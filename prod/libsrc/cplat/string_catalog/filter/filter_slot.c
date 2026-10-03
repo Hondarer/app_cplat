@@ -79,7 +79,7 @@ struct cplat_string_catalog_filter_slot
     const void *source;      /**< 結び付けたソース領域。未設定は NULL。 */
     size_t source_size;      /**< @ref cplat_string_catalog_filter_slot::source のバイト数。 */
     cplat_string_catalog_filter_source_lock source_lock; /**< 書き込み側の排他。未設定は lock が NULL。 */
-    cplat_atomic_u64 taken_timestamp; /**< 取り込みを試みた公開時刻。判定のたびにロックなしで読みます。 */
+    cplat_atomic_u64 taken_revision;  /**< 取り込みを試みた版番号。判定のたびにロックなしで読みます。 */
     size_t source_last_invalid_count; /**< 直近の取り込みで無効にした行の数。apply_lock の下で読み書きします。 */
     int source_last_result;           /**< 直近の取り込みの結果コード。apply_lock の下で読み書きします。 */
     unsigned int pad;                 /**< 明示的アラインメントです。 */
@@ -1498,7 +1498,7 @@ const cplat_string_catalog *cplat_string_catalog_filter_slot_get_catalog(const c
  *  @param[in]      diagnostic_capacity @p diagnostics の要素数。
  *  @param[out]     invalid_count_out   無効にした行数の格納先。不要な場合は NULL。
  *  @param[in]      source    読み取り元のソース領域。@p image がソース領域内にない場合は NULL。
- *  @param[in]      timestamp @p source の読み取りを始めたときの公開時刻。
+ *  @param[in]      revision @p source の読み取りを始めたときの版番号。
  *  @param[in]      writer_lock 取得済みの書き込み側の排他。複製を終えた時点で解放します。保持していない場合は NULL。
  *  @param[out]     torn_out  複製の間にソース領域が書き換えられた場合は true の格納先。
  *
@@ -1507,7 +1507,7 @@ const cplat_string_catalog *cplat_string_catalog_filter_slot_get_catalog(const c
  */
 static int apply_image_locked(cplat_string_catalog_filter_slot *slot, const void *image, const size_t image_size,
                               cplat_string_catalog_filter_diagnostic *diagnostics, const size_t diagnostic_capacity,
-                              size_t *invalid_count_out, const void *source, const uint64_t timestamp,
+                              size_t *invalid_count_out, const void *source, const uint64_t revision,
                               const cplat_string_catalog_filter_source_lock *writer_lock, bool *torn_out)
 {
     string_catalog_filter_image_header header;
@@ -1534,7 +1534,7 @@ static int apply_image_locked(cplat_string_catalog_filter_slot *slot, const void
 
         /* ソース領域からの複製では、複製の間に公開が重なっていないことを確かめる。
          * 重なった場合は未使用の面へ複製しただけなので、捨てても参照中の条件に影響しない */
-        *torn_out = (source != NULL) && !string_catalog_filter_source_end_read(source, timestamp);
+        *torn_out = (source != NULL) && !string_catalog_filter_source_end_read(source, revision);
     }
 
     /* 書き込み側の排他は複製と確認の間だけ保持する。検証と適用は排他の外で行い、書き込み側を待たせない */
@@ -1605,14 +1605,14 @@ int cplat_string_catalog_filter_slot_apply(cplat_string_catalog_filter_slot *slo
 }
 
 /**
- *  @brief          ソース領域の公開時刻が変わっていれば、フィルター オブジェクトを取り込みます。
+ *  @brief          ソース領域の版番号が変わっていれば、フィルター オブジェクトを取り込みます。
  *
- *  公開時刻の読み取りは 1 回のアトミックな読み取りで、変化がなければロックを取らずに戻ります (緩いチェック)。\n
+ *  版番号の読み取りは 1 回のアトミックな読み取りで、変化がなければロックを取らずに戻ります (緩いチェック)。\n
  *  ほかのスレッドが取り込み中または適用中の場合は待たずに戻り、適用済みの条件で判定を続けます。
  *
- *  書き込み側の排他を結び付けている場合は、その排他を取ってから公開時刻を読み直し (最終チェック)、
+ *  書き込み側の排他を結び付けている場合は、その排他を取ってから版番号を読み直し (最終チェック)、
  *  取り込み済みでなければ複製します。排他は複製を終えた時点で解放します。\n
- *  結び付けていない場合は、ロックを取らずに複製し、複製の後に公開時刻を読み直します。
+ *  結び付けていない場合は、ロックを取らずに複製し、複製の後に版番号を読み直します。
  *  複製の間に公開が重なった場合は記録せず、次の判定で改めて取り込みます。
  *
  *  ファイルをマップした領域は、異なる版のライブラリや異なる行数の上限と行幅で書かれた内容を残している場合があります。
@@ -1624,7 +1624,7 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
     const cplat_string_catalog_filter_source_lock *writer_lock = NULL;
     string_catalog_filter_source_header header;
     size_t invalid_count = 0U;
-    uint64_t timestamp;
+    uint64_t revision;
     bool torn;
     int ret;
 
@@ -1632,9 +1632,9 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
     {
         return;
     }
-    timestamp = string_catalog_filter_source_begin_read(slot->source);
-    if ((timestamp == 0U) || ((timestamp & 1U) != 0U) ||
-        (timestamp == cplat_atomic_load_u64(&slot->taken_timestamp, CPLAT_MEMORY_ORDER_RELAXED)))
+    revision = string_catalog_filter_source_begin_read(slot->source);
+    if ((revision == 0U) || ((revision & 1U) != 0U) ||
+        (revision == cplat_atomic_load_u64(&slot->taken_revision, CPLAT_MEMORY_ORDER_RELAXED)))
     {
         return;
     }
@@ -1655,14 +1655,14 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
             return;
         }
 
-        /* 排他の下で公開時刻を読み直す。待つ間に公開が進んでいれば、新しい公開時刻を取り込む */
-        timestamp = string_catalog_filter_source_begin_read(slot->source);
+        /* 排他の下で版番号を読み直す。待つ間に公開が進んでいれば、新しい版番号を取り込む */
+        revision = string_catalog_filter_source_begin_read(slot->source);
     }
 
-    /* ロックを待つ間に、ほかのスレッドが同じ公開時刻を取り込んでいる場合がある。
+    /* ロックを待つ間に、ほかのスレッドが同じ版番号を取り込んでいる場合がある。
      * 排他の下で奇数が見えるのは、書き込みの途中で書き込み側が停止した場合だけで、次の公開まで取り込まない */
-    if ((timestamp == 0U) || ((timestamp & 1U) != 0U) ||
-        (timestamp == cplat_atomic_load_u64(&slot->taken_timestamp, CPLAT_MEMORY_ORDER_RELAXED)))
+    if ((revision == 0U) || ((revision & 1U) != 0U) ||
+        (revision == cplat_atomic_load_u64(&slot->taken_revision, CPLAT_MEMORY_ORDER_RELAXED)))
     {
         if (writer_lock != NULL)
         {
@@ -1672,7 +1672,7 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
         return;
     }
 
-    /* ヘッダーも公開時刻の読み直しで一貫性を確かめる。一貫しない場合は次の判定で改めて取り込む */
+    /* ヘッダーも版番号の読み直しで一貫性を確かめる。一貫しない場合は次の判定で改めて取り込む */
     memcpy(&header, slot->source, sizeof(header));
     ret = CPLAT_OK;
     if (!string_catalog_filter_source_is_header_valid(&header) || (header.line_capacity != slot->line_capacity) ||
@@ -1691,11 +1691,11 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
         {
             writer_lock->unlock(writer_lock->context);
         }
-        if (string_catalog_filter_source_end_read(slot->source, timestamp))
+        if (string_catalog_filter_source_end_read(slot->source, revision))
         {
             slot->source_last_result = ret;
             slot->source_last_invalid_count = 0U;
-            cplat_atomic_store_u64(&slot->taken_timestamp, timestamp, CPLAT_MEMORY_ORDER_RELAXED);
+            cplat_atomic_store_u64(&slot->taken_revision, revision, CPLAT_MEMORY_ORDER_RELAXED);
         }
         (void)cplat_local_lock_unlock(slot->apply_lock);
         return;
@@ -1703,13 +1703,13 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
 
     ret = apply_image_locked(slot, (const unsigned char *)slot->source + CPLAT_STRING_CATALOG_FILTER_SOURCE_HEADER_SIZE,
                              slot->source_size - CPLAT_STRING_CATALOG_FILTER_SOURCE_HEADER_SIZE, NULL, 0U,
-                             &invalid_count, slot->source, timestamp, writer_lock, &torn);
+                             &invalid_count, slot->source, revision, writer_lock, &torn);
     if (!torn)
     {
         /* 適用に失敗した公開内容も記録し、同じ内容の取り込みを繰り返さない */
         slot->source_last_result = ret;
         slot->source_last_invalid_count = (ret == CPLAT_OK) ? invalid_count : 0U;
-        cplat_atomic_store_u64(&slot->taken_timestamp, timestamp, CPLAT_MEMORY_ORDER_RELAXED);
+        cplat_atomic_store_u64(&slot->taken_revision, revision, CPLAT_MEMORY_ORDER_RELAXED);
     }
     (void)cplat_local_lock_unlock(slot->apply_lock);
 }
@@ -1742,7 +1742,7 @@ int cplat_string_catalog_filter_slot_attach_source(cplat_string_catalog_filter_s
     }
     slot->source_last_result = CPLAT_OK;
     slot->source_last_invalid_count = 0U;
-    cplat_atomic_store_u64(&slot->taken_timestamp, 0U, CPLAT_MEMORY_ORDER_RELAXED);
+    cplat_atomic_store_u64(&slot->taken_revision, 0U, CPLAT_MEMORY_ORDER_RELAXED);
     return CPLAT_OK;
 }
 
@@ -1765,7 +1765,7 @@ int cplat_string_catalog_filter_slot_get_source_status(cplat_string_catalog_filt
         return ret;
     }
     memset(status_out, 0, sizeof(*status_out));
-    status_out->taken_timestamp = cplat_atomic_load_u64(&slot->taken_timestamp, CPLAT_MEMORY_ORDER_RELAXED);
+    status_out->taken_revision = cplat_atomic_load_u64(&slot->taken_revision, CPLAT_MEMORY_ORDER_RELAXED);
     status_out->last_result = slot->source_last_result;
     status_out->last_invalid_count = slot->source_last_invalid_count;
     (void)cplat_local_lock_unlock(slot->apply_lock);
@@ -2011,7 +2011,7 @@ int cplat_string_catalog_filter_slot_vformat(cplat_string_catalog_filter_slot *s
     *matched_out = 0;
     dest[0] = '\0';
 
-    /* 判定の前に、ソース領域の公開内容が変わっていれば取り込む。通常は公開時刻の比較 1 回で戻る */
+    /* 判定の前に、ソース領域の公開内容が変わっていれば取り込む。通常は版番号の比較 1 回で戻る */
     refresh_from_source(slot);
 
     /* 可変長引数は 1 回だけ取り出し、判定と書式展開で同じ値を使用する */

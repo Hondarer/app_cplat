@@ -6,7 +6,7 @@
 #include "filter_test_catalog.h"
 #include "gen/filter_test_trace.h"
 
-/* 公開時刻と署名を書き換えるため、モジュール私有ヘッダーを取り込む */
+/* 版番号と署名を書き換えるため、モジュール私有ヘッダーを取り込む */
 #include "filter.h"
 
 #include <cplat/base/result.h>
@@ -32,7 +32,7 @@ class stringCatalogFilterSourceTest : public Test
   protected:
     NiceMock<Mock_cplat> mock_cplat;
 
-    /** ソース領域です。公開時刻をアトミックに読み書きするため、8 バイト境界に置きます。 */
+    /** ソース領域です。版番号をアトミックに読み書きするため、8 バイト境界に置きます。 */
     alignas(8) unsigned char source_[kSourceSize];
 
     /** 公開するフィルター オブジェクトです。 */
@@ -67,7 +67,7 @@ class stringCatalogFilterSourceTest : public Test
     }
 
     /** 条件式 1 行をコンパイルして、ソース領域へ公開します。 */
-    int publish_line(const char *text, uint64_t *timestamp_out = nullptr)
+    int publish_line(const char *text, uint64_t *revision_out = nullptr)
     {
         int ret = compile_single_line(text, image_);
         if (ret != CPLAT_OK)
@@ -75,7 +75,7 @@ class stringCatalogFilterSourceTest : public Test
             return ret;
         }
         return cplat_string_catalog_filter_source_publish(source_, sizeof(source_), image_, sizeof(image_), catalog_id_,
-                                                          nullptr, timestamp_out);
+                                                          nullptr, revision_out);
     }
 
     /** WARNING の JOB_FAILED を判定付きで組み立て、一致結果を返します。 */
@@ -99,10 +99,10 @@ class stringCatalogFilterSourceTest : public Test
 TEST_F(stringCatalogFilterSourceTest, format_takes_published_conditions)
 {
     // Arrange
-    uint64_t published_timestamp = 0U;
+    uint64_t published_revision = 0U;
     int actual_ret;
     int actual_matched = 0;
-    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &published_timestamp)); // [状態] - 条件を公開する。
+    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &published_revision)); // [状態] - 条件を公開する。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                        nullptr)); // [状態] - 結び付ける。
 
@@ -113,15 +113,15 @@ TEST_F(stringCatalogFilterSourceTest, format_takes_published_conditions)
 
     // Assert
     cplat_string_catalog_filter_source_status status = source_status();
-    EXPECT_EQ(CPLAT_OK, actual_ret);                        // [確認_正常系] - 組み立てに成功すること。
-    EXPECT_NE(0, actual_matched);                           // [確認_正常系] - 公開した条件で一致すること。
-    EXPECT_EQ(published_timestamp, status.taken_timestamp); // [確認_正常系] - 公開時刻を取り込み済みとすること。
-    EXPECT_EQ(CPLAT_OK, status.last_result);                // [確認_正常系] - 取り込みの結果が成功であること。
-    EXPECT_EQ(0U, status.last_invalid_count);               // [確認_正常系] - 無効にした行がないこと。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                      // [確認_正常系] - 組み立てに成功すること。
+    EXPECT_NE(0, actual_matched);                         // [確認_正常系] - 公開した条件で一致すること。
+    EXPECT_EQ(published_revision, status.taken_revision); // [確認_正常系] - 版番号を取り込み済みとすること。
+    EXPECT_EQ(CPLAT_OK, status.last_result);              // [確認_正常系] - 取り込みの結果が成功であること。
+    EXPECT_EQ(0U, status.last_invalid_count);             // [確認_正常系] - 無効にした行がないこと。
 }
 
-// 公開時刻が変わらない場合は、ロックを取らずに判定することの確認
-TEST_F(stringCatalogFilterSourceTest, unchanged_timestamp_skips_lock)
+// 版番号が変わらない場合は、ロックを取らずに判定することの確認
+TEST_F(stringCatalogFilterSourceTest, unchanged_revision_skips_lock)
 {
     // Arrange
     int actual_matched = 0;
@@ -142,18 +142,18 @@ TEST_F(stringCatalogFilterSourceTest, unchanged_timestamp_skips_lock)
     EXPECT_NE(0, actual_matched); // [確認_正常系] - 取り込み済みの条件で一致すること。
 }
 
-// 公開し直した条件を取り込み、公開時刻が増加することの確認
+// 公開し直した条件を取り込み、版番号が増加することの確認
 TEST_F(stringCatalogFilterSourceTest, republished_conditions_replace_previous)
 {
     // Arrange
-    uint64_t first_timestamp = 0U;
-    uint64_t second_timestamp = 0U;
+    uint64_t first_revision = 0U;
+    uint64_t second_revision = 0U;
     int actual_matched = 0;
-    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &first_timestamp)); // [状態] - 1 回目の条件を公開する。
+    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &first_revision)); // [状態] - 1 回目の条件を公開する。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                        nullptr)); // [状態] - 結び付ける。
     ASSERT_EQ(CPLAT_OK, format_job_failed(&actual_matched));                      // [状態] - 1 回目の条件を取り込む。
-    ASSERT_EQ(CPLAT_OK, publish_line("category >= 3", &second_timestamp));        // [状態] - 2 回目の条件を公開する。
+    ASSERT_EQ(CPLAT_OK, publish_line("category >= 3", &second_revision));         // [状態] - 2 回目の条件を公開する。
 
     // Pre-Assert
 
@@ -162,23 +162,23 @@ TEST_F(stringCatalogFilterSourceTest, republished_conditions_replace_previous)
     (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
 
     // Assert
-    EXPECT_GT(second_timestamp, first_timestamp); // [確認_正常系] - 公開時刻が増加すること。
-    EXPECT_EQ(0U, second_timestamp % 2U);         // [確認_正常系] - 公開時刻が偶数であること。
-    EXPECT_EQ(0, actual_matched);                 // [確認_正常系] - 2 回目の条件で判定すること。
-    EXPECT_EQ(second_timestamp,
-              source_status().taken_timestamp); // [確認_正常系] - 2 回目の公開時刻を取り込み済みとすること。
+    EXPECT_EQ(2U, first_revision);  // [確認_正常系] - 未公開の領域への最初の公開は 2 であること。
+    EXPECT_EQ(4U, second_revision); // [確認_正常系] - 公開のたびに 2 ずつ増えること。
+    EXPECT_EQ(0, actual_matched);   // [確認_正常系] - 2 回目の条件で判定すること。
+    EXPECT_EQ(second_revision,
+              source_status().taken_revision); // [確認_正常系] - 2 回目の版番号を取り込み済みとすること。
 }
 
-// 公開時刻が奇数 (書き込み中) の間は取り込まず、次の公開で回復することの確認
+// 版番号が奇数 (書き込み中) の間は取り込まず、次の公開で回復することの確認
 TEST_F(stringCatalogFilterSourceTest, writing_source_is_not_taken_until_next_publish)
 {
     // Arrange
-    uint64_t published_timestamp = 0U;
-    uint64_t recovered_timestamp = 0U;
+    uint64_t published_revision = 0U;
+    uint64_t recovered_revision = 0U;
     int actual_matched_while_writing = 1;
     int actual_matched_after_recovery = 0;
-    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &published_timestamp)); // [状態] - 条件を公開する。
-    cplat_atomic_store_u64(&header()->published_timestamp, published_timestamp | 1U,
+    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &published_revision)); // [状態] - 条件を公開する。
+    cplat_atomic_store_u64(&header()->published_revision, published_revision | 1U,
                            CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 書き込みの途中で中断した状態にする。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                        nullptr)); // [状態] - 結び付ける。
@@ -187,15 +187,16 @@ TEST_F(stringCatalogFilterSourceTest, writing_source_is_not_taken_until_next_pub
 
     // Act
     (void)format_job_failed(&actual_matched_while_writing); // [手順] - 書き込み中に組み立てる。
-    uint64_t taken_while_writing = source_status().taken_timestamp;
-    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &recovered_timestamp)); // [手順] - 公開し直す。
-    (void)format_job_failed(&actual_matched_after_recovery);                  // [手順] - 公開後に組み立てる。
+    uint64_t taken_while_writing = source_status().taken_revision;
+    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &recovered_revision)); // [手順] - 公開し直す。
+    (void)format_job_failed(&actual_matched_after_recovery);                 // [手順] - 公開後に組み立てる。
 
     // Assert
     EXPECT_EQ(0, actual_matched_while_writing); // [確認_異常系] - 書き込み中は取り込まず、以前の条件で判定すること。
     EXPECT_EQ(0U, taken_while_writing);         // [確認_異常系] - 書き込み中は取り込み済みとしないこと。
-    EXPECT_GT(recovered_timestamp, published_timestamp); // [確認_正常系] - 中断後の公開時刻が中断前より大きいこと。
-    EXPECT_NE(0, actual_matched_after_recovery);         // [確認_正常系] - 公開し直した条件を取り込むこと。
+    EXPECT_EQ(published_revision + 2U,
+              recovered_revision);               // [確認_正常系] - 中断前の版番号に 2 を加えた値になること。
+    EXPECT_NE(0, actual_matched_after_recovery); // [確認_正常系] - 公開し直した条件を取り込むこと。
 }
 
 // 複製の間に公開が重なった場合は取り込まず、次の判定で取り込むことの確認
@@ -213,21 +214,21 @@ TEST_F(stringCatalogFilterSourceTest, torn_copy_is_discarded_and_retried)
         .WillOnce(Invoke(
             [this](cplat_local_lock *mtx)
             {
-                uint64_t timestamp = cplat_atomic_load_u64(&header()->published_timestamp, CPLAT_MEMORY_ORDER_RELAXED);
-                cplat_atomic_store_u64(&header()->published_timestamp, timestamp + 2U, CPLAT_MEMORY_ORDER_RELAXED);
+                uint64_t revision = cplat_atomic_load_u64(&header()->published_revision, CPLAT_MEMORY_ORDER_RELAXED);
+                cplat_atomic_store_u64(&header()->published_revision, revision + 2U, CPLAT_MEMORY_ORDER_RELAXED);
                 return delegate_real_cplat_local_lock_try_lock(mtx);
-            })) // [Pre-Assert手順] - 1 回目は公開時刻を読んだ後に、公開が重なった状態を作る。
+            })) // [Pre-Assert手順] - 1 回目は版番号を読んだ後に、公開が重なった状態を作る。
         .WillRepeatedly(
             Invoke(delegate_real_cplat_local_lock_try_lock)); // [Pre-Assert手順] - 2 回目以降は実関数を呼ぶ。
 
     // Act
     (void)format_job_failed(&actual_matched_torn); // [手順] - 公開が重なった状態で組み立てる。
-    uint64_t taken_after_torn = source_status().taken_timestamp;
+    uint64_t taken_after_torn = source_status().taken_revision;
     (void)format_job_failed(&actual_matched_retry); // [手順] - もう一度組み立てる。
 
     // Assert
     EXPECT_EQ(0, actual_matched_torn);  // [確認_異常系] - 重なった複製を適用せず、以前の条件で判定すること。
-    EXPECT_EQ(0U, taken_after_torn);    // [確認_異常系] - 重なった公開時刻を取り込み済みとしないこと。
+    EXPECT_EQ(0U, taken_after_torn);    // [確認_異常系] - 重なった版番号を取り込み済みとしないこと。
     EXPECT_NE(0, actual_matched_retry); // [確認_正常系] - 次の判定で取り込むこと。
 }
 
@@ -258,15 +259,15 @@ TEST_F(stringCatalogFilterSourceTest, busy_lock_skips_take_without_waiting)
 TEST_F(stringCatalogFilterSourceTest, corrupt_publication_is_recorded_and_not_retried)
 {
     // Arrange
-    uint64_t published_timestamp = 0U;
+    uint64_t published_revision = 0U;
     int actual_matched = 0;
-    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &published_timestamp)); // [状態] - 条件を公開する。
+    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &published_revision)); // [状態] - 条件を公開する。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                        nullptr)); // [状態] - 結び付ける。
     ASSERT_EQ(CPLAT_OK, format_job_failed(&actual_matched));                      // [状態] - 正しい条件を取り込む。
     source_[CPLAT_STRING_CATALOG_FILTER_SOURCE_HEADER_SIZE + CPLAT_STRING_CATALOG_FILTER_HEADER_SIZE +
             CPLAT_STRING_CATALOG_FILTER_RECORD_HEADER_SIZE] ^= 0xFFU; // [状態] - 行レコードを壊す。
-    cplat_atomic_store_u64(&header()->published_timestamp, published_timestamp + 2U,
+    cplat_atomic_store_u64(&header()->published_revision, published_revision + 2U,
                            CPLAT_MEMORY_ORDER_RELEASE); // [状態] - 壊れた内容を公開済みにする。
 
     // Pre-Assert
@@ -281,7 +282,7 @@ TEST_F(stringCatalogFilterSourceTest, corrupt_publication_is_recorded_and_not_re
 
     // Assert
     EXPECT_NE(0, actual_matched);                                // [確認_異常系] - 以前の条件を維持すること。
-    EXPECT_EQ(published_timestamp + 2U, status.taken_timestamp); // [確認_異常系] - 試みた公開時刻を記録すること。
+    EXPECT_EQ(published_revision + 2U, status.taken_revision);   // [確認_異常系] - 試みた版番号を記録すること。
     EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, status.last_result); // [確認_異常系] - 検証の失敗を記録すること。
 }
 
@@ -362,7 +363,7 @@ TEST_F(stringCatalogFilterSourceTest, get_info_reports_each_state)
     cplat_string_catalog_filter_source_info actual_published;
     cplat_string_catalog_filter_source_info actual_writing;
     cplat_string_catalog_filter_source_info actual_foreign;
-    uint64_t published_timestamp = 0U;
+    uint64_t published_revision = 0U;
     int actual_unpublished_ret;
     int actual_published_ret;
     int actual_writing_ret;
@@ -373,62 +374,62 @@ TEST_F(stringCatalogFilterSourceTest, get_info_reports_each_state)
     // Act
     actual_unpublished_ret =
         cplat_string_catalog_filter_source_get_info(source_, sizeof(source_),
-                                                    &actual_unpublished);     // [手順] - 未公開の情報を読む。
-    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &published_timestamp)); // [手順] - 条件を公開する。
+                                                    &actual_unpublished);    // [手順] - 未公開の情報を読む。
+    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &published_revision)); // [手順] - 条件を公開する。
     actual_published_ret =
         cplat_string_catalog_filter_source_get_info(source_, sizeof(source_),
                                                     &actual_published); // [手順] - 公開済みの情報を読む。
-    cplat_atomic_store_u64(&header()->published_timestamp, published_timestamp | 1U, CPLAT_MEMORY_ORDER_RELAXED);
+    cplat_atomic_store_u64(&header()->published_revision, published_revision | 1U, CPLAT_MEMORY_ORDER_RELAXED);
     actual_writing_ret =
         cplat_string_catalog_filter_source_get_info(source_, sizeof(source_),
                                                     &actual_writing); // [手順] - 書き込み中の情報を読む。
-    cplat_atomic_store_u64(&header()->published_timestamp, published_timestamp, CPLAT_MEMORY_ORDER_RELAXED);
+    cplat_atomic_store_u64(&header()->published_revision, published_revision, CPLAT_MEMORY_ORDER_RELAXED);
     header()->signature = 0x12345678U;
     actual_foreign_ret =
         cplat_string_catalog_filter_source_get_info(source_, sizeof(source_),
                                                     &actual_foreign); // [手順] - 異なる形式の情報を読む。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_unpublished_ret);           // [確認_正常系] - 未公開でも成功すること。
-    EXPECT_EQ(0U, actual_unpublished.published_timestamp); // [確認_正常系] - 未公開の公開時刻が 0 であること。
-    EXPECT_EQ(CPLAT_OK, actual_published_ret);             // [確認_正常系] - 公開済みの情報を読めること。
-    EXPECT_EQ(published_timestamp, actual_published.published_timestamp); // [確認_正常系] - 公開時刻を返すこと。
-    EXPECT_EQ((uint32_t)kLineCapacity, actual_published.line_capacity);   // [確認_正常系] - 行数の上限を返すこと。
-    EXPECT_EQ((uint32_t)kLineWidth, actual_published.line_width);         // [確認_正常系] - 行幅を返すこと。
-    EXPECT_NE(0U, actual_published.publisher_process_id);                 // [確認_正常系] - プロセス ID を返すこと。
-    EXPECT_NE(0, (long long)actual_published.published_realtime.tv_sec);  // [確認_正常系] - 実時刻を返すこと。
+    EXPECT_EQ(CPLAT_OK, actual_unpublished_ret);          // [確認_正常系] - 未公開でも成功すること。
+    EXPECT_EQ(0U, actual_unpublished.published_revision); // [確認_正常系] - 未公開の版番号が 0 であること。
+    EXPECT_EQ(CPLAT_OK, actual_published_ret);            // [確認_正常系] - 公開済みの情報を読めること。
+    EXPECT_EQ(published_revision, actual_published.published_revision);  // [確認_正常系] - 版番号を返すこと。
+    EXPECT_EQ((uint32_t)kLineCapacity, actual_published.line_capacity);  // [確認_正常系] - 行数の上限を返すこと。
+    EXPECT_EQ((uint32_t)kLineWidth, actual_published.line_width);        // [確認_正常系] - 行幅を返すこと。
+    EXPECT_NE(0U, actual_published.publisher_process_id);                // [確認_正常系] - プロセス ID を返すこと。
+    EXPECT_NE(0, (long long)actual_published.published_realtime.tv_sec); // [確認_正常系] - 実時刻を返すこと。
     EXPECT_EQ(CPLAT_ERR_BUSY, actual_writing_ret); // [確認_異常系] - 書き込み中は CPLAT_ERR_BUSY を返すこと。
     EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_foreign_ret); // [確認_異常系] - 異なる形式を拒否すること。
 }
 
-// 前回の公開時刻が単調増加クロックより大きい領域 (再起動を越えて残ったファイルのマップ) でも、公開時刻が増え続けることの確認
-TEST_F(stringCatalogFilterSourceTest, publish_continues_from_carried_over_timestamp)
+// 前回の版番号が大きい領域 (再起動を越えて残ったファイルのマップ) でも、版番号が前回の値から増え続けることの確認
+TEST_F(stringCatalogFilterSourceTest, publish_continues_from_carried_over_revision)
 {
     // Arrange
     const uint64_t carried_over = UINT64_C(0x4000000000000000);
-    uint64_t actual_timestamp = 0U;
+    uint64_t actual_revision = 0U;
     int actual_matched = 0;
     ASSERT_EQ(CPLAT_OK, publish_line("category >= 3")); // [状態] - 以前の条件を公開する。
-    cplat_atomic_store_u64(
-        &header()->published_timestamp, carried_over,
-        CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 前回の公開時刻を、現在の単調増加クロックより大きくする。
+    cplat_atomic_store_u64(&header()->published_revision, carried_over,
+                           CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 前回の版番号を大きな値にする。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                        nullptr)); // [状態] - 結び付ける。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &actual_timestamp)); // [手順] - 新しい条件を公開する。
-    (void)format_job_failed(&actual_matched);                              // [手順] - JOB_FAILED を組み立てる。
+    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &actual_revision)); // [手順] - 新しい条件を公開する。
+    (void)format_job_failed(&actual_matched);                             // [手順] - JOB_FAILED を組み立てる。
 
     // Assert
-    EXPECT_EQ(carried_over + 2U, actual_timestamp); // [確認_正常系] - 前回の値に 2 を加えた値になること。
-    EXPECT_NE(0, actual_matched);                   // [確認_正常系] - 新しい条件を取り込むこと。
-    EXPECT_EQ(actual_timestamp,
-              source_status().taken_timestamp); // [確認_正常系] - 新しい公開時刻を取り込み済みとすること。
+    EXPECT_EQ(carried_over + 2U, actual_revision); // [確認_正常系] - 前回の値に 2 を加えた値になること。
+    EXPECT_NE(0, actual_matched);                  // [確認_正常系] - 新しい条件を取り込むこと。
+    EXPECT_EQ(actual_revision,
+              source_status().taken_revision); // [確認_正常系] - 新しい版番号を取り込み済みとすること。
 }
 
-// 公開時刻が上限に達した領域では、0 でない小さな偶数へ戻り、読み取り側が取り込むことの確認
+// 版番号が上限に達した領域では、0 でない最小の偶数へ戻り、読み取り側が取り込むことの確認
+// 読み取り側は上限の手前の版番号を取り込み済みとし、戻った値と一致しないようにする
 TEST_F(stringCatalogFilterSourceTest, publish_wraps_around_at_upper_limit)
 {
     const uint64_t limits[] = {UINT64_MAX - 1U, UINT64_MAX};
@@ -438,31 +439,31 @@ TEST_F(stringCatalogFilterSourceTest, publish_wraps_around_at_upper_limit)
         SCOPED_TRACE(limit);
 
         // Arrange
-        uint64_t actual_timestamp = 0U;
+        uint64_t actual_revision = 0U;
         int actual_matched = 0;
         memset(source_, 0, sizeof(source_));
-        ASSERT_EQ(CPLAT_OK, publish_line("category >= 3")); // [状態] - 以前の条件を公開する。
+        cplat_atomic_store_u64(&header()->published_revision, UINT64_MAX - 5U,
+                               CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 上限の手前の版番号にする。
+        ASSERT_EQ(CPLAT_OK, publish_line("category >= 3")); // [状態] - 以前の条件を上限の手前の版番号で公開する。
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                            nullptr)); // [状態] - 結び付ける。
         ASSERT_EQ(CPLAT_OK, format_job_failed(&actual_matched));                      // [状態] - 以前の条件を取り込む。
         cplat_atomic_store_u64(
-            &header()->published_timestamp, limit,
-            CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 公開時刻を上限 (偶数) または上限で書き込み中 (奇数) にする。
+            &header()->published_revision, limit,
+            CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 版番号を上限 (偶数) または上限で書き込み中 (奇数) にする。
 
         // Pre-Assert
 
         // Act
-        ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &actual_timestamp)); // [手順] - 新しい条件を公開する。
+        ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &actual_revision)); // [手順] - 新しい条件を公開する。
         actual_matched = 0;
         (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
 
         // Assert
-        EXPECT_NE(0U, actual_timestamp);              // [確認_正常系] - 未公開を表す 0 にならないこと。
-        EXPECT_EQ(0U, actual_timestamp % 2U);         // [確認_正常系] - 偶数であること。
-        EXPECT_LT(actual_timestamp, UINT64_MAX - 1U); // [確認_正常系] - 上限から小さな値へ戻ること。
-        EXPECT_NE(0, actual_matched);                 // [確認_正常系] - 戻った公開時刻の条件を取り込むこと。
-        EXPECT_EQ(actual_timestamp,
-                  source_status().taken_timestamp); // [確認_正常系] - 戻った公開時刻を取り込み済みとすること。
+        EXPECT_EQ(2U, actual_revision); // [確認_正常系] - 未公開を表す 0 を避け、最小の偶数 2 へ戻ること。
+        EXPECT_NE(0, actual_matched);   // [確認_正常系] - 戻った版番号の条件を取り込むこと。
+        EXPECT_EQ(actual_revision,
+                  source_status().taken_revision); // [確認_正常系] - 戻った版番号を取り込み済みとすること。
     }
 }
 
@@ -484,10 +485,10 @@ TEST_F(stringCatalogFilterSourceTest, foreign_header_is_recorded_without_taking)
         SCOPED_TRACE(change.label);
 
         // Arrange
-        uint64_t published_timestamp = 0U;
+        uint64_t published_revision = 0U;
         int actual_matched = 1;
         memset(source_, 0, sizeof(source_));
-        ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &published_timestamp)); // [状態] - 条件を公開する。
+        ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &published_revision)); // [状態] - 条件を公開する。
         change.apply(header()); // [状態] - ヘッダーを異なる版や大きさに書き換える。
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                            nullptr)); // [状態] - 結び付ける。
@@ -500,8 +501,8 @@ TEST_F(stringCatalogFilterSourceTest, foreign_header_is_recorded_without_taking)
         // Assert
         cplat_string_catalog_filter_source_status status = source_status();
         EXPECT_EQ(0, actual_matched); // [確認_異常系] - 取り込まず、以前の条件で判定すること。
-        EXPECT_EQ(published_timestamp,
-                  status.taken_timestamp); // [確認_異常系] - 公開時刻を記録し、繰り返し試みないこと。
+        EXPECT_EQ(published_revision,
+                  status.taken_revision); // [確認_異常系] - 版番号を記録し、繰り返し試みないこと。
         EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, status.last_result); // [確認_異常系] - 形式の不一致を記録すること。
     }
 }
@@ -568,7 +569,7 @@ TEST_F(stringCatalogFilterLockedSourceTest, takes_under_writer_lock_only_when_ch
 
     // Act
     (void)format_job_failed(&actual_first_matched);  // [手順] - 1 回目の組み立てを行う。
-    (void)format_job_failed(&actual_second_matched); // [手順] - 公開時刻が変わらないまま 2 回目の組み立てを行う。
+    (void)format_job_failed(&actual_second_matched); // [手順] - 版番号が変わらないまま 2 回目の組み立てを行う。
 
     // Assert
     EXPECT_NE(0, actual_first_matched);  // [確認_正常系] - 公開した条件を取り込むこと。
@@ -577,13 +578,13 @@ TEST_F(stringCatalogFilterLockedSourceTest, takes_under_writer_lock_only_when_ch
     EXPECT_EQ(1, counter_.unlock_count); // [確認_正常系] - 取った排他を解放すること。
 }
 
-// 排他を待つ間に公開が進んだ場合、排他の下で読み直した新しい公開時刻を取り込むことの確認
-TEST_F(stringCatalogFilterLockedSourceTest, rechecks_timestamp_under_writer_lock)
+// 排他を待つ間に公開が進んだ場合、排他の下で読み直した新しい版番号を取り込むことの確認
+TEST_F(stringCatalogFilterLockedSourceTest, rechecks_revision_under_writer_lock)
 {
     // Arrange
-    uint64_t first_timestamp = 0U;
+    uint64_t first_revision = 0U;
     int actual_matched = 1;
-    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &first_timestamp)); // [状態] - 1 回目の条件を公開する。
+    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &first_revision)); // [状態] - 1 回目の条件を公開する。
     ASSERT_EQ(CPLAT_OK, attach_with_lock()); // [状態] - 書き込み側の排他とともに結び付ける。
     counter_.on_lock =
         publish_while_waiting; // [状態] - 排他を取った時点で、待つ間に終わった公開として 2 回目の条件を公開する。
@@ -596,11 +597,11 @@ TEST_F(stringCatalogFilterLockedSourceTest, rechecks_timestamp_under_writer_lock
 
     // Assert
     cplat_string_catalog_filter_source_status status = source_status();
-    EXPECT_EQ(0, actual_matched);                       // [確認_正常系] - 2 回目の条件で判定すること。
-    EXPECT_GT(status.taken_timestamp, first_timestamp); // [確認_正常系] - 読み直した新しい公開時刻を取り込むこと。
+    EXPECT_EQ(0, actual_matched);                     // [確認_正常系] - 2 回目の条件で判定すること。
+    EXPECT_GT(status.taken_revision, first_revision); // [確認_正常系] - 読み直した新しい版番号を取り込むこと。
     cplat_string_catalog_filter_source_info info;
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_source_get_info(source_, sizeof(source_), &info));
-    EXPECT_EQ(info.published_timestamp, status.taken_timestamp); // [確認_正常系] - 最新の公開時刻と一致すること。
+    EXPECT_EQ(info.published_revision, status.taken_revision); // [確認_正常系] - 最新の版番号と一致すること。
 }
 
 // 排他の下で書き込み中 (書き込み側が途中で停止した状態) が見えた場合は取り込まず、排他を解放することの確認
@@ -613,8 +614,8 @@ TEST_F(stringCatalogFilterLockedSourceTest, interrupted_write_seen_under_lock_is
     counter_.on_lock = [](void *context)
     {
         string_catalog_filter_source_header *h = static_cast<string_catalog_filter_source_header *>(context);
-        uint64_t timestamp = cplat_atomic_load_u64(&h->published_timestamp, CPLAT_MEMORY_ORDER_RELAXED);
-        cplat_atomic_store_u64(&h->published_timestamp, timestamp | 1U, CPLAT_MEMORY_ORDER_RELAXED);
+        uint64_t revision = cplat_atomic_load_u64(&h->published_revision, CPLAT_MEMORY_ORDER_RELAXED);
+        cplat_atomic_store_u64(&h->published_revision, revision | 1U, CPLAT_MEMORY_ORDER_RELAXED);
     }; // [状態] - 排他を取った時点で、書き込みの途中で停止した状態にする。
     counter_.on_lock_context = header();
 
@@ -625,7 +626,7 @@ TEST_F(stringCatalogFilterLockedSourceTest, interrupted_write_seen_under_lock_is
 
     // Assert
     EXPECT_EQ(0, actual_matched);                          // [確認_異常系] - 取り込まず、以前の条件で判定すること。
-    EXPECT_EQ(0U, source_status().taken_timestamp);        // [確認_異常系] - 取り込み済みとしないこと。
+    EXPECT_EQ(0U, source_status().taken_revision);         // [確認_異常系] - 取り込み済みとしないこと。
     EXPECT_EQ(counter_.lock_count, counter_.unlock_count); // [確認_異常系] - 取った排他を解放すること。
 }
 
@@ -650,11 +651,11 @@ TEST_F(stringCatalogFilterLockedSourceTest, lock_failure_is_recorded_and_retried
 
     // Assert
     EXPECT_EQ(0, actual_failed_matched);                     // [確認_異常系] - 取り込まず、以前の条件で判定すること。
-    EXPECT_EQ(0U, failed_status.taken_timestamp);            // [確認_異常系] - 取り込み済みとしないこと。
+    EXPECT_EQ(0U, failed_status.taken_revision);             // [確認_異常系] - 取り込み済みとしないこと。
     EXPECT_EQ(CPLAT_ERR_TIMEOUT, failed_status.last_result); // [確認_異常系] - 排他の取得の結果コードを記録すること。
     EXPECT_EQ(1, counter_.unlock_count);                     // [確認_異常系] - 取得できなかった排他は解放しないこと。
     EXPECT_NE(0, actual_retry_matched);                      // [確認_正常系] - 次の判定で取り込むこと。
-    EXPECT_EQ(published, source_status().taken_timestamp);   // [確認_正常系] - 公開時刻を取り込み済みとすること。
+    EXPECT_EQ(published, source_status().taken_revision);    // [確認_正常系] - 版番号を取り込み済みとすること。
 }
 
 // 関数が NULL の排他を結び付けられないことの確認
@@ -684,7 +685,7 @@ TEST_F(stringCatalogFilterLockedSourceTest, attach_rejects_incomplete_lock)
 TEST_F(stringCatalogFilterLockedSourceTest, publish_takes_lock_once_while_writing)
 {
     // Arrange
-    uint64_t actual_timestamp = 0U;
+    uint64_t actual_revision = 0U;
     ASSERT_EQ(CPLAT_OK, compile_single_line("category <= 2", image_)); // [状態] - 条件をコンパイルする。
 
     // Pre-Assert
@@ -692,11 +693,11 @@ TEST_F(stringCatalogFilterLockedSourceTest, publish_takes_lock_once_while_writin
     // Act
     int actual_ret = cplat_string_catalog_filter_source_publish(source_, sizeof(source_), image_, sizeof(image_),
                                                                 catalog_id_, &lock_,
-                                                                &actual_timestamp); // [手順] - 排他とともに公開する。
+                                                                &actual_revision); // [手順] - 排他とともに公開する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret);     // [確認_正常系] - 公開に成功すること。
-    EXPECT_NE(0U, actual_timestamp);     // [確認_正常系] - 公開時刻を格納すること。
+    EXPECT_NE(0U, actual_revision);      // [確認_正常系] - 版番号を格納すること。
     EXPECT_EQ(1, counter_.lock_count);   // [確認_正常系] - 排他を 1 回取得すること。
     EXPECT_EQ(1, counter_.unlock_count); // [確認_正常系] - 取得した排他を解放すること。
 }
@@ -826,7 +827,7 @@ TEST_F(stringCatalogFilterSourceTest, publication_for_another_catalog_is_not_tak
 
         // Arrange
         uint64_t other_catalog_id = 0U;
-        uint64_t timestamp = 0U;
+        uint64_t revision = 0U;
         int actual_matched = 1;
         memset(source_, 0, sizeof(source_));
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_get_catalog_id(filter_test_catalog(), &other_catalog_id));
@@ -834,7 +835,7 @@ TEST_F(stringCatalogFilterSourceTest, publication_for_another_catalog_is_not_tak
         ASSERT_EQ(CPLAT_OK,
                   cplat_string_catalog_filter_source_publish(source_, sizeof(source_), image_, sizeof(image_),
                                                              case_item.is_legacy ? catalog_id_ : other_catalog_id,
-                                                             nullptr, &timestamp)); // [状態] - 公開する。
+                                                             nullptr, &revision)); // [状態] - 公開する。
         if (case_item.is_legacy)
         {
             header()->catalog_id = 0U; // [状態] - 識別値を持たない以前の版の領域にする。
@@ -854,7 +855,7 @@ TEST_F(stringCatalogFilterSourceTest, publication_for_another_catalog_is_not_tak
 
         // Assert
         EXPECT_EQ(0, actual_matched);                         // [確認_異常系] - 取り込まず、以前の条件で判定すること。
-        EXPECT_EQ(timestamp, status.taken_timestamp);         // [確認_異常系] - 公開時刻を記録すること。
+        EXPECT_EQ(revision, status.taken_revision);           // [確認_異常系] - 版番号を記録すること。
         EXPECT_EQ(CPLAT_ERR_UNSUPPORTED, status.last_result); // [確認_異常系] - カタログの不一致を記録すること。
     }
 }

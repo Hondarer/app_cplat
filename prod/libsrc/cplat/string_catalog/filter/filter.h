@@ -350,8 +350,8 @@ extern "C"
      *  @brief          ソース領域のヘッダーです。
      *
      *  複数のプロセスが同じレイアウトで読み書きするため、固定幅の整数型だけで構成します。\n
-     *  @ref string_catalog_filter_source_header::published_timestamp はアトミックに読み書きします。
-     *  それ以外のメンバーとフィルター オブジェクトは、公開時刻を奇数にした間に書き込みます。
+     *  @ref string_catalog_filter_source_header::published_revision はアトミックに読み書きします。
+     *  それ以外のメンバーとフィルター オブジェクトは、版番号を奇数にした間に書き込みます。
      */
     typedef struct string_catalog_filter_source_header
     {
@@ -361,7 +361,7 @@ extern "C"
         uint32_t line_capacity;                 /**< フィルター オブジェクトの行数の上限。 */
         uint32_t line_width;                    /**< フィルター オブジェクトの行幅。 */
         uint64_t image_size;                    /**< フィルター オブジェクトのバイト数。 */
-        cplat_atomic_u64 published_timestamp;   /**< 公開時刻。0 は未公開、奇数は書き込み中。 */
+        cplat_atomic_u64 published_revision;    /**< 版番号。0 は未公開、奇数は書き込み中。 */
         int64_t published_realtime_seconds;     /**< 公開した実時刻の秒部。 */
         int64_t published_realtime_nanoseconds; /**< 公開した実時刻のナノ秒部。 */
         uint32_t publisher_process_id;          /**< 公開したプロセスの ID。 */
@@ -402,21 +402,21 @@ extern "C"
     bool string_catalog_filter_source_is_header_valid(const string_catalog_filter_source_header *header);
 
     /**
-     *  @brief          ソース領域の読み取りを始め、公開時刻を返します。
+     *  @brief          ソース領域の読み取りを始め、版番号を返します。
      *  @param[in]      source ソース領域の先頭アドレス。
-     *  @return         公開時刻。0 は未公開、奇数は書き込み中です。
+     *  @return         版番号。0 は未公開、奇数は書き込み中です。
      *
-     *  公開時刻が偶数の場合、この後に読んだ内容は @ref string_catalog_filter_source_end_read で確定します。
+     *  版番号が偶数の場合、この後に読んだ内容は @ref string_catalog_filter_source_end_read で確定します。
      */
     uint64_t string_catalog_filter_source_begin_read(const void *source);
 
     /**
      *  @brief          ソース領域の読み取りを終え、読んだ内容が一貫しているかを返します。
      *  @param[in]      source    ソース領域の先頭アドレス。
-     *  @param[in]      timestamp @ref string_catalog_filter_source_begin_read が返した公開時刻。
-     *  @return         読み取りの間に公開時刻が変わっていない場合は true。
+     *  @param[in]      revision @ref string_catalog_filter_source_begin_read が返した版番号。
+     *  @return         読み取りの間に版番号が変わっていない場合は true。
      */
-    bool string_catalog_filter_source_end_read(const void *source, uint64_t timestamp);
+    bool string_catalog_filter_source_end_read(const void *source, uint64_t revision);
 
 #ifdef __cplusplus
 }

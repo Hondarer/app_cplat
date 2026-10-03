@@ -681,7 +681,7 @@ ID (`cplat_string_catalog_entry::id`) と分類値 (`cplat_string_catalog_entry:
 Table: 文字列カタログの条件式フィルターにおける用途別 cplat API
 
 フィルター オブジェクトのバイト数は `CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE` で行数の上限と行幅から求めます。  
-ソース領域のバイト数は `CPLAT_STRING_CATALOG_FILTER_SOURCE_SIZE` で求めます。コマンド `string-catalog-filter-required-size` でも、行数の上限と行幅から表示できます。スロットは判定付きの組み立てのたびに公開時刻を比べ、変化した場合に取り込みます。  
+ソース領域のバイト数は `CPLAT_STRING_CATALOG_FILTER_SOURCE_SIZE` で求めます。コマンド `string-catalog-filter-required-size` でも、行数の上限と行幅から表示できます。スロットは判定付きの組み立てのたびに版番号を比べ、変化した場合に取り込みます。  
 分類値の名前 (`cplat_string_catalog_filter_category_names`) は、スロットの作成時に `cplat_string_catalog_filter_slot_create` へ渡します。作成後は変更できません。  
 設計の詳細は [文字列カタログの条件式フィルターの設計](proposals/string-catalog-filter-design.md) を参照してください。
 
