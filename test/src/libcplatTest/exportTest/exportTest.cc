@@ -692,7 +692,7 @@
     EXPORT_ENTRY(cplat_string_catalog_filter_source_publish, \
                  int(CPLAT_API *)(void *source, size_t source_size, const void *image, size_t image_size, \
                                   uint64_t catalog_id, const cplat_string_catalog_filter_source_lock *lock, \
-                                  uint64_t *timestamp_out)) \
+                                  uint64_t *revision_out)) \
     EXPORT_ENTRY(cplat_string_catalog_filter_source_get_info, int(CPLAT_API *)(const void *source, size_t source_size, cplat_string_catalog_filter_source_info *info_out)) \
     EXPORT_ENTRY(cplat_string_catalog_filter_slot_attach_source, \
                  int(CPLAT_API *)(cplat_string_catalog_filter_slot * slot, const void *source, size_t source_size, \
