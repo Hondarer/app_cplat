@@ -1618,7 +1618,7 @@ int cplat_string_catalog_filter_slot_apply(cplat_string_catalog_filter_slot *slo
  *
  *  ファイルをマップした領域は、異なる版のライブラリや異なる行数の上限と行幅で書かれた内容を残している場合があります。
  *  ヘッダーの形式と大きさがスロットと一致しない公開内容は、フィルター オブジェクトを読まずに記録します。
- *  形式版の不一致は `CPLAT_ERR_VERSION_MISMATCH`、別のカタログ向けの公開内容は `CPLAT_ERR_SIGNATURE_MISMATCH`、
+ *  形式版の不一致は `CPLAT_ERR_VERSION_MISMATCH`、別のカタログ向けの公開内容は `CPLAT_ERR_IDENTITY_MISMATCH`、
  *  そのほかの不一致は `CPLAT_ERR_CORRUPT_DESCRIPTOR` です。
  */
 static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
@@ -1686,7 +1686,7 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
     else if ((ret == CPLAT_OK) && (header.catalog_id != slot->catalog_id))
     {
         /* 別のカタログ (別の版の定義を含む) 向けの公開内容は、名前が解決できても意味が異なり得るため取り込まない */
-        ret = CPLAT_ERR_SIGNATURE_MISMATCH;
+        ret = CPLAT_ERR_IDENTITY_MISMATCH;
     }
     if (ret != CPLAT_OK)
     {

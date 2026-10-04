@@ -583,7 +583,7 @@ category <= 3 || (key == SAMPLE_MESSAGES_KEY_FILE_OPEN_FAILED && arg.file_path s
 署名が一致して形式版だけが異なる場合は `CPLAT_ERR_VERSION_MISMATCH`、署名、ヘッダー長、行数の上限、行幅の不一致は `CPLAT_ERR_CORRUPT_DESCRIPTOR` とします。
 
 ヘッダーには、公開時に指定したカタログの識別値も記録します。  
-スロットは、作成時に求めた自分のカタログの識別値と一致しない公開内容を、フィルター オブジェクトを読まずに `CPLAT_ERR_SIGNATURE_MISMATCH` として記録します。  
+スロットは、作成時に求めた自分のカタログの識別値と一致しない公開内容を、フィルター オブジェクトを読まずに `CPLAT_ERR_IDENTITY_MISMATCH` として記録します。  
 条件式中の名前が解決できても、別の版のカタログでは文字列キーの値や引数の位置が異なり得るためです。  
 以前の版が書いた領域は識別値が 0 のため取り込まず、新しい版で公開し直すと回復します。
 

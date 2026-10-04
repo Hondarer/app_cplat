@@ -886,6 +886,6 @@ TEST_F(stringCatalogFilterSourceTest, publication_for_another_catalog_is_not_tak
         // Assert
         EXPECT_EQ(0, actual_matched);               // [確認_異常系] - 取り込まず、以前の条件で判定すること。
         EXPECT_EQ(revision, status.taken_revision); // [確認_異常系] - 版番号を記録すること。
-        EXPECT_EQ(CPLAT_ERR_SIGNATURE_MISMATCH, status.last_result); // [確認_異常系] - カタログの不一致を記録すること。
+        EXPECT_EQ(CPLAT_ERR_IDENTITY_MISMATCH, status.last_result); // [確認_異常系] - カタログの不一致を記録すること。
     }
 }

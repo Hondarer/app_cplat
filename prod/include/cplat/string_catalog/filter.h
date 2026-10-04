@@ -648,7 +648,7 @@ extern "C"
      *  ソース領域の形式版が異なる場合は `CPLAT_ERR_VERSION_MISMATCH`、
      *  署名、ヘッダー長、行数の上限、行幅が異なる場合は `CPLAT_ERR_CORRUPT_DESCRIPTOR` です。\n
      *  公開時に指定したカタログの識別値が、スロットのカタログの識別値 (@ref cplat_string_catalog_filter_get_catalog_id)
-     *  と一致しない公開内容も取り込まず、`CPLAT_ERR_SIGNATURE_MISMATCH` として記録します。
+     *  と一致しない公開内容も取り込まず、`CPLAT_ERR_IDENTITY_MISMATCH` として記録します。
      *  以前の版のライブラリが公開した領域は識別値を持たないため、新しい版で公開し直すまで取り込みません。
      *
      *  版番号の確認は、@p lock の有無にかかわらず、ロックを取らない 1 回のアトミックな読み取りです。\n

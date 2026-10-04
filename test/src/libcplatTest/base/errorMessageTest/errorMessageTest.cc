@@ -47,7 +47,7 @@ static std::vector<int> all_error_codes()
                             CPLAT_ERR_EOF,
                             CPLAT_ERR_CANCELED,
                             CPLAT_ERR_IN_PROGRESS,
-                            CPLAT_ERR_SIGNATURE_MISMATCH,
+                            CPLAT_ERR_IDENTITY_MISMATCH,
                             CPLAT_ERR_VERSION_MISMATCH};
 }
 
