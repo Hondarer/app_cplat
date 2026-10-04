@@ -18,6 +18,9 @@ static_assert(CPLAT_ERR_NOT_FOUND == -6, "cplat: CPLAT_ERR_NOT_FOUND の ABI 値
 static_assert(CPLAT_ERR_DUPLICATE_DEFINITION == -5,
               "cplat: CPLAT_ERR_DUPLICATE_DEFINITION の ABI 値を変更してはなりません。");
 static_assert(CPLAT_ERR_DUPLICATE_KEY == -7, "cplat: CPLAT_ERR_DUPLICATE_KEY の ABI 値を変更してはなりません。");
+static_assert(CPLAT_ERR_SIGNATURE_MISMATCH == -8,
+              "cplat: CPLAT_ERR_SIGNATURE_MISMATCH の ABI 値を変更してはなりません。");
+static_assert(CPLAT_ERR_VERSION_MISMATCH == -9, "cplat: CPLAT_ERR_VERSION_MISMATCH の ABI 値を変更してはなりません。");
 static_assert(CPLAT_ERR_OUT_OF_MEMORY == -10, "cplat: CPLAT_ERR_OUT_OF_MEMORY の ABI 値を変更してはなりません。");
 static_assert(CPLAT_ERR_BUSY == -11, "cplat: CPLAT_ERR_BUSY の ABI 値を変更してはなりません。");
 static_assert(CPLAT_ERR_TIMEOUT == -12, "cplat: CPLAT_ERR_TIMEOUT の ABI 値を変更してはなりません。");
@@ -52,6 +55,8 @@ static std::vector<int> all_error_codes()
                             CPLAT_ERR_PERMISSION_DENIED,
                             CPLAT_ERR_DUPLICATE_DEFINITION,
                             CPLAT_ERR_DUPLICATE_KEY,
+                            CPLAT_ERR_SIGNATURE_MISMATCH,
+                            CPLAT_ERR_VERSION_MISMATCH,
                             CPLAT_ERR_OUT_OF_MEMORY,
                             CPLAT_ERR_BUSY,
                             CPLAT_ERR_TIMEOUT,

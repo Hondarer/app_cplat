@@ -69,7 +69,8 @@ extern "C"
      *                                   呼び出し元が free すること。
      *  @return         成功時 CPLAT_OK。
      *                  descriptor または identity_out が NULL の場合 CPLAT_ERR_INVALID_ARGUMENT。
-     *                  フォーマット不一致時 CPLAT_ERR_CORRUPT_DESCRIPTOR。
+     *                  形式版の不一致時 CPLAT_ERR_VERSION_MISMATCH。
+     *                  それ以外のフォーマット不正時 CPLAT_ERR_CORRUPT_DESCRIPTOR。
      *                  メモリ確保失敗時 CPLAT_ERR_UNKNOWN。
      */
     int cplat_internal_interprocess_sync_descriptor_import(const void *descriptor, size_t descriptor_size, uint8_t kind,

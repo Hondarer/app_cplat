@@ -143,6 +143,22 @@
 
 #define CPLAT_ERR_DUPLICATE_KEY (-7) /**< 同一キーが既に存在します。 */
 
+/**
+ *  @brief          期待する対象の識別値と一致しません。
+ *
+ *  形式は正しく読めたうえで、別の対象 (別のカタログなど) を指していることを表します。\n
+ *  マジック値 (署名) の不一致は、別の形式と破損を区別できないため @ref CPLAT_ERR_CORRUPT_DESCRIPTOR とします。
+ */
+#define CPLAT_ERR_SIGNATURE_MISMATCH (-8)
+
+/**
+ *  @brief          対応する定義または形式の版と一致しません。
+ *
+ *  署名が一致し、同じ種類の対象であることを確かめたうえで、形式版が異なることを表します。\n
+ *  長さ、範囲、内部整合性の不正は @ref CPLAT_ERR_CORRUPT_DESCRIPTOR とします。
+ */
+#define CPLAT_ERR_VERSION_MISMATCH (-9)
+
 /* リソース・バッファー: -10 〜 -19 */
 
 /**

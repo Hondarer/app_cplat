@@ -196,8 +196,8 @@ TEST(syncDescriptorTest, rejects_each_corrupt_header_field)
               short_header_result); // [確認_異常系] - 短いヘッダーが CORRUPT_DESCRIPTOR になること。
     EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
               magic_result); // [確認_異常系] - magic 不一致が CORRUPT_DESCRIPTOR になること。
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              version_result); // [確認_異常系] - version 不一致が CORRUPT_DESCRIPTOR になること。
+    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH,
+              version_result); // [確認_異常系] - version 不一致が VERSION_MISMATCH になること。
     EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
               kind_result); // [確認_異常系] - kind 不一致が CORRUPT_DESCRIPTOR になること。
     EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,

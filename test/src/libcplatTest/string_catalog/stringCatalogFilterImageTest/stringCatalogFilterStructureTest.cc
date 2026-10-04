@@ -351,8 +351,24 @@ TEST_F(stringCatalogFilterStructureTest, different_format_version_is_rejected)
     string_catalog_filter_update_content_hash(image, &header);            // [手順] - 全体のハッシュ値を計算し直す。
     actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
 
+    cplat_string_catalog_filter_info actual_info;
+    char actual_text[64];
+    int actual_info_ret =
+        cplat_string_catalog_filter_get_info(image, kImageSize, &actual_info);              // [手順] - 情報を取得する。
+    int actual_remove_ret = cplat_string_catalog_filter_remove_line(image, kImageSize, 0U); // [手順] - 行を削除する。
+    int actual_compile_ret = cplat_string_catalog_filter_compile_line(image, kImageSize, 0U, "key == 1",
+                                                                      nullptr); // [手順] - 行を書き換える。
+    int actual_decompile_ret = cplat_string_catalog_filter_decompile_line(
+        image, kImageSize, 0U, actual_text, sizeof(actual_text)); // [手順] - 行を逆コンパイルする。
+
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_ret); // [確認_異常系] - 異なる形式版を拒否すること。
+    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH, actual_ret);        // [確認_異常系] - 異なる形式版を拒否すること。
+    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH, actual_info_ret);   // [確認_異常系] - 情報取得でも版の不一致を維持すること。
+    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH, actual_remove_ret); // [確認_異常系] - 削除でも版の不一致を維持すること。
+    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH,
+              actual_compile_ret); // [確認_異常系] - コンパイルでも版の不一致を維持すること。
+    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH,
+              actual_decompile_ret); // [確認_異常系] - 逆コンパイルでも版の不一致を維持すること。
 }
 
 // バイト順序の目印が異なるフィルター オブジェクトは、変換せずに拒否することの確認

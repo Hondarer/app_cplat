@@ -468,16 +468,23 @@ TEST_F(stringCatalogFilterSourceTest, publish_wraps_around_at_upper_limit)
 }
 
 // 形式版や大きさが異なるヘッダーの公開内容は、フィルター オブジェクトを読まずに記録することの確認
+// 形式版の不一致は CPLAT_ERR_VERSION_MISMATCH、そのほかの不一致は CPLAT_ERR_CORRUPT_DESCRIPTOR で区別する
 TEST_F(stringCatalogFilterSourceTest, foreign_header_is_recorded_without_taking)
 {
     struct header_change
     {
         const char *label;
         void (*apply)(string_catalog_filter_source_header *);
+        int expected_result;
+        unsigned int pad;
     };
     const header_change changes[] = {
-        {"format_version", [](string_catalog_filter_source_header *h) { h->format_version = 2U; }},
-        {"line_width", [](string_catalog_filter_source_header *h) { h->line_width = h->line_width + 8U; }},
+        {"format_version", [](string_catalog_filter_source_header *h) { h->format_version = 2U; },
+         CPLAT_ERR_VERSION_MISMATCH, 0U},
+        {"header_size", [](string_catalog_filter_source_header *h) { h->header_size = 32U; },
+         CPLAT_ERR_CORRUPT_DESCRIPTOR, 0U},
+        {"line_width", [](string_catalog_filter_source_header *h) { h->line_width = h->line_width + 8U; },
+         CPLAT_ERR_CORRUPT_DESCRIPTOR, 0U},
     };
 
     for (const header_change &change : changes)
@@ -502,9 +509,32 @@ TEST_F(stringCatalogFilterSourceTest, foreign_header_is_recorded_without_taking)
         cplat_string_catalog_filter_source_status status = source_status();
         EXPECT_EQ(0, actual_matched); // [確認_異常系] - 取り込まず、以前の条件で判定すること。
         EXPECT_EQ(published_revision,
-                  status.taken_revision); // [確認_異常系] - 版番号を記録し、繰り返し試みないこと。
-        EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, status.last_result); // [確認_異常系] - 形式の不一致を記録すること。
+                  status.taken_revision);                      // [確認_異常系] - 版番号を記録し、繰り返し試みないこと。
+        EXPECT_EQ(change.expected_result, status.last_result); // [確認_異常系] - 不一致の種類を記録すること。
     }
+}
+
+// 署名が一致して形式版だけが異なる領域は、公開と情報の読み取りで CPLAT_ERR_VERSION_MISMATCH を返すことの確認
+TEST_F(stringCatalogFilterSourceTest, other_format_version_region_reports_version_mismatch)
+{
+    // Arrange
+    unsigned char expected_source[sizeof(source_)];
+    cplat_string_catalog_filter_source_info actual_info;
+    ASSERT_EQ(CPLAT_OK, publish_line("category <= 2")); // [状態] - 条件を公開する。
+    header()->format_version = 2U;                      // [状態] - 異なる形式版の領域にする。
+    memcpy(expected_source, source_, sizeof(source_));
+
+    // Pre-Assert
+
+    // Act
+    int actual_publish_ret = publish_line("category >= 3"); // [手順] - 異なる形式版の領域へ公開する。
+    int actual_info_ret = cplat_string_catalog_filter_source_get_info(source_, sizeof(source_),
+                                                                      &actual_info); // [手順] - 情報を読む。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH, actual_publish_ret);       // [確認_異常系] - 公開が版の不一致を返すこと。
+    EXPECT_EQ(0, memcmp(expected_source, source_, sizeof(source_))); // [確認_異常系] - 領域を変更しないこと。
+    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH, actual_info_ret); // [確認_異常系] - 情報の読み取りも版の不一致を返すこと。
 }
 
 namespace
@@ -854,8 +884,8 @@ TEST_F(stringCatalogFilterSourceTest, publication_for_another_catalog_is_not_tak
         testing::Mock::VerifyAndClearExpectations(&mock_cplat);
 
         // Assert
-        EXPECT_EQ(0, actual_matched);                         // [確認_異常系] - 取り込まず、以前の条件で判定すること。
-        EXPECT_EQ(revision, status.taken_revision);           // [確認_異常系] - 版番号を記録すること。
-        EXPECT_EQ(CPLAT_ERR_UNSUPPORTED, status.last_result); // [確認_異常系] - カタログの不一致を記録すること。
+        EXPECT_EQ(0, actual_matched);               // [確認_異常系] - 取り込まず、以前の条件で判定すること。
+        EXPECT_EQ(revision, status.taken_revision); // [確認_異常系] - 版番号を記録すること。
+        EXPECT_EQ(CPLAT_ERR_SIGNATURE_MISMATCH, status.last_result); // [確認_異常系] - カタログの不一致を記録すること。
     }
 }

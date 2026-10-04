@@ -410,7 +410,7 @@ int cplat_hashtable_attach(void *buf_mgmt, size_t buf_mgmt_size, void *buf_data,
     }
     if (hdr->version != CPLAT_HASHTABLE_VERSION)
     {
-        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        return CPLAT_ERR_VERSION_MISMATCH;
     }
     if (hashtable_validate_config(&hdr->config) != 0)
     {

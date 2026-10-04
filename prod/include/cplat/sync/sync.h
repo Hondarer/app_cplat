@@ -331,7 +331,7 @@ extern "C"
      *  @param[in]      descriptor       インポートするディスクリプタ データ。NULL を渡してはなりません。
      *  @param[in]      descriptor_size  @p descriptor のサイズ (バイト)。
      *  @param[out]     lock             インポートしたロック ハンドルの格納先。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_CORRUPT_DESCRIPTOR 、
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_CORRUPT_DESCRIPTOR 、@ref CPLAT_ERR_VERSION_MISMATCH 、
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ
@@ -418,7 +418,7 @@ extern "C"
      *  @param[in]      descriptor       インポートするディスクリプタ データ。NULL を渡してはなりません。
      *  @param[in]      descriptor_size  @p descriptor のサイズ (バイト)。
      *  @param[out]     lock             インポートしたロック ハンドルの格納先。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_CORRUPT_DESCRIPTOR 、
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_CORRUPT_DESCRIPTOR 、@ref CPLAT_ERR_VERSION_MISMATCH 、
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ

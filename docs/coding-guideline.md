@@ -45,6 +45,8 @@ cplat の公開 API が戻り値として使用する共通結果コードの運
 | | `CPLAT_ERR_DUPLICATE_DEFINITION` | -5 | 同名の定義が登録済み |
 | | `CPLAT_ERR_NOT_FOUND` | -6 | 対象が存在しない (ファイル、ディレクトリ、ホスト名など) |
 | | `CPLAT_ERR_DUPLICATE_KEY` | -7 | 同一キーがすでに存在する |
+| | `CPLAT_ERR_SIGNATURE_MISMATCH` | -8 | 期待する対象の識別値と一致しない |
+| | `CPLAT_ERR_VERSION_MISMATCH` | -9 | 対応する定義または形式の版と一致しない |
 | リソース・バッファー<br> (-10 〜 -19) | `CPLAT_ERR_OUT_OF_MEMORY` | -10 | メモリを確保できません。 |
 | | `CPLAT_ERR_BUSY` | -11 | リソースがビジー状態 |
 | | `CPLAT_ERR_TIMEOUT` | -12 | タイムアウト |
@@ -140,6 +142,10 @@ OS エラーの原因をプラットフォーム共通で調べる場合は、`e
 `result.h` は、粗い分類 (`CPLAT_ERR_INVALID_ARGUMENT` など) と細かい操作結果 (`CPLAT_ERR_UNKNOWN_OPTION` など) の両方を含みます。  
 モジュール固有の戻り値コード体系は別に設けません。  
 argparser の `cplat_argparser_parse()` は解析エラーの種別に対応するコードを直接返し、`cplat_argparser_get_error()` はその種別を後から再取得する用途で提供しています。
+
+識別値の不一致は `CPLAT_ERR_SIGNATURE_MISMATCH`、同じ対象の定義や形式の版の不一致は `CPLAT_ERR_VERSION_MISMATCH` で通知します。  
+長さ、範囲、内部整合性の不正は、従来どおり `CPLAT_ERR_CORRUPT_DESCRIPTOR` で通知します。  
+マジック値だけでは別形式と破損を区別できないため、その不一致は `CPLAT_ERR_CORRUPT_DESCRIPTOR` とします。
 
 ### OS エラー詳細の抽象化
 

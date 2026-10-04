@@ -392,14 +392,16 @@ extern "C"
     bool string_catalog_filter_source_is_region_valid(const void *source, size_t source_size, size_t image_size);
 
     /**
-     *  @brief          ソース領域のヘッダーが、本ライブラリの形式で公開されたものかを返します。
+     *  @brief          ソース領域のヘッダーが、本ライブラリの形式で公開されたものかを確かめます。
      *  @param[in]      header 確かめるヘッダー。書き込みと重ならないよう、複製したヘッダーを渡します。
-     *  @return         署名、形式版、ヘッダー長が本ライブラリと一致する場合は true。
+     *  @return         署名、形式版、ヘッダー長が本ライブラリと一致する場合は `CPLAT_OK` を返します。
+     *  @return         署名が一致し、形式版が異なる場合は `CPLAT_ERR_VERSION_MISMATCH` を返します。
+     *  @return         署名またはヘッダー長が異なる場合は `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。
      *
      *  ファイルをマップした領域は、異なる版のライブラリが書いた内容を残している場合があります。
      *  形式の異なる領域を、本ライブラリの配置で読まないために確かめます。
      */
-    bool string_catalog_filter_source_is_header_valid(const string_catalog_filter_source_header *header);
+    int string_catalog_filter_source_check_header(const string_catalog_filter_source_header *header);
 
     /**
      *  @brief          ソース領域の読み取りを始め、版番号を返します。

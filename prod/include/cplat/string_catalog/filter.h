@@ -331,7 +331,8 @@ extern "C"
      *  @param[out]     diagnostic_out コンパイルに失敗した場合の診断情報の格納先。NULL を指定できます。
      *  @return         成功時は `CPLAT_OK` を返します。
      *  @return         引数が不正な場合は `CPLAT_ERR_INVALID_ARGUMENT` を返します。
-     *  @return         @p image が検証に失敗した場合は `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。
+     *  @return         @p image の形式版が異なる場合は `CPLAT_ERR_VERSION_MISMATCH`、
+     *                  それ以外の検証の失敗は `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。
      *  @return         条件式が不正な場合、および空行やコメントの場合は `CPLAT_ERR_MALFORMED_DEFINITION` を返します。
      *
      *  失敗した場合、@p image は変更しません。
@@ -354,7 +355,8 @@ extern "C"
      *  @param[out]     diagnostic_out コンパイルに失敗した場合の診断情報の格納先。NULL を指定できます。
      *  @return         成功時は `CPLAT_OK` を返します。
      *  @return         引数が不正な場合は `CPLAT_ERR_INVALID_ARGUMENT` を返します。
-     *  @return         @p image が検証に失敗した場合は `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。
+     *  @return         @p image の形式版が異なる場合は `CPLAT_ERR_VERSION_MISMATCH`、
+     *                  それ以外の検証の失敗は `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。
      *  @return         行数の上限に達している場合は `CPLAT_ERR_STORAGE_FULL` を返します。
      *  @return         条件式が不正な場合、および空行やコメントの場合は `CPLAT_ERR_MALFORMED_DEFINITION` を返します。
      *
@@ -376,7 +378,8 @@ extern "C"
      *  @param[in]      line_index 削除する行 (0 起点)。
      *  @return         成功時は `CPLAT_OK` を返します。
      *  @return         引数が不正な場合は `CPLAT_ERR_INVALID_ARGUMENT` を返します。
-     *  @return         @p image が検証に失敗した場合は `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。
+     *  @return         @p image の形式版が異なる場合は `CPLAT_ERR_VERSION_MISMATCH`、
+     *                  それ以外の検証の失敗は `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。
      *
      *  後続の行は 1 つ前へ移動します。
      *
@@ -394,14 +397,15 @@ extern "C"
      *  @param[in]      image_size @p image のバイト数。
      *  @return         整合している場合は `CPLAT_OK` を返します。
      *  @return         引数が NULL の場合は `CPLAT_ERR_INVALID_ARGUMENT` を返します。
-     *  @return         不整合を検出した場合は `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。
+     *  @return         形式版の不一致を検出した場合は `CPLAT_ERR_VERSION_MISMATCH` を返します。
+     *  @return         それ以外の不整合を検出した場合は `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。
      *
      *  署名、形式版、バイト順序の目印、行数と行幅、全体のバイト数、内容のハッシュ値、
      *  および各行の命令と定数の参照先が領域内に収まることを確認します。
      *
      *  形式版とバイト順序の目印は、本ライブラリが生成する値と一致する必要があります。\n
-     *  異なる形式版のフィルター オブジェクトや、バイト順序が異なる環境で生成したフィルター オブジェクトは、
-     *  変換せずに `CPLAT_ERR_CORRUPT_DESCRIPTOR` で拒否します。\n
+     *  異なる形式版のフィルター オブジェクトは `CPLAT_ERR_VERSION_MISMATCH`、
+     *  バイト順序が異なる環境で生成したものは `CPLAT_ERR_CORRUPT_DESCRIPTOR` で拒否し、変換しません。\n
      *  形式版は @ref cplat_string_catalog_filter_get_info で読み取れます。
      *
      *  @par            スレッド セーフ
@@ -418,7 +422,8 @@ extern "C"
      *  @param[out]     info_out   情報の格納先。
      *  @return         成功時は `CPLAT_OK` を返します。
      *  @return         引数が NULL の場合は `CPLAT_ERR_INVALID_ARGUMENT` を返します。
-     *  @return         @p image が検証に失敗した場合は `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。
+     *  @return         @p image の形式版が異なる場合は `CPLAT_ERR_VERSION_MISMATCH`、
+     *                  それ以外の検証の失敗は `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
@@ -437,7 +442,8 @@ extern "C"
      *  @param[in]      dest_size  @p dest のバイト数。1 以上です。
      *  @return         成功時は `CPLAT_OK` を返します。
      *  @return         引数が不正な場合は `CPLAT_ERR_INVALID_ARGUMENT` を返します。
-     *  @return         @p image が検証に失敗した場合は `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。
+     *  @return         @p image の形式版が異なる場合は `CPLAT_ERR_VERSION_MISMATCH`、
+     *                  それ以外の検証の失敗は `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。
      *  @return         @p dest に収まらない場合は、切り詰めたうえで `CPLAT_ERR_BUFFER_TOO_SMALL` を返します。
      *
      *  括弧は演算子の優先順位から必要な位置にだけ付与します。\n
@@ -491,7 +497,9 @@ extern "C"
      *                  @p source_size がヘッダーとフィルター オブジェクトを格納できない場合、
      *                  @p catalog_id が 0 の場合、または @p lock の関数が NULL の場合は `CPLAT_ERR_INVALID_ARGUMENT` を返します。
      *  @return         @p image が `cplat_string_catalog_filter_validate` の確認を通らない場合は、その結果コードを返します。
-     *  @return         @p source が 0 で埋まっておらず、ソース領域の署名または形式版が異なる場合は
+     *  @return         @p source が 0 で埋まっておらず、ソース領域の署名が一致して形式版が異なる場合は
+     *                  `CPLAT_ERR_VERSION_MISMATCH` を返します。
+     *  @return         @p source が 0 で埋まっておらず、ソース領域の署名またはヘッダー長が異なる場合は
      *                  `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。
      *  @return         @p lock の排他を取得できない場合は、取得する関数の結果コードを返します。
      *
@@ -532,7 +540,8 @@ extern "C"
      *  @return         成功時は `CPLAT_OK` を返します。未公開の場合も `CPLAT_OK` を返し、各メンバーへ 0 を格納します。
      *  @return         引数が NULL の場合、@p source のアラインメントが合わない場合、
      *                  または @p source_size がヘッダーに満たない場合は `CPLAT_ERR_INVALID_ARGUMENT` を返します。
-     *  @return         ソース領域の署名または形式版が異なる場合は `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。
+     *  @return         ソース領域の署名が一致して形式版が異なる場合は `CPLAT_ERR_VERSION_MISMATCH` を返します。
+     *  @return         ソース領域の署名またはヘッダー長が異なる場合は `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。
      *  @return         書き込み中のため一貫した内容を読み取れない場合は `CPLAT_ERR_BUSY` を返します。
      *
      *  @par            スレッド セーフ
@@ -635,10 +644,11 @@ extern "C"
      *  結び付けと解除のたびに、取り込みの状態を未取り込みへ戻します。適用済みの条件は変わりません。\n
      *  そのため、ファイルをマップした領域のように以前の公開内容が残っている場合は、最初の判定付きの組み立てで取り込みます。
      *
-     *  ヘッダーの署名、形式版、行数の上限、行幅がスロットと一致しない公開内容は取り込まず、
-     *  `CPLAT_ERR_CORRUPT_DESCRIPTOR` として @ref cplat_string_catalog_filter_slot_get_source_status へ記録します。\n
+     *  ヘッダーがスロットと一致しない公開内容は取り込まず、@ref cplat_string_catalog_filter_slot_get_source_status へ記録します。
+     *  ソース領域の形式版が異なる場合は `CPLAT_ERR_VERSION_MISMATCH`、
+     *  署名、ヘッダー長、行数の上限、行幅が異なる場合は `CPLAT_ERR_CORRUPT_DESCRIPTOR` です。\n
      *  公開時に指定したカタログの識別値が、スロットのカタログの識別値 (@ref cplat_string_catalog_filter_get_catalog_id)
-     *  と一致しない公開内容も取り込まず、`CPLAT_ERR_UNSUPPORTED` として記録します。
+     *  と一致しない公開内容も取り込まず、`CPLAT_ERR_SIGNATURE_MISMATCH` として記録します。
      *  以前の版のライブラリが公開した領域は識別値を持たないため、新しい版で公開し直すまで取り込みません。
      *
      *  版番号の確認は、@p lock の有無にかかわらず、ロックを取らない 1 回のアトミックな読み取りです。\n
@@ -686,7 +696,8 @@ extern "C"
      *  @param[out]     invalid_count_out   無効にした行の総数の格納先。NULL を指定できます。
      *  @return         成功時は `CPLAT_OK` を返します。無効にした行があっても成功です。
      *  @return         引数が不正な場合は `CPLAT_ERR_INVALID_ARGUMENT` を返します。
-     *  @return         @p image が検証に失敗した場合、または行数の上限と行幅がスロットと一致しない場合は
+     *  @return         @p image の形式版が異なる場合は `CPLAT_ERR_VERSION_MISMATCH` を返します。現在の内容を維持します。
+     *  @return         それ以外の検証の失敗、または行数の上限と行幅がスロットと一致しない場合は
      *                  `CPLAT_ERR_CORRUPT_DESCRIPTOR` を返します。現在の内容を維持します。
      *
      *  内容はスロットの内部へ複製します。\n

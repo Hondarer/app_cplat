@@ -112,8 +112,8 @@ TEST_F(hashtableMoreTest, attach_rejects_invalid_buffers)
               actual_ret_small); // [確認_異常系] - 短すぎる管理領域が BUFFER_TOO_SMALL であること。
     EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
               actual_ret_magic); // [確認_異常系] - マジック不一致が CORRUPT_DESCRIPTOR であること。
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret_version); // [確認_異常系] - 版不一致が CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH,
+              actual_ret_version); // [確認_異常系] - 版不一致が VERSION_MISMATCH であること。
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
               actual_ret_small_data);      // [確認_異常系] - 短すぎるデータ領域が BUFFER_TOO_SMALL であること。
     EXPECT_EQ(CPLAT_OK, actual_ret_ok); // [確認_正常系] - 正常な attach が成功すること。

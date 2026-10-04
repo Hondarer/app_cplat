@@ -290,7 +290,8 @@ extern "C"
      *                  @ref CPLAT_ERR_CORRUPT_DESCRIPTOR 。
      *
      *  マジックと版番号、ヘッダー範囲、保存されている設定と件数を検証します。\n
-     *  保存ヘッダーが不正な場合は @ref CPLAT_ERR_CORRUPT_DESCRIPTOR です。\n
+     *  保存ヘッダーが不正な場合は @ref CPLAT_ERR_CORRUPT_DESCRIPTOR 、版番号が異なる場合は
+     *  @ref CPLAT_ERR_VERSION_MISMATCH です。\n
      *  管理領域のアラインメント不正は @ref CPLAT_ERR_INVALID_ARGUMENT 、
      *  管理領域またはデータ領域の容量不足は @ref CPLAT_ERR_BUFFER_TOO_SMALL です。\n
      *  チェインの整合性は検証しないため、必要なら直後に
@@ -312,7 +313,7 @@ extern "C"
      *  @brief          内部整合性を検証します。
      *  @param[in]      ht  対象。NULL を渡してはなりません。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
-     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_CORRUPT_DESCRIPTOR 。
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_CORRUPT_DESCRIPTOR 、@ref CPLAT_ERR_VERSION_MISMATCH 。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n

@@ -270,6 +270,38 @@ TEST_F(stringCatalogFilterApplyTest, apply_with_corrupt_image_keeps_previous_sta
               actual_state_after); // [確認_異常系] - 以前の判定状態 (常に一致) が維持されること。
 }
 
+// 形式版が異なるイメージの適用が、CPLAT_ERR_VERSION_MISMATCH を返し以前の判定状態を維持することの確認
+TEST_F(stringCatalogFilterApplyTest, apply_with_other_format_version_reports_version_mismatch)
+{
+    // Arrange
+    static unsigned char valid_image[kImageSize];
+    static unsigned char other_version_image[kImageSize];
+    string_catalog_filter_image_header image_header;
+    cplat_string_catalog_filter_state actual_state_after;
+    int actual_apply_ret;
+    ASSERT_EQ(CPLAT_OK, compile_single_line("key == 2", valid_image)); // [状態] - 正常な条件式をコンパイルする。
+    ASSERT_EQ(CPLAT_OK, compile_single_line("key == 1", other_version_image)); // [状態] - 別の内容をコンパイルする。
+    string_catalog_filter_read_image_header(other_version_image, &image_header);
+    image_header.format_version = (uint16_t)(STRING_CATALOG_FILTER_FORMAT_VERSION + 1U);
+    string_catalog_filter_write_image_header(other_version_image, &image_header);  // [状態] - 形式版を 1 つ進める。
+    string_catalog_filter_update_content_hash(other_version_image, &image_header); // [状態] - ハッシュ値を計算し直す。
+    ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_apply(slot_, valid_image, kImageSize, nullptr, 0U,
+                                                               nullptr)); // [状態] - 正常なイメージを適用する。
+
+    // Pre-Assert
+
+    // Act
+    actual_apply_ret = cplat_string_catalog_filter_slot_apply(slot_, other_version_image, kImageSize, nullptr, 0U,
+                                                              nullptr); // [手順] - 形式版が異なるイメージを適用する。
+    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
+                                                &actual_state_after); // [手順] - 適用の試行後の状態を取得する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH, actual_apply_ret); // [確認_異常系] - 形式版の不一致を返すこと。
+    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH,
+              actual_state_after); // [確認_異常系] - 以前の判定状態 (常に一致) が維持されること。
+}
+
 // ハッシュ値は正しく、構造の検査で拒否されるイメージの適用が、以前の判定状態を維持することの確認
 TEST_F(stringCatalogFilterApplyTest, apply_with_structurally_broken_image_keeps_previous_state)
 {
