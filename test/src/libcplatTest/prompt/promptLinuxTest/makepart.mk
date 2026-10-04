@@ -5,4 +5,4 @@ TEST_SRCS := \
 
 # ライブラリの指定
 # read の失敗と EINTR を注入するため mock_libc を使用する
-LIBS += mock_libc mock_cplat
+LIBS += mock_libc

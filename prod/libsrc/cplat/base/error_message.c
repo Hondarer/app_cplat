@@ -59,6 +59,12 @@ const char *cplat_result_to_string(const int result)
     case CPLAT_ERR_DUPLICATE_KEY:
         text = "duplicate key";
         break;
+    case CPLAT_ERR_IDENTITY_MISMATCH:
+        text = "identity mismatch";
+        break;
+    case CPLAT_ERR_VERSION_MISMATCH:
+        text = "version mismatch";
+        break;
     case CPLAT_ERR_OUT_OF_MEMORY:
         text = "out of memory";
         break;

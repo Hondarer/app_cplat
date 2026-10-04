@@ -598,7 +598,7 @@ Table: ハッシュ テーブル操作における用途別 cplat API
 `cplat_hashtable_add` と `cplat_hashtable_insert_direct` は、既存キーとの衝突を `CPLAT_ERR_DUPLICATE_KEY` で通知します。  
 `cplat_hashtable_insert_direct` の指定スロットが空でない場合は、`CPLAT_ERR_DUPLICATE_DEFINITION` です。
 
-`cplat_hashtable_attach` は、呼び出し引数の不正を `CPLAT_ERR_INVALID_ARGUMENT`、領域の容量不足を `CPLAT_ERR_BUFFER_TOO_SMALL`、保存ヘッダーの不正を `CPLAT_ERR_CORRUPT_DESCRIPTOR` で通知します。
+`cplat_hashtable_attach` は、呼び出し引数の不正を `CPLAT_ERR_INVALID_ARGUMENT`、領域の容量不足を `CPLAT_ERR_BUFFER_TOO_SMALL`、保存ヘッダーの版の不一致を `CPLAT_ERR_VERSION_MISMATCH`、それ以外の保存ヘッダーの不正を `CPLAT_ERR_CORRUPT_DESCRIPTOR` で通知します。
 
 `cplat_hashtable_resize` と `cplat_hashtable_rebuild_into` で変えられるのは、`capacity`、`key_storage_size`、`value_storage_size` の 3 つだけです。  
 ほかの項目が現在の設定と異なる場合は `CPLAT_ERR_INVALID_ARGUMENT` です。  

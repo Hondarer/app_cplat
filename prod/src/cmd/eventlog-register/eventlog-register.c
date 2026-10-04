@@ -182,7 +182,11 @@ static int do_install(void)
     }
 
     ret = cplat_eventlog_register_source(CPLAT_TRACER_DEFAULT_PROVIDER_NAME, message_file);
-    return report_status(ret, "登録", ret == CPLAT_OK ? message_file : NULL);
+    if (ret == CPLAT_OK)
+    {
+        return report_status(ret, "登録", message_file);
+    }
+    return report_status(ret, "登録", NULL);
 }
 
 /**

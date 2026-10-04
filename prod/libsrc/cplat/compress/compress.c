@@ -28,7 +28,7 @@
  * zlib の avail_in / avail_out は uInt のため、1 回に渡せる長さは 4 GiB 未満です。
  * see: https://zlib.net/manual.html
  */
-static uInt cplat_zlib_avail(const size_t remaining)
+static uInt zlib_avail(const size_t remaining)
 {
     if (remaining > (size_t)((uInt)-1))
     {
@@ -90,7 +90,7 @@ int cplat_compress(uint8_t *dst, size_t *dst_len, const uint8_t *src, const size
     {
         uInt avail_out;
 
-        avail_out = cplat_zlib_avail(out_remaining);
+        avail_out = zlib_avail(out_remaining);
         z.avail_out = avail_out;
         ret = deflate(&z, Z_FINISH);
         out_remaining -= (size_t)(avail_out - z.avail_out);

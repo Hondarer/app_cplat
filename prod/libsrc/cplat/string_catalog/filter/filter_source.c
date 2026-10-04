@@ -44,10 +44,14 @@ _Static_assert(sizeof(string_catalog_filter_source_header) == CPLAT_STRING_CATAL
 /** 版番号が上限を超えた場合に戻る値です。0 は未公開を表すため、0 でない最小の偶数とします。 */
 #define REVISION_WRAPPED 2ULL
 
-/** ヘッダーが、0 で埋まった未公開の領域か、本ライブラリの形式の領域であるかを返します。 */
-static bool is_known_header(const string_catalog_filter_source_header *header)
+/** ヘッダーが、0 で埋まった未公開の領域か、本ライブラリの形式の領域であるかを確かめます。 */
+static int check_known_header(const string_catalog_filter_source_header *header)
 {
-    return (header->signature == 0U) || string_catalog_filter_source_is_header_valid(header);
+    if (header->signature == 0U)
+    {
+        return CPLAT_OK;
+    }
+    return string_catalog_filter_source_check_header(header);
 }
 
 /**
@@ -73,11 +77,22 @@ static uint64_t next_revision(const uint64_t base)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-bool string_catalog_filter_source_is_header_valid(const string_catalog_filter_source_header *header)
+int string_catalog_filter_source_check_header(const string_catalog_filter_source_header *header)
 {
-    return (header->signature == STRING_CATALOG_FILTER_SOURCE_SIGNATURE) &&
-           (header->format_version == STRING_CATALOG_FILTER_SOURCE_FORMAT_VERSION) &&
-           (header->header_size == CPLAT_STRING_CATALOG_FILTER_SOURCE_HEADER_SIZE);
+    /* 署名だけでは別の形式と破損を区別できないため、署名の不一致は破損として扱う */
+    if (header->signature != STRING_CATALOG_FILTER_SOURCE_SIGNATURE)
+    {
+        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+    }
+    if (header->format_version != STRING_CATALOG_FILTER_SOURCE_FORMAT_VERSION)
+    {
+        return CPLAT_ERR_VERSION_MISMATCH;
+    }
+    if (header->header_size != CPLAT_STRING_CATALOG_FILTER_SOURCE_HEADER_SIZE)
+    {
+        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+    }
+    return CPLAT_OK;
 }
 
 /** バイト列を識別値のハッシュへ加えます。 */
@@ -127,7 +142,15 @@ int cplat_string_catalog_filter_get_catalog_id(const cplat_string_catalog *catal
     for (int entry_index = 0; entry_index < catalog->entry_count; entry_index++)
     {
         const cplat_string_catalog_entry *entry = &catalog->entries[entry_index];
-        const int argument_count = ((entry->argument_count > 0) && (entry->arguments != NULL)) ? entry->argument_count : 0;
+        int argument_count;
+        if ((entry->argument_count > 0) && (entry->arguments != NULL))
+        {
+            argument_count = entry->argument_count;
+        }
+        else
+        {
+            argument_count = 0;
+        }
 
         hash = hash_u32(hash, (uint32_t)entry->key);
         hash = hash_u32(hash, (uint32_t)entry->category);
@@ -141,7 +164,14 @@ int cplat_string_catalog_filter_get_catalog_id(const cplat_string_catalog *catal
     }
 
     /* 0 は識別値を持たない以前の版の領域を表すため、使わない */
-    *catalog_id_out = (hash == 0U) ? 1U : hash;
+    if (hash == 0U)
+    {
+        *catalog_id_out = 1U;
+    }
+    else
+    {
+        *catalog_id_out = hash;
+    }
     return CPLAT_OK;
 }
 
@@ -215,13 +245,14 @@ int cplat_string_catalog_filter_source_publish(void *source, const size_t source
             return ret;
         }
     }
-    if (!is_known_header(header))
+    ret = check_known_header(header);
+    if (ret != CPLAT_OK)
     {
         if (lock != NULL)
         {
             lock->unlock(lock->context);
         }
-        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        return ret;
     }
 
     /* 書き込みの途中で中断した領域では版番号が奇数のまま残るため、偶数へ戻して基準にする */
@@ -267,6 +298,7 @@ int cplat_string_catalog_filter_source_get_info(const void *source, const size_t
     const string_catalog_filter_source_header *header = (const string_catalog_filter_source_header *)source;
     string_catalog_filter_source_header copy;
     uint64_t revision;
+    int ret;
 
     if ((info_out == NULL) || !string_catalog_filter_source_is_region_valid(source, source_size, 0U))
     {
@@ -288,9 +320,10 @@ int cplat_string_catalog_filter_source_get_info(const void *source, const size_t
     {
         return CPLAT_ERR_BUSY;
     }
-    if (!string_catalog_filter_source_is_header_valid(&copy))
+    ret = string_catalog_filter_source_check_header(&copy);
+    if (ret != CPLAT_OK)
     {
-        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        return ret;
     }
 
     info_out->published_revision = revision;

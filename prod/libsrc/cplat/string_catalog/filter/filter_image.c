@@ -321,10 +321,14 @@ int string_catalog_filter_check_header(const void *image, const size_t image_siz
     string_catalog_filter_read_image_header(image, &header);
 
     if ((header.signature != STRING_CATALOG_FILTER_SIGNATURE) ||
-        (header.format_version != STRING_CATALOG_FILTER_FORMAT_VERSION) ||
         (header.byte_order_mark != STRING_CATALOG_FILTER_BYTE_ORDER_MARK))
     {
         return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+    }
+
+    if (header.format_version != STRING_CATALOG_FILTER_FORMAT_VERSION)
+    {
+        return CPLAT_ERR_VERSION_MISMATCH;
     }
 
     if ((header.line_width < CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MIN) ||
@@ -716,15 +720,17 @@ int string_catalog_filter_check_record(const unsigned char *record, const uint32
 int cplat_string_catalog_filter_validate(const void *image, const size_t image_size)
 {
     string_catalog_filter_image_header header;
+    int ret;
 
     if (image == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    if (string_catalog_filter_check_header(image, image_size, &header) != CPLAT_OK)
+    ret = string_catalog_filter_check_header(image, image_size, &header);
+    if (ret != CPLAT_OK)
     {
-        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        return ret;
     }
 
     for (uint32_t index = 0; index < header.line_count; index++)
@@ -751,15 +757,17 @@ int cplat_string_catalog_filter_get_info(const void *image, const size_t image_s
                                          cplat_string_catalog_filter_info *info_out)
 {
     string_catalog_filter_image_header header;
+    int ret;
 
     if ((image == NULL) || (info_out == NULL))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    if (cplat_string_catalog_filter_validate(image, image_size) != CPLAT_OK)
+    ret = cplat_string_catalog_filter_validate(image, image_size);
+    if (ret != CPLAT_OK)
     {
-        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        return ret;
     }
 
     string_catalog_filter_read_image_header(image, &header);
@@ -778,15 +786,17 @@ int cplat_string_catalog_filter_remove_line(void *image, const size_t image_size
 {
     string_catalog_filter_image_header header;
     unsigned char *target;
+    int ret;
 
     if (image == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    if (cplat_string_catalog_filter_validate(image, image_size) != CPLAT_OK)
+    ret = cplat_string_catalog_filter_validate(image, image_size);
+    if (ret != CPLAT_OK)
     {
-        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        return ret;
     }
 
     string_catalog_filter_read_image_header(image, &header);
@@ -1202,6 +1212,7 @@ int cplat_string_catalog_filter_decompile_line(const void *image, const size_t i
     string_catalog_filter_image_header header;
     string_catalog_filter_record_header record_header;
     decompile_context context;
+    int ret;
 
     if ((image == NULL) || (dest == NULL) || (dest_size == 0U))
     {
@@ -1209,9 +1220,10 @@ int cplat_string_catalog_filter_decompile_line(const void *image, const size_t i
     }
     dest[0] = '\0';
 
-    if (string_catalog_filter_check_header(image, image_size, &header) != CPLAT_OK)
+    ret = string_catalog_filter_check_header(image, image_size, &header);
+    if (ret != CPLAT_OK)
     {
-        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        return ret;
     }
     if (line_index >= header.line_count)
     {

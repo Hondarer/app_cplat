@@ -9,7 +9,7 @@ ADD_SRCS := \
 	$(MYAPP_DIR)/prod/libsrc/cplat/base/result.c
 
 # ライブラリの指定
-LIBS += mock_libc mock_cplat
+LIBS += mock_libc
 ifdef PLATFORM_LINUX
     # OpenSSL の失敗注入に mock_openssl を使う
     LIBS += mock_openssl crypto

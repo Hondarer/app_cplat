@@ -1549,12 +1549,13 @@ static int apply_image_locked(cplat_string_catalog_filter_slot *slot, const void
 
     if (image_size >= slot->image_size)
     {
-        if (cplat_string_catalog_filter_validate(target->image, slot->image_size) == CPLAT_OK)
+        ret = cplat_string_catalog_filter_validate(target->image, slot->image_size);
+        if (ret == CPLAT_OK)
         {
             string_catalog_filter_read_image_header(target->image, &header);
-            if ((header.line_capacity == slot->line_capacity) && (header.line_width == slot->line_width))
+            if ((header.line_capacity != slot->line_capacity) || (header.line_width != slot->line_width))
             {
-                ret = CPLAT_OK;
+                ret = CPLAT_ERR_CORRUPT_DESCRIPTOR;
             }
         }
     }
@@ -1616,8 +1617,9 @@ int cplat_string_catalog_filter_slot_apply(cplat_string_catalog_filter_slot *slo
  *  複製の間に公開が重なった場合は記録せず、次の判定で改めて取り込みます。
  *
  *  ファイルをマップした領域は、異なる版のライブラリや異なる行数の上限と行幅で書かれた内容を残している場合があります。
- *  ヘッダーの形式と大きさがスロットと一致しない公開内容は、フィルター オブジェクトを読まずに
- *  `CPLAT_ERR_CORRUPT_DESCRIPTOR` として記録します。
+ *  ヘッダーの形式と大きさがスロットと一致しない公開内容は、フィルター オブジェクトを読まずに記録します。
+ *  形式版の不一致は `CPLAT_ERR_VERSION_MISMATCH`、別のカタログ向けの公開内容は `CPLAT_ERR_IDENTITY_MISMATCH`、
+ *  そのほかの不一致は `CPLAT_ERR_CORRUPT_DESCRIPTOR` です。
  */
 static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
 {
@@ -1674,16 +1676,17 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
 
     /* ヘッダーも版番号の読み直しで一貫性を確かめる。一貫しない場合は次の判定で改めて取り込む */
     memcpy(&header, slot->source, sizeof(header));
-    ret = CPLAT_OK;
-    if (!string_catalog_filter_source_is_header_valid(&header) || (header.line_capacity != slot->line_capacity) ||
-        (header.line_width != slot->line_width) || (header.image_size != (uint64_t)slot->image_size))
+    ret = string_catalog_filter_source_check_header(&header);
+    if ((ret == CPLAT_OK) &&
+        ((header.line_capacity != slot->line_capacity) || (header.line_width != slot->line_width) ||
+         (header.image_size != (uint64_t)slot->image_size)))
     {
         ret = CPLAT_ERR_CORRUPT_DESCRIPTOR;
     }
-    else if (header.catalog_id != slot->catalog_id)
+    else if ((ret == CPLAT_OK) && (header.catalog_id != slot->catalog_id))
     {
         /* 別のカタログ (別の版の定義を含む) 向けの公開内容は、名前が解決できても意味が異なり得るため取り込まない */
-        ret = CPLAT_ERR_UNSUPPORTED;
+        ret = CPLAT_ERR_IDENTITY_MISMATCH;
     }
     if (ret != CPLAT_OK)
     {
@@ -1708,7 +1711,14 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
     {
         /* 適用に失敗した公開内容も記録し、同じ内容の取り込みを繰り返さない */
         slot->source_last_result = ret;
-        slot->source_last_invalid_count = (ret == CPLAT_OK) ? invalid_count : 0U;
+        if (ret == CPLAT_OK)
+        {
+            slot->source_last_invalid_count = invalid_count;
+        }
+        else
+        {
+            slot->source_last_invalid_count = 0U;
+        }
         cplat_atomic_store_u64(&slot->taken_revision, revision, CPLAT_MEMORY_ORDER_RELAXED);
     }
     (void)cplat_local_lock_unlock(slot->apply_lock);
@@ -1734,7 +1744,14 @@ int cplat_string_catalog_filter_slot_attach_source(cplat_string_catalog_filter_s
     }
 
     slot->source = source;
-    slot->source_size = (source != NULL) ? source_size : 0U;
+    if (source != NULL)
+    {
+        slot->source_size = source_size;
+    }
+    else
+    {
+        slot->source_size = 0U;
+    }
     memset(&slot->source_lock, 0, sizeof(slot->source_lock));
     if ((source != NULL) && (lock != NULL))
     {

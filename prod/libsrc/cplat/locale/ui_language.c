@@ -116,7 +116,14 @@ static int decide_from_windows(char *const tag_out, const size_t tag_size, int *
                 (language_count > 0U))
             {
                 /* 一覧の先頭要素は NUL 終端されているため、そのまま 1 つの文字列として扱えます。 */
-                converted = (cplat_wstr_to_utf8(value, sizeof(value), names) > 0) ? 1 : 0;
+                if (cplat_wstr_to_utf8(value, sizeof(value), names) > 0)
+                {
+                    converted = 1;
+                }
+                else
+                {
+                    converted = 0;
+                }
             }
             cplat_free(names);
         }
@@ -128,7 +135,14 @@ static int decide_from_windows(char *const tag_out, const size_t tag_size, int *
 
         if (GetUserDefaultLocaleName(name, (int)(sizeof(name) / sizeof(name[0]))) > 0)
         {
-            converted = (cplat_wstr_to_utf8(value, sizeof(value), name) > 0) ? 1 : 0;
+            if (cplat_wstr_to_utf8(value, sizeof(value), name) > 0)
+            {
+                converted = 1;
+            }
+            else
+            {
+                converted = 0;
+            }
         }
     }
 

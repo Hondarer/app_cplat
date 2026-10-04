@@ -1423,13 +1423,16 @@ static int compile_text(const char *text, const uint32_t line_width, unsigned ch
 static int prepare_edit(void *image, const size_t image_size, const char *text,
                         string_catalog_filter_image_header *header)
 {
+    int ret;
+
     if ((image == NULL) || (text == NULL))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
-    if (cplat_string_catalog_filter_validate(image, image_size) != CPLAT_OK)
+    ret = cplat_string_catalog_filter_validate(image, image_size);
+    if (ret != CPLAT_OK)
     {
-        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        return ret;
     }
     string_catalog_filter_read_image_header(image, header);
     return CPLAT_OK;
