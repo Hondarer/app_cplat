@@ -203,7 +203,14 @@ static int bench_fragment_storage(cplat_hashtable *ht, size_t capacity)
             return -1;
         }
     }
-    return cplat_hashtable_purge_deleted(ht) == CPLAT_OK ? 0 : -1;
+    if (cplat_hashtable_purge_deleted(ht) == CPLAT_OK)
+    {
+        return 0;
+    }
+    else
+    {
+        return -1;
+    }
 }
 
 /**
@@ -290,10 +297,24 @@ static int bench_iterate(void *arg)
             /* 回収済みのレコード番号を、同じ長さのキーと値で埋め直す。 */
             return bench_add_range(state->ht, 0, state->capacity / 2u, 2);
         case BENCH_SCENARIO_COMPACT:
-            return cplat_hashtable_compact(state->ht) == CPLAT_OK ? 0 : -1;
+            if (cplat_hashtable_compact(state->ht) == CPLAT_OK)
+            {
+                return 0;
+            }
+            else
+            {
+                return -1;
+            }
         case BENCH_SCENARIO_RESIZE:
             bench_make_config(state->capacity * 2u, &config);
-            return cplat_hashtable_resize(state->ht, &config) == CPLAT_OK ? 0 : -1;
+            if (cplat_hashtable_resize(state->ht, &config) == CPLAT_OK)
+            {
+                return 0;
+            }
+            else
+            {
+                return -1;
+            }
         case BENCH_SCENARIO_COUNT:
         default:
             return -1;
@@ -327,7 +348,14 @@ static int bench_run_case(FILE *csv, const bench_hashtable_case *item)
         return -1;
     }
 
-    per_unit_ns = (units != 0) ? ((double)timing.median_ns / (double)units) : 0.0;
+    if (units != 0)
+    {
+        per_unit_ns = ((double)timing.median_ns / (double)units);
+    }
+    else
+    {
+        per_unit_ns = 0.0;
+    }
     (void)printf("%10zu  %-8s  %14.3f  %12.1f\n", item->capacity, bench_scenario_name(item->scenario),
                  (double)timing.median_ns / 1000000.0, per_unit_ns);
     if (csv != NULL)
@@ -403,7 +431,14 @@ int main(int argc, char **argv)
         (void)fprintf(stderr, "max capacity must not be negative.\n");
         return EXIT_FAILURE;
     }
-    max_capacity = (options.max_capacity > 0) ? (size_t)options.max_capacity : 16384u;
+    if (options.max_capacity > 0)
+    {
+        max_capacity = (size_t)options.max_capacity;
+    }
+    else
+    {
+        max_capacity = 16384u;
+    }
 
     if (options.csv_path != NULL)
     {
@@ -439,5 +474,12 @@ int main(int argc, char **argv)
     {
         (void)fclose(csv);
     }
-    return (failures == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
+    if (failures == 0)
+    {
+        return EXIT_SUCCESS;
+    }
+    else
+    {
+        return EXIT_FAILURE;
+    }
 }

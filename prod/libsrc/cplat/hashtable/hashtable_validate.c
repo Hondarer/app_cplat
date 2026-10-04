@@ -265,5 +265,12 @@ int cplat_hashtable_validate(const cplat_hashtable *ht)
     }
     result = hashtable_validate_impl(ht, visited);
     cplat_free(visited);
-    return (result == 0) ? CPLAT_OK : CPLAT_ERR_CORRUPT_DESCRIPTOR;
+    if (result == 0)
+    {
+        return CPLAT_OK;
+    }
+    else
+    {
+        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+    }
 }

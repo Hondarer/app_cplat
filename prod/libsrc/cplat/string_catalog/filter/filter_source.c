@@ -127,7 +127,15 @@ int cplat_string_catalog_filter_get_catalog_id(const cplat_string_catalog *catal
     for (int entry_index = 0; entry_index < catalog->entry_count; entry_index++)
     {
         const cplat_string_catalog_entry *entry = &catalog->entries[entry_index];
-        const int argument_count = ((entry->argument_count > 0) && (entry->arguments != NULL)) ? entry->argument_count : 0;
+        int argument_count;
+        if ((entry->argument_count > 0) && (entry->arguments != NULL))
+        {
+            argument_count = entry->argument_count;
+        }
+        else
+        {
+            argument_count = 0;
+        }
 
         hash = hash_u32(hash, (uint32_t)entry->key);
         hash = hash_u32(hash, (uint32_t)entry->category);
@@ -141,7 +149,14 @@ int cplat_string_catalog_filter_get_catalog_id(const cplat_string_catalog *catal
     }
 
     /* 0 は識別値を持たない以前の版の領域を表すため、使わない */
-    *catalog_id_out = (hash == 0U) ? 1U : hash;
+    if (hash == 0U)
+    {
+        *catalog_id_out = 1U;
+    }
+    else
+    {
+        *catalog_id_out = hash;
+    }
     return CPLAT_OK;
 }
 

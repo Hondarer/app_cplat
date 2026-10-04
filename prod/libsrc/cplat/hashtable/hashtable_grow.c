@@ -218,8 +218,22 @@ static int hashtable_growth_target(size_t current, size_t minimum, size_t maximu
         *target_out = current;
         return 1;
     }
-    doubled = (current > (SIZE_MAX / 2u)) ? SIZE_MAX : current * 2u;
-    target = (doubled < minimum) ? minimum : doubled;
+    if (current > (SIZE_MAX / 2u))
+    {
+        doubled = SIZE_MAX;
+    }
+    else
+    {
+        doubled = current * 2u;
+    }
+    if (doubled < minimum)
+    {
+        target = minimum;
+    }
+    else
+    {
+        target = doubled;
+    }
     if ((maximum != 0) && (target > maximum))
     {
         target = maximum;
@@ -280,7 +294,14 @@ static int hashtable_stage_growth(const cplat_hashtable *src, const struct hasht
     if (ret != CPLAT_OK)
     {
         cplat_free(keep);
-        return (ret == CPLAT_ERR_INVALID_ARGUMENT) ? pressure_error : ret;
+        if (ret == CPLAT_ERR_INVALID_ARGUMENT)
+        {
+            return pressure_error;
+        }
+        else
+        {
+            return ret;
+        }
     }
     ret = hashtable_apply_migration(src, staged, keep);
     cplat_free(keep);

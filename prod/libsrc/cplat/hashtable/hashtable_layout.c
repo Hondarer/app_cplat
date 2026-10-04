@@ -55,7 +55,15 @@ static int mul_checked(size_t a, size_t b, size_t *product_out)
 int hashtable_align_up_checked(size_t offset, size_t alignment, size_t *aligned_out)
 {
     size_t rem = offset % alignment;
-    size_t pad = (rem == 0) ? 0 : (alignment - rem);
+    size_t pad;
+    if (rem == 0)
+    {
+        pad = 0;
+    }
+    else
+    {
+        pad = (alignment - rem);
+    }
 
     return hashtable_add_checked(offset, pad, aligned_out);
 }
@@ -94,7 +102,14 @@ static size_t entry_key_offset(const cplat_hashtable_config *config)
 
 static size_t key_slot_size(const cplat_hashtable_config *config)
 {
-    return (hashtable_field_is_variable(config->key_type) != 0) ? sizeof(struct hashtable_string_ref) : config->key_size;
+    if (hashtable_field_is_variable(config->key_type) != 0)
+    {
+        return sizeof(struct hashtable_string_ref);
+    }
+    else
+    {
+        return config->key_size;
+    }
 }
 
 /**

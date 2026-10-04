@@ -66,10 +66,15 @@ static int arena_free_block_adjoins(const struct hashtable_arena *arena, uint64_
     {
         return 0;
     }
-    return (((arena->free_list[index].offset + arena->free_list[index].length) == own_offset) ||
-            (arena->free_list[index].offset == (own_offset + own_length)))
-               ? 1
-               : 0;
+    if (((arena->free_list[index].offset + arena->free_list[index].length) == own_offset) ||
+        (arena->free_list[index].offset == (own_offset + own_length)))
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 /**
@@ -92,7 +97,15 @@ static int arena_find_fit(const struct hashtable_arena *arena, uint64_t own_offs
     uint64_t merged_offset = own_offset;
     uint64_t merged_length = own_length;
     uint64_t i;
-    int merged_pending = (own_length != 0) ? 1 : 0;
+    int merged_pending;
+    if (own_length != 0)
+    {
+        merged_pending = 1;
+    }
+    else
+    {
+        merged_pending = 0;
+    }
 
     if (own_length != 0)
     {
@@ -215,8 +228,22 @@ static void arena_give(struct hashtable_arena *arena, size_t offset, size_t leng
     {
         i++;
     }
-    merge_prev = ((i > 0u) && ((arena->free_list[i - 1u].offset + arena->free_list[i - 1u].length) == start)) ? 1 : 0;
-    merge_next = ((i < count) && (arena->free_list[i].offset == end)) ? 1 : 0;
+    if ((i > 0u) && ((arena->free_list[i - 1u].offset + arena->free_list[i - 1u].length) == start))
+    {
+        merge_prev = 1;
+    }
+    else
+    {
+        merge_prev = 0;
+    }
+    if ((i < count) && (arena->free_list[i].offset == end))
+    {
+        merge_next = 1;
+    }
+    else
+    {
+        merge_next = 0;
+    }
     if ((merge_prev != 0) && (merge_next != 0))
     {
         arena->free_list[i - 1u].length += (uint64_t)length + arena->free_list[i].length;

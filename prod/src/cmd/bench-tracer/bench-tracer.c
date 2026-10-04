@@ -164,9 +164,17 @@ static int measure_files(char *executable, char *path, int processes, int messag
         cplat_process_dispose(children[index]);
     }
     elapsed = monotonic_ns() - begin;
-    printf("file_%s,processes=%d,messages=%d,total_ns=%llu,ns_per_message=%llu\n",
-           buffered != 0 ? "buffered" : "durable", processes, processes * messages,
-           (unsigned long long)elapsed,
+    const char *mode;
+    if (buffered != 0)
+    {
+        mode = "buffered";
+    }
+    else
+    {
+        mode = "durable";
+    }
+    printf("file_%s,processes=%d,messages=%d,total_ns=%llu,ns_per_message=%llu\n", mode, processes,
+           processes * messages, (unsigned long long)elapsed,
            (unsigned long long)(elapsed / ((uint64_t)processes * (uint64_t)messages)));
     free(children);
     return failed;
