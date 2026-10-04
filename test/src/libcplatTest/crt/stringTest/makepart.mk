@@ -3,4 +3,4 @@ TEST_SRCS := \
 	$(MYAPP_DIR)/prod/libsrc/cplat/crt/string.c
 
 # ライブラリの指定
-LIBS += mock_libc mock_cplat
+LIBS += mock_libc
