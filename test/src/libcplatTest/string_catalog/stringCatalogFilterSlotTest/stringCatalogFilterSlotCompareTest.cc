@@ -572,6 +572,82 @@ TEST_F(stringCatalogFilterSlotCompareTest, type_mismatched_predicate_is_always_f
     EXPECT_EQ(0, actual_matched);    // [確認_正常系] - 判定結果が偽であること。
 }
 
+// 型が合わない != の比較要素も偽となり、どの項目でも成立しない行として無効になることの確認
+TEST_F(stringCatalogFilterSlotCompareTest, type_mismatched_not_equal_predicate_is_false)
+{
+    // Arrange
+    std::size_t actual_invalid = 0U;
+    cplat_string_catalog_filter_line_error actual_error = CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE;
+    static unsigned char image[kImageSize];
+
+    ASSERT_EQ(CPLAT_OK, compile_single_line("arg.job_name != 1",
+                                            image)); // [状態] - STRING の引数を整数定数と != で比較する条件式をコンパイルする。
+
+    // Pre-Assert
+
+    // Act
+    ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_apply(slot_, image, kImageSize, nullptr, 0U,
+                                                               &actual_invalid)); // [手順] - 条件式を適用する。
+    ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_get_line_error(slot_, 0U,
+                                                                        &actual_error)); // [手順] - 行の状態を取得する。
+
+    // Assert
+    EXPECT_EQ(1U, actual_invalid); // [確認_正常系] - != でも型が合わないため偽となり、行を無効にすること。
+    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NEVER_SATISFIABLE,
+              actual_error); // [確認_正常系] - 原因が成立し得ない条件であること。
+}
+
+// 型が合わない比較要素は偽となり、否定すると真になることの確認
+TEST_F(stringCatalogFilterSlotCompareTest, negated_type_mismatched_predicate_is_true)
+{
+    // Arrange
+    char dest[CPLAT_STRING_CATALOG_TEXT_MAX];
+    cplat_string_catalog_filter_state actual_state;
+    int actual_matched = -1;
+    int actual_ret;
+
+    apply_filter("!(arg.job_name == 1)"); // [状態] - 型が合わない比較要素を否定する条件式を適用する。
+
+    // Pre-Assert
+
+    // Act
+    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
+                                                &actual_state); // [手順] - 事前計算状態を取得する。
+    actual_ret = cplat_string_catalog_filter_slot_format(
+        slot_, dest, sizeof(dest), &actual_matched, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, (uint32_t)1, (uint64_t)1, "job",
+        (int32_t)0, FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - 判定と書式展開を行う。
+
+    // Assert
+    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH,
+              actual_state);         // [確認_正常系] - 偽の比較要素の否定により、常に一致となること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_NE(0, actual_matched);    // [確認_正常系] - 判定結果が真であること。
+}
+
+// 項目に無い引数を参照する比較要素は != でも偽となり、否定すると真になることの確認
+TEST_F(stringCatalogFilterSlotCompareTest, missing_argument_predicate_is_false_and_negation_is_true)
+{
+    // Arrange
+    cplat_string_catalog_filter_state actual_not_equal_state;
+    cplat_string_catalog_filter_state actual_negated_state;
+
+    // Pre-Assert
+
+    // Act
+    apply_filter("arg.job_name != \"x\""); // [手順] - job_name を != で比較する条件式を適用する。
+    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_WORKER_STARTED,
+                                                &actual_not_equal_state); // [手順] - job_name の無い項目の状態を取得する。
+    apply_filter("!(arg.job_name == \"x\")"); // [手順] - job_name の比較を否定する条件式を適用する。
+    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_WORKER_STARTED,
+                                                &actual_negated_state); // [手順] - job_name の無い項目の状態を取得する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_NEVER_MATCH,
+              actual_not_equal_state); // [確認_正常系] - 引数が無い項目では != の比較要素も偽となること。
+    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH,
+              actual_negated_state); // [確認_正常系] - 偽の比較要素の否定により、常に一致となること。
+}
+
 // 一致の有無にかかわらず dest へ文字列が組み立てられ、戻り値が CPLAT_OK であることの確認
 TEST_F(stringCatalogFilterSlotCompareTest, destination_is_formatted_regardless_of_match_result)
 {
