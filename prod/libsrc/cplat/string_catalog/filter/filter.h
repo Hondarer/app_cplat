@@ -330,6 +330,30 @@ extern "C"
     int string_catalog_filter_describe_record(const string_catalog_filter_describe_source *source, char *dest,
                                               size_t dest_size);
 
+    /**
+     *  @brief          型区分が混在する引数の代表です。
+     */
+    typedef struct string_catalog_filter_mixed_argument
+    {
+        const cplat_string_catalog_entry *string_entry; /**< 文字列の引数を持つ最初の項目。 */
+        const cplat_string_catalog_entry *other_entry;  /**< 文字列以外の引数を持つ最初の項目。 */
+        int string_argument;                            /**< @ref string_entry での引数の位置。 */
+        int other_argument;                             /**< @ref other_entry での引数の位置。 */
+    } string_catalog_filter_mixed_argument;
+
+    /**
+     *  @brief          引数名が、カタログ内で文字列の項目と文字列以外の項目の両方に現れるかを調べます。
+     *  @param[in]      catalog   カタログ。
+     *  @param[in]      name      引数名。
+     *  @param[out]     mixed_out 両方に現れる場合の、それぞれの区分の最初の項目と引数の位置。
+     *  @return         両方に現れる場合は true。
+     *
+     *  項目ごとに、適用時の名前の解決と同じく最初に名前が一致した引数を対象とします。\n
+     *  ポインターは null 以外との比較で符号なしの整数として扱うため、文字列以外に含めます。
+     */
+    bool string_catalog_filter_find_mixed_argument(const cplat_string_catalog *catalog, const char *name,
+                                                   string_catalog_filter_mixed_argument *mixed_out);
+
     /* ===== コンパイル ===== */
 
     /**

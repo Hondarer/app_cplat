@@ -173,6 +173,43 @@ extern "C"
     } cplat_string_catalog_filter_diagnostic;
 
     /**
+     *  @brief          型が合わない比較要素の警告の種別です。
+     *
+     *  警告は行を無効にせず、判定の結果を変えません。\n
+     *  型が合わない比較要素は、`!=` を含めて偽として判定します。
+     */
+    typedef enum cplat_string_catalog_filter_warning_kind
+    {
+        CPLAT_STRING_CATALOG_FILTER_WARNING_NONE = 0, /**< 警告なし。 */
+        CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH =
+            1, /**< 比較要素の定数が、項目の引数の型と比較できない。その項目では比較要素が偽になる。 */
+        CPLAT_STRING_CATALOG_FILTER_WARNING_MIXED_ARGUMENT_TYPES =
+            2 /**< 名前で参照した引数が、カタログ内で文字列の項目と文字列以外の項目の両方に現れる。 */
+    } cplat_string_catalog_filter_warning_kind;
+
+    /**
+     *  @brief          型が合わない比較要素の警告です。
+     *
+     *  @ref CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH では、
+     *  @ref cplat_string_catalog_filter_warning::string_key が型の合わない項目です。
+     *  @ref cplat_string_catalog_filter_warning::other_argument_index は -1 です。\n
+     *  @ref CPLAT_STRING_CATALOG_FILTER_WARNING_MIXED_ARGUMENT_TYPES では、
+     *  @ref cplat_string_catalog_filter_warning::string_key が文字列の引数を持つ項目の 1 つ、
+     *  @ref cplat_string_catalog_filter_warning::other_string_key が文字列以外の引数を持つ項目の 1 つです。\n
+     *  引数名は、項目と引数の位置からカタログを参照して取得します。
+     */
+    typedef struct cplat_string_catalog_filter_warning
+    {
+        uint32_t line_index;      /**< フィルター オブジェクト内の行の位置 (0 起点)。 */
+        uint32_t predicate_index; /**< 行内の比較要素を条件式に現れる順に数えた位置 (0 起点)。 */
+        cplat_string_catalog_filter_warning_kind kind; /**< 種別。 */
+        int string_key;           /**< 項目の文字列キー。 */
+        int argument_index;       /**< @ref cplat_string_catalog_filter_warning::string_key の項目での引数の位置。 */
+        int other_string_key;     /**< もう一方の項目の文字列キー。使用しない場合は string_key と同じ値。 */
+        int other_argument_index; /**< もう一方の項目での引数の位置。使用しない場合は -1。 */
+    } cplat_string_catalog_filter_warning;
+
+    /**
      *  @brief          フィルター オブジェクトのヘッダーから読み取った情報です。
      */
     typedef struct cplat_string_catalog_filter_info
@@ -721,6 +758,41 @@ extern "C"
         cplat_string_catalog_filter_diagnostic *diagnostics, size_t diagnostic_capacity, size_t *invalid_count_out);
 
     /**
+     *  @brief          フィルター オブジェクトを適用せずに確かめ、型が合わない比較要素を警告として返します。
+     *  @param[in,out]  slot                フィルター スロット。判定に使う内容は変わりません。
+     *  @param[in]      image               フィルター オブジェクトの先頭。
+     *  @param[in]      image_size          @p image のバイト数。
+     *  @param[out]     diagnostics         無効にする行の診断情報の格納先。NULL を指定できます。
+     *  @param[in]      diagnostic_capacity @p diagnostics の要素数。
+     *  @param[out]     invalid_count_out   無効にする行の総数の格納先。NULL を指定できます。
+     *  @param[out]     warnings            警告の格納先。NULL を指定できます。
+     *  @param[in]      warning_capacity    @p warnings の要素数。
+     *  @param[out]     warning_count_out   警告の総数の格納先。@p warning_capacity を超える場合も総数を格納します。
+     *                                      NULL を指定できます。
+     *  @return         戻り値は @ref cplat_string_catalog_filter_slot_apply と同じです。警告があっても成功です。
+     *
+     *  @ref cplat_string_catalog_filter_slot_apply と同じ手順で検証、名前の解決、事前計算を行い、
+     *  @p diagnostics には適用した場合と同じ内容を返します。\n
+     *  判定が参照する内容を切り替えないため、判定と、適用中の条件の説明や状態の取得には影響しません。
+     *
+     *  警告の対象は、名前を解決できた行です。成立し得ない条件として無効にする行も含みます。\n
+     *  - 比較要素の定数が、項目の引数の型と比較できない場合は、
+     *    行、比較要素、項目の組ごとに @ref CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH を返します。
+     *    項目に引数が無い場合は対象外です。
+     *  - 名前で参照した引数が、カタログ内で文字列の項目と文字列以外 (整数、浮動小数点数、ポインター) の項目に分かれる場合は、
+     *    行と引数名の組ごとに @ref CPLAT_STRING_CATALOG_FILTER_WARNING_MIXED_ARGUMENT_TYPES を返します。
+     *
+     *  `has` は引数の有無だけを調べるため、どちらの警告の対象にもしません。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。適用と、ソース領域からの取り込みとは直列化します。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_string_catalog_filter_slot_check(
+        cplat_string_catalog_filter_slot *slot, const void *image, size_t image_size,
+        cplat_string_catalog_filter_diagnostic *diagnostics, size_t diagnostic_capacity, size_t *invalid_count_out,
+        cplat_string_catalog_filter_warning *warnings, size_t warning_capacity, size_t *warning_count_out);
+
+    /**
      *  @brief          適用中のフィルター オブジェクトを複製して取り出します。
      *  @param[in]      slot       フィルター スロット。
      *  @param[out]     image_out  複製の格納先。
@@ -772,7 +844,9 @@ extern "C"
      *  分類値は値そのもので表し、意味を解釈しません。
      *  作成時に分類値の名前を指定した場合は、条件を満たす分類値の名前を列挙して表します。\n
      *  行が 1 つの項目に限定される場合は、その項目の引数の説明を使います。\n
-     *  複数の項目が対象の場合は、引数を持つすべての項目で説明が一致するときに限り、その説明を使います。
+     *  複数の項目が対象の場合は、引数を持つすべての項目で説明が一致するときに限り、その説明を使います。\n
+     *  比較に使う引数の名前が、カタログ内で文字列の項目と文字列以外の項目に分かれる場合は、
+     *  意図した判定結果にならない可能性があることを、引数名ごとに末尾へ注記します。`has` だけで参照する引数は対象外です。
      *
      *  文型は、`cplat_string_catalog_get_language` が日本語を返す場合は日本語、それ以外はニュートラル言語です。
      *

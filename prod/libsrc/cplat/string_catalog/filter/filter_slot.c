@@ -1490,6 +1490,27 @@ const cplat_string_catalog *cplat_string_catalog_filter_slot_get_catalog(const c
 }
 
 /**
+ *  @brief          未使用の面へ複製したフィルター オブジェクトを検証し、行数の上限と行幅がスロットと一致することを確かめます。
+ *  @return         `CPLAT_OK`、形式版が異なる場合は `CPLAT_ERR_VERSION_MISMATCH`、それ以外は `CPLAT_ERR_CORRUPT_DESCRIPTOR`。
+ */
+static int validate_copied_image(const cplat_string_catalog_filter_slot *slot, const filter_plane *target)
+{
+    string_catalog_filter_image_header header;
+    int ret;
+
+    ret = cplat_string_catalog_filter_validate(target->image, slot->image_size);
+    if (ret == CPLAT_OK)
+    {
+        string_catalog_filter_read_image_header(target->image, &header);
+        if ((header.line_capacity != slot->line_capacity) || (header.line_width != slot->line_width))
+        {
+            ret = CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        }
+    }
+    return ret;
+}
+
+/**
  *  @brief          apply_lock を保持した状態で、フィルター オブジェクトを未使用の面へ構築して切り替えます。
  *  @param[in,out]  slot                フィルター スロット。
  *  @param[in]      image               適用するフィルター オブジェクト。
@@ -1510,7 +1531,6 @@ static int apply_image_locked(cplat_string_catalog_filter_slot *slot, const void
                               size_t *invalid_count_out, const void *source, const uint64_t revision,
                               const cplat_string_catalog_filter_source_lock *writer_lock, bool *torn_out)
 {
-    string_catalog_filter_image_header header;
     filter_plane *target;
     filter_plane *current;
     size_t invalid_count = 0U;
@@ -1549,15 +1569,7 @@ static int apply_image_locked(cplat_string_catalog_filter_slot *slot, const void
 
     if (image_size >= slot->image_size)
     {
-        ret = cplat_string_catalog_filter_validate(target->image, slot->image_size);
-        if (ret == CPLAT_OK)
-        {
-            string_catalog_filter_read_image_header(target->image, &header);
-            if ((header.line_capacity != slot->line_capacity) || (header.line_width != slot->line_width))
-            {
-                ret = CPLAT_ERR_CORRUPT_DESCRIPTOR;
-            }
-        }
+        ret = validate_copied_image(slot, target);
     }
 
     if (ret == CPLAT_OK)
@@ -1602,6 +1614,200 @@ int cplat_string_catalog_filter_slot_apply(cplat_string_catalog_filter_slot *slo
     ret = apply_image_locked(slot, image, image_size, diagnostics, diagnostic_capacity, invalid_count_out, NULL, 0U,
                              NULL, &torn);
     (void)cplat_local_lock_unlock(slot->apply_lock);
+    return ret;
+}
+
+/* ===== 型が合わない比較要素の警告 ===== */
+
+/** 警告を 1 件数え、容量までを格納します。 */
+static void add_warning(cplat_string_catalog_filter_warning *warnings, const size_t capacity, size_t *count,
+                        const cplat_string_catalog_filter_warning *warning)
+{
+    if ((warnings != NULL) && (*count < capacity))
+    {
+        warnings[*count] = *warning;
+    }
+    (*count)++;
+}
+
+/**
+ *  @brief          構築した面の 1 行について、型の不一致と型区分の混在の警告を集めます。
+ *
+ *  名前の解決が済んだ行だけを対象とします。項目ごとの引数の位置は、適用時に解決した対応表を使います。\n
+ *  比較の可否は、判定と同じ @ref is_argument_comparable で決めます。
+ */
+static void collect_line_warnings(const cplat_string_catalog_filter_slot *slot, filter_plane *plane,
+                                  const uint32_t line_index, cplat_string_catalog_filter_warning *warnings,
+                                  const size_t capacity, size_t *count)
+{
+    const unsigned char *record =
+        string_catalog_filter_record_address_const(plane->image, slot->record_size, line_index);
+    const unsigned char *constants = string_catalog_filter_record_constants(record, slot->line_width);
+    const int8_t *maps = argument_maps_of(slot, plane, line_index);
+    const char *noted[CPLAT_STRING_CATALOG_FILTER_ARGUMENT_REFERENCE_MAX];
+    size_t noted_count = 0U;
+    uint32_t predicate_index = 0U;
+    string_catalog_filter_record_header header;
+    string_catalog_filter_instruction instruction;
+    string_catalog_filter_constant constant;
+    cplat_string_catalog_filter_warning warning;
+
+    string_catalog_filter_read_record_header(record, &header);
+    for (uint32_t index = 0; index < header.instruction_count; index++)
+    {
+        const char *name = NULL;
+        uint32_t offset;
+
+        string_catalog_filter_read_instruction(record, index, &instruction);
+        if (instruction.opcode != (uint8_t)STRING_CATALOG_FILTER_OPCODE_PREDICATE)
+        {
+            continue;
+        }
+        predicate_index++;
+        if (((instruction.field != (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME) &&
+             (instruction.field != (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_INDEX)) ||
+            (instruction.operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_HAS))
+        {
+            continue;
+        }
+
+        memset(&warning, 0, sizeof(warning));
+        warning.line_index = line_index;
+        warning.predicate_index = predicate_index - 1U;
+
+        /* 名前で指定した引数では、比較対象は引数名の定数の直後から並ぶ */
+        offset = instruction.operand;
+        if (instruction.field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME)
+        {
+            (void)string_catalog_filter_read_constant(constants, header.constant_size, offset, &constant);
+            name = constant.text;
+            offset = constant.next_offset;
+        }
+        (void)string_catalog_filter_read_constant(constants, header.constant_size, offset, &constant);
+
+        /* 型区分の混在は、引数名ごとに最初の比較要素で 1 回だけ警告する */
+        if (name != NULL)
+        {
+            string_catalog_filter_mixed_argument mixed;
+            bool is_noted = false;
+
+            for (size_t other = 0; other < noted_count; other++)
+            {
+                if (strcmp(noted[other], name) == 0)
+                {
+                    is_noted = true;
+                    break;
+                }
+            }
+            if (!is_noted && (noted_count < CPLAT_STRING_CATALOG_FILTER_ARGUMENT_REFERENCE_MAX) &&
+                string_catalog_filter_find_mixed_argument(slot->catalog, name, &mixed))
+            {
+                noted[noted_count] = name;
+                noted_count++;
+                warning.kind = CPLAT_STRING_CATALOG_FILTER_WARNING_MIXED_ARGUMENT_TYPES;
+                warning.string_key = mixed.string_entry->key;
+                warning.argument_index = mixed.string_argument;
+                warning.other_string_key = mixed.other_entry->key;
+                warning.other_argument_index = mixed.other_argument;
+                add_warning(warnings, capacity, count, &warning);
+            }
+        }
+
+        for (size_t entry_index = 0; entry_index < slot->entry_count; entry_index++)
+        {
+            const cplat_string_catalog_entry *entry = &slot->catalog->entries[entry_index];
+            int argument_index = -1;
+
+            if (instruction.field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME)
+            {
+                argument_index =
+                    maps[(entry_index * CPLAT_STRING_CATALOG_FILTER_ARGUMENT_REFERENCE_MAX) + instruction.argument];
+            }
+            else if (((int)instruction.argument < entry->argument_count) &&
+                     (entry->arguments[instruction.argument].kind != CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED))
+            {
+                argument_index = instruction.argument;
+            }
+            else
+            {
+                /* 項目に引数が無い。型の不一致の対象外 */
+            }
+
+            if ((argument_index < 0) ||
+                is_argument_comparable(class_of_argument(entry->arguments[argument_index].kind), constant.header.kind))
+            {
+                continue;
+            }
+            warning.kind = CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH;
+            warning.string_key = entry->key;
+            warning.argument_index = argument_index;
+            warning.other_string_key = entry->key;
+            warning.other_argument_index = -1;
+            add_warning(warnings, capacity, count, &warning);
+        }
+    }
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_string_catalog_filter_slot_check(cplat_string_catalog_filter_slot *slot, const void *image,
+                                           const size_t image_size, cplat_string_catalog_filter_diagnostic *diagnostics,
+                                           const size_t diagnostic_capacity, size_t *invalid_count_out,
+                                           cplat_string_catalog_filter_warning *warnings, const size_t warning_capacity,
+                                           size_t *warning_count_out)
+{
+    filter_plane *target;
+    size_t invalid_count = 0U;
+    size_t warning_count = 0U;
+    int ret;
+
+    if ((slot == NULL) || (image == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = cplat_local_lock_lock(slot->apply_lock, CPLAT_SYNC_WAIT_FOREVER);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    /* 未使用の面へ構築し、切り替えない。未使用の面は適用のたびに作り直すため、残った内容は判定に影響しない */
+    target = &slot->planes[1 - slot->active_plane];
+    ret = CPLAT_ERR_CORRUPT_DESCRIPTOR;
+    if (image_size >= slot->image_size)
+    {
+        memcpy(target->image, image, slot->image_size);
+        ret = validate_copied_image(slot, target);
+    }
+
+    if (ret == CPLAT_OK)
+    {
+        build_plane(slot, target, &slot->planes[slot->active_plane], diagnostics, diagnostic_capacity,
+                    &invalid_count);
+        for (uint32_t line_index = 0; line_index < target->line_count; line_index++)
+        {
+            /* 成立し得ない行は、型の不一致が原因であり得るため対象に含める */
+            if ((target->line_errors[line_index] == CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE) ||
+                (target->line_errors[line_index] == CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NEVER_SATISFIABLE))
+            {
+                collect_line_warnings(slot, target, line_index, warnings, warning_capacity, &warning_count);
+            }
+        }
+    }
+    (void)cplat_local_lock_unlock(slot->apply_lock);
+
+    if (ret == CPLAT_OK)
+    {
+        if (invalid_count_out != NULL)
+        {
+            *invalid_count_out = invalid_count;
+        }
+        if (warning_count_out != NULL)
+        {
+            *warning_count_out = warning_count;
+        }
+    }
     return ret;
 }
 

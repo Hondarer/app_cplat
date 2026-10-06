@@ -702,6 +702,11 @@
                  int(CPLAT_API *)(cplat_string_catalog_filter_slot * slot, const void *image, size_t image_size, \
                                   cplat_string_catalog_filter_diagnostic *diagnostics, size_t diagnostic_capacity, \
                                   size_t *invalid_count_out)) \
+    EXPORT_ENTRY(cplat_string_catalog_filter_slot_check, \
+                 int(CPLAT_API *)(cplat_string_catalog_filter_slot * slot, const void *image, size_t image_size, \
+                                  cplat_string_catalog_filter_diagnostic *diagnostics, size_t diagnostic_capacity, \
+                                  size_t *invalid_count_out, cplat_string_catalog_filter_warning *warnings, \
+                                  size_t warning_capacity, size_t *warning_count_out)) \
     EXPORT_ENTRY(cplat_string_catalog_filter_slot_snapshot, \
                  int(CPLAT_API *)(cplat_string_catalog_filter_slot * slot, void *image_out, size_t image_size)) \
     EXPORT_ENTRY(cplat_string_catalog_filter_slot_get_line_error, \

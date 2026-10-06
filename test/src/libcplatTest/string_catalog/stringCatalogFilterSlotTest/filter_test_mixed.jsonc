@@ -1,0 +1,92 @@
+// 文字列カタログの定義です。
+// このファイルから gen/ 配下の生成物が出力されます。生成物を直接編集しないでください。
+// 生成器は app/cplat/bin_internal/string_catalog_gen.py です。このテストの makepart.mk の構文解析時に実行されます。
+//
+// 型が合わない比較要素の警告と注記を確かめるための、トレース種別のカタログです。
+// 同じ名前の引数 value を、項目によって文字列、符号付き整数、ポインターとして定義しています。
+{
+    "kind": "trace",
+    "settings": "catalog_settings.jsonc",
+    "author": "Tetsuo Honda",
+    "date": "2026/10/07",
+    "version": "0.1.0",
+
+    "strings": [
+        {
+            "key": "FILTER_TEST_MIXED_KEY_TEXT_VALUE",
+            "id": "FILTER_TEST_MIXED_ID_0001",
+            "level": "INFO",
+            "brief": "文字列の値。",
+            "details": "value を文字列として持つ項目です。",
+            "arguments": [
+                {
+                    "kind": "STRING",
+                    "name": "value",
+                    "description": "文字列の値。"
+                },
+                {
+                    "kind": "UINT32",
+                    "name": "count",
+                    "description": "件数。"
+                }
+            ],
+            "texts": {
+                "neutral": "Text value {0} count={1}.",
+                "japanese": "文字列の値 {0}、件数={1}。"
+            },
+            "notes": {
+                "neutral": "arg.value is a string in this entry.",
+                "japanese": "この項目の arg.value は文字列です。"
+            }
+        },
+        {
+            "key": "FILTER_TEST_MIXED_KEY_NUMBER_VALUE",
+            "id": "FILTER_TEST_MIXED_ID_0002",
+            "level": "INFO",
+            "brief": "数値の値。",
+            "details": "value を符号付き整数として持つ項目です。",
+            "arguments": [
+                {
+                    "kind": "INT32",
+                    "name": "value",
+                    "description": "数値の値。"
+                },
+                {
+                    "kind": "UINT64",
+                    "name": "count",
+                    "description": "件数。"
+                }
+            ],
+            "texts": {
+                "neutral": "Number value {0} count={1}.",
+                "japanese": "数値の値 {0}、件数={1}。"
+            },
+            "notes": {
+                "neutral": "arg.value is a signed integer in this entry.",
+                "japanese": "この項目の arg.value は符号付き整数です。"
+            }
+        },
+        {
+            "key": "FILTER_TEST_MIXED_KEY_POINTER_VALUE",
+            "id": "FILTER_TEST_MIXED_ID_0003",
+            "level": "INFO",
+            "brief": "ポインターの値。",
+            "details": "value をポインターとして持つ項目です。",
+            "arguments": [
+                {
+                    "kind": "POINTER",
+                    "name": "value",
+                    "description": "ポインターの値。"
+                }
+            ],
+            "texts": {
+                "neutral": "Pointer value {0}.",
+                "japanese": "ポインターの値 {0}。"
+            },
+            "notes": {
+                "neutral": "arg.value is a pointer in this entry.",
+                "japanese": "この項目の arg.value はポインターです。"
+            }
+        }
+    ]
+}

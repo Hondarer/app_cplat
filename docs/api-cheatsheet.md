@@ -670,6 +670,7 @@ ID (`cplat_string_catalog_entry::id`) と分類値 (`cplat_string_catalog_entry:
 | スロットの作成と破棄 | `cplat_string_catalog_filter_slot_create` / `cplat_string_catalog_filter_slot_dispose` |
 | スロットを作成したカタログの取得 | `cplat_string_catalog_filter_slot_get_catalog` |
 | フィルター オブジェクトの適用と取得 | `cplat_string_catalog_filter_slot_apply` / `cplat_string_catalog_filter_slot_snapshot` |
+| 適用せずに確かめ、型が合わない比較要素の警告を取得 | `cplat_string_catalog_filter_slot_check` |
 | 行の有効、無効と無効にした原因の取得 | `cplat_string_catalog_filter_slot_get_line_error` |
 | 行の自然文での表現 | `cplat_string_catalog_filter_slot_describe_line` |
 | 引数値によらない判定 | `cplat_string_catalog_filter_slot_test` |
@@ -682,6 +683,7 @@ Table: 文字列カタログの条件式フィルターにおける用途別 cpl
 
 フィルター オブジェクトのバイト数は `CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE` で行数の上限と行幅から求めます。  
 ソース領域のバイト数は `CPLAT_STRING_CATALOG_FILTER_SOURCE_SIZE` で求めます。コマンド `string-catalog-filter-required-size` でも、行数の上限と行幅から表示できます。スロットは判定付きの組み立てのたびに版番号を比べ、変化した場合に取り込みます。  
+条件式を編集する利用側は、公開や適用の前に `cplat_string_catalog_filter_slot_check` で型の不一致と同名の引数の型区分の混在を確かめ、警告を人へ表示します。`cplat_string_catalog_filter_slot_describe_line` も、型区分が混在する引数を説明文の末尾に注記します。  
 分類値の名前 (`cplat_string_catalog_filter_category_names`) は、スロットの作成時に `cplat_string_catalog_filter_slot_create` へ渡します。作成後は変更できません。  
 設計の詳細は [文字列カタログの条件式フィルターの設計](proposals/string-catalog-filter-design.md) を参照してください。
 

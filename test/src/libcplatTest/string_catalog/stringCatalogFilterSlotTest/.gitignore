@@ -3,6 +3,7 @@
 /filter_image.c
 /filter_slot.c
 /filter_source.c
+/filter_test_mixed.c
 /filter_test_trace.c
 /string_catalog_argument.c
 /string_catalog_catalog.c

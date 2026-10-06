@@ -78,6 +78,8 @@ typedef struct language_phrases
     const char *category_is_after;     /**< 分類値の名前: 名前が 1 つの場合の後置。前置は演算子 == の文型。 */
     const char *category_other_before; /**< 分類値の名前: 補集合を表す場合の前置。 */
     const char *category_other_after;  /**< 分類値の名前: 補集合を表す場合の後置。 */
+    const char *mixed_types_prefix;    /**< 型区分が混在する引数の注記: 引数名の前置。 */
+    const char *mixed_types_suffix;    /**< 型区分が混在する引数の注記: 引数名の後置。 */
     int inserts_space_after_ascii;     /**< 主語が ASCII で終わる場合に before の前へ空白を置くなら 0 以外。 */
     unsigned int pad;                  /**< 明示的アラインメントです。 */
     operator_phrase operators[OPERATOR_TABLE_SIZE]; /**< 判定演算子ごとの文型。 */
@@ -114,6 +116,8 @@ static const language_phrases s_japanese = {
     " である",
     "が ",
     " 以外",
+    " (注意: 引数 ",
+    " はカタログ内に文字列型と数値型が混在しているため、意図した判定結果にならない可能性があります)",
     1,
     0U,
     {
@@ -169,6 +173,8 @@ static const language_phrases s_neutral = {
     "",
     " is other than ",
     "",
+    " (Note: argument ",
+    " has both string and numeric types in the catalog; the result may not be as intended.)",
     0,
     0U,
     {
@@ -854,6 +860,109 @@ static void append_node(describe_context *context, const uint16_t node, const in
     }
 }
 
+/* ===== 型区分の混在 ===== */
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+bool string_catalog_filter_find_mixed_argument(const cplat_string_catalog *catalog, const char *name,
+                                               string_catalog_filter_mixed_argument *mixed_out)
+{
+    bool has_string = false;
+    bool has_other = false;
+
+    memset(mixed_out, 0, sizeof(*mixed_out));
+    for (int entry_index = 0; entry_index < catalog->entry_count; entry_index++)
+    {
+        const cplat_string_catalog_entry *entry = &catalog->entries[entry_index];
+
+        /* 適用時の名前の解決と同じく、項目ごとに最初に名前が一致した引数を対象とする */
+        for (int argument = 0; argument < entry->argument_count; argument++)
+        {
+            const cplat_string_catalog_argument *candidate = &entry->arguments[argument];
+
+            if ((candidate->kind == CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED) || (candidate->name == NULL) ||
+                (strcmp(candidate->name, name) != 0))
+            {
+                continue;
+            }
+            if ((candidate->kind == CPLAT_STRING_CATALOG_ARGUMENT_KIND_STRING) && !has_string)
+            {
+                mixed_out->string_entry = entry;
+                mixed_out->string_argument = argument;
+                has_string = true;
+            }
+            else if ((candidate->kind != CPLAT_STRING_CATALOG_ARGUMENT_KIND_STRING) && !has_other)
+            {
+                mixed_out->other_entry = entry;
+                mixed_out->other_argument = argument;
+                has_other = true;
+            }
+            else
+            {
+                /* 区分ごとに最初の項目だけを代表として残す */
+            }
+            break;
+        }
+        if (has_string && has_other)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ *  @brief          型区分が混在する引数名を、説明文の末尾に注記します。
+ *
+ *  比較に使う引数名を条件式に現れる順にたどり、同じ名前は 1 回だけ注記します。\n
+ *  `has` は引数の有無だけを調べるため対象にしません。
+ */
+static void append_mixed_notes(describe_context *context)
+{
+    const char *noted[CPLAT_STRING_CATALOG_FILTER_ARGUMENT_REFERENCE_MAX];
+    size_t noted_count = 0U;
+    string_catalog_filter_record_header header;
+    string_catalog_filter_instruction instruction;
+    string_catalog_filter_constant constant;
+    string_catalog_filter_mixed_argument mixed;
+
+    string_catalog_filter_read_record_header(context->source->record, &header);
+    for (uint32_t index = 0; index < header.instruction_count; index++)
+    {
+        bool is_noted = false;
+
+        string_catalog_filter_read_instruction(context->source->record, index, &instruction);
+        if ((instruction.opcode != (uint8_t)STRING_CATALOG_FILTER_OPCODE_PREDICATE) ||
+            (instruction.field != (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME) ||
+            (instruction.operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_HAS))
+        {
+            continue;
+        }
+
+        (void)string_catalog_filter_read_constant(context->constants, context->constant_size, instruction.operand,
+                                                  &constant);
+        for (size_t other = 0; other < noted_count; other++)
+        {
+            if (strcmp(noted[other], constant.text) == 0)
+            {
+                is_noted = true;
+                break;
+            }
+        }
+        if (is_noted || (noted_count >= CPLAT_STRING_CATALOG_FILTER_ARGUMENT_REFERENCE_MAX) ||
+            !string_catalog_filter_find_mixed_argument(context->source->catalog, constant.text, &mixed))
+        {
+            continue;
+        }
+
+        noted[noted_count] = constant.text;
+        noted_count++;
+        append_text(&context->writer, context->phrases->mixed_types_prefix);
+        append_text(&context->writer, constant.text);
+        append_text(&context->writer, context->phrases->mixed_types_suffix);
+    }
+}
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int string_catalog_filter_describe_record(const string_catalog_filter_describe_source *source, char *dest,
@@ -885,6 +994,7 @@ int string_catalog_filter_describe_record(const string_catalog_filter_describe_s
 
     root = string_catalog_filter_build_tree(source->record, context->left, context->right);
     append_node(context, root, 0);
+    append_mixed_notes(context);
 
     if (context->writer.is_truncated)
     {
