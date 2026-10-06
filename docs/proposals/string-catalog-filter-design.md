@@ -940,7 +940,7 @@ Table: 型区分の混在の注記
 | 1 | 型が合わない比較要素の判定を、機能仕様、設計資料、テストで固定する | 完了。要件 FUNC-055 を追加 |
 | 2 | 確認関数と警告の型を公開ヘッダーへ追加し、実装、mock、エクスポート テスト、API 逆引き、機能仕様を同期する | 完了。要件 FUNC-056 を追加。テスト用カタログ `filter_test_mixed.jsonc` を追加し、`stringCatalogFilterCheckTest` で 9 件を確認 |
 | 3 | 説明文へ型区分の混在の注記を追加する | 完了。要件 FUNC-057 を追加。`stringCatalogFilterCheckTest` で 3 件を確認 |
-| 4 | サンプルの条件編集で確認関数を呼び、警告を表示する | 未着手 |
+| 4 | サンプルの条件編集で確認関数を呼び、警告を表示する | 完了。string-catalog-filter-sample の `add`、`insert`、`edit`、`load`、`draft`、`apply` で警告を表示する |
 
 Table: 型の不一致の通知の進め方と進捗
 
