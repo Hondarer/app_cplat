@@ -946,12 +946,13 @@ Table: 型の不一致の通知の進め方と進捗
 
 ## CI による Windows/MSVC の検証
 
-2026 年 10 月 6 日の [Windows CI](https://github.com/Hondarer/c-modernization-kit/actions/runs/37460933666/job/112260018459) で、MSVC のビルドとテストが成功しています。  
-この実行の cplat のコミットは `111a7924d53475b15c66e8c8b55aa3cc7cfcd7a3` です。  
-ログではフィルター関連 147 件とサンプル関連 20 件の成功を確認し、主要機能の Windows 検証は確認済みです。
+2026 年 10 月 7 日の [Windows CI](https://github.com/Hondarer/c-modernization-kit/actions/runs/37545565878/job/112548611780) で、MSVC のビルドとテストが成功しています。  
+この実行の cplat のコミットは `61cb6cd61cb68660222e58f8283cb740db2ab145` です。  
+ログではフィルター関連 162 件とサンプル関連 26 件の成功を確認し、スキップされたテストはありません。  
+型が合わない比較要素の確認関数と説明文の注記のテスト (`stringCatalogFilterCheckTest`) も、Windows で成功しています。
 
-この時点では、書き込み途中のプロセス異常終了からの回復テストは `fork` を使うため、Windows CI ではスキップされていました。  
-その後、このテストを、共有ファイルを直接壊して開き直すテストへ置き換え、Windows でも実行するようにしました。置き換えたテストの Windows CI での結果は未確認です。
+書き込み途中のプロセス異常終了からの回復テストは、`fork` を使うため Windows CI でスキップされていました。  
+このテストを、共有ファイルを直接壊して開き直すテストへ置き換え、上記の実行で Windows でも成功しています。
 
 ## 性能測定と差し替え全体の処理量は残課題
 
