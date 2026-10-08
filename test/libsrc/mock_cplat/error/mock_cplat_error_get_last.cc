@@ -1,7 +1,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-void delegate_real_cplat_error_get_last(cplat_error * error_out)
+void delegate_real_cplat_error_get_last(cplat_error *error_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_error_get_last)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_error_get_last"));
@@ -9,7 +9,7 @@ void delegate_real_cplat_error_get_last(cplat_error * error_out)
     real_fn(error_out);
 }
 
-MOCK_WEAK_IMPL(void, cplat_error_get_last, cplat_error * error_out)
+MOCK_WEAK_IMPL(void, cplat_error_get_last, cplat_error *error_out)
 {
     if (_mock_cplat != nullptr)
     {

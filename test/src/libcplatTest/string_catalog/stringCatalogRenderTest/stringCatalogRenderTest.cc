@@ -163,112 +163,112 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     values[0].value.char_value = 'A';
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - 印字できる文字を展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("'A'", dest);       // [確認_正常系] - 単引用符で囲んだ 1 文字になること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("'A'", dest);                                 // [確認_正常系] - 単引用符で囲んだ 1 文字になること。
 
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_CHAR;
     values[0].value.char_value = (char)(unsigned char)0x8A;
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - 印字できない文字を展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret);  // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("138 (0x8a)", dest); // [確認_正常系] - 10 進数と 16 進数が併記されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("138 (0x8a)", dest);                          // [確認_正常系] - 10 進数と 16 進数が併記されること。
 
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_INT8;
     values[0].value.int8_value = INT8_C(-12);
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - 符号付き 8 bit 整数を展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("-12", dest);       // [確認_正常系] - 10 進数で表現されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("-12", dest);                                 // [確認_正常系] - 10 進数で表現されること。
 
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_UINT8;
     values[0].value.uint8_value = UINT8_C(200);
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - 符号なし 8 bit 整数を展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("200", dest);       // [確認_正常系] - 10 進数で表現されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("200", dest);                                 // [確認_正常系] - 10 進数で表現されること。
 
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_INT16;
     values[0].value.int16_value = INT16_C(-1200);
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - 符号付き 16 bit 整数を展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("-1200", dest);     // [確認_正常系] - 10 進数で表現されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("-1200", dest);                               // [確認_正常系] - 10 進数で表現されること。
 
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_UINT16;
     values[0].value.uint16_value = UINT16_C(48000);
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - 符号なし 16 bit 整数を展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("48000", dest);     // [確認_正常系] - 10 進数で表現されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("48000", dest);                               // [確認_正常系] - 10 進数で表現されること。
 
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_UINT32;
     values[0].value.uint32_value = 12U;
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - 符号なし 32 bit 整数を展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("12", dest);        // [確認_正常系] - 10 進数で表現されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("12", dest);                                  // [確認_正常系] - 10 進数で表現されること。
 
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_INT64;
     values[0].value.int64_value = INT64_C(-4294967296);
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - 符号付き 64 bit 整数を展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret);   // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("-4294967296", dest); // [確認_正常系] - 10 進数で表現されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("-4294967296", dest);                         // [確認_正常系] - 10 進数で表現されること。
 
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_UINT64;
     values[0].value.uint64_value = UINT64_C(4294967296);
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - 符号なし 64 bit 整数を展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret);  // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("4294967296", dest); // [確認_正常系] - 10 進数で表現されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("4294967296", dest);                          // [確認_正常系] - 10 進数で表現されること。
 
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_HEX8;
     values[0].value.uint8_value = UINT8_C(0x8A);
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - 8 bit の 16 進数を展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("0x8a", dest);      // [確認_正常系] - 2 桁の英小文字 16 進数で表現されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("0x8a", dest); // [確認_正常系] - 2 桁の英小文字 16 進数で表現されること。
 
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_HEX16;
     values[0].value.uint16_value = UINT16_C(0xBEEF);
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - 16 bit の 16 進数を展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("0xbeef", dest);    // [確認_正常系] - 4 桁の英小文字 16 進数で表現されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("0xbeef", dest); // [確認_正常系] - 4 桁の英小文字 16 進数で表現されること。
 
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_HEX32;
     values[0].value.uint32_value = 0x1234ABCDU;
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - 32 bit の 16 進数を展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret);  // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("0x1234abcd", dest); // [確認_正常系] - 8 桁の英小文字 16 進数で表現されること。
 
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_HEX64;
     values[0].value.uint64_value = UINT64_C(0xDEADBEEF);
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - 64 bit の 16 進数を展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret);          // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("0x00000000deadbeef", dest); // [確認_正常系] - 16 桁の英小文字 16 進数で表現されること。
 
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_SIZE;
     values[0].value.size_value = (size_t)4096U;
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - バイト数を展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("4096", dest);      // [確認_正常系] - 10 進数で表現されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("4096", dest);                                // [確認_正常系] - 10 進数で表現されること。
 
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_SSIZE;
     values[0].value.int64_value = INT64_C(-1);
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - 符号付きのバイト数を展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret);            // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("-1", dest);                   // [確認_正常系] - 10 進数で表現されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("-1", dest);                                  // [確認_正常系] - 10 進数で表現されること。
 
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_POINTER;
     values[0].value.pointer_value = sample_object;
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - ポインターを展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret);      // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_EQ(18U, strlen(dest));         // [確認_正常系] - 0x と 16 桁の 16 進数で表現されること。
     EXPECT_EQ(0, strncmp(dest, "0x", 2)); // [確認_正常系] - 先頭が 0x であること。
 
@@ -276,15 +276,15 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     values[0].value.double_value = 12.5;
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - 倍精度浮動小数点数を展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("12.5", dest);      // [確認_正常系] - 有効桁を保つ短い表現になること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("12.5", dest);                                // [確認_正常系] - 有効桁を保つ短い表現になること。
 
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_ERROR_CODE;
     values[0].value.error_code_value = 2;
     actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                            1); // [手順] - エラー コードを展開する。
-    EXPECT_EQ(CPLAT_OK, actual_ret);      // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("2 (0x00000002)", dest); // [確認_正常系] - 10 進数と 16 進数が併記されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);                           // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("2 (0x00000002)", dest);                      // [確認_正常系] - 10 進数と 16 進数が併記されること。
 }
 
 // 未知の引数種別が定義エラーになることの確認

@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_parse_int(int *value_out, const char *text, int base)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_parse_int)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_parse_int"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_parse_int)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_parse_int"));
 
     return real_fn(value_out, text, base);
 }

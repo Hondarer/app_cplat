@@ -12,7 +12,7 @@
 #include <cplat/sync/sync_descriptor.h>
 
 int cplat_internal_interprocess_sync_descriptor_export(const char *identity, const uint8_t kind, const uint8_t backend,
-                                        void *descriptor, size_t *descriptor_size)
+                                                       void *descriptor, size_t *descriptor_size)
 {
     uint8_t *out;
     size_t identity_len;
@@ -43,8 +43,8 @@ int cplat_internal_interprocess_sync_descriptor_export(const char *identity, con
     return CPLAT_OK;
 }
 
-int cplat_internal_interprocess_sync_descriptor_import(const void *descriptor, const size_t descriptor_size, const uint8_t kind,
-                                        const uint8_t backend, char **identity_out)
+int cplat_internal_interprocess_sync_descriptor_import(const void *descriptor, const size_t descriptor_size,
+                                                       const uint8_t kind, const uint8_t backend, char **identity_out)
 {
     const uint8_t *in = (const uint8_t *)descriptor;
     size_t identity_len;

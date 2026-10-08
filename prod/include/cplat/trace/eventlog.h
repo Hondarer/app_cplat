@@ -94,8 +94,8 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_eventlog_sink_write(cplat_eventlog_sink *handle, int level,
-                                                                  int64_t file_identifier, const char *instance_name,
-                                                                  int64_t instance_identifier, const char *message);
+                                                         int64_t file_identifier, const char *instance_name,
+                                                         int64_t instance_identifier, const char *message);
 
     /**
      *  @brief          イベント ログ書き込みハンドルを解放します。
@@ -131,8 +131,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_eventlog_register_source(const char *source_name,
-                                                                       const char *message_file_path);
+    CPLAT_EXPORT int CPLAT_API cplat_eventlog_register_source(const char *source_name, const char *message_file_path);
 
     /**
      *  @brief          共通イベント ソースの登録を削除します。

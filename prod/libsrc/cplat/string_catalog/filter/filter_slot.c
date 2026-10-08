@@ -46,16 +46,16 @@ typedef enum truth_value
 /** 判定が参照する内容の 1 面分です。 */
 typedef struct filter_plane
 {
-    unsigned char *image;                           /**< フィルター オブジェクトの複製。 */
-    uint8_t *entry_states;                          /**< [項目] の cplat_string_catalog_filter_state。 */
-    uint64_t *entry_dependent_lines;                /**< [項目][語] の、引数値に依存する行の集合 (ビット i が行 i)。 */
-    uint8_t *line_states;                           /**< [行][項目] の truth_value。 */
-    int8_t *argument_maps;                          /**< [行][項目][引数参照] の引数インデックス。未定義は -1。 */
-    int64_t *identifier_values;                     /**< [行][識別子] の文字列キー。 */
+    unsigned char *image;            /**< フィルター オブジェクトの複製。 */
+    uint8_t *entry_states;           /**< [項目] の cplat_string_catalog_filter_state。 */
+    uint64_t *entry_dependent_lines; /**< [項目][語] の、引数値に依存する行の集合 (ビット i が行 i)。 */
+    uint8_t *line_states;            /**< [行][項目] の truth_value。 */
+    int8_t *argument_maps;           /**< [行][項目][引数参照] の引数インデックス。未定義は -1。 */
+    int64_t *identifier_values;      /**< [行][識別子] の文字列キー。 */
     cplat_string_catalog_filter_line_error *line_errors; /**< [行] の無効にした原因。 */
     cplat_regex **patterns; /**< [行][パターン] のコンパイルした正規表現。面の構築のたびに作り直します。 */
-    uint32_t line_count;                            /**< 格納している条件式の数。 */
-    uint32_t pad;                                   /**< 明示的アラインメントです。 */
+    uint32_t line_count;    /**< 格納している条件式の数。 */
+    uint32_t pad;           /**< 明示的アラインメントです。 */
 } filter_plane;
 
 struct cplat_string_catalog_filter_slot
@@ -76,8 +76,8 @@ struct cplat_string_catalog_filter_slot
     cplat_local_rwlock *plane_lock;
     cplat_local_lock *apply_lock;
     filter_plane planes[2];
-    const void *source;      /**< 結び付けたソース領域。未設定は NULL。 */
-    size_t source_size;      /**< @ref cplat_string_catalog_filter_slot::source のバイト数。 */
+    const void *source; /**< 結び付けたソース領域。未設定は NULL。 */
+    size_t source_size; /**< @ref cplat_string_catalog_filter_slot::source のバイト数。 */
     cplat_string_catalog_filter_source_lock source_lock; /**< 書き込み側の排他。未設定は lock が NULL。 */
     cplat_atomic_u64 taken_revision;  /**< 取り込みを試みた版番号。判定のたびにロックなしで読みます。 */
     size_t source_last_invalid_count; /**< 直近の取り込みで無効にした行の数。apply_lock の下で読み書きします。 */
@@ -891,8 +891,8 @@ static bool allocate_plane(const cplat_string_catalog_filter_slot *slot, filter_
                           sizeof(*plane->identifier_values));
     plane->line_errors =
         (cplat_string_catalog_filter_line_error *)calloc(slot->line_capacity, sizeof(*plane->line_errors));
-    plane->patterns = (cplat_regex **)calloc((size_t)slot->line_capacity * CPLAT_STRING_CATALOG_FILTER_PATTERN_REFERENCE_MAX,
-                                             sizeof(*plane->patterns));
+    plane->patterns = (cplat_regex **)calloc(
+        (size_t)slot->line_capacity * CPLAT_STRING_CATALOG_FILTER_PATTERN_REFERENCE_MAX, sizeof(*plane->patterns));
 
     if ((plane->image == NULL) || (plane->entry_states == NULL) || (plane->entry_dependent_lines == NULL) ||
         (plane->line_states == NULL) || (plane->argument_maps == NULL) || (plane->identifier_values == NULL) ||
@@ -1783,8 +1783,7 @@ int cplat_string_catalog_filter_slot_check(cplat_string_catalog_filter_slot *slo
 
     if (ret == CPLAT_OK)
     {
-        build_plane(slot, target, &slot->planes[slot->active_plane], diagnostics, diagnostic_capacity,
-                    &invalid_count);
+        build_plane(slot, target, &slot->planes[slot->active_plane], diagnostics, diagnostic_capacity, &invalid_count);
         for (uint32_t line_index = 0; line_index < target->line_count; line_index++)
         {
             /* 成立し得ない行は、型の不一致が原因であり得るため対象に含める */
@@ -2153,10 +2152,11 @@ int cplat_string_catalog_filter_slot_describe_line(cplat_string_catalog_filter_s
 
 /** 参照中の面で、1 項目の一致を判定します。共有モードのロックの下で呼び出します。 */
 /** 引数の値に依存する 1 行を、引数の値で評価します。 */
-static bool is_line_matched(const cplat_string_catalog_filter_slot *slot, filter_plane *plane,
-                            const size_t entry_index, const uint32_t line_index, const argument_value *values)
+static bool is_line_matched(const cplat_string_catalog_filter_slot *slot, filter_plane *plane, const size_t entry_index,
+                            const uint32_t line_index, const argument_value *values)
 {
-    const unsigned char *record = string_catalog_filter_record_address_const(plane->image, slot->record_size, line_index);
+    const unsigned char *record =
+        string_catalog_filter_record_address_const(plane->image, slot->record_size, line_index);
     string_catalog_filter_record_header header;
     evaluation_context context;
 

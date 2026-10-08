@@ -47,13 +47,13 @@ TEST_F(hashtableAttachTest, rejects_misaligned_buffer)
     std::vector<unsigned char> buf_mgmt(mgmt_needed + 1, 0);
     std::vector<unsigned char> buf_data(data_needed, 0);
     (void)cplat_hashtable_create(&config, buf_mgmt.data(), mgmt_needed, buf_data.data(), buf_data.size(),
-                                    &ht); // [状態] - 先頭が整列した妥当な管理領域を構築する。
+                                 &ht); // [状態] - 先頭が整列した妥当な管理領域を構築する。
 
     // Pre-Assert
 
     // Act
     int actual_ret = cplat_hashtable_attach(buf_mgmt.data() + 1, mgmt_needed, buf_data.data(), buf_data.size(),
-                                               &attached); // [手順] - 1 バイトずれた管理領域へ再接続する。
+                                            &attached); // [手順] - 1 バイトずれた管理領域へ再接続する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -78,13 +78,13 @@ TEST_F(hashtableAttachTest, rejects_null_ht_out)
     std::vector<unsigned char> buf_mgmt(mgmt_needed, 0);
     std::vector<unsigned char> buf_data(data_needed, 0);
     (void)cplat_hashtable_create(&config, buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
-                                    &ht); // [状態] - 妥当な領域を構築する。
+                                 &ht); // [状態] - 妥当な領域を構築する。
 
     // Pre-Assert
 
     // Act
     int actual_ret = cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
-                                               NULL); // [手順] - ht_out に NULL を渡す。
+                                            NULL); // [手順] - ht_out に NULL を渡す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -117,11 +117,10 @@ TEST_F(hashtableAttachTest, accepts_binary_key_type)
 
     // Act
     (void)cplat_hashtable_create(&config, buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
-                                    &ht); // [手順] - バイナリ キーのテーブルを構築する。
+                                 &ht); // [手順] - バイナリ キーのテーブルを構築する。
     (void)cplat_hashtable_add(ht, key, value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    int actual_ret_attach =
-        cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
-                                  &attached); // [手順] - バイナリ キーのテーブルへ再接続する。
+    int actual_ret_attach = cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
+                                                   &attached); // [手順] - バイナリ キーのテーブルへ再接続する。
     int actual_ret_find = cplat_hashtable_find_value_ref(attached, key, &found); // [手順] - 再接続先から値を検索する。
 
     // Assert
@@ -153,7 +152,7 @@ TEST_F(hashtableAttachTest, rejects_corrupted_config_fields)
 
     // Act
     (void)cplat_hashtable_create(&config, buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
-                                    &ht); // [手順] - 外部バッファーへ構築する。
+                                 &ht); // [手順] - 外部バッファーへ構築する。
 
     bad_config = config;
     {
@@ -221,11 +220,11 @@ TEST_F(hashtableAttachTest, rejects_corrupted_config_fields)
     test_hashtable_set_config(ht, &config);
     int actual_ret_mgmt_too_small =
         cplat_hashtable_attach(buf_mgmt.data(), mgmt_needed - 1, buf_data.data(), buf_data.size(),
-                                  &attached); // [手順] - 管理領域の buf_mgmt_size 不足で再接続する。
+                               &attached); // [手順] - 管理領域の buf_mgmt_size 不足で再接続する。
     std::vector<unsigned char> small_data(1, 0);
     int actual_ret_data_too_small =
         cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), small_data.data(), small_data.size(),
-                                  &attached); // [手順] - データ領域の buf_data_size 不足で再接続する。
+                               &attached); // [手順] - データ領域の buf_data_size 不足で再接続する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,

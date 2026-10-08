@@ -1,8 +1,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_memory_lock_self(const cplat_memory_lock_self_options *options,
-                                            cplat_memory_lock_scope **scope)
+int delegate_real_cplat_memory_lock_self(const cplat_memory_lock_self_options *options, cplat_memory_lock_scope **scope)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_memory_lock_self)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_memory_lock_self"));

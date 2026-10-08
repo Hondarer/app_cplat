@@ -53,7 +53,7 @@ TEST(stdioFailureInjectionTest, fopen_reports_mocked_os_failure)
         cplat_fopen("mocked-failure.txt", "rb", &detail); // [手順] - fopen の EACCES 失敗を注入してファイルを開く。
 
     // Assert
-    EXPECT_EQ(static_cast<FILE *>(NULL), stream);         // [確認_異常系] - cplat_fopen の戻り値が NULL であること。
+    EXPECT_EQ(static_cast<FILE *>(NULL), stream);      // [確認_異常系] - cplat_fopen の戻り値が NULL であること。
     EXPECT_EQ(EACCES, cplat_error_get_errno(&detail)); // [確認_異常系] - 詳細エラーへ EACCES が記録されること。
 }
 
@@ -83,7 +83,7 @@ TEST(stdioFailureInjectionTest, fopen_reports_success_and_clears_detail)
     NiceMock<Mock_stdio> mock_stdio;
     FILE *opened = reinterpret_cast<FILE *>(static_cast<uintptr_t>(19));
     cplat_error detail = {CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_NOT_FOUND,
-                             ENOENT}; // [状態] - 詳細エラーへあらかじめ ENOENT を設定する。
+                          ENOENT}; // [状態] - 詳細エラーへあらかじめ ENOENT を設定する。
 
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
@@ -122,7 +122,7 @@ TEST(stdioFailureInjectionTest, fclose_reports_eio_when_errno_is_empty)
     int result = cplat_fclose(stream, &detail); // [手順] - fclose が EOF を返す失敗を注入する。
 
     // Assert
-    EXPECT_EQ(EOF, result);                            // [確認_異常系] - cplat_fclose の戻り値が EOF であること。
+    EXPECT_EQ(EOF, result);                         // [確認_異常系] - cplat_fclose の戻り値が EOF であること。
     EXPECT_EQ(EIO, cplat_error_get_errno(&detail)); // [確認_異常系] - errno が空の場合に EIO が記録されること。
 }
 
@@ -139,9 +139,8 @@ TEST(stdioFailureInjectionTest, fclose_rejects_null_stream)
 
     // Assert
     EXPECT_EQ(EOF, result); // [確認_異常系] - NULL stream の fclose が EOF を返すこと。
-    EXPECT_EQ(
-        CPLAT_CAUSE_INVALID_ARGUMENT,
-        cplat_error_get_cause(&detail)); // [確認_異常系] - NULL stream が INVALID_ARGUMENT として記録されること。
+    EXPECT_EQ(CPLAT_CAUSE_INVALID_ARGUMENT,
+              cplat_error_get_cause(&detail)); // [確認_異常系] - NULL stream が INVALID_ARGUMENT として記録されること。
 }
 
 // fclose の成功時に詳細エラーがクリアされることの確認
@@ -151,7 +150,7 @@ TEST(stdioFailureInjectionTest, fclose_reports_success_and_clears_detail)
     NiceMock<Mock_stdio> mock_stdio;
     FILE *stream = reinterpret_cast<FILE *>(static_cast<uintptr_t>(20));
     cplat_error detail = {CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_NOT_FOUND,
-                             ENOENT}; // [状態] - 詳細エラーへあらかじめ ENOENT を設定する。
+                          ENOENT}; // [状態] - 詳細エラーへあらかじめ ENOENT を設定する。
 
     // Pre-Assert
     EXPECT_CALL(mock_stdio, fclose(_, _, _, stream))
@@ -184,7 +183,7 @@ TEST(stdioFailureInjectionTest, fflush_reports_eio_when_errno_is_empty)
     int result = cplat_fflush(stream, &detail); // [手順] - fflush が EOF を返す失敗を注入する。
 
     // Assert
-    EXPECT_EQ(EOF, result);                            // [確認_異常系] - cplat_fflush の戻り値が EOF であること。
+    EXPECT_EQ(EOF, result);                         // [確認_異常系] - cplat_fflush の戻り値が EOF であること。
     EXPECT_EQ(EIO, cplat_error_get_errno(&detail)); // [確認_異常系] - errno が空の場合に EIO が記録されること。
 }
 
@@ -210,7 +209,7 @@ TEST(stdioFailureInjectionTest, fclose_preserves_nonzero_errno)
     int result = cplat_fclose(stream, &detail); // [手順] - errno が EACCES の fclose 失敗を注入する。
 
     // Assert
-    EXPECT_EQ(EOF, result);                               // [確認_異常系] - fclose の戻り値が EOF であること。
+    EXPECT_EQ(EOF, result);                            // [確認_異常系] - fclose の戻り値が EOF であること。
     EXPECT_EQ(EACCES, cplat_error_get_errno(&detail)); // [確認_異常系] - EACCES が詳細エラーへ記録されること。
 }
 
@@ -236,7 +235,7 @@ TEST(stdioFailureInjectionTest, fflush_preserves_nonzero_errno)
     int result = cplat_fflush(stream, &detail); // [手順] - errno が EACCES の fflush 失敗を注入する。
 
     // Assert
-    EXPECT_EQ(EOF, result);                               // [確認_異常系] - fflush の戻り値が EOF であること。
+    EXPECT_EQ(EOF, result);                            // [確認_異常系] - fflush の戻り値が EOF であること。
     EXPECT_EQ(EACCES, cplat_error_get_errno(&detail)); // [確認_異常系] - EACCES が詳細エラーへ記録されること。
 }
 
@@ -247,7 +246,7 @@ TEST(stdioFailureInjectionTest, fflush_reports_success_for_valid_stream)
     NiceMock<Mock_stdio> mock_stdio;
     FILE *stream = reinterpret_cast<FILE *>(static_cast<uintptr_t>(13));
     cplat_error detail = {CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_NOT_FOUND,
-                             ENOENT}; // [状態] - 詳細エラーへあらかじめ ENOENT を設定する。
+                          ENOENT}; // [状態] - 詳細エラーへあらかじめ ENOENT を設定する。
 
     // Pre-Assert
     EXPECT_CALL(mock_stdio, fflush(_, _, _, stream))
@@ -294,7 +293,7 @@ TEST(stdioFailureInjectionTest, freopen_reports_os_failure)
 
     // Act
     FILE *reopened = cplat_freopen("/cplat/path/does/not/exist", "rb", stream,
-                                      &detail); // [手順] - 存在しないパスへ freopen して OS 失敗を発生させる。
+                                   &detail); // [手順] - 存在しないパスへ freopen して OS 失敗を発生させる。
 
     // Assert
     EXPECT_EQ(static_cast<FILE *>(NULL), reopened); // [確認_異常系] - cplat_freopen の戻り値が NULL であること。
@@ -333,23 +332,20 @@ TEST(stdioFailureInjectionTest, fread_and_fwrite_classify_arguments_and_counts)
         .Times(0); // [Pre-Assert確認_正常系] - fwrite が要素数 0 で呼び出されないこと。
 
     // Act
-    size_t read_null_buffer =
-        cplat_fread(NULL, 1u, 1u, stream, &read_detail);                     // [手順] - NULL 読み込み先を指定する。
-    size_t read_null_stream = cplat_fread(data, 1u, 1u, NULL, &read_detail); // [手順] - NULL ストリームを指定する。
-    size_t read_zero_size =
-        cplat_fread(NULL, 0u, 1u, stream, &read_detail); // [手順] - サイズ 0 の読み込みを指定する。
+    size_t read_null_buffer = cplat_fread(NULL, 1u, 1u, stream, &read_detail); // [手順] - NULL 読み込み先を指定する。
+    size_t read_null_stream = cplat_fread(data, 1u, 1u, NULL, &read_detail);   // [手順] - NULL ストリームを指定する。
+    size_t read_zero_size = cplat_fread(NULL, 0u, 1u, stream, &read_detail); // [手順] - サイズ 0 の読み込みを指定する。
     size_t read_zero_count =
         cplat_fread(NULL, 1u, 0u, stream, &read_detail);                 // [手順] - 要素数 0 の読み込みを指定する。
     size_t read_full = cplat_fread(data, 1u, 1u, stream, &read_detail);  // [手順] - 全量読み込みを指定する。
     size_t read_short = cplat_fread(data, 1u, 1u, stream, &read_detail); // [手順] - 短い読み込みを指定する。
     size_t write_null_buffer =
-        cplat_fwrite(NULL, 1u, 1u, stream, &write_detail); // [手順] - NULL 書き込み元を指定する。
-    size_t write_null_stream =
-        cplat_fwrite(data, 1u, 1u, NULL, &write_detail); // [手順] - NULL ストリームへ書き込む。
+        cplat_fwrite(NULL, 1u, 1u, stream, &write_detail);                      // [手順] - NULL 書き込み元を指定する。
+    size_t write_null_stream = cplat_fwrite(data, 1u, 1u, NULL, &write_detail); // [手順] - NULL ストリームへ書き込む。
     size_t write_zero_size =
         cplat_fwrite(NULL, 0u, 1u, stream, &write_detail); // [手順] - サイズ 0 の書き込みを指定する。
     size_t write_zero_count =
-        cplat_fwrite(NULL, 1u, 0u, stream, &write_detail); // [手順] - 要素数 0 の書き込みを指定する。
+        cplat_fwrite(NULL, 1u, 0u, stream, &write_detail);                  // [手順] - 要素数 0 の書き込みを指定する。
     size_t write_full = cplat_fwrite(data, 1u, 1u, stream, &write_detail);  // [手順] - 全量書き込みを指定する。
     size_t write_short = cplat_fwrite(data, 1u, 1u, stream, &write_detail); // [手順] - 短い書き込みを指定する。
 
@@ -398,7 +394,7 @@ TEST(stdioFailureInjectionTest, fread_and_fgets_report_stream_errors)
     size_t read_count =
         cplat_fread(data, 1U, 1U, fread_stream, &fread_detail); // [手順] - エラー状態のストリームを fread へ渡す。
     int fgets_result = cplat_fgets(data, sizeof(data), fgets_stream,
-                                      &fgets_detail); // [手順] - エラー状態のストリームを fgets へ渡す。
+                                   &fgets_detail); // [手順] - エラー状態のストリームを fgets へ渡す。
 
     // Assert
     EXPECT_EQ(0U, read_count); // [確認_異常系] - 読み込みエラー時の fread 件数が 0 であること。
@@ -438,12 +434,11 @@ TEST(stdioFailureInjectionTest, remove_and_rename_classify_file_operations)
 
     // Act
 #if defined(PLATFORM_LINUX)
-    int rename_result =
-        cplat_rename(old_path, new_path, &detail);        // [手順] - 既存ファイルを新しいパスへ rename する。
-    int remove_result = cplat_remove(new_path, &detail);  // [手順] - rename 後のファイルを remove する。
-    int missing_result = cplat_remove(new_path, &detail); // [手順] - 存在しないファイルを remove する。
-#endif                                                       /* PLATFORM_LINUX */
-    int null_rename_result = cplat_rename(NULL, new_path, &detail);  // [手順] - oldpath NULL の rename を実行する。
+    int rename_result = cplat_rename(old_path, new_path, &detail);  // [手順] - 既存ファイルを新しいパスへ rename する。
+    int remove_result = cplat_remove(new_path, &detail);            // [手順] - rename 後のファイルを remove する。
+    int missing_result = cplat_remove(new_path, &detail);           // [手順] - 存在しないファイルを remove する。
+#endif                                                              /* PLATFORM_LINUX */
+    int null_rename_result = cplat_rename(NULL, new_path, &detail); // [手順] - oldpath NULL の rename を実行する。
     int null_newpath_result = cplat_rename(old_path, NULL, &detail); // [手順] - newpath NULL の rename を実行する。
     int null_remove_result = cplat_remove(NULL, &detail);            // [手順] - path NULL の remove を実行する。
 
@@ -468,8 +463,7 @@ TEST(stdioFailureInjectionTest, rename_reports_os_failure)
     cplat_error detail = {};
 
     // Pre-Assert
-    EXPECT_CALL(mock_stdio,
-                rename(_, _, _, StrEq("/cplat/path/does/not/exist"), StrEq("/tmp/cplat_stdio_target.txt")))
+    EXPECT_CALL(mock_stdio, rename(_, _, _, StrEq("/cplat/path/does/not/exist"), StrEq("/tmp/cplat_stdio_target.txt")))
         .WillOnce(
             [](const char *, int, const char *, const char *, const char *)
             {
@@ -480,7 +474,7 @@ TEST(stdioFailureInjectionTest, rename_reports_os_failure)
 
     // Act
     int result = cplat_rename("/cplat/path/does/not/exist", "/tmp/cplat_stdio_target.txt",
-                                 &detail); // [手順] - 存在しないパスを rename して OS 失敗を発生させる。
+                              &detail); // [手順] - 存在しないパスを rename して OS 失敗を発生させる。
 
     // Assert
     EXPECT_NE(0, result); // [確認_異常系] - cplat_rename の戻り値が 0 以外であること。
@@ -519,7 +513,7 @@ TEST(stdioFailureInjectionTest, formatted_output_and_file_position_wrappers_work
     // Act
 #if defined(PLATFORM_LINUX)
     int print_result = cplat_fprintf(stream, "%s", "abc"); // [手順] - 番兵ストリームへ文字列を fprintf する。
-#endif                                                        /* PLATFORM_LINUX */
+#endif                                                     /* PLATFORM_LINUX */
     int seek_result = cplat_fseek(stream, 0, SEEK_SET);    // [手順] - ファイル位置を先頭へ移動する。
     int64_t position = cplat_ftell(stream);                // [手順] - 現在のファイル位置を取得する。
 
@@ -546,8 +540,7 @@ TEST(stdioFailureInjectionTest, fwrite_reports_short_write)
                                // [Pre-Assert手順] - 1 要素を返却する。
 
     // Act
-    size_t result =
-        cplat_fwrite(data, 1u, 2u, stream, &detail); // [手順] - 2 要素中 1 要素だけ書き込む失敗を注入する。
+    size_t result = cplat_fwrite(data, 1u, 2u, stream, &detail); // [手順] - 2 要素中 1 要素だけ書き込む失敗を注入する。
 
     // Assert
     EXPECT_EQ(1u, result); // [確認_異常系] - cplat_fwrite の戻り値が 1 要素であること。
@@ -615,9 +608,9 @@ TEST(stdioFailureInjectionTest, short_io_preserves_nonzero_errno)
     EXPECT_EQ(0u, write_result);          // [確認_異常系] - ENOSPC 発生時の cplat_fwrite の戻り値が 0 であること。
     EXPECT_EQ(ENOSPC, cplat_error_get_errno(
                           &write_detail)); // [確認_異常系] - cplat_fwrite の詳細エラーに ENOSPC が記録されること。
-    EXPECT_NE(CPLAT_OK, line_result);   // [確認_異常系] - EIO 発生時の cplat_fgets の戻り値が成功以外であること。
-    EXPECT_EQ(EIO, cplat_error_get_errno(
-                       &line_detail)); // [確認_異常系] - cplat_fgets の詳細エラーに EIO が記録されること。
+    EXPECT_NE(CPLAT_OK, line_result);      // [確認_異常系] - EIO 発生時の cplat_fgets の戻り値が成功以外であること。
+    EXPECT_EQ(EIO,
+              cplat_error_get_errno(&line_detail)); // [確認_異常系] - cplat_fgets の詳細エラーに EIO が記録されること。
 }
 
 // errno が設定されない読み込みエラーを EIO として報告することの確認
@@ -649,9 +642,9 @@ TEST(stdioFailureInjectionTest, read_errors_without_errno_default_to_eio)
 
     // Act
     size_t read_result = cplat_fread(read_data, 1u, 1u, read_stream,
-                                        &read_detail); // [手順] - errno を設定せず失敗する fread を実行する。
+                                     &read_detail); // [手順] - errno を設定せず失敗する fread を実行する。
     int line_result = cplat_fgets(line_data, sizeof(line_data), line_stream,
-                                     &line_detail); // [手順] - errno を設定せず失敗する fgets を実行する。
+                                  &line_detail); // [手順] - errno を設定せず失敗する fgets を実行する。
 
     // Assert
     EXPECT_EQ(0u, read_result); // [確認_異常系] - errno がないエラー時の cplat_fread の戻り値が 0 であること。
@@ -689,9 +682,9 @@ TEST(stdioFailureInjectionTest, fgets_classifies_empty_text_and_exact_newline)
 
     // Act
     int empty_result = cplat_fgets(empty_text, sizeof(empty_text), empty_stream,
-                                      NULL); // [手順] - 空文字列を返す fgets を実行する。
+                                   NULL); // [手順] - 空文字列を返す fgets を実行する。
     int newline_result = cplat_fgets(newline_text, sizeof(newline_text), newline_stream,
-                                        NULL); // [手順] - バッファー末尾が改行の fgets を実行する。
+                                     NULL); // [手順] - バッファー末尾が改行の fgets を実行する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -747,7 +740,7 @@ TEST(stdioFailureInjectionTest, fgets_rejects_invalid_buffer_sizes)
         cplat_fgets(data, 0u, stream, NULL); // [手順] - dest_size に 0 を指定して cplat_fgets を呼び出す。
     int oversized_result =
         cplat_fgets(data, static_cast<size_t>(INT_MAX) + 1u, stream,
-                       NULL); // [手順] - dest_size に INT_MAX を 1 超える値を指定して cplat_fgets を呼び出す。
+                    NULL); // [手順] - dest_size に INT_MAX を 1 超える値を指定して cplat_fgets を呼び出す。
 
     // Assert
     EXPECT_EQ(

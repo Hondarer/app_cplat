@@ -52,18 +52,20 @@ TEST_F(hostTest, RejectsInvalidOutputArguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null = cplat_host_get_name(NULL, sizeof(name)); // [手順] - 出力先に NULL を渡してホスト名を取得する。
+    int actual_ret_null =
+        cplat_host_get_name(NULL, sizeof(name));        // [手順] - 出力先に NULL を渡してホスト名を取得する。
     int actual_ret_zero = cplat_host_get_name(name, 0); // [手順] - 出力先サイズに 0 を渡してホスト名を取得する。
-    int actual_ret_too_big =
-        cplat_host_get_name(name, (size_t)INT_MAX + 1u); // [手順] - 出力先サイズに INT_MAX を超える値を渡してホスト名を取得する。
+    int actual_ret_too_big = cplat_host_get_name(
+        name, (size_t)INT_MAX + 1u); // [手順] - 出力先サイズに INT_MAX を超える値を渡してホスト名を取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
               actual_ret_null); // [確認_異常系] - 出力先が NULL の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
               actual_ret_zero); // [確認_異常系] - 出力先サイズが 0 の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_too_big); // [確認_異常系] - 出力先サイズが INT_MAX 超えの戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_too_big); // [確認_異常系] - 出力先サイズが INT_MAX 超えの戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ('x', name[0]); // [確認_異常系] - 不正引数の呼び出しで出力先が変更されないこと。
 }
 
@@ -242,12 +244,12 @@ TEST_F(hostTest, ReportsWstrToUtf8OsError)
         .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - UTF-16 のホスト名が UTF-8 変換に 1 回渡されること。
                               // [Pre-Assert手順] - UTF-8 変換から 0 を返却する。
     EXPECT_CALL(mock_windows, GetLastError(_, _, _))
-        .WillOnce(Return(ERROR_ACCESS_DENIED)); // [Pre-Assert確認_異常系] - 変換失敗時に GetLastError が 1 回呼び出されること。
-                                                // [Pre-Assert手順] - ERROR_ACCESS_DENIED を返却する。
+        .WillOnce(Return(
+            ERROR_ACCESS_DENIED)); // [Pre-Assert確認_異常系] - 変換失敗時に GetLastError が 1 回呼び出されること。
+                                   // [Pre-Assert手順] - ERROR_ACCESS_DENIED を返却する。
 
     // Act
-    int actual_ret =
-        cplat_host_get_name(name, sizeof(name)); // [手順] - UTF-8 変換が失敗する状態でホスト名を取得する。
+    int actual_ret = cplat_host_get_name(name, sizeof(name)); // [手順] - UTF-8 変換が失敗する状態でホスト名を取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED,

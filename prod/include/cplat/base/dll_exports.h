@@ -118,8 +118,7 @@
         #ifndef __INTELLISENSE__
             #define CPLAT_DLL_EXPORT(prefix) \
                 CPLAT_DLL_IF(CPLAT_DLL_PP_CAT(prefix, _STATIC)) \
-                (, CPLAT_DLL_IF(CPLAT_DLL_PP_CAT(prefix, _EXPORTS))(__declspec(dllexport), \
-                                                                              __declspec(dllimport)))
+                (, CPLAT_DLL_IF(CPLAT_DLL_PP_CAT(prefix, _EXPORTS))(__declspec(dllexport), __declspec(dllimport)))
         #else /* __INTELLISENSE__ */
             #define CPLAT_DLL_EXPORT(prefix)
         #endif /* __INTELLISENSE__ */

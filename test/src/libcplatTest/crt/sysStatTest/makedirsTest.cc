@@ -119,8 +119,7 @@ TEST_F(makedirsTest, stat_reports_missing_path)
                 // [Pre-Assert手順] - errno に ENOENT を設定し、-1 を返却する。
 
     // Act
-    const int result =
-        cplat_stat(&stat_buffer, NULL, "missing"); // [手順] - 存在しないパスを指定して stat を呼び出す。
+    const int result = cplat_stat(&stat_buffer, NULL, "missing"); // [手順] - 存在しないパスを指定して stat を呼び出す。
 
     // Assert
     EXPECT_NE(CPLAT_OK,
@@ -206,7 +205,7 @@ TEST_F(makedirsTest, single_level_creates_directory)
 
     // Act
     int actual_ret =
-        cplat_makedirs("dir1", NULL); // [手順] - 存在しない単一階層ディレクトリを cplat_makedirs で作成する。
+        cplat_makedirs("dir1", NULL);        // [手順] - 存在しない単一階層ディレクトリを cplat_makedirs で作成する。
     int ret2 = cplat_makedirs("dir1", NULL); // [手順] - 既存ディレクトリに cplat_makedirs を再呼び出しする。
 
     // Assert
@@ -257,8 +256,9 @@ TEST_F(makedirsTest, nested_levels_creates_all_directories)
                               // [Pre-Assert手順] - 0 を返却する。
 
     // Act
-    int actual_ret = cplat_makedirs("root/sub/leaf",
-                                NULL); // [手順] - 中間ディレクトリが存在しない 2 階層パスを cplat_makedirs で作成する。
+    int actual_ret =
+        cplat_makedirs("root/sub/leaf",
+                       NULL); // [手順] - 中間ディレクトリが存在しない 2 階層パスを cplat_makedirs で作成する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_makedirs の戻り値が CPLAT_OK であること。
@@ -295,8 +295,7 @@ TEST_F(makedirsTest, relative_path_creates_nested_directories)
                               // [Pre-Assert手順] - 0 を返却する。
 
     // Act
-    const int result =
-        cplat_makedirs("rel/sub", NULL); // [手順] - 相対パスの複数階層を指定して makedirs を呼び出す。
+    const int result = cplat_makedirs("rel/sub", NULL); // [手順] - 相対パスの複数階層を指定して makedirs を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -350,8 +349,7 @@ TEST_F(makedirsTest, returns_success_when_mkdir_creates_target)
                               // [Pre-Assert手順] - mkdir で 0 を返却する。
 
     // Act
-    int result =
-        cplat_makedirs("target", NULL); // [手順] - stat 失敗後に mkdir が成功する条件で makedirs を呼び出す。
+    int result = cplat_makedirs("target", NULL); // [手順] - stat 失敗後に mkdir が成功する条件で makedirs を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -386,8 +384,8 @@ TEST_F(makedirsTest, returns_success_when_target_appears_after_mkdir_failure)
                               // [Pre-Assert手順] - mkdir の後の stat で 0 を返却する。
 
     // Act
-    int result = cplat_makedirs(
-        "target", NULL); // [手順] - mkdir 失敗後の stat が成功する競合生成の条件で makedirs を呼び出す。
+    int result =
+        cplat_makedirs("target", NULL); // [手順] - mkdir 失敗後の stat が成功する競合生成の条件で makedirs を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -454,10 +452,10 @@ TEST_F(makedirsTest, windows_separator_path_creates_directory)
 
     // Act
     int actual_ret = cplat_makedirs(windows_path.c_str(),
-                                NULL); // [手順] - Windows スタイル区切りの 2 階層パスを cplat_makedirs で作成する。
+                                    NULL); // [手順] - Windows スタイル区切りの 2 階層パスを cplat_makedirs で作成する。
     int actual_ret_exist = cplat_stat(&st, NULL, nested.c_str()); // [手順] - 正規化後のパスでリーフの存在を確認する。
     int ret2 = cplat_makedirs(windows_path.c_str(),
-                                 NULL); // [手順] - 既存ディレクトリに cplat_makedirs を再呼び出しする。
+                              NULL); // [手順] - 既存ディレクトリに cplat_makedirs を再呼び出しする。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret);       // [確認_正常系] - cplat_makedirs の戻り値が CPLAT_OK であること。

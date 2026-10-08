@@ -25,8 +25,8 @@ MOCK_WEAK_IMPL(int, cplat_utf8_to_wpath, wchar_t *wbuf, size_t wbuf_count, const
 
 int delegate_real_cplat_utf8_to_wstr(wchar_t *wbuf, size_t wbuf_count, const char *utf8_text)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_utf8_to_wstr)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_utf8_to_wstr"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_utf8_to_wstr)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_utf8_to_wstr"));
 
     return real_fn(wbuf, wbuf_count, utf8_text);
 }
@@ -65,8 +65,8 @@ MOCK_WEAK_IMPL(int, cplat_wpath_to_utf8, char *dest, size_t dest_size, const wch
 
 int delegate_real_cplat_wstr_to_utf8(char *dest, size_t dest_size, const wchar_t *wtext)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_wstr_to_utf8)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_wstr_to_utf8"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_wstr_to_utf8)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_wstr_to_utf8"));
 
     return real_fn(dest, dest_size, wtext);
 }

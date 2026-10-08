@@ -4,8 +4,7 @@
 #if defined(PLATFORM_WINDOWS)
 
 int delegate_real_cplat_eventlog_sink_write(cplat_eventlog_sink *handle, int level, int64_t file_identifier,
-                                               const char *instance_name, int64_t instance_identifier,
-                                               const char *message)
+                                            const char *instance_name, int64_t instance_identifier, const char *message)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_eventlog_sink_write)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_eventlog_sink_write"));
@@ -21,12 +20,12 @@ MOCK_WEAK_IMPL(int, cplat_eventlog_sink_write, cplat_eventlog_sink *handle, int 
     if (_mock_cplat != nullptr)
     {
         mock_ret = _mock_cplat->cplat_eventlog_sink_write(handle, level, file_identifier, instance_name,
-                                                           instance_identifier, message);
+                                                          instance_identifier, message);
     }
     else
     {
         mock_ret = delegate_real_cplat_eventlog_sink_write(handle, level, file_identifier, instance_name,
-                                                         instance_identifier, message);
+                                                           instance_identifier, message);
     }
 
     if (getTraceLevel() > TRACE_NONE)

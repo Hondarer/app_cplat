@@ -373,12 +373,12 @@ typedef std::basic_regex<wchar_t, regex_traits> engine_type;
 typedef std::match_results<std::wstring::const_iterator> match_type;
 
 /** コンパイル フラグとして受け付けるビットの和。 */
-const unsigned int COMPILE_FLAG_MASK = CPLAT_REGEX_EXTENDED | CPLAT_REGEX_BASIC | CPLAT_REGEX_ICASE |
-                                       CPLAT_REGEX_NOSUB | CPLAT_REGEX_OPTIMIZE;
+const unsigned int COMPILE_FLAG_MASK =
+    CPLAT_REGEX_EXTENDED | CPLAT_REGEX_BASIC | CPLAT_REGEX_ICASE | CPLAT_REGEX_NOSUB | CPLAT_REGEX_OPTIMIZE;
 
 /** 照合フラグとして受け付けるビットの和。 */
-const unsigned int MATCH_FLAG_MASK = CPLAT_REGEX_MATCH_NOTBOL | CPLAT_REGEX_MATCH_NOTEOL |
-                                     CPLAT_REGEX_MATCH_NOTEMPTY | CPLAT_REGEX_MATCH_ANCHORED;
+const unsigned int MATCH_FLAG_MASK =
+    CPLAT_REGEX_MATCH_NOTBOL | CPLAT_REGEX_MATCH_NOTEOL | CPLAT_REGEX_MATCH_NOTEMPTY | CPLAT_REGEX_MATCH_ANCHORED;
 
 /** 置換フラグとして受け付けるビットの和。 */
 const unsigned int REPLACE_FLAG_MASK =
@@ -564,8 +564,7 @@ struct cplat_regex
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_regex_create(const char *pattern, const unsigned int flags, cplat_regex **regex_out,
-                          cplat_error *detail_out)
+int cplat_regex_create(const char *pattern, const unsigned int flags, cplat_regex **regex_out, cplat_error *detail_out)
 {
     if ((pattern == nullptr) || (regex_out == nullptr))
     {
@@ -599,14 +598,15 @@ int cplat_regex_create(const char *pattern, const unsigned int flags, cplat_rege
 
         std::wstring units;
         std::vector<std::size_t> offsets;
-        const bool decoded = cplat_internal_regex_utf8_decode(pattern, pattern_len, units, offsets); /* TESTFW_EXCL_EH_ARCS */
+        const bool decoded =
+            cplat_internal_regex_utf8_decode(pattern, pattern_len, units, offsets); /* TESTFW_EXCL_EH_ARCS */
         if (!decoded)
         {
             return report_plain(detail_out, CPLAT_ERR_INVALID_ENCODING);
         }
 
         cplat_regex *created = new cplat_regex{engine_type(units, option), 0}; /* TESTFW_EXCL_EH_ARCS */
-        created->group_count = created->engine.mark_count() + 1;                     /* TESTFW_EXCL_EH_ARCS */
+        created->group_count = created->engine.mark_count() + 1;               /* TESTFW_EXCL_EH_ARCS */
 
         *regex_out = created;
         result = report_success(detail_out);
@@ -693,7 +693,8 @@ int execute(const cplat_regex *regex, const char *text, std::size_t text_len, st
         }
 
         std::size_t start_index = 0;
-        const bool indexed = cplat_internal_regex_index_of_offset(offsets, start_offset, start_index); /* TESTFW_EXCL_EH_ARCS */
+        const bool indexed =
+            cplat_internal_regex_index_of_offset(offsets, start_offset, start_index); /* TESTFW_EXCL_EH_ARCS */
         if (!indexed)
         {
             return report_plain(detail_out, CPLAT_ERR_INVALID_ARGUMENT);
@@ -755,9 +756,9 @@ int execute(const cplat_regex *regex, const char *text, std::size_t text_len, st
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_regex_search(const cplat_regex *regex, const char *text, const size_t text_len,
-                          const size_t start_offset, const unsigned int match_flags, cplat_regex_match *matches_out,
-                          const size_t matches_capacity, int *matched_out, cplat_error *detail_out)
+int cplat_regex_search(const cplat_regex *regex, const char *text, const size_t text_len, const size_t start_offset,
+                       const unsigned int match_flags, cplat_regex_match *matches_out, const size_t matches_capacity,
+                       int *matched_out, cplat_error *detail_out)
 {
     return execute(regex, text, text_len, start_offset, match_flags, false, matches_out, matches_capacity, matched_out,
                    detail_out);
@@ -766,17 +767,17 @@ int cplat_regex_search(const cplat_regex *regex, const char *text, const size_t 
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_regex_matches(const cplat_regex *regex, const char *text, const size_t text_len,
-                           const unsigned int match_flags, cplat_regex_match *matches_out,
-                           const size_t matches_capacity, int *matched_out, cplat_error *detail_out)
+                        const unsigned int match_flags, cplat_regex_match *matches_out, const size_t matches_capacity,
+                        int *matched_out, cplat_error *detail_out)
 {
     return execute(regex, text, text_len, 0, match_flags, true, matches_out, matches_capacity, matched_out, detail_out);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_regex_replace(const cplat_regex *regex, const char *text, const size_t text_len,
-                           const char *replacement, const unsigned int flags, char *result_out,
-                           const size_t result_size, size_t *required_size_out, cplat_error *detail_out)
+int cplat_regex_replace(const cplat_regex *regex, const char *text, const size_t text_len, const char *replacement,
+                        const unsigned int flags, char *result_out, const size_t result_size, size_t *required_size_out,
+                        cplat_error *detail_out)
 {
     if ((regex == nullptr) || (text == nullptr) || (replacement == nullptr))
     {
@@ -803,7 +804,8 @@ int cplat_regex_replace(const cplat_regex *regex, const char *text, const size_t
 #endif /* !CPLAT_REGEX_NO_EXCEPTIONS */
         std::wstring text_units;
         std::vector<std::size_t> text_offsets;
-        const bool text_decoded = cplat_internal_regex_utf8_decode(text, text_len, text_units, text_offsets); /* TESTFW_EXCL_EH_ARCS */
+        const bool text_decoded =
+            cplat_internal_regex_utf8_decode(text, text_len, text_units, text_offsets); /* TESTFW_EXCL_EH_ARCS */
         if (!text_decoded)
         {
             return report_plain(detail_out, CPLAT_ERR_INVALID_ENCODING);
@@ -817,8 +819,8 @@ int cplat_regex_replace(const cplat_regex *regex, const char *text, const size_t
 
         std::wstring replacement_units;
         std::vector<std::size_t> replacement_offsets;
-        const bool replacement_decoded =
-            cplat_internal_regex_utf8_decode(replacement, replacement_len, replacement_units, replacement_offsets); /* TESTFW_EXCL_EH_ARCS */
+        const bool replacement_decoded = cplat_internal_regex_utf8_decode(
+            replacement, replacement_len, replacement_units, replacement_offsets); /* TESTFW_EXCL_EH_ARCS */
         if (!replacement_decoded)
         {
             return report_plain(detail_out, CPLAT_ERR_INVALID_ENCODING);
@@ -887,7 +889,7 @@ int cplat_regex_replace(const cplat_regex *regex, const char *text, const size_t
  */
 struct cplat_regex_iter
 {
-    const cplat_regex *regex;      /**< 参照するコンパイル済みパターン。 */
+    const cplat_regex *regex;         /**< 参照するコンパイル済みパターン。 */
     std::wstring units;               /**< 入力のコード単位列。 */
     std::vector<std::size_t> offsets; /**< コード単位索引から UTF-8 バイト オフセットへの写像表。 */
     std::size_t position;             /**< 次に照合を開始するコード単位索引。 */
@@ -943,8 +945,7 @@ std::size_t advance_position(const std::wstring &units, std::size_t position)
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_regex_iter_create(const cplat_regex *regex, const char *text, const size_t text_len,
-                               const unsigned int match_flags, cplat_regex_iter **iter_out,
-                               cplat_error *detail_out)
+                            const unsigned int match_flags, cplat_regex_iter **iter_out, cplat_error *detail_out)
 {
     if ((regex == nullptr) || (text == nullptr) || (iter_out == nullptr))
     {
@@ -976,8 +977,8 @@ int cplat_regex_iter_create(const cplat_regex *regex, const char *text, const si
             return report_plain(detail_out, CPLAT_ERR_INVALID_ENCODING);
         }
 
-        cplat_regex_iter *created = new cplat_regex_iter{
-            regex, std::move(units), std::move(offsets), 0, match_flags, 0}; /* TESTFW_EXCL_EH_ARCS */
+        cplat_regex_iter *created = new cplat_regex_iter{regex, std::move(units), std::move(offsets),
+                                                         0,     match_flags,      0}; /* TESTFW_EXCL_EH_ARCS */
 
         *iter_out = created;
         result = report_success(detail_out);
@@ -994,8 +995,8 @@ int cplat_regex_iter_create(const cplat_regex *regex, const char *text, const si
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_regex_iter_next(cplat_regex_iter *iter, cplat_regex_match *matches_out,
-                             const size_t matches_capacity, int *has_match_out, cplat_error *detail_out)
+int cplat_regex_iter_next(cplat_regex_iter *iter, cplat_regex_match *matches_out, const size_t matches_capacity,
+                          int *has_match_out, cplat_error *detail_out)
 {
     if ((iter == nullptr) || (has_match_out == nullptr))
     {
@@ -1077,8 +1078,8 @@ void cplat_regex_iter_dispose(cplat_regex_iter *iter)
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_regex_split(const cplat_regex *regex, const char *text, const size_t text_len, const size_t max_parts,
-                         const unsigned int match_flags, cplat_regex_match *parts_out, const size_t parts_capacity,
-                         size_t *part_count_out, cplat_error *detail_out)
+                      const unsigned int match_flags, cplat_regex_match *parts_out, const size_t parts_capacity,
+                      size_t *part_count_out, cplat_error *detail_out)
 {
     if ((regex == nullptr) || (text == nullptr) || (part_count_out == nullptr))
     {
@@ -1154,7 +1155,7 @@ int cplat_regex_split(const cplat_regex *regex, const char *text, const size_t t
             cplat_regex_match part;
             part.begin = cplat_internal_regex_offset_of_begin(units, offsets, part_begin); /* TESTFW_EXCL_EH_ARCS */
             part.end = cplat_internal_regex_offset_of_end(units, offsets, begin_index);    /* TESTFW_EXCL_EH_ARCS */
-            parts.push_back(part);                                    /* TESTFW_EXCL_EH_ARCS */
+            parts.push_back(part);                                                         /* TESTFW_EXCL_EH_ARCS */
 
             part_begin = end_index;
             position = end_index;
@@ -1163,7 +1164,7 @@ int cplat_regex_split(const cplat_regex *regex, const char *text, const size_t t
         cplat_regex_match last_part;
         last_part.begin = cplat_internal_regex_offset_of_begin(units, offsets, part_begin); /* TESTFW_EXCL_EH_ARCS */
         last_part.end = cplat_internal_regex_offset_of_end(units, offsets, units.size());   /* TESTFW_EXCL_EH_ARCS */
-        parts.push_back(last_part);                                    /* TESTFW_EXCL_EH_ARCS */
+        parts.push_back(last_part);                                                         /* TESTFW_EXCL_EH_ARCS */
 
         *part_count_out = parts.size();
 

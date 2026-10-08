@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_decompress(uint8_t *dst, size_t *dst_len, const uint8_t *src, size_t src_len)
 {
-    static auto real_decompress = reinterpret_cast<decltype(&cplat_decompress)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_decompress"));
+    static auto real_decompress =
+        reinterpret_cast<decltype(&cplat_decompress)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_decompress"));
 
     return real_decompress(dst, dst_len, src, src_len);
 }

@@ -226,7 +226,7 @@ static void print_start_error(int ret, const char *session_name)
     }
     else if (ret == CPLAT_ERR_INVALID_ARGUMENT)
     {
-        fprintf(stderr, "ETW session の開始に失敗しました。内部パラメータが不正です。\n");
+        fprintf(stderr, "ETW session の開始に失敗しました。内部パラメーターが不正です。\n");
     }
     else
     {
@@ -314,8 +314,8 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    ret = cplat_etw_session_start(session_name, CPLAT_TRACER_DEFAULT_PROVIDER_GUID_STR,
-                                     etw_viewer_handle_event, &viewer_context, &session);
+    ret = cplat_etw_session_start(session_name, CPLAT_TRACER_DEFAULT_PROVIDER_GUID_STR, etw_viewer_handle_event,
+                                  &viewer_context, &session);
     if (ret != CPLAT_OK)
     {
         int exit_code = EXIT_FAILURE;

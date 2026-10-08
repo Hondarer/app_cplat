@@ -7,7 +7,7 @@
  *  @version        1.0.0
  *
  *  対話的な 1 行入力を提供します。\n
- *  TTY (対話端末) では以下のキー操作を使用できます。
+ *  TTY (対話端末) では次のキー操作を使用できます。
  *  - 上/下矢印キー : 入力履歴を遡る/進む
  *  - 左/右矢印キー : カーソル移動
  *  - Home / End    : 行頭/行末へ移動
@@ -206,9 +206,8 @@ extern "C"
  *  本マクロはスレッド セーフではありません。\n
  *  同一プロンプト ハンドルに対する呼び出しを、呼び出し側で直列化してください。
  */
-#define cplat_prompt_readline_with_initial(p, buf, buf_size, prompt_str, initial_text)                        \
-    cplat_prompt_readline_with_initial_at((p), (buf), (buf_size), (prompt_str), (initial_text), __FILE__, \
-                                       __LINE__)
+#define cplat_prompt_readline_with_initial(p, buf, buf_size, prompt_str, initial_text) \
+    cplat_prompt_readline_with_initial_at((p), (buf), (buf_size), (prompt_str), (initial_text), __FILE__, __LINE__)
 
     /**
      *  @brief          呼び出し元を明示して 1 行入力を受け取ります。
@@ -233,7 +232,7 @@ extern "C"
      *  同一プロンプト ハンドルに対する呼び出しを、呼び出し側で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_prompt_readline_at(cplat_prompt *prompt, char *buf, size_t buf_size,
-                                                                 const char *prompt_str, const char *file, int line);
+                                                        const char *prompt_str, const char *file, int line);
 
     /**
      *  @brief          呼び出し元を明示し、入力欄に初期値を入れた状態で 1 行入力を受け取ります。
@@ -269,10 +268,9 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  同一プロンプト ハンドルに対する呼び出しを、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_prompt_readline_with_initial_at(cplat_prompt *prompt, char *buf,
-                                                                     size_t buf_size, const char *prompt_str,
-                                                                     const char *initial_text, const char *file,
-                                                                     int line);
+    CPLAT_EXPORT int CPLAT_API cplat_prompt_readline_with_initial_at(cplat_prompt *prompt, char *buf, size_t buf_size,
+                                                                     const char *prompt_str, const char *initial_text,
+                                                                     const char *file, int line);
 
     /**
      *  @brief          呼び出し元を明示し、printf 形式のプロンプトで 1 行入力を受け取ります。
@@ -298,7 +296,7 @@ extern "C"
      *  同一プロンプト ハンドルに対する呼び出しを、呼び出し側で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_prompt_readline_fmt_at(cplat_prompt *p, char *buf, size_t buf_size,
-                                                                     const char *file, int line, const char *fmt, ...)
+                                                            const char *file, int line, const char *fmt, ...)
 #if defined(COMPILER_GCC)
         __attribute__((format(printf, 6, 7)))
 #endif /* COMPILER_GCC */

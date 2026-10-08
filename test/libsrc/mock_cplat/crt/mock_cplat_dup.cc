@@ -3,8 +3,7 @@
 
 int delegate_real_cplat_dup(int fd, cplat_error *detail_out)
 {
-    static auto real_fn =
-        reinterpret_cast<decltype(&cplat_dup)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_dup"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_dup)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_dup"));
 
     return real_fn(fd, detail_out);
 }

@@ -129,8 +129,7 @@ extern "C"
      *  異なる @p file に対する呼び出しは同時に実行できます。\n
      *  同一 @p file に対する並行操作は、呼び出し側で同期してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_file_open(cplat_file *file, const char *path, int flags,
-                                                        cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_file_open(cplat_file *file, const char *path, int flags, cplat_error *detail_out);
 
     /**
      *  @brief          ファイルにバイト列を書き込みます。
@@ -151,8 +150,7 @@ extern "C"
      *  異なる @p file に対する呼び出しは同時に実行できます。\n
      *  同一 @p file への並行書き込みは、呼び出し側で同期してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_file_write(cplat_file *file, const void *buf, size_t len,
-                                                         cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_file_write(cplat_file *file, const void *buf, size_t len, cplat_error *detail_out);
 
     /**
      *  @brief          ファイルからバイト列を読み取ります。
@@ -177,7 +175,7 @@ extern "C"
      *  同一 @p file への並行読み取りは、呼び出し側で同期してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_file_read(cplat_file *file, void *buf, size_t len, size_t *read_out,
-                                                        cplat_error *detail_out);
+                                               cplat_error *detail_out);
 
     /**
      *  @brief          ファイル サイズを取得します。
@@ -193,8 +191,7 @@ extern "C"
      *  異なる @p file に対する呼び出しは同時に実行できます。\n
      *  同一 @p file に対するクローズや書き込みと並行して呼び出さないでください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_file_get_size(const cplat_file *file, size_t *size_out,
-                                                            cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_file_get_size(const cplat_file *file, size_t *size_out, cplat_error *detail_out);
 
     /**
      *  @brief          ファイル サイズを指定値に設定します (拡張または切り詰め)。
@@ -211,8 +208,7 @@ extern "C"
      *  異なる @p file に対する呼び出しは同時に実行できます。\n
      *  同一 @p file への並行操作は、呼び出し側で同期してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_file_set_size(cplat_file *file, size_t size,
-                                                            cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_file_set_size(cplat_file *file, size_t size, cplat_error *detail_out);
 
     /**
      *  @brief          開いているファイルの同一性情報を取得します。
@@ -231,7 +227,7 @@ extern "C"
      *  同一 @p file に対するクローズ操作と並行して呼び出さないでください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_file_get_id(const cplat_file *file, cplat_file_id *id_out,
-                                                          cplat_error *detail_out);
+                                                 cplat_error *detail_out);
 
     /**
      *  @brief          UTF-8 パスが現在指しているファイルの同一性情報を取得します。
@@ -250,8 +246,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_file_get_path_id(const char *path, cplat_file_id *id_out,
-                                                               cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_file_get_path_id(const char *path, cplat_file_id *id_out, cplat_error *detail_out);
 
     /**
      *  @brief          開いているファイルの最終更新日時を取得します。
@@ -274,9 +269,8 @@ extern "C"
      *  異なる @p file に対する呼び出しは同時に実行できます。\n
      *  同一 @p file に対するクローズ操作と並行して呼び出さないでください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_file_get_modified_timestamp(const cplat_file *file,
-                                                                           cplat_timespec *timestamp_out,
-                                                                           cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_file_get_modified_timestamp(const cplat_file *file, cplat_timespec *timestamp_out,
+                                                                 cplat_error *detail_out);
 
     /**
      *  @brief          開いているファイルの最終更新日時を設定します。
@@ -308,9 +302,8 @@ extern "C"
      *  異なる @p file に対する呼び出しは同時に実行できます。\n
      *  同一 @p file への並行操作は、呼び出し側で同期してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_file_set_modified_timestamp(cplat_file *file,
-                                                                           const cplat_timespec *timestamp,
-                                                                           cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_file_set_modified_timestamp(cplat_file *file, const cplat_timespec *timestamp,
+                                                                 cplat_error *detail_out);
 
     /**
      *  @brief          UTF-8 パスが指すファイルの最終更新日時を取得します。
@@ -329,9 +322,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_file_get_path_modified_timestamp(const char *path,
-                                                                               cplat_timespec *timestamp_out,
-                                                                               cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_file_get_path_modified_timestamp(const char *path, cplat_timespec *timestamp_out,
+                                                                      cplat_error *detail_out);
 
     /**
      *  @brief          UTF-8 パスが指すファイルの最終更新日時を設定します。
@@ -354,9 +346,8 @@ extern "C"
      *  異なるパスに対する呼び出しは同時に実行できます。\n
      *  同一パスに対する並行操作は、呼び出し側で同期してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_file_set_path_modified_timestamp(const char *path,
-                                                                               const cplat_timespec *timestamp,
-                                                                               cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_file_set_path_modified_timestamp(const char *path, const cplat_timespec *timestamp,
+                                                                      cplat_error *detail_out);
 
     /**
      *  @brief          ファイルへ書き込んだ内容を永続記憶装置へ反映します。

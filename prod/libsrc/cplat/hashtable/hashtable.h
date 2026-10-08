@@ -9,7 +9,7 @@
  *  本ヘッダーは `prod/libsrc/cplat/hashtable/` のモジュール私有ヘッダーです。\n
  *  同ディレクトリの実装ファイルからだけ `#include "hashtable.h"` で取り込みます。\n
  *  公開契約は公開ヘッダー `<cplat/hashtable/hashtable.h>` を正とします。\n
- *  以下の配置は実装の説明であり、公開 ABI ではありません。
+ *  次の配置は実装の説明であり、公開 ABI ではありません。
  *
  *  @section        hashtable_buffer_layout 管理領域とデータ領域の構成
  *
@@ -238,18 +238,18 @@ struct hashtable_free_block
  */
 struct hashtable_persist_header
 {
-    uint32_t magic;                    /**< 識別子。@c CPLAT_HASHTABLE_MAGIC 。 */
-    uint32_t version;                  /**< 配置の版。@c CPLAT_HASHTABLE_VERSION 。 */
+    uint32_t magic;                 /**< 識別子。@c CPLAT_HASHTABLE_MAGIC 。 */
+    uint32_t version;               /**< 配置の版。@c CPLAT_HASHTABLE_VERSION 。 */
     cplat_hashtable_config config;  /**< 構築時の設定の複製です。 */
-    uint64_t next_empty;               /**< 1 相対の最小空きです。満杯のときは 0 です。 */
-    uint64_t in_use_count;             /**< 実装中の件数です。 */
-    uint64_t deleted_count;            /**< 削除済み(加齢中および終端 255 を含む)の件数です。 */
-    uint64_t key_storage_used;         /**< 可変長キー ストレージの使用バイト数です。 */
-    uint64_t value_storage_used;       /**< 可変長値ストレージの使用バイト数です。 */
-    uint64_t key_free_count;           /**< 可変長キー ストレージの空きリストの要素数です。 */
-    uint64_t value_free_count;         /**< 可変長値ストレージの空きリストの要素数です。 */
+    uint64_t next_empty;            /**< 1 相対の最小空きです。満杯のときは 0 です。 */
+    uint64_t in_use_count;          /**< 実装中の件数です。 */
+    uint64_t deleted_count;         /**< 削除済み(加齢中および終端 255 を含む)の件数です。 */
+    uint64_t key_storage_used;      /**< 可変長キー ストレージの使用バイト数です。 */
+    uint64_t value_storage_used;    /**< 可変長値ストレージの使用バイト数です。 */
+    uint64_t key_free_count;        /**< 可変長キー ストレージの空きリストの要素数です。 */
+    uint64_t value_free_count;      /**< 可変長値ストレージの空きリストの要素数です。 */
     cplat_timespec table_timestamp; /**< 最後にキーまたは値が変わった実時刻です。 */
-    uint64_t table_generation;         /**< 変更のたびに 1 ずつ増える単調な値です。 */
+    uint64_t table_generation;      /**< 変更のたびに 1 ずつ増える単調な値です。 */
 };
 
 /* ヘッダー サイズは hashtable_mgmt_layout の整列前提(uint64_t 境界)を満たす。 */
@@ -271,7 +271,7 @@ struct cplat_hashtable
     struct hashtable_persist_header *hdr; /**< 永続化領域の先頭です。実行時のみ有効な内部参照です。 */
     unsigned char *data;                  /**< データ領域(値配列)の先頭です。実行時のみ有効です。 */
 
-    /* 以下は hdr->config から導出したレイアウトの控えです。永続化しません。 */
+    /* 次は hdr->config から導出したレイアウトの控えです。永続化しません。 */
     size_t off_bucket_head; /**< 管理領域先頭からバケット配列までのバイト オフセットです。 */
     size_t off_entries;     /**< 管理領域先頭からエントリ配列までのバイト オフセットです。 */
     size_t mgmt_size;       /**< 管理領域の総バイト数です。 */
@@ -280,12 +280,12 @@ struct cplat_hashtable
     size_t value_stride;    /**< 固定長値 1 件のバイト数です。 */
     size_t free_list_size;  /**< 空きリスト 1 本のバイト数です。 */
 
-    unsigned char owns_buffer;      /**< 1 なら @ref cplat_hashtable_dispose が永続化領域と
+    unsigned char owns_buffer;            /**< 1 なら @ref cplat_hashtable_dispose が永続化領域と
                                          データ領域をあわせて解放します。 */
-    unsigned char growable;         /**< 1 なら通常の追加・更新で自動拡張します。 */
-    unsigned char key_is_variable;  /**< 1 ならキーが可変長文字列です。 */
-    unsigned char value_is_variable; /**< 1 なら値が可変長文字列です。 */
-    unsigned char pad[4];           /**< value_is_variable のあとの明示パディングです。 */
+    unsigned char growable;               /**< 1 なら通常の追加・更新で自動拡張します。 */
+    unsigned char key_is_variable;        /**< 1 ならキーが可変長文字列です。 */
+    unsigned char value_is_variable;      /**< 1 なら値が可変長文字列です。 */
+    unsigned char pad[4];                 /**< value_is_variable のあとの明示パディングです。 */
     cplat_hashtable_growth_config growth; /**< 自動拡張の上限です。永続化しません。 */
 };
 
@@ -317,10 +317,10 @@ struct hashtable_arena
  */
 enum hashtable_growth_pressure
 {
-    HASHTABLE_GROWTH_NONE = 0,          /**< 不足はありません。 */
-    HASHTABLE_GROWTH_CAPACITY = 1,      /**< 空きレコードが不足しています。 */
-    HASHTABLE_GROWTH_KEY_STORAGE = 2,   /**< 可変長キー ストレージが不足しています。 */
-    HASHTABLE_GROWTH_VALUE_STORAGE = 4  /**< 可変長値ストレージが不足しています。 */
+    HASHTABLE_GROWTH_NONE = 0,         /**< 不足はありません。 */
+    HASHTABLE_GROWTH_CAPACITY = 1,     /**< 空きレコードが不足しています。 */
+    HASHTABLE_GROWTH_KEY_STORAGE = 2,  /**< 可変長キー ストレージが不足しています。 */
+    HASHTABLE_GROWTH_VALUE_STORAGE = 4 /**< 可変長値ストレージが不足しています。 */
 };
 
 /**
@@ -448,8 +448,7 @@ static inline cplat_timespec *hashtable_entry_timestamp(const cplat_hashtable *h
  */
 static inline uint64_t *hashtable_entry_generation(const cplat_hashtable *ht, size_t rec)
 {
-    return (uint64_t *)(void *)(hashtable_entries(ht) + rec * ht->entry_stride +
-                                hashtable_entry_generation_offset());
+    return (uint64_t *)(void *)(hashtable_entries(ht) + rec * ht->entry_stride + hashtable_entry_generation_offset());
 }
 
 /**
@@ -722,7 +721,7 @@ void hashtable_value_arena(const cplat_hashtable *ht, struct hashtable_arena *ar
  *  累積和を空きリスト上へ一時的に作り、二分探索で引きます。
  */
 void hashtable_arena_compact(cplat_hashtable *ht, struct hashtable_arena *arena, hashtable_ref_fn get_ref,
-                   uint64_t used);
+                             uint64_t used);
 
 /**
  *  @brief          指定スロットのキーを解放します。
@@ -815,7 +814,7 @@ void hashtable_reset_arenas(cplat_hashtable *ht);
  *  @ref hashtable_release_key を呼ぶ前提です。
  */
 int hashtable_key_storage_find_free(const cplat_hashtable *ht, size_t rec, int replace, const void *key,
-                          size_t *offset_out);
+                                    size_t *offset_out);
 
 /**
  *  @brief          可変長値の格納先を探します。
@@ -832,7 +831,7 @@ int hashtable_key_storage_find_free(const cplat_hashtable *ht, size_t rec, int r
  *  @ref hashtable_release_value を呼ぶ前提です。
  */
 int hashtable_value_storage_find_free(const cplat_hashtable *ht, size_t rec, int replace, const void *value,
-                            size_t *offset_out);
+                                      size_t *offset_out);
 
 /* ---- 構築と接続 (hashtable_create.c) ---- */
 
@@ -928,8 +927,7 @@ int hashtable_update_rec(cplat_hashtable *ht, uint64_t record, const void *value
  *  自動拡張が無効なテーブルでは、@ref hashtable_put の結果をそのまま返します。
  */
 int hashtable_put_with_growth(cplat_hashtable *ht, const void *key, const void *value,
-                              cplat_hashtable_add_deleted_policy deleted_policy, int allow_update,
-                              int *inserted_out);
+                              cplat_hashtable_add_deleted_policy deleted_policy, int allow_update, int *inserted_out);
 
 /**
  *  @brief          @ref hashtable_update を、不足時の自動拡張付きで実行します。

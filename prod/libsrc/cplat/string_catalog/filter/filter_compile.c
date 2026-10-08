@@ -948,8 +948,9 @@ static bool parse_pattern(compiler *state, const string_catalog_filter_instructi
     header.slot = (uint16_t)state->pattern_count;
     memcpy(constants + offset, &header, sizeof(header));
 
-    if (string_catalog_filter_create_pattern((const char *)(constants + offset + STRING_CATALOG_FILTER_CONSTANT_HEADER_SIZE),
-                                             instruction->operator_kind, &regex) != CPLAT_OK)
+    if (string_catalog_filter_create_pattern(
+            (const char *)(constants + offset + STRING_CATALOG_FILTER_CONSTANT_HEADER_SIZE), instruction->operator_kind,
+            &regex) != CPLAT_OK)
     {
         return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_INVALID_PATTERN, column);
     }

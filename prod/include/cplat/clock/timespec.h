@@ -98,7 +98,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT void CPLAT_API cplat_timespec_add(const cplat_timespec *a, const cplat_timespec *b,
-                                                            cplat_timespec *result);
+                                                   cplat_timespec *result);
 
     /**
      *  @brief          2 つの時刻値の差を求めます (result = a - b)。
@@ -114,7 +114,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT void CPLAT_API cplat_timespec_sub(const cplat_timespec *a, const cplat_timespec *b,
-                                                            cplat_timespec *result);
+                                                   cplat_timespec *result);
 
     /**
      *  @brief          2 つの時刻値を比較します。
@@ -143,7 +143,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT void CPLAT_API cplat_timespec_add_ms(const cplat_timespec *ts, uint64_t timeout_ms,
-                                                               cplat_timespec *result);
+                                                      cplat_timespec *result);
 
     /**
      *  @brief          2 つの時刻値の差をミリ秒で求めます (end - start)。
@@ -158,8 +158,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int64_t CPLAT_API cplat_timespec_diff_ms(const cplat_timespec *end,
-                                                                   const cplat_timespec *start);
+    CPLAT_EXPORT int64_t CPLAT_API cplat_timespec_diff_ms(const cplat_timespec *end, const cplat_timespec *start);
 
     /**
      *  @brief          cplat_timespec をネイティブの `struct timespec` へ変換します。
@@ -185,8 +184,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT void CPLAT_API cplat_timespec_from_native(const struct timespec *native,
-                                                                    cplat_timespec *ts);
+    CPLAT_EXPORT void CPLAT_API cplat_timespec_from_native(const struct timespec *native, cplat_timespec *ts);
 
 #ifdef __cplusplus
 }

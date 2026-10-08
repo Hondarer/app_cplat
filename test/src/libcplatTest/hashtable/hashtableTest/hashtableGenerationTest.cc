@@ -104,7 +104,7 @@ TEST_F(hashtableGenerationTest, add_update_delete_advance_generation)
     int actual_ret_created =
         cplat_hashtable_get_table_generation(ht, &created); // [手順] - 構築直後のテーブル世代を読む。
     int actual_ret_add = cplat_hashtable_add(ht, "a", value.data(),
-                                                 CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - キーを追加する。
+                                             CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - キーを追加する。
     int actual_ret_added_table =
         cplat_hashtable_get_table_generation(ht, &added_table); // [手順] - 追加後のテーブル世代を読む。
     int actual_ret_added_record =
@@ -123,25 +123,25 @@ TEST_F(hashtableGenerationTest, add_update_delete_advance_generation)
         cplat_hashtable_find_generation(ht, "a", &after_delete_found); // [手順] - 削除済みキーで検索する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_created);      // [確認_正常系] - 構築直後にテーブル世代を読めること。
-    EXPECT_EQ(0u, created);                          // [確認_正常系] - 構築直後のテーブル世代が 0 であること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_add);          // [確認_正常系] - add が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_added_table);  // [確認_正常系] - 追加後にテーブル世代を読めること。
-    EXPECT_EQ(1u, added_table);                      // [確認_正常系] - 追加でテーブル世代が 1 増えること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_added_record); // [確認_正常系] - 追加後にレコード世代を読めること。
-    EXPECT_EQ(added_table, added_record); // [確認_正常系] - レコード世代が追加後のテーブル世代と一致すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_added_found);    // [確認_正常系] - キーでレコード世代を読めること。
-    EXPECT_EQ(added_record, added_found);              // [確認_正常系] - キー経由と番号経由で同じ世代が得られること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_update);         // [確認_正常系] - update が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_updated_table);  // [確認_正常系] - 更新後にテーブル世代を読めること。
-    EXPECT_EQ(2u, updated_table);                      // [確認_正常系] - 更新でテーブル世代がさらに 1 増えること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_created);       // [確認_正常系] - 構築直後にテーブル世代を読めること。
+    EXPECT_EQ(0u, created);                        // [確認_正常系] - 構築直後のテーブル世代が 0 であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_add);           // [確認_正常系] - add が成功すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_added_table);   // [確認_正常系] - 追加後にテーブル世代を読めること。
+    EXPECT_EQ(1u, added_table);                    // [確認_正常系] - 追加でテーブル世代が 1 増えること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_added_record);  // [確認_正常系] - 追加後にレコード世代を読めること。
+    EXPECT_EQ(added_table, added_record);          // [確認_正常系] - レコード世代が追加後のテーブル世代と一致すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_added_found);   // [確認_正常系] - キーでレコード世代を読めること。
+    EXPECT_EQ(added_record, added_found);          // [確認_正常系] - キー経由と番号経由で同じ世代が得られること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_update);        // [確認_正常系] - update が成功すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_updated_table); // [確認_正常系] - 更新後にテーブル世代を読めること。
+    EXPECT_EQ(2u, updated_table);                  // [確認_正常系] - 更新でテーブル世代がさらに 1 増えること。
     EXPECT_EQ(CPLAT_OK, actual_ret_updated_record); // [確認_正常系] - 更新後にレコード世代を読めること。
-    EXPECT_EQ(updated_table, updated_record);  // [確認_正常系] - レコード世代が更新後のテーブル世代と一致すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_delete); // [確認_正常系] - delete が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_deleted_table);  // [確認_正常系] - 削除後にテーブル世代を読めること。
-    EXPECT_EQ(3u, deleted_table);                      // [確認_正常系] - 削除でテーブル世代がさらに 1 増えること。
+    EXPECT_EQ(updated_table, updated_record);      // [確認_正常系] - レコード世代が更新後のテーブル世代と一致すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_delete);        // [確認_正常系] - delete が成功すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_deleted_table); // [確認_正常系] - 削除後にテーブル世代を読めること。
+    EXPECT_EQ(3u, deleted_table);                  // [確認_正常系] - 削除でテーブル世代がさらに 1 増えること。
     EXPECT_EQ(CPLAT_OK, actual_ret_deleted_record); // [確認_正常系] - 削除済みレコードの世代を読めること。
-    EXPECT_EQ(deleted_table, deleted_record);          // [確認_正常系] - 削除済みレコードの世代が削除時の値であること。
+    EXPECT_EQ(deleted_table, deleted_record);       // [確認_正常系] - 削除済みレコードの世代が削除時の値であること。
     EXPECT_EQ(
         CPLAT_ERR_NOT_FOUND,
         actual_ret_after_delete_found); // [確認_異常系] - 削除済みキーの find_generation が NOT_FOUND であること。
@@ -177,7 +177,7 @@ TEST_F(hashtableGenerationTest, generation_advances_while_realtime_goes_backward
     // Act
     (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(),
-                                 CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - キーを追加する。
+                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - キーを追加する。
     int actual_ret_first_time = cplat_hashtable_get_timestamp_val(ht, 1, &first_time);
     int actual_ret_first_generation = cplat_hashtable_get_generation(ht, 1, &first_generation);
     fill_value(&value, "v2");
@@ -190,8 +190,8 @@ TEST_F(hashtableGenerationTest, generation_advances_while_realtime_goes_backward
     EXPECT_EQ(CPLAT_OK, actual_ret_first_generation);  // [確認_正常系] - 追加後の世代を読めること。
     EXPECT_EQ(CPLAT_OK, actual_ret_second_time);       // [確認_正常系] - 更新後の時刻を読めること。
     EXPECT_EQ(CPLAT_OK, actual_ret_second_generation); // [確認_正常系] - 更新後の世代を読めること。
-    EXPECT_LT(second_time.tv_sec, first_time.tv_sec);     // [確認_正常系] - 実時刻は時計の巻き戻しにより逆行すること。
-    EXPECT_GT(second_generation, first_generation); // [確認_正常系] - 世代カウンターは時計が戻っても増え続けること。
+    EXPECT_LT(second_time.tv_sec, first_time.tv_sec);  // [確認_正常系] - 実時刻は時計の巻き戻しにより逆行すること。
+    EXPECT_GT(second_generation, first_generation);    // [確認_正常系] - 世代カウンターは時計が戻っても増え続けること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -217,13 +217,13 @@ TEST_F(hashtableGenerationTest, reuse_deleted_selects_smallest_generation)
     /* レコード 1 は時刻が古く世代が新しい。レコード 2 は時刻が新しく世代が古い。 */
     int actual_ret_first =
         cplat_hashtable_insert_direct(ht, 1, "a", 2, value.data(), &old_time,
-                                         50); // [手順] - 時刻が古く世代が新しい削除済みレコードをレコード 1 へ置く。
+                                      50); // [手順] - 時刻が古く世代が新しい削除済みレコードをレコード 1 へ置く。
     int actual_ret_second =
         cplat_hashtable_insert_direct(ht, 2, "b", 2, value.data(), &new_time,
-                                         10); // [手順] - 時刻が新しく世代が古い削除済みレコードをレコード 2 へ置く。
-    int actual_ret_add = cplat_hashtable_add(
-        ht, "z", value.data(),
-        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 空きが無い状態で新しいキーを追加する。
+                                      10); // [手順] - 時刻が新しく世代が古い削除済みレコードをレコード 2 へ置く。
+    int actual_ret_add =
+        cplat_hashtable_add(ht, "z", value.data(),
+                            CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 空きが無い状態で新しいキーを追加する。
     int actual_ret_recno = cplat_hashtable_find_recno(ht, "z", &reused_record);
 
     // Assert
@@ -231,7 +231,7 @@ TEST_F(hashtableGenerationTest, reuse_deleted_selects_smallest_generation)
     EXPECT_EQ(CPLAT_OK, actual_ret_second); // [確認_正常系] - レコード 2 への直接書き込みが成功すること。
     EXPECT_EQ(CPLAT_OK, actual_ret_add);    // [確認_正常系] - 削除済みを追い出して追加できること。
     EXPECT_EQ(CPLAT_OK, actual_ret_recno);  // [確認_正常系] - 追加したキーのレコード番号を引けること。
-    EXPECT_EQ(2u, reused_record); // [確認_正常系] - 実時刻ではなく世代が最小のレコード 2 が再利用されること。
+    EXPECT_EQ(2u, reused_record);           // [確認_正常系] - 実時刻ではなく世代が最小のレコード 2 が再利用されること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -255,22 +255,22 @@ TEST_F(hashtableGenerationTest, insert_direct_keeps_largest_generation)
     // Act
     (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
     int actual_ret_large = cplat_hashtable_insert_direct(ht, 1, "a", 1, value.data(), &timestamp,
-                                                            40); // [手順] - 大きい世代でレコードを置く。
+                                                         40); // [手順] - 大きい世代でレコードを置く。
     int actual_ret_after_large = cplat_hashtable_get_table_generation(ht, &after_large);
     int actual_ret_small = cplat_hashtable_insert_direct(ht, 2, "b", 1, value.data(), &timestamp,
-                                                            7); // [手順] - 小さい世代でレコードを置く。
+                                                         7); // [手順] - 小さい世代でレコードを置く。
     int actual_ret_after_small = cplat_hashtable_get_table_generation(ht, &after_small);
     int actual_ret_record_small = cplat_hashtable_get_generation(ht, 2, &record_small);
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_large);        // [確認_正常系] - 大きい世代での直接書き込みが成功すること。
     EXPECT_EQ(CPLAT_OK, actual_ret_after_large);  // [確認_正常系] - テーブル世代を読めること。
-    EXPECT_EQ(40u, after_large);                     // [確認_正常系] - テーブル世代が渡した値まで進むこと。
+    EXPECT_EQ(40u, after_large);                  // [確認_正常系] - テーブル世代が渡した値まで進むこと。
     EXPECT_EQ(CPLAT_OK, actual_ret_small);        // [確認_正常系] - 小さい世代での直接書き込みが成功すること。
     EXPECT_EQ(CPLAT_OK, actual_ret_after_small);  // [確認_正常系] - テーブル世代を読めること。
-    EXPECT_EQ(40u, after_small);                     // [確認_正常系] - 小さい世代を渡してもテーブル世代が戻らないこと。
+    EXPECT_EQ(40u, after_small);                  // [確認_正常系] - 小さい世代を渡してもテーブル世代が戻らないこと。
     EXPECT_EQ(CPLAT_OK, actual_ret_record_small); // [確認_正常系] - レコード世代を読めること。
-    EXPECT_EQ(7u, record_small);                     // [確認_正常系] - レコードには渡した値がそのまま書かれること。
+    EXPECT_EQ(7u, record_small);                  // [確認_正常系] - レコードには渡した値がそのまま書かれること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -297,8 +297,8 @@ TEST_F(hashtableGenerationTest, scope_table_has_no_record_generation)
     int actual_ret_table = cplat_hashtable_get_table_generation(ht, &table_generation);
     int actual_ret_record = cplat_hashtable_get_generation(ht, 1, &record_generation);
     int actual_ret_found = cplat_hashtable_find_generation(ht, "a", &found_generation);
-    int actual_ret_direct_generation = cplat_hashtable_insert_direct(
-        ht, 2, "b", 1, value.data(), NULL, 3); // [手順] - テーブル粒度で 0 以外の世代を渡す。
+    int actual_ret_direct_generation = cplat_hashtable_insert_direct(ht, 2, "b", 1, value.data(), NULL,
+                                                                     3); // [手順] - テーブル粒度で 0 以外の世代を渡す。
     int actual_ret_direct_timestamp = cplat_hashtable_insert_direct(
         ht, 2, "b", 1, value.data(), &timestamp, 0); // [手順] - テーブル粒度で NULL 以外の時刻を渡す。
     int actual_ret_direct_ok =
@@ -306,7 +306,7 @@ TEST_F(hashtableGenerationTest, scope_table_has_no_record_generation)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_table); // [確認_正常系] - テーブル粒度でもテーブル世代を読めること。
-    EXPECT_EQ(1u, table_generation);          // [確認_正常系] - テーブル粒度でもテーブル世代が進むこと。
+    EXPECT_EQ(1u, table_generation);       // [確認_正常系] - テーブル粒度でもテーブル世代が進むこと。
     EXPECT_EQ(CPLAT_ERR_UNSUPPORTED,
               actual_ret_record); // [確認_異常系] - テーブル粒度では get_generation が UNSUPPORTED であること。
     EXPECT_EQ(CPLAT_ERR_UNSUPPORTED,
@@ -355,8 +355,8 @@ TEST_F(hashtableGenerationTest, find_generation_walks_chain)
         cplat_hashtable_find_generation(ht, "zz", &missing_generation); // [手順] - 未登録のキーで検索する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_first);       // [確認_正常系] - チェイン先頭のキーで世代を読めること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_walked);      // [確認_正常系] - チェインを辿ってもキーで世代を読めること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_first);          // [確認_正常系] - チェイン先頭のキーで世代を読めること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_walked);         // [確認_正常系] - チェインを辿ってもキーで世代を読めること。
     EXPECT_EQ(first_generation, walked_generation); // [確認_正常系] - 辿っても同じ世代が得られること。
     EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
               actual_ret_missing); // [確認_異常系] - 未登録のキーの find_generation が NOT_FOUND であること。
@@ -397,17 +397,17 @@ TEST_F(hashtableGenerationTest, clear_and_purge_handle_generation)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_before);      // [確認_正常系] - 削除後にテーブル世代を読めること。
-    EXPECT_EQ(2u, before_purge);                    // [確認_正常系] - 追加と削除でテーブル世代が 2 になること。
+    EXPECT_EQ(2u, before_purge);                 // [確認_正常系] - 追加と削除でテーブル世代が 2 になること。
     EXPECT_EQ(CPLAT_OK, actual_ret_purge);       // [確認_正常系] - purge_deleted が成功すること。
     EXPECT_EQ(CPLAT_OK, actual_ret_after_purge); // [確認_正常系] - 回収後にテーブル世代を読めること。
-    EXPECT_EQ(before_purge, after_purge);           // [確認_正常系] - purge_deleted がテーブル世代を進めないこと。
+    EXPECT_EQ(before_purge, after_purge);        // [確認_正常系] - purge_deleted がテーブル世代を進めないこと。
     EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
-              actual_ret_purged_record);            // [確認_異常系] - 空へ戻したレコードの世代は NOT_FOUND であること。
+              actual_ret_purged_record);         // [確認_異常系] - 空へ戻したレコードの世代は NOT_FOUND であること。
     EXPECT_EQ(CPLAT_OK, actual_ret_validate);    // [確認_正常系] - 空へ戻した後も内部整合性が保たれること。
     EXPECT_EQ(CPLAT_OK, actual_ret_clear);       // [確認_正常系] - clear が成功すること。
     EXPECT_EQ(CPLAT_OK, actual_ret_after_clear); // [確認_正常系] - clear 後にテーブル世代を読めること。
-    EXPECT_GT(after_clear, after_purge);            // [確認_正常系] - clear がテーブル世代を進めること。
-    EXPECT_EQ(4u, after_clear); // [確認_正常系] - 追加と clear でテーブル世代がさらに 2 増えること。
+    EXPECT_GT(after_clear, after_purge);         // [確認_正常系] - clear がテーブル世代を進めること。
+    EXPECT_EQ(4u, after_clear);                  // [確認_正常系] - 追加と clear でテーブル世代がさらに 2 増えること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);

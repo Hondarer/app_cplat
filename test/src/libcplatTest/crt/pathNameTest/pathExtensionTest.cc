@@ -18,8 +18,8 @@ TEST_F(pathExtensionTest, returns_last_extension_of_multi_dot_name)
     const char *actual = cplat_path_extension(path); // [手順] - cplat_path_extension(path) を呼び出す。
 
     // Assert
-    EXPECT_STREQ(
-        ".gz", actual); // [確認_正常系] - cplat_path_extension の戻り値として、ドット込みの最後の拡張子が返ること。
+    EXPECT_STREQ(".gz",
+                 actual); // [確認_正常系] - cplat_path_extension の戻り値として、ドット込みの最後の拡張子が返ること。
 }
 
 // ドットファイルの先頭ドットが拡張子とみなされないことの確認
@@ -34,8 +34,8 @@ TEST_F(pathExtensionTest, does_not_treat_leading_dot_as_extension)
     const char *actual = cplat_path_extension(path); // [手順] - cplat_path_extension(path) を呼び出す。
 
     // Assert
-    EXPECT_STREQ(
-        "", actual); // [確認_正常系] - cplat_path_extension の戻り値として、拡張子なしとして空文字列が返ること。
+    EXPECT_STREQ("",
+                 actual); // [確認_正常系] - cplat_path_extension の戻り値として、拡張子なしとして空文字列が返ること。
 }
 
 // ディレクトリ名にドットが含まれても拡張子とみなされないことの確認

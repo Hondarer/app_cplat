@@ -3,14 +3,13 @@
 
 int delegate_real_cplat_file_get_id(const cplat_file *file, cplat_file_id *id_out, cplat_error *detail_out)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_file_get_id)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_file_get_id"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_file_get_id)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_file_get_id"));
 
     return real_fn(file, id_out, detail_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_file_get_id, const cplat_file *file, cplat_file_id *id_out,
-               cplat_error *detail_out)
+MOCK_WEAK_IMPL(int, cplat_file_get_id, const cplat_file *file, cplat_file_id *id_out, cplat_error *detail_out)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

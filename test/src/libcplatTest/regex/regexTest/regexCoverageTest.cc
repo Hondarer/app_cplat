@@ -107,31 +107,33 @@ TEST_F(regexCoverageTest, public_apis_translate_decode_exceptions)
     size_t part_count = 0U;
     int matched = 0;
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
-                                                 NULL)); // [状態] - パターン "a" をコンパイルする。
+                                           NULL)); // [状態] - パターン "a" をコンパイルする。
     // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     test_regex_utf8_set_decode_mode(REGEX_UTF8_FAKE_THROW_BAD_ALLOC);
-    int search_result = cplat_regex_search(regex, "a", 1U, 0U, CPLAT_REGEX_DEFAULT, NULL, 0U, &matched,
-                                              NULL); // [手順] - cplat_internal_regex_utf8_decode が bad_alloc を送出する状態で検索する。
+    int search_result =
+        cplat_regex_search(regex, "a", 1U, 0U, CPLAT_REGEX_DEFAULT, NULL, 0U, &matched,
+                           NULL); // [手順] - cplat_internal_regex_utf8_decode が bad_alloc を送出する状態で検索する。
     int replace_alloc_result =
         cplat_regex_replace(regex, "a", 1U, "x", CPLAT_REGEX_DEFAULT, buffer, sizeof(buffer), NULL,
-                               NULL); // [手順] - cplat_internal_regex_utf8_decode が bad_alloc を送出する状態で置換する。
-    int iter_create_result =
-        cplat_regex_iter_create(regex, "a", 1U, CPLAT_REGEX_DEFAULT, &iter,
-                                   NULL); // [手順] - cplat_internal_regex_utf8_decode が bad_alloc を送出する状態で列挙を生成する。
-    int split_result = cplat_regex_split(regex, "a", 1U, 0U, CPLAT_REGEX_DEFAULT, parts, 1U, &part_count,
-                                            NULL); // [手順] - cplat_internal_regex_utf8_decode が bad_alloc を送出する状態で分割する。
+                            NULL); // [手順] - cplat_internal_regex_utf8_decode が bad_alloc を送出する状態で置換する。
+    int iter_create_result = cplat_regex_iter_create(
+        regex, "a", 1U, CPLAT_REGEX_DEFAULT, &iter,
+        NULL); // [手順] - cplat_internal_regex_utf8_decode が bad_alloc を送出する状態で列挙を生成する。
+    int split_result =
+        cplat_regex_split(regex, "a", 1U, 0U, CPLAT_REGEX_DEFAULT, parts, 1U, &part_count,
+                          NULL); // [手順] - cplat_internal_regex_utf8_decode が bad_alloc を送出する状態で分割する。
     test_regex_utf8_set_decode_mode(REGEX_UTF8_FAKE_THROW_REGEX_ERROR);
     int search_regex_result =
         cplat_regex_search(regex, "a", 1U, 0U, CPLAT_REGEX_DEFAULT, &match, 1U, &matched,
-                              NULL); // [手順] - cplat_internal_regex_utf8_decode が regex_error を送出する状態で検索する。
+                           NULL); // [手順] - cplat_internal_regex_utf8_decode が regex_error を送出する状態で検索する。
     test_regex_utf8_set_decode_mode(REGEX_UTF8_FAKE_THROW_INT);
     int search_unknown_result =
         cplat_regex_search(regex, "a", 1U, 0U, CPLAT_REGEX_DEFAULT, NULL, 0U, &matched,
-                              NULL); // [手順] - cplat_internal_regex_utf8_decode が未知例外を送出する状態で検索する。
+                           NULL); // [手順] - cplat_internal_regex_utf8_decode が未知例外を送出する状態で検索する。
 
     // Assert
     EXPECT_EQ(
@@ -168,28 +170,29 @@ TEST_F(regexCoverageTest, replace_encode_failure_and_iter_position_past_end)
     char buffer[16] = {};
     int has_match = 0;
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
-                                                 NULL)); // [状態] - パターン "a" をコンパイルする。
+                                           NULL)); // [状態] - パターン "a" をコンパイルする。
     // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_iter_create(regex, "a", 1U, CPLAT_REGEX_DEFAULT, &iter,
-                                                      NULL)); // [状態] - 入力 "a" のイテレーターを生成する。
+                                                NULL)); // [状態] - 入力 "a" のイテレーターを生成する。
     // [状態確認] - cplat_regex_iter_create の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     test_regex_utf8_set_encode_mode(REGEX_UTF8_FAKE_RETURN_FALSE);
-    int encode_result = cplat_regex_replace(regex, "a", 1U, "x", CPLAT_REGEX_DEFAULT, buffer, sizeof(buffer),
-                                               NULL, NULL); // [手順] - cplat_internal_regex_utf8_encode が false を返す状態で置換する。
+    int encode_result =
+        cplat_regex_replace(regex, "a", 1U, "x", CPLAT_REGEX_DEFAULT, buffer, sizeof(buffer), NULL,
+                            NULL); // [手順] - cplat_internal_regex_utf8_encode が false を返す状態で置換する。
 #if !defined(CPLAT_REGEX_NO_EXCEPTIONS)
     test_regex_utf8_set_encode_mode(REGEX_UTF8_FAKE_THROW_BAD_ALLOC);
     int encode_throw_result =
         cplat_regex_replace(regex, "a", 1U, "x", CPLAT_REGEX_DEFAULT, buffer, sizeof(buffer), NULL,
-                               NULL); // [手順] - cplat_internal_regex_utf8_encode が bad_alloc を送出する状態で置換する。
-#endif                                /* !CPLAT_REGEX_NO_EXCEPTIONS */
+                            NULL); // [手順] - cplat_internal_regex_utf8_encode が bad_alloc を送出する状態で置換する。
+#endif                             /* !CPLAT_REGEX_NO_EXCEPTIONS */
     test_regex_utf8_set_encode_mode(REGEX_UTF8_FAKE_REAL);
     test_regex_iter_set_position(iter, 99U); // [状態] - 列挙位置を入力長より後ろへ進める。
     int next_result = cplat_regex_iter_next(iter, NULL, 0U, &has_match,
-                                               NULL); // [手順] - 終端を超えた位置で次の一致を取得する。
+                                            NULL); // [手順] - 終端を超えた位置で次の一致を取得する。
     bool past_end =
         test_regex_find_next_rejects_position_past_end(regex); // [手順] - 空入力の位置 1 で find_next を呼び出す。
 
@@ -201,10 +204,9 @@ TEST_F(regexCoverageTest, replace_encode_failure_and_iter_position_past_end)
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_MEMORY,
         encode_throw_result); // [確認_異常系] - cplat_internal_regex_utf8_encode の例外時の cplat_regex_replace の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
-#endif /* !CPLAT_REGEX_NO_EXCEPTIONS */
-    EXPECT_EQ(
-        CPLAT_OK,
-        next_result); // [確認_正常系] - 終端超過位置の cplat_regex_iter_next の戻り値が CPLAT_OK であること。
+#endif                        /* !CPLAT_REGEX_NO_EXCEPTIONS */
+    EXPECT_EQ(CPLAT_OK,
+              next_result);  // [確認_正常系] - 終端超過位置の cplat_regex_iter_next の戻り値が CPLAT_OK であること。
     EXPECT_EQ(0, has_match); // [確認_正常系] - 終端超過位置では一致が無いこと。
     EXPECT_FALSE(past_end);  // [確認_正常系] - 位置超過の find_next が false を返すこと。
 
@@ -264,12 +266,12 @@ TEST_F(regexCoverageTest, syntax_option_and_remaining_class_boundaries)
     // Pre-Assert
 
     // Act
-    bool both_syntax = test_regex_to_syntax_option(
-        CPLAT_REGEX_EXTENDED | CPLAT_REGEX_BASIC); // [手順] - EXTENDED と BASIC を同時に指定する。
+    bool both_syntax = test_regex_to_syntax_option(CPLAT_REGEX_EXTENDED |
+                                                   CPLAT_REGEX_BASIC); // [手順] - EXTENDED と BASIC を同時に指定する。
     bool extended_only = test_regex_to_syntax_option(CPLAT_REGEX_EXTENDED); // [手順] - EXTENDED だけを指定する。
     bool default_syntax = test_regex_to_syntax_option(CPLAT_REGEX_DEFAULT); // [手順] - 既定フラグを指定する。
-    bool icase_nosub = test_regex_to_syntax_option(CPLAT_REGEX_ICASE |
-                                                   CPLAT_REGEX_NOSUB); // [手順] - ICASE と NOSUB を指定する。
+    bool icase_nosub =
+        test_regex_to_syntax_option(CPLAT_REGEX_ICASE | CPLAT_REGEX_NOSUB); // [手順] - ICASE と NOSUB を指定する。
     unsigned int bracket_class =
         test_regex_lookup_classname(bracket_name, false); // [手順] - '[' だけのクラス名を変換する。
     int slash_value = test_regex_value(L'/', 10);         // [手順] - '/' の 10 進値を取得する。
@@ -321,7 +323,7 @@ TEST_F(regexCoverageTest, remaining_source_conditions)
     int split_text_null = CPLAT_OK;
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
-                                                 NULL)); // [状態] - パターン "a" をコンパイルする。
+                                           NULL)); // [状態] - パターン "a" をコンパイルする。
     // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -330,25 +332,25 @@ TEST_F(regexCoverageTest, remaining_source_conditions)
     class_at = test_regex_lookup_classname(L"@", false); // [手順] - '@' だけのクラス名を変換する。
     class_z = test_regex_lookup_classname(L"Z", false);  // [手順] - 'Z' だけのクラス名を変換する。
     create_limit = cplat_regex_create(long_pattern.c_str(), CPLAT_REGEX_DEFAULT, &limit_regex,
-                                         NULL); // [手順] - 上限を超えるパターンをコンパイルする。
+                                      NULL); // [手順] - 上限を超えるパターンをコンパイルする。
     search_extra = cplat_regex_search(regex, "a", 1U, 0U, CPLAT_REGEX_DEFAULT, extra, 4U, &matched,
-                                         NULL); // [手順] - グループ数より多い格納先で検索する。
+                                      NULL); // [手順] - グループ数より多い格納先で検索する。
     replace_text_null = cplat_regex_replace(regex, NULL, 0U, "x", CPLAT_REGEX_DEFAULT, NULL, 0U, NULL,
-                                               NULL); // [手順] - text NULL で置換する。
+                                            NULL); // [手順] - text NULL で置換する。
     iter_regex_null = cplat_regex_iter_create(NULL, "a", 1U, CPLAT_REGEX_DEFAULT, &iter,
-                                                 NULL); // [手順] - regex NULL で列挙を生成する。
+                                              NULL); // [手順] - regex NULL で列挙を生成する。
     iter_text_null = cplat_regex_iter_create(regex, NULL, 0U, CPLAT_REGEX_DEFAULT, &iter,
-                                                NULL); // [手順] - text NULL で列挙を生成する。
-    next_has_null = cplat_regex_iter_next(reinterpret_cast<cplat_regex_iter *>(static_cast<uintptr_t>(0x1)), NULL,
-                                             0U, NULL, NULL); // [手順] - has_match_out NULL で次一致を取得する。
+                                             NULL); // [手順] - text NULL で列挙を生成する。
+    next_has_null = cplat_regex_iter_next(reinterpret_cast<cplat_regex_iter *>(static_cast<uintptr_t>(0x1)), NULL, 0U,
+                                          NULL, NULL); // [手順] - has_match_out NULL で次一致を取得する。
     split_regex_null = cplat_regex_split(NULL, "a", 1U, 0U, CPLAT_REGEX_DEFAULT, NULL, 0U, &part_count,
-                                            NULL); // [手順] - regex NULL で分割する。
+                                         NULL); // [手順] - regex NULL で分割する。
     split_text_null = cplat_regex_split(regex, NULL, 0U, 0U, CPLAT_REGEX_DEFAULT, NULL, 0U, &part_count,
-                                           NULL);             // [手順] - text NULL で分割する。
+                                        NULL);                // [手順] - text NULL で分割する。
     advanced = test_regex_advance_position(two_low, 0U);      // [手順] - 連続する下位サロゲートで位置を進める。
     advanced_bmp = test_regex_advance_position(bmp_pair, 0U); // [手順] - BMP 2 文字の先頭から位置を進める。
-    cplat_regex_dispose(NULL);                             // [手順] - NULL のコンパイル済みパターンを破棄する。
-    cplat_regex_iter_dispose(NULL);                        // [手順] - NULL の列挙を破棄する。
+    cplat_regex_dispose(NULL);                                // [手順] - NULL のコンパイル済みパターンを破棄する。
+    cplat_regex_iter_dispose(NULL);                           // [手順] - NULL の列挙を破棄する。
 
     // Assert
     EXPECT_EQ(0U, class_at); // [確認_異常系] - '@' のクラス名が 0 であること。
@@ -356,9 +358,8 @@ TEST_F(regexCoverageTest, remaining_source_conditions)
     EXPECT_EQ(
         CPLAT_ERR_LIMIT_EXCEEDED,
         create_limit); // [確認_異常系] - 長過ぎるパターンの cplat_regex_create の戻り値が CPLAT_ERR_LIMIT_EXCEEDED であること。
-    EXPECT_EQ(
-        CPLAT_OK,
-        search_extra); // [確認_正常系] - 余剰グループ付き cplat_regex_search の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              search_extra); // [確認_正常系] - 余剰グループ付き cplat_regex_search の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_REGEX_NPOS, extra[3].begin); // [確認_正常系] - 余剰グループの begin が NPOS であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
@@ -397,10 +398,10 @@ TEST_F(regexCoverageTest, iter_next_translates_allocation_failure)
     int throw_count = 0;
     int fail_after = 0;
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
-                                                 NULL)); // [状態] - パターン "a" をコンパイルする。
+                                           NULL)); // [状態] - パターン "a" をコンパイルする。
     // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_iter_create(regex, "aaa", 3U, CPLAT_REGEX_DEFAULT, &iter,
-                                                      NULL)); // [状態] - 入力 "aaa" のイテレーターを生成する。
+                                                NULL)); // [状態] - 入力 "aaa" のイテレーターを生成する。
     // [状態確認] - cplat_regex_iter_create の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -413,7 +414,7 @@ TEST_F(regexCoverageTest, iter_next_translates_allocation_failure)
         try
         {
             result = cplat_regex_iter_next(iter, NULL, 0U, &has_match,
-                                              NULL); // [手順] - 確保失敗を注入して次の一致を取得する。
+                                           NULL); // [手順] - 確保失敗を注入して次の一致を取得する。
         }
         catch (const std::bad_alloc &)
         {

@@ -46,7 +46,7 @@ extern "C"
      *  呼び出し側がスレッドの静止を保証します。
      */
     void cplat_internal_eventlog_sink_dispose_on_shutdown(cplat_eventlog_sink *handle,
-                                                    const cplat_shutdown_event *event);
+                                                          const cplat_shutdown_event *event);
 
     #ifdef __cplusplus
 }

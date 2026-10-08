@@ -2,8 +2,8 @@
 #include <mock_cplat.h>
 
 void delegate_real_cplat_tracer_call_next_hook(cplat_tracer_hook_entry *prev, cplat_tracer *handle,
-                                                  cplat_trace_level level, const cplat_timespec *timestamp,
-                                                  const char *message)
+                                               cplat_trace_level level, const cplat_timespec *timestamp,
+                                               const char *message)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_tracer_call_next_hook)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_tracer_call_next_hook"));

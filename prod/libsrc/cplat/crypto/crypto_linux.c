@@ -30,7 +30,7 @@
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_crypto_encrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, const size_t src_len, const uint8_t *key,
-                     const uint8_t *nonce, const uint8_t *aad, const size_t aad_len)
+                         const uint8_t *nonce, const uint8_t *aad, const size_t aad_len)
 {
     EVP_CIPHER_CTX *ctx;
     int outl;
@@ -58,7 +58,7 @@ int cplat_crypto_encrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
         return CPLAT_ERR_UNKNOWN;
     }
 
-    /* ノンス長を 12 バイトに設定 (デフォルトと同一だが明示する) */
+    /* ノンス長を 12 バイトに設定 (既定値と同一だが明示する) */
     if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, (int)CPLAT_CRYPTO_NONCE_SIZE, NULL) != 1)
     {
         EVP_CIPHER_CTX_free(ctx);
@@ -115,7 +115,7 @@ int cplat_crypto_encrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, const size_t src_len, const uint8_t *key,
-                     const uint8_t *nonce, const uint8_t *aad, const size_t aad_len)
+                         const uint8_t *nonce, const uint8_t *aad, const size_t aad_len)
 {
     EVP_CIPHER_CTX *ctx;
     size_t plain_len;

@@ -81,8 +81,8 @@ _Static_assert(sizeof(void *) == 8, "cplat: requires a 64-bit environment");
 #endif /* DOXYGEN */
 
 #ifdef DOXYGEN
-    #define ARCH_NAME    "name" /**< アーキテクチャー名の文字列 ("x64", "Unknown")。 */
-#else                           /* !DOXYGEN */
+    #define ARCH_NAME "name" /**< アーキテクチャー名の文字列 ("x64", "Unknown")。 */
+#else                        /* !DOXYGEN */
     #if defined(__x86_64__) || defined(_M_X64)
         #define ARCH_NAME "x64"
     #else

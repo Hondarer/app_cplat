@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_socket_set_broadcast(cplat_socket sock, int enable, cplat_error *detail_out)
 {
-    static auto real_fn =
-        reinterpret_cast<decltype(&cplat_socket_set_broadcast)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_set_broadcast"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_socket_set_broadcast)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_set_broadcast"));
 
     return real_fn(sock, enable, detail_out);
 }

@@ -140,24 +140,24 @@ static void decode_cli_escapes(char *s)
 static void print_help(cplat_pinned_prompt *screen)
 {
     cplat_pinned_prompt_printf(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                                  "commands:\n"
-                                  "  help          show this help\n"
-                                  "  echo TEXT     write TEXT to stdout (\\e emits ESC)\n"
-                                  "  read primary  read one line with primary history\n"
-                                  "  read secondary read one line with secondary history\n"
-                                  "  read formatted read one line with formatted prompt\n"
-                                  "  start stdout  start stdout tick output\n"
-                                  "  start stderr  start stderr tick output\n"
-                                  "  stop stdout   stop stdout tick output\n"
-                                  "  stop stderr   stop stderr tick output\n"
-                                  "  stop all      stop all tick output\n"
-                                  "  status show [top|bottom|all]    show status area(s)\n"
-                                  "  status hide [top|bottom|all]    hide status area(s)\n"
-                                  "  status set-top-left TEXT    set top-left status (\\e emits ESC)\n"
-                                  "  status set-top-right TEXT   set top-right status (\\e emits ESC)\n"
-                                  "  status set-bottom-left TEXT    set bottom-left status (\\e emits ESC)\n"
-                                  "  status set-bottom-right TEXT   set bottom-right status (\\e emits ESC)\n"
-                                  "  exit, quit    exit pinned-prompt\n");
+                               "commands:\n"
+                               "  help          show this help\n"
+                               "  echo TEXT     write TEXT to stdout (\\e emits ESC)\n"
+                               "  read primary  read one line with primary history\n"
+                               "  read secondary read one line with secondary history\n"
+                               "  read formatted read one line with formatted prompt\n"
+                               "  start stdout  start stdout tick output\n"
+                               "  start stderr  start stderr tick output\n"
+                               "  stop stdout   stop stdout tick output\n"
+                               "  stop stderr   stop stderr tick output\n"
+                               "  stop all      stop all tick output\n"
+                               "  status show [top|bottom|all]    show status area(s)\n"
+                               "  status hide [top|bottom|all]    hide status area(s)\n"
+                               "  status set-top-left TEXT    set top-left status (\\e emits ESC)\n"
+                               "  status set-top-right TEXT   set top-right status (\\e emits ESC)\n"
+                               "  status set-bottom-left TEXT    set bottom-left status (\\e emits ESC)\n"
+                               "  status set-bottom-right TEXT   set bottom-right status (\\e emits ESC)\n"
+                               "  exit, quit    exit pinned-prompt\n");
 }
 
 static void worker_init(pinned_prompt_cli_worker *worker, cplat_pinned_prompt *screen,
@@ -215,7 +215,7 @@ static void worker_thread_proc(void *arg)
         if (!stop)
         {
             cplat_pinned_prompt_printf(worker->screen, worker->channel, "[%s tick %llu]\n", worker->name,
-                                          (unsigned long long)worker->tick_count);
+                                       (unsigned long long)worker->tick_count);
         }
 
         (void)cplat_local_lock_lock(worker->mutex, CPLAT_SYNC_WAIT_FOREVER);
@@ -233,7 +233,7 @@ static void worker_start(pinned_prompt_cli_worker *worker)
     if (worker_ensure_sync(worker) != 0)
     {
         cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
-                                      "failed to initialize %s worker\n", worker->name);
+                                   "failed to initialize %s worker\n", worker->name);
         return;
     }
 
@@ -259,18 +259,18 @@ static void worker_start(pinned_prompt_cli_worker *worker)
 
     if (running)
     {
-        cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                                      "%s worker already running\n", worker->name);
+        cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s worker already running\n",
+                                   worker->name);
     }
     else if (started)
     {
         cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s worker started\n",
-                                      worker->name);
+                                   worker->name);
     }
     else if (failed)
     {
-        cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
-                                      "failed to start %s worker\n", worker->name);
+        cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR, "failed to start %s worker\n",
+                                   worker->name);
     }
 }
 
@@ -282,8 +282,8 @@ static void worker_stop(pinned_prompt_cli_worker *worker, int announce)
     {
         if (announce)
         {
-            cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                                          "%s worker not running\n", worker->name);
+            cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s worker not running\n",
+                                       worker->name);
         }
         return;
     }
@@ -303,13 +303,13 @@ static void worker_stop(pinned_prompt_cli_worker *worker, int announce)
         if (announce)
         {
             cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s worker stopped\n",
-                                          worker->name);
+                                       worker->name);
         }
     }
     else if (announce)
     {
         cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s worker not running\n",
-                                      worker->name);
+                                   worker->name);
     }
 }
 
@@ -348,8 +348,7 @@ static void process_start(pinned_prompt_cli_session *session, const char *arg)
     worker = find_worker(session, arg);
     if (worker == NULL)
     {
-        cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
-                                      "usage: start stdout|stderr\n");
+        cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR, "usage: start stdout|stderr\n");
         return;
     }
     worker_start(worker);
@@ -370,7 +369,7 @@ static void process_stop(pinned_prompt_cli_session *session, const char *arg)
     if (worker == NULL)
     {
         cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
-                                      "usage: stop stdout|stderr|all\n");
+                                   "usage: stop stdout|stderr|all\n");
         return;
     }
     worker_stop(worker, 1);
@@ -398,28 +397,25 @@ static void process_status(pinned_prompt_cli_session *session, const char *arg)
         if (subarg == NULL || strcmp(subarg, "all") == 0)
         {
             (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP, 1);
-            (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM,
-                                                       1);
-            cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                                          "status areas enabled\n");
+            (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM, 1);
+            cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "status areas enabled\n");
         }
         else if (strcmp(subarg, "top") == 0)
         {
             (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP, 1);
             cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                                          "top status area enabled\n");
+                                       "top status area enabled\n");
         }
         else if (strcmp(subarg, "bottom") == 0)
         {
-            (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM,
-                                                       1);
+            (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM, 1);
             cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                                          "bottom status area enabled\n");
+                                       "bottom status area enabled\n");
         }
         else
         {
             cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
-                                          "usage: status show [top|bottom|all]\n");
+                                       "usage: status show [top|bottom|all]\n");
         }
     }
     else if (strcmp(subcmd, "hide") == 0)
@@ -427,54 +423,51 @@ static void process_status(pinned_prompt_cli_session *session, const char *arg)
         if (subarg == NULL || strcmp(subarg, "all") == 0)
         {
             (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP, 0);
-            (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM,
-                                                       0);
-            cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                                          "status areas disabled\n");
+            (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM, 0);
+            cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "status areas disabled\n");
         }
         else if (strcmp(subarg, "top") == 0)
         {
             (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP, 0);
             cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                                          "top status area disabled\n");
+                                       "top status area disabled\n");
         }
         else if (strcmp(subarg, "bottom") == 0)
         {
-            (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM,
-                                                       0);
+            (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM, 0);
             cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                                          "bottom status area disabled\n");
+                                       "bottom status area disabled\n");
         }
         else
         {
             cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
-                                          "usage: status hide [top|bottom|all]\n");
+                                       "usage: status hide [top|bottom|all]\n");
         }
     }
     else if (strcmp(subcmd, "set-top-left") == 0)
     {
         (void)cplat_pinned_prompt_status_set(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
-                                                CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT, subarg);
+                                             CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT, subarg);
     }
     else if (strcmp(subcmd, "set-top-right") == 0)
     {
         (void)cplat_pinned_prompt_status_set(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
-                                                CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT, subarg);
+                                             CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT, subarg);
     }
     else if (strcmp(subcmd, "set-bottom-left") == 0)
     {
         (void)cplat_pinned_prompt_status_set(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM,
-                                                CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT, subarg);
+                                             CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT, subarg);
     }
     else if (strcmp(subcmd, "set-bottom-right") == 0)
     {
         (void)cplat_pinned_prompt_status_set(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM,
-                                                CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT, subarg);
+                                             CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT, subarg);
     }
     else
     {
         cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
-                                      "unknown status subcommand: %s\n", subcmd);
+                                   "unknown status subcommand: %s\n", subcmd);
     }
 }
 
@@ -501,7 +494,7 @@ static void process_read(pinned_prompt_cli_session *session, const char *arg)
     if (arg == NULL)
     {
         cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
-                                      "usage: read primary|secondary|formatted\n");
+                                   "usage: read primary|secondary|formatted\n");
         return;
     }
 
@@ -520,19 +513,17 @@ static void process_read(pinned_prompt_cli_session *session, const char *arg)
     else
     {
         cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
-                                      "usage: read primary|secondary|formatted\n");
+                                   "usage: read primary|secondary|formatted\n");
         return;
     }
 
     if (ret == CPLAT_OK)
     {
-        cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "read %s: %s\n", arg,
-                                      buf);
+        cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "read %s: %s\n", arg, buf);
     }
     else
     {
-        cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "read %s cancelled\n",
-                                      arg);
+        cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "read %s cancelled\n", arg);
     }
 }
 
@@ -596,7 +587,7 @@ static void process_line(pinned_prompt_cli_session *session, char *line)
     else
     {
         cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR, "unknown command: %s\n",
-                                      command);
+                                   command);
     }
 }
 

@@ -62,7 +62,7 @@ TEST_F(fgetsTest, reads_line_terminated_by_lf)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_fgets の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("abc", buf);    // [確認_正常系] - 末尾の LF を除いた "abc" が格納されること。
+    EXPECT_STREQ("abc", buf);        // [確認_正常系] - 末尾の LF を除いた "abc" が格納されること。
 }
 
 // CRLF で終わる行が CR と LF の双方を除去して取得されることの確認
@@ -80,11 +80,12 @@ TEST_F(fgetsTest, strips_crlf)
                                                          // [Pre-Assert手順] - "abc\r\n" を格納して dest を返却する。
 
     // Act
-    int actual_ret = cplat_fgets(buf, sizeof(buf), kStream, NULL); // [手順] - CRLF で終わる行を cplat_fgets で読み取る。
+    int actual_ret =
+        cplat_fgets(buf, sizeof(buf), kStream, NULL); // [手順] - CRLF で終わる行を cplat_fgets で読み取る。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_fgets の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("abc", buf);    // [確認_正常系] - CR と LF を除いた "abc" が格納されること。
+    EXPECT_STREQ("abc", buf);        // [確認_正常系] - CR と LF を除いた "abc" が格納されること。
 }
 
 // 改行で終わらない最終行が取得できることの確認
@@ -106,7 +107,7 @@ TEST_F(fgetsTest, reads_last_line_without_newline)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_fgets の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("abc", buf);    // [確認_正常系] - "abc" が格納されること。
+    EXPECT_STREQ("abc", buf);        // [確認_正常系] - "abc" が格納されること。
 }
 
 // 空行が空文字列として取得されることの確認
@@ -128,7 +129,7 @@ TEST_F(fgetsTest, reads_empty_line)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_fgets の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("", buf);       // [確認_正常系] - 空文字列が格納されること。
+    EXPECT_STREQ("", buf);           // [確認_正常系] - 空文字列が格納されること。
 }
 
 // 読み取る行がない場合に EOF を返すことの確認
@@ -173,11 +174,12 @@ TEST_F(fgetsTest, returns_buffer_too_small_for_long_line)
                 // [Pre-Assert手順] - 先頭 3 文字を格納して dest を返却する。
 
     // Act
-    int actual_ret = cplat_fgets(buf, sizeof(buf), kStream, NULL); // [手順] - 4 バイトのバッファーで 8 文字の行を読み取る。
+    int actual_ret =
+        cplat_fgets(buf, sizeof(buf), kStream, NULL); // [手順] - 4 バイトのバッファーで 8 文字の行を読み取る。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              actual_ret);        // [確認_異常系] - cplat_fgets の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+              actual_ret); // [確認_異常系] - cplat_fgets の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
     EXPECT_STREQ("", buf); // [確認_異常系] - 途中までの内容を残さずバッファーが空文字列になること。
 }
 
@@ -202,9 +204,8 @@ TEST_F(fgetsTest, continues_reading_remainder_after_buffer_too_small)
     int second_ret = cplat_fgets(buf, sizeof(buf), kStream, NULL); // [手順] - 2 回目の呼び出しで行の残りを読み取る。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_ERR_BUFFER_TOO_SMALL,
-        first_ret); // [確認_異常系] - 1 回目の cplat_fgets の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
+              first_ret); // [確認_異常系] - 1 回目の cplat_fgets の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
     EXPECT_EQ(CPLAT_OK,
               second_ret);   // [確認_正常系] - 2 回目の cplat_fgets の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("ef", buf); // [確認_正常系] - 2 回目の呼び出しで行の残り "ef" が格納されること。
@@ -232,7 +233,7 @@ TEST_F(fgetsTest, buffer_size_one_returns_buffer_too_small)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              actual_ret);        // [確認_異常系] - cplat_fgets の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+              actual_ret); // [確認_異常系] - cplat_fgets の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
     EXPECT_STREQ("", buf); // [確認_異常系] - バッファーが空文字列になること。
 }
 
@@ -279,7 +280,7 @@ TEST_F(fgetsTest, clears_detail_on_success)
 {
     // Arrange
     cplat_error detail = {CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_NOT_FOUND,
-                             ENOENT}; // [状態] - 詳細エラーへあらかじめ ENOENT を設定する。
+                          ENOENT}; // [状態] - 詳細エラーへあらかじめ ENOENT を設定する。
     char buf[16];
     ASSERT_NE(0, cplat_error_is_set(&detail)); // [状態確認] - 呼び出し前の詳細エラーが設定済みであること。
 
@@ -291,9 +292,10 @@ TEST_F(fgetsTest, clears_detail_on_success)
                                                        // [Pre-Assert手順] - "abc\n" を格納して dest を返却する。
 
     // Act
-    int actual_ret = cplat_fgets(buf, sizeof(buf), kStream, &detail); // [手順] - 詳細エラー出力を指定して 1 行を読み取る。
+    int actual_ret =
+        cplat_fgets(buf, sizeof(buf), kStream, &detail); // [手順] - 詳細エラー出力を指定して 1 行を読み取る。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);                  // [確認_正常系] - cplat_fgets の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);           // [確認_正常系] - cplat_fgets の戻り値が CPLAT_OK であること。
     EXPECT_EQ(0, cplat_error_is_set(&detail)); // [確認_正常系] - 成功時に詳細エラーがクリアされること。
 }

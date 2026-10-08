@@ -124,10 +124,10 @@ TEST_F(errorContractTest, all_detail_out_apis_accept_null)
         {"cplat_file_set_size", []() { (void)cplat_file_set_size(NULL, 0U, NULL); }, 1, 0U},
         {"cplat_file_get_id", []() { (void)cplat_file_get_id(NULL, NULL, NULL); }, 1, 0U},
         {"cplat_file_get_path_id", []() { (void)cplat_file_get_path_id(NULL, NULL, NULL); }, 1, 0U},
-        {"cplat_file_get_modified_timestamp", []() { (void)cplat_file_get_modified_timestamp(NULL, NULL, NULL); },
-         1, 0U},
-        {"cplat_file_set_modified_timestamp", []() { (void)cplat_file_set_modified_timestamp(NULL, NULL, NULL); },
-         1, 0U},
+        {"cplat_file_get_modified_timestamp", []() { (void)cplat_file_get_modified_timestamp(NULL, NULL, NULL); }, 1,
+         0U},
+        {"cplat_file_set_modified_timestamp", []() { (void)cplat_file_set_modified_timestamp(NULL, NULL, NULL); }, 1,
+         0U},
         {"cplat_file_get_path_modified_timestamp",
          []() { (void)cplat_file_get_path_modified_timestamp(NULL, NULL, NULL); }, 1, 0U},
         {"cplat_file_set_path_modified_timestamp",
@@ -176,8 +176,8 @@ TEST_F(errorContractTest, all_detail_out_apis_accept_null)
         {"cplat_vstat_fmt", []() { invoke_vstat_fmt_with_null_detail(NULL); }, 1, 0U},
         {"cplat_mkdir_fmt", []() { (void)cplat_mkdir_fmt(NULL, NULL); }, 1, 0U},
         {"cplat_vmkdir_fmt", []() { invoke_vmkdir_fmt_with_null_detail(NULL); }, 1, 0U},
-        {"cplat_mmap_attach",
-         []() { (void)cplat_mmap_attach(NULL, CPLAT_MMAP_ACCESS_READ_ONLY, 0U, NULL, NULL); }, 1, 0U},
+        {"cplat_mmap_attach", []() { (void)cplat_mmap_attach(NULL, CPLAT_MMAP_ACCESS_READ_ONLY, 0U, NULL, NULL); }, 1,
+         0U},
         {"cplat_mmap_flush", []() { (void)cplat_mmap_flush(NULL, NULL, 0U, NULL); }, 1, 0U},
         {"cplat_mmap_detach", []() { (void)cplat_mmap_detach(NULL, NULL); }, 0, 0U},
     }; // [状態] - detail_out に NULL を指定する公開関数 59 件と公開マクロ 2 件を用意する。
@@ -217,23 +217,22 @@ TEST_F(errorContractTest, real_api_records_failure_and_clears_it_on_success)
     cplat_error success_error;
 
     (void)cplat_remove("cplat_error_tls_missing_file",
-                          NULL); // [状態] - 失敗対象のファイルが存在しない状態にする。
+                       NULL); // [状態] - 失敗対象のファイルが存在しない状態にする。
 
     // Pre-Assert
 
     // Act
     FILE *missing =
         cplat_fopen("cplat_error_tls_missing_file", "rb", NULL); // [手順] - 詳細エラー出力なしで失敗させる。
-    cplat_error_get_last(&failure_error);                           // [手順] - 失敗直後の TLS 詳細エラーを取得する。
+    cplat_error_get_last(&failure_error);                        // [手順] - 失敗直後の TLS 詳細エラーを取得する。
     FILE *existing = cplat_fopen_temp("err", "w+b", temp_path, sizeof(temp_path),
-                                         NULL); // [手順] - 次の詳細エラー記録対象 API を成功させる。
+                                      NULL); // [手順] - 次の詳細エラー記録対象 API を成功させる。
     cplat_error_get_last(&success_error);    // [手順] - 成功直後の TLS 詳細エラーを取得する。
 
     // Assert
     EXPECT_EQ((FILE *)NULL, missing); // [確認_異常系] - 存在しないファイルに対する cplat_fopen が NULL を返すこと。
-    EXPECT_EQ(
-        1, cplat_error_is(&failure_error,
-                             CPLAT_CAUSE_NOT_FOUND)); // [確認_異常系] - 失敗直後の TLS 要因が NOT_FOUND であること。
+    EXPECT_EQ(1, cplat_error_is(&failure_error,
+                                CPLAT_CAUSE_NOT_FOUND)); // [確認_異常系] - 失敗直後の TLS 要因が NOT_FOUND であること。
     ASSERT_NE((FILE *)NULL, existing); // [確認_正常系] - 存在するファイルに対する cplat_fopen が成功すること。
     EXPECT_EQ(0, cplat_error_is_set(&success_error)); // [確認_正常系] - 成功直後の TLS 詳細エラーが空であること。
 
@@ -254,9 +253,8 @@ TEST_F(errorContractTest, nested_paths_equal_success_clears_previous_failure)
     // Pre-Assert
 
     // Act
-    const int result =
-        cplat_path_equal(".", ".", &equal, NULL); // [手順] - 内部で 2 回絶対パス化する比較を成功させる。
-    cplat_error_get_last(&last_error);             // [手順] - 比較成功直後の TLS 詳細エラーを取得する。
+    const int result = cplat_path_equal(".", ".", &equal, NULL); // [手順] - 内部で 2 回絶対パス化する比較を成功させる。
+    cplat_error_get_last(&last_error);                           // [手順] - 比較成功直後の TLS 詳細エラーを取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -279,7 +277,7 @@ TEST_F(errorContractTest, last_error_is_isolated_between_threads)
     int join_invalid_result = CPLAT_ERR_UNKNOWN;
 
     (void)cplat_remove("cplat_error_tls_missing_file",
-                          NULL); // [状態] - NOT_FOUND 用のファイルが存在しない状態にする。
+                       NULL); // [状態] - NOT_FOUND 用のファイルが存在しない状態にする。
     cplat_error_clear_last(); // [状態] - メイン スレッドの TLS 詳細エラーを空にする。
 
     // Pre-Assert
@@ -287,14 +285,14 @@ TEST_F(errorContractTest, last_error_is_isolated_between_threads)
     // Act
     const int create_not_found_result =
         cplat_thread_create(&not_found_thread, record_thread_local_error,
-                               &not_found_case); // [手順] - NOT_FOUND を記録するスレッドを起動する。
+                            &not_found_case); // [手順] - NOT_FOUND を記録するスレッドを起動する。
     const int create_invalid_result =
         cplat_thread_create(&invalid_thread, record_thread_local_error,
-                               &invalid_case); // [手順] - INVALID_ARGUMENT を記録するスレッドを起動する。
+                            &invalid_case); // [手順] - INVALID_ARGUMENT を記録するスレッドを起動する。
     if (create_not_found_result == CPLAT_OK)
     {
-        join_not_found_result = cplat_thread_join(
-            not_found_thread, CPLAT_SYNC_WAIT_FOREVER); // [手順] - NOT_FOUND スレッドを待機する。
+        join_not_found_result =
+            cplat_thread_join(not_found_thread, CPLAT_SYNC_WAIT_FOREVER); // [手順] - NOT_FOUND スレッドを待機する。
     }
     if (create_invalid_result == CPLAT_OK)
     {
@@ -304,29 +302,26 @@ TEST_F(errorContractTest, last_error_is_isolated_between_threads)
     cplat_error_get_last(&main_error); // [手順] - 子スレッド終了後にメイン スレッドの TLS 詳細エラーを取得する。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_OK,
-        create_not_found_result); // [確認_正常系] - 1 つ目の cplat_thread_create の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(
-        CPLAT_OK,
-        create_invalid_result); // [確認_正常系] - 2 つ目の cplat_thread_create の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(
-        CPLAT_OK,
-        join_not_found_result); // [確認_正常系] - 1 つ目の cplat_thread_join の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              create_not_found_result); // [確認_正常系] - 1 つ目の cplat_thread_create の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              create_invalid_result); // [確認_正常系] - 2 つ目の cplat_thread_create の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              join_not_found_result); // [確認_正常系] - 1 つ目の cplat_thread_join の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK,
               join_invalid_result); // [確認_正常系] - 2 つ目の cplat_thread_join の戻り値が CPLAT_OK であること。
     EXPECT_EQ(1,
               not_found_case.call_completed); // [確認_正常系] - 1 つ目のスレッドが詳細エラーの取得を完了したこと。
     EXPECT_EQ(1,
               invalid_case.call_completed); // [確認_正常系] - 2 つ目のスレッドが詳細エラーの取得を完了したこと。
-    EXPECT_EQ(1, cplat_error_is(
-                     &not_found_case.observed_error,
-                     CPLAT_CAUSE_NOT_FOUND)); // [確認_正常系] - 1 つ目のスレッドが NOT_FOUND だけを取得すること。
+    EXPECT_EQ(
+        1, cplat_error_is(&not_found_case.observed_error,
+                          CPLAT_CAUSE_NOT_FOUND)); // [確認_正常系] - 1 つ目のスレッドが NOT_FOUND だけを取得すること。
     EXPECT_EQ(
         1,
         cplat_error_is(
             &invalid_case.observed_error,
             CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_正常系] - 2 つ目のスレッドが INVALID_ARGUMENT だけを取得すること。
-    EXPECT_EQ(0, cplat_error_is_set(
-                     &main_error)); // [確認_正常系] - メイン スレッドの TLS 詳細エラーが空のままであること。
+    EXPECT_EQ(
+        0, cplat_error_is_set(&main_error)); // [確認_正常系] - メイン スレッドの TLS 詳細エラーが空のままであること。
 }

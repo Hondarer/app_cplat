@@ -1,8 +1,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-size_t delegate_real_cplat_fwrite(const void *buffer, size_t size, size_t count, FILE *stream,
-                                     cplat_error *detail_out)
+size_t delegate_real_cplat_fwrite(const void *buffer, size_t size, size_t count, FILE *stream, cplat_error *detail_out)
 {
     static auto real_fn =
         reinterpret_cast<decltype(&cplat_fwrite)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_fwrite"));

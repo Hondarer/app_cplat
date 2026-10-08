@@ -136,103 +136,103 @@ extern "C"
      * see: https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html */
 
     /** 読み取りに使えない順序 (RELEASE と ACQ_REL) は SEQ_CST として扱います。 */
-    #define CPLAT_ATOMIC_GCC_LOAD(type, pointer, order)                                              \
-        __extension__({                                                                        \
-            type cplat_atomic_loaded_;                                       \
-            switch (order)                                                                     \
-            {                                                                                  \
-            case CPLAT_MEMORY_ORDER_RELAXED:                                                   \
-                cplat_atomic_loaded_ = __atomic_load_n((pointer), __ATOMIC_RELAXED);           \
-                break;                                                                         \
-            case CPLAT_MEMORY_ORDER_ACQUIRE:                                                   \
-                cplat_atomic_loaded_ = __atomic_load_n((pointer), __ATOMIC_ACQUIRE);           \
-                break;                                                                         \
-            case CPLAT_MEMORY_ORDER_RELEASE:                                                   \
-            case CPLAT_MEMORY_ORDER_ACQ_REL:                                                   \
-            case CPLAT_MEMORY_ORDER_SEQ_CST:                                                   \
-            default:                                                                           \
-                cplat_atomic_loaded_ = __atomic_load_n((pointer), __ATOMIC_SEQ_CST);           \
-                break;                                                                         \
-            }                                                                                  \
-            cplat_atomic_loaded_;                                                              \
+    #define CPLAT_ATOMIC_GCC_LOAD(type, pointer, order) \
+        __extension__({ \
+            type cplat_atomic_loaded_; \
+            switch (order) \
+            { \
+            case CPLAT_MEMORY_ORDER_RELAXED: \
+                cplat_atomic_loaded_ = __atomic_load_n((pointer), __ATOMIC_RELAXED); \
+                break; \
+            case CPLAT_MEMORY_ORDER_ACQUIRE: \
+                cplat_atomic_loaded_ = __atomic_load_n((pointer), __ATOMIC_ACQUIRE); \
+                break; \
+            case CPLAT_MEMORY_ORDER_RELEASE: \
+            case CPLAT_MEMORY_ORDER_ACQ_REL: \
+            case CPLAT_MEMORY_ORDER_SEQ_CST: \
+            default: \
+                cplat_atomic_loaded_ = __atomic_load_n((pointer), __ATOMIC_SEQ_CST); \
+                break; \
+            } \
+            cplat_atomic_loaded_; \
         })
 
     /** 書き込みに使えない順序 (ACQUIRE と ACQ_REL) は SEQ_CST として扱います。 */
-    #define CPLAT_ATOMIC_GCC_STORE(pointer, desired, order)                                    \
-        do                                                                                     \
-        {                                                                                      \
-            switch (order)                                                                     \
-            {                                                                                  \
-            case CPLAT_MEMORY_ORDER_RELAXED:                                                   \
-                __atomic_store_n((pointer), (desired), __ATOMIC_RELAXED);                      \
-                break;                                                                         \
-            case CPLAT_MEMORY_ORDER_RELEASE:                                                   \
-                __atomic_store_n((pointer), (desired), __ATOMIC_RELEASE);                      \
-                break;                                                                         \
-            case CPLAT_MEMORY_ORDER_ACQUIRE:                                                   \
-            case CPLAT_MEMORY_ORDER_ACQ_REL:                                                   \
-            case CPLAT_MEMORY_ORDER_SEQ_CST:                                                   \
-            default:                                                                           \
-                __atomic_store_n((pointer), (desired), __ATOMIC_SEQ_CST);                      \
-                break;                                                                         \
-            }                                                                                  \
+    #define CPLAT_ATOMIC_GCC_STORE(pointer, desired, order) \
+        do \
+        { \
+            switch (order) \
+            { \
+            case CPLAT_MEMORY_ORDER_RELAXED: \
+                __atomic_store_n((pointer), (desired), __ATOMIC_RELAXED); \
+                break; \
+            case CPLAT_MEMORY_ORDER_RELEASE: \
+                __atomic_store_n((pointer), (desired), __ATOMIC_RELEASE); \
+                break; \
+            case CPLAT_MEMORY_ORDER_ACQUIRE: \
+            case CPLAT_MEMORY_ORDER_ACQ_REL: \
+            case CPLAT_MEMORY_ORDER_SEQ_CST: \
+            default: \
+                __atomic_store_n((pointer), (desired), __ATOMIC_SEQ_CST); \
+                break; \
+            } \
         } while (0)
 
     /** 読み書きを伴う操作は、すべての順序を指定できます。 */
-    #define CPLAT_ATOMIC_GCC_RMW(type, builtin, pointer, operand, order)                             \
-        __extension__({                                                                        \
-            type cplat_atomic_previous_;                                     \
-            switch (order)                                                                     \
-            {                                                                                  \
-            case CPLAT_MEMORY_ORDER_RELAXED:                                                   \
-                cplat_atomic_previous_ = builtin((pointer), (operand), __ATOMIC_RELAXED);      \
-                break;                                                                         \
-            case CPLAT_MEMORY_ORDER_ACQUIRE:                                                   \
-                cplat_atomic_previous_ = builtin((pointer), (operand), __ATOMIC_ACQUIRE);      \
-                break;                                                                         \
-            case CPLAT_MEMORY_ORDER_RELEASE:                                                   \
-                cplat_atomic_previous_ = builtin((pointer), (operand), __ATOMIC_RELEASE);      \
-                break;                                                                         \
-            case CPLAT_MEMORY_ORDER_ACQ_REL:                                                   \
-                cplat_atomic_previous_ = builtin((pointer), (operand), __ATOMIC_ACQ_REL);      \
-                break;                                                                         \
-            case CPLAT_MEMORY_ORDER_SEQ_CST:                                                   \
-            default:                                                                           \
-                cplat_atomic_previous_ = builtin((pointer), (operand), __ATOMIC_SEQ_CST);      \
-                break;                                                                         \
-            }                                                                                  \
-            cplat_atomic_previous_;                                                            \
+    #define CPLAT_ATOMIC_GCC_RMW(type, builtin, pointer, operand, order) \
+        __extension__({ \
+            type cplat_atomic_previous_; \
+            switch (order) \
+            { \
+            case CPLAT_MEMORY_ORDER_RELAXED: \
+                cplat_atomic_previous_ = builtin((pointer), (operand), __ATOMIC_RELAXED); \
+                break; \
+            case CPLAT_MEMORY_ORDER_ACQUIRE: \
+                cplat_atomic_previous_ = builtin((pointer), (operand), __ATOMIC_ACQUIRE); \
+                break; \
+            case CPLAT_MEMORY_ORDER_RELEASE: \
+                cplat_atomic_previous_ = builtin((pointer), (operand), __ATOMIC_RELEASE); \
+                break; \
+            case CPLAT_MEMORY_ORDER_ACQ_REL: \
+                cplat_atomic_previous_ = builtin((pointer), (operand), __ATOMIC_ACQ_REL); \
+                break; \
+            case CPLAT_MEMORY_ORDER_SEQ_CST: \
+            default: \
+                cplat_atomic_previous_ = builtin((pointer), (operand), __ATOMIC_SEQ_CST); \
+                break; \
+            } \
+            cplat_atomic_previous_; \
         })
 
     /** 比較交換の失敗時の順序は、成功時の順序から C11 の既定と同じ規則で導きます。 */
-    #define CPLAT_ATOMIC_GCC_CAS(pointer, expected, desired, order)                                              \
-        __extension__({                                                                                          \
-            int cplat_atomic_exchanged_;                                                                         \
-            switch (order)                                                                                       \
-            {                                                                                                    \
-            case CPLAT_MEMORY_ORDER_RELAXED:                                                                     \
-                cplat_atomic_exchanged_ = (int)__atomic_compare_exchange_n((pointer), (expected), (desired), 0,  \
-                                                                           __ATOMIC_RELAXED, __ATOMIC_RELAXED);  \
-                break;                                                                                           \
-            case CPLAT_MEMORY_ORDER_ACQUIRE:                                                                     \
-                cplat_atomic_exchanged_ = (int)__atomic_compare_exchange_n((pointer), (expected), (desired), 0,  \
-                                                                           __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE);  \
-                break;                                                                                           \
-            case CPLAT_MEMORY_ORDER_RELEASE:                                                                     \
-                cplat_atomic_exchanged_ = (int)__atomic_compare_exchange_n((pointer), (expected), (desired), 0,  \
-                                                                           __ATOMIC_RELEASE, __ATOMIC_RELAXED);  \
-                break;                                                                                           \
-            case CPLAT_MEMORY_ORDER_ACQ_REL:                                                                     \
-                cplat_atomic_exchanged_ = (int)__atomic_compare_exchange_n((pointer), (expected), (desired), 0,  \
-                                                                           __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);  \
-                break;                                                                                           \
-            case CPLAT_MEMORY_ORDER_SEQ_CST:                                                                     \
-            default:                                                                                             \
-                cplat_atomic_exchanged_ = (int)__atomic_compare_exchange_n((pointer), (expected), (desired), 0,  \
-                                                                           __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);  \
-                break;                                                                                           \
-            }                                                                                                    \
-            cplat_atomic_exchanged_;                                                                             \
+    #define CPLAT_ATOMIC_GCC_CAS(pointer, expected, desired, order) \
+        __extension__({ \
+            int cplat_atomic_exchanged_; \
+            switch (order) \
+            { \
+            case CPLAT_MEMORY_ORDER_RELAXED: \
+                cplat_atomic_exchanged_ = (int)__atomic_compare_exchange_n((pointer), (expected), (desired), 0, \
+                                                                           __ATOMIC_RELAXED, __ATOMIC_RELAXED); \
+                break; \
+            case CPLAT_MEMORY_ORDER_ACQUIRE: \
+                cplat_atomic_exchanged_ = (int)__atomic_compare_exchange_n((pointer), (expected), (desired), 0, \
+                                                                           __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE); \
+                break; \
+            case CPLAT_MEMORY_ORDER_RELEASE: \
+                cplat_atomic_exchanged_ = (int)__atomic_compare_exchange_n((pointer), (expected), (desired), 0, \
+                                                                           __ATOMIC_RELEASE, __ATOMIC_RELAXED); \
+                break; \
+            case CPLAT_MEMORY_ORDER_ACQ_REL: \
+                cplat_atomic_exchanged_ = (int)__atomic_compare_exchange_n((pointer), (expected), (desired), 0, \
+                                                                           __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE); \
+                break; \
+            case CPLAT_MEMORY_ORDER_SEQ_CST: \
+            default: \
+                cplat_atomic_exchanged_ = (int)__atomic_compare_exchange_n((pointer), (expected), (desired), 0, \
+                                                                           __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST); \
+                break; \
+            } \
+            cplat_atomic_exchanged_; \
         })
 
 #elif defined(COMPILER_MSVC)
@@ -266,13 +266,13 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_LOAD(uint8_t, &atomic->value, order);
 #else
-        const uint8_t loaded = (uint8_t)__iso_volatile_load8((const volatile char *)&atomic->value);
+    const uint8_t loaded = (uint8_t)__iso_volatile_load8((const volatile char *)&atomic->value);
 
-        if (order != CPLAT_MEMORY_ORDER_RELAXED)
-        {
-            CPLAT_ATOMIC_COMPILER_BARRIER();
-        }
-        return loaded;
+    if (order != CPLAT_MEMORY_ORDER_RELAXED)
+    {
+        CPLAT_ATOMIC_COMPILER_BARRIER();
+    }
+    return loaded;
 #endif /* COMPILER_ */
     }
 
@@ -292,22 +292,22 @@ extern "C"
 #if defined(COMPILER_GCC)
         CPLAT_ATOMIC_GCC_STORE(&atomic->value, desired, order);
 #else
-        switch (order)
-        {
-        case CPLAT_MEMORY_ORDER_RELAXED:
-            __iso_volatile_store8((volatile char *)&atomic->value, (char)desired);
-            break;
-        case CPLAT_MEMORY_ORDER_RELEASE:
-            CPLAT_ATOMIC_COMPILER_BARRIER();
-            __iso_volatile_store8((volatile char *)&atomic->value, (char)desired);
-            break;
-        case CPLAT_MEMORY_ORDER_ACQUIRE:
-        case CPLAT_MEMORY_ORDER_ACQ_REL:
-        case CPLAT_MEMORY_ORDER_SEQ_CST:
-        default:
-            (void)_InterlockedExchange8((volatile char *)&atomic->value, (char)desired);
-            break;
-        }
+    switch (order)
+    {
+    case CPLAT_MEMORY_ORDER_RELAXED:
+        __iso_volatile_store8((volatile char *)&atomic->value, (char)desired);
+        break;
+    case CPLAT_MEMORY_ORDER_RELEASE:
+        CPLAT_ATOMIC_COMPILER_BARRIER();
+        __iso_volatile_store8((volatile char *)&atomic->value, (char)desired);
+        break;
+    case CPLAT_MEMORY_ORDER_ACQUIRE:
+    case CPLAT_MEMORY_ORDER_ACQ_REL:
+    case CPLAT_MEMORY_ORDER_SEQ_CST:
+    default:
+        (void)_InterlockedExchange8((volatile char *)&atomic->value, (char)desired);
+        break;
+    }
 #endif /* COMPILER_ */
     }
 
@@ -325,8 +325,8 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_RMW(uint8_t, __atomic_exchange_n, &atomic->value, desired, order);
 #else
-        (void)order;
-        return (uint8_t)_InterlockedExchange8((volatile char *)&atomic->value, (char)desired);
+    (void)order;
+    return (uint8_t)_InterlockedExchange8((volatile char *)&atomic->value, (char)desired);
 #endif /* COMPILER_ */
     }
 
@@ -344,16 +344,16 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_CAS(&atomic->value, expected, desired, order);
 #else
-        const uint8_t previous =
-            (uint8_t)_InterlockedCompareExchange8((volatile char *)&atomic->value, (char)desired, (char)*expected);
+    const uint8_t previous =
+        (uint8_t)_InterlockedCompareExchange8((volatile char *)&atomic->value, (char)desired, (char)*expected);
 
-        (void)order;
-        if (previous == *expected)
-        {
-            return 1;
-        }
-        *expected = previous;
-        return 0;
+    (void)order;
+    if (previous == *expected)
+    {
+        return 1;
+    }
+    *expected = previous;
+    return 0;
 #endif /* COMPILER_ */
     }
 
@@ -374,13 +374,13 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_LOAD(int32_t, &atomic->value, order);
 #else
-        const int32_t loaded = (int32_t)__iso_volatile_load32((const volatile int *)&atomic->value);
+    const int32_t loaded = (int32_t)__iso_volatile_load32((const volatile int *)&atomic->value);
 
-        if (order != CPLAT_MEMORY_ORDER_RELAXED)
-        {
-            CPLAT_ATOMIC_COMPILER_BARRIER();
-        }
-        return loaded;
+    if (order != CPLAT_MEMORY_ORDER_RELAXED)
+    {
+        CPLAT_ATOMIC_COMPILER_BARRIER();
+    }
+    return loaded;
 #endif /* COMPILER_ */
     }
 
@@ -400,22 +400,22 @@ extern "C"
 #if defined(COMPILER_GCC)
         CPLAT_ATOMIC_GCC_STORE(&atomic->value, desired, order);
 #else
-        switch (order)
-        {
-        case CPLAT_MEMORY_ORDER_RELAXED:
-            __iso_volatile_store32((volatile int *)&atomic->value, (int)desired);
-            break;
-        case CPLAT_MEMORY_ORDER_RELEASE:
-            CPLAT_ATOMIC_COMPILER_BARRIER();
-            __iso_volatile_store32((volatile int *)&atomic->value, (int)desired);
-            break;
-        case CPLAT_MEMORY_ORDER_ACQUIRE:
-        case CPLAT_MEMORY_ORDER_ACQ_REL:
-        case CPLAT_MEMORY_ORDER_SEQ_CST:
-        default:
-            (void)_InterlockedExchange((volatile long *)&atomic->value, (long)desired);
-            break;
-        }
+    switch (order)
+    {
+    case CPLAT_MEMORY_ORDER_RELAXED:
+        __iso_volatile_store32((volatile int *)&atomic->value, (int)desired);
+        break;
+    case CPLAT_MEMORY_ORDER_RELEASE:
+        CPLAT_ATOMIC_COMPILER_BARRIER();
+        __iso_volatile_store32((volatile int *)&atomic->value, (int)desired);
+        break;
+    case CPLAT_MEMORY_ORDER_ACQUIRE:
+    case CPLAT_MEMORY_ORDER_ACQ_REL:
+    case CPLAT_MEMORY_ORDER_SEQ_CST:
+    default:
+        (void)_InterlockedExchange((volatile long *)&atomic->value, (long)desired);
+        break;
+    }
 #endif /* COMPILER_ */
     }
 
@@ -435,8 +435,8 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_RMW(int32_t, __atomic_exchange_n, &atomic->value, desired, order);
 #else
-        (void)order;
-        return (int32_t)_InterlockedExchange((volatile long *)&atomic->value, (long)desired);
+    (void)order;
+    return (int32_t)_InterlockedExchange((volatile long *)&atomic->value, (long)desired);
 #endif /* COMPILER_ */
     }
 
@@ -460,16 +460,16 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_CAS(&atomic->value, expected, desired, order);
 #else
-        const int32_t previous =
-            (int32_t)_InterlockedCompareExchange((volatile long *)&atomic->value, (long)desired, (long)*expected);
+    const int32_t previous =
+        (int32_t)_InterlockedCompareExchange((volatile long *)&atomic->value, (long)desired, (long)*expected);
 
-        (void)order;
-        if (previous == *expected)
-        {
-            return 1;
-        }
-        *expected = previous;
-        return 0;
+    (void)order;
+    if (previous == *expected)
+    {
+        return 1;
+    }
+    *expected = previous;
+    return 0;
 #endif /* COMPILER_ */
     }
 
@@ -491,8 +491,8 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_RMW(int32_t, __atomic_fetch_add, &atomic->value, operand, order);
 #else
-        (void)order;
-        return (int32_t)_InterlockedExchangeAdd((volatile long *)&atomic->value, (long)operand);
+    (void)order;
+    return (int32_t)_InterlockedExchangeAdd((volatile long *)&atomic->value, (long)operand);
 #endif /* COMPILER_ */
     }
 
@@ -510,10 +510,9 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_RMW(int32_t, __atomic_fetch_sub, &atomic->value, operand, order);
 #else
-        (void)order;
-        /* 2 の補数の否定は符号なしで計算し、INT32_MIN でも未定義動作にしない */
-        return (int32_t)_InterlockedExchangeAdd((volatile long *)&atomic->value,
-                                                (long)(int32_t)(0U - (uint32_t)operand));
+    (void)order;
+    /* 2 の補数の否定は符号なしで計算し、INT32_MIN でも未定義動作にしない */
+    return (int32_t)_InterlockedExchangeAdd((volatile long *)&atomic->value, (long)(int32_t)(0U - (uint32_t)operand));
 #endif /* COMPILER_ */
     }
 
@@ -570,8 +569,8 @@ extern "C"
                                                         const uint32_t desired, const cplat_memory_order order)
     {
         int32_t signed_expected = (int32_t)*expected;
-        const int is_exchanged = cplat_atomic_compare_exchange_i32((cplat_atomic_i32 *)(void *)atomic,
-                                                                   &signed_expected, (int32_t)desired, order);
+        const int is_exchanged = cplat_atomic_compare_exchange_i32((cplat_atomic_i32 *)(void *)atomic, &signed_expected,
+                                                                   (int32_t)desired, order);
 
         *expected = (uint32_t)signed_expected;
         return is_exchanged;
@@ -616,13 +615,13 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_LOAD(int64_t, &atomic->value, order);
 #elif defined(COMPILER_MSVC)
-        const int64_t loaded = (int64_t)__iso_volatile_load64((const volatile __int64 *)&atomic->value);
+    const int64_t loaded = (int64_t)__iso_volatile_load64((const volatile __int64 *)&atomic->value);
 
-        if (order != CPLAT_MEMORY_ORDER_RELAXED)
-        {
-            CPLAT_ATOMIC_COMPILER_BARRIER();
-        }
-        return loaded;
+    if (order != CPLAT_MEMORY_ORDER_RELAXED)
+    {
+        CPLAT_ATOMIC_COMPILER_BARRIER();
+    }
+    return loaded;
 #endif /* COMPILER_ */
     }
 
@@ -640,22 +639,22 @@ extern "C"
 #if defined(COMPILER_GCC)
         CPLAT_ATOMIC_GCC_STORE(&atomic->value, desired, order);
 #elif defined(COMPILER_MSVC)
-        switch (order)
-        {
-        case CPLAT_MEMORY_ORDER_RELAXED:
-            __iso_volatile_store64((volatile __int64 *)&atomic->value, desired);
-            break;
-        case CPLAT_MEMORY_ORDER_RELEASE:
-            CPLAT_ATOMIC_COMPILER_BARRIER();
-            __iso_volatile_store64((volatile __int64 *)&atomic->value, desired);
-            break;
-        case CPLAT_MEMORY_ORDER_ACQUIRE:
-        case CPLAT_MEMORY_ORDER_ACQ_REL:
-        case CPLAT_MEMORY_ORDER_SEQ_CST:
-        default:
-            (void)_InterlockedExchange64((volatile __int64 *)&atomic->value, desired);
-            break;
-        }
+    switch (order)
+    {
+    case CPLAT_MEMORY_ORDER_RELAXED:
+        __iso_volatile_store64((volatile __int64 *)&atomic->value, desired);
+        break;
+    case CPLAT_MEMORY_ORDER_RELEASE:
+        CPLAT_ATOMIC_COMPILER_BARRIER();
+        __iso_volatile_store64((volatile __int64 *)&atomic->value, desired);
+        break;
+    case CPLAT_MEMORY_ORDER_ACQUIRE:
+    case CPLAT_MEMORY_ORDER_ACQ_REL:
+    case CPLAT_MEMORY_ORDER_SEQ_CST:
+    default:
+        (void)_InterlockedExchange64((volatile __int64 *)&atomic->value, desired);
+        break;
+    }
 #endif /* COMPILER_ */
     }
 
@@ -673,8 +672,8 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_RMW(int64_t, __atomic_exchange_n, &atomic->value, desired, order);
 #elif defined(COMPILER_MSVC)
-        (void)order;
-        return (int64_t)_InterlockedExchange64((volatile __int64 *)&atomic->value, desired);
+    (void)order;
+    return (int64_t)_InterlockedExchange64((volatile __int64 *)&atomic->value, desired);
 #endif /* COMPILER_ */
     }
 
@@ -692,16 +691,16 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_CAS(&atomic->value, expected, desired, order);
 #else
-        const int64_t previous =
-            (int64_t)_InterlockedCompareExchange64((volatile __int64 *)&atomic->value, desired, *expected);
+    const int64_t previous =
+        (int64_t)_InterlockedCompareExchange64((volatile __int64 *)&atomic->value, desired, *expected);
 
-        (void)order;
-        if (previous == *expected)
-        {
-            return 1;
-        }
-        *expected = previous;
-        return 0;
+    (void)order;
+    if (previous == *expected)
+    {
+        return 1;
+    }
+    *expected = previous;
+    return 0;
 #endif /* COMPILER_ */
     }
 
@@ -719,8 +718,8 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_RMW(int64_t, __atomic_fetch_add, &atomic->value, operand, order);
 #elif defined(COMPILER_MSVC)
-        (void)order;
-        return (int64_t)_InterlockedExchangeAdd64((volatile __int64 *)&atomic->value, operand);
+    (void)order;
+    return (int64_t)_InterlockedExchangeAdd64((volatile __int64 *)&atomic->value, operand);
 #endif /* COMPILER_ */
     }
 
@@ -738,8 +737,8 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_RMW(int64_t, __atomic_fetch_sub, &atomic->value, operand, order);
 #else
-        /* 2 の補数の否定は符号なしで計算し、INT64_MIN でも未定義動作にしない */
-        return cplat_atomic_fetch_add_i64(atomic, (int64_t)(0U - (uint64_t)operand), order);
+    /* 2 の補数の否定は符号なしで計算し、INT64_MIN でも未定義動作にしない */
+    return cplat_atomic_fetch_add_i64(atomic, (int64_t)(0U - (uint64_t)operand), order);
 #endif /* COMPILER_ */
     }
 
@@ -794,8 +793,8 @@ extern "C"
                                                         const uint64_t desired, const cplat_memory_order order)
     {
         int64_t signed_expected = (int64_t)*expected;
-        const int is_exchanged = cplat_atomic_compare_exchange_i64((cplat_atomic_i64 *)(void *)atomic,
-                                                                   &signed_expected, (int64_t)desired, order);
+        const int is_exchanged = cplat_atomic_compare_exchange_i64((cplat_atomic_i64 *)(void *)atomic, &signed_expected,
+                                                                   (int64_t)desired, order);
 
         *expected = (uint64_t)signed_expected;
         return is_exchanged;
@@ -840,7 +839,7 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_LOAD(void *, &atomic->value, order);
 #elif defined(COMPILER_MSVC)
-        return (void *)cplat_atomic_load_i64((const cplat_atomic_i64 *)(const void *)atomic, order);
+    return (void *)cplat_atomic_load_i64((const cplat_atomic_i64 *)(const void *)atomic, order);
 #endif /* COMPILER_ */
     }
 
@@ -857,7 +856,7 @@ extern "C"
 #if defined(COMPILER_GCC)
         CPLAT_ATOMIC_GCC_STORE(&atomic->value, desired, order);
 #elif defined(COMPILER_MSVC)
-        cplat_atomic_store_i64((cplat_atomic_i64 *)(void *)atomic, (int64_t)(intptr_t)desired, order);
+    cplat_atomic_store_i64((cplat_atomic_i64 *)(void *)atomic, (int64_t)(intptr_t)desired, order);
 #endif /* COMPILER_ */
     }
 
@@ -873,8 +872,8 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_RMW(void *, __atomic_exchange_n, &atomic->value, desired, order);
 #elif defined(COMPILER_MSVC)
-        (void)order;
-        return _InterlockedExchangePointer((void *volatile *)&atomic->value, desired);
+    (void)order;
+    return _InterlockedExchangePointer((void *volatile *)&atomic->value, desired);
 #endif /* COMPILER_ */
     }
 
@@ -892,15 +891,15 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_CAS(&atomic->value, expected, desired, order);
 #elif defined(COMPILER_MSVC)
-        void *const previous = _InterlockedCompareExchangePointer((void *volatile *)&atomic->value, desired, *expected);
+    void *const previous = _InterlockedCompareExchangePointer((void *volatile *)&atomic->value, desired, *expected);
 
-        (void)order;
-        if (previous == *expected)
-        {
-            return 1;
-        }
-        *expected = previous;
-        return 0;
+    (void)order;
+    if (previous == *expected)
+    {
+        return 1;
+    }
+    *expected = previous;
+    return 0;
 #endif /* COMPILER_ */
     }
 
@@ -937,26 +936,26 @@ extern "C"
             break;
         }
 #else
-        switch (order)
-        {
-        case CPLAT_MEMORY_ORDER_RELAXED:
-            break;
-        case CPLAT_MEMORY_ORDER_ACQUIRE:
-        case CPLAT_MEMORY_ORDER_RELEASE:
-        case CPLAT_MEMORY_ORDER_ACQ_REL:
-            /* x64 では、acquire と release の順序はハードウェアが保証する。コンパイラの並べ替えだけを止める */
-            CPLAT_ATOMIC_COMPILER_BARRIER();
-            break;
-        case CPLAT_MEMORY_ORDER_SEQ_CST:
-        default:
-        {
-            /* 書き込みとその後の読み取りの並べ替えを止めるため、完全なメモリ バリアを伴う操作を行う */
-            long guard = 0;
+    switch (order)
+    {
+    case CPLAT_MEMORY_ORDER_RELAXED:
+        break;
+    case CPLAT_MEMORY_ORDER_ACQUIRE:
+    case CPLAT_MEMORY_ORDER_RELEASE:
+    case CPLAT_MEMORY_ORDER_ACQ_REL:
+        /* x64 では、acquire と release の順序はハードウェアが保証する。コンパイラの並べ替えだけを止める */
+        CPLAT_ATOMIC_COMPILER_BARRIER();
+        break;
+    case CPLAT_MEMORY_ORDER_SEQ_CST:
+    default:
+    {
+        /* 書き込みとその後の読み取りの並べ替えを止めるため、完全なメモリ バリアを伴う操作を行う */
+        long guard = 0;
 
-            (void)_InterlockedExchange(&guard, 0);
-            break;
-        }
-        }
+        (void)_InterlockedExchange(&guard, 0);
+        break;
+    }
+    }
 #endif /* COMPILER_ */
     }
 

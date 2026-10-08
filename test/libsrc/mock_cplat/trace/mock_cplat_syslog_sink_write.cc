@@ -3,8 +3,8 @@
 
 #if defined(PLATFORM_LINUX)
 
-int delegate_real_cplat_syslog_sink_write(cplat_syslog_sink *handle, int level,
-                                             const cplat_timespec *timestamp, const char *message)
+int delegate_real_cplat_syslog_sink_write(cplat_syslog_sink *handle, int level, const cplat_timespec *timestamp,
+                                          const char *message)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_syslog_sink_write)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_syslog_sink_write"));
@@ -12,8 +12,8 @@ int delegate_real_cplat_syslog_sink_write(cplat_syslog_sink *handle, int level,
     return real_fn(handle, level, timestamp, message);
 }
 
-MOCK_WEAK_IMPL(int, cplat_syslog_sink_write, cplat_syslog_sink *handle, int level,
-               const cplat_timespec *timestamp, const char *message)
+MOCK_WEAK_IMPL(int, cplat_syslog_sink_write, cplat_syslog_sink *handle, int level, const cplat_timespec *timestamp,
+               const char *message)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

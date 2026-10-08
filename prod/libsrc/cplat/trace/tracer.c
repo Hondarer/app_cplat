@@ -804,7 +804,7 @@ static int resolve_file_name(const cplat_tracer *handle, char *file_name_out, co
 }
 
 /**
- *  @brief          ファイル トレースのデフォルト パスを構築します。
+ *  @brief          ファイル トレースの既定パスを構築します。
  *  @param[in]      handle     対象のトレース プロバイダー ハンドル。
  *  @param[out]     path_out   構築したパスを格納するバッファー。
  *  @param[in]      path_size  バッファーのバイト数。
@@ -858,8 +858,8 @@ static int build_default_file_path(const cplat_tracer *handle, char *path_out, c
  *  呼び出し側で config の排他ロックを保持していることを前提とします。
  *  cplat_tracer_start と cplat_tracer_set_file_level の双方から使用します。
  */
-static cplat_trace_file_sink *open_file_sink_with(const cplat_tracer *handle, const char *path,
-                                                     const size_t max_bytes, const int generations, const int flags)
+static cplat_trace_file_sink *open_file_sink_with(const cplat_tracer *handle, const char *path, const size_t max_bytes,
+                                                  const int generations, const int flags)
 {
     const char *eff_path = path;
     char default_path[PLATFORM_PATH_MAX];
@@ -1272,8 +1272,8 @@ static int has_output_target(const cplat_tracer *handle, const cplat_trace_level
  *  Windows では ETW を etw_level で、EventLog を os_level で独立してゲートします。
  *  各レベル判定を内部で行うため、本関数は常に呼び出せます。
  */
-static int write_os_backends(cplat_tracer *handle, const cplat_trace_level level,
-                             const cplat_timespec *timestamp, const char *msg)
+static int write_os_backends(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
+                             const char *msg)
 {
 #if defined(PLATFORM_LINUX)
     if (should_output(level, handle->os_level))
@@ -1295,7 +1295,7 @@ static int write_os_backends(cplat_tracer *handle, const cplat_trace_level level
     if (should_output(level, handle->os_level))
     {
         eventlog_result = cplat_eventlog_sink_write(s_eventlog_handle, (int)level, handle->file_identifier,
-                                                       handle->eventlog_instance_name, handle->identifier, msg);
+                                                    handle->eventlog_instance_name, handle->identifier, msg);
     }
 
     if (etw_result != 0 || eventlog_result != 0)
@@ -1392,8 +1392,7 @@ static int write_dual(cplat_tracer *handle, const cplat_trace_level level, const
     if (handle->file_handle != NULL && should_output(level, handle->file_level))
     {
         file_result =
-            cplat_internal_trace_file_sink_write_text(handle->file_handle, (int)level, effective_timestamp, ts,
-                                                      msg);
+            cplat_internal_trace_file_sink_write_text(handle->file_handle, (int)level, effective_timestamp, ts, msg);
     }
 
     if (should_output(level, handle->stderr_level))
@@ -1422,8 +1421,8 @@ static int write_dual(cplat_tracer *handle, const cplat_trace_level level, const
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_tracer_write_at(cplat_tracer *handle, const cplat_trace_level level,
-                           const cplat_timespec *timestamp, const char *message)
+int cplat_tracer_write_at(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
+                          const char *message)
 {
     const char *msg;
     char buf[CPLAT_TRACER_MESSAGE_MAX_BYTES];
@@ -1461,8 +1460,8 @@ int cplat_tracer_write_at(cplat_tracer *handle, const cplat_trace_level level,
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_tracer_vwritef_at(cplat_tracer *handle, const cplat_trace_level level,
-                             const cplat_timespec *timestamp, const char *format, va_list args)
+int cplat_tracer_vwritef_at(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
+                            const char *format, va_list args)
 {
     char buf[CPLAT_TRACER_MESSAGE_MAX_BYTES];
     int ret;
@@ -1490,8 +1489,8 @@ int cplat_tracer_vwritef_at(cplat_tracer *handle, const cplat_trace_level level,
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_tracer_writef_at(cplat_tracer *handle, const cplat_trace_level level,
-                            const cplat_timespec *timestamp, const char *format, ...)
+int cplat_tracer_writef_at(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
+                           const char *format, ...)
 {
     va_list args;
     int ret;
@@ -1527,9 +1526,8 @@ const char *cplat_tracer_hex_msg(const char *message)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_tracer_write_with_source(cplat_tracer *handle, const cplat_trace_level level,
-                                      const cplat_timespec *timestamp, const char *file, const int line,
-                                      const char *message)
+int cplat_tracer_write_with_source(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
+                                   const char *file, const int line, const char *message)
 {
     if (message != NULL)
     {
@@ -1642,9 +1640,8 @@ static int hex_write_impl(cplat_tracer *handle, const cplat_trace_level level, c
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_tracer_write_hex_at(cplat_tracer *handle, const cplat_trace_level level,
-                               const cplat_timespec *timestamp, const void *data, const size_t size,
-                               const char *message)
+int cplat_tracer_write_hex_at(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
+                              const void *data, const size_t size, const char *message)
 {
     int ret;
 
@@ -1669,9 +1666,8 @@ int cplat_tracer_write_hex_at(cplat_tracer *handle, const cplat_trace_level leve
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_tracer_vwrite_hexf_at(cplat_tracer *handle, const cplat_trace_level level,
-                                 const cplat_timespec *timestamp, const void *data, const size_t size,
-                                 const char *format, va_list args)
+int cplat_tracer_vwrite_hexf_at(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
+                                const void *data, const size_t size, const char *format, va_list args)
 {
     char label[CPLAT_TRACER_MESSAGE_MAX_BYTES];
     int ret;
@@ -1706,9 +1702,8 @@ int cplat_tracer_vwrite_hexf_at(cplat_tracer *handle, const cplat_trace_level le
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_tracer_write_hexf_at(cplat_tracer *handle, const cplat_trace_level level,
-                                const cplat_timespec *timestamp, const void *data, const size_t size,
-                                const char *format, ...)
+int cplat_tracer_write_hexf_at(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
+                               const void *data, const size_t size, const char *format, ...)
 {
     va_list args;
     int ret;
@@ -1989,7 +1984,7 @@ cplat_trace_level cplat_tracer_get_file_level(cplat_tracer *handle)
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_tracer_set_file_level(cplat_tracer *handle, const char *path, const cplat_trace_level level,
-                                   const size_t max_bytes, const int generations, const int flags)
+                                const size_t max_bytes, const int generations, const int flags)
 {
     char *path_copy = NULL;
 
@@ -2286,9 +2281,8 @@ void cplat_tracer_remove_hook(cplat_tracer *handle, cplat_tracer_hook_entry *hoo
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-void cplat_tracer_call_next_hook(cplat_tracer_hook_entry *prev, cplat_tracer *handle,
-                                    const cplat_trace_level level, const cplat_timespec *timestamp,
-                                    const char *message)
+void cplat_tracer_call_next_hook(cplat_tracer_hook_entry *prev, cplat_tracer *handle, const cplat_trace_level level,
+                                 const cplat_timespec *timestamp, const char *message)
 {
     if (prev == NULL || prev->fn == NULL)
     {

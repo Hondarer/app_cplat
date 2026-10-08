@@ -71,9 +71,9 @@ typedef struct argparser_spec
 /* register 系呼び出しで発生した 1 件のエラー */
 typedef struct argparser_register_error
 {
-    int result; /* 発生した結果コード (OK 以外) */
+    int result;       /* 発生した結果コード (OK 以外) */
     unsigned int pad; /* 明示的アラインメント */
-    char *target; /* 対象名 (複製)。対象がない場合は NULL */
+    char *target;     /* 対象名 (複製)。対象がない場合は NULL */
 } argparser_register_error;
 
 struct cplat_argparser
@@ -1110,7 +1110,7 @@ static void argparser_apply_args(cplat_argparser *parser, int argc, char *const 
 /* Doxygen コメントは、ヘッダーに記載 */
 
 cplat_argparser *cplat_argparser_handle_create(const int argc, char *const *argv,
-                                                     const cplat_argparser_options *options)
+                                               const cplat_argparser_options *options)
 {
     cplat_argparser *parser = cplat_calloc(1, sizeof(cplat_argparser));
     if (parser == NULL)
@@ -1139,7 +1139,7 @@ void cplat_argparser_handle_dispose(cplat_argparser *parser)
     argparser_dispose_core(parser);
 }
 
-/* プロセス共有のデフォルト パーサー ハンドル */
+/* プロセス共有の既定パーサー ハンドル */
 static cplat_argparser *s_default_parser = NULL;
 /* 破棄と並行取得の競合を避けるため、初期化後はプロセス終了まで同じロックを使用する */
 static cplat_local_lock *s_default_lock = NULL;
@@ -1187,18 +1187,18 @@ static void argparser_default_initialize(void)
 }
 
 /**
- *  @brief          プロセス共有のデフォルト パーサーを取得します。
+ *  @brief          プロセス共有の既定パーサーを取得します。
  *  @param[in]      argc            解析対象の argv の要素数。適用しない場合は 0 を指定します。
  *  @param[in]      argv            解析対象のコマンド ライン引数。適用しない場合は NULL を指定します。
  *  @param[in]      options         生成オプション。NULL も指定できます。
  *  @param[in]      reset_existing  0 以外なら、既存インスタンスを生成直後の状態へ戻して
  *                                  @p argc 、@p argv 、@p options を適用し直します。
- *  @return         デフォルト パーサー。生成に失敗した場合は NULL です。
+ *  @return         既定パーサー。生成に失敗した場合は NULL です。
  *
  *  生成と再初期化を同じロック区間で行い、取得と初期化の競合を避けます。
  */
 static cplat_argparser *argparser_default_acquire(const int argc, char *const *argv,
-                                                     const cplat_argparser_options *options, int reset_existing)
+                                                  const cplat_argparser_options *options, int reset_existing)
 {
     cplat_call_once(&s_default_initialize_once, argparser_default_initialize);
     cplat_local_lock *lock = s_default_lock;
@@ -1241,7 +1241,7 @@ void cplat_argparser_init(const int argc, char *const *argv, const char *descrip
 }
 
 int cplat_argparser_handle_register_flag(cplat_argparser *parser, const char *short_name, const char *long_name,
-                                      const char *description, int *storage)
+                                         const char *description, int *storage)
 {
     if (storage == NULL)
     {
@@ -1263,16 +1263,15 @@ int cplat_argparser_handle_register_flag(cplat_argparser *parser, const char *sh
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_argparser_register_flag(const char *short_name, const char *long_name, const char *description,
-                                     int *storage)
+int cplat_argparser_register_flag(const char *short_name, const char *long_name, const char *description, int *storage)
 {
-    return cplat_argparser_handle_register_flag(argparser_default_acquire(0, NULL, NULL, 0), short_name, long_name, description,
-                                             storage);
+    return cplat_argparser_handle_register_flag(argparser_default_acquire(0, NULL, NULL, 0), short_name, long_name,
+                                                description, storage);
 }
 
 int cplat_argparser_handle_register_option_int(cplat_argparser *parser, const char *short_name, const char *long_name,
-                                            const char *value_name, const char *description, const unsigned int flags,
-                                            int *storage)
+                                               const char *value_name, const char *description,
+                                               const unsigned int flags, int *storage)
 {
     if (storage == NULL)
     {
@@ -1295,15 +1294,16 @@ int cplat_argparser_handle_register_option_int(cplat_argparser *parser, const ch
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_register_option_int(const char *short_name, const char *long_name, const char *value_name,
-                                           const char *description, const unsigned int flags, int *storage)
+                                        const char *description, const unsigned int flags, int *storage)
 {
-    return cplat_argparser_handle_register_option_int(argparser_default_acquire(0, NULL, NULL, 0), short_name, long_name, value_name,
-                                                   description, flags, storage);
+    return cplat_argparser_handle_register_option_int(argparser_default_acquire(0, NULL, NULL, 0), short_name,
+                                                      long_name, value_name, description, flags, storage);
 }
 
 int cplat_argparser_handle_register_option_string(cplat_argparser *parser, const char *short_name,
-                                               const char *long_name, const char *value_name, const char *description,
-                                               const unsigned int flags, const char **storage)
+                                                  const char *long_name, const char *value_name,
+                                                  const char *description, const unsigned int flags,
+                                                  const char **storage)
 {
     if (storage == NULL)
     {
@@ -1326,16 +1326,16 @@ int cplat_argparser_handle_register_option_string(cplat_argparser *parser, const
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_register_option_string(const char *short_name, const char *long_name, const char *value_name,
-                                              const char *description, const unsigned int flags, const char **storage)
+                                           const char *description, const unsigned int flags, const char **storage)
 {
     return cplat_argparser_handle_register_option_string(argparser_default_acquire(0, NULL, NULL, 0), short_name,
-                                                      long_name, value_name, description, flags, storage);
+                                                         long_name, value_name, description, flags, storage);
 }
 
 int cplat_argparser_handle_register_option_int_array(cplat_argparser *parser, const char *short_name,
-                                                  const char *long_name, const char *value_name,
-                                                  const char *description, const unsigned int flags, int *storage,
-                                                  const size_t capacity, size_t *count)
+                                                     const char *long_name, const char *value_name,
+                                                     const char *description, const unsigned int flags, int *storage,
+                                                     const size_t capacity, size_t *count)
 {
     if (storage == NULL || capacity == 0 || count == NULL)
     {
@@ -1360,17 +1360,18 @@ int cplat_argparser_handle_register_option_int_array(cplat_argparser *parser, co
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_register_option_int_array(const char *short_name, const char *long_name, const char *value_name,
-                                                 const char *description, const unsigned int flags, int *storage,
-                                                 const size_t capacity, size_t *count)
+                                              const char *description, const unsigned int flags, int *storage,
+                                              const size_t capacity, size_t *count)
 {
-    return cplat_argparser_handle_register_option_int_array(argparser_default_acquire(0, NULL, NULL, 0), short_name, long_name,
-                                                         value_name, description, flags, storage, capacity, count);
+    return cplat_argparser_handle_register_option_int_array(argparser_default_acquire(0, NULL, NULL, 0), short_name,
+                                                            long_name, value_name, description, flags, storage,
+                                                            capacity, count);
 }
 
 int cplat_argparser_handle_register_option_string_array(cplat_argparser *parser, const char *short_name,
-                                                     const char *long_name, const char *value_name,
-                                                     const char *description, const unsigned int flags,
-                                                     const char **storage, const size_t capacity, size_t *count)
+                                                        const char *long_name, const char *value_name,
+                                                        const char *description, const unsigned int flags,
+                                                        const char **storage, const size_t capacity, size_t *count)
 {
     if (storage == NULL || capacity == 0 || count == NULL)
     {
@@ -1394,17 +1395,17 @@ int cplat_argparser_handle_register_option_string_array(cplat_argparser *parser,
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_argparser_register_option_string_array(const char *short_name, const char *long_name,
-                                                    const char *value_name, const char *description,
-                                                    const unsigned int flags, const char **storage,
-                                                    const size_t capacity, size_t *count)
+int cplat_argparser_register_option_string_array(const char *short_name, const char *long_name, const char *value_name,
+                                                 const char *description, const unsigned int flags,
+                                                 const char **storage, const size_t capacity, size_t *count)
 {
-    return cplat_argparser_handle_register_option_string_array(argparser_default_acquire(0, NULL, NULL, 0), short_name, long_name,
-                                                            value_name, description, flags, storage, capacity, count);
+    return cplat_argparser_handle_register_option_string_array(argparser_default_acquire(0, NULL, NULL, 0), short_name,
+                                                               long_name, value_name, description, flags, storage,
+                                                               capacity, count);
 }
 
 int cplat_argparser_handle_register_positional_int(cplat_argparser *parser, const char *name, const char *description,
-                                                const unsigned int flags, int *storage)
+                                                   const unsigned int flags, int *storage)
 {
     if (storage == NULL)
     {
@@ -1427,15 +1428,15 @@ int cplat_argparser_handle_register_positional_int(cplat_argparser *parser, cons
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_register_positional_int(const char *name, const char *description, const unsigned int flags,
-                                               int *storage)
+                                            int *storage)
 {
-    return cplat_argparser_handle_register_positional_int(argparser_default_acquire(0, NULL, NULL, 0), name, description, flags,
-                                                       storage);
+    return cplat_argparser_handle_register_positional_int(argparser_default_acquire(0, NULL, NULL, 0), name,
+                                                          description, flags, storage);
 }
 
 int cplat_argparser_handle_register_positional_string(cplat_argparser *parser, const char *name,
-                                                   const char *description, const unsigned int flags,
-                                                   const char **storage)
+                                                      const char *description, const unsigned int flags,
+                                                      const char **storage)
 {
     if (storage == NULL)
     {
@@ -1458,15 +1459,15 @@ int cplat_argparser_handle_register_positional_string(cplat_argparser *parser, c
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_register_positional_string(const char *name, const char *description, const unsigned int flags,
-                                                  const char **storage)
+                                               const char **storage)
 {
-    return cplat_argparser_handle_register_positional_string(argparser_default_acquire(0, NULL, NULL, 0), name, description, flags,
-                                                          storage);
+    return cplat_argparser_handle_register_positional_string(argparser_default_acquire(0, NULL, NULL, 0), name,
+                                                             description, flags, storage);
 }
 
 int cplat_argparser_handle_register_positional_int_array(cplat_argparser *parser, const char *name,
-                                                      const char *description, const unsigned int flags, int *storage,
-                                                      const size_t capacity, size_t *count)
+                                                         const char *description, const unsigned int flags,
+                                                         int *storage, const size_t capacity, size_t *count)
 {
     if (storage == NULL || capacity == 0 || count == NULL)
     {
@@ -1490,17 +1491,16 @@ int cplat_argparser_handle_register_positional_int_array(cplat_argparser *parser
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_argparser_register_positional_int_array(const char *name, const char *description,
-                                                     const unsigned int flags, int *storage, const size_t capacity,
-                                                     size_t *count)
+int cplat_argparser_register_positional_int_array(const char *name, const char *description, const unsigned int flags,
+                                                  int *storage, const size_t capacity, size_t *count)
 {
-    return cplat_argparser_handle_register_positional_int_array(argparser_default_acquire(0, NULL, NULL, 0), name, description,
-                                                             flags, storage, capacity, count);
+    return cplat_argparser_handle_register_positional_int_array(argparser_default_acquire(0, NULL, NULL, 0), name,
+                                                                description, flags, storage, capacity, count);
 }
 
 int cplat_argparser_handle_register_positional_string_array(cplat_argparser *parser, const char *name,
-                                                         const char *description, const unsigned int flags,
-                                                         const char **storage, const size_t capacity, size_t *count)
+                                                            const char *description, const unsigned int flags,
+                                                            const char **storage, const size_t capacity, size_t *count)
 {
     if (storage == NULL || capacity == 0 || count == NULL)
     {
@@ -1525,11 +1525,11 @@ int cplat_argparser_handle_register_positional_string_array(cplat_argparser *par
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_register_positional_string_array(const char *name, const char *description,
-                                                        const unsigned int flags, const char **storage,
-                                                        const size_t capacity, size_t *count)
+                                                     const unsigned int flags, const char **storage,
+                                                     const size_t capacity, size_t *count)
 {
-    return cplat_argparser_handle_register_positional_string_array(argparser_default_acquire(0, NULL, NULL, 0), name, description,
-                                                                flags, storage, capacity, count);
+    return cplat_argparser_handle_register_positional_string_array(argparser_default_acquire(0, NULL, NULL, 0), name,
+                                                                   description, flags, storage, capacity, count);
 }
 
 int cplat_argparser_handle_parse(cplat_argparser *parser)
@@ -1607,8 +1607,7 @@ int cplat_argparser_handle_parse(cplat_argparser *parser)
             {
                 if ((i + 1) >= argc)
                 {
-                    return argparser_set_error(parser, CPLAT_ERR_MISSING_VALUE, argparser_spec_display_name(spec),
-                                               i);
+                    return argparser_set_error(parser, CPLAT_ERR_MISSING_VALUE, argparser_spec_display_name(spec), i);
                 }
                 i++;
                 value = argv[i];
@@ -1697,8 +1696,7 @@ int cplat_argparser_handle_parse(cplat_argparser *parser)
             {
                 if ((i + 1) >= argc)
                 {
-                    return argparser_set_error(parser, CPLAT_ERR_MISSING_VALUE, argparser_spec_display_name(spec),
-                                               i);
+                    return argparser_set_error(parser, CPLAT_ERR_MISSING_VALUE, argparser_spec_display_name(spec), i);
                 }
                 i++;
                 value = argv[i];
@@ -1823,28 +1821,34 @@ int cplat_argparser_handle_get_error_message(const cplat_argparser *parser, char
         written = snprintf(buffer, buffer_size, "unknown option '%s'", target); /* 置換対象外: 意図的な切り詰め */
         break;
     case CPLAT_ERR_MISSING_VALUE:
-        written = snprintf(buffer, buffer_size, "option '%s' requires a value", target); /* 置換対象外: 意図的な切り詰め */
+        written =
+            snprintf(buffer, buffer_size, "option '%s' requires a value", target); /* 置換対象外: 意図的な切り詰め */
         break;
     case CPLAT_ERR_INVALID_INTEGER:
-        written = snprintf(buffer, buffer_size, "value of '%s' must be an integer", target); /* 置換対象外: 意図的な切り詰め */
+        written = snprintf(buffer, buffer_size, "value of '%s' must be an integer",
+                           target); /* 置換対象外: 意図的な切り詰め */
         break;
     case CPLAT_ERR_OUT_OF_RANGE:
-        written = snprintf(buffer, buffer_size, "value of '%s' is out of range", target); /* 置換対象外: 意図的な切り詰め */
+        written =
+            snprintf(buffer, buffer_size, "value of '%s' is out of range", target); /* 置換対象外: 意図的な切り詰め */
         break;
     case CPLAT_ERR_MISSING_REQUIRED:
         written = snprintf(buffer, buffer_size, "'%s' is required", target); /* 置換対象外: 意図的な切り詰め */
         break;
     case CPLAT_ERR_DUPLICATE_OPTION:
-        written = snprintf(buffer, buffer_size, "option '%s' is specified more than once", target); /* 置換対象外: 意図的な切り詰め */
+        written = snprintf(buffer, buffer_size, "option '%s' is specified more than once",
+                           target); /* 置換対象外: 意図的な切り詰め */
         break;
     case CPLAT_ERR_TOO_MANY_ARGUMENTS:
         written = snprintf(buffer, buffer_size, "too many arguments: '%s'", target); /* 置換対象外: 意図的な切り詰め */
         break;
     case CPLAT_ERR_TOO_MANY_OCCURRENCES:
-        written = snprintf(buffer, buffer_size, "option '%s' is specified too many times", target); /* 置換対象外: 意図的な切り詰め */
+        written = snprintf(buffer, buffer_size, "option '%s' is specified too many times",
+                           target); /* 置換対象外: 意図的な切り詰め */
         break;
     case CPLAT_ERR_UNEXPECTED_VALUE:
-        written = snprintf(buffer, buffer_size, "option '%s' does not take a value", target); /* 置換対象外: 意図的な切り詰め */
+        written = snprintf(buffer, buffer_size, "option '%s' does not take a value",
+                           target); /* 置換対象外: 意図的な切り詰め */
         break;
     case CPLAT_OK:
     default:
@@ -1869,12 +1873,11 @@ int cplat_argparser_handle_get_error_message(const cplat_argparser *parser, char
 
 int cplat_argparser_get_error_message(char *buffer, const size_t buffer_size)
 {
-    return cplat_argparser_handle_get_error_message(argparser_default_acquire(0, NULL, NULL, 0), buffer,
-                                                buffer_size);
+    return cplat_argparser_handle_get_error_message(argparser_default_acquire(0, NULL, NULL, 0), buffer, buffer_size);
 }
 
 int cplat_argparser_handle_get_usage(const cplat_argparser *parser, char *buffer, const size_t buffer_size,
-                                  size_t *required_size)
+                                     size_t *required_size)
 {
     if (parser == NULL)
     {
@@ -1924,7 +1927,7 @@ int cplat_argparser_handle_get_usage(const cplat_argparser *parser, char *buffer
 int cplat_argparser_get_usage(char *buffer, const size_t buffer_size, size_t *required_size)
 {
     return cplat_argparser_handle_get_usage(argparser_default_acquire(0, NULL, NULL, 0), buffer, buffer_size,
-                                        required_size);
+                                            required_size);
 }
 
 int cplat_argparser_handle_print_usage(const cplat_argparser *parser, FILE *stream)
@@ -2041,7 +2044,7 @@ const char *cplat_argparser_get_register_error_target(size_t index)
 }
 
 int cplat_argparser_handle_get_register_error_message(const cplat_argparser *parser, const size_t index, char *buffer,
-                                                   const size_t buffer_size)
+                                                      const size_t buffer_size)
 {
     if (parser == NULL || buffer == NULL || buffer_size == 0 || index >= parser->register_error_count)
     {
@@ -2060,13 +2063,16 @@ int cplat_argparser_handle_get_register_error_message(const cplat_argparser *par
     switch (parser->register_errors[index].result)
     {
     case CPLAT_ERR_INVALID_ARGUMENT:
-        written = snprintf(buffer, buffer_size, "failed to register '%s': invalid argument", target); /* 置換対象外: 意図的な切り詰め */
+        written = snprintf(buffer, buffer_size, "failed to register '%s': invalid argument",
+                           target); /* 置換対象外: 意図的な切り詰め */
         break;
     case CPLAT_ERR_OUT_OF_MEMORY:
-        written = snprintf(buffer, buffer_size, "failed to register '%s': out of memory", target); /* 置換対象外: 意図的な切り詰め */
+        written = snprintf(buffer, buffer_size, "failed to register '%s': out of memory",
+                           target); /* 置換対象外: 意図的な切り詰め */
         break;
     case CPLAT_ERR_DUPLICATE_DEFINITION:
-        written = snprintf(buffer, buffer_size, "failed to register '%s': duplicate definition", target); /* 置換対象外: 意図的な切り詰め */
+        written = snprintf(buffer, buffer_size, "failed to register '%s': duplicate definition",
+                           target); /* 置換対象外: 意図的な切り詰め */
         break;
     case CPLAT_OK:
     case CPLAT_ERR_BUFFER_TOO_SMALL:
@@ -2092,8 +2098,8 @@ int cplat_argparser_handle_get_register_error_message(const cplat_argparser *par
 
 int cplat_argparser_get_register_error_message(const size_t index, char *buffer, const size_t buffer_size)
 {
-    return cplat_argparser_handle_get_register_error_message(argparser_default_acquire(0, NULL, NULL, 0), index,
-                                                          buffer, buffer_size);
+    return cplat_argparser_handle_get_register_error_message(argparser_default_acquire(0, NULL, NULL, 0), index, buffer,
+                                                             buffer_size);
 }
 
 int cplat_argparser_handle_print_register_error_messages(const cplat_argparser *parser, FILE *stream)

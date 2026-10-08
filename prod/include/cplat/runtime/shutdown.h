@@ -68,7 +68,7 @@ extern "C"
     {
         cplat_shutdown_reason reason;       /**< 終了理由。 */
         cplat_shutdown_code_kind code_kind; /**< `code` の意味。 */
-        int code;                              /**< 終了コード、シグナル番号、CTRL 種別。 */
+        int code;                           /**< 終了コード、シグナル番号、CTRL 種別。 */
     } cplat_shutdown_event;
 
     /**
@@ -218,8 +218,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_shutdown_invoke_for_test(const cplat_shutdown_event *event,
-                                                                        int *invoked_out);
+    CPLAT_EXPORT int CPLAT_API cplat_shutdown_invoke_for_test(const cplat_shutdown_event *event, int *invoked_out);
 
     /**
      *  @brief          テスト用に終了要求 callback を同期実行します。
@@ -235,7 +234,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_shutdown_request_invoke_for_test(const cplat_shutdown_event *event,
-                                                                                int *invoked_out);
+                                                                      int *invoked_out);
 
     /**
      *  @brief          テスト用に shutdown ランタイムの内部状態を初期化します。

@@ -10,8 +10,8 @@ int delegate_real_cplat_elevated_process_run_piped(const char *arguments, cplat_
     return real_fn(arguments, output_fn, context, exit_code, handled);
 }
 
-MOCK_WEAK_IMPL(int, cplat_elevated_process_run_piped, const char *arguments,
-               cplat_elevated_process_output_fn output_fn, void *context, int *exit_code, int *handled)
+MOCK_WEAK_IMPL(int, cplat_elevated_process_run_piped, const char *arguments, cplat_elevated_process_output_fn output_fn,
+               void *context, int *exit_code, int *handled)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_tracer_stop(cplat_tracer *handle)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_tracer_stop)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_tracer_stop"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_tracer_stop)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_tracer_stop"));
 
     return real_fn(handle);
 }

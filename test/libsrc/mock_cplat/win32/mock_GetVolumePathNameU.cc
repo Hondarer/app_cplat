@@ -5,8 +5,8 @@
 
 BOOL delegate_real_GetVolumePathNameU(const char *utf8_path, char *utf8_volume_root, DWORD size)
 {
-    static auto real_fn = reinterpret_cast<decltype(&GetVolumePathNameU)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "GetVolumePathNameU"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&GetVolumePathNameU)>(resolveSharedSymbolOrExit(kLibCplatName, "GetVolumePathNameU"));
 
     return real_fn(utf8_path, utf8_volume_root, size);
 }

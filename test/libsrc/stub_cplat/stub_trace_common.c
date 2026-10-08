@@ -13,7 +13,8 @@ static int timestamp_is_valid(const cplat_timespec *timestamp)
     return timestamp != NULL && timestamp->tv_nsec >= 0 && timestamp->tv_nsec < 1000000000;
 }
 
-int cplat_internal_trace_resolve_timestamp(const cplat_timespec *timestamp, cplat_timespec *resolved, int *fallback_used)
+int cplat_internal_trace_resolve_timestamp(const cplat_timespec *timestamp, cplat_timespec *resolved,
+                                           int *fallback_used)
 {
     if (resolved == NULL)
     {

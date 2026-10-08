@@ -1,8 +1,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_hashtable_upsert(cplat_hashtable *ht, const void *key, const void *value,
-                                            int *inserted_out)
+int delegate_real_cplat_hashtable_upsert(cplat_hashtable *ht, const void *key, const void *value, int *inserted_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_hashtable_upsert)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_hashtable_upsert"));
@@ -10,8 +9,7 @@ int delegate_real_cplat_hashtable_upsert(cplat_hashtable *ht, const void *key, c
     return real_fn(ht, key, value, inserted_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_hashtable_upsert, cplat_hashtable *ht, const void *key, const void *value,
-               int *inserted_out)
+MOCK_WEAK_IMPL(int, cplat_hashtable_upsert, cplat_hashtable *ht, const void *key, const void *value, int *inserted_out)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

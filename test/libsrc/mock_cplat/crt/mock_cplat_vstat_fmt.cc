@@ -4,17 +4,15 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_vstat_fmt(cplat_file_stat_t *buf, cplat_error *detail_out, const char *format,
-                                     va_list args)
+int delegate_real_cplat_vstat_fmt(cplat_file_stat_t *buf, cplat_error *detail_out, const char *format, va_list args)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_vstat_fmt)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_vstat_fmt"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_vstat_fmt)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_vstat_fmt"));
 
     return real_fn(buf, detail_out, format, args);
 }
 
-MOCK_WEAK_IMPL(int, cplat_vstat_fmt, cplat_file_stat_t *buf, cplat_error *detail_out, const char *format,
-               va_list args)
+MOCK_WEAK_IMPL(int, cplat_vstat_fmt, cplat_file_stat_t *buf, cplat_error *detail_out, const char *format, va_list args)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

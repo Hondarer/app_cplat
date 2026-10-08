@@ -9,8 +9,7 @@ int delegate_real_cplat_path_get_full(char *path_out, size_t path_size, cplat_er
     return real_fn(path_out, path_size, detail_out, path);
 }
 
-MOCK_WEAK_IMPL(int, cplat_path_get_full, char *path_out, size_t path_size, cplat_error *detail_out,
-               const char *path)
+MOCK_WEAK_IMPL(int, cplat_path_get_full, char *path_out, size_t path_size, cplat_error *detail_out, const char *path)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

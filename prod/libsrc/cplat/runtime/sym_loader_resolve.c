@@ -125,7 +125,7 @@ void *cplat_sym_loader_resolve(cplat_sym_loader_entry *fobj)
     {
         if (strcmp(fobj->lib_name, "default") == 0 && strcmp(fobj->func_name, "default") == 0)
         {
-            /* resolved=2: 明示的デフォルト。func_ptr は NULL のまま */
+            /* resolved=2: 明示的既定値。func_ptr は NULL のまま */
             cplat_atomic_store_i32(&fobj->resolved, 2, CPLAT_MEMORY_ORDER_RELEASE);
             return unlock_entry_and_return_func_ptr(fobj);
         }

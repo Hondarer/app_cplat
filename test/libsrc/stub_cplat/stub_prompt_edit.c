@@ -101,8 +101,8 @@ int cplat_internal_prompt_edit_ensure_capacity(char **buf, size_t *cap, size_t m
 }
 
 void cplat_internal_prompt_edit_resolve_options(size_t requested_history_max, size_t requested_initial_capacity,
-                                          size_t requested_max_bytes, size_t initial_capacity_default,
-                                          size_t *history_max, size_t *initial_capacity, size_t *max_bytes)
+                                                size_t requested_max_bytes, size_t initial_capacity_default,
+                                                size_t *history_max, size_t *initial_capacity, size_t *max_bytes)
 {
     size_t resolved_history_max = requested_history_max;
     size_t resolved_max_bytes = requested_max_bytes;

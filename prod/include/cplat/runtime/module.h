@@ -50,8 +50,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_module_get_path(char *path_out, size_t path_size,
-                                                              const void *func_addr);
+    CPLAT_EXPORT int CPLAT_API cplat_module_get_path(char *path_out, size_t path_size, const void *func_addr);
 
     /**
      *  @brief          関数アドレスが属するモジュールのベース名を取得します。
@@ -64,7 +63,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_module_get_basename(char *basename_out, size_t basename_size,
-                                                                  const void *func_addr);
+                                                         const void *func_addr);
 
 #ifdef __cplusplus
 }

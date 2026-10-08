@@ -72,8 +72,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_stat(cplat_file_stat_t *buf, cplat_error *detail_out,
-                                                   const char *path);
+    CPLAT_EXPORT int CPLAT_API cplat_stat(cplat_file_stat_t *buf, cplat_error *detail_out, const char *path);
 
     /**
      *  @brief          UTF-8 パスのディレクトリを作成します (`mkdir` / `_wmkdir` ラッパー)。
@@ -135,8 +134,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_stat_fmt(cplat_file_stat_t *buf, cplat_error *detail_out,
-                                                       const char *format, ...)
+    CPLAT_EXPORT int CPLAT_API cplat_stat_fmt(cplat_file_stat_t *buf, cplat_error *detail_out, const char *format, ...)
 #if defined(COMPILER_GCC)
         __attribute__((format(printf, 3, 4)))
 #endif /* COMPILER_GCC */
@@ -155,8 +153,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_vstat_fmt(cplat_file_stat_t *buf, cplat_error *detail_out,
-                                                        const char *format, va_list args)
+    CPLAT_EXPORT int CPLAT_API cplat_vstat_fmt(cplat_file_stat_t *buf, cplat_error *detail_out, const char *format,
+                                               va_list args)
 #if defined(COMPILER_GCC)
         __attribute__((format(printf, 3, 0)))
 #endif /* COMPILER_GCC */

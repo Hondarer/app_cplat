@@ -33,8 +33,9 @@ typedef struct filter_required_size_options
 static int register_options(filter_required_size_options *options)
 {
     (void)cplat_argparser_register_flag("-h", "--help", "show this help", &options->need_help);
-    (void)cplat_argparser_register_option_int("-l", "--line-capacity", "N", "maximum number of condition lines (1-1024)",
-                                              CPLAT_ARGPARSER_REQUIRED, &options->line_capacity);
+    (void)cplat_argparser_register_option_int("-l", "--line-capacity", "N",
+                                              "maximum number of condition lines (1-1024)", CPLAT_ARGPARSER_REQUIRED,
+                                              &options->line_capacity);
     (void)cplat_argparser_register_option_int("-w", "--line-width", "N", "bytes per condition line (8-1024)",
                                               CPLAT_ARGPARSER_REQUIRED, &options->line_width);
     if (cplat_argparser_get_register_error_count() > 0)

@@ -28,8 +28,7 @@
  *  変えてよいのは capacity、key_storage_size、value_storage_size の 3 つだけです。
  *  フィールド形式やレイアウト要件まで変えるのは create と insert_direct の役割です。
  */
-static int hashtable_config_is_compatible(const cplat_hashtable_config *current,
-                                          const cplat_hashtable_config *next)
+static int hashtable_config_is_compatible(const cplat_hashtable_config *current, const cplat_hashtable_config *next)
 {
     if ((current->key_type != next->key_type) || (current->value_type != next->value_type))
     {
@@ -191,8 +190,8 @@ static int hashtable_apply_migration(const cplat_hashtable *src, cplat_hashtable
             record = next_record;
             next_record++;
         }
-        ret = cplat_hashtable_insert_direct(dst, record, hashtable_entry_key(src, i), status,
-                                               hashtable_data_at(src, i), timestamp, generation);
+        ret = cplat_hashtable_insert_direct(dst, record, hashtable_entry_key(src, i), status, hashtable_data_at(src, i),
+                                            timestamp, generation);
         if (ret != CPLAT_OK)
         {
             return ret;
@@ -262,8 +261,7 @@ static int hashtable_stage_growth(const cplat_hashtable *src, const struct hasht
             return pressure_error;
         }
         minimum = src->hdr->config.capacity + 1u;
-        if (hashtable_growth_target(src->hdr->config.capacity, minimum, src->growth.max_capacity,
-                                    &next.capacity) == 0)
+        if (hashtable_growth_target(src->hdr->config.capacity, minimum, src->growth.max_capacity, &next.capacity) == 0)
         {
             return pressure_error;
         }
@@ -329,8 +327,7 @@ static void hashtable_commit_staged(cplat_hashtable *ht, cplat_hashtable *staged
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int hashtable_put_with_growth(cplat_hashtable *ht, const void *key, const void *value,
-                              cplat_hashtable_add_deleted_policy deleted_policy, int allow_update,
-                              int *inserted_out)
+                              cplat_hashtable_add_deleted_policy deleted_policy, int allow_update, int *inserted_out)
 {
     struct hashtable_growth_request growth;
     cplat_hashtable *staged = NULL;
@@ -436,8 +433,7 @@ int cplat_hashtable_resize(cplat_hashtable *ht, const cplat_hashtable_config *ne
     }
     if ((ht->growable != 0) &&
         (((ht->growth.max_capacity != 0) && (new_config->capacity > ht->growth.max_capacity)) ||
-         ((ht->growth.max_key_storage_size != 0) &&
-          (new_config->key_storage_size > ht->growth.max_key_storage_size)) ||
+         ((ht->growth.max_key_storage_size != 0) && (new_config->key_storage_size > ht->growth.max_key_storage_size)) ||
          ((ht->growth.max_value_storage_size != 0) &&
           (new_config->value_storage_size > ht->growth.max_value_storage_size))))
     {
@@ -477,9 +473,8 @@ int cplat_hashtable_resize(cplat_hashtable *ht, const cplat_hashtable_config *ne
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_hashtable_rebuild_into(const cplat_hashtable *src, const cplat_hashtable_config *new_config,
-                                    void *buf_mgmt, size_t buf_mgmt_size, void *buf_data, size_t buf_data_size,
-                                    cplat_hashtable **ht_out)
+int cplat_hashtable_rebuild_into(const cplat_hashtable *src, const cplat_hashtable_config *new_config, void *buf_mgmt,
+                                 size_t buf_mgmt_size, void *buf_data, size_t buf_data_size, cplat_hashtable **ht_out)
 {
     cplat_hashtable *dst = NULL;
     unsigned char *keep = NULL;

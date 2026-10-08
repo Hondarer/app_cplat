@@ -1,15 +1,17 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_socket_recvfrom(cplat_socket sock, void *buf, size_t len, cplat_ipv4_endpoint *peer_out, size_t *received_out, cplat_error *detail_out)
+int delegate_real_cplat_socket_recvfrom(cplat_socket sock, void *buf, size_t len, cplat_ipv4_endpoint *peer_out,
+                                        size_t *received_out, cplat_error *detail_out)
 {
-    static auto real_fn =
-        reinterpret_cast<decltype(&cplat_socket_recvfrom)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_recvfrom"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_socket_recvfrom)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_recvfrom"));
 
     return real_fn(sock, buf, len, peer_out, received_out, detail_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_socket_recvfrom, cplat_socket sock, void *buf, size_t len, cplat_ipv4_endpoint *peer_out, size_t *received_out, cplat_error *detail_out)
+MOCK_WEAK_IMPL(int, cplat_socket_recvfrom, cplat_socket sock, void *buf, size_t len, cplat_ipv4_endpoint *peer_out,
+               size_t *received_out, cplat_error *detail_out)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

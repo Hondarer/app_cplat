@@ -9,8 +9,7 @@ void delegate_real_cplat_timespec_add_ms(const cplat_timespec *ts, uint64_t time
     real_fn(ts, timeout_ms, result);
 }
 
-MOCK_WEAK_IMPL(void, cplat_timespec_add_ms, const cplat_timespec *ts, uint64_t timeout_ms,
-               cplat_timespec *result)
+MOCK_WEAK_IMPL(void, cplat_timespec_add_ms, const cplat_timespec *ts, uint64_t timeout_ms, cplat_timespec *result)
 {
     if (_mock_cplat != nullptr)
     {

@@ -1,7 +1,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-const char * delegate_real_cplat_path_extension(const char *path)
+const char *delegate_real_cplat_path_extension(const char *path)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_path_extension)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_path_extension"));
@@ -11,7 +11,7 @@ const char * delegate_real_cplat_path_extension(const char *path)
 
 MOCK_WEAK_IMPL(const char *, cplat_path_extension, const char *path)
 {
-    const char * mock_ret;
+    const char *mock_ret;
 
     if (_mock_cplat != nullptr)
     {

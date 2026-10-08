@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_timespec_cmp(const cplat_timespec *a, const cplat_timespec *b)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_timespec_cmp)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_timespec_cmp"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_timespec_cmp)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_timespec_cmp"));
 
     return real_fn(a, b);
 }

@@ -123,8 +123,7 @@ TEST(pinnedPromptCoverageTest, platform_helpers_cover_short_circuits_and_install
     int stdout_not_tty = test_pinned_prompt_platform_is_tty(); // [手順] - 標準出力が TTY ではない端末判定を行う。
     int both_tty = test_pinned_prompt_platform_is_tty();       // [手順] - 標準入出力がともに TTY の端末判定を行う。
     test_pinned_prompt_get_size(&cols, &rows); // [手順] - 行数が 0 の ioctl 結果から端末サイズを取得する。
-    screen =
-        cplat_pinned_prompt_create(NULL); // [手順] - シグナル登録済み状態の raw モード試験用ハンドルを生成する。
+    screen = cplat_pinned_prompt_create(NULL); // [手順] - シグナル登録済み状態の raw モード試験用ハンドルを生成する。
     ASSERT_NE(nullptr, screen);
     // [確認_正常系] - `nullptr` と `screen` が異なること。
     test_pinned_prompt_set_tty(screen, 1);
@@ -156,7 +155,7 @@ TEST(pinnedPromptCoverageTest, internal_state_handles_inactive_mutex_and_prompt_
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     NiceMock<Mock_cplat> mock_cplat;
     int null_prompt_result = 0;
     int allocation_result = 0;
@@ -187,7 +186,7 @@ TEST(pinnedPromptCoverageTest, layout_and_view_cover_narrow_and_status_boundarie
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     int prompt_row = 0;
     int separator_row = 0;
     int main_bottom_row = 0;
@@ -236,7 +235,7 @@ TEST(pinnedPromptCoverageTest, drawing_helpers_cover_hidden_narrow_and_clear_ran
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     NiceMock<Mock_ioctl> mock_ioctl;
     struct winsize narrow_size = {};
     narrow_size.ws_col = 1U;
@@ -280,7 +279,7 @@ TEST(pinnedPromptCoverageTest, history_helpers_cover_capacity_and_null_entries)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
 
@@ -312,7 +311,7 @@ TEST(pinnedPromptCoverageTest, history_context_reports_allocation_failures)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     NiceMock<Mock_cplat> mock_cplat;
     int realloc_failure = 0;
     int calloc_failure = 0;
@@ -320,18 +319,18 @@ TEST(pinnedPromptCoverageTest, history_context_reports_allocation_failures)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _))
-        .WillOnce(Return(nullptr))                         // realloc.c: 配列確保失敗
+        .WillOnce(Return(nullptr))                      // realloc.c: 配列確保失敗
         .WillOnce(Invoke(delegate_real_cplat_realloc)); // calloc.c: 配列確保は成功させる
     // [Pre-Assert確認_異常系] - cplat_realloc が履歴コンテキスト配列の再確保のために呼び出されること。
     // [Pre-Assert手順] - 1 回目は NULL、2 回目は本物の realloc 結果を返却する。
     EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
-        .WillOnce(Return(nullptr))                        // calloc.c: 要素配列確保失敗
+        .WillOnce(Return(nullptr))                     // calloc.c: 要素配列確保失敗
         .WillOnce(Invoke(delegate_real_cplat_calloc)); // malloc.c: 要素配列確保は成功させる
     // [Pre-Assert確認_異常系] - cplat_calloc が履歴要素配列の確保のために呼び出されること。
     // [Pre-Assert手順] - 1 回目は NULL、2 回目は本物の calloc 結果を返却する。
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(Invoke(delegate_real_cplat_malloc)) // calloc.c: saved_line 確保は成功 (calloc 失敗と対で必ず呼ばれる)
-        .WillOnce(Return(nullptr));                      // malloc.c: saved_line 確保失敗
+        .WillOnce(Return(nullptr));                   // malloc.c: saved_line 確保失敗
     // [Pre-Assert確認_異常系] - cplat_malloc が履歴保存行の確保のために呼び出されること。
     // [Pre-Assert手順] - 1 回目は本物の malloc 結果、2 回目は NULL を返却する。
 
@@ -359,9 +358,8 @@ TEST(pinnedPromptCoverageTest, edit_helpers_preserve_text_when_capacity_is_exhau
     cplat_pinned_prompt_options options = {};
     options.input.input_initial_capacity = 2U;
     options.input.input_max_bytes = 2U;
-    cplat_pinned_prompt *screen =
-        cplat_pinned_prompt_create(&options); // [状態] - 指定オプションのハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                  // [状態確認] - ハンドルが非 NULL であること。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(&options); // [状態] - 指定オプションのハンドルを用意する。
+    ASSERT_NE(nullptr, screen);                                         // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
 
@@ -385,7 +383,7 @@ TEST(pinnedPromptCoverageTest, format_helper_handles_allocation_and_format_failu
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     NiceMock<Mock_cplat> mock_cplat;
     NiceMock<Mock_stdio> mock_stdio;
     const char long_text[300] = {};
@@ -395,7 +393,7 @@ TEST(pinnedPromptCoverageTest, format_helper_handles_allocation_and_format_failu
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
-        .WillOnce(Return(nullptr))                        // 1回目: 初回確保失敗
+        .WillOnce(Return(nullptr))                     // 1回目: 初回確保失敗
         .WillOnce(Invoke(delegate_real_cplat_malloc)); // 2回目: 初回確保は成功させる
     // [Pre-Assert確認_異常系] - cplat_malloc が書式バッファーの初回確保のために呼び出されること。
     // [Pre-Assert手順] - 1 回目は NULL、2 回目は本物の malloc 結果を返却する。
@@ -487,7 +485,7 @@ TEST(pinnedPromptCoverageTest, readline_reports_setup_failures)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     NiceMock<Mock_termios> mock_termios;
     NiceMock<Mock_cplat> mock_cplat;
     char input[] = "fallback";
@@ -511,31 +509,31 @@ TEST(pinnedPromptCoverageTest, readline_reports_setup_failures)
     // [Pre-Assert確認_異常系] - cplat_fgets が raw 移行失敗後の fallback で 1 回呼び出されること。
     // [Pre-Assert手順] - cplat_fgets から入力 "fallback" を返却する。
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _))
-        .WillOnce(Return(nullptr))                        // history-failure.c: 履歴コンテキスト配列確保失敗
+        .WillOnce(Return(nullptr))                     // history-failure.c: 履歴コンテキスト配列確保失敗
         .WillOnce(Invoke(delegate_real_cplat_realloc)) // prompt-failure.c の事前生成: 配列確保は成功させる
-        .WillOnce(Return(nullptr));                       // 6回目の readline: プロンプト文字列の再確保失敗
+        .WillOnce(Return(nullptr));                    // 6回目の readline: プロンプト文字列の再確保失敗
     // [Pre-Assert確認_異常系] - cplat_realloc が履歴確保とプロンプト再確保のために呼び出されること。
     // [Pre-Assert手順] - 1 回目と 3 回目は NULL、2 回目は本物の realloc 結果を返却する。
 
     // Act
     invalid_screen = cplat_pinned_prompt_readline_at(NULL, output, sizeof(output), "", "invalid.c",
-                                                      1); // [手順] - NULL ハンドルで readline を呼び出す。
+                                                     1); // [手順] - NULL ハンドルで readline を呼び出す。
     invalid_buffer = cplat_pinned_prompt_readline_at(screen, NULL, sizeof(output), "", "invalid.c",
-                                                      2); // [手順] - NULL 出力バッファーで readline を呼び出す。
+                                                     2); // [手順] - NULL 出力バッファーで readline を呼び出す。
     invalid_size = cplat_pinned_prompt_readline_at(screen, output, 0U, "", "invalid.c",
-                                                    3); // [手順] - サイズ 0 の出力バッファーで readline を呼び出す。
+                                                   3); // [手順] - サイズ 0 の出力バッファーで readline を呼び出す。
     test_pinned_prompt_set_tty(screen, 1);
     raw_failure = cplat_pinned_prompt_readline_at(screen, output, sizeof(output), "", "raw.c",
-                                                   4); // [手順] - raw モード移行に失敗した readline を呼び出す。
+                                                  4); // [手順] - raw モード移行に失敗した readline を呼び出す。
     test_pinned_prompt_set_raw_active(screen, 1);
     history_failure =
         cplat_pinned_prompt_readline_at(screen, output, sizeof(output), "", "history-failure.c",
-                                         5); // [手順] - 履歴コンテキスト確保に失敗した readline を呼び出す。
+                                        5); // [手順] - 履歴コンテキスト確保に失敗した readline を呼び出す。
     ASSERT_EQ(0, test_pinned_prompt_history_failure_state(screen, "prompt-failure.c", 6));
     // [確認_異常系] - `test_pinned_prompt_history_failure_state(screen, "prompt-failure.c", 6)` の戻り値が `0` であること。
     test_pinned_prompt_set_raw_active(screen, 1);
     prompt_failure = cplat_pinned_prompt_readline_at(screen, output, sizeof(output), "long prompt", "prompt-failure.c",
-                                                      6); // [手順] - プロンプト再確保に失敗した readline を呼び出す。
+                                                     6); // [手順] - プロンプト再確保に失敗した readline を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -543,7 +541,7 @@ TEST(pinnedPromptCoverageTest, readline_reports_setup_failures)
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
               invalid_buffer); // [確認_異常系] - NULL 出力バッファーの readline が INVALID_ARGUMENT になること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              invalid_size);             // [確認_異常系] - サイズ 0 の readline が INVALID_ARGUMENT になること。
+              invalid_size);          // [確認_異常系] - サイズ 0 の readline が INVALID_ARGUMENT になること。
     EXPECT_EQ(CPLAT_OK, raw_failure); // [確認_異常系] - raw モード移行失敗時は fallback 入力が成功すること。
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, history_failure); // [確認_異常系] - 履歴コンテキスト確保失敗が UNKNOWN になること。
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, prompt_failure);  // [確認_異常系] - プロンプト再確保失敗が UNKNOWN になること。
@@ -557,7 +555,7 @@ TEST(pinnedPromptCoverageTest, readline_covers_remaining_key_actions)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     test_pinned_prompt_set_tty(screen, 1);
     NiceMock<Mock_ioctl> mock_ioctl;
     NiceMock<Mock_termios> mock_termios;
@@ -611,19 +609,19 @@ TEST(pinnedPromptCoverageTest, readline_covers_remaining_key_actions)
     test_pinned_prompt_set_raw_active(screen, 1);
     int first_result =
         cplat_pinned_prompt_readline_at(screen, first_output, sizeof(first_output), "", "keys.c",
-                                         1); // [手順] - 右移動、Home、End、削除、クリア、未知キーを含む入力を確定する。
+                                        1); // [手順] - 右移動、Home、End、削除、クリア、未知キーを含む入力を確定する。
     test_pinned_prompt_set_raw_active(screen, 1);
     int short_result = cplat_pinned_prompt_readline_at(screen, short_output, sizeof(short_output), "", "keys.c",
-                                                        2); // [手順] - 出力バッファーより長い入力を確定する。
+                                                       2); // [手順] - 出力バッファーより長い入力を確定する。
     test_pinned_prompt_set_raw_active(screen, 1);
     int eof_result = cplat_pinned_prompt_readline_at(screen, eof_output, sizeof(eof_output), "", "keys.c",
-                                                      3); // [手順] - EOF を受信して入力を終了する。
+                                                     3); // [手順] - EOF を受信して入力を終了する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, first_result);    // [確認_正常系] - 残りのキー操作を含む readline が OK になること。
-    EXPECT_STREQ("", first_output);          // [確認_正常系] - クリア後の確定入力が空文字列になること。
+    EXPECT_STREQ("", first_output);       // [確認_正常系] - クリア後の確定入力が空文字列になること。
     EXPECT_EQ(CPLAT_OK, short_result);    // [確認_正常系] - 長い入力の readline が OK になること。
-    EXPECT_STREQ("a", short_output);         // [確認_正常系] - 長い入力が出力容量内へ切り捨てられること。
+    EXPECT_STREQ("a", short_output);      // [確認_正常系] - 長い入力が出力容量内へ切り捨てられること。
     EXPECT_EQ(CPLAT_ERR_EOF, eof_result); // [確認_正常系] - EOF を受信した readline が EOF になること。
 
     // Cleanup
@@ -637,7 +635,7 @@ TEST(pinnedPromptCoverageTest, tty_write_and_printf_cover_empty_short_and_failur
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     test_pinned_prompt_set_tty(screen, 1);
     NiceMock<Mock_stdio> mock_stdio;
     NiceMock<Mock_cplat> mock_cplat;
@@ -657,30 +655,30 @@ TEST(pinnedPromptCoverageTest, tty_write_and_printf_cover_empty_short_and_failur
     // [Pre-Assert確認_異常系] - vsnprintf が書式長計算のために呼び出されること。
     // [Pre-Assert手順] - 1 回目は -1、以降は 1 を返却する。出力書き込みは cplat_vsnprintf へ委譲する。
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
-        .WillOnce(Return(nullptr))                        // malloc_failure: 出力バッファー確保失敗
+        .WillOnce(Return(nullptr))                     // malloc_failure: 出力バッファー確保失敗
         .WillOnce(Invoke(delegate_real_cplat_malloc)); // write_failure: 出力バッファー確保は成功させる
     // [Pre-Assert確認_異常系] - cplat_malloc が printf の出力バッファー確保のために呼び出されること。
     // [Pre-Assert手順] - 1 回目は NULL、2 回目は本物の malloc 結果を返却する。
 
     // Act
     int empty_result = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, NULL, 0U,
-                                                    NULL); // [手順] - TTY へサイズ 0 を書き込む。
+                                                 NULL); // [手順] - TTY へサイズ 0 を書き込む。
     int short_result = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, data, 3U,
-                                                    &written); // [手順] - TTY へ短い書き込みを行う。
+                                                 &written); // [手順] - TTY へ短い書き込みを行う。
     int format_failure = cplat_pinned_prompt_printf(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s",
-                                                       "x"); // [手順] - printf の書式長計算を失敗させる。
+                                                    "x"); // [手順] - printf の書式長計算を失敗させる。
     int malloc_failure = cplat_pinned_prompt_printf(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s",
-                                                       "x"); // [手順] - printf の出力バッファー確保を失敗させる。
+                                                    "x"); // [手順] - printf の出力バッファー確保を失敗させる。
     int write_failure = cplat_pinned_prompt_printf(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s",
-                                                      "x"); // [手順] - printf の内部書き込みを失敗させる。
+                                                   "x"); // [手順] - printf の内部書き込みを失敗させる。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, empty_result);          // [確認_正常系] - TTY へのサイズ 0 の書き込みが OK になること。
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, short_result); // [確認_異常系] - TTY への短い書き込みが UNKNOWN になること。
-    EXPECT_EQ(2U, written);                        // [確認_異常系] - TTY の短い書き込みバイト数が 2 であること。
-    EXPECT_EQ(-1, format_failure);                 // [確認_異常系] - printf の書式長計算失敗が -1 になること。
-    EXPECT_EQ(-1, malloc_failure);                 // [確認_異常系] - printf の出力バッファー確保失敗が -1 になること。
-    EXPECT_EQ(-1, write_failure);                  // [確認_異常系] - printf の内部書き込み失敗が -1 になること。
+    EXPECT_EQ(2U, written);                     // [確認_異常系] - TTY の短い書き込みバイト数が 2 であること。
+    EXPECT_EQ(-1, format_failure);              // [確認_異常系] - printf の書式長計算失敗が -1 になること。
+    EXPECT_EQ(-1, malloc_failure);              // [確認_異常系] - printf の出力バッファー確保失敗が -1 になること。
+    EXPECT_EQ(-1, write_failure);               // [確認_異常系] - printf の内部書き込み失敗が -1 になること。
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
@@ -691,7 +689,7 @@ TEST(pinnedPromptCoverageTest, status_apis_cover_toggle_and_allocation_failure)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     NiceMock<Mock_cplat> mock_cplat;
 
     // Pre-Assert
@@ -701,9 +699,9 @@ TEST(pinnedPromptCoverageTest, status_apis_cover_toggle_and_allocation_failure)
 
     // Act
     int top_disable = cplat_pinned_prompt_status_enable(screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
-                                                           0); // [手順] - 上部ステータスを無効にする。
+                                                        0); // [手順] - 上部ステータスを無効にする。
     int bottom_enable = cplat_pinned_prompt_status_enable(screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM,
-                                                             1); // [手順] - 下部ステータスを有効にする。
+                                                          1); // [手順] - 下部ステータスを有効にする。
     int direct_failure = test_pinned_prompt_set_status_content(
         screen, "long status"); // [手順] - ステータス内容の再確保を直接失敗させる。
     int public_failure = cplat_pinned_prompt_status_set(
@@ -729,7 +727,7 @@ TEST(pinnedPromptCoverageTest, read_key_classifies_unknown_csi_default)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_sys_select> mock_select;
     const unsigned char input[] = {0x1BU, '[', '2', 0x1BU, '[', '4', 'x'};
@@ -773,7 +771,7 @@ TEST(pinnedPromptCoverageTest, read_key_and_status_cover_remaining_conditions)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_sys_select> mock_select;
     NiceMock<Mock_ioctl> mock_ioctl;
@@ -835,7 +833,7 @@ TEST(pinnedPromptCoverageTest, remaining_conditions_cover_null_status_history_an
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     size_t written = 99U;
     int write_null_out = CPLAT_OK;
     int write_with_out = CPLAT_OK;
@@ -867,10 +865,10 @@ TEST(pinnedPromptCoverageTest, remaining_conditions_cover_null_status_history_an
     (void)test_pinned_prompt_history_fill(screen, 1U);
     test_pinned_prompt_set_tty(screen, 0);
     write_null_out = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, payload,
-                                                  sizeof(payload) - 1U, NULL); // [手順] - written_out NULL で書き込む。
+                                               sizeof(payload) - 1U, NULL); // [手順] - written_out NULL で書き込む。
     write_with_out =
         cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, payload, sizeof(payload) - 1U,
-                                     &written); // [手順] - written_out 付きで書き込む。
+                                  &written); // [手順] - written_out 付きで書き込む。
     test_pinned_prompt_destroy_mutex(screen);
     cplat_pinned_prompt_dispose(screen); // [手順] - mutex を先に破棄したハンドルを dispose する。
     screen = NULL;
@@ -885,7 +883,7 @@ TEST(pinnedPromptCoverageTest, remaining_five_branches)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
 
@@ -933,7 +931,7 @@ TEST(pinnedPromptCoverageTest, format_helper_grows_buffer_when_realloc_succeeds)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     NiceMock<Mock_cplat> mock_cplat;
     NiceMock<Mock_stdio> mock_stdio;
     char long_text[300];
@@ -971,7 +969,7 @@ TEST(pinnedPromptCoverageTest, readline_fmt_uses_empty_prompt_when_format_alloca
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_cplat> mock_cplat;
     char input[] = "ok";
@@ -988,9 +986,9 @@ TEST(pinnedPromptCoverageTest, readline_fmt_uses_empty_prompt_when_format_alloca
     // [Pre-Assert手順] - cplat_fgets から入力 "ok" を返却する。
 
     // Act
-    readline_result = cplat_pinned_prompt_readline_fmt(
-        screen, output, sizeof(output), "%s",
-        "prompt"); // [手順] - 書式バッファー確保失敗状態で readline_fmt を呼び出す。
+    readline_result =
+        cplat_pinned_prompt_readline_fmt(screen, output, sizeof(output), "%s",
+                                         "prompt"); // [手順] - 書式バッファー確保失敗状態で readline_fmt を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1008,7 +1006,7 @@ TEST(pinnedPromptCoverageTest, render_and_prepare_output_cover_hidden_bottom_sta
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     NiceMock<Mock_ioctl> mock_ioctl;
     struct winsize two_rows = {};
     struct winsize one_row = {};
@@ -1109,7 +1107,7 @@ TEST(pinnedPromptCoverageTest, render_and_prepare_output_cover_hidden_bottom_sta
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     NiceMock<Mock_windows> mock_windows;
     HANDLE out_handle = (HANDLE)0x1234;
 
@@ -1154,7 +1152,7 @@ TEST(pinnedPromptCoverageTest, drawing_helpers_cover_hidden_narrow_and_clear_ran
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                           // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, screen);                                     // [状態確認] - ハンドルが非 NULL であること。
     NiceMock<Mock_windows> mock_windows;
     HANDLE out_handle = (HANDLE)0x1234;
 

@@ -328,17 +328,16 @@ int hashtable_put(cplat_hashtable *ht, const void *key, const void *value,
 
     rec = (size_t)(rec_no - 1);
     key_has_space = hashtable_key_storage_find_free(ht, rec, *hashtable_entry_status(ht, rec) != REC_EMPTY, key,
-                                          &key_storage_offset);
+                                                    &key_storage_offset);
     value_has_space = hashtable_value_storage_find_free(ht, rec, *hashtable_entry_status(ht, rec) != REC_EMPTY, value,
-                                              &value_storage_offset);
+                                                        &value_storage_offset);
     if (key_has_space == 0)
     {
         if (growth_out != NULL)
         {
             growth_out->pressure |= HASHTABLE_GROWTH_KEY_STORAGE;
             growth_out->key_storage_min = storage_min_for_transaction(
-                ht->hdr->key_storage_used,
-                hashtable_field_input_size(ht->hdr->config.key_type, 0, key));
+                ht->hdr->key_storage_used, hashtable_field_input_size(ht->hdr->config.key_type, 0, key));
         }
     }
     if (value_has_space == 0)
@@ -347,8 +346,7 @@ int hashtable_put(cplat_hashtable *ht, const void *key, const void *value,
         {
             growth_out->pressure |= HASHTABLE_GROWTH_VALUE_STORAGE;
             growth_out->value_storage_min = storage_min_for_transaction(
-                ht->hdr->value_storage_used,
-                hashtable_field_input_size(ht->hdr->config.value_type, 0, value));
+                ht->hdr->value_storage_used, hashtable_field_input_size(ht->hdr->config.value_type, 0, value));
         }
     }
     if ((key_has_space == 0) || (value_has_space == 0))
@@ -381,7 +379,7 @@ int hashtable_put(cplat_hashtable *ht, const void *key, const void *value,
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_hashtable_add(cplat_hashtable *ht, const void *key, const void *value,
-                           cplat_hashtable_add_deleted_policy deleted_policy)
+                        cplat_hashtable_add_deleted_policy deleted_policy)
 {
     return hashtable_put_with_growth(ht, key, value, deleted_policy, 0, NULL);
 }
@@ -395,8 +393,8 @@ int cplat_hashtable_upsert(cplat_hashtable *ht, const void *key, const void *val
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_hashtable_insert_direct(cplat_hashtable *ht, uint64_t record, const void *key, int status,
-                                     const void *value, const cplat_timespec *timestamp, uint64_t generation)
+int cplat_hashtable_insert_direct(cplat_hashtable *ht, uint64_t record, const void *key, int status, const void *value,
+                                  const cplat_timespec *timestamp, uint64_t generation)
 {
     size_t key_storage_offset = 0;
     size_t value_storage_offset = 0;
@@ -558,8 +556,7 @@ int hashtable_update(cplat_hashtable *ht, const void *key, const void *value,
                 {
                     growth_out->pressure |= HASHTABLE_GROWTH_VALUE_STORAGE;
                     growth_out->value_storage_min = storage_min_for_transaction(
-                        ht->hdr->value_storage_used,
-                        hashtable_field_input_size(ht->hdr->config.value_type, 0, value));
+                        ht->hdr->value_storage_used, hashtable_field_input_size(ht->hdr->config.value_type, 0, value));
                 }
                 return CPLAT_ERR_STORAGE_FULL;
             }
@@ -620,8 +617,7 @@ int hashtable_update_rec(cplat_hashtable *ht, uint64_t record, const void *value
         {
             growth_out->pressure |= HASHTABLE_GROWTH_VALUE_STORAGE;
             growth_out->value_storage_min = storage_min_for_transaction(
-                ht->hdr->value_storage_used,
-                hashtable_field_input_size(ht->hdr->config.value_type, 0, value));
+                ht->hdr->value_storage_used, hashtable_field_input_size(ht->hdr->config.value_type, 0, value));
         }
         return CPLAT_ERR_STORAGE_FULL;
     }

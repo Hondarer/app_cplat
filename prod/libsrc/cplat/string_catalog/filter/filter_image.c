@@ -20,7 +20,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-_Static_assert(sizeof(string_catalog_filter_image_header) == CPLAT_STRING_CATALOG_FILTER_HEADER_SIZE, "cplat: header size");
+_Static_assert(sizeof(string_catalog_filter_image_header) == CPLAT_STRING_CATALOG_FILTER_HEADER_SIZE,
+               "cplat: header size");
 _Static_assert(sizeof(string_catalog_filter_record_header) == CPLAT_STRING_CATALOG_FILTER_RECORD_HEADER_SIZE,
                "cplat: record header size");
 _Static_assert(sizeof(string_catalog_filter_instruction) == 8U, "cplat: instruction size");

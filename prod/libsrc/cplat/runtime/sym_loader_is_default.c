@@ -1,7 +1,7 @@
 /**
  *******************************************************************************
  *  @file           sym_loader_is_default.c
- *  @brief          cplat_sym_loader_entry が明示的デフォルトかどうかを返します。
+ *  @brief          cplat_sym_loader_entry が明示的既定値かどうかを返します。
  *  @author         c-modenization-kit sample team
  *  @date           2026/02/23
  *  @version        1.0.0

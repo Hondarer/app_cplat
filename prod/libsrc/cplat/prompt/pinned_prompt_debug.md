@@ -12,7 +12,7 @@ make
 
 `make clean` は通常不要です。ファイル名や生成物の構成を変えた場合だけ検討します。
 
-CLI 単体の再リンクは以下で行います。
+CLI 単体の再リンクは次で行います。
 
 ```bash
 cd /home/user/c-modernization-kit/app/cplat/prod/src/cmd/pinned-prompt
@@ -21,7 +21,7 @@ make
 
 `pinned_prompt.c` は `-Wpadded` 付きでコンパイルされます。構造体のメンバー配置を変更した場合は、`pinned_prompt.c` のコンパイル行で警告が出力されていないか確認します。
 
-差分の空白確認は以下で行います。
+差分の空白確認は次で行います。
 
 ```bash
 git -C /home/user/c-modernization-kit/app/cplat diff --check --

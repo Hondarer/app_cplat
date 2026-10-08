@@ -5,8 +5,8 @@
 
 DWORD delegate_real_GetModuleFileNameU(HMODULE module, char *utf8_buf, DWORD size)
 {
-    static auto real_fn = reinterpret_cast<decltype(&GetModuleFileNameU)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "GetModuleFileNameU"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&GetModuleFileNameU)>(resolveSharedSymbolOrExit(kLibCplatName, "GetModuleFileNameU"));
 
     return real_fn(module, utf8_buf, size);
 }

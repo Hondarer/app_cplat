@@ -2,10 +2,10 @@
 #include <mock_cplat.h>
 
 FILE *delegate_real_cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, size_t path_size,
-                                        cplat_error *detail_out)
+                                     cplat_error *detail_out)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_fopen_temp)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_fopen_temp"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_fopen_temp)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_fopen_temp"));
 
     return real_fn(prefix, modes, path_out, path_size, detail_out);
 }

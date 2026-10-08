@@ -3,8 +3,8 @@
 
 void delegate_real_cplat_console_init(void)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_console_init)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_console_init"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_console_init)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_console_init"));
 
     real_fn();
 }

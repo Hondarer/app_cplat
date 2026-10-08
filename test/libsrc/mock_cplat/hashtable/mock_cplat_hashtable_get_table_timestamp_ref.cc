@@ -2,7 +2,7 @@
 #include <mock_cplat.h>
 
 int delegate_real_cplat_hashtable_get_table_timestamp_ref(const cplat_hashtable *ht,
-                                                        const cplat_timespec **timestamp_out)
+                                                          const cplat_timespec **timestamp_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_hashtable_get_table_timestamp_ref)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_hashtable_get_table_timestamp_ref"));

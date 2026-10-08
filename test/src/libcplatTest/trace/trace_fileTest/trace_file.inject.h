@@ -15,7 +15,7 @@ extern "C"
 #endif /* __cplusplus */
 
     extern cplat_trace_file_sink *test_trace_file_sink_create_unregistered(const char *path, size_t max_bytes,
-                                                                              int generations, int flags);
+                                                                           int generations, int flags);
 
 #ifdef __cplusplus
 }

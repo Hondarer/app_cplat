@@ -37,7 +37,7 @@
 /* Doxygen コメントは、ヘッダーに記載 */
 
 FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, const size_t path_size,
-                          cplat_error *detail_out)
+                       cplat_error *detail_out)
 {
     if (modes == NULL || path_out == NULL || path_size == 0u)
     {

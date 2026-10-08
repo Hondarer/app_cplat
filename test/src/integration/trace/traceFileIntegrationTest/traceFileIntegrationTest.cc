@@ -51,7 +51,7 @@ TEST_F(traceFileIntegrationTest, both_concurrency_modes_repeat_lifecycle)
 {
     // Arrange
     const cplat_tracer_concurrency_mode modes[] = {CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED,
-                                                      CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED};
+                                                   CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED};
 
     // Pre-Assert
 
@@ -60,8 +60,7 @@ TEST_F(traceFileIntegrationTest, both_concurrency_modes_repeat_lifecycle)
     {
         for (int i = 0; i < 16; i++)
         {
-            cplat_tracer *handle =
-                cplat_tracer_create(mode); // [手順] - 各並行処理管理モードで tracer を生成する。
+            cplat_tracer *handle = cplat_tracer_create(mode); // [手順] - 各並行処理管理モードで tracer を生成する。
             ASSERT_NE(nullptr, handle);
             // [確認_正常系 回数=2*16] - `nullptr` と `handle` が異なること。
             cplat_tracer_dispose(&handle); // [手順] - 生成した tracer を破棄する。
@@ -80,28 +79,30 @@ TEST_F(traceFileIntegrationTest, test_enable_file_trace_writes_messages)
     std::string path = ws + "/app/cplat/test/src/integration/trace/traceFileIntegrationTest/results/trace_test.log";
     remove(path.c_str());
 
-    cplat_tracer *handle = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED); // [状態] - 生成済みのトレース ハンドルを用意する。
-    ASSERT_NE((cplat_tracer *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
-    ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
-                                                                                             // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
+    cplat_tracer *handle = cplat_tracer_create(
+        CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED); // [状態] - 生成済みのトレース ハンドルを用意する。
+    ASSERT_NE((cplat_tracer *)NULL, handle);      // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
+    // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int actual_ret_tracer_set_file_level = cplat_tracer_set_file_level(handle, path.c_str(), CPLAT_TRACE_LEVEL_INFO, 0,
-                                                                   0, 0); // [手順] - file trace を有効化する。
+                                                                       0, 0); // [手順] - file trace を有効化する。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_tracer_set_file_level); // [確認_正常系] - file trace を有効化した cplat_tracer_set_file_level の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_tracer_start(handle));
     // [確認_正常系] - `cplat_tracer_start(handle)` の戻り値が `CPLAT_OK` であること。
     int actual_ret_tracer_write = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_ERROR, NULL,
-                                                  "file error message"); // [手順] - ERROR 行を書き込む。
+                                                        "file error message"); // [手順] - ERROR 行を書き込む。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_tracer_write); // [確認_正常系] - ERROR 行を書き込んだ cplat_tracer_write_at の戻り値が CPLAT_OK であること。
     int actual_ret_tracer_write_2 = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
-                                                    "file info message"); // [手順] - INFO 行を書き込む。
+                                                          "file info message"); // [手順] - INFO 行を書き込む。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_tracer_write_2); // [確認_正常系] - INFO 行を書き込んだ cplat_tracer_write_at の戻り値が CPLAT_OK であること。
@@ -121,32 +122,33 @@ TEST_F(traceFileIntegrationTest, test_file_level_filters_messages)
 {
     // Arrange
     std::string ws = findWorkspaceRoot();
-    std::string path =
-        ws + "/app/cplat/test/src/integration/trace/traceFileIntegrationTest/results/trace_filter.log";
+    std::string path = ws + "/app/cplat/test/src/integration/trace/traceFileIntegrationTest/results/trace_filter.log";
     remove(path.c_str());
 
-    cplat_tracer *handle = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED); // [状態] - 生成済みのトレース ハンドルを用意する。
-    ASSERT_NE((cplat_tracer *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
-    ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
-                                                                                             // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
+    cplat_tracer *handle = cplat_tracer_create(
+        CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED); // [状態] - 生成済みのトレース ハンドルを用意する。
+    ASSERT_NE((cplat_tracer *)NULL, handle);      // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
+    // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    int actual_ret_tracer_set_file_level = cplat_tracer_set_file_level(handle, path.c_str(), CPLAT_TRACE_LEVEL_ERROR, 0,
-                                                                   0, 0); // [手順] - file level を ERROR に設定する。
+    int actual_ret_tracer_set_file_level = cplat_tracer_set_file_level(
+        handle, path.c_str(), CPLAT_TRACE_LEVEL_ERROR, 0, 0, 0); // [手順] - file level を ERROR に設定する。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_tracer_set_file_level); // [確認_正常系] - file level を ERROR に設定した cplat_tracer_set_file_level の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_tracer_start(handle));
     // [確認_正常系] - `cplat_tracer_start(handle)` の戻り値が `CPLAT_OK` であること。
     int actual_ret_tracer_write = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_ERROR, NULL,
-                                                  "should be in file"); // [手順] - ERROR 行を書き込む。
+                                                        "should be in file"); // [手順] - ERROR 行を書き込む。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_tracer_write); // [確認_正常系] - ERROR 行を書き込んだ cplat_tracer_write_at の戻り値が CPLAT_OK であること。
     int actual_ret_tracer_write_2 = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_WARNING, NULL,
-                                                    "should not be in file"); // [手順] - WARNING 行を書き込む。
+                                                          "should not be in file"); // [手順] - WARNING 行を書き込む。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_tracer_write_2); // [確認_正常系] - WARNING 行を書き込んだ cplat_tracer_write_at の戻り値が CPLAT_OK であること。
@@ -169,28 +171,30 @@ TEST_F(traceFileIntegrationTest, test_debug_level_outputs_verbose_and_debug_mark
     std::string path = ws + "/app/cplat/test/src/integration/trace/traceFileIntegrationTest/results/trace_debug.log";
     remove(path.c_str());
 
-    cplat_tracer *handle = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED); // [状態] - 生成済みのトレース ハンドルを用意する。
-    ASSERT_NE((cplat_tracer *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
-    ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
-                                                                                             // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
+    cplat_tracer *handle = cplat_tracer_create(
+        CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED); // [状態] - 生成済みのトレース ハンドルを用意する。
+    ASSERT_NE((cplat_tracer *)NULL, handle);      // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
+    // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    int actual_ret_tracer_set_file_level = cplat_tracer_set_file_level(handle, path.c_str(), CPLAT_TRACE_LEVEL_DEBUG, 0,
-                                                                   0, 0); // [手順] - file level を DEBUG に設定する。
+    int actual_ret_tracer_set_file_level = cplat_tracer_set_file_level(
+        handle, path.c_str(), CPLAT_TRACE_LEVEL_DEBUG, 0, 0, 0); // [手順] - file level を DEBUG に設定する。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_tracer_set_file_level); // [確認_正常系] - file level を DEBUG に設定した cplat_tracer_set_file_level の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_tracer_start(handle));
     // [確認_正常系] - `cplat_tracer_start(handle)` の戻り値が `CPLAT_OK` であること。
     int actual_ret_tracer_write = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_VERBOSE, NULL,
-                                                  "verbose in debug file"); // [手順] - VERBOSE 行を書き込む。
+                                                        "verbose in debug file"); // [手順] - VERBOSE 行を書き込む。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_tracer_write); // [確認_正常系] - VERBOSE 行を書き込んだ cplat_tracer_write_at の戻り値が CPLAT_OK であること。
     int actual_ret_tracer_write_2 = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_DEBUG, NULL,
-                                                    "debug in debug file"); // [手順] - DEBUG 行を書き込む。
+                                                          "debug in debug file"); // [手順] - DEBUG 行を書き込む。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_tracer_write_2); // [確認_正常系] - DEBUG 行を書き込んだ cplat_tracer_write_at の戻り値が CPLAT_OK であること。
@@ -210,27 +214,28 @@ TEST_F(traceFileIntegrationTest, test_level_none_disables_file_trace)
 {
     // Arrange
     std::string ws = findWorkspaceRoot();
-    std::string path =
-        ws + "/app/cplat/test/src/integration/trace/traceFileIntegrationTest/results/trace_disable.log";
+    std::string path = ws + "/app/cplat/test/src/integration/trace/traceFileIntegrationTest/results/trace_disable.log";
     remove(path.c_str());
 
-    cplat_tracer *handle = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED); // [状態] - 生成済みのトレース ハンドルを用意する。
-    ASSERT_NE((cplat_tracer *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
-    ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
-                                                                                             // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
+    cplat_tracer *handle = cplat_tracer_create(
+        CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED); // [状態] - 生成済みのトレース ハンドルを用意する。
+    ASSERT_NE((cplat_tracer *)NULL, handle);      // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
+    // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int actual_ret_tracer_set_file_level = cplat_tracer_set_file_level(handle, path.c_str(), CPLAT_TRACE_LEVEL_INFO, 0,
-                                                                   0, 0); // [手順] - file trace を有効化する。
+                                                                       0, 0); // [手順] - file trace を有効化する。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_tracer_set_file_level); // [確認_正常系] - file trace を有効化した cplat_tracer_set_file_level の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_tracer_start(handle));
     // [確認_正常系] - `cplat_tracer_start(handle)` の戻り値が `CPLAT_OK` であること。
     int actual_ret_tracer_write = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_ERROR, NULL,
-                                                  "before disable"); // [手順] - 無効化前に 1 行書き込む。
+                                                        "before disable"); // [手順] - 無効化前に 1 行書き込む。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_tracer_write); // [確認_正常系] - 無効化前に呼び出した cplat_tracer_write_at の戻り値が CPLAT_OK であること。
@@ -244,7 +249,7 @@ TEST_F(traceFileIntegrationTest, test_level_none_disables_file_trace)
     ASSERT_EQ(CPLAT_OK, cplat_tracer_start(handle));
     // [確認_正常系] - `cplat_tracer_start(handle)` の戻り値が `CPLAT_OK` であること。
     int actual_ret_tracer_write_2 = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_ERROR, NULL,
-                                                    "after disable"); // [手順] - 無効化後に 1 行書き込む。
+                                                          "after disable"); // [手順] - 無効化後に 1 行書き込む。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_tracer_write_2); // [確認_正常系] - 無効化後に呼び出した cplat_tracer_write_at の戻り値が CPLAT_OK であること。
@@ -262,7 +267,7 @@ TEST_F(traceFileIntegrationTest, test_level_none_disables_file_trace)
 namespace
 {
 
-// デフォルト トレース ファイルのパス (実行ファイルのディレクトリ + /log/<プロセス名>.log) を導出する
+// 既定のトレース ファイルのパス (実行ファイルのディレクトリ + /log/<プロセス名>.log) を導出する
 static std::string build_expected_default_path(void)
 {
     char exe_path[PLATFORM_PATH_MAX];
@@ -287,27 +292,28 @@ static std::string build_expected_default_path(void)
 
 } // namespace
 
-// set_file_level でパスを指定しない場合にデフォルト パス (実行ファイルのディレクトリ + /log/<プロセス名>.log) へ
+// set_file_level でパスを指定しない場合に既定パス (実行ファイルのディレクトリ + /log/<プロセス名>.log) へ
 // 書き込まれることの確認。set_name はトレース ファイル名に影響しないことも実証する。
 TEST_F(traceFileIntegrationTest, test_default_path_writes_to_log_directory_next_to_executable)
 {
     // Arrange
-    std::string path = build_expected_default_path(); // [状態] - デフォルトのトレース ファイル パスを用意する。
-    ASSERT_FALSE(path.empty()); // [状態確認] - デフォルト パスが空でないこと。
+    std::string path = build_expected_default_path(); // [状態] - 既定のトレース ファイル パスを用意する。
+    ASSERT_FALSE(path.empty());                       // [状態確認] - 既定パスが空でないこと。
     remove(path.c_str());
 
-    cplat_tracer *handle = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED); // [状態] - 生成済みのトレース ハンドルを用意する。
-    ASSERT_NE((cplat_tracer *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
-    ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
-                                                                                             // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
+    cplat_tracer *handle = cplat_tracer_create(
+        CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED); // [状態] - 生成済みのトレース ハンドルを用意する。
+    ASSERT_NE((cplat_tracer *)NULL, handle);      // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
+    // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
     int actual_ret_tracer_set_name = cplat_tracer_set_name(
         handle, "default_path_it", 0); // [状態] - インスタンス名を設定する (ファイル名には影響しない)。
     ASSERT_EQ(CPLAT_OK,
               actual_ret_tracer_set_name); // [状態確認] - cplat_tracer_set_name の戻り値が CPLAT_OK であること。
-    ASSERT_EQ(CPLAT_OK,
-              cplat_tracer_set_file_level(handle, NULL, CPLAT_TRACE_LEVEL_INFO, 0, 0,
-                                             0)); // [状態] - パスを指定せずファイル レベルを INFO とする。
-                                                  // [状態確認] - cplat_tracer_set_file_level の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, cplat_tracer_set_file_level(handle, NULL, CPLAT_TRACE_LEVEL_INFO, 0, 0,
+                                                    0)); // [状態] - パスを指定せずファイル レベルを INFO とする。
+    // [状態確認] - cplat_tracer_set_file_level の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -317,7 +323,7 @@ TEST_F(traceFileIntegrationTest, test_default_path_writes_to_log_directory_next_
         CPLAT_OK,
         actual_ret_tracer_start); // [確認_正常系] - パスを指定せず start した cplat_tracer_start の戻り値が CPLAT_OK であること。
     int actual_ret_tracer_write = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
-                                                  "default path message"); // [手順] - INFO 行を書き込む。
+                                                        "default path message"); // [手順] - INFO 行を書き込む。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_tracer_write); // [確認_正常系] - INFO 行を書き込んだ cplat_tracer_write_at の戻り値が CPLAT_OK であること。
@@ -331,30 +337,32 @@ TEST_F(traceFileIntegrationTest, test_default_path_writes_to_log_directory_next_
     remove(path.c_str());
 }
 
-// 同一プロセス内の複数 tracer が占有モードのまま同一デフォルト パスへ出力できることの確認 (プロセス内調停)
+// 同一プロセス内の複数 tracer が占有モードのまま同一の既定パスへ出力できることの確認 (プロセス内調停)
 TEST_F(traceFileIntegrationTest, test_two_tracers_share_default_path_in_single_process)
 {
     // Arrange
-    std::string path = build_expected_default_path(); // [状態] - デフォルトのトレース ファイル パスを用意する。
-    ASSERT_FALSE(path.empty()); // [状態確認] - デフォルト パスが空でないこと。
+    std::string path = build_expected_default_path(); // [状態] - 既定のトレース ファイル パスを用意する。
+    ASSERT_FALSE(path.empty());                       // [状態確認] - 既定パスが空でないこと。
     remove(path.c_str());
 
-    cplat_tracer *first = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED); // [状態] - 1 つ目のトレース ハンドルを用意する。
-    cplat_tracer *second = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED); // [状態] - 2 つ目のトレース ハンドルを用意する。
-    ASSERT_NE((cplat_tracer *)NULL, first); // [状態確認] - 1 つ目のハンドルが非 NULL であること。
+    cplat_tracer *first =
+        cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED); // [状態] - 1 つ目のトレース ハンドルを用意する。
+    cplat_tracer *second =
+        cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED); // [状態] - 2 つ目のトレース ハンドルを用意する。
+    ASSERT_NE((cplat_tracer *)NULL, first);  // [状態確認] - 1 つ目のハンドルが非 NULL であること。
     ASSERT_NE((cplat_tracer *)NULL, second); // [状態確認] - 2 つ目のハンドルが非 NULL であること。
-    ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(first, CPLAT_TRACE_LEVEL_NONE)); // [状態] - 1 つ目の OS レベルを NONE とする。
-                                                                                            // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
-    ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(second, CPLAT_TRACE_LEVEL_NONE)); // [状態] - 2 つ目の OS レベルを NONE とする。
-                                                                                             // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
-              cplat_tracer_set_file_level(first, NULL, CPLAT_TRACE_LEVEL_INFO, 0, 0,
-                                             0)); // [状態] - 1 つ目のファイル レベルを INFO とする。
-                                                  // [状態確認] - cplat_tracer_set_file_level の戻り値が CPLAT_OK であること。
+              cplat_tracer_set_os_level(first, CPLAT_TRACE_LEVEL_NONE)); // [状態] - 1 つ目の OS レベルを NONE とする。
+    // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
-              cplat_tracer_set_file_level(second, NULL, CPLAT_TRACE_LEVEL_INFO, 0, 0,
-                                             0)); // [状態] - 2 つ目のファイル レベルを INFO とする。
-                                                  // [状態確認] - cplat_tracer_set_file_level の戻り値が CPLAT_OK であること。
+              cplat_tracer_set_os_level(second, CPLAT_TRACE_LEVEL_NONE)); // [状態] - 2 つ目の OS レベルを NONE とする。
+    // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, cplat_tracer_set_file_level(first, NULL, CPLAT_TRACE_LEVEL_INFO, 0, 0,
+                                                    0)); // [状態] - 1 つ目のファイル レベルを INFO とする。
+    // [状態確認] - cplat_tracer_set_file_level の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, cplat_tracer_set_file_level(second, NULL, CPLAT_TRACE_LEVEL_INFO, 0, 0,
+                                                    0)); // [状態] - 2 つ目のファイル レベルを INFO とする。
+    // [状態確認] - cplat_tracer_set_file_level の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -363,23 +371,24 @@ TEST_F(traceFileIntegrationTest, test_two_tracers_share_default_path_in_single_p
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_tracer_start); // [確認_正常系] - 1 つ目の tracer を start した cplat_tracer_start の戻り値が CPLAT_OK であること。
-    int actual_ret_tracer_start_2 = cplat_tracer_start(second); // [手順] - 2 つ目も同一デフォルト パスで start する。
+    int actual_ret_tracer_start_2 = cplat_tracer_start(second); // [手順] - 2 つ目も同一の既定パスで start する。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_tracer_start_2); // [確認_正常系] - 2 つ目に対する cplat_tracer_start の戻り値が CPLAT_OK であること。
     int actual_ret_tracer_write = cplat_tracer_write_at(first, CPLAT_TRACE_LEVEL_ERROR, NULL,
-                                                  "from first tracer"); // [手順] - 1 つ目から書き込む。
+                                                        "from first tracer"); // [手順] - 1 つ目から書き込む。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_tracer_write); // [確認_正常系] - 1 つ目から呼び出した cplat_tracer_write_at の戻り値が CPLAT_OK であること。
     int actual_ret_tracer_write_2 = cplat_tracer_write_at(second, CPLAT_TRACE_LEVEL_ERROR, NULL,
-                                                    "from second tracer"); // [手順] - 2 つ目から書き込む。
+                                                          "from second tracer"); // [手順] - 2 つ目から書き込む。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_tracer_write_2); // [確認_正常系] - 2 つ目から呼び出した cplat_tracer_write_at の戻り値が CPLAT_OK であること。
     cplat_tracer_dispose(&first); // [手順] - 1 つ目を解放する。
-    int actual_ret_tracer_write_3 = cplat_tracer_write_at(second, CPLAT_TRACE_LEVEL_ERROR, NULL,
-                                                    "after first dispose"); // [手順] - 解放後も 2 つ目から書き込む。
+    int actual_ret_tracer_write_3 =
+        cplat_tracer_write_at(second, CPLAT_TRACE_LEVEL_ERROR, NULL,
+                              "after first dispose"); // [手順] - 解放後も 2 つ目から書き込む。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_tracer_write_3); // [確認_正常系] - 1 つ目の解放後に 2 つ目から呼び出した cplat_tracer_write_at の戻り値が CPLAT_OK であること。

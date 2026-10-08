@@ -21,10 +21,10 @@ TEST_F(pathConcatTest, concatenates_path_fragments)
     // Act
     int actual_ret_path_concat =
         cplat_path_concat(path, sizeof(path), &err, "tmp", PLATFORM_PATH_SEP,
-                             "libbase_extdef.json"); // [手順] - "tmp"、セパレータ、"libbase_extdef.json" を連結する。
+                          "libbase_extdef.json"); // [手順] - "tmp"、セパレータ、"libbase_extdef.json" を連結する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_path_concat); // [確認_正常系] - cplat_path_concat の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_path_concat);   // [確認_正常系] - cplat_path_concat の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("tmp/libbase_extdef.json", path); // [確認_正常系] - 断片が指定順に連結されること。
 }
 
@@ -43,7 +43,7 @@ TEST_F(pathConcatTest, keeps_empty_fragment)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_path_concat); // [確認_正常系] - cplat_path_concat の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("abc", path);               // [確認_正常系] - 空文字断片もそのまま扱え "abc" になること。
+    EXPECT_STREQ("abc", path);                   // [確認_正常系] - 空文字断片もそのまま扱え "abc" になること。
 }
 
 // サポート上限の 16 断片を連結できることの確認
@@ -58,11 +58,11 @@ TEST_F(pathConcatTest, accepts_sixteen_fragments)
     // Act
     int actual_ret_path_concat =
         cplat_path_concat(path, sizeof(path), &err, "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
-                             "n", "o", "p"); // [手順] - "a" から "p" までの 16 断片を連結する。
+                          "n", "o", "p"); // [手順] - "a" から "p" までの 16 断片を連結する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_path_concat); // [確認_正常系] - cplat_path_concat の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("abcdefghijklmnop", path);  // [確認_正常系] - サポート上限の 16 断片が連結されること。
+    EXPECT_STREQ("abcdefghijklmnop", path);      // [確認_正常系] - サポート上限の 16 断片が連結されること。
 }
 
 // 断片数 0 の場合に EINVAL で失敗することの確認
@@ -77,7 +77,7 @@ TEST_F(pathConcatTest, returns_einval_for_zero_part_count)
 
     // Act
     int actual_ret_path_concat_n = cplat_path_concat_n(
-        path, sizeof(path), &err, 0u);    // [手順] - part_count に 0 を渡して cplat_path_concat_n を呼び出す。
+        path, sizeof(path), &err, 0u); // [手順] - part_count に 0 を渡して cplat_path_concat_n を呼び出す。
     cplat_error_get_last(&last_error); // [手順] - TLS に記録された詳細エラーを取得する。
 
     // Assert
@@ -99,11 +99,10 @@ TEST_F(pathConcatTest, returns_einval_for_invalid_output_buffer)
     // Pre-Assert
 
     // Act
-    int null_result =
-        cplat_path_concat_n(NULL, sizeof(path), &null_detail, 1u,
-                               "a"); // [手順] - 連結先に NULL を指定して cplat_path_concat_n を呼び出す。
-    int zero_result = cplat_path_concat_n(
-        path, 0u, &zero_detail, 1u, "a"); // [手順] - 連結先サイズに 0 を指定して cplat_path_concat_n を呼び出す。
+    int null_result = cplat_path_concat_n(NULL, sizeof(path), &null_detail, 1u,
+                                          "a"); // [手順] - 連結先に NULL を指定して cplat_path_concat_n を呼び出す。
+    int zero_result = cplat_path_concat_n(path, 0u, &zero_detail, 1u,
+                                          "a"); // [手順] - 連結先サイズに 0 を指定して cplat_path_concat_n を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -149,15 +148,15 @@ TEST_F(pathConcatTest, returns_enametoolong_when_result_does_not_fit)
     // Pre-Assert
 
     // Act
-    int actual_ret_path_concat = cplat_path_concat(path, sizeof(path), &err, "ab", "cd",
-                                               "e"); // [手順] - 連結結果が 5 文字 (+NUL) となる断片を渡して呼び出す。
+    int actual_ret_path_concat =
+        cplat_path_concat(path, sizeof(path), &err, "ab", "cd",
+                          "e"); // [手順] - 連結結果が 5 文字 (+NUL) となる断片を渡して呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_BUFFER_TOO_SMALL,
         actual_ret_path_concat); // [確認_異常系] - cplat_path_concat の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
-    EXPECT_EQ(1,
-              cplat_error_is(&err, CPLAT_CAUSE_NAME_TOO_LONG)); // [確認_異常系] - ENAMETOOLONG の要因が返ること。
+    EXPECT_EQ(1, cplat_error_is(&err, CPLAT_CAUSE_NAME_TOO_LONG)); // [確認_異常系] - ENAMETOOLONG の要因が返ること。
     EXPECT_EQ('\0', path[0]); // [確認_異常系] - 失敗時は空文字列に初期化されること。
 }
 
@@ -171,13 +170,12 @@ TEST_F(pathConcatTest, get_temp_dir_records_error_for_null_output)
 
     // Act
     const int result = cplat_path_get_temp_dir(NULL, 0U, NULL); // [手順] - 格納先と詳細エラー出力に NULL を指定する。
-    cplat_error_get_last(&last_error);                     // [手順] - TLS に記録された詳細エラーを取得する。
+    cplat_error_get_last(&last_error);                          // [手順] - TLS に記録された詳細エラーを取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
               result); // [確認_異常系] - cplat_path_get_temp_dir の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(1,
-              cplat_error_is(&last_error,
+    EXPECT_EQ(1, cplat_error_is(&last_error,
                                 CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - TLS の要因が EINVAL であること。
 }
 
@@ -212,11 +210,12 @@ TEST_F(pathConcatTest, get_temp_dir_returns_normalized_windows_path)
     // Pre-Assert
 
     // Act
-    int result = cplat_path_get_temp_dir(output, sizeof(output), &err); // [手順] - Windows の一時ディレクトリを取得する。
+    int result =
+        cplat_path_get_temp_dir(output, sizeof(output), &err); // [手順] - Windows の一時ディレクトリを取得する。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_path_get_temp_dir の戻り値が CPLAT_OK であること。
-    EXPECT_NE('\0', output[0]); // [確認_正常系] - 一時ディレクトリの絶対パスが返ること。
+    EXPECT_NE('\0', output[0]);  // [確認_正常系] - 一時ディレクトリの絶対パスが返ること。
     EXPECT_EQ(nullptr, std::strchr(output, '\\')); // [確認_正常系] - 出力に Windows 固有の区切り文字が残らないこと。
     EXPECT_NE(PLATFORM_PATH_SEP_CHR,
               output[std::strlen(output) - 1u]); // [確認_正常系] - 末尾の区切り文字が除去されること。
@@ -242,10 +241,11 @@ TEST_F(pathConcatTest, get_temp_dir_uses_default_when_tmpdir_is_empty)
                  // [Pre-Assert手順] - TMPDIR として空文字列を返却する。
 
     // Act
-    int result = cplat_path_get_temp_dir(output, sizeof(output), NULL); // [手順] - TMPDIR が空の状態で一時ディレクトリを取得する。
+    int result = cplat_path_get_temp_dir(output, sizeof(output),
+                                         NULL); // [手順] - TMPDIR が空の状態で一時ディレクトリを取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - TMPDIR 未設定時の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, result);  // [確認_正常系] - TMPDIR 未設定時の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("/tmp", output); // [確認_正常系] - 標準の一時ディレクトリ /tmp が返ること。
 }
 
@@ -267,10 +267,11 @@ TEST_F(pathConcatTest, get_temp_dir_removes_trailing_separators)
                  // [Pre-Assert手順] - TMPDIR として末尾セパレーター付きの "/var/tmp///" を返却する。
 
     // Act
-    int result = cplat_path_get_temp_dir(output, sizeof(output), NULL); // [手順] - 末尾セパレーターを含む TMPDIR を取得する。
+    int result =
+        cplat_path_get_temp_dir(output, sizeof(output), NULL); // [手順] - 末尾セパレーターを含む TMPDIR を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - TMPDIR 末尾セパレーターの戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, result);      // [確認_正常系] - TMPDIR 末尾セパレーターの戻り値が CPLAT_OK であること。
     EXPECT_STREQ("/var/tmp", output); // [確認_正常系] - 末尾セパレーターを除いたパスが返ること。
 }
 
@@ -313,14 +314,15 @@ TEST_F(pathConcatTest, get_temp_dir_rejects_overlong_tmpdir)
     EXPECT_CALL(mock_cplat, cplat_getenv(_, _, _, _, _))
         .WillOnce(
             Return(CPLAT_ERR_BUFFER_TOO_SMALL)); // [Pre-Assert確認_異常系] - TMPDIR の取得が 1 回呼び出されること。
-                                                    // [Pre-Assert手順] - CPLAT_ERR_BUFFER_TOO_SMALL を返却する。
+                                                 // [Pre-Assert手順] - CPLAT_ERR_BUFFER_TOO_SMALL を返却する。
 
     // Act
-    int result = cplat_path_get_temp_dir(output, sizeof(output), NULL); // [手順] - 長過ぎる TMPDIR の取得結果を処理する。
+    int result =
+        cplat_path_get_temp_dir(output, sizeof(output), NULL); // [手順] - 長過ぎる TMPDIR の取得結果を処理する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, result); // [確認_異常系] - 長過ぎる TMPDIR が BUFFER_TOO_SMALL になること。
-    EXPECT_STREQ("", output); // [確認_異常系] - 失敗時の出力が空文字列になること。
+    EXPECT_STREQ("", output);                      // [確認_異常系] - 失敗時の出力が空文字列になること。
 }
 
 // 一時ディレクトリの出力整形失敗がエラーになることの確認
@@ -342,10 +344,11 @@ TEST_F(pathConcatTest, get_temp_dir_reports_formatting_failure)
     EXPECT_CALL(mock_cplat, cplat_snprintf(_, _, _))
         .WillOnce(Return(
             CPLAT_ERR_BUFFER_TOO_SMALL)); // [Pre-Assert確認_異常系] - 一時ディレクトリの出力整形が 1 回呼び出されること。
-                                             // [Pre-Assert手順] - CPLAT_ERR_BUFFER_TOO_SMALL を返却する。
+                                          // [Pre-Assert手順] - CPLAT_ERR_BUFFER_TOO_SMALL を返却する。
 
     // Act
-    int result = cplat_path_get_temp_dir(output, sizeof(output), NULL); // [手順] - 一時ディレクトリの出力整形失敗を注入する。
+    int result =
+        cplat_path_get_temp_dir(output, sizeof(output), NULL); // [手順] - 一時ディレクトリの出力整形失敗を注入する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, result); // [確認_異常系] - 出力整形失敗が BUFFER_TOO_SMALL になること。

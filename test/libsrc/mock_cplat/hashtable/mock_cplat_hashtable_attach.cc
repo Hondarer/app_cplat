@@ -2,7 +2,7 @@
 #include <mock_cplat.h>
 
 int delegate_real_cplat_hashtable_attach(void *buf_mgmt, size_t buf_mgmt_size, void *buf_data, size_t buf_data_size,
-                                            cplat_hashtable **ht_out)
+                                         cplat_hashtable **ht_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_hashtable_attach)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_hashtable_attach"));
@@ -10,8 +10,8 @@ int delegate_real_cplat_hashtable_attach(void *buf_mgmt, size_t buf_mgmt_size, v
     return real_fn(buf_mgmt, buf_mgmt_size, buf_data, buf_data_size, ht_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_hashtable_attach, void *buf_mgmt, size_t buf_mgmt_size, void *buf_data,
-               size_t buf_data_size, cplat_hashtable **ht_out)
+MOCK_WEAK_IMPL(int, cplat_hashtable_attach, void *buf_mgmt, size_t buf_mgmt_size, void *buf_data, size_t buf_data_size,
+               cplat_hashtable **ht_out)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

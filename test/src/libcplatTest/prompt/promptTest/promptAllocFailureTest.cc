@@ -44,9 +44,9 @@ TEST_F(promptAllocFailureTest, create_returns_null_when_handle_allocation_fails)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_calloc(1u, _))
-        .WillOnce(
-            Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc が要素数 1 を指定してハンドル確保のために 1 回呼び出されること。
-                              // [Pre-Assert手順] - cplat_calloc から NULL を返却する。
+        .WillOnce(Return(
+            nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc が要素数 1 を指定してハンドル確保のために 1 回呼び出されること。
+                       // [Pre-Assert手順] - cplat_calloc から NULL を返却する。
 
     // Act
     cplat_prompt *handle = cplat_prompt_create(NULL); // [手順] - cplat_prompt_create を呼び出す。
@@ -66,9 +66,9 @@ TEST_F(promptAllocFailureTest, create_returns_null_when_edit_buffer_allocation_f
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
-        .WillOnce(
-            Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc が編集バッファー確保のために 1 回呼び出されること。
-                              // [Pre-Assert手順] - cplat_malloc から NULL を返却する。
+        .WillOnce(Return(
+            nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc が編集バッファー確保のために 1 回呼び出されること。
+                       // [Pre-Assert手順] - cplat_malloc から NULL を返却する。
 
     // Act
     cplat_prompt *handle = cplat_prompt_create(NULL); // [手順] - cplat_prompt_create を呼び出す。
@@ -91,13 +91,13 @@ TEST_F(promptAllocFailureTest, readline_falls_back_when_context_expansion_fails)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _))
-        .WillOnce(
-            Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_realloc がコンテキスト配列の拡張のために 1 回呼び出されること。
-                              // [Pre-Assert手順] - cplat_realloc から NULL を返却する。
+        .WillOnce(Return(
+            nullptr)); // [Pre-Assert確認_異常系] - cplat_realloc がコンテキスト配列の拡張のために 1 回呼び出されること。
+                       // [Pre-Assert手順] - cplat_realloc から NULL を返却する。
 
     // Act
     int actual_ret = cplat_prompt_readline_at(prompt_, buf, sizeof(buf), ">> ", "promptAllocFailureTest.cc",
-                                          1); // [手順] - 1 行読み取る。
+                                              1); // [手順] - 1 行読み取る。
 
     // Assert
     EXPECT_EQ(
@@ -119,13 +119,13 @@ TEST_F(promptAllocFailureTest, readline_falls_back_when_saved_line_allocation_fa
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
-        .WillOnce(
-            Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc が退避バッファー確保のために 1 回呼び出されること。
-                              // [Pre-Assert手順] - cplat_malloc から NULL を返却する。
+        .WillOnce(Return(
+            nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc が退避バッファー確保のために 1 回呼び出されること。
+                       // [Pre-Assert手順] - cplat_malloc から NULL を返却する。
 
     // Act
     int actual_ret = cplat_prompt_readline_at(prompt_, buf, sizeof(buf), ">> ", "promptAllocFailureTest.cc",
-                                          2); // [手順] - 1 行読み取る。
+                                              2); // [手順] - 1 行読み取る。
 
     // Assert
     EXPECT_EQ(
@@ -149,17 +149,17 @@ TEST_F(promptAllocFailureTest, readline_succeeds_when_history_entry_allocation_f
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(DoDefault())
-        .WillOnce(
-            Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc が 2 回呼び出されること。
-                              // [Pre-Assert手順] - 1 回目は本物へ委譲し、2 回目は NULL を返却する。
+        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc が 2 回呼び出されること。
+                                    // [Pre-Assert手順] - 1 回目は本物へ委譲し、2 回目は NULL を返却する。
 
     // Act
     int actual_ret = cplat_prompt_readline_at(prompt_, buf, sizeof(buf), ">> ", "promptAllocFailureTest.cc",
-                                          3); // [手順] - "abc" と Enter を入力して 1 行読み取る。
+                                              3); // [手順] - "abc" と Enter を入力して 1 行読み取る。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 履歴へ残せなくても cplat_prompt_readline_at は CPLAT_OK を返すこと。
-    EXPECT_STREQ("abc", buf);    // [確認_正常系] - 入力した "abc" が返ること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret);    // [確認_正常系] - 履歴へ残せなくても cplat_prompt_readline_at は CPLAT_OK を返すこと。
+    EXPECT_STREQ("abc", buf); // [確認_正常系] - 入力した "abc" が返ること。
 }
 // [サブ手順参照 名前=promptAllocFailureTest.TearDown]
 
@@ -177,20 +177,21 @@ TEST_F(promptAllocFailureTest, readline_fmt_continues_with_empty_prompt_when_all
     /* 書式バッファー以外の確保 (コンテキストの退避バッファーなど) は本物へ委譲する。
        gMock は後から宣言した期待値を優先するため、汎用の期待値を先に宣言する */
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_正常系] - 書式バッファー以外の cplat_malloc が任意の回数呼び出されること。
-                                      // [Pre-Assert手順] - 本物の cplat_malloc へ委譲する。
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_正常系] - 書式バッファー以外の cplat_malloc が任意の回数呼び出されること。
+                          // [Pre-Assert手順] - 本物の cplat_malloc へ委譲する。
     EXPECT_CALL(mock_cplat, cplat_malloc(256u))
-        .WillOnce(
-            Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc が書式バッファーの初期容量 256 を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - cplat_malloc から NULL を返却する。
+        .WillOnce(Return(
+            nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc が書式バッファーの初期容量 256 を指定して 1 回呼び出されること。
+                       // [Pre-Assert手順] - cplat_malloc から NULL を返却する。
 
     // Act
     int actual_ret = cplat_prompt_readline_fmt_at(prompt_, buf, sizeof(buf), "promptAllocFailureTest.cc", 4, "[%d] ",
-                                              7); // [手順] - 書式付きプロンプトで 1 行読み取る。
+                                                  7); // [手順] - 書式付きプロンプトで 1 行読み取る。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 空のプロンプトで継続し CPLAT_OK が返ること。
-    EXPECT_STREQ("abc", buf);    // [確認_正常系] - 入力した "abc" が返ること。
+    EXPECT_STREQ("abc", buf);        // [確認_正常系] - 入力した "abc" が返ること。
 }
 // [サブ手順参照 名前=promptAllocFailureTest.TearDown]
 
@@ -205,9 +206,10 @@ TEST_F(promptAllocFailureTest, readline_fmt_truncates_prompt_when_reallocation_f
     /* 同じ呼び出し位置で 1 度読み取り、コンテキストと書式バッファーを確保済みにする。
        これにより Act 中の realloc は書式バッファーの拡張だけになる */
     promptFakeSetInput("x\r");
-    ASSERT_EQ(CPLAT_OK, cplat_prompt_readline_fmt_at(prompt_, buf, sizeof(buf), "promptAllocFailureTest.cc", 5,
-                                                           "%s", "short")); // [状態] - 同じ呼び出し位置でコンテキストと書式バッファーを確保する。
-                                                                            // [状態確認] - cplat_prompt_readline_fmt_at の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, cplat_prompt_readline_fmt_at(
+                            prompt_, buf, sizeof(buf), "promptAllocFailureTest.cc", 5, "%s",
+                            "short")); // [状態] - 同じ呼び出し位置でコンテキストと書式バッファーを確保する。
+                                       // [状態確認] - cplat_prompt_readline_fmt_at の戻り値が CPLAT_OK であること。
 
     NiceMock<Mock_cplat> mock_cplat;
 
@@ -215,17 +217,17 @@ TEST_F(promptAllocFailureTest, readline_fmt_truncates_prompt_when_reallocation_f
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _))
-        .WillOnce(
-            Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_realloc が書式バッファーの拡張のために 1 回呼び出されること。
-                              // [Pre-Assert手順] - cplat_realloc から NULL を返却する。
+        .WillOnce(Return(
+            nullptr)); // [Pre-Assert確認_異常系] - cplat_realloc が書式バッファーの拡張のために 1 回呼び出されること。
+                       // [Pre-Assert手順] - cplat_realloc から NULL を返却する。
 
     // Act
     int actual_ret = cplat_prompt_readline_fmt_at(prompt_, buf, sizeof(buf), "promptAllocFailureTest.cc", 5, "%s",
-                                              long_prompt.c_str()); // [手順] - 長いプロンプトで 1 行読み取る。
+                                                  long_prompt.c_str()); // [手順] - 長いプロンプトで 1 行読み取る。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - プロンプトを切り捨てて継続し CPLAT_OK が返ること。
-    EXPECT_STREQ("abc", buf);    // [確認_正常系] - 入力した "abc" が返ること。
+    EXPECT_STREQ("abc", buf);        // [確認_正常系] - 入力した "abc" が返ること。
 }
 // [サブ手順参照 名前=promptAllocFailureTest.TearDown]
 
@@ -242,19 +244,21 @@ TEST_F(promptAllocFailureTest, readline_with_initial_reports_out_of_memory_when_
     promptFakeSetInput("x\r");
     ASSERT_EQ(CPLAT_OK, cplat_prompt_readline_at(prompt_, buf, sizeof(buf), ">> ", "promptAllocFailureTest.cc",
                                                  6)); // [状態] - 同じ呼び出し位置でコンテキストを確保する。
-                                                      // [状態確認] - cplat_prompt_readline_at の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_prompt_readline_at の戻り値が CPLAT_OK であること。
 
     NiceMock<Mock_cplat> mock_cplat;
     int leave_raw_count_before = promptFakeLeaveRawCount();
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _))
-        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_realloc が編集バッファーの拡張のために 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_realloc から NULL を返却する。
+        .WillOnce(Return(
+            nullptr)); // [Pre-Assert確認_異常系] - cplat_realloc が編集バッファーの拡張のために 1 回呼び出されること。
+                       // [Pre-Assert手順] - cplat_realloc から NULL を返却する。
 
     // Act
-    int actual_ret = cplat_prompt_readline_with_initial_at(prompt_, buf, sizeof(buf), ">> ", long_initial.c_str(),
-                                                           "promptAllocFailureTest.cc", 6); // [手順] - 長い初期値で 1 行読み取る。
+    int actual_ret =
+        cplat_prompt_readline_with_initial_at(prompt_, buf, sizeof(buf), ">> ", long_initial.c_str(),
+                                              "promptAllocFailureTest.cc", 6); // [手順] - 長い初期値で 1 行読み取る。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY, actual_ret); // [確認_異常系] - CPLAT_ERR_OUT_OF_MEMORY が返ること。

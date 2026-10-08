@@ -22,7 +22,8 @@ static int trace_timestamp_is_valid(const cplat_timespec *timestamp)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_internal_trace_resolve_timestamp(const cplat_timespec *timestamp, cplat_timespec *resolved, int *fallback_used)
+int cplat_internal_trace_resolve_timestamp(const cplat_timespec *timestamp, cplat_timespec *resolved,
+                                           int *fallback_used)
 {
     if (resolved == NULL)
     {

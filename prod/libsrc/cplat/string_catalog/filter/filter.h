@@ -119,14 +119,15 @@ extern "C"
     /** 定数の種類です。 */
     typedef enum string_catalog_filter_constant_kind
     {
-        STRING_CATALOG_FILTER_CONSTANT_KIND_INTEGER = 1,      /**< 整数。値は 64 ビットの絶対値と符号の flags。 */
-        STRING_CATALOG_FILTER_CONSTANT_KIND_FLOAT = 2,        /**< 倍精度浮動小数点数。 */
-        STRING_CATALOG_FILTER_CONSTANT_KIND_STRING = 3,       /**< 文字列。length バイトと NUL。 */
-        STRING_CATALOG_FILTER_CONSTANT_KIND_CHARACTER = 4,    /**< 文字。値は整数と同じ形式。 */
-        STRING_CATALOG_FILTER_CONSTANT_KIND_NULL = 5,         /**< `null`。値を持たない。 */
-        STRING_CATALOG_FILTER_CONSTANT_KIND_IDENTIFIER = 6,   /**< 文字列キーの名前。slot は行内の識別子の番号。 */
+        STRING_CATALOG_FILTER_CONSTANT_KIND_INTEGER = 1,       /**< 整数。値は 64 ビットの絶対値と符号の flags。 */
+        STRING_CATALOG_FILTER_CONSTANT_KIND_FLOAT = 2,         /**< 倍精度浮動小数点数。 */
+        STRING_CATALOG_FILTER_CONSTANT_KIND_STRING = 3,        /**< 文字列。length バイトと NUL。 */
+        STRING_CATALOG_FILTER_CONSTANT_KIND_CHARACTER = 4,     /**< 文字。値は整数と同じ形式。 */
+        STRING_CATALOG_FILTER_CONSTANT_KIND_NULL = 5,          /**< `null`。値を持たない。 */
+        STRING_CATALOG_FILTER_CONSTANT_KIND_IDENTIFIER = 6,    /**< 文字列キーの名前。slot は行内の識別子の番号。 */
         STRING_CATALOG_FILTER_CONSTANT_KIND_ARGUMENT_NAME = 7, /**< 引数名。slot は行内の引数参照の番号。 */
-        STRING_CATALOG_FILTER_CONSTANT_KIND_PATTERN = 8 /**< 正規表現のパターン。length バイトと NUL。slot は行内のパターンの番号。 */
+        STRING_CATALOG_FILTER_CONSTANT_KIND_PATTERN =
+            8 /**< 正規表現のパターン。length バイトと NUL。slot は行内のパターンの番号。 */
     } string_catalog_filter_constant_kind;
 
     /**
@@ -390,7 +391,7 @@ extern "C"
         int64_t published_realtime_nanoseconds; /**< 公開した実時刻のナノ秒部。 */
         uint32_t publisher_process_id;          /**< 公開したプロセスの ID。 */
         uint32_t reserved;                      /**< 予約。0 を格納します。 */
-        uint64_t catalog_id; /**< 公開したフィルター オブジェクトを判定に使うカタログの識別値。 */
+        uint64_t catalog_id;                    /**< 公開したフィルター オブジェクトを判定に使うカタログの識別値。 */
     } string_catalog_filter_source_header;
 
     /**

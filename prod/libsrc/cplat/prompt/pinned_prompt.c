@@ -1014,7 +1014,8 @@ static pinned_prompt_history_ctx *pinned_prompt_find_or_create_history_ctx(cplat
         {
             new_cap = 4U;
         }
-        new_contexts = (pinned_prompt_history_ctx *)cplat_realloc(screen->history_contexts, new_cap, sizeof(*new_contexts));
+        new_contexts =
+            (pinned_prompt_history_ctx *)cplat_realloc(screen->history_contexts, new_cap, sizeof(*new_contexts));
         if (new_contexts == NULL)
         {
             return NULL;
@@ -1086,8 +1087,8 @@ static void pinned_prompt_set_edit_line(cplat_pinned_prompt *screen, const char 
     size_t len;
 
     len = cstr_len(line);
-    if (cplat_internal_prompt_edit_ensure_capacity(&screen->edit_buf, &screen->edit_cap, screen->input_max_bytes, len + 1U) !=
-        0)
+    if (cplat_internal_prompt_edit_ensure_capacity(&screen->edit_buf, &screen->edit_cap, screen->input_max_bytes,
+                                                   len + 1U) != 0)
     {
         len = screen->edit_cap - 1U;
     }
@@ -1172,7 +1173,7 @@ static void pinned_prompt_history_next(cplat_pinned_prompt *screen, pinned_promp
 static void pinned_prompt_insert_byte(cplat_pinned_prompt *screen, int ch)
 {
     if (cplat_internal_prompt_edit_ensure_capacity(&screen->edit_buf, &screen->edit_cap, screen->input_max_bytes,
-                                             screen->edit_len + 2U) != 0)
+                                                   screen->edit_len + 2U) != 0)
     {
         return;
     }
@@ -1296,13 +1297,13 @@ cplat_pinned_prompt *cplat_pinned_prompt_create(const cplat_pinned_prompt_option
     if (options != NULL)
     {
         cplat_internal_prompt_edit_resolve_options(options->input.history_max, options->input.input_initial_capacity,
-                                             options->input.input_max_bytes, PINNED_PROMPT_INPUT_INITIAL_DEFAULT,
-                                             &history_max, &input_initial_capacity, &input_max_bytes);
+                                                   options->input.input_max_bytes, PINNED_PROMPT_INPUT_INITIAL_DEFAULT,
+                                                   &history_max, &input_initial_capacity, &input_max_bytes);
     }
     else
     {
         cplat_internal_prompt_edit_resolve_options(0U, 0U, 0U, PINNED_PROMPT_INPUT_INITIAL_DEFAULT, &history_max,
-                                             &input_initial_capacity, &input_max_bytes);
+                                                   &input_initial_capacity, &input_max_bytes);
     }
     screen->history_max = history_max;
     screen->input_max_bytes = input_max_bytes;
@@ -1410,8 +1411,8 @@ void cplat_pinned_prompt_dispose(cplat_pinned_prompt *screen)
  *  履歴をさかのぼる最初の操作で編集中の行を退避するため、初期値 (編集途中ならその内容) へ ↓ で戻れます。
  */
 static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, const size_t buf_size,
-                                       const char *prompt_str, const char *initial_text,
-                                       const size_t initial_length, const char *file, int line)
+                                       const char *prompt_str, const char *initial_text, const size_t initial_length,
+                                       const char *file, int line)
 {
     int done;
     int result;
@@ -1453,7 +1454,7 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
     {
         /* 検証済みの長さは上限以内のため、確保に失敗するのはメモリ不足のときだけ */
         if (cplat_internal_prompt_edit_ensure_capacity(&screen->edit_buf, &screen->edit_cap, screen->input_max_bytes,
-                                                 initial_length + 1U) != 0)
+                                                       initial_length + 1U) != 0)
         {
             pinned_prompt_unlock(screen);
             pinned_prompt_platform_leave_raw(screen);
@@ -1575,7 +1576,7 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_pinned_prompt_readline_at(cplat_pinned_prompt *screen, char *buf, const size_t buf_size,
-                                     const char *prompt_str, const char *file, int line)
+                                    const char *prompt_str, const char *file, int line)
 {
     if (screen == NULL || buf == NULL || buf_size == 0U)
     {
@@ -1587,8 +1588,8 @@ int cplat_pinned_prompt_readline_at(cplat_pinned_prompt *screen, char *buf, cons
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_pinned_prompt_readline_with_initial_at(cplat_pinned_prompt *screen, char *buf, const size_t buf_size,
-                                                  const char *prompt_str, const char *initial_text,
-                                                  const char *file, int line)
+                                                 const char *prompt_str, const char *initial_text, const char *file,
+                                                 int line)
 {
     size_t initial_length;
     int ret;
@@ -1611,7 +1612,7 @@ int cplat_pinned_prompt_readline_with_initial_at(cplat_pinned_prompt *screen, ch
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_pinned_prompt_readline_fmt_at(cplat_pinned_prompt *screen, char *buf, size_t buf_size, const char *file,
-                                         int line, const char *fmt, ...)
+                                        int line, const char *fmt, ...)
 {
     va_list ap;
     int rc;
@@ -1632,8 +1633,8 @@ int cplat_pinned_prompt_readline_fmt_at(cplat_pinned_prompt *screen, char *buf, 
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_pinned_prompt_write(cplat_pinned_prompt *screen, cplat_pinned_prompt_channel channel,
-                                 const void *data, size_t size, size_t *written_out)
+int cplat_pinned_prompt_write(cplat_pinned_prompt *screen, cplat_pinned_prompt_channel channel, const void *data,
+                              size_t size, size_t *written_out)
 {
     FILE *out;
     size_t written;
@@ -1698,8 +1699,7 @@ int cplat_pinned_prompt_write(cplat_pinned_prompt *screen, cplat_pinned_prompt_c
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_pinned_prompt_printf(cplat_pinned_prompt *screen, cplat_pinned_prompt_channel channel,
-                                  const char *fmt, ...)
+int cplat_pinned_prompt_printf(cplat_pinned_prompt *screen, cplat_pinned_prompt_channel channel, const char *fmt, ...)
 {
     va_list ap;
     va_list ap_copy;
@@ -1757,8 +1757,8 @@ int cplat_pinned_prompt_printf(cplat_pinned_prompt *screen, cplat_pinned_prompt_
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_pinned_prompt_status_enable(cplat_pinned_prompt *screen,
-                                         cplat_pinned_prompt_status_position position, int enable)
+int cplat_pinned_prompt_status_enable(cplat_pinned_prompt *screen, cplat_pinned_prompt_status_position position,
+                                      int enable)
 {
     if (screen == NULL)
     {
@@ -1829,7 +1829,7 @@ static int pinned_prompt_set_status_content(char **buf, size_t *cap, const char 
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_pinned_prompt_status_set(cplat_pinned_prompt *screen, cplat_pinned_prompt_status_position position,
-                                      cplat_pinned_prompt_status_align align, const char *content)
+                                   cplat_pinned_prompt_status_align align, const char *content)
 {
     int ret;
 

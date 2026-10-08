@@ -112,9 +112,9 @@ TEST_F(fdTest, write_read_lseek_roundtrip)
     int64_t pos_end = cplat_lseek(kFakeFd, 0, SEEK_END, NULL);      // [手順] - 読み書き位置を終端へ移動する。
 
     // Assert
-    EXPECT_EQ(6, written);  // [確認_正常系] - 書き込んだバイト数が 6 であること。
-    EXPECT_EQ(0, pos_head); // [確認_正常系] - SEEK_SET 0 を指定した cplat_lseek の戻り値が 0 であること。
-    EXPECT_EQ(6, read_len); // [確認_正常系] - 読み取ったバイト数が 6 であること。
+    EXPECT_EQ(6, written);              // [確認_正常系] - 書き込んだバイト数が 6 であること。
+    EXPECT_EQ(0, pos_head);             // [確認_正常系] - SEEK_SET 0 を指定した cplat_lseek の戻り値が 0 であること。
+    EXPECT_EQ(6, read_len);             // [確認_正常系] - 読み取ったバイト数が 6 であること。
     EXPECT_EQ(0, memcmp(data, buf, 6)); // [確認_正常系] - 読み取った内容が書き込んだ内容と一致すること。
     EXPECT_EQ(6, pos_end); // [確認_正常系] - SEEK_END 0 を指定した cplat_lseek の戻り値がファイル サイズであること。
 }
@@ -183,13 +183,13 @@ TEST_F(fdTest, dup_shares_file_offset)
     int dup_fd = cplat_dup(kFakeFd, NULL);                  // [手順] - ファイル記述子を複製する。
     int64_t written = cplat_write(dup_fd, "wxyz", 4, NULL); // [手順] - 複製側へ 4 バイト書き込む。
     int64_t pos = cplat_lseek(kFakeFd, 0, SEEK_CUR, NULL);  // [手順] - 複製元の現在位置を取得する。
-    int actual_ret_close = cplat_close(dup_fd, NULL);              // [手順] - 複製側を閉じる。
+    int actual_ret_close = cplat_close(dup_fd, NULL);       // [手順] - 複製側を閉じる。
 
     // Assert
-    EXPECT_EQ(kDupFd, dup_fd); // [確認_正常系] - cplat_dup の戻り値が複製記述子 8 であること。
-    EXPECT_EQ(4, written);     // [確認_正常系] - 複製側へ書き込んだバイト数が 4 であること。
-    EXPECT_EQ(4, pos);         // [確認_正常系] - SEEK_CUR を指定した cplat_lseek の戻り値が 4 であること。
-    EXPECT_EQ(0, actual_ret_close);   // [確認_正常系] - 複製側の cplat_close の戻り値が 0 であること。
+    EXPECT_EQ(kDupFd, dup_fd);      // [確認_正常系] - cplat_dup の戻り値が複製記述子 8 であること。
+    EXPECT_EQ(4, written);          // [確認_正常系] - 複製側へ書き込んだバイト数が 4 であること。
+    EXPECT_EQ(4, pos);              // [確認_正常系] - SEEK_CUR を指定した cplat_lseek の戻り値が 4 であること。
+    EXPECT_EQ(0, actual_ret_close); // [確認_正常系] - 複製側の cplat_close の戻り値が 0 であること。
 }
 
 // dup2 の成功時に 0 が返ることの確認

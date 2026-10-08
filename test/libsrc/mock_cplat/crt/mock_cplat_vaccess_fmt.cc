@@ -6,8 +6,8 @@
 
 int delegate_real_cplat_vaccess_fmt(int mode, cplat_error *detail_out, const char *format, va_list args)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_vaccess_fmt)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_vaccess_fmt"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_vaccess_fmt)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_vaccess_fmt"));
 
     return real_fn(mode, detail_out, format, args);
 }

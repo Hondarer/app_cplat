@@ -126,8 +126,7 @@ static int report_last_winsock_error(cplat_error *detail_out)
  */
 static int report_connect_winsock_error(cplat_error *detail_out, const unsigned long error_code)
 {
-    if ((error_code == (unsigned long)WSAEWOULDBLOCK) ||
-        (error_code == (unsigned long)WSAEINPROGRESS) ||
+    if ((error_code == (unsigned long)WSAEWOULDBLOCK) || (error_code == (unsigned long)WSAEINPROGRESS) ||
         (error_code == (unsigned long)WSAEALREADY))
     {
         return cplat_internal_error_report_winsock_error_as(detail_out, error_code, CPLAT_ERR_IN_PROGRESS);
@@ -169,8 +168,7 @@ static int set_int_option(cplat_socket sock, int level, int optname, int value, 
  *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
  *  @return         共通結果コードを返します。
  */
-static int wait_single(cplat_socket sock, short events, int timeout_ms, int *ready_out,
-                       cplat_error *detail_out)
+static int wait_single(cplat_socket sock, short events, int timeout_ms, int *ready_out, cplat_error *detail_out)
 {
     WSAPOLLFD poll_fd;
     int poll_result;
@@ -277,8 +275,7 @@ void cplat_socket_shutdown(const cplat_socket sock)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_socket_bind(const cplat_socket sock, const cplat_ipv4_endpoint *endpoint,
-                         cplat_error *detail_out)
+int cplat_socket_bind(const cplat_socket sock, const cplat_ipv4_endpoint *endpoint, cplat_error *detail_out)
 {
     struct sockaddr_in native;
 
@@ -324,7 +321,7 @@ int cplat_socket_listen(const cplat_socket sock, const int backlog, cplat_error 
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_socket_accept(const cplat_socket sock, cplat_ipv4_endpoint *peer_out, cplat_socket *sock_out,
-                           cplat_error *detail_out)
+                        cplat_error *detail_out)
 {
     struct sockaddr_in native = {0};
     int native_len = (int)sizeof(native);
@@ -355,8 +352,7 @@ int cplat_socket_accept(const cplat_socket sock, cplat_ipv4_endpoint *peer_out, 
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_socket_connect(const cplat_socket sock, const cplat_ipv4_endpoint *endpoint,
-                            cplat_error *detail_out)
+int cplat_socket_connect(const cplat_socket sock, const cplat_ipv4_endpoint *endpoint, cplat_error *detail_out)
 {
     struct sockaddr_in native;
 
@@ -457,7 +453,7 @@ int cplat_socket_set_broadcast(const cplat_socket sock, const int enable, cplat_
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_socket_set_multicast_interface(const cplat_socket sock, const uint32_t interface_address,
-                                            cplat_error *detail_out)
+                                         cplat_error *detail_out)
 {
     struct in_addr value = {0};
 
@@ -468,8 +464,7 @@ int cplat_socket_set_multicast_interface(const cplat_socket sock, const uint32_t
 
     memcpy(&value.S_un.S_addr, &interface_address, sizeof(value.S_un.S_addr));
 
-    if (setsockopt((SOCKET)sock, IPPROTO_IP, IP_MULTICAST_IF, (const char *)&value, (int)sizeof(value)) ==
-        SOCKET_ERROR)
+    if (setsockopt((SOCKET)sock, IPPROTO_IP, IP_MULTICAST_IF, (const char *)&value, (int)sizeof(value)) == SOCKET_ERROR)
     {
         return report_last_winsock_error(detail_out);
     }
@@ -480,7 +475,7 @@ int cplat_socket_set_multicast_interface(const cplat_socket sock, const uint32_t
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_socket_join_multicast_group(const cplat_socket sock, const uint32_t group_address,
-                                         const uint32_t interface_address, cplat_error *detail_out)
+                                      const uint32_t interface_address, cplat_error *detail_out)
 {
     struct ip_mreq request = {0};
 
@@ -504,7 +499,7 @@ int cplat_socket_join_multicast_group(const cplat_socket sock, const uint32_t gr
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_socket_leave_multicast_group(const cplat_socket sock, const uint32_t group_address,
-                                          const uint32_t interface_address, cplat_error *detail_out)
+                                       const uint32_t interface_address, cplat_error *detail_out)
 {
     struct ip_mreq request = {0};
 
@@ -528,12 +523,11 @@ int cplat_socket_leave_multicast_group(const cplat_socket sock, const uint32_t g
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_socket_send(const cplat_socket sock, const void *buf, const size_t len, size_t *sent_out,
-                         cplat_error *detail_out)
+                      cplat_error *detail_out)
 {
     int transferred;
 
-    if ((sock == CPLAT_INVALID_SOCKET) || (buf == NULL) || (sent_out == NULL) ||
-        (len > CPLAT_SOCKET_MAX_TRANSFER))
+    if ((sock == CPLAT_INVALID_SOCKET) || (buf == NULL) || (sent_out == NULL) || (len > CPLAT_SOCKET_MAX_TRANSFER))
     {
         return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
     }
@@ -560,12 +554,11 @@ int cplat_socket_send(const cplat_socket sock, const void *buf, const size_t len
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_socket_recv(const cplat_socket sock, void *buf, const size_t len, size_t *received_out,
-                         cplat_error *detail_out)
+                      cplat_error *detail_out)
 {
     int transferred;
 
-    if ((sock == CPLAT_INVALID_SOCKET) || (buf == NULL) || (received_out == NULL) ||
-        (len > CPLAT_SOCKET_MAX_TRANSFER))
+    if ((sock == CPLAT_INVALID_SOCKET) || (buf == NULL) || (received_out == NULL) || (len > CPLAT_SOCKET_MAX_TRANSFER))
     {
         return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
     }
@@ -591,8 +584,8 @@ int cplat_socket_recv(const cplat_socket sock, void *buf, const size_t len, size
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_socket_sendto(const cplat_socket sock, const void *buf, const size_t len,
-                           const cplat_ipv4_endpoint *endpoint, size_t *sent_out, cplat_error *detail_out)
+int cplat_socket_sendto(const cplat_socket sock, const void *buf, const size_t len, const cplat_ipv4_endpoint *endpoint,
+                        size_t *sent_out, cplat_error *detail_out)
 {
     struct sockaddr_in native;
     int transferred;
@@ -626,15 +619,14 @@ int cplat_socket_sendto(const cplat_socket sock, const void *buf, const size_t l
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_socket_recvfrom(const cplat_socket sock, void *buf, const size_t len,
-                             cplat_ipv4_endpoint *peer_out, size_t *received_out, cplat_error *detail_out)
+int cplat_socket_recvfrom(const cplat_socket sock, void *buf, const size_t len, cplat_ipv4_endpoint *peer_out,
+                          size_t *received_out, cplat_error *detail_out)
 {
     struct sockaddr_in native = {0};
     int native_len = (int)sizeof(native);
     int transferred;
 
-    if ((sock == CPLAT_INVALID_SOCKET) || (buf == NULL) || (received_out == NULL) ||
-        (len > CPLAT_SOCKET_MAX_TRANSFER))
+    if ((sock == CPLAT_INVALID_SOCKET) || (buf == NULL) || (received_out == NULL) || (len > CPLAT_SOCKET_MAX_TRANSFER))
     {
         return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
     }
@@ -665,8 +657,7 @@ int cplat_socket_recvfrom(const cplat_socket sock, void *buf, const size_t len,
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_socket_send_all(const cplat_socket sock, const void *buf, const size_t len,
-                             cplat_error *detail_out)
+int cplat_socket_send_all(const cplat_socket sock, const void *buf, const size_t len, cplat_error *detail_out)
 {
     const char *cursor = (const char *)buf;
     size_t sent = 0U;
@@ -740,16 +731,14 @@ int cplat_socket_recv_all(const cplat_socket sock, void *buf, const size_t len, 
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_socket_wait_readable(const cplat_socket sock, const int timeout_ms, int *ready_out,
-                                  cplat_error *detail_out)
+int cplat_socket_wait_readable(const cplat_socket sock, const int timeout_ms, int *ready_out, cplat_error *detail_out)
 {
     return wait_single(sock, (short)POLLRDNORM, timeout_ms, ready_out, detail_out);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_socket_wait_writable(const cplat_socket sock, const int timeout_ms, int *ready_out,
-                                  cplat_error *detail_out)
+int cplat_socket_wait_writable(const cplat_socket sock, const int timeout_ms, int *ready_out, cplat_error *detail_out)
 {
     return wait_single(sock, (short)POLLWRNORM, timeout_ms, ready_out, detail_out);
 }
@@ -757,7 +746,7 @@ int cplat_socket_wait_writable(const cplat_socket sock, const int timeout_ms, in
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_socket_wait_readable_multi(const cplat_socket *socks, const size_t count, const int timeout_ms,
-                                        unsigned char *ready_out, cplat_error *detail_out)
+                                     unsigned char *ready_out, cplat_error *detail_out)
 {
     WSAPOLLFD poll_fds[CPLAT_SOCKET_WAIT_MAX];
     size_t valid_count = 0U;

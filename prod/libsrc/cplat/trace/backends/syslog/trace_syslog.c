@@ -221,7 +221,7 @@ cplat_syslog_sink *cplat_syslog_sink_create(const char *ident, const int facilit
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cplat_timespec *timestamp,
-                               const char *message)
+                            const char *message)
 {
     char buf[SYSLOG_BUF_SIZE];
     char debug_buf[SYSLOG_DEBUG_BUF_SIZE];
@@ -267,11 +267,11 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
        値は参照せず、設定の有無だけを判定する */
     if (handle->test_fd_exists != 0)
     {
-        if (effective_timestamp != NULL &&
-            cplat_clock_format_realtime_iso8601_local(timestamp_text, sizeof(timestamp_text), effective_timestamp) ==
-                CPLAT_OK)
+        if (effective_timestamp != NULL && cplat_clock_format_realtime_iso8601_local(
+                                               timestamp_text, sizeof(timestamp_text), effective_timestamp) == CPLAT_OK)
         {
-            debug_len = snprintf(debug_buf, sizeof(debug_buf), "%s %.*s\n", timestamp_text, n, buf); /* 置換対象外: 意図的な切り詰め */
+            debug_len = snprintf(debug_buf, sizeof(debug_buf), "%s %.*s\n", timestamp_text, n,
+                                 buf); /* 置換対象外: 意図的な切り詰め */
             if (debug_len < 0)
             {
                 return CPLAT_ERR_UNKNOWN;

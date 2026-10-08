@@ -2,7 +2,7 @@
 #include <mock_cplat.h>
 
 int delegate_real_cplat_path_strip_extension(char *path_out, size_t path_size, cplat_error *detail_out,
-                                                const char *path)
+                                             const char *path)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_path_strip_extension)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_path_strip_extension"));

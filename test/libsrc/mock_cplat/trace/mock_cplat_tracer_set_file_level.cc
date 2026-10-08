@@ -2,7 +2,7 @@
 #include <mock_cplat.h>
 
 int delegate_real_cplat_tracer_set_file_level(cplat_tracer *handle, const char *path, cplat_trace_level level,
-                                                 size_t max_bytes, int generations, int flags)
+                                              size_t max_bytes, int generations, int flags)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_tracer_set_file_level)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_tracer_set_file_level"));
@@ -10,8 +10,8 @@ int delegate_real_cplat_tracer_set_file_level(cplat_tracer *handle, const char *
     return real_fn(handle, path, level, max_bytes, generations, flags);
 }
 
-MOCK_WEAK_IMPL(int, cplat_tracer_set_file_level, cplat_tracer *handle, const char *path,
-               cplat_trace_level level, size_t max_bytes, int generations, int flags)
+MOCK_WEAK_IMPL(int, cplat_tracer_set_file_level, cplat_tracer *handle, const char *path, cplat_trace_level level,
+               size_t max_bytes, int generations, int flags)
 {
     int mock_ret = 0;
 

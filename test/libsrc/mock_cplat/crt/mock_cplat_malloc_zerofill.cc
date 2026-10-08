@@ -1,7 +1,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-void * delegate_real_cplat_malloc_zerofill(size_t size)
+void *delegate_real_cplat_malloc_zerofill(size_t size)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_malloc_zerofill)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_malloc_zerofill"));
@@ -11,7 +11,7 @@ void * delegate_real_cplat_malloc_zerofill(size_t size)
 
 MOCK_WEAK_IMPL(void *, cplat_malloc_zerofill, size_t size)
 {
-    void * mock_ret;
+    void *mock_ret;
 
     if (_mock_cplat != nullptr)
     {

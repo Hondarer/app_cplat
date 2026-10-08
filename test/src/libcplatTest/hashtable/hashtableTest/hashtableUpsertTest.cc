@@ -88,18 +88,18 @@ TEST_F(hashtableUpsertTest, inserts_then_updates_the_same_key)
     // Act
     (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
     int actual_ret_first = cplat_hashtable_upsert(ht, "a", value.data(),
-                                                     &inserted_first); // [手順] - 未登録のキーを upsert する。
+                                                  &inserted_first); // [手順] - 未登録のキーを upsert する。
     fill_value(&value, "v2");
     int actual_ret_second = cplat_hashtable_upsert(ht, "a", value.data(),
-                                                      &inserted_second); // [手順] - 同じキーを再度 upsert する。
+                                                   &inserted_second); // [手順] - 同じキーを再度 upsert する。
     int actual_ret_read = cplat_hashtable_find_value_copy(ht, "a", read_back.data(), read_back.size(), &required);
     int actual_ret_count = cplat_hashtable_count(ht, &in_use);
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_first);  // [確認_正常系] - 未登録のキーの upsert が成功すること。
-    EXPECT_EQ(1, inserted_first);              // [確認_正常系] - 未登録のキーは新規追加として報告されること。
+    EXPECT_EQ(1, inserted_first);           // [確認_正常系] - 未登録のキーは新規追加として報告されること。
     EXPECT_EQ(CPLAT_OK, actual_ret_second); // [確認_正常系] - 登録済みのキーの upsert が成功すること。
-    EXPECT_EQ(0, inserted_second);             // [確認_正常系] - 登録済みのキーは既存更新として報告されること。
+    EXPECT_EQ(0, inserted_second);          // [確認_正常系] - 登録済みのキーは既存更新として報告されること。
     EXPECT_EQ(CPLAT_OK, actual_ret_read);
     // [確認_正常系] - `cplat_hashtable_find_value_copy(ht, "a", read_back.data(), read_back.size(), &required)` の戻り値が `CPLAT_OK` であること。
     EXPECT_STREQ("v2", reinterpret_cast<const char *>(read_back.data())); // [確認_正常系] - 値が更新されていること。
@@ -164,7 +164,7 @@ TEST_F(hashtableUpsertTest, revives_deleted_key_with_the_given_value)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_upsert); // [確認_正常系] - 削除済みのキーの upsert が成功すること。
-    EXPECT_EQ(1, inserted);                    // [確認_正常系] - 削除済みからの復活は新規追加として報告されること。
+    EXPECT_EQ(1, inserted);                 // [確認_正常系] - 削除済みからの復活は新規追加として報告されること。
     EXPECT_EQ(CPLAT_OK, actual_ret_status);
     // [確認_正常系] - `cplat_hashtable_get_status(ht, 1, &status)` の戻り値が `CPLAT_OK` であること。
     EXPECT_EQ(1, status); // [確認_正常系] - レコードが使用中に戻ること。
@@ -200,9 +200,9 @@ TEST_F(hashtableUpsertTest, reports_limit_exceeded_when_table_is_full)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_LIMIT_EXCEEDED,
-              actual_ret_full);                  // [確認_異常系] - 満杯での新規追加が LIMIT_EXCEEDED であること。
+              actual_ret_full);               // [確認_異常系] - 満杯での新規追加が LIMIT_EXCEEDED であること。
     EXPECT_EQ(CPLAT_OK, actual_ret_existing); // [確認_正常系] - 満杯でも登録済みのキーは更新できること。
-    EXPECT_EQ(0, inserted);                      // [確認_正常系] - 既存更新として報告されること。
+    EXPECT_EQ(0, inserted);                   // [確認_正常系] - 既存更新として報告されること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -226,7 +226,7 @@ TEST_F(hashtableUpsertTest, guards_reject_invalid_arguments)
     int actual_ret_null_key = cplat_hashtable_upsert(ht, NULL, value.data(), &inserted);
     int actual_ret_null_value = cplat_hashtable_upsert(ht, "a", NULL, &inserted);
     int actual_ret_long_key = cplat_hashtable_upsert(ht, "0123456789", value.data(),
-                                                        &inserted); // [手順] - key_size に収まらないキーを渡す。
+                                                     &inserted); // [手順] - key_size に収まらないキーを渡す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_null_ht);    // [確認_異常系] - ht が NULL なら失敗すること。
@@ -262,7 +262,7 @@ TEST_F(hashtableUpsertTest, updates_key_that_is_not_at_chain_head)
     (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
     (void)cplat_hashtable_upsert(ht, "a", value.data(), NULL);
     (void)cplat_hashtable_upsert(ht, peer, value.data(),
-                                    NULL); // [手順] - 同一バケットへ別キーを足してチェイン先頭をずらす。
+                                 NULL); // [手順] - 同一バケットへ別キーを足してチェイン先頭をずらす。
     fill_value(&value, "v3");
     int actual_ret_upsert =
         cplat_hashtable_upsert(ht, "a", value.data(), &inserted); // [手順] - チェイン先頭でないキーを upsert する。
@@ -270,7 +270,7 @@ TEST_F(hashtableUpsertTest, updates_key_that_is_not_at_chain_head)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_upsert); // [確認_正常系] - チェイン先頭でないキーを更新できること。
-    EXPECT_EQ(0, inserted);                    // [確認_正常系] - 既存更新として報告されること。
+    EXPECT_EQ(0, inserted);                 // [確認_正常系] - 既存更新として報告されること。
     EXPECT_EQ(CPLAT_OK, actual_ret_read);
     // [確認_正常系] - `cplat_hashtable_find_value_copy(ht, "a", read_back.data(), read_back.size(), &required)` の戻り値が `CPLAT_OK` であること。
     EXPECT_STREQ("v3", reinterpret_cast<const char *>(read_back.data())); // [確認_正常系] - 値が更新されていること。
@@ -300,7 +300,7 @@ TEST_F(hashtableUpsertTest, reports_storage_full_when_variable_value_does_not_fi
     (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
     int actual_ret_insert = cplat_hashtable_upsert(ht, "a", "short", &inserted); // [手順] - 収まる値で追加する。
     int actual_ret_update = cplat_hashtable_upsert(ht, "a", "far too long for the storage",
-                                                      &inserted); // [手順] - 収まらない値で同じキーを更新する。
+                                                   &inserted); // [手順] - 収まらない値で同じキーを更新する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_insert); // [確認_正常系] - 収まる値の追加が成功すること。

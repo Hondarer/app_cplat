@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_file_close(cplat_file *file, cplat_error *detail_out)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_file_close)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_file_close"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_file_close)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_file_close"));
 
     return real_fn(file, detail_out);
 }

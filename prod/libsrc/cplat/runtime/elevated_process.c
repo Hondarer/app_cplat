@@ -49,7 +49,7 @@
  *  `{FLAG}={一時ファイルの UTF-8 パス}` の形式で付与し、
  *  cplat_elevated_process_extract_result_target() がこれを検出して報告先を保持します。
  */
-    #define CPLAT_PROCESS_RESULT_TARGET_FLAG "--cplat-result-file"
+    #define CPLAT_PROCESS_RESULT_TARGET_FLAG      "--cplat-result-file"
 
 static char s_result_target_path[PLATFORM_PATH_MAX] = {0};
 
@@ -61,7 +61,7 @@ static char s_result_target_path[PLATFORM_PATH_MAX] = {0};
  *  の形式 (いずれも 10 進数) で付与し、cplat_elevated_process_attach_output_pipes() が
  *  これを検出してパイプを複製します。
  */
-    #define CPLAT_PROCESS_OUTPUT_PIPES_FLAG "--cplat-output-pipes"
+    #define CPLAT_PROCESS_OUTPUT_PIPES_FLAG       "--cplat-output-pipes"
 
 /**
  *  @brief          昇格プロセスの終了を待つ間に出力パイプを確認する間隔 [ms] です。
@@ -71,7 +71,7 @@ static char s_result_target_path[PLATFORM_PATH_MAX] = {0};
 /**
  *  @brief          出力パイプから 1 回に読み取る最大バイト数です。
  */
-    #define CPLAT_PROCESS_OUTPUT_CHUNK_SIZE 4096
+    #define CPLAT_PROCESS_OUTPUT_CHUNK_SIZE       4096
 
 /**
  *  @brief          現在のプロセスが対話セッションで動作しているかを確認します。
@@ -160,8 +160,7 @@ static int start_elevated_self(const char *arguments, cplat_process **child_out)
  *  cplat_elevated_process_run_piped() に @p output_fn として NULL を渡した場合の既定の処理です。
  *  昇格プロセス側はバイナリ モードで書き込むため、改行コードの変換は呼び出し元の CRT に任せます。
  */
-static void write_to_own_std_stream(cplat_elevated_process_stream stream, const char *data, size_t size,
-                                    void *context)
+static void write_to_own_std_stream(cplat_elevated_process_stream stream, const char *data, size_t size, void *context)
 {
     FILE *fp;
 
@@ -525,9 +524,8 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
                 {
                     separator = " ";
                 }
-                ret = cplat_snprintf(extra, sizeof(extra), "%s%s=%lu:%llu", separator,
-                                        CPLAT_CONSOLE_HANDOVER_FLAG, (unsigned long)parent_pid,
-                                        parent_console_window);
+                ret = cplat_snprintf(extra, sizeof(extra), "%s%s=%lu:%llu", separator, CPLAT_CONSOLE_HANDOVER_FLAG,
+                                     (unsigned long)parent_pid, parent_console_window);
                 if (ret != CPLAT_OK)
                 {
                     cplat_free(combined_arguments);
@@ -638,7 +636,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code, int *handled, char *result_message,
-                                              size_t result_message_size)
+                                           size_t result_message_size)
 {
     if (exit_code == NULL || handled == NULL)
     {
@@ -735,12 +733,12 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         if (arg_len > 0)
         {
             (void)cplat_snprintf(combined_arguments, buf_sz, "%s %s=\"%s\"", arguments,
-                                    CPLAT_PROCESS_RESULT_TARGET_FLAG, result_path);
+                                 CPLAT_PROCESS_RESULT_TARGET_FLAG, result_path);
         }
         else
         {
             (void)cplat_snprintf(combined_arguments, buf_sz, "%s=\"%s\"", CPLAT_PROCESS_RESULT_TARGET_FLAG,
-                                    result_path);
+                                 result_path);
         }
 
         wide_exe_path = cplat_utf8_to_wstr_alloc(exe_path);
@@ -1187,8 +1185,8 @@ int cplat_elevated_process_attach_output_pipes(int *argc, char **argv, int *atta
 
         /* 昇格プロセスのコンソールは非表示のため、標準入力の読み取りで応答不能にならないよう
            NUL デバイスへ付け替える。ワイド文字列リテラルを渡すため、CreateFileU を使わない。 */
-        stdin_handle = CreateFileW(L"NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0,
-                                   NULL);
+        stdin_handle =
+            CreateFileW(L"NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
         if (stdin_handle == INVALID_HANDLE_VALUE)
         {
             CloseHandle(stdout_handle);

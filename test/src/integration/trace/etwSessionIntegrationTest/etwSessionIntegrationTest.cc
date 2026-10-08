@@ -14,7 +14,7 @@
     #include <cstdio>
 
 CPLAT_ETW_DEFINE_PROVIDER(s_test_provider, "EtwSessionTest",
-                             (0x0dfe6031, 0x5678, 0x4688, 0xae, 0xe8, 0x61, 0x13, 0x40, 0x99, 0x7c, 0xaa));
+                          (0x0dfe6031, 0x5678, 0x4688, 0xae, 0xe8, 0x61, 0x13, 0x40, 0x99, 0x7c, 0xaa));
 
     #define TEST_PROVIDER_GUID "0dfe6031-5678-4688-aee8-611340997caa"
 
@@ -100,7 +100,7 @@ TEST_F(etwSessionIntegrationTest, test_session_start_null_params)
     // Act
     int actual_ret_null_name =
         cplat_etw_session_start(NULL, TEST_PROVIDER_GUID, collect_callback, NULL,
-                                   &session); // [手順] - session_name に NULL を渡して session_start を呼び出す。
+                                &session); // [手順] - session_name に NULL を渡して session_start を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -112,7 +112,7 @@ TEST_F(etwSessionIntegrationTest, test_session_start_null_params)
     // Act_2
     int actual_ret_null_provider_guid =
         cplat_etw_session_start("test", NULL, collect_callback, NULL,
-                                   &session); // [手順] - provider_guid に NULL を渡して session_start を呼び出す。
+                                &session); // [手順] - provider_guid に NULL を渡して session_start を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -122,7 +122,7 @@ TEST_F(etwSessionIntegrationTest, test_session_start_null_params)
     // Act_3
     int actual_ret_null_callback =
         cplat_etw_session_start("test", TEST_PROVIDER_GUID, NULL, NULL,
-                                   &session); // [手順] - callback に NULL を渡して session_start を呼び出す。
+                                &session); // [手順] - callback に NULL を渡して session_start を呼び出す。
 
     // Assert_3
     EXPECT_EQ(
@@ -132,7 +132,7 @@ TEST_F(etwSessionIntegrationTest, test_session_start_null_params)
     // Act_4
     int actual_ret_null_session_out =
         cplat_etw_session_start("test", TEST_PROVIDER_GUID, collect_callback, NULL,
-                                   NULL); // [手順] - session の受け取り先に NULL を渡して session_start を呼び出す。
+                                NULL); // [手順] - session の受け取り先に NULL を渡して session_start を呼び出す。
 
     // Assert_4
     EXPECT_EQ(
@@ -151,7 +151,7 @@ TEST_F(etwSessionIntegrationTest, test_session_start_invalid_guid)
     // Act
     int actual_ret_invalid_guid =
         cplat_etw_session_start("test", "not-a-guid", collect_callback, NULL,
-                                   &session); // [手順] - 不正な GUID 文字列 "not-a-guid" で session_start を呼び出す。
+                                &session); // [手順] - 不正な GUID 文字列 "not-a-guid" で session_start を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -187,13 +187,13 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_ascii)
     std::string session_name = make_session_name(); // [状態] - プロセス固有の session 名を生成する。
     EventCollector collector;
 
-    cplat_etw_provider *handle = cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
-    ASSERT_NE((cplat_etw_provider *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    cplat_etw_provider *handle =
+        cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
+    ASSERT_NE((cplat_etw_provider *)NULL, handle);  // [状態確認] - ハンドルが非 NULL であること。
 
     cplat_etw_session *session = NULL;
-    int start_result =
-        cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
-                                   &session); // [状態] - 収集 callback 付きで ETW session を開始する。
+    int start_result = cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
+                                               &session); // [状態] - 収集 callback 付きで ETW session を開始する。
     ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -235,13 +235,13 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_utf8_japanese)
     const char *msg = "\xe8\xa8\x88\xe7\xae\x97\xe7\xb5\x90\xe6\x9e\x9c: "
                       "\xe6\x88\x90\xe5\x8a\x9f";
 
-    cplat_etw_provider *handle = cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
-    ASSERT_NE((cplat_etw_provider *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    cplat_etw_provider *handle =
+        cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
+    ASSERT_NE((cplat_etw_provider *)NULL, handle);  // [状態確認] - ハンドルが非 NULL であること。
 
     cplat_etw_session *session = NULL;
-    int start_result =
-        cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
-                                   &session); // [状態] - 収集 callback 付きで ETW session を開始する。
+    int start_result = cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
+                                               &session); // [状態] - 収集 callback 付きで ETW session を開始する。
     ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -286,13 +286,13 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_utf8_mixed)
                       "\xf0\x9f\x8c\x8d"
                       " World";
 
-    cplat_etw_provider *handle = cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
-    ASSERT_NE((cplat_etw_provider *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    cplat_etw_provider *handle =
+        cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
+    ASSERT_NE((cplat_etw_provider *)NULL, handle);  // [状態確認] - ハンドルが非 NULL であること。
 
     cplat_etw_session *session = NULL;
-    int start_result =
-        cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
-                                   &session); // [状態] - 収集 callback 付きで ETW session を開始する。
+    int start_result = cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
+                                               &session); // [状態] - 収集 callback 付きで ETW session を開始する。
     ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -332,13 +332,13 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_multiple_levels)
     std::string session_name = make_session_name(); // [状態] - プロセス固有の session 名を生成する。
     EventCollector collector;
 
-    cplat_etw_provider *handle = cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
-    ASSERT_NE((cplat_etw_provider *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    cplat_etw_provider *handle =
+        cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
+    ASSERT_NE((cplat_etw_provider *)NULL, handle);  // [状態確認] - ハンドルが非 NULL であること。
 
     cplat_etw_session *session = NULL;
-    int start_result =
-        cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
-                                   &session); // [状態] - 収集 callback 付きで ETW session を開始する。
+    int start_result = cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
+                                               &session); // [状態] - 収集 callback 付きで ETW session を開始する。
     ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -433,13 +433,13 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_empty_string)
     std::string session_name = make_session_name(); // [状態] - プロセス固有の session 名を生成する。
     EventCollector collector;
 
-    cplat_etw_provider *handle = cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
-    ASSERT_NE((cplat_etw_provider *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    cplat_etw_provider *handle =
+        cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
+    ASSERT_NE((cplat_etw_provider *)NULL, handle);  // [状態確認] - ハンドルが非 NULL であること。
 
     cplat_etw_session *session = NULL;
-    int start_result =
-        cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
-                                   &session); // [状態] - 収集 callback 付きで ETW session を開始する。
+    int start_result = cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
+                                               &session); // [状態] - 収集 callback 付きで ETW session を開始する。
     ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -479,13 +479,13 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_service_and_message)
     std::string session_name = make_session_name(); // [状態] - プロセス固有の session 名を生成する。
     EventCollector collector;
 
-    cplat_etw_provider *handle = cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
-    ASSERT_NE((cplat_etw_provider *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    cplat_etw_provider *handle =
+        cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
+    ASSERT_NE((cplat_etw_provider *)NULL, handle);  // [状態確認] - ハンドルが非 NULL であること。
 
     cplat_etw_session *session = NULL;
-    int start_result =
-        cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
-                                   &session); // [状態] - 収集 callback 付きで ETW session を開始する。
+    int start_result = cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
+                                               &session); // [状態] - 収集 callback 付きで ETW session を開始する。
     ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -493,7 +493,7 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_service_and_message)
     // Act
     Sleep(200);
     cplat_etw_provider_write(handle, 4, "worker-1",
-                                "service_msg"); // [手順] - Service と Message を持つイベントを書き込む。
+                             "service_msg"); // [手順] - Service と Message を持つイベントを書き込む。
     cplat_etw_session_stop(session);         // [手順] - session を停止して受信を確定させる。
 
     // Assert

@@ -2,7 +2,7 @@
 #include <mock_cplat.h>
 
 cplat_tracer_hook_entry *delegate_real_cplat_tracer_set_hook(cplat_tracer *handle, cplat_tracer_hook_fn fn,
-                                                                   void *context)
+                                                             void *context)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_tracer_set_hook)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_tracer_set_hook"));
@@ -10,8 +10,8 @@ cplat_tracer_hook_entry *delegate_real_cplat_tracer_set_hook(cplat_tracer *handl
     return real_fn(handle, fn, context);
 }
 
-MOCK_WEAK_IMPL(cplat_tracer_hook_entry *, cplat_tracer_set_hook, cplat_tracer *handle,
-               cplat_tracer_hook_fn fn, void *context)
+MOCK_WEAK_IMPL(cplat_tracer_hook_entry *, cplat_tracer_set_hook, cplat_tracer *handle, cplat_tracer_hook_fn fn,
+               void *context)
 {
     cplat_tracer_hook_entry *mock_ret = nullptr;
 

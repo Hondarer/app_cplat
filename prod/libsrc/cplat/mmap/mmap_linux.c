@@ -50,10 +50,9 @@ static int open_backing_file(const char *path, cplat_mmap_access access, size_t 
     }
 
     /* 新規作成のみ許可するオープンをまず試みる。成功すれば新規作成と判定できる。 */
-    open_result = cplat_file_open(file, path,
-                                     CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE | CPLAT_FILE_OPEN_CREATE |
-                                         CPLAT_FILE_OPEN_CREATE_NEW,
-                                     detail_out);
+    open_result = cplat_file_open(
+        file, path, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE | CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_CREATE_NEW,
+        detail_out);
     if (open_result == 0)
     {
         if (create_size == 0)
@@ -91,7 +90,7 @@ static int open_backing_file(const char *path, cplat_mmap_access access, size_t 
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_mmap_attach(const char *path, cplat_mmap_access access, size_t create_size, cplat_mmap **map,
-                         cplat_error *detail_out)
+                      cplat_error *detail_out)
 {
     cplat_mmap *new_map;
     int result;

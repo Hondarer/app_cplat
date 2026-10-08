@@ -78,7 +78,8 @@ TEST_F(symLoaderInitTest, applies_json_with_comments)
                        "  },\n"
                        "}\n";
     cplat_sym_loader_entry entry = CPLAT_SYM_LOADER_ENTRY_INIT("sample_func", void (*)(void));
-    cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - コメントと末尾カンマを含む JSONC と sample_func エントリを用意する。
+    cplat_sym_loader_entry *entries[] = {
+        &entry}; // [状態] - コメントと末尾カンマを含む JSONC と sample_func エントリを用意する。
 
     // Pre-Assert
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
@@ -87,7 +88,8 @@ TEST_F(symLoaderInitTest, applies_json_with_comments)
                               // [Pre-Assert手順] - コメントと末尾カンマを含む JSONC 本文を返却する。
 
     // Act
-    cplat_sym_loader_init(entries, 1u, "with_comments.json"); // [手順] - コメントと末尾カンマを含む JSONC 設定を読み込む。
+    cplat_sym_loader_init(entries, 1u,
+                          "with_comments.json"); // [手順] - コメントと末尾カンマを含む JSONC 設定を読み込む。
 
     // Assert
     EXPECT_STREQ("liboverride", entry.lib_name);    // [確認_正常系] - lib_name が liboverride であること。
@@ -116,7 +118,7 @@ TEST_F(symLoaderInitTest, applies_matching_func_key)
     EXPECT_STREQ("override_func", entry.func_name); // [確認_正常系] - func_name が override_func であること。
 }
 
-// 明示的デフォルト (lib/func がともに default) が反映されることの確認
+// 明示的既定値 (lib/func がともに default) が反映されることの確認
 TEST_F(symLoaderInitTest, applies_explicit_default)
 {
     // Arrange
@@ -127,11 +129,11 @@ TEST_F(symLoaderInitTest, applies_explicit_default)
     // Pre-Assert
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
     expect_config_read("explicit_default.json",
-                       json); // 明示的デフォルト JSON の読取が呼び出されること。
-                              // [Pre-Assert手順] - 明示的デフォルト JSON 本文を返却する。
+                       json); // 明示的既定値 JSON の読取が呼び出されること。
+                              // [Pre-Assert手順] - 明示的既定値 JSON 本文を返却する。
 
     // Act
-    cplat_sym_loader_init(entries, 1u, "explicit_default.json"); // [手順] - 明示的デフォルトの JSON を読み込む。
+    cplat_sym_loader_init(entries, 1u, "explicit_default.json"); // [手順] - 明示的既定値の JSON を読み込む。
 
     // Assert
     EXPECT_STREQ("default", entry.lib_name);  // [確認_正常系] - lib_name が default であること。
@@ -315,9 +317,8 @@ TEST_F(symLoaderInitTest, ignores_document_when_cjson_parse_fails)
         cJSON_Delete(nullptr)); // [Pre-Assert確認_異常系] - cJSON_Delete が NULL を指定して 1 回呼び出されること。
 
     // Act
-    cplat_sym_loader_init(
-        entries, 1u,
-        "injected_parse_failure.json"); // [手順] - JSONC 解析の失敗を注入して設定を読み込む。
+    cplat_sym_loader_init(entries, 1u,
+                          "injected_parse_failure.json"); // [手順] - JSONC 解析の失敗を注入して設定を読み込む。
 
     // Assert
     EXPECT_STREQ("", entry.lib_name);  // [確認_異常系] - lib_name が空のままであること。
@@ -447,16 +448,15 @@ TEST_F(symLoaderInitTest, releases_resources_when_read_setup_fails)
         .WillOnce(Return(4)); // [Pre-Assert確認_異常系] - reset_error の cplat_ftell が 1 回呼び出されること。
                               // [Pre-Assert手順] - reset_error の cplat_ftell から 4 を返却する。
     EXPECT_CALL(mock_cplat_, cplat_fseek(file, 0, SEEK_SET))
-        .WillOnce(
-            Return(-1)); // [Pre-Assert確認_異常系] - 読み込み開始位置への cplat_fseek が 1 回呼び出されること。
-                         // [Pre-Assert手順] - 読み込み開始位置への cplat_fseek から -1 を返却する。
+        .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - 読み込み開始位置への cplat_fseek が 1 回呼び出されること。
+                               // [Pre-Assert手順] - 読み込み開始位置への cplat_fseek から -1 を返却する。
     EXPECT_CALL(mock_cplat_, cplat_fclose(file, nullptr))
         .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - reset 失敗後に cplat_fclose が 1 回呼び出されること。
                               // [Pre-Assert手順] - reset 失敗後の cplat_fclose から 0 を返却する。
 
     // Act
     cplat_sym_loader_init(entries, 1u,
-                             "reset_error"); // [手順] - 読み込み開始位置への seek が失敗するファイルを読み込む。
+                          "reset_error"); // [手順] - 読み込み開始位置への seek が失敗するファイルを読み込む。
 
     // Assert
     EXPECT_STREQ(
@@ -551,7 +551,7 @@ TEST_F(symLoaderInitTest, ignores_invalid_json_entries)
 
     // Act
     cplat_sym_loader_init(entries, 1u,
-                             "invalid_entries.json"); // [手順] - 不正な JSON エントリを含む設定を読み込む。
+                          "invalid_entries.json"); // [手順] - 不正な JSON エントリを含む設定を読み込む。
 
     // Assert
     EXPECT_STREQ("", entry.lib_name);  // [確認_異常系] - 不正な JSON エントリが lib_name に反映されないこと。
@@ -594,7 +594,7 @@ TEST_F(symLoaderInitTest, skips_null_cache_entries)
 
     // Act
     cplat_sym_loader_init(entries, 2u,
-                             "null_cache_entries.json"); // [手順] - 不正なキャッシュ配列を指定して設定を読み込む。
+                          "null_cache_entries.json"); // [手順] - 不正なキャッシュ配列を指定して設定を読み込む。
 
     // Assert
     EXPECT_STREQ("", entry.lib_name); // [確認_異常系] - 不正なキャッシュ要素へ設定が反映されないこと。
@@ -617,16 +617,16 @@ TEST_F(symLoaderInitTest, ignores_config_file_larger_than_limit)
         .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - large_file の末尾 seek が 1 回呼び出されること。
                               // [Pre-Assert手順] - large_file の末尾 seek から 0 を返却する。
     EXPECT_CALL(mock_cplat_, cplat_ftell(file))
-        .WillOnce(Return(1024 * 1024 +
-                         1)); // [Pre-Assert確認_異常系] - large_file の cplat_ftell が 1 回呼び出されること。
-                              // [Pre-Assert手順] - 上限を 1 バイト超えるサイズを返却する。
+        .WillOnce(
+            Return(1024 * 1024 + 1)); // [Pre-Assert確認_異常系] - large_file の cplat_ftell が 1 回呼び出されること。
+                                      // [Pre-Assert手順] - 上限を 1 バイト超えるサイズを返却する。
     EXPECT_CALL(mock_cplat_, cplat_fclose(file, nullptr))
         .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - 上限超過後に cplat_fclose が 1 回呼び出されること。
                               // [Pre-Assert手順] - 上限超過後の cplat_fclose から 0 を返却する。
 
     // Act
     cplat_sym_loader_init(entries, 1u,
-                             "large_file"); // [手順] - 上限を 1 バイト超える設定ファイルを読み込む。
+                          "large_file"); // [手順] - 上限を 1 バイト超える設定ファイルを読み込む。
 
     // Assert
     EXPECT_STREQ("",
@@ -661,7 +661,7 @@ TEST_F(symLoaderInitTest, ignores_invalid_function_values)
 
     // Act
     cplat_sym_loader_init(null_entries, 1u,
-                             "null_func.json"); // [手順] - func の文字列取得失敗を注入して設定を読み込む。
+                          "null_func.json"); // [手順] - func の文字列取得失敗を注入して設定を読み込む。
 
     // Assert
     EXPECT_STREQ("", null_entry.func_name); // [確認_異常系] - NULL の func が反映されないこと。
@@ -681,7 +681,7 @@ TEST_F(symLoaderInitTest, ignores_invalid_function_values)
 
     // Act_2
     cplat_sym_loader_init(boundary_entries, 2u,
-                             "invalid_func_values.json"); // [手順] - 空または上限超過の func を含む設定を読み込む。
+                          "invalid_func_values.json"); // [手順] - 空または上限超過の func を含む設定を読み込む。
 
     // Assert_2
     EXPECT_STREQ("", empty_entry.func_name); // [確認_異常系] - 空の func が反映されないこと。

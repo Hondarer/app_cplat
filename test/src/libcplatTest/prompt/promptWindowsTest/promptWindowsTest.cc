@@ -24,15 +24,16 @@ TEST_F(promptWindowsTest, enter_raw_does_nothing_for_non_terminal)
 
     // Pre-Assert
     EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_INPUT_HANDLE))
-        .WillOnce(
-            Return(dummy_handle)); // [Pre-Assert確認_正常系] - GetStdHandle が STD_INPUT_HANDLE を指定して 1 回呼び出されること。
-                                    // [Pre-Assert手順] - ダミー ハンドルを返却する。
+        .WillOnce(Return(
+            dummy_handle)); // [Pre-Assert確認_正常系] - GetStdHandle が STD_INPUT_HANDLE を指定して 1 回呼び出されること。
+                            // [Pre-Assert手順] - ダミー ハンドルを返却する。
     EXPECT_CALL(mock_windows, GetConsoleMode(_, _, _, dummy_handle, _))
         .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - GetConsoleMode が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - FALSE を返却する。
+                                  // [Pre-Assert手順] - FALSE を返却する。
 
     // Act
-    cplat_internal_prompt_platform_enter_raw(&handle_); // [手順] - cplat_internal_prompt_platform_enter_raw を呼び出す。
+    cplat_internal_prompt_platform_enter_raw(
+        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw を呼び出す。
 
     // Assert
     EXPECT_EQ(0, handle_.raw_active); // [確認_異常系] - GetConsoleMode が失敗するため raw モードにならないこと。
@@ -46,17 +47,21 @@ TEST_F(promptWindowsTest, enter_raw_does_nothing_when_stdin_handle_invalid)
 
     // Pre-Assert
     EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_INPUT_HANDLE))
-        .WillOnce(
-            Return(INVALID_HANDLE_VALUE)); // [Pre-Assert確認_異常系] - GetStdHandle が STD_INPUT_HANDLE を指定して 1 回呼び出されること。
-                                            // [Pre-Assert手順] - INVALID_HANDLE_VALUE を返却する。
-    EXPECT_CALL(mock_windows, GetConsoleMode(_, _, _, _, _)).Times(0); // [Pre-Assert確認_異常系] - GetConsoleMode が呼び出されないこと。
+        .WillOnce(Return(
+            INVALID_HANDLE_VALUE)); // [Pre-Assert確認_異常系] - GetStdHandle が STD_INPUT_HANDLE を指定して 1 回呼び出されること。
+                                    // [Pre-Assert手順] - INVALID_HANDLE_VALUE を返却する。
+    EXPECT_CALL(mock_windows, GetConsoleMode(_, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - GetConsoleMode が呼び出されないこと。
 
     // Act
-    cplat_internal_prompt_platform_enter_raw(&handle_); // [手順] - cplat_internal_prompt_platform_enter_raw を呼び出す。
+    cplat_internal_prompt_platform_enter_raw(
+        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw を呼び出す。
 
     // Assert
-    EXPECT_EQ(0,
-              handle_.raw_active); // [確認_異常系] - GetStdHandle が INVALID_HANDLE_VALUE を返すため raw モードにならないこと。
+    EXPECT_EQ(
+        0,
+        handle_
+            .raw_active); // [確認_異常系] - GetStdHandle が INVALID_HANDLE_VALUE を返すため raw モードにならないこと。
 }
 
 // 端末に対して raw モードへ移行できることと渡されるモード値が正しいことの確認
@@ -78,16 +83,19 @@ TEST_F(promptWindowsTest, enter_raw_succeeds_and_changes_mode)
                         Return(TRUE))); // [Pre-Assert確認_正常系] - GetConsoleMode が 1 回呼び出されること。
                                         // [Pre-Assert手順] - 元のコンソール モードを返却する。
     EXPECT_CALL(mock_windows, SetConsoleMode(_, _, _, dummy_handle, _))
-        .WillOnce(DoAll(SaveArg<4>(&captured_mode),
-                        Return(TRUE))); // [Pre-Assert確認_正常系] - SetConsoleMode が新しいモードで 1 回呼び出されること。
-                                        // [Pre-Assert手順] - TRUE を返却する。
+        .WillOnce(
+            DoAll(SaveArg<4>(&captured_mode),
+                  Return(TRUE))); // [Pre-Assert確認_正常系] - SetConsoleMode が新しいモードで 1 回呼び出されること。
+                                  // [Pre-Assert手順] - TRUE を返却する。
 
     // Act
-    cplat_internal_prompt_platform_enter_raw(&handle_); // [手順] - cplat_internal_prompt_platform_enter_raw を呼び出す。
+    cplat_internal_prompt_platform_enter_raw(
+        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw を呼び出す。
 
     // Assert
     EXPECT_EQ(1, handle_.raw_active); // [確認_正常系] - raw モードが有効になること。
-    EXPECT_NE(0U, captured_mode & (DWORD)ENABLE_VIRTUAL_TERMINAL_INPUT); // [確認_正常系] - 仮想端末入力が有効化されること。
+    EXPECT_NE(0U,
+              captured_mode & (DWORD)ENABLE_VIRTUAL_TERMINAL_INPUT); // [確認_正常系] - 仮想端末入力が有効化されること。
     EXPECT_EQ(0U, captured_mode & (DWORD)(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT |
                                           ENABLE_PROCESSED_INPUT)); // [確認_正常系] - エコー・行入力・Ctrl+C
                                                                     // シグナル化が無効化されること。
@@ -112,10 +120,11 @@ TEST_F(promptWindowsTest, enter_raw_does_nothing_when_set_console_mode_fails)
                                         // [Pre-Assert手順] - 元のコンソール モードを返却する。
     EXPECT_CALL(mock_windows, SetConsoleMode(_, _, _, dummy_handle, _))
         .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - SetConsoleMode が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - FALSE を返却する。
+                                  // [Pre-Assert手順] - FALSE を返却する。
 
     // Act
-    cplat_internal_prompt_platform_enter_raw(&handle_); // [手順] - cplat_internal_prompt_platform_enter_raw を呼び出す。
+    cplat_internal_prompt_platform_enter_raw(
+        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw を呼び出す。
 
     // Assert
     EXPECT_EQ(0, handle_.raw_active); // [確認_異常系] - SetConsoleMode が失敗するため raw モードが有効にならないこと。
@@ -130,7 +139,8 @@ TEST_F(promptWindowsTest, enter_raw_is_ignored_while_already_raw)
     // Pre-Assert
 
     // Act
-    cplat_internal_prompt_platform_enter_raw(&handle_); // [手順] - raw モード中に cplat_internal_prompt_platform_enter_raw を呼び出す。
+    cplat_internal_prompt_platform_enter_raw(
+        &handle_); // [手順] - raw モード中に cplat_internal_prompt_platform_enter_raw を呼び出す。
 
     // Assert
     EXPECT_EQ(1, handle_.raw_active); // [確認_正常系] - raw モードの状態が変化しないこと。
@@ -148,7 +158,8 @@ TEST_F(promptWindowsTest, leave_raw_is_ignored_when_not_raw)
     // Pre-Assert
 
     // Act
-    cplat_internal_prompt_platform_leave_raw(&handle_); // [手順] - cplat_internal_prompt_platform_leave_raw を呼び出す。
+    cplat_internal_prompt_platform_leave_raw(
+        &handle_); // [手順] - cplat_internal_prompt_platform_leave_raw を呼び出す。
 
     // Assert
     EXPECT_EQ(0, handle_.raw_active); // [確認_正常系] - raw モードの状態が変化しないこと。
@@ -163,7 +174,8 @@ TEST_F(promptWindowsTest, leave_raw_restores_mode)
     DWORD captured_mode = 0;
     handle_.raw_active = 1;
     handle_.stdin_handle = dummy_handle;
-    handle_.orig_in_mode = ENABLE_PROCESSED_INPUT; // [状態] - raw モード中で、復元対象のモードを保持している状態にする。
+    handle_.orig_in_mode =
+        ENABLE_PROCESSED_INPUT; // [状態] - raw モード中で、復元対象のモードを保持している状態にする。
 
     // Pre-Assert
     EXPECT_CALL(mock_windows, SetConsoleMode(_, _, _, dummy_handle, _))
@@ -172,7 +184,8 @@ TEST_F(promptWindowsTest, leave_raw_restores_mode)
                                         // [Pre-Assert手順] - TRUE を返却する。
 
     // Act
-    cplat_internal_prompt_platform_leave_raw(&handle_); // [手順] - cplat_internal_prompt_platform_leave_raw を呼び出す。
+    cplat_internal_prompt_platform_leave_raw(
+        &handle_); // [手順] - cplat_internal_prompt_platform_leave_raw を呼び出す。
 
     // Assert
     EXPECT_EQ(0, handle_.raw_active);               // [確認_正常系] - raw モードが無効になること。
@@ -194,9 +207,9 @@ TEST_F(promptWindowsTest, read_char_returns_next_byte)
 
     // Pre-Assert
     EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, dummy_handle, 100U))
-        .WillOnce(
-            Return(WAIT_OBJECT_0)); // [Pre-Assert確認_正常系] - WaitForSingleObject が 100ms を指定して 1 回呼び出されること。
-                                     // [Pre-Assert手順] - WAIT_OBJECT_0 を返却する。
+        .WillOnce(Return(
+            WAIT_OBJECT_0)); // [Pre-Assert確認_正常系] - WaitForSingleObject が 100ms を指定して 1 回呼び出されること。
+                             // [Pre-Assert手順] - WAIT_OBJECT_0 を返却する。
     EXPECT_CALL(mock_windows, ReadFile(_, _, _, dummy_handle, _, 1U, _, _))
         .WillOnce(
             [byte_value](const char *, int, const char *, HANDLE, LPVOID buffer, DWORD, LPDWORD bytes_read,
@@ -209,7 +222,8 @@ TEST_F(promptWindowsTest, read_char_returns_next_byte)
                 // [Pre-Assert手順] - 出力バッファーへ 'A' を書き込み、読み取りバイト数 1 と TRUE を返却する。
 
     // Act
-    int actual_ret = cplat_internal_prompt_platform_read_char(&handle_); // [手順] - cplat_internal_prompt_platform_read_char を呼び出す。
+    int actual_ret = cplat_internal_prompt_platform_read_char(
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char を呼び出す。
 
     // Assert
     EXPECT_EQ('A', actual_ret); // [確認_正常系] - 読み取ったバイト値 'A' が返ること。
@@ -234,7 +248,8 @@ TEST_F(promptWindowsTest, read_char_returns_minus1_at_eof)
                                         // [Pre-Assert手順] - 読み取りバイト数 0 と TRUE を返却する。
 
     // Act
-    int actual_ret = cplat_internal_prompt_platform_read_char(&handle_); // [手順] - cplat_internal_prompt_platform_read_char を呼び出す。
+    int actual_ret = cplat_internal_prompt_platform_read_char(
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, actual_ret); // [確認_異常系] - EOF を示す -1 が返ること。
@@ -251,11 +266,13 @@ TEST_F(promptWindowsTest, read_char_returns_minus2_on_timeout)
     // Pre-Assert
     EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, dummy_handle, 100U))
         .WillOnce(Return(WAIT_TIMEOUT)); // [Pre-Assert確認_正常系] - WaitForSingleObject が 1 回呼び出されること。
-                                          // [Pre-Assert手順] - WAIT_TIMEOUT を返却する。
-    EXPECT_CALL(mock_windows, ReadFile(_, _, _, _, _, _, _, _)).Times(0); // [Pre-Assert確認_正常系] - ReadFile が呼び出されないこと。
+                                         // [Pre-Assert手順] - WAIT_TIMEOUT を返却する。
+    EXPECT_CALL(mock_windows, ReadFile(_, _, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_正常系] - ReadFile が呼び出されないこと。
 
     // Act
-    int actual_ret = cplat_internal_prompt_platform_read_char(&handle_); // [手順] - cplat_internal_prompt_platform_read_char を呼び出す。
+    int actual_ret = cplat_internal_prompt_platform_read_char(
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char を呼び出す。
 
     // Assert
     EXPECT_EQ(-2, actual_ret); // [確認_正常系] - リサイズ チェック用タイムアウトを示す -2 が返ること。
@@ -272,11 +289,13 @@ TEST_F(promptWindowsTest, read_char_returns_minus1_when_wait_fails)
     // Pre-Assert
     EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, dummy_handle, 100U))
         .WillOnce(Return(WAIT_FAILED)); // [Pre-Assert確認_異常系] - WaitForSingleObject が 1 回呼び出されること。
-                                         // [Pre-Assert手順] - WAIT_TIMEOUT でも WAIT_OBJECT_0 でもない WAIT_FAILED を返却する。
-    EXPECT_CALL(mock_windows, ReadFile(_, _, _, _, _, _, _, _)).Times(0); // [Pre-Assert確認_異常系] - ReadFile が呼び出されないこと。
+    // [Pre-Assert手順] - WAIT_TIMEOUT でも WAIT_OBJECT_0 でもない WAIT_FAILED を返却する。
+    EXPECT_CALL(mock_windows, ReadFile(_, _, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - ReadFile が呼び出されないこと。
 
     // Act
-    int actual_ret = cplat_internal_prompt_platform_read_char(&handle_); // [手順] - cplat_internal_prompt_platform_read_char を呼び出す。
+    int actual_ret = cplat_internal_prompt_platform_read_char(
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, actual_ret); // [確認_異常系] - 読み取り失敗を示す -1 が返ること。
@@ -297,13 +316,13 @@ TEST_F(promptWindowsTest, read_char_nb_returns_next_byte_when_available)
 
     // Pre-Assert
     EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, dummy_handle, 50U))
-        .WillOnce(
-            Return(WAIT_OBJECT_0)); // [Pre-Assert確認_正常系] - WaitForSingleObject が 50ms を指定して 1 回呼び出されること。
-                                     // [Pre-Assert手順] - WAIT_OBJECT_0 を返却する。
+        .WillOnce(Return(
+            WAIT_OBJECT_0)); // [Pre-Assert確認_正常系] - WaitForSingleObject が 50ms を指定して 1 回呼び出されること。
+                             // [Pre-Assert手順] - WAIT_OBJECT_0 を返却する。
     EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, dummy_handle, 100U))
-        .WillOnce(
-            Return(WAIT_OBJECT_0)); // [Pre-Assert確認_正常系] - cplat_internal_prompt_platform_read_char への委譲で 100ms を指定して 1 回呼び出されること。
-                                     // [Pre-Assert手順] - WAIT_OBJECT_0 を返却する。
+        .WillOnce(Return(
+            WAIT_OBJECT_0)); // [Pre-Assert確認_正常系] - cplat_internal_prompt_platform_read_char への委譲で 100ms を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - WAIT_OBJECT_0 を返却する。
     EXPECT_CALL(mock_windows, ReadFile(_, _, _, dummy_handle, _, 1U, _, _))
         .WillOnce(
             [byte_value](const char *, int, const char *, HANDLE, LPVOID buffer, DWORD, LPDWORD bytes_read,
@@ -316,7 +335,8 @@ TEST_F(promptWindowsTest, read_char_nb_returns_next_byte_when_available)
                 // [Pre-Assert手順] - 出力バッファーへ 'B' を書き込み、読み取りバイト数 1 と TRUE を返却する。
 
     // Act
-    int actual_ret = cplat_internal_prompt_platform_read_char_nb(&handle_); // [手順] - cplat_internal_prompt_platform_read_char_nb を呼び出す。
+    int actual_ret = cplat_internal_prompt_platform_read_char_nb(
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char_nb を呼び出す。
 
     // Assert
     EXPECT_EQ('B', actual_ret); // [確認_正常系] - 読み取ったバイト値 'B' が返ること。
@@ -332,15 +352,18 @@ TEST_F(promptWindowsTest, read_char_nb_returns_minus1_on_timeout)
 
     // Pre-Assert
     EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, dummy_handle, 50U))
-        .WillOnce(
-            Return(WAIT_TIMEOUT)); // [Pre-Assert確認_異常系] - WaitForSingleObject が 50ms を指定して 1 回呼び出されること。
-                                    // [Pre-Assert手順] - WAIT_TIMEOUT を返却する。
+        .WillOnce(Return(
+            WAIT_TIMEOUT)); // [Pre-Assert確認_異常系] - WaitForSingleObject が 50ms を指定して 1 回呼び出されること。
+                            // [Pre-Assert手順] - WAIT_TIMEOUT を返却する。
     EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, dummy_handle, 100U))
-        .Times(0); // [Pre-Assert確認_異常系] - cplat_internal_prompt_platform_read_char への委譲 (100ms 待機) が発生しないこと。
-    EXPECT_CALL(mock_windows, ReadFile(_, _, _, _, _, _, _, _)).Times(0); // [Pre-Assert確認_異常系] - ReadFile が呼び出されないこと。
+        .Times(
+            0); // [Pre-Assert確認_異常系] - cplat_internal_prompt_platform_read_char への委譲 (100ms 待機) が発生しないこと。
+    EXPECT_CALL(mock_windows, ReadFile(_, _, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - ReadFile が呼び出されないこと。
 
     // Act
-    int actual_ret = cplat_internal_prompt_platform_read_char_nb(&handle_); // [手順] - cplat_internal_prompt_platform_read_char_nb を呼び出す。
+    int actual_ret = cplat_internal_prompt_platform_read_char_nb(
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char_nb を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, actual_ret); // [確認_異常系] - 50 ミリ秒待っても入力がないため -1 が返ること。

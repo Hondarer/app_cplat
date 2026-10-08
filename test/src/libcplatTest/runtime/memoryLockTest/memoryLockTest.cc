@@ -55,10 +55,10 @@ TEST_F(memoryLockTest, test_range_rejects_invalid_arguments)
 
     // Act
     null_address_lock_result =
-        cplat_memory_lock_range(NULL, sizeof(buffer)); // [手順] - NULL アドレスを指定して範囲をロックする。
+        cplat_memory_lock_range(NULL, sizeof(buffer));           // [手順] - NULL アドレスを指定して範囲をロックする。
     zero_size_lock_result = cplat_memory_lock_range(buffer, 0U); // [手順] - サイズ 0 を指定して範囲をロックする。
     null_address_unlock_result =
-        cplat_memory_unlock_range(NULL, sizeof(buffer)); // [手順] - NULL アドレスを指定して範囲を解除する。
+        cplat_memory_unlock_range(NULL, sizeof(buffer));             // [手順] - NULL アドレスを指定して範囲を解除する。
     zero_size_unlock_result = cplat_memory_unlock_range(buffer, 0U); // [手順] - サイズ 0 を指定して範囲を解除する。
 
     // Assert
@@ -99,8 +99,7 @@ TEST_F(memoryLockTest, test_range_locks_and_unlocks_heap_buffer)
     // Act
     int lock_result =
         cplat_memory_lock_range(buffer, 4096U); // [手順] - バッファーを cplat_memory_lock_range でロックする。
-    int unlock_result =
-        cplat_memory_unlock_range(buffer, 4096U); // [手順] - cplat_memory_unlock_range で解除する。
+    int unlock_result = cplat_memory_unlock_range(buffer, 4096U); // [手順] - cplat_memory_unlock_range で解除する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -130,8 +129,8 @@ TEST_F(memoryLockTest, test_range_maps_mlock_errors)
                                // [Pre-Assert手順] - munlock から -1 を返却する。
 
     // Act
-    int lock_result = cplat_memory_lock_range(
-        buffer, sizeof(buffer)); // [手順] - mlock が ENOMEM で失敗する状態で範囲をロックする。
+    int lock_result =
+        cplat_memory_lock_range(buffer, sizeof(buffer)); // [手順] - mlock が ENOMEM で失敗する状態で範囲をロックする。
     errno = EACCES;
     int unlock_result = cplat_memory_unlock_range(
         buffer, sizeof(buffer)); // [手順] - munlock が EACCES で失敗する状態で範囲を解除する。
@@ -176,15 +175,14 @@ TEST_F(memoryLockTest, test_lock_self_reports_mlockall_failure)
     // [Pre-Assert手順] - 本物の cplat_local_lock_create へ委譲する。
     EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, CPLAT_SYNC_WAIT_FOREVER))
         .WillOnce(Return(CPLAT_OK)); // [Pre-Assert確認_異常系] - cplat_local_lock_lock が 1 回呼び出されること。
-                                        // [Pre-Assert手順] - cplat_local_lock_lock から CPLAT_OK を返却する。
+                                     // [Pre-Assert手順] - cplat_local_lock_lock から CPLAT_OK を返却する。
     EXPECT_CALL(mock_cplat, cplat_local_lock_unlock(_))
-        .WillOnce(
-            Return(CPLAT_OK)); // [Pre-Assert確認_異常系] - cplat_local_lock_unlock が 1 回呼び出されること。
-                                  // [Pre-Assert手順] - cplat_local_lock_unlock から CPLAT_OK を返却する。
+        .WillOnce(Return(CPLAT_OK)); // [Pre-Assert確認_異常系] - cplat_local_lock_unlock が 1 回呼び出されること。
+                                     // [Pre-Assert手順] - cplat_local_lock_unlock から CPLAT_OK を返却する。
 
     // Act
-    int result = cplat_memory_lock_self(
-        &options, &scope); // [手順] - mlockall が ENOMEM で失敗する状態で self lock を生成する。
+    int result =
+        cplat_memory_lock_self(&options, &scope); // [手順] - mlockall が ENOMEM で失敗する状態で self lock を生成する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_LIMIT_EXCEEDED,
@@ -407,14 +405,14 @@ TEST_F(memoryLockTest, test_scope_release_classifies_internal_states)
         .WillOnce(Return(CPLAT_OK))
         .WillOnce(Return(CPLAT_OK))
         .WillOnce(Return(CPLAT_OK))
-        .WillOnce(Return(
-            CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_local_lock_lock が 4 回呼び出されること。
+        .WillOnce(
+            Return(CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_local_lock_lock が 4 回呼び出されること。
     // [Pre-Assert手順] - 3 回は CPLAT_OK を返却し、4 回目は CPLAT_ERR_UNKNOWN を返却する。
     EXPECT_CALL(mock_cplat, cplat_local_lock_unlock(_))
         .Times(3)
         .WillRepeatedly(
             Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_local_lock_unlock が 3 回呼び出されること。
-                                  // [Pre-Assert手順] - cplat_local_lock_unlock から CPLAT_OK を返却する。
+                               // [Pre-Assert手順] - cplat_local_lock_unlock から CPLAT_OK を返却する。
     EXPECT_CALL(mock_mman, munlockall(_, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - munlockall が 1 回呼び出されること。
                               // [Pre-Assert手順] - munlockall から 0 を返却する。
@@ -429,15 +427,14 @@ TEST_F(memoryLockTest, test_scope_release_classifies_internal_states)
     int shared_result =
         cplat_memory_lock_scope_release(shared_scope); // [手順] - 複数参照中の mlockall scope を解放する。
     test_memory_lock_set_scope_count(1U);
-    int last_result =
-        cplat_memory_lock_scope_release(last_scope); // [手順] - 最後の mlockall scope を正常に解放する。
+    int last_result = cplat_memory_lock_scope_release(last_scope); // [手順] - 最後の mlockall scope を正常に解放する。
     int lock_failure_result = cplat_memory_lock_scope_release(
         lock_failure_scope); // [手順] - 内部 local lock の取得失敗中に scope を解放する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, unlocked_result); // [確認_正常系] - mlockall 未実行 scope の解放が成功すること。
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              empty_count_result);         // [確認_異常系] - 参照数 0 の解放が内部状態不整合を通知すること。
+              empty_count_result);      // [確認_異常系] - 参照数 0 の解放が内部状態不整合を通知すること。
     EXPECT_EQ(CPLAT_OK, shared_result); // [確認_正常系] - 複数参照中の scope 解放が成功すること。
     EXPECT_EQ(CPLAT_OK, last_result);   // [確認_正常系] - 最後の scope 解放と munlockall が成功すること。
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -526,8 +523,8 @@ TEST_F(memoryLockTest, test_lock_self_rejects_insufficient_stack_range)
                               // [Pre-Assert手順] - 余白不足後の pthread_attr_destroy から 0 を返却する。
 
     // Act
-    int result = cplat_memory_lock_self(
-        &options, &scope); // [手順] - スタック安全余白を満たさない状態で self lock を生成する。
+    int result =
+        cplat_memory_lock_self(&options, &scope); // [手順] - スタック安全余白を満たさない状態で self lock を生成する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_LIMIT_EXCEEDED,
@@ -583,8 +580,8 @@ TEST_F(memoryLockTest, test_scope_release_accepts_null)
     // Pre-Assert
 
     // Act
-    int actual_ret_memory_lock = cplat_memory_lock_scope_release(
-        NULL); // [手順] - NULL scope で cplat_memory_lock_scope_release を呼び出す。
+    int actual_ret_memory_lock =
+        cplat_memory_lock_scope_release(NULL); // [手順] - NULL scope で cplat_memory_lock_scope_release を呼び出す。
 
     // Assert
     EXPECT_EQ(

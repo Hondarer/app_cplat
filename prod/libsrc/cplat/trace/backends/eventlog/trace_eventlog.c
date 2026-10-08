@@ -371,7 +371,7 @@ cplat_eventlog_sink *cplat_eventlog_sink_create(const char *source_name)
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_eventlog_sink_write(cplat_eventlog_sink *handle, const int level, const int64_t file_identifier,
-                                 const char *instance_name, const int64_t instance_identifier, const char *message)
+                              const char *instance_name, const int64_t instance_identifier, const char *message)
 {
     WORD type;
     WORD category;

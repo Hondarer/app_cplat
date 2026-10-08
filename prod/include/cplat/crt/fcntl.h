@@ -69,8 +69,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_open_fmt(int flags, int mode, cplat_error *detail_out,
-                                                       const char *format, ...)
+    CPLAT_EXPORT int CPLAT_API cplat_open_fmt(int flags, int mode, cplat_error *detail_out, const char *format, ...)
 #if defined(COMPILER_GCC)
         __attribute__((format(printf, 4, 5)))
 #endif /* COMPILER_GCC */
@@ -90,8 +89,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_vopen_fmt(int flags, int mode, cplat_error *detail_out,
-                                                        const char *format, va_list args)
+    CPLAT_EXPORT int CPLAT_API cplat_vopen_fmt(int flags, int mode, cplat_error *detail_out, const char *format,
+                                               va_list args)
 #if defined(COMPILER_GCC)
         __attribute__((format(printf, 4, 0)))
 #endif /* COMPILER_GCC */

@@ -3,8 +3,8 @@
 
 void delegate_real_cplat_exit(int code)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_exit)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_exit"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_exit)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_exit"));
 
     real_fn(code);
 }

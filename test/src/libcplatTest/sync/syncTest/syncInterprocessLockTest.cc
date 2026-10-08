@@ -49,9 +49,8 @@ TEST(syncInterprocessLockTest, descriptor_round_trip_reopens_same_lock)
         lock, descriptor, &descriptor_size); // [手順] - descriptor をバッファーへ出力する。
     int import_result = cplat_interprocess_lock_import_descriptor(
         descriptor, descriptor_size, &restored); // [手順] - descriptor から interprocess lock を復元する。
-    int first_lock =
-        cplat_interprocess_lock_lock(lock, CPLAT_SYNC_NO_WAIT); // [手順] - 元ハンドルでロックを取得する。
-    int second_try = cplat_interprocess_lock_try_lock(restored);   // [手順] - 復元ハンドルで try_lock を試行する。
+    int first_lock = cplat_interprocess_lock_lock(lock, CPLAT_SYNC_NO_WAIT); // [手順] - 元ハンドルでロックを取得する。
+    int second_try = cplat_interprocess_lock_try_lock(restored); // [手順] - 復元ハンドルで try_lock を試行する。
 
     // Assert
     EXPECT_EQ(
@@ -163,15 +162,13 @@ TEST(syncInterprocessLockTest, second_handle_observes_exclusive_lock)
     int other_open = cplat_interprocess_lock_open(path, &other); // [手順] - 同一識別子でもう 1 つ開く。
     int lock_result =
         cplat_interprocess_lock_lock(lock, CPLAT_SYNC_NO_WAIT); // [手順] - 1 つ目のハンドルでロックを取得する。
-    int other_try = cplat_interprocess_lock_try_lock(other); // [手順] - 2 つ目のハンドルで try_lock を試行する。
+    int other_try = cplat_interprocess_lock_try_lock(other);    // [手順] - 2 つ目のハンドルで try_lock を試行する。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_OK,
-        open_result); // [確認_正常系] - 1 つ目の cplat_interprocess_lock_open の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(
-        CPLAT_OK,
-        other_open); // [確認_正常系] - 2 つ目の cplat_interprocess_lock_open の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              open_result); // [確認_正常系] - 1 つ目の cplat_interprocess_lock_open の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              other_open); // [確認_正常系] - 2 つ目の cplat_interprocess_lock_open の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK,
               lock_result); // [確認_正常系] - 1 つ目のハンドルのロック取得が成功すること。
     EXPECT_EQ(CPLAT_ERR_BUSY,

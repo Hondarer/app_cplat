@@ -1,7 +1,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-void delegate_real_cplat_timespec_normalize(cplat_timespec * ts)
+void delegate_real_cplat_timespec_normalize(cplat_timespec *ts)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_timespec_normalize)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_timespec_normalize"));
@@ -9,7 +9,7 @@ void delegate_real_cplat_timespec_normalize(cplat_timespec * ts)
     real_fn(ts);
 }
 
-MOCK_WEAK_IMPL(void, cplat_timespec_normalize, cplat_timespec * ts)
+MOCK_WEAK_IMPL(void, cplat_timespec_normalize, cplat_timespec *ts)
 {
     if (_mock_cplat != nullptr)
     {

@@ -9,8 +9,7 @@ int delegate_real_cplat_hashtable_get_config_val(const cplat_hashtable *ht, cpla
     return real_fn(ht, config_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_hashtable_get_config_val, const cplat_hashtable *ht,
-               cplat_hashtable_config *config_out)
+MOCK_WEAK_IMPL(int, cplat_hashtable_get_config_val, const cplat_hashtable *ht, cplat_hashtable_config *config_out)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

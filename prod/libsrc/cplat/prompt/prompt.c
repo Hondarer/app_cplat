@@ -328,7 +328,8 @@ static cplat_internal_prompt_ctx *find_or_create_ctx(cplat_prompt *p, const char
         {
             new_cap = 4;
         }
-        new_contexts = (cplat_internal_prompt_ctx *)cplat_realloc(p->contexts, new_cap, sizeof(cplat_internal_prompt_ctx));
+        new_contexts =
+            (cplat_internal_prompt_ctx *)cplat_realloc(p->contexts, new_cap, sizeof(cplat_internal_prompt_ctx));
         if (new_contexts == NULL)
         {
             return NULL;
@@ -392,8 +393,8 @@ cplat_prompt *cplat_prompt_create(const cplat_prompt_options *options)
         opt_input_max_bytes = 0U;
     }
     cplat_internal_prompt_edit_resolve_options(opt_history_max, opt_input_initial_capacity, opt_input_max_bytes,
-                                         PROMPT_INPUT_INITIAL_DEFAULT, &history_max, &input_initial_capacity,
-                                         &input_max_bytes);
+                                               PROMPT_INPUT_INITIAL_DEFAULT, &history_max, &input_initial_capacity,
+                                               &input_max_bytes);
 
     p->history_max = history_max;
     p->input_max_bytes = input_max_bytes;
@@ -502,8 +503,8 @@ static int prompt_readline_core(cplat_prompt *p, char *buf, const size_t buf_siz
     if (initial_length > 0U)
     {
         /* 検証済みの長さは上限以内のため、確保に失敗するのはメモリ不足のときだけ */
-        if (cplat_internal_prompt_edit_ensure_capacity(&p->edit_buf, &p->edit_cap, p->input_max_bytes, initial_length + 1U) !=
-            0)
+        if (cplat_internal_prompt_edit_ensure_capacity(&p->edit_buf, &p->edit_cap, p->input_max_bytes,
+                                                       initial_length + 1U) != 0)
         {
             cplat_internal_prompt_platform_leave_raw(p);
             return CPLAT_ERR_OUT_OF_MEMORY;
@@ -632,7 +633,7 @@ static int prompt_readline_core(cplat_prompt *p, char *buf, const size_t buf_siz
 
         case KEY_CHAR:
             if (cplat_internal_prompt_edit_ensure_capacity(&p->edit_buf, &p->edit_cap, p->input_max_bytes,
-                                                     p->edit_len + 2U) == 0)
+                                                           p->edit_len + 2U) == 0)
             {
                 memmove(p->edit_buf + p->cursor + 1, p->edit_buf + p->cursor, p->edit_len - p->cursor + 1);
                 p->edit_buf[p->cursor] = (char)ch;
@@ -656,7 +657,7 @@ static int prompt_readline_core(cplat_prompt *p, char *buf, const size_t buf_siz
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_prompt_readline_at(cplat_prompt *p, char *buf, const size_t buf_size, const char *prompt_str,
-                                const char *file, int line)
+                             const char *file, int line)
 {
     if (p == NULL || buf == NULL || buf_size == 0)
     {
@@ -668,7 +669,7 @@ int cplat_prompt_readline_at(cplat_prompt *p, char *buf, const size_t buf_size, 
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_prompt_readline_with_initial_at(cplat_prompt *p, char *buf, const size_t buf_size, const char *prompt_str,
-                                             const char *initial_text, const char *file, int line)
+                                          const char *initial_text, const char *file, int line)
 {
     size_t initial_length;
     int ret;
@@ -691,7 +692,7 @@ int cplat_prompt_readline_with_initial_at(cplat_prompt *p, char *buf, const size
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_prompt_readline_fmt_at(cplat_prompt *p, char *buf, size_t buf_size, const char *file, int line,
-                                    const char *fmt, ...)
+                                 const char *fmt, ...)
 {
     va_list ap;
     int needed;

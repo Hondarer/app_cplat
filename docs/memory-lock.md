@@ -66,7 +66,7 @@ Table: メモリ ロック options->flags のフラグと OS 別動作
 `options == NULL`、`flags == 0`、または未知の bit を含む場合は `CPLAT_ERR_INVALID_ARGUMENT` を返します。  
 Windows で `CPLAT_MEMORY_LOCK_FUTURE` または `CPLAT_MEMORY_LOCK_ONFAULT` を指定した場合は `CPLAT_ERR_UNSUPPORTED` を返します。
 
-## スレッド安全性と scope の解放
+## スレッド セーフと scope の解放
 
 `cplat_memory_lock_self()` は複数スレッドから同時に呼び出せます。  
 呼び出しが成功した場合、呼び出しごとに独立した `scope` が返ります。  

@@ -45,8 +45,7 @@ class fileTimestampFailureInjectionTest : public testing::Test
         // [状態確認] - `cplat_fclose(stream, NULL)` の戻り値が `CPLAT_OK` であること。
 
         cplat_file_init(&file_);
-        ASSERT_EQ(CPLAT_OK,
-                  cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL));
+        ASSERT_EQ(CPLAT_OK, cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL));
         // [状態確認] - `cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL)` の戻り値が `CPLAT_OK` であること。
     }
     // [サブ手順終了]
@@ -202,8 +201,7 @@ class fileTimestampFailureInjectionTest : public testing::Test
         // [状態確認] - `cplat_fclose(stream, NULL)` の戻り値が `CPLAT_OK` であること。
 
         cplat_file_init(&file_);
-        ASSERT_EQ(CPLAT_OK,
-                  cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL));
+        ASSERT_EQ(CPLAT_OK, cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL));
         // [状態確認] - `cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL)` の戻り値が `CPLAT_OK` であること。
     }
     // [サブ手順終了]

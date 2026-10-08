@@ -49,9 +49,10 @@ TEST(symLoaderInfoTest, sym_loader_info_reports_resolution_state)
     cplat_sym_loader_entry unresolved = CPLAT_SYM_LOADER_ENTRY_INIT("unresolved", void (*)(void));
     cplat_sym_loader_entry *resolved_entries[] = {&resolved};
     cplat_sym_loader_entry *unresolved_entries[] = {&unresolved};
-    cplat_atomic_store_i32(&resolved.resolved, 1, CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 1 個のエントリを解決済みとする。
+    cplat_atomic_store_i32(&resolved.resolved, 1,
+                           CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 1 個のエントリを解決済みとする。
     cplat_atomic_store_i32(&unresolved.resolved, -1,
-                            CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 1 個のエントリを解決失敗済みとする。
+                           CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 1 個のエントリを解決失敗済みとする。
 
     // Pre-Assert
 
@@ -63,9 +64,8 @@ TEST(symLoaderInfoTest, sym_loader_info_reports_resolution_state)
     // Assert
     EXPECT_EQ(CPLAT_OK,
               resolved_result); // [確認_正常系] - 解決済みエントリに対する戻り値が CPLAT_OK であること。
-    EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        unresolved_result); // [確認_異常系] - 解決失敗済みエントリに対する戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              unresolved_result); // [確認_異常系] - 解決失敗済みエントリに対する戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // 未解決エントリを情報表示時に解決してから状態を表示することの確認
@@ -75,11 +75,11 @@ TEST(symLoaderInfoTest, sym_loader_info_resolves_unresolved_entry)
     cplat_sym_loader_entry entry = CPLAT_SYM_LOADER_ENTRY_INIT("default_entry", void (*)(void));
     cplat_sym_loader_entry *entries[] = {&entry};
     ASSERT_EQ(CPLAT_OK, cplat_strcpy(entry.lib_name, sizeof(entry.lib_name),
-                                           "default")); // [状態] - 明示的デフォルトとして解決できるエントリを用意する。
-                                                        // [状態確認] - lib_name への cplat_strcpy の戻り値が CPLAT_OK であること。
+                                     "default")); // [状態] - 明示的既定値として解決できるエントリを用意する。
+    // [状態確認] - lib_name への cplat_strcpy の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_strcpy(entry.func_name, sizeof(entry.func_name),
-                                           "default")); // [状態] - func_name に "default" を設定する。
-                                                        // [状態確認] - func_name への cplat_strcpy の戻り値が CPLAT_OK であること。
+                                     "default")); // [状態] - func_name に "default" を設定する。
+    // [状態確認] - func_name への cplat_strcpy の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -88,7 +88,8 @@ TEST(symLoaderInfoTest, sym_loader_info_resolves_unresolved_entry)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              result);            // [確認_正常系] - cplat_sym_loader_info の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(2, cplat_atomic_load_i32(&entry.resolved,
-                                        CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - 情報表示前の解決により resolved が 2 になること。
+              result); // [確認_正常系] - cplat_sym_loader_info の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(2, cplat_atomic_load_i32(
+                     &entry.resolved,
+                     CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - 情報表示前の解決により resolved が 2 になること。
 }

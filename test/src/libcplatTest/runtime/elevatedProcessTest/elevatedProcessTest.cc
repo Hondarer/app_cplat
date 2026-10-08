@@ -37,9 +37,8 @@ TEST(elevatedProcessTest, elevated_result_target_initializes_output)
         &argc, argv, &detected); // [手順] - 結果報告先フラグのない引数から報告先を抽出する。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_OK,
-        result); // [確認_正常系] - cplat_elevated_process_extract_result_target の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              result); // [確認_正常系] - cplat_elevated_process_extract_result_target の戻り値が CPLAT_OK であること。
     EXPECT_EQ(0, detected); // [確認_正常系] - detected_out が 0 であること。
 }
 
@@ -139,8 +138,8 @@ TEST(elevatedProcessTest, run_piped_rejects_null_outputs)
     // Act
     int null_exit_result = cplat_elevated_process_run_piped(
         NULL, NULL, NULL, NULL, &handled); // [手順] - run_piped の exit_code に NULL を渡す。
-    int null_handled_result = cplat_elevated_process_run_piped(
-        NULL, NULL, NULL, &exit_code, NULL); // [手順] - run_piped の handled に NULL を渡す。
+    int null_handled_result = cplat_elevated_process_run_piped(NULL, NULL, NULL, &exit_code,
+                                                               NULL); // [手順] - run_piped の handled に NULL を渡す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -251,15 +250,15 @@ TEST(elevatedProcessTest, run_piped_reports_linux_elevation_state)
                                                      // [Pre-Assert手順] - geteuid から 0、1000 の順に返却する。
 
     // Act
-    int root_result = cplat_elevated_process_run_piped(
-        "--test", NULL, NULL, &root_exit_code, &root_handled); // [手順] - root 状態で run_piped を実行する。
-    int user_result = cplat_elevated_process_run_piped(
-        "--test", NULL, NULL, &user_exit_code, &user_handled); // [手順] - 非 root 状態で run_piped を実行する。
+    int root_result = cplat_elevated_process_run_piped("--test", NULL, NULL, &root_exit_code,
+                                                       &root_handled); // [手順] - root 状態で run_piped を実行する。
+    int user_result = cplat_elevated_process_run_piped("--test", NULL, NULL, &user_exit_code,
+                                                       &user_handled); // [手順] - 非 root 状態で run_piped を実行する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, root_result);        // [確認_正常系] - root 状態の run_piped が CPLAT_OK を返すこと。
-    EXPECT_EQ(0, root_exit_code);            // [確認_正常系] - root 状態の exit_code が 0 であること。
-    EXPECT_EQ(0, root_handled);              // [確認_正常系] - Linux の run_piped が handled を 0 にすること。
+    EXPECT_EQ(CPLAT_OK, root_result);          // [確認_正常系] - root 状態の run_piped が CPLAT_OK を返すこと。
+    EXPECT_EQ(0, root_exit_code);              // [確認_正常系] - root 状態の exit_code が 0 であること。
+    EXPECT_EQ(0, root_handled);                // [確認_正常系] - Linux の run_piped が handled を 0 にすること。
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, user_result); // [確認_異常系] - 非 root の run_piped が UNKNOWN を返すこと。
     EXPECT_EQ(EXIT_FAILURE, user_exit_code);   // [確認_異常系] - 非 root の run_piped が失敗コードを返すこと。
     EXPECT_EQ(0, user_handled);                // [確認_異常系] - 非 root の run_piped が handled を 0 にすること。
@@ -313,8 +312,8 @@ TEST(elevatedProcessTest, run_apis_report_linux_elevation_state)
                                                         // [Pre-Assert手順] - geteuid から実効ユーザー ID 0 を返却する。
 
     // Act
-    int run_result = cplat_elevated_process_run_if_needed(
-        "--test", &exit_code, &handled); // [手順] - root 状態で run_if_needed を実行する。
+    int run_result = cplat_elevated_process_run_if_needed("--test", &exit_code,
+                                                          &handled); // [手順] - root 状態で run_if_needed を実行する。
     int result_run_with_result = cplat_elevated_process_run_with_result(
         "--test", &exit_code, &handled, result_message,
         sizeof(result_message)); // [手順] - root 状態で run_with_result を実行する。

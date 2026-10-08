@@ -1,8 +1,8 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_trace_file_sink_write(cplat_trace_file_sink *handle, int level,
-                                                 const cplat_timespec *timestamp, const char *message)
+int delegate_real_cplat_trace_file_sink_write(cplat_trace_file_sink *handle, int level, const cplat_timespec *timestamp,
+                                              const char *message)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_trace_file_sink_write)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_trace_file_sink_write"));

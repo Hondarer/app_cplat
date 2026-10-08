@@ -147,8 +147,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_condvar_wait(cplat_condvar *cv, cplat_local_lock *mtx,
-                                                           int timeout_ms);
+    CPLAT_EXPORT int CPLAT_API cplat_condvar_wait(cplat_condvar *cv, cplat_local_lock *mtx, int timeout_ms);
 
     /**
      *  @brief          待機中のスレッドを 1 つ起床させます。
@@ -229,8 +228,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_local_rwlock_lock_exclusive(cplat_local_rwlock *rwlock,
-                                                                          int timeout_ms);
+    CPLAT_EXPORT int CPLAT_API cplat_local_rwlock_lock_exclusive(cplat_local_rwlock *rwlock, int timeout_ms);
 
     /**
      *  @brief          排他 (書き込み) ロックを非ブロッキングで取得試行します。
@@ -283,8 +281,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_thread_create(cplat_thread **thread, cplat_thread_fn func,
-                                                            void *arg);
+    CPLAT_EXPORT int CPLAT_API cplat_thread_create(cplat_thread **thread, cplat_thread_fn func, void *arg);
 
     /**
      *  @brief          スレッドの終了を待機します。
@@ -323,8 +320,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_interprocess_lock_open(const char *identity,
-                                                                     cplat_interprocess_lock **lock);
+    CPLAT_EXPORT int CPLAT_API cplat_interprocess_lock_open(const char *identity, cplat_interprocess_lock **lock);
 
     /**
      *  @brief          エクスポートされたディスクリプタからプロセス横断ミューテックスをインポートします。
@@ -337,9 +333,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_interprocess_lock_import_descriptor(const void *descriptor,
-                                                                                  size_t descriptor_size,
-                                                                                  cplat_interprocess_lock **lock);
+    CPLAT_EXPORT int CPLAT_API cplat_interprocess_lock_import_descriptor(const void *descriptor, size_t descriptor_size,
+                                                                         cplat_interprocess_lock **lock);
 
     /**
      *  @brief          プロセス横断ミューテックスをディスクリプタにエクスポートします (プロセス間受け渡し用)。
@@ -352,8 +347,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_interprocess_lock_export_descriptor(
-        const cplat_interprocess_lock *lock, void *descriptor, size_t *descriptor_size);
+    CPLAT_EXPORT int CPLAT_API cplat_interprocess_lock_export_descriptor(const cplat_interprocess_lock *lock,
+                                                                         void *descriptor, size_t *descriptor_size);
 
     /**
      *  @brief          プロセス横断ミューテックスをロックします。
@@ -410,8 +405,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_open(const char *identity,
-                                                                       cplat_interprocess_rwlock **lock);
+    CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_open(const char *identity, cplat_interprocess_rwlock **lock);
 
     /**
      *  @brief          エクスポートされたディスクリプタからプロセス横断読み書きロックをインポートします。
@@ -424,8 +418,9 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_import_descriptor(
-        const void *descriptor, size_t descriptor_size, cplat_interprocess_rwlock **lock);
+    CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_import_descriptor(const void *descriptor,
+                                                                           size_t descriptor_size,
+                                                                           cplat_interprocess_rwlock **lock);
 
     /**
      *  @brief          プロセス横断読み書きロックをディスクリプタにエクスポートします (プロセス間受け渡し用)。
@@ -438,8 +433,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_export_descriptor(
-        const cplat_interprocess_rwlock *lock, void *descriptor, size_t *descriptor_size);
+    CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_export_descriptor(const cplat_interprocess_rwlock *lock,
+                                                                           void *descriptor, size_t *descriptor_size);
 
     /**
      *  @brief          プロセス横断共有 (読み取り) ロックを取得します。
@@ -454,8 +449,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_lock_shared(cplat_interprocess_rwlock *lock,
-                                                                              int timeout_ms);
+    CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_lock_shared(cplat_interprocess_rwlock *lock, int timeout_ms);
 
     /**
      *  @brief          プロセス横断共有 (読み取り) ロックを非ブロッキングで取得試行します。
@@ -481,7 +475,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_lock_exclusive(cplat_interprocess_rwlock *lock,
-                                                                                 int timeout_ms);
+                                                                        int timeout_ms);
 
     /**
      *  @brief          プロセス横断排他 (書き込み) ロックを非ブロッキングで取得試行します。
@@ -491,8 +485,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API
-    cplat_interprocess_rwlock_try_lock_exclusive(cplat_interprocess_rwlock *lock);
+    CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_try_lock_exclusive(cplat_interprocess_rwlock *lock);
 
     /**
      *  @brief          プロセス横断読み書きロックを解放します。

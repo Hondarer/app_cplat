@@ -1,8 +1,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_getenv(const char *name, char *buf, size_t buf_size, int *exists_out,
-                                  cplat_error *detail_out)
+int delegate_real_cplat_getenv(const char *name, char *buf, size_t buf_size, int *exists_out, cplat_error *detail_out)
 {
     static auto real_fn =
         reinterpret_cast<decltype(&cplat_getenv)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_getenv"));

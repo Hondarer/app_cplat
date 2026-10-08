@@ -49,7 +49,7 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_registry_key_allocati
     // Act
     cplat_trace_file_sink *handle =
         cplat_trace_file_sink_create("traceFileAllocFailureTest_key.log", 0, 0,
-                                        0); // [手順] - cplat_trace_file_sink_create を呼び出す。
+                                     0); // [手順] - cplat_trace_file_sink_create を呼び出す。
 
     // Assert
     EXPECT_EQ((cplat_trace_file_sink *)NULL,
@@ -66,13 +66,14 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_handle_allocation_fai
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(DoDefault())
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc がハンドルの確保のために 2 回目に呼び出されること。
-                                      // [Pre-Assert手順] - 2 回目は NULL を返却し、他は本物へ委譲する。
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc がハンドルの確保のために 2 回目に呼び出されること。
+                          // [Pre-Assert手順] - 2 回目は NULL を返却し、他は本物へ委譲する。
 
     // Act
     cplat_trace_file_sink *handle =
         cplat_trace_file_sink_create("traceFileAllocFailureTest_handle.log", 0, 0,
-                                        0); // [手順] - cplat_trace_file_sink_create を呼び出す。
+                                     0); // [手順] - cplat_trace_file_sink_create を呼び出す。
 
     // Assert
     EXPECT_EQ((cplat_trace_file_sink *)NULL,
@@ -97,7 +98,7 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_path_duplication_fail
     // Act
     cplat_trace_file_sink *handle =
         cplat_trace_file_sink_create("traceFileAllocFailureTest_path.log", 0, 0,
-                                        0); // [手順] - cplat_trace_file_sink_create を呼び出す。
+                                     0); // [手順] - cplat_trace_file_sink_create を呼び出す。
 
     // Assert
     EXPECT_EQ((cplat_trace_file_sink *)NULL,
@@ -119,7 +120,7 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_registry_expansion_fa
     // Act
     cplat_trace_file_sink *handle =
         cplat_trace_file_sink_create("traceFileAllocFailureTest_registry.log", 0, 0,
-                                        0); // [手順] - cplat_trace_file_sink_create を呼び出す。
+                                     0); // [手順] - cplat_trace_file_sink_create を呼び出す。
 
     // Assert
     EXPECT_EQ((cplat_trace_file_sink *)NULL,

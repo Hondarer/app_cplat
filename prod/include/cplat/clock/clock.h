@@ -225,7 +225,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_clock_format_realtime_iso8601_local(char *buf, size_t buf_size,
-                                                                            const cplat_timespec *timestamp);
+                                                                         const cplat_timespec *timestamp);
 
     /**
      *  @brief          UTC 基準の実時刻を UTC の ISO8601 文字列へ整形します。
@@ -245,7 +245,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_clock_format_realtime_iso8601_utc(char *buf, size_t buf_size,
-                                                                          const cplat_timespec *timestamp);
+                                                                       const cplat_timespec *timestamp);
 
     /**
      *  @brief          現在時刻を UTC の分解済み時刻とナノ秒で返します。
@@ -295,8 +295,7 @@ extern "C"
      *  // absolute deadline を要求する同期 API へ渡す
         @endcode
      */
-    CPLAT_EXPORT void CPLAT_API cplat_clock_get_realtime_deadline_ms(uint64_t timeout_ms,
-                                                                        struct timespec *abs_timeout);
+    CPLAT_EXPORT void CPLAT_API cplat_clock_get_realtime_deadline_ms(uint64_t timeout_ms, struct timespec *abs_timeout);
 
 #ifdef __cplusplus
 }

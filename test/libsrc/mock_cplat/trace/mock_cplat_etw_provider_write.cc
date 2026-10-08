@@ -4,7 +4,7 @@
 #if defined(PLATFORM_WINDOWS)
 
 int delegate_real_cplat_etw_provider_write(cplat_etw_provider *handle, int level, const char *service,
-                                              const char *message)
+                                           const char *message)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_etw_provider_write)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_etw_provider_write"));

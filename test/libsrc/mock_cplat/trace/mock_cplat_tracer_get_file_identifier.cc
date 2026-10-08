@@ -1,7 +1,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int64_t delegate_real_cplat_tracer_get_file_identifier(cplat_tracer * handle)
+int64_t delegate_real_cplat_tracer_get_file_identifier(cplat_tracer *handle)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_tracer_get_file_identifier)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_tracer_get_file_identifier"));
@@ -9,7 +9,7 @@ int64_t delegate_real_cplat_tracer_get_file_identifier(cplat_tracer * handle)
     return real_fn(handle);
 }
 
-MOCK_WEAK_IMPL(int64_t, cplat_tracer_get_file_identifier, cplat_tracer * handle)
+MOCK_WEAK_IMPL(int64_t, cplat_tracer_get_file_identifier, cplat_tracer *handle)
 {
     int64_t mock_ret;
 

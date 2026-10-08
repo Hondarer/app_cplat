@@ -103,8 +103,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT cplat_pinned_prompt *CPLAT_API
-    cplat_pinned_prompt_create(const cplat_pinned_prompt_options *options);
+    CPLAT_EXPORT cplat_pinned_prompt *CPLAT_API cplat_pinned_prompt_create(const cplat_pinned_prompt_options *options);
 
     /**
      *  @brief          固定プロンプト ハンドルを解放します。
@@ -175,9 +174,9 @@ extern "C"
  *  本マクロはスレッド セーフではありません。\n
  *  同一プロンプト ハンドルに対する呼び出しを、呼び出し側で直列化してください。
  */
-#define cplat_pinned_prompt_readline_with_initial(screen, buf, buf_size, prompt_str, initial_text)                        \
+#define cplat_pinned_prompt_readline_with_initial(screen, buf, buf_size, prompt_str, initial_text) \
     cplat_pinned_prompt_readline_with_initial_at((screen), (buf), (buf_size), (prompt_str), (initial_text), __FILE__, \
-                                       __LINE__)
+                                                 __LINE__)
 
     /**
      *  @brief          呼び出し元の位置を明示して 1 行のコマンド入力を受け取ります。
@@ -201,9 +200,8 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  同一プロンプト ハンドルに対する呼び出しを、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_pinned_prompt_readline_at(cplat_pinned_prompt *screen, char *buf,
-                                                                      size_t buf_size, const char *prompt_str,
-                                                                      const char *file, int line);
+    CPLAT_EXPORT int CPLAT_API cplat_pinned_prompt_readline_at(cplat_pinned_prompt *screen, char *buf, size_t buf_size,
+                                                               const char *prompt_str, const char *file, int line);
 
     /**
      *  @brief          呼び出し元を明示し、入力欄に初期値を入れた状態で 1 行入力を受け取ります。
@@ -268,8 +266,8 @@ extern "C"
      *  同一プロンプト ハンドルに対する呼び出しを、呼び出し側で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_pinned_prompt_readline_fmt_at(cplat_pinned_prompt *screen, char *buf,
-                                                                          size_t buf_size, const char *file, int line,
-                                                                          const char *fmt, ...)
+                                                                   size_t buf_size, const char *file, int line,
+                                                                   const char *fmt, ...)
 #if defined(COMPILER_GCC)
         __attribute__((format(printf, 6, 7)))
 #endif /* COMPILER_GCC */
@@ -292,8 +290,8 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_pinned_prompt_write(cplat_pinned_prompt *screen,
-                                                                  cplat_pinned_prompt_channel channel,
-                                                                  const void *data, size_t size, size_t *written_out);
+                                                         cplat_pinned_prompt_channel channel, const void *data,
+                                                         size_t size, size_t *written_out);
 
     /**
      *  @brief          端末下部の固定プロンプトより上へ書式付き文字列を書き込みます。
@@ -309,8 +307,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_pinned_prompt_printf(cplat_pinned_prompt *screen,
-                                                                   cplat_pinned_prompt_channel channel,
-                                                                   const char *fmt, ...)
+                                                          cplat_pinned_prompt_channel channel, const char *fmt, ...)
 #if defined(COMPILER_GCC)
         __attribute__((format(printf, 3, 4)))
 #endif /* COMPILER_GCC */
@@ -327,8 +324,9 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_pinned_prompt_status_enable(
-        cplat_pinned_prompt *screen, cplat_pinned_prompt_status_position position, int enable);
+    CPLAT_EXPORT int CPLAT_API cplat_pinned_prompt_status_enable(cplat_pinned_prompt *screen,
+                                                                 cplat_pinned_prompt_status_position position,
+                                                                 int enable);
 
     /**
      *  @brief          指定位置のステータス領域へ表示内容を設定します。
@@ -346,9 +344,9 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_pinned_prompt_status_set(cplat_pinned_prompt *screen,
-                                                                       cplat_pinned_prompt_status_position position,
-                                                                       cplat_pinned_prompt_status_align align,
-                                                                       const char *content);
+                                                              cplat_pinned_prompt_status_position position,
+                                                              cplat_pinned_prompt_status_align align,
+                                                              const char *content);
 
 #ifdef __cplusplus
 }

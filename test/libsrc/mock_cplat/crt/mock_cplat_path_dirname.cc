@@ -3,14 +3,13 @@
 
 int delegate_real_cplat_path_dirname(char *path_out, size_t path_size, cplat_error *detail_out, const char *path)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_path_dirname)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_path_dirname"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_path_dirname)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_path_dirname"));
 
     return real_fn(path_out, path_size, detail_out, path);
 }
 
-MOCK_WEAK_IMPL(int, cplat_path_dirname, char *path_out, size_t path_size, cplat_error *detail_out,
-               const char *path)
+MOCK_WEAK_IMPL(int, cplat_path_dirname, char *path_out, size_t path_size, cplat_error *detail_out, const char *path)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

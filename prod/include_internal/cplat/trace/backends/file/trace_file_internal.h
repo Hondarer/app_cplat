@@ -53,8 +53,8 @@ extern "C"
      *  tracer がすでに整形したタイムスタンプを再利用する内部経路です。
      */
     int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, int level,
-                                                   const cplat_timespec *timestamp,
-                                                   const char *timestamp_text, const char *message);
+                                                  const cplat_timespec *timestamp, const char *timestamp_text,
+                                                  const char *message);
 
 #ifdef __cplusplus
 }

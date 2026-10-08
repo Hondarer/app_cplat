@@ -13,7 +13,7 @@ TEST(syncSleepMsTest, zero_returns_immediately)
     // Pre-Assert
 
     // Act
-    cplat_sleep_ms(0);                 // [手順] - 待機時間 0 ms で呼び出す。
+    cplat_sleep_ms(0);                    // [手順] - 待機時間 0 ms で呼び出す。
     uint64_t after = test_monotonic_ms(); // [手順] - 呼び出し後の単調増加時刻を取得する。
 
     // Assert
@@ -29,7 +29,7 @@ TEST(syncSleepMsTest, negative_returns_immediately)
     // Pre-Assert
 
     // Act
-    cplat_sleep_ms(-1);                // [手順] - 負の待機時間で呼び出す。
+    cplat_sleep_ms(-1);                   // [手順] - 負の待機時間で呼び出す。
     uint64_t after = test_monotonic_ms(); // [手順] - 呼び出し後の単調増加時刻を取得する。
 
     // Assert
@@ -65,7 +65,7 @@ TEST(syncSleepMsTest, elapses_at_least_specified_duration)
     cplat_sleep_ms(target_ms); // [手順] - 指定ミリ秒待機する。
 #else
     uint64_t before = test_monotonic_ms(); // [状態] - 呼び出し前の単調増加時刻を取得する。
-    cplat_sleep_ms(target_ms);          // [手順] - 指定ミリ秒待機する。
+    cplat_sleep_ms(target_ms);             // [手順] - 指定ミリ秒待機する。
     uint64_t after = test_monotonic_ms();  // [手順] - 呼び出し後の単調増加時刻を取得する。
 #endif /* PLATFORM_LINUX */
 

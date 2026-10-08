@@ -175,7 +175,7 @@ TEST_F(timespecTest, cmp_compares_sec_first_then_nsec)
     EXPECT_EQ(-1, cplat_timespec_cmp(
                       &base, &newer_nsec)); // [確認_正常系] - 同秒でナノ秒部が未来の値との比較が -1 を返すこと。
     EXPECT_EQ(1, cplat_timespec_cmp(&newer_nsec,
-                                       &base)); // [確認_正常系] - 同秒でナノ秒部が過去の値との比較が 1 を返すこと。
+                                    &base)); // [確認_正常系] - 同秒でナノ秒部が過去の値との比較が 1 を返すこと。
 }
 
 // ミリ秒加算で deadline が生成されることの確認
@@ -235,7 +235,7 @@ TEST_F(timespecTest, operations_ignore_null_arguments)
     // Arrange
     const cplat_timespec value = {1, 2}; // [状態] - 非 NULL 側の引数として {1, 2} を用意する。
     cplat_timespec result = {3, 4};      // [状態] - 結果格納先を {3, 4} で初期化する。
-    struct timespec native = {5, 6};        // [状態] - ネイティブ変換の格納先を {5, 6} で初期化する。
+    struct timespec native = {5, 6};     // [状態] - ネイティブ変換の格納先を {5, 6} で初期化する。
 
     // Pre-Assert
 
@@ -252,18 +252,18 @@ TEST_F(timespecTest, operations_ignore_null_arguments)
     cplat_timespec_to_native(&value, NULL);
     cplat_timespec_from_native(NULL, &result); // [手順] - 逆変換の各引数に NULL を渡して呼び出す。
     cplat_timespec_from_native(&native, NULL);
-    int cmp_null_left = cplat_timespec_cmp(NULL, &value);   // [手順] - 左辺 NULL で比較を呼び出す。
-    int cmp_null_right = cplat_timespec_cmp(&value, NULL);  // [手順] - 右辺 NULL で比較を呼び出す。
-    int64_t diff_null_end = cplat_timespec_diff_ms(NULL, &value);  // [手順] - 終点 NULL で差分計算を呼び出す。
+    int cmp_null_left = cplat_timespec_cmp(NULL, &value);           // [手順] - 左辺 NULL で比較を呼び出す。
+    int cmp_null_right = cplat_timespec_cmp(&value, NULL);          // [手順] - 右辺 NULL で比較を呼び出す。
+    int64_t diff_null_end = cplat_timespec_diff_ms(NULL, &value);   // [手順] - 終点 NULL で差分計算を呼び出す。
     int64_t diff_null_start = cplat_timespec_diff_ms(&value, NULL); // [手順] - 起点 NULL で差分計算を呼び出す。
 
     // Assert
-    EXPECT_EQ(3, result.tv_sec);  // [確認_正常系] - 結果格納先の秒部が書き換えられないこと。
-    EXPECT_EQ(4, result.tv_nsec); // [確認_正常系] - 結果格納先のナノ秒部が書き換えられないこと。
-    EXPECT_EQ(5, native.tv_sec);  // [確認_正常系] - ネイティブ格納先の秒部が書き換えられないこと。
-    EXPECT_EQ(6, native.tv_nsec); // [確認_正常系] - ネイティブ格納先のナノ秒部が書き換えられないこと。
-    EXPECT_EQ(0, cmp_null_left);  // [確認_正常系] - 左辺 NULL の比較が 0 を返すこと。
-    EXPECT_EQ(0, cmp_null_right); // [確認_正常系] - 右辺 NULL の比較が 0 を返すこと。
+    EXPECT_EQ(3, result.tv_sec);   // [確認_正常系] - 結果格納先の秒部が書き換えられないこと。
+    EXPECT_EQ(4, result.tv_nsec);  // [確認_正常系] - 結果格納先のナノ秒部が書き換えられないこと。
+    EXPECT_EQ(5, native.tv_sec);   // [確認_正常系] - ネイティブ格納先の秒部が書き換えられないこと。
+    EXPECT_EQ(6, native.tv_nsec);  // [確認_正常系] - ネイティブ格納先のナノ秒部が書き換えられないこと。
+    EXPECT_EQ(0, cmp_null_left);   // [確認_正常系] - 左辺 NULL の比較が 0 を返すこと。
+    EXPECT_EQ(0, cmp_null_right);  // [確認_正常系] - 右辺 NULL の比較が 0 を返すこと。
     EXPECT_EQ(0, diff_null_end);   // [確認_正常系] - 終点 NULL の差が 0 を返すこと。
     EXPECT_EQ(0, diff_null_start); // [確認_正常系] - 起点 NULL の差が 0 を返すこと。
 }
@@ -273,7 +273,7 @@ TEST_F(timespecTest, native_conversion_round_trips_value)
 {
     // Arrange
     const cplat_timespec ts = {1712345678, 987654321LL}; // [状態] - 変換元を {1712345678, 987654321} とする。
-    struct timespec native = {};                            // [状態] - ネイティブ変換結果を 0 初期化する。
+    struct timespec native = {};                         // [状態] - ネイティブ変換結果を 0 初期化する。
     cplat_timespec restored = {-1, -1};                  // [状態] - 逆変換結果の格納先を未更新値で初期化する。
 
     // Pre-Assert
@@ -281,7 +281,7 @@ TEST_F(timespecTest, native_conversion_round_trips_value)
     // Act
     cplat_timespec_to_native(&ts, &native); // [手順] - cplat_timespec_to_native(&ts, &native) を呼び出す。
     cplat_timespec_from_native(&native,
-                                  &restored); // [手順] - cplat_timespec_from_native(&native, &restored) を呼び出す。
+                               &restored); // [手順] - cplat_timespec_from_native(&native, &restored) を呼び出す。
 
     // Assert
     EXPECT_EQ((time_t)1712345678, native.tv_sec); // [確認_正常系] - ネイティブ側の秒部が保たれること。

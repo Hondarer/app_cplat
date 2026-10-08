@@ -3,13 +3,14 @@
 
 int delegate_real_cplat_socket_connect(cplat_socket sock, const cplat_ipv4_endpoint *endpoint, cplat_error *detail_out)
 {
-    static auto real_fn =
-        reinterpret_cast<decltype(&cplat_socket_connect)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_connect"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_socket_connect)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_connect"));
 
     return real_fn(sock, endpoint, detail_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_socket_connect, cplat_socket sock, const cplat_ipv4_endpoint *endpoint, cplat_error *detail_out)
+MOCK_WEAK_IMPL(int, cplat_socket_connect, cplat_socket sock, const cplat_ipv4_endpoint *endpoint,
+               cplat_error *detail_out)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

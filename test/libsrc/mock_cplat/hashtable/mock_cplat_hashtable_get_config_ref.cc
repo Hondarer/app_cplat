@@ -1,8 +1,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_hashtable_get_config_ref(const cplat_hashtable *ht,
-                                                    const cplat_hashtable_config **config_out)
+int delegate_real_cplat_hashtable_get_config_ref(const cplat_hashtable *ht, const cplat_hashtable_config **config_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_hashtable_get_config_ref)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_hashtable_get_config_ref"));

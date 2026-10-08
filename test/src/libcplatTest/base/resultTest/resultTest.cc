@@ -7,13 +7,14 @@
 #include <utility>
 #include <vector>
 
-/* result.h の値は ABI として凍結する。値を変更した場合、以下の静的検査が失敗する。 */
+/* result.h の値は ABI として凍結する。値を変更した場合、次の静的検査が失敗する。 */
 static_assert(CPLAT_OK == 0, "cplat: CPLAT_OK の ABI 値を変更してはなりません。");
 static_assert(CPLAT_SKIPPED == 1, "cplat: CPLAT_SKIPPED の ABI 値を変更してはなりません。");
 static_assert(CPLAT_ERR_UNKNOWN == -1, "cplat: CPLAT_ERR_UNKNOWN の ABI 値を変更してはなりません。");
 static_assert(CPLAT_ERR_INVALID_ARGUMENT == -2, "cplat: CPLAT_ERR_INVALID_ARGUMENT の ABI 値を変更してはなりません。");
 static_assert(CPLAT_ERR_UNSUPPORTED == -3, "cplat: CPLAT_ERR_UNSUPPORTED の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_PERMISSION_DENIED == -4, "cplat: CPLAT_ERR_PERMISSION_DENIED の ABI 値を変更してはなりません。");
+static_assert(CPLAT_ERR_PERMISSION_DENIED == -4,
+              "cplat: CPLAT_ERR_PERMISSION_DENIED の ABI 値を変更してはなりません。");
 static_assert(CPLAT_ERR_NOT_FOUND == -6, "cplat: CPLAT_ERR_NOT_FOUND の ABI 値を変更してはなりません。");
 static_assert(CPLAT_ERR_DUPLICATE_DEFINITION == -5,
               "cplat: CPLAT_ERR_DUPLICATE_DEFINITION の ABI 値を変更してはなりません。");
@@ -123,8 +124,8 @@ TEST_F(resultTest, only_ok_is_zero_and_all_errors_are_negative)
     }
 
     // Assert
-    EXPECT_EQ(0, CPLAT_OK);         // [確認_正常系] - CPLAT_OK の値が 0 であること。
-    EXPECT_EQ(1, CPLAT_SKIPPED);    // [確認_正常系] - CPLAT_SKIPPED の値が 1 であること。
+    EXPECT_EQ(0, CPLAT_OK);            // [確認_正常系] - CPLAT_OK の値が 0 であること。
+    EXPECT_EQ(1, CPLAT_SKIPPED);       // [確認_正常系] - CPLAT_SKIPPED の値が 1 であること。
     EXPECT_EQ(0U, non_negative_count); // [確認_正常系] - 0 以上の値を持つエラー コードが存在しないこと。
     EXPECT_FALSE(error_codes.empty()); // [確認_正常系] - 検証対象のエラー コードが 1 つ以上列挙されていること。
 }
@@ -138,7 +139,7 @@ TEST_F(resultTest, length_errors_map_to_buffer_too_small)
 
     // Act
     const int name_too_long_result =
-        cplat_internal_result_from_errno(ENAMETOOLONG);                // [手順] - ENAMETOOLONG を共通結果コードへ変換する。
+        cplat_internal_result_from_errno(ENAMETOOLONG); // [手順] - ENAMETOOLONG を共通結果コードへ変換する。
     const int range_result = cplat_internal_result_from_errno(ERANGE); // [手順] - ERANGE を共通結果コードへ変換する。
 
     // Assert

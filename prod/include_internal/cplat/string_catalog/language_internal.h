@@ -23,17 +23,17 @@ extern "C"
 {
 #endif /* __cplusplus */
 
-/**
- *  @brief          出力言語を、決定前の状態へ戻します。
- *
- *  次回の出力言語の参照で、実行環境の表示言語から決定し直します。\n
- *  実行環境ごとの決定を検証するテストから呼び出します。
- *
- *  @par            スレッド セーフ
- *  本関数はスレッド セーフではありません。\n
- *  文字列を組み立てているスレッドが存在しない状態で呼び出してください。
- */
-void cplat_internal_string_catalog_language_reset_for_test(void);
+    /**
+     *  @brief          出力言語を、決定前の状態へ戻します。
+     *
+     *  次回の出力言語の参照で、実行環境の表示言語から決定し直します。\n
+     *  実行環境ごとの決定を検証するテストから呼び出します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフではありません。\n
+     *  文字列を組み立てているスレッドが存在しない状態で呼び出してください。
+     */
+    void cplat_internal_string_catalog_language_reset_for_test(void);
 
 #ifdef __cplusplus
 }

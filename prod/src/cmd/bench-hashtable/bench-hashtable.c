@@ -46,12 +46,12 @@
  */
 typedef enum
 {
-    BENCH_SCENARIO_FILL = 0,     /**< 空のテーブルへ capacity 件を追加します。 */
-    BENCH_SCENARIO_UPDATE,       /**< 満杯のテーブルの全件を同じ長さの値へ更新します。 */
-    BENCH_SCENARIO_CHURN,        /**< 半数を回収して空きブロックを作り、同数を追加し直します。 */
-    BENCH_SCENARIO_COMPACT,      /**< 半数を回収した状態のストレージを圧縮します。 */
-    BENCH_SCENARIO_RESIZE,       /**< capacity を 2 倍へ広げます。 */
-    BENCH_SCENARIO_COUNT         /**< 列挙子の個数です。 */
+    BENCH_SCENARIO_FILL = 0, /**< 空のテーブルへ capacity 件を追加します。 */
+    BENCH_SCENARIO_UPDATE,   /**< 満杯のテーブルの全件を同じ長さの値へ更新します。 */
+    BENCH_SCENARIO_CHURN,    /**< 半数を回収して空きブロックを作り、同数を追加し直します。 */
+    BENCH_SCENARIO_COMPACT,  /**< 半数を回収した状態のストレージを圧縮します。 */
+    BENCH_SCENARIO_RESIZE,   /**< capacity を 2 倍へ広げます。 */
+    BENCH_SCENARIO_COUNT     /**< 列挙子の個数です。 */
 } bench_scenario;
 
 /**
@@ -59,9 +59,9 @@ typedef enum
  */
 typedef struct bench_hashtable_case
 {
-    size_t capacity;          /**< スロット数です。 */
-    bench_scenario scenario;  /**< 測定対象の操作です。 */
-    int _pad_struct_end;      /**< パディング抑止用の予約領域です。 */
+    size_t capacity;         /**< スロット数です。 */
+    bench_scenario scenario; /**< 測定対象の操作です。 */
+    int _pad_struct_end;     /**< パディング抑止用の予約領域です。 */
 } bench_hashtable_case;
 
 /**
@@ -69,10 +69,10 @@ typedef struct bench_hashtable_case
  */
 typedef struct bench_state
 {
-    cplat_hashtable *ht;   /**< 測定対象のテーブルです。 */
-    size_t capacity;          /**< スロット数です。 */
-    bench_scenario scenario;  /**< 測定対象の操作です。 */
-    int failed;               /**< 準備または測定に失敗した場合は 1 です。 */
+    cplat_hashtable *ht;     /**< 測定対象のテーブルです。 */
+    size_t capacity;         /**< スロット数です。 */
+    bench_scenario scenario; /**< 測定対象の操作です。 */
+    int failed;              /**< 準備または測定に失敗した場合は 1 です。 */
 } bench_state;
 
 /**
@@ -84,19 +84,19 @@ static const char *bench_scenario_name(bench_scenario scenario)
 {
     switch (scenario)
     {
-        case BENCH_SCENARIO_FILL:
-            return "fill";
-        case BENCH_SCENARIO_UPDATE:
-            return "update";
-        case BENCH_SCENARIO_CHURN:
-            return "churn";
-        case BENCH_SCENARIO_COMPACT:
-            return "compact";
-        case BENCH_SCENARIO_RESIZE:
-            return "resize";
-        case BENCH_SCENARIO_COUNT:
-        default:
-            return "unknown";
+    case BENCH_SCENARIO_FILL:
+        return "fill";
+    case BENCH_SCENARIO_UPDATE:
+        return "update";
+    case BENCH_SCENARIO_CHURN:
+        return "churn";
+    case BENCH_SCENARIO_COMPACT:
+        return "compact";
+    case BENCH_SCENARIO_RESIZE:
+        return "resize";
+    case BENCH_SCENARIO_COUNT:
+    default:
+        return "unknown";
     }
 }
 
@@ -233,33 +233,33 @@ static int bench_prepare(void *arg)
     }
     switch (state->scenario)
     {
-        case BENCH_SCENARIO_FILL:
-            break;
-        case BENCH_SCENARIO_UPDATE:
-        case BENCH_SCENARIO_RESIZE:
-            if (bench_add_range(state->ht, 0, state->capacity, 1) != 0)
-            {
-                state->failed = 1;
-                return -1;
-            }
-            break;
-        case BENCH_SCENARIO_CHURN:
-        case BENCH_SCENARIO_COMPACT:
-            if (bench_add_range(state->ht, 0, state->capacity, 1) != 0)
-            {
-                state->failed = 1;
-                return -1;
-            }
-            if (bench_fragment_storage(state->ht, state->capacity) != 0)
-            {
-                state->failed = 1;
-                return -1;
-            }
-            break;
-        case BENCH_SCENARIO_COUNT:
-        default:
+    case BENCH_SCENARIO_FILL:
+        break;
+    case BENCH_SCENARIO_UPDATE:
+    case BENCH_SCENARIO_RESIZE:
+        if (bench_add_range(state->ht, 0, state->capacity, 1) != 0)
+        {
             state->failed = 1;
             return -1;
+        }
+        break;
+    case BENCH_SCENARIO_CHURN:
+    case BENCH_SCENARIO_COMPACT:
+        if (bench_add_range(state->ht, 0, state->capacity, 1) != 0)
+        {
+            state->failed = 1;
+            return -1;
+        }
+        if (bench_fragment_storage(state->ht, state->capacity) != 0)
+        {
+            state->failed = 1;
+            return -1;
+        }
+        break;
+    case BENCH_SCENARIO_COUNT:
+    default:
+        state->failed = 1;
+        return -1;
     }
     return 0;
 }
@@ -277,47 +277,47 @@ static int bench_iterate(void *arg)
 
     switch (state->scenario)
     {
-        case BENCH_SCENARIO_FILL:
-            return bench_add_range(state->ht, 0, state->capacity, 1);
-        case BENCH_SCENARIO_UPDATE:
-            for (i = 0; i < state->capacity; i++)
-            {
-                char key[BENCH_TEXT_SIZE];
-                char value[BENCH_TEXT_SIZE];
+    case BENCH_SCENARIO_FILL:
+        return bench_add_range(state->ht, 0, state->capacity, 1);
+    case BENCH_SCENARIO_UPDATE:
+        for (i = 0; i < state->capacity; i++)
+        {
+            char key[BENCH_TEXT_SIZE];
+            char value[BENCH_TEXT_SIZE];
 
-                bench_make_key(i, key);
-                bench_make_value(i + state->capacity, value);
-                if (cplat_hashtable_update(state->ht, key, value) != CPLAT_OK)
-                {
-                    return -1;
-                }
+            bench_make_key(i, key);
+            bench_make_value(i + state->capacity, value);
+            if (cplat_hashtable_update(state->ht, key, value) != CPLAT_OK)
+            {
+                return -1;
             }
+        }
+        return 0;
+    case BENCH_SCENARIO_CHURN:
+        /* 回収済みのレコード番号を、同じ長さのキーと値で埋め直す。 */
+        return bench_add_range(state->ht, 0, state->capacity / 2u, 2);
+    case BENCH_SCENARIO_COMPACT:
+        if (cplat_hashtable_compact(state->ht) == CPLAT_OK)
+        {
             return 0;
-        case BENCH_SCENARIO_CHURN:
-            /* 回収済みのレコード番号を、同じ長さのキーと値で埋め直す。 */
-            return bench_add_range(state->ht, 0, state->capacity / 2u, 2);
-        case BENCH_SCENARIO_COMPACT:
-            if (cplat_hashtable_compact(state->ht) == CPLAT_OK)
-            {
-                return 0;
-            }
-            else
-            {
-                return -1;
-            }
-        case BENCH_SCENARIO_RESIZE:
-            bench_make_config(state->capacity * 2u, &config);
-            if (cplat_hashtable_resize(state->ht, &config) == CPLAT_OK)
-            {
-                return 0;
-            }
-            else
-            {
-                return -1;
-            }
-        case BENCH_SCENARIO_COUNT:
-        default:
+        }
+        else
+        {
             return -1;
+        }
+    case BENCH_SCENARIO_RESIZE:
+        bench_make_config(state->capacity * 2u, &config);
+        if (cplat_hashtable_resize(state->ht, &config) == CPLAT_OK)
+        {
+            return 0;
+        }
+        else
+        {
+            return -1;
+        }
+    case BENCH_SCENARIO_COUNT:
+    default:
+        return -1;
     }
 }
 
@@ -373,8 +373,8 @@ static int bench_run_case(FILE *csv, const bench_hashtable_case *item)
 typedef struct bench_hashtable_options
 {
     const char *csv_path; /**< CSV の出力先パス。指定がなければ NULL です。 */
-    int max_capacity; /**< 測定する capacity の上限。0 なら既定値です。 */
-    int need_help;    /**< ヘルプ表示が指定された場合は 1 です。 */
+    int max_capacity;     /**< 測定する capacity の上限。0 なら既定値です。 */
+    int need_help;        /**< ヘルプ表示が指定された場合は 1 です。 */
 } bench_hashtable_options;
 
 /**
@@ -386,10 +386,9 @@ static int register_options(bench_hashtable_options *options)
 {
     (void)cplat_argparser_register_flag("-h", "--help", "show this help", &options->need_help);
     (void)cplat_argparser_register_option_int(
-        NULL, "--max-capacity", "N", "largest number of slots to measure (default 16384)", 0,
-        &options->max_capacity);
+        NULL, "--max-capacity", "N", "largest number of slots to measure (default 16384)", 0, &options->max_capacity);
     (void)cplat_argparser_register_option_string(NULL, "--csv", "PATH", "also write results as CSV", 0,
-                                                            &options->csv_path);
+                                                 &options->csv_path);
     if (cplat_argparser_get_register_error_count() > 0)
     {
         (void)cplat_argparser_print_register_error_messages(stderr);

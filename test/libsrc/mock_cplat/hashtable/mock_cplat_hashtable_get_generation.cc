@@ -1,8 +1,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_hashtable_get_generation(const cplat_hashtable *ht, uint64_t record,
-                                                    uint64_t *generation_out)
+int delegate_real_cplat_hashtable_get_generation(const cplat_hashtable *ht, uint64_t record, uint64_t *generation_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_hashtable_get_generation)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_hashtable_get_generation"));

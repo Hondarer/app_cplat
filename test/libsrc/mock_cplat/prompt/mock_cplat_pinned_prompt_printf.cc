@@ -5,7 +5,7 @@
 #include <mock_cplat.h>
 
 int delegate_real_cplat_pinned_prompt_printf(cplat_pinned_prompt *screen, cplat_pinned_prompt_channel channel,
-                                                const char *fmt, ...)
+                                             const char *fmt, ...)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_pinned_prompt_printf)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_pinned_prompt_printf"));
@@ -18,8 +18,8 @@ int delegate_real_cplat_pinned_prompt_printf(cplat_pinned_prompt *screen, cplat_
     return real_fn(screen, channel, "%s", fmt);
 }
 
-MOCK_WEAK_IMPL(int, cplat_pinned_prompt_printf, cplat_pinned_prompt *screen,
-               cplat_pinned_prompt_channel channel, const char *fmt, ...)
+MOCK_WEAK_IMPL(int, cplat_pinned_prompt_printf, cplat_pinned_prompt *screen, cplat_pinned_prompt_channel channel,
+               const char *fmt, ...)
 {
     int mock_ret = -1;
     std::vector<char> buf;

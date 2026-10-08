@@ -39,8 +39,7 @@ const HANDLE kFakeMappingHandle = reinterpret_cast<HANDLE>(static_cast<uintptr_t
 
 int flags_create_new(void)
 {
-    return CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE | CPLAT_FILE_OPEN_CREATE |
-           CPLAT_FILE_OPEN_CREATE_NEW;
+    return CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE | CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_CREATE_NEW;
 }
 
 int flags_existing_rw(void)

@@ -103,8 +103,7 @@ static HANDLE open_for_attributes(const char *path, DWORD desired_access, cplat_
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_file_get_modified_timestamp(const cplat_file *file, cplat_timespec *timestamp_out,
-                                         cplat_error *detail_out)
+int cplat_file_get_modified_timestamp(const cplat_file *file, cplat_timespec *timestamp_out, cplat_error *detail_out)
 {
     if (!file_is_open(file) || timestamp_out == NULL)
     {
@@ -140,8 +139,7 @@ int cplat_file_get_modified_timestamp(const cplat_file *file, cplat_timespec *ti
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_file_set_modified_timestamp(cplat_file *file, const cplat_timespec *timestamp,
-                                         cplat_error *detail_out)
+int cplat_file_set_modified_timestamp(cplat_file *file, const cplat_timespec *timestamp, cplat_error *detail_out)
 {
     if (!file_is_open(file) || timestamp == NULL)
     {
@@ -189,8 +187,7 @@ int cplat_file_set_modified_timestamp(cplat_file *file, const cplat_timespec *ti
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_file_get_path_modified_timestamp(const char *path, cplat_timespec *timestamp_out,
-                                              cplat_error *detail_out)
+int cplat_file_get_path_modified_timestamp(const char *path, cplat_timespec *timestamp_out, cplat_error *detail_out)
 {
     if (path == NULL || timestamp_out == NULL)
     {
@@ -243,8 +240,7 @@ int cplat_file_get_path_modified_timestamp(const char *path, cplat_timespec *tim
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_file_set_path_modified_timestamp(const char *path, const cplat_timespec *timestamp,
-                                              cplat_error *detail_out)
+int cplat_file_set_path_modified_timestamp(const char *path, const cplat_timespec *timestamp, cplat_error *detail_out)
 {
     if (path == NULL || timestamp == NULL)
     {

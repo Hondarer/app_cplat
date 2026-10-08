@@ -56,8 +56,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    int string_catalog_validate_text(const char *text, const cplat_string_catalog_argument *arguments,
-                                     int value_count);
+    int string_catalog_validate_text(const char *text, const cplat_string_catalog_argument *arguments, int value_count);
 
 #ifdef __cplusplus
 }

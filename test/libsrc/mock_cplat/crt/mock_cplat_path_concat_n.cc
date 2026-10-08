@@ -2,8 +2,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_path_concat_n(char *path_out, size_t path_size, cplat_error *detail_out, size_t part_count,
-                                      ...)
+int delegate_real_cplat_path_concat_n(char *path_out, size_t path_size, cplat_error *detail_out, size_t part_count, ...)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_vpath_concat_n)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_vpath_concat_n"));
@@ -16,8 +15,8 @@ int delegate_real_cplat_path_concat_n(char *path_out, size_t path_size, cplat_er
     return mock_ret;
 }
 
-MOCK_WEAK_IMPL(int, cplat_path_concat_n, char *path_out, size_t path_size, cplat_error *detail_out,
-               size_t part_count, ...)
+MOCK_WEAK_IMPL(int, cplat_path_concat_n, char *path_out, size_t path_size, cplat_error *detail_out, size_t part_count,
+               ...)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
     va_list args;

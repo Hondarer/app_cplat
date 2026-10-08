@@ -79,16 +79,15 @@ TEST_F(fileTest, open_rejects_negative_flags)
 
     // Act
     int result = cplat_file_open(&file, kPath, -1,
-                                    &detail); // [手順] - 負のフラグを指定して cplat_file_open を呼び出す。
+                                 &detail); // [手順] - 負のフラグを指定して cplat_file_open を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         result); // [確認_異常系] - 負のフラグに対する cplat_file_open の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(
-        EINVAL,
-        cplat_error_get_errno(
-            &detail)); // [確認_異常系] - 負のフラグに対する cplat_error_get_errno の戻り値が EINVAL であること。
+    EXPECT_EQ(EINVAL,
+              cplat_error_get_errno(
+                  &detail)); // [確認_異常系] - 負のフラグに対する cplat_error_get_errno の戻り値が EINVAL であること。
 }
 
 // 同一性 ID 取得が不正な引数で CPLAT_ERR_INVALID_ARGUMENT を、存在しないパスで CPLAT_ERR_NOT_FOUND を返すことの確認
@@ -146,9 +145,9 @@ TEST_F(fileTest, create_new_without_create_fails)
     // Pre-Assert
 
     // Act
-    int actual_ret_file_open = cplat_file_open(
-        &file, kPath, CPLAT_FILE_OPEN_CREATE_NEW | CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE,
-        NULL); // [手順] - CREATE を指定せず CREATE_NEW | READ | WRITE でオープンを試みる。
+    int actual_ret_file_open =
+        cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE_NEW | CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE,
+                        NULL); // [手順] - CREATE を指定せず CREATE_NEW | READ | WRITE でオープンを試みる。
 
     // Assert
     EXPECT_EQ(
@@ -226,9 +225,9 @@ TEST_F(fileTest, append_open_reports_existing_size)
                 // [Pre-Assert手順] - サイズ 5 を設定する。
 
     // Act
-    int actual_ret_file_open = cplat_file_open(
-        &file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
-        NULL); // [手順] - CREATE | APPEND | WRITE_THROUGH でオープンする。
+    int actual_ret_file_open =
+        cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
+                        NULL); // [手順] - CREATE | APPEND | WRITE_THROUGH でオープンする。
     int actual_ret_file_get_size =
         cplat_file_get_size(&file, &size, NULL); // [手順] - cplat_file_get_size でサイズを取得する。
 
@@ -238,7 +237,7 @@ TEST_F(fileTest, append_open_reports_existing_size)
         actual_ret_file_open); // [確認_正常系] - CREATE | APPEND | WRITE_THROUGH の cplat_file_open の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
               actual_ret_file_get_size); // [確認_正常系] - cplat_file_get_size の戻り値が CPLAT_OK であること。
-    EXPECT_EQ((size_t)5, size);   // [確認_正常系] - 報告サイズが 5 であること。
+    EXPECT_EQ((size_t)5, size);          // [確認_正常系] - 報告サイズが 5 であること。
 
     // Cleanup
     (void)cplat_file_close(&file, NULL);
@@ -270,9 +269,9 @@ TEST_F(fileTest, truncate_open_resets_existing_file_size)
 
     // Act
     int actual_ret_file_open = cplat_file_open(&file, kPath,
-                                           CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_TRUNCATE |
-                                               CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
-                                           NULL); // [手順] - TRUNCATE を含むフラグでオープンする。
+                                               CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_TRUNCATE |
+                                                   CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
+                                               NULL); // [手順] - TRUNCATE を含むフラグでオープンする。
     int actual_ret_file_get_size =
         cplat_file_get_size(&file, &size, NULL); // [手順] - cplat_file_get_size でサイズを取得する。
 
@@ -281,7 +280,7 @@ TEST_F(fileTest, truncate_open_resets_existing_file_size)
               actual_ret_file_open); // [確認_正常系] - TRUNCATE 付き cplat_file_open の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
               actual_ret_file_get_size); // [確認_正常系] - cplat_file_get_size の戻り値が CPLAT_OK であること。
-    EXPECT_EQ((size_t)0, size);   // [確認_正常系] - 報告サイズが 0 であること。
+    EXPECT_EQ((size_t)0, size);          // [確認_正常系] - 報告サイズが 0 であること。
 
     // Cleanup
     (void)cplat_file_close(&file, NULL);
@@ -315,21 +314,22 @@ TEST_F(fileTest, write_then_reopen_appends)
 
     // Act
     int actual_ret_file_open = cplat_file_open(&file, kPath,
-                                           CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_TRUNCATE |
-                                               CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
-                                           NULL);                    // [手順] - 新規作成でオープンする。
+                                               CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_TRUNCATE |
+                                                   CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
+                                               NULL);                    // [手順] - 新規作成でオープンする。
     int actual_ret_file_write = cplat_file_write(&file, "abc", 3, NULL); // [手順] - "abc" 3 バイトを書き込む。
     int actual_ret_file_get_size = cplat_file_get_size(&file, &size, NULL);
 
     // Assert
     ASSERT_EQ(CPLAT_OK,
               actual_ret_file_open); // [確認_正常系] - 新規作成の cplat_file_open の戻り値が CPLAT_OK であること。
-    ASSERT_EQ(CPLAT_OK,
-              actual_ret_file_write); // [確認_正常系] - "abc" を渡した cplat_file_write の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(
+        CPLAT_OK,
+        actual_ret_file_write); // [確認_正常系] - "abc" を渡した cplat_file_write の戻り値が CPLAT_OK であること。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_file_get_size); // [確認_正常系] - 書き込み後の cplat_file_get_size の戻り値が CPLAT_OK であること。
-    EXPECT_EQ((size_t)3, size); // [確認_正常系] - 書き込み後の報告サイズが 3 であること。
+    EXPECT_EQ((size_t)3, size);    // [確認_正常系] - 書き込み後の報告サイズが 3 であること。
 
     // Pre-Assert_2
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq(kPath), O_WRONLY | O_CREAT | O_APPEND | kWriteThroughFlag, 0644))
@@ -341,9 +341,9 @@ TEST_F(fileTest, write_then_reopen_appends)
 
     // Act_2
     (void)cplat_file_close(&file, NULL);
-    int actual_ret_file_open_2 = cplat_file_open(
-        &file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
-        NULL); // [手順] - クローズ後に追記モードで再オープンする。
+    int actual_ret_file_open_2 =
+        cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
+                        NULL); // [手順] - クローズ後に追記モードで再オープンする。
     int actual_ret_file_write_2 = cplat_file_write(&file, "def", 3, NULL); // [手順] - "def" 3 バイトを追記する。
 
     // Assert_2
@@ -387,10 +387,11 @@ TEST_F(fileTest, file_id_matches_between_handle_and_path)
                 // [Pre-Assert手順] - volume 11、index 22 を設定する。
 
     // Act
-    int actual_ret_file_open = cplat_file_open(
-        &file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
-        NULL);                                                           // [手順] - オープンする。
-    int actual_ret_file_get_id = cplat_file_get_id(&file, &handle_id, NULL); // [手順] - ハンドルから同一性 ID を取得する。
+    int actual_ret_file_open =
+        cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
+                        NULL); // [手順] - オープンする。
+    int actual_ret_file_get_id =
+        cplat_file_get_id(&file, &handle_id, NULL); // [手順] - ハンドルから同一性 ID を取得する。
     int actual_ret_file_get_path_id =
         cplat_file_get_path_id(kPath, &path_id, NULL); // [手順] - パスから同一性 ID を取得する。
 
@@ -437,10 +438,11 @@ TEST_F(fileTest, file_id_differs_when_path_stat_differs)
                 // [Pre-Assert手順] - ハンドル側とパス側で異なる index を設定する。
 
     // Act
-    int actual_ret_file_open = cplat_file_open(
-        &file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
-        NULL);                                                           // [手順] - オープンする。
-    int actual_ret_file_get_id = cplat_file_get_id(&file, &handle_id, NULL); // [手順] - ハンドルから同一性 ID を取得する。
+    int actual_ret_file_open =
+        cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
+                        NULL); // [手順] - オープンする。
+    int actual_ret_file_get_id =
+        cplat_file_get_id(&file, &handle_id, NULL); // [手順] - ハンドルから同一性 ID を取得する。
     int actual_ret_file_get_path_id =
         cplat_file_get_path_id(kPath, &path_id, NULL); // [手順] - パスから同一性 ID を取得する。
 
@@ -477,7 +479,7 @@ TEST_F(fileTest, default_access_remains_write_only)
 
     // Act
     int actual_ret_file_open = cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE,
-                                           NULL); // [手順] - READ/WRITE を指定せず CREATE のみでオープンする。
+                                               NULL); // [手順] - READ/WRITE を指定せず CREATE のみでオープンする。
     int actual_ret_file_write = cplat_file_write(&file, "abc", 3, NULL); // [手順] - "abc" 3 バイトを書き込む。
 
     // Assert
@@ -512,9 +514,8 @@ TEST_F(fileTest, explicit_write_only_open_allows_write)
 
     // Act
     int open_result = cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_WRITE,
-                                         NULL); // [手順] - CREATE | WRITE でオープンする。
-    int write_result =
-        cplat_file_write(&file, "abc", 3u, NULL); // [手順] - オープンしたファイルへ 3 バイトを書き込む。
+                                      NULL);                     // [手順] - CREATE | WRITE でオープンする。
+    int write_result = cplat_file_write(&file, "abc", 3u, NULL); // [手順] - オープンしたファイルへ 3 バイトを書き込む。
 
     // Assert
     ASSERT_EQ(CPLAT_OK,
@@ -545,7 +546,7 @@ TEST_F(fileTest, read_only_open_rejects_write)
 
     // Act
     int actual_ret_file_open = cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_READ,
-                                           NULL); // [手順] - CPLAT_FILE_OPEN_READ のみでオープンする。
+                                               NULL); // [手順] - CPLAT_FILE_OPEN_READ のみでオープンする。
     int actual_ret_file_write = cplat_file_write(&file, "x", 1, NULL); // [手順] - 1 バイトの書き込みを試みる。
 
     // Assert
@@ -576,7 +577,7 @@ TEST_F(fileTest, read_only_open_fails_for_missing_file)
 
     // Act
     int actual_ret_file_open = cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_READ,
-                                           NULL); // [手順] - CREATE を伴わずに READ のみでオープンを試みる。
+                                               NULL); // [手順] - CREATE を伴わずに READ のみでオープンを試みる。
 
     // Assert
     EXPECT_EQ(
@@ -611,7 +612,7 @@ TEST_F(fileTest, read_write_open_allows_write_and_reports_size)
     // Act
     int actual_ret_file_open =
         cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE,
-                           NULL); // [手順] - CREATE | READ | WRITE でオープンする。
+                        NULL); // [手順] - CREATE | READ | WRITE でオープンする。
     int actual_ret_file_write = cplat_file_write(&file, "abcde", 5, NULL);  // [手順] - "abcde" 5 バイトを書き込む。
     int actual_ret_file_get_size = cplat_file_get_size(&file, &size, NULL); // [手順] - サイズを取得する。
 
@@ -624,7 +625,7 @@ TEST_F(fileTest, read_write_open_allows_write_and_reports_size)
         actual_ret_file_write); // [確認_正常系] - 読み書き両用ハンドルへの cplat_file_write の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
               actual_ret_file_get_size); // [確認_正常系] - cplat_file_get_size の戻り値が CPLAT_OK であること。
-    EXPECT_EQ((size_t)5, size);   // [確認_正常系] - 書き込み後の報告サイズが 5 であること。
+    EXPECT_EQ((size_t)5, size);          // [確認_正常系] - 書き込み後の報告サイズが 5 であること。
 
     // Cleanup
     (void)cplat_file_close(&file, NULL);
@@ -647,9 +648,9 @@ TEST_F(fileTest, create_new_succeeds_for_absent_file)
 
     // Act
     int actual_ret_file_open = cplat_file_open(&file, kPath,
-                                           CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_CREATE_NEW |
-                                               CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE,
-                                           NULL); // [手順] - CREATE | CREATE_NEW | READ | WRITE でオープンする。
+                                               CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_CREATE_NEW |
+                                                   CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE,
+                                               NULL); // [手順] - CREATE | CREATE_NEW | READ | WRITE でオープンする。
 
     // Assert
     EXPECT_EQ(
@@ -697,10 +698,9 @@ TEST_F(fileTest, set_size_extends_and_truncates_file)
 
     cplat_file_init(&file);
     ASSERT_EQ(CPLAT_OK,
-              cplat_file_open(&file, kPath,
-                                 CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE,
-                                 NULL)); // [状態] - CREATE | READ | WRITE でオープンする。
-                                         // [状態確認] - cplat_file_open の戻り値が CPLAT_OK であること。
+              cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE,
+                              NULL)); // [状態] - CREATE | READ | WRITE でオープンする。
+                                      // [状態確認] - cplat_file_open の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_unistd_, ftruncate(_, _, _, kFakeFd, 128)).WillOnce(Return(0));
@@ -783,8 +783,8 @@ TEST_F(fileTest, read_returns_written_content)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_read); // [確認_正常系] - cplat_file_read の戻り値が CPLAT_OK であること。
-    EXPECT_EQ((size_t)5, read_len);   // [確認_正常系] - 読み取ったバイト数が 5 であること。
-    EXPECT_STREQ("abcde", buf);       // [確認_正常系] - 読み取った内容が "abcde" であること。
+    EXPECT_EQ((size_t)5, read_len);       // [確認_正常系] - 読み取ったバイト数が 5 であること。
+    EXPECT_STREQ("abcde", buf);           // [確認_正常系] - 読み取った内容が "abcde" であること。
 
     // Cleanup
     (void)cplat_file_close(&file, NULL);
@@ -822,7 +822,7 @@ TEST_F(fileTest, read_at_end_of_file_returns_zero_length)
 
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_ret_read); // [確認_正常系] - 1 回目の cplat_file_read の戻り値が CPLAT_OK であること。
-    ASSERT_EQ((size_t)2, first_len);  // [確認_正常系] - 1 回目の読み取りバイト数が 2 であること。
+    ASSERT_EQ((size_t)2, first_len);      // [確認_正常系] - 1 回目の読み取りバイト数が 2 であること。
     EXPECT_EQ(CPLAT_OK,
               actual_ret_read_eof); // [確認_正常系] - 終端到達後の cplat_file_read の戻り値が CPLAT_OK であること。
     EXPECT_EQ((size_t)0, read_len); // [確認_正常系] - 2 回目の読み取りバイト数が 0 であること。
@@ -842,8 +842,7 @@ TEST_F(fileTest, flush_reports_success)
     cplat_file_init(&file);
 
     // Pre-Assert
-    ASSERT_EQ(CPLAT_OK,
-              cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_TRUNCATE, NULL));
+    ASSERT_EQ(CPLAT_OK, cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_TRUNCATE, NULL));
     // [確認_正常系] - `cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_TRUNCATE, NULL)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_file_write(&file, "data", 4, NULL));
     // [確認_正常系] - `cplat_file_write(&file, "data", 4, NULL)` の戻り値が `CPLAT_OK` であること。
@@ -856,10 +855,9 @@ TEST_F(fileTest, flush_reports_success)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_file_flush の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(
-        CPLAT_ERROR_DOMAIN_NONE,
-        cplat_error_get_domain(
-            &detail)); // [確認_正常系] - cplat_error_get_domain の戻り値が CPLAT_ERROR_DOMAIN_NONE であること。
+    EXPECT_EQ(CPLAT_ERROR_DOMAIN_NONE,
+              cplat_error_get_domain(
+                  &detail)); // [確認_正常系] - cplat_error_get_domain の戻り値が CPLAT_ERROR_DOMAIN_NONE であること。
 
     // Cleanup
     (void)cplat_file_close(&file, NULL);

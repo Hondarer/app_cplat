@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_process_wait(cplat_process *process, int timeout_ms)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_process_wait)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_process_wait"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_process_wait)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_process_wait"));
 
     return real_fn(process, timeout_ms);
 }

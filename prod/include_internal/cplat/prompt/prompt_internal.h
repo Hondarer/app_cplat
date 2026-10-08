@@ -60,9 +60,9 @@ extern "C"
 
         /* 履歴コンテキスト管理 */
         cplat_internal_prompt_ctx *contexts; /* コンテキスト配列 (動的拡張) */
-        size_t ctx_count;              /* 現在のコンテキスト数 */
-        size_t ctx_cap;                /* contexts 配列の容量 */
-        size_t history_max;            /* 各コンテキストの履歴最大数 */
+        size_t ctx_count;                    /* 現在のコンテキスト数 */
+        size_t ctx_cap;                      /* contexts 配列の容量 */
+        size_t history_max;                  /* 各コンテキストの履歴最大数 */
 
         /* _readline_fmt 用プロンプト文字列バッファー (遅延 malloc、自動拡張) */
         char *prompt_fmt_buf;
@@ -72,51 +72,50 @@ extern "C"
         int is_tty;
 
 #if defined(PLATFORM_LINUX)
-    /* struct termios は 4 バイト アライン・60 バイト。raw_active 後に 4 バイトの
-     * 末尾パディングが必要なため、明示メンバーで定義する。 */
-    struct termios orig_term;
-    int raw_active;
-    char _pad[4]; /* 構造体末尾 8 バイト アライン用パディング */
+        /* struct termios は 4 バイト アライン・60 バイト。raw_active 後に 4 バイトの
+         * 末尾パディングが必要なため、明示メンバーで定義する。 */
+        struct termios orig_term;
+        int raw_active;
+        char _pad[4]; /* 構造体末尾 8 バイト アライン用パディング */
 #elif defined(PLATFORM_WINDOWS)
-    /* HANDLE は 8 バイト アライン。is_tty (int) との間に 4 バイトのパディングが
-     * 必要なため、明示メンバーで定義する。 */
+    /* HANDLE は 8 バイト アライン。is_tty (int) との間に 4 バイトのパディングが必要なため明示メンバーで定義する。 */
     char _pad[4]; /* HANDLE 前の 8 バイト アライン用パディング */
     HANDLE stdin_handle;
     DWORD orig_in_mode;
     int raw_active;
 #endif
-};
+    };
 
-/* ---- プラットフォーム抽象インターフェース (各 _platform.c で実装) ---- */
+    /* ---- プラットフォーム抽象インターフェース (各 _platform.c で実装) ---- */
 
-/**
- *  @brief          端末を 1 バイト単位で入力できる raw モードへ移行します。
- *  @param[in]      p  プロンプト ハンドルです。
- *
- *  移行に成功した場合は @p p の raw モード状態を有効にし、復元用の端末設定を保存します。
- */
-void cplat_internal_prompt_platform_enter_raw(cplat_prompt *p);
+    /**
+     *  @brief          端末を 1 バイト単位で入力できる raw モードへ移行します。
+     *  @param[in]      p  プロンプト ハンドルです。
+     *
+     *  移行に成功した場合は @p p の raw モード状態を有効にし、復元用の端末設定を保存します。
+     */
+    void cplat_internal_prompt_platform_enter_raw(cplat_prompt *p);
 
-/**
- *  @brief          raw モードを解除して保存済みの端末設定を復元します。
- *  @param[in]      p  プロンプト ハンドルです。
- */
-void cplat_internal_prompt_platform_leave_raw(cplat_prompt *p);
+    /**
+     *  @brief          raw モードを解除して保存済みの端末設定を復元します。
+     *  @param[in]      p  プロンプト ハンドルです。
+     */
+    void cplat_internal_prompt_platform_leave_raw(cplat_prompt *p);
 
-/**
- *  @brief          標準入力から 1 バイトを待機して読み取ります。
- *  @param[in]      p  プロンプト ハンドルです。
- *  @return         読み取った 0 以上のバイト値を返します。EOF または読み取り失敗の場合は -1 を返します。
- */
-int cplat_internal_prompt_platform_read_char(cplat_prompt *p);
+    /**
+     *  @brief          標準入力から 1 バイトを待機して読み取ります。
+     *  @param[in]      p  プロンプト ハンドルです。
+     *  @return         読み取った 0 以上のバイト値を返します。EOF または読み取り失敗の場合は -1 を返します。
+     */
+    int cplat_internal_prompt_platform_read_char(cplat_prompt *p);
 
-/**
- *  @brief          標準入力から 1 バイトを最大 50 ミリ秒待って読み取ります。
- *  @param[in]      p  プロンプト ハンドルです。
- *  @return         読み取った 0 以上のバイト値を返します。タイムアウト、EOF、または読み取り失敗の場合は
- *                  -1 を返します。
- */
-int cplat_internal_prompt_platform_read_char_nb(cplat_prompt *p);
+    /**
+     *  @brief          標準入力から 1 バイトを最大 50 ミリ秒待って読み取ります。
+     *  @param[in]      p  プロンプト ハンドルです。
+     *  @return         読み取った 0 以上のバイト値を返します。タイムアウト、EOF、または読み取り失敗の場合は
+     *                  -1 を返します。
+     */
+    int cplat_internal_prompt_platform_read_char_nb(cplat_prompt *p);
 
 #ifdef __cplusplus
 }

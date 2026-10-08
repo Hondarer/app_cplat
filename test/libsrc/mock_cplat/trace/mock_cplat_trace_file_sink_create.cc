@@ -1,8 +1,8 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-cplat_trace_file_sink *delegate_real_cplat_trace_file_sink_create(const char *path, size_t max_bytes,
-                                                                        int generations, int flags)
+cplat_trace_file_sink *delegate_real_cplat_trace_file_sink_create(const char *path, size_t max_bytes, int generations,
+                                                                  int flags)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_trace_file_sink_create)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_trace_file_sink_create"));

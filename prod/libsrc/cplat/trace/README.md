@@ -70,7 +70,7 @@ Windows EventLog はイベント タイプが Error / Warning / Information の 
 
 強制出力のレベルで `VERBOSE` と `DEBUG` を syslog の `LOG_INFO` と ETW の Informational へ引き上げているのは、この設計に合わせて常時記録の帯へ入れるためです。
 
-## デフォルト動作
+## 既定の動作
 
 `cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)` 直後の既定値は次のとおりです。
 

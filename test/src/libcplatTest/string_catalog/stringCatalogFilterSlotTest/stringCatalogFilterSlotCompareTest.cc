@@ -662,8 +662,9 @@ TEST_F(stringCatalogFilterSlotCompareTest, type_mismatched_not_equal_predicate_i
     cplat_string_catalog_filter_line_error actual_error = CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE;
     static unsigned char image[kImageSize];
 
-    ASSERT_EQ(CPLAT_OK, compile_single_line("arg.job_name != 1",
-                                            image)); // [状態] - STRING の引数を整数定数と != で比較する条件式をコンパイルする。
+    ASSERT_EQ(CPLAT_OK,
+              compile_single_line("arg.job_name != 1",
+                                  image)); // [状態] - STRING の引数を整数定数と != で比較する条件式をコンパイルする。
     // [状態確認] - `compile_single_line("arg.job_name != 1", image)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
@@ -672,8 +673,9 @@ TEST_F(stringCatalogFilterSlotCompareTest, type_mismatched_not_equal_predicate_i
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_apply(slot_, image, kImageSize, nullptr, 0U,
                                                                &actual_invalid)); // [手順] - 条件式を適用する。
     // [確認_正常系] - `cplat_string_catalog_filter_slot_apply(slot_, image, kImageSize, nullptr, 0U, &actual_invalid)` の戻り値が `CPLAT_OK` であること。
-    ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_get_line_error(slot_, 0U,
-                                                                        &actual_error)); // [手順] - 行の状態を取得する。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_string_catalog_filter_slot_get_line_error(slot_, 0U,
+                                                              &actual_error)); // [手順] - 行の状態を取得する。
     // [確認_正常系] - `cplat_string_catalog_filter_slot_get_line_error(slot_, 0U, &actual_error)` の戻り値が `CPLAT_OK` であること。
 
     // Assert
@@ -726,12 +728,14 @@ TEST_F(stringCatalogFilterSlotCompareTest, missing_argument_predicate_is_false_a
     // Act
     // [サブ手順参照 名前=stringCatalogFilterSlotCompareTest.apply_filter]
     apply_filter("arg.job_name != \"x\""); // [手順] - job_name を != で比較する条件式を適用する。
-    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_WORKER_STARTED,
-                                                &actual_not_equal_state); // [手順] - job_name の無い項目の状態を取得する。
+    (void)cplat_string_catalog_filter_slot_test(
+        slot_, FILTER_TEST_TRACE_KEY_WORKER_STARTED,
+        &actual_not_equal_state);             // [手順] - job_name の無い項目の状態を取得する。
     // [サブ手順参照 名前=stringCatalogFilterSlotCompareTest.apply_filter]
     apply_filter("!(arg.job_name == \"x\")"); // [手順] - job_name の比較を否定する条件式を適用する。
-    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_WORKER_STARTED,
-                                                &actual_negated_state); // [手順] - job_name の無い項目の状態を取得する。
+    (void)cplat_string_catalog_filter_slot_test(
+        slot_, FILTER_TEST_TRACE_KEY_WORKER_STARTED,
+        &actual_negated_state); // [手順] - job_name の無い項目の状態を取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_NEVER_MATCH,

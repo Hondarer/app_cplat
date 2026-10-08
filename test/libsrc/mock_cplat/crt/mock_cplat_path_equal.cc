@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_path_equal(const char *lhs, const char *rhs, int *equal_out, cplat_error *detail_out)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_path_equal)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_path_equal"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_path_equal)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_path_equal"));
 
     return real_fn(lhs, rhs, equal_out, detail_out);
 }

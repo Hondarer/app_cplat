@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_socket_listen(cplat_socket sock, int backlog, cplat_error *detail_out)
 {
-    static auto real_fn =
-        reinterpret_cast<decltype(&cplat_socket_listen)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_listen"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_socket_listen)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_listen"));
 
     return real_fn(sock, backlog, detail_out);
 }

@@ -146,9 +146,9 @@ TEST_F(stringCatalogLanguageTest, decides_environment_only_once)
     // 表示言語を取得する呼び出し期待を満たすこと。
 
     // Act
-    actual_language_first = cplat_string_catalog_get_language(); // [手順] - 現在の言語を取得する。
+    actual_language_first = cplat_string_catalog_get_language();  // [手順] - 現在の言語を取得する。
     // [サブ手順参照 名前=stringCatalogLanguageTest.expect_ui_language_tag]
-    expect_ui_language_tag(mock_cplat, "en"); // [手順] - 表示言語として en を返す状態へ変更する。
+    expect_ui_language_tag(mock_cplat, "en");                     // [手順] - 表示言語として en を返す状態へ変更する。
     // 表示言語を取得する呼び出し期待を満たすこと。
     actual_language_second = cplat_string_catalog_get_language(); // [手順] - 現在の言語を再度取得する。
 
@@ -258,8 +258,8 @@ TEST_F(stringCatalogLanguageTest, language_from_tag)
         "ja-JP", &actual_language_japanese); // [手順] - 地域を含む日本語の言語タグを対応付ける。
     actual_ret_english = cplat_string_catalog_language_from_tag(
         "en", &actual_language_english); // [手順] - 言語だけの英語の言語タグを対応付ける。
-    actual_ret_upper = cplat_string_catalog_language_from_tag(
-        "JA", &actual_language_upper); // [手順] - 大文字の言語タグを対応付ける。
+    actual_ret_upper =
+        cplat_string_catalog_language_from_tag("JA", &actual_language_upper); // [手順] - 大文字の言語タグを対応付ける。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_japanese); // [確認_正常系] - 日本語の言語タグで戻り値が CPLAT_OK であること。
@@ -296,7 +296,7 @@ TEST_F(stringCatalogLanguageTest, language_from_tag_without_match)
     EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
               actual_ret_unknown); // [確認_異常系] - 扱わない言語の戻り値が CPLAT_ERR_NOT_FOUND であること。
     EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL,
-              actual_language_unknown);     // [確認_異常系] - 扱わない言語でニュートラル言語が格納されること。
+              actual_language_unknown);      // [確認_異常系] - 扱わない言語でニュートラル言語が格納されること。
     EXPECT_EQ(CPLAT_OK, actual_ret_neutral); // [確認_正常系] - 空文字列の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL,
               actual_language_neutral); // [確認_正常系] - 空文字列でニュートラル言語が格納されること。
@@ -316,15 +316,16 @@ TEST_F(stringCatalogLanguageTest, language_from_tag_invalid_argument)
 
     // Act
     actual_ret_null_tag =
-        cplat_string_catalog_language_from_tag(NULL, &actual_language); // [手順] - 言語タグに NULL を渡す。
-    actual_ret_null_language =
-        cplat_string_catalog_language_from_tag("ja", NULL); // [手順] - 格納先に NULL を渡す。
+        cplat_string_catalog_language_from_tag(NULL, &actual_language);            // [手順] - 言語タグに NULL を渡す。
+    actual_ret_null_language = cplat_string_catalog_language_from_tag("ja", NULL); // [手順] - 格納先に NULL を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_tag); // [確認_異常系] - 言語タグが NULL の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_language); // [確認_異常系] - 格納先が NULL の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_tag); // [確認_異常系] - 言語タグが NULL の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_language); // [確認_異常系] - 格納先が NULL の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_COUNT,
               actual_language); // [確認_異常系] - 言語タグが NULL の場合に格納先を変更しないこと。
 }

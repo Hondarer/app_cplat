@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_error_is_set(const cplat_error *error)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_error_is_set)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_error_is_set"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_error_is_set)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_error_is_set"));
 
     return real_fn(error);
 }

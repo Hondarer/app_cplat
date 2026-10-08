@@ -2,7 +2,7 @@
 #include <mock_cplat.h>
 
 int delegate_real_cplat_pinned_prompt_write(cplat_pinned_prompt *screen, cplat_pinned_prompt_channel channel,
-                                               const void *data, size_t size, size_t *written_out)
+                                            const void *data, size_t size, size_t *written_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_pinned_prompt_write)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_pinned_prompt_write"));
@@ -10,8 +10,8 @@ int delegate_real_cplat_pinned_prompt_write(cplat_pinned_prompt *screen, cplat_p
     return real_fn(screen, channel, data, size, written_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_pinned_prompt_write, cplat_pinned_prompt *screen,
-               cplat_pinned_prompt_channel channel, const void *data, size_t size, size_t *written_out)
+MOCK_WEAK_IMPL(int, cplat_pinned_prompt_write, cplat_pinned_prompt *screen, cplat_pinned_prompt_channel channel,
+               const void *data, size_t size, size_t *written_out)
 {
     int mock_ret = 0;
 

@@ -45,13 +45,13 @@ TEST_F(consoleTest, dispose_on_shutdown_after_init)
     // Arrange
     cplat_console_init(); // [状態] - 初期化済みのコンソール ヘルパーとする。
     cplat_shutdown_event event = {CPLAT_SHUTDOWN_REASON_NORMAL_EXIT, CPLAT_SHUTDOWN_CODE_KIND_NONE,
-                                     0}; // [状態] - 通常終了イベントを用意する。
+                                  0}; // [状態] - 通常終了イベントを用意する。
 
     // Pre-Assert
 
     // Act
     cplat_internal_console_dispose_on_shutdown(&event,
-                                         NULL); // [手順] - 正常終了イベントで dispose_on_shutdown() を呼び出す。
+                                               NULL); // [手順] - 正常終了イベントで dispose_on_shutdown() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - クラッシュせずに完了すること。
@@ -63,12 +63,13 @@ TEST_F(consoleTest, dispose_on_shutdown_without_init)
 {
     // Arrange
     cplat_shutdown_event event = {CPLAT_SHUTDOWN_REASON_NORMAL_EXIT, CPLAT_SHUTDOWN_CODE_KIND_NONE,
-                                     0}; // [状態] - 通常終了イベントを用意する (init は呼ばない)。
+                                  0}; // [状態] - 通常終了イベントを用意する (init は呼ばない)。
 
     // Pre-Assert
 
     // Act
-    cplat_internal_console_dispose_on_shutdown(&event, NULL); // [手順] - init を呼ばずに dispose_on_shutdown() を呼び出す。
+    cplat_internal_console_dispose_on_shutdown(&event,
+                                               NULL); // [手順] - init を呼ばずに dispose_on_shutdown() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - 安全に何もせず、クラッシュしないこと。
@@ -81,13 +82,14 @@ TEST_F(consoleTest, double_dispose_on_shutdown)
     // Arrange
     cplat_console_init(); // [状態] - 初期化済みのコンソール ヘルパーとする。
     cplat_shutdown_event event = {CPLAT_SHUTDOWN_REASON_NORMAL_EXIT, CPLAT_SHUTDOWN_CODE_KIND_NONE,
-                                     0}; // [状態] - 通常終了イベントを用意する。
+                                  0}; // [状態] - 通常終了イベントを用意する。
 
     // Pre-Assert
 
     // Act
     cplat_internal_console_dispose_on_shutdown(&event, NULL); // [手順] - 1 回目の dispose_on_shutdown() を呼び出す。
-    cplat_internal_console_dispose_on_shutdown(&event, NULL); // [手順] - 続けて 2 回目の dispose_on_shutdown() を呼び出す。
+    cplat_internal_console_dispose_on_shutdown(&event,
+                                               NULL); // [手順] - 続けて 2 回目の dispose_on_shutdown() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - 2 回目は安全に何もせず、クラッシュしないこと。
@@ -99,16 +101,15 @@ TEST_F(consoleTest, dispose_on_shutdown_process_terminating)
 {
     // Arrange
     cplat_console_init(); // [状態] - 初期化済みのコンソール ヘルパーとする。
-    cplat_shutdown_event terminating_event = {CPLAT_SHUTDOWN_REASON_PROCESS_TERMINATING,
-                                                 CPLAT_SHUTDOWN_CODE_KIND_NONE,
-                                                 0}; // [状態] - プロセス終了中イベントを用意する。
+    cplat_shutdown_event terminating_event = {CPLAT_SHUTDOWN_REASON_PROCESS_TERMINATING, CPLAT_SHUTDOWN_CODE_KIND_NONE,
+                                              0}; // [状態] - プロセス終了中イベントを用意する。
     cplat_shutdown_event normal_event = {CPLAT_SHUTDOWN_REASON_NORMAL_EXIT, CPLAT_SHUTDOWN_CODE_KIND_NONE, 0};
 
     // Pre-Assert
 
     // Act
     cplat_internal_console_dispose_on_shutdown(&terminating_event,
-                                         NULL); // [手順] - 終了中イベントで dispose_on_shutdown() を呼び出す。
+                                               NULL); // [手順] - 終了中イベントで dispose_on_shutdown() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - 終了中イベントでは何もせず、クラッシュしないこと。
@@ -138,7 +139,7 @@ TEST_F(consoleTest, write_after_init)
 /* ===== Linux NOP テスト ===== */
 /*
  * Linux では cplat_console_init / cplat_console_dispose は no-op である。
- * 以下のテストは、no-op 実装が stdout / stderr に一切影響を与えないことを確認する。
+ * 次のテストは、no-op 実装が stdout / stderr に一切影響を与えないことを確認する。
  */
 
 #if defined(PLATFORM_LINUX)
@@ -189,7 +190,7 @@ TEST_F(consoleTest, nop_dispose_stdout_fd_unchanged)
 {
     // Arrange
     int fd_before = fileno(stdout); // [状態] - init 前の stdout FD を記録する。
-    cplat_console_init();        // [状態] - 初期化済みのコンソール ヘルパーとする。
+    cplat_console_init();           // [状態] - 初期化済みのコンソール ヘルパーとする。
 
     // Pre-Assert
 

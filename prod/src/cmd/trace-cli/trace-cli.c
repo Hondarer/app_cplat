@@ -909,7 +909,7 @@ int main(int argc, char *argv[])
     while (!session.exit_requested)
     {
         if (cplat_prompt_readline_fmt(prompt, line, sizeof(line), "trace-cli[%s]> ",
-                                         session_prompt_state_to_name(&session)) != CPLAT_OK)
+                                      session_prompt_state_to_name(&session)) != CPLAT_OK)
         {
             break;
         }

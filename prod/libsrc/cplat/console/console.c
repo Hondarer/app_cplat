@@ -93,8 +93,7 @@ static int reopen_crt_std_fd(HANDLE handle, FILE *stream, const char *name, int 
     new_fd = _open_osfhandle((intptr_t)handle, open_flags);
     if (new_fd < 0)
     {
-        console_diag_logf("reopen %s _open_osfhandle failed errno=%d expected_fd=%d", name, errno,
-                                   expected_fd);
+        console_diag_logf("reopen %s _open_osfhandle failed errno=%d expected_fd=%d", name, errno, expected_fd);
         return -1;
     }
     if (new_fd != expected_fd)
@@ -180,9 +179,9 @@ static void console_diag_logf(const char *fmt, ...)
 
     GetLocalTime(&now);
     if (cplat_snprintf(line, sizeof(line), "%04u-%02u-%02u %02u:%02u:%02u.%03u pid=%lu ", (unsigned int)now.wYear,
-                         (unsigned int)now.wMonth, (unsigned int)now.wDay, (unsigned int)now.wHour,
-                         (unsigned int)now.wMinute, (unsigned int)now.wSecond, (unsigned int)now.wMilliseconds,
-                         (unsigned long)GetCurrentProcessId()) != CPLAT_OK)
+                       (unsigned int)now.wMonth, (unsigned int)now.wDay, (unsigned int)now.wHour,
+                       (unsigned int)now.wMinute, (unsigned int)now.wSecond, (unsigned int)now.wMilliseconds,
+                       (unsigned long)GetCurrentProcessId()) != CPLAT_OK)
     {
         return;
     }
@@ -274,14 +273,14 @@ void cplat_console_init(void)
             if (!SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
             {
                 console_diag_logf("console_init SetConsoleMode stdout failed handle=0x%p error=%lu", (void *)h,
-                                           (unsigned long)GetLastError());
+                                  (unsigned long)GetLastError());
             }
         }
     }
     else
     {
         console_diag_logf("console_init GetConsoleMode stdout failed handle=0x%p error=%lu", (void *)h,
-                                   (unsigned long)GetLastError());
+                          (unsigned long)GetLastError());
     }
 
     h = GetStdHandle(STD_ERROR_HANDLE);
@@ -293,14 +292,14 @@ void cplat_console_init(void)
             if (!SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
             {
                 console_diag_logf("console_init SetConsoleMode stderr failed handle=0x%p error=%lu", (void *)h,
-                                           (unsigned long)GetLastError());
+                                  (unsigned long)GetLastError());
             }
         }
     }
     else
     {
         console_diag_logf("console_init GetConsoleMode stderr failed handle=0x%p error=%lu", (void *)h,
-                                   (unsigned long)GetLastError());
+                          (unsigned long)GetLastError());
     }
 }
 
@@ -509,7 +508,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
     attached = 0;
     attached_once = 0;
     console_diag_logf("attach_parent begin parent_pid=%lu parent_hwnd=0x%p argc=%d", (unsigned long)parent_pid,
-                               (void *)parent_window, argc_value);
+                      (void *)parent_window, argc_value);
     for (attempt = 0; attempt < CPLAT_CONSOLE_ATTACH_MAX_ATTEMPTS; attempt++)
     {
         if (attached_once == 0)
@@ -524,8 +523,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
             if (AttachConsole(parent_pid))
             {
                 attached_once = 1;
-                console_diag_logf("attempt=%d AttachConsole success hwnd=0x%p", attempt,
-                                           (void *)GetConsoleWindow());
+                console_diag_logf("attempt=%d AttachConsole success hwnd=0x%p", attempt, (void *)GetConsoleWindow());
                 if (parent_window == NULL)
                 {
                     attached = 1;
@@ -536,8 +534,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
             {
                 DWORD attach_error = GetLastError();
 
-                console_diag_logf("attempt=%d AttachConsole failed error=%lu", attempt,
-                                           (unsigned long)attach_error);
+                console_diag_logf("attempt=%d AttachConsole failed error=%lu", attempt, (unsigned long)attach_error);
             }
         }
         else
@@ -545,7 +542,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
             HWND current_window = GetConsoleWindow();
 
             console_diag_logf("attempt=%d attached_once current_hwnd=0x%p parent_hwnd=0x%p", attempt,
-                                       (void *)current_window, (void *)parent_window);
+                              (void *)current_window, (void *)parent_window);
             if (current_window == parent_window)
             {
                 attached = 1;
@@ -557,16 +554,16 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
     if (attached == 0 && attached_once == 0)
     {
         /* AttachConsole 自体が一度も成功しなかった場合のみ失敗とする。 */
-        console_diag_logf("attach_parent failed attached=%d attached_once=%d final_hwnd=0x%p", attached,
-                                   attached_once, (void *)GetConsoleWindow());
+        console_diag_logf("attach_parent failed attached=%d attached_once=%d final_hwnd=0x%p", attached, attached_once,
+                          (void *)GetConsoleWindow());
         return CPLAT_ERR_UNKNOWN;
     }
-    console_diag_logf("attach_parent proceed attached=%d attached_once=%d final_hwnd=0x%p", attached,
-                               attached_once, (void *)GetConsoleWindow());
+    console_diag_logf("attach_parent proceed attached=%d attached_once=%d final_hwnd=0x%p", attached, attached_once,
+                      (void *)GetConsoleWindow());
 
     /* Win32 レベルの標準ハンドルを親コンソールへ付け替える
        (GetStdHandle / WriteConsole 系や tracer の stderr sink が参照する) */
-    /* 以下 3 件はワイド文字列リテラルを渡すため、CreateFileU を使わない */
+    /* 次の 3 件はワイド文字列リテラルを渡すため、CreateFileU を使わない */
     h_out = CreateFileW(L"CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
                         OPEN_EXISTING, 0, NULL);
     if (h_out != INVALID_HANDLE_VALUE)
@@ -578,8 +575,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
     {
         DWORD open_error = GetLastError();
 
-        console_diag_logf("SetStdHandle stdout skipped CreateFileW failed error=%lu",
-                                   (unsigned long)open_error);
+        console_diag_logf("SetStdHandle stdout skipped CreateFileW failed error=%lu", (unsigned long)open_error);
     }
     h_err = CreateFileW(L"CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
                         OPEN_EXISTING, 0, NULL);
@@ -592,8 +588,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
     {
         DWORD open_error = GetLastError();
 
-        console_diag_logf("SetStdHandle stderr skipped CreateFileW failed error=%lu",
-                                   (unsigned long)open_error);
+        console_diag_logf("SetStdHandle stderr skipped CreateFileW failed error=%lu", (unsigned long)open_error);
     }
     h_in = CreateFileW(L"CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
                        0, NULL);
@@ -606,8 +601,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
     {
         DWORD open_error = GetLastError();
 
-        console_diag_logf("SetStdHandle stdin skipped CreateFileW failed error=%lu",
-                                   (unsigned long)open_error);
+        console_diag_logf("SetStdHandle stdin skipped CreateFileW failed error=%lu", (unsigned long)open_error);
     }
 
     /* CRT レベルの標準ストリームを親コンソールへ再接続する (fgets 等の入力で参照する)。
@@ -652,7 +646,7 @@ void cplat_internal_console_dispose_on_shutdown(const cplat_shutdown_event *even
     fflush(stdout);
     fflush(stderr);
     console_diag_logf("dispose_on_shutdown after fflush attached_parent=%ld",
-                               (long)cplat_atomic_load_i32(&s_attached_parent, CPLAT_MEMORY_ORDER_SEQ_CST));
+                      (long)cplat_atomic_load_i32(&s_attached_parent, CPLAT_MEMORY_ORDER_SEQ_CST));
 
     /* 昇格時に親コンソールへ再接続していた場合、終了時フラッシュで書き込んだ内容を
        conhost が処理し終える前にプロセスが終了すると、内容が画面に出ないことがある。
@@ -666,8 +660,7 @@ void cplat_internal_console_dispose_on_shutdown(const cplat_shutdown_event *even
         if (h_out != NULL && h_out != INVALID_HANDLE_VALUE)
         {
             (void)GetConsoleScreenBufferInfo(h_out, &info);
-            console_diag_logf("dispose_on_shutdown drain GetConsoleScreenBufferInfo handle=0x%p",
-                                       (void *)h_out);
+            console_diag_logf("dispose_on_shutdown drain GetConsoleScreenBufferInfo handle=0x%p", (void *)h_out);
         }
     }
 
@@ -725,7 +718,7 @@ int cplat_console_write(cplat_stream stream, const char *text)
 
 #elif defined(PLATFORM_LINUX)
 
-    #include <errno.h> /* errno, EINTR */
+    #include <errno.h>  /* errno, EINTR */
     #include <string.h> /* strlen */
     #include <unistd.h> /* write, STDOUT_FILENO, STDERR_FILENO */
 

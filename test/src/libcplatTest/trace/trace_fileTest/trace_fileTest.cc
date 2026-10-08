@@ -77,7 +77,8 @@ class trace_fileTest : public Test
         ON_CALL(mock_cplat, cplat_clock_get_realtime_deadline_ms(_, _))
             .WillByDefault([](uint64_t, struct timespec *abs_timeout) { set_valid_deadline(abs_timeout); });
         // [状態] - `cplat_clock_get_realtime_deadline_ms` の既定動作を設定する。
-        ON_CALL(mock_cplat, cplat_clock_get_realtime(_)).WillByDefault([](cplat_timespec *ts) { set_fixed_realtime(ts); });
+        ON_CALL(mock_cplat, cplat_clock_get_realtime(_))
+            .WillByDefault([](cplat_timespec *ts) { set_fixed_realtime(ts); });
         // [状態] - `cplat_clock_get_realtime` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_format_realtime_iso8601_local(_, _, _))
             .WillByDefault(
@@ -292,8 +293,9 @@ TEST_F(trace_fileTest, test_create_returns_null_after_file_open_retry_exhausted)
 TEST_F(trace_fileTest, test_write_formats_info_line)
 {
     // Arrange
-    cplat_trace_file_sink *handle = cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [状態] - 初期化済みの file sink を用意する。
-    ASSERT_NE((cplat_trace_file_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    cplat_trace_file_sink *handle =
+        cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [状態] - 初期化済みの file sink を用意する。
+    ASSERT_NE((cplat_trace_file_sink *)NULL, handle);       // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_file_write(_, _, _, _))
@@ -309,12 +311,11 @@ TEST_F(trace_fileTest, test_write_formats_info_line)
 
     // Act
     int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
-                                                "hello"); // [手順] - INFO 行を書き込む。
+                                             "hello"); // [手順] - INFO 行を書き込む。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_OK,
-        result); // [確認_正常系] - cplat_trace_file_sink_write の戻り値から、書き込みが成功したと判断できること。
+    EXPECT_EQ(CPLAT_OK,
+              result); // [確認_正常系] - cplat_trace_file_sink_write の戻り値から、書き込みが成功したと判断できること。
 
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
@@ -325,8 +326,9 @@ TEST_F(trace_fileTest, test_write_formats_info_line)
 TEST_F(trace_fileTest, test_write_formats_debug_marker)
 {
     // Arrange
-    cplat_trace_file_sink *handle = cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [状態] - 初期化済みの file sink を用意する。
-    ASSERT_NE((cplat_trace_file_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    cplat_trace_file_sink *handle =
+        cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [状態] - 初期化済みの file sink を用意する。
+    ASSERT_NE((cplat_trace_file_sink *)NULL, handle);       // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_file_write(_, _, _, _))
@@ -342,12 +344,11 @@ TEST_F(trace_fileTest, test_write_formats_debug_marker)
 
     // Act
     int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_DEBUG, NULL,
-                                                "debug line"); // [手順] - DEBUG 行を書き込む。
+                                             "debug line"); // [手順] - DEBUG 行を書き込む。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_OK,
-        result); // [確認_正常系] - cplat_trace_file_sink_write の戻り値から、書き込みが成功したと判断できること。
+    EXPECT_EQ(CPLAT_OK,
+              result); // [確認_正常系] - cplat_trace_file_sink_write の戻り値から、書き込みが成功したと判断できること。
 
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
@@ -358,7 +359,8 @@ TEST_F(trace_fileTest, test_write_formats_debug_marker)
 TEST_F(trace_fileTest, test_write_uses_explicit_timestamp_without_internal_clock)
 {
     // Arrange
-    cplat_trace_file_sink *handle = cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [状態] - 初期化済みの file sink を用意する。
+    cplat_trace_file_sink *handle =
+        cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [状態] - 初期化済みの file sink を用意する。
     cplat_timespec timestamp = make_fixed_timestamp();
     ASSERT_NE((cplat_trace_file_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
 
@@ -378,7 +380,7 @@ TEST_F(trace_fileTest, test_write_uses_explicit_timestamp_without_internal_clock
 
     // Act
     int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, &timestamp,
-                                                "explicit hello"); // [手順] - 明示タイムスタンプ付きで書き込む。
+                                             "explicit hello"); // [手順] - 明示タイムスタンプ付きで書き込む。
 
     // Assert
     EXPECT_EQ(
@@ -394,8 +396,9 @@ TEST_F(trace_fileTest, test_write_uses_explicit_timestamp_without_internal_clock
 TEST_F(trace_fileTest, test_write_returns_minus_one_on_file_error)
 {
     // Arrange
-    cplat_trace_file_sink *handle = cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [状態] - 初期化済みの file sink を用意する。
-    ASSERT_NE((cplat_trace_file_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    cplat_trace_file_sink *handle =
+        cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [状態] - 初期化済みの file sink を用意する。
+    ASSERT_NE((cplat_trace_file_sink *)NULL, handle);       // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_file_write(_, _, _, _))
@@ -404,7 +407,7 @@ TEST_F(trace_fileTest, test_write_returns_minus_one_on_file_error)
 
     // Act
     int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
-                                                "write error"); // [手順] - 書き込み失敗を発生させる。
+                                             "write error"); // [手順] - 書き込み失敗を発生させる。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -419,7 +422,8 @@ TEST_F(trace_fileTest, test_write_returns_minus_one_on_file_error)
 TEST_F(trace_fileTest, test_write_falls_back_from_invalid_explicit_timestamp)
 {
     // Arrange
-    cplat_trace_file_sink *handle = cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [状態] - 初期化済みの file sink を用意する。
+    cplat_trace_file_sink *handle =
+        cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [状態] - 初期化済みの file sink を用意する。
     cplat_timespec invalid_timestamp = {1714100645LL, 1000000000};
     ASSERT_NE((cplat_trace_file_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
 
@@ -439,7 +443,7 @@ TEST_F(trace_fileTest, test_write_falls_back_from_invalid_explicit_timestamp)
 
     // Act
     int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, &invalid_timestamp,
-                                                "invalid"); // [手順] - 不正タイムスタンプで書き込む。
+                                             "invalid"); // [手順] - 不正タイムスタンプで書き込む。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, result); // [確認_異常系] - 代替出力後も CPLAT_ERR_UNKNOWN を返すこと。
@@ -467,8 +471,9 @@ TEST_F(trace_fileTest, test_write_rotates_when_size_limit_is_reached)
             }); // [状態確認] - create 時に cplat_file_get_size が 1 回呼び出されること。
     // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_size(_, _, _) が登録した呼び出し期待を満たすこと。
 
-    cplat_trace_file_sink *handle = cplat_trace_file_sink_create("trace.log", 1, 2, 0); // [状態] - ローテーション設定付きの file sink を用意する。
-    ASSERT_NE((cplat_trace_file_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    cplat_trace_file_sink *handle =
+        cplat_trace_file_sink_create("trace.log", 1, 2, 0); // [状態] - ローテーション設定付きの file sink を用意する。
+    ASSERT_NE((cplat_trace_file_sink *)NULL, handle);       // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_file_write(_, _, _, _))
@@ -493,7 +498,7 @@ TEST_F(trace_fileTest, test_write_rotates_when_size_limit_is_reached)
 
     // Act
     int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
-                                                "rotate me"); // [手順] - 上限 1 byte のファイルへ 1 行書き込む。
+                                             "rotate me"); // [手順] - 上限 1 byte のファイルへ 1 行書き込む。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - 書き込み後にローテーションが完了すること。
@@ -523,8 +528,9 @@ TEST_F(trace_fileTest, test_write_does_not_retry_open_after_rotation)
         // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_size(_, _, _) が登録した呼び出し期待を満たすこと。
     }
 
-    cplat_trace_file_sink *handle = cplat_trace_file_sink_create("trace.log", 1, 2, 0); // [状態] - ローテーション設定付きの file sink を用意する。
-    ASSERT_NE((cplat_trace_file_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    cplat_trace_file_sink *handle =
+        cplat_trace_file_sink_create("trace.log", 1, 2, 0); // [状態] - ローテーション設定付きの file sink を用意する。
+    ASSERT_NE((cplat_trace_file_sink *)NULL, handle);       // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
     {
@@ -654,13 +660,12 @@ TEST_F(trace_fileTest, test_single_mode_does_not_use_interprocess_lock_or_identi
     cplat_trace_file_sink *handle =
         cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [手順] - flags なしの create を呼ぶ。
     int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
-                                                "single"); // [手順] - 1 行書き込む。
+                                             "single"); // [手順] - 1 行書き込む。
 
     // Assert
     EXPECT_NE((cplat_trace_file_sink *)NULL, handle); // [確認_正常系] - ハンドルが生成されること。
-    EXPECT_EQ(
-        CPLAT_OK,
-        result); // [確認_正常系] - cplat_trace_file_sink_write の戻り値から、書き込みが成功したと判断できること。
+    EXPECT_EQ(CPLAT_OK,
+              result); // [確認_正常系] - cplat_trace_file_sink_write の戻り値から、書き込みが成功したと判断できること。
 
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
@@ -737,9 +742,9 @@ TEST_F(trace_fileTest, test_create_returns_null_for_negative_flags)
 TEST_F(trace_fileTest, test_shared_write_reopens_after_external_rotation)
 {
     // Arrange
-    cplat_trace_file_sink *handle =
-        cplat_trace_file_sink_create("trace.log", 0, 0, CPLAT_TRACE_FILE_SINK_SHARED); // [状態] - 共有モードの file sink を用意する。
-    ASSERT_NE((cplat_trace_file_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
+        "trace.log", 0, 0, CPLAT_TRACE_FILE_SINK_SHARED); // [状態] - 共有モードの file sink を用意する。
+    ASSERT_NE((cplat_trace_file_sink *)NULL, handle);     // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
     InSequence seq;
@@ -749,8 +754,8 @@ TEST_F(trace_fileTest, test_shared_write_reopens_after_external_rotation)
             {
                 set_file_id(id_out, kDefaultFileIndex + 1); // 別実体を示す
                 return 0;
-            });                                             // [Pre-Assert確認_正常系] - path が別実体を指していること。
-                                                            // [Pre-Assert手順] - 別実体のファイル同一性を返却する。
+            }); // [Pre-Assert確認_正常系] - path が別実体を指していること。
+                // [Pre-Assert手順] - 別実体のファイル同一性を返却する。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // [Pre-Assert確認_正常系] - 旧ハンドルが閉じられること。
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 新しい path が開き直されること。
@@ -763,12 +768,11 @@ TEST_F(trace_fileTest, test_shared_write_reopens_after_external_rotation)
 
     // Act
     int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
-                                                "after rotate"); // [手順] - 1 行書き込む。
+                                             "after rotate"); // [手順] - 1 行書き込む。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_OK,
-        result); // [確認_正常系] - cplat_trace_file_sink_write の戻り値から、書き込みが成功したと判断できること。
+    EXPECT_EQ(CPLAT_OK,
+              result); // [確認_正常系] - cplat_trace_file_sink_write の戻り値から、書き込みが成功したと判断できること。
 
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
@@ -779,9 +783,9 @@ TEST_F(trace_fileTest, test_shared_write_reopens_after_external_rotation)
 TEST_F(trace_fileTest, test_shared_write_reopen_does_not_retry_after_external_rotation)
 {
     // Arrange
-    cplat_trace_file_sink *handle =
-        cplat_trace_file_sink_create("trace.log", 0, 0, CPLAT_TRACE_FILE_SINK_SHARED); // [状態] - 共有モードの file sink を用意する。
-    ASSERT_NE((cplat_trace_file_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
+        "trace.log", 0, 0, CPLAT_TRACE_FILE_SINK_SHARED); // [状態] - 共有モードの file sink を用意する。
+    ASSERT_NE((cplat_trace_file_sink *)NULL, handle);     // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
     {
@@ -808,12 +812,11 @@ TEST_F(trace_fileTest, test_shared_write_reopen_does_not_retry_after_external_ro
 
     // Act
     int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
-                                                "after rotate"); // [手順] - 1 行書き込む。
+                                             "after rotate"); // [手順] - 1 行書き込む。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        result); // [確認_異常系] - cplat_trace_file_sink_write の戻り値が直ちに CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              result); // [確認_異常系] - cplat_trace_file_sink_write の戻り値が直ちに CPLAT_ERR_UNKNOWN であること。
 
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
@@ -838,15 +841,16 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
                 return 0;
             }); // [状態確認] - create 時に cplat_file_get_size が 1 回呼び出されること。
     // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_size(_, _, _) が登録した呼び出し期待を満たすこと。
-    EXPECT_CALL(mock_cplat, cplat_file_get_id(_, _, _)).Times(1); // [状態確認] - create 時に cplat_file_get_id が呼び出されること。
+    EXPECT_CALL(mock_cplat, cplat_file_get_id(_, _, _))
+        .Times(1); // [状態確認] - create 時に cplat_file_get_id が呼び出されること。
     // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_id(_, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_interprocess_lock_open(StrEq("trace.log.lock"), _))
         .Times(1); // [状態確認] - create 時にロック ファイルが開かれること。
     // [Pre-Assert確認_正常系] - mock_cplat の cplat_interprocess_lock_open(StrEq("trace.log.lock"), _) が登録した呼び出し期待を満たすこと。
 
-    cplat_trace_file_sink *handle =
-        cplat_trace_file_sink_create("trace.log", 1, 2, CPLAT_TRACE_FILE_SINK_SHARED); // [状態] - 共有モードの file sink を用意する。
-    ASSERT_NE((cplat_trace_file_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
+        "trace.log", 1, 2, CPLAT_TRACE_FILE_SINK_SHARED); // [状態] - 共有モードの file sink を用意する。
+    ASSERT_NE((cplat_trace_file_sink *)NULL, handle);     // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
     // write: 同一性チェック → 書き込み → 実サイズ超過
@@ -866,8 +870,7 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
 
     // プロセス間ロック下の再確認 → ローテーション
     EXPECT_CALL(mock_cplat, cplat_interprocess_lock_try_lock(_))
-        .WillOnce(
-            Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - ローテーション前にプロセス間ロックを即時取得すること。
+        .WillOnce(Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - ローテーション前にプロセス間ロックを即時取得すること。
     // [Pre-Assert手順] - cplat_interprocess_lock_try_lock から CPLAT_OK を返却する。
     EXPECT_CALL(mock_cplat, cplat_file_get_path_id(StrEq("trace.log"), _, _)).Times(1); // ロック下の同一性再確認
     // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_path_id(StrEq("trace.log"), _, _) が登録した呼び出し期待を満たすこと。
@@ -899,7 +902,7 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
             {
                 *size_out = 0;
                 return 0;
-            });                                                 // 開き直し時の初期サイズ取得
+            });                                                   // 開き直し時の初期サイズ取得
     // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_size(_, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_file_get_id(_, _, _)).Times(1); // 開き直し時の同一性キャッシュ
     // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_id(_, _, _) が登録した呼び出し期待を満たすこと。
@@ -911,7 +914,7 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
 
     // Act
     int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
-                                                "rotate me"); // [手順] - 上限 1 byte のファイルへ 1 行書き込む。
+                                             "rotate me"); // [手順] - 上限 1 byte のファイルへ 1 行書き込む。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - 書き込み後にローテーションが完了すること。
@@ -925,9 +928,9 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
 TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_other_process_already_rotated)
 {
     // Arrange
-    cplat_trace_file_sink *handle =
-        cplat_trace_file_sink_create("trace.log", 1, 2, CPLAT_TRACE_FILE_SINK_SHARED); // [状態] - 共有モードの file sink を用意する。
-    ASSERT_NE((cplat_trace_file_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
+        "trace.log", 1, 2, CPLAT_TRACE_FILE_SINK_SHARED); // [状態] - 共有モードの file sink を用意する。
+    ASSERT_NE((cplat_trace_file_sink *)NULL, handle);     // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_rename(_, _, _)).Times(0); // [Pre-Assert確認_正常系] - リネームは行われないこと。
@@ -968,23 +971,22 @@ TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_other_process_already
             {
                 *size_out = 0;
                 return 0;
-            });                                                 // 開き直し時の初期サイズ取得
+            });                                                   // 開き直し時の初期サイズ取得
     // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_size(_, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_file_get_id(_, _, _)).Times(1); // 開き直し時の同一性キャッシュ
     // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_id(_, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_interprocess_lock_unlock(_)).WillOnce(Return(CPLAT_OK)); // 開き直し後のロック解放
     // [Pre-Assert確認_正常系] - mock_cplat の cplat_interprocess_lock_unlock(_) が登録した呼び出し期待を満たすこと。
-    EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // dispose 分
+    EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1);                              // dispose 分
     // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
 
     // Act
     int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
-                                                "already rotated"); // [手順] - 1 行書き込む。
+                                             "already rotated"); // [手順] - 1 行書き込む。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_OK,
-        result); // [確認_正常系] - cplat_trace_file_sink_write の戻り値から、書き込みが成功したと判断できること。
+    EXPECT_EQ(CPLAT_OK,
+              result); // [確認_正常系] - cplat_trace_file_sink_write の戻り値から、書き込みが成功したと判断できること。
 
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
@@ -995,9 +997,9 @@ TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_other_process_already
 TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_lock_is_busy)
 {
     // Arrange
-    cplat_trace_file_sink *handle =
-        cplat_trace_file_sink_create("trace.log", 1, 2, CPLAT_TRACE_FILE_SINK_SHARED); // [状態] - 共有モードの file sink を用意する。
-    ASSERT_NE((cplat_trace_file_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
+        "trace.log", 1, 2, CPLAT_TRACE_FILE_SINK_SHARED); // [状態] - 共有モードの file sink を用意する。
+    ASSERT_NE((cplat_trace_file_sink *)NULL, handle);     // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_file_get_size(_, _, _))
@@ -1017,7 +1019,7 @@ TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_lock_is_busy)
 
     // Act
     int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
-                                                "lock busy"); // [手順] - 1 行書き込む。
+                                             "lock busy"); // [手順] - 1 行書き込む。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_異常系] - ローテーションを見送っても書き込みは成功扱いであること。
@@ -1045,9 +1047,8 @@ TEST_F(trace_fileTest, test_create_same_path_shares_handle_in_single_process)
 
     // Assert
     ASSERT_NE((cplat_trace_file_sink *)NULL, first); // [確認_正常系] - 1 回目のハンドルが生成されること。
-    EXPECT_EQ(
-        first,
-        second); // [確認_正常系] - cplat_trace_file_sink_create の戻り値として、2 回目は同一ハンドルが返ること。
+    EXPECT_EQ(first,
+              second); // [確認_正常系] - cplat_trace_file_sink_create の戻り値として、2 回目は同一ハンドルが返ること。
 
     // Cleanup
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(AtLeast(1)); // dispose 時の close を許容する。
@@ -1061,11 +1062,13 @@ TEST_F(trace_fileTest, test_create_same_path_shares_handle_in_single_process)
 TEST_F(trace_fileTest, test_shared_handle_survives_until_last_dispose)
 {
     // Arrange
-    cplat_trace_file_sink *first = cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [状態] - 同一パスの 1 つ目の file sink を用意する。
-    cplat_trace_file_sink *second = cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [状態] - 同一パスの 2 つ目の file sink を用意する。
-    ASSERT_NE((cplat_trace_file_sink *)NULL, first); // [状態確認] - 1 つ目のハンドルが非 NULL であること。
-    ASSERT_EQ(first, second); // [状態] - 同一 sink の参照カウントが 2 の状態とする。
-                              // [状態確認] - first と second が同一であること。
+    cplat_trace_file_sink *first =
+        cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [状態] - 同一パスの 1 つ目の file sink を用意する。
+    cplat_trace_file_sink *second =
+        cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [状態] - 同一パスの 2 つ目の file sink を用意する。
+    ASSERT_NE((cplat_trace_file_sink *)NULL, first);        // [状態確認] - 1 つ目のハンドルが非 NULL であること。
+    ASSERT_EQ(first, second);                               // [状態] - 同一 sink の参照カウントが 2 の状態とする。
+                                                            // [状態確認] - first と second が同一であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_file_write(_, _, _, _))
@@ -1082,7 +1085,7 @@ TEST_F(trace_fileTest, test_shared_handle_survives_until_last_dispose)
     // Act
     cplat_trace_file_sink_dispose(first); // [手順] - 1 人目の利用者が解放する。
     int result = cplat_trace_file_sink_write(second, CPLAT_TRACE_LEVEL_INFO, NULL,
-                                                "after first dispose"); // [手順] - 2 人目の利用者が書き込む。
+                                             "after first dispose"); // [手順] - 2 人目の利用者が書き込む。
 
     // Assert
     EXPECT_EQ(
@@ -1100,7 +1103,7 @@ TEST_F(trace_fileTest, test_create_same_path_with_mismatched_shared_flag_returns
     // Arrange
     cplat_trace_file_sink *first =
         cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [状態] - 占有モードの sink を用意する。
-    ASSERT_NE((cplat_trace_file_sink *)NULL, first); // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE((cplat_trace_file_sink *)NULL, first);        // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
 
@@ -1140,7 +1143,7 @@ TEST_F(trace_fileTest, test_create_different_paths_returns_distinct_handles)
     // Assert
     ASSERT_NE((cplat_trace_file_sink *)NULL, first);  // [確認_正常系] - 1 つ目のハンドルが生成されること。
     ASSERT_NE((cplat_trace_file_sink *)NULL, second); // [確認_正常系] - 2 つ目のハンドルが生成されること。
-    EXPECT_NE(first, second);                            // [確認_正常系] - 異なるパスでは別ハンドルになること。
+    EXPECT_NE(first, second);                         // [確認_正常系] - 異なるパスでは別ハンドルになること。
 
     // Cleanup
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(AtLeast(2)); // dispose 時の close を許容する。

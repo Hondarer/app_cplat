@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_ipv4_to_string(uint32_t address, char *buffer, size_t buffer_size, cplat_error *detail_out)
 {
-    static auto real_fn =
-        reinterpret_cast<decltype(&cplat_ipv4_to_string)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_ipv4_to_string"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_ipv4_to_string)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_ipv4_to_string"));
 
     return real_fn(address, buffer, buffer_size, detail_out);
 }

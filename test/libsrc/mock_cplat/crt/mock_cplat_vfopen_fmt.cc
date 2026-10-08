@@ -6,14 +6,13 @@
 
 FILE *delegate_real_cplat_vfopen_fmt(const char *modes, cplat_error *detail_out, const char *format, va_list args)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_vfopen_fmt)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_vfopen_fmt"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_vfopen_fmt)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_vfopen_fmt"));
 
     return real_fn(modes, detail_out, format, args);
 }
 
-MOCK_WEAK_IMPL(FILE *, cplat_vfopen_fmt, const char *modes, cplat_error *detail_out, const char *format,
-               va_list args)
+MOCK_WEAK_IMPL(FILE *, cplat_vfopen_fmt, const char *modes, cplat_error *detail_out, const char *format, va_list args)
 {
     FILE *mock_ret = nullptr;
 

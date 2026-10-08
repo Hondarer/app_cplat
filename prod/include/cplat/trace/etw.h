@@ -114,8 +114,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT cplat_etw_provider *CPLAT_API
-    cplat_etw_provider_create(cplat_etw_provider_ref_t provider_ref);
+    CPLAT_EXPORT cplat_etw_provider *CPLAT_API cplat_etw_provider_create(cplat_etw_provider_ref_t provider_ref);
 
     /**
      *  @brief          ETW プロバイダーへ UTF-8 メッセージを書き込みます。
@@ -129,8 +128,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_etw_provider_write(cplat_etw_provider *handle, int level,
-                                                                 const char *service, const char *message);
+    CPLAT_EXPORT int CPLAT_API cplat_etw_provider_write(cplat_etw_provider *handle, int level, const char *service,
+                                                        const char *message);
 
     /**
      *  @brief          ETW プロバイダーの登録を解除します。
@@ -176,8 +175,8 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_etw_session_start(const char *session_name, const char *provider_guid_str,
-                                                                cplat_etw_event_fn callback, void *context,
-                                                                cplat_etw_session **session_out);
+                                                       cplat_etw_event_fn callback, void *context,
+                                                       cplat_etw_session **session_out);
 
     /**
      *  @brief          ETW セッションを停止し、リソースを解放します。

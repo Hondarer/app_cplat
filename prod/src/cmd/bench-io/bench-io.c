@@ -494,7 +494,7 @@ static int execute_case(const bench_case *job, bench_context *ctx, const bench_e
     if (setup_result != 0)
     {
         (void)cplat_fprintf(stderr, "error: setup failed for %s/%s\n", bench_api_name(job->api, job->durable),
-                               bench_pattern_name(job->pattern));
+                            bench_pattern_name(job->pattern));
         return -1;
     }
 
@@ -520,7 +520,7 @@ static int execute_case(const bench_case *job, bench_context *ctx, const bench_e
     if (measure_result != 0)
     {
         (void)cplat_fprintf(stderr, "error: measurement failed for %s/%s\n", bench_api_name(job->api, job->durable),
-                               bench_pattern_name(job->pattern));
+                            bench_pattern_name(job->pattern));
         return -1;
     }
 
@@ -656,11 +656,10 @@ int main(int argc, char *argv[])
     cplat_argparser_register_option_string(NULL, "--dir", "PATH", "測定用ファイルを置くディレクトリ。", 0U, &dir);
     cplat_argparser_register_option_string(NULL, "--csv", "PATH", "CSV の出力先。", 0U, &csv_path);
     cplat_argparser_register_option_string(NULL, "--sizes", "LIST", "測定するファイル サイズ (例: 4K,1M,256M)。", 0U,
-                                              &sizes);
-    cplat_argparser_register_option_string(NULL, "--apis", "LIST", "測定する API 形態を絞り込みます。", 0U,
-                                              &api_list);
-    cplat_argparser_register_option_string(NULL, "--patterns", "LIST", "測定するアクセス パターンを絞り込みます。",
-                                              0U, &pattern_list);
+                                           &sizes);
+    cplat_argparser_register_option_string(NULL, "--apis", "LIST", "測定する API 形態を絞り込みます。", 0U, &api_list);
+    cplat_argparser_register_option_string(NULL, "--patterns", "LIST", "測定するアクセス パターンを絞り込みます。", 0U,
+                                           &pattern_list);
     cplat_argparser_register_option_int(NULL, "--min-ms", "MS", "1 試行の測定区間の下限 (ミリ秒)。", 0U, &min_ms);
     cplat_argparser_register_option_int(NULL, "--trials", "N", "1 条件あたりの試行回数。", 0U, &trials);
     cplat_argparser_register_flag(NULL, "--huge", "1 GB のケースを追加します。", &huge);
@@ -689,13 +688,13 @@ int main(int argc, char *argv[])
     if (min_ms <= 0 || trials <= 0 || trials > BENCH_TIMER_MAX_TRIALS)
     {
         (void)cplat_fprintf(stderr, "error: --min-ms は 1 以上、--trials は 1 以上 %d 以下を指定してください。\n",
-                               BENCH_TIMER_MAX_TRIALS);
+                            BENCH_TIMER_MAX_TRIALS);
         return EXIT_FAILURE;
     }
     if (cold != 0 && drop_page_cache(NULL) != 0)
     {
         (void)cplat_fprintf(stderr, "error: ページ キャッシュを破棄できません。"
-                                       "--cold は Linux で root 権限が必要です。\n");
+                                    "--cold は Linux で root 権限が必要です。\n");
         return EXIT_FAILURE;
     }
 

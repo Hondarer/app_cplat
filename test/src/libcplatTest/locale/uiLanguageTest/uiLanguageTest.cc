@@ -111,8 +111,9 @@ TEST_F(uiLanguageTest, PrefersLcAllOverOtherVariables)
 
     ASSERT_EQ(CPLAT_OK, cplat_setenv("LC_ALL", "en_US.UTF-8", 1, NULL)); // [状態] - LC_ALL へ英語のロケールを設定する。
                                                                          // [状態確認] - LC_ALL の設定が成功すること。
-    ASSERT_EQ(CPLAT_OK, cplat_setenv("LC_MESSAGES", "fr_FR", 1, NULL)); // [状態] - LC_MESSAGES へ別のロケールを設定する。
-                                                                        // [状態確認] - LC_MESSAGES の設定が成功すること。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_setenv("LC_MESSAGES", "fr_FR", 1, NULL)); // [状態] - LC_MESSAGES へ別のロケールを設定する。
+                                                              // [状態確認] - LC_MESSAGES の設定が成功すること。
     ASSERT_EQ(CPLAT_OK, cplat_setenv("LANG", "ja_JP.UTF-8", 1, NULL)); // [状態] - LANG へ別のロケールを設定する。
                                                                        // [状態確認] - LANG の設定が成功すること。
 
@@ -134,8 +135,9 @@ TEST_F(uiLanguageTest, PrefersLcMessagesOverLang)
     // Arrange
     char tag[CPLAT_UI_LANGUAGE_TAG_MAX];
 
-    ASSERT_EQ(CPLAT_OK, cplat_setenv("LC_MESSAGES", "en_US.UTF-8", 1, NULL)); // [状態] - LC_MESSAGES へ英語のロケールを設定する。
-                                                                              // [状態確認] - LC_MESSAGES の設定が成功すること。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_setenv("LC_MESSAGES", "en_US.UTF-8", 1, NULL)); // [状態] - LC_MESSAGES へ英語のロケールを設定する。
+                                                                    // [状態確認] - LC_MESSAGES の設定が成功すること。
     ASSERT_EQ(CPLAT_OK, cplat_setenv("LANG", "ja_JP.UTF-8", 1, NULL)); // [状態] - LANG へ日本語のロケールを設定する。
                                                                        // [状態確認] - LANG の設定が成功すること。
 
@@ -157,8 +159,8 @@ TEST_F(uiLanguageTest, SkipsUninterpretableValue)
     // Arrange
     char tag[CPLAT_UI_LANGUAGE_TAG_MAX];
 
-    ASSERT_EQ(CPLAT_OK, cplat_setenv("LC_ALL", "!!!", 1, NULL)); // [状態] - LC_ALL へ解釈できない値を設定する。
-                                                                 // [状態確認] - LC_ALL の設定が成功すること。
+    ASSERT_EQ(CPLAT_OK, cplat_setenv("LC_ALL", "!!!", 1, NULL));       // [状態] - LC_ALL へ解釈できない値を設定する。
+                                                                       // [状態確認] - LC_ALL の設定が成功すること。
     ASSERT_EQ(CPLAT_OK, cplat_setenv("LANG", "ja_JP.UTF-8", 1, NULL)); // [状態] - LANG へ日本語のロケールを設定する。
                                                                        // [状態確認] - LANG の設定が成功すること。
 
@@ -180,8 +182,8 @@ TEST_F(uiLanguageTest, StopsAtLanguageNeutralLocale)
     // Arrange
     char tag[CPLAT_UI_LANGUAGE_TAG_MAX];
 
-    ASSERT_EQ(CPLAT_OK, cplat_setenv("LC_ALL", "C", 1, NULL)); // [状態] - LC_ALL へ C を設定する。
-                                                               // [状態確認] - LC_ALL の設定が成功すること。
+    ASSERT_EQ(CPLAT_OK, cplat_setenv("LC_ALL", "C", 1, NULL));         // [状態] - LC_ALL へ C を設定する。
+                                                                       // [状態確認] - LC_ALL の設定が成功すること。
     ASSERT_EQ(CPLAT_OK, cplat_setenv("LANG", "ja_JP.UTF-8", 1, NULL)); // [状態] - LANG へ日本語のロケールを設定する。
                                                                        // [状態確認] - LANG の設定が成功すること。
 
@@ -192,7 +194,7 @@ TEST_F(uiLanguageTest, StopsAtLanguageNeutralLocale)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_ui_language_get_tag の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("", tag); // [確認_正常系] - LANG を評価せず、ニュートラルを表す空文字列を取得すること。
+    EXPECT_STREQ("", tag);           // [確認_正常系] - LANG を評価せず、ニュートラルを表す空文字列を取得すること。
 }
 // [サブ手順参照 名前=uiLanguageTest.TearDown]
 
@@ -251,12 +253,13 @@ TEST_F(uiLanguageTest, ReportsSmallBuffer)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_ui_language_get_tag(tag, sizeof(tag)); // [手順] - ja-JP が収まらない出力先へ表示言語を取得する。
+    int actual_ret =
+        cplat_ui_language_get_tag(tag, sizeof(tag)); // [手順] - ja-JP が収まらない出力先へ表示言語を取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              actual_ret);  // [確認_異常系] - 戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
-    EXPECT_STREQ("", tag);  // [確認_異常系] - 出力先が空文字列であること。
+              actual_ret); // [確認_異常系] - 戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_STREQ("", tag); // [確認_異常系] - 出力先が空文字列であること。
 }
 // [サブ手順参照 名前=uiLanguageTest.TearDown]
 
@@ -270,7 +273,8 @@ TEST_F(uiLanguageTest, RejectsInvalidOutputArguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null = cplat_ui_language_get_tag(NULL, sizeof(tag)); // [手順] - 出力先に NULL を渡して表示言語を取得する。
+    int actual_ret_null =
+        cplat_ui_language_get_tag(NULL, sizeof(tag));        // [手順] - 出力先に NULL を渡して表示言語を取得する。
     int actual_ret_zero = cplat_ui_language_get_tag(tag, 0); // [手順] - 出力先サイズに 0 を渡して表示言語を取得する。
 
     // Assert
@@ -294,7 +298,8 @@ TEST_F(uiLanguageTest, ReturnsNeutralWhenEnvironmentIsUnset)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_ui_language_get_tag(tag, sizeof(tag)); // [手順] - 環境変数が未設定の状態で表示言語を取得する。
+    int actual_ret =
+        cplat_ui_language_get_tag(tag, sizeof(tag)); // [手順] - 環境変数が未設定の状態で表示言語を取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_ui_language_get_tag の戻り値が CPLAT_OK であること。
@@ -316,15 +321,15 @@ TEST_F(uiLanguageTest, ReturnsWindowsUiLanguageWhenEnvironmentIsUnset)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_ui_language_get_tag(tag, sizeof(tag)); // [手順] - 環境変数が未設定の状態で表示言語を取得する。
+    int actual_ret =
+        cplat_ui_language_get_tag(tag, sizeof(tag)); // [手順] - 環境変数が未設定の状態で表示言語を取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_ui_language_get_tag の戻り値が CPLAT_OK であること。
     if (tag[0] != '\0')
     {
         // OS の表示言語は実行環境によって異なるため、値ではなく表記が規則に従うことを確認する
-        normalize_ret = cplat_internal_ui_language_normalize(
-            tag, normalized, sizeof(normalized));
+        normalize_ret = cplat_internal_ui_language_normalize(tag, normalized, sizeof(normalized));
     }
     EXPECT_EQ(CPLAT_OK, normalize_ret); // [確認_正常系] - 空の言語タグを許容し、取得した言語タグを解釈できること。
     EXPECT_STREQ(tag, normalized); // [確認_正常系] - 取得した言語タグが空または正規化済みの表記であること。
@@ -372,7 +377,8 @@ TEST_F(uiLanguageTest, ConvertsMockedWindowsUiLanguage)
                  // [Pre-Assert手順] - ja-JP と en-US の一覧を返却する。
 
     // Act
-    int actual_ret = cplat_ui_language_get_tag(tag, sizeof(tag)); // [手順] - 環境変数が未設定の状態で表示言語を取得する。
+    int actual_ret =
+        cplat_ui_language_get_tag(tag, sizeof(tag)); // [手順] - 環境変数が未設定の状態で表示言語を取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_ui_language_get_tag の戻り値が CPLAT_OK であること。
@@ -409,7 +415,8 @@ TEST_F(uiLanguageTest, FallsBackToUserDefaultLocaleName)
                  // [Pre-Assert手順] - en-US を返却する。
 
     // Act
-    int actual_ret = cplat_ui_language_get_tag(tag, sizeof(tag)); // [手順] - 環境変数が未設定の状態で表示言語を取得する。
+    int actual_ret =
+        cplat_ui_language_get_tag(tag, sizeof(tag)); // [手順] - 環境変数が未設定の状態で表示言語を取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_ui_language_get_tag の戻り値が CPLAT_OK であること。
@@ -434,7 +441,8 @@ TEST_F(uiLanguageTest, ReturnsNeutralWhenWindowsApisFail)
                               // [Pre-Assert手順] - 失敗を返却する。
 
     // Act
-    int actual_ret = cplat_ui_language_get_tag(tag, sizeof(tag)); // [手順] - 環境変数が未設定の状態で表示言語を取得する。
+    int actual_ret =
+        cplat_ui_language_get_tag(tag, sizeof(tag)); // [手順] - 環境変数が未設定の状態で表示言語を取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 取得できないことを失敗として扱わないこと。
@@ -471,14 +479,15 @@ TEST_F(uiLanguageTagTest, NormalizesSeparatorAndLetterCase)
         "es-419", tag_digit_region, sizeof(tag_digit_region)); // [手順] - 数字の地域を含む指定を正規化する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_underscore);  // [確認_正常系] - 下線区切りの指定で戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("zh-TW", tag_underscore);       // [確認_正常系] - 下線をハイフンへそろえること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_upper);       // [確認_正常系] - 大文字小文字が異なる指定で戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("ja-JP", tag_upper);            // [確認_正常系] - 言語を小文字、地域を大文字へそろえること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_script);      // [確認_正常系] - 表記体系を含む指定で戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("zh-Hans-CN", tag_script);      // [確認_正常系] - 表記体系を先頭だけ大文字へそろえること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_digit_region); // [確認_正常系] - 数字の地域を含む指定で戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("es-419", tag_digit_region);     // [確認_正常系] - 数字の地域をそのまま保持すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_underscore); // [確認_正常系] - 下線区切りの指定で戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("zh-TW", tag_underscore);      // [確認_正常系] - 下線をハイフンへそろえること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_upper);  // [確認_正常系] - 大文字小文字が異なる指定で戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("ja-JP", tag_upper);       // [確認_正常系] - 言語を小文字、地域を大文字へそろえること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_script); // [確認_正常系] - 表記体系を含む指定で戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("zh-Hans-CN", tag_script); // [確認_正常系] - 表記体系を先頭だけ大文字へそろえること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_digit_region);       // [確認_正常系] - 数字の地域を含む指定で戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("es-419", tag_digit_region); // [確認_正常系] - 数字の地域をそのまま保持すること。
 }
 
 // 文字コードと修飾子を取り除くことの確認
@@ -513,16 +522,17 @@ TEST_F(uiLanguageTagTest, IgnoresSubtagsAfterRegion)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_internal_ui_language_normalize("ja-JP-u-ca-japanese", tag,
-                                                          sizeof(tag)); // [手順] - 地域の後ろに区別が続く指定を正規化する。
+    int actual_ret =
+        cplat_internal_ui_language_normalize("ja-JP-u-ca-japanese", tag,
+                                             sizeof(tag)); // [手順] - 地域の後ろに区別が続く指定を正規化する。
     int actual_ret_mixed = cplat_internal_ui_language_normalize(
         "es-4a9", tag_mixed, sizeof(tag_mixed)); // [手順] - 英字と数字が混在する区別を含む指定を正規化する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("ja-JP", tag);      // [確認_正常系] - 地域までを取り込み、後続の区別を取り込まないこと。
+    EXPECT_EQ(CPLAT_OK, actual_ret);       // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("ja-JP", tag);            // [確認_正常系] - 地域までを取り込み、後続の区別を取り込まないこと。
     EXPECT_EQ(CPLAT_OK, actual_ret_mixed); // [確認_正常系] - 混在する区別を含む指定で戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("es", tag_mixed); // [確認_正常系] - 地域として解釈できない区別を取り込まないこと。
+    EXPECT_STREQ("es", tag_mixed);         // [確認_正常系] - 地域として解釈できない区別を取り込まないこと。
 }
 
 // 解釈できない指定を通知することの確認
@@ -537,10 +547,11 @@ TEST_F(uiLanguageTagTest, RejectsUninterpretableValue)
     // Pre-Assert
 
     // Act
-    int actual_ret_symbol =
-        cplat_internal_ui_language_normalize("!!!", tag_symbol, sizeof(tag_symbol)); // [手順] - 英字以外の指定を正規化する。
-    int actual_ret_short = cplat_internal_ui_language_normalize("j", tag_short,
-                                                                sizeof(tag_short)); // [手順] - 言語が 1 文字の指定を正規化する。
+    int actual_ret_symbol = cplat_internal_ui_language_normalize(
+        "!!!", tag_symbol, sizeof(tag_symbol)); // [手順] - 英字以外の指定を正規化する。
+    int actual_ret_short =
+        cplat_internal_ui_language_normalize("j", tag_short,
+                                             sizeof(tag_short)); // [手順] - 言語が 1 文字の指定を正規化する。
     int actual_ret_trailing = cplat_internal_ui_language_normalize(
         "ja_", tag_trailing, sizeof(tag_trailing)); // [手順] - 区切り文字で終わる指定を正規化する。
     int actual_ret_codeset_only = cplat_internal_ui_language_normalize(
@@ -550,12 +561,15 @@ TEST_F(uiLanguageTagTest, RejectsUninterpretableValue)
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
               actual_ret_symbol); // [確認_異常系] - 英字以外の指定で戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_STREQ("", tag_symbol); // [確認_異常系] - 英字以外の指定で出力先が空文字列であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_short); // [確認_異常系] - 言語が 1 文字の指定で戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_trailing); // [確認_異常系] - 区切り文字で終わる指定で戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_codeset_only); // [確認_異常系] - 文字コードだけの指定で戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_short); // [確認_異常系] - 言語が 1 文字の指定で戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_trailing); // [確認_異常系] - 区切り文字で終わる指定で戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_codeset_only); // [確認_異常系] - 文字コードだけの指定で戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 不正な引数を拒否することの確認
@@ -570,7 +584,7 @@ TEST_F(uiLanguageTagTest, RejectsInvalidArguments)
     int actual_ret_null_value =
         cplat_internal_ui_language_normalize(NULL, tag, sizeof(tag)); // [手順] - 正規化する値に NULL を渡す。
     int actual_ret_null_tag =
-        cplat_internal_ui_language_normalize("ja", NULL, sizeof(tag)); // [手順] - 出力先に NULL を渡す。
+        cplat_internal_ui_language_normalize("ja", NULL, sizeof(tag));        // [手順] - 出力先に NULL を渡す。
     int actual_ret_zero = cplat_internal_ui_language_normalize("ja", tag, 0); // [手順] - 出力先サイズに 0 を渡す。
 
     // Assert
@@ -591,9 +605,10 @@ TEST_F(uiLanguageTagTest, ReportsSmallBuffer)
     // Pre-Assert
 
     // Act
-    int actual_ret =
-        cplat_internal_ui_language_normalize("ja_JP", tag, sizeof(tag)); // [手順] - ja-JP が収まらない出力先へ正規化する。
+    int actual_ret = cplat_internal_ui_language_normalize(
+        "ja_JP", tag, sizeof(tag)); // [手順] - ja-JP が収まらない出力先へ正規化する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, actual_ret); // [確認_異常系] - 戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
+              actual_ret); // [確認_異常系] - 戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
 }

@@ -67,8 +67,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_syslog_sink_write(cplat_syslog_sink *handle, int level,
-                                                                const cplat_timespec *timestamp,
-                                                                const char *message);
+                                                       const cplat_timespec *timestamp, const char *message);
 
     /**
      *  @brief          syslog プロバイダーの識別子を変更します。

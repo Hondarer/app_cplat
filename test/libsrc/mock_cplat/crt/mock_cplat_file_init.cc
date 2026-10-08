@@ -3,8 +3,8 @@
 
 void delegate_real_cplat_file_init(cplat_file *file)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_file_init)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_file_init"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_file_init)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_file_init"));
 
     real_fn(file);
 }

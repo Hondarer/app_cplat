@@ -1,8 +1,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_hashtable_buffer_size(const cplat_hashtable *ht, size_t *mgmt_size_out,
-                                                 size_t *data_size_out)
+int delegate_real_cplat_hashtable_buffer_size(const cplat_hashtable *ht, size_t *mgmt_size_out, size_t *data_size_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_hashtable_buffer_size)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_hashtable_buffer_size"));

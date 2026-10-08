@@ -98,8 +98,7 @@ int cplat_ipv4_resolve(const char *text, uint32_t *address_out, cplat_error *det
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_ipv4_to_string(const uint32_t address, char *buffer, const size_t buffer_size,
-                            cplat_error *detail_out)
+int cplat_ipv4_to_string(const uint32_t address, char *buffer, const size_t buffer_size, cplat_error *detail_out)
 {
     struct in_addr value;
     int startup_result;

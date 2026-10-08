@@ -215,8 +215,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "usage: bench-tracer [path [processes [messages]]]\n");
         return 1;
     }
-    if (measure_filtered(messages * processes) != 0 ||
-        measure_files(argv[0], path, processes, messages, 0) != 0 ||
+    if (measure_filtered(messages * processes) != 0 || measure_files(argv[0], path, processes, messages, 0) != 0 ||
         measure_files(argv[0], path, processes, messages, 1) != 0)
     {
         return 1;

@@ -155,15 +155,15 @@ extern "C"
      */
     typedef struct cplat_hashtable_config
     {
-        size_t capacity;                                    /**< バケット数兼エントリ数。0 は不正。 */
+        size_t capacity;                                 /**< バケット数兼エントリ数。0 は不正。 */
         cplat_hashtable_field_type key_type;             /**< キーの格納形式。 */
         cplat_hashtable_field_type value_type;           /**< 値の格納形式。 */
         cplat_hashtable_timestamp_scope timestamp_scope; /**< 変更時刻の粒度。レイアウト入力。 */
-        unsigned char pad1[4];                              /**< key_size の直前の予約。常に 0。 */
-        size_t key_size;                                    /**< 固定長キーのバイト数。可変長では 0。 */
-        size_t value_size;                                  /**< 固定長値のバイト数。可変長では 0。 */
-        size_t key_storage_size;                            /**< 可変長キーのストレージ容量バイト数。固定長では 0。 */
-        size_t value_storage_size;                          /**< 可変長値のストレージ容量バイト数。固定長では 0。 */
+        unsigned char pad1[4];                           /**< key_size の直前の予約。常に 0。 */
+        size_t key_size;                                 /**< 固定長キーのバイト数。可変長では 0。 */
+        size_t value_size;                               /**< 固定長値のバイト数。可変長では 0。 */
+        size_t key_storage_size;                         /**< 可変長キーのストレージ容量バイト数。固定長では 0。 */
+        size_t value_storage_size;                       /**< 可変長値のストレージ容量バイト数。固定長では 0。 */
         size_t value_align;     /**< 固定長値の格納境界。0 は詰めて配置。非 0 は 2 の冪かつ
                                  @ref CPLAT_HASHTABLE_VALUE_ALIGN_MAX 以下。可変長値では 0。 */
         unsigned char lifetime; /**< 削除済みの寿命。2 から 254 は有限、255 は無限。 */
@@ -212,7 +212,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_required_size(const cplat_hashtable_config *config,
-                                                                      size_t *mgmt_size_out, size_t *data_size_out);
+                                                             size_t *mgmt_size_out, size_t *data_size_out);
 
     /**
      *  @brief          ハッシュ テーブルを構築します。
@@ -247,8 +247,8 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_create(const cplat_hashtable_config *config, void *buf_mgmt,
-                                                               size_t buf_mgmt_size, void *buf_data,
-                                                               size_t buf_data_size, cplat_hashtable **ht_out);
+                                                      size_t buf_mgmt_size, void *buf_data, size_t buf_data_size,
+                                                      cplat_hashtable **ht_out);
 
     /**
      *  @brief          内部領域を必要に応じて自動拡張するハッシュ テーブルを構築します。
@@ -274,9 +274,9 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_hashtable_create_growable(
-        const cplat_hashtable_config *initial_config, const cplat_hashtable_growth_config *growth_config,
-        cplat_hashtable **ht_out);
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_create_growable(const cplat_hashtable_config *initial_config,
+                                                               const cplat_hashtable_growth_config *growth_config,
+                                                               cplat_hashtable **ht_out);
 
     /**
      *  @brief          構築済み領域へ、既存内容を保ったまま再接続します。
@@ -307,7 +307,7 @@ extern "C"
      *  同一 @p buf_mgmt を他スレッドが使っていないことを呼び出し側で保証してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_attach(void *buf_mgmt, size_t buf_mgmt_size, void *buf_data,
-                                                               size_t buf_data_size, cplat_hashtable **ht_out);
+                                                      size_t buf_data_size, cplat_hashtable **ht_out);
 
     /**
      *  @brief          内部整合性を検証します。
@@ -335,7 +335,7 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_config_ref(const cplat_hashtable *ht,
-                                                                       const cplat_hashtable_config **config_out);
+                                                              const cplat_hashtable_config **config_out);
 
     /**
      *  @brief          設定を呼び出し側へ複製します。
@@ -349,7 +349,7 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_config_val(const cplat_hashtable *ht,
-                                                                       cplat_hashtable_config *config_out);
+                                                              cplat_hashtable_config *config_out);
 
     /**
      *  @brief          テーブルが占める管理領域とデータ領域のバイト数を返します。
@@ -366,7 +366,7 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_buffer_size(const cplat_hashtable *ht, size_t *mgmt_size_out,
-                                                                    size_t *data_size_out);
+                                                           size_t *data_size_out);
 
     /**
      *  @brief          テーブルが現在管理している管理領域とデータ領域の先頭を返します。
@@ -394,7 +394,7 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_buffer_ref(const cplat_hashtable *ht, const void **mgmt_out,
-                                                                   const void **data_out);
+                                                          const void **data_out);
 
     /**
      *  @brief          add で削除済みの同一キーが見つかった場合の振る舞いです。
@@ -443,7 +443,7 @@ extern "C"
      *  同一テーブルへの同時呼び出しは、呼び出し側で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_add(cplat_hashtable *ht, const void *key, const void *value,
-                                                            cplat_hashtable_add_deleted_policy deleted_policy);
+                                                   cplat_hashtable_add_deleted_policy deleted_policy);
 
     /**
      *  @brief          キーが無ければ追加し、あれば値を書き換えます。
@@ -471,8 +471,8 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  同一テーブルへの同時呼び出しは、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_hashtable_upsert(cplat_hashtable *ht, const void *key,
-                                                               const void *value, int *inserted_out);
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_upsert(cplat_hashtable *ht, const void *key, const void *value,
+                                                      int *inserted_out);
 
     /**
      *  @brief          レコード番号を指定してキーと値と変更時刻を直接書き込みます。
@@ -511,10 +511,9 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  同一テーブルへの同時呼び出しは、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_hashtable_insert_direct(cplat_hashtable *ht, uint64_t record,
-                                                                      const void *key, int status, const void *value,
-                                                                      const cplat_timespec *timestamp,
-                                                                      uint64_t generation);
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_insert_direct(cplat_hashtable *ht, uint64_t record, const void *key,
+                                                             int status, const void *value,
+                                                             const cplat_timespec *timestamp, uint64_t generation);
 
     /**
      *  @brief          使用中の既存キーの値を書き換えます。
@@ -536,8 +535,7 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  同一テーブルへの同時呼び出しは、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_hashtable_update(cplat_hashtable *ht, const void *key,
-                                                               const void *value);
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_update(cplat_hashtable *ht, const void *key, const void *value);
 
     /**
      *  @brief          レコード番号で値を書き換えます。
@@ -559,8 +557,7 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  同一テーブルへの同時呼び出しは、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_hashtable_update_rec(cplat_hashtable *ht, uint64_t record,
-                                                                   const void *value);
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_update_rec(cplat_hashtable *ht, uint64_t record, const void *value);
 
     /**
      *  @brief          キーで値への参照を取得します。
@@ -578,7 +575,7 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_value_ref(const cplat_hashtable *ht, const void *key,
-                                                                       const void **value_out);
+                                                              const void **value_out);
 
     /**
      *  @brief          キーで値を容量検査付きで複製します。
@@ -601,9 +598,8 @@ extern "C"
      *  異なるテーブルへの同時呼び出しはできます。\n
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_value_copy(const cplat_hashtable *ht, const void *key,
-                                                                        void *dest, size_t dest_size,
-                                                                        size_t *required_size_out);
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_value_copy(const cplat_hashtable *ht, const void *key, void *dest,
+                                                               size_t dest_size, size_t *required_size_out);
 
     /**
      *  @brief          キーからレコード番号を取得します。
@@ -619,7 +615,7 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_recno(const cplat_hashtable *ht, const void *key,
-                                                                   uint64_t *record_out);
+                                                          uint64_t *record_out);
 
     /**
      *  @brief          キーで変更時刻への参照を取得します。
@@ -639,9 +635,8 @@ extern "C"
      *  異なるテーブルへの同時呼び出しはできます。\n
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_timestamp_ref(const cplat_hashtable *ht,
-                                                                           const void *key,
-                                                                           const cplat_timespec **timestamp_out);
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_timestamp_ref(const cplat_hashtable *ht, const void *key,
+                                                                  const cplat_timespec **timestamp_out);
 
     /**
      *  @brief          キーで変更時刻を呼び出し側へ複製します。
@@ -657,9 +652,8 @@ extern "C"
      *  異なるテーブルへの同時呼び出しはできます。\n
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_timestamp_val(const cplat_hashtable *ht,
-                                                                           const void *key,
-                                                                           cplat_timespec *timestamp_out);
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_timestamp_val(const cplat_hashtable *ht, const void *key,
+                                                                  cplat_timespec *timestamp_out);
 
     /**
      *  @brief          キーで世代カウンターを取得します。
@@ -680,7 +674,7 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_generation(const cplat_hashtable *ht, const void *key,
-                                                                        uint64_t *generation_out);
+                                                               uint64_t *generation_out);
 
     /**
      *  @brief          レコード番号からキーへの参照を取得します。
@@ -698,7 +692,7 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_key_ref(const cplat_hashtable *ht, uint64_t record,
-                                                                    const void **key_out);
+                                                           const void **key_out);
 
     /**
      *  @brief          レコード番号からキーを容量検査付きで複製します。
@@ -721,9 +715,8 @@ extern "C"
      *  異なるテーブルへの同時呼び出しはできます。\n
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_key_copy(const cplat_hashtable *ht, uint64_t record,
-                                                                     void *dest, size_t dest_size,
-                                                                     size_t *required_size_out);
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_key_copy(const cplat_hashtable *ht, uint64_t record, void *dest,
+                                                            size_t dest_size, size_t *required_size_out);
 
     /**
      *  @brief          レコード番号から値への参照を取得します。
@@ -741,7 +734,7 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_value_ref(const cplat_hashtable *ht, uint64_t record,
-                                                                      const void **value_out);
+                                                             const void **value_out);
 
     /**
      *  @brief          レコード番号から値を容量検査付きで複製します。
@@ -764,9 +757,8 @@ extern "C"
      *  異なるテーブルへの同時呼び出しはできます。\n
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_value_copy(const cplat_hashtable *ht, uint64_t record,
-                                                                       void *dest, size_t dest_size,
-                                                                       size_t *required_size_out);
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_value_copy(const cplat_hashtable *ht, uint64_t record, void *dest,
+                                                              size_t dest_size, size_t *required_size_out);
 
     /**
      *  @brief          レコード番号の使用状況を取得します。
@@ -783,8 +775,7 @@ extern "C"
      *  異なるテーブルへの同時呼び出しはできます。\n
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_status(const cplat_hashtable *ht, uint64_t record,
-                                                                   int *status_out);
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_status(const cplat_hashtable *ht, uint64_t record, int *status_out);
 
     /**
      *  @brief          走査で対象とする使用状況のビットです。
@@ -820,8 +811,8 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_next_record(const cplat_hashtable *ht, uint64_t from,
-                                                                    unsigned int status_mask, uint64_t *record_out,
-                                                                    int *has_record_out);
+                                                           unsigned int status_mask, uint64_t *record_out,
+                                                           int *has_record_out);
 
     /**
      *  @brief          レコード番号から変更時刻への参照を取得します。
@@ -841,7 +832,7 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_timestamp_ref(const cplat_hashtable *ht, uint64_t record,
-                                                                          const cplat_timespec **timestamp_out);
+                                                                 const cplat_timespec **timestamp_out);
 
     /**
      *  @brief          レコード番号から変更時刻を呼び出し側へ複製します。
@@ -857,7 +848,7 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_timestamp_val(const cplat_hashtable *ht, uint64_t record,
-                                                                          cplat_timespec *timestamp_out);
+                                                                 cplat_timespec *timestamp_out);
 
     /**
      *  @brief          レコード番号から世代カウンターを取得します。
@@ -877,7 +868,7 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_generation(const cplat_hashtable *ht, uint64_t record,
-                                                                       uint64_t *generation_out);
+                                                              uint64_t *generation_out);
 
     /**
      *  @brief          テーブル横断の変更時刻への参照を取得します。
@@ -894,8 +885,8 @@ extern "C"
      *  異なるテーブルへの同時呼び出しはできます。\n
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
-    CPLAT_EXPORT int CPLAT_API
-    cplat_hashtable_get_table_timestamp_ref(const cplat_hashtable *ht, const cplat_timespec **timestamp_out);
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_table_timestamp_ref(const cplat_hashtable *ht,
+                                                                       const cplat_timespec **timestamp_out);
 
     /**
      *  @brief          テーブル横断の変更時刻を呼び出し側へ複製します。
@@ -909,7 +900,7 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_table_timestamp_val(const cplat_hashtable *ht,
-                                                                                cplat_timespec *timestamp_out);
+                                                                       cplat_timespec *timestamp_out);
 
     /**
      *  @brief          テーブル横断の世代カウンターを取得します。
@@ -928,7 +919,7 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_table_generation(const cplat_hashtable *ht,
-                                                                             uint64_t *generation_out);
+                                                                    uint64_t *generation_out);
 
     /**
      *  @brief          使用中・削除済み・空の件数を返します。
@@ -948,7 +939,7 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_count_status(const cplat_hashtable *ht, size_t *in_use_out,
-                                                                     size_t *deleted_out, size_t *empty_out);
+                                                            size_t *deleted_out, size_t *empty_out);
 
     /**
      *  @brief          使用中の件数を返します。
@@ -1113,8 +1104,7 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  同一テーブルへの同時呼び出しは、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_hashtable_resize(cplat_hashtable *ht,
-                                                               const cplat_hashtable_config *new_config);
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_resize(cplat_hashtable *ht, const cplat_hashtable_config *new_config);
 
     /**
      *  @brief          呼び出し側が用意した新しい領域へ、内容を保ったまま作り直します。
@@ -1146,10 +1136,9 @@ extern "C"
      *  @p src への書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_rebuild_into(const cplat_hashtable *src,
-                                                                     const cplat_hashtable_config *new_config,
-                                                                     void *buf_mgmt, size_t buf_mgmt_size,
-                                                                     void *buf_data, size_t buf_data_size,
-                                                                     cplat_hashtable **ht_out);
+                                                            const cplat_hashtable_config *new_config, void *buf_mgmt,
+                                                            size_t buf_mgmt_size, void *buf_data, size_t buf_data_size,
+                                                            cplat_hashtable **ht_out);
 
     /**
      *  @brief          使用中と削除済みを含めてテーブルを空にします。

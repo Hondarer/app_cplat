@@ -48,10 +48,10 @@ TEST_F(accessTest, returns_zero_for_existing_file)
 
     // Act
     int actual_ret = cplat_access("work.bin", CPLAT_ACCESS_FMT_F_OK,
-                              &detail); // [手順] - 存在するパスに F_OK を指定して cplat_access を呼び出す。
+                                  &detail); // [手順] - 存在するパスに F_OK を指定して cplat_access を呼び出す。
 
     // Assert
-    EXPECT_EQ(0, actual_ret);                            // [確認_正常系] - cplat_access の戻り値が 0 であること。
+    EXPECT_EQ(0, actual_ret);                  // [確認_正常系] - cplat_access の戻り値が 0 であること。
     EXPECT_EQ(0, cplat_error_is_set(&detail)); // [確認_正常系] - detail に詳細エラーが記録されないこと。
 }
 
@@ -69,12 +69,12 @@ TEST_F(accessTest, returns_minus1_for_missing_file)
 
     // Act
     int actual_ret = cplat_access("missing.bin", CPLAT_ACCESS_FMT_F_OK,
-                              &detail); // [手順] - 存在しないパスに F_OK を指定して cplat_access を呼び出す。
+                                  &detail); // [手順] - 存在しないパスに F_OK を指定して cplat_access を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_access の戻り値が -1 であること。
     EXPECT_EQ(1, cplat_error_is(&detail,
-                                   CPLAT_CAUSE_NOT_FOUND)); // [確認_異常系] - 見つからないことが要因であること。
+                                CPLAT_CAUSE_NOT_FOUND)); // [確認_異常系] - 見つからないことが要因であること。
 }
 #endif /* PLATFORM_LINUX */
 
@@ -88,13 +88,12 @@ TEST_F(accessTest, returns_minus1_for_null_path)
 
     // Act
     int actual_ret = cplat_access(NULL, CPLAT_ACCESS_FMT_F_OK,
-                              &detail); // [手順] - パスに NULL を指定して cplat_access を呼び出す。
+                                  &detail); // [手順] - パスに NULL を指定して cplat_access を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_access の戻り値が -1 であること。
-    EXPECT_EQ(
-        EINVAL,
-        cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が EINVAL であること。
+    EXPECT_EQ(EINVAL,
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が EINVAL であること。
 }
 
 #if defined(PLATFORM_WINDOWS)
@@ -107,18 +106,18 @@ TEST_F(accessTest, returns_enametoolong_when_path_exceeds_wide_buffer)
     // Arrange
     std::string long_path(PLATFORM_PATH_MAX + 1u,
                           'a'); // [状態] - PLATFORM_PATH_MAX を 1 文字超えるパスを用意する。
-    cplat_error detail;      // [状態] - 詳細エラーの格納先を用意する。
+    cplat_error detail;         // [状態] - 詳細エラーの格納先を用意する。
 
     // Pre-Assert
 
     // Act
     int actual_ret = cplat_access(long_path.c_str(), CPLAT_ACCESS_FMT_F_OK,
-                              &detail); // [手順] - 変換先バッファーに収まらないパスで cplat_access を呼び出す。
+                                  &detail); // [手順] - 変換先バッファーに収まらないパスで cplat_access を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_access の戻り値が -1 であること。
     EXPECT_EQ(1, cplat_error_is(&detail,
-                                   CPLAT_CAUSE_NAME_TOO_LONG)); // [確認_異常系] - ENAMETOOLONG の要因であること。
+                                CPLAT_CAUSE_NAME_TOO_LONG)); // [確認_異常系] - ENAMETOOLONG の要因であること。
 }
 
 #endif /* PLATFORM_WINDOWS */

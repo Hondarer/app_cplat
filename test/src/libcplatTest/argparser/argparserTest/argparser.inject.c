@@ -24,8 +24,8 @@ void test_argparser_default_dispose_on_shutdown(const cplat_shutdown_event *even
     argparser_default_dispose_on_shutdown(event, context);
 }
 
-cplat_argparser *test_argparser_default_acquire(int argc, char *const *argv,
-                                                   const cplat_argparser_options *options, int reset_existing)
+cplat_argparser *test_argparser_default_acquire(int argc, char *const *argv, const cplat_argparser_options *options,
+                                                int reset_existing)
 {
     return argparser_default_acquire(argc, argv, options, reset_existing);
 }

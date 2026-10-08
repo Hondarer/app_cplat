@@ -20,7 +20,8 @@ extern "C"
                                          const char *prompt_string);
 
     /* prompt.c の呼び出し位置別コンテキスト検索へ直接アクセスする。 */
-    extern cplat_internal_prompt_ctx *test_prompt_find_or_create_context(cplat_prompt *prompt, const char *file, int line);
+    extern cplat_internal_prompt_ctx *test_prompt_find_or_create_context(cplat_prompt *prompt, const char *file,
+                                                                         int line);
 
 #ifdef __cplusplus
 }

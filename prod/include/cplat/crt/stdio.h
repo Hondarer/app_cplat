@@ -192,8 +192,7 @@ extern "C"
      *  異なるストリームに対する呼び出しは同時に実行できます。\n
      *  同一 @p stream に対する並行操作は、呼び出し側で同期してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_fgets(char *dest, size_t dest_size, FILE *stream,
-                                                    cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_fgets(char *dest, size_t dest_size, FILE *stream, cplat_error *detail_out);
 
     /**
      *  @brief          UTF-8 パスでファイルを開きます (`fopen` ラッパー)。
@@ -237,7 +236,7 @@ extern "C"
      *  同一 @p stream に対する操作は、呼び出し側で同期してください。
      */
     CPLAT_EXPORT FILE *CPLAT_API cplat_freopen(const char *path, const char *modes, FILE *stream,
-                                                        cplat_error *detail_out);
+                                               cplat_error *detail_out);
 
     /**
      *  @brief          ストリームを閉じます (`fclose` ラッパー)。
@@ -286,7 +285,7 @@ extern "C"
      *  同一 @p stream に対する並行操作は、呼び出し側で同期してください。
      */
     CPLAT_EXPORT size_t CPLAT_API cplat_fread(void *buffer, size_t size, size_t count, FILE *stream,
-                                                       cplat_error *detail_out);
+                                              cplat_error *detail_out);
 
     /**
      *  @brief          ストリームへ要素を書き込みます (`fwrite` ラッパー)。
@@ -305,7 +304,7 @@ extern "C"
      *  同一 @p stream に対する並行操作は、呼び出し側で同期してください。
      */
     CPLAT_EXPORT size_t CPLAT_API cplat_fwrite(const void *buffer, size_t size, size_t count, FILE *stream,
-                                                        cplat_error *detail_out);
+                                               cplat_error *detail_out);
 
     /**
      *  @brief          UTF-8 パスのファイルを削除します (`remove` / `_wremove` ラッパー)。
@@ -332,8 +331,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_rename(const char *oldpath, const char *newpath,
-                                                     cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_rename(const char *oldpath, const char *newpath, cplat_error *detail_out);
 
     /**
      *  @brief          ストリームへ書式化出力します (`fprintf` ラッパー)。
@@ -410,8 +408,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT FILE *CPLAT_API cplat_fopen_fmt(const char *modes, cplat_error *detail_out,
-                                                          const char *format, ...)
+    CPLAT_EXPORT FILE *CPLAT_API cplat_fopen_fmt(const char *modes, cplat_error *detail_out, const char *format, ...)
 #if defined(COMPILER_GCC)
         __attribute__((format(printf, 3, 4)))
 #endif /* COMPILER_GCC */
@@ -430,8 +427,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT FILE *CPLAT_API cplat_vfopen_fmt(const char *modes, cplat_error *detail_out,
-                                                           const char *format, va_list args)
+    CPLAT_EXPORT FILE *CPLAT_API cplat_vfopen_fmt(const char *modes, cplat_error *detail_out, const char *format,
+                                                  va_list args)
 #if defined(COMPILER_GCC)
         __attribute__((format(printf, 3, 0)))
 #endif /* COMPILER_GCC */
@@ -509,7 +506,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT FILE *CPLAT_API cplat_fopen_temp(const char *prefix, const char *modes, char *path_out,
-                                                           size_t path_size, cplat_error *detail_out);
+                                                  size_t path_size, cplat_error *detail_out);
 
 #ifdef __cplusplus
 }

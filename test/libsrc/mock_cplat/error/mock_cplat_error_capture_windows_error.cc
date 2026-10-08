@@ -3,7 +3,7 @@
 
 #if defined(PLATFORM_WINDOWS)
 
-void delegate_real_cplat_error_capture_windows_error(cplat_error * error, unsigned long error_code)
+void delegate_real_cplat_error_capture_windows_error(cplat_error *error, unsigned long error_code)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_error_capture_windows_error)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_error_capture_windows_error"));
@@ -11,7 +11,7 @@ void delegate_real_cplat_error_capture_windows_error(cplat_error * error, unsign
     real_fn(error, error_code);
 }
 
-MOCK_WEAK_IMPL(void, cplat_error_capture_windows_error, cplat_error * error, unsigned long error_code)
+MOCK_WEAK_IMPL(void, cplat_error_capture_windows_error, cplat_error *error, unsigned long error_code)
 {
     if (_mock_cplat != nullptr)
     {

@@ -47,7 +47,7 @@ namespace regex_detail
  *  オフセット (そのコード ポイントの開始位置) を割り当てます。
  */
 bool cplat_internal_regex_utf8_decode(const char *text, std::size_t text_len, std::wstring &units_out,
-                 std::vector<std::size_t> &offsets_out);
+                                      std::vector<std::size_t> &offsets_out);
 
 /**
  *  @brief          UTF-16 コード単位の列を UTF-8 文字列へ変換します。
@@ -68,7 +68,8 @@ bool cplat_internal_regex_utf8_encode(const std::wstring &units, std::string &te
  *  索引がサロゲート ペアの内側を指す場合は、そのコード ポイントの
  *  開始位置へ丸めます。
  */
-std::size_t cplat_internal_regex_offset_of_begin(const std::wstring &units, const std::vector<std::size_t> &offsets, std::size_t index);
+std::size_t cplat_internal_regex_offset_of_begin(const std::wstring &units, const std::vector<std::size_t> &offsets,
+                                                 std::size_t index);
 
 /**
  *  @brief          マッチ終了位置のコード単位索引を UTF-8 バイト オフセットへ変換します。
@@ -80,7 +81,8 @@ std::size_t cplat_internal_regex_offset_of_begin(const std::wstring &units, cons
  *  索引がサロゲート ペアの内側を指す場合は、そのコード ポイントの
  *  終了位置へ丸めます。
  */
-std::size_t cplat_internal_regex_offset_of_end(const std::wstring &units, const std::vector<std::size_t> &offsets, std::size_t index);
+std::size_t cplat_internal_regex_offset_of_end(const std::wstring &units, const std::vector<std::size_t> &offsets,
+                                               std::size_t index);
 
 /**
  *  @brief          UTF-8 バイト オフセットをコード単位索引へ変換します。
@@ -90,7 +92,8 @@ std::size_t cplat_internal_regex_offset_of_end(const std::wstring &units, const 
  *  @return         `offset` がコード ポイント境界を指す場合は true、
  *                  それ以外は false。
  */
-bool cplat_internal_regex_index_of_offset(const std::vector<std::size_t> &offsets, std::size_t offset, std::size_t &index_out);
+bool cplat_internal_regex_index_of_offset(const std::vector<std::size_t> &offsets, std::size_t offset,
+                                          std::size_t &index_out);
 
 } /* namespace regex_detail */
 } /* namespace cplat */

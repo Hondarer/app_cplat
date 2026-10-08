@@ -104,8 +104,8 @@ static size_t subtag_length(const char *const text)
  *  すでに区別が 1 つ以上ある場合は、区切りのハイフンを先に追加します。\n
  *  呼び出し側は、追加後の文字数が @p tag の容量に収まることを保証してください。
  */
-static void append_subtag(char *const tag, size_t *const tag_length_inout, const char *const text,
-                          const size_t length, const size_t upper_length)
+static void append_subtag(char *const tag, size_t *const tag_length_inout, const char *const text, const size_t length,
+                          const size_t upper_length)
 {
     size_t tag_length = *tag_length_inout;
     size_t index;
@@ -200,9 +200,8 @@ int cplat_internal_ui_language_normalize(const char *const value, char *const ta
             append_subtag(tag, &tag_length, subtag, length, 1U);
             has_script = 1;
         }
-        else if ((has_region == 0) &&
-                 ((((length == REGION_ALPHA_LENGTH) && (is_alpha_text(subtag, length) != 0))) ||
-                  ((length == REGION_DIGIT_LENGTH) && (is_digit_text(subtag, length) != 0))))
+        else if ((has_region == 0) && ((((length == REGION_ALPHA_LENGTH) && (is_alpha_text(subtag, length) != 0))) ||
+                                       ((length == REGION_DIGIT_LENGTH) && (is_digit_text(subtag, length) != 0))))
         {
             append_subtag(tag, &tag_length, subtag, length, length);
             has_region = 1;

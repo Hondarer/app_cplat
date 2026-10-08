@@ -6,8 +6,8 @@
 
 FILE *delegate_real_cplat_fopen_fmt(const char *modes, cplat_error *detail_out, const char *format, ...)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_fopen_fmt)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_fopen_fmt"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_fopen_fmt)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_fopen_fmt"));
 
     return real_fn(modes, detail_out, "%s", format);
 }

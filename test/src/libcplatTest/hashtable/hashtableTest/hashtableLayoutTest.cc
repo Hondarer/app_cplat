@@ -33,7 +33,7 @@ class hashtableLayoutTest : public Test
 };
 
 /*
- * hashtable_mgmt_layout 内の align_up_checked 呼び出しのうち、以下の 2 箇所は現行の実装では
+ * hashtable_mgmt_layout 内の align_up_checked 呼び出しのうち、次の 2 箇所は現行の実装では
  * 到達不能である(how-to-test.md「到達できない条件への対処」手順 3)。
  * - 先頭オフセットの整列: 入力が sizeof(struct cplat_hashtable) 固定の小さな値のため、
  *   uint64_t 境界への整列でオーバーフローする余地がない。
@@ -49,9 +49,8 @@ TEST_F(hashtableLayoutTest, rejects_entry_stride_overflow)
     size_t mgmt_size = 1;
     size_t data_size = 1;
 
-    fill_config(
-        &config, 1, SIZE_MAX, 8, 5,
-        CPLAT_HASHTABLE_KEY_STRING); // [状態] - entry_stride_checked 内の加算が破綻する key_size を用意する。
+    fill_config(&config, 1, SIZE_MAX, 8, 5,
+                CPLAT_HASHTABLE_KEY_STRING); // [状態] - entry_stride_checked 内の加算が破綻する key_size を用意する。
 
     // Pre-Assert
 
@@ -188,9 +187,8 @@ TEST_F(hashtableLayoutTest, create_rejects_misaligned_external_buffer)
     // Pre-Assert
 
     // Act
-    int actual_ret =
-        cplat_hashtable_create(&config, buf_mgmt.data() + 1, mgmt_needed, buf_data.data(), buf_data.size(),
-                                  &ht); // [手順] - 1 バイトずれた管理領域で構築する。
+    int actual_ret = cplat_hashtable_create(&config, buf_mgmt.data() + 1, mgmt_needed, buf_data.data(), buf_data.size(),
+                                            &ht); // [手順] - 1 バイトずれた管理領域で構築する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -211,7 +209,7 @@ TEST_F(hashtableLayoutTest, create_internal_alloc_rejects_combined_size_overflow
     (void)cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [状態] - 管理領域サイズを求めておく。
     fill_config(&config, 1, 8, SIZE_MAX - mgmt_size + 1, 5,
                 CPLAT_HASHTABLE_KEY_STRING); // [状態] - 内部確保の mgmt_size + data_size 加算が破綻する value_size
-                                                // を用意する(capacity 1 なので data_size 単体はあふれない)。
+                                             // を用意する(capacity 1 なので data_size 単体はあふれない)。
 
     // Pre-Assert
 
@@ -250,8 +248,8 @@ TEST_F(hashtableLayoutTest, required_size_table_scope_is_smaller_than_record_sco
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_table);  // [確認_正常系] - SCOPE_TABLE の必要サイズが求まること。
     EXPECT_EQ(CPLAT_OK, actual_ret_record); // [確認_正常系] - SCOPE_RECORD の必要サイズが求まること。
-    EXPECT_LT(table_mgmt, record_mgmt);        // [確認_正常系] - SCOPE_TABLE の管理領域が厳密に小さいこと。
-    EXPECT_EQ(table_data, record_data);        // [確認_正常系] - データ領域サイズは粒度で変わらないこと。
+    EXPECT_LT(table_mgmt, record_mgmt);     // [確認_正常系] - SCOPE_TABLE の管理領域が厳密に小さいこと。
+    EXPECT_EQ(table_data, record_data);     // [確認_正常系] - データ領域サイズは粒度で変わらないこと。
 }
 
 // 不正な value_align (非2冪、上限超過、可変長値指定) に対して INVALID_ARGUMENT を返すことの確認
@@ -325,12 +323,12 @@ TEST_F(hashtableLayoutTest, value_align_rounds_up_data_region_and_aligns_referen
     EXPECT_EQ(static_cast<size_t>(4 * 5),
               packed_data_size); // [確認_正常系] - 詰めた場合は value_size の総和であること。
     EXPECT_EQ(static_cast<size_t>(4 * 8),
-              aligned_data_size);              // [確認_正常系] - 整列させた場合は境界へ切り上げた幅の総和であること。
+              aligned_data_size);           // [確認_正常系] - 整列させた場合は境界へ切り上げた幅の総和であること。
     EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - 整列させる設定で構築できること。
     EXPECT_EQ(CPLAT_OK, actual_ret_first);  // [確認_正常系] - 1 件目の値参照を取れること。
     EXPECT_EQ(CPLAT_OK, actual_ret_second); // [確認_正常系] - 2 件目の値参照を取れること。
-    EXPECT_EQ(0u, first_addr % 8u);            // [確認_正常系] - 1 件目の値参照が指定した境界に整列していること。
-    EXPECT_EQ(0u, second_addr % 8u);           // [確認_正常系] - 2 件目の値参照が指定した境界に整列していること。
+    EXPECT_EQ(0u, first_addr % 8u);         // [確認_正常系] - 1 件目の値参照が指定した境界に整列していること。
+    EXPECT_EQ(0u, second_addr % 8u);        // [確認_正常系] - 2 件目の値参照が指定した境界に整列していること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -358,8 +356,7 @@ TEST_F(hashtableLayoutTest, create_rejects_external_data_buffer_misaligned_for_v
 
     // Act
     /* 8 境界から 1 バイトずらした位置をデータ領域として渡す。 */
-    int actual_ret =
-        cplat_hashtable_create(&config, mgmt_buf.data(), mgmt_size, data_buf.data() + 1, data_size, &ht);
+    int actual_ret = cplat_hashtable_create(&config, mgmt_buf.data(), mgmt_size, data_buf.data() + 1, data_size, &ht);
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -380,8 +377,7 @@ TEST_F(hashtableLayoutTest, variable_key_descriptor_is_aligned_in_table_scope)
     fill_config(&config, 4, 0, 8, 5, CPLAT_HASHTABLE_KEY_STRING);
     config.key_type = CPLAT_HASHTABLE_FIELD_VARIABLE_STRING;
     config.key_storage_size = 64;
-    config.timestamp_scope =
-        CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE; // [状態] - 可変長キーとテーブル粒度を組み合わせる。
+    config.timestamp_scope = CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE; // [状態] - 可変長キーとテーブル粒度を組み合わせる。
 
     // Pre-Assert
 
@@ -429,8 +425,8 @@ TEST_F(hashtableLayoutTest, internal_data_region_is_aligned_after_odd_key_storag
     ref_addr = reinterpret_cast<uintptr_t>(test_hashtable_value_ref_at(ht, 0));
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_create);    // [確認_正常系] - 8 の倍数でないキー ストレージ容量で構築できること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_buffer);    // [確認_正常系] - データ領域の先頭を取れること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_create);       // [確認_正常系] - 8 の倍数でないキー ストレージ容量で構築できること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_buffer);       // [確認_正常系] - データ領域の先頭を取れること。
     EXPECT_EQ(0u, data_addr % alignof(uint64_t)); // [確認_正常系] - データ領域の先頭が uint64_t 境界にあること。
     EXPECT_EQ(0u, ref_addr % alignof(uint64_t));  // [確認_正常系] - 値 descriptor が uint64_t 境界にあること。
 

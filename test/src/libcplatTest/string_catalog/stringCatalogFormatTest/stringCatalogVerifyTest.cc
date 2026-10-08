@@ -193,15 +193,13 @@ TEST_F(stringCatalogVerifyTest, unused_argument_index_in_format)
 {
     // Arrange
     int actual_ret;
-    fake_catalog_set_argument_kind(FAKE_CATALOG_INDEX_ONE_ARGUMENT, 0,
-                                   CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED);
+    fake_catalog_set_argument_kind(FAKE_CATALOG_INDEX_ONE_ARGUMENT, 0, CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED);
 
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                    &language); // [手順] - 未使用のインデックスを参照するカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(fake_catalog(), &string_key,
+                                             &language); // [手順] - 未使用のインデックスを参照するカタログを確認する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_MALFORMED_DEFINITION,
@@ -217,8 +215,7 @@ TEST_F(stringCatalogVerifyTest, unused_argument_needs_no_metadata)
 {
     // Arrange
     int actual_ret;
-    fake_catalog_set_argument_kind(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, 1,
-                                   CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED);
+    fake_catalog_set_argument_kind(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, 1, CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED);
     fake_catalog_set_argument_name(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, 1, NULL);
     fake_catalog_set_argument_description(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, 1, NULL);
     fake_catalog_set_text(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL, "path {0}");
@@ -242,8 +239,7 @@ TEST_F(stringCatalogVerifyTest, unused_argument_kind_is_allowed)
 {
     // Arrange
     int actual_ret;
-    fake_catalog_set_argument_kind(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, 1,
-                                   CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED);
+    fake_catalog_set_argument_kind(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, 1, CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED);
     fake_catalog_set_text(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL, "path {0}");
     fake_catalog_set_text(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_LANGUAGE_ENGLISH, "path {0}");
     fake_catalog_set_text(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE, "パス {0}");

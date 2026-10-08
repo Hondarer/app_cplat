@@ -40,7 +40,7 @@ TEST_F(unistdFormatTest, passes_formatted_path_to_open)
 
     // Act
     int actual_ret = cplat_access_fmt(CPLAT_ACCESS_FMT_F_OK, &detail, "/tmp/sample_%d.txt",
-                                  42); // [手順] - 書式引数 42 を指定して cplat_access_fmt を呼び出す。
+                                      42); // [手順] - 書式引数 42 を指定して cplat_access_fmt を呼び出す。
 
     // Assert
     EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_access_fmt の戻り値が cplat_open の戻り値 7 であること。
@@ -60,7 +60,7 @@ TEST_F(unistdFormatTest, vaccess_fmt_passes_formatted_path_to_open)
 
     // Act
     int actual_ret = call_vaccess_fmt(CPLAT_ACCESS_FMT_F_OK, &detail, "/tmp/sample_%d.txt",
-                               7); // [手順] - 書式引数 7 を指定して cplat_vaccess_fmt を呼び出す。
+                                      7); // [手順] - 書式引数 7 を指定して cplat_vaccess_fmt を呼び出す。
 
     // Assert
     EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_vaccess_fmt の戻り値が cplat_open の戻り値 3 であること。
@@ -78,11 +78,10 @@ TEST_F(unistdFormatTest, returns_minus1_without_open_when_format_fails)
 
     // Act
     int actual_ret = cplat_access_fmt(CPLAT_ACCESS_FMT_F_OK, &detail,
-                                  NULL); // [手順] - 書式文字列に NULL を指定して cplat_access_fmt を呼び出す。
+                                      NULL); // [手順] - 書式文字列に NULL を指定して cplat_access_fmt を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_access_fmt の戻り値が -1 であること。
-    EXPECT_EQ(
-        EINVAL,
-        cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が EINVAL であること。
+    EXPECT_EQ(EINVAL,
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が EINVAL であること。
 }

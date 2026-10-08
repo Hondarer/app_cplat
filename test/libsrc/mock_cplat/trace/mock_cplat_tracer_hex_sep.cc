@@ -24,7 +24,8 @@ MOCK_WEAK_IMPL(const char *, cplat_tracer_hex_sep, const char *message)
 
     if (getTraceLevel() > TRACE_NONE)
     {
-        printf("  > %s %s -> %s\n", __func__, message == NULL ? "(null)" : message, mock_ret == NULL ? "(null)" : mock_ret);
+        printf("  > %s %s -> %s\n", __func__, message == NULL ? "(null)" : message,
+               mock_ret == NULL ? "(null)" : mock_ret);
     }
 
     return mock_ret;

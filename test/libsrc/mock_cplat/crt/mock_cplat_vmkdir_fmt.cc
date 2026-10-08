@@ -6,8 +6,8 @@
 
 int delegate_real_cplat_vmkdir_fmt(cplat_error *detail_out, const char *format, va_list args)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_vmkdir_fmt)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_vmkdir_fmt"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_vmkdir_fmt)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_vmkdir_fmt"));
 
     return real_fn(detail_out, format, args);
 }

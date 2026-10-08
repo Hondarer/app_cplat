@@ -1,17 +1,15 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_file_read(cplat_file *file, void *buf, size_t len, size_t *read_out,
-                                     cplat_error *detail_out)
+int delegate_real_cplat_file_read(cplat_file *file, void *buf, size_t len, size_t *read_out, cplat_error *detail_out)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_file_read)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_file_read"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_file_read)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_file_read"));
 
     return real_fn(file, buf, len, read_out, detail_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_file_read, cplat_file *file, void *buf, size_t len, size_t *read_out,
-               cplat_error *detail_out)
+MOCK_WEAK_IMPL(int, cplat_file_read, cplat_file *file, void *buf, size_t len, size_t *read_out, cplat_error *detail_out)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

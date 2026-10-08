@@ -9,7 +9,7 @@
     #include <cplat/trace/etw.h>
 
 CPLAT_ETW_DEFINE_PROVIDER(s_test_provider, "TraceEtwTest",
-                             (0x62ab1ccc, 0x5fc6, 0x4e1e, 0x82, 0x60, 0x9e, 0xa2, 0x77, 0x2a, 0xfe, 0x5e));
+                          (0x62ab1ccc, 0x5fc6, 0x4e1e, 0x82, 0x60, 0x9e, 0xa2, 0x77, 0x2a, 0xfe, 0x5e));
 
 class trace_etwTest : public Test
 {
@@ -38,13 +38,13 @@ TEST_F(trace_etwTest, test_write_returns_zero)
     // Arrange
     cplat_etw_provider *handle =
         cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
-    ASSERT_NE((cplat_etw_provider *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE((cplat_etw_provider *)NULL, handle);  // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
 
     // Act
     int result = cplat_etw_provider_write(handle, 4, NULL,
-                                             "test message"); // [手順] - INFO レベル (4) で "test message" を書き込む。
+                                          "test message"); // [手順] - INFO レベル (4) で "test message" を書き込む。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -60,7 +60,7 @@ TEST_F(trace_etwTest, test_write_all_levels)
     // Arrange
     cplat_etw_provider *handle =
         cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
-    ASSERT_NE((cplat_etw_provider *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE((cplat_etw_provider *)NULL, handle);  // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
 

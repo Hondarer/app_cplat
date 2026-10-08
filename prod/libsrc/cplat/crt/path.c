@@ -138,8 +138,7 @@ static int normalize_absolute_posix_path(char *path)
     return CPLAT_OK;
 }
 
-static int build_absolute_posix_path(char *path_out, const size_t path_size, cplat_error *detail_out,
-                                              const char *path)
+static int build_absolute_posix_path(char *path_out, const size_t path_size, cplat_error *detail_out, const char *path)
 {
     if (path[0] == PLATFORM_PATH_SEP_CHR)
     {
@@ -170,7 +169,7 @@ static int build_absolute_posix_path(char *path_out, const size_t path_size, cpl
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_vpath_concat_n(char *path_out, const size_t path_size, cplat_error *detail_out, const size_t part_count,
-                            va_list args)
+                         va_list args)
 {
     size_t required_size = 1u;
     size_t offset = 0u;
@@ -429,8 +428,7 @@ int cplat_path_get_temp_dir(char *path_out, const size_t path_size, cplat_error 
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_path_concat_n(char *path_out, const size_t path_size, cplat_error *detail_out, const size_t part_count,
-                           ...)
+int cplat_path_concat_n(char *path_out, const size_t path_size, cplat_error *detail_out, const size_t part_count, ...)
 {
     int result;
     va_list args;

@@ -115,7 +115,7 @@ TEST(syncInterprocessRwlockTest, export_reports_required_descriptor_size)
         CPLAT_OK,
         create_result); // [確認_正常系] - cplat_interprocess_rwlock_open の戻り値から、interprocess rwlock open が成功したと判断できること。
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, export_result); // [確認_正常系] - バッファー不足が通知されること。
-    EXPECT_EQ(expected_size, descriptor_size);               // [確認_正常系] - descriptor に必要なサイズが返ること。
+    EXPECT_EQ(expected_size, descriptor_size);            // [確認_正常系] - descriptor に必要なサイズが返ること。
 
     // Cleanup
 #if defined(PLATFORM_LINUX)
@@ -139,11 +139,11 @@ TEST(syncInterprocessRwlockTest, corrupt_descriptor_is_rejected)
 
     // Act
     int result = cplat_interprocess_rwlock_import_descriptor(descriptor, sizeof(descriptor),
-                                                                &lock); // [手順] - 不正 descriptor を import する。
+                                                             &lock); // [手順] - 不正 descriptor を import する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, result); // [確認_異常系] - 不正 descriptor が拒否されること。
-    EXPECT_EQ(NULL, lock);                              // [確認_異常系] - ハンドルが生成されないこと。
+    EXPECT_EQ(NULL, lock);                           // [確認_異常系] - ハンドルが生成されないこと。
 }
 
 #if defined(PLATFORM_LINUX)
@@ -179,12 +179,10 @@ TEST(syncInterprocessRwlockTest, second_handle_observes_exclusive_lock)
         cplat_interprocess_rwlock_try_lock_shared(other); // [手順] - 2 つ目のハンドルで共有 try_lock を試行する。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_OK,
-        open_result); // [確認_正常系] - 1 つ目の cplat_interprocess_rwlock_open の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(
-        CPLAT_OK,
-        other_open); // [確認_正常系] - 2 つ目の cplat_interprocess_rwlock_open の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              open_result); // [確認_正常系] - 1 つ目の cplat_interprocess_rwlock_open の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              other_open); // [確認_正常系] - 2 つ目の cplat_interprocess_rwlock_open の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK,
               lock_result); // [確認_正常系] - 1 つ目のハンドルの排他ロック取得が成功すること。
     EXPECT_EQ(CPLAT_ERR_BUSY,

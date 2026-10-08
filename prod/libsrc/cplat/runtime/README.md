@@ -98,7 +98,7 @@ stdout と stderr は別のパイプで受け取るため、両者の間の出�
 - `CPLAT_SYM_LOADER_ENTRY_INIT`: 静的エントリ初期化
 - `cplat_sym_loader_init`: 設定ファイル読み込み
 - `cplat_sym_loader_resolve_as`: 型付きで関数ポインター取得
-- `cplat_sym_loader_is_default`: 明示的デフォルト設定か確認
+- `cplat_sym_loader_is_default`: 明示的既定値設定か確認
 - `cplat_sym_loader_info`: 現在状態のダンプ
 - `cplat_sym_loader_dispose`: 後始末
 
@@ -186,7 +186,7 @@ cplat_sym_loader_dispose(fobj_array, fobj_length);
 - 必須フィールド欠落、型不正、未知の `func_key`、名称長超過のエントリは無視します。
 - ファイル未存在、読取失敗、JSONC 解析失敗は無視します (エントリは未設定のまま)。
 
-`lib` と `func` の両方に `default` を指定した場合は、明示的にデフォルト実装を使う設定として扱われます。
+`lib` と `func` の両方に `default` を指定した場合は、明示的に既定実装を使う設定として扱われます。
 
 ## 使い方
 
@@ -248,7 +248,7 @@ int sample_func(int a, int b, int *result)
 - `cplat_sym_loader_init` と `cplat_sym_loader_dispose` は constructor / destructor や `DllMain` から呼ぶ前提です
 - `cplat_sym_loader_dispose` はその前提に合わせてロックを取らずに解放します
 - `sym_loader` はライブラリ名に拡張子を含めず設定します
-- 解決失敗時は `cplat_sym_loader_resolve_as` が `NULL` を返すため、呼び出し側でデフォルト処理を持つ設計が基本です
+- 解決失敗時は `cplat_sym_loader_resolve_as` が `NULL` を返すため、呼び出し側で既定処理を持つ設計が基本です
 - オーバーライド実装側から元の関数を再帰的に呼ぶ構成は避けてください
 
 ## 関連ヘッダー

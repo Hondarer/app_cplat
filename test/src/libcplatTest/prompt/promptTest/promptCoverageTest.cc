@@ -55,11 +55,11 @@ TEST_F(promptCoverageTest, readline_accepts_lf_and_ctrl_h)
 
     // Act
     int actual_ret = readline("ab\x08\n", buf,
-                       sizeof(buf)); // [手順] - "ab"、Ctrl+H、LF の順に入力して 1 行読み取る。
+                              sizeof(buf)); // [手順] - "ab"、Ctrl+H、LF の順に入力して 1 行読み取る。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_prompt_readline_at の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("a", buf);     // [確認_正常系] - Ctrl+H で末尾を削除した "a" が返ること。
+    EXPECT_STREQ("a", buf);          // [確認_正常系] - Ctrl+H で末尾を削除した "a" が返ること。
 }
 // [サブ手順参照 名前=promptCoverageTest.TearDown]
 
@@ -73,12 +73,13 @@ TEST_F(promptCoverageTest, readline_ignores_remaining_unknown_sequences)
     // Pre-Assert
 
     // Act
-    int actual_ret = readline("\x01\x1Bx\x1B[1X\x1B[4Xq\n", buf,
-                       sizeof(buf)); // [手順] - 未対応制御文字、未知 ESC、終端が不正な Home と End、"q"、LF を入力する。
+    int actual_ret =
+        readline("\x01\x1Bx\x1B[1X\x1B[4Xq\n", buf,
+                 sizeof(buf)); // [手順] - 未対応制御文字、未知 ESC、終端が不正な Home と End、"q"、LF を入力する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_prompt_readline_at の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("q", buf);     // [確認_正常系] - 未対応入力が無視されて "q" が返ること。
+    EXPECT_STREQ("q", buf);          // [確認_正常系] - 未対応入力が無視されて "q" が返ること。
 }
 // [サブ手順参照 名前=promptCoverageTest.TearDown]
 
@@ -93,11 +94,11 @@ TEST_F(promptCoverageTest, readline_ignores_editing_keys_at_line_edges)
 
     // Act
     int actual_ret = readline("\x1B[3~\x1B[D\x1B[C\x1B[H\x1B[F\n", buf,
-                       sizeof(buf)); // [手順] - 空行で Delete、Left、Right、Home、End、LF の順に入力する。
+                              sizeof(buf)); // [手順] - 空行で Delete、Left、Right、Home、End、LF の順に入力する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_prompt_readline_at の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("", buf);      // [確認_正常系] - 行端用の編集キーが無視されて空行が返ること。
+    EXPECT_STREQ("", buf);           // [確認_正常系] - 行端用の編集キーが無視されて空行が返ること。
 }
 // [サブ手順参照 名前=promptCoverageTest.TearDown]
 
@@ -114,11 +115,11 @@ TEST_F(promptCoverageTest, readline_redisplays_after_resize_with_null_prompt)
 
     // Act
     int actual_ret = cplat_prompt_readline_at(prompt_, buf, sizeof(buf), NULL, "promptCoverageTest.cc",
-                                          2); // [手順] - NULL のプロンプトでリサイズ通知後の入力を読み取る。
+                                              2); // [手順] - NULL のプロンプトでリサイズ通知後の入力を読み取る。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_prompt_readline_at の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("z", buf);     // [確認_正常系] - リサイズ通知後に入力した "z" が返ること。
+    EXPECT_STREQ("z", buf);          // [確認_正常系] - リサイズ通知後に入力した "z" が返ること。
 }
 // [サブ手順参照 名前=promptCoverageTest.TearDown]
 
@@ -145,16 +146,20 @@ TEST_F(promptCoverageTest, readline_fallback_paths_return_input)
 
     // Act
     prompt_->is_tty = 0;
-    int actual_ret_non_tty = cplat_prompt_readline_at(prompt_, first_output, sizeof(first_output), "> ", "fallback.c", 1);
+    int actual_ret_non_tty =
+        cplat_prompt_readline_at(prompt_, first_output, sizeof(first_output), "> ", "fallback.c", 1);
     prompt_->is_tty = 1;
-    int actual_ret_allocation = cplat_prompt_readline_at(prompt_, second_output, sizeof(second_output), NULL,
-                                                     "fallback.c", 2); // [手順] - 非 TTY と確保失敗の fallback で入力を読む。
+    int actual_ret_allocation =
+        cplat_prompt_readline_at(prompt_, second_output, sizeof(second_output), NULL, "fallback.c",
+                                 2); // [手順] - 非 TTY と確保失敗の fallback で入力を読む。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_non_tty); // [確認_正常系] - 非 TTY の cplat_prompt_readline_at が CPLAT_OK を返すこと。
-    EXPECT_STREQ("first", first_output); // [確認_正常系] - 非 TTY の入力結果が "first" であること。
     EXPECT_EQ(CPLAT_OK,
-              actual_ret_allocation); // [確認_正常系] - コンテキスト確保失敗時の cplat_prompt_readline_at が CPLAT_OK を返すこと。
+              actual_ret_non_tty);       // [確認_正常系] - 非 TTY の cplat_prompt_readline_at が CPLAT_OK を返すこと。
+    EXPECT_STREQ("first", first_output); // [確認_正常系] - 非 TTY の入力結果が "first" であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_allocation); // [確認_正常系] - コンテキスト確保失敗時の cplat_prompt_readline_at が CPLAT_OK を返すこと。
     EXPECT_STREQ("second", second_output); // [確認_正常系] - コンテキスト確保失敗時の入力結果が "second" であること。
 }
 // [サブ手順参照 名前=promptCoverageTest.TearDown]
@@ -185,9 +190,10 @@ TEST_F(promptCoverageTest, contexts_distinguish_file_and_line_and_expand_twice)
         ASSERT_NE((cplat_internal_prompt_ctx *)NULL,
                   contexts[i]); // [確認_正常系 回数=5] - 5 個の新規コンテキストが取得できること。
     }
-    EXPECT_EQ(&prompt_->contexts[0], contexts[5]); // [確認_正常系] - 同じファイルと行番号から既存コンテキストが返ること。
-    EXPECT_EQ(5u, prompt_->ctx_count);   // [確認_正常系] - コンテキスト数が 5 であること。
-    EXPECT_EQ(8u, prompt_->ctx_cap);     // [確認_正常系] - コンテキスト配列の容量が 8 へ拡張されること。
+    EXPECT_EQ(&prompt_->contexts[0],
+              contexts[5]);            // [確認_正常系] - 同じファイルと行番号から既存コンテキストが返ること。
+    EXPECT_EQ(5u, prompt_->ctx_count); // [確認_正常系] - コンテキスト数が 5 であること。
+    EXPECT_EQ(8u, prompt_->ctx_cap);   // [確認_正常系] - コンテキスト配列の容量が 8 へ拡張されること。
 }
 // [サブ手順参照 名前=promptCoverageTest.TearDown]
 
@@ -198,11 +204,12 @@ TEST_F(promptCoverageTest, history_helpers_cover_remaining_boundaries)
     // Arrange
     cplat_internal_prompt_ctx *context =
         test_prompt_find_or_create_context(prompt_, "history.c", 1); // [状態] - 空の履歴コンテキストを用意する。
-    cplat_internal_prompt_ctx *null_entry_context =
-        test_prompt_find_or_create_context(prompt_, "null-entry.c", 1); // [状態] - NULL エントリ試験用の履歴コンテキストを用意する。
+    cplat_internal_prompt_ctx *null_entry_context = test_prompt_find_or_create_context(
+        prompt_, "null-entry.c", 1); // [状態] - NULL エントリ試験用の履歴コンテキストを用意する。
     char *first_entry = NULL;
-    ASSERT_NE((cplat_internal_prompt_ctx *)NULL, context);             // [状態確認] - コンテキストが非 NULL であること。
-    ASSERT_NE((cplat_internal_prompt_ctx *)NULL, null_entry_context); // [状態確認] - NULL エントリ試験用コンテキストが非 NULL であること。
+    ASSERT_NE((cplat_internal_prompt_ctx *)NULL, context); // [状態確認] - コンテキストが非 NULL であること。
+    ASSERT_NE((cplat_internal_prompt_ctx *)NULL,
+              null_entry_context); // [状態確認] - NULL エントリ試験用コンテキストが非 NULL であること。
 
     // Pre-Assert
 
@@ -232,7 +239,7 @@ TEST_F(promptCoverageTest, history_helpers_cover_remaining_boundaries)
                              NULL); // [手順] - 重複、NULL エントリ、容量制限、前後端の履歴操作を行う。
 
     // Assert
-    EXPECT_EQ(1, context->browse_idx); // [確認_正常系] - NULL の新しい履歴位置まで browse index が進むこと。
+    EXPECT_EQ(1, context->browse_idx);      // [確認_正常系] - NULL の新しい履歴位置まで browse index が進むこと。
     EXPECT_STREQ("sav", prompt_->edit_buf); // [確認_正常系] - 容量制限により退避文字列が "sav" へ切り詰められること。
 }
 // [サブ手順参照 名前=promptCoverageTest.TearDown]
@@ -244,7 +251,7 @@ TEST_F(promptCoverageTest, history_add_ignores_zero_history_max)
     // Arrange
     cplat_internal_prompt_ctx *context =
         test_prompt_find_or_create_context(prompt_, "zero-history.c", 1); // [状態] - 空の履歴コンテキストを用意する。
-    ASSERT_NE((cplat_internal_prompt_ctx *)NULL, context);                         // [状態確認] - コンテキストが非 NULL であること。
+    ASSERT_NE((cplat_internal_prompt_ctx *)NULL, context); // [状態確認] - コンテキストが非 NULL であること。
     size_t saved_history_max = prompt_->history_max;
     prompt_->history_max = 0u; // [状態] - 履歴上限を 0 にする。
 
@@ -275,7 +282,7 @@ TEST_F(promptCoverageTest, context_creation_fails_when_entries_allocation_fails)
 
     // Act
     cplat_internal_prompt_ctx *context = test_prompt_find_or_create_context(prompt_, "failure.c",
-                                                                      1); // [手順] - 履歴コンテキストを作成する。
+                                                                            1); // [手順] - 履歴コンテキストを作成する。
 
     // Assert
     EXPECT_EQ((cplat_internal_prompt_ctx *)NULL,
@@ -294,9 +301,7 @@ TEST_F(promptCoverageTest, readline_fmt_handles_null_error_and_growth)
     std::string long_prompt(300u, 'p'); // [状態] - NULL 書式、書式エラー、初期容量を超える書式を試験する。
 
     // Pre-Assert
-    EXPECT_CALL(mock_stdio, vsnprintf(_, _, _, _, _, _))
-        .WillOnce(Return(-1))
-        .WillRepeatedly(DoDefault());
+    EXPECT_CALL(mock_stdio, vsnprintf(_, _, _, _, _, _)).WillOnce(Return(-1)).WillRepeatedly(DoDefault());
     // [Pre-Assert確認_異常系] - 1 回目の vsnprintf がエンコード エラーを返すこと。
     // [Pre-Assert手順] - 1 回目は -1 を返却し、以降は既定動作を行う。
 
@@ -306,14 +311,18 @@ TEST_F(promptCoverageTest, readline_fmt_handles_null_error_and_growth)
     promptFakeSetInput("b\n");
     int actual_ret_null = cplat_prompt_readline_fmt_at(prompt_, buf, sizeof(buf), "format.c", 2, NULL);
     promptFakeSetInput("c\n");
-    int actual_ret_growth = cplat_prompt_readline_fmt_at(prompt_, buf, sizeof(buf), "format.c", 3, "%s",
-                                                     long_prompt.c_str()); // [手順] - 3 種類の書式で 1 行ずつ読み取る。
+    int actual_ret_growth =
+        cplat_prompt_readline_fmt_at(prompt_, buf, sizeof(buf), "format.c", 3, "%s",
+                                     long_prompt.c_str()); // [手順] - 3 種類の書式で 1 行ずつ読み取る。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_error); // [確認_正常系] - 書式エラー時の cplat_prompt_readline_fmt_at が CPLAT_OK を返すこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_null); // [確認_正常系] - NULL 書式の cplat_prompt_readline_fmt_at が CPLAT_OK を返すこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_growth); // [確認_正常系] - 長い書式の cplat_prompt_readline_fmt_at が CPLAT_OK を返すこと。
-    EXPECT_STREQ("c", buf);              // [確認_正常系] - 最後に入力した "c" が返ること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_error); // [確認_正常系] - 書式エラー時の cplat_prompt_readline_fmt_at が CPLAT_OK を返すこと。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_null); // [確認_正常系] - NULL 書式の cplat_prompt_readline_fmt_at が CPLAT_OK を返すこと。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_growth); // [確認_正常系] - 長い書式の cplat_prompt_readline_fmt_at が CPLAT_OK を返すこと。
+    EXPECT_STREQ("c", buf);       // [確認_正常系] - 最後に入力した "c" が返ること。
     EXPECT_EQ(301u, prompt_->prompt_fmt_cap); // [確認_正常系] - 書式バッファーの容量が終端を含む 301 であること。
 }
 // [サブ手順参照 名前=promptCoverageTest.TearDown]

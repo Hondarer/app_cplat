@@ -1,15 +1,17 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_regex_create(const char *pattern, unsigned int flags, cplat_regex **regex_out, cplat_error *detail_out)
+int delegate_real_cplat_regex_create(const char *pattern, unsigned int flags, cplat_regex **regex_out,
+                                     cplat_error *detail_out)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_regex_create)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_regex_create"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_regex_create)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_regex_create"));
 
     return real_fn(pattern, flags, regex_out, detail_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_regex_create, const char *pattern, unsigned int flags, cplat_regex **regex_out, cplat_error *detail_out)
+MOCK_WEAK_IMPL(int, cplat_regex_create, const char *pattern, unsigned int flags, cplat_regex **regex_out,
+               cplat_error *detail_out)
 {
     int mock_ret;
 

@@ -108,9 +108,9 @@ static int clock_format_iso8601_utc_from_tm(char *buf, const size_t buf_size, co
         return -1;
     }
 
-    if (cplat_snprintf(buf, buf_size, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", utc_tm->tm_year + 1900,
-                          utc_tm->tm_mon + 1, utc_tm->tm_mday, utc_tm->tm_hour, utc_tm->tm_min, utc_tm->tm_sec,
-                          (int)(tv_nsec / 1000000)) != CPLAT_OK)
+    if (cplat_snprintf(buf, buf_size, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", utc_tm->tm_year + 1900, utc_tm->tm_mon + 1,
+                       utc_tm->tm_mday, utc_tm->tm_hour, utc_tm->tm_min, utc_tm->tm_sec,
+                       (int)(tv_nsec / 1000000)) != CPLAT_OK)
     {
         return -1;
     }
@@ -144,9 +144,8 @@ static int clock_format_iso8601_local_from_tm(char *buf, const size_t buf_size, 
     offset_mins = abs_offset_minutes % 60;
 
     if (cplat_snprintf(buf, buf_size, "%04d-%02d-%02dT%02d:%02d:%02d.%03d%c%02d:%02d", local_tm->tm_year + 1900,
-                          local_tm->tm_mon + 1, local_tm->tm_mday, local_tm->tm_hour, local_tm->tm_min,
-                          local_tm->tm_sec, (int)(tv_nsec / 1000000), offset_sign, offset_hours,
-                          offset_mins) != CPLAT_OK)
+                       local_tm->tm_mon + 1, local_tm->tm_mday, local_tm->tm_hour, local_tm->tm_min, local_tm->tm_sec,
+                       (int)(tv_nsec / 1000000), offset_sign, offset_hours, offset_mins) != CPLAT_OK)
     {
         return -1;
     }

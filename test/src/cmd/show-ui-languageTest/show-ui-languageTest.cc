@@ -104,8 +104,9 @@ TEST_F(show_ui_languageTest, main_reports_failure)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_ui_language_get_tag(_, _))
-        .WillOnce(Return(CPLAT_ERR_INVALID_ARGUMENT)); // [Pre-Assert確認_異常系] - 表示言語の取得が 1 回呼び出されること。
-                                                       // [Pre-Assert手順] - CPLAT_ERR_INVALID_ARGUMENT を返却する。
+        .WillOnce(
+            Return(CPLAT_ERR_INVALID_ARGUMENT)); // [Pre-Assert確認_異常系] - 表示言語の取得が 1 回呼び出されること。
+                                                 // [Pre-Assert手順] - CPLAT_ERR_INVALID_ARGUMENT を返却する。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, _))
         .Times(0); // [Pre-Assert確認_異常系] - 標準出力への出力が行われないこと。
 
@@ -146,7 +147,8 @@ TEST_F(show_ui_languageTest, main_rejects_unknown_option)
         .Times(0); // [Pre-Assert確認_異常系] - 表示言語の取得が呼び出されないこと。
 
     // Act
-    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - 未知のオプションを指定して main を呼び出す。
+    int actual_ret =
+        __real_main(argc, const_cast<char **>(argv)); // [手順] - 未知のオプションを指定して main を呼び出す。
 
     // Assert
     EXPECT_EQ(EXIT_FAILURE, actual_ret); // [確認_異常系] - 失敗終了すること。

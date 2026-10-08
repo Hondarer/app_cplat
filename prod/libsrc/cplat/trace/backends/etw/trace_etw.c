@@ -75,8 +75,7 @@ cplat_etw_provider *cplat_etw_provider_create(cplat_etw_provider_ref_t provider_
  *  @param[in]      service サービス名 (NULL 可)。NULL の場合 Service フィールドを省略。
  *  @param[in]      message メッセージ文字列。
  */
-static void write_trace_event(cplat_etw_provider_ref_t ref, const int level, const char *service,
-                              const char *message)
+static void write_trace_event(cplat_etw_provider_ref_t ref, const int level, const char *service, const char *message)
 {
     uint32_t process_id = (uint32_t)GetCurrentProcessId();
 
@@ -136,8 +135,7 @@ static void write_trace_event(cplat_etw_provider_ref_t ref, const int level, con
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_etw_provider_write(cplat_etw_provider *handle, const int level, const char *service,
-                                const char *message)
+int cplat_etw_provider_write(cplat_etw_provider *handle, const int level, const char *service, const char *message)
 {
     if (handle == NULL || message == NULL)
     {

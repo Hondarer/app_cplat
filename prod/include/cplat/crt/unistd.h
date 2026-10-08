@@ -41,7 +41,7 @@
     #define CPLAT_ACCESS_FMT_F_OK 0 /**< ファイルの存在確認 (F_OK 相当)。 */
     #define CPLAT_ACCESS_FMT_R_OK 4 /**< 読み取り可能確認 (R_OK 相当)。 */
     #define CPLAT_ACCESS_FMT_W_OK 2 /**< 書き込み可能確認 (W_OK 相当)。 */
-#else                                  /* !DOXYGEN */
+#else                               /* !DOXYGEN */
     #if defined(PLATFORM_LINUX)
         #define CPLAT_ACCESS_FMT_F_OK F_OK
         #define CPLAT_ACCESS_FMT_R_OK R_OK
@@ -194,8 +194,7 @@ extern "C"
      *  異なるファイル記述子に対する呼び出しは同時に実行できます。\n
      *  同一 @p fd の読み書き位置はスレッド間で共有されるため、同一 @p fd に対する並行操作は、呼び出し側で同期してください。
      */
-    CPLAT_EXPORT int64_t CPLAT_API cplat_write(int fd, const void *buf, size_t count,
-                                                        cplat_error *detail_out);
+    CPLAT_EXPORT int64_t CPLAT_API cplat_write(int fd, const void *buf, size_t count, cplat_error *detail_out);
 
     /**
      *  @brief          UTF-8 パスのアクセス確認 (`access` / `_waccess` ラッパー) です。
@@ -243,8 +242,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_vaccess_fmt(int mode, cplat_error *detail_out, const char *format,
-                                                          va_list args)
+    CPLAT_EXPORT int CPLAT_API cplat_vaccess_fmt(int mode, cplat_error *detail_out, const char *format, va_list args)
 #if defined(COMPILER_GCC)
         __attribute__((format(printf, 3, 0)))
 #endif /* COMPILER_GCC */

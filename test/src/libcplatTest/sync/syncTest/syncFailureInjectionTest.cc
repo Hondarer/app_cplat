@@ -82,7 +82,7 @@ TEST_F(syncFailureInjectionTest, interprocess_lock_open_fails_for_unopenable_pat
 
     // Act
     int actual_ret = cplat_interprocess_lock_open(kLockIdentity,
-                                              &lock); // [手順] - open 失敗を注入してロックを開く。
+                                                  &lock); // [手順] - open 失敗を注入してロックを開く。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -168,11 +168,11 @@ TEST_F(syncFailureInjectionTest, interprocess_lock_unlock_reports_flock_failure)
     // Arrange
     cplat_interprocess_lock *lock = NULL;
 
-    ASSERT_EQ(CPLAT_OK, cplat_interprocess_lock_open(kLockIdentity, &lock)); // [状態] - interprocess lock を開いた状態とする。
-                                                                                   // [状態確認] - cplat_interprocess_lock_open の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
-              cplat_interprocess_lock_lock(lock, CPLAT_SYNC_NO_WAIT)); // [状態] - ロックを取得済みにする。
-                                                                             // [状態確認] - cplat_interprocess_lock_lock の戻り値が CPLAT_OK であること。
+              cplat_interprocess_lock_open(kLockIdentity, &lock)); // [状態] - interprocess lock を開いた状態とする。
+    // [状態確認] - cplat_interprocess_lock_open の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, cplat_interprocess_lock_lock(lock, CPLAT_SYNC_NO_WAIT)); // [状態] - ロックを取得済みにする。
+    // [状態確認] - cplat_interprocess_lock_lock の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
     EXPECT_CALL(os_.sys_file, flock(_, _, _, _, LOCK_UN))
@@ -225,7 +225,7 @@ TEST_F(syncFailureInjectionTest, local_lock_maps_pthread_failure_results)
     // Arrange
     cplat_local_lock *lock = NULL;
     ASSERT_EQ(CPLAT_OK, cplat_local_lock_create(&lock)); // [状態] - local lock を生成する。
-                                                               // [状態確認] - cplat_local_lock_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_local_lock_create の戻り値が CPLAT_OK であること。
     NiceMock<Mock_pthread> mock_pthread;
 
     // Pre-Assert
@@ -239,8 +239,8 @@ TEST_F(syncFailureInjectionTest, local_lock_maps_pthread_failure_results)
     // Act
     int lock_result =
         cplat_local_lock_lock(lock, CPLAT_SYNC_WAIT_FOREVER); // [手順] - EBUSY を返す mutex lock を実行する。
-    int try_result = cplat_local_lock_try_lock(lock);            // [手順] - EACCES を返す mutex trylock を実行する。
-    int unlock_result = cplat_local_lock_unlock(lock);           // [手順] - EINVAL を返す mutex unlock を実行する。
+    int try_result = cplat_local_lock_try_lock(lock);         // [手順] - EACCES を返す mutex trylock を実行する。
+    int unlock_result = cplat_local_lock_unlock(lock);        // [手順] - EINVAL を返す mutex unlock を実行する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUSY,
@@ -271,7 +271,7 @@ TEST_F(syncFailureInjectionTest, condvar_create_reports_condition_attribute_fail
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - 属性初期化失敗時の戻り値が CPLAT_ERR_UNKNOWN であること。
+              actual_ret);                // [確認_異常系] - 属性初期化失敗時の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ((cplat_condvar *)NULL, cv); // [確認_異常系] - 生成失敗時にハンドルが NULL であること。
 }
 

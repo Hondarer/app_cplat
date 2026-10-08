@@ -26,14 +26,14 @@ MOCK_WEAK_IMPL(BOOL, CreateProcessU, const char *utf8_application_name, const ch
     if (_mock_cplat != nullptr)
     {
         mock_ret = _mock_cplat->CreateProcessU(utf8_application_name, utf8_command_line, process_attributes,
-                                             thread_attributes, inherit_handles, creation_flags, environment,
-                                             utf8_current_directory, startup_info, process_information);
+                                               thread_attributes, inherit_handles, creation_flags, environment,
+                                               utf8_current_directory, startup_info, process_information);
     }
     else
     {
         mock_ret = delegate_real_CreateProcessU(utf8_application_name, utf8_command_line, process_attributes,
-                                           thread_attributes, inherit_handles, creation_flags, environment,
-                                           utf8_current_directory, startup_info, process_information);
+                                                thread_attributes, inherit_handles, creation_flags, environment,
+                                                utf8_current_directory, startup_info, process_information);
     }
 
     if (getTraceLevel() > TRACE_NONE)

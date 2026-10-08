@@ -51,8 +51,8 @@ extern "C"
      */
     typedef struct cplat_memory_lock_self_options
     {
-        int flags; /**< ロック対象を示す flag。0 または未知の bit を指定してはなりません。 */
-        unsigned int pad; /**< x64 で stack_prefault_bytes のアラインメントを明示するパディング。 */
+        int flags;                   /**< ロック対象を示す flag。0 または未知の bit を指定してはなりません。 */
+        unsigned int pad;            /**< x64 で stack_prefault_bytes のアラインメントを明示するパディング。 */
         size_t stack_prefault_bytes; /**< ロック前に呼び出しスレッドで追加消費するスタック サイズ。0 可。 */
     } cplat_memory_lock_self_options;
 
@@ -154,7 +154,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_memory_lock_self(const cplat_memory_lock_self_options *options,
-                                                               cplat_memory_lock_scope **scope);
+                                                      cplat_memory_lock_scope **scope);
 
     /**
      *  @brief          自プロセス全体ロックの解除情報を破棄し、ロックを解除します。

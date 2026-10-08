@@ -71,11 +71,9 @@ class socketTest : public Test
     bool verifyExpectations()
     {
 #if defined(PLATFORM_LINUX)
-        return Mock::VerifyAndClearExpectations(&mock_cplat_) &&
-               Mock::VerifyAndClearExpectations(&mock_sys_socket_);
+        return Mock::VerifyAndClearExpectations(&mock_cplat_) && Mock::VerifyAndClearExpectations(&mock_sys_socket_);
 #elif defined(PLATFORM_WINDOWS)
-        return Mock::VerifyAndClearExpectations(&mock_cplat_) &&
-               Mock::VerifyAndClearExpectations(&mock_winsock_);
+        return Mock::VerifyAndClearExpectations(&mock_cplat_) && Mock::VerifyAndClearExpectations(&mock_winsock_);
 #endif /* PLATFORM_ */
     }
 
@@ -139,7 +137,7 @@ TEST_F(socketTest, open_rejects_invalid_arguments)
     // Act
     int actual_ret_null_output = cplat_socket_open(CPLAT_SOCKET_TCP, NULL, NULL); // [手順] - 出力先に NULL を指定する。
     int actual_ret_invalid_kind = cplat_socket_open(static_cast<cplat_socket_kind>(invalid_kind_value), &socket,
-                                                NULL); // [手順] - 未定義の種別を指定する。
+                                                    NULL); // [手順] - 未定義の種別を指定する。
 
     // Assert
     EXPECT_EQ(
@@ -203,15 +201,12 @@ TEST_F(socketTest, open_reports_socket_failure)
     // [Pre-Assert手順] - 下位のソケット生成 API から失敗を返却し、失敗要因を EMFILE 相当として通知する。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_sys_socket_, socket(_, _, _, AF_INET, SOCK_STREAM, 0))
-        .WillOnce(DoAll(Assign(&errno, EMFILE),
-                        Return(-1)));
+        .WillOnce(DoAll(Assign(&errno, EMFILE), Return(-1)));
     // [Pre-Assert確認_異常系] - mock_sys_socket_ の socket(_, _, _, AF_INET, SOCK_STREAM, 0) が登録した呼び出し期待を満たすこと。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, socket(_, _, _, AF_INET, SOCK_STREAM, 0)).WillOnce(Return(INVALID_SOCKET));
     // [Pre-Assert確認_異常系] - mock_winsock_ の socket(_, _, _, AF_INET, SOCK_STREAM, 0) が登録した呼び出し期待を満たすこと。
-    EXPECT_CALL(mock_winsock_, WSAGetLastError)
-        .WillOnce(
-            Return(WSAEMFILE));
+    EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAEMFILE));
     // [Pre-Assert確認_異常系] - mock_winsock_ の WSAGetLastError が登録した呼び出し期待を満たすこと。
 #endif /* PLATFORM_ */
 
@@ -248,13 +243,12 @@ TEST_F(socketTest, open_propagates_startup_failure)
     // Pre-Assert
     // WSAStartup が 1 回呼び出されること。
     // [Pre-Assert手順] - WSAStartup から WSASYSNOTREADY を返却する。
-    EXPECT_CALL(mock_winsock_, WSAStartup(_, _, _, _, _))
-        .WillOnce(Return(WSASYSNOTREADY));
+    EXPECT_CALL(mock_winsock_, WSAStartup(_, _, _, _, _)).WillOnce(Return(WSASYSNOTREADY));
     // [Pre-Assert確認_異常系] - mock_winsock_ の WSAStartup(_, _, _, _, _) が登録した呼び出し期待を満たすこと。
 
     // Act
     int actual_ret = cplat_socket_open(CPLAT_SOCKET_TCP, &socket,
-                                   &detail); // [手順] - 初期化失敗を注入してソケットを生成する。
+                                       &detail); // [手順] - 初期化失敗を注入してソケットを生成する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -320,7 +314,7 @@ TEST_F(socketTest, close_preserves_last_error)
 {
     // Arrange
     const cplat_error saved = {CPLAT_ERROR_DOMAIN_SOCKET_ERRNO, CPLAT_ERR_UNKNOWN,
-                                  static_cast<unsigned long>(ECONNRESET)};
+                               static_cast<unsigned long>(ECONNRESET)};
     cplat_error actual = {};
 
     cplat_error_set_last(&saved); // [状態] - 呼び出し前の直前エラーを ECONNRESET とする。
@@ -334,7 +328,7 @@ TEST_F(socketTest, close_preserves_last_error)
             [](int, cplat_error *)
             {
                 const cplat_error overwritten = {CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_PERMISSION_DENIED,
-                                                    static_cast<unsigned long>(EACCES)};
+                                                 static_cast<unsigned long>(EACCES)};
                 cplat_error_set_last(&overwritten);
                 return CPLAT_OK;
             });
@@ -345,7 +339,7 @@ TEST_F(socketTest, close_preserves_last_error)
             [](const char *, const int, const char *, SOCKET)
             {
                 const cplat_error overwritten = {CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_PERMISSION_DENIED,
-                                                    static_cast<unsigned long>(EACCES)};
+                                                 static_cast<unsigned long>(EACCES)};
                 cplat_error_set_last(&overwritten);
                 return 0;
             });
@@ -424,14 +418,15 @@ TEST_F(socketTest, connection_operations_reject_invalid_arguments)
 
     // Act
     int actual_ret_bind_socket = cplat_socket_bind(CPLAT_INVALID_SOCKET, &kEndpoint,
-                                               &detail); // [手順] - bind のソケットに無効値を指定する。
-    int actual_ret_bind_endpoint = cplat_socket_bind(kSocket, NULL, &detail); // [手順] - bind のエンドポイントに NULL を指定する。
+                                                   &detail); // [手順] - bind のソケットに無効値を指定する。
+    int actual_ret_bind_endpoint =
+        cplat_socket_bind(kSocket, NULL, &detail); // [手順] - bind のエンドポイントに NULL を指定する。
     int actual_ret_listen_socket =
         cplat_socket_listen(CPLAT_INVALID_SOCKET, 1, &detail); // [手順] - listen のソケットに無効値を指定する。
     int actual_ret_listen_backlog =
         cplat_socket_listen(kSocket, -1, &detail); // [手順] - listen に負の待ち受け数を指定する。
     int actual_ret_connect_socket = cplat_socket_connect(CPLAT_INVALID_SOCKET, &kEndpoint,
-                                                     &detail); // [手順] - connect のソケットに無効値を指定する。
+                                                         &detail); // [手順] - connect のソケットに無効値を指定する。
     int actual_ret_connect_endpoint =
         cplat_socket_connect(kSocket, NULL, &detail); // [手順] - connect のエンドポイントに NULL を指定する。
 
@@ -561,7 +556,8 @@ TEST_F(socketTest, connect_reports_in_progress_for_nonblocking_completion)
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_sys_socket_, connect(_, _, _, (int)kSocket, _, _))
-        .WillOnce(DoAll(Assign(&errno, EINPROGRESS), Return(-1))); // [Pre-Assert手順] - connect から EINPROGRESS を返却する。
+        .WillOnce(
+            DoAll(Assign(&errno, EINPROGRESS), Return(-1))); // [Pre-Assert手順] - connect から EINPROGRESS を返却する。
     // [Pre-Assert確認_正常系] - mock_sys_socket_ の connect(_, _, _, (int)kSocket, _, _) が登録した呼び出し期待を満たすこと。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, connect(_, _, _, (SOCKET)kSocket, _, _))
@@ -574,7 +570,7 @@ TEST_F(socketTest, connect_reports_in_progress_for_nonblocking_completion)
 
     // Act
     int result = cplat_socket_connect(kSocket, &kEndpoint,
-                                         &detail); // [手順] - 非ブロッキング connect の継続状態を処理する。
+                                      &detail); // [手順] - 非ブロッキング connect の継続状態を処理する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_IN_PROGRESS,
@@ -599,8 +595,9 @@ TEST_F(socketTest, accept_rejects_invalid_arguments)
 
     // Act
     int actual_ret_socket = cplat_socket_accept(CPLAT_INVALID_SOCKET, NULL, &accepted,
-                                            NULL); // [手順] - accept の待ち受けソケットに無効値を指定する。
-    int actual_ret_output = cplat_socket_accept(kSocket, NULL, NULL, NULL); // [手順] - accept の出力先に NULL を指定する。
+                                                NULL); // [手順] - accept の待ち受けソケットに無効値を指定する。
+    int actual_ret_output =
+        cplat_socket_accept(kSocket, NULL, NULL, NULL); // [手順] - accept の出力先に NULL を指定する。
 
     // Assert
     EXPECT_EQ(
@@ -650,14 +647,16 @@ TEST_F(socketTest, accept_returns_peer_and_socket)
 
     // Act
     int actual_ret = cplat_socket_accept(kSocket, &peer, &accepted, NULL); // [手順] - 接続を受け付ける。
-    int actual_ret_without_peer = cplat_socket_accept(kSocket, NULL, &accepted,
-                                                  NULL); // [手順] - 接続元エンドポイントの出力先を NULL にして接続を受け付ける。
+    int actual_ret_without_peer =
+        cplat_socket_accept(kSocket, NULL, &accepted,
+                            NULL); // [手順] - 接続元エンドポイントの出力先を NULL にして接続を受け付ける。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
               actual_ret); // [確認_正常系] - accept の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_OK,
-              actual_ret_without_peer); // [確認_正常系] - 接続元エンドポイントを要求しない accept の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_without_peer); // [確認_正常系] - 接続元エンドポイントを要求しない accept の戻り値が CPLAT_OK であること。
     EXPECT_EQ((cplat_socket)8,
               accepted); // [確認_正常系] - 受け付けたソケットが返されること。
     EXPECT_EQ(CPLAT_IPV4_ADDR_LOOPBACK,
@@ -745,9 +744,11 @@ TEST_F(socketTest, pending_error_reports_empty_pending_and_failure)
 
     // Act
     int actual_ret_invalid = cplat_socket_get_pending_error(CPLAT_INVALID_SOCKET,
-                                                        &detail); // [手順] - 無効なソケットの保留エラーを取得する。
-    int actual_ret_empty = cplat_socket_get_pending_error(kSocket, &detail);   // [手順] - 保留エラーがない状態を取得する。
-    int actual_ret_pending = cplat_socket_get_pending_error(kSocket, &detail); // [手順] - 保留エラーがある状態を取得する。
+                                                            &detail); // [手順] - 無効なソケットの保留エラーを取得する。
+    int actual_ret_empty =
+        cplat_socket_get_pending_error(kSocket, &detail); // [手順] - 保留エラーがない状態を取得する。
+    int actual_ret_pending =
+        cplat_socket_get_pending_error(kSocket, &detail); // [手順] - 保留エラーがある状態を取得する。
     int actual_ret_failure = cplat_socket_get_pending_error(kSocket, &detail); // [手順] - getsockopt の失敗を注入する。
 
     // Assert
@@ -806,9 +807,9 @@ TEST_F(socketTest, nonblocking_reports_invalid_and_os_failure)
 
     // Act
     int actual_ret_invalid =
-        cplat_socket_set_nonblocking(CPLAT_INVALID_SOCKET, 1, &detail); // [手順] - 無効なソケットを指定する。
-    int actual_ret_enable = cplat_socket_set_nonblocking(kSocket, 1, &detail);    // [手順] - 非ブロッキングを有効にする。
-    int actual_ret_disable = cplat_socket_set_nonblocking(kSocket, 0, &detail);   // [手順] - 非ブロッキングを無効にする。
+        cplat_socket_set_nonblocking(CPLAT_INVALID_SOCKET, 1, &detail);         // [手順] - 無効なソケットを指定する。
+    int actual_ret_enable = cplat_socket_set_nonblocking(kSocket, 1, &detail);  // [手順] - 非ブロッキングを有効にする。
+    int actual_ret_disable = cplat_socket_set_nonblocking(kSocket, 0, &detail); // [手順] - 非ブロッキングを無効にする。
     int actual_ret_failure =
         cplat_socket_set_nonblocking(kSocket, 1, &detail); // [手順] - 非ブロッキング設定の失敗を注入する。
 
@@ -904,16 +905,18 @@ TEST_F(socketTest, socket_options_succeed)
     // Act
     int actual_ret_reuse = cplat_socket_set_reuse_address(kSocket, 1, &detail); // [手順] - アドレス再利用を有効にする。
     int actual_ret_reuse_disabled =
-        cplat_socket_set_reuse_address(kSocket, 0, &detail);             // [手順] - アドレス再利用を無効にする。
-    int actual_ret_broadcast = cplat_socket_set_broadcast(kSocket, 0, &detail); // [手順] - ブロードキャストを無効にする。
+        cplat_socket_set_reuse_address(kSocket, 0, &detail); // [手順] - アドレス再利用を無効にする。
+    int actual_ret_broadcast =
+        cplat_socket_set_broadcast(kSocket, 0, &detail); // [手順] - ブロードキャストを無効にする。
     int actual_ret_broadcast_enabled =
         cplat_socket_set_broadcast(kSocket, 1, &detail); // [手順] - ブロードキャストを有効にする。
     int actual_ret_interface = cplat_socket_set_multicast_interface(
         kSocket, CPLAT_IPV4_ADDR_LOOPBACK, &detail); // [手順] - マルチキャスト インターフェースを設定する。
     int actual_ret_join = cplat_socket_join_multicast_group(kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
-                                                        &detail); // [手順] - マルチキャスト グループへ参加する。
-    int actual_ret_leave = cplat_socket_leave_multicast_group(
-        kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY, &detail); // [手順] - マルチキャスト グループから離脱する。
+                                                            &detail); // [手順] - マルチキャスト グループへ参加する。
+    int actual_ret_leave =
+        cplat_socket_leave_multicast_group(kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
+                                           &detail); // [手順] - マルチキャスト グループから離脱する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -924,8 +927,9 @@ TEST_F(socketTest, socket_options_succeed)
               actual_ret_broadcast); // [確認_正常系] - ブロードキャスト設定の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK,
               actual_ret_broadcast_enabled); // [確認_正常系] - ブロードキャスト有効化の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_OK,
-              actual_ret_interface); // [確認_正常系] - マルチキャスト インターフェース設定の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_interface); // [確認_正常系] - マルチキャスト インターフェース設定の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK,
               actual_ret_join); // [確認_正常系] - マルチキャスト参加の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK,
@@ -977,29 +981,30 @@ TEST_F(socketTest, socket_options_report_invalid_and_os_failure)
 #endif /* PLATFORM_ */
 
     // Act
-    int actual_ret_reuse_invalid = cplat_socket_set_reuse_address(CPLAT_INVALID_SOCKET, 1,
-                                                              &detail); // [手順] - 無効なソケットで再利用を設定する。
+    int actual_ret_reuse_invalid =
+        cplat_socket_set_reuse_address(CPLAT_INVALID_SOCKET, 1,
+                                       &detail); // [手順] - 無効なソケットで再利用を設定する。
     int actual_ret_broadcast_invalid = cplat_socket_set_broadcast(
         CPLAT_INVALID_SOCKET, 1, &detail); // [手順] - 無効なソケットでブロードキャストを設定する。
     int actual_ret_interface_invalid =
         cplat_socket_set_multicast_interface(CPLAT_INVALID_SOCKET, CPLAT_IPV4_ADDR_ANY,
-                                                &detail); // [手順] - 無効なソケットでインターフェースを設定する。
-    int actual_ret_join_invalid = cplat_socket_join_multicast_group(
-        CPLAT_INVALID_SOCKET, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
-        &detail); // [手順] - 無効なソケットでグループ参加を設定する。
-    int actual_ret_leave_invalid = cplat_socket_leave_multicast_group(
-        CPLAT_INVALID_SOCKET, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
-        &detail); // [手順] - 無効なソケットでグループ離脱を設定する。
+                                             &detail); // [手順] - 無効なソケットでインターフェースを設定する。
+    int actual_ret_join_invalid =
+        cplat_socket_join_multicast_group(CPLAT_INVALID_SOCKET, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
+                                          &detail); // [手順] - 無効なソケットでグループ参加を設定する。
+    int actual_ret_leave_invalid =
+        cplat_socket_leave_multicast_group(CPLAT_INVALID_SOCKET, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
+                                           &detail); // [手順] - 無効なソケットでグループ離脱を設定する。
     int actual_ret_failure =
         cplat_socket_set_reuse_address(kSocket, 1, &detail); // [手順] - オプション設定の失敗を注入する。
     int actual_ret_interface_failure = cplat_socket_set_multicast_interface(
         kSocket, CPLAT_IPV4_ADDR_LOOPBACK, &detail); // [手順] - インターフェース設定の失敗を注入する。
     int actual_ret_join_failure =
         cplat_socket_join_multicast_group(kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
-                                             &detail); // [手順] - グループ参加の失敗を注入する。
+                                          &detail); // [手順] - グループ参加の失敗を注入する。
     int actual_ret_leave_failure =
         cplat_socket_leave_multicast_group(kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
-                                              &detail); // [手順] - グループ離脱の失敗を注入する。
+                                           &detail); // [手順] - グループ離脱の失敗を注入する。
 
     // Assert
     EXPECT_EQ(
@@ -1024,9 +1029,8 @@ TEST_F(socketTest, socket_options_report_invalid_and_os_failure)
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_leave_invalid); // [確認_異常系] - 無効なソケットを指定したグループ離脱の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        actual_ret_leave_failure); // [確認_異常系] - グループ離脱失敗時の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              actual_ret_leave_failure); // [確認_異常系] - グループ離脱失敗時の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 // [サブ手順参照 名前=socketTest.TearDown]
 
@@ -1068,22 +1072,23 @@ TEST_F(socketTest, send_and_recv_report_results)
 
     // Act
     int actual_ret_invalid_send = cplat_socket_send(CPLAT_INVALID_SOCKET, buffer, sizeof(buffer), &sent,
-                                                &detail); // [手順] - 無効なソケットで送信する。
+                                                    &detail); // [手順] - 無効なソケットで送信する。
     int actual_ret_invalid_send_buffer = cplat_socket_send(kSocket, NULL, sizeof(buffer), &sent,
-                                                       &detail); // [手順] - NULL の送信バッファーを指定する。
+                                                           &detail); // [手順] - NULL の送信バッファーを指定する。
     int actual_ret_invalid_send_output = cplat_socket_send(kSocket, buffer, sizeof(buffer), NULL,
-                                                       &detail); // [手順] - NULL の送信バイト数出力先を指定する。
-    int actual_ret_invalid_send_length = cplat_socket_send(kSocket, buffer, CPLAT_SOCKET_MAX_TRANSFER + (size_t)1U,
-                                                       &sent, &detail); // [手順] - 最大転送量を超える送信長を指定する。
+                                                           &detail); // [手順] - NULL の送信バイト数出力先を指定する。
+    int actual_ret_invalid_send_length =
+        cplat_socket_send(kSocket, buffer, CPLAT_SOCKET_MAX_TRANSFER + (size_t)1U, &sent,
+                          &detail); // [手順] - 最大転送量を超える送信長を指定する。
     int actual_ret_invalid_recv_socket = cplat_socket_recv(CPLAT_INVALID_SOCKET, buffer, sizeof(buffer), &received,
-                                                       &detail); // [手順] - 無効なソケットで受信する。
+                                                           &detail); // [手順] - 無効なソケットで受信する。
     int actual_ret_invalid_recv = cplat_socket_recv(kSocket, NULL, sizeof(buffer), &received,
-                                                &detail); // [手順] - NULL の受信バッファーを指定する。
+                                                    &detail); // [手順] - NULL の受信バッファーを指定する。
     int actual_ret_invalid_recv_output = cplat_socket_recv(kSocket, buffer, sizeof(buffer), NULL,
-                                                       &detail); // [手順] - NULL の受信バイト数出力先を指定する。
+                                                           &detail); // [手順] - NULL の受信バイト数出力先を指定する。
     int actual_ret_invalid_recv_length =
         cplat_socket_recv(kSocket, buffer, CPLAT_SOCKET_MAX_TRANSFER + (size_t)1U, &received,
-                             &detail); // [手順] - 最大転送量を超える受信長を指定する。
+                          &detail); // [手順] - 最大転送量を超える受信長を指定する。
     int actual_ret_send =
         cplat_socket_send(kSocket, buffer, sizeof(buffer), &sent, &detail); // [手順] - 送信成功を注入する。
     int actual_ret_recv =
@@ -1091,7 +1096,7 @@ TEST_F(socketTest, send_and_recv_report_results)
     int actual_ret_send_failure =
         cplat_socket_send(kSocket, buffer, sizeof(buffer), &sent_failure, &detail); // [手順] - 送信失敗を注入する。
     int actual_ret_recv_failure = cplat_socket_recv(kSocket, buffer, sizeof(buffer), &received_failure,
-                                                &detail); // [手順] - 受信失敗を注入する。
+                                                    &detail); // [手順] - 受信失敗を注入する。
 
     // Assert
     EXPECT_EQ(
@@ -1174,12 +1179,12 @@ TEST_F(socketTest, datagram_operations_succeed)
 
     // Act
     int actual_ret_send = cplat_socket_sendto(kSocket, buffer, sizeof(buffer), &kEndpoint, &transferred,
-                                          NULL); // [手順] - データグラムを送信する。
+                                              NULL); // [手順] - データグラムを送信する。
     int actual_ret_recv = cplat_socket_recvfrom(kSocket, buffer, sizeof(buffer), &peer, &transferred,
-                                            NULL); // [手順] - データグラムを受信する。
+                                                NULL); // [手順] - データグラムを受信する。
     int actual_ret_recv_without_peer =
         cplat_socket_recvfrom(kSocket, buffer, sizeof(buffer), NULL, &transferred,
-                                 NULL); // [手順] - 接続元エンドポイントの出力先を NULL にしてデータグラムを受信する。
+                              NULL); // [手順] - 接続元エンドポイントの出力先を NULL にしてデータグラムを受信する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1228,33 +1233,33 @@ TEST_F(socketTest, datagram_operations_report_invalid_and_os_failure)
     // Act
     int actual_ret_send_invalid_socket =
         cplat_socket_sendto(CPLAT_INVALID_SOCKET, buffer, sizeof(buffer), &kEndpoint, &transferred,
-                               &detail); // [手順] - 無効なソケットで sendto を呼び出す。
+                            &detail); // [手順] - 無効なソケットで sendto を呼び出す。
     int actual_ret_send_invalid_buffer =
         cplat_socket_sendto(kSocket, NULL, sizeof(buffer), &kEndpoint, &transferred,
-                               &detail); // [手順] - NULL の送信バッファーで sendto を呼び出す。
+                            &detail); // [手順] - NULL の送信バッファーで sendto を呼び出す。
     int actual_ret_send_invalid_output =
         cplat_socket_sendto(kSocket, buffer, sizeof(buffer), &kEndpoint, NULL,
-                               &detail); // [手順] - NULL の送信バイト数出力先で sendto を呼び出す。
+                            &detail); // [手順] - NULL の送信バイト数出力先で sendto を呼び出す。
     int actual_ret_send_invalid_length =
         cplat_socket_sendto(kSocket, buffer, CPLAT_SOCKET_MAX_TRANSFER + (size_t)1U, &kEndpoint, &transferred,
-                               &detail); // [手順] - 最大転送量を超える長さで sendto を呼び出す。
+                            &detail); // [手順] - 最大転送量を超える長さで sendto を呼び出す。
     int actual_ret_send_invalid = cplat_socket_sendto(kSocket, buffer, sizeof(buffer), NULL, &transferred,
-                                                  &detail); // [手順] - sendto のエンドポイントに NULL を指定する。
+                                                      &detail); // [手順] - sendto のエンドポイントに NULL を指定する。
     int actual_ret_recv_invalid_socket =
         cplat_socket_recvfrom(CPLAT_INVALID_SOCKET, buffer, sizeof(buffer), NULL, &transferred,
-                                 &detail); // [手順] - 無効なソケットで recvfrom を呼び出す。
+                              &detail); // [手順] - 無効なソケットで recvfrom を呼び出す。
     int actual_ret_recv_invalid_buffer =
         cplat_socket_recvfrom(kSocket, NULL, sizeof(buffer), NULL, &transferred,
-                                 &detail); // [手順] - NULL の受信バッファーで recvfrom を呼び出す。
+                              &detail); // [手順] - NULL の受信バッファーで recvfrom を呼び出す。
     int actual_ret_recv_invalid_length =
         cplat_socket_recvfrom(kSocket, buffer, CPLAT_SOCKET_MAX_TRANSFER + (size_t)1U, NULL, &transferred,
-                                 &detail); // [手順] - 最大転送量を超える長さで recvfrom を呼び出す。
+                              &detail); // [手順] - 最大転送量を超える長さで recvfrom を呼び出す。
     int actual_ret_recv_invalid = cplat_socket_recvfrom(kSocket, buffer, sizeof(buffer), NULL, NULL,
-                                                    &detail); // [手順] - recvfrom の出力先に NULL を指定する。
+                                                        &detail); // [手順] - recvfrom の出力先に NULL を指定する。
     int actual_ret_send_failure = cplat_socket_sendto(kSocket, buffer, sizeof(buffer), &kEndpoint, &transferred,
-                                                  &detail); // [手順] - sendto の失敗を注入する。
+                                                      &detail); // [手順] - sendto の失敗を注入する。
     int actual_ret_recv_failure = cplat_socket_recvfrom(kSocket, buffer, sizeof(buffer), NULL, &transferred,
-                                                    &detail); // [手順] - recvfrom の失敗を注入する。
+                                                        &detail); // [手順] - recvfrom の失敗を注入する。
 
     // Assert
     EXPECT_EQ(
@@ -1334,11 +1339,11 @@ TEST_F(socketTest, send_all_reports_results)
     int actual_ret_failure =
         cplat_socket_send_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - 送信失敗を注入する。
     int actual_ret_invalid = cplat_socket_send_all(CPLAT_INVALID_SOCKET, buffer, sizeof(buffer),
-                                               &detail); // [手順] - 無効なソケットを指定する。
+                                                   &detail); // [手順] - 無効なソケットを指定する。
     int actual_ret_invalid_buffer =
         cplat_socket_send_all(kSocket, NULL, sizeof(buffer), &detail); // [手順] - NULL の送信バッファーを指定する。
     int actual_ret_invalid_length = cplat_socket_send_all(kSocket, buffer, CPLAT_SOCKET_MAX_TRANSFER + (size_t)1U,
-                                                      &detail); // [手順] - 最大転送量を超える送信長を指定する。
+                                                          &detail); // [手順] - 最大転送量を超える送信長を指定する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1400,16 +1405,16 @@ TEST_F(socketTest, recv_all_reports_results)
     int actual_ret_full =
         cplat_socket_recv_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - 全受信成功を注入する。
     int actual_ret_partial =
-        cplat_socket_recv_all(kSocket, buffer, sizeof(buffer), &detail);           // [手順] - 部分受信を注入する。
+        cplat_socket_recv_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - 部分受信を注入する。
     int actual_ret_eof = cplat_socket_recv_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - EOF を注入する。
     int actual_ret_failure =
         cplat_socket_recv_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - 受信失敗を注入する。
     int actual_ret_invalid = cplat_socket_recv_all(CPLAT_INVALID_SOCKET, buffer, sizeof(buffer),
-                                               &detail); // [手順] - 無効なソケットを指定する。
+                                                   &detail); // [手順] - 無効なソケットを指定する。
     int actual_ret_invalid_buffer =
         cplat_socket_recv_all(kSocket, NULL, sizeof(buffer), &detail); // [手順] - NULL の受信バッファーを指定する。
     int actual_ret_invalid_length = cplat_socket_recv_all(kSocket, buffer, CPLAT_SOCKET_MAX_TRANSFER + (size_t)1U,
-                                                      &detail); // [手順] - 最大転送量を超える受信長を指定する。
+                                                          &detail); // [手順] - 最大転送量を超える受信長を指定する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1480,11 +1485,13 @@ TEST_F(socketTest, send_and_recv_reject_transfer_exceeding_request)
                                                     &detail); // [手順] - 4 バイトを受信する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret_send); // [確認_異常系] - 要求量超過時の cplat_socket_send の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret_send); // [確認_異常系] - 要求量超過時の cplat_socket_send の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ((size_t)0, sent); // [確認_異常系] - 要求量超過時の送信バイト数が 0 のままであること。
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret_recv); // [確認_異常系] - 要求量超過時の cplat_socket_recv の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret_recv); // [確認_異常系] - 要求量超過時の cplat_socket_recv の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ((size_t)0, received); // [確認_異常系] - 要求量超過時の受信バイト数が 0 のままであること。
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
@@ -1493,7 +1500,8 @@ TEST_F(socketTest, send_and_recv_reject_transfer_exceeding_request)
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         actual_ret_recvfrom); // [確認_異常系] - 要求量超過時の cplat_socket_recvfrom の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ((size_t)0, received_from); // [確認_異常系] - 要求量超過時の recvfrom の受信バイト数が 0 のままであること。
+    EXPECT_EQ((size_t)0,
+              received_from); // [確認_異常系] - 要求量超過時の recvfrom の受信バイト数が 0 のままであること。
 }
 // [サブ手順参照 名前=socketTest.TearDown]
 
@@ -1594,10 +1602,11 @@ TEST_F(socketTest, wait_single_reports_results)
 
     // Act
     int actual_ret_invalid_socket = cplat_socket_wait_readable(CPLAT_INVALID_SOCKET, 0, &ready,
-                                                           &detail); // [手順] - 無効なソケットで待機する。
+                                                               &detail); // [手順] - 無効なソケットで待機する。
     int actual_ret_invalid_output =
         cplat_socket_wait_readable(kSocket, 0, NULL, &detail); // [手順] - 待機結果の出力先に NULL を指定する。
-    int actual_ret_timeout = cplat_socket_wait_readable(kSocket, 0, &ready, &detail); // [手順] - タイムアウトを注入する。
+    int actual_ret_timeout =
+        cplat_socket_wait_readable(kSocket, 0, &ready, &detail); // [手順] - タイムアウトを注入する。
     int actual_ret_not_ready =
         cplat_socket_wait_readable(kSocket, 0, &ready, &detail); // [手順] - イベント不一致を注入する。
     ready_after_not_ready = ready;
@@ -1646,7 +1655,7 @@ TEST_F(socketTest, wait_multi_rejects_invalid_and_waits_without_valid_socket)
     int actual_ret_zero_count =
         cplat_socket_wait_readable_multi(socks, 0U, 0, ready, &detail); // [手順] - 要素数 0 を指定する。
     int actual_ret_large_count = cplat_socket_wait_readable_multi(socks, CPLAT_SOCKET_WAIT_MAX + 1U, 0, ready,
-                                                              &detail); // [手順] - 最大数を超える要素数を指定する。
+                                                                  &detail); // [手順] - 最大数を超える要素数を指定する。
     int actual_ret_null_ready =
         cplat_socket_wait_readable_multi(socks, 1U, 0, NULL, &detail); // [手順] - 結果配列に NULL を指定する。
     int actual_ret_wait =
@@ -1659,10 +1668,12 @@ TEST_F(socketTest, wait_multi_rejects_invalid_and_waits_without_valid_socket)
               actual_ret_null_socks); // [確認_異常系] - NULL 配列の待機戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
               actual_ret_zero_count); // [確認_異常系] - 要素数 0 の待機戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_large_count); // [確認_異常系] - 最大数超過の待機戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ready); // [確認_異常系] - NULL 結果配列の待機戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_large_count); // [確認_異常系] - 最大数超過の待機戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ready); // [確認_異常系] - NULL 結果配列の待機戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(CPLAT_OK,
               actual_ret_wait); // [確認_正常系] - 全無効ソケットの待機戻り値が CPLAT_OK であること。
     EXPECT_EQ(
@@ -1729,7 +1740,7 @@ TEST_F(socketTest, wait_multi_reports_results)
     int actual_ret_timeout =
         cplat_socket_wait_readable_multi(socks, 3U, 0, ready, &detail); // [手順] - タイムアウトを注入する。
     int actual_ret_ready = cplat_socket_wait_readable_multi(socks, 3U, 0, ready,
-                                                        &detail); // [手順] - 複数ソケットの準備完了を注入する。
+                                                            &detail); // [手順] - 複数ソケットの準備完了を注入する。
     std::memcpy(ready_after_ready, ready, sizeof(ready_after_ready));
     int actual_ret_failure =
         cplat_socket_wait_readable_multi(socks, 3U, 0, ready, &detail); // [手順] - 待機失敗を注入する。
@@ -1773,7 +1784,8 @@ TEST_F(socketTest, wait_single_retries_after_interrupt)
     // [Pre-Assert確認_正常系] - mock_poll_ の poll(_, _, _, _, 1, 0) が登録した呼び出し期待を満たすこと。
 
     // Act
-    int actual_ret = cplat_socket_wait_readable(kSocket, 0, &ready, &detail); // [手順] - タイムアウト 0 で受信可能を待機する。
+    int actual_ret =
+        cplat_socket_wait_readable(kSocket, 0, &ready, &detail); // [手順] - タイムアウト 0 で受信可能を待機する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1807,7 +1819,7 @@ TEST_F(socketTest, wait_single_retries_without_deadline_after_interrupt)
 
     // Act
     int actual_ret = cplat_socket_wait_readable(kSocket, CPLAT_SOCKET_WAIT_FOREVER, &ready,
-                                            &detail); // [手順] - 無期限で受信可能を待機する。
+                                                &detail); // [手順] - 無期限で受信可能を待機する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1849,8 +1861,9 @@ TEST_F(socketTest, wait_single_recomputes_remaining_after_interrupt)
         cplat_socket_wait_readable(kSocket, 100, &ready, &detail); // [手順] - タイムアウト 100 ms で待機する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK,
-              actual_ret); // [確認_正常系] - タイムアウト 100 ms の cplat_socket_wait_readable の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret); // [確認_正常系] - タイムアウト 100 ms の cplat_socket_wait_readable の戻り値が CPLAT_OK であること。
     EXPECT_EQ(1,
               ready); // [確認_正常系] - 残り時間での再待機で条件が成立し、準備完了フラグが 1 になること。
 }
@@ -1875,12 +1888,12 @@ TEST_F(socketTest, wait_single_reports_not_ready_when_deadline_expires_after_int
     // [Pre-Assert確認_正常系] - mock_poll_ の poll(_, _, _, _, 1, 50) が登録した呼び出し期待を満たすこと。
 
     // Act
-    int actual_ret = cplat_socket_wait_readable(kSocket, 50, &ready, &detail); // [手順] - タイムアウト 50 ms で待機する。
+    int actual_ret =
+        cplat_socket_wait_readable(kSocket, 50, &ready, &detail); // [手順] - タイムアウト 50 ms で待機する。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_OK,
-        actual_ret); // [確認_正常系] - 期限超過後の cplat_socket_wait_readable の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret); // [確認_正常系] - 期限超過後の cplat_socket_wait_readable の戻り値が CPLAT_OK であること。
     EXPECT_EQ(0,
               ready); // [確認_正常系] - 期限を過ぎたため準備完了フラグが 0 のままであること。
 }
@@ -1910,7 +1923,7 @@ TEST_F(socketTest, wait_multi_retries_after_interrupt)
 
     // Act
     int actual_ret = cplat_socket_wait_readable_multi(socks, 2U, 0, ready,
-                                                  &detail); // [手順] - 2 個のソケットで受信可能を待機する。
+                                                      &detail); // [手順] - 2 個のソケットで受信可能を待機する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1971,8 +1984,10 @@ TEST_F(socketTest, send_and_recv_retry_after_interrupt)
     // [Pre-Assert確認_正常系] - mock_sys_socket_ の recv(_, _, _, (int)kSocket, _, 4U, 0) が登録した呼び出し期待を満たすこと。
 
     // Act
-    int actual_ret_send = cplat_socket_send(kSocket, buffer, sizeof(buffer), &sent, &detail); // [手順] - 4 バイト送信する。
-    int actual_ret_recv = cplat_socket_recv(kSocket, buffer, sizeof(buffer), &received, &detail); // [手順] - 4 バイト受信する。
+    int actual_ret_send =
+        cplat_socket_send(kSocket, buffer, sizeof(buffer), &sent, &detail); // [手順] - 4 バイト送信する。
+    int actual_ret_recv =
+        cplat_socket_recv(kSocket, buffer, sizeof(buffer), &received, &detail); // [手順] - 4 バイト受信する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -2011,9 +2026,9 @@ TEST_F(socketTest, sendto_and_recvfrom_retry_after_interrupt)
 
     // Act
     int actual_ret_sendto = cplat_socket_sendto(kSocket, buffer, sizeof(buffer), &kEndpoint, &sent,
-                                            &detail); // [手順] - 4 バイトを指定したエンドポイントへ送信する。
+                                                &detail); // [手順] - 4 バイトを指定したエンドポイントへ送信する。
     int actual_ret_recvfrom = cplat_socket_recvfrom(kSocket, buffer, sizeof(buffer), &peer, &received,
-                                                &detail); // [手順] - 4 バイトを受信する。
+                                                    &detail); // [手順] - 4 バイトを受信する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -2136,8 +2151,9 @@ TEST_F(socketTest, connect_reports_pending_error_after_interrupt)
     int actual_ret = cplat_socket_connect(kSocket, &kEndpoint, &detail); // [手順] - ブロッキング モードで接続する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - 保留エラーがある場合の cplat_socket_connect の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret); // [確認_異常系] - 保留エラーがある場合の cplat_socket_connect の戻り値が CPLAT_ERR_UNKNOWN であること。
     // [サブ手順参照 名前=socketTest.expect_detail 区分=異常系]
     expect_detail(detail, CPLAT_ERROR_DOMAIN_SOCKET_ERRNO, CPLAT_ERR_UNKNOWN,
                   (unsigned long)ECONNREFUSED); // 詳細に接続拒否が記録されること。
@@ -2234,13 +2250,16 @@ TEST_F(socketTest, shutdown_receive_reports_results)
 
     // Act
     int actual_ret_null = cplat_socket_shutdown_receive(NULL, &detail); // [手順] - ソケット出力先に NULL を指定する。
-    int actual_ret_invalid = cplat_socket_shutdown_receive(&invalid_socket, &detail); // [手順] - 無効なソケットを指定する。
-    int actual_ret_success = cplat_socket_shutdown_receive(&socket, &detail);         // [手順] - 受信停止を成功させる。
-    int actual_ret_failure = cplat_socket_shutdown_receive(&failure_socket, &detail); // [手順] - 受信停止の失敗を注入する。
+    int actual_ret_invalid =
+        cplat_socket_shutdown_receive(&invalid_socket, &detail);              // [手順] - 無効なソケットを指定する。
+    int actual_ret_success = cplat_socket_shutdown_receive(&socket, &detail); // [手順] - 受信停止を成功させる。
+    int actual_ret_failure =
+        cplat_socket_shutdown_receive(&failure_socket, &detail); // [手順] - 受信停止の失敗を注入する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null); // [確認_異常系] - NULL の出力先を指定した戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null); // [確認_異常系] - NULL の出力先を指定した戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_invalid); // [確認_異常系] - 無効なソケットを指定した戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。

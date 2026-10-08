@@ -25,8 +25,8 @@ MOCK_WEAK_IMPL(int, cplat_string_catalog_filter_slot_check, cplat_string_catalog
     if (_mock_cplat != nullptr)
     {
         mock_ret = _mock_cplat->cplat_string_catalog_filter_slot_check(slot, image, image_size, diagnostics,
-                                                                       diagnostic_capacity, invalid_count_out,
-                                                                       warnings, warning_capacity, warning_count_out);
+                                                                       diagnostic_capacity, invalid_count_out, warnings,
+                                                                       warning_capacity, warning_count_out);
     }
     else
     {

@@ -102,16 +102,16 @@ extern "C"
     typedef struct cplat_process_stdio
     {
         cplat_process_stdio_mode mode; /**< 標準入出力の扱い。 */
-        unsigned int pad; /**< x64 で native_handle のアラインメントを明示するパディング。 */
-        intptr_t native_handle; /**< OS ネイティブ ハンドル。 */
+        unsigned int pad;              /**< x64 で native_handle のアラインメントを明示するパディング。 */
+        intptr_t native_handle;        /**< OS ネイティブ ハンドル。 */
     } cplat_process_stdio;
 
     /** @brief 子プロセス起動オプション。 */
     typedef struct cplat_process_options
     {
-        char *const *argv;                  /**< コマンドと引数の配列 (NULL 終端)。NULL を渡してはなりません。 */
-        char *const *env_overrides;         /**< 追加・上書きする KEY=VALUE 配列 (NULL 終端)。NULL 可。 */
-        const char *working_directory;      /**< 作業ディレクトリ。NULL の場合は親の作業ディレクトリを継承します。 */
+        char *const *argv;               /**< コマンドと引数の配列 (NULL 終端)。NULL を渡してはなりません。 */
+        char *const *env_overrides;      /**< 追加・上書きする KEY=VALUE 配列 (NULL 終端)。NULL 可。 */
+        const char *working_directory;   /**< 作業ディレクトリ。NULL の場合は親の作業ディレクトリを継承します。 */
         cplat_process_stdio stdin_spec;  /**< stdin 指定。 */
         cplat_process_stdio stdout_spec; /**< stdout 指定。 */
         cplat_process_stdio stderr_spec; /**< stderr 指定。 */
@@ -128,8 +128,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_process_start(const cplat_process_options *options,
-                                                            cplat_process **process);
+    CPLAT_EXPORT int CPLAT_API cplat_process_start(const cplat_process_options *options, cplat_process **process);
 
     /**
      *  @brief          子プロセスの終了を待機します。
@@ -195,7 +194,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_process_run_sync(const cplat_process_options *options, int timeout_ms,
-                                                               int *exit_code);
+                                                      int *exit_code);
 
 #ifdef __cplusplus
 }

@@ -40,7 +40,7 @@
 #include <stdint.h>
 
 /** 無効なソケットを表す値。 */
-#define CPLAT_INVALID_SOCKET ((cplat_socket)-1)
+#define CPLAT_INVALID_SOCKET ((cplat_socket) - 1)
 
 /** タイムアウトなしで待機することを表すタイムアウト値。 */
 #define CPLAT_SOCKET_WAIT_FOREVER (-1)
@@ -99,7 +99,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_socket_open(cplat_socket_kind kind, cplat_socket *sock_out,
-                                                          cplat_error *detail_out);
+                                                 cplat_error *detail_out);
 
     /**
      *  @brief          ソケットを閉じます。
@@ -138,9 +138,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_bind(cplat_socket sock,
-                                                          const cplat_ipv4_endpoint *endpoint,
-                                                          cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_bind(cplat_socket sock, const cplat_ipv4_endpoint *endpoint,
+                                                 cplat_error *detail_out);
 
     /**
      *  @brief          ソケットを接続待ち受け状態にします。
@@ -154,8 +153,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_listen(cplat_socket sock, int backlog,
-                                                            cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_listen(cplat_socket sock, int backlog, cplat_error *detail_out);
 
     /**
      *  @brief          待ち受け中のソケットで接続を受け付けます。
@@ -174,7 +172,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_socket_accept(cplat_socket sock, cplat_ipv4_endpoint *peer_out,
-                                                            cplat_socket *sock_out, cplat_error *detail_out);
+                                                   cplat_socket *sock_out, cplat_error *detail_out);
 
     /**
      *  @brief          相手のエンドポイントへ接続します。
@@ -197,9 +195,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_connect(cplat_socket sock,
-                                                             const cplat_ipv4_endpoint *endpoint,
-                                                             cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_connect(cplat_socket sock, const cplat_ipv4_endpoint *endpoint,
+                                                    cplat_error *detail_out);
 
     /**
      *  @brief          ソケットに保留されているエラーを取得します。
@@ -213,8 +210,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_get_pending_error(cplat_socket sock,
-                                                                       cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_get_pending_error(cplat_socket sock, cplat_error *detail_out);
 
     /**
      *  @brief          ソケットの非ブロッキング モードを設定します。
@@ -227,8 +223,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_set_nonblocking(cplat_socket sock, int enable,
-                                                                     cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_set_nonblocking(cplat_socket sock, int enable, cplat_error *detail_out);
 
     /**
      *  @brief          アドレスの再利用を許可するかどうかを設定します。
@@ -241,8 +236,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_set_reuse_address(cplat_socket sock, int enable,
-                                                                       cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_set_reuse_address(cplat_socket sock, int enable, cplat_error *detail_out);
 
     /**
      *  @brief          ブロードキャスト送信を許可するかどうかを設定します。
@@ -255,8 +249,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_set_broadcast(cplat_socket sock, int enable,
-                                                                   cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_set_broadcast(cplat_socket sock, int enable, cplat_error *detail_out);
 
     /**
      *  @brief          マルチキャスト送信に使用するローカル インターフェースを設定します。
@@ -270,9 +263,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_set_multicast_interface(cplat_socket sock,
-                                                                             uint32_t interface_address,
-                                                                             cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_set_multicast_interface(cplat_socket sock, uint32_t interface_address,
+                                                                    cplat_error *detail_out);
 
     /**
      *  @brief          マルチキャスト グループへ参加します。
@@ -290,8 +282,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_socket_join_multicast_group(cplat_socket sock, uint32_t group_address,
-                                                                          uint32_t interface_address,
-                                                                          cplat_error *detail_out);
+                                                                 uint32_t interface_address, cplat_error *detail_out);
 
     /**
      *  @brief          マルチキャスト グループから離脱します。
@@ -311,10 +302,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_leave_multicast_group(cplat_socket sock,
-                                                                           uint32_t group_address,
-                                                                           uint32_t interface_address,
-                                                                           cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_leave_multicast_group(cplat_socket sock, uint32_t group_address,
+                                                                  uint32_t interface_address, cplat_error *detail_out);
 
     /**
      *  @brief          接続済みソケットへ送信します。
@@ -336,8 +325,8 @@ extern "C"
      *  異なるソケットに対する呼び出しは同時に実行できます。\n
      *  同一 @p sock に対する並行操作は、呼び出し側で同期してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_send(cplat_socket sock, const void *buf, size_t len,
-                                                          size_t *sent_out, cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_send(cplat_socket sock, const void *buf, size_t len, size_t *sent_out,
+                                                 cplat_error *detail_out);
 
     /**
      *  @brief          接続済みソケットから受信します。
@@ -354,8 +343,8 @@ extern "C"
      *  異なるソケットに対する呼び出しは同時に実行できます。\n
      *  同一 @p sock に対する並行操作は、呼び出し側で同期してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_recv(cplat_socket sock, void *buf, size_t len,
-                                                          size_t *received_out, cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_recv(cplat_socket sock, void *buf, size_t len, size_t *received_out,
+                                                 cplat_error *detail_out);
 
     /**
      *  @brief          指定したエンドポイントへ送信します。
@@ -372,8 +361,8 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_socket_sendto(cplat_socket sock, const void *buf, size_t len,
-                                                            const cplat_ipv4_endpoint *endpoint, size_t *sent_out,
-                                                            cplat_error *detail_out);
+                                                   const cplat_ipv4_endpoint *endpoint, size_t *sent_out,
+                                                   cplat_error *detail_out);
 
     /**
      *  @brief          任意のエンドポイントから受信します。
@@ -390,8 +379,8 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_socket_recvfrom(cplat_socket sock, void *buf, size_t len,
-                                                              cplat_ipv4_endpoint *peer_out, size_t *received_out,
-                                                              cplat_error *detail_out);
+                                                     cplat_ipv4_endpoint *peer_out, size_t *received_out,
+                                                     cplat_error *detail_out);
 
     /**
      *  @brief          指定したバイト数をすべて送信します。
@@ -414,7 +403,7 @@ extern "C"
      *  同一 @p sock に対する並行操作は、呼び出し側で同期してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_socket_send_all(cplat_socket sock, const void *buf, size_t len,
-                                                              cplat_error *detail_out);
+                                                     cplat_error *detail_out);
 
     /**
      *  @brief          指定したバイト数をすべて受信します。
@@ -433,8 +422,7 @@ extern "C"
      *  異なるソケットに対する呼び出しは同時に実行できます。\n
      *  同一 @p sock に対する並行操作は、呼び出し側で同期してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_recv_all(cplat_socket sock, void *buf, size_t len,
-                                                              cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_recv_all(cplat_socket sock, void *buf, size_t len, cplat_error *detail_out);
 
     /**
      *  @brief          ソケットが受信可能になるまで待機します。
@@ -455,7 +443,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_socket_wait_readable(cplat_socket sock, int timeout_ms, int *ready_out,
-                                                                   cplat_error *detail_out);
+                                                          cplat_error *detail_out);
 
     /**
      *  @brief          ソケットが送信可能になるまで待機します。
@@ -476,7 +464,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_socket_wait_writable(cplat_socket sock, int timeout_ms, int *ready_out,
-                                                                   cplat_error *detail_out);
+                                                          cplat_error *detail_out);
 
     /**
      *  @brief          複数のソケットのいずれかが受信可能になるまで待機します。
@@ -499,9 +487,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_wait_readable_multi(const cplat_socket *socks, size_t count,
-                                                                         int timeout_ms, unsigned char *ready_out,
-                                                                         cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_wait_readable_multi(const cplat_socket *socks, size_t count, int timeout_ms,
+                                                                unsigned char *ready_out, cplat_error *detail_out);
 
     /**
      *  @brief          ソケットの受信方向を停止します。
@@ -525,8 +512,7 @@ extern "C"
      *  異なるソケットに対する呼び出しは同時に実行できます。\n
      *  同一 @p sock_inout に対する並行操作は、呼び出し側で同期してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_shutdown_receive(cplat_socket *sock_inout,
-                                                                      cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_shutdown_receive(cplat_socket *sock_inout, cplat_error *detail_out);
 
 #ifdef __cplusplus
 }

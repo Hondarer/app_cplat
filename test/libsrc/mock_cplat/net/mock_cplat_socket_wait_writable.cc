@@ -3,13 +3,14 @@
 
 int delegate_real_cplat_socket_wait_writable(cplat_socket sock, int timeout_ms, int *ready_out, cplat_error *detail_out)
 {
-    static auto real_fn =
-        reinterpret_cast<decltype(&cplat_socket_wait_writable)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_wait_writable"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_socket_wait_writable)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_wait_writable"));
 
     return real_fn(sock, timeout_ms, ready_out, detail_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_socket_wait_writable, cplat_socket sock, int timeout_ms, int *ready_out, cplat_error *detail_out)
+MOCK_WEAK_IMPL(int, cplat_socket_wait_writable, cplat_socket sock, int timeout_ms, int *ready_out,
+               cplat_error *detail_out)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

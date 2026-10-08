@@ -1,7 +1,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_tracer_get_name(cplat_tracer * handle, char *name_out, size_t name_size)
+int delegate_real_cplat_tracer_get_name(cplat_tracer *handle, char *name_out, size_t name_size)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_tracer_get_name)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_tracer_get_name"));
@@ -9,7 +9,7 @@ int delegate_real_cplat_tracer_get_name(cplat_tracer * handle, char *name_out, s
     return real_fn(handle, name_out, name_size);
 }
 
-MOCK_WEAK_IMPL(int, cplat_tracer_get_name, cplat_tracer * handle, char *name_out, size_t name_size)
+MOCK_WEAK_IMPL(int, cplat_tracer_get_name, cplat_tracer *handle, char *name_out, size_t name_size)
 {
     int mock_ret;
 

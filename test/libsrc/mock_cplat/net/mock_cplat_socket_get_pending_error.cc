@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_socket_get_pending_error(cplat_socket sock, cplat_error *detail_out)
 {
-    static auto real_fn =
-        reinterpret_cast<decltype(&cplat_socket_get_pending_error)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_get_pending_error"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_socket_get_pending_error)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_get_pending_error"));
 
     return real_fn(sock, detail_out);
 }

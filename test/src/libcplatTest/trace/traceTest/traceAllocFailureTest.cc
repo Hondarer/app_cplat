@@ -52,20 +52,21 @@ TEST_F(traceAllocFailureTest, create_returns_null_when_handle_allocation_fails)
     // Pre-Assert
     /* cplat_tracer は不透明型でサイズを指定できない。生成時の malloc はハンドル確保の 1 回だけである */
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
-        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc がハンドル確保のために 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_malloc から NULL を返却する。
+        .WillOnce(
+            Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc がハンドル確保のために 1 回呼び出されること。
+                              // [Pre-Assert手順] - cplat_malloc から NULL を返却する。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_cplat, cplat_syslog_sink_dispose(os_handle_))
         .Times(1); // [Pre-Assert確認_異常系] - 確保済みの syslog sink が 1 回破棄されること。
 #endif             /* PLATFORM_LINUX */
 
     // Act
-    cplat_tracer *handle = cplat_tracer_create(
-        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - cplat_tracer_create を呼び出す。
+    cplat_tracer *handle =
+        cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - cplat_tracer_create を呼び出す。
 
     // Assert
     EXPECT_EQ((cplat_tracer *)NULL,
-              handle);                            // [確認_異常系] - cplat_tracer_create の戻り値が NULL であること。
+              handle); // [確認_異常系] - cplat_tracer_create の戻り値が NULL であること。
     EXPECT_EQ((size_t)0, cplat_internal_trace_registry_count()); // [確認_異常系] - registry へ登録されないこと。
 }
 
@@ -85,12 +86,12 @@ TEST_F(traceAllocFailureTest, create_returns_null_when_name_duplication_fails)
         .Times(1); // [Pre-Assert確認_異常系] - 確保済みの syslog sink が 1 回破棄されること。
 
     // Act
-    cplat_tracer *handle = cplat_tracer_create(
-        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - cplat_tracer_create を呼び出す。
+    cplat_tracer *handle =
+        cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - cplat_tracer_create を呼び出す。
 
     // Assert
     EXPECT_EQ((cplat_tracer *)NULL,
-              handle);                            // [確認_異常系] - cplat_tracer_create の戻り値が NULL であること。
+              handle); // [確認_異常系] - cplat_tracer_create の戻り値が NULL であること。
     EXPECT_EQ((size_t)0, cplat_internal_trace_registry_count()); // [確認_異常系] - registry へ登録されないこと。
 }
 
@@ -103,17 +104,17 @@ TEST_F(traceAllocFailureTest, create_returns_null_when_registry_expansion_fails)
     // Arrange
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _))
-        .WillOnce(
-            Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_realloc がレジストリの拡張のために 1 回呼び出されること。
-                              // [Pre-Assert手順] - cplat_realloc から NULL を返却する。
+        .WillOnce(Return(
+            nullptr)); // [Pre-Assert確認_異常系] - cplat_realloc がレジストリの拡張のために 1 回呼び出されること。
+                       // [Pre-Assert手順] - cplat_realloc から NULL を返却する。
 
     // Act
-    cplat_tracer *handle = cplat_tracer_create(
-        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - cplat_tracer_create を呼び出す。
+    cplat_tracer *handle =
+        cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - cplat_tracer_create を呼び出す。
 
     // Assert
     EXPECT_EQ((cplat_tracer *)NULL,
-              handle);                            // [確認_異常系] - cplat_tracer_create の戻り値が NULL であること。
+              handle); // [確認_異常系] - cplat_tracer_create の戻り値が NULL であること。
     EXPECT_EQ((size_t)0, cplat_internal_trace_registry_count()); // [確認_異常系] - registry が空のままであること。
 }
 
@@ -122,7 +123,8 @@ TEST_F(traceAllocFailureTest, create_returns_null_when_registry_expansion_fails)
 TEST_F(traceAllocFailureTest, set_name_fails_when_effective_name_allocation_fails)
 {
     // Arrange
-    cplat_tracer *handle = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [状態] - 生成済みのトレース ハンドルを用意する。
+    cplat_tracer *handle = cplat_tracer_create(
+        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [状態] - 生成済みのトレース ハンドルを用意する。
 
     ASSERT_NE((cplat_tracer *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
 
@@ -134,7 +136,7 @@ TEST_F(traceAllocFailureTest, set_name_fails_when_effective_name_allocation_fail
     // Act
     int actual_ret =
         cplat_tracer_set_name(handle, "sample",
-                                 42); // [手順] - インスタンス識別 42 を指定して cplat_tracer_set_name を呼び出す。
+                              42); // [手順] - インスタンス識別 42 を指定して cplat_tracer_set_name を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,

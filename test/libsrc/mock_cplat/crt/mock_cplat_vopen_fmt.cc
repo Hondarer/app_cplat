@@ -6,14 +6,13 @@
 
 int delegate_real_cplat_vopen_fmt(int flags, int mode, cplat_error *detail_out, const char *format, va_list args)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_vopen_fmt)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_vopen_fmt"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_vopen_fmt)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_vopen_fmt"));
 
     return real_fn(flags, mode, detail_out, format, args);
 }
 
-MOCK_WEAK_IMPL(int, cplat_vopen_fmt, int flags, int mode, cplat_error *detail_out, const char *format,
-               va_list args)
+MOCK_WEAK_IMPL(int, cplat_vopen_fmt, int flags, int mode, cplat_error *detail_out, const char *format, va_list args)
 {
     int mock_ret = -1;
 

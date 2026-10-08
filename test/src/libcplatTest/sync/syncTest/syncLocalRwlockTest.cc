@@ -69,13 +69,11 @@ TEST(syncLocalRwlockTest, waiting_writer_prevents_new_reader)
     // Pre-Assert
 
     // Act
-    int create_result = cplat_local_rwlock_create(&rwlock); // [手順] - rwlock を作成する。
-    int shared_lock =
-        cplat_local_rwlock_lock_shared(rwlock, CPLAT_SYNC_NO_WAIT); // [手順] - 先行 reader を取得する。
+    int create_result = cplat_local_rwlock_create(&rwlock);                       // [手順] - rwlock を作成する。
+    int shared_lock = cplat_local_rwlock_lock_shared(rwlock, CPLAT_SYNC_NO_WAIT); // [手順] - 先行 reader を取得する。
     int writer_try =
         cplat_local_rwlock_lock_exclusive(rwlock, 5U); // [手順] - writer 待機を発生させてタイムアウトさせる。
-    int second_reader =
-        cplat_local_rwlock_try_lock_shared(rwlock); // [手順] - writer 待機後に新規 reader を試行する。
+    int second_reader = cplat_local_rwlock_try_lock_shared(rwlock); // [手順] - writer 待機後に新規 reader を試行する。
 
     // Assert
     EXPECT_EQ(

@@ -78,8 +78,8 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_crypto_encrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, size_t src_len,
-                                                      const uint8_t *key, const uint8_t *nonce, const uint8_t *aad,
-                                                      size_t aad_len);
+                                                    const uint8_t *key, const uint8_t *nonce, const uint8_t *aad,
+                                                    size_t aad_len);
 
     /**
      *  @brief          AES-256-GCM でデータを復号し、認証タグを検証します。
@@ -99,8 +99,8 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, size_t src_len,
-                                                      const uint8_t *key, const uint8_t *nonce, const uint8_t *aad,
-                                                      size_t aad_len);
+                                                    const uint8_t *key, const uint8_t *nonce, const uint8_t *aad,
+                                                    size_t aad_len);
 
     /**
      *  @brief          任意のパスフレーズを SHA-256 ハッシュにより AES-256 鍵に変換します。
@@ -116,8 +116,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase,
-                                                                size_t passphrase_len);
+    CPLAT_EXPORT int CPLAT_API cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, size_t passphrase_len);
 
 #ifdef __cplusplus
 }

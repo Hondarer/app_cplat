@@ -4,8 +4,8 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_prompt_readline_fmt_at(cplat_prompt *p, char *buf, size_t buf_size, const char *file,
-                                                  int line, const char *fmt, va_list args)
+int delegate_real_cplat_prompt_readline_fmt_at(cplat_prompt *p, char *buf, size_t buf_size, const char *file, int line,
+                                               const char *fmt, va_list args)
 {
     /* 実装側は必要長に応じてバッファーを伸長するため、モックでも切り詰めずに展開する */
     std::vector<char> prompt = mock_cplat_expand_format(fmt, args);

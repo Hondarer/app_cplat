@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_localtime(struct tm *local_tm, const time_t *timep)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_localtime)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_localtime"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_localtime)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_localtime"));
 
     return real_fn(local_tm, timep);
 }

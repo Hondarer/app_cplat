@@ -82,15 +82,15 @@ extern "C"
      */
     typedef struct cplat_sym_loader_entry
     {
-        const char *func_key;                         /**< この関数インスタンスの識別キー。 */
+        const char *func_key;                      /**< この関数インスタンスの識別キー。 */
         char lib_name[CPLAT_SYM_LOADER_NAME_MAX];  /**< 拡張子なしライブラリ名。[0]=='\0' = 未設定。 */
         char func_name[CPLAT_SYM_LOADER_NAME_MAX]; /**< 関数シンボル名。[0]=='\0' = 未設定。 */
         CPLAT_MODULE_HANDLE handle;                /**< キャッシュ済みハンドル (NULL = 未ロード)。 */
-        /* 以下の 3 つは、ロックを取らない高速経路から読むため、アトミック型で保持する。 */
+        /* 次の 3 つは、ロックを取らない高速経路から読むため、アトミック型で保持する。 */
         cplat_atomic_ptr func_ptr;   /**< キャッシュ済み関数ポインター (NULL = 未取得)。 */
         cplat_atomic_i32 resolved;   /**< 解決済フラグ (0 = 未解決)。 */
         cplat_atomic_i32 lock_state; /**< ロック初期化状態 (0=未初期化,1=初期化中,2=初期化済み)。 */
-        cplat_local_lock *lock;   /**< ロード処理を保護するミューテックス。 */
+        cplat_local_lock *lock;      /**< ロード処理を保護するミューテックス。 */
     } cplat_sym_loader_entry;
 
 /**
@@ -99,7 +99,7 @@ extern "C"
  *  @param[in]      key     この関数インスタンスの識別キー (文字列リテラル)。
  *  @param[in]      type    格納する関数ポインターの型 (例: sample_func_t)。
  */
-#define CPLAT_SYM_LOADER_ENTRY_INIT(key, type)                                                                      \
+#define CPLAT_SYM_LOADER_ENTRY_INIT(key, type) \
     {(key), {0}, {0}, NULL, CPLAT_ATOMIC_INIT(NULL), CPLAT_ATOMIC_INIT(0), CPLAT_ATOMIC_INIT(0), NULL}
 
     /**
@@ -126,10 +126,10 @@ extern "C"
 #define cplat_sym_loader_resolve_as(fobj, type) ((type)cplat_sym_loader_resolve(fobj))
 
     /**
-     *  @brief          cplat_sym_loader_entry が明示的デフォルトかどうかを返します。
+     *  @brief          cplat_sym_loader_entry が明示的既定値かどうかを返します。
      *
      *  @param[in]      fobj cplat_sym_loader_entry へのポインター。
-     *  @return         明示的デフォルトの場合は 1、それ以外は 0。
+     *  @return         明示的既定値の場合は 1、それ以外は 0。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -148,7 +148,7 @@ extern "C"
      *  DLL ロード直後のシングル スレッド フェーズで呼び出してください。複数スレッドから同時に @p fobj_array の同一エントリへ書き込むと競合が発生します。
      */
     CPLAT_EXPORT void CPLAT_API cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array,
-                                                               const size_t fobj_length, const char *configpath);
+                                                      const size_t fobj_length, const char *configpath);
 
     /**
      *  @brief          cplat_sym_loader_entry ポインター配列を解放します。
@@ -161,7 +161,7 @@ extern "C"
      *  DllMain / destructor コンテキストのシングル スレッド フェーズで呼び出してください。他スレッドが resolve を実行中の場合、解放と競合します。
      */
     CPLAT_EXPORT void CPLAT_API cplat_sym_loader_dispose(cplat_sym_loader_entry *const *fobj_array,
-                                                                  const size_t fobj_length);
+                                                         const size_t fobj_length);
 
     /**
      *  @brief          cplat_sym_loader_entry ポインター配列の内容を標準出力に表示します。
@@ -176,7 +176,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_sym_loader_info(cplat_sym_loader_entry *const *fobj_array,
-                                                              const size_t fobj_length);
+                                                     const size_t fobj_length);
 
 #ifdef __cplusplus
 }

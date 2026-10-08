@@ -110,7 +110,7 @@ static int copy_arguments_are_valid(const void *dest, size_t dest_size, const si
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_hashtable_find_value_copy(const cplat_hashtable *ht, const void *key, void *dest, size_t dest_size,
-                                       size_t *required_size_out)
+                                    size_t *required_size_out)
 {
     uint64_t record;
     int ret;
@@ -169,8 +169,7 @@ int cplat_hashtable_find_recno(const cplat_hashtable *ht, const void *key, uint6
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_hashtable_find_timestamp_ref(const cplat_hashtable *ht, const void *key,
-                                          const cplat_timespec **timestamp_out)
+int cplat_hashtable_find_timestamp_ref(const cplat_hashtable *ht, const void *key, const cplat_timespec **timestamp_out)
 {
     size_t idx;
     uint64_t *bucket_head;
@@ -212,8 +211,7 @@ int cplat_hashtable_find_timestamp_ref(const cplat_hashtable *ht, const void *ke
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_hashtable_find_timestamp_val(const cplat_hashtable *ht, const void *key,
-                                          cplat_timespec *timestamp_out)
+int cplat_hashtable_find_timestamp_val(const cplat_hashtable *ht, const void *key, cplat_timespec *timestamp_out)
 {
     const cplat_timespec *src;
     int ret;
@@ -300,7 +298,7 @@ int cplat_hashtable_get_key_ref(const cplat_hashtable *ht, uint64_t record, cons
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_hashtable_get_key_copy(const cplat_hashtable *ht, uint64_t record, void *dest, size_t dest_size,
-                                    size_t *required_size_out)
+                                 size_t *required_size_out)
 {
     const void *src;
     int ret;
@@ -344,7 +342,7 @@ int cplat_hashtable_get_value_ref(const cplat_hashtable *ht, uint64_t record, co
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_hashtable_get_value_copy(const cplat_hashtable *ht, uint64_t record, void *dest, size_t dest_size,
-                                      size_t *required_size_out)
+                                   size_t *required_size_out)
 {
     const void *src;
     int ret;
@@ -380,10 +378,9 @@ int cplat_hashtable_get_status(const cplat_hashtable *ht, uint64_t record, int *
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_hashtable_next_record(const cplat_hashtable *ht, uint64_t from, unsigned int status_mask,
-                                   uint64_t *record_out, int *has_record_out)
+                                uint64_t *record_out, int *has_record_out)
 {
-    unsigned int known_bits =
-        CPLAT_HASHTABLE_SCAN_IN_USE | CPLAT_HASHTABLE_SCAN_DELETED | CPLAT_HASHTABLE_SCAN_EMPTY;
+    unsigned int known_bits = CPLAT_HASHTABLE_SCAN_IN_USE | CPLAT_HASHTABLE_SCAN_DELETED | CPLAT_HASHTABLE_SCAN_EMPTY;
     size_t i;
 
     if ((ht == NULL) || (record_out == NULL) || (has_record_out == NULL))
@@ -430,8 +427,7 @@ int cplat_hashtable_next_record(const cplat_hashtable *ht, uint64_t from, unsign
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_hashtable_get_timestamp_ref(const cplat_hashtable *ht, uint64_t record,
-                                         const cplat_timespec **timestamp_out)
+int cplat_hashtable_get_timestamp_ref(const cplat_hashtable *ht, uint64_t record, const cplat_timespec **timestamp_out)
 {
     size_t rec;
 
@@ -458,8 +454,7 @@ int cplat_hashtable_get_timestamp_ref(const cplat_hashtable *ht, uint64_t record
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_hashtable_get_timestamp_val(const cplat_hashtable *ht, uint64_t record,
-                                         cplat_timespec *timestamp_out)
+int cplat_hashtable_get_timestamp_val(const cplat_hashtable *ht, uint64_t record, cplat_timespec *timestamp_out)
 {
     const cplat_timespec *src;
     int ret;
@@ -550,8 +545,7 @@ int cplat_hashtable_get_table_generation(const cplat_hashtable *ht, uint64_t *ge
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_hashtable_count_status(const cplat_hashtable *ht, size_t *in_use_out, size_t *deleted_out,
-                                    size_t *empty_out)
+int cplat_hashtable_count_status(const cplat_hashtable *ht, size_t *in_use_out, size_t *deleted_out, size_t *empty_out)
 {
     if (ht == NULL)
     {

@@ -88,7 +88,7 @@ TEST_F(hashtableResizeTest, grow_preserves_record_numbers_and_stamps)
     (void)cplat_hashtable_get_table_generation(ht, &generation_before);
     (void)cplat_hashtable_get_table_timestamp_val(ht, &timestamp_before);
     grown = config;
-    grown.capacity = 16;                                           // [状態] - レコード数を 4 から 16 へ増やす。
+    grown.capacity = 16;                                        // [状態] - レコード数を 4 から 16 へ増やす。
     int actual_ret_resize = cplat_hashtable_resize(ht, &grown); // [手順] - 拡大する。
     int actual_ret_find = cplat_hashtable_find_recno(ht, "a", &rec_a_after);
     int actual_ret_generation = cplat_hashtable_get_table_generation(ht, &generation_after);
@@ -100,7 +100,7 @@ TEST_F(hashtableResizeTest, grow_preserves_record_numbers_and_stamps)
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_resize); // [確認_正常系] - 拡大が成功すること。
     EXPECT_EQ(CPLAT_OK, actual_ret_find);   // [確認_正常系] - 拡大後もキーを引けること。
-    EXPECT_EQ(rec_a_before, rec_a_after);      // [確認_正常系] - 拡大でレコード番号が保存されること。
+    EXPECT_EQ(rec_a_before, rec_a_after);   // [確認_正常系] - 拡大でレコード番号が保存されること。
     EXPECT_EQ(CPLAT_OK, actual_ret_generation);
     // [確認_正常系] - `cplat_hashtable_get_table_generation(ht, &generation_after)` の戻り値が `CPLAT_OK` であること。
     EXPECT_EQ(generation_before, generation_after); // [確認_正常系] - 拡大でテーブル世代が進まないこと。
@@ -109,8 +109,8 @@ TEST_F(hashtableResizeTest, grow_preserves_record_numbers_and_stamps)
     EXPECT_EQ(timestamp_before.tv_sec, timestamp_after.tv_sec); // [確認_正常系] - 拡大でテーブル時刻が変わらないこと。
     EXPECT_EQ(CPLAT_OK, actual_ret_counts);
     // [確認_正常系] - `cplat_hashtable_count_status(ht, &in_use, NULL, &empty)` の戻り値が `CPLAT_OK` であること。
-    EXPECT_EQ(2u, in_use);                       // [確認_正常系] - 使用中件数が保たれること。
-    EXPECT_EQ(14u, empty);                       // [確認_正常系] - 増やしたぶんが空きとして使えること。
+    EXPECT_EQ(2u, in_use);                    // [確認_正常系] - 使用中件数が保たれること。
+    EXPECT_EQ(14u, empty);                    // [確認_正常系] - 増やしたぶんが空きとして使えること。
     EXPECT_EQ(CPLAT_OK, actual_ret_validate); // [確認_正常系] - 拡大後も内部整合性が保たれること。
     EXPECT_EQ(CPLAT_OK, actual_ret_add_more); // [確認_正常系] - 拡大後に追加できること。
 
@@ -140,10 +140,10 @@ TEST_F(hashtableResizeTest, shrink_renumbers_records_and_keeps_values)
     // Act
     (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
     (void)cplat_hashtable_insert_direct(ht, 7, "a", 1, value.data(), &timestamp,
-                                           4); // [手順] - 縮小後の範囲外になる番号へ置く。
+                                        4); // [手順] - 縮小後の範囲外になる番号へ置く。
     (void)cplat_hashtable_find_recno(ht, "a", &rec_before);
     shrunk = config;
-    shrunk.capacity = 2;                                            // [状態] - レコード数を 8 から 2 へ減らす。
+    shrunk.capacity = 2;                                         // [状態] - レコード数を 8 から 2 へ減らす。
     int actual_ret_resize = cplat_hashtable_resize(ht, &shrunk); // [手順] - 縮小する。
     int actual_ret_find = cplat_hashtable_find_recno(ht, "a", &rec_after);
     int actual_ret_read = cplat_hashtable_find_value_copy(ht, "a", read_back.data(), read_back.size(), &required);
@@ -152,10 +152,10 @@ TEST_F(hashtableResizeTest, shrink_renumbers_records_and_keeps_values)
     int actual_ret_validate = cplat_hashtable_validate(ht);
 
     // Assert
-    EXPECT_EQ(7u, rec_before);                 // [確認_正常系] - 縮小前は指定した番号にあること。
+    EXPECT_EQ(7u, rec_before);              // [確認_正常系] - 縮小前は指定した番号にあること。
     EXPECT_EQ(CPLAT_OK, actual_ret_resize); // [確認_正常系] - 縮小が成功すること。
     EXPECT_EQ(CPLAT_OK, actual_ret_find);   // [確認_正常系] - 縮小後もキーを引けること。
-    EXPECT_EQ(1u, rec_after);                  // [確認_正常系] - 範囲外だったレコード番号が詰め直されること。
+    EXPECT_EQ(1u, rec_after);               // [確認_正常系] - 範囲外だったレコード番号が詰め直されること。
     EXPECT_EQ(CPLAT_OK, actual_ret_read);
     // [確認_正常系] - `cplat_hashtable_find_value_copy(ht, "a", read_back.data(), read_back.size(), &required)` の戻り値が `CPLAT_OK` であること。
     EXPECT_STREQ("keep", reinterpret_cast<const char *>(read_back.data())); // [確認_正常系] - 値が保たれること。
@@ -164,7 +164,7 @@ TEST_F(hashtableResizeTest, shrink_renumbers_records_and_keeps_values)
     EXPECT_EQ(4u, generation_after); // [確認_正常系] - レコードの世代カウンターが引き継がれること。
     EXPECT_EQ(CPLAT_OK, actual_ret_counts);
     // [確認_正常系] - `cplat_hashtable_count(ht, &in_use)` の戻り値が `CPLAT_OK` であること。
-    EXPECT_EQ(1u, in_use);                       // [確認_正常系] - 使用中件数が保たれること。
+    EXPECT_EQ(1u, in_use);                    // [確認_正常系] - 使用中件数が保たれること。
     EXPECT_EQ(CPLAT_OK, actual_ret_validate); // [確認_正常系] - 縮小後も内部整合性が保たれること。
 
     // Cleanup
@@ -202,7 +202,7 @@ TEST_F(hashtableResizeTest, shrink_rejects_when_in_use_records_do_not_fit)
               actual_ret_resize); // [確認_異常系] - 使用中が収まらない縮小が LIMIT_EXCEEDED であること。
     EXPECT_EQ(CPLAT_OK, actual_ret_counts);
     // [確認_正常系] - `cplat_hashtable_count(ht, &in_use)` の戻り値が `CPLAT_OK` であること。
-    EXPECT_EQ(3u, in_use);                       // [確認_正常系] - 失敗してもテーブルが変わらないこと。
+    EXPECT_EQ(3u, in_use);                    // [確認_正常系] - 失敗してもテーブルが変わらないこと。
     EXPECT_EQ(CPLAT_OK, actual_ret_find);     // [確認_正常系] - 失敗後もキーを引けること。
     EXPECT_EQ(CPLAT_OK, actual_ret_validate); // [確認_正常系] - 失敗後も内部整合性が保たれること。
 
@@ -270,9 +270,9 @@ TEST_F(hashtableResizeTest, shrink_drops_oldest_deleted_records_when_reuse_is_en
     (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
     (void)cplat_hashtable_insert_direct(ht, 1, "a", 1, value.data(), &timestamp, 9); // [手順] - 使用中を 1 件置く。
     (void)cplat_hashtable_insert_direct(ht, 2, "b", 2, value.data(), &timestamp,
-                                           8); // [手順] - 世代が新しい削除済みを置く。
+                                        8); // [手順] - 世代が新しい削除済みを置く。
     (void)cplat_hashtable_insert_direct(ht, 3, "c", 2, value.data(), &timestamp,
-                                           3); // [手順] - 世代が古い削除済みを置く。
+                                        3); // [手順] - 世代が古い削除済みを置く。
     shrunk = config;
     shrunk.capacity = 2; // [状態] - 3 件のうち 1 件が収まらないレコード数にする。
     int actual_ret_resize = cplat_hashtable_resize(ht, &shrunk);
@@ -280,20 +280,19 @@ TEST_F(hashtableResizeTest, shrink_drops_oldest_deleted_records_when_reuse_is_en
     /* 削除済みは find_recno で引けないため、走査してキーを読み、どちらが残ったかを判定する。 */
     int actual_ret_scan =
         cplat_hashtable_next_record(ht, 0, CPLAT_HASHTABLE_SCAN_DELETED, &deleted_record, &has_deleted);
-    int actual_ret_key =
-        cplat_hashtable_get_key_copy(ht, deleted_record, kept_key.data(), kept_key.size(), &required);
+    int actual_ret_key = cplat_hashtable_get_key_copy(ht, deleted_record, kept_key.data(), kept_key.size(), &required);
     int actual_ret_validate = cplat_hashtable_validate(ht);
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_resize); // [確認_正常系] - 削除済みを除外して縮小できること。
     EXPECT_EQ(CPLAT_OK, actual_ret_counts);
     // [確認_正常系] - `cplat_hashtable_deleted_count(ht, &deleted)` の戻り値が `CPLAT_OK` であること。
-    EXPECT_EQ(1u, deleted);                  // [確認_正常系] - 削除済みが 1 件だけ残ること。
+    EXPECT_EQ(1u, deleted);               // [確認_正常系] - 削除済みが 1 件だけ残ること。
     EXPECT_EQ(CPLAT_OK, actual_ret_scan); // [確認_正常系] - 削除済みを走査できること。
-    EXPECT_EQ(1, has_deleted);               // [確認_正常系] - 削除済みが 1 件見つかること。
+    EXPECT_EQ(1, has_deleted);            // [確認_正常系] - 削除済みが 1 件見つかること。
     EXPECT_EQ(CPLAT_OK, actual_ret_key);
     // [確認_正常系] - `cplat_hashtable_get_key_copy(ht, deleted_record, kept_key.data(), kept_key.size(), &required)` の戻り値が `CPLAT_OK` であること。
-    EXPECT_STREQ("b", kept_key.data());          // [確認_正常系] - 世代が新しい削除済みが残り、古い方が破棄されること。
+    EXPECT_STREQ("b", kept_key.data());       // [確認_正常系] - 世代が新しい削除済みが残り、古い方が破棄されること。
     EXPECT_EQ(CPLAT_OK, actual_ret_validate); // [確認_正常系] - 縮小後も内部整合性が保たれること。
 
     // Cleanup
@@ -320,8 +319,7 @@ TEST_F(hashtableResizeTest, resizes_variable_storage_and_rejects_when_it_does_no
     grown.key_storage_size = 128;
     grown.value_storage_size = 128; // [状態] - 可変長ストレージを増やす。
     int actual_ret_grow = cplat_hashtable_resize(ht, &grown);
-    int actual_ret_read =
-        cplat_hashtable_find_value_copy(ht, "alpha", read_back.data(), read_back.size(), &required);
+    int actual_ret_read = cplat_hashtable_find_value_copy(ht, "alpha", read_back.data(), read_back.size(), &required);
     int actual_ret_add_after =
         cplat_hashtable_add(ht, "bravo", "value-bravo-is-longer", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     too_small = grown;
@@ -334,9 +332,9 @@ TEST_F(hashtableResizeTest, resizes_variable_storage_and_rejects_when_it_does_no
     EXPECT_EQ(CPLAT_OK, actual_ret_read);
     // [確認_正常系] - `cplat_hashtable_find_value_copy(ht, "alpha", read_back.data(), read_back.size(), &required)` の戻り値が `CPLAT_OK` であること。
     EXPECT_STREQ("value-alpha", read_back.data()); // [確認_正常系] - 可変長の値が保たれること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_add_after);  // [確認_正常系] - 増やしたストレージを使えること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_add_after);     // [確認_正常系] - 増やしたストレージを使えること。
     EXPECT_EQ(CPLAT_ERR_STORAGE_FULL,
-              actual_ret_shrink);                // [確認_異常系] - 収まらない縮小が STORAGE_FULL であること。
+              actual_ret_shrink);             // [確認_異常系] - 収まらない縮小が STORAGE_FULL であること。
     EXPECT_EQ(CPLAT_OK, actual_ret_validate); // [確認_正常系] - 失敗後も内部整合性が保たれること。
 
     // Cleanup
@@ -423,7 +421,7 @@ TEST_F(hashtableResizeTest, rebuild_into_moves_table_to_caller_supplied_region)
     (void)cplat_hashtable_add(src, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_find_recno(src, "a", &rec_before);
     int actual_ret_rebuild = cplat_hashtable_rebuild_into(src, &grown, mgmt_buf.data(), mgmt_size, data_buf.data(),
-                                                             data_size, &dst); // [手順] - 外部領域へ移す。
+                                                          data_size, &dst); // [手順] - 外部領域へ移す。
     int actual_ret_find_dst = cplat_hashtable_find_recno(dst, "a", &rec_after);
     int actual_ret_read = cplat_hashtable_find_value_copy(dst, "a", read_back.data(), read_back.size(), &required);
     int actual_ret_validate = cplat_hashtable_validate(dst);
@@ -433,13 +431,13 @@ TEST_F(hashtableResizeTest, rebuild_into_moves_table_to_caller_supplied_region)
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_rebuild);  // [確認_正常系] - 外部領域への移行が成功すること。
     EXPECT_EQ(CPLAT_OK, actual_ret_find_dst); // [確認_正常系] - 移行先でキーを引けること。
-    EXPECT_EQ(rec_before, rec_after);            // [確認_正常系] - 拡大なのでレコード番号が保存されること。
+    EXPECT_EQ(rec_before, rec_after);         // [確認_正常系] - 拡大なのでレコード番号が保存されること。
     EXPECT_EQ(CPLAT_OK, actual_ret_read);
     // [確認_正常系] - `cplat_hashtable_find_value_copy(dst, "a", read_back.data(), read_back.size(), &required)` の戻り値が `CPLAT_OK` であること。
     EXPECT_STREQ("v1", reinterpret_cast<const char *>(read_back.data())); // [確認_正常系] - 値が保たれること。
     EXPECT_EQ(CPLAT_OK, actual_ret_validate);   // [確認_正常系] - 移行先の内部整合性が保たれること。
     EXPECT_EQ(CPLAT_OK, actual_ret_src_intact); // [確認_正常系] - 移行元が変更されずに残ること。
-    EXPECT_EQ(rec_before, rec_src_after);          // [確認_正常系] - 移行元のレコード番号が変わらないこと。
+    EXPECT_EQ(rec_before, rec_src_after);       // [確認_正常系] - 移行元のレコード番号が変わらないこと。
 
     // Cleanup
     cplat_hashtable_dispose(dst);
@@ -498,7 +496,7 @@ TEST_F(hashtableResizeTest, rebuild_into_guards_reject_invalid_arguments)
 }
 
 /*
- * 以下の防御的な分岐は、公開 API 経由では到達できない
+ * 次の防御的な分岐は、公開 API 経由では到達できない
  * (how-to-test.md「到達できない条件への対処」手順 3)。
  * - hashtable_plan_migration の追い出しループで候補が尽きる分岐:
  *   使用中が新しい capacity に収まることを先に検査しているため、
@@ -602,15 +600,14 @@ TEST_F(hashtableResizeTest, shrink_drops_multiple_deleted_records_in_generation_
     (void)cplat_hashtable_insert_direct(ht, 1, "a", 2, value.data(), &timestamp, 30);
     (void)cplat_hashtable_insert_direct(ht, 2, "b", 2, value.data(), &timestamp, 10);
     (void)cplat_hashtable_insert_direct(ht, 3, "c", 2, value.data(), &timestamp,
-                                           20); // [手順] - 世代の異なる削除済みを 3 件置く。
+                                        20); // [手順] - 世代の異なる削除済みを 3 件置く。
     shrunk = config;
     shrunk.capacity = 1; // [状態] - 3 件のうち 2 件が収まらないレコード数にする。
     int actual_ret_resize = cplat_hashtable_resize(ht, &shrunk);
     int actual_ret_counts = cplat_hashtable_deleted_count(ht, &deleted);
     int actual_ret_scan =
         cplat_hashtable_next_record(ht, 0, CPLAT_HASHTABLE_SCAN_DELETED, &deleted_record, &has_deleted);
-    int actual_ret_key =
-        cplat_hashtable_get_key_copy(ht, deleted_record, kept_key.data(), kept_key.size(), &required);
+    int actual_ret_key = cplat_hashtable_get_key_copy(ht, deleted_record, kept_key.data(), kept_key.size(), &required);
     int actual_ret_validate = cplat_hashtable_validate(ht);
 
     // Assert
@@ -624,7 +621,7 @@ TEST_F(hashtableResizeTest, shrink_drops_multiple_deleted_records_in_generation_
     // [確認_正常系] - 削除済みのレコードが見つかり、`has_deleted` が `1` であること。
     EXPECT_EQ(CPLAT_OK, actual_ret_key);
     // [確認_正常系] - `cplat_hashtable_get_key_copy(ht, deleted_record, kept_key.data(), kept_key.size(), &required)` の戻り値が `CPLAT_OK` であること。
-    EXPECT_STREQ("a", kept_key.data());          // [確認_正常系] - 世代が最も新しい削除済みだけが残ること。
+    EXPECT_STREQ("a", kept_key.data());       // [確認_正常系] - 世代が最も新しい削除済みだけが残ること。
     EXPECT_EQ(CPLAT_OK, actual_ret_validate); // [確認_正常系] - 縮小後も内部整合性が保たれること。
 
     // Cleanup
@@ -693,10 +690,10 @@ TEST_F(hashtableResizeTest, rebuild_into_rejects_invalid_and_incompatible_config
         cplat_hashtable_rebuild_into(src, &invalid, mgmt_buf.data(), mgmt_size, data_buf.data(), data_size, &dst);
     cplat_hashtable_config incompatible = config;
     incompatible.lifetime = 9; // [状態] - 変えてはならない項目を変えた設定を用意する。
-    int actual_ret_incompatible = cplat_hashtable_rebuild_into(src, &incompatible, mgmt_buf.data(), mgmt_size,
-                                                                  data_buf.data(), data_size, &dst);
+    int actual_ret_incompatible =
+        cplat_hashtable_rebuild_into(src, &incompatible, mgmt_buf.data(), mgmt_size, data_buf.data(), data_size, &dst);
     int actual_ret_too_small = cplat_hashtable_rebuild_into(src, &config, mgmt_buf.data(), 1, data_buf.data(),
-                                                               data_size, &dst); // [手順] - 管理領域を小さく渡す。
+                                                            data_size, &dst); // [手順] - 管理領域を小さく渡す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,

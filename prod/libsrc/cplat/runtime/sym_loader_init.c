@@ -51,8 +51,7 @@ _Static_assert(SYMBOL_LOADER_NAME_WIDTH == CPLAT_SYM_LOADER_NAME_MAX - 1,
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-void cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array, const size_t fobj_length,
-                              const char *configpath)
+void cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array, const size_t fobj_length, const char *configpath)
 {
     FILE *fp;
     char *buffer;

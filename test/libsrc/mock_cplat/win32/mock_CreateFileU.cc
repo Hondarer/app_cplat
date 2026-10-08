@@ -23,12 +23,12 @@ MOCK_WEAK_IMPL(HANDLE, CreateFileU, const char *utf8_path, DWORD desired_access,
     if (_mock_cplat != nullptr)
     {
         mock_ret = _mock_cplat->CreateFileU(utf8_path, desired_access, share_mode, security_attributes,
-                                          creation_disposition, flags_and_attributes, template_file);
+                                            creation_disposition, flags_and_attributes, template_file);
     }
     else
     {
         mock_ret = delegate_real_CreateFileU(utf8_path, desired_access, share_mode, security_attributes,
-                                        creation_disposition, flags_and_attributes, template_file);
+                                             creation_disposition, flags_and_attributes, template_file);
     }
 
     if (getTraceLevel() > TRACE_NONE)

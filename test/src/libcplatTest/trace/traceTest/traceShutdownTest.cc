@@ -76,11 +76,11 @@ TEST_F(traceShutdownTest, shutdown_disposes_registry_and_rejects_new_create)
     // Arrange
     cplat_tracer *handle = cplat_tracer_create(
         CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [状態] - tracer を 1 件生成し registry に登録された状態とする。
-    ASSERT_NE((cplat_tracer *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE((cplat_tracer *)NULL, handle);      // [状態確認] - ハンドルが非 NULL であること。
     EXPECT_EQ((size_t)1, cplat_internal_trace_registry_count()); // [状態確認] - registry の登録件数が 1 件であること。
 
     cplat_shutdown_event event = {CPLAT_SHUTDOWN_REASON_NORMAL_EXIT, CPLAT_SHUTDOWN_CODE_KIND_NONE,
-                                     0}; // [状態] - 通常終了 (NORMAL_EXIT) の shutdown イベントを用意する。
+                                  0}; // [状態] - 通常終了 (NORMAL_EXIT) の shutdown イベントを用意する。
 
     // Pre-Assert
     ASSERT_NE(nullptr, shutdown_callback_); // [Pre-Assert確認_正常系] - tracer の shutdown callback が登録されること。
@@ -91,7 +91,8 @@ TEST_F(traceShutdownTest, shutdown_disposes_registry_and_rejects_new_create)
         CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - shutdown 後に新しい tracer の生成を試みる。
 
     // Assert
-    EXPECT_EQ((size_t)0, cplat_internal_trace_registry_count()); // [確認_正常系] - shutdown 後に registry が空になること。
+    EXPECT_EQ((size_t)0,
+              cplat_internal_trace_registry_count()); // [確認_正常系] - shutdown 後に registry が空になること。
     EXPECT_EQ(
         (cplat_tracer *)NULL,
         created_after_shutdown); // [確認_正常系] - cplat_tracer_create の戻り値として、shutdown 開始後は新規 tracer 作成が拒否され NULL が返ること。

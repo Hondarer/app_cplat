@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_socket_shutdown_receive(cplat_socket *sock_inout, cplat_error *detail_out)
 {
-    static auto real_fn =
-        reinterpret_cast<decltype(&cplat_socket_shutdown_receive)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_shutdown_receive"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_socket_shutdown_receive)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_shutdown_receive"));
 
     return real_fn(sock_inout, detail_out);
 }

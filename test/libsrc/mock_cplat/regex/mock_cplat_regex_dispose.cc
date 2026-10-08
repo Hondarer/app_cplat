@@ -1,7 +1,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-void delegate_real_cplat_regex_dispose(cplat_regex * regex)
+void delegate_real_cplat_regex_dispose(cplat_regex *regex)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_regex_dispose)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_regex_dispose"));
@@ -9,7 +9,7 @@ void delegate_real_cplat_regex_dispose(cplat_regex * regex)
     real_fn(regex);
 }
 
-MOCK_WEAK_IMPL(void, cplat_regex_dispose, cplat_regex * regex)
+MOCK_WEAK_IMPL(void, cplat_regex_dispose, cplat_regex *regex)
 {
     if (_mock_cplat != nullptr)
     {

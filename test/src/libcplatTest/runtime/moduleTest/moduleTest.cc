@@ -71,10 +71,10 @@ TEST_F(moduleTest, get_path_returns_absolute_path_of_owning_module_linux)
     // Act
     int actual_ret =
         cplat_module_get_path(path, sizeof(path),
-                                 self_func_addr()); // [手順] - テスト バイナリ内の関数アドレスを指定して呼び出す。
+                              self_func_addr()); // [手順] - テスト バイナリ内の関数アドレスを指定して呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);     // [確認_正常系] - cplat_module_get_path の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_module_get_path の戻り値が CPLAT_OK であること。
     EXPECT_STREQ(kModulePath, path); // [確認_正常系] - 所属モジュールの絶対パスが返ること。
 }
 
@@ -91,8 +91,9 @@ TEST_F(moduleTest, get_path_returns_unknown_when_dladdr_fails)
                               // [Pre-Assert手順] - dladdr から失敗を返却する。
 
     // Act
-    int actual_ret = cplat_module_get_path(path, sizeof(path),
-                                       self_func_addr()); // [手順] - dladdr の失敗を注入してモジュール パスを取得する。
+    int actual_ret =
+        cplat_module_get_path(path, sizeof(path),
+                              self_func_addr()); // [手順] - dladdr の失敗を注入してモジュール パスを取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -164,12 +165,12 @@ TEST_F(moduleTest, get_path_returns_absolute_path_of_owning_module_windows)
     // Act
     int actual_ret =
         cplat_module_get_path(path, sizeof(path),
-                                 self_func_addr()); // [手順] - テスト バイナリ内の関数アドレスを指定して呼び出す。
+                              self_func_addr()); // [手順] - テスト バイナリ内の関数アドレスを指定して呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_module_get_path の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(':', path[1]);     // [確認_正常系] - 絶対パスがドライブ レター形式であること。
-    EXPECT_EQ('/', path[2]);     // [確認_正常系] - 絶対パスが '/' 区切りへ正規化されていること。
+    EXPECT_EQ(':', path[1]);         // [確認_正常系] - 絶対パスがドライブ レター形式であること。
+    EXPECT_EQ('/', path[2]);         // [確認_正常系] - 絶対パスが '/' 区切りへ正規化されていること。
     EXPECT_NE(nullptr,
               std::strstr(path, "moduleTest")); // [確認_正常系] - パスに所属モジュール名 moduleTest が含まれること。
 }
@@ -184,7 +185,7 @@ TEST_F(moduleTest, get_path_rejects_null_out_path)
 
     // Act
     int actual_ret = cplat_module_get_path(NULL, 16u,
-                                       self_func_addr()); // [手順] - path_out に NULL を指定して呼び出す。
+                                           self_func_addr()); // [手順] - path_out に NULL を指定して呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -201,7 +202,7 @@ TEST_F(moduleTest, get_path_rejects_zero_size)
 
     // Act
     int actual_ret = cplat_module_get_path(path, 0u,
-                                       self_func_addr()); // [手順] - path_size に 0 を指定して呼び出す。
+                                           self_func_addr()); // [手順] - path_size に 0 を指定して呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -234,7 +235,7 @@ TEST_F(moduleTest, get_path_returns_buffer_too_small)
 
     // Act
     int actual_ret = cplat_module_get_path(path, sizeof(path),
-                                       self_func_addr()); // [手順] - 不足するバッファーを指定して呼び出す。
+                                           self_func_addr()); // [手順] - 不足するバッファーを指定して呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -286,7 +287,7 @@ TEST_F(moduleTest, get_path_returns_buffer_too_small_when_normalization_reports_
 
     // Act
     const int result = cplat_module_get_path(path, sizeof(path),
-                                                self_func_addr()); // [手順] - 長過ぎるパスのエラーを注入して呼び出す。
+                                             self_func_addr()); // [手順] - 長過ぎるパスのエラーを注入して呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -329,7 +330,7 @@ TEST_F(moduleTest, get_basename_returns_module_name_without_extension)
         basename, sizeof(basename), self_func_addr()); // [手順] - テスト バイナリ内の関数アドレスを指定して呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_module_get_basename の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);      // [確認_正常系] - cplat_module_get_basename の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("moduleTest", basename); // [確認_正常系] - 拡張子を持たないモジュール名 "moduleTest" が返ること。
 }
 
@@ -342,7 +343,7 @@ TEST_F(moduleTest, get_basename_rejects_null_out_basename)
 
     // Act
     int actual_ret = cplat_module_get_basename(NULL, 16u,
-                                           self_func_addr()); // [手順] - basename_out に NULL を指定して呼び出す。
+                                               self_func_addr()); // [手順] - basename_out に NULL を指定して呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -360,7 +361,7 @@ TEST_F(moduleTest, get_basename_rejects_zero_size)
 
     // Act
     int actual_ret = cplat_module_get_basename(basename, 0u,
-                                           self_func_addr()); // [手順] - basename_size に 0 を指定して呼び出す。
+                                               self_func_addr()); // [手順] - basename_size に 0 を指定して呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -380,7 +381,7 @@ TEST_F(moduleTest, get_basename_propagates_get_path_failure)
 
     // Act
     int actual_ret = cplat_module_get_basename(basename, sizeof(basename),
-                                           NULL); // [手順] - func_addr に NULL を指定して呼び出す。
+                                               NULL); // [手順] - func_addr に NULL を指定して呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -399,7 +400,7 @@ TEST_F(moduleTest, get_basename_returns_buffer_too_small)
 
     // Act
     int actual_ret = cplat_module_get_basename(basename, sizeof(basename),
-                                           self_func_addr()); // [手順] - 不足するバッファーを指定して呼び出す。
+                                               self_func_addr()); // [手順] - 不足するバッファーを指定して呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -507,7 +508,7 @@ TEST_F(moduleTest, basename_core_handles_shared_and_regular_extensions)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              shared_result); // [確認_正常系] - 共有ライブラリ名取得の戻り値が CPLAT_OK であること。
+              shared_result);                   // [確認_正常系] - 共有ライブラリ名取得の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("libsample", shared_basename); // [確認_正常系] - バージョン付き .so が除去されること。
     EXPECT_EQ(CPLAT_OK,
               regular_result);                // [確認_正常系] - 通常拡張子名取得の戻り値が CPLAT_OK であること。

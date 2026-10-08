@@ -74,8 +74,8 @@ typedef struct cplat_service_entry_u
  *  本関数はスレッド セーフです。
  */
 CPLAT_EXPORT HANDLE CPLAT_API CreateFileU(const char *utf8_path, DWORD desired_access, DWORD share_mode,
-                                                LPSECURITY_ATTRIBUTES security_attributes, DWORD creation_disposition,
-                                                DWORD flags_and_attributes, HANDLE template_file);
+                                          LPSECURITY_ATTRIBUTES security_attributes, DWORD creation_disposition,
+                                          DWORD flags_and_attributes, HANDLE template_file);
 
 /**
  *  @brief          名前付きパイプのインスタンスを作成します (UTF-8 名前版)。
@@ -100,8 +100,8 @@ CPLAT_EXPORT HANDLE CPLAT_API CreateFileU(const char *utf8_path, DWORD desired_a
  *  本関数はスレッド セーフです。
  */
 CPLAT_EXPORT HANDLE CPLAT_API CreateNamedPipeU(const char *utf8_name, DWORD open_mode, DWORD pipe_mode,
-                                                     DWORD max_instances, DWORD out_buffer_size, DWORD in_buffer_size,
-                                                     DWORD default_timeout, LPSECURITY_ATTRIBUTES security_attributes);
+                                               DWORD max_instances, DWORD out_buffer_size, DWORD in_buffer_size,
+                                               DWORD default_timeout, LPSECURITY_ATTRIBUTES security_attributes);
 
 /**
  *  @brief          指定したモジュールのファイルの完全修飾パスを取得します (UTF-8 出力版)。
@@ -151,7 +151,7 @@ CPLAT_EXPORT DWORD CPLAT_API GetModuleFileNameU(HMODULE module, char *utf8_buf, 
  *  本関数はスレッド セーフです。
  */
 CPLAT_EXPORT BOOL CPLAT_API WriteConsoleU(HANDLE console, const char *utf8_text, DWORD utf8_length,
-                                                DWORD *written_length, void *reserved);
+                                          DWORD *written_length, void *reserved);
 
 /**
  *  @brief          パスを含むボリュームのマウント ポイントを取得します (UTF-8 版)。
@@ -197,9 +197,9 @@ CPLAT_EXPORT BOOL CPLAT_API GetVolumePathNameU(const char *utf8_path, char *utf8
  *  本関数はスレッド セーフです。
  */
 CPLAT_EXPORT BOOL CPLAT_API GetVolumeInformationU(const char *utf8_root_path, char *utf8_volume_name,
-                                                        DWORD volume_name_size, DWORD *serial_number,
-                                                        DWORD *max_component_length, DWORD *file_system_flags,
-                                                        char *utf8_file_system_name, DWORD file_system_name_size);
+                                                  DWORD volume_name_size, DWORD *serial_number,
+                                                  DWORD *max_component_length, DWORD *file_system_flags,
+                                                  char *utf8_file_system_name, DWORD file_system_name_size);
 
 /**
  *  @brief          指定したモジュールをプロセスのアドレス空間にロードします (UTF-8 名前版)。
@@ -251,11 +251,10 @@ CPLAT_EXPORT HMODULE CPLAT_API LoadLibraryU(const char *utf8_file_name);
  *  本関数はスレッド セーフです。
  */
 CPLAT_EXPORT BOOL CPLAT_API CreateProcessU(const char *utf8_application_name, const char *utf8_command_line,
-                                                 LPSECURITY_ATTRIBUTES process_attributes,
-                                                 LPSECURITY_ATTRIBUTES thread_attributes, BOOL inherit_handles,
-                                                 DWORD creation_flags, LPVOID environment,
-                                                 const char *utf8_current_directory, LPSTARTUPINFOW startup_info,
-                                                 LPPROCESS_INFORMATION process_information);
+                                           LPSECURITY_ATTRIBUTES process_attributes,
+                                           LPSECURITY_ATTRIBUTES thread_attributes, BOOL inherit_handles,
+                                           DWORD creation_flags, LPVOID environment, const char *utf8_current_directory,
+                                           LPSTARTUPINFOW startup_info, LPPROCESS_INFORMATION process_information);
 
 /* ------------------------------------------------------------------ */
 /*  サービス コントロール マネージャー (SCM)                              */
@@ -279,7 +278,7 @@ CPLAT_EXPORT BOOL CPLAT_API CreateProcessU(const char *utf8_application_name, co
  *  本関数はスレッド セーフです。
  */
 CPLAT_EXPORT SC_HANDLE CPLAT_API OpenSCManagerU(const char *utf8_machine_name, const char *utf8_database_name,
-                                                      DWORD desired_access);
+                                                DWORD desired_access);
 
 /**
  *  @brief          サービス オブジェクトを作成して SCM データベースに追加します (UTF-8 文字列版)。
@@ -311,12 +310,11 @@ CPLAT_EXPORT SC_HANDLE CPLAT_API OpenSCManagerU(const char *utf8_machine_name, c
  *  本関数はスレッド セーフです。
  */
 CPLAT_EXPORT SC_HANDLE CPLAT_API CreateServiceU(SC_HANDLE scm, const char *utf8_service_name,
-                                                      const char *utf8_display_name, DWORD desired_access,
-                                                      DWORD service_type, DWORD start_type, DWORD error_control,
-                                                      const char *utf8_binary_path_name,
-                                                      const char *utf8_load_order_group, LPDWORD tag_id,
-                                                      const char *utf8_dependencies,
-                                                      const char *utf8_service_start_name, const char *utf8_password);
+                                                const char *utf8_display_name, DWORD desired_access, DWORD service_type,
+                                                DWORD start_type, DWORD error_control,
+                                                const char *utf8_binary_path_name, const char *utf8_load_order_group,
+                                                LPDWORD tag_id, const char *utf8_dependencies,
+                                                const char *utf8_service_start_name, const char *utf8_password);
 
 /**
  *  @brief          既存のサービスのハンドルを開きます (UTF-8 名前版)。
@@ -375,8 +373,8 @@ CPLAT_EXPORT BOOL CPLAT_API ChangeServiceConfig2U(SC_HANDLE service, DWORD info_
  *  本関数はスレッド セーフです。
  */
 CPLAT_EXPORT SERVICE_STATUS_HANDLE CPLAT_API RegisterServiceCtrlHandlerExU(const char *utf8_service_name,
-                                                                                 LPHANDLER_FUNCTION_EX handler_proc,
-                                                                                 LPVOID context);
+                                                                           LPHANDLER_FUNCTION_EX handler_proc,
+                                                                           LPVOID context);
 
 /**
  *  @brief          サービス プロセスのメイン スレッドを SCM に接続します (UTF-8 テーブル版)。

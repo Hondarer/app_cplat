@@ -44,38 +44,42 @@ TEST_F(hashtableVariableStringTest, persists_variable_key_and_value_and_copies_w
     // Pre-Assert
 
     // Act
-    int actual_ret_create = cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - 可変長設定でテーブルを構築する。
+    int actual_ret_create =
+        cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - 可変長設定でテーブルを構築する。
     int actual_ret_add =
-        cplat_hashtable_add(ht, "variable-key", "variable-value", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 可変長キーと値を追加する。
+        cplat_hashtable_add(ht, "variable-key", "variable-value",
+                            CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 可変長キーと値を追加する。
     int actual_ret_find = cplat_hashtable_find_value_ref(ht, "variable-key", &found);
-    int actual_ret_query = cplat_hashtable_find_value_copy(ht, "variable-key", NULL, 0, &required_size); // [手順] - 必要サイズを問い合わせる。
-    int actual_ret_copy =
-        cplat_hashtable_find_value_copy(ht, "variable-key", copied, sizeof(copied), &required_size); // [手順] - 値をバッファーへ複製する。
+    int actual_ret_query = cplat_hashtable_find_value_copy(ht, "variable-key", NULL, 0,
+                                                           &required_size); // [手順] - 必要サイズを問い合わせる。
+    int actual_ret_copy = cplat_hashtable_find_value_copy(ht, "variable-key", copied, sizeof(copied),
+                                                          &required_size); // [手順] - 値をバッファーへ複製する。
     (void)cplat_hashtable_buffer_size(ht, &mgmt_size, &data_size);
     (void)cplat_hashtable_buffer_ref(ht, &mgmt, &data);
     std::vector<unsigned char> mgmt_copy(static_cast<const unsigned char *>(mgmt),
                                          static_cast<const unsigned char *>(mgmt) + mgmt_size);
     std::vector<unsigned char> data_copy(static_cast<const unsigned char *>(data),
                                          static_cast<const unsigned char *>(data) + data_size);
-    int actual_ret_attach =
-        cplat_hashtable_attach(mgmt_copy.data(), mgmt_copy.size(), data_copy.data(), data_copy.size(), &attached); // [手順] - 複製領域へ再接続する。
+    int actual_ret_attach = cplat_hashtable_attach(mgmt_copy.data(), mgmt_copy.size(), data_copy.data(),
+                                                   data_copy.size(), &attached); // [手順] - 複製領域へ再接続する。
     const void *attached_value = nullptr;
     int actual_ret_attached_find = cplat_hashtable_find_value_ref(attached, "variable-key", &attached_value);
     std::string found_text = static_cast<const char *>(found);
     std::string attached_text = static_cast<const char *>(attached_value);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - テーブル構築が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_add);    // [確認_正常系] - 可変長キーと値の追加が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_find);   // [確認_正常系] - 値参照の取得が成功すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_create);  // [確認_正常系] - テーブル構築が成功すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_add);     // [確認_正常系] - 可変長キーと値の追加が成功すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_find);    // [確認_正常系] - 値参照の取得が成功すること。
     EXPECT_EQ("variable-value", found_text); // [確認_正常系] - 取得した値が一致すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_query);  // [確認_正常系] - 必要サイズの問い合わせが成功すること。
-    EXPECT_EQ(std::strlen("variable-value") + 1u, required_size); // [確認_正常系] - 必要サイズが終端文字を含んだ長さであること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_copy);   // [確認_正常系] - 値の複製が成功すること。
-    EXPECT_STREQ("variable-value", copied); // [確認_正常系] - 複製された内容が一致すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_attach); // [確認_正常系] - 再接続が成功すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_query);   // [確認_正常系] - 必要サイズの問い合わせが成功すること。
+    EXPECT_EQ(std::strlen("variable-value") + 1u,
+              required_size);                      // [確認_正常系] - 必要サイズが終端文字を含んだ長さであること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_copy);          // [確認_正常系] - 値の複製が成功すること。
+    EXPECT_STREQ("variable-value", copied);        // [確認_正常系] - 複製された内容が一致すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_attach);        // [確認_正常系] - 再接続が成功すること。
     EXPECT_EQ(CPLAT_OK, actual_ret_attached_find); // [確認_正常系] - 再接続後の検索が成功すること。
-    EXPECT_EQ("variable-value", attached_text); // [確認_正常系] - 再接続後も値が一致すること。
+    EXPECT_EQ("variable-value", attached_text);    // [確認_正常系] - 再接続後も値が一致すること。
 
     // Cleanup
     cplat_hashtable_dispose(attached);
@@ -102,12 +106,12 @@ TEST_F(hashtableVariableStringTest, fragmented_update_returns_storage_full_and_p
     std::string found_text = static_cast<const char *>(found);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_add_a); // [確認_正常系] - a の追加が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_add_b); // [確認_正常系] - b の追加が成功すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_add_a);                // [確認_正常系] - a の追加が成功すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_add_b);                // [確認_正常系] - b の追加が成功すること。
     EXPECT_EQ(CPLAT_ERR_STORAGE_FULL, actual_ret_update); // [確認_異常系] - ストレージ不足で STORAGE_FULL が返ること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_find);   // [確認_正常系] - 既存値の検索が成功すること。
-    EXPECT_EQ("1111", found_text);          // [確認_正常系] - 更新失敗後も既存値が保持されていること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_validate); // [確認_正常系] - 内部整合性が保たれていること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_find);                 // [確認_正常系] - 既存値の検索が成功すること。
+    EXPECT_EQ("1111", found_text);                        // [確認_正常系] - 更新失敗後も既存値が保持されていること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_validate);             // [確認_正常系] - 内部整合性が保たれていること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -138,8 +142,8 @@ TEST_F(hashtableVariableStringTest, explicit_compaction_enables_fragmented_add_a
     (void)cplat_hashtable_get_key_ref(ht, c_record, &key_before_compact);
     (void)cplat_hashtable_delete(ht, "b");
     (void)cplat_hashtable_purge_deleted(ht);
-    int actual_ret_fragmented =
-        cplat_hashtable_add(ht, "d", "55555", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 断片化状態で追加を試みる。
+    int actual_ret_fragmented = cplat_hashtable_add(
+        ht, "d", "55555", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 断片化状態で追加を試みる。
     const void *after_failed_add = nullptr;
     (void)cplat_hashtable_find_value_ref(ht, "c", &after_failed_add);
     int actual_ret_compact = cplat_hashtable_compact(ht); // [手順] - ストレージを圧縮する。
@@ -152,25 +156,27 @@ TEST_F(hashtableVariableStringTest, explicit_compaction_enables_fragmented_add_a
     {
         vacated_value_zeroed = vacated_value_zeroed && (static_cast<const unsigned char *>(before_compact)[i] == 0);
     }
-    int actual_ret_retry = cplat_hashtable_add(ht, "d", "55555", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 圧縮後に再度追加する。
+    int actual_ret_retry =
+        cplat_hashtable_add(ht, "d", "55555", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 圧縮後に再度追加する。
     int actual_ret_find = cplat_hashtable_find_value_ref(ht, "d", &added);
     int actual_ret_validate = cplat_hashtable_validate(ht);
     std::string compacted_text = static_cast<const char *>(after_compact);
     std::string added_text = static_cast<const char *>(added);
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_STORAGE_FULL, actual_ret_fragmented); // [確認_異常系] - 圧縮前は断片化により STORAGE_FULL であること。
-    EXPECT_EQ(before_compact, after_failed_add);              // [確認_正常系] - 失敗した追加では既存参照が変わらないこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_compact);                  // [確認_正常系] - compact が成功すること。
-    EXPECT_NE(before_compact, after_compact);                 // [確認_正常系] - 圧縮により値アドレスが移動すること。
-    EXPECT_NE(key_before_compact, key_after_compact);         // [確認_正常系] - 圧縮によりキーアドレスが移動すること。
-    EXPECT_TRUE(vacated_key_zeroed);                          // [確認_正常系] - 移動元のキー領域がゼロクリアされること。
-    EXPECT_TRUE(vacated_value_zeroed);                        // [確認_正常系] - 移動元の値領域がゼロクリアされること。
-    EXPECT_EQ("3333", compacted_text);                        // [確認_正常系] - 移動後も値の内容が保たれていること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_retry);                    // [確認_正常系] - 圧縮後の追加が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_find);                     // [確認_正常系] - 追加したキーの検索が成功すること。
-    EXPECT_EQ("55555", added_text);                           // [確認_正常系] - 追加された値が一致すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_validate);                 // [確認_正常系] - 内部整合性が保たれていること。
+    EXPECT_EQ(CPLAT_ERR_STORAGE_FULL,
+              actual_ret_fragmented);                 // [確認_異常系] - 圧縮前は断片化により STORAGE_FULL であること。
+    EXPECT_EQ(before_compact, after_failed_add);      // [確認_正常系] - 失敗した追加では既存参照が変わらないこと。
+    EXPECT_EQ(CPLAT_OK, actual_ret_compact);          // [確認_正常系] - compact が成功すること。
+    EXPECT_NE(before_compact, after_compact);         // [確認_正常系] - 圧縮により値アドレスが移動すること。
+    EXPECT_NE(key_before_compact, key_after_compact); // [確認_正常系] - 圧縮によりキーアドレスが移動すること。
+    EXPECT_TRUE(vacated_key_zeroed);                  // [確認_正常系] - 移動元のキー領域がゼロクリアされること。
+    EXPECT_TRUE(vacated_value_zeroed);                // [確認_正常系] - 移動元の値領域がゼロクリアされること。
+    EXPECT_EQ("3333", compacted_text);                // [確認_正常系] - 移動後も値の内容が保たれていること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_retry);            // [確認_正常系] - 圧縮後の追加が成功すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_find);             // [確認_正常系] - 追加したキーの検索が成功すること。
+    EXPECT_EQ("55555", added_text);                   // [確認_正常系] - 追加された値が一致すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_validate);         // [確認_正常系] - 内部整合性が保たれていること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -210,10 +216,10 @@ TEST_F(hashtableVariableStringTest, purge_zero_fills_released_variable_key_and_v
     }
 
     // Assert
-    EXPECT_TRUE(retained_while_deleted); // [確認_正常系] - パージ前は削除済みでも内容が残っていること。
+    EXPECT_TRUE(retained_while_deleted);   // [確認_正常系] - パージ前は削除済みでも内容が残っていること。
     EXPECT_EQ(CPLAT_OK, actual_ret_purge); // [確認_正常系] - purge が成功すること。
-    EXPECT_TRUE(key_zeroed);             // [確認_正常系] - 解放されたキー領域がゼロクリアされること。
-    EXPECT_TRUE(value_zeroed);           // [確認_正常系] - 解放された値領域がゼロクリアされること。
+    EXPECT_TRUE(key_zeroed);               // [確認_正常系] - 解放されたキー領域がゼロクリアされること。
+    EXPECT_TRUE(value_zeroed);             // [確認_正常系] - 解放された値領域がゼロクリアされること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -286,7 +292,7 @@ TEST_F(hashtableVariableStringTest, compact_accepts_null_and_is_noop_for_fixed_f
     (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
     (void)cplat_hashtable_add(ht, "key", "value", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_find_value_ref(ht, "key", &before);
-    int actual_ret_null = cplat_hashtable_compact(NULL); // [手順] - ht に NULL を渡す。
+    int actual_ret_null = cplat_hashtable_compact(NULL);  // [手順] - ht に NULL を渡す。
     int actual_ret_compact = cplat_hashtable_compact(ht); // [手順] - 固定長テーブルで compact を呼び出す。
     (void)cplat_hashtable_find_value_ref(ht, "key", &after);
     std::string after_text = static_cast<const char *>(after);
@@ -326,10 +332,10 @@ TEST_F(hashtableVariableStringTest, supports_variable_key_with_fixed_binary_valu
     int actual_ret_copy = cplat_hashtable_find_value_copy(ht, "key", copied, sizeof(copied), &required_size);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - 作成が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_add);    // [確認_正常系] - 追加が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_copy);   // [確認_正常系] - 複製取得が成功すること。
-    EXPECT_EQ(sizeof(value), required_size); // [確認_正常系] - 必要サイズが一致すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_create);                  // [確認_正常系] - 作成が成功すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_add);                     // [確認_正常系] - 追加が成功すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_copy);                    // [確認_正常系] - 複製取得が成功すること。
+    EXPECT_EQ(sizeof(value), required_size);                 // [確認_正常系] - 必要サイズが一致すること。
     EXPECT_EQ(0, std::memcmp(value, copied, sizeof(value))); // [確認_正常系] - 複製内容が一致すること。
 
     // Cleanup
@@ -370,8 +376,7 @@ TEST_F(hashtableVariableStringTest, fixed_strings_accept_literals_and_zero_fill_
     (void)cplat_hashtable_find_recno(ht, "k", &record);
     (void)cplat_hashtable_get_key_ref(ht, record, &key_ref);
     (void)cplat_hashtable_get_value_ref(ht, record, &value_ref);
-    int actual_ret_key_copy =
-        cplat_hashtable_get_key_copy(ht, record, key_copy, sizeof(key_copy), &key_required_size);
+    int actual_ret_key_copy = cplat_hashtable_get_key_copy(ht, record, key_copy, sizeof(key_copy), &key_required_size);
     int actual_ret_value_copy =
         cplat_hashtable_get_value_copy(ht, record, value_copy, sizeof(value_copy), &value_required_size);
     std::memcpy(stored_key, key_ref, sizeof(stored_key));
@@ -381,14 +386,16 @@ TEST_F(hashtableVariableStringTest, fixed_strings_accept_literals_and_zero_fill_
     EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - 作成が成功すること。
     EXPECT_EQ(CPLAT_OK, actual_ret_add);    // [確認_正常系] - 追加が成功すること。
     EXPECT_EQ(CPLAT_OK, actual_ret_update); // [確認_正常系] - 更新が成功すること。
-    EXPECT_EQ(0, std::memcmp(expected_key, stored_key, sizeof(expected_key))); // [確認_正常系] - キー未使用部がゼロ埋めされること。
-    EXPECT_EQ(0, std::memcmp(expected_value, stored_value, sizeof(expected_value))); // [確認_正常系] - 値未使用部がゼロ埋めされること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_key_copy); // [確認_正常系] - キー複製が成功すること。
-    EXPECT_EQ(2u, key_required_size);         // [確認_正常系] - キー必要サイズが一致すること。
-    EXPECT_STREQ("k", key_copy);             // [確認_正常系] - キー複製内容が一致すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_value_copy); // [確認_正常系] - 値複製が成功すること。
-    EXPECT_EQ(4u, value_required_size);       // [確認_正常系] - 値必要サイズが一致すること。
-    EXPECT_STREQ("new", value_copy);          // [確認_正常系] - 値複製内容が一致すること。
+    EXPECT_EQ(0, std::memcmp(expected_key, stored_key,
+                             sizeof(expected_key))); // [確認_正常系] - キー未使用部がゼロ埋めされること。
+    EXPECT_EQ(0, std::memcmp(expected_value, stored_value,
+                             sizeof(expected_value))); // [確認_正常系] - 値未使用部がゼロ埋めされること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_key_copy);          // [確認_正常系] - キー複製が成功すること。
+    EXPECT_EQ(2u, key_required_size);                  // [確認_正常系] - キー必要サイズが一致すること。
+    EXPECT_STREQ("k", key_copy);                       // [確認_正常系] - キー複製内容が一致すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_value_copy);        // [確認_正常系] - 値複製が成功すること。
+    EXPECT_EQ(4u, value_required_size);                // [確認_正常系] - 値必要サイズが一致すること。
+    EXPECT_STREQ("new", value_copy);                   // [確認_正常系] - 値複製内容が一致すること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -397,9 +404,8 @@ TEST_F(hashtableVariableStringTest, fixed_strings_accept_literals_and_zero_fill_
 // キーおよび値の全フィールド型組み合わせ（固定長バイナリ・固定長文字列・可変長文字列）が正常に動作することの確認
 TEST_F(hashtableVariableStringTest, supports_all_key_and_value_field_type_combinations)
 {
-    const cplat_hashtable_field_type field_types[] = {CPLAT_HASHTABLE_FIELD_FIXED_BINARY,
-                                                         CPLAT_HASHTABLE_FIELD_FIXED_STRING,
-                                                         CPLAT_HASHTABLE_FIELD_VARIABLE_STRING};
+    const cplat_hashtable_field_type field_types[] = {
+        CPLAT_HASHTABLE_FIELD_FIXED_BINARY, CPLAT_HASHTABLE_FIELD_FIXED_STRING, CPLAT_HASHTABLE_FIELD_VARIABLE_STRING};
     const unsigned char binary_key[] = {'k', 'e', 'y', 0};
     const unsigned char binary_value[] = {'v', 'a', 'l', 0};
 
@@ -413,7 +419,7 @@ TEST_F(hashtableVariableStringTest, supports_all_key_and_value_field_type_combin
             unsigned char copied[16] = {};
             size_t required_size = 0;
             const void *key = key_type == CPLAT_HASHTABLE_FIELD_FIXED_BINARY ? static_cast<const void *>(binary_key)
-                                                                                : static_cast<const void *>("key");
+                                                                             : static_cast<const void *>("key");
             const void *value = value_type == CPLAT_HASHTABLE_FIELD_FIXED_BINARY
                                     ? static_cast<const void *>(binary_value)
                                     : static_cast<const void *>("val");
@@ -443,14 +449,16 @@ TEST_F(hashtableVariableStringTest, supports_all_key_and_value_field_type_combin
             int actual_ret_copy = cplat_hashtable_find_value_copy(ht, key, copied, sizeof(copied), &required_size);
 
             // Assert
-            EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系 回数=3*3] - 作成が成功すること。
-            EXPECT_EQ(CPLAT_OK, actual_ret_add);    // [確認_正常系 回数=3*3] - 追加が成功すること。
-            EXPECT_EQ(CPLAT_OK, actual_ret_query);  // [確認_正常系 回数=3*3] - クエリが成功すること。
+            EXPECT_EQ(CPLAT_OK, actual_ret_create);         // [確認_正常系 回数=3*3] - 作成が成功すること。
+            EXPECT_EQ(CPLAT_OK, actual_ret_add);            // [確認_正常系 回数=3*3] - 追加が成功すること。
+            EXPECT_EQ(CPLAT_OK, actual_ret_query);          // [確認_正常系 回数=3*3] - クエリが成功すること。
             EXPECT_EQ(sizeof(binary_value), required_size); // [確認_正常系 回数=3*3] - 必要サイズが一致すること。
-            EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, actual_ret_too_small); // [確認_異常系 回数=3*3] - 短いバッファーで BUFFER_TOO_SMALL であること。
-            EXPECT_TRUE(too_small_unchanged);       // [確認_正常系 回数=3*3] - 短いバッファーでは内容が変更されないこと。
-            EXPECT_EQ(CPLAT_OK, actual_ret_copy);   // [確認_正常系 回数=3*3] - 複製が成功すること。
-            EXPECT_EQ(0, std::memcmp(binary_value, copied, sizeof(binary_value))); // [確認_正常系 回数=3*3] - 複製内容が一致すること。
+            EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
+                      actual_ret_too_small);      // [確認_異常系 回数=3*3] - 短いバッファーで BUFFER_TOO_SMALL であること。
+            EXPECT_TRUE(too_small_unchanged);     // [確認_正常系 回数=3*3] - 短いバッファーでは内容が変更されないこと。
+            EXPECT_EQ(CPLAT_OK, actual_ret_copy); // [確認_正常系 回数=3*3] - 複製が成功すること。
+            EXPECT_EQ(
+                0, std::memcmp(binary_value, copied, sizeof(binary_value))); // [確認_正常系 回数=3*3] - 複製内容が一致すること。
 
             // Cleanup
             cplat_hashtable_dispose(ht);
@@ -459,13 +467,13 @@ TEST_F(hashtableVariableStringTest, supports_all_key_and_value_field_type_combin
 }
 
 /*
- *  以下は可変長ストレージの配置に関する特性化テストです。
+ *  次は可変長ストレージの配置に関する特性化テストです。
  *  先着適合の探索順と圧縮の詰め直し順を、オフセットの実測値で固定します。
  *  ストレージ アロケーターの内部実装を差し替えても、配置が変わらないことを保証します。
  */
 
 static cplat_hashtable_config variable_config_with_capacity(size_t capacity, size_t key_storage_size,
-                                                               size_t value_storage_size)
+                                                            size_t value_storage_size)
 {
     cplat_hashtable_config config = {};
 
@@ -551,20 +559,21 @@ TEST_F(hashtableVariableStringTest, first_fit_placement_is_stable_across_add_pur
     (void)cplat_hashtable_add(ht, "k2", "bbbb", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "k3", "cccc", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "k4", "dddd",
-                                 CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 5 バイト値を 4 件詰める。
+                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 5 バイト値を 4 件詰める。
     (void)cplat_hashtable_delete(ht, "k2");
     (void)cplat_hashtable_purge_deleted(ht); // [手順] - 2 件目を回収し、途中に空きブロックを作る。
-    int actual_ret_reuse_free_block = cplat_hashtable_add(ht, "k5", "ee",
-                                                       CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    long actual_offset_reuse_free_block = origin.value_offset(ht, "k5"); // [手順] - 空きブロックに収まる 3 バイト値を追加する。
-    int actual_ret_skip_free_block = cplat_hashtable_add(ht, "k6", "ffffff",
-                                                      CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    long actual_offset_skip_free_block = origin.value_offset(ht, "k6"); // [手順] - 空きブロックに収まらない 7 バイト値を追加する。
+    int actual_ret_reuse_free_block = cplat_hashtable_add(ht, "k5", "ee", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
+    long actual_offset_reuse_free_block =
+        origin.value_offset(ht, "k5"); // [手順] - 空きブロックに収まる 3 バイト値を追加する。
+    int actual_ret_skip_free_block = cplat_hashtable_add(ht, "k6", "ffffff", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
+    long actual_offset_skip_free_block =
+        origin.value_offset(ht, "k6"); // [手順] - 空きブロックに収まらない 7 バイト値を追加する。
     (void)cplat_hashtable_add(ht, "k7", "gg", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_shrink = cplat_hashtable_update(ht, "k1", "hh");
     long actual_offset_shrink = origin.value_offset(ht, "k1"); // [手順] - 先頭の値を短い値へ更新する。
     int actual_ret_merge_own = cplat_hashtable_update(ht, "k3", "iiiiii");
-    long actual_offset_merge_own = origin.value_offset(ht, "k3"); // [手順] - 自ブロックと隣接する空きブロックの結合が要る更新を行う。
+    long actual_offset_merge_own =
+        origin.value_offset(ht, "k3"); // [手順] - 自ブロックと隣接する空きブロックの結合が要る更新を行う。
     for (const char *key : {"k1", "k3", "k4", "k5", "k6", "k7"})
     {
         actual_value_offsets.push_back(origin.value_offset(ht, key));
@@ -574,17 +583,25 @@ TEST_F(hashtableVariableStringTest, first_fit_placement_is_stable_across_add_pur
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_reuse_free_block); // [確認_正常系] - 空きブロックに収まる add が成功すること。
-    EXPECT_EQ(5, actual_offset_reuse_free_block); // [確認_正常系] - 空きブロックに収まる add が、回収済みの空きブロックの先頭へ配置されること。
+    EXPECT_EQ(
+        5,
+        actual_offset_reuse_free_block); // [確認_正常系] - 空きブロックに収まる add が、回収済みの空きブロックの先頭へ配置されること。
     EXPECT_EQ(CPLAT_OK, actual_ret_skip_free_block); // [確認_正常系] - 空きブロックに収まらない add が成功すること。
-    EXPECT_EQ(20, actual_offset_skip_free_block); // [確認_正常系] - 空きブロックに収まらない add が、小さすぎる空きブロックを読み飛ばして末尾側へ配置されること。
+    EXPECT_EQ(
+        20,
+        actual_offset_skip_free_block); // [確認_正常系] - 空きブロックに収まらない add が、小さすぎる空きブロックを読み飛ばして末尾側へ配置されること。
     EXPECT_EQ(CPLAT_OK, actual_ret_shrink); // [確認_正常系] - 短い値への update が成功すること。
-    EXPECT_EQ(0, actual_offset_shrink); // [確認_正常系] - 短い値への update が、自ブロックの先頭を維持すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_merge_own); // [確認_正常系] - 自ブロックと隣接する空きブロックの結合が要る update が成功すること。
-    EXPECT_EQ(8, actual_offset_merge_own); // [確認_正常系] - 当該 update が、直前の空きブロックと自ブロックを結合した位置へ配置されること。
+    EXPECT_EQ(0, actual_offset_shrink);     // [確認_正常系] - 短い値への update が、自ブロックの先頭を維持すること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_merge_own); // [確認_正常系] - 自ブロックと隣接する空きブロックの結合が要る update が成功すること。
+    EXPECT_EQ(
+        8,
+        actual_offset_merge_own); // [確認_正常系] - 当該 update が、直前の空きブロックと自ブロックを結合した位置へ配置されること。
     EXPECT_EQ(std::vector<long>({0, 8, 15, 5, 20, 27}),
               actual_value_offsets); // [確認_正常系] - 一連の操作後の値オフセットが記録どおりであること。
     EXPECT_EQ(std::vector<long>({0, 6, 9, 3, 12, 15}),
-              actual_key_offsets); // [確認_正常系] - 一連の操作後のキー オフセットが記録どおりであること。
+              actual_key_offsets);            // [確認_正常系] - 一連の操作後のキー オフセットが記録どおりであること。
     EXPECT_EQ(CPLAT_OK, actual_ret_validate); // [確認_正常系] - 一連の操作後の validate が成功すること。
 
     // Cleanup
@@ -615,7 +632,7 @@ TEST_F(hashtableVariableStringTest, compaction_packs_blocks_in_offset_order_and_
     (void)cplat_hashtable_add(ht, "k6", "ffffff", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "k7", "gg", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_update(ht, "k1", "hh");
-    (void)cplat_hashtable_update(ht, "k3", "iiiiii"); // [手順] - 空きブロックが残る状態を作る。
+    (void)cplat_hashtable_update(ht, "k3", "iiiiii");     // [手順] - 空きブロックが残る状態を作る。
     int actual_ret_compact = cplat_hashtable_compact(ht); // [手順] - 明示的に圧縮する。
     for (const char *key : {"k1", "k5", "k3", "k4", "k6", "k7"})
     {
@@ -623,17 +640,17 @@ TEST_F(hashtableVariableStringTest, compaction_packs_blocks_in_offset_order_and_
     }
     int actual_ret_add_after_compact =
         cplat_hashtable_add(ht, "k8", "jjj",
-                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 圧縮で空いた末尾へ追加する。
+                            CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 圧縮で空いた末尾へ追加する。
     long actual_offset_after_compact = origin.value_offset(ht, "k8");
     int actual_ret_validate = cplat_hashtable_validate(ht);
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_compact); // [確認_正常系] - compact が成功すること。
     EXPECT_EQ(std::vector<long>({0, 3, 6, 13, 18, 25}),
-              actual_value_offsets); // [確認_正常系] - compact がオフセット順に隙間なく詰め直すこと。
+              actual_value_offsets);                   // [確認_正常系] - compact がオフセット順に隙間なく詰め直すこと。
     EXPECT_EQ(CPLAT_OK, actual_ret_add_after_compact); // [確認_正常系] - 圧縮後の add が成功すること。
     EXPECT_EQ(28, actual_offset_after_compact); // [確認_正常系] - 圧縮後の add が、詰め直した末尾へ配置されること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_validate); // [確認_正常系] - 圧縮と追加の後の validate が成功すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_validate);   // [確認_正常系] - 圧縮と追加の後の validate が成功すること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -653,17 +670,19 @@ TEST_F(hashtableVariableStringTest, exact_fit_consumes_the_last_free_block_and_t
     (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
     storage_origin origin(ht, config);
     (void)cplat_hashtable_add(ht, "k1", "aaaaaaa", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    int actual_ret_exact_fit = cplat_hashtable_add(ht, "k2", "bbbbbbb",
-                                                      CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
+    int actual_ret_exact_fit = cplat_hashtable_add(ht, "k2", "bbbbbbb", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     long actual_offset_exact_fit = origin.value_offset(ht, "k2"); // [手順] - 残り 8 バイトへ 8 バイト値を追加する。
     int actual_ret_full = cplat_hashtable_add(ht, "k3", "c",
-                                                 CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - さらに追加する。
+                                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - さらに追加する。
     int actual_ret_validate = cplat_hashtable_validate(ht);
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_exact_fit); // [確認_正常系] - 残り容量ちょうどの add が成功すること。
-    EXPECT_EQ(8, actual_offset_exact_fit); // [確認_正常系] - 残り容量ちょうどの add が、末尾の空きブロックの先頭へ配置されること。
-    EXPECT_EQ(CPLAT_ERR_STORAGE_FULL, actual_ret_full); // [確認_異常系] - 空きが無くなった後の add が STORAGE_FULL であること。
+    EXPECT_EQ(
+        8,
+        actual_offset_exact_fit); // [確認_正常系] - 残り容量ちょうどの add が、末尾の空きブロックの先頭へ配置されること。
+    EXPECT_EQ(CPLAT_ERR_STORAGE_FULL,
+              actual_ret_full);               // [確認_異常系] - 空きが無くなった後の add が STORAGE_FULL であること。
     EXPECT_EQ(CPLAT_OK, actual_ret_validate); // [確認_正常系] - 満杯状態の validate が成功すること。
 
     // Cleanup
@@ -717,12 +736,12 @@ TEST_F(hashtableVariableStringTest, resize_repacks_variable_storage_and_moves_re
 
     // Assert
     EXPECT_EQ(std::vector<long>({0, 10}),
-              actual_offsets_before); // [確認_正常系] - resize 前は回収済みの空きブロックがそのまま残ること。
+              actual_offsets_before);       // [確認_正常系] - resize 前は回収済みの空きブロックがそのまま残ること。
     EXPECT_EQ(CPLAT_OK, actual_ret_resize); // [確認_正常系] - resize が成功すること。
     EXPECT_EQ(std::vector<long>({0, 5}),
               actual_offsets_after); // [確認_正常系] - resize が残すレコードをレコード番号順に隙間なく詰め直すこと。
-    EXPECT_NE(before_resize, after_resize); // [確認_正常系] - resize が取得済みの可変長参照を移動させること。
-    EXPECT_EQ("cccc", moved_text); // [確認_正常系] - 詰め直した後も値の内容が変わらないこと。
+    EXPECT_NE(before_resize, after_resize);   // [確認_正常系] - resize が取得済みの可変長参照を移動させること。
+    EXPECT_EQ("cccc", moved_text);            // [確認_正常系] - 詰め直した後も値の内容が変わらないこと。
     EXPECT_EQ(CPLAT_OK, actual_ret_validate); // [確認_正常系] - resize 後の validate が成功すること。
 
     // Cleanup

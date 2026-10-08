@@ -2,8 +2,8 @@
 #include <mock_cplat.h>
 
 int delegate_real_cplat_pinned_prompt_status_set(cplat_pinned_prompt *screen,
-                                                    cplat_pinned_prompt_status_position position,
-                                                    cplat_pinned_prompt_status_align align, const char *content)
+                                                 cplat_pinned_prompt_status_position position,
+                                                 cplat_pinned_prompt_status_align align, const char *content)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_pinned_prompt_status_set)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_pinned_prompt_status_set"));

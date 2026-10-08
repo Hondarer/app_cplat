@@ -21,7 +21,8 @@ TEST(atomicExchangeTest, u8_exchange_returns_previous_value_for_every_memory_ord
         const uint8_t desired = (uint8_t)(20U + (uint8_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] = cplat_atomic_exchange_u8(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
+        previous_values[index] =
+            cplat_atomic_exchange_u8(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
         current = desired;
     }
 
@@ -30,7 +31,9 @@ TEST(atomicExchangeTest, u8_exchange_returns_previous_value_for_every_memory_ord
     {
         EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 交換前の値が返ること。
     }
-    EXPECT_EQ(current, cplat_atomic_load_u8(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 最後に交換した値が格納されていること。
+    EXPECT_EQ(current,
+              cplat_atomic_load_u8(
+                  &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 最後に交換した値が格納されていること。
 }
 
 // 符号付き 32 ビットの exchange が、あらゆるメモリ順序で交換前の値を返し、最終値を格納することの確認
@@ -50,7 +53,8 @@ TEST(atomicExchangeTest, i32_exchange_returns_previous_value_for_every_memory_or
         const int32_t desired = (int32_t)(500 + (int32_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] = cplat_atomic_exchange_i32(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
+        previous_values[index] =
+            cplat_atomic_exchange_i32(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
         current = desired;
     }
 
@@ -59,7 +63,9 @@ TEST(atomicExchangeTest, i32_exchange_returns_previous_value_for_every_memory_or
     {
         EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 交換前の値が返ること。
     }
-    EXPECT_EQ(current, cplat_atomic_load_i32(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 最後に交換した値が格納されていること。
+    EXPECT_EQ(current,
+              cplat_atomic_load_i32(
+                  &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 最後に交換した値が格納されていること。
 }
 
 // 符号なし 32 ビットの exchange が、あらゆるメモリ順序で交換前の値を返し、最終値を格納することの確認
@@ -79,7 +85,8 @@ TEST(atomicExchangeTest, u32_exchange_returns_previous_value_for_every_memory_or
         const uint32_t desired = (uint32_t)(600U + (uint32_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] = cplat_atomic_exchange_u32(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
+        previous_values[index] =
+            cplat_atomic_exchange_u32(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
         current = desired;
     }
 
@@ -88,7 +95,9 @@ TEST(atomicExchangeTest, u32_exchange_returns_previous_value_for_every_memory_or
     {
         EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 交換前の値が返ること。
     }
-    EXPECT_EQ(current, cplat_atomic_load_u32(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 最後に交換した値が格納されていること。
+    EXPECT_EQ(current,
+              cplat_atomic_load_u32(
+                  &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 最後に交換した値が格納されていること。
 }
 
 // 符号付き 64 ビットの exchange が、あらゆるメモリ順序で交換前の値を返し、最終値を格納することの確認
@@ -108,7 +117,8 @@ TEST(atomicExchangeTest, i64_exchange_returns_previous_value_for_every_memory_or
         const int64_t desired = (int64_t)(50000000000LL + (int64_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] = cplat_atomic_exchange_i64(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
+        previous_values[index] =
+            cplat_atomic_exchange_i64(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
         current = desired;
     }
 
@@ -117,7 +127,9 @@ TEST(atomicExchangeTest, i64_exchange_returns_previous_value_for_every_memory_or
     {
         EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 交換前の値が返ること。
     }
-    EXPECT_EQ(current, cplat_atomic_load_i64(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 最後に交換した値が格納されていること。
+    EXPECT_EQ(current,
+              cplat_atomic_load_i64(
+                  &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 最後に交換した値が格納されていること。
 }
 
 // 符号なし 64 ビットの exchange が、あらゆるメモリ順序で交換前の値を返し、最終値を格納することの確認
@@ -137,7 +149,8 @@ TEST(atomicExchangeTest, u64_exchange_returns_previous_value_for_every_memory_or
         const uint64_t desired = (uint64_t)(60000000000ULL + (uint64_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] = cplat_atomic_exchange_u64(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
+        previous_values[index] =
+            cplat_atomic_exchange_u64(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
         current = desired;
     }
 
@@ -146,7 +159,9 @@ TEST(atomicExchangeTest, u64_exchange_returns_previous_value_for_every_memory_or
     {
         EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 交換前の値が返ること。
     }
-    EXPECT_EQ(current, cplat_atomic_load_u64(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 最後に交換した値が格納されていること。
+    EXPECT_EQ(current,
+              cplat_atomic_load_u64(
+                  &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 最後に交換した値が格納されていること。
 }
 
 // ポインターの exchange が、あらゆるメモリ順序で交換前の値を返し、最終値を格納することの確認
@@ -169,7 +184,8 @@ TEST(atomicExchangeTest, ptr_exchange_returns_previous_value_for_every_memory_or
         void *const desired = &markers[index];
 
         expected_previous[index] = current;
-        previous_values[index] = cplat_atomic_exchange_ptr(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
+        previous_values[index] =
+            cplat_atomic_exchange_ptr(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
         current = desired;
     }
 
@@ -178,5 +194,7 @@ TEST(atomicExchangeTest, ptr_exchange_returns_previous_value_for_every_memory_or
     {
         EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 交換前の値が返ること。
     }
-    EXPECT_EQ(current, cplat_atomic_load_ptr(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 最後に交換した値が格納されていること。
+    EXPECT_EQ(current,
+              cplat_atomic_load_ptr(
+                  &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 最後に交換した値が格納されていること。
 }

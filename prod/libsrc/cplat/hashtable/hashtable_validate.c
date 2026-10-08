@@ -114,8 +114,10 @@ static int hashtable_validate_impl(const cplat_hashtable *ht, unsigned char *vis
 
         if (status == REC_EMPTY)
         {
-            if (((hashtable_field_is_variable(ht->hdr->config.key_type) != 0) && (hashtable_key_ref_at(ht, i)->length != 0)) ||
-                ((hashtable_field_is_variable(ht->hdr->config.value_type) != 0) && (hashtable_value_ref_at(ht, i)->length != 0)))
+            if (((hashtable_field_is_variable(ht->hdr->config.key_type) != 0) &&
+                 (hashtable_key_ref_at(ht, i)->length != 0)) ||
+                ((hashtable_field_is_variable(ht->hdr->config.value_type) != 0) &&
+                 (hashtable_value_ref_at(ht, i)->length != 0)))
             {
                 return -1;
             }
@@ -165,7 +167,7 @@ static int hashtable_validate_impl(const cplat_hashtable *ht, unsigned char *vis
             }
             else if ((ht->hdr->config.value_type == CPLAT_HASHTABLE_FIELD_FIXED_STRING) &&
                      (hashtable_fixed_string_fits(ht->hdr->config.value_type, ht->hdr->config.value_size,
-                                        hashtable_data_at(ht, i)) == 0))
+                                                  hashtable_data_at(ht, i)) == 0))
             {
                 return -1;
             }

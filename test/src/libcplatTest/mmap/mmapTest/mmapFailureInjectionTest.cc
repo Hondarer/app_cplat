@@ -29,13 +29,13 @@ TEST_F(mmapFailureInjectionTest, attach_returns_error_when_read_only_size_lookup
     EXPECT_CALL(mock_cplat_, cplat_file_get_size(_, _, _))
         .WillOnce(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - 読み取り専用アタッチのサイズ取得が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_file_get_size にエラーを返却させる。
+                                 // [Pre-Assert手順] - cplat_file_get_size にエラーを返却させる。
     EXPECT_CALL(mock_cplat_, cplat_file_close(_, _))
         .Times(1); // [Pre-Assert確認_異常系] - サイズ取得失敗時に cplat_file_close が 1 回呼び出されること。
 
     // Act
     int actual_ret = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_ONLY, 0u, &map,
-                                   NULL); // [手順] - サイズ取得失敗を注入して読み取り専用アタッチを呼び出す。
+                                       NULL); // [手順] - サイズ取得失敗を注入して読み取り専用アタッチを呼び出す。
 
     // Assert
     EXPECT_NE(CPLAT_OK,
@@ -53,9 +53,9 @@ TEST_F(mmapFailureInjectionTest, attach_returns_error_when_new_file_size_setting
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_file_set_size(_, _, _))
-        .WillOnce(Return(
-            CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - 新規ファイルのサイズ設定が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_file_set_size にエラーを返却させる。
+        .WillOnce(
+            Return(CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - 新規ファイルのサイズ設定が 1 回呼び出されること。
+                                        // [Pre-Assert手順] - cplat_file_set_size にエラーを返却させる。
     EXPECT_CALL(mock_cplat_, cplat_file_close(_, _))
         .Times(1); // [Pre-Assert確認_異常系] - サイズ設定失敗時に cplat_file_close が 1 回呼び出されること。
     EXPECT_CALL(mock_cplat_, cplat_remove(_, _))
@@ -63,7 +63,7 @@ TEST_F(mmapFailureInjectionTest, attach_returns_error_when_new_file_size_setting
 
     // Act
     int actual_ret = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
-                                   NULL); // [手順] - サイズ設定失敗を注入して新規ファイルへのアタッチを呼び出す。
+                                       NULL); // [手順] - サイズ設定失敗を注入して新規ファイルへのアタッチを呼び出す。
 
     // Assert
     EXPECT_NE(CPLAT_OK,
@@ -83,15 +83,15 @@ TEST_F(mmapFailureInjectionTest, attach_returns_error_when_existing_file_reopen_
     EXPECT_CALL(mock_cplat_, cplat_file_open(_, _, flags_create_new(), _))
         .WillOnce(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - CREATE_NEW の cplat_file_open が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - CPLAT_ERR_UNKNOWN を返却する。
+                                 // [Pre-Assert手順] - CPLAT_ERR_UNKNOWN を返却する。
     EXPECT_CALL(mock_cplat_, cplat_file_open(_, _, flags_existing_rw(), _))
         .WillOnce(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - CREATE_NEW と既存ファイル再オープンの cplat_file_open が順に呼び出されること。
-                                    // [Pre-Assert手順] - 2 回の cplat_file_open にエラーを返却させる。
+                                 // [Pre-Assert手順] - 2 回の cplat_file_open にエラーを返却させる。
 
     // Act
     int actual_ret = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
-                                   NULL); // [手順] - 既存ファイルの再オープン失敗を注入してアタッチを呼び出す。
+                                       NULL); // [手順] - 既存ファイルの再オープン失敗を注入してアタッチを呼び出す。
 
     // Assert
     EXPECT_NE(CPLAT_OK,
@@ -111,7 +111,7 @@ TEST_F(mmapFailureInjectionTest, attach_returns_error_when_existing_size_lookup_
     EXPECT_CALL(mock_cplat_, cplat_file_open(_, _, flags_create_new(), _))
         .WillOnce(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - 1 回目の CREATE_NEW の cplat_file_open が呼び出されること。
-                                    // [Pre-Assert手順] - 1 回目の cplat_file_open から CPLAT_ERR_UNKNOWN を返却する。
+                                 // [Pre-Assert手順] - 1 回目の cplat_file_open から CPLAT_ERR_UNKNOWN を返却する。
     EXPECT_CALL(mock_cplat_, cplat_file_open(_, _, flags_existing_rw(), _))
         .WillOnce(
             [](cplat_file *file, const char *, int flags, cplat_error *)
@@ -121,24 +121,23 @@ TEST_F(mmapFailureInjectionTest, attach_returns_error_when_existing_size_lookup_
             }); // [Pre-Assert確認_異常系] - CREATE_NEW の cplat_file_open が失敗し、既存ファイル再オープンは成功すること。
                 // [Pre-Assert手順] - CREATE_NEW だけエラーを返し、再オープンは番兵ハンドルを設定する。
     EXPECT_CALL(mock_cplat_, cplat_file_get_size(_, _, _))
-        .WillOnce(Return(
-            CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - 既存ファイルのサイズ取得が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_file_get_size にエラーを返却させる。
+        .WillOnce(
+            Return(CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - 既存ファイルのサイズ取得が 1 回呼び出されること。
+                                        // [Pre-Assert手順] - cplat_file_get_size にエラーを返却させる。
     EXPECT_CALL(mock_cplat_, cplat_file_close(_, _))
         .Times(
             1); // [Pre-Assert確認_異常系] - 既存ファイルのサイズ取得失敗時に cplat_file_close が 1 回呼び出されること。
 
     // Act
     int actual_ret = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
-                                   NULL); // [手順] - 既存ファイルのサイズ取得失敗を注入してアタッチを呼び出す。
+                                       NULL); // [手順] - 既存ファイルのサイズ取得失敗を注入してアタッチを呼び出す。
 
     // Assert
     EXPECT_NE(
         CPLAT_OK,
         actual_ret); // [確認_異常系] - 既存ファイルのサイズ取得失敗時の cplat_mmap_attach の戻り値が CPLAT_OK 以外であること。
-    EXPECT_EQ(
-        (cplat_mmap *)NULL,
-        map); // [確認_異常系] - 既存ファイルのサイズ取得失敗時に cplat_mmap_attach のマップが NULL であること。
+    EXPECT_EQ((cplat_mmap *)NULL,
+              map); // [確認_異常系] - 既存ファイルのサイズ取得失敗時に cplat_mmap_attach のマップが NULL であること。
 }
 
 // ファイルのクローズに失敗した場合に detach が失敗を返すことの確認
@@ -153,13 +152,13 @@ TEST_F(mmapFailureInjectionTest, detach_reports_error_when_file_close_fails)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_file_close(_, _))
-        .WillOnce(Return(
-            CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - detach のファイル クローズが 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_file_close にエラーを返却させる。
+        .WillOnce(
+            Return(CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - detach のファイル クローズが 1 回呼び出されること。
+                                        // [Pre-Assert手順] - cplat_file_close にエラーを返却させる。
 
     // Act
     int actual_ret = cplat_mmap_detach(map,
-                                   &detail); // [手順] - ファイル クローズ失敗を注入して detach を呼び出す。
+                                       &detail); // [手順] - ファイル クローズ失敗を注入して detach を呼び出す。
 
     // Assert
     EXPECT_NE(
@@ -183,7 +182,7 @@ TEST_F(mmapFailureInjectionTest, attach_returns_out_of_memory_when_handle_alloca
 
     // Act
     int actual_ret = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
-                                   NULL); // [手順] - cplat_mmap_attach を呼び出す。
+                                       NULL); // [手順] - cplat_mmap_attach を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -209,14 +208,13 @@ TEST_F(mmapFailureInjectionTest, attach_reports_errno_when_mmap_fails)
 
     // Act
     int actual_ret = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
-                                   &detail); // [手順] - cplat_mmap_attach を呼び出す。
+                                       &detail); // [手順] - cplat_mmap_attach を呼び出す。
 
     // Assert
-    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - cplat_mmap_attach の戻り値が CPLAT_OK 以外であること。
+    EXPECT_NE(CPLAT_OK, actual_ret);    // [確認_異常系] - cplat_mmap_attach の戻り値が CPLAT_OK 以外であること。
     EXPECT_EQ((cplat_mmap *)NULL, map); // [確認_異常系] - ハンドルが設定されないこと。
-    EXPECT_EQ(
-        ENOMEM,
-        cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が ENOMEM であること。
+    EXPECT_EQ(ENOMEM,
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が ENOMEM であること。
 }
 
 // 書き戻しに失敗した場合に errno が通知されることの確認
@@ -240,9 +238,8 @@ TEST_F(mmapFailureInjectionTest, flush_reports_errno_when_msync_fails)
 
     // Assert
     EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - cplat_mmap_flush の戻り値が CPLAT_OK 以外であること。
-    EXPECT_EQ(
-        EIO,
-        cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が EIO であること。
+    EXPECT_EQ(EIO,
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が EIO であること。
 
     // Cleanup
     (void)cplat_mmap_detach(map, NULL);
@@ -270,9 +267,8 @@ TEST_F(mmapFailureInjectionTest, detach_reports_errno_when_munmap_fails)
     // Assert
     EXPECT_NE(CPLAT_OK,
               actual_ret); // [確認_異常系] - munmap 失敗時に cplat_mmap_detach の戻り値が CPLAT_OK 以外であること。
-    EXPECT_EQ(
-        EIO,
-        cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_mmap_detach の詳細 errno が EIO であること。
+    EXPECT_EQ(EIO,
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_mmap_detach の詳細 errno が EIO であること。
 }
 
 #elif defined(PLATFORM_WINDOWS)
@@ -295,10 +291,10 @@ TEST_F(mmapFailureInjectionTest, attach_reports_error_when_create_file_mapping_f
 
     // Act
     int actual_ret = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
-                                   &detail); // [手順] - cplat_mmap_attach を呼び出す。
+                                       &detail); // [手順] - cplat_mmap_attach を呼び出す。
 
     // Assert
-    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - cplat_mmap_attach の戻り値が CPLAT_OK 以外であること。
+    EXPECT_NE(CPLAT_OK, actual_ret);    // [確認_異常系] - cplat_mmap_attach の戻り値が CPLAT_OK 以外であること。
     EXPECT_EQ((cplat_mmap *)NULL, map); // [確認_異常系] - ハンドルが設定されないこと。
     EXPECT_EQ(
         static_cast<unsigned long>(ERROR_NOT_ENOUGH_MEMORY),
@@ -328,10 +324,10 @@ TEST_F(mmapFailureInjectionTest, attach_reports_error_when_map_view_fails)
 
     // Act
     int actual_ret = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
-                                   &detail); // [手順] - cplat_mmap_attach を呼び出す。
+                                       &detail); // [手順] - cplat_mmap_attach を呼び出す。
 
     // Assert
-    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - cplat_mmap_attach の戻り値が CPLAT_OK 以外であること。
+    EXPECT_NE(CPLAT_OK, actual_ret);    // [確認_異常系] - cplat_mmap_attach の戻り値が CPLAT_OK 以外であること。
     EXPECT_EQ((cplat_mmap *)NULL, map); // [確認_異常系] - ハンドルが設定されないこと。
     EXPECT_EQ(
         static_cast<unsigned long>(ERROR_NOT_ENOUGH_MEMORY),

@@ -1,15 +1,17 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_socket_wait_readable_multi(const cplat_socket *socks, size_t count, int timeout_ms, unsigned char *ready_out, cplat_error *detail_out)
+int delegate_real_cplat_socket_wait_readable_multi(const cplat_socket *socks, size_t count, int timeout_ms,
+                                                   unsigned char *ready_out, cplat_error *detail_out)
 {
-    static auto real_fn =
-        reinterpret_cast<decltype(&cplat_socket_wait_readable_multi)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_wait_readable_multi"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_socket_wait_readable_multi)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_wait_readable_multi"));
 
     return real_fn(socks, count, timeout_ms, ready_out, detail_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_socket_wait_readable_multi, const cplat_socket *socks, size_t count, int timeout_ms, unsigned char *ready_out, cplat_error *detail_out)
+MOCK_WEAK_IMPL(int, cplat_socket_wait_readable_multi, const cplat_socket *socks, size_t count, int timeout_ms,
+               unsigned char *ready_out, cplat_error *detail_out)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

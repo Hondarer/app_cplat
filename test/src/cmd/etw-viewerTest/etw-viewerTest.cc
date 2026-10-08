@@ -35,7 +35,7 @@ static int emulate_cplat_strncpy(char *dest, size_t dest_size, const char *src, 
 }
 
 static int emulate_cplat_clock_format_realtime_iso8601_local(char *dest, size_t dest_size,
-                                                          const cplat_timespec *timestamp)
+                                                             const cplat_timespec *timestamp)
 {
     const char *text;
 
@@ -202,8 +202,7 @@ TEST_F(etw_viewerTest, handle_event_prints_message_without_service)
     cplat_etw_event event = {3, 5678U, "Trace", NULL, "degraded", 116444736000000000LL};
 
     // Pre-Assert
-    EXPECT_CALL(mock_stdio_,
-                printf(_, _, _, StrEq("1970-01-01T09:00:00.000+09:00 <W>cplat.tracer[5678]: degraded\n")))
+    EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq("1970-01-01T09:00:00.000+09:00 <W>cplat.tracer[5678]: degraded\n")))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - Service なしでは既定 tag を使って出力されること。
     EXPECT_CALL(mock_stdio_, fflush(_, _, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 出力後に flush されること。
@@ -305,7 +304,7 @@ TEST_F(etw_viewerTest, main_stops_when_access_is_denied)
     EXPECT_CALL(mock_cplat_, cplat_etw_session_check_access())
         .WillOnce(Return(
             CPLAT_ERR_PERMISSION_DENIED)); // [Pre-Assert確認_異常系] - cplat_etw_session_check_access が 1 回呼び出されること。
-                                              // [Pre-Assert手順] - 権限確認から ERR_ACCESS を返却する。
+                                           // [Pre-Assert手順] - 権限確認から ERR_ACCESS を返却する。
     EXPECT_CALL(mock_stdio_, fprintf(_, _, _, _, HasSubstr("Performance Log Users")))
         .WillOnce(
             Return(0)); // [Pre-Assert確認_異常系] - "Performance Log Users" を含む案内メッセージが表示されること。

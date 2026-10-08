@@ -97,8 +97,8 @@ TEST_F(stringCatalogCatalogTest, unusable_catalog_is_empty)
         cplat_internal_string_catalog_is_usable(&negative_count); // [手順] - 件数が負のカタログの使用可否を判定する。
     bool usable_negative_index = cplat_internal_string_catalog_is_usable(
         &negative_index_count); // [手順] - インデックス表の要素数が負のカタログの使用可否を判定する。
-    bool usable_valid =
-        cplat_internal_string_catalog_is_usable(&s_catalog_with_index); // [手順] - 妥当な構造のカタログの使用可否を判定する。
+    bool usable_valid = cplat_internal_string_catalog_is_usable(
+        &s_catalog_with_index); // [手順] - 妥当な構造のカタログの使用可否を判定する。
 
     int count_null = cplat_internal_string_catalog_entry_count(NULL); // [手順] - NULL の件数を取得する。
     const cplat_string_catalog_entry *find_null =

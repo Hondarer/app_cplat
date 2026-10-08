@@ -24,7 +24,7 @@
     @endcode
  *
  *  @par            使用例 (共通)
- *  すべての出力先のデフォルトは CPLAT_TRACE_LEVEL_NONE (無効) です。\n
+ *  すべての出力先の既定値は CPLAT_TRACE_LEVEL_NONE (無効) です。\n
  *  出力する出力先の詳細度を、cplat_tracer_start の前に設定します。
     @code{.c}
    #include <cplat/trace/tracer.h>
@@ -88,12 +88,12 @@
  *  @{
  */
 
-/* ===== デフォルト プロバイダー定義 (Windows) ===== */
+/* ===== 既定のプロバイダー定義 (Windows) ===== */
 
 #if defined(PLATFORM_WINDOWS)
 
     /**
-     *  @brief          cplat が使用するデフォルトの OS トレース識別子 (Windows) です。
+     *  @brief          cplat が使用する既定の OS トレース識別子 (Windows) です。
      *
      *  cplat_tracer_create が使用する ETW プロバイダー名と、
      *  EventLog の共通イベント ソース名 (@ref eventlog.h) を兼ねます。\n
@@ -102,7 +102,7 @@
     #define CPLAT_TRACER_DEFAULT_PROVIDER_NAME "cplat.tracer"
 
     /**
-     *  @brief          デフォルト ETW プロバイダーの GUID (TraceLogging タプル形式) です。
+     *  @brief          既定の ETW プロバイダーの GUID (TraceLogging タプル形式) です。
      *
      *  TRACELOGGING_DEFINE_PROVIDER で使用する形式です。
      */
@@ -110,7 +110,7 @@
         (0xc3a7b5d1, 0x4e2f, 0x4a89, 0x96, 0xc8, 0xd7, 0xe9, 0xf1, 0xa2, 0xb3, 0xc4)
 
     /**
-     *  @brief          デフォルト ETW プロバイダーの GUID (文字列形式) です。
+     *  @brief          既定の ETW プロバイダーの GUID (文字列形式) です。
      *
      *  cplat_etw_session_start に渡す場合など、文字列形式の GUID が
      *  必要な場面で使用します。
@@ -235,8 +235,7 @@ typedef enum cplat_trace_level
  *
  *  すでに強制出力のレベルを渡した場合の結果は規定しません。
  */
-#define CPLAT_TRACE_LEVEL_TO_FORCE(level) \
-    ((cplat_trace_level)((int)(level) - CPLAT_TRACE_LEVEL_FORCE_OFFSET))
+#define CPLAT_TRACE_LEVEL_TO_FORCE(level) ((cplat_trace_level)((int)(level) - CPLAT_TRACE_LEVEL_FORCE_OFFSET))
 
 /**
  *  @brief          強制出力のトレース レベルを、通常のトレース レベルへ変換します。
@@ -245,8 +244,7 @@ typedef enum cplat_trace_level
  *
  *  通常のレベルを渡した場合の結果は規定しません。
  */
-#define CPLAT_TRACE_LEVEL_FROM_FORCE(level) \
-    ((cplat_trace_level)((int)(level) + CPLAT_TRACE_LEVEL_FORCE_OFFSET))
+#define CPLAT_TRACE_LEVEL_FROM_FORCE(level) ((cplat_trace_level)((int)(level) + CPLAT_TRACE_LEVEL_FORCE_OFFSET))
 
 /**
  *  @brief          トレース レベルが強制出力のレベルかどうかを判定します。
@@ -297,51 +295,51 @@ typedef enum cplat_tracer_concurrency_mode
     CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED = 1
 } cplat_tracer_concurrency_mode;
 
-/* ===== デフォルト トレース レベル ===== */
+/* ===== 既定のトレース レベル ===== */
 
 /*
- *  すべての出力先のデフォルト レベルを CPLAT_TRACE_LEVEL_NONE (無効) とします。
+ *  すべての出力先の既定のトレース レベルを CPLAT_TRACE_LEVEL_NONE (無効) とします。
  *  利用者が出力先ごとに詳細度を設定するまで、トレースは副作用を持ちません。
  *  ログ ファイルの生成のような副作用を、利用者の意図しないうちに起こさないための方針です。
  */
 
 /**
- *  @brief          cplat_tracer_create() が設定する OS トレース (EventLog / syslog) のデフォルト レベルです。
+ *  @brief          cplat_tracer_create() が設定する OS トレース (EventLog / syslog) の既定のレベルです。
  *
  *  OS トレースは Windows ではイベント ログ (EventLog)、Linux では syslog を指します。\n
  *  運用者が参照する OS ネイティブの運用ログであり、ユーザーが
  *  cplat_tracer_set_os_level() で変更するまで有効な初期値です。\n
- *  デフォルトは CPLAT_TRACE_LEVEL_NONE (無効) です。
+ *  既定値は CPLAT_TRACE_LEVEL_NONE (無効) です。
  */
 #define CPLAT_TRACER_DEFAULT_OS_LEVEL CPLAT_TRACE_LEVEL_NONE
 
 /**
- *  @brief          cplat_tracer_create() が設定する ETW トレースのデフォルト レベルです。
+ *  @brief          cplat_tracer_create() が設定する ETW トレースの既定のレベルです。
  *
  *  ETW (Event Tracing for Windows) は開発者向けの低オーバーヘッド診断チャネルであり、
  *  OS トレース (EventLog) とは独立した軸として制御します。\n
  *  ユーザーが cplat_tracer_set_etw_level() で変更するまで有効な初期値です。\n
- *  デフォルトは CPLAT_TRACE_LEVEL_NONE (無効) です。\n
+ *  既定値は CPLAT_TRACE_LEVEL_NONE (無効) です。\n
  *  本定義は Windows でのみ意味を持ちます。Linux では ETW は存在せず、
  *  cplat_tracer_set_etw_level() / cplat_tracer_get_etw_level() は何もしません。
  */
 #define CPLAT_TRACER_DEFAULT_ETW_LEVEL CPLAT_TRACE_LEVEL_NONE
 
 /**
- *  @brief          cplat_tracer_create() が設定するファイル トレースのデフォルト レベルです。
+ *  @brief          cplat_tracer_create() が設定するファイル トレースの既定のレベルです。
  *
  *  ユーザーが cplat_tracer_set_file_level() で変更するまで有効な初期値です。\n
- *  デフォルトは CPLAT_TRACE_LEVEL_NONE (無効) であり、
+ *  既定値は CPLAT_TRACE_LEVEL_NONE (無効) であり、
  *  cplat_tracer_set_file_level() を呼び出さない場合、cplat_tracer_start() は
  *  ファイルを作成しません。
  */
 #define CPLAT_TRACER_DEFAULT_FILE_LEVEL CPLAT_TRACE_LEVEL_NONE
 
 /**
- *  @brief          cplat_tracer_create() が設定する stderr トレースのデフォルト レベルです。
+ *  @brief          cplat_tracer_create() が設定する stderr トレースの既定のレベルです。
  *
  *  ユーザーが cplat_tracer_set_stderr_level() で変更するまで有効な初期値です。\n
- *  デフォルトは CPLAT_TRACE_LEVEL_NONE (無効) です。
+ *  既定値は CPLAT_TRACE_LEVEL_NONE (無効) です。
  */
 #define CPLAT_TRACER_DEFAULT_STDERR_LEVEL CPLAT_TRACE_LEVEL_NONE
 
@@ -389,9 +387,8 @@ typedef struct cplat_tracer_hook_entry cplat_tracer_hook_entry;
  *  コールバックは複数スレッドから同時に呼び出される可能性があります。\n
  *  コールバックの実装者は再入性を確保してください。
  */
-typedef void (*cplat_tracer_hook_fn)(cplat_tracer_hook_entry *prev, cplat_tracer *handle,
-                                        cplat_trace_level level, const cplat_timespec *timestamp,
-                                        const char *message, void *context);
+typedef void (*cplat_tracer_hook_fn)(cplat_tracer_hook_entry *prev, cplat_tracer *handle, cplat_trace_level level,
+                                     const cplat_timespec *timestamp, const char *message, void *context);
 
 /* ===== API 関数 ===== */
 
@@ -403,22 +400,22 @@ extern "C"
     /**
      *  @brief          トレース プロバイダーを初期化します。
      *
-     *  自プロセスの実行ファイル名をデフォルト識別名として初期化します
+     *  自プロセスの実行ファイル名を既定の識別名として初期化します
      *  (例: Linux `/usr/bin/myapp` → `"myapp"`,
      *  Windows `C:\bin\myapp.exe` → `"myapp.exe"`)。\n
      *  プロセス名の取得に失敗した場合は `"unknown"` を使用します。\n
      *  Linux 環境では syslog を LOG_USER facility で初期化します。\n
-     *  Windows 環境ではライブラリ内蔵の ETW デフォルト プロバイダー
+     *  Windows 環境ではライブラリ内蔵の ETW 既定プロバイダー
      *  (`CPLAT_TRACER_DEFAULT_PROVIDER_NAME`) を使用します。\n
      *  識別名を変更するには cplat_tracer_set_name を呼び出してください。
      *
-     *  デフォルトの出力先はファイル トレースのみです
-     *  (OS トレースと stderr トレースのデフォルト レベルは CPLAT_TRACE_LEVEL_NONE)。\n
-     *  ファイル トレースの出力先はデフォルトで実行ファイルのディレクトリ配下の
+     *  既定の出力先はファイル トレースのみです
+     *  (OS トレースと stderr トレースの既定のレベルは CPLAT_TRACE_LEVEL_NONE)。\n
+     *  ファイル トレースの出力先は既定で実行ファイルのディレクトリ配下の
      *  `log/{ファイル名}.log` であり、占有モード、最大
      *  CPLAT_TRACE_FILE_SINK_DEFAULT_MAX_BYTES バイト、
      *  CPLAT_TRACE_FILE_SINK_DEFAULT_GENERATIONS 世代で運用されます。
-     *  ファイル名のデフォルトはプロセス名 (実行ファイルのベース名。Windows は末尾の `.exe` を除く) です。\n
+     *  ファイル名の既定値はプロセス名 (実行ファイルのベース名。Windows は末尾の `.exe` を除く) です。\n
      *  パスとパラメーターは cplat_tracer_set_file_level で、
      *  ファイル名とファイル識別は cplat_tracer_set_file_name で変更できます。
      *
@@ -458,8 +455,7 @@ extern "C"
      *  @attention      どちらのモードでも、cplat_tracer_dispose と同一ハンドルの他の API を
      *                  並行して呼び出してはなりません。
      */
-    CPLAT_EXPORT cplat_tracer *CPLAT_API
-    cplat_tracer_create(cplat_tracer_concurrency_mode concurrency_mode);
+    CPLAT_EXPORT cplat_tracer *CPLAT_API cplat_tracer_create(cplat_tracer_concurrency_mode concurrency_mode);
 
     /**
      *  @brief          トレース プロバイダーを開始します。
@@ -496,7 +492,7 @@ extern "C"
      *  内部で排他制御を行います。
      *
      *  @warning        別プロセスとの間では占有モードの排他が働くため、同一実行ファイルを複数プロセス
-     *                  起動するとデフォルト パスのオープンが 2 プロセス目以降で失敗する場合があります
+     *                  起動すると既定パスのオープンが 2 プロセス目以降で失敗する場合があります
      *                  (Windows)。cplat_tracer_set_file_name のファイル識別、または
      *                  cplat_tracer_set_file_level の明示パスでプロセスごとにファイルを分けてください。
      *
@@ -510,7 +506,7 @@ extern "C"
      *  ハンドルを停止中 (stopped) 状態に遷移させます。\n
      *  stopped 状態では出力関数 (cplat_tracer_write 等) は @ref CPLAT_ERR_UNKNOWN を返し、
      *  識別子・ファイル名・フックの設定関数 (cplat_tracer_set_name, cplat_tracer_set_file_name,
-     *  cplat_tracer_set_hook, cplat_tracer_remove_hook) がスレッド安全に使用できるようになります。\n
+     *  cplat_tracer_set_hook, cplat_tracer_remove_hook) がスレッド セーフに使用できるようになります。\n
      *  レベル設定関数 (cplat_tracer_set_os_level 等) は stopped / started のどちらでも使用できます。\n
      *  ファイル トレースが有効な場合、開いていたトレース ファイルを閉じます。
      *  ファイル トレースの設定は保持され、次回の cplat_tracer_start で改めてファイルを開きます。\n
@@ -567,7 +563,7 @@ extern "C"
      *  内部で共有ロックを取得して設定を参照し、複数スレッドから同時に呼び出せます。
      */
     CPLAT_EXPORT int CPLAT_API cplat_tracer_write_at(cplat_tracer *handle, cplat_trace_level level,
-                                                            const cplat_timespec *timestamp, const char *message);
+                                                     const cplat_timespec *timestamp, const char *message);
 
     /**
      *  @brief          printf 形式でトレース メッセージを書き込む低レベル関数です。
@@ -588,8 +584,7 @@ extern "C"
      *  内部で共有ロックを取得して設定を参照し、複数スレッドから同時に呼び出せます。
      */
     CPLAT_EXPORT int CPLAT_API cplat_tracer_writef_at(cplat_tracer *handle, cplat_trace_level level,
-                                                             const cplat_timespec *timestamp, const char *format,
-                                                             ...);
+                                                      const cplat_timespec *timestamp, const char *format, ...);
 
     /**
      *  @brief          書式付きメッセージをトレースに書き込む低レベル関数 (`cplat_tracer_writef_at` の `va_list` 版) です。
@@ -608,8 +603,8 @@ extern "C"
      *  内部で共有ロックを取得して設定を参照し、複数スレッドから同時に呼び出せます。
      */
     CPLAT_EXPORT int CPLAT_API cplat_tracer_vwritef_at(cplat_tracer *handle, cplat_trace_level level,
-                                                              const cplat_timespec *timestamp, const char *format,
-                                                              va_list args);
+                                                       const cplat_timespec *timestamp, const char *format,
+                                                       va_list args);
 
     /**
      *  @brief          バイナリ データを HEX テキスト形式でトレースに書き込む低レベル関数です。
@@ -631,8 +626,8 @@ extern "C"
      *  内部で共有ロックを取得して設定を参照し、複数スレッドから同時に呼び出せます。
      */
     CPLAT_EXPORT int CPLAT_API cplat_tracer_write_hex_at(cplat_tracer *handle, cplat_trace_level level,
-                                                                const cplat_timespec *timestamp, const void *data,
-                                                                size_t size, const char *message);
+                                                         const cplat_timespec *timestamp, const void *data, size_t size,
+                                                         const char *message);
 
     /**
      *  @brief          バイナリ データを HEX テキスト形式でトレースに書き込む低レベル関数 (printf 形式ラベル) です。
@@ -655,8 +650,8 @@ extern "C"
      *  内部で共有ロックを取得して設定を参照し、複数スレッドから同時に呼び出せます。
      */
     CPLAT_EXPORT int CPLAT_API cplat_tracer_write_hexf_at(cplat_tracer *handle, cplat_trace_level level,
-                                                                 const cplat_timespec *timestamp, const void *data,
-                                                                 size_t size, const char *format, ...);
+                                                          const cplat_timespec *timestamp, const void *data,
+                                                          size_t size, const char *format, ...);
 
     /**
      *  @brief          バイナリ データを HEX テキスト形式で書き込む低レベル関数 (`cplat_tracer_write_hexf_at` の `va_list` 版) です。
@@ -677,8 +672,8 @@ extern "C"
      *  内部で共有ロックを取得して設定を参照し、複数スレッドから同時に呼び出せます。
      */
     CPLAT_EXPORT int CPLAT_API cplat_tracer_vwrite_hexf_at(cplat_tracer *handle, cplat_trace_level level,
-                                                                  const cplat_timespec *timestamp, const void *data,
-                                                                  size_t size, const char *format, va_list args);
+                                                           const cplat_timespec *timestamp, const void *data,
+                                                           size_t size, const char *format, va_list args);
 
     /**
      *  @brief          トレース プロバイダーのインスタンス名とインスタンス識別を設定します。
@@ -706,8 +701,7 @@ extern "C"
      *  @see            cplat_tracer_get_identifier
      *  @see            cplat_tracer_set_file_name
      */
-    CPLAT_EXPORT int CPLAT_API cplat_tracer_set_name(cplat_tracer *handle, const char *name,
-                                                              int64_t identifier);
+    CPLAT_EXPORT int CPLAT_API cplat_tracer_set_name(cplat_tracer *handle, const char *name, int64_t identifier);
 
     /**
      *  @brief          解決済みのインスタンス名 (識別番号サフィックス込み) を取得します。
@@ -751,14 +745,14 @@ extern "C"
     /**
      *  @brief          トレース ファイル名とファイル識別を設定します。
      *
-     *  ファイル トレースのデフォルト パス (実行ファイルのディレクトリ配下の
+     *  ファイル トレースの既定パス (実行ファイルのディレクトリ配下の
      *  `log/{ファイル名}.log`) に使用するファイル名を設定します。
      *  ファイル名は `{name}` (identifier が 0 の場合) または `{name}_{identifier}` です。\n
      *  name に NULL を指定した場合はプロセス名 (実行ファイルのベース名。Windows は末尾の
      *  `.exe` を除く) を使用します。明示設定した名前には `.exe` の除去を適用しません。\n
      *  本関数は OS トレースの識別名 (cplat_tracer_set_name) には影響しません。\n
      *  cplat_tracer_set_file_level で出力ファイル パスを明示設定している場合、
-     *  本設定はデフォルト パスの解決に使用されないため効果を持ちません。
+     *  本設定は既定パスの解決に使用されないため効果を持ちません。
      *
      *  @param[in]      handle      cplat_tracer_create の戻り値。
      *  @param[in]      name        ファイル名。NULL でプロセス名を使用。
@@ -775,13 +769,12 @@ extern "C"
      *  @see            cplat_tracer_get_file_identifier
      *  @see            cplat_tracer_set_file_level
      */
-    CPLAT_EXPORT int CPLAT_API cplat_tracer_set_file_name(cplat_tracer *handle, const char *name,
-                                                                   int64_t identifier);
+    CPLAT_EXPORT int CPLAT_API cplat_tracer_set_file_name(cplat_tracer *handle, const char *name, int64_t identifier);
 
     /**
      *  @brief          解決済みのトレース ファイル名 (ファイル識別サフィックス込み) を取得します。
      *
-     *  ファイル トレースのデフォルト パスで実際に使用されるファイル名
+     *  ファイル トレースの既定パスで実際に使用されるファイル名
      *  (拡張子 `.log` を除く) を返します。\n
      *  cplat_tracer_set_file_name 未呼び出しの場合はプロセス名
      *  (実行ファイルのベース名。Windows は末尾の `.exe` を除く) です。
@@ -801,7 +794,7 @@ extern "C"
      *  @see            cplat_tracer_set_file_name
      */
     CPLAT_EXPORT int CPLAT_API cplat_tracer_get_file_name(cplat_tracer *handle, char *file_name_out,
-                                                                   size_t file_name_size);
+                                                          size_t file_name_size);
 
     /**
      *  @brief          ファイル識別番号を取得します。
@@ -878,7 +871,7 @@ extern "C"
      *  @brief          ETW トレースのスレッショルド レベルを設定します。
      *
      *  ETW は Windows 専用の独立した診断チャネルであり、OS トレース (EventLog) とは
-     *  別の軸として制御します。デフォルトは CPLAT_TRACER_DEFAULT_ETW_LEVEL です。\n
+     *  別の軸として制御します。既定値は CPLAT_TRACER_DEFAULT_ETW_LEVEL です。\n
      *  Linux では ETW が存在しないため、本関数は何もせず @ref CPLAT_OK を返します。
      *
      *  @param[in]      handle   cplat_tracer_create の戻り値。
@@ -918,10 +911,10 @@ extern "C"
      *  そのため、出力ファイル パスの妥当性 (オープン可否) は本関数ではなく
      *  cplat_tracer_start の戻り値で報告されます。
      *
-     *  path に NULL を指定した場合はデフォルト パスを使用します。
-     *  デフォルト パスは実行ファイルのディレクトリ配下の `log/{ファイル名}.log` であり、
+     *  path に NULL を指定した場合は既定パスを使用します。
+     *  既定パスは実行ファイルのディレクトリ配下の `log/{ファイル名}.log` であり、
      *  ファイル名は start 時点の設定 (cplat_tracer_set_file_name のファイル名とファイル識別)
-     *  で解決されます。ファイル名のデフォルトはプロセス名です
+     *  で解決されます。ファイル名の既定値はプロセス名です
      *  (例: `myapp` または Windows の `myapp.exe` → `log/myapp.log`)。\n
      *  実行ファイル パスの取得に失敗した場合は、カレント ディレクトリからの相対パス
      *  `log/{ファイル名}.log` へ出力します。\n
@@ -938,7 +931,7 @@ extern "C"
      *  詳細は cplat_trace_file_sink_create を参照してください。
      *
      *  @param[in]      handle       cplat_tracer_create の戻り値。
-     *  @param[in]      path         出力ファイル パス。NULL でデフォルト パスを使用。
+     *  @param[in]      path         出力ファイル パス。NULL で既定パスを使用。
      *  @param[in]      level        ファイル トレースのスレッショルド レベル。
      *                               CPLAT_TRACE_LEVEL_NONE でファイル トレースを無効化。
      *                               強制出力のレベルは指定できません。
@@ -965,8 +958,8 @@ extern "C"
      *  旧閾値と新閾値の両方で出力対象となるトレースを取りこぼしません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_tracer_set_file_level(cplat_tracer *handle, const char *path,
-                                                                    cplat_trace_level level, size_t max_bytes,
-                                                                    int generations, int flags);
+                                                           cplat_trace_level level, size_t max_bytes, int generations,
+                                                           int flags);
 
     /**
      *  @brief          stderr トレースの現在のスレッショルド レベルを取得します。
@@ -999,8 +992,7 @@ extern "C"
      *  stopped / started のどちらの状態でも有効です。変更は排他制御下で原子的に反映され、
      *  旧閾値と新閾値の両方で出力対象となるトレースを取りこぼしません。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_tracer_set_stderr_level(cplat_tracer *handle,
-                                                                      cplat_trace_level level);
+    CPLAT_EXPORT int CPLAT_API cplat_tracer_set_stderr_level(cplat_tracer *handle, cplat_trace_level level);
 
     /**
      *  @brief          トレース プロバイダーを終了し、リソースを解放します。
@@ -1048,9 +1040,8 @@ extern "C"
      *  stopped 状態のときは同時に実行できます。\n
      *  started 状態のときは呼び出せません。
      */
-    CPLAT_EXPORT cplat_tracer_hook_entry *CPLAT_API cplat_tracer_set_hook(cplat_tracer *handle,
-                                                                                      cplat_tracer_hook_fn fn,
-                                                                                      void *context);
+    CPLAT_EXPORT cplat_tracer_hook_entry *CPLAT_API cplat_tracer_set_hook(cplat_tracer *handle, cplat_tracer_hook_fn fn,
+                                                                          void *context);
 
     /**
      *  @brief          登録済みトレース フックを解除します。
@@ -1066,8 +1057,7 @@ extern "C"
      *  stopped 状態のときは同時に実行できます。\n
      *  started 状態のときは呼び出せません。
      */
-    CPLAT_EXPORT void CPLAT_API cplat_tracer_remove_hook(cplat_tracer *handle,
-                                                                  cplat_tracer_hook_entry *hook_entry);
+    CPLAT_EXPORT void CPLAT_API cplat_tracer_remove_hook(cplat_tracer *handle, cplat_tracer_hook_entry *hook_entry);
 
     /**
      *  @brief          フック チェーンを継続します。
@@ -1087,11 +1077,9 @@ extern "C"
      *  同一 @p handle に対する操作は、CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED で生成したハンドルでは同時に実行できます。CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED では、呼び出し側で直列化してください。\n
      *  フック コールバック内から複数スレッドで同時に呼び出せます。
      */
-    CPLAT_EXPORT void CPLAT_API cplat_tracer_call_next_hook(cplat_tracer_hook_entry *prev,
-                                                                     cplat_tracer *handle,
-                                                                     cplat_trace_level level,
-                                                                     const cplat_timespec *timestamp,
-                                                                     const char *message);
+    CPLAT_EXPORT void CPLAT_API cplat_tracer_call_next_hook(cplat_tracer_hook_entry *prev, cplat_tracer *handle,
+                                                            cplat_trace_level level, const cplat_timespec *timestamp,
+                                                            const char *message);
 
     /**
      *  @brief  HEX 出力用ラベル セパレータを返すヘルパー関数です。
@@ -1121,11 +1109,9 @@ extern "C"
      *  異なる @p handle に対する操作は同時に実行できます。\n
      *  同一 @p handle に対する操作は、CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED で生成したハンドルでは同時に実行できます。CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED では、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_tracer_write_with_source(cplat_tracer *handle,
-                                                                       cplat_trace_level level,
-                                                                       const cplat_timespec *timestamp,
-                                                                       const char *file, int line,
-                                                                       const char *message);
+    CPLAT_EXPORT int CPLAT_API cplat_tracer_write_with_source(cplat_tracer *handle, cplat_trace_level level,
+                                                              const cplat_timespec *timestamp, const char *file,
+                                                              int line, const char *message);
 
 #ifdef __cplusplus
 }
@@ -1135,30 +1121,29 @@ extern "C"
  *  @brief          ソース ファイル名と行番号を自動付与する cplat_tracer_write マクロです。
  */
 #define cplat_tracer_write(handle, level, timestamp, message) \
-    cplat_tracer_write_with_source((handle), (level), (timestamp), cplat_path_basename(__FILE__), __LINE__, \
-                                       (message))
+    cplat_tracer_write_with_source((handle), (level), (timestamp), cplat_path_basename(__FILE__), __LINE__, (message))
 
 /**
  *  @brief          ソース ファイル名と行番号を自動付与する cplat_tracer_writef マクロです。
  */
 #define cplat_tracer_writef(handle, level, timestamp, fmt, ...) \
     cplat_tracer_writef_at((handle), (level), (timestamp), "[%s:%d] " fmt, cplat_path_basename(__FILE__), \
-                            __LINE__, ##__VA_ARGS__)
+                           __LINE__, ##__VA_ARGS__)
 
 /**
  *  @brief          ソース ファイル名と行番号を自動付与する cplat_tracer_write_hex マクロです。
  */
 #define cplat_tracer_write_hex(handle, level, timestamp, data, size, message) \
     cplat_tracer_write_hexf_at((handle), (level), (timestamp), (data), (size), "[%s:%d]%s%s", \
-                                cplat_path_basename(__FILE__), __LINE__, cplat_tracer_hex_sep(message), \
-                                cplat_tracer_hex_msg(message))
+                               cplat_path_basename(__FILE__), __LINE__, cplat_tracer_hex_sep(message), \
+                               cplat_tracer_hex_msg(message))
 
 /**
  *  @brief          ソース ファイル名と行番号を自動付与する cplat_tracer_write_hexf マクロです。
  */
 #define cplat_tracer_write_hexf(handle, level, timestamp, data, size, fmt, ...) \
     cplat_tracer_write_hexf_at((handle), (level), (timestamp), (data), (size), "[%s:%d] " fmt, \
-                                cplat_path_basename(__FILE__), __LINE__, ##__VA_ARGS__)
+                               cplat_path_basename(__FILE__), __LINE__, ##__VA_ARGS__)
 
 /** @} */
 

@@ -155,8 +155,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT cplat_argparser *CPLAT_API
-    cplat_argparser_handle_create(int argc, char *const *argv, const cplat_argparser_options *options);
+    CPLAT_EXPORT cplat_argparser *CPLAT_API cplat_argparser_handle_create(int argc, char *const *argv,
+                                                                          const cplat_argparser_options *options);
 
     /**
      *  @brief          プロセス共有のパーサーを初期化します。
@@ -193,8 +193,7 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  プロセス共有のパーサーに対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT void CPLAT_API cplat_argparser_init(int argc, char *const *argv,
-                                                              const char *description);
+    CPLAT_EXPORT void CPLAT_API cplat_argparser_init(int argc, char *const *argv, const char *description);
 
     /**
      *  @brief          引数パーサー ハンドルを解放します。
@@ -229,12 +228,12 @@ extern "C"
      *  異なる @p parser ハンドルに対する操作は同時に実行できます。\n
      *  同一 @p parser に対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_register_flag(cplat_argparser *parser,
-                                                                       const char *short_name, const char *long_name,
-                                                                       const char *description, int *storage);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_register_flag(cplat_argparser *parser, const char *short_name,
+                                                                    const char *long_name, const char *description,
+                                                                    int *storage);
 
     /**
-     *  @brief          フラグ (値なしオプション) を、プロセス共有のデフォルト パーサーへ登録します。
+     *  @brief          フラグ (値なしオプション) を、プロセス共有の既定パーサーへ登録します。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_DUPLICATE_DEFINITION 、
@@ -248,7 +247,7 @@ extern "C"
      *  プロセス共有のパーサーに対する操作は、呼び出し側で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_argparser_register_flag(const char *short_name, const char *long_name,
-                                                                      const char *description, int *storage);
+                                                             const char *description, int *storage);
 
     /**
      *  @brief          int 値を取るオプションを登録します。
@@ -273,12 +272,14 @@ extern "C"
      *  異なる @p parser ハンドルに対する操作は同時に実行できます。\n
      *  同一 @p parser に対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_register_option_int(
-        cplat_argparser *parser, const char *short_name, const char *long_name, const char *value_name,
-        const char *description, unsigned int flags, int *storage);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_register_option_int(cplat_argparser *parser,
+                                                                          const char *short_name, const char *long_name,
+                                                                          const char *value_name,
+                                                                          const char *description, unsigned int flags,
+                                                                          int *storage);
 
     /**
-     *  @brief          int 値を取るオプションを、プロセス共有のデフォルト パーサーへ登録します。
+     *  @brief          int 値を取るオプションを、プロセス共有の既定パーサーへ登録します。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_DUPLICATE_DEFINITION 、
@@ -291,11 +292,9 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  プロセス共有のパーサーに対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_argparser_register_option_int(const char *short_name,
-                                                                            const char *long_name,
-                                                                            const char *value_name,
-                                                                            const char *description, unsigned int flags,
-                                                                            int *storage);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_register_option_int(const char *short_name, const char *long_name,
+                                                                   const char *value_name, const char *description,
+                                                                   unsigned int flags, int *storage);
 
     /**
      *  @brief          文字列値を取るオプションを登録します。
@@ -327,7 +326,7 @@ extern "C"
         const char *description, unsigned int flags, const char **storage);
 
     /**
-     *  @brief          文字列値を取るオプションを、プロセス共有のデフォルト パーサーへ登録します。
+     *  @brief          文字列値を取るオプションを、プロセス共有の既定パーサーへ登録します。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_DUPLICATE_DEFINITION 、
@@ -340,9 +339,9 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  プロセス共有のパーサーに対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API
-    cplat_argparser_register_option_string(const char *short_name, const char *long_name, const char *value_name,
-                                              const char *description, unsigned int flags, const char **storage);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_register_option_string(const char *short_name, const char *long_name,
+                                                                      const char *value_name, const char *description,
+                                                                      unsigned int flags, const char **storage);
 
     /**
      *  @brief          複数回指定できる int 値オプションを登録します。
@@ -373,7 +372,7 @@ extern "C"
         const char *description, unsigned int flags, int *storage, size_t capacity, size_t *count);
 
     /**
-     *  @brief          複数回指定できる int 値オプションを、プロセス共有のデフォルト パーサーへ登録します。
+     *  @brief          複数回指定できる int 値オプションを、プロセス共有の既定パーサーへ登録します。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_DUPLICATE_DEFINITION 、
@@ -386,9 +385,10 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  プロセス共有のパーサーに対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_argparser_register_option_int_array(
-        const char *short_name, const char *long_name, const char *value_name, const char *description,
-        unsigned int flags, int *storage, size_t capacity, size_t *count);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_register_option_int_array(const char *short_name, const char *long_name,
+                                                                         const char *value_name,
+                                                                         const char *description, unsigned int flags,
+                                                                         int *storage, size_t capacity, size_t *count);
 
     /**
      *  @brief          複数回指定できる文字列値オプションを登録します。
@@ -421,7 +421,7 @@ extern "C"
         const char *description, unsigned int flags, const char **storage, size_t capacity, size_t *count);
 
     /**
-     *  @brief          複数回指定できる文字列値オプションを、プロセス共有のデフォルト パーサーへ登録します。
+     *  @brief          複数回指定できる文字列値オプションを、プロセス共有の既定パーサーへ登録します。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_DUPLICATE_DEFINITION 、
@@ -459,13 +459,12 @@ extern "C"
      *  異なる @p parser ハンドルに対する操作は同時に実行できます。\n
      *  同一 @p parser に対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_register_positional_int(cplat_argparser *parser,
-                                                                                 const char *name,
-                                                                                 const char *description,
-                                                                                 unsigned int flags, int *storage);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_register_positional_int(cplat_argparser *parser, const char *name,
+                                                                              const char *description,
+                                                                              unsigned int flags, int *storage);
 
     /**
-     *  @brief          int 値の位置引数を、プロセス共有のデフォルト パーサーへ登録します。
+     *  @brief          int 値の位置引数を、プロセス共有の既定パーサーへ登録します。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_DUPLICATE_DEFINITION 、
@@ -478,9 +477,8 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  プロセス共有のパーサーに対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_argparser_register_positional_int(const char *name,
-                                                                                const char *description,
-                                                                                unsigned int flags, int *storage);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_register_positional_int(const char *name, const char *description,
+                                                                       unsigned int flags, int *storage);
 
     /**
      *  @brief          文字列値の位置引数を登録します。
@@ -505,14 +503,11 @@ extern "C"
      *  異なる @p parser ハンドルに対する操作は同時に実行できます。\n
      *  同一 @p parser に対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_register_positional_string(cplat_argparser *parser,
-                                                                                    const char *name,
-                                                                                    const char *description,
-                                                                                    unsigned int flags,
-                                                                                    const char **storage);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_register_positional_string(
+        cplat_argparser *parser, const char *name, const char *description, unsigned int flags, const char **storage);
 
     /**
-     *  @brief          文字列値の位置引数を、プロセス共有のデフォルト パーサーへ登録します。
+     *  @brief          文字列値の位置引数を、プロセス共有の既定パーサーへ登録します。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_DUPLICATE_DEFINITION 、
@@ -525,10 +520,8 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  プロセス共有のパーサーに対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_argparser_register_positional_string(const char *name,
-                                                                                   const char *description,
-                                                                                   unsigned int flags,
-                                                                                   const char **storage);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_register_positional_string(const char *name, const char *description,
+                                                                          unsigned int flags, const char **storage);
 
     /**
      *  @brief          可変長の int 値位置引数を登録します。
@@ -555,13 +548,13 @@ extern "C"
      *  同一 @p parser に対する操作は、呼び出し側で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_register_positional_int_array(cplat_argparser *parser,
-                                                                                       const char *name,
-                                                                                       const char *description,
-                                                                                       unsigned int flags, int *storage,
-                                                                                       size_t capacity, size_t *count);
+                                                                                    const char *name,
+                                                                                    const char *description,
+                                                                                    unsigned int flags, int *storage,
+                                                                                    size_t capacity, size_t *count);
 
     /**
-     *  @brief          可変長の int 値位置引数を、プロセス共有のデフォルト パーサーへ登録します。
+     *  @brief          可変長の int 値位置引数を、プロセス共有の既定パーサーへ登録します。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_DUPLICATE_DEFINITION 、
@@ -574,10 +567,9 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  プロセス共有のパーサーに対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_argparser_register_positional_int_array(const char *name,
-                                                                                      const char *description,
-                                                                                      unsigned int flags, int *storage,
-                                                                                      size_t capacity, size_t *count);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_register_positional_int_array(const char *name, const char *description,
+                                                                             unsigned int flags, int *storage,
+                                                                             size_t capacity, size_t *count);
 
     /**
      *  @brief          可変長の文字列値位置引数を登録します。
@@ -610,7 +602,7 @@ extern "C"
         size_t capacity, size_t *count);
 
     /**
-     *  @brief          可変長の文字列値位置引数を、プロセス共有のデフォルト パーサーへ登録します。
+     *  @brief          可変長の文字列値位置引数を、プロセス共有の既定パーサーへ登録します。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_DUPLICATE_DEFINITION 、
@@ -623,9 +615,11 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  プロセス共有のパーサーに対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API
-    cplat_argparser_register_positional_string_array(const char *name, const char *description, unsigned int flags,
-                                                        const char **storage, size_t capacity, size_t *count);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_register_positional_string_array(const char *name,
+                                                                                const char *description,
+                                                                                unsigned int flags,
+                                                                                const char **storage, size_t capacity,
+                                                                                size_t *count);
 
     /**
      *  @brief          コマンド ラインを解析し、登録済みの格納先に結果を書き込みます。
@@ -670,7 +664,7 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_parse(cplat_argparser *parser);
 
     /**
-     *  @brief          プロセス共有のデフォルト パーサーでコマンド ラインを解析します。
+     *  @brief          プロセス共有の既定パーサーでコマンド ラインを解析します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_UNKNOWN_OPTION 、
      *                  @ref CPLAT_ERR_MISSING_VALUE 、
@@ -709,7 +703,7 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_get_error(const cplat_argparser *parser);
 
     /**
-     *  @brief          プロセス共有のデフォルト パーサーの、直前の解析エラー種別を取得します。
+     *  @brief          プロセス共有の既定パーサーの、直前の解析エラー種別を取得します。
      *  @see            cplat_argparser_handle_get_error
      *
      *  @par            スレッド セーフ
@@ -734,7 +728,7 @@ extern "C"
     CPLAT_EXPORT const char *CPLAT_API cplat_argparser_handle_get_error_target(const cplat_argparser *parser);
 
     /**
-     *  @brief          プロセス共有のデフォルト パーサーの、直前の解析エラーの対象名を取得します。
+     *  @brief          プロセス共有の既定パーサーの、直前の解析エラーの対象名を取得します。
      *  @see            cplat_argparser_handle_get_error_target
      *
      *  @par            スレッド セーフ
@@ -758,7 +752,7 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_get_error_index(const cplat_argparser *parser);
 
     /**
-     *  @brief          プロセス共有のデフォルト パーサーの、直前の解析エラーが発生した argv のインデックスを取得します。
+     *  @brief          プロセス共有の既定パーサーの、直前の解析エラーが発生した argv のインデックスを取得します。
      *  @see            cplat_argparser_handle_get_error_index
      *
      *  @par            スレッド セーフ
@@ -785,11 +779,11 @@ extern "C"
      *  異なる @p parser ハンドルに対する操作は同時に実行できます。\n
      *  同一 @p parser に対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_get_error_message(const cplat_argparser *parser,
-                                                                           char *buffer, size_t buffer_size);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_get_error_message(const cplat_argparser *parser, char *buffer,
+                                                                        size_t buffer_size);
 
     /**
-     *  @brief          プロセス共有のデフォルト パーサーの、直前の解析エラーのメッセージを組み立てます。
+     *  @brief          プロセス共有の既定パーサーの、直前の解析エラーのメッセージを組み立てます。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL のいずれかを返します。
@@ -828,10 +822,10 @@ extern "C"
      *  同一 @p parser に対する操作は、呼び出し側で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_get_usage(const cplat_argparser *parser, char *buffer,
-                                                                   size_t buffer_size, size_t *required_size);
+                                                                size_t buffer_size, size_t *required_size);
 
     /**
-     *  @brief          プロセス共有のデフォルト パーサーの登録内容から usage 文字列を組み立てます。
+     *  @brief          プロセス共有の既定パーサーの登録内容から usage 文字列を組み立てます。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL のいずれかを返します。
@@ -841,8 +835,7 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  プロセス共有のパーサーに対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_argparser_get_usage(char *buffer, size_t buffer_size,
-                                                                  size_t *required_size);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_get_usage(char *buffer, size_t buffer_size, size_t *required_size);
 
     /**
      *  @brief          登録内容から組み立てた usage を指定ストリームへ出力します。
@@ -863,7 +856,7 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_print_usage(const cplat_argparser *parser, FILE *stream);
 
     /**
-     *  @brief          プロセス共有のデフォルト パーサーの usage を指定ストリームへ出力します。
+     *  @brief          プロセス共有の既定パーサーの usage を指定ストリームへ出力します。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_OUT_OF_MEMORY のいずれかを返します。
@@ -892,11 +885,10 @@ extern "C"
      *  異なる @p parser ハンドルに対する操作は同時に実行できます。\n
      *  同一 @p parser に対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_print_error_messages(const cplat_argparser *parser,
-                                                                              FILE *stream);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_print_error_messages(const cplat_argparser *parser, FILE *stream);
 
     /**
-     *  @brief          プロセス共有のデフォルト パーサーの、直前の解析エラーのメッセージを出力します。
+     *  @brief          プロセス共有の既定パーサーの、直前の解析エラーのメッセージを出力します。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL のいずれかを返します。
@@ -927,7 +919,7 @@ extern "C"
     CPLAT_EXPORT size_t CPLAT_API cplat_argparser_handle_get_register_error_count(const cplat_argparser *parser);
 
     /**
-     *  @brief          プロセス共有のデフォルト パーサーの、register 系呼び出しで発生したエラーの件数を取得します。
+     *  @brief          プロセス共有の既定パーサーの、register 系呼び出しで発生したエラーの件数を取得します。
      *  @see            cplat_argparser_handle_get_register_error_count
      *
      *  @par            スレッド セーフ
@@ -949,11 +941,10 @@ extern "C"
      *  異なる @p parser ハンドルに対する操作は同時に実行できます。\n
      *  同一 @p parser に対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_get_register_error(const cplat_argparser *parser,
-                                                                            size_t index);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_get_register_error(const cplat_argparser *parser, size_t index);
 
     /**
-     *  @brief          プロセス共有のデフォルト パーサーの、register 系エラーの結果コードを取得します。
+     *  @brief          プロセス共有の既定パーサーの、register 系エラーの結果コードを取得します。
      *  @see            cplat_argparser_handle_get_register_error
      *
      *  @par            スレッド セーフ
@@ -975,11 +966,11 @@ extern "C"
      *  異なる @p parser ハンドルに対する操作は同時に実行できます。\n
      *  同一 @p parser に対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT const char *CPLAT_API
-    cplat_argparser_handle_get_register_error_target(const cplat_argparser *parser, size_t index);
+    CPLAT_EXPORT const char *CPLAT_API cplat_argparser_handle_get_register_error_target(const cplat_argparser *parser,
+                                                                                        size_t index);
 
     /**
-     *  @brief          プロセス共有のデフォルト パーサーの、register 系エラーの対象名を取得します。
+     *  @brief          プロセス共有の既定パーサーの、register 系エラーの対象名を取得します。
      *  @see            cplat_argparser_handle_get_register_error_target
      *
      *  @par            スレッド セーフ
@@ -1009,11 +1000,11 @@ extern "C"
      *  同一 @p parser に対する操作は、呼び出し側で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_get_register_error_message(const cplat_argparser *parser,
-                                                                                    size_t index, char *buffer,
-                                                                                    size_t buffer_size);
+                                                                                 size_t index, char *buffer,
+                                                                                 size_t buffer_size);
 
     /**
-     *  @brief          プロセス共有のデフォルト パーサーの、register 系エラーのメッセージを組み立てます。
+     *  @brief          プロセス共有の既定パーサーの、register 系エラーのメッセージを組み立てます。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL のいずれかを返します。
@@ -1024,7 +1015,7 @@ extern "C"
      *  プロセス共有のパーサーに対する操作は、呼び出し側で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_argparser_get_register_error_message(size_t index, char *buffer,
-                                                                                   size_t buffer_size);
+                                                                          size_t buffer_size);
 
     /**
      *  @brief          register 系呼び出しで発生したエラーのメッセージを指定ストリームへ全件出力します。
@@ -1044,10 +1035,10 @@ extern "C"
      *  同一 @p parser に対する操作は、呼び出し側で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_print_register_error_messages(const cplat_argparser *parser,
-                                                                                       FILE *stream);
+                                                                                    FILE *stream);
 
     /**
-     *  @brief          プロセス共有のデフォルト パーサーの、register 系エラーのメッセージを全件出力します。
+     *  @brief          プロセス共有の既定パーサーの、register 系エラーのメッセージを全件出力します。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL のいずれかを返します。

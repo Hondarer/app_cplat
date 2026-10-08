@@ -105,7 +105,7 @@ TEST_F(errorMessageTest, errno_is_converted_to_message)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_internal_errno_message の戻り値が CPLAT_OK であること。
-    EXPECT_LT(0U, strlen(buf));         // [確認_正常系] - 空でないメッセージが格納されること。
+    EXPECT_LT(0U, strlen(buf));      // [確認_正常系] - 空でないメッセージが格納されること。
 }
 
 // 引数不正の場合に CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
@@ -118,8 +118,9 @@ TEST_F(errorMessageTest, invalid_arguments_are_rejected)
 
     // Act
     int actual_ret_null_buf =
-        cplat_internal_errno_message(NULL, sizeof(buf), ENOENT);              // [手順] - 格納先に NULL を指定して呼び出す。
-    int actual_ret_zero_size = cplat_internal_errno_message(buf, 0U, ENOENT); // [手順] - サイズに 0 を指定して呼び出す。
+        cplat_internal_errno_message(NULL, sizeof(buf), ENOENT); // [手順] - 格納先に NULL を指定して呼び出す。
+    int actual_ret_zero_size =
+        cplat_internal_errno_message(buf, 0U, ENOENT); // [手順] - サイズに 0 を指定して呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -161,19 +162,17 @@ TEST_F(errorMessageTest, error_message_dispatches_by_domain)
         errno_result); // [確認_正常系] - errno ドメインに対する cplat_error_message の戻り値が CPLAT_OK であること。
     EXPECT_FALSE(errno_message.empty()); // [確認_正常系] - errno ドメインのメッセージが空でないこと。
     EXPECT_EQ(CPLAT_OK,
-              socket_errno_result); // [確認_正常系] - socket errno ドメインの戻り値が CPLAT_OK であること。
+              socket_errno_result);             // [確認_正常系] - socket errno ドメインの戻り値が CPLAT_OK であること。
     EXPECT_FALSE(socket_errno_message.empty()); // [確認_正常系] - socket errno ドメインのメッセージが空でないこと。
-    EXPECT_EQ(
-        CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_error_message(NULL, sizeof(buf),
-                               &error)); // [確認_異常系] - NULL の格納先が CPLAT_ERR_INVALID_ARGUMENT になること。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
+              cplat_error_message(NULL, sizeof(buf),
+                                  &error)); // [確認_異常系] - NULL の格納先が CPLAT_ERR_INVALID_ARGUMENT になること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
               cplat_error_message(buf, 0U,
-                                     &error)); // [確認_異常系] - サイズ 0 が CPLAT_ERR_INVALID_ARGUMENT になること。
-    EXPECT_EQ(
-        CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_error_message(buf, sizeof(buf),
-                               NULL)); // [確認_異常系] - NULL の詳細エラーが CPLAT_ERR_INVALID_ARGUMENT になること。
+                                  &error)); // [確認_異常系] - サイズ 0 が CPLAT_ERR_INVALID_ARGUMENT になること。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
+              cplat_error_message(buf, sizeof(buf),
+                                  NULL)); // [確認_異常系] - NULL の詳細エラーが CPLAT_ERR_INVALID_ARGUMENT になること。
 }
 
 // 空の詳細エラーが小さいバッファーへ切り詰めて格納されることの確認
@@ -189,12 +188,11 @@ TEST_F(errorMessageTest, empty_error_message_is_truncated_to_buffer)
 
     // Act
     int result = cplat_error_message(buf, sizeof(buf),
-                                        &error); // [手順] - 4 バイトのバッファーへ空の詳細エラーを文字列化する。
+                                     &error); // [手順] - 4 バイトのバッファーへ空の詳細エラーを文字列化する。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_OK,
-        result); // [確認_正常系] - 小さいバッファーでも cplat_error_message の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              result); // [確認_正常系] - 小さいバッファーでも cplat_error_message の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("no ", buf); // [確認_正常系] - バッファーへ終端付きで "no " が格納されること。
 }
 
@@ -233,8 +231,7 @@ TEST_F(errorMessageTest, gai_domain_is_converted_to_message_on_linux)
 {
     // Arrange
     char buf[128] = {};
-    const cplat_error error = {CPLAT_ERROR_DOMAIN_GAI, CPLAT_ERR_UNKNOWN,
-                                  static_cast<unsigned long>(EAI_NONAME)};
+    const cplat_error error = {CPLAT_ERROR_DOMAIN_GAI, CPLAT_ERR_UNKNOWN, static_cast<unsigned long>(EAI_NONAME)};
 
     // Pre-Assert
 
@@ -291,7 +288,8 @@ TEST_F(errorMessageTest, errno_message_returns_unknown_when_strerror_r_fails)
                       // [Pre-Assert手順] - strerror_r から EINVAL を返却する。
 
     // Act
-    int actual_ret = cplat_internal_errno_message(buf, sizeof(buf), EACCES); // [手順] - cplat_internal_errno_message を呼び出す。
+    int actual_ret =
+        cplat_internal_errno_message(buf, sizeof(buf), EACCES); // [手順] - cplat_internal_errno_message を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -316,11 +314,12 @@ TEST_F(errorMessageTest, errno_message_treats_erange_as_success)
     // [Pre-Assert手順] - バッファーへ切り詰め済みの文字列を書き込み、strerror_r から ERANGE を返却する。
 
     // Act
-    int actual_ret = cplat_internal_errno_message(buf, sizeof(buf), EACCES); // [手順] - cplat_internal_errno_message を呼び出す。
+    int actual_ret =
+        cplat_internal_errno_message(buf, sizeof(buf), EACCES); // [手順] - cplat_internal_errno_message を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 切り詰めは成功として扱われ CPLAT_OK が返ること。
-    EXPECT_STREQ("trunc", buf);         // [確認_正常系] - 書き込まれた文字列が保持されること。
+    EXPECT_STREQ("trunc", buf);      // [確認_正常系] - 書き込まれた文字列が保持されること。
 }
 
 #endif /* PLATFORM_LINUX */

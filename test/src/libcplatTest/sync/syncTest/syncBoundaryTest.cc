@@ -38,7 +38,7 @@ TEST(syncBoundaryTest, map_wait_rc_translates_supported_results)
     // Assert
     EXPECT_EQ(CPLAT_OK, ok_result); // [確認_正常系] - 成功コードが CPLAT_OK に変換されること。
     EXPECT_EQ(CPLAT_ERR_TIMEOUT,
-              timeout_result);                   // [確認_正常系] - ETIMEDOUT が CPLAT_ERR_TIMEOUT に変換されること。
+              timeout_result);                // [確認_正常系] - ETIMEDOUT が CPLAT_ERR_TIMEOUT に変換されること。
     EXPECT_EQ(CPLAT_ERR_BUSY, busy_result);   // [確認_正常系] - EBUSY が CPLAT_ERR_BUSY に変換されること。
     EXPECT_EQ(CPLAT_ERR_BUSY, again_result);  // [確認_正常系] - EAGAIN が CPLAT_ERR_BUSY に変換されること。
     EXPECT_EQ(CPLAT_ERR_BUSY, access_result); // [確認_正常系] - EACCES が CPLAT_ERR_BUSY に変換されること。
@@ -85,10 +85,10 @@ TEST(syncBoundaryTest, condvar_rejects_invalid_arguments)
     // Act
     int create_result = cplat_condvar_create(NULL); // [手順] - NULL の格納先で condvar を生成する。
     int wait_result = cplat_condvar_wait(NULL, NULL, CPLAT_SYNC_NO_WAIT); // [手順] - NULL 引数で待機する。
-    int signal_result = cplat_condvar_signal(NULL);                          // [手順] - NULL の condvar を通知する。
-    int broadcast_result = cplat_condvar_broadcast(NULL); // [手順] - NULL の condvar を一斉通知する。
-    cplat_condvar_dispose(NULL);                          // [手順] - NULL の condvar を破棄する。
-    cplat_local_lock_dispose(NULL);                       // [手順] - NULL の local lock を破棄する。
+    int signal_result = cplat_condvar_signal(NULL);                       // [手順] - NULL の condvar を通知する。
+    int broadcast_result = cplat_condvar_broadcast(NULL);                 // [手順] - NULL の condvar を一斉通知する。
+    cplat_condvar_dispose(NULL);                                          // [手順] - NULL の condvar を破棄する。
+    cplat_local_lock_dispose(NULL);                                       // [手順] - NULL の local lock を破棄する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -113,13 +113,13 @@ TEST(syncBoundaryTest, condvar_timeout_signal_and_broadcast_are_supported)
     // Pre-Assert
 
     // Act
-    int create_cv_result = cplat_condvar_create(&cv);                          // [手順] - condvar を生成する。
-    int create_lock_result = cplat_local_lock_create(&lock);                   // [手順] - 待機用 lock を生成する。
+    int create_cv_result = cplat_condvar_create(&cv);                       // [手順] - condvar を生成する。
+    int create_lock_result = cplat_local_lock_create(&lock);                // [手順] - 待機用 lock を生成する。
     int lock_result = cplat_local_lock_lock(lock, CPLAT_SYNC_WAIT_FOREVER); // [手順] - lock を取得する。
-    int wait_result = cplat_condvar_wait(cv, lock, CPLAT_SYNC_NO_WAIT); // [手順] - 即時タイムアウトで待機する。
-    int unlock_result = cplat_local_lock_unlock(lock);                     // [手順] - lock を解放する。
-    int signal_result = cplat_condvar_signal(cv);                          // [手順] - condvar を通知する。
-    int broadcast_result = cplat_condvar_broadcast(cv);                    // [手順] - condvar を一斉通知する。
+    int wait_result = cplat_condvar_wait(cv, lock, CPLAT_SYNC_NO_WAIT);     // [手順] - 即時タイムアウトで待機する。
+    int unlock_result = cplat_local_lock_unlock(lock);                      // [手順] - lock を解放する。
+    int signal_result = cplat_condvar_signal(cv);                           // [手順] - condvar を通知する。
+    int broadcast_result = cplat_condvar_broadcast(cv);                     // [手順] - condvar を一斉通知する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, create_cv_result);     // [確認_正常系] - condvar 生成が成功すること。
@@ -144,18 +144,19 @@ TEST(syncBoundaryTest, condvar_wait_forever_returns_after_signal)
     std::atomic<bool> waiter_ready(false);
     int wait_result = CPLAT_ERR_UNKNOWN;
     ASSERT_EQ(CPLAT_OK, cplat_condvar_create(&cv)); // [状態] - condvar を生成する。
-                                                          // [状態確認] - cplat_condvar_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_condvar_create の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_local_lock_create(&lock)); // [状態] - local lock を生成する。
-                                                               // [状態確認] - cplat_local_lock_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_local_lock_create の戻り値が CPLAT_OK であること。
     std::thread waiter(
         [&]()
         {
-            ASSERT_EQ(CPLAT_OK, cplat_local_lock_lock(lock, CPLAT_SYNC_WAIT_FOREVER)); // [状態] - 待機側の lock を取得する。
-                                                                                                // [状態確認] - cplat_local_lock_lock の戻り値が CPLAT_OK であること。
+            ASSERT_EQ(CPLAT_OK,
+                      cplat_local_lock_lock(lock, CPLAT_SYNC_WAIT_FOREVER)); // [状態] - 待機側の lock を取得する。
+            // [状態確認] - cplat_local_lock_lock の戻り値が CPLAT_OK であること。
             waiter_ready.store(true);
             wait_result = cplat_condvar_wait(cv, lock, CPLAT_SYNC_WAIT_FOREVER);
             EXPECT_EQ(CPLAT_OK, cplat_local_lock_unlock(lock)); // [状態] - 待機側の lock を解放する。
-                                                                      // [状態確認] - cplat_local_lock_unlock の戻り値が CPLAT_OK であること。
+            // [状態確認] - cplat_local_lock_unlock の戻り値が CPLAT_OK であること。
         });
 
     // Pre-Assert
@@ -167,8 +168,8 @@ TEST(syncBoundaryTest, condvar_wait_forever_returns_after_signal)
     // Act
     int lock_result =
         cplat_local_lock_lock(lock, CPLAT_SYNC_WAIT_FOREVER); // [手順] - 待機側が解放した lock を取得する。
-    int signal_result = cplat_condvar_signal(cv);                // [手順] - 待機側を通知する。
-    int unlock_result = cplat_local_lock_unlock(lock);           // [手順] - 通知側の lock を解放する。
+    int signal_result = cplat_condvar_signal(cv);             // [手順] - 待機側を通知する。
+    int unlock_result = cplat_local_lock_unlock(lock);        // [手順] - 通知側の lock を解放する。
     waiter.join();
 
     // Assert
@@ -199,12 +200,12 @@ TEST(syncBoundaryTest, thread_create_and_join_runs_start_function)
 
     // Act
     int create_result = cplat_thread_create(&thread, set_thread_flag, &flag); // [手順] - スレッドを生成する。
-    int join_result = cplat_thread_join(thread, CPLAT_SYNC_WAIT_FOREVER);  // [手順] - スレッド終了を待機する。
+    int join_result = cplat_thread_join(thread, CPLAT_SYNC_WAIT_FOREVER);     // [手順] - スレッド終了を待機する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, create_result); // [確認_正常系] - スレッド生成が成功すること。
     EXPECT_EQ(CPLAT_OK, join_result);   // [確認_正常系] - スレッド join が成功すること。
-    EXPECT_EQ(1, flag);                    // [確認_正常系] - 開始関数が実行されること。
+    EXPECT_EQ(1, flag);                 // [確認_正常系] - 開始関数が実行されること。
 }
 
 static int s_once_call_count;
@@ -232,5 +233,5 @@ TEST(syncBoundaryTest, call_once_runs_function_only_once)
     // Assert
     EXPECT_EQ(1, s_once_call_count); // [確認_正常系] - 関数が 1 回だけ呼び出されること。
     EXPECT_EQ(2, cplat_atomic_load_i32(&flag.state,
-                                        CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - 初期化済み状態になること。
+                                       CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - 初期化済み状態になること。
 }

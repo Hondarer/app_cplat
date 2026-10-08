@@ -672,21 +672,21 @@ int cplat_interprocess_lock_open(const char *identity, cplat_interprocess_lock *
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_interprocess_lock_export_descriptor(const cplat_interprocess_lock *lock, void *descriptor,
-                                                 size_t *descriptor_size)
+                                              size_t *descriptor_size)
 {
     if (lock == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
     return cplat_internal_interprocess_sync_descriptor_export(lock->identity, CPLAT_INTERPROCESS_SYNC_KIND_LOCK,
-                                               (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE, descriptor,
-                                               descriptor_size);
+                                                              (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE,
+                                                              descriptor, descriptor_size);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_interprocess_lock_import_descriptor(const void *descriptor, size_t descriptor_size,
-                                                 cplat_interprocess_lock **lock)
+                                              cplat_interprocess_lock **lock)
 {
     char *identity;
     int result;
@@ -695,8 +695,9 @@ int cplat_interprocess_lock_import_descriptor(const void *descriptor, size_t des
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
-    result = cplat_internal_interprocess_sync_descriptor_import(descriptor, descriptor_size, CPLAT_INTERPROCESS_SYNC_KIND_LOCK,
-                                                 (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE, &identity);
+    result = cplat_internal_interprocess_sync_descriptor_import(
+        descriptor, descriptor_size, CPLAT_INTERPROCESS_SYNC_KIND_LOCK,
+        (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE, &identity);
     if (result != CPLAT_OK)
     {
         return result;
@@ -768,21 +769,21 @@ int cplat_interprocess_rwlock_open(const char *identity, cplat_interprocess_rwlo
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_interprocess_rwlock_export_descriptor(const cplat_interprocess_rwlock *lock, void *descriptor,
-                                                   size_t *descriptor_size)
+                                                size_t *descriptor_size)
 {
     if (lock == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
     return cplat_internal_interprocess_sync_descriptor_export(lock->identity, CPLAT_INTERPROCESS_SYNC_KIND_RWLOCK,
-                                               (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE, descriptor,
-                                               descriptor_size);
+                                                              (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE,
+                                                              descriptor, descriptor_size);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_interprocess_rwlock_import_descriptor(const void *descriptor, size_t descriptor_size,
-                                                   cplat_interprocess_rwlock **lock)
+                                                cplat_interprocess_rwlock **lock)
 {
     char *identity;
     int result;
@@ -791,8 +792,9 @@ int cplat_interprocess_rwlock_import_descriptor(const void *descriptor, size_t d
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
-    result = cplat_internal_interprocess_sync_descriptor_import(descriptor, descriptor_size, CPLAT_INTERPROCESS_SYNC_KIND_RWLOCK,
-                                                 (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE, &identity);
+    result = cplat_internal_interprocess_sync_descriptor_import(
+        descriptor, descriptor_size, CPLAT_INTERPROCESS_SYNC_KIND_RWLOCK,
+        (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE, &identity);
     if (result != CPLAT_OK)
     {
         return result;

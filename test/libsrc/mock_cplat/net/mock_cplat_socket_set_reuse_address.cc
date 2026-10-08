@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_socket_set_reuse_address(cplat_socket sock, int enable, cplat_error *detail_out)
 {
-    static auto real_fn =
-        reinterpret_cast<decltype(&cplat_socket_set_reuse_address)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_set_reuse_address"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_socket_set_reuse_address)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_set_reuse_address"));
 
     return real_fn(sock, enable, detail_out);
 }

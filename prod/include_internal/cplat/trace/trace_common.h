@@ -32,7 +32,8 @@ extern "C"
      *  resolved へ格納します。不正な値からの代替時のみ fallback_used に 1 を
      *  設定します (NULL は代替と見なさない)。
      */
-    int cplat_internal_trace_resolve_timestamp(const cplat_timespec *timestamp, cplat_timespec *resolved, int *fallback_used);
+    int cplat_internal_trace_resolve_timestamp(const cplat_timespec *timestamp, cplat_timespec *resolved,
+                                               int *fallback_used);
 
     /**
      *  @brief          実時刻を ISO 8601 ローカル時刻文字列としてバッファーへ書き込みます。

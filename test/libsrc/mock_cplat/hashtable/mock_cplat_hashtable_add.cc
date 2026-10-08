@@ -2,7 +2,7 @@
 #include <mock_cplat.h>
 
 int delegate_real_cplat_hashtable_add(cplat_hashtable *ht, const void *key, const void *value,
-                                         cplat_hashtable_add_deleted_policy deleted_policy)
+                                      cplat_hashtable_add_deleted_policy deleted_policy)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_hashtable_add)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_hashtable_add"));
@@ -11,7 +11,7 @@ int delegate_real_cplat_hashtable_add(cplat_hashtable *ht, const void *key, cons
 }
 
 MOCK_WEAK_IMPL(int, cplat_hashtable_add, cplat_hashtable *ht, const void *key, const void *value,
-              cplat_hashtable_add_deleted_policy deleted_policy)
+               cplat_hashtable_add_deleted_policy deleted_policy)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

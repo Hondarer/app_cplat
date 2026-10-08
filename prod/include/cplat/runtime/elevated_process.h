@@ -28,7 +28,8 @@
  *  @{
  */
 
-#define CPLAT_ELEVATED_PROCESS_RESULT_MESSAGE_SIZE 4096 /**< 昇格プロセスの結果メッセージを受け渡すバッファのバイト数 (終端 NUL を含む)。 */
+#define CPLAT_ELEVATED_PROCESS_RESULT_MESSAGE_SIZE \
+    4096 /**< 昇格プロセスの結果メッセージを受け渡すバッファのバイト数 (終端 NUL を含む)。 */
 
 #ifdef __cplusplus
 extern "C"
@@ -101,7 +102,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code,
-                                                                             int *handled);
+                                                                    int *handled);
 
     /**
      *  @brief          管理者/root 権限が必要な処理のため、必要に応じて昇格実行し、
@@ -133,8 +134,8 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_elevated_process_run_with_result(const char *arguments, int *exit_code,
-                                                                               int *handled, char *result_message,
-                                                                               size_t result_message_size);
+                                                                      int *handled, char *result_message,
+                                                                      size_t result_message_size);
 
     /**
      *  @brief          argv から結果報告先フラグを取り出します。
@@ -154,8 +155,7 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  プロセス起動直後のシングル スレッド フェーズで呼び出してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_elevated_process_extract_result_target(int *argc, char **argv,
-                                                                                     int *detected_out);
+    CPLAT_EXPORT int CPLAT_API cplat_elevated_process_extract_result_target(int *argc, char **argv, int *detected_out);
 
     /**
      *  @brief          昇格プロセスから、呼び出し元プロセスへ結果メッセージを報告します。

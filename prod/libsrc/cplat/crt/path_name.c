@@ -21,8 +21,7 @@ static int path_is_sep(const char c)
     return c == '/' || c == '\\';
 }
 
-static int copy_path_name_text(char *path_out, const size_t path_size, cplat_error *detail_out,
-                                        const char *text)
+static int copy_path_name_text(char *path_out, const size_t path_size, cplat_error *detail_out, const char *text)
 {
     size_t len;
 
@@ -195,7 +194,7 @@ int cplat_path_strip_extension(char *path_out, const size_t path_size, cplat_err
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_vpath_join_n(char *path_out, const size_t path_size, cplat_error *detail_out, const size_t part_count,
-                          va_list args)
+                       va_list args)
 {
     size_t required_size = 1u;
     size_t offset = 0u;
@@ -316,8 +315,7 @@ int cplat_vpath_join_n(char *path_out, const size_t path_size, cplat_error *deta
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_path_join_n(char *path_out, const size_t path_size, cplat_error *detail_out, const size_t part_count,
-                         ...)
+int cplat_path_join_n(char *path_out, const size_t path_size, cplat_error *detail_out, const size_t part_count, ...)
 {
     int result;
     va_list args;

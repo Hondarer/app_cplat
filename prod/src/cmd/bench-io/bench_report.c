@@ -133,8 +133,7 @@ static void collect_cpu_model(bench_environment *env)
 #elif defined(PLATFORM_WINDOWS)
     int exists = 0;
 
-    if (cplat_getenv("PROCESSOR_IDENTIFIER", env->cpu_model, sizeof(env->cpu_model), &exists, NULL) != 0 ||
-        exists == 0)
+    if (cplat_getenv("PROCESSOR_IDENTIFIER", env->cpu_model, sizeof(env->cpu_model), &exists, NULL) != 0 || exists == 0)
     {
         copy_text(env->cpu_model, sizeof(env->cpu_model), NULL);
     }
@@ -225,8 +224,8 @@ void bench_report_begin_csv(FILE *csv, const bench_environment *env)
     (void)cplat_fprintf(csv, "# fs_type=%s\n", env->fs_type);
     (void)cplat_fprintf(csv, "# record_bytes=%d\n", BENCH_RECORD_SIZE);
     (void)cplat_fprintf(csv, "os,cpu_model,fs_type,cache_state,api,pattern,file_size_bytes,record_bytes,"
-                                "records_touched,iterations,trial_median_ns,trial_min_ns,trial_max_ns,"
-                                "ns_per_record,mib_per_sec\n");
+                             "records_touched,iterations,trial_median_ns,trial_min_ns,trial_max_ns,"
+                             "ns_per_record,mib_per_sec\n");
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -280,9 +279,9 @@ void bench_report_row(FILE *csv, const bench_environment *env, const bench_case 
         return;
     }
     (void)cplat_fprintf(csv, "%s,\"%s\",%s,%s,%s,%s,%llu,%d,%llu,%llu,%llu,%llu,%llu,%.3f,%.3f\n", env->os_name,
-                           env->cpu_model, env->fs_type, env->cache_state, api_name, pattern_name,
-                           (unsigned long long)ctx->file_size, BENCH_RECORD_SIZE, (unsigned long long)ctx->touch_count,
-                           (unsigned long long)timing->iterations, (unsigned long long)timing->median_ns,
-                           (unsigned long long)timing->min_ns, (unsigned long long)timing->max_ns, ns_per_record,
-                           mib_per_sec);
+                        env->cpu_model, env->fs_type, env->cache_state, api_name, pattern_name,
+                        (unsigned long long)ctx->file_size, BENCH_RECORD_SIZE, (unsigned long long)ctx->touch_count,
+                        (unsigned long long)timing->iterations, (unsigned long long)timing->median_ns,
+                        (unsigned long long)timing->min_ns, (unsigned long long)timing->max_ns, ns_per_record,
+                        mib_per_sec);
 }

@@ -116,8 +116,8 @@ extern "C"
      *  - 解放には利用者ごとに cplat_trace_file_sink_dispose の呼び出しが必要です。
      *
      *  @param[in]      path         出力ファイル パス。NULL の場合は NULL を返します。
-     *  @param[in]      max_bytes    1 ファイルあたりの最大バイト数。0 でデフォルト値を使用。
-     *  @param[in]      generations  保持する旧世代数。0 以下でデフォルト値を使用。
+     *  @param[in]      max_bytes    1 ファイルあたりの最大バイト数。0 で既定値を使用。
+     *  @param[in]      generations  保持する旧世代数。0 以下で既定値を使用。
      *  @param[in]      flags        @ref CPLAT_TRACE_FILE_SINK_SHARED と
      *                               @ref CPLAT_TRACE_FILE_SINK_OS_BUFFERED の OR 結合、または 0。
      *                               負値を渡した場合は NULL を返します。
@@ -129,9 +129,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT cplat_trace_file_sink *CPLAT_API cplat_trace_file_sink_create(const char *path,
-                                                                                           size_t max_bytes,
-                                                                                           int generations, int flags);
+    CPLAT_EXPORT cplat_trace_file_sink *CPLAT_API cplat_trace_file_sink_create(const char *path, size_t max_bytes,
+                                                                               int generations, int flags);
 
     /**
      *  @brief          ファイルへトレース メッセージを書き込みます。
@@ -148,8 +147,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_trace_file_sink_write(cplat_trace_file_sink *handle, int level,
-                                                                    const cplat_timespec *timestamp,
-                                                                    const char *message);
+                                                           const cplat_timespec *timestamp, const char *message);
 
     /**
      *  @brief          ファイル トレース プロバイダーを終了します。

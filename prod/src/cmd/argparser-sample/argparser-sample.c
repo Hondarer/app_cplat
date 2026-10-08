@@ -49,9 +49,8 @@ static int register_argparser(argparser_sample_options *options)
     cplat_argparser_register_option_int("-c", "--count", "N", "repeat count", 0, &options->count_value);
     cplat_argparser_register_option_string("-n", "--name", "NAME", "display name", 0, &options->name_value);
     cplat_argparser_register_option_string_array("-i", "--include", "DIR", "include directory", 0, options->includes,
-                                                    ARGPARSER_SAMPLE_INCLUDE_MAX, &options->include_count);
-    cplat_argparser_register_positional_string("input", "input file", CPLAT_ARGPARSER_REQUIRED,
-                                                  &options->input_path);
+                                                 ARGPARSER_SAMPLE_INCLUDE_MAX, &options->include_count);
+    cplat_argparser_register_positional_string("input", "input file", CPLAT_ARGPARSER_REQUIRED, &options->input_path);
     cplat_argparser_register_positional_string("output", "output file", 0, &options->output_path);
 
     if (cplat_argparser_get_register_error_count() > 0)

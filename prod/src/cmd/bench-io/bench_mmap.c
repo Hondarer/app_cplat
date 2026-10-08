@@ -145,8 +145,7 @@ int bench_mmap_setup(bench_context *ctx, const bench_case *item)
     {
         return -1;
     }
-    if (cplat_mmap_attach(ctx->path, CPLAT_MMAP_ACCESS_READ_WRITE, ctx->file_size, &state->map, NULL) !=
-        CPLAT_OK)
+    if (cplat_mmap_attach(ctx->path, CPLAT_MMAP_ACCESS_READ_WRITE, ctx->file_size, &state->map, NULL) != CPLAT_OK)
     {
         cplat_free(state);
         return -1;

@@ -47,9 +47,12 @@ TEST_F(stringCatalogValidateTest, invalid_format)
     // Pre-Assert
 
     // Act
-    int ret_closing_brace = string_catalog_validate_text("}", NULL, 0); // [手順] - 対を成さない } だけの書式を確認する。
-    int ret_zero_index = string_catalog_validate_text("{0}", NULL, 0);  // [手順] - 引数を取らない定義に位置指定がある書式を確認する。
-    int ret_out_of_range = string_catalog_validate_text("{8}", NULL, 8); // [手順] - 上限を超えるインデックスを持つ書式を確認する。
+    int ret_closing_brace =
+        string_catalog_validate_text("}", NULL, 0); // [手順] - 対を成さない } だけの書式を確認する。
+    int ret_zero_index =
+        string_catalog_validate_text("{0}", NULL, 0); // [手順] - 引数を取らない定義に位置指定がある書式を確認する。
+    int ret_out_of_range =
+        string_catalog_validate_text("{8}", NULL, 8); // [手順] - 上限を超えるインデックスを持つ書式を確認する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_MALFORMED_DEFINITION,
@@ -73,12 +76,12 @@ TEST_F(stringCatalogValidateTest, unused_argument_reference)
 
     // Act
     int ret_valid = string_catalog_validate_text("{0}", arguments,
-                                              2); // [手順] - 値を受け取る引数だけを参照する書式を確認する。
+                                                 2); // [手順] - 値を受け取る引数だけを参照する書式を確認する。
     int ret_unused = string_catalog_validate_text("{1}", arguments,
-                                              2); // [手順] - 値を受け取らない引数を参照する書式を確認する。
+                                                  2); // [手順] - 値を受け取らない引数を参照する書式を確認する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, ret_valid);              // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, ret_valid); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_ERR_MALFORMED_DEFINITION,
               ret_unused); // [確認_異常系] - 戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
 }

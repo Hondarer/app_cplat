@@ -87,14 +87,14 @@ TEST_F(pathGetFullTest, returns_einval_for_null_path)
 {
     // Arrange
     char path[PLATFORM_PATH_MAX] = {}; // [状態] - 出力バッファーを用意する。
-    cplat_error err;                // [状態] - 詳細エラーの受け取り先を用意する。
+    cplat_error err;                   // [状態] - 詳細エラーの受け取り先を用意する。
     cplat_error last_error;
 
     // Pre-Assert
 
     // Act
     int rc = cplat_path_get_full(path, sizeof(path), &err,
-                                    nullptr); // [手順] - パスに NULL を渡して cplat_path_get_full を呼び出す。
+                                 nullptr); // [手順] - パスに NULL を渡して cplat_path_get_full を呼び出す。
     cplat_error_get_last(&last_error);     // [手順] - TLS に記録された詳細エラーを取得する。
 
     // Assert
@@ -102,7 +102,7 @@ TEST_F(pathGetFullTest, returns_einval_for_null_path)
               rc); // [確認_異常系] - cplat_path_get_full の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(1, cplat_error_is(&err, CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - EINVAL の要因が返ること。
     EXPECT_EQ(1, cplat_error_is_set(&last_error)); // [確認_異常系] - TLS に詳細エラーが記録されること。
-    EXPECT_EQ('\0', path[0]);                         // [確認_異常系] - 出力は空文字列に初期化されること。
+    EXPECT_EQ('\0', path[0]);                      // [確認_異常系] - 出力は空文字列に初期化されること。
 }
 
 // 出力先、出力サイズ、空パスの異常入力が EINVAL になることの確認
@@ -118,13 +118,12 @@ TEST_F(pathGetFullTest, rejects_invalid_output_and_empty_path)
     // Pre-Assert
 
     // Act
-    int null_result = cplat_path_get_full(
-        NULL, 8u, &null_detail, "."); // [手順] - 出力先に NULL を指定して cplat_path_get_full を呼び出す。
-    int zero_result =
-        cplat_path_get_full(&zero_size_output, 0u, &zero_detail,
-                               "."); // [手順] - 出力サイズに 0 を指定して cplat_path_get_full を呼び出す。
+    int null_result = cplat_path_get_full(NULL, 8u, &null_detail,
+                                          "."); // [手順] - 出力先に NULL を指定して cplat_path_get_full を呼び出す。
+    int zero_result = cplat_path_get_full(&zero_size_output, 0u, &zero_detail,
+                                          "."); // [手順] - 出力サイズに 0 を指定して cplat_path_get_full を呼び出す。
     int empty_result = cplat_path_get_full(empty_path_output, sizeof(empty_path_output), &empty_detail,
-                                              ""); // [手順] - 空パスを指定して cplat_path_get_full を呼び出す。
+                                           ""); // [手順] - 空パスを指定して cplat_path_get_full を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -209,11 +208,11 @@ TEST_F(pathGetFullTest, normalizes_repeated_separators)
 
     // Act
     int result = cplat_path_get_full(actual, sizeof(actual), NULL,
-                                        "/tmp//"); // [手順] - 連続したセパレーターを含む絶対パスを正規化する。
+                                     "/tmp//"); // [手順] - 連続したセパレーターを含む絶対パスを正規化する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_path_get_full の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("/tmp", actual);   // [確認_正常系] - 連続したセパレーターが除去されたパスになること。
+    EXPECT_EQ(CPLAT_OK, result);  // [確認_正常系] - cplat_path_get_full の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("/tmp", actual); // [確認_正常系] - 連続したセパレーターが除去されたパスになること。
 }
 
 // ルートを越える親参照と 2 文字の通常セグメントが正規化されることの確認
@@ -229,15 +228,13 @@ TEST_F(pathGetFullTest, normalizes_parent_above_root_and_two_character_segments)
 
     // Act
     int parent_result = cplat_path_get_full(parent_actual, sizeof(parent_actual), NULL,
-                                               "/../../a"); // [手順] - ルートを越える親参照を含む絶対パスを正規化する。
+                                            "/../../a"); // [手順] - ルートを越える親参照を含む絶対パスを正規化する。
     int plain_result = cplat_path_get_full(plain_actual, sizeof(plain_actual), NULL,
-                                              "/ab"); // [手順] - 2 文字の通常セグメントを持つ絶対パスを正規化する。
-    int leading_dot_result =
-        cplat_path_get_full(leading_dot_actual, sizeof(leading_dot_actual), NULL,
-                               "/.x"); // [手順] - 先頭だけがドットの 2 文字セグメントを正規化する。
-    int trailing_dot_result =
-        cplat_path_get_full(trailing_dot_actual, sizeof(trailing_dot_actual), NULL,
-                               "/x."); // [手順] - 末尾だけがドットの 2 文字セグメントを正規化する。
+                                           "/ab"); // [手順] - 2 文字の通常セグメントを持つ絶対パスを正規化する。
+    int leading_dot_result = cplat_path_get_full(leading_dot_actual, sizeof(leading_dot_actual), NULL,
+                                                 "/.x"); // [手順] - 先頭だけがドットの 2 文字セグメントを正規化する。
+    int trailing_dot_result = cplat_path_get_full(trailing_dot_actual, sizeof(trailing_dot_actual), NULL,
+                                                  "/x."); // [手順] - 末尾だけがドットの 2 文字セグメントを正規化する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -274,7 +271,7 @@ TEST_F(pathGetFullTest, normalizes_repeated_windows_separators)
 
     // Assert
     ASSERT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_path_get_full の戻り値が CPLAT_OK であること。
-    EXPECT_NE('\0', actual[0]);     // [確認_正常系] - 絶対パスが返ること。
+    EXPECT_NE('\0', actual[0]);  // [確認_正常系] - 絶対パスが返ること。
     EXPECT_EQ(nullptr, std::strchr(actual, '\\')); // [確認_正常系] - '\\' が '/' に正規化されること。
     EXPECT_EQ(nullptr, std::strstr(actual, "//")); // [確認_正常系] - 連続したセパレーターが除去されること。
 }
@@ -300,14 +297,14 @@ TEST_F(pathGetFullTest, returns_enametoolong_when_relative_path_is_too_long)
     // Act
     int result =
         cplat_path_get_full(output, sizeof(output), &err,
-                               relative); // [手順] - カレント ディレクトリとの連結結果が長過ぎる相対パスを指定する。
+                            relative); // [手順] - カレント ディレクトリとの連結結果が長過ぎる相対パスを指定する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
               result); // [確認_異常系] - cplat_path_get_full の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
     EXPECT_EQ(1, cplat_error_is(&err,
-                                   CPLAT_CAUSE_NAME_TOO_LONG)); // [確認_異常系] - ENAMETOOLONG の要因が返ること。
-    EXPECT_EQ('\0', output[0]); // [確認_異常系] - 失敗時に出力先が空文字列になること。
+                                CPLAT_CAUSE_NAME_TOO_LONG)); // [確認_異常系] - ENAMETOOLONG の要因が返ること。
+    EXPECT_EQ('\0', output[0]);                              // [確認_異常系] - 失敗時に出力先が空文字列になること。
 }
 
 // 出力バッファーが小さすぎる場合に ENAMETOOLONG で失敗することの確認
@@ -321,20 +318,19 @@ TEST_F(pathGetFullTest, returns_enametoolong_when_buffer_is_too_small)
                                &mock_stdlib); // [状態] - getcwd と realpath を既定の作業ディレクトリへ差し替える。
 #endif                                        /* PLATFORM_LINUX */
     char path[4] = {};                        // [状態] - 4 バイトの小さすぎる出力バッファーを用意する。
-    cplat_error err;                       // [状態] - 詳細エラーの受け取り先を用意する。
+    cplat_error err;                          // [状態] - 詳細エラーの受け取り先を用意する。
 
     // Pre-Assert
 
     // Act
     int rc = cplat_path_get_full(path, sizeof(path), &err,
-                                    "."); // [手順] - 小さすぎる出力バッファーで cplat_path_get_full を呼び出す。
+                                 "."); // [手順] - 小さすぎる出力バッファーで cplat_path_get_full を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
               rc); // [確認_異常系] - cplat_path_get_full の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
-    EXPECT_EQ(1,
-              cplat_error_is(&err, CPLAT_CAUSE_NAME_TOO_LONG)); // [確認_異常系] - ENAMETOOLONG の要因が返ること。
-    EXPECT_EQ('\0', path[0]); // [確認_異常系] - 出力は空文字列に初期化されること。
+    EXPECT_EQ(1, cplat_error_is(&err, CPLAT_CAUSE_NAME_TOO_LONG)); // [確認_異常系] - ENAMETOOLONG の要因が返ること。
+    EXPECT_EQ('\0', path[0]);                                      // [確認_異常系] - 出力は空文字列に初期化されること。
 }
 
 // 存在しないパスでも絶対化済み文字列が返ることの確認
@@ -377,7 +373,7 @@ TEST_F(pathGetFullTest, returns_enomem_when_normalization_allocation_fails)
     // Arrange
     NiceMock<Mock_cplat> mock_cplat;
     char path[PLATFORM_PATH_MAX] = {'x'}; // [状態] - 出力バッファーを空文字列以外で初期化する。
-    cplat_error err;                   // [状態] - 詳細エラーの受け取り先を用意する。
+    cplat_error err;                      // [状態] - 詳細エラーの受け取り先を用意する。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_calloc(PLATFORM_PATH_MAX, sizeof(size_t)))
@@ -386,13 +382,13 @@ TEST_F(pathGetFullTest, returns_enomem_when_normalization_allocation_fails)
 
     // Act
     int rc = cplat_path_get_full(path, sizeof(path), &err,
-                                    "/missing"); // [手順] - 絶対パスを指定して cplat_path_get_full を呼び出す。
+                                 "/missing"); // [手順] - 絶対パスを指定して cplat_path_get_full を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
               rc); // [確認_異常系] - cplat_path_get_full の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(1, cplat_error_is(&err, CPLAT_CAUSE_OUT_OF_MEMORY)); // [確認_異常系] - ENOMEM の要因が返ること。
-    EXPECT_EQ('\0', path[0]); // [確認_異常系] - 出力は空文字列に初期化されること。
+    EXPECT_EQ('\0', path[0]);                                      // [確認_異常系] - 出力は空文字列に初期化されること。
 }
 
 // symlink が実体ファイルのパスへ解決されることの確認
@@ -415,10 +411,10 @@ TEST_F(pathGetFullTest, resolves_symlink_to_target_path_when_target_exists)
 
     // Act
     int result = cplat_path_get_full(actual, sizeof(actual), NULL,
-                                        "/work/target-link.bin"); // [手順] - symlink のパスを絶対化する。
+                                     "/work/target-link.bin"); // [手順] - symlink のパスを絶対化する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_path_get_full の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, result);              // [確認_正常系] - cplat_path_get_full の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("/work/target.bin", actual); // [確認_正常系] - 実体ファイルのパスへ解決されること。
 }
 #endif /* PLATFORM_LINUX */
@@ -432,7 +428,7 @@ TEST_F(pathGetFullTest, reports_errno_when_getcwd_fails)
     // Arrange
     NiceMock<Mock_unistd> mock_unistd;
     char actual[PLATFORM_PATH_MAX]; // [状態] - 出力バッファーを用意する。
-    cplat_error detail;          // [状態] - 詳細エラーの格納先を用意する。
+    cplat_error detail;             // [状態] - 詳細エラーの格納先を用意する。
 
     std::memset(actual, 'X', sizeof(actual));
 
@@ -444,14 +440,13 @@ TEST_F(pathGetFullTest, reports_errno_when_getcwd_fails)
 
     // Act
     int actual_ret = cplat_path_get_full(actual, sizeof(actual), &detail,
-                                     "relative.txt"); // [手順] - 相対パスを指定して呼び出す。
+                                         "relative.txt"); // [手順] - 相対パスを指定して呼び出す。
 
     // Assert
     EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - cplat_path_get_full の戻り値が CPLAT_OK 以外であること。
-    EXPECT_EQ(
-        EACCES,
-        cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が EACCES であること。
-    EXPECT_STREQ("", actual);               // [確認_異常系] - 出力バッファーが空文字列に初期化されること。
+    EXPECT_EQ(EACCES,
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が EACCES であること。
+    EXPECT_STREQ("", actual);                  // [確認_異常系] - 出力バッファーが空文字列に初期化されること。
 }
 
 // realpath による解決に失敗しても正規化済みパスが返ることの確認
@@ -470,7 +465,7 @@ TEST_F(pathGetFullTest, falls_back_to_normalized_path_when_realpath_fails)
 
     // Act
     int actual_ret = cplat_path_get_full(actual, sizeof(actual), NULL,
-                                     "/tmp/./pathGetFullTest_fallback"); // [手順] - 絶対パスを指定して呼び出す。
+                                         "/tmp/./pathGetFullTest_fallback"); // [手順] - 絶対パスを指定して呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_get_full の戻り値が CPLAT_OK であること。

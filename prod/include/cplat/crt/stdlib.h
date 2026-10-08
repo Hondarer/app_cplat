@@ -64,7 +64,7 @@ extern "C"
      *  他スレッドが同時に環境変数を変更する場合は、呼び出し側で同期してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_getenv(const char *name, char *buf, size_t buf_size, int *exists_out,
-                                                     cplat_error *detail_out);
+                                            cplat_error *detail_out);
 
     /**
      *  @brief          環境変数の値を設定します。
@@ -88,7 +88,7 @@ extern "C"
      *  マルチスレッド化の前に設定を完了させるか、呼び出し側で同期してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_setenv(const char *name, const char *value, int overwrite,
-                                                     cplat_error *detail_out);
+                                            cplat_error *detail_out);
 
     /**
      *  @brief          環境変数を削除します。
@@ -313,8 +313,7 @@ extern "C"
      *  異なるメモリ領域に対する操作は同時に実行できます。\n
      *  同一 @p ptr に対する並行操作は、呼び出し側で同期してください。
      */
-    CPLAT_EXPORT void *CPLAT_API cplat_realloc_zerofill(void *ptr, size_t old_count, size_t count,
-                                                                 size_t size);
+    CPLAT_EXPORT void *CPLAT_API cplat_realloc_zerofill(void *ptr, size_t old_count, size_t count, size_t size);
 
     /**
      *  @brief          確保したメモリを解放します (`free` の代替)。

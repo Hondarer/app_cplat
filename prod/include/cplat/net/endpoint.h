@@ -98,8 +98,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_ipv4_resolve(const char *text, uint32_t *address_out,
-                                                           cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_ipv4_resolve(const char *text, uint32_t *address_out, cplat_error *detail_out);
 
     /**
      *  @brief          IPv4 アドレスをドット区切りの文字列へ変換します。
@@ -114,7 +113,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_ipv4_to_string(uint32_t address, char *buffer, size_t buffer_size,
-                                                             cplat_error *detail_out);
+                                                    cplat_error *detail_out);
 
 #ifdef __cplusplus
 }

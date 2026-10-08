@@ -167,8 +167,8 @@ extern "C"
      */
     typedef struct cplat_string_catalog_filter_diagnostic
     {
-        uint32_t line_index;                     /**< 行の位置 (0 起点)。 */
-        uint32_t column;                         /**< 行内のバイト位置 (0 起点)。適用で検出した場合は 0。 */
+        uint32_t line_index;                          /**< 行の位置 (0 起点)。 */
+        uint32_t column;                              /**< 行内のバイト位置 (0 起点)。適用で検出した場合は 0。 */
         cplat_string_catalog_filter_line_error error; /**< 原因。 */
     } cplat_string_catalog_filter_diagnostic;
 
@@ -200,10 +200,10 @@ extern "C"
      */
     typedef struct cplat_string_catalog_filter_warning
     {
-        uint32_t line_index;      /**< フィルター オブジェクト内の行の位置 (0 起点)。 */
-        uint32_t predicate_index; /**< 行内の比較要素を条件式に現れる順に数えた位置 (0 起点)。 */
+        uint32_t line_index;                           /**< フィルター オブジェクト内の行の位置 (0 起点)。 */
+        uint32_t predicate_index;                      /**< 行内の比較要素を条件式に現れる順に数えた位置 (0 起点)。 */
         cplat_string_catalog_filter_warning_kind kind; /**< 種別。 */
-        int string_key;           /**< 項目の文字列キー。 */
+        int string_key;                                /**< 項目の文字列キー。 */
         int argument_index;       /**< @ref cplat_string_catalog_filter_warning::string_key の項目での引数の位置。 */
         int other_string_key;     /**< もう一方の項目の文字列キー。使用しない場合は string_key と同じ値。 */
         int other_argument_index; /**< もう一方の項目での引数の位置。使用しない場合は -1。 */
@@ -233,7 +233,7 @@ extern "C"
         uint32_t line_capacity;            /**< 公開したフィルター オブジェクトの行数の上限。未公開の場合は 0 です。 */
         uint32_t line_width;               /**< 公開したフィルター オブジェクトの行幅。未公開の場合は 0 です。 */
         uint32_t pad;                      /**< 明示的アラインメントです。 */
-        uint64_t catalog_id; /**< 公開時に指定したカタログの識別値。未公開の場合は 0 です。 */
+        uint64_t catalog_id;               /**< 公開時に指定したカタログの識別値。未公開の場合は 0 です。 */
     } cplat_string_catalog_filter_source_info;
 
     /**
@@ -515,7 +515,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_string_catalog_filter_get_catalog_id(const cplat_string_catalog *catalog,
-                                                                         uint64_t *catalog_id_out);
+                                                                          uint64_t *catalog_id_out);
 
     /**
      *  @brief          ソース領域へフィルター オブジェクトを公開します。

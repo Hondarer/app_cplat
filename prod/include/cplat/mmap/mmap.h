@@ -14,7 +14,7 @@
  *  独立して生成し、寿命を管理してください。
  *
  *  @warning        本 API はローカル ファイル システム上のファイルを対象とする設計です。\n
- *                  NFS などのネットワーク ファイル システムでは、以下の理由により
+ *                  NFS などのネットワーク ファイル システムでは、次の理由により
  *                  プロセス間 (特にホストをまたぐ場合) の一貫性が保証されません。
  *                  - @ref cplat_mmap_flush() が反映するのはサーバーへの書き込みまでであり、
  *                    他クライアントのキャッシュを無効化するものではない。
@@ -85,9 +85,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_mmap_attach(const char *path, cplat_mmap_access access,
-                                                          size_t create_size, cplat_mmap **map,
-                                                          cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_mmap_attach(const char *path, cplat_mmap_access access, size_t create_size,
+                                                 cplat_mmap **map, cplat_error *detail_out);
 
     /**
      *  @brief          マップ済みアドレスを取得します。
@@ -125,8 +124,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_mmap_flush(cplat_mmap *map, void *address, size_t length,
-                                                         cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_mmap_flush(cplat_mmap *map, void *address, size_t length, cplat_error *detail_out);
 
     /**
      *  @brief          マッピングを解除し、ハンドルを破棄します。

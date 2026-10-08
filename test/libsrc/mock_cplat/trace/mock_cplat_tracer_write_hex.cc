@@ -2,8 +2,8 @@
 #include <mock_cplat.h>
 
 int delegate_real_cplat_tracer_write_hex_at(cplat_tracer *handle, cplat_trace_level level,
-                                             const cplat_timespec *timestamp, const void *data, size_t size,
-                                             const char *message)
+                                            const cplat_timespec *timestamp, const void *data, size_t size,
+                                            const char *message)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_tracer_write_hex_at)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_tracer_write_hex_at"));

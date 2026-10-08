@@ -381,9 +381,9 @@ int main(int argc, char *argv[])
     cplat_argparser_register_flag(NULL, "--compress", "入力ファイルを圧縮します。", &compress_count);
     cplat_argparser_register_flag(NULL, "--decompress", "入力ファイルを展開します。", &decompress_count);
     cplat_argparser_register_positional_string("input", "入力ファイル。", CPLAT_ARGPARSER_REQUIRED,
-                                                  &options.input_path);
+                                               &options.input_path);
     cplat_argparser_register_positional_string("output", "出力ファイル。", CPLAT_ARGPARSER_REQUIRED,
-                                                  &options.output_path);
+                                               &options.output_path);
 
     if (cplat_argparser_get_register_error_count() > 0)
     {

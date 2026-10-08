@@ -19,7 +19,7 @@ TEST_F(parseTest, parse_int64_decimal)
     int actual_ret = cplat_parse_int64(&value, "1234", 10); // [手順] - "1234" を基数 10 で cplat_parse_int64 に渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);     // [確認_正常系] - cplat_parse_int64 の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_parse_int64 の戻り値が CPLAT_OK であること。
     EXPECT_EQ((int64_t)1234, value); // [確認_正常系] - 変換結果が 1234 であること。
 }
 
@@ -35,8 +35,8 @@ TEST_F(parseTest, parse_int64_negative)
     int actual_ret = cplat_parse_int64(&value, "-42", 10); // [手順] - "-42" を基数 10 で cplat_parse_int64 に渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);    // [確認_正常系] - cplat_parse_int64 の戻り値が CPLAT_OK であること。
-    EXPECT_EQ((int64_t)-42, value); // [確認_正常系] - 変換結果が -42 であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_parse_int64 の戻り値が CPLAT_OK であること。
+    EXPECT_EQ((int64_t)-42, value);  // [確認_正常系] - 変換結果が -42 であること。
 }
 
 // 先頭の空白が読み飛ばされることの確認
@@ -51,8 +51,8 @@ TEST_F(parseTest, parse_int64_leading_space)
     int actual_ret = cplat_parse_int64(&value, "   7", 10); // [手順] - 先頭に空白を持つ "   7" を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);  // [確認_正常系] - cplat_parse_int64 の戻り値が CPLAT_OK であること。
-    EXPECT_EQ((int64_t)7, value); // [確認_正常系] - 変換結果が 7 であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_parse_int64 の戻り値が CPLAT_OK であること。
+    EXPECT_EQ((int64_t)7, value);    // [確認_正常系] - 変換結果が 7 であること。
 }
 
 // 基数 16 の指定で 16 進数として変換されることの確認
@@ -67,8 +67,8 @@ TEST_F(parseTest, parse_int64_base16)
     int actual_ret = cplat_parse_int64(&value, "ff", 16); // [手順] - "ff" を基数 16 で cplat_parse_int64 に渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);    // [確認_正常系] - cplat_parse_int64 の戻り値が CPLAT_OK であること。
-    EXPECT_EQ((int64_t)255, value); // [確認_正常系] - 変換結果が 255 であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_parse_int64 の戻り値が CPLAT_OK であること。
+    EXPECT_EQ((int64_t)255, value);  // [確認_正常系] - 変換結果が 255 であること。
 }
 
 // 基数 0 の指定で接頭辞から基数が自動判別されることの確認
@@ -83,8 +83,8 @@ TEST_F(parseTest, parse_int64_base_auto_detect)
     int actual_ret = cplat_parse_int64(&value, "0x10", 0); // [手順] - "0x10" を基数 0 で cplat_parse_int64 に渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);   // [確認_正常系] - cplat_parse_int64 の戻り値が CPLAT_OK であること。
-    EXPECT_EQ((int64_t)16, value); // [確認_正常系] - 0x10 が 16 として変換されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_parse_int64 の戻り値が CPLAT_OK であること。
+    EXPECT_EQ((int64_t)16, value);   // [確認_正常系] - 0x10 が 16 として変換されること。
 }
 
 // int64_t の上限と下限が変換できることの確認
@@ -153,7 +153,7 @@ TEST_F(parseTest, parse_int64_out_of_range)
 
     // Act
     int actual_ret = cplat_parse_int64(&value, "99999999999999999999",
-                                   10); // [手順] - INT64_MAX を超える 20 桁の数値を渡す。
+                                       10); // [手順] - INT64_MAX を超える 20 桁の数値を渡す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_RANGE,
@@ -218,11 +218,11 @@ TEST_F(parseTest, parse_uint64_decimal)
 
     // Act
     int actual_ret = cplat_parse_uint64(&value, "18446744073709551615",
-                                    10); // [手順] - UINT64_MAX の 10 進表記を cplat_parse_uint64 に渡す。
+                                        10); // [手順] - UINT64_MAX の 10 進表記を cplat_parse_uint64 に渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);  // [確認_正常系] - cplat_parse_uint64 の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(UINT64_MAX, value); // [確認_正常系] - 変換結果が UINT64_MAX であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_parse_uint64 の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(UINT64_MAX, value);    // [確認_正常系] - 変換結果が UINT64_MAX であること。
 }
 
 // 負値の入力が折り返されずに範囲外エラーになることの確認
@@ -277,10 +277,10 @@ TEST_F(parseTest, parse_int_boundary_values)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              max_ret); // [確認_正常系] - INT_MAX を渡した cplat_parse_int の戻り値が CPLAT_OK であること。
+              max_ret);            // [確認_正常系] - INT_MAX を渡した cplat_parse_int の戻り値が CPLAT_OK であること。
     EXPECT_EQ(INT_MAX, max_value); // [確認_正常系] - 変換結果が INT_MAX であること。
     EXPECT_EQ(CPLAT_OK,
-              min_ret); // [確認_正常系] - INT_MIN を渡した cplat_parse_int の戻り値が CPLAT_OK であること。
+              min_ret);            // [確認_正常系] - INT_MIN を渡した cplat_parse_int の戻り値が CPLAT_OK であること。
     EXPECT_EQ(INT_MIN, min_value); // [確認_正常系] - 変換結果が INT_MIN であること。
 }
 
@@ -294,8 +294,7 @@ TEST_F(parseTest, parse_int_out_of_range)
     // Pre-Assert
 
     // Act
-    int upper_ret =
-        cplat_parse_int(&upper_value, "2147483648", 10); // [手順] - INT_MAX を 1 超える 2147483648 を渡す。
+    int upper_ret = cplat_parse_int(&upper_value, "2147483648", 10); // [手順] - INT_MAX を 1 超える 2147483648 を渡す。
     int lower_ret =
         cplat_parse_int(&lower_value, "-2147483649", 10); // [手順] - INT_MIN を 1 下回る -2147483649 を渡す。
 
@@ -320,8 +319,8 @@ TEST_F(parseTest, parse_double_decimal)
     int actual_ret = cplat_parse_double(&value, "1.5"); // [手順] - "1.5" を cplat_parse_double に渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);  // [確認_正常系] - cplat_parse_double の戻り値が CPLAT_OK であること。
-    EXPECT_DOUBLE_EQ(1.5, value); // [確認_正常系] - 変換結果が 1.5 であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_parse_double の戻り値が CPLAT_OK であること。
+    EXPECT_DOUBLE_EQ(1.5, value);    // [確認_正常系] - 変換結果が 1.5 であること。
 }
 
 // 指数表記の文字列が変換されることの確認
@@ -336,7 +335,7 @@ TEST_F(parseTest, parse_double_exponent)
     int actual_ret = cplat_parse_double(&value, "2e3"); // [手順] - 指数表記の "2e3" を cplat_parse_double に渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);     // [確認_正常系] - cplat_parse_double の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_parse_double の戻り値が CPLAT_OK であること。
     EXPECT_DOUBLE_EQ(2000.0, value); // [確認_正常系] - 変換結果が 2000.0 であること。
 }
 
@@ -382,8 +381,9 @@ TEST_F(parseTest, parse_double_rejects_trailing_garbage)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_parse_double(&value,
-                                    "1.5x"); // [手順] - 数値の後ろに文字が残る "1.5x" を cplat_parse_double に渡す。
+    int actual_ret =
+        cplat_parse_double(&value,
+                           "1.5x"); // [手順] - 数値の後ろに文字が残る "1.5x" を cplat_parse_double に渡す。
 
     // Assert
     EXPECT_EQ(
@@ -416,9 +416,10 @@ TEST_F(parseTest, parse_uint64_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_value_out = cplat_parse_uint64(NULL, "1", 10); // [手順] - value_out に NULL を指定して呼び出す。
-    int actual_ret_null_text = cplat_parse_uint64(&value, NULL, 10);   // [手順] - text に NULL を指定して呼び出す。
-    int actual_ret_invalid_base = cplat_parse_uint64(&value, "1", 1);  // [手順] - base に 1 を指定して呼び出す。
+    int actual_ret_null_value_out =
+        cplat_parse_uint64(NULL, "1", 10);                            // [手順] - value_out に NULL を指定して呼び出す。
+    int actual_ret_null_text = cplat_parse_uint64(&value, NULL, 10);  // [手順] - text に NULL を指定して呼び出す。
+    int actual_ret_invalid_base = cplat_parse_uint64(&value, "1", 1); // [手順] - base に 1 を指定して呼び出す。
 
     // Assert
     EXPECT_EQ(

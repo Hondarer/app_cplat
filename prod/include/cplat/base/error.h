@@ -491,8 +491,8 @@ extern "C"
     typedef struct cplat_error
     {
         cplat_error_domain domain; /**< code の由来。 */
-        int result;                   /**< 対応する共通結果コード (CPLAT_OK または CPLAT_ERR_*)。 */
-        unsigned long code;           /**< ドメイン固有の生のエラー値。 */
+        int result;                /**< 対応する共通結果コード (CPLAT_OK または CPLAT_ERR_*)。 */
+        unsigned long code;        /**< ドメイン固有の生のエラー値。 */
     } cplat_error;
 
     /**
@@ -543,8 +543,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT void CPLAT_API cplat_error_capture_windows_error(cplat_error *error,
-                                                                           unsigned long error_code);
+    CPLAT_EXPORT void CPLAT_API cplat_error_capture_windows_error(cplat_error *error, unsigned long error_code);
 
     /**
      *  @brief          現在の Win32 エラー コードを詳細エラーへ取り込みます。

@@ -88,9 +88,8 @@ int test_tracer_build_default_file_path(const cplat_tracer *handle, char *path_o
     return build_default_file_path(handle, path_out, path_size);
 }
 
-int test_tracer_hex_write_impl(cplat_tracer *handle, const cplat_trace_level level,
-                               const cplat_timespec *timestamp, const void *data, const size_t size,
-                               const char *label)
+int test_tracer_hex_write_impl(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
+                               const void *data, const size_t size, const char *label)
 {
     return hex_write_impl(handle, level, timestamp, data, size, label);
 }

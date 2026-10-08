@@ -21,7 +21,7 @@ class argparserAllocFailureTest : public Test
     void SetUp() override
     {
         parser_ = cplat_argparser_handle_create(0, NULL, NULL); // [状態] - 生成済みの parser を用意する。
-        ASSERT_NE((cplat_argparser *)NULL, parser_); // [状態確認] - ハンドルが非 NULL であること。
+        ASSERT_NE((cplat_argparser *)NULL, parser_);            // [状態確認] - ハンドルが非 NULL であること。
     }
     // [サブ手順終了]
 
@@ -53,9 +53,9 @@ TEST_F(argparserAllocFailureTest, register_fails_when_spec_array_expansion_fails
                           // [Pre-Assert手順] - 1 回目は NULL を返却し、以降 (エラー記録用の確保) は本物へ委譲する。
 
     // Act
-    int actual_ret = cplat_argparser_handle_register_option_string(
-        parser_, "-a", "--alpha", "VALUE", "説明", 0u,
-        &storage_); // [手順] - 文字列オプション --alpha を登録する。
+    int actual_ret =
+        cplat_argparser_handle_register_option_string(parser_, "-a", "--alpha", "VALUE", "説明", 0u,
+                                                      &storage_); // [手順] - 文字列オプション --alpha を登録する。
 
     // Assert
     EXPECT_EQ(
@@ -73,13 +73,14 @@ TEST_F(argparserAllocFailureTest, register_fails_when_name_duplication_fails)
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_malloc(_))
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - malloc が名前の複製のために 1 回目に呼び出されること。
-                                      // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - malloc が名前の複製のために 1 回目に呼び出されること。
+                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
 
     // Act
-    int actual_ret = cplat_argparser_handle_register_option_string(
-        parser_, "-a", "--alpha", "VALUE", "説明", 0u,
-        &storage_); // [手順] - 文字列オプション --alpha を登録する。
+    int actual_ret =
+        cplat_argparser_handle_register_option_string(parser_, "-a", "--alpha", "VALUE", "説明", 0u,
+                                                      &storage_); // [手順] - 文字列オプション --alpha を登録する。
 
     // Assert
     EXPECT_EQ(
@@ -102,8 +103,9 @@ TEST_F(argparserAllocFailureTest, positional_register_fails_when_spec_array_expa
                           // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物の realloc へ委譲する。
 
     // Act
-    int actual_ret = cplat_argparser_handle_register_positional_string(parser_, "input", "説明", 0u,
-                                                             &storage_); // [手順] - 文字列位置引数 input を登録する。
+    int actual_ret =
+        cplat_argparser_handle_register_positional_string(parser_, "input", "説明", 0u,
+                                                          &storage_); // [手順] - 文字列位置引数 input を登録する。
 
     // Assert
     EXPECT_EQ(
@@ -125,8 +127,9 @@ TEST_F(argparserAllocFailureTest, positional_register_fails_when_name_duplicatio
                                       // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物の malloc へ委譲する。
 
     // Act
-    int actual_ret = cplat_argparser_handle_register_positional_string(parser_, "input", NULL, 0u,
-                                                             &storage_); // [手順] - 文字列位置引数 input を登録する。
+    int actual_ret =
+        cplat_argparser_handle_register_positional_string(parser_, "input", NULL, 0u,
+                                                          &storage_); // [手順] - 文字列位置引数 input を登録する。
 
     // Assert
     EXPECT_EQ(
@@ -143,8 +146,8 @@ TEST_F(argparserAllocFailureTest, print_usage_fails_when_buffer_allocation_fails
 
     ASSERT_EQ(CPLAT_OK,
               cplat_argparser_handle_register_option_string(parser_, "-a", "--alpha", "VALUE", "説明", 0u,
-                                                         &storage_)); // [状態] - オプションを 1 件登録しておく。
-                                                                      // [状態確認] - cplat_argparser_handle_register_option_string の戻り値が CPLAT_OK であること。
+                                                            &storage_)); // [状態] - オプションを 1 件登録しておく。
+    // [状態確認] - cplat_argparser_handle_register_option_string の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_malloc(_))
@@ -154,8 +157,9 @@ TEST_F(argparserAllocFailureTest, print_usage_fails_when_buffer_allocation_fails
                           // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
 
     // Act
-    int actual_ret = cplat_argparser_handle_print_usage(parser_,
-                                              stdout); // [手順] - cplat_argparser_handle_print_usage を呼び出す。
+    int actual_ret =
+        cplat_argparser_handle_print_usage(parser_,
+                                           stdout); // [手順] - cplat_argparser_handle_print_usage を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -176,9 +180,9 @@ TEST_F(argparserAllocFailureTest, register_fails_when_short_name_duplication_fai
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - short_name の複製で malloc が失敗すること。
 
     // Act
-    int actual_ret =
-        cplat_argparser_handle_register_option_string(parser_, "-a", "--alpha", "VALUE", "説明", 0u,
-                                                   &storage_); // [手順] - short_name を含む文字列オプションを登録する。
+    int actual_ret = cplat_argparser_handle_register_option_string(
+        parser_, "-a", "--alpha", "VALUE", "説明", 0u,
+        &storage_); // [手順] - short_name を含む文字列オプションを登録する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
@@ -199,9 +203,9 @@ TEST_F(argparserAllocFailureTest, register_fails_when_long_name_duplication_fail
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - long_name の複製で malloc が失敗すること。
 
     // Act
-    int actual_ret =
-        cplat_argparser_handle_register_option_string(parser_, "-a", "--alpha", "VALUE", "説明", 0u,
-                                                   &storage_); // [手順] - long_name を含む文字列オプションを登録する。
+    int actual_ret = cplat_argparser_handle_register_option_string(
+        parser_, "-a", "--alpha", "VALUE", "説明", 0u,
+        &storage_); // [手順] - long_name を含む文字列オプションを登録する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
@@ -223,9 +227,9 @@ TEST_F(argparserAllocFailureTest, register_fails_when_value_name_duplication_fai
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - value_name の複製で malloc が失敗すること。
 
     // Act
-    int actual_ret =
-        cplat_argparser_handle_register_option_string(parser_, "-a", "--alpha", "VALUE", "説明", 0u,
-                                                   &storage_); // [手順] - value_name を含む文字列オプションを登録する。
+    int actual_ret = cplat_argparser_handle_register_option_string(
+        parser_, "-a", "--alpha", "VALUE", "説明", 0u,
+        &storage_); // [手順] - value_name を含む文字列オプションを登録する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
@@ -272,7 +276,7 @@ TEST_F(argparserAllocFailureTest, register_error_is_not_recorded_when_realloc_fa
 
     // Act
     int actual_ret = cplat_argparser_handle_register_flag(parser_, NULL, NULL, NULL,
-                                                &storage); // [手順] - 名前なし登録で登録エラーを発生させる。
+                                                          &storage); // [手順] - 名前なし登録で登録エラーを発生させる。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -297,8 +301,8 @@ TEST_F(argparserAllocFailureTest, create_fails_when_program_name_duplication_fai
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - program_name の複製で malloc が失敗すること。
 
     // Act
-    cplat_argparser *parser =
-        cplat_argparser_handle_create(0, NULL, &options); // [手順] - program_name と description を指定して parser を生成する。
+    cplat_argparser *parser = cplat_argparser_handle_create(
+        0, NULL, &options); // [手順] - program_name と description を指定して parser を生成する。
 
     // Assert
     EXPECT_EQ(nullptr, parser); // [確認_異常系] - program_name 複製失敗時の parser が NULL であること。
@@ -321,8 +325,8 @@ TEST_F(argparserAllocFailureTest, create_fails_when_program_description_duplicat
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - program_description の複製で malloc が失敗すること。
 
     // Act
-    cplat_argparser *parser =
-        cplat_argparser_handle_create(0, NULL, &options); // [手順] - program_name と description を指定して parser を生成する。
+    cplat_argparser *parser = cplat_argparser_handle_create(
+        0, NULL, &options); // [手順] - program_name と description を指定して parser を生成する。
 
     // Assert
     EXPECT_EQ(nullptr, parser); // [確認_異常系] - program_description 複製失敗時の parser が NULL であること。
@@ -349,7 +353,8 @@ TEST_F(argparserAllocFailureTest, create_continues_when_program_name_duplication
     ASSERT_NE(nullptr, parser); // [確認_正常系] - ベース名複製失敗時も生成が成功すること。
     EXPECT_EQ(
         CPLAT_OK,
-        cplat_argparser_handle_parse(parser)); // [確認_正常系] - ベース名複製失敗時も cplat_argparser_handle_parse の戻り値が CPLAT_OK であること。
+        cplat_argparser_handle_parse(
+            parser)); // [確認_正常系] - ベース名複製失敗時も cplat_argparser_handle_parse の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_argparser_handle_dispose(parser);

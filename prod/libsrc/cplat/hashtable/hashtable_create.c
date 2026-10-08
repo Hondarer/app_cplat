@@ -39,8 +39,10 @@ int hashtable_validate_config(const cplat_hashtable_config *config)
     {
         return -1;
     }
-    if (((hashtable_field_is_variable(config->key_type) != 0) && ((config->key_size != 0) || (config->key_storage_size == 0))) ||
-        ((hashtable_field_is_variable(config->key_type) == 0) && ((config->key_size == 0) || (config->key_storage_size != 0))) ||
+    if (((hashtable_field_is_variable(config->key_type) != 0) &&
+         ((config->key_size != 0) || (config->key_storage_size == 0))) ||
+        ((hashtable_field_is_variable(config->key_type) == 0) &&
+         ((config->key_size == 0) || (config->key_storage_size != 0))) ||
         ((hashtable_field_is_variable(config->value_type) != 0) &&
          ((config->value_size != 0) || (config->value_storage_size == 0))) ||
         ((hashtable_field_is_variable(config->value_type) == 0) &&
@@ -74,8 +76,7 @@ int hashtable_validate_config(const cplat_hashtable_config *config)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_hashtable_required_size(const cplat_hashtable_config *config, size_t *mgmt_size_out,
-                                     size_t *data_size_out)
+int cplat_hashtable_required_size(const cplat_hashtable_config *config, size_t *mgmt_size_out, size_t *data_size_out)
 {
     size_t mgmt_size;
     size_t data_size;
@@ -109,8 +110,8 @@ int cplat_hashtable_required_size(const cplat_hashtable_config *config, size_t *
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_hashtable_create(const cplat_hashtable_config *config, void *buf_mgmt, size_t buf_mgmt_size,
-                              void *buf_data, size_t buf_data_size, cplat_hashtable **ht_out)
+int cplat_hashtable_create(const cplat_hashtable_config *config, void *buf_mgmt, size_t buf_mgmt_size, void *buf_data,
+                           size_t buf_data_size, cplat_hashtable **ht_out)
 {
     size_t mgmt_size;
     size_t data_size;
@@ -239,8 +240,7 @@ int cplat_hashtable_create(const cplat_hashtable_config *config, void *buf_mgmt,
 static int growth_config_is_valid(const cplat_hashtable_config *initial_config,
                                   const cplat_hashtable_growth_config *growth_config)
 {
-    if ((growth_config->max_capacity != 0) &&
-        (growth_config->max_capacity < initial_config->capacity))
+    if ((growth_config->max_capacity != 0) && (growth_config->max_capacity < initial_config->capacity))
     {
         return 0;
     }
@@ -274,8 +274,7 @@ static int growth_config_is_valid(const cplat_hashtable_config *initial_config,
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_hashtable_create_growable(const cplat_hashtable_config *initial_config,
-                                    const cplat_hashtable_growth_config *growth_config,
-                                    cplat_hashtable **ht_out)
+                                    const cplat_hashtable_growth_config *growth_config, cplat_hashtable **ht_out)
 {
     cplat_hashtable *ht = NULL;
     int ret;
@@ -377,7 +376,7 @@ int cplat_hashtable_buffer_ref(const cplat_hashtable *ht, const void **mgmt_out,
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_hashtable_attach(void *buf_mgmt, size_t buf_mgmt_size, void *buf_data, size_t buf_data_size,
-                              cplat_hashtable **ht_out)
+                           cplat_hashtable **ht_out)
 {
     struct hashtable_persist_header *hdr;
     cplat_hashtable *ht;

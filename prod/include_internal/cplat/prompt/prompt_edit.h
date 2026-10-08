@@ -72,8 +72,8 @@ extern "C"
      *  @param[out]     max_bytes                   解決後の最大容量を格納します。NULL も指定できます。
      */
     void cplat_internal_prompt_edit_resolve_options(size_t requested_history_max, size_t requested_initial_capacity,
-                                              size_t requested_max_bytes, size_t initial_capacity_default,
-                                              size_t *history_max, size_t *initial_capacity, size_t *max_bytes);
+                                                    size_t requested_max_bytes, size_t initial_capacity_default,
+                                                    size_t *history_max, size_t *initial_capacity, size_t *max_bytes);
 
     /**
      *  @brief          入力欄の初期値が、1 行の編集内容として受け入れられるかを確認します。
@@ -88,7 +88,8 @@ extern "C"
      *  prompt と pinned_prompt が、初期値付きの入力で同じ規則を使うための関数です。\n
      *  途中で切り詰めると UTF-8 の文字の途中で切れた値を編集させることになるため、切り詰めずに拒否します。
      */
-    int cplat_internal_prompt_edit_validate_initial_text(const char *initial_text, size_t max_bytes, size_t *length_out);
+    int cplat_internal_prompt_edit_validate_initial_text(const char *initial_text, size_t max_bytes,
+                                                         size_t *length_out);
 
 #ifdef __cplusplus
 }

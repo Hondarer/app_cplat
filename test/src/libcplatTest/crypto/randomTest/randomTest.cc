@@ -2,7 +2,7 @@
 #include <cplat/base/result.h>
 #include <cplat/crypto/random.h>
 #if defined(PLATFORM_LINUX)
-#include <mock_openssl.h>
+    #include <mock_openssl.h>
 #endif /* PLATFORM_LINUX */
 
 #include <cstring>
@@ -24,7 +24,8 @@ TEST_F(randomTest, fills_requested_size)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_random_bytes(buf, sizeof(buf)); // [手順] - 32 byte を要求して cplat_random_bytes を呼び出す。
+    int actual_ret =
+        cplat_random_bytes(buf, sizeof(buf)); // [手順] - 32 byte を要求して cplat_random_bytes を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_random_bytes の戻り値が CPLAT_OK であること。

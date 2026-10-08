@@ -17,8 +17,9 @@ TEST(atomicLoadStoreTest, u8_store_and_load_are_consistent_across_memory_orders)
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
         const uint8_t value = (uint8_t)(10U + (uint8_t)index);
-        cplat_atomic_store_u8(&atomic, value, kAllMemoryOrders[index]);         // [手順] - 各メモリ順序で異なる値を書き込む。
-        loaded[index] = cplat_atomic_load_u8(&atomic, kAllMemoryOrders[index]); // [手順] - 直後に同じメモリ順序で読み取る。
+        cplat_atomic_store_u8(&atomic, value, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で異なる値を書き込む。
+        loaded[index] =
+            cplat_atomic_load_u8(&atomic, kAllMemoryOrders[index]); // [手順] - 直後に同じメモリ順序で読み取る。
     }
 
     // Assert
@@ -42,8 +43,9 @@ TEST(atomicLoadStoreTest, i32_store_and_load_are_consistent_across_memory_orders
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
         const int32_t value = (int32_t)(1000 + (int32_t)index);
-        cplat_atomic_store_i32(&atomic, value, kAllMemoryOrders[index]);         // [手順] - 各メモリ順序で異なる値を書き込む。
-        loaded[index] = cplat_atomic_load_i32(&atomic, kAllMemoryOrders[index]); // [手順] - 直後に同じメモリ順序で読み取る。
+        cplat_atomic_store_i32(&atomic, value, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で異なる値を書き込む。
+        loaded[index] =
+            cplat_atomic_load_i32(&atomic, kAllMemoryOrders[index]); // [手順] - 直後に同じメモリ順序で読み取る。
     }
 
     // Assert
@@ -67,8 +69,9 @@ TEST(atomicLoadStoreTest, u32_store_and_load_are_consistent_across_memory_orders
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
         const uint32_t value = (uint32_t)(2000U + (uint32_t)index);
-        cplat_atomic_store_u32(&atomic, value, kAllMemoryOrders[index]);         // [手順] - 各メモリ順序で異なる値を書き込む。
-        loaded[index] = cplat_atomic_load_u32(&atomic, kAllMemoryOrders[index]); // [手順] - 直後に同じメモリ順序で読み取る。
+        cplat_atomic_store_u32(&atomic, value, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で異なる値を書き込む。
+        loaded[index] =
+            cplat_atomic_load_u32(&atomic, kAllMemoryOrders[index]); // [手順] - 直後に同じメモリ順序で読み取る。
     }
 
     // Assert
@@ -92,8 +95,9 @@ TEST(atomicLoadStoreTest, i64_store_and_load_are_consistent_across_memory_orders
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
         const int64_t value = (int64_t)(30000000000LL + (int64_t)index);
-        cplat_atomic_store_i64(&atomic, value, kAllMemoryOrders[index]);         // [手順] - 各メモリ順序で異なる値を書き込む。
-        loaded[index] = cplat_atomic_load_i64(&atomic, kAllMemoryOrders[index]); // [手順] - 直後に同じメモリ順序で読み取る。
+        cplat_atomic_store_i64(&atomic, value, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で異なる値を書き込む。
+        loaded[index] =
+            cplat_atomic_load_i64(&atomic, kAllMemoryOrders[index]); // [手順] - 直後に同じメモリ順序で読み取る。
     }
 
     // Assert
@@ -117,8 +121,9 @@ TEST(atomicLoadStoreTest, u64_store_and_load_are_consistent_across_memory_orders
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
         const uint64_t value = (uint64_t)(40000000000ULL + (uint64_t)index);
-        cplat_atomic_store_u64(&atomic, value, kAllMemoryOrders[index]);         // [手順] - 各メモリ順序で異なる値を書き込む。
-        loaded[index] = cplat_atomic_load_u64(&atomic, kAllMemoryOrders[index]); // [手順] - 直後に同じメモリ順序で読み取る。
+        cplat_atomic_store_u64(&atomic, value, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で異なる値を書き込む。
+        loaded[index] =
+            cplat_atomic_load_u64(&atomic, kAllMemoryOrders[index]); // [手順] - 直後に同じメモリ順序で読み取る。
     }
 
     // Assert
@@ -143,8 +148,10 @@ TEST(atomicLoadStoreTest, ptr_store_and_load_are_consistent_across_memory_orders
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
         markers[index] = (int)index;
-        cplat_atomic_store_ptr(&atomic, &markers[index], kAllMemoryOrders[index]); // [手順] - 各メモリ順序で異なるポインターを書き込む。
-        loaded[index] = cplat_atomic_load_ptr(&atomic, kAllMemoryOrders[index]);   // [手順] - 直後に同じメモリ順序で読み取る。
+        cplat_atomic_store_ptr(&atomic, &markers[index],
+                               kAllMemoryOrders[index]); // [手順] - 各メモリ順序で異なるポインターを書き込む。
+        loaded[index] =
+            cplat_atomic_load_ptr(&atomic, kAllMemoryOrders[index]); // [手順] - 直後に同じメモリ順序で読み取る。
     }
 
     // Assert
@@ -166,8 +173,9 @@ TEST(atomicLoadStoreTest, value_written_through_one_pointer_is_visible_through_a
     // Pre-Assert
 
     // Act
-    cplat_atomic_store_i32(writer_view, 4242, CPLAT_MEMORY_ORDER_SEQ_CST);   // [手順] - 一方のポインター経由で書き込む。
-    const int32_t actual = cplat_atomic_load_i32(reader_view, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - もう一方のポインター経由で読み取る。
+    cplat_atomic_store_i32(writer_view, 4242, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 一方のポインター経由で書き込む。
+    const int32_t actual =
+        cplat_atomic_load_i32(reader_view, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - もう一方のポインター経由で読み取る。
 
     // Assert
     EXPECT_EQ(4242, actual); // [確認_正常系] - 別ポインター経由でも書き込んだ値が読めること。

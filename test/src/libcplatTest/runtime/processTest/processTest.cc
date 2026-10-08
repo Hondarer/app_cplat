@@ -92,9 +92,8 @@ TEST(processTest, MapsWindowsInsufficientBuffer)
         ERROR_INSUFFICIENT_BUFFER); // [手順] - ERROR_INSUFFICIENT_BUFFER を共通結果コードへ変換する。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_ERR_BUFFER_TOO_SMALL,
-        result); // [確認_正常系] - ERROR_INSUFFICIENT_BUFFER の変換結果が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
+              result); // [確認_正常系] - ERROR_INSUFFICIENT_BUFFER の変換結果が CPLAT_ERR_BUFFER_TOO_SMALL であること。
 }
 #endif
 
@@ -126,7 +125,7 @@ TEST(processTest, RunSyncReturnsChildExitCode)
 
     // Act
     int result = cplat_process_run_sync(&options, CPLAT_PROCESS_WAIT_FOREVER,
-                                           &exit_code); // [手順] - cplat_process_run_sync を無期限待機で呼び出す。
+                                        &exit_code); // [手順] - cplat_process_run_sync を無期限待機で呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -163,11 +162,11 @@ TEST(processTest, EnvironmentOverridesAreAcceptedByRunSync)
 
     // Act
     int result = cplat_process_run_sync(&options, CPLAT_PROCESS_WAIT_FOREVER,
-                                           &exit_code); // [手順] - 環境変数上書き付きで同期実行する。
+                                        &exit_code); // [手順] - 環境変数上書き付きで同期実行する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_process_run_sync の戻り値が OK であること。
-    EXPECT_EQ(0, exit_code);        // [確認_正常系] - 子プロセスの終了コードが 0 であること。
+    EXPECT_EQ(0, exit_code);     // [確認_正常系] - 子プロセスの終了コードが 0 であること。
 }
 
 // 実行中プロセスへの NO_WAIT 待機が TIMEOUT を報告することの確認
@@ -202,17 +201,16 @@ TEST(processTest, WaitNoWaitReportsTimeoutForRunningProcess)
     // [Pre-Assert手順] - 終了ステータス 0 を設定して 4244 を返却する。
 
     // Act
-    int start_result =
-        cplat_process_start(&options, &process); // [手順] - cplat_process_start で子プロセスを起動する。
+    int start_result = cplat_process_start(&options, &process); // [手順] - cplat_process_start で子プロセスを起動する。
     ASSERT_EQ(CPLAT_OK, start_result);
     // [確認_正常系] - `cplat_process_start(&options, &process)` の戻り値が `CPLAT_OK` であること。
     ASSERT_NE(nullptr, process);
     // [確認_正常系] - `nullptr` と `process` が異なること。
 
-    int wait_result = cplat_process_wait(process, CPLAT_PROCESS_NO_WAIT); // [手順] - NO_WAIT で待機する。
-    int terminate_result = cplat_process_terminate(process); // [手順] - 子プロセスを terminate する。
+    int wait_result = cplat_process_wait(process, CPLAT_PROCESS_NO_WAIT);     // [手順] - NO_WAIT で待機する。
+    int terminate_result = cplat_process_terminate(process);                  // [手順] - 子プロセスを terminate する。
     int final_wait = cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 無期限待機で終了を待つ。
-    int exit_result = cplat_process_get_exit_code(process, &exit_code);          // [手順] - 終了コードを取得する。
+    int exit_result = cplat_process_get_exit_code(process, &exit_code);       // [手順] - 終了コードを取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_TIMEOUT, wait_result); // [確認_正常系] - 実行中の NO_WAIT 待機が TIMEOUT を返すこと。
@@ -250,9 +248,8 @@ TEST(processTest, WaitReturnsChildExitCode)
     // [Pre-Assert確認_正常系] - mock_windows の CloseHandle(_, _, _, fake_process) が登録した呼び出し期待を満たすこと。
 
     // Act
-    int wait_result =
-        cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER);     // [手順] - 無期限待機で終了を待つ。
-    int exit_result = cplat_process_get_exit_code(process, &exit_code); // [手順] - 終了コードを取得する。
+    int wait_result = cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 無期限待機で終了を待つ。
+    int exit_result = cplat_process_get_exit_code(process, &exit_code);        // [手順] - 終了コードを取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, wait_result); // [確認_正常系] - cplat_process_wait の戻り値が CPLAT_OK であること。
@@ -295,10 +292,10 @@ TEST(processTest, WaitNoWaitReportsTimeoutForAdoptedProcess)
     // [Pre-Assert確認_正常系] - mock_windows の CloseHandle(_, _, _, fake_process) が登録した呼び出し期待を満たすこと。
 
     // Act
-    int wait_result = cplat_process_wait(process, CPLAT_PROCESS_NO_WAIT); // [手順] - NO_WAIT で待機する。
-    int terminate_result = cplat_process_terminate(process); // [手順] - 子プロセスを terminate する。
+    int wait_result = cplat_process_wait(process, CPLAT_PROCESS_NO_WAIT);     // [手順] - NO_WAIT で待機する。
+    int terminate_result = cplat_process_terminate(process);                  // [手順] - 子プロセスを terminate する。
     int final_wait = cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 無期限待機で終了を待つ。
-    int exit_result = cplat_process_get_exit_code(process, &exit_code);          // [手順] - 終了コードを取得する。
+    int exit_result = cplat_process_get_exit_code(process, &exit_code);       // [手順] - 終了コードを取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_TIMEOUT, wait_result); // [確認_正常系] - 実行中の NO_WAIT 待機が TIMEOUT を返すこと。
@@ -374,7 +371,7 @@ TEST(processTest, StartCreatesProcessWithCreateProcessW)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_process_start の戻り値が CPLAT_OK であること。
-    EXPECT_NE(nullptr, process);    // [確認_正常系] - 生成された process が非 NULL であること。
+    EXPECT_NE(nullptr, process); // [確認_正常系] - 生成された process が非 NULL であること。
 
     // Cleanup
     cplat_process_dispose(process);
@@ -452,7 +449,7 @@ TEST(processTest, StartCreatesProcessWithInheritedStdio)
     HANDLE process_handle = reinterpret_cast<HANDLE>(0x80);
     HANDLE thread_handle = reinterpret_cast<HANDLE>(0x81);
 
-    options.argv = argv;                                       // [状態] - cmd.exe を起動する argv とする。
+    options.argv = argv;                                    // [状態] - cmd.exe を起動する argv とする。
     options.stdin_spec.mode = CPLAT_PROCESS_STDIO_INHERIT;  // [状態] - stdin を親ハンドル継承とする。
     options.stdout_spec.mode = CPLAT_PROCESS_STDIO_INHERIT; // [状態] - stdout を親ハンドル継承とする。
     options.stderr_spec.mode = CPLAT_PROCESS_STDIO_INHERIT; // [状態] - stderr を親ハンドル継承とする。
@@ -543,7 +540,7 @@ TEST(processTest, StartCreatesProcessWithInheritedStdio)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_process_start の戻り値が CPLAT_OK であること。
-    EXPECT_NE(nullptr, process);    // [確認_正常系] - 生成された process が非 NULL であること。
+    EXPECT_NE(nullptr, process); // [確認_正常系] - 生成された process が非 NULL であること。
 
     // Cleanup
     cplat_process_dispose(process);
@@ -561,7 +558,7 @@ TEST(processTest, StartReportsDuplicateHandleFailure)
     HANDLE current_process = reinterpret_cast<HANDLE>(0x50);
     HANDLE stdin_source = reinterpret_cast<HANDLE>(0x10);
 
-    options.argv = argv;                                       // [状態] - cmd.exe を起動する argv とする。
+    options.argv = argv;                                    // [状態] - cmd.exe を起動する argv とする。
     options.stdin_spec.mode = CPLAT_PROCESS_STDIO_INHERIT;  // [状態] - stdin を親ハンドル継承とする。
     options.stdout_spec.mode = CPLAT_PROCESS_STDIO_INHERIT; // [状態] - stdout を親ハンドル継承とする。
     options.stderr_spec.mode = CPLAT_PROCESS_STDIO_INHERIT; // [状態] - stderr を親ハンドル継承とする。
@@ -602,7 +599,7 @@ TEST(processTest, StartFallsBackToNullDeviceWhenStdHandleInvalid)
     HANDLE process_handle = reinterpret_cast<HANDLE>(0x80);
     HANDLE thread_handle = reinterpret_cast<HANDLE>(0x81);
 
-    options.argv = argv;                                       // [状態] - cmd.exe を起動する argv とする。
+    options.argv = argv;                                    // [状態] - cmd.exe を起動する argv とする。
     options.stdin_spec.mode = CPLAT_PROCESS_STDIO_INHERIT;  // [状態] - stdin を親ハンドル継承とする。
     options.stdout_spec.mode = CPLAT_PROCESS_STDIO_INHERIT; // [状態] - stdout を親ハンドル継承とする。
     options.stderr_spec.mode = CPLAT_PROCESS_STDIO_INHERIT; // [状態] - stderr を親ハンドル継承とする。
@@ -656,7 +653,7 @@ TEST(processTest, StartFallsBackToNullDeviceWhenStdHandleInvalid)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_process_start の戻り値が CPLAT_OK であること。
-    EXPECT_NE(nullptr, process);    // [確認_正常系] - 生成された process が非 NULL であること。
+    EXPECT_NE(nullptr, process); // [確認_正常系] - 生成された process が非 NULL であること。
 
     // Cleanup
     cplat_process_dispose(process);
@@ -677,7 +674,7 @@ TEST(processTest, StartCreatesProcessWithNativeStdioHandle)
     HANDLE process_handle = reinterpret_cast<HANDLE>(0x80);
     HANDLE thread_handle = reinterpret_cast<HANDLE>(0x81);
 
-    options.argv = argv;                                            // [状態] - cmd.exe を起動する argv とする。
+    options.argv = argv;                                         // [状態] - cmd.exe を起動する argv とする。
     options.stdin_spec.mode = CPLAT_PROCESS_STDIO_NATIVE_HANDLE; // [状態] - stdin を指定ハンドルとする。
     options.stdin_spec.native_handle = reinterpret_cast<intptr_t>(native_handle);
     options.stdout_spec.mode = CPLAT_PROCESS_STDIO_NATIVE_HANDLE; // [状態] - stdout を指定ハンドルとする。
@@ -740,7 +737,7 @@ TEST(processTest, StartCreatesProcessWithNativeStdioHandle)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_process_start の戻り値が CPLAT_OK であること。
-    EXPECT_NE(nullptr, process);    // [確認_正常系] - 生成された process が非 NULL であること。
+    EXPECT_NE(nullptr, process); // [確認_正常系] - 生成された process が非 NULL であること。
 
     // Cleanup
     cplat_process_dispose(process);
@@ -830,8 +827,8 @@ TEST(processTest, ExecutablePathRejectsInvalidOutputArguments)
     // Act
     int null_result = cplat_process_get_executable_path(
         NULL, sizeof(path)); // [手順] - 出力先に NULL を渡して実行ファイルのパスを取得する。
-    int zero_size_result = cplat_process_get_executable_path(
-        path, 0); // [手順] - 出力先サイズに 0 を渡して実行ファイルのパスを取得する。
+    int zero_size_result =
+        cplat_process_get_executable_path(path, 0); // [手順] - 出力先サイズに 0 を渡して実行ファイルのパスを取得する。
 
     // Assert
     EXPECT_EQ(
@@ -871,7 +868,7 @@ TEST(processTest, GetsPidPropagatesMockedGetpid)
     // Pre-Assert
     EXPECT_CALL(mock_unistd, getpid(_, _, _))
         .WillOnce(Return(static_cast<pid_t>(4321))); // [Pre-Assert確認_正常系] - getpid が 1 回呼び出されること。
-                                                      // [Pre-Assert手順] - pid 4321 を返却する。
+                                                     // [Pre-Assert手順] - pid 4321 を返却する。
 
     // Act
     uint32_t result = cplat_process_get_pid(); // [手順] - cplat_process_get_pid を呼び出す。
@@ -912,8 +909,8 @@ TEST(processTest, GetsTidReturnsSameValueInSameThread)
     uint32_t second_tid = cplat_process_get_tid(); // [手順] - 同じスレッドから cplat_process_get_tid を再度呼び出す。
 
     // Assert
-    EXPECT_NE(0U, first_tid);            // [確認_正常系] - 取得した TID が 0 でないこと。
-    EXPECT_EQ(first_tid, second_tid);    // [確認_正常系] - 同じスレッドからの 2 回の取得結果が一致すること。
+    EXPECT_NE(0U, first_tid);         // [確認_正常系] - 取得した TID が 0 でないこと。
+    EXPECT_EQ(first_tid, second_tid); // [確認_正常系] - 同じスレッドからの 2 回の取得結果が一致すること。
 }
 
 // 別のスレッドから取得した TID が、呼び出し元のスレッドの TID と異なることの確認
@@ -927,11 +924,12 @@ TEST(processTest, GetsTidDiffersBetweenThreads)
     // Act
     std::thread worker(get_tid_in_thread, &worker_tid); // [手順] - 別のスレッドから cplat_process_get_tid を呼び出す。
     worker.join();
-    uint32_t current_tid = cplat_process_get_tid(); // [手順] - 呼び出し元のスレッドから cplat_process_get_tid を呼び出す。
+    uint32_t current_tid =
+        cplat_process_get_tid(); // [手順] - 呼び出し元のスレッドから cplat_process_get_tid を呼び出す。
 
     // Assert
-    EXPECT_NE(0U, worker_tid);             // [確認_正常系] - 別スレッドで取得した TID が 0 でないこと。
-    EXPECT_NE(current_tid, worker_tid);    // [確認_正常系] - 別スレッドの TID が呼び出し元のスレッドの TID と異なること。
+    EXPECT_NE(0U, worker_tid);          // [確認_正常系] - 別スレッドで取得した TID が 0 でないこと。
+    EXPECT_NE(current_tid, worker_tid); // [確認_正常系] - 別スレッドの TID が呼び出し元のスレッドの TID と異なること。
 }
 
 #if defined(PLATFORM_LINUX)
@@ -1070,9 +1068,9 @@ TEST(processTest, StartReportsProcessAllocationFailure)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
         .WillOnce(DoDefault())
-        .WillOnce(
-            Return(nullptr)); // [Pre-Assert確認_異常系] - 環境配列後の process ハンドル確保で cplat_calloc が失敗すること。
-                              // [Pre-Assert手順] - 1 回目は本物へ委譲し、2 回目は NULL を返却する。
+        .WillOnce(Return(
+            nullptr)); // [Pre-Assert確認_異常系] - 環境配列後の process ハンドル確保で cplat_calloc が失敗すること。
+                       // [Pre-Assert手順] - 1 回目は本物へ委譲し、2 回目は NULL を返却する。
 
     // Act
     int result = cplat_process_start(&options, &process); // [手順] - process ハンドル確保失敗を注入して開始する。
@@ -1113,13 +1111,16 @@ TEST(processTest, WaitMapsExitStatesAndRetriesEintr)
 {
     // Arrange
     NiceMock<Mock_sys_wait> mock_sys_wait;
-    cplat_process *normal_process = cplat_internal_process_adopt_native(123);   // [状態] - pid 123 の process を用意する。
-    cplat_process *signaled_process = cplat_internal_process_adopt_native(124); // [状態] - pid 124 の process を用意する。
+    cplat_process *normal_process =
+        cplat_internal_process_adopt_native(123); // [状態] - pid 123 の process を用意する。
+    cplat_process *signaled_process =
+        cplat_internal_process_adopt_native(124); // [状態] - pid 124 の process を用意する。
     int normal_status = 7 << 8;
     int signaled_status = SIGTERM;
     int normal_exit_code = 0;
     int signaled_exit_code = 0;
-    ASSERT_NE(nullptr, normal_process); // [状態確認] - pid 123 の cplat_internal_process_adopt_native が非 NULL を返すこと。
+    ASSERT_NE(nullptr,
+              normal_process); // [状態確認] - pid 123 の cplat_internal_process_adopt_native が非 NULL を返すこと。
     ASSERT_NE(nullptr,
               signaled_process); // [状態確認] - pid 124 の cplat_internal_process_adopt_native が非 NULL を返すこと。
     errno = EINTR;               // [状態] - 1 回目の waitpid が EINTR を返す状態とする。
@@ -1142,23 +1143,21 @@ TEST(processTest, WaitMapsExitStatesAndRetriesEintr)
         normal_process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - EINTR 後に正常終了する process を待機する。
     int normal_get = cplat_process_get_exit_code(
         normal_process, &normal_exit_code); // [手順] - 正常終了 process の終了コードを取得する。
-    int signaled_wait = cplat_process_wait(
-        signaled_process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - シグナル終了 process を待機する。
+    int signaled_wait =
+        cplat_process_wait(signaled_process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - シグナル終了 process を待機する。
     int signaled_get = cplat_process_get_exit_code(
         signaled_process, &signaled_exit_code); // [手順] - シグナル終了 process の終了コードを取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
               normal_wait); // [確認_正常系] - 1 回目の EINTR 後の cplat_process_wait が CPLAT_OK であること。
-    EXPECT_EQ(
-        CPLAT_OK,
-        normal_get); // [確認_正常系] - 正常終了 process の cplat_process_get_exit_code が CPLAT_OK であること。
-    EXPECT_EQ(7, normal_exit_code); // [確認_正常系] - 正常終了 process の終了コードが 7 であること。
-    EXPECT_EQ(
-        CPLAT_OK,
-        signaled_wait); // [確認_正常系] - シグナル終了 process の cplat_process_wait が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK,
-              signaled_get); // [確認_正常系] - シグナル終了 process の終了コード取得が CPLAT_OK であること。
+              normal_get); // [確認_正常系] - 正常終了 process の cplat_process_get_exit_code が CPLAT_OK であること。
+    EXPECT_EQ(7, normal_exit_code); // [確認_正常系] - 正常終了 process の終了コードが 7 であること。
+    EXPECT_EQ(CPLAT_OK,
+              signaled_wait); // [確認_正常系] - シグナル終了 process の cplat_process_wait が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              signaled_get);           // [確認_正常系] - シグナル終了 process の終了コード取得が CPLAT_OK であること。
     EXPECT_EQ(-1, signaled_exit_code); // [確認_正常系] - シグナル終了 process の終了コードが -1 であること。
 
     // Cleanup
@@ -1182,8 +1181,7 @@ TEST(processTest, WaitReportsWaitpidFailure)
                                              // [Pre-Assert手順] - waitpid から -1 を返却する。
 
     // Act
-    int result =
-        cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - waitpid 失敗を注入して待機する。
+    int result = cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - waitpid 失敗を注入して待機する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -1230,11 +1228,10 @@ TEST(processTest, RejectsInvalidWaitAndExitArguments)
 
     // Act
     int null_wait = cplat_process_wait(NULL, CPLAT_PROCESS_NO_WAIT); // [手順] - NULL process で待機する。
-    int negative_wait = cplat_process_wait(process, -1);                // [手順] - 負の timeout で待機する。
+    int negative_wait = cplat_process_wait(process, -1);             // [手順] - 負の timeout で待機する。
     int null_exit_process =
         cplat_process_get_exit_code(NULL, &exit_code); // [手順] - NULL process から終了コードを取得する。
-    int null_exit_output =
-        cplat_process_get_exit_code(process, NULL); // [手順] - NULL 出力先へ終了コードを取得する。
+    int null_exit_output = cplat_process_get_exit_code(process, NULL); // [手順] - NULL 出力先へ終了コードを取得する。
     int running_exit =
         cplat_process_get_exit_code(process, &exit_code); // [手順] - 待機前 process から終了コードを取得する。
     int null_terminate = cplat_process_terminate(NULL);   // [手順] - NULL process を terminate する。
@@ -1305,10 +1302,9 @@ TEST(processTest, environment_helpers_handle_keys_and_capacity)
     ASSERT_NE(static_cast<char **>(NULL), built_env);          // [確認_正常系] - 環境配列が生成されること。
     EXPECT_STREQ("/custom/bin",
                  test_process_find_env_value(built_env, "PATH")); // [確認_正常系] - PATH が上書きされること。
-    EXPECT_STREQ("helper",
-                 test_process_find_env_value(
-                     built_env, "CPLAT_PROCESS_TEST_HELPER")); // [確認_正常系] - 追加変数が検索できること。
-    EXPECT_EQ(static_cast<char **>(NULL), invalid_env);           // [確認_異常系] - 不正な上書きで NULL が返ること。
+    EXPECT_STREQ("helper", test_process_find_env_value(
+                               built_env, "CPLAT_PROCESS_TEST_HELPER")); // [確認_正常系] - 追加変数が検索できること。
+    EXPECT_EQ(static_cast<char **>(NULL), invalid_env); // [確認_異常系] - 不正な上書きで NULL が返ること。
 
     // Cleanup
     test_process_free_envp(built_env);
@@ -1517,13 +1513,13 @@ TEST(processTest, wait_sleeps_before_finite_deadline_and_detects_exit)
                               // [Pre-Assert手順] - usleep から 0 を返却する。
 
     // Act
-    int wait_result = cplat_process_wait(process, 500); // [手順] - 期限前のプロセスを有限時間待機する。
+    int wait_result = cplat_process_wait(process, 500);                 // [手順] - 期限前のプロセスを有限時間待機する。
     int exit_result = cplat_process_get_exit_code(process, &exit_code); // [手順] - 終了コードを取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, wait_result); // [確認_正常系] - 有限待機が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK, exit_result); // [確認_正常系] - 終了コード取得が CPLAT_OK であること。
-    EXPECT_EQ(4, exit_code);             // [確認_正常系] - 子プロセスの終了コードが 4 であること。
+    EXPECT_EQ(4, exit_code);          // [確認_正常系] - 子プロセスの終了コードが 4 であること。
 
     // Cleanup
     cplat_process_dispose(process);
@@ -1584,11 +1580,10 @@ TEST(processTest, completed_process_wait_and_terminate_are_idempotent)
                                                // [Pre-Assert手順] - 終了ステータス 3 を設定して 129 を返却する。
 
     // Act
-    int first_wait =
-        cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - プロセスの終了を待機する。
+    int first_wait = cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - プロセスの終了を待機する。
     int second_wait =
         cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 終了済みプロセスを再度待機する。
-    int terminate_result = cplat_process_terminate(process);        // [手順] - 終了済みプロセスを terminate する。
+    int terminate_result = cplat_process_terminate(process);     // [手順] - 終了済みプロセスを terminate する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, first_wait);  // [確認_正常系] - 1 回目の cplat_process_wait が CPLAT_OK であること。
@@ -1633,10 +1628,10 @@ TEST(processTest, run_sync_rejects_invalid_output_and_start_failure)
 
     // Act
     int null_output = cplat_process_run_sync(&options, CPLAT_PROCESS_WAIT_FOREVER,
-                                                NULL); // [手順] - 終了コード出力先に NULL を渡す。
+                                             NULL); // [手順] - 終了コード出力先に NULL を渡す。
     options.argv = nullptr;
     int start_failure = cplat_process_run_sync(&options, CPLAT_PROCESS_WAIT_FOREVER,
-                                                  &exit_code); // [手順] - 不正な options で同期実行する。
+                                               &exit_code); // [手順] - 不正な options で同期実行する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -1829,7 +1824,7 @@ TEST(processTest, run_sync_returns_wait_failure)
 
     // Act
     int result = cplat_process_run_sync(&options, CPLAT_PROCESS_NO_WAIT,
-                                           &exit_code); // [手順] - 未終了プロセスを即時 timeout で同期実行する。
+                                        &exit_code); // [手順] - 未終了プロセスを即時 timeout で同期実行する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_TIMEOUT, result); // [確認_正常系] - cplat_process_run_sync が wait timeout を返すこと。

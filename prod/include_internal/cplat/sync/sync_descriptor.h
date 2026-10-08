@@ -56,8 +56,8 @@ extern "C"
      *                  バッファー不足時は CPLAT_ERR_BUFFER_TOO_SMALL を返し、
      *                  descriptor_size に必要バイト数を格納します。
      */
-    int cplat_internal_interprocess_sync_descriptor_export(const char *identity, uint8_t kind, uint8_t backend, void *descriptor,
-                                            size_t *descriptor_size);
+    int cplat_internal_interprocess_sync_descriptor_export(const char *identity, uint8_t kind, uint8_t backend,
+                                                           void *descriptor, size_t *descriptor_size);
 
     /**
      *  @brief          ディスクリプターを検証して identity を取り出します。
@@ -74,7 +74,7 @@ extern "C"
      *                  メモリ確保失敗時 CPLAT_ERR_UNKNOWN。
      */
     int cplat_internal_interprocess_sync_descriptor_import(const void *descriptor, size_t descriptor_size, uint8_t kind,
-                                            uint8_t backend, char **identity_out);
+                                                           uint8_t backend, char **identity_out);
 
 #ifdef __cplusplus
 }

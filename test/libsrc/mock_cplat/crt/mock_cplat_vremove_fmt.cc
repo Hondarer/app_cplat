@@ -6,8 +6,8 @@
 
 int delegate_real_cplat_vremove_fmt(cplat_error *detail_out, const char *format, va_list args)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_vremove_fmt)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_vremove_fmt"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_vremove_fmt)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_vremove_fmt"));
 
     return real_fn(detail_out, format, args);
 }

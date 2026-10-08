@@ -25,7 +25,7 @@ TEST_F(trace_syslogTest, test_init_and_dispose)
 
     // Act
     cplat_syslog_sink *handle = cplat_syslog_sink_create(
-        "syslog_test", LOG_USER); // [手順] - ident "syslog_test"、facility LOG_USER で syslog sink を初期化する。
+        "syslog_test", LOG_USER);      // [手順] - ident "syslog_test"、facility LOG_USER で syslog sink を初期化する。
     cplat_syslog_sink_dispose(handle); // [手順] - syslog sink を破棄する。
 
     // Assert
@@ -38,7 +38,7 @@ TEST_F(trace_syslogTest, rename_succeeds)
     // Arrange
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("before", LOG_USER); // [状態] - 変更前の識別子を "before" とする。
-    ASSERT_NE((cplat_syslog_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE((cplat_syslog_sink *)NULL, handle);     // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
 
@@ -59,7 +59,7 @@ TEST_F(trace_syslogTest, rename_rejects_invalid_arguments)
     // Arrange
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslog_test", LOG_USER); // [状態] - 初期化済みの syslog sink を用意する。
-    ASSERT_NE((cplat_syslog_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE((cplat_syslog_sink *)NULL, handle);          // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
 
@@ -87,13 +87,13 @@ TEST_F(trace_syslogTest, test_write_returns_zero)
     // Arrange
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslog_test", LOG_USER); // [状態] - 初期化済みの syslog sink を用意する。
-    ASSERT_NE((cplat_syslog_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE((cplat_syslog_sink *)NULL, handle);          // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
 
     // Act
     int result = cplat_syslog_sink_write(handle, LOG_INFO, NULL,
-                                            "test message"); // [手順] - LOG_INFO レベルで "test message" を書き込む。
+                                         "test message"); // [手順] - LOG_INFO レベルで "test message" を書き込む。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -109,7 +109,7 @@ TEST_F(trace_syslogTest, test_write_all_levels)
     // Arrange
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslog_test", LOG_USER); // [状態] - 初期化済みの syslog sink を用意する。
-    ASSERT_NE((cplat_syslog_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE((cplat_syslog_sink *)NULL, handle);          // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
 
@@ -156,11 +156,11 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_prefixes_timestamp)
     cplat_timespec timestamp = {
         1412916640LL, 0}; // [状態] - 明示タイムスタンプを 2014-10-10T13:50:40+09:00 相当の {1412916640, 0} とする。
 
-    ASSERT_EQ(0, pipe(pipe_fds)); // [状態] - pipe を生成する。
-                                  // [状態確認] - pipe の生成が成功すること。
-    ASSERT_EQ(0, setenv("TZ", "Asia/Tokyo", 1)); // [状態] - TZ を Asia/Tokyo とする。
-                                                 // [状態確認] - TZ の setenv の戻り値が 0 であること。
-    tzset(); // [状態] - タイム ゾーンを Asia/Tokyo とする。
+    ASSERT_EQ(0, pipe(pipe_fds));                          // [状態] - pipe を生成する。
+                                                           // [状態確認] - pipe の生成が成功すること。
+    ASSERT_EQ(0, setenv("TZ", "Asia/Tokyo", 1));           // [状態] - TZ を Asia/Tokyo とする。
+                                                           // [状態確認] - TZ の setenv の戻り値が 0 であること。
+    tzset();                                               // [状態] - タイム ゾーンを Asia/Tokyo とする。
     snprintf(fd_text, sizeof(fd_text), "%d", pipe_fds[1]); // [状態] - テスト用 FD をパイプの書き込み側とする。
     ASSERT_EQ(0, setenv("SYSLOG_TEST_FD", fd_text,
                         1)); // [状態] - SYSLOG_TEST_FD をパイプの書き込み側とする。
@@ -168,7 +168,7 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_prefixes_timestamp)
 
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslog_test", LOG_USER); // [状態] - 初期化済みの syslog sink を用意する。
-    ASSERT_NE((cplat_syslog_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE((cplat_syslog_sink *)NULL, handle);          // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
 
@@ -235,13 +235,13 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_falls_back_from_invalid_explicit_
         saved_fd_value = saved_fd;
     }
     cplat_timespec invalid_timestamp = {1714100645LL,
-                                           1000000000}; // [状態] - nsec が 10 億の不正な明示タイムスタンプを用意する。
+                                        1000000000}; // [状態] - nsec が 10 億の不正な明示タイムスタンプを用意する。
 
-    ASSERT_EQ(0, pipe(pipe_fds)); // [状態] - pipe を生成する。
-                                  // [状態確認] - pipe の生成が成功すること。
-    ASSERT_EQ(0, setenv("TZ", "Asia/Tokyo", 1)); // [状態] - TZ を Asia/Tokyo とする。
-                                                 // [状態確認] - TZ の setenv の戻り値が 0 であること。
-    tzset(); // [状態] - タイム ゾーンを Asia/Tokyo とする。
+    ASSERT_EQ(0, pipe(pipe_fds));                          // [状態] - pipe を生成する。
+                                                           // [状態確認] - pipe の生成が成功すること。
+    ASSERT_EQ(0, setenv("TZ", "Asia/Tokyo", 1));           // [状態] - TZ を Asia/Tokyo とする。
+                                                           // [状態確認] - TZ の setenv の戻り値が 0 であること。
+    tzset();                                               // [状態] - タイム ゾーンを Asia/Tokyo とする。
     snprintf(fd_text, sizeof(fd_text), "%d", pipe_fds[1]); // [状態] - テスト用 FD をパイプの書き込み側とする。
     ASSERT_EQ(0, setenv("SYSLOG_TEST_FD", fd_text,
                         1)); // [状態] - SYSLOG_TEST_FD をパイプの書き込み側とする。
@@ -249,14 +249,14 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_falls_back_from_invalid_explicit_
 
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslog_test", LOG_USER); // [状態] - 初期化済みの syslog sink を用意する。
-    ASSERT_NE((cplat_syslog_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE((cplat_syslog_sink *)NULL, handle);          // [状態確認] - ハンドルが非 NULL であること。
 
     // Pre-Assert
 
     // Act
     int actual_ret_syslog_sink_write =
         cplat_syslog_sink_write(handle, LOG_INFO, &invalid_timestamp,
-                                   "invalid ts"); // [手順] - 不正な明示タイムスタンプ付きで "invalid ts" を書き込む。
+                                "invalid ts"); // [手順] - 不正な明示タイムスタンプ付きで "invalid ts" を書き込む。
 
     // Assert
     EXPECT_EQ(

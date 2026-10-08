@@ -143,7 +143,7 @@ TEST_F(clockTest, realtime_returns_split_platform_value)
 {
     // Arrange
     const int64_t expected_sec = 1712345678LL; // [状態] - 実時刻の秒部期待値を 1712345678 とする。
-    cplat_timespec actual_ts = {-1, -1};    // [状態] - 出力先を未更新値 {-1, -1} で初期化する。
+    cplat_timespec actual_ts = {-1, -1};       // [状態] - 出力先を未更新値 {-1, -1} で初期化する。
     // [状態] - プラットフォームに応じたナノ秒部期待値を expected_nsec に設定する。
 
     // Pre-Assert
@@ -319,7 +319,7 @@ TEST_F(clockTest, format_realtime_iso8601_local_outputs_offset_and_milliseconds)
 {
     // Arrange
     const cplat_timespec timestamp = {1712297228LL,
-                                         246800000LL}; // [状態] - 変換対象を {1712297228, 246800000} とする。
+                                      246800000LL}; // [状態] - 変換対象を {1712297228, 246800000} とする。
     char actual[CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1];
     struct tm local_tm;
     struct tm utc_tm;
@@ -367,7 +367,7 @@ TEST_F(clockTest, format_realtime_iso8601_local_supports_negative_offset)
 {
     // Arrange
     const cplat_timespec timestamp = {1712297228LL,
-                                         135000000LL}; // [状態] - 変換対象を {1712297228, 135000000} とする。
+                                      135000000LL}; // [状態] - 変換対象を {1712297228, 135000000} とする。
     char actual[CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1];
     struct tm local_tm;
     struct tm utc_tm;
@@ -412,7 +412,7 @@ TEST_F(clockTest, format_realtime_iso8601_utc_outputs_z_suffix)
 {
     // Arrange
     const cplat_timespec timestamp = {1712297228LL,
-                                         987000000LL}; // [状態] - 変換対象を {1712297228, 987000000} とする。
+                                      987000000LL}; // [状態] - 変換対象を {1712297228, 987000000} とする。
     char actual[CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN + 1];
     struct tm utc_tm;
     Mock_cplat mock_cplat;
@@ -446,8 +446,8 @@ TEST_F(clockTest, format_realtime_iso8601_utc_outputs_z_suffix)
 TEST_F(clockTest, format_realtime_iso8601_local_falls_back_when_nsec_is_invalid)
 {
     // Arrange
-    const cplat_timespec invalid_timestamp = {
-        0, 1000000000LL}; // [状態] - nsec が 10 億の不正なタイムスタンプを用意する。
+    const cplat_timespec invalid_timestamp = {0,
+                                              1000000000LL}; // [状態] - nsec が 10 億の不正なタイムスタンプを用意する。
     char actual[CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1];
 
     // Pre-Assert
@@ -616,7 +616,7 @@ TEST_F(clockTest, format_realtime_iso8601_utc_falls_back_when_gmtime_fails)
 {
     // Arrange
     const cplat_timespec timestamp = {1712297228LL,
-                                         123000000LL}; // [状態] - 変換対象を {1712297228, 123000000} とする。
+                                      123000000LL}; // [状態] - 変換対象を {1712297228, 123000000} とする。
     char actual[CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN + 1];
     Mock_cplat mock_cplat;
 
@@ -680,7 +680,7 @@ TEST_F(clockTest, format_realtime_iso8601_local_rejects_small_buffer)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              result); // [確認_異常系] - 小さいバッファーが UNKNOWN として通知されること。
+              result);          // [確認_異常系] - 小さいバッファーが UNKNOWN として通知されること。
     EXPECT_EQ('\0', actual[0]); // [確認_異常系] - フォールバック文字列の先頭だけが格納されること。
 }
 
@@ -710,7 +710,7 @@ TEST_F(clockTest, format_realtime_iso8601_utc_rejects_small_buffer)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              result); // [確認_異常系] - 小さいバッファーが UNKNOWN として通知されること。
+              result);          // [確認_異常系] - 小さいバッファーが UNKNOWN として通知されること。
     EXPECT_EQ('\0', actual[0]); // [確認_異常系] - フォールバック文字列の先頭だけが格納されること。
 }
 
@@ -745,9 +745,9 @@ TEST_F(clockTest, format_realtime_iso8601_local_rejects_null_buffer)
                 // [Pre-Assert手順] - cplat_gmtime から用意した分解時刻を返却する。
 
     // Act
-    int result =
-        cplat_clock_format_realtime_iso8601_local(NULL, CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1u,
-                                               &timestamp); // [手順] - NULL バッファーで local formatter を呼び出す。
+    int result = cplat_clock_format_realtime_iso8601_local(
+        NULL, CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1u,
+        &timestamp); // [手順] - NULL バッファーで local formatter を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -778,7 +778,7 @@ TEST_F(clockTest, format_realtime_iso8601_utc_rejects_null_buffer)
     // Act
     int result =
         cplat_clock_format_realtime_iso8601_utc(NULL, CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN + 1u,
-                                             &timestamp); // [手順] - NULL バッファーで UTC formatter を呼び出す。
+                                                &timestamp); // [手順] - NULL バッファーで UTC formatter を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -862,7 +862,8 @@ TEST_F(clockTest, realtime_deadline_ms_adds_timeout_without_nsec_carry)
 
     // Act
     cplat_clock_get_realtime_deadline_ms(
-        timeout_ms, &abs_timeout); // [手順] - cplat_clock_get_realtime_deadline_ms(timeout_ms, &abs_timeout) を呼び出す。
+        timeout_ms,
+        &abs_timeout); // [手順] - cplat_clock_get_realtime_deadline_ms(timeout_ms, &abs_timeout) を呼び出す。
 
     // Assert
     EXPECT_EQ(expected_sec, abs_timeout.tv_sec);   // [確認_正常系] - 秒繰り上がりなしで秒部が 100 のままであること。
@@ -906,7 +907,8 @@ TEST_F(clockTest, realtime_deadline_ms_carries_nsec_overflow)
 
     // Act
     cplat_clock_get_realtime_deadline_ms(
-        timeout_ms, &abs_timeout); // [手順] - cplat_clock_get_realtime_deadline_ms(timeout_ms, &abs_timeout) を呼び出す。
+        timeout_ms,
+        &abs_timeout); // [手順] - cplat_clock_get_realtime_deadline_ms(timeout_ms, &abs_timeout) を呼び出す。
 
     // Assert
     EXPECT_EQ(expected_sec, abs_timeout.tv_sec); // [確認_正常系] - ナノ秒 overflow により秒部が 101 に繰り上がること。

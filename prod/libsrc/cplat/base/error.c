@@ -35,8 +35,7 @@ static THREAD_LOCAL cplat_error cplat_error_last;
  *  @param[in]      result 共通結果コード。
  *  @param[in]      code   ドメイン固有のエラー値。
  */
-static void error_store(cplat_error *error, const cplat_error_domain domain, const int result,
-                                 const unsigned long code)
+static void error_store(cplat_error *error, const cplat_error_domain domain, const int result, const unsigned long code)
 {
     if (error != NULL)
     {
@@ -517,7 +516,7 @@ void cplat_error_capture_errno(cplat_error *error, const int errno_value)
     else
     {
         error_store(error, CPLAT_ERROR_DOMAIN_ERRNO, cplat_internal_result_from_errno(errno_value),
-                             (unsigned long)errno_value);
+                    (unsigned long)errno_value);
     }
 }
 
@@ -542,7 +541,7 @@ void cplat_error_capture_windows_error(cplat_error *error, const unsigned long e
     else
     {
         error_store(error, CPLAT_ERROR_DOMAIN_WINDOWS, cplat_internal_result_from_windows_error(error_code),
-                             error_code);
+                    error_code);
     }
 }
 
@@ -613,9 +612,8 @@ cplat_error_domain cplat_error_get_domain(const cplat_error *error)
     if (error != NULL)
     {
         if ((error->domain == CPLAT_ERROR_DOMAIN_NONE) || (error->domain == CPLAT_ERROR_DOMAIN_ERRNO) ||
-            (error->domain == CPLAT_ERROR_DOMAIN_SOCKET_ERRNO) ||
-            (error->domain == CPLAT_ERROR_DOMAIN_WINDOWS) || (error->domain == CPLAT_ERROR_DOMAIN_WINSOCK) ||
-            (error->domain == CPLAT_ERROR_DOMAIN_GAI))
+            (error->domain == CPLAT_ERROR_DOMAIN_SOCKET_ERRNO) || (error->domain == CPLAT_ERROR_DOMAIN_WINDOWS) ||
+            (error->domain == CPLAT_ERROR_DOMAIN_WINSOCK) || (error->domain == CPLAT_ERROR_DOMAIN_GAI))
         {
             domain = error->domain;
         }
@@ -794,7 +792,8 @@ int cplat_internal_error_report_winsock_error(cplat_error *detail_out, const uns
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_internal_error_report_winsock_error_as(cplat_error *detail_out, const unsigned long error_code, const int result)
+int cplat_internal_error_report_winsock_error_as(cplat_error *detail_out, const unsigned long error_code,
+                                                 const int result)
 {
     cplat_error_domain domain = CPLAT_ERROR_DOMAIN_WINSOCK;
 
@@ -893,7 +892,8 @@ int cplat_internal_error_report_windows_error(cplat_error *detail_out, const uns
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_internal_error_report_windows_error_as(cplat_error *detail_out, const unsigned long error_code, const int result)
+int cplat_internal_error_report_windows_error_as(cplat_error *detail_out, const unsigned long error_code,
+                                                 const int result)
 {
     cplat_error_domain domain = CPLAT_ERROR_DOMAIN_WINDOWS;
 

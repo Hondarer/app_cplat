@@ -11,11 +11,11 @@
 - `prod/include_internal/` は、ライブラリ内部の共有ヘッダーです。
 - `prod/libsrc/` は、C の実装です。同一ディレクトリの実装だけが共有する宣言は、モジュール私有ヘッダー (例: `prod/libsrc/cplat/hashtable/hashtable.h`) に配置します。
 - `test/` は、単体テスト、モック、エクスポート確認です。
-- [docs/README.md](docs/README.md)は、発行文書の入口です。
-- [docs/functional-spec/README.md](docs/functional-spec/README.md)は、要件と機能を説明する機能仕様の入口です。
-- [docs/functional-spec-guideline.md](docs/functional-spec-guideline.md)は、cplat 固有の要件 ID 接頭辞、参照コメント タグ、カテゴリごとの主語を定めます。記載範囲、構成、要件 ID と UUID の運用は [機能仕様の記載規範](../general/docs/functional-spec-guideline.md) が正本です。
-- [docs/api-cheatsheet.md](docs/api-cheatsheet.md)は、公開 API の逆引きです。
-- [docs/coding-guideline.md](docs/coding-guideline.md)は、cplat 固有の規範です。
+- [docs/README.md](docs/README.md) は、発行文書の入口です。
+- [docs/functional-spec/README.md](docs/functional-spec/README.md) は、要件と機能を説明する機能仕様の入口です。
+- [docs/functional-spec-guideline.md](docs/functional-spec-guideline.md) は、cplat 固有の要件 ID 接頭辞、参照コメント タグ、カテゴリごとの主語を定めます。記載範囲、構成、要件 ID と UUID の運用は [機能仕様の記載規範](../general/docs/functional-spec-guideline.md) が正本です。
+- [docs/api-cheatsheet.md](docs/api-cheatsheet.md) は、公開 API の逆引きです。
+- [docs/coding-guideline.md](docs/coding-guideline.md) は、cplat 固有の規範です。
 
 ## 公開 API と文書の同期
 

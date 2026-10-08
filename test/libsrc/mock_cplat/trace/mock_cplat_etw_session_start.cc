@@ -4,8 +4,7 @@
 #if defined(PLATFORM_WINDOWS)
 
 int delegate_real_cplat_etw_session_start(const char *session_name, const char *provider_guid_str,
-                                             cplat_etw_event_fn callback, void *context,
-                                             cplat_etw_session **session_out)
+                                          cplat_etw_event_fn callback, void *context, cplat_etw_session **session_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_etw_session_start)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_etw_session_start"));
@@ -25,7 +24,8 @@ MOCK_WEAK_IMPL(int, cplat_etw_session_start, const char *session_name, const cha
     }
     else
     {
-        mock_ret = delegate_real_cplat_etw_session_start(session_name, provider_guid_str, callback, context, session_out);
+        mock_ret =
+            delegate_real_cplat_etw_session_start(session_name, provider_guid_str, callback, context, session_out);
     }
 
     if (getTraceLevel() > TRACE_NONE)

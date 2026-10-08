@@ -98,7 +98,7 @@
 #endif /* DOXYGEN */
 
 #define CPLAT_PATH_CONCAT_COUNT_IMPL(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, count, \
-                                        ...) \
+                                     ...) \
     count
 #define CPLAT_PATH_CONCAT_COUNT(...) \
     CPLAT_PATH_CONCAT_COUNT_IMPL(__VA_ARGS__, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
@@ -182,8 +182,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_path_get_full(char *path_out, size_t path_size,
-                                                            cplat_error *detail_out, const char *path);
+    CPLAT_EXPORT int CPLAT_API cplat_path_get_full(char *path_out, size_t path_size, cplat_error *detail_out,
+                                                   const char *path);
 
     /**
      *  @brief          2 つのパスが同じ実体を指すか比較します。
@@ -205,7 +205,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_path_equal(const char *lhs, const char *rhs, int *equal_out,
-                                                          cplat_error *detail_out);
+                                                cplat_error *detail_out);
 
     /**
      *  @brief          プラットフォームの一時ディレクトリのパスを取得します。
@@ -226,8 +226,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_path_get_temp_dir(char *path_out, size_t path_size,
-                                                           cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_path_get_temp_dir(char *path_out, size_t path_size, cplat_error *detail_out);
 
     /**
      *  @brief          パス断片を指定順にそのまま連結します。
@@ -247,8 +246,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_path_concat_n(char *path_out, size_t path_size,
-                                                            cplat_error *detail_out, size_t part_count, ...);
+    CPLAT_EXPORT int CPLAT_API cplat_path_concat_n(char *path_out, size_t path_size, cplat_error *detail_out,
+                                                   size_t part_count, ...);
 
     /**
      *  @brief          パス断片を指定順にそのまま連結します (`cplat_path_concat_n` の `va_list` 版)。
@@ -264,9 +263,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_vpath_concat_n(char *path_out, size_t path_size,
-                                                             cplat_error *detail_out, size_t part_count,
-                                                             va_list args);
+    CPLAT_EXPORT int CPLAT_API cplat_vpath_concat_n(char *path_out, size_t path_size, cplat_error *detail_out,
+                                                    size_t part_count, va_list args);
 
     /**
      *  @brief          パスのベース名 (最後のセパレータの次の位置) を指すポインターを返します。
@@ -311,7 +309,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_path_dirname(char *path_out, size_t path_size, cplat_error *detail_out,
-                                                           const char *path);
+                                                  const char *path);
 
     /**
      *  @brief          パスの拡張子 (ドット込み) を指すポインターを返します。
@@ -353,8 +351,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_path_strip_extension(char *path_out, size_t path_size,
-                                                                   cplat_error *detail_out, const char *path);
+    CPLAT_EXPORT int CPLAT_API cplat_path_strip_extension(char *path_out, size_t path_size, cplat_error *detail_out,
+                                                          const char *path);
 
     /**
      *  @brief          パス断片をパス区切り文字で自動補完しながら連結します。
@@ -381,7 +379,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_path_join_n(char *path_out, size_t path_size, cplat_error *detail_out,
-                                                          size_t part_count, ...);
+                                                 size_t part_count, ...);
 
     /**
      *  @brief          パス断片をパス区切り文字で自動補完しながら連結します (`cplat_path_join_n` の `va_list` 版)。
@@ -398,7 +396,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_vpath_join_n(char *path_out, size_t path_size, cplat_error *detail_out,
-                                                           size_t part_count, va_list args);
+                                                  size_t part_count, va_list args);
 
 #ifdef __cplusplus
 }

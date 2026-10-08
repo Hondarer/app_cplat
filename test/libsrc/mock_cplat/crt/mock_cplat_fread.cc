@@ -9,8 +9,7 @@ size_t delegate_real_cplat_fread(void *buffer, size_t size, size_t count, FILE *
     return real_fn(buffer, size, count, stream, detail_out);
 }
 
-MOCK_WEAK_IMPL(size_t, cplat_fread, void *buffer, size_t size, size_t count, FILE *stream,
-               cplat_error *detail_out)
+MOCK_WEAK_IMPL(size_t, cplat_fread, void *buffer, size_t size, size_t count, FILE *stream, cplat_error *detail_out)
 {
     if (_mock_cplat != nullptr)
     {

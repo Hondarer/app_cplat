@@ -287,8 +287,7 @@ size_t cplat_fread(void *buffer, const size_t size, const size_t count, FILE *st
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-size_t cplat_fwrite(const void *buffer, const size_t size, const size_t count, FILE *stream,
-                       cplat_error *detail_out)
+size_t cplat_fwrite(const void *buffer, const size_t size, const size_t count, FILE *stream, cplat_error *detail_out)
 {
     size_t written_count;
 

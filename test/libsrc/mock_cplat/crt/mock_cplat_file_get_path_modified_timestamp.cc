@@ -2,7 +2,7 @@
 #include <mock_cplat.h>
 
 int delegate_real_cplat_file_get_path_modified_timestamp(const char *path, cplat_timespec *timestamp_out,
-                                                            cplat_error *detail_out)
+                                                         cplat_error *detail_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_file_get_path_modified_timestamp)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_file_get_path_modified_timestamp"));

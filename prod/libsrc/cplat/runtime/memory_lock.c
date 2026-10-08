@@ -35,8 +35,7 @@
 #endif
 
 /** cplat_memory_lock_self_options::flags で受け付ける bit の集合。 */
-#define CPLAT_MEMORY_LOCK_KNOWN_FLAGS \
-    (CPLAT_MEMORY_LOCK_CURRENT | CPLAT_MEMORY_LOCK_FUTURE | CPLAT_MEMORY_LOCK_ONFAULT)
+#define CPLAT_MEMORY_LOCK_KNOWN_FLAGS (CPLAT_MEMORY_LOCK_CURRENT | CPLAT_MEMORY_LOCK_FUTURE | CPLAT_MEMORY_LOCK_ONFAULT)
 /** stack prefault で 1 回にアクセスするスタック サイズ。 */
 #define CPLAT_MEMORY_LOCK_STACK_PREFAULT_CHUNK 4096U
 /** stack overflow を避けるために残すスタック サイズ。 */
@@ -61,8 +60,8 @@ struct cplat_memory_lock_scope
 {
 #if defined(PLATFORM_WINDOWS)
     cplat_memory_lock_range_entry *entries; /**< 本 scope が参照するロック範囲の配列。 */
-    size_t count;                              /**< entries の有効要素数。 */
-    size_t capacity;                           /**< entries の確保済み要素数。 */
+    size_t count;                           /**< entries の有効要素数。 */
+    size_t capacity;                        /**< entries の確保済み要素数。 */
 #else
     int locked_all; /**< mlockall() が成功した scope であることを示す値。 */
     int flags;      /**< mlockall() へ渡した cplat の flag。 */
@@ -76,8 +75,8 @@ static cplat_once_flag s_memory_lock_lock_once = {0}; /**< local lock 初期化�
 static size_t s_linux_self_lock_scope_count; /**< Linux で成功中の self scope 数。 */
 #elif defined(PLATFORM_WINDOWS)
 static cplat_memory_lock_range_entry *s_windows_locked_ranges; /**< Windows でロック済み範囲を保持する registry。 */
-static size_t s_windows_locked_range_count;                       /**< registry の有効要素数。 */
-static size_t s_windows_locked_range_capacity;                    /**< registry の確保済み要素数。 */
+static size_t s_windows_locked_range_count;                    /**< registry の有効要素数。 */
+static size_t s_windows_locked_range_capacity;                 /**< registry の確保済み要素数。 */
 #endif
 
 /**

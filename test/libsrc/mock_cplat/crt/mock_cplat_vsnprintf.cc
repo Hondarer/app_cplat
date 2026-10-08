@@ -6,8 +6,8 @@
 
 int delegate_real_cplat_vsnprintf(char *dest, size_t dest_size, const char *format, va_list args)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_vsnprintf)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_vsnprintf"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_vsnprintf)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_vsnprintf"));
 
     return real_fn(dest, dest_size, format, args);
 }

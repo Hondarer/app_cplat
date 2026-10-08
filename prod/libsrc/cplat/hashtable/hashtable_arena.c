@@ -60,7 +60,7 @@ static void arena_reset(struct hashtable_arena *arena)
  *  @return         隣接するなら 1、しないなら 0 です。
  */
 static int arena_free_block_adjoins(const struct hashtable_arena *arena, uint64_t index, uint64_t own_offset,
-                              uint64_t own_length)
+                                    uint64_t own_length)
 {
     if (own_length == 0)
     {
@@ -247,7 +247,8 @@ static void arena_give(struct hashtable_arena *arena, size_t offset, size_t leng
     if ((merge_prev != 0) && (merge_next != 0))
     {
         arena->free_list[i - 1u].length += (uint64_t)length + arena->free_list[i].length;
-        memmove(&arena->free_list[i], &arena->free_list[i + 1u], (size_t)(count - i - 1u) * sizeof(struct hashtable_free_block));
+        memmove(&arena->free_list[i], &arena->free_list[i + 1u],
+                (size_t)(count - i - 1u) * sizeof(struct hashtable_free_block));
         *arena->free_count = count - 1u;
     }
     else if (merge_prev != 0)
@@ -261,7 +262,8 @@ static void arena_give(struct hashtable_arena *arena, size_t offset, size_t leng
     }
     else
     {
-        memmove(&arena->free_list[i + 1u], &arena->free_list[i], (size_t)(count - i) * sizeof(struct hashtable_free_block));
+        memmove(&arena->free_list[i + 1u], &arena->free_list[i],
+                (size_t)(count - i) * sizeof(struct hashtable_free_block));
         arena->free_list[i].offset = start;
         arena->free_list[i].length = (uint64_t)length;
         *arena->free_count = count + 1u;
@@ -271,7 +273,7 @@ static void arena_give(struct hashtable_arena *arena, size_t offset, size_t leng
 /* Doxygen コメントは、ヘッダーに記載 */
 
 void hashtable_arena_compact(cplat_hashtable *ht, struct hashtable_arena *arena, hashtable_ref_fn get_ref,
-                   uint64_t used)
+                             uint64_t used)
 {
     uint64_t count = *arena->free_count;
     uint64_t shift = 0;
@@ -286,8 +288,7 @@ void hashtable_arena_compact(cplat_hashtable *ht, struct hashtable_arena *arena,
 
         if ((run_length != 0) && (shift != 0))
         {
-            memmove(arena->storage + (size_t)(prev_end - shift), arena->storage + (size_t)prev_end,
-                    (size_t)run_length);
+            memmove(arena->storage + (size_t)(prev_end - shift), arena->storage + (size_t)prev_end, (size_t)run_length);
         }
         shift += arena->free_list[i].length;
         prev_end = arena->free_list[i].offset + arena->free_list[i].length;
@@ -548,7 +549,7 @@ void hashtable_reset_arenas(cplat_hashtable *ht)
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int hashtable_key_storage_find_free(const cplat_hashtable *ht, size_t rec, int replace, const void *key,
-                          size_t *offset_out)
+                                    size_t *offset_out)
 {
     struct hashtable_arena arena;
     uint64_t own_offset = 0;
@@ -575,7 +576,7 @@ int hashtable_key_storage_find_free(const cplat_hashtable *ht, size_t rec, int r
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int hashtable_value_storage_find_free(const cplat_hashtable *ht, size_t rec, int replace, const void *value,
-                            size_t *offset_out)
+                                      size_t *offset_out)
 {
     struct hashtable_arena arena;
     uint64_t own_offset = 0;

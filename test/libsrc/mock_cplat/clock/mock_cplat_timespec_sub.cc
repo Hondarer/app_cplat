@@ -3,8 +3,8 @@
 
 void delegate_real_cplat_timespec_sub(const cplat_timespec *a, const cplat_timespec *b, cplat_timespec *result)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_timespec_sub)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_timespec_sub"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_timespec_sub)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_timespec_sub"));
 
     real_fn(a, b, result);
 }

@@ -140,8 +140,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_regex_create(const char *pattern, unsigned int flags,
-                                                           cplat_regex **regex_out, cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_regex_create(const char *pattern, unsigned int flags, cplat_regex **regex_out,
+                                                  cplat_error *detail_out);
 
     /**
      *  @brief          ハンドルを破棄します。
@@ -197,11 +197,10 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_regex_search(const cplat_regex *regex, const char *text,
-                                                           size_t text_len, size_t start_offset,
-                                                           unsigned int match_flags, cplat_regex_match *matches_out,
-                                                           size_t matches_capacity, int *matched_out,
-                                                           cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_regex_search(const cplat_regex *regex, const char *text, size_t text_len,
+                                                  size_t start_offset, unsigned int match_flags,
+                                                  cplat_regex_match *matches_out, size_t matches_capacity,
+                                                  int *matched_out, cplat_error *detail_out);
 
     /**
      *  @brief          入力の全体がパターンに一致するかを照合します。
@@ -226,10 +225,9 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_regex_matches(const cplat_regex *regex, const char *text,
-                                                            size_t text_len, unsigned int match_flags,
-                                                            cplat_regex_match *matches_out, size_t matches_capacity,
-                                                            int *matched_out, cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_regex_matches(const cplat_regex *regex, const char *text, size_t text_len,
+                                                   unsigned int match_flags, cplat_regex_match *matches_out,
+                                                   size_t matches_capacity, int *matched_out, cplat_error *detail_out);
 
     /**
      *  @brief          一致した箇所を置換した文字列を生成します。
@@ -265,10 +263,10 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_regex_replace(const cplat_regex *regex, const char *text,
-                                                            size_t text_len, const char *replacement,
-                                                            unsigned int flags, char *result_out, size_t result_size,
-                                                            size_t *required_size_out, cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_regex_replace(const cplat_regex *regex, const char *text, size_t text_len,
+                                                   const char *replacement, unsigned int flags, char *result_out,
+                                                   size_t result_size, size_t *required_size_out,
+                                                   cplat_error *detail_out);
 
     /** @brief 一致箇所を順に列挙するイテレーターのハンドル (不透明構造体)。 */
     typedef struct cplat_regex_iter cplat_regex_iter;
@@ -295,10 +293,9 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_regex_iter_create(const cplat_regex *regex, const char *text,
-                                                                size_t text_len, unsigned int match_flags,
-                                                                cplat_regex_iter **iter_out,
-                                                                cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_regex_iter_create(const cplat_regex *regex, const char *text, size_t text_len,
+                                                       unsigned int match_flags, cplat_regex_iter **iter_out,
+                                                       cplat_error *detail_out);
 
     /**
      *  @brief          次の一致箇所を取得します。
@@ -323,10 +320,9 @@ extern "C"
      *  異なるハンドルに対する呼び出しは同時に実行できます。\n
      *  同一 @p iter に対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_regex_iter_next(cplat_regex_iter *iter,
-                                                              cplat_regex_match *matches_out,
-                                                              size_t matches_capacity, int *has_match_out,
-                                                              cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_regex_iter_next(cplat_regex_iter *iter, cplat_regex_match *matches_out,
+                                                     size_t matches_capacity, int *has_match_out,
+                                                     cplat_error *detail_out);
 
     /**
      *  @brief          イテレーターを破棄します。
@@ -369,10 +365,10 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_regex_split(const cplat_regex *regex, const char *text,
-                                                          size_t text_len, size_t max_parts, unsigned int match_flags,
-                                                          cplat_regex_match *parts_out, size_t parts_capacity,
-                                                          size_t *part_count_out, cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_regex_split(const cplat_regex *regex, const char *text, size_t text_len,
+                                                 size_t max_parts, unsigned int match_flags,
+                                                 cplat_regex_match *parts_out, size_t parts_capacity,
+                                                 size_t *part_count_out, cplat_error *detail_out);
 
 #ifdef __cplusplus
 }

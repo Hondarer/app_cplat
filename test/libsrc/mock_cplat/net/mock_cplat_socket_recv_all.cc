@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_socket_recv_all(cplat_socket sock, void *buf, size_t len, cplat_error *detail_out)
 {
-    static auto real_fn =
-        reinterpret_cast<decltype(&cplat_socket_recv_all)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_recv_all"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_socket_recv_all)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_recv_all"));
 
     return real_fn(sock, buf, len, detail_out);
 }

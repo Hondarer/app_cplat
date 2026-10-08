@@ -2,8 +2,8 @@
 #include <mock_cplat.h>
 
 int delegate_real_cplat_hashtable_create_growable(const cplat_hashtable_config *initial_config,
-                                                     const cplat_hashtable_growth_config *growth_config,
-                                                     cplat_hashtable **ht_out)
+                                                  const cplat_hashtable_growth_config *growth_config,
+                                                  cplat_hashtable **ht_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_hashtable_create_growable)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_hashtable_create_growable"));

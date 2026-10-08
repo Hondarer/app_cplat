@@ -1,15 +1,17 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_socket_join_multicast_group(cplat_socket sock, uint32_t group_address, uint32_t interface_address, cplat_error *detail_out)
+int delegate_real_cplat_socket_join_multicast_group(cplat_socket sock, uint32_t group_address,
+                                                    uint32_t interface_address, cplat_error *detail_out)
 {
-    static auto real_fn =
-        reinterpret_cast<decltype(&cplat_socket_join_multicast_group)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_join_multicast_group"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_socket_join_multicast_group)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_join_multicast_group"));
 
     return real_fn(sock, group_address, interface_address, detail_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_socket_join_multicast_group, cplat_socket sock, uint32_t group_address, uint32_t interface_address, cplat_error *detail_out)
+MOCK_WEAK_IMPL(int, cplat_socket_join_multicast_group, cplat_socket sock, uint32_t group_address,
+               uint32_t interface_address, cplat_error *detail_out)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

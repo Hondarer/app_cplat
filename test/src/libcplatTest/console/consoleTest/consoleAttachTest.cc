@@ -23,8 +23,8 @@ TEST_F(consoleAttachTest, reports_not_attached_without_takeover_option)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_console_attach_parent の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(0, attached);      // [確認_正常系] - attached_out が 0 であること。
-    EXPECT_EQ(1, argc);          // [確認_正常系] - argc が変化しないこと。
+    EXPECT_EQ(0, attached);          // [確認_正常系] - attached_out が 0 であること。
+    EXPECT_EQ(1, argc);              // [確認_正常系] - argc が変化しないこと。
 }
 
 // attached_out に NULL を渡してもクラッシュしないことの確認
@@ -39,7 +39,7 @@ TEST_F(consoleAttachTest, accepts_null_attached_out)
 
     // Act
     int actual_ret = cplat_console_attach_parent(&argc, argv,
-                                             NULL); // [手順] - attached_out に NULL を指定して呼び出す。
+                                                 NULL); // [手順] - attached_out に NULL を指定して呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_console_attach_parent の戻り値が CPLAT_OK であること。

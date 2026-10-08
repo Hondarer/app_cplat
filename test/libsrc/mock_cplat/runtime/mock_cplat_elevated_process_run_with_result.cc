@@ -2,7 +2,7 @@
 #include <mock_cplat.h>
 
 int delegate_real_cplat_elevated_process_run_with_result(const char *arguments, int *exit_code, int *handled,
-                                                            char *result_message, size_t result_message_size)
+                                                         char *result_message, size_t result_message_size)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_elevated_process_run_with_result)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_elevated_process_run_with_result"));
@@ -18,12 +18,12 @@ MOCK_WEAK_IMPL(int, cplat_elevated_process_run_with_result, const char *argument
     if (_mock_cplat != nullptr)
     {
         mock_ret = _mock_cplat->cplat_elevated_process_run_with_result(arguments, exit_code, handled, result_message,
-                                                                        result_message_size);
+                                                                       result_message_size);
     }
     else
     {
         mock_ret = delegate_real_cplat_elevated_process_run_with_result(arguments, exit_code, handled, result_message,
-                                                                      result_message_size);
+                                                                        result_message_size);
     }
 
     if (getTraceLevel() > TRACE_NONE)

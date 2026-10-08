@@ -3,8 +3,8 @@
 
 void delegate_real_cplat_secure_zero(void *buf, size_t size)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_secure_zero)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_secure_zero"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_secure_zero)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_secure_zero"));
 
     real_fn(buf, size);
 }

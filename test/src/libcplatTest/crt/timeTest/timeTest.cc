@@ -22,13 +22,13 @@ TEST_F(timeTest, gmtime_success_epoch)
     int actual_ret = cplat_gmtime(&utc_tm, &epoch); // [手順] - cplat_gmtime(&utc_tm, &epoch) を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);   // [確認_正常系] - cplat_gmtime の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(70, utc_tm.tm_year); // [確認_正常系] - tm_year が 70 (1970 年) であること。
-    EXPECT_EQ(0, utc_tm.tm_mon);   // [確認_正常系] - tm_mon が 0 (1 月) であること。
-    EXPECT_EQ(1, utc_tm.tm_mday);  // [確認_正常系] - tm_mday が 1 日であること。
-    EXPECT_EQ(0, utc_tm.tm_hour);  // [確認_正常系] - tm_hour が 0 時であること。
-    EXPECT_EQ(0, utc_tm.tm_min);   // [確認_正常系] - tm_min が 0 分であること。
-    EXPECT_EQ(0, utc_tm.tm_sec);   // [確認_正常系] - tm_sec が 0 秒であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_gmtime の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(70, utc_tm.tm_year);   // [確認_正常系] - tm_year が 70 (1970 年) であること。
+    EXPECT_EQ(0, utc_tm.tm_mon);     // [確認_正常系] - tm_mon が 0 (1 月) であること。
+    EXPECT_EQ(1, utc_tm.tm_mday);    // [確認_正常系] - tm_mday が 1 日であること。
+    EXPECT_EQ(0, utc_tm.tm_hour);    // [確認_正常系] - tm_hour が 0 時であること。
+    EXPECT_EQ(0, utc_tm.tm_min);     // [確認_正常系] - tm_min が 0 分であること。
+    EXPECT_EQ(0, utc_tm.tm_sec);     // [確認_正常系] - tm_sec が 0 秒であること。
 }
 
 // 出力構造体が NULL の場合に CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
@@ -113,7 +113,7 @@ TEST_F(timeTest, gmtime_zeroes_tm_when_platform_conversion_fails)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret);               // [確認_異常系] - cplat_gmtime の戻り値が CPLAT_ERR_UNKNOWN であること。
+              actual_ret);        // [確認_異常系] - cplat_gmtime の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(0, utc_tm.tm_year); // [確認_異常系] - tm_year が 0 にクリアされること。
     EXPECT_EQ(0, utc_tm.tm_mon);  // [確認_異常系] - tm_mon が 0 にクリアされること。
     EXPECT_EQ(0, utc_tm.tm_mday); // [確認_異常系] - tm_mday が 0 にクリアされること。
@@ -128,7 +128,7 @@ TEST_F(timeTest, localtime_matches_platform_result)
     // Arrange
     struct tm expected_tm = {};
     struct tm actual_tm;
-    time_t epoch = 0; // [状態] - 変換対象のエポック秒を 0 とする。
+    time_t epoch = 0;                            // [状態] - 変換対象のエポック秒を 0 とする。
     memset(&actual_tm, 0xff, sizeof(actual_tm)); // [状態] - 出力構造体を 0xff で埋め、書き換えを検出できるようにする。
 
     // Pre-Assert
@@ -217,13 +217,13 @@ TEST_F(timeTest, localtime_zeroes_tm_when_platform_conversion_fails)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret_localtime);       // [確認_異常系] - cplat_localtime の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(0, local_tm.tm_year); // [確認_異常系] - tm_year が 0 にクリアされること。
-    EXPECT_EQ(0, local_tm.tm_mon);  // [確認_異常系] - tm_mon が 0 にクリアされること。
-    EXPECT_EQ(0, local_tm.tm_mday); // [確認_異常系] - tm_mday が 0 にクリアされること。
-    EXPECT_EQ(0, local_tm.tm_hour); // [確認_異常系] - tm_hour が 0 にクリアされること。
-    EXPECT_EQ(0, local_tm.tm_min);  // [確認_異常系] - tm_min が 0 にクリアされること。
-    EXPECT_EQ(0, local_tm.tm_sec);  // [確認_異常系] - tm_sec が 0 にクリアされること。
+              actual_ret_localtime); // [確認_異常系] - cplat_localtime の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(0, local_tm.tm_year);  // [確認_異常系] - tm_year が 0 にクリアされること。
+    EXPECT_EQ(0, local_tm.tm_mon);   // [確認_異常系] - tm_mon が 0 にクリアされること。
+    EXPECT_EQ(0, local_tm.tm_mday);  // [確認_異常系] - tm_mday が 0 にクリアされること。
+    EXPECT_EQ(0, local_tm.tm_hour);  // [確認_異常系] - tm_hour が 0 にクリアされること。
+    EXPECT_EQ(0, local_tm.tm_min);   // [確認_異常系] - tm_min が 0 にクリアされること。
+    EXPECT_EQ(0, local_tm.tm_sec);   // [確認_異常系] - tm_sec が 0 にクリアされること。
 }
 
 // エポック 0 秒が ctime 形式の文字列に変換されることの確認
@@ -256,7 +256,7 @@ TEST_F(timeTest, ctime_matches_platform_result)
     // Arrange
     char expected[26] = {0};
     char actual[26];
-    time_t epoch = 0; // [状態] - 変換対象のエポック秒を 0 とする。
+    time_t epoch = 0;                     // [状態] - 変換対象のエポック秒を 0 とする。
     memset(actual, 0xff, sizeof(actual)); // [状態] - 出力バッファーを 0xff で埋め、書き換えを検出できるようにする。
 
     // Pre-Assert
@@ -275,7 +275,7 @@ TEST_F(timeTest, ctime_matches_platform_result)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_ctime); // [確認_正常系] - cplat_ctime の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ(expected, actual);    // [確認_正常系] - 変換結果が OS の変換結果と一致すること。
+    EXPECT_STREQ(expected, actual);        // [確認_正常系] - 変換結果が OS の変換結果と一致すること。
 }
 
 // 出力バッファーが NULL の場合に CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
@@ -305,7 +305,8 @@ TEST_F(timeTest, ctime_null_time_zeroes_buf)
     // Pre-Assert
 
     // Act
-    int actual_ret_ctime = cplat_ctime(buf, sizeof(buf), NULL); // [手順] - 時刻に NULL を渡して cplat_ctime を呼び出す。
+    int actual_ret_ctime =
+        cplat_ctime(buf, sizeof(buf), NULL); // [手順] - 時刻に NULL を渡して cplat_ctime を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,

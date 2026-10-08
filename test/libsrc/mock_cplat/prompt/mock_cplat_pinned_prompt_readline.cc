@@ -2,7 +2,7 @@
 #include <mock_cplat.h>
 
 int delegate_real_cplat_pinned_prompt_readline_at(cplat_pinned_prompt *screen, char *buf, size_t buf_size,
-                                                   const char *prompt_str, const char *file, int line)
+                                                  const char *prompt_str, const char *file, int line)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_pinned_prompt_readline_at)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_pinned_prompt_readline_at"));

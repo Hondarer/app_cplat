@@ -25,19 +25,23 @@ TEST(atomicCompareExchangeTest, u8_compare_exchange_succeeds_and_updates_value_f
 
         desired_values[index] = (uint8_t)(30U + (uint8_t)index);
         expected_before[index] = expected;
-        exchanged[index] = cplat_atomic_compare_exchange_u8(&atomic, &expected, desired_values[index],
-                                                             kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
+        exchanged[index] =
+            cplat_atomic_compare_exchange_u8(&atomic, &expected, desired_values[index],
+                                             kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
         expected_after[index] = expected;
-        loaded_after[index] = cplat_atomic_load_u8(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
+        loaded_after[index] =
+            cplat_atomic_load_u8(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
         current = desired_values[index];
     }
 
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_NE(0, exchanged[index]);                              // [確認_正常系 回数=5] - 一致した期待値での交換が成功と判定されること。
-        EXPECT_EQ(expected_before[index], expected_after[index]);    // [確認_正常系 回数=5] - 成功時に expected が変化しないこと。
-        EXPECT_EQ(desired_values[index], loaded_after[index]);       // [確認_正常系 回数=5] - 交換後に desired が格納されていること。
+        EXPECT_NE(0, exchanged[index]); // [確認_正常系] - 一致した期待値での交換が成功と判定されること。
+        EXPECT_EQ(expected_before[index],
+                  expected_after[index]); // [確認_正常系] - 成功時に expected が変化しないこと。
+        EXPECT_EQ(desired_values[index],
+                  loaded_after[index]); // [確認_正常系] - 交換後に desired が格納されていること。
     }
 }
 
@@ -56,18 +60,20 @@ TEST(atomicCompareExchangeTest, u8_compare_exchange_fails_and_reports_current_va
     {
         uint8_t expected = (uint8_t)(5U + (uint8_t)index); // 現在値 200 と一致しない期待値
 
-        exchanged[index] = cplat_atomic_compare_exchange_u8(&atomic, &expected, (uint8_t)(1U + (uint8_t)index),
-                                                             kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
+        exchanged[index] =
+            cplat_atomic_compare_exchange_u8(&atomic, &expected, (uint8_t)(1U + (uint8_t)index),
+                                             kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
         expected_after[index] = expected;
     }
 
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(0, exchanged[index]);           // [確認_異常系 回数=5] - 不一致の期待値では交換が失敗と判定されること。
-        EXPECT_EQ(200U, expected_after[index]);   // [確認_異常系 回数=5] - 失敗時に expected へ現在値 200 が格納されること。
+        EXPECT_EQ(0, exchanged[index]);         // [確認_異常系] - 不一致の期待値では交換が失敗と判定されること。
+        EXPECT_EQ(200U, expected_after[index]); // [確認_異常系] - 失敗時に expected へ現在値 200 が格納されること。
     }
-    EXPECT_EQ(200U, cplat_atomic_load_u8(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_異常系] - 失敗した交換で値が変化しないこと。
+    EXPECT_EQ(200U, cplat_atomic_load_u8(
+                        &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_異常系] - 失敗した交換で値が変化しないこと。
 }
 
 // 符号付き 32 ビットの compare_exchange が、期待値が一致する限りあらゆるメモリ順序で成功することの確認
@@ -91,19 +97,23 @@ TEST(atomicCompareExchangeTest, i32_compare_exchange_succeeds_and_updates_value_
 
         desired_values[index] = (int32_t)(2000 + (int32_t)index);
         expected_before[index] = expected;
-        exchanged[index] = cplat_atomic_compare_exchange_i32(&atomic, &expected, desired_values[index],
-                                                              kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
+        exchanged[index] =
+            cplat_atomic_compare_exchange_i32(&atomic, &expected, desired_values[index],
+                                              kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
         expected_after[index] = expected;
-        loaded_after[index] = cplat_atomic_load_i32(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
+        loaded_after[index] =
+            cplat_atomic_load_i32(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
         current = desired_values[index];
     }
 
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_NE(0, exchanged[index]);                              // [確認_正常系 回数=5] - 一致した期待値での交換が成功と判定されること。
-        EXPECT_EQ(expected_before[index], expected_after[index]);    // [確認_正常系 回数=5] - 成功時に expected が変化しないこと。
-        EXPECT_EQ(desired_values[index], loaded_after[index]);       // [確認_正常系 回数=5] - 交換後に desired が格納されていること。
+        EXPECT_NE(0, exchanged[index]); // [確認_正常系] - 一致した期待値での交換が成功と判定されること。
+        EXPECT_EQ(expected_before[index],
+                  expected_after[index]); // [確認_正常系] - 成功時に expected が変化しないこと。
+        EXPECT_EQ(desired_values[index],
+                  loaded_after[index]); // [確認_正常系] - 交換後に desired が格納されていること。
     }
 }
 
@@ -122,18 +132,20 @@ TEST(atomicCompareExchangeTest, i32_compare_exchange_fails_and_reports_current_v
     {
         int32_t expected = (int32_t)(999 + (int32_t)index); // 現在値 777 と一致しない期待値
 
-        exchanged[index] = cplat_atomic_compare_exchange_i32(&atomic, &expected, (int32_t)(1 + (int32_t)index),
-                                                              kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
+        exchanged[index] =
+            cplat_atomic_compare_exchange_i32(&atomic, &expected, (int32_t)(1 + (int32_t)index),
+                                              kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
         expected_after[index] = expected;
     }
 
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(0, exchanged[index]);          // [確認_異常系 回数=5] - 不一致の期待値では交換が失敗と判定されること。
-        EXPECT_EQ(777, expected_after[index]);   // [確認_異常系 回数=5] - 失敗時に expected へ現在値 777 が格納されること。
+        EXPECT_EQ(0, exchanged[index]);        // [確認_異常系] - 不一致の期待値では交換が失敗と判定されること。
+        EXPECT_EQ(777, expected_after[index]); // [確認_異常系] - 失敗時に expected へ現在値 777 が格納されること。
     }
-    EXPECT_EQ(777, cplat_atomic_load_i32(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_異常系] - 失敗した交換で値が変化しないこと。
+    EXPECT_EQ(777, cplat_atomic_load_i32(
+                       &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_異常系] - 失敗した交換で値が変化しないこと。
 }
 
 // 符号なし 32 ビットの compare_exchange が、期待値が一致する限りあらゆるメモリ順序で成功することの確認
@@ -157,19 +169,23 @@ TEST(atomicCompareExchangeTest, u32_compare_exchange_succeeds_and_updates_value_
 
         desired_values[index] = (uint32_t)(3000U + (uint32_t)index);
         expected_before[index] = expected;
-        exchanged[index] = cplat_atomic_compare_exchange_u32(&atomic, &expected, desired_values[index],
-                                                              kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
+        exchanged[index] =
+            cplat_atomic_compare_exchange_u32(&atomic, &expected, desired_values[index],
+                                              kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
         expected_after[index] = expected;
-        loaded_after[index] = cplat_atomic_load_u32(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
+        loaded_after[index] =
+            cplat_atomic_load_u32(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
         current = desired_values[index];
     }
 
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_NE(0, exchanged[index]);                              // [確認_正常系 回数=5] - 一致した期待値での交換が成功と判定されること。
-        EXPECT_EQ(expected_before[index], expected_after[index]);    // [確認_正常系 回数=5] - 成功時に expected が変化しないこと。
-        EXPECT_EQ(desired_values[index], loaded_after[index]);       // [確認_正常系 回数=5] - 交換後に desired が格納されていること。
+        EXPECT_NE(0, exchanged[index]); // [確認_正常系] - 一致した期待値での交換が成功と判定されること。
+        EXPECT_EQ(expected_before[index],
+                  expected_after[index]); // [確認_正常系] - 成功時に expected が変化しないこと。
+        EXPECT_EQ(desired_values[index],
+                  loaded_after[index]); // [確認_正常系] - 交換後に desired が格納されていること。
     }
 }
 
@@ -188,18 +204,20 @@ TEST(atomicCompareExchangeTest, u32_compare_exchange_fails_and_reports_current_v
     {
         uint32_t expected = (uint32_t)(999U + (uint32_t)index); // 現在値 777 と一致しない期待値
 
-        exchanged[index] = cplat_atomic_compare_exchange_u32(&atomic, &expected, (uint32_t)(1U + (uint32_t)index),
-                                                              kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
+        exchanged[index] =
+            cplat_atomic_compare_exchange_u32(&atomic, &expected, (uint32_t)(1U + (uint32_t)index),
+                                              kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
         expected_after[index] = expected;
     }
 
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(0, exchanged[index]);           // [確認_異常系 回数=5] - 不一致の期待値では交換が失敗と判定されること。
-        EXPECT_EQ(777U, expected_after[index]);   // [確認_異常系 回数=5] - 失敗時に expected へ現在値 777 が格納されること。
+        EXPECT_EQ(0, exchanged[index]);         // [確認_異常系] - 不一致の期待値では交換が失敗と判定されること。
+        EXPECT_EQ(777U, expected_after[index]); // [確認_異常系] - 失敗時に expected へ現在値 777 が格納されること。
     }
-    EXPECT_EQ(777U, cplat_atomic_load_u32(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_異常系] - 失敗した交換で値が変化しないこと。
+    EXPECT_EQ(777U, cplat_atomic_load_u32(
+                        &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_異常系] - 失敗した交換で値が変化しないこと。
 }
 
 // 符号付き 64 ビットの compare_exchange が、期待値が一致する限りあらゆるメモリ順序で成功することの確認
@@ -223,19 +241,23 @@ TEST(atomicCompareExchangeTest, i64_compare_exchange_succeeds_and_updates_value_
 
         desired_values[index] = (int64_t)(70000000000LL + (int64_t)index);
         expected_before[index] = expected;
-        exchanged[index] = cplat_atomic_compare_exchange_i64(&atomic, &expected, desired_values[index],
-                                                              kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
+        exchanged[index] =
+            cplat_atomic_compare_exchange_i64(&atomic, &expected, desired_values[index],
+                                              kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
         expected_after[index] = expected;
-        loaded_after[index] = cplat_atomic_load_i64(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
+        loaded_after[index] =
+            cplat_atomic_load_i64(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
         current = desired_values[index];
     }
 
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_NE(0, exchanged[index]);                              // [確認_正常系 回数=5] - 一致した期待値での交換が成功と判定されること。
-        EXPECT_EQ(expected_before[index], expected_after[index]);    // [確認_正常系 回数=5] - 成功時に expected が変化しないこと。
-        EXPECT_EQ(desired_values[index], loaded_after[index]);       // [確認_正常系 回数=5] - 交換後に desired が格納されていること。
+        EXPECT_NE(0, exchanged[index]); // [確認_正常系] - 一致した期待値での交換が成功と判定されること。
+        EXPECT_EQ(expected_before[index],
+                  expected_after[index]); // [確認_正常系] - 成功時に expected が変化しないこと。
+        EXPECT_EQ(desired_values[index],
+                  loaded_after[index]); // [確認_正常系] - 交換後に desired が格納されていること。
     }
 }
 
@@ -254,18 +276,20 @@ TEST(atomicCompareExchangeTest, i64_compare_exchange_fails_and_reports_current_v
     {
         int64_t expected = (int64_t)(999 + (int64_t)index); // 現在値 777 と一致しない期待値
 
-        exchanged[index] = cplat_atomic_compare_exchange_i64(&atomic, &expected, (int64_t)(1 + (int64_t)index),
-                                                              kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
+        exchanged[index] =
+            cplat_atomic_compare_exchange_i64(&atomic, &expected, (int64_t)(1 + (int64_t)index),
+                                              kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
         expected_after[index] = expected;
     }
 
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(0, exchanged[index]);          // [確認_異常系 回数=5] - 不一致の期待値では交換が失敗と判定されること。
-        EXPECT_EQ(777, expected_after[index]);   // [確認_異常系 回数=5] - 失敗時に expected へ現在値 777 が格納されること。
+        EXPECT_EQ(0, exchanged[index]);        // [確認_異常系] - 不一致の期待値では交換が失敗と判定されること。
+        EXPECT_EQ(777, expected_after[index]); // [確認_異常系] - 失敗時に expected へ現在値 777 が格納されること。
     }
-    EXPECT_EQ(777, cplat_atomic_load_i64(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_異常系] - 失敗した交換で値が変化しないこと。
+    EXPECT_EQ(777, cplat_atomic_load_i64(
+                       &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_異常系] - 失敗した交換で値が変化しないこと。
 }
 
 // 符号なし 64 ビットの compare_exchange が、期待値が一致する限りあらゆるメモリ順序で成功することの確認
@@ -289,19 +313,23 @@ TEST(atomicCompareExchangeTest, u64_compare_exchange_succeeds_and_updates_value_
 
         desired_values[index] = (uint64_t)(80000000000ULL + (uint64_t)index);
         expected_before[index] = expected;
-        exchanged[index] = cplat_atomic_compare_exchange_u64(&atomic, &expected, desired_values[index],
-                                                              kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
+        exchanged[index] =
+            cplat_atomic_compare_exchange_u64(&atomic, &expected, desired_values[index],
+                                              kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
         expected_after[index] = expected;
-        loaded_after[index] = cplat_atomic_load_u64(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
+        loaded_after[index] =
+            cplat_atomic_load_u64(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
         current = desired_values[index];
     }
 
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_NE(0, exchanged[index]);                              // [確認_正常系 回数=5] - 一致した期待値での交換が成功と判定されること。
-        EXPECT_EQ(expected_before[index], expected_after[index]);    // [確認_正常系 回数=5] - 成功時に expected が変化しないこと。
-        EXPECT_EQ(desired_values[index], loaded_after[index]);       // [確認_正常系 回数=5] - 交換後に desired が格納されていること。
+        EXPECT_NE(0, exchanged[index]); // [確認_正常系] - 一致した期待値での交換が成功と判定されること。
+        EXPECT_EQ(expected_before[index],
+                  expected_after[index]); // [確認_正常系] - 成功時に expected が変化しないこと。
+        EXPECT_EQ(desired_values[index],
+                  loaded_after[index]); // [確認_正常系] - 交換後に desired が格納されていること。
     }
 }
 
@@ -320,18 +348,20 @@ TEST(atomicCompareExchangeTest, u64_compare_exchange_fails_and_reports_current_v
     {
         uint64_t expected = (uint64_t)(999U + (uint64_t)index); // 現在値 777 と一致しない期待値
 
-        exchanged[index] = cplat_atomic_compare_exchange_u64(&atomic, &expected, (uint64_t)(1U + (uint64_t)index),
-                                                              kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
+        exchanged[index] =
+            cplat_atomic_compare_exchange_u64(&atomic, &expected, (uint64_t)(1U + (uint64_t)index),
+                                              kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
         expected_after[index] = expected;
     }
 
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(0, exchanged[index]);           // [確認_異常系 回数=5] - 不一致の期待値では交換が失敗と判定されること。
-        EXPECT_EQ(777U, expected_after[index]);   // [確認_異常系 回数=5] - 失敗時に expected へ現在値 777 が格納されること。
+        EXPECT_EQ(0, exchanged[index]);         // [確認_異常系] - 不一致の期待値では交換が失敗と判定されること。
+        EXPECT_EQ(777U, expected_after[index]); // [確認_異常系] - 失敗時に expected へ現在値 777 が格納されること。
     }
-    EXPECT_EQ(777U, cplat_atomic_load_u64(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_異常系] - 失敗した交換で値が変化しないこと。
+    EXPECT_EQ(777U, cplat_atomic_load_u64(
+                        &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_異常系] - 失敗した交換で値が変化しないこと。
 }
 
 // ポインターの compare_exchange が、期待値が一致する限りあらゆるメモリ順序で成功することの確認
@@ -357,19 +387,23 @@ TEST(atomicCompareExchangeTest, ptr_compare_exchange_succeeds_and_updates_value_
         markers[index] = (int)index;
         desired_values[index] = &markers[index];
         expected_before[index] = expected;
-        exchanged[index] = cplat_atomic_compare_exchange_ptr(&atomic, &expected, desired_values[index],
-                                                              kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
+        exchanged[index] =
+            cplat_atomic_compare_exchange_ptr(&atomic, &expected, desired_values[index],
+                                              kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
         expected_after[index] = expected;
-        loaded_after[index] = cplat_atomic_load_ptr(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
+        loaded_after[index] =
+            cplat_atomic_load_ptr(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
         current = desired_values[index];
     }
 
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_NE(0, exchanged[index]);                              // [確認_正常系 回数=5] - 一致した期待値での交換が成功と判定されること。
-        EXPECT_EQ(expected_before[index], expected_after[index]);    // [確認_正常系 回数=5] - 成功時に expected が変化しないこと。
-        EXPECT_EQ(desired_values[index], loaded_after[index]);       // [確認_正常系 回数=5] - 交換後に desired が格納されていること。
+        EXPECT_NE(0, exchanged[index]); // [確認_正常系] - 一致した期待値での交換が成功と判定されること。
+        EXPECT_EQ(expected_before[index],
+                  expected_after[index]); // [確認_正常系] - 成功時に expected が変化しないこと。
+        EXPECT_EQ(desired_values[index],
+                  loaded_after[index]); // [確認_正常系] - 交換後に desired が格納されていること。
     }
 }
 
@@ -379,7 +413,8 @@ TEST(atomicCompareExchangeTest, ptr_compare_exchange_fails_and_reports_current_v
     // Arrange
     int current_marker = 0;
     int other_marker = 0;
-    cplat_atomic_ptr atomic = CPLAT_ATOMIC_INIT(&current_marker); // [状態] - &current_marker で初期化したアトミック変数を用意する。
+    cplat_atomic_ptr atomic =
+        CPLAT_ATOMIC_INIT(&current_marker); // [状態] - &current_marker で初期化したアトミック変数を用意する。
     int exchanged[kAllMemoryOrderCount] = {0};
     void *expected_after[kAllMemoryOrderCount] = {nullptr};
 
@@ -390,18 +425,21 @@ TEST(atomicCompareExchangeTest, ptr_compare_exchange_fails_and_reports_current_v
     {
         void *expected = &other_marker; // 現在値 &current_marker と一致しない期待値
 
-        exchanged[index] = cplat_atomic_compare_exchange_ptr(&atomic, &expected, &other_marker,
-                                                              kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
+        exchanged[index] =
+            cplat_atomic_compare_exchange_ptr(&atomic, &expected, &other_marker,
+                                              kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
         expected_after[index] = expected;
     }
 
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(0, exchanged[index]); // [確認_異常系 回数=5] - 不一致の期待値では交換が失敗と判定されること。
-        EXPECT_EQ((void *)&current_marker,
-                  expected_after[index]); // [確認_異常系 回数=5] - 失敗時に expected へ現在値 &current_marker が格納されること。
+        EXPECT_EQ(0, exchanged[index]); // [確認_異常系] - 不一致の期待値では交換が失敗と判定されること。
+        EXPECT_EQ(
+            (void *)&current_marker,
+            expected_after[index]); // [確認_異常系] - 失敗時に expected へ現在値 &current_marker が格納されること。
     }
     EXPECT_EQ((void *)&current_marker,
-              cplat_atomic_load_ptr(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_異常系] - 失敗した交換で値が変化しないこと。
+              cplat_atomic_load_ptr(&atomic,
+                                    CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_異常系] - 失敗した交換で値が変化しないこと。
 }

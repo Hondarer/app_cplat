@@ -2,7 +2,7 @@
 #include <mock_cplat.h>
 
 void delegate_real_cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length,
-                                            const char *configpath)
+                                         const char *configpath)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_sym_loader_init)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_sym_loader_init"));

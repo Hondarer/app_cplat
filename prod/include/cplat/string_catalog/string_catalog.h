@@ -108,7 +108,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_string_catalog_language_from_tag(const char *tag,
-                                                                     cplat_string_catalog_language *language_out);
+                                                                      cplat_string_catalog_language *language_out);
 
     /**
      *  @brief          文字列キーと可変長引数から、現在の言語の文字列を組み立てます。

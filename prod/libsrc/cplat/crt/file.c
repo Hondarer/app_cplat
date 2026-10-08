@@ -201,8 +201,7 @@ int cplat_file_open(cplat_file *file, const char *path, int flags, cplat_error *
             /* APPEND かつ TRUNCATE なしのとき FILE_APPEND_DATA で開くと書き込みが EOF へ原子的に向かう。 */
             /* FILE_READ_ATTRIBUTES は後続の GetFileSizeEx (cplat_file_get_size) に必要。           */
             /* TRUNCATE ありの場合は既存ファイルをゼロ化して先頭から書くため GENERIC_WRITE を使う。    */
-            use_append_access =
-                ((flags & CPLAT_FILE_OPEN_APPEND) != 0) && ((flags & CPLAT_FILE_OPEN_TRUNCATE) == 0);
+            use_append_access = ((flags & CPLAT_FILE_OPEN_APPEND) != 0) && ((flags & CPLAT_FILE_OPEN_TRUNCATE) == 0);
             if (use_append_access != 0)
             {
                 desired_access = FILE_APPEND_DATA | FILE_READ_ATTRIBUTES;

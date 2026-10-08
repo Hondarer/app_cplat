@@ -1,7 +1,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-const char * delegate_real_cplat_result_to_string(int result)
+const char *delegate_real_cplat_result_to_string(int result)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_result_to_string)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_result_to_string"));
@@ -11,7 +11,7 @@ const char * delegate_real_cplat_result_to_string(int result)
 
 MOCK_WEAK_IMPL(const char *, cplat_result_to_string, int result)
 {
-    const char * mock_ret;
+    const char *mock_ret;
 
     if (_mock_cplat != nullptr)
     {

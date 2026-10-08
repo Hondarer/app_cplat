@@ -250,7 +250,7 @@ static int sink_registry_register_locked(char *key, cplat_trace_file_sink *sink)
         }
 
         new_items = (struct sink_registry_entry *)cplat_realloc(s_sink_registry.items, new_capacity,
-                                                                   sizeof(struct sink_registry_entry));
+                                                                sizeof(struct sink_registry_entry));
         if (new_items == NULL)
         {
             return -1;
@@ -578,13 +578,13 @@ static void free_sink(cplat_trace_file_sink *p)
  *  @brief          新規 sink を生成してファイルを開く (レジストリ登録は行わない) です。
  *  @param[in]      path         出力ファイル パス。
  *  @param[in]      path_len     path のバイト数。
- *  @param[in]      max_bytes    1 ファイルあたりの最大バイト数。0 でデフォルト値を使用。
- *  @param[in]      generations  保持する旧世代数。0 以下でデフォルト値を使用。
+ *  @param[in]      max_bytes    1 ファイルあたりの最大バイト数。0 で既定値を使用。
+ *  @param[in]      generations  保持する旧世代数。0 以下で既定値を使用。
  *  @param[in]      flags        動作フラグ。
  *  @return         成功時: ハンドル。失敗時: NULL。
  */
 static cplat_trace_file_sink *create_new_sink(const char *path, const size_t path_len, const size_t max_bytes,
-                                                 const int generations, const int flags)
+                                              const int generations, const int flags)
 {
     cplat_trace_file_sink *handle;
     char dir[PLATFORM_PATH_MAX];
@@ -669,7 +669,7 @@ static cplat_trace_file_sink *create_new_sink(const char *path, const size_t pat
             return NULL;
         }
         (void)cplat_snprintf(handle->lock_path, path_len + sizeof(TRACE_FILE_LOCK_SUFFIX), "%s%s", path,
-                                TRACE_FILE_LOCK_SUFFIX);
+                             TRACE_FILE_LOCK_SUFFIX);
 
         if (cplat_interprocess_lock_open(handle->lock_path, &handle->rotate_lock) != CPLAT_OK)
         {
@@ -686,8 +686,8 @@ static cplat_trace_file_sink *create_new_sink(const char *path, const size_t pat
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-cplat_trace_file_sink *cplat_trace_file_sink_create(const char *path, const size_t max_bytes,
-                                                          const int generations, const int flags)
+cplat_trace_file_sink *cplat_trace_file_sink_create(const char *path, const size_t max_bytes, const int generations,
+                                                    const int flags)
 {
     cplat_trace_file_sink *handle;
     struct sink_registry_entry *entry;
@@ -781,8 +781,9 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
     }
 
     /* 1 行全体をスタック バッファーへフォーマットする (syscall 回数を最小化) */
-    len = snprintf(buf, sizeof(buf), "%s %c %s\n", timestamp_text,
-                   cplat_internal_trace_level_char((cplat_trace_level)level), message); /* 置換対象外: 意図的な切り詰め */
+    len =
+        snprintf(buf, sizeof(buf), "%s %c %s\n", timestamp_text,
+                 cplat_internal_trace_level_char((cplat_trace_level)level), message); /* 置換対象外: 意図的な切り詰め */
     if (len <= 0)
     {
         return CPLAT_ERR_UNKNOWN;
@@ -854,8 +855,8 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_trace_file_sink_write(cplat_trace_file_sink *handle, const int level,
-                                const cplat_timespec *timestamp, const char *message)
+int cplat_trace_file_sink_write(cplat_trace_file_sink *handle, const int level, const cplat_timespec *timestamp,
+                                const char *message)
 {
     char timestamp_text[TRACE_FILE_TS_LEN + 1];
     cplat_timespec resolved;

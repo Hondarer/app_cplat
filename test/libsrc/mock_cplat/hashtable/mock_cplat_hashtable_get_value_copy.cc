@@ -2,7 +2,7 @@
 #include <mock_cplat.h>
 
 int delegate_real_cplat_hashtable_get_value_copy(const cplat_hashtable *ht, uint64_t record, void *dest,
-                                                    size_t dest_size, size_t *required_size_out)
+                                                 size_t dest_size, size_t *required_size_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_hashtable_get_value_copy)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_hashtable_get_value_copy"));

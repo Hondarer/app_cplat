@@ -3,8 +3,8 @@
 
 int delegate_real_cplat_random_bytes(void *buf, size_t size)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_random_bytes)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_random_bytes"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_random_bytes)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_random_bytes"));
 
     return real_fn(buf, size);
 }

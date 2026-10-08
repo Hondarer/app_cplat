@@ -2,7 +2,7 @@
 #include <mock_cplat.h>
 
 int delegate_real_cplat_hashtable_next_record(const cplat_hashtable *ht, uint64_t from, unsigned int status_mask,
-                                                 uint64_t *record_out, int *has_record_out)
+                                              uint64_t *record_out, int *has_record_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_hashtable_next_record)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_hashtable_next_record"));
@@ -10,8 +10,8 @@ int delegate_real_cplat_hashtable_next_record(const cplat_hashtable *ht, uint64_
     return real_fn(ht, from, status_mask, record_out, has_record_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_hashtable_next_record, const cplat_hashtable *ht, uint64_t from,
-               unsigned int status_mask, uint64_t *record_out, int *has_record_out)
+MOCK_WEAK_IMPL(int, cplat_hashtable_next_record, const cplat_hashtable *ht, uint64_t from, unsigned int status_mask,
+               uint64_t *record_out, int *has_record_out)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 
