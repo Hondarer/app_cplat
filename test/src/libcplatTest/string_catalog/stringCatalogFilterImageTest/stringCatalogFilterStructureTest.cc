@@ -75,7 +75,9 @@ class stringCatalogFilterStructureTest : public Test
     {
         std::memset(image, 0, sizeof(image));
         ASSERT_EQ(CPLAT_OK, compile_single_line(text, image));
+        // [状態確認] - `compile_single_line(text, image)` の戻り値が `CPLAT_OK` であること。
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_validate(image, kImageSize));
+        // [状態確認] - `cplat_string_catalog_filter_validate(image, kImageSize)` の戻り値が `CPLAT_OK` であること。
         record = filter_test_record_address(image, kLineWidth, 0U);
     }
 

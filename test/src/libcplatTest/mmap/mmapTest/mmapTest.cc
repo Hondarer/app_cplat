@@ -154,16 +154,19 @@ TEST_F(mmapTest, attach_read_only_maps_existing_file)
                 return CPLAT_OK;
             }); // [Pre-Assert確認_正常系] - 読み取り専用の cplat_file_open が 1 回呼び出されること。
                 // [Pre-Assert手順] - 番兵ハンドルを設定し、CPLAT_OK を返却する。
-    // [Pre-Assert確認_正常系] - 読み取り専用のマップ API が呼び出されること。
+    // 読み取り専用のマップ API が呼び出されること。
     // [Pre-Assert手順] - テスト用バッファーを返却する。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_sys_mman_, mmap(_, _, _, _, kMapSize, PROT_READ, MAP_SHARED, kFakeFileHandle, 0))
         .WillOnce(Return(mapped_buf_));
+    // [Pre-Assert確認_正常系] - mock_sys_mman_ の mmap(_, _, _, _, kMapSize, PROT_READ, MAP_SHARED, kFakeFileHandle, 0) が登録した呼び出し期待を満たすこと。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_windows_, CreateFileMappingA(_, _, _, kFakeFileHandle, _, PAGE_READONLY, _, _, _))
         .WillOnce(Return(kFakeMappingHandle));
+    // [Pre-Assert確認_正常系] - mock_windows_ の CreateFileMappingA(_, _, _, kFakeFileHandle, _, PAGE_READONLY, _, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_windows_, MapViewOfFile(_, _, _, kFakeMappingHandle, FILE_MAP_READ, 0u, 0u, kMapSize))
         .WillOnce(Return(mapped_buf_));
+    // [Pre-Assert確認_正常系] - mock_windows_ の MapViewOfFile(_, _, _, kFakeMappingHandle, FILE_MAP_READ, 0u, 0u, kMapSize) が登録した呼び出し期待を満たすこと。
 #endif /* PLATFORM_ */
 
     // Act
@@ -173,6 +176,7 @@ TEST_F(mmapTest, attach_read_only_maps_existing_file)
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 読み取り専用アタッチの戻り値が CPLAT_OK であること。
     ASSERT_NE((cplat_mmap *)NULL, map);
+    // [確認_正常系] - `(cplat_mmap *)NULL` と `map` が異なること。
     EXPECT_EQ(kMapSize,
               cplat_mmap_get_size(map)); // [確認_正常系] - マップ サイズが既存ファイルの 64 バイトと一致すること。
     EXPECT_EQ(static_cast<void *>(mapped_buf_),
@@ -276,13 +280,16 @@ TEST_F(mmapTest, flush_succeeds_for_explicit_address_range)
     attachNewFile(&map); // [状態] - 書き戻し対象のマップを用意する。
 
     // Pre-Assert
-    // [Pre-Assert確認_正常系] - 先頭 1 byte を対象とする書き戻し API が呼び出されること。
+    // 先頭 1 byte を対象とする書き戻し API が呼び出されること。
     // [Pre-Assert手順] - 成功を返却する。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_sys_mman_, msync(_, _, _, mapped_buf_, 1u, MS_SYNC)).WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_sys_mman_ の msync(_, _, _, mapped_buf_, 1u, MS_SYNC) が登録した呼び出し期待を満たすこと。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_windows_, FlushViewOfFile(_, _, _, mapped_buf_, 1u)).WillOnce(Return(TRUE));
+    // [Pre-Assert確認_正常系] - mock_windows_ の FlushViewOfFile(_, _, _, mapped_buf_, 1u) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_windows_, FlushFileBuffers(_, _, _, kFakeFileHandle)).WillOnce(Return(TRUE));
+    // [Pre-Assert確認_正常系] - mock_windows_ の FlushFileBuffers(_, _, _, kFakeFileHandle) が登録した呼び出し期待を満たすこと。
 #endif /* PLATFORM_ */
 
     // Act

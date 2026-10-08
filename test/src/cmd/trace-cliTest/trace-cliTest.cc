@@ -197,6 +197,7 @@ TEST_F(trace_cliTest, process_line_dispose_releases_handle)
     EXPECT_CALL(mock_cplat_, cplat_tracer_dispose(_))
         .Times(AnyNumber())
         .WillRepeatedly(Return()); // [Pre-Assert手順] - 後処理で発生する NULL ハンドルの dispose を許容する。
+    // [Pre-Assert確認_正常系] - mock_cplat_ の cplat_tracer_dispose(_) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat_, cplat_tracer_dispose(Pointee(handle_)))
         .WillOnce(
             Return()); // [Pre-Assert確認_正常系] - handle_ を保持するポインターで cplat_tracer_dispose が 1 回呼び出されること。
@@ -296,6 +297,7 @@ TEST_F(trace_cliTest, process_line_help_prints_command_list)
     EXPECT_CALL(mock_stdio_, printf(_, _, _, _))
         .Times(AnyNumber())
         .WillRepeatedly(Return(0)); // [Pre-Assert手順] - help の複数行 stdout 出力を許容する。
+    // [Pre-Assert確認_正常系] - mock_stdio_ の printf(_, _, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, HasSubstr("trace-cli")))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - "trace-cli" を含む help 見出しが出力されること。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, HasSubstr("write-hexf")))
@@ -371,6 +373,7 @@ TEST_F(trace_cliTest, main_runs_interactive_sequence_and_disposes_handle)
     EXPECT_CALL(mock_cplat_, cplat_tracer_dispose(_))
         .Times(AnyNumber())
         .WillRepeatedly(Return()); // [Pre-Assert手順] - 後処理で発生する NULL ハンドルの dispose を許容する。
+    // [Pre-Assert確認_正常系] - mock_cplat_ の cplat_tracer_dispose(_) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat_, cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED))
         .WillOnce(Return(
             handle_)); // [Pre-Assert確認_正常系] - create コマンドで cplat_tracer_create が 1 回呼び出されること。
@@ -409,9 +412,11 @@ TEST_F(trace_cliTest, main_runs_interactive_sequence_and_disposes_handle)
                 copy_line(buf, (int)buf_size, lines[index++].c_str());
                 return CPLAT_OK;
             }); // [Pre-Assert手順] - cplat_prompt_readline_fmt_at にて入力列を 1 行ずつ返却し、尽きたら CPLAT_ERR_EOF を返却する。
+    // [Pre-Assert確認_正常系] - mock_cplat_ の cplat_prompt_readline_fmt_at(prompt_handle, _, _, _, _, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, _))
         .Times(AnyNumber())
         .WillRepeatedly(Return(0)); // [Pre-Assert手順] - help を含むその他の stdout 出力を許容する。
+    // [Pre-Assert確認_正常系] - mock_stdio_ の printf(_, _, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq("handle=created\n")))
         .InSequence(io_seq)
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - create 結果として "handle=created" が出力されること。

@@ -20,7 +20,7 @@ TEST_F(fileTest, init_and_close_are_safe_for_unopened_handle)
     cplat_file_close(&file, NULL); // [手順] - 続けてもう一度 cplat_file_close を呼び出す。
 
     // Assert
-    // [確認_正常系] - クラッシュせずに完了すること。
+    SUCCEED(); // [確認_正常系] - クラッシュせずに完了すること。
 }
 
 // 不正な引数で各関数が CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
@@ -291,7 +291,9 @@ TEST_F(fileTest, write_then_reopen_appends)
     EXPECT_CALL(mock_fcntl_,
                 open(_, _, _, StrEq(kPath), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | kWriteThroughFlag, 0644))
         .WillOnce(Return(kFakeFd));
+    // [Pre-Assert確認_正常系] - mock_fcntl_ の open(_, _, _, StrEq(kPath), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | kWriteThroughFlag, 0644) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_unistd_, write(_, _, _, kFakeFd, _, 3u)).WillOnce(Return(3));
+    // [Pre-Assert確認_正常系] - mock_unistd_ の write(_, _, _, kFakeFd, _, 3u) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_sys_stat_, fstat(_, _, _, kFakeFd, _))
         .WillOnce(
             [](const char *, int, const char *, int, struct stat *st)
@@ -322,6 +324,7 @@ TEST_F(fileTest, write_then_reopen_appends)
     // Pre-Assert_2
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq(kPath), O_WRONLY | O_CREAT | O_APPEND | kWriteThroughFlag, 0644))
         .WillOnce(Return(kFakeFd));
+    // [Pre-Assert確認_正常系] - mock_fcntl_ の open(_, _, _, StrEq(kPath), O_WRONLY | O_CREAT | O_APPEND | kWriteThroughFlag, 0644) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_unistd_, write(_, _, _, kFakeFd, _, 3u))
         .WillOnce(Return(3)); // [Pre-Assert確認_正常系] - 追記オープンと 3 バイトの write が呼び出されること。
                               // [Pre-Assert手順] - 番兵記述子 7 と書き込み長 3 を返却する。
@@ -362,6 +365,7 @@ TEST_F(fileTest, file_id_matches_between_handle_and_path)
                 fill_stat(st, 0, 11, 22);
                 return 0;
             });
+    // [Pre-Assert確認_正常系] - mock_sys_stat_ の fstat(_, _, _, kFakeFd, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_sys_stat_, stat(_, _, _, StrEq(kPath), _))
         .WillOnce(
             [](const char *, int, const char *, const char *, struct stat *st)
@@ -410,6 +414,7 @@ TEST_F(fileTest, file_id_differs_when_path_stat_differs)
                 fill_stat(st, 0, 11, 22);
                 return 0;
             });
+    // [Pre-Assert確認_正常系] - mock_sys_stat_ の fstat(_, _, _, kFakeFd, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_sys_stat_, stat(_, _, _, StrEq(kPath), _))
         .WillOnce(
             [](const char *, int, const char *, const char *, struct stat *st)
@@ -574,7 +579,9 @@ TEST_F(fileTest, read_write_open_allows_write_and_reports_size)
 
     // Pre-Assert
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq(kPath), O_RDWR | O_CREAT, 0644)).WillOnce(Return(kFakeFd));
+    // [Pre-Assert確認_正常系] - mock_fcntl_ の open(_, _, _, StrEq(kPath), O_RDWR | O_CREAT, 0644) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_unistd_, write(_, _, _, kFakeFd, _, 5u)).WillOnce(Return(5));
+    // [Pre-Assert確認_正常系] - mock_unistd_ の write(_, _, _, kFakeFd, _, 5u) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_sys_stat_, fstat(_, _, _, kFakeFd, _))
         .WillOnce(
             [](const char *, int, const char *, int, struct stat *st)
@@ -677,6 +684,7 @@ TEST_F(fileTest, set_size_extends_and_truncates_file)
 
     // Pre-Assert
     EXPECT_CALL(mock_unistd_, ftruncate(_, _, _, kFakeFd, 128)).WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_unistd_ の ftruncate(_, _, _, kFakeFd, 128) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_sys_stat_, fstat(_, _, _, kFakeFd, _))
         .WillOnce(
             [](const char *, int, const char *, int, struct stat *st)
@@ -695,10 +703,12 @@ TEST_F(fileTest, set_size_extends_and_truncates_file)
         CPLAT_OK,
         actual_ret_set_size_1); // [確認_正常系] - 128 バイトへ拡張する cplat_file_set_size の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, actual_ret_get_size_1);
+    // [確認_正常系] - `cplat_file_get_size(&file, &size, NULL)` の 1 回目の戻り値が `CPLAT_OK` であること。
     EXPECT_EQ((size_t)128, size); // [確認_正常系] - 報告サイズが 128 であること。
 
     // Pre-Assert_2
     EXPECT_CALL(mock_unistd_, ftruncate(_, _, _, kFakeFd, 16)).WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_unistd_ の ftruncate(_, _, _, kFakeFd, 16) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_sys_stat_, fstat(_, _, _, kFakeFd, _))
         .WillOnce(
             [](const char *, int, const char *, int, struct stat *st)
@@ -717,6 +727,7 @@ TEST_F(fileTest, set_size_extends_and_truncates_file)
         CPLAT_OK,
         actual_ret_set_size_2); // [確認_正常系] - 16 バイトへ縮小する cplat_file_set_size の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, actual_ret_get_size_2);
+    // [確認_正常系] - `cplat_file_get_size(&file, &size, NULL)` の 2 回目の戻り値が `CPLAT_OK` であること。
     EXPECT_EQ((size_t)16, size); // [確認_正常系] - 報告サイズが 16 であること。
 
     // Cleanup
@@ -735,6 +746,7 @@ TEST_F(fileTest, read_returns_written_content)
 
     // Pre-Assert
     ASSERT_EQ(CPLAT_OK, cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_READ, NULL));
+    // [確認_正常系] - `cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_READ, NULL)` の戻り値が `CPLAT_OK` であること。
     EXPECT_CALL(mock_unistd_, read(_, _, _, kFakeFd, _, sizeof(buf)))
         .WillOnce(
             [](const char *, int, const char *, int, void *out, size_t)
@@ -769,6 +781,7 @@ TEST_F(fileTest, read_at_end_of_file_returns_zero_length)
 
     // Pre-Assert
     ASSERT_EQ(CPLAT_OK, cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_READ, NULL));
+    // [確認_正常系] - `cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_READ, NULL)` の戻り値が `CPLAT_OK` であること。
     EXPECT_CALL(mock_unistd_, read(_, _, _, kFakeFd, _, sizeof(buf)))
         .WillOnce(
             [](const char *, int, const char *, int, void *out, size_t)
@@ -808,7 +821,9 @@ TEST_F(fileTest, flush_reports_success)
     // Pre-Assert
     ASSERT_EQ(CPLAT_OK,
               cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_TRUNCATE, NULL));
+    // [確認_正常系] - `cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_TRUNCATE, NULL)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_file_write(&file, "data", 4, NULL));
+    // [確認_正常系] - `cplat_file_write(&file, "data", 4, NULL)` の戻り値が `CPLAT_OK` であること。
     EXPECT_CALL(mock_unistd_, fsync(_, _, _, kFakeFd))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - fsync が番兵記述子 7 で 1 回呼び出されること。
                               // [Pre-Assert手順] - 0 を返却する。

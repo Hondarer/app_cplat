@@ -205,7 +205,9 @@ TEST(processTest, WaitNoWaitReportsTimeoutForRunningProcess)
     int start_result =
         cplat_process_start(&options, &process); // [手順] - cplat_process_start で子プロセスを起動する。
     ASSERT_EQ(CPLAT_OK, start_result);
+    // [確認_正常系] - `cplat_process_start(&options, &process)` の戻り値が `CPLAT_OK` であること。
     ASSERT_NE(nullptr, process);
+    // [確認_正常系] - `nullptr` と `process` が異なること。
 
     int wait_result = cplat_process_wait(process, CPLAT_PROCESS_NO_WAIT); // [手順] - NO_WAIT で待機する。
     int terminate_result = cplat_process_terminate(process); // [手順] - 子プロセスを terminate する。
@@ -245,6 +247,7 @@ TEST(processTest, WaitReturnsChildExitCode)
     // [Pre-Assert確認_正常系] - GetExitCodeProcess が 1 回呼び出されること。
     // [Pre-Assert手順] - 終了コード 7 を設定して TRUE を返却する。
     EXPECT_CALL(mock_windows, CloseHandle(_, _, _, fake_process)).WillOnce(Return(TRUE)); // Cleanup の destroy 用
+    // [Pre-Assert確認_正常系] - mock_windows の CloseHandle(_, _, _, fake_process) が登録した呼び出し期待を満たすこと。
 
     // Act
     int wait_result =
@@ -289,6 +292,7 @@ TEST(processTest, WaitNoWaitReportsTimeoutForAdoptedProcess)
     // [Pre-Assert確認_正常系] - GetExitCodeProcess が 1 回呼び出されること。
     // [Pre-Assert手順] - 終了コード 1 を設定して TRUE を返却する。
     EXPECT_CALL(mock_windows, CloseHandle(_, _, _, fake_process)).WillOnce(Return(TRUE)); // Cleanup の destroy 用
+    // [Pre-Assert確認_正常系] - mock_windows の CloseHandle(_, _, _, fake_process) が登録した呼び出し期待を満たすこと。
 
     // Act
     int wait_result = cplat_process_wait(process, CPLAT_PROCESS_NO_WAIT); // [手順] - NO_WAIT で待機する。

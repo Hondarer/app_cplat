@@ -36,8 +36,9 @@ TEST_F(symLoaderDisposeTest, releases_handle_and_func_ptr_of_resolved_entry)
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_dlfcn, dlclose(_, _, _, kFakeHandle)).WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_dlfcn の dlclose(_, _, _, kFakeHandle) が登録した呼び出し期待を満たすこと。
 #endif /* PLATFORM_LINUX */
-    // [Pre-Assert確認_正常系] - 解放 API がエントリのハンドルを 1 回閉じること。
+    // 解放 API がエントリのハンドルを 1 回閉じること。
     // [Pre-Assert手順] - 閉じる操作は成功を返却する。
 
     // Act
@@ -62,8 +63,9 @@ TEST_F(symLoaderDisposeTest, skips_entry_without_handle)
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_dlfcn, dlclose(_, _, _, _)).Times(0);
+    // [Pre-Assert確認_正常系] - mock_dlfcn の dlclose(_, _, _, _) が登録した呼び出し期待を満たすこと。
 #endif /* PLATFORM_LINUX */
-    // [Pre-Assert確認_正常系] - ハンドルが無いとき解放 API が呼び出されないこと。
+    // ハンドルが無いとき解放 API が呼び出されないこと。
 
     // Act
     cplat_sym_loader_dispose(entries, 1u); // [手順] - ハンドルを持たないエントリを指定して解放する。
@@ -88,8 +90,9 @@ TEST_F(symLoaderDisposeTest, accepts_zero_length)
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_dlfcn, dlclose(_, _, _, _)).Times(0);
+    // [Pre-Assert確認_正常系] - mock_dlfcn の dlclose(_, _, _, _) が登録した呼び出し期待を満たすこと。
 #endif /* PLATFORM_LINUX */
-    // [Pre-Assert確認_正常系] - 要素数 0 のとき解放 API が呼び出されないこと。
+    // 要素数 0 のとき解放 API が呼び出されないこと。
 
     // Act
     cplat_sym_loader_dispose(entries, 0u); // [手順] - 要素数に 0 を指定して解放する。
@@ -118,9 +121,11 @@ TEST_F(symLoaderDisposeTest, releases_multiple_entries)
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_dlfcn, dlclose(_, _, _, first.handle)).WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_dlfcn の dlclose(_, _, _, first.handle) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_dlfcn, dlclose(_, _, _, second.handle)).WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_dlfcn の dlclose(_, _, _, second.handle) が登録した呼び出し期待を満たすこと。
 #endif /* PLATFORM_LINUX */
-    // [Pre-Assert確認_正常系] - 2 件のハンドルがそれぞれ閉じられること。
+    // 2 件のハンドルがそれぞれ閉じられること。
     // [Pre-Assert手順] - 閉じる操作は成功を返却する。
 
     // Act

@@ -253,6 +253,7 @@ TEST_F(hashtableTimestampTest, push_deleted_does_not_stamp)
     EXPECT_EQ(CPLAT_OK, actual_ret_after); // [確認_正常系] - 加齢後も時刻を読めること。
     EXPECT_EQ(before.tv_sec, after.tv_sec);   // [確認_正常系] - 加齢では時刻が変わらないこと。
     EXPECT_EQ(CPLAT_OK, actual_ret_status);
+    // [確認_正常系] - `cplat_hashtable_get_status(ht, 1, &status)` の戻り値が `CPLAT_OK` であること。
     EXPECT_EQ(3, status); // [確認_正常系] - 加齢で status が 3 になること。
 
     // Cleanup

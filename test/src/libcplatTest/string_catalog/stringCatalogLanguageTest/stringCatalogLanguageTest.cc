@@ -66,6 +66,7 @@ TEST_F(stringCatalogLanguageTest, decides_from_environment)
 
     // Pre-Assert
     expect_ui_language_tag(mock_cplat, "ja-JP"); // [Pre-Assert手順] - 表示言語として ja-JP を返す状態にする。
+    // [Pre-Assert確認_正常系] - 表示言語を取得する呼び出し期待を満たすこと。
 
     // Act
     actual_language = cplat_string_catalog_get_language(); // [手順] - 設定を行わずに現在の言語を取得する。
@@ -84,6 +85,7 @@ TEST_F(stringCatalogLanguageTest, decides_neutral_for_unknown_tag)
 
     // Pre-Assert
     expect_ui_language_tag(mock_cplat, "fr-FR"); // [Pre-Assert手順] - 扱わない言語の表示言語を返す状態にする。
+    // [Pre-Assert確認_正常系] - 表示言語を取得する呼び出し期待を満たすこと。
 
     // Act
     actual_language = cplat_string_catalog_get_language(); // [手順] - 設定を行わずに現在の言語を取得する。
@@ -102,6 +104,7 @@ TEST_F(stringCatalogLanguageTest, decides_neutral_for_neutral_tag)
 
     // Pre-Assert
     expect_ui_language_tag(mock_cplat, ""); // [Pre-Assert手順] - 表示言語としてニュートラルを返す状態にする。
+    // [Pre-Assert確認_正常系] - 表示言語を取得する呼び出し期待を満たすこと。
 
     // Act
     actual_language = cplat_string_catalog_get_language(); // [手順] - 設定を行わずに現在の言語を取得する。
@@ -121,10 +124,12 @@ TEST_F(stringCatalogLanguageTest, decides_environment_only_once)
 
     // Pre-Assert
     expect_ui_language_tag(mock_cplat, "ja"); // [Pre-Assert手順] - 表示言語として ja を返す状態にする。
+    // [Pre-Assert確認_正常系] - 表示言語を取得する呼び出し期待を満たすこと。
 
     // Act
     actual_language_first = cplat_string_catalog_get_language(); // [手順] - 現在の言語を取得する。
     expect_ui_language_tag(mock_cplat, "en"); // [手順] - 表示言語として en を返す状態へ変更する。
+    // [Pre-Assert確認_正常系] - 表示言語を取得する呼び出し期待を満たすこと。
     actual_language_second = cplat_string_catalog_get_language(); // [手順] - 現在の言語を再度取得する。
 
     // Assert

@@ -126,6 +126,7 @@ TEST(pinnedPromptCoverageTest, platform_helpers_cover_short_circuits_and_install
     screen =
         cplat_pinned_prompt_create(NULL); // [手順] - シグナル登録済み状態の raw モード試験用ハンドルを生成する。
     ASSERT_NE(nullptr, screen);
+    // [確認_正常系] - `nullptr` と `screen` が異なること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_set_sigwinch_installed(1);
     test_pinned_prompt_enter_raw(screen); // [手順] - SIGWINCH 登録済み状態で raw モードへ移行する。
@@ -197,6 +198,7 @@ TEST(pinnedPromptCoverageTest, layout_and_view_cover_narrow_and_status_boundarie
 
     // Act
     ASSERT_EQ(0, test_pinned_prompt_set_prompt(screen, "long-prompt"));
+    // [確認_正常系] - `test_pinned_prompt_set_prompt(screen, "long-prompt")` の戻り値が `0` であること。
     test_pinned_prompt_set_edit_line(screen, "abcdef");
     test_pinned_prompt_set_internal_state(screen, 1, 0, 9999, 1, 1, 1, 6U, 4U);
     test_pinned_prompt_set_cursor(screen, 2U);
@@ -471,7 +473,7 @@ TEST(pinnedPromptCoverageTest, create_reports_each_resource_failure)
     EXPECT_EQ(nullptr, lock_failure);   // [確認_異常系] - ロック生成失敗で NULL が返ること。
     for (cplat_pinned_prompt *screen : allocation_failures)
     {
-        EXPECT_EQ(nullptr, screen); // [確認_異常系] - 各文字列バッファーの確保失敗で NULL が返ること。
+        EXPECT_EQ(nullptr, screen); // [確認_異常系 回数=6] - 各文字列バッファーの確保失敗で NULL が返ること。
     }
 
     // Cleanup
@@ -530,6 +532,7 @@ TEST(pinnedPromptCoverageTest, readline_reports_setup_failures)
         cplat_pinned_prompt_readline_at(screen, output, sizeof(output), "", "history-failure.c",
                                          5); // [手順] - 履歴コンテキスト確保に失敗した readline を呼び出す。
     ASSERT_EQ(0, test_pinned_prompt_history_failure_state(screen, "prompt-failure.c", 6));
+    // [確認_異常系] - `test_pinned_prompt_history_failure_state(screen, "prompt-failure.c", 6)` の戻り値が `0` であること。
     test_pinned_prompt_set_raw_active(screen, 1);
     prompt_failure = cplat_pinned_prompt_readline_at(screen, output, sizeof(output), "long prompt", "prompt-failure.c",
                                                       6); // [手順] - プロンプト再確保に失敗した readline を呼び出す。
@@ -952,6 +955,7 @@ TEST(pinnedPromptCoverageTest, format_helper_grows_buffer_when_realloc_succeeds)
 
     // Act
     ASSERT_EQ(0, test_pinned_prompt_format(screen, "%s", "x"));
+    // [確認_正常系] - `test_pinned_prompt_format(screen, "%s", "x")` の戻り値が `0` であること。
     grow_result =
         test_pinned_prompt_format(screen, "%s", long_text); // [手順] - 長い書式結果で書式バッファーを再確保する。
 

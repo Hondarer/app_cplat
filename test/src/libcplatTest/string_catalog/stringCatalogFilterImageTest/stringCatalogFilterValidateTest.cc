@@ -40,6 +40,7 @@ TEST_F(stringCatalogFilterValidateTest, corrupted_signature_returns_corrupt_desc
     int actual_validate_ret;
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == 1", image)); // [状態] - 有効な条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("key == 1", image)` の戻り値が `CPLAT_OK` であること。
     image[0] = (unsigned char)(image[0] ^ 0xFFU);                // [状態] - 署名の先頭バイトを破壊する。
 
     // Pre-Assert
@@ -62,6 +63,7 @@ TEST_F(stringCatalogFilterValidateTest, single_byte_content_change_is_detected_b
     int actual_validate_ret_after;
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == 1", image)); // [状態] - 有効な条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("key == 1", image)` の戻り値が `CPLAT_OK` であること。
     actual_validate_ret_before = cplat_string_catalog_filter_validate(image, kImageSize);
     ASSERT_EQ(CPLAT_OK, actual_validate_ret_before); // [状態確認] - 改変前は検証に成功すること。
 
@@ -90,6 +92,7 @@ TEST_F(stringCatalogFilterValidateTest, insufficient_image_size_returns_corrupt_
     int actual_ret;
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == 1", image)); // [状態] - 有効な条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("key == 1", image)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 

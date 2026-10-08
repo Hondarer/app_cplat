@@ -107,7 +107,7 @@ TEST(byteorderTest, hton16_and_ntoh16_round_trip)
     for (const uint16_t value : values)
     {
         EXPECT_EQ(value, cplat_ntoh16(cplat_hton16(value)));
-        // [確認_正常系] - 境界値を含む各値について cplat_hton16 と cplat_ntoh16 の往復結果が元の値と一致すること。
+        // [確認_正常系 回数=7] - 境界値を含む各値について cplat_hton16 と cplat_ntoh16 の往復結果が元の値と一致すること。
     }
 }
 
@@ -126,7 +126,7 @@ TEST(byteorderTest, hton32_and_ntoh32_round_trip)
     for (const uint32_t value : values)
     {
         EXPECT_EQ(value, cplat_ntoh32(cplat_hton32(value)));
-        // [確認_正常系] - 境界値を含む各値について cplat_hton32 と cplat_ntoh32 の往復結果が元の値と一致すること。
+        // [確認_正常系 回数=8] - 境界値を含む各値について cplat_hton32 と cplat_ntoh32 の往復結果が元の値と一致すること。
     }
 }
 
@@ -211,6 +211,6 @@ TEST(byteorderTest, hton64_and_ntoh64_round_trip)
     for (const uint64_t value : values)
     {
         EXPECT_EQ(value, cplat_ntoh64(cplat_hton64(value)));
-        // [確認_正常系] - 境界値を含む各値について cplat_hton64 と cplat_ntoh64 の往復結果が元の値と一致すること。
+        // [確認_正常系 回数=8] - 境界値を含む各値について cplat_hton64 と cplat_ntoh64 の往復結果が元の値と一致すること。
     }
 }

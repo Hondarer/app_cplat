@@ -494,7 +494,7 @@ TEST_F(stringCatalogRenderTest, integer_conversion_matches_standard_library)
         snprintf(expected, sizeof(expected), "%" PRId64, signed_values[index]);
 
         // Assert
-        EXPECT_STREQ(expected, dest); // [確認_正常系] - 標準ライブラリの 10 進表現と一致すること。
+        EXPECT_STREQ(expected, dest); // [確認_正常系 回数=13] - 標準ライブラリの 10 進表現と一致すること。
     }
 
     for (index = 0; index < (sizeof(unsigned_values) / sizeof(unsigned_values[0])); index++)
@@ -504,13 +504,13 @@ TEST_F(stringCatalogRenderTest, integer_conversion_matches_standard_library)
         (void)cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                         1); // [手順] - 符号なし 64 bit 整数を展開する。
         snprintf(expected, sizeof(expected), "%" PRIu64, unsigned_values[index]);
-        EXPECT_STREQ(expected, dest); // [確認_正常系] - 標準ライブラリの 10 進表現と一致すること。
+        EXPECT_STREQ(expected, dest); // [確認_正常系 回数=7] - 標準ライブラリの 10 進表現と一致すること。
 
         values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_HEX64;
         (void)cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                         1); // [手順] - 64 bit の 16 進数を展開する。
         snprintf(expected, sizeof(expected), "0x%016" PRIx64, unsigned_values[index]);
-        EXPECT_STREQ(expected, dest); // [確認_正常系] - 標準ライブラリの 16 進表現と一致すること。
+        EXPECT_STREQ(expected, dest); // [確認_正常系 回数=7] - 標準ライブラリの 16 進表現と一致すること。
     }
 
     for (index = 0; index < (sizeof(error_values) / sizeof(error_values[0])); index++)
@@ -520,7 +520,7 @@ TEST_F(stringCatalogRenderTest, integer_conversion_matches_standard_library)
         (void)cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
                                                         1); // [手順] - エラー コードを展開する。
         snprintf(expected, sizeof(expected), "%d (0x%08x)", error_values[index], (unsigned int)error_values[index]);
-        EXPECT_STREQ(expected, dest); // [確認_正常系] - 10 進数と 16 進数の併記が一致すること。
+        EXPECT_STREQ(expected, dest); // [確認_正常系 回数=5] - 10 進数と 16 進数の併記が一致すること。
     }
 }
 

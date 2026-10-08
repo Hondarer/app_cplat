@@ -170,6 +170,7 @@ TEST_F(trace_fileTest, test_create_opens_file_with_default_flags)
 
     // Cleanup
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(AtLeast(1)); // dispose 時の close を許容する。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
     cplat_trace_file_sink_dispose(handle);
 }
 
@@ -226,6 +227,7 @@ TEST_F(trace_fileTest, test_create_retries_file_open_after_initial_failure)
 
     // Cleanup
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(AtLeast(1)); // dispose 時の close を許容する。
+    // [Pre-Assert確認_異常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
     cplat_trace_file_sink_dispose(handle);
 }
 
@@ -277,6 +279,7 @@ TEST_F(trace_fileTest, test_write_formats_info_line)
             {
                 std::string actual((const char *)buf, len);
                 EXPECT_EQ("2026-04-26T03:04:05.678+09:00 I hello\n", actual);
+                // [確認_正常系] - `actual` の値が `"2026-04-26T03:04:05.678+09:00 I hello\n"` であること。
                 return 0;
             }); // [Pre-Assert確認_正常系] - INFO 行が期待フォーマットで書き込まれること。
                 // [Pre-Assert手順] - 書式化した行を確認し、0 を返却する。
@@ -308,6 +311,7 @@ TEST_F(trace_fileTest, test_write_formats_debug_marker)
             {
                 std::string actual((const char *)buf, len);
                 EXPECT_EQ("2026-04-26T03:04:05.678+09:00 D debug line\n", actual);
+                // [確認_正常系] - `actual` の値が `"2026-04-26T03:04:05.678+09:00 D debug line\n"` であること。
                 return 0;
             }); // [Pre-Assert確認_正常系] - DEBUG 行が D marker で書き込まれること。
                 // [Pre-Assert手順] - D marker の行を確認し、0 を返却する。
@@ -342,6 +346,7 @@ TEST_F(trace_fileTest, test_write_uses_explicit_timestamp_without_internal_clock
             {
                 std::string actual((const char *)buf, len);
                 EXPECT_EQ("2026-04-26T03:04:05.678+09:00 I explicit hello\n", actual);
+                // [確認_正常系] - `actual` の値が `"2026-04-26T03:04:05.678+09:00 I explicit hello\n"` であること。
                 return 0;
             }); // [Pre-Assert確認_正常系] - 明示タイムスタンプがそのまま書式化されること。
                 // [Pre-Assert手順] - 書式化した行を確認し、0 を返却する。
@@ -400,6 +405,7 @@ TEST_F(trace_fileTest, test_write_falls_back_from_invalid_explicit_timestamp)
             {
                 std::string actual((const char *)buf, len);
                 EXPECT_EQ("2026-04-26T03:04:05.678+09:00 I invalid\n", actual);
+                // [確認_正常系] - `actual` の値が `"2026-04-26T03:04:05.678+09:00 I invalid\n"` であること。
                 return 0;
             }); // [Pre-Assert確認_異常系] - 代替時刻で低レベル書き込みを行うこと。
                 // [Pre-Assert手順] - 代替時刻の行を確認し、0 を返却する。
@@ -423,6 +429,7 @@ TEST_F(trace_fileTest, test_write_rotates_when_size_limit_is_reached)
 
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(0)); // [状態確認] - create 時に cplat_file_open が 1 回呼び出されること。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_file_get_size(_, _, _))
         .WillOnce(
             [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -430,6 +437,7 @@ TEST_F(trace_fileTest, test_write_rotates_when_size_limit_is_reached)
                 *size_out = 0;
                 return 0;
             }); // [状態確認] - create 時に cplat_file_get_size が 1 回呼び出されること。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_size(_, _, _) が登録した呼び出し期待を満たすこと。
 
     cplat_trace_file_sink *handle = cplat_trace_file_sink_create("trace.log", 1, 2, 0); // [状態] - ローテーション設定付きの file sink を用意する。
     ASSERT_NE((cplat_trace_file_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
@@ -439,6 +447,7 @@ TEST_F(trace_fileTest, test_write_rotates_when_size_limit_is_reached)
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 元ファイルへの書き込みが成功すること。
                               // [Pre-Assert手順] - cplat_file_write から 0 を返却する。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // ローテーション前の close
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_remove(StrEq("trace.log.2"), _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 最古世代ファイル削除が 1 回呼ばれること。
                               // [Pre-Assert手順] - cplat_remove から 0 を返却する。
@@ -452,6 +461,7 @@ TEST_F(trace_fileTest, test_write_rotates_when_size_limit_is_reached)
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 新規世代ファイルが truncate 付きで開かれること。
                               // [Pre-Assert手順] - truncate 付き open から 0 を返却する。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // dispose 分
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
 
     // Act
     int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
@@ -473,6 +483,7 @@ TEST_F(trace_fileTest, test_write_does_not_retry_open_after_rotation)
 
         EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
             .WillOnce(Return(0)); // [状態確認] - create 時に cplat_file_open が 1 回呼び出されること。
+        // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _) が登録した呼び出し期待を満たすこと。
         EXPECT_CALL(mock_cplat, cplat_file_get_size(_, _, _))
             .WillOnce(
                 [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -480,6 +491,7 @@ TEST_F(trace_fileTest, test_write_does_not_retry_open_after_rotation)
                     *size_out = 0;
                     return 0;
                 }); // [状態確認] - create 時に cplat_file_get_size が 1 回呼び出されること。
+        // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_size(_, _, _) が登録した呼び出し期待を満たすこと。
     }
 
     cplat_trace_file_sink *handle = cplat_trace_file_sink_create("trace.log", 1, 2, 0); // [状態] - ローテーション設定付きの file sink を用意する。
@@ -492,6 +504,7 @@ TEST_F(trace_fileTest, test_write_does_not_retry_open_after_rotation)
             .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - ローテーション前の書き込みが成功すること。
                                   // [Pre-Assert手順] - cplat_file_write から 0 を返却する。
         EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // ローテーション前の close
+        // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
         EXPECT_CALL(mock_cplat, cplat_remove(StrEq("trace.log.2"), _))
             .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - 最古世代ファイル削除が 1 回呼ばれること。
                                   // [Pre-Assert手順] - cplat_remove から 0 を返却する。
@@ -505,6 +518,7 @@ TEST_F(trace_fileTest, test_write_does_not_retry_open_after_rotation)
             .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - ローテーション後のファイル オープンが失敗すること。
                                    // [Pre-Assert手順] - truncate 付き open から -1 を返却する。
         EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // dispose 分
+        // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
     }
     EXPECT_CALL(mock_cplat, cplat_sleep_ms(_))
         .Times(0); // [Pre-Assert確認_異常系] - ローテーション後のオープン失敗時に待機しないこと。
@@ -534,7 +548,7 @@ TEST_F(trace_fileTest, test_dispose_with_null_handle_is_safe)
     cplat_trace_file_sink_dispose(NULL); // [手順] - NULL ハンドルで dispose を呼び出す。
 
     // Assert
-    // [確認_正常系] - クラッシュせずに完了すること。
+    SUCCEED(); // [確認_正常系] - クラッシュせずに完了すること。
 }
 
 // パスに区切り文字が含まれる場合に makedirs が親ディレクトリ パスで呼ばれることの確認
@@ -559,6 +573,7 @@ TEST_F(trace_fileTest, test_create_calls_makedirs_for_path_with_separator)
 
     // Cleanup
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(AtLeast(1)); // dispose 時の close を許容する。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
     cplat_trace_file_sink_dispose(handle);
 }
 
@@ -584,6 +599,7 @@ TEST_F(trace_fileTest, test_create_normalizes_windows_separator_for_parent_direc
 
     // Cleanup
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(AtLeast(1)); // dispose 時の close を許容する。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
     cplat_trace_file_sink_dispose(handle);
 }
 #endif /* PLATFORM_WINDOWS */
@@ -637,7 +653,9 @@ TEST_F(trace_fileTest, test_create_shared_opens_lock_file)
 
     // Cleanup
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(AtLeast(1));    // dispose 時の close を許容する。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_interprocess_lock_dispose(_)).Times(1); // dispose 時のプロセス間ロック破棄
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_interprocess_lock_dispose(_) が登録した呼び出し期待を満たすこと。
     cplat_trace_file_sink_dispose(handle);
 }
 
@@ -704,6 +722,7 @@ TEST_F(trace_fileTest, test_shared_write_reopens_after_external_rotation)
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 開き直し後に書き込まれること。
                               // [Pre-Assert手順] - 開き直し後の cplat_file_write から 0 を返却する。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // dispose 分
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
 
     // Act
     int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
@@ -742,6 +761,7 @@ TEST_F(trace_fileTest, test_shared_write_reopen_does_not_retry_after_external_ro
         EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
             .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - 開き直しのファイル オープンが失敗すること。
         EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // dispose 分
+        // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
     }
     EXPECT_CALL(mock_cplat, cplat_sleep_ms(_))
         .Times(0); // [Pre-Assert確認_異常系] - ファイル オープンの失敗後に待機しないこと。
@@ -770,6 +790,7 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
     // create: オープン → サイズ取得 → 同一性キャッシュ → ロック ファイル オープン
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(0)); // [状態確認] - create 時に cplat_file_open が 1 回呼び出されること。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_file_get_size(_, _, _))
         .WillOnce(
             [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -777,9 +798,12 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
                 *size_out = 0;
                 return 0;
             }); // [状態確認] - create 時に cplat_file_get_size が 1 回呼び出されること。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_size(_, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_file_get_id(_, _, _)).Times(1); // [状態確認] - create 時に cplat_file_get_id が呼び出されること。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_id(_, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_interprocess_lock_open(StrEq("trace.log.lock"), _))
         .Times(1); // [状態確認] - create 時にロック ファイルが開かれること。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_interprocess_lock_open(StrEq("trace.log.lock"), _) が登録した呼び出し期待を満たすこと。
 
     cplat_trace_file_sink *handle =
         cplat_trace_file_sink_create("trace.log", 1, 2, CPLAT_TRACE_FILE_SINK_SHARED); // [状態] - 共有モードの file sink を用意する。
@@ -788,6 +812,7 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
     // Pre-Assert
     // write: 同一性チェック → 書き込み → 実サイズ超過
     EXPECT_CALL(mock_cplat, cplat_file_get_path_id(StrEq("trace.log"), _, _)).Times(1); // 書き込み前の同一性チェック
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_path_id(StrEq("trace.log"), _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_file_write(_, _, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 書き込みが成功すること。
                               // [Pre-Assert手順] - cplat_file_write から 0 を返却する。
@@ -806,6 +831,7 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
             Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - ローテーション前にプロセス間ロックを即時取得すること。
     // [Pre-Assert手順] - cplat_interprocess_lock_try_lock から CPLAT_OK を返却する。
     EXPECT_CALL(mock_cplat, cplat_file_get_path_id(StrEq("trace.log"), _, _)).Times(1); // ロック下の同一性再確認
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_path_id(StrEq("trace.log"), _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_file_get_size(_, _, _))
         .WillOnce(
             [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -815,6 +841,7 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
             }); // [Pre-Assert確認_正常系] - ロック下で実サイズを再確認すること。
                 // [Pre-Assert手順] - ロック下のサイズ 10 を返却する。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // ローテーション前の close
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_remove(StrEq("trace.log.2"), _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 最古世代ファイル削除が 1 回呼ばれること。
                               // [Pre-Assert手順] - cplat_remove から 0 を返却する。
@@ -834,11 +861,14 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
                 *size_out = 0;
                 return 0;
             });                                                 // 開き直し時の初期サイズ取得
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_size(_, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_file_get_id(_, _, _)).Times(1); // 開き直し時の同一性キャッシュ
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_id(_, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_interprocess_lock_unlock(_))
         .WillOnce(Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - ローテーション後にロックを解放すること。
     // [Pre-Assert手順] - cplat_interprocess_lock_unlock から CPLAT_OK を返却する。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // dispose 分
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
 
     // Act
     int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
@@ -888,6 +918,7 @@ TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_other_process_already
             }); // [Pre-Assert確認_正常系] - ロック下の再確認で別実体を検知すること。
                 // [Pre-Assert手順] - 別実体のファイル同一性を返却する。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // 開き直し前の close
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 開き直しのみ行われること。
                               // [Pre-Assert手順] - cplat_file_open から 0 を返却する。
@@ -898,9 +929,13 @@ TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_other_process_already
                 *size_out = 0;
                 return 0;
             });                                                 // 開き直し時の初期サイズ取得
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_size(_, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_file_get_id(_, _, _)).Times(1); // 開き直し時の同一性キャッシュ
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_id(_, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_interprocess_lock_unlock(_)).WillOnce(Return(CPLAT_OK)); // 開き直し後のロック解放
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_interprocess_lock_unlock(_) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // dispose 分
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
 
     // Act
     int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
@@ -974,6 +1009,7 @@ TEST_F(trace_fileTest, test_create_same_path_shares_handle_in_single_process)
 
     // Cleanup
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(AtLeast(1)); // dispose 時の close を許容する。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
     cplat_trace_file_sink_dispose(second);
     cplat_trace_file_sink_dispose(first);
 }
@@ -995,6 +1031,7 @@ TEST_F(trace_fileTest, test_shared_handle_survives_until_last_dispose)
             {
                 std::string actual((const char *)buf, len);
                 EXPECT_NE(std::string::npos, actual.find("after first dispose"));
+                // [確認_正常系] - `std::string::npos` と `actual.find("after first dispose")` が異なること。
                 return 0;
             }); // [Pre-Assert確認_正常系] - 1 回目の dispose 後も書き込みできること。
                 // [Pre-Assert手順] - 書き込み内容を確認し、0 を返却する。
@@ -1062,6 +1099,7 @@ TEST_F(trace_fileTest, test_create_different_paths_returns_distinct_handles)
 
     // Cleanup
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(AtLeast(2)); // dispose 時の close を許容する。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_close(_, _) が登録した呼び出し期待を満たすこと。
     cplat_trace_file_sink_dispose(first);
     cplat_trace_file_sink_dispose(second);
 }

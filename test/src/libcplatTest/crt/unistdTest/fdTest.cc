@@ -465,9 +465,10 @@ TEST_F(fdTest, fd_set_aborts_for_negative_fd)
 
     // Act
     EXPECT_DEATH(invoke_cplat_fd_set_with_negative_fd(), ""); // [手順] - 負の FD を範囲検査付き FD_SET へ渡す。
+    // [確認_異常系] - EXPECT_DEATH(invoke_cplat_fd_set_with_negative_fd(), "") の期待が成立すること。
 
     // Assert
-    // [確認_異常系] - 負の FD によりプロセスが abort すること。
+    // 負の FD によりプロセスが abort すること。
 }
 
 #if defined(PLATFORM_LINUX)
@@ -482,9 +483,10 @@ TEST_F(fdTest, fd_set_aborts_for_fd_out_of_range)
     // Act
     EXPECT_DEATH(invoke_cplat_fd_set_with_out_of_range_fd(),
                  ""); // [手順] - FD_SETSIZE と同じ FD を範囲検査付き FD_SET へ渡す。
+    // [確認_異常系] - EXPECT_DEATH(invoke_cplat_fd_set_with_out_of_range_fd(), "") の期待が成立すること。
 
     // Assert
-    // [確認_異常系] - FD_SETSIZE 以上の FD によりプロセスが abort すること。
+    // FD_SETSIZE 以上の FD によりプロセスが abort すること。
 }
 #elif defined(PLATFORM_WINDOWS)
 /* Windows の fd_set は SOCKET の配列であり、上限は値ではなく格納数で決まる */
@@ -498,9 +500,10 @@ TEST_F(fdTest, fd_set_aborts_when_set_is_full)
     // Act
     EXPECT_DEATH(invoke_cplat_fd_set_with_full_set(),
                  ""); // [手順] - FD_SETSIZE 個を格納した集合へ、さらに FD を追加する。
+    // [確認_異常系] - EXPECT_DEATH(invoke_cplat_fd_set_with_full_set(), "") の期待が成立すること。
 
     // Assert
-    // [確認_異常系] - 追加できない FD によりプロセスが abort すること。
+    // 追加できない FD によりプロセスが abort すること。
 }
 #endif /* PLATFORM_ */
 

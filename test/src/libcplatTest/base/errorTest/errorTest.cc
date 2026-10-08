@@ -238,9 +238,9 @@ TEST_F(errorTest, errno_values_map_to_one_cause)
     for (std::size_t index = 0U; index < cases.size(); ++index)
     {
         EXPECT_EQ(cases[index].second,
-                  actual_causes[index]); // [確認_正常系] - 各 errno が対応する単一の要因へ変換されること。
+                  actual_causes[index]); // [確認_正常系 回数=19] - 各 errno が対応する単一の要因へ変換されること。
         EXPECT_EQ(1,
-                  actual_matches[index]); // [確認_正常系] - 対応する要因との一致判定が 1 であること。
+                  actual_matches[index]); // [確認_正常系 回数=19] - 対応する要因との一致判定が 1 であること。
     }
 }
 
@@ -533,11 +533,12 @@ TEST_F(errorTest, accessors_cover_socket_gai_and_extended_errno_causes)
               winsock_domain); // [確認_正常系] - WINSOCK ドメインがそのまま取得できること。
     EXPECT_EQ(CPLAT_ERROR_DOMAIN_GAI, explicit_gai_domain); // [確認_正常系] - GAI ドメインがそのまま取得できること。
     EXPECT_EQ(CPLAT_CAUSE_OTHER, winsock_cause); // [確認_正常系] - Linux の WINSOCK ドメイン要因が OTHER であること。
-    ASSERT_EQ(cases.size(), causes.size());
-    for (std::size_t index = 0U; index < cases.size(); ++index)
+    std::vector<cplat_error_cause> expected_causes;
+    for (const std::pair<int, cplat_error_cause> &item : cases)
     {
-        EXPECT_EQ(cases[index].second, causes[index]); // [確認_正常系] - 追加 errno が期待する要因へ分類されること。
+        expected_causes.push_back(item.second);
     }
+    EXPECT_EQ(expected_causes, causes); // [確認_正常系] - 追加 errno の要因列が期待値と一致すること。
 }
 
 // 詳細エラーの要因が一致しない場合に不一致となることの確認

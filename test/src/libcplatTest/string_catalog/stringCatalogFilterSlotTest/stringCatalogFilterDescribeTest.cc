@@ -20,6 +20,7 @@ class stringCatalogFilterDescribeTest : public Test
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(
                                 filter_test_trace_catalog(), filter_test_trace_key_names(),
                                 filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_));
+        // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_trace_catalog(), filter_test_trace_key_names(), filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
     }
 
     void TearDown() override
@@ -188,8 +189,10 @@ TEST_F(stringCatalogFilterDescribeTest, small_buffer_is_truncated)
     int actual_ret;
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("category <= 2", image)); // [状態] - 条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("category <= 2", image)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_apply(slot_, image, kImageSize, nullptr, 0U,
                                                                nullptr)); // [状態] - 適用する。
+    // [状態確認] - `cplat_string_catalog_filter_slot_apply(slot_, image, kImageSize, nullptr, 0U, nullptr)` の戻り値が `CPLAT_OK` であること。
     (void)cplat_string_catalog_set_language(CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL);
 
     // Pre-Assert
@@ -224,6 +227,7 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_list_matching_names)
     int actual_ret;
 
     ASSERT_EQ(CPLAT_OK, recreate_slot_with_category_names(&s_test_category_names)); // [状態] - レベルの名前を設定する。
+    // [状態確認] - `recreate_slot_with_category_names(&s_test_category_names)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -246,6 +250,7 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_use_complement_when_short
     int actual_ret_neutral;
 
     ASSERT_EQ(CPLAT_OK, recreate_slot_with_category_names(&s_test_category_names)); // [状態] - レベルの名前を設定する。
+    // [状態確認] - `recreate_slot_with_category_names(&s_test_category_names)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -275,6 +280,7 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_describe_single_any_and_n
     int actual_ret_none;
 
     ASSERT_EQ(CPLAT_OK, recreate_slot_with_category_names(&s_test_category_names)); // [状態] - レベルの名前を設定する。
+    // [状態確認] - `recreate_slot_with_category_names(&s_test_category_names)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -321,6 +327,7 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_absent_use_numbers_and_re
     // Arrange_2
     ASSERT_EQ(CPLAT_OK,
               recreate_slot_with_category_names(nullptr)); // [状態] - 分類値の名前を指定せずにスロットを作り直す。
+    // [状態確認] - `recreate_slot_with_category_names(nullptr)` の戻り値が `CPLAT_OK` であること。
 
     // Act_2
     actual_ret_describe =

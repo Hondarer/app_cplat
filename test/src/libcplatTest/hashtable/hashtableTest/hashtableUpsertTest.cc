@@ -101,8 +101,10 @@ TEST_F(hashtableUpsertTest, inserts_then_updates_the_same_key)
     EXPECT_EQ(CPLAT_OK, actual_ret_second); // [確認_正常系] - 登録済みのキーの upsert が成功すること。
     EXPECT_EQ(0, inserted_second);             // [確認_正常系] - 登録済みのキーは既存更新として報告されること。
     EXPECT_EQ(CPLAT_OK, actual_ret_read);
+    // [確認_正常系] - `cplat_hashtable_find_value_copy(ht, "a", read_back.data(), read_back.size(), &required)` の戻り値が `CPLAT_OK` であること。
     EXPECT_STREQ("v2", reinterpret_cast<const char *>(read_back.data())); // [確認_正常系] - 値が更新されていること。
     EXPECT_EQ(CPLAT_OK, actual_ret_count);
+    // [確認_正常系] - `cplat_hashtable_count(ht, &in_use)` の戻り値が `CPLAT_OK` であること。
     EXPECT_EQ(1u, in_use); // [確認_正常系] - 更新では使用中件数が増えないこと。
 
     // Cleanup
@@ -164,8 +166,10 @@ TEST_F(hashtableUpsertTest, revives_deleted_key_with_the_given_value)
     EXPECT_EQ(CPLAT_OK, actual_ret_upsert); // [確認_正常系] - 削除済みのキーの upsert が成功すること。
     EXPECT_EQ(1, inserted);                    // [確認_正常系] - 削除済みからの復活は新規追加として報告されること。
     EXPECT_EQ(CPLAT_OK, actual_ret_status);
+    // [確認_正常系] - `cplat_hashtable_get_status(ht, 1, &status)` の戻り値が `CPLAT_OK` であること。
     EXPECT_EQ(1, status); // [確認_正常系] - レコードが使用中に戻ること。
     EXPECT_EQ(CPLAT_OK, actual_ret_read);
+    // [確認_正常系] - `cplat_hashtable_find_value_copy(ht, "a", read_back.data(), read_back.size(), &required)` の戻り値が `CPLAT_OK` であること。
     EXPECT_STREQ("v2", reinterpret_cast<const char *>(
                            read_back.data())); // [確認_正常系] - 削除前の値ではなく渡した値で復活すること。
 
@@ -268,6 +272,7 @@ TEST_F(hashtableUpsertTest, updates_key_that_is_not_at_chain_head)
     EXPECT_EQ(CPLAT_OK, actual_ret_upsert); // [確認_正常系] - チェイン先頭でないキーを更新できること。
     EXPECT_EQ(0, inserted);                    // [確認_正常系] - 既存更新として報告されること。
     EXPECT_EQ(CPLAT_OK, actual_ret_read);
+    // [確認_正常系] - `cplat_hashtable_find_value_copy(ht, "a", read_back.data(), read_back.size(), &required)` の戻り値が `CPLAT_OK` であること。
     EXPECT_STREQ("v3", reinterpret_cast<const char *>(read_back.data())); // [確認_正常系] - 値が更新されていること。
 
     // Cleanup

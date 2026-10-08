@@ -28,7 +28,7 @@ TEST(atomicFetchAddSubTest, i32_fetch_add_returns_previous_value_for_every_memor
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系] - 加算前の値が返ること。
+        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 加算前の値が返ること。
     }
     EXPECT_EQ(current, cplat_atomic_load_i32(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - すべての加算が反映されていること。
 }
@@ -57,7 +57,7 @@ TEST(atomicFetchAddSubTest, i32_fetch_sub_returns_previous_value_for_every_memor
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系] - 減算前の値が返ること。
+        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 減算前の値が返ること。
     }
     EXPECT_EQ(current, cplat_atomic_load_i32(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - すべての減算が反映されていること。
 }
@@ -86,7 +86,7 @@ TEST(atomicFetchAddSubTest, u32_fetch_add_returns_previous_value_for_every_memor
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系] - 加算前の値が返ること。
+        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 加算前の値が返ること。
     }
     EXPECT_EQ(current, cplat_atomic_load_u32(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - すべての加算が反映されていること。
 }
@@ -115,7 +115,7 @@ TEST(atomicFetchAddSubTest, u32_fetch_sub_returns_previous_value_for_every_memor
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系] - 減算前の値が返ること。
+        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 減算前の値が返ること。
     }
     EXPECT_EQ(current, cplat_atomic_load_u32(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - すべての減算が反映されていること。
 }
@@ -144,7 +144,7 @@ TEST(atomicFetchAddSubTest, i64_fetch_add_returns_previous_value_for_every_memor
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系] - 加算前の値が返ること。
+        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 加算前の値が返ること。
     }
     EXPECT_EQ(current, cplat_atomic_load_i64(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - すべての加算が反映されていること。
 }
@@ -173,7 +173,7 @@ TEST(atomicFetchAddSubTest, i64_fetch_sub_returns_previous_value_for_every_memor
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系] - 減算前の値が返ること。
+        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 減算前の値が返ること。
     }
     EXPECT_EQ(current, cplat_atomic_load_i64(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - すべての減算が反映されていること。
 }
@@ -202,7 +202,7 @@ TEST(atomicFetchAddSubTest, u64_fetch_add_returns_previous_value_for_every_memor
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系] - 加算前の値が返ること。
+        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 加算前の値が返ること。
     }
     EXPECT_EQ(current, cplat_atomic_load_u64(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - すべての加算が反映されていること。
 }
@@ -231,7 +231,7 @@ TEST(atomicFetchAddSubTest, u64_fetch_sub_returns_previous_value_for_every_memor
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系] - 減算前の値が返ること。
+        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 減算前の値が返ること。
     }
     EXPECT_EQ(current, cplat_atomic_load_u64(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - すべての減算が反映されていること。
 }

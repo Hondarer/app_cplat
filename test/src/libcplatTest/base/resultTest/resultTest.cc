@@ -180,6 +180,6 @@ TEST_F(resultTest, errno_values_map_to_expected_results)
     for (std::size_t index = 0U; index < cases.size(); ++index)
     {
         EXPECT_EQ(cases[index].second,
-                  actual[index]); // [確認_正常系] - errno ごとの共通結果コードが期待値と一致すること。
+                  actual[index]); // [確認_正常系 回数=11] - errno ごとの共通結果コードが期待値と一致すること。
     }
 }

@@ -23,7 +23,9 @@ class symLoaderResolveTest : public Test
     void set_names(const char *lib_name, const char *func_name)
     {
         ASSERT_EQ(CPLAT_OK, cplat_strcpy(entry_.lib_name, sizeof(entry_.lib_name), lib_name));
+        // [状態確認] - `cplat_strcpy(entry_.lib_name, sizeof(entry_.lib_name), lib_name)` の戻り値が `CPLAT_OK` であること。
         ASSERT_EQ(CPLAT_OK, cplat_strcpy(entry_.func_name, sizeof(entry_.func_name), func_name));
+        // [状態確認] - `cplat_strcpy(entry_.func_name, sizeof(entry_.func_name), func_name)` の戻り値が `CPLAT_OK` であること。
     }
 
     void TearDown() override

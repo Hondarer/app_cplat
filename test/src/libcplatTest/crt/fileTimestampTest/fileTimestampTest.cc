@@ -37,8 +37,11 @@ void create_file(const char *path)
     FILE *stream = cplat_fopen(path, "wb", NULL);
 
     ASSERT_NE(nullptr, stream);
+    // [状態確認] - `nullptr` と `stream` が異なること。
     ASSERT_EQ(1U, cplat_fwrite("x", 1U, 1U, stream, NULL));
+    // [状態確認] - `cplat_fwrite("x", 1U, 1U, stream, NULL)` の戻り値が `1U` であること。
     ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, NULL));
+    // [状態確認] - `cplat_fclose(stream, NULL)` の戻り値が `CPLAT_OK` であること。
 }
 
 } // namespace
@@ -64,6 +67,7 @@ class fileTimestampTest : public Test
         cplat_file_init(file);
         ASSERT_EQ(CPLAT_OK,
                   cplat_file_open(file, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL));
+        // [状態確認] - `cplat_file_open(file, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL)` の戻り値が `CPLAT_OK` であること。
     }
 };
 
@@ -115,6 +119,7 @@ TEST_F(fileTimestampTest, handle_set_then_handle_get_round_trips)
     EXPECT_EQ(expected.tv_nsec, actual.tv_nsec); // [確認_正常系] - ナノ秒部が一致すること。
 
     EXPECT_EQ(CPLAT_OK, cplat_file_close(&file, NULL));
+    // [確認_正常系] - `cplat_file_close(&file, NULL)` の戻り値が `CPLAT_OK` であること。
 }
 
 // パス版で設定した最終更新日時を、ハンドル版で取得しても一致することの確認
@@ -126,6 +131,7 @@ TEST_F(fileTimestampTest, path_set_is_visible_from_handle_get)
     cplat_file file;
 
     ASSERT_EQ(CPLAT_OK, cplat_file_set_path_modified_timestamp(kPath, &expected, NULL));
+    // [状態確認] - `cplat_file_set_path_modified_timestamp(kPath, &expected, NULL)` の戻り値が `CPLAT_OK` であること。
     open_writable(&file); // [状態] - 設定後にファイルを開く。
 
     // Pre-Assert
@@ -140,6 +146,7 @@ TEST_F(fileTimestampTest, path_set_is_visible_from_handle_get)
     EXPECT_EQ(expected.tv_nsec, actual.tv_nsec); // [確認_正常系] - ナノ秒部がパス版の設定値と一致すること。
 
     EXPECT_EQ(CPLAT_OK, cplat_file_close(&file, NULL));
+    // [確認_正常系] - `cplat_file_close(&file, NULL)` の戻り値が `CPLAT_OK` であること。
 }
 
 // 取得した最終更新日時の秒部が cplat_stat の st_mtime と一致することの確認
@@ -150,6 +157,7 @@ TEST_F(fileTimestampTest, seconds_agree_with_cplat_stat)
     cplat_file_stat_t file_stat;
 
     ASSERT_EQ(CPLAT_OK, cplat_file_set_path_modified_timestamp(kPath, &expected, NULL));
+    // [状態確認] - `cplat_file_set_path_modified_timestamp(kPath, &expected, NULL)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -158,8 +166,9 @@ TEST_F(fileTimestampTest, seconds_agree_with_cplat_stat)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_stat); // [確認_正常系] - cplat_stat が CPLAT_OK であること。
-    // [確認_正常系] - st_mtime が設定した秒部と一致すること。
+    // st_mtime が設定した秒部と一致すること。
     EXPECT_EQ(expected.tv_sec, static_cast<time_t>(file_stat.st_mtime));
+    // [確認_正常系] - `file_stat.st_mtime` を `time_t` に変換した値が、設定した秒数 `expected.tv_sec` と一致すること。
 }
 
 // 過去と未来のいずれの日時も往復することの確認
@@ -175,9 +184,11 @@ TEST_F(fileTimestampTest, past_and_future_timestamps_round_trip)
 
     // Act
     ASSERT_EQ(CPLAT_OK, cplat_file_set_path_modified_timestamp(kPath, &past, NULL));
+    // [確認_正常系] - `cplat_file_set_path_modified_timestamp(kPath, &past, NULL)` の戻り値が `CPLAT_OK` であること。
     int actual_ret_get_past =
         cplat_file_get_path_modified_timestamp(kPath, &actual_past, NULL); // [手順] - 過去の日時を往復させる。
     ASSERT_EQ(CPLAT_OK, cplat_file_set_path_modified_timestamp(kPath, &future, NULL));
+    // [確認_正常系] - `cplat_file_set_path_modified_timestamp(kPath, &future, NULL)` の戻り値が `CPLAT_OK` であること。
     int actual_ret_get_future =
         cplat_file_get_path_modified_timestamp(kPath, &actual_future, NULL); // [手順] - 未来の日時を往復させる。
 
@@ -197,6 +208,7 @@ TEST_F(fileTimestampTest, set_does_not_change_access_time)
     cplat_file_stat_t after;
 
     ASSERT_EQ(CPLAT_OK, cplat_stat(&before, NULL, kPath)); // [状態] - 設定前の最終アクセス日時を控える。
+    // [状態確認] - `cplat_stat(&before, NULL, kPath)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -207,6 +219,7 @@ TEST_F(fileTimestampTest, set_does_not_change_access_time)
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_set); // [確認_正常系] - 設定が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_stat(&after, NULL, kPath));
+    // [確認_正常系] - `cplat_stat(&after, NULL, kPath)` の戻り値が `CPLAT_OK` であること。
     EXPECT_EQ(before.st_atime, after.st_atime); // [確認_正常系] - 最終アクセス日時が変化しないこと。
 }
 
@@ -222,6 +235,7 @@ TEST_F(fileTimestampTest, set_on_read_only_handle_is_permission_denied)
     cplat_file_init(&file);
     ASSERT_EQ(CPLAT_OK,
               cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_READ, NULL)); // [状態] - 読み取り専用で開く。
+    // [状態確認] - `cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_READ, NULL)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -230,12 +244,14 @@ TEST_F(fileTimestampTest, set_on_read_only_handle_is_permission_denied)
                                                               &detail); // [手順] - 最終更新日時の設定を試みる。
 
     // Assert
-    // [確認_異常系] - 戻り値が CPLAT_ERR_PERMISSION_DENIED であること。
+    // 戻り値が CPLAT_ERR_PERMISSION_DENIED であること。
     EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED, actual_ret_set);
     // [確認_異常系] - 詳細エラーの要因がアクセス拒否であること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_ACCESS_DENIED));
+    // [確認_正常系] - `cplat_error_is(&detail, CPLAT_CAUSE_ACCESS_DENIED)` の戻り値が `1` であること。
 
     EXPECT_EQ(CPLAT_OK, cplat_file_close(&file, NULL));
+    // [確認_正常系] - `cplat_file_close(&file, NULL)` の戻り値が `CPLAT_OK` であること。
 }
 
 // 存在しないパスに対する取得が対象なしの要因になることの確認
@@ -255,8 +271,9 @@ TEST_F(fileTimestampTest, get_on_missing_path_reports_not_found)
 
     // Assert
     EXPECT_NE(CPLAT_OK, actual_ret_get); // [確認_異常系] - 戻り値が CPLAT_OK 以外であること。
-    // [確認_異常系] - 詳細エラーの要因が対象なしであること。
+    // 詳細エラーの要因が対象なしであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_NOT_FOUND));
+    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_NOT_FOUND)` の戻り値が `1` であること。
 }
 
 // 存在しないパスに対する設定が対象なしの要因になることの確認
@@ -276,8 +293,9 @@ TEST_F(fileTimestampTest, set_on_missing_path_reports_not_found)
 
     // Assert
     EXPECT_NE(CPLAT_OK, actual_ret_set); // [確認_異常系] - 戻り値が CPLAT_OK 以外であること。
-    // [確認_異常系] - 詳細エラーの要因が対象なしであること。
+    // 詳細エラーの要因が対象なしであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_NOT_FOUND));
+    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_NOT_FOUND)` の戻り値が `1` であること。
 }
 
 // 引数に NULL を指定した場合に引数不正を返すことの確認
@@ -308,18 +326,28 @@ TEST_F(fileTimestampTest, null_arguments_are_rejected)
     // 有効なハンドルと NULL の出力引数を組み合わせ、短絡評価の両側を通す。
 
     // Assert
-    // [確認_異常系] - いずれも CPLAT_ERR_INVALID_ARGUMENT を返すこと。
+    // いずれも CPLAT_ERR_INVALID_ARGUMENT を返すこと。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_get_path);
+    // [確認_異常系] - `cplat_file_get_path_modified_timestamp(NULL, &actual, NULL)` の戻り値が `CPLAT_ERR_INVALID_ARGUMENT` であること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_get_path_out);
+    // [確認_異常系] - `cplat_file_get_path_modified_timestamp(kPath, NULL, NULL)` の戻り値が `CPLAT_ERR_INVALID_ARGUMENT` であること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_set_path);
+    // [確認_異常系] - `cplat_file_set_path_modified_timestamp(NULL, &timestamp, NULL)` の戻り値が `CPLAT_ERR_INVALID_ARGUMENT` であること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_set_path_value);
+    // [確認_異常系] - `cplat_file_set_path_modified_timestamp(kPath, NULL, NULL)` の戻り値が `CPLAT_ERR_INVALID_ARGUMENT` であること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_get_handle);
+    // [確認_異常系] - `cplat_file_get_modified_timestamp(NULL, &actual, NULL)` の戻り値が `CPLAT_ERR_INVALID_ARGUMENT` であること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_get_handle_closed);
+    // [確認_異常系] - `cplat_file_get_modified_timestamp(&file, &actual, NULL)` の戻り値が `CPLAT_ERR_INVALID_ARGUMENT` であること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_set_handle);
+    // [確認_異常系] - `cplat_file_set_modified_timestamp(NULL, &timestamp, NULL)` の戻り値が `CPLAT_ERR_INVALID_ARGUMENT` であること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_get_handle_out);
+    // [確認_異常系] - `cplat_file_get_modified_timestamp(&open_file, NULL, NULL)` の戻り値が `CPLAT_ERR_INVALID_ARGUMENT` であること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_set_handle_value);
+    // [確認_異常系] - `cplat_file_set_modified_timestamp(&open_file, NULL, NULL)` の戻り値が `CPLAT_ERR_INVALID_ARGUMENT` であること。
 
     EXPECT_EQ(CPLAT_OK, cplat_file_close(&open_file, NULL));
+    // [確認_正常系] - `cplat_file_close(&open_file, NULL)` の戻り値が `CPLAT_OK` であること。
 }
 
 #if defined(PLATFORM_WINDOWS)

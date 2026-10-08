@@ -142,7 +142,7 @@ TEST_F(traceFileCoverageTest, registry_expands_and_finds_later_sink)
     for (cplat_trace_file_sink *handle : handles)
     {
         ASSERT_NE((cplat_trace_file_sink *)NULL,
-                  handle); // [確認_正常系] - 9 個の cplat_trace_file_sink_create の戻り値が NULL でないこと。
+                  handle); // [確認_正常系 回数=8] - 残った 8 個の cplat_trace_file_sink_create の戻り値が NULL でないこと。
     }
 
     // Cleanup
@@ -181,6 +181,7 @@ TEST_F(traceFileCoverageTest, shared_write_reopens_when_file_identity_is_unavail
     EXPECT_CALL(mock_cplat, cplat_file_get_id(_, _, _))
         .WillOnce(Return(CPLAT_ERR_UNKNOWN))
         .WillOnce(DoDefault()); // [状態確認] - create 時の cplat_file_get_id が 1 回失敗し、以降は既定動作へ委譲すること。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_file_get_id(_, _, _) が登録した呼び出し期待を満たすこと。
     cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
         "identity-unavailable.log", 0, 0, CPLAT_TRACE_FILE_SINK_SHARED); // [状態] - ファイル同一性を保持しない共有 sink を用意する。
     ASSERT_NE((cplat_trace_file_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。
@@ -468,6 +469,7 @@ TEST_F(traceFileCoverageTest, write_avoids_current_size_overflow)
                 *size_out = (std::numeric_limits<size_t>::max)();
                 return CPLAT_OK;
             }); // [状態確認] - create 時に cplat_file_get_size が 1 回呼び出されること。
+    // [Pre-Assert確認_異常系] - mock_cplat の cplat_file_get_size(_, _, _) が登録した呼び出し期待を満たすこと。
     cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
         "size-overflow.log", (std::numeric_limits<size_t>::max)(), 1, 0); // [状態] - current_bytes が SIZE_MAX の sink を用意する。
     ASSERT_NE((cplat_trace_file_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。

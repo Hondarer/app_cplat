@@ -24,8 +24,11 @@ class fileStatIsRegularTest : public testing::Test
 
         stream = cplat_fopen(kFilePath, "wb", NULL);
         ASSERT_NE(nullptr, stream);
+        // [状態確認] - `nullptr` と `stream` が異なること。
         ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, NULL));
+        // [状態確認] - `cplat_fclose(stream, NULL)` の戻り値が `CPLAT_OK` であること。
         ASSERT_EQ(CPLAT_OK, cplat_mkdir(kDirPath, NULL));
+        // [状態確認] - `cplat_mkdir(kDirPath, NULL)` の戻り値が `CPLAT_OK` であること。
     }
 
     void TearDown() override
@@ -42,6 +45,7 @@ TEST_F(fileStatIsRegularTest, returns_one_for_regular_file)
     cplat_file_stat_t file_stat;
 
     ASSERT_EQ(CPLAT_OK, cplat_stat(&file_stat, NULL, kFilePath)); // [状態] - 通常ファイルの情報を取得する。
+    // [状態確認] - `cplat_stat(&file_stat, NULL, kFilePath)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -59,6 +63,7 @@ TEST_F(fileStatIsRegularTest, returns_zero_for_directory)
     cplat_file_stat_t file_stat;
 
     ASSERT_EQ(CPLAT_OK, cplat_stat(&file_stat, NULL, kDirPath)); // [状態] - ディレクトリの情報を取得する。
+    // [状態確認] - `cplat_stat(&file_stat, NULL, kDirPath)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 

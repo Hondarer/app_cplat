@@ -443,14 +443,14 @@ TEST_F(hashtableVariableStringTest, supports_all_key_and_value_field_type_combin
             int actual_ret_copy = cplat_hashtable_find_value_copy(ht, key, copied, sizeof(copied), &required_size);
 
             // Assert
-            EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - 作成が成功すること。
-            EXPECT_EQ(CPLAT_OK, actual_ret_add);    // [確認_正常系] - 追加が成功すること。
-            EXPECT_EQ(CPLAT_OK, actual_ret_query);  // [確認_正常系] - クエリが成功すること。
-            EXPECT_EQ(sizeof(binary_value), required_size); // [確認_正常系] - 必要サイズが一致すること。
-            EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, actual_ret_too_small); // [確認_異常系] - 短いバッファーで BUFFER_TOO_SMALL であること。
-            EXPECT_TRUE(too_small_unchanged);       // [確認_正常系] - 短いバッファーでは内容が変更されないこと。
-            EXPECT_EQ(CPLAT_OK, actual_ret_copy);   // [確認_正常系] - 複製が成功すること。
-            EXPECT_EQ(0, std::memcmp(binary_value, copied, sizeof(binary_value))); // [確認_正常系] - 複製内容が一致すること。
+            EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系 回数=3*3] - 作成が成功すること。
+            EXPECT_EQ(CPLAT_OK, actual_ret_add);    // [確認_正常系 回数=3*3] - 追加が成功すること。
+            EXPECT_EQ(CPLAT_OK, actual_ret_query);  // [確認_正常系 回数=3*3] - クエリが成功すること。
+            EXPECT_EQ(sizeof(binary_value), required_size); // [確認_正常系 回数=3*3] - 必要サイズが一致すること。
+            EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, actual_ret_too_small); // [確認_異常系 回数=3*3] - 短いバッファーで BUFFER_TOO_SMALL であること。
+            EXPECT_TRUE(too_small_unchanged);       // [確認_正常系 回数=3*3] - 短いバッファーでは内容が変更されないこと。
+            EXPECT_EQ(CPLAT_OK, actual_ret_copy);   // [確認_正常系 回数=3*3] - 複製が成功すること。
+            EXPECT_EQ(0, std::memcmp(binary_value, copied, sizeof(binary_value))); // [確認_正常系 回数=3*3] - 複製内容が一致すること。
 
             // Cleanup
             cplat_hashtable_dispose(ht);

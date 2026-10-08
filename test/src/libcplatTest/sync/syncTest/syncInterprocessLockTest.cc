@@ -67,8 +67,11 @@ TEST(syncInterprocessLockTest, descriptor_round_trip_reopens_same_lock)
     // Cleanup
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(os.sys_file, flock(_, _, _, kFakeFd, LOCK_UN)).WillOnce(Return(0)); // unlock 用の flock を成功させる。
+    // [Pre-Assert確認_正常系] - os.sys_file の flock(_, _, _, kFakeFd, LOCK_UN) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(os.unistd, close(_, _, _, kFakeFd)).WillOnce(Return(0));            // 元ハンドルの close を成功させる。
+    // [Pre-Assert確認_正常系] - os.unistd の close(_, _, _, kFakeFd) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(os.unistd, close(_, _, _, kFakeFd2)).WillOnce(Return(0)); // 復元ハンドルの close を成功させる。
+    // [Pre-Assert確認_正常系] - os.unistd の close(_, _, _, kFakeFd2) が登録した呼び出し期待を満たすこと。
 #endif
     (void)cplat_interprocess_lock_unlock(lock);
     cplat_interprocess_lock_dispose(restored);
@@ -123,6 +126,7 @@ TEST(syncInterprocessLockTest, rejects_rwlock_descriptor)
     // Cleanup
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(os.unistd, close(_, _, _, kFakeFd)).WillOnce(Return(0)); // rwlock 破棄時の close を成功させる。
+    // [Pre-Assert確認_異常系] - os.unistd の close(_, _, _, kFakeFd) が登録した呼び出し期待を満たすこと。
 #endif
     cplat_interprocess_rwlock_dispose(rwlock);
 #if defined(PLATFORM_WINDOWS)
@@ -175,8 +179,11 @@ TEST(syncInterprocessLockTest, second_handle_observes_exclusive_lock)
 
     // Cleanup
     EXPECT_CALL(os.sys_file, flock(_, _, _, kFakeFd, LOCK_UN)).WillOnce(Return(0)); // unlock 用の flock を成功させる。
+    // [Pre-Assert確認_正常系] - os.sys_file の flock(_, _, _, kFakeFd, LOCK_UN) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(os.unistd, close(_, _, _, kFakeFd)).WillOnce(Return(0));  // 1 つ目のハンドルの close を成功させる。
+    // [Pre-Assert確認_正常系] - os.unistd の close(_, _, _, kFakeFd) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(os.unistd, close(_, _, _, kFakeFd2)).WillOnce(Return(0)); // 2 つ目のハンドルの close を成功させる。
+    // [Pre-Assert確認_正常系] - os.unistd の close(_, _, _, kFakeFd2) が登録した呼び出し期待を満たすこと。
     (void)cplat_interprocess_lock_unlock(lock);
     cplat_interprocess_lock_dispose(other);
     cplat_interprocess_lock_dispose(lock);

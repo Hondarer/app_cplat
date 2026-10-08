@@ -23,6 +23,7 @@ class stringCatalogFilterApplyTest : public Test
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(
                                 filter_test_trace_catalog(), filter_test_trace_key_names(),
                                 filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_));
+        // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_trace_catalog(), filter_test_trace_key_names(), filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
     }
 
     void TearDown() override
@@ -70,6 +71,7 @@ TEST_F(stringCatalogFilterApplyTest, category_le_2_marks_warning_and_above_as_al
     int actual_apply_ret;
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("category <= 2", image)); // [状態] - 分類値による絞り込みをコンパイルする。
+    // [状態確認] - `compile_single_line("category <= 2", image)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -102,14 +104,17 @@ TEST_F(stringCatalogFilterApplyTest, key_name_and_integer_resolve_to_same_result
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == FILTER_TEST_TRACE_KEY_JOB_RECEIVED",
                                             image_by_name)); // [状態] - 列挙定数名で指定した条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("key == FILTER_TEST_TRACE_KEY_JOB_RECEIVED", image_by_name)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, compile_single_line(
                             "key == 2", image_by_integer)); // [状態] - 整数値 (2) で指定した条件式をコンパイルする。
+    // [状態確認] - `compile_single_line( "key == 2", image_by_integer)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
     // Act
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_apply(slot_, image_by_name, kImageSize, nullptr, 0U,
                                                                nullptr)); // [手順] - 名前指定の条件式を適用する。
+    // [確認_正常系] - `cplat_string_catalog_filter_slot_apply(slot_, image_by_name, kImageSize, nullptr, 0U, nullptr)` の戻り値が `CPLAT_OK` であること。
     (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
                                                 &actual_state_by_name); // [手順] - JOB_RECEIVED の状態を取得する。
 
@@ -120,6 +125,7 @@ TEST_F(stringCatalogFilterApplyTest, key_name_and_integer_resolve_to_same_result
     // Act_2
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_apply(slot_, image_by_integer, kImageSize, nullptr, 0U,
                                                                nullptr)); // [手順] - 整数指定の条件式を適用する。
+    // [確認_正常系] - `cplat_string_catalog_filter_slot_apply(slot_, image_by_integer, kImageSize, nullptr, 0U, nullptr)` の戻り値が `CPLAT_OK` であること。
     (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
                                                 &actual_state_by_integer); // [手順] - JOB_RECEIVED の状態を取得する。
 
@@ -141,6 +147,7 @@ TEST_F(stringCatalogFilterApplyTest, argument_predicate_marks_only_entries_with_
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("arg.priority == 5",
                                             image)); // [状態] - JOB_RECEIVED だけが持つ引数の条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("arg.priority == 5", image)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -176,6 +183,7 @@ TEST_F(stringCatalogFilterApplyTest, unresolved_key_name_disables_line_and_is_di
 
     ASSERT_EQ(CPLAT_OK,
               compile_lines(lines, 2U, image)); // [状態] - 名前解決できない行と、解決できる行をコンパイルする。
+    // [状態確認] - `compile_lines(lines, 2U, image)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -185,9 +193,11 @@ TEST_F(stringCatalogFilterApplyTest, unresolved_key_name_disables_line_and_is_di
     ASSERT_EQ(CPLAT_OK,
               cplat_string_catalog_filter_slot_get_line_error(slot_, 0U,
                                                               &actual_line0_error)); // [手順] - 行 0 の原因を取得する。
+    // [確認_正常系] - `cplat_string_catalog_filter_slot_get_line_error(slot_, 0U, &actual_line0_error)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK,
               cplat_string_catalog_filter_slot_get_line_error(slot_, 1U,
                                                               &actual_line1_error)); // [手順] - 行 1 の原因を取得する。
+    // [確認_正常系] - `cplat_string_catalog_filter_slot_get_line_error(slot_, 1U, &actual_line1_error)` の戻り値が `CPLAT_OK` であること。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_apply_ret); // [確認_正常系] - 名前解決できない行があっても適用は成功すること。
@@ -213,6 +223,7 @@ TEST_F(stringCatalogFilterApplyTest, unresolved_argument_name_disables_line_and_
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("arg.nonexistent_argument == 1",
                                             image)); // [状態] - カタログのどの項目にもない引数名の行をコンパイルする。
+    // [状態確認] - `compile_single_line("arg.nonexistent_argument == 1", image)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -222,6 +233,7 @@ TEST_F(stringCatalogFilterApplyTest, unresolved_argument_name_disables_line_and_
     ASSERT_EQ(CPLAT_OK,
               cplat_string_catalog_filter_slot_get_line_error(slot_, 0U,
                                                               &actual_line0_error)); // [手順] - 行 0 の原因を取得する。
+    // [確認_正常系] - `cplat_string_catalog_filter_slot_get_line_error(slot_, 0U, &actual_line0_error)` の戻り値が `CPLAT_OK` であること。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_apply_ret); // [確認_正常系] - 名前解決できない行があっても適用は成功すること。
@@ -246,11 +258,14 @@ TEST_F(stringCatalogFilterApplyTest, apply_with_corrupt_image_keeps_previous_sta
     ASSERT_EQ(CPLAT_OK,
               compile_single_line("key == 2",
                                   valid_image)); // [状態] - JOB_RECEIVED (key=2) に一致する条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("key == 2", valid_image)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK,
               compile_single_line("key == 1", corrupt_image));    // [状態] - 別の内容をコンパイルしたうえで破損させる。
+    // [状態確認] - `compile_single_line("key == 1", corrupt_image)` の戻り値が `CPLAT_OK` であること。
     corrupt_image[0] = (unsigned char)(corrupt_image[0] ^ 0xFFU); // [状態] - 署名を破損させる。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_apply(slot_, valid_image, kImageSize, nullptr, 0U,
                                                                nullptr)); // [状態] - 正常なイメージを適用する。
+    // [状態確認] - `cplat_string_catalog_filter_slot_apply(slot_, valid_image, kImageSize, nullptr, 0U, nullptr)` の戻り値が `CPLAT_OK` であること。
     (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, &actual_state_before);
     ASSERT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH,
               actual_state_before); // [状態確認] - 適用直後は常に一致であること。
@@ -280,13 +295,16 @@ TEST_F(stringCatalogFilterApplyTest, apply_with_other_format_version_reports_ver
     cplat_string_catalog_filter_state actual_state_after;
     int actual_apply_ret;
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == 2", valid_image)); // [状態] - 正常な条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("key == 2", valid_image)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == 1", other_version_image)); // [状態] - 別の内容をコンパイルする。
+    // [状態確認] - `compile_single_line("key == 1", other_version_image)` の戻り値が `CPLAT_OK` であること。
     string_catalog_filter_read_image_header(other_version_image, &image_header);
     image_header.format_version = (uint16_t)(STRING_CATALOG_FILTER_FORMAT_VERSION + 1U);
     string_catalog_filter_write_image_header(other_version_image, &image_header);  // [状態] - 形式版を 1 つ進める。
     string_catalog_filter_update_content_hash(other_version_image, &image_header); // [状態] - ハッシュ値を計算し直す。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_apply(slot_, valid_image, kImageSize, nullptr, 0U,
                                                                nullptr)); // [状態] - 正常なイメージを適用する。
+    // [状態確認] - `cplat_string_catalog_filter_slot_apply(slot_, valid_image, kImageSize, nullptr, 0U, nullptr)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -318,7 +336,9 @@ TEST_F(stringCatalogFilterApplyTest, apply_with_structurally_broken_image_keeps_
     ASSERT_EQ(CPLAT_OK,
               compile_single_line("key == 2",
                                   valid_image)); // [状態] - JOB_RECEIVED (key=2) に一致する条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("key == 2", valid_image)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == 1", broken_image)); // [状態] - 別の内容をコンパイルする。
+    // [状態確認] - `compile_single_line("key == 1", broken_image)` の戻り値が `CPLAT_OK` であること。
     record = filter_test_record_address(broken_image, kLineWidth, 0U);
     string_catalog_filter_read_instruction(record, 0U, &instruction);
     instruction.opcode = 0x7FU;
@@ -330,6 +350,7 @@ TEST_F(stringCatalogFilterApplyTest, apply_with_structurally_broken_image_keeps_
     string_catalog_filter_update_content_hash(broken_image, &image_header); // [状態] - ハッシュ値を計算し直す。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_apply(slot_, valid_image, kImageSize, nullptr, 0U,
                                                                nullptr)); // [状態] - 正常なイメージを適用する。
+    // [状態確認] - `cplat_string_catalog_filter_slot_apply(slot_, valid_image, kImageSize, nullptr, 0U, nullptr)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -359,8 +380,10 @@ TEST_F(stringCatalogFilterApplyTest, apply_with_mismatched_line_width_returns_co
     ASSERT_EQ(CPLAT_OK,
               compile_single_line("key == 2",
                                   valid_image)); // [状態] - JOB_RECEIVED (key=2) に一致する条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("key == 2", valid_image)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_apply(slot_, valid_image, kImageSize, nullptr, 0U,
                                                                nullptr)); // [状態] - 正常なイメージを適用する。
+    // [状態確認] - `cplat_string_catalog_filter_slot_apply(slot_, valid_image, kImageSize, nullptr, 0U, nullptr)` の戻り値が `CPLAT_OK` であること。
     (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, &actual_state_before);
     ASSERT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH,
               actual_state_before); // [状態確認] - 適用直後は常に一致であること。
@@ -370,6 +393,7 @@ TEST_F(stringCatalogFilterApplyTest, apply_with_mismatched_line_width_returns_co
               compile_single_line(
                   "key == 1", mismatched_image, CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(kLineCapacity, 80U), 80U,
                   kLineCapacity)); // [状態] - スロットとは行幅が異なる (80) イメージを、その領域内にコンパイルする。
+    // [状態確認] - `compile_single_line( "key == 1", mismatched_image, CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(kLineCapacity, 80U), 80U, kLineCapacity)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -397,6 +421,7 @@ TEST_F(stringCatalogFilterApplyTest, apply_copies_image_so_caller_buffer_can_be_
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == 2",
                                             image)); // [状態] - JOB_RECEIVED (key=2) に一致する条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("key == 2", image)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -437,10 +462,13 @@ TEST_F(stringCatalogFilterApplyTest, lines_beyond_64_are_evaluated)
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_compile(
                             &rows[0][0], kWideCapacity, kLineWidth, kWideCapacity, image, sizeof(image), nullptr, 0U,
                             &invalid_count)); // [状態] - 130 行の条件式をコンパイルする。
+    // [状態確認] - `cplat_string_catalog_filter_compile( &rows[0][0], kWideCapacity, kLineWidth, kWideCapacity, image, sizeof(image), nullptr, 0U, &invalid_count)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, filter_test_trace_create_filter(nullptr, kWideCapacity, kLineWidth,
                                                         &wide_slot)); // [状態] - 行数の上限 130 のスロットを作成する。
+    // [状態確認] - `filter_test_trace_create_filter(nullptr, kWideCapacity, kLineWidth, &wide_slot)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_apply(wide_slot, image, sizeof(image), nullptr, 0U,
                                                                nullptr)); // [状態] - 130 行を適用する。
+    // [状態確認] - `cplat_string_catalog_filter_slot_apply(wide_slot, image, sizeof(image), nullptr, 0U, nullptr)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -455,6 +483,7 @@ TEST_F(stringCatalogFilterApplyTest, lines_beyond_64_are_evaluated)
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_get_line_error(
                             wide_slot, 129U,
                             &actual_last_error)); // [手順] - 最後の行の状態を取得する。
+    // [確認_正常系] - `cplat_string_catalog_filter_slot_get_line_error( wide_slot, 129U, &actual_last_error)` の戻り値が `CPLAT_OK` であること。
     const int actual_out_of_range_ret = cplat_string_catalog_filter_slot_get_line_error(
         wide_slot, 130U, &actual_last_error); // [手順] - 行数を超える位置を問い合わせる。
 
@@ -485,6 +514,7 @@ TEST_F(stringCatalogFilterApplyTest, never_satisfiable_lines_are_diagnosed_at_ap
     std::size_t actual_invalid_count = 0U;
 
     ASSERT_EQ(CPLAT_OK, compile_lines(lines, 4U, image)); // [状態] - 成立し得ない行を含む 4 行をコンパイルする。
+    // [状態確認] - `compile_lines(lines, 4U, image)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -503,7 +533,7 @@ TEST_F(stringCatalogFilterApplyTest, never_satisfiable_lines_are_diagnosed_at_ap
     for (int index = 0; index < 3; index++)
     {
         EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NEVER_SATISFIABLE,
-                  diagnostics[index].error); // [確認_異常系] - 原因が成立し得ない条件であること。
+                  diagnostics[index].error); // [確認_異常系 回数=3] - 原因が成立し得ない条件であること。
     }
     EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_ARGUMENT_DEPENDENT,
               actual_state); // [確認_正常系] - 成立し得る行は有効なままであること。

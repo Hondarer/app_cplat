@@ -202,8 +202,8 @@ TEST_F(errorContractTest, all_detail_out_apis_accept_null)
     {
         if (cases[index].expected_tls_set >= 0)
         {
-            // [確認_正常系] - 各公開 API が NULL の detail_out を参照せず、TLS を規約どおり更新すること。
             EXPECT_EQ(cases[index].expected_tls_set, tls_set_results[index]) << cases[index].name;
+            // [確認_正常系 回数=60] - 各公開 API が NULL の detail_out を参照せず、TLS を規約どおり更新すること。
         }
     }
 }

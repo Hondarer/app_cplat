@@ -20,9 +20,12 @@ TEST_F(allocTest, malloc_allocates_requested_size)
 
     // Assert
     ASSERT_NE((uint8_t *)NULL, buf); // [確認_正常系] - cplat_malloc の戻り値が NULL でないこと。
-    memset(buf, 0xAB, 16U);          // [確認_正常系] - 確保した 16 バイト全体へ書き込めること。
+    memset(buf, 0xAB, 16U);
+    SUCCEED(); // [確認_正常系] - 確保した 16 バイト全体へ書き込めること。
     EXPECT_EQ((uint8_t)0xAB, buf[0]);
+    // [確認_正常系] - `buf[0]` の値が `(uint8_t)0xAB` であること。
     EXPECT_EQ((uint8_t)0xAB, buf[15]);
+    // [確認_正常系] - `buf[15]` の値が `(uint8_t)0xAB` であること。
 
     // Cleanup
     cplat_free(buf);
@@ -218,8 +221,9 @@ TEST_F(allocTest, realloc_allocates_when_ptr_is_null)
     values = (int32_t *)cplat_realloc(NULL, 4U, sizeof(*values));
 
     // Assert
-    // [確認_正常系] - ptr に NULL を渡した cplat_realloc の戻り値が NULL でないこと。
+    // ptr に NULL を渡した cplat_realloc の戻り値が NULL でないこと。
     ASSERT_NE((int32_t *)NULL, values);
+    // [確認_異常系] - `(int32_t *)NULL` と `values` が異なること。
 
     // Cleanup
     cplat_free(values);
@@ -346,8 +350,9 @@ TEST_F(allocTest, realloc_zerofill_skips_when_not_extended)
     new_values = (int32_t *)cplat_realloc_zerofill(values, 8U, 2U, sizeof(*new_values));
 
     // Assert
-    // [確認_正常系] - 縮小指定の cplat_realloc_zerofill の戻り値が NULL でないこと。
+    // 縮小指定の cplat_realloc_zerofill の戻り値が NULL でないこと。
     ASSERT_NE((int32_t *)NULL, new_values);
+    // [確認_正常系] - `(int32_t *)NULL` と `new_values` が異なること。
     EXPECT_EQ(99, new_values[0]); // [確認_正常系] - 縮小後の先頭要素が 99 のまま保持されていること。
     EXPECT_EQ(98, new_values[1]); // [確認_正常系] - 縮小後の 2 番目の要素が 98 のまま保持されていること。
 
@@ -414,8 +419,9 @@ TEST_F(allocTest, realloc_zerofill_rejects_zero_count_without_free)
     ptr = cplat_realloc_zerofill(values, 4U, 0U, sizeof(*values));
 
     // Assert
-    // [確認_異常系] - 要素数 0 を渡した cplat_realloc_zerofill の戻り値が NULL であること。
+    // 要素数 0 を渡した cplat_realloc_zerofill の戻り値が NULL であること。
     EXPECT_EQ((void *)NULL, ptr);
+    // [確認_異常系] - `cplat_realloc_zerofill(values, 4U, 0U, sizeof(*values))` の戻り値が NULL であること。
     EXPECT_EQ(88, values[0]); // [確認_異常系] - 元の領域が解放されず、先頭要素が 88 のまま参照できること。
 
     // Cleanup
@@ -441,8 +447,9 @@ TEST_F(allocTest, realloc_zerofill_returns_null_on_failure_without_free)
     ptr = cplat_realloc_zerofill(values, 4U, SIZE_MAX / 4U, 4U);
 
     // Assert
-    // [確認_異常系] - 確保に失敗した cplat_realloc_zerofill の戻り値が NULL であること。
+    // 確保に失敗した cplat_realloc_zerofill の戻り値が NULL であること。
     EXPECT_EQ((void *)NULL, ptr);
+    // [確認_異常系] - `cplat_realloc_zerofill(values, 4U, SIZE_MAX / 4U, 4U)` の戻り値が NULL であること。
     EXPECT_EQ(89, values[0]); // [確認_異常系] - 元の領域が解放されず、先頭要素が 89 のまま参照できること。
 
     // Cleanup

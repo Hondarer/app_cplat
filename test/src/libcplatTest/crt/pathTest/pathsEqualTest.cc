@@ -14,13 +14,16 @@ static void assert_path_get_full_success(char *path_out, size_t path_size, const
 {
     cplat_error err;
     ASSERT_EQ(0, cplat_path_get_full(path_out, path_size, &err, path));
+    // [状態確認] - `cplat_path_get_full(path_out, path_size, &err, path)` の戻り値が `0` であること。
 }
 
 static void build_path(char *path_out, size_t path_size, const char *lhs, const char *rhs)
 {
     int written = std::snprintf(path_out, path_size, "%s/%s", lhs, rhs);
     ASSERT_GE(written, 0);
+    // [状態確認] - `written` が `0` 以上であること。
     ASSERT_LT((size_t)written, path_size);
+    // [状態確認] - `(size_t)written` が `path_size` より小さいこと。
 }
 
 static void build_three_part_path(char *path_out, size_t path_size, const char *lhs, const char *middle,
@@ -28,7 +31,9 @@ static void build_three_part_path(char *path_out, size_t path_size, const char *
 {
     int written = std::snprintf(path_out, path_size, "%s/%s/%s", lhs, middle, rhs);
     ASSERT_GE(written, 0);
+    // [状態確認] - `written` が `0` 以上であること。
     ASSERT_LT((size_t)written, path_size);
+    // [状態確認] - `(size_t)written` が `path_size` より小さいこと。
 }
 
 } // namespace

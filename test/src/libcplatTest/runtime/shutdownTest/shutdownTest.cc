@@ -266,7 +266,7 @@ TEST_F(shutdownTest, test_cplat_exit_preserves_exit_code)
     // Act
     // [手順] - 子プロセス側でイベント内容を出力する callback を登録し、cplat_exit(7) を呼び出す。
     // Assert
-    // [確認_正常系] - 終了コード 7 で終了し、callback に reason=0 kind=1 code=7 のイベントが渡ること。
+    // 終了コード 7 で終了し、callback に reason=0 kind=1 code=7 のイベントが渡ること。
     EXPECT_EXIT(
         {
             cplat_shutdown_reset_for_test();
@@ -274,6 +274,7 @@ TEST_F(shutdownTest, test_cplat_exit_preserves_exit_code)
             cplat_exit(7);
         },
         ::testing::ExitedWithCode(7), "reason=0 kind=1 code=7");
+    // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_reset_for_test(); cplat_shutdown_register(print_callback, NULL); cplat_exit(7); }, ::testing::ExitedWithCode(7), "reason=0 kind=1 code=7") の期待が成立すること。
 }
 
 // cplat_exit が範囲外 (CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE 以上) の終了コードを
@@ -293,7 +294,7 @@ TEST_F(shutdownTest, test_cplat_exit_clamps_code_above_range)
     // [手順] - 子プロセス側でイベント内容を出力する callback を登録し、下位 8 bit 切り捨てで 0 になる
     //          cplat_exit(256) を呼び出す。
     // Assert
-    // [確認_異常系] - 終了コードが CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE (125) へ差し替わり、
+    // 終了コードが CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE (125) へ差し替わり、
     //                callback にも code=125 のイベントが渡ること。
     EXPECT_EXIT(
         {
@@ -302,6 +303,7 @@ TEST_F(shutdownTest, test_cplat_exit_clamps_code_above_range)
             cplat_exit(256);
         },
         ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE), "reason=0 kind=1 code=125");
+    // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_reset_for_test(); cplat_shutdown_register(print_callback, NULL); cplat_exit(256); }, ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE), "reason=0 kind=1 code=125") の期待が成立すること。
 }
 
 // cplat_exit が負の終了コードも CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE へ差し替えることの確認
@@ -319,7 +321,7 @@ TEST_F(shutdownTest, test_cplat_exit_clamps_negative_code)
     // Act
     // [手順] - 子プロセス側でイベント内容を出力する callback を登録し、cplat_exit(-1) を呼び出す。
     // Assert
-    // [確認_異常系] - 終了コードが CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE (125) へ差し替わり、
+    // 終了コードが CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE (125) へ差し替わり、
     //                callback にも code=125 のイベントが渡ること。
     EXPECT_EXIT(
         {
@@ -328,6 +330,7 @@ TEST_F(shutdownTest, test_cplat_exit_clamps_negative_code)
             cplat_exit(-1);
         },
         ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE), "reason=0 kind=1 code=125");
+    // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_reset_for_test(); cplat_shutdown_register(print_callback, NULL); cplat_exit(-1); }, ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE), "reason=0 kind=1 code=125") の期待が成立すること。
 }
 
 // cplat_exit が範囲上限 (CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1) の終了コードを
@@ -347,7 +350,7 @@ TEST_F(shutdownTest, test_cplat_exit_preserves_upper_bound_code)
     // [手順] - 子プロセス側でイベント内容を出力する callback を登録し、
     //          範囲上限の cplat_exit(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1) を呼び出す。
     // Assert
-    // [確認_正常系] - 終了コード 124 のまま差し替わらずに終了し、callback にも code=124 のイベントが渡ること。
+    // 終了コード 124 のまま差し替わらずに終了し、callback にも code=124 のイベントが渡ること。
     EXPECT_EXIT(
         {
             cplat_shutdown_reset_for_test();
@@ -355,6 +358,7 @@ TEST_F(shutdownTest, test_cplat_exit_preserves_upper_bound_code)
             cplat_exit(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1);
         },
         ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1), "reason=0 kind=1 code=124");
+    // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_reset_for_test(); cplat_shutdown_register(print_callback, NULL); cplat_exit(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1); }, ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1), "reason=0 kind=1 code=124") の期待が成立すること。
 }
 
 // 明示的な shutdown 実行後に atexit で二重実行されないことの確認
@@ -372,7 +376,7 @@ TEST_F(shutdownTest, test_explicit_invoke_prevents_atexit_double_execution)
     // Act
     // [手順] - 子プロセス側で実行回数を出力する callback を登録し、明示的な shutdown 実行後に exit(0) を呼び出す。
     // Assert
-    // [確認_正常系] - 終了コード 0 で終了し、callback の実行回数が count=1 のまま二重実行されないこと。
+    // 終了コード 0 で終了し、callback の実行回数が count=1 のまま二重実行されないこと。
     EXPECT_EXIT(
         {
             cplat_shutdown_event event =
@@ -383,6 +387,7 @@ TEST_F(shutdownTest, test_explicit_invoke_prevents_atexit_double_execution)
             exit(0);
         },
         ::testing::ExitedWithCode(0), "count=1");
+    // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_event event = make_event(CPLAT_SHUTDOWN_REASON_NORMAL_EXIT, CPLAT_SHUTDOWN_CODE_KIND_NONE, 0); cplat_shutdown_reset_for_test(); cplat_shutdown_register(print_count_callback, NULL); cplat_shutdown_invoke_for_test(&event, NULL); exit(0); }, ::testing::ExitedWithCode(0), "count=1") の期待が成立すること。
 }
 
 #if defined(PLATFORM_LINUX)
@@ -398,7 +403,7 @@ TEST_F(shutdownTest, test_sigint_is_reported_to_callback)
     // Act
     // [手順] - 子プロセス側でイベント内容を出力する終了要求 callback を登録し、raise(SIGINT) を発生させる。
     // Assert
-    // [確認_正常系] - callback に reason=2 kind=2 code=2 のイベントが渡り、SIGINT 後も処理が継続して終了コード 0 で終了すること。
+    // callback に reason=2 kind=2 code=2 のイベントが渡り、SIGINT 後も処理が継続して終了コード 0 で終了すること。
     EXPECT_EXIT(
         {
             cplat_shutdown_reset_for_test();
@@ -408,6 +413,7 @@ TEST_F(shutdownTest, test_sigint_is_reported_to_callback)
             exit(0);
         },
         ::testing::ExitedWithCode(0), "reason=2 kind=2 code=2.*after-sigint");
+    // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_reset_for_test(); cplat_shutdown_request_register(print_callback, NULL); raise(SIGINT); fprintf(stderr, "after-sigint\n"); exit(0); }, ::testing::ExitedWithCode(0), "reason=2 kind=2 code=2.*after-sigint") の期待が成立すること。
 }
 
 // callback がないシグナルを最終 shutdown 後に既定処理へ戻すことの確認

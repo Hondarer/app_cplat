@@ -73,12 +73,14 @@ TEST_F(stringCatalogFilterPatternCompileTest, pattern_constants_are_numbered_per
     // Act
     ASSERT_EQ(CPLAT_OK, compile_single_line("id matches \"^FILTER\" && arg.job_name matches_i \"IMP\"",
                                             image_)); // [手順] - 2 つのパターンを含む条件式をコンパイルする。
+    // [確認_正常系] - `compile_single_line("id matches \"^FILTER\" && arg.job_name matches_i \"IMP\"", image_)` の戻り値が `CPLAT_OK` であること。
     record = filter_test_record_address(image_, kLineWidth, 0U);
     constants = string_catalog_filter_record_constants(record, (uint32_t)kLineWidth);
     string_catalog_filter_read_record_header(record, &header);
     while (offset < header.constant_size)
     {
         ASSERT_EQ(CPLAT_OK, string_catalog_filter_read_constant(constants, header.constant_size, offset, &constant));
+        // [確認_正常系 回数=3] - `string_catalog_filter_read_constant(constants, header.constant_size, offset, &constant)` の戻り値が `CPLAT_OK` であること。
         if ((constant.header.kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_PATTERN) &&
             (actual_pattern_constants < 4U))
         {
@@ -106,13 +108,16 @@ TEST_F(stringCatalogFilterPatternCompileTest, decompiled_pattern_recompiles_to_s
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("arg.job_name matches \"^imp\\\\.[0-9]+\\\"x\" || id matches_i \"0005$\"",
                                             image_)); // [状態] - エスケープを含むパターンをコンパイルする。
+    // [状態確認] - `compile_single_line("arg.job_name matches \"^imp\\\\.[0-9]+\\\"x\" || id matches_i \"0005$\"", image_)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
     // Act
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_decompile_line(image_, kImageSize, 0U, actual_text,
                                                                    sizeof(actual_text))); // [手順] - デコンパイルする。
+    // [確認_正常系] - `cplat_string_catalog_filter_decompile_line(image_, kImageSize, 0U, actual_text, sizeof(actual_text))` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, compile_single_line(actual_text, recompiled)); // [手順] - 復元した条件式を再コンパイルする。
+    // [確認_正常系] - `compile_single_line(actual_text, recompiled)` の戻り値が `CPLAT_OK` であること。
 
     // Assert
     EXPECT_STREQ("arg.job_name matches \"^imp\\\\.[0-9]+\\\"x\" || id matches_i \"0005$\"",
@@ -205,6 +210,7 @@ TEST_F(stringCatalogFilterPatternCompileTest, pattern_slot_beyond_count_is_rejec
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("id matches \"0005$\"",
                                             image_)); // [状態] - パターンを 1 個含む条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("id matches \"0005$\"", image_)` の戻り値が `CPLAT_OK` であること。
     record = filter_test_record_address(image_, kLineWidth, 0U);
 
     // Pre-Assert

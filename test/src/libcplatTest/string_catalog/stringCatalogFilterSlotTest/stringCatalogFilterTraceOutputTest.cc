@@ -68,10 +68,14 @@ class stringCatalogFilterTraceOutputTest : public Test
     void connect_with_line(const char *text)
     {
         ASSERT_EQ(CPLAT_OK, filter_test_trace_create_filter(nullptr, kLineCapacity, kLineWidth, &slot_));
+        // [状態確認] - `filter_test_trace_create_filter(nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
         ASSERT_EQ(CPLAT_OK, compile_single_line(text, image_));
+        // [状態確認] - `compile_single_line(text, image_)` の戻り値が `CPLAT_OK` であること。
         ASSERT_EQ(CPLAT_OK,
                   cplat_string_catalog_filter_slot_apply(slot_, image_, sizeof(image_), nullptr, 0U, nullptr));
+        // [状態確認] - `cplat_string_catalog_filter_slot_apply(slot_, image_, sizeof(image_), nullptr, 0U, nullptr)` の戻り値が `CPLAT_OK` であること。
         ASSERT_EQ(CPLAT_OK, filter_test_trace_set_filter(slot_));
+        // [状態確認] - `filter_test_trace_set_filter(slot_)` の戻り値が `CPLAT_OK` であること。
     }
 };
 
@@ -143,6 +147,7 @@ TEST_F(stringCatalogFilterTraceOutputTest, set_filter_rejects_slot_of_another_ca
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(
                             filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity, kLineWidth,
                             &other_slot)); // [状態] - 別のカタログでスロットを作成する。
+    // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity, kLineWidth, &other_slot)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -184,12 +189,14 @@ TEST_F(stringCatalogFilterTraceOutputTest, create_filter_binds_own_catalog_and_k
     int actual_apply_ret;
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == FILTER_TEST_TRACE_KEY_WORKER_STOPPED",
                                             image_)); // [状態] - 文字列キーの名前を使う条件をコンパイルする。
+    // [状態確認] - `compile_single_line("key == FILTER_TEST_TRACE_KEY_WORKER_STOPPED", image_)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
     // Act
     ASSERT_EQ(CPLAT_OK, filter_test_trace_create_filter(nullptr, kLineCapacity, kLineWidth,
                                                         &slot_)); // [手順] - スロットを作成する。
+    // [確認_正常系] - `filter_test_trace_create_filter(nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
     actual_apply_ret = cplat_string_catalog_filter_slot_apply(slot_, image_, sizeof(image_), nullptr, 0U,
                                                               &actual_invalid_count); // [手順] - 条件を適用する。
 
@@ -210,13 +217,18 @@ TEST_F(stringCatalogFilterTraceOutputTest, attached_source_is_taken_on_write)
     memset(source, 0, sizeof(source));
     ASSERT_EQ(CPLAT_OK, filter_test_trace_create_filter(nullptr, kLineCapacity, kLineWidth,
                                                         &slot_)); // [状態] - スロットを作成する。
+    // [状態確認] - `filter_test_trace_create_filter(nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source, sizeof(source),
                                                                        nullptr)); // [状態] - ソース領域を結び付ける。
+    // [状態確認] - `cplat_string_catalog_filter_slot_attach_source(slot_, source, sizeof(source), nullptr)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, filter_test_trace_set_filter(slot_));                     // [状態] - 出力へ接続する。
+    // [状態確認] - `filter_test_trace_set_filter(slot_)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, compile_single_line("category <= 2", image_));
+    // [状態確認] - `compile_single_line("category <= 2", image_)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_source_publish(
                             source, sizeof(source), image_, sizeof(image_), trace_catalog_id(), nullptr,
                             nullptr)); // [状態] - WARNING 以上に一致する条件を公開する。
+    // [状態確認] - `cplat_string_catalog_filter_source_publish( source, sizeof(source), image_, sizeof(image_), trace_catalog_id(), nullptr, nullptr)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat,

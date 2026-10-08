@@ -303,8 +303,10 @@ TEST(syncAdditionalFailureTest, local_rwlock_shared_wait_reports_pthread_failure
                               // [Pre-Assert手順] - pthread_mutex_unlock にて 0 を返却する。
     EXPECT_CALL(mock_pthread, pthread_mutex_destroy(_, _, _, _))
         .WillOnce(Return(0)); // pthread_mutex_destroy は Cleanup の destroy 用
+    // [Pre-Assert確認_異常系] - mock_pthread の pthread_mutex_destroy(_, _, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_pthread, pthread_cond_destroy(_, _, _, _))
         .WillRepeatedly(Return(0)); // pthread_cond_destroy は Cleanup の destroy 用
+    // [Pre-Assert確認_異常系] - mock_pthread の pthread_cond_destroy(_, _, _, _) が登録した呼び出し期待を満たすこと。
 
     // Act
     int result = cplat_local_rwlock_lock_shared(
@@ -342,8 +344,10 @@ TEST(syncAdditionalFailureTest, local_rwlock_shared_wait_reports_timeout)
                               // [Pre-Assert手順] - pthread_mutex_unlock にて 0 を返却する。
     EXPECT_CALL(mock_pthread, pthread_mutex_destroy(_, _, _, _))
         .WillOnce(Return(0)); // pthread_mutex_destroy は Cleanup の destroy 用
+    // [Pre-Assert確認_異常系] - mock_pthread の pthread_mutex_destroy(_, _, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_pthread, pthread_cond_destroy(_, _, _, _))
         .WillRepeatedly(Return(0)); // pthread_cond_destroy は Cleanup の destroy 用
+    // [Pre-Assert確認_異常系] - mock_pthread の pthread_cond_destroy(_, _, _, _) が登録した呼び出し期待を満たすこと。
 
     // Act
     int result = cplat_local_rwlock_lock_shared(rwlock, 1); // [手順] - 共有待機のタイムアウトを注入する。
@@ -380,8 +384,10 @@ TEST(syncAdditionalFailureTest, local_rwlock_exclusive_wait_reports_pthread_fail
                               // [Pre-Assert手順] - pthread_mutex_unlock にて 0 を返却する。
     EXPECT_CALL(mock_pthread, pthread_mutex_destroy(_, _, _, _))
         .WillOnce(Return(0)); // pthread_mutex_destroy は Cleanup の destroy 用
+    // [Pre-Assert確認_異常系] - mock_pthread の pthread_mutex_destroy(_, _, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_pthread, pthread_cond_destroy(_, _, _, _))
         .WillRepeatedly(Return(0)); // pthread_cond_destroy は Cleanup の destroy 用
+    // [Pre-Assert確認_異常系] - mock_pthread の pthread_cond_destroy(_, _, _, _) が登録した呼び出し期待を満たすこと。
 
     // Act
     int result = cplat_local_rwlock_lock_exclusive(
@@ -419,8 +425,10 @@ TEST(syncAdditionalFailureTest, local_rwlock_exclusive_wait_reports_timeout)
                               // [Pre-Assert手順] - pthread_mutex_unlock にて 0 を返却する。
     EXPECT_CALL(mock_pthread, pthread_mutex_destroy(_, _, _, _))
         .WillOnce(Return(0)); // pthread_mutex_destroy は Cleanup の destroy 用
+    // [Pre-Assert確認_異常系] - mock_pthread の pthread_mutex_destroy(_, _, _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_pthread, pthread_cond_destroy(_, _, _, _))
         .WillRepeatedly(Return(0)); // pthread_cond_destroy は Cleanup の destroy 用
+    // [Pre-Assert確認_異常系] - mock_pthread の pthread_cond_destroy(_, _, _, _) が登録した呼び出し期待を満たすこと。
 
     // Act
     int result = cplat_local_rwlock_lock_exclusive(rwlock, 1); // [手順] - 排他待機のタイムアウトを注入する。
@@ -670,6 +678,7 @@ TEST(syncAdditionalFailureTest, interprocess_lock_maps_busy_and_retries_eintr)
 
     // Cleanup
     EXPECT_CALL(mock_sys_file, flock(_, _, _, _, LOCK_UN)).WillOnce(Return(0)); // unlock 用の flock を成功させる。
+    // [Pre-Assert確認_異常系] - mock_sys_file の flock(_, _, _, _, LOCK_UN) が登録した呼び出し期待を満たすこと。
     (void)cplat_interprocess_lock_unlock(lock);
     cplat_interprocess_lock_dispose(lock);
 }
@@ -1105,6 +1114,7 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_wait_forever_retries_eintr)
 
     // Cleanup
     EXPECT_CALL(mock_sys_file, flock(_, _, _, _, LOCK_UN)).WillOnce(Return(0)); // unlock 用の flock を成功させる。
+    // [Pre-Assert確認_異常系] - mock_sys_file の flock(_, _, _, _, LOCK_UN) が登録した呼び出し期待を満たすこと。
     (void)cplat_interprocess_rwlock_unlock(lock);
     cplat_interprocess_rwlock_dispose(lock);
 }
@@ -1307,6 +1317,7 @@ TEST(syncAdditionalFailureTest, interprocess_locks_cover_locked_and_finite_retry
     EXPECT_CALL(mock_sys_file, flock(_, _, _, _, LOCK_UN))
         .Times(2)
         .WillRepeatedly(Return(0)); // unlock 用の flock を成功させる。
+    // [Pre-Assert確認_異常系] - mock_sys_file の flock(_, _, _, _, LOCK_UN) が登録した呼び出し期待を満たすこと。
     (void)cplat_interprocess_lock_unlock(lock);
     (void)cplat_interprocess_rwlock_unlock(rwlock);
     cplat_interprocess_lock_dispose(lock);

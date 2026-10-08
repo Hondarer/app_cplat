@@ -64,7 +64,7 @@ TEST_F(symLoaderInitTest, applies_json_with_comments)
 
     // Pre-Assert
     expect_config_read("with_comments.json",
-                       json); // [Pre-Assert確認_正常系] - コメントと末尾カンマを含む JSONC の読取が呼び出されること。
+                       json); // [Pre-Assert確認_正常系 回数=6] - コメントと末尾カンマを含む JSONC の読取が呼び出されること。
                               // [Pre-Assert手順] - コメントと末尾カンマを含む JSONC 本文を返却する。
 
     // Act
@@ -85,7 +85,7 @@ TEST_F(symLoaderInitTest, applies_matching_func_key)
 
     // Pre-Assert
     expect_config_read("apply_matching.json",
-                       json); // [Pre-Assert確認_正常系] - 一致キー JSON の読取が呼び出されること。
+                       json); // [Pre-Assert確認_正常系 回数=6] - 一致キー JSON の読取が呼び出されること。
                               // [Pre-Assert手順] - 一致キー JSON 本文を返却する。
 
     // Act
@@ -106,7 +106,7 @@ TEST_F(symLoaderInitTest, applies_explicit_default)
 
     // Pre-Assert
     expect_config_read("explicit_default.json",
-                       json); // [Pre-Assert確認_正常系] - 明示的デフォルト JSON の読取が呼び出されること。
+                       json); // [Pre-Assert確認_正常系 回数=6] - 明示的デフォルト JSON の読取が呼び出されること。
                               // [Pre-Assert手順] - 明示的デフォルト JSON 本文を返却する。
 
     // Act
@@ -145,7 +145,7 @@ TEST_F(symLoaderInitTest, ignores_invalid_json)
     cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - 不正 JSON の設定を用意する。
 
     // Pre-Assert
-    expect_config_read("invalid.json", json); // [Pre-Assert確認_正常系] - 不正 JSON の読取が呼び出されること。
+    expect_config_read("invalid.json", json); // [Pre-Assert確認_正常系 回数=6] - 不正 JSON の読取が呼び出されること。
                                               // [Pre-Assert手順] - 不正 JSON 本文を返却する。
 
     // Act
@@ -165,7 +165,7 @@ TEST_F(symLoaderInitTest, ignores_non_object_root)
     cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - 配列ルートの JSON を用意する。
 
     // Pre-Assert
-    expect_config_read("array_root.json", json); // [Pre-Assert確認_正常系] - 配列ルート JSON の読取が呼び出されること。
+    expect_config_read("array_root.json", json); // [Pre-Assert確認_正常系 回数=6] - 配列ルート JSON の読取が呼び出されること。
                                                  // [Pre-Assert手順] - 配列ルート JSON 本文を返却する。
 
     // Act
@@ -186,7 +186,7 @@ TEST_F(symLoaderInitTest, ignores_missing_required_fields)
 
     // Pre-Assert
     expect_config_read("missing_fields.json",
-                       json); // [Pre-Assert確認_正常系] - 必須フィールド欠落 JSON の読取が呼び出されること。
+                       json); // [Pre-Assert確認_正常系 回数=6] - 必須フィールド欠落 JSON の読取が呼び出されること。
                               // [Pre-Assert手順] - func 欠落の JSON 本文を返却する。
 
     // Act
@@ -207,7 +207,7 @@ TEST_F(symLoaderInitTest, ignores_unknown_func_key_and_applies_known)
     cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - 既知キーと未知キーを含む JSON を用意する。
 
     // Pre-Assert
-    expect_config_read("partial.json", json); // [Pre-Assert確認_正常系] - 複数キー JSON の読取が呼び出されること。
+    expect_config_read("partial.json", json); // [Pre-Assert確認_正常系 回数=6] - 複数キー JSON の読取が呼び出されること。
                                               // [Pre-Assert手順] - 既知キーと未知キーを含む JSON 本文を返却する。
 
     // Act
@@ -229,7 +229,7 @@ TEST_F(symLoaderInitTest, ignores_name_too_long)
 
     // Pre-Assert
     expect_config_read("name_too_long.json",
-                       json.c_str()); // [Pre-Assert確認_正常系] - 名称長超過 JSON の読取が呼び出されること。
+                       json.c_str()); // [Pre-Assert確認_正常系 回数=6] - 名称長超過 JSON の読取が呼び出されること。
                                       // [Pre-Assert手順] - 名称長超過 JSON 本文を返却する。
 
     // Act
@@ -251,7 +251,7 @@ TEST_F(symLoaderInitTest, applies_multiple_entries)
     cplat_sym_loader_entry *entries[] = {&entry_a, &entry_b}; // [状態] - 2 件のエントリを用意する。
 
     // Pre-Assert
-    expect_config_read("multi.json", json); // [Pre-Assert確認_正常系] - 複数エントリ JSON の読取が呼び出されること。
+    expect_config_read("multi.json", json); // [Pre-Assert確認_正常系 回数=6] - 複数エントリ JSON の読取が呼び出されること。
                                             // [Pre-Assert手順] - 複数エントリ JSON 本文を返却する。
 
     // Act
@@ -275,7 +275,7 @@ TEST_F(symLoaderInitTest, ignores_document_when_cjson_parse_fails)
 
     // Pre-Assert
     expect_config_read("injected_parse_failure.json",
-                       json); // [Pre-Assert確認_異常系] - 正常な JSON の読取が呼び出されること。
+                       json); // [Pre-Assert確認_異常系 回数=6] - 正常な JSON の読取が呼び出されること。
                               // [Pre-Assert手順] - 正常な JSON 本文を返却する。
     EXPECT_CALL(mock_cjson, cJSON_ParseJSONCWithLength(StrEq(json), std::strlen(json)))
         .WillOnce(Return(
@@ -306,7 +306,7 @@ TEST_F(symLoaderInitTest, ignores_entry_when_cjson_string_value_is_null)
 
     // Pre-Assert
     expect_config_read("injected_string_failure.json",
-                       json); // [Pre-Assert確認_異常系] - 正常な JSON の読取が呼び出されること。
+                       json); // [Pre-Assert確認_異常系 回数=6] - 正常な JSON の読取が呼び出されること。
                               // [Pre-Assert手順] - 正常な JSON 本文を返却する。
     EXPECT_CALL(mock_cjson, cJSON_GetStringValue(_))
         .WillOnce(Return(nullptr))
@@ -515,7 +515,7 @@ TEST_F(symLoaderInitTest, ignores_invalid_json_entries)
 
     // Pre-Assert
     expect_config_read("invalid_entries.json",
-                       json); // [Pre-Assert確認_異常系] - 不正エントリ JSON の読取が呼び出されること。
+                       json); // [Pre-Assert確認_異常系 回数=6] - 不正エントリ JSON の読取が呼び出されること。
                               // [Pre-Assert手順] - 不正エントリ JSON 本文を返却する。
 
     // Act
@@ -535,7 +535,7 @@ TEST_F(symLoaderInitTest, ignores_matching_entry_when_object_array_is_null)
         "{\"sample_func\":{\"lib\":\"liboverride\",\"func\":\"override_func\"}}"; // [状態] - 一致する設定を含む JSON を用意する。
 
     // Pre-Assert
-    expect_config_read("null_array.json", json); // [Pre-Assert確認_正常系] - 一致設定 JSON の読取が呼び出されること。
+    expect_config_read("null_array.json", json); // [Pre-Assert確認_正常系 回数=6] - 一致設定 JSON の読取が呼び出されること。
                                                  // [Pre-Assert手順] - 一致設定 JSON 本文を返却する。
 
     // Act
@@ -556,7 +556,7 @@ TEST_F(symLoaderInitTest, skips_null_cache_entries)
 
     // Pre-Assert
     expect_config_read("null_cache_entries.json",
-                       json); // [Pre-Assert確認_異常系] - 一致設定 JSON の読取が呼び出されること。
+                       json); // [Pre-Assert確認_異常系 回数=6] - 一致設定 JSON の読取が呼び出されること。
                               // [Pre-Assert手順] - 一致設定 JSON 本文を返却する。
 
     // Act
@@ -617,7 +617,7 @@ TEST_F(symLoaderInitTest, ignores_invalid_function_values)
 
     // Pre-Assert
     expect_config_read("null_func.json",
-                       valid_json); // [Pre-Assert確認_異常系] - func 取得失敗用 JSON の読取が呼び出されること。
+                       valid_json); // [Pre-Assert確認_異常系 回数=6] - func 取得失敗用 JSON の読取が呼び出されること。
                                     // [Pre-Assert手順] - 正常な JSON 本文を返却する。
     EXPECT_CALL(mock_cjson, cJSON_GetStringValue(_))
         .WillOnce(DoDefault())
@@ -641,7 +641,7 @@ TEST_F(symLoaderInitTest, ignores_invalid_function_values)
     // Pre-Assert_2
     expect_config_read(
         "invalid_func_values.json",
-        boundary_json.c_str()); // [Pre-Assert確認_異常系] - 空または上限超過 func の JSON 読取が呼び出されること。
+        boundary_json.c_str()); // [Pre-Assert確認_異常系 回数=6] - 空または上限超過 func の JSON 読取が呼び出されること。
                                 // [Pre-Assert手順] - 境界値 JSON 本文を返却する。
 
     // Act_2

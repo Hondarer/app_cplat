@@ -417,6 +417,7 @@ TEST_F(hashtableMoreTest, add_reuses_oldest_generation_when_status_ties_with_rec
     EXPECT_EQ(CPLAT_OK, actual_ret_find_c); // [確認_正常系] - c が見つかること。
     EXPECT_EQ(1u, rec_c); // [確認_正常系] - 時刻ではなく世代が古い a(レコード1)が再利用されたこと。
     EXPECT_EQ(CPLAT_OK, actual_ret_get_status_b);
+    // [確認_正常系] - `cplat_hashtable_get_status(ht, 2, &status_b)` の戻り値が `CPLAT_OK` であること。
     EXPECT_EQ(3, status_b); // [確認_正常系] - b(レコード2)は変更されず削除中のままであること。
 
     // Cleanup
@@ -458,6 +459,7 @@ TEST_F(hashtableMoreTest, add_reuses_lowest_record_number_when_status_ties_with_
     EXPECT_EQ(CPLAT_OK, actual_ret_find_c); // [確認_正常系] - c が見つかること。
     EXPECT_EQ(1u, rec_c);                      // [確認_正常系] - レコード番号が最小の a(レコード1)が再利用されたこと。
     EXPECT_EQ(CPLAT_OK, actual_ret_get_status_b);
+    // [確認_正常系] - `cplat_hashtable_get_status(ht, 2, &status_b)` の戻り値が `CPLAT_OK` であること。
     EXPECT_EQ(3, status_b); // [確認_正常系] - b(レコード2)は変更されず削除中のままであること。
 
     // Cleanup
@@ -537,6 +539,7 @@ TEST_F(hashtableMoreTest, add_reuses_deleted_record_that_is_not_at_chain_head)
     EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
               actual_ret_find_base); // [確認_正常系] - チェーン非先頭にあった削除中キーが追い出されていること。
     EXPECT_EQ(CPLAT_OK, actual_ret_get_status_head);
+    // [確認_正常系] - `cplat_hashtable_get_status(ht, 2, &status_head)` の戻り値が `CPLAT_OK` であること。
     EXPECT_EQ(1, status_head);                   // [確認_正常系] - チェーン先頭のキー(実装中)は影響を受けないこと。
     EXPECT_EQ(CPLAT_OK, actual_ret_validate); // [確認_正常系] - validate が成功すること。
 

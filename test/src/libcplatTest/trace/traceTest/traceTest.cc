@@ -109,6 +109,7 @@ class traceTest : public Test
     {
         cplat_tracer *handle = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED);
         EXPECT_NE((cplat_tracer *)NULL, handle);
+        // [状態確認] - `(cplat_tracer *)NULL` と `handle` が異なること。
         return handle;
     }
 };
@@ -136,17 +137,24 @@ TEST_F(traceTest, caller_managed_mode_does_not_use_handle_rwlock)
 {
     // Arrange
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_create(_)).Times(0);
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_local_rwlock_create(_) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_, _)).Times(0);
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_local_rwlock_lock_shared(_, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_exclusive(_, _)).Times(0);
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_local_rwlock_lock_exclusive(_, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_unlock_shared(_)).Times(0);
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_local_rwlock_unlock_shared(_) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_unlock_exclusive(_)).Times(0);
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_local_rwlock_unlock_exclusive(_) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_dispose(_)).Times(0);
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_local_rwlock_dispose(_) が登録した呼び出し期待を満たすこと。
 
     // Pre-Assert
 
     // Act
     cplat_tracer *handle = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED);
     ASSERT_NE(nullptr, handle);
+    // [確認_正常系] - `nullptr` と `handle` が異なること。
     int start_result = cplat_tracer_start(handle); // [手順] - caller-managed モードの tracer を開始する。
     int stop_result = cplat_tracer_stop(handle);   // [手順] - caller-managed モードの tracer を停止する。
     cplat_tracer_dispose(&handle);                 // [手順] - caller-managed モードの tracer を破棄する。
@@ -164,7 +172,9 @@ TEST_F(traceTest, create_rejects_invalid_concurrency_mode_before_side_effects)
     cplat_tracer_concurrency_mode invalid_mode;
     memset(&invalid_mode, 0x7F, sizeof(invalid_mode));
     EXPECT_CALL(mock_cplat, cplat_shutdown_register(_, _)).Times(0);
+    // [Pre-Assert確認_異常系] - mock_cplat の cplat_shutdown_register(_, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_create(_)).Times(0);
+    // [Pre-Assert確認_異常系] - mock_cplat の cplat_local_rwlock_create(_) が登録した呼び出し期待を満たすこと。
 
     // Pre-Assert
 
@@ -187,8 +197,10 @@ TEST_F(traceTest, get_state_reports_stopped_started_stopped)
     // Act
     cplat_tracer_state created_state = cplat_tracer_get_state(handle); // [手順] - create 直後の状態を取得する。
     ASSERT_EQ(CPLAT_OK, cplat_tracer_start(handle));
+    // [確認_正常系] - `cplat_tracer_start(handle)` の戻り値が `CPLAT_OK` であること。
     cplat_tracer_state started_state = cplat_tracer_get_state(handle); // [手順] - start 後の状態を取得する。
     ASSERT_EQ(CPLAT_OK, cplat_tracer_stop(handle));
+    // [確認_正常系] - `cplat_tracer_stop(handle)` の戻り値が `CPLAT_OK` であること。
     cplat_tracer_state stopped_state = cplat_tracer_get_state(handle); // [手順] - stop 後の状態を取得する。
 
     // Assert
@@ -255,16 +267,18 @@ TEST_F(traceTest, macro_write_prefixes_source_location)
                                                            // [状態確認] - cplat_tracer_start の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
-    // [Pre-Assert確認_正常系] - 公開マクロが source location を付けて backend へ渡すこと。
+    // 公開マクロが source location を付けて backend へ渡すこと。
     // [Pre-Assert手順] - backend 書き込みから 0 を返却する。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_cplat, cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(),
                                                   MatchesRegex("\\[traceTest\\.cc:[0-9]+\\] macro message")))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), MatchesRegex("\\[traceTest\\.cc:[0-9]+\\] macro message")) が登録した呼び出し期待を満たすこと。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_cplat, cplat_etw_provider_write(os_handle_, 4, NotNull(),
                                                    MatchesRegex("\\[traceTest\\.cc:\\d+\\] macro message")))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_etw_provider_write(os_handle_, 4, NotNull(), MatchesRegex("\\[traceTest\\.cc:\\d+\\] macro message")) が登録した呼び出し期待を満たすこと。
 #endif
 
     // Act
@@ -301,7 +315,9 @@ TEST_F(traceTest, macro_write_passes_explicit_timestamp)
             [&timestamp](cplat_syslog_sink *, int, const cplat_timespec *actual_timestamp, const char *)
             {
                 EXPECT_EQ(timestamp.tv_sec, actual_timestamp->tv_sec);
+                // [確認_正常系] - backend へ渡すタイムスタンプの秒部が、指定した `timestamp.tv_sec` と一致すること。
                 EXPECT_EQ(timestamp.tv_nsec, actual_timestamp->tv_nsec);
+                // [確認_正常系] - backend へ渡すタイムスタンプのナノ秒部が、指定した `timestamp.tv_nsec` と一致すること。
                 return 0;
             }); // [Pre-Assert確認_正常系] - 公開マクロ経由でも明示タイムスタンプがそのまま渡ること。
 #elif defined(PLATFORM_WINDOWS)
@@ -376,37 +392,45 @@ TEST_F(traceTest, public_macros_prefix_source_location_with_basename)
                                                            // [状態確認] - cplat_tracer_start の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
-    // [Pre-Assert確認_正常系] - write マクロが basename を使うこと。
-    // [Pre-Assert確認_正常系] - writef マクロが basename を使うこと。
-    // [Pre-Assert確認_正常系] - write_hex マクロが basename を使うこと。
-    // [Pre-Assert確認_正常系] - write_hexf マクロが basename を使うこと。
+    // write マクロが basename を使うこと。
+    // writef マクロが basename を使うこと。
+    // write_hex マクロが basename を使うこと。
+    // write_hexf マクロが basename を使うこと。
     // [Pre-Assert手順] - 各 backend 書き込みから 0 を返却する。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_cplat, cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(),
                                                   MatchesRegex("\\[traceTest\\.cc:[0-9]+\\] direct write")))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), MatchesRegex("\\[traceTest\\.cc:[0-9]+\\] direct write")) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(),
                                                   MatchesRegex("\\[traceTest\\.cc:[0-9]+\\] value=7")))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), MatchesRegex("\\[traceTest\\.cc:[0-9]+\\] value=7")) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(),
                                                   MatchesRegex("\\[traceTest\\.cc:[0-9]+\\] hex label: 48 69")))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), MatchesRegex("\\[traceTest\\.cc:[0-9]+\\] hex label: 48 69")) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(),
                                                   MatchesRegex("\\[traceTest\\.cc:[0-9]+\\] hex 7: 48 69")))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), MatchesRegex("\\[traceTest\\.cc:[0-9]+\\] hex 7: 48 69")) が登録した呼び出し期待を満たすこと。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_cplat, cplat_etw_provider_write(os_handle_, 4, NotNull(),
                                                    MatchesRegex("\\[traceTest\\.cc:\\d+\\] direct write")))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_etw_provider_write(os_handle_, 4, NotNull(), MatchesRegex("\\[traceTest\\.cc:\\d+\\] direct write")) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(
         mock_cplat, cplat_etw_provider_write(os_handle_, 4, NotNull(), MatchesRegex("\\[traceTest\\.cc:\\d+\\] value=7")))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_etw_provider_write(os_handle_, 4, NotNull(), MatchesRegex("\\[traceTest\\.cc:\\d+\\] value=7")) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_etw_provider_write(os_handle_, 4, NotNull(),
                                                    MatchesRegex("\\[traceTest\\.cc:\\d+\\] hex label: 48 69")))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_etw_provider_write(os_handle_, 4, NotNull(), MatchesRegex("\\[traceTest\\.cc:\\d+\\] hex label: 48 69")) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_etw_provider_write(os_handle_, 4, NotNull(),
                                                    MatchesRegex("\\[traceTest\\.cc:\\d+\\] hex 7: 48 69")))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_etw_provider_write(os_handle_, 4, NotNull(), MatchesRegex("\\[traceTest\\.cc:\\d+\\] hex 7: 48 69")) が登録した呼び出し期待を満たすこと。
 #endif
 
     // Act
@@ -454,7 +478,9 @@ TEST_F(traceTest, write_routes_info_to_os_backend)
             [](cplat_syslog_sink *, int, const cplat_timespec *timestamp, const char *)
             {
                 EXPECT_EQ(1714100645LL, timestamp->tv_sec);
+                // [確認_正常系] - タイムスタンプの秒部 `timestamp->tv_sec` が `1714100645LL` であること。
                 EXPECT_EQ(678000000, timestamp->tv_nsec);
+                // [確認_正常系] - タイムスタンプのナノ秒部 `timestamp->tv_nsec` が `678000000` であること。
                 return 0;
             }); // [Pre-Assert確認_正常系] - INFO が解決済み時刻付きで syslog backend へ 1 回送られること。
 #elif defined(PLATFORM_WINDOWS)
@@ -555,6 +581,7 @@ TEST_F(traceTest, write_routes_info_to_eventlog_backend)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result);
+    // [確認_正常系] - `cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_INFO, NULL, "to eventlog")` の戻り値が `CPLAT_OK` であること。
 
     // Cleanup
     cplat_tracer_dispose(&handle);
@@ -586,6 +613,7 @@ TEST_F(traceTest, write_routes_eventlog_identity_fields)
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result);
+    // [確認_正常系] - `cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_INFO, NULL, "identity fields")` の戻り値が `CPLAT_OK` であること。
 
     // Cleanup
     cplat_tracer_dispose(&handle);
@@ -612,7 +640,9 @@ TEST_F(traceTest, write_routes_explicit_timestamp_to_os_backend)
             [&timestamp](cplat_syslog_sink *, int, const cplat_timespec *actual_timestamp, const char *)
             {
                 EXPECT_EQ(timestamp.tv_sec, actual_timestamp->tv_sec);
+                // [確認_正常系] - backend へ渡すタイムスタンプの秒部が、指定した `timestamp.tv_sec` と一致すること。
                 EXPECT_EQ(timestamp.tv_nsec, actual_timestamp->tv_nsec);
+                // [確認_正常系] - backend へ渡すタイムスタンプのナノ秒部が、指定した `timestamp.tv_nsec` と一致すること。
                 return 0;
             }); // [Pre-Assert確認_正常系] - 明示タイムスタンプが syslog backend へそのまま渡ること。
 #elif defined(PLATFORM_WINDOWS)
@@ -679,7 +709,7 @@ TEST_F(traceTest, write_truncates_utf8_boundary)
     msg[1024] = '\0';
 
     // Pre-Assert
-    // [Pre-Assert確認_正常系] - UTF-8 境界直前の 1021 バイトだけが backend へ渡ること。
+    // UTF-8 境界直前の 1021 バイトだけが backend へ渡ること。
     // [Pre-Assert手順] - 切り詰め後の 1021 バイト文字列を確認し、0 を返却する。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_cplat, cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), _))
@@ -687,20 +717,28 @@ TEST_F(traceTest, write_truncates_utf8_boundary)
             [](cplat_syslog_sink *, int, const cplat_timespec *timestamp, const char *actual)
             {
                 EXPECT_EQ(1714100645LL, timestamp->tv_sec);
+                // [確認_正常系] - タイムスタンプの秒部 `timestamp->tv_sec` が `1714100645LL` であること。
                 EXPECT_EQ(678000000, timestamp->tv_nsec);
+                // [確認_正常系] - タイムスタンプのナノ秒部 `timestamp->tv_nsec` が `678000000` であること。
                 EXPECT_EQ((size_t)1021, strlen(actual));
+                // [確認_正常系] - `actual` の文字列長が `(size_t)1021` バイトであること。
                 EXPECT_EQ(std::string(1021, 'A'), std::string(actual));
+                // [確認_正常系] - backend へ渡す本文が、A を 1021 個並べた文字列であること。
                 return 0;
             });
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), _) が登録した呼び出し期待を満たすこと。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_cplat, cplat_etw_provider_write(os_handle_, 4, NotNull(), _))
         .WillOnce(
             [](cplat_etw_provider *, int, const char *, const char *actual)
             {
                 EXPECT_EQ((size_t)1021, strlen(actual));
+                // [確認_正常系] - `actual` の文字列長が `(size_t)1021` バイトであること。
                 EXPECT_EQ(std::string(1021, 'A'), std::string(actual));
+                // [確認_正常系] - backend へ渡す本文が、A を 1021 個並べた文字列であること。
                 return 0;
             });
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_etw_provider_write(os_handle_, 4, NotNull(), _) が登録した呼び出し期待を満たすこと。
 #endif
 
     // Act
@@ -801,14 +839,16 @@ TEST_F(traceTest, write_hex_appends_ellipsis_when_only_ellipsis_fits)
     std::string expected = label + ": ...";
 
     // Pre-Assert
-    // [Pre-Assert確認_正常系] - HEX データ本体なしで省略記号だけが backend へ渡ること。
+    // HEX データ本体なしで省略記号だけが backend へ渡ること。
     // [Pre-Assert手順] - backend 書き込みから 0 を返却する。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_cplat, cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), StrEq(expected.c_str())))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), StrEq(expected.c_str())) が登録した呼び出し期待を満たすこと。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_cplat, cplat_etw_provider_write(os_handle_, 4, NotNull(), StrEq(expected.c_str())))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_etw_provider_write(os_handle_, 4, NotNull(), StrEq(expected.c_str())) が登録した呼び出し期待を満たすこと。
 #endif
 
     // Act
@@ -842,20 +882,24 @@ TEST_F(traceTest, write_hex_appends_only_ellipsis_up_to_five_remaining_bytes)
     std::string expected_remaining_5 = label_remaining_5 + ": ...";
 
     // Pre-Assert
-    // [Pre-Assert確認_正常系] - 残り長 4 と 5 のどちらでも、HEX データ本体なしで省略記号だけが backend へ渡ること。
+    // 残り長 4 と 5 のどちらでも、HEX データ本体なしで省略記号だけが backend へ渡ること。
     // [Pre-Assert手順] - backend 書き込みから 0 を返却する。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_cplat,
                 cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), StrEq(expected_remaining_4.c_str())))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), StrEq(expected_remaining_4.c_str())) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat,
                 cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), StrEq(expected_remaining_5.c_str())))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), StrEq(expected_remaining_5.c_str())) が登録した呼び出し期待を満たすこと。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_cplat, cplat_etw_provider_write(os_handle_, 4, NotNull(), StrEq(expected_remaining_4.c_str())))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_etw_provider_write(os_handle_, 4, NotNull(), StrEq(expected_remaining_4.c_str())) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_etw_provider_write(os_handle_, 4, NotNull(), StrEq(expected_remaining_5.c_str())))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_etw_provider_write(os_handle_, 4, NotNull(), StrEq(expected_remaining_5.c_str())) が登録した呼び出し期待を満たすこと。
 #endif
 
     // Act
@@ -890,15 +934,17 @@ TEST_F(traceTest, write_hex_fits_one_byte_and_ellipsis_in_six_remaining_bytes)
     std::string expected = label + ": 48 ...";
 
     // Pre-Assert
-    // [Pre-Assert確認_正常系] - 本文の上限 (CPLAT_TRACER_MESSAGE_MAX_BYTES - 1 バイト) ちょうどの文字列が backend へ渡ること。
+    // 本文の上限 (CPLAT_TRACER_MESSAGE_MAX_BYTES - 1 バイト) ちょうどの文字列が backend へ渡ること。
     // [Pre-Assert手順] - backend 書き込みから 0 を返却する。
     ASSERT_EQ((size_t)(CPLAT_TRACER_MESSAGE_MAX_BYTES - 1), expected.size()); // [状態確認] - 期待値の長さが本文の上限と等しいこと。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_cplat, cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), StrEq(expected.c_str())))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), StrEq(expected.c_str())) が登録した呼び出し期待を満たすこと。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_cplat, cplat_etw_provider_write(os_handle_, 4, NotNull(), StrEq(expected.c_str())))
         .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_etw_provider_write(os_handle_, 4, NotNull(), StrEq(expected.c_str())) が登録した呼び出し期待を満たすこと。
 #endif
 
     // Act
@@ -1078,6 +1124,7 @@ TEST_F(traceTest, set_file_level_reopen_on_path_change_while_started)
 
     EXPECT_CALL(mock_cplat, cplat_trace_file_sink_create(StrEq("trace.log"), 0, 0, 0))
         .WillOnce(Return(file_handle_)); // [状態確認] - start 時に初期パスで file sink を開くこと。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_trace_file_sink_create(StrEq("trace.log"), 0, 0, 0) が登録した呼び出し期待を満たすこと。
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_file_level(handle, "trace.log", CPLAT_TRACE_LEVEL_INFO, 0, 0, 0)); // [状態] - ファイル レベルを INFO、パスを "trace.log" とする。
                                                                                                                      // [状態確認] - cplat_tracer_set_file_level の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_tracer_start(handle)); // [状態] - tracer を started 状態とする。
@@ -1114,6 +1161,7 @@ TEST_F(traceTest, set_file_level_disable_while_started)
 
     EXPECT_CALL(mock_cplat, cplat_trace_file_sink_create(StrEq("trace.log"), 0, 0, 0))
         .WillOnce(Return(file_handle_)); // [状態確認] - start 時に file sink を開くこと。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_trace_file_sink_create(StrEq("trace.log"), 0, 0, 0) が登録した呼び出し期待を満たすこと。
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_file_level(handle, "trace.log", CPLAT_TRACE_LEVEL_INFO, 0, 0, 0)); // [状態] - ファイル レベルを INFO、パスを "trace.log" とする。
                                                                                                                      // [状態確認] - cplat_tracer_set_file_level の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_tracer_start(handle)); // [状態] - tracer を started 状態とする。
@@ -1157,12 +1205,14 @@ TEST_F(traceTest, file_level_routes_to_file_backend)
 
     // Act
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE));
+    // [確認_正常系] - `cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)` の戻り値が `CPLAT_OK` であること。
     int actual_ret_tracer_set_file_level = cplat_tracer_set_file_level(handle, "trace.log", CPLAT_TRACE_LEVEL_INFO, 0, 0,
                                                                    0); // [手順] - file trace を有効化する。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_tracer_set_file_level); // [確認_正常系] - file trace を有効化した cplat_tracer_set_file_level の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_tracer_start(handle));
+    // [確認_正常系] - `cplat_tracer_start(handle)` の戻り値が `CPLAT_OK` であること。
     int result = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
                                         "file info"); // [手順] - INFO メッセージを書き込む。
 
@@ -1245,6 +1295,7 @@ TEST_F(traceTest, explicit_timestamp_is_shared_by_file_and_stderr)
 
     EXPECT_CALL(mock_cplat, cplat_trace_file_sink_create(StrEq("trace.log"), 0, 0, 0))
         .WillOnce(Return(file_handle_)); // [状態確認] - start 時に file sink を初期化すること。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_trace_file_sink_create(StrEq("trace.log"), 0, 0, 0) が登録した呼び出し期待を満たすこと。
 
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -1264,8 +1315,11 @@ TEST_F(traceTest, explicit_timestamp_is_shared_by_file_and_stderr)
             [](cplat_trace_file_sink *, int, const cplat_timespec *actual, const char *)
             {
                 EXPECT_NE(nullptr, actual);
+                // [確認_正常系] - `nullptr` と `actual` が異なること。
                 EXPECT_EQ(1714100645LL, actual->tv_sec);
+                // [確認_正常系] - タイムスタンプの秒部 `actual->tv_sec` が `1714100645LL` であること。
                 EXPECT_EQ(678000000, actual->tv_nsec);
+                // [確認_正常系] - タイムスタンプのナノ秒部 `actual->tv_nsec` が `678000000` であること。
                 return 0;
             }); // [Pre-Assert確認_正常系] - file sink へ明示タイムスタンプがそのまま渡ること。
                 // [Pre-Assert手順] - 渡された時刻を確認し、0 を返却する。
@@ -1310,6 +1364,7 @@ TEST_F(traceTest, file_level_none_disables_file_backend)
 
     // Act
     ASSERT_EQ(CPLAT_OK, cplat_tracer_start(handle));
+    // [確認_正常系] - `cplat_tracer_start(handle)` の戻り値が `CPLAT_OK` であること。
     int result = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_CRITICAL, NULL,
                                         "no file output"); // [手順] - ファイル トレース無効のまま書き込む。
 
@@ -1341,11 +1396,15 @@ TEST_F(traceTest, set_name_with_identifier_updates_backend_name)
 
 #if defined(PLATFORM_WINDOWS)
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO));
+    // [確認_正常系] - `cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_etw_level(handle, CPLAT_TRACE_LEVEL_INFO));
+    // [確認_正常系] - `cplat_tracer_set_etw_level(handle, CPLAT_TRACE_LEVEL_INFO)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_tracer_start(handle));
+    // [確認_正常系] - `cplat_tracer_start(handle)` の戻り値が `CPLAT_OK` であること。
     EXPECT_CALL(mock_cplat, cplat_etw_provider_write(os_handle_, 4, StrEq("worker_2"), StrEq("running as worker_2")))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - ETW サービス名が worker_2 に更新されること。
     EXPECT_EQ(CPLAT_OK, cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_INFO, NULL, "running as worker_2"));
+    // [確認_正常系] - `cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_INFO, NULL, "running as worker_2")` の戻り値が `CPLAT_OK` であること。
 #endif
 
     // Cleanup
@@ -1445,7 +1504,7 @@ TEST_F(traceTest, invalid_explicit_timestamp_falls_back_and_returns_minus_one)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_clock_get_realtime(_))
         .Times(1); // [Pre-Assert確認_異常系] - 不正時刻では現在時刻へ代替すること。
-    // [Pre-Assert確認_異常系] - OS backend へ代替時刻で渡ること。
+    // OS backend へ代替時刻で渡ること。
     // [Pre-Assert手順] - OS backend へ代替時刻を渡して 0 を返却する。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_cplat, cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), StrEq("invalid ts")))
@@ -1453,11 +1512,15 @@ TEST_F(traceTest, invalid_explicit_timestamp_falls_back_and_returns_minus_one)
             [](cplat_syslog_sink *, int, const cplat_timespec *timestamp, const char *)
             {
                 EXPECT_EQ(1714100645LL, timestamp->tv_sec);
+                // [確認_正常系] - タイムスタンプの秒部 `timestamp->tv_sec` が `1714100645LL` であること。
                 EXPECT_EQ(678000000, timestamp->tv_nsec);
+                // [確認_正常系] - タイムスタンプのナノ秒部 `timestamp->tv_nsec` が `678000000` であること。
                 return 0;
             });
+    // [Pre-Assert確認_異常系] - mock_cplat の cplat_syslog_sink_write(os_handle_, LOG_INFO, NotNull(), StrEq("invalid ts")) が登録した呼び出し期待を満たすこと。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_cplat, cplat_etw_provider_write(os_handle_, 4, _, StrEq("invalid ts"))).WillOnce(Return(0));
+    // [Pre-Assert確認_異常系] - mock_cplat の cplat_etw_provider_write(os_handle_, 4, _, StrEq("invalid ts")) が登録した呼び出し期待を満たすこと。
 #endif
     EXPECT_CALL(mock_cplat,
                 cplat_trace_file_sink_write(file_handle_, CPLAT_TRACE_LEVEL_INFO, NotNull(), StrEq("invalid ts")))
@@ -1465,7 +1528,9 @@ TEST_F(traceTest, invalid_explicit_timestamp_falls_back_and_returns_minus_one)
             [](cplat_trace_file_sink *, int, const cplat_timespec *timestamp, const char *)
             {
                 EXPECT_EQ(1714100645LL, timestamp->tv_sec);
+                // [確認_正常系] - タイムスタンプの秒部 `timestamp->tv_sec` が `1714100645LL` であること。
                 EXPECT_EQ(678000000, timestamp->tv_nsec);
+                // [確認_正常系] - タイムスタンプのナノ秒部 `timestamp->tv_nsec` が `678000000` であること。
                 return 0;
             }); // [Pre-Assert確認_異常系] - file backend へ代替時刻で渡ること。
                 // [Pre-Assert手順] - file backend へ代替時刻を渡して 0 を返却する。
@@ -1510,7 +1575,9 @@ TEST_F(traceTest, write_hex_invalid_explicit_timestamp_falls_back_and_returns_mi
             [](cplat_trace_file_sink *, int, const cplat_timespec *timestamp, const char *)
             {
                 EXPECT_EQ(1714100645LL, timestamp->tv_sec);
+                // [確認_正常系] - タイムスタンプの秒部 `timestamp->tv_sec` が `1714100645LL` であること。
                 EXPECT_EQ(678000000, timestamp->tv_nsec);
+                // [確認_正常系] - タイムスタンプのナノ秒部 `timestamp->tv_nsec` が `678000000` であること。
                 return 0;
             }); // [Pre-Assert確認_異常系] - HEX 書き込みでも代替時刻が file backend へ渡ること。
                 // [Pre-Assert手順] - 代替時刻を確認し、0 を返却する。
@@ -1835,12 +1902,14 @@ TEST_F(traceTest, getters_report_instance_and_file_settings_independently)
         CPLAT_OK,
         actual_ret_tracer_set_file_name); // [確認_正常系] - ファイル側を "custom", 5 に設定した cplat_tracer_set_file_name の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_tracer_get_name(handle, name_buf, sizeof(name_buf)));
+    // [確認_正常系] - `cplat_tracer_get_name(handle, name_buf, sizeof(name_buf))` の戻り値が `CPLAT_OK` であること。
     EXPECT_STREQ("worker_2", name_buf); // [確認_正常系] - インスタンス名が識別込みの "worker_2" で返ること。
     EXPECT_EQ(
         2,
         cplat_tracer_get_identifier(
             handle)); // [確認_正常系] - cplat_tracer_get_identifier の戻り値として、インスタンス識別番号 2 が返ること。
     ASSERT_EQ(CPLAT_OK, cplat_tracer_get_file_name(handle, file_buf, sizeof(file_buf)));
+    // [確認_正常系] - `cplat_tracer_get_file_name(handle, file_buf, sizeof(file_buf))` の戻り値が `CPLAT_OK` であること。
     EXPECT_STREQ("custom_5", file_buf); // [確認_正常系] - ファイル名が識別込みの "custom_5" で返ること。
     EXPECT_EQ(
         5,

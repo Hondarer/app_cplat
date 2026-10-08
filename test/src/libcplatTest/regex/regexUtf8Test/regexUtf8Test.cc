@@ -348,6 +348,7 @@ TEST_F(regexUtf8Test, decode_encode_cover_two_byte_and_boundary_units)
                                        decoded_offsets);         // [手順] - 有効な 2 バイト文字 U+00E9 を変換する。
     bool private_use_result = cplat_internal_regex_utf8_encode(private_use, encoded); // [手順] - U+E000 を UTF-8 へ変換する。
     ASSERT_TRUE(cplat_internal_regex_utf8_decode(astral.data(), astral.size(), astral_units, astral_offsets));
+    // [確認_正常系] - `cplat_internal_regex_utf8_decode(astral.data(), astral.size(), astral_units, astral_offsets)` が true であること。
     std::size_t end_index_offset = cplat_internal_regex_offset_of_end(
         astral_units, astral_offsets, astral_units.size()); // [手順] - コード単位数と等しい終了索引を変換する。
 

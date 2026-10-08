@@ -31,6 +31,7 @@ class stringCatalogFilterCategoryTest : public Test
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(
                                 filter_test_trace_catalog(), filter_test_trace_key_names(),
                                 filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_));
+        // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_trace_catalog(), filter_test_trace_key_names(), filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
     }
 
     void TearDown() override
@@ -94,6 +95,7 @@ TEST_F(stringCatalogFilterCategoryTest, level_name_and_number_give_same_result)
 
     ASSERT_EQ(CPLAT_OK,
               recreate_slot_with_category_names(&s_level_category_names)); // [状態] - レベルの名前を設定する。
+    // [状態確認] - `recreate_slot_with_category_names(&s_level_category_names)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -128,6 +130,7 @@ TEST_F(stringCatalogFilterCategoryTest, out_of_range_values_are_rejected)
     // Arrange
     ASSERT_EQ(CPLAT_OK,
               recreate_slot_with_category_names(&s_level_category_names)); // [状態] - レベルの名前を設定する。
+    // [状態確認] - `recreate_slot_with_category_names(&s_level_category_names)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -162,6 +165,7 @@ TEST_F(stringCatalogFilterCategoryTest, unknown_level_name_is_rejected)
     // Arrange
     ASSERT_EQ(CPLAT_OK,
               recreate_slot_with_category_names(&s_level_category_names)); // [状態] - レベルの名前を設定する。
+    // [状態確認] - `recreate_slot_with_category_names(&s_level_category_names)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 

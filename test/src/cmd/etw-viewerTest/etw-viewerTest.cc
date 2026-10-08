@@ -87,6 +87,7 @@ TEST_F(etw_viewerTest, main_accepts_pid_filter)
             Return()); // [Pre-Assert確認_正常系] - main() 呼び出し時に cplat_console_init が 1 回呼び出されること。
     EXPECT_CALL(mock_cplat_, cplat_etw_session_check_access())
         .WillOnce(Return(CPLAT_OK)); // [Pre-Assert手順] - 権限確認から OK を返却して通過させる。
+    // [Pre-Assert確認_正常系] - mock_cplat_ の cplat_etw_session_check_access() が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat_, cplat_etw_session_start(_, _, _, _, _))
         .WillOnce(Invoke(
             [&captured_context](const char *, const char *, cplat_etw_event_fn, void *context,

@@ -721,6 +721,7 @@ TEST_F(syslogFailureInjectionTest, write_reports_unknown_when_fallback_socket_is
     NiceMock<Mock_sys_socket> mock_sys_socket;
     EXPECT_CALL(mock_sys_socket, socket(_, _, _, _, _, _))
         .WillOnce(Return(-1)); // [状態確認] - create 時に socket が 1 回呼び出されること。
+    // [Pre-Assert確認_異常系] - mock_sys_socket の socket(_, _, _, _, _, _) が登録した呼び出し期待を満たすこと。
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
     ASSERT_NE((cplat_syslog_sink *)NULL, handle); // [状態確認] - ハンドルが非 NULL であること。

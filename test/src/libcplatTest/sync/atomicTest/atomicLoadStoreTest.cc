@@ -25,7 +25,7 @@ TEST(atomicLoadStoreTest, u8_store_and_load_are_consistent_across_memory_orders)
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
         EXPECT_EQ((uint8_t)(10U + (uint8_t)index),
-                  loaded[index]); // [確認_正常系] - メモリ順序によらず直前に書き込んだ値を読めること。
+                  loaded[index]); // [確認_正常系 回数=5] - メモリ順序によらず直前に書き込んだ値を読めること。
     }
 }
 
@@ -50,7 +50,7 @@ TEST(atomicLoadStoreTest, i32_store_and_load_are_consistent_across_memory_orders
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
         EXPECT_EQ((int32_t)(1000 + (int32_t)index),
-                  loaded[index]); // [確認_正常系] - メモリ順序によらず直前に書き込んだ値を読めること。
+                  loaded[index]); // [確認_正常系 回数=5] - メモリ順序によらず直前に書き込んだ値を読めること。
     }
 }
 
@@ -75,7 +75,7 @@ TEST(atomicLoadStoreTest, u32_store_and_load_are_consistent_across_memory_orders
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
         EXPECT_EQ((uint32_t)(2000U + (uint32_t)index),
-                  loaded[index]); // [確認_正常系] - メモリ順序によらず直前に書き込んだ値を読めること。
+                  loaded[index]); // [確認_正常系 回数=5] - メモリ順序によらず直前に書き込んだ値を読めること。
     }
 }
 
@@ -100,7 +100,7 @@ TEST(atomicLoadStoreTest, i64_store_and_load_are_consistent_across_memory_orders
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
         EXPECT_EQ((int64_t)(30000000000LL + (int64_t)index),
-                  loaded[index]); // [確認_正常系] - メモリ順序によらず直前に書き込んだ値を読めること。
+                  loaded[index]); // [確認_正常系 回数=5] - メモリ順序によらず直前に書き込んだ値を読めること。
     }
 }
 
@@ -125,7 +125,7 @@ TEST(atomicLoadStoreTest, u64_store_and_load_are_consistent_across_memory_orders
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
         EXPECT_EQ((uint64_t)(40000000000ULL + (uint64_t)index),
-                  loaded[index]); // [確認_正常系] - メモリ順序によらず直前に書き込んだ値を読めること。
+                  loaded[index]); // [確認_正常系 回数=5] - メモリ順序によらず直前に書き込んだ値を読めること。
     }
 }
 
@@ -151,7 +151,7 @@ TEST(atomicLoadStoreTest, ptr_store_and_load_are_consistent_across_memory_orders
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
         EXPECT_EQ((void *)&markers[index],
-                  loaded[index]); // [確認_正常系] - メモリ順序によらず直前に書き込んだポインターを読めること。
+                  loaded[index]); // [確認_正常系 回数=5] - メモリ順序によらず直前に書き込んだポインターを読めること。
     }
 }
 

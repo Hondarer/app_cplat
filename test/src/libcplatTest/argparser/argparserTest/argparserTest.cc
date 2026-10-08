@@ -61,7 +61,7 @@ TEST_F(argparserTest, create_and_dispose)
 
     // Assert
     EXPECT_TRUE(handle_created); // [確認_正常系] - cplat_argparser_handle_create の戻り値が NULL でないこと。
-    // [確認_正常系] - dispose(NULL) がクラッシュせずに完了すること。
+    SUCCEED(); // [確認_正常系] - dispose(NULL) がクラッシュせずに完了すること。
 }
 
 // メモリ確保に失敗した場合に create が NULL を返すことの確認
@@ -247,10 +247,11 @@ TEST_F(argparserTest, default_returns_same_handle_to_concurrent_callers)
 
     // Assert
     ASSERT_NE(nullptr, parsers[0]); // [確認_正常系] - ハンドルが NULL でないこと。
-    // [確認_正常系] - 16 スレッドすべてに同一ハンドルが返ること。
+    // 16 スレッドすべてに同一ハンドルが返ること。
     for (size_t i = 1; i < kThreadCount; i++)
     {
         EXPECT_EQ(parsers[0], parsers[i]);
+        // [確認_正常系 回数=15] - 各スレッドが取得したハンドルが、先頭のスレッドのハンドルと一致すること。
     }
 }
 
@@ -542,6 +543,7 @@ TEST_F(argparserTest, register_error_getters_default_when_absent_or_out_of_range
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_argparser_register_flag); // [確認_異常系] - cplat_argparser_handle_register_flag の戻り値として、エラーを 1 件発生させた結果が CPLAT_ERR_INVALID_ARGUMENT であること。
     ASSERT_EQ((size_t)1, cplat_argparser_handle_get_register_error_count(parser));
+    // [確認_異常系] - `cplat_argparser_handle_get_register_error_count(parser)` の戻り値が `(size_t)1` であること。
     EXPECT_EQ(
         CPLAT_OK,
         cplat_argparser_handle_get_register_error(
@@ -681,6 +683,7 @@ TEST_F(argparserTest, print_register_error_messages_writes_all_to_stream)
     // Pre-Assert
     EXPECT_CALL(mock_stdio, fprintf(_, _, _, stderr, _))
         .Times(AnyNumber()); // [Pre-Assert手順] - 区切りの空行の fprintf 呼び出しを許容する。
+    // [Pre-Assert確認_異常系] - mock_stdio の fprintf(_, _, _, stderr, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_stdio,
                 fprintf(_, _, _, stderr, HasSubstr("error: failed to register '--bb': duplicate definition")))
         .Times(1); // [Pre-Assert確認_正常系] - "--bb" の重複エラーが stderr へ 1 回書き出されること。
@@ -719,6 +722,7 @@ TEST_F(argparserTest, register_grows_beyond_initial_capacity)
         char long_name[32];
         snprintf(long_name, sizeof(long_name), "--opt%02d", i);
         ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_register_flag(parser, NULL, long_name, NULL, &storages[i]));
+        // [確認_正常系 回数=20] - `cplat_argparser_handle_register_flag(parser, NULL, long_name, NULL, &storages[i])` の戻り値が `CPLAT_OK` であること。
     }
 
     // Assert
@@ -1857,6 +1861,7 @@ TEST_F(argparserTest, error_message_formatting)
             actual_ret_argparser_parse); // [確認_異常系] - cplat_argparser_handle_parse の戻り値として、未登録の "--bogus" で解析エラーを発生させた結果が CPLAT_ERR_UNKNOWN_OPTION であること。
     }
     EXPECT_EQ(CPLAT_OK, cplat_argparser_handle_get_error_message(parser, message, sizeof(message)));
+    // [確認_正常系] - `cplat_argparser_handle_get_error_message(parser, message, sizeof(message))` の戻り値が `CPLAT_OK` であること。
     EXPECT_STREQ("unknown option '--bogus'",
                  message); // [確認_正常系] - "unknown option '--bogus'" が組み立てられること。
 
@@ -2112,6 +2117,7 @@ TEST_F(argparserTest, print_error_messages_writes_to_stream)
     // Pre-Assert
     EXPECT_CALL(mock_stdio, fprintf(_, _, _, stderr, _))
         .Times(AnyNumber()); // [Pre-Assert手順] - 区切りの空行の fprintf 呼び出しを許容する。
+    // [Pre-Assert確認_異常系] - mock_stdio の fprintf(_, _, _, stderr, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_stdio, fprintf(_, _, _, stderr, HasSubstr("error: unknown option '--bogus'")))
         .Times(1); // [Pre-Assert確認_正常系] - "error: unknown option '--bogus'" が stderr へ 1 回書き出されること。
 
@@ -2430,15 +2436,18 @@ TEST_F(argparserTest, register_wrappers_reject_invalid_storage_and_registration)
 
     ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_register_option_int_array(parser, "-x", "--x", NULL, NULL, 0u, int_array,
                                                                          1u, &int_count));
+    // [確認_正常系] - `cplat_argparser_handle_register_option_int_array(parser, "-x", "--x", NULL, NULL, 0u, int_array, 1u, &int_count)` の戻り値が `CPLAT_OK` であること。
     int option_int_array_duplicate = cplat_argparser_handle_register_option_int_array(
         parser, "-x", "--x2", NULL, NULL, 0u, int_array, 1u, &int_count); // [手順] - int 配列の重複登録を検証する。
     ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_register_option_string_array(parser, "-y", "--y", NULL, NULL, 0u,
                                                                             string_array, 1u, &string_count));
+    // [確認_正常系] - `cplat_argparser_handle_register_option_string_array(parser, "-y", "--y", NULL, NULL, 0u, string_array, 1u, &string_count)` の戻り値が `CPLAT_OK` であること。
     int option_string_array_duplicate =
         cplat_argparser_handle_register_option_string_array(parser, "-y", "--y2", NULL, NULL, 0u, string_array, 1u,
                                                          &string_count); // [手順] - string 配列の重複登録を検証する。
     ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_register_positional_string_array(parser, "tail", NULL, 0u, string_array,
                                                                                 1u, &string_count));
+    // [確認_正常系] - `cplat_argparser_handle_register_positional_string_array(parser, "tail", NULL, 0u, string_array, 1u, &string_count)` の戻り値が `CPLAT_OK` であること。
     int positional_int_array_duplicate = cplat_argparser_handle_register_positional_int_array(
         parser, "tail2", NULL, 0u, int_array, 1u, &int_count); // [手順] - 可変長位置引数後の int 配列登録を検証する。
     int positional_string_array_duplicate = cplat_argparser_handle_register_positional_string_array(
@@ -2805,7 +2814,7 @@ TEST_F(argparserTest, error_message_formats_all_error_results)
     for (int return_code : return_codes)
     {
         EXPECT_EQ(CPLAT_OK,
-                  return_code); // [確認_正常系] - 各解析結果のメッセージ取得結果が CPLAT_OK であること。
+                  return_code); // [確認_正常系 回数=11] - 各解析結果のメッセージ取得結果が CPLAT_OK であること。
     }
     EXPECT_STREQ("no error", message); // [確認_正常系] - 既定分岐のメッセージが no error であること。
 
@@ -2879,7 +2888,7 @@ TEST_F(argparserTest, register_error_message_formats_all_results)
     for (int return_code : return_codes)
     {
         EXPECT_EQ(CPLAT_OK,
-                  return_code); // [確認_正常系] - 各登録結果のメッセージ取得結果が CPLAT_OK であること。
+                  return_code); // [確認_正常系 回数=6] - 各登録結果のメッセージ取得結果が CPLAT_OK であること。
     }
     EXPECT_EQ(CPLAT_OK,
               null_target_result); // [確認_正常系] - 対象名 NULL のメッセージ取得結果が CPLAT_OK であること。
@@ -3104,6 +3113,7 @@ TEST_F(argparserTest, print_error_messages_writes_buffer_too_small_message)
     // Pre-Assert
     EXPECT_CALL(mock_stdio, fprintf(_, _, _, stderr, _))
         .Times(AnyNumber()); // [Pre-Assert手順] - error message と区切り行の fprintf を許容する。
+    // [Pre-Assert確認_異常系] - mock_stdio の fprintf(_, _, _, stderr, _) が登録した呼び出し期待を満たすこと。
 
     // Act
     int result = cplat_argparser_handle_print_error_messages(
@@ -3167,6 +3177,7 @@ TEST_F(argparserTest, print_register_error_messages_writes_buffer_too_small_mess
     // Pre-Assert
     EXPECT_CALL(mock_stdio, fprintf(_, _, _, stderr, _))
         .Times(AnyNumber()); // [Pre-Assert手順] - 登録エラーと区切り行の fprintf を許容する。
+    // [Pre-Assert確認_異常系] - mock_stdio の fprintf(_, _, _, stderr, _) が登録した呼び出し期待を満たすこと。
 
     // Act
     int result =

@@ -23,6 +23,7 @@ class promptCoverageTest : public Test
         promptFakeReset();
         prompt_ = cplat_prompt_create(NULL);
         ASSERT_NE((cplat_prompt *)NULL, prompt_);
+        // [状態確認] - `(cplat_prompt *)NULL` と `prompt_` が異なること。
         prompt_->is_tty = 1;
     }
 
@@ -167,7 +168,7 @@ TEST_F(promptCoverageTest, contexts_distinguish_file_and_line_and_expand_twice)
     for (size_t i = 0u; i < 5u; i++)
     {
         ASSERT_NE((cplat_internal_prompt_ctx *)NULL,
-                  contexts[i]); // [確認_正常系] - 5 個の新規コンテキストが取得できること。
+                  contexts[i]); // [確認_正常系 回数=5] - 5 個の新規コンテキストが取得できること。
     }
     EXPECT_EQ(&prompt_->contexts[0], contexts[5]); // [確認_正常系] - 同じファイルと行番号から既存コンテキストが返ること。
     EXPECT_EQ(5u, prompt_->ctx_count);   // [確認_正常系] - コンテキスト数が 5 であること。

@@ -51,9 +51,11 @@ class stringCatalogFilterSourceTest : public Test
         memset(source_, 0, sizeof(source_));
         memset(image_, 0, sizeof(image_));
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_get_catalog_id(filter_test_trace_catalog(), &catalog_id_));
+        // [状態確認] - `cplat_string_catalog_filter_get_catalog_id(filter_test_trace_catalog(), &catalog_id_)` の戻り値が `CPLAT_OK` であること。
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(
                                 filter_test_trace_catalog(), filter_test_trace_key_names(),
                                 filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_));
+        // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_trace_catalog(), filter_test_trace_key_names(), filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
     }
 
     void TearDown() override
@@ -91,6 +93,7 @@ class stringCatalogFilterSourceTest : public Test
         cplat_string_catalog_filter_source_status status;
         memset(&status, 0xFF, sizeof(status));
         EXPECT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_get_source_status(slot_, &status));
+        // [状態確認] - `cplat_string_catalog_filter_slot_get_source_status(slot_, &status)` の戻り値が `CPLAT_OK` であること。
         return status;
     }
 };
@@ -103,8 +106,10 @@ TEST_F(stringCatalogFilterSourceTest, format_takes_published_conditions)
     int actual_ret;
     int actual_matched = 0;
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &published_revision)); // [状態] - 条件を公開する。
+    // [状態確認] - `publish_line("category <= 2", &published_revision)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                        nullptr)); // [状態] - 結び付ける。
+    // [状態確認] - `cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_), nullptr)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -126,9 +131,12 @@ TEST_F(stringCatalogFilterSourceTest, unchanged_revision_skips_lock)
     // Arrange
     int actual_matched = 0;
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2")); // [状態] - 条件を公開する。
+    // [状態確認] - `publish_line("category <= 2")` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                        nullptr)); // [状態] - 結び付ける。
+    // [状態確認] - `cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_), nullptr)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, format_job_failed(&actual_matched)); // [状態] - 1 回目の組み立てで取り込む。
+    // [状態確認] - `format_job_failed(&actual_matched)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_local_lock_try_lock(_))
@@ -150,10 +158,14 @@ TEST_F(stringCatalogFilterSourceTest, republished_conditions_replace_previous)
     uint64_t second_revision = 0U;
     int actual_matched = 0;
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &first_revision)); // [状態] - 1 回目の条件を公開する。
+    // [状態確認] - `publish_line("category <= 2", &first_revision)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                        nullptr)); // [状態] - 結び付ける。
+    // [状態確認] - `cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_), nullptr)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, format_job_failed(&actual_matched));                      // [状態] - 1 回目の条件を取り込む。
+    // [状態確認] - `format_job_failed(&actual_matched)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, publish_line("category >= 3", &second_revision));         // [状態] - 2 回目の条件を公開する。
+    // [状態確認] - `publish_line("category >= 3", &second_revision)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -178,10 +190,12 @@ TEST_F(stringCatalogFilterSourceTest, writing_source_is_not_taken_until_next_pub
     int actual_matched_while_writing = 1;
     int actual_matched_after_recovery = 0;
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &published_revision)); // [状態] - 条件を公開する。
+    // [状態確認] - `publish_line("category <= 2", &published_revision)` の戻り値が `CPLAT_OK` であること。
     cplat_atomic_store_u64(&header()->published_revision, published_revision | 1U,
                            CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 書き込みの途中で中断した状態にする。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                        nullptr)); // [状態] - 結び付ける。
+    // [状態確認] - `cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_), nullptr)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -189,6 +203,7 @@ TEST_F(stringCatalogFilterSourceTest, writing_source_is_not_taken_until_next_pub
     (void)format_job_failed(&actual_matched_while_writing); // [手順] - 書き込み中に組み立てる。
     uint64_t taken_while_writing = source_status().taken_revision;
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &recovered_revision)); // [手順] - 公開し直す。
+    // [確認_正常系] - `publish_line("category <= 2", &recovered_revision)` の戻り値が `CPLAT_OK` であること。
     (void)format_job_failed(&actual_matched_after_recovery);                 // [手順] - 公開後に組み立てる。
 
     // Assert
@@ -206,8 +221,10 @@ TEST_F(stringCatalogFilterSourceTest, torn_copy_is_discarded_and_retried)
     int actual_matched_torn = 1;
     int actual_matched_retry = 0;
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2")); // [状態] - 条件を公開する。
+    // [状態確認] - `publish_line("category <= 2")` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                        nullptr)); // [状態] - 結び付ける。
+    // [状態確認] - `cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_), nullptr)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_local_lock_try_lock(_))
@@ -220,6 +237,7 @@ TEST_F(stringCatalogFilterSourceTest, torn_copy_is_discarded_and_retried)
             })) // [Pre-Assert手順] - 1 回目は版番号を読んだ後に、公開が重なった状態を作る。
         .WillRepeatedly(
             Invoke(delegate_real_cplat_local_lock_try_lock)); // [Pre-Assert手順] - 2 回目以降は実関数を呼ぶ。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_local_lock_try_lock(_) が登録した呼び出し期待を満たすこと。
 
     // Act
     (void)format_job_failed(&actual_matched_torn); // [手順] - 公開が重なった状態で組み立てる。
@@ -239,12 +257,15 @@ TEST_F(stringCatalogFilterSourceTest, busy_lock_skips_take_without_waiting)
     int actual_ret;
     int actual_matched = 1;
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2")); // [状態] - 条件を公開する。
+    // [状態確認] - `publish_line("category <= 2")` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                        nullptr)); // [状態] - 結び付ける。
+    // [状態確認] - `cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_), nullptr)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_local_lock_try_lock(_))
         .WillOnce(Return(CPLAT_ERR_BUSY)); // [Pre-Assert手順] - 取り込みのロックで CPLAT_ERR_BUSY を返却する。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_local_lock_try_lock(_) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, _)).Times(0); // [Pre-Assert確認_正常系] - ロックを待たないこと。
 
     // Act
@@ -262,9 +283,12 @@ TEST_F(stringCatalogFilterSourceTest, corrupt_publication_is_recorded_and_not_re
     uint64_t published_revision = 0U;
     int actual_matched = 0;
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &published_revision)); // [状態] - 条件を公開する。
+    // [状態確認] - `publish_line("category <= 2", &published_revision)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                        nullptr)); // [状態] - 結び付ける。
+    // [状態確認] - `cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_), nullptr)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, format_job_failed(&actual_matched));                      // [状態] - 正しい条件を取り込む。
+    // [状態確認] - `format_job_failed(&actual_matched)` の戻り値が `CPLAT_OK` であること。
     source_[CPLAT_STRING_CATALOG_FILTER_SOURCE_HEADER_SIZE + CPLAT_STRING_CATALOG_FILTER_HEADER_SIZE +
             CPLAT_STRING_CATALOG_FILTER_RECORD_HEADER_SIZE] ^= 0xFFU; // [状態] - 行レコードを壊す。
     cplat_atomic_store_u64(&header()->published_revision, published_revision + 2U,
@@ -277,7 +301,8 @@ TEST_F(stringCatalogFilterSourceTest, corrupt_publication_is_recorded_and_not_re
     (void)format_job_failed(&actual_matched); // [手順] - 壊れた公開内容で組み立てる。
     cplat_string_catalog_filter_source_status status = source_status();
     EXPECT_CALL(mock_cplat, cplat_local_lock_try_lock(_))
-        .Times(0);                            // [確認_異常系] - 同じ公開内容の取り込みを試みないこと。
+        .Times(0);                            // 同じ公開内容の取り込みを試みない。
+    // [Pre-Assert確認_異常系] - mock_cplat の cplat_local_lock_try_lock(_) が登録した呼び出し期待を満たすこと。
     (void)format_job_failed(&actual_matched); // [手順] - もう一度組み立てる。
 
     // Assert
@@ -295,6 +320,7 @@ TEST_F(stringCatalogFilterSourceTest, attach_validates_region_and_detaches_with_
     int actual_detach_ret;
     int actual_matched = 1;
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2")); // [状態] - 条件を公開する。
+    // [状態確認] - `publish_line("category <= 2")` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -305,6 +331,7 @@ TEST_F(stringCatalogFilterSourceTest, attach_validates_region_and_detaches_with_
                                                                       nullptr); // [手順] - 小さい領域を結び付ける。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                        nullptr)); // [手順] - 正しい領域を結び付ける。
+    // [確認_正常系] - `cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_), nullptr)` の戻り値が `CPLAT_OK` であること。
     actual_detach_ret =
         cplat_string_catalog_filter_slot_attach_source(slot_, nullptr, 0U, nullptr); // [手順] - 解除する。
     (void)format_job_failed(&actual_matched);                                        // [手順] - 解除後に組み立てる。
@@ -326,6 +353,7 @@ TEST_F(stringCatalogFilterSourceTest, publish_rejects_invalid_input_without_chan
     int actual_corrupt_image_ret;
     int actual_foreign_ret;
     ASSERT_EQ(CPLAT_OK, compile_single_line("category <= 2", image_)); // [状態] - 条件をコンパイルする。
+    // [状態確認] - `compile_single_line("category <= 2", image_)` の戻り値が `CPLAT_OK` であること。
     header()->signature = 0x12345678U;                                 // [状態] - 異なる形式の署名を置く。
     memcpy(expected_source, source_, sizeof(source_));
 
@@ -376,6 +404,7 @@ TEST_F(stringCatalogFilterSourceTest, get_info_reports_each_state)
         cplat_string_catalog_filter_source_get_info(source_, sizeof(source_),
                                                     &actual_unpublished);    // [手順] - 未公開の情報を読む。
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &published_revision)); // [手順] - 条件を公開する。
+    // [確認_正常系] - `publish_line("category <= 2", &published_revision)` の戻り値が `CPLAT_OK` であること。
     actual_published_ret =
         cplat_string_catalog_filter_source_get_info(source_, sizeof(source_),
                                                     &actual_published); // [手順] - 公開済みの情報を読む。
@@ -410,15 +439,18 @@ TEST_F(stringCatalogFilterSourceTest, publish_continues_from_carried_over_revisi
     uint64_t actual_revision = 0U;
     int actual_matched = 0;
     ASSERT_EQ(CPLAT_OK, publish_line("category >= 3")); // [状態] - 以前の条件を公開する。
+    // [状態確認] - `publish_line("category >= 3")` の戻り値が `CPLAT_OK` であること。
     cplat_atomic_store_u64(&header()->published_revision, carried_over,
                            CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 前回の版番号を大きな値にする。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                        nullptr)); // [状態] - 結び付ける。
+    // [状態確認] - `cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_), nullptr)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
     // Act
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &actual_revision)); // [手順] - 新しい条件を公開する。
+    // [確認_正常系] - `publish_line("category <= 2", &actual_revision)` の戻り値が `CPLAT_OK` であること。
     (void)format_job_failed(&actual_matched);                             // [手順] - JOB_FAILED を組み立てる。
 
     // Assert
@@ -445,9 +477,12 @@ TEST_F(stringCatalogFilterSourceTest, publish_wraps_around_at_upper_limit)
         cplat_atomic_store_u64(&header()->published_revision, UINT64_MAX - 5U,
                                CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 上限の手前の版番号にする。
         ASSERT_EQ(CPLAT_OK, publish_line("category >= 3")); // [状態] - 以前の条件を上限の手前の版番号で公開する。
+        // [状態確認] - `publish_line("category >= 3")` の戻り値が `CPLAT_OK` であること。
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                            nullptr)); // [状態] - 結び付ける。
+        // [状態確認] - `cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_), nullptr)` の戻り値が `CPLAT_OK` であること。
         ASSERT_EQ(CPLAT_OK, format_job_failed(&actual_matched));                      // [状態] - 以前の条件を取り込む。
+        // [状態確認] - `format_job_failed(&actual_matched)` の戻り値が `CPLAT_OK` であること。
         cplat_atomic_store_u64(
             &header()->published_revision, limit,
             CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 版番号を上限 (偶数) または上限で書き込み中 (奇数) にする。
@@ -456,14 +491,15 @@ TEST_F(stringCatalogFilterSourceTest, publish_wraps_around_at_upper_limit)
 
         // Act
         ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &actual_revision)); // [手順] - 新しい条件を公開する。
+        // [確認_正常系 回数=2] - `publish_line("category <= 2", &actual_revision)` の戻り値が `CPLAT_OK` であること。
         actual_matched = 0;
         (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
 
         // Assert
-        EXPECT_EQ(2U, actual_revision); // [確認_正常系] - 未公開を表す 0 を避け、最小の偶数 2 へ戻ること。
-        EXPECT_NE(0, actual_matched);   // [確認_正常系] - 戻った版番号の条件を取り込むこと。
+        EXPECT_EQ(2U, actual_revision); // [確認_正常系 回数=2] - 未公開を表す 0 を避け、最小の偶数 2 へ戻ること。
+        EXPECT_NE(0, actual_matched);   // [確認_正常系 回数=2] - 戻った版番号の条件を取り込むこと。
         EXPECT_EQ(actual_revision,
-                  source_status().taken_revision); // [確認_正常系] - 戻った版番号を取り込み済みとすること。
+                  source_status().taken_revision); // [確認_正常系 回数=2] - 戻った版番号を取り込み済みとすること。
     }
 }
 
@@ -496,9 +532,11 @@ TEST_F(stringCatalogFilterSourceTest, foreign_header_is_recorded_without_taking)
         int actual_matched = 1;
         memset(source_, 0, sizeof(source_));
         ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &published_revision)); // [状態] - 条件を公開する。
+        // [状態確認] - `publish_line("category <= 2", &published_revision)` の戻り値が `CPLAT_OK` であること。
         change.apply(header()); // [状態] - ヘッダーを異なる版や大きさに書き換える。
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                            nullptr)); // [状態] - 結び付ける。
+        // [状態確認] - `cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_), nullptr)` の戻り値が `CPLAT_OK` であること。
 
         // Pre-Assert
 
@@ -507,10 +545,10 @@ TEST_F(stringCatalogFilterSourceTest, foreign_header_is_recorded_without_taking)
 
         // Assert
         cplat_string_catalog_filter_source_status status = source_status();
-        EXPECT_EQ(0, actual_matched); // [確認_異常系] - 取り込まず、以前の条件で判定すること。
+        EXPECT_EQ(0, actual_matched); // [確認_異常系 回数=3] - 取り込まず、以前の条件で判定すること。
         EXPECT_EQ(published_revision,
-                  status.taken_revision);                      // [確認_異常系] - 版番号を記録し、繰り返し試みないこと。
-        EXPECT_EQ(change.expected_result, status.last_result); // [確認_異常系] - 不一致の種類を記録すること。
+                  status.taken_revision);                      // [確認_異常系 回数=3] - 版番号を記録し、繰り返し試みないこと。
+        EXPECT_EQ(change.expected_result, status.last_result); // [確認_異常系 回数=3] - 不一致の種類を記録すること。
     }
 }
 
@@ -521,6 +559,7 @@ TEST_F(stringCatalogFilterSourceTest, other_format_version_region_reports_versio
     unsigned char expected_source[sizeof(source_)];
     cplat_string_catalog_filter_source_info actual_info;
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2")); // [状態] - 条件を公開する。
+    // [状態確認] - `publish_line("category <= 2")` の戻り値が `CPLAT_OK` であること。
     header()->format_version = 2U;                      // [状態] - 異なる形式版の領域にする。
     memcpy(expected_source, source_, sizeof(source_));
 
@@ -593,7 +632,9 @@ TEST_F(stringCatalogFilterLockedSourceTest, takes_under_writer_lock_only_when_ch
     int actual_first_matched = 0;
     int actual_second_matched = 0;
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2")); // [状態] - 条件を公開する。
+    // [状態確認] - `publish_line("category <= 2")` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, attach_with_lock());            // [状態] - 書き込み側の排他とともに結び付ける。
+    // [状態確認] - `attach_with_lock()` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -615,7 +656,9 @@ TEST_F(stringCatalogFilterLockedSourceTest, rechecks_revision_under_writer_lock)
     uint64_t first_revision = 0U;
     int actual_matched = 1;
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &first_revision)); // [状態] - 1 回目の条件を公開する。
+    // [状態確認] - `publish_line("category <= 2", &first_revision)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, attach_with_lock()); // [状態] - 書き込み側の排他とともに結び付ける。
+    // [状態確認] - `attach_with_lock()` の戻り値が `CPLAT_OK` であること。
     counter_.on_lock =
         publish_while_waiting; // [状態] - 排他を取った時点で、待つ間に終わった公開として 2 回目の条件を公開する。
     counter_.on_lock_context = this;
@@ -631,6 +674,7 @@ TEST_F(stringCatalogFilterLockedSourceTest, rechecks_revision_under_writer_lock)
     EXPECT_GT(status.taken_revision, first_revision); // [確認_正常系] - 読み直した新しい版番号を取り込むこと。
     cplat_string_catalog_filter_source_info info;
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_source_get_info(source_, sizeof(source_), &info));
+    // [確認_正常系] - `cplat_string_catalog_filter_source_get_info(source_, sizeof(source_), &info)` の戻り値が `CPLAT_OK` であること。
     EXPECT_EQ(info.published_revision, status.taken_revision); // [確認_正常系] - 最新の版番号と一致すること。
 }
 
@@ -640,7 +684,9 @@ TEST_F(stringCatalogFilterLockedSourceTest, interrupted_write_seen_under_lock_is
     // Arrange
     int actual_matched = 1;
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2")); // [状態] - 条件を公開する。
+    // [状態確認] - `publish_line("category <= 2")` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, attach_with_lock());            // [状態] - 書き込み側の排他とともに結び付ける。
+    // [状態確認] - `attach_with_lock()` の戻り値が `CPLAT_OK` であること。
     counter_.on_lock = [](void *context)
     {
         string_catalog_filter_source_header *h = static_cast<string_catalog_filter_source_header *>(context);
@@ -668,7 +714,9 @@ TEST_F(stringCatalogFilterLockedSourceTest, lock_failure_is_recorded_and_retried
     int actual_failed_matched = 1;
     int actual_retry_matched = 0;
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &published)); // [状態] - 条件を公開する。
+    // [状態確認] - `publish_line("category <= 2", &published)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, attach_with_lock());                        // [状態] - 書き込み側の排他とともに結び付ける。
+    // [状態確認] - `attach_with_lock()` の戻り値が `CPLAT_OK` であること。
     counter_.lock_result = CPLAT_ERR_TIMEOUT;                       // [状態] - 排他の取得が失敗するようにする。
 
     // Pre-Assert
@@ -717,6 +765,7 @@ TEST_F(stringCatalogFilterLockedSourceTest, publish_takes_lock_once_while_writin
     // Arrange
     uint64_t actual_revision = 0U;
     ASSERT_EQ(CPLAT_OK, compile_single_line("category <= 2", image_)); // [状態] - 条件をコンパイルする。
+    // [状態確認] - `compile_single_line("category <= 2", image_)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -738,6 +787,7 @@ TEST_F(stringCatalogFilterLockedSourceTest, publish_lock_failure_keeps_region)
     // Arrange
     unsigned char expected_source[sizeof(source_)];
     ASSERT_EQ(CPLAT_OK, compile_single_line("category <= 2", image_)); // [状態] - 条件をコンパイルする。
+    // [状態確認] - `compile_single_line("category <= 2", image_)` の戻り値が `CPLAT_OK` であること。
     counter_.lock_result = CPLAT_ERR_TIMEOUT;                          // [状態] - 排他の取得が失敗するようにする。
     memcpy(expected_source, source_, sizeof(source_));
 
@@ -759,6 +809,7 @@ TEST_F(stringCatalogFilterLockedSourceTest, publish_rejecting_foreign_region_rel
 {
     // Arrange
     ASSERT_EQ(CPLAT_OK, compile_single_line("category <= 2", image_)); // [状態] - 条件をコンパイルする。
+    // [状態確認] - `compile_single_line("category <= 2", image_)` の戻り値が `CPLAT_OK` であること。
     header()->signature = 0x12345678U;                                 // [状態] - 異なる形式の署名を置く。
 
     // Pre-Assert
@@ -780,6 +831,7 @@ TEST_F(stringCatalogFilterLockedSourceTest, publish_rejects_incomplete_lock)
     // Arrange
     cplat_string_catalog_filter_source_lock without_unlock = {counting_lock_acquire, nullptr, &counter_};
     ASSERT_EQ(CPLAT_OK, compile_single_line("category <= 2", image_)); // [状態] - 条件をコンパイルする。
+    // [状態確認] - `compile_single_line("category <= 2", image_)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -825,6 +877,7 @@ TEST_F(stringCatalogFilterSourceTest, publish_records_catalog_id_and_rejects_zer
     // Arrange
     cplat_string_catalog_filter_source_info actual_info;
     ASSERT_EQ(CPLAT_OK, compile_single_line("category <= 2", image_)); // [状態] - 条件をコンパイルする。
+    // [状態確認] - `compile_single_line("category <= 2", image_)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -832,8 +885,10 @@ TEST_F(stringCatalogFilterSourceTest, publish_records_catalog_id_and_rejects_zer
     int actual_zero_ret = cplat_string_catalog_filter_source_publish(
         source_, sizeof(source_), image_, sizeof(image_), 0U, nullptr, nullptr); // [手順] - 識別値 0 で公開する。
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2"));                          // [手順] - 識別値を指定して公開する。
+    // [確認_正常系] - `publish_line("category <= 2")` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_source_get_info(source_, sizeof(source_),
                                                                     &actual_info)); // [手順] - 公開の情報を読む。
+    // [確認_正常系] - `cplat_string_catalog_filter_source_get_info(source_, sizeof(source_), &actual_info)` の戻り値が `CPLAT_OK` であること。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_zero_ret); // [確認_異常系] - 識別値 0 を拒否すること。
@@ -861,17 +916,21 @@ TEST_F(stringCatalogFilterSourceTest, publication_for_another_catalog_is_not_tak
         int actual_matched = 1;
         memset(source_, 0, sizeof(source_));
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_get_catalog_id(filter_test_catalog(), &other_catalog_id));
+        // [状態確認] - `cplat_string_catalog_filter_get_catalog_id(filter_test_catalog(), &other_catalog_id)` の戻り値が `CPLAT_OK` であること。
         ASSERT_EQ(CPLAT_OK, compile_single_line("category <= 2", image_)); // [状態] - 条件をコンパイルする。
+        // [状態確認] - `compile_single_line("category <= 2", image_)` の戻り値が `CPLAT_OK` であること。
         ASSERT_EQ(CPLAT_OK,
                   cplat_string_catalog_filter_source_publish(source_, sizeof(source_), image_, sizeof(image_),
                                                              case_item.is_legacy ? catalog_id_ : other_catalog_id,
                                                              nullptr, &revision)); // [状態] - 公開する。
+        // [状態確認] - `cplat_string_catalog_filter_source_publish(source_, sizeof(source_), image_, sizeof(image_), case_item.is_legacy ? catalog_id_ : other_catalog_id, nullptr, &revision)` の戻り値が `CPLAT_OK` であること。
         if (case_item.is_legacy)
         {
             header()->catalog_id = 0U; // [状態] - 識別値を持たない以前の版の領域にする。
         }
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
                                                                            nullptr)); // [状態] - 結び付ける。
+        // [状態確認] - `cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_), nullptr)` の戻り値が `CPLAT_OK` であること。
 
         // Pre-Assert
 
@@ -879,13 +938,13 @@ TEST_F(stringCatalogFilterSourceTest, publication_for_another_catalog_is_not_tak
         (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
         cplat_string_catalog_filter_source_status status = source_status();
         EXPECT_CALL(mock_cplat, cplat_local_lock_try_lock(_))
-            .Times(0);                            // [確認_異常系] - 同じ公開内容の取り込みを試みないこと。
+            .Times(0);                            // [Pre-Assert確認_異常系 回数=2] - 同じ公開内容の取り込みを試みないこと。
         (void)format_job_failed(&actual_matched); // [手順] - もう一度組み立てる。
         testing::Mock::VerifyAndClearExpectations(&mock_cplat);
 
         // Assert
-        EXPECT_EQ(0, actual_matched);               // [確認_異常系] - 取り込まず、以前の条件で判定すること。
-        EXPECT_EQ(revision, status.taken_revision); // [確認_異常系] - 版番号を記録すること。
-        EXPECT_EQ(CPLAT_ERR_IDENTITY_MISMATCH, status.last_result); // [確認_異常系] - カタログの不一致を記録すること。
+        EXPECT_EQ(0, actual_matched);               // [確認_異常系 回数=2] - 取り込まず、以前の条件で判定すること。
+        EXPECT_EQ(revision, status.taken_revision); // [確認_異常系 回数=2] - 版番号を記録すること。
+        EXPECT_EQ(CPLAT_ERR_IDENTITY_MISMATCH, status.last_result); // [確認_異常系 回数=2] - カタログの不一致を記録すること。
     }
 }

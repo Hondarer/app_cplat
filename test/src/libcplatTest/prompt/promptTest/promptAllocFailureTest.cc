@@ -19,6 +19,7 @@ class promptAllocFailureTest : public Test
         promptFakeReset();
         prompt_ = cplat_prompt_create(NULL);
         ASSERT_NE((cplat_prompt *)NULL, prompt_);
+        // [状態確認] - `(cplat_prompt *)NULL` と `prompt_` が異なること。
         /* 端末に接続していない実行環境でも対話パスを通すため、TTY 状態を直接立てる */
         prompt_->is_tty = 1;
     }

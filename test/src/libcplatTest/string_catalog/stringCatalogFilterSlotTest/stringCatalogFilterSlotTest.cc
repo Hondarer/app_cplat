@@ -82,6 +82,7 @@ TEST_F(stringCatalogFilterSlotTest, create_returns_rwlock_create_result)
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_create(_))
         .WillOnce(
             Return(CPLAT_ERR_UNKNOWN)); // [Pre-Assert手順] - 読み書きロックの作成で CPLAT_ERR_UNKNOWN を返却する。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_local_rwlock_create(_) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_local_lock_create(_))
         .Times(0); // [Pre-Assert確認_異常系] - ミューテックスの作成へ進まないこと。
 
@@ -105,6 +106,7 @@ TEST_F(stringCatalogFilterSlotTest, create_returns_lock_create_result)
     EXPECT_CALL(mock_cplat, cplat_local_lock_create(_))
         .WillOnce(Return(
             CPLAT_ERR_PERMISSION_DENIED)); // [Pre-Assert手順] - ミューテックスの作成で CPLAT_ERR_PERMISSION_DENIED を返却する。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_local_lock_create(_) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_dispose(_))
         .Times(1); // [Pre-Assert確認_異常系] - 作成済みの読み書きロックを破棄すること。
 
@@ -126,11 +128,14 @@ TEST_F(stringCatalogFilterSlotTest, vformat_returns_lock_result_without_formatti
     int actual_matched = 1;
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity,
                                                                 kLineWidth, &slot)); // [状態] - スロットを作成する。
+    // [状態確認] - `cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity, kLineWidth, &slot)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_strcpy(dest, sizeof(dest), "previous")); // [状態] - 格納先へ以前の内容を書き込む。
+    // [状態確認] - `cplat_strcpy(dest, sizeof(dest), "previous")` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_, _))
         .WillOnce(Return(CPLAT_ERR_UNKNOWN)); // [Pre-Assert手順] - 共有ロックの取得で CPLAT_ERR_UNKNOWN を返却する。
+    // [Pre-Assert確認_正常系] - mock_cplat の cplat_local_rwlock_lock_shared(_, _) が登録した呼び出し期待を満たすこと。
 
     // Act
     actual_ret = call_slot_vformat(slot, dest, sizeof(dest), &actual_matched, FILTER_TEST_CATALOG_KEY_NUMBER,
@@ -150,6 +155,7 @@ TEST_F(stringCatalogFilterSlotTest, vformat_formats_when_lock_succeeds)
     int actual_matched = 1;
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity,
                                                                 kLineWidth, &slot)); // [状態] - スロットを作成する。
+    // [状態確認] - `cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity, kLineWidth, &slot)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_, _))
@@ -173,6 +179,7 @@ TEST_F(stringCatalogFilterSlotTest, vformat_skips_lock_for_missing_key)
     int actual_matched = 1;
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity,
                                                                 kLineWidth, &slot)); // [状態] - スロットを作成する。
+    // [状態確認] - `cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity, kLineWidth, &slot)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_, _))
@@ -316,6 +323,7 @@ TEST_F(stringCatalogFilterSlotTest, get_catalog_returns_creation_catalog)
 
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity,
                                                                 kLineWidth, &slot)); // [状態] - スロットを作成する。
+    // [状態確認] - `cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity, kLineWidth, &slot)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -349,6 +357,7 @@ TEST_F(stringCatalogFilterSlotTest, vformat_rejects_null_dest)
     int actual_matched = 1;
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity,
                                                                 kLineWidth, &slot)); // [状態] - スロットを作成する。
+    // [状態確認] - `cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity, kLineWidth, &slot)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_, _))

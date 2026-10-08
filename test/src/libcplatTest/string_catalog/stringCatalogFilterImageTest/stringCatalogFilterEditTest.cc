@@ -24,6 +24,7 @@ TEST_F(stringCatalogFilterEditTest, insert_line_at_head_and_tail_are_reflected)
     int actual_insert_tail_ret;
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == 1", image)); // [状態] - 1 行の条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("key == 1", image)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -62,6 +63,7 @@ TEST_F(stringCatalogFilterEditTest, compile_line_replaces_only_target_line)
     int actual_ret;
 
     ASSERT_EQ(CPLAT_OK, compile_lines(lines, 2U, image)); // [状態] - 2 行の条件式をコンパイルする。
+    // [状態確認] - `compile_lines(lines, 2U, image)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -91,6 +93,7 @@ TEST_F(stringCatalogFilterEditTest, remove_line_shifts_following_lines)
     int actual_remove_ret;
 
     ASSERT_EQ(CPLAT_OK, compile_lines(lines, 3U, image)); // [状態] - 3 行の条件式をコンパイルする。
+    // [状態確認] - `compile_lines(lines, 3U, image)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -120,6 +123,7 @@ TEST_F(stringCatalogFilterEditTest, malformed_compile_line_leaves_image_unchange
     int actual_ret;
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == 1", image)); // [状態] - 1 行の条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("key == 1", image)` の戻り値が `CPLAT_OK` であること。
     std::memcpy(snapshot, image, kImageSize);                    // [状態] - 変更前のバイト列を保存する。
 
     // Pre-Assert
@@ -145,6 +149,7 @@ TEST_F(stringCatalogFilterEditTest, malformed_insert_line_leaves_image_unchanged
     int actual_ret;
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == 1", image)); // [状態] - 1 行の条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("key == 1", image)` の戻り値が `CPLAT_OK` であること。
     std::memcpy(snapshot, image, kImageSize);                    // [状態] - 変更前のバイト列を保存する。
 
     // Pre-Assert
@@ -170,6 +175,7 @@ TEST_F(stringCatalogFilterEditTest, insert_line_at_full_capacity_returns_storage
     ASSERT_EQ(CPLAT_OK,
               compile_single_line("key == 1", image, CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(1U, kLineWidth), kLineWidth,
                                   1U)); // [状態] - 行数の上限 1 いっぱいまで条件式を格納する。
+    // [状態確認] - `compile_single_line("key == 1", image, CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(1U, kLineWidth), kLineWidth, 1U)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 

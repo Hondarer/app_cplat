@@ -53,6 +53,7 @@ TEST(syncDescriptorTest, rejects_zero_and_mismatched_identity_lengths)
 
     // Pre-Assert
     ASSERT_EQ(CPLAT_OK, cplat_internal_interprocess_sync_descriptor_export("identity", 1U, 1U, descriptor, &descriptor_size));
+    // [確認_正常系] - `cplat_internal_interprocess_sync_descriptor_export("identity", 1U, 1U, descriptor, &descriptor_size)` の戻り値が `CPLAT_OK` であること。
 
     // Act
     descriptor[8] = 0U;

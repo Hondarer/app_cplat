@@ -184,6 +184,7 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_prefixes_timestamp)
     pipe_fds[1] = -1;
     nread = read(pipe_fds[0], actual, sizeof(actual) - 1); // [手順] - pipe から書き込まれた 1 行を読み取る。
     ASSERT_GT(nread, 0);
+    // [確認_正常系] - `nread` が `0` より大きいこと。
     actual[nread] = '\0';
 
     snprintf(expected, sizeof(expected), "2014-10-10T13:50:40.000+09:00 <14>syslog_test[%d]: test message\n",
@@ -266,6 +267,7 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_falls_back_from_invalid_explicit_
     pipe_fds[1] = -1;
     nread = read(pipe_fds[0], actual, sizeof(actual) - 1); // [手順] - pipe から書き込まれた 1 行を読み取る。
     ASSERT_GT(nread, 0);
+    // [確認_異常系] - `nread` が `0` より大きいこと。
     actual[nread] = '\0';
 
     snprintf(expected, sizeof(expected), "<14>syslog_test[%d]: invalid ts\n", (int)getpid());

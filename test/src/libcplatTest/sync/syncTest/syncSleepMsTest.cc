@@ -52,7 +52,9 @@ TEST(syncSleepMsTest, elapses_at_least_specified_duration)
             [](const char *, int, const char *, const struct timespec *req, struct timespec *) -> int
             {
                 EXPECT_EQ(0, req->tv_sec);
+                // [確認_正常系] - `nanosleep` に渡す待機時間の秒部 が `0` であること。
                 EXPECT_EQ(50000000L, req->tv_nsec);
+                // [確認_正常系] - `nanosleep` に渡す待機時間のナノ秒部 が `50000000L` であること。
                 return 0;
             }); // [Pre-Assert確認_正常系] - nanosleep が 50 ms 相当で 1 回呼び出されること。
                 // [Pre-Assert手順] - nanosleep から 0 を返却する。

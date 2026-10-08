@@ -166,6 +166,7 @@ TEST_F(compress_cliTest, main_rejects_compress_input_over_size_limit_before_read
     EXPECT_CALL(mock_cplat_, cplat_ftell(input_file))
         .WillOnce(Return(kMaxUncompressedSize +
                          1)); // [Pre-Assert手順] - 入力ファイルのサイズとして上限より 1 byte 大きい値を返却する。
+    // [Pre-Assert確認_異常系] - mock_cplat_ の cplat_ftell(input_file) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat_, cplat_fseek(input_file, 0, SEEK_SET))
         .Times(0); // [Pre-Assert確認_異常系] - 上限超過時は入力ファイルの先頭へ戻す処理が呼び出されないこと。
     EXPECT_CALL(mock_stdio_, fread(_, _, _, _, _, _, _))
@@ -203,18 +204,21 @@ TEST_F(compress_cliTest, main_compresses_input_and_writes_output)
         .WillOnce(
             DoAll(SetArgPointee<2>(0),
                   Return(CPLAT_OK))); // [Pre-Assert手順] - equal_out に 0 (不一致) を設定して CPLAT_OK を返却する。
+    // [Pre-Assert確認_正常系] - mock_cplat_ の cplat_path_equal(StrEq("input.bin"), StrEq("output.bin"), _, _) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat_, cplat_path_get_full(_, _, _, StrEq("input.bin")))
         .WillOnce(
             [](char *path_out, size_t path_size, cplat_error *detail_out, const char *)
             {
                 return return_full_path(path_out, path_size, detail_out, "/tmp/input.bin");
             }); // [Pre-Assert手順] - 入力パスの正規化結果として "/tmp/input.bin" を返却する。
+    // [Pre-Assert確認_正常系] - mock_cplat_ の cplat_path_get_full(_, _, _, StrEq("input.bin")) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat_, cplat_path_get_full(_, _, _, StrEq("output.bin")))
         .WillOnce(
             [](char *path_out, size_t path_size, cplat_error *detail_out, const char *)
             {
                 return return_full_path(path_out, path_size, detail_out, "/tmp/output.bin");
             }); // [Pre-Assert手順] - 出力パスの正規化結果として "/tmp/output.bin" を返却する。
+    // [Pre-Assert確認_正常系] - mock_cplat_ の cplat_path_get_full(_, _, _, StrEq("output.bin")) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat_, cplat_fopen(StrEq("/tmp/input.bin"), StrEq("rb"), _))
         .WillOnce(Return(input_file)); // [Pre-Assert確認_正常系] - 入力ファイルがモード "rb" で開かれること。
     EXPECT_CALL(mock_cplat_, cplat_fseek(input_file, 0, SEEK_END))
@@ -234,6 +238,7 @@ TEST_F(compress_cliTest, main_compresses_input_and_writes_output)
                 std::memcpy(ptr, kPlainInput, sizeof(kPlainInput));
                 return count;
             }); // [Pre-Assert手順] - 入力ファイルの読み込みで平文データ 6 byte を返却する。
+    // [Pre-Assert確認_正常系] - mock_stdio_ の fread(_, _, _, _, 1u, sizeof(kPlainInput), input_file) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_stdio_, fclose(_, _, _, input_file))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 入力ファイルが fclose されること。
                               // [Pre-Assert手順] - 入力ファイルの fclose から 0 を返却する。
@@ -248,6 +253,7 @@ TEST_F(compress_cliTest, main_compresses_input_and_writes_output)
                         sizeof(
                             kPlainInput))); // [Pre-Assert確認_正常系] - 圧縮 API に読み込んだ平文データがそのまま渡ること。
                 EXPECT_GE(*dst_len, sizeof(kCompressedPayload));
+                // [確認_正常系] - `*dst_len` が `sizeof(kCompressedPayload)` 以上であること。
                 std::memcpy(dst, kCompressedPayload, sizeof(kCompressedPayload));
                 *dst_len = sizeof(kCompressedPayload);
                 return 0;
@@ -333,6 +339,7 @@ TEST_F(compress_cliTest, main_rejects_decompress_input_when_original_size_is_zer
                 std::memcpy(ptr, invalid_input, sizeof(invalid_input));
                 return count;
             }); // [Pre-Assert手順] - 入力ファイルの読み込みで不正入力 9 byte を返却する。
+    // [Pre-Assert確認_異常系] - mock_stdio_ の fread(_, _, _, _, 1u, sizeof(invalid_input), input_file) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_stdio_, fclose(_, _, _, input_file))
         .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - ヘッダー不正時に入力ファイルが fclose されること。
                               // [Pre-Assert手順] - 入力ファイルの fclose から 0 を返却する。
@@ -403,6 +410,7 @@ TEST_F(compress_cliTest, main_rejects_decompress_input_when_original_size_exceed
                 std::memcpy(ptr, invalid_input, sizeof(invalid_input));
                 return count;
             }); // [Pre-Assert手順] - 入力ファイルの読み込みで元サイズが上限を超える入力 9 byte を返却する。
+    // [Pre-Assert確認_異常系] - mock_stdio_ の fread(_, _, _, _, 1u, sizeof(invalid_input), input_file) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_stdio_, fclose(_, _, _, input_file))
         .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - 元サイズの上限超過時に入力ファイルが fclose されること。
                               // [Pre-Assert手順] - 入力ファイルの fclose から 0 を返却する。
@@ -475,6 +483,7 @@ TEST_F(compress_cliTest, main_rejects_decompress_when_max_original_size_allocati
                 std::memcpy(ptr, max_size_input, sizeof(max_size_input));
                 return count;
             }); // [Pre-Assert手順] - 入力ファイルの読み込みで元サイズが UINT32_MAX の入力 9 byte を返却する。
+    // [Pre-Assert確認_異常系] - mock_stdio_ の fread(_, _, _, _, 1u, sizeof(max_size_input), input_file) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_stdio_, fclose(_, _, _, input_file))
         .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - バッファー確保失敗時に入力ファイルが fclose されること。
                               // [Pre-Assert手順] - 入力ファイルの fclose から 0 を返却する。
@@ -542,6 +551,7 @@ TEST_F(compress_cliTest, main_rejects_decompress_input_when_raw_file_exceeds_siz
     EXPECT_CALL(mock_cplat_, cplat_ftell(input_file))
         .WillOnce(Return(kMaxUncompressedSize +
                          1)); // [Pre-Assert手順] - 入力ファイルのサイズとして上限より 1 byte 大きい値を返却する。
+    // [Pre-Assert確認_異常系] - mock_cplat_ の cplat_ftell(input_file) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat_, cplat_fseek(input_file, 0, SEEK_SET))
         .Times(0); // [Pre-Assert確認_異常系] - 上限超過時は入力ファイルの先頭へ戻す処理が呼び出されないこと。
     EXPECT_CALL(mock_stdio_, fread(_, _, _, _, _, _, _))
@@ -618,6 +628,7 @@ TEST_F(compress_cliTest, main_decompresses_one_byte_input)
                 std::memcpy(ptr, compressed_input, sizeof(compressed_input));
                 return count;
             }); // [Pre-Assert手順] - 入力ファイルの読み込みで元サイズが 1 byte の圧縮入力を返却する。
+    // [Pre-Assert確認_正常系] - mock_stdio_ の fread(_, _, _, _, 1u, sizeof(compressed_input), input_file) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_stdio_, fclose(_, _, _, input_file))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 入力ファイルが fclose されること。
                               // [Pre-Assert手順] - 入力ファイルの fclose から 0 を返却する。
@@ -711,6 +722,7 @@ TEST_F(compress_cliTest, main_rejects_decompress_output_when_size_mismatches_hea
                 std::memcpy(ptr, kCompressedPayload, sizeof(kCompressedPayload));
                 return count;
             }); // [Pre-Assert手順] - 入力ファイルの読み込みで圧縮済みデータ 7 byte を返却する。
+    // [Pre-Assert確認_異常系] - mock_stdio_ の fread(_, _, _, _, 1u, sizeof(kCompressedPayload), input_file) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_stdio_, fclose(_, _, _, input_file))
         .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - サイズ不一致時に入力ファイルが fclose されること。
                               // [Pre-Assert手順] - 入力ファイルの fclose から 0 を返却する。
@@ -792,6 +804,7 @@ TEST_F(compress_cliTest, main_removes_partial_output_when_write_fails)
                 std::memcpy(ptr, kCompressedPayload, sizeof(kCompressedPayload));
                 return count;
             }); // [Pre-Assert手順] - 入力ファイルの読み込みで圧縮済みデータ 7 byte を返却する。
+    // [Pre-Assert確認_異常系] - mock_stdio_ の fread(_, _, _, _, 1u, sizeof(kCompressedPayload), input_file) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_stdio_, fclose(_, _, _, input_file))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 入力ファイルが fclose されること。
                               // [Pre-Assert手順] - 入力ファイルの fclose から 0 を返却する。
@@ -803,6 +816,7 @@ TEST_F(compress_cliTest, main_removes_partial_output_when_write_fails)
                 *dst_len = sizeof(kDecompressedOutput);
                 return 0;
             }); // [Pre-Assert手順] - cplat_decompress から展開済みデータ 6 byte を返却する。
+    // [Pre-Assert確認_異常系] - mock_cplat_ の cplat_decompress(_, _, _, sizeof(kCompressedPayload)) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_cplat_, cplat_fopen(StrEq("/tmp/output.bin"), StrEq("wb"), _))
         .WillOnce(Return(output_file)); // [Pre-Assert確認_正常系] - 出力ファイルがモード "wb" で開かれること。
                                         // [Pre-Assert手順] - 出力ファイルのハンドルを返却する。
@@ -810,6 +824,7 @@ TEST_F(compress_cliTest, main_removes_partial_output_when_write_fails)
         .WillOnce(Return(
             sizeof(kDecompressedOutput) -
             1u)); // [Pre-Assert手順] - 出力ファイルの書き込みで要求より 1 byte 少ない 5 byte を返却し、書き込み失敗を発生させる。
+    // [Pre-Assert確認_異常系] - mock_stdio_ の fwrite(_, _, _, _, 1u, sizeof(kDecompressedOutput), output_file) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_stdio_, fclose(_, _, _, output_file))
         .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - 書き込み失敗時に出力ファイルが fclose されること。
                               // [Pre-Assert手順] - 出力ファイルの fclose から 0 を返却する。

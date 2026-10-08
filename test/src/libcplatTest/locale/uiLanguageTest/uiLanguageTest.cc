@@ -285,7 +285,8 @@ TEST_F(uiLanguageTest, ReturnsWindowsUiLanguageWhenEnvironmentIsUnset)
 {
     // Arrange
     char tag[CPLAT_UI_LANGUAGE_TAG_MAX];
-    char normalized[CPLAT_UI_LANGUAGE_TAG_MAX];
+    char normalized[CPLAT_UI_LANGUAGE_TAG_MAX] = {};
+    int normalize_ret = CPLAT_OK;
 
     // Pre-Assert
 
@@ -297,11 +298,11 @@ TEST_F(uiLanguageTest, ReturnsWindowsUiLanguageWhenEnvironmentIsUnset)
     if (tag[0] != '\0')
     {
         // OS の表示言語は実行環境によって異なるため、値ではなく表記が規則に従うことを確認する
-        int normalize_ret = cplat_internal_ui_language_normalize(
+        normalize_ret = cplat_internal_ui_language_normalize(
             tag, normalized, sizeof(normalized));
-        EXPECT_EQ(CPLAT_OK, normalize_ret); // [確認_正常系] - 取得した言語タグを解釈できること。
-        EXPECT_STREQ(tag, normalized); // [確認_正常系] - 取得した言語タグが正規化済みの表記であること。
     }
+    EXPECT_EQ(CPLAT_OK, normalize_ret); // [確認_正常系] - 空の言語タグを許容し、取得した言語タグを解釈できること。
+    EXPECT_STREQ(tag, normalized); // [確認_正常系] - 取得した言語タグが空または正規化済みの表記であること。
 }
 
 // mock 化した表示言語の優先順位の先頭が、言語タグへ変換されることの確認

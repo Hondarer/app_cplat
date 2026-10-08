@@ -20,6 +20,7 @@ class stringCatalogFilterCheckTest : public Test
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(
                                 filter_test_mixed_catalog(), filter_test_mixed_key_names(),
                                 filter_test_mixed_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_));
+        // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_mixed_catalog(), filter_test_mixed_key_names(), filter_test_mixed_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
     }
 
     void TearDown() override
@@ -208,6 +209,7 @@ TEST_F(stringCatalogFilterCheckTest, warning_count_exceeding_capacity_is_reporte
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("arg.value == 5 || arg.value == \"x\"",
                                             image)); // [状態] - 警告が 4 件になる条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("arg.value == 5 || arg.value == \"x\"", image)` の戻り値が `CPLAT_OK` であること。
     actual_warnings[1].kind = CPLAT_STRING_CATALOG_FILTER_WARNING_NONE;
 
     // Pre-Assert
@@ -237,8 +239,10 @@ TEST_F(stringCatalogFilterCheckTest, check_keeps_applied_conditions)
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == FILTER_TEST_MIXED_KEY_NUMBER_VALUE",
                                             applied)); // [状態] - NUMBER_VALUE だけに一致する条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("key == FILTER_TEST_MIXED_KEY_NUMBER_VALUE", applied)` の戻り値が `CPLAT_OK` であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_apply(slot_, applied, kImageSize, nullptr, 0U,
                                                                nullptr)); // [状態] - 条件式を適用する。
+    // [状態確認] - `cplat_string_catalog_filter_slot_apply(slot_, applied, kImageSize, nullptr, 0U, nullptr)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 
@@ -285,6 +289,7 @@ TEST_F(stringCatalogFilterCheckTest, null_arguments_are_rejected)
     static unsigned char image[kImageSize];
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("arg.value == 5", image)); // [状態] - 条件式をコンパイルする。
+    // [状態確認] - `compile_single_line("arg.value == 5", image)` の戻り値が `CPLAT_OK` であること。
 
     // Pre-Assert
 

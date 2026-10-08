@@ -30,8 +30,9 @@ TEST_F(argparser_sampleTest, main_parses_and_prints_all_kinds)
     const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
 
     // Pre-Assert
-    // [Pre-Assert確認_正常系] - 解析結果が標準出力に表示されること。
+    // 解析結果が標準出力に表示されること。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, HasSubstr("verbose: 2"))).Times(1);
+    // [Pre-Assert確認_正常系] - mock_stdio_ の printf(_, _, _, HasSubstr("verbose: 2")) が登録した呼び出し期待を満たすこと。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, HasSubstr("count: 3")))
         .Times(1); // [Pre-Assert確認_正常系] - count: 3 が標準出力に表示されること。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, HasSubstr("name: alice")))

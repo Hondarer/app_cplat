@@ -39,11 +39,14 @@ class fileTimestampFailureInjectionTest : public testing::Test
         (void)cplat_remove(kPath, NULL);
         stream = cplat_fopen(kPath, "wb", NULL);
         ASSERT_NE(nullptr, stream);
+        // [状態確認] - `nullptr` と `stream` が異なること。
         ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, NULL));
+        // [状態確認] - `cplat_fclose(stream, NULL)` の戻り値が `CPLAT_OK` であること。
 
         cplat_file_init(&file_);
         ASSERT_EQ(CPLAT_OK,
                   cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL));
+        // [状態確認] - `cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL)` の戻り値が `CPLAT_OK` であること。
     }
 
     void TearDown() override
@@ -76,8 +79,9 @@ TEST_F(fileTimestampFailureInjectionTest, get_reports_fstat_failure)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_get); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
-    // [確認_異常系] - 詳細エラーの要因が入出力エラーであること。
+    // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
+    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
 
 // futimens の失敗が cplat_file_set_modified_timestamp から伝播することの確認
@@ -100,8 +104,9 @@ TEST_F(fileTimestampFailureInjectionTest, set_reports_futimens_failure)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_set); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
-    // [確認_異常系] - 詳細エラーの要因が入出力エラーであること。
+    // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
+    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
 
 // utimensat の失敗が cplat_file_set_path_modified_timestamp から伝播することの確認
@@ -124,8 +129,9 @@ TEST_F(fileTimestampFailureInjectionTest, set_path_reports_utimensat_failure)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_set); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
-    // [確認_異常系] - 詳細エラーの要因が入出力エラーであること。
+    // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
+    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
 
 // stat の失敗が cplat_file_get_path_modified_timestamp から伝播することの確認
@@ -148,8 +154,9 @@ TEST_F(fileTimestampFailureInjectionTest, get_path_reports_stat_failure)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_get); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
-    // [確認_異常系] - 詳細エラーの要因が入出力エラーであること。
+    // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
+    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
 
 #elif defined(PLATFORM_WINDOWS)
@@ -177,11 +184,14 @@ class fileTimestampFailureInjectionTest : public testing::Test
         (void)cplat_remove(kPath, NULL);
         stream = cplat_fopen(kPath, "wb", NULL);
         ASSERT_NE(nullptr, stream);
+        // [状態確認] - `nullptr` と `stream` が異なること。
         ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, NULL));
+        // [状態確認] - `cplat_fclose(stream, NULL)` の戻り値が `CPLAT_OK` であること。
 
         cplat_file_init(&file_);
         ASSERT_EQ(CPLAT_OK,
                   cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL));
+        // [状態確認] - `cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL)` の戻り値が `CPLAT_OK` であること。
     }
 
     void TearDown() override
@@ -217,8 +227,9 @@ TEST_F(fileTimestampFailureInjectionTest, get_reports_GetFileTime_failure)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_get); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
-    // [確認_異常系] - 詳細エラーの要因が入出力エラーであること。
+    // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
+    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
 
 // SetFileTime の失敗が cplat_file_set_modified_timestamp から伝播することの確認
@@ -244,8 +255,9 @@ TEST_F(fileTimestampFailureInjectionTest, set_reports_SetFileTime_failure)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_set); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
-    // [確認_異常系] - 詳細エラーの要因が入出力エラーであること。
+    // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
+    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
 
 // パス版の GetFileTime の失敗が cplat_file_get_path_modified_timestamp から伝播することの確認
@@ -271,8 +283,9 @@ TEST_F(fileTimestampFailureInjectionTest, get_path_reports_GetFileTime_failure)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_get); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
-    // [確認_異常系] - 詳細エラーの要因が入出力エラーであること。
+    // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
+    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
 
 // パス版の SetFileTime の失敗が cplat_file_set_path_modified_timestamp から伝播することの確認
@@ -298,8 +311,9 @@ TEST_F(fileTimestampFailureInjectionTest, set_path_reports_SetFileTime_failure)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_set); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
-    // [確認_異常系] - 詳細エラーの要因が入出力エラーであること。
+    // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
+    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
 
 // パス版の取得で CloseHandle の失敗が伝播することの確認
@@ -326,8 +340,9 @@ TEST_F(fileTimestampFailureInjectionTest, get_path_reports_CloseHandle_failure)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_get); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
-    // [確認_異常系] - 詳細エラーの要因が入出力エラーであること。
+    // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
+    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
 
 // パス版の設定で CloseHandle の失敗が伝播することの確認
@@ -354,8 +369,9 @@ TEST_F(fileTimestampFailureInjectionTest, set_path_reports_CloseHandle_failure)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_set); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
-    // [確認_異常系] - 詳細エラーの要因が入出力エラーであること。
+    // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
+    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
 
 #endif /* PLATFORM_ */

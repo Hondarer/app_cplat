@@ -120,7 +120,7 @@ TEST_F(fileFailureInjectionTest, init_accepts_null)
     cplat_file_init(NULL); // [手順] - NULL を指定して cplat_file_init を呼び出す。
 
     // Assert
-    // [確認_正常系] - クラッシュせずに完了すること。
+    SUCCEED(); // [確認_正常系] - クラッシュせずに完了すること。
 }
 
 // 既存ハンドルのクローズに失敗した場合にオープン処理を中断することの確認

@@ -142,6 +142,7 @@ class traceHookTest : public Test
     {
         cplat_tracer *handle = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED);
         EXPECT_NE((cplat_tracer *)NULL, handle);
+        // [状態確認] - `(cplat_tracer *)NULL` と `handle` が異なること。
         return handle;
     }
 };

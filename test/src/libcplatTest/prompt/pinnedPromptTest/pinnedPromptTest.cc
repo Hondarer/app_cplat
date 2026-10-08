@@ -1321,6 +1321,7 @@ TEST(pinnedPromptTest, tty_readline_with_initial_returns_initial_text_on_enter)
 
     // Pre-Assert
     expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "\n");
+    // [Pre-Assert確認_正常系 回数=6] - 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
     // [Pre-Assert手順] - 端末操作を成功させ、入力として改行だけを返却する。
 
     // Act
@@ -1351,6 +1352,7 @@ TEST(pinnedPromptTest, tty_readline_with_initial_allows_editing_from_end)
 
     // Pre-Assert
     expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "\x7F-3\n");
+    // [Pre-Assert確認_正常系 回数=6] - 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
     // [Pre-Assert手順] - 端末操作を成功させ、Backspace、"-3"、改行を返却する。
 
     // Act
@@ -1383,6 +1385,7 @@ TEST(pinnedPromptTest, tty_readline_with_initial_restores_initial_text_after_his
         NiceMock<Mock_unistd> mock_unistd;
 
         expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "first\n");
+    // [Pre-Assert確認_正常系 回数=6] - 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
         ASSERT_EQ(CPLAT_OK, cplat_pinned_prompt_readline_at(screen, first_output, sizeof(first_output), "",
                                                             "history.c", 1)); // [状態] - "first" を履歴へ登録する。
                                                                              // [状態確認] - readline の戻り値が CPLAT_OK であること。
@@ -1395,6 +1398,7 @@ TEST(pinnedPromptTest, tty_readline_with_initial_restores_initial_text_after_his
 
     // Pre-Assert
     expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "\x1B[A\x1B[B\n");
+    // [Pre-Assert確認_正常系 回数=6] - 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
     // [Pre-Assert手順] - 端末操作を成功させ、上矢印、下矢印、改行を返却する。
     EXPECT_CALL(mock_select, select(_, _, _, _, _, _, _, _)).WillRepeatedly(Return(1));
     // [Pre-Assert確認_正常系] - select がエスケープシーケンスの後続判定で呼び出されること。
@@ -1431,6 +1435,7 @@ TEST(pinnedPromptTest, tty_readline_with_initial_reports_out_of_memory_when_edit
         NiceMock<Mock_unistd> mock_unistd;
 
         expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "x\n");
+    // [Pre-Assert確認_正常系 回数=6] - 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
         ASSERT_EQ(CPLAT_OK, cplat_pinned_prompt_readline_at(screen, first_output, sizeof(first_output), "",
                                                             "alloc.c", 1)); // [状態] - 同じ呼び出し位置で履歴のコンテキストを確保する。
                                                                            // [状態確認] - readline の戻り値が CPLAT_OK であること。
@@ -1443,6 +1448,7 @@ TEST(pinnedPromptTest, tty_readline_with_initial_reports_out_of_memory_when_edit
 
     // Pre-Assert
     expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "\n");
+    // [Pre-Assert確認_正常系 回数=6] - 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
     // [Pre-Assert手順] - 端末操作を成功させる。
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _)).WillOnce(Return(nullptr));
     // [Pre-Assert確認_異常系] - cplat_realloc が編集バッファーの拡張のために 1 回呼び出されること。

@@ -376,7 +376,7 @@ TEST_F(promptEditTest, resolve_options_accepts_null_outputs)
                                          NULL); // [手順] - 出力先をすべて NULL にして呼び出す。
 
     // Assert
-    // [確認_正常系] - クラッシュせずに完了すること。
+    SUCCEED(); // [確認_正常系] - クラッシュせずに完了すること。
 }
 
 // 再確保に失敗した場合に拒否されることの確認

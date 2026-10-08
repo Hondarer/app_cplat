@@ -80,7 +80,7 @@ TEST_F(timeTest, gmtime_zeroes_tm_when_platform_conversion_fails)
     Mock_time mock_time;
 
     // Pre-Assert
-    // [Pre-Assert確認_異常系] - OS の時刻変換関数が epoch=0 と有効な出力先で 1 回呼び出されること。
+    // OS の時刻変換関数が epoch=0 と有効な出力先で 1 回呼び出されること。
     // [Pre-Assert手順] - OS の時刻変換関数から失敗を返却する。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_time, gmtime_r(_, _, _, _, _))
@@ -88,18 +88,24 @@ TEST_F(timeTest, gmtime_zeroes_tm_when_platform_conversion_fails)
             [](const char *, const int, const char *, const time_t *timep, struct tm *result)
             {
                 EXPECT_EQ((time_t)0, *timep);
+                // [確認_正常系] - `gmtime_r` に渡す時刻の秒数が `(time_t)0` であること。
                 EXPECT_NE((struct tm *)NULL, result);
+                // [確認_正常系] - `(struct tm *)NULL` と `result` が異なること。
                 return (struct tm *)NULL;
             });
+    // [Pre-Assert確認_異常系] - mock_time の gmtime_r(_, _, _, _, _) が登録した呼び出し期待を満たすこと。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_time, gmtime_s(_, _, _, _, _))
         .WillOnce(
             [](const char *, const int, const char *, struct tm *result, const time_t *timep)
             {
                 EXPECT_EQ((time_t)0, *timep);
+                // [確認_正常系] - `gmtime_s` に渡す時刻の秒数が `(time_t)0` であること。
                 EXPECT_NE((struct tm *)NULL, result);
+                // [確認_正常系] - `(struct tm *)NULL` と `result` が異なること。
                 return 1;
             });
+    // [Pre-Assert確認_異常系] - mock_time の gmtime_s(_, _, _, _, _) が登録した呼び出し期待を満たすこと。
 #endif
 
     // Act
@@ -129,8 +135,10 @@ TEST_F(timeTest, localtime_matches_platform_result)
     // [Pre-Assert手順] - OS のローカル時刻変換で期待値 expected_tm を取得する。
 #if defined(PLATFORM_LINUX)
     ASSERT_NE((struct tm *)NULL, localtime_r(&epoch, &expected_tm));
+    // [確認_正常系] - `(struct tm *)NULL` と `localtime_r(&epoch, &expected_tm)` が異なること。
 #elif defined(PLATFORM_WINDOWS)
     ASSERT_EQ(0, localtime_s(&expected_tm, &epoch));
+    // [確認_正常系] - `localtime_s(&expected_tm, &epoch)` の戻り値が `0` であること。
 #endif
 
     // Act
@@ -193,12 +201,14 @@ TEST_F(timeTest, localtime_zeroes_tm_when_platform_conversion_fails)
     Mock_time mock_time;
 
     // Pre-Assert
-    // [Pre-Assert確認_異常系] - OS のローカル時刻変換関数が有効な引数で 1 回呼び出されること。
+    // OS のローカル時刻変換関数が有効な引数で 1 回呼び出されること。
     // [Pre-Assert手順] - OS のローカル時刻変換関数から失敗を返却する。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_time, localtime_r(_, _, _, _, _)).WillOnce(Return((struct tm *)NULL));
+    // [Pre-Assert確認_異常系] - mock_time の localtime_r(_, _, _, _, _) が登録した呼び出し期待を満たすこと。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_time, localtime_s(_, _, _, _, _)).WillOnce(Return(1));
+    // [Pre-Assert確認_異常系] - mock_time の localtime_s(_, _, _, _, _) が登録した呼び出し期待を満たすこと。
 #endif
 
     // Act
@@ -253,8 +263,10 @@ TEST_F(timeTest, ctime_matches_platform_result)
     // [Pre-Assert手順] - OS の ctime 系関数で期待値 expected を取得する。
 #if defined(PLATFORM_LINUX)
     ASSERT_NE((char *)NULL, ctime_r(&epoch, expected));
+    // [確認_正常系] - `(char *)NULL` と `ctime_r(&epoch, expected)` が異なること。
 #elif defined(PLATFORM_WINDOWS)
     ASSERT_EQ(0, ctime_s(expected, sizeof(expected), &epoch));
+    // [確認_正常系] - `ctime_s(expected, sizeof(expected), &epoch)` の戻り値が `0` であること。
 #endif
 
     // Act
@@ -299,10 +311,11 @@ TEST_F(timeTest, ctime_null_time_zeroes_buf)
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
               actual_ret_ctime); // [確認_異常系] - cplat_ctime の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
-    // [確認_異常系] - 出力バッファーの全バイトが '\0' にクリアされること。
+    // 出力バッファーの全バイトが '\0' にクリアされること。
     for (size_t i = 0; i < sizeof(buf); i++)
     {
         EXPECT_EQ('\0', buf[i]);
+        // [確認_異常系 回数=26] - 出力バッファーの各バイトが `\0` にクリアされること。
     }
 }
 
@@ -324,10 +337,11 @@ TEST_F(timeTest, ctime_small_buf_zeroes_buf)
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
               actual_ret_ctime); // [確認_異常系] - cplat_ctime の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
-    // [確認_異常系] - 出力バッファーの全バイトが '\0' にクリアされること。
+    // 出力バッファーの全バイトが '\0' にクリアされること。
     for (size_t i = 0; i < sizeof(buf); i++)
     {
         EXPECT_EQ('\0', buf[i]);
+        // [確認_異常系 回数=25] - 出力バッファーの各バイトが `\0` にクリアされること。
     }
 }
 
@@ -364,7 +378,7 @@ TEST_F(timeTest, ctime_zeroes_buf_when_platform_conversion_fails)
     Mock_time mock_time;
 
     // Pre-Assert
-    // [Pre-Assert確認_異常系] - OS の ctime 系関数が epoch=0 と有効な出力先で 1 回呼び出されること。
+    // OS の ctime 系関数が epoch=0 と有効な出力先で 1 回呼び出されること。
     // [Pre-Assert手順] - OS の ctime 系関数から失敗を返却する。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_time, ctime_r(_, _, _, _, _))
@@ -372,19 +386,26 @@ TEST_F(timeTest, ctime_zeroes_buf_when_platform_conversion_fails)
             [](const char *, const int, const char *, const time_t *timep, char *result)
             {
                 EXPECT_EQ((time_t)0, *timep);
+                // [確認_正常系] - `ctime_r` に渡す時刻の秒数が `(time_t)0` であること。
                 EXPECT_NE((char *)NULL, result);
+                // [確認_正常系] - `(char *)NULL` と `result` が異なること。
                 return (char *)NULL;
             });
+    // [Pre-Assert確認_異常系] - mock_time の ctime_r(_, _, _, _, _) が登録した呼び出し期待を満たすこと。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_time, ctime_s(_, _, _, _, _, _))
         .WillOnce(
             [](const char *, const int, const char *, char *result, size_t size, const time_t *timep)
             {
                 EXPECT_EQ((time_t)0, *timep);
+                // [確認_正常系] - `ctime_s` に渡す時刻の秒数が `(time_t)0` であること。
                 EXPECT_EQ((size_t)26, size);
+                // [確認_正常系] - `size` の値が `(size_t)26` であること。
                 EXPECT_NE((char *)NULL, result);
+                // [確認_正常系] - `(char *)NULL` と `result` が異なること。
                 return 1;
             });
+    // [Pre-Assert確認_異常系] - mock_time の ctime_s(_, _, _, _, _, _) が登録した呼び出し期待を満たすこと。
 #endif
 
     // Act
@@ -393,9 +414,10 @@ TEST_F(timeTest, ctime_zeroes_buf_when_platform_conversion_fails)
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret); // [確認_異常系] - cplat_ctime の戻り値が CPLAT_ERR_UNKNOWN であること。
 
-    // [確認_異常系] - 出力バッファーの全バイトが '\0' にクリアされること。
+    // 出力バッファーの全バイトが '\0' にクリアされること。
     for (size_t i = 0; i < sizeof(buf); i++)
     {
         EXPECT_EQ('\0', buf[i]);
+        // [確認_異常系 回数=26] - 出力バッファーの各バイトが `\0` にクリアされること。
     }
 }
