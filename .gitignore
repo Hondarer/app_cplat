@@ -15,7 +15,7 @@
 ## makefile
 !makefile
 
-# 次は管理対象外
+# 以下は管理対象外
 
 ## Claude Code
 /.claude/
