@@ -11,16 +11,20 @@ class consoleTest : public Test
   protected:
     NiceMock<Mock_cplat> mock_cplat;
 
+    // [サブ手順 名前=consoleTest.SetUp]
     void SetUp() override
     {
         // console.c の単体テストでは shutdown.c を対象外とし、登録 API の呼び出しをフェイクする。
         ON_CALL(mock_cplat, cplat_shutdown_register(_, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_shutdown_register` の既定動作を設定する。
     }
+    // [サブ手順終了]
 };
 
 /* ===== 共通テスト (Windows / Linux 両方) ===== */
 
 // cplat_console_init がクラッシュしないことの確認
+// [サブ手順参照 名前=consoleTest.SetUp]
 TEST_F(consoleTest, init_succeeds)
 {
     // Arrange
@@ -35,6 +39,7 @@ TEST_F(consoleTest, init_succeeds)
 }
 
 // init 後に dispose_on_shutdown() がクラッシュしないことの確認
+// [サブ手順参照 名前=consoleTest.SetUp]
 TEST_F(consoleTest, dispose_on_shutdown_after_init)
 {
     // Arrange
@@ -53,6 +58,7 @@ TEST_F(consoleTest, dispose_on_shutdown_after_init)
 }
 
 // init なしで dispose_on_shutdown() を呼んでも安全なことの確認
+// [サブ手順参照 名前=consoleTest.SetUp]
 TEST_F(consoleTest, dispose_on_shutdown_without_init)
 {
     // Arrange
@@ -69,6 +75,7 @@ TEST_F(consoleTest, dispose_on_shutdown_without_init)
 }
 
 // dispose_on_shutdown() を 2 回呼んでも安全なことの確認
+// [サブ手順参照 名前=consoleTest.SetUp]
 TEST_F(consoleTest, double_dispose_on_shutdown)
 {
     // Arrange
@@ -87,6 +94,7 @@ TEST_F(consoleTest, double_dispose_on_shutdown)
 }
 
 // init 後に終了中イベントの dispose_on_shutdown() が安全に何もしないことの確認
+// [サブ手順参照 名前=consoleTest.SetUp]
 TEST_F(consoleTest, dispose_on_shutdown_process_terminating)
 {
     // Arrange
@@ -111,6 +119,7 @@ TEST_F(consoleTest, dispose_on_shutdown_process_terminating)
 }
 
 // init 後に printf / fprintf を呼んでもクラッシュしないことの確認
+// [サブ手順参照 名前=consoleTest.SetUp]
 TEST_F(consoleTest, write_after_init)
 {
     // Arrange
@@ -135,6 +144,7 @@ TEST_F(consoleTest, write_after_init)
 #if defined(PLATFORM_LINUX)
 
 // Linux: init 前後で stdout の FD が変わらないことの確認
+// [サブ手順参照 名前=consoleTest.SetUp]
 TEST_F(consoleTest, nop_stdout_fd_unchanged)
 {
     // Arrange
@@ -154,6 +164,7 @@ TEST_F(consoleTest, nop_stdout_fd_unchanged)
 }
 
 // Linux: init 前後で stderr の FD が変わらないことの確認
+// [サブ手順参照 名前=consoleTest.SetUp]
 TEST_F(consoleTest, nop_stderr_fd_unchanged)
 {
     // Arrange
@@ -173,6 +184,7 @@ TEST_F(consoleTest, nop_stderr_fd_unchanged)
 }
 
 // Linux: dispose を呼んでも stdout の FD が変わらないことの確認
+// [サブ手順参照 名前=consoleTest.SetUp]
 TEST_F(consoleTest, nop_dispose_stdout_fd_unchanged)
 {
     // Arrange

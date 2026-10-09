@@ -14,6 +14,7 @@ using namespace filter_test;
 class stringCatalogFilterDescribeTest : public Test
 {
   protected:
+    // [サブ手順 名前=stringCatalogFilterDescribeTest.SetUp]
     void SetUp() override
     {
         saved_language_ = cplat_string_catalog_get_language();
@@ -22,12 +23,15 @@ class stringCatalogFilterDescribeTest : public Test
                                 filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_));
         // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_trace_catalog(), filter_test_trace_key_names(), filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=stringCatalogFilterDescribeTest.TearDown]
     void TearDown() override
     {
         cplat_string_catalog_filter_slot_dispose(&slot_);
         (void)cplat_string_catalog_set_language(saved_language_);
     }
+    // [サブ手順終了]
 
     /** 分類値の名前を指定して、スロットを作り直します。分類値の名前は作成時にだけ指定できるためです。 */
     int recreate_slot_with_category_names(const cplat_string_catalog_filter_category_names *category_names)
@@ -62,6 +66,7 @@ class stringCatalogFilterDescribeTest : public Test
 };
 
 // 文字列キーの一致が、項目の brief と ID で表されることの確認
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.SetUp]
 TEST_F(stringCatalogFilterDescribeTest, key_equal_is_described_with_brief_and_id)
 {
     // Arrange
@@ -78,8 +83,10 @@ TEST_F(stringCatalogFilterDescribeTest, key_equal_is_described_with_brief_and_id
     EXPECT_STREQ("「ジョブの進捗」(FILTER_TEST_TRACE_ID_0003)",
                  description_); // [確認_正常系] - brief の句点を除き、ID を添えた表現になること。
 }
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
 // 行が 1 つの項目に限定される場合、その項目の引数の説明が使われることの確認
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.SetUp]
 TEST_F(stringCatalogFilterDescribeTest, single_entry_line_uses_argument_description)
 {
     // Arrange
@@ -97,8 +104,10 @@ TEST_F(stringCatalogFilterDescribeTest, single_entry_line_uses_argument_descript
     EXPECT_STREQ("引数 buffer (確保したバッファーのアドレス。確保に失敗した場合は NULL です) が NULL である",
                  description_); // [確認_正常系] - 引数の説明と null の文型で表されること。
 }
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
 // 複数の項目が対象でも、説明が一致する引数は説明付きで表されることの確認
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.SetUp]
 TEST_F(stringCatalogFilterDescribeTest, shared_argument_description_is_used_for_multiple_entries)
 {
     // Arrange
@@ -117,8 +126,10 @@ TEST_F(stringCatalogFilterDescribeTest, shared_argument_description_is_used_for_
                  "が 90 以上 99 以下",
                  description_); // [確認_正常系] - インデックス、共通の名前、共通の説明で表されること。
 }
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
 // 否定と、論理積の中の論理和に括弧が付くことの確認
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.SetUp]
 TEST_F(stringCatalogFilterDescribeTest, not_and_nested_or_are_parenthesized)
 {
     // Arrange
@@ -136,8 +147,10 @@ TEST_F(stringCatalogFilterDescribeTest, not_and_nested_or_are_parenthesized)
     EXPECT_STREQ("(分類値が 2 以下) ではない かつ (文字列キー 99、または ID が \"0002\" で終わる)",
                  description_); // [確認_正常系] - 否定の文型と、優先順位を保つ括弧で表されること。
 }
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
 // 日本語以外の出力言語では、ニュートラル言語の文型が使われることの確認
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.SetUp]
 TEST_F(stringCatalogFilterDescribeTest, neutral_language_uses_neutral_phrases)
 {
     // Arrange
@@ -162,8 +175,10 @@ TEST_F(stringCatalogFilterDescribeTest, neutral_language_uses_neutral_phrases)
     EXPECT_EQ(CPLAT_OK, actual_ret_english);    // [確認_正常系] - 英語で説明文を得られること。
     EXPECT_STREQ(actual_neutral, description_); // [確認_正常系] - 英語はニュートラル言語の文型を使うこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
 // 名前を解決できずに無効とした行は、説明文を作らないことの確認
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.SetUp]
 TEST_F(stringCatalogFilterDescribeTest, disabled_line_is_not_described)
 {
     // Arrange
@@ -179,8 +194,10 @@ TEST_F(stringCatalogFilterDescribeTest, disabled_line_is_not_described)
     EXPECT_EQ(CPLAT_ERR_MALFORMED_DEFINITION, actual_ret); // [確認_異常系] - 無効な行として扱われること。
     EXPECT_STREQ("", description_);                        // [確認_異常系] - 出力先が空文字列であること。
 }
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
 // 出力先が小さい場合は、切り詰めて NUL 終端することの確認
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.SetUp]
 TEST_F(stringCatalogFilterDescribeTest, small_buffer_is_truncated)
 {
     // Arrange
@@ -206,6 +223,7 @@ TEST_F(stringCatalogFilterDescribeTest, small_buffer_is_truncated)
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, actual_ret); // [確認_異常系] - 切り詰めを報告すること。
     EXPECT_STREQ("the cat", actual_text);              // [確認_異常系] - 7 バイトで切り詰め、NUL 終端すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
 namespace
 {
@@ -221,6 +239,7 @@ const cplat_string_catalog_filter_category_names s_test_category_names = {
 } // namespace
 
 // 分類値の名前を設定した場合、条件を満たす名前を列挙して表すことの確認
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.SetUp]
 TEST_F(stringCatalogFilterDescribeTest, category_names_list_matching_names)
 {
     // Arrange
@@ -240,8 +259,10 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_list_matching_names)
     EXPECT_STREQ("レベルが CRITICAL、ERROR、WARNING のいずれか",
                  description_); // [確認_正常系] - 条件を満たすレベルの名前が列挙されること。
 }
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
 // 満たさない名前のほうが少ない場合は、補集合を「以外」で表すことの確認
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.SetUp]
 TEST_F(stringCatalogFilterDescribeTest, category_names_use_complement_when_shorter)
 {
     // Arrange
@@ -268,8 +289,10 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_use_complement_when_short
     EXPECT_STREQ("the level is other than VERBOSE",
                  description_); // [確認_正常系] - ニュートラル言語でも補集合で表すこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
 // 1 つだけ、すべて、該当なしの場合にそれぞれ適切に表現されることの確認
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.SetUp]
 TEST_F(stringCatalogFilterDescribeTest, category_names_describe_single_any_and_none)
 {
     // Arrange
@@ -304,8 +327,10 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_describe_single_any_and_n
     EXPECT_NE(nullptr, std::strstr(description_, "レベルがいずれにも該当しない"))
         << description_; // [確認_正常系] - 該当なしを表すこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
 // 分類値の名前を指定せずに作成すると数値で表し、不正な名前の設定では作成できないことの確認
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.SetUp]
 TEST_F(stringCatalogFilterDescribeTest, category_names_absent_use_numbers_and_reject_invalid_settings)
 {
     // Arrange
@@ -337,3 +362,4 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_absent_use_numbers_and_re
     EXPECT_EQ(CPLAT_OK, actual_ret_describe);      // [確認_正常系] - 説明文を得られること。
     EXPECT_STREQ("分類値が 2 以下", description_); // [確認_正常系] - 名前の設定がなければ数値で表すこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]

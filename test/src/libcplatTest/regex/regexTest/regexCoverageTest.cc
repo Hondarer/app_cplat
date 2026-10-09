@@ -85,11 +85,13 @@ using testing::Test;
 class regexCoverageTest : public Test
 {
   protected:
+    // [サブ手順 名前=regexCoverageTest.TearDown]
     void TearDown() override
     {
         test_regex_utf8_set_decode_mode(REGEX_UTF8_FAKE_REAL);
         test_regex_utf8_set_encode_mode(REGEX_UTF8_FAKE_REAL);
     }
+    // [サブ手順終了]
 };
 
 #if !defined(CPLAT_REGEX_NO_EXCEPTIONS)
@@ -154,6 +156,7 @@ TEST_F(regexCoverageTest, public_apis_translate_decode_exceptions)
     // Cleanup
     cplat_regex_dispose(regex);
 }
+// [サブ手順参照 名前=regexCoverageTest.TearDown]
 #endif /* !CPLAT_REGEX_NO_EXCEPTIONS */
 
 // 置換後の cplat_internal_regex_utf8_encode 失敗と列挙位置超過を処理することの確認
@@ -209,6 +212,7 @@ TEST_F(regexCoverageTest, replace_encode_failure_and_iter_position_past_end)
     cplat_regex_iter_dispose(iter);
     cplat_regex_dispose(regex);
 }
+// [サブ手順参照 名前=regexCoverageTest.TearDown]
 
 // 文字クラス名の非 ASCII と icase、境界文字を分類することの確認
 TEST_F(regexCoverageTest, traits_cover_remaining_classname_and_isctype_conditions)
@@ -249,6 +253,7 @@ TEST_F(regexCoverageTest, traits_cover_remaining_classname_and_isctype_condition
     EXPECT_EQ(-1, hex_g);          // [確認_異常系] - g の値が -1 であること。
     EXPECT_EQ(-1, hex_G);          // [確認_異常系] - G の値が -1 であること。
 }
+// [サブ手順参照 名前=regexCoverageTest.TearDown]
 
 // コンパイル フラグ変換と残りの文字クラス境界を充足することの確認
 TEST_F(regexCoverageTest, syntax_option_and_remaining_class_boundaries)
@@ -287,6 +292,7 @@ TEST_F(regexCoverageTest, syntax_option_and_remaining_class_boundaries)
     EXPECT_FALSE(graph_space);    // [確認_異常系] - 空白が graph でないこと。
     EXPECT_FALSE(print_del);      // [確認_異常系] - DEL が print でないこと。
 }
+// [サブ手順参照 名前=regexCoverageTest.TearDown]
 
 // 残っている複合条件と上限、サロゲート進行を充足することの確認
 TEST_F(regexCoverageTest, remaining_source_conditions)
@@ -378,6 +384,7 @@ TEST_F(regexCoverageTest, remaining_source_conditions)
     // Cleanup
     cplat_regex_dispose(regex);
 }
+// [サブ手順参照 名前=regexCoverageTest.TearDown]
 
 #if !defined(CPLAT_REGEX_NO_EXCEPTIONS)
 // 列挙の次一致取得が確保失敗を catch することの確認
@@ -426,4 +433,5 @@ TEST_F(regexCoverageTest, iter_next_translates_allocation_failure)
     cplat_regex_iter_dispose(iter);
     cplat_regex_dispose(regex);
 }
+// [サブ手順参照 名前=regexCoverageTest.TearDown]
 #endif /* !CPLAT_REGEX_NO_EXCEPTIONS */

@@ -53,14 +53,19 @@ class traceCoverageTest : public Test
         reinterpret_cast<cplat_eventlog_sink *>(static_cast<uintptr_t>(0x1300));
 #endif /* PLATFORM_ */
 
+    // [サブ手順 名前=traceCoverageTest.SetUp]
     void SetUp() override
     {
         set_trace_sync_mock_defaults(mock_cplat);
         test_trace_registry_reset_shutdown_state();
         ON_CALL(mock_cplat, cplat_shutdown_register(_, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_shutdown_register` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_trace_file_sink_create(_, _, _, _)).WillByDefault(Return(file_handle_));
+        // [状態] - `cplat_trace_file_sink_create` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_trace_file_sink_write(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_trace_file_sink_write` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_trace_file_sink_dispose(_)).WillByDefault(Return());
+        // [状態] - `cplat_trace_file_sink_dispose` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
             .WillByDefault(
                 [](char *path_out, size_t path_size)
@@ -68,30 +73,45 @@ class traceCoverageTest : public Test
                     snprintf(path_out, path_size, "%s", "/opt/bin/myapp");
                     return CPLAT_OK;
                 });
+        // [状態] - `cplat_process_get_executable_path` の既定動作を設定する。
 #if defined(PLATFORM_LINUX)
         ON_CALL(mock_cplat, cplat_syslog_sink_create(_, _)).WillByDefault(Return(os_handle_));
+        // [状態] - `cplat_syslog_sink_create` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_write(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_syslog_sink_write` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_rename(_, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_syslog_sink_rename` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_dispose(_)).WillByDefault(Return());
+        // [状態] - `cplat_syslog_sink_dispose` の既定動作を設定する。
 #elif defined(PLATFORM_WINDOWS)
         ON_CALL(mock_cplat, cplat_etw_provider_create(_)).WillByDefault(Return(os_handle_));
+        // [状態] - `cplat_etw_provider_create` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_etw_provider_write(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_etw_provider_write` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_etw_provider_dispose(_)).WillByDefault(Return());
+        // [状態] - `cplat_etw_provider_dispose` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_eventlog_sink_create(_)).WillByDefault(Return(eventlog_handle_));
+        // [状態] - `cplat_eventlog_sink_create` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_eventlog_sink_write(_, _, _, _, _, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_eventlog_sink_write` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_eventlog_sink_dispose(_)).WillByDefault(Return());
+        // [状態] - `cplat_eventlog_sink_dispose` の既定動作を設定する。
 #endif /* PLATFORM_ */
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=traceCoverageTest.TearDown]
     void TearDown() override
     {
         test_trace_registry_reset_shutdown_state();
     }
+    // [サブ手順終了]
 };
 
 #if defined(PLATFORM_LINUX)
 
 // syslog レベル変換が各トレース レベルと default を返すことの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, to_syslog_level_covers_all_cases)
 {
     // Arrange
@@ -120,8 +140,10 @@ TEST_F(traceCoverageTest, to_syslog_level_covers_all_cases)
     EXPECT_EQ(LOG_DEBUG, none_level);      // [確認_正常系] - NONE が LOG_DEBUG になること。
     EXPECT_EQ(LOG_DEBUG, default_level);   // [確認_正常系] - 未定義レベルが LOG_DEBUG になること。
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 // 強制出力のレベルが、対応する重大度へ変換されることの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, to_syslog_level_maps_force_levels)
 {
     // Arrange
@@ -149,8 +171,10 @@ TEST_F(traceCoverageTest, to_syslog_level_maps_force_levels)
     EXPECT_EQ(LOG_INFO, debug_level);   // [確認_正常系] - FORCE_DEBUG が常時記録の帯である LOG_INFO になること。
     EXPECT_EQ(LOG_INFO, none_level);    // [確認_正常系] - FORCE_NONE が LOG_INFO になること。
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 // 強制出力と通常のレベルの相互変換が対応していることの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, force_level_conversion_macros_are_symmetric)
 {
     // Arrange
@@ -168,8 +192,10 @@ TEST_F(traceCoverageTest, force_level_conversion_macros_are_symmetric)
     EXPECT_NE(0, CPLAT_TRACE_LEVEL_IS_FORCE(forced));   // [確認_正常系] - 強制出力と判定できること。
     EXPECT_EQ(0, CPLAT_TRACE_LEVEL_IS_FORCE(restored)); // [確認_正常系] - 通常のレベルは強制出力と判定しないこと。
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 // syslog sink 生成失敗と rwlock 生成失敗で create が NULL を返すことの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, create_fails_when_syslog_or_rwlock_setup_fails)
 {
     // Arrange
@@ -198,10 +224,12 @@ TEST_F(traceCoverageTest, create_fails_when_syslog_or_rwlock_setup_fails)
     EXPECT_EQ((cplat_tracer *)NULL,
               rwlock_failure); // [確認_異常系] - rwlock 失敗時の cplat_tracer_create が NULL であること。
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 #endif /* PLATFORM_LINUX */
 
 // シャットダウン中の生成拒否と非アクティブ dispose を処理することの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, shutdown_and_inactive_dispose_paths)
 {
     // Arrange
@@ -234,8 +262,10 @@ TEST_F(traceCoverageTest, shutdown_and_inactive_dispose_paths)
     EXPECT_EQ(0, null_active);   // [確認_異常系] - NULL の handle_is_active が 0 であること。
     EXPECT_EQ(-1, null_begin);   // [確認_異常系] - NULL の begin_dispose が -1 であること。
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 // 共有ロック失敗とロック中のライフサイクル変化を処理することの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, enter_shared_fails_on_timeout_and_lifecycle_change)
 {
     // Arrange
@@ -293,8 +323,10 @@ TEST_F(traceCoverageTest, enter_shared_fails_on_timeout_and_lifecycle_change)
     test_tracer_set_lifecycle_state(handle, 0);
     cplat_tracer_dispose(&handle);
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 // 名前設定とファイル設定の失敗枝を処理することの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, setters_cover_invalid_and_allocation_failures)
 {
     // Arrange
@@ -372,8 +404,10 @@ TEST_F(traceCoverageTest, setters_cover_invalid_and_allocation_failures)
     test_tracer_set_lifecycle_state(handle, 0);
     cplat_tracer_dispose(&handle);
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 // 既定パス構築失敗と稼働中の file sink 再オープン失敗を処理することの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, file_sink_open_failures)
 {
     // Arrange
@@ -417,8 +451,10 @@ TEST_F(traceCoverageTest, file_sink_open_failures)
     test_tracer_set_file_handle(handle, NULL);
     cplat_tracer_dispose(&handle);
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 // snprintf 失敗と write / hex の番兵を処理することの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, snprintf_and_hex_edge_paths)
 {
     // Arrange
@@ -477,8 +513,10 @@ TEST_F(traceCoverageTest, snprintf_and_hex_edge_paths)
     // Cleanup
     cplat_tracer_dispose(&handle);
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 // hook の確保失敗とシャットダウンの二重呼び出しを処理することの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, hook_alloc_failure_and_shutdown_repeat)
 {
     // Arrange
@@ -509,8 +547,10 @@ TEST_F(traceCoverageTest, hook_alloc_failure_and_shutdown_repeat)
     // Cleanup
     test_trace_registry_reset_shutdown_state();
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 // タイムスタンプ解決失敗が write 経路へ伝播することの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, write_fails_when_timestamp_resolution_fails)
 {
     // Arrange
@@ -554,8 +594,10 @@ TEST_F(traceCoverageTest, write_fails_when_timestamp_resolution_fails)
     // Cleanup
     cplat_tracer_dispose(&handle);
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 // 残っている複合条件を inject と設定 API で充足することの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, remaining_compound_conditions)
 {
     // Arrange
@@ -669,8 +711,10 @@ TEST_F(traceCoverageTest, remaining_compound_conditions)
     EXPECT_EQ(CPLAT_OK, hex_empty_label); // [確認_正常系] - 空 label の hex が OK であること。
     EXPECT_EQ(0, utf8_cut);                  // [確認_正常系] - 継続バイト位置の切り詰め結果が 0 であること。
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 // 稼働中に file を閉じたあとの通常解放を処理することの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, release_normal_disposes_open_file_and_hooks)
 {
     // Arrange
@@ -692,8 +736,10 @@ TEST_F(traceCoverageTest, release_normal_disposes_open_file_and_hooks)
     // Assert
     EXPECT_EQ(CPLAT_OK, started); // [確認_正常系] - ファイル付き start が OK であること。
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 // 登録直前のシャットダウンと、停止中の残存ファイル ハンドルを処理することの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, register_during_shutdown_and_stale_file_handle)
 {
     // Arrange
@@ -755,8 +801,10 @@ TEST_F(traceCoverageTest, register_during_shutdown_and_stale_file_handle)
     // Cleanup
     test_trace_registry_reset_shutdown_state();
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 // 排他ロック待ち中の dispose と set_file_level の enter 失敗を処理することの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, exclusive_lock_lifecycle_and_set_file_level_enter_failure)
 {
     // Arrange
@@ -792,8 +840,10 @@ TEST_F(traceCoverageTest, exclusive_lock_lifecycle_and_set_file_level_enter_fail
     test_tracer_set_lifecycle_state(handle, 0);
     cplat_tracer_dispose(&handle);
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 // 既定パスの snprintf 失敗、NULL パスの sink 生成、残存 file の通常解放を処理することの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, default_path_snprintf_failure_and_normal_file_release)
 {
     // Arrange
@@ -860,8 +910,10 @@ TEST_F(traceCoverageTest, default_path_snprintf_failure_and_normal_file_release)
     // Cleanup
     cplat_tracer_dispose(&handle);
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 // 残っている C2 分岐を設定変更と inject で充足することの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, remaining_gcov_branches)
 {
     // Arrange
@@ -1108,8 +1160,10 @@ TEST_F(traceCoverageTest, remaining_gcov_branches)
     test_tracer_set_file_handle(handle, NULL);
     cplat_tracer_dispose(&handle);
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
 
 // ロック失敗、容量あふれ、caller-managed、二重 shutdown を充足することの確認
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, remaining_lock_overflow_and_caller_managed_paths)
 {
     // Arrange
@@ -1241,3 +1295,4 @@ TEST_F(traceCoverageTest, remaining_lock_overflow_and_caller_managed_paths)
     // Cleanup
     test_trace_registry_reset_shutdown_state();
 }
+// [サブ手順参照 名前=traceCoverageTest.TearDown]

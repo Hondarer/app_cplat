@@ -20,6 +20,7 @@ class symLoaderResolveTest : public Test
     cplat_sym_loader_entry entry_ = CPLAT_SYM_LOADER_ENTRY_INIT("test_key", void (*)(void));
 
     /* lib_name / func_name は固定長配列のため、テストからは直接書き込む */
+    // [サブ手順 名前=symLoaderResolveTest.set_names]
     void set_names(const char *lib_name, const char *func_name)
     {
         ASSERT_EQ(CPLAT_OK, cplat_strcpy(entry_.lib_name, sizeof(entry_.lib_name), lib_name));
@@ -27,19 +28,23 @@ class symLoaderResolveTest : public Test
         ASSERT_EQ(CPLAT_OK, cplat_strcpy(entry_.func_name, sizeof(entry_.func_name), func_name));
         // [状態確認] - `cplat_strcpy(entry_.func_name, sizeof(entry_.func_name), func_name)` の戻り値が `CPLAT_OK` であること。
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=symLoaderResolveTest.TearDown]
     void TearDown() override
     {
         cplat_sym_loader_entry *entries[] = {&entry_};
 
         cplat_sym_loader_dispose(entries, 1u);
     }
+    // [サブ手順終了]
 };
 
 // 実在するライブラリとシンボルが解決されることの確認
 TEST_F(symLoaderResolveTest, resolves_existing_symbol)
 {
     // Arrange
+    // [サブ手順参照 名前=symLoaderResolveTest.set_names]
     set_names("libcplat",
               "cplat_path_basename"); // [状態] - 実在するライブラリ名と関数名を設定したエントリを用意する。
 
@@ -53,11 +58,13 @@ TEST_F(symLoaderResolveTest, resolves_existing_symbol)
     EXPECT_EQ(1, cplat_atomic_load_i32(&entry_.resolved,
                                         CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - resolved が解決済みを示す 1 になること。
 }
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 // 2 回目の呼び出しが解決済みの結果をそのまま返すことの確認
 TEST_F(symLoaderResolveTest, second_call_returns_cached_result)
 {
     // Arrange
+    // [サブ手順参照 名前=symLoaderResolveTest.set_names]
     set_names("libcplat", "cplat_path_basename");
     void *first = cplat_sym_loader_resolve(&entry_); // [状態] - 1 回目の解決を済ませておく。
 
@@ -71,11 +78,13 @@ TEST_F(symLoaderResolveTest, second_call_returns_cached_result)
     EXPECT_EQ(1, cplat_atomic_load_i32(&entry_.resolved,
                                         CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - resolved が 1 のまま変化しないこと。
 }
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 // lib_name と func_name がともに "default" の場合に明示的デフォルトとして扱われることの確認
 TEST_F(symLoaderResolveTest, marks_explicit_default_when_both_names_are_default)
 {
     // Arrange
+    // [サブ手順参照 名前=symLoaderResolveTest.set_names]
     set_names("default", "default"); // [状態] - lib_name と func_name の双方に "default" を設定する。
 
     // Pre-Assert
@@ -88,11 +97,13 @@ TEST_F(symLoaderResolveTest, marks_explicit_default_when_both_names_are_default)
     EXPECT_EQ(2, cplat_atomic_load_i32(&entry_.resolved,
                                         CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - resolved が明示的デフォルトを示す 2 になること。
 }
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 // lib_name が未設定の場合に定義なしとして扱われることの確認
 TEST_F(symLoaderResolveTest, marks_undefined_when_lib_name_is_empty)
 {
     // Arrange
+    // [サブ手順参照 名前=symLoaderResolveTest.set_names]
     set_names("", "cplat_path_basename"); // [状態] - lib_name を空文字列にしたエントリを用意する。
 
     // Pre-Assert
@@ -105,11 +116,13 @@ TEST_F(symLoaderResolveTest, marks_undefined_when_lib_name_is_empty)
     EXPECT_EQ(-1, cplat_atomic_load_i32(&entry_.resolved,
                                          CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - resolved が定義なしを示す -1 になること。
 }
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 // func_name が未設定の場合に定義なしとして扱われることの確認
 TEST_F(symLoaderResolveTest, marks_undefined_when_func_name_is_empty)
 {
     // Arrange
+    // [サブ手順参照 名前=symLoaderResolveTest.set_names]
     set_names("libcplat", ""); // [状態] - func_name を空文字列にしたエントリを用意する。
 
     // Pre-Assert
@@ -122,6 +135,7 @@ TEST_F(symLoaderResolveTest, marks_undefined_when_func_name_is_empty)
     EXPECT_EQ(-1, cplat_atomic_load_i32(&entry_.resolved,
                                          CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - resolved が定義なしを示す -1 になること。
 }
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 // 拡張子を加えた名称が上限を超える場合に名称長超過として扱われることの確認
 TEST_F(symLoaderResolveTest, marks_name_too_long_when_extension_does_not_fit)
@@ -131,6 +145,7 @@ TEST_F(symLoaderResolveTest, marks_name_too_long_when_extension_does_not_fit)
 
     std::memset(long_name, 'a', sizeof(long_name) - 1u);
     long_name[sizeof(long_name) - 1u] = '\0';
+    // [サブ手順参照 名前=symLoaderResolveTest.set_names]
     set_names(long_name,
               "cplat_path_basename"); // [状態] - 拡張子を加えると上限を超える長さの lib_name を設定する。
 
@@ -144,11 +159,13 @@ TEST_F(symLoaderResolveTest, marks_name_too_long_when_extension_does_not_fit)
     EXPECT_EQ(-2, cplat_atomic_load_i32(&entry_.resolved,
                                          CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - resolved が名称長超過を示す -2 になること。
 }
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 // 実在しないライブラリのオープン失敗が記録されることの確認
 TEST_F(symLoaderResolveTest, marks_open_error_when_library_is_missing)
 {
     // Arrange
+    // [サブ手順参照 名前=symLoaderResolveTest.set_names]
     set_names("libcplat_missing_for_test",
               "cplat_path_basename"); // [状態] - 実在しないライブラリ名を設定したエントリを用意する。
 
@@ -164,11 +181,13 @@ TEST_F(symLoaderResolveTest, marks_open_error_when_library_is_missing)
                       CPLAT_MEMORY_ORDER_RELAXED));  // [確認_異常系] - resolved がライブラリ オープン エラーを示す -3 になること。
     EXPECT_EQ(nullptr, entry_.handle); // [確認_異常系] - handle が NULL のままであること。
 }
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 // 実在しないシンボル名でハンドルが解放されることの確認
 TEST_F(symLoaderResolveTest, releases_handle_when_symbol_is_missing)
 {
     // Arrange
+    // [サブ手順参照 名前=symLoaderResolveTest.set_names]
     set_names("libcplat",
               "cplat_symbol_that_does_not_exist"); // [状態] - 実在するライブラリと実在しない関数名を設定する。
 
@@ -183,6 +202,7 @@ TEST_F(symLoaderResolveTest, releases_handle_when_symbol_is_missing)
                                         CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - resolved が解決済みを示す 1 になること。
     EXPECT_EQ(nullptr, entry_.handle); // [確認_異常系] - シンボルが見つからないためハンドルが解放されること。
 }
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 #if defined(PLATFORM_LINUX)
 
@@ -193,6 +213,7 @@ TEST_F(symLoaderResolveTest, returns_null_when_lock_creation_fails)
     // Arrange
     NiceMock<Mock_cplat> mock_cplat;
 
+    // [サブ手順参照 名前=symLoaderResolveTest.set_names]
     set_names("libcplat", "cplat_path_basename"); // [状態] - 実在するライブラリ名と関数名を設定する。
 
     // Pre-Assert
@@ -210,6 +231,7 @@ TEST_F(symLoaderResolveTest, returns_null_when_lock_creation_fails)
     EXPECT_EQ(0, cplat_atomic_load_i32(&entry_.resolved,
                                         CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - 解決状態が未解決のままであること。
 }
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 // ロックの取得に失敗した場合に解決が失敗することの確認
 TEST_F(symLoaderResolveTest, returns_null_when_lock_acquisition_fails)
@@ -217,6 +239,7 @@ TEST_F(symLoaderResolveTest, returns_null_when_lock_acquisition_fails)
     // Arrange
     NiceMock<Mock_cplat> mock_cplat;
 
+    // [サブ手順参照 名前=symLoaderResolveTest.set_names]
     set_names("libcplat", "cplat_path_basename"); // [状態] - 実在するライブラリ名と関数名を設定する。
 
     // Pre-Assert
@@ -234,6 +257,7 @@ TEST_F(symLoaderResolveTest, returns_null_when_lock_acquisition_fails)
     EXPECT_EQ(0, cplat_atomic_load_i32(&entry_.resolved,
                                         CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - 解決状態が未解決のままであること。
 }
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 // ほかのスレッドがロック初期化を完了した状態を再利用することの確認
 TEST_F(symLoaderResolveTest, reuses_lock_initialized_by_another_thread)
@@ -258,6 +282,7 @@ TEST_F(symLoaderResolveTest, reuses_lock_initialized_by_another_thread)
     // Cleanup
     test_sym_loader_set_entry_lock_wait_hook(NULL);
 }
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 // ロック初期化待機の既定処理が呼び出し元へ制御を戻すことの確認
 TEST_F(symLoaderResolveTest, default_lock_wait_yields_execution)
@@ -272,6 +297,7 @@ TEST_F(symLoaderResolveTest, default_lock_wait_yields_execution)
     // Assert
     SUCCEED(); // [確認_正常系] - test_sym_loader_default_entry_lock_wait が呼び出し元へ制御を戻すこと。
 }
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 // ほかのスレッドによるロック初期化失敗を通知することの確認
 TEST_F(symLoaderResolveTest, reports_lock_initialization_failure_from_another_thread)
@@ -288,12 +314,14 @@ TEST_F(symLoaderResolveTest, reports_lock_initialization_failure_from_another_th
     // Assert
     EXPECT_EQ(-1, result); // [確認_異常系] - test_sym_loader_ensure_entry_lock_initialized の戻り値が -1 であること。
 }
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 // ロック取得中に解決済みとなった結果を再利用することの確認
 TEST_F(symLoaderResolveTest, returns_result_resolved_while_waiting_for_lock)
 {
     // Arrange
     NiceMock<Mock_cplat> mock_cplat;
+    // [サブ手順参照 名前=symLoaderResolveTest.set_names]
     set_names("default", "not_default");
 
     // Pre-Assert
@@ -315,11 +343,13 @@ TEST_F(symLoaderResolveTest, returns_result_resolved_while_waiting_for_lock)
     EXPECT_EQ(reinterpret_cast<void *>(1),
               result); // [確認_正常系] - cplat_sym_loader_resolve の戻り値が別スレッドの解決結果であること。
 }
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 // ライブラリ名だけが default の場合に通常のライブラリ名として扱うことの確認
 TEST_F(symLoaderResolveTest, does_not_mark_default_when_only_library_name_is_default)
 {
     // Arrange
+    // [サブ手順参照 名前=symLoaderResolveTest.set_names]
     set_names("default", "not_default");
 
     // Pre-Assert
@@ -334,5 +364,6 @@ TEST_F(symLoaderResolveTest, does_not_mark_default_when_only_library_name_is_def
                       &entry_.resolved,
                       CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - 実在しない default ライブラリの解決結果が -3 であること。
 }
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 #endif /* PLATFORM_LINUX */

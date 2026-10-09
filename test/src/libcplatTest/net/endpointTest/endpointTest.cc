@@ -42,13 +42,18 @@ class Mock_socket_internal
 Mock_socket_internal *s_mock_socket_internal = nullptr;
 #endif /* PLATFORM_WINDOWS */
 
+// [サブ手順 名前=endpointTest.expect_detail]
 void expect_detail(const cplat_error &detail, const cplat_error_domain domain, const int result,
                    const unsigned long code)
 {
     EXPECT_EQ(domain, detail.domain);
+    // [確認_正常系] - `detail.domain` の値が `domain` であること。
     EXPECT_EQ(result, detail.result);
+    // [確認_正常系] - `detail.result` の値が `result` であること。
     EXPECT_EQ(code, detail.code);
+    // [確認_正常系] - `detail.code` の値が `code` であること。
 }
+// [サブ手順終了]
 
 } // namespace
 
@@ -74,22 +79,29 @@ class endpointTest : public Test
     NiceMock<Mock_socket_internal> mock_socket_internal_;
     NiceMock<Mock_winsock> mock_winsock_;
 
+    // [サブ手順 名前=endpointTest.SetUp]
     void SetUp() override
     {
         s_mock_socket_internal = &mock_socket_internal_;
         ON_CALL(mock_socket_internal_, startup(_))
             .WillByDefault([](cplat_error *detail_out) { return cplat_internal_error_report_success(detail_out); });
+        // [状態] - `startup` の既定動作を設定する。
         ON_CALL(mock_winsock_, WSAGetLastError).WillByDefault(Return(0));
+        // [状態] - `WSAGetLastError` の既定動作を設定する。
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=endpointTest.TearDown]
     void TearDown() override
     {
         s_mock_socket_internal = nullptr;
     }
+    // [サブ手順終了]
 #endif /* PLATFORM_WINDOWS */
 };
 
 // IPv4 の解析が NULL 引数を拒否することの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, parse_rejects_null_arguments)
 {
     // Arrange
@@ -109,8 +121,10 @@ TEST_F(endpointTest, parse_rejects_null_arguments)
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_null_output); // [確認_異常系] - address_out が NULL の cplat_ipv4_parse の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 
 // 不正な IPv4 文字列が拒否されることの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, parse_rejects_malformed_text)
 {
     // Arrange
@@ -139,8 +153,10 @@ TEST_F(endpointTest, parse_rejects_malformed_text)
     EXPECT_EQ(0xA5A5A5A5U,
               address); // [確認_異常系] - 解析に失敗して address_out が変更されないこと。
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 
 // 正しい IPv4 文字列がネットワークバイトオーダーの値へ変換されることの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, parse_converts_valid_text)
 {
     // Arrange
@@ -180,9 +196,11 @@ TEST_F(endpointTest, parse_converts_valid_text)
     EXPECT_EQ(expected,
               address); // [確認_正常系] - cplat_ipv4_parse がネットワークバイトオーダーのアドレスを返すこと。
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 
 #if defined(PLATFORM_WINDOWS)
 // Winsock の初期化に失敗した場合、IPv4 解析が不正引数として終了することの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, parse_returns_invalid_when_startup_fails)
 {
     // Arrange
@@ -204,9 +222,11 @@ TEST_F(endpointTest, parse_returns_invalid_when_startup_fails)
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret); // [確認_異常系] - 初期化に失敗した cplat_ipv4_parse の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 #endif /* PLATFORM_WINDOWS */
 
 // 名前解決が NULL 引数を拒否することの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, resolve_rejects_null_arguments)
 {
     // Arrange
@@ -229,12 +249,15 @@ TEST_F(endpointTest, resolve_rejects_null_arguments)
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_null_output); // [確認_異常系] - address_out が NULL の cplat_ipv4_resolve の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     // 詳細エラーに errno ドメインと EINVAL が記録されること。
+    // [サブ手順参照 名前=endpointTest.expect_detail]
     expect_detail(detail, CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_INVALID_ARGUMENT,
                   static_cast<unsigned long>(EINVAL));
-    // [Pre-Assert確認_正常系 回数=3] - 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
+    // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 
 // 名前解決の失敗時に GAI エラーが返されることの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, resolve_reports_lookup_failure)
 {
     // Arrange
@@ -273,16 +296,19 @@ TEST_F(endpointTest, resolve_reports_lookup_failure)
         CPLAT_ERR_UNKNOWN,
         actual_ret); // [確認_異常系] - 名前解決に失敗した cplat_ipv4_resolve の戻り値が CPLAT_ERR_UNKNOWN であること。
     // 詳細エラーに getaddrinfo ドメインとエラー コードが記録されること。
+    // [サブ手順参照 名前=endpointTest.expect_detail]
     expect_detail(detail, CPLAT_ERROR_DOMAIN_GAI, CPLAT_ERR_UNKNOWN,
 #if defined(PLATFORM_LINUX)
                   static_cast<unsigned long>(EAI_AGAIN));
-    // [Pre-Assert確認_正常系 回数=3] - 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
+    // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 #else
                   static_cast<unsigned long>(EAI_AGAIN));
 #endif /* PLATFORM_ */
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 
 // 名前解決の失敗時に返された解決結果が解放されることの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, resolve_releases_result_when_lookup_fails)
 {
     // Arrange
@@ -344,8 +370,10 @@ TEST_F(endpointTest, resolve_releases_result_when_lookup_fails)
         CPLAT_ERR_UNKNOWN,
         actual_ret); // [確認_異常系] - 解決結果を残した cplat_ipv4_resolve の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 
 // 名前解決結果が NULL の場合に失敗として扱われることの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, resolve_rejects_empty_result)
 {
     // Arrange
@@ -384,8 +412,10 @@ TEST_F(endpointTest, resolve_rejects_empty_result)
         CPLAT_ERR_NOT_FOUND,
         actual_ret); // [確認_異常系] - 結果が NULL の cplat_ipv4_resolve の戻り値が CPLAT_ERR_NOT_FOUND であること。
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 
 // 名前解決結果の先頭 IPv4 アドレスが返されることの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, resolve_returns_first_ipv4_address)
 {
     // Arrange
@@ -451,12 +481,15 @@ TEST_F(endpointTest, resolve_returns_first_ipv4_address)
     EXPECT_EQ(expected,
               address); // [確認_正常系] - cplat_ipv4_resolve が先頭の IPv4 アドレスを返すこと。
     // 詳細エラーが記録されないこと。
+    // [サブ手順参照 名前=endpointTest.expect_detail]
     expect_detail(detail, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
-    // [Pre-Assert確認_正常系 回数=3] - 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
+    // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 
 #if defined(PLATFORM_LINUX)
 // 名前解決がシグナル中断後に再試行することの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, resolve_retries_after_interrupt)
 {
     // Arrange
@@ -504,11 +537,14 @@ TEST_F(endpointTest, resolve_retries_after_interrupt)
     EXPECT_EQ(expected,
               address); // [確認_正常系] - 再試行で解決した IPv4 アドレスが返されること。
     // 詳細エラーが記録されないこと。
+    // [サブ手順参照 名前=endpointTest.expect_detail]
     expect_detail(detail, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
-    // [Pre-Assert確認_正常系 回数=3] - 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
+    // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 
 // 名前解決の EAI_SYSTEM が中断以外の errno では再試行されないことの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, resolve_reports_system_error_without_retry)
 {
     // Arrange
@@ -537,13 +573,16 @@ TEST_F(endpointTest, resolve_reports_system_error_without_retry)
         CPLAT_ERR_UNKNOWN,
         actual_ret); // [確認_異常系] - EAI_SYSTEM を返した cplat_ipv4_resolve の戻り値が CPLAT_ERR_UNKNOWN であること。
     // 詳細エラーに getaddrinfo ドメインと EAI_SYSTEM が記録されること。
+    // [サブ手順参照 名前=endpointTest.expect_detail]
     expect_detail(detail, CPLAT_ERROR_DOMAIN_GAI, CPLAT_ERR_UNKNOWN, static_cast<unsigned long>(EAI_SYSTEM));
-    // [Pre-Assert確認_正常系 回数=3] - 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
+    // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 #endif /* PLATFORM_LINUX */
 
 #if defined(PLATFORM_WINDOWS)
 // Winsock の初期化に失敗した場合、名前解決が失敗することの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, resolve_propagates_startup_failure)
 {
     // Arrange
@@ -566,13 +605,16 @@ TEST_F(endpointTest, resolve_propagates_startup_failure)
         CPLAT_ERR_UNKNOWN,
         actual_ret); // [確認_異常系] - 初期化に失敗した cplat_ipv4_resolve の戻り値が CPLAT_ERR_UNKNOWN であること。
     // 詳細エラーに Winsock ドメインと OS のエラー値が記録されること。
+    // [サブ手順参照 名前=endpointTest.expect_detail]
     expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_UNKNOWN,
                   static_cast<unsigned long>(WSASYSNOTREADY));
-    // [Pre-Assert確認_正常系 回数=3] - 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
+    // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 #endif /* PLATFORM_WINDOWS */
 
 // IPv4 文字列出力が NULL 引数を拒否することの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, to_string_rejects_null_or_zero_sized_buffer)
 {
     // Arrange
@@ -595,8 +637,10 @@ TEST_F(endpointTest, to_string_rejects_null_or_zero_sized_buffer)
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_zero_size); // [確認_異常系] - buffer_size が 0 の cplat_ipv4_to_string の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 
 // IPv4 文字列出力が小さいバッファーを拒否することの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, to_string_rejects_small_buffer)
 {
     // Arrange
@@ -614,12 +658,15 @@ TEST_F(endpointTest, to_string_rejects_small_buffer)
         CPLAT_ERR_BUFFER_TOO_SMALL,
         actual_ret); // [確認_異常系] - 小さいバッファーを指定した cplat_ipv4_to_string の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
     // 詳細エラーに errno ドメインと ERANGE が記録されること。
+    // [サブ手順参照 名前=endpointTest.expect_detail]
     expect_detail(detail, CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_BUFFER_TOO_SMALL,
                   static_cast<unsigned long>(ERANGE));
-    // [Pre-Assert確認_正常系 回数=3] - 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
+    // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 
 // OS の IPv4 文字列化に失敗した場合にエラーが返されることの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, to_string_reports_conversion_failure)
 {
     // Arrange
@@ -654,8 +701,10 @@ TEST_F(endpointTest, to_string_reports_conversion_failure)
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret); // [確認_異常系] - 文字列化に失敗した cplat_ipv4_to_string の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 
 // IPv4 アドレスがドット区切り文字列へ変換されることの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, to_string_converts_address)
 {
     // Arrange
@@ -695,12 +744,15 @@ TEST_F(endpointTest, to_string_converts_address)
     EXPECT_STREQ("127.0.0.1",
                  buffer); // [確認_正常系] - cplat_ipv4_to_string がドット区切りの IPv4 文字列を返すこと。
     // 詳細エラーが記録されないこと。
+    // [サブ手順参照 名前=endpointTest.expect_detail]
     expect_detail(detail, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
-    // [Pre-Assert確認_正常系 回数=3] - 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
+    // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 
 #if defined(PLATFORM_WINDOWS)
 // Winsock の初期化に失敗した場合、IPv4 文字列化が失敗することの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, to_string_propagates_startup_failure)
 {
     // Arrange
@@ -724,8 +776,10 @@ TEST_F(endpointTest, to_string_propagates_startup_failure)
         CPLAT_ERR_UNKNOWN,
         actual_ret); // [確認_異常系] - 初期化に失敗した cplat_ipv4_to_string の戻り値が CPLAT_ERR_UNKNOWN であること。
     // 詳細エラーに Winsock ドメインと OS のエラー値が記録されること。
+    // [サブ手順参照 名前=endpointTest.expect_detail]
     expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_UNKNOWN,
                   static_cast<unsigned long>(WSASYSNOTREADY));
-    // [Pre-Assert確認_正常系 回数=3] - 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
+    // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 }
+// [サブ手順参照 名前=endpointTest.TearDown]
 #endif /* PLATFORM_WINDOWS */

@@ -32,14 +32,19 @@ class fgetsTest : public testing::Test
   protected:
     NiceMock<Mock_stdio> mock_stdio;
 
+    // [サブ手順 名前=fgetsTest.SetUp]
     void SetUp() override
     {
         ON_CALL(mock_stdio, feof(_, _, _, _)).WillByDefault(Return(0));
+        // [状態] - `feof` の既定動作を設定する。
         ON_CALL(mock_stdio, ferror(_, _, _, _)).WillByDefault(Return(0));
+        // [状態] - `ferror` の既定動作を設定する。
     }
+    // [サブ手順終了]
 };
 
 // LF で終わる行が改行を除去して取得されることの確認
+// [サブ手順参照 名前=fgetsTest.SetUp]
 TEST_F(fgetsTest, reads_line_terminated_by_lf)
 {
     // Arrange
@@ -61,6 +66,7 @@ TEST_F(fgetsTest, reads_line_terminated_by_lf)
 }
 
 // CRLF で終わる行が CR と LF の双方を除去して取得されることの確認
+// [サブ手順参照 名前=fgetsTest.SetUp]
 TEST_F(fgetsTest, strips_crlf)
 {
     // Arrange
@@ -82,6 +88,7 @@ TEST_F(fgetsTest, strips_crlf)
 }
 
 // 改行で終わらない最終行が取得できることの確認
+// [サブ手順参照 名前=fgetsTest.SetUp]
 TEST_F(fgetsTest, reads_last_line_without_newline)
 {
     // Arrange
@@ -103,6 +110,7 @@ TEST_F(fgetsTest, reads_last_line_without_newline)
 }
 
 // 空行が空文字列として取得されることの確認
+// [サブ手順参照 名前=fgetsTest.SetUp]
 TEST_F(fgetsTest, reads_empty_line)
 {
     // Arrange
@@ -124,6 +132,7 @@ TEST_F(fgetsTest, reads_empty_line)
 }
 
 // 読み取る行がない場合に EOF を返すことの確認
+// [サブ手順参照 名前=fgetsTest.SetUp]
 TEST_F(fgetsTest, returns_eof_at_end_of_stream)
 {
     // Arrange
@@ -148,6 +157,7 @@ TEST_F(fgetsTest, returns_eof_at_end_of_stream)
 }
 
 // 行がバッファーに収まらない場合にバッファー不足を返すことの確認
+// [サブ手順参照 名前=fgetsTest.SetUp]
 TEST_F(fgetsTest, returns_buffer_too_small_for_long_line)
 {
     // Arrange
@@ -172,6 +182,7 @@ TEST_F(fgetsTest, returns_buffer_too_small_for_long_line)
 }
 
 // バッファーに収まらない行の残りが次の呼び出しで取得されることの確認
+// [サブ手順参照 名前=fgetsTest.SetUp]
 TEST_F(fgetsTest, continues_reading_remainder_after_buffer_too_small)
 {
     // Arrange
@@ -200,6 +211,7 @@ TEST_F(fgetsTest, continues_reading_remainder_after_buffer_too_small)
 }
 
 // バッファー サイズが 1 の場合にバッファー不足を返すことの確認
+// [サブ手順参照 名前=fgetsTest.SetUp]
 TEST_F(fgetsTest, buffer_size_one_returns_buffer_too_small)
 {
     // Arrange
@@ -225,6 +237,7 @@ TEST_F(fgetsTest, buffer_size_one_returns_buffer_too_small)
 }
 
 // 格納先が NULL の場合に引数エラーになることの確認
+// [サブ手順参照 名前=fgetsTest.SetUp]
 TEST_F(fgetsTest, null_dest_returns_invalid_argument)
 {
     // Arrange
@@ -243,6 +256,7 @@ TEST_F(fgetsTest, null_dest_returns_invalid_argument)
 }
 
 // ストリームが NULL の場合に引数エラーになることの確認
+// [サブ手順参照 名前=fgetsTest.SetUp]
 TEST_F(fgetsTest, null_stream_returns_invalid_argument)
 {
     // Arrange
@@ -260,6 +274,7 @@ TEST_F(fgetsTest, null_stream_returns_invalid_argument)
 }
 
 // 成功時に詳細エラーがクリアされることの確認
+// [サブ手順参照 名前=fgetsTest.SetUp]
 TEST_F(fgetsTest, clears_detail_on_success)
 {
     // Arrange

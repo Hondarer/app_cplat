@@ -71,6 +71,7 @@ class stringCatalogFilterStructureTest : public Test
     unsigned char *record = nullptr;
 
     /** 1 行の条件式をコンパイルし、検証に成功することを確かめたうえで先頭行の行レコードを得ます。 */
+    // [サブ手順 名前=stringCatalogFilterStructureTest.prepare]
     void prepare(const char *text)
     {
         std::memset(image, 0, sizeof(image));
@@ -80,6 +81,7 @@ class stringCatalogFilterStructureTest : public Test
         // [状態確認] - `cplat_string_catalog_filter_validate(image, kImageSize)` の戻り値が `CPLAT_OK` であること。
         record = filter_test_record_address(image, kLineWidth, 0U);
     }
+    // [サブ手順終了]
 
     /** 命令を 1 個書き換えます。 */
     void write_instruction(uint32_t index, const string_catalog_filter_instruction &instruction)
@@ -95,6 +97,7 @@ TEST_F(stringCatalogFilterStructureTest, rehash_without_change_keeps_image_valid
     // Arrange
     int actual_ret;
 
+    // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
     prepare("key == 1 || !(id == \"X\")"); // [状態] - ジャンプ、否定、文字列定数を含む条件式をコンパイルする。
 
     // Pre-Assert
@@ -115,6 +118,7 @@ TEST_F(stringCatalogFilterStructureTest, backward_jump_is_rejected)
     string_catalog_filter_instruction instruction;
     int actual_ret;
 
+    // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
     prepare("key == 1 || key == 2"); // [状態] - 短絡評価のジャンプを含む条件式をコンパイルする。
     jump_index = find_instruction(record, (uint8_t)STRING_CATALOG_FILTER_OPCODE_JUMP_IF_TRUE);
     ASSERT_NE(UINT32_MAX, jump_index); // [状態確認] - ジャンプ命令があること。
@@ -140,6 +144,7 @@ TEST_F(stringCatalogFilterStructureTest, jump_beyond_end_is_rejected)
     string_catalog_filter_instruction instruction;
     int actual_ret;
 
+    // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
     prepare("key == 1 || key == 2"); // [状態] - 短絡評価のジャンプを含む条件式をコンパイルする。
     jump_index = find_instruction(record, (uint8_t)STRING_CATALOG_FILTER_OPCODE_JUMP_IF_TRUE);
     ASSERT_NE(UINT32_MAX, jump_index); // [状態確認] - ジャンプ命令があること。
@@ -164,6 +169,7 @@ TEST_F(stringCatalogFilterStructureTest, unknown_opcode_is_rejected)
     string_catalog_filter_instruction instruction;
     int actual_ret;
 
+    // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
     prepare("key == 1"); // [状態] - 判定要素 1 個の条件式をコンパイルする。
 
     // Pre-Assert
@@ -186,6 +192,7 @@ TEST_F(stringCatalogFilterStructureTest, stack_underflow_is_rejected)
     string_catalog_filter_instruction instruction;
     int actual_ret;
 
+    // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
     prepare("key == 1"); // [状態] - 判定要素 1 個の条件式をコンパイルする。
 
     // Pre-Assert
@@ -209,6 +216,7 @@ TEST_F(stringCatalogFilterStructureTest, logical_instruction_with_field_is_rejec
     string_catalog_filter_instruction instruction;
     int actual_ret;
 
+    // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
     prepare("!(key == 1)"); // [状態] - 否定を含む条件式をコンパイルする。
     not_index = find_instruction(record, (uint8_t)STRING_CATALOG_FILTER_OPCODE_NOT);
     ASSERT_NE(UINT32_MAX, not_index); // [状態確認] - 否定の命令があること。
@@ -233,6 +241,7 @@ TEST_F(stringCatalogFilterStructureTest, stack_depth_mismatch_is_rejected)
     string_catalog_filter_record_header header;
     int actual_ret;
 
+    // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
     prepare("key == 1 && key == 2"); // [状態] - 判定要素 2 個の条件式をコンパイルする。
 
     // Pre-Assert
@@ -255,6 +264,7 @@ TEST_F(stringCatalogFilterStructureTest, empty_instruction_list_is_rejected)
     string_catalog_filter_record_header header;
     int actual_ret;
 
+    // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
     prepare("key == 1"); // [状態] - 判定要素 1 個の条件式をコンパイルする。
 
     // Pre-Assert
@@ -277,6 +287,7 @@ TEST_F(stringCatalogFilterStructureTest, constant_offset_out_of_range_is_rejecte
     string_catalog_filter_instruction instruction;
     int actual_ret;
 
+    // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
     prepare("key == 1"); // [状態] - 定数を 1 個参照する条件式をコンパイルする。
 
     // Pre-Assert
@@ -299,6 +310,7 @@ TEST_F(stringCatalogFilterStructureTest, operator_and_constant_mismatch_is_rejec
     string_catalog_filter_instruction instruction;
     int actual_ret;
 
+    // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
     prepare("id == \"X\""); // [状態] - 文字列の定数と比較する条件式をコンパイルする。
 
     // Pre-Assert
@@ -321,6 +333,7 @@ TEST_F(stringCatalogFilterStructureTest, unknown_constant_kind_is_rejected)
     unsigned char *constants;
     int actual_ret;
 
+    // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
     prepare("key == 1"); // [状態] - 定数を 1 個参照する条件式をコンパイルする。
 
     // Pre-Assert
@@ -342,6 +355,7 @@ TEST_F(stringCatalogFilterStructureTest, different_format_version_is_rejected)
     string_catalog_filter_image_header header;
     int actual_ret;
 
+    // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
     prepare("key == 1"); // [状態] - 条件式をコンパイルする。
 
     // Pre-Assert
@@ -380,6 +394,7 @@ TEST_F(stringCatalogFilterStructureTest, different_byte_order_is_rejected)
     string_catalog_filter_image_header header;
     int actual_ret;
 
+    // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
     prepare("key == 1"); // [状態] - 条件式をコンパイルする。
 
     // Pre-Assert

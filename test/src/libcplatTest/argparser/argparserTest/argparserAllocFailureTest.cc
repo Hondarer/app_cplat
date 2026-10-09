@@ -17,20 +17,25 @@ class argparserAllocFailureTest : public Test
     cplat_argparser *parser_ = NULL;
     const char *storage_ = NULL;
 
+    // [サブ手順 名前=argparserAllocFailureTest.SetUp]
     void SetUp() override
     {
         parser_ = cplat_argparser_handle_create(0, NULL, NULL); // [状態] - 生成済みの parser を用意する。
         ASSERT_NE((cplat_argparser *)NULL, parser_); // [状態確認] - ハンドルが非 NULL であること。
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=argparserAllocFailureTest.TearDown]
     void TearDown() override
     {
         cplat_argparser_handle_dispose(parser_);
         parser_ = NULL;
     }
+    // [サブ手順終了]
 };
 
 // 登録項目配列の拡張に失敗した場合に登録が失敗することの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
 TEST_F(argparserAllocFailureTest, register_fails_when_spec_array_expansion_fails)
 {
     // Arrange
@@ -57,8 +62,10 @@ TEST_F(argparserAllocFailureTest, register_fails_when_spec_array_expansion_fails
         CPLAT_ERR_OUT_OF_MEMORY,
         actual_ret); // [確認_異常系] - cplat_argparser_handle_register_option_string の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
 // 登録項目の名前複製に失敗した場合に登録が失敗することの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
 TEST_F(argparserAllocFailureTest, register_fails_when_name_duplication_fails)
 {
     // Arrange
@@ -79,8 +86,10 @@ TEST_F(argparserAllocFailureTest, register_fails_when_name_duplication_fails)
         CPLAT_ERR_OUT_OF_MEMORY,
         actual_ret); // [確認_異常系] - cplat_argparser_handle_register_option_string の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
 // 位置引数の登録項目配列拡張に失敗した場合に登録が失敗することの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
 TEST_F(argparserAllocFailureTest, positional_register_fails_when_spec_array_expansion_fails)
 {
     // Arrange
@@ -101,8 +110,10 @@ TEST_F(argparserAllocFailureTest, positional_register_fails_when_spec_array_expa
         CPLAT_ERR_OUT_OF_MEMORY,
         actual_ret); // [確認_異常系] - 配列拡張失敗時の cplat_argparser_handle_register_positional_string の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
 // 位置引数名の複製に失敗した場合に登録が失敗することの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
 TEST_F(argparserAllocFailureTest, positional_register_fails_when_name_duplication_fails)
 {
     // Arrange
@@ -122,8 +133,10 @@ TEST_F(argparserAllocFailureTest, positional_register_fails_when_name_duplicatio
         CPLAT_ERR_OUT_OF_MEMORY,
         actual_ret); // [確認_異常系] - 名前複製失敗時の cplat_argparser_handle_register_positional_string の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
 // 使用方法の出力バッファー確保に失敗した場合に出力が失敗することの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
 TEST_F(argparserAllocFailureTest, print_usage_fails_when_buffer_allocation_fails)
 {
     // Arrange
@@ -149,8 +162,10 @@ TEST_F(argparserAllocFailureTest, print_usage_fails_when_buffer_allocation_fails
         CPLAT_ERR_OUT_OF_MEMORY,
         actual_ret); // [確認_異常系] - cplat_argparser_handle_print_usage の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
 // short_name の複製に失敗した場合に登録が失敗することの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
 TEST_F(argparserAllocFailureTest, register_fails_when_short_name_duplication_fails)
 {
     // Arrange
@@ -169,8 +184,10 @@ TEST_F(argparserAllocFailureTest, register_fails_when_short_name_duplication_fai
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
               actual_ret); // [確認_異常系] - short_name 複製失敗時の登録結果が OUT_OF_MEMORY であること。
 }
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
 // long_name の複製に失敗した場合に登録が失敗することの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
 TEST_F(argparserAllocFailureTest, register_fails_when_long_name_duplication_fails)
 {
     // Arrange
@@ -190,8 +207,10 @@ TEST_F(argparserAllocFailureTest, register_fails_when_long_name_duplication_fail
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
               actual_ret); // [確認_異常系] - long_name 複製失敗時の登録結果が OUT_OF_MEMORY であること。
 }
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
 // value_name の複製に失敗した場合に登録が失敗することの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
 TEST_F(argparserAllocFailureTest, register_fails_when_value_name_duplication_fails)
 {
     // Arrange
@@ -212,8 +231,10 @@ TEST_F(argparserAllocFailureTest, register_fails_when_value_name_duplication_fai
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
               actual_ret); // [確認_異常系] - value_name 複製失敗時の登録結果が OUT_OF_MEMORY であること。
 }
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
 // description の複製に失敗した場合に登録が失敗することの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
 TEST_F(argparserAllocFailureTest, register_fails_when_description_duplication_fails)
 {
     // Arrange
@@ -235,8 +256,10 @@ TEST_F(argparserAllocFailureTest, register_fails_when_description_duplication_fa
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
               actual_ret); // [確認_異常系] - description 複製失敗時の登録結果が OUT_OF_MEMORY であること。
 }
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
 // 登録エラー配列の realloc に失敗した場合に登録結果だけが返ることの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
 TEST_F(argparserAllocFailureTest, register_error_is_not_recorded_when_realloc_fails)
 {
     // Arrange
@@ -257,8 +280,10 @@ TEST_F(argparserAllocFailureTest, register_error_is_not_recorded_when_realloc_fa
     EXPECT_EQ((size_t)0, cplat_argparser_handle_get_register_error_count(
                              parser_)); // [確認_異常系] - realloc 失敗時に登録エラー件数が 0 のままであること。
 }
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
 // create の program_name 複製に失敗した場合に NULL が返ることの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
 TEST_F(argparserAllocFailureTest, create_fails_when_program_name_duplication_fails)
 {
     // Arrange
@@ -278,8 +303,10 @@ TEST_F(argparserAllocFailureTest, create_fails_when_program_name_duplication_fai
     // Assert
     EXPECT_EQ(nullptr, parser); // [確認_異常系] - program_name 複製失敗時の parser が NULL であること。
 }
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
 // create の program_description 複製に失敗した場合に NULL が返ることの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
 TEST_F(argparserAllocFailureTest, create_fails_when_program_description_duplication_fails)
 {
     // Arrange
@@ -300,8 +327,10 @@ TEST_F(argparserAllocFailureTest, create_fails_when_program_description_duplicat
     // Assert
     EXPECT_EQ(nullptr, parser); // [確認_異常系] - program_description 複製失敗時の parser が NULL であること。
 }
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
 // argv[0] のベース名複製に失敗した場合も生成と解析が継続することの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
 TEST_F(argparserAllocFailureTest, create_continues_when_program_name_duplication_fails)
 {
     // Arrange
@@ -325,3 +354,4 @@ TEST_F(argparserAllocFailureTest, create_continues_when_program_name_duplication
     // Cleanup
     cplat_argparser_handle_dispose(parser);
 }
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]

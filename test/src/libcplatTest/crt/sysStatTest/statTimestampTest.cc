@@ -21,6 +21,7 @@ cplat_timespec make_timestamp(time_t tv_sec, int64_t tv_nsec)
     return timestamp;
 }
 
+// [サブ手順 名前=statTimestampTest.create_file]
 void create_file(const char *path)
 {
     FILE *stream = cplat_fopen(path, "wb", NULL);
@@ -32,22 +33,28 @@ void create_file(const char *path)
     ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, NULL));
     // [状態確認] - `cplat_fclose(stream, NULL)` の戻り値が `CPLAT_OK` であること。
 }
+// [サブ手順終了]
 
 } // namespace
 
 class statTimestampTest : public Test
 {
   protected:
+    // [サブ手順 名前=statTimestampTest.SetUp]
     void SetUp() override
     {
         (void)cplat_remove(kPath, NULL);
+        // [サブ手順参照 名前=statTimestampTest.create_file]
         create_file(kPath);
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=statTimestampTest.TearDown]
     void TearDown() override
     {
         (void)cplat_remove(kPath, NULL);
     }
+    // [サブ手順終了]
 };
 
 /*
@@ -57,6 +64,7 @@ class statTimestampTest : public Test
  */
 
 // 設定した最終更新日時の秒部が cplat_stat の st_mtime と一致することの確認
+// [サブ手順参照 名前=statTimestampTest.SetUp]
 TEST_F(statTimestampTest, seconds_agree_with_set_modified_timestamp)
 {
     // Arrange
@@ -77,3 +85,4 @@ TEST_F(statTimestampTest, seconds_agree_with_set_modified_timestamp)
     EXPECT_EQ(expected.tv_sec, static_cast<time_t>(file_stat.st_mtime));
     // [確認_正常系] - `file_stat.st_mtime` を `time_t` に変換した値が、設定した秒数 `expected.tv_sec` と一致すること。
 }
+// [サブ手順参照 名前=statTimestampTest.TearDown]

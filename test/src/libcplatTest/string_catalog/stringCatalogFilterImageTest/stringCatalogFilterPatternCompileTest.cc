@@ -35,10 +35,12 @@ class stringCatalogFilterPatternCompileTest : public Test
   protected:
     unsigned char image_[kImageSize];
 
+    // [サブ手順 名前=stringCatalogFilterPatternCompileTest.SetUp]
     void SetUp() override
     {
         std::memset(image_, 0, sizeof(image_));
     }
+    // [サブ手順終了]
 
     /** 1 行をコンパイルし、無効になった場合の原因を返します。 */
     cplat_string_catalog_filter_line_error compile_error_of(const char *text)
@@ -57,6 +59,7 @@ class stringCatalogFilterPatternCompileTest : public Test
 };
 
 // matches と matches_i を ID と文字列の引数へ書け、パターンの定数と番号を記録することの確認
+// [サブ手順参照 名前=stringCatalogFilterPatternCompileTest.SetUp]
 TEST_F(stringCatalogFilterPatternCompileTest, pattern_constants_are_numbered_per_line)
 {
     // Arrange
@@ -100,6 +103,7 @@ TEST_F(stringCatalogFilterPatternCompileTest, pattern_constants_are_numbered_per
 }
 
 // パターンを含む条件式をデコンパイルし、再コンパイルすると元と同じ表現になることの確認
+// [サブ手順参照 名前=stringCatalogFilterPatternCompileTest.SetUp]
 TEST_F(stringCatalogFilterPatternCompileTest, decompiled_pattern_recompiles_to_same_bytes)
 {
     // Arrange
@@ -129,6 +133,7 @@ TEST_F(stringCatalogFilterPatternCompileTest, decompiled_pattern_recompiles_to_s
 }
 
 // 正規表現として誤ったパターンは、変換の時点で行を無効にし、原因と位置を通知することの確認
+// [サブ手順参照 名前=stringCatalogFilterPatternCompileTest.SetUp]
 TEST_F(stringCatalogFilterPatternCompileTest, invalid_pattern_is_diagnosed_at_compile)
 {
     // Arrange
@@ -152,6 +157,7 @@ TEST_F(stringCatalogFilterPatternCompileTest, invalid_pattern_is_diagnosed_at_co
 }
 
 // パターンを書けないフィールドと定数を、型の誤りとして拒否することの確認
+// [サブ手順参照 名前=stringCatalogFilterPatternCompileTest.SetUp]
 TEST_F(stringCatalogFilterPatternCompileTest, pattern_requires_string_field_and_string_literal)
 {
     // Arrange
@@ -180,6 +186,7 @@ TEST_F(stringCatalogFilterPatternCompileTest, pattern_requires_string_field_and_
 }
 
 // 1 行のパターンの数の上限を超えた場合は、上限の超過として行を無効にすることの確認
+// [サブ手順参照 名前=stringCatalogFilterPatternCompileTest.SetUp]
 TEST_F(stringCatalogFilterPatternCompileTest, pattern_count_is_limited_per_line)
 {
     // Arrange
@@ -201,6 +208,7 @@ TEST_F(stringCatalogFilterPatternCompileTest, pattern_count_is_limited_per_line)
 }
 
 // パターンの番号が見出しのパターンの数を超える場合は、構造の検査で拒否することの確認
+// [サブ手順参照 名前=stringCatalogFilterPatternCompileTest.SetUp]
 TEST_F(stringCatalogFilterPatternCompileTest, pattern_slot_beyond_count_is_rejected)
 {
     // Arrange

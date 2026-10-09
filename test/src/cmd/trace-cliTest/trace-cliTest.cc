@@ -77,23 +77,33 @@ class trace_cliTest : public Test
     trace_cli_session session_{};
     cplat_tracer *handle_ = reinterpret_cast<cplat_tracer *>(static_cast<uintptr_t>(0x1234));
 
+    // [サブ手順 名前=trace_cliTest.SetUp]
     void SetUp() override
     {
         trace_cli_session_init(&session_);
         ON_CALL(mock_cplat_, cplat_strncpy(_, _, _, _)).WillByDefault(emulate_cplat_strncpy);
+        // [状態] - `cplat_strncpy` の既定動作を設定する。
         ON_CALL(mock_cplat_, cplat_isatty(CPLAT_STREAM_STDOUT)).WillByDefault(Return(1));
+        // [状態] - `cplat_isatty` の既定動作を設定する。
         ON_CALL(mock_cplat_, cplat_tracer_dispose(_)).WillByDefault(Return());
+        // [状態] - `cplat_tracer_dispose` の既定動作を設定する。
         ON_CALL(mock_stdio_, printf(_, _, _, _)).WillByDefault(Return(0));
+        // [状態] - `printf` の既定動作を設定する。
         ON_CALL(mock_stdio_, fprintf(_, _, _, _, _)).WillByDefault(Return(0));
+        // [状態] - `fprintf` の既定動作を設定する。
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=trace_cliTest.TearDown]
     void TearDown() override
     {
         trace_cli_session_dispose(&session_);
     }
+    // [サブ手順終了]
 };
 
 // create で handle が生成され、2 回目の create が拒否されることの確認
+// [サブ手順参照 名前=trace_cliTest.SetUp]
 TEST_F(trace_cliTest, process_line_create_and_reject_second_create)
 {
     // Arrange
@@ -118,8 +128,10 @@ TEST_F(trace_cliTest, process_line_create_and_reject_second_create)
               0); // [確認_異常系] - 2 回目に呼び出した trace_cli_process_line の戻り値が負 (エラー) であること。
     EXPECT_EQ(handle_, session_.handle); // [確認_正常系] - session に生成済み handle が保持されること。
 }
+// [サブ手順参照 名前=trace_cliTest.TearDown]
 
 // set-file-level の null キーワードが NULL パスとして tracer API へ渡されることの確認
+// [サブ手順参照 名前=trace_cliTest.SetUp]
 TEST_F(trace_cliTest, process_line_set_file_level_accepts_null_keyword)
 {
     // Arrange
@@ -140,8 +152,10 @@ TEST_F(trace_cliTest, process_line_set_file_level_accepts_null_keyword)
     // Assert
     EXPECT_EQ(0, rc); // [確認_正常系] - trace_cli_process_line の戻り値が 0 (継続) であること。
 }
+// [サブ手順参照 名前=trace_cliTest.TearDown]
 
 // set-os-level で tracer API がエラーの場合に赤の rc 表示となることの確認
+// [サブ手順参照 名前=trace_cliTest.SetUp]
 TEST_F(trace_cliTest, process_line_set_os_level_colors_error_rc)
 {
     // Arrange
@@ -161,8 +175,10 @@ TEST_F(trace_cliTest, process_line_set_os_level_colors_error_rc)
     // Assert
     EXPECT_EQ(0, rc); // [確認_正常系] - trace_cli_process_line の戻り値が 0 (継続) であること。
 }
+// [サブ手順参照 名前=trace_cliTest.TearDown]
 
 // stdout が TTY でない場合に rc 表示へ ANSI 色を付けないことの確認
+// [サブ手順参照 名前=trace_cliTest.SetUp]
 TEST_F(trace_cliTest, process_line_set_os_level_keeps_plain_rc_when_stdout_is_not_tty)
 {
     // Arrange
@@ -186,8 +202,10 @@ TEST_F(trace_cliTest, process_line_set_os_level_keeps_plain_rc_when_stdout_is_no
     // Assert
     EXPECT_EQ(0, rc); // [確認_正常系] - trace_cli_process_line の戻り値が 0 (継続) であること。
 }
+// [サブ手順参照 名前=trace_cliTest.TearDown]
 
 // dispose で保持中の handle が解放され session から外れることの確認
+// [サブ手順参照 名前=trace_cliTest.SetUp]
 TEST_F(trace_cliTest, process_line_dispose_releases_handle)
 {
     // Arrange
@@ -211,8 +229,10 @@ TEST_F(trace_cliTest, process_line_dispose_releases_handle)
     EXPECT_EQ(0, rc);                    // [確認_正常系] - trace_cli_process_line の戻り値が 0 (継続) であること。
     EXPECT_EQ(nullptr, session_.handle); // [確認_正常系] - session の handle が NULL に戻ること。
 }
+// [サブ手順参照 名前=trace_cliTest.TearDown]
 
 // write-hex の引用付き 16 進文字列とラベルが解析されて API へ渡されることの確認
+// [サブ手順参照 名前=trace_cliTest.SetUp]
 TEST_F(trace_cliTest, process_line_write_hex_parses_quoted_hex_and_label)
 {
     // Arrange
@@ -244,8 +264,10 @@ TEST_F(trace_cliTest, process_line_write_hex_parses_quoted_hex_and_label)
     // Assert
     EXPECT_EQ(0, rc); // [確認_正常系] - trace_cli_process_line の戻り値が 0 (継続) であること。
 }
+// [サブ手順参照 名前=trace_cliTest.TearDown]
 
 // writef が行末までを 1 つの message 文字列として API へ渡すことの確認
+// [サブ手順参照 名前=trace_cliTest.SetUp]
 TEST_F(trace_cliTest, process_line_writef_uses_message_as_single_string)
 {
     // Arrange
@@ -267,8 +289,10 @@ TEST_F(trace_cliTest, process_line_writef_uses_message_as_single_string)
     // Assert
     EXPECT_EQ(0, rc); // [確認_正常系] - trace_cli_process_line の戻り値が 0 (継続) であること。
 }
+// [サブ手順参照 名前=trace_cliTest.TearDown]
 
 // handle 未生成でも get-os-level が NULL handle のまま API を呼び出すことの確認
+// [サブ手順参照 名前=trace_cliTest.SetUp]
 TEST_F(trace_cliTest, process_line_get_os_level_calls_api_with_null_handle)
 {
     // Arrange
@@ -287,8 +311,10 @@ TEST_F(trace_cliTest, process_line_get_os_level_calls_api_with_null_handle)
     // Assert
     EXPECT_EQ(0, rc); // [確認_正常系] - trace_cli_process_line の戻り値が 0 (継続) であること。
 }
+// [サブ手順参照 名前=trace_cliTest.TearDown]
 
 // help でコマンド一覧が stdout に出力されることの確認
+// [サブ手順参照 名前=trace_cliTest.SetUp]
 TEST_F(trace_cliTest, process_line_help_prints_command_list)
 {
     // Arrange
@@ -309,8 +335,10 @@ TEST_F(trace_cliTest, process_line_help_prints_command_list)
     // Assert
     EXPECT_EQ(0, rc); // [確認_正常系] - trace_cli_process_line の戻り値が 0 (継続) であること。
 }
+// [サブ手順参照 名前=trace_cliTest.TearDown]
 
 // quit が終了要求として処理されることの確認
+// [サブ手順参照 名前=trace_cliTest.SetUp]
 TEST_F(trace_cliTest, process_line_quit_requests_exit)
 {
     // Arrange
@@ -324,8 +352,10 @@ TEST_F(trace_cliTest, process_line_quit_requests_exit)
     EXPECT_EQ(1, rc); // [確認_正常系] - trace_cli_process_line の戻り値が 1 (終了要求) であること。
     EXPECT_EQ(1, session_.exit_requested); // [確認_正常系] - session の exit_requested が 1 になること。
 }
+// [サブ手順参照 名前=trace_cliTest.TearDown]
 
 // --help 指定時に usage を表示して正常終了することの確認
+// [サブ手順参照 名前=trace_cliTest.SetUp]
 TEST_F(trace_cliTest, main_prints_usage_on_help)
 {
     // Arrange
@@ -343,8 +373,10 @@ TEST_F(trace_cliTest, main_prints_usage_on_help)
     // Assert
     EXPECT_EQ(EXIT_SUCCESS, rc); // [確認_正常系] - main() の戻り値が EXIT_SUCCESS であること。
 }
+// [サブ手順参照 名前=trace_cliTest.TearDown]
 
 // 対話モードで create から exit までの一連のコマンドが処理され handle が解放されることの確認
+// [サブ手順参照 名前=trace_cliTest.SetUp]
 TEST_F(trace_cliTest, main_runs_interactive_sequence_and_disposes_handle)
 {
     // Arrange
@@ -439,3 +471,4 @@ TEST_F(trace_cliTest, main_runs_interactive_sequence_and_disposes_handle)
     // Assert
     EXPECT_EQ(EXIT_SUCCESS, rc); // [確認_正常系] - main() の戻り値が EXIT_SUCCESS であること。
 }
+// [サブ手順参照 名前=trace_cliTest.TearDown]

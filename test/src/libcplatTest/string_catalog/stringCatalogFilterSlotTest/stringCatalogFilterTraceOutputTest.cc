@@ -49,22 +49,28 @@ class stringCatalogFilterTraceOutputTest : public Test
         return reinterpret_cast<cplat_tracer *>(&tracer_storage_);
     }
 
+    // [サブ手順 名前=stringCatalogFilterTraceOutputTest.SetUp]
     void SetUp() override
     {
         memset(image_, 0, sizeof(image_));
         cplat_string_catalog_set_language(CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL);
         filter_test_trace_set_tracer(tracer());
         ON_CALL(mock_cplat, cplat_tracer_write_at(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_tracer_write_at` の既定動作を設定する。
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=stringCatalogFilterTraceOutputTest.TearDown]
     void TearDown() override
     {
         (void)filter_test_trace_set_filter(nullptr);
         filter_test_trace_set_tracer(nullptr);
         cplat_string_catalog_filter_slot_dispose(&slot_);
     }
+    // [サブ手順終了]
 
     /** 本カタログでスロットを作成し、条件式 1 行を適用して出力へ接続します。 */
+    // [サブ手順 名前=stringCatalogFilterTraceOutputTest.connect_with_line]
     void connect_with_line(const char *text)
     {
         ASSERT_EQ(CPLAT_OK, filter_test_trace_create_filter(nullptr, kLineCapacity, kLineWidth, &slot_));
@@ -77,9 +83,11 @@ class stringCatalogFilterTraceOutputTest : public Test
         ASSERT_EQ(CPLAT_OK, filter_test_trace_set_filter(slot_));
         // [状態確認] - `filter_test_trace_set_filter(slot_)` の戻り値が `CPLAT_OK` であること。
     }
+    // [サブ手順終了]
 };
 
 // フィルターを接続しない場合は、定義のレベルで出力することの確認
+// [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.SetUp]
 TEST_F(stringCatalogFilterTraceOutputTest, unconnected_writes_with_defined_level)
 {
     // Arrange
@@ -98,12 +106,15 @@ TEST_F(stringCatalogFilterTraceOutputTest, unconnected_writes_with_defined_level
     EXPECT_EQ(CPLAT_OK, actual_ret);                    // [確認_正常系] - 出力に成功すること。
     EXPECT_EQ(nullptr, filter_test_trace_get_filter()); // [確認_正常系] - フィルターが未設定であること。
 }
+// [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.TearDown]
 
 // 接続した条件式に一致した場合は、強制出力のレベルで出力することの確認
+// [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.SetUp]
 TEST_F(stringCatalogFilterTraceOutputTest, matched_trace_is_forced)
 {
     // Arrange
     int actual_ret;
+    // [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.connect_with_line]
     connect_with_line("key == FILTER_TEST_TRACE_KEY_JOB_FAILED"); // [状態] - JOB_FAILED に一致する条件で接続する。
 
     // Pre-Assert
@@ -117,12 +128,15 @@ TEST_F(stringCatalogFilterTraceOutputTest, matched_trace_is_forced)
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 出力に成功すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.TearDown]
 
 // 接続した条件式に一致しない場合は、定義のレベルのまま出力することの確認
+// [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.SetUp]
 TEST_F(stringCatalogFilterTraceOutputTest, unmatched_trace_keeps_defined_level)
 {
     // Arrange
     int actual_ret;
+    // [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.connect_with_line]
     connect_with_line(
         "key == FILTER_TEST_TRACE_KEY_WORKER_STARTED"); // [状態] - JOB_FAILED に一致しない条件で接続する。
 
@@ -136,13 +150,16 @@ TEST_F(stringCatalogFilterTraceOutputTest, unmatched_trace_keeps_defined_level)
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 出力に成功すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.TearDown]
 
 // 別のカタログで作成したスロットは接続せず、それまでの接続を保つことの確認
+// [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.SetUp]
 TEST_F(stringCatalogFilterTraceOutputTest, set_filter_rejects_slot_of_another_catalog)
 {
     // Arrange
     cplat_string_catalog_filter_slot *other_slot = nullptr;
     int actual_ret;
+    // [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.connect_with_line]
     connect_with_line("key == FILTER_TEST_TRACE_KEY_JOB_FAILED"); // [状態] - 本カタログのスロットで接続する。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(
                             filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity, kLineWidth,
@@ -160,12 +177,15 @@ TEST_F(stringCatalogFilterTraceOutputTest, set_filter_rejects_slot_of_another_ca
 
     cplat_string_catalog_filter_slot_dispose(&other_slot);
 }
+// [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.TearDown]
 
 // 接続を解除すると、条件式に一致していたトレースも定義のレベルで出力することの確認
+// [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.SetUp]
 TEST_F(stringCatalogFilterTraceOutputTest, detached_filter_restores_defined_level)
 {
     // Arrange
     int actual_detach_ret;
+    // [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.connect_with_line]
     connect_with_line("key == FILTER_TEST_TRACE_KEY_JOB_FAILED"); // [状態] - JOB_FAILED に一致する条件で接続する。
 
     // Pre-Assert
@@ -180,8 +200,10 @@ TEST_F(stringCatalogFilterTraceOutputTest, detached_filter_restores_defined_leve
     EXPECT_EQ(CPLAT_OK, actual_detach_ret);             // [確認_正常系] - 解除に成功すること。
     EXPECT_EQ(nullptr, filter_test_trace_get_filter()); // [確認_正常系] - フィルターが未設定になること。
 }
+// [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.TearDown]
 
 // 作成したスロットが本カタログに結び付き、名前解決表で文字列キーの名前を解決することの確認
+// [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.SetUp]
 TEST_F(stringCatalogFilterTraceOutputTest, create_filter_binds_own_catalog_and_key_names)
 {
     // Arrange
@@ -208,8 +230,10 @@ TEST_F(stringCatalogFilterTraceOutputTest, create_filter_binds_own_catalog_and_k
     EXPECT_EQ(CPLAT_OK, actual_apply_ret);         // [確認_正常系] - 適用に成功すること。
     EXPECT_EQ(0U, actual_invalid_count);           // [確認_正常系] - 文字列キーの名前を解決し、無効な行がないこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.TearDown]
 
 // ソース領域を結び付けたスロットでは、出力のたびに公開された条件を取り込むことの確認
+// [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.SetUp]
 TEST_F(stringCatalogFilterTraceOutputTest, attached_source_is_taken_on_write)
 {
     // Arrange
@@ -242,3 +266,4 @@ TEST_F(stringCatalogFilterTraceOutputTest, attached_source_is_taken_on_write)
     // Assert
     (void)cplat_string_catalog_filter_slot_attach_source(slot_, nullptr, 0U, nullptr);
 }
+// [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.TearDown]

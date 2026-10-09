@@ -46,6 +46,7 @@ class stringCatalogFilterSourceTest : public Test
     /** テスト用カタログの識別値です。公開で指定します。 */
     uint64_t catalog_id_ = 0U;
 
+    // [サブ手順 名前=stringCatalogFilterSourceTest.SetUp]
     void SetUp() override
     {
         memset(source_, 0, sizeof(source_));
@@ -57,11 +58,14 @@ class stringCatalogFilterSourceTest : public Test
                                 filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_));
         // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_trace_catalog(), filter_test_trace_key_names(), filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=stringCatalogFilterSourceTest.TearDown]
     void TearDown() override
     {
         cplat_string_catalog_filter_slot_dispose(&slot_);
     }
+    // [サブ手順終了]
 
     string_catalog_filter_source_header *header()
     {
@@ -88,6 +92,7 @@ class stringCatalogFilterSourceTest : public Test
                                                        FILTER_TEST_CONTEXT_ARGS(7));
     }
 
+    // [サブ手順 名前=stringCatalogFilterSourceTest.source_status]
     cplat_string_catalog_filter_source_status source_status()
     {
         cplat_string_catalog_filter_source_status status;
@@ -96,9 +101,11 @@ class stringCatalogFilterSourceTest : public Test
         // [状態確認] - `cplat_string_catalog_filter_slot_get_source_status(slot_, &status)` の戻り値が `CPLAT_OK` であること。
         return status;
     }
+    // [サブ手順終了]
 };
 
 // 公開した条件を、次の判定付きの組み立てで取り込むことの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, format_takes_published_conditions)
 {
     // Arrange
@@ -117,6 +124,7 @@ TEST_F(stringCatalogFilterSourceTest, format_takes_published_conditions)
     actual_ret = format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
 
     // Assert
+    // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status]
     cplat_string_catalog_filter_source_status status = source_status();
     EXPECT_EQ(CPLAT_OK, actual_ret);                      // [確認_正常系] - 組み立てに成功すること。
     EXPECT_NE(0, actual_matched);                         // [確認_正常系] - 公開した条件で一致すること。
@@ -124,8 +132,10 @@ TEST_F(stringCatalogFilterSourceTest, format_takes_published_conditions)
     EXPECT_EQ(CPLAT_OK, status.last_result);              // [確認_正常系] - 取り込みの結果が成功であること。
     EXPECT_EQ(0U, status.last_invalid_count);             // [確認_正常系] - 無効にした行がないこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 版番号が変わらない場合は、ロックを取らずに判定することの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, unchanged_revision_skips_lock)
 {
     // Arrange
@@ -149,8 +159,10 @@ TEST_F(stringCatalogFilterSourceTest, unchanged_revision_skips_lock)
     // Assert
     EXPECT_NE(0, actual_matched); // [確認_正常系] - 取り込み済みの条件で一致すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 公開し直した条件を取り込み、版番号が増加することの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, republished_conditions_replace_previous)
 {
     // Arrange
@@ -178,10 +190,13 @@ TEST_F(stringCatalogFilterSourceTest, republished_conditions_replace_previous)
     EXPECT_EQ(4U, second_revision); // [確認_正常系] - 公開のたびに 2 ずつ増えること。
     EXPECT_EQ(0, actual_matched);   // [確認_正常系] - 2 回目の条件で判定すること。
     EXPECT_EQ(second_revision,
+              // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status]
               source_status().taken_revision); // [確認_正常系] - 2 回目の版番号を取り込み済みとすること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 版番号が奇数 (書き込み中) の間は取り込まず、次の公開で回復することの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, writing_source_is_not_taken_until_next_publish)
 {
     // Arrange
@@ -201,6 +216,7 @@ TEST_F(stringCatalogFilterSourceTest, writing_source_is_not_taken_until_next_pub
 
     // Act
     (void)format_job_failed(&actual_matched_while_writing); // [手順] - 書き込み中に組み立てる。
+    // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status]
     uint64_t taken_while_writing = source_status().taken_revision;
     ASSERT_EQ(CPLAT_OK, publish_line("category <= 2", &recovered_revision)); // [手順] - 公開し直す。
     // [確認_正常系] - `publish_line("category <= 2", &recovered_revision)` の戻り値が `CPLAT_OK` であること。
@@ -213,8 +229,10 @@ TEST_F(stringCatalogFilterSourceTest, writing_source_is_not_taken_until_next_pub
               recovered_revision);               // [確認_正常系] - 中断前の版番号に 2 を加えた値になること。
     EXPECT_NE(0, actual_matched_after_recovery); // [確認_正常系] - 公開し直した条件を取り込むこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 複製の間に公開が重なった場合は取り込まず、次の判定で取り込むことの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, torn_copy_is_discarded_and_retried)
 {
     // Arrange
@@ -241,6 +259,7 @@ TEST_F(stringCatalogFilterSourceTest, torn_copy_is_discarded_and_retried)
 
     // Act
     (void)format_job_failed(&actual_matched_torn); // [手順] - 公開が重なった状態で組み立てる。
+    // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status]
     uint64_t taken_after_torn = source_status().taken_revision;
     (void)format_job_failed(&actual_matched_retry); // [手順] - もう一度組み立てる。
 
@@ -249,8 +268,10 @@ TEST_F(stringCatalogFilterSourceTest, torn_copy_is_discarded_and_retried)
     EXPECT_EQ(0U, taken_after_torn);    // [確認_異常系] - 重なった版番号を取り込み済みとしないこと。
     EXPECT_NE(0, actual_matched_retry); // [確認_正常系] - 次の判定で取り込むこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // ほかのスレッドが取り込み中の場合は待たずに、適用済みの条件で判定することの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, busy_lock_skips_take_without_waiting)
 {
     // Arrange
@@ -275,8 +296,10 @@ TEST_F(stringCatalogFilterSourceTest, busy_lock_skips_take_without_waiting)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 組み立てに成功すること。
     EXPECT_EQ(0, actual_matched);    // [確認_正常系] - 適用済みの条件で判定すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 検証に失敗する公開内容は、結果を記録して繰り返し取り込まないことの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, corrupt_publication_is_recorded_and_not_retried)
 {
     // Arrange
@@ -299,6 +322,7 @@ TEST_F(stringCatalogFilterSourceTest, corrupt_publication_is_recorded_and_not_re
     // Act
     actual_matched = 0;
     (void)format_job_failed(&actual_matched); // [手順] - 壊れた公開内容で組み立てる。
+    // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status]
     cplat_string_catalog_filter_source_status status = source_status();
     EXPECT_CALL(mock_cplat, cplat_local_lock_try_lock(_))
         .Times(0);                            // 同じ公開内容の取り込みを試みない。
@@ -310,8 +334,10 @@ TEST_F(stringCatalogFilterSourceTest, corrupt_publication_is_recorded_and_not_re
     EXPECT_EQ(published_revision + 2U, status.taken_revision);   // [確認_異常系] - 試みた版番号を記録すること。
     EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, status.last_result); // [確認_異常系] - 検証の失敗を記録すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 結び付けで、アラインメントと大きさを確認し、NULL で解除できることの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, attach_validates_region_and_detaches_with_null)
 {
     // Arrange
@@ -342,8 +368,10 @@ TEST_F(stringCatalogFilterSourceTest, attach_validates_region_and_detaches_with_
     EXPECT_EQ(CPLAT_OK, actual_detach_ret);                       // [確認_正常系] - 解除できること。
     EXPECT_EQ(0, actual_matched);                                 // [確認_正常系] - 解除後は取り込まないこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 公開で、不正な入力と異なる形式の領域を拒否し、領域を変更しないことの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, publish_rejects_invalid_input_without_change)
 {
     // Arrange
@@ -382,8 +410,10 @@ TEST_F(stringCatalogFilterSourceTest, publish_rejects_invalid_input_without_chan
     EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_foreign_ret);     // [確認_異常系] - 異なる形式の領域を拒否すること。
     EXPECT_EQ(0, memcmp(expected_source, source_, sizeof(source_))); // [確認_異常系] - 領域を変更しないこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 公開の情報を、未公開、公開済み、書き込み中、異なる形式の各状態で返すことの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, get_info_reports_each_state)
 {
     // Arrange
@@ -430,8 +460,10 @@ TEST_F(stringCatalogFilterSourceTest, get_info_reports_each_state)
     EXPECT_EQ(CPLAT_ERR_BUSY, actual_writing_ret); // [確認_異常系] - 書き込み中は CPLAT_ERR_BUSY を返すこと。
     EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_foreign_ret); // [確認_異常系] - 異なる形式を拒否すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 前回の版番号が大きい領域 (再起動を越えて残ったファイルのマップ) でも、版番号が前回の値から増え続けることの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, publish_continues_from_carried_over_revision)
 {
     // Arrange
@@ -457,11 +489,14 @@ TEST_F(stringCatalogFilterSourceTest, publish_continues_from_carried_over_revisi
     EXPECT_EQ(carried_over + 2U, actual_revision); // [確認_正常系] - 前回の値に 2 を加えた値になること。
     EXPECT_NE(0, actual_matched);                  // [確認_正常系] - 新しい条件を取り込むこと。
     EXPECT_EQ(actual_revision,
+              // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status]
               source_status().taken_revision); // [確認_正常系] - 新しい版番号を取り込み済みとすること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 版番号が上限に達した領域では、0 でない最小の偶数へ戻り、読み取り側が取り込むことの確認
 // 読み取り側は上限の手前の版番号を取り込み済みとし、戻った値と一致しないようにする
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, publish_wraps_around_at_upper_limit)
 {
     const uint64_t limits[] = {UINT64_MAX - 1U, UINT64_MAX};
@@ -499,12 +534,15 @@ TEST_F(stringCatalogFilterSourceTest, publish_wraps_around_at_upper_limit)
         EXPECT_EQ(2U, actual_revision); // [確認_正常系 回数=2] - 未公開を表す 0 を避け、最小の偶数 2 へ戻ること。
         EXPECT_NE(0, actual_matched);   // [確認_正常系 回数=2] - 戻った版番号の条件を取り込むこと。
         EXPECT_EQ(actual_revision,
+                  // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status 回数=2]
                   source_status().taken_revision); // [確認_正常系 回数=2] - 戻った版番号を取り込み済みとすること。
     }
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 形式版や大きさが異なるヘッダーの公開内容は、フィルター オブジェクトを読まずに記録することの確認
 // 形式版の不一致は CPLAT_ERR_VERSION_MISMATCH、そのほかの不一致は CPLAT_ERR_CORRUPT_DESCRIPTOR で区別する
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, foreign_header_is_recorded_without_taking)
 {
     struct header_change
@@ -544,6 +582,7 @@ TEST_F(stringCatalogFilterSourceTest, foreign_header_is_recorded_without_taking)
         (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
 
         // Assert
+        // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status 回数=3]
         cplat_string_catalog_filter_source_status status = source_status();
         EXPECT_EQ(0, actual_matched); // [確認_異常系 回数=3] - 取り込まず、以前の条件で判定すること。
         EXPECT_EQ(published_revision,
@@ -551,8 +590,10 @@ TEST_F(stringCatalogFilterSourceTest, foreign_header_is_recorded_without_taking)
         EXPECT_EQ(change.expected_result, status.last_result); // [確認_異常系 回数=3] - 不一致の種類を記録すること。
     }
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 署名が一致して形式版だけが異なる領域は、公開と情報の読み取りで CPLAT_ERR_VERSION_MISMATCH を返すことの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, other_format_version_region_reports_version_mismatch)
 {
     // Arrange
@@ -575,6 +616,7 @@ TEST_F(stringCatalogFilterSourceTest, other_format_version_region_reports_versio
     EXPECT_EQ(0, memcmp(expected_source, source_, sizeof(source_))); // [確認_異常系] - 領域を変更しないこと。
     EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH, actual_info_ret); // [確認_異常系] - 情報の読み取りも版の不一致を返すこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 namespace
 {
@@ -626,6 +668,7 @@ class stringCatalogFilterLockedSourceTest : public stringCatalogFilterSourceTest
 };
 
 // 書き込み側の排他を結び付けた場合、変化を検知したときだけ排他を取って取り込むことの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterLockedSourceTest, takes_under_writer_lock_only_when_changed)
 {
     // Arrange
@@ -648,8 +691,10 @@ TEST_F(stringCatalogFilterLockedSourceTest, takes_under_writer_lock_only_when_ch
     EXPECT_EQ(1, counter_.lock_count);   // [確認_正常系] - 変化を検知した 1 回目だけ排他を取ること。
     EXPECT_EQ(1, counter_.unlock_count); // [確認_正常系] - 取った排他を解放すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 排他を待つ間に公開が進んだ場合、排他の下で読み直した新しい版番号を取り込むことの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterLockedSourceTest, rechecks_revision_under_writer_lock)
 {
     // Arrange
@@ -669,6 +714,7 @@ TEST_F(stringCatalogFilterLockedSourceTest, rechecks_revision_under_writer_lock)
     (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
 
     // Assert
+    // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status]
     cplat_string_catalog_filter_source_status status = source_status();
     EXPECT_EQ(0, actual_matched);                     // [確認_正常系] - 2 回目の条件で判定すること。
     EXPECT_GT(status.taken_revision, first_revision); // [確認_正常系] - 読み直した新しい版番号を取り込むこと。
@@ -677,8 +723,10 @@ TEST_F(stringCatalogFilterLockedSourceTest, rechecks_revision_under_writer_lock)
     // [確認_正常系] - `cplat_string_catalog_filter_source_get_info(source_, sizeof(source_), &info)` の戻り値が `CPLAT_OK` であること。
     EXPECT_EQ(info.published_revision, status.taken_revision); // [確認_正常系] - 最新の版番号と一致すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 排他の下で書き込み中 (書き込み側が途中で停止した状態) が見えた場合は取り込まず、排他を解放することの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterLockedSourceTest, interrupted_write_seen_under_lock_is_not_taken)
 {
     // Arrange
@@ -702,11 +750,14 @@ TEST_F(stringCatalogFilterLockedSourceTest, interrupted_write_seen_under_lock_is
 
     // Assert
     EXPECT_EQ(0, actual_matched);                          // [確認_異常系] - 取り込まず、以前の条件で判定すること。
+    // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status]
     EXPECT_EQ(0U, source_status().taken_revision);         // [確認_異常系] - 取り込み済みとしないこと。
     EXPECT_EQ(counter_.lock_count, counter_.unlock_count); // [確認_異常系] - 取った排他を解放すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 書き込み側の排他を取得できない場合は取り込まず、結果を記録して次の判定で改めて試みることの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterLockedSourceTest, lock_failure_is_recorded_and_retried)
 {
     // Arrange
@@ -723,6 +774,7 @@ TEST_F(stringCatalogFilterLockedSourceTest, lock_failure_is_recorded_and_retried
 
     // Act
     (void)format_job_failed(&actual_failed_matched); // [手順] - 排他を取得できない状態で組み立てる。
+    // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status]
     cplat_string_catalog_filter_source_status failed_status = source_status();
     counter_.lock_result = CPLAT_OK;                // [手順] - 排他を取得できる状態に戻す。
     (void)format_job_failed(&actual_retry_matched); // [手順] - もう一度組み立てる。
@@ -733,10 +785,13 @@ TEST_F(stringCatalogFilterLockedSourceTest, lock_failure_is_recorded_and_retried
     EXPECT_EQ(CPLAT_ERR_TIMEOUT, failed_status.last_result); // [確認_異常系] - 排他の取得の結果コードを記録すること。
     EXPECT_EQ(1, counter_.unlock_count);                     // [確認_異常系] - 取得できなかった排他は解放しないこと。
     EXPECT_NE(0, actual_retry_matched);                      // [確認_正常系] - 次の判定で取り込むこと。
+    // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status]
     EXPECT_EQ(published, source_status().taken_revision);    // [確認_正常系] - 版番号を取り込み済みとすること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 関数が NULL の排他を結び付けられないことの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterLockedSourceTest, attach_rejects_incomplete_lock)
 {
     // Arrange
@@ -758,8 +813,10 @@ TEST_F(stringCatalogFilterLockedSourceTest, attach_rejects_incomplete_lock)
               actual_without_unlock);                           // [確認_異常系] - 解放の関数がない排他を拒否すること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_without_lock); // [確認_異常系] - 取得の関数がない排他を拒否すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 公開に排他を渡した場合、書き込みの間だけ 1 回取得して解放することの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterLockedSourceTest, publish_takes_lock_once_while_writing)
 {
     // Arrange
@@ -780,8 +837,10 @@ TEST_F(stringCatalogFilterLockedSourceTest, publish_takes_lock_once_while_writin
     EXPECT_EQ(1, counter_.lock_count);   // [確認_正常系] - 排他を 1 回取得すること。
     EXPECT_EQ(1, counter_.unlock_count); // [確認_正常系] - 取得した排他を解放すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 公開で排他を取得できない場合は、その結果コードを返し、領域を変更しないことの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterLockedSourceTest, publish_lock_failure_keeps_region)
 {
     // Arrange
@@ -803,8 +862,10 @@ TEST_F(stringCatalogFilterLockedSourceTest, publish_lock_failure_keeps_region)
     EXPECT_EQ(0, counter_.unlock_count);      // [確認_異常系] - 取得できなかった排他は解放しないこと。
     EXPECT_EQ(0, memcmp(expected_source, source_, sizeof(source_))); // [確認_異常系] - 領域を変更しないこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 公開で異なる形式の領域を拒否した場合も、取得した排他を解放することの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterLockedSourceTest, publish_rejecting_foreign_region_releases_lock)
 {
     // Arrange
@@ -824,8 +885,10 @@ TEST_F(stringCatalogFilterLockedSourceTest, publish_rejecting_foreign_region_rel
     EXPECT_EQ(1, counter_.lock_count);                   // [確認_異常系] - ヘッダーの確認のために排他を取得すること。
     EXPECT_EQ(1, counter_.unlock_count);                 // [確認_異常系] - 取得した排他を解放すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 公開で関数が NULL の排他を拒否することの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterLockedSourceTest, publish_rejects_incomplete_lock)
 {
     // Arrange
@@ -844,8 +907,10 @@ TEST_F(stringCatalogFilterLockedSourceTest, publish_rejects_incomplete_lock)
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - 関数が欠けた排他を拒否すること。
     EXPECT_EQ(0, counter_.lock_count);                 // [確認_異常系] - 排他を取得しないこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // カタログの識別値は同じ定義で同じ値になり、異なるカタログでは異なる値になることの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, catalog_id_is_stable_and_distinguishes_catalogs)
 {
     // Arrange
@@ -870,8 +935,10 @@ TEST_F(stringCatalogFilterSourceTest, catalog_id_is_stable_and_distinguishes_cat
     EXPECT_NE(catalog_id_, actual_other);                   // [確認_正常系] - 異なるカタログで異なる値になること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_null_ret); // [確認_異常系] - NULL を拒否すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 公開でカタログの識別値に 0 を指定した場合は拒否し、指定した識別値をヘッダーへ記録することの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, publish_records_catalog_id_and_rejects_zero)
 {
     // Arrange
@@ -894,8 +961,10 @@ TEST_F(stringCatalogFilterSourceTest, publish_records_catalog_id_and_rejects_zer
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_zero_ret); // [確認_異常系] - 識別値 0 を拒否すること。
     EXPECT_EQ(catalog_id_, actual_info.catalog_id);         // [確認_正常系] - 指定した識別値を記録すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
 // 別のカタログ向けの公開内容と、識別値を持たない以前の版の領域は取り込まず、記録して再試行しないことの確認
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.SetUp]
 TEST_F(stringCatalogFilterSourceTest, publication_for_another_catalog_is_not_taken)
 {
     struct publication
@@ -936,6 +1005,7 @@ TEST_F(stringCatalogFilterSourceTest, publication_for_another_catalog_is_not_tak
 
         // Act
         (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
+        // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status 回数=2]
         cplat_string_catalog_filter_source_status status = source_status();
         EXPECT_CALL(mock_cplat, cplat_local_lock_try_lock(_))
             .Times(0);                            // [Pre-Assert確認_異常系 回数=2] - 同じ公開内容の取り込みを試みないこと。
@@ -948,3 +1018,4 @@ TEST_F(stringCatalogFilterSourceTest, publication_for_another_catalog_is_not_tak
         EXPECT_EQ(CPLAT_ERR_IDENTITY_MISMATCH, status.last_result); // [確認_異常系 回数=2] - カタログの不一致を記録すること。
     }
 }
+// [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]

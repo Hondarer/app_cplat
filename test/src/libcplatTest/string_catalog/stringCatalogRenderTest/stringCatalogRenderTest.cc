@@ -19,11 +19,13 @@ class stringCatalogRenderTest : public Test
     /** 展開に使用する値の配列です。 */
     cplat_internal_string_catalog_argument_value values[CPLAT_STRING_CATALOG_ARGUMENT_MAX];
 
+    // [サブ手順 名前=stringCatalogRenderTest.SetUp]
     void SetUp() override
     {
         memset(dest, 0, sizeof(dest));
         memset(values, 0, sizeof(values));
     }
+    // [サブ手順終了]
 
     /**
      *  指定した位置へ 32 bit 符号付き整数の値を設定します。
@@ -45,6 +47,7 @@ class stringCatalogRenderTest : public Test
 };
 
 // 位置指定を持たない書式が、そのまま書き込まれることの確認
+// [サブ手順参照 名前=stringCatalogRenderTest.SetUp]
 TEST_F(stringCatalogRenderTest, plain_text)
 {
     // Arrange
@@ -62,6 +65,7 @@ TEST_F(stringCatalogRenderTest, plain_text)
 }
 
 // 位置指定が値へ置き換わることの確認
+// [サブ手順参照 名前=stringCatalogRenderTest.SetUp]
 TEST_F(stringCatalogRenderTest, single_placeholder)
 {
     // Arrange
@@ -80,6 +84,7 @@ TEST_F(stringCatalogRenderTest, single_placeholder)
 }
 
 // 位置指定の順序を入れ替えても、値の対応が変わらないことの確認
+// [サブ手順参照 名前=stringCatalogRenderTest.SetUp]
 TEST_F(stringCatalogRenderTest, reordered_placeholder)
 {
     // Arrange
@@ -99,6 +104,7 @@ TEST_F(stringCatalogRenderTest, reordered_placeholder)
 }
 
 // 同じ位置指定を複数回参照できることの確認
+// [サブ手順参照 名前=stringCatalogRenderTest.SetUp]
 TEST_F(stringCatalogRenderTest, repeated_placeholder)
 {
     // Arrange
@@ -117,6 +123,7 @@ TEST_F(stringCatalogRenderTest, repeated_placeholder)
 }
 
 // 波括弧のエスケープが 1 文字へ戻ることの確認
+// [サブ手順参照 名前=stringCatalogRenderTest.SetUp]
 TEST_F(stringCatalogRenderTest, escaped_braces)
 {
     // Arrange
@@ -135,6 +142,7 @@ TEST_F(stringCatalogRenderTest, escaped_braces)
 }
 
 // 引数種別ごとの文字列表現の確認
+// [サブ手順参照 名前=stringCatalogRenderTest.SetUp]
 TEST_F(stringCatalogRenderTest, argument_kind_text)
 {
     // Arrange
@@ -280,6 +288,7 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
 }
 
 // 未知の引数種別が定義エラーになることの確認
+// [サブ手順参照 名前=stringCatalogRenderTest.SetUp]
 TEST_F(stringCatalogRenderTest, unknown_argument_kind)
 {
     // Arrange
@@ -298,6 +307,7 @@ TEST_F(stringCatalogRenderTest, unknown_argument_kind)
 }
 
 // 容量が不足した場合に切り詰めて報告することの確認
+// [サブ手順参照 名前=stringCatalogRenderTest.SetUp]
 TEST_F(stringCatalogRenderTest, truncated_output)
 {
     // Arrange
@@ -318,6 +328,7 @@ TEST_F(stringCatalogRenderTest, truncated_output)
 }
 
 // 容量を使い切った後の追加でも切り詰めを報告することの確認
+// [サブ手順参照 名前=stringCatalogRenderTest.SetUp]
 TEST_F(stringCatalogRenderTest, truncated_after_full)
 {
     // Arrange
@@ -339,6 +350,7 @@ TEST_F(stringCatalogRenderTest, truncated_after_full)
 }
 
 // 容量にちょうど収まる場合に切り詰めを報告しないことの確認
+// [サブ手順参照 名前=stringCatalogRenderTest.SetUp]
 TEST_F(stringCatalogRenderTest, exact_fit)
 {
     // Arrange
@@ -358,6 +370,7 @@ TEST_F(stringCatalogRenderTest, exact_fit)
 }
 
 // 構文が不正な書式が定義エラーになることの確認
+// [サブ手順参照 名前=stringCatalogRenderTest.SetUp]
 TEST_F(stringCatalogRenderTest, invalid_format)
 {
     // Arrange
@@ -400,6 +413,7 @@ TEST_F(stringCatalogRenderTest, invalid_format)
 }
 
 // 2 桁のインデックスを展開できることの確認
+// [サブ手順参照 名前=stringCatalogRenderTest.SetUp]
 TEST_F(stringCatalogRenderTest, two_digit_placeholder)
 {
     // Arrange
@@ -436,6 +450,7 @@ TEST_F(stringCatalogRenderTest, two_digit_placeholder)
 }
 
 // 2 桁を超えるインデックスおよび範囲外のインデックスが定義エラーになることの確認
+// [サブ手順参照 名前=stringCatalogRenderTest.SetUp]
 TEST_F(stringCatalogRenderTest, invalid_two_digit_placeholder)
 {
     // Arrange
@@ -472,6 +487,7 @@ TEST_F(stringCatalogRenderTest, invalid_two_digit_placeholder)
 }
 
 // 自前の整数変換が、標準ライブラリの書式と境界値で一致することの確認
+// [サブ手順参照 名前=stringCatalogRenderTest.SetUp]
 TEST_F(stringCatalogRenderTest, integer_conversion_matches_standard_library)
 {
     // Arrange
@@ -525,6 +541,7 @@ TEST_F(stringCatalogRenderTest, integer_conversion_matches_standard_library)
 }
 
 // 値を割り当てないインデックスを参照する書式が定義エラーになることの確認
+// [サブ手順参照 名前=stringCatalogRenderTest.SetUp]
 TEST_F(stringCatalogRenderTest, unused_index_reference)
 {
     // Arrange

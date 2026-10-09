@@ -11,6 +11,7 @@ class mmapFailureInjectionTest : public mmapTestFixture
 };
 
 // 読み取り専用ファイルのサイズ取得に失敗した場合にファイルを閉じて失敗することの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapFailureInjectionTest, attach_returns_error_when_read_only_size_lookup_fails)
 {
     // Arrange
@@ -44,6 +45,7 @@ TEST_F(mmapFailureInjectionTest, attach_returns_error_when_read_only_size_lookup
 }
 
 // 新規ファイルのサイズ設定に失敗した場合にファイルを削除して失敗することの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapFailureInjectionTest, attach_returns_error_when_new_file_size_setting_fails)
 {
     // Arrange
@@ -71,6 +73,7 @@ TEST_F(mmapFailureInjectionTest, attach_returns_error_when_new_file_size_setting
 }
 
 // 既存ファイルの再オープンに失敗した場合にアタッチが失敗することの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapFailureInjectionTest, attach_returns_error_when_existing_file_reopen_fails)
 {
     // Arrange
@@ -98,6 +101,7 @@ TEST_F(mmapFailureInjectionTest, attach_returns_error_when_existing_file_reopen_
 }
 
 // 既存ファイルのサイズ取得に失敗した場合にファイルを閉じて失敗することの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapFailureInjectionTest, attach_returns_error_when_existing_size_lookup_fails)
 {
     // Arrange
@@ -138,11 +142,13 @@ TEST_F(mmapFailureInjectionTest, attach_returns_error_when_existing_size_lookup_
 }
 
 // ファイルのクローズに失敗した場合に detach が失敗を返すことの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapFailureInjectionTest, detach_reports_error_when_file_close_fails)
 {
     // Arrange
     cplat_mmap *map = NULL;
     cplat_error detail;
+    // [サブ手順参照 名前=mmapTestFixture.attachNewFile]
     attachNewFile(&map); // [状態] - detach 前のマップと詳細エラーの格納先を用意する。
 
     // Pre-Assert
@@ -162,6 +168,7 @@ TEST_F(mmapFailureInjectionTest, detach_reports_error_when_file_close_fails)
 }
 
 // マップ ハンドルの確保に失敗した場合にアタッチが失敗することの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapFailureInjectionTest, attach_returns_out_of_memory_when_handle_allocation_fails)
 {
     // Arrange
@@ -187,6 +194,7 @@ TEST_F(mmapFailureInjectionTest, attach_returns_out_of_memory_when_handle_alloca
 
 #if defined(PLATFORM_LINUX)
 // メモリ マップの作成に失敗した場合に errno が通知されることの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapFailureInjectionTest, attach_reports_errno_when_mmap_fails)
 {
     // Arrange
@@ -212,10 +220,12 @@ TEST_F(mmapFailureInjectionTest, attach_reports_errno_when_mmap_fails)
 }
 
 // 書き戻しに失敗した場合に errno が通知されることの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapFailureInjectionTest, flush_reports_errno_when_msync_fails)
 {
     // Arrange
     cplat_mmap *map = NULL;
+    // [サブ手順参照 名前=mmapTestFixture.attachNewFile]
     attachNewFile(&map);
     cplat_error detail; // [状態] - アタッチ済みのメモリ マップと詳細エラーの格納先を用意する。
 
@@ -239,11 +249,13 @@ TEST_F(mmapFailureInjectionTest, flush_reports_errno_when_msync_fails)
 }
 
 // マップ解除に失敗した場合に errno が通知されることの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapFailureInjectionTest, detach_reports_errno_when_munmap_fails)
 {
     // Arrange
     cplat_mmap *map = NULL;
     cplat_error detail;
+    // [サブ手順参照 名前=mmapTestFixture.attachNewFile]
     attachNewFile(&map); // [状態] - アタッチ済みのメモリ マップを用意する。
 
     // Pre-Assert
@@ -265,6 +277,7 @@ TEST_F(mmapFailureInjectionTest, detach_reports_errno_when_munmap_fails)
 
 #elif defined(PLATFORM_WINDOWS)
 // CreateFileMapping に失敗した場合に Windows エラーが通知されることの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapFailureInjectionTest, attach_reports_error_when_create_file_mapping_fails)
 {
     // Arrange
@@ -294,6 +307,7 @@ TEST_F(mmapFailureInjectionTest, attach_reports_error_when_create_file_mapping_f
 }
 
 // MapViewOfFile に失敗した場合に Windows エラーが通知されることの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapFailureInjectionTest, attach_reports_error_when_map_view_fails)
 {
     // Arrange
@@ -326,10 +340,12 @@ TEST_F(mmapFailureInjectionTest, attach_reports_error_when_map_view_fails)
 }
 
 // FlushViewOfFile に失敗した場合に Windows エラーが通知されることの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapFailureInjectionTest, flush_reports_error_when_flush_view_fails)
 {
     // Arrange
     cplat_mmap *map = NULL;
+    // [サブ手順参照 名前=mmapTestFixture.attachNewFile]
     attachNewFile(&map);
     cplat_error detail; // [状態] - アタッチ済みのメモリ マップと詳細エラーの格納先を用意する。
 
@@ -357,10 +373,12 @@ TEST_F(mmapFailureInjectionTest, flush_reports_error_when_flush_view_fails)
 }
 
 // FlushFileBuffers に失敗した場合に Windows エラーが通知されることの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapFailureInjectionTest, flush_reports_error_when_flush_file_buffers_fails)
 {
     // Arrange
     cplat_mmap *map = NULL;
+    // [サブ手順参照 名前=mmapTestFixture.attachNewFile]
     attachNewFile(&map);
     cplat_error detail; // [状態] - アタッチ済みのメモリ マップと詳細エラーの格納先を用意する。
 
@@ -391,11 +409,13 @@ TEST_F(mmapFailureInjectionTest, flush_reports_error_when_flush_file_buffers_fai
 }
 
 // UnmapViewOfFile に失敗した場合に Windows エラーが通知されることの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapFailureInjectionTest, detach_reports_error_when_unmap_view_fails)
 {
     // Arrange
     cplat_mmap *map = NULL;
     cplat_error detail;
+    // [サブ手順参照 名前=mmapTestFixture.attachNewFile]
     attachNewFile(&map); // [状態] - アタッチ済みのメモリ マップを用意する。
 
     // Pre-Assert

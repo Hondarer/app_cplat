@@ -18,6 +18,7 @@ class promptCoverageTest : public Test
   protected:
     cplat_prompt *prompt_ = NULL;
 
+    // [サブ手順 名前=promptCoverageTest.SetUp]
     void SetUp() override
     {
         promptFakeReset();
@@ -26,12 +27,15 @@ class promptCoverageTest : public Test
         // [状態確認] - `(cplat_prompt *)NULL` と `prompt_` が異なること。
         prompt_->is_tty = 1;
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=promptCoverageTest.TearDown]
     void TearDown() override
     {
         cplat_prompt_dispose(prompt_);
         prompt_ = NULL;
     }
+    // [サブ手順終了]
 
     int readline(const std::string &input, char *buf, size_t buf_size, const char *prompt_string = "> ")
     {
@@ -41,6 +45,7 @@ class promptCoverageTest : public Test
 };
 
 // 改行と Backspace の代替表現を処理することの確認
+// [サブ手順参照 名前=promptCoverageTest.SetUp]
 TEST_F(promptCoverageTest, readline_accepts_lf_and_ctrl_h)
 {
     // Arrange
@@ -56,8 +61,10 @@ TEST_F(promptCoverageTest, readline_accepts_lf_and_ctrl_h)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_prompt_readline_at の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("a", buf);     // [確認_正常系] - Ctrl+H で末尾を削除した "a" が返ること。
 }
+// [サブ手順参照 名前=promptCoverageTest.TearDown]
 
 // 未対応の制御入力と数値付きエスケープ シーケンスを無視することの確認
+// [サブ手順参照 名前=promptCoverageTest.SetUp]
 TEST_F(promptCoverageTest, readline_ignores_remaining_unknown_sequences)
 {
     // Arrange
@@ -73,8 +80,10 @@ TEST_F(promptCoverageTest, readline_ignores_remaining_unknown_sequences)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_prompt_readline_at の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("q", buf);     // [確認_正常系] - 未対応入力が無視されて "q" が返ること。
 }
+// [サブ手順参照 名前=promptCoverageTest.TearDown]
 
 // 行端で編集キーを押した場合に入力内容を変更しないことの確認
+// [サブ手順参照 名前=promptCoverageTest.SetUp]
 TEST_F(promptCoverageTest, readline_ignores_editing_keys_at_line_edges)
 {
     // Arrange
@@ -90,8 +99,10 @@ TEST_F(promptCoverageTest, readline_ignores_editing_keys_at_line_edges)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_prompt_readline_at の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("", buf);      // [確認_正常系] - 行端用の編集キーが無視されて空行が返ること。
 }
+// [サブ手順参照 名前=promptCoverageTest.TearDown]
 
 // リサイズ通知後に NULL のプロンプトで入力を継続することの確認
+// [サブ手順参照 名前=promptCoverageTest.SetUp]
 TEST_F(promptCoverageTest, readline_redisplays_after_resize_with_null_prompt)
 {
     // Arrange
@@ -109,8 +120,10 @@ TEST_F(promptCoverageTest, readline_redisplays_after_resize_with_null_prompt)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_prompt_readline_at の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("z", buf);     // [確認_正常系] - リサイズ通知後に入力した "z" が返ること。
 }
+// [サブ手順参照 名前=promptCoverageTest.TearDown]
 
 // 非 TTY とコンテキスト確保失敗時の fallback が入力を返すことの確認
+// [サブ手順参照 名前=promptCoverageTest.SetUp]
 TEST_F(promptCoverageTest, readline_fallback_paths_return_input)
 {
     // Arrange
@@ -144,8 +157,10 @@ TEST_F(promptCoverageTest, readline_fallback_paths_return_input)
               actual_ret_allocation); // [確認_正常系] - コンテキスト確保失敗時の cplat_prompt_readline_at が CPLAT_OK を返すこと。
     EXPECT_STREQ("second", second_output); // [確認_正常系] - コンテキスト確保失敗時の入力結果が "second" であること。
 }
+// [サブ手順参照 名前=promptCoverageTest.TearDown]
 
 // 呼び出し位置コンテキストの検索と配列拡張を処理することの確認
+// [サブ手順参照 名前=promptCoverageTest.SetUp]
 TEST_F(promptCoverageTest, contexts_distinguish_file_and_line_and_expand_twice)
 {
     // Arrange
@@ -174,8 +189,10 @@ TEST_F(promptCoverageTest, contexts_distinguish_file_and_line_and_expand_twice)
     EXPECT_EQ(5u, prompt_->ctx_count);   // [確認_正常系] - コンテキスト数が 5 であること。
     EXPECT_EQ(8u, prompt_->ctx_cap);     // [確認_正常系] - コンテキスト配列の容量が 8 へ拡張されること。
 }
+// [サブ手順参照 名前=promptCoverageTest.TearDown]
 
 // 履歴の重複、NULL エントリ、前後端、容量制限を処理することの確認
+// [サブ手順参照 名前=promptCoverageTest.SetUp]
 TEST_F(promptCoverageTest, history_helpers_cover_remaining_boundaries)
 {
     // Arrange
@@ -218,8 +235,10 @@ TEST_F(promptCoverageTest, history_helpers_cover_remaining_boundaries)
     EXPECT_EQ(1, context->browse_idx); // [確認_正常系] - NULL の新しい履歴位置まで browse index が進むこと。
     EXPECT_STREQ("sav", prompt_->edit_buf); // [確認_正常系] - 容量制限により退避文字列が "sav" へ切り詰められること。
 }
+// [サブ手順参照 名前=promptCoverageTest.TearDown]
 
 // 履歴上限が 0 の場合に、剰余を取らずに履歴を追加しないことの確認
+// [サブ手順参照 名前=promptCoverageTest.SetUp]
 TEST_F(promptCoverageTest, history_add_ignores_zero_history_max)
 {
     // Arrange
@@ -240,8 +259,10 @@ TEST_F(promptCoverageTest, history_add_ignores_zero_history_max)
 
     prompt_->history_max = saved_history_max; // 後始末で履歴エントリ配列を走査できるよう、履歴上限を戻す。
 }
+// [サブ手順参照 名前=promptCoverageTest.TearDown]
 
 // 履歴エントリ配列の確保失敗をコンテキスト作成失敗として扱うことの確認
+// [サブ手順参照 名前=promptCoverageTest.SetUp]
 TEST_F(promptCoverageTest, context_creation_fails_when_entries_allocation_fails)
 {
     // Arrange
@@ -261,8 +282,10 @@ TEST_F(promptCoverageTest, context_creation_fails_when_entries_allocation_fails)
               context); // [確認_異常系] - test_prompt_find_or_create_context の戻り値が NULL であること。
     EXPECT_EQ(0u, prompt_->ctx_count); // [確認_異常系] - 失敗したコンテキストが件数へ加算されないこと。
 }
+// [サブ手順参照 名前=promptCoverageTest.TearDown]
 
 // 書式生成の NULL、エンコード エラー、バッファー拡張を処理することの確認
+// [サブ手順参照 名前=promptCoverageTest.SetUp]
 TEST_F(promptCoverageTest, readline_fmt_handles_null_error_and_growth)
 {
     // Arrange
@@ -293,3 +316,4 @@ TEST_F(promptCoverageTest, readline_fmt_handles_null_error_and_growth)
     EXPECT_STREQ("c", buf);              // [確認_正常系] - 最後に入力した "c" が返ること。
     EXPECT_EQ(301u, prompt_->prompt_fmt_cap); // [確認_正常系] - 書式バッファーの容量が終端を含む 301 であること。
 }
+// [サブ手順参照 名前=promptCoverageTest.TearDown]

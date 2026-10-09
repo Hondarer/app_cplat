@@ -14,15 +14,18 @@ class stringCatalogVerifyTest : public Test
     /** 不正を検出した言語の受け取り先です。 */
     cplat_string_catalog_language language;
 
+    // [サブ手順 名前=stringCatalogVerifyTest.SetUp]
     void SetUp() override
     {
         string_key = FAKE_CATALOG_KEY_UNKNOWN;
         language = CPLAT_STRING_CATALOG_LANGUAGE_ENGLISH;
         fake_catalog_reset();
     }
+    // [サブ手順終了]
 };
 
 // 整合したカタログが受理されることの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, valid_catalog)
 {
     // Arrange
@@ -39,6 +42,7 @@ TEST_F(stringCatalogVerifyTest, valid_catalog)
 }
 
 // 必須の項目メタデータが未設定のカタログが拒否されることの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, missing_entry_metadata)
 {
     // Arrange
@@ -59,6 +63,7 @@ TEST_F(stringCatalogVerifyTest, missing_entry_metadata)
 }
 
 // 詳細説明が未設定でもカタログが受理されることの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, missing_details_is_allowed)
 {
     // Arrange
@@ -78,6 +83,7 @@ TEST_F(stringCatalogVerifyTest, missing_details_is_allowed)
 }
 
 // ID が未設定のカタログを許容することの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, missing_id_is_allowed)
 {
     // Arrange
@@ -97,6 +103,7 @@ TEST_F(stringCatalogVerifyTest, missing_id_is_allowed)
 }
 
 // 引数定義のメタデータが未設定のカタログが拒否されることの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, missing_argument_metadata)
 {
     // Arrange
@@ -117,6 +124,7 @@ TEST_F(stringCatalogVerifyTest, missing_argument_metadata)
 }
 
 // 引数説明が未設定のカタログが拒否されることの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, missing_argument_description)
 {
     // Arrange
@@ -137,6 +145,7 @@ TEST_F(stringCatalogVerifyTest, missing_argument_description)
 }
 
 // 引数定義配列が未設定のカタログが拒否されることの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, missing_argument_array)
 {
     // Arrange
@@ -157,6 +166,7 @@ TEST_F(stringCatalogVerifyTest, missing_argument_array)
 }
 
 // 書式の構文が不正なカタログが拒否されることの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, invalid_format)
 {
     // Arrange
@@ -178,6 +188,7 @@ TEST_F(stringCatalogVerifyTest, invalid_format)
 }
 
 // 引数を割り当てないインデックスを参照する書式が拒否されることの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, unused_argument_index_in_format)
 {
     // Arrange
@@ -201,6 +212,7 @@ TEST_F(stringCatalogVerifyTest, unused_argument_index_in_format)
 }
 
 // 値を受け取らない引数に名前と説明が無くても受理されることの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, unused_argument_needs_no_metadata)
 {
     // Arrange
@@ -225,6 +237,7 @@ TEST_F(stringCatalogVerifyTest, unused_argument_needs_no_metadata)
 }
 
 // 引数を割り当てないインデックスを参照しない書式が受理されることの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, unused_argument_kind_is_allowed)
 {
     // Arrange
@@ -247,6 +260,7 @@ TEST_F(stringCatalogVerifyTest, unused_argument_kind_is_allowed)
 }
 
 // ニュートラル言語以外のリソースが未定義であっても受理されることの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, missing_localized_text_is_allowed)
 {
     // Arrange
@@ -265,6 +279,7 @@ TEST_F(stringCatalogVerifyTest, missing_localized_text_is_allowed)
 }
 
 // ニュートラル言語の書式が未設定のカタログが拒否されることの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, missing_neutral_text)
 {
     // Arrange
@@ -287,6 +302,7 @@ TEST_F(stringCatalogVerifyTest, missing_neutral_text)
 }
 
 // ニュートラル言語の備考が未設定のカタログが拒否されることの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, missing_neutral_note)
 {
     // Arrange
@@ -309,6 +325,7 @@ TEST_F(stringCatalogVerifyTest, missing_neutral_note)
 }
 
 // 引数個数が上限を超えたカタログが拒否されることの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, argument_count_over_max)
 {
     // Arrange
@@ -331,6 +348,7 @@ TEST_F(stringCatalogVerifyTest, argument_count_over_max)
 }
 
 // 文字列キーが重複したカタログが拒否されることの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, duplicated_string_key)
 {
     // Arrange
@@ -352,6 +370,7 @@ TEST_F(stringCatalogVerifyTest, duplicated_string_key)
 }
 
 // ID が重複したカタログを許容することの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, duplicated_id_is_allowed)
 {
     // Arrange
@@ -371,6 +390,7 @@ TEST_F(stringCatalogVerifyTest, duplicated_id_is_allowed)
 }
 
 // 引数個数が負のカタログが拒否されることの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, argument_count_negative)
 {
     // Arrange
@@ -389,6 +409,7 @@ TEST_F(stringCatalogVerifyTest, argument_count_negative)
 }
 
 // 出力引数を省略しても結果コードを返すことの確認
+// [サブ手順参照 名前=stringCatalogVerifyTest.SetUp]
 TEST_F(stringCatalogVerifyTest, omitted_output_arguments)
 {
     // Arrange

@@ -12,15 +12,23 @@ class clockTest : public Test
 {
 };
 
+// [サブ手順 名前=clockTest.expect_tm_equal]
 static void expect_tm_equal(const struct tm *actual, const struct tm *expected)
 {
     EXPECT_EQ(expected->tm_year, actual->tm_year);
+    // [確認_正常系] - `actual->tm_year` の値が `expected->tm_year` であること。
     EXPECT_EQ(expected->tm_mon, actual->tm_mon);
+    // [確認_正常系] - `actual->tm_mon` の値が `expected->tm_mon` であること。
     EXPECT_EQ(expected->tm_mday, actual->tm_mday);
+    // [確認_正常系] - `actual->tm_mday` の値が `expected->tm_mday` であること。
     EXPECT_EQ(expected->tm_hour, actual->tm_hour);
+    // [確認_正常系] - `actual->tm_hour` の値が `expected->tm_hour` であること。
     EXPECT_EQ(expected->tm_min, actual->tm_min);
+    // [確認_正常系] - `actual->tm_min` の値が `expected->tm_min` であること。
     EXPECT_EQ(expected->tm_sec, actual->tm_sec);
+    // [確認_正常系] - `actual->tm_sec` の値が `expected->tm_sec` であること。
 }
+// [サブ手順終了]
 
 static void set_tm(struct tm *tm_value, int year, int month, int day, int hour, int min, int sec)
 {
@@ -234,8 +242,9 @@ TEST_F(clockTest, realtime_utc_uses_platform_conversion_result)
         &actual_tm, &actual_nsec); // [手順] - cplat_clock_get_realtime_utc(&actual_tm, &actual_nsec) を呼び出す。
 
     // Assert
+    // [サブ手順参照 名前=clockTest.expect_tm_equal]
     expect_tm_equal(&actual_tm,
-                    &expected_tm);         // [確認_正常系 回数=6] - UTC 分解結果が cplat_gmtime() の設定値と一致すること。
+                    &expected_tm);         // UTC 分解結果が cplat_gmtime() の設定値と一致すること。
     EXPECT_EQ(expected_nsec, actual_nsec); // [確認_正常系] - ナノ秒部が 246800000 のまま返ること。
 }
 
@@ -300,7 +309,8 @@ TEST_F(clockTest, realtime_utc_zeroes_tm_when_cplat_gmtime_fails)
         &actual_tm, &actual_nsec); // [手順] - cplat_clock_get_realtime_utc(&actual_tm, &actual_nsec) を呼び出す。
 
     // Assert
-    expect_tm_equal(&actual_tm, &expected_tm); // [確認_異常系 回数=6] - UTC 分解結果がすべて 0 に初期化されること。
+    // [サブ手順参照 名前=clockTest.expect_tm_equal 区分=異常系]
+    expect_tm_equal(&actual_tm, &expected_tm); // UTC 分解結果がすべて 0 に初期化されること。
     EXPECT_EQ(expected_nsec, actual_nsec);     // [確認_異常系] - ナノ秒部は取得済みの値 246800000 を保持すること。
 }
 

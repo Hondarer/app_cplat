@@ -15,6 +15,7 @@ const char kDirPath[] = "is_regular_dir";
 class fileStatIsRegularTest : public testing::Test
 {
   protected:
+    // [サブ手順 名前=fileStatIsRegularTest.SetUp]
     void SetUp() override
     {
         FILE *stream = NULL;
@@ -30,15 +31,19 @@ class fileStatIsRegularTest : public testing::Test
         ASSERT_EQ(CPLAT_OK, cplat_mkdir(kDirPath, NULL));
         // [状態確認] - `cplat_mkdir(kDirPath, NULL)` の戻り値が `CPLAT_OK` であること。
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=fileStatIsRegularTest.TearDown]
     void TearDown() override
     {
         (void)cplat_remove(kFilePath, NULL);
         (void)cplat_rmdir(kDirPath, NULL);
     }
+    // [サブ手順終了]
 };
 
 // cplat_file_stat_is_regular が通常ファイルに対して 1 を返すことの確認
+// [サブ手順参照 名前=fileStatIsRegularTest.SetUp]
 TEST_F(fileStatIsRegularTest, returns_one_for_regular_file)
 {
     // Arrange
@@ -55,8 +60,10 @@ TEST_F(fileStatIsRegularTest, returns_one_for_regular_file)
     // Assert
     EXPECT_EQ(1, actual_ret_is_regular); // [確認_正常系] - 戻り値が 1 であること。
 }
+// [サブ手順参照 名前=fileStatIsRegularTest.TearDown]
 
 // cplat_file_stat_is_regular がディレクトリに対して 0 を返すことの確認
+// [サブ手順参照 名前=fileStatIsRegularTest.SetUp]
 TEST_F(fileStatIsRegularTest, returns_zero_for_directory)
 {
     // Arrange
@@ -73,8 +80,10 @@ TEST_F(fileStatIsRegularTest, returns_zero_for_directory)
     // Assert
     EXPECT_EQ(0, actual_ret_is_regular); // [確認_異常系] - 戻り値が 0 であること。
 }
+// [サブ手順参照 名前=fileStatIsRegularTest.TearDown]
 
 // cplat_file_stat_is_regular が NULL に対して 0 を返すことの確認
+// [サブ手順参照 名前=fileStatIsRegularTest.SetUp]
 TEST_F(fileStatIsRegularTest, returns_zero_for_null)
 {
     // Arrange
@@ -87,3 +96,4 @@ TEST_F(fileStatIsRegularTest, returns_zero_for_null)
     // Assert
     EXPECT_EQ(0, actual_ret_is_regular); // [確認_異常系] - 戻り値が 0 であること。
 }
+// [サブ手順参照 名前=fileStatIsRegularTest.TearDown]

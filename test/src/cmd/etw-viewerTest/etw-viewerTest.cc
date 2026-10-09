@@ -63,17 +63,22 @@ class etw_viewerTest : public Test
     NiceMock<Mock_stdio> mock_stdio_;
     NiceMock<Mock_cplat> mock_cplat_;
 
+    // [サブ手順 名前=etw_viewerTest.SetUp]
     void SetUp() override
     {
         ON_CALL(mock_cplat_, cplat_strncpy(_, _, _, _)).WillByDefault(emulate_cplat_strncpy);
+        // [状態] - `cplat_strncpy` の既定動作を設定する。
         ON_CALL(mock_cplat_, cplat_clock_format_realtime_iso8601_local(_, _, _))
             .WillByDefault(emulate_cplat_clock_format_realtime_iso8601_local);
+        // [状態] - `cplat_clock_format_realtime_iso8601_local` の既定動作を設定する。
     }
+    // [サブ手順終了]
 };
 
 #if defined(PLATFORM_WINDOWS)
 
 // pid フィルター引数が session 開始の context へ伝わることの確認
+// [サブ手順参照 名前=etw_viewerTest.SetUp]
 TEST_F(etw_viewerTest, main_accepts_pid_filter)
 {
     // Arrange
@@ -110,6 +115,7 @@ TEST_F(etw_viewerTest, main_accepts_pid_filter)
 }
 
 // 数値でない pid 指定が拒否されることの確認
+// [サブ手順参照 名前=etw_viewerTest.SetUp]
 TEST_F(etw_viewerTest, main_rejects_invalid_pid)
 {
     // Arrange
@@ -130,6 +136,7 @@ TEST_F(etw_viewerTest, main_rejects_invalid_pid)
 }
 
 // 既定 session 名に process id が埋め込まれることの確認
+// [サブ手順参照 名前=etw_viewerTest.SetUp]
 TEST_F(etw_viewerTest, build_default_session_name_formats_process_id)
 {
     // Arrange
@@ -149,6 +156,7 @@ TEST_F(etw_viewerTest, build_default_session_name_formats_process_id)
 }
 
 // FILETIME がローカル ISO 8601 文字列へ変換されることの確認
+// [サブ手順参照 名前=etw_viewerTest.SetUp]
 TEST_F(etw_viewerTest, format_timestamp_utc_formats_filetime)
 {
     // Arrange
@@ -168,6 +176,7 @@ TEST_F(etw_viewerTest, format_timestamp_utc_formats_filetime)
 }
 
 // Service ありイベントが syslog 互換形式で表示されることの確認
+// [サブ手順参照 名前=etw_viewerTest.SetUp]
 TEST_F(etw_viewerTest, handle_event_prints_service_and_message)
 {
     // Arrange
@@ -186,6 +195,7 @@ TEST_F(etw_viewerTest, handle_event_prints_service_and_message)
 }
 
 // Service なしイベントが既定 tag で表示されることの確認
+// [サブ手順参照 名前=etw_viewerTest.SetUp]
 TEST_F(etw_viewerTest, handle_event_prints_message_without_service)
 {
     // Arrange
@@ -205,6 +215,7 @@ TEST_F(etw_viewerTest, handle_event_prints_message_without_service)
 }
 
 // Trace 以外のイベントが表示されないことの確認
+// [サブ手順参照 名前=etw_viewerTest.SetUp]
 TEST_F(etw_viewerTest, handle_event_skips_non_trace_event)
 {
     // Arrange
@@ -221,6 +232,7 @@ TEST_F(etw_viewerTest, handle_event_skips_non_trace_event)
 }
 
 // pid フィルター不一致のイベントが表示されないことの確認
+// [サブ手順参照 名前=etw_viewerTest.SetUp]
 TEST_F(etw_viewerTest, handle_event_skips_non_matching_pid_filter)
 {
     // Arrange
@@ -239,6 +251,7 @@ TEST_F(etw_viewerTest, handle_event_skips_non_matching_pid_filter)
 }
 
 // 未対応オプション指定時に main() が失敗終了することの確認
+// [サブ手順参照 名前=etw_viewerTest.SetUp]
 TEST_F(etw_viewerTest, main_rejects_invalid_arguments)
 {
     // Arrange
@@ -259,6 +272,7 @@ TEST_F(etw_viewerTest, main_rejects_invalid_arguments)
 }
 
 // help オプション指定時に usage を表示して正常終了することの確認
+// [サブ手順参照 名前=etw_viewerTest.SetUp]
 TEST_F(etw_viewerTest, main_prints_usage_on_help)
 {
     // Arrange
@@ -277,6 +291,7 @@ TEST_F(etw_viewerTest, main_prints_usage_on_help)
 }
 
 // 権限不足の場合に案内メッセージを表示して失敗終了することの確認
+// [サブ手順参照 名前=etw_viewerTest.SetUp]
 TEST_F(etw_viewerTest, main_stops_when_access_is_denied)
 {
     // Arrange

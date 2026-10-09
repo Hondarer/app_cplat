@@ -27,6 +27,7 @@ class traceShutdownTest : public Test
     cplat_etw_provider *os_handle_ = reinterpret_cast<cplat_etw_provider *>(static_cast<uintptr_t>(0x1100));
 #endif
 
+    // [サブ手順 名前=traceShutdownTest.SetUp]
     void SetUp() override
     {
         set_trace_sync_mock_defaults(mock_cplat);
@@ -39,27 +40,37 @@ class traceShutdownTest : public Test
                     shutdown_context_ = context;
                     return CPLAT_OK;
                 });
+        // [状態] - `cplat_shutdown_register` の既定動作を設定する。
 
 #if defined(PLATFORM_LINUX)
         ON_CALL(mock_cplat, cplat_syslog_sink_create(_, _)).WillByDefault(Return(os_handle_));
+        // [状態] - `cplat_syslog_sink_create` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_dispose(_)).WillByDefault(Return());
+        // [状態] - `cplat_syslog_sink_dispose` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_rename(_, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_syslog_sink_rename` の既定動作を設定する。
 #elif defined(PLATFORM_WINDOWS)
         ON_CALL(mock_cplat, cplat_etw_provider_create(_)).WillByDefault(Return(os_handle_));
+        // [状態] - `cplat_etw_provider_create` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_etw_provider_dispose(_)).WillByDefault(Return());
+        // [状態] - `cplat_etw_provider_dispose` の既定動作を設定する。
 #endif
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=traceShutdownTest.TearDown]
     void TearDown() override
     {
         // shutdown_started は本来戻らないため、同一バイナリの他テストが tracer を生成できるよう初期状態へ戻す。
         test_trace_registry_reset_shutdown_state();
     }
+    // [サブ手順終了]
 };
 
 } // namespace
 
 // 共通 shutdown で registry が破棄され、以後の tracer 生成が拒否されることの確認
+// [サブ手順参照 名前=traceShutdownTest.SetUp]
 TEST_F(traceShutdownTest, shutdown_disposes_registry_and_rejects_new_create)
 {
     // Arrange
@@ -85,3 +96,4 @@ TEST_F(traceShutdownTest, shutdown_disposes_registry_and_rejects_new_create)
         (cplat_tracer *)NULL,
         created_after_shutdown); // [確認_正常系] - cplat_tracer_create の戻り値として、shutdown 開始後は新規 tracer 作成が拒否され NULL が返ること。
 }
+// [サブ手順参照 名前=traceShutdownTest.TearDown]

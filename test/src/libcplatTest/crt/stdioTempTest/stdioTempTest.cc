@@ -43,12 +43,17 @@ class stdioTempTest : public testing::Test
     NiceMock<Mock_stdio> mock_stdio_;
     NiceMock<Mock_cplat> mock_cplat_;
 
+    // [サブ手順 名前=stdioTempTest.SetUp]
     void SetUp() override
     {
         ON_CALL(mock_cplat_, cplat_getenv(StrEq("TMPDIR"), _, _, _, _)).WillByDefault(getenv_empty_tmpdir);
+        // [状態] - `cplat_getenv` の既定動作を設定する。
         ON_CALL(mock_unistd_, close(_, _, _, _)).WillByDefault(Return(0));
+        // [状態] - `close` の既定動作を設定する。
         ON_CALL(mock_unistd_, unlink(_, _, _, _)).WillByDefault(Return(0));
+        // [状態] - `unlink` の既定動作を設定する。
     }
+    // [サブ手順終了]
 };
 
 #else /* PLATFORM_LINUX */
@@ -61,6 +66,7 @@ class stdioTempTest : public testing::Test
 
 #if defined(PLATFORM_LINUX)
 // 一時ファイルが開き、mkostemp が書き込んだパスが報告されることの確認
+// [サブ手順参照 名前=stdioTempTest.SetUp]
 TEST_F(stdioTempTest, opens_writable_file_and_reports_path)
 {
     // Arrange
@@ -88,6 +94,7 @@ TEST_F(stdioTempTest, opens_writable_file_and_reports_path)
 }
 
 // TMPDIR が空でない場合にそのディレクトリが使われることの確認
+// [サブ手順参照 名前=stdioTempTest.SetUp]
 TEST_F(stdioTempTest, uses_tmpdir_when_getenv_returns_a_path)
 {
     // Arrange
@@ -124,6 +131,7 @@ TEST_F(stdioTempTest, uses_tmpdir_when_getenv_returns_a_path)
 }
 
 // 繰り返し呼び出しで毎回異なるパスが返ることの確認
+// [サブ手順参照 名前=stdioTempTest.SetUp]
 TEST_F(stdioTempTest, returns_unique_paths_for_repeated_calls)
 {
     // Arrange
@@ -173,6 +181,7 @@ TEST_F(stdioTempTest, returns_unique_paths_for_repeated_calls)
 }
 
 // prefix がファイル名 (basename) に含まれることの確認
+// [サブ手順参照 名前=stdioTempTest.SetUp]
 TEST_F(stdioTempTest, prefix_is_part_of_basename)
 {
     // Arrange
@@ -200,6 +209,7 @@ TEST_F(stdioTempTest, prefix_is_part_of_basename)
 }
 
 // prefix が NULL でも受理されることの確認
+// [サブ手順参照 名前=stdioTempTest.SetUp]
 TEST_F(stdioTempTest, null_prefix_is_accepted)
 {
     // Arrange
@@ -228,6 +238,7 @@ TEST_F(stdioTempTest, null_prefix_is_accepted)
 }
 
 // 3 文字を超える prefix が先頭 3 文字に切り詰められることの確認
+// [サブ手順参照 名前=stdioTempTest.SetUp]
 TEST_F(stdioTempTest, prefix_longer_than_three_chars_is_truncated)
 {
     // Arrange
@@ -257,6 +268,7 @@ TEST_F(stdioTempTest, prefix_longer_than_three_chars_is_truncated)
 #endif /* PLATFORM_LINUX */
 
 // modes が NULL の場合に EINVAL で失敗することの確認
+// [サブ手順参照 名前=stdioTempTest.SetUp]
 TEST_F(stdioTempTest, null_modes_returns_einval)
 {
     // Arrange
@@ -279,6 +291,7 @@ TEST_F(stdioTempTest, null_modes_returns_einval)
 }
 
 // path_out が NULL の場合に EINVAL で失敗することの確認
+// [サブ手順参照 名前=stdioTempTest.SetUp]
 TEST_F(stdioTempTest, null_path_out_returns_einval)
 {
     // Arrange
@@ -297,6 +310,7 @@ TEST_F(stdioTempTest, null_path_out_returns_einval)
 }
 
 // path_size が 0 の場合に EINVAL で失敗することの確認
+// [サブ手順参照 名前=stdioTempTest.SetUp]
 TEST_F(stdioTempTest, zero_path_size_returns_einval)
 {
     // Arrange
@@ -317,6 +331,7 @@ TEST_F(stdioTempTest, zero_path_size_returns_einval)
 
 #if defined(PLATFORM_LINUX)
 // path_size が必要長未満の場合に ENAMETOOLONG で失敗することの確認
+// [サブ手順参照 名前=stdioTempTest.SetUp]
 TEST_F(stdioTempTest, path_size_too_small_returns_enametoolong)
 {
     // Arrange
@@ -337,6 +352,7 @@ TEST_F(stdioTempTest, path_size_too_small_returns_enametoolong)
 }
 
 // TMPDIR の取得結果がバッファーに収まらない場合に失敗することの確認
+// [サブ手順参照 名前=stdioTempTest.SetUp]
 TEST_F(stdioTempTest, tmpdir_buffer_too_small_returns_enametoolong)
 {
     // Arrange
@@ -360,6 +376,7 @@ TEST_F(stdioTempTest, tmpdir_buffer_too_small_returns_enametoolong)
 }
 
 // mkostemp の失敗が詳細エラーへ記録されることの確認
+// [サブ手順参照 名前=stdioTempTest.SetUp]
 TEST_F(stdioTempTest, mkostemp_failure_reports_errno)
 {
     // Arrange
@@ -387,6 +404,7 @@ TEST_F(stdioTempTest, mkostemp_failure_reports_errno)
 }
 
 // fdopen の失敗が詳細エラーへ記録され、一時ファイルが削除されることの確認
+// [サブ手順参照 名前=stdioTempTest.SetUp]
 TEST_F(stdioTempTest, invalid_modes_reports_fdopen_error)
 {
     // Arrange
@@ -428,6 +446,7 @@ TEST_F(stdioTempTest, invalid_modes_reports_fdopen_error)
 }
 
 // 一時ファイルのパス整形に失敗した場合に ENAMETOOLONG で失敗することの確認
+// [サブ手順参照 名前=stdioTempTest.SetUp]
 TEST_F(stdioTempTest, path_formatting_failure_returns_enametoolong)
 {
     // Arrange

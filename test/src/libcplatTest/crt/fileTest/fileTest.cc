@@ -7,6 +7,7 @@ class fileTest : public fileTestFixture
 };
 
 // 未オープンのハンドルに対する init と多重 close が安全であることの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, init_and_close_are_safe_for_unopened_handle)
 {
     // Arrange
@@ -24,6 +25,7 @@ TEST_F(fileTest, init_and_close_are_safe_for_unopened_handle)
 }
 
 // 不正な引数で各関数が CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, invalid_arguments_fail)
 {
     // Arrange
@@ -64,6 +66,7 @@ TEST_F(fileTest, invalid_arguments_fail)
 }
 
 // 負のフラグでオープンすると CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, open_rejects_negative_flags)
 {
     // Arrange
@@ -89,6 +92,7 @@ TEST_F(fileTest, open_rejects_negative_flags)
 }
 
 // 同一性 ID 取得が不正な引数で CPLAT_ERR_INVALID_ARGUMENT を、存在しないパスで CPLAT_ERR_NOT_FOUND を返すことの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, file_id_invalid_arguments_fail)
 {
     // Arrange
@@ -131,6 +135,7 @@ TEST_F(fileTest, file_id_invalid_arguments_fail)
 }
 
 // CREATE_NEW を CREATE なしで指定すると CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, create_new_without_create_fails)
 {
     // Arrange
@@ -152,6 +157,7 @@ TEST_F(fileTest, create_new_without_create_fails)
 }
 
 // cplat_file_set_size が不正な引数で CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, set_size_invalid_arguments_fail)
 {
     // Arrange
@@ -171,6 +177,7 @@ TEST_F(fileTest, set_size_invalid_arguments_fail)
 }
 
 // cplat_file_read が不正な引数で CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, read_invalid_arguments_fail)
 {
     // Arrange
@@ -195,6 +202,7 @@ TEST_F(fileTest, read_invalid_arguments_fail)
 #if defined(PLATFORM_LINUX)
 
 // 追記オープンで既存サイズが fstat から報告されることの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, append_open_reports_existing_size)
 {
     // Arrange
@@ -237,6 +245,7 @@ TEST_F(fileTest, append_open_reports_existing_size)
 }
 
 // TRUNCATE 付きオープンが O_TRUNC を渡し、サイズ 0 を報告することの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, truncate_open_resets_existing_file_size)
 {
     // Arrange
@@ -279,6 +288,7 @@ TEST_F(fileTest, truncate_open_resets_existing_file_size)
 }
 
 // 書き込み後の再オープンで追記 write が呼ばれることの確認 (マルチ フェーズ テスト)
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, write_then_reopen_appends)
 {
     // Arrange
@@ -348,6 +358,7 @@ TEST_F(fileTest, write_then_reopen_appends)
 }
 
 // ハンドル由来とパス由来のファイル同一性 ID が一致することの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, file_id_matches_between_handle_and_path)
 {
     // Arrange
@@ -397,6 +408,7 @@ TEST_F(fileTest, file_id_matches_between_handle_and_path)
 }
 
 // パス側の stat が別実体を返したとき同一性 ID が一致しないことの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, file_id_differs_when_path_stat_differs)
 {
     // Arrange
@@ -446,6 +458,7 @@ TEST_F(fileTest, file_id_differs_when_path_stat_differs)
 }
 
 // READ/WRITE フラグを指定しない場合に、既定で書き込み専用としてオープンすることの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, default_access_remains_write_only)
 {
     // Arrange
@@ -480,6 +493,7 @@ TEST_F(fileTest, default_access_remains_write_only)
 }
 
 // CPLAT_FILE_OPEN_WRITE のみを指定した場合に書き込み可能であることの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, explicit_write_only_open_allows_write)
 {
     // Arrange
@@ -514,6 +528,7 @@ TEST_F(fileTest, explicit_write_only_open_allows_write)
 }
 
 // CPLAT_FILE_OPEN_READ のみを指定した場合に書き込みが失敗することの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, read_only_open_rejects_write)
 {
     // Arrange
@@ -545,6 +560,7 @@ TEST_F(fileTest, read_only_open_rejects_write)
 }
 
 // CPLAT_FILE_OPEN_READ が存在しないファイルに対して失敗することの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, read_only_open_fails_for_missing_file)
 {
     // Arrange
@@ -569,6 +585,7 @@ TEST_F(fileTest, read_only_open_fails_for_missing_file)
 }
 
 // READ | WRITE を指定した場合に読み書き両用でオープンできることの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, read_write_open_allows_write_and_reports_size)
 {
     // Arrange
@@ -614,6 +631,7 @@ TEST_F(fileTest, read_write_open_allows_write_and_reports_size)
 }
 
 // CREATE | CREATE_NEW で新規ファイルの作成に成功することの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, create_new_succeeds_for_absent_file)
 {
     // Arrange
@@ -643,6 +661,7 @@ TEST_F(fileTest, create_new_succeeds_for_absent_file)
 }
 
 // CREATE | CREATE_NEW が既存ファイルに対して失敗することの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, create_new_fails_for_existing_file)
 {
     // Arrange
@@ -669,6 +688,7 @@ TEST_F(fileTest, create_new_fails_for_existing_file)
 }
 
 // cplat_file_set_size が ftruncate に拡張と縮小のサイズを渡すことの確認 (マルチ フェーズ テスト)
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, set_size_extends_and_truncates_file)
 {
     // Arrange
@@ -735,6 +755,7 @@ TEST_F(fileTest, set_size_extends_and_truncates_file)
 }
 
 // cplat_file_read が read の返却バッファーを呼び出し元へ渡すことの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, read_returns_written_content)
 {
     // Arrange
@@ -770,6 +791,7 @@ TEST_F(fileTest, read_returns_written_content)
 }
 
 // cplat_file_read がファイル終端で 0 バイトを返すことの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, read_at_end_of_file_returns_zero_length)
 {
     // Arrange
@@ -810,6 +832,7 @@ TEST_F(fileTest, read_at_end_of_file_returns_zero_length)
 }
 
 // cplat_file_flush が fsync 成功を結果コードへ反映することの確認
+// [サブ手順参照 名前=fileTestFixture.SetUp]
 TEST_F(fileTest, flush_reports_success)
 {
     // Arrange

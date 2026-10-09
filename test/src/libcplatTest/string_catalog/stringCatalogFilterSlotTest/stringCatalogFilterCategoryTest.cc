@@ -26,6 +26,7 @@ const cplat_string_catalog_filter_category_names s_level_category_names = {
 class stringCatalogFilterCategoryTest : public Test
 {
   protected:
+    // [サブ手順 名前=stringCatalogFilterCategoryTest.SetUp]
     void SetUp() override
     {
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(
@@ -33,11 +34,14 @@ class stringCatalogFilterCategoryTest : public Test
                                 filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_));
         // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_trace_catalog(), filter_test_trace_key_names(), filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=stringCatalogFilterCategoryTest.TearDown]
     void TearDown() override
     {
         cplat_string_catalog_filter_slot_dispose(&slot_);
     }
+    // [サブ手順終了]
 
     /** 分類値の名前を指定して、スロットを作り直します。分類値の名前は作成時にだけ指定できるためです。 */
     int recreate_slot_with_category_names(const cplat_string_catalog_filter_category_names *category_names)
@@ -83,6 +87,7 @@ class stringCatalogFilterCategoryTest : public Test
 };
 
 // 分類値の名前を設定すると、レベル名と数値のどちらでも同じ判定になることの確認
+// [サブ手順参照 名前=stringCatalogFilterCategoryTest.SetUp]
 TEST_F(stringCatalogFilterCategoryTest, level_name_and_number_give_same_result)
 {
     // Arrange
@@ -123,8 +128,10 @@ TEST_F(stringCatalogFilterCategoryTest, level_name_and_number_give_same_result)
     EXPECT_EQ(actual_failed_name, actual_failed_number);   // [確認_正常系] - JOB_FAILED の判定が同じであること。
     EXPECT_EQ(actual_started_name, actual_started_number); // [確認_正常系] - WORKER_STARTED の判定が同じであること。
 }
+// [サブ手順参照 名前=stringCatalogFilterCategoryTest.TearDown]
 
 // 分類値の名前の範囲外の定数を、行を無効にして拒否することの確認
+// [サブ手順参照 名前=stringCatalogFilterCategoryTest.SetUp]
 TEST_F(stringCatalogFilterCategoryTest, out_of_range_values_are_rejected)
 {
     // Arrange
@@ -158,8 +165,10 @@ TEST_F(stringCatalogFilterCategoryTest, out_of_range_values_are_rejected)
     EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE,
               actual_boundary); // [確認_正常系] - 範囲内の値は受け入れられること。
 }
+// [サブ手順参照 名前=stringCatalogFilterCategoryTest.TearDown]
 
 // 分類値の名前にない識別子を、行を無効にして拒否することの確認
+// [サブ手順参照 名前=stringCatalogFilterCategoryTest.SetUp]
 TEST_F(stringCatalogFilterCategoryTest, unknown_level_name_is_rejected)
 {
     // Arrange
@@ -177,8 +186,10 @@ TEST_F(stringCatalogFilterCategoryTest, unknown_level_name_is_rejected)
     EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_UNRESOLVED_CATEGORY_NAME,
               actual_error); // [確認_異常系] - 未知のレベル名として拒否されること。
 }
+// [サブ手順参照 名前=stringCatalogFilterCategoryTest.TearDown]
 
 // 分類値の名前を設定しない場合は、分類値を匿名のまま扱うことの確認
+// [サブ手順参照 名前=stringCatalogFilterCategoryTest.SetUp]
 TEST_F(stringCatalogFilterCategoryTest, without_category_names_category_is_anonymous)
 {
     // Arrange
@@ -197,3 +208,4 @@ TEST_F(stringCatalogFilterCategoryTest, without_category_names_category_is_anony
         CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_UNRESOLVED_KEY_NAME,
         actual_name); // [確認_異常系] - 識別子は従来どおり文字列キーの名前として解決され、WARNING は見つからないこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterCategoryTest.TearDown]

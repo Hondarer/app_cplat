@@ -71,11 +71,14 @@ class trace_fileTest : public Test
   protected:
     NiceMock<Mock_cplat> mock_cplat;
 
+    // [サブ手順 名前=trace_fileTest.SetUp]
     void SetUp() override
     {
         ON_CALL(mock_cplat, cplat_clock_get_realtime_deadline_ms(_, _))
             .WillByDefault([](uint64_t, struct timespec *abs_timeout) { set_valid_deadline(abs_timeout); });
+        // [状態] - `cplat_clock_get_realtime_deadline_ms` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_get_realtime(_)).WillByDefault([](cplat_timespec *ts) { set_fixed_realtime(ts); });
+        // [状態] - `cplat_clock_get_realtime` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_format_realtime_iso8601_local(_, _, _))
             .WillByDefault(
                 [](char *buf, size_t buf_size, const cplat_timespec *)
@@ -83,7 +86,9 @@ class trace_fileTest : public Test
                     snprintf(buf, buf_size, "%s", "2026-04-26T03:04:05.678+09:00");
                     return 0;
                 });
+        // [状態] - `cplat_clock_format_realtime_iso8601_local` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_open(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_file_open` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_get_size(_, _, _))
             .WillByDefault(
                 [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -91,10 +96,15 @@ class trace_fileTest : public Test
                     *size_out = 0;
                     return 0;
                 });
+        // [状態] - `cplat_file_get_size` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_write(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_file_write` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_close(_, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_file_close` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_remove(_, _)).WillByDefault(Return(0));
+        // [状態] - `cplat_remove` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_rename(_, _, _)).WillByDefault(Return(0));
+        // [状態] - `cplat_rename` の既定動作を設定する。
 
         // 共有モード用の既定動作: ハンドルとパスの同一性は常に一致させる
         ON_CALL(mock_cplat, cplat_file_get_id(_, _, _))
@@ -104,6 +114,7 @@ class trace_fileTest : public Test
                     set_file_id(id_out, kDefaultFileIndex);
                     return 0;
                 });
+        // [状態] - `cplat_file_get_id` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_get_path_id(_, _, _))
             .WillByDefault(
                 [](const char *, cplat_file_id *id_out, cplat_error *)
@@ -111,6 +122,7 @@ class trace_fileTest : public Test
                     set_file_id(id_out, kDefaultFileIndex);
                     return 0;
                 });
+        // [状態] - `cplat_file_get_path_id` の既定動作を設定する。
 
         // プロセス間ロックはダミー ハンドルで成功させる (実体は作らない)
         ON_CALL(mock_cplat, cplat_interprocess_lock_open(_, _))
@@ -121,13 +133,19 @@ class trace_fileTest : public Test
                     *lock = (cplat_interprocess_lock *)&dummy_lock;
                     return CPLAT_OK;
                 });
+        // [状態] - `cplat_interprocess_lock_open` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_interprocess_lock_try_lock(_)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_interprocess_lock_try_lock` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_interprocess_lock_unlock(_)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_interprocess_lock_unlock` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_interprocess_lock_dispose(_)).WillByDefault(Return());
+        // [状態] - `cplat_interprocess_lock_dispose` の既定動作を設定する。
     }
+    // [サブ手順終了]
 };
 
 // NULL path では create が失敗することの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_create_returns_null_for_null_path)
 {
     // Arrange
@@ -144,6 +162,7 @@ TEST_F(trace_fileTest, test_create_returns_null_for_null_path)
 }
 
 // create が既定 open flags でファイルを開くことの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_create_opens_file_with_default_flags)
 {
     // Arrange
@@ -175,6 +194,7 @@ TEST_F(trace_fileTest, test_create_opens_file_with_default_flags)
 }
 
 // OS バッファー指定時に write-through を付けずにファイルを開くことの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_create_opens_buffered_file_without_write_through)
 {
     // Arrange
@@ -197,6 +217,7 @@ TEST_F(trace_fileTest, test_create_opens_buffered_file_without_write_through)
 }
 
 // create のファイル オープンが初回失敗後にリトライされることの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_create_retries_file_open_after_initial_failure)
 {
     // Arrange
@@ -232,6 +253,7 @@ TEST_F(trace_fileTest, test_create_retries_file_open_after_initial_failure)
 }
 
 // create のファイル オープンがリトライ上限まで失敗した場合に NULL を返すことの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_create_returns_null_after_file_open_retry_exhausted)
 {
     // Arrange
@@ -266,6 +288,7 @@ TEST_F(trace_fileTest, test_create_returns_null_after_file_open_retry_exhausted)
 }
 
 // INFO 行が固定タイムスタンプと I marker で書き込まれることの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_write_formats_info_line)
 {
     // Arrange
@@ -298,6 +321,7 @@ TEST_F(trace_fileTest, test_write_formats_info_line)
 }
 
 // DEBUG 行が D marker で書き込まれることの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_write_formats_debug_marker)
 {
     // Arrange
@@ -330,6 +354,7 @@ TEST_F(trace_fileTest, test_write_formats_debug_marker)
 }
 
 // 明示タイムスタンプ指定時に内部の現在時刻取得を行わずに書き込むことの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_write_uses_explicit_timestamp_without_internal_clock)
 {
     // Arrange
@@ -365,6 +390,7 @@ TEST_F(trace_fileTest, test_write_uses_explicit_timestamp_without_internal_clock
 }
 
 // ファイル書き込み失敗時に -1 が返ることの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_write_returns_minus_one_on_file_error)
 {
     // Arrange
@@ -389,6 +415,7 @@ TEST_F(trace_fileTest, test_write_returns_minus_one_on_file_error)
 }
 
 // 不正な明示タイムスタンプ指定時に現在時刻へ代替して書き込みつつ -1 を返すことの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_write_falls_back_from_invalid_explicit_timestamp)
 {
     // Arrange
@@ -422,6 +449,7 @@ TEST_F(trace_fileTest, test_write_falls_back_from_invalid_explicit_timestamp)
 }
 
 // サイズ上限超過時にローテーションが実行されることの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_write_rotates_when_size_limit_is_reached)
 {
     // Arrange
@@ -475,6 +503,7 @@ TEST_F(trace_fileTest, test_write_rotates_when_size_limit_is_reached)
 }
 
 // 単一プロセス モードのローテーション後にファイル オープンが失敗しても再試行しないことの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_write_does_not_retry_open_after_rotation)
 {
     // Arrange
@@ -538,6 +567,7 @@ TEST_F(trace_fileTest, test_write_does_not_retry_open_after_rotation)
 }
 
 // dispose が NULL ハンドルでも安全であることの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_dispose_with_null_handle_is_safe)
 {
     // Arrange
@@ -552,6 +582,7 @@ TEST_F(trace_fileTest, test_dispose_with_null_handle_is_safe)
 }
 
 // パスに区切り文字が含まれる場合に makedirs が親ディレクトリ パスで呼ばれることの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_create_calls_makedirs_for_path_with_separator)
 {
     // Arrange
@@ -579,6 +610,7 @@ TEST_F(trace_fileTest, test_create_calls_makedirs_for_path_with_separator)
 
 #if defined(PLATFORM_WINDOWS)
 // Windows スタイル区切りのパスでも makedirs が親ディレクトリ パスで呼ばれることの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_create_normalizes_windows_separator_for_parent_directory)
 {
     // Arrange
@@ -605,6 +637,7 @@ TEST_F(trace_fileTest, test_create_normalizes_windows_separator_for_parent_direc
 #endif /* PLATFORM_WINDOWS */
 
 // 単一プロセス モード (flags 0) ではプロセス間ロックも同一性チェックも使わないことの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_single_mode_does_not_use_interprocess_lock_or_identity_check)
 {
     // Arrange
@@ -634,6 +667,7 @@ TEST_F(trace_fileTest, test_single_mode_does_not_use_interprocess_lock_or_identi
 }
 
 // 共有モードの create がロック ファイルを開くことの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_create_shared_opens_lock_file)
 {
     // Arrange
@@ -660,6 +694,7 @@ TEST_F(trace_fileTest, test_create_shared_opens_lock_file)
 }
 
 // 共有モードでプロセス間ロックのオープンに失敗した場合に create が NULL を返すことの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_create_shared_returns_null_when_lock_open_fails)
 {
     // Arrange
@@ -681,6 +716,7 @@ TEST_F(trace_fileTest, test_create_shared_returns_null_when_lock_open_fails)
 }
 
 // 負の flags では create が NULL を返すことの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_create_returns_null_for_negative_flags)
 {
     // Arrange
@@ -697,6 +733,7 @@ TEST_F(trace_fileTest, test_create_returns_null_for_negative_flags)
 }
 
 // 他プロセスのローテーションで path の実体が変わった場合に書き込み前に開き直すことの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_shared_write_reopens_after_external_rotation)
 {
     // Arrange
@@ -738,6 +775,7 @@ TEST_F(trace_fileTest, test_shared_write_reopens_after_external_rotation)
 }
 
 // 共有モードの開き直しでファイル オープンに失敗した場合に再試行しないことの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_shared_write_reopen_does_not_retry_after_external_rotation)
 {
     // Arrange
@@ -782,6 +820,7 @@ TEST_F(trace_fileTest, test_shared_write_reopen_does_not_retry_after_external_ro
 }
 
 // 共有モードで実サイズがしきい値以上のときプロセス間ロック下でローテーションすることの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
 {
     // Arrange
@@ -882,6 +921,7 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
 }
 
 // ロック下の再確認で他プロセスのローテーション済みを検知した場合に開き直すだけになることの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_other_process_already_rotated)
 {
     // Arrange
@@ -951,6 +991,7 @@ TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_other_process_already
 }
 
 // プロセス間ロックがビジー状態の場合にローテーションを見送ることの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_lock_is_busy)
 {
     // Arrange
@@ -986,6 +1027,7 @@ TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_lock_is_busy)
 }
 
 // 同一プロセス内で同一パスの create が同一ハンドルを共有することの確認 (プロセス内調停)
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_create_same_path_shares_handle_in_single_process)
 {
     // Arrange
@@ -1015,6 +1057,7 @@ TEST_F(trace_fileTest, test_create_same_path_shares_handle_in_single_process)
 }
 
 // 参照カウントにより最後の dispose までハンドルが有効であることの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_shared_handle_survives_until_last_dispose)
 {
     // Arrange
@@ -1051,6 +1094,7 @@ TEST_F(trace_fileTest, test_shared_handle_survives_until_last_dispose)
 }
 
 // 共有モード設定が一致しない同一パスの create が失敗することの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_create_same_path_with_mismatched_shared_flag_returns_null)
 {
     // Arrange
@@ -1074,6 +1118,7 @@ TEST_F(trace_fileTest, test_create_same_path_with_mismatched_shared_flag_returns
 }
 
 // 異なるパスの create は独立したハンドルを生成することの確認
+// [サブ手順参照 名前=trace_fileTest.SetUp]
 TEST_F(trace_fileTest, test_create_different_paths_returns_distinct_handles)
 {
     // Arrange

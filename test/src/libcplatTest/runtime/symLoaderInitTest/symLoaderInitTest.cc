@@ -21,15 +21,24 @@ class symLoaderInitTest : public Test
     NiceMock<Mock_cplat> mock_cplat_;
     FILE *const file_ = reinterpret_cast<FILE *>(static_cast<uintptr_t>(0x70));
 
+    // [サブ手順 名前=symLoaderInitTest.expect_config_read]
     void expect_config_read(const char *path, const char *content)
     {
         const size_t size = std::strlen(content);
 
         // 指定パスを rb で開き、指定本文を読み取って閉じる。
         EXPECT_CALL(mock_cplat_, cplat_fopen(StrEq(path), StrEq("rb"), nullptr)).WillOnce(Return(file_));
+        // [Pre-Assert手順] - 設定ファイルを開くハンドルを返す。
+        // [Pre-Assert確認_正常系] - cplat_fopen() が指定パスとモード "rb" で 1 回呼び出されること。
         EXPECT_CALL(mock_cplat_, cplat_fseek(file_, 0, SEEK_END)).WillOnce(Return(0));
+        // [Pre-Assert手順] - 指定位置への移動に成功する。
+        // [Pre-Assert確認_正常系] - cplat_fseek() が file_ とオフセット 0、SEEK_END で 1 回呼び出されること。
         EXPECT_CALL(mock_cplat_, cplat_ftell(file_)).WillOnce(Return(static_cast<int64_t>(size)));
+        // [Pre-Assert手順] - 設定本文のバイト数を返す。
+        // [Pre-Assert確認_正常系] - cplat_ftell() が file_ を引数に 1 回呼び出されること。
         EXPECT_CALL(mock_cplat_, cplat_fseek(file_, 0, SEEK_SET)).WillOnce(Return(0));
+        // [Pre-Assert手順] - 指定位置への移動に成功する。
+        // [Pre-Assert確認_正常系] - cplat_fseek() が file_ とオフセット 0、SEEK_SET で 1 回呼び出されること。
         EXPECT_CALL(mock_cplat_, cplat_fread(_, 1u, size, file_, nullptr))
             .WillOnce(
                 [content, size](void *buffer, size_t, size_t, FILE *, cplat_error *)
@@ -37,14 +46,23 @@ class symLoaderInitTest : public Test
                     std::memcpy(buffer, content, size);
                     return size;
                 });
+        // [Pre-Assert手順] - 設定本文を出力バッファーへコピーし、読取バイト数を返す。
+        // [Pre-Assert確認_正常系] - cplat_fread() が file_ から 1 バイトの要素を設定本文のバイト数分読む引数で 1 回呼び出されること。
         EXPECT_CALL(mock_cplat_, cplat_fclose(file_, nullptr)).WillOnce(Return(0));
+        // [Pre-Assert手順] - 設定ファイルのクローズに成功する。
+        // [Pre-Assert確認_正常系] - cplat_fclose() が file_ を引数に 1 回呼び出されること。
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=symLoaderInitTest.expect_missing_file]
     void expect_missing_file(const char *path)
     {
         // 指定パスの fopen を失敗させる。
         EXPECT_CALL(mock_cplat_, cplat_fopen(StrEq(path), StrEq("rb"), nullptr)).WillOnce(Return(nullptr));
+        // [Pre-Assert手順] - 設定ファイルを開けず、NULL を返す。
+        // [Pre-Assert確認_正常系] - cplat_fopen() が存在しない設定の指定パスとモード "rb" で 1 回呼び出されること。
     }
+    // [サブ手順終了]
 };
 
 // コメントと末尾カンマを含む JSONC が解析されることの確認
@@ -63,8 +81,9 @@ TEST_F(symLoaderInitTest, applies_json_with_comments)
     cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - コメントと末尾カンマを含む JSONC と sample_func エントリを用意する。
 
     // Pre-Assert
+    // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
     expect_config_read("with_comments.json",
-                       json); // [Pre-Assert確認_正常系 回数=6] - コメントと末尾カンマを含む JSONC の読取が呼び出されること。
+                       json); // コメントと末尾カンマを含む JSONC の読取が呼び出されること。
                               // [Pre-Assert手順] - コメントと末尾カンマを含む JSONC 本文を返却する。
 
     // Act
@@ -84,8 +103,9 @@ TEST_F(symLoaderInitTest, applies_matching_func_key)
     cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - sample_func エントリを 1 件用意する。
 
     // Pre-Assert
+    // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
     expect_config_read("apply_matching.json",
-                       json); // [Pre-Assert確認_正常系 回数=6] - 一致キー JSON の読取が呼び出されること。
+                       json); // 一致キー JSON の読取が呼び出されること。
                               // [Pre-Assert手順] - 一致キー JSON 本文を返却する。
 
     // Act
@@ -105,8 +125,9 @@ TEST_F(symLoaderInitTest, applies_explicit_default)
     cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - sample_func エントリを 1 件用意する。
 
     // Pre-Assert
+    // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
     expect_config_read("explicit_default.json",
-                       json); // [Pre-Assert確認_正常系 回数=6] - 明示的デフォルト JSON の読取が呼び出されること。
+                       json); // 明示的デフォルト JSON の読取が呼び出されること。
                               // [Pre-Assert手順] - 明示的デフォルト JSON 本文を返却する。
 
     // Act
@@ -125,7 +146,8 @@ TEST_F(symLoaderInitTest, ignores_missing_file)
     cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - 設定ファイルを置かない。
 
     // Pre-Assert
-    expect_missing_file("missing.json"); // [Pre-Assert確認_正常系] - 存在しない設定の fopen が呼び出されること。
+    // [サブ手順参照 名前=symLoaderInitTest.expect_missing_file]
+    expect_missing_file("missing.json"); // 存在しない設定の fopen が呼び出されること。
                                          // [Pre-Assert手順] - fopen から NULL を返却する。
 
     // Act
@@ -145,7 +167,8 @@ TEST_F(symLoaderInitTest, ignores_invalid_json)
     cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - 不正 JSON の設定を用意する。
 
     // Pre-Assert
-    expect_config_read("invalid.json", json); // [Pre-Assert確認_正常系 回数=6] - 不正 JSON の読取が呼び出されること。
+    // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
+    expect_config_read("invalid.json", json); // 不正 JSON の読取が呼び出されること。
                                               // [Pre-Assert手順] - 不正 JSON 本文を返却する。
 
     // Act
@@ -165,7 +188,8 @@ TEST_F(symLoaderInitTest, ignores_non_object_root)
     cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - 配列ルートの JSON を用意する。
 
     // Pre-Assert
-    expect_config_read("array_root.json", json); // [Pre-Assert確認_正常系 回数=6] - 配列ルート JSON の読取が呼び出されること。
+    // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
+    expect_config_read("array_root.json", json); // 配列ルート JSON の読取が呼び出されること。
                                                  // [Pre-Assert手順] - 配列ルート JSON 本文を返却する。
 
     // Act
@@ -185,8 +209,9 @@ TEST_F(symLoaderInitTest, ignores_missing_required_fields)
     cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - func 欠落の JSON を用意する。
 
     // Pre-Assert
+    // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
     expect_config_read("missing_fields.json",
-                       json); // [Pre-Assert確認_正常系 回数=6] - 必須フィールド欠落 JSON の読取が呼び出されること。
+                       json); // 必須フィールド欠落 JSON の読取が呼び出されること。
                               // [Pre-Assert手順] - func 欠落の JSON 本文を返却する。
 
     // Act
@@ -207,7 +232,8 @@ TEST_F(symLoaderInitTest, ignores_unknown_func_key_and_applies_known)
     cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - 既知キーと未知キーを含む JSON を用意する。
 
     // Pre-Assert
-    expect_config_read("partial.json", json); // [Pre-Assert確認_正常系 回数=6] - 複数キー JSON の読取が呼び出されること。
+    // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
+    expect_config_read("partial.json", json); // 複数キー JSON の読取が呼び出されること。
                                               // [Pre-Assert手順] - 既知キーと未知キーを含む JSON 本文を返却する。
 
     // Act
@@ -228,8 +254,9 @@ TEST_F(symLoaderInitTest, ignores_name_too_long)
     cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - lib が上限超過の JSON を用意する。
 
     // Pre-Assert
+    // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
     expect_config_read("name_too_long.json",
-                       json.c_str()); // [Pre-Assert確認_正常系 回数=6] - 名称長超過 JSON の読取が呼び出されること。
+                       json.c_str()); // 名称長超過 JSON の読取が呼び出されること。
                                       // [Pre-Assert手順] - 名称長超過 JSON 本文を返却する。
 
     // Act
@@ -251,7 +278,8 @@ TEST_F(symLoaderInitTest, applies_multiple_entries)
     cplat_sym_loader_entry *entries[] = {&entry_a, &entry_b}; // [状態] - 2 件のエントリを用意する。
 
     // Pre-Assert
-    expect_config_read("multi.json", json); // [Pre-Assert確認_正常系 回数=6] - 複数エントリ JSON の読取が呼び出されること。
+    // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
+    expect_config_read("multi.json", json); // 複数エントリ JSON の読取が呼び出されること。
                                             // [Pre-Assert手順] - 複数エントリ JSON 本文を返却する。
 
     // Act
@@ -274,8 +302,9 @@ TEST_F(symLoaderInitTest, ignores_document_when_cjson_parse_fails)
     cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - 正常な JSON と未設定の sample_func エントリを用意する。
 
     // Pre-Assert
+    // [サブ手順参照 名前=symLoaderInitTest.expect_config_read 区分=異常系]
     expect_config_read("injected_parse_failure.json",
-                       json); // [Pre-Assert確認_異常系 回数=6] - 正常な JSON の読取が呼び出されること。
+                       json); // 正常な JSON の読取が呼び出されること。
                               // [Pre-Assert手順] - 正常な JSON 本文を返却する。
     EXPECT_CALL(mock_cjson, cJSON_ParseJSONCWithLength(StrEq(json), std::strlen(json)))
         .WillOnce(Return(
@@ -305,8 +334,9 @@ TEST_F(symLoaderInitTest, ignores_entry_when_cjson_string_value_is_null)
     cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - 正常な JSON と未設定の sample_func エントリを用意する。
 
     // Pre-Assert
+    // [サブ手順参照 名前=symLoaderInitTest.expect_config_read 区分=異常系]
     expect_config_read("injected_string_failure.json",
-                       json); // [Pre-Assert確認_異常系 回数=6] - 正常な JSON の読取が呼び出されること。
+                       json); // 正常な JSON の読取が呼び出されること。
                               // [Pre-Assert手順] - 正常な JSON 本文を返却する。
     EXPECT_CALL(mock_cjson, cJSON_GetStringValue(_))
         .WillOnce(Return(nullptr))
@@ -514,8 +544,9 @@ TEST_F(symLoaderInitTest, ignores_invalid_json_entries)
     cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - 不正な型、空キー、空値を含む JSON を用意する。
 
     // Pre-Assert
+    // [サブ手順参照 名前=symLoaderInitTest.expect_config_read 区分=異常系]
     expect_config_read("invalid_entries.json",
-                       json); // [Pre-Assert確認_異常系 回数=6] - 不正エントリ JSON の読取が呼び出されること。
+                       json); // 不正エントリ JSON の読取が呼び出されること。
                               // [Pre-Assert手順] - 不正エントリ JSON 本文を返却する。
 
     // Act
@@ -535,7 +566,8 @@ TEST_F(symLoaderInitTest, ignores_matching_entry_when_object_array_is_null)
         "{\"sample_func\":{\"lib\":\"liboverride\",\"func\":\"override_func\"}}"; // [状態] - 一致する設定を含む JSON を用意する。
 
     // Pre-Assert
-    expect_config_read("null_array.json", json); // [Pre-Assert確認_正常系 回数=6] - 一致設定 JSON の読取が呼び出されること。
+    // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
+    expect_config_read("null_array.json", json); // 一致設定 JSON の読取が呼び出されること。
                                                  // [Pre-Assert手順] - 一致設定 JSON 本文を返却する。
 
     // Act
@@ -555,8 +587,9 @@ TEST_F(symLoaderInitTest, skips_null_cache_entries)
     cplat_sym_loader_entry *entries[] = {NULL, &entry}; // [状態] - NULL 要素と func_key が NULL の要素を用意する。
 
     // Pre-Assert
+    // [サブ手順参照 名前=symLoaderInitTest.expect_config_read 区分=異常系]
     expect_config_read("null_cache_entries.json",
-                       json); // [Pre-Assert確認_異常系 回数=6] - 一致設定 JSON の読取が呼び出されること。
+                       json); // 一致設定 JSON の読取が呼び出されること。
                               // [Pre-Assert手順] - 一致設定 JSON 本文を返却する。
 
     // Act
@@ -616,8 +649,9 @@ TEST_F(symLoaderInitTest, ignores_invalid_function_values)
     cplat_sym_loader_entry *boundary_entries[] = {&empty_entry, &long_entry};
 
     // Pre-Assert
+    // [サブ手順参照 名前=symLoaderInitTest.expect_config_read 区分=異常系]
     expect_config_read("null_func.json",
-                       valid_json); // [Pre-Assert確認_異常系 回数=6] - func 取得失敗用 JSON の読取が呼び出されること。
+                       valid_json); // func 取得失敗用 JSON の読取が呼び出されること。
                                     // [Pre-Assert手順] - 正常な JSON 本文を返却する。
     EXPECT_CALL(mock_cjson, cJSON_GetStringValue(_))
         .WillOnce(DoDefault())
@@ -639,9 +673,10 @@ TEST_F(symLoaderInitTest, ignores_invalid_function_values)
     // Arrange_2
 
     // Pre-Assert_2
+    // [サブ手順参照 名前=symLoaderInitTest.expect_config_read 区分=異常系]
     expect_config_read(
         "invalid_func_values.json",
-        boundary_json.c_str()); // [Pre-Assert確認_異常系 回数=6] - 空または上限超過 func の JSON 読取が呼び出されること。
+        boundary_json.c_str()); // 空または上限超過 func の JSON 読取が呼び出されること。
                                 // [Pre-Assert手順] - 境界値 JSON 本文を返却する。
 
     // Act_2

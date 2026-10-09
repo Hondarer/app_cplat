@@ -38,6 +38,7 @@ class traceFileCoverageTest : public Test
   protected:
     NiceMock<Mock_cplat> mock_cplat;
 
+    // [サブ手順 名前=traceFileCoverageTest.SetUp]
     void SetUp() override
     {
         ON_CALL(mock_cplat, cplat_clock_get_realtime(_))
@@ -47,6 +48,7 @@ class traceFileCoverageTest : public Test
                     timestamp->tv_sec = 1714100645LL;
                     timestamp->tv_nsec = 678000000;
                 });
+        // [状態] - `cplat_clock_get_realtime` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_format_realtime_iso8601_local(_, _, _))
             .WillByDefault(
                 [](char *buf, const size_t buf_size, const cplat_timespec *)
@@ -54,7 +56,9 @@ class traceFileCoverageTest : public Test
                     snprintf(buf, buf_size, "%s", "2026-04-26T03:04:05.678+09:00");
                     return CPLAT_OK;
                 });
+        // [状態] - `cplat_clock_format_realtime_iso8601_local` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_open(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_file_open` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_get_size(_, _, _))
             .WillByDefault(
                 [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -62,10 +66,15 @@ class traceFileCoverageTest : public Test
                     *size_out = 0;
                     return CPLAT_OK;
                 });
+        // [状態] - `cplat_file_get_size` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_write(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_file_write` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_close(_, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_file_close` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_remove(_, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_remove` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_rename(_, _, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_rename` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_get_id(_, _, _))
             .WillByDefault(
                 [](const cplat_file *, cplat_file_id *id_out, cplat_error *)
@@ -73,6 +82,7 @@ class traceFileCoverageTest : public Test
                     set_file_id(id_out, 1, kFileIndex);
                     return CPLAT_OK;
                 });
+        // [状態] - `cplat_file_get_id` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_get_path_id(_, _, _))
             .WillByDefault(
                 [](const char *, cplat_file_id *id_out, cplat_error *)
@@ -80,6 +90,7 @@ class traceFileCoverageTest : public Test
                     set_file_id(id_out, 1, kFileIndex);
                     return CPLAT_OK;
                 });
+        // [状態] - `cplat_file_get_path_id` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_interprocess_lock_open(_, _))
             .WillByDefault(
                 [](const char *, cplat_interprocess_lock **lock)
@@ -88,13 +99,19 @@ class traceFileCoverageTest : public Test
                     *lock = (cplat_interprocess_lock *)&dummy_lock;
                     return CPLAT_OK;
                 });
+        // [状態] - `cplat_interprocess_lock_open` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_interprocess_lock_try_lock(_)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_interprocess_lock_try_lock` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_interprocess_lock_unlock(_)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_interprocess_lock_unlock` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_interprocess_lock_dispose(_)).WillByDefault(Return());
+        // [状態] - `cplat_interprocess_lock_dispose` の既定動作を設定する。
     }
+    // [サブ手順終了]
 };
 
 // フル パス解決に失敗した場合に元のパスで sink を登録することの確認
+// [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, create_uses_original_path_when_full_path_resolution_fails)
 {
     // Arrange
@@ -120,6 +137,7 @@ TEST_F(traceFileCoverageTest, create_uses_original_path_when_full_path_resolutio
 }
 
 // レジストリの後方検索と容量再拡張を行うことの確認
+// [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, registry_expands_and_finds_later_sink)
 {
     // Arrange
@@ -153,6 +171,7 @@ TEST_F(traceFileCoverageTest, registry_expands_and_finds_later_sink)
 }
 
 // 親ディレクトリ解決と初期サイズ取得に失敗しても sink を生成することの確認
+// [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, create_accepts_empty_path_and_size_query_failure)
 {
     // Arrange
@@ -175,6 +194,7 @@ TEST_F(traceFileCoverageTest, create_accepts_empty_path_and_size_query_failure)
 }
 
 // 共有ファイルの同一性を取得できない場合に書き込み前に開き直すことの確認
+// [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, shared_write_reopens_when_file_identity_is_unavailable)
 {
     // Arrange
@@ -207,6 +227,7 @@ TEST_F(traceFileCoverageTest, shared_write_reopens_when_file_identity_is_unavail
 }
 
 // 共有ファイルのパス同一性取得に失敗した場合に開き直すことの確認
+// [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, shared_write_reopens_when_path_identity_query_fails)
 {
     // Arrange
@@ -236,6 +257,7 @@ TEST_F(traceFileCoverageTest, shared_write_reopens_when_path_identity_query_fail
 }
 
 // volume が異なるファイルを別実体と判定することの確認
+// [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, shared_write_reopens_when_file_volume_changes)
 {
     // Arrange
@@ -270,6 +292,7 @@ TEST_F(traceFileCoverageTest, shared_write_reopens_when_file_volume_changes)
 }
 
 // ローテーション中の rename 失敗時にカスケードを中止することの確認
+// [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, rotation_stops_after_rename_failure)
 {
     // Arrange
@@ -295,6 +318,7 @@ TEST_F(traceFileCoverageTest, rotation_stops_after_rename_failure)
 }
 
 // 共有ローテーションのサイズ取得失敗とロック後の再確認を扱うことの確認
+// [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, shared_rotation_handles_size_query_outcomes)
 {
     // Arrange
@@ -347,6 +371,7 @@ TEST_F(traceFileCoverageTest, shared_rotation_handles_size_query_outcomes)
 }
 
 // create のロック生成失敗とパス長上限を拒否することの確認
+// [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, create_rejects_lock_failure_and_long_path)
 {
     // Arrange
@@ -372,6 +397,7 @@ TEST_F(traceFileCoverageTest, create_rejects_lock_failure_and_long_path)
 }
 
 // write が不正引数と依存処理の失敗を返すことの確認
+// [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, write_handles_invalid_arguments_and_dependency_failures)
 {
     // Arrange
@@ -419,6 +445,7 @@ TEST_F(traceFileCoverageTest, write_handles_invalid_arguments_and_dependency_fai
 }
 
 // write の書式化失敗、切り詰め、ロック失敗を扱うことの確認
+// [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, write_handles_format_truncation_and_lock_failure)
 {
     // Arrange
@@ -459,6 +486,7 @@ TEST_F(traceFileCoverageTest, write_handles_format_truncation_and_lock_failure)
 }
 
 // サイズ加算がオーバーフローする場合に加算しないことの確認
+// [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, write_avoids_current_size_overflow)
 {
     // Arrange
@@ -493,6 +521,7 @@ TEST_F(traceFileCoverageTest, write_avoids_current_size_overflow)
 }
 
 // 登録済みと未登録の sink を通常と shutdown 経路で破棄できることの確認
+// [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, dispose_handles_registered_and_unregistered_sinks)
 {
     // Arrange
@@ -524,6 +553,7 @@ TEST_F(traceFileCoverageTest, dispose_handles_registered_and_unregistered_sinks)
 }
 
 // 共有 sink の lock-path 確保に失敗した場合に生成を中止することの確認
+// [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, create_shared_returns_null_when_lock_path_allocation_fails)
 {
     // Arrange

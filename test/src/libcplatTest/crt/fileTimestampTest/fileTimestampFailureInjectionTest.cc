@@ -32,6 +32,7 @@ const char kPath[] = "file_timestamp_failure.dat";
 class fileTimestampFailureInjectionTest : public testing::Test
 {
   protected:
+    // [サブ手順 名前=fileTimestampFailureInjectionTest.SetUp_1]
     void SetUp() override
     {
         FILE *stream = NULL;
@@ -48,18 +49,22 @@ class fileTimestampFailureInjectionTest : public testing::Test
                   cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL));
         // [状態確認] - `cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL)` の戻り値が `CPLAT_OK` であること。
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=fileTimestampFailureInjectionTest.TearDown_1]
     void TearDown() override
     {
         (void)cplat_file_close(&file_, NULL);
         (void)cplat_remove(kPath, NULL);
     }
+    // [サブ手順終了]
 
     NiceMock<Mock_sys_stat> mock_sys_stat_;
     cplat_file file_;
 };
 
 // fstat の失敗が cplat_file_get_modified_timestamp から伝播することの確認
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.SetUp_1]
 TEST_F(fileTimestampFailureInjectionTest, get_reports_fstat_failure)
 {
     // Arrange
@@ -83,8 +88,10 @@ TEST_F(fileTimestampFailureInjectionTest, get_reports_fstat_failure)
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
     // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_1]
 
 // futimens の失敗が cplat_file_set_modified_timestamp から伝播することの確認
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.SetUp_1]
 TEST_F(fileTimestampFailureInjectionTest, set_reports_futimens_failure)
 {
     // Arrange
@@ -108,8 +115,10 @@ TEST_F(fileTimestampFailureInjectionTest, set_reports_futimens_failure)
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
     // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_1]
 
 // utimensat の失敗が cplat_file_set_path_modified_timestamp から伝播することの確認
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.SetUp_1]
 TEST_F(fileTimestampFailureInjectionTest, set_path_reports_utimensat_failure)
 {
     // Arrange
@@ -133,8 +142,10 @@ TEST_F(fileTimestampFailureInjectionTest, set_path_reports_utimensat_failure)
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
     // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_1]
 
 // stat の失敗が cplat_file_get_path_modified_timestamp から伝播することの確認
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.SetUp_1]
 TEST_F(fileTimestampFailureInjectionTest, get_path_reports_stat_failure)
 {
     // Arrange
@@ -158,6 +169,7 @@ TEST_F(fileTimestampFailureInjectionTest, get_path_reports_stat_failure)
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
     // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_1]
 
 #elif defined(PLATFORM_WINDOWS)
 
@@ -177,6 +189,7 @@ const char kPath[] = "file_timestamp_failure.dat";
 class fileTimestampFailureInjectionTest : public testing::Test
 {
   protected:
+    // [サブ手順 名前=fileTimestampFailureInjectionTest.SetUp_2]
     void SetUp() override
     {
         FILE *stream = NULL;
@@ -193,18 +206,22 @@ class fileTimestampFailureInjectionTest : public testing::Test
                   cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL));
         // [状態確認] - `cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL)` の戻り値が `CPLAT_OK` であること。
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=fileTimestampFailureInjectionTest.TearDown_2]
     void TearDown() override
     {
         (void)cplat_file_close(&file_, NULL);
         (void)cplat_remove(kPath, NULL);
     }
+    // [サブ手順終了]
 
     NiceMock<Mock_windows> mock_windows_;
     cplat_file file_;
 };
 
 // GetFileTime の失敗が cplat_file_get_modified_timestamp から伝播することの確認
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.SetUp_2]
 TEST_F(fileTimestampFailureInjectionTest, get_reports_GetFileTime_failure)
 {
     // Arrange
@@ -231,8 +248,10 @@ TEST_F(fileTimestampFailureInjectionTest, get_reports_GetFileTime_failure)
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
     // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_2]
 
 // SetFileTime の失敗が cplat_file_set_modified_timestamp から伝播することの確認
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.SetUp_2]
 TEST_F(fileTimestampFailureInjectionTest, set_reports_SetFileTime_failure)
 {
     // Arrange
@@ -259,8 +278,10 @@ TEST_F(fileTimestampFailureInjectionTest, set_reports_SetFileTime_failure)
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
     // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_2]
 
 // パス版の GetFileTime の失敗が cplat_file_get_path_modified_timestamp から伝播することの確認
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.SetUp_2]
 TEST_F(fileTimestampFailureInjectionTest, get_path_reports_GetFileTime_failure)
 {
     // Arrange
@@ -287,8 +308,10 @@ TEST_F(fileTimestampFailureInjectionTest, get_path_reports_GetFileTime_failure)
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
     // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_2]
 
 // パス版の SetFileTime の失敗が cplat_file_set_path_modified_timestamp から伝播することの確認
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.SetUp_2]
 TEST_F(fileTimestampFailureInjectionTest, set_path_reports_SetFileTime_failure)
 {
     // Arrange
@@ -315,8 +338,10 @@ TEST_F(fileTimestampFailureInjectionTest, set_path_reports_SetFileTime_failure)
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
     // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_2]
 
 // パス版の取得で CloseHandle の失敗が伝播することの確認
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.SetUp_2]
 TEST_F(fileTimestampFailureInjectionTest, get_path_reports_CloseHandle_failure)
 {
     // Arrange
@@ -344,8 +369,10 @@ TEST_F(fileTimestampFailureInjectionTest, get_path_reports_CloseHandle_failure)
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
     // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_2]
 
 // パス版の設定で CloseHandle の失敗が伝播することの確認
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.SetUp_2]
 TEST_F(fileTimestampFailureInjectionTest, set_path_reports_CloseHandle_failure)
 {
     // Arrange
@@ -373,5 +400,6 @@ TEST_F(fileTimestampFailureInjectionTest, set_path_reports_CloseHandle_failure)
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
     // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
 }
+// [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_2]
 
 #endif /* PLATFORM_ */

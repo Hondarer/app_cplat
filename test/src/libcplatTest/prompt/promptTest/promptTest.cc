@@ -14,6 +14,7 @@ class promptTest : public Test
   protected:
     cplat_prompt *prompt_ = NULL;
 
+    // [サブ手順 名前=promptTest.SetUp]
     void SetUp() override
     {
         promptFakeReset();
@@ -23,12 +24,15 @@ class promptTest : public Test
         /* 端末に接続していない実行環境でも対話パスを通すため、TTY 状態を直接立てる */
         prompt_->is_tty = 1;
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=promptTest.TearDown]
     void TearDown() override
     {
         cplat_prompt_dispose(prompt_);
         prompt_ = NULL;
     }
+    // [サブ手順終了]
 
     /* 入力列を設定して 1 行読み取る */
     int readline(const std::string &input, char *buf, size_t buf_size, const char *file = "promptTest.cc",
@@ -44,6 +48,7 @@ class promptTest : public Test
  */
 
 // 既定オプションでハンドルが生成されることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, create_applies_default_options)
 {
     // Arrange
@@ -64,8 +69,10 @@ TEST_F(promptTest, create_applies_default_options)
     // Cleanup
     cplat_prompt_dispose(handle);
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 指定したオプションが反映されることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, create_applies_given_options)
 {
     // Arrange
@@ -89,8 +96,10 @@ TEST_F(promptTest, create_applies_given_options)
     // Cleanup
     cplat_prompt_dispose(handle);
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // NULL ハンドルの破棄が安全であることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, dispose_accepts_null)
 {
     // Arrange
@@ -103,12 +112,14 @@ TEST_F(promptTest, dispose_accepts_null)
     // Assert
     SUCCEED(); // [確認_正常系] - クラッシュせずに完了すること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 /*
  * cplat_prompt_readline_at (引数検証)
  */
 
 // 不正な引数が拒否されることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_rejects_invalid_arguments)
 {
     // Arrange
@@ -130,12 +141,14 @@ TEST_F(promptTest, readline_rejects_invalid_arguments)
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
               actual_ret_zero_size); // [確認_異常系] - buf_size が 0 のとき CPLAT_ERR_INVALID_ARGUMENT が返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 /*
  * cplat_prompt_readline_at (キー処理)
  */
 
 // 入力した文字列が Enter で確定することの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_returns_typed_line_on_enter)
 {
     // Arrange
@@ -152,8 +165,10 @@ TEST_F(promptTest, readline_returns_typed_line_on_enter)
     EXPECT_EQ(1, promptFakeEnterRawCount()); // [確認_正常系] - raw モードへ 1 回移行すること。
     EXPECT_EQ(1, promptFakeLeaveRawCount()); // [確認_正常系] - raw モードを 1 回解除すること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // EOF で入力が打ち切られることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_returns_eof_when_input_ends)
 {
     // Arrange
@@ -169,8 +184,10 @@ TEST_F(promptTest, readline_returns_eof_when_input_ends)
     EXPECT_STREQ("", buf);            // [確認_異常系] - 出力バッファーが空文字列になること。
     EXPECT_EQ(1, promptFakeLeaveRawCount()); // [確認_異常系] - raw モードが解除されること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // Ctrl+C で入力が取り消されることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_returns_canceled_on_ctrl_c)
 {
     // Arrange
@@ -185,8 +202,10 @@ TEST_F(promptTest, readline_returns_canceled_on_ctrl_c)
     EXPECT_EQ(CPLAT_ERR_CANCELED, actual_ret); // [確認_異常系] - 戻り値が CPLAT_ERR_CANCELED であること。
     EXPECT_STREQ("", buf);                 // [確認_異常系] - 出力バッファーが空文字列になること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // Backspace でカーソル直前の 1 文字が削除されることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_backspace_removes_previous_character)
 {
     // Arrange
@@ -201,8 +220,10 @@ TEST_F(promptTest, readline_backspace_removes_previous_character)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("ab", buf);     // [確認_正常系] - 末尾の 1 文字が削除された "ab" が返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 行頭での Backspace が何もしないことの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_backspace_at_head_does_nothing)
 {
     // Arrange
@@ -217,8 +238,10 @@ TEST_F(promptTest, readline_backspace_at_head_does_nothing)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("a", buf);      // [確認_正常系] - Backspace が無視されて "a" が返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 左矢印と Delete でカーソル位置の文字が削除されることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_delete_removes_character_at_cursor)
 {
     // Arrange
@@ -234,8 +257,10 @@ TEST_F(promptTest, readline_delete_removes_character_at_cursor)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("ab", buf);     // [確認_正常系] - カーソル位置の 'c' が削除された "ab" が返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 左矢印で戻った位置に文字が挿入されることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_inserts_at_cursor_after_left_arrow)
 {
     // Arrange
@@ -250,8 +275,10 @@ TEST_F(promptTest, readline_inserts_at_cursor_after_left_arrow)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("abc", buf);    // [確認_正常系] - カーソル位置へ挿入された "abc" が返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 右矢印でカーソルが進むことの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_right_arrow_moves_cursor_forward)
 {
     // Arrange
@@ -267,8 +294,10 @@ TEST_F(promptTest, readline_right_arrow_moves_cursor_forward)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("acb", buf);    // [確認_正常系] - カーソルが末尾へ戻り "acb" が返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // Home と End でカーソルが行頭と行末へ移動することの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_home_and_end_move_cursor_to_line_edges)
 {
     // Arrange
@@ -288,8 +317,10 @@ TEST_F(promptTest, readline_home_and_end_move_cursor_to_line_edges)
     EXPECT_EQ(CPLAT_OK, actual_ret_end);      // [確認_正常系] - End を含む呼び出しの戻り値が CPLAT_OK であること。
     EXPECT_STREQ("bcd", buf);             // [確認_正常系] - 行末へ挿入された "bcd" が返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // ESC 単押しで編集中の行が消去されることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_clears_line_on_single_escape)
 {
     // Arrange
@@ -304,8 +335,10 @@ TEST_F(promptTest, readline_clears_line_on_single_escape)
     EXPECT_EQ(CPLAT_ERR_EOF, actual_ret); // [確認_異常系] - 行消去の後 EOF に達するため CPLAT_ERR_EOF が返ること。
     EXPECT_STREQ("", buf);            // [確認_異常系] - 出力バッファーが空文字列になること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 未対応のエスケープ シーケンスが無視されることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_ignores_unknown_escape_sequence)
 {
     // Arrange
@@ -321,8 +354,10 @@ TEST_F(promptTest, readline_ignores_unknown_escape_sequence)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("a", buf);      // [確認_正常系] - 未対応シーケンスが無視されて "a" が返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 数値付きエスケープ シーケンスが Home と End として扱われることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_numeric_escape_sequences_move_cursor)
 {
     // Arrange
@@ -343,8 +378,10 @@ TEST_F(promptTest, readline_numeric_escape_sequences_move_cursor)
     EXPECT_EQ(CPLAT_OK, actual_ret_end);  // [確認_正常系] - End を含む呼び出しの戻り値が CPLAT_OK であること。
     EXPECT_STREQ("bcd", buf);         // [確認_正常系] - 行末へ挿入された "bcd" が返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 数値付きエスケープ シーケンスが '~' で終わらない場合に無視されることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_ignores_incomplete_numeric_escape_sequence)
 {
     // Arrange
@@ -360,8 +397,10 @@ TEST_F(promptTest, readline_ignores_incomplete_numeric_escape_sequence)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("a", buf);      // [確認_正常系] - 未完のシーケンスが無視されて "a" が返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // UTF-8 の 1 文字が Backspace でまとめて削除されることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_backspace_removes_whole_utf8_character)
 {
     // Arrange
@@ -377,8 +416,10 @@ TEST_F(promptTest, readline_backspace_removes_whole_utf8_character)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("a", buf);      // [確認_正常系] - 日本語 1 文字が 3 バイトまとめて削除されること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 出力バッファーに収まらない入力が切り詰められることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_truncates_line_to_buffer_size)
 {
     // Arrange
@@ -393,8 +434,10 @@ TEST_F(promptTest, readline_truncates_line_to_buffer_size)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("abc", buf);    // [確認_正常系] - 出力バッファーに収まる 3 文字へ切り詰められること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 入力上限を超える文字が破棄されることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_stops_accepting_characters_at_input_limit)
 {
     // Arrange
@@ -421,12 +464,14 @@ TEST_F(promptTest, readline_stops_accepting_characters_at_input_limit)
     // Cleanup
     cplat_prompt_dispose(limited);
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 /*
  * 履歴
  */
 
 // 上矢印で直前の入力が呼び出されることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, history_up_recalls_previous_line)
 {
     // Arrange
@@ -444,8 +489,10 @@ TEST_F(promptTest, history_up_recalls_previous_line)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("first", buf);  // [確認_正常系] - 履歴の "first" が返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 上矢印と下矢印で履歴を往復できることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, history_down_returns_to_newer_entry)
 {
     // Arrange
@@ -466,8 +513,10 @@ TEST_F(promptTest, history_down_returns_to_newer_entry)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("second\0", buf); // [確認_正常系] - 新しい側の履歴 "second" が返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 履歴の末尾で下矢印を押すと編集前の内容へ戻ることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, history_down_restores_saved_line_at_newest)
 {
     // Arrange
@@ -486,8 +535,10 @@ TEST_F(promptTest, history_down_restores_saved_line_at_newest)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("ab", buf);     // [確認_正常系] - 履歴へ入る前の編集内容 "ab" が復元されること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 履歴がない状態で上矢印を押しても何も起きないことの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, history_up_does_nothing_when_empty)
 {
     // Arrange
@@ -502,8 +553,10 @@ TEST_F(promptTest, history_up_does_nothing_when_empty)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("a", buf);      // [確認_正常系] - 上矢印が無視されて "a" が返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 空行が履歴へ登録されないことの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, history_does_not_record_empty_line)
 {
     // Arrange
@@ -521,8 +574,10 @@ TEST_F(promptTest, history_does_not_record_empty_line)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("a", buf);      // [確認_正常系] - 履歴が空のままのため上矢印が無視されること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 呼び出し位置ごとに履歴が独立することの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, history_is_independent_per_call_site)
 {
     // Arrange
@@ -542,8 +597,10 @@ TEST_F(promptTest, history_is_independent_per_call_site)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("x", buf);      // [確認_正常系] - 別の呼び出し位置の履歴は参照されないこと。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 履歴上限を超えた場合に最古のエントリが破棄されることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, history_discards_oldest_entry_over_limit)
 {
     // Arrange
@@ -578,12 +635,14 @@ TEST_F(promptTest, history_discards_oldest_entry_over_limit)
     // Cleanup
     cplat_prompt_dispose(limited);
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 /*
  * cplat_prompt_readline_fmt_at
  */
 
 // 書式付きプロンプトで 1 行読み取れることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_fmt_reads_line)
 {
     // Arrange
@@ -601,8 +660,10 @@ TEST_F(promptTest, readline_fmt_reads_line)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("abc", buf);    // [確認_正常系] - 入力した "abc" が返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 書式付きプロンプトが不正な引数を拒否することの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_fmt_rejects_invalid_arguments)
 {
     // Arrange
@@ -624,12 +685,14 @@ TEST_F(promptTest, readline_fmt_rejects_invalid_arguments)
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
               actual_ret_zero_size); // [確認_異常系] - buf_size が 0 のとき CPLAT_ERR_INVALID_ARGUMENT が返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 /*
  * TTY でない場合のフォールバック
  */
 
 // TTY でない場合に cplat_fgets へフォールバックすることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_falls_back_to_fgets_when_not_tty)
 {
     // Arrange
@@ -647,8 +710,10 @@ TEST_F(promptTest, readline_falls_back_to_fgets_when_not_tty)
     EXPECT_EQ(CPLAT_ERR_EOF, actual_ret); // [確認_異常系] - 標準入力が EOF のため CPLAT_ERR_EOF が返ること。
     EXPECT_EQ(0, promptFakeEnterRawCount()); // [確認_異常系] - raw モードへ移行しないこと。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 非 TTY の readline が行の切り詰めをバッファー不足として返すことの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_fallback_reports_buffer_too_small)
 {
     // Arrange
@@ -673,12 +738,14 @@ TEST_F(promptTest, readline_fallback_reports_buffer_too_small)
               actual_ret); // [確認_異常系] - 切り詰め時の cplat_prompt_readline_at が CPLAT_ERR_BUFFER_TOO_SMALL を返すこと。
     EXPECT_STREQ("", buf); // [確認_異常系] - 切り詰め時に出力先が空文字列であること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 /*
  * cplat_prompt_readline_with_initial_at
  */
 
 // 初期値のまま Enter を押すと初期値が返ることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_with_initial_returns_initial_text_on_enter)
 {
     // Arrange
@@ -696,8 +763,10 @@ TEST_F(promptTest, readline_with_initial_returns_initial_text_on_enter)
     EXPECT_EQ(CPLAT_OK, actual_ret);   // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("edit 1 abc", buf); // [確認_正常系] - 初期値がそのまま返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 初期値の末尾にカーソルがあり、後退削除と入力で編集できることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_with_initial_places_cursor_at_end)
 {
     // Arrange
@@ -715,8 +784,10 @@ TEST_F(promptTest, readline_with_initial_places_cursor_at_end)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("abX", buf);        // [確認_正常系] - 末尾の c が削除され、X が追加されること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 初期値の先頭へ移動して挿入できることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_with_initial_allows_insert_at_head)
 {
     // Arrange
@@ -734,8 +805,10 @@ TEST_F(promptTest, readline_with_initial_allows_insert_at_head)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("abc", buf);        // [確認_正常系] - 先頭に a が挿入されること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 履歴をさかのぼってから最新の側へ戻ると、初期値へ戻ることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_with_initial_restores_initial_text_after_history)
 {
     // Arrange
@@ -755,8 +828,10 @@ TEST_F(promptTest, readline_with_initial_restores_initial_text_after_history)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("initial", buf);    // [確認_正常系] - 退避した初期値へ戻ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // NULL の初期値は、初期値なしの readline と同じであることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_with_initial_accepts_null_initial_text)
 {
     // Arrange
@@ -774,8 +849,10 @@ TEST_F(promptTest, readline_with_initial_accepts_null_initial_text)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_STREQ("xyz", buf);        // [確認_正常系] - 入力した内容だけが返ること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 制御文字を含む初期値を拒否し、入力を読み取らないことの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_with_initial_rejects_control_character_without_reading)
 {
     // Arrange
@@ -798,8 +875,10 @@ TEST_F(promptTest, readline_with_initial_rejects_control_character_without_readi
     EXPECT_EQ(CPLAT_OK, actual_ret_next);              // [確認_異常系] - 後続の読み取りが成功すること。
     EXPECT_STREQ("abc", buf);                          // [確認_異常系] - 入力が消費されずに残っていること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 入力欄の上限を超える初期値を拒否することの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_with_initial_rejects_text_over_input_limit)
 {
     // Arrange
@@ -828,8 +907,10 @@ TEST_F(promptTest, readline_with_initial_rejects_text_over_input_limit)
     // Cleanup
     cplat_prompt_dispose(handle);
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // TTY でない場合は初期値を使わず、読み取った行を返すことの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_with_initial_ignores_initial_text_when_not_tty)
 {
     // Arrange
@@ -854,8 +935,10 @@ TEST_F(promptTest, readline_with_initial_ignores_initial_text_when_not_tty)
     EXPECT_STREQ("piped", buf);              // [確認_正常系] - 初期値ではなく読み取った行が返ること。
     EXPECT_EQ(0, promptFakeEnterRawCount()); // [確認_正常系] - raw モードへ移行しないこと。
 }
+// [サブ手順参照 名前=promptTest.TearDown]
 
 // 不正な引数を拒否することの確認
+// [サブ手順参照 名前=promptTest.SetUp]
 TEST_F(promptTest, readline_with_initial_rejects_invalid_arguments)
 {
     // Arrange
@@ -876,3 +959,4 @@ TEST_F(promptTest, readline_with_initial_rejects_invalid_arguments)
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_buf);    // [確認_異常系] - 出力先 NULL が拒否されること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_size);   // [確認_異常系] - バイト数 0 が拒否されること。
 }
+// [サブ手順参照 名前=promptTest.TearDown]

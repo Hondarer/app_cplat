@@ -24,10 +24,12 @@ class promptLinuxTest : public Test
   protected:
     cplat_prompt handle_ = {};
 
+    // [サブ手順 名前=promptLinuxTest.SetUp]
     void SetUp() override
     {
         test_prompt_set_resize_pending(0);
     }
+    // [サブ手順終了]
 };
 
 /*
@@ -35,6 +37,7 @@ class promptLinuxTest : public Test
  */
 
 // 端末でない標準入力では raw モードへ移行しないことの確認
+// [サブ手順参照 名前=promptLinuxTest.SetUp]
 TEST_F(promptLinuxTest, enter_raw_does_nothing_for_non_terminal)
 {
     // Arrange
@@ -53,6 +56,7 @@ TEST_F(promptLinuxTest, enter_raw_does_nothing_for_non_terminal)
 }
 
 // 端末に対して raw モードへ移行し復帰できることの確認
+// [サブ手順参照 名前=promptLinuxTest.SetUp]
 TEST_F(promptLinuxTest, enter_and_leave_raw_on_terminal)
 {
     // Arrange
@@ -82,6 +86,7 @@ TEST_F(promptLinuxTest, enter_and_leave_raw_on_terminal)
 }
 
 // 端末設定の適用に失敗した場合に raw モードへ移行しないことの確認
+// [サブ手順参照 名前=promptLinuxTest.SetUp]
 TEST_F(promptLinuxTest, enter_raw_does_nothing_when_tcsetattr_fails)
 {
     // Arrange
@@ -106,6 +111,7 @@ TEST_F(promptLinuxTest, enter_raw_does_nothing_when_tcsetattr_fails)
 }
 
 // raw モード中の再入で二重に移行しないことの確認
+// [サブ手順参照 名前=promptLinuxTest.SetUp]
 TEST_F(promptLinuxTest, enter_raw_is_ignored_while_already_raw)
 {
     // Arrange
@@ -124,6 +130,7 @@ TEST_F(promptLinuxTest, enter_raw_is_ignored_while_already_raw)
 }
 
 // SIGWINCH ハンドラーの登録済み状態を保持して raw モードへ移行することの確認
+// [サブ手順参照 名前=promptLinuxTest.SetUp]
 TEST_F(promptLinuxTest, enter_raw_does_not_reinstall_sigwinch_handler)
 {
     // Arrange
@@ -155,6 +162,7 @@ TEST_F(promptLinuxTest, enter_raw_does_not_reinstall_sigwinch_handler)
 }
 
 // raw モードでないときの復帰が何もしないことの確認
+// [サブ手順参照 名前=promptLinuxTest.SetUp]
 TEST_F(promptLinuxTest, leave_raw_is_ignored_when_not_raw)
 {
     // Arrange
@@ -170,6 +178,7 @@ TEST_F(promptLinuxTest, leave_raw_is_ignored_when_not_raw)
 }
 
 // SIGWINCH ハンドラーが未登録でも raw モードを解除できることの確認
+// [サブ手順参照 名前=promptLinuxTest.SetUp]
 TEST_F(promptLinuxTest, leave_raw_handles_uninstalled_sigwinch_handler)
 {
     // Arrange
@@ -192,6 +201,7 @@ TEST_F(promptLinuxTest, leave_raw_handles_uninstalled_sigwinch_handler)
 }
 
 // SIGWINCH の受信がリサイズ待ちとして記録されることの確認
+// [サブ手順参照 名前=promptLinuxTest.SetUp]
 TEST_F(promptLinuxTest, sigwinch_handler_records_pending_resize)
 {
     // Arrange
@@ -224,6 +234,7 @@ TEST_F(promptLinuxTest, sigwinch_handler_records_pending_resize)
  */
 
 // 標準入力から 1 バイトが読み取れることの確認
+// [サブ手順参照 名前=promptLinuxTest.SetUp]
 TEST_F(promptLinuxTest, read_char_returns_next_byte)
 {
     // Arrange
@@ -247,6 +258,7 @@ TEST_F(promptLinuxTest, read_char_returns_next_byte)
 }
 
 // 標準入力が閉じられた場合に EOF が返ることの確認
+// [サブ手順参照 名前=promptLinuxTest.SetUp]
 TEST_F(promptLinuxTest, read_char_returns_minus1_at_eof)
 {
     // Arrange
@@ -266,6 +278,7 @@ TEST_F(promptLinuxTest, read_char_returns_minus1_at_eof)
 }
 
 // 端末サイズ変更の通知がリサイズ結果として返ることの確認
+// [サブ手順参照 名前=promptLinuxTest.SetUp]
 TEST_F(promptLinuxTest, read_char_reports_resize_on_interrupted_read)
 {
     // Arrange
@@ -289,6 +302,7 @@ TEST_F(promptLinuxTest, read_char_reports_resize_on_interrupted_read)
 }
 
 // 割り込みでリサイズ通知がない場合に読み取りが継続されることの確認
+// [サブ手順参照 名前=promptLinuxTest.SetUp]
 TEST_F(promptLinuxTest, read_char_retries_after_interrupt_without_resize)
 {
     // Arrange
@@ -315,6 +329,7 @@ TEST_F(promptLinuxTest, read_char_retries_after_interrupt_without_resize)
  */
 
 // 入力がある場合に 1 バイトが読み取れることの確認
+// [サブ手順参照 名前=promptLinuxTest.SetUp]
 TEST_F(promptLinuxTest, read_char_nb_returns_next_byte_when_available)
 {
     // Arrange
@@ -342,6 +357,7 @@ TEST_F(promptLinuxTest, read_char_nb_returns_next_byte_when_available)
 }
 
 // 入力がない場合にタイムアウトすることの確認
+// [サブ手順参照 名前=promptLinuxTest.SetUp]
 TEST_F(promptLinuxTest, read_char_nb_returns_minus1_on_timeout)
 {
     // Arrange

@@ -954,6 +954,7 @@ class exportTest : public Test
     std::string workspace_root;
     std::string dll_path;
 
+    // [サブ手順 名前=exportTest.SetUp]
     void SetUp() override
     {
         workspace_root = findWorkspaceRoot();
@@ -961,9 +962,11 @@ class exportTest : public Test
         // [状態確認] - `workspace_root.empty()` が false であること。
         dll_path = workspace_root + "/app/cplat/prod/lib/libcplat" TESTFW_SHARED_LIBRARY_EXTENSION;
     }
+    // [サブ手順終了]
 };
 
 // libcplat のエクスポート シンボル名が期待値テーブルと完全一致することの確認
+// [サブ手順参照 名前=exportTest.SetUp]
 TEST_F(exportTest, symbol_names_match)
 {
     // Arrange
@@ -984,13 +987,15 @@ TEST_F(exportTest, symbol_names_match)
         testing::getActualExportNames(dll_path); // [手順] - dumpbin/nm で libcplat の実際のエクスポート一覧を取得する。
 
     // Assert
+    // [サブ手順参照 名前=testing.expectExportNamesMatch]
     testing::expectExportNamesMatch(
         expected, actual,
-        kExpectedExportSignatures); // [確認_正常系 回数=2] - 期待シンボルとの不足/想定外がないこと (Windows / Linux とも完全一致)。
+        kExpectedExportSignatures); // 期待シンボルとの不足/想定外がないこと (Windows / Linux とも完全一致)。
 }
 
 // 公開ヘッダーの変数宣言が dllexport マクロ (CPLAT_EXPORT) を
 // 伴わずに追加されていないことの確認
+// [サブ手順参照 名前=exportTest.SetUp]
 TEST_F(exportTest, public_header_variables_declare_export_macro)
 {
     // Arrange

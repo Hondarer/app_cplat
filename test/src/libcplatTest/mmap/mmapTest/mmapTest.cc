@@ -6,6 +6,7 @@ class mmapTest : public mmapTestFixture
 };
 
 // 新規ファイルを create_size で作成し、再アタッチ時は既存サイズを使うことの確認 (マルチ フェーズ テスト)
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapTest, attach_creates_new_file_and_ignores_create_size_on_reattach)
 {
     // Arrange
@@ -79,6 +80,7 @@ TEST_F(mmapTest, attach_creates_new_file_and_ignores_create_size_on_reattach)
 }
 
 // create_size に 0 を渡した新規作成が INVALID_ARGUMENT で失敗することの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapTest, attach_fails_when_create_size_is_zero_for_new_file)
 {
     // Arrange
@@ -101,6 +103,7 @@ TEST_F(mmapTest, attach_fails_when_create_size_is_zero_for_new_file)
 }
 
 // サイズ 0 の既存ファイルへのアタッチが失敗することの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapTest, attach_fails_for_empty_existing_file)
 {
     // Arrange
@@ -140,6 +143,7 @@ TEST_F(mmapTest, attach_fails_for_empty_existing_file)
 }
 
 // 既存ファイルを読み取り専用でマップできることの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapTest, attach_read_only_maps_existing_file)
 {
     // Arrange
@@ -188,6 +192,7 @@ TEST_F(mmapTest, attach_read_only_maps_existing_file)
 }
 
 // 読み取り専用アクセスで存在しないファイルを指定すると失敗することの確認 (新規作成しない)
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapTest, attach_read_only_fails_for_missing_file)
 {
     // Arrange
@@ -209,6 +214,7 @@ TEST_F(mmapTest, attach_read_only_fails_for_missing_file)
 }
 
 // 不正な引数で attach が INVALID_ARGUMENT を返すことの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapTest, attach_invalid_arguments_fail)
 {
     // Arrange
@@ -248,6 +254,7 @@ TEST_F(mmapTest, attach_invalid_arguments_fail)
 }
 
 // NULL ハンドルに対する get_address/get_size/flush/detach が安全であることの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapTest, accessors_are_safe_for_null_handle)
 {
     // Arrange
@@ -273,10 +280,12 @@ TEST_F(mmapTest, accessors_are_safe_for_null_handle)
 }
 
 // 指定したアドレス範囲の書き戻しが成功することの確認
+// [サブ手順参照 名前=mmapTestFixture.SetUp]
 TEST_F(mmapTest, flush_succeeds_for_explicit_address_range)
 {
     // Arrange
     cplat_mmap *map = NULL;
+    // [サブ手順参照 名前=mmapTestFixture.attachNewFile]
     attachNewFile(&map); // [状態] - 書き戻し対象のマップを用意する。
 
     // Pre-Assert

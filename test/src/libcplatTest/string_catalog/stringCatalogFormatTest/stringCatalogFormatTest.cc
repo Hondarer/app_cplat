@@ -33,15 +33,18 @@ class stringCatalogFormatTest : public Test
     /** 組み立てた文字列の格納先です。 */
     char dest[64];
 
+    // [サブ手順 名前=stringCatalogFormatTest.SetUp]
     void SetUp() override
     {
         memset(dest, 0, sizeof(dest));
         fake_catalog_reset();
         cplat_string_catalog_set_language(CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE);
     }
+    // [サブ手順終了]
 };
 
 // 引数を取らない文字列を組み立てられることの確認
+// [サブ手順参照 名前=stringCatalogFormatTest.SetUp]
 TEST_F(stringCatalogFormatTest, no_argument)
 {
     // Arrange
@@ -60,6 +63,7 @@ TEST_F(stringCatalogFormatTest, no_argument)
 }
 
 // 言語設定の変更が語順だけを変えることの確認
+// [サブ手順参照 名前=stringCatalogFormatTest.SetUp]
 TEST_F(stringCatalogFormatTest, language_changes_order_only)
 {
     // Arrange
@@ -91,6 +95,7 @@ TEST_F(stringCatalogFormatTest, language_changes_order_only)
 }
 
 // 言語を設定していないプロセスがニュートラル言語を使用することの確認
+// [サブ手順参照 名前=stringCatalogFormatTest.SetUp]
 TEST_F(stringCatalogFormatTest, neutral_language)
 {
     // Arrange
@@ -110,6 +115,7 @@ TEST_F(stringCatalogFormatTest, neutral_language)
 }
 
 // va_list を受け取る API でも同じ結果になることの確認
+// [サブ手順参照 名前=stringCatalogFormatTest.SetUp]
 TEST_F(stringCatalogFormatTest, vformat_accepts_argument_list)
 {
     // Arrange
@@ -127,6 +133,7 @@ TEST_F(stringCatalogFormatTest, vformat_accepts_argument_list)
 }
 
 // 書き込み先が NULL の場合に引数不正となることの確認
+// [サブ手順参照 名前=stringCatalogFormatTest.SetUp]
 TEST_F(stringCatalogFormatTest, null_dest)
 {
     // Arrange
@@ -144,6 +151,7 @@ TEST_F(stringCatalogFormatTest, null_dest)
 }
 
 // 書き込み先の容量が 0 の場合に引数不正となることの確認
+// [サブ手順参照 名前=stringCatalogFormatTest.SetUp]
 TEST_F(stringCatalogFormatTest, zero_dest_size)
 {
     // Arrange
@@ -161,6 +169,7 @@ TEST_F(stringCatalogFormatTest, zero_dest_size)
 }
 
 // カタログに無い文字列キーを指定した場合に未検出となることの確認
+// [サブ手順参照 名前=stringCatalogFormatTest.SetUp]
 TEST_F(stringCatalogFormatTest, unknown_string_key)
 {
     // Arrange
@@ -180,6 +189,7 @@ TEST_F(stringCatalogFormatTest, unknown_string_key)
 }
 
 // 引数個数が上限を超える定義が定義エラーになることの確認
+// [サブ手順参照 名前=stringCatalogFormatTest.SetUp]
 TEST_F(stringCatalogFormatTest, argument_count_over_max)
 {
     // Arrange
@@ -199,6 +209,7 @@ TEST_F(stringCatalogFormatTest, argument_count_over_max)
 }
 
 // 引数個数が負の定義が定義エラーになることの確認
+// [サブ手順参照 名前=stringCatalogFormatTest.SetUp]
 TEST_F(stringCatalogFormatTest, argument_count_negative)
 {
     // Arrange
@@ -218,6 +229,7 @@ TEST_F(stringCatalogFormatTest, argument_count_negative)
 }
 
 // 現在の言語のリソースが無い場合にニュートラル言語へフォールバックすることの確認
+// [サブ手順参照 名前=stringCatalogFormatTest.SetUp]
 TEST_F(stringCatalogFormatTest, falls_back_to_neutral_text)
 {
     // Arrange
@@ -237,6 +249,7 @@ TEST_F(stringCatalogFormatTest, falls_back_to_neutral_text)
 }
 
 // ニュートラル言語のリソースも無い場合に定義エラーになることの確認
+// [サブ手順参照 名前=stringCatalogFormatTest.SetUp]
 TEST_F(stringCatalogFormatTest, missing_neutral_text)
 {
     // Arrange
@@ -257,6 +270,7 @@ TEST_F(stringCatalogFormatTest, missing_neutral_text)
 }
 
 // 備考を現在の言語で参照し、無い場合はニュートラル言語へフォールバックすることの確認
+// [サブ手順参照 名前=stringCatalogFormatTest.SetUp]
 TEST_F(stringCatalogFormatTest, metadata)
 {
     // Arrange
@@ -313,6 +327,7 @@ TEST_F(stringCatalogFormatTest, metadata)
 }
 
 // 列挙に無い引数種別を持つ定義が定義エラーになることの確認
+// [サブ手順参照 名前=stringCatalogFormatTest.SetUp]
 TEST_F(stringCatalogFormatTest, unknown_argument_kind)
 {
     // Arrange
@@ -331,6 +346,7 @@ TEST_F(stringCatalogFormatTest, unknown_argument_kind)
 }
 
 // 書き込み先に収まらない場合に切り詰めを報告することの確認
+// [サブ手順参照 名前=stringCatalogFormatTest.SetUp]
 TEST_F(stringCatalogFormatTest, truncated_output)
 {
     // Arrange

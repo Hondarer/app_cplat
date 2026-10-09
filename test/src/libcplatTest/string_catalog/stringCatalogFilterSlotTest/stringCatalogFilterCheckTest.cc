@@ -14,6 +14,7 @@ using namespace filter_test;
 class stringCatalogFilterCheckTest : public Test
 {
   protected:
+    // [サブ手順 名前=stringCatalogFilterCheckTest.SetUp]
     void SetUp() override
     {
         saved_language_ = cplat_string_catalog_get_language();
@@ -22,12 +23,15 @@ class stringCatalogFilterCheckTest : public Test
                                 filter_test_mixed_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_));
         // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_mixed_catalog(), filter_test_mixed_key_names(), filter_test_mixed_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=stringCatalogFilterCheckTest.TearDown]
     void TearDown() override
     {
         cplat_string_catalog_filter_slot_dispose(&slot_);
         (void)cplat_string_catalog_set_language(saved_language_);
     }
+    // [サブ手順終了]
 
     /** 1 行の条件式をコンパイルし、確認関数で警告を得ます。Arrange と Act の共通処理です。 */
     int check(const char *expression)
@@ -67,6 +71,7 @@ class stringCatalogFilterCheckTest : public Test
 };
 
 // 数値と比較する引数が、文字列の項目と数値の項目に分かれる場合、混在と型の不一致を警告することの確認
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.SetUp]
 TEST_F(stringCatalogFilterCheckTest, numeric_comparison_warns_mixed_and_type_mismatch)
 {
     // Arrange
@@ -98,8 +103,10 @@ TEST_F(stringCatalogFilterCheckTest, numeric_comparison_warns_mixed_and_type_mis
     EXPECT_EQ(0, warnings_[1].argument_index);        // [確認_正常系] - 引数の位置が 0 であること。
     EXPECT_EQ(-1, warnings_[1].other_argument_index); // [確認_正常系] - もう一方の引数は使用しないこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
 // null との比較では、ポインターと文字列は比較でき、整数の項目だけが型の不一致になることの確認
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.SetUp]
 TEST_F(stringCatalogFilterCheckTest, null_comparison_warns_only_integer_entry)
 {
     // Arrange
@@ -120,8 +127,10 @@ TEST_F(stringCatalogFilterCheckTest, null_comparison_warns_only_integer_entry)
     EXPECT_EQ(FILTER_TEST_MIXED_KEY_NUMBER_VALUE,
               warnings_[1].string_key); // [確認_正常系] - 型が合わないのは整数の項目だけであること。
 }
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
 // 同じ引数名を複数の比較要素で参照しても、混在の警告は最初の比較要素で 1 回だけであることの確認
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.SetUp]
 TEST_F(stringCatalogFilterCheckTest, mixed_warning_is_reported_once_per_name)
 {
     // Arrange
@@ -148,8 +157,10 @@ TEST_F(stringCatalogFilterCheckTest, mixed_warning_is_reported_once_per_name)
               warnings_[3].string_key); // [確認_正常系] - 文字列との比較ではポインターの項目も合わないこと。
     EXPECT_EQ(1U, warnings_[3].predicate_index); // [確認_正常系] - 2 つ目の比較要素の警告であること。
 }
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
 // 成立し得ない行は無効にする診断を返し、その原因の型の不一致も警告することの確認
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.SetUp]
 TEST_F(stringCatalogFilterCheckTest, never_satisfiable_line_is_diagnosed_and_warned)
 {
     // Arrange
@@ -172,8 +183,10 @@ TEST_F(stringCatalogFilterCheckTest, never_satisfiable_line_is_diagnosed_and_war
     EXPECT_EQ(1, warnings_[0].argument_index);                              // [確認_正常系] - count の位置であること。
     EXPECT_EQ(FILTER_TEST_MIXED_KEY_NUMBER_VALUE, warnings_[1].string_key); // [確認_正常系] - 2 項目目であること。
 }
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
 // has と、インデックスで指定した引数は、混在の警告の対象にならないことの確認
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.SetUp]
 TEST_F(stringCatalogFilterCheckTest, has_and_index_reference_are_not_warned_as_mixed)
 {
     // Arrange
@@ -197,8 +210,10 @@ TEST_F(stringCatalogFilterCheckTest, has_and_index_reference_are_not_warned_as_m
               warnings_[0].kind); // [確認_正常系] - インデックスの参照は混在として警告しないこと。
     EXPECT_EQ(FILTER_TEST_MIXED_KEY_TEXT_VALUE, warnings_[0].string_key); // [確認_正常系] - 文字列の項目であること。
 }
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
 // 警告の格納先の容量を超える場合も総数を返し、容量までを格納することの確認
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.SetUp]
 TEST_F(stringCatalogFilterCheckTest, warning_count_exceeding_capacity_is_reported)
 {
     // Arrange
@@ -227,8 +242,10 @@ TEST_F(stringCatalogFilterCheckTest, warning_count_exceeding_capacity_is_reporte
     EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_WARNING_NONE,
               actual_warnings[1].kind); // [確認_正常系] - 容量を超えて書き込まないこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
 // 確認は適用中の条件を変えないことの確認
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.SetUp]
 TEST_F(stringCatalogFilterCheckTest, check_keeps_applied_conditions)
 {
     // Arrange
@@ -260,8 +277,10 @@ TEST_F(stringCatalogFilterCheckTest, check_keeps_applied_conditions)
     EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_NEVER_MATCH,
               actual_text_state); // [確認_正常系] - 確認した条件は判定に使われないこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
 // 壊れたフィルター オブジェクトは適用と同じ結果コードを返し、警告の総数を書き換えないことの確認
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.SetUp]
 TEST_F(stringCatalogFilterCheckTest, corrupt_image_is_rejected)
 {
     // Arrange
@@ -281,8 +300,10 @@ TEST_F(stringCatalogFilterCheckTest, corrupt_image_is_rejected)
     EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_ret); // [確認_異常系] - 検証の失敗を返すこと。
     EXPECT_EQ(99U, actual_count);                        // [確認_異常系] - 総数を書き換えないこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
 // NULL の引数を拒否することの確認
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.SetUp]
 TEST_F(stringCatalogFilterCheckTest, null_arguments_are_rejected)
 {
     // Arrange
@@ -301,8 +322,10 @@ TEST_F(stringCatalogFilterCheckTest, null_arguments_are_rejected)
               cplat_string_catalog_filter_slot_check(slot_, nullptr, kImageSize, nullptr, 0U, nullptr, nullptr, 0U,
                                                      nullptr)); // [確認_異常系] - 領域が NULL なら拒否すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
 // 型区分が混在する引数は、日本語の説明文の末尾に注記されることの確認
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.SetUp]
 TEST_F(stringCatalogFilterCheckTest, describe_notes_mixed_argument_in_japanese)
 {
     // Arrange
@@ -321,8 +344,10 @@ TEST_F(stringCatalogFilterCheckTest, describe_notes_mixed_argument_in_japanese)
                  "意図した判定結果にならない可能性があります)",
                  description_); // [確認_正常系] - 同じ名前の注記は 1 回だけ末尾に付くこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
 // 型区分が混在する引数は、ニュートラル言語の説明文の末尾に注記されることの確認
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.SetUp]
 TEST_F(stringCatalogFilterCheckTest, describe_notes_mixed_argument_in_neutral)
 {
     // Arrange
@@ -339,8 +364,10 @@ TEST_F(stringCatalogFilterCheckTest, describe_notes_mixed_argument_in_neutral)
                                                  "catalog; the result may not be as intended.)"))
         << description_; // [確認_正常系] - ニュートラル言語の注記が付くこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
 // 型区分が混在しない引数と、has だけで参照する引数には注記しないことの確認
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.SetUp]
 TEST_F(stringCatalogFilterCheckTest, describe_does_not_note_unmixed_or_has_only_argument)
 {
     // Arrange
@@ -362,3 +389,4 @@ TEST_F(stringCatalogFilterCheckTest, describe_does_not_note_unmixed_or_has_only_
     EXPECT_EQ(nullptr, std::strstr(description_, "注意"))
         << description_; // [確認_正常系] - has だけで参照する value には注記しないこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]

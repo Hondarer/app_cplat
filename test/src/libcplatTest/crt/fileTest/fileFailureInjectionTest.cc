@@ -22,21 +22,26 @@ class fileFailureInjectionTest : public Test
   protected:
     cplat_file file_ = {};
 
+    // [サブ手順 名前=fileFailureInjectionTest.SetUp]
     void SetUp() override
     {
         cplat_file_init(&file_);
         file_.handle = kFakeFd;
         file_.writable = 1;
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=fileFailureInjectionTest.TearDown]
     void TearDown() override
     {
         file_.handle = -1;
     }
+    // [サブ手順終了]
 };
 
 // サイズ変更に失敗した場合に errno が通知されることの確認
 // Windows の cplat_file_set_size は SetEndOfFile を使うため、この失敗経路は Linux のみに存在する
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, set_size_reports_errno_when_ftruncate_fails)
 {
     // Arrange
@@ -58,9 +63,11 @@ TEST_F(fileFailureInjectionTest, set_size_reports_errno_when_ftruncate_fails)
         EIO,
         cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が EIO であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // サイズ取得に失敗した場合に errno が通知されることの確認
 // Windows の cplat_file_get_size は GetFileSizeEx を使うため、この失敗経路は Linux のみに存在する
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, get_size_reports_errno_when_fstat_fails)
 {
     // Arrange
@@ -83,9 +90,11 @@ TEST_F(fileFailureInjectionTest, get_size_reports_errno_when_fstat_fails)
         EBADF,
         cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が EBADF であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // ファイル識別の取得に失敗した場合に errno が通知されることの確認
 // Windows の cplat_file_get_id は GetFileInformationByHandle を使うため、この失敗経路は Linux のみに存在する
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, get_id_reports_errno_when_fstat_fails)
 {
     // Arrange
@@ -108,8 +117,10 @@ TEST_F(fileFailureInjectionTest, get_id_reports_errno_when_fstat_fails)
         EBADF,
         cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が EBADF であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // NULL のファイル ハンドル初期化が安全に完了することの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, init_accepts_null)
 {
     // Arrange
@@ -122,8 +133,10 @@ TEST_F(fileFailureInjectionTest, init_accepts_null)
     // Assert
     SUCCEED(); // [確認_正常系] - クラッシュせずに完了すること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // 既存ハンドルのクローズに失敗した場合にオープン処理を中断することの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, open_reports_close_failure_before_opening_new_path)
 {
     // Arrange
@@ -143,8 +156,10 @@ TEST_F(fileFailureInjectionTest, open_reports_close_failure_before_opening_new_p
     EXPECT_EQ(EBADF,
               cplat_error_get_errno(&detail)); // [確認_異常系] - クローズ失敗の errno が EBADF であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // 書き込み長 0 の場合に OS API を呼ばず成功することの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, write_succeeds_for_zero_length)
 {
     // Arrange
@@ -159,8 +174,10 @@ TEST_F(fileFailureInjectionTest, write_succeeds_for_zero_length)
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 長さ 0 の書き込みが成功すること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // オープン済みファイルへの NULL バッファー付き書き込みが拒否されることの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, write_rejects_null_buffer_for_positive_length)
 {
     // Arrange
@@ -179,8 +196,10 @@ TEST_F(fileFailureInjectionTest, write_rejects_null_buffer_for_positive_length)
     EXPECT_EQ(EINVAL, cplat_error_get_errno(
                           &detail)); // [確認_異常系] - NULL バッファー付き書き込みの errno が EINVAL であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // 読み取り長 0 の場合に OS API を呼ばず成功することの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, read_succeeds_for_zero_length)
 {
     // Arrange
@@ -198,8 +217,10 @@ TEST_F(fileFailureInjectionTest, read_succeeds_for_zero_length)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 長さ 0 の読み取りが成功すること。
     EXPECT_EQ(0u, read);         // [確認_正常系] - 読み取ったバイト数が 0 であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // オープン済みファイルからの NULL バッファー付き読み取りが拒否されることの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, read_rejects_null_buffer_when_open)
 {
     // Arrange
@@ -219,8 +240,10 @@ TEST_F(fileFailureInjectionTest, read_rejects_null_buffer_when_open)
     EXPECT_EQ(EINVAL, cplat_error_get_errno(
                           &detail)); // [確認_異常系] - NULL バッファー付き読み取りの errno が EINVAL であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // オープン済みファイルからの NULL 出力先付き読み取りが拒否されることの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, read_rejects_null_output_when_open)
 {
     // Arrange
@@ -240,8 +263,10 @@ TEST_F(fileFailureInjectionTest, read_rejects_null_output_when_open)
     EXPECT_EQ(EINVAL, cplat_error_get_errno(
                           &detail)); // [確認_異常系] - NULL 出力先付き読み取りの errno が EINVAL であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // オープン済みファイルのサイズ取得で NULL 出力先が拒否されることの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, get_size_rejects_null_output_when_open)
 {
     // Arrange
@@ -260,8 +285,10 @@ TEST_F(fileFailureInjectionTest, get_size_rejects_null_output_when_open)
     EXPECT_EQ(EINVAL, cplat_error_get_errno(
                           &detail)); // [確認_異常系] - NULL 出力先付きサイズ取得の errno が EINVAL であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // オープン済みファイルの ID 取得で NULL 出力先が拒否されることの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, get_id_rejects_null_output_when_open)
 {
     // Arrange
@@ -280,8 +307,10 @@ TEST_F(fileFailureInjectionTest, get_id_rejects_null_output_when_open)
     EXPECT_EQ(EINVAL, cplat_error_get_errno(
                           &detail)); // [確認_異常系] - NULL 出力先付き ID 取得の errno が EINVAL であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // 未オープンのファイルに対する flush が拒否されることの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, flush_rejects_unopened_file)
 {
     // Arrange
@@ -300,8 +329,10 @@ TEST_F(fileFailureInjectionTest, flush_rejects_unopened_file)
     EXPECT_EQ(EINVAL,
               cplat_error_get_errno(&detail)); // [確認_異常系] - 詳細 errno が EINVAL であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // NULL のファイル クローズが拒否されることの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, close_rejects_null_file)
 {
     // Arrange
@@ -318,8 +349,10 @@ TEST_F(fileFailureInjectionTest, close_rejects_null_file)
     EXPECT_EQ(EINVAL,
               cplat_error_get_errno(&detail)); // [確認_異常系] - 詳細 errno が EINVAL であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // 無効なファイル記述子への書き込み失敗が通知されることの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, write_reports_os_failure)
 {
     // Arrange
@@ -341,8 +374,10 @@ TEST_F(fileFailureInjectionTest, write_reports_os_failure)
     EXPECT_EQ(EBADF,
               cplat_error_get_errno(&detail)); // [確認_異常系] - 詳細 errno が EBADF であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // 無効なファイル記述子からの読み取り失敗が通知されることの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, read_reports_os_failure)
 {
     // Arrange
@@ -364,8 +399,10 @@ TEST_F(fileFailureInjectionTest, read_reports_os_failure)
     EXPECT_EQ(EBADF,
               cplat_error_get_errno(&detail)); // [確認_異常系] - 詳細 errno が EBADF であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // 無効なファイル記述子の flush 失敗が通知されることの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, flush_reports_os_failure)
 {
     // Arrange
@@ -385,8 +422,10 @@ TEST_F(fileFailureInjectionTest, flush_reports_os_failure)
     EXPECT_EQ(EBADF,
               cplat_error_get_errno(&detail)); // [確認_異常系] - 詳細 errno が EBADF であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // 読み取りがシグナルで中断された場合に再試行されることの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, read_retries_after_interrupt)
 {
     // Arrange
@@ -411,8 +450,10 @@ TEST_F(fileFailureInjectionTest, read_retries_after_interrupt)
     EXPECT_EQ((size_t)4,
               read_bytes); // [確認_正常系] - 再試行後の読み取りバイト数が 4 であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // 書き込みがシグナルで中断された場合に再試行されることの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, write_retries_after_interrupt)
 {
     // Arrange
@@ -434,8 +475,10 @@ TEST_F(fileFailureInjectionTest, write_retries_after_interrupt)
     EXPECT_EQ(CPLAT_OK,
               actual_ret); // [確認_正常系] - 中断後に再試行した cplat_file_write の戻り値が CPLAT_OK であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 // 無効なファイル記述子のクローズ失敗が通知されることの確認
+// [サブ手順参照 名前=fileFailureInjectionTest.SetUp]
 TEST_F(fileFailureInjectionTest, close_reports_os_failure)
 {
     // Arrange
@@ -455,5 +498,6 @@ TEST_F(fileFailureInjectionTest, close_reports_os_failure)
     EXPECT_EQ(EBADF,
               cplat_error_get_errno(&detail)); // [確認_異常系] - 詳細 errno が EBADF であること。
 }
+// [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
 #endif /* PLATFORM_LINUX */

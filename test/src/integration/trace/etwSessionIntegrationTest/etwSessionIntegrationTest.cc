@@ -34,6 +34,7 @@ struct EventCollector
     std::vector<EventRecord> events;
 };
 
+// [サブ手順 名前=etwSessionIntegrationTest.collect_callback]
 static void collect_callback(const cplat_etw_event *event, void *context)
 {
     EventCollector *collector = static_cast<EventCollector *>(context);
@@ -59,6 +60,7 @@ static void collect_callback(const cplat_etw_event *event, void *context)
     }
     collector->events.push_back(record);
 }
+// [サブ手順終了]
 
 static int s_session_counter = 0;
 
@@ -161,6 +163,7 @@ TEST_F(etwSessionIntegrationTest, test_session_start_invalid_guid)
 class etwSessionSubscribeIntegrationTest : public Test
 {
   protected:
+    // [サブ手順 名前=etwSessionSubscribeIntegrationTest.SetUp]
     void SetUp() override
     {
         int status = cplat_etw_session_check_access();
@@ -173,9 +176,11 @@ class etwSessionSubscribeIntegrationTest : public Test
         ASSERT_EQ(CPLAT_OK, status) << "cplat_etw_session_check_access failed (status=" << status << ")";
         // [状態確認] - `cplat_etw_session_check_access()` の戻り値が `CPLAT_OK` であること。
     }
+    // [サブ手順終了]
 };
 
 // ASCII メッセージが session で購読・受信できることの確認
+// [サブ手順参照 名前=etwSessionSubscribeIntegrationTest.SetUp]
 TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_ascii)
 {
     // Arrange
@@ -221,6 +226,7 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_ascii)
 }
 
 // 日本語 UTF-8 メッセージが session で購読・受信できることの確認
+// [サブ手順参照 名前=etwSessionSubscribeIntegrationTest.SetUp]
 TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_utf8_japanese)
 {
     // Arrange
@@ -268,6 +274,7 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_utf8_japanese)
 }
 
 // ASCII と絵文字を含む混在 UTF-8 メッセージが購読・受信できることの確認
+// [サブ手順参照 名前=etwSessionSubscribeIntegrationTest.SetUp]
 TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_utf8_mixed)
 {
     // Arrange
@@ -318,6 +325,7 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_utf8_mixed)
 }
 
 // 全レベルのイベントが購読・受信できることの確認
+// [サブ手順参照 名前=etwSessionSubscribeIntegrationTest.SetUp]
 TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_multiple_levels)
 {
     // Arrange
@@ -418,6 +426,7 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_multiple_levels)
 }
 
 // 空文字列メッセージが購読・受信できることの確認
+// [サブ手順参照 名前=etwSessionSubscribeIntegrationTest.SetUp]
 TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_empty_string)
 {
     // Arrange
@@ -463,6 +472,7 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_empty_string)
 }
 
 // Service と Message を持つイベントが購読・受信できることの確認
+// [サブ手順参照 名前=etwSessionSubscribeIntegrationTest.SetUp]
 TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_service_and_message)
 {
     // Arrange

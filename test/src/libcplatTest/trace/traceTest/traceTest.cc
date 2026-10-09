@@ -64,13 +64,17 @@ class traceTest : public Test
         reinterpret_cast<cplat_eventlog_sink *>(static_cast<uintptr_t>(0x1300));
 #endif
 
+    // [サブ手順 名前=traceTest.SetUp]
     void SetUp() override
     {
         set_trace_sync_mock_defaults(mock_cplat);
         ON_CALL(mock_cplat, cplat_shutdown_register(_, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_shutdown_register` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_get_realtime_deadline_ms(_, _))
             .WillByDefault([](uint64_t, struct timespec *abs_timeout) { set_valid_deadline(abs_timeout); });
+        // [状態] - `cplat_clock_get_realtime_deadline_ms` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_get_realtime(_)).WillByDefault([](cplat_timespec *ts) { set_fixed_realtime(ts); });
+        // [状態] - `cplat_clock_get_realtime` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_format_realtime_iso8601_local(_, _, _))
             .WillByDefault(
                 [](char *buf, size_t buf_size, const cplat_timespec *)
@@ -78,9 +82,13 @@ class traceTest : public Test
                     snprintf(buf, buf_size, "%s", "2026-04-26T03:04:05.678+09:00");
                     return 0;
                 });
+        // [状態] - `cplat_clock_format_realtime_iso8601_local` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_trace_file_sink_create(_, _, _, _)).WillByDefault(Return(file_handle_));
+        // [状態] - `cplat_trace_file_sink_create` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_trace_file_sink_write(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_trace_file_sink_write` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_trace_file_sink_dispose(_)).WillByDefault(Return());
+        // [状態] - `cplat_trace_file_sink_dispose` の既定動作を設定する。
         // デフォルト パス解決を決定的にするため、実行ファイル パスを固定する
         ON_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
             .WillByDefault(
@@ -89,22 +97,35 @@ class traceTest : public Test
                     snprintf(path_out, path_size, "%s", "/opt/bin/myapp");
                     return 0;
                 });
+        // [状態] - `cplat_process_get_executable_path` の既定動作を設定する。
 
 #if defined(PLATFORM_LINUX)
         ON_CALL(mock_cplat, cplat_syslog_sink_create(_, _)).WillByDefault(Return(os_handle_));
+        // [状態] - `cplat_syslog_sink_create` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_write(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_syslog_sink_write` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_rename(_, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_syslog_sink_rename` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_dispose(_)).WillByDefault(Return());
+        // [状態] - `cplat_syslog_sink_dispose` の既定動作を設定する。
 #elif defined(PLATFORM_WINDOWS)
         ON_CALL(mock_cplat, cplat_etw_provider_create(_)).WillByDefault(Return(os_handle_));
+        // [状態] - `cplat_etw_provider_create` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_etw_provider_write(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_etw_provider_write` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_etw_provider_dispose(_)).WillByDefault(Return());
+        // [状態] - `cplat_etw_provider_dispose` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_eventlog_sink_create(_)).WillByDefault(Return(eventlog_handle_));
+        // [状態] - `cplat_eventlog_sink_create` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_eventlog_sink_write(_, _, _, _, _, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_eventlog_sink_write` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_eventlog_sink_dispose(_)).WillByDefault(Return());
+        // [状態] - `cplat_eventlog_sink_dispose` の既定動作を設定する。
 #endif
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=traceTest.create_logger]
     cplat_tracer *create_logger()
     {
         cplat_tracer *handle = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED);
@@ -112,9 +133,11 @@ class traceTest : public Test
         // [状態確認] - `(cplat_tracer *)NULL` と `handle` が異なること。
         return handle;
     }
+    // [サブ手順終了]
 };
 
 // 初期化と破棄が成功することの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, init_and_dispose)
 {
     // Arrange
@@ -122,6 +145,7 @@ TEST_F(traceTest, init_and_dispose)
     // Pre-Assert
 
     // Act
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger(); // [手順] - トレース ハンドルを初期化する。
     size_t registry_count_after_create = cplat_internal_trace_registry_count();
     cplat_tracer_dispose(&handle); // [手順] - トレース ハンドルを破棄する。
@@ -133,6 +157,7 @@ TEST_F(traceTest, init_and_dispose)
 }
 
 // caller-managed モードではハンドル専用 rwlock を使用しないことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, caller_managed_mode_does_not_use_handle_rwlock)
 {
     // Arrange
@@ -166,6 +191,7 @@ TEST_F(traceTest, caller_managed_mode_does_not_use_handle_rwlock)
 }
 
 // 不正な並行処理管理モードを副作用なしで拒否することの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, create_rejects_invalid_concurrency_mode_before_side_effects)
 {
     // Arrange
@@ -187,9 +213,11 @@ TEST_F(traceTest, create_rejects_invalid_concurrency_mode_before_side_effects)
 }
 
 // get_state が create/start/stop の状態遷移を返すことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, get_state_reports_stopped_started_stopped)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
 
     // Pre-Assert
@@ -213,6 +241,7 @@ TEST_F(traceTest, get_state_reports_stopped_started_stopped)
 }
 
 // get_state が NULL に対して disposed を返すことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, get_state_returns_disposed_for_null)
 {
     // Arrange
@@ -227,6 +256,7 @@ TEST_F(traceTest, get_state_returns_disposed_for_null)
 }
 
 // registry が live handle 数と容量拡張を追跡できることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, registry_tracks_and_expands)
 {
     // Arrange
@@ -239,6 +269,7 @@ TEST_F(traceTest, registry_tracks_and_expands)
     for (size_t i = 0; i < create_count; i++)
     {
         handles[i] =
+            // [サブ手順参照 名前=traceTest.create_logger 回数=12]
             create_logger(); // [手順] - cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED) を 12 回呼び出す。
     }
 
@@ -255,9 +286,11 @@ TEST_F(traceTest, registry_tracks_and_expands)
 }
 
 // started 状態で INFO 出力が OS backend へ送られることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, macro_write_prefixes_source_location)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - OS レベルを INFO とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -295,9 +328,11 @@ TEST_F(traceTest, macro_write_prefixes_source_location)
 }
 
 // 公開マクロが明示タイムスタンプを backend へ渡すことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, macro_write_passes_explicit_timestamp)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     cplat_timespec timestamp = make_fixed_timestamp();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - OS レベルを INFO とする。
@@ -341,9 +376,11 @@ TEST_F(traceTest, macro_write_passes_explicit_timestamp)
 }
 
 // 公開マクロが NULL メッセージでもソース位置だけを backend へ渡すことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, macro_write_with_null_message_emits_source_location_only)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - OS レベルを INFO とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -379,9 +416,11 @@ TEST_F(traceTest, macro_write_with_null_message_emits_source_location_only)
 }
 
 // 公開マクロが source location にファイルの basename を使うことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, public_macros_prefix_source_location_with_basename)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     unsigned char data[] = {0x48, 0x69};
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - OS レベルを INFO とする。
@@ -460,9 +499,11 @@ TEST_F(traceTest, public_macros_prefix_source_location_with_basename)
 }
 
 // started 状態で INFO 出力が OS backend へ送られることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, write_routes_info_to_os_backend)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - OS レベルを INFO とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -502,9 +543,11 @@ TEST_F(traceTest, write_routes_info_to_os_backend)
 
 #if defined(PLATFORM_WINDOWS)
 // ETW トレース (etw_level) と OS トレース (os_level) が独立にゲートされることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, etw_and_os_levels_are_independent)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK,
               cplat_tracer_set_etw_level(
@@ -535,9 +578,11 @@ TEST_F(traceTest, etw_and_os_levels_are_independent)
 }
 #elif defined(PLATFORM_LINUX)
 // Linux では etw_level が常に NONE を返し、設定が no-op となることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, etw_level_is_none_and_noop_on_linux)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger(); // [状態] - 生成済みの tracer を用意する。
 
     // Pre-Assert
@@ -561,9 +606,11 @@ TEST_F(traceTest, etw_level_is_none_and_noop_on_linux)
 
 #if defined(PLATFORM_WINDOWS)
 // OS トレース (os_level) が EventLog backend へ送られることの確認 (Windows)
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, write_routes_info_to_eventlog_backend)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - OS レベルを INFO とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -588,9 +635,11 @@ TEST_F(traceTest, write_routes_info_to_eventlog_backend)
 }
 
 // EventLog backend へファイル識別子とインスタンス識別子が個別に渡されることの確認 (Windows)
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, write_routes_eventlog_identity_fields)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_name(handle, "worker", 3)); // [状態] - インスタンス名を worker_3 とする。
                                                                            // [状態確認] - cplat_tracer_set_name の戻り値が CPLAT_OK であること。
@@ -621,9 +670,11 @@ TEST_F(traceTest, write_routes_eventlog_identity_fields)
 #endif /* PLATFORM_WINDOWS */
 
 // 明示タイムスタンプ付き INFO 出力が OS backend へ渡ることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, write_routes_explicit_timestamp_to_os_backend)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     cplat_timespec timestamp = make_fixed_timestamp();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - OS レベルを INFO とする。
@@ -665,9 +716,11 @@ TEST_F(traceTest, write_routes_explicit_timestamp_to_os_backend)
 }
 
 // NULL ハンドルと NULL メッセージが安全に無視されることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, write_is_null_safe)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
 
     // Pre-Assert
@@ -691,9 +744,11 @@ TEST_F(traceTest, write_is_null_safe)
 }
 
 // 1024 バイト超の UTF-8 文字列が安全な境界で切り詰められることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, write_truncates_utf8_boundary)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - OS レベルを INFO とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -755,9 +810,11 @@ TEST_F(traceTest, write_truncates_utf8_boundary)
 }
 
 // writef が format 展開後の文字列を backend へ渡すことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, writef_formats_message)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - OS レベルを INFO とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -789,9 +846,11 @@ TEST_F(traceTest, writef_formats_message)
 }
 
 // HEX 書き込みがラベル付きテキストへ変換されることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, write_hex_formats_payload)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - OS レベルを INFO とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -824,9 +883,11 @@ TEST_F(traceTest, write_hex_formats_payload)
 }
 
 // HEX 書き込みでデータ本体を出力できない残り長の場合に省略記号だけが付与されることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, write_hex_appends_ellipsis_when_only_ellipsis_fits)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - OS レベルを INFO とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -865,9 +926,11 @@ TEST_F(traceTest, write_hex_appends_ellipsis_when_only_ellipsis_fits)
 }
 
 // HEX 書き込みで残り長が 4 と 5 の場合も、データ本体を出力せず省略記号だけが付与されることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, write_hex_appends_only_ellipsis_up_to_five_remaining_bytes)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - OS レベルを INFO とする。
                                                                                     // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -919,9 +982,11 @@ TEST_F(traceTest, write_hex_appends_only_ellipsis_up_to_five_remaining_bytes)
 }
 
 // HEX 書き込みで残り長が 6 の場合に、データ 1 バイトと省略記号が本文の上限ちょうどに収まることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, write_hex_fits_one_byte_and_ellipsis_in_six_remaining_bytes)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - OS レベルを INFO とする。
                                                                                     // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -959,9 +1024,11 @@ TEST_F(traceTest, write_hex_fits_one_byte_and_ellipsis_in_six_remaining_bytes)
 }
 
 // started 中は識別子・ファイル名の設定関数が失敗することの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, identity_config_fails_when_started)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_start(handle)); // [状態] - tracer を started 状態とする。
                                                            // [状態確認] - cplat_tracer_start の戻り値が CPLAT_OK であること。
@@ -986,9 +1053,11 @@ TEST_F(traceTest, identity_config_fails_when_started)
 }
 
 // started 中でも os / etw / stderr のレベル変更が成功し反映されることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, level_change_allowed_when_started)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - OS レベルを INFO とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -1027,9 +1096,11 @@ TEST_F(traceTest, level_change_allowed_when_started)
 }
 
 // started 中の os レベル引き上げが即座に出力へ反映されることの確認 (連続性)
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, os_level_raise_takes_effect_while_started)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - OS レベルを INFO とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -1079,9 +1150,11 @@ TEST_F(traceTest, os_level_raise_takes_effect_while_started)
 }
 
 // started 中のしきい値のみ変更では file sink を開き直さないことの確認 (ケース 2)
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, set_file_level_threshold_only_no_reopen_while_started)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -1113,11 +1186,13 @@ TEST_F(traceTest, set_file_level_threshold_only_no_reopen_while_started)
 }
 
 // started 中にパスを変更すると file sink を開き直すことの確認 (ケース 3)
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, set_file_level_reopen_on_path_change_while_started)
 {
     // Arrange
     cplat_trace_file_sink *file_handle2 =
         reinterpret_cast<cplat_trace_file_sink *>(static_cast<uintptr_t>(0x2300));
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -1152,9 +1227,11 @@ TEST_F(traceTest, set_file_level_reopen_on_path_change_while_started)
 }
 
 // started 中に level=NONE を指定するとファイル出力を無効化することの確認 (ケース 1)
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, set_file_level_disable_while_started)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -1191,9 +1268,11 @@ TEST_F(traceTest, set_file_level_disable_while_started)
 }
 
 // stopped 中の file level 設定が file backend 作成と書き込みへ反映されることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, file_level_routes_to_file_backend)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
 
     // Pre-Assert
@@ -1226,9 +1305,11 @@ TEST_F(traceTest, file_level_routes_to_file_backend)
 }
 
 // set_file_level の flags が start 時の file sink 生成へ引き渡されることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, set_file_level_passes_flags_to_file_sink)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
 
     // Pre-Assert
@@ -1253,9 +1334,11 @@ TEST_F(traceTest, set_file_level_passes_flags_to_file_sink)
 }
 
 // set_file_level が sink を生成せず start まで遅延されることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, set_file_level_defers_sink_creation_until_start)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -1287,9 +1370,11 @@ TEST_F(traceTest, set_file_level_defers_sink_creation_until_start)
 }
 
 // 明示タイムスタンプ指定時に file backend と stderr が同じ時刻を使うことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, explicit_timestamp_is_shared_by_file_and_stderr)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     cplat_timespec timestamp = make_fixed_timestamp();
 
@@ -1344,9 +1429,11 @@ TEST_F(traceTest, explicit_timestamp_is_shared_by_file_and_stderr)
 }
 
 // file level NONE でファイル トレースが無効化されることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, file_level_none_disables_file_backend)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -1376,9 +1463,11 @@ TEST_F(traceTest, file_level_none_disables_file_backend)
 }
 
 // set_name が識別子付き名称を反映することの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, set_name_with_identifier_updates_backend_name)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
 
     // Pre-Assert
@@ -1412,9 +1501,11 @@ TEST_F(traceTest, set_name_with_identifier_updates_backend_name)
 }
 
 // CPLAT_TRACE_LEVEL_NONE では OS backend が呼ばれないことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, os_level_none_suppresses_output)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -1442,9 +1533,11 @@ TEST_F(traceTest, os_level_none_suppresses_output)
 }
 
 // stderr level DEBUG で V と D の marker が出力されることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, stderr_level_debug_outputs_markers)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -1484,9 +1577,11 @@ TEST_F(traceTest, stderr_level_debug_outputs_markers)
 }
 
 // 不正な明示タイムスタンプ指定時に現在時刻へ代替して各出力先へ書き込みつつ -1 を返すことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, invalid_explicit_timestamp_falls_back_and_returns_minus_one)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     cplat_timespec invalid_timestamp = {1714100645LL, 1000000000};
 
@@ -1552,9 +1647,11 @@ TEST_F(traceTest, invalid_explicit_timestamp_falls_back_and_returns_minus_one)
 }
 
 // 不正な明示タイムスタンプ指定時に write_hex でも現在時刻へ代替して -1 を返すことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, write_hex_invalid_explicit_timestamp_falls_back_and_returns_minus_one)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     cplat_timespec invalid_timestamp = {1714100645LL, 1000000000};
     unsigned char data[] = {0x48, 0x69};
@@ -1595,9 +1692,11 @@ TEST_F(traceTest, write_hex_invalid_explicit_timestamp_falls_back_and_returns_mi
 }
 
 // stopped 状態では出力関数が失敗することの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, write_fails_when_stopped)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     unsigned char data[] = {0x01, 0x02};
 
@@ -1632,9 +1731,11 @@ TEST_F(traceTest, write_fails_when_stopped)
 }
 
 // start と stop の二重呼び出しがべき等であることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, start_and_stop_are_idempotent)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
 
     // Pre-Assert
@@ -1664,9 +1765,11 @@ TEST_F(traceTest, start_and_stop_are_idempotent)
 
 // create 直後にすべての出力先が無効で、set_file_level 未呼び出しの start がトレース ファイルを作らないことの確認
 // cplat-req: id=CPLAT-TRACE-FUNC-011; uuid=94ce1fc3-c198-49fe-816e-70ec4f6212ce
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, start_without_level_settings_creates_no_output)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
 
     // Pre-Assert
@@ -1722,9 +1825,11 @@ TEST_F(traceTest, start_without_level_settings_creates_no_output)
 }
 
 // set_file_level でパスを指定しない start が、デフォルト パスのトレース ファイルを開くことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, start_creates_default_file_sink)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK,
               cplat_tracer_set_file_level(handle, NULL, CPLAT_TRACE_LEVEL_INFO, 0, 0,
@@ -1757,9 +1862,11 @@ TEST_F(traceTest, start_creates_default_file_sink)
 }
 
 // set_name (インスタンス名とインスタンス識別) がデフォルトのトレース ファイル名に影響しないことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, set_name_does_not_affect_default_file_path)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -1790,9 +1897,11 @@ TEST_F(traceTest, set_name_does_not_affect_default_file_path)
 }
 
 // set_file_name のファイル名とファイル識別がデフォルト パスへ反映されることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, set_file_name_reflects_to_default_file_path)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -1822,9 +1931,11 @@ TEST_F(traceTest, set_file_name_reflects_to_default_file_path)
 }
 
 // set_file_name(NULL, 0) でデフォルト (プロセス名、識別なし) に戻ることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, set_file_name_null_restores_process_name_default)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -1861,9 +1972,11 @@ TEST_F(traceTest, set_file_name_null_restores_process_name_default)
 }
 
 // 名前と識別の getter がインスタンス側とファイル側を独立して返すことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, getters_report_instance_and_file_settings_independently)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     char name_buf[64];
     char file_buf[64];
@@ -1921,9 +2034,11 @@ TEST_F(traceTest, getters_report_instance_and_file_settings_independently)
 }
 
 // started 中の set_file_name と負の識別番号が失敗することの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, set_file_name_fails_when_started_or_identifier_negative)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
 
     // Pre-Assert
@@ -1950,11 +2065,13 @@ TEST_F(traceTest, set_file_name_fails_when_started_or_identifier_negative)
 }
 
 // 名前と識別の getter が NULL や不足バッファーに対して安全に失敗することの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, name_getters_fail_safely_for_invalid_arguments)
 {
     // Arrange
     char buf[64];
     char small_buf[2];
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
 
     // Pre-Assert
@@ -2001,6 +2118,7 @@ TEST_F(traceTest, name_getters_fail_safely_for_invalid_arguments)
 
 #if defined(PLATFORM_WINDOWS)
 // Windows でプロセス名由来の有効名から .exe が除去されることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, default_file_path_strips_exe_suffix_on_windows)
 {
     // Arrange
@@ -2011,6 +2129,7 @@ TEST_F(traceTest, default_file_path_strips_exe_suffix_on_windows)
                 snprintf(path_out, path_size, "%s", "C:/bin/myapp.exe");
                 return 0;
             }); // [状態] - cplat_process_get_executable_path が呼び出された際に "C:/bin/myapp.exe" を返すようにモックを設定する。
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -2044,12 +2163,14 @@ TEST_F(traceTest, default_file_path_strips_exe_suffix_on_windows)
 #endif /* PLATFORM_WINDOWS */
 
 // 実行ファイル パス取得失敗時に相対 log パスへフォールバックすることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, default_file_path_falls_back_to_relative_log)
 {
     // Arrange
     ON_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
         .WillByDefault(Return(
             -1)); // [状態] - cplat_process_get_executable_path が呼び出された際に -1 を返すようにモックを設定する。
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger(); // [手順] - 有効名はフォールバックの unknown になる。
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -2077,9 +2198,11 @@ TEST_F(traceTest, default_file_path_falls_back_to_relative_log)
 }
 
 // トレース ファイルを開けない場合に start が -1 を返しつつ started 状態になることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, start_returns_minus_one_but_starts_when_file_sink_create_fails)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_stderr_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - stderr レベルを INFO とする。
                                                                                                  // [状態確認] - cplat_tracer_set_stderr_level の戻り値が CPLAT_OK であること。
@@ -2116,9 +2239,11 @@ TEST_F(traceTest, start_returns_minus_one_but_starts_when_file_sink_create_fails
 }
 
 // stop がトレース ファイルを閉じ、再 start で新しいファイル名のデフォルト パスを開き直すことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, stop_disposes_file_sink_and_restart_uses_new_name)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     ASSERT_EQ(CPLAT_OK, cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
                                                                                              // [状態確認] - cplat_tracer_set_os_level の戻り値が CPLAT_OK であること。
@@ -2162,9 +2287,11 @@ TEST_F(traceTest, stop_disposes_file_sink_and_restart_uses_new_name)
 }
 
 // 強制出力のレベルが、出力先のしきい値を越えて出力されることの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, force_level_passes_threshold)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
 
     ASSERT_EQ(CPLAT_OK,
@@ -2196,9 +2323,11 @@ TEST_F(traceTest, force_level_passes_threshold)
 }
 
 // 強制出力のレベルでも、しきい値が NONE の出力先へは出力しないことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, force_level_does_not_pass_none_threshold)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
 
     ASSERT_EQ(CPLAT_OK,
@@ -2225,9 +2354,11 @@ TEST_F(traceTest, force_level_does_not_pass_none_threshold)
 }
 
 // しきい値の設定が、強制出力のレベルと範囲外の値を拒否することの確認
+// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, set_level_rejects_out_of_range_threshold)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
     cplat_trace_level out_of_range = CPLAT_TRACE_LEVEL_NONE;
 

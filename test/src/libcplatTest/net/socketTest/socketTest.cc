@@ -39,13 +39,18 @@ const cplat_socket kSocket = (cplat_socket)7;
 
 const cplat_ipv4_endpoint kEndpoint = {CPLAT_IPV4_ADDR_LOOPBACK, cplat_hton16((uint16_t)12345U), 0U};
 
+// [サブ手順 名前=socketTest.expect_detail]
 void expect_detail(const cplat_error &detail, const cplat_error_domain domain, const int result,
                    const unsigned long code)
 {
     EXPECT_EQ(domain, detail.domain);
+    // [確認_正常系] - `detail.domain` の値が `domain` であること。
     EXPECT_EQ(result, detail.result);
+    // [確認_正常系] - `detail.result` の値が `result` であること。
     EXPECT_EQ(code, detail.code);
+    // [確認_正常系] - `detail.code` の値が `code` であること。
 }
+// [サブ手順終了]
 
 } // namespace
 
@@ -75,24 +80,32 @@ class socketTest : public Test
     }
 
     /* 下位のクローズ API が呼び出されないことを期待する。 */
+    // [サブ手順 名前=socketTest.expectNoCloseCall]
     void expectNoCloseCall()
     {
 #if defined(PLATFORM_LINUX)
         EXPECT_CALL(mock_cplat_, cplat_close(_, _)).Times(0);
+        // [Pre-Assert確認_正常系] - `cplat_close` が呼び出されないこと。
 #elif defined(PLATFORM_WINDOWS)
         EXPECT_CALL(mock_winsock_, closesocket(_, _, _, _)).Times(0);
+        // [Pre-Assert確認_正常系] - `closesocket` が呼び出されないこと。
 #endif /* PLATFORM_ */
     }
+    // [サブ手順終了]
 
     /* 下位のシャットダウン API が呼び出されないことを期待する。 */
+    // [サブ手順 名前=socketTest.expectNoShutdownCall]
     void expectNoShutdownCall()
     {
 #if defined(PLATFORM_LINUX)
         EXPECT_CALL(mock_sys_socket_, shutdown(_, _, _, _, _)).Times(0);
+        // [Pre-Assert確認_正常系] - `shutdown` が呼び出されないこと。
 #elif defined(PLATFORM_WINDOWS)
         EXPECT_CALL(mock_winsock_, shutdown(_, _, _, _, _)).Times(0);
+        // [Pre-Assert確認_正常系] - `shutdown` が呼び出されないこと。
 #endif /* PLATFORM_ */
     }
+    // [サブ手順終了]
 
 #if defined(PLATFORM_WINDOWS)
     void SetUp() override
@@ -104,10 +117,12 @@ class socketTest : public Test
         ON_CALL(mock_winsock_, WSAGetLastError).WillByDefault(Return(0));
     }
 
+    // [サブ手順 名前=socketTest.TearDown]
     void TearDown() override
     {
         cplat_internal_socket_cleanup();
     }
+    // [サブ手順終了]
 #endif /* PLATFORM_WINDOWS */
 };
 
@@ -136,6 +151,7 @@ TEST_F(socketTest, open_rejects_invalid_arguments)
     EXPECT_EQ(CPLAT_INVALID_SOCKET,
               socket); // [確認_異常系] - 不正な種別の指定時に出力先が無効値になること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // ソケットが TCP と UDP の種別に応じて生成されることの確認
 TEST_F(socketTest, open_returns_socket_for_each_kind)
@@ -173,6 +189,7 @@ TEST_F(socketTest, open_returns_socket_for_each_kind)
     EXPECT_EQ((cplat_socket)8,
               udp_socket); // [確認_正常系] - UDP ソケットのハンドルが返されること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // OS のソケット生成失敗が通知されることの確認
 TEST_F(socketTest, open_reports_socket_failure)
@@ -209,13 +226,16 @@ TEST_F(socketTest, open_reports_socket_failure)
               socket); // [確認_異常系] - ソケット生成失敗時に無効値が返されること。
     // 詳細エラーに実行環境に応じた OS のエラー ドメインとエラー値が記録されること。
 #if defined(PLATFORM_LINUX)
+    // [サブ手順参照 名前=socketTest.expect_detail]
     expect_detail(detail, CPLAT_ERROR_DOMAIN_SOCKET_ERRNO, CPLAT_ERR_UNKNOWN, static_cast<unsigned long>(EMFILE));
-    // [Pre-Assert確認_正常系 回数=3] - 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
+    // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 #elif defined(PLATFORM_WINDOWS)
+    // [サブ手順参照 名前=socketTest.expect_detail]
     expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_UNKNOWN, static_cast<unsigned long>(WSAEMFILE));
-    // [Pre-Assert確認_正常系 回数=3] - 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
+    // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 #endif /* PLATFORM_ */
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 #if defined(PLATFORM_WINDOWS)
 // Winsock の初期化失敗がソケット生成へ伝播することの確認
@@ -242,10 +262,12 @@ TEST_F(socketTest, open_propagates_startup_failure)
     EXPECT_EQ(CPLAT_INVALID_SOCKET,
               socket); // [確認_異常系] - 初期化失敗時に無効値が返されること。
     // 詳細エラーに Winsock ドメインと OS のエラー値が記録されること。
+    // [サブ手順参照 名前=socketTest.expect_detail]
     expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_UNKNOWN,
                   static_cast<unsigned long>(WSASYSNOTREADY));
-    // [Pre-Assert確認_正常系 回数=3] - 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
+    // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 #endif /* PLATFORM_WINDOWS */
 
 // 無効なソケットを閉じる場合に OS API が呼ばれないことの確認
@@ -255,8 +277,9 @@ TEST_F(socketTest, close_ignores_invalid_socket)
 
     // Pre-Assert
     // 下位のクローズ API が呼び出されないこと。
+    // [サブ手順参照 名前=socketTest.expectNoCloseCall]
     expectNoCloseCall();
-    // [Pre-Assert確認_正常系] - 下位のクローズ API が呼び出されないこと。
+    // 下位のクローズ API が呼び出されないこと。
 
     // Act
     cplat_socket_close(CPLAT_INVALID_SOCKET); // [手順] - 無効なソケットを閉じる。
@@ -265,6 +288,7 @@ TEST_F(socketTest, close_ignores_invalid_socket)
     EXPECT_TRUE(verifyExpectations());
     // [確認_正常系] - 無効なソケットの指定時に下位のクローズ API が呼び出されないこと。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 有効なソケットを閉じる場合に OS API が呼ばれることの確認
 TEST_F(socketTest, close_calls_os_close)
@@ -289,6 +313,7 @@ TEST_F(socketTest, close_calls_os_close)
     EXPECT_TRUE(verifyExpectations());
     // [確認_正常系] - 下位のクローズ API への呼び出し期待が満たされること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // クローズが呼び出し前の直前エラーを保存および復元することの確認
 TEST_F(socketTest, close_preserves_last_error)
@@ -342,6 +367,7 @@ TEST_F(socketTest, close_preserves_last_error)
     // Cleanup
     cplat_error_clear_last();
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 無効なソケットのシャットダウンが無視されることの確認
 TEST_F(socketTest, shutdown_ignores_invalid_socket)
@@ -350,8 +376,9 @@ TEST_F(socketTest, shutdown_ignores_invalid_socket)
 
     // Pre-Assert
     // 下位のシャットダウン API が呼び出されないこと。
+    // [サブ手順参照 名前=socketTest.expectNoShutdownCall]
     expectNoShutdownCall();
-    // [Pre-Assert確認_正常系] - 下位のシャットダウン API が呼び出されないこと。
+    // 下位のシャットダウン API が呼び出されないこと。
 
     // Act
     cplat_socket_shutdown(CPLAT_INVALID_SOCKET); // [手順] - 無効なソケットをシャットダウンする。
@@ -360,6 +387,7 @@ TEST_F(socketTest, shutdown_ignores_invalid_socket)
     EXPECT_TRUE(verifyExpectations());
     // [確認_正常系] - 無効なソケットの指定時に下位のシャットダウン API が呼び出されないこと。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 有効なソケットのシャットダウンが OS API へ委譲されることの確認
 TEST_F(socketTest, shutdown_calls_os_shutdown)
@@ -384,6 +412,7 @@ TEST_F(socketTest, shutdown_calls_os_shutdown)
     EXPECT_TRUE(verifyExpectations());
     // [確認_正常系] - 下位のシャットダウン API への呼び出し期待が満たされること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // bind、listen、connect の引数不正が拒否されることの確認
 TEST_F(socketTest, connection_operations_reject_invalid_arguments)
@@ -426,6 +455,7 @@ TEST_F(socketTest, connection_operations_reject_invalid_arguments)
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_connect_endpoint); // [確認_異常系] - NULL のエンドポイントを指定した connect の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // bind、listen、connect が成功することの確認
 TEST_F(socketTest, connection_operations_succeed)
@@ -473,6 +503,7 @@ TEST_F(socketTest, connection_operations_succeed)
     EXPECT_EQ(CPLAT_OK,
               actual_ret_connect); // [確認_正常系] - connect の戻り値が CPLAT_OK であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // bind、listen、connect の OS 失敗が通知されることの確認
 TEST_F(socketTest, connection_operations_report_os_failures)
@@ -519,6 +550,7 @@ TEST_F(socketTest, connection_operations_report_os_failures)
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
               actual_ret_connect); // [確認_異常系] - connect の OS 失敗時の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 非ブロッキング connect の継続状態がプラットフォーム共通の結果コードになることの確認
 TEST_F(socketTest, connect_reports_in_progress_for_nonblocking_completion)
@@ -555,6 +587,7 @@ TEST_F(socketTest, connect_reports_in_progress_for_nonblocking_completion)
               cplat_error_get_cause(&detail)); // [確認_正常系] - Windows の生の詳細要因が WOULD_BLOCK であること。
 #endif /* PLATFORM_ */
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // accept が無効な引数を拒否することの確認
 TEST_F(socketTest, accept_rejects_invalid_arguments)
@@ -577,6 +610,7 @@ TEST_F(socketTest, accept_rejects_invalid_arguments)
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_output); // [確認_異常系] - 出力先が NULL の accept の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // accept が接続元エンドポイントと新しいソケットを返すことの確認
 TEST_F(socketTest, accept_returns_peer_and_socket)
@@ -631,6 +665,7 @@ TEST_F(socketTest, accept_returns_peer_and_socket)
     EXPECT_EQ(cplat_hton16((uint16_t)54321U),
               peer.port); // [確認_正常系] - 接続元ポートが返されること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // accept の OS 失敗が通知されることの確認
 TEST_F(socketTest, accept_reports_os_failure)
@@ -661,6 +696,7 @@ TEST_F(socketTest, accept_reports_os_failure)
     EXPECT_EQ(CPLAT_INVALID_SOCKET,
               accepted); // [確認_異常系] - accept の失敗時に無効値が返されること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 保留エラーの取得結果が分類されることの確認
 TEST_F(socketTest, pending_error_reports_empty_pending_and_failure)
@@ -725,6 +761,7 @@ TEST_F(socketTest, pending_error_reports_empty_pending_and_failure)
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
               actual_ret_failure); // [確認_異常系] - getsockopt 失敗時の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 非ブロッキング設定の引数不正と OS 失敗が処理されることの確認
 TEST_F(socketTest, nonblocking_reports_invalid_and_os_failure)
@@ -786,6 +823,7 @@ TEST_F(socketTest, nonblocking_reports_invalid_and_os_failure)
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
               actual_ret_failure); // [確認_異常系] - 非ブロッキング設定失敗時の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 #if defined(PLATFORM_LINUX)
 // F_SETFL の失敗が通知されることの確認
@@ -813,6 +851,7 @@ TEST_F(socketTest, nonblocking_reports_set_failure)
         CPLAT_ERR_UNKNOWN,
         actual_ret); // [確認_異常系] - F_SETFL 失敗時の cplat_socket_set_nonblocking の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 #endif /* PLATFORM_LINUX */
 
 // ソケット オプションの設定が成功することの確認
@@ -892,6 +931,7 @@ TEST_F(socketTest, socket_options_succeed)
     EXPECT_EQ(CPLAT_OK,
               actual_ret_leave); // [確認_正常系] - マルチキャスト離脱の戻り値が CPLAT_OK であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // ソケット オプションの引数不正と OS 失敗が処理されることの確認
 TEST_F(socketTest, socket_options_report_invalid_and_os_failure)
@@ -988,6 +1028,7 @@ TEST_F(socketTest, socket_options_report_invalid_and_os_failure)
         CPLAT_ERR_UNKNOWN,
         actual_ret_leave_failure); // [確認_異常系] - グループ離脱失敗時の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 送受信の引数不正、成功、失敗が処理されることの確認
 TEST_F(socketTest, send_and_recv_report_results)
@@ -1090,6 +1131,7 @@ TEST_F(socketTest, send_and_recv_report_results)
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
               actual_ret_recv_failure); // [確認_異常系] - 受信失敗時の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // sendto と recvfrom がエンドポイントを変換して送受信することの確認
 TEST_F(socketTest, datagram_operations_succeed)
@@ -1154,6 +1196,7 @@ TEST_F(socketTest, datagram_operations_succeed)
     EXPECT_EQ(kEndpoint.port,
               peer.port); // [確認_正常系] - recvfrom が接続元ポートを返すこと。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // sendto と recvfrom の引数不正および OS 失敗が処理されることの確認
 TEST_F(socketTest, datagram_operations_report_invalid_and_os_failure)
@@ -1246,6 +1289,7 @@ TEST_F(socketTest, datagram_operations_report_invalid_and_os_failure)
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
               actual_ret_recv_failure); // [確認_異常系] - recvfrom 失敗時の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // send_all の全送信、部分送信、ゼロ送信、失敗が処理されることの確認
 TEST_F(socketTest, send_all_reports_results)
@@ -1317,6 +1361,7 @@ TEST_F(socketTest, send_all_reports_results)
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_invalid_length); // [確認_異常系] - 最大転送量超過の send_all 戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // recv_all の全受信、部分受信、EOF、失敗が処理されることの確認
 TEST_F(socketTest, recv_all_reports_results)
@@ -1387,6 +1432,7 @@ TEST_F(socketTest, recv_all_reports_results)
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_invalid_length); // [確認_異常系] - 最大転送量超過の recv_all 戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 下位 API が要求量を超える転送量を返した場合に、単発の送受信が異常を返し出力値を 0 のままにすることの確認
 TEST_F(socketTest, send_and_recv_reject_transfer_exceeding_request)
@@ -1449,6 +1495,7 @@ TEST_F(socketTest, send_and_recv_reject_transfer_exceeding_request)
         actual_ret_recvfrom); // [確認_異常系] - 要求量超過時の cplat_socket_recvfrom の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ((size_t)0, received_from); // [確認_異常系] - 要求量超過時の recvfrom の受信バイト数が 0 のままであること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 下位 API が残量を超える転送量を返した場合に、全量送受信が異常を返すことの確認
 TEST_F(socketTest, send_all_and_recv_all_reject_transfer_exceeding_remaining)
@@ -1494,6 +1541,7 @@ TEST_F(socketTest, send_all_and_recv_all_reject_transfer_exceeding_remaining)
         CPLAT_ERR_UNKNOWN,
         actual_ret_recv_all); // [確認_異常系] - 残量超過時の cplat_socket_recv_all の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 単一ソケット待機の引数不正、タイムアウト、準備完了、失敗が処理されることの確認
 TEST_F(socketTest, wait_single_reports_results)
@@ -1577,6 +1625,7 @@ TEST_F(socketTest, wait_single_reports_results)
     EXPECT_EQ(0,
               ready); // [確認_正常系] - 最後の待機失敗で準備完了フラグが 0 であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 複数ソケット待機の入力検証と全無効ソケット処理が行われることの確認
 TEST_F(socketTest, wait_multi_rejects_invalid_and_waits_without_valid_socket)
@@ -1622,6 +1671,7 @@ TEST_F(socketTest, wait_multi_rejects_invalid_and_waits_without_valid_socket)
     EXPECT_EQ(0U,
               ready[0]); // [確認_正常系] - 全無効ソケットの準備完了フラグが 0 であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 複数ソケット待機のタイムアウト、準備完了、失敗が処理されることの確認
 TEST_F(socketTest, wait_multi_reports_results)
@@ -1698,6 +1748,7 @@ TEST_F(socketTest, wait_multi_reports_results)
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
               actual_ret_failure); // [確認_異常系] - 待機失敗時の複数待機戻り値が CPLAT_ERR_UNKNOWN であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 #if defined(PLATFORM_LINUX)
 
@@ -1730,6 +1781,7 @@ TEST_F(socketTest, wait_single_retries_after_interrupt)
     EXPECT_EQ(1,
               ready); // [確認_正常系] - 再待機で条件が成立し、準備完了フラグが 1 になること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 無期限の単一ソケット待機がシグナル中断後に期限を計算せず再待機することの確認
 TEST_F(socketTest, wait_single_retries_without_deadline_after_interrupt)
@@ -1763,6 +1815,7 @@ TEST_F(socketTest, wait_single_retries_without_deadline_after_interrupt)
     EXPECT_EQ(1,
               ready); // [確認_正常系] - 再待機で条件が成立し、準備完了フラグが 1 になること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 期限付きの単一ソケット待機がシグナル中断後に残り時間で再待機することの確認
 TEST_F(socketTest, wait_single_recomputes_remaining_after_interrupt)
@@ -1801,6 +1854,7 @@ TEST_F(socketTest, wait_single_recomputes_remaining_after_interrupt)
     EXPECT_EQ(1,
               ready); // [確認_正常系] - 残り時間での再待機で条件が成立し、準備完了フラグが 1 になること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 期限付きの単一ソケット待機がシグナル中断で期限を過ぎた場合に条件不成立となることの確認
 TEST_F(socketTest, wait_single_reports_not_ready_when_deadline_expires_after_interrupt)
@@ -1830,6 +1884,7 @@ TEST_F(socketTest, wait_single_reports_not_ready_when_deadline_expires_after_int
     EXPECT_EQ(0,
               ready); // [確認_正常系] - 期限を過ぎたため準備完了フラグが 0 のままであること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 複数ソケット待機がシグナル中断後に再待機することの確認
 TEST_F(socketTest, wait_multi_retries_after_interrupt)
@@ -1865,6 +1920,7 @@ TEST_F(socketTest, wait_multi_retries_after_interrupt)
     EXPECT_EQ(0U,
               ready[1]); // [確認_正常系] - 2 番目のソケットの準備完了が 0 であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 接続受け付けがシグナル中断後に再試行することの確認
 TEST_F(socketTest, accept_retries_after_interrupt)
@@ -1890,6 +1946,7 @@ TEST_F(socketTest, accept_retries_after_interrupt)
     EXPECT_EQ((cplat_socket)8,
               accepted); // [確認_正常系] - 再試行で受け付けたソケットが返されること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 送信と受信がシグナル中断後に再試行することの確認
 TEST_F(socketTest, send_and_recv_retry_after_interrupt)
@@ -1927,6 +1984,7 @@ TEST_F(socketTest, send_and_recv_retry_after_interrupt)
     EXPECT_EQ((size_t)4,
               received); // [確認_正常系] - 再試行後の受信バイト数が 4 であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // データグラムの送信と受信がシグナル中断後に再試行することの確認
 TEST_F(socketTest, sendto_and_recvfrom_retry_after_interrupt)
@@ -1967,6 +2025,7 @@ TEST_F(socketTest, sendto_and_recvfrom_retry_after_interrupt)
     EXPECT_EQ((size_t)4,
               received); // [確認_正常系] - 再試行後の受信バイト数が 4 であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // 全量送信と全量受信がシグナル中断後に再試行することの確認
 TEST_F(socketTest, send_all_and_recv_all_retry_after_interrupt)
@@ -2000,6 +2059,7 @@ TEST_F(socketTest, send_all_and_recv_all_retry_after_interrupt)
     EXPECT_EQ(CPLAT_OK,
               actual_ret_recv_all); // [確認_正常系] - cplat_socket_recv_all の戻り値が CPLAT_OK であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // ブロッキング接続がシグナル中断後に完了を待って成功を確定することの確認
 TEST_F(socketTest, connect_completes_after_interrupt)
@@ -2039,6 +2099,7 @@ TEST_F(socketTest, connect_completes_after_interrupt)
     EXPECT_EQ(CPLAT_OK,
               actual_ret); // [確認_正常系] - 中断後の cplat_socket_connect の戻り値が CPLAT_OK であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // ブロッキング接続がシグナル中断後の完了確認で保留エラーを検出することの確認
 TEST_F(socketTest, connect_reports_pending_error_after_interrupt)
@@ -2077,9 +2138,11 @@ TEST_F(socketTest, connect_reports_pending_error_after_interrupt)
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
               actual_ret); // [確認_異常系] - 保留エラーがある場合の cplat_socket_connect の戻り値が CPLAT_ERR_UNKNOWN であること。
+    // [サブ手順参照 名前=socketTest.expect_detail 区分=異常系]
     expect_detail(detail, CPLAT_ERROR_DOMAIN_SOCKET_ERRNO, CPLAT_ERR_UNKNOWN,
-                  (unsigned long)ECONNREFUSED); // [確認_異常系 回数=3] - 詳細に接続拒否が記録されること。
+                  (unsigned long)ECONNREFUSED); // 詳細に接続拒否が記録されること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // ブロッキング接続がシグナル中断後の待機失敗を通知することの確認
 TEST_F(socketTest, connect_reports_wait_failure_after_interrupt)
@@ -2107,9 +2170,11 @@ TEST_F(socketTest, connect_reports_wait_failure_after_interrupt)
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         actual_ret); // [確認_異常系] - 待機に失敗した場合の cplat_socket_connect の戻り値が CPLAT_ERR_UNKNOWN であること。
+    // [サブ手順参照 名前=socketTest.expect_detail 区分=異常系]
     expect_detail(detail, CPLAT_ERROR_DOMAIN_SOCKET_ERRNO, CPLAT_ERR_UNKNOWN,
-                  (unsigned long)EBADF); // [確認_異常系 回数=3] - 詳細に待機失敗の要因が記録されること。
+                  (unsigned long)EBADF); // 詳細に待機失敗の要因が記録されること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 // ブロッキング接続がシグナル中断後の待機で条件不成立となった場合にタイムアウトを通知することの確認
 TEST_F(socketTest, connect_reports_timeout_when_not_writable_after_interrupt)
@@ -2137,6 +2202,7 @@ TEST_F(socketTest, connect_reports_timeout_when_not_writable_after_interrupt)
         CPLAT_ERR_TIMEOUT,
         actual_ret); // [確認_異常系] - 条件不成立の場合の cplat_socket_connect の戻り値が CPLAT_ERR_TIMEOUT であること。
 }
+// [サブ手順参照 名前=socketTest.TearDown]
 
 #endif /* PLATFORM_LINUX */
 
@@ -2187,3 +2253,4 @@ TEST_F(socketTest, shutdown_receive_reports_results)
               socket); // [確認_正常系] - Windows の受信停止成功でソケットが無効値になること。
 #endif                 /* PLATFORM_WINDOWS */
 }
+// [サブ手順参照 名前=socketTest.TearDown]

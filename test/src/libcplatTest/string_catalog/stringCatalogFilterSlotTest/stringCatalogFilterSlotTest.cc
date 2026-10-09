@@ -58,19 +58,24 @@ class stringCatalogFilterSlotTest : public Test
     /** 作成したスロットです。 */
     cplat_string_catalog_filter_slot *slot = nullptr;
 
+    // [サブ手順 名前=stringCatalogFilterSlotTest.SetUp]
     void SetUp() override
     {
         memset(dest, 0, sizeof(dest));
         cplat_string_catalog_set_language(CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL);
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=stringCatalogFilterSlotTest.TearDown]
     void TearDown() override
     {
         cplat_string_catalog_filter_slot_dispose(&slot);
     }
+    // [サブ手順終了]
 };
 
 // 読み書きロックの作成に失敗した場合、作成関数の結果コードを返し、スロットを返さないことの確認
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
 TEST_F(stringCatalogFilterSlotTest, create_returns_rwlock_create_result)
 {
     // Arrange
@@ -95,8 +100,10 @@ TEST_F(stringCatalogFilterSlotTest, create_returns_rwlock_create_result)
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret); // [確認_異常系] - 作成関数の結果コードを返すこと。
     EXPECT_EQ(nullptr, slot);                 // [確認_異常系] - 格納先へ NULL を格納すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]
 
 // ミューテックスの作成に失敗した場合、作成関数の結果コードを返し、スロットを返さないことの確認
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
 TEST_F(stringCatalogFilterSlotTest, create_returns_lock_create_result)
 {
     // Arrange
@@ -119,8 +126,10 @@ TEST_F(stringCatalogFilterSlotTest, create_returns_lock_create_result)
     EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED, actual_ret); // [確認_異常系] - 作成関数の結果コードを返すこと。
     EXPECT_EQ(nullptr, slot);                           // [確認_異常系] - 格納先へ NULL を格納すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]
 
 // 判定のための読み書きロックを取得できない場合、結果コードを返し、文字列を組み立てないことの確認
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
 TEST_F(stringCatalogFilterSlotTest, vformat_returns_lock_result_without_formatting)
 {
     // Arrange
@@ -146,8 +155,10 @@ TEST_F(stringCatalogFilterSlotTest, vformat_returns_lock_result_without_formatti
     EXPECT_EQ(0, actual_matched);             // [確認_異常系] - 一致結果へ 0 を格納すること。
     EXPECT_STREQ("", dest);                   // [確認_異常系] - 格納先を空文字列にし、文字列を組み立てないこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]
 
 // 判定のための読み書きロックを取得できた場合、文字列を組み立てることの確認
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
 TEST_F(stringCatalogFilterSlotTest, vformat_formats_when_lock_succeeds)
 {
     // Arrange
@@ -170,8 +181,10 @@ TEST_F(stringCatalogFilterSlotTest, vformat_formats_when_lock_succeeds)
     EXPECT_EQ(0, actual_matched);    // [確認_正常系] - 条件がないため不一致であること。
     EXPECT_STREQ("number 7", dest);  // [確認_正常系] - 不一致でも文字列を組み立てること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]
 
 // カタログに存在しない文字列キーは判定せず、文字列の組み立てへ進むことの確認
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
 TEST_F(stringCatalogFilterSlotTest, vformat_skips_lock_for_missing_key)
 {
     // Arrange
@@ -194,8 +207,10 @@ TEST_F(stringCatalogFilterSlotTest, vformat_skips_lock_for_missing_key)
     EXPECT_EQ(CPLAT_ERR_NOT_FOUND, actual_ret); // [確認_異常系] - 書式展開の結果コードを返すこと。
     EXPECT_EQ(0, actual_matched);               // [確認_異常系] - 一致結果へ 0 を格納すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]
 
 // 確認を通らないカタログでは、確認の結果コードを返し、スロットを返さないことの確認
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
 TEST_F(stringCatalogFilterSlotTest, create_rejects_malformed_catalog)
 {
     // Arrange
@@ -212,8 +227,10 @@ TEST_F(stringCatalogFilterSlotTest, create_rejects_malformed_catalog)
     EXPECT_EQ(CPLAT_ERR_MALFORMED_DEFINITION, actual_ret); // [確認_異常系] - カタログの確認の結果コードを返すこと。
     EXPECT_EQ(nullptr, slot);                              // [確認_異常系] - 格納先へ NULL を格納すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]
 
 // 名前解決テーブルに NULL の名前がある場合は拒否することの確認
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
 TEST_F(stringCatalogFilterSlotTest, create_rejects_null_key_name)
 {
     // Arrange
@@ -231,8 +248,10 @@ TEST_F(stringCatalogFilterSlotTest, create_rejects_null_key_name)
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - CPLAT_ERR_INVALID_ARGUMENT を返すこと。
     EXPECT_EQ(nullptr, slot);                          // [確認_異常系] - 格納先へ NULL を格納すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]
 
 // 名前解決テーブルにカタログに存在しない文字列キーがある場合は拒否することの確認
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
 TEST_F(stringCatalogFilterSlotTest, create_rejects_missing_key_in_key_names)
 {
     // Arrange
@@ -250,8 +269,10 @@ TEST_F(stringCatalogFilterSlotTest, create_rejects_missing_key_in_key_names)
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - CPLAT_ERR_INVALID_ARGUMENT を返すこと。
     EXPECT_EQ(nullptr, slot);                          // [確認_異常系] - 格納先へ NULL を格納すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]
 
 // 名前解決テーブルに重複する名前がある場合は拒否することの確認
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
 TEST_F(stringCatalogFilterSlotTest, create_rejects_duplicate_key_name)
 {
     // Arrange
@@ -270,8 +291,10 @@ TEST_F(stringCatalogFilterSlotTest, create_rejects_duplicate_key_name)
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - CPLAT_ERR_INVALID_ARGUMENT を返すこと。
     EXPECT_EQ(nullptr, slot);                          // [確認_異常系] - 格納先へ NULL を格納すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]
 
 // 異なる名前が同じ文字列キーを指す名前解決テーブルは受け付けることの確認
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
 TEST_F(stringCatalogFilterSlotTest, create_accepts_aliases_for_same_key)
 {
     // Arrange
@@ -290,8 +313,10 @@ TEST_F(stringCatalogFilterSlotTest, create_accepts_aliases_for_same_key)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
     EXPECT_NE(nullptr, slot);        // [確認_正常系] - スロットを格納すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]
 
 // 項目数が 0 で配列が NULL のカタログは、何もしないカタログとして受け付けることの確認
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
 TEST_F(stringCatalogFilterSlotTest, create_accepts_empty_catalog)
 {
     // Arrange
@@ -314,8 +339,10 @@ TEST_F(stringCatalogFilterSlotTest, create_accepts_empty_catalog)
     EXPECT_NE(nullptr, slot);                        // [確認_正常系] - スロットを格納すること。
     EXPECT_EQ(CPLAT_ERR_NOT_FOUND, actual_test_ret); // [確認_正常系] - どの文字列キーも判定の対象にならないこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]
 
 // スロットの作成に使用したカタログを返すことの確認
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
 TEST_F(stringCatalogFilterSlotTest, get_catalog_returns_creation_catalog)
 {
     // Arrange
@@ -333,8 +360,10 @@ TEST_F(stringCatalogFilterSlotTest, get_catalog_returns_creation_catalog)
     // Assert
     EXPECT_EQ(filter_test_catalog(), actual_catalog); // [確認_正常系] - 作成時に指定したカタログを返すこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]
 
 // スロットが NULL の場合は NULL を返すことの確認
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
 TEST_F(stringCatalogFilterSlotTest, get_catalog_returns_null_for_null_slot)
 {
     // Arrange
@@ -348,8 +377,10 @@ TEST_F(stringCatalogFilterSlotTest, get_catalog_returns_null_for_null_slot)
     // Assert
     EXPECT_EQ(nullptr, actual_catalog); // [確認_異常系] - NULL を返すこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]
 
 // 格納先が NULL の場合は、判定せずに CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
 TEST_F(stringCatalogFilterSlotTest, vformat_rejects_null_dest)
 {
     // Arrange
@@ -371,8 +402,10 @@ TEST_F(stringCatalogFilterSlotTest, vformat_rejects_null_dest)
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - CPLAT_ERR_INVALID_ARGUMENT を返すこと。
     EXPECT_EQ(0, actual_matched);                      // [確認_異常系] - 一致結果へ 0 を格納すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]
 
 // 分類値の名前に不正な設定がある場合は拒否することの確認
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
 TEST_F(stringCatalogFilterSlotTest, create_rejects_invalid_category_names)
 {
     // Arrange
@@ -391,3 +424,4 @@ TEST_F(stringCatalogFilterSlotTest, create_rejects_invalid_category_names)
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - CPLAT_ERR_INVALID_ARGUMENT を返すこと。
     EXPECT_EQ(nullptr, slot);                          // [確認_異常系] - 格納先へ NULL を格納すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]

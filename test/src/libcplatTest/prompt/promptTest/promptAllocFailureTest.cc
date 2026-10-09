@@ -14,6 +14,7 @@ class promptAllocFailureTest : public Test
   protected:
     cplat_prompt *prompt_ = NULL;
 
+    // [サブ手順 名前=promptAllocFailureTest.SetUp]
     void SetUp() override
     {
         promptFakeReset();
@@ -23,15 +24,19 @@ class promptAllocFailureTest : public Test
         /* 端末に接続していない実行環境でも対話パスを通すため、TTY 状態を直接立てる */
         prompt_->is_tty = 1;
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=promptAllocFailureTest.TearDown]
     void TearDown() override
     {
         cplat_prompt_dispose(prompt_);
         prompt_ = NULL;
     }
+    // [サブ手順終了]
 };
 
 // ハンドルの確保に失敗した場合に生成が失敗することの確認
+// [サブ手順参照 名前=promptAllocFailureTest.SetUp]
 TEST_F(promptAllocFailureTest, create_returns_null_when_handle_allocation_fails)
 {
     // Arrange
@@ -50,8 +55,10 @@ TEST_F(promptAllocFailureTest, create_returns_null_when_handle_allocation_fails)
     EXPECT_EQ((cplat_prompt *)NULL,
               handle); // [確認_異常系] - cplat_prompt_create の戻り値が NULL であること。
 }
+// [サブ手順参照 名前=promptAllocFailureTest.TearDown]
 
 // 編集バッファーの確保に失敗した場合に生成が失敗することの確認
+// [サブ手順参照 名前=promptAllocFailureTest.SetUp]
 TEST_F(promptAllocFailureTest, create_returns_null_when_edit_buffer_allocation_fails)
 {
     // Arrange
@@ -70,8 +77,10 @@ TEST_F(promptAllocFailureTest, create_returns_null_when_edit_buffer_allocation_f
     EXPECT_EQ((cplat_prompt *)NULL,
               handle); // [確認_異常系] - cplat_prompt_create の戻り値が NULL であること。
 }
+// [サブ手順参照 名前=promptAllocFailureTest.TearDown]
 
 // コンテキスト配列の拡張に失敗した場合に cplat_fgets へフォールバックすることの確認
+// [サブ手順参照 名前=promptAllocFailureTest.SetUp]
 TEST_F(promptAllocFailureTest, readline_falls_back_when_context_expansion_fails)
 {
     // Arrange
@@ -96,8 +105,10 @@ TEST_F(promptAllocFailureTest, readline_falls_back_when_context_expansion_fails)
         actual_ret); // [確認_異常系] - コンテキストを取得できず cplat_fgets へフォールバックし、標準入力が EOF のため CPLAT_ERR_EOF が返ること。
     EXPECT_EQ(0, promptFakeEnterRawCount()); // [確認_異常系] - raw モードへ移行しないこと。
 }
+// [サブ手順参照 名前=promptAllocFailureTest.TearDown]
 
 // 履歴の退避バッファーの確保に失敗した場合に cplat_fgets へフォールバックすることの確認
+// [サブ手順参照 名前=promptAllocFailureTest.SetUp]
 TEST_F(promptAllocFailureTest, readline_falls_back_when_saved_line_allocation_fails)
 {
     // Arrange
@@ -122,8 +133,10 @@ TEST_F(promptAllocFailureTest, readline_falls_back_when_saved_line_allocation_fa
         actual_ret); // [確認_異常系] - コンテキストを取得できず cplat_fgets へフォールバックし、標準入力が EOF のため CPLAT_ERR_EOF が返ること。
     EXPECT_EQ(0, promptFakeEnterRawCount()); // [確認_異常系] - raw モードへ移行しないこと。
 }
+// [サブ手順参照 名前=promptAllocFailureTest.TearDown]
 
 // 履歴エントリの確保に失敗しても行の確定が成功することの確認
+// [サブ手順参照 名前=promptAllocFailureTest.SetUp]
 TEST_F(promptAllocFailureTest, readline_succeeds_when_history_entry_allocation_fails)
 {
     // Arrange
@@ -148,8 +161,10 @@ TEST_F(promptAllocFailureTest, readline_succeeds_when_history_entry_allocation_f
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 履歴へ残せなくても cplat_prompt_readline_at は CPLAT_OK を返すこと。
     EXPECT_STREQ("abc", buf);    // [確認_正常系] - 入力した "abc" が返ること。
 }
+// [サブ手順参照 名前=promptAllocFailureTest.TearDown]
 
 // 書式バッファーの確保に失敗した場合に空のプロンプトで継続することの確認
+// [サブ手順参照 名前=promptAllocFailureTest.SetUp]
 TEST_F(promptAllocFailureTest, readline_fmt_continues_with_empty_prompt_when_allocation_fails)
 {
     // Arrange
@@ -177,8 +192,10 @@ TEST_F(promptAllocFailureTest, readline_fmt_continues_with_empty_prompt_when_all
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 空のプロンプトで継続し CPLAT_OK が返ること。
     EXPECT_STREQ("abc", buf);    // [確認_正常系] - 入力した "abc" が返ること。
 }
+// [サブ手順参照 名前=promptAllocFailureTest.TearDown]
 
 // 書式バッファーの再確保に失敗した場合に切り捨てて継続することの確認
+// [サブ手順参照 名前=promptAllocFailureTest.SetUp]
 TEST_F(promptAllocFailureTest, readline_fmt_truncates_prompt_when_reallocation_fails)
 {
     // Arrange
@@ -210,8 +227,10 @@ TEST_F(promptAllocFailureTest, readline_fmt_truncates_prompt_when_reallocation_f
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - プロンプトを切り捨てて継続し CPLAT_OK が返ること。
     EXPECT_STREQ("abc", buf);    // [確認_正常系] - 入力した "abc" が返ること。
 }
+// [サブ手順参照 名前=promptAllocFailureTest.TearDown]
 
 // 初期値のための編集バッファーの拡張に失敗した場合に、メモリ不足を返すことの確認
+// [サブ手順参照 名前=promptAllocFailureTest.SetUp]
 TEST_F(promptAllocFailureTest, readline_with_initial_reports_out_of_memory_when_edit_buffer_expansion_fails)
 {
     // Arrange
@@ -242,3 +261,4 @@ TEST_F(promptAllocFailureTest, readline_with_initial_reports_out_of_memory_when_
     EXPECT_STREQ("", buf);                          // [確認_異常系] - 出力先が空文字列であること。
     EXPECT_EQ(leave_raw_count_before + 1, promptFakeLeaveRawCount()); // [確認_異常系] - raw モードを解除して戻ること。
 }
+// [サブ手順参照 名前=promptAllocFailureTest.TearDown]

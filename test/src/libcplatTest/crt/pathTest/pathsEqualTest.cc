@@ -10,13 +10,16 @@ using namespace testing;
 namespace
 {
 
+// [サブ手順 名前=pathsEqualTest.assert_path_get_full_success]
 static void assert_path_get_full_success(char *path_out, size_t path_size, const char *path)
 {
     cplat_error err;
     ASSERT_EQ(0, cplat_path_get_full(path_out, path_size, &err, path));
     // [状態確認] - `cplat_path_get_full(path_out, path_size, &err, path)` の戻り値が `0` であること。
 }
+// [サブ手順終了]
 
+// [サブ手順 名前=pathsEqualTest.build_path]
 static void build_path(char *path_out, size_t path_size, const char *lhs, const char *rhs)
 {
     int written = std::snprintf(path_out, path_size, "%s/%s", lhs, rhs);
@@ -25,7 +28,9 @@ static void build_path(char *path_out, size_t path_size, const char *lhs, const 
     ASSERT_LT((size_t)written, path_size);
     // [状態確認] - `(size_t)written` が `path_size` より小さいこと。
 }
+// [サブ手順終了]
 
+// [サブ手順 名前=pathsEqualTest.build_three_part_path]
 static void build_three_part_path(char *path_out, size_t path_size, const char *lhs, const char *middle,
                                   const char *rhs)
 {
@@ -35,6 +40,7 @@ static void build_three_part_path(char *path_out, size_t path_size, const char *
     ASSERT_LT((size_t)written, path_size);
     // [状態確認] - `(size_t)written` が `path_size` より小さいこと。
 }
+// [サブ手順終了]
 
 } // namespace
 
@@ -116,6 +122,7 @@ TEST_F(pathsEqualTest, compares_relative_and_absolute_current_directory_as_equal
     cplat_error err;
     int equal = 0;
 
+    // [サブ手順参照 名前=pathsEqualTest.assert_path_get_full_success]
     assert_path_get_full_success(absolute_current_dir, sizeof(absolute_current_dir),
                                  "."); // [状態] - カレント ディレクトリの絶対パスを取得する。
 
@@ -140,9 +147,12 @@ TEST_F(pathsEqualTest, normalizes_dotdot_and_backslash_segments_before_comparing
     cplat_error err;
     int equal = 0;
 
+    // [サブ手順参照 名前=pathsEqualTest.assert_path_get_full_success]
     assert_path_get_full_success(base, sizeof(base), ".");
+    // [サブ手順参照 名前=pathsEqualTest.build_three_part_path]
     build_three_part_path(lhs, sizeof(lhs), base, "alpha\\..",
                           "beta.txt");              // [状態] - 左辺を "alpha\\.." を挟んだ表記ゆれパスとする。
+    // [サブ手順参照 名前=pathsEqualTest.build_path]
     build_path(rhs, sizeof(rhs), base, "beta.txt"); // [状態] - 右辺を正規化済みの同一実体パスとする。
 
     // Pre-Assert
@@ -165,8 +175,11 @@ TEST_F(pathsEqualTest, returns_zero_for_different_paths)
     cplat_error err;
     int equal = 1;
 
+    // [サブ手順参照 名前=pathsEqualTest.assert_path_get_full_success]
     assert_path_get_full_success(base, sizeof(base), ".");
+    // [サブ手順参照 名前=pathsEqualTest.build_path]
     build_path(lhs, sizeof(lhs), base, "alpha.bin"); // [状態] - 左辺を "alpha.bin" とする。
+    // [サブ手順参照 名前=pathsEqualTest.build_path]
     build_path(rhs, sizeof(rhs), base, "beta.bin");  // [状態] - 右辺を "beta.bin" とする。
 
     // Pre-Assert
@@ -214,8 +227,11 @@ TEST_F(pathsEqualTest, keeps_case_sensitive_comparison_on_linux)
     cplat_error err;
     int equal = 1;
 
+    // [サブ手順参照 名前=pathsEqualTest.assert_path_get_full_success]
     assert_path_get_full_success(base, sizeof(base), ".");
+    // [サブ手順参照 名前=pathsEqualTest.build_path]
     build_path(lhs, sizeof(lhs), base, "Case.bin"); // [状態] - 左辺を "Case.bin" とする。
+    // [サブ手順参照 名前=pathsEqualTest.build_path]
     build_path(rhs, sizeof(rhs), base, "case.bin"); // [状態] - 右辺を大小文字だけが異なる "case.bin" とする。
 
     // Pre-Assert
@@ -238,8 +254,11 @@ TEST_F(pathsEqualTest, ignores_case_differences_on_windows)
     cplat_error err;
     int equal = 0;
 
+    // [サブ手順参照 名前=pathsEqualTest.assert_path_get_full_success]
     assert_path_get_full_success(base, sizeof(base), ".");
+    // [サブ手順参照 名前=pathsEqualTest.build_path]
     build_path(lhs, sizeof(lhs), base, "Case.bin"); // [状態] - 左辺を "Case.bin" とする。
+    // [サブ手順参照 名前=pathsEqualTest.build_path]
     build_path(rhs, sizeof(rhs), base, "case.bin"); // [状態] - 右辺を大小文字だけが異なる "case.bin" とする。
 
     // Pre-Assert

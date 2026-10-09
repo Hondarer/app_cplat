@@ -32,6 +32,7 @@ cplat_timespec make_timestamp(time_t tv_sec, int64_t tv_nsec)
     return timestamp;
 }
 
+// [サブ手順 名前=fileTimestampTest.create_file]
 void create_file(const char *path)
 {
     FILE *stream = cplat_fopen(path, "wb", NULL);
@@ -43,25 +44,32 @@ void create_file(const char *path)
     ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, NULL));
     // [状態確認] - `cplat_fclose(stream, NULL)` の戻り値が `CPLAT_OK` であること。
 }
+// [サブ手順終了]
 
 } // namespace
 
 class fileTimestampTest : public Test
 {
   protected:
+    // [サブ手順 名前=fileTimestampTest.SetUp]
     void SetUp() override
     {
         (void)cplat_remove(kPath, NULL);
         (void)cplat_remove(kMissingPath, NULL);
+        // [サブ手順参照 名前=fileTimestampTest.create_file]
         create_file(kPath);
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=fileTimestampTest.TearDown]
     void TearDown() override
     {
         (void)cplat_remove(kPath, NULL);
     }
+    // [サブ手順終了]
 
     /* 書き込みアクセスで対象ファイルを開きます。 */
+    // [サブ手順 名前=fileTimestampTest.open_writable]
     void open_writable(cplat_file *file)
     {
         cplat_file_init(file);
@@ -69,9 +77,11 @@ class fileTimestampTest : public Test
                   cplat_file_open(file, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL));
         // [状態確認] - `cplat_file_open(file, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL)` の戻り値が `CPLAT_OK` であること。
     }
+    // [サブ手順終了]
 };
 
 // パス版で設定した最終更新日時が、パス版で取得し直すと一致することの確認
+// [サブ手順参照 名前=fileTimestampTest.SetUp]
 TEST_F(fileTimestampTest, path_set_then_path_get_round_trips)
 {
     // Arrange
@@ -93,8 +103,10 @@ TEST_F(fileTimestampTest, path_set_then_path_get_round_trips)
     EXPECT_EQ(expected.tv_nsec,
               actual.tv_nsec); // [確認_正常系] - ナノ秒部が一致すること (サブ秒を保持するファイル システムが前提)。
 }
+// [サブ手順参照 名前=fileTimestampTest.TearDown]
 
 // ハンドル版で設定した最終更新日時が、ハンドル版で取得し直すと一致することの確認
+// [サブ手順参照 名前=fileTimestampTest.SetUp]
 TEST_F(fileTimestampTest, handle_set_then_handle_get_round_trips)
 {
     // Arrange
@@ -102,6 +114,7 @@ TEST_F(fileTimestampTest, handle_set_then_handle_get_round_trips)
     cplat_timespec actual = make_timestamp(0, 0);
     cplat_file file;
 
+    // [サブ手順参照 名前=fileTimestampTest.open_writable]
     open_writable(&file); // [状態] - 書き込みアクセスでファイルを開く。
 
     // Pre-Assert
@@ -121,8 +134,10 @@ TEST_F(fileTimestampTest, handle_set_then_handle_get_round_trips)
     EXPECT_EQ(CPLAT_OK, cplat_file_close(&file, NULL));
     // [確認_正常系] - `cplat_file_close(&file, NULL)` の戻り値が `CPLAT_OK` であること。
 }
+// [サブ手順参照 名前=fileTimestampTest.TearDown]
 
 // パス版で設定した最終更新日時を、ハンドル版で取得しても一致することの確認
+// [サブ手順参照 名前=fileTimestampTest.SetUp]
 TEST_F(fileTimestampTest, path_set_is_visible_from_handle_get)
 {
     // Arrange
@@ -132,6 +147,7 @@ TEST_F(fileTimestampTest, path_set_is_visible_from_handle_get)
 
     ASSERT_EQ(CPLAT_OK, cplat_file_set_path_modified_timestamp(kPath, &expected, NULL));
     // [状態確認] - `cplat_file_set_path_modified_timestamp(kPath, &expected, NULL)` の戻り値が `CPLAT_OK` であること。
+    // [サブ手順参照 名前=fileTimestampTest.open_writable]
     open_writable(&file); // [状態] - 設定後にファイルを開く。
 
     // Pre-Assert
@@ -148,8 +164,10 @@ TEST_F(fileTimestampTest, path_set_is_visible_from_handle_get)
     EXPECT_EQ(CPLAT_OK, cplat_file_close(&file, NULL));
     // [確認_正常系] - `cplat_file_close(&file, NULL)` の戻り値が `CPLAT_OK` であること。
 }
+// [サブ手順参照 名前=fileTimestampTest.TearDown]
 
 // 取得した最終更新日時の秒部が cplat_stat の st_mtime と一致することの確認
+// [サブ手順参照 名前=fileTimestampTest.SetUp]
 TEST_F(fileTimestampTest, seconds_agree_with_cplat_stat)
 {
     // Arrange
@@ -170,8 +188,10 @@ TEST_F(fileTimestampTest, seconds_agree_with_cplat_stat)
     EXPECT_EQ(expected.tv_sec, static_cast<time_t>(file_stat.st_mtime));
     // [確認_正常系] - `file_stat.st_mtime` を `time_t` に変換した値が、設定した秒数 `expected.tv_sec` と一致すること。
 }
+// [サブ手順参照 名前=fileTimestampTest.TearDown]
 
 // 過去と未来のいずれの日時も往復することの確認
+// [サブ手順参照 名前=fileTimestampTest.SetUp]
 TEST_F(fileTimestampTest, past_and_future_timestamps_round_trip)
 {
     // Arrange
@@ -198,8 +218,10 @@ TEST_F(fileTimestampTest, past_and_future_timestamps_round_trip)
     EXPECT_EQ(CPLAT_OK, actual_ret_get_future);  // [確認_正常系] - 未来の取得が CPLAT_OK であること。
     EXPECT_EQ(future.tv_sec, actual_future.tv_sec); // [確認_正常系] - 未来の秒部が一致すること。
 }
+// [サブ手順参照 名前=fileTimestampTest.TearDown]
 
 // 最終更新日時の設定が最終アクセス日時を変更しないことの確認
+// [サブ手順参照 名前=fileTimestampTest.SetUp]
 TEST_F(fileTimestampTest, set_does_not_change_access_time)
 {
     // Arrange
@@ -222,8 +244,10 @@ TEST_F(fileTimestampTest, set_does_not_change_access_time)
     // [確認_正常系] - `cplat_stat(&after, NULL, kPath)` の戻り値が `CPLAT_OK` であること。
     EXPECT_EQ(before.st_atime, after.st_atime); // [確認_正常系] - 最終アクセス日時が変化しないこと。
 }
+// [サブ手順参照 名前=fileTimestampTest.TearDown]
 
 // 読み取り専用で開いたハンドルへの設定が権限エラーになることの確認
+// [サブ手順参照 名前=fileTimestampTest.SetUp]
 TEST_F(fileTimestampTest, set_on_read_only_handle_is_permission_denied)
 {
     // Arrange
@@ -253,8 +277,10 @@ TEST_F(fileTimestampTest, set_on_read_only_handle_is_permission_denied)
     EXPECT_EQ(CPLAT_OK, cplat_file_close(&file, NULL));
     // [確認_正常系] - `cplat_file_close(&file, NULL)` の戻り値が `CPLAT_OK` であること。
 }
+// [サブ手順参照 名前=fileTimestampTest.TearDown]
 
 // 存在しないパスに対する取得が対象なしの要因になることの確認
+// [サブ手順参照 名前=fileTimestampTest.SetUp]
 TEST_F(fileTimestampTest, get_on_missing_path_reports_not_found)
 {
     // Arrange
@@ -275,8 +301,10 @@ TEST_F(fileTimestampTest, get_on_missing_path_reports_not_found)
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_NOT_FOUND));
     // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_NOT_FOUND)` の戻り値が `1` であること。
 }
+// [サブ手順参照 名前=fileTimestampTest.TearDown]
 
 // 存在しないパスに対する設定が対象なしの要因になることの確認
+// [サブ手順参照 名前=fileTimestampTest.SetUp]
 TEST_F(fileTimestampTest, set_on_missing_path_reports_not_found)
 {
     // Arrange
@@ -297,8 +325,10 @@ TEST_F(fileTimestampTest, set_on_missing_path_reports_not_found)
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_NOT_FOUND));
     // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_NOT_FOUND)` の戻り値が `1` であること。
 }
+// [サブ手順参照 名前=fileTimestampTest.TearDown]
 
 // 引数に NULL を指定した場合に引数不正を返すことの確認
+// [サブ手順参照 名前=fileTimestampTest.SetUp]
 TEST_F(fileTimestampTest, null_arguments_are_rejected)
 {
     // Arrange
@@ -308,6 +338,7 @@ TEST_F(fileTimestampTest, null_arguments_are_rejected)
     cplat_file open_file;
 
     cplat_file_init(&file); // [状態] - 無効なハンドルを用意する。
+    // [サブ手順参照 名前=fileTimestampTest.open_writable]
     open_writable(&open_file); // [状態] - 有効なハンドルを用意する。
 
     // Pre-Assert
@@ -349,10 +380,12 @@ TEST_F(fileTimestampTest, null_arguments_are_rejected)
     EXPECT_EQ(CPLAT_OK, cplat_file_close(&open_file, NULL));
     // [確認_正常系] - `cplat_file_close(&open_file, NULL)` の戻り値が `CPLAT_OK` であること。
 }
+// [サブ手順参照 名前=fileTimestampTest.TearDown]
 
 #if defined(PLATFORM_WINDOWS)
 
 // Windows でパスがワイド文字へ変換できない場合に取得が名称長超過になることの確認
+// [サブ手順参照 名前=fileTimestampTest.SetUp]
 TEST_F(fileTimestampTest, get_path_reports_name_too_long_when_path_exceeds_wide_buffer)
 {
     // Arrange
@@ -374,8 +407,10 @@ TEST_F(fileTimestampTest, get_path_reports_name_too_long_when_path_exceeds_wide_
     EXPECT_EQ(1, cplat_error_is(&detail,
                                    CPLAT_CAUSE_NAME_TOO_LONG)); // [確認_異常系] - ENAMETOOLONG の要因であること。
 }
+// [サブ手順参照 名前=fileTimestampTest.TearDown]
 
 // Windows でパスがワイド文字へ変換できない場合に設定が名称長超過になることの確認
+// [サブ手順参照 名前=fileTimestampTest.SetUp]
 TEST_F(fileTimestampTest, set_path_reports_name_too_long_when_path_exceeds_wide_buffer)
 {
     // Arrange
@@ -397,5 +432,6 @@ TEST_F(fileTimestampTest, set_path_reports_name_too_long_when_path_exceeds_wide_
     EXPECT_EQ(1, cplat_error_is(&detail,
                                    CPLAT_CAUSE_NAME_TOO_LONG)); // [確認_異常系] - ENAMETOOLONG の要因であること。
 }
+// [サブ手順参照 名前=fileTimestampTest.TearDown]
 
 #endif /* PLATFORM_WINDOWS */

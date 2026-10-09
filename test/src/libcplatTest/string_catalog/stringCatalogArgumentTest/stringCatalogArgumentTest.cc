@@ -38,6 +38,7 @@ class stringCatalogArgumentTest : public Test
     /** カタログ項目が参照する引数定義です。 */
     cplat_string_catalog_argument arguments[CPLAT_STRING_CATALOG_ARGUMENT_MAX];
 
+    // [サブ手順 名前=stringCatalogArgumentTest.SetUp]
     void SetUp() override
     {
         memset(values, 0, sizeof(values));
@@ -46,6 +47,7 @@ class stringCatalogArgumentTest : public Test
         entry.arguments = arguments;
         entry.key = 1;
     }
+    // [サブ手順終了]
 
     /**
      *  引数スキーマへ引数種別を 1 個追加します。
@@ -58,6 +60,7 @@ class stringCatalogArgumentTest : public Test
 };
 
 // 引数を取らない定義では値を取り出さないことの確認
+// [サブ手順参照 名前=stringCatalogArgumentTest.SetUp]
 TEST_F(stringCatalogArgumentTest, no_argument)
 {
     // Arrange
@@ -75,6 +78,7 @@ TEST_F(stringCatalogArgumentTest, no_argument)
 }
 
 // 引数を割り当てないインデックスを読み飛ばすことの確認
+// [サブ手順参照 名前=stringCatalogArgumentTest.SetUp]
 TEST_F(stringCatalogArgumentTest, unused_argument_kind_is_skipped)
 {
     // Arrange
@@ -100,6 +104,7 @@ TEST_F(stringCatalogArgumentTest, unused_argument_kind_is_skipped)
 }
 
 // 引数種別ごとに、対応する型の値を取り出すことの確認
+// [サブ手順参照 名前=stringCatalogArgumentTest.SetUp]
 TEST_F(stringCatalogArgumentTest, all_argument_kinds)
 {
     // Arrange
@@ -186,6 +191,7 @@ TEST_F(stringCatalogArgumentTest, all_argument_kinds)
 }
 
 // 列挙に無い引数種別が定義エラーになることの確認
+// [サブ手順参照 名前=stringCatalogArgumentTest.SetUp]
 TEST_F(stringCatalogArgumentTest, unknown_argument_kind)
 {
     // Arrange

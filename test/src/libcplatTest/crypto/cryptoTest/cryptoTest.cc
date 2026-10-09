@@ -12,14 +12,17 @@ class cryptoTest : public Test
     uint8_t nonce_[CPLAT_CRYPTO_NONCE_SIZE];
     unsigned int pad_ = 0; /* 明示的アラインメント */
 
+    // [サブ手順 名前=cryptoTest.SetUp]
     void SetUp() override
     {
         std::memset(key_, 0x11, sizeof(key_));
         std::memset(nonce_, 0x22, sizeof(nonce_));
     }
+    // [サブ手順終了]
 };
 
 // 暗号化した結果を復号すると元のデータへ戻ることの確認
+// [サブ手順参照 名前=cryptoTest.SetUp]
 TEST_F(cryptoTest, round_trip_restores_original_bytes)
 {
     // Arrange
@@ -48,6 +51,7 @@ TEST_F(cryptoTest, round_trip_restores_original_bytes)
 }
 
 // AAD 付きの往復が成功することの確認
+// [サブ手順参照 名前=cryptoTest.SetUp]
 TEST_F(cryptoTest, round_trip_with_aad)
 {
     // Arrange
@@ -75,6 +79,7 @@ TEST_F(cryptoTest, round_trip_with_aad)
 }
 
 // AAD のポインターが非 NULL でも長さ 0 の場合に往復が成功することの確認
+// [サブ手順参照 名前=cryptoTest.SetUp]
 TEST_F(cryptoTest, round_trip_with_nonnull_zero_length_aad)
 {
     // Arrange
@@ -104,6 +109,7 @@ TEST_F(cryptoTest, round_trip_with_nonnull_zero_length_aad)
 }
 
 // 改ざんされた暗号文の復号が認証に失敗することの確認
+// [サブ手順参照 名前=cryptoTest.SetUp]
 TEST_F(cryptoTest, decrypt_rejects_tampered_cipher_text)
 {
     // Arrange
@@ -132,6 +138,7 @@ TEST_F(cryptoTest, decrypt_rejects_tampered_cipher_text)
 }
 
 // 異なる鍵での復号が認証に失敗することの確認
+// [サブ手順参照 名前=cryptoTest.SetUp]
 TEST_F(cryptoTest, decrypt_rejects_wrong_key)
 {
     // Arrange
@@ -161,6 +168,7 @@ TEST_F(cryptoTest, decrypt_rejects_wrong_key)
 }
 
 // 空の平文が暗号化・復号できることの確認
+// [サブ手順参照 名前=cryptoTest.SetUp]
 TEST_F(cryptoTest, round_trip_of_empty_plain_text)
 {
     // Arrange
@@ -185,6 +193,7 @@ TEST_F(cryptoTest, round_trip_of_empty_plain_text)
 }
 
 // cplat_crypto_encrypt が不正な引数を拒否することの確認
+// [サブ手順参照 名前=cryptoTest.SetUp]
 TEST_F(cryptoTest, encrypt_rejects_invalid_arguments)
 {
     // Arrange
@@ -218,6 +227,7 @@ TEST_F(cryptoTest, encrypt_rejects_invalid_arguments)
 }
 
 // 暗号文とタグが収まらない出力バッファーが拒否されることの確認
+// [サブ手順参照 名前=cryptoTest.SetUp]
 TEST_F(cryptoTest, encrypt_returns_buffer_too_small)
 {
     // Arrange
@@ -238,6 +248,7 @@ TEST_F(cryptoTest, encrypt_returns_buffer_too_small)
 }
 
 // cplat_crypto_decrypt が不正な引数を拒否することの確認
+// [サブ手順参照 名前=cryptoTest.SetUp]
 TEST_F(cryptoTest, decrypt_rejects_invalid_arguments)
 {
     // Arrange
@@ -275,6 +286,7 @@ TEST_F(cryptoTest, decrypt_rejects_invalid_arguments)
 }
 
 // 平文が収まらない出力バッファーが拒否されることの確認
+// [サブ手順参照 名前=cryptoTest.SetUp]
 TEST_F(cryptoTest, decrypt_returns_buffer_too_small)
 {
     // Arrange
@@ -294,6 +306,7 @@ TEST_F(cryptoTest, decrypt_returns_buffer_too_small)
 }
 
 // パスフレーズから鍵が導出されることの確認
+// [サブ手順参照 名前=cryptoTest.SetUp]
 TEST_F(cryptoTest, passphrase_to_key_derives_deterministic_key)
 {
     // Arrange
@@ -315,6 +328,7 @@ TEST_F(cryptoTest, passphrase_to_key_derives_deterministic_key)
 }
 
 // 長さ 0 のパスフレーズが受け付けられることの確認
+// [サブ手順参照 名前=cryptoTest.SetUp]
 TEST_F(cryptoTest, passphrase_to_key_accepts_empty_passphrase)
 {
     // Arrange
@@ -331,6 +345,7 @@ TEST_F(cryptoTest, passphrase_to_key_accepts_empty_passphrase)
 }
 
 // cplat_passphrase_to_key が不正な引数を拒否することの確認
+// [サブ手順参照 名前=cryptoTest.SetUp]
 TEST_F(cryptoTest, passphrase_to_key_rejects_invalid_arguments)
 {
     // Arrange

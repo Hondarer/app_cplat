@@ -1273,6 +1273,7 @@ TEST(pinnedPromptTest, status_apis_reject_invalid_position_and_alignment)
  *
  *  端末設定、SIGWINCH、端末サイズの取得は成功として扱います。
  */
+// [サブ手順 名前=pinnedPromptTest.expect_tty_input]
 static void expect_tty_input(Mock_ioctl &mock_ioctl, Mock_signal &mock_signal, Mock_termios &mock_termios,
                              Mock_unistd &mock_unistd, const std::string &bytes)
 {
@@ -1284,13 +1285,23 @@ static void expect_tty_input(Mock_ioctl &mock_ioctl, Mock_signal &mock_signal, M
     size.ws_row = 24;
     EXPECT_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
         .WillOnce(DoAll(SetArgPointee<4>(original), Return(0)));
+    // [Pre-Assert手順] - 端末設定の取得に成功し、元の設定を返す。
+    // [Pre-Assert確認_正常系] - tcgetattr() が STDIN_FILENO の端末設定を取得する引数で 1 回呼び出されること。
     EXPECT_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _)).WillRepeatedly(Return(0));
+    // [Pre-Assert手順] - 端末設定の変更に成功する。
+    // [Pre-Assert確認_正常系] - 端末設定の変更で tcsetattr() に STDIN_FILENO が渡されること。
     EXPECT_CALL(mock_signal, sigemptyset(_, _, _, _)).WillRepeatedly(Return(0));
+    // [Pre-Assert手順] - シグナル集合の初期化に成功する。
+    // [Pre-Assert確認_正常系] - シグナル集合の初期化で sigemptyset() が呼び出されること。
     EXPECT_CALL(mock_signal, sigaction(_, _, _, SIGWINCH, _, _)).WillRepeatedly(Return(0));
+    // [Pre-Assert手順] - SIGWINCH のハンドラー登録に成功する。
+    // [Pre-Assert確認_正常系] - sigaction() が SIGWINCH の設定を変更する引数で呼び出されること。
     EXPECT_CALL(mock_ioctl, ioctl(_, _, _, STDOUT_FILENO, TIOCGWINSZ, _))
         .WillRepeatedly(DoAll(Invoke([size](const char *, const int, const char *, const int, const unsigned long,
                                             void *arg) { *static_cast<struct winsize *>(arg) = size; }),
                               Return(0)));
+    // [Pre-Assert手順] - 端末サイズとして 80 列、24 行を返す。
+    // [Pre-Assert確認_正常系] - ioctl() が STDOUT_FILENO と TIOCGWINSZ を引数に端末サイズを取得すること。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
         .WillRepeatedly(Invoke(
             [bytes, position](const char *, const int, const char *, const int, void *arg, const size_t) -> ssize_t
@@ -1303,7 +1314,10 @@ static void expect_tty_input(Mock_ioctl &mock_ioctl, Mock_signal &mock_signal, M
                 (*position)++;
                 return 1;
             }));
+    // [Pre-Assert手順] - 指定した入力列を 1 バイトずつ返し、終端では 0 を返す。
+    // [Pre-Assert確認_正常系] - 端末入力を読む read() に STDIN_FILENO が渡されること。
 }
+// [サブ手順終了]
 
 // TTY の初期値付き readline で、初期値のまま Enter を押すと初期値が返ることの確認
 TEST(pinnedPromptTest, tty_readline_with_initial_returns_initial_text_on_enter)
@@ -1320,8 +1334,9 @@ TEST(pinnedPromptTest, tty_readline_with_initial_returns_initial_text_on_enter)
     char output[32] = {};
 
     // Pre-Assert
+    // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
     expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "\n");
-    // [Pre-Assert確認_正常系 回数=6] - 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
+    // 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
     // [Pre-Assert手順] - 端末操作を成功させ、入力として改行だけを返却する。
 
     // Act
@@ -1351,8 +1366,9 @@ TEST(pinnedPromptTest, tty_readline_with_initial_allows_editing_from_end)
     char output[32] = {};
 
     // Pre-Assert
+    // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
     expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "\x7F-3\n");
-    // [Pre-Assert確認_正常系 回数=6] - 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
+    // 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
     // [Pre-Assert手順] - 端末操作を成功させ、Backspace、"-3"、改行を返却する。
 
     // Act
@@ -1384,8 +1400,9 @@ TEST(pinnedPromptTest, tty_readline_with_initial_restores_initial_text_after_his
         NiceMock<Mock_termios> mock_termios;
         NiceMock<Mock_unistd> mock_unistd;
 
+        // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
         expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "first\n");
-    // [Pre-Assert確認_正常系 回数=6] - 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
+    // 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
         ASSERT_EQ(CPLAT_OK, cplat_pinned_prompt_readline_at(screen, first_output, sizeof(first_output), "",
                                                             "history.c", 1)); // [状態] - "first" を履歴へ登録する。
                                                                              // [状態確認] - readline の戻り値が CPLAT_OK であること。
@@ -1397,8 +1414,9 @@ TEST(pinnedPromptTest, tty_readline_with_initial_restores_initial_text_after_his
     NiceMock<Mock_sys_select> mock_select;
 
     // Pre-Assert
+    // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
     expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "\x1B[A\x1B[B\n");
-    // [Pre-Assert確認_正常系 回数=6] - 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
+    // 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
     // [Pre-Assert手順] - 端末操作を成功させ、上矢印、下矢印、改行を返却する。
     EXPECT_CALL(mock_select, select(_, _, _, _, _, _, _, _)).WillRepeatedly(Return(1));
     // [Pre-Assert確認_正常系] - select がエスケープシーケンスの後続判定で呼び出されること。
@@ -1434,8 +1452,9 @@ TEST(pinnedPromptTest, tty_readline_with_initial_reports_out_of_memory_when_edit
         NiceMock<Mock_termios> mock_termios;
         NiceMock<Mock_unistd> mock_unistd;
 
+        // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
         expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "x\n");
-    // [Pre-Assert確認_正常系 回数=6] - 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
+    // 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
         ASSERT_EQ(CPLAT_OK, cplat_pinned_prompt_readline_at(screen, first_output, sizeof(first_output), "",
                                                             "alloc.c", 1)); // [状態] - 同じ呼び出し位置で履歴のコンテキストを確保する。
                                                                            // [状態確認] - readline の戻り値が CPLAT_OK であること。
@@ -1447,8 +1466,9 @@ TEST(pinnedPromptTest, tty_readline_with_initial_reports_out_of_memory_when_edit
     NiceMock<Mock_cplat> mock_cplat;
 
     // Pre-Assert
+    // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
     expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "\n");
-    // [Pre-Assert確認_正常系 回数=6] - 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
+    // 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
     // [Pre-Assert手順] - 端末操作を成功させる。
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _)).WillOnce(Return(nullptr));
     // [Pre-Assert確認_異常系] - cplat_realloc が編集バッファーの拡張のために 1 回呼び出されること。

@@ -76,6 +76,7 @@ class hashtableTimestampTest : public Test
     NiceMock<Mock_cplat> mock_cplat_;
     time_t next_sec_ = 1000;
 
+    // [サブ手順 名前=hashtableTimestampTest.SetUp]
     void SetUp() override
     {
         ON_CALL(mock_cplat_, cplat_clock_get_realtime(_))
@@ -86,9 +87,11 @@ class hashtableTimestampTest : public Test
                     next_sec_ += 10;
                 }); // [状態] - cplat_clock_get_realtime が呼び出された際に 10 秒ずつ進む時刻を返すようにモックを設定する。
     }
+    // [サブ手順終了]
 };
 
 // add/update/delete 操作時に実時刻が正しくタイムスタンプに記録されることの確認
+// [サブ手順参照 名前=hashtableTimestampTest.SetUp]
 TEST_F(hashtableTimestampTest, add_update_delete_stamp_realtime)
 {
     // Arrange
@@ -171,6 +174,7 @@ TEST_F(hashtableTimestampTest, add_update_delete_stamp_realtime)
 }
 
 // CPLAT_HASHTABLE_ADD_DELETED_REVIVE による復活時に既存の値が維持されタイムスタンプが更新されることの確認
+// [サブ手順参照 名前=hashtableTimestampTest.SetUp]
 TEST_F(hashtableTimestampTest, add_revive_keeps_previous_value_and_stamps)
 {
     // Arrange
@@ -223,6 +227,7 @@ TEST_F(hashtableTimestampTest, add_revive_keeps_previous_value_and_stamps)
 }
 
 // cplat_hashtable_push_deleted による削除済みレコード加齢ではタイムスタンプが更新されないことの確認
+// [サブ手順参照 名前=hashtableTimestampTest.SetUp]
 TEST_F(hashtableTimestampTest, push_deleted_does_not_stamp)
 {
     // Arrange
@@ -261,6 +266,7 @@ TEST_F(hashtableTimestampTest, push_deleted_does_not_stamp)
 }
 
 // 空スロットおよび完全削除・パージ後のスロットのタイムスタンプ取得が NOT_FOUND を返すことの確認
+// [サブ手順参照 名前=hashtableTimestampTest.SetUp]
 TEST_F(hashtableTimestampTest, empty_slot_time_is_not_found_and_zeroed)
 {
     // Arrange
@@ -306,6 +312,7 @@ TEST_F(hashtableTimestampTest, empty_slot_time_is_not_found_and_zeroed)
 }
 
 // タイムスタンプ取得 API 群に不正な引数や範囲外キーを渡した場合のエラー返却の確認
+// [サブ手順参照 名前=hashtableTimestampTest.SetUp]
 TEST_F(hashtableTimestampTest, accessors_reject_invalid_arguments)
 {
     // Arrange
@@ -365,6 +372,7 @@ TEST_F(hashtableTimestampTest, accessors_reject_invalid_arguments)
 }
 
 // テーブル全体のタイムスタンプがコンテンツの変更操作や直接挿入に追従して更新されることの確認
+// [サブ手順参照 名前=hashtableTimestampTest.SetUp]
 TEST_F(hashtableTimestampTest, table_timestamp_tracks_content_changes)
 {
     // Arrange
@@ -447,6 +455,7 @@ TEST_F(hashtableTimestampTest, table_timestamp_tracks_content_changes)
 }
 
 // テーブル粒度設定時にレコード単位のタイムスタンプ API が UNSUPPORTED を返すことの確認
+// [サブ手順参照 名前=hashtableTimestampTest.SetUp]
 TEST_F(hashtableTimestampTest, scope_table_record_timestamp_apis_are_unsupported)
 {
     // Arrange
@@ -518,6 +527,7 @@ TEST_F(hashtableTimestampTest, scope_table_record_timestamp_apis_are_unsupported
 }
 
 // テーブル粒度設定における insert_direct の引数制約およびテーブルタイムスタンプの挙動の確認
+// [サブ手順参照 名前=hashtableTimestampTest.SetUp]
 TEST_F(hashtableTimestampTest, scope_table_insert_direct_and_table_timestamp)
 {
     // Arrange

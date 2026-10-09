@@ -18,6 +18,7 @@ using namespace filter_test;
 class stringCatalogFilterApplyTest : public Test
 {
   protected:
+    // [サブ手順 名前=stringCatalogFilterApplyTest.SetUp]
     void SetUp() override
     {
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(
@@ -25,16 +26,20 @@ class stringCatalogFilterApplyTest : public Test
                                 filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_));
         // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_trace_catalog(), filter_test_trace_key_names(), filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=stringCatalogFilterApplyTest.TearDown]
     void TearDown() override
     {
         cplat_string_catalog_filter_slot_dispose(&slot_);
     }
+    // [サブ手順終了]
 
     cplat_string_catalog_filter_slot *slot_ = nullptr;
 };
 
 // 作成直後のスロットは、すべての文字列キーが常に不一致であることの確認
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.SetUp]
 TEST_F(stringCatalogFilterApplyTest, freshly_created_slot_marks_all_keys_never_match)
 {
     // Arrange
@@ -60,8 +65,10 @@ TEST_F(stringCatalogFilterApplyTest, freshly_created_slot_marks_all_keys_never_m
     EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_NEVER_MATCH,
               actual_state_job_failed); // [確認_正常系] - JOB_FAILED が常に不一致であること。
 }
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.TearDown]
 
 // category <= 2 が、WARNING 以上 (分類値が 2 以下) の項目だけを常に一致にすることの確認
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.SetUp]
 TEST_F(stringCatalogFilterApplyTest, category_le_2_marks_warning_and_above_as_always_match)
 {
     // Arrange
@@ -92,8 +99,10 @@ TEST_F(stringCatalogFilterApplyTest, category_le_2_marks_warning_and_above_as_al
     EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_NEVER_MATCH,
               actual_state_worker_started); // [確認_正常系] - 分類値 3 (INFO) は常に不一致のままであること。
 }
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.TearDown]
 
 // 文字列キーの名前解決と整数指定が、同じ判定結果になることの確認
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.SetUp]
 TEST_F(stringCatalogFilterApplyTest, key_name_and_integer_resolve_to_same_result)
 {
     // Arrange
@@ -135,8 +144,10 @@ TEST_F(stringCatalogFilterApplyTest, key_name_and_integer_resolve_to_same_result
     EXPECT_EQ(actual_state_by_name,
               actual_state_by_integer); // [確認_正常系] - 名前指定と整数指定の結果が一致すること。
 }
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.TearDown]
 
 // 引数を含む行が、その引数を持つ項目だけを引数値に依存させることの確認
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.SetUp]
 TEST_F(stringCatalogFilterApplyTest, argument_predicate_marks_only_entries_with_that_argument)
 {
     // Arrange
@@ -168,8 +179,10 @@ TEST_F(stringCatalogFilterApplyTest, argument_predicate_marks_only_entries_with_
     EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_NEVER_MATCH,
               actual_state_worker_started); // [確認_正常系] - priority を持たない項目は常に不一致であること。
 }
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.TearDown]
 
 // 名前解決できない文字列キー名の行が、適用時に無効となり診断されることの確認
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.SetUp]
 TEST_F(stringCatalogFilterApplyTest, unresolved_key_name_disables_line_and_is_diagnosed)
 {
     // Arrange
@@ -210,8 +223,10 @@ TEST_F(stringCatalogFilterApplyTest, unresolved_key_name_disables_line_and_is_di
     EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE,
               actual_line1_error); // [確認_正常系] - 行 1 が有効であること。
 }
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.TearDown]
 
 // 名前解決できない引数名の行が、適用時に無効となり診断されることの確認
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.SetUp]
 TEST_F(stringCatalogFilterApplyTest, unresolved_argument_name_disables_line_and_is_diagnosed)
 {
     // Arrange
@@ -244,8 +259,10 @@ TEST_F(stringCatalogFilterApplyTest, unresolved_argument_name_disables_line_and_
     EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_UNRESOLVED_ARGUMENT_NAME,
               actual_line0_error); // [確認_正常系] - 行 0 が無効で、原因を問い合わせられること。
 }
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.TearDown]
 
 // 検証に失敗するイメージの適用が、以前の判定状態を維持することの確認
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.SetUp]
 TEST_F(stringCatalogFilterApplyTest, apply_with_corrupt_image_keeps_previous_state)
 {
     // Arrange
@@ -284,8 +301,10 @@ TEST_F(stringCatalogFilterApplyTest, apply_with_corrupt_image_keeps_previous_sta
     EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH,
               actual_state_after); // [確認_異常系] - 以前の判定状態 (常に一致) が維持されること。
 }
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.TearDown]
 
 // 形式版が異なるイメージの適用が、CPLAT_ERR_VERSION_MISMATCH を返し以前の判定状態を維持することの確認
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.SetUp]
 TEST_F(stringCatalogFilterApplyTest, apply_with_other_format_version_reports_version_mismatch)
 {
     // Arrange
@@ -319,8 +338,10 @@ TEST_F(stringCatalogFilterApplyTest, apply_with_other_format_version_reports_ver
     EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH,
               actual_state_after); // [確認_異常系] - 以前の判定状態 (常に一致) が維持されること。
 }
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.TearDown]
 
 // ハッシュ値は正しく、構造の検査で拒否されるイメージの適用が、以前の判定状態を維持することの確認
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.SetUp]
 TEST_F(stringCatalogFilterApplyTest, apply_with_structurally_broken_image_keeps_previous_state)
 {
     // Arrange
@@ -366,8 +387,10 @@ TEST_F(stringCatalogFilterApplyTest, apply_with_structurally_broken_image_keeps_
     EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH,
               actual_state_after); // [確認_異常系] - 以前の判定状態 (常に一致) が維持されること。
 }
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.TearDown]
 
 // 行数の上限や行幅がスロットと異なるイメージの適用が、CPLAT_ERR_CORRUPT_DESCRIPTOR を返し状態を維持することの確認
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.SetUp]
 TEST_F(stringCatalogFilterApplyTest, apply_with_mismatched_line_width_returns_corrupt_descriptor_and_keeps_state)
 {
     // Arrange
@@ -410,8 +433,10 @@ TEST_F(stringCatalogFilterApplyTest, apply_with_mismatched_line_width_returns_co
     EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH,
               actual_state_after); // [確認_異常系] - 以前の判定状態が維持されること。
 }
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.TearDown]
 
 // 呼び出し側のイメージ領域がスロット内部へ複製され、適用後に元の領域を 0 で上書きしても判定結果が変わらないことの確認
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.SetUp]
 TEST_F(stringCatalogFilterApplyTest, apply_copies_image_so_caller_buffer_can_be_cleared_afterwards)
 {
     // Arrange
@@ -438,8 +463,10 @@ TEST_F(stringCatalogFilterApplyTest, apply_copies_image_so_caller_buffer_can_be_
         CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH,
         actual_state); // [確認_正常系] - 呼び出し側の領域を破壊しても、スロット内部の複製により判定結果が変わらないこと。
 }
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.TearDown]
 
 // 64 行を超える行数の上限でも、65 行目以降の行が引数の値に依存する判定で一致することの確認
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.SetUp]
 TEST_F(stringCatalogFilterApplyTest, lines_beyond_64_are_evaluated)
 {
     // Arrange
@@ -497,8 +524,10 @@ TEST_F(stringCatalogFilterApplyTest, lines_beyond_64_are_evaluated)
 
     cplat_string_catalog_filter_slot_dispose(&wide_slot);
 }
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.TearDown]
 
 // どの項目に対しても成立し得ない行を、適用の時点で無効にして診断し、成立し得る行は残すことの確認
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.SetUp]
 TEST_F(stringCatalogFilterApplyTest, never_satisfiable_lines_are_diagnosed_at_apply)
 {
     // Arrange
@@ -538,3 +567,4 @@ TEST_F(stringCatalogFilterApplyTest, never_satisfiable_lines_are_diagnosed_at_ap
     EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_ARGUMENT_DEPENDENT,
               actual_state); // [確認_正常系] - 成立し得る行は有効なままであること。
 }
+// [サブ手順参照 名前=stringCatalogFilterApplyTest.TearDown]

@@ -23,21 +23,29 @@ class traceAllocFailureTest : public Test
     cplat_etw_provider *os_handle_ = reinterpret_cast<cplat_etw_provider *>(static_cast<uintptr_t>(0x1100));
 #endif /* PLATFORM_ */
 
+    // [サブ手順 名前=traceAllocFailureTest.SetUp]
     void SetUp() override
     {
         set_trace_sync_mock_defaults(mock_cplat);
         ON_CALL(mock_cplat, cplat_shutdown_register(_, _)).WillByDefault(Return(CPLAT_OK));
+        // [状態] - `cplat_shutdown_register` の既定動作を設定する。
 #if defined(PLATFORM_LINUX)
         ON_CALL(mock_cplat, cplat_syslog_sink_create(_, _)).WillByDefault(Return(os_handle_));
+        // [状態] - `cplat_syslog_sink_create` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_dispose(_)).WillByDefault(Return());
+        // [状態] - `cplat_syslog_sink_dispose` の既定動作を設定する。
 #elif defined(PLATFORM_WINDOWS)
         ON_CALL(mock_cplat, cplat_etw_provider_create(_)).WillByDefault(Return(os_handle_));
+        // [状態] - `cplat_etw_provider_create` の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_etw_provider_dispose(_)).WillByDefault(Return());
+        // [状態] - `cplat_etw_provider_dispose` の既定動作を設定する。
 #endif /* PLATFORM_ */
     }
+    // [サブ手順終了]
 };
 
 // ハンドルの確保に失敗した場合に生成が失敗することの確認
+// [サブ手順参照 名前=traceAllocFailureTest.SetUp]
 TEST_F(traceAllocFailureTest, create_returns_null_when_handle_allocation_fails)
 {
     // Arrange
@@ -65,6 +73,7 @@ TEST_F(traceAllocFailureTest, create_returns_null_when_handle_allocation_fails)
 
 // インスタンス名の複製に失敗した場合に生成が失敗することの確認
 // Windows の cplat_tracer_create は _strdup を使うため、この失敗経路は Linux のみに存在する
+// [サブ手順参照 名前=traceAllocFailureTest.SetUp]
 TEST_F(traceAllocFailureTest, create_returns_null_when_name_duplication_fails)
 {
     // Arrange
@@ -88,6 +97,7 @@ TEST_F(traceAllocFailureTest, create_returns_null_when_name_duplication_fails)
 #endif /* PLATFORM_LINUX */
 
 // レジストリの拡張に失敗した場合に生成が失敗することの確認
+// [サブ手順参照 名前=traceAllocFailureTest.SetUp]
 TEST_F(traceAllocFailureTest, create_returns_null_when_registry_expansion_fails)
 {
     // Arrange
@@ -108,6 +118,7 @@ TEST_F(traceAllocFailureTest, create_returns_null_when_registry_expansion_fails)
 }
 
 // インスタンス識別付きの名前組み立てで確保に失敗した場合に設定が失敗することの確認
+// [サブ手順参照 名前=traceAllocFailureTest.SetUp]
 TEST_F(traceAllocFailureTest, set_name_fails_when_effective_name_allocation_fails)
 {
     // Arrange

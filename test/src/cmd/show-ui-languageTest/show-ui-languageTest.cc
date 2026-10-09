@@ -17,6 +17,7 @@ namespace
  *  @param[in,out]  mock  設定する mock。
  *  @param[in]      tag   返す言語タグ。
  */
+// [サブ手順 名前=show_ui_languageTest.expect_ui_language_tag]
 void expect_ui_language_tag(NiceMock<Mock_cplat> &mock, const char *const tag)
 {
     EXPECT_CALL(mock, cplat_ui_language_get_tag(_, _))
@@ -32,7 +33,10 @@ void expect_ui_language_tag(NiceMock<Mock_cplat> &mock, const char *const tag)
                 memcpy(tag_out, tag, length + 1U);
                 return CPLAT_OK;
             }));
+    // [Pre-Assert手順] - 指定した表示言語タグを出力バッファーへコピーする。
+    // [Pre-Assert確認_正常系] - 表示言語の取得で cplat_ui_language_get_tag() が 1 回呼び出されること。
 }
+// [サブ手順終了]
 
 } // namespace
 
@@ -57,7 +61,8 @@ TEST_F(show_ui_languageTest, main_prints_language_tag)
     const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
 
     // Pre-Assert
-    expect_ui_language_tag(mock_cplat_, "ja-JP"); // [Pre-Assert確認_正常系] - 表示言語の取得が 1 回呼び出されること。
+    // [サブ手順参照 名前=show_ui_languageTest.expect_ui_language_tag]
+    expect_ui_language_tag(mock_cplat_, "ja-JP"); // 表示言語の取得が 1 回呼び出されること。
                                                   // [Pre-Assert手順] - 言語タグ ja-JP を返却する。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq("ja-JP\n")))
         .Times(1); // [Pre-Assert確認_正常系] - 言語タグ ja-JP の出力が 1 回行われること。
@@ -77,7 +82,8 @@ TEST_F(show_ui_languageTest, main_prints_empty_line_for_neutral)
     const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
 
     // Pre-Assert
-    expect_ui_language_tag(mock_cplat_, ""); // [Pre-Assert確認_正常系] - 表示言語の取得が 1 回呼び出されること。
+    // [サブ手順参照 名前=show_ui_languageTest.expect_ui_language_tag]
+    expect_ui_language_tag(mock_cplat_, ""); // 表示言語の取得が 1 回呼び出されること。
                                              // [Pre-Assert手順] - ニュートラルを表す空文字列を返却する。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq("\n")))
         .Times(1); // [Pre-Assert確認_正常系] - 空行の出力が 1 回行われること。

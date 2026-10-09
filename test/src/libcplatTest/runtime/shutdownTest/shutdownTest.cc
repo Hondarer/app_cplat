@@ -67,21 +67,27 @@ class shutdownTest : public Test
   protected:
     NiceMock<Mock_stdlib> mock_stdlib_;
 
+    // [サブ手順 名前=shutdownTest.SetUp]
     void SetUp() override
     {
         cplat_shutdown_reset_for_test();
         reset_records();
         // atexit は成功を返す。
         ON_CALL(mock_stdlib_, atexit(_, _, _, _)).WillByDefault(Return(0));
+        // [状態] - `atexit` の既定動作を設定する。
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=shutdownTest.TearDown]
     void TearDown() override
     {
         cplat_shutdown_reset_for_test();
     }
+    // [サブ手順終了]
 };
 
 // shutdown callback が登録の逆順 (LIFO) で実行されることの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
 TEST_F(shutdownTest, test_callbacks_are_invoked_in_lifo_order)
 {
     // Arrange
@@ -124,8 +130,10 @@ TEST_F(shutdownTest, test_callbacks_are_invoked_in_lifo_order)
               g_last_event.code_kind); // [確認_正常系] - code_kind が callback に渡ること。
     EXPECT_EQ(7, g_last_event.code);   // [確認_正常系] - 終了コード 7 が callback に渡ること。
 }
+// [サブ手順参照 名前=shutdownTest.TearDown]
 
 // 複数回の shutdown 実行でも callback が 1 回だけ実行されることの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
 TEST_F(shutdownTest, test_multiple_invoke_runs_callbacks_only_once)
 {
     // Arrange
@@ -158,8 +166,10 @@ TEST_F(shutdownTest, test_multiple_invoke_runs_callbacks_only_once)
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, register_after_shutdown); // [確認_正常系] - shutdown 開始後の登録が拒否されること。
     EXPECT_EQ(1, g_call_count);                               // [確認_正常系] - callback は 1 回だけ実行されること。
 }
+// [サブ手順参照 名前=shutdownTest.TearDown]
 
 // 終了要求 callback の実行が最終 shutdown を消費しないことの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
 TEST_F(shutdownTest, test_request_callbacks_do_not_consume_final_shutdown)
 {
     // Arrange
@@ -216,8 +226,10 @@ TEST_F(shutdownTest, test_request_callbacks_do_not_consume_final_shutdown)
     EXPECT_EQ(CPLAT_SHUTDOWN_REASON_NORMAL_EXIT,
               g_last_event.reason); // [確認_正常系] - final shutdown では通常終了イベントが渡ること。
 }
+// [サブ手順参照 名前=shutdownTest.TearDown]
 
 // 終了要求 callback が 1 回だけ実行されることの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
 TEST_F(shutdownTest, test_request_callback_runs_only_once)
 {
     // Arrange
@@ -250,8 +262,10 @@ TEST_F(shutdownTest, test_request_callback_runs_only_once)
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, register_after_request); // [確認_正常系] - 通知後の登録は拒否されること。
     EXPECT_EQ(1, g_call_count); // [確認_正常系] - request callback は 1 回だけ実行されること。
 }
+// [サブ手順参照 名前=shutdownTest.TearDown]
 
 // cplat_exit が終了コードを保持したまま callback を実行することの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
 TEST_F(shutdownTest, test_cplat_exit_preserves_exit_code)
 {
     // Arrange
@@ -276,9 +290,11 @@ TEST_F(shutdownTest, test_cplat_exit_preserves_exit_code)
         ::testing::ExitedWithCode(7), "reason=0 kind=1 code=7");
     // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_reset_for_test(); cplat_shutdown_register(print_callback, NULL); cplat_exit(7); }, ::testing::ExitedWithCode(7), "reason=0 kind=1 code=7") の期待が成立すること。
 }
+// [サブ手順参照 名前=shutdownTest.TearDown]
 
 // cplat_exit が範囲外 (CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE 以上) の終了コードを
 // CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE へ差し替えることの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
 TEST_F(shutdownTest, test_cplat_exit_clamps_code_above_range)
 {
     // Arrange
@@ -305,8 +321,10 @@ TEST_F(shutdownTest, test_cplat_exit_clamps_code_above_range)
         ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE), "reason=0 kind=1 code=125");
     // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_reset_for_test(); cplat_shutdown_register(print_callback, NULL); cplat_exit(256); }, ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE), "reason=0 kind=1 code=125") の期待が成立すること。
 }
+// [サブ手順参照 名前=shutdownTest.TearDown]
 
 // cplat_exit が負の終了コードも CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE へ差し替えることの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
 TEST_F(shutdownTest, test_cplat_exit_clamps_negative_code)
 {
     // Arrange
@@ -332,9 +350,11 @@ TEST_F(shutdownTest, test_cplat_exit_clamps_negative_code)
         ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE), "reason=0 kind=1 code=125");
     // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_reset_for_test(); cplat_shutdown_register(print_callback, NULL); cplat_exit(-1); }, ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE), "reason=0 kind=1 code=125") の期待が成立すること。
 }
+// [サブ手順参照 名前=shutdownTest.TearDown]
 
 // cplat_exit が範囲上限 (CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1) の終了コードを
 // 差し替えずにそのまま使うことの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
 TEST_F(shutdownTest, test_cplat_exit_preserves_upper_bound_code)
 {
     // Arrange
@@ -360,8 +380,10 @@ TEST_F(shutdownTest, test_cplat_exit_preserves_upper_bound_code)
         ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1), "reason=0 kind=1 code=124");
     // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_reset_for_test(); cplat_shutdown_register(print_callback, NULL); cplat_exit(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1); }, ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1), "reason=0 kind=1 code=124") の期待が成立すること。
 }
+// [サブ手順参照 名前=shutdownTest.TearDown]
 
 // 明示的な shutdown 実行後に atexit で二重実行されないことの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
 TEST_F(shutdownTest, test_explicit_invoke_prevents_atexit_double_execution)
 {
     // Arrange
@@ -389,9 +411,11 @@ TEST_F(shutdownTest, test_explicit_invoke_prevents_atexit_double_execution)
         ::testing::ExitedWithCode(0), "count=1");
     // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_event event = make_event(CPLAT_SHUTDOWN_REASON_NORMAL_EXIT, CPLAT_SHUTDOWN_CODE_KIND_NONE, 0); cplat_shutdown_reset_for_test(); cplat_shutdown_register(print_count_callback, NULL); cplat_shutdown_invoke_for_test(&event, NULL); exit(0); }, ::testing::ExitedWithCode(0), "count=1") の期待が成立すること。
 }
+// [サブ手順参照 名前=shutdownTest.TearDown]
 
 #if defined(PLATFORM_LINUX)
 // SIGINT が終了要求 callback へ報告され、処理が継続することの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
 TEST_F(shutdownTest, test_sigint_is_reported_to_callback)
 {
     // Arrange
@@ -415,8 +439,10 @@ TEST_F(shutdownTest, test_sigint_is_reported_to_callback)
         ::testing::ExitedWithCode(0), "reason=2 kind=2 code=2.*after-sigint");
     // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_reset_for_test(); cplat_shutdown_request_register(print_callback, NULL); raise(SIGINT); fprintf(stderr, "after-sigint\n"); exit(0); }, ::testing::ExitedWithCode(0), "reason=2 kind=2 code=2.*after-sigint") の期待が成立すること。
 }
+// [サブ手順参照 名前=shutdownTest.TearDown]
 
 // callback がないシグナルを最終 shutdown 後に既定処理へ戻すことの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
 TEST_F(shutdownTest, test_unhandled_signal_invokes_final_callbacks_and_reraises)
 {
     // Arrange
@@ -440,8 +466,10 @@ TEST_F(shutdownTest, test_unhandled_signal_invokes_final_callbacks_and_reraises)
     EXPECT_EQ(1, g_call_count);            // [確認_正常系] - 最終 shutdown callback が 1 回実行されること。
     EXPECT_EQ(SIGTERM, g_last_event.code); // [確認_正常系] - callback へ SIGTERM の番号が渡ること。
 }
+// [サブ手順参照 名前=shutdownTest.TearDown]
 
 // 処理済みの終了要求ではシグナルの既定処理を再実行しないことの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
 TEST_F(shutdownTest, test_repeated_signal_request_returns_without_reraise)
 {
     // Arrange
@@ -462,8 +490,10 @@ TEST_F(shutdownTest, test_repeated_signal_request_returns_without_reraise)
     // Assert
     EXPECT_EQ(0, g_call_count); // [確認_正常系] - callback が追加実行されないこと。
 }
+// [サブ手順参照 名前=shutdownTest.TearDown]
 
 // shutdown API が不正引数とメモリ確保失敗を通知することの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
 TEST_F(shutdownTest, test_registration_and_invoke_reject_invalid_inputs)
 {
     // Arrange
@@ -507,8 +537,10 @@ TEST_F(shutdownTest, test_registration_and_invoke_reject_invalid_inputs)
         CPLAT_ERR_INVALID_ARGUMENT,
         request_invoke_null_result); // [確認_異常系] - cplat_shutdown_request_invoke_for_test が NULL イベントを拒否すること。
 }
+// [サブ手順参照 名前=shutdownTest.TearDown]
 
 // 最終 shutdown 開始後の終了要求 callback 登録を拒否することの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
 TEST_F(shutdownTest, test_request_registration_after_final_shutdown_is_rejected)
 {
     // Arrange
@@ -535,8 +567,10 @@ TEST_F(shutdownTest, test_request_registration_after_final_shutdown_is_rejected)
         invoke_result); // [確認_正常系] - cplat_shutdown_request_invoke_for_test の戻り値が CPLAT_OK であること。
     EXPECT_EQ(0, request_invoked); // [確認_正常系] - 最終 shutdown 開始後は終了要求 callback が実行されないこと。
 }
+// [サブ手順参照 名前=shutdownTest.TearDown]
 
 // 未実行の callback をテスト状態のリセット時に解放することの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
 TEST_F(shutdownTest, test_reset_discards_pending_callbacks)
 {
     // Arrange
@@ -555,8 +589,10 @@ TEST_F(shutdownTest, test_reset_discards_pending_callbacks)
     // Assert
     EXPECT_EQ(0, g_call_count); // [確認_正常系] - リセット時に callback が実行されないこと。
 }
+// [サブ手順参照 名前=shutdownTest.TearDown]
 #elif defined(PLATFORM_WINDOWS)
 // コンソール イベントが終了要求 callback へ報告されることの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
 TEST_F(shutdownTest, test_console_event_is_reported_to_callback)
 {
     // Arrange
@@ -588,4 +624,5 @@ TEST_F(shutdownTest, test_console_event_is_reported_to_callback)
               g_last_event.code_kind);               // [確認_正常系] - CTRL 種別として渡ること。
     EXPECT_EQ((int)CTRL_C_EVENT, g_last_event.code); // [確認_正常系] - CTRL_C_EVENT の値が渡ること。
 }
+// [サブ手順参照 名前=shutdownTest.TearDown]
 #endif

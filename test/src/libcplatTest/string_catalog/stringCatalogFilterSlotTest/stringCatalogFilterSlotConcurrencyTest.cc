@@ -50,6 +50,7 @@ void format_worker(void *raw_arg)
 class stringCatalogFilterSlotConcurrencyTest : public Test
 {
   protected:
+    // [サブ手順 名前=stringCatalogFilterSlotConcurrencyTest.SetUp]
     void SetUp() override
     {
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(
@@ -57,17 +58,21 @@ class stringCatalogFilterSlotConcurrencyTest : public Test
                                 filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_));
         // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_trace_catalog(), filter_test_trace_key_names(), filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=stringCatalogFilterSlotConcurrencyTest.TearDown]
     void TearDown() override
     {
         cplat_string_catalog_filter_slot_dispose(&slot_);
     }
+    // [サブ手順終了]
 
     cplat_string_catalog_filter_slot *slot_ = nullptr;
 };
 
 // 判定と書式展開を繰り返す複数スレッドの最中に、メイン スレッドが 2 種類のイメージを繰り返し適用しても、
 // 各スレッドの呼び出しが常に CPLAT_OK を返し、クラッシュしないことの確認
+// [サブ手順参照 名前=stringCatalogFilterSlotConcurrencyTest.SetUp]
 TEST_F(stringCatalogFilterSlotConcurrencyTest, concurrent_apply_does_not_break_concurrent_format_calls)
 {
     // Arrange
@@ -126,3 +131,4 @@ TEST_F(stringCatalogFilterSlotConcurrencyTest, concurrent_apply_does_not_break_c
                 .ok); // [確認_正常系 回数=4] - 各スレッドの format 呼び出しが、常に CPLAT_OK かつ 0/1 の判定結果を返していたこと。
     }
 }
+// [サブ手順参照 名前=stringCatalogFilterSlotConcurrencyTest.TearDown]

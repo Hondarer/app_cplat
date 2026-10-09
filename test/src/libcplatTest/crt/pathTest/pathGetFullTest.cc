@@ -44,13 +44,16 @@ static void stub_linux_path_resolution(Mock_unistd *mock_unistd, Mock_stdlib *mo
 }
 #endif /* PLATFORM_LINUX */
 
+// [サブ手順 名前=pathGetFullTest.assert_path_get_full_success]
 static void assert_path_get_full_success(char *path_out, size_t path_size, const char *path)
 {
     cplat_error err;
     ASSERT_EQ(CPLAT_OK, cplat_path_get_full(path_out, path_size, &err, path));
     // [状態確認] - `cplat_path_get_full(path_out, path_size, &err, path)` の戻り値が `CPLAT_OK` であること。
 }
+// [サブ手順終了]
 
+// [サブ手順 名前=pathGetFullTest.build_path]
 static void build_path(char *path_out, size_t path_size, const char *lhs, const char *rhs)
 {
     int written = std::snprintf(path_out, path_size, "%s/%s", lhs, rhs);
@@ -59,7 +62,9 @@ static void build_path(char *path_out, size_t path_size, const char *lhs, const 
     ASSERT_LT((size_t)written, path_size);
     // [状態確認] - `(size_t)written` が `path_size` より小さいこと。
 }
+// [サブ手順終了]
 
+// [サブ手順 名前=pathGetFullTest.build_three_part_path]
 static void build_three_part_path(char *path_out, size_t path_size, const char *lhs, const char *middle,
                                   const char *rhs)
 {
@@ -69,6 +74,7 @@ static void build_three_part_path(char *path_out, size_t path_size, const char *
     ASSERT_LT((size_t)written, path_size);
     // [状態確認] - `(size_t)written` が `path_size` より小さいこと。
 }
+// [サブ手順終了]
 
 } // namespace
 
@@ -150,7 +156,9 @@ TEST_F(pathGetFullTest, expands_current_directory_to_absolute_path)
     // Pre-Assert
 
     // Act
+    // [サブ手順参照 名前=pathGetFullTest.assert_path_get_full_success]
     assert_path_get_full_success(actual, sizeof(actual), "."); // [手順] - カレント ディレクトリ "." を絶対化する。
+    // [サブ手順参照 名前=pathGetFullTest.assert_path_get_full_success]
     assert_path_get_full_success(expected, sizeof(expected), actual); // [手順] - 得られた絶対パスを再度正規化する。
 
     // Assert
@@ -172,14 +180,18 @@ TEST_F(pathGetFullTest, normalizes_dotdot_and_backslash_segments)
     char actual[PLATFORM_PATH_MAX] = {};
     char expected[PLATFORM_PATH_MAX] = {};
 
+    // [サブ手順参照 名前=pathGetFullTest.assert_path_get_full_success]
     assert_path_get_full_success(base, sizeof(base), ".");
+    // [サブ手順参照 名前=pathGetFullTest.build_three_part_path]
     build_three_part_path(candidate, sizeof(candidate), base, "alpha\\..",
                           "beta.txt"); // [状態] - 入力を "alpha\\.." を挟んだ表記ゆれパスとする。
+    // [サブ手順参照 名前=pathGetFullTest.build_path]
     build_path(expected, sizeof(expected), base, "beta.txt"); // [状態] - 期待値を正規化済みパスとする。
 
     // Pre-Assert
 
     // Act
+    // [サブ手順参照 名前=pathGetFullTest.assert_path_get_full_success]
     assert_path_get_full_success(actual, sizeof(actual), candidate); // [手順] - '\\' と '..' を含むパスを正規化する。
 
     // Assert
@@ -340,14 +352,18 @@ TEST_F(pathGetFullTest, returns_absolute_path_for_nonexistent_target)
     char actual[PLATFORM_PATH_MAX] = {};
     char expected[PLATFORM_PATH_MAX] = {};
 
+    // [サブ手順参照 名前=pathGetFullTest.assert_path_get_full_success]
     assert_path_get_full_success(base, sizeof(base), ".");
+    // [サブ手順参照 名前=pathGetFullTest.build_three_part_path]
     build_three_part_path(candidate, sizeof(candidate), base, "ghost-dir/..",
                           "ghost.bin"); // [状態] - 入力を存在しない "ghost-dir/.." を挟んだパスとする。
+    // [サブ手順参照 名前=pathGetFullTest.build_path]
     build_path(expected, sizeof(expected), base, "ghost.bin"); // [状態] - 期待値を正規化済みパスとする。
 
     // Pre-Assert
 
     // Act
+    // [サブ手順参照 名前=pathGetFullTest.assert_path_get_full_success]
     assert_path_get_full_success(actual, sizeof(actual), candidate); // [手順] - 存在しないパスを絶対化する。
 
     // Assert

@@ -48,6 +48,7 @@ int g_saved_exists[kEnvironmentNameCount];
 class uiLanguageTest : public Test
 {
   protected:
+    // [サブ手順 名前=uiLanguageTest.SetUp]
     void SetUp() override
     {
         for (size_t index = 0U; index < kEnvironmentNameCount; index++)
@@ -60,7 +61,9 @@ class uiLanguageTest : public Test
             (void)cplat_unsetenv(kEnvironmentNames[index], NULL);
         }
     }
+    // [サブ手順終了]
 
+    // [サブ手順 名前=uiLanguageTest.TearDown]
     void TearDown() override
     {
         for (size_t index = 0U; index < kEnvironmentNameCount; index++)
@@ -75,9 +78,11 @@ class uiLanguageTest : public Test
             }
         }
     }
+    // [サブ手順終了]
 };
 
 // LANG だけが設定されている場合に、その指定を使用することの確認
+// [サブ手順参照 名前=uiLanguageTest.SetUp]
 TEST_F(uiLanguageTest, UsesLangWhenOnlyLangIsSet)
 {
     // Arrange
@@ -95,8 +100,10 @@ TEST_F(uiLanguageTest, UsesLangWhenOnlyLangIsSet)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_ui_language_get_tag の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("ja-JP", tag);      // [確認_正常系] - LANG の指定から言語タグ ja-JP を取得すること。
 }
+// [サブ手順参照 名前=uiLanguageTest.TearDown]
 
 // LC_ALL が他の環境変数より優先されることの確認
+// [サブ手順参照 名前=uiLanguageTest.SetUp]
 TEST_F(uiLanguageTest, PrefersLcAllOverOtherVariables)
 {
     // Arrange
@@ -118,8 +125,10 @@ TEST_F(uiLanguageTest, PrefersLcAllOverOtherVariables)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_ui_language_get_tag の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("en-US", tag);      // [確認_正常系] - LC_ALL の指定を優先して en-US を取得すること。
 }
+// [サブ手順参照 名前=uiLanguageTest.TearDown]
 
 // LC_MESSAGES が LANG より優先されることの確認
+// [サブ手順参照 名前=uiLanguageTest.SetUp]
 TEST_F(uiLanguageTest, PrefersLcMessagesOverLang)
 {
     // Arrange
@@ -139,8 +148,10 @@ TEST_F(uiLanguageTest, PrefersLcMessagesOverLang)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_ui_language_get_tag の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("en-US", tag);      // [確認_正常系] - LC_MESSAGES の指定を優先して en-US を取得すること。
 }
+// [サブ手順参照 名前=uiLanguageTest.TearDown]
 
 // 解釈できない指定を読み飛ばし、次の候補を使用することの確認
+// [サブ手順参照 名前=uiLanguageTest.SetUp]
 TEST_F(uiLanguageTest, SkipsUninterpretableValue)
 {
     // Arrange
@@ -160,8 +171,10 @@ TEST_F(uiLanguageTest, SkipsUninterpretableValue)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_ui_language_get_tag の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("ja-JP", tag);      // [確認_正常系] - 解釈できない LC_ALL を使用せず、LANG の指定を使用すること。
 }
+// [サブ手順参照 名前=uiLanguageTest.TearDown]
 
 // 言語を指定しないロケールで、後続の候補を評価せずにニュートラルを返すことの確認
+// [サブ手順参照 名前=uiLanguageTest.SetUp]
 TEST_F(uiLanguageTest, StopsAtLanguageNeutralLocale)
 {
     // Arrange
@@ -181,8 +194,10 @@ TEST_F(uiLanguageTest, StopsAtLanguageNeutralLocale)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_ui_language_get_tag の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("", tag); // [確認_正常系] - LANG を評価せず、ニュートラルを表す空文字列を取得すること。
 }
+// [サブ手順参照 名前=uiLanguageTest.TearDown]
 
 // 文字コードを伴う C の指定でニュートラルを返すことの確認
+// [サブ手順参照 名前=uiLanguageTest.SetUp]
 TEST_F(uiLanguageTest, ReturnsNeutralForCLocaleWithCodeset)
 {
     // Arrange
@@ -200,8 +215,10 @@ TEST_F(uiLanguageTest, ReturnsNeutralForCLocaleWithCodeset)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_ui_language_get_tag の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("", tag);           // [確認_正常系] - ニュートラルを表す空文字列を取得すること。
 }
+// [サブ手順参照 名前=uiLanguageTest.TearDown]
 
 // POSIX の指定でニュートラルを返すことの確認
+// [サブ手順参照 名前=uiLanguageTest.SetUp]
 TEST_F(uiLanguageTest, ReturnsNeutralForPosixLocale)
 {
     // Arrange
@@ -219,8 +236,10 @@ TEST_F(uiLanguageTest, ReturnsNeutralForPosixLocale)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_ui_language_get_tag の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("", tag);           // [確認_正常系] - ニュートラルを表す空文字列を取得すること。
 }
+// [サブ手順参照 名前=uiLanguageTest.TearDown]
 
 // 出力先の容量が不足する場合に、容量不足を通知することの確認
+// [サブ手順参照 名前=uiLanguageTest.SetUp]
 TEST_F(uiLanguageTest, ReportsSmallBuffer)
 {
     // Arrange
@@ -239,8 +258,10 @@ TEST_F(uiLanguageTest, ReportsSmallBuffer)
               actual_ret);  // [確認_異常系] - 戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
     EXPECT_STREQ("", tag);  // [確認_異常系] - 出力先が空文字列であること。
 }
+// [サブ手順参照 名前=uiLanguageTest.TearDown]
 
 // 不正な出力引数を拒否することの確認
+// [サブ手順参照 名前=uiLanguageTest.SetUp]
 TEST_F(uiLanguageTest, RejectsInvalidOutputArguments)
 {
     // Arrange
@@ -259,10 +280,12 @@ TEST_F(uiLanguageTest, RejectsInvalidOutputArguments)
               actual_ret_zero); // [確認_異常系] - 出力先サイズが 0 の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ('x', tag[0]);     // [確認_異常系] - 不正引数の呼び出しで出力先が変更されないこと。
 }
+// [サブ手順参照 名前=uiLanguageTest.TearDown]
 
 #if defined(PLATFORM_LINUX)
 
 // 環境変数が未設定の Linux でニュートラルを返すことの確認
+// [サブ手順参照 名前=uiLanguageTest.SetUp]
 TEST_F(uiLanguageTest, ReturnsNeutralWhenEnvironmentIsUnset)
 {
     // Arrange
@@ -277,10 +300,12 @@ TEST_F(uiLanguageTest, ReturnsNeutralWhenEnvironmentIsUnset)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_ui_language_get_tag の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("", tag);           // [確認_正常系] - ニュートラルを表す空文字列を取得すること。
 }
+// [サブ手順参照 名前=uiLanguageTest.TearDown]
 
 #elif defined(PLATFORM_WINDOWS)
 
 // 環境変数が未設定の Windows で、OS の表示言語を言語タグの表記で返すことの確認
+// [サブ手順参照 名前=uiLanguageTest.SetUp]
 TEST_F(uiLanguageTest, ReturnsWindowsUiLanguageWhenEnvironmentIsUnset)
 {
     // Arrange
@@ -304,8 +329,10 @@ TEST_F(uiLanguageTest, ReturnsWindowsUiLanguageWhenEnvironmentIsUnset)
     EXPECT_EQ(CPLAT_OK, normalize_ret); // [確認_正常系] - 空の言語タグを許容し、取得した言語タグを解釈できること。
     EXPECT_STREQ(tag, normalized); // [確認_正常系] - 取得した言語タグが空または正規化済みの表記であること。
 }
+// [サブ手順参照 名前=uiLanguageTest.TearDown]
 
 // mock 化した表示言語の優先順位の先頭が、言語タグへ変換されることの確認
+// [サブ手順参照 名前=uiLanguageTest.SetUp]
 TEST_F(uiLanguageTest, ConvertsMockedWindowsUiLanguage)
 {
     // Arrange
@@ -351,8 +378,10 @@ TEST_F(uiLanguageTest, ConvertsMockedWindowsUiLanguage)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_ui_language_get_tag の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("ja-JP", tag);      // [確認_正常系] - 一覧の先頭の表示言語を言語タグとして取得すること。
 }
+// [サブ手順参照 名前=uiLanguageTest.TearDown]
 
 // 表示言語の優先順位を取得できない場合に、地域設定の名前を使用することの確認
+// [サブ手順参照 名前=uiLanguageTest.SetUp]
 TEST_F(uiLanguageTest, FallsBackToUserDefaultLocaleName)
 {
     // Arrange
@@ -386,8 +415,10 @@ TEST_F(uiLanguageTest, FallsBackToUserDefaultLocaleName)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_ui_language_get_tag の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("en-US", tag);      // [確認_正常系] - 地域設定の名前を言語タグとして取得すること。
 }
+// [サブ手順参照 名前=uiLanguageTest.TearDown]
 
 // OS から表示言語を取得できない場合にニュートラルを返すことの確認
+// [サブ手順参照 名前=uiLanguageTest.SetUp]
 TEST_F(uiLanguageTest, ReturnsNeutralWhenWindowsApisFail)
 {
     // Arrange
@@ -409,6 +440,7 @@ TEST_F(uiLanguageTest, ReturnsNeutralWhenWindowsApisFail)
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 取得できないことを失敗として扱わないこと。
     EXPECT_STREQ("", tag);           // [確認_正常系] - ニュートラルを表す空文字列を取得すること。
 }
+// [サブ手順参照 名前=uiLanguageTest.TearDown]
 
 #endif /* PLATFORM_ */
 

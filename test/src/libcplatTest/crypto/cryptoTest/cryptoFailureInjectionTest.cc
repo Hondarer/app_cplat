@@ -24,6 +24,7 @@ class cryptoFailureInjectionTest : public Test
     std::vector<uint8_t> cipher_;
     size_t cipher_len_ = 0u;
 
+    // [サブ手順 名前=cryptoFailureInjectionTest.SetUp]
     void SetUp() override
     {
         std::memset(key_, 0x11, sizeof(key_));
@@ -32,6 +33,7 @@ class cryptoFailureInjectionTest : public Test
         cipher_.assign(sizeof(plain_) + CPLAT_CRYPTO_TAG_SIZE, 0u);
         cipher_len_ = cipher_.size();
     }
+    // [サブ手順終了]
 
     int encrypt()
     {
@@ -41,6 +43,7 @@ class cryptoFailureInjectionTest : public Test
 };
 
 // 暗号化コンテキストの確保に失敗した場合にメモリ不足が返ることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, encrypt_returns_out_of_memory_when_context_allocation_fails)
 {
     // Arrange
@@ -61,6 +64,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_out_of_memory_when_context_al
 }
 
 // 暗号化の初期化に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_init_fails)
 {
     // Arrange
@@ -81,6 +85,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_init_fails)
 }
 
 // 暗号化の鍵・ノンス設定に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_key_setting_fails)
 {
     // Arrange
@@ -104,6 +109,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_key_setting_fail
 }
 
 // ノンス長の設定に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_nonce_length_setting_fails)
 {
     // Arrange
@@ -124,6 +130,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_nonce_length_set
 }
 
 // 暗号文の生成に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_update_fails)
 {
     // Arrange
@@ -144,6 +151,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_update_fails)
 }
 
 // AAD の入力に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_aad_update_fails)
 {
     // Arrange
@@ -167,6 +175,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_aad_update_fails
 }
 
 // 暗号化の終端処理に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_final_fails)
 {
     // Arrange
@@ -187,6 +196,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_final_fails)
 }
 
 // 認証タグの取得に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_tag_get_fails)
 {
     // Arrange
@@ -209,6 +219,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_tag_get_fails)
 }
 
 // 復号コンテキストの確保に失敗した場合にメモリ不足が返ることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, decrypt_returns_out_of_memory_when_context_allocation_fails)
 {
     // Arrange
@@ -236,6 +247,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_out_of_memory_when_context_al
 }
 
 // 復号の初期化に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_init_fails)
 {
     // Arrange
@@ -263,6 +275,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_init_fails)
 }
 
 // 復号のノンス長設定に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_nonce_length_setting_fails)
 {
     // Arrange
@@ -292,6 +305,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_nonce_length_set
 }
 
 // 復号の鍵・ノンス設定に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_key_setting_fails)
 {
     // Arrange
@@ -323,6 +337,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_key_setting_fail
 }
 
 // AAD の入力に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_aad_update_fails)
 {
     // Arrange
@@ -357,6 +372,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_aad_update_fails
 }
 
 // 平文の復号に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_update_fails)
 {
     // Arrange
@@ -384,6 +400,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_update_fails)
 }
 
 // 認証タグの設定に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_tag_setting_fails)
 {
     // Arrange
@@ -414,6 +431,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_tag_setting_fail
 }
 
 // 認証の終端処理に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_final_fails)
 {
     // Arrange
@@ -442,6 +460,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_final_fails)
 }
 
 // ダイジェスト コンテキストの確保に失敗した場合にメモリ不足が返ることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_out_of_memory_when_context_allocation_fails)
 {
     // Arrange
@@ -464,6 +483,7 @@ TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_out_of_memory_when_
 }
 
 // ダイジェストの計算に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_unknown_when_digest_fails)
 {
     // Arrange
@@ -486,6 +506,7 @@ TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_unknown_when_digest
 }
 
 // ダイジェスト更新に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_unknown_when_digest_update_fails)
 {
     // Arrange
@@ -509,6 +530,7 @@ TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_unknown_when_digest
 }
 
 // ダイジェスト終端処理に失敗した場合に通知されることの確認
+// [サブ手順参照 名前=cryptoFailureInjectionTest.SetUp]
 TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_unknown_when_digest_final_fails)
 {
     // Arrange
