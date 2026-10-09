@@ -210,8 +210,7 @@ Windows の `scope` は `VirtualLock()` に成功した範囲を記録します�
 
 Table: メモリ ロック API が返す結果コードと意味
 
-errno および Windows の `GetLastError()` の値は、共通ヘルパー `cplat_internal_result_from_errno()` /  
-`cplat_internal_result_from_windows_error()` (`cplat/base/result_internal.h`) を通じて結果コードへ変換します。  
+errno および Windows の `GetLastError()` の値は、共通ヘルパー `cplat_internal_result_from_errno()` / `cplat_internal_result_from_windows_error()` (`cplat/base/result_internal.h`) を通じて結果コードへ変換します。  
 ただし、ロック可能量の上限超過を示すエラーはこの API に固有の意味を持つため、共通ヘルパーより前段で個別に判定します。
 
 Linux では `EPERM` を `CPLAT_ERR_PERMISSION_DENIED` に対応させます (共通ヘルパーの分類)。  

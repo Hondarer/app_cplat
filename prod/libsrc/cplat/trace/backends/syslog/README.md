@@ -52,11 +52,8 @@ Linux では OS トレース先が syslog になります。
 
 環境変数 `SYSLOG_TEST_FD` にパイプの書き込み端 FD 番号を設定すると、`/dev/log` への送信を行わず、その FD にデバッグ用メッセージを書き込みます。
 
-`cplat_tracer_write*()` からの経路では、debug FD へ出る行は  
-`YYYY-MM-DDTHH:MM:SS.mmm+09:00 <PRI>TAG[PID]: MSG`  
-の形式になります。  
-一方、`/dev/log` へ送る通常 syslog メッセージ本体は従来通り RFC 3164 形式で、  
-タイムスタンプはプラットフォーム側に任せます。
+`cplat_tracer_write*()` からの経路では、debug FD へ出る行は `YYYY-MM-DDTHH:MM:SS.mmm+09:00 <PRI>TAG[PID]: MSG` の形式になります。  
+一方、`/dev/log` へ送る通常 syslog メッセージ本体は従来通り RFC 3164 形式で、タイムスタンプはプラットフォーム側に任せます。
 
 これにより、実際の syslog デーモンなしで送信内容をテスト プロセスが受け取れます。  
 `testfw` の `processController` が `preload_lib` オプションと組み合わせてこの仕組みを使用します。

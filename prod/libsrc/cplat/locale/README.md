@@ -29,8 +29,7 @@ LC_ALL -> LC_MESSAGES -> LANG -> (Windows のみ) OS の表示言語 -> ニュ�
 環境変数は Windows でも優先します。同じ指定に対して両プラットフォームが同じ言語タグを返します。  
 Linux では、システム設定がログイン時に環境変数へ反映されるため、環境変数以外の候補を評価しません。
 
-Windows では、表示言語の優先順位を返す `GetUserPreferredUILanguages` を使用し、取得できない場合に  
-`GetUserDefaultLocaleName` を使用します。地域設定は表示言語と別に設定できるため、第一の候補にしません。
+Windows では、表示言語の優先順位を返す `GetUserPreferredUILanguages` を使用し、取得できない場合に `GetUserDefaultLocaleName` を使用します。地域設定は表示言語と別に設定できるため、第一の候補にしません。
 
 ## 言語タグの表記
 

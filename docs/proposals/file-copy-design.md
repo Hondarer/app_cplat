@@ -23,8 +23,7 @@ cplat を利用して、Linux/GCC と Windows/MSVC の双方で動作するフ�
 - コピー先がすでに存在し、コピー元と同じサイズを持つ
 
 本関数は排他制御を行いません。  
-排他の手段は呼び出し側の選択に委ねますが、`cplat` の `sync.h` が提供する  
-`cplat_interprocess_lock` と `cplat_interprocess_rwlock` を利用できます。
+排他の手段は呼び出し側の選択に委ねますが、`cplat` の `sync.h` が提供する `cplat_interprocess_lock` と `cplat_interprocess_rwlock` を利用できます。
 
 ## サンプル実装の所在
 
@@ -114,8 +113,7 @@ Linux に `CopyFileW` の等価物はありません。
 第二に、共有モードが外部の排他と衝突しうる点が最大の懸念です。  
 `CopyFileW` はコピー先を他プロセスと共有しない形で開きます。  
 前提の排他がファイル ハンドルの保持で実現されている場合、Windows 側だけが共有違反で失敗します。  
-cplat の `cplat_file_open()` は `FILE_SHARE_READ`、`FILE_SHARE_WRITE`、`FILE_SHARE_DELETE` を指定して  
-他プロセスの読み取り、書き込み、削除を妨げない方針を明記しており、`CopyFileW` はこの共通契約から外れます。
+cplat の `cplat_file_open()` は `FILE_SHARE_READ`、`FILE_SHARE_WRITE`、`FILE_SHARE_DELETE` を指定して他プロセスの読み取り、書き込み、削除を妨げない方針を明記しており、`CopyFileW` はこの共通契約から外れます。
 
 第三に、抽象化の層から外れます。  
 `win32.h` に `CopyFileU` ラッパーはなく、リポジトリ内に `CopyFile` の使用例もありません。  
@@ -181,14 +179,12 @@ Coverity はこの形を TOCTOU として検出します。
 実装で解消するのではなく、注釈で抑制します。
 
 抑制の機構は `#pragma` ではありません。  
-Coverity にソース内の `#pragma` で欠陥を抑制する機構はなく、`#pragma coverity compliance` は MISRA の  
-コンプライアンス用であって欠陥の抑制には使えません。  
+Coverity にソース内の `#pragma` で欠陥を抑制する機構はなく、`#pragma coverity compliance` は MISRA のコンプライアンス用であって欠陥の抑制には使えません。  
 正しい機構は、欠陥が報告される行の直前に置く `coverity[<チェッカー名>]` 形式のコード注釈コメントです。  
 `file_copy_sample.c` では、2 箇所のオープンの直前にこの注釈と抑制の理由を併記しています。
 
 本リポジトリにコード注釈の前例はありません。  
-既存の Coverity 関連は `prod/coverity.mk` によるビルド統合だけで、  
-ソース内の抑制は MSVC 警告に対する `#pragma warning(suppress : 4996)` にとどまります。  
+既存の Coverity 関連は `prod/coverity.mk` によるビルド統合だけで、ソース内の抑制は MSVC 警告に対する `#pragma warning(suppress : 4996)` にとどまります。  
 本設計が初例になるため、抑制の理由をコメントで必ず併記する運用とします。
 
 チェッカー名の表記が `TOCTOU` と `toctou` のどちらであるかは、実際の解析結果の出力に合わせて確定します。
@@ -200,8 +196,7 @@ Coverity にソース内の `#pragma` で欠陥を抑制する機構はなく、
 
 ## プラットフォーム差異
 
-[C/C++ プラットフォーム抽象化ガイドライン](../platform-abstraction-guideline.md) に従い、  
-`_WIN32` や `_MSC_VER` を直接使わず `PLATFORM_LINUX` と `PLATFORM_WINDOWS` で分岐します。  
+[C/C++ プラットフォーム抽象化ガイドライン](../platform-abstraction-guideline.md) に従い、`_WIN32` や `_MSC_VER` を直接使わず `PLATFORM_LINUX` と `PLATFORM_WINDOWS` で分岐します。  
 分岐の順は Linux、Windows の順です。
 
 | 項目 | Linux | Windows |
@@ -265,8 +260,7 @@ cplat の「限界値は厳しい側に合わせる」共通契約に従う判�
 
 ## テスト観点
 
-テストの構成は [テスト方法](../../../../framework/testfw/docs/how-to-test.md) と、  
-cplat の `test/src/libcplatTest/crt/fileTest/` に倣います。
+テストの構成は [テスト方法](../../../../framework/testfw/docs/how-to-test.md) と、cplat の `test/src/libcplatTest/crt/fileTest/` に倣います。
 
 実ファイルを使う観点は次のとおりです。
 
