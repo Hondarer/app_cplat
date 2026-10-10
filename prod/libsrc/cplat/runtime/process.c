@@ -25,7 +25,6 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -393,6 +392,58 @@ static void exec_with_path(char *const *argv, char *const *envp)
     }
 }
 
+/* fork 後の子プロセスでは、親の他スレッドが保持していたロックが解放されないまま複製される。
+   stdio や strerror は内部でロックやロケールを使うため、非同期シグナル安全な関数だけで組み立てる。
+   see: https://pubs.opengroup.org/onlinepubs/9799919799/functions/fork.html */
+
+static size_t child_append_text(char *buf, const size_t buf_size, size_t len, const char *text)
+{
+    while (*text != '\0' && len + 1 < buf_size)
+    {
+        buf[len] = *text;
+        len++;
+        text++;
+    }
+    return len;
+}
+
+static size_t child_append_uint(char *buf, const size_t buf_size, size_t len, unsigned int magnitude)
+{
+    char digits[16];
+    size_t count = 0;
+
+    do
+    {
+        digits[count] = (char)('0' + (int)(magnitude % 10U));
+        count++;
+        magnitude /= 10U;
+    } while (magnitude != 0U && count < sizeof(digits));
+    while (count > 0 && len + 1 < buf_size)
+    {
+        count--;
+        buf[len] = digits[count];
+        len++;
+    }
+    return len;
+}
+
+static void child_report_exec_failure(const char *program, const int error_number)
+{
+    char message[512];
+    size_t len = 0;
+    ssize_t written;
+
+    len = child_append_text(message, sizeof(message), len, "エラー: exec(\"");
+    len = child_append_text(message, sizeof(message), len, program);
+    len = child_append_text(message, sizeof(message), len, "\") が失敗しました: errno=");
+    /* errno は正の値のため、符号なしで出力する。 */
+    len = child_append_uint(message, sizeof(message), len, (unsigned int)error_number);
+    len = child_append_text(message, sizeof(message), len, "\n");
+    /* 書き込みの失敗は報告先がないため無視する。glibc の warn_unused_result は (void) で抑止できない。 */
+    written = write(STDERR_FILENO, message, len);
+    (void)written;
+}
+
 static int run_child_process(const cplat_process_options *options, char *const *envp)
 {
     if (options->working_directory != NULL)
@@ -407,7 +458,7 @@ static int run_child_process(const cplat_process_options *options, char *const *
         return 127;
     }
     exec_with_path(options->argv, envp);
-    fprintf(stderr, "エラー: exec(\"%s\") が失敗しました: %s\n", options->argv[0], strerror(errno));
+    child_report_exec_failure(options->argv[0], errno);
     return 127;
 }
 

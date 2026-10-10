@@ -10,9 +10,10 @@
  *  利用側が設定していないプロセスでは、最初の参照時に実行環境の表示言語から決定します。\n
  *  決定は 1 回だけ行い、同じプロセスの記録が途中で別の言語へ切り替わらないようにします。
  *
- *  言語設定はプロセス共有の状態であり、排他制御は行いません。\n
+ *  言語設定はプロセス共有の状態であり、アトミック変数で保持します。\n
  *  プロセスの初期化時に設定し、文字列組み立ての実行中は変更しない運用を前提とします。\n
- *  実行環境からの決定が複数のスレッドで重複して実行された場合も、書き込まれる言語は同一です。
+ *  実行環境からの決定は複数のスレッドで重複して実行される場合がありますが、
+ *  比較交換で最初に決まった言語だけを採用します。
  *
  *  @copyright      Copyright (C) Tetsuo Honda. 2026. All rights reserved.
  *
@@ -25,14 +26,20 @@
 #include <cplat/crt/string.h>
 #include <cplat/locale/ui_language.h>
 #include <cplat/string_catalog/language_internal.h>
+#include <cplat/sync/atomic.h>
 
 #include <string.h>
 
-/** プロセスが文字列を出力する言語です。 */
-static cplat_string_catalog_language s_language = CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL;
+/** 出力する言語が未決定であることを示す値です。言語の列挙値とは重なりません。 */
+#define LANGUAGE_UNDECIDED ((int32_t)-1)
 
-/** 出力する言語を決定済みかどうかです。0 の場合、最初の参照で実行環境から決定します。 */
-static int s_language_decided = 0;
+/**
+ *  プロセスが文字列を出力する言語です。
+ *
+ *  未決定の場合は `LANGUAGE_UNDECIDED` を保持し、最初の参照で実行環境から決定します。
+ *  言語と決定済みかどうかを 1 つの値で表し、両者が食い違った状態を他スレッドから観測させません。
+ */
+static cplat_atomic_i32 s_language = CPLAT_ATOMIC_INIT(LANGUAGE_UNDECIDED);
 
 /**
  *  言語タグの言語と、文字列を出力する言語の対応表です。
@@ -62,10 +69,8 @@ int cplat_string_catalog_set_language(const cplat_string_catalog_language langua
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    s_language = language;
-
     /* 明示的な設定を実行環境よりも優先します。ニュートラル言語の設定も上書きしません。 */
-    s_language_decided = 1;
+    cplat_atomic_store_i32(&s_language, (int32_t)language, CPLAT_MEMORY_ORDER_RELEASE);
 
     return CPLAT_OK;
 }
@@ -74,7 +79,9 @@ int cplat_string_catalog_set_language(const cplat_string_catalog_language langua
 
 cplat_string_catalog_language cplat_string_catalog_get_language(void)
 {
-    if (s_language_decided == 0)
+    int32_t current = cplat_atomic_load_i32(&s_language, CPLAT_MEMORY_ORDER_ACQUIRE);
+
+    if (current == LANGUAGE_UNDECIDED)
     {
         char tag[CPLAT_UI_LANGUAGE_TAG_MAX];
         cplat_string_catalog_language language = CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL;
@@ -85,11 +92,15 @@ cplat_string_catalog_language cplat_string_catalog_get_language(void)
             (void)cplat_string_catalog_language_from_tag(tag, &language);
         }
 
-        s_language = language;
-        s_language_decided = 1;
+        /* 他スレッドが先に決定または設定した場合は、その言語を採用します。
+           交換しなかった場合は、current に読み取った現在の言語が入ります。 */
+        if (cplat_atomic_compare_exchange_i32(&s_language, &current, (int32_t)language, CPLAT_MEMORY_ORDER_ACQ_REL))
+        {
+            current = (int32_t)language;
+        }
     }
 
-    return s_language;
+    return (cplat_string_catalog_language)current;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -133,6 +144,5 @@ int cplat_string_catalog_language_from_tag(const char *const tag, cplat_string_c
 
 void cplat_internal_string_catalog_language_reset_for_test(void)
 {
-    s_language = CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL;
-    s_language_decided = 0;
+    cplat_atomic_store_i32(&s_language, LANGUAGE_UNDECIDED, CPLAT_MEMORY_ORDER_RELEASE);
 }

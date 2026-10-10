@@ -12,7 +12,8 @@
  *  アプリケーションをブロックしません。送信失敗時はメッセージを
  *  drop し、低頻度バックオフでのみ再接続を試みます。\n
  *  環境変数 `SYSLOG_TEST_FD` が設定されている場合は /dev/log の代わりに
- *  その FD に RFC 3164 形式のメッセージを書き込みます (テスト用途)。
+ *  その FD に RFC 3164 形式のメッセージを書き込みます (テスト用途)。\n
+ *  環境変数は生成時に 1 回だけ参照し、書き込み時には参照しません。
  *
  *  @par            スレッド セーフ
  *  本モジュールはスレッド セーフです。\n
@@ -48,7 +49,6 @@
     #include <cplat/trace/syslog.h>
     #include <cplat/trace/trace_common.h>
     #include <cplat/trace/backends/syslog/syslog_internal.h>
-    #include <cplat/test/syslog_test.h>
 
     /** /dev/log への UNIX ドメイン ソケット パス。 */
     #define DEVLOG_PATH "/dev/log"
@@ -97,8 +97,8 @@ struct cplat_syslog_sink
     /** SYSLOG_TEST_FD が生成時に設定されていた場合 1。 */
     int test_fd_exists;
 
-    /** 送信先アドレスの開始位置を調整する明示パディング。 */
-    int pad;
+    /** 生成時に SYSLOG_TEST_FD から解釈したテスト用 FD。未設定または解釈できない場合は -1。 */
+    int test_fd;
 
     /** /dev/log の送信先アドレス。 */
     struct sockaddr_un address;
@@ -165,6 +165,47 @@ static void try_open_socket_locked(cplat_syslog_sink *h)
     /* バックオフは送信成功時にリセットする */
 }
 
+/**
+ *  @brief  環境変数 SYSLOG_TEST_FD の有無とテスト用 FD を取得します。
+ *  @param[out] exists_out  設定されている場合は 1、未設定の場合は 0 を格納します。
+ *  @param[out] fd_out      解釈した FD を格納します。未設定または解釈できない場合は -1 を格納します。
+ */
+static void read_test_fd(int *exists_out, int *fd_out)
+{
+    char value[32];
+    int fd;
+
+    *exists_out = 0;
+    *fd_out = -1;
+    if (cplat_getenv("SYSLOG_TEST_FD", value, sizeof(value), exists_out, NULL) != CPLAT_OK || *exists_out == 0)
+    {
+        return;
+    }
+    if (cplat_parse_int(&fd, value, 10) == CPLAT_OK && fd >= 0)
+    {
+        *fd_out = fd;
+    }
+}
+
+/**
+ *  @brief  テスト用 FD へバッファーを書き込みます。FD が負の場合は何もしません。
+ *  @param[in]  test_fd  書き込み先の FD。
+ *  @param[in]  buf      書き込むバッファー。
+ *  @param[in]  nbytes   書き込むバイト数。
+ */
+static void write_test_fd(const int test_fd, const char *buf, const size_t nbytes)
+{
+    ssize_t written;
+
+    if (test_fd < 0)
+    {
+        return;
+    }
+    /* テスト用の経路であり、書き込みの失敗は報告しない。glibc の warn_unused_result は (void) で抑止できない。 */
+    written = write(test_fd, buf, nbytes);
+    (void)written;
+}
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 cplat_syslog_sink *cplat_syslog_sink_create(const char *ident, const int facility)
@@ -198,12 +239,12 @@ cplat_syslog_sink *cplat_syslog_sink_create(const char *ident, const int facilit
     handle->backoff_sec = BACKOFF_INIT_SEC;
     handle->pid = cplat_process_get_pid();
     handle->test_fd_exists = 0;
-    (void)cplat_getenv("SYSLOG_TEST_FD", NULL, 0u, &handle->test_fd_exists, NULL);
+    handle->test_fd = -1;
+    read_test_fd(&handle->test_fd_exists, &handle->test_fd);
     memset(&handle->address, 0, sizeof(handle->address));
     handle->address.sun_family = AF_UNIX;
     (void)cplat_strncpy(handle->address.sun_path, sizeof(handle->address.sun_path), DEVLOG_PATH,
                         sizeof(handle->address.sun_path) - 1u);
-    handle->pad = 0;
     if (cplat_local_lock_create(&handle->reconnect_lock) != CPLAT_OK)
     {
         cplat_free(handle->ident);
@@ -282,12 +323,12 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
                 debug_buf[sizeof(debug_buf) - 1] = '\0';
                 debug_len = (int)(sizeof(debug_buf) - 1);
             }
-            (void)syslog_test_fd_write(debug_buf, (size_t)debug_len);
+            write_test_fd(handle->test_fd, debug_buf, (size_t)debug_len);
         }
         else
         {
             buf[n] = '\n';
-            (void)syslog_test_fd_write(buf, (size_t)(n + 1));
+            write_test_fd(handle->test_fd, buf, (size_t)(n + 1));
         }
         if (fallback_used)
         {

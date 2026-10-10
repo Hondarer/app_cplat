@@ -329,4 +329,108 @@ TEST_F(trace_syslogTest, test_null_arguments_are_safe)
     cplat_syslog_sink_dispose(handle);
 }
 
+// SYSLOG_TEST_FD は生成時に確定し、生成後の環境変数の変更が書き込み先に影響しないことの確認
+TEST_F(trace_syslogTest, test_fd_is_fixed_at_create)
+{
+    // Arrange
+    int pipe_fds[2];
+    char fd_text[32];
+    char actual[256];
+    char expected[256];
+    ssize_t nread;
+    const char *saved_fd = getenv("SYSLOG_TEST_FD");
+    std::string saved_fd_value;
+    if (saved_fd != NULL)
+    {
+        saved_fd_value = saved_fd;
+    }
+
+    ASSERT_EQ(0, pipe(pipe_fds));                          // [状態] - pipe を生成する。
+                                                           // [状態確認] - pipe の生成が成功すること。
+    snprintf(fd_text, sizeof(fd_text), "%d", pipe_fds[1]); // [状態] - テスト用 FD をパイプの書き込み側とする。
+    ASSERT_EQ(0, setenv("SYSLOG_TEST_FD", fd_text,
+                        1)); // [状態] - SYSLOG_TEST_FD をパイプの書き込み側とする。
+                             // [状態確認] - SYSLOG_TEST_FD の setenv の戻り値が 0 であること。
+
+    cplat_syslog_sink *handle =
+        cplat_syslog_sink_create("syslog_test", LOG_USER); // [状態] - 初期化済みの syslog sink を用意する。
+    ASSERT_NE((cplat_syslog_sink *)NULL, handle);          // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_EQ(0, setenv("SYSLOG_TEST_FD", "-1",
+                        1)); // [状態] - 生成後に SYSLOG_TEST_FD を書き込み先のない値へ変更する。
+                             // [状態確認] - SYSLOG_TEST_FD の setenv の戻り値が 0 であること。
+
+    // Pre-Assert
+
+    // Act
+    int actual_ret_syslog_sink_write = cplat_syslog_sink_write(
+        handle, LOG_INFO, NULL, "fixed message"); // [手順] - タイムスタンプなしで "fixed message" を書き込む。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_syslog_sink_write); // [確認_正常系] - cplat_syslog_sink_write の戻り値が CPLAT_OK であること。
+
+    close(pipe_fds[1]);
+    pipe_fds[1] = -1;
+    nread = read(pipe_fds[0], actual, sizeof(actual) - 1); // [手順] - pipe から書き込まれた 1 行を読み取る。
+    ASSERT_GT(nread, 0);
+    // [確認_正常系] - `nread` が `0` より大きいこと。
+    actual[nread] = '\0';
+
+    snprintf(expected, sizeof(expected), "<14>syslog_test[%d]: fixed message\n", (int)getpid());
+    EXPECT_STREQ(expected, actual); // [確認_正常系] - 生成時の FD へ 1 行が書き込まれていること。
+
+    // Cleanup
+    cplat_syslog_sink_dispose(handle);
+    close(pipe_fds[0]);
+    if (saved_fd != NULL)
+    {
+        setenv("SYSLOG_TEST_FD", saved_fd_value.c_str(), 1);
+    }
+    else
+    {
+        unsetenv("SYSLOG_TEST_FD");
+    }
+}
+
+// SYSLOG_TEST_FD を FD として解釈できない場合も、書き込みが成功扱いになることの確認
+TEST_F(trace_syslogTest, test_fd_invalid_value_is_ignored)
+{
+    // Arrange
+    const char *saved_fd = getenv("SYSLOG_TEST_FD");
+    std::string saved_fd_value;
+    if (saved_fd != NULL)
+    {
+        saved_fd_value = saved_fd;
+    }
+
+    ASSERT_EQ(0, setenv("SYSLOG_TEST_FD", "not-a-number",
+                        1)); // [状態] - SYSLOG_TEST_FD を FD として解釈できない値とする。
+                             // [状態確認] - SYSLOG_TEST_FD の setenv の戻り値が 0 であること。
+
+    cplat_syslog_sink *handle =
+        cplat_syslog_sink_create("syslog_test", LOG_USER); // [状態] - 初期化済みの syslog sink を用意する。
+    ASSERT_NE((cplat_syslog_sink *)NULL, handle);          // [状態確認] - ハンドルが非 NULL であること。
+
+    // Pre-Assert
+
+    // Act
+    int actual_ret_syslog_sink_write =
+        cplat_syslog_sink_write(handle, LOG_INFO, NULL, "ignored message"); // [手順] - "ignored message" を書き込む。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_syslog_sink_write); // [確認_正常系] - cplat_syslog_sink_write の戻り値が CPLAT_OK であること。
+
+    // Cleanup
+    cplat_syslog_sink_dispose(handle);
+    if (saved_fd != NULL)
+    {
+        setenv("SYSLOG_TEST_FD", saved_fd_value.c_str(), 1);
+    }
+    else
+    {
+        unsetenv("SYSLOG_TEST_FD");
+    }
+}
+
 #endif /* PLATFORM_ */

@@ -50,7 +50,8 @@ Linux では OS トレース先が syslog になります。
 
 ## テスト用途: SYSLOG_TEST_FD
 
-環境変数 `SYSLOG_TEST_FD` にパイプの書き込み端 FD 番号を設定すると、`/dev/log` への送信を行わず、その FD にデバッグ用メッセージを書き込みます。
+環境変数 `SYSLOG_TEST_FD` にパイプの書き込み端 FD 番号を設定すると、`/dev/log` への送信を行わず、その FD にデバッグ用メッセージを書き込みます。  
+環境変数は `cplat_syslog_sink_create()` の時点で 1 回だけ参照するため、シンクを生成する前に設定してください。
 
 `cplat_tracer_write*()` からの経路では、debug FD へ出る行は `YYYY-MM-DDTHH:MM:SS.mmm+09:00 <PRI>TAG[PID]: MSG` の形式になります。  
 一方、`/dev/log` へ送る通常 syslog メッセージ本体は従来通り RFC 3164 形式で、タイムスタンプはプラットフォーム側に任せます。
