@@ -109,7 +109,7 @@ cd app/cplat/test/src/libcplatTest/prompt
 make test
 ```
 
-各テストの詳細なカバレッジ結果は、テスト ディレクトリ下の `results/all_tests/summary.log` と `coverage.xml` に出力されます。
+各テストの詳細なカバレッジ結果は、テスト ディレクトリ下の `results/all_tests/summary.md` と `coverage.xml` に出力されます。
 
 テスト ディレクトリを改名した場合は、旧パスを含む `obj/` を削除してから再ビルドします。
 
