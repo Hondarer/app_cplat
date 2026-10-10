@@ -17,6 +17,7 @@
 #include <cplat/crt/path.h>
 #include <cplat/crt/stdio.h>
 #include <cplat/crt/stdlib.h>
+#include <cplat/crt/string.h>
 #include <cplat/runtime/shutdown.h>
 #include <cplat/sync/sync.h>
 #include <stdlib.h>
@@ -37,6 +38,9 @@ static const char s_default_value_name[] = "VALUE";
 
 /* program_name 未解決時の既定表示名 */
 static const char s_default_program_name[] = "{program}";
+
+/* argv[0] から求めるプログラム名で除去する実行ファイルの拡張子 */
+static const char s_executable_extension[] = ".exe";
 
 /* 登録項目の種別 */
 typedef enum
@@ -747,6 +751,8 @@ static int argparser_store_positional(cplat_argparser *parser, const char *token
  *  @param[in,out]  parser  対象のハンドル。
  *  @param[in]      argv0   argv[0] の文字列。NULL 可。
  *
+ *  Linux と Windows で同じ名前を表示するため、末尾の ".exe" は大文字小文字を区別せずに
+ *  除去します。ベース名が ".exe" だけの場合は除去しません。\n
  *  複製に失敗した場合は前回値を維持します (usage 表示のみに影響するため)。
  */
 static void argparser_resolve_program_name(cplat_argparser *parser, const char *argv0)
@@ -762,6 +768,14 @@ static void argparser_resolve_program_name(cplat_argparser *parser, const char *
     if (copied == NULL)
     {
         return;
+    }
+
+    const size_t base_length = strlen(copied);
+    const size_t extension_length = sizeof(s_executable_extension) - 1u;
+    if ((base_length > extension_length) &&
+        (cplat_strcasecmp(copied + base_length - extension_length, s_executable_extension) == 0))
+    {
+        copied[base_length - extension_length] = '\0';
     }
     cplat_free(parser->resolved_program_name);
     parser->resolved_program_name = copied;
@@ -894,11 +908,7 @@ static void argparser_usage_build(const cplat_argparser *parser, argparser_usage
         argparser_usage_write(writer, "\n\n");
     }
 
-    const char *program_name = parser->program_name;
-    if (program_name == NULL)
-    {
-        program_name = parser->resolved_program_name;
-    }
+    const char *program_name = cplat_argparser_handle_get_program_name(parser);
     if (program_name == NULL)
     {
         program_name = s_default_program_name;
@@ -1129,6 +1139,8 @@ cplat_argparser *cplat_argparser_handle_create(const int argc, char *const *argv
     return parser;
 }
 
+/* Doxygen コメントは、ヘッダーに記載 */
+
 void cplat_argparser_handle_dispose(cplat_argparser *parser)
 {
     if (parser == NULL || parser->library_owned != 0)
@@ -1240,6 +1252,8 @@ void cplat_argparser_init(const int argc, char *const *argv, const char *descrip
     (void)argparser_default_acquire(argc, argv, &options, 1);
 }
 
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int cplat_argparser_handle_register_flag(cplat_argparser *parser, const char *short_name, const char *long_name,
                                          const char *description, int *storage)
 {
@@ -1268,6 +1282,8 @@ int cplat_argparser_register_flag(const char *short_name, const char *long_name,
     return cplat_argparser_handle_register_flag(argparser_default_acquire(0, NULL, NULL, 0), short_name, long_name,
                                                 description, storage);
 }
+
+/* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_handle_register_option_int(cplat_argparser *parser, const char *short_name, const char *long_name,
                                                const char *value_name, const char *description,
@@ -1300,6 +1316,8 @@ int cplat_argparser_register_option_int(const char *short_name, const char *long
                                                       long_name, value_name, description, flags, storage);
 }
 
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int cplat_argparser_handle_register_option_string(cplat_argparser *parser, const char *short_name,
                                                   const char *long_name, const char *value_name,
                                                   const char *description, const unsigned int flags,
@@ -1331,6 +1349,8 @@ int cplat_argparser_register_option_string(const char *short_name, const char *l
     return cplat_argparser_handle_register_option_string(argparser_default_acquire(0, NULL, NULL, 0), short_name,
                                                          long_name, value_name, description, flags, storage);
 }
+
+/* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_handle_register_option_int_array(cplat_argparser *parser, const char *short_name,
                                                      const char *long_name, const char *value_name,
@@ -1368,6 +1388,8 @@ int cplat_argparser_register_option_int_array(const char *short_name, const char
                                                             capacity, count);
 }
 
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int cplat_argparser_handle_register_option_string_array(cplat_argparser *parser, const char *short_name,
                                                         const char *long_name, const char *value_name,
                                                         const char *description, const unsigned int flags,
@@ -1404,6 +1426,8 @@ int cplat_argparser_register_option_string_array(const char *short_name, const c
                                                                capacity, count);
 }
 
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int cplat_argparser_handle_register_positional_int(cplat_argparser *parser, const char *name, const char *description,
                                                    const unsigned int flags, int *storage)
 {
@@ -1433,6 +1457,8 @@ int cplat_argparser_register_positional_int(const char *name, const char *descri
     return cplat_argparser_handle_register_positional_int(argparser_default_acquire(0, NULL, NULL, 0), name,
                                                           description, flags, storage);
 }
+
+/* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_handle_register_positional_string(cplat_argparser *parser, const char *name,
                                                       const char *description, const unsigned int flags,
@@ -1464,6 +1490,8 @@ int cplat_argparser_register_positional_string(const char *name, const char *des
     return cplat_argparser_handle_register_positional_string(argparser_default_acquire(0, NULL, NULL, 0), name,
                                                              description, flags, storage);
 }
+
+/* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_handle_register_positional_int_array(cplat_argparser *parser, const char *name,
                                                          const char *description, const unsigned int flags,
@@ -1498,6 +1526,8 @@ int cplat_argparser_register_positional_int_array(const char *name, const char *
                                                                 description, flags, storage, capacity, count);
 }
 
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int cplat_argparser_handle_register_positional_string_array(cplat_argparser *parser, const char *name,
                                                             const char *description, const unsigned int flags,
                                                             const char **storage, const size_t capacity, size_t *count)
@@ -1531,6 +1561,8 @@ int cplat_argparser_register_positional_string_array(const char *name, const cha
     return cplat_argparser_handle_register_positional_string_array(argparser_default_acquire(0, NULL, NULL, 0), name,
                                                                    description, flags, storage, capacity, count);
 }
+
+/* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_handle_parse(cplat_argparser *parser)
 {
@@ -1748,6 +1780,8 @@ int cplat_argparser_parse(void)
     return cplat_argparser_handle_parse(argparser_default_acquire(0, NULL, NULL, 0));
 }
 
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int cplat_argparser_handle_get_error(const cplat_argparser *parser)
 {
     if (parser == NULL)
@@ -1764,6 +1798,8 @@ int cplat_argparser_get_error(void)
 {
     return cplat_argparser_handle_get_error(argparser_default_acquire(0, NULL, NULL, 0));
 }
+
+/* Doxygen コメントは、ヘッダーに記載 */
 
 const char *cplat_argparser_handle_get_error_target(const cplat_argparser *parser)
 {
@@ -1782,6 +1818,8 @@ const char *cplat_argparser_get_error_target(void)
     return cplat_argparser_handle_get_error_target(argparser_default_acquire(0, NULL, NULL, 0));
 }
 
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int cplat_argparser_handle_get_error_index(const cplat_argparser *parser)
 {
     if (parser == NULL)
@@ -1798,6 +1836,8 @@ int cplat_argparser_get_error_index(void)
 {
     return cplat_argparser_handle_get_error_index(argparser_default_acquire(0, NULL, NULL, 0));
 }
+
+/* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_handle_get_error_message(const cplat_argparser *parser, char *buffer, const size_t buffer_size)
 {
@@ -1876,6 +1916,31 @@ int cplat_argparser_get_error_message(char *buffer, const size_t buffer_size)
     return cplat_argparser_handle_get_error_message(argparser_default_acquire(0, NULL, NULL, 0), buffer, buffer_size);
 }
 
+/* Doxygen コメントは、ヘッダーに記載 */
+
+const char *cplat_argparser_handle_get_program_name(const cplat_argparser *parser)
+{
+    if (parser == NULL)
+    {
+        return NULL;
+    }
+
+    if (parser->program_name != NULL)
+    {
+        return parser->program_name;
+    }
+    return parser->resolved_program_name;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+const char *cplat_argparser_get_program_name(void)
+{
+    return cplat_argparser_handle_get_program_name(argparser_default_acquire(0, NULL, NULL, 0));
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int cplat_argparser_handle_get_usage(const cplat_argparser *parser, char *buffer, const size_t buffer_size,
                                      size_t *required_size)
 {
@@ -1930,6 +1995,8 @@ int cplat_argparser_get_usage(char *buffer, const size_t buffer_size, size_t *re
                                             required_size);
 }
 
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int cplat_argparser_handle_print_usage(const cplat_argparser *parser, FILE *stream)
 {
     if (parser == NULL || stream == NULL)
@@ -1963,6 +2030,8 @@ int cplat_argparser_print_usage(FILE *stream)
     return cplat_argparser_handle_print_usage(argparser_default_acquire(0, NULL, NULL, 0), stream);
 }
 
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int cplat_argparser_handle_print_error_messages(const cplat_argparser *parser, FILE *stream)
 {
     if (parser == NULL || stream == NULL)
@@ -1992,6 +2061,8 @@ int cplat_argparser_print_error_messages(FILE *stream)
     return cplat_argparser_handle_print_error_messages(argparser_default_acquire(0, NULL, NULL, 0), stream);
 }
 
+/* Doxygen コメントは、ヘッダーに記載 */
+
 size_t cplat_argparser_handle_get_register_error_count(const cplat_argparser *parser)
 {
     if (parser == NULL)
@@ -2008,6 +2079,8 @@ size_t cplat_argparser_get_register_error_count(void)
 {
     return cplat_argparser_handle_get_register_error_count(argparser_default_acquire(0, NULL, NULL, 0));
 }
+
+/* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_handle_get_register_error(const cplat_argparser *parser, const size_t index)
 {
@@ -2026,6 +2099,8 @@ int cplat_argparser_get_register_error(size_t index)
     return cplat_argparser_handle_get_register_error(argparser_default_acquire(0, NULL, NULL, 0), index);
 }
 
+/* Doxygen コメントは、ヘッダーに記載 */
+
 const char *cplat_argparser_handle_get_register_error_target(const cplat_argparser *parser, const size_t index)
 {
     if (parser == NULL || index >= parser->register_error_count)
@@ -2042,6 +2117,8 @@ const char *cplat_argparser_get_register_error_target(size_t index)
 {
     return cplat_argparser_handle_get_register_error_target(argparser_default_acquire(0, NULL, NULL, 0), index);
 }
+
+/* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_handle_get_register_error_message(const cplat_argparser *parser, const size_t index, char *buffer,
                                                       const size_t buffer_size)
@@ -2101,6 +2178,8 @@ int cplat_argparser_get_register_error_message(const size_t index, char *buffer,
     return cplat_argparser_handle_get_register_error_message(argparser_default_acquire(0, NULL, NULL, 0), index, buffer,
                                                              buffer_size);
 }
+
+/* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_handle_print_register_error_messages(const cplat_argparser *parser, FILE *stream)
 {

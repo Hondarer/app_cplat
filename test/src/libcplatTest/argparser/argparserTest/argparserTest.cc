@@ -2233,6 +2233,115 @@ TEST_F(argparserTest, usage_program_name_resolution)
     cplat_argparser_handle_dispose(no_argv_parser);
 }
 
+// 明示ハンドルのプログラム名が、生成オプション、argv[0] の順に求められ、得られない場合は NULL になることの確認
+TEST_F(argparserTest, handle_get_program_name_resolution)
+{
+    // Arrange
+    ARGV(cstr("C:\\bin\\mytool.exe"));
+    cplat_argparser_options options = {};
+    options.program_name = "sample"; // [状態] - program_name を "sample" とする。
+    cplat_argparser *named_parser =
+        cplat_argparser_handle_create(argc, argv, &options); // [状態] - program_name 指定で parser を生成する。
+    cplat_argparser *resolved_parser =
+        cplat_argparser_handle_create(argc, argv, NULL); // [状態] - program_name 未指定で parser を生成する。
+    cplat_argparser *no_argv_parser =
+        cplat_argparser_handle_create(0, NULL, NULL); // [状態] - argv を渡さずに parser を生成する。
+    ASSERT_NE(nullptr, named_parser);                 // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, resolved_parser);              // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(nullptr, no_argv_parser);               // [状態確認] - ハンドルが非 NULL であること。
+
+    // Pre-Assert
+
+    // Act
+    const char *actual_named = cplat_argparser_handle_get_program_name(
+        named_parser); // [手順] - program_name 指定の parser からプログラム名を取得する。
+    const char *actual_resolved = cplat_argparser_handle_get_program_name(
+        resolved_parser); // [手順] - program_name 未指定の parser からプログラム名を取得する。
+    const char *actual_no_argv = cplat_argparser_handle_get_program_name(
+        no_argv_parser); // [手順] - argv を持たない parser からプログラム名を取得する。
+    const char *actual_null_parser =
+        cplat_argparser_handle_get_program_name(NULL); // [手順] - NULL ハンドルでプログラム名を取得する。
+
+    // Assert
+    EXPECT_STREQ("sample", actual_named); // [確認_正常系] - 生成オプションの program_name "sample" が返ること。
+    EXPECT_STREQ("mytool",
+                 actual_resolved); // [確認_正常系] - argv[0] から ".exe" を除いたベース名 "mytool" が返ること。
+    EXPECT_EQ(nullptr,
+              actual_no_argv); // [確認_正常系] - argv[0] が得られない場合は "{program}" ではなく NULL が返ること。
+    EXPECT_EQ(nullptr, actual_null_parser); // [確認_異常系] - NULL ハンドルの場合は NULL が返ること。
+
+    // Cleanup
+    cplat_argparser_handle_dispose(named_parser);
+    cplat_argparser_handle_dispose(resolved_parser);
+    cplat_argparser_handle_dispose(no_argv_parser);
+}
+
+// 既定パーサーのプログラム名が init の argv[0] から求められ、argv がない場合は NULL になることの確認
+TEST_F(argparserTest, default_get_program_name_resolution)
+{
+    // Arrange
+    ARGV(cstr("/usr/local/bin/mytool"));
+    cplat_argparser_init(0, NULL, NULL); // [状態] - argv を渡さずに既定パーサーを初期化する。
+
+    // Pre-Assert
+
+    // Act
+    const char *actual_no_argv =
+        cplat_argparser_get_program_name(); // [手順] - argv を持たない既定パーサーからプログラム名を取得する。
+    cplat_argparser_init(argc, argv, NULL); // [手順] - argv[0] を "/usr/local/bin/mytool" として既定パーサーを初期化し直す。
+    const char *actual_resolved =
+        cplat_argparser_get_program_name(); // [手順] - 既定パーサーからプログラム名を取得する。
+
+    // Assert
+    EXPECT_EQ(nullptr, actual_no_argv); // [確認_正常系] - argv[0] が得られない場合は NULL が返ること。
+    EXPECT_STREQ("mytool", actual_resolved); // [確認_正常系] - argv[0] のベース名 "mytool" が返ること。
+}
+
+// argv[0] のベース名から末尾の ".exe" だけを大文字小文字を区別せずに除去することの確認
+TEST_F(argparserTest, usage_program_name_strips_executable_extension)
+{
+    // Arrange
+    struct program_name_case
+    {
+        const char *argv0;
+        const char *expected_usage;
+    };
+    const program_name_case cases[] = {
+        {"C:\\path\\exename.exe", "Usage: exename\n"},
+        {"/usr/local/bin/mytool.EXE", "Usage: mytool\n"},
+        {"/usr/local/bin/mytool", "Usage: mytool\n"},
+        {"/opt/bin/my.tool", "Usage: my.tool\n"},
+        {"C:\\bin\\.exe", "Usage: .exe\n"},
+    }; // [状態] - Windows 形式の ".exe"、大文字の ".EXE"、拡張子なし、".exe" 以外の拡張子、ベース名が ".exe" だけの argv[0] を用意する。
+    char usage[256];
+
+    // Pre-Assert
+
+    for (const program_name_case &test_case : cases)
+    {
+        ARGV(cstr(test_case.argv0));
+        cplat_argparser *parser =
+            cplat_argparser_handle_create(argc, argv, NULL); // [状態] - program_name 未指定で parser を生成する。
+        ASSERT_NE(nullptr, parser);                          // [状態確認] - ハンドルが非 NULL であること。
+
+        // Act
+        int actual_ret_argparser_get_usage =
+            cplat_argparser_handle_get_usage(parser, usage, sizeof(usage), NULL); // [手順] - usage を取得する。
+
+        // Assert
+        EXPECT_EQ(
+            CPLAT_OK,
+            actual_ret_argparser_get_usage); // [確認_正常系 回数=5] - cplat_argparser_handle_get_usage の戻り値が CPLAT_OK であること。
+        EXPECT_THAT(
+            std::string(usage),
+            HasSubstr(
+                test_case.expected_usage)); // [確認_正常系 回数=5] - 末尾の ".exe" だけを大文字小文字を区別せずに除去したベース名が使われること。
+
+        // Cleanup
+        cplat_argparser_handle_dispose(parser);
+    }
+}
+
 // parse の不正引数が検出されることの確認
 TEST_F(argparserTest, parse_rejects_invalid_arguments)
 {

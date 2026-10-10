@@ -65,6 +65,10 @@ Mock_cplat::Mock_cplat()
         .WillByDefault(Invoke(delegate_real_cplat_argparser_handle_get_error_message));
     ON_CALL(*this, cplat_argparser_get_error_message(_, _))
         .WillByDefault(Invoke(delegate_real_cplat_argparser_get_error_message));
+    ON_CALL(*this, cplat_argparser_handle_get_program_name(_))
+        .WillByDefault(Invoke(delegate_real_cplat_argparser_handle_get_program_name));
+    ON_CALL(*this, cplat_argparser_get_program_name())
+        .WillByDefault(Invoke(delegate_real_cplat_argparser_get_program_name));
     ON_CALL(*this, cplat_argparser_handle_get_usage(_, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_argparser_handle_get_usage));
     ON_CALL(*this, cplat_argparser_get_usage(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_argparser_get_usage));

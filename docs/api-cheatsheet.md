@@ -718,6 +718,7 @@ Table: スレッドおよび同期プリミティブと cplat API の対応
 | 登録エラーを確認します。 | `cplat_argparser_get_register_error` / `_get_register_error_count` / `_get_register_error_target` / `_get_register_error_message` / `_print_register_error_messages` |
 | 初期化時に受け取ったコマンド ラインを解析します。 | `cplat_argparser_parse` |
 | 解析エラーを確認します。 | `cplat_argparser_get_error` / `_get_error_index` / `_get_error_target` / `_get_error_message` / `_print_error_messages` |
+| プログラム名を取得します。 | `cplat_argparser_get_program_name` |
 | 使用方法を表示します。 | `cplat_argparser_get_usage` / `cplat_argparser_print_usage` |
 
 Table: コマンド ライン引数解析における用途別 cplat API
@@ -823,7 +824,7 @@ Table: 動的シンボル解決における用途別 cplat API
 前節までの表や説明でまとめて扱った公開関数を、完全な関数名から検索できるように補足します。  
 シグネチャを確認する場合は、関数名に対応する [`prod/include/`](../prod/include/) 配下のヘッダーを参照してください。
 
-- 引数解析: `cplat_argparser_register_option_int`、`cplat_argparser_register_option_string`、`cplat_argparser_register_option_int_array`、`cplat_argparser_register_option_string_array`、`cplat_argparser_register_positional_int`、`cplat_argparser_register_positional_int_array`、`cplat_argparser_register_positional_string_array`、`cplat_argparser_get_error_target`、`cplat_argparser_get_error_index`、`cplat_argparser_get_error_message`、`cplat_argparser_print_error_messages`、`cplat_argparser_get_register_error_count`、`cplat_argparser_get_register_error_target`、`cplat_argparser_get_register_error_message`、`cplat_argparser_print_register_error_messages`
+- 引数解析: `cplat_argparser_register_option_int`、`cplat_argparser_register_option_string`、`cplat_argparser_register_option_int_array`、`cplat_argparser_register_option_string_array`、`cplat_argparser_register_positional_int`、`cplat_argparser_register_positional_int_array`、`cplat_argparser_register_positional_string_array`、`cplat_argparser_get_program_name`、`cplat_argparser_get_error_target`、`cplat_argparser_get_error_index`、`cplat_argparser_get_error_message`、`cplat_argparser_print_error_messages`、`cplat_argparser_get_register_error_count`、`cplat_argparser_get_register_error_target`、`cplat_argparser_get_register_error_message`、`cplat_argparser_print_register_error_messages`
 - 時刻: `cplat_clock_format_realtime_iso8601_local`、`cplat_clock_format_realtime_iso8601_utc`、`cplat_clock_get_realtime_utc`、`cplat_clock_get_realtime_deadline_ms`、`cplat_timespec_normalize`、`cplat_timespec_add`、`cplat_timespec_sub`、`cplat_timespec_cmp`、`cplat_timespec_add_ms`、`cplat_timespec_diff_ms`、`cplat_timespec_to_native`、`cplat_timespec_from_native`
 - ファイル: `cplat_file_init`、`cplat_file_open`、`cplat_file_write`、`cplat_file_read`、`cplat_file_get_size`、`cplat_file_set_size`、`cplat_file_get_id`、`cplat_file_get_path_id`、`cplat_file_get_modified_timestamp`、`cplat_file_set_modified_timestamp`、`cplat_file_get_path_modified_timestamp`、`cplat_file_set_path_modified_timestamp`、`cplat_file_flush`、`cplat_file_close`
 - パス: `cplat_path_normalize_sep`、`cplat_path_get_full`、`cplat_path_equal`、`cplat_path_get_temp_dir`、`cplat_path_concat_n`、`cplat_vpath_concat_n`、`cplat_path_basename`、`cplat_path_dirname`、`cplat_path_extension`、`cplat_path_strip_extension`、`cplat_path_join_n`、`cplat_vpath_join_n`

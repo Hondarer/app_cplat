@@ -125,7 +125,8 @@ extern "C"
     {
         /**
          *  @brief  usage に表示するプログラム名です。
-         *          NULL の場合は cplat_argparser_handle_create() 時に argv[0] のベース名で補完します。
+         *          NULL の場合は cplat_argparser_handle_create() 時に argv[0] のベース名で補完します。\n
+         *          補完では、末尾の ".exe" を大文字小文字を区別せずに除去します。
          */
         const char *program_name;
 
@@ -796,6 +797,43 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_argparser_get_error_message(char *buffer, size_t buffer_size);
 
     /**
+     *  @brief          プログラム名を取得します。
+     *  @param[in]      parser  引数パーサー ハンドルです。NULL の場合は NULL を返します。
+     *  @return         生成オプションの program_name を返します。\n
+     *                  program_name が未指定の場合は、生成時の argv[0] から求めたベース名を返します。\n
+     *                  いずれも得られない場合は NULL を返します。\n
+     *                  返却する文字列はハンドルが所有します。cplat_argparser_handle_dispose() まで有効です。
+     *
+     *  argv[0] から求めるベース名では、Linux と Windows で同じ名前になるよう、
+     *  末尾の ".exe" を大文字小文字を区別せずに除去します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数は条件付きスレッド セーフです。\n
+     *  プログラム名はハンドルの生成時に確定し、以後は変更されません。\n
+     *  そのため、同一 @p parser に対しても、cplat_argparser_handle_dispose() 以外の操作
+     *  (本関数どうしを含む) と同時に呼び出せます。\n
+     *  cplat_argparser_handle_dispose() とは同時に呼び出さないでください。
+     */
+    CPLAT_EXPORT const char *CPLAT_API cplat_argparser_handle_get_program_name(const cplat_argparser *parser);
+
+    /**
+     *  @brief          プロセス共有の既定パーサーの、プログラム名を取得します。
+     *  @return         cplat_argparser_init() の argv[0] から求めたベース名を返します。\n
+     *                  得られない場合は NULL を返します。\n
+     *                  返却する文字列はパーサーが所有します。次回の cplat_argparser_init() または
+     *                  プロセス終了時の自動解放まで有効です。
+     *  @see            cplat_argparser_handle_get_program_name
+     *
+     *  @par            スレッド セーフ
+     *  本関数は条件付きスレッド セーフです。\n
+     *  プログラム名を変更するのは cplat_argparser_init() だけです。\n
+     *  そのため、cplat_argparser_init() 以外のプロセス共有パーサーの操作 (本関数どうしを含む) と
+     *  同時に呼び出せます。\n
+     *  cplat_argparser_init() はプログラム名を解放して再設定するため、本関数と同時に呼び出さないでください。
+     */
+    CPLAT_EXPORT const char *CPLAT_API cplat_argparser_get_program_name(void);
+
+    /**
      *  @brief          登録内容から usage 文字列を組み立てます。
      *  @param[in]      parser         引数パーサー ハンドルです。NULL を渡してはなりません。
      *  @param[out]     buffer         usage 文字列の格納先バッファーです。\n
@@ -814,7 +852,9 @@ extern "C"
      *  解析前のヘルプ表示にも、解析後に呼び出し側で行うバリデーションのエラー報告にも使用できます。
      *
      *  プログラム名は生成オプションの program_name、未指定の場合は初期化時に
-     *  argv[0] から求めたベース名、いずれも得られない場合は "{program}" を使用します。
+     *  argv[0] から求めたベース名、いずれも得られない場合は "{program}" を使用します。\n
+     *  argv[0] から求めるベース名では、Linux と Windows で同じ名前になるよう、
+     *  末尾の ".exe" を大文字小文字を区別せずに除去します。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n

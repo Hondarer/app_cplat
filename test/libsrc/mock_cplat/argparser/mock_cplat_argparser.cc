@@ -201,6 +201,40 @@ MOCK_WEAK_IMPL(const char *, cplat_argparser_handle_get_error_target, const cpla
     return mock_ret;
 }
 
+const char *delegate_real_cplat_argparser_handle_get_program_name(const cplat_argparser *parser)
+{
+    static auto real_fn = reinterpret_cast<decltype(&cplat_argparser_handle_get_program_name)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_argparser_handle_get_program_name"));
+
+    return real_fn(parser);
+}
+
+MOCK_WEAK_IMPL(const char *, cplat_argparser_handle_get_program_name, const cplat_argparser *parser)
+{
+    const char *mock_ret = nullptr;
+
+    if (_mock_cplat != nullptr)
+    {
+        mock_ret = _mock_cplat->cplat_argparser_handle_get_program_name(parser);
+    }
+    else
+    {
+        mock_ret = delegate_real_cplat_argparser_handle_get_program_name(parser);
+    }
+
+    if (getTraceLevel() > TRACE_NONE)
+    {
+        const char *trace_result = mock_ret;
+        if (trace_result == nullptr)
+        {
+            trace_result = "(null)";
+        }
+        printf("  > %s -> %s\n", __func__, trace_result);
+    }
+
+    return mock_ret;
+}
+
 int delegate_real_cplat_argparser_handle_get_error_index(const cplat_argparser *parser)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_argparser_handle_get_error_index)>(
@@ -416,6 +450,40 @@ MOCK_WEAK_IMPL(const char *, cplat_argparser_get_error_target, void)
     else
     {
         mock_ret = delegate_real_cplat_argparser_get_error_target();
+    }
+
+    if (getTraceLevel() > TRACE_NONE)
+    {
+        const char *trace_result = mock_ret;
+        if (trace_result == nullptr)
+        {
+            trace_result = "(null)";
+        }
+        printf("  > %s -> %s\n", __func__, trace_result);
+    }
+
+    return mock_ret;
+}
+
+const char *delegate_real_cplat_argparser_get_program_name(void)
+{
+    static auto real_fn = reinterpret_cast<decltype(&cplat_argparser_get_program_name)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_argparser_get_program_name"));
+
+    return real_fn();
+}
+
+MOCK_WEAK_IMPL(const char *, cplat_argparser_get_program_name, void)
+{
+    const char *mock_ret = nullptr;
+
+    if (_mock_cplat != nullptr)
+    {
+        mock_ret = _mock_cplat->cplat_argparser_get_program_name();
+    }
+    else
+    {
+        mock_ret = delegate_real_cplat_argparser_get_program_name();
     }
 
     if (getTraceLevel() > TRACE_NONE)
