@@ -136,7 +136,11 @@ extern "C"
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
-     *  言語設定を同時に変更しない場合は、同時に実行できます。
+     *  言語設定を同時に変更しない場合は、同時に実行できます。\n
+     *  他スレッドが言語設定を変更する場合は、呼び出し側で同期してください。\n
+     *  cplat_string_catalog_set_language() で言語を設定しておらず、言語がまだ決まっていない場合は、
+     *  環境変数から言語を決定します。\n
+     *  このとき、他スレッドが環境変数を同時に変更する場合は、呼び出し側で同期してください。
      */
     int cplat_internal_string_catalog_prepare_format(const cplat_string_catalog *catalog, int string_key, va_list args,
                                                      const cplat_string_catalog_entry **entry_out,

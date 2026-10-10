@@ -48,7 +48,10 @@ extern "C"
      *  @return         成功時はハンドル、失敗時は NULL を返します。
      *
      *  @par            スレッド セーフ
-     *  本関数はスレッド セーフです。
+     *  本関数は条件付きスレッド セーフです。\n
+     *  テスト用の環境変数 `SYSLOG_TEST_FD` の有無を参照します。\n
+     *  他スレッドが環境変数を同時に変更しない場合は、同時に実行できます。\n
+     *  他スレッドが同時に環境変数を変更する場合は、呼び出し側で同期してください。
      */
     CPLAT_EXPORT cplat_syslog_sink *CPLAT_API cplat_syslog_sink_create(const char *ident, int facility);
 
@@ -64,7 +67,10 @@ extern "C"
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ
-     *  本関数はスレッド セーフです。
+     *  本関数は条件付きスレッド セーフです。\n
+     *  環境変数 `SYSLOG_TEST_FD` が設定された状態で生成したハンドルでは、書き込みのたびに同じ環境変数を参照します。\n
+     *  この場合、他スレッドが同時に環境変数を変更するときは、呼び出し側で同期してください。\n
+     *  それ以外のハンドルでは、同時に実行できます。
      */
     CPLAT_EXPORT int CPLAT_API cplat_syslog_sink_write(cplat_syslog_sink *handle, int level,
                                                        const cplat_timespec *timestamp, const char *message);

@@ -160,7 +160,9 @@ extern "C"
  *
  *  @par            スレッド セーフ
  *  本マクロはスレッド セーフではありません。\n
- *  同一プロンプト ハンドルに対する呼び出しを、呼び出し側で直列化してください。
+ *  標準入力の端末設定と、Linux の SIGWINCH のハンドラーは、プロセス全体で共有します。\n
+ *  そのため、異なるハンドルへの呼び出しも含め、
+ *  入力を受け付ける関数 (cplat_pinned_prompt の入力関数を含む) の呼び出しを、プロセス全体で直列化してください。
  */
 #define cplat_prompt_readline(p, buf, buf_size, prompt_str) \
     cplat_prompt_readline_at((p), (buf), (buf_size), (prompt_str), __FILE__, __LINE__)
@@ -183,7 +185,9 @@ extern "C"
  *
  *  @par            スレッド セーフ
  *  本マクロはスレッド セーフではありません。\n
- *  同一プロンプト ハンドルに対する呼び出しを、呼び出し側で直列化してください。
+ *  標準入力の端末設定と、Linux の SIGWINCH のハンドラーは、プロセス全体で共有します。\n
+ *  そのため、異なるハンドルへの呼び出しも含め、
+ *  入力を受け付ける関数 (cplat_pinned_prompt の入力関数を含む) の呼び出しを、プロセス全体で直列化してください。
  */
 #define cplat_prompt_readline_fmt(p, buf, buf_size, fmt, ...) \
     cplat_prompt_readline_fmt_at((p), (buf), (buf_size), __FILE__, __LINE__, (fmt), ##__VA_ARGS__)
@@ -204,7 +208,9 @@ extern "C"
  *
  *  @par            スレッド セーフ
  *  本マクロはスレッド セーフではありません。\n
- *  同一プロンプト ハンドルに対する呼び出しを、呼び出し側で直列化してください。
+ *  標準入力の端末設定と、Linux の SIGWINCH のハンドラーは、プロセス全体で共有します。\n
+ *  そのため、異なるハンドルへの呼び出しも含め、
+ *  入力を受け付ける関数 (cplat_pinned_prompt の入力関数を含む) の呼び出しを、プロセス全体で直列化してください。
  */
 #define cplat_prompt_readline_with_initial(p, buf, buf_size, prompt_str, initial_text) \
     cplat_prompt_readline_with_initial_at((p), (buf), (buf_size), (prompt_str), (initial_text), __FILE__, __LINE__)
@@ -229,7 +235,9 @@ extern "C"
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
-     *  同一プロンプト ハンドルに対する呼び出しを、呼び出し側で直列化してください。
+     *  標準入力の端末設定と、Linux の SIGWINCH のハンドラーは、プロセス全体で共有します。\n
+     *  そのため、異なるハンドルへの呼び出しも含め、
+     *  入力を受け付ける関数 (cplat_pinned_prompt の入力関数を含む) の呼び出しを、プロセス全体で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_prompt_readline_at(cplat_prompt *prompt, char *buf, size_t buf_size,
                                                         const char *prompt_str, const char *file, int line);
@@ -266,7 +274,9 @@ extern "C"
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
-     *  同一プロンプト ハンドルに対する呼び出しを、呼び出し側で直列化してください。
+     *  標準入力の端末設定と、Linux の SIGWINCH のハンドラーは、プロセス全体で共有します。\n
+     *  そのため、異なるハンドルへの呼び出しも含め、
+     *  入力を受け付ける関数 (cplat_pinned_prompt の入力関数を含む) の呼び出しを、プロセス全体で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_prompt_readline_with_initial_at(cplat_prompt *prompt, char *buf, size_t buf_size,
                                                                      const char *prompt_str, const char *initial_text,
@@ -293,7 +303,9 @@ extern "C"
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
-     *  同一プロンプト ハンドルに対する呼び出しを、呼び出し側で直列化してください。
+     *  標準入力の端末設定と、Linux の SIGWINCH のハンドラーは、プロセス全体で共有します。\n
+     *  そのため、異なるハンドルへの呼び出しも含め、
+     *  入力を受け付ける関数 (cplat_pinned_prompt の入力関数を含む) の呼び出しを、プロセス全体で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_prompt_readline_fmt_at(cplat_prompt *p, char *buf, size_t buf_size,
                                                             const char *file, int line, const char *fmt, ...)

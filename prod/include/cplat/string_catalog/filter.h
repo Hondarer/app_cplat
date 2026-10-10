@@ -718,7 +718,9 @@ extern "C"
      *  失敗の原因は @ref cplat_string_catalog_filter_source_status::last_result で確認します。
      *
      *  @par            スレッド セーフ
-     *  本関数はスレッド セーフです。
+     *  本関数は条件付きスレッド セーフです。\n
+     *  同じスロットに対する cplat_string_catalog_filter_slot_attach_source() と同時に呼び出さない場合は、
+     *  同時に実行できます。
      */
     CPLAT_EXPORT int CPLAT_API cplat_string_catalog_filter_slot_get_source_status(
         cplat_string_catalog_filter_slot *slot, cplat_string_catalog_filter_source_status *status_out);
@@ -851,7 +853,12 @@ extern "C"
      *  文型は、`cplat_string_catalog_get_language` が日本語を返す場合は日本語、それ以外はニュートラル言語です。
      *
      *  @par            スレッド セーフ
-     *  本関数はスレッド セーフです。
+     *  本関数は条件付きスレッド セーフです。\n
+     *  言語設定を同時に変更しない場合は、同時に実行できます。\n
+     *  他スレッドが言語設定を変更する場合は、呼び出し側で同期してください。\n
+     *  cplat_string_catalog_set_language() で言語を設定しておらず、言語がまだ決まっていない場合は、
+     *  環境変数から言語を決定します。\n
+     *  このとき、他スレッドが環境変数を同時に変更する場合は、呼び出し側で同期してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_string_catalog_filter_slot_describe_line(cplat_string_catalog_filter_slot *slot,
                                                                               size_t line_index, char *dest,
@@ -904,7 +911,13 @@ extern "C"
      *  取り込みの結果は本関数の戻り値に含めず、@ref cplat_string_catalog_filter_slot_get_source_status で確認します。
      *
      *  @par            スレッド セーフ
-     *  本関数はスレッド セーフです。
+     *  本関数は条件付きスレッド セーフです。\n
+     *  言語設定を同時に変更しない場合は、同時に実行できます。\n
+     *  他スレッドが言語設定を変更する場合は、呼び出し側で同期してください。\n
+     *  cplat_string_catalog_set_language() で言語を設定しておらず、言語がまだ決まっていない場合は、
+     *  環境変数から言語を決定します。\n
+     *  このとき、他スレッドが環境変数を同時に変更する場合は、呼び出し側で同期してください。\n
+     *  同じスロットに対する cplat_string_catalog_filter_slot_attach_source() と同時に呼び出さないでください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_string_catalog_filter_slot_vformat(cplat_string_catalog_filter_slot *slot,
                                                                         char *dest, size_t dest_size, int *matched_out,
@@ -916,7 +929,13 @@ extern "C"
      *  引数と戻り値は @ref cplat_string_catalog_filter_slot_vformat と同じです。
      *
      *  @par            スレッド セーフ
-     *  本関数はスレッド セーフです。
+     *  本関数は条件付きスレッド セーフです。\n
+     *  言語設定を同時に変更しない場合は、同時に実行できます。\n
+     *  他スレッドが言語設定を変更する場合は、呼び出し側で同期してください。\n
+     *  cplat_string_catalog_set_language() で言語を設定しておらず、言語がまだ決まっていない場合は、
+     *  環境変数から言語を決定します。\n
+     *  このとき、他スレッドが環境変数を同時に変更する場合は、呼び出し側で同期してください。\n
+     *  同じスロットに対する cplat_string_catalog_filter_slot_attach_source() と同時に呼び出さないでください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_string_catalog_filter_slot_format(cplat_string_catalog_filter_slot *slot,
                                                                        char *dest, size_t dest_size, int *matched_out,

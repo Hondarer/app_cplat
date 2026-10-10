@@ -503,7 +503,10 @@ extern "C"
      *  読み書きを許可します ([cplat_fopen](@ref cplat_fopen) と同じ既定です)。
      *
      *  @par            スレッド セーフ
-     *  本関数はスレッド セーフです。
+     *  本関数は条件付きスレッド セーフです。\n
+     *  Linux 環境では環境変数 `TMPDIR` を参照します。\n
+     *  他スレッドが環境変数を同時に変更しない場合は、同時に実行できます。\n
+     *  他スレッドが同時に環境変数を変更する場合は、呼び出し側で同期してください。
      */
     CPLAT_EXPORT FILE *CPLAT_API cplat_fopen_temp(const char *prefix, const char *modes, char *path_out,
                                                   size_t path_size, cplat_error *detail_out);

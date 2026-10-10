@@ -126,7 +126,10 @@ extern "C"
      *  @return         結果コードを返します。
      *
      *  @par            スレッド セーフ
-     *  本関数はスレッド セーフです。
+     *  本関数は条件付きスレッド セーフです。\n
+     *  Linux 環境では、子プロセスへ引き継ぐため、自プロセスの環境変数を読み取ります。\n
+     *  他スレッドが環境変数を同時に変更しない場合は、同時に実行できます。\n
+     *  他スレッドが同時に環境変数を変更する場合は、呼び出し側で同期してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_process_start(const cplat_process_options *options, cplat_process **process);
 
@@ -191,7 +194,10 @@ extern "C"
      *  @return         結果コードを返します。
      *
      *  @par            スレッド セーフ
-     *  本関数はスレッド セーフです。
+     *  本関数は条件付きスレッド セーフです。\n
+     *  Linux 環境では、子プロセスへ引き継ぐため、自プロセスの環境変数を読み取ります。\n
+     *  他スレッドが環境変数を同時に変更しない場合は、同時に実行できます。\n
+     *  他スレッドが同時に環境変数を変更する場合は、呼び出し側で同期してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_process_run_sync(const cplat_process_options *options, int timeout_ms,
                                                       int *exit_code);
