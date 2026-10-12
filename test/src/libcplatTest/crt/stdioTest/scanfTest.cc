@@ -65,16 +65,18 @@ TEST_F(scanfTest, scanf_reads_width_limited_token_and_integer)
             [](const char *, int, const char *, const char *, va_list args)
             {
                 return fill_token_and_int(args, "alpha", 42);
-            }); // [Pre-Assert確認_正常系] - vscanf が "%7s %d" で 1 回呼び出されること。
+            }); // [Pre-Assert確認_正常系] - vscanf() が "%7s %d" と等しい文字列を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - 文字列に "alpha"、数値に 42 を格納し、2 を返却する。
 
     // Act
     int count = cplat_scanf("%7s %d", token, &value); // [手順] - 幅 7 の文字列と整数を cplat_scanf で読み取る。
 
     // Assert
-    EXPECT_EQ(2, count);          // [確認_正常系] - cplat_scanf の戻り値が 2 であること。
-    EXPECT_STREQ("alpha", token); // [確認_正常系] - 文字列が "alpha" であること。
-    EXPECT_EQ(42, value);         // [確認_正常系] - 数値が 42 であること。
+    EXPECT_EQ(
+        2,
+        count); // [確認_正常系] - cplat_scanf() の戻り値が 2 であること。(文字列と整数の 2 項目を読み取ったことの確認)
+    EXPECT_STREQ("alpha", token); // [確認_正常系] - token が "alpha" であること。
+    EXPECT_EQ(42, value);         // [確認_正常系] - value が 42 であること。
 }
 
 // vscanf が標準入力から幅指定した文字列と数値を読み取ることの確認
@@ -90,16 +92,18 @@ TEST_F(scanfTest, vscanf_reads_width_limited_token_and_integer)
             [](const char *, int, const char *, const char *, va_list args)
             {
                 return fill_token_and_int(args, "bravo", 24);
-            }); // [Pre-Assert確認_正常系] - vscanf が "%7s %d" で 1 回呼び出されること。
+            }); // [Pre-Assert確認_正常系] - vscanf() が "%7s %d" と等しい文字列を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - 文字列に "bravo"、数値に 24 を格納し、2 を返却する。
 
     // Act
     int count = call_cplat_vscanf("%7s %d", token, &value); // [手順] - 幅 7 の文字列と整数を cplat_vscanf で読み取る。
 
     // Assert
-    EXPECT_EQ(2, count);          // [確認_正常系] - cplat_vscanf の戻り値が 2 であること。
-    EXPECT_STREQ("bravo", token); // [確認_正常系] - 文字列が "bravo" であること。
-    EXPECT_EQ(24, value);         // [確認_正常系] - 数値が 24 であること。
+    EXPECT_EQ(
+        2,
+        count); // [確認_正常系] - call_cplat_vscanf() の戻り値が 2 であること。(文字列と整数の 2 項目を読み取ったことの確認)
+    EXPECT_STREQ("bravo", token); // [確認_正常系] - token が "bravo" であること。
+    EXPECT_EQ(24, value);         // [確認_正常系] - value が 24 であること。
 }
 
 // fscanf がストリームから幅指定した文字列と数値を読み取ることの確認
@@ -115,7 +119,7 @@ TEST_F(scanfTest, fscanf_reads_width_limited_token_and_integer)
             [](const char *, int, const char *, FILE *, const char *, va_list args)
             {
                 return fill_token_and_int(args, "charlie", 17);
-            }); // [Pre-Assert確認_正常系] - vfscanf が番兵ストリームと "%7s %d" で 1 回呼び出されること。
+            }); // [Pre-Assert確認_正常系] - vfscanf() が kStream、"%7s %d" と等しい文字列を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - 文字列に "charlie"、数値に 17 を格納し、2 を返却する。
 
     // Act
@@ -123,9 +127,11 @@ TEST_F(scanfTest, fscanf_reads_width_limited_token_and_integer)
                              &value); // [手順] - 幅 7 の文字列と整数を cplat_fscanf で読み取る。
 
     // Assert
-    EXPECT_EQ(2, count);            // [確認_正常系] - cplat_fscanf の戻り値が 2 であること。
-    EXPECT_STREQ("charlie", token); // [確認_正常系] - 文字列が "charlie" であること。
-    EXPECT_EQ(17, value);           // [確認_正常系] - 数値が 17 であること。
+    EXPECT_EQ(
+        2,
+        count); // [確認_正常系] - cplat_fscanf() の戻り値が 2 であること。(文字列と整数の 2 項目を読み取ったことの確認)
+    EXPECT_STREQ("charlie", token); // [確認_正常系] - token が "charlie" であること。
+    EXPECT_EQ(17, value);           // [確認_正常系] - value が 17 であること。
 }
 
 // vfscanf がストリームから幅指定した文字列と数値を読み取ることの確認
@@ -141,7 +147,7 @@ TEST_F(scanfTest, vfscanf_reads_width_limited_token_and_integer)
             [](const char *, int, const char *, FILE *, const char *, va_list args)
             {
                 return fill_token_and_int(args, "delta", 71);
-            }); // [Pre-Assert確認_正常系] - vfscanf が番兵ストリームと "%7s %d" で 1 回呼び出されること。
+            }); // [Pre-Assert確認_正常系] - vfscanf() が kStream、"%7s %d" と等しい文字列を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - 文字列に "delta"、数値に 71 を格納し、2 を返却する。
 
     // Act
@@ -149,7 +155,9 @@ TEST_F(scanfTest, vfscanf_reads_width_limited_token_and_integer)
                                    &value); // [手順] - 幅 7 の文字列と整数を cplat_vfscanf で読み取る。
 
     // Assert
-    EXPECT_EQ(2, count);          // [確認_正常系] - cplat_vfscanf の戻り値が 2 であること。
-    EXPECT_STREQ("delta", token); // [確認_正常系] - 文字列が "delta" であること。
-    EXPECT_EQ(71, value);         // [確認_正常系] - 数値が 71 であること。
+    EXPECT_EQ(
+        2,
+        count); // [確認_正常系] - call_cplat_vfscanf() の戻り値が 2 であること。(文字列と整数の 2 項目を読み取ったことの確認)
+    EXPECT_STREQ("delta", token); // [確認_正常系] - token が "delta" であること。
+    EXPECT_EQ(71, value);         // [確認_正常系] - value が 71 であること。
 }

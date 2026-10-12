@@ -25,18 +25,21 @@ TEST_F(symLoaderIsDefaultTest, resolves_and_reports_explicit_default)
             {
                 cplat_atomic_store_i32(&entry->resolved, 2, CPLAT_MEMORY_ORDER_RELAXED);
                 return nullptr;
-            }); // [Pre-Assert確認_正常系] - 未解決のため cplat_sym_loader_resolve が 1 回呼び出されること。
+            }); // [Pre-Assert確認_正常系] - cplat_sym_loader_resolve() が &entry_ を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - resolved を明示的既定値の 2 に設定する。
 
     // Act
     int actual_ret = cplat_sym_loader_is_default(&entry_); // [手順] - cplat_sym_loader_is_default を呼び出す。
 
     // Assert
-    EXPECT_EQ(1, actual_ret); // [確認_正常系] - cplat_sym_loader_is_default の戻り値が 1 であること。
-    EXPECT_EQ(2,
-              cplat_atomic_load_i32(
-                  &entry_.resolved,
-                  CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - 呼び出しの中で解決が行われ resolved が 2 になること。
+    EXPECT_EQ(
+        1,
+        actual_ret); // [確認_正常系] - cplat_sym_loader_is_default() の戻り値が 1 であること。(明示的既定値と判定されることの確認)
+    EXPECT_EQ(
+        2,
+        cplat_atomic_load_i32(
+            &entry_.resolved,
+            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 2 であること。(呼び出しの中で明示的既定値へ解決されることの確認)
 }
 
 // 解決済みのエントリが明示的既定値でないと判定されることの確認
@@ -49,16 +52,20 @@ TEST_F(symLoaderIsDefaultTest, reports_not_default_for_resolved_symbol)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_sym_loader_resolve(_))
-        .Times(0); // [Pre-Assert確認_正常系] - 解決済みのため cplat_sym_loader_resolve が呼び出されないこと。
+        .Times(0); // [Pre-Assert確認_正常系] - cplat_sym_loader_resolve() が呼び出されないこと。
 
     // Act
     int actual_ret = cplat_sym_loader_is_default(&entry_); // [手順] - cplat_sym_loader_is_default を呼び出す。
 
     // Assert
-    EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_sym_loader_is_default の戻り値が 0 であること。
     EXPECT_EQ(
-        1, cplat_atomic_load_i32(&entry_.resolved,
-                                 CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - resolved が 1 のまま変化しないこと。
+        0,
+        actual_ret); // [確認_正常系] - cplat_sym_loader_is_default() の戻り値が 0 であること。(明示的既定値でないと判定されることの確認)
+    EXPECT_EQ(
+        1,
+        cplat_atomic_load_i32(
+            &entry_.resolved,
+            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 1 であること。(解決状態が変化しないことの確認)
 }
 
 // 解決に失敗したエントリが明示的既定値でないと判定されることの確認
@@ -75,15 +82,19 @@ TEST_F(symLoaderIsDefaultTest, reports_not_default_for_unresolved_entry)
             {
                 cplat_atomic_store_i32(&entry->resolved, -1, CPLAT_MEMORY_ORDER_RELAXED);
                 return nullptr;
-            }); // [Pre-Assert確認_異常系] - 未解決のため cplat_sym_loader_resolve が 1 回呼び出されること。
+            }); // [Pre-Assert確認_異常系] - cplat_sym_loader_resolve() が &entry_ を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - resolved を定義なしの -1 に設定する。
 
     // Act
     int actual_ret = cplat_sym_loader_is_default(&entry_); // [手順] - cplat_sym_loader_is_default を呼び出す。
 
     // Assert
-    EXPECT_EQ(0, actual_ret); // [確認_異常系] - cplat_sym_loader_is_default の戻り値が 0 であること。
-    EXPECT_EQ(-1, cplat_atomic_load_i32(
-                      &entry_.resolved,
-                      CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - resolved が定義なしを示す -1 になること。
+    EXPECT_EQ(
+        0,
+        actual_ret); // [確認_異常系] - cplat_sym_loader_is_default() の戻り値が 0 であること。(明示的既定値でないと判定されることの確認)
+    EXPECT_EQ(
+        -1,
+        cplat_atomic_load_i32(
+            &entry_.resolved,
+            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が -1 であること。(定義なしの解決状態になることの確認)
 }

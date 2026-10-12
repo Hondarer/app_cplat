@@ -92,14 +92,22 @@ TEST_F(hashtableScanTest, walks_each_status_group)
                 &ret_all); // [手順] - 全レコードを走査する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, ret_in_use);                         // [確認_正常系] - 使用中の走査が成功すること。
-    EXPECT_EQ(std::vector<uint64_t>({1u, 3u}), in_use);      // [確認_正常系] - 使用中のレコードだけを昇順に返すこと。
-    EXPECT_EQ(CPLAT_OK, ret_deleted);                        // [確認_正常系] - 削除済みの走査が成功すること。
-    EXPECT_EQ(std::vector<uint64_t>({2u}), deleted);         // [確認_正常系] - 削除済みのレコードだけを返すこと。
-    EXPECT_EQ(CPLAT_OK, ret_empty);                          // [確認_正常系] - 空の走査が成功すること。
-    EXPECT_EQ(std::vector<uint64_t>({4u}), empty);           // [確認_正常系] - 空のレコードだけを返すこと。
-    EXPECT_EQ(CPLAT_OK, ret_all);                            // [確認_正常系] - 全状態の走査が成功すること。
-    EXPECT_EQ(std::vector<uint64_t>({1u, 2u, 3u, 4u}), all); // [確認_正常系] - すべてのレコードを昇順に返すこと。
+    EXPECT_EQ(CPLAT_OK, ret_in_use); // [確認_正常系] - 使用中の走査での ret_in_use が CPLAT_OK であること。
+    EXPECT_EQ(
+        std::vector<uint64_t>({1u, 3u}),
+        in_use); // [確認_正常系] - 使用中を走査した collect() の戻り値が std::vector<uint64_t>({1u, 3u}) と一致すること。(使用中のレコードだけを昇順に返したことの確認)
+    EXPECT_EQ(CPLAT_OK, ret_deleted); // [確認_正常系] - 削除済みの走査での ret_deleted が CPLAT_OK であること。
+    EXPECT_EQ(
+        std::vector<uint64_t>({2u}),
+        deleted); // [確認_正常系] - 削除済みを走査した collect() の戻り値が std::vector<uint64_t>({2u}) と一致すること。(削除済みのレコードだけを返したことの確認)
+    EXPECT_EQ(CPLAT_OK, ret_empty); // [確認_正常系] - 空の走査での ret_empty が CPLAT_OK であること。
+    EXPECT_EQ(
+        std::vector<uint64_t>({4u}),
+        empty); // [確認_正常系] - 空を走査した collect() の戻り値が std::vector<uint64_t>({4u}) と一致すること。(空のレコードだけを返したことの確認)
+    EXPECT_EQ(CPLAT_OK, ret_all); // [確認_正常系] - 全状態の走査での ret_all が CPLAT_OK であること。
+    EXPECT_EQ(
+        std::vector<uint64_t>({1u, 2u, 3u, 4u}),
+        all); // [確認_正常系] - 全状態を走査した collect() の戻り値が std::vector<uint64_t>({1u, 2u, 3u, 4u}) と一致すること。(すべてのレコードを昇順に返したことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
@@ -128,12 +136,21 @@ TEST_F(hashtableScanTest, reports_end_of_scan_without_error)
                                                         &has_record_at_end); // [手順] - 終端から走査する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_empty_table); // [確認_正常系] - 該当が無くてもエラーにならないこと。
-    EXPECT_EQ(0, has_record);                    // [確認_正常系] - 該当が無いことが出力引数で分かること。
-    EXPECT_EQ(12345u, record);                   // [確認_正常系] - 該当が無いとき格納先を書き換えないこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_at_end);      // [確認_正常系] - capacity と等しい位置からの走査が成功すること。
-    EXPECT_EQ(0, has_record_at_end);             // [確認_正常系] - 終端では該当が無いこと。
-    EXPECT_EQ(54321u, record_at_end);            // [確認_正常系] - 終端でも格納先を書き換えないこと。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_empty_table); // [確認_正常系] - 空テーブルに対する cplat_hashtable_next_record() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0,
+              has_record); // [確認_正常系] - has_record が 0 であること。(該当が無いことが出力引数で分かったことの確認)
+    EXPECT_EQ(12345u,
+              record); // [確認_正常系] - record が 12345 であること。(該当が無いとき格納先を書き換えなかったことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_at_end); // [確認_正常系] - capacity と等しい位置からの cplat_hashtable_next_record() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0,
+              has_record_at_end); // [確認_正常系] - has_record_at_end が 0 であること。(終端では該当が無いことの確認)
+    EXPECT_EQ(
+        54321u,
+        record_at_end); // [確認_正常系] - record_at_end が 54321 であること。(終端でも格納先を書き換えなかったことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
@@ -168,16 +185,24 @@ TEST_F(hashtableScanTest, guards_reject_invalid_arguments)
                                                            &has_record); // [手順] - capacity を超える開始位置を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_null_ht); // [確認_異常系] - ht が NULL なら失敗すること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_record); // [確認_異常系] - レコード番号の格納先が NULL なら失敗すること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_has); // [確認_異常系] - 該当有無の格納先が NULL なら失敗すること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_zero_mask); // [確認_異常系] - マスクが 0 なら失敗すること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_unknown_mask); // [確認_異常系] - 未定義のビットを含むマスクが失敗すること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_from_over); // [確認_異常系] - capacity を超える開始位置が失敗すること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_next_record() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_record); // [確認_異常系] - record に NULL を渡した cplat_hashtable_next_record() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_has); // [確認_異常系] - has_record に NULL を渡した cplat_hashtable_next_record() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_zero_mask); // [確認_異常系] - マスクに 0 を渡した cplat_hashtable_next_record() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_unknown_mask); // [確認_異常系] - 未定義のビットを含むマスクを渡した cplat_hashtable_next_record() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_from_over); // [確認_異常系] - capacity を超える開始位置を渡した cplat_hashtable_next_record() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。

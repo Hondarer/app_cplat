@@ -51,16 +51,16 @@ TEST_F(fileFailureInjectionTest, set_size_reports_errno_when_ftruncate_fails)
     // Pre-Assert
     EXPECT_CALL(mock_unistd, ftruncate(_, _, _, _, _))
         .WillOnce(DoAll(Assign(&errno, EIO), Return(-1)))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - ftruncate が 1 回目に呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - ftruncate() が 1 回以上呼び出されること。
                                       // [Pre-Assert手順] - errno に EIO を設定し、1 回目は -1 を返却する。
 
     // Act
     int actual_ret = cplat_file_set_size(&file_, 16u, &detail); // [手順] - cplat_file_set_size を呼び出す。
 
     // Assert
-    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - cplat_file_set_size の戻り値が CPLAT_OK 以外であること。
+    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - cplat_file_set_size() の戻り値が CPLAT_OK 以外であること。
     EXPECT_EQ(EIO,
-              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が EIO であること。
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EIO であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -77,16 +77,16 @@ TEST_F(fileFailureInjectionTest, get_size_reports_errno_when_fstat_fails)
     // Pre-Assert
     EXPECT_CALL(mock_sys_stat, fstat(_, _, _, _, _))
         .WillOnce(DoAll(Assign(&errno, EBADF), Return(-1)))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - fstat が 1 回目に呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - fstat() が 1 回以上呼び出されること。
                                       // [Pre-Assert手順] - errno に EBADF を設定し、1 回目は -1 を返却する。
 
     // Act
     int actual_ret = cplat_file_get_size(&file_, &size, &detail); // [手順] - cplat_file_get_size を呼び出す。
 
     // Assert
-    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - cplat_file_get_size の戻り値が CPLAT_OK 以外であること。
+    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - cplat_file_get_size() の戻り値が CPLAT_OK 以外であること。
     EXPECT_EQ(EBADF,
-              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が EBADF であること。
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EBADF であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -103,16 +103,16 @@ TEST_F(fileFailureInjectionTest, get_id_reports_errno_when_fstat_fails)
     // Pre-Assert
     EXPECT_CALL(mock_sys_stat, fstat(_, _, _, _, _))
         .WillOnce(DoAll(Assign(&errno, EBADF), Return(-1)))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - fstat が 1 回目に呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - fstat() が 1 回以上呼び出されること。
                                       // [Pre-Assert手順] - errno に EBADF を設定し、1 回目は -1 を返却する。
 
     // Act
     int actual_ret = cplat_file_get_id(&file_, &id, &detail); // [手順] - cplat_file_get_id を呼び出す。
 
     // Assert
-    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - cplat_file_get_id の戻り値が CPLAT_OK 以外であること。
+    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - cplat_file_get_id() の戻り値が CPLAT_OK 以外であること。
     EXPECT_EQ(EBADF,
-              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が EBADF であること。
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EBADF であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -128,7 +128,7 @@ TEST_F(fileFailureInjectionTest, init_accepts_null)
     cplat_file_init(NULL); // [手順] - NULL を指定して cplat_file_init を呼び出す。
 
     // Assert
-    SUCCEED(); // [確認_正常系] - クラッシュせずに完了すること。
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(NULL を渡した cplat_file_init() がクラッシュしないことの確認)
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -149,9 +149,11 @@ TEST_F(fileFailureInjectionTest, open_reports_close_failure_before_opening_new_p
                                      &detail); // [手順] - 既存ハンドルを持つ状態で別のファイルを開く。
 
     // Assert
-    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - 既存ハンドルのクローズ失敗が返ること。
+    EXPECT_NE(
+        CPLAT_OK,
+        actual_ret); // [確認_異常系] - cplat_file_open() の戻り値が CPLAT_OK 以外であること。(既存ハンドルのクローズ失敗が返ったことの確認)
     EXPECT_EQ(EBADF,
-              cplat_error_get_errno(&detail)); // [確認_異常系] - クローズ失敗の errno が EBADF であること。
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EBADF であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -169,7 +171,7 @@ TEST_F(fileFailureInjectionTest, write_succeeds_for_zero_length)
                                       &detail); // [手順] - NULL バッファーと長さ 0 を指定して書き込む。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 長さ 0 の書き込みが成功すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 長さ 0 の cplat_file_write() の戻り値が CPLAT_OK であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -188,10 +190,11 @@ TEST_F(fileFailureInjectionTest, write_rejects_null_buffer_for_positive_length)
                          &detail); // [手順] - オープン済みファイルへ NULL バッファーと長さ 1 を指定して書き込む。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - NULL バッファー付き書き込みが CPLAT_ERR_INVALID_ARGUMENT を返すこと。
-    EXPECT_EQ(EINVAL, cplat_error_get_errno(
-                          &detail)); // [確認_異常系] - NULL バッファー付き書き込みの errno が EINVAL であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - NULL バッファーを渡した cplat_file_write() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(EINVAL,
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EINVAL であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -211,8 +214,9 @@ TEST_F(fileFailureInjectionTest, read_succeeds_for_zero_length)
                                      &detail); // [手順] - 長さ 0 を指定して読み込む。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 長さ 0 の読み取りが成功すること。
-    EXPECT_EQ(0u, read);             // [確認_正常系] - 読み取ったバイト数が 0 であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 長さ 0 の cplat_file_read() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0u, read); // [確認_正常系] - read が 0u であること。(長さ 0 の読み取りで読み取りバイト数が 0 であることの確認)
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -232,10 +236,11 @@ TEST_F(fileFailureInjectionTest, read_rejects_null_buffer_when_open)
                         &detail); // [手順] - オープン済みファイルへ NULL バッファーと長さ 1 を指定して読み取る。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - NULL バッファー付き読み取りが CPLAT_ERR_INVALID_ARGUMENT を返すこと。
-    EXPECT_EQ(EINVAL, cplat_error_get_errno(
-                          &detail)); // [確認_異常系] - NULL バッファー付き読み取りの errno が EINVAL であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - NULL バッファーを渡した cplat_file_read() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(EINVAL,
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EINVAL であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -255,10 +260,11 @@ TEST_F(fileFailureInjectionTest, read_rejects_null_output_when_open)
                         &detail); // [手順] - オープン済みファイルへ NULL の読み取りバイト数出力先を指定して読み取る。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - NULL 出力先付き読み取りが CPLAT_ERR_INVALID_ARGUMENT を返すこと。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - NULL 出力先を渡した cplat_file_read() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(EINVAL,
-              cplat_error_get_errno(&detail)); // [確認_異常系] - NULL 出力先付き読み取りの errno が EINVAL であること。
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EINVAL であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -277,10 +283,11 @@ TEST_F(fileFailureInjectionTest, get_size_rejects_null_output_when_open)
                             &detail); // [手順] - オープン済みファイルへ NULL のサイズ出力先を指定してサイズを取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - NULL 出力先付きサイズ取得が CPLAT_ERR_INVALID_ARGUMENT を返すこと。
-    EXPECT_EQ(EINVAL, cplat_error_get_errno(
-                          &detail)); // [確認_異常系] - NULL 出力先付きサイズ取得の errno が EINVAL であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - NULL 出力先を渡した cplat_file_get_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(EINVAL,
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EINVAL であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -299,10 +306,11 @@ TEST_F(fileFailureInjectionTest, get_id_rejects_null_output_when_open)
                           &detail); // [手順] - オープン済みファイルへ NULL の ID 出力先を指定して ID を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - NULL 出力先付き ID 取得が CPLAT_ERR_INVALID_ARGUMENT を返すこと。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - NULL 出力先を渡した cplat_file_get_id() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(EINVAL,
-              cplat_error_get_errno(&detail)); // [確認_異常系] - NULL 出力先付き ID 取得の errno が EINVAL であること。
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EINVAL であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -322,9 +330,11 @@ TEST_F(fileFailureInjectionTest, flush_rejects_unopened_file)
                                       &detail); // [手順] - 未オープンのファイルを flush する。
 
     // Assert
-    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - 未オープンのファイルが拒否されること。
+    EXPECT_NE(
+        CPLAT_OK,
+        actual_ret); // [確認_異常系] - 未オープンのファイルに対する cplat_file_flush() の戻り値が CPLAT_OK 以外であること。
     EXPECT_EQ(EINVAL,
-              cplat_error_get_errno(&detail)); // [確認_異常系] - 詳細 errno が EINVAL であること。
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EINVAL であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -342,9 +352,10 @@ TEST_F(fileFailureInjectionTest, close_rejects_null_file)
                                       &detail); // [手順] - NULL を指定して cplat_file_close を呼び出す。
 
     // Assert
-    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - NULL のファイルが拒否されること。
+    EXPECT_NE(CPLAT_OK,
+              actual_ret); // [確認_異常系] - NULL を渡した cplat_file_close() の戻り値が CPLAT_OK 以外であること。
     EXPECT_EQ(EINVAL,
-              cplat_error_get_errno(&detail)); // [確認_異常系] - 詳細 errno が EINVAL であること。
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EINVAL であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -367,9 +378,11 @@ TEST_F(fileFailureInjectionTest, write_reports_os_failure)
                                       &detail); // [手順] - 無効な記述子へ 1 バイトを書き込む。
 
     // Assert
-    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - OS の書き込み失敗が通知されること。
+    EXPECT_NE(
+        CPLAT_OK,
+        actual_ret); // [確認_異常系] - cplat_file_write() の戻り値が CPLAT_OK 以外であること。(OS の書き込み失敗が通知されたことの確認)
     EXPECT_EQ(EBADF,
-              cplat_error_get_errno(&detail)); // [確認_異常系] - 詳細 errno が EBADF であること。
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EBADF であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -392,9 +405,11 @@ TEST_F(fileFailureInjectionTest, read_reports_os_failure)
                                      &detail); // [手順] - 無効な記述子から 1 バイトを読み取る。
 
     // Assert
-    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - OS の読み取り失敗が通知されること。
+    EXPECT_NE(
+        CPLAT_OK,
+        actual_ret); // [確認_異常系] - cplat_file_read() の戻り値が CPLAT_OK 以外であること。(OS の読み取り失敗が通知されたことの確認)
     EXPECT_EQ(EBADF,
-              cplat_error_get_errno(&detail)); // [確認_異常系] - 詳細 errno が EBADF であること。
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EBADF であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -415,9 +430,11 @@ TEST_F(fileFailureInjectionTest, flush_reports_os_failure)
                                       &detail); // [手順] - 無効な記述子を flush する。
 
     // Assert
-    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - OS の flush 失敗が通知されること。
+    EXPECT_NE(
+        CPLAT_OK,
+        actual_ret); // [確認_異常系] - cplat_file_flush() の戻り値が CPLAT_OK 以外であること。(OS の flush 失敗が通知されたことの確認)
     EXPECT_EQ(EBADF,
-              cplat_error_get_errno(&detail)); // [確認_異常系] - 詳細 errno が EBADF であること。
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EBADF であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -434,7 +451,7 @@ TEST_F(fileFailureInjectionTest, read_retries_after_interrupt)
     // Pre-Assert
     EXPECT_CALL(mock_unistd, read(_, _, _, _, _, _))
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)))
-        .WillOnce(Return(4)); // [Pre-Assert確認_正常系] - read が 2 回呼び出されること。
+        .WillOnce(Return(4)); // [Pre-Assert確認_正常系] - read() が 2 回呼び出されること。
                               // [Pre-Assert手順] - errno に EINTR を設定した -1 ののち 4 を返却する。
 
     // Act
@@ -443,9 +460,10 @@ TEST_F(fileFailureInjectionTest, read_retries_after_interrupt)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              actual_ret); // [確認_正常系] - 中断後に再試行した cplat_file_read の戻り値が CPLAT_OK であること。
-    EXPECT_EQ((size_t)4,
-              read_bytes); // [確認_正常系] - 再試行後の読み取りバイト数が 4 であること。
+              actual_ret); // [確認_正常系] - 中断後に再試行した cplat_file_read() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        (size_t)4,
+        read_bytes); // [確認_正常系] - read_bytes が (size_t)4 であること。(再試行後の読み取りバイト数が 4 であることの確認)
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -461,7 +479,7 @@ TEST_F(fileFailureInjectionTest, write_retries_after_interrupt)
     // Pre-Assert
     EXPECT_CALL(mock_unistd, write(_, _, _, _, _, _))
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)))
-        .WillOnce(Return(4)); // [Pre-Assert確認_正常系] - write が 2 回呼び出されること。
+        .WillOnce(Return(4)); // [Pre-Assert確認_正常系] - write() が 2 回呼び出されること。
                               // [Pre-Assert手順] - errno に EINTR を設定した -1 ののち 4 を返却する。
 
     // Act
@@ -470,7 +488,7 @@ TEST_F(fileFailureInjectionTest, write_retries_after_interrupt)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              actual_ret); // [確認_正常系] - 中断後に再試行した cplat_file_write の戻り値が CPLAT_OK であること。
+              actual_ret); // [確認_正常系] - 中断後に再試行した cplat_file_write() の戻り値が CPLAT_OK であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -491,9 +509,11 @@ TEST_F(fileFailureInjectionTest, close_reports_os_failure)
                                       &detail); // [手順] - 無効な記述子をクローズする。
 
     // Assert
-    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - OS のクローズ失敗が通知されること。
+    EXPECT_NE(
+        CPLAT_OK,
+        actual_ret); // [確認_異常系] - cplat_file_close() の戻り値が CPLAT_OK 以外であること。(OS のクローズ失敗が通知されたことの確認)
     EXPECT_EQ(EBADF,
-              cplat_error_get_errno(&detail)); // [確認_異常系] - 詳細 errno が EBADF であること。
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EBADF であること。
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 

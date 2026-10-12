@@ -36,7 +36,7 @@ TEST_F(symLoaderDisposeTest, releases_handle_and_func_ptr_of_resolved_entry)
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_dlfcn, dlclose(_, _, _, kFakeHandle)).WillOnce(Return(0));
-    // [Pre-Assert確認_正常系] - mock_dlfcn の dlclose(_, _, _, kFakeHandle) が登録した呼び出し期待を満たすこと。
+    // [Pre-Assert確認_正常系] - dlclose() が kFakeHandle を指定して 1 回呼び出されること。
 #endif /* PLATFORM_LINUX */
     // 解放 API がエントリのハンドルを 1 回閉じること。
     // [Pre-Assert手順] - 閉じる操作は成功を返却する。
@@ -45,10 +45,12 @@ TEST_F(symLoaderDisposeTest, releases_handle_and_func_ptr_of_resolved_entry)
     cplat_sym_loader_dispose(entries, 1u); // [手順] - 解決済みエントリ 1 件を指定して解放する。
 
     // Assert
-    EXPECT_EQ(nullptr, entry.handle); // [確認_正常系] - handle が NULL になること。
-    EXPECT_EQ(nullptr,
-              cplat_atomic_load_ptr(&entry.func_ptr,
-                                    CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - func_ptr が NULL になること。
+    EXPECT_EQ(nullptr, entry.handle); // [確認_正常系] - entry.handle が nullptr であること。
+    EXPECT_EQ(
+        nullptr,
+        cplat_atomic_load_ptr(
+            &entry.func_ptr,
+            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - entry.func_ptr を読み込んだ cplat_atomic_load_ptr() の戻り値が nullptr であること。
 }
 
 // ハンドルを持たないエントリが読み飛ばされることの確認
@@ -64,7 +66,7 @@ TEST_F(symLoaderDisposeTest, skips_entry_without_handle)
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_dlfcn, dlclose(_, _, _, _)).Times(0);
-    // [Pre-Assert確認_正常系] - mock_dlfcn の dlclose(_, _, _, _) が登録した呼び出し期待を満たすこと。
+    // [Pre-Assert確認_正常系] - dlclose() が呼び出されないこと。
 #endif /* PLATFORM_LINUX */
     // ハンドルが無いとき解放 API が呼び出されないこと。
 
@@ -72,7 +74,7 @@ TEST_F(symLoaderDisposeTest, skips_entry_without_handle)
     cplat_sym_loader_dispose(entries, 1u); // [手順] - ハンドルを持たないエントリを指定して解放する。
 
     // Assert
-    EXPECT_EQ(nullptr, entry.handle); // [確認_正常系] - handle が NULL のままであること。
+    EXPECT_EQ(nullptr, entry.handle); // [確認_正常系] - entry.handle が nullptr であること。
 }
 
 // 要素数 0 の指定で何も起こらないことの確認
@@ -91,7 +93,7 @@ TEST_F(symLoaderDisposeTest, accepts_zero_length)
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_dlfcn, dlclose(_, _, _, _)).Times(0);
-    // [Pre-Assert確認_正常系] - mock_dlfcn の dlclose(_, _, _, _) が登録した呼び出し期待を満たすこと。
+    // [Pre-Assert確認_正常系] - dlclose() が呼び出されないこと。
 #endif /* PLATFORM_LINUX */
     // 要素数 0 のとき解放 API が呼び出されないこと。
 
@@ -99,7 +101,10 @@ TEST_F(symLoaderDisposeTest, accepts_zero_length)
     cplat_sym_loader_dispose(entries, 0u); // [手順] - 要素数に 0 を指定して解放する。
 
     // Assert
-    EXPECT_EQ(kFakeHandle, entry.handle); // [確認_正常系] - 走査されないため handle が保持されたままであること。
+    EXPECT_EQ(
+        kFakeHandle,
+        entry
+            .handle); // [確認_正常系] - entry.handle が kFakeHandle と一致すること。(要素数 0 ではハンドルが保持されることの確認)
 }
 
 // 複数エントリがまとめて解放されることの確認
@@ -121,9 +126,9 @@ TEST_F(symLoaderDisposeTest, releases_multiple_entries)
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_dlfcn, dlclose(_, _, _, first.handle)).WillOnce(Return(0));
-    // [Pre-Assert確認_正常系] - mock_dlfcn の dlclose(_, _, _, first.handle) が登録した呼び出し期待を満たすこと。
+    // [Pre-Assert確認_正常系] - dlclose() が first.handle を指定して 1 回呼び出されること。
     EXPECT_CALL(mock_dlfcn, dlclose(_, _, _, second.handle)).WillOnce(Return(0));
-    // [Pre-Assert確認_正常系] - mock_dlfcn の dlclose(_, _, _, second.handle) が登録した呼び出し期待を満たすこと。
+    // [Pre-Assert確認_正常系] - dlclose() が second.handle を指定して 1 回呼び出されること。
 #endif /* PLATFORM_LINUX */
     // 2 件のハンドルがそれぞれ閉じられること。
     // [Pre-Assert手順] - 閉じる操作は成功を返却する。
@@ -132,6 +137,6 @@ TEST_F(symLoaderDisposeTest, releases_multiple_entries)
     cplat_sym_loader_dispose(entries, 2u); // [手順] - 解決済みエントリ 2 件を指定して解放する。
 
     // Assert
-    EXPECT_EQ(nullptr, first.handle);  // [確認_正常系] - 1 件目の handle が NULL になること。
-    EXPECT_EQ(nullptr, second.handle); // [確認_正常系] - 2 件目の handle が NULL になること。
+    EXPECT_EQ(nullptr, first.handle);  // [確認_正常系] - first.handle が nullptr であること。
+    EXPECT_EQ(nullptr, second.handle); // [確認_正常系] - second.handle が nullptr であること。
 }

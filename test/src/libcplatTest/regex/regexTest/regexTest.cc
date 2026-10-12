@@ -38,11 +38,12 @@ TEST_F(regexTest, create_reports_group_count)
                                 NULL); // [手順] - 捕捉グループを 3 個持つパターンをコンパイルする。
 
     // Assert
-    ASSERT_EQ(CPLAT_OK, result);           // [確認_正常系] - cplat_regex_create の戻り値が CPLAT_OK であること。
-    ASSERT_NE((cplat_regex *)NULL, regex); // [確認_正常系] - ハンドルが NULL でないこと。
-    EXPECT_EQ((size_t)4,
-              cplat_regex_get_group_count(
-                  regex)); // [確認_正常系] - cplat_regex_get_group_count の戻り値が捕捉グループ数 + 1 の 4 であること。
+    ASSERT_EQ(CPLAT_OK, result);           // [確認_正常系] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+    ASSERT_NE((cplat_regex *)NULL, regex); // [確認_正常系] - regex が NULL 以外であること。
+    EXPECT_EQ(
+        (size_t)4,
+        cplat_regex_get_group_count(
+            regex)); // [確認_正常系] - cplat_regex_get_group_count() の戻り値が 4 であること。(捕捉グループ 3 個と入力全体のグループを合わせた数であることの確認)
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -60,7 +61,7 @@ TEST_F(regexTest, search_returns_byte_offsets)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a.c", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "a.c" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -69,11 +70,11 @@ TEST_F(regexTest, search_returns_byte_offsets)
                                 NULL); // [手順] - "xxabcyy" の先頭から検索する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, result);            // [確認_正常系] - cplat_regex_search の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1, matched);                  // [確認_正常系] - 一致したことを示す 1 が matched へ格納されること。
-    EXPECT_EQ((size_t)2, matches[0].begin); // [確認_正常系] - マッチ開始位置が 2 であること。
-    EXPECT_EQ((size_t)5, matches[0].end);   // [確認_正常系] - マッチ終了位置が 5 であること。
-    EXPECT_EQ(std::string("abc"), slice(text, matches[0])); // [確認_正常系] - 切り出した部分文字列が "abc" であること。
+    EXPECT_EQ(CPLAT_OK, result);            // [確認_正常系] - cplat_regex_search() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, matched);                  // [確認_正常系] - matched が 1 であること。(一致したことの確認)
+    EXPECT_EQ((size_t)2, matches[0].begin); // [確認_正常系] - matches[0].begin が 2 であること。
+    EXPECT_EQ((size_t)5, matches[0].end);   // [確認_正常系] - matches[0].end が 5 であること。
+    EXPECT_EQ(std::string("abc"), slice(text, matches[0])); // [確認_正常系] - slice() の戻り値が "abc" であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -91,7 +92,7 @@ TEST_F(regexTest, search_reports_no_match_as_success)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("abc", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "abc" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -100,12 +101,12 @@ TEST_F(regexTest, search_reports_no_match_as_success)
                                 NULL); // [手順] - 一致しない入力 "xyz" を検索する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_regex_search の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(0, matched);       // [確認_正常系] - 一致しなかったことを示す 0 が matched へ格納されること。
+    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_regex_search() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0, matched);       // [確認_正常系] - matched が 0 であること。(一致しなかったことの確認)
     EXPECT_EQ(CPLAT_REGEX_NPOS,
-              matches[0].begin); // [確認_正常系] - マッチ開始位置に CPLAT_REGEX_NPOS が格納されること。
+              matches[0].begin); // [確認_正常系] - matches[0].begin が CPLAT_REGEX_NPOS であること。
     EXPECT_EQ(CPLAT_REGEX_NPOS,
-              matches[0].end); // [確認_正常系] - マッチ終了位置に CPLAT_REGEX_NPOS が格納されること。
+              matches[0].end); // [確認_正常系] - matches[0].end が CPLAT_REGEX_NPOS であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -122,23 +123,23 @@ TEST_F(regexTest, matches_requires_whole_text)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a.c", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "a.c" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK, cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0,
-                                           &matched_partial,
-                                           NULL)); // [手順] - "xxabcyy" を cplat_regex_search で照合する。
-    // [確認_正常系] - `cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_partial, NULL)` の戻り値が `CPLAT_OK` であること。
-    ASSERT_EQ(CPLAT_OK,
-              cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_whole,
-                                  NULL)); // [手順] - 同じ入力を cplat_regex_matches で照合する。
-    // [確認_正常系] - `cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_whole, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret_partial =
+        cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_partial,
+                           NULL); // [手順] - "xxabcyy" を cplat_regex_search で照合する。
+    int actual_ret_whole =
+        cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_whole,
+                            NULL); // [手順] - 同じ入力を cplat_regex_matches で照合する。
 
     // Assert
-    EXPECT_EQ(1, matched_partial); // [確認_正常系] - cplat_regex_search では一致を示す 1 が格納されること。
-    EXPECT_EQ(0, matched_whole);   // [確認_正常系] - cplat_regex_matches では不一致を示す 0 が格納されること。
+    ASSERT_EQ(CPLAT_OK, actual_ret_partial); // [確認_正常系] - cplat_regex_search() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, actual_ret_whole);   // [確認_正常系] - cplat_regex_matches() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, matched_partial); // [確認_正常系] - matched_partial が 1 であること。(部分一致したことの確認)
+    EXPECT_EQ(0, matched_whole);   // [確認_正常系] - matched_whole が 0 であること。(全体一致しなかったことの確認)
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -156,23 +157,26 @@ TEST_F(regexTest, matches_treats_bmp_character_as_one_character)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("^.{3}$", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "^.{3}$" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK,
-              cplat_regex_matches(regex, three.data(), three.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_three,
-                                  NULL)); // [手順] - 日本語 3 文字 "あいう" を照合する。
-    // [確認_正常系] - `cplat_regex_matches(regex, three.data(), three.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_three, NULL)` の戻り値が `CPLAT_OK` であること。
-    ASSERT_EQ(CPLAT_OK,
-              cplat_regex_matches(regex, two.data(), two.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_two,
-                                  NULL)); // [手順] - 日本語 2 文字 "あい" を照合する。
-    // [確認_正常系] - `cplat_regex_matches(regex, two.data(), two.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_two, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret_three =
+        cplat_regex_matches(regex, three.data(), three.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_three,
+                            NULL); // [手順] - 日本語 3 文字 "あいう" を照合する。
+    int actual_ret_two =
+        cplat_regex_matches(regex, two.data(), two.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_two,
+                            NULL); // [手順] - 日本語 2 文字 "あい" を照合する。
 
     // Assert
-    EXPECT_EQ(1, matched_three); // [確認_正常系] - "あいう" の照合で一致を示す 1 が格納されること。
-    EXPECT_EQ(0, matched_two);   // [確認_正常系] - "あい" の照合で不一致を示す 0 が格納されること。
+    ASSERT_EQ(
+        CPLAT_OK,
+        actual_ret_three); // [確認_正常系] - "あいう" に対する cplat_regex_matches() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK,
+              actual_ret_two); // [確認_正常系] - "あい" に対する cplat_regex_matches() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, matched_three); // [確認_正常系] - matched_three が 1 であること。("あいう" が一致したことの確認)
+    EXPECT_EQ(0, matched_two);   // [確認_正常系] - matched_two が 0 であること。("あい" が一致しなかったことの確認)
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -191,29 +195,33 @@ TEST_F(regexTest, matches_treats_astral_character_as_two_characters)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("^.$", CPLAT_REGEX_DEFAULT, &one_regex,
                                            NULL)); // [状態] - パターン "^.$" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - "^.$" に対する cplat_regex_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("^.{2}$", CPLAT_REGEX_DEFAULT, &two_regex,
                                            NULL)); // [状態] - パターン "^.{2}$" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - "^.{2}$" に対する cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK,
-              cplat_regex_matches(one_regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_one,
-                                  NULL)); // [手順] - "^.$" で U+1F600 を照合する。
-    // [確認_正常系] - `cplat_regex_matches(one_regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_one, NULL)` の戻り値が `CPLAT_OK` であること。
-    ASSERT_EQ(CPLAT_OK, cplat_regex_matches(two_regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, matches, 1,
-                                            &matched_two,
-                                            NULL)); // [手順] - "^.{2}$" で U+1F600 を照合する。
-    // [確認_正常系] - `cplat_regex_matches(two_regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, matches, 1, &matched_two, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret_one =
+        cplat_regex_matches(one_regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_one,
+                            NULL); // [手順] - "^.$" で U+1F600 を照合する。
+    int actual_ret_two =
+        cplat_regex_matches(two_regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, matches, 1, &matched_two,
+                            NULL); // [手順] - "^.{2}$" で U+1F600 を照合する。
 
     // Assert
-    EXPECT_EQ(0, matched_one);              // [確認_正常系] - "^.$" の照合で不一致を示す 0 が格納されること。
-    EXPECT_EQ(1, matched_two);              // [確認_正常系] - "^.{2}$" の照合で一致を示す 1 が格納されること。
-    EXPECT_EQ((size_t)0, matches[0].begin); // [確認_正常系] - マッチ開始位置が 0 であること。
-    EXPECT_EQ((size_t)4,
-              matches[0].end); // [確認_正常系] - マッチ終了位置が UTF-8 の 4 バイト境界であること。
+    ASSERT_EQ(CPLAT_OK,
+              actual_ret_one); // [確認_正常系] - "^.$" に対する cplat_regex_matches() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(
+        CPLAT_OK,
+        actual_ret_two); // [確認_正常系] - "^.{2}$" に対する cplat_regex_matches() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0, matched_one); // [確認_正常系] - matched_one が 0 であること。("^.$" に一致しなかったことの確認)
+    EXPECT_EQ(1, matched_two); // [確認_正常系] - matched_two が 1 であること。("^.{2}$" に一致したことの確認)
+    EXPECT_EQ((size_t)0, matches[0].begin); // [確認_正常系] - matches[0].begin が 0 であること。
+    EXPECT_EQ(
+        (size_t)4,
+        matches[0].end); // [確認_正常系] - matches[0].end が 4 であること。(UTF-8 の 4 バイト境界で終了したことの確認)
 
     // Cleanup
     cplat_regex_dispose(one_regex);
@@ -231,24 +239,29 @@ TEST_F(regexTest, search_stores_capture_groups)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("^(.+)=(.+)$", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "^(.+)=(.+)$" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+
+    ASSERT_EQ(
+        (size_t)3,
+        cplat_regex_get_group_count(regex)); // [状態確認] - cplat_regex_get_group_count() の戻り値が 3 であること。
 
     // Pre-Assert
-    ASSERT_EQ((size_t)3,
-              cplat_regex_get_group_count(
-                  regex)); // [Pre-Assert確認_正常系] - cplat_regex_get_group_count の戻り値が 3 であること。
 
     // Act
-    ASSERT_EQ(CPLAT_OK,
-              cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, matches, 3, &matched,
-                                 NULL)); // [手順] - "名前=あきら" を検索する。
-    // [確認_正常系] - `cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, matches, 3, &matched, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret =
+        cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, matches, 3, &matched,
+                           NULL); // [手順] - "名前=あきら" を検索する。
 
     // Assert
-    EXPECT_EQ(1, matched);                                       // [確認_正常系] - 一致を示す 1 が格納されること。
-    EXPECT_EQ(text, slice(text, matches[0]));                    // [確認_正常系] - グループ 0 が入力全体であること。
-    EXPECT_EQ(std::string(u8"名前"), slice(text, matches[1]));   // [確認_正常系] - グループ 1 が "名前" であること。
-    EXPECT_EQ(std::string(u8"あきら"), slice(text, matches[2])); // [確認_正常系] - グループ 2 が "あきら" であること。
+    ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_regex_search() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, matched);           // [確認_正常系] - matched が 1 であること。(一致したことの確認)
+    EXPECT_EQ(text,
+              slice(text, matches[0])); // [確認_正常系] - グループ 0 に対する slice() の戻り値が text と一致すること。
+    EXPECT_EQ(std::string(u8"名前"),
+              slice(text, matches[1])); // [確認_正常系] - グループ 1 に対する slice() の戻り値が u8"名前" であること。
+    EXPECT_EQ(
+        std::string(u8"あきら"),
+        slice(text, matches[2])); // [確認_正常系] - グループ 2 に対する slice() の戻り値が u8"あきら" であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -265,23 +278,24 @@ TEST_F(regexTest, search_marks_unmatched_group_as_npos)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("^(a)?(b)$", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "^(a)?(b)$" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK,
-              cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, matches, 3, &matched,
-                                 NULL)); // [手順] - グループ 1 が一致しない入力 "b" を検索する。
-    // [確認_正常系] - `cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, matches, 3, &matched, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret =
+        cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, matches, 3, &matched,
+                           NULL); // [手順] - グループ 1 が一致しない入力 "b" を検索する。
 
     // Assert
-    EXPECT_EQ(1, matched); // [確認_正常系] - 一致を示す 1 が格納されること。
+    ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_regex_search() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, matched);           // [確認_正常系] - matched が 1 であること。(一致したことの確認)
     EXPECT_EQ(CPLAT_REGEX_NPOS,
-              matches[1].begin); // [確認_正常系] - 不参加グループの開始位置が CPLAT_REGEX_NPOS であること。
+              matches[1].begin); // [確認_正常系] - matches[1].begin が CPLAT_REGEX_NPOS であること。
     EXPECT_EQ(CPLAT_REGEX_NPOS,
-              matches[1].end); // [確認_正常系] - 不参加グループの終了位置が CPLAT_REGEX_NPOS であること。
-    EXPECT_EQ(std::string("b"), slice(text, matches[2])); // [確認_正常系] - グループ 2 が "b" であること。
+              matches[1].end); // [確認_正常系] - matches[1].end が CPLAT_REGEX_NPOS であること。
+    EXPECT_EQ(std::string("b"),
+              slice(text, matches[2])); // [確認_正常系] - グループ 2 に対する slice() の戻り値が "b" であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -298,23 +312,26 @@ TEST_F(regexTest, search_truncates_groups_to_capacity)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("(a)(b)(c)", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - 捕捉グループを 3 個持つパターンをコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+
+    ASSERT_EQ(
+        (size_t)4,
+        cplat_regex_get_group_count(regex)); // [状態確認] - cplat_regex_get_group_count() の戻り値が 4 であること。
 
     // Pre-Assert
-    ASSERT_EQ((size_t)4,
-              cplat_regex_get_group_count(
-                  regex)); // [Pre-Assert確認_正常系] - cplat_regex_get_group_count の戻り値が 4 であること。
 
     // Act
-    ASSERT_EQ(CPLAT_OK,
-              cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, matches, 2, &matched,
-                                 NULL)); // [手順] - 要素数 2 の配列を渡して検索する。
-    // [確認_正常系] - `cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, matches, 2, &matched, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret =
+        cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, matches, 2, &matched,
+                           NULL); // [手順] - 要素数 2 の配列を渡して検索する。
 
     // Assert
-    EXPECT_EQ(1, matched);                                  // [確認_正常系] - 一致を示す 1 が格納されること。
-    EXPECT_EQ(std::string("abc"), slice(text, matches[0])); // [確認_正常系] - グループ 0 が格納されること。
-    EXPECT_EQ(std::string("a"), slice(text, matches[1]));   // [確認_正常系] - グループ 1 が格納されること。
+    ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_regex_search() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, matched);           // [確認_正常系] - matched が 1 であること。(一致したことの確認)
+    EXPECT_EQ(std::string("abc"),
+              slice(text, matches[0])); // [確認_正常系] - グループ 0 に対する slice() の戻り値が "abc" であること。
+    EXPECT_EQ(std::string("a"),
+              slice(text, matches[1])); // [確認_正常系] - グループ 1 に対する slice() の戻り値が "a" であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -330,21 +347,20 @@ TEST_F(regexTest, create_with_nosub_reports_single_group)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("(a)(b)(c)", CPLAT_REGEX_NOSUB, &regex,
                                            NULL)); // [状態] - CPLAT_REGEX_NOSUB を指定してコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK,
-              cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
-                                  NULL)); // [手順] - "abc" を照合する。
-    // [確認_正常系] - `cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret = cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
+                                         NULL); // [手順] - "abc" を照合する。
 
     // Assert
-    EXPECT_EQ(1, matched); // [確認_正常系] - 一致を示す 1 が格納されること。
+    ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_regex_matches() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, matched);           // [確認_正常系] - matched が 1 であること。(一致したことの確認)
     EXPECT_EQ(
         (size_t)1,
-        cplat_regex_get_group_count(regex)); // [確認_正常系] - cplat_regex_get_group_count の戻り値が 1 であること。
+        cplat_regex_get_group_count(regex)); // [確認_正常系] - cplat_regex_get_group_count() の戻り値が 1 であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -363,27 +379,34 @@ TEST_F(regexTest, icase_folds_ascii_only)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("abc", CPLAT_REGEX_ICASE, &ascii_regex,
                                            NULL)); // [状態] - ASCII のパターン "abc" を ICASE でコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - "abc" に対する cplat_regex_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_create(u8"Ä", CPLAT_REGEX_ICASE, &latin_regex,
                                            NULL)); // [状態] - 非 ASCII のパターン "Ä" を ICASE で
                                                    // コンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - u8"Ä" に対する cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK, cplat_regex_search(ascii_regex, ascii_text.data(), ascii_text.size(), 0,
-                                           CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_ascii,
-                                           NULL)); // [手順] - パターン "abc" で "XABCX" を検索する。
-    ASSERT_EQ(CPLAT_OK, cplat_regex_search(latin_regex, latin_text.data(), latin_text.size(), 0,
-                                           CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_latin,
-                                           NULL)); // [手順] - パターン "Ä" で "ä" を検索する。
-    // [確認_正常系] - `cplat_regex_search(ascii_regex, ascii_text.data(), ascii_text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_ascii, NULL)` の戻り値が `CPLAT_OK` であること。
-    // [確認_正常系] - `cplat_regex_search(latin_regex, latin_text.data(), latin_text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_latin, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret_ascii = cplat_regex_search(ascii_regex, ascii_text.data(), ascii_text.size(), 0,
+                                              CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_ascii,
+                                              NULL); // [手順] - パターン "abc" で "XABCX" を検索する。
+    int actual_ret_latin = cplat_regex_search(latin_regex, latin_text.data(), latin_text.size(), 0,
+                                              CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_latin,
+                                              NULL); // [手順] - パターン "Ä" で "ä" を検索する。
 
     // Assert
-    EXPECT_EQ(1, matched_ascii); // [確認_正常系] - ASCII では大小が畳み込まれ、一致を示す 1 が格納されること。
-    EXPECT_EQ(0, matched_latin); // [確認_正常系] - 非 ASCII では畳み込まれず、不一致を示す 0 が格納されること。
+    ASSERT_EQ(
+        CPLAT_OK,
+        actual_ret_ascii); // [確認_正常系] - ASCII 入力に対する cplat_regex_search() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(
+        CPLAT_OK,
+        actual_ret_latin); // [確認_正常系] - 非 ASCII 入力に対する cplat_regex_search() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1, matched_ascii); // [確認_正常系] - matched_ascii が 1 であること。(ASCII の大小文字が畳み込まれたことの確認)
+    EXPECT_EQ(
+        0,
+        matched_latin); // [確認_正常系] - matched_latin が 0 であること。(非 ASCII の大小文字が畳み込まれなかったことの確認)
 
     // Cleanup
     cplat_regex_dispose(ascii_regex);
@@ -400,18 +423,17 @@ TEST_F(regexTest, create_with_extended_uses_posix_ere)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("(ab)+c", CPLAT_REGEX_EXTENDED, &regex,
                                            NULL)); // [状態] - CPLAT_REGEX_EXTENDED を指定してコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK,
-              cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
-                                  NULL)); // [手順] - "ababc" を照合する。
-    // [確認_正常系] - `cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret = cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
+                                         NULL); // [手順] - "ababc" を照合する。
 
     // Assert
-    EXPECT_EQ(1, matched); // [確認_正常系] - 一致を示す 1 が格納されること。
+    ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_regex_matches() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, matched);           // [確認_正常系] - matched が 1 であること。(一致したことの確認)
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -431,30 +453,39 @@ TEST_F(regexTest, search_supports_ascii_character_classes)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("[[:digit:]]+", CPLAT_REGEX_DEFAULT, &posix_regex,
                                            NULL)); // [状態] - パターン "[[:digit:]]+" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - "[[:digit:]]+" に対する cplat_regex_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("\\d+", CPLAT_REGEX_DEFAULT, &escape_regex,
                                            NULL)); // [状態] - パターン "\\d+" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - "\\d+" に対する cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK, cplat_regex_search(posix_regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT,
-                                           posix_match, 1, &matched_posix,
-                                           NULL)); // [手順] - "[[:digit:]]+" で "あ123い" を検索する。
-    ASSERT_EQ(CPLAT_OK, cplat_regex_search(escape_regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT,
-                                           escape_match, 1, &matched_escape,
-                                           NULL)); // [手順] - "\\d+" で "あ123い" を検索する。
-    // [確認_正常系] - `cplat_regex_search(posix_regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, posix_match, 1, &matched_posix, NULL)` の戻り値が `CPLAT_OK` であること。
-    // [確認_正常系] - `cplat_regex_search(escape_regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, escape_match, 1, &matched_escape, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret_posix = cplat_regex_search(posix_regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT,
+                                              posix_match, 1, &matched_posix,
+                                              NULL); // [手順] - "[[:digit:]]+" で "あ123い" を検索する。
+    int actual_ret_escape = cplat_regex_search(escape_regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT,
+                                               escape_match, 1, &matched_escape,
+                                               NULL); // [手順] - "\\d+" で "あ123い" を検索する。
 
     // Assert
-    EXPECT_EQ(1, matched_posix); // [確認_正常系] - "[[:digit:]]+" の検索で一致を示す 1 が格納されること。
-    EXPECT_EQ(std::string("123"),
-              slice(text, posix_match[0])); // [確認_正常系] - "[[:digit:]]+" のマッチ範囲が "123" であること。
-    EXPECT_EQ(1, matched_escape);           // [確認_正常系] - "\\d+" の検索で一致を示す 1 が格納されること。
-    EXPECT_EQ(std::string("123"),
-              slice(text, escape_match[0])); // [確認_正常系] - "\\d+" のマッチ範囲が "123" であること。
+    ASSERT_EQ(
+        CPLAT_OK,
+        actual_ret_posix); // [確認_正常系] - "[[:digit:]]+" に対する cplat_regex_search() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(
+        CPLAT_OK,
+        actual_ret_escape); // [確認_正常系] - "\\d+" に対する cplat_regex_search() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, matched_posix); // [確認_正常系] - matched_posix が 1 であること。("[[:digit:]]+" が一致したことの確認)
+    EXPECT_EQ(
+        std::string("123"),
+        slice(text,
+              posix_match
+                  [0])); // [確認_正常系] - "[[:digit:]]+" のマッチ範囲に対する slice() の戻り値が "123" であること。
+    EXPECT_EQ(1, matched_escape); // [確認_正常系] - matched_escape が 1 であること。("\\d+" が一致したことの確認)
+    EXPECT_EQ(
+        std::string("123"),
+        slice(text,
+              escape_match[0])); // [確認_正常系] - "\\d+" のマッチ範囲に対する slice() の戻り値が "123" であること。
 
     // Cleanup
     cplat_regex_dispose(posix_regex);
@@ -472,24 +503,31 @@ TEST_F(regexTest, search_from_offset_does_not_treat_offset_as_line_start)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("^b", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "^b" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK, cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0,
-                                           &matched_from_head,
-                                           NULL)); // [手順] - start_offset に 0 を指定して検索する。
-    ASSERT_EQ(CPLAT_OK, cplat_regex_search(regex, text.data(), text.size(), 1, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0,
-                                           &matched_from_offset,
-                                           NULL)); // [手順] - start_offset に 1 を指定して検索する。
-    // [確認_正常系] - `cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_from_head, NULL)` の戻り値が `CPLAT_OK` であること。
-    // [確認_正常系] - `cplat_regex_search(regex, text.data(), text.size(), 1, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_from_offset, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret_head =
+        cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_from_head,
+                           NULL); // [手順] - start_offset に 0 を指定して検索する。
+    int actual_ret_offset =
+        cplat_regex_search(regex, text.data(), text.size(), 1, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_from_offset,
+                           NULL); // [手順] - start_offset に 1 を指定して検索する。
 
     // Assert
-    EXPECT_EQ(0, matched_from_head); // [確認_正常系] - start_offset が 0 の検索で不一致を示す 0 が格納されること。
-    EXPECT_EQ(0,
-              matched_from_offset); // [確認_正常系] - start_offset が 1 の検索でも不一致を示す 0 が格納されること。
+    ASSERT_EQ(
+        CPLAT_OK,
+        actual_ret_head); // [確認_正常系] - start_offset が 0 の cplat_regex_search() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(
+        CPLAT_OK,
+        actual_ret_offset); // [確認_正常系] - start_offset が 1 の cplat_regex_search() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0,
+        matched_from_head); // [確認_正常系] - matched_from_head が 0 であること。(先頭からの検索で一致しなかったことの確認)
+    EXPECT_EQ(
+        0,
+        matched_from_offset); // [確認_正常系] - matched_from_offset が 0 であること。(文字列の途中を行頭とみなさなかったことの確認)
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -506,23 +544,28 @@ TEST_F(regexTest, search_with_anchored_matches_only_at_start_offset)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("ab", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "ab" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK, cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0,
-                                           &matched_default,
-                                           NULL)); // [手順] - CPLAT_REGEX_MATCH_DEFAULT を指定して検索する。
-    ASSERT_EQ(CPLAT_OK, cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_ANCHORED, NULL, 0,
-                                           &matched_anchored,
-                                           NULL)); // [手順] - CPLAT_REGEX_MATCH_ANCHORED を指定して検索する。
-    // [確認_正常系] - `cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_default, NULL)` の戻り値が `CPLAT_OK` であること。
-    // [確認_正常系] - `cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_ANCHORED, NULL, 0, &matched_anchored, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret_default =
+        cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_default,
+                           NULL); // [手順] - CPLAT_REGEX_MATCH_DEFAULT を指定して検索する。
+    int actual_ret_anchored =
+        cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_ANCHORED, NULL, 0, &matched_anchored,
+                           NULL); // [手順] - CPLAT_REGEX_MATCH_ANCHORED を指定して検索する。
 
     // Assert
-    EXPECT_EQ(1, matched_default);  // [確認_正常系] - 既定の検索で一致を示す 1 が格納されること。
-    EXPECT_EQ(0, matched_anchored); // [確認_正常系] - 固定照合では不一致を示す 0 が格納されること。
+    ASSERT_EQ(
+        CPLAT_OK,
+        actual_ret_default); // [確認_正常系] - CPLAT_REGEX_MATCH_DEFAULT の cplat_regex_search() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(
+        CPLAT_OK,
+        actual_ret_anchored); // [確認_正常系] - CPLAT_REGEX_MATCH_ANCHORED の cplat_regex_search() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, matched_default); // [確認_正常系] - matched_default が 1 であること。(既定の検索で一致したことの確認)
+    EXPECT_EQ(
+        0, matched_anchored); // [確認_正常系] - matched_anchored が 0 であること。(固定照合で一致しなかったことの確認)
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -540,19 +583,22 @@ TEST_F(regexTest, create_rejects_invalid_pattern)
     // Act
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_PATTERN,
-              cplat_regex_create("(", CPLAT_REGEX_DEFAULT, &regex,
-                                 NULL)); // [確認_異常系] - パターン "(" に対する cplat_regex_create の
-                                         // 戻り値が CPLAT_ERR_INVALID_PATTERN であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_PATTERN,
-              cplat_regex_create("[a-", CPLAT_REGEX_DEFAULT, &regex,
-                                 NULL)); // [確認_異常系] - パターン "[a-" に対する cplat_regex_create の
-                                         // 戻り値が CPLAT_ERR_INVALID_PATTERN であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_PATTERN,
-              cplat_regex_create("a{2,1}", CPLAT_REGEX_DEFAULT, &regex,
-                                 NULL));   // [確認_異常系] - パターン "a{2,1}" に対する cplat_regex_create の
-                                           // 戻り値が CPLAT_ERR_INVALID_PATTERN であること。
-    EXPECT_EQ((cplat_regex *)NULL, regex); // [確認_異常系] - 失敗時にハンドルが NULL のままであること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_PATTERN,
+        cplat_regex_create(
+            "(", CPLAT_REGEX_DEFAULT, &regex,
+            NULL)); // [確認_異常系] - パターン "(" に対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_PATTERN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_PATTERN,
+        cplat_regex_create(
+            "[a-", CPLAT_REGEX_DEFAULT, &regex,
+            NULL)); // [確認_異常系] - パターン "[a-" に対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_PATTERN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_PATTERN,
+        cplat_regex_create(
+            "a{2,1}", CPLAT_REGEX_DEFAULT, &regex,
+            NULL)); // [確認_異常系] - パターン "a{2,1}" に対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_PATTERN であること。
+    EXPECT_EQ((cplat_regex *)NULL, regex); // [確認_異常系] - regex が NULL であること。
 }
 #endif /* !CPLAT_REGEX_NO_EXCEPTIONS */
 
@@ -567,16 +613,16 @@ TEST_F(regexTest, create_rejects_invalid_flags)
     // Act
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_regex_create("a", CPLAT_REGEX_EXTENDED | CPLAT_REGEX_BASIC, &regex,
-                                 NULL)); // [確認_異常系] - EXTENDED と BASIC の同時指定に対する
-                                         // cplat_regex_create の戻り値が CPLAT_ERR_INVALID_ARGUMENT
-                                         // であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_regex_create("a", 0x8000U, &regex,
-                                 NULL)); // [確認_異常系] - 未定義ビット 0x8000 の指定に対する
-                                         // cplat_regex_create の戻り値が CPLAT_ERR_INVALID_ARGUMENT
-                                         // であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_regex_create(
+            "a", CPLAT_REGEX_EXTENDED | CPLAT_REGEX_BASIC, &regex,
+            NULL)); // [確認_異常系] - EXTENDED と BASIC の同時指定に対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_regex_create(
+            "a", 0x8000U, &regex,
+            NULL)); // [確認_異常系] - 未定義ビット 0x8000 の指定に対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 不正な UTF-8 が CPLAT_ERR_INVALID_ENCODING になることの確認
@@ -590,22 +636,23 @@ TEST_F(regexTest, rejects_invalid_utf8)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "a" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ENCODING, cplat_regex_create(invalid_text.c_str(), CPLAT_REGEX_DEFAULT, &invalid_regex,
-                                                             NULL)); // [確認_異常系] - 不正な UTF-8 のパターンに対する
-    // cplat_regex_create の戻り値が CPLAT_ERR_INVALID_ENCODING
-    // であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ENCODING,
-              cplat_regex_search(regex, invalid_text.data(), invalid_text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0,
-                                 &matched,
-                                 NULL)); // [確認_異常系] - 不正な UTF-8 の入力に対する cplat_regex_search の
-                                         // 戻り値が CPLAT_ERR_INVALID_ENCODING であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ENCODING,
+        cplat_regex_create(
+            invalid_text.c_str(), CPLAT_REGEX_DEFAULT, &invalid_regex,
+            NULL)); // [確認_異常系] - 不正な UTF-8 のパターンに対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_ENCODING であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ENCODING,
+        cplat_regex_search(
+            regex, invalid_text.data(), invalid_text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
+            NULL)); // [確認_異常系] - 不正な UTF-8 の入力に対する cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ENCODING であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -621,41 +668,47 @@ TEST_F(regexTest, rejects_null_arguments)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "a" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_regex_create(NULL, CPLAT_REGEX_DEFAULT, &regex,
-                                 NULL)); // [確認_異常系] - pattern が NULL のときの cplat_regex_create の
-                                         // 戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_regex_create("a", CPLAT_REGEX_DEFAULT, NULL,
-                                 NULL)); // [確認_異常系] - regex_out が NULL のときの cplat_regex_create の
-                                         // 戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_regex_search(NULL, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
-                                 NULL)); // [確認_異常系] - regex が NULL のときの cplat_regex_search の
-                                         // 戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_regex_search(regex, NULL, 0, 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
-                                 NULL)); // [確認_異常系] - text が NULL のときの cplat_regex_search の
-                                         // 戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, NULL,
-                                 NULL)); // [確認_異常系] - matched_out が NULL のときの cplat_regex_search の
-                                         // 戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_regex_matches(NULL, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
-                                  NULL)); // [確認_異常系] - regex が NULL のときの cplat_regex_matches の
-                                          // 戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ((size_t)0,
-              cplat_regex_get_group_count(
-                  NULL)); // [確認_異常系] - regex が NULL のときの cplat_regex_get_group_count の戻り値が
-                          // 0 であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_regex_create(
+            NULL, CPLAT_REGEX_DEFAULT, &regex,
+            NULL)); // [確認_異常系] - pattern が NULL のときの cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_regex_create(
+            "a", CPLAT_REGEX_DEFAULT, NULL,
+            NULL)); // [確認_異常系] - regex_out が NULL のときの cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_regex_search(
+            NULL, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
+            NULL)); // [確認_異常系] - regex が NULL のときの cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_regex_search(
+            regex, NULL, 0, 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
+            NULL)); // [確認_異常系] - text が NULL のときの cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_regex_search(
+            regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, NULL,
+            NULL)); // [確認_異常系] - matched_out が NULL のときの cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_regex_matches(
+            NULL, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
+            NULL)); // [確認_異常系] - regex が NULL のときの cplat_regex_matches() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        (size_t)0,
+        cplat_regex_get_group_count(
+            NULL)); // [確認_異常系] - regex が NULL のときの cplat_regex_get_group_count() の戻り値が 0 であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -672,24 +725,23 @@ TEST_F(regexTest, search_rejects_invalid_start_offset)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "a" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_regex_search(regex, text.data(), text.size(), text.size() + 1, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0,
-                                 &matched,
-                                 NULL)); // [確認_異常系] - 入力長を超える start_offset に対する
-                                         // cplat_regex_search の戻り値が CPLAT_ERR_INVALID_ARGUMENT
-                                         // であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_regex_search(regex, text.data(), text.size(), 1, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
-                                 NULL)); // [確認_異常系] - 文字の途中を指す start_offset 1 に対する
-                                         // cplat_regex_search の戻り値が CPLAT_ERR_INVALID_ARGUMENT
-                                         // であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_regex_search(
+            regex, text.data(), text.size(), text.size() + 1, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
+            NULL)); // [確認_異常系] - 入力長を超える start_offset に対する cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_regex_search(
+            regex, text.data(), text.size(), 1, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
+            NULL)); // [確認_異常系] - 文字の途中を指す start_offset 1 に対する cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -705,18 +757,17 @@ TEST_F(regexTest, matches_accepts_empty_text)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("^$", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "^$" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK,
-              cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
-                                  NULL)); // [手順] - 空の入力を照合する。
-    // [確認_正常系] - `cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret = cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
+                                         NULL); // [手順] - 空の入力を照合する。
 
     // Assert
-    EXPECT_EQ(1, matched); // [確認_正常系] - 一致を示す 1 が格納されること。
+    ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_regex_matches() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, matched);           // [確認_正常系] - matched が 1 であること。(一致したことの確認)
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -736,12 +787,17 @@ TEST_F(regexTest, reports_error_detail)
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
-                                           &detail)); // [手順] - 正しいパターン "a" をコンパイルする。
-    // [確認_正常系] - `cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex, &detail)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret = cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
+                                        &detail); // [手順] - 正しいパターン "a" をコンパイルする。
 
     // Assert
-    EXPECT_EQ(0, cplat_error_is_set(&detail)); // [確認_正常系] - 成功時に detail_out がクリアされること。
+    ASSERT_EQ(
+        CPLAT_OK,
+        actual_ret); // [確認_正常系] - パターン "a" に対する cplat_regex_create() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0,
+        cplat_error_is_set(
+            &detail)); // [確認_正常系] - 成功時の detail に対する cplat_error_is_set() の戻り値が 0 であること。(detail_out がクリアされたことの確認)
 
 #if !defined(CPLAT_REGEX_NO_EXCEPTIONS)
     // Arrange_2
@@ -749,15 +805,22 @@ TEST_F(regexTest, reports_error_detail)
     // Pre-Assert_2
 
     // Act_2
-    ASSERT_EQ(CPLAT_ERR_INVALID_PATTERN, cplat_regex_create("(", CPLAT_REGEX_DEFAULT, &invalid_regex,
-                                                            &detail)); // [手順] - 不正なパターン "(" をコンパイルする。
-    // [確認_異常系] - `cplat_regex_create("(", CPLAT_REGEX_DEFAULT, &invalid_regex, &detail)` の戻り値が `CPLAT_ERR_INVALID_PATTERN` であること。
+    int actual_ret_invalid = cplat_regex_create("(", CPLAT_REGEX_DEFAULT, &invalid_regex,
+                                                &detail); // [手順] - 不正なパターン "(" をコンパイルする。
 
     // Assert_2
-    EXPECT_EQ(0,
-              cplat_error_is_set(&detail)); // [確認_正常系] - OS 由来ではない失敗のため detail_out がクリアされること。
+    ASSERT_EQ(
+        CPLAT_ERR_INVALID_PATTERN,
+        actual_ret_invalid); // [確認_異常系] - パターン "(" に対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_PATTERN であること。
+    EXPECT_EQ(
+        0,
+        cplat_error_is_set(
+            &detail)); // [確認_正常系] - detail に対する cplat_error_is_set() の戻り値が 0 であること。(OS 由来ではない失敗のため detail_out がクリアされたことの確認)
     cplat_error_get_last(&last);
-    EXPECT_EQ(0, cplat_error_is_set(&last)); // [確認_正常系] - 直前値もクリアされること。
+    EXPECT_EQ(
+        0,
+        cplat_error_is_set(
+            &last)); // [確認_正常系] - last に対する cplat_error_is_set() の戻り値が 0 であること。(直前値がクリアされたことの確認)
 #else
     (void)invalid_regex;
     (void)last;
@@ -779,7 +842,7 @@ TEST_F(regexTest, replace_substitutes_all_matches)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("[0-9]+", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "[0-9]+" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -789,10 +852,10 @@ TEST_F(regexTest, replace_substitutes_all_matches)
                                  NULL); // [手順] - "a1b22c" の数字列をすべて "#" へ置換する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_regex_replace の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(std::string("a#b#c"), std::string(buffer)); // [確認_正常系] - 置換結果が "a#b#c" であること。
+    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_regex_replace() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(std::string("a#b#c"), std::string(buffer)); // [確認_正常系] - std::string(buffer) が "a#b#c" であること。
     EXPECT_EQ((size_t)6,
-              required_size); // [確認_正常系] - required_size_out に null 終端を含む 6 が格納されること。
+              required_size); // [確認_正常系] - required_size が 6 であること。(null 終端を含むサイズであることの確認)
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -808,19 +871,19 @@ TEST_F(regexTest, replace_expands_back_references)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("(\\w+)@(\\w+)", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "(\\w+)@(\\w+)" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK, cplat_regex_replace(regex, text.data(), text.size(), "$2:$1", CPLAT_REGEX_MATCH_DEFAULT, buffer,
-                                            sizeof(buffer), NULL,
-                                            NULL)); // [手順] - 置換文字列 "$2:$1" で置換する。
-    // [確認_正常系] - `cplat_regex_replace(regex, text.data(), text.size(), "$2:$1", CPLAT_REGEX_MATCH_DEFAULT, buffer, sizeof(buffer), NULL, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret = cplat_regex_replace(regex, text.data(), text.size(), "$2:$1", CPLAT_REGEX_MATCH_DEFAULT, buffer,
+                                         sizeof(buffer), NULL,
+                                         NULL); // [手順] - 置換文字列 "$2:$1" で置換する。
 
     // Assert
+    ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_regex_replace() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(std::string("host:user"),
-              std::string(buffer)); // [確認_正常系] - 置換結果が "host:user" であること。
+              std::string(buffer)); // [確認_正常系] - std::string(buffer) が "host:user" であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -837,25 +900,33 @@ TEST_F(regexTest, replace_honors_replace_flags)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("[0-9]", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "[0-9]" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK, cplat_regex_replace(regex, text.data(), text.size(), "#", CPLAT_REGEX_REPLACE_FIRST_ONLY,
-                                            first_only, sizeof(first_only), NULL,
-                                            NULL)); // [手順] - CPLAT_REGEX_REPLACE_FIRST_ONLY を指定して置換する。
-    ASSERT_EQ(CPLAT_OK, cplat_regex_replace(regex, text.data(), text.size(), "#", CPLAT_REGEX_REPLACE_NO_COPY, no_copy,
-                                            sizeof(no_copy), NULL,
-                                            NULL)); // [手順] - CPLAT_REGEX_REPLACE_NO_COPY を指定して置換する。
-    // [確認_正常系] - `cplat_regex_replace(regex, text.data(), text.size(), "#", CPLAT_REGEX_REPLACE_FIRST_ONLY, first_only, sizeof(first_only), NULL, NULL)` の戻り値が `CPLAT_OK` であること。
-    // [確認_正常系] - `cplat_regex_replace(regex, text.data(), text.size(), "#", CPLAT_REGEX_REPLACE_NO_COPY, no_copy, sizeof(no_copy), NULL, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret_first_only = cplat_regex_replace(
+        regex, text.data(), text.size(), "#", CPLAT_REGEX_REPLACE_FIRST_ONLY, first_only, sizeof(first_only), NULL,
+        NULL); // [手順] - CPLAT_REGEX_REPLACE_FIRST_ONLY を指定して置換する。
+    int actual_ret_no_copy = cplat_regex_replace(regex, text.data(), text.size(), "#", CPLAT_REGEX_REPLACE_NO_COPY,
+                                                 no_copy, sizeof(no_copy), NULL,
+                                                 NULL); // [手順] - CPLAT_REGEX_REPLACE_NO_COPY を指定して置換する。
 
     // Assert
-    EXPECT_EQ(std::string("a#b2c"),
-              std::string(first_only)); // [確認_正常系] - FIRST_ONLY では最初の 1 件のみ置換されること。
-    EXPECT_EQ(std::string("##"),
-              std::string(no_copy)); // [確認_正常系] - NO_COPY では非一致部分が出力されないこと。
+    ASSERT_EQ(
+        CPLAT_OK,
+        actual_ret_first_only); // [確認_正常系] - CPLAT_REGEX_REPLACE_FIRST_ONLY を指定した cplat_regex_replace() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(
+        CPLAT_OK,
+        actual_ret_no_copy); // [確認_正常系] - CPLAT_REGEX_REPLACE_NO_COPY を指定した cplat_regex_replace() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        std::string("a#b2c"),
+        std::string(
+            first_only)); // [確認_正常系] - std::string(first_only) が "a#b2c" であること。(FIRST_ONLY では最初の 1 件のみ置換されたことの確認)
+    EXPECT_EQ(
+        std::string("##"),
+        std::string(
+            no_copy)); // [確認_正常系] - std::string(no_copy) が "##" であること。(NO_COPY では非一致部分が出力されなかったことの確認)
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -873,7 +944,7 @@ TEST_F(regexTest, replace_reports_required_size)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "a" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -884,9 +955,10 @@ TEST_F(regexTest, replace_reports_required_size)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              result); // [確認_正常系] - 問い合わせ時の cplat_regex_replace の戻り値が CPLAT_OK であること。
-    EXPECT_EQ((size_t)7,
-              required_size); // [確認_正常系] - "xyxyxy" と null 終端を合わせた 7 が格納されること。
+              result); // [確認_正常系] - 問い合わせ時の cplat_regex_replace() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        (size_t)7,
+        required_size); // [確認_正常系] - required_size が 7 であること。("xyxyxy" と null 終端を合わせたサイズであることの確認)
 
     // Arrange_2
     required_size = 0;
@@ -899,10 +971,11 @@ TEST_F(regexTest, replace_reports_required_size)
                             NULL); // [手順] - 必要サイズより 1 バイト小さい 6 を指定して置換する。
 
     // Assert_2
-    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              result);                   // [確認_異常系] - バッファー不足時の cplat_regex_replace の戻り値が
-                                         // CPLAT_ERR_BUFFER_TOO_SMALL であること。
-    EXPECT_EQ((size_t)7, required_size); // [確認_異常系] - required_size_out に必要な 7 が格納されること。
+    EXPECT_EQ(
+        CPLAT_ERR_BUFFER_TOO_SMALL,
+        result); // [確認_異常系] - バッファー不足時の cplat_regex_replace() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_EQ((size_t)7,
+              required_size); // [確認_異常系] - required_size が 7 であること。(必要なサイズであることの確認)
 
     // Arrange_3
     required_size = 0;
@@ -916,9 +989,9 @@ TEST_F(regexTest, replace_reports_required_size)
 
     // Assert_3
     EXPECT_EQ(CPLAT_OK,
-              result); // [確認_正常系] - ちょうどのサイズでの cplat_regex_replace の戻り値が CPLAT_OK
-                       // であること。
-    EXPECT_EQ(std::string("xyxyxy"), std::string(buffer)); // [確認_正常系] - 置換結果が "xyxyxy" であること。
+              result); // [確認_正常系] - ちょうどのサイズでの cplat_regex_replace() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(std::string("xyxyxy"),
+              std::string(buffer)); // [確認_正常系] - std::string(buffer) が "xyxyxy" であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -937,20 +1010,21 @@ TEST_F(regexTest, iter_enumerates_all_matches)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("[0-9]+", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "[0-9]+" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_iter_create(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, &iter,
                                                 NULL)); // [状態] - 入力に対するイテレーターを生成しておく。
-    // [状態確認] - cplat_regex_iter_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_regex_iter_create() の戻り値が CPLAT_OK であること。
+    ASSERT_NE((cplat_regex_iter *)NULL, iter); // [状態確認] - iter が NULL 以外であること。
 
     // Pre-Assert
-    ASSERT_NE((cplat_regex_iter *)NULL, iter); // [Pre-Assert確認_正常系] - イテレーターが NULL でないこと。
 
     // Act
     for (;;)
     {
-        ASSERT_EQ(CPLAT_OK, cplat_regex_iter_next(iter, &match, 1, &has_match,
-                                                  NULL)); // [手順] - 次の一致箇所を取得する。
-        // [確認_正常系 回数=3+1] - `cplat_regex_iter_next(iter, &match, 1, &has_match, NULL)` の戻り値が `CPLAT_OK` であること。
+        int actual_ret_next = cplat_regex_iter_next(iter, &match, 1, &has_match,
+                                                    NULL); // [手順] - 次の一致箇所を取得する。
+        ASSERT_EQ(CPLAT_OK,
+                  actual_ret_next); // [確認_正常系 回数=3+1] - cplat_regex_iter_next() の戻り値が CPLAT_OK であること。
         if (has_match == 0)
         {
             break;
@@ -959,11 +1033,12 @@ TEST_F(regexTest, iter_enumerates_all_matches)
     }
 
     // Assert
-    ASSERT_EQ((size_t)3, found.size());      // [確認_正常系] - 列挙された件数が 3 であること。
-    EXPECT_EQ(std::string("1"), found[0]);   // [確認_正常系] - 1 件目が "1" であること。
-    EXPECT_EQ(std::string("22"), found[1]);  // [確認_正常系] - 2 件目が "22" であること。
-    EXPECT_EQ(std::string("333"), found[2]); // [確認_正常系] - 3 件目が "333" であること。
-    EXPECT_EQ(0, has_match);                 // [確認_正常系] - 列挙終了時に has_match_out へ 0 が格納されること。
+    ASSERT_EQ((size_t)3,
+              found.size()); // [確認_正常系] - found.size() の戻り値が 3 であること。(列挙された件数であることの確認)
+    EXPECT_EQ(std::string("1"), found[0]);   // [確認_正常系] - found[0] が "1" であること。
+    EXPECT_EQ(std::string("22"), found[1]);  // [確認_正常系] - found[1] が "22" であること。
+    EXPECT_EQ(std::string("333"), found[2]); // [確認_正常系] - found[2] が "333" であること。
+    EXPECT_EQ(0, has_match);                 // [確認_正常系] - has_match が 0 であること。(列挙が終了したことの確認)
 
     // Cleanup
     cplat_regex_iter_dispose(iter);
@@ -982,31 +1057,32 @@ TEST_F(regexTest, iter_terminates_on_empty_matches)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a*", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - 空一致しうるパターン "a*" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_iter_create(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, &iter,
                                                 NULL)); // [状態] - 入力 "ab" のイテレーターを生成しておく。
-    // [状態確認] - cplat_regex_iter_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_regex_iter_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     for (;;)
     {
-        ASSERT_EQ(CPLAT_OK, cplat_regex_iter_next(iter, NULL, 0, &has_match,
-                                                  NULL)); // [手順] - 次の一致箇所を取得する。
-        // [確認_正常系 回数=3+1] - `cplat_regex_iter_next(iter, NULL, 0, &has_match, NULL)` の戻り値が `CPLAT_OK` であること。
+        int actual_ret_next = cplat_regex_iter_next(iter, NULL, 0, &has_match,
+                                                    NULL); // [手順] - 次の一致箇所を取得する。
+        ASSERT_EQ(CPLAT_OK,
+                  actual_ret_next); // [確認_正常系 回数=3+1] - cplat_regex_iter_next() の戻り値が CPLAT_OK であること。
         if (has_match == 0)
         {
             break;
         }
         count++;
         ASSERT_LT(count, 100); // 無限ループの検出
-        // [確認_正常系 回数=3] - `count` が `100` より小さいこと。
+        // [確認_正常系 回数=3] - count が 100 より小さいこと。
     }
 
     // Assert
-    EXPECT_LT(count, 100);   // [確認_正常系] - 空一致でも列挙が有限回で終了すること。
-    EXPECT_EQ(0, has_match); // [確認_正常系] - 列挙終了時に has_match_out へ 0 が格納されること。
+    EXPECT_LT(count, 100); // [確認_正常系] - count が 100 より小さいこと。(空一致でも列挙が有限回で終了したことの確認)
+    EXPECT_EQ(0, has_match); // [確認_正常系] - has_match が 0 であること。(列挙が終了したことの確認)
 
     // Cleanup
     cplat_regex_iter_dispose(iter);
@@ -1025,23 +1101,28 @@ TEST_F(regexTest, iter_copies_input_text)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("b", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "b" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_iter_create(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, &iter,
                                                 NULL)); // [状態] - 入力 "abc" のイテレーターを生成しておく。
-    // [状態確認] - cplat_regex_iter_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_regex_iter_create() の戻り値が CPLAT_OK であること。
     text = "zzz"; // [状態] - イテレーター生成後に元の文字列を書き換える。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK, cplat_regex_iter_next(iter, &match, 1, &has_match,
-                                              NULL)); // [手順] - 次の一致箇所を取得する。
-    // [確認_正常系] - `cplat_regex_iter_next(iter, &match, 1, &has_match, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret = cplat_regex_iter_next(iter, &match, 1, &has_match,
+                                           NULL); // [手順] - 次の一致箇所を取得する。
 
     // Assert
-    EXPECT_EQ(1, has_match);           // [確認_正常系] - 一致を示す 1 が格納されること。
-    EXPECT_EQ((size_t)1, match.begin); // [確認_正常系] - 元の "abc" に対するマッチ開始位置 1 が返ること。
-    EXPECT_EQ((size_t)2, match.end);   // [確認_正常系] - 元の "abc" に対するマッチ終了位置 2 が返ること。
+    ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_regex_iter_next() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, has_match);         // [確認_正常系] - has_match が 1 であること。(一致したことの確認)
+    EXPECT_EQ(
+        (size_t)1,
+        match
+            .begin); // [確認_正常系] - match.begin が 1 であること。(元の "abc" に対するマッチ開始位置であることの確認)
+    EXPECT_EQ(
+        (size_t)2,
+        match.end); // [確認_正常系] - match.end が 2 であること。(元の "abc" に対するマッチ終了位置であることの確認)
 
     // Cleanup
     cplat_regex_iter_dispose(iter);
@@ -1059,22 +1140,26 @@ TEST_F(regexTest, split_divides_text_by_matches)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create(",", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - 区切りのパターン "," をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK,
-              cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, parts, 8, &part_count,
-                                NULL)); // [手順] - "a,,b,c" を上限なしで分割する。
-    // [確認_正常系] - `cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, parts, 8, &part_count, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret =
+        cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, parts, 8, &part_count,
+                          NULL); // [手順] - "a,,b,c" を上限なしで分割する。
 
     // Assert
-    ASSERT_EQ((size_t)4, part_count);                   // [確認_正常系] - 分割件数が 4 であること。
-    EXPECT_EQ(std::string("a"), slice(text, parts[0])); // [確認_正常系] - 1 件目が "a" であること。
-    EXPECT_EQ(std::string(""), slice(text, parts[1]));  // [確認_正常系] - 2 件目が空文字列であること。
-    EXPECT_EQ(std::string("b"), slice(text, parts[2])); // [確認_正常系] - 3 件目が "b" であること。
-    EXPECT_EQ(std::string("c"), slice(text, parts[3])); // [確認_正常系] - 4 件目が "c" であること。
+    ASSERT_EQ(CPLAT_OK, actual_ret);  // [確認_正常系] - cplat_regex_split() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ((size_t)4, part_count); // [確認_正常系] - part_count が 4 であること。(分割件数であることの確認)
+    EXPECT_EQ(std::string("a"),
+              slice(text, parts[0])); // [確認_正常系] - 1 件目に対する slice() の戻り値が "a" であること。
+    EXPECT_EQ(std::string(""),
+              slice(text, parts[1])); // [確認_正常系] - 2 件目に対する slice() の戻り値が "" であること。
+    EXPECT_EQ(std::string("b"),
+              slice(text, parts[2])); // [確認_正常系] - 3 件目に対する slice() の戻り値が "b" であること。
+    EXPECT_EQ(std::string("c"),
+              slice(text, parts[3])); // [確認_正常系] - 4 件目に対する slice() の戻り値が "c" であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -1091,21 +1176,24 @@ TEST_F(regexTest, split_keeps_empty_parts_at_boundaries)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create(",", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - 区切りのパターン "," をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK,
-              cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, parts, 8, &part_count,
-                                NULL)); // [手順] - ",a," を上限なしで分割する。
-    // [確認_正常系] - `cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, parts, 8, &part_count, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret =
+        cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, parts, 8, &part_count,
+                          NULL); // [手順] - ",a," を上限なしで分割する。
 
     // Assert
-    ASSERT_EQ((size_t)3, part_count);                   // [確認_正常系] - 分割件数が 3 であること。
-    EXPECT_EQ(std::string(""), slice(text, parts[0]));  // [確認_正常系] - 1 件目が空文字列であること。
-    EXPECT_EQ(std::string("a"), slice(text, parts[1])); // [確認_正常系] - 2 件目が "a" であること。
-    EXPECT_EQ(std::string(""), slice(text, parts[2]));  // [確認_正常系] - 3 件目が空文字列であること。
+    ASSERT_EQ(CPLAT_OK, actual_ret);  // [確認_正常系] - cplat_regex_split() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ((size_t)3, part_count); // [確認_正常系] - part_count が 3 であること。(分割件数であることの確認)
+    EXPECT_EQ(std::string(""),
+              slice(text, parts[0])); // [確認_正常系] - 1 件目に対する slice() の戻り値が "" であること。
+    EXPECT_EQ(std::string("a"),
+              slice(text, parts[1])); // [確認_正常系] - 2 件目に対する slice() の戻り値が "a" であること。
+    EXPECT_EQ(std::string(""),
+              slice(text, parts[2])); // [確認_正常系] - 3 件目に対する slice() の戻り値が "" であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -1122,19 +1210,24 @@ TEST_F(regexTest, split_returns_whole_text_when_no_match)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create(",", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - 区切りのパターン "," をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK,
-              cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, parts, 2, &part_count,
-                                NULL)); // [手順] - 区切りを含まない "abc" を分割する。
-    // [確認_正常系] - `cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, parts, 2, &part_count, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret =
+        cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, parts, 2, &part_count,
+                          NULL); // [手順] - 区切りを含まない "abc" を分割する。
 
     // Assert
-    ASSERT_EQ((size_t)1, part_count);                     // [確認_正常系] - 分割件数が 1 であること。
-    EXPECT_EQ(std::string("abc"), slice(text, parts[0])); // [確認_正常系] - 1 件目が入力全体であること。
+    ASSERT_EQ(CPLAT_OK, actual_ret);  // [確認_正常系] - cplat_regex_split() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ((size_t)1, part_count); // [確認_正常系] - part_count が 1 であること。(分割件数であることの確認)
+    EXPECT_EQ(
+        std::string("abc"),
+        slice(
+            text,
+            parts
+                [0])); // [確認_正常系] - 1 件目に対する slice() の戻り値が "abc" であること。(入力全体であることの確認)
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -1151,20 +1244,26 @@ TEST_F(regexTest, split_honors_max_parts)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create(",", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - 区切りのパターン "," をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK,
-              cplat_regex_split(regex, text.data(), text.size(), 2, CPLAT_REGEX_MATCH_DEFAULT, parts, 8, &part_count,
-                                NULL)); // [手順] - max_parts に 2 を指定して分割する。
-    // [確認_正常系] - `cplat_regex_split(regex, text.data(), text.size(), 2, CPLAT_REGEX_MATCH_DEFAULT, parts, 8, &part_count, NULL)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret =
+        cplat_regex_split(regex, text.data(), text.size(), 2, CPLAT_REGEX_MATCH_DEFAULT, parts, 8, &part_count,
+                          NULL); // [手順] - max_parts に 2 を指定して分割する。
 
     // Assert
-    ASSERT_EQ((size_t)2, part_count);                       // [確認_正常系] - 分割件数が 2 であること。
-    EXPECT_EQ(std::string("a"), slice(text, parts[0]));     // [確認_正常系] - 1 件目が "a" であること。
-    EXPECT_EQ(std::string("b,c,d"), slice(text, parts[1])); // [確認_正常系] - 2 件目が残り全体の "b,c,d" であること。
+    ASSERT_EQ(CPLAT_OK, actual_ret);  // [確認_正常系] - cplat_regex_split() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ((size_t)2, part_count); // [確認_正常系] - part_count が 2 であること。(分割件数であることの確認)
+    EXPECT_EQ(std::string("a"),
+              slice(text, parts[0])); // [確認_正常系] - 1 件目に対する slice() の戻り値が "a" であること。
+    EXPECT_EQ(
+        std::string("b,c,d"),
+        slice(
+            text,
+            parts
+                [1])); // [確認_正常系] - 2 件目に対する slice() の戻り値が "b,c,d" であること。(残り全体であることの確認)
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -1182,7 +1281,7 @@ TEST_F(regexTest, split_reports_required_count)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create(",", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - 区切りのパターン "," をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -1192,8 +1291,8 @@ TEST_F(regexTest, split_reports_required_count)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              result); // [確認_正常系] - 問い合わせ時の cplat_regex_split の戻り値が CPLAT_OK であること。
-    EXPECT_EQ((size_t)3, part_count); // [確認_正常系] - 必要な件数 3 が格納されること。
+              result); // [確認_正常系] - 問い合わせ時の cplat_regex_split() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ((size_t)3, part_count); // [確認_正常系] - part_count が 3 であること。(必要な件数であることの確認)
 
     // Arrange_2
     part_count = 0;
@@ -1205,11 +1304,16 @@ TEST_F(regexTest, split_reports_required_count)
                                NULL); // [手順] - 必要件数より少ない要素数 2 の配列を渡して分割する。
 
     // Assert_2
-    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              result);                // [確認_異常系] - 件数不足時の cplat_regex_split の戻り値が
-                                      // CPLAT_ERR_BUFFER_TOO_SMALL であること。
-    EXPECT_EQ((size_t)3, part_count); // [確認_異常系] - part_count_out に必要な件数 3 が格納されること。
-    EXPECT_EQ(std::string("a"), slice(text, parts[0])); // [確認_異常系] - 格納できる範囲まで書き込まれていること。
+    EXPECT_EQ(
+        CPLAT_ERR_BUFFER_TOO_SMALL,
+        result); // [確認_異常系] - 件数不足時の cplat_regex_split() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_EQ((size_t)3, part_count); // [確認_異常系] - part_count が 3 であること。(必要な件数であることの確認)
+    EXPECT_EQ(
+        std::string("a"),
+        slice(
+            text,
+            parts
+                [0])); // [確認_異常系] - 1 件目に対する slice() の戻り値が "a" であること。(格納できる範囲まで書き込まれたことの確認)
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -1228,37 +1332,39 @@ TEST_F(regexTest, replace_iter_split_reject_null_arguments)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "a" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_regex_replace(NULL, text.data(), text.size(), "x", CPLAT_REGEX_MATCH_DEFAULT, buffer,
-                                  sizeof(buffer), NULL,
-                                  NULL)); // [確認_異常系] - regex が NULL のときの cplat_regex_replace の
-                                          // 戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_regex_replace(regex, text.data(), text.size(), NULL, CPLAT_REGEX_MATCH_DEFAULT, buffer,
-                                  sizeof(buffer), NULL,
-                                  NULL)); // [確認_異常系] - replacement が NULL のときの cplat_regex_replace
-                                          // の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_regex_iter_create(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL,
-                                      NULL)); // [確認_異常系] - iter_out が NULL のときの
-                                              // cplat_regex_iter_create の戻り値が
-                                              // CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_regex_iter_next(NULL, NULL, 0, &has_match,
-                                    NULL)); // [確認_異常系] - iter が NULL のときの cplat_regex_iter_next の
-                                            // 戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, NULL,
-                                NULL)); // [確認_異常系] - part_count_out が NULL のときの cplat_regex_split
-                                        // の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ((size_t)0, part_count);   // [確認_異常系] - part_count が変更されていないこと。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_regex_replace(
+            NULL, text.data(), text.size(), "x", CPLAT_REGEX_MATCH_DEFAULT, buffer, sizeof(buffer), NULL,
+            NULL)); // [確認_異常系] - regex が NULL のときの cplat_regex_replace() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_regex_replace(
+            regex, text.data(), text.size(), NULL, CPLAT_REGEX_MATCH_DEFAULT, buffer, sizeof(buffer), NULL,
+            NULL)); // [確認_異常系] - replacement が NULL のときの cplat_regex_replace() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_regex_iter_create(
+            regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL,
+            NULL)); // [確認_異常系] - iter_out が NULL のときの cplat_regex_iter_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_regex_iter_next(
+            NULL, NULL, 0, &has_match,
+            NULL)); // [確認_異常系] - iter が NULL のときの cplat_regex_iter_next() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_regex_split(
+            regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, NULL,
+            NULL)); // [確認_異常系] - part_count_out が NULL のときの cplat_regex_split() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ((size_t)0, part_count); // [確認_異常系] - part_count が 0 であること。(変更されていないことの確認)
 
     // Cleanup
     cplat_regex_iter_dispose(iter);
@@ -1317,48 +1423,72 @@ TEST_F(regexTest, traits_cover_ascii_classes_and_conversions)
     bool classic_locale = test_regex_getloc_is_classic();           // [手順] - traits の locale を取得する。
 
     // Assert
-    EXPECT_NE(0U, alnum);              // [確認_正常系] - alnum クラスが定義されること。
-    EXPECT_NE(0U, alpha);              // [確認_正常系] - alpha クラスが定義されること。
-    EXPECT_NE(0U, blank);              // [確認_正常系] - blank クラスが定義されること。
-    EXPECT_NE(0U, cntrl);              // [確認_正常系] - cntrl クラスが定義されること。
-    EXPECT_NE(0U, digit);              // [確認_正常系] - digit クラスが定義されること。
-    EXPECT_EQ(digit, digit_short);     // [確認_正常系] - d 短縮名が digit と同じであること。
-    EXPECT_NE(0U, graph);              // [確認_正常系] - graph クラスが定義されること。
-    EXPECT_NE(0U, lower);              // [確認_正常系] - lower クラスが定義されること。
-    EXPECT_NE(0U, print);              // [確認_正常系] - print クラスが定義されること。
-    EXPECT_NE(0U, punct);              // [確認_正常系] - punct クラスが定義されること。
-    EXPECT_NE(0U, space);              // [確認_正常系] - space クラスが定義されること。
-    EXPECT_EQ(space, space_short);     // [確認_正常系] - s 短縮名が space と同じであること。
-    EXPECT_NE(0U, upper);              // [確認_正常系] - upper クラスが定義されること。
-    EXPECT_NE(0U, xdigit);             // [確認_正常系] - xdigit クラスが定義されること。
-    EXPECT_NE(0U, word);               // [確認_正常系] - w 短縮名が word と同じであること。
-    EXPECT_EQ(0U, unknown);            // [確認_異常系] - 未知のクラス名が 0 になること。
-    EXPECT_EQ(alpha, lower_icase);     // [確認_正常系] - lower の icase が alpha になること。
-    EXPECT_EQ(alpha, upper_icase);     // [確認_正常系] - upper の icase が alpha になること。
-    EXPECT_TRUE(alpha_result);         // [確認_正常系] - 大文字が alpha と判定されること。
-    EXPECT_TRUE(lower_result);         // [確認_正常系] - 小文字が lower と判定されること。
-    EXPECT_TRUE(digit_result);         // [確認_正常系] - 数字が digit と判定されること。
-    EXPECT_TRUE(blank_result);         // [確認_正常系] - タブが blank と判定されること。
-    EXPECT_TRUE(space_result);         // [確認_正常系] - 空白が space と判定されること。
-    EXPECT_TRUE(control_result);       // [確認_正常系] - 制御文字が cntrl と判定されること。
-    EXPECT_TRUE(graph_result);         // [確認_正常系] - 記号が graph と判定されること。
-    EXPECT_TRUE(print_result);         // [確認_正常系] - 空白が print と判定されること。
-    EXPECT_TRUE(punct_result);         // [確認_正常系] - 記号が punct と判定されること。
-    EXPECT_TRUE(xdigit_result);        // [確認_正常系] - F が xdigit と判定されること。
-    EXPECT_TRUE(word_result);          // [確認_正常系] - 下線が word と判定されること。
-    EXPECT_FALSE(non_ascii_result);    // [確認_異常系] - 非 ASCII 文字が alpha と判定されないこと。
-    EXPECT_EQ(L'q', upper_fold);       // [確認_正常系] - Q が q へ変換されること。
-    EXPECT_EQ(L'q', lower_fold);       // [確認_正常系] - q が q のままであること。
-    EXPECT_EQ(L"Ab", transformed);     // [確認_正常系] - transform が入力を保持すること。
-    EXPECT_EQ(L"ab", primary);         // [確認_正常系] - transform_primary が大小を変換すること。
-    EXPECT_TRUE(collatename.empty());  // [確認_正常系] - 未対応照合要素が空になること。
-    EXPECT_EQ(7, digit_value);         // [確認_正常系] - 7 の値が 7 であること。
-    EXPECT_EQ(15, lower_hex_value);    // [確認_正常系] - f の値が 15 であること。
-    EXPECT_EQ(15, upper_hex_value);    // [確認_正常系] - F の値が 15 であること。
-    EXPECT_EQ(-1, invalid_value);      // [確認_異常系] - z の値が -1 であること。
-    EXPECT_EQ(-1, radix_value);        // [確認_異常系] - 基数外の F の値が -1 であること。
-    EXPECT_FALSE(locale_name.empty()); // [確認_正常系] - imbue の locale 名が空でないこと。
-    EXPECT_TRUE(classic_locale);       // [確認_正常系] - getloc が classic locale を返すこと。
+    EXPECT_NE(0U, alnum); // [確認_正常系] - alnum が 0U 以外であること。(alnum クラスが定義されたことの確認)
+    EXPECT_NE(0U, alpha); // [確認_正常系] - alpha が 0U 以外であること。(alpha クラスが定義されたことの確認)
+    EXPECT_NE(0U, blank); // [確認_正常系] - blank が 0U 以外であること。(blank クラスが定義されたことの確認)
+    EXPECT_NE(0U, cntrl); // [確認_正常系] - cntrl が 0U 以外であること。(cntrl クラスが定義されたことの確認)
+    EXPECT_NE(0U, digit); // [確認_正常系] - digit が 0U 以外であること。(digit クラスが定義されたことの確認)
+    EXPECT_EQ(
+        digit,
+        digit_short); // [確認_正常系] - digit_short が digit と一致すること。(d 短縮名が digit と同じであることの確認)
+    EXPECT_NE(0U, graph); // [確認_正常系] - graph が 0U 以外であること。(graph クラスが定義されたことの確認)
+    EXPECT_NE(0U, lower); // [確認_正常系] - lower が 0U 以外であること。(lower クラスが定義されたことの確認)
+    EXPECT_NE(0U, print); // [確認_正常系] - print が 0U 以外であること。(print クラスが定義されたことの確認)
+    EXPECT_NE(0U, punct); // [確認_正常系] - punct が 0U 以外であること。(punct クラスが定義されたことの確認)
+    EXPECT_NE(0U, space); // [確認_正常系] - space が 0U 以外であること。(space クラスが定義されたことの確認)
+    EXPECT_EQ(
+        space,
+        space_short); // [確認_正常系] - space_short が space と一致すること。(s 短縮名が space と同じであることの確認)
+    EXPECT_NE(0U, upper);   // [確認_正常系] - upper が 0U 以外であること。(upper クラスが定義されたことの確認)
+    EXPECT_NE(0U, xdigit);  // [確認_正常系] - xdigit が 0U 以外であること。(xdigit クラスが定義されたことの確認)
+    EXPECT_NE(0U, word);    // [確認_正常系] - word が 0U 以外であること。(w クラスが定義されたことの確認)
+    EXPECT_EQ(0U, unknown); // [確認_異常系] - unknown が 0U であること。(未知のクラス名であることの確認)
+    EXPECT_EQ(
+        alpha,
+        lower_icase); // [確認_正常系] - lower_icase が alpha と一致すること。(lower の icase が alpha であることの確認)
+    EXPECT_EQ(
+        alpha,
+        upper_icase); // [確認_正常系] - upper_icase が alpha と一致すること。(upper の icase が alpha であることの確認)
+    EXPECT_TRUE(
+        alpha_result); // [確認_正常系] - alpha_result が true であること。(大文字が alpha と判定されたことの確認)
+    EXPECT_TRUE(
+        lower_result); // [確認_正常系] - lower_result が true であること。(小文字が lower と判定されたことの確認)
+    EXPECT_TRUE(digit_result); // [確認_正常系] - digit_result が true であること。(数字が digit と判定されたことの確認)
+    EXPECT_TRUE(blank_result); // [確認_正常系] - blank_result が true であること。(タブが blank と判定されたことの確認)
+    EXPECT_TRUE(space_result); // [確認_正常系] - space_result が true であること。(空白が space と判定されたことの確認)
+    EXPECT_TRUE(
+        control_result); // [確認_正常系] - control_result が true であること。(制御文字が cntrl と判定されたことの確認)
+    EXPECT_TRUE(graph_result); // [確認_正常系] - graph_result が true であること。(記号が graph と判定されたことの確認)
+    EXPECT_TRUE(print_result); // [確認_正常系] - print_result が true であること。(空白が print と判定されたことの確認)
+    EXPECT_TRUE(punct_result); // [確認_正常系] - punct_result が true であること。(記号が punct と判定されたことの確認)
+    EXPECT_TRUE(
+        xdigit_result);       // [確認_正常系] - xdigit_result が true であること。(F が xdigit と判定されたことの確認)
+    EXPECT_TRUE(word_result); // [確認_正常系] - word_result が true であること。(下線が word と判定されたことの確認)
+    EXPECT_FALSE(
+        non_ascii_result); // [確認_異常系] - non_ascii_result が false であること。(非 ASCII 文字が alpha と判定されなかったことの確認)
+    EXPECT_EQ(L'q', upper_fold); // [確認_正常系] - upper_fold が L'q' であること。(Q が q へ変換されたことの確認)
+    EXPECT_EQ(L'q', lower_fold); // [確認_正常系] - lower_fold が L'q' であること。(q が q のままであることの確認)
+    EXPECT_EQ(L"Ab",
+              transformed); // [確認_正常系] - transformed が L"Ab" であること。(transform が入力を保持したことの確認)
+    EXPECT_EQ(L"ab",
+              primary); // [確認_正常系] - primary が L"ab" であること。(transform_primary が大小を変換したことの確認)
+    EXPECT_TRUE(
+        collatename
+            .empty()); // [確認_正常系] - collatename.empty() の戻り値が true であること。(未対応照合要素が空であることの確認)
+    EXPECT_EQ(7, digit_value); // [確認_正常系] - digit_value が 7 であること。
+    EXPECT_EQ(
+        15,
+        lower_hex_value); // [確認_正常系] - lower_hex_value が 15 であること。(小文字の 16 進数字 f の値であることの確認)
+    EXPECT_EQ(
+        15,
+        upper_hex_value); // [確認_正常系] - upper_hex_value が 15 であること。(大文字の 16 進数字 F の値であることの確認)
+    EXPECT_EQ(-1, invalid_value); // [確認_異常系] - invalid_value が -1 であること。(z の値であることの確認)
+    EXPECT_EQ(-1, radix_value);   // [確認_異常系] - radix_value が -1 であること。(基数外の F の値であることの確認)
+    EXPECT_FALSE(
+        locale_name
+            .empty()); // [確認_正常系] - locale_name.empty() の戻り値が false であること。(imbue の locale 名が空でないことの確認)
+    EXPECT_TRUE(
+        classic_locale); // [確認_正常系] - classic_locale が true であること。(getloc が classic locale を返すことの確認)
 }
 
 #if !defined(CPLAT_REGEX_NO_EXCEPTIONS)
@@ -1382,14 +1512,24 @@ TEST_F(regexTest, translate_exception_maps_regex_and_runtime_errors)
     int unknown_result = test_regex_translate_unknown();                     // [手順] - 未知の例外を変換する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_LIMIT_EXCEEDED,
-              complexity_result);                         // [確認_異常系] - complexity が LIMIT_EXCEEDED になること。
-    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY, space_result);     // [確認_異常系] - space が OUT_OF_MEMORY になること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_PATTERN, pattern_result); // [確認_異常系] - pattern が INVALID_PATTERN になること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_PATTERN,
-              default_result); // [確認_異常系] - 未分類 regex 例外が INVALID_PATTERN になること。
-    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY, alloc_result); // [確認_異常系] - bad_alloc が OUT_OF_MEMORY になること。
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, unknown_result);     // [確認_異常系] - 未知の例外が UNKNOWN になること。
+    EXPECT_EQ(
+        CPLAT_ERR_LIMIT_EXCEEDED,
+        complexity_result); // [確認_異常系] - complexity 例外に対する test_regex_translate_error() の戻り値が CPLAT_ERR_LIMIT_EXCEEDED であること。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_MEMORY,
+        space_result); // [確認_異常系] - space 例外に対する test_regex_translate_error() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_PATTERN,
+        pattern_result); // [確認_異常系] - pattern 例外に対する test_regex_translate_error() の戻り値が CPLAT_ERR_INVALID_PATTERN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_PATTERN,
+        default_result); // [確認_異常系] - 未分類の regex 例外に対する test_regex_translate_error() の戻り値が CPLAT_ERR_INVALID_PATTERN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_MEMORY,
+        alloc_result); // [確認_異常系] - test_regex_translate_bad_alloc() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        unknown_result); // [確認_異常系] - test_regex_translate_unknown() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 #endif /* !CPLAT_REGEX_NO_EXCEPTIONS */
 
@@ -1403,7 +1543,7 @@ TEST_F(regexTest, option_and_match_flags_cover_basic_optimize_and_boundaries)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_BASIC | CPLAT_REGEX_OPTIMIZE, &regex,
                                            NULL)); // [状態] - BASIC と OPTIMIZE を指定してコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -1414,9 +1554,13 @@ TEST_F(regexTest, option_and_match_flags_cover_basic_optimize_and_boundaries)
                                     NULL); // [手順] - 行境界、空一致、最適化に関する照合フラグを指定して検索する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, result);                 // [確認_正常系] - 追加フラグ付き検索の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1, matched);                       // [確認_正常系] - 追加フラグ付き検索が一致を返すこと。
-    EXPECT_EQ(L'a', test_regex_translate(L'a')); // [確認_正常系] - traits の translate が入力文字を保持すること。
+    EXPECT_EQ(CPLAT_OK,
+              result);     // [確認_正常系] - 追加フラグを指定した cplat_regex_search() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, matched); // [確認_正常系] - matched が 1 であること。(追加フラグ付き検索で一致したことの確認)
+    EXPECT_EQ(
+        L'a',
+        test_regex_translate(
+            L'a')); // [確認_正常系] - test_regex_translate() の戻り値が L'a' であること。(入力文字を保持したことの確認)
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -1437,7 +1581,7 @@ TEST_F(regexTest, replace_iter_split_reject_limits_and_invalid_encoding)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - 境界テスト用のパターンをコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -1479,34 +1623,48 @@ TEST_F(regexTest, replace_iter_split_reject_limits_and_invalid_encoding)
                           NULL); // [手順] - 不正 UTF-8 の入力を分割する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              replace_null_result); // [確認_異常系] - 出力先 NULL の置換が INVALID_ARGUMENT になること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              replace_flag_result); // [確認_異常系] - 不正置換フラグが INVALID_ARGUMENT になること。
-    EXPECT_EQ(CPLAT_ERR_LIMIT_EXCEEDED,
-              replace_text_limit_result); // [確認_異常系] - 長過ぎる置換入力が LIMIT_EXCEEDED になること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ENCODING,
-              replace_text_encoding_result); // [確認_異常系] - 不正置換入力が INVALID_ENCODING になること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ENCODING,
-              replace_replacement_encoding_result); // [確認_異常系] - 不正置換文字列が INVALID_ENCODING になること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              search_flag_result); // [確認_異常系] - 不正検索フラグが INVALID_ARGUMENT になること。
-    EXPECT_EQ(CPLAT_ERR_LIMIT_EXCEEDED,
-              search_limit_result); // [確認_異常系] - 長過ぎる検索入力が LIMIT_EXCEEDED になること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              iter_flag_result); // [確認_異常系] - 不正列挙フラグが INVALID_ARGUMENT になること。
-    EXPECT_EQ(CPLAT_ERR_LIMIT_EXCEEDED,
-              iter_limit_result); // [確認_異常系] - 長過ぎる列挙入力が LIMIT_EXCEEDED になること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ENCODING,
-              iter_encoding_result); // [確認_異常系] - 不正列挙入力が INVALID_ENCODING になること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              split_null_result); // [確認_異常系] - 分割出力 NULL が INVALID_ARGUMENT になること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              split_flag_result); // [確認_異常系] - 不正分割フラグが INVALID_ARGUMENT になること。
-    EXPECT_EQ(CPLAT_ERR_LIMIT_EXCEEDED,
-              split_limit_result); // [確認_異常系] - 長過ぎる分割入力が LIMIT_EXCEEDED になること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ENCODING,
-              split_encoding_result); // [確認_異常系] - 不正分割入力が INVALID_ENCODING になること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        replace_null_result); // [確認_異常系] - 出力先 NULL の cplat_regex_replace() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        replace_flag_result); // [確認_異常系] - 未定義フラグを指定した cplat_regex_replace() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_LIMIT_EXCEEDED,
+        replace_text_limit_result); // [確認_異常系] - 最大長を超える入力の cplat_regex_replace() の戻り値が CPLAT_ERR_LIMIT_EXCEEDED であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ENCODING,
+        replace_text_encoding_result); // [確認_異常系] - 不正な UTF-8 の入力の cplat_regex_replace() の戻り値が CPLAT_ERR_INVALID_ENCODING であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ENCODING,
+        replace_replacement_encoding_result); // [確認_異常系] - 不正な UTF-8 の置換文字列の cplat_regex_replace() の戻り値が CPLAT_ERR_INVALID_ENCODING であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        search_flag_result); // [確認_異常系] - 未定義フラグを指定した cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_LIMIT_EXCEEDED,
+        search_limit_result); // [確認_異常系] - 最大長を超える入力の cplat_regex_search() の戻り値が CPLAT_ERR_LIMIT_EXCEEDED であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        iter_flag_result); // [確認_異常系] - 未定義フラグを指定した cplat_regex_iter_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_LIMIT_EXCEEDED,
+        iter_limit_result); // [確認_異常系] - 最大長を超える入力の cplat_regex_iter_create() の戻り値が CPLAT_ERR_LIMIT_EXCEEDED であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ENCODING,
+        iter_encoding_result); // [確認_異常系] - 不正な UTF-8 の入力の cplat_regex_iter_create() の戻り値が CPLAT_ERR_INVALID_ENCODING であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        split_null_result); // [確認_異常系] - 出力先 NULL の cplat_regex_split() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        split_flag_result); // [確認_異常系] - 未定義フラグを指定した cplat_regex_split() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_LIMIT_EXCEEDED,
+        split_limit_result); // [確認_異常系] - 最大長を超える入力の cplat_regex_split() の戻り値が CPLAT_ERR_LIMIT_EXCEEDED であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ENCODING,
+        split_encoding_result); // [確認_異常系] - 不正な UTF-8 の入力の cplat_regex_split() の戻り値が CPLAT_ERR_INVALID_ENCODING であること。
 
     // Cleanup
     cplat_regex_iter_dispose(iter);
@@ -1524,10 +1682,10 @@ TEST_F(regexTest, iter_advances_empty_match_over_astral_code_point)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a*", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - 空一致するパターンをコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_iter_create(regex, text.data(), text.size(), CPLAT_REGEX_DEFAULT, &iter,
                                                 NULL)); // [状態] - BMP 外文字の列挙器を生成しておく。
-    // [状態確認] - cplat_regex_iter_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_regex_iter_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -1538,9 +1696,11 @@ TEST_F(regexTest, iter_advances_empty_match_over_astral_code_point)
                                               NULL); // [手順] - サロゲート ペアを越えた次の空一致を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, first_result);  // [確認_正常系] - 1 回目の列挙が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_OK, second_result); // [確認_正常系] - 2 回目の列挙が CPLAT_OK であること。
-    EXPECT_EQ(1, has_match);            // [確認_正常系] - 2 回目も空一致を示すこと。
+    EXPECT_EQ(CPLAT_OK,
+              first_result); // [確認_正常系] - 1 回目の cplat_regex_iter_next() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              second_result); // [確認_正常系] - 2 回目の cplat_regex_iter_next() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, has_match);  // [確認_正常系] - has_match が 1 であること。(2 回目も空一致したことの確認)
 
     // Cleanup
     cplat_regex_iter_dispose(iter);
@@ -1557,7 +1717,7 @@ TEST_F(regexTest, replace_checks_replacement_limit_and_sed_flag)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("(a)", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - 捕捉グループを持つパターンをコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -1569,10 +1729,12 @@ TEST_F(regexTest, replace_checks_replacement_limit_and_sed_flag)
                                          NULL); // [手順] - sed 書式の後方参照を指定する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_LIMIT_EXCEEDED,
-              limit_result);         // [確認_異常系] - 長過ぎる置換文字列が LIMIT_EXCEEDED になること。
-    EXPECT_EQ(CPLAT_OK, sed_result); // [確認_正常系] - sed 書式の置換が CPLAT_OK になること。
-    EXPECT_STREQ("a", buffer);       // [確認_正常系] - sed 書式の後方参照結果が a であること。
+    EXPECT_EQ(
+        CPLAT_ERR_LIMIT_EXCEEDED,
+        limit_result); // [確認_異常系] - 最大長を超える置換文字列の cplat_regex_replace() の戻り値が CPLAT_ERR_LIMIT_EXCEEDED であること。
+    EXPECT_EQ(CPLAT_OK,
+              sed_result);     // [確認_正常系] - sed 書式の cplat_regex_replace() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("a", buffer); // [確認_正常系] - buffer が "a" であること。(sed 書式の後方参照結果であることの確認)
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -1589,7 +1751,7 @@ TEST_F(regexTest, split_advances_empty_match_over_astral_code_point)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a*", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - 空一致する区切りパターンをコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -1598,10 +1760,16 @@ TEST_F(regexTest, split_advances_empty_match_over_astral_code_point)
                                    NULL); // [手順] - BMP 外文字を空一致パターンで分割する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - 空一致分割の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1U, part_count);   // [確認_正常系] - 空一致分割で入力全体の 1 件が返ること。
-    EXPECT_EQ(text, std::string(text.data() + parts[0].begin,
-                                parts[0].end - parts[0].begin)); // [確認_正常系] - 入力全体が保持されること。
+    EXPECT_EQ(CPLAT_OK,
+              result);         // [確認_正常系] - 空一致で分割した cplat_regex_split() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, part_count); // [確認_正常系] - part_count が 1U であること。(入力全体の 1 件であることの確認)
+    EXPECT_EQ(
+        text,
+        std::string(
+            text.data() + parts[0].begin,
+            parts[0].end -
+                parts[0]
+                    .begin)); // [確認_正常系] - std::string(text.data() + parts[0].begin, parts[0].end - parts[0].begin) が text と一致すること。(入力全体が保持されたことの確認)
 
     // Cleanup
     cplat_regex_dispose(regex);

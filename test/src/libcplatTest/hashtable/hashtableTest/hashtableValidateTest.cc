@@ -76,7 +76,9 @@ TEST_F(hashtableValidateTest, rejects_null_handle)
     int actual_ret = cplat_hashtable_validate(NULL); // [手順] - NULL で validate を呼ぶ。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - NULL を渡した cplat_hashtable_validate() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // バケット先頭リンクが capacity を超えている破損を CORRUPT_DESCRIPTOR として検出することの確認
@@ -96,8 +98,9 @@ TEST_F(hashtableValidateTest, detects_bucket_link_out_of_range)
     int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret); // [確認_異常系] - capacity を超えるバケット リンクが CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - capacity を超えるバケット リンクがあるときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -115,8 +118,9 @@ TEST_F(hashtableValidateTest, detects_link_cycle)
     fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
     peer = find_colliding_key("a", 2); // [状態] - "a" と同じバケットに割り当てられるキーを探す。
 
+    ASSERT_NE(nullptr, peer); // [状態確認] - find_colliding_key() の戻り値が nullptr 以外であること。
+
     // Pre-Assert
-    ASSERT_NE(nullptr, peer); // [Pre-Assert確認_正常系] - 同一バケットの別キーが見つかること。
 
     // Act
     (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
@@ -128,8 +132,9 @@ TEST_F(hashtableValidateTest, detects_link_cycle)
     int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret); // [確認_異常系] - チェインの循環が CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - チェインが循環しているときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -156,8 +161,9 @@ TEST_F(hashtableValidateTest, detects_duplicate_visit)
     int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret); // [確認_異常系] - 同じレコードへの二重リンクが CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - 同じレコードへ二重にリンクしているときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -180,8 +186,9 @@ TEST_F(hashtableValidateTest, detects_linked_empty_slot)
     int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret); // [確認_異常系] - 空スロットへのリンクが CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - 空スロットへリンクしているときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -207,8 +214,9 @@ TEST_F(hashtableValidateTest, detects_key_without_terminator)
     int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret); // [確認_異常系] - NUL の無いキーが CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - NUL の無いキーがあるときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -238,8 +246,9 @@ TEST_F(hashtableValidateTest, detects_hash_mismatch)
         }
     }
 
+    ASSERT_NE(0, mismatched_key[0]); // [状態確認] - mismatched_key[0] が 0 以外であること。
+
     // Pre-Assert
-    ASSERT_NE(0, mismatched_key[0]); // [Pre-Assert確認_正常系] - 異なるバケットに割り当てられるキーが見つかること。
 
     // Act
     (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
@@ -251,8 +260,9 @@ TEST_F(hashtableValidateTest, detects_hash_mismatch)
     int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret); // [確認_異常系] - バケットと再計算ハッシュの不一致が CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - バケットと再計算したハッシュが一致しないときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -278,8 +288,9 @@ TEST_F(hashtableValidateTest, detects_next_link_out_of_range)
     int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret); // [確認_異常系] - capacity を超える次リンクが CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - capacity を超える次リンクがあるときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -302,8 +313,9 @@ TEST_F(hashtableValidateTest, detects_unlinked_in_use_record)
     int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret); // [確認_異常系] - 未リンクの使用中レコードが CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - 未リンクの使用中レコードがあるときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -327,8 +339,9 @@ TEST_F(hashtableValidateTest, detects_next_empty_mismatch)
     int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret); // [確認_異常系] - next_empty の不一致が CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - next_empty が実態と一致しないときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -355,8 +368,9 @@ TEST_F(hashtableValidateTest, detects_in_use_count_mismatch)
     int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret); // [確認_異常系] - 実装中件数の不一致が CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - in_use_count が実態と一致しないときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -383,8 +397,9 @@ TEST_F(hashtableValidateTest, detects_deleted_count_mismatch)
     int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret); // [確認_異常系] - 削除済み件数の不一致が CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - deleted_count が実態と一致しないときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -442,8 +457,9 @@ TEST_F(hashtableValidateTest, detects_free_block_overlapping_a_live_block)
     int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret); // [確認_異常系] - 使用中ブロックと重なる空きブロックが CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - 使用中ブロックと重なる空きブロックがあるときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -469,8 +485,9 @@ TEST_F(hashtableValidateTest, detects_free_list_total_mismatch)
     int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret); // [確認_異常系] - 空きの合計の不一致が CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - 空きの合計が実態と一致しないときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -500,8 +517,9 @@ TEST_F(hashtableValidateTest, detects_adjacent_free_blocks_left_unmerged)
     int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret); // [確認_異常系] - 結合されていない隣接した空きブロックが CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - 結合されていない隣接した空きブロックがあるときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -525,8 +543,9 @@ TEST_F(hashtableValidateTest, detects_free_count_beyond_upper_bound)
     int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret); // [確認_異常系] - 上限を超える空きブロックの個数が CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - 空きブロックの個数が上限を超えているときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -564,8 +583,9 @@ TEST_F(hashtableValidateTest, attach_rejects_free_count_beyond_upper_bound)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_CORRUPT_DESCRIPTOR,
-        actual_ret); // [確認_異常系] - 上限を超える空きブロックの個数での attach が CORRUPT_DESCRIPTOR であること。
-    EXPECT_EQ(nullptr, attached); // [確認_異常系] - 失敗後の ht_out が NULL であること。
+        actual_ret); // [確認_異常系] - 空きブロックの個数が上限を超えている領域に対する cplat_hashtable_attach() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(nullptr,
+              attached); // [確認_異常系] - attached が nullptr であること。(失敗後の ht_out が NULL になったことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(attached);

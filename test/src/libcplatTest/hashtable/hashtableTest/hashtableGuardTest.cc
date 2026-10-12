@@ -81,12 +81,15 @@ TEST_F(hashtableGuardTest, add_rejects_null_arguments)
         cplat_hashtable_add(ht, "a", NULL, CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - value に NULL を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ht); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_key); // [確認_異常系] - NULL key が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_value); // [確認_異常系] - NULL value が INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_add() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_add() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_value); // [確認_異常系] - value に NULL を渡した cplat_hashtable_add() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -106,8 +109,9 @@ TEST_F(hashtableGuardTest, update_rejects_invalid_arguments_and_walks_chain)
     std::memset(too_long, 'x', sizeof(too_long));                 // [状態] - NUL が無いキーを用意する。
     peer = find_colliding_key("a", 4);                            // [状態] - "a" と同じバケットの別キーを探す。
 
+    ASSERT_NE(nullptr, peer); // [状態確認] - find_colliding_key() の戻り値が nullptr 以外であること。
+
     // Pre-Assert
-    ASSERT_NE(nullptr, peer); // [Pre-Assert確認_正常系] - 同一バケットの別キーが見つかること。
 
     // Act
     (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
@@ -125,18 +129,25 @@ TEST_F(hashtableGuardTest, update_rejects_invalid_arguments_and_walks_chain)
     int actual_ret_deleted = cplat_hashtable_update(ht, "a", value.data()); // [手順] - 削除済みキーを更新する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ht); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_key); // [確認_異常系] - NULL key が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_value); // [確認_異常系] - NULL value が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_OUT_OF_RANGE,
-              actual_ret_too_long);         // [確認_異常系] - 長すぎるキーが OUT_OF_RANGE であること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_walk);   // [確認_正常系] - チェインを辿って更新できること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_delete); // [確認_正常系] - delete が成功すること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
-              actual_ret_deleted); // [確認_異常系] - 削除済みキーの更新が NOT_FOUND であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_update() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_update() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_value); // [確認_異常系] - value に NULL を渡した cplat_hashtable_update() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_RANGE,
+        actual_ret_too_long); // [確認_異常系] - 長すぎるキーを渡した cplat_hashtable_update() の戻り値が CPLAT_ERR_OUT_OF_RANGE であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_walk); // [確認_正常系] - チェイン先頭ではないキーに対する cplat_hashtable_update() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_delete); // [確認_正常系] - cplat_hashtable_delete() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_deleted); // [確認_異常系] - 削除済みキーに対する cplat_hashtable_update() の戻り値が CPLAT_ERR_NOT_FOUND であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -164,15 +175,21 @@ TEST_F(hashtableGuardTest, update_rec_rejects_invalid_arguments)
     int actual_ret_empty = cplat_hashtable_update_rec(ht, 1, value.data()); // [手順] - 空きレコードを更新する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ht); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_value); // [確認_異常系] - NULL value が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_rec0); // [確認_異常系] - レコード番号 0 が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_rec_hi);                     // [確認_異常系] - capacity 超が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND, actual_ret_empty); // [確認_異常系] - 空きレコードの更新が NOT_FOUND であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_update_rec() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_value); // [確認_異常系] - value に NULL を渡した cplat_hashtable_update_rec() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_rec0); // [確認_異常系] - レコード番号 0 を渡した cplat_hashtable_update_rec() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_rec_hi); // [確認_異常系] - capacity 超のレコード番号を渡した cplat_hashtable_update_rec() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_empty); // [確認_異常系] - 空きレコードに対する cplat_hashtable_update_rec() の戻り値が CPLAT_ERR_NOT_FOUND であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -200,14 +217,18 @@ TEST_F(hashtableGuardTest, find_value_ref_rejects_invalid_arguments)
     int actual_ret_too_long = cplat_hashtable_find_value_ref(ht, too_long, &found); // [手順] - 長すぎるキーで検索する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ht); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_key); // [確認_異常系] - NULL key が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_out); // [確認_異常系] - NULL value_out が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_OUT_OF_RANGE,
-              actual_ret_too_long); // [確認_異常系] - 長すぎるキーが OUT_OF_RANGE であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_find_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_find_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_out); // [確認_異常系] - value_out に NULL を渡した cplat_hashtable_find_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_RANGE,
+        actual_ret_too_long); // [確認_異常系] - 長すぎるキーを渡した cplat_hashtable_find_value_ref() の戻り値が CPLAT_ERR_OUT_OF_RANGE であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -242,14 +263,22 @@ TEST_F(hashtableGuardTest, find_value_copy_rejects_invalid_arguments_and_succeed
                                                         &required_size); // [手順] - 妥当な引数で検索する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_size); // [確認_異常系] - NULL required_size_out が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_bad_pair); // [確認_異常系] - 不正な照会指定が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
-              actual_ret_not_found);    // [確認_異常系] - find_value_ref の失敗が NOT_FOUND として伝播すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_ok); // [確認_正常系] - 妥当な引数で複製できること。
-    EXPECT_STREQ("v", reinterpret_cast<char *>(copied.data())); // [確認_正常系] - 複製内容が一致すること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_size); // [確認_異常系] - required_size_out に NULL を渡した cplat_hashtable_find_value_copy() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_bad_pair); // [確認_異常系] - 不正な照会指定を渡した cplat_hashtable_find_value_copy() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_not_found); // [確認_異常系] - 存在しないキーに対する cplat_hashtable_find_value_copy() の戻り値が CPLAT_ERR_NOT_FOUND であること。(cplat_hashtable_find_value_ref() の失敗が伝播したことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_ok); // [確認_正常系] - 妥当な引数での cplat_hashtable_find_value_copy() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "v",
+        reinterpret_cast<char *>(
+            copied.data())); // [確認_正常系] - copied.data() の戻り値が "v" であること。(複製内容が一致したことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -271,8 +300,9 @@ TEST_F(hashtableGuardTest, find_recno_rejects_invalid_arguments_and_walks_chain)
     peer = find_colliding_key("a", 4);                            // [状態] - "a" と同じバケットの別キーを探す。
     (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
 
+    ASSERT_NE(nullptr, peer); // [状態確認] - find_colliding_key() の戻り値が nullptr 以外であること。
+
     // Pre-Assert
-    ASSERT_NE(nullptr, peer); // [Pre-Assert確認_正常系] - 同一バケットの別キーが見つかること。
 
     // Act
     int actual_ret_null_ht = cplat_hashtable_find_recno(NULL, "a", &rec);     // [手順] - ht に NULL を渡す。
@@ -287,18 +317,27 @@ TEST_F(hashtableGuardTest, find_recno_rejects_invalid_arguments_and_walks_chain)
     int actual_ret_deleted = cplat_hashtable_find_recno(ht, "a", &rec); // [手順] - 削除済みキーを検索する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ht); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_key); // [確認_異常系] - NULL key が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_out); // [確認_異常系] - NULL record_out が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_OUT_OF_RANGE,
-              actual_ret_too_long); // [確認_異常系] - 長すぎるキーが OUT_OF_RANGE であること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
-              actual_ret_absent);         // [確認_異常系] - 何も無いテーブルでの検索が NOT_FOUND であること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_walk); // [確認_正常系] - チェインを辿って見つかること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND, actual_ret_deleted); // [確認_異常系] - 削除済みキーが NOT_FOUND であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_find_recno() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_find_recno() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_out); // [確認_異常系] - record_out に NULL を渡した cplat_hashtable_find_recno() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_RANGE,
+        actual_ret_too_long); // [確認_異常系] - 長すぎるキーを渡した cplat_hashtable_find_recno() の戻り値が CPLAT_ERR_OUT_OF_RANGE であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_absent); // [確認_異常系] - 何も無いテーブルでの cplat_hashtable_find_recno() の戻り値が CPLAT_ERR_NOT_FOUND であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_walk); // [確認_正常系] - チェイン先頭ではないキーに対する cplat_hashtable_find_recno() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_deleted); // [確認_異常系] - 削除済みキーに対する cplat_hashtable_find_recno() の戻り値が CPLAT_ERR_NOT_FOUND であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -324,14 +363,18 @@ TEST_F(hashtableGuardTest, get_key_ref_rejects_invalid_arguments)
     int actual_ret_empty = cplat_hashtable_get_key_ref(ht, 1, &key_out);  // [手順] - 空きレコードを読む。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ht); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_out); // [確認_異常系] - NULL key_out が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_rec_hi); // [確認_異常系] - capacity 超が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
-              actual_ret_empty); // [確認_異常系] - 空きレコードの読み出しが NOT_FOUND であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_key_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_out); // [確認_異常系] - key_out に NULL を渡した cplat_hashtable_get_key_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_rec_hi); // [確認_異常系] - capacity 超のレコード番号を渡した cplat_hashtable_get_key_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_empty); // [確認_異常系] - 空きレコードに対する cplat_hashtable_get_key_ref() の戻り値が CPLAT_ERR_NOT_FOUND であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -359,10 +402,12 @@ TEST_F(hashtableGuardTest, get_key_copy_rejects_invalid_arguments)
                                      &required_size); // [手順] - 不正な record で内部エラーを伝播させる。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_size); // [確認_異常系] - NULL required_size_out が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_propagated); // [確認_異常系] - get_key_ref の失敗が伝播すること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_size); // [確認_異常系] - required_size_out に NULL を渡した cplat_hashtable_get_key_copy() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_propagated); // [確認_異常系] - 不正な record を渡した cplat_hashtable_get_key_copy() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(cplat_hashtable_get_key_ref() の失敗が伝播したことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -390,16 +435,21 @@ TEST_F(hashtableGuardTest, get_value_ref_rejects_invalid_arguments)
     int actual_ret_empty = cplat_hashtable_get_value_ref(ht, 1, &value_out); // [手順] - 空きレコードを読む。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ht); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_out); // [確認_異常系] - NULL value_out が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_rec0); // [確認_異常系] - レコード番号 0 が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_rec_hi); // [確認_異常系] - capacity 超が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
-              actual_ret_empty); // [確認_異常系] - 空きレコードの読み出しが NOT_FOUND であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_out); // [確認_異常系] - value_out に NULL を渡した cplat_hashtable_get_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_rec0); // [確認_異常系] - レコード番号 0 を渡した cplat_hashtable_get_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_rec_hi); // [確認_異常系] - capacity 超のレコード番号を渡した cplat_hashtable_get_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_empty); // [確認_異常系] - 空きレコードに対する cplat_hashtable_get_value_ref() の戻り値が CPLAT_ERR_NOT_FOUND であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -427,10 +477,12 @@ TEST_F(hashtableGuardTest, get_value_copy_rejects_invalid_arguments)
                                        &required_size); // [手順] - 不正な record で内部エラーを伝播させる。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_size); // [確認_異常系] - NULL required_size_out が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_propagated); // [確認_異常系] - get_value_ref の失敗が伝播すること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_size); // [確認_異常系] - required_size_out に NULL を渡した cplat_hashtable_get_value_copy() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_propagated); // [確認_異常系] - 不正な record を渡した cplat_hashtable_get_value_copy() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(cplat_hashtable_get_value_ref() の失敗が伝播したことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -456,14 +508,18 @@ TEST_F(hashtableGuardTest, get_status_rejects_invalid_arguments)
     int actual_ret_rec_hi = cplat_hashtable_get_status(ht, 3, &status);    // [手順] - capacity 超のレコード番号を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ht); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_out); // [確認_異常系] - NULL status_out が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_rec0); // [確認_異常系] - レコード番号 0 が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_rec_hi); // [確認_異常系] - capacity 超が INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_status() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_out); // [確認_異常系] - status_out に NULL を渡した cplat_hashtable_get_status() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_rec0); // [確認_異常系] - レコード番号 0 を渡した cplat_hashtable_get_status() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_rec_hi); // [確認_異常系] - capacity 超のレコード番号を渡した cplat_hashtable_get_status() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -481,7 +537,9 @@ TEST_F(hashtableGuardTest, count_status_rejects_null_handle)
     int actual_ret = cplat_hashtable_count_status(NULL, &in_use, NULL, NULL); // [手順] - ht に NULL を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_count_status() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // cplat_hashtable_count, deleted_count, empty_count の引数不正時の拒否確認
@@ -510,19 +568,24 @@ TEST_F(hashtableGuardTest, count_wrappers_reject_invalid_arguments)
         cplat_hashtable_empty_count(ht, NULL); // [手順] - empty_count: count に NULL を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_count_null_ht); // [確認_異常系] - count で NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_count_null_out); // [確認_異常系] - count で NULL 出力先が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_deleted_null_ht); // [確認_異常系] - deleted_count で NULL ht が INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_deleted_null_out); // [確認_異常系] - deleted_count で NULL 出力先が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_empty_null_ht); // [確認_異常系] - empty_count で NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_empty_null_out); // [確認_異常系] - empty_count で NULL 出力先が INVALID_ARGUMENT であること。
+        actual_ret_count_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_count_null_out); // [確認_異常系] - 出力先に NULL を渡した cplat_hashtable_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_deleted_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_deleted_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_deleted_null_out); // [確認_異常系] - 出力先に NULL を渡した cplat_hashtable_deleted_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_empty_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_empty_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_empty_null_out); // [確認_異常系] - 出力先に NULL を渡した cplat_hashtable_empty_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -552,15 +615,20 @@ TEST_F(hashtableGuardTest, delete_rejects_invalid_arguments_and_already_deleted)
     int actual_ret_second = cplat_hashtable_delete(ht, "a"); // [手順] - 削除済みキーへの 2 回目の削除。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ht); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_key); // [確認_異常系] - NULL key が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_OUT_OF_RANGE,
-              actual_ret_too_long);        // [確認_異常系] - 長すぎるキーが OUT_OF_RANGE であること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_first); // [確認_正常系] - 1 回目の削除が成功すること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
-              actual_ret_second); // [確認_異常系] - 削除済みキーへの再削除が NOT_FOUND であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_delete() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_delete() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_RANGE,
+        actual_ret_too_long); // [確認_異常系] - 長すぎるキーを渡した cplat_hashtable_delete() の戻り値が CPLAT_ERR_OUT_OF_RANGE であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_first); // [確認_正常系] - 1 回目の cplat_hashtable_delete() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_second); // [確認_異常系] - 削除済みキーへの 2 回目の cplat_hashtable_delete() の戻り値が CPLAT_ERR_NOT_FOUND であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -585,13 +653,18 @@ TEST_F(hashtableGuardTest, delete_rec_rejects_invalid_arguments)
     int actual_ret_empty = cplat_hashtable_delete_rec(ht, 1);     // [手順] - 空きレコードを削除する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ht); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_rec0); // [確認_異常系] - レコード番号 0 が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_rec_hi);                     // [確認_異常系] - capacity 超が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND, actual_ret_empty); // [確認_異常系] - 空きレコードの削除が NOT_FOUND であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_delete_rec() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_rec0); // [確認_異常系] - レコード番号 0 を渡した cplat_hashtable_delete_rec() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_rec_hi); // [確認_異常系] - capacity 超のレコード番号を渡した cplat_hashtable_delete_rec() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_empty); // [確認_異常系] - 空きレコードに対する cplat_hashtable_delete_rec() の戻り値が CPLAT_ERR_NOT_FOUND であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -610,10 +683,13 @@ TEST_F(hashtableGuardTest, lifecycle_wrappers_reject_null_handle)
     int actual_ret_clear = cplat_hashtable_clear(NULL);         // [手順] - clear に NULL を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_push); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_purge); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_clear); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_push); // [確認_異常系] - NULL を渡した cplat_hashtable_push_deleted() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_purge); // [確認_異常系] - NULL を渡した cplat_hashtable_purge_deleted() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_clear); // [確認_異常系] - NULL を渡した cplat_hashtable_clear() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }

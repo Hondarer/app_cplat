@@ -25,8 +25,10 @@ TEST(atomicLoadStoreTest, u8_store_and_load_are_consistent_across_memory_orders)
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ((uint8_t)(10U + (uint8_t)index),
-                  loaded[index]); // [確認_正常系 回数=5] - メモリ順序によらず直前に書き込んだ値を読めること。
+        EXPECT_EQ(
+            (uint8_t)(10U + (uint8_t)index),
+            loaded
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_load_u8() の戻り値が (uint8_t)(10U + (uint8_t)index) と一致すること。
     }
 }
 
@@ -51,8 +53,10 @@ TEST(atomicLoadStoreTest, i32_store_and_load_are_consistent_across_memory_orders
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ((int32_t)(1000 + (int32_t)index),
-                  loaded[index]); // [確認_正常系 回数=5] - メモリ順序によらず直前に書き込んだ値を読めること。
+        EXPECT_EQ(
+            (int32_t)(1000 + (int32_t)index),
+            loaded
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_load_i32() の戻り値が (int32_t)(1000 + (int32_t)index) と一致すること。
     }
 }
 
@@ -77,8 +81,10 @@ TEST(atomicLoadStoreTest, u32_store_and_load_are_consistent_across_memory_orders
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ((uint32_t)(2000U + (uint32_t)index),
-                  loaded[index]); // [確認_正常系 回数=5] - メモリ順序によらず直前に書き込んだ値を読めること。
+        EXPECT_EQ(
+            (uint32_t)(2000U + (uint32_t)index),
+            loaded
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_load_u32() の戻り値が (uint32_t)(2000U + (uint32_t)index) と一致すること。
     }
 }
 
@@ -103,8 +109,10 @@ TEST(atomicLoadStoreTest, i64_store_and_load_are_consistent_across_memory_orders
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ((int64_t)(30000000000LL + (int64_t)index),
-                  loaded[index]); // [確認_正常系 回数=5] - メモリ順序によらず直前に書き込んだ値を読めること。
+        EXPECT_EQ(
+            (int64_t)(30000000000LL + (int64_t)index),
+            loaded
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_load_i64() の戻り値が (int64_t)(30000000000LL + (int64_t)index) と一致すること。
     }
 }
 
@@ -129,8 +137,10 @@ TEST(atomicLoadStoreTest, u64_store_and_load_are_consistent_across_memory_orders
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ((uint64_t)(40000000000ULL + (uint64_t)index),
-                  loaded[index]); // [確認_正常系 回数=5] - メモリ順序によらず直前に書き込んだ値を読めること。
+        EXPECT_EQ(
+            (uint64_t)(40000000000ULL + (uint64_t)index),
+            loaded
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_load_u64() の戻り値が (uint64_t)(40000000000ULL + (uint64_t)index) と一致すること。
     }
 }
 
@@ -157,8 +167,10 @@ TEST(atomicLoadStoreTest, ptr_store_and_load_are_consistent_across_memory_orders
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ((void *)&markers[index],
-                  loaded[index]); // [確認_正常系 回数=5] - メモリ順序によらず直前に書き込んだポインターを読めること。
+        EXPECT_EQ(
+            (void *)&markers[index],
+            loaded
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_load_ptr() の戻り値が (void *)&markers[index] と一致すること。
     }
 }
 
@@ -178,5 +190,5 @@ TEST(atomicLoadStoreTest, value_written_through_one_pointer_is_visible_through_a
         cplat_atomic_load_i32(reader_view, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - もう一方のポインター経由で読み取る。
 
     // Assert
-    EXPECT_EQ(4242, actual); // [確認_正常系] - 別ポインター経由でも書き込んだ値が読めること。
+    EXPECT_EQ(4242, actual); // [確認_正常系] - reader_view 経由の cplat_atomic_load_i32() の戻り値が 4242 であること。
 }

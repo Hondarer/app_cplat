@@ -37,9 +37,10 @@ TEST(elevatedProcessTest, elevated_result_target_initializes_output)
         &argc, argv, &detected); // [手順] - 結果報告先フラグのない引数から報告先を抽出する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK,
-              result); // [確認_正常系] - cplat_elevated_process_extract_result_target の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(0, detected); // [確認_正常系] - detected_out が 0 であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        result); // [確認_正常系] - cplat_elevated_process_extract_result_target() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0, detected); // [確認_正常系] - detected が 0 であること。(結果報告先が未検出であることの確認)
 }
 
 #if defined(PLATFORM_LINUX)
@@ -52,7 +53,7 @@ TEST(elevatedProcessTest, is_elevated_reflects_effective_user_id)
 
     // Pre-Assert
     EXPECT_CALL(mock_unistd, geteuid(_, _, _))
-        .WillOnce(Return(static_cast<uid_t>(0))); // [Pre-Assert確認_正常系] - geteuid が 1 回呼び出されること。
+        .WillOnce(Return(static_cast<uid_t>(0))); // [Pre-Assert確認_正常系] - geteuid() が 1 回呼び出されること。
                                                   // [Pre-Assert手順] - geteuid から実効ユーザー ID 0 を返却する。
 
     // Act
@@ -61,8 +62,9 @@ TEST(elevatedProcessTest, is_elevated_reflects_effective_user_id)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              root_result); // [確認_正常系] - root 判定の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1, elevated); // [確認_正常系] - geteuid が 0 のとき elevated が 1 であること。
+              root_result); // [確認_正常系] - cplat_elevated_process_is_elevated() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1, elevated); // [確認_正常系] - elevated が 1 であること。(実効ユーザー ID 0 が昇格状態と判定されることの確認)
 }
 
 // Linux の非 root 判定が elevated を 0 にすることの確認
@@ -74,7 +76,7 @@ TEST(elevatedProcessTest, is_elevated_rejects_non_root_as_not_elevated)
 
     // Pre-Assert
     EXPECT_CALL(mock_unistd, geteuid(_, _, _))
-        .WillOnce(Return(static_cast<uid_t>(1000))); // [Pre-Assert確認_正常系] - geteuid が 1 回呼び出されること。
+        .WillOnce(Return(static_cast<uid_t>(1000))); // [Pre-Assert確認_正常系] - geteuid() が 1 回呼び出されること。
                                                      // [Pre-Assert手順] - geteuid から実効ユーザー ID 1000 を返却する。
 
     // Act
@@ -83,8 +85,10 @@ TEST(elevatedProcessTest, is_elevated_rejects_non_root_as_not_elevated)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              result);      // [確認_正常系] - 非 root 判定の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(0, elevated); // [確認_正常系] - geteuid が 0 以外のとき elevated が 0 であること。
+              result); // [確認_正常系] - cplat_elevated_process_is_elevated() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0,
+        elevated); // [確認_正常系] - elevated が 0 であること。(実効ユーザー ID 1000 が非昇格状態と判定されることの確認)
 }
 #endif /* PLATFORM_LINUX */
 
@@ -111,19 +115,24 @@ TEST(elevatedProcessTest, elevated_apis_reject_null_outputs)
         cplat_elevated_process_report_result(NULL); // [手順] - report_result の message に NULL を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              is_elevated_result); // [確認_異常系] - is_elevated の戻り値が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              run_result); // [確認_異常系] - run_if_needed の戻り値が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              run_handled_result); // [確認_異常系] - handled が NULL の run_if_needed が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              result_run_with_result); // [確認_異常系] - run_with_result の戻り値が INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        result_run_with_null_exit); // [確認_異常系] - exit_code が NULL の run_with_result が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              report_null_result); // [確認_異常系] - report_result の戻り値が INVALID_ARGUMENT であること。
+        is_elevated_result); // [確認_異常系] - cplat_elevated_process_is_elevated() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        run_result); // [確認_異常系] - exit_code が NULL の cplat_elevated_process_run_if_needed() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        run_handled_result); // [確認_異常系] - handled が NULL の cplat_elevated_process_run_if_needed() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        result_run_with_result); // [確認_異常系] - handled が NULL の cplat_elevated_process_run_with_result() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        result_run_with_null_exit); // [確認_異常系] - exit_code が NULL の cplat_elevated_process_run_with_result() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        report_null_result); // [確認_異常系] - cplat_elevated_process_report_result() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // run_piped が NULL 出力を拒否することの確認
@@ -142,10 +151,12 @@ TEST(elevatedProcessTest, run_piped_rejects_null_outputs)
                                                                NULL); // [手順] - run_piped の handled に NULL を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              null_exit_result); // [確認_異常系] - exit_code が NULL の run_piped が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              null_handled_result); // [確認_異常系] - handled が NULL の run_piped が INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        null_exit_result); // [確認_異常系] - exit_code が NULL の cplat_elevated_process_run_piped() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        null_handled_result); // [確認_異常系] - handled が NULL の cplat_elevated_process_run_piped() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 出力パイプ フラグがない場合に attach_output_pipes が何もしないことの確認
@@ -167,11 +178,15 @@ TEST(elevatedProcessTest, attach_output_pipes_without_flag_keeps_arguments)
         cplat_elevated_process_attach_output_pipes(NULL, NULL, NULL); // [手順] - すべての引数に NULL を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, result);      // [確認_正常系] - フラグがない場合の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(0, attached);           // [確認_正常系] - attached_out が 0 であること。
-    EXPECT_EQ(2, argc);               // [確認_正常系] - argc が変更されないこと。
-    EXPECT_STREQ("install", argv[1]); // [確認_正常系] - argv が変更されないこと。
-    EXPECT_EQ(CPLAT_OK, null_result); // [確認_正常系] - NULL 引数の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        result); // [確認_正常系] - フラグがない場合の cplat_elevated_process_attach_output_pipes() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0, attached);           // [確認_正常系] - attached が 0 であること。(パイプが接続されないことの確認)
+    EXPECT_EQ(2, argc);               // [確認_正常系] - argc が 2 であること。(引数の個数が変更されないことの確認)
+    EXPECT_STREQ("install", argv[1]); // [確認_正常系] - argv[1] が "install" であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        null_result); // [確認_正常系] - NULL 引数の cplat_elevated_process_attach_output_pipes() の戻り値が CPLAT_OK であること。
 }
 
 #if defined(PLATFORM_WINDOWS)
@@ -193,11 +208,14 @@ TEST(elevatedProcessTest, attach_output_pipes_removes_malformed_flag_and_fails)
         &argc, argv, &attached); // [手順] - ハンドル値が数値でないフラグで接続を試行する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, result); // [確認_異常系] - 不正なフラグの戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(0, attached);               // [確認_異常系] - attached_out が 0 であること。
-    EXPECT_EQ(2, argc);                   // [確認_異常系] - フラグを取り除いて argc が 1 減ること。
-    EXPECT_STREQ("install", argv[1]);     // [確認_異常系] - 後続の引数が前へ詰められること。
-    EXPECT_EQ(nullptr, argv[2]);          // [確認_異常系] - 末尾が NULL になること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        result); // [確認_異常系] - cplat_elevated_process_attach_output_pipes() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(0, attached); // [確認_異常系] - attached が 0 であること。(パイプが接続されないことの確認)
+    EXPECT_EQ(2, argc); // [確認_異常系] - argc が 2 であること。(フラグの除去で引数の個数が 3 から 1 減ることの確認)
+    EXPECT_STREQ("install",
+                 argv[1]); // [確認_異常系] - argv[1] が "install" であること。(後続の引数が前へ詰められることの確認)
+    EXPECT_EQ(nullptr, argv[2]); // [確認_異常系] - argv[2] が nullptr であること。
 }
 
 // 出力パイプ フラグのハンドルがパイプ以外を指す場合に付け替えないことの確認
@@ -214,19 +232,24 @@ TEST(elevatedProcessTest, attach_output_pipes_rejects_non_pipe_handles)
     int attached = -1;
     HANDLE stdout_before = GetStdHandle(STD_OUTPUT_HANDLE);
 
+    ASSERT_NE(nullptr, event_handle); // [状態確認] - CreateEventW() の戻り値が nullptr 以外であること。
+
     // Pre-Assert
-    ASSERT_NE(nullptr, event_handle); // [Pre-Assert確認_正常系] - イベント ハンドルを作成できること。
 
     // Act
     int result = cplat_elevated_process_attach_output_pipes(
         &argc, argv, &attached); // [手順] - 自プロセスのイベント ハンドルを指すフラグで接続を試行する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, result); // [確認_異常系] - パイプ以外のハンドルで CPLAT_ERR_UNKNOWN を返すこと。
-    EXPECT_EQ(0, attached);               // [確認_異常系] - attached_out が 0 であること。
-    EXPECT_EQ(1, argc);                   // [確認_異常系] - フラグを取り除いて argc が 1 減ること。
-    EXPECT_EQ(stdout_before,
-              GetStdHandle(STD_OUTPUT_HANDLE)); // [確認_異常系] - 標準出力ハンドルが変更されないこと。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        result); // [確認_異常系] - cplat_elevated_process_attach_output_pipes() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(0, attached); // [確認_異常系] - attached が 0 であること。(パイプが接続されないことの確認)
+    EXPECT_EQ(1, argc); // [確認_異常系] - argc が 1 であること。(フラグの除去で引数の個数が 2 から 1 減ることの確認)
+    EXPECT_EQ(
+        stdout_before,
+        GetStdHandle(
+            STD_OUTPUT_HANDLE)); // [確認_異常系] - 標準出力に対する GetStdHandle() の戻り値が stdout_before と一致すること。(標準出力ハンドルが変更されないことの確認)
 
     CloseHandle(event_handle);
 }
@@ -246,7 +269,7 @@ TEST(elevatedProcessTest, run_piped_reports_linux_elevation_state)
     // Pre-Assert
     EXPECT_CALL(mock_unistd, geteuid(_, _, _))
         .WillOnce(Return(static_cast<uid_t>(0)))
-        .WillOnce(Return(static_cast<uid_t>(1000))); // [Pre-Assert確認_正常系] - geteuid が 2 回呼び出されること。
+        .WillOnce(Return(static_cast<uid_t>(1000))); // [Pre-Assert確認_正常系] - geteuid() が 2 回呼び出されること。
                                                      // [Pre-Assert手順] - geteuid から 0、1000 の順に返却する。
 
     // Act
@@ -256,12 +279,18 @@ TEST(elevatedProcessTest, run_piped_reports_linux_elevation_state)
                                                        &user_handled); // [手順] - 非 root 状態で run_piped を実行する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, root_result);          // [確認_正常系] - root 状態の run_piped が CPLAT_OK を返すこと。
-    EXPECT_EQ(0, root_exit_code);              // [確認_正常系] - root 状態の exit_code が 0 であること。
-    EXPECT_EQ(0, root_handled);                // [確認_正常系] - Linux の run_piped が handled を 0 にすること。
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, user_result); // [確認_異常系] - 非 root の run_piped が UNKNOWN を返すこと。
-    EXPECT_EQ(EXIT_FAILURE, user_exit_code);   // [確認_異常系] - 非 root の run_piped が失敗コードを返すこと。
-    EXPECT_EQ(0, user_handled);                // [確認_異常系] - 非 root の run_piped が handled を 0 にすること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        root_result); // [確認_正常系] - root 状態の cplat_elevated_process_run_piped() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0, root_exit_code); // [確認_正常系] - root_exit_code が 0 であること。
+    EXPECT_EQ(0,
+              root_handled); // [確認_正常系] - root_handled が 0 であること。(Linux では昇格処理を実行しないことの確認)
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        user_result); // [確認_異常系] - 非 root 状態の cplat_elevated_process_run_piped() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(EXIT_FAILURE, user_exit_code); // [確認_異常系] - user_exit_code が EXIT_FAILURE であること。
+    EXPECT_EQ(0,
+              user_handled); // [確認_異常系] - user_handled が 0 であること。(Linux では昇格処理を実行しないことの確認)
 }
 #endif /* PLATFORM_LINUX */
 
@@ -287,11 +316,13 @@ TEST(elevatedProcessTest, linux_helpers_accept_optional_output_and_report_unavai
 #endif /* PLATFORM_ */
 
     // Assert
-    EXPECT_EQ(CPLAT_OK,
-              extract_result); // [確認_正常系] - detected_out を省略した抽出の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        extract_result); // [確認_正常系] - detected_out を省略した cplat_elevated_process_extract_result_target() の戻り値が CPLAT_OK であること。
 #if defined(PLATFORM_LINUX)
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              report_result); // [確認_異常系] - Linux の report_result が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        report_result); // [確認_異常系] - Linux の cplat_elevated_process_report_result() の戻り値が CPLAT_ERR_UNKNOWN であること。
 #endif                        /* PLATFORM_LINUX */
 }
 
@@ -308,7 +339,7 @@ TEST(elevatedProcessTest, run_apis_report_linux_elevation_state)
     // Pre-Assert
     EXPECT_CALL(mock_unistd, geteuid(_, _, _))
         .Times(2)
-        .WillRepeatedly(Return(static_cast<uid_t>(0))); // [Pre-Assert確認_正常系] - geteuid が 2 回呼び出されること。
+        .WillRepeatedly(Return(static_cast<uid_t>(0))); // [Pre-Assert確認_正常系] - geteuid() が 2 回呼び出されること。
                                                         // [Pre-Assert手順] - geteuid から実効ユーザー ID 0 を返却する。
 
     // Act
@@ -319,14 +350,16 @@ TEST(elevatedProcessTest, run_apis_report_linux_elevation_state)
         sizeof(result_message)); // [手順] - root 状態で run_with_result を実行する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK,
-              run_result);   // [確認_正常系] - root 状態の run_if_needed が CPLAT_OK を返すこと。
-    EXPECT_EQ(0, exit_code); // [確認_正常系] - root 状態の run_if_needed が exit_code を 0 にすること。
-    EXPECT_EQ(0, handled);   // [確認_正常系] - Linux の run_if_needed が handled を 0 にすること。
-    EXPECT_EQ(CPLAT_OK,
-              result_run_with_result); // [確認_正常系] - root 状態の run_with_result が CPLAT_OK を返すこと。
-    EXPECT_EQ(0, handled);             // [確認_正常系] - Linux の run_with_result が handled を 0 にすること。
-    EXPECT_STREQ("", result_message);  // [確認_正常系] - result_message が初期化されること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        run_result); // [確認_正常系] - root 状態の cplat_elevated_process_run_if_needed() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0, exit_code); // [確認_正常系] - exit_code が 0 であること。
+    EXPECT_EQ(0, handled);   // [確認_正常系] - handled が 0 であること。(Linux では昇格処理を実行しないことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        result_run_with_result); // [確認_正常系] - root 状態の cplat_elevated_process_run_with_result() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0, handled); // [確認_正常系] - handled が 0 であること。(Linux では昇格処理を実行しないことの確認)
+    EXPECT_STREQ("", result_message); // [確認_正常系] - result_message が "" であること。
 }
 
 // Linux の結果バッファー初期化が NULL とサイズ 0 を受理することの確認
@@ -341,7 +374,7 @@ TEST(elevatedProcessTest, run_with_result_accepts_absent_or_zero_sized_message_b
     // Pre-Assert
     EXPECT_CALL(mock_unistd, geteuid(_, _, _))
         .Times(2)
-        .WillRepeatedly(Return(static_cast<uid_t>(0))); // [Pre-Assert確認_正常系] - geteuid が 2 回呼び出されること。
+        .WillRepeatedly(Return(static_cast<uid_t>(0))); // [Pre-Assert確認_正常系] - geteuid() が 2 回呼び出されること。
                                                         // [Pre-Assert手順] - geteuid から実効ユーザー ID 0 を返却する。
 
     // Act
@@ -351,11 +384,15 @@ TEST(elevatedProcessTest, run_with_result_accepts_absent_or_zero_sized_message_b
         NULL, &exit_code, &handled, result_message, 0U); // [手順] - result_message_size が 0 の状態で実行する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK,
-              null_buffer_result); // [確認_正常系] - NULL バッファー指定時の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_OK,
-              zero_size_result);       // [確認_正常系] - サイズ 0 指定時の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("x", result_message); // [確認_正常系] - サイズ 0 のバッファー内容が変更されないこと。
+    EXPECT_EQ(
+        CPLAT_OK,
+        null_buffer_result); // [確認_正常系] - NULL バッファー指定時の cplat_elevated_process_run_with_result() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        zero_size_result); // [確認_正常系] - サイズ 0 指定時の cplat_elevated_process_run_with_result() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "x",
+        result_message); // [確認_正常系] - result_message が "x" であること。(サイズ 0 のバッファー内容が変更されないことの確認)
 }
 
 // Linux の非 root 状態では昇格 API が失敗を報告することの確認
@@ -370,7 +407,7 @@ TEST(elevatedProcessTest, run_apis_reject_linux_non_root)
     EXPECT_CALL(mock_unistd, geteuid(_, _, _))
         .Times(2)
         .WillRepeatedly(
-            Return(static_cast<uid_t>(1000))); // [Pre-Assert確認_異常系] - geteuid が 2 回呼び出されること。
+            Return(static_cast<uid_t>(1000))); // [Pre-Assert確認_異常系] - geteuid() が 2 回呼び出されること。
                                                // [Pre-Assert手順] - geteuid から実効ユーザー ID 1000 を返却する。
 
     // Act
@@ -380,12 +417,14 @@ TEST(elevatedProcessTest, run_apis_reject_linux_non_root)
         NULL, &exit_code, &handled, NULL, 0U); // [手順] - 非 root 状態で run_with_result を実行する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              run_result);              // [確認_異常系] - 非 root の run_if_needed が UNKNOWN を返すこと。
-    EXPECT_EQ(EXIT_FAILURE, exit_code); // [確認_異常系] - 非 root の run_if_needed が失敗コードを返すこと。
-    EXPECT_EQ(0, handled);              // [確認_異常系] - 非 root の run_if_needed が handled を 0 にすること。
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              result_run_with_result);  // [確認_異常系] - 非 root の run_with_result が UNKNOWN を返すこと。
-    EXPECT_EQ(EXIT_FAILURE, exit_code); // [確認_異常系] - 非 root の run_with_result が失敗コードを返すこと。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        run_result); // [確認_異常系] - 非 root 状態の cplat_elevated_process_run_if_needed() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(EXIT_FAILURE, exit_code); // [確認_異常系] - exit_code が EXIT_FAILURE であること。
+    EXPECT_EQ(0, handled); // [確認_異常系] - handled が 0 であること。(Linux では昇格処理を実行しないことの確認)
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        result_run_with_result); // [確認_異常系] - 非 root 状態の cplat_elevated_process_run_with_result() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(EXIT_FAILURE, exit_code); // [確認_異常系] - exit_code が EXIT_FAILURE であること。
 }
 #endif /* PLATFORM_LINUX */

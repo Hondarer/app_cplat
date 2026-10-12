@@ -139,9 +139,9 @@ class mmapTestFixture : public Test
     void attachNewFile(cplat_mmap **map)
     {
         ASSERT_EQ(CPLAT_OK, cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, map, NULL));
-        // [状態確認] - メモリ マップを利用できる状態に準備したこと。
+        // [状態確認] - cplat_mmap_attach() の戻り値が CPLAT_OK であること。
         ASSERT_NE(static_cast<cplat_mmap *>(NULL), *map);
-        // [状態確認] - メモリ マップのハンドルが NULL でないこと。
+        // [状態確認] - *map が NULL 以外であること。
     }
     // [サブ手順終了]
 };

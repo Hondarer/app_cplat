@@ -32,27 +32,31 @@ TEST_F(argparser_sampleTest, main_parses_and_prints_all_kinds)
     // Pre-Assert
     // 解析結果が標準出力に表示されること。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, HasSubstr("verbose: 2"))).Times(1);
-    // [Pre-Assert確認_正常系] - mock_stdio_ の printf(_, _, _, HasSubstr("verbose: 2")) が登録した呼び出し期待を満たすこと。
+    // [Pre-Assert確認_正常系] - printf() が "verbose: 2" を含む文字列を指定して 1 回呼び出されること。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, HasSubstr("count: 3")))
-        .Times(1); // [Pre-Assert確認_正常系] - count: 3 が標準出力に表示されること。
+        .Times(1); // [Pre-Assert確認_正常系] - printf() が "count: 3" を含む文字列を指定して 1 回呼び出されること。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, HasSubstr("name: alice")))
-        .Times(1); // [Pre-Assert確認_正常系] - name: alice が標準出力に表示されること。
+        .Times(1); // [Pre-Assert確認_正常系] - printf() が "name: alice" を含む文字列を指定して 1 回呼び出されること。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, HasSubstr("includes: 2")))
-        .Times(1); // [Pre-Assert確認_正常系] - includes: 2 が標準出力に表示されること。
+        .Times(1); // [Pre-Assert確認_正常系] - printf() が "includes: 2" を含む文字列を指定して 1 回呼び出されること。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, HasSubstr("include[0]: dir1")))
-        .Times(1); // [Pre-Assert確認_正常系] - include[0]: dir1 が標準出力に表示されること。
+        .Times(
+            1); // [Pre-Assert確認_正常系] - printf() が "include[0]: dir1" を含む文字列を指定して 1 回呼び出されること。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, HasSubstr("include[1]: dir2")))
-        .Times(1); // [Pre-Assert確認_正常系] - include[1]: dir2 が標準出力に表示されること。
+        .Times(
+            1); // [Pre-Assert確認_正常系] - printf() が "include[1]: dir2" を含む文字列を指定して 1 回呼び出されること。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, HasSubstr("input: in.txt")))
-        .Times(1); // [Pre-Assert確認_正常系] - input: in.txt が標準出力に表示されること。
+        .Times(
+            1); // [Pre-Assert確認_正常系] - printf() が "input: in.txt" を含む文字列を指定して 1 回呼び出されること。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, HasSubstr("output: out.txt")))
-        .Times(1); // [Pre-Assert確認_正常系] - output: out.txt が標準出力に表示されること。
+        .Times(
+            1); // [Pre-Assert確認_正常系] - printf() が "output: out.txt" を含む文字列を指定して 1 回呼び出されること。
 
     // Act
     int rc = __real_main(argc, (char **)&argv); // [手順] - 全種別の引数で main を呼び出す。
 
     // Assert
-    EXPECT_EQ(EXIT_SUCCESS, rc); // [確認_正常系] - 正常終了すること。
+    EXPECT_EQ(EXIT_SUCCESS, rc); // [確認_正常系] - __real_main() の戻り値が EXIT_SUCCESS であること。
 }
 
 // 未知のオプションで失敗終了することの確認
@@ -75,7 +79,7 @@ TEST_F(argparser_sampleTest, main_reports_parse_error_with_usage)
     int rc = __real_main(argc, (char **)&argv); // [手順] - 未知のオプションで main を呼び出す。
 
     // Assert
-    EXPECT_NE(EXIT_SUCCESS, rc); // [確認_異常系] - 失敗終了すること。
+    EXPECT_NE(EXIT_SUCCESS, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_SUCCESS 以外であること。
 }
 
 // 必須引数の欠落で失敗終了することの確認 (メッセージ内容の確認は上記コメント参照)
@@ -91,7 +95,7 @@ TEST_F(argparser_sampleTest, main_reports_missing_required)
     int rc = __real_main(argc, (char **)&argv); // [手順] - 引数なしで main を呼び出す。
 
     // Assert
-    EXPECT_NE(EXIT_SUCCESS, rc); // [確認_異常系] - 失敗終了すること。
+    EXPECT_NE(EXIT_SUCCESS, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_SUCCESS 以外であること。
 }
 
 // --help 指定時に必須引数が省略されていても正常終了することの確認
@@ -109,5 +113,5 @@ TEST_F(argparser_sampleTest, main_prints_usage_on_help)
     int rc = __real_main(argc, (char **)&argv); // [手順] - --help で main を呼び出す。
 
     // Assert
-    EXPECT_EQ(EXIT_SUCCESS, rc); // [確認_正常系] - 正常終了すること。
+    EXPECT_EQ(EXIT_SUCCESS, rc); // [確認_正常系] - __real_main() の戻り値が EXIT_SUCCESS であること。
 }

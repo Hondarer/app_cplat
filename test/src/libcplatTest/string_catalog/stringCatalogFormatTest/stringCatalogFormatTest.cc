@@ -58,8 +58,8 @@ TEST_F(stringCatalogFormatTest, no_argument)
                                     FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 引数を取らない文字列を組み立てる。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);      // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("開始しました。", dest); // [確認_正常系] - 現在の言語の書式がそのまま組み立てられること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_string_catalog_format() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("開始しました。", dest); // [確認_正常系] - dest が "開始しました。" であること。
 }
 
 // 言語設定の変更が語順だけを変えることの確認
@@ -86,12 +86,16 @@ TEST_F(stringCatalogFormatTest, language_changes_order_only)
                                                      INT32_C(2)); // [手順] - 言語を英語へ変更し、同じ引数で組み立てる。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK,
-              actual_ret_japanese);                    // [確認_正常系] - 日本語の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_english);           // [確認_正常系] - 英語の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("ファイル config.json 番号 2", dest); // [確認_正常系] - 日本語では書式の語順で並ぶこと。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_japanese); // [確認_正常系] - 日本語で組み立てた cplat_string_catalog_format() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_english); // [確認_正常系] - 英語で組み立てた cplat_string_catalog_format() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("ファイル config.json 番号 2",
+                 dest); // [確認_正常系] - dest が "ファイル config.json 番号 2" であること。
     EXPECT_STREQ("number 2 of config.json",
-                 english_dest); // [確認_正常系] - 英語では引数順を変えずに語順だけが変わること。
+                 english_dest); // [確認_正常系] - english_dest が "number 2 of config.json" であること。
 }
 
 // 言語を設定していないプロセスがニュートラル言語を使用することの確認
@@ -110,8 +114,8 @@ TEST_F(stringCatalogFormatTest, neutral_language)
                                     INT32_C(2)); // [手順] - ニュートラル言語で文字列を組み立てる。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);                 // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("file config.json number 2", dest); // [確認_正常系] - ニュートラル言語の書式で組み立てられること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_string_catalog_format() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("file config.json number 2", dest); // [確認_正常系] - dest が "file config.json number 2" であること。
 }
 
 // va_list を受け取る API でも同じ結果になることの確認
@@ -128,8 +132,8 @@ TEST_F(stringCatalogFormatTest, vformat_accepts_argument_list)
                               (size_t)4096U); // [手順] - va_list を渡して文字列を組み立てる。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("上限 4096", dest); // [確認_正常系] - 可変長引数と同じ結果になること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - call_vformat() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("上限 4096", dest); // [確認_正常系] - dest が "上限 4096" であること。
 }
 
 // 書き込み先が NULL の場合に引数不正となることの確認
@@ -146,8 +150,9 @@ TEST_F(stringCatalogFormatTest, null_dest)
                                              FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 書き込み先へ NULL を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - 戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - 書き込み先が NULL の場合の cplat_string_catalog_format() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 書き込み先の容量が 0 の場合に引数不正となることの確認
@@ -164,8 +169,9 @@ TEST_F(stringCatalogFormatTest, zero_dest_size)
                                              FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 書き込み先の容量へ 0 を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - 戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - 書き込み先の容量が 0 の場合の cplat_string_catalog_format() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // カタログに無い文字列キーを指定した場合に未検出となることの確認
@@ -184,8 +190,8 @@ TEST_F(stringCatalogFormatTest, unknown_string_key)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
-              actual_ret);  // [確認_異常系] - 戻り値が CPLAT_ERR_NOT_FOUND であること。
-    EXPECT_STREQ("", dest); // [確認_異常系] - 書き込み先が NUL 終端されること。
+              actual_ret);  // [確認_異常系] - cplat_string_catalog_format() の戻り値が CPLAT_ERR_NOT_FOUND であること。
+    EXPECT_STREQ("", dest); // [確認_異常系] - dest が "" であること。
 }
 
 // 引数個数が上限を超える定義が定義エラーになることの確認
@@ -204,8 +210,9 @@ TEST_F(stringCatalogFormatTest, argument_count_over_max)
         FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 引数個数が上限を超える定義で文字列を組み立てる。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_MALFORMED_DEFINITION,
-              actual_ret); // [確認_異常系] - 戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
+    EXPECT_EQ(
+        CPLAT_ERR_MALFORMED_DEFINITION,
+        actual_ret); // [確認_異常系] - 引数個数が上限を超える場合の cplat_string_catalog_format() の戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
 }
 
 // 引数個数が負の定義が定義エラーになることの確認
@@ -224,8 +231,9 @@ TEST_F(stringCatalogFormatTest, argument_count_negative)
                                     FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 引数個数が負の定義で文字列を組み立てる。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_MALFORMED_DEFINITION,
-              actual_ret); // [確認_異常系] - 戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
+    EXPECT_EQ(
+        CPLAT_ERR_MALFORMED_DEFINITION,
+        actual_ret); // [確認_異常系] - 引数個数が負の場合の cplat_string_catalog_format() の戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
 }
 
 // 現在の言語のリソースが無い場合にニュートラル言語へフォールバックすることの確認
@@ -244,8 +252,8 @@ TEST_F(stringCatalogFormatTest, falls_back_to_neutral_text)
         FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 日本語のリソースが無い文字列を日本語で組み立てる。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("started", dest);   // [確認_正常系] - ニュートラル言語の書式で組み立てられること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_string_catalog_format() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("started", dest);   // [確認_正常系] - dest が "started" であること。
 }
 
 // ニュートラル言語のリソースも無い場合に定義エラーになることの確認
@@ -265,8 +273,9 @@ TEST_F(stringCatalogFormatTest, missing_neutral_text)
         FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - どの言語にもリソースが無い文字列を組み立てる。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_MALFORMED_DEFINITION,
-              actual_ret); // [確認_異常系] - 戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
+    EXPECT_EQ(
+        CPLAT_ERR_MALFORMED_DEFINITION,
+        actual_ret); // [確認_異常系] - 全言語のリソースが無い場合の cplat_string_catalog_format() の戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
 }
 
 // 備考を現在の言語で参照し、無い場合はニュートラル言語へフォールバックすることの確認
@@ -306,24 +315,41 @@ TEST_F(stringCatalogFormatTest, metadata)
         fake_catalog(), FAKE_CATALOG_KEY_TWO_ARGUMENTS); // [手順] - 文字列キーの項目メタデータを取得する。
 
     // Assert
-    ASSERT_NE(nullptr, actual_id);           // [確認_正常系] - ID を取得できること。
-    EXPECT_STREQ("FAKE_ID_0001", actual_id); // [確認_正常系] - ID が一致すること。
-    EXPECT_EQ(3, actual_category);           // [確認_正常系] - カタログの分類値をそのまま返すこと。
-    EXPECT_EQ(0, actual_unknown_category);   // [確認_異常系] - 未登録の文字列キーでは 0 を返すこと。
-    EXPECT_STREQ("引数を取らない文字列です。",
-                 actual_note_japanese); // [確認_正常系] - 現在の言語の備考を返すこと。
-    EXPECT_STREQ("no argument",
-                 actual_note_fallback); // [確認_正常系] - 備考が無い言語ではニュートラル言語の備考を返すこと。
-    EXPECT_EQ(nullptr,
-              actual_unknown_id);                // [確認_異常系] - 未登録の文字列キーでは ID が NULL であること。
-    EXPECT_EQ(nullptr, actual_unknown_note);     // [確認_異常系] - 未登録の文字列キーでは NULL を返すこと。
-    ASSERT_NE(nullptr, actual_entry);            // [確認_正常系] - 項目メタデータを取得できること。
-    EXPECT_STREQ("2 引数", actual_entry->brief); // [確認_正常系] - 短い説明を保持すること。
-    EXPECT_STREQ("2 つの引数を取る文字列です。", actual_entry->details); // [確認_正常系] - 詳細説明を保持すること。
-    ASSERT_NE(nullptr, actual_entry->arguments);                         // [確認_正常系] - 引数定義を取得できること。
-    EXPECT_STREQ("path", actual_entry->arguments[0].name);               // [確認_正常系] - 引数名を保持すること。
-    EXPECT_STREQ("ファイルのパス。",
-                 actual_entry->arguments[0].description); // [確認_正常系] - 引数説明を保持すること。
+    ASSERT_NE(nullptr, actual_id); // [確認_正常系] - cplat_string_catalog_get_id() の戻り値が nullptr 以外であること。
+    EXPECT_STREQ("FAKE_ID_0001",
+                 actual_id); // [確認_正常系] - cplat_string_catalog_get_id() の戻り値が "FAKE_ID_0001" であること。
+    EXPECT_EQ(
+        3,
+        actual_category); // [確認_正常系] - 登録済みの文字列キーに対する cplat_string_catalog_get_category() の戻り値が 3 であること。
+    EXPECT_EQ(
+        0,
+        actual_unknown_category); // [確認_異常系] - 未登録の文字列キーに対する cplat_string_catalog_get_category() の戻り値が 0 であること。
+    EXPECT_STREQ(
+        "引数を取らない文字列です。",
+        actual_note_japanese); // [確認_正常系] - 日本語で取得した cplat_string_catalog_get_note() の戻り値が "引数を取らない文字列です。" であること。
+    EXPECT_STREQ(
+        "no argument",
+        actual_note_fallback); // [確認_正常系] - 英語で取得した cplat_string_catalog_get_note() の戻り値が "no argument" であること。
+    EXPECT_EQ(
+        nullptr,
+        actual_unknown_id); // [確認_異常系] - 未登録の文字列キーに対する cplat_string_catalog_get_id() の戻り値が nullptr であること。
+    EXPECT_EQ(
+        nullptr,
+        actual_unknown_note); // [確認_異常系] - 未登録の文字列キーに対する cplat_string_catalog_get_note() の戻り値が nullptr であること。
+    ASSERT_NE(nullptr,
+              actual_entry); // [確認_正常系] - cplat_string_catalog_get_entry() の戻り値が nullptr 以外であること。
+    EXPECT_STREQ("2 引数", actual_entry->brief); // [確認_正常系] - actual_entry->brief が "2 引数" であること。
+    EXPECT_STREQ(
+        "2 つの引数を取る文字列です。",
+        actual_entry->details); // [確認_正常系] - actual_entry->details が "2 つの引数を取る文字列です。" であること。
+    ASSERT_NE(nullptr, actual_entry->arguments); // [確認_正常系] - actual_entry->arguments が nullptr 以外であること。
+    EXPECT_STREQ(
+        "path",
+        actual_entry->arguments[0].name); // [確認_正常系] - actual_entry->arguments[0].name が "path" であること。
+    EXPECT_STREQ(
+        "ファイルのパス。",
+        actual_entry->arguments[0]
+            .description); // [確認_正常系] - actual_entry->arguments[0].description が "ファイルのパス。" であること。
 }
 
 // 列挙に無い引数種別を持つ定義が定義エラーになることの確認
@@ -341,8 +367,9 @@ TEST_F(stringCatalogFormatTest, unknown_argument_kind)
                                              (size_t)1U); // [手順] - 列挙に無い引数種別を持つ定義で文字列を組み立てる。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_MALFORMED_DEFINITION,
-              actual_ret); // [確認_異常系] - 戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
+    EXPECT_EQ(
+        CPLAT_ERR_MALFORMED_DEFINITION,
+        actual_ret); // [確認_異常系] - 未知の引数種別に対する cplat_string_catalog_format() の戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
 }
 
 // 書き込み先に収まらない場合に切り詰めを報告することの確認
@@ -364,7 +391,8 @@ TEST_F(stringCatalogFormatTest, truncated_output)
                                     (size_t)4096U); // [手順] - 結果が収まらない容量で文字列を組み立てる。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              actual_ret);               // [確認_異常系] - 戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
-    EXPECT_STREQ("limit 4", small_dest); // [確認_異常系] - 容量まで書き込んで NUL 終端すること。
+    EXPECT_EQ(
+        CPLAT_ERR_BUFFER_TOO_SMALL,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_format() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_STREQ("limit 4", small_dest); // [確認_異常系] - small_dest が "limit 4" であること。
 }

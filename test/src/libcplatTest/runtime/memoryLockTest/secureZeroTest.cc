@@ -29,7 +29,9 @@ TEST_F(secureZeroTest, clears_whole_range)
             non_zero_count++;
         }
     }
-    EXPECT_EQ(0U, non_zero_count); // [確認_正常系] - 指定範囲に 0 以外のバイトが残らないこと。
+    EXPECT_EQ(
+        0U,
+        non_zero_count); // [確認_正常系] - non_zero_count が 0U であること。(指定範囲に 0 以外のバイトが残らないことの確認)
 }
 
 // 指定範囲外を書き換えないことの確認
@@ -46,10 +48,12 @@ TEST_F(secureZeroTest, does_not_touch_outside_range)
     cplat_secure_zero(buf, 8U); // [手順] - 先頭 8 byte だけを指定して cplat_secure_zero を呼び出す。
 
     // Assert
-    EXPECT_EQ(0, buf[0]);     // [確認_正常系] - 指定範囲の先頭が 0 になること。
-    EXPECT_EQ(0, buf[7]);     // [確認_正常系] - 指定範囲の末尾が 0 になること。
-    EXPECT_EQ(0xA5, buf[8]);  // [確認_正常系] - 指定範囲の直後が 0xA5 のまま保たれること。
-    EXPECT_EQ(0xA5, buf[15]); // [確認_正常系] - バッファー末尾が 0xA5 のまま保たれること。
+    EXPECT_EQ(0, buf[0]);    // [確認_正常系] - buf[0] が 0 であること。
+    EXPECT_EQ(0, buf[7]);    // [確認_正常系] - buf[7] が 0 であること。
+    EXPECT_EQ(0xA5, buf[8]); // [確認_正常系] - buf[8] が 0xA5 であること。(指定範囲の直後が保持されることの確認)
+    EXPECT_EQ(
+        0xA5,
+        buf[15]); // [確認_正常系] - buf[15] が 0xA5 であること。(指定範囲外のバッファー末尾が保持されることの確認)
 }
 
 // NULL とサイズ 0 で何も起こらないことの確認
@@ -67,6 +71,10 @@ TEST_F(secureZeroTest, null_or_zero_size_is_noop)
     cplat_secure_zero(buf, 0U);  // [手順] - サイズに 0 を指定して呼び出す。
 
     // Assert
-    EXPECT_EQ(0xA5, buf[0]); // [確認_正常系] - サイズ 0 の指定でバッファーが書き換わらないこと。
-    EXPECT_EQ(0xA5, buf[7]); // [確認_正常系] - バッファー末尾も書き換わらないこと。
+    EXPECT_EQ(
+        0xA5,
+        buf[0]); // [確認_正常系] - buf[0] が 0xA5 であること。(サイズ 0 の指定でバッファーが書き換わらないことの確認)
+    EXPECT_EQ(
+        0xA5,
+        buf[7]); // [確認_正常系] - buf[7] が 0xA5 であること。(サイズ 0 の指定でバッファー末尾が書き換わらないことの確認)
 }

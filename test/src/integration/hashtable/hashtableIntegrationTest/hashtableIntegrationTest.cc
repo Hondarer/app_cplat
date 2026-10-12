@@ -92,18 +92,28 @@ TEST_F(hashtableIntegrationTest, string_mode_demo_scenarios)
     cplat_hashtable_dispose(ht);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - create が成功すること。
-    EXPECT_EQ(CPLAT_ERR_UNSUPPORTED,
-              actual_ret_timestamp); // [確認_異常系] - 既定の SCOPE_TABLE ではレコード時刻が取れないこと。
-    EXPECT_EQ(1u, apple_rec);        // [確認_正常系] - apple のレコード番号が 1 であること。
-    EXPECT_EQ(2u, banana_rec);       // [確認_正常系] - banana のレコード番号が 2 であること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND, actual_ret_find_deleted); // [確認_正常系] - 削除後の banana が見つからないこと。
-    EXPECT_EQ(2, status);                                    // [確認_正常系] - 削除直後の状態が 2 であること。
-    EXPECT_EQ(CPLAT_ERR_LIMIT_EXCEEDED, actual_ret_full);    // [確認_異常系] - 削除直後は満杯であること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_reuse);                   // [確認_正常系] - 寿命到達後に追加できること。
-    EXPECT_EQ(4u, in_use);                                   // [確認_正常系] - 再利用後は 4 件実装中であること。
-    EXPECT_EQ(CPLAT_ERR_OUT_OF_RANGE, actual_ret_long);      // [確認_異常系] - 長すぎるキーが拒否されること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_empty_key);               // [確認_正常系] - 空文字列キーが追加できること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - cplat_hashtable_create() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNSUPPORTED,
+        actual_ret_timestamp); // [確認_異常系] - SCOPE_TABLE の cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_ERR_UNSUPPORTED であること。
+    EXPECT_EQ(1u, apple_rec);  // [確認_正常系] - apple_rec が 1 であること。
+    EXPECT_EQ(2u, banana_rec); // [確認_正常系] - banana_rec が 2 であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_find_deleted); // [確認_正常系] - 削除後の cplat_hashtable_find_value_ref() の戻り値が CPLAT_ERR_NOT_FOUND であること。
+    EXPECT_EQ(2, status); // [確認_正常系] - status が 2 であること。(削除直後の加齢値が 2 であることの確認)
+    EXPECT_EQ(
+        CPLAT_ERR_LIMIT_EXCEEDED,
+        actual_ret_full); // [確認_異常系] - 削除直後の cplat_hashtable_add() の戻り値が CPLAT_ERR_LIMIT_EXCEEDED であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_reuse); // [確認_正常系] - 寿命到達後の cplat_hashtable_add() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(4u, in_use); // [確認_正常系] - in_use が 4 であること。(削除枠の再利用後に使用中が 4 件であることの確認)
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_RANGE,
+        actual_ret_long); // [確認_異常系] - 長すぎるキーに対する cplat_hashtable_add() の戻り値が CPLAT_ERR_OUT_OF_RANGE であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_empty_key); // [確認_正常系] - 空文字列キーに対する cplat_hashtable_add() の戻り値が CPLAT_OK であること。
 }
 
 // バイナリキーモードにおける領域永続化と別ハンドル再接続によるデータ復元が正常に動作することの確認
@@ -166,15 +176,28 @@ TEST_F(hashtableIntegrationTest, binary_and_persist_demo_scenarios)
     cplat_hashtable_dispose(reattached);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_create);          // [確認_正常系] - バイナリ create が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_zero);            // [確認_正常系] - 全ゼロ キーが追加できること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND, actual_ret_tail); // [確認_正常系] - 末尾差のキーが見つからないこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_size);            // [確認_正常系] - required_size が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_ext);             // [確認_正常系] - 外部バッファー create が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_attach);          // [確認_正常系] - attach が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_validate);        // [確認_正常系] - validate が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_find);            // [確認_正常系] - 再接続後に fig が見つかること。
-    EXPECT_STREQ("いちじく", static_cast<const char *>(found)); // [確認_正常系] - 再接続後の値が一致すること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_create); // [確認_正常系] - バイナリ モードの cplat_hashtable_create() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_zero); // [確認_正常系] - 全ゼロ キーに対する cplat_hashtable_add() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_tail); // [確認_正常系] - 末尾が異なるキーに対する cplat_hashtable_find_value_ref() の戻り値が CPLAT_ERR_NOT_FOUND であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_size); // [確認_正常系] - cplat_hashtable_required_size() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_ext); // [確認_正常系] - 外部バッファーを指定した cplat_hashtable_create() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_attach); // [確認_正常系] - cplat_hashtable_attach() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_validate); // [確認_正常系] - cplat_hashtable_validate() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_find); // [確認_正常系] - 再接続後の cplat_hashtable_find_value_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("いちじく", static_cast<const char *>(
+                                 found)); // [確認_正常系] - static_cast<const char *>(found) が "いちじく" であること。
 }
 
 // レコード直接挿入による異なるライフタイムのテーブル間レコード移行が正常に動作することの確認
@@ -280,32 +303,73 @@ TEST_F(hashtableIntegrationTest, migrate_records_by_number)
     cplat_hashtable_dispose(dest_skip);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_src);       // [確認_正常系] - 移行元の構築が成功すること。
-    EXPECT_EQ(1u, apple_rec);                  // [確認_正常系] - apple がレコード 1 であること。
-    EXPECT_EQ(2u, banana_rec);                 // [確認_正常系] - banana がレコード 2 であること。
-    EXPECT_EQ(3u, cherry_rec);                 // [確認_正常系] - cherry がレコード 3 であること。
-    EXPECT_EQ(2, banana_status);               // [確認_正常系] - 移行元の banana が削除済みであること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_keep);      // [確認_正常系] - lifetime 4 の移行先構築が成功すること。
-    ASSERT_EQ(3u, keep_copies.size());         // [確認_正常系] - 空以外の 3 件を移行すること。
-    EXPECT_EQ(CPLAT_OK, keep_copies[0]);       // [確認_正常系] - lifetime 4 では 1 件目を置けること。
-    EXPECT_EQ(CPLAT_OK, keep_copies[1]);       // [確認_正常系] - lifetime 4 では 2 件目を置けること。
-    EXPECT_EQ(CPLAT_OK, keep_copies[2]);       // [確認_正常系] - lifetime 4 では 3 件目を置けること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_keep_find); // [確認_正常系] - 移行後に apple が見つかること。
-    EXPECT_EQ(apple_rec, dest_apple_rec);      // [確認_正常系] - apple のレコード番号が保たれること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
-              actual_ret_keep_deleted); // [確認_正常系] - 移行後の banana は検索対象にならないこと。
-    EXPECT_EQ(2, dest_banana_status);   // [確認_正常系] - banana の加齢値が移行先でも 2 であること。
     EXPECT_EQ(CPLAT_OK,
-              actual_ret_keep_validate);           // [確認_正常系] - 削除済みを含む移行先の validate が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_skip);          // [確認_正常系] - lifetime 2 の移行先構築が成功すること。
-    ASSERT_EQ(3u, skip_copies.size());             // [確認_正常系] - lifetime 2 でも空以外の 3 件を試すこと。
-    EXPECT_EQ(CPLAT_OK, skip_copies[0]);           // [確認_正常系] - apple は lifetime 2 でも置けること。
-    EXPECT_EQ(CPLAT_SKIPPED, skip_copies[1]);      // [確認_正常系] - banana の削除済みが SKIPPED になること。
-    EXPECT_EQ(CPLAT_OK, skip_copies[2]);           // [確認_正常系] - cherry は lifetime 2 でも置けること。
-    EXPECT_EQ(2u, in_use);                         // [確認_正常系] - lifetime 2 の移行先は実装中 2 件であること。
-    EXPECT_EQ(0u, deleted);                        // [確認_正常系] - lifetime 2 の移行先に削除済みが残らないこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_skip_validate); // [確認_正常系] - SKIPPED 後の移行先の validate が成功すること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND, actual_ret_skip_find); // [確認_正常系] - SKIPPED した banana が移行先に無いこと。
+              actual_ret_src); // [確認_正常系] - 移行元の cplat_hashtable_create() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1u, apple_rec);  // [確認_正常系] - apple_rec が 1 であること。
+    EXPECT_EQ(2u, banana_rec); // [確認_正常系] - banana_rec が 2 であること。
+    EXPECT_EQ(3u, cherry_rec); // [確認_正常系] - cherry_rec が 3 であること。
+    EXPECT_EQ(2,
+              banana_status); // [確認_正常系] - banana_status が 2 であること。(削除直後の加齢値が 2 であることの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_keep); // [確認_正常系] - lifetime 4 の cplat_hashtable_create() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(
+        3u,
+        keep_copies
+            .size()); // [確認_正常系] - keep_copies.size() の戻り値が 3 であること。(空のレコードを除いた 3 件を移行したことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        keep_copies
+            [0]); // [確認_正常系] - lifetime 4 の 1 件目の cplat_hashtable_insert_direct() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        keep_copies
+            [1]); // [確認_正常系] - lifetime 4 の 2 件目の cplat_hashtable_insert_direct() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        keep_copies
+            [2]); // [確認_正常系] - lifetime 4 の 3 件目の cplat_hashtable_insert_direct() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_keep_find); // [確認_正常系] - 移行後の cplat_hashtable_find_recno() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(apple_rec, dest_apple_rec); // [確認_正常系] - dest_apple_rec が apple_rec と一致すること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_keep_deleted); // [確認_正常系] - lifetime 4 の移行後の cplat_hashtable_find_value_ref() の戻り値が CPLAT_ERR_NOT_FOUND であること。
+    EXPECT_EQ(
+        2,
+        dest_banana_status); // [確認_正常系] - dest_banana_status が 2 であること。(移行先でも削除の加齢値が 2 であることの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_keep_validate); // [確認_正常系] - lifetime 4 の移行先の cplat_hashtable_validate() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_skip); // [確認_正常系] - lifetime 2 の cplat_hashtable_create() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(
+        3u,
+        skip_copies
+            .size()); // [確認_正常系] - skip_copies.size() の戻り値が 3 であること。(空のレコードを除いた 3 件を試したことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        skip_copies
+            [0]); // [確認_正常系] - lifetime 2 の 1 件目の cplat_hashtable_insert_direct() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_SKIPPED,
+        skip_copies
+            [1]); // [確認_正常系] - lifetime 2 の 2 件目の cplat_hashtable_insert_direct() の戻り値が CPLAT_SKIPPED であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        skip_copies
+            [2]); // [確認_正常系] - lifetime 2 の 3 件目の cplat_hashtable_insert_direct() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(2u,
+              in_use); // [確認_正常系] - in_use が 2 であること。(lifetime 2 の移行先で使用中が 2 件であることの確認)
+    EXPECT_EQ(0u, deleted); // [確認_正常系] - deleted が 0 であること。(移行先に削除済みレコードが残らないことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_skip_validate); // [確認_正常系] - lifetime 2 の移行先の cplat_hashtable_validate() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_skip_find); // [確認_正常系] - lifetime 2 の移行後の cplat_hashtable_find_value_ref() の戻り値が CPLAT_ERR_NOT_FOUND であること。
 }
 
 // mmap でファイルにマップしたデータ領域を用いた構築・永続化・再接続が正常に動作することの確認
@@ -364,13 +428,21 @@ TEST_F(hashtableIntegrationTest, mmap_backed_data_region_round_trip)
     remove(path.c_str());
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_mmap_create); // [確認_正常系] - データ領域ファイルの mmap が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_create);      // [確認_正常系] - mmap 領域をデータ領域として構築できること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_flush);       // [確認_正常系] - flush が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_mmap_reopen); // [確認_正常系] - 同じファイルの再 mmap が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_attach);      // [確認_正常系] - 再マップしたデータ領域で再接続できること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_find);        // [確認_正常系] - 再接続後に mmap 経由で値を検索できること。
-    EXPECT_EQ("mapped-value", found_text);       // [確認_正常系] - mmap 経由の値が一致すること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_mmap_create); // [確認_正常系] - 新規ファイルに対する cplat_mmap_attach() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_create); // [確認_正常系] - mmap 領域を指定した cplat_hashtable_create() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_flush); // [確認_正常系] - cplat_mmap_flush() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_mmap_reopen); // [確認_正常系] - 再マップ時の cplat_mmap_attach() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_attach); // [確認_正常系] - cplat_hashtable_attach() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_find); // [確認_正常系] - 再接続後の cplat_hashtable_find_value_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ("mapped-value", found_text); // [確認_正常系] - found_text が "mapped-value" であること。
 }
 
 // 内部バッファーをファイルへダンプし別領域へ復元して再接続できることの確認
@@ -412,7 +484,7 @@ TEST_F(hashtableIntegrationTest, internal_buffers_round_trip_through_file)
     int actual_ret_size = cplat_hashtable_buffer_size(ht, &mgmt_size, &data_size);
 
     FILE *out = cplat_fopen(path.c_str(), "wb", NULL);
-    ASSERT_NE(nullptr, out);                             // [状態確認] - 書き出し先を開けること。
+    ASSERT_NE(nullptr, out); // [状態確認] - 書き出し時の cplat_fopen() の戻り値が nullptr 以外であること。
     size_t wrote_mgmt = fwrite(mgmt, 1, mgmt_size, out); // [手順] - 管理領域を書き出す。
     size_t wrote_data = fwrite(data, 1, data_size, out); // [手順] - データ領域を書き出す。
     (void)fclose(out);
@@ -422,7 +494,7 @@ TEST_F(hashtableIntegrationTest, internal_buffers_round_trip_through_file)
     std::vector<uint64_t> load_mgmt((mgmt_size + sizeof(uint64_t) - 1u) / sizeof(uint64_t), 0);
     std::vector<unsigned char> load_data(data_size, 0);
     FILE *in = cplat_fopen(path.c_str(), "rb", NULL);
-    ASSERT_NE(nullptr, in);                                       // [状態確認] - 読み戻し元を開けること。
+    ASSERT_NE(nullptr, in); // [状態確認] - 読み戻し時の cplat_fopen() の戻り値が nullptr 以外であること。
     size_t read_mgmt = fread(load_mgmt.data(), 1, mgmt_size, in); // [手順] - 管理領域を読み戻す。
     size_t read_data = fread(load_data.data(), 1, data_size, in); // [手順] - データ領域を読み戻す。
     (void)fclose(in);
@@ -437,15 +509,24 @@ TEST_F(hashtableIntegrationTest, internal_buffers_round_trip_through_file)
     remove(path.c_str());
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_create);    // [確認_正常系] - 内部確保の構築が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_ref);       // [確認_正常系] - buffer_ref が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_size);      // [確認_正常系] - buffer_size が成功すること。
-    EXPECT_EQ(mgmt_size, wrote_mgmt);          // [確認_正常系] - 管理領域を全量書き出せること。
-    EXPECT_EQ(data_size, wrote_data);          // [確認_正常系] - データ領域を全量書き出せること。
-    EXPECT_EQ(mgmt_size, read_mgmt);           // [確認_正常系] - 管理領域を全量読み戻せること。
-    EXPECT_EQ(data_size, read_data);           // [確認_正常系] - データ領域を全量読み戻せること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_attach);    // [確認_正常系] - 読み戻した領域へ再接続できること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_validate);  // [確認_正常系] - 再接続後の整合性検査が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_find);      // [確認_正常系] - 再接続後に値を検索できること。
-    EXPECT_EQ("persisted-banana", found_text); // [確認_正常系] - 永続化した値が保たれること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - cplat_hashtable_create() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_ref); // [確認_正常系] - cplat_hashtable_buffer_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_size); // [確認_正常系] - cplat_hashtable_buffer_size() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(mgmt_size,
+              wrote_mgmt); // [確認_正常系] - 管理領域を書き出した fwrite() の戻り値が mgmt_size と一致すること。
+    EXPECT_EQ(data_size,
+              wrote_data); // [確認_正常系] - データ領域を書き出した fwrite() の戻り値が data_size と一致すること。
+    EXPECT_EQ(mgmt_size,
+              read_mgmt); // [確認_正常系] - 管理領域を読み戻した fread() の戻り値が mgmt_size と一致すること。
+    EXPECT_EQ(data_size,
+              read_data); // [確認_正常系] - データ領域を読み戻した fread() の戻り値が data_size と一致すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_attach); // [確認_正常系] - cplat_hashtable_attach() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_validate); // [確認_正常系] - cplat_hashtable_validate() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_find); // [確認_正常系] - 再接続後の cplat_hashtable_find_value_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ("persisted-banana", found_text); // [確認_正常系] - found_text が "persisted-banana" であること。
 }

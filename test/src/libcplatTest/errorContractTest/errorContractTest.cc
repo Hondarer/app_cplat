@@ -197,13 +197,15 @@ TEST_F(errorContractTest, all_detail_out_apis_accept_null)
     } // [手順] - 全公開 API の detail_out に NULL を指定し、呼び出し後の TLS を取得する。
 
     // Assert
-    EXPECT_EQ(cases.size(), tls_set_results.size()); // [確認_正常系] - 全 61 件の公開 API 呼び出しが完了したこと。
+    EXPECT_EQ(cases.size(),
+              tls_set_results
+                  .size()); // [確認_正常系] - tls_set_results.size() の戻り値が cases.size() の戻り値と一致すること。
     for (std::size_t index = 0U; index < cases.size(); ++index)
     {
         if (cases[index].expected_tls_set >= 0)
         {
             EXPECT_EQ(cases[index].expected_tls_set, tls_set_results[index]) << cases[index].name;
-            // [確認_正常系 回数=60] - 各公開 API が NULL の detail_out を参照せず、TLS を規約どおり更新すること。
+            // [確認_正常系 回数=60] - tls_set_results[index] が cases[index].expected_tls_set と一致すること。(各公開 API が NULL の detail_out を参照せず、TLS を規約どおり更新したことの確認)
         }
     }
 }
@@ -230,11 +232,18 @@ TEST_F(errorContractTest, real_api_records_failure_and_clears_it_on_success)
     cplat_error_get_last(&success_error);    // [手順] - 成功直後の TLS 詳細エラーを取得する。
 
     // Assert
-    EXPECT_EQ((FILE *)NULL, missing); // [確認_異常系] - 存在しないファイルに対する cplat_fopen が NULL を返すこと。
-    EXPECT_EQ(1, cplat_error_is(&failure_error,
-                                CPLAT_CAUSE_NOT_FOUND)); // [確認_異常系] - 失敗直後の TLS 要因が NOT_FOUND であること。
-    ASSERT_NE((FILE *)NULL, existing); // [確認_正常系] - 存在するファイルに対する cplat_fopen が成功すること。
-    EXPECT_EQ(0, cplat_error_is_set(&success_error)); // [確認_正常系] - 成功直後の TLS 詳細エラーが空であること。
+    EXPECT_EQ((FILE *)NULL,
+              missing); // [確認_異常系] - 存在しないファイルに対する cplat_fopen() の戻り値が NULL であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &failure_error,
+            CPLAT_CAUSE_NOT_FOUND)); // [確認_異常系] - CPLAT_CAUSE_NOT_FOUND に対する失敗直後の cplat_error_is() の戻り値が 1 であること。
+    ASSERT_NE((FILE *)NULL, existing); // [確認_正常系] - cplat_fopen_temp() の戻り値が NULL 以外であること。
+    EXPECT_EQ(
+        0,
+        cplat_error_is_set(
+            &success_error)); // [確認_正常系] - 成功直後の cplat_error_is_set() の戻り値が 0 であること。(TLS 詳細エラーが空であることの確認)
 
     // Cleanup
     (void)fclose(existing);
@@ -258,10 +267,12 @@ TEST_F(errorContractTest, nested_paths_equal_success_clears_previous_failure)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              result);   // [確認_正常系] - cplat_path_equal の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1, equal); // [確認_正常系] - 同じパスの比較結果が一致であること。
-    EXPECT_EQ(0,
-              cplat_error_is_set(&last_error)); // [確認_正常系] - ネストした成功後の TLS 詳細エラーが空であること。
+              result);   // [確認_正常系] - cplat_path_equal() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, equal); // [確認_正常系] - equal が 1 であること。(同じパスの比較結果が一致であることの確認)
+    EXPECT_EQ(
+        0,
+        cplat_error_is_set(
+            &last_error)); // [確認_正常系] - ネストした成功後の cplat_error_is_set() の戻り値が 0 であること。(TLS 詳細エラーが空であることの確認)
 }
 
 // スレッド間で last error が独立することの確認
@@ -302,26 +313,38 @@ TEST_F(errorContractTest, last_error_is_isolated_between_threads)
     cplat_error_get_last(&main_error); // [手順] - 子スレッド終了後にメイン スレッドの TLS 詳細エラーを取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK,
-              create_not_found_result); // [確認_正常系] - 1 つ目の cplat_thread_create の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_OK,
-              create_invalid_result); // [確認_正常系] - 2 つ目の cplat_thread_create の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_OK,
-              join_not_found_result); // [確認_正常系] - 1 つ目の cplat_thread_join の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_OK,
-              join_invalid_result); // [確認_正常系] - 2 つ目の cplat_thread_join の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1,
-              not_found_case.call_completed); // [確認_正常系] - 1 つ目のスレッドが詳細エラーの取得を完了したこと。
-    EXPECT_EQ(1,
-              invalid_case.call_completed); // [確認_正常系] - 2 つ目のスレッドが詳細エラーの取得を完了したこと。
     EXPECT_EQ(
-        1, cplat_error_is(&not_found_case.observed_error,
-                          CPLAT_CAUSE_NOT_FOUND)); // [確認_正常系] - 1 つ目のスレッドが NOT_FOUND だけを取得すること。
+        CPLAT_OK,
+        create_not_found_result); // [確認_正常系] - NOT_FOUND スレッドを起動した cplat_thread_create() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        create_invalid_result); // [確認_正常系] - INVALID_ARGUMENT スレッドを起動した cplat_thread_create() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        join_not_found_result); // [確認_正常系] - NOT_FOUND スレッドを待機した cplat_thread_join() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        join_invalid_result); // [確認_正常系] - INVALID_ARGUMENT スレッドを待機した cplat_thread_join() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1,
+        not_found_case
+            .call_completed); // [確認_正常系] - not_found_case.call_completed が 1 であること。(NOT_FOUND スレッドが詳細エラーの取得を完了したことの確認)
+    EXPECT_EQ(
+        1,
+        invalid_case
+            .call_completed); // [確認_正常系] - invalid_case.call_completed が 1 であること。(INVALID_ARGUMENT スレッドが詳細エラーの取得を完了したことの確認)
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &not_found_case.observed_error,
+            CPLAT_CAUSE_NOT_FOUND)); // [確認_正常系] - NOT_FOUND スレッドの CPLAT_CAUSE_NOT_FOUND に対する cplat_error_is() の戻り値が 1 であること。
     EXPECT_EQ(
         1,
         cplat_error_is(
             &invalid_case.observed_error,
-            CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_正常系] - 2 つ目のスレッドが INVALID_ARGUMENT だけを取得すること。
+            CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_正常系] - INVALID_ARGUMENT スレッドの CPLAT_CAUSE_INVALID_ARGUMENT に対する cplat_error_is() の戻り値が 1 であること。
     EXPECT_EQ(
-        0, cplat_error_is_set(&main_error)); // [確認_正常系] - メイン スレッドの TLS 詳細エラーが空のままであること。
+        0,
+        cplat_error_is_set(
+            &main_error)); // [確認_正常系] - 子スレッド終了後のメイン スレッドの cplat_error_is_set() の戻り値が 0 であること。(TLS 詳細エラーが空のままであることの確認)
 }

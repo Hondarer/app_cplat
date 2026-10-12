@@ -71,10 +71,14 @@ TEST_F(errorMessageTest, known_codes_map_to_distinct_texts)
     }
 
     // Assert
-    EXPECT_EQ(codes.size(),
-              texts.size()); // [確認_正常系] - 文字列が重複せず、集合の要素数が列挙したコード数と一致すること。
-    EXPECT_STREQ("success",
-                 cplat_result_to_string(CPLAT_OK)); // [確認_正常系] - CPLAT_OK が "success" になること。
+    EXPECT_EQ(
+        codes.size(),
+        texts
+            .size()); // [確認_正常系] - texts.size() の戻り値が codes.size() の戻り値と一致すること。(各コードの文字列に重複がないことの確認)
+    EXPECT_STREQ(
+        "success",
+        cplat_result_to_string(
+            CPLAT_OK)); // [確認_正常系] - CPLAT_OK に対する cplat_result_to_string() の戻り値が "success" であること。
 }
 
 // 未知の値が既定の文字列になることの確認
@@ -89,7 +93,7 @@ TEST_F(errorMessageTest, unknown_code_maps_to_default_text)
 
     // Assert
     EXPECT_STREQ("unknown result code",
-                 text); // [確認_異常系] - cplat_result_to_string の戻り値が "unknown result code" であること。
+                 text); // [確認_異常系] - cplat_result_to_string() の戻り値が "unknown result code" であること。
 }
 
 // errno がメッセージへ変換されることの確認
@@ -104,8 +108,11 @@ TEST_F(errorMessageTest, errno_is_converted_to_message)
     int actual_ret = cplat_internal_errno_message(buf, sizeof(buf), ENOENT); // [手順] - ENOENT を指定して呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_internal_errno_message の戻り値が CPLAT_OK であること。
-    EXPECT_LT(0U, strlen(buf));      // [確認_正常系] - 空でないメッセージが格納されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_internal_errno_message() の戻り値が CPLAT_OK であること。
+    EXPECT_LT(
+        0U,
+        strlen(
+            buf)); // [確認_正常系] - strlen() の戻り値が 0U より大きいこと。(空でないメッセージが格納されたことの確認)
 }
 
 // 引数不正の場合に CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
@@ -125,10 +132,10 @@ TEST_F(errorMessageTest, invalid_arguments_are_rejected)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_buf); // [確認_異常系] - 格納先が NULL の場合に cplat_internal_errno_message の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_buf); // [確認_異常系] - 格納先が NULL の場合に cplat_internal_errno_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_zero_size); // [確認_異常系] - サイズが 0 の場合に cplat_internal_errno_message の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_zero_size); // [確認_異常系] - サイズが 0 の場合に cplat_internal_errno_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // error_message がドメインごとに文字列化することの確認
@@ -155,24 +162,32 @@ TEST_F(errorMessageTest, error_message_dispatches_by_domain)
     // Assert
     EXPECT_EQ(
         CPLAT_OK,
-        none_result); // [確認_正常系] - 空の詳細エラーに対する cplat_error_message の戻り値が CPLAT_OK であること。
-    EXPECT_EQ("no error", none_message); // [確認_正常系] - 空の詳細エラーのメッセージが "no error" であること。
+        none_result); // [確認_正常系] - 空の詳細エラーに対する cplat_error_message() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ("no error", none_message); // [確認_正常系] - none_message が "no error" であること。
     EXPECT_EQ(
         CPLAT_OK,
-        errno_result); // [確認_正常系] - errno ドメインに対する cplat_error_message の戻り値が CPLAT_OK であること。
-    EXPECT_FALSE(errno_message.empty()); // [確認_正常系] - errno ドメインのメッセージが空でないこと。
-    EXPECT_EQ(CPLAT_OK,
-              socket_errno_result);             // [確認_正常系] - socket errno ドメインの戻り値が CPLAT_OK であること。
-    EXPECT_FALSE(socket_errno_message.empty()); // [確認_正常系] - socket errno ドメインのメッセージが空でないこと。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_error_message(NULL, sizeof(buf),
-                                  &error)); // [確認_異常系] - NULL の格納先が CPLAT_ERR_INVALID_ARGUMENT になること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_error_message(buf, 0U,
-                                  &error)); // [確認_異常系] - サイズ 0 が CPLAT_ERR_INVALID_ARGUMENT になること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_error_message(buf, sizeof(buf),
-                                  NULL)); // [確認_異常系] - NULL の詳細エラーが CPLAT_ERR_INVALID_ARGUMENT になること。
+        errno_result); // [確認_正常系] - errno ドメインに対する cplat_error_message() の戻り値が CPLAT_OK であること。
+    EXPECT_FALSE(errno_message.empty()); // [確認_正常系] - errno_message.empty() の戻り値が false であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        socket_errno_result); // [確認_正常系] - socket errno ドメインに対する cplat_error_message() の戻り値が CPLAT_OK であること。
+    EXPECT_FALSE(
+        socket_errno_message.empty()); // [確認_正常系] - socket_errno_message.empty() の戻り値が false であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_error_message(
+            NULL, sizeof(buf),
+            &error)); // [確認_異常系] - 格納先 NULL に対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_error_message(
+            buf, 0U,
+            &error)); // [確認_異常系] - サイズ 0 に対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        cplat_error_message(
+            buf, sizeof(buf),
+            NULL)); // [確認_異常系] - 詳細エラー NULL に対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 空の詳細エラーが小さいバッファーへ切り詰めて格納されることの確認
@@ -191,9 +206,10 @@ TEST_F(errorMessageTest, empty_error_message_is_truncated_to_buffer)
                                      &error); // [手順] - 4 バイトのバッファーへ空の詳細エラーを文字列化する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK,
-              result); // [確認_正常系] - 小さいバッファーでも cplat_error_message の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("no ", buf); // [確認_正常系] - バッファーへ終端付きで "no " が格納されること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        result); // [確認_正常系] - 小さいバッファーに対する cplat_error_message() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("no ", buf); // [確認_正常系] - buf が "no " であること。
 }
 
 #if defined(PLATFORM_LINUX)
@@ -218,12 +234,12 @@ TEST_F(errorMessageTest, windows_error_domain_is_rejected_on_linux)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        windows_result); // [確認_異常系] - Windows ドメインに対する戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_STREQ("", windows_buf); // [確認_異常系] - Windows ドメインでは出力バッファーが空になること。
+        windows_result); // [確認_異常系] - Windows ドメインに対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_STREQ("", windows_buf); // [確認_異常系] - windows_buf が "" であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        winsock_result); // [確認_異常系] - Winsock ドメインに対する戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_STREQ("", winsock_buf); // [確認_異常系] - Winsock ドメインでは出力バッファーが空になること。
+        winsock_result); // [確認_異常系] - Winsock ドメインに対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_STREQ("", winsock_buf); // [確認_異常系] - winsock_buf が "" であること。
 }
 
 // GAI ドメインが Linux の gai_strerror() で文字列化されることの確認
@@ -240,8 +256,9 @@ TEST_F(errorMessageTest, gai_domain_is_converted_to_message_on_linux)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              result);       // [確認_正常系] - GAI ドメインの文字列化が成功すること。
-    EXPECT_NE('\0', buf[0]); // [確認_正常系] - GAI エラー メッセージが格納されること。
+              result); // [確認_正常系] - GAI ドメインに対する cplat_error_message() の戻り値が CPLAT_OK であること。
+    EXPECT_NE('\0',
+              buf[0]); // [確認_正常系] - buf[0] が '\0' 以外であること。(GAI エラー メッセージが格納されたことの確認)
 }
 
 // 未知のエラー ドメインが不正引数として拒否されることの確認
@@ -262,9 +279,10 @@ TEST_F(errorMessageTest, unknown_error_domain_is_rejected)
         cplat_error_message(buf, sizeof(buf), &error); // [手順] - 未知のドメインを持つ詳細エラーを文字列化する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              result);     // [確認_異常系] - 未知のドメインに対する戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_STREQ("", buf); // [確認_異常系] - 未知のドメインでは出力バッファーが空になること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        result); // [確認_異常系] - 未知のドメインに対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_STREQ("", buf); // [確認_異常系] - buf が "" であること。
 }
 
 #endif /* PLATFORM_LINUX */
@@ -284,7 +302,7 @@ TEST_F(errorMessageTest, errno_message_returns_unknown_when_strerror_r_fails)
     // Pre-Assert
     EXPECT_CALL(mock_string, strerror_r(_, _, _, EACCES, buf, sizeof(buf)))
         .WillOnce(Return(
-            EINVAL)); // [Pre-Assert確認_異常系] - strerror_r が errno 値 EACCES と 64 バイトのバッファーを指定して 1 回呼び出されること。
+            EINVAL)); // [Pre-Assert確認_異常系] - strerror_r() が EACCES、buf、sizeof(buf) を指定して 1 回呼び出されること。
                       // [Pre-Assert手順] - strerror_r から EINVAL を返却する。
 
     // Act
@@ -293,8 +311,8 @@ TEST_F(errorMessageTest, errno_message_returns_unknown_when_strerror_r_fails)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - cplat_internal_errno_message の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_STREQ("", buf); // [確認_異常系] - 出力バッファーが空文字列に初期化されること。
+              actual_ret); // [確認_異常系] - cplat_internal_errno_message() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_STREQ("", buf); // [確認_異常系] - buf が "" であること。
 }
 
 // 切り詰めを表す ERANGE が成功として扱われることの確認
@@ -310,7 +328,7 @@ TEST_F(errorMessageTest, errno_message_treats_erange_as_success)
         .WillOnce(DoAll(
             SetArrayArgument<4>("trunc", "trunc" + 6),
             Return(
-                ERANGE))); // [Pre-Assert確認_正常系] - strerror_r が errno 値 EACCES と 8 バイトのバッファーを指定して 1 回呼び出されること。
+                ERANGE))); // [Pre-Assert確認_正常系] - strerror_r() が EACCES、buf、sizeof(buf) を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - バッファーへ切り詰め済みの文字列を書き込み、strerror_r から ERANGE を返却する。
 
     // Act
@@ -318,8 +336,10 @@ TEST_F(errorMessageTest, errno_message_treats_erange_as_success)
         cplat_internal_errno_message(buf, sizeof(buf), EACCES); // [手順] - cplat_internal_errno_message を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 切り詰めは成功として扱われ CPLAT_OK が返ること。
-    EXPECT_STREQ("trunc", buf);      // [確認_正常系] - 書き込まれた文字列が保持されること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret); // [確認_正常系] - cplat_internal_errno_message() の戻り値が CPLAT_OK であること。(切り詰めを表す ERANGE が成功として扱われたことの確認)
+    EXPECT_STREQ("trunc", buf); // [確認_正常系] - buf が "trunc" であること。
 }
 
 #endif /* PLATFORM_LINUX */

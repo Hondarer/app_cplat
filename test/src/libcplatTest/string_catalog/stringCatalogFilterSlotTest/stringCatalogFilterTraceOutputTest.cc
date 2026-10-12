@@ -74,14 +74,14 @@ class stringCatalogFilterTraceOutputTest : public Test
     void connect_with_line(const char *text)
     {
         ASSERT_EQ(CPLAT_OK, filter_test_trace_create_filter(nullptr, kLineCapacity, kLineWidth, &slot_));
-        // [状態確認] - `filter_test_trace_create_filter(nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - filter_test_trace_create_filter() の戻り値が CPLAT_OK であること。
         ASSERT_EQ(CPLAT_OK, compile_single_line(text, image_));
-        // [状態確認] - `compile_single_line(text, image_)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - compile_single_line() の戻り値が CPLAT_OK であること。
         ASSERT_EQ(CPLAT_OK,
                   cplat_string_catalog_filter_slot_apply(slot_, image_, sizeof(image_), nullptr, 0U, nullptr));
-        // [状態確認] - `cplat_string_catalog_filter_slot_apply(slot_, image_, sizeof(image_), nullptr, 0U, nullptr)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - cplat_string_catalog_filter_slot_apply() の戻り値が CPLAT_OK であること。
         ASSERT_EQ(CPLAT_OK, filter_test_trace_set_filter(slot_));
-        // [状態確認] - `filter_test_trace_set_filter(slot_)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - filter_test_trace_set_filter() の戻り値が CPLAT_OK であること。
     }
     // [サブ手順終了]
 };
@@ -96,15 +96,18 @@ TEST_F(stringCatalogFilterTraceOutputTest, unconnected_writes_with_defined_level
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_tracer_write_at(tracer(), CPLAT_TRACE_LEVEL_WARNING, nullptr,
                                                   HasSubstr("Job 5 failed. Error code=2")))
-        .WillOnce(
-            Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - 定義のレベル WARNING で、組み立てた文字列を出力すること。
+        .WillOnce(Return(
+            CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_tracer_write_at() が tracer() の戻り値、CPLAT_TRACE_LEVEL_WARNING、nullptr、"Job 5 failed. Error code=2" を含む文字列を指定して 1 回呼び出されること。
 
     // Act
     actual_ret = filter_test_trace_key_job_failed((uint64_t)5U, 2); // [手順] - JOB_FAILED を出力する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);                    // [確認_正常系] - 出力に成功すること。
-    EXPECT_EQ(nullptr, filter_test_trace_get_filter()); // [確認_正常系] - フィルターが未設定であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret); // [確認_正常系] - filter_test_trace_key_job_failed() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        nullptr,
+        filter_test_trace_get_filter()); // [確認_正常系] - filter_test_trace_get_filter() の戻り値が nullptr であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.TearDown]
 
@@ -120,13 +123,15 @@ TEST_F(stringCatalogFilterTraceOutputTest, matched_trace_is_forced)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_tracer_write_at(tracer(), CPLAT_TRACE_LEVEL_TO_FORCE(CPLAT_TRACE_LEVEL_WARNING),
                                                   nullptr, HasSubstr("Job 5 failed.")))
-        .WillOnce(Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - 強制出力のレベルで出力すること。
+        .WillOnce(Return(
+            CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_tracer_write_at() が tracer() の戻り値、CPLAT_TRACE_LEVEL_TO_FORCE(CPLAT_TRACE_LEVEL_WARNING)、nullptr、"Job 5 failed." を含む文字列を指定して 1 回呼び出されること。
 
     // Act
     actual_ret = filter_test_trace_key_job_failed((uint64_t)5U, 2); // [手順] - JOB_FAILED を出力する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 出力に成功すること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret); // [確認_正常系] - filter_test_trace_key_job_failed() の戻り値が CPLAT_OK であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.TearDown]
 
@@ -142,13 +147,15 @@ TEST_F(stringCatalogFilterTraceOutputTest, unmatched_trace_keeps_defined_level)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_tracer_write_at(tracer(), CPLAT_TRACE_LEVEL_WARNING, nullptr, _))
-        .WillOnce(Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - 定義のレベルで出力すること。
+        .WillOnce(Return(
+            CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_tracer_write_at() が tracer() の戻り値、CPLAT_TRACE_LEVEL_WARNING、nullptr を指定して 1 回呼び出されること。
 
     // Act
     actual_ret = filter_test_trace_key_job_failed((uint64_t)5U, 2); // [手順] - JOB_FAILED を出力する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 出力に成功すること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret); // [確認_正常系] - filter_test_trace_key_job_failed() の戻り値が CPLAT_OK であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.TearDown]
 
@@ -164,7 +171,7 @@ TEST_F(stringCatalogFilterTraceOutputTest, set_filter_rejects_slot_of_another_ca
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(
                             filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity, kLineWidth,
                             &other_slot)); // [状態] - 別のカタログでスロットを作成する。
-    // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity, kLineWidth, &other_slot)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - cplat_string_catalog_filter_slot_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -172,8 +179,12 @@ TEST_F(stringCatalogFilterTraceOutputTest, set_filter_rejects_slot_of_another_ca
     actual_ret = filter_test_trace_set_filter(other_slot); // [手順] - 別のカタログのスロットを接続する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - CPLAT_ERR_INVALID_ARGUMENT を返すこと。
-    EXPECT_EQ(slot_, filter_test_trace_get_filter());  // [確認_異常系] - それまでの接続を保つこと。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - filter_test_trace_set_filter() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        slot_,
+        filter_test_trace_get_filter()); // [確認_異常系] - filter_test_trace_get_filter() の戻り値が slot_ と一致すること。(それまでの接続を保つことの確認)
 
     cplat_string_catalog_filter_slot_dispose(&other_slot);
 }
@@ -190,15 +201,19 @@ TEST_F(stringCatalogFilterTraceOutputTest, detached_filter_restores_defined_leve
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_tracer_write_at(tracer(), CPLAT_TRACE_LEVEL_WARNING, nullptr, _))
-        .WillOnce(Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - 定義のレベルで出力すること。
+        .WillOnce(Return(
+            CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_tracer_write_at() が tracer() の戻り値、CPLAT_TRACE_LEVEL_WARNING、nullptr を指定して 1 回呼び出されること。
 
     // Act
     actual_detach_ret = filter_test_trace_set_filter(nullptr); // [手順] - 接続を解除する。
     (void)filter_test_trace_key_job_failed((uint64_t)5U, 2);   // [手順] - JOB_FAILED を出力する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_detach_ret);             // [確認_正常系] - 解除に成功すること。
-    EXPECT_EQ(nullptr, filter_test_trace_get_filter()); // [確認_正常系] - フィルターが未設定になること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_detach_ret); // [確認_正常系] - filter_test_trace_set_filter() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        nullptr,
+        filter_test_trace_get_filter()); // [確認_正常系] - filter_test_trace_get_filter() の戻り値が nullptr であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.TearDown]
 
@@ -211,24 +226,32 @@ TEST_F(stringCatalogFilterTraceOutputTest, create_filter_binds_own_catalog_and_k
     int actual_apply_ret;
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == FILTER_TEST_TRACE_KEY_WORKER_STOPPED",
                                             image_)); // [状態] - 文字列キーの名前を使う条件をコンパイルする。
-    // [状態確認] - `compile_single_line("key == FILTER_TEST_TRACE_KEY_WORKER_STOPPED", image_)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - compile_single_line() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK, filter_test_trace_create_filter(nullptr, kLineCapacity, kLineWidth,
-                                                        &slot_)); // [手順] - スロットを作成する。
-    // [確認_正常系] - `filter_test_trace_create_filter(nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret_create = filter_test_trace_create_filter(nullptr, kLineCapacity, kLineWidth,
+                                                            &slot_); // [手順] - スロットを作成する。
+    ASSERT_EQ(CPLAT_OK,
+              actual_ret_create); // [確認_正常系] - filter_test_trace_create_filter() の戻り値が CPLAT_OK であること。
     actual_apply_ret = cplat_string_catalog_filter_slot_apply(slot_, image_, sizeof(image_), nullptr, 0U,
                                                               &actual_invalid_count); // [手順] - 条件を適用する。
 
     // Assert
-    EXPECT_EQ(filter_test_trace_catalog(),
-              cplat_string_catalog_filter_slot_get_catalog(slot_)); // [確認_正常系] - 本カタログに結び付くこと。
-    EXPECT_EQ((size_t)filter_test_trace_entry_count(),
-              filter_test_trace_key_name_count()); // [確認_正常系] - 名前解決表が全項目を持つこと。
-    EXPECT_EQ(CPLAT_OK, actual_apply_ret);         // [確認_正常系] - 適用に成功すること。
-    EXPECT_EQ(0U, actual_invalid_count);           // [確認_正常系] - 文字列キーの名前を解決し、無効な行がないこと。
+    EXPECT_EQ(
+        filter_test_trace_catalog(),
+        cplat_string_catalog_filter_slot_get_catalog(
+            slot_)); // [確認_正常系] - cplat_string_catalog_filter_slot_get_catalog() の戻り値が filter_test_trace_catalog() の戻り値と一致すること。
+    EXPECT_EQ(
+        (size_t)filter_test_trace_entry_count(),
+        filter_test_trace_key_name_count()); // [確認_正常系] - filter_test_trace_key_name_count() の戻り値が size_t に変換した filter_test_trace_entry_count() の戻り値と一致すること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_apply_ret); // [確認_正常系] - cplat_string_catalog_filter_slot_apply() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0U,
+        actual_invalid_count); // [確認_正常系] - actual_invalid_count が 0U であること。(文字列キーの名前を解決し、無効な行がないことの確認)
 }
 // [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.TearDown]
 
@@ -241,24 +264,24 @@ TEST_F(stringCatalogFilterTraceOutputTest, attached_source_is_taken_on_write)
     memset(source, 0, sizeof(source));
     ASSERT_EQ(CPLAT_OK, filter_test_trace_create_filter(nullptr, kLineCapacity, kLineWidth,
                                                         &slot_)); // [状態] - スロットを作成する。
-    // [状態確認] - `filter_test_trace_create_filter(nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - filter_test_trace_create_filter() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source, sizeof(source),
                                                                        nullptr)); // [状態] - ソース領域を結び付ける。
-    // [状態確認] - `cplat_string_catalog_filter_slot_attach_source(slot_, source, sizeof(source), nullptr)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - cplat_string_catalog_filter_slot_attach_source() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, filter_test_trace_set_filter(slot_));                     // [状態] - 出力へ接続する。
-    // [状態確認] - `filter_test_trace_set_filter(slot_)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - filter_test_trace_set_filter() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, compile_single_line("category <= 2", image_));
-    // [状態確認] - `compile_single_line("category <= 2", image_)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - compile_single_line() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_source_publish(
                             source, sizeof(source), image_, sizeof(image_), trace_catalog_id(), nullptr,
                             nullptr)); // [状態] - WARNING 以上に一致する条件を公開する。
-    // [状態確認] - `cplat_string_catalog_filter_source_publish( source, sizeof(source), image_, sizeof(image_), trace_catalog_id(), nullptr, nullptr)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - cplat_string_catalog_filter_source_publish() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat,
                 cplat_tracer_write_at(tracer(), CPLAT_TRACE_LEVEL_TO_FORCE(CPLAT_TRACE_LEVEL_WARNING), nullptr, _))
-        .WillOnce(
-            Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - 公開された条件で判定し、強制出力のレベルで出力すること。
+        .WillOnce(Return(
+            CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_tracer_write_at() が tracer() の戻り値、CPLAT_TRACE_LEVEL_TO_FORCE(CPLAT_TRACE_LEVEL_WARNING)、nullptr を指定して 1 回呼び出されること。
 
     // Act
     (void)filter_test_trace_key_job_failed((uint64_t)5U, 2); // [手順] - JOB_FAILED を出力する。

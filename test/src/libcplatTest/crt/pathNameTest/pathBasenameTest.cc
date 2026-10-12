@@ -19,7 +19,7 @@ TEST_F(pathBasenameTest, returns_name_after_last_separator)
 
     // Assert
     EXPECT_STREQ("c.txt",
-                 actual); // [確認_正常系] - cplat_path_basename の戻り値として、最後のセパレータ以降が返ること。
+                 actual); // [確認_正常系] - cplat_path_basename() の戻り値が "c.txt" であること。
 }
 
 // セパレータを含まないパスがそのまま返ることの確認
@@ -35,7 +35,7 @@ TEST_F(pathBasenameTest, returns_input_when_no_separator)
 
     // Assert
     EXPECT_EQ(path,
-              actual); // [確認_正常系] - cplat_path_basename の戻り値として、入力ポインターそのものが返ること。
+              actual); // [確認_正常系] - cplat_path_basename() の戻り値が path と一致すること。
 }
 
 // '\\' もセパレータとして扱われることの確認
@@ -50,7 +50,7 @@ TEST_F(pathBasenameTest, treats_backslash_as_separator)
     const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename(path) を呼び出す。
 
     // Assert
-    EXPECT_STREQ("c", actual); // [確認_正常系] - cplat_path_basename の戻り値として、'\\' 以降が返ること。
+    EXPECT_STREQ("c", actual); // [確認_正常系] - cplat_path_basename() の戻り値が "c" であること。
 }
 
 // '/' と '\\' が混在するパスで最後のセパレータ以降が返ることの確認
@@ -65,8 +65,7 @@ TEST_F(pathBasenameTest, handles_mixed_separators)
     const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename(path) を呼び出す。
 
     // Assert
-    EXPECT_STREQ(
-        "c", actual); // [確認_正常系] - cplat_path_basename の戻り値として、最後のセパレータ ('\\') 以降が返ること。
+    EXPECT_STREQ("c", actual); // [確認_正常系] - cplat_path_basename() の戻り値が "c" であること。
 }
 
 // 末尾がセパレータの場合に空文字列が返ることの確認
@@ -81,7 +80,7 @@ TEST_F(pathBasenameTest, returns_empty_string_when_trailing_separator)
     const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename(path) を呼び出す。
 
     // Assert
-    EXPECT_STREQ("", actual); // [確認_正常系] - cplat_path_basename の戻り値として、空文字列が返ること。
+    EXPECT_STREQ("", actual); // [確認_正常系] - cplat_path_basename() の戻り値が "" であること。
 }
 
 // ルートのみのパスで空文字列が返ることの確認
@@ -96,7 +95,7 @@ TEST_F(pathBasenameTest, returns_empty_string_for_root)
     const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename(path) を呼び出す。
 
     // Assert
-    EXPECT_STREQ("", actual); // [確認_正常系] - cplat_path_basename の戻り値として、空文字列が返ること。
+    EXPECT_STREQ("", actual); // [確認_正常系] - cplat_path_basename() の戻り値が "" であること。
 }
 
 // 空文字列パスで空文字列が返ることの確認
@@ -111,7 +110,7 @@ TEST_F(pathBasenameTest, returns_empty_string_for_empty_input)
     const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename(path) を呼び出す。
 
     // Assert
-    EXPECT_STREQ("", actual); // [確認_正常系] - cplat_path_basename の戻り値として、空文字列が返ること。
+    EXPECT_STREQ("", actual); // [確認_正常系] - cplat_path_basename() の戻り値が "" であること。
 }
 
 // NULL を渡した場合に NULL が返ることの確認
@@ -125,7 +124,7 @@ TEST_F(pathBasenameTest, returns_null_for_null_input)
     const char *actual = cplat_path_basename(NULL); // [手順] - cplat_path_basename(NULL) を呼び出す。
 
     // Assert
-    EXPECT_EQ(nullptr, actual); // [確認_異常系] - cplat_path_basename の戻り値が NULL であること。
+    EXPECT_EQ(nullptr, actual); // [確認_異常系] - cplat_path_basename() の戻り値が nullptr であること。
 }
 
 // 返却ポインターが入力文字列を指す (複製されない) ことの確認
@@ -140,5 +139,5 @@ TEST_F(pathBasenameTest, returns_pointer_within_input_buffer)
     const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename(path) を呼び出す。
 
     // Assert
-    EXPECT_EQ(path + 4, actual); // [確認_正常系] - 入力バッファー内の位置を指すこと。
+    EXPECT_EQ(path + 4, actual); // [確認_正常系] - cplat_path_basename() の戻り値が path + 4 と一致すること。
 }

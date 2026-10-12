@@ -41,7 +41,7 @@ TEST_F(isattyTest, invalid_stream_returns_zero)
     int actual_ret = cplat_isatty(invalid_stream); // [手順] - 定義外の enum 値を渡して cplat_isatty を呼び出す。
 
     // Assert
-    EXPECT_EQ(0, actual_ret); // [確認_異常系] - cplat_isatty の戻り値が 0 であること。
+    EXPECT_EQ(0, actual_ret); // [確認_異常系] - cplat_isatty() の戻り値が 0 であること。
 }
 
 // stdin の判定が STDIN_FILENO の isatty 結果になることの確認
@@ -52,7 +52,7 @@ TEST_F(isattyTest, stdin_returns_int)
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_unistd_, isatty(_, _, _, STDIN_FILENO))
-        .WillOnce(Return(1)); // [Pre-Assert確認_正常系] - isatty が STDIN_FILENO で 1 回呼び出されること。
+        .WillOnce(Return(1)); // [Pre-Assert確認_正常系] - isatty() が STDIN_FILENO を指定して 1 回呼び出されること。
                               // [Pre-Assert手順] - 1 を返却する。
 #endif                        /* PLATFORM_LINUX */
 
@@ -61,10 +61,12 @@ TEST_F(isattyTest, stdin_returns_int)
 
     // Assert
 #if defined(PLATFORM_LINUX)
-    EXPECT_EQ(1, actual_ret); // [確認_正常系] - cplat_isatty の戻り値が 1 であること。
+    EXPECT_EQ(1, actual_ret); // [確認_正常系] - cplat_isatty() の戻り値が 1 であること。
 #elif defined(PLATFORM_WINDOWS)
-    EXPECT_TRUE(actual_ret == 0 ||
-                actual_ret == 1); // [確認_正常系] - cplat_isatty の戻り値が 0 または 1 であり、クラッシュしないこと。
+    EXPECT_TRUE(
+        actual_ret == 0 ||
+        actual_ret ==
+            1); // [確認_正常系] - actual_ret == 0 || actual_ret == 1 が true であること。(cplat_isatty() の戻り値が 0 または 1 であることの確認)
 #endif /* PLATFORM_ */
 }
 
@@ -76,7 +78,7 @@ TEST_F(isattyTest, stdout_returns_int)
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_unistd_, isatty(_, _, _, STDOUT_FILENO))
-        .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - isatty が STDOUT_FILENO で 1 回呼び出されること。
+        .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - isatty() が STDOUT_FILENO を指定して 1 回呼び出されること。
                               // [Pre-Assert手順] - 0 を返却する。
 #endif                        /* PLATFORM_LINUX */
 
@@ -86,10 +88,12 @@ TEST_F(isattyTest, stdout_returns_int)
 
     // Assert
 #if defined(PLATFORM_LINUX)
-    EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_isatty の戻り値が 0 であること。
+    EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_isatty() の戻り値が 0 であること。
 #elif defined(PLATFORM_WINDOWS)
-    EXPECT_TRUE(actual_ret == 0 ||
-                actual_ret == 1); // [確認_正常系] - cplat_isatty の戻り値が 0 または 1 であり、クラッシュしないこと。
+    EXPECT_TRUE(
+        actual_ret == 0 ||
+        actual_ret ==
+            1); // [確認_正常系] - actual_ret == 0 || actual_ret == 1 が true であること。(cplat_isatty() の戻り値が 0 または 1 であることの確認)
 #endif /* PLATFORM_ */
 }
 
@@ -101,7 +105,7 @@ TEST_F(isattyTest, stderr_returns_int)
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_unistd_, isatty(_, _, _, STDERR_FILENO))
-        .WillOnce(Return(1)); // [Pre-Assert確認_正常系] - isatty が STDERR_FILENO で 1 回呼び出されること。
+        .WillOnce(Return(1)); // [Pre-Assert確認_正常系] - isatty() が STDERR_FILENO を指定して 1 回呼び出されること。
                               // [Pre-Assert手順] - 1 を返却する。
 #endif                        /* PLATFORM_LINUX */
 
@@ -111,9 +115,11 @@ TEST_F(isattyTest, stderr_returns_int)
 
     // Assert
 #if defined(PLATFORM_LINUX)
-    EXPECT_EQ(1, actual_ret); // [確認_正常系] - cplat_isatty の戻り値が 1 であること。
+    EXPECT_EQ(1, actual_ret); // [確認_正常系] - cplat_isatty() の戻り値が 1 であること。
 #elif defined(PLATFORM_WINDOWS)
-    EXPECT_TRUE(actual_ret == 0 ||
-                actual_ret == 1); // [確認_正常系] - cplat_isatty の戻り値が 0 または 1 であり、クラッシュしないこと。
+    EXPECT_TRUE(
+        actual_ret == 0 ||
+        actual_ret ==
+            1); // [確認_正常系] - actual_ret == 0 || actual_ret == 1 が true であること。(cplat_isatty() の戻り値が 0 または 1 であることの確認)
 #endif /* PLATFORM_ */
 }

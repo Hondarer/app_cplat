@@ -74,16 +74,18 @@ TEST_F(stringCatalogFilterPatternCompileTest, pattern_constants_are_numbered_per
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK, compile_single_line("id matches \"^FILTER\" && arg.job_name matches_i \"IMP\"",
-                                            image_)); // [手順] - 2 つのパターンを含む条件式をコンパイルする。
-    // [確認_正常系] - `compile_single_line("id matches \"^FILTER\" && arg.job_name matches_i \"IMP\"", image_)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret_compile = compile_single_line("id matches \"^FILTER\" && arg.job_name matches_i \"IMP\"",
+                                                 image_); // [手順] - 2 つのパターンを含む条件式をコンパイルする。
+    ASSERT_EQ(CPLAT_OK, actual_ret_compile); // [確認_正常系] - compile_single_line() の戻り値が CPLAT_OK であること。
     record = filter_test_record_address(image_, kLineWidth, 0U);
     constants = string_catalog_filter_record_constants(record, (uint32_t)kLineWidth);
     string_catalog_filter_read_record_header(record, &header);
     while (offset < header.constant_size)
     {
-        ASSERT_EQ(CPLAT_OK, string_catalog_filter_read_constant(constants, header.constant_size, offset, &constant));
-        // [確認_正常系 回数=3] - `string_catalog_filter_read_constant(constants, header.constant_size, offset, &constant)` の戻り値が `CPLAT_OK` であること。
+        int actual_ret_read = string_catalog_filter_read_constant(constants, header.constant_size, offset, &constant);
+        ASSERT_EQ(
+            CPLAT_OK,
+            actual_ret_read); // [状態確認] - string_catalog_filter_read_constant() の戻り値が CPLAT_OK であること。
         if ((constant.header.kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_PATTERN) &&
             (actual_pattern_constants < 4U))
         {
@@ -94,12 +96,24 @@ TEST_F(stringCatalogFilterPatternCompileTest, pattern_constants_are_numbered_per
     }
 
     // Assert
-    EXPECT_EQ(CPLAT_OK,
-              cplat_string_catalog_filter_validate(image_, kImageSize)); // [確認_正常系] - 検証に成功すること。
-    EXPECT_EQ(2U, header.pattern_count);                                 // [確認_正常系] - パターンの数を記録すること。
-    EXPECT_EQ(2U, actual_pattern_constants); // [確認_正常系] - パターンの種類の定数が 2 個あること。
-    EXPECT_EQ(0U, actual_slots[0]);          // [確認_正常系] - 1 個目のパターンが番号 0 であること。
-    EXPECT_EQ(1U, actual_slots[1]);          // [確認_正常系] - 2 個目のパターンが番号 1 であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        cplat_string_catalog_filter_validate(
+            image_,
+            kImageSize)); // [確認_正常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        2U,
+        header
+            .pattern_count); // [確認_正常系] - header.pattern_count が 2U であること。(2 つのパターンの数を記録したことの確認)
+    EXPECT_EQ(
+        2U,
+        actual_pattern_constants); // [確認_正常系] - actual_pattern_constants が 2U であること。(パターンの種類の定数が 2 個あることの確認)
+    EXPECT_EQ(
+        0U, actual_slots
+                [0]); // [確認_正常系] - actual_slots[0] が 0U であること。(1 個目のパターンの番号が 0 であることの確認)
+    EXPECT_EQ(
+        1U, actual_slots
+                [1]); // [確認_正常系] - actual_slots[1] が 1U であること。(2 個目のパターンの番号が 1 であることの確認)
 }
 
 // パターンを含む条件式をデコンパイルし、再コンパイルすると元と同じ表現になることの確認
@@ -112,24 +126,32 @@ TEST_F(stringCatalogFilterPatternCompileTest, decompiled_pattern_recompiles_to_s
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("arg.job_name matches \"^imp\\\\.[0-9]+\\\"x\" || id matches_i \"0005$\"",
                                             image_)); // [状態] - エスケープを含むパターンをコンパイルする。
-    // [状態確認] - `compile_single_line("arg.job_name matches \"^imp\\\\.[0-9]+\\\"x\" || id matches_i \"0005$\"", image_)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - エスケープを含むパターンをコンパイルした compile_single_line() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_decompile_line(image_, kImageSize, 0U, actual_text,
-                                                                   sizeof(actual_text))); // [手順] - デコンパイルする。
-    // [確認_正常系] - `cplat_string_catalog_filter_decompile_line(image_, kImageSize, 0U, actual_text, sizeof(actual_text))` の戻り値が `CPLAT_OK` であること。
-    ASSERT_EQ(CPLAT_OK, compile_single_line(actual_text, recompiled)); // [手順] - 復元した条件式を再コンパイルする。
-    // [確認_正常系] - `compile_single_line(actual_text, recompiled)` の戻り値が `CPLAT_OK` であること。
+    int actual_ret_decompile = cplat_string_catalog_filter_decompile_line(
+        image_, kImageSize, 0U, actual_text, sizeof(actual_text)); // [手順] - デコンパイルする。
+    ASSERT_EQ(
+        CPLAT_OK,
+        actual_ret_decompile); // [確認_正常系] - cplat_string_catalog_filter_decompile_line() の戻り値が CPLAT_OK であること。
+    int actual_ret_recompile =
+        compile_single_line(actual_text, recompiled); // [手順] - 復元した条件式を再コンパイルする。
 
     // Assert
-    EXPECT_STREQ("arg.job_name matches \"^imp\\\\.[0-9]+\\\"x\" || id matches_i \"0005$\"",
-                 actual_text); // [確認_正常系] - 元の表記へ復元すること。
-    EXPECT_EQ(0, std::memcmp(
-                     filter_test_record_address(image_, kLineWidth, 0U),
-                     filter_test_record_address(recompiled, kLineWidth, 0U),
-                     CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(kLineWidth))); // [確認_正常系] - 元と同じ表現になること。
+    ASSERT_EQ(
+        CPLAT_OK,
+        actual_ret_recompile); // [確認_正常系] - 復元した条件式を再コンパイルした compile_single_line() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "arg.job_name matches \"^imp\\\\.[0-9]+\\\"x\" || id matches_i \"0005$\"",
+        actual_text); // [確認_正常系] - actual_text が "arg.job_name matches \"^imp\\\\.[0-9]+\\\"x\" || id matches_i \"0005$\"" であること。(元の表記へ復元したことの確認)
+    EXPECT_EQ(
+        0,
+        std::memcmp(
+            filter_test_record_address(image_, kLineWidth, 0U), filter_test_record_address(recompiled, kLineWidth, 0U),
+            CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(
+                kLineWidth))); // [確認_正常系] - std::memcmp() の戻り値が 0 であること。(元と同じ表現であることの確認)
 }
 
 // 正規表現として誤ったパターンは、変換の時点で行を無効にし、原因と位置を通知することの確認
@@ -150,10 +172,15 @@ TEST_F(stringCatalogFilterPatternCompileTest, invalid_pattern_is_diagnosed_at_co
                               &invalid_count); // [手順] - 閉じていない括弧を含むパターンをコンパイルする。
 
     // Assert
-    EXPECT_EQ(1U, invalid_count); // [確認_異常系] - 行を無効にすること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_INVALID_PATTERN,
-              diagnostic.error);       // [確認_異常系] - 原因が正規表現の誤りであること。
-    EXPECT_EQ(21U, diagnostic.column); // [確認_異常系] - パターンの字句の位置 (21) が誤りの位置であること。
+    EXPECT_EQ(1U, invalid_count); // [確認_異常系] - invalid_count が 1U であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_INVALID_PATTERN,
+        diagnostic
+            .error); // [確認_異常系] - diagnostic.error が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_INVALID_PATTERN であること。
+    EXPECT_EQ(
+        21U,
+        diagnostic
+            .column); // [確認_異常系] - diagnostic.column が 21U であること。(パターンの字句の位置が誤りの位置であることの確認)
 }
 
 // パターンを書けないフィールドと定数を、型の誤りとして拒否することの確認
@@ -175,14 +202,18 @@ TEST_F(stringCatalogFilterPatternCompileTest, pattern_requires_string_field_and_
         compile_error_of("arg.job_name matches null"); // [手順] - null をパターンにする。
 
     // Assert
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH,
-              actual_key); // [確認_異常系] - 文字列キーを拒否すること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH,
-              actual_category); // [確認_異常系] - 分類値を拒否すること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH,
-              actual_number); // [確認_異常系] - 数値を拒否すること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH,
-              actual_null); // [確認_異常系] - null を拒否すること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH,
+        actual_key); // [確認_異常系] - 文字列キーへ書いた compile_error_of() の戻り値が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH,
+        actual_category); // [確認_異常系] - 分類値へ書いた compile_error_of() の戻り値が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH,
+        actual_number); // [確認_異常系] - 数値をパターンにした compile_error_of() の戻り値が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH,
+        actual_null); // [確認_異常系] - null をパターンにした compile_error_of() の戻り値が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH であること。
 }
 
 // 1 行のパターンの数の上限を超えた場合は、上限の超過として行を無効にすることの確認
@@ -201,10 +232,12 @@ TEST_F(stringCatalogFilterPatternCompileTest, pattern_count_is_limited_per_line)
                          "\"e\""); // [手順] - 5 個を書く。
 
     // Assert
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE,
-              actual_at_limit); // [確認_正常系] - 上限までは受け付けること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED,
-              actual_over_limit); // [確認_異常系] - 上限の超過を拒否すること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE,
+        actual_at_limit); // [確認_正常系] - 上限の 4 個に対する compile_error_of() の戻り値が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED,
+        actual_over_limit); // [確認_異常系] - 5 個に対する compile_error_of() の戻り値が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED であること。
 }
 
 // パターンの番号が見出しのパターンの数を超える場合は、構造の検査で拒否することの確認
@@ -218,7 +251,7 @@ TEST_F(stringCatalogFilterPatternCompileTest, pattern_slot_beyond_count_is_rejec
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("id matches \"0005$\"",
                                             image_)); // [状態] - パターンを 1 個含む条件式をコンパイルする。
-    // [状態確認] - `compile_single_line("id matches \"0005$\"", image_)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - compile_single_line() の戻り値が CPLAT_OK であること。
     record = filter_test_record_address(image_, kLineWidth, 0U);
 
     // Pre-Assert
@@ -231,5 +264,7 @@ TEST_F(stringCatalogFilterPatternCompileTest, pattern_slot_beyond_count_is_rejec
     actual_ret = cplat_string_catalog_filter_validate(image_, kImageSize); // [手順] - 検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_ret); // [確認_異常系] - 範囲外のパターンの番号を拒否すること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 }

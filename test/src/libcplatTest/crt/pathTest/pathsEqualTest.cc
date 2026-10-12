@@ -15,7 +15,7 @@ static void assert_path_get_full_success(char *path_out, size_t path_size, const
 {
     cplat_error err;
     ASSERT_EQ(0, cplat_path_get_full(path_out, path_size, &err, path));
-    // [状態確認] - `cplat_path_get_full(path_out, path_size, &err, path)` の戻り値が `0` であること。
+    // [状態確認] - cplat_path_get_full() の戻り値が 0 であること。
 }
 // [サブ手順終了]
 
@@ -24,9 +24,9 @@ static void build_path(char *path_out, size_t path_size, const char *lhs, const 
 {
     int written = std::snprintf(path_out, path_size, "%s/%s", lhs, rhs);
     ASSERT_GE(written, 0);
-    // [状態確認] - `written` が `0` 以上であること。
+    // [状態確認] - written が 0 以上であること。
     ASSERT_LT((size_t)written, path_size);
-    // [状態確認] - `(size_t)written` が `path_size` より小さいこと。
+    // [状態確認] - (size_t)written が path_size より小さいこと。
 }
 // [サブ手順終了]
 
@@ -36,9 +36,9 @@ static void build_three_part_path(char *path_out, size_t path_size, const char *
 {
     int written = std::snprintf(path_out, path_size, "%s/%s/%s", lhs, middle, rhs);
     ASSERT_GE(written, 0);
-    // [状態確認] - `written` が `0` 以上であること。
+    // [状態確認] - written が 0 以上であること。
     ASSERT_LT((size_t)written, path_size);
-    // [状態確認] - `(size_t)written` が `path_size` より小さいこと。
+    // [状態確認] - (size_t)written が path_size より小さいこと。
 }
 // [サブ手順終了]
 
@@ -65,9 +65,16 @@ TEST_F(pathsEqualTest, returns_einval_for_null_lhs)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              rc); // [確認_異常系] - cplat_path_equal の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(1, cplat_error_is(&err, CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - EINVAL の要因が返ること。
-    EXPECT_EQ(1, cplat_error_is_set(&last_error)); // [確認_異常系] - TLS に詳細エラーが記録されること。
+              rc); // [確認_異常系] - cplat_path_equal() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &err,
+            CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(err の要因が CPLAT_CAUSE_INVALID_ARGUMENT であることの確認)
+    EXPECT_EQ(
+        1,
+        cplat_error_is_set(
+            &last_error)); // [確認_異常系] - cplat_error_is_set() の戻り値が 1 であること。(TLS に詳細エラーが記録されたことの確認)
 }
 
 // 右辺パスの取得に失敗した場合にそのエラーを返すことの確認
@@ -80,7 +87,7 @@ TEST_F(pathsEqualTest, returns_error_when_rhs_path_cannot_be_resolved)
 
     ASSERT_EQ(CPLAT_OK, cplat_path_get_full(lhs, sizeof(lhs), NULL,
                                             ".")); // [状態] - カレントディレクトリから左辺パスを取得する。
-                                                   // [状態確認] - 左辺パスの取得が成功すること。
+    // [状態確認] - cplat_path_get_full() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -90,10 +97,13 @@ TEST_F(pathsEqualTest, returns_error_when_rhs_path_cannot_be_resolved)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              result); // [確認_異常系] - cplat_path_equal の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(1, cplat_error_is(&err,
-                                CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - 右辺取得時の EINVAL が返ること。
-    EXPECT_EQ(1, equal); // [確認_異常系] - 右辺取得に失敗して比較結果が変更されないこと。
+              result); // [確認_異常系] - cplat_path_equal() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &err,
+            CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(err の要因が CPLAT_CAUSE_INVALID_ARGUMENT であることの確認)
+    EXPECT_EQ(1, equal); // [確認_異常系] - equal が 1 であること。(右辺取得に失敗して比較結果が変更されないことの確認)
 }
 
 // 比較結果の出力先が NULL の場合に不正引数で失敗することの確認
@@ -110,8 +120,12 @@ TEST_F(pathsEqualTest, returns_invalid_argument_for_null_equal_out)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              result); // [確認_異常系] - cplat_path_equal の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(1, cplat_error_is(&err, CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - EINVAL の要因が返ること。
+              result); // [確認_異常系] - cplat_path_equal() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &err,
+            CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(err の要因が CPLAT_CAUSE_INVALID_ARGUMENT であることの確認)
 }
 
 // 相対パスと絶対パスが同じ実体なら一致と判定されることの確認
@@ -133,8 +147,8 @@ TEST_F(pathsEqualTest, compares_relative_and_absolute_current_directory_as_equal
                               &err); // [手順] - 相対パス "." と絶対パスを比較する。
 
     // Assert
-    ASSERT_EQ(CPLAT_OK, rc); // [確認_正常系] - cplat_path_equal の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1, equal);     // [確認_正常系] - equal_out が 1 (一致) であること。
+    ASSERT_EQ(CPLAT_OK, rc); // [確認_正常系] - cplat_path_equal() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, equal);     // [確認_正常系] - equal が 1 であること。(一致であることの確認)
 }
 
 // ".." やバックスラッシュを含むパスが正規化されて比較されることの確認
@@ -161,8 +175,8 @@ TEST_F(pathsEqualTest, normalizes_dotdot_and_backslash_segments_before_comparing
     int rc = cplat_path_equal(lhs, rhs, &equal, &err); // [手順] - 表記ゆれのある 2 つのパスを比較する。
 
     // Assert
-    ASSERT_EQ(CPLAT_OK, rc); // [確認_正常系] - cplat_path_equal の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1, equal);     // [確認_正常系] - equal_out が 1 (正規化後に一致) であること。
+    ASSERT_EQ(CPLAT_OK, rc); // [確認_正常系] - cplat_path_equal() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, equal);     // [確認_正常系] - equal が 1 であること。(正規化後に一致であることの確認)
 }
 
 // 異なるパスが不一致と判定されることの確認
@@ -188,8 +202,8 @@ TEST_F(pathsEqualTest, returns_zero_for_different_paths)
     int rc = cplat_path_equal(lhs, rhs, &equal, &err); // [手順] - 異なる 2 つのパスを比較する。
 
     // Assert
-    ASSERT_EQ(CPLAT_OK, rc); // [確認_正常系] - cplat_path_equal の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(0, equal);     // [確認_正常系] - equal_out が 0 (不一致) であること。
+    ASSERT_EQ(CPLAT_OK, rc); // [確認_正常系] - cplat_path_equal() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0, equal);     // [確認_正常系] - equal が 0 であること。(不一致であることの確認)
 }
 
 #if defined(PLATFORM_LINUX)
@@ -204,7 +218,7 @@ TEST_F(pathsEqualTest, returns_enomem_when_lhs_normalization_allocation_fails)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_calloc(PLATFORM_PATH_MAX, sizeof(size_t)))
         .WillOnce(Return(
-            nullptr)); // [Pre-Assert確認_異常系] - 左辺パスの正規化用メモリの cplat_calloc が 1 回呼び出されること。
+            nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が PLATFORM_PATH_MAX、sizeof(size_t) を指定して 1 回呼び出されること。(左辺パスの正規化用メモリを確保する呼び出しであることの確認)
                        // [Pre-Assert手順] - cplat_calloc から NULL を返却する。
 
     // Act
@@ -213,8 +227,12 @@ TEST_F(pathsEqualTest, returns_enomem_when_lhs_normalization_allocation_fails)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
-              rc); // [確認_異常系] - cplat_path_equal の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
-    EXPECT_EQ(1, cplat_error_is(&err, CPLAT_CAUSE_OUT_OF_MEMORY)); // [確認_異常系] - ENOMEM の要因が返ること。
+              rc); // [確認_異常系] - cplat_path_equal() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &err,
+            CPLAT_CAUSE_OUT_OF_MEMORY)); // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(err の要因が CPLAT_CAUSE_OUT_OF_MEMORY であることの確認)
 }
 
 // Linux では大小文字を区別して比較されることの確認
@@ -240,8 +258,8 @@ TEST_F(pathsEqualTest, keeps_case_sensitive_comparison_on_linux)
     int rc = cplat_path_equal(lhs, rhs, &equal, &err); // [手順] - 大小文字だけが異なるパスを比較する。
 
     // Assert
-    ASSERT_EQ(CPLAT_OK, rc); // [確認_正常系] - cplat_path_equal の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(0, equal);     // [確認_正常系] - equal_out が 0 (大小文字を区別して不一致) であること。
+    ASSERT_EQ(CPLAT_OK, rc); // [確認_正常系] - cplat_path_equal() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0, equal);     // [確認_正常系] - equal が 0 であること。(大小文字を区別して不一致であることの確認)
 }
 #elif defined(PLATFORM_WINDOWS)
 // Windows では大小文字差を無視して比較されることの確認
@@ -267,7 +285,7 @@ TEST_F(pathsEqualTest, ignores_case_differences_on_windows)
     int rc = cplat_path_equal(lhs, rhs, &equal, &err); // [手順] - 大小文字だけが異なるパスを比較する。
 
     // Assert
-    ASSERT_EQ(CPLAT_OK, rc); // [確認_正常系] - cplat_path_equal の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1, equal);     // [確認_正常系] - equal_out が 1 (大小文字差を無視して一致) であること。
+    ASSERT_EQ(CPLAT_OK, rc); // [確認_正常系] - cplat_path_equal() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, equal);     // [確認_正常系] - equal が 1 であること。(大小文字差を無視して一致であることの確認)
 }
 #endif

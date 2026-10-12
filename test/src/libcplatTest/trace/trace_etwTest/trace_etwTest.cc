@@ -26,7 +26,8 @@ TEST_F(trace_etwTest, test_init_and_dispose)
     cplat_etw_provider *handle = cplat_etw_provider_create(s_test_provider); // [手順] - ETW provider を登録する。
 
     // Assert
-    EXPECT_NE((cplat_etw_provider *)NULL, handle); // [確認_正常系] - ハンドルが NULL でないこと。
+    EXPECT_NE((cplat_etw_provider *)NULL,
+              handle); // [確認_正常系] - cplat_etw_provider_create() の戻り値が NULL 以外であること。
 
     // Cleanup
     cplat_etw_provider_dispose(handle);
@@ -38,7 +39,8 @@ TEST_F(trace_etwTest, test_write_returns_zero)
     // Arrange
     cplat_etw_provider *handle =
         cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
-    ASSERT_NE((cplat_etw_provider *)NULL, handle);  // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE((cplat_etw_provider *)NULL,
+              handle); // [状態確認] - cplat_etw_provider_create() の戻り値が NULL 以外であること。
 
     // Pre-Assert
 
@@ -48,7 +50,7 @@ TEST_F(trace_etwTest, test_write_returns_zero)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              result); // [確認_正常系] - cplat_etw_provider_write の戻り値が CPLAT_OK であること。
+              result); // [確認_正常系] - cplat_etw_provider_write() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_etw_provider_dispose(handle);
@@ -60,7 +62,8 @@ TEST_F(trace_etwTest, test_write_all_levels)
     // Arrange
     cplat_etw_provider *handle =
         cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
-    ASSERT_NE((cplat_etw_provider *)NULL, handle);  // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE((cplat_etw_provider *)NULL,
+              handle); // [状態確認] - cplat_etw_provider_create() の戻り値が NULL 以外であること。
 
     // Pre-Assert
 
@@ -73,11 +76,21 @@ TEST_F(trace_etwTest, test_write_all_levels)
     int actual_ret_verbose = cplat_etw_provider_write(handle, 5, NULL, "verbose");
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_critical); // [確認_正常系] - CRITICAL レベルで書き込めること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_error);    // [確認_正常系] - ERROR レベルで書き込めること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_warning);  // [確認_正常系] - WARNING レベルで書き込めること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_info);     // [確認_正常系] - INFO レベルで書き込めること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_verbose);  // [確認_正常系] - VERBOSE レベルで書き込めること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_critical); // [確認_正常系] - CRITICAL レベルでの cplat_etw_provider_write() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_error); // [確認_正常系] - ERROR レベルでの cplat_etw_provider_write() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_warning); // [確認_正常系] - WARNING レベルでの cplat_etw_provider_write() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_info); // [確認_正常系] - INFO レベルでの cplat_etw_provider_write() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_verbose); // [確認_正常系] - VERBOSE レベルでの cplat_etw_provider_write() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_etw_provider_dispose(handle);
@@ -95,21 +108,23 @@ TEST_F(trace_etwTest, test_null_arguments_are_safe)
     // Act
     cplat_etw_provider_dispose(NULL); // [手順] - NULL ハンドルで dispose を呼び出す。
 
+    cplat_etw_provider *actual_ret_create =
+        cplat_etw_provider_create(NULL); // [手順] - NULL provider_ref で create を呼び出す。
+    int actual_ret_null_handle =
+        cplat_etw_provider_write(NULL, 4, NULL, "test message"); // [手順] - NULL ハンドルで write を呼び出す。
+    int actual_ret_null_message =
+        cplat_etw_provider_write(handle, 4, NULL, NULL); // [手順] - NULL message で write を呼び出す。
+
     // Assert
     EXPECT_EQ(
         (cplat_etw_provider *)NULL,
-        cplat_etw_provider_create(
-            NULL)); // [確認_異常系] - cplat_etw_provider_create の戻り値から、NULL provider_ref で create が失敗したと判断できること。
+        actual_ret_create); // [確認_異常系] - NULL provider_ref に対する cplat_etw_provider_create() の戻り値が NULL であること。
     EXPECT_EQ(
         CPLAT_OK,
-        cplat_etw_provider_write(
-            NULL, 4, NULL,
-            "test message")); // [確認_異常系] - NULL ハンドルに対する cplat_etw_provider_write の戻り値が CPLAT_OK であること。
+        actual_ret_null_handle); // [確認_異常系] - NULL ハンドルに対する cplat_etw_provider_write() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_OK,
-        cplat_etw_provider_write(
-            handle, 4, NULL,
-            NULL)); // [確認_異常系] - NULL message に対する cplat_etw_provider_write の戻り値が CPLAT_OK であること。
+        actual_ret_null_message); // [確認_異常系] - NULL message に対する cplat_etw_provider_write() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_etw_provider_dispose(handle);

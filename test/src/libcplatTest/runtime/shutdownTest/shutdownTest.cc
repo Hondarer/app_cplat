@@ -99,13 +99,13 @@ TEST_F(shutdownTest, test_callbacks_are_invoked_in_lifo_order)
 
     ASSERT_EQ(CPLAT_OK, cplat_shutdown_register(record_callback,
                                                 &first)); // [状態] - 記録用 callback を id 1 で登録する。
-    // [状態確認] - 1 件目の cplat_shutdown_register の戻り値が CPLAT_OK であること。
+    // [状態確認] - 1 件目の cplat_shutdown_register() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_shutdown_register(record_callback,
                                                 &second)); // [状態] - 記録用 callback を id 2 で登録する。
-    // [状態確認] - 2 件目の cplat_shutdown_register の戻り値が CPLAT_OK であること。
+    // [状態確認] - 2 件目の cplat_shutdown_register() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_shutdown_register(record_callback,
                                                 &third)); // [状態] - 記録用 callback を id 3 で登録する。
-    // [状態確認] - 3 件目の cplat_shutdown_register の戻り値が CPLAT_OK であること。
+    // [状態確認] - 3 件目の cplat_shutdown_register() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -116,17 +116,28 @@ TEST_F(shutdownTest, test_callbacks_are_invoked_in_lifo_order)
 
     // Assert
     ASSERT_EQ(CPLAT_OK,
-              result);          // [確認_正常系] - cplat_shutdown_invoke_for_test の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1, invoked);      // [確認_正常系] - invoked_out が 1 (実行した) であること。
-    ASSERT_EQ(3, g_call_count); // [確認_正常系] - callback が 3 回呼ばれること。
-    EXPECT_EQ(3, g_order[0]);   // [確認_正常系] - 最後に登録した callback から実行されること。
-    EXPECT_EQ(2, g_order[1]);   // [確認_正常系] - 2 番目に登録した callback が続くこと。
-    EXPECT_EQ(1, g_order[2]);   // [確認_正常系] - 最初に登録した callback が最後に実行されること。
-    EXPECT_EQ(CPLAT_SHUTDOWN_REASON_NORMAL_EXIT,
-              g_last_event.reason); // [確認_正常系] - 終了理由が callback に渡ること。
-    EXPECT_EQ(CPLAT_SHUTDOWN_CODE_KIND_EXIT_CODE,
-              g_last_event.code_kind); // [確認_正常系] - code_kind が callback に渡ること。
-    EXPECT_EQ(7, g_last_event.code);   // [確認_正常系] - 終了コード 7 が callback に渡ること。
+              result);          // [確認_正常系] - cplat_shutdown_invoke_for_test() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, invoked);      // [確認_正常系] - invoked が 1 であること。(実行したことの確認)
+    ASSERT_EQ(3, g_call_count); // [確認_正常系] - g_call_count が 3 であること。(callback が 3 回呼ばれることの確認)
+    EXPECT_EQ(
+        3,
+        g_order[0]); // [確認_正常系] - g_order[0] が 3 であること。(最後に登録した callback から実行されることの確認)
+    EXPECT_EQ(2,
+              g_order[1]); // [確認_正常系] - g_order[1] が 2 であること。(2 番目に登録した callback が続くことの確認)
+    EXPECT_EQ(
+        1,
+        g_order
+            [2]); // [確認_正常系] - g_order[2] が 1 であること。(最初に登録した callback が最後に実行されることの確認)
+    EXPECT_EQ(
+        CPLAT_SHUTDOWN_REASON_NORMAL_EXIT,
+        g_last_event.reason); // [確認_正常系] - g_last_event.reason が CPLAT_SHUTDOWN_REASON_NORMAL_EXIT であること。
+    EXPECT_EQ(
+        CPLAT_SHUTDOWN_CODE_KIND_EXIT_CODE,
+        g_last_event
+            .code_kind); // [確認_正常系] - g_last_event.code_kind が CPLAT_SHUTDOWN_CODE_KIND_EXIT_CODE であること。
+    EXPECT_EQ(
+        7, g_last_event
+               .code); // [確認_正常系] - g_last_event.code が 7 であること。(終了コード 7 が callback に渡ることの確認)
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 
@@ -140,7 +151,7 @@ TEST_F(shutdownTest, test_multiple_invoke_runs_callbacks_only_once)
                                             0); // [状態] - プロセス終了中イベントを用意する。
 
     ASSERT_EQ(CPLAT_OK, cplat_shutdown_register(record_callback, &id)); // [状態] - 記録用 callback を 1 件登録する。
-    // [状態確認] - cplat_shutdown_register の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_shutdown_register() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -155,12 +166,19 @@ TEST_F(shutdownTest, test_multiple_invoke_runs_callbacks_only_once)
         cplat_shutdown_register(record_callback, &id); // [手順] - shutdown 後に新規登録を試みる。
 
     // Assert
-    ASSERT_EQ(CPLAT_OK, first_result);                     // [確認_正常系] - 1 回目の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1, first_invoked);                           // [確認_正常系] - 1 回目は実行されること。
-    ASSERT_EQ(CPLAT_OK, second_result);                    // [確認_正常系] - 2 回目の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(0, second_invoked);                          // [確認_正常系] - 2 回目は再実行されないこと。
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, register_after_shutdown); // [確認_正常系] - shutdown 開始後の登録が拒否されること。
-    EXPECT_EQ(1, g_call_count);                            // [確認_正常系] - callback は 1 回だけ実行されること。
+    ASSERT_EQ(
+        CPLAT_OK,
+        first_result); // [確認_正常系] - 1 回目の cplat_shutdown_invoke_for_test() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, first_invoked); // [確認_正常系] - first_invoked が 1 であること。(1 回目は実行されることの確認)
+    ASSERT_EQ(
+        CPLAT_OK,
+        second_result); // [確認_正常系] - 2 回目の cplat_shutdown_invoke_for_test() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0, second_invoked); // [確認_正常系] - second_invoked が 0 であること。(2 回目は再実行されないことの確認)
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        register_after_shutdown); // [確認_正常系] - shutdown 開始後の cplat_shutdown_register() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(1,
+              g_call_count); // [確認_正常系] - g_call_count が 1 であること。(callback は 1 回だけ実行されることの確認)
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 
@@ -180,14 +198,14 @@ TEST_F(shutdownTest, test_request_callbacks_do_not_consume_final_shutdown)
 
     ASSERT_EQ(CPLAT_OK, cplat_shutdown_request_register(
                             record_callback, &request_first)); // [状態] - 終了要求 callback を id 1 で登録する。
-    // [状態確認] - 1 件目の cplat_shutdown_request_register の戻り値が CPLAT_OK であること。
+    // [状態確認] - 1 件目の cplat_shutdown_request_register() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_shutdown_request_register(
                             record_callback, &request_second)); // [状態] - 終了要求 callback を id 2 で登録する。
-    // [状態確認] - 2 件目の cplat_shutdown_request_register の戻り値が CPLAT_OK であること。
+    // [状態確認] - 2 件目の cplat_shutdown_request_register() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
               cplat_shutdown_register(record_callback,
                                       &final_id)); // [状態] - 最終 shutdown callback を id 3 で 1 件登録する。
-    // [状態確認] - cplat_shutdown_register の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_shutdown_register() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -199,13 +217,22 @@ TEST_F(shutdownTest, test_request_callbacks_do_not_consume_final_shutdown)
     // Assert
     ASSERT_EQ(
         CPLAT_OK,
-        request_result); // [確認_正常系] - cplat_shutdown_request_invoke_for_test の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1, request_invoked); // [確認_正常系] - invoked_out が 1 (実行した) であること。
-    ASSERT_EQ(2, g_call_count);    // [確認_正常系] - request callback が 2 件だけ実行されること。
-    EXPECT_EQ(2, g_order[0]);      // [確認_正常系] - request callback も LIFO 順で実行されること。
-    EXPECT_EQ(1, g_order[1]);      // [確認_正常系] - 最初の request callback が最後に実行されること。
-    EXPECT_EQ(CPLAT_SHUTDOWN_REASON_SIGNAL_OR_CONSOLE_EVENT,
-              g_last_event.reason); // [確認_正常系] - request イベントが渡ること。
+        request_result); // [確認_正常系] - cplat_shutdown_request_invoke_for_test() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, request_invoked); // [確認_正常系] - request_invoked が 1 であること。(実行したことの確認)
+    ASSERT_EQ(
+        2,
+        g_call_count); // [確認_正常系] - g_call_count が 2 であること。(request callback が 2 件だけ実行されることの確認)
+    EXPECT_EQ(
+        2,
+        g_order[0]); // [確認_正常系] - g_order[0] が 2 であること。(request callback も LIFO 順で実行されることの確認)
+    EXPECT_EQ(
+        1,
+        g_order
+            [1]); // [確認_正常系] - g_order[1] が 1 であること。(最初の request callback が最後に実行されることの確認)
+    EXPECT_EQ(
+        CPLAT_SHUTDOWN_REASON_SIGNAL_OR_CONSOLE_EVENT,
+        g_last_event
+            .reason); // [確認_正常系] - g_last_event.reason が CPLAT_SHUTDOWN_REASON_SIGNAL_OR_CONSOLE_EVENT であること。
 
     reset_records();
 
@@ -213,12 +240,17 @@ TEST_F(shutdownTest, test_request_callbacks_do_not_consume_final_shutdown)
     int final_result =
         cplat_shutdown_invoke_for_test(&final_event, &final_invoked); // [手順] - 続けて最終 shutdown を実行する。
 
-    ASSERT_EQ(CPLAT_OK, final_result); // [確認_正常系] - final shutdown の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1, final_invoked);       // [確認_正常系] - final shutdown が別途実行できること。
-    ASSERT_EQ(1, g_call_count);        // [確認_正常系] - final callback は独立して 1 件実行されること。
-    EXPECT_EQ(3, g_order[0]);          // [確認_正常系] - final callback が実行されること。
-    EXPECT_EQ(CPLAT_SHUTDOWN_REASON_NORMAL_EXIT,
-              g_last_event.reason); // [確認_正常系] - final shutdown では通常終了イベントが渡ること。
+    ASSERT_EQ(CPLAT_OK,
+              final_result); // [確認_正常系] - cplat_shutdown_invoke_for_test() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1, final_invoked); // [確認_正常系] - final_invoked が 1 であること。(final shutdown が別途実行できることの確認)
+    ASSERT_EQ(
+        1,
+        g_call_count); // [確認_正常系] - g_call_count が 1 であること。(final callback は独立して 1 件実行されることの確認)
+    EXPECT_EQ(3, g_order[0]); // [確認_正常系] - g_order[0] が 3 であること。(final callback が実行されることの確認)
+    EXPECT_EQ(
+        CPLAT_SHUTDOWN_REASON_NORMAL_EXIT,
+        g_last_event.reason); // [確認_正常系] - g_last_event.reason が CPLAT_SHUTDOWN_REASON_NORMAL_EXIT であること。
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 
@@ -234,7 +266,7 @@ TEST_F(shutdownTest, test_request_callback_runs_only_once)
 
     ASSERT_EQ(CPLAT_OK,
               cplat_shutdown_request_register(record_callback, &id)); // [状態] - 終了要求 callback を 1 件登録する。
-    // [状態確認] - cplat_shutdown_request_register の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_shutdown_request_register() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -249,12 +281,20 @@ TEST_F(shutdownTest, test_request_callback_runs_only_once)
         cplat_shutdown_request_register(record_callback, &id); // [手順] - 通知後に新規登録を試みる。
 
     // Assert
-    ASSERT_EQ(CPLAT_OK, first_result);                    // [確認_正常系] - 1 回目の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1, first_invoked);                          // [確認_正常系] - 1 回目は実行されること。
-    ASSERT_EQ(CPLAT_OK, second_result);                   // [確認_正常系] - 2 回目の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(0, second_invoked);                         // [確認_正常系] - 2 回目は再実行されないこと。
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, register_after_request); // [確認_正常系] - 通知後の登録は拒否されること。
-    EXPECT_EQ(1, g_call_count); // [確認_正常系] - request callback は 1 回だけ実行されること。
+    ASSERT_EQ(
+        CPLAT_OK,
+        first_result); // [確認_正常系] - 1 回目の cplat_shutdown_request_invoke_for_test() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, first_invoked); // [確認_正常系] - first_invoked が 1 であること。(1 回目は実行されることの確認)
+    ASSERT_EQ(
+        CPLAT_OK,
+        second_result); // [確認_正常系] - 2 回目の cplat_shutdown_request_invoke_for_test() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0, second_invoked); // [確認_正常系] - second_invoked が 0 であること。(2 回目は再実行されないことの確認)
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        register_after_request); // [確認_正常系] - 通知後の cplat_shutdown_request_register() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        1,
+        g_call_count); // [確認_正常系] - g_call_count が 1 であること。(request callback は 1 回だけ実行されることの確認)
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 
@@ -282,7 +322,7 @@ TEST_F(shutdownTest, test_cplat_exit_preserves_exit_code)
             cplat_exit(7);
         },
         ::testing::ExitedWithCode(7), "reason=0 kind=1 code=7");
-    // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_reset_for_test(); cplat_shutdown_register(print_callback, NULL); cplat_exit(7); }, ::testing::ExitedWithCode(7), "reason=0 kind=1 code=7") の期待が成立すること。
+    // [確認_正常系] - 子プロセスが終了コード 7 で終了し、標準エラー出力が "reason=0 kind=1 code=7" と一致すること。(終了コード 7 を保持したまま callback にイベントが渡ることの確認)
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 
@@ -313,7 +353,7 @@ TEST_F(shutdownTest, test_cplat_exit_clamps_code_above_range)
             cplat_exit(256);
         },
         ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE), "reason=0 kind=1 code=125");
-    // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_reset_for_test(); cplat_shutdown_register(print_callback, NULL); cplat_exit(256); }, ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE), "reason=0 kind=1 code=125") の期待が成立すること。
+    // [確認_正常系] - 子プロセスが終了コード CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE で終了し、標準エラー出力が "reason=0 kind=1 code=125" と一致すること。(範囲外の終了コードが差し替わり、callback に code=125 のイベントが渡ることの確認)
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 
@@ -342,7 +382,7 @@ TEST_F(shutdownTest, test_cplat_exit_clamps_negative_code)
             cplat_exit(-1);
         },
         ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE), "reason=0 kind=1 code=125");
-    // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_reset_for_test(); cplat_shutdown_register(print_callback, NULL); cplat_exit(-1); }, ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE), "reason=0 kind=1 code=125") の期待が成立すること。
+    // [確認_正常系] - 子プロセスが終了コード CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE で終了し、標準エラー出力が "reason=0 kind=1 code=125" と一致すること。(負の終了コードが差し替わり、callback に code=125 のイベントが渡ることの確認)
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 
@@ -372,7 +412,7 @@ TEST_F(shutdownTest, test_cplat_exit_preserves_upper_bound_code)
             cplat_exit(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1);
         },
         ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1), "reason=0 kind=1 code=124");
-    // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_reset_for_test(); cplat_shutdown_register(print_callback, NULL); cplat_exit(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1); }, ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1), "reason=0 kind=1 code=124") の期待が成立すること。
+    // [確認_正常系] - 子プロセスが終了コード CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1 で終了し、標準エラー出力が "reason=0 kind=1 code=124" と一致すること。(範囲上限の終了コード 124 が差し替わらず、callback に code=124 のイベントが渡ることの確認)
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 
@@ -403,7 +443,7 @@ TEST_F(shutdownTest, test_explicit_invoke_prevents_atexit_double_execution)
             exit(0);
         },
         ::testing::ExitedWithCode(0), "count=1");
-    // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_event event = make_event(CPLAT_SHUTDOWN_REASON_NORMAL_EXIT, CPLAT_SHUTDOWN_CODE_KIND_NONE, 0); cplat_shutdown_reset_for_test(); cplat_shutdown_register(print_count_callback, NULL); cplat_shutdown_invoke_for_test(&event, NULL); exit(0); }, ::testing::ExitedWithCode(0), "count=1") の期待が成立すること。
+    // [確認_正常系] - 子プロセスが終了コード 0 で終了し、標準エラー出力が "count=1" と一致すること。(callback の実行回数が 1 のまま二重実行されないことの確認)
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 
@@ -431,7 +471,7 @@ TEST_F(shutdownTest, test_sigint_is_reported_to_callback)
             exit(0);
         },
         ::testing::ExitedWithCode(0), "reason=2 kind=2 code=2.*after-sigint");
-    // [確認_正常系] - EXPECT_EXIT({ cplat_shutdown_reset_for_test(); cplat_shutdown_request_register(print_callback, NULL); raise(SIGINT); fprintf(stderr, "after-sigint\n"); exit(0); }, ::testing::ExitedWithCode(0), "reason=2 kind=2 code=2.*after-sigint") の期待が成立すること。
+    // [確認_正常系] - 子プロセスが終了コード 0 で終了し、標準エラー出力が正規表現 "reason=2 kind=2 code=2.*after-sigint" に一致すること。(SIGINT が callback へ報告された後も処理が継続することの確認)
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 
@@ -444,22 +484,24 @@ TEST_F(shutdownTest, test_unhandled_signal_invokes_final_callbacks_and_reraises)
     int id = 1;
     ASSERT_EQ(CPLAT_OK,
               cplat_shutdown_register(record_callback, &id)); // [状態] - 最終 shutdown callback を 1 件登録する。
-    // [状態確認] - cplat_shutdown_register の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_shutdown_register() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_signal, signal(_, _, _, _, SIG_DFL))
-        .WillOnce(Return(SIG_DFL)); // [Pre-Assert確認_正常系] - signal が SIG_DFL を指定して 1 回呼び出されること。
+        .WillOnce(Return(SIG_DFL)); // [Pre-Assert確認_正常系] - signal() が SIG_DFL を指定して 1 回呼び出されること。
                                     // [Pre-Assert手順] - signal から SIG_DFL を返却する。
     EXPECT_CALL(mock_signal, raise(_, _, _, SIGTERM))
-        .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - raise が SIGTERM を指定して 1 回呼び出されること。
+        .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - raise() が SIGTERM を指定して 1 回呼び出されること。
                               // [Pre-Assert手順] - raise から 0 を返却する。
 
     // Act
     test_shutdown_signal_handler(SIGTERM); // [手順] - callback がない SIGTERM のシグナル ハンドラーを実行する。
 
     // Assert
-    EXPECT_EQ(1, g_call_count);            // [確認_正常系] - 最終 shutdown callback が 1 回実行されること。
-    EXPECT_EQ(SIGTERM, g_last_event.code); // [確認_正常系] - callback へ SIGTERM の番号が渡ること。
+    EXPECT_EQ(
+        1,
+        g_call_count); // [確認_正常系] - g_call_count が 1 であること。(最終 shutdown callback が 1 回実行されることの確認)
+    EXPECT_EQ(SIGTERM, g_last_event.code); // [確認_正常系] - g_last_event.code が SIGTERM であること。
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 
@@ -472,18 +514,19 @@ TEST_F(shutdownTest, test_repeated_signal_request_returns_without_reraise)
         make_event(CPLAT_SHUTDOWN_REASON_SIGNAL_OR_CONSOLE_EVENT, CPLAT_SHUTDOWN_CODE_KIND_SIGNAL_NUMBER, SIGINT);
     ASSERT_EQ(CPLAT_OK,
               cplat_shutdown_request_invoke_for_test(&event, NULL)); // [状態] - 終了要求を処理済みの状態にする。
-    // [状態確認] - cplat_shutdown_request_invoke_for_test の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_shutdown_request_invoke_for_test() の戻り値が CPLAT_OK であること。
     NiceMock<Mock_signal> mock_signal;
 
     // Pre-Assert
-    EXPECT_CALL(mock_signal, signal(_, _, _, _, _)).Times(0); // [Pre-Assert確認_正常系] - signal が呼び出されないこと。
-    EXPECT_CALL(mock_signal, raise(_, _, _, _)).Times(0);     // [Pre-Assert確認_正常系] - raise が呼び出されないこと。
+    EXPECT_CALL(mock_signal, signal(_, _, _, _, _))
+        .Times(0);                                        // [Pre-Assert確認_正常系] - signal() が呼び出されないこと。
+    EXPECT_CALL(mock_signal, raise(_, _, _, _)).Times(0); // [Pre-Assert確認_正常系] - raise() が呼び出されないこと。
 
     // Act
     test_shutdown_signal_handler(SIGINT); // [手順] - 終了要求処理済みの状態で SIGINT のハンドラーを実行する。
 
     // Assert
-    EXPECT_EQ(0, g_call_count); // [確認_正常系] - callback が追加実行されないこと。
+    EXPECT_EQ(0, g_call_count); // [確認_正常系] - g_call_count が 0 であること。(callback が追加実行されないことの確認)
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 
@@ -497,7 +540,7 @@ TEST_F(shutdownTest, test_registration_and_invoke_reject_invalid_inputs)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(Return(nullptr))
-        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc が 2 回呼び出されること。
+        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc() が 2 回呼び出されること。
                                     // [Pre-Assert手順] - cplat_malloc から NULL を返却する。
 
     // Act
@@ -515,21 +558,24 @@ TEST_F(shutdownTest, test_registration_and_invoke_reject_invalid_inputs)
         cplat_shutdown_request_invoke_for_test(NULL, NULL); // [手順] - NULL イベントで終了要求を実行する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              register_null_result); // [確認_異常系] - cplat_shutdown_register が NULL callback を拒否すること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        request_register_null_result); // [確認_異常系] - cplat_shutdown_request_register が NULL callback を拒否すること。
-    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
-              register_oom_result); // [確認_異常系] - cplat_shutdown_register がメモリ不足を通知すること。
+        register_null_result); // [確認_異常系] - NULL callback に対する cplat_shutdown_register() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        request_register_null_result); // [確認_異常系] - NULL callback に対する cplat_shutdown_request_register() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_MEMORY,
-        request_register_oom_result); // [確認_異常系] - cplat_shutdown_request_register がメモリ不足を通知すること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              invoke_null_result); // [確認_異常系] - cplat_shutdown_invoke_for_test が NULL イベントを拒否すること。
+        register_oom_result); // [確認_異常系] - malloc 失敗時の cplat_shutdown_register() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_MEMORY,
+        request_register_oom_result); // [確認_異常系] - malloc 失敗時の cplat_shutdown_request_register() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        request_invoke_null_result); // [確認_異常系] - cplat_shutdown_request_invoke_for_test が NULL イベントを拒否すること。
+        invoke_null_result); // [確認_異常系] - NULL イベントに対する cplat_shutdown_invoke_for_test() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        request_invoke_null_result); // [確認_異常系] - NULL イベントに対する cplat_shutdown_request_invoke_for_test() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 
@@ -541,7 +587,7 @@ TEST_F(shutdownTest, test_request_registration_after_final_shutdown_is_rejected)
     cplat_shutdown_event event = make_event(CPLAT_SHUTDOWN_REASON_NORMAL_EXIT, CPLAT_SHUTDOWN_CODE_KIND_NONE, 0);
     ASSERT_EQ(CPLAT_OK,
               cplat_shutdown_invoke_for_test(&event, NULL)); // [状態] - 最終 shutdown を実行済みの状態にする。
-    // [状態確認] - cplat_shutdown_invoke_for_test の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_shutdown_invoke_for_test() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -553,11 +599,15 @@ TEST_F(shutdownTest, test_request_registration_after_final_shutdown_is_rejected)
         &event, &request_invoked); // [手順] - 最終 shutdown 開始後に終了要求 callback の実行を試みる。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              result); // [確認_異常系] - cplat_shutdown_request_register が CPLAT_ERR_UNKNOWN を返すこと。
-    EXPECT_EQ(CPLAT_OK,
-              invoke_result); // [確認_正常系] - cplat_shutdown_request_invoke_for_test の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(0, request_invoked); // [確認_正常系] - 最終 shutdown 開始後は終了要求 callback が実行されないこと。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        result); // [確認_異常系] - 最終 shutdown 開始後の cplat_shutdown_request_register() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        invoke_result); // [確認_正常系] - cplat_shutdown_request_invoke_for_test() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0,
+        request_invoked); // [確認_正常系] - request_invoked が 0 であること。(最終 shutdown 開始後は終了要求 callback が実行されないことの確認)
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 
@@ -569,10 +619,10 @@ TEST_F(shutdownTest, test_reset_discards_pending_callbacks)
     int id = 1;
     ASSERT_EQ(CPLAT_OK,
               cplat_shutdown_register(record_callback, &id)); // [状態] - 最終 shutdown callback を 1 件登録する。
-    // [状態確認] - cplat_shutdown_register の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_shutdown_register() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
               cplat_shutdown_request_register(record_callback, &id)); // [状態] - 終了要求 callback を 1 件登録する。
-    // [状態確認] - cplat_shutdown_request_register の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_shutdown_request_register() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -580,7 +630,9 @@ TEST_F(shutdownTest, test_reset_discards_pending_callbacks)
     cplat_shutdown_reset_for_test(); // [手順] - 未実行の 2 種類の callback を登録した状態をリセットする。
 
     // Assert
-    EXPECT_EQ(0, g_call_count); // [確認_正常系] - リセット時に callback が実行されないこと。
+    EXPECT_EQ(
+        0,
+        g_call_count); // [確認_正常系] - g_call_count が 0 であること。(リセット時に callback が実行されないことの確認)
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 #elif defined(PLATFORM_WINDOWS)
@@ -596,7 +648,7 @@ TEST_F(shutdownTest, test_console_event_is_reported_to_callback)
 
     ASSERT_EQ(CPLAT_OK, cplat_shutdown_request_register(record_callback,
                                                         &id)); // [状態] - 記録用の終了要求 callback を 1 件登録する。
-    // [状態確認] - cplat_shutdown_request_register の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_shutdown_request_register() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -607,14 +659,19 @@ TEST_F(shutdownTest, test_console_event_is_reported_to_callback)
 
     // Assert
     ASSERT_EQ(CPLAT_OK,
-              result);     // [確認_正常系] - cplat_shutdown_request_invoke_for_test の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1, invoked); // [確認_正常系] - invoked_out が 1 (実行した) であること。
-    EXPECT_EQ(1, g_call_count); // [確認_正常系] - callback が 1 回実行されること。
-    EXPECT_EQ(CPLAT_SHUTDOWN_REASON_SIGNAL_OR_CONSOLE_EVENT,
-              g_last_event.reason); // [確認_正常系] - コンソール イベントの理由が渡ること。
-    EXPECT_EQ(CPLAT_SHUTDOWN_CODE_KIND_CONSOLE_CTRL_TYPE,
-              g_last_event.code_kind);               // [確認_正常系] - CTRL 種別として渡ること。
-    EXPECT_EQ((int)CTRL_C_EVENT, g_last_event.code); // [確認_正常系] - CTRL_C_EVENT の値が渡ること。
+              result);     // [確認_正常系] - cplat_shutdown_request_invoke_for_test() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, invoked); // [確認_正常系] - invoked が 1 であること。(実行したことの確認)
+    EXPECT_EQ(1, g_call_count); // [確認_正常系] - g_call_count が 1 であること。(callback が 1 回実行されることの確認)
+    EXPECT_EQ(
+        CPLAT_SHUTDOWN_REASON_SIGNAL_OR_CONSOLE_EVENT,
+        g_last_event
+            .reason); // [確認_正常系] - g_last_event.reason が CPLAT_SHUTDOWN_REASON_SIGNAL_OR_CONSOLE_EVENT であること。
+    EXPECT_EQ(
+        CPLAT_SHUTDOWN_CODE_KIND_CONSOLE_CTRL_TYPE,
+        g_last_event
+            .code_kind); // [確認_正常系] - g_last_event.code_kind が CPLAT_SHUTDOWN_CODE_KIND_CONSOLE_CTRL_TYPE であること。
+    EXPECT_EQ((int)CTRL_C_EVENT,
+              g_last_event.code); // [確認_正常系] - g_last_event.code が (int)CTRL_C_EVENT と一致すること。
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 #endif

@@ -29,10 +29,16 @@ TEST(atomicFetchAddSubTest, i32_fetch_add_returns_previous_value_for_every_memor
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 加算前の値が返ること。
+        EXPECT_EQ(
+            expected_previous[index],
+            previous_values
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_fetch_add_i32() の戻り値が expected_previous[index] と一致すること。
     }
-    EXPECT_EQ(current, cplat_atomic_load_i32(
-                           &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - すべての加算が反映されていること。
+    EXPECT_EQ(
+        current,
+        cplat_atomic_load_i32(
+            &atomic,
+            CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 加算後の cplat_atomic_load_i32() の戻り値が current と一致すること。(すべての加算が反映されたことの確認)
 }
 
 // 符号付き 32 ビットの fetch_sub が、あらゆるメモリ順序で減算前の値を返し、減算後の値を格納することの確認
@@ -60,10 +66,16 @@ TEST(atomicFetchAddSubTest, i32_fetch_sub_returns_previous_value_for_every_memor
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 減算前の値が返ること。
+        EXPECT_EQ(
+            expected_previous[index],
+            previous_values
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_fetch_sub_i32() の戻り値が expected_previous[index] と一致すること。
     }
-    EXPECT_EQ(current, cplat_atomic_load_i32(
-                           &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - すべての減算が反映されていること。
+    EXPECT_EQ(
+        current,
+        cplat_atomic_load_i32(
+            &atomic,
+            CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 減算後の cplat_atomic_load_i32() の戻り値が current と一致すること。(すべての減算が反映されたことの確認)
 }
 
 // 符号なし 32 ビットの fetch_add が、あらゆるメモリ順序で加算前の値を返し、加算後の値を格納することの確認
@@ -91,10 +103,16 @@ TEST(atomicFetchAddSubTest, u32_fetch_add_returns_previous_value_for_every_memor
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 加算前の値が返ること。
+        EXPECT_EQ(
+            expected_previous[index],
+            previous_values
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_fetch_add_u32() の戻り値が expected_previous[index] と一致すること。
     }
-    EXPECT_EQ(current, cplat_atomic_load_u32(
-                           &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - すべての加算が反映されていること。
+    EXPECT_EQ(
+        current,
+        cplat_atomic_load_u32(
+            &atomic,
+            CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 加算後の cplat_atomic_load_u32() の戻り値が current と一致すること。(すべての加算が反映されたことの確認)
 }
 
 // 符号なし 32 ビットの fetch_sub が、あらゆるメモリ順序で減算前の値を返し、減算後の値を格納することの確認
@@ -122,10 +140,16 @@ TEST(atomicFetchAddSubTest, u32_fetch_sub_returns_previous_value_for_every_memor
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 減算前の値が返ること。
+        EXPECT_EQ(
+            expected_previous[index],
+            previous_values
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_fetch_sub_u32() の戻り値が expected_previous[index] と一致すること。
     }
-    EXPECT_EQ(current, cplat_atomic_load_u32(
-                           &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - すべての減算が反映されていること。
+    EXPECT_EQ(
+        current,
+        cplat_atomic_load_u32(
+            &atomic,
+            CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 減算後の cplat_atomic_load_u32() の戻り値が current と一致すること。(すべての減算が反映されたことの確認)
 }
 
 // 符号付き 64 ビットの fetch_add が、あらゆるメモリ順序で加算前の値を返し、加算後の値を格納することの確認
@@ -153,10 +177,16 @@ TEST(atomicFetchAddSubTest, i64_fetch_add_returns_previous_value_for_every_memor
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 加算前の値が返ること。
+        EXPECT_EQ(
+            expected_previous[index],
+            previous_values
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_fetch_add_i64() の戻り値が expected_previous[index] と一致すること。
     }
-    EXPECT_EQ(current, cplat_atomic_load_i64(
-                           &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - すべての加算が反映されていること。
+    EXPECT_EQ(
+        current,
+        cplat_atomic_load_i64(
+            &atomic,
+            CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 加算後の cplat_atomic_load_i64() の戻り値が current と一致すること。(すべての加算が反映されたことの確認)
 }
 
 // 符号付き 64 ビットの fetch_sub が、あらゆるメモリ順序で減算前の値を返し、減算後の値を格納することの確認
@@ -185,10 +215,16 @@ TEST(atomicFetchAddSubTest, i64_fetch_sub_returns_previous_value_for_every_memor
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 減算前の値が返ること。
+        EXPECT_EQ(
+            expected_previous[index],
+            previous_values
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_fetch_sub_i64() の戻り値が expected_previous[index] と一致すること。
     }
-    EXPECT_EQ(current, cplat_atomic_load_i64(
-                           &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - すべての減算が反映されていること。
+    EXPECT_EQ(
+        current,
+        cplat_atomic_load_i64(
+            &atomic,
+            CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 減算後の cplat_atomic_load_i64() の戻り値が current と一致すること。(すべての減算が反映されたことの確認)
 }
 
 // 符号なし 64 ビットの fetch_add が、あらゆるメモリ順序で加算前の値を返し、加算後の値を格納することの確認
@@ -216,10 +252,16 @@ TEST(atomicFetchAddSubTest, u64_fetch_add_returns_previous_value_for_every_memor
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 加算前の値が返ること。
+        EXPECT_EQ(
+            expected_previous[index],
+            previous_values
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_fetch_add_u64() の戻り値が expected_previous[index] と一致すること。
     }
-    EXPECT_EQ(current, cplat_atomic_load_u64(
-                           &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - すべての加算が反映されていること。
+    EXPECT_EQ(
+        current,
+        cplat_atomic_load_u64(
+            &atomic,
+            CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 加算後の cplat_atomic_load_u64() の戻り値が current と一致すること。(すべての加算が反映されたことの確認)
 }
 
 // 符号なし 64 ビットの fetch_sub が、あらゆるメモリ順序で減算前の値を返し、減算後の値を格納することの確認
@@ -248,8 +290,14 @@ TEST(atomicFetchAddSubTest, u64_fetch_sub_returns_previous_value_for_every_memor
     // Assert
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        EXPECT_EQ(expected_previous[index], previous_values[index]); // [確認_正常系 回数=5] - 減算前の値が返ること。
+        EXPECT_EQ(
+            expected_previous[index],
+            previous_values
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_fetch_sub_u64() の戻り値が expected_previous[index] と一致すること。
     }
-    EXPECT_EQ(current, cplat_atomic_load_u64(
-                           &atomic, CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - すべての減算が反映されていること。
+    EXPECT_EQ(
+        current,
+        cplat_atomic_load_u64(
+            &atomic,
+            CPLAT_MEMORY_ORDER_SEQ_CST)); // [確認_正常系] - 減算後の cplat_atomic_load_u64() の戻り値が current と一致すること。(すべての減算が反映されたことの確認)
 }

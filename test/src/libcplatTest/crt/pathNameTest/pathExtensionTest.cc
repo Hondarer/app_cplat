@@ -19,7 +19,7 @@ TEST_F(pathExtensionTest, returns_last_extension_of_multi_dot_name)
 
     // Assert
     EXPECT_STREQ(".gz",
-                 actual); // [確認_正常系] - cplat_path_extension の戻り値として、ドット込みの最後の拡張子が返ること。
+                 actual); // [確認_正常系] - cplat_path_extension() の戻り値が ".gz" であること。
 }
 
 // ドットファイルの先頭ドットが拡張子とみなされないことの確認
@@ -35,7 +35,7 @@ TEST_F(pathExtensionTest, does_not_treat_leading_dot_as_extension)
 
     // Assert
     EXPECT_STREQ("",
-                 actual); // [確認_正常系] - cplat_path_extension の戻り値として、拡張子なしとして空文字列が返ること。
+                 actual); // [確認_正常系] - cplat_path_extension() の戻り値が "" であること。
 }
 
 // ディレクトリ名にドットが含まれても拡張子とみなされないことの確認
@@ -50,9 +50,8 @@ TEST_F(pathExtensionTest, ignores_dot_in_directory_component)
     const char *actual = cplat_path_extension(path); // [手順] - cplat_path_extension(path) を呼び出す。
 
     // Assert
-    EXPECT_STREQ(
-        "",
-        actual); // [確認_正常系] - cplat_path_extension の戻り値として、ベース名にドットがないため空文字列が返ること。
+    EXPECT_STREQ("",
+                 actual); // [確認_正常系] - cplat_path_extension() の戻り値が "" であること。
 }
 
 // 末尾がドットのみの場合にそのドットが拡張子として返ることの確認
@@ -67,7 +66,7 @@ TEST_F(pathExtensionTest, returns_dot_only_extension)
     const char *actual = cplat_path_extension(path); // [手順] - cplat_path_extension(path) を呼び出す。
 
     // Assert
-    EXPECT_STREQ(".", actual); // [確認_正常系] - cplat_path_extension の戻り値として、"." が返ること。
+    EXPECT_STREQ(".", actual); // [確認_正常系] - cplat_path_extension() の戻り値が "." であること。
 }
 
 // NULL を渡した場合に NULL が返ることの確認
@@ -81,7 +80,7 @@ TEST_F(pathExtensionTest, returns_null_for_null_input)
     const char *actual = cplat_path_extension(NULL); // [手順] - cplat_path_extension(NULL) を呼び出す。
 
     // Assert
-    EXPECT_EQ(nullptr, actual); // [確認_異常系] - cplat_path_extension の戻り値が NULL であること。
+    EXPECT_EQ(nullptr, actual); // [確認_異常系] - cplat_path_extension() の戻り値が nullptr であること。
 }
 
 // 拡張子なし時に入力の終端ポインターが返ることの確認
@@ -96,5 +95,7 @@ TEST_F(pathExtensionTest, returns_pointer_to_terminator_when_no_extension)
     const char *actual = cplat_path_extension(path); // [手順] - cplat_path_extension(path) を呼び出す。
 
     // Assert
-    EXPECT_EQ(path + strlen(path), actual); // [確認_正常系] - path の終端 '\0' を指すこと。
+    EXPECT_EQ(
+        path + strlen(path),
+        actual); // [確認_正常系] - cplat_path_extension() の戻り値が path + strlen(path) と一致すること。(path の終端を指すことの確認)
 }

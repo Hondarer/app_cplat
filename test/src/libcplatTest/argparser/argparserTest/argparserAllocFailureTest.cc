@@ -21,7 +21,9 @@ class argparserAllocFailureTest : public Test
     void SetUp() override
     {
         parser_ = cplat_argparser_handle_create(0, NULL, NULL); // [状態] - 生成済みの parser を用意する。
-        ASSERT_NE((cplat_argparser *)NULL, parser_);            // [状態確認] - ハンドルが非 NULL であること。
+        ASSERT_NE(
+            (cplat_argparser *)NULL,
+            parser_); // [状態確認] - cplat_argparser_handle_create() の戻り値が (cplat_argparser *)NULL 以外であること。
     }
     // [サブ手順終了]
 
@@ -44,12 +46,12 @@ TEST_F(argparserAllocFailureTest, register_fails_when_spec_array_expansion_fails
     /* 名前の複製など他の確保は本物へ委譲する。
        gMock は後から宣言した期待値を優先するため、汎用の期待値を先に宣言する */
     EXPECT_CALL(mock_cplat_, cplat_malloc(_))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_正常系] - malloc が任意の回数呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_正常系] - cplat_malloc() が任意の回数呼び出されること。
                                       // [Pre-Assert手順] - 本物の malloc へ委譲する。
     EXPECT_CALL(mock_cplat_, cplat_realloc(_, _, _))
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_異常系] - realloc が登録項目配列の拡張のために 1 回呼び出されること。
+            DoDefault()); // [Pre-Assert確認_異常系] - 登録項目配列の拡張に対する cplat_realloc() が 1 回以上呼び出されること。
                           // [Pre-Assert手順] - 1 回目は NULL を返却し、以降 (エラー記録用の確保) は本物へ委譲する。
 
     // Act
@@ -60,7 +62,7 @@ TEST_F(argparserAllocFailureTest, register_fails_when_spec_array_expansion_fails
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_MEMORY,
-        actual_ret); // [確認_異常系] - cplat_argparser_handle_register_option_string の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+        actual_ret); // [確認_異常系] - cplat_argparser_handle_register_option_string() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
 // [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
@@ -74,7 +76,7 @@ TEST_F(argparserAllocFailureTest, register_fails_when_name_duplication_fails)
     EXPECT_CALL(mock_cplat_, cplat_malloc(_))
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_異常系] - malloc が名前の複製のために 1 回目に呼び出されること。
+            DoDefault()); // [Pre-Assert確認_異常系] - 名前の複製に対する cplat_malloc() が 1 回以上呼び出されること。
                           // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
 
     // Act
@@ -85,7 +87,7 @@ TEST_F(argparserAllocFailureTest, register_fails_when_name_duplication_fails)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_MEMORY,
-        actual_ret); // [確認_異常系] - cplat_argparser_handle_register_option_string の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+        actual_ret); // [確認_異常系] - cplat_argparser_handle_register_option_string() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
 // [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
@@ -99,7 +101,7 @@ TEST_F(argparserAllocFailureTest, positional_register_fails_when_spec_array_expa
     EXPECT_CALL(mock_cplat_, cplat_realloc(_, _, _))
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_異常系] - realloc が位置引数の登録項目配列拡張で 1 回失敗すること。
+            DoDefault()); // [Pre-Assert確認_異常系] - 位置引数の登録項目配列の拡張に対する cplat_realloc() が 1 回以上呼び出されること。
                           // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物の realloc へ委譲する。
 
     // Act
@@ -110,7 +112,7 @@ TEST_F(argparserAllocFailureTest, positional_register_fails_when_spec_array_expa
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_MEMORY,
-        actual_ret); // [確認_異常系] - 配列拡張失敗時の cplat_argparser_handle_register_positional_string の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+        actual_ret); // [確認_異常系] - 配列拡張失敗時の cplat_argparser_handle_register_positional_string() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
 // [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
@@ -123,8 +125,9 @@ TEST_F(argparserAllocFailureTest, positional_register_fails_when_name_duplicatio
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_malloc(_))
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - malloc が位置引数名の複製で 1 回失敗すること。
-                                      // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物の malloc へ委譲する。
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - 位置引数名の複製に対する cplat_malloc() が 1 回以上呼び出されること。
+                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物の malloc へ委譲する。
 
     // Act
     int actual_ret =
@@ -134,7 +137,7 @@ TEST_F(argparserAllocFailureTest, positional_register_fails_when_name_duplicatio
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_MEMORY,
-        actual_ret); // [確認_異常系] - 名前複製失敗時の cplat_argparser_handle_register_positional_string の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+        actual_ret); // [確認_異常系] - 名前複製失敗時の cplat_argparser_handle_register_positional_string() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
 // [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
@@ -147,13 +150,13 @@ TEST_F(argparserAllocFailureTest, print_usage_fails_when_buffer_allocation_fails
     ASSERT_EQ(CPLAT_OK,
               cplat_argparser_handle_register_option_string(parser_, "-a", "--alpha", "VALUE", "説明", 0u,
                                                             &storage_)); // [状態] - オプションを 1 件登録しておく。
-    // [状態確認] - cplat_argparser_handle_register_option_string の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_argparser_handle_register_option_string() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_malloc(_))
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_異常系] - malloc が使用方法の組み立てバッファーのために 1 回目に呼び出されること。
+            DoDefault()); // [Pre-Assert確認_異常系] - 使用方法の組み立てバッファーの確保に対する cplat_malloc() が 1 回以上呼び出されること。
                           // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
 
     // Act
@@ -164,7 +167,7 @@ TEST_F(argparserAllocFailureTest, print_usage_fails_when_buffer_allocation_fails
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_MEMORY,
-        actual_ret); // [確認_異常系] - cplat_argparser_handle_print_usage の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+        actual_ret); // [確認_異常系] - cplat_argparser_handle_print_usage() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
 // [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
@@ -177,7 +180,9 @@ TEST_F(argparserAllocFailureTest, register_fails_when_short_name_duplication_fai
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_malloc(_))
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - short_name の複製で malloc が失敗すること。
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - short_name の複製に対する cplat_malloc() が 1 回以上呼び出されること。
+                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物の malloc へ委譲する。
 
     // Act
     int actual_ret = cplat_argparser_handle_register_option_string(
@@ -185,8 +190,9 @@ TEST_F(argparserAllocFailureTest, register_fails_when_short_name_duplication_fai
         &storage_); // [手順] - short_name を含む文字列オプションを登録する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
-              actual_ret); // [確認_異常系] - short_name 複製失敗時の登録結果が OUT_OF_MEMORY であること。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_MEMORY,
+        actual_ret); // [確認_異常系] - short_name の複製に失敗したときの cplat_argparser_handle_register_option_string() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
 // [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
@@ -200,7 +206,9 @@ TEST_F(argparserAllocFailureTest, register_fails_when_long_name_duplication_fail
     EXPECT_CALL(mock_cplat_, cplat_malloc(_))
         .WillOnce(DoDefault())
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - long_name の複製で malloc が失敗すること。
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - long_name の複製に対する cplat_malloc() が 2 回以上呼び出されること。
+    // [Pre-Assert手順] - 1 回目は本物へ委譲し、2 回目は NULL を返却し、以降は本物の malloc へ委譲する。
 
     // Act
     int actual_ret = cplat_argparser_handle_register_option_string(
@@ -208,8 +216,9 @@ TEST_F(argparserAllocFailureTest, register_fails_when_long_name_duplication_fail
         &storage_); // [手順] - long_name を含む文字列オプションを登録する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
-              actual_ret); // [確認_異常系] - long_name 複製失敗時の登録結果が OUT_OF_MEMORY であること。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_MEMORY,
+        actual_ret); // [確認_異常系] - long_name の複製に失敗したときの cplat_argparser_handle_register_option_string() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
 // [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
@@ -224,7 +233,9 @@ TEST_F(argparserAllocFailureTest, register_fails_when_value_name_duplication_fai
         .WillOnce(DoDefault())
         .WillOnce(DoDefault())
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - value_name の複製で malloc が失敗すること。
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - value_name の複製に対する cplat_malloc() が 3 回以上呼び出されること。
+    // [Pre-Assert手順] - 1 回目と 2 回目は本物へ委譲し、3 回目は NULL を返却し、以降は本物の malloc へ委譲する。
 
     // Act
     int actual_ret = cplat_argparser_handle_register_option_string(
@@ -232,8 +243,9 @@ TEST_F(argparserAllocFailureTest, register_fails_when_value_name_duplication_fai
         &storage_); // [手順] - value_name を含む文字列オプションを登録する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
-              actual_ret); // [確認_異常系] - value_name 複製失敗時の登録結果が OUT_OF_MEMORY であること。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_MEMORY,
+        actual_ret); // [確認_異常系] - value_name の複製に失敗したときの cplat_argparser_handle_register_option_string() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
 // [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
@@ -249,7 +261,9 @@ TEST_F(argparserAllocFailureTest, register_fails_when_description_duplication_fa
         .WillOnce(DoDefault())
         .WillOnce(DoDefault())
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - description の複製で malloc が失敗すること。
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - description の複製に対する cplat_malloc() が 4 回以上呼び出されること。
+    // [Pre-Assert手順] - 1 回目から 3 回目は本物へ委譲し、4 回目は NULL を返却し、以降は本物の malloc へ委譲する。
 
     // Act
     int actual_ret = cplat_argparser_handle_register_option_string(
@@ -257,8 +271,9 @@ TEST_F(argparserAllocFailureTest, register_fails_when_description_duplication_fa
         &storage_); // [手順] - description を含む文字列オプションを登録する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
-              actual_ret); // [確認_異常系] - description 複製失敗時の登録結果が OUT_OF_MEMORY であること。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_MEMORY,
+        actual_ret); // [確認_異常系] - description の複製に失敗したときの cplat_argparser_handle_register_option_string() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
 // [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
@@ -272,17 +287,22 @@ TEST_F(argparserAllocFailureTest, register_error_is_not_recorded_when_realloc_fa
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_realloc(_, _, _))
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - 登録エラー配列の realloc が失敗すること。
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - 登録エラー配列の確保に対する cplat_realloc() が 1 回以上呼び出されること。
+                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物の realloc へ委譲する。
 
     // Act
     int actual_ret = cplat_argparser_handle_register_flag(parser_, NULL, NULL, NULL,
                                                           &storage); // [手順] - 名前なし登録で登録エラーを発生させる。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - 登録エラー配列確保失敗後も登録結果が INVALID_ARGUMENT であること。
-    EXPECT_EQ((size_t)0, cplat_argparser_handle_get_register_error_count(
-                             parser_)); // [確認_異常系] - realloc 失敗時に登録エラー件数が 0 のままであること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - 登録エラー配列の確保に失敗した後の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        (size_t)0,
+        cplat_argparser_handle_get_register_error_count(
+            parser_)); // [確認_異常系] - realloc に失敗したときの cplat_argparser_handle_get_register_error_count() の戻り値が (size_t)0 であること。(登録エラーが記録されていないことの確認)
 }
 // [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
@@ -298,14 +318,18 @@ TEST_F(argparserAllocFailureTest, create_fails_when_program_name_duplication_fai
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_malloc(_))
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - program_name の複製で malloc が失敗すること。
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - program_name の複製に対する cplat_malloc() が 1 回以上呼び出されること。
+                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物の malloc へ委譲する。
 
     // Act
     cplat_argparser *parser = cplat_argparser_handle_create(
         0, NULL, &options); // [手順] - program_name と description を指定して parser を生成する。
 
     // Assert
-    EXPECT_EQ(nullptr, parser); // [確認_異常系] - program_name 複製失敗時の parser が NULL であること。
+    EXPECT_EQ(
+        nullptr,
+        parser); // [確認_異常系] - program_name の複製に失敗したときの cplat_argparser_handle_create() の戻り値が nullptr であること。
 }
 // [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
@@ -322,14 +346,18 @@ TEST_F(argparserAllocFailureTest, create_fails_when_program_description_duplicat
     EXPECT_CALL(mock_cplat_, cplat_malloc(_))
         .WillOnce(DoDefault())
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - program_description の複製で malloc が失敗すること。
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - program_description の複製に対する cplat_malloc() が 2 回以上呼び出されること。
+    // [Pre-Assert手順] - 1 回目は本物へ委譲し、2 回目は NULL を返却し、以降は本物の malloc へ委譲する。
 
     // Act
     cplat_argparser *parser = cplat_argparser_handle_create(
         0, NULL, &options); // [手順] - program_name と description を指定して parser を生成する。
 
     // Assert
-    EXPECT_EQ(nullptr, parser); // [確認_異常系] - program_description 複製失敗時の parser が NULL であること。
+    EXPECT_EQ(
+        nullptr,
+        parser); // [確認_異常系] - program_description の複製に失敗したときの cplat_argparser_handle_create() の戻り値が nullptr であること。
 }
 // [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
@@ -343,18 +371,22 @@ TEST_F(argparserAllocFailureTest, create_continues_when_program_name_duplication
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_malloc(_))
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - argv[0] のベース名複製で malloc が失敗すること。
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - argv[0] のベース名の複製に対する cplat_malloc() が 1 回以上呼び出されること。
+                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物の malloc へ委譲する。
 
     // Act
     cplat_argparser *parser =
         cplat_argparser_handle_create(1, argv, NULL); // [手順] - ベース名複製が失敗する状態で parser を生成する。
 
     // Assert
-    ASSERT_NE(nullptr, parser); // [確認_正常系] - ベース名複製失敗時も生成が成功すること。
+    ASSERT_NE(
+        nullptr,
+        parser); // [確認_正常系] - ベース名の複製に失敗したときの cplat_argparser_handle_create() の戻り値が nullptr 以外であること。(生成が成功したことの確認)
     EXPECT_EQ(
         CPLAT_OK,
         cplat_argparser_handle_parse(
-            parser)); // [確認_正常系] - ベース名複製失敗時も cplat_argparser_handle_parse の戻り値が CPLAT_OK であること。
+            parser)); // [確認_正常系] - ベース名の複製に失敗したときの cplat_argparser_handle_parse() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_argparser_handle_dispose(parser);

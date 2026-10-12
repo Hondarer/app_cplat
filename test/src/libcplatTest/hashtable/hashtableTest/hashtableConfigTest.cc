@@ -46,10 +46,12 @@ TEST_F(hashtableConfigTest, get_config_ref_rejects_null_arguments)
     int actual_ret_null_out = cplat_hashtable_get_config_ref(ht, NULL);  // [手順] - config_out に NULL を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ht); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_out); // [確認_異常系] - NULL config_out が INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_config_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_out); // [確認_異常系] - config_out に NULL を渡した cplat_hashtable_get_config_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -74,12 +76,16 @@ TEST_F(hashtableConfigTest, get_config_val_rejects_null_out_and_propagates_ref_f
     int actual_ret_ok = cplat_hashtable_get_config_val(ht, &out);        // [手順] - 妥当な引数で呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_out); // [確認_異常系] - NULL config_out が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ht);      // [確認_異常系] - NULL ht が get_config_ref の失敗として伝播すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_ok); // [確認_正常系] - 妥当な引数で複製できること。
-    EXPECT_EQ(2u, out.capacity);        // [確認_正常系] - 複製内容が一致すること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_out); // [確認_異常系] - config_out に NULL を渡した cplat_hashtable_get_config_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_config_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(cplat_hashtable_get_config_ref() の失敗が伝播したことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_ok); // [確認_正常系] - 妥当な引数での cplat_hashtable_get_config_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(2u, out.capacity); // [確認_正常系] - out.capacity が 2 であること。(複製内容が設定と一致したことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -104,10 +110,12 @@ TEST_F(hashtableConfigTest, buffer_size_rejects_null_arguments)
     int actual_ret_null_both = cplat_hashtable_buffer_size(ht, NULL, NULL); // [手順] - 両方の出力先に NULL を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ht); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_both); // [確認_異常系] - 両方 NULL のとき INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_buffer_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_both); // [確認_異常系] - 両方の出力先に NULL を渡した cplat_hashtable_buffer_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -136,13 +144,19 @@ TEST_F(hashtableConfigTest, buffer_size_allows_partial_query_and_succeeds)
                                                     &full_data_size); // [手順] - 両方の引数を渡してサイズを取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_only_mgmt); // [確認_正常系] - 管理側だけの問い合わせが成功すること。
-    EXPECT_GT(mgmt_size, 0u);                  // [確認_正常系] - 管理領域サイズが取得できていること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_only_data); // [確認_正常系] - データ側だけの問い合わせが成功すること。
-    EXPECT_GT(data_size, 0u);                  // [確認_正常系] - データ領域サイズが取得できていること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_ok);        // [確認_正常系] - 両方の問い合わせが成功すること。
-    EXPECT_EQ(mgmt_size, full_mgmt_size);      // [確認_正常系] - 管理領域サイズが一致すること。
-    EXPECT_EQ(data_size, full_data_size);      // [確認_正常系] - データ領域サイズが一致すること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_only_mgmt); // [確認_正常系] - 管理側だけを問い合わせた cplat_hashtable_buffer_size() の戻り値が CPLAT_OK であること。
+    EXPECT_GT(mgmt_size, 0u); // [確認_正常系] - mgmt_size が 0 より大きいこと。(管理領域サイズが取得できたことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_only_data); // [確認_正常系] - データ側だけを問い合わせた cplat_hashtable_buffer_size() の戻り値が CPLAT_OK であること。
+    EXPECT_GT(data_size, 0u); // [確認_正常系] - data_size が 0 より大きいこと。(データ領域サイズが取得できたことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_ok); // [確認_正常系] - 両方を問い合わせた cplat_hashtable_buffer_size() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(mgmt_size, full_mgmt_size); // [確認_正常系] - full_mgmt_size が mgmt_size と一致すること。
+    EXPECT_EQ(data_size, full_data_size); // [確認_正常系] - full_data_size が data_size と一致すること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -167,10 +181,12 @@ TEST_F(hashtableConfigTest, buffer_ref_rejects_null_arguments)
     int actual_ret_null_both = cplat_hashtable_buffer_ref(ht, NULL, NULL);   // [手順] - 両方の出力先に NULL を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ht); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_both); // [確認_異常系] - 両方 NULL のとき INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_buffer_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_both); // [確認_異常系] - 両方の出力先に NULL を渡した cplat_hashtable_buffer_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -195,10 +211,16 @@ TEST_F(hashtableConfigTest, buffer_ref_allows_partial_query)
     int actual_ret_only_data = cplat_hashtable_buffer_ref(ht, NULL, &data); // [手順] - 管理側だけ NULL を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_only_mgmt); // [確認_正常系] - 管理側だけの問い合わせが成功すること。
-    EXPECT_NE(nullptr, mgmt);                  // [確認_正常系] - 管理領域ポインタが取得できること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_only_data); // [確認_正常系] - データ側だけの問い合わせが成功すること。
-    EXPECT_NE(nullptr, data);                  // [確認_正常系] - データ領域ポインタが取得できること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_only_mgmt); // [確認_正常系] - 管理側だけを問い合わせた cplat_hashtable_buffer_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_NE(nullptr,
+              mgmt); // [確認_正常系] - mgmt が nullptr 以外であること。(管理領域ポインタが取得できたことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_only_data); // [確認_正常系] - データ側だけを問い合わせた cplat_hashtable_buffer_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_NE(nullptr,
+              data); // [確認_正常系] - data が nullptr 以外であること。(データ領域ポインタが取得できたことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -226,11 +248,12 @@ TEST_F(hashtableConfigTest, buffer_ref_returns_internal_regions_contiguously)
     const unsigned char *mgmt_bytes = static_cast<const unsigned char *>(mgmt);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - buffer_ref が成功すること。
-    EXPECT_NE(nullptr, mgmt);        // [確認_正常系] - 管理領域の先頭が非 NULL であること。
-    EXPECT_NE(nullptr, data);        // [確認_正常系] - データ領域の先頭が非 NULL であること。
-    EXPECT_EQ(static_cast<const void *>(mgmt_bytes + mgmt_size),
-              data); // [確認_正常系] - 内部確保では管理領域の直後にデータ領域が続くこと。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_hashtable_buffer_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_NE(nullptr, mgmt);        // [確認_正常系] - mgmt が nullptr 以外であること。
+    EXPECT_NE(nullptr, data);        // [確認_正常系] - data が nullptr 以外であること。
+    EXPECT_EQ(
+        static_cast<const void *>(mgmt_bytes + mgmt_size),
+        data); // [確認_正常系] - data が mgmt_bytes + mgmt_size と一致すること。(内部確保では管理領域の直後にデータ領域が続くことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -266,16 +289,24 @@ TEST_F(hashtableConfigTest, buffer_ref_returns_external_regions_as_supplied)
     int actual_ret_attach = cplat_hashtable_buffer_ref(attached, &attached_mgmt, &attached_data);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - 外部指定でも buffer_ref が成功すること。
-    EXPECT_EQ(static_cast<const void *>(buf_mgmt.data()),
-              mgmt); // [確認_正常系] - 渡した管理領域がそのまま返ること。
-    EXPECT_EQ(static_cast<const void *>(buf_data.data()),
-              data);                        // [確認_正常系] - 渡したデータ領域がそのまま返ること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_attach); // [確認_正常系] - 再接続後も buffer_ref が成功すること。
-    EXPECT_EQ(static_cast<const void *>(buf_mgmt.data()),
-              attached_mgmt); // [確認_正常系] - 再接続後も管理領域が一致すること。
-    EXPECT_EQ(static_cast<const void *>(buf_data.data()),
-              attached_data); // [確認_正常系] - 再接続がデータ領域アドレスを渡した値で上書きすること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_create); // [確認_正常系] - 外部指定で構築したテーブルに対する cplat_hashtable_buffer_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        static_cast<const void *>(buf_mgmt.data()),
+        mgmt); // [確認_正常系] - mgmt が buf_mgmt.data() の戻り値と一致すること。(渡した管理領域がそのまま返ったことの確認)
+    EXPECT_EQ(
+        static_cast<const void *>(buf_data.data()),
+        data); // [確認_正常系] - data が buf_data.data() の戻り値と一致すること。(渡したデータ領域がそのまま返ったことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_attach); // [確認_正常系] - 再接続後のテーブルに対する cplat_hashtable_buffer_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        static_cast<const void *>(buf_mgmt.data()),
+        attached_mgmt); // [確認_正常系] - attached_mgmt が buf_mgmt.data() の戻り値と一致すること。(再接続後も管理領域が一致したことの確認)
+    EXPECT_EQ(
+        static_cast<const void *>(buf_data.data()),
+        attached_data); // [確認_正常系] - attached_data が buf_data.data() の戻り値と一致すること。(再接続がデータ領域アドレスを渡した値で上書きしたことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht);

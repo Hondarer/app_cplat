@@ -31,9 +31,14 @@ TEST_F(stringCatalogFilterCompileTest, blank_whitespace_and_comment_lines_are_no
         cplat_string_catalog_filter_get_info(image, kImageSize, &actual_info); // [手順] - ヘッダー情報を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_compile_ret); // [確認_正常系] - コンパイルが成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_info_ret);    // [確認_正常系] - ヘッダー情報を取得できること。
-    EXPECT_EQ(1U, actual_info.line_count);   // [確認_正常系] - 有効行の "key == 1" だけが格納されること。
+    EXPECT_EQ(CPLAT_OK, actual_compile_ret); // [確認_正常系] - compile_lines() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_info_ret); // [確認_正常系] - cplat_string_catalog_filter_get_info() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1U,
+        actual_info
+            .line_count); // [確認_正常系] - actual_info.line_count が 1U であること。(有効行の "key == 1" だけが格納されたことの確認)
 }
 
 // 閉じない引用符や不正な 16 進数表記などの字句の誤りが診断情報として通知されることの確認
@@ -52,34 +57,55 @@ TEST_F(stringCatalogFilterCompileTest, lexical_errors_are_diagnosed)
                                      &actual_invalid_count); // [手順] - 閉じない引用符の行をコンパイルする。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);     // [確認_正常系] - 無効な行があってもコンパイル自体は成功すること。
-    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - 無効にした行が 1 件であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL,
-              diagnostic.error);          // [確認_正常系] - 原因が字句の誤りであること。
-    EXPECT_EQ(0U, diagnostic.line_index); // [確認_正常系] - 入力の行番号が 0 であること。
-    EXPECT_EQ(6U, diagnostic.column);     // [確認_正常系] - 開き引用符の位置 (6) が誤りの位置であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret); // [確認_正常系] - 閉じない引用符の行に対する compile_single_line() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - actual_invalid_count が 1U であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL,
+        diagnostic
+            .error); // [確認_正常系] - diagnostic.error が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL であること。
+    EXPECT_EQ(0U, diagnostic.line_index); // [確認_正常系] - diagnostic.line_index が 0U であること。
+    EXPECT_EQ(
+        6U,
+        diagnostic
+            .column); // [確認_正常系] - diagnostic.column が 6U であること。(開き引用符の位置が誤りの位置であることの確認)
 
     // Act_2
     actual_ret = compile_single_line("key == 0x", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
                                      &actual_invalid_count); // [手順] - 0x の後に桁がない行をコンパイルする。
 
     // Assert_2
-    EXPECT_EQ(CPLAT_OK, actual_ret);     // [確認_正常系] - コンパイル自体は成功すること。
-    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - 無効にした行が 1 件であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL,
-              diagnostic.error);      // [確認_正常系] - 原因が字句の誤りであること。
-    EXPECT_EQ(7U, diagnostic.column); // [確認_正常系] - "0x" の開始位置 (7) が誤りの位置であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret); // [確認_正常系] - 0x の後に桁がない行に対する compile_single_line() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - actual_invalid_count が 1U であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL,
+        diagnostic
+            .error); // [確認_正常系] - diagnostic.error が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL であること。
+    EXPECT_EQ(
+        7U,
+        diagnostic
+            .column); // [確認_正常系] - diagnostic.column が 7U であること。("0x" の開始位置が誤りの位置であることの確認)
 
     // Act_3
     actual_ret = compile_single_line("key == -0x1", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
                                      &actual_invalid_count); // [手順] - 符号付き 16 進数の行をコンパイルする。
 
     // Assert_3
-    EXPECT_EQ(CPLAT_OK, actual_ret);     // [確認_正常系] - コンパイル自体は成功すること。
-    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - 無効にした行が 1 件であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL,
-              diagnostic.error);      // [確認_正常系] - 原因が字句の誤りであること。
-    EXPECT_EQ(7U, diagnostic.column); // [確認_正常系] - "-" の位置 (7) が誤りの位置であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret); // [確認_正常系] - 符号付き 16 進数の行に対する compile_single_line() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - actual_invalid_count が 1U であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL,
+        diagnostic
+            .error); // [確認_正常系] - diagnostic.error が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL であること。
+    EXPECT_EQ(
+        7U,
+        diagnostic
+            .column); // [確認_正常系] - diagnostic.column が 7U であること。("-" の位置が誤りの位置であることの確認)
 }
 
 // 被演算子の欠落や未定義の識別子などの構文の誤りが診断情報として通知されることの確認
@@ -98,11 +124,17 @@ TEST_F(stringCatalogFilterCompileTest, syntax_errors_are_diagnosed)
                                      &actual_invalid_count); // [手順] - 右辺が続かない && の行をコンパイルする。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);     // [確認_正常系] - コンパイル自体は成功すること。
-    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - 無効にした行が 1 件であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX,
-              diagnostic.error);       // [確認_正常系] - 原因が構文の誤りであること。
-    EXPECT_EQ(11U, diagnostic.column); // [確認_正常系] - 行末 (11) が誤りの位置であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret); // [確認_正常系] - 右辺が続かない && の行に対する compile_single_line() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - actual_invalid_count が 1U であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX,
+        diagnostic
+            .error); // [確認_正常系] - diagnostic.error が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX であること。
+    EXPECT_EQ(
+        11U,
+        diagnostic.column); // [確認_正常系] - diagnostic.column が 11U であること。(行末が誤りの位置であることの確認)
 
     // Act_2
     actual_ret = compile_single_line(
@@ -110,11 +142,18 @@ TEST_F(stringCatalogFilterCompileTest, syntax_errors_are_diagnosed)
         &actual_invalid_count); // [手順] - key/id/category/arg のいずれでもない識別子の行をコンパイルする。
 
     // Assert_2
-    EXPECT_EQ(CPLAT_OK, actual_ret);     // [確認_正常系] - コンパイル自体は成功すること。
-    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - 無効にした行が 1 件であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX,
-              diagnostic.error);      // [確認_正常系] - 原因が構文の誤りであること。
-    EXPECT_EQ(0U, diagnostic.column); // [確認_正常系] - 識別子 "x" の位置 (0) が誤りの位置であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret); // [確認_正常系] - 未定義の識別子の行に対する compile_single_line() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - actual_invalid_count が 1U であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX,
+        diagnostic
+            .error); // [確認_正常系] - diagnostic.error が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX であること。
+    EXPECT_EQ(
+        0U,
+        diagnostic
+            .column); // [確認_正常系] - diagnostic.column が 0U であること。(識別子 "x" の位置が誤りの位置であることの確認)
 }
 
 // 型の不一致や非互換な比較演算子などの誤りが診断情報として通知されることの確認
@@ -134,10 +173,14 @@ TEST_F(stringCatalogFilterCompileTest, type_mismatch_errors_are_diagnosed)
                             &actual_invalid_count); // [手順] - 数値フィールドへ文字列演算子を使う行をコンパイルする。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);     // [確認_正常系] - コンパイル自体は成功すること。
-    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - 無効にした行が 1 件であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH,
-              diagnostic.error); // [確認_正常系] - 原因が型の誤りであること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret); // [確認_正常系] - 数値フィールドへ文字列演算子を使う行に対する compile_single_line() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - actual_invalid_count が 1U であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH,
+        diagnostic
+            .error); // [確認_正常系] - diagnostic.error が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH であること。
 
     // Act_2
     actual_ret =
@@ -145,10 +188,14 @@ TEST_F(stringCatalogFilterCompileTest, type_mismatch_errors_are_diagnosed)
                             &actual_invalid_count); // [手順] - 文字列フィールドへ大小比較を使う行をコンパイルする。
 
     // Assert_2
-    EXPECT_EQ(CPLAT_OK, actual_ret);     // [確認_正常系] - コンパイル自体は成功すること。
-    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - 無効にした行が 1 件であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH,
-              diagnostic.error); // [確認_正常系] - 原因が型の誤りであること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret); // [確認_正常系] - 文字列フィールドへ大小比較を使う行に対する compile_single_line() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - actual_invalid_count が 1U であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH,
+        diagnostic
+            .error); // [確認_正常系] - diagnostic.error が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH であること。
 
     // Act_3
     actual_ret = compile_single_line(
@@ -156,10 +203,14 @@ TEST_F(stringCatalogFilterCompileTest, type_mismatch_errors_are_diagnosed)
         &actual_invalid_count); // [手順] - null と比較できないフィールドへ null を使う行をコンパイルする。
 
     // Assert_3
-    EXPECT_EQ(CPLAT_OK, actual_ret);     // [確認_正常系] - コンパイル自体は成功すること。
-    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - 無効にした行が 1 件であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH,
-              diagnostic.error); // [確認_正常系] - 原因が型の誤りであること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret); // [確認_正常系] - null と比較できないフィールドへ null を使う行に対する compile_single_line() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - actual_invalid_count が 1U であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH,
+        diagnostic
+            .error); // [確認_正常系] - diagnostic.error が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH であること。
 }
 
 // 引数インデックスの上限超過が診断情報として通知されることの確認
@@ -179,10 +230,12 @@ TEST_F(stringCatalogFilterCompileTest, argument_index_limit_exceeded_is_diagnose
                             &actual_invalid_count); // [手順] - 引数個数の上限 (50) と同じ添字の行をコンパイルする。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);     // [確認_正常系] - コンパイル自体は成功すること。
-    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - 無効にした行が 1 件であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED,
-              diagnostic.error); // [確認_正常系] - 原因が上限超過であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret);     // [確認_正常系] - compile_single_line() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, actual_invalid_count); // [確認_正常系] - actual_invalid_count が 1U であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED,
+        diagnostic
+            .error); // [確認_正常系] - diagnostic.error が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED であること。
 }
 
 // フィルター オブジェクトの行数の上限を超えた入力行が、行数超過として診断されることの確認
@@ -206,12 +259,22 @@ TEST_F(stringCatalogFilterCompileTest, line_capacity_exceeded_is_diagnosed)
                                                &actual_info); // [手順] - ヘッダー情報を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_compile_ret); // [確認_正常系] - コンパイル自体は成功すること。
-    EXPECT_EQ(1U, actual_invalid_count);     // [確認_正常系] - 上限を超えた 1 行が無効になること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LINE_CAPACITY,
-              diagnostic.error);           // [確認_正常系] - 原因が行数の上限超過であること。
-    EXPECT_EQ(2U, diagnostic.line_index);  // [確認_正常系] - 入力の 3 行目 (index 2) が対象であること。
-    EXPECT_EQ(2U, actual_info.line_count); // [確認_正常系] - 先着の 2 行だけが格納されること。
+    EXPECT_EQ(CPLAT_OK, actual_compile_ret); // [確認_正常系] - compile_lines() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1U,
+        actual_invalid_count); // [確認_正常系] - actual_invalid_count が 1U であること。(行数の上限を超えた 1 行が無効になったことの確認)
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LINE_CAPACITY,
+        diagnostic
+            .error); // [確認_正常系] - diagnostic.error が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LINE_CAPACITY であること。
+    EXPECT_EQ(
+        2U,
+        diagnostic
+            .line_index); // [確認_正常系] - diagnostic.line_index が 2U であること。(入力の 3 行目が診断の対象であることの確認)
+    EXPECT_EQ(
+        2U,
+        actual_info
+            .line_count); // [確認_正常系] - actual_info.line_count が 2U であること。(先着の 2 行だけが格納されたことの確認)
 }
 
 // image のバイト数が不足する場合に CPLAT_ERR_BUFFER_TOO_SMALL を返すことの確認
@@ -229,7 +292,8 @@ TEST_F(stringCatalogFilterCompileTest, image_buffer_too_small_returns_buffer_too
         line, image, kImageSize - 1U); // [手順] - 必要量より 1 バイト小さい image_size でコンパイルする。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, actual_ret); // [確認_異常系] - CPLAT_ERR_BUFFER_TOO_SMALL を返すこと。
+    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
+              actual_ret); // [確認_異常系] - compile_single_line() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
 }
 
 // 行幅または行数の上限が範囲外の場合に CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
@@ -264,11 +328,18 @@ TEST_F(stringCatalogFilterCompileTest, out_of_range_width_or_capacity_returns_in
         &invalid_count); // [手順] - 行数の上限より 1 大きい行数上限でコンパイルする。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_narrow_width);  // [確認_異常系] - 行幅の下限未満は不正であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_wide_width);    // [確認_異常系] - 行幅の上限超過は不正であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_zero_capacity); // [確認_異常系] - 行数の上限 0 は不正であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_large_capacity); // [確認_異常系] - 行数の上限超過は不正であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_narrow_width); // [確認_異常系] - 下限未満の行幅に対する cplat_string_catalog_filter_compile() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_wide_width); // [確認_異常系] - 上限を超える行幅に対する cplat_string_catalog_filter_compile() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_zero_capacity); // [確認_異常系] - 行数の上限 0 に対する cplat_string_catalog_filter_compile() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_large_capacity); // [確認_異常系] - 範囲外の行数上限に対する cplat_string_catalog_filter_compile() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE マクロの算出結果と、cplat_string_catalog_filter_get_info が返す image_size が一致することの確認
@@ -290,8 +361,12 @@ TEST_F(stringCatalogFilterCompileTest, image_size_macro_matches_get_info_result)
                                                            &actual_info); // [手順] - ヘッダー情報を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_compile_ret); // [確認_正常系] - コンパイルが成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_info_ret);    // [確認_正常系] - ヘッダー情報を取得できること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(4U, 64U),
-              actual_info.image_size); // [確認_正常系] - マクロの算出結果と image_size が一致すること。
+    EXPECT_EQ(CPLAT_OK, actual_compile_ret); // [確認_正常系] - compile_single_line() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_info_ret); // [確認_正常系] - cplat_string_catalog_filter_get_info() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(4U, 64U),
+        actual_info
+            .image_size); // [確認_正常系] - actual_info.image_size が CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(4U, 64U) と一致すること。
 }

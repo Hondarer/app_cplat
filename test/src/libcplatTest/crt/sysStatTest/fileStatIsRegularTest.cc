@@ -25,11 +25,11 @@ class fileStatIsRegularTest : public testing::Test
 
         stream = cplat_fopen(kFilePath, "wb", NULL);
         ASSERT_NE(nullptr, stream);
-        // [状態確認] - `nullptr` と `stream` が異なること。
+        // [状態確認] - cplat_fopen() の戻り値が nullptr 以外であること。
         ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, NULL));
-        // [状態確認] - `cplat_fclose(stream, NULL)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - cplat_fclose() の戻り値が CPLAT_OK であること。
         ASSERT_EQ(CPLAT_OK, cplat_mkdir(kDirPath, NULL));
-        // [状態確認] - `cplat_mkdir(kDirPath, NULL)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - cplat_mkdir() の戻り値が CPLAT_OK であること。
     }
     // [サブ手順終了]
 
@@ -50,7 +50,7 @@ TEST_F(fileStatIsRegularTest, returns_one_for_regular_file)
     cplat_file_stat_t file_stat;
 
     ASSERT_EQ(CPLAT_OK, cplat_stat(&file_stat, NULL, kFilePath)); // [状態] - 通常ファイルの情報を取得する。
-    // [状態確認] - `cplat_stat(&file_stat, NULL, kFilePath)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - 通常ファイルに対する cplat_stat() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -58,7 +58,9 @@ TEST_F(fileStatIsRegularTest, returns_one_for_regular_file)
     int actual_ret_is_regular = cplat_file_stat_is_regular(&file_stat); // [手順] - 種別を判定する。
 
     // Assert
-    EXPECT_EQ(1, actual_ret_is_regular); // [確認_正常系] - 戻り値が 1 であること。
+    EXPECT_EQ(
+        1,
+        actual_ret_is_regular); // [確認_正常系] - 通常ファイルに対する cplat_file_stat_is_regular() の戻り値が 1 であること。
 }
 // [サブ手順参照 名前=fileStatIsRegularTest.TearDown]
 
@@ -70,7 +72,7 @@ TEST_F(fileStatIsRegularTest, returns_zero_for_directory)
     cplat_file_stat_t file_stat;
 
     ASSERT_EQ(CPLAT_OK, cplat_stat(&file_stat, NULL, kDirPath)); // [状態] - ディレクトリの情報を取得する。
-    // [状態確認] - `cplat_stat(&file_stat, NULL, kDirPath)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - ディレクトリに対する cplat_stat() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -78,7 +80,9 @@ TEST_F(fileStatIsRegularTest, returns_zero_for_directory)
     int actual_ret_is_regular = cplat_file_stat_is_regular(&file_stat); // [手順] - 種別を判定する。
 
     // Assert
-    EXPECT_EQ(0, actual_ret_is_regular); // [確認_異常系] - 戻り値が 0 であること。
+    EXPECT_EQ(
+        0,
+        actual_ret_is_regular); // [確認_異常系] - ディレクトリに対する cplat_file_stat_is_regular() の戻り値が 0 であること。
 }
 // [サブ手順参照 名前=fileStatIsRegularTest.TearDown]
 
@@ -94,6 +98,8 @@ TEST_F(fileStatIsRegularTest, returns_zero_for_null)
     int actual_ret_is_regular = cplat_file_stat_is_regular(NULL); // [手順] - NULL を指定する。
 
     // Assert
-    EXPECT_EQ(0, actual_ret_is_regular); // [確認_異常系] - 戻り値が 0 であること。
+    EXPECT_EQ(
+        0,
+        actual_ret_is_regular); // [確認_異常系] - NULL に対する cplat_file_stat_is_regular() の戻り値が 0 であること。
 }
 // [サブ手順参照 名前=fileStatIsRegularTest.TearDown]

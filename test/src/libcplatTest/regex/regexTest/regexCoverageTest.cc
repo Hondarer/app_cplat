@@ -108,7 +108,7 @@ TEST_F(regexCoverageTest, public_apis_translate_decode_exceptions)
     int matched = 0;
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "a" をコンパイルする。
-    // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -138,22 +138,22 @@ TEST_F(regexCoverageTest, public_apis_translate_decode_exceptions)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_MEMORY,
-        search_result); // [確認_異常系] - bad_alloc 時の cplat_regex_search の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+        search_result); // [確認_異常系] - bad_alloc 時の cplat_regex_search() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_MEMORY,
-        replace_alloc_result); // [確認_異常系] - bad_alloc 時の cplat_regex_replace の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+        replace_alloc_result); // [確認_異常系] - bad_alloc 時の cplat_regex_replace() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_MEMORY,
-        iter_create_result); // [確認_異常系] - bad_alloc 時の cplat_regex_iter_create の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+        iter_create_result); // [確認_異常系] - bad_alloc 時の cplat_regex_iter_create() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_MEMORY,
-        split_result); // [確認_異常系] - bad_alloc 時の cplat_regex_split の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+        split_result); // [確認_異常系] - bad_alloc 時の cplat_regex_split() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(
         CPLAT_ERR_LIMIT_EXCEEDED,
-        search_regex_result); // [確認_異常系] - regex_error 時の cplat_regex_search の戻り値が CPLAT_ERR_LIMIT_EXCEEDED であること。
+        search_regex_result); // [確認_異常系] - regex_error 時の cplat_regex_search() の戻り値が CPLAT_ERR_LIMIT_EXCEEDED であること。
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        search_unknown_result); // [確認_異常系] - 未知例外時の cplat_regex_search の戻り値が CPLAT_ERR_UNKNOWN であること。
+        search_unknown_result); // [確認_異常系] - 未知例外時の cplat_regex_search() の戻り値が CPLAT_ERR_UNKNOWN であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -171,10 +171,10 @@ TEST_F(regexCoverageTest, replace_encode_failure_and_iter_position_past_end)
     int has_match = 0;
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "a" をコンパイルする。
-    // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_iter_create(regex, "a", 1U, CPLAT_REGEX_DEFAULT, &iter,
                                                 NULL)); // [状態] - 入力 "a" のイテレーターを生成する。
-    // [状態確認] - cplat_regex_iter_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_regex_iter_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -199,16 +199,17 @@ TEST_F(regexCoverageTest, replace_encode_failure_and_iter_position_past_end)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        encode_result); // [確認_異常系] - cplat_internal_regex_utf8_encode 失敗時の cplat_regex_replace の戻り値が CPLAT_ERR_UNKNOWN であること。
+        encode_result); // [確認_異常系] - cplat_internal_regex_utf8_encode() 失敗時の cplat_regex_replace() の戻り値が CPLAT_ERR_UNKNOWN であること。
 #if !defined(CPLAT_REGEX_NO_EXCEPTIONS)
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_MEMORY,
-        encode_throw_result); // [確認_異常系] - cplat_internal_regex_utf8_encode の例外時の cplat_regex_replace の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+        encode_throw_result); // [確認_異常系] - cplat_internal_regex_utf8_encode() の例外時の cplat_regex_replace() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 #endif                        /* !CPLAT_REGEX_NO_EXCEPTIONS */
     EXPECT_EQ(CPLAT_OK,
-              next_result);  // [確認_正常系] - 終端超過位置の cplat_regex_iter_next の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(0, has_match); // [確認_正常系] - 終端超過位置では一致が無いこと。
-    EXPECT_FALSE(past_end);  // [確認_正常系] - 位置超過の find_next が false を返すこと。
+              next_result);  // [確認_正常系] - 終端超過位置の cplat_regex_iter_next() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0, has_match); // [確認_正常系] - 終端超過位置の has_match が 0 であること。(一致が無いことの確認)
+    EXPECT_FALSE(
+        past_end); // [確認_正常系] - 位置超過の test_regex_find_next_rejects_position_past_end() の戻り値が false であること。
 
     // Cleanup
     cplat_regex_iter_dispose(iter);
@@ -244,16 +245,24 @@ TEST_F(regexCoverageTest, traits_cover_remaining_classname_and_isctype_condition
     int hex_G = test_regex_value(L'G', 16); // [手順] - 16 進の範囲外文字 G の値を取得する。
 
     // Assert
-    EXPECT_EQ(0U, mixed);          // [確認_異常系] - 非 ASCII を含むクラス名が 0 になること。
-    EXPECT_EQ(digit, digit_icase); // [確認_正常系] - digit の icase が digit のままであること。
-    EXPECT_FALSE(bracket_upper);   // [確認_異常系] - '[' が upper でないこと。
-    EXPECT_FALSE(brace_lower);     // [確認_異常系] - '{' が lower でないこと。
-    EXPECT_FALSE(slash_digit);     // [確認_異常系] - '/' が digit でないこと。
-    EXPECT_FALSE(at_xdigit);       // [確認_異常系] - '@' が xdigit でないこと。
-    EXPECT_TRUE(del_cntrl);        // [確認_正常系] - DEL が cntrl であること。
-    EXPECT_TRUE(cr_space);         // [確認_正常系] - CR が space であること。
-    EXPECT_EQ(-1, hex_g);          // [確認_異常系] - g の値が -1 であること。
-    EXPECT_EQ(-1, hex_G);          // [確認_異常系] - G の値が -1 であること。
+    EXPECT_EQ(
+        0U,
+        mixed); // [確認_異常系] - 非 ASCII を含むクラス名に対する test_regex_lookup_classname() の戻り値が 0 であること。
+    EXPECT_EQ(
+        digit,
+        digit_icase); // [確認_正常系] - icase を指定した test_regex_lookup_classname() の戻り値が、icase を指定しない test_regex_lookup_classname() の戻り値と一致すること。(digit の icase が digit のままであることの確認)
+    EXPECT_FALSE(
+        bracket_upper); // [確認_異常系] - '[' を upper で判定した test_regex_isctype() の戻り値が false であること。
+    EXPECT_FALSE(
+        brace_lower); // [確認_異常系] - '{' を lower で判定した test_regex_isctype() の戻り値が false であること。
+    EXPECT_FALSE(
+        slash_digit); // [確認_異常系] - '/' を digit で判定した test_regex_isctype() の戻り値が false であること。
+    EXPECT_FALSE(
+        at_xdigit); // [確認_異常系] - '@' を xdigit で判定した test_regex_isctype() の戻り値が false であること。
+    EXPECT_TRUE(del_cntrl); // [確認_正常系] - DEL を cntrl で判定した test_regex_isctype() の戻り値が true であること。
+    EXPECT_TRUE(cr_space);  // [確認_正常系] - CR を space で判定した test_regex_isctype() の戻り値が true であること。
+    EXPECT_EQ(-1, hex_g);   // [確認_異常系] - 16 進の g に対する test_regex_value() の戻り値が -1 であること。
+    EXPECT_EQ(-1, hex_G);   // [確認_異常系] - 16 進の G に対する test_regex_value() の戻り値が -1 であること。
 }
 // [サブ手順参照 名前=regexCoverageTest.TearDown]
 
@@ -283,16 +292,24 @@ TEST_F(regexCoverageTest, syntax_option_and_remaining_class_boundaries)
         test_regex_isctype(L'\x7F', test_regex_lookup_classname(L"print", false)); // [手順] - DEL を print で判定する。
 
     // Assert
-    EXPECT_FALSE(both_syntax);    // [確認_異常系] - EXTENDED と BASIC の同時指定が false であること。
-    EXPECT_TRUE(extended_only);   // [確認_正常系] - EXTENDED だけの変換が true であること。
-    EXPECT_TRUE(default_syntax);  // [確認_正常系] - 既定フラグの変換が true であること。
-    EXPECT_TRUE(icase_nosub);     // [確認_正常系] - ICASE と NOSUB の変換が true であること。
-    EXPECT_EQ(0U, bracket_class); // [確認_異常系] - '[' のクラス名が 0 であること。
-    EXPECT_EQ(-1, slash_value);   // [確認_異常系] - '/' の値が -1 であること。
-    EXPECT_EQ(-1, colon_value);   // [確認_異常系] - ':' の値が -1 であること。
-    EXPECT_EQ(-1, grave_value);   // [確認_異常系] - '`' の値が -1 であること。
-    EXPECT_FALSE(graph_space);    // [確認_異常系] - 空白が graph でないこと。
-    EXPECT_FALSE(print_del);      // [確認_異常系] - DEL が print でないこと。
+    EXPECT_FALSE(
+        both_syntax); // [確認_異常系] - EXTENDED と BASIC を同時に指定した test_regex_to_syntax_option() の戻り値が false であること。
+    EXPECT_TRUE(
+        extended_only); // [確認_正常系] - EXTENDED だけを指定した test_regex_to_syntax_option() の戻り値が true であること。
+    EXPECT_TRUE(
+        default_syntax); // [確認_正常系] - 既定フラグを指定した test_regex_to_syntax_option() の戻り値が true であること。
+    EXPECT_TRUE(
+        icase_nosub); // [確認_正常系] - ICASE と NOSUB を指定した test_regex_to_syntax_option() の戻り値が true であること。
+    EXPECT_EQ(
+        0U,
+        bracket_class); // [確認_異常系] - '[' だけのクラス名に対する test_regex_lookup_classname() の戻り値が 0 であること。
+    EXPECT_EQ(-1, slash_value); // [確認_異常系] - 10 進の '/' に対する test_regex_value() の戻り値が -1 であること。
+    EXPECT_EQ(-1, colon_value); // [確認_異常系] - 10 進の ':' に対する test_regex_value() の戻り値が -1 であること。
+    EXPECT_EQ(-1, grave_value); // [確認_異常系] - 16 進の '`' に対する test_regex_value() の戻り値が -1 であること。
+    EXPECT_FALSE(
+        graph_space); // [確認_異常系] - 空白を graph で判定した test_regex_isctype() の戻り値が false であること。
+    EXPECT_FALSE(
+        print_del); // [確認_異常系] - DEL を print で判定した test_regex_isctype() の戻り値が false であること。
 }
 // [サブ手順参照 名前=regexCoverageTest.TearDown]
 
@@ -324,7 +341,7 @@ TEST_F(regexCoverageTest, remaining_source_conditions)
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "a" をコンパイルする。
-    // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -353,34 +370,40 @@ TEST_F(regexCoverageTest, remaining_source_conditions)
     cplat_regex_iter_dispose(NULL);                           // [手順] - NULL の列挙を破棄する。
 
     // Assert
-    EXPECT_EQ(0U, class_at); // [確認_異常系] - '@' のクラス名が 0 であること。
-    EXPECT_EQ(0U, class_z);  // [確認_異常系] - 'Z' のクラス名が 0 であること。
+    EXPECT_EQ(
+        0U,
+        class_at); // [確認_異常系] - '@' だけのクラス名に対する test_regex_lookup_classname() の戻り値が 0 であること。
+    EXPECT_EQ(
+        0U,
+        class_z); // [確認_異常系] - 'Z' だけのクラス名に対する test_regex_lookup_classname() の戻り値が 0 であること。
     EXPECT_EQ(
         CPLAT_ERR_LIMIT_EXCEEDED,
-        create_limit); // [確認_異常系] - 長過ぎるパターンの cplat_regex_create の戻り値が CPLAT_ERR_LIMIT_EXCEEDED であること。
+        create_limit); // [確認_異常系] - 長過ぎるパターンの cplat_regex_create() の戻り値が CPLAT_ERR_LIMIT_EXCEEDED であること。
     EXPECT_EQ(CPLAT_OK,
-              search_extra); // [確認_正常系] - 余剰グループ付き cplat_regex_search の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_REGEX_NPOS, extra[3].begin); // [確認_正常系] - 余剰グループの begin が NPOS であること。
+              search_extra); // [確認_正常系] - 余剰グループ付き cplat_regex_search() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_REGEX_NPOS,
+              extra[3].begin); // [確認_正常系] - 余剰グループの extra[3].begin が CPLAT_REGEX_NPOS であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        replace_text_null); // [確認_異常系] - text NULL の cplat_regex_replace の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        replace_text_null); // [確認_異常系] - text が NULL のときの cplat_regex_replace() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        iter_regex_null); // [確認_異常系] - regex NULL の cplat_regex_iter_create の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        iter_regex_null); // [確認_異常系] - regex が NULL のときの cplat_regex_iter_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        iter_text_null); // [確認_異常系] - text NULL の cplat_regex_iter_create の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        iter_text_null); // [確認_異常系] - text が NULL のときの cplat_regex_iter_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        next_has_null); // [確認_異常系] - has_match_out NULL の cplat_regex_iter_next の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        next_has_null); // [確認_異常系] - has_match_out が NULL のときの cplat_regex_iter_next() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        split_regex_null); // [確認_異常系] - regex NULL の cplat_regex_split の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        split_regex_null); // [確認_異常系] - regex が NULL のときの cplat_regex_split() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        split_text_null); // [確認_異常系] - text NULL の cplat_regex_split の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(2U, advanced);     // [確認_正常系] - 連続下位サロゲートの test_regex_advance_position が 2 を返すこと。
-    EXPECT_EQ(1U, advanced_bmp); // [確認_正常系] - BMP 2 文字の test_regex_advance_position が 1 を返すこと。
+        split_text_null); // [確認_異常系] - text が NULL のときの cplat_regex_split() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(2U,
+              advanced); // [確認_正常系] - 連続下位サロゲートの test_regex_advance_position() の戻り値が 2 であること。
+    EXPECT_EQ(1U, advanced_bmp); // [確認_正常系] - BMP 2 文字の test_regex_advance_position() の戻り値が 1 であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -399,10 +422,10 @@ TEST_F(regexCoverageTest, iter_next_translates_allocation_failure)
     int fail_after = 0;
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
                                            NULL)); // [状態] - パターン "a" をコンパイルする。
-    // [状態確認] - cplat_regex_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_iter_create(regex, "aaa", 3U, CPLAT_REGEX_DEFAULT, &iter,
                                                 NULL)); // [状態] - 入力 "aaa" のイテレーターを生成する。
-    // [状態確認] - cplat_regex_iter_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_regex_iter_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -428,7 +451,9 @@ TEST_F(regexCoverageTest, iter_next_translates_allocation_failure)
     }
 
     // Assert
-    EXPECT_GT(throw_count, 0); // [確認_異常系] - iter_next が確保失敗を CPLAT_ERR_OUT_OF_MEMORY へ変換すること。
+    EXPECT_GT(
+        throw_count,
+        0); // [確認_異常系] - throw_count が 0 より大きいこと。(cplat_regex_iter_next() が確保失敗を CPLAT_ERR_OUT_OF_MEMORY へ変換することの確認)
 
     // Cleanup
     cplat_regex_iter_dispose(iter);

@@ -54,25 +54,33 @@ TEST_F(errorTest, capture_errno_preserves_domain_result_and_code)
 
     cplat_error_clear(&error); // [状態] - 詳細エラーを空の値で初期化する。
 
-    // Pre-Assert
     EXPECT_EQ(CPLAT_ERROR_DOMAIN_NONE,
-              error.domain); // [状態確認] - 初期化後の domain が CPLAT_ERROR_DOMAIN_NONE であること。
+              error.domain); // [状態確認] - error.domain が CPLAT_ERROR_DOMAIN_NONE であること。
+
+    // Pre-Assert
 
     // Act
     cplat_error_capture_errno(&error, ENOENT); // [手順] - ENOENT を詳細エラーへ取り込む。
 
     // Assert
-    EXPECT_EQ(1, cplat_error_is_set(&error)); // [確認_正常系] - cplat_error_is_set の戻り値が 1 であること。
+    EXPECT_EQ(1, cplat_error_is_set(&error)); // [確認_正常系] - cplat_error_is_set() の戻り値が 1 であること。
     EXPECT_EQ(CPLAT_ERROR_DOMAIN_ERRNO,
-              cplat_error_get_domain(&error)); // [確認_正常系] - domain が errno であること。
+              cplat_error_get_domain(
+                  &error)); // [確認_正常系] - cplat_error_get_domain() の戻り値が CPLAT_ERROR_DOMAIN_ERRNO であること。
     EXPECT_EQ(ENOENT,
-              cplat_error_get_errno(&error)); // [確認_正常系] - cplat_error_get_errno の戻り値が ENOENT であること。
+              cplat_error_get_errno(&error)); // [確認_正常系] - cplat_error_get_errno() の戻り値が ENOENT であること。
     EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
-              cplat_error_to_result(&error)); // [確認_正常系] - 共通結果コードが errno から変換した値であること。
-    EXPECT_EQ(CPLAT_CAUSE_NOT_FOUND,
-              cplat_error_get_cause(&error)); // [確認_正常系] - ENOENT の要因が NOT_FOUND であること。
-    EXPECT_EQ(1, cplat_error_is(&error,
-                                CPLAT_CAUSE_NOT_FOUND)); // [確認_正常系] - NOT_FOUND との一致判定が 1 であること。
+              cplat_error_to_result(
+                  &error)); // [確認_正常系] - cplat_error_to_result() の戻り値が CPLAT_ERR_NOT_FOUND であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_NOT_FOUND,
+        cplat_error_get_cause(
+            &error)); // [確認_正常系] - ENOENT に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_NOT_FOUND であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &error,
+            CPLAT_CAUSE_NOT_FOUND)); // [確認_正常系] - CPLAT_CAUSE_NOT_FOUND に対する cplat_error_is() の戻り値が 1 であること。
 }
 
 // capture_current_errno が現在の errno を保持することの確認
@@ -90,9 +98,10 @@ TEST_F(errorTest, capture_current_errno_preserves_current_value)
 
     // Assert
     EXPECT_EQ(CPLAT_ERROR_DOMAIN_ERRNO,
-              cplat_error_get_domain(&error)); // [確認_正常系] - error のドメインが errno であること。
+              cplat_error_get_domain(
+                  &error)); // [確認_正常系] - cplat_error_get_domain() の戻り値が CPLAT_ERROR_DOMAIN_ERRNO であること。
     EXPECT_EQ(ENOENT,
-              cplat_error_get_errno(&error)); // [確認_正常系] - cplat_error_get_errno の戻り値が ENOENT であること。
+              cplat_error_get_errno(&error)); // [確認_正常系] - cplat_error_get_errno() の戻り値が ENOENT であること。
 }
 
 // set_last がコピーし NULL でクリアすることの確認
@@ -115,16 +124,16 @@ TEST_F(errorTest, set_last_copies_saved_error_and_null_clears_it)
 
     // Assert
     EXPECT_EQ(saved_error.domain,
-              copied_error.domain); // [確認_正常系] - 設定後の TLS に保存済みの domain がコピーされること。
+              copied_error.domain); // [確認_正常系] - copied_error.domain が saved_error.domain と一致すること。
     EXPECT_EQ(saved_error.result,
-              copied_error.result); // [確認_正常系] - 設定後の TLS に保存済みの result がコピーされること。
+              copied_error.result); // [確認_正常系] - copied_error.result が saved_error.result と一致すること。
     EXPECT_EQ(saved_error.code,
-              copied_error.code); // [確認_正常系] - 設定後の TLS に保存済みの code がコピーされること。
+              copied_error.code); // [確認_正常系] - copied_error.code が saved_error.code と一致すること。
     EXPECT_EQ(CPLAT_ERROR_DOMAIN_NONE,
-              cleared_error.domain); // [確認_正常系] - NULL 指定後の TLS の domain が空であること。
+              cleared_error.domain); // [確認_正常系] - cleared_error.domain が CPLAT_ERROR_DOMAIN_NONE であること。
     EXPECT_EQ(CPLAT_OK,
-              cleared_error.result);    // [確認_正常系] - NULL 指定後の TLS の result が CPLAT_OK であること。
-    EXPECT_EQ(0UL, cleared_error.code); // [確認_正常系] - NULL 指定後の TLS の code が 0 であること。
+              cleared_error.result);    // [確認_正常系] - cleared_error.result が CPLAT_OK であること。
+    EXPECT_EQ(0UL, cleared_error.code); // [確認_正常系] - cleared_error.code が 0UL であること。
 }
 
 // アクセサが NULL、空、ドメイン不一致を拒否することの確認
@@ -165,35 +174,48 @@ TEST_F(errorTest, accessors_reject_null_empty_and_mismatched_domain)
         cplat_error_get_errno(&windows_error); // [手順] - Windows ドメインから errno を取得する。
 
     // Assert
-    EXPECT_EQ(0, null_is_set); // [確認_異常系] - NULL に対する設定状態が 0 であること。
-    EXPECT_EQ(CPLAT_ERROR_DOMAIN_NONE,
-              null_domain);   // [確認_異常系] - NULL に対するドメインが CPLAT_ERROR_DOMAIN_NONE であること。
-    EXPECT_EQ(0, null_errno); // [確認_異常系] - NULL から取得した errno が 0 であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              null_result); // [確認_異常系] - NULL に対する変換結果が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_CAUSE_NONE,
-              null_cause);      // [確認_異常系] - NULL に対する要因が CPLAT_CAUSE_NONE であること。
-    EXPECT_EQ(0, null_matches); // [確認_異常系] - NULL に対する要因一致が 0 であること。
-    EXPECT_EQ(0, empty_is_set); // [確認_正常系] - 空の詳細エラーの設定状態が 0 であること。
-    EXPECT_EQ(CPLAT_OK,
-              cplat_error_to_result(&empty)); // [確認_正常系] - 空の値に対する変換結果が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_CAUSE_NONE,
-              cplat_error_get_cause(&empty)); // [確認_正常系] - 空の値の要因が CPLAT_CAUSE_NONE であること。
-    EXPECT_EQ(CPLAT_ERROR_DOMAIN_WINDOWS,
-              mismatched_domain); // [確認_正常系] - Windows ドメインがそのまま取得できること。
+    EXPECT_EQ(0, null_is_set); // [確認_異常系] - NULL に対する cplat_error_is_set() の戻り値が 0 であること。
+    EXPECT_EQ(
+        CPLAT_ERROR_DOMAIN_NONE,
+        null_domain); // [確認_異常系] - NULL に対する cplat_error_get_domain() の戻り値が CPLAT_ERROR_DOMAIN_NONE であること。
+    EXPECT_EQ(0, null_errno); // [確認_異常系] - NULL に対する cplat_error_get_errno() の戻り値が 0 であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        null_result); // [確認_異常系] - NULL に対する cplat_error_to_result() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_NONE,
+        null_cause); // [確認_異常系] - NULL に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_NONE であること。
+    EXPECT_EQ(0, null_matches); // [確認_異常系] - NULL に対する cplat_error_is() の戻り値が 0 であること。
+    EXPECT_EQ(0, empty_is_set); // [確認_正常系] - 空の詳細エラーに対する cplat_error_is_set() の戻り値が 0 であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        cplat_error_to_result(
+            &empty)); // [確認_正常系] - 空の詳細エラーに対する cplat_error_to_result() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_NONE,
+        cplat_error_get_cause(
+            &empty)); // [確認_正常系] - 空の詳細エラーに対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_NONE であること。
+    EXPECT_EQ(
+        CPLAT_ERROR_DOMAIN_WINDOWS,
+        mismatched_domain); // [確認_正常系] - Windows ドメインに対する cplat_error_get_domain() の戻り値が CPLAT_ERROR_DOMAIN_WINDOWS であること。
 #if defined(PLATFORM_LINUX)
-    EXPECT_EQ(CPLAT_CAUSE_OTHER,
-              windows_cause); // [確認_正常系] - Linux で Windows ドメイン エラー コード 5 の要因が OTHER になること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_OTHER,
+        windows_cause); // [確認_正常系] - Linux で Windows ドメインのコード 5 に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_OTHER であること。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_EQ(
         CPLAT_CAUSE_ACCESS_DENIED,
-        windows_cause); // [確認_正常系] - Windows で Windows ドメイン エラー コード 5 の要因が ACCESS_DENIED になること。
+        windows_cause); // [確認_正常系] - Windows で Windows ドメインのコード 5 に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_ACCESS_DENIED であること。
 #endif /* PLATFORM_ */
-    EXPECT_EQ(CPLAT_ERROR_DOMAIN_NONE,
-              invalid_domain); // [確認_異常系] - 未知のドメインが NONE へ正規化されること。
-    EXPECT_EQ(CPLAT_CAUSE_OTHER,
-              invalid_cause);       // [確認_異常系] - 未知のドメインの要因が OTHER になること。
-    EXPECT_EQ(0, mismatched_errno); // [確認_異常系] - Windows ドメインから取得した errno が 0 であること。
+    EXPECT_EQ(
+        CPLAT_ERROR_DOMAIN_NONE,
+        invalid_domain); // [確認_異常系] - 未知のドメインに対する cplat_error_get_domain() の戻り値が CPLAT_ERROR_DOMAIN_NONE であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_OTHER,
+        invalid_cause); // [確認_異常系] - 未知のドメインに対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_OTHER であること。
+    EXPECT_EQ(
+        0,
+        mismatched_errno); // [確認_異常系] - Windows ドメインに対する cplat_error_get_errno() の戻り値が 0 であること。
 }
 
 // 各 errno が単一の要因へ変換されることの確認
@@ -236,10 +258,14 @@ TEST_F(errorTest, errno_values_map_to_one_cause)
     // Assert
     for (std::size_t index = 0U; index < cases.size(); ++index)
     {
-        EXPECT_EQ(cases[index].second,
-                  actual_causes[index]); // [確認_正常系 回数=19] - 各 errno が対応する単一の要因へ変換されること。
-        EXPECT_EQ(1,
-                  actual_matches[index]); // [確認_正常系 回数=19] - 対応する要因との一致判定が 1 であること。
+        EXPECT_EQ(
+            cases[index].second,
+            actual_causes
+                [index]); // [確認_正常系 回数=19] - cases[index].first に対する cplat_error_get_cause() の戻り値が cases[index].second と一致すること。
+        EXPECT_EQ(
+            1,
+            actual_matches
+                [index]); // [確認_正常系 回数=19] - cases[index].second に対する cplat_error_is() の戻り値が 1 であること。
     }
 }
 
@@ -255,8 +281,10 @@ TEST_F(errorTest, unknown_errno_maps_to_other)
     cplat_error_capture_errno(&error, EDOM); // [手順] - 対応表にない EDOM を詳細エラーへ取り込む。
 
     // Assert
-    EXPECT_EQ(CPLAT_CAUSE_OTHER,
-              cplat_error_get_cause(&error)); // [確認_正常系] - 対応表にない errno の要因が OTHER であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_OTHER,
+        cplat_error_get_cause(
+            &error)); // [確認_正常系] - EDOM に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_OTHER であること。
 }
 
 #if defined(ENOSYS)
@@ -272,8 +300,10 @@ TEST_F(errorTest, enosys_maps_to_unsupported)
     cplat_error_capture_errno(&error, ENOSYS); // [手順] - ENOSYS を詳細エラーへ取り込む。
 
     // Assert
-    EXPECT_EQ(CPLAT_CAUSE_UNSUPPORTED,
-              cplat_error_get_cause(&error)); // [確認_正常系] - ENOSYS の要因が UNSUPPORTED であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_UNSUPPORTED,
+        cplat_error_get_cause(
+            &error)); // [確認_正常系] - ENOSYS に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_UNSUPPORTED であること。
 }
 #endif
 
@@ -297,18 +327,21 @@ TEST_F(errorTest, report_errno_records_success_and_explicit_result)
     // Assert
     EXPECT_EQ(
         CPLAT_OK,
-        success_result); // [確認_正常系] - errno 0 を指定した cplat_internal_error_report_errno の戻り値が CPLAT_OK であること。
+        success_result); // [確認_正常系] - errno 0 を指定した cplat_internal_error_report_errno() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_ERR_NOT_FOUND,
-        mapped_result); // [確認_正常系] - ENOENT を指定した cplat_internal_error_report_errno の戻り値が CPLAT_ERR_NOT_FOUND であること。
+        mapped_result); // [確認_正常系] - ENOENT を指定した cplat_internal_error_report_errno() の戻り値が CPLAT_ERR_NOT_FOUND であること。
     EXPECT_EQ(
         CPLAT_ERR_BUSY,
-        explicit_result); // [確認_正常系] - 明示結果を指定した cplat_internal_error_report_errno_as の戻り値が CPLAT_ERR_BUSY であること。
+        explicit_result); // [確認_正常系] - 明示結果を指定した cplat_internal_error_report_errno_as() の戻り値が CPLAT_ERR_BUSY であること。
     EXPECT_EQ(CPLAT_ERROR_DOMAIN_ERRNO,
-              detail.domain);                       // [確認_正常系] - 明示結果の詳細エラーが errno ドメインであること。
-    EXPECT_EQ(EIO, cplat_error_get_errno(&detail)); // [確認_正常系] - 詳細エラーへ EIO が記録されること。
-    EXPECT_EQ(CPLAT_ERR_BUSY,
-              cplat_error_to_result(&last_error)); // [確認_正常系] - TLS の結果コードが CPLAT_ERR_BUSY であること。
+              detail.domain); // [確認_正常系] - detail.domain が CPLAT_ERROR_DOMAIN_ERRNO であること。
+    EXPECT_EQ(EIO,
+              cplat_error_get_errno(&detail)); // [確認_正常系] - cplat_error_get_errno() の戻り値が EIO であること。
+    EXPECT_EQ(
+        CPLAT_ERR_BUSY,
+        cplat_error_to_result(
+            &last_error)); // [確認_正常系] - TLS 詳細エラーに対する cplat_error_to_result() の戻り値が CPLAT_ERR_BUSY であること。
 }
 
 // 成功報告が詳細エラーと TLS の双方をクリアすることの確認
@@ -326,11 +359,11 @@ TEST_F(errorTest, report_success_clears_detail_and_last_error)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              result); // [確認_正常系] - cplat_internal_error_report_success の戻り値が CPLAT_OK であること。
+              result); // [確認_正常系] - cplat_internal_error_report_success() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_ERROR_DOMAIN_NONE,
-              detail.domain); // [確認_正常系] - 出力詳細エラーのドメインが空であること。
+              detail.domain); // [確認_正常系] - detail.domain が CPLAT_ERROR_DOMAIN_NONE であること。
     EXPECT_EQ(CPLAT_ERROR_DOMAIN_NONE,
-              last_error.domain); // [確認_正常系] - TLS 詳細エラーのドメインが空であること。
+              last_error.domain); // [確認_正常系] - last_error.domain が CPLAT_ERROR_DOMAIN_NONE であること。
 }
 
 // ソケット errno が待機要因と通常要因を区別して記録されることの確認
@@ -354,14 +387,20 @@ TEST_F(errorTest, report_socket_errno_uses_socket_domain_and_would_block_cause)
     cplat_error_get_last(&last_error);                       // [手順] - ソケット成功後の TLS 詳細エラーを取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_BUSY, blocked_result); // [確認_正常系] - ソケット EAGAIN の戻り値が CPLAT_ERR_BUSY であること。
-    EXPECT_EQ(CPLAT_ERROR_DOMAIN_SOCKET_ERRNO,
-              blocked_domain); // [確認_正常系] - EAGAIN の記録ドメインが SOCKET_ERRNO であること。
-    EXPECT_EQ(CPLAT_CAUSE_WOULD_BLOCK,
-              blocked_cause);            // [確認_正常系] - ソケット EAGAIN の要因が WOULD_BLOCK であること。
-    EXPECT_EQ(CPLAT_OK, success_result); // [確認_正常系] - ソケット errno 0 の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_BUSY,
+        blocked_result); // [確認_正常系] - EAGAIN に対する cplat_internal_error_report_socket_errno() の戻り値が CPLAT_ERR_BUSY であること。
+    EXPECT_EQ(
+        CPLAT_ERROR_DOMAIN_SOCKET_ERRNO,
+        blocked_domain); // [確認_正常系] - ソケット EAGAIN に対する cplat_error_get_domain() の戻り値が CPLAT_ERROR_DOMAIN_SOCKET_ERRNO であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_WOULD_BLOCK,
+        blocked_cause); // [確認_正常系] - ソケット EAGAIN に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_WOULD_BLOCK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        success_result); // [確認_正常系] - errno 0 に対する cplat_internal_error_report_socket_errno() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_ERROR_DOMAIN_NONE,
-              last_error.domain); // [確認_正常系] - ソケット成功後の TLS ドメインが NONE であること。
+              last_error.domain); // [確認_正常系] - last_error.domain が CPLAT_ERROR_DOMAIN_NONE であること。
 }
 
 // errno 0 と非成功結果をソケット エラーとして記録するとドメインが保持されることの確認
@@ -377,9 +416,11 @@ TEST_F(errorTest, report_socket_errno_as_keeps_domain_when_result_is_not_success
         &error, 0, CPLAT_ERR_UNKNOWN); // [手順] - errno 0 と非成功結果をソケット エラーとして記録する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, result); // [確認_正常系] - 明示した非成功結果がそのまま返ること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        result); // [確認_正常系] - cplat_internal_error_report_socket_errno_as() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(CPLAT_ERROR_DOMAIN_SOCKET_ERRNO,
-              error.domain); // [確認_正常系] - 非成功結果のドメインが SOCKET_ERRNO であること。
+              error.domain); // [確認_正常系] - error.domain が CPLAT_ERROR_DOMAIN_SOCKET_ERRNO であること。
 }
 
 // getaddrinfo のエラー コードが要因と結果へ分類されることの確認
@@ -415,25 +456,44 @@ TEST_F(errorTest, report_gai_error_maps_standard_codes_and_unknown_code)
 
     // Assert
 #if defined(PLATFORM_LINUX)
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
-              not_found_result); // [確認_正常系] - EAI_NONAME の戻り値が CPLAT_ERR_NOT_FOUND であること。
-    EXPECT_EQ(CPLAT_CAUSE_NOT_FOUND, not_found_cause); // [確認_正常系] - EAI_NONAME の要因が NOT_FOUND であること。
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, again_result);  // [確認_正常系] - EAI_AGAIN の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(CPLAT_CAUSE_BUSY, again_cause);    // [確認_正常系] - EAI_AGAIN の要因が BUSY であること。
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, memory_result); // [確認_正常系] - EAI_MEMORY の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(CPLAT_CAUSE_OUT_OF_MEMORY,
-              memory_cause);                     // [確認_正常系] - EAI_MEMORY の要因が OUT_OF_MEMORY であること。
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, family_result); // [確認_正常系] - EAI_FAMILY の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(CPLAT_CAUSE_UNSUPPORTED, family_cause); // [確認_正常系] - EAI_FAMILY の要因が UNSUPPORTED であること。
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              flags_result); // [確認_正常系] - EAI_BADFLAGS の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(CPLAT_CAUSE_INVALID_ARGUMENT,
-              flags_cause); // [確認_正常系] - EAI_BADFLAGS の要因が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              unknown_result); // [確認_異常系] - 未知の EAI 値の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(CPLAT_CAUSE_OTHER, unknown_cause); // [確認_異常系] - 未知の EAI 値の要因が OTHER であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        not_found_result); // [確認_正常系] - EAI_NONAME に対する cplat_internal_error_report_gai_error() の戻り値が CPLAT_ERR_NOT_FOUND であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_NOT_FOUND,
+        not_found_cause); // [確認_正常系] - EAI_NONAME に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_NOT_FOUND であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        again_result); // [確認_正常系] - EAI_AGAIN に対する cplat_internal_error_report_gai_error() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_BUSY,
+        again_cause); // [確認_正常系] - EAI_AGAIN に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_BUSY であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        memory_result); // [確認_正常系] - EAI_MEMORY に対する cplat_internal_error_report_gai_error() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_OUT_OF_MEMORY,
+        memory_cause); // [確認_正常系] - EAI_MEMORY に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_OUT_OF_MEMORY であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        family_result); // [確認_正常系] - EAI_FAMILY に対する cplat_internal_error_report_gai_error() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_UNSUPPORTED,
+        family_cause); // [確認_正常系] - EAI_FAMILY に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_UNSUPPORTED であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        flags_result); // [確認_正常系] - EAI_BADFLAGS に対する cplat_internal_error_report_gai_error() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_INVALID_ARGUMENT,
+        flags_cause); // [確認_正常系] - EAI_BADFLAGS に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        unknown_result); // [確認_異常系] - 未知の EAI 値に対する cplat_internal_error_report_gai_error() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_OTHER,
+        unknown_cause); // [確認_異常系] - 未知の EAI 値に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_OTHER であること。
 #endif
-    EXPECT_EQ(CPLAT_OK, success_result); // [確認_正常系] - EAI 0 の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, success_result); // [確認_正常系] - success_result が CPLAT_OK であること。
 }
 
 #if defined(PLATFORM_LINUX)
@@ -460,13 +520,15 @@ TEST_F(errorTest, report_gai_error_classifies_system_error_by_errno)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        memory_result); // [確認_異常系] - EAI_SYSTEM の cplat_internal_error_report_gai_error の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(CPLAT_CAUSE_OUT_OF_MEMORY,
-              memory_cause); // [確認_異常系] - errno が ENOMEM の EAI_SYSTEM の要因が OUT_OF_MEMORY であること。
+        memory_result); // [確認_異常系] - errno が ENOMEM の EAI_SYSTEM に対する cplat_internal_error_report_gai_error() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_OUT_OF_MEMORY,
+        memory_cause); // [確認_異常系] - errno が ENOMEM の EAI_SYSTEM に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_OUT_OF_MEMORY であること。
     EXPECT_EQ(static_cast<unsigned long>(EAI_SYSTEM),
-              memory_code); // [確認_異常系] - 生値として EAI_SYSTEM が保持されること。
-    EXPECT_EQ(CPLAT_CAUSE_INTERRUPTED,
-              interrupted_cause); // [確認_異常系] - errno が EINTR の EAI_SYSTEM の要因が INTERRUPTED であること。
+              memory_code); // [確認_異常系] - memory_code が static_cast<unsigned long>(EAI_SYSTEM) と一致すること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_INTERRUPTED,
+        interrupted_cause); // [確認_異常系] - errno が EINTR の EAI_SYSTEM に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_INTERRUPTED であること。
 }
 #endif /* PLATFORM_LINUX */
 
@@ -541,18 +603,27 @@ TEST_F(errorTest, accessors_cover_socket_gai_and_extended_errno_causes)
     }
 
     // Assert
-    EXPECT_EQ(CPLAT_CAUSE_IO_ERROR, socket_io_cause); // [確認_正常系] - ソケット EIO の要因が IO_ERROR であること。
-    EXPECT_EQ(CPLAT_ERROR_DOMAIN_NONE, gai_domain);   // [確認_正常系] - GAI 成功値のドメインが NONE であること。
-    EXPECT_EQ(CPLAT_ERROR_DOMAIN_WINSOCK,
-              winsock_domain); // [確認_正常系] - WINSOCK ドメインがそのまま取得できること。
-    EXPECT_EQ(CPLAT_ERROR_DOMAIN_GAI, explicit_gai_domain); // [確認_正常系] - GAI ドメインがそのまま取得できること。
-    EXPECT_EQ(CPLAT_CAUSE_OTHER, winsock_cause); // [確認_正常系] - Linux の WINSOCK ドメイン要因が OTHER であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_IO_ERROR,
+        socket_io_cause); // [確認_正常系] - ソケット EIO に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_IO_ERROR であること。
+    EXPECT_EQ(
+        CPLAT_ERROR_DOMAIN_NONE,
+        gai_domain); // [確認_正常系] - GAI 成功値に対する cplat_error_get_domain() の戻り値が CPLAT_ERROR_DOMAIN_NONE であること。
+    EXPECT_EQ(
+        CPLAT_ERROR_DOMAIN_WINSOCK,
+        winsock_domain); // [確認_正常系] - WINSOCK ドメインに対する cplat_error_get_domain() の戻り値が CPLAT_ERROR_DOMAIN_WINSOCK であること。
+    EXPECT_EQ(
+        CPLAT_ERROR_DOMAIN_GAI,
+        explicit_gai_domain); // [確認_正常系] - GAI ドメインに対する cplat_error_get_domain() の戻り値が CPLAT_ERROR_DOMAIN_GAI であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_OTHER,
+        winsock_cause); // [確認_正常系] - WINSOCK ドメインのコード 1 に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_OTHER であること。
     std::vector<cplat_error_cause> expected_causes;
     for (const std::pair<int, cplat_error_cause> &item : cases)
     {
         expected_causes.push_back(item.second);
     }
-    EXPECT_EQ(expected_causes, causes); // [確認_正常系] - 追加 errno の要因列が期待値と一致すること。
+    EXPECT_EQ(expected_causes, causes); // [確認_正常系] - causes が expected_causes と一致すること。
 }
 
 // 詳細エラーの要因が一致しない場合に不一致となることの確認
@@ -568,7 +639,9 @@ TEST_F(errorTest, error_is_rejects_nonmatching_cause)
         &error, CPLAT_CAUSE_ACCESS_DENIED); // [手順] - NOT_FOUND の詳細エラーを ACCESS_DENIED と比較する。
 
     // Assert
-    EXPECT_EQ(0, matches); // [確認_異常系] - 異なる要因の比較結果が 0 であること。
+    EXPECT_EQ(
+        0,
+        matches); // [確認_異常系] - CPLAT_CAUSE_ACCESS_DENIED に対する cplat_error_is() の戻り値が 0 であること。(異なる要因と一致しないことの確認)
 }
 
 // errno 0 と非成功結果の組合せがエラー ドメインとして保持されることの確認
@@ -584,6 +657,9 @@ TEST_F(errorTest, report_errno_as_keeps_domain_when_result_is_not_success)
         &error, 0, CPLAT_ERR_UNKNOWN); // [手順] - errno 0 と非成功結果を明示して記録する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, result);              // [確認_正常系] - 明示した非成功結果がそのまま返ること。
-    EXPECT_EQ(CPLAT_ERROR_DOMAIN_ERRNO, error.domain); // [確認_正常系] - 非成功結果のドメインが ERRNO であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        result); // [確認_正常系] - cplat_internal_error_report_errno_as() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(CPLAT_ERROR_DOMAIN_ERRNO,
+              error.domain); // [確認_正常系] - error.domain が CPLAT_ERROR_DOMAIN_ERRNO であること。
 }

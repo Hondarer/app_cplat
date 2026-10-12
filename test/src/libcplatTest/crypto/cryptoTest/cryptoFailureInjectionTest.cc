@@ -52,7 +52,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_out_of_memory_when_context_al
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_CIPHER_CTX_new(_, _, _))
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_CIPHER_CTX_new が 1 回目に呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_CIPHER_CTX_new() が 1 回以上呼び出されること。
                                       // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
 
     // Act
@@ -60,7 +60,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_out_of_memory_when_context_al
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
-              actual_ret); // [確認_異常系] - cplat_crypto_encrypt の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+              actual_ret); // [確認_異常系] - encrypt() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
 
 // 暗号化の初期化に失敗した場合に通知されることの確認
@@ -73,7 +73,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_init_fails)
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_EncryptInit_ex(_, _, _, _, _, _, _, _))
         .WillOnce(Return(0))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_EncryptInit_ex が 1 回目に呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_EncryptInit_ex() が 1 回以上呼び出されること。
                                       // [Pre-Assert手順] - 1 回目は失敗を示す 0 を返却し、以降は本物へ委譲する。
 
     // Act
@@ -81,7 +81,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_init_fails)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - cplat_crypto_encrypt の戻り値が CPLAT_ERR_UNKNOWN であること。
+              actual_ret); // [確認_異常系] - encrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // 暗号化の鍵・ノンス設定に失敗した場合に通知されることの確認
@@ -93,11 +93,12 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_key_setting_fail
 
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_CIPHER_CTX_ctrl(_, _, _, _, _, _, _))
-        .WillOnce(Return(1)); // [Pre-Assert確認_正常系] - 鍵設定へ進むため、ノンス長設定が成功すること。
+        .WillOnce(Return(1)); // [Pre-Assert確認_正常系] - EVP_CIPHER_CTX_ctrl() が 1 回呼び出されること。
+                              // [Pre-Assert手順] - 鍵設定へ進むため、ノンス長設定を成功させる。
     EXPECT_CALL(mock_openssl, EVP_EncryptInit_ex(_, _, _, _, _, _, _, _))
         .WillOnce(Return(1))
         .WillOnce(Return(0))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_EncryptInit_ex が 2 回呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_EncryptInit_ex() が 2 回以上呼び出されること。
                                       // [Pre-Assert手順] - 1 回目は成功を示す 1、2 回目は失敗を示す 0 を返却する。
 
     // Act
@@ -105,7 +106,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_key_setting_fail
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - cplat_crypto_encrypt の戻り値が CPLAT_ERR_UNKNOWN であること。
+              actual_ret); // [確認_異常系] - encrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // ノンス長の設定に失敗した場合に通知されることの確認
@@ -118,7 +119,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_nonce_length_set
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_CIPHER_CTX_ctrl(_, _, _, _, _, _, _))
         .WillOnce(Return(0))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_CIPHER_CTX_ctrl が 1 回目に呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_CIPHER_CTX_ctrl() が 1 回以上呼び出されること。
                                       // [Pre-Assert手順] - 1 回目は失敗を示す 0 を返却し、以降は本物へ委譲する。
 
     // Act
@@ -126,7 +127,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_nonce_length_set
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - cplat_crypto_encrypt の戻り値が CPLAT_ERR_UNKNOWN であること。
+              actual_ret); // [確認_異常系] - encrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // 暗号文の生成に失敗した場合に通知されることの確認
@@ -139,7 +140,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_update_fails)
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_EncryptUpdate(_, _, _, _, _, _, _, _))
         .WillOnce(Return(0))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_EncryptUpdate が 1 回目に呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_EncryptUpdate() が 1 回以上呼び出されること。
                                       // [Pre-Assert手順] - 1 回目は失敗を示す 0 を返却し、以降は本物へ委譲する。
 
     // Act
@@ -147,7 +148,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_update_fails)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - cplat_crypto_encrypt の戻り値が CPLAT_ERR_UNKNOWN であること。
+              actual_ret); // [確認_異常系] - encrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // AAD の入力に失敗した場合に通知されることの確認
@@ -162,8 +163,9 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_aad_update_fails
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_EncryptUpdate(_, _, _, _, _, _, _, _))
         .WillOnce(Return(0))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - AAD の入力で EVP_EncryptUpdate が呼び出されること。
-                                      // [Pre-Assert手順] - AAD の入力で失敗を示す 0 を返却する。
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - AAD の入力時に EVP_EncryptUpdate() が 1 回以上呼び出されること。
+                          // [Pre-Assert手順] - AAD の入力で失敗を示す 0 を返却する。
 
     // Act
     int actual_ret =
@@ -173,7 +175,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_aad_update_fails
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - AAD の入力失敗時に cplat_crypto_encrypt の戻り値が CPLAT_ERR_UNKNOWN であること。
+        actual_ret); // [確認_異常系] - AAD の入力失敗時の cplat_crypto_encrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // 暗号化の終端処理に失敗した場合に通知されることの確認
@@ -186,7 +188,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_final_fails)
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_EncryptFinal_ex(_, _, _, _, _, _))
         .WillOnce(Return(0))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_EncryptFinal_ex が 1 回目に呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_EncryptFinal_ex() が 1 回以上呼び出されること。
                                       // [Pre-Assert手順] - 1 回目は失敗を示す 0 を返却し、以降は本物へ委譲する。
 
     // Act
@@ -194,7 +196,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_final_fails)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - cplat_crypto_encrypt の戻り値が CPLAT_ERR_UNKNOWN であること。
+              actual_ret); // [確認_異常系] - encrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // 認証タグの取得に失敗した場合に通知されることの確認
@@ -208,17 +210,15 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_tag_get_fails)
     EXPECT_CALL(mock_openssl, EVP_CIPHER_CTX_ctrl(_, _, _, _, _, _, _))
         .WillOnce(Return(1))
         .WillOnce(Return(0))
-        .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_異常系] - EVP_CIPHER_CTX_ctrl がノンス長設定とタグ取得で呼び出されること。
-                          // [Pre-Assert手順] - ノンス長設定は成功させ、タグ取得で失敗を示す 0 を返却する。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_CIPHER_CTX_ctrl() が 2 回以上呼び出されること。
+                                      // [Pre-Assert手順] - ノンス長設定は成功させ、タグ取得で失敗を示す 0 を返却する。
 
     // Act
     int actual_ret = encrypt(); // [手順] - cplat_crypto_encrypt を呼び出す。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - タグ取得失敗時に cplat_crypto_encrypt の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              actual_ret); // [確認_異常系] - タグ取得失敗時の encrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // 復号コンテキストの確保に失敗した場合にメモリ不足が返ることの確認
@@ -230,14 +230,14 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_out_of_memory_when_context_al
     size_t restored_len = restored.size();
 
     ASSERT_EQ(CPLAT_OK, encrypt()); // [状態] - 復号対象の暗号文を用意する。
-                                    // [状態確認] - encrypt の戻り値が CPLAT_OK であること。
+                                    // [状態確認] - encrypt() の戻り値が CPLAT_OK であること。
 
     NiceMock<Mock_openssl> mock_openssl;
 
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_CIPHER_CTX_new(_, _, _))
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_CIPHER_CTX_new が 1 回目に呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_CIPHER_CTX_new() が 1 回以上呼び出されること。
                                       // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
 
     // Act
@@ -247,7 +247,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_out_of_memory_when_context_al
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
-              actual_ret); // [確認_異常系] - cplat_crypto_decrypt の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+              actual_ret); // [確認_異常系] - cplat_crypto_decrypt() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
 
 // 復号の初期化に失敗した場合に通知されることの確認
@@ -259,14 +259,14 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_init_fails)
     size_t restored_len = restored.size();
 
     ASSERT_EQ(CPLAT_OK, encrypt()); // [状態] - 復号対象の暗号文を用意する。
-                                    // [状態確認] - encrypt の戻り値が CPLAT_OK であること。
+                                    // [状態確認] - encrypt() の戻り値が CPLAT_OK であること。
 
     NiceMock<Mock_openssl> mock_openssl;
 
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_DecryptInit_ex(_, _, _, _, _, _, _, _))
         .WillOnce(Return(0))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_DecryptInit_ex が 1 回目に呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_DecryptInit_ex() が 1 回以上呼び出されること。
                                       // [Pre-Assert手順] - 1 回目は失敗を示す 0 を返却する。
 
     // Act
@@ -276,7 +276,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_init_fails)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - cplat_crypto_decrypt の戻り値が CPLAT_ERR_UNKNOWN であること。
+              actual_ret); // [確認_異常系] - cplat_crypto_decrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // 復号のノンス長設定に失敗した場合に通知されることの確認
@@ -288,7 +288,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_nonce_length_set
     size_t restored_len = restored.size();
 
     ASSERT_EQ(CPLAT_OK, encrypt()); // [状態] - 復号対象の暗号文を用意する。
-                                    // [状態確認] - encrypt の戻り値が CPLAT_OK であること。
+                                    // [状態確認] - encrypt() の戻り値が CPLAT_OK であること。
 
     NiceMock<Mock_openssl> mock_openssl;
 
@@ -296,7 +296,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_nonce_length_set
     EXPECT_CALL(mock_openssl, EVP_CIPHER_CTX_ctrl(_, _, _, _, _, _, _))
         .WillOnce(Return(0))
         .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_異常系] - 復号のノンス長設定で EVP_CIPHER_CTX_ctrl が呼び出されること。
+            DoDefault()); // [Pre-Assert確認_異常系] - 復号のノンス長設定時に EVP_CIPHER_CTX_ctrl() が 1 回以上呼び出されること。
                           // [Pre-Assert手順] - ノンス長設定で失敗を示す 0 を返却する。
 
     // Act
@@ -307,7 +307,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_nonce_length_set
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - ノンス長設定失敗時に cplat_crypto_decrypt の戻り値が CPLAT_ERR_UNKNOWN であること。
+        actual_ret); // [確認_異常系] - ノンス長設定失敗時の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // 復号の鍵・ノンス設定に失敗した場合に通知されることの確認
@@ -319,17 +319,18 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_key_setting_fail
     size_t restored_len = restored.size();
 
     ASSERT_EQ(CPLAT_OK, encrypt()); // [状態] - 復号対象の暗号文を用意する。
-                                    // [状態確認] - encrypt の戻り値が CPLAT_OK であること。
+                                    // [状態確認] - encrypt() の戻り値が CPLAT_OK であること。
 
     NiceMock<Mock_openssl> mock_openssl;
 
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_CIPHER_CTX_ctrl(_, _, _, _, _, _, _))
-        .WillOnce(Return(1)); // [Pre-Assert確認_正常系] - 鍵設定へ進むため、ノンス長設定が成功すること。
+        .WillOnce(Return(1)); // [Pre-Assert確認_正常系] - EVP_CIPHER_CTX_ctrl() が 1 回呼び出されること。
+                              // [Pre-Assert手順] - 鍵設定へ進むため、ノンス長設定を成功させる。
     EXPECT_CALL(mock_openssl, EVP_DecryptInit_ex(_, _, _, _, _, _, _, _))
         .WillOnce(Return(1))
         .WillOnce(Return(0))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_DecryptInit_ex が 2 回呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_DecryptInit_ex() が 2 回以上呼び出されること。
                                       // [Pre-Assert手順] - 1 回目は成功を示す 1、2 回目は失敗を示す 0 を返却する。
 
     // Act
@@ -340,7 +341,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_key_setting_fail
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - 鍵・ノンス設定失敗時に cplat_crypto_decrypt の戻り値が CPLAT_ERR_UNKNOWN であること。
+        actual_ret); // [確認_異常系] - 鍵・ノンス設定失敗時の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // AAD の入力に失敗した場合に通知されることの確認
@@ -359,15 +360,16 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_aad_update_fails
 
     ASSERT_EQ(CPLAT_OK, cplat_crypto_encrypt(cipher.data(), &cipher_len, plain, plain_len, key_, nonce_, aad,
                                              aad_len)); // [状態] - AAD 付きの復号対象を用意する。
-    // [状態確認] - cplat_crypto_encrypt の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_crypto_encrypt() の戻り値が CPLAT_OK であること。
 
     NiceMock<Mock_openssl> mock_openssl;
 
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_DecryptUpdate(_, _, _, _, _, _, _, _))
         .WillOnce(Return(0))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - AAD の入力で EVP_DecryptUpdate が呼び出されること。
-                                      // [Pre-Assert手順] - AAD の入力で失敗を示す 0 を返却する。
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - AAD の入力時に EVP_DecryptUpdate() が 1 回以上呼び出されること。
+                          // [Pre-Assert手順] - AAD の入力で失敗を示す 0 を返却する。
 
     // Act
     int actual_ret = cplat_crypto_decrypt(restored.data(), &restored_len, cipher.data(), cipher_len, key_, nonce_, aad,
@@ -376,7 +378,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_aad_update_fails
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - AAD の入力失敗時に cplat_crypto_decrypt の戻り値が CPLAT_ERR_UNKNOWN であること。
+        actual_ret); // [確認_異常系] - AAD の入力失敗時の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // 平文の復号に失敗した場合に通知されることの確認
@@ -388,15 +390,16 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_update_fails)
     size_t restored_len = restored.size();
 
     ASSERT_EQ(CPLAT_OK, encrypt()); // [状態] - 復号対象の暗号文を用意する。
-                                    // [状態確認] - encrypt の戻り値が CPLAT_OK であること。
+                                    // [状態確認] - encrypt() の戻り値が CPLAT_OK であること。
 
     NiceMock<Mock_openssl> mock_openssl;
 
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_DecryptUpdate(_, _, _, _, _, _, _, _))
         .WillOnce(Return(0))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - 平文の復号で EVP_DecryptUpdate が呼び出されること。
-                                      // [Pre-Assert手順] - 平文の復号で失敗を示す 0 を返却する。
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - 平文の復号時に EVP_DecryptUpdate() が 1 回以上呼び出されること。
+                          // [Pre-Assert手順] - 平文の復号で失敗を示す 0 を返却する。
 
     // Act
     int actual_ret =
@@ -406,7 +409,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_update_fails)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - 平文の復号失敗時に cplat_crypto_decrypt の戻り値が CPLAT_ERR_UNKNOWN であること。
+        actual_ret); // [確認_異常系] - 平文の復号失敗時の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // 認証タグの設定に失敗した場合に通知されることの確認
@@ -418,7 +421,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_tag_setting_fail
     size_t restored_len = restored.size();
 
     ASSERT_EQ(CPLAT_OK, encrypt()); // [状態] - 復号対象の暗号文を用意する。
-                                    // [状態確認] - encrypt の戻り値が CPLAT_OK であること。
+                                    // [状態確認] - encrypt() の戻り値が CPLAT_OK であること。
 
     NiceMock<Mock_openssl> mock_openssl;
 
@@ -426,9 +429,8 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_tag_setting_fail
     EXPECT_CALL(mock_openssl, EVP_CIPHER_CTX_ctrl(_, _, _, _, _, _, _))
         .WillOnce(Return(1))
         .WillOnce(Return(0))
-        .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_異常系] - 認証タグ設定で EVP_CIPHER_CTX_ctrl が呼び出されること。
-                          // [Pre-Assert手順] - 認証タグ設定で失敗を示す 0 を返却する。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_CIPHER_CTX_ctrl() が 2 回以上呼び出されること。
+                                      // [Pre-Assert手順] - 認証タグ設定で失敗を示す 0 を返却する。
 
     // Act
     int actual_ret =
@@ -438,7 +440,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_tag_setting_fail
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - 認証タグ設定失敗時に cplat_crypto_decrypt の戻り値が CPLAT_ERR_UNKNOWN であること。
+        actual_ret); // [確認_異常系] - 認証タグ設定失敗時の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // 認証の終端処理に失敗した場合に通知されることの確認
@@ -450,14 +452,14 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_final_fails)
     size_t restored_len = restored.size();
 
     ASSERT_EQ(CPLAT_OK, encrypt()); // [状態] - 復号対象の暗号文を用意する。
-                                    // [状態確認] - encrypt の戻り値が CPLAT_OK であること。
+                                    // [状態確認] - encrypt() の戻り値が CPLAT_OK であること。
 
     NiceMock<Mock_openssl> mock_openssl;
 
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_DecryptFinal_ex(_, _, _, _, _, _))
         .WillOnce(Return(0))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_DecryptFinal_ex が 1 回目に呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_DecryptFinal_ex() が 1 回以上呼び出されること。
                                       // [Pre-Assert手順] - 1 回目は失敗を示す 0 を返却する。
 
     // Act
@@ -468,7 +470,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_final_fails)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - 認証終端処理失敗時に cplat_crypto_decrypt の戻り値が CPLAT_ERR_UNKNOWN であること。
+        actual_ret); // [確認_異常系] - 認証終端処理失敗時の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // ダイジェスト コンテキストの確保に失敗した場合にメモリ不足が返ることの確認
@@ -482,7 +484,7 @@ TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_out_of_memory_when_
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_MD_CTX_new(_, _, _))
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_MD_CTX_new が 1 回目に呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_MD_CTX_new() が 1 回以上呼び出されること。
                                       // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
 
     // Act
@@ -491,7 +493,7 @@ TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_out_of_memory_when_
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
-              actual_ret); // [確認_異常系] - cplat_passphrase_to_key の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+              actual_ret); // [確認_異常系] - cplat_passphrase_to_key() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 }
 
 // ダイジェストの計算に失敗した場合に通知されることの確認
@@ -505,7 +507,7 @@ TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_unknown_when_digest
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_DigestInit_ex(_, _, _, _, _, _))
         .WillOnce(Return(0))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_DigestInit_ex が 1 回目に呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_DigestInit_ex() が 1 回以上呼び出されること。
                                       // [Pre-Assert手順] - 1 回目は失敗を示す 0 を返却し、以降は本物へ委譲する。
 
     // Act
@@ -514,7 +516,7 @@ TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_unknown_when_digest
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - cplat_passphrase_to_key の戻り値が CPLAT_ERR_UNKNOWN であること。
+              actual_ret); // [確認_異常系] - cplat_passphrase_to_key() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // ダイジェスト更新に失敗した場合に通知されることの確認
@@ -528,7 +530,7 @@ TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_unknown_when_digest
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_DigestUpdate(_, _, _, _, _, _))
         .WillOnce(Return(0))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_DigestUpdate が 1 回目に呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_DigestUpdate() が 1 回以上呼び出されること。
                                       // [Pre-Assert手順] - 1 回目は失敗を示す 0 を返却する。
 
     // Act
@@ -538,7 +540,7 @@ TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_unknown_when_digest
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - ダイジェスト更新失敗時に cplat_passphrase_to_key の戻り値が CPLAT_ERR_UNKNOWN であること。
+        actual_ret); // [確認_異常系] - ダイジェスト更新失敗時の cplat_passphrase_to_key() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // ダイジェスト終端処理に失敗した場合に通知されることの確認
@@ -552,7 +554,7 @@ TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_unknown_when_digest
     // Pre-Assert
     EXPECT_CALL(mock_openssl, EVP_DigestFinal_ex(_, _, _, _, _, _))
         .WillOnce(Return(0))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_DigestFinal_ex が 1 回目に呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - EVP_DigestFinal_ex() が 1 回以上呼び出されること。
                                       // [Pre-Assert手順] - 1 回目は失敗を示す 0 を返却する。
 
     // Act
@@ -562,7 +564,7 @@ TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_unknown_when_digest
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - ダイジェスト終端処理失敗時に cplat_passphrase_to_key の戻り値が CPLAT_ERR_UNKNOWN であること。
+        actual_ret); // [確認_異常系] - ダイジェスト終端処理失敗時の cplat_passphrase_to_key() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 #endif /* PLATFORM_LINUX */

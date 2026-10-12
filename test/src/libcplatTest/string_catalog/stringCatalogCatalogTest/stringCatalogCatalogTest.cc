@@ -109,15 +109,28 @@ TEST_F(stringCatalogCatalogTest, unusable_catalog_is_empty)
         cplat_internal_string_catalog_entry_count(&null_entries); // [手順] - 配列が NULL の件数を取得する。
 
     // Assert
-    EXPECT_FALSE(usable_null);           // [確認_異常系] - NULL は参照できないこと。
-    EXPECT_FALSE(usable_null_entries);   // [確認_異常系] - 配列が NULL なら参照できないこと。
-    EXPECT_FALSE(usable_negative_count); // [確認_異常系] - 件数が負なら参照できないこと。
-    EXPECT_FALSE(usable_negative_index); // [確認_異常系] - インデックス表の要素数が負なら参照できないこと。
-    EXPECT_TRUE(usable_valid);           // [確認_正常系] - 妥当な構造のカタログは参照できること。
-    EXPECT_EQ(0, count_null);            // [確認_異常系] - NULL では件数が 0 であること。
-    EXPECT_EQ(nullptr, find_null);       // [確認_異常系] - NULL では検索が NULL を返すこと。
-    EXPECT_EQ(nullptr, at_null);         // [確認_異常系] - NULL ではインデックス指定取得が NULL を返すこと。
-    EXPECT_EQ(0, count_null_entries);    // [確認_異常系] - 配列が NULL では件数が 0 であること。
+    EXPECT_FALSE(
+        usable_null); // [確認_異常系] - NULL のカタログに対する cplat_internal_string_catalog_is_usable() の戻り値が false であること。
+    EXPECT_FALSE(
+        usable_null_entries); // [確認_異常系] - 配列が NULL のカタログに対する cplat_internal_string_catalog_is_usable() の戻り値が false であること。
+    EXPECT_FALSE(
+        usable_negative_count); // [確認_異常系] - 件数が負のカタログに対する cplat_internal_string_catalog_is_usable() の戻り値が false であること。
+    EXPECT_FALSE(
+        usable_negative_index); // [確認_異常系] - インデックス表の要素数が負のカタログに対する cplat_internal_string_catalog_is_usable() の戻り値が false であること。
+    EXPECT_TRUE(
+        usable_valid); // [確認_正常系] - 妥当な構造のカタログに対する cplat_internal_string_catalog_is_usable() の戻り値が true であること。
+    EXPECT_EQ(
+        0,
+        count_null); // [確認_異常系] - NULL のカタログに対する cplat_internal_string_catalog_entry_count() の戻り値が 0 であること。
+    EXPECT_EQ(
+        nullptr,
+        find_null); // [確認_異常系] - NULL のカタログに対する cplat_internal_string_catalog_find_entry() の戻り値が nullptr であること。
+    EXPECT_EQ(
+        nullptr,
+        at_null); // [確認_異常系] - NULL のカタログに対する cplat_internal_string_catalog_entry_at() の戻り値が nullptr であること。
+    EXPECT_EQ(
+        0,
+        count_null_entries); // [確認_異常系] - 配列が NULL のカタログに対する cplat_internal_string_catalog_entry_count() の戻り値が 0 であること。
 }
 
 // インデックス表を持たないカタログを線形探索で参照できることの確認
@@ -138,10 +151,14 @@ TEST_F(stringCatalogCatalogTest, find_without_key_index)
                                                                     2); // [手順] - 未登録の文字列キーで検索する。
 
     // Assert
-    EXPECT_EQ(2, actual_count);               // [確認_正常系] - カタログが持つ件数を返すこと。
-    ASSERT_NE(nullptr, actual_entry_found);   // [確認_正常系] - カタログを取得できること。
-    EXPECT_EQ(3, actual_entry_found->key);    // [確認_正常系] - 検索した文字列キーの定義であること。
-    EXPECT_EQ(nullptr, actual_entry_unknown); // [確認_異常系] - 未登録の文字列キーでは NULL を返すこと。
+    EXPECT_EQ(2, actual_count); // [確認_正常系] - cplat_internal_string_catalog_entry_count() の戻り値が 2 であること。
+    ASSERT_NE(
+        nullptr,
+        actual_entry_found); // [確認_正常系] - 登録済みの文字列キーに対する cplat_internal_string_catalog_find_entry() の戻り値が nullptr 以外であること。
+    EXPECT_EQ(3, actual_entry_found->key); // [確認_正常系] - actual_entry_found->key が 3 であること。
+    EXPECT_EQ(
+        nullptr,
+        actual_entry_unknown); // [確認_異常系] - 未登録の文字列キーに対する cplat_internal_string_catalog_find_entry() の戻り値が nullptr であること。
 }
 
 // インデックス表でカタログを参照できることの確認
@@ -167,13 +184,19 @@ TEST_F(stringCatalogCatalogTest, find_with_key_index)
         cplat_internal_string_catalog_find_entry(&s_catalog_with_index, -1); // [手順] - 負の文字列キーで検索する。
 
     // Assert
-    ASSERT_NE(nullptr, actual_entry_found);  // [確認_正常系] - インデックス表からカタログを取得できること。
-    EXPECT_EQ(3, actual_entry_found->key);   // [確認_正常系] - 検索した文字列キーの定義であること。
-    EXPECT_EQ(nullptr, actual_entry_absent); // [確認_異常系] - インデックス表が負の値を持つ場合は NULL を返すこと。
+    ASSERT_NE(
+        nullptr,
+        actual_entry_found); // [確認_正常系] - 登録済みの文字列キーに対する cplat_internal_string_catalog_find_entry() の戻り値が nullptr 以外であること。
+    EXPECT_EQ(3, actual_entry_found->key); // [確認_正常系] - actual_entry_found->key が 3 であること。
     EXPECT_EQ(
         nullptr,
-        actual_entry_over_index); // [確認_異常系] - インデックス表の範囲外では線形探索へフォールバックし、NULL を返すこと。
-    EXPECT_EQ(nullptr, actual_entry_negative_key); // [確認_異常系] - 負の文字列キーでは NULL を返すこと。
+        actual_entry_absent); // [確認_異常系] - インデックス表が負の値を持つ文字列キーに対する cplat_internal_string_catalog_find_entry() の戻り値が nullptr であること。
+    EXPECT_EQ(
+        nullptr,
+        actual_entry_over_index); // [確認_異常系] - インデックス表の範囲外の文字列キーに対する cplat_internal_string_catalog_find_entry() の戻り値が nullptr であること。
+    EXPECT_EQ(
+        nullptr,
+        actual_entry_negative_key); // [確認_異常系] - 負の文字列キーに対する cplat_internal_string_catalog_find_entry() の戻り値が nullptr であること。
 }
 
 // インデックス表が範囲外のインデックスを持つ場合に参照しないことの確認
@@ -189,7 +212,9 @@ TEST_F(stringCatalogCatalogTest, broken_key_index)
         &s_catalog_broken_index, 1); // [手順] - 範囲外のインデックスを持つインデックス表で検索する。
 
     // Assert
-    EXPECT_EQ(nullptr, actual_entry); // [確認_異常系] - カタログを参照せずに NULL を返すこと。
+    EXPECT_EQ(
+        nullptr,
+        actual_entry); // [確認_異常系] - 不正なインデックス表に対する cplat_internal_string_catalog_find_entry() の戻り値が nullptr であること。
 }
 
 // 公開 API から文字列キーに対応するカタログ項目を取得できることの確認
@@ -210,11 +235,18 @@ TEST_F(stringCatalogCatalogTest, get_entry)
         cplat_string_catalog_get_entry(&s_catalog_with_index, 2); // [手順] - 未登録の文字列キーで項目を取得する。
 
     // Assert
-    ASSERT_NE(nullptr, actual_entry);                 // [確認_正常系] - 登録済みの項目を取得できること。
-    EXPECT_EQ(1, actual_entry->key);                  // [確認_正常系] - 指定した文字列キーの項目であること。
-    EXPECT_STREQ("first brief", actual_entry->brief); // [確認_正常系] - メタデータを保持した項目を返すこと。
-    EXPECT_EQ(nullptr, actual_unknown);               // [確認_異常系] - NULL のカタログでは NULL を返すこと。
-    EXPECT_EQ(nullptr, actual_absent);                // [確認_異常系] - 未登録の文字列キーでは NULL を返すこと。
+    ASSERT_NE(
+        nullptr,
+        actual_entry); // [確認_正常系] - 登録済みの文字列キーに対する cplat_string_catalog_get_entry() の戻り値が nullptr 以外であること。
+    EXPECT_EQ(1, actual_entry->key); // [確認_正常系] - actual_entry->key が 1 であること。
+    EXPECT_STREQ("first brief",
+                 actual_entry->brief); // [確認_正常系] - actual_entry->brief が "first brief" であること。
+    EXPECT_EQ(
+        nullptr,
+        actual_unknown); // [確認_異常系] - NULL のカタログに対する cplat_string_catalog_get_entry() の戻り値が nullptr であること。
+    EXPECT_EQ(
+        nullptr,
+        actual_absent); // [確認_異常系] - 未登録の文字列キーに対する cplat_string_catalog_get_entry() の戻り値が nullptr であること。
 }
 
 // インデックス指定でカタログを取得できることの確認
@@ -237,10 +269,16 @@ TEST_F(stringCatalogCatalogTest, entry_at)
                                                s_entry_count); // [手順] - 登録件数と同じインデックスで取得する。
 
     // Assert
-    ASSERT_NE(nullptr, actual_entry);          // [確認_正常系] - カタログを取得できること。
-    EXPECT_EQ(3, actual_entry->key);           // [確認_正常系] - インデックスに対応する文字列であること。
-    EXPECT_EQ(nullptr, actual_entry_negative); // [確認_異常系] - 負のインデックスでは NULL を返すこと。
-    EXPECT_EQ(nullptr, actual_entry_over);     // [確認_異常系] - 登録件数以上のインデックスでは NULL を返すこと。
+    ASSERT_NE(
+        nullptr,
+        actual_entry); // [確認_正常系] - インデックス 1 に対する cplat_internal_string_catalog_entry_at() の戻り値が nullptr 以外であること。
+    EXPECT_EQ(3, actual_entry->key); // [確認_正常系] - actual_entry->key が 3 であること。
+    EXPECT_EQ(
+        nullptr,
+        actual_entry_negative); // [確認_異常系] - 負のインデックスに対する cplat_internal_string_catalog_entry_at() の戻り値が nullptr であること。
+    EXPECT_EQ(
+        nullptr,
+        actual_entry_over); // [確認_異常系] - 登録件数と同じインデックスに対する cplat_internal_string_catalog_entry_at() の戻り値が nullptr であること。
 }
 
 // 複数のカタログが互いに影響しないことの確認
@@ -264,14 +302,20 @@ TEST_F(stringCatalogCatalogTest, multiple_catalogs_are_independent)
         &s_other_catalog, 3); // [手順] - 1 つ目にだけある文字列キーを 2 つ目で引く。
 
     // Assert
-    ASSERT_NE(nullptr, actual_entry_first); // [確認_正常系] - 1 つ目のカタログから取得できること。
-    ASSERT_NE(nullptr, actual_entry_other); // [確認_正常系] - 2 つ目のカタログから取得できること。
+    ASSERT_NE(
+        nullptr,
+        actual_entry_first); // [確認_正常系] - 1 つ目のカタログに対する cplat_internal_string_catalog_find_entry() の戻り値が nullptr 以外であること。
+    ASSERT_NE(
+        nullptr,
+        actual_entry_other); // [確認_正常系] - 2 つ目のカタログに対する cplat_internal_string_catalog_find_entry() の戻り値が nullptr 以外であること。
     EXPECT_STREQ("FAKE_ID_0001",
-                 actual_entry_first->id); // [確認_正常系] - 1 つ目の ID を返すこと。
-    EXPECT_STREQ("OTHER_CATALOG_ID_0001",
-                 actual_entry_other->id);       // [確認_正常系] - 2 つ目の ID を返すこと。
-    EXPECT_EQ(3, actual_entry_first->category); // [確認_正常系] - 1 つ目の分類値を返すこと。
-    EXPECT_EQ(7, actual_entry_other->category); // [確認_正常系] - 2 つ目の分類値を返すこと。
-    EXPECT_EQ(nullptr,
-              actual_entry_only_in_first); // [確認_異常系] - 一方にだけある文字列キーは他方から引けないこと。
+                 actual_entry_first->id); // [確認_正常系] - actual_entry_first->id が "FAKE_ID_0001" であること。
+    EXPECT_STREQ(
+        "OTHER_CATALOG_ID_0001",
+        actual_entry_other->id); // [確認_正常系] - actual_entry_other->id が "OTHER_CATALOG_ID_0001" であること。
+    EXPECT_EQ(3, actual_entry_first->category); // [確認_正常系] - actual_entry_first->category が 3 であること。
+    EXPECT_EQ(7, actual_entry_other->category); // [確認_正常系] - actual_entry_other->category が 7 であること。
+    EXPECT_EQ(
+        nullptr,
+        actual_entry_only_in_first); // [確認_異常系] - 1 つ目にだけある文字列キーに対する cplat_internal_string_catalog_find_entry() の戻り値が nullptr であること。
 }

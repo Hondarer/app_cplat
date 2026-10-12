@@ -30,7 +30,7 @@ TEST_F(stdioFormatTest, test_null_modes)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_fopen(_, _, _))
-        .Times(0); // [Pre-Assert確認_異常系] - cplat_fopen が呼び出されないこと。
+        .Times(0); // [Pre-Assert確認_異常系] - modes に NULL を指定したとき cplat_fopen() が呼び出されないこと。
 
     // Act
     FILE *fp = cplat_fopen_fmt(NULL, NULL, "test_%d.txt",
@@ -38,8 +38,11 @@ TEST_F(stdioFormatTest, test_null_modes)
     cplat_error_get_last(&last_error); // [手順] - TLS に記録された詳細エラーを取得する。
 
     // Assert
-    EXPECT_EQ((FILE *)NULL, fp);                   // [確認_異常系] - cplat_fopen_fmt から NULL が返されること。
-    EXPECT_EQ(1, cplat_error_is_set(&last_error)); // [確認_異常系] - TLS に詳細エラーが記録されること。
+    EXPECT_EQ((FILE *)NULL, fp); // [確認_異常系] - cplat_fopen_fmt() の戻り値が (FILE *)NULL であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is_set(
+            &last_error)); // [確認_異常系] - cplat_error_is_set() の戻り値が 1 であること。(TLS に詳細エラーが記録されたことの確認)
 }
 
 // va_list 版で modes が NULL の場合に TLS へ詳細エラーが記録されることの確認
@@ -51,16 +54,19 @@ TEST_F(stdioFormatTest, vfopen_fmt_records_error_for_null_modes)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_fopen(_, _, _))
-        .Times(0); // [Pre-Assert確認_異常系] - cplat_fopen が呼び出されないこと。
+        .Times(0); // [Pre-Assert確認_異常系] - modes に NULL を指定したとき cplat_fopen() が呼び出されないこと。
 
     // Act
     FILE *fp = call_vfopen_fmt(NULL, NULL, "%s", "test.txt"); // [手順] - modes に NULL を指定して va_list 版を呼ぶ。
     cplat_error_get_last(&last_error);                        // [手順] - TLS に記録された詳細エラーを取得する。
 
     // Assert
-    EXPECT_EQ((FILE *)NULL, fp); // [確認_異常系] - cplat_vfopen_fmt の戻り値が NULL であること。
-    EXPECT_EQ(1, cplat_error_is(&last_error,
-                                CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - TLS の要因が EINVAL であること。
+    EXPECT_EQ((FILE *)NULL, fp); // [確認_異常系] - call_vfopen_fmt() の戻り値が (FILE *)NULL であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &last_error,
+            CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - CPLAT_CAUSE_INVALID_ARGUMENT に対する cplat_error_is() の戻り値が 1 であること。
 }
 
 // format が NULL の場合に cplat_fopen を呼び出さず NULL を返すことの確認
@@ -71,13 +77,13 @@ TEST_F(stdioFormatTest, test_null_format)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_fopen(_, _, _))
-        .Times(0); // [Pre-Assert確認_異常系] - cplat_fopen が呼び出されないこと。
+        .Times(0); // [Pre-Assert確認_異常系] - format に NULL を指定したとき cplat_fopen() が呼び出されないこと。
 
     // Act
     FILE *fp = cplat_fopen_fmt("r", NULL, NULL); // [手順] - format に NULL を渡して cplat_fopen_fmt を呼び出す。
 
     // Assert
-    EXPECT_EQ((FILE *)NULL, fp); // [確認_異常系] - cplat_fopen_fmt から NULL が返されること。
+    EXPECT_EQ((FILE *)NULL, fp); // [確認_異常系] - cplat_fopen_fmt() の戻り値が (FILE *)NULL であること。
 }
 
 // フォーマット結果がバッファー サイズを超える場合に cplat_fopen を呼び出さず NULL を返すことの確認
@@ -91,7 +97,8 @@ TEST_F(stdioFormatTest, test_buffer_overflow)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_fopen(_, _, _))
-        .Times(0); // [Pre-Assert確認_異常系] - cplat_fopen が呼び出されないこと。
+        .Times(
+            0); // [Pre-Assert確認_異常系] - 展開結果がバッファーに収まらないとき cplat_fopen() が呼び出されないこと。
 
     // Act
     FILE *fp = cplat_fopen_fmt(
@@ -99,7 +106,7 @@ TEST_F(stdioFormatTest, test_buffer_overflow)
         long_string); // [手順] - バッファー サイズを超えるファイル名を指定して cplat_fopen_fmt を呼び出す。
 
     // Assert
-    EXPECT_EQ((FILE *)NULL, fp); // [確認_異常系] - cplat_fopen_fmt から NULL が返されること。
+    EXPECT_EQ((FILE *)NULL, fp); // [確認_異常系] - cplat_fopen_fmt() の戻り値が (FILE *)NULL であること。
 }
 
 // フォーマット文字列を展開したファイル名で cplat_fopen が呼び出されることの確認
@@ -113,7 +120,7 @@ TEST_F(stdioFormatTest, test_successful_call_with_format)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_fopen(StrEq("test_123.txt"), StrEq("r"), _))
         .WillOnce(Return(
-            expected_fp)); // [Pre-Assert確認_正常系] - cplat_fopen が展開後のファイル名 "test_123.txt" とモード "r" で 1 回呼び出されること。
+            expected_fp)); // [Pre-Assert確認_正常系] - cplat_fopen() が "test_123.txt" と等しい文字列、"r" と等しい文字列を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - cplat_fopen から expected_fp を返却する。
 
     // Act
@@ -122,7 +129,7 @@ TEST_F(stdioFormatTest, test_successful_call_with_format)
         123); // [手順] - フォーマット文字列 "test_%d.txt" と引数 123 を指定して cplat_fopen_fmt を呼び出す。
 
     // Assert
-    EXPECT_EQ(expected_fp, fp); // [確認_正常系] - cplat_fopen_fmt から expected_fp が返されること。
+    EXPECT_EQ(expected_fp, fp); // [確認_正常系] - cplat_fopen_fmt() の戻り値が expected_fp と一致すること。
 }
 
 // 複数のフォーマット パラメーターを展開したファイル名で cplat_fopen が呼び出されることの確認
@@ -136,7 +143,7 @@ TEST_F(stdioFormatTest, test_successful_call_with_multiple_parameters)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_fopen(StrEq("output_1_2_3.txt"), StrEq("w"), _))
         .WillOnce(Return(
-            expected_fp)); // [Pre-Assert確認_正常系] - cplat_fopen が展開後のファイル名 "output_1_2_3.txt" とモード "w" で 1 回呼び出されること。
+            expected_fp)); // [Pre-Assert確認_正常系] - cplat_fopen() が "output_1_2_3.txt" と等しい文字列、"w" と等しい文字列を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - cplat_fopen から expected_fp を返却する。
 
     // Act
@@ -145,7 +152,7 @@ TEST_F(stdioFormatTest, test_successful_call_with_multiple_parameters)
         3); // [手順] - フォーマット文字列 "output_%d_%d_%d.txt" と引数 1, 2, 3 を指定して cplat_fopen_fmt を呼び出す。
 
     // Assert
-    EXPECT_EQ(expected_fp, fp); // [確認_正常系] - cplat_fopen_fmt から expected_fp が返されること。
+    EXPECT_EQ(expected_fp, fp); // [確認_正常系] - cplat_fopen_fmt() の戻り値が expected_fp と一致すること。
 }
 
 // cplat_fopen が NULL を返した場合に NULL を返すことの確認
@@ -158,7 +165,7 @@ TEST_F(stdioFormatTest, test_fopen_returns_null)
     EXPECT_CALL(mock_cplat, cplat_fopen(StrEq("nonexistent.txt"), StrEq("r"), _))
         .WillOnce(Return(
             (FILE *)
-                NULL)); // [Pre-Assert確認_異常系] - cplat_fopen がファイル名 "nonexistent.txt" とモード "r" で 1 回呼び出されること。
+                NULL)); // [Pre-Assert確認_異常系] - cplat_fopen() が "nonexistent.txt" と等しい文字列、"r" と等しい文字列を指定して 1 回呼び出されること。
                         // [Pre-Assert手順] - cplat_fopen から NULL を返却する。
 
     // Act
@@ -167,7 +174,7 @@ TEST_F(stdioFormatTest, test_fopen_returns_null)
         "nonexistent.txt"); // [手順] - 存在しないファイル名 "nonexistent.txt" を指定して cplat_fopen_fmt を呼び出す。
 
     // Assert
-    EXPECT_EQ((FILE *)NULL, fp); // [確認_異常系] - cplat_fopen_fmt から NULL が返されること。
+    EXPECT_EQ((FILE *)NULL, fp); // [確認_異常系] - cplat_fopen_fmt() の戻り値が (FILE *)NULL であること。
 }
 
 #if defined(PLATFORM_WINDOWS)
@@ -181,7 +188,7 @@ TEST_F(stdioFormatTest, test_fopen_s_access_denied)
     EXPECT_CALL(mock_cplat, cplat_fopen(StrEq("protected.txt"), StrEq("w"), _))
         .WillOnce(Return(
             (FILE *)
-                NULL)); // [Pre-Assert確認_異常系] - cplat_fopen がファイル名 "protected.txt" とモード "w" で 1 回呼び出されること。
+                NULL)); // [Pre-Assert確認_異常系] - cplat_fopen() が "protected.txt" と等しい文字列、"w" と等しい文字列を指定して 1 回呼び出されること。
                         // [Pre-Assert手順] - cplat_fopen から NULL を返却する。
 
     // Act
@@ -190,7 +197,7 @@ TEST_F(stdioFormatTest, test_fopen_s_access_denied)
         "protected.txt"); // [手順] - 書き込み保護されたファイル名 "protected.txt" を指定して cplat_fopen_fmt を呼び出す。
 
     // Assert
-    EXPECT_EQ((FILE *)NULL, fp); // [確認_異常系] - cplat_fopen_fmt から NULL が返されること。
+    EXPECT_EQ((FILE *)NULL, fp); // [確認_異常系] - cplat_fopen_fmt() の戻り値が (FILE *)NULL であること。
 }
 #endif /* PLATFORM_WINDOWS */
 
@@ -208,7 +215,7 @@ TEST_F(stdioFormatTest, test_fopen_returns_null_with_errno)
             SetArgPointee<2>(error),
             Return(
                 (FILE *)
-                    NULL))); // [Pre-Assert確認_異常系] - cplat_fopen がファイル名 "nonexistent.txt" とモード "r" で 1 回呼び出されること。
+                    NULL))); // [Pre-Assert確認_異常系] - cplat_fopen() が "nonexistent.txt" と等しい文字列、"r" と等しい文字列を指定して 1 回呼び出されること。
                              // [Pre-Assert手順] - cplat_fopen から NULL を返却し、detail_out に ENOENT を設定する。
 
     // Act
@@ -217,9 +224,12 @@ TEST_F(stdioFormatTest, test_fopen_returns_null_with_errno)
                         "nonexistent.txt"); // [手順] - error_code の受け取り先を指定して cplat_fopen_fmt を呼び出す。
 
     // Assert
-    EXPECT_EQ((FILE *)NULL, fp); // [確認_異常系] - cplat_fopen_fmt から NULL が返されること。
-    EXPECT_EQ(1, cplat_error_is(&error_code,
-                                CPLAT_CAUSE_NOT_FOUND)); // [確認_異常系] - error_code の要因が NOT_FOUND であること。
+    EXPECT_EQ((FILE *)NULL, fp); // [確認_異常系] - cplat_fopen_fmt() の戻り値が (FILE *)NULL であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &error_code,
+            CPLAT_CAUSE_NOT_FOUND)); // [確認_異常系] - CPLAT_CAUSE_NOT_FOUND に対する cplat_error_is() の戻り値が 1 であること。
 }
 
 // cplat_fopen が成功した場合に詳細エラーが空になることの確認
@@ -237,7 +247,7 @@ TEST_F(stdioFormatTest, test_fopen_success_clears_error)
         .WillOnce(DoAll(
             SetArgPointee<2>(empty_error),
             Return(
-                expected_fp))); // [Pre-Assert確認_正常系] - cplat_fopen がファイル名 "success.txt" とモード "r" で 1 回呼び出されること。
+                expected_fp))); // [Pre-Assert確認_正常系] - cplat_fopen() が "success.txt" と等しい文字列、"r" と等しい文字列を指定して 1 回呼び出されること。
                                 // [Pre-Assert手順] - detail_out を空にして expected_fp を返却する。
 
     // Act
@@ -245,8 +255,11 @@ TEST_F(stdioFormatTest, test_fopen_success_clears_error)
                                "success.txt"); // [手順] - 詳細エラーの受け取り先を指定して cplat_fopen_fmt を呼び出す。
 
     // Assert
-    EXPECT_EQ(expected_fp, fp);               // [確認_正常系] - cplat_fopen_fmt から expected_fp が返されること。
-    EXPECT_EQ(0, cplat_error_is_set(&error)); // [確認_正常系] - 成功時は詳細エラーが空であること。
+    EXPECT_EQ(expected_fp, fp); // [確認_正常系] - cplat_fopen_fmt() の戻り値が expected_fp と一致すること。
+    EXPECT_EQ(
+        0,
+        cplat_error_is_set(
+            &error)); // [確認_正常系] - cplat_error_is_set() の戻り値が 0 であること。(成功時に詳細エラーがクリアされたことの確認)
 }
 
 // format が NULL の場合に cplat_remove を呼び出さず -1 を返すことの確認
@@ -257,14 +270,14 @@ TEST_F(stdioFormatTest, remove_fmt_rejects_null_format)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_remove(_, _))
-        .Times(0); // [Pre-Assert確認_異常系] - cplat_remove が呼び出されないこと。
+        .Times(0); // [Pre-Assert確認_異常系] - format に NULL を指定したとき cplat_remove() が呼び出されないこと。
 
     // Act
     const int result = cplat_remove_fmt(NULL, NULL); // [手順] - format に NULL を指定して cplat_remove_fmt を呼び出す。
 
     // Assert
     EXPECT_EQ(-1,
-              result); // [確認_異常系] - cplat_remove_fmt の戻り値が -1 であること。
+              result); // [確認_異常系] - cplat_remove_fmt() の戻り値が -1 であること。
 }
 
 // フォーマット文字列を展開したファイル名で cplat_remove が呼び出されることの確認
@@ -276,7 +289,8 @@ TEST_F(stdioFormatTest, remove_fmt_passes_formatted_path)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_remove(StrEq("temporary_42.txt"), &detail))
-        .WillOnce(Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - 展開後のパスで cplat_remove が呼び出されること。
+        .WillOnce(Return(
+            CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_remove() が "temporary_42.txt" と等しい文字列、&detail を指定して 1 回呼び出されること。
 
     // Act
     const int result = cplat_remove_fmt(&detail, "temporary_%d.txt",
@@ -284,5 +298,5 @@ TEST_F(stdioFormatTest, remove_fmt_passes_formatted_path)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              result); // [確認_正常系] - cplat_remove_fmt の戻り値が CPLAT_OK であること。
+              result); // [確認_正常系] - cplat_remove_fmt() の戻り値が CPLAT_OK であること。
 }

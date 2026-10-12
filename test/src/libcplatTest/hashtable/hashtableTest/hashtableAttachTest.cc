@@ -56,9 +56,11 @@ TEST_F(hashtableAttachTest, rejects_misaligned_buffer)
                                             &attached); // [手順] - 1 バイトずれた管理領域へ再接続する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret);        // [確認_異常系] - 未整列の領域が INVALID_ARGUMENT であること。
-    EXPECT_EQ(nullptr, attached); // [確認_異常系] - 失敗後の ht_out が NULL であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - 未整列の管理領域を渡した cplat_hashtable_attach() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(nullptr,
+              attached); // [確認_異常系] - attached が nullptr であること。(失敗後の ht_out が NULL になったことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
@@ -87,8 +89,9 @@ TEST_F(hashtableAttachTest, rejects_null_ht_out)
                                             NULL); // [手順] - ht_out に NULL を渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - NULL ht_out が INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - ht_out に NULL を渡した cplat_hashtable_attach() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
@@ -124,8 +127,10 @@ TEST_F(hashtableAttachTest, accepts_binary_key_type)
     int actual_ret_find = cplat_hashtable_find_value_ref(attached, key, &found); // [手順] - 再接続先から値を検索する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_attach); // [確認_正常系] - バイナリ キー種別の再接続が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_find);   // [確認_正常系] - 再接続後も検索できること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_attach); // [確認_正常系] - cplat_hashtable_attach() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_find); // [確認_正常系] - 再接続後の cplat_hashtable_find_value_ref() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);       // [破棄] - 元のテーブルを破棄する。
@@ -227,32 +232,42 @@ TEST_F(hashtableAttachTest, rejects_corrupted_config_fields)
                                &attached); // [手順] - データ領域の buf_data_size 不足で再接続する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret_key_type); // [確認_異常系] - 不正な保存 key_type が破損として拒否されること。
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret_scope); // [確認_異常系] - 不正な保存 timestamp_scope が破損として拒否されること。
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret_key_size); // [確認_異常系] - 保存 key_size 0 が破損として拒否されること。
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret_value_size); // [確認_異常系] - 保存 value_size 0 が破損として拒否されること。
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret_lifetime); // [確認_異常系] - 保存 lifetime 1 が破損として拒否されること。
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret_capacity); // [確認_異常系] - 保存 capacity 0 が破損として拒否されること。
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret_next_empty); // [確認_異常系] - capacity を超える保存 next_empty が破損として拒否されること。
     EXPECT_EQ(
         CPLAT_ERR_CORRUPT_DESCRIPTOR,
-        actual_ret_in_use_count); // [確認_異常系] - capacity を超える保存 in_use_count が破損として拒否されること。
+        actual_ret_key_type); // [確認_異常系] - 不正な保存 key_type に対する cplat_hashtable_attach() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
     EXPECT_EQ(
         CPLAT_ERR_CORRUPT_DESCRIPTOR,
-        actual_ret_deleted_count); // [確認_異常系] - capacity を超える保存 deleted_count が破損として拒否されること。
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              actual_ret_layout); // [確認_異常系] - 保存設定によるレイアウト計算の破綻が破損として拒否されること。
-    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              actual_ret_mgmt_too_small); // [確認_異常系] - 管理領域不足が BUFFER_TOO_SMALL であること。
-    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              actual_ret_data_too_small); // [確認_異常系] - データ領域不足が BUFFER_TOO_SMALL であること。
+        actual_ret_scope); // [確認_異常系] - 不正な保存 timestamp_scope に対する cplat_hashtable_attach() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret_key_size); // [確認_異常系] - 保存 key_size が 0 のときの cplat_hashtable_attach() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret_value_size); // [確認_異常系] - 保存 value_size が 0 のときの cplat_hashtable_attach() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret_lifetime); // [確認_異常系] - 保存 lifetime が 1 のときの cplat_hashtable_attach() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret_capacity); // [確認_異常系] - 保存 capacity が 0 のときの cplat_hashtable_attach() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret_next_empty); // [確認_異常系] - capacity を超える保存 next_empty に対する cplat_hashtable_attach() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret_in_use_count); // [確認_異常系] - capacity を超える保存 in_use_count に対する cplat_hashtable_attach() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret_deleted_count); // [確認_異常系] - capacity を超える保存 deleted_count に対する cplat_hashtable_attach() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret_layout); // [確認_異常系] - レイアウト計算が破綻する保存設定に対する cplat_hashtable_attach() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_BUFFER_TOO_SMALL,
+        actual_ret_mgmt_too_small); // [確認_異常系] - 管理領域が不足するときの cplat_hashtable_attach() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_EQ(
+        CPLAT_ERR_BUFFER_TOO_SMALL,
+        actual_ret_data_too_small); // [確認_異常系] - データ領域が不足するときの cplat_hashtable_attach() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。

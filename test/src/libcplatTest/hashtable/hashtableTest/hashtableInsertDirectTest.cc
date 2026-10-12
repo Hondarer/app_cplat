@@ -93,8 +93,9 @@ TEST_F(hashtableInsertDirectTest, places_in_use_at_requested_record)
     fill_value(&value, "keep");              // [状態] - 直接書き込む値を用意する。
     peer = find_colliding_key("c", 4);
 
+    ASSERT_NE(nullptr, peer); // [状態確認] - find_colliding_key() の戻り値が nullptr 以外であること。
+
     // Pre-Assert
-    ASSERT_NE(nullptr, peer); // [Pre-Assert確認_正常系] - 同一バケットの別キーが見つかること。
 
     // Act
     int actual_ret_create = cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
@@ -113,21 +114,33 @@ TEST_F(hashtableInsertDirectTest, places_in_use_at_requested_record)
     int actual_ret_validate = cplat_hashtable_validate(ht);                              // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_create);                 // [確認_正常系] - create が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_direct);                 // [確認_正常系] - insert_direct が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_find);                   // [確認_正常系] - 直接書き込んだキーが見つかること。
-    EXPECT_STREQ("keep", static_cast<const char *>(found)); // [確認_正常系] - 値が一致すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_rec);                    // [確認_正常系] - find_recno が成功すること。
-    EXPECT_EQ(3u, rec);                                     // [確認_正常系] - 指定したレコード番号が保たれること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_status);                 // [確認_正常系] - get_status が成功すること。
-    EXPECT_EQ(1, status);                                   // [確認_正常系] - 状態が実装中であること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_peer);                   // [確認_正常系] - 同一バケットの別キーを置けること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_add);                    // [確認_正常系] - 先頭空きへの add が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_counts);                 // [確認_正常系] - count_status が成功すること。
-    EXPECT_EQ(3u, in_use);                                  // [確認_正常系] - 実装中が 3 件であること。
-    EXPECT_EQ(0u, deleted);                                 // [確認_正常系] - 削除済みが 0 件であること。
-    EXPECT_EQ(1u, empty);                                   // [確認_正常系] - 空が 1 件であること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_validate);               // [確認_正常系] - validate が成功すること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - cplat_hashtable_create() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_direct); // [確認_正常系] - レコード 3 に対する cplat_hashtable_insert_direct() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_find); // [確認_正常系] - 直接書き込んだキーに対する cplat_hashtable_find_value_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("keep", static_cast<const char *>(found)); // [確認_正常系] - found が "keep" であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_rec); // [確認_正常系] - cplat_hashtable_find_recno() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(3u, rec);        // [確認_正常系] - rec が 3 であること。(指定したレコード番号が保たれたことの確認)
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_status); // [確認_正常系] - cplat_hashtable_get_status() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, status);         // [確認_正常系] - status が 1 であること。(状態が実装中であることの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_peer); // [確認_正常系] - 同一バケットの別キーに対する cplat_hashtable_insert_direct() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_add); // [確認_正常系] - 先頭空きへ追加した cplat_hashtable_add() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_counts); // [確認_正常系] - cplat_hashtable_count_status() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(3u, in_use);        // [確認_正常系] - in_use が 3 であること。(実装中が 3 件であることの確認)
+    EXPECT_EQ(0u, deleted);       // [確認_正常系] - deleted が 0 であること。(削除済みが 0 件であることの確認)
+    EXPECT_EQ(1u, empty);         // [確認_正常系] - empty が 1 であること。(空が 1 件であることの確認)
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_validate); // [確認_正常系] - cplat_hashtable_validate() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
@@ -163,19 +176,28 @@ TEST_F(hashtableInsertDirectTest, places_deleted_without_resurrecting_key)
     int actual_ret_validate = cplat_hashtable_validate(ht);  // [手順] - 整合性を検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_direct); // [確認_正常系] - 寿命内の削除済みを置けること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
-              actual_ret_find);                               // [確認_正常系] - 削除済みキーは検索対象にならないこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_status);                   // [確認_正常系] - get_status が成功すること。
-    EXPECT_EQ(3, status);                                     // [確認_正常系] - 書き込んだ加齢値が保たれること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_key);                      // [確認_正常系] - 削除済みでもキーを読めること。
-    EXPECT_STREQ("gone", static_cast<const char *>(key_out)); // [確認_正常系] - キーが一致すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_deleted);                  // [確認_正常系] - deleted_count が成功すること。
-    EXPECT_EQ(1u, deleted);                                   // [確認_正常系] - 削除済みが 1 件であること。
-    EXPECT_EQ(CPLAT_ERR_DUPLICATE_KEY,
-              actual_ret_again); // [確認_異常系] - 削除済みキーの再配置が DUPLICATE_KEY であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_direct); // [確認_正常系] - 寿命内の削除済みに対する cplat_hashtable_insert_direct() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_find); // [確認_正常系] - 削除済みキーに対する cplat_hashtable_find_value_ref() の戻り値が CPLAT_ERR_NOT_FOUND であること。(削除済みキーは検索対象にならないことの確認)
     EXPECT_EQ(CPLAT_OK,
-              actual_ret_validate); // [確認_正常系] - 削除済みをチェインへ載せたあと validate が成功すること。
+              actual_ret_status); // [確認_正常系] - cplat_hashtable_get_status() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(3, status);         // [確認_正常系] - status が 3 であること。(書き込んだ加齢値が保たれたことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_key); // [確認_正常系] - 削除済みに対する cplat_hashtable_get_key_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("gone", static_cast<const char *>(key_out)); // [確認_正常系] - key_out が "gone" であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_deleted); // [確認_正常系] - cplat_hashtable_deleted_count() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1u, deleted);        // [確認_正常系] - deleted が 1 であること。(削除済みが 1 件であることの確認)
+    EXPECT_EQ(
+        CPLAT_ERR_DUPLICATE_KEY,
+        actual_ret_again); // [確認_異常系] - 削除済みキーを別レコードへ置いた cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_DUPLICATE_KEY であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_validate); // [確認_正常系] - 削除済みをチェインへ載せたあとの cplat_hashtable_validate() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
@@ -211,11 +233,17 @@ TEST_F(hashtableInsertDirectTest, skips_status_that_cannot_exist)
     (void)cplat_hashtable_empty_count(ht, &empty);
 
     // Assert
-    EXPECT_EQ(CPLAT_SKIPPED, actual_ret_eq);    // [確認_正常系] - status == lifetime が SKIPPED であること。
-    EXPECT_EQ(CPLAT_SKIPPED, actual_ret_over);  // [確認_正常系] - lifetime 超過が SKIPPED であること。
-    EXPECT_EQ(CPLAT_SKIPPED, actual_ret_life2); // [確認_正常系] - lifetime 2 の status 2 が SKIPPED であること。
-    EXPECT_EQ(0, status);                       // [確認_正常系] - SKIPPED 後もスロットが空のままであること。
-    EXPECT_EQ(2u, empty);                       // [確認_正常系] - テーブルを変更していないこと。
+    EXPECT_EQ(
+        CPLAT_SKIPPED,
+        actual_ret_eq); // [確認_正常系] - status が lifetime と等しいときの cplat_hashtable_insert_direct() の戻り値が CPLAT_SKIPPED であること。
+    EXPECT_EQ(
+        CPLAT_SKIPPED,
+        actual_ret_over); // [確認_正常系] - status が lifetime を超えるときの cplat_hashtable_insert_direct() の戻り値が CPLAT_SKIPPED であること。
+    EXPECT_EQ(
+        CPLAT_SKIPPED,
+        actual_ret_life2); // [確認_正常系] - lifetime 2 に status 2 を指定した cplat_hashtable_insert_direct() の戻り値が CPLAT_SKIPPED であること。
+    EXPECT_EQ(0, status);  // [確認_正常系] - status が 0 であること。(SKIPPED 後もスロットが空のままであることの確認)
+    EXPECT_EQ(2u, empty);  // [確認_正常系] - empty が 2 であること。(テーブルを変更していないことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
@@ -266,30 +294,44 @@ TEST_F(hashtableInsertDirectTest, rejects_invalid_arguments_and_collisions)
                                                                 1); // [手順] - 削除済みスロットへ別キーを置く。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ht); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_key); // [確認_異常系] - NULL key が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_value); // [確認_異常系] - NULL value が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_timestamp); // [確認_異常系] - NULL timestamp が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_status0); // [確認_異常系] - status 0 が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_status256); // [確認_異常系] - status 256 が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_rec0); // [確認_異常系] - レコード番号 0 が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_rec_hi); // [確認_異常系] - 範囲外レコードが INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_OUT_OF_RANGE, actual_ret_long); // [確認_異常系] - 長すぎるキーが OUT_OF_RANGE であること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_ok);                 // [確認_正常系] - 最初の直接書き込みが成功すること。
-    EXPECT_EQ(CPLAT_ERR_DUPLICATE_DEFINITION,
-              actual_ret_occupied); // [確認_異常系] - 使用中レコードが DUPLICATE_DEFINITION であること。
-    EXPECT_EQ(CPLAT_ERR_DUPLICATE_KEY,
-              actual_ret_dup_key); // [確認_異常系] - 既存キーが DUPLICATE_KEY であること。
-    EXPECT_EQ(CPLAT_ERR_DUPLICATE_DEFINITION,
-              actual_ret_deleted_slot); // [確認_異常系] - 削除済みスロットが DUPLICATE_DEFINITION であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_value); // [確認_異常系] - value に NULL を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_timestamp); // [確認_異常系] - timestamp に NULL を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_status0); // [確認_異常系] - status 0 を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_status256); // [確認_異常系] - status 256 を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_rec0); // [確認_異常系] - レコード番号 0 を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_rec_hi); // [確認_異常系] - capacity 超のレコード番号を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_RANGE,
+        actual_ret_long); // [確認_異常系] - 長すぎるキーを渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_OUT_OF_RANGE であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_ok); // [確認_正常系] - 最初の cplat_hashtable_insert_direct() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_DUPLICATE_DEFINITION,
+        actual_ret_occupied); // [確認_異常系] - 使用中レコードへ別キーを置いた cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_DUPLICATE_DEFINITION であること。
+    EXPECT_EQ(
+        CPLAT_ERR_DUPLICATE_KEY,
+        actual_ret_dup_key); // [確認_異常系] - 既存キーを別レコードへ置いた cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_DUPLICATE_KEY であること。
+    EXPECT_EQ(
+        CPLAT_ERR_DUPLICATE_DEFINITION,
+        actual_ret_deleted_slot); // [確認_異常系] - 削除済みスロットへ別キーを置いた cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_DUPLICATE_DEFINITION であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
@@ -319,9 +361,14 @@ TEST_F(hashtableInsertDirectTest, skip_checked_before_occupancy)
     int actual_ret_find = cplat_hashtable_find_value_ref(ht, "keep", &found); // [手順] - 既存キーを検索する。
 
     // Assert
-    EXPECT_EQ(CPLAT_SKIPPED, actual_ret_skip);              // [確認_正常系] - 占有より先に SKIPPED になること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_find);                   // [確認_正常系] - 既存キーが残ること。
-    EXPECT_STREQ("keep", static_cast<const char *>(found)); // [確認_正常系] - 既存値が変わらないこと。
+    EXPECT_EQ(
+        CPLAT_SKIPPED,
+        actual_ret_skip); // [確認_正常系] - 占有スロットへ成立しない寿命値を置いた cplat_hashtable_insert_direct() の戻り値が CPLAT_SKIPPED であること。(占有エラーより先にスキップ判定されたことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_find); // [確認_正常系] - 既存キーに対する cplat_hashtable_find_value_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("keep", static_cast<const char *>(
+                             found)); // [確認_正常系] - found が "keep" であること。(既存値が変わらないことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。

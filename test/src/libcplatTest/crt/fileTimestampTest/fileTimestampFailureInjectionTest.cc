@@ -40,13 +40,13 @@ class fileTimestampFailureInjectionTest : public testing::Test
         (void)cplat_remove(kPath, NULL);
         stream = cplat_fopen(kPath, "wb", NULL);
         ASSERT_NE(nullptr, stream);
-        // [状態確認] - `nullptr` と `stream` が異なること。
+        // [状態確認] - cplat_fopen() の戻り値が nullptr 以外であること。
         ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, NULL));
-        // [状態確認] - `cplat_fclose(stream, NULL)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - cplat_fclose() の戻り値が CPLAT_OK であること。
 
         cplat_file_init(&file_);
         ASSERT_EQ(CPLAT_OK, cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL));
-        // [状態確認] - `cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - cplat_file_open() の戻り値が CPLAT_OK であること。
     }
     // [サブ手順終了]
 
@@ -74,7 +74,7 @@ TEST_F(fileTimestampFailureInjectionTest, get_reports_fstat_failure)
 
     // Pre-Assert
     EXPECT_CALL(mock_sys_stat_, fstat(_, _, _, _, _))
-        .WillOnce(SetErrnoAndReturn(EIO, -1)); // [Pre-Assert確認_異常系] - fstat が 1 回呼び出されること。
+        .WillOnce(SetErrnoAndReturn(EIO, -1)); // [Pre-Assert確認_異常系] - fstat() が 1 回呼び出されること。
                                                // [Pre-Assert手順] - errno に EIO を設定して -1 を返却する。
 
     // Act
@@ -82,10 +82,12 @@ TEST_F(fileTimestampFailureInjectionTest, get_reports_fstat_failure)
         cplat_file_get_modified_timestamp(&file_, &actual, &detail); // [手順] - 最終更新日時を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_get); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret_get); // [確認_異常系] - cplat_file_get_modified_timestamp() の戻り値が CPLAT_ERR_UNKNOWN であること。
     // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
-    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
+    // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(要因が CPLAT_CAUSE_IO_ERROR であることの確認)
 }
 // [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_1]
 
@@ -101,7 +103,7 @@ TEST_F(fileTimestampFailureInjectionTest, set_reports_futimens_failure)
 
     // Pre-Assert
     EXPECT_CALL(mock_sys_stat_, futimens(_, _, _, _, _))
-        .WillOnce(SetErrnoAndReturn(EIO, -1)); // [Pre-Assert確認_異常系] - futimens が 1 回呼び出されること。
+        .WillOnce(SetErrnoAndReturn(EIO, -1)); // [Pre-Assert確認_異常系] - futimens() が 1 回呼び出されること。
                                                // [Pre-Assert手順] - errno に EIO を設定して -1 を返却する。
 
     // Act
@@ -109,10 +111,12 @@ TEST_F(fileTimestampFailureInjectionTest, set_reports_futimens_failure)
         cplat_file_set_modified_timestamp(&file_, &timestamp, &detail); // [手順] - 最終更新日時を設定する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_set); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret_set); // [確認_異常系] - cplat_file_set_modified_timestamp() の戻り値が CPLAT_ERR_UNKNOWN であること。
     // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
-    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
+    // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(要因が CPLAT_CAUSE_IO_ERROR であることの確認)
 }
 // [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_1]
 
@@ -128,7 +132,7 @@ TEST_F(fileTimestampFailureInjectionTest, set_path_reports_utimensat_failure)
 
     // Pre-Assert
     EXPECT_CALL(mock_sys_stat_, utimensat(_, _, _, _, _, _, _))
-        .WillOnce(SetErrnoAndReturn(EIO, -1)); // [Pre-Assert確認_異常系] - utimensat が 1 回呼び出されること。
+        .WillOnce(SetErrnoAndReturn(EIO, -1)); // [Pre-Assert確認_異常系] - utimensat() が 1 回呼び出されること。
                                                // [Pre-Assert手順] - errno に EIO を設定して -1 を返却する。
 
     // Act
@@ -136,10 +140,12 @@ TEST_F(fileTimestampFailureInjectionTest, set_path_reports_utimensat_failure)
         cplat_file_set_path_modified_timestamp(kPath, &timestamp, &detail); // [手順] - 最終更新日時を設定する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_set); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret_set); // [確認_異常系] - cplat_file_set_path_modified_timestamp() の戻り値が CPLAT_ERR_UNKNOWN であること。
     // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
-    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
+    // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(要因が CPLAT_CAUSE_IO_ERROR であることの確認)
 }
 // [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_1]
 
@@ -155,7 +161,7 @@ TEST_F(fileTimestampFailureInjectionTest, get_path_reports_stat_failure)
 
     // Pre-Assert
     EXPECT_CALL(mock_sys_stat_, stat(_, _, _, _, _))
-        .WillOnce(SetErrnoAndReturn(EIO, -1)); // [Pre-Assert確認_異常系] - stat が 1 回呼び出されること。
+        .WillOnce(SetErrnoAndReturn(EIO, -1)); // [Pre-Assert確認_異常系] - stat() が 1 回呼び出されること。
                                                // [Pre-Assert手順] - errno に EIO を設定して -1 を返却する。
 
     // Act
@@ -163,10 +169,12 @@ TEST_F(fileTimestampFailureInjectionTest, get_path_reports_stat_failure)
         cplat_file_get_path_modified_timestamp(kPath, &actual, &detail); // [手順] - 最終更新日時を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_get); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret_get); // [確認_異常系] - cplat_file_get_path_modified_timestamp() の戻り値が CPLAT_ERR_UNKNOWN であること。
     // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
-    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
+    // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(要因が CPLAT_CAUSE_IO_ERROR であることの確認)
 }
 // [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_1]
 
@@ -196,13 +204,13 @@ class fileTimestampFailureInjectionTest : public testing::Test
         (void)cplat_remove(kPath, NULL);
         stream = cplat_fopen(kPath, "wb", NULL);
         ASSERT_NE(nullptr, stream);
-        // [状態確認] - `nullptr` と `stream` が異なること。
+        // [状態確認] - cplat_fopen() の戻り値が nullptr 以外であること。
         ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, NULL));
-        // [状態確認] - `cplat_fclose(stream, NULL)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - cplat_fclose() の戻り値が CPLAT_OK であること。
 
         cplat_file_init(&file_);
         ASSERT_EQ(CPLAT_OK, cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL));
-        // [状態確認] - `cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - cplat_file_open() の戻り値が CPLAT_OK であること。
     }
     // [サブ手順終了]
 
@@ -230,10 +238,10 @@ TEST_F(fileTimestampFailureInjectionTest, get_reports_GetFileTime_failure)
 
     // Pre-Assert
     EXPECT_CALL(mock_windows_, GetFileTime(_, _, _, _, _, _, _))
-        .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - GetFileTime が 1 回呼び出されること。
+        .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - GetFileTime() が 1 回呼び出されること。
                                   // [Pre-Assert手順] - FALSE を返却する。
     EXPECT_CALL(mock_windows_, GetLastError(_, _, _))
-        .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError が 1 回呼び出されること。
+        .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
                                             // [Pre-Assert手順] - ERROR_IO_DEVICE を返却する。
 
     // Act
@@ -241,10 +249,12 @@ TEST_F(fileTimestampFailureInjectionTest, get_reports_GetFileTime_failure)
         cplat_file_get_modified_timestamp(&file_, &actual, &detail); // [手順] - 最終更新日時を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_get); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret_get); // [確認_異常系] - cplat_file_get_modified_timestamp() の戻り値が CPLAT_ERR_UNKNOWN であること。
     // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
-    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
+    // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(要因が CPLAT_CAUSE_IO_ERROR であることの確認)
 }
 // [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_2]
 
@@ -260,10 +270,10 @@ TEST_F(fileTimestampFailureInjectionTest, set_reports_SetFileTime_failure)
 
     // Pre-Assert
     EXPECT_CALL(mock_windows_, SetFileTime(_, _, _, _, _, _, _))
-        .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - SetFileTime が 1 回呼び出されること。
+        .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - SetFileTime() が 1 回呼び出されること。
                                   // [Pre-Assert手順] - FALSE を返却する。
     EXPECT_CALL(mock_windows_, GetLastError(_, _, _))
-        .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError が 1 回呼び出されること。
+        .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
                                             // [Pre-Assert手順] - ERROR_IO_DEVICE を返却する。
 
     // Act
@@ -271,10 +281,12 @@ TEST_F(fileTimestampFailureInjectionTest, set_reports_SetFileTime_failure)
         cplat_file_set_modified_timestamp(&file_, &timestamp, &detail); // [手順] - 最終更新日時を設定する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_set); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret_set); // [確認_異常系] - cplat_file_set_modified_timestamp() の戻り値が CPLAT_ERR_UNKNOWN であること。
     // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
-    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
+    // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(要因が CPLAT_CAUSE_IO_ERROR であることの確認)
 }
 // [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_2]
 
@@ -290,10 +302,10 @@ TEST_F(fileTimestampFailureInjectionTest, get_path_reports_GetFileTime_failure)
 
     // Pre-Assert
     EXPECT_CALL(mock_windows_, GetFileTime(_, _, _, _, _, _, _))
-        .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - GetFileTime が 1 回呼び出されること。
+        .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - GetFileTime() が 1 回呼び出されること。
                                   // [Pre-Assert手順] - FALSE を返却する。
     EXPECT_CALL(mock_windows_, GetLastError(_, _, _))
-        .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError が 1 回呼び出されること。
+        .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
                                             // [Pre-Assert手順] - ERROR_IO_DEVICE を返却する。
 
     // Act
@@ -301,10 +313,12 @@ TEST_F(fileTimestampFailureInjectionTest, get_path_reports_GetFileTime_failure)
         cplat_file_get_path_modified_timestamp(kPath, &actual, &detail); // [手順] - 最終更新日時を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_get); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret_get); // [確認_異常系] - cplat_file_get_path_modified_timestamp() の戻り値が CPLAT_ERR_UNKNOWN であること。
     // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
-    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
+    // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(要因が CPLAT_CAUSE_IO_ERROR であることの確認)
 }
 // [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_2]
 
@@ -320,10 +334,10 @@ TEST_F(fileTimestampFailureInjectionTest, set_path_reports_SetFileTime_failure)
 
     // Pre-Assert
     EXPECT_CALL(mock_windows_, SetFileTime(_, _, _, _, _, _, _))
-        .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - SetFileTime が 1 回呼び出されること。
+        .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - SetFileTime() が 1 回呼び出されること。
                                   // [Pre-Assert手順] - FALSE を返却する。
     EXPECT_CALL(mock_windows_, GetLastError(_, _, _))
-        .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError が 1 回呼び出されること。
+        .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
                                             // [Pre-Assert手順] - ERROR_IO_DEVICE を返却する。
 
     // Act
@@ -331,10 +345,12 @@ TEST_F(fileTimestampFailureInjectionTest, set_path_reports_SetFileTime_failure)
         cplat_file_set_path_modified_timestamp(kPath, &timestamp, &detail); // [手順] - 最終更新日時を設定する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_set); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret_set); // [確認_異常系] - cplat_file_set_path_modified_timestamp() の戻り値が CPLAT_ERR_UNKNOWN であること。
     // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
-    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
+    // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(要因が CPLAT_CAUSE_IO_ERROR であることの確認)
 }
 // [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_2]
 
@@ -351,10 +367,10 @@ TEST_F(fileTimestampFailureInjectionTest, get_path_reports_CloseHandle_failure)
     // Pre-Assert
     EXPECT_CALL(mock_windows_, CloseHandle(_, _, _, _))
         .WillOnce(DoAll(Invoke(delegate_real_CloseHandle),
-                        Return(FALSE))); // [Pre-Assert確認_異常系] - CloseHandle が 1 回呼び出されること。
+                        Return(FALSE))); // [Pre-Assert確認_異常系] - CloseHandle() が 1 回呼び出されること。
                                          // [Pre-Assert手順] - 実ハンドルを閉じたうえで FALSE を返却する。
     EXPECT_CALL(mock_windows_, GetLastError(_, _, _))
-        .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError が 1 回呼び出されること。
+        .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
                                             // [Pre-Assert手順] - ERROR_IO_DEVICE を返却する。
 
     // Act
@@ -362,10 +378,12 @@ TEST_F(fileTimestampFailureInjectionTest, get_path_reports_CloseHandle_failure)
         cplat_file_get_path_modified_timestamp(kPath, &actual, &detail); // [手順] - 最終更新日時を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_get); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret_get); // [確認_異常系] - cplat_file_get_path_modified_timestamp() の戻り値が CPLAT_ERR_UNKNOWN であること。
     // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
-    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
+    // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(要因が CPLAT_CAUSE_IO_ERROR であることの確認)
 }
 // [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_2]
 
@@ -382,10 +400,10 @@ TEST_F(fileTimestampFailureInjectionTest, set_path_reports_CloseHandle_failure)
     // Pre-Assert
     EXPECT_CALL(mock_windows_, CloseHandle(_, _, _, _))
         .WillOnce(DoAll(Invoke(delegate_real_CloseHandle),
-                        Return(FALSE))); // [Pre-Assert確認_異常系] - CloseHandle が 1 回呼び出されること。
+                        Return(FALSE))); // [Pre-Assert確認_異常系] - CloseHandle() が 1 回呼び出されること。
                                          // [Pre-Assert手順] - 実ハンドルを閉じたうえで FALSE を返却する。
     EXPECT_CALL(mock_windows_, GetLastError(_, _, _))
-        .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError が 1 回呼び出されること。
+        .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
                                             // [Pre-Assert手順] - ERROR_IO_DEVICE を返却する。
 
     // Act
@@ -393,10 +411,12 @@ TEST_F(fileTimestampFailureInjectionTest, set_path_reports_CloseHandle_failure)
         cplat_file_set_path_modified_timestamp(kPath, &timestamp, &detail); // [手順] - 最終更新日時を設定する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret_set); // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret_set); // [確認_異常系] - cplat_file_set_path_modified_timestamp() の戻り値が CPLAT_ERR_UNKNOWN であること。
     // 詳細エラーの要因が入出力エラーであること。
     EXPECT_EQ(1, cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR));
-    // [確認_異常系] - `cplat_error_is(&detail, CPLAT_CAUSE_IO_ERROR)` の戻り値が `1` であること。
+    // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(要因が CPLAT_CAUSE_IO_ERROR であることの確認)
 }
 // [サブ手順参照 名前=fileTimestampFailureInjectionTest.TearDown_2]
 

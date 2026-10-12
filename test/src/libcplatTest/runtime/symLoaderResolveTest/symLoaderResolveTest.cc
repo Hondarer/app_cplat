@@ -24,9 +24,9 @@ class symLoaderResolveTest : public Test
     void set_names(const char *lib_name, const char *func_name)
     {
         ASSERT_EQ(CPLAT_OK, cplat_strcpy(entry_.lib_name, sizeof(entry_.lib_name), lib_name));
-        // [状態確認] - `cplat_strcpy(entry_.lib_name, sizeof(entry_.lib_name), lib_name)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - lib_name を設定する cplat_strcpy() の戻り値が CPLAT_OK であること。
         ASSERT_EQ(CPLAT_OK, cplat_strcpy(entry_.func_name, sizeof(entry_.func_name), func_name));
-        // [状態確認] - `cplat_strcpy(entry_.func_name, sizeof(entry_.func_name), func_name)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - func_name を設定する cplat_strcpy() の戻り値が CPLAT_OK であること。
     }
     // [サブ手順終了]
 
@@ -54,10 +54,12 @@ TEST_F(symLoaderResolveTest, resolves_existing_symbol)
     void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
 
     // Assert
-    EXPECT_NE(nullptr, func_ptr); // [確認_正常系] - cplat_sym_loader_resolve の戻り値が NULL でないこと。
-    EXPECT_EQ(1, cplat_atomic_load_i32(
-                     &entry_.resolved,
-                     CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - resolved が解決済みを示す 1 になること。
+    EXPECT_NE(nullptr, func_ptr); // [確認_正常系] - cplat_sym_loader_resolve() の戻り値が nullptr 以外であること。
+    EXPECT_EQ(
+        1,
+        cplat_atomic_load_i32(
+            &entry_.resolved,
+            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 1 であること。(解決済みになることの確認)
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -75,10 +77,14 @@ TEST_F(symLoaderResolveTest, second_call_returns_cached_result)
     void *second = cplat_sym_loader_resolve(&entry_); // [手順] - 同じエントリで 2 回目の解決を行う。
 
     // Assert
-    EXPECT_EQ(first, second); // [確認_正常系] - 2 回目の戻り値が 1 回目と同じポインターであること。
     EXPECT_EQ(
-        1, cplat_atomic_load_i32(&entry_.resolved,
-                                 CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - resolved が 1 のまま変化しないこと。
+        first,
+        second); // [確認_正常系] - 2 回目の cplat_sym_loader_resolve() の戻り値が 1 回目の cplat_sym_loader_resolve() の戻り値と一致すること。
+    EXPECT_EQ(
+        1,
+        cplat_atomic_load_i32(
+            &entry_.resolved,
+            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 1 であること。(解決状態が変化しないことの確認)
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -95,10 +101,12 @@ TEST_F(symLoaderResolveTest, marks_explicit_default_when_both_names_are_default)
     void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
 
     // Assert
-    EXPECT_EQ(nullptr, func_ptr); // [確認_正常系] - 明示的既定値のため戻り値が NULL であること。
-    EXPECT_EQ(2, cplat_atomic_load_i32(
-                     &entry_.resolved,
-                     CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - resolved が明示的既定値を示す 2 になること。
+    EXPECT_EQ(nullptr, func_ptr); // [確認_正常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
+    EXPECT_EQ(
+        2,
+        cplat_atomic_load_i32(
+            &entry_.resolved,
+            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 2 であること。(明示的既定値になることの確認)
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -115,10 +123,12 @@ TEST_F(symLoaderResolveTest, marks_undefined_when_lib_name_is_empty)
     void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
 
     // Assert
-    EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - 戻り値が NULL であること。
-    EXPECT_EQ(-1, cplat_atomic_load_i32(
-                      &entry_.resolved,
-                      CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - resolved が定義なしを示す -1 になること。
+    EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
+    EXPECT_EQ(
+        -1,
+        cplat_atomic_load_i32(
+            &entry_.resolved,
+            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が -1 であること。(定義なしになることの確認)
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -135,10 +145,12 @@ TEST_F(symLoaderResolveTest, marks_undefined_when_func_name_is_empty)
     void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
 
     // Assert
-    EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - 戻り値が NULL であること。
-    EXPECT_EQ(-1, cplat_atomic_load_i32(
-                      &entry_.resolved,
-                      CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - resolved が定義なしを示す -1 になること。
+    EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
+    EXPECT_EQ(
+        -1,
+        cplat_atomic_load_i32(
+            &entry_.resolved,
+            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が -1 であること。(定義なしになることの確認)
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -160,10 +172,12 @@ TEST_F(symLoaderResolveTest, marks_name_too_long_when_extension_does_not_fit)
     void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
 
     // Assert
-    EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - 戻り値が NULL であること。
-    EXPECT_EQ(-2, cplat_atomic_load_i32(
-                      &entry_.resolved,
-                      CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - resolved が名称長超過を示す -2 になること。
+    EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
+    EXPECT_EQ(
+        -2,
+        cplat_atomic_load_i32(
+            &entry_.resolved,
+            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が -2 であること。(名称長超過になることの確認)
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -181,13 +195,13 @@ TEST_F(symLoaderResolveTest, marks_open_error_when_library_is_missing)
     void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
 
     // Assert
-    EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - 戻り値が NULL であること。
+    EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
     EXPECT_EQ(
         -3,
         cplat_atomic_load_i32(
             &entry_.resolved,
-            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - resolved がライブラリ オープン エラーを示す -3 になること。
-    EXPECT_EQ(nullptr, entry_.handle);    // [確認_異常系] - handle が NULL のままであること。
+            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が -3 であること。(ライブラリ オープン エラーになることの確認)
+    EXPECT_EQ(nullptr, entry_.handle);    // [確認_異常系] - entry_.handle が nullptr であること。
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -205,11 +219,16 @@ TEST_F(symLoaderResolveTest, releases_handle_when_symbol_is_missing)
     void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
 
     // Assert
-    EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - 戻り値が NULL であること。
-    EXPECT_EQ(1, cplat_atomic_load_i32(
-                     &entry_.resolved,
-                     CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - resolved が解決済みを示す 1 になること。
-    EXPECT_EQ(nullptr, entry_.handle); // [確認_異常系] - シンボルが見つからないためハンドルが解放されること。
+    EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
+    EXPECT_EQ(
+        1,
+        cplat_atomic_load_i32(
+            &entry_.resolved,
+            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 1 であること。(解決済みになることの確認)
+    EXPECT_EQ(
+        nullptr,
+        entry_
+            .handle); // [確認_異常系] - entry_.handle が nullptr であること。(シンボルが見つからずハンドルが解放されることの確認)
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -228,17 +247,20 @@ TEST_F(symLoaderResolveTest, returns_null_when_lock_creation_fails)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_local_lock_create(_))
         .WillOnce(Return(CPLAT_ERR_UNKNOWN))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_lock_create が 1 回目に呼び出されること。
-                                      // [Pre-Assert手順] - 1 回目は CPLAT_ERR_UNKNOWN を返却し、以降は本物へ委譲する。
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_lock_create() が 1 回以上呼び出されること。
+                          // [Pre-Assert手順] - 1 回目は CPLAT_ERR_UNKNOWN を返却し、以降は本物へ委譲する。
 
     // Act
     void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
 
     // Assert
-    EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - cplat_sym_loader_resolve の戻り値が NULL であること。
-    EXPECT_EQ(0,
-              cplat_atomic_load_i32(&entry_.resolved,
-                                    CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - 解決状態が未解決のままであること。
+    EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
+    EXPECT_EQ(
+        0,
+        cplat_atomic_load_i32(
+            &entry_.resolved,
+            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 0 であること。(未解決のままであることの確認)
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -254,17 +276,19 @@ TEST_F(symLoaderResolveTest, returns_null_when_lock_acquisition_fails)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, _))
         .WillOnce(Return(CPLAT_ERR_UNKNOWN))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_lock_lock が 1 回目に呼び出されること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が 1 回以上呼び出されること。
                                       // [Pre-Assert手順] - 1 回目は CPLAT_ERR_UNKNOWN を返却し、以降は本物へ委譲する。
 
     // Act
     void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
 
     // Assert
-    EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - cplat_sym_loader_resolve の戻り値が NULL であること。
-    EXPECT_EQ(0,
-              cplat_atomic_load_i32(&entry_.resolved,
-                                    CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - 解決状態が未解決のままであること。
+    EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
+    EXPECT_EQ(
+        0,
+        cplat_atomic_load_i32(
+            &entry_.resolved,
+            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 0 であること。(未解決のままであることの確認)
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -273,7 +297,7 @@ TEST_F(symLoaderResolveTest, reuses_lock_initialized_by_another_thread)
 {
     // Arrange
     ASSERT_EQ(CPLAT_OK, cplat_local_lock_create(&entry_.lock)); // [状態] - エントリのロックを生成する。
-    // [状態確認] - cplat_local_lock_create の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_local_lock_create() の戻り値が CPLAT_OK であること。
     cplat_atomic_store_i32(&entry_.lock_state, 1, CPLAT_MEMORY_ORDER_RELAXED);
     test_sym_loader_set_entry_lock_wait_hook(complete_entry_lock_initialization);
 
@@ -284,10 +308,12 @@ TEST_F(symLoaderResolveTest, reuses_lock_initialized_by_another_thread)
         &entry_); // [手順] - 他スレッドの初期化中を表すエントリでロック初期化確認を実行する。
 
     // Assert
-    EXPECT_EQ(0, result); // [確認_正常系] - test_sym_loader_ensure_entry_lock_initialized の戻り値が 0 であること。
-    EXPECT_EQ(2, cplat_atomic_load_i32(
-                     &entry_.lock_state,
-                     CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - ロック初期化状態が完了を示す 2 であること。
+    EXPECT_EQ(0, result); // [確認_正常系] - test_sym_loader_ensure_entry_lock_initialized() の戻り値が 0 であること。
+    EXPECT_EQ(
+        2,
+        cplat_atomic_load_i32(
+            &entry_.lock_state,
+            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - entry_.lock_state を読み込んだ cplat_atomic_load_i32() の戻り値が 2 であること。(ロック初期化が完了することの確認)
 
     // Cleanup
     test_sym_loader_set_entry_lock_wait_hook(NULL);
@@ -305,7 +331,7 @@ TEST_F(symLoaderResolveTest, default_lock_wait_yields_execution)
     test_sym_loader_default_entry_lock_wait(&entry_); // [手順] - ロック初期化待機の既定処理を 1 回実行する。
 
     // Assert
-    SUCCEED(); // [確認_正常系] - test_sym_loader_default_entry_lock_wait が呼び出し元へ制御を戻すこと。
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(test_sym_loader_default_entry_lock_wait() が呼び出し元へ制御を戻すことの確認)
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -322,7 +348,7 @@ TEST_F(symLoaderResolveTest, reports_lock_initialization_failure_from_another_th
         &entry_); // [手順] - 他スレッドの初期化失敗を表すエントリでロック初期化確認を実行する。
 
     // Assert
-    EXPECT_EQ(-1, result); // [確認_異常系] - test_sym_loader_ensure_entry_lock_initialized の戻り値が -1 であること。
+    EXPECT_EQ(-1, result); // [確認_異常系] - test_sym_loader_ensure_entry_lock_initialized() の戻り値が -1 であること。
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -342,7 +368,7 @@ TEST_F(symLoaderResolveTest, returns_result_resolved_while_waiting_for_lock)
                 cplat_atomic_store_i32(&entry_.resolved, 1, CPLAT_MEMORY_ORDER_RELAXED);
                 cplat_atomic_store_ptr(&entry_.func_ptr, reinterpret_cast<void *>(1), CPLAT_MEMORY_ORDER_RELAXED);
                 return CPLAT_OK;
-            })); // [Pre-Assert確認_正常系] - cplat_local_lock_lock が 1 回呼び出されること。
+            })); // [Pre-Assert確認_正常系] - cplat_local_lock_lock() が 1 回呼び出されること。
                  // [Pre-Assert手順] - resolved と func_ptr を設定し、CPLAT_OK を返却する。
 
     // Act
@@ -350,8 +376,9 @@ TEST_F(symLoaderResolveTest, returns_result_resolved_while_waiting_for_lock)
         &entry_); // [手順] - ロック待機中に解決済みとなるエントリで cplat_sym_loader_resolve を呼び出す。
 
     // Assert
-    EXPECT_EQ(reinterpret_cast<void *>(1),
-              result); // [確認_正常系] - cplat_sym_loader_resolve の戻り値が別スレッドの解決結果であること。
+    EXPECT_EQ(
+        reinterpret_cast<void *>(1),
+        result); // [確認_正常系] - cplat_sym_loader_resolve() の戻り値が reinterpret_cast<void *>(1) と一致すること。(別スレッドの解決結果を再利用することの確認)
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -369,12 +396,12 @@ TEST_F(symLoaderResolveTest, does_not_mark_default_when_only_library_name_is_def
         &entry_); // [手順] - ライブラリ名だけが default のエントリで cplat_sym_loader_resolve を呼び出す。
 
     // Assert
-    EXPECT_EQ(nullptr, result); // [確認_異常系] - cplat_sym_loader_resolve の戻り値が NULL であること。
+    EXPECT_EQ(nullptr, result); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
     EXPECT_EQ(
         -3,
         cplat_atomic_load_i32(
             &entry_.resolved,
-            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - 実在しない default ライブラリの解決結果が -3 であること。
+            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が -3 であること。(実在しない default ライブラリのオープン エラーになることの確認)
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 

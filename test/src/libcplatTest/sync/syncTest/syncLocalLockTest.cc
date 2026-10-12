@@ -19,7 +19,7 @@ TEST(syncLocalLockTest, try_lock_reports_busy_when_already_locked)
     EXPECT_CALL(mock_pthread, pthread_mutex_trylock(_, _, _, _))
         .WillOnce(testing::Return(0))
         .WillOnce(testing::Return(EBUSY));
-    // [Pre-Assert確認_正常系] - pthread_mutex_trylock が 2 回呼び出されること。
+    // [Pre-Assert確認_正常系] - pthread_mutex_trylock() が 2 回呼び出されること。
     // [Pre-Assert手順] - 1 回目は 0、2 回目は EBUSY を返却する。
 #endif /* PLATFORM_LINUX */
 
@@ -29,14 +29,12 @@ TEST(syncLocalLockTest, try_lock_reports_busy_when_already_locked)
     int second_try = cplat_local_lock_try_lock(lock);                 // [手順] - ロック保持中に try_lock を試行する。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_OK,
-        create_result); // [確認_正常系] - cplat_local_lock_create の戻り値から、local lock 作成が成功したと判断できること。
-    EXPECT_EQ(
-        CPLAT_OK,
-        first_lock); // [確認_正常系] - cplat_local_lock_lock の戻り値から、1 回目のロック取得が成功したと判断できること。
-    EXPECT_EQ(CPLAT_ERR_BUSY,
-              second_try); // [確認_正常系] - 保持中の try_lock が BUSY を返すこと。
+    EXPECT_EQ(CPLAT_OK,
+              create_result); // [確認_正常系] - cplat_local_lock_create() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              first_lock); // [確認_正常系] - cplat_local_lock_lock() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_ERR_BUSY, second_try);
+    // [確認_正常系] - ロック保持中の cplat_local_lock_try_lock() の戻り値が CPLAT_ERR_BUSY であること。
 
     // Cleanup
     (void)cplat_local_lock_unlock(lock);
@@ -56,10 +54,10 @@ TEST(syncLocalLockTest, negative_timeout_returns_invalid_argument)
     int lock_result = cplat_local_lock_lock(lock, -1);  // [手順] - 負のタイムアウト -1 を指定してロックする。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_OK,
-        create_result); // [確認_正常系] - cplat_local_lock_create の戻り値から、local lock 作成が成功したと判断できること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, lock_result); // [確認_異常系] - 負値で INVALID_ARGUMENT を返すこと。
+    EXPECT_EQ(CPLAT_OK,
+              create_result); // [確認_正常系] - cplat_local_lock_create() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, lock_result);
+    // [確認_異常系] - 負のタイムアウトに対する cplat_local_lock_lock() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_local_lock_dispose(lock);

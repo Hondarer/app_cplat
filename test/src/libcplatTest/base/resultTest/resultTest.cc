@@ -101,8 +101,10 @@ TEST_F(resultTest, all_codes_are_distinct)
     unique_codes.insert(codes.begin(), codes.end()); // [手順] - 全コードを集合へ挿入して重複を排除する。
 
     // Assert
-    EXPECT_EQ(codes.size(),
-              unique_codes.size()); // [確認_正常系] - 重複がなく、集合の要素数が列挙したコード数と一致すること。
+    EXPECT_EQ(
+        codes.size(),
+        unique_codes
+            .size()); // [確認_正常系] - unique_codes.size() の戻り値が codes.size() の戻り値と一致すること。(全コードに重複がないことの確認)
 }
 
 // CPLAT_OK のみが 0 で、エラー コードがすべて負値であることの確認
@@ -124,10 +126,12 @@ TEST_F(resultTest, only_ok_is_zero_and_all_errors_are_negative)
     }
 
     // Assert
-    EXPECT_EQ(0, CPLAT_OK);            // [確認_正常系] - CPLAT_OK の値が 0 であること。
-    EXPECT_EQ(1, CPLAT_SKIPPED);       // [確認_正常系] - CPLAT_SKIPPED の値が 1 であること。
-    EXPECT_EQ(0U, non_negative_count); // [確認_正常系] - 0 以上の値を持つエラー コードが存在しないこと。
-    EXPECT_FALSE(error_codes.empty()); // [確認_正常系] - 検証対象のエラー コードが 1 つ以上列挙されていること。
+    EXPECT_EQ(0, CPLAT_OK);      // [確認_正常系] - CPLAT_OK が 0 であること。
+    EXPECT_EQ(1, CPLAT_SKIPPED); // [確認_正常系] - CPLAT_SKIPPED が 1 であること。
+    EXPECT_EQ(
+        0U,
+        non_negative_count); // [確認_正常系] - non_negative_count が 0U であること。(0 以上のエラー コードが存在しないことの確認)
+    EXPECT_FALSE(error_codes.empty()); // [確認_正常系] - error_codes.empty() の戻り値が false であること。
 }
 
 // パスまたはバッファーの長さ超過を共通結果コードへ変換できることの確認
@@ -145,9 +149,10 @@ TEST_F(resultTest, length_errors_map_to_buffer_too_small)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_BUFFER_TOO_SMALL,
-        name_too_long_result); // [確認_正常系] - ENAMETOOLONG の変換結果が CPLAT_ERR_BUFFER_TOO_SMALL であること。
-    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              range_result); // [確認_正常系] - ERANGE の変換結果が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+        name_too_long_result); // [確認_正常系] - ENAMETOOLONG に対する cplat_internal_result_from_errno() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_EQ(
+        CPLAT_ERR_BUFFER_TOO_SMALL,
+        range_result); // [確認_正常系] - ERANGE に対する cplat_internal_result_from_errno() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
 }
 
 // 代表的な errno が対応する共通結果コードへ変換されることの確認
@@ -177,10 +182,13 @@ TEST_F(resultTest, errno_values_map_to_expected_results)
     }
 
     // Assert
-    ASSERT_EQ(cases.size(), actual.size()); // [確認_正常系] - 全ての errno に変換結果が得られること。
+    ASSERT_EQ(cases.size(),
+              actual.size()); // [確認_正常系] - actual.size() の戻り値が cases.size() の戻り値と一致すること。
     for (std::size_t index = 0U; index < cases.size(); ++index)
     {
-        EXPECT_EQ(cases[index].second,
-                  actual[index]); // [確認_正常系 回数=11] - errno ごとの共通結果コードが期待値と一致すること。
+        EXPECT_EQ(
+            cases[index].second,
+            actual
+                [index]); // [確認_正常系 回数=11] - cases[index].first に対する cplat_internal_result_from_errno() の戻り値が cases[index].second と一致すること。
     }
 }

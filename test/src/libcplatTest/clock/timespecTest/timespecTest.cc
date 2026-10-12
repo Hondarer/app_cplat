@@ -17,9 +17,11 @@ TEST_F(timespecTest, layout_is_16_bytes_with_expected_offsets)
     // Act
 
     // Assert
-    EXPECT_EQ(16U, sizeof(cplat_timespec));           // [確認_正常系] - 構造体サイズが 16 バイトであること。
-    EXPECT_EQ(0U, offsetof(cplat_timespec, tv_sec));  // [確認_正常系] - tv_sec のオフセットが 0 であること。
-    EXPECT_EQ(8U, offsetof(cplat_timespec, tv_nsec)); // [確認_正常系] - tv_nsec のオフセットが 8 であること。
+    EXPECT_EQ(16U, sizeof(cplat_timespec)); // [確認_正常系] - sizeof(cplat_timespec) が 16U であること。
+    EXPECT_EQ(0U,
+              offsetof(cplat_timespec, tv_sec)); // [確認_正常系] - offsetof(cplat_timespec, tv_sec) が 0U であること。
+    EXPECT_EQ(
+        8U, offsetof(cplat_timespec, tv_nsec)); // [確認_正常系] - offsetof(cplat_timespec, tv_nsec) が 8U であること。
 }
 
 // ナノ秒部が上限を超えた時刻値が秒繰り上げで正規化されることの確認
@@ -34,8 +36,8 @@ TEST_F(timespecTest, normalize_carries_nsec_overflow_into_sec)
     cplat_timespec_normalize(&ts); // [手順] - cplat_timespec_normalize(&ts) を呼び出す。
 
     // Assert
-    EXPECT_EQ(3, ts.tv_sec);            // [確認_正常系] - 秒部が 2 秒繰り上がって 3 になること。
-    EXPECT_EQ(500000000LL, ts.tv_nsec); // [確認_正常系] - ナノ秒部が 500000000 に正規化されること。
+    EXPECT_EQ(3, ts.tv_sec); // [確認_正常系] - ts.tv_sec が 3 であること。(ナノ秒部から 2 秒繰り上がったことの確認)
+    EXPECT_EQ(500000000LL, ts.tv_nsec); // [確認_正常系] - ts.tv_nsec が 500000000LL であること。
 }
 
 // 負のナノ秒部が秒繰り下げで正規化されることの確認
@@ -50,8 +52,9 @@ TEST_F(timespecTest, normalize_borrows_sec_for_negative_nsec)
     cplat_timespec_normalize(&ts); // [手順] - cplat_timespec_normalize(&ts) を呼び出す。
 
     // Assert
-    EXPECT_EQ(0, ts.tv_sec);            // [確認_正常系] - 秒部が 1 繰り下がって 0 になること。
-    EXPECT_EQ(999999999LL, ts.tv_nsec); // [確認_正常系] - ナノ秒部が 999999999 に正規化されること。
+    EXPECT_EQ(0,
+              ts.tv_sec); // [確認_正常系] - ts.tv_sec が 0 であること。(負のナノ秒部により 1 秒繰り下がったことの確認)
+    EXPECT_EQ(999999999LL, ts.tv_nsec); // [確認_正常系] - ts.tv_nsec が 999999999LL であること。
 }
 
 // 正規化済みの時刻値が正規化で変化しないことの確認
@@ -66,8 +69,8 @@ TEST_F(timespecTest, normalize_keeps_already_normalized_value)
     cplat_timespec_normalize(&ts); // [手順] - cplat_timespec_normalize(&ts) を呼び出す。
 
     // Assert
-    EXPECT_EQ(5, ts.tv_sec);            // [確認_正常系] - 秒部が変化しないこと。
-    EXPECT_EQ(999999999LL, ts.tv_nsec); // [確認_正常系] - ナノ秒部が変化しないこと。
+    EXPECT_EQ(5, ts.tv_sec);            // [確認_正常系] - ts.tv_sec が 5 であること。
+    EXPECT_EQ(999999999LL, ts.tv_nsec); // [確認_正常系] - ts.tv_nsec が 999999999LL であること。
 }
 
 // NULL を渡した正規化が無処理で戻ることの確認
@@ -81,7 +84,7 @@ TEST_F(timespecTest, normalize_ignores_null)
     cplat_timespec_normalize(NULL); // [手順] - cplat_timespec_normalize(NULL) を呼び出す。
 
     // Assert
-    SUCCEED(); // [確認_異常系] - クラッシュせず無処理で戻ること。
+    SUCCEED(); // [確認_異常系] - SUCCEED() に到達すること。(NULL を渡した cplat_timespec_normalize() がクラッシュしないことの確認)
 }
 
 // 加算でナノ秒部の繰り上げが行われることの確認
@@ -98,8 +101,9 @@ TEST_F(timespecTest, add_carries_nsec_into_sec)
     cplat_timespec_add(&a, &b, &result); // [手順] - cplat_timespec_add(&a, &b, &result) を呼び出す。
 
     // Assert
-    EXPECT_EQ(4, result.tv_sec);            // [確認_正常系] - 秒部が繰り上げ込みで 4 になること。
-    EXPECT_EQ(300000000LL, result.tv_nsec); // [確認_正常系] - ナノ秒部が 300000000 になること。
+    EXPECT_EQ(
+        4, result.tv_sec); // [確認_正常系] - result.tv_sec が 4 であること。(ナノ秒部から 1 秒繰り上がったことの確認)
+    EXPECT_EQ(300000000LL, result.tv_nsec); // [確認_正常系] - result.tv_nsec が 300000000LL であること。
 }
 
 // 加算の結果格納先に入力と同一の変数を指定できることの確認
@@ -115,8 +119,8 @@ TEST_F(timespecTest, add_accepts_result_aliasing_input)
     cplat_timespec_add(&a, &b, &a); // [手順] - 結果格納先に加算元と同一の &a を指定して呼び出す。
 
     // Assert
-    EXPECT_EQ(3, a.tv_sec);            // [確認_正常系] - 秒部が 3 になること。
-    EXPECT_EQ(300000000LL, a.tv_nsec); // [確認_正常系] - ナノ秒部が 300000000 になること。
+    EXPECT_EQ(3, a.tv_sec);            // [確認_正常系] - a.tv_sec が 3 であること。
+    EXPECT_EQ(300000000LL, a.tv_nsec); // [確認_正常系] - a.tv_nsec が 300000000LL であること。
 }
 
 // 減算でナノ秒部の繰り下げが行われることの確認
@@ -133,8 +137,11 @@ TEST_F(timespecTest, sub_borrows_sec_for_nsec)
     cplat_timespec_sub(&a, &b, &result); // [手順] - cplat_timespec_sub(&a, &b, &result) を呼び出す。
 
     // Assert
-    EXPECT_EQ(1, result.tv_sec);            // [確認_正常系] - 秒部が繰り下げ込みで 1 になること。
-    EXPECT_EQ(500000000LL, result.tv_nsec); // [確認_正常系] - ナノ秒部が 500000000 になること。
+    EXPECT_EQ(
+        1,
+        result
+            .tv_sec); // [確認_正常系] - result.tv_sec が 1 であること。(ナノ秒部の不足により 1 秒繰り下がったことの確認)
+    EXPECT_EQ(500000000LL, result.tv_nsec); // [確認_正常系] - result.tv_nsec が 500000000LL であること。
 }
 
 // 過去方向の減算結果が負の秒部と正規化済みナノ秒部になることの確認
@@ -151,8 +158,11 @@ TEST_F(timespecTest, sub_returns_negative_sec_when_a_is_older)
     cplat_timespec_sub(&a, &b, &result); // [手順] - cplat_timespec_sub(&a, &b, &result) を呼び出す。
 
     // Assert
-    EXPECT_EQ(-2, result.tv_sec);           // [確認_正常系] - 秒部が -2 になること (-1.5 秒 = {-2, +0.5 秒})。
-    EXPECT_EQ(500000000LL, result.tv_nsec); // [確認_正常系] - ナノ秒部が 0 以上に正規化され 500000000 になること。
+    EXPECT_EQ(
+        -2,
+        result
+            .tv_sec); // [確認_正常系] - result.tv_sec が -2 であること。(-1.5 秒の差分を {-2, 500000000} に正規化したことの確認)
+    EXPECT_EQ(500000000LL, result.tv_nsec); // [確認_正常系] - result.tv_nsec が 500000000LL であること。
 }
 
 // 比較が秒部優先で行われることの確認
@@ -167,15 +177,26 @@ TEST_F(timespecTest, cmp_compares_sec_first_then_nsec)
     // Pre-Assert
 
     // Act
+    int actual_ret_same = cplat_timespec_cmp(&base, &same);
+    int actual_ret_older_sec = cplat_timespec_cmp(&base, &older_sec);
+    int actual_ret_reverse = cplat_timespec_cmp(&older_sec, &base);
+    int actual_ret_newer_nsec = cplat_timespec_cmp(&base, &newer_nsec);
+    int actual_ret_older_nsec = cplat_timespec_cmp(&newer_nsec, &base);
 
     // Assert
-    EXPECT_EQ(0, cplat_timespec_cmp(&base, &same));       // [確認_正常系] - 等しい値の比較が 0 を返すこと。
-    EXPECT_EQ(1, cplat_timespec_cmp(&base, &older_sec));  // [確認_正常系] - 秒部が過去の値との比較が 1 を返すこと。
-    EXPECT_EQ(-1, cplat_timespec_cmp(&older_sec, &base)); // [確認_正常系] - 逆順の比較が -1 を返すこと。
-    EXPECT_EQ(-1, cplat_timespec_cmp(
-                      &base, &newer_nsec)); // [確認_正常系] - 同秒でナノ秒部が未来の値との比較が -1 を返すこと。
-    EXPECT_EQ(1, cplat_timespec_cmp(&newer_nsec,
-                                    &base)); // [確認_正常系] - 同秒でナノ秒部が過去の値との比較が 1 を返すこと。
+    EXPECT_EQ(0, actual_ret_same); // [確認_正常系] - 等しい値に対する cplat_timespec_cmp() の戻り値が 0 であること。
+    EXPECT_EQ(
+        1,
+        actual_ret_older_sec); // [確認_正常系] - 秒部が過去の右辺に対する cplat_timespec_cmp() の戻り値が 1 であること。
+    EXPECT_EQ(
+        -1,
+        actual_ret_reverse); // [確認_正常系] - 秒部が未来の右辺に対する cplat_timespec_cmp() の戻り値が -1 であること。
+    EXPECT_EQ(
+        -1,
+        actual_ret_newer_nsec); // [確認_正常系] - 同秒でナノ秒部が未来の右辺に対する cplat_timespec_cmp() の戻り値が -1 であること。
+    EXPECT_EQ(
+        1,
+        actual_ret_older_nsec); // [確認_正常系] - 同秒でナノ秒部が過去の右辺に対する cplat_timespec_cmp() の戻り値が 1 であること。
 }
 
 // ミリ秒加算で deadline が生成されることの確認
@@ -191,8 +212,11 @@ TEST_F(timespecTest, add_ms_creates_deadline_with_carry)
     cplat_timespec_add_ms(&ts, 1250, &result); // [手順] - cplat_timespec_add_ms(&ts, 1250, &result) を呼び出す。
 
     // Assert
-    EXPECT_EQ(102, result.tv_sec);         // [確認_正常系] - 秒部が繰り上げ込みで 102 になること。
-    EXPECT_EQ(50000000LL, result.tv_nsec); // [確認_正常系] - ナノ秒部が 50000000 になること。
+    EXPECT_EQ(
+        102,
+        result
+            .tv_sec); // [確認_正常系] - result.tv_sec が 102 であること。(1250 ミリ秒の加算で 2 秒繰り上がったことの確認)
+    EXPECT_EQ(50000000LL, result.tv_nsec); // [確認_正常系] - result.tv_nsec が 50000000LL であること。
 }
 
 // ミリ秒差分が切り捨てで計算されることの確認
@@ -209,7 +233,9 @@ TEST_F(timespecTest, diff_ms_truncates_sub_millisecond_part)
         cplat_timespec_diff_ms(&end, &start); // [手順] - cplat_timespec_diff_ms(&end, &start) を呼び出す。
 
     // Assert
-    EXPECT_EQ(2250, elapsed_ms); // [確認_正常系] - ミリ秒未満が切り捨てられ 2250 になること。
+    EXPECT_EQ(
+        2250,
+        elapsed_ms); // [確認_正常系] - cplat_timespec_diff_ms() の戻り値が 2250 であること。(ミリ秒未満が切り捨てられたことの確認)
 }
 
 // 過去方向のミリ秒差分が負値になることの確認
@@ -226,7 +252,7 @@ TEST_F(timespecTest, diff_ms_returns_negative_when_end_is_older)
         cplat_timespec_diff_ms(&end, &start); // [手順] - cplat_timespec_diff_ms(&end, &start) を呼び出す。
 
     // Assert
-    EXPECT_EQ(-1, elapsed_ms); // [確認_正常系] - 差分が -1 ミリ秒になること。
+    EXPECT_EQ(-1, elapsed_ms); // [確認_正常系] - cplat_timespec_diff_ms() の戻り値が -1 であること。
 }
 
 // NULL を渡した演算・変換が無処理または 0 で戻ることの確認
@@ -258,14 +284,16 @@ TEST_F(timespecTest, operations_ignore_null_arguments)
     int64_t diff_null_start = cplat_timespec_diff_ms(&value, NULL); // [手順] - 起点 NULL で差分計算を呼び出す。
 
     // Assert
-    EXPECT_EQ(3, result.tv_sec);   // [確認_正常系] - 結果格納先の秒部が書き換えられないこと。
-    EXPECT_EQ(4, result.tv_nsec);  // [確認_正常系] - 結果格納先のナノ秒部が書き換えられないこと。
-    EXPECT_EQ(5, native.tv_sec);   // [確認_正常系] - ネイティブ格納先の秒部が書き換えられないこと。
-    EXPECT_EQ(6, native.tv_nsec);  // [確認_正常系] - ネイティブ格納先のナノ秒部が書き換えられないこと。
-    EXPECT_EQ(0, cmp_null_left);   // [確認_正常系] - 左辺 NULL の比較が 0 を返すこと。
-    EXPECT_EQ(0, cmp_null_right);  // [確認_正常系] - 右辺 NULL の比較が 0 を返すこと。
-    EXPECT_EQ(0, diff_null_end);   // [確認_正常系] - 終点 NULL の差が 0 を返すこと。
-    EXPECT_EQ(0, diff_null_start); // [確認_正常系] - 起点 NULL の差が 0 を返すこと。
+    EXPECT_EQ(3, result.tv_sec);  // [確認_正常系] - result.tv_sec が 3 であること。
+    EXPECT_EQ(4, result.tv_nsec); // [確認_正常系] - result.tv_nsec が 4 であること。
+    EXPECT_EQ(5, native.tv_sec);  // [確認_正常系] - native.tv_sec が 5 であること。
+    EXPECT_EQ(6, native.tv_nsec); // [確認_正常系] - native.tv_nsec が 6 であること。
+    EXPECT_EQ(0, cmp_null_left);  // [確認_正常系] - 左辺 NULL に対する cplat_timespec_cmp() の戻り値が 0 であること。
+    EXPECT_EQ(0, cmp_null_right); // [確認_正常系] - 右辺 NULL に対する cplat_timespec_cmp() の戻り値が 0 であること。
+    EXPECT_EQ(0,
+              diff_null_end); // [確認_正常系] - 終点 NULL に対する cplat_timespec_diff_ms() の戻り値が 0 であること。
+    EXPECT_EQ(0,
+              diff_null_start); // [確認_正常系] - 起点 NULL に対する cplat_timespec_diff_ms() の戻り値が 0 であること。
 }
 
 // ネイティブ struct timespec との相互変換で値が保たれることの確認
@@ -284,8 +312,8 @@ TEST_F(timespecTest, native_conversion_round_trips_value)
                                &restored); // [手順] - cplat_timespec_from_native(&native, &restored) を呼び出す。
 
     // Assert
-    EXPECT_EQ((time_t)1712345678, native.tv_sec); // [確認_正常系] - ネイティブ側の秒部が保たれること。
-    EXPECT_EQ(987654321L, native.tv_nsec);        // [確認_正常系] - ネイティブ側のナノ秒部が保たれること。
-    EXPECT_EQ(ts.tv_sec, restored.tv_sec);        // [確認_正常系] - 逆変換後の秒部が元の値と一致すること。
-    EXPECT_EQ(ts.tv_nsec, restored.tv_nsec);      // [確認_正常系] - 逆変換後のナノ秒部が元の値と一致すること。
+    EXPECT_EQ((time_t)1712345678, native.tv_sec); // [確認_正常系] - native.tv_sec が (time_t)1712345678 であること。
+    EXPECT_EQ(987654321L, native.tv_nsec);        // [確認_正常系] - native.tv_nsec が 987654321L であること。
+    EXPECT_EQ(ts.tv_sec, restored.tv_sec);        // [確認_正常系] - restored.tv_sec が ts.tv_sec と一致すること。
+    EXPECT_EQ(ts.tv_nsec, restored.tv_nsec);      // [確認_正常系] - restored.tv_nsec が ts.tv_nsec と一致すること。
 }

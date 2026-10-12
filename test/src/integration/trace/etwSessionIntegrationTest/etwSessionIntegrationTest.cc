@@ -40,7 +40,7 @@ static void collect_callback(const cplat_etw_event *event, void *context)
     EventCollector *collector = static_cast<EventCollector *>(context);
     std::lock_guard<std::mutex> lock(collector->mtx);
     ASSERT_NE((const cplat_etw_event *)NULL, event);
-    // [状態確認] - `(const cplat_etw_event *)NULL` と `event` が異なること。
+    // [状態確認] - event が (const cplat_etw_event *)NULL 以外であること。
     EventCollector::EventRecord record;
     record.level = event->level;
     record.process_id = event->process_id;
@@ -86,7 +86,7 @@ TEST_F(etwSessionIntegrationTest, test_session_stop_with_null)
     cplat_etw_session_stop(NULL); // [手順] - NULL セッションで cplat_etw_session_stop を呼び出す。
 
     // Assert
-    SUCCEED(); // [確認_正常系] - クラッシュせずに完了すること。
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(NULL を渡した cplat_etw_session_stop() がクラッシュしないことの確認)
 }
 
 // session_start の必須引数 NULL が ERR_INVALID_ARGUMENT で拒否されることの確認
@@ -105,9 +105,10 @@ TEST_F(etwSessionIntegrationTest, test_session_start_null_params)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_name); // [確認_異常系] - session_name が NULL の場合に cplat_etw_session_start の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ((cplat_etw_session *)NULL,
-              session); // [確認_異常系] - session_name が NULL の場合に session に NULL が格納されること。
+        actual_ret_null_name); // [確認_異常系] - session_name が NULL の cplat_etw_session_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        (cplat_etw_session *)NULL,
+        session); // [確認_異常系] - session_name が NULL の cplat_etw_session_start() の後の session が (cplat_etw_session *)NULL であること。
 
     // Act_2
     int actual_ret_null_provider_guid =
@@ -117,7 +118,7 @@ TEST_F(etwSessionIntegrationTest, test_session_start_null_params)
     // Assert_2
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_provider_guid); // [確認_異常系] - provider_guid が NULL の場合に cplat_etw_session_start の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_provider_guid); // [確認_異常系] - provider_guid が NULL の cplat_etw_session_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_3
     int actual_ret_null_callback =
@@ -127,7 +128,7 @@ TEST_F(etwSessionIntegrationTest, test_session_start_null_params)
     // Assert_3
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_callback); // [確認_異常系] - callback が NULL の場合に cplat_etw_session_start の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_callback); // [確認_異常系] - callback が NULL の cplat_etw_session_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_4
     int actual_ret_null_session_out =
@@ -137,7 +138,7 @@ TEST_F(etwSessionIntegrationTest, test_session_start_null_params)
     // Assert_4
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_session_out); // [確認_異常系] - 受け取り先が NULL の場合に cplat_etw_session_start の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_session_out); // [確認_異常系] - 受け取り先が NULL の cplat_etw_session_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 不正な GUID 文字列が ERR_INVALID_ARGUMENT で拒否されることの確認
@@ -156,8 +157,10 @@ TEST_F(etwSessionIntegrationTest, test_session_start_invalid_guid)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_invalid_guid); // [確認_異常系] - cplat_etw_session_start の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ((cplat_etw_session *)NULL, session); // [確認_異常系] - session に NULL が格納されること。
+        actual_ret_invalid_guid); // [確認_異常系] - cplat_etw_session_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        (cplat_etw_session *)NULL,
+        session); // [確認_異常系] - 不正な GUID 文字列 "not-a-guid" の cplat_etw_session_start() の後の session が (cplat_etw_session *)NULL であること。
 }
 
 class etwSessionSubscribeIntegrationTest : public Test
@@ -172,9 +175,9 @@ class etwSessionSubscribeIntegrationTest : public Test
                "\"Performance Log Users\" が必要です。\n"
                "対処方法: net localgroup \"Performance Log Users\" %USERNAME% /add\n"
                "          この操作後にサインアウト/サインインが必要です。";
-        // [状態確認] - `CPLAT_ERR_PERMISSION_DENIED` と `status` が異なること。
+        // [状態確認] - status が CPLAT_ERR_PERMISSION_DENIED 以外であること。
         ASSERT_EQ(CPLAT_OK, status) << "cplat_etw_session_check_access failed (status=" << status << ")";
-        // [状態確認] - `cplat_etw_session_check_access()` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - cplat_etw_session_check_access() の戻り値が CPLAT_OK であること。
     }
     // [サブ手順終了]
 };
@@ -189,12 +192,14 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_ascii)
 
     cplat_etw_provider *handle =
         cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
-    ASSERT_NE((cplat_etw_provider *)NULL, handle);  // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(
+        (cplat_etw_provider *)NULL,
+        handle); // [状態確認] - cplat_etw_provider_create() の戻り値が (cplat_etw_provider *)NULL 以外であること。
 
     cplat_etw_session *session = NULL;
     int start_result = cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
                                                &session); // [状態] - 収集 callback 付きで ETW session を開始する。
-    ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -209,17 +214,24 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_ascii)
     {
         if (evt.message == "hello world")
         {
-            EXPECT_EQ(4, evt.level);                                    // [確認_正常系] - INFO レベルで受信されること。
-            EXPECT_EQ((uint32_t)GetCurrentProcessId(), evt.process_id); // [確認_正常系] - 発行元 PID が受信されること。
-            EXPECT_EQ("Trace", evt.event_name);                         // [確認_正常系] - イベント名が受信されること。
-            EXPECT_FALSE(evt.has_service);              // [確認_正常系] - Service なしで受信されること。
-            EXPECT_NE((int64_t)0, evt.timestamp_100ns); // [確認_正常系] - ETW タイムスタンプが設定されること。
+            EXPECT_EQ(
+                4,
+                evt.level); // [確認_正常系] - "hello world" の evt.level が 4 であること。(INFO レベルであることの確認)
+            EXPECT_EQ(
+                (uint32_t)GetCurrentProcessId(),
+                evt.process_id); // [確認_正常系] - evt.process_id が (uint32_t)GetCurrentProcessId() の戻り値と一致すること。
+            EXPECT_EQ("Trace", evt.event_name); // [確認_正常系] - evt.event_name が "Trace" であること。
+            EXPECT_FALSE(
+                evt.has_service); // [確認_正常系] - evt.has_service が false であること。(Service なしで受信されることの確認)
+            EXPECT_NE(
+                (int64_t)0,
+                evt.timestamp_100ns); // [確認_正常系] - evt.timestamp_100ns が (int64_t)0 以外であること。(ETW タイムスタンプが設定されていることの確認)
             found = true;
             break;
         }
     }
     EXPECT_TRUE(found) << "Expected event 'hello world' not found";
-    // [確認_正常系] - `found` が true であること。
+    // [確認_正常系] - found が true であること。("hello world" のイベントを受信したことの確認)
 
     // Cleanup
     cplat_etw_provider_dispose(handle);
@@ -237,12 +249,14 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_utf8_japanese)
 
     cplat_etw_provider *handle =
         cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
-    ASSERT_NE((cplat_etw_provider *)NULL, handle);  // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(
+        (cplat_etw_provider *)NULL,
+        handle); // [状態確認] - cplat_etw_provider_create() の戻り値が (cplat_etw_provider *)NULL 以外であること。
 
     cplat_etw_session *session = NULL;
     int start_result = cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
                                                &session); // [状態] - 収集 callback 付きで ETW session を開始する。
-    ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -257,17 +271,24 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_utf8_japanese)
     {
         if (evt.message == msg)
         {
-            EXPECT_EQ(3, evt.level); // [確認_正常系] - WARNING レベルで受信されること。
-            EXPECT_EQ((uint32_t)GetCurrentProcessId(), evt.process_id); // [確認_正常系] - 発行元 PID が受信されること。
-            EXPECT_EQ("Trace", evt.event_name);                         // [確認_正常系] - イベント名が受信されること。
-            EXPECT_FALSE(evt.has_service);              // [確認_正常系] - Service なしで受信されること。
-            EXPECT_NE((int64_t)0, evt.timestamp_100ns); // [確認_正常系] - ETW タイムスタンプが設定されること。
+            EXPECT_EQ(
+                3,
+                evt.level); // [確認_正常系] - "計算結果: 成功" の evt.level が 3 であること。(WARNING レベルであることの確認)
+            EXPECT_EQ(
+                (uint32_t)GetCurrentProcessId(),
+                evt.process_id); // [確認_正常系] - evt.process_id が (uint32_t)GetCurrentProcessId() の戻り値と一致すること。
+            EXPECT_EQ("Trace", evt.event_name); // [確認_正常系] - evt.event_name が "Trace" であること。
+            EXPECT_FALSE(
+                evt.has_service); // [確認_正常系] - evt.has_service が false であること。(Service なしで受信されることの確認)
+            EXPECT_NE(
+                (int64_t)0,
+                evt.timestamp_100ns); // [確認_正常系] - evt.timestamp_100ns が (int64_t)0 以外であること。(ETW タイムスタンプが設定されていることの確認)
             found = true;
             break;
         }
     }
     EXPECT_TRUE(found) << "Expected UTF-8 Japanese event not found";
-    // [確認_正常系] - `found` が true であること。
+    // [確認_正常系] - found が true であること。(UTF-8 の日本語イベントを受信したことの確認)
 
     // Cleanup
     cplat_etw_provider_dispose(handle);
@@ -288,12 +309,14 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_utf8_mixed)
 
     cplat_etw_provider *handle =
         cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
-    ASSERT_NE((cplat_etw_provider *)NULL, handle);  // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(
+        (cplat_etw_provider *)NULL,
+        handle); // [状態確認] - cplat_etw_provider_create() の戻り値が (cplat_etw_provider *)NULL 以外であること。
 
     cplat_etw_session *session = NULL;
     int start_result = cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
                                                &session); // [状態] - 収集 callback 付きで ETW session を開始する。
-    ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -308,17 +331,24 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_utf8_mixed)
     {
         if (evt.message == msg)
         {
-            EXPECT_EQ(2, evt.level); // [確認_正常系] - ERROR レベルで受信されること。
-            EXPECT_EQ((uint32_t)GetCurrentProcessId(), evt.process_id); // [確認_正常系] - 発行元 PID が受信されること。
-            EXPECT_EQ("Trace", evt.event_name);                         // [確認_正常系] - イベント名が受信されること。
-            EXPECT_FALSE(evt.has_service);              // [確認_正常系] - Service なしで受信されること。
-            EXPECT_NE((int64_t)0, evt.timestamp_100ns); // [確認_正常系] - ETW タイムスタンプが設定されること。
+            EXPECT_EQ(
+                2,
+                evt.level); // [確認_正常系] - "Hello 世界 🌍 World" の evt.level が 2 であること。(ERROR レベルであることの確認)
+            EXPECT_EQ(
+                (uint32_t)GetCurrentProcessId(),
+                evt.process_id); // [確認_正常系] - evt.process_id が (uint32_t)GetCurrentProcessId() の戻り値と一致すること。
+            EXPECT_EQ("Trace", evt.event_name); // [確認_正常系] - evt.event_name が "Trace" であること。
+            EXPECT_FALSE(
+                evt.has_service); // [確認_正常系] - evt.has_service が false であること。(Service なしで受信されることの確認)
+            EXPECT_NE(
+                (int64_t)0,
+                evt.timestamp_100ns); // [確認_正常系] - evt.timestamp_100ns が (int64_t)0 以外であること。(ETW タイムスタンプが設定されていることの確認)
             found = true;
             break;
         }
     }
     EXPECT_TRUE(found) << "Expected UTF-8 mixed event not found";
-    // [確認_正常系] - `found` が true であること。
+    // [確認_正常系] - found が true であること。(混在 UTF-8 のイベントを受信したことの確認)
 
     // Cleanup
     cplat_etw_provider_dispose(handle);
@@ -334,12 +364,14 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_multiple_levels)
 
     cplat_etw_provider *handle =
         cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
-    ASSERT_NE((cplat_etw_provider *)NULL, handle);  // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(
+        (cplat_etw_provider *)NULL,
+        handle); // [状態確認] - cplat_etw_provider_create() の戻り値が (cplat_etw_provider *)NULL 以外であること。
 
     cplat_etw_session *session = NULL;
     int start_result = cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
                                                &session); // [状態] - 収集 callback 付きで ETW session を開始する。
-    ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -364,62 +396,65 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_multiple_levels)
         if (evt.message == "critical_msg")
         {
             EXPECT_EQ(1, evt.level);
-            // [確認_正常系] - 受信イベントのレベルが `1` であること。
+            // [確認_正常系] - "critical_msg" の evt.level が 1 であること。(CRITICAL レベルであることの確認)
             EXPECT_EQ((uint32_t)GetCurrentProcessId(), evt.process_id);
-            // [確認_正常系] - 受信イベントのプロセス ID が発行元プロセスの ID であること。
+            // [確認_正常系] - evt.process_id が (uint32_t)GetCurrentProcessId() の戻り値と一致すること。
             EXPECT_EQ("Trace", evt.event_name);
-            // [確認_正常系] - 受信イベントの名前が `"Trace"` であること。
+            // [確認_正常系] - evt.event_name が "Trace" であること。
             saw_critical = true;
         }
         else if (evt.message == "error_msg")
         {
             EXPECT_EQ(2, evt.level);
-            // [確認_正常系] - 受信イベントのレベルが `2` であること。
+            // [確認_正常系] - "error_msg" の evt.level が 2 であること。(ERROR レベルであることの確認)
             EXPECT_EQ((uint32_t)GetCurrentProcessId(), evt.process_id);
-            // [確認_正常系] - 受信イベントのプロセス ID が発行元プロセスの ID であること。
+            // [確認_正常系] - evt.process_id が (uint32_t)GetCurrentProcessId() の戻り値と一致すること。
             EXPECT_EQ("Trace", evt.event_name);
-            // [確認_正常系] - 受信イベントの名前が `"Trace"` であること。
+            // [確認_正常系] - evt.event_name が "Trace" であること。
             saw_error = true;
         }
         else if (evt.message == "warning_msg")
         {
             EXPECT_EQ(3, evt.level);
-            // [確認_正常系] - 受信イベントのレベルが `3` であること。
+            // [確認_正常系] - "warning_msg" の evt.level が 3 であること。(WARNING レベルであることの確認)
             EXPECT_EQ((uint32_t)GetCurrentProcessId(), evt.process_id);
-            // [確認_正常系] - 受信イベントのプロセス ID が発行元プロセスの ID であること。
+            // [確認_正常系] - evt.process_id が (uint32_t)GetCurrentProcessId() の戻り値と一致すること。
             EXPECT_EQ("Trace", evt.event_name);
-            // [確認_正常系] - 受信イベントの名前が `"Trace"` であること。
+            // [確認_正常系] - evt.event_name が "Trace" であること。
             saw_warning = true;
         }
         else if (evt.message == "info_msg")
         {
             EXPECT_EQ(4, evt.level);
-            // [確認_正常系] - 受信イベントのレベルが `4` であること。
+            // [確認_正常系] - "info_msg" の evt.level が 4 であること。(INFO レベルであることの確認)
             EXPECT_EQ((uint32_t)GetCurrentProcessId(), evt.process_id);
-            // [確認_正常系] - 受信イベントのプロセス ID が発行元プロセスの ID であること。
+            // [確認_正常系] - evt.process_id が (uint32_t)GetCurrentProcessId() の戻り値と一致すること。
             EXPECT_EQ("Trace", evt.event_name);
-            // [確認_正常系] - 受信イベントの名前が `"Trace"` であること。
+            // [確認_正常系] - evt.event_name が "Trace" であること。
             saw_info = true;
         }
         else if (evt.message == "verbose_msg")
         {
             EXPECT_EQ(5, evt.level);
-            // [確認_正常系] - 受信イベントのレベルが `5` であること。
+            // [確認_正常系] - "verbose_msg" の evt.level が 5 であること。(VERBOSE レベルであることの確認)
             EXPECT_EQ((uint32_t)GetCurrentProcessId(), evt.process_id);
-            // [確認_正常系] - 受信イベントのプロセス ID が発行元プロセスの ID であること。
+            // [確認_正常系] - evt.process_id が (uint32_t)GetCurrentProcessId() の戻り値と一致すること。
             EXPECT_EQ("Trace", evt.event_name);
-            // [確認_正常系] - 受信イベントの名前が `"Trace"` であること。
+            // [確認_正常系] - evt.event_name が "Trace" であること。
             saw_verbose = true;
         }
-        EXPECT_FALSE(evt.has_service);              // [確認_正常系 回数=5] - 既存ケースでは Service なしで受信されること。
-        EXPECT_NE((int64_t)0, evt.timestamp_100ns); // [確認_正常系 回数=5] - 各イベントに ETW タイムスタンプが設定されること。
+        EXPECT_FALSE(
+            evt.has_service); // [確認_正常系 回数=5] - evt.has_service が false であること。(既存ケースでは Service なしで受信されることの確認)
+        EXPECT_NE(
+            (int64_t)0,
+            evt.timestamp_100ns); // [確認_正常系 回数=5] - evt.timestamp_100ns が (int64_t)0 以外であること。(各イベントに ETW タイムスタンプが設定されていることの確認)
     }
 
-    EXPECT_TRUE(saw_critical); // [確認_正常系] - CRITICAL が受信されること。
-    EXPECT_TRUE(saw_error);    // [確認_正常系] - ERROR が受信されること。
-    EXPECT_TRUE(saw_warning);  // [確認_正常系] - WARNING が受信されること。
-    EXPECT_TRUE(saw_info);     // [確認_正常系] - INFO が受信されること。
-    EXPECT_TRUE(saw_verbose);  // [確認_正常系] - VERBOSE が受信されること。
+    EXPECT_TRUE(saw_critical); // [確認_正常系] - saw_critical が true であること。(CRITICAL が受信されることの確認)
+    EXPECT_TRUE(saw_error);    // [確認_正常系] - saw_error が true であること。(ERROR が受信されることの確認)
+    EXPECT_TRUE(saw_warning);  // [確認_正常系] - saw_warning が true であること。(WARNING が受信されることの確認)
+    EXPECT_TRUE(saw_info);     // [確認_正常系] - saw_info が true であること。(INFO が受信されることの確認)
+    EXPECT_TRUE(saw_verbose);  // [確認_正常系] - saw_verbose が true であること。(VERBOSE が受信されることの確認)
 
     // Cleanup
     cplat_etw_provider_dispose(handle);
@@ -435,12 +470,14 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_empty_string)
 
     cplat_etw_provider *handle =
         cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
-    ASSERT_NE((cplat_etw_provider *)NULL, handle);  // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(
+        (cplat_etw_provider *)NULL,
+        handle); // [状態確認] - cplat_etw_provider_create() の戻り値が (cplat_etw_provider *)NULL 以外であること。
 
     cplat_etw_session *session = NULL;
     int start_result = cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
                                                &session); // [状態] - 収集 callback 付きで ETW session を開始する。
-    ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -455,17 +492,23 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_empty_string)
     {
         if (evt.message.empty())
         {
-            EXPECT_EQ(5, evt.level); // [確認_正常系] - 空文字列が VERBOSE で受信されること。
-            EXPECT_EQ((uint32_t)GetCurrentProcessId(), evt.process_id); // [確認_正常系] - 発行元 PID が受信されること。
-            EXPECT_EQ("Trace", evt.event_name);                         // [確認_正常系] - イベント名が受信されること。
-            EXPECT_FALSE(evt.has_service);              // [確認_正常系] - Service なしで受信されること。
-            EXPECT_NE((int64_t)0, evt.timestamp_100ns); // [確認_正常系] - ETW タイムスタンプが設定されること。
+            EXPECT_EQ(
+                5, evt.level); // [確認_正常系] - 空文字列の evt.level が 5 であること。(VERBOSE レベルであることの確認)
+            EXPECT_EQ(
+                (uint32_t)GetCurrentProcessId(),
+                evt.process_id); // [確認_正常系] - evt.process_id が (uint32_t)GetCurrentProcessId() の戻り値と一致すること。
+            EXPECT_EQ("Trace", evt.event_name); // [確認_正常系] - evt.event_name が "Trace" であること。
+            EXPECT_FALSE(
+                evt.has_service); // [確認_正常系] - evt.has_service が false であること。(Service なしで受信されることの確認)
+            EXPECT_NE(
+                (int64_t)0,
+                evt.timestamp_100ns); // [確認_正常系] - evt.timestamp_100ns が (int64_t)0 以外であること。(ETW タイムスタンプが設定されていることの確認)
             found = true;
             break;
         }
     }
     EXPECT_TRUE(found) << "Expected empty-string event not found";
-    // [確認_正常系] - `found` が true であること。
+    // [確認_正常系] - found が true であること。(空文字列のイベントを受信したことの確認)
 
     // Cleanup
     cplat_etw_provider_dispose(handle);
@@ -481,12 +524,14 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_service_and_message)
 
     cplat_etw_provider *handle =
         cplat_etw_provider_create(s_test_provider); // [状態] - 登録済みの ETW provider を用意する。
-    ASSERT_NE((cplat_etw_provider *)NULL, handle);  // [状態確認] - ハンドルが非 NULL であること。
+    ASSERT_NE(
+        (cplat_etw_provider *)NULL,
+        handle); // [状態確認] - cplat_etw_provider_create() の戻り値が (cplat_etw_provider *)NULL 以外であること。
 
     cplat_etw_session *session = NULL;
     int start_result = cplat_etw_session_start(session_name.c_str(), TEST_PROVIDER_GUID, collect_callback, &collector,
                                                &session); // [状態] - 収集 callback 付きで ETW session を開始する。
-    ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, start_result); // [状態確認] - cplat_etw_session_start() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -502,18 +547,25 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_service_and_message)
     {
         if (evt.message == "service_msg")
         {
-            EXPECT_EQ(4, evt.level);                                    // [確認_正常系] - INFO レベルで受信されること。
-            EXPECT_EQ((uint32_t)GetCurrentProcessId(), evt.process_id); // [確認_正常系] - 発行元 PID が受信されること。
-            EXPECT_EQ("Trace", evt.event_name);                         // [確認_正常系] - イベント名が受信されること。
-            EXPECT_TRUE(evt.has_service);               // [確認_正常系] - Service フィールドが受信されること。
-            EXPECT_EQ("worker-1", evt.service);         // [確認_正常系] - Service 名が復元されること。
-            EXPECT_NE((int64_t)0, evt.timestamp_100ns); // [確認_正常系] - ETW タイムスタンプが設定されること。
+            EXPECT_EQ(
+                4,
+                evt.level); // [確認_正常系] - "service_msg" の evt.level が 4 であること。(INFO レベルであることの確認)
+            EXPECT_EQ(
+                (uint32_t)GetCurrentProcessId(),
+                evt.process_id); // [確認_正常系] - evt.process_id が (uint32_t)GetCurrentProcessId() の戻り値と一致すること。
+            EXPECT_EQ("Trace", evt.event_name); // [確認_正常系] - evt.event_name が "Trace" であること。
+            EXPECT_TRUE(
+                evt.has_service); // [確認_正常系] - evt.has_service が true であること。(Service フィールドが受信されることの確認)
+            EXPECT_EQ("worker-1", evt.service); // [確認_正常系] - evt.service が "worker-1" であること。
+            EXPECT_NE(
+                (int64_t)0,
+                evt.timestamp_100ns); // [確認_正常系] - evt.timestamp_100ns が (int64_t)0 以外であること。(ETW タイムスタンプが設定されていることの確認)
             found = true;
             break;
         }
     }
     EXPECT_TRUE(found) << "Expected event with service field not found";
-    // [確認_正常系] - `found` が true であること。
+    // [確認_正常系] - found が true であること。(Service フィールドを持つイベントを受信したことの確認)
 
     // Cleanup
     cplat_etw_provider_dispose(handle);

@@ -86,22 +86,23 @@ TEST(atomicConcurrencyTest, concurrent_relaxed_fetch_add_u64_sums_without_loss_a
     // Act
     for (index = 0; index < kThreadCount; index++)
     {
-        ASSERT_EQ(CPLAT_OK, cplat_thread_create(&threads[index], fetch_add_worker,
-                                                &args)); // [手順] - fetch_add を繰り返すスレッドを 4 本起動する。
-        // [確認_正常系 回数=4] - `cplat_thread_create(&threads[index], fetch_add_worker, &args)` の戻り値が `CPLAT_OK` であること。
+        int actual_ret_create = cplat_thread_create(&threads[index], fetch_add_worker,
+                                                    &args); // [手順] - fetch_add を繰り返すスレッドを 4 本起動する。
+        ASSERT_EQ(CPLAT_OK, actual_ret_create); // [状態確認] - cplat_thread_create() の戻り値が CPLAT_OK であること。
     }
     for (index = 0; index < kThreadCount; index++)
     {
-        ASSERT_EQ(CPLAT_OK,
-                  cplat_thread_join(threads[index], CPLAT_SYNC_WAIT_FOREVER)); // [手順] - 各スレッドの終了を待機する。
-        // [確認_正常系 回数=4] - `cplat_thread_join(threads[index], CPLAT_SYNC_WAIT_FOREVER)` の戻り値が `CPLAT_OK` であること。
+        int actual_ret_join =
+            cplat_thread_join(threads[index], CPLAT_SYNC_WAIT_FOREVER); // [手順] - 各スレッドの終了を待機する。
+        ASSERT_EQ(CPLAT_OK, actual_ret_join); // [状態確認] - cplat_thread_join() の戻り値が CPLAT_OK であること。
     }
     const uint64_t total =
         cplat_atomic_load_u64(&counter, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 最終的な合計値を読み取る。
 
     // Assert
-    EXPECT_EQ((uint64_t)(kThreadCount * kFetchAddIncrementsPerThread),
-              total); // [確認_正常系] - 4 スレッド分の加算が欠落なく反映されていること。
+    EXPECT_EQ(
+        (uint64_t)(kThreadCount * kFetchAddIncrementsPerThread),
+        total); // [確認_正常系] - cplat_atomic_load_u64() の戻り値が (uint64_t)(kThreadCount * kFetchAddIncrementsPerThread) と一致すること。(4 スレッド分の加算が欠落なく反映されたことの確認)
 }
 
 // compare_exchange (acquire/release) による自前のスピンロックで保護した通常の int が、
@@ -123,20 +124,20 @@ TEST(atomicConcurrencyTest, compare_exchange_protected_spinlock_counts_correctly
     // Act
     for (index = 0; index < kThreadCount; index++)
     {
-        ASSERT_EQ(CPLAT_OK,
-                  cplat_thread_create(
-                      &threads[index], spinlock_counter_worker,
-                      &args)); // [手順] - スピンロックで保護したカウント アップを行うスレッドを 4 本起動する。
-        // [確認_正常系 回数=4] - `cplat_thread_create(&threads[index], spinlock_counter_worker, &args)` の戻り値が `CPLAT_OK` であること。
+        int actual_ret_create =
+            cplat_thread_create(&threads[index], spinlock_counter_worker,
+                                &args); // [手順] - スピンロックで保護したカウント アップを行うスレッドを 4 本起動する。
+        ASSERT_EQ(CPLAT_OK, actual_ret_create); // [状態確認] - cplat_thread_create() の戻り値が CPLAT_OK であること。
     }
     for (index = 0; index < kThreadCount; index++)
     {
-        ASSERT_EQ(CPLAT_OK,
-                  cplat_thread_join(threads[index], CPLAT_SYNC_WAIT_FOREVER)); // [手順] - 各スレッドの終了を待機する。
-        // [確認_正常系 回数=4] - `cplat_thread_join(threads[index], CPLAT_SYNC_WAIT_FOREVER)` の戻り値が `CPLAT_OK` であること。
+        int actual_ret_join =
+            cplat_thread_join(threads[index], CPLAT_SYNC_WAIT_FOREVER); // [手順] - 各スレッドの終了を待機する。
+        ASSERT_EQ(CPLAT_OK, actual_ret_join); // [状態確認] - cplat_thread_join() の戻り値が CPLAT_OK であること。
     }
 
     // Assert
-    EXPECT_EQ(kThreadCount * kSpinlockIncrementsPerThread,
-              counter); // [確認_正常系] - スピンロックで保護したカウンターが、欠落や二重カウントなく一致すること。
+    EXPECT_EQ(
+        kThreadCount * kSpinlockIncrementsPerThread,
+        counter); // [確認_正常系] - counter が kThreadCount * kSpinlockIncrementsPerThread と一致すること。(スピンロックで保護したカウントが欠落や二重カウントなく一致したことの確認)
 }

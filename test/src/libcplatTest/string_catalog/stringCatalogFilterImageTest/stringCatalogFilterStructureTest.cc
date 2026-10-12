@@ -76,9 +76,9 @@ class stringCatalogFilterStructureTest : public Test
     {
         std::memset(image, 0, sizeof(image));
         ASSERT_EQ(CPLAT_OK, compile_single_line(text, image));
-        // [状態確認] - `compile_single_line(text, image)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - compile_single_line() の戻り値が CPLAT_OK であること。
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_validate(image, kImageSize));
-        // [状態確認] - `cplat_string_catalog_filter_validate(image, kImageSize)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_OK であること。
         record = filter_test_record_address(image, kLineWidth, 0U);
     }
     // [サブ手順終了]
@@ -107,7 +107,8 @@ TEST_F(stringCatalogFilterStructureTest, rehash_without_change_keeps_image_valid
     actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 検証に成功すること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret); // [確認_正常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_OK であること。
 }
 
 // ジャンプ先が自身より前の命令を指す場合は、構造の検査で拒否することの確認
@@ -121,7 +122,7 @@ TEST_F(stringCatalogFilterStructureTest, backward_jump_is_rejected)
     // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
     prepare("key == 1 || key == 2"); // [状態] - 短絡評価のジャンプを含む条件式をコンパイルする。
     jump_index = find_instruction(record, (uint8_t)STRING_CATALOG_FILTER_OPCODE_JUMP_IF_TRUE);
-    ASSERT_NE(UINT32_MAX, jump_index); // [状態確認] - ジャンプ命令があること。
+    ASSERT_NE(UINT32_MAX, jump_index); // [状態確認] - find_instruction() の戻り値が UINT32_MAX 以外であること。
 
     // Pre-Assert
 
@@ -133,7 +134,9 @@ TEST_F(stringCatalogFilterStructureTest, backward_jump_is_rejected)
     actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_ret); // [確認_異常系] - 後方へのジャンプを拒否すること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 }
 
 // ジャンプ先が命令列の末尾より後ろを指す場合は、構造の検査で拒否することの確認
@@ -147,7 +150,7 @@ TEST_F(stringCatalogFilterStructureTest, jump_beyond_end_is_rejected)
     // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
     prepare("key == 1 || key == 2"); // [状態] - 短絡評価のジャンプを含む条件式をコンパイルする。
     jump_index = find_instruction(record, (uint8_t)STRING_CATALOG_FILTER_OPCODE_JUMP_IF_TRUE);
-    ASSERT_NE(UINT32_MAX, jump_index); // [状態確認] - ジャンプ命令があること。
+    ASSERT_NE(UINT32_MAX, jump_index); // [状態確認] - find_instruction() の戻り値が UINT32_MAX 以外であること。
 
     // Pre-Assert
 
@@ -159,7 +162,9 @@ TEST_F(stringCatalogFilterStructureTest, jump_beyond_end_is_rejected)
     actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_ret); // [確認_異常系] - 範囲外へのジャンプを拒否すること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 }
 
 // 存在しない命令の種類は、構造の検査で拒否することの確認
@@ -182,7 +187,9 @@ TEST_F(stringCatalogFilterStructureTest, unknown_opcode_is_rejected)
     actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_ret); // [確認_異常系] - 存在しない命令を拒否すること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 }
 
 // 論理積の時点でスタックに値が 2 個ない場合は、構造の検査で拒否することの確認
@@ -205,7 +212,9 @@ TEST_F(stringCatalogFilterStructureTest, stack_underflow_is_rejected)
     actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_ret); // [確認_異常系] - スタックの不足を拒否すること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 }
 
 // 判定要素以外の命令がフィールドを持つ場合は、構造の検査で拒否することの確認
@@ -219,7 +228,7 @@ TEST_F(stringCatalogFilterStructureTest, logical_instruction_with_field_is_rejec
     // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
     prepare("!(key == 1)"); // [状態] - 否定を含む条件式をコンパイルする。
     not_index = find_instruction(record, (uint8_t)STRING_CATALOG_FILTER_OPCODE_NOT);
-    ASSERT_NE(UINT32_MAX, not_index); // [状態確認] - 否定の命令があること。
+    ASSERT_NE(UINT32_MAX, not_index); // [状態確認] - find_instruction() の戻り値が UINT32_MAX 以外であること。
 
     // Pre-Assert
 
@@ -231,7 +240,9 @@ TEST_F(stringCatalogFilterStructureTest, logical_instruction_with_field_is_rejec
     actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_ret); // [確認_異常系] - 余分なフィールドを拒否すること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 }
 
 // 見出しのスタックの深さが命令列と一致しない場合は、構造の検査で拒否することの確認
@@ -254,7 +265,9 @@ TEST_F(stringCatalogFilterStructureTest, stack_depth_mismatch_is_rejected)
     actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_ret); // [確認_異常系] - 深さの不一致を拒否すること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 }
 
 // 命令数が 0 の行は、構造の検査で拒否することの確認
@@ -277,7 +290,9 @@ TEST_F(stringCatalogFilterStructureTest, empty_instruction_list_is_rejected)
     actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_ret); // [確認_異常系] - 命令のない行を拒否すること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 }
 
 // 定数の参照位置が定数領域の外を指す場合は、構造の検査で拒否することの確認
@@ -300,7 +315,9 @@ TEST_F(stringCatalogFilterStructureTest, constant_offset_out_of_range_is_rejecte
     actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_ret); // [確認_異常系] - 範囲外の定数参照を拒否すること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 }
 
 // フィールド、演算子、定数の種類の組み合わせが成り立たない場合は、構造の検査で拒否することの確認
@@ -323,7 +340,9 @@ TEST_F(stringCatalogFilterStructureTest, operator_and_constant_mismatch_is_rejec
     actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_ret); // [確認_異常系] - 成り立たない組み合わせを拒否すること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 }
 
 // 存在しない種類の定数は、構造の検査で拒否することの確認
@@ -345,7 +364,9 @@ TEST_F(stringCatalogFilterStructureTest, unknown_constant_kind_is_rejected)
     actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_ret); // [確認_異常系] - 存在しない定数の種類を拒否すること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 }
 
 // 形式版が異なるフィルター オブジェクトは、変換せずに拒否することの確認
@@ -378,13 +399,21 @@ TEST_F(stringCatalogFilterStructureTest, different_format_version_is_rejected)
         image, kImageSize, 0U, actual_text, sizeof(actual_text)); // [手順] - 行を逆コンパイルする。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH, actual_ret);        // [確認_異常系] - 異なる形式版を拒否すること。
-    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH, actual_info_ret);   // [確認_異常系] - 情報取得でも版の不一致を維持すること。
-    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH, actual_remove_ret); // [確認_異常系] - 削除でも版の不一致を維持すること。
-    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH,
-              actual_compile_ret); // [確認_異常系] - コンパイルでも版の不一致を維持すること。
-    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH,
-              actual_decompile_ret); // [確認_異常系] - 逆コンパイルでも版の不一致を維持すること。
+    EXPECT_EQ(
+        CPLAT_ERR_VERSION_MISMATCH,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_VERSION_MISMATCH であること。
+    EXPECT_EQ(
+        CPLAT_ERR_VERSION_MISMATCH,
+        actual_info_ret); // [確認_異常系] - cplat_string_catalog_filter_get_info() の戻り値が CPLAT_ERR_VERSION_MISMATCH であること。
+    EXPECT_EQ(
+        CPLAT_ERR_VERSION_MISMATCH,
+        actual_remove_ret); // [確認_異常系] - cplat_string_catalog_filter_remove_line() の戻り値が CPLAT_ERR_VERSION_MISMATCH であること。
+    EXPECT_EQ(
+        CPLAT_ERR_VERSION_MISMATCH,
+        actual_compile_ret); // [確認_異常系] - cplat_string_catalog_filter_compile_line() の戻り値が CPLAT_ERR_VERSION_MISMATCH であること。
+    EXPECT_EQ(
+        CPLAT_ERR_VERSION_MISMATCH,
+        actual_decompile_ret); // [確認_異常系] - cplat_string_catalog_filter_decompile_line() の戻り値が CPLAT_ERR_VERSION_MISMATCH であること。
 }
 
 // バイト順序の目印が異なるフィルター オブジェクトは、変換せずに拒否することの確認
@@ -407,5 +436,7 @@ TEST_F(stringCatalogFilterStructureTest, different_byte_order_is_rejected)
     actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_ret); // [確認_異常系] - 異なるバイト順序を拒否すること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 }

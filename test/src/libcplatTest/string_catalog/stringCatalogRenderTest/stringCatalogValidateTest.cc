@@ -21,7 +21,7 @@ TEST_F(stringCatalogValidateTest, valid_format)
                                               2); // [手順] - エスケープ、並べ替え、繰り返しを含む書式を確認する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - string_catalog_validate_text() の戻り値が CPLAT_OK であること。
 }
 
 // 引数を取らない書式が受理されることの確認
@@ -36,7 +36,7 @@ TEST_F(stringCatalogValidateTest, no_placeholder)
     actual_ret = string_catalog_validate_text("開始しました。", NULL, 0); // [手順] - 位置指定を含まない書式を確認する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - string_catalog_validate_text() の戻り値が CPLAT_OK であること。
 }
 
 // 構文が不正な書式が拒否されることの確認
@@ -55,12 +55,15 @@ TEST_F(stringCatalogValidateTest, invalid_format)
         string_catalog_validate_text("{8}", NULL, 8); // [手順] - 上限を超えるインデックスを持つ書式を確認する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_MALFORMED_DEFINITION,
-              ret_closing_brace); // [確認_異常系] - 戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
-    EXPECT_EQ(CPLAT_ERR_MALFORMED_DEFINITION,
-              ret_zero_index); // [確認_異常系] - 戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
-    EXPECT_EQ(CPLAT_ERR_MALFORMED_DEFINITION,
-              ret_out_of_range); // [確認_異常系] - 戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
+    EXPECT_EQ(
+        CPLAT_ERR_MALFORMED_DEFINITION,
+        ret_closing_brace); // [確認_異常系] - 対を成さない } だけの書式に対する string_catalog_validate_text() の戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
+    EXPECT_EQ(
+        CPLAT_ERR_MALFORMED_DEFINITION,
+        ret_zero_index); // [確認_異常系] - 引数を取らない定義に位置指定がある書式に対する string_catalog_validate_text() の戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
+    EXPECT_EQ(
+        CPLAT_ERR_MALFORMED_DEFINITION,
+        ret_out_of_range); // [確認_異常系] - 上限を超えるインデックスを持つ書式に対する string_catalog_validate_text() の戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
 }
 
 // 値を受け取らない引数を参照する書式が拒否されることの確認
@@ -81,7 +84,10 @@ TEST_F(stringCatalogValidateTest, unused_argument_reference)
                                                   2); // [手順] - 値を受け取らない引数を参照する書式を確認する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, ret_valid); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_ERR_MALFORMED_DEFINITION,
-              ret_unused); // [確認_異常系] - 戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        ret_valid); // [確認_正常系] - 値を受け取る引数だけを参照する書式に対する string_catalog_validate_text() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_MALFORMED_DEFINITION,
+        ret_unused); // [確認_異常系] - 値を受け取らない引数を参照する書式に対する string_catalog_validate_text() の戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
 }

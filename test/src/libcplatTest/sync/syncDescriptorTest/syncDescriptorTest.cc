@@ -33,14 +33,14 @@ TEST(syncDescriptorTest, rejects_invalid_export_and_import_arguments)
         descriptor, sizeof(descriptor), 1U, 1U, NULL); // [手順] - NULL identity 格納先で import する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              export_identity_result); // [確認_異常系] - NULL identity が INVALID_ARGUMENT になること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              export_size_result); // [確認_異常系] - NULL サイズ格納先が INVALID_ARGUMENT になること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              import_descriptor_result); // [確認_異常系] - NULL descriptor が INVALID_ARGUMENT になること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              import_identity_result); // [確認_異常系] - NULL identity 格納先が INVALID_ARGUMENT になること。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, export_identity_result);
+    // [確認_異常系] - NULL identity に対する cplat_internal_interprocess_sync_descriptor_export() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, export_size_result);
+    // [確認_異常系] - NULL サイズ格納先に対する cplat_internal_interprocess_sync_descriptor_export() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, import_descriptor_result);
+    // [確認_異常系] - NULL descriptor に対する cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, import_identity_result);
+    // [確認_異常系] - NULL identity 格納先に対する cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // identity 長 0 とサイズ不一致を拒否することの確認
@@ -50,11 +50,12 @@ TEST(syncDescriptorTest, rejects_zero_and_mismatched_identity_lengths)
     unsigned char descriptor[64] = {0};
     size_t descriptor_size = sizeof(descriptor);
     char *identity = NULL;
+    ASSERT_EQ(CPLAT_OK,
+              cplat_internal_interprocess_sync_descriptor_export(
+                  "identity", 1U, 1U, descriptor, &descriptor_size)); // [状態] - 正常な descriptor を生成する。
+    // [状態確認] - cplat_internal_interprocess_sync_descriptor_export() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
-    ASSERT_EQ(CPLAT_OK,
-              cplat_internal_interprocess_sync_descriptor_export("identity", 1U, 1U, descriptor, &descriptor_size));
-    // [確認_正常系] - `cplat_internal_interprocess_sync_descriptor_export("identity", 1U, 1U, descriptor, &descriptor_size)` の戻り値が `CPLAT_OK` であること。
 
     // Act
     descriptor[8] = 0U;
@@ -68,10 +69,10 @@ TEST(syncDescriptorTest, rejects_zero_and_mismatched_identity_lengths)
         &identity); // [手順] - identity length とサイズが一致しない descriptor を import する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              zero_length_result); // [確認_異常系] - identity length 0 が CORRUPT_DESCRIPTOR になること。
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              short_descriptor_result); // [確認_異常系] - サイズ不一致が CORRUPT_DESCRIPTOR になること。
+    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, zero_length_result);
+    // [確認_異常系] - identity length 0 に対する cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, short_descriptor_result);
+    // [確認_異常系] - identity length とサイズが一致しない descriptor に対する cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 }
 
 // identity が同じ種別とバックエンドで往復することの確認
@@ -93,13 +94,11 @@ TEST(syncDescriptorTest, exports_and_imports_identity)
         &identity); // [手順] - 同じ種別とバックエンドで import する。
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_OK,
-        export_result); // [確認_正常系] - cplat_internal_interprocess_sync_descriptor_export の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(
-        CPLAT_OK,
-        import_result); // [確認_正常系] - cplat_internal_interprocess_sync_descriptor_import の戻り値が CPLAT_OK であること。
-    ASSERT_NE((char *)NULL, identity);   // [確認_正常系] - import した identity が NULL でないこと。
+    EXPECT_EQ(CPLAT_OK, export_result);
+    // [確認_正常系] - cplat_internal_interprocess_sync_descriptor_export() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, import_result);
+    // [確認_正常系] - cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_OK であること。
+    ASSERT_NE((char *)NULL, identity);   // [確認_正常系] - import した identity が (char *)NULL 以外であること。
     EXPECT_STREQ("lock-path", identity); // [確認_正常系] - import した identity が "lock-path" であること。
 
     // Cleanup
@@ -117,21 +116,24 @@ TEST(syncDescriptorTest, reports_unknown_when_identity_allocation_fails)
     ASSERT_EQ(CPLAT_OK,
               cplat_internal_interprocess_sync_descriptor_export(
                   "identity", 1U, 1U, descriptor, &descriptor_size)); // [状態] - 正常な descriptor を生成する。
-    // [状態確認] - cplat_internal_interprocess_sync_descriptor_export の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_internal_interprocess_sync_descriptor_export() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - identity 確保が 1 回目に失敗すること。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回以上呼び出されること。
+    // [Pre-Assert手順] - 1 回目は nullptr を返却して identity 確保を失敗させ、以降は既定動作へ委譲する。
 
     // Act
     int result = cplat_internal_interprocess_sync_descriptor_import(descriptor, descriptor_size, 1U, 1U,
                                                                     &identity); // [手順] - descriptor を import する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              result);         // [確認_異常系] - import の戻り値が CPLAT_ERR_UNKNOWN になること。
-    EXPECT_EQ(NULL, identity); // [確認_異常系] - identity が設定されないこと。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, result);
+    // [確認_異常系] - cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        NULL,
+        identity); // [確認_異常系] - identity が NULL であること。(確保失敗時に identity が設定されないことの確認)
 }
 
 // 省略と容量不足で必要サイズを返すことの確認
@@ -152,11 +154,12 @@ TEST(syncDescriptorTest, reports_required_size_for_absent_and_small_buffers)
                                                            &small_size); // [手順] - 容量不足の descriptor へ出力する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              absent_result); // [確認_正常系] - descriptor 省略時の戻り値が BUFFER_TOO_SMALL であること。
-    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              small_result);            // [確認_異常系] - descriptor 容量不足時の戻り値が BUFFER_TOO_SMALL であること。
-    EXPECT_EQ(absent_size, small_size); // [確認_正常系] - 両方の呼び出しが同じ必要サイズを返すこと。
+    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, absent_result);
+    // [確認_正常系] - descriptor 省略時の cplat_internal_interprocess_sync_descriptor_export() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, small_result);
+    // [確認_異常系] - 容量不足の descriptor に対する cplat_internal_interprocess_sync_descriptor_export() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_EQ(absent_size, small_size);
+    // [確認_正常系] - small_size が absent_size と一致すること。(両方の呼び出しが同じ必要サイズを返すことの確認)
 }
 
 // 壊れたヘッダー各欄を拒否することの確認
@@ -170,7 +173,7 @@ TEST(syncDescriptorTest, rejects_each_corrupt_header_field)
     ASSERT_EQ(CPLAT_OK,
               cplat_internal_interprocess_sync_descriptor_export(
                   "identity", 1U, 1U, descriptor, &descriptor_size)); // [状態] - 正常な descriptor を生成する。
-    // [状態確認] - cplat_internal_interprocess_sync_descriptor_export の戻り値が CPLAT_OK であること。
+    // [状態確認] - cplat_internal_interprocess_sync_descriptor_export() の戻り値が CPLAT_OK であること。
     memcpy(original, descriptor, descriptor_size);
 
     // Pre-Assert
@@ -201,17 +204,19 @@ TEST(syncDescriptorTest, rejects_each_corrupt_header_field)
         &identity); // [手順] - identity 長と全体サイズが異なる descriptor を import する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              short_header_result); // [確認_異常系] - 短いヘッダーが CORRUPT_DESCRIPTOR になること。
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              magic_result); // [確認_異常系] - magic 不一致が CORRUPT_DESCRIPTOR になること。
-    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH,
-              version_result); // [確認_異常系] - version 不一致が VERSION_MISMATCH になること。
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              kind_result); // [確認_異常系] - kind 不一致が CORRUPT_DESCRIPTOR になること。
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              backend_result); // [確認_異常系] - backend 不一致が CORRUPT_DESCRIPTOR になること。
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR,
-              length_result);  // [確認_異常系] - identity 長不一致が CORRUPT_DESCRIPTOR になること。
-    EXPECT_EQ(NULL, identity); // [確認_異常系] - 不正 descriptor から identity が生成されないこと。
+    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, short_header_result);
+    // [確認_異常系] - ヘッダーより短い descriptor に対する cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, magic_result);
+    // [確認_異常系] - magic が異なる descriptor に対する cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(CPLAT_ERR_VERSION_MISMATCH, version_result);
+    // [確認_異常系] - version が異なる descriptor に対する cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_VERSION_MISMATCH であること。
+    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, kind_result);
+    // [確認_異常系] - kind が異なる descriptor に対する cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, backend_result);
+    // [確認_異常系] - backend が異なる descriptor に対する cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, length_result);
+    // [確認_異常系] - identity 長と全体サイズが異なる descriptor に対する cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        NULL,
+        identity); // [確認_異常系] - identity が NULL であること。(不正 descriptor から identity が生成されないことの確認)
 }

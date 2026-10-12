@@ -21,7 +21,7 @@ class stringCatalogFilterDescribeTest : public Test
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(
                                 filter_test_trace_catalog(), filter_test_trace_key_names(),
                                 filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_));
-        // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_trace_catalog(), filter_test_trace_key_names(), filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - cplat_string_catalog_filter_slot_create() の戻り値が CPLAT_OK であること。
     }
     // [サブ手順終了]
 
@@ -79,9 +79,10 @@ TEST_F(stringCatalogFilterDescribeTest, key_equal_is_described_with_brief_and_id
                           CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 文字列キーの一致を日本語で説明する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 説明文を得られること。
-    EXPECT_STREQ("「ジョブの進捗」(FILTER_TEST_TRACE_ID_0003)",
-                 description_); // [確認_正常系] - brief の句点を除き、ID を添えた表現になること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - describe() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "「ジョブの進捗」(FILTER_TEST_TRACE_ID_0003)",
+        description_); // [確認_正常系] - description_ が "「ジョブの進捗」(FILTER_TEST_TRACE_ID_0003)" であること。(brief の句点を除き、ID を添えた表現であることの確認)
 }
 // [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
@@ -100,9 +101,10 @@ TEST_F(stringCatalogFilterDescribeTest, single_entry_line_uses_argument_descript
                  CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - BUFFER_ALLOCATED だけが持つ引数の条件を説明する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 説明文を得られること。
-    EXPECT_STREQ("引数 buffer (確保したバッファーのアドレス。確保に失敗した場合は NULL です) が NULL である",
-                 description_); // [確認_正常系] - 引数の説明と null の文型で表されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - describe() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "引数 buffer (確保したバッファーのアドレス。確保に失敗した場合は NULL です) が NULL である",
+        description_); // [確認_正常系] - description_ が "引数 buffer (確保したバッファーのアドレス。確保に失敗した場合は NULL です) が NULL である" であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
@@ -121,10 +123,11 @@ TEST_F(stringCatalogFilterDescribeTest, shared_argument_description_is_used_for_
         CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 全項目が持つ app 定義のコンテキスト引数を説明する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 説明文を得られること。
-    EXPECT_STREQ("引数 {46} sequence_number (出力ごとに 1 から順に増加し、上限に達すると 1 へ戻るラウンド トリップ ID) "
-                 "が 90 以上 99 以下",
-                 description_); // [確認_正常系] - インデックス、共通の名前、共通の説明で表されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - describe() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "引数 {46} sequence_number (出力ごとに 1 から順に増加し、上限に達すると 1 へ戻るラウンド トリップ ID) "
+        "が 90 以上 99 以下",
+        description_); // [確認_正常系] - description_ が "引数 {46} sequence_number (出力ごとに 1 から順に増加し、上限に達すると 1 へ戻るラウンド トリップ ID) が 90 以上 99 以下" であること。(インデックス、共通の名前、共通の説明で表したことの確認)
 }
 // [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
@@ -143,9 +146,10 @@ TEST_F(stringCatalogFilterDescribeTest, not_and_nested_or_are_parenthesized)
                  CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 否定と、括弧で囲んだ論理和を含む条件を説明する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 説明文を得られること。
-    EXPECT_STREQ("(分類値が 2 以下) ではない かつ (文字列キー 99、または ID が \"0002\" で終わる)",
-                 description_); // [確認_正常系] - 否定の文型と、優先順位を保つ括弧で表されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - describe() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "(分類値が 2 以下) ではない かつ (文字列キー 99、または ID が \"0002\" で終わる)",
+        description_); // [確認_正常系] - description_ が "(分類値が 2 以下) ではない かつ (文字列キー 99、または ID が "0002" で終わる)" であること。(否定の文型と、優先順位を保つ括弧で表したことの確認)
 }
 // [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
@@ -168,12 +172,18 @@ TEST_F(stringCatalogFilterDescribeTest, neutral_language_uses_neutral_phrases)
                                   CPLAT_STRING_CATALOG_LANGUAGE_ENGLISH); // [手順] - 英語で説明する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_neutral); // [確認_正常系] - ニュートラル言語で説明文を得られること。
-    EXPECT_STREQ("the category is less than or equal to 2 or argument job_name (ジョブの名前) contains \"exp\" "
-                 "(case-insensitive)",
-                 actual_neutral);               // [確認_正常系] - ニュートラル言語の文型で表されること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_english);    // [確認_正常系] - 英語で説明文を得られること。
-    EXPECT_STREQ(actual_neutral, description_); // [確認_正常系] - 英語はニュートラル言語の文型を使うこと。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_neutral); // [確認_正常系] - ニュートラル言語で説明した describe() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "the category is less than or equal to 2 or argument job_name (ジョブの名前) contains \"exp\" "
+        "(case-insensitive)",
+        actual_neutral); // [確認_正常系] - actual_neutral が "the category is less than or equal to 2 or argument job_name (ジョブの名前) contains "exp" (case-insensitive)" であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_english); // [確認_正常系] - 英語で説明した describe() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        actual_neutral,
+        description_); // [確認_正常系] - description_ が actual_neutral であること。(英語はニュートラル言語の文型を使うことの確認)
 }
 // [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
@@ -191,8 +201,10 @@ TEST_F(stringCatalogFilterDescribeTest, disabled_line_is_not_described)
                           CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 未解決のキー名を含む行を説明する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_MALFORMED_DEFINITION, actual_ret); // [確認_異常系] - 無効な行として扱われること。
-    EXPECT_STREQ("", description_);                        // [確認_異常系] - 出力先が空文字列であること。
+    EXPECT_EQ(
+        CPLAT_ERR_MALFORMED_DEFINITION,
+        actual_ret); // [確認_異常系] - 未解決のキー名を含む場合の describe() の戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
+    EXPECT_STREQ("", description_); // [確認_異常系] - description_ が "" であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
@@ -206,10 +218,10 @@ TEST_F(stringCatalogFilterDescribeTest, small_buffer_is_truncated)
     int actual_ret;
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("category <= 2", image)); // [状態] - 条件式をコンパイルする。
-    // [状態確認] - `compile_single_line("category <= 2", image)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - compile_single_line() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_apply(slot_, image, kImageSize, nullptr, 0U,
                                                                nullptr)); // [状態] - 適用する。
-    // [状態確認] - `cplat_string_catalog_filter_slot_apply(slot_, image, kImageSize, nullptr, 0U, nullptr)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - cplat_string_catalog_filter_slot_apply() の戻り値が CPLAT_OK であること。
     (void)cplat_string_catalog_set_language(CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL);
 
     // Pre-Assert
@@ -220,8 +232,12 @@ TEST_F(stringCatalogFilterDescribeTest, small_buffer_is_truncated)
                                                        sizeof(actual_text)); // [手順] - 8 バイトの出力先で説明する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, actual_ret); // [確認_異常系] - 切り詰めを報告すること。
-    EXPECT_STREQ("the cat", actual_text);              // [確認_異常系] - 7 バイトで切り詰め、NUL 終端すること。
+    EXPECT_EQ(
+        CPLAT_ERR_BUFFER_TOO_SMALL,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_filter_slot_describe_line() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_STREQ(
+        "the cat",
+        actual_text); // [確認_異常系] - actual_text が "the cat" であること。(7 バイトで切り詰め、NUL 終端したことの確認)
 }
 // [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
@@ -246,7 +262,7 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_list_matching_names)
     int actual_ret;
 
     ASSERT_EQ(CPLAT_OK, recreate_slot_with_category_names(&s_test_category_names)); // [状態] - レベルの名前を設定する。
-    // [状態確認] - `recreate_slot_with_category_names(&s_test_category_names)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - recreate_slot_with_category_names() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -255,9 +271,10 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_list_matching_names)
         describe("category <= 2", CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 分類値の比較を日本語で説明する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 説明文を得られること。
-    EXPECT_STREQ("レベルが CRITICAL、ERROR、WARNING のいずれか",
-                 description_); // [確認_正常系] - 条件を満たすレベルの名前が列挙されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - describe() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "レベルが CRITICAL、ERROR、WARNING のいずれか",
+        description_); // [確認_正常系] - description_ が "レベルが CRITICAL、ERROR、WARNING のいずれか" であること。(条件を満たすレベルの名前を列挙したことの確認)
 }
 // [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
@@ -271,7 +288,7 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_use_complement_when_short
     int actual_ret_neutral;
 
     ASSERT_EQ(CPLAT_OK, recreate_slot_with_category_names(&s_test_category_names)); // [状態] - レベルの名前を設定する。
-    // [状態確認] - `recreate_slot_with_category_names(&s_test_category_names)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - recreate_slot_with_category_names() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -283,11 +300,17 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_use_complement_when_short
         describe("category != 4", CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL); // [手順] - ニュートラル言語で説明する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_japanese);               // [確認_正常系] - 日本語の説明文を得られること。
-    EXPECT_STREQ("レベルが VERBOSE 以外", actual_japanese); // [確認_正常系] - 補集合の VERBOSE を「以外」で表すこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_neutral);                // [確認_正常系] - ニュートラル言語の説明文を得られること。
-    EXPECT_STREQ("the level is other than VERBOSE",
-                 description_); // [確認_正常系] - ニュートラル言語でも補集合で表すこと。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_japanese); // [確認_正常系] - 日本語で説明した describe() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "レベルが VERBOSE 以外",
+        actual_japanese); // [確認_正常系] - actual_japanese が "レベルが VERBOSE 以外" であること。(補集合の VERBOSE を「以外」で表したことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_neutral); // [確認_正常系] - ニュートラル言語で説明した describe() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "the level is other than VERBOSE",
+        description_); // [確認_正常系] - description_ が "the level is other than VERBOSE" であること。(ニュートラル言語でも補集合で表したことの確認)
 }
 // [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
@@ -303,7 +326,7 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_describe_single_any_and_n
     int actual_ret_none;
 
     ASSERT_EQ(CPLAT_OK, recreate_slot_with_category_names(&s_test_category_names)); // [状態] - レベルの名前を設定する。
-    // [状態確認] - `recreate_slot_with_category_names(&s_test_category_names)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - recreate_slot_with_category_names() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -319,13 +342,23 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_describe_single_any_and_n
                  CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - どの名前も該当しない判定要素を含む条件を説明する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_single);           // [確認_正常系] - 説明文を得られること。
-    EXPECT_STREQ("the level is INFO", actual_single); // [確認_正常系] - 1 つの名前で表すこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_any);              // [確認_正常系] - 説明文を得られること。
-    EXPECT_STREQ("レベルを問わない", actual_any);     // [確認_正常系] - すべての名前が該当することを表すこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_none);             // [確認_正常系] - 説明文を得られること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_single); // [確認_正常系] - 1 つの名前だけが該当する場合の describe() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "the level is INFO",
+        actual_single); // [確認_正常系] - actual_single が "the level is INFO" であること。(1 つの名前で表したことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_any); // [確認_正常系] - すべての名前が該当する場合の describe() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "レベルを問わない",
+        actual_any); // [確認_正常系] - actual_any が "レベルを問わない" であること。(すべての名前が該当することを表したことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_none); // [確認_正常系] - どの名前も該当しない場合の describe() の戻り値が CPLAT_OK であること。
     EXPECT_NE(nullptr, std::strstr(description_, "レベルがいずれにも該当しない"))
-        << description_; // [確認_正常系] - 該当なしを表すこと。
+        << description_; // [確認_正常系] - "レベルがいずれにも該当しない" を探した std::strstr() の戻り値が nullptr 以外であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]
 
@@ -346,20 +379,24 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_absent_use_numbers_and_re
         recreate_slot_with_category_names(&invalid_names); // [手順] - NULL の名前を含む設定でスロットを作り直す。
 
     // Assert_1
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_invalid); // [確認_異常系] - 不正な設定が拒否されること。
-    EXPECT_EQ(nullptr, slot_);                                 // [確認_異常系] - スロットが作成されないこと。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_invalid); // [確認_異常系] - 不正な名前の設定に対する recreate_slot_with_category_names() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(nullptr, slot_); // [確認_異常系] - slot_ が nullptr であること。(スロットが作成されないことの確認)
 
     // Arrange_2
     ASSERT_EQ(CPLAT_OK,
               recreate_slot_with_category_names(nullptr)); // [状態] - 分類値の名前を指定せずにスロットを作り直す。
-    // [状態確認] - `recreate_slot_with_category_names(nullptr)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - recreate_slot_with_category_names() の戻り値が CPLAT_OK であること。
 
     // Act_2
     actual_ret_describe =
         describe("category <= 2", CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 分類値の比較を説明する。
 
     // Assert_2
-    EXPECT_EQ(CPLAT_OK, actual_ret_describe);      // [確認_正常系] - 説明文を得られること。
-    EXPECT_STREQ("分類値が 2 以下", description_); // [確認_正常系] - 名前の設定がなければ数値で表すこと。
+    EXPECT_EQ(CPLAT_OK, actual_ret_describe); // [確認_正常系] - describe() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "分類値が 2 以下",
+        description_); // [確認_正常系] - description_ が "分類値が 2 以下" であること。(名前の設定がなければ数値で表したことの確認)
 }
 // [サブ手順参照 名前=stringCatalogFilterDescribeTest.TearDown]

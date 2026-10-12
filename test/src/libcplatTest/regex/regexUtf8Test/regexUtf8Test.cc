@@ -31,14 +31,17 @@ TEST_F(regexUtf8Test, decode_ascii_maps_one_byte_to_one_unit)
                                                offsets); // [手順] - ASCII 文字列 "abc" をコード単位列へ変換する。
 
     // Assert
-    EXPECT_TRUE(decoded); // [確認_正常系] - cplat_internal_regex_utf8_decode の戻り値が true であること。
-    EXPECT_EQ((std::size_t)3, units.size());   // [確認_正常系] - コード単位数が 3 であること。
-    EXPECT_EQ(std::wstring(L"abc"), units);    // [確認_正常系] - コード単位列が L"abc" であること。
-    ASSERT_EQ((std::size_t)4, offsets.size()); // [確認_正常系] - 写像表の要素数がコード単位数 + 1 であること。
-    EXPECT_EQ((std::size_t)0, offsets[0]);     // [確認_正常系] - 1 文字目のバイト オフセットが 0 であること。
-    EXPECT_EQ((std::size_t)1, offsets[1]);     // [確認_正常系] - 2 文字目のバイト オフセットが 1 であること。
-    EXPECT_EQ((std::size_t)2, offsets[2]);     // [確認_正常系] - 3 文字目のバイト オフセットが 2 であること。
-    EXPECT_EQ((std::size_t)3, offsets[3]);     // [確認_正常系] - 終端のバイト オフセットが 3 であること。
+    EXPECT_TRUE(decoded); // [確認_正常系] - cplat_internal_regex_utf8_decode() の戻り値が true であること。
+    EXPECT_EQ((std::size_t)3, units.size()); // [確認_正常系] - units.size() の戻り値が 3 であること。
+    EXPECT_EQ(std::wstring(L"abc"), units);  // [確認_正常系] - units が std::wstring(L"abc") と一致すること。
+    ASSERT_EQ(
+        (std::size_t)4,
+        offsets
+            .size()); // [確認_正常系] - offsets.size() の戻り値が 4 であること。(写像表の要素数がコード単位数 + 1 であることの確認)
+    EXPECT_EQ((std::size_t)0, offsets[0]); // [確認_正常系] - offsets[0] が 0 であること。
+    EXPECT_EQ((std::size_t)1, offsets[1]); // [確認_正常系] - offsets[1] が 1 であること。
+    EXPECT_EQ((std::size_t)2, offsets[2]); // [確認_正常系] - offsets[2] が 2 であること。
+    EXPECT_EQ((std::size_t)3, offsets[3]); // [確認_正常系] - offsets[3] が 3 であること。
 }
 
 // 日本語 (BMP) の 1 文字が 1 コード単位 3 バイトへ対応することの確認
@@ -57,13 +60,13 @@ TEST_F(regexUtf8Test, decode_japanese_maps_three_bytes_to_one_unit)
                                                offsets); // [手順] - 日本語 3 文字 "あいう" をコード単位列へ変換する。
 
     // Assert
-    EXPECT_TRUE(decoded); // [確認_正常系] - cplat_internal_regex_utf8_decode の戻り値が true であること。
-    EXPECT_EQ((std::size_t)3, units.size());   // [確認_正常系] - コード単位数が 3 であること。
-    ASSERT_EQ((std::size_t)4, offsets.size()); // [確認_正常系] - 写像表の要素数が 4 であること。
-    EXPECT_EQ((std::size_t)0, offsets[0]);     // [確認_正常系] - "あ" のバイト オフセットが 0 であること。
-    EXPECT_EQ((std::size_t)3, offsets[1]);     // [確認_正常系] - "い" のバイト オフセットが 3 であること。
-    EXPECT_EQ((std::size_t)6, offsets[2]);     // [確認_正常系] - "う" のバイト オフセットが 6 であること。
-    EXPECT_EQ((std::size_t)9, offsets[3]);     // [確認_正常系] - 終端のバイト オフセットが 9 であること。
+    EXPECT_TRUE(decoded); // [確認_正常系] - cplat_internal_regex_utf8_decode() の戻り値が true であること。
+    EXPECT_EQ((std::size_t)3, units.size());   // [確認_正常系] - units.size() の戻り値が 3 であること。
+    ASSERT_EQ((std::size_t)4, offsets.size()); // [確認_正常系] - offsets.size() の戻り値が 4 であること。
+    EXPECT_EQ((std::size_t)0, offsets[0]);     // [確認_正常系] - offsets[0] が 0 であること。
+    EXPECT_EQ((std::size_t)3, offsets[1]);     // [確認_正常系] - offsets[1] が 3 であること。
+    EXPECT_EQ((std::size_t)6, offsets[2]);     // [確認_正常系] - offsets[2] が 6 であること。
+    EXPECT_EQ((std::size_t)9, offsets[3]);     // [確認_正常系] - offsets[3] が 9 であること。
 }
 
 // BMP 外の 1 文字がサロゲート ペア 2 コード単位へ対応することの確認
@@ -82,15 +85,20 @@ TEST_F(regexUtf8Test, decode_astral_maps_one_code_point_to_surrogate_pair)
                                                offsets); // [手順] - BMP 外の 1 文字 U+1F600 をコード単位列へ変換する。
 
     // Assert
-    EXPECT_TRUE(decoded); // [確認_正常系] - cplat_internal_regex_utf8_decode の戻り値が true であること。
-    ASSERT_EQ((std::size_t)2, units.size());   // [確認_正常系] - コード単位数が 2 (サロゲート ペア) であること。
-    EXPECT_EQ((wchar_t)0xD83D, units[0]);      // [確認_正常系] - 上位サロゲートが 0xD83D であること。
-    EXPECT_EQ((wchar_t)0xDE00, units[1]);      // [確認_正常系] - 下位サロゲートが 0xDE00 であること。
-    ASSERT_EQ((std::size_t)3, offsets.size()); // [確認_正常系] - 写像表の要素数が 3 であること。
-    EXPECT_EQ((std::size_t)0, offsets[0]);     // [確認_正常系] - 上位サロゲートのバイト オフセットが 0 であること。
-    EXPECT_EQ((std::size_t)0,
-              offsets[1]); // [確認_正常系] - 下位サロゲートにも同じ開始バイト オフセット 0 が割り当たること。
-    EXPECT_EQ((std::size_t)4, offsets[2]); // [確認_正常系] - 終端のバイト オフセットが 4 であること。
+    EXPECT_TRUE(decoded); // [確認_正常系] - cplat_internal_regex_utf8_decode() の戻り値が true であること。
+    ASSERT_EQ(
+        (std::size_t)2,
+        units
+            .size()); // [確認_正常系] - units.size() の戻り値が 2 であること。(サロゲート ペアのコード単位数であることの確認)
+    EXPECT_EQ((wchar_t)0xD83D, units[0]);      // [確認_正常系] - units[0] が 0xD83D であること。
+    EXPECT_EQ((wchar_t)0xDE00, units[1]);      // [確認_正常系] - units[1] が 0xDE00 であること。
+    ASSERT_EQ((std::size_t)3, offsets.size()); // [確認_正常系] - offsets.size() の戻り値が 3 であること。
+    EXPECT_EQ((std::size_t)0, offsets[0]);     // [確認_正常系] - offsets[0] が 0 であること。
+    EXPECT_EQ(
+        (std::size_t)0,
+        offsets
+            [1]); // [確認_正常系] - offsets[1] が 0 であること。(下位サロゲートにも同じ開始バイト オフセットが割り当たることの確認)
+    EXPECT_EQ((std::size_t)4, offsets[2]); // [確認_正常系] - offsets[2] が 4 であること。
 }
 
 // 不正な UTF-8 が変換を拒否されることの確認
@@ -112,24 +120,19 @@ TEST_F(regexUtf8Test, decode_rejects_invalid_utf8)
     // Assert
     EXPECT_FALSE(cplat_internal_regex_utf8_decode(
         overlong.data(), overlong.size(), units,
-        offsets)); // [確認_異常系] - オーバー ロング表現 C0 80 に対する cplat_internal_regex_utf8_decode の戻り値が
-                   // false であること。
+        offsets)); // [確認_異常系] - オーバー ロング表現 C0 80 に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
     EXPECT_FALSE(cplat_internal_regex_utf8_decode(
         surrogate.data(), surrogate.size(), units,
-        offsets)); // [確認_異常系] - 単独サロゲート ED A0 80 に対する cplat_internal_regex_utf8_decode の戻り値が
-                   // false であること。
+        offsets)); // [確認_異常系] - 単独サロゲート ED A0 80 に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
     EXPECT_FALSE(cplat_internal_regex_utf8_decode(
         too_large.data(), too_large.size(), units,
-        offsets)); // [確認_異常系] - U+10FFFF を超える F5 80 80 80 に対する cplat_internal_regex_utf8_decode の
-                   // 戻り値が false であること。
+        offsets)); // [確認_異常系] - U+10FFFF を超える F5 80 80 80 に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
     EXPECT_FALSE(cplat_internal_regex_utf8_decode(
         truncated.data(), truncated.size(), units,
-        offsets)); // [確認_異常系] - 途中で切れた E3 81 に対する cplat_internal_regex_utf8_decode の戻り値が
-                   // false であること。
+        offsets)); // [確認_異常系] - 途中で切れた E3 81 に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
     EXPECT_FALSE(cplat_internal_regex_utf8_decode(
         lone_trail.data(), lone_trail.size(), units,
-        offsets)); // [確認_異常系] - 後続バイト単独の 80 に対する cplat_internal_regex_utf8_decode の戻り値が
-                   // false であること。
+        offsets)); // [確認_異常系] - 後続バイト単独の 80 に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
 }
 
 // コード単位列を UTF-8 へ戻せることの確認
@@ -146,7 +149,7 @@ TEST_F(regexUtf8Test, encode_restores_original_text)
     decoded = cplat_internal_regex_utf8_decode(
         text.data(), text.size(), units,
         offsets);         // [状態] - ASCII、日本語、BMP 外を含む文字列をコード単位列へ変換しておく。
-    ASSERT_TRUE(decoded); // [状態確認] - cplat_internal_regex_utf8_decode の戻り値が true であること。
+    ASSERT_TRUE(decoded); // [状態確認] - cplat_internal_regex_utf8_decode() の戻り値が true であること。
 
     // Pre-Assert
 
@@ -154,8 +157,8 @@ TEST_F(regexUtf8Test, encode_restores_original_text)
     result = cplat_internal_regex_utf8_encode(units, encoded); // [手順] - コード単位列を UTF-8 へ戻す。
 
     // Assert
-    EXPECT_TRUE(result);      // [確認_正常系] - cplat_internal_regex_utf8_encode の戻り値が true であること。
-    EXPECT_EQ(text, encoded); // [確認_正常系] - 変換結果が元の UTF-8 文字列と一致すること。
+    EXPECT_TRUE(result);      // [確認_正常系] - cplat_internal_regex_utf8_encode() の戻り値が true であること。
+    EXPECT_EQ(text, encoded); // [確認_正常系] - encoded が text と一致すること。
 }
 
 // 単独の下位サロゲートが符号化を拒否されることの確認
@@ -174,7 +177,7 @@ TEST_F(regexUtf8Test, encode_rejects_lone_surrogate)
     result = cplat_internal_regex_utf8_encode(units, encoded); // [手順] - 単独の下位サロゲートを UTF-8 へ変換する。
 
     // Assert
-    EXPECT_FALSE(result); // [確認_異常系] - cplat_internal_regex_utf8_encode の戻り値が false であること。
+    EXPECT_FALSE(result); // [確認_異常系] - cplat_internal_regex_utf8_encode() の戻り値が false であること。
 }
 
 // サロゲート ペアの内側を指す索引が丸められることの確認
@@ -190,10 +193,10 @@ TEST_F(regexUtf8Test, offset_conversion_rounds_inside_surrogate_pair)
     ASSERT_TRUE(cplat_internal_regex_utf8_decode(
         text.data(), text.size(), units,
         offsets)); // [状態] - BMP 外の 1 文字と ASCII 1 文字からなる文字列を変換しておく。
-                   // [状態確認] - cplat_internal_regex_utf8_decode の戻り値が true であること。
+                   // [状態確認] - cplat_internal_regex_utf8_decode() の戻り値が true であること。
+    ASSERT_EQ((std::size_t)3, units.size()); // [状態確認] - units.size() の戻り値が 3 であること。
 
     // Pre-Assert
-    ASSERT_EQ((std::size_t)3, units.size()); // [Pre-Assert確認_正常系] - コード単位数が 3 であること。
 
     // Act
     begin_offset =
@@ -206,10 +209,10 @@ TEST_F(regexUtf8Test, offset_conversion_rounds_inside_surrogate_pair)
     // Assert
     EXPECT_EQ(
         (std::size_t)0,
-        begin_offset); // [確認_正常系] - cplat_internal_regex_offset_of_begin の戻り値がコード ポイント先頭の 0 であること。
+        begin_offset); // [確認_正常系] - 下位サロゲートを指す索引 1 に対する cplat_internal_regex_offset_of_begin() の戻り値が 0 であること。
     EXPECT_EQ(
         (std::size_t)4,
-        end_offset); // [確認_正常系] - cplat_internal_regex_offset_of_end の戻り値がコード ポイント末尾の 4 であること。
+        end_offset); // [確認_正常系] - 下位サロゲートを指す索引 1 に対する cplat_internal_regex_offset_of_end() の戻り値が 4 であること。
 }
 
 // バイト オフセットからコード単位索引を復元できることの確認
@@ -223,7 +226,7 @@ TEST_F(regexUtf8Test, index_of_offset_accepts_code_point_boundary_only)
 
     ASSERT_TRUE(cplat_internal_regex_utf8_decode(text.data(), text.size(), units,
                                                  offsets)); // [状態] - 日本語 2 文字の文字列を変換しておく。
-    // [状態確認] - cplat_internal_regex_utf8_decode の戻り値が true であること。
+    // [状態確認] - cplat_internal_regex_utf8_decode() の戻り値が true であること。
 
     // Pre-Assert
 
@@ -232,22 +235,18 @@ TEST_F(regexUtf8Test, index_of_offset_accepts_code_point_boundary_only)
     // Assert
     EXPECT_TRUE(cplat_internal_regex_index_of_offset(
         offsets, 3,
-        index)); // [確認_正常系] - 境界であるオフセット 3 に対する cplat_internal_regex_index_of_offset の
-                 // 戻り値が true であること。
-    EXPECT_EQ((std::size_t)1, index); // [確認_正常系] - 復元された索引が 1 であること。
+        index)); // [確認_正常系] - 境界であるオフセット 3 に対する cplat_internal_regex_index_of_offset() の戻り値が true であること。
+    EXPECT_EQ((std::size_t)1, index); // [確認_正常系] - index が 1 であること。
     EXPECT_TRUE(cplat_internal_regex_index_of_offset(
         offsets, 6,
-        index)); // [確認_正常系] - 終端であるオフセット 6 に対する cplat_internal_regex_index_of_offset の
-                 // 戻り値が true であること。
-    EXPECT_EQ((std::size_t)2, index); // [確認_正常系] - 復元された索引が 2 であること。
+        index)); // [確認_正常系] - 終端であるオフセット 6 に対する cplat_internal_regex_index_of_offset() の戻り値が true であること。
+    EXPECT_EQ((std::size_t)2, index); // [確認_正常系] - index が 2 であること。
     EXPECT_FALSE(cplat_internal_regex_index_of_offset(
         offsets, 1,
-        index)); // [確認_異常系] - 文字の途中であるオフセット 1 に対する cplat_internal_regex_index_of_offset
-                 // の戻り値が false であること。
+        index)); // [確認_異常系] - 文字の途中であるオフセット 1 に対する cplat_internal_regex_index_of_offset() の戻り値が false であること。
     EXPECT_FALSE(cplat_internal_regex_index_of_offset(
         offsets, 7,
-        index)); // [確認_異常系] - 範囲外であるオフセット 7 に対する cplat_internal_regex_index_of_offset の
-                 // 戻り値が false であること。
+        index)); // [確認_異常系] - 範囲外であるオフセット 7 に対する cplat_internal_regex_index_of_offset() の戻り値が false であること。
 }
 
 // NULL の空入力と不正な後続バイトが安全に処理されることの確認
@@ -279,14 +278,16 @@ TEST_F(regexUtf8Test, decode_handles_empty_null_and_invalid_trail_inputs)
 
     // Assert
     EXPECT_TRUE(
-        empty_result); // [確認_正常系] - NULL の空入力に対する cplat_internal_regex_utf8_decode の戻り値が true であること。
-    EXPECT_TRUE(units.empty()); // [確認_正常系] - NULL の空入力でコード単位列が空であること。
+        empty_result); // [確認_正常系] - NULL の空入力に対する cplat_internal_regex_utf8_decode() の戻り値が true であること。
+    EXPECT_TRUE(units.empty()); // [確認_正常系] - units.empty() の戻り値が true であること。
     EXPECT_FALSE(
-        null_nonempty_result); // [確認_異常系] - NULL の非空入力に対する cplat_internal_regex_utf8_decode の戻り値が false であること。
+        null_nonempty_result); // [確認_異常系] - NULL の非空入力に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
     EXPECT_FALSE(
-        invalid_trail_result); // [確認_異常系] - 不正な後続バイトに対する cplat_internal_regex_utf8_decode の戻り値が false であること。
-    EXPECT_FALSE(overlong_three_result); // [確認_異常系] - 3 バイトのオーバー ロング表現が拒否されること。
-    EXPECT_FALSE(overlong_four_result);  // [確認_異常系] - 4 バイトのオーバー ロング表現が拒否されること。
+        invalid_trail_result); // [確認_異常系] - 不正な後続バイトに対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
+    EXPECT_FALSE(
+        overlong_three_result); // [確認_異常系] - 3 バイトのオーバー ロング表現に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
+    EXPECT_FALSE(
+        overlong_four_result); // [確認_異常系] - 4 バイトのオーバー ロング表現に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
 }
 
 // UTF-16 コード単位の不正なサロゲート構成が符号化を拒否することの確認
@@ -313,11 +314,11 @@ TEST_F(regexUtf8Test, encode_rejects_incomplete_surrogate_pairs)
 
     // Assert
     EXPECT_FALSE(
-        high_only_result); // [確認_異常系] - 上位サロゲート単独の cplat_internal_regex_utf8_encode が false であること。
+        high_only_result); // [確認_異常系] - 上位サロゲート単独の cplat_internal_regex_utf8_encode() の戻り値が false であること。
     EXPECT_FALSE(
-        high_then_ascii_result); // [確認_異常系] - 不完全なサロゲート ペアの cplat_internal_regex_utf8_encode が false であること。
+        high_then_ascii_result); // [確認_異常系] - 不完全なサロゲート ペアの cplat_internal_regex_utf8_encode() の戻り値が false であること。
     EXPECT_TRUE(
-        two_byte_result); // [確認_正常系] - 2 バイト文字の cplat_internal_regex_utf8_encode が true であること。
+        two_byte_result); // [確認_正常系] - 2 バイト文字の cplat_internal_regex_utf8_encode() の戻り値が true であること。
 }
 
 // オフセット変換の空写像、終端超過、サロゲート内部を処理することの確認
@@ -350,13 +351,26 @@ TEST_F(regexUtf8Test, offset_helpers_handle_empty_and_out_of_range_indices)
         cplat_internal_regex_index_of_offset(empty_offsets, 0U, index); // [手順] - 空写像からオフセットを検索する。
 
     // Assert
-    EXPECT_EQ(0U, empty_begin);       // [確認_正常系] - 空写像の開始オフセットが 0 であること。
-    EXPECT_EQ(1U, out_begin);         // [確認_正常系] - 範囲外の開始オフセットが終端へ丸められること。
-    EXPECT_EQ(0U, empty_end);         // [確認_正常系] - 空写像の終了オフセットが 0 であること。
-    EXPECT_EQ(1U, out_end);           // [確認_正常系] - 範囲外の終了オフセットが終端へ丸められること。
-    EXPECT_EQ(0U, first_end);         // [確認_正常系] - 先頭索引の終了オフセットが 0 であること。
-    EXPECT_EQ(1U, regular_end);       // [確認_正常系] - 通常文字の終了オフセットが対応するオフセットであること。
-    EXPECT_FALSE(empty_index_result); // [確認_異常系] - 空写像の検索が false になること。
+    EXPECT_EQ(
+        0U,
+        empty_begin); // [確認_正常系] - 空写像に対する cplat_internal_regex_offset_of_begin() の戻り値が 0U であること。
+    EXPECT_EQ(
+        1U,
+        out_begin); // [確認_正常系] - 範囲外の開始索引に対する cplat_internal_regex_offset_of_begin() の戻り値が 1U であること。(終端へ丸められたことの確認)
+    EXPECT_EQ(
+        0U,
+        empty_end); // [確認_正常系] - 空写像に対する cplat_internal_regex_offset_of_end() の戻り値が 0U であること。
+    EXPECT_EQ(
+        1U,
+        out_end); // [確認_正常系] - 範囲外の終了索引に対する cplat_internal_regex_offset_of_end() の戻り値が 1U であること。(終端へ丸められたことの確認)
+    EXPECT_EQ(
+        0U,
+        first_end); // [確認_正常系] - 先頭索引に対する cplat_internal_regex_offset_of_end() の戻り値が 0U であること。
+    EXPECT_EQ(
+        1U,
+        regular_end); // [確認_正常系] - 通常文字に対する cplat_internal_regex_offset_of_end() の戻り値が 1U であること。
+    EXPECT_FALSE(
+        empty_index_result); // [確認_異常系] - 空写像に対する cplat_internal_regex_index_of_offset() の戻り値が false であること。
 }
 
 // 有効な 2 バイト列と BMP 上位文字、終端索引を処理することの確認
@@ -381,18 +395,22 @@ TEST_F(regexUtf8Test, decode_encode_cover_two_byte_and_boundary_units)
                                          decoded_offsets); // [手順] - 有効な 2 バイト文字 U+00E9 を変換する。
     bool private_use_result =
         cplat_internal_regex_utf8_encode(private_use, encoded); // [手順] - U+E000 を UTF-8 へ変換する。
-    ASSERT_TRUE(cplat_internal_regex_utf8_decode(astral.data(), astral.size(), astral_units, astral_offsets));
-    // [確認_正常系] - `cplat_internal_regex_utf8_decode(astral.data(), astral.size(), astral_units, astral_offsets)` が true であること。
+    bool actual_ret_astral =
+        cplat_internal_regex_utf8_decode(astral.data(), astral.size(), astral_units,
+                                         astral_offsets); // [手順] - BMP 外の 1 文字をコード単位列へ変換する。
+    ASSERT_TRUE(actual_ret_astral);
+    // [確認_正常系] - BMP 外の 1 文字に対する cplat_internal_regex_utf8_decode() の戻り値が true であること。
     std::size_t end_index_offset = cplat_internal_regex_offset_of_end(
         astral_units, astral_offsets, astral_units.size()); // [手順] - コード単位数と等しい終了索引を変換する。
 
     // Assert
     EXPECT_TRUE(
-        two_byte_result); // [確認_正常系] - 有効な 2 バイト文字に対する cplat_internal_regex_utf8_decode の戻り値が true であること。
-    ASSERT_EQ((std::size_t)1, decoded_units.size()); // [確認_正常系] - 2 バイト文字のコード単位数が 1 であること。
-    EXPECT_EQ((wchar_t)0x00E9, decoded_units[0]);    // [確認_正常系] - 変換結果が U+00E9 であること。
-    EXPECT_TRUE(private_use_result); // [確認_正常系] - U+E000 の cplat_internal_regex_utf8_encode が true であること。
+        two_byte_result); // [確認_正常系] - 有効な 2 バイト文字に対する cplat_internal_regex_utf8_decode() の戻り値が true であること。
+    ASSERT_EQ((std::size_t)1, decoded_units.size()); // [確認_正常系] - decoded_units.size() の戻り値が 1 であること。
+    EXPECT_EQ((wchar_t)0x00E9, decoded_units[0]);    // [確認_正常系] - decoded_units[0] が 0x00E9 であること。
+    EXPECT_TRUE(
+        private_use_result); // [確認_正常系] - U+E000 に対する cplat_internal_regex_utf8_encode() の戻り値が true であること。
     EXPECT_EQ(
         astral_offsets.back(),
-        end_index_offset); // [確認_正常系] - 終端索引の cplat_internal_regex_offset_of_end が写像表の末尾と一致すること。
+        end_index_offset); // [確認_正常系] - 終端索引に対する cplat_internal_regex_offset_of_end() の戻り値が astral_offsets.back() の戻り値と一致すること。
 }

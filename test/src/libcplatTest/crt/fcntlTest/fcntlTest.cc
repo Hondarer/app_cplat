@@ -45,16 +45,20 @@ TEST_F(fcntlTest, creates_file_and_returns_descriptor)
 
     // Pre-Assert
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq("work.bin"), O_RDWR | O_CREAT | O_TRUNC, 0644))
-        .WillOnce(Return(7)); // [Pre-Assert確認_正常系] - open が work.bin と作成フラグで 1 回呼び出されること。
-                              // [Pre-Assert手順] - 番兵記述子 7 を返却する。
+        .WillOnce(Return(
+            7)); // [Pre-Assert確認_正常系] - open() が "work.bin" と等しい文字列、O_RDWR | O_CREAT | O_TRUNC、0644 を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - 番兵記述子 7 を返却する。
 
     // Act
     int fd = cplat_open("work.bin", O_RDWR | O_CREAT | O_TRUNC, 0644,
                         &detail); // [手順] - 存在しないパスに作成フラグを指定して cplat_open を呼び出す。
 
     // Assert
-    EXPECT_EQ(7, fd);                          // [確認_正常系] - cplat_open の戻り値が番兵記述子 7 であること。
-    EXPECT_EQ(0, cplat_error_is_set(&detail)); // [確認_正常系] - detail に詳細エラーが記録されないこと。
+    EXPECT_EQ(7, fd); // [確認_正常系] - cplat_open() の戻り値が 7 であること。
+    EXPECT_EQ(
+        0,
+        cplat_error_is_set(
+            &detail)); // [確認_正常系] - cplat_error_is_set() の戻り値が 0 であること。(detail に詳細エラーが記録されないことの確認)
 }
 
 // 存在しないファイルを読み取り専用で開くと失敗することの確認
@@ -65,18 +69,23 @@ TEST_F(fcntlTest, returns_minus1_for_missing_file)
 
     // Pre-Assert
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq("missing.bin"), O_RDONLY, 0))
-        .WillOnce(DoAll(Assign(&errno, ENOENT),
-                        Return(-1))); // [Pre-Assert確認_異常系] - open が missing.bin で 1 回呼び出されること。
-                                      // [Pre-Assert手順] - errno に ENOENT を設定し、-1 を返却する。
+        .WillOnce(DoAll(
+            Assign(&errno, ENOENT),
+            Return(
+                -1))); // [Pre-Assert確認_異常系] - open() が "missing.bin" と等しい文字列、O_RDONLY、0 を指定して 1 回呼び出されること。
+                       // [Pre-Assert手順] - errno に ENOENT を設定し、-1 を返却する。
 
     // Act
     int fd = cplat_open("missing.bin", O_RDONLY, 0,
                         &detail); // [手順] - 存在しないパスを読み取り専用で cplat_open に指定する。
 
     // Assert
-    EXPECT_EQ(-1, fd); // [確認_異常系] - cplat_open の戻り値が -1 であること。
-    EXPECT_EQ(1, cplat_error_is(&detail,
-                                CPLAT_CAUSE_NOT_FOUND)); // [確認_異常系] - 見つからないことが要因であること。
+    EXPECT_EQ(-1, fd); // [確認_異常系] - cplat_open() の戻り値が -1 であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &detail,
+            CPLAT_CAUSE_NOT_FOUND)); // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(CPLAT_CAUSE_NOT_FOUND が要因であることの確認)
 }
 #endif /* PLATFORM_LINUX */
 
@@ -92,9 +101,9 @@ TEST_F(fcntlTest, returns_minus1_for_null_path)
     int fd = cplat_open(NULL, O_RDONLY, 0, &detail); // [手順] - パスに NULL を指定して cplat_open を呼び出す。
 
     // Assert
-    EXPECT_EQ(-1, fd); // [確認_異常系] - cplat_open の戻り値が -1 であること。
+    EXPECT_EQ(-1, fd); // [確認_異常系] - cplat_open() の戻り値が -1 であること。
     EXPECT_EQ(EINVAL,
-              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno の戻り値が EINVAL であること。
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EINVAL であること。
 }
 
 // detail_out に NULL を渡してもクラッシュしないことの確認
@@ -108,7 +117,7 @@ TEST_F(fcntlTest, accepts_null_detail_out)
     int fd = cplat_open(NULL, O_RDONLY, 0, NULL); // [手順] - detail_out に NULL を指定して cplat_open を呼び出す。
 
     // Assert
-    EXPECT_EQ(-1, fd); // [確認_異常系] - cplat_open の戻り値が -1 であること。
+    EXPECT_EQ(-1, fd); // [確認_異常系] - cplat_open() の戻り値が -1 であること。
 }
 
 #if defined(PLATFORM_LINUX)
@@ -122,7 +131,8 @@ TEST_F(fcntlTest, open_retries_after_interrupt)
     // Pre-Assert
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq("work.bin"), O_RDONLY, 0))
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)))
-        .WillOnce(Return(5)); // [Pre-Assert確認_正常系] - 下位の open API が 2 回呼び出されること。
+        .WillOnce(Return(
+            5)); // [Pre-Assert確認_正常系] - open() が "work.bin" と等しい文字列、O_RDONLY、0 を指定して 2 回呼び出されること。
     // [Pre-Assert手順] - 下位の open API から、errno に EINTR を設定した -1 ののち記述子 5 を返却する。
 
     // Act
@@ -131,7 +141,7 @@ TEST_F(fcntlTest, open_retries_after_interrupt)
 
     // Assert
     EXPECT_EQ(5,
-              fd); // [確認_正常系] - 再試行後の cplat_open の戻り値が 5 であること。
+              fd); // [確認_正常系] - 再試行後の cplat_open() の戻り値が 5 であること。
 }
 #endif /* PLATFORM_LINUX */
 
@@ -154,9 +164,12 @@ TEST_F(fcntlTest, returns_enametoolong_when_path_exceeds_wide_buffer)
                         &detail); // [手順] - 変換先バッファーに収まらないパスで cplat_open を呼び出す。
 
     // Assert
-    EXPECT_EQ(-1, fd); // [確認_異常系] - cplat_open の戻り値が -1 であること。
-    EXPECT_EQ(1, cplat_error_is(&detail,
-                                CPLAT_CAUSE_NAME_TOO_LONG)); // [確認_異常系] - ENAMETOOLONG の要因であること。
+    EXPECT_EQ(-1, fd); // [確認_異常系] - cplat_open() の戻り値が -1 であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &detail,
+            CPLAT_CAUSE_NAME_TOO_LONG)); // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(CPLAT_CAUSE_NAME_TOO_LONG が要因であることの確認)
 }
 
 #endif /* PLATFORM_WINDOWS */

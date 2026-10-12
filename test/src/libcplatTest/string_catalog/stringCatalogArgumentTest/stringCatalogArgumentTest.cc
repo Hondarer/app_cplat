@@ -72,9 +72,10 @@ TEST_F(stringCatalogArgumentTest, no_argument)
     actual_ret = collect_arguments(&entry, values); // [手順] - 引数個数が 0 の定義で値を取り出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED,
-              values[0].kind); // [確認_正常系] - 値の配列が書き換わらないこと。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - collect_arguments() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED,
+        values[0].kind); // [確認_正常系] - values[0].kind が CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED であること。
 }
 
 // 引数を割り当てないインデックスを読み飛ばすことの確認
@@ -95,12 +96,17 @@ TEST_F(stringCatalogArgumentTest, unused_argument_kind_is_skipped)
                                    INT32_C(2)); // [手順] - 未使用を挟んだ定義へ、値を 2 個だけ渡して取り出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);                    // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_EQ(INT32_C(1), values[0].value.int32_value); // [確認_正常系] - 未使用より前の値を取り出すこと。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED,
-              values[1].kind); // [確認_正常系] - 未使用のインデックスに引数種別を記録すること。
-    EXPECT_EQ(INT32_C(2),
-              values[2].value.int32_value); // [確認_正常系] - 未使用を読み飛ばし、次の値を取り出すこと。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - collect_arguments() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(INT32_C(1),
+              values[0].value.int32_value); // [確認_正常系] - values[0].value.int32_value が INT32_C(1) であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED,
+        values[1].kind); // [確認_正常系] - values[1].kind が CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED であること。
+    EXPECT_EQ(
+        INT32_C(2),
+        values[2]
+            .value
+            .int32_value); // [確認_正常系] - values[2].value.int32_value が INT32_C(2) であること。(未使用の引数を読み飛ばしたことの確認)
 }
 
 // 引数種別ごとに、対応する型の値を取り出すことの確認
@@ -128,17 +134,25 @@ TEST_F(stringCatalogArgumentTest, all_argument_kinds)
                                    (size_t)7U); // [手順] - 8 種類の引数種別を持つ定義で値を取り出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);                      // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("text", values[0].value.string_value);   // [確認_正常系] - 文字列を取り出すこと。
-    EXPECT_EQ(INT32_C(-1), values[1].value.int32_value);  // [確認_正常系] - 符号付き 32 bit 整数を取り出すこと。
-    EXPECT_EQ(UINT32_C(2), values[2].value.uint32_value); // [確認_正常系] - 符号なし 32 bit 整数を取り出すこと。
-    EXPECT_EQ(UINT32_C(3), values[3].value.uint32_value); // [確認_正常系] - 16 進表現の 32 bit 整数を取り出すこと。
-    EXPECT_EQ(INT64_C(-4), values[4].value.int64_value);  // [確認_正常系] - 符号付き 64 bit 整数を取り出すこと。
-    EXPECT_EQ(UINT64_C(5), values[5].value.uint64_value); // [確認_正常系] - 符号なし 64 bit 整数を取り出すこと。
-    EXPECT_EQ(UINT64_C(6), values[6].value.uint64_value); // [確認_正常系] - 16 進表現の 64 bit 整数を取り出すこと。
-    EXPECT_EQ((size_t)7U, values[7].value.size_value);    // [確認_正常系] - バイト数を取り出すこと。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - collect_arguments() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("text",
+                 values[0].value.string_value); // [確認_正常系] - values[0].value.string_value が "text" であること。
+    EXPECT_EQ(INT32_C(-1),
+              values[1].value.int32_value); // [確認_正常系] - values[1].value.int32_value が INT32_C(-1) であること。
+    EXPECT_EQ(UINT32_C(2),
+              values[2].value.uint32_value); // [確認_正常系] - values[2].value.uint32_value が UINT32_C(2) であること。
+    EXPECT_EQ(UINT32_C(3),
+              values[3].value.uint32_value); // [確認_正常系] - values[3].value.uint32_value が UINT32_C(3) であること。
+    EXPECT_EQ(INT64_C(-4),
+              values[4].value.int64_value); // [確認_正常系] - values[4].value.int64_value が INT64_C(-4) であること。
+    EXPECT_EQ(UINT64_C(5),
+              values[5].value.uint64_value); // [確認_正常系] - values[5].value.uint64_value が UINT64_C(5) であること。
+    EXPECT_EQ(UINT64_C(6),
+              values[6].value.uint64_value); // [確認_正常系] - values[6].value.uint64_value が UINT64_C(6) であること。
+    EXPECT_EQ((size_t)7U,
+              values[7].value.size_value); // [確認_正常系] - values[7].value.size_value が (size_t)7U であること。
     EXPECT_EQ(CPLAT_STRING_CATALOG_ARGUMENT_KIND_SIZE,
-              values[7].kind); // [確認_正常系] - 取り出した値に引数種別を記録すること。
+              values[7].kind); // [確認_正常系] - values[7].kind が CPLAT_STRING_CATALOG_ARGUMENT_KIND_SIZE であること。
 
     // Arrange
     memset(values, 0, sizeof(values));
@@ -154,10 +168,16 @@ TEST_F(stringCatalogArgumentTest, all_argument_kinds)
                                    2); // [手順] - 残る 3 種類の引数種別を持つ定義で値を取り出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_EQ((const void *)sample_object, values[0].value.pointer_value); // [確認_正常系] - ポインターを取り出すこと。
-    EXPECT_DOUBLE_EQ(12.5, values[1].value.double_value); // [確認_正常系] - 倍精度浮動小数点数を取り出すこと。
-    EXPECT_EQ(2, values[2].value.error_code_value);       // [確認_正常系] - エラー コードを取り出すこと。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - collect_arguments() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        (const void *)sample_object,
+        values[0]
+            .value
+            .pointer_value); // [確認_正常系] - values[0].value.pointer_value が (const void *)sample_object と一致すること。
+    EXPECT_DOUBLE_EQ(12.5,
+                     values[1].value.double_value); // [確認_正常系] - values[1].value.double_value が 12.5 であること。
+    EXPECT_EQ(2,
+              values[2].value.error_code_value); // [確認_正常系] - values[2].value.error_code_value が 2 であること。
 
     // Arrange
     memset(values, 0, sizeof(values));
@@ -178,16 +198,25 @@ TEST_F(stringCatalogArgumentTest, all_argument_kinds)
                                    INT64_C(-1)); // [手順] - 昇格して渡る種別と SSIZE で値を取り出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);                          // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_EQ('A', values[0].value.char_value);               // [確認_正常系] - 文字を取り出すこと。
-    EXPECT_EQ(INT8_C(-12), values[1].value.int8_value);       // [確認_正常系] - 符号付き 8 bit 整数を取り出すこと。
-    EXPECT_EQ(UINT8_C(200), values[2].value.uint8_value);     // [確認_正常系] - 符号なし 8 bit 整数を取り出すこと。
-    EXPECT_EQ(INT16_C(-1200), values[3].value.int16_value);   // [確認_正常系] - 符号付き 16 bit 整数を取り出すこと。
-    EXPECT_EQ(UINT16_C(48000), values[4].value.uint16_value); // [確認_正常系] - 符号なし 16 bit 整数を取り出すこと。
-    EXPECT_EQ(UINT8_C(0x8A), values[5].value.uint8_value);    // [確認_正常系] - 16 進表現の 8 bit 整数を取り出すこと。
-    EXPECT_EQ(UINT16_C(0xBEEF),
-              values[6].value.uint16_value);             // [確認_正常系] - 16 進表現の 16 bit 整数を取り出すこと。
-    EXPECT_EQ(INT64_C(-1), values[7].value.int64_value); // [確認_正常系] - 符号付きのバイト数を取り出すこと。
+    EXPECT_EQ(CPLAT_OK, actual_ret);            // [確認_正常系] - collect_arguments() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ('A', values[0].value.char_value); // [確認_正常系] - values[0].value.char_value が 'A' であること。
+    EXPECT_EQ(INT8_C(-12),
+              values[1].value.int8_value); // [確認_正常系] - values[1].value.int8_value が INT8_C(-12) であること。
+    EXPECT_EQ(UINT8_C(200),
+              values[2].value.uint8_value); // [確認_正常系] - values[2].value.uint8_value が UINT8_C(200) であること。
+    EXPECT_EQ(
+        INT16_C(-1200),
+        values[3].value.int16_value); // [確認_正常系] - values[3].value.int16_value が INT16_C(-1200) であること。
+    EXPECT_EQ(
+        UINT16_C(48000),
+        values[4].value.uint16_value); // [確認_正常系] - values[4].value.uint16_value が UINT16_C(48000) であること。
+    EXPECT_EQ(UINT8_C(0x8A),
+              values[5].value.uint8_value); // [確認_正常系] - values[5].value.uint8_value が UINT8_C(0x8A) であること。
+    EXPECT_EQ(
+        UINT16_C(0xBEEF),
+        values[6].value.uint16_value); // [確認_正常系] - values[6].value.uint16_value が UINT16_C(0xBEEF) であること。
+    EXPECT_EQ(INT64_C(-1),
+              values[7].value.int64_value); // [確認_正常系] - values[7].value.int64_value が INT64_C(-1) であること。
 }
 
 // 列挙に無い引数種別が定義エラーになることの確認
@@ -208,6 +237,7 @@ TEST_F(stringCatalogArgumentTest, unknown_argument_kind)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_MALFORMED_DEFINITION,
-              actual_ret); // [確認_異常系] - 戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
-    EXPECT_EQ(INT32_C(1), values[0].value.int32_value); // [確認_異常系] - 未知の種別より前の値は取り出されていること。
+              actual_ret); // [確認_異常系] - collect_arguments() の戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
+    EXPECT_EQ(INT32_C(1),
+              values[0].value.int32_value); // [確認_異常系] - values[0].value.int32_value が INT32_C(1) であること。
 }

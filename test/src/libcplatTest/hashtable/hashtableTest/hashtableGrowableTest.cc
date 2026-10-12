@@ -66,15 +66,29 @@ TEST_F(hashtableGrowableTest, add_grows_capacity_and_preserves_existing_record)
     int actual_ret_validate = cplat_hashtable_validate(ht);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_create);   // [確認_正常系] - 自動拡張テーブルの構築が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_add);      // [確認_正常系] - 満杯時の add が自動拡張して成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_find);     // [確認_正常系] - 自動拡張後も既存キーを検索できること。
-    EXPECT_EQ(record_before, record_after);   // [確認_正常系] - 自動拡張で既存レコード番号が変わらないこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_config);   // [確認_正常系] - 自動拡張後の設定を取得できること。
-    EXPECT_EQ(4u, current.capacity);          // [確認_正常系] - capacity が 2 倍になること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_count);    // [確認_正常系] - 自動拡張後の件数を取得できること。
-    EXPECT_EQ(3u, count);                     // [確認_正常系] - 3 件すべてが格納されていること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_validate); // [確認_正常系] - 自動拡張後の内部状態が整合すること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_create); // [確認_正常系] - cplat_hashtable_create_growable() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_add); // [確認_正常系] - 満杯時の cplat_hashtable_add() の戻り値が CPLAT_OK であること。(自動拡張して追加が成功したことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_find); // [確認_正常系] - 自動拡張後の cplat_hashtable_find_recno() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        record_before,
+        record_after); // [確認_正常系] - record_after が record_before と一致すること。(自動拡張で既存レコード番号が変わらないことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_config); // [確認_正常系] - 自動拡張後の cplat_hashtable_get_config_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        4u, current.capacity); // [確認_正常系] - current.capacity が 4 であること。(capacity が 2 倍になったことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_count); // [確認_正常系] - 自動拡張後の cplat_hashtable_count() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(3u, count);  // [確認_正常系] - count が 3 であること。(3 件すべてが格納されていることの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_validate); // [確認_正常系] - 自動拡張後の cplat_hashtable_validate() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -106,12 +120,25 @@ TEST_F(hashtableGrowableTest, add_rebuilds_same_size_for_fragmentation)
     int actual_ret_validate = cplat_hashtable_validate(ht);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_add);  // [確認_正常系] - 断片化時の add が再構築して成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_find); // [確認_正常系] - 再構築後に追加した値を検索できること。
-    EXPECT_STREQ("555555", static_cast<const char *>(value)); // [確認_正常系] - 追加した値が保存されていること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_config);                   // [確認_正常系] - 再構築後の設定を取得できること。
-    EXPECT_EQ(20u, current.value_storage_size); // [確認_正常系] - 断片化だけの場合はストレージ容量が増えないこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_validate);   // [確認_正常系] - 同容量再構築後の内部状態が整合すること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_add); // [確認_正常系] - 断片化時の cplat_hashtable_add() の戻り値が CPLAT_OK であること。(再構築して追加が成功したことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_find); // [確認_正常系] - 再構築後の cplat_hashtable_find_value_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("555555",
+                 static_cast<const char *>(
+                     value)); // [確認_正常系] - value が "555555" であること。(追加した値が保存されていることの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_config); // [確認_正常系] - 再構築後の cplat_hashtable_get_config_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        20u,
+        current
+            .value_storage_size); // [確認_正常系] - current.value_storage_size が 20 であること。(断片化だけの場合はストレージ容量が増えないことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_validate); // [確認_正常系] - 同容量再構築後の cplat_hashtable_validate() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -140,13 +167,27 @@ TEST_F(hashtableGrowableTest, update_rec_grows_value_storage)
     int actual_ret_config = cplat_hashtable_get_config_val(ht, &current);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_update); // [確認_正常系] - update_rec が値ストレージを拡張して成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_find);   // [確認_正常系] - 拡張後に更新した値を検索できること。
-    EXPECT_STREQ("12345678901", static_cast<const char *>(value)); // [確認_正常系] - 更新した値が保存されていること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_config);                        // [確認_正常系] - 更新後の設定を取得できること。
-    EXPECT_EQ(22u,
-              current.value_storage_size); // [確認_正常系] - 旧値と新値が共存できる必要量まで値ストレージが増えること。
-    EXPECT_EQ(2u, current.capacity);       // [確認_正常系] - 更新では capacity が変わらないこと。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_update); // [確認_正常系] - cplat_hashtable_update_rec() の戻り値が CPLAT_OK であること。(値ストレージを拡張して更新が成功したことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_find); // [確認_正常系] - 拡張後の cplat_hashtable_find_value_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "12345678901",
+        static_cast<const char *>(
+            value)); // [確認_正常系] - value が "12345678901" であること。(更新した値が保存されていることの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_config); // [確認_正常系] - 更新後の cplat_hashtable_get_config_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        22u,
+        current
+            .value_storage_size); // [確認_正常系] - current.value_storage_size が 22 であること。(旧値と新値が共存できる必要量まで値ストレージが増えたことの確認)
+    EXPECT_EQ(
+        2u,
+        current
+            .capacity); // [確認_正常系] - current.capacity が 2 であること。(更新では capacity が変わらないことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -176,15 +217,30 @@ TEST_F(hashtableGrowableTest, upsert_and_update_grow_required_regions)
     int actual_ret_config = cplat_hashtable_get_config_val(ht, &current);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_upsert); // [確認_正常系] - upsert がレコードと値ストレージを拡張して成功すること。
-    EXPECT_EQ(1, inserted);                 // [確認_正常系] - upsert が新規追加として完了すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_update); // [確認_正常系] - update が値ストレージを拡張して成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_find);   // [確認_正常系] - update 後の値を検索できること。
-    EXPECT_STREQ("12345678901",
-                 static_cast<const char *>(value)); // [確認_正常系] - update 後の値が保存されていること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_config);         // [確認_正常系] - 更新後の設定を取得できること。
-    EXPECT_EQ(2u, current.capacity);                // [確認_正常系] - upsert により capacity が 2 倍になること。
-    EXPECT_GE(current.value_storage_size, 15u);     // [確認_正常系] - 新旧値が共存できる値ストレージ容量であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_upsert); // [確認_正常系] - cplat_hashtable_upsert() の戻り値が CPLAT_OK であること。(レコードと値ストレージを拡張して upsert が成功したことの確認)
+    EXPECT_EQ(1, inserted); // [確認_正常系] - inserted が 1 であること。(upsert が新規追加として完了したことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_update); // [確認_正常系] - cplat_hashtable_update() の戻り値が CPLAT_OK であること。(値ストレージを拡張して update が成功したことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_find); // [確認_正常系] - update 後の cplat_hashtable_find_value_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "12345678901",
+        static_cast<const char *>(
+            value)); // [確認_正常系] - value が "12345678901" であること。(update 後の値が保存されていることの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_config); // [確認_正常系] - 更新後の cplat_hashtable_get_config_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        2u,
+        current
+            .capacity); // [確認_正常系] - current.capacity が 2 であること。(upsert により capacity が 2 倍になったことの確認)
+    EXPECT_GE(
+        current.value_storage_size,
+        15u); // [確認_正常系] - current.value_storage_size が 15 以上であること。(新旧値が共存できる値ストレージ容量であることの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -209,8 +265,9 @@ TEST_F(hashtableGrowableTest, allocation_failure_preserves_original_buffers)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
-        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - 移行計画の確保が 1 回呼ばれること。
-                                    // [Pre-Assert手順] - 移行計画の確保に失敗させる。
+        .WillOnce(Return(
+            nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が 1 回呼び出されること。(移行計画の確保が呼び出されたことの確認)
+                       // [Pre-Assert手順] - 移行計画の確保に失敗させる。
 
     // Act
     int actual_ret_add = cplat_hashtable_add(
@@ -220,12 +277,20 @@ TEST_F(hashtableGrowableTest, allocation_failure_preserves_original_buffers)
     int actual_ret_count = cplat_hashtable_count(ht, &count);
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY, actual_ret_add); // [確認_異常系] - 自動拡張が OUT_OF_MEMORY を返すこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_ref);                // [確認_正常系] - 失敗後の領域参照を取得できること。
-    EXPECT_EQ(mgmt_before, mgmt_after);                 // [確認_正常系] - 失敗後も管理領域の先頭が変わらないこと。
-    EXPECT_EQ(data_before, data_after);                 // [確認_正常系] - 失敗後もデータ領域の先頭が変わらないこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_count);              // [確認_正常系] - 失敗後の件数を取得できること。
-    EXPECT_EQ(1u, count);                               // [確認_正常系] - 失敗した追加によって件数が変わらないこと。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_MEMORY,
+        actual_ret_add); // [確認_異常系] - 自動拡張を要求した cplat_hashtable_add() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_ref); // [確認_正常系] - 失敗後の cplat_hashtable_buffer_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        mgmt_before,
+        mgmt_after); // [確認_正常系] - mgmt_after が mgmt_before と一致すること。(失敗後も管理領域の先頭が変わらないことの確認)
+    EXPECT_EQ(
+        data_before,
+        data_after); // [確認_正常系] - data_after が data_before と一致すること。(失敗後もデータ領域の先頭が変わらないことの確認)
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_count); // [確認_正常系] - 失敗後の cplat_hashtable_count() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1u, count); // [確認_正常系] - count が 1 であること。(失敗した追加によって件数が変わらないことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -254,11 +319,15 @@ TEST_F(hashtableGrowableTest, limits_preserve_original_table)
     int actual_ret_validate = cplat_hashtable_validate(ht);
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_LIMIT_EXCEEDED,
-              actual_ret_add);                // [確認_異常系] - 上限到達時の add が LIMIT_EXCEEDED を返すこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_count);    // [確認_正常系] - 失敗後の件数を取得できること。
-    EXPECT_EQ(2u, count);                     // [確認_正常系] - 失敗した追加によって件数が変わらないこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_validate); // [確認_正常系] - 失敗後も内部状態が整合すること。
+    EXPECT_EQ(
+        CPLAT_ERR_LIMIT_EXCEEDED,
+        actual_ret_add); // [確認_異常系] - 上限到達時の cplat_hashtable_add() の戻り値が CPLAT_ERR_LIMIT_EXCEEDED であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_count); // [確認_正常系] - 失敗後の cplat_hashtable_count() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(2u, count); // [確認_正常系] - count が 2 であること。(失敗した追加によって件数が変わらないことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_validate); // [確認_正常系] - 失敗後の cplat_hashtable_validate() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -280,8 +349,9 @@ TEST_F(hashtableGrowableTest, ordinary_create_remains_fixed_capacity)
         ht, "b", "two", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 通常の満杯テーブルへ追加する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_LIMIT_EXCEEDED,
-              actual_ret_add); // [確認_異常系] - 通常の create では固定長の結果コードを維持すること。
+    EXPECT_EQ(
+        CPLAT_ERR_LIMIT_EXCEEDED,
+        actual_ret_add); // [確認_異常系] - 通常の create で構築した満杯テーブルへの cplat_hashtable_add() の戻り値が CPLAT_ERR_LIMIT_EXCEEDED であること。(自動拡張せず固定長の結果コードを維持したことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -305,6 +375,9 @@ TEST_F(hashtableGrowableTest, create_rejects_invalid_growth_config)
         cplat_hashtable_create_growable(&config, &growth, &ht); // [手順] - 初期値未満かつ固定長値用の上限を指定する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - 不正な拡張設定を拒否すること。
-    EXPECT_EQ(nullptr, ht);                            // [確認_異常系] - 失敗時に出力ハンドルが NULL になること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - 不正な拡張設定を渡した cplat_hashtable_create_growable() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(nullptr,
+              ht); // [確認_異常系] - ht が nullptr であること。(失敗時に出力ハンドルが NULL になったことの確認)
 }

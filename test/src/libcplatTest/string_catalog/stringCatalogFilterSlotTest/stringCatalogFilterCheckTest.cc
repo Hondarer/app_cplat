@@ -21,7 +21,7 @@ class stringCatalogFilterCheckTest : public Test
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(
                                 filter_test_mixed_catalog(), filter_test_mixed_key_names(),
                                 filter_test_mixed_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_));
-        // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_mixed_catalog(), filter_test_mixed_key_names(), filter_test_mixed_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - cplat_string_catalog_filter_slot_create() の戻り値が CPLAT_OK であること。
     }
     // [サブ手順終了]
 
@@ -83,25 +83,41 @@ TEST_F(stringCatalogFilterCheckTest, numeric_comparison_warns_mixed_and_type_mis
     actual_ret = check("arg.value == 5"); // [手順] - 文字列、整数、ポインターに分かれる value を数値と比較する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 警告だけなら CPLAT_OK を返すこと。
-    EXPECT_EQ(0U, invalid_count_);   // [確認_正常系] - 行を無効にしないこと。
-    ASSERT_EQ(2U, warning_count_);   // [確認_正常系] - 混在と型の不一致の 2 件であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_WARNING_MIXED_ARGUMENT_TYPES,
-              warnings_[0].kind);                // [確認_正常系] - 1 件目が型区分の混在であること。
-    EXPECT_EQ(0U, warnings_[0].line_index);      // [確認_正常系] - 行の位置が 0 であること。
-    EXPECT_EQ(0U, warnings_[0].predicate_index); // [確認_正常系] - 比較要素の位置が 0 であること。
-    EXPECT_EQ(FILTER_TEST_MIXED_KEY_TEXT_VALUE,
-              warnings_[0].string_key);        // [確認_正常系] - 文字列の代表が TEXT_VALUE であること。
-    EXPECT_EQ(0, warnings_[0].argument_index); // [確認_正常系] - 文字列の代表の引数の位置が 0 であること。
-    EXPECT_EQ(FILTER_TEST_MIXED_KEY_NUMBER_VALUE,
-              warnings_[0].other_string_key);        // [確認_正常系] - 文字列以外の代表が NUMBER_VALUE であること。
-    EXPECT_EQ(0, warnings_[0].other_argument_index); // [確認_正常系] - 文字列以外の代表の引数の位置が 0 であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH,
-              warnings_[1].kind); // [確認_正常系] - 2 件目が型の不一致であること。
-    EXPECT_EQ(FILTER_TEST_MIXED_KEY_TEXT_VALUE,
-              warnings_[1].string_key);               // [確認_正常系] - 型が合わないのは文字列の項目だけであること。
-    EXPECT_EQ(0, warnings_[1].argument_index);        // [確認_正常系] - 引数の位置が 0 であること。
-    EXPECT_EQ(-1, warnings_[1].other_argument_index); // [確認_正常系] - もう一方の引数は使用しないこと。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - check() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0U, invalid_count_);   // [確認_正常系] - invalid_count_ が 0U であること。
+    ASSERT_EQ(
+        2U,
+        warning_count_); // [確認_正常系] - warning_count_ が 2U であること。(混在と型の不一致の警告が 1 件ずつあることの確認)
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_WARNING_MIXED_ARGUMENT_TYPES,
+        warnings_[0]
+            .kind); // [確認_正常系] - warnings_[0].kind が CPLAT_STRING_CATALOG_FILTER_WARNING_MIXED_ARGUMENT_TYPES であること。
+    EXPECT_EQ(0U, warnings_[0].line_index);      // [確認_正常系] - warnings_[0].line_index が 0U であること。
+    EXPECT_EQ(0U, warnings_[0].predicate_index); // [確認_正常系] - warnings_[0].predicate_index が 0U であること。
+    EXPECT_EQ(
+        FILTER_TEST_MIXED_KEY_TEXT_VALUE,
+        warnings_[0]
+            .string_key); // [確認_正常系] - warnings_[0].string_key が FILTER_TEST_MIXED_KEY_TEXT_VALUE であること。
+    EXPECT_EQ(0, warnings_[0].argument_index); // [確認_正常系] - warnings_[0].argument_index が 0 であること。
+    EXPECT_EQ(
+        FILTER_TEST_MIXED_KEY_NUMBER_VALUE,
+        warnings_[0]
+            .other_string_key); // [確認_正常系] - warnings_[0].other_string_key が FILTER_TEST_MIXED_KEY_NUMBER_VALUE であること。
+    EXPECT_EQ(0,
+              warnings_[0].other_argument_index); // [確認_正常系] - warnings_[0].other_argument_index が 0 であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH,
+        warnings_[1]
+            .kind); // [確認_正常系] - warnings_[1].kind が CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH であること。
+    EXPECT_EQ(
+        FILTER_TEST_MIXED_KEY_TEXT_VALUE,
+        warnings_[1]
+            .string_key); // [確認_正常系] - warnings_[1].string_key が FILTER_TEST_MIXED_KEY_TEXT_VALUE であること。
+    EXPECT_EQ(0, warnings_[1].argument_index); // [確認_正常系] - warnings_[1].argument_index が 0 であること。
+    EXPECT_EQ(
+        -1,
+        warnings_[1]
+            .other_argument_index); // [確認_正常系] - warnings_[1].other_argument_index が -1 であること。(もう一方の引数を使用しないことの確認)
 }
 // [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
@@ -118,14 +134,22 @@ TEST_F(stringCatalogFilterCheckTest, null_comparison_warns_only_integer_entry)
     actual_ret = check("arg.value == null"); // [手順] - value を null と比較する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - CPLAT_OK を返すこと。
-    ASSERT_EQ(2U, warning_count_);   // [確認_正常系] - 混在と型の不一致の 2 件であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_WARNING_MIXED_ARGUMENT_TYPES,
-              warnings_[0].kind); // [確認_正常系] - 1 件目が型区分の混在であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH,
-              warnings_[1].kind); // [確認_正常系] - 2 件目が型の不一致であること。
-    EXPECT_EQ(FILTER_TEST_MIXED_KEY_NUMBER_VALUE,
-              warnings_[1].string_key); // [確認_正常系] - 型が合わないのは整数の項目だけであること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - check() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(
+        2U,
+        warning_count_); // [確認_正常系] - warning_count_ が 2U であること。(混在と型の不一致の警告が 1 件ずつあることの確認)
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_WARNING_MIXED_ARGUMENT_TYPES,
+        warnings_[0]
+            .kind); // [確認_正常系] - warnings_[0].kind が CPLAT_STRING_CATALOG_FILTER_WARNING_MIXED_ARGUMENT_TYPES であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH,
+        warnings_[1]
+            .kind); // [確認_正常系] - warnings_[1].kind が CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH であること。
+    EXPECT_EQ(
+        FILTER_TEST_MIXED_KEY_NUMBER_VALUE,
+        warnings_[1]
+            .string_key); // [確認_正常系] - warnings_[1].string_key が FILTER_TEST_MIXED_KEY_NUMBER_VALUE であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
@@ -142,20 +166,30 @@ TEST_F(stringCatalogFilterCheckTest, mixed_warning_is_reported_once_per_name)
     actual_ret = check("arg.value == 5 || arg.value == \"x\""); // [手順] - value を数値と文字列の両方と比較する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - CPLAT_OK を返すこと。
-    ASSERT_EQ(4U, warning_count_);   // [確認_正常系] - 混在 1 件と型の不一致 3 件であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_WARNING_MIXED_ARGUMENT_TYPES,
-              warnings_[0].kind);                // [確認_正常系] - 混在の警告が先頭にあること。
-    EXPECT_EQ(0U, warnings_[0].predicate_index); // [確認_正常系] - 混在は最初の比較要素で警告すること。
-    EXPECT_EQ(FILTER_TEST_MIXED_KEY_TEXT_VALUE,
-              warnings_[1].string_key);          // [確認_正常系] - 数値との比較では文字列の項目が合わないこと。
-    EXPECT_EQ(0U, warnings_[1].predicate_index); // [確認_正常系] - 1 つ目の比較要素の警告であること。
-    EXPECT_EQ(FILTER_TEST_MIXED_KEY_NUMBER_VALUE,
-              warnings_[2].string_key);          // [確認_正常系] - 文字列との比較では整数の項目が合わないこと。
-    EXPECT_EQ(1U, warnings_[2].predicate_index); // [確認_正常系] - 2 つ目の比較要素の警告であること。
-    EXPECT_EQ(FILTER_TEST_MIXED_KEY_POINTER_VALUE,
-              warnings_[3].string_key);          // [確認_正常系] - 文字列との比較ではポインターの項目も合わないこと。
-    EXPECT_EQ(1U, warnings_[3].predicate_index); // [確認_正常系] - 2 つ目の比較要素の警告であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - check() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(
+        4U,
+        warning_count_); // [確認_正常系] - warning_count_ が 4U であること。(混在 1 件と型の不一致 3 件の警告があることの確認)
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_WARNING_MIXED_ARGUMENT_TYPES,
+        warnings_[0]
+            .kind); // [確認_正常系] - warnings_[0].kind が CPLAT_STRING_CATALOG_FILTER_WARNING_MIXED_ARGUMENT_TYPES であること。
+    EXPECT_EQ(0U, warnings_[0].predicate_index); // [確認_正常系] - warnings_[0].predicate_index が 0U であること。
+    EXPECT_EQ(
+        FILTER_TEST_MIXED_KEY_TEXT_VALUE,
+        warnings_[1]
+            .string_key); // [確認_正常系] - warnings_[1].string_key が FILTER_TEST_MIXED_KEY_TEXT_VALUE であること。
+    EXPECT_EQ(0U, warnings_[1].predicate_index); // [確認_正常系] - warnings_[1].predicate_index が 0U であること。
+    EXPECT_EQ(
+        FILTER_TEST_MIXED_KEY_NUMBER_VALUE,
+        warnings_[2]
+            .string_key); // [確認_正常系] - warnings_[2].string_key が FILTER_TEST_MIXED_KEY_NUMBER_VALUE であること。
+    EXPECT_EQ(1U, warnings_[2].predicate_index); // [確認_正常系] - warnings_[2].predicate_index が 1U であること。
+    EXPECT_EQ(
+        FILTER_TEST_MIXED_KEY_POINTER_VALUE,
+        warnings_[3]
+            .string_key); // [確認_正常系] - warnings_[3].string_key が FILTER_TEST_MIXED_KEY_POINTER_VALUE であること。
+    EXPECT_EQ(1U, warnings_[3].predicate_index); // [確認_正常系] - warnings_[3].predicate_index が 1U であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
@@ -172,16 +206,28 @@ TEST_F(stringCatalogFilterCheckTest, never_satisfiable_line_is_diagnosed_and_war
     actual_ret = check("arg.count starts_with \"1\""); // [手順] - 整数だけの count を文字列で判定する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - CPLAT_OK を返すこと。
-    ASSERT_EQ(1U, invalid_count_);   // [確認_正常系] - 行を無効にすること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NEVER_SATISFIABLE,
-              diagnostics_[0].error); // [確認_正常系] - 原因が成立し得ない条件であること。
-    ASSERT_EQ(2U, warning_count_);    // [確認_正常系] - count を持つ 2 項目の型の不一致であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH,
-              warnings_[0].kind); // [確認_正常系] - 混在ではなく型の不一致であること。
-    EXPECT_EQ(FILTER_TEST_MIXED_KEY_TEXT_VALUE, warnings_[0].string_key);   // [確認_正常系] - 1 項目目であること。
-    EXPECT_EQ(1, warnings_[0].argument_index);                              // [確認_正常系] - count の位置であること。
-    EXPECT_EQ(FILTER_TEST_MIXED_KEY_NUMBER_VALUE, warnings_[1].string_key); // [確認_正常系] - 2 項目目であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - check() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(1U, invalid_count_);   // [確認_正常系] - invalid_count_ が 1U であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NEVER_SATISFIABLE,
+        diagnostics_[0]
+            .error); // [確認_正常系] - diagnostics_[0].error が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NEVER_SATISFIABLE であること。
+    ASSERT_EQ(
+        2U,
+        warning_count_); // [確認_正常系] - warning_count_ が 2U であること。(count を持つ 2 項目で型の不一致を警告することの確認)
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH,
+        warnings_[0]
+            .kind); // [確認_正常系] - warnings_[0].kind が CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH であること。
+    EXPECT_EQ(
+        FILTER_TEST_MIXED_KEY_TEXT_VALUE,
+        warnings_[0]
+            .string_key); // [確認_正常系] - warnings_[0].string_key が FILTER_TEST_MIXED_KEY_TEXT_VALUE であること。
+    EXPECT_EQ(1, warnings_[0].argument_index); // [確認_正常系] - warnings_[0].argument_index が 1 であること。
+    EXPECT_EQ(
+        FILTER_TEST_MIXED_KEY_NUMBER_VALUE,
+        warnings_[1]
+            .string_key); // [確認_正常系] - warnings_[1].string_key が FILTER_TEST_MIXED_KEY_NUMBER_VALUE であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
@@ -202,13 +248,19 @@ TEST_F(stringCatalogFilterCheckTest, has_and_index_reference_are_not_warned_as_m
     actual_index_ret = check("arg[0] == 5"); // [手順] - 0 番目の引数を数値と比較する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_has_ret);   // [確認_正常系] - CPLAT_OK を返すこと。
-    EXPECT_EQ(0U, actual_has_count);       // [確認_正常系] - has は警告しないこと。
-    EXPECT_EQ(CPLAT_OK, actual_index_ret); // [確認_正常系] - CPLAT_OK を返すこと。
-    ASSERT_EQ(1U, warning_count_);         // [確認_正常系] - 型の不一致の 1 件だけであること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH,
-              warnings_[0].kind); // [確認_正常系] - インデックスの参照は混在として警告しないこと。
-    EXPECT_EQ(FILTER_TEST_MIXED_KEY_TEXT_VALUE, warnings_[0].string_key); // [確認_正常系] - 文字列の項目であること。
+    EXPECT_EQ(CPLAT_OK, actual_has_ret); // [確認_正常系] - has に対する check() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0U, actual_has_count);     // [確認_正常系] - actual_has_count が 0U であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_index_ret); // [確認_正常系] - インデックスの参照に対する check() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(1U, warning_count_); // [確認_正常系] - warning_count_ が 1U であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH,
+        warnings_[0]
+            .kind); // [確認_正常系] - warnings_[0].kind が CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH であること。
+    EXPECT_EQ(
+        FILTER_TEST_MIXED_KEY_TEXT_VALUE,
+        warnings_[0]
+            .string_key); // [確認_正常系] - warnings_[0].string_key が FILTER_TEST_MIXED_KEY_TEXT_VALUE であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
@@ -224,7 +276,7 @@ TEST_F(stringCatalogFilterCheckTest, warning_count_exceeding_capacity_is_reporte
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("arg.value == 5 || arg.value == \"x\"",
                                             image)); // [状態] - 警告が 4 件になる条件式をコンパイルする。
-    // [状態確認] - `compile_single_line("arg.value == 5 || arg.value == \"x\"", image)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - compile_single_line() の戻り値が CPLAT_OK であること。
     actual_warnings[1].kind = CPLAT_STRING_CATALOG_FILTER_WARNING_NONE;
 
     // Pre-Assert
@@ -235,12 +287,19 @@ TEST_F(stringCatalogFilterCheckTest, warning_count_exceeding_capacity_is_reporte
                                                &actual_count); // [手順] - 容量 1 で確認する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - CPLAT_OK を返すこと。
-    EXPECT_EQ(4U, actual_count);     // [確認_正常系] - 容量にかかわらず総数を返すこと。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_WARNING_MIXED_ARGUMENT_TYPES,
-              actual_warnings[0].kind); // [確認_正常系] - 容量までを格納すること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_WARNING_NONE,
-              actual_warnings[1].kind); // [確認_正常系] - 容量を超えて書き込まないこと。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret); // [確認_正常系] - cplat_string_catalog_filter_slot_check() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        4U,
+        actual_count); // [確認_正常系] - actual_count が 4U であること。(容量にかかわらず警告の総数を返すことの確認)
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_WARNING_MIXED_ARGUMENT_TYPES,
+        actual_warnings[0]
+            .kind); // [確認_正常系] - actual_warnings[0].kind が CPLAT_STRING_CATALOG_FILTER_WARNING_MIXED_ARGUMENT_TYPES であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_WARNING_NONE,
+        actual_warnings[1]
+            .kind); // [確認_正常系] - actual_warnings[1].kind が CPLAT_STRING_CATALOG_FILTER_WARNING_NONE であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
@@ -256,10 +315,10 @@ TEST_F(stringCatalogFilterCheckTest, check_keeps_applied_conditions)
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == FILTER_TEST_MIXED_KEY_NUMBER_VALUE",
                                             applied)); // [状態] - NUMBER_VALUE だけに一致する条件式をコンパイルする。
-    // [状態確認] - `compile_single_line("key == FILTER_TEST_MIXED_KEY_NUMBER_VALUE", applied)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - compile_single_line() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_apply(slot_, applied, kImageSize, nullptr, 0U,
                                                                nullptr)); // [状態] - 条件式を適用する。
-    // [状態確認] - `cplat_string_catalog_filter_slot_apply(slot_, applied, kImageSize, nullptr, 0U, nullptr)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - cplat_string_catalog_filter_slot_apply() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -271,11 +330,13 @@ TEST_F(stringCatalogFilterCheckTest, check_keeps_applied_conditions)
                                                 &actual_text_state); // [手順] - 適用中の状態を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - CPLAT_OK を返すこと。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH,
-              actual_number_state); // [確認_正常系] - 適用中の条件が維持されること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_NEVER_MATCH,
-              actual_text_state); // [確認_正常系] - 確認した条件は判定に使われないこと。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - check() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH,
+        actual_number_state); // [確認_正常系] - actual_number_state が CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_STATE_NEVER_MATCH,
+        actual_text_state); // [確認_正常系] - actual_text_state が CPLAT_STRING_CATALOG_FILTER_STATE_NEVER_MATCH であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
@@ -297,8 +358,11 @@ TEST_F(stringCatalogFilterCheckTest, corrupt_image_is_rejected)
                                                         &actual_count); // [手順] - 壊れた領域を確認する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, actual_ret); // [確認_異常系] - 検証の失敗を返すこと。
-    EXPECT_EQ(99U, actual_count);                        // [確認_異常系] - 総数を書き換えないこと。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_filter_slot_check() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(99U,
+              actual_count); // [確認_異常系] - actual_count が 99U であること。(警告の総数を書き換えないことの確認)
 }
 // [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
@@ -310,17 +374,23 @@ TEST_F(stringCatalogFilterCheckTest, null_arguments_are_rejected)
     static unsigned char image[kImageSize];
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("arg.value == 5", image)); // [状態] - 条件式をコンパイルする。
-    // [状態確認] - `compile_single_line("arg.value == 5", image)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - compile_single_line() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
-    // Act & Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_string_catalog_filter_slot_check(nullptr, image, kImageSize, nullptr, 0U, nullptr, nullptr, 0U,
-                                                     nullptr)); // [確認_異常系] - スロットが NULL なら拒否すること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              cplat_string_catalog_filter_slot_check(slot_, nullptr, kImageSize, nullptr, 0U, nullptr, nullptr, 0U,
-                                                     nullptr)); // [確認_異常系] - 領域が NULL なら拒否すること。
+    // Act
+    int actual_ret_slot =
+        cplat_string_catalog_filter_slot_check(nullptr, image, kImageSize, nullptr, 0U, nullptr, nullptr, 0U, nullptr);
+    int actual_ret_image =
+        cplat_string_catalog_filter_slot_check(slot_, nullptr, kImageSize, nullptr, 0U, nullptr, nullptr, 0U, nullptr);
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_slot); // [確認_異常系] - スロットが NULL の cplat_string_catalog_filter_slot_check() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_image); // [確認_異常系] - 領域が NULL の cplat_string_catalog_filter_slot_check() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
@@ -338,11 +408,12 @@ TEST_F(stringCatalogFilterCheckTest, describe_notes_mixed_argument_in_japanese)
                           CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - value を 2 回比較する条件式を説明する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - CPLAT_OK を返すこと。
-    EXPECT_STREQ("引数 value が 5 である かつ 引数 value が 6 ではない"
-                 " (注意: 引数 value はカタログ内に文字列型と数値型が混在しているため、"
-                 "意図した判定結果にならない可能性があります)",
-                 description_); // [確認_正常系] - 同じ名前の注記は 1 回だけ末尾に付くこと。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - describe() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(
+        "引数 value が 5 である かつ 引数 value が 6 ではない"
+        " (注意: 引数 value はカタログ内に文字列型と数値型が混在しているため、"
+        "意図した判定結果にならない可能性があります)",
+        description_); // [確認_正常系] - description_ が "引数 value が 5 である かつ 引数 value が 6 ではない (注意: 引数 value はカタログ内に文字列型と数値型が混在しているため、意図した判定結果にならない可能性があります)" であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
@@ -359,10 +430,10 @@ TEST_F(stringCatalogFilterCheckTest, describe_notes_mixed_argument_in_neutral)
     actual_ret = describe("arg.value == null", CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL); // [手順] - 条件式を説明する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - CPLAT_OK を返すこと。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - describe() の戻り値が CPLAT_OK であること。
     EXPECT_NE(nullptr, std::strstr(description_, " (Note: argument value has both string and numeric types in the "
                                                  "catalog; the result may not be as intended.)"))
-        << description_; // [確認_正常系] - ニュートラル言語の注記が付くこと。
+        << description_; // [確認_正常系] - " (Note: argument value has both string and numeric types in the catalog; the result may not be as intended.)" を探した std::strstr() の戻り値が nullptr 以外であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
@@ -384,10 +455,12 @@ TEST_F(stringCatalogFilterCheckTest, describe_does_not_note_unmixed_or_has_only_
     actual_has_ret = describe("has(arg.value)", CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - has を説明する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_count_ret); // [確認_正常系] - CPLAT_OK を返すこと。
-    EXPECT_FALSE(actual_count_noted);      // [確認_正常系] - 整数だけの count には注記しないこと。
-    EXPECT_EQ(CPLAT_OK, actual_has_ret);   // [確認_正常系] - CPLAT_OK を返すこと。
+    EXPECT_EQ(CPLAT_OK,
+              actual_count_ret); // [確認_正常系] - count の条件式に対する describe() の戻り値が CPLAT_OK であること。
+    EXPECT_FALSE(actual_count_noted); // [確認_正常系] - actual_count_noted が false であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_has_ret); // [確認_正常系] - has の条件式に対する describe() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(nullptr, std::strstr(description_, "注意"))
-        << description_; // [確認_正常系] - has だけで参照する value には注記しないこと。
+        << description_; // [確認_正常系] - "注意" を探した std::strstr() の戻り値が nullptr であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]

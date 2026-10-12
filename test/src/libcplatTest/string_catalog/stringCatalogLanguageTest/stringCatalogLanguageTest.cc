@@ -38,9 +38,8 @@ void expect_ui_language_tag(NiceMock<Mock_cplat> &mock, const char *const tag)
                 }
                 memcpy(tag_out, tag, length + 1U);
                 return CPLAT_OK;
-            }));
-    // [Pre-Assert手順] - 指定した表示言語タグを出力バッファーへコピーする。
-    // [Pre-Assert確認_正常系] - 表示言語の取得で cplat_ui_language_get_tag() が呼び出されること。
+            })); // [Pre-Assert確認_正常系] - cplat_ui_language_get_tag() が任意の回数呼び出されること。
+                 // [Pre-Assert手順] - 指定した表示言語タグを出力バッファーへコピーする。
 }
 // [サブ手順終了]
 
@@ -82,8 +81,9 @@ TEST_F(stringCatalogLanguageTest, decides_from_environment)
     actual_language = cplat_string_catalog_get_language(); // [手順] - 設定を行わずに現在の言語を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE,
-              actual_language); // [確認_正常系] - 実行環境の表示言語に対応する日本語となること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE,
+        actual_language); // [確認_正常系] - cplat_string_catalog_get_language() の戻り値が CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE であること。
 }
 // [サブ手順参照 名前=stringCatalogLanguageTest.TearDown]
 
@@ -104,8 +104,9 @@ TEST_F(stringCatalogLanguageTest, decides_neutral_for_unknown_tag)
     actual_language = cplat_string_catalog_get_language(); // [手順] - 設定を行わずに現在の言語を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL,
-              actual_language); // [確認_正常系] - 対応する言語が存在しない場合にニュートラル言語となること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL,
+        actual_language); // [確認_正常系] - 対応する言語が存在しない場合の cplat_string_catalog_get_language() の戻り値が CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL であること。
 }
 // [サブ手順参照 名前=stringCatalogLanguageTest.TearDown]
 
@@ -126,8 +127,9 @@ TEST_F(stringCatalogLanguageTest, decides_neutral_for_neutral_tag)
     actual_language = cplat_string_catalog_get_language(); // [手順] - 設定を行わずに現在の言語を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL,
-              actual_language); // [確認_正常系] - ニュートラル言語となること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL,
+        actual_language); // [確認_正常系] - cplat_string_catalog_get_language() の戻り値が CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL であること。
 }
 // [サブ手順参照 名前=stringCatalogLanguageTest.TearDown]
 
@@ -153,10 +155,12 @@ TEST_F(stringCatalogLanguageTest, decides_environment_only_once)
     actual_language_second = cplat_string_catalog_get_language(); // [手順] - 現在の言語を再度取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE,
-              actual_language_first); // [確認_正常系] - 最初の取得で日本語となること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE,
-              actual_language_second); // [確認_正常系] - 表示言語の変更後も決定済みの日本語を返すこと。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE,
+        actual_language_first); // [確認_正常系] - 最初の cplat_string_catalog_get_language() の戻り値が CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE,
+        actual_language_second); // [確認_正常系] - 表示言語の変更後の cplat_string_catalog_get_language() の戻り値が CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE であること。
 }
 // [サブ手順参照 名前=stringCatalogLanguageTest.TearDown]
 
@@ -171,7 +175,7 @@ TEST_F(stringCatalogLanguageTest, explicit_setting_precedes_environment)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_ui_language_get_tag(_, _))
-        .Times(0); // [Pre-Assert確認_正常系] - 表示言語の取得が呼び出されないこと。
+        .Times(0); // [Pre-Assert確認_正常系] - cplat_ui_language_get_tag() が呼び出されないこと。
 
     // Act
     actual_ret = cplat_string_catalog_set_language(
@@ -179,9 +183,11 @@ TEST_F(stringCatalogLanguageTest, explicit_setting_precedes_environment)
     actual_language = cplat_string_catalog_get_language(); // [手順] - 現在の言語を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - ニュートラル言語の設定が成功すること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL,
-              actual_language); // [確認_正常系] - 明示的に設定したニュートラル言語が実行環境で上書きされないこと。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret); // [確認_正常系] - cplat_string_catalog_set_language() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL,
+        actual_language); // [確認_正常系] - 明示的な設定後の cplat_string_catalog_get_language() の戻り値が CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL であること。
 }
 // [サブ手順参照 名前=stringCatalogLanguageTest.TearDown]
 
@@ -206,12 +212,18 @@ TEST_F(stringCatalogLanguageTest, set_and_get)
     actual_language_english = cplat_string_catalog_get_language();                // [手順] - 現在の言語を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_japanese); // [確認_正常系] - 日本語の設定が成功すること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE,
-              actual_language_japanese);     // [確認_正常系] - 設定した日本語を取得できること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_english); // [確認_正常系] - 英語の設定が成功すること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_ENGLISH,
-              actual_language_english); // [確認_正常系] - 設定した英語を取得できること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_japanese); // [確認_正常系] - 日本語を設定した cplat_string_catalog_set_language() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE,
+        actual_language_japanese); // [確認_正常系] - 日本語の設定後の cplat_string_catalog_get_language() の戻り値が CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_english); // [確認_正常系] - 英語を設定した cplat_string_catalog_set_language() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_LANGUAGE_ENGLISH,
+        actual_language_english); // [確認_正常系] - 英語の設定後の cplat_string_catalog_get_language() の戻り値が CPLAT_STRING_CATALOG_LANGUAGE_ENGLISH であること。
 }
 // [サブ手順参照 名前=stringCatalogLanguageTest.TearDown]
 
@@ -233,9 +245,12 @@ TEST_F(stringCatalogLanguageTest, invalid_language)
     actual_language = cplat_string_catalog_get_language();                      // [手順] - 現在の言語を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - 戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE, actual_language); // [確認_異常系] - 設定が変更されないこと。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_set_language() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE,
+        actual_language); // [確認_異常系] - 不正な設定後の cplat_string_catalog_get_language() の戻り値が CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE であること。
 }
 // [サブ手順参照 名前=stringCatalogLanguageTest.TearDown]
 
@@ -262,15 +277,24 @@ TEST_F(stringCatalogLanguageTest, language_from_tag)
         cplat_string_catalog_language_from_tag("JA", &actual_language_upper); // [手順] - 大文字の言語タグを対応付ける。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_japanese); // [確認_正常系] - 日本語の言語タグで戻り値が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE,
-              actual_language_japanese);     // [確認_正常系] - 地域を含む言語タグが日本語へ対応付けられること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_english); // [確認_正常系] - 英語の言語タグで戻り値が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_ENGLISH,
-              actual_language_english);    // [確認_正常系] - 言語だけの言語タグが英語へ対応付けられること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_upper); // [確認_正常系] - 大文字の言語タグで戻り値が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE,
-              actual_language_upper); // [確認_正常系] - 大文字の言語タグが日本語へ対応付けられること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_japanese); // [確認_正常系] - 日本語の言語タグに対する cplat_string_catalog_language_from_tag() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE,
+        actual_language_japanese); // [確認_正常系] - actual_language_japanese が CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_english); // [確認_正常系] - 英語の言語タグに対する cplat_string_catalog_language_from_tag() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_LANGUAGE_ENGLISH,
+        actual_language_english); // [確認_正常系] - actual_language_english が CPLAT_STRING_CATALOG_LANGUAGE_ENGLISH であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_upper); // [確認_正常系] - 大文字の言語タグに対する cplat_string_catalog_language_from_tag() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE,
+        actual_language_upper); // [確認_正常系] - actual_language_upper が CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE であること。
 }
 // [サブ手順参照 名前=stringCatalogLanguageTest.TearDown]
 
@@ -293,13 +317,18 @@ TEST_F(stringCatalogLanguageTest, language_from_tag_without_match)
         "", &actual_language_neutral); // [手順] - ニュートラルを表す空文字列を対応付ける。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
-              actual_ret_unknown); // [確認_異常系] - 扱わない言語の戻り値が CPLAT_ERR_NOT_FOUND であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL,
-              actual_language_unknown);      // [確認_異常系] - 扱わない言語でニュートラル言語が格納されること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_neutral); // [確認_正常系] - 空文字列の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL,
-              actual_language_neutral); // [確認_正常系] - 空文字列でニュートラル言語が格納されること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_unknown); // [確認_異常系] - 扱わない言語のタグに対する cplat_string_catalog_language_from_tag() の戻り値が CPLAT_ERR_NOT_FOUND であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL,
+        actual_language_unknown); // [確認_異常系] - actual_language_unknown が CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_neutral); // [確認_正常系] - 空文字列に対する cplat_string_catalog_language_from_tag() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL,
+        actual_language_neutral); // [確認_正常系] - actual_language_neutral が CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL であること。
 }
 // [サブ手順参照 名前=stringCatalogLanguageTest.TearDown]
 
@@ -322,11 +351,12 @@ TEST_F(stringCatalogLanguageTest, language_from_tag_invalid_argument)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_tag); // [確認_異常系] - 言語タグが NULL の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_tag); // [確認_異常系] - 言語タグが NULL の場合の cplat_string_catalog_language_from_tag() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_language); // [確認_異常系] - 格納先が NULL の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_LANGUAGE_COUNT,
-              actual_language); // [確認_異常系] - 言語タグが NULL の場合に格納先を変更しないこと。
+        actual_ret_null_language); // [確認_異常系] - 格納先が NULL の場合の cplat_string_catalog_language_from_tag() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_LANGUAGE_COUNT,
+        actual_language); // [確認_異常系] - actual_language が CPLAT_STRING_CATALOG_LANGUAGE_COUNT であること。(言語タグが NULL の場合に格納先を変更しないことの確認)
 }
 // [サブ手順参照 名前=stringCatalogLanguageTest.TearDown]

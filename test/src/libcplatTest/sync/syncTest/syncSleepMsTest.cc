@@ -17,7 +17,8 @@ TEST(syncSleepMsTest, zero_returns_immediately)
     uint64_t after = test_monotonic_ms(); // [手順] - 呼び出し後の単調増加時刻を取得する。
 
     // Assert
-    EXPECT_LT(after - before, 100U); // [確認_正常系] - 0 ms 指定で即時に戻ること。
+    EXPECT_LT(after - before,
+              100U); // [確認_正常系] - 0 ms 指定の after - before が 100U より小さいこと。(即時に戻ることの確認)
 }
 
 // 負の待機時間の指定で即時に戻ることの確認
@@ -33,7 +34,9 @@ TEST(syncSleepMsTest, negative_returns_immediately)
     uint64_t after = test_monotonic_ms(); // [手順] - 呼び出し後の単調増加時刻を取得する。
 
     // Assert
-    EXPECT_LT(after - before, 100U); // [確認_異常系] - 負値指定で即時に戻ること (no-op)。
+    EXPECT_LT(
+        after - before,
+        100U); // [確認_異常系] - 負の待機時間指定の after - before が 100U より小さいこと。(no-op で即時に戻ることの確認)
 }
 
 // 指定した待機時間以上が経過することの確認
@@ -52,11 +55,11 @@ TEST(syncSleepMsTest, elapses_at_least_specified_duration)
             [](const char *, int, const char *, const struct timespec *req, struct timespec *) -> int
             {
                 EXPECT_EQ(0, req->tv_sec);
-                // [確認_正常系] - `nanosleep` に渡す待機時間の秒部 が `0` であること。
+                // [Pre-Assert確認_正常系] - req->tv_sec が 0 であること。(50 ms の秒部が 0 であることの確認)
                 EXPECT_EQ(50000000L, req->tv_nsec);
-                // [確認_正常系] - `nanosleep` に渡す待機時間のナノ秒部 が `50000000L` であること。
+                // [Pre-Assert確認_正常系] - req->tv_nsec が 50000000L であること。(50 ms が 50000000 ナノ秒であることの確認)
                 return 0;
-            }); // [Pre-Assert確認_正常系] - nanosleep が 50 ms 相当で 1 回呼び出されること。
+            }); // [Pre-Assert確認_正常系] - nanosleep() が 1 回呼び出されること。
                 // [Pre-Assert手順] - nanosleep から 0 を返却する。
 #endif          /* PLATFORM_LINUX */
 
@@ -71,9 +74,10 @@ TEST(syncSleepMsTest, elapses_at_least_specified_duration)
 
     // Assert
 #if defined(PLATFORM_LINUX)
-    SUCCEED(); // [確認_正常系] - nanosleep が 50 ms 相当で呼び出されること。
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(nanosleep() が 50 ms 相当で呼び出されたことの確認)
 #else
     // Windows の GetTickCount64 は ~15 ms 精度のため余裕を持って判定する。
-    EXPECT_GE(after - before, (uint64_t)target_ms - 15U); // [確認_正常系] - 指定ミリ秒以上経過していること。
+    EXPECT_GE(after - before, (uint64_t)target_ms - 15U);
+    // [確認_正常系] - after - before が (uint64_t)target_ms - 15U 以上であること。(GetTickCount64 の 15 ms 精度を差し引き、指定ミリ秒以上経過していることの確認)
 #endif /* PLATFORM_LINUX */
 }

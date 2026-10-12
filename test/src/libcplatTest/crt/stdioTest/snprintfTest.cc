@@ -30,8 +30,8 @@ TEST_F(snprintfTest, formats_into_buffer)
                                     7); // [手順] - "%s=%d" に "count" と 7 を与えて cplat_snprintf を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_snprintf の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("count=7", buf);    // [確認_正常系] - バッファーに "count=7" が書き込まれること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_snprintf() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("count=7", buf);    // [確認_正常系] - buf が "count=7" であること。
 }
 
 // 出力がバッファーにちょうど収まる場合に成功することの確認
@@ -46,8 +46,8 @@ TEST_F(snprintfTest, exact_fit_succeeds)
     int actual_ret = cplat_snprintf(buf, sizeof(buf), "abc"); // [手順] - 3 文字の "abc" を書式として渡す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_snprintf の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("abc", buf);        // [確認_正常系] - バッファーに "abc" が書き込まれること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_snprintf() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("abc", buf);        // [確認_正常系] - buf が "abc" であること。
 }
 
 // 1 バイト不足の場合にバッファー不足を返しバッファーが空になることの確認
@@ -63,8 +63,8 @@ TEST_F(snprintfTest, truncation_clears_buffer)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              actual_ret); // [確認_異常系] - cplat_snprintf の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
-    EXPECT_STREQ("", buf); // [確認_異常系] - 切り詰めた結果を残さずバッファーが空文字列になること。
+              actual_ret); // [確認_異常系] - cplat_snprintf() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_STREQ("", buf); // [確認_異常系] - buf が "" であること。(切り詰めた結果が残らないことの確認)
 }
 
 // 書き込み先が NULL の場合に引数エラーになることの確認
@@ -80,7 +80,7 @@ TEST_F(snprintfTest, null_dest_returns_invalid_argument)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - cplat_snprintf の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+              actual_ret); // [確認_異常系] - cplat_snprintf() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // バッファー サイズが 0 の場合に引数エラーになることの確認
@@ -97,7 +97,7 @@ TEST_F(snprintfTest, zero_dest_size_returns_invalid_argument)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - cplat_snprintf の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+              actual_ret); // [確認_異常系] - cplat_snprintf() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 書式が NULL の場合に引数エラーになることの確認
@@ -114,7 +114,7 @@ TEST_F(snprintfTest, null_format_returns_invalid_argument)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - cplat_snprintf の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+              actual_ret); // [確認_異常系] - cplat_snprintf() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // va_list 版でも書式化結果が書き込まれることの確認
@@ -130,8 +130,8 @@ TEST_F(snprintfTest, vsnprintf_formats_into_buffer)
                                           "b"); // [手順] - va_list 経由で "%s-%s" に "a" と "b" を与えて呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_vsnprintf の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("a-b", buf);        // [確認_正常系] - バッファーに "a-b" が書き込まれること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - call_cplat_vsnprintf() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("a-b", buf);        // [確認_正常系] - buf が "a-b" であること。
 }
 
 // va_list 版でも切り詰め時にバッファーが空になることの確認
@@ -148,6 +148,6 @@ TEST_F(snprintfTest, vsnprintf_truncation_clears_buffer)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              actual_ret); // [確認_異常系] - cplat_vsnprintf の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
-    EXPECT_STREQ("", buf); // [確認_異常系] - 切り詰めた結果を残さずバッファーが空文字列になること。
+              actual_ret); // [確認_異常系] - call_cplat_vsnprintf() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_STREQ("", buf); // [確認_異常系] - buf が "" であること。(切り詰めた結果が残らないことの確認)
 }

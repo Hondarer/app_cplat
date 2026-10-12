@@ -32,7 +32,7 @@ class stringCatalogFilterCategoryTest : public Test
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(
                                 filter_test_trace_catalog(), filter_test_trace_key_names(),
                                 filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_));
-        // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_trace_catalog(), filter_test_trace_key_names(), filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - cplat_string_catalog_filter_slot_create() の戻り値が CPLAT_OK であること。
     }
     // [サブ手順終了]
 
@@ -100,7 +100,7 @@ TEST_F(stringCatalogFilterCategoryTest, level_name_and_number_give_same_result)
 
     ASSERT_EQ(CPLAT_OK,
               recreate_slot_with_category_names(&s_level_category_names)); // [状態] - レベルの名前を設定する。
-    // [状態確認] - `recreate_slot_with_category_names(&s_level_category_names)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - recreate_slot_with_category_names() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -110,12 +110,15 @@ TEST_F(stringCatalogFilterCategoryTest, level_name_and_number_give_same_result)
     actual_started_name = state_of(FILTER_TEST_TRACE_KEY_WORKER_STARTED);
 
     // Assert_1
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE,
-              actual_error_name); // [確認_正常系] - レベル名の行が有効であること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH,
-              actual_failed_name); // [確認_正常系] - WARNING の JOB_FAILED が一致すること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_STATE_NEVER_MATCH,
-              actual_started_name); // [確認_正常系] - INFO の WORKER_STARTED が一致しないこと。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE,
+        actual_error_name); // [確認_正常系] - レベル名の条件式に対する apply_line() の戻り値が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH,
+        actual_failed_name); // [確認_正常系] - レベル名の条件式の JOB_FAILED に対する state_of() の戻り値が CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_STATE_NEVER_MATCH,
+        actual_started_name); // [確認_正常系] - レベル名の条件式の WORKER_STARTED に対する state_of() の戻り値が CPLAT_STRING_CATALOG_FILTER_STATE_NEVER_MATCH であること。
 
     // Act_2
     actual_error_number = apply_line("category <= 2"); // [手順] - 数値で書いた条件式を適用する。
@@ -123,10 +126,15 @@ TEST_F(stringCatalogFilterCategoryTest, level_name_and_number_give_same_result)
     actual_started_number = state_of(FILTER_TEST_TRACE_KEY_WORKER_STARTED);
 
     // Assert_2
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE,
-              actual_error_number);                        // [確認_正常系] - 数値の行が有効であること。
-    EXPECT_EQ(actual_failed_name, actual_failed_number);   // [確認_正常系] - JOB_FAILED の判定が同じであること。
-    EXPECT_EQ(actual_started_name, actual_started_number); // [確認_正常系] - WORKER_STARTED の判定が同じであること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE,
+        actual_error_number); // [確認_正常系] - 数値の条件式に対する apply_line() の戻り値が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE であること。
+    EXPECT_EQ(
+        actual_failed_name,
+        actual_failed_number); // [確認_正常系] - 数値の条件式の JOB_FAILED に対する state_of() の戻り値がレベル名の条件式の JOB_FAILED に対する state_of() の戻り値と一致すること。
+    EXPECT_EQ(
+        actual_started_name,
+        actual_started_number); // [確認_正常系] - 数値の条件式の WORKER_STARTED に対する state_of() の戻り値がレベル名の条件式の WORKER_STARTED に対する state_of() の戻り値と一致すること。
 }
 // [サブ手順参照 名前=stringCatalogFilterCategoryTest.TearDown]
 
@@ -137,7 +145,7 @@ TEST_F(stringCatalogFilterCategoryTest, out_of_range_values_are_rejected)
     // Arrange
     ASSERT_EQ(CPLAT_OK,
               recreate_slot_with_category_names(&s_level_category_names)); // [状態] - レベルの名前を設定する。
-    // [状態確認] - `recreate_slot_with_category_names(&s_level_category_names)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - recreate_slot_with_category_names() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -154,16 +162,21 @@ TEST_F(stringCatalogFilterCategoryTest, out_of_range_values_are_rejected)
         apply_line("category in [0, 6, 2.0]"); // [手順] - 範囲の両端と整数値の実数を適用する。
 
     // Assert
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_CATEGORY_OUT_OF_RANGE,
-              actual_upper); // [確認_異常系] - 上限超過が拒否されること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_CATEGORY_OUT_OF_RANGE,
-              actual_negative); // [確認_異常系] - 負の値が拒否されること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_CATEGORY_OUT_OF_RANGE,
-              actual_fraction); // [確認_異常系] - 整数でない値が拒否されること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_CATEGORY_OUT_OF_RANGE,
-              actual_list); // [確認_異常系] - 列挙の範囲外が拒否されること。
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE,
-              actual_boundary); // [確認_正常系] - 範囲内の値は受け入れられること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_CATEGORY_OUT_OF_RANGE,
+        actual_upper); // [確認_異常系] - 上限を超える値に対する apply_line() の戻り値が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_CATEGORY_OUT_OF_RANGE であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_CATEGORY_OUT_OF_RANGE,
+        actual_negative); // [確認_異常系] - 負の値に対する apply_line() の戻り値が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_CATEGORY_OUT_OF_RANGE であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_CATEGORY_OUT_OF_RANGE,
+        actual_fraction); // [確認_異常系] - 整数でない値に対する apply_line() の戻り値が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_CATEGORY_OUT_OF_RANGE であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_CATEGORY_OUT_OF_RANGE,
+        actual_list); // [確認_異常系] - 範囲外の値を含む列挙に対する apply_line() の戻り値が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_CATEGORY_OUT_OF_RANGE であること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE,
+        actual_boundary); // [確認_正常系] - 範囲内の値に対する apply_line() の戻り値が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterCategoryTest.TearDown]
 
@@ -174,7 +187,7 @@ TEST_F(stringCatalogFilterCategoryTest, unknown_level_name_is_rejected)
     // Arrange
     ASSERT_EQ(CPLAT_OK,
               recreate_slot_with_category_names(&s_level_category_names)); // [状態] - レベルの名前を設定する。
-    // [状態確認] - `recreate_slot_with_category_names(&s_level_category_names)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - recreate_slot_with_category_names() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
@@ -183,8 +196,9 @@ TEST_F(stringCatalogFilterCategoryTest, unknown_level_name_is_rejected)
         apply_line("category in [INFO, FOO]"); // [手順] - 未知のレベル名を含む条件式を適用する。
 
     // Assert
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_UNRESOLVED_CATEGORY_NAME,
-              actual_error); // [確認_異常系] - 未知のレベル名として拒否されること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_UNRESOLVED_CATEGORY_NAME,
+        actual_error); // [確認_異常系] - 未知のレベル名に対する apply_line() の戻り値が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_UNRESOLVED_CATEGORY_NAME であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterCategoryTest.TearDown]
 
@@ -202,10 +216,11 @@ TEST_F(stringCatalogFilterCategoryTest, without_category_names_category_is_anony
         apply_line("category <= WARNING"); // [手順] - レベル名を適用する。
 
     // Assert
-    EXPECT_EQ(CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE,
-              actual_large); // [確認_正常系] - 範囲を確かめないため受け入れられること。
+    EXPECT_EQ(
+        CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE,
+        actual_large); // [確認_正常系] - 大きな分類値に対する apply_line() の戻り値が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE であること。
     EXPECT_EQ(
         CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_UNRESOLVED_KEY_NAME,
-        actual_name); // [確認_異常系] - 識別子は従来どおり文字列キーの名前として解決され、WARNING は見つからないこと。
+        actual_name); // [確認_異常系] - レベル名に対する apply_line() の戻り値が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_UNRESOLVED_KEY_NAME であること。(分類値の名前を設定しない場合は WARNING を文字列キーの名前として解決することの確認)
 }
 // [サブ手順参照 名前=stringCatalogFilterCategoryTest.TearDown]

@@ -16,7 +16,7 @@ TEST_F(sysStatFormatTest, test_null_buf)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_stat(_, _, _))
-        .Times(0); // [Pre-Assert確認_異常系] - cplat_stat が呼び出されないこと。
+        .Times(0); // [Pre-Assert確認_異常系] - cplat_stat() が呼び出されないこと。
 
     // Act
     int actual_ret =
@@ -24,7 +24,7 @@ TEST_F(sysStatFormatTest, test_null_buf)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - cplat_stat_fmt から CPLAT_ERR_INVALID_ARGUMENT が返されること。
+              actual_ret); // [確認_異常系] - cplat_stat_fmt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // format が NULL の場合に cplat_stat を呼び出さず CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
@@ -36,14 +36,14 @@ TEST_F(sysStatFormatTest, test_null_format)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_stat(_, _, _))
-        .Times(0); // [Pre-Assert確認_異常系] - cplat_stat が呼び出されないこと。
+        .Times(0); // [Pre-Assert確認_異常系] - cplat_stat() が呼び出されないこと。
 
     // Act
     int actual_ret = cplat_stat_fmt(&st, NULL, NULL); // [手順] - format に NULL を渡して cplat_stat_fmt を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - cplat_stat_fmt から CPLAT_ERR_INVALID_ARGUMENT が返されること。
+              actual_ret); // [確認_異常系] - cplat_stat_fmt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // フォーマット結果がバッファー サイズを超える場合に cplat_stat を呼び出さず CPLAT_ERR_BUFFER_TOO_SMALL を返すことの確認
@@ -58,7 +58,7 @@ TEST_F(sysStatFormatTest, test_buffer_overflow)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_stat(_, _, _))
-        .Times(0); // [Pre-Assert確認_異常系] - cplat_stat が呼び出されないこと。
+        .Times(0); // [Pre-Assert確認_異常系] - cplat_stat() が呼び出されないこと。
 
     // Act
     int actual_ret = cplat_stat_fmt(
@@ -67,7 +67,7 @@ TEST_F(sysStatFormatTest, test_buffer_overflow)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              actual_ret); // [確認_異常系] - cplat_stat_fmt から CPLAT_ERR_BUFFER_TOO_SMALL が返されること。
+              actual_ret); // [確認_異常系] - cplat_stat_fmt() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
 }
 
 // フォーマット文字列を展開したファイル名で cplat_stat が呼び出されることの確認
@@ -80,7 +80,7 @@ TEST_F(sysStatFormatTest, test_successful_call_with_format)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_stat(&st, _, StrEq("test_123.txt")))
         .WillOnce(Return(
-            CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_stat が展開後のファイル名 "test_123.txt" で 1 回呼び出されること。
+            CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_stat() が &st、"test_123.txt" と等しい文字列を指定して 1 回呼び出されること。
                         // [Pre-Assert手順] - cplat_stat から CPLAT_OK を返却する。
 
     // Act
@@ -89,7 +89,7 @@ TEST_F(sysStatFormatTest, test_successful_call_with_format)
         123); // [手順] - フォーマット文字列 "test_%d.txt" と引数 123 を指定して cplat_stat_fmt を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_stat_fmt から CPLAT_OK が返されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_stat_fmt() の戻り値が CPLAT_OK であること。
 }
 
 // 複数のフォーマット パラメーターを展開したファイル名で cplat_stat が呼び出されることの確認
@@ -102,7 +102,7 @@ TEST_F(sysStatFormatTest, test_successful_call_with_multiple_parameters)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_stat(&st, _, StrEq("output_1_2_3.txt")))
         .WillOnce(Return(
-            CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_stat が展開後のファイル名 "output_1_2_3.txt" で 1 回呼び出されること。
+            CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_stat() が &st、"output_1_2_3.txt" と等しい文字列を指定して 1 回呼び出されること。
                         // [Pre-Assert手順] - cplat_stat から CPLAT_OK を返却する。
 
     // Act
@@ -111,7 +111,7 @@ TEST_F(sysStatFormatTest, test_successful_call_with_multiple_parameters)
         3); // [手順] - フォーマット文字列 "output_%d_%d_%d.txt" と引数 1, 2, 3 を指定して cplat_stat_fmt を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_stat_fmt から CPLAT_OK が返されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_stat_fmt() の戻り値が CPLAT_OK であること。
 }
 
 // cplat_stat が失敗した場合に、その結果コードをそのまま返すことの確認
@@ -124,7 +124,7 @@ TEST_F(sysStatFormatTest, test_stat_returns_error)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_stat(&st, _, StrEq("nonexistent.txt")))
         .WillOnce(Return(
-            CPLAT_ERR_NOT_FOUND)); // [Pre-Assert確認_異常系] - cplat_stat がファイル名 "nonexistent.txt" で 1 回呼び出されること。
+            CPLAT_ERR_NOT_FOUND)); // [Pre-Assert確認_異常系] - cplat_stat() が &st、"nonexistent.txt" と等しい文字列を指定して 1 回呼び出されること。
                                    // [Pre-Assert手順] - cplat_stat から CPLAT_ERR_NOT_FOUND を返却する。
 
     // Act
@@ -134,7 +134,7 @@ TEST_F(sysStatFormatTest, test_stat_returns_error)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
-              actual_ret); // [確認_異常系] - cplat_stat_fmt から CPLAT_ERR_NOT_FOUND が返されること。
+              actual_ret); // [確認_異常系] - cplat_stat_fmt() の戻り値が CPLAT_ERR_NOT_FOUND であること。
 }
 
 // format が NULL の場合に cplat_mkdir を呼び出さず CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
@@ -144,14 +144,15 @@ TEST_F(sysStatFormatTest, mkdir_fmt_rejects_null_format)
     NiceMock<Mock_cplat> mock_cplat;
 
     // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_mkdir(_, _)).Times(0); // [Pre-Assert確認_異常系] - cplat_mkdir が呼び出されないこと。
+    EXPECT_CALL(mock_cplat, cplat_mkdir(_, _))
+        .Times(0); // [Pre-Assert確認_異常系] - cplat_mkdir() が呼び出されないこと。
 
     // Act
     const int result = cplat_mkdir_fmt(NULL, NULL); // [手順] - format に NULL を指定して cplat_mkdir_fmt を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              result); // [確認_異常系] - cplat_mkdir_fmt の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+              result); // [確認_異常系] - cplat_mkdir_fmt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // フォーマット文字列を展開したパスで cplat_mkdir が呼び出されることの確認
@@ -163,7 +164,8 @@ TEST_F(sysStatFormatTest, mkdir_fmt_passes_formatted_path)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_mkdir(StrEq("temporary_42"), &detail))
-        .WillOnce(Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - 展開後のパスで cplat_mkdir が呼び出されること。
+        .WillOnce(Return(
+            CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_mkdir() が "temporary_42" と等しい文字列、&detail を指定して 1 回呼び出されること。
 
     // Act
     const int result =
@@ -171,5 +173,5 @@ TEST_F(sysStatFormatTest, mkdir_fmt_passes_formatted_path)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              result); // [確認_正常系] - cplat_mkdir_fmt の戻り値が CPLAT_OK であること。
+              result); // [確認_正常系] - cplat_mkdir_fmt() の戻り値が CPLAT_OK であること。
 }

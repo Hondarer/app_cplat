@@ -54,15 +54,17 @@ TEST_F(fgetsTest, reads_line_terminated_by_lf)
     EXPECT_CALL(mock_stdio, fgets(_, _, _, buf, static_cast<int>(sizeof(buf)), kStream))
         .WillOnce(
             [](const char *, int, const char *, char *dest, int n, FILE *)
-            { return copy_fgets(dest, n, "abc\n"); }); // [Pre-Assert確認_正常系] - fgets が 1 回呼び出されること。
-                                                       // [Pre-Assert手順] - "abc\n" を格納して dest を返却する。
+            {
+                return copy_fgets(dest, n, "abc\n");
+            }); // [Pre-Assert確認_正常系] - fgets() が buf、static_cast<int>(sizeof(buf))、kStream を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - "abc\n" を格納して dest を返却する。
 
     // Act
     int actual_ret = cplat_fgets(buf, sizeof(buf), kStream, NULL); // [手順] - 1 行目を cplat_fgets で読み取る。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_fgets の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("abc", buf);        // [確認_正常系] - 末尾の LF を除いた "abc" が格納されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_fgets() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("abc", buf);        // [確認_正常系] - buf が "abc" であること。(末尾の LF が除去されたことの確認)
 }
 
 // CRLF で終わる行が CR と LF の双方を除去して取得されることの確認
@@ -76,16 +78,18 @@ TEST_F(fgetsTest, strips_crlf)
     EXPECT_CALL(mock_stdio, fgets(_, _, _, buf, static_cast<int>(sizeof(buf)), kStream))
         .WillOnce(
             [](const char *, int, const char *, char *dest, int n, FILE *)
-            { return copy_fgets(dest, n, "abc\r\n"); }); // [Pre-Assert確認_正常系] - fgets が 1 回呼び出されること。
-                                                         // [Pre-Assert手順] - "abc\r\n" を格納して dest を返却する。
+            {
+                return copy_fgets(dest, n, "abc\r\n");
+            }); // [Pre-Assert確認_正常系] - fgets() が buf、static_cast<int>(sizeof(buf))、kStream を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - "abc\r\n" を格納して dest を返却する。
 
     // Act
     int actual_ret =
         cplat_fgets(buf, sizeof(buf), kStream, NULL); // [手順] - CRLF で終わる行を cplat_fgets で読み取る。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_fgets の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("abc", buf);        // [確認_正常系] - CR と LF を除いた "abc" が格納されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_fgets() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("abc", buf); // [確認_正常系] - buf が "abc" であること。(末尾の CR と LF が除去されたことの確認)
 }
 
 // 改行で終わらない最終行が取得できることの確認
@@ -97,8 +101,11 @@ TEST_F(fgetsTest, reads_last_line_without_newline)
 
     // Pre-Assert
     EXPECT_CALL(mock_stdio, fgets(_, _, _, buf, static_cast<int>(sizeof(buf)), kStream))
-        .WillOnce([](const char *, int, const char *, char *dest, int n, FILE *)
-                  { return copy_fgets(dest, n, "abc"); }); // [Pre-Assert確認_正常系] - fgets が 1 回呼び出されること。
+        .WillOnce(
+            [](const char *, int, const char *, char *dest, int n, FILE *)
+            {
+                return copy_fgets(dest, n, "abc");
+            }); // [Pre-Assert確認_正常系] - fgets() が buf、static_cast<int>(sizeof(buf))、kStream を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - 改行なしの "abc" を格納して dest を返却する。
 
     // Act
@@ -106,8 +113,8 @@ TEST_F(fgetsTest, reads_last_line_without_newline)
         cplat_fgets(buf, sizeof(buf), kStream, NULL); // [手順] - 改行のない最終行を cplat_fgets で読み取る。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_fgets の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("abc", buf);        // [確認_正常系] - "abc" が格納されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_fgets() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("abc", buf);        // [確認_正常系] - buf が "abc" であること。
 }
 
 // 空行が空文字列として取得されることの確認
@@ -119,17 +126,20 @@ TEST_F(fgetsTest, reads_empty_line)
 
     // Pre-Assert
     EXPECT_CALL(mock_stdio, fgets(_, _, _, buf, static_cast<int>(sizeof(buf)), kStream))
-        .WillOnce([](const char *, int, const char *, char *dest, int n, FILE *)
-                  { return copy_fgets(dest, n, "\n"); }); // [Pre-Assert確認_正常系] - fgets が 1 回呼び出されること。
-                                                          // [Pre-Assert手順] - "\n" を格納して dest を返却する。
+        .WillOnce(
+            [](const char *, int, const char *, char *dest, int n, FILE *)
+            {
+                return copy_fgets(dest, n, "\n");
+            }); // [Pre-Assert確認_正常系] - fgets() が buf、static_cast<int>(sizeof(buf))、kStream を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - "\n" を格納して dest を返却する。
 
     // Act
     int actual_ret =
         cplat_fgets(buf, sizeof(buf), kStream, NULL); // [手順] - 空行である 1 行目を cplat_fgets で読み取る。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_fgets の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("", buf);           // [確認_正常系] - 空文字列が格納されること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_fgets() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("", buf);           // [確認_正常系] - buf が "" であること。
 }
 
 // 読み取る行がない場合に EOF を返すことの確認
@@ -143,8 +153,9 @@ TEST_F(fgetsTest, returns_eof_at_end_of_stream)
     EXPECT_CALL(mock_stdio, fgets(_, _, _, buf, static_cast<int>(sizeof(buf)), kStream))
         .WillOnce([](const char *, int, const char *, char *dest, int n, FILE *)
                   { return copy_fgets(dest, n, "abc\n"); })
-        .WillOnce(Return(static_cast<char *>(NULL))); // [Pre-Assert確認_正常系] - fgets が 2 回呼び出されること。
-                                                      // [Pre-Assert手順] - 1 回目は "abc\n"、2 回目は NULL を返却する。
+        .WillOnce(Return(static_cast<char *>(
+            NULL))); // [Pre-Assert確認_正常系] - fgets() が buf、static_cast<int>(sizeof(buf))、kStream を指定して 2 回呼び出されること。
+    // [Pre-Assert手順] - 1 回目は "abc\n"、2 回目は NULL を返却する。
 
     // Act
     int first_ret = cplat_fgets(buf, sizeof(buf), kStream, NULL); // [手順] - 1 回目の呼び出しで唯一の行を読み取る。
@@ -152,9 +163,9 @@ TEST_F(fgetsTest, returns_eof_at_end_of_stream)
         cplat_fgets(buf, sizeof(buf), kStream, NULL); // [手順] - 2 回目の呼び出しを行末尾の状態で実行する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, first_ret); // [確認_正常系] - 1 回目の cplat_fgets の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, first_ret); // [確認_正常系] - 1 回目の cplat_fgets() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_ERR_EOF,
-              second_ret); // [確認_正常系] - 2 回目の cplat_fgets の戻り値が CPLAT_ERR_EOF であること。
+              second_ret); // [確認_正常系] - 2 回目の cplat_fgets() の戻り値が CPLAT_ERR_EOF であること。
 }
 
 // 行がバッファーに収まらない場合にバッファー不足を返すことの確認
@@ -170,7 +181,7 @@ TEST_F(fgetsTest, returns_buffer_too_small_for_long_line)
             [](const char *, int, const char *, char *dest, int n, FILE *)
             {
                 return copy_fgets(dest, n, "abcdefgh\n");
-            }); // [Pre-Assert確認_異常系] - fgets がバッファー サイズ 4 で 1 回呼び出されること。
+            }); // [Pre-Assert確認_異常系] - fgets() が buf、4、kStream を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - 先頭 3 文字を格納して dest を返却する。
 
     // Act
@@ -179,8 +190,8 @@ TEST_F(fgetsTest, returns_buffer_too_small_for_long_line)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              actual_ret); // [確認_異常系] - cplat_fgets の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
-    EXPECT_STREQ("", buf); // [確認_異常系] - 途中までの内容を残さずバッファーが空文字列になること。
+              actual_ret); // [確認_異常系] - cplat_fgets() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_STREQ("", buf); // [確認_異常系] - buf が "" であること。(途中までの内容が残らないことの確認)
 }
 
 // バッファーに収まらない行の残りが次の呼び出しで取得されることの確認
@@ -194,8 +205,11 @@ TEST_F(fgetsTest, continues_reading_remainder_after_buffer_too_small)
     EXPECT_CALL(mock_stdio, fgets(_, _, _, buf, 5, kStream))
         .WillOnce([](const char *, int, const char *, char *dest, int n, FILE *)
                   { return copy_fgets(dest, n, "abcdef\n"); })
-        .WillOnce([](const char *, int, const char *, char *dest, int n, FILE *)
-                  { return copy_fgets(dest, n, "ef\n"); }); // [Pre-Assert確認_正常系] - fgets が 2 回呼び出されること。
+        .WillOnce(
+            [](const char *, int, const char *, char *dest, int n, FILE *)
+            {
+                return copy_fgets(dest, n, "ef\n");
+            }); // [Pre-Assert確認_正常系] - fgets() が buf、5、kStream を指定して 2 回呼び出されること。
     // [Pre-Assert手順] - 1 回目は先頭 4 文字、2 回目は残り "ef\n" を返却する。
 
     // Act
@@ -205,10 +219,10 @@ TEST_F(fgetsTest, continues_reading_remainder_after_buffer_too_small)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              first_ret); // [確認_異常系] - 1 回目の cplat_fgets の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+              first_ret); // [確認_異常系] - 1 回目の cplat_fgets() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
     EXPECT_EQ(CPLAT_OK,
-              second_ret);   // [確認_正常系] - 2 回目の cplat_fgets の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("ef", buf); // [確認_正常系] - 2 回目の呼び出しで行の残り "ef" が格納されること。
+              second_ret);   // [確認_正常系] - 2 回目の cplat_fgets() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("ef", buf); // [確認_正常系] - buf が "ef" であること。(2 回目の呼び出しで行の残りを取得したことの確認)
 }
 
 // バッファー サイズが 1 の場合にバッファー不足を返すことの確認
@@ -224,7 +238,7 @@ TEST_F(fgetsTest, buffer_size_one_returns_buffer_too_small)
             [](const char *, int, const char *, char *dest, int n, FILE *)
             {
                 return copy_fgets(dest, n, "abc\n");
-            }); // [Pre-Assert確認_異常系] - fgets がバッファー サイズ 1 で 1 回呼び出されること。
+            }); // [Pre-Assert確認_異常系] - fgets() が buf、1、kStream を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - 空文字列を格納して dest を返却する。
 
     // Act
@@ -233,8 +247,8 @@ TEST_F(fgetsTest, buffer_size_one_returns_buffer_too_small)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
-              actual_ret); // [確認_異常系] - cplat_fgets の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
-    EXPECT_STREQ("", buf); // [確認_異常系] - バッファーが空文字列になること。
+              actual_ret); // [確認_異常系] - cplat_fgets() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_STREQ("", buf); // [確認_異常系] - buf が "" であること。
 }
 
 // 格納先が NULL の場合に引数エラーになることの確認
@@ -252,8 +266,9 @@ TEST_F(fgetsTest, null_dest_returns_invalid_argument)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - cplat_fgets の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(EINVAL, cplat_error_get_errno(&detail)); // [確認_異常系] - 詳細エラーへ EINVAL が記録されること。
+              actual_ret); // [確認_異常系] - cplat_fgets() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(EINVAL,
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EINVAL であること。
 }
 
 // ストリームが NULL の場合に引数エラーになることの確認
@@ -271,7 +286,7 @@ TEST_F(fgetsTest, null_stream_returns_invalid_argument)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - cplat_fgets の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+              actual_ret); // [確認_異常系] - cplat_fgets() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 成功時に詳細エラーがクリアされることの確認
@@ -282,20 +297,26 @@ TEST_F(fgetsTest, clears_detail_on_success)
     cplat_error detail = {CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_NOT_FOUND,
                           ENOENT}; // [状態] - 詳細エラーへあらかじめ ENOENT を設定する。
     char buf[16];
-    ASSERT_NE(0, cplat_error_is_set(&detail)); // [状態確認] - 呼び出し前の詳細エラーが設定済みであること。
+    ASSERT_NE(
+        0, cplat_error_is_set(&detail)); // [状態確認] - 呼び出し前の cplat_error_is_set() の戻り値が 0 以外であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_stdio, fgets(_, _, _, buf, static_cast<int>(sizeof(buf)), kStream))
         .WillOnce(
             [](const char *, int, const char *, char *dest, int n, FILE *)
-            { return copy_fgets(dest, n, "abc\n"); }); // [Pre-Assert確認_正常系] - fgets が 1 回呼び出されること。
-                                                       // [Pre-Assert手順] - "abc\n" を格納して dest を返却する。
+            {
+                return copy_fgets(dest, n, "abc\n");
+            }); // [Pre-Assert確認_正常系] - fgets() が buf、static_cast<int>(sizeof(buf))、kStream を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - "abc\n" を格納して dest を返却する。
 
     // Act
     int actual_ret =
         cplat_fgets(buf, sizeof(buf), kStream, &detail); // [手順] - 詳細エラー出力を指定して 1 行を読み取る。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret);           // [確認_正常系] - cplat_fgets の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(0, cplat_error_is_set(&detail)); // [確認_正常系] - 成功時に詳細エラーがクリアされること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_fgets() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0,
+        cplat_error_is_set(
+            &detail)); // [確認_正常系] - 呼び出し後の cplat_error_is_set() の戻り値が 0 であること。(成功時に詳細エラーがクリアされたことの確認)
 }

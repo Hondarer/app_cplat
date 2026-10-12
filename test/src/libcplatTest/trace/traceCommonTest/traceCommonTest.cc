@@ -16,7 +16,7 @@ TEST(traceCommonTest, resolves_valid_explicit_timestamp)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_clock_get_realtime(_))
-        .Times(0); // [Pre-Assert確認_正常系] - 有効な明示タイムスタンプでは現在時刻を取得しないこと。
+        .Times(0); // [Pre-Assert確認_正常系] - cplat_clock_get_realtime() が呼び出されないこと。
 
     // Act
     int actual_ret = cplat_internal_trace_resolve_timestamp(
@@ -24,10 +24,11 @@ TEST(traceCommonTest, resolves_valid_explicit_timestamp)
         &fallback_used); // [手順] - 有効な明示タイムスタンプを指定して cplat_internal_trace_resolve_timestamp を呼び出す。
 
     // Assert
-    EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp の戻り値が 0 であること。
-    EXPECT_EQ(timestamp.tv_sec, resolved.tv_sec); // [確認_正常系] - resolved の秒値が明示タイムスタンプと一致すること。
+    EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp() の戻り値が 0 であること。
+    EXPECT_EQ(timestamp.tv_sec,
+              resolved.tv_sec); // [確認_正常系] - resolved.tv_sec が timestamp.tv_sec と一致すること。
     EXPECT_EQ(timestamp.tv_nsec,
-              resolved.tv_nsec); // [確認_正常系] - resolved のナノ秒値が明示タイムスタンプと一致すること。
+              resolved.tv_nsec); // [確認_正常系] - resolved.tv_nsec が timestamp.tv_nsec と一致すること。
     EXPECT_EQ(0, fallback_used); // [確認_正常系] - fallback_used が 0 であること。
 }
 
@@ -46,7 +47,7 @@ TEST(traceCommonTest, resolves_current_time_for_null_timestamp)
             {
                 timestamp->tv_sec = 789;
                 timestamp->tv_nsec = 123;
-            }); // [Pre-Assert確認_正常系] - NULL タイムスタンプでは現在時刻を 1 回取得すること。
+            }); // [Pre-Assert確認_正常系] - cplat_clock_get_realtime() が &resolved を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - 現在時刻として 789 秒 123 ナノ秒を返却する。
 
     // Act
@@ -55,10 +56,11 @@ TEST(traceCommonTest, resolves_current_time_for_null_timestamp)
         &fallback_used); // [手順] - timestamp に NULL を指定して cplat_internal_trace_resolve_timestamp を呼び出す。
 
     // Assert
-    EXPECT_EQ(0, actual_ret);        // [確認_正常系] - cplat_internal_trace_resolve_timestamp の戻り値が 0 であること。
-    EXPECT_EQ(789, resolved.tv_sec); // [確認_正常系] - resolved の秒値が取得した現在時刻と一致すること。
-    EXPECT_EQ(123, resolved.tv_nsec); // [確認_正常系] - resolved のナノ秒値が取得した現在時刻と一致すること。
-    EXPECT_EQ(0, fallback_used);      // [確認_正常系] - NULL 指定は代替と見なさず fallback_used が 0 であること。
+    EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp() の戻り値が 0 であること。
+    EXPECT_EQ(789, resolved.tv_sec);  // [確認_正常系] - resolved.tv_sec が 789 であること。
+    EXPECT_EQ(123, resolved.tv_nsec); // [確認_正常系] - resolved.tv_nsec が 123 であること。
+    EXPECT_EQ(0,
+              fallback_used); // [確認_正常系] - fallback_used が 0 であること。(NULL 指定は代替と見なさないことの確認)
 }
 
 // 無効な明示タイムスタンプでは現在時刻へ代替することの確認
@@ -77,7 +79,7 @@ TEST(traceCommonTest, falls_back_from_invalid_explicit_timestamp)
             {
                 current->tv_sec = 456;
                 current->tv_nsec = 789;
-            }); // [Pre-Assert確認_正常系] - 無効な明示タイムスタンプでは現在時刻を 1 回取得すること。
+            }); // [Pre-Assert確認_正常系] - cplat_clock_get_realtime() が &resolved を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - 現在時刻として 456 秒 789 ナノ秒を返却する。
 
     // Act
@@ -86,9 +88,9 @@ TEST(traceCommonTest, falls_back_from_invalid_explicit_timestamp)
         &fallback_used); // [手順] - 無効な明示タイムスタンプを指定して cplat_internal_trace_resolve_timestamp を呼び出す。
 
     // Assert
-    EXPECT_EQ(0, actual_ret);        // [確認_正常系] - cplat_internal_trace_resolve_timestamp の戻り値が 0 であること。
-    EXPECT_EQ(456, resolved.tv_sec); // [確認_正常系] - resolved の秒値が代替の現在時刻と一致すること。
-    EXPECT_EQ(789, resolved.tv_nsec); // [確認_正常系] - resolved のナノ秒値が代替の現在時刻と一致すること。
+    EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp() の戻り値が 0 であること。
+    EXPECT_EQ(456, resolved.tv_sec);  // [確認_正常系] - resolved.tv_sec が 456 であること。
+    EXPECT_EQ(789, resolved.tv_nsec); // [確認_正常系] - resolved.tv_nsec が 789 であること。
     EXPECT_EQ(1, fallback_used);      // [確認_正常系] - fallback_used が 1 であること。
 }
 
@@ -107,7 +109,7 @@ TEST(traceCommonTest, rejects_invalid_current_time)
             {
                 timestamp->tv_sec = 0;
                 timestamp->tv_nsec = -1;
-            }); // [Pre-Assert確認_異常系] - 現在時刻を 1 回取得すること。
+            }); // [Pre-Assert確認_異常系] - cplat_clock_get_realtime() が &resolved を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - 無効なナノ秒値 -1 を返却する。
 
     // Act
@@ -116,8 +118,9 @@ TEST(traceCommonTest, rejects_invalid_current_time)
         &fallback_used); // [手順] - 取得時刻が無効になる条件で cplat_internal_trace_resolve_timestamp を呼び出す。
 
     // Assert
-    EXPECT_EQ(-1, actual_ret);   // [確認_異常系] - cplat_internal_trace_resolve_timestamp の戻り値が -1 であること。
-    EXPECT_EQ(0, fallback_used); // [確認_異常系] - NULL 指定のため fallback_used が 0 であること。
+    EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_internal_trace_resolve_timestamp() の戻り値が -1 であること。
+    EXPECT_EQ(0,
+              fallback_used); // [確認_異常系] - fallback_used が 0 であること。(NULL 指定は代替と見なさないことの確認)
 }
 
 // resolved が NULL の場合に出力へ触れず失敗することの確認
@@ -130,7 +133,7 @@ TEST(traceCommonTest, rejects_null_resolved)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_clock_get_realtime(_))
-        .Times(0); // [Pre-Assert確認_異常系] - resolved が NULL の場合は現在時刻を取得しないこと。
+        .Times(0); // [Pre-Assert確認_異常系] - cplat_clock_get_realtime() が呼び出されないこと。
 
     // Act
     int actual_ret = cplat_internal_trace_resolve_timestamp(
@@ -138,8 +141,9 @@ TEST(traceCommonTest, rejects_null_resolved)
         &fallback_used); // [手順] - resolved に NULL を指定して cplat_internal_trace_resolve_timestamp を呼び出す。
 
     // Assert
-    EXPECT_EQ(-1, actual_ret);    // [確認_異常系] - cplat_internal_trace_resolve_timestamp の戻り値が -1 であること。
-    EXPECT_EQ(77, fallback_used); // [確認_異常系] - fallback_used が変更されないこと。
+    EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_internal_trace_resolve_timestamp() の戻り値が -1 であること。
+    EXPECT_EQ(
+        77, fallback_used); // [確認_異常系] - fallback_used が 77 であること。(fallback_used が変更されないことの確認)
 }
 
 // fallback_used が NULL でも現在時刻へ代替できることの確認
@@ -157,7 +161,7 @@ TEST(traceCommonTest, allows_null_fallback_used)
             {
                 current->tv_sec = 456;
                 current->tv_nsec = 789;
-            }); // [Pre-Assert確認_正常系] - 無効な明示タイムスタンプでは現在時刻を 1 回取得すること。
+            }); // [Pre-Assert確認_正常系] - cplat_clock_get_realtime() が &resolved を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - 有効な現在時刻を返却する。
 
     // Act
@@ -166,9 +170,9 @@ TEST(traceCommonTest, allows_null_fallback_used)
         NULL); // [手順] - fallback_used に NULL を指定して cplat_internal_trace_resolve_timestamp を呼び出す。
 
     // Assert
-    EXPECT_EQ(0, actual_ret);        // [確認_正常系] - cplat_internal_trace_resolve_timestamp の戻り値が 0 であること。
-    EXPECT_EQ(456, resolved.tv_sec); // [確認_正常系] - resolved の秒値が代替の現在時刻と一致すること。
-    EXPECT_EQ(789, resolved.tv_nsec); // [確認_正常系] - resolved のナノ秒値が代替の現在時刻と一致すること。
+    EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp() の戻り値が 0 であること。
+    EXPECT_EQ(456, resolved.tv_sec);  // [確認_正常系] - resolved.tv_sec が 456 であること。
+    EXPECT_EQ(789, resolved.tv_nsec); // [確認_正常系] - resolved.tv_nsec が 789 であること。
 }
 
 // 有効なタイムスタンプを書式化して結果を返すことの確認
@@ -186,7 +190,7 @@ TEST(traceCommonTest, formats_valid_timestamp)
             {
                 (void)cplat_strcpy(output, output_size, "formatted");
                 return CPLAT_OK;
-            }); // [Pre-Assert確認_正常系] - 有効なタイムスタンプの書式化を 1 回呼び出すこと。
+            }); // [Pre-Assert確認_正常系] - cplat_clock_format_realtime_iso8601_local() が buf、sizeof(buf)、&timestamp を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - "formatted" を格納して CPLAT_OK を返却する。
 
     // Act
@@ -197,8 +201,8 @@ TEST(traceCommonTest, formats_valid_timestamp)
     // Assert
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret); // [確認_正常系] - cplat_internal_trace_format_local_timestamp の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("formatted", buf); // [確認_正常系] - buf に書式化した文字列が格納されること。
+        actual_ret); // [確認_正常系] - cplat_internal_trace_format_local_timestamp() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("formatted", buf); // [確認_正常系] - buf が "formatted" であること。
 }
 
 // 無効なタイムスタンプを書式化せず拒否することの確認
@@ -211,7 +215,7 @@ TEST(traceCommonTest, rejects_invalid_timestamp_for_formatting)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_clock_format_realtime_iso8601_local(_, _, _))
-        .Times(0); // [Pre-Assert確認_異常系] - 無効なタイムスタンプを書式化しないこと。
+        .Times(0); // [Pre-Assert確認_異常系] - cplat_clock_format_realtime_iso8601_local() が呼び出されないこと。
 
     // Act
     int actual_ret = cplat_internal_trace_format_local_timestamp(
@@ -219,7 +223,8 @@ TEST(traceCommonTest, rejects_invalid_timestamp_for_formatting)
         &timestamp); // [手順] - 無効なタイムスタンプを指定して cplat_internal_trace_format_local_timestamp を呼び出す。
 
     // Assert
-    EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_internal_trace_format_local_timestamp の戻り値が -1 であること。
+    EXPECT_EQ(-1,
+              actual_ret); // [確認_異常系] - cplat_internal_trace_format_local_timestamp() の戻り値が -1 であること。
 }
 
 // NULL タイムスタンプを書式化せず拒否することの確認
@@ -231,7 +236,7 @@ TEST(traceCommonTest, rejects_null_timestamp_for_formatting)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_clock_format_realtime_iso8601_local(_, _, _))
-        .Times(0); // [Pre-Assert確認_異常系] - NULL タイムスタンプを書式化しないこと。
+        .Times(0); // [Pre-Assert確認_異常系] - cplat_clock_format_realtime_iso8601_local() が呼び出されないこと。
 
     // Act
     int actual_ret = cplat_internal_trace_format_local_timestamp(
@@ -239,7 +244,8 @@ TEST(traceCommonTest, rejects_null_timestamp_for_formatting)
         NULL); // [手順] - timestamp に NULL を指定して cplat_internal_trace_format_local_timestamp を呼び出す。
 
     // Assert
-    EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_internal_trace_format_local_timestamp の戻り値が -1 であること。
+    EXPECT_EQ(-1,
+              actual_ret); // [確認_異常系] - cplat_internal_trace_format_local_timestamp() の戻り値が -1 であること。
 }
 
 // buf が NULL の場合に書式化関数の結果を伝搬することの確認
@@ -252,7 +258,7 @@ TEST(traceCommonTest, propagates_error_for_null_buffer)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_clock_format_realtime_iso8601_local(nullptr, 32, &timestamp))
         .WillOnce(Return(
-            CPLAT_ERR_INVALID_ARGUMENT)); // [Pre-Assert確認_異常系] - NULL バッファーの書式化を 1 回呼び出すこと。
+            CPLAT_ERR_INVALID_ARGUMENT)); // [Pre-Assert確認_異常系] - cplat_clock_format_realtime_iso8601_local() が nullptr、32、&timestamp を指定して 1 回呼び出されること。
                                           // [Pre-Assert手順] - CPLAT_ERR_INVALID_ARGUMENT を返却する。
 
     // Act
@@ -263,7 +269,7 @@ TEST(traceCommonTest, propagates_error_for_null_buffer)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret); // [確認_異常系] - cplat_internal_trace_format_local_timestamp の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret); // [確認_異常系] - cplat_internal_trace_format_local_timestamp() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // buf_size が 0 の場合に書式化関数の結果を伝搬することの確認
@@ -276,9 +282,9 @@ TEST(traceCommonTest, propagates_error_for_zero_buffer_size)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_clock_format_realtime_iso8601_local(buf, 0, &timestamp))
-        .WillOnce(
-            Return(CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - サイズ 0 のバッファーの書式化を 1 回呼び出すこと。
-                                        // [Pre-Assert手順] - CPLAT_ERR_UNKNOWN を返却する。
+        .WillOnce(Return(
+            CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_clock_format_realtime_iso8601_local() が buf、0、&timestamp を指定して 1 回呼び出されること。
+                                 // [Pre-Assert手順] - CPLAT_ERR_UNKNOWN を返却する。
 
     // Act
     int actual_ret = cplat_internal_trace_format_local_timestamp(
@@ -288,7 +294,7 @@ TEST(traceCommonTest, propagates_error_for_zero_buffer_size)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - cplat_internal_trace_format_local_timestamp の戻り値が CPLAT_ERR_UNKNOWN であること。
+        actual_ret); // [確認_異常系] - cplat_internal_trace_format_local_timestamp() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // 全トレース レベルと範囲外の値が対応する文字へ変換されることの確認
@@ -320,6 +326,9 @@ TEST(traceCommonTest, maps_all_trace_levels)
 
     // Assert
     EXPECT_EQ(
-        0, memcmp(expected, actual,
-                  sizeof(expected))); // [確認_正常系] - 全トレース レベルと範囲外の値が期待する文字へ変換されること。
+        0,
+        memcmp(
+            expected, actual,
+            sizeof(
+                expected))); // [確認_正常系] - memcmp() の戻り値が 0 であること。(全トレース レベルと範囲外の値が期待する文字へ変換されたことの確認)
 }

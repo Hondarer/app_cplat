@@ -35,7 +35,7 @@ TEST_F(consoleTest, init_succeeds)
     cplat_console_init(); // [手順] - コンソール ヘルパーを初期化する。
 
     // Assert
-    SUCCEED(); // [確認_正常系] - クラッシュせずに完了すること。
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(cplat_console_init() がクラッシュしないことの確認)
 }
 
 // init 後に dispose_on_shutdown() がクラッシュしないことの確認
@@ -54,7 +54,7 @@ TEST_F(consoleTest, dispose_on_shutdown_after_init)
                                                NULL); // [手順] - 正常終了イベントで dispose_on_shutdown() を呼び出す。
 
     // Assert
-    SUCCEED(); // [確認_正常系] - クラッシュせずに完了すること。
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(初期化後の cplat_internal_console_dispose_on_shutdown() がクラッシュしないことの確認)
 }
 
 // init なしで dispose_on_shutdown() を呼んでも安全なことの確認
@@ -72,7 +72,7 @@ TEST_F(consoleTest, dispose_on_shutdown_without_init)
                                                NULL); // [手順] - init を呼ばずに dispose_on_shutdown() を呼び出す。
 
     // Assert
-    SUCCEED(); // [確認_正常系] - 安全に何もせず、クラッシュしないこと。
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(初期化せずに呼び出した cplat_internal_console_dispose_on_shutdown() がクラッシュしないことの確認)
 }
 
 // dispose_on_shutdown() を 2 回呼んでも安全なことの確認
@@ -92,7 +92,7 @@ TEST_F(consoleTest, double_dispose_on_shutdown)
                                                NULL); // [手順] - 続けて 2 回目の dispose_on_shutdown() を呼び出す。
 
     // Assert
-    SUCCEED(); // [確認_正常系] - 2 回目は安全に何もせず、クラッシュしないこと。
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(2 回目の cplat_internal_console_dispose_on_shutdown() がクラッシュしないことの確認)
 }
 
 // init 後に終了中イベントの dispose_on_shutdown() が安全に何もしないことの確認
@@ -112,7 +112,7 @@ TEST_F(consoleTest, dispose_on_shutdown_process_terminating)
                                                NULL); // [手順] - 終了中イベントで dispose_on_shutdown() を呼び出す。
 
     // Assert
-    SUCCEED(); // [確認_正常系] - 終了中イベントでは何もせず、クラッシュしないこと。
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(終了中イベントを渡した cplat_internal_console_dispose_on_shutdown() がクラッシュしないことの確認)
 
     // Cleanup
     // init 状態を通常終了イベントで解放する。
@@ -133,7 +133,7 @@ TEST_F(consoleTest, write_after_init)
     fprintf(stderr, "consoleTest: stderr\n"); // [手順] - stderr に書き込む。
 
     // Assert
-    SUCCEED(); // [確認_正常系] - クラッシュせずに完了すること。
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(初期化後の printf() と fprintf() がクラッシュしないことの確認)
 }
 
 /* ===== Linux NOP テスト ===== */
@@ -160,8 +160,12 @@ TEST_F(consoleTest, nop_stdout_fd_unchanged)
     int fd_after_dispose = fileno(stdout);
 
     // Assert
-    EXPECT_EQ(fd_before, fd_after_init);    // [確認_正常系] - no-op のため init 後も FD が変わらないこと。
-    EXPECT_EQ(fd_before, fd_after_dispose); // [確認_正常系] - dispose 後も FD が変わらないこと。
+    EXPECT_EQ(
+        fd_before,
+        fd_after_init); // [確認_正常系] - 初期化後の stdout に対する fileno() の戻り値が初期化前の fileno() の戻り値と一致すること。
+    EXPECT_EQ(
+        fd_before,
+        fd_after_dispose); // [確認_正常系] - 解放後の stdout に対する fileno() の戻り値が初期化前の fileno() の戻り値と一致すること。
 }
 
 // Linux: init 前後で stderr の FD が変わらないことの確認
@@ -180,8 +184,12 @@ TEST_F(consoleTest, nop_stderr_fd_unchanged)
     int fd_after_dispose = fileno(stderr);
 
     // Assert
-    EXPECT_EQ(fd_before, fd_after_init);    // [確認_正常系] - no-op のため init 後も FD が変わらないこと。
-    EXPECT_EQ(fd_before, fd_after_dispose); // [確認_正常系] - dispose 後も FD が変わらないこと。
+    EXPECT_EQ(
+        fd_before,
+        fd_after_init); // [確認_正常系] - 初期化後の stderr に対する fileno() の戻り値が初期化前の fileno() の戻り値と一致すること。
+    EXPECT_EQ(
+        fd_before,
+        fd_after_dispose); // [確認_正常系] - 解放後の stderr に対する fileno() の戻り値が初期化前の fileno() の戻り値と一致すること。
 }
 
 // Linux: dispose を呼んでも stdout の FD が変わらないことの確認
@@ -198,7 +206,10 @@ TEST_F(consoleTest, nop_dispose_stdout_fd_unchanged)
     cplat_console_dispose(); // [手順] - no-op の dispose を呼び出す。
 
     // Assert
-    EXPECT_EQ(fd_before, fileno(stdout)); // [確認_正常系] - dispose を呼んでも FD が変わらないこと。
+    EXPECT_EQ(
+        fd_before,
+        fileno(
+            stdout)); // [確認_正常系] - 解放後の stdout に対する fileno() の戻り値が初期化前の fileno() の戻り値と一致すること。
 }
 
 #endif /* PLATFORM_LINUX */

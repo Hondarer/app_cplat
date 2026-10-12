@@ -58,8 +58,9 @@ TEST_F(hashtableLayoutTest, rejects_entry_stride_overflow)
     int actual_ret = cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - 必要サイズを求める。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - キー ストライド計算のオーバーフローが INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - キー ストライド計算がオーバーフローするときの cplat_hashtable_required_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // cplat_hashtable_required_size がバケット領域オフセット計算のオーバーフロー時に INVALID_ARGUMENT を返すことの確認
@@ -80,8 +81,9 @@ TEST_F(hashtableLayoutTest, rejects_bucket_region_offset_overflow)
     int actual_ret = cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - 必要サイズを求める。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - バケット領域オフセット加算のオーバーフローが INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - バケット領域オフセットの加算がオーバーフローするときの cplat_hashtable_required_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // cplat_hashtable_required_size がエントリ領域サイズ乗算のオーバーフロー時に INVALID_ARGUMENT を返すことの確認
@@ -102,8 +104,9 @@ TEST_F(hashtableLayoutTest, rejects_entries_region_multiplication_overflow)
     int actual_ret = cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - 必要サイズを求める。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - エントリ領域サイズ計算のオーバーフローが INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - エントリ領域サイズの計算がオーバーフローするときの cplat_hashtable_required_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // cplat_hashtable_required_size がエントリ領域オフセット加算のオーバーフロー時に INVALID_ARGUMENT を返すことの確認
@@ -124,8 +127,9 @@ TEST_F(hashtableLayoutTest, rejects_entries_region_offset_overflow)
     int actual_ret = cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - 必要サイズを求める。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - エントリ領域オフセット加算のオーバーフローが INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - エントリ領域オフセットの加算がオーバーフローするときの cplat_hashtable_required_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // cplat_hashtable_required_size がデータ領域サイズ乗算のオーバーフロー時に INVALID_ARGUMENT を返すことの確認
@@ -145,8 +149,9 @@ TEST_F(hashtableLayoutTest, rejects_data_region_multiplication_overflow)
     int actual_ret = cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - 必要サイズを求める。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - データ領域サイズ計算のオーバーフローが INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - データ領域サイズの計算がオーバーフローするときの cplat_hashtable_required_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // cplat_hashtable_required_size が capacity に 0 を指定した場合に INVALID_ARGUMENT を返すことの確認
@@ -166,8 +171,9 @@ TEST_F(hashtableLayoutTest, required_size_rejects_zero_capacity)
     int actual_ret = cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - 必要サイズを求める。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - capacity 0 が create と同じ基準で INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - capacity 0 に対する cplat_hashtable_required_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(create と同じ基準で拒否されたことの確認)
 }
 
 // cplat_hashtable_create が未整列の外部管理バッファーを指定した場合に INVALID_ARGUMENT を返すことの確認
@@ -191,9 +197,10 @@ TEST_F(hashtableLayoutTest, create_rejects_misaligned_external_buffer)
                                             &ht); // [手順] - 1 バイトずれた管理領域で構築する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret);  // [確認_異常系] - 未整列の外部バッファーが INVALID_ARGUMENT であること。
-    EXPECT_EQ(nullptr, ht); // [確認_異常系] - 失敗後の ht_out が NULL であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - 未整列の外部バッファーを渡した cplat_hashtable_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(nullptr, ht); // [確認_異常系] - ht が nullptr であること。(失敗後の ht_out が NULL になったことの確認)
 }
 
 // cplat_hashtable_create が内部確保時の管理領域とデータ領域の合計サイズオーバーフローで INVALID_ARGUMENT を返すことの確認
@@ -219,8 +226,8 @@ TEST_F(hashtableLayoutTest, create_internal_alloc_rejects_combined_size_overflow
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret); // [確認_異常系] - 管理領域とデータ領域の合計サイズのオーバーフローが INVALID_ARGUMENT であること。
-    EXPECT_EQ(nullptr, ht); // [確認_異常系] - 失敗後の ht_out が NULL であること。
+        actual_ret); // [確認_異常系] - 管理領域とデータ領域の合計サイズがオーバーフローするときの cplat_hashtable_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(nullptr, ht); // [確認_異常系] - ht が nullptr であること。(失敗後の ht_out が NULL になったことの確認)
 }
 
 // SCOPE_TABLE 指定時の必要管理領域サイズが SCOPE_RECORD 指定時よりも小さくなることの確認
@@ -246,10 +253,18 @@ TEST_F(hashtableLayoutTest, required_size_table_scope_is_smaller_than_record_sco
     int actual_ret_record = cplat_hashtable_required_size(&record_config, &record_mgmt, &record_data);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_table);  // [確認_正常系] - SCOPE_TABLE の必要サイズが求まること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_record); // [確認_正常系] - SCOPE_RECORD の必要サイズが求まること。
-    EXPECT_LT(table_mgmt, record_mgmt);     // [確認_正常系] - SCOPE_TABLE の管理領域が厳密に小さいこと。
-    EXPECT_EQ(table_data, record_data);     // [確認_正常系] - データ領域サイズは粒度で変わらないこと。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_table); // [確認_正常系] - SCOPE_TABLE に対する cplat_hashtable_required_size() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_record); // [確認_正常系] - SCOPE_RECORD に対する cplat_hashtable_required_size() の戻り値が CPLAT_OK であること。
+    EXPECT_LT(
+        table_mgmt,
+        record_mgmt); // [確認_正常系] - table_mgmt が record_mgmt より小さいこと。(SCOPE_TABLE の管理領域が厳密に小さいことの確認)
+    EXPECT_EQ(
+        table_data,
+        record_data); // [確認_正常系] - record_data が table_data と一致すること。(データ領域サイズは粒度で変わらないことの確認)
 }
 
 // 不正な value_align (非2冪、上限超過、可変長値指定) に対して INVALID_ARGUMENT を返すことの確認
@@ -279,12 +294,15 @@ TEST_F(hashtableLayoutTest, rejects_invalid_value_align)
     int actual_ret_variable_value = cplat_hashtable_required_size(&variable_value, &mgmt_size, &data_size);
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_not_power_of_two); // [確認_異常系] - 2 の冪でない境界が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_too_large); // [確認_異常系] - 上限を超える境界が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_variable_value); // [確認_異常系] - 可変長値に境界を指定すると INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_not_power_of_two); // [確認_異常系] - 2 の冪でない境界に対する cplat_hashtable_required_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_too_large); // [確認_異常系] - 上限を超える境界に対する cplat_hashtable_required_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_variable_value); // [確認_異常系] - 境界を指定した可変長値に対する cplat_hashtable_required_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // value_align 指定時にデータ領域が必要幅へ切り上げられ値参照が境界に整列することの確認
@@ -318,17 +336,35 @@ TEST_F(hashtableLayoutTest, value_align_rounds_up_data_region_and_aligns_referen
     uintptr_t second_addr = reinterpret_cast<uintptr_t>(second_ref);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_packed_size);  // [確認_正常系] - 詰めて並べる設定で必要サイズを求められること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_aligned_size); // [確認_正常系] - 整列させる設定で必要サイズを求められること。
-    EXPECT_EQ(static_cast<size_t>(4 * 5),
-              packed_data_size); // [確認_正常系] - 詰めた場合は value_size の総和であること。
-    EXPECT_EQ(static_cast<size_t>(4 * 8),
-              aligned_data_size);           // [確認_正常系] - 整列させた場合は境界へ切り上げた幅の総和であること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - 整列させる設定で構築できること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_first);  // [確認_正常系] - 1 件目の値参照を取れること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_second); // [確認_正常系] - 2 件目の値参照を取れること。
-    EXPECT_EQ(0u, first_addr % 8u);         // [確認_正常系] - 1 件目の値参照が指定した境界に整列していること。
-    EXPECT_EQ(0u, second_addr % 8u);        // [確認_正常系] - 2 件目の値参照が指定した境界に整列していること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_packed_size); // [確認_正常系] - 詰めて並べる設定に対する cplat_hashtable_required_size() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_aligned_size); // [確認_正常系] - 整列させる設定に対する cplat_hashtable_required_size() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        static_cast<size_t>(4 * 5),
+        packed_data_size); // [確認_正常系] - packed_data_size が 4 * 5 と一致すること。(詰めた場合は value_size の総和になることの確認)
+    EXPECT_EQ(
+        static_cast<size_t>(4 * 8),
+        aligned_data_size); // [確認_正常系] - aligned_data_size が 4 * 8 と一致すること。(整列させた場合は境界へ切り上げた幅の総和になることの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_create); // [確認_正常系] - 整列させる設定に対する cplat_hashtable_create() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_first); // [確認_正常系] - 1 件目に対する cplat_hashtable_get_value_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_second); // [確認_正常系] - 2 件目に対する cplat_hashtable_get_value_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0u,
+        first_addr %
+            8u); // [確認_正常系] - first_addr % 8u が 0 であること。(1 件目の値参照が指定した境界に整列していることの確認)
+    EXPECT_EQ(
+        0u,
+        second_addr %
+            8u); // [確認_正常系] - second_addr % 8u が 0 であること。(2 件目の値参照が指定した境界に整列していることの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -351,17 +387,20 @@ TEST_F(hashtableLayoutTest, create_rejects_external_data_buffer_misaligned_for_v
     mgmt_buf.assign((mgmt_size / sizeof(uint64_t)) + 1u, 0);
     data_buf.assign(data_size + 8u, 0);
 
+    ASSERT_NE(0u, data_size); // [状態確認] - data_size が 0 以外であること。
+
     // Pre-Assert
-    ASSERT_NE(0u, data_size); // [Pre-Assert確認_正常系] - データ領域の必要サイズが求まること。
 
     // Act
     /* 8 境界から 1 バイトずらした位置をデータ領域として渡す。 */
     int actual_ret = cplat_hashtable_create(&config, mgmt_buf.data(), mgmt_size, data_buf.data() + 1, data_size, &ht);
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret);  // [確認_異常系] - 境界を満たさないデータ領域が INVALID_ARGUMENT であること。
-    EXPECT_EQ(nullptr, ht); // [確認_異常系] - 失敗時にハンドルが NULL のままであること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - 境界を満たさないデータ領域を渡した cplat_hashtable_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(nullptr,
+              ht); // [確認_異常系] - ht が nullptr であること。(失敗時にハンドルが NULL のままであることの確認)
 }
 
 // SCOPE_TABLE において可変長キーの記述子が uint64_t 境界に整列することの確認
@@ -388,11 +427,19 @@ TEST_F(hashtableLayoutTest, variable_key_descriptor_is_aligned_in_table_scope)
     second_addr = reinterpret_cast<uintptr_t>(test_hashtable_key_ref_at(ht, 1));
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - 可変長キーとテーブル粒度で構築できること。
-    EXPECT_EQ(0u,
-              first_addr % alignof(uint64_t)); // [確認_正常系] - 1 件目のキー descriptor が uint64_t 境界にあること。
-    EXPECT_EQ(0u,
-              second_addr % alignof(uint64_t)); // [確認_正常系] - 2 件目のキー descriptor が uint64_t 境界にあること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_create); // [確認_正常系] - 可変長キーとテーブル粒度に対する cplat_hashtable_create() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0u,
+        first_addr %
+            alignof(
+                uint64_t)); // [確認_正常系] - first_addr % alignof(uint64_t) が 0 であること。(1 件目のキー descriptor が uint64_t 境界にあることの確認)
+    EXPECT_EQ(
+        0u,
+        second_addr %
+            alignof(
+                uint64_t)); // [確認_正常系] - second_addr % alignof(uint64_t) が 0 であること。(2 件目のキー descriptor が uint64_t 境界にあることの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
@@ -425,10 +472,21 @@ TEST_F(hashtableLayoutTest, internal_data_region_is_aligned_after_odd_key_storag
     ref_addr = reinterpret_cast<uintptr_t>(test_hashtable_value_ref_at(ht, 0));
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_create);       // [確認_正常系] - 8 の倍数でないキー ストレージ容量で構築できること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_buffer);       // [確認_正常系] - データ領域の先頭を取れること。
-    EXPECT_EQ(0u, data_addr % alignof(uint64_t)); // [確認_正常系] - データ領域の先頭が uint64_t 境界にあること。
-    EXPECT_EQ(0u, ref_addr % alignof(uint64_t));  // [確認_正常系] - 値 descriptor が uint64_t 境界にあること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_create); // [確認_正常系] - 8 の倍数でないキー ストレージ容量に対する cplat_hashtable_create() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_buffer); // [確認_正常系] - cplat_hashtable_buffer_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0u,
+        data_addr %
+            alignof(
+                uint64_t)); // [確認_正常系] - data_addr % alignof(uint64_t) が 0 であること。(データ領域の先頭が uint64_t 境界にあることの確認)
+    EXPECT_EQ(
+        0u,
+        ref_addr %
+            alignof(
+                uint64_t)); // [確認_正常系] - ref_addr % alignof(uint64_t) が 0 であること。(値 descriptor が uint64_t 境界にあることの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。

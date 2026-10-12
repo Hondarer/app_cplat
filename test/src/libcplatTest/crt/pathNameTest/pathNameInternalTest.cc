@@ -24,9 +24,14 @@ TEST_F(pathNameInternalTest, copy_path_name_text_returns_einval_for_null_path_ou
                                  "."); // [手順] - test_copy_path_name_text(NULL, 16, &err, ".") を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - copy_path_name_text の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(1, cplat_error_is(&err, CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - EINVAL の要因であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - test_copy_path_name_text() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &err,
+            CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(err の要因が CPLAT_CAUSE_INVALID_ARGUMENT であることの確認)
 }
 
 // path_size に 0 を渡した場合に EINVAL が返ることの確認
@@ -44,9 +49,14 @@ TEST_F(pathNameInternalTest, copy_path_name_text_returns_einval_for_zero_path_si
                                  "."); // [手順] - test_copy_path_name_text(actual, 0, &err, ".") を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - copy_path_name_text の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(1, cplat_error_is(&err, CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - EINVAL の要因であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - test_copy_path_name_text() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &err,
+            CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(err の要因が CPLAT_CAUSE_INVALID_ARGUMENT であることの確認)
 }
 
 // text に NULL を渡した場合に EINVAL が返ることの確認
@@ -64,9 +74,14 @@ TEST_F(pathNameInternalTest, copy_path_name_text_returns_einval_for_null_text)
                                  NULL); // [手順] - test_copy_path_name_text(actual, size, &err, NULL) を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - copy_path_name_text の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(1, cplat_error_is(&err, CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - EINVAL の要因であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - test_copy_path_name_text() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &err,
+            CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(err の要因が CPLAT_CAUSE_INVALID_ARGUMENT であることの確認)
 }
 
 // 正常な引数でテキストがコピーされることの確認
@@ -84,6 +99,6 @@ TEST_F(pathNameInternalTest, copy_path_name_text_copies_text_into_buffer)
                                  "."); // [手順] - test_copy_path_name_text(actual, size, &err, ".") を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - copy_path_name_text の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ(".", actual);       // [確認_正常系] - 出力バッファーに "." がコピーされること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - test_copy_path_name_text() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(".", actual);       // [確認_正常系] - actual が "." であること。
 }

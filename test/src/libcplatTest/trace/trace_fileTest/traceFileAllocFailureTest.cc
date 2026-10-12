@@ -42,9 +42,8 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_registry_key_allocati
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc がレジストリ キーの確保のために 1 回目に呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回以上呼び出されること。
+                                      // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
 
     // Act
     cplat_trace_file_sink *handle =
@@ -53,7 +52,7 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_registry_key_allocati
 
     // Assert
     EXPECT_EQ((cplat_trace_file_sink *)NULL,
-              handle); // [確認_異常系] - cplat_trace_file_sink_create の戻り値が NULL であること。
+              handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が NULL であること。
 }
 
 // ハンドルの確保に失敗した場合に生成が失敗することの確認
@@ -66,9 +65,8 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_handle_allocation_fai
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(DoDefault())
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc がハンドルの確保のために 2 回目に呼び出されること。
-                          // [Pre-Assert手順] - 2 回目は NULL を返却し、他は本物へ委譲する。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc() が 2 回以上呼び出されること。
+                                      // [Pre-Assert手順] - 2 回目は NULL を返却し、他は本物へ委譲する。
 
     // Act
     cplat_trace_file_sink *handle =
@@ -77,7 +75,7 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_handle_allocation_fai
 
     // Assert
     EXPECT_EQ((cplat_trace_file_sink *)NULL,
-              handle); // [確認_異常系] - cplat_trace_file_sink_create の戻り値が NULL であること。
+              handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が NULL であること。
 }
 
 // パス文字列の複製に失敗した場合に生成が失敗することの確認
@@ -91,9 +89,8 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_path_duplication_fail
         .WillOnce(DoDefault())
         .WillOnce(DoDefault())
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc がパス文字列の複製のために 3 回目に呼び出されること。
-                          // [Pre-Assert手順] - 3 回目は NULL を返却し、他は本物へ委譲する。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc() が 3 回以上呼び出されること。
+                                      // [Pre-Assert手順] - 3 回目は NULL を返却し、他は本物へ委譲する。
 
     // Act
     cplat_trace_file_sink *handle =
@@ -102,7 +99,7 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_path_duplication_fail
 
     // Assert
     EXPECT_EQ((cplat_trace_file_sink *)NULL,
-              handle); // [確認_異常系] - cplat_trace_file_sink_create の戻り値が NULL であること。
+              handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が NULL であること。
 }
 
 // レジストリ配列の拡張に失敗した場合に生成が失敗することの確認
@@ -113,9 +110,8 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_registry_expansion_fa
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _))
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_異常系] - cplat_realloc がレジストリ配列の拡張のために 1 回目に呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_realloc() が 1 回以上呼び出されること。
+                                      // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
 
     // Act
     cplat_trace_file_sink *handle =
@@ -124,5 +120,5 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_registry_expansion_fa
 
     // Assert
     EXPECT_EQ((cplat_trace_file_sink *)NULL,
-              handle); // [確認_異常系] - cplat_trace_file_sink_create の戻り値が NULL であること。
+              handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が NULL であること。
 }

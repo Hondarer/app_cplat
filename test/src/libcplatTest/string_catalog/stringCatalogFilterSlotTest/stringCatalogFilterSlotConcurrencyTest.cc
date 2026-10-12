@@ -56,7 +56,7 @@ class stringCatalogFilterSlotConcurrencyTest : public Test
         ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(
                                 filter_test_trace_catalog(), filter_test_trace_key_names(),
                                 filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_));
-        // [状態確認] - `cplat_string_catalog_filter_slot_create( filter_test_trace_catalog(), filter_test_trace_key_names(), filter_test_trace_key_name_count(), nullptr, kLineCapacity, kLineWidth, &slot_)` の戻り値が `CPLAT_OK` であること。
+        // [状態確認] - cplat_string_catalog_filter_slot_create() の戻り値が CPLAT_OK であること。
     }
     // [サブ手順終了]
 
@@ -86,11 +86,11 @@ TEST_F(stringCatalogFilterSlotConcurrencyTest, concurrent_apply_does_not_break_c
     ASSERT_EQ(CPLAT_OK,
               compile_single_line("key == 2",
                                   image_key2)); // [状態] - JOB_RECEIVED (key=2) に一致するイメージをコンパイルする。
-    // [状態確認] - `compile_single_line("key == 2", image_key2)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - "key == 2" をコンパイルした compile_single_line() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
               compile_single_line("key == 3",
                                   image_key3)); // [状態] - JOB_PROGRESS (key=3) に一致するイメージをコンパイルする。
-    // [状態確認] - `compile_single_line("key == 3", image_key3)` の戻り値が `CPLAT_OK` であること。
+    // [状態確認] - "key == 3" をコンパイルした compile_single_line() の戻り値が CPLAT_OK であること。
     for (std::size_t index = 0; index < 4U; index++)
     {
         args[index].slot = slot_;
@@ -103,23 +103,26 @@ TEST_F(stringCatalogFilterSlotConcurrencyTest, concurrent_apply_does_not_break_c
     // Act
     for (std::size_t index = 0; index < 4U; index++)
     {
-        ASSERT_EQ(CPLAT_OK, cplat_thread_create(&threads[index], format_worker,
-                                                &args[index])); // [手順] - format を繰り返すスレッドを 4 本起動する。
-        // [確認_正常系 回数=4] - `cplat_thread_create(&threads[index], format_worker, &args[index])` の戻り値が `CPLAT_OK` であること。
+        int actual_ret_create =
+            cplat_thread_create(&threads[index], format_worker,
+                                &args[index]);  // [手順] - format を繰り返すスレッドを 4 本起動する。
+        ASSERT_EQ(CPLAT_OK, actual_ret_create); // [状態確認] - cplat_thread_create() の戻り値が CPLAT_OK であること。
     }
     for (iteration = 0; iteration < 200; iteration++)
     {
-        ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_apply(
-                                slot_, ((iteration % 2) == 0) ? image_key2 : image_key3, kImageSize, nullptr, 0U,
-                                nullptr)); // [手順] - 2 種類のイメージを交互に 200 回適用する。
-        // [確認_正常系 回数=200] - `cplat_string_catalog_filter_slot_apply( slot_, ((iteration % 2) == 0) ? image_key2 : image_key3, kImageSize, nullptr, 0U, nullptr)` の戻り値が `CPLAT_OK` であること。
+        int actual_ret_apply = cplat_string_catalog_filter_slot_apply(
+            slot_, ((iteration % 2) == 0) ? image_key2 : image_key3, kImageSize, nullptr, 0U,
+            nullptr); // [手順] - 2 種類のイメージを交互に 200 回適用する。
+        ASSERT_EQ(
+            CPLAT_OK,
+            actual_ret_apply); // [確認_正常系 回数=200] - cplat_string_catalog_filter_slot_apply() の戻り値が CPLAT_OK であること。
     }
     stop_flag = 1; // [手順] - ワーカー スレッドへ終了を通知する。
     for (std::size_t index = 0; index < 4U; index++)
     {
-        ASSERT_EQ(CPLAT_OK,
-                  cplat_thread_join(threads[index], CPLAT_SYNC_WAIT_FOREVER)); // [手順] - 各スレッドの終了を待機する。
-        // [確認_正常系 回数=4] - `cplat_thread_join(threads[index], CPLAT_SYNC_WAIT_FOREVER)` の戻り値が `CPLAT_OK` であること。
+        int actual_ret_join =
+            cplat_thread_join(threads[index], CPLAT_SYNC_WAIT_FOREVER); // [手順] - 各スレッドの終了を待機する。
+        ASSERT_EQ(CPLAT_OK, actual_ret_join); // [状態確認] - cplat_thread_join() の戻り値が CPLAT_OK であること。
     }
 
     // Assert
@@ -128,7 +131,7 @@ TEST_F(stringCatalogFilterSlotConcurrencyTest, concurrent_apply_does_not_break_c
         EXPECT_EQ(
             1,
             args[index]
-                .ok); // [確認_正常系 回数=4] - 各スレッドの format 呼び出しが、常に CPLAT_OK かつ 0/1 の判定結果を返していたこと。
+                .ok); // [確認_正常系 回数=4] - args[index].ok が 1 であること。(各スレッドの format 呼び出しが常に CPLAT_OK かつ 0/1 の判定結果を返したことの確認)
     }
 }
 // [サブ手順参照 名前=stringCatalogFilterSlotConcurrencyTest.TearDown]

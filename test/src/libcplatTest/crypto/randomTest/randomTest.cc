@@ -28,9 +28,13 @@ TEST_F(randomTest, fills_requested_size)
         cplat_random_bytes(buf, sizeof(buf)); // [手順] - 32 byte を要求して cplat_random_bytes を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_random_bytes の戻り値が CPLAT_OK であること。
-    EXPECT_NE(0, memcmp(buf, sentinel,
-                        sizeof(buf))); // [確認_正常系] - バッファーが初期値 0xCD のままではなく書き換わること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_random_bytes() の戻り値が CPLAT_OK であること。
+    EXPECT_NE(
+        0,
+        memcmp(
+            buf, sentinel,
+            sizeof(
+                buf))); // [確認_正常系] - memcmp() の戻り値が 0 以外であること。(buf が初期値 0xCD から書き換わったことの確認)
 }
 
 // 続けて取得した乱数が一致しないことの確認
@@ -48,10 +52,15 @@ TEST_F(randomTest, successive_calls_differ)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              actual_ret_first); // [確認_正常系] - 1 回目の cplat_random_bytes の戻り値が CPLAT_OK であること。
+              actual_ret_first); // [確認_正常系] - 1 回目の cplat_random_bytes() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK,
-              actual_ret_second); // [確認_正常系] - 2 回目の cplat_random_bytes の戻り値が CPLAT_OK であること。
-    EXPECT_NE(0, memcmp(first, second, sizeof(first))); // [確認_正常系] - 2 回の取得結果が一致しないこと。
+              actual_ret_second); // [確認_正常系] - 2 回目の cplat_random_bytes() の戻り値が CPLAT_OK であること。
+    EXPECT_NE(
+        0,
+        memcmp(
+            first, second,
+            sizeof(
+                first))); // [確認_正常系] - memcmp() の戻り値が 0 以外であること。(2 回の取得結果が一致しないことの確認)
 }
 
 // サイズ 0 を成功として扱うことの確認
@@ -66,7 +75,7 @@ TEST_F(randomTest, zero_size_succeeds)
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              actual_ret); // [確認_正常系] - サイズ 0 の場合に cplat_random_bytes の戻り値が CPLAT_OK であること。
+              actual_ret); // [確認_正常系] - サイズ 0 の cplat_random_bytes() の戻り値が CPLAT_OK であること。
 }
 
 // バッファーが NULL の場合に引数不正を返すことの確認
@@ -81,7 +90,7 @@ TEST_F(randomTest, null_buffer_returns_invalid_argument)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - cplat_random_bytes の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+              actual_ret); // [確認_異常系] - cplat_random_bytes() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 要求バイト数が共通最大サイズを超える場合に拒否されることの確認
@@ -100,7 +109,7 @@ TEST_F(randomTest, size_over_int_max_returns_invalid_argument)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret); // [確認_異常系] - cplat_random_bytes の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+              actual_ret); // [確認_異常系] - cplat_random_bytes() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 #if defined(PLATFORM_LINUX)
@@ -117,7 +126,7 @@ TEST_F(randomTest, returns_unknown_when_rand_bytes_fails)
     EXPECT_CALL(mock_openssl, RAND_bytes(_, _, _, buf, 16))
         .WillOnce(Return(0))
         .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_異常系] - RAND_bytes がバッファーと 16 byte を指定して 1 回目に呼び出されること。
+            DoDefault()); // [Pre-Assert確認_異常系] - RAND_bytes() が buf、16 を指定して 1 回以上呼び出されること。
                           // [Pre-Assert手順] - 1 回目は失敗を示す 0 を返却し、以降は本物へ委譲する。
 
     // Act
@@ -125,7 +134,7 @@ TEST_F(randomTest, returns_unknown_when_rand_bytes_fails)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - cplat_random_bytes の戻り値が CPLAT_ERR_UNKNOWN であること。
+              actual_ret); // [確認_異常系] - cplat_random_bytes() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 #endif /* PLATFORM_LINUX */

@@ -110,8 +110,9 @@ TEST_F(hashtableTimestampTest, add_update_delete_stamp_realtime)
     fill_value(&value, "v1");
     peer = find_colliding_key("a", 4); // [状態] - "a" と同じバケットの別キーを探す。
 
+    ASSERT_NE(nullptr, peer); // [状態確認] - find_colliding_key() の戻り値が nullptr 以外であること。
+
     // Pre-Assert
-    ASSERT_NE(nullptr, peer); // [Pre-Assert確認_正常系] - 同一バケットの別キーが見つかること。
 
     // Act
     (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
@@ -143,29 +144,70 @@ TEST_F(hashtableTimestampTest, add_update_delete_stamp_realtime)
         cplat_hashtable_find_timestamp_val(ht, "a", &added); // [手順] - 削除済みキーで検索する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_add);          // [確認_正常系] - add が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_add_time);     // [確認_正常系] - 追加後に時刻を読めること。
-    EXPECT_EQ(1000, added.tv_sec);                // [確認_正常系] - 追加時刻が最初の実時刻であること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_table_add);    // [確認_正常系] - 追加後にテーブル時刻を読めること。
-    EXPECT_EQ(1000, table_added.tv_sec);          // [確認_正常系] - テーブル時刻が追加時刻と一致すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_find_ref);     // [確認_正常系] - find_timestamp_ref が成功すること。
-    EXPECT_EQ(1000, added_ref_sec);               // [確認_正常系] - 参照の秒が追加時刻と一致すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_find_val);     // [確認_正常系] - find_timestamp_val が成功すること。
-    EXPECT_EQ(1000, added_copy.tv_sec);           // [確認_正常系] - 複製の秒が追加時刻と一致すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_walk);         // [確認_正常系] - チェインを辿って時刻を読めること。
-    EXPECT_EQ(1000, walked.tv_sec);               // [確認_正常系] - チェイン走査後も追加時刻が保たれること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_update);       // [確認_正常系] - update が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_update_time);  // [確認_正常系] - 更新後に時刻を読めること。
-    EXPECT_EQ(1020, updated.tv_sec);              // [確認_正常系] - 更新で時刻が進むこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_table_update); // [確認_正常系] - 更新後にテーブル時刻を読めること。
-    EXPECT_EQ(1020, table_updated.tv_sec);        // [確認_正常系] - テーブル時刻が更新時刻と一致すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_delete);       // [確認_正常系] - delete が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_deleted_time); // [確認_正常系] - 削除済みでも時刻を読めること。
-    EXPECT_EQ(1030, deleted.tv_sec);              // [確認_正常系] - 削除時刻が更新されていること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_table_delete); // [確認_正常系] - 削除後にテーブル時刻を読めること。
-    EXPECT_EQ(1030, table_deleted.tv_sec);        // [確認_正常系] - テーブル時刻が削除時刻と一致すること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
-              actual_ret_find_deleted); // [確認_異常系] - 削除済みキーの find_timestamp が NOT_FOUND であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_add); // [確認_正常系] - cplat_hashtable_add() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_add_time); // [確認_正常系] - 追加後の cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1000,
+        added.tv_sec); // [確認_正常系] - added.tv_sec が 1000 であること。(追加時刻が最初の実時刻であることの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_table_add); // [確認_正常系] - 追加後の cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1000,
+        table_added
+            .tv_sec); // [確認_正常系] - table_added.tv_sec が 1000 であること。(テーブル時刻が追加時刻と一致することの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_find_ref); // [確認_正常系] - cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1000,
+        added_ref_sec); // [確認_正常系] - added_ref_sec が 1000 であること。(参照の秒が追加時刻と一致することの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_find_val); // [確認_正常系] - cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1000,
+        added_copy
+            .tv_sec); // [確認_正常系] - added_copy.tv_sec が 1000 であること。(複製の秒が追加時刻と一致することの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_walk); // [確認_正常系] - チェインを辿ったときの cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1000,
+        walked
+            .tv_sec); // [確認_正常系] - walked.tv_sec が 1000 であること。(チェイン走査後も追加時刻が保たれることの確認)
+    EXPECT_EQ(CPLAT_OK, actual_ret_update); // [確認_正常系] - cplat_hashtable_update() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_update_time); // [確認_正常系] - 更新後の cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1020,
+              updated.tv_sec); // [確認_正常系] - updated.tv_sec が 1020 であること。(更新で時刻が進んだことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_table_update); // [確認_正常系] - 更新後の cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1020,
+        table_updated
+            .tv_sec); // [確認_正常系] - table_updated.tv_sec が 1020 であること。(テーブル時刻が更新時刻と一致することの確認)
+    EXPECT_EQ(CPLAT_OK, actual_ret_delete); // [確認_正常系] - cplat_hashtable_delete() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_deleted_time); // [確認_正常系] - 削除済みに対する cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1030,
+        deleted.tv_sec); // [確認_正常系] - deleted.tv_sec が 1030 であること。(削除時刻が更新されていることの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_table_delete); // [確認_正常系] - 削除後の cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1030,
+        table_deleted
+            .tv_sec); // [確認_正常系] - table_deleted.tv_sec が 1030 であること。(テーブル時刻が削除時刻と一致することの確認)
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_find_deleted); // [確認_異常系] - 削除済みキーに対する cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_ERR_NOT_FOUND であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -211,14 +253,27 @@ TEST_F(hashtableTimestampTest, add_revive_keeps_previous_value_and_stamps)
     int actual_ret_counts = cplat_hashtable_count_status(ht, &in_use, &deleted, NULL); // [手順] - 件数を取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_revive); // [確認_正常系] - REVIVE での add が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_find);   // [確認_正常系] - 復活後に検索できること。
-    EXPECT_EQ("old", found_text); // [確認_正常系] - 復活した値が削除前のままであること(new は無視されること)。
-    EXPECT_LT(before_revive.tv_sec, after_revive.tv_sec); // [確認_正常系] - REVIVE でもレコード時刻が進むこと。
-    EXPECT_LT(table_before.tv_sec, table_after.tv_sec);   // [確認_正常系] - REVIVE でもテーブル時刻が進むこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_counts);               // [確認_正常系] - count_status が成功すること。
-    EXPECT_EQ(1u, in_use);                                // [確認_正常系] - 復活により実装中が 1 件に戻ること。
-    EXPECT_EQ(0u, deleted);                               // [確認_正常系] - 復活により削除済みが 0 件に戻ること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_revive); // [確認_正常系] - REVIVE を指定した cplat_hashtable_add() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_find); // [確認_正常系] - 復活後の cplat_hashtable_find_value_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        "old",
+        found_text); // [確認_正常系] - found_text が "old" であること。(復活した値が削除前のままで、new は無視されたことの確認)
+    EXPECT_LT(
+        before_revive.tv_sec,
+        after_revive
+            .tv_sec); // [確認_正常系] - before_revive.tv_sec が after_revive.tv_sec より小さいこと。(REVIVE でもレコード時刻が進んだことの確認)
+    EXPECT_LT(
+        table_before.tv_sec,
+        table_after
+            .tv_sec); // [確認_正常系] - table_before.tv_sec が table_after.tv_sec より小さいこと。(REVIVE でもテーブル時刻が進んだことの確認)
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_counts); // [確認_正常系] - cplat_hashtable_count_status() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1u, in_use);        // [確認_正常系] - in_use が 1 であること。(復活により実装中が 1 件に戻ったことの確認)
+    EXPECT_EQ(0u, deleted); // [確認_正常系] - deleted が 0 であること。(復活により削除済みが 0 件に戻ったことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -252,12 +307,18 @@ TEST_F(hashtableTimestampTest, push_deleted_does_not_stamp)
     actual_ret_status = cplat_hashtable_get_status(ht, 1, &status);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_push);   // [確認_正常系] - push_deleted が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_after);  // [確認_正常系] - 加齢後も時刻を読めること。
-    EXPECT_EQ(before.tv_sec, after.tv_sec); // [確認_正常系] - 加齢では時刻が変わらないこと。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_push); // [確認_正常系] - cplat_hashtable_push_deleted() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_after); // [確認_正常系] - 加齢後の cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        before.tv_sec,
+        after
+            .tv_sec); // [確認_正常系] - after.tv_sec が before.tv_sec と一致すること。(加齢では時刻が変わらないことの確認)
     EXPECT_EQ(CPLAT_OK, actual_ret_status);
-    // [確認_正常系] - `cplat_hashtable_get_status(ht, 1, &status)` の戻り値が `CPLAT_OK` であること。
-    EXPECT_EQ(3, status); // [確認_正常系] - 加齢で status が 3 になること。
+    // [確認_正常系] - cplat_hashtable_get_status() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(3, status); // [確認_正常系] - status が 3 であること。(加齢で status が 3 になったことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -295,14 +356,28 @@ TEST_F(hashtableTimestampTest, empty_slot_time_is_not_found_and_zeroed)
     int actual_ret_purged = cplat_hashtable_get_timestamp_val(ht, 2, &ts);
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND, actual_ret_empty);  // [確認_異常系] - 空の get_time が NOT_FOUND であること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_delete);            // [確認_正常系] - 直ちに空へ戻る削除が成功すること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND, actual_ret_after);  // [確認_異常系] - 空へ戻したスロットの時刻が無効であること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_insert);            // [確認_正常系] - insert_direct が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_direct_time);       // [確認_正常系] - 指定時刻を読めること。
-    EXPECT_EQ(50, ts.tv_sec);                          // [確認_正常系] - insert_direct が渡した時刻を保持すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_purge);             // [確認_正常系] - purge_deleted が成功すること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND, actual_ret_purged); // [確認_異常系] - 回収後の時刻が無効であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_empty); // [確認_異常系] - 空スロットに対する cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_ERR_NOT_FOUND であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_delete); // [確認_正常系] - 直ちに空へ戻る cplat_hashtable_delete() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_after); // [確認_異常系] - 空へ戻したスロットに対する cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_ERR_NOT_FOUND であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_insert); // [確認_正常系] - cplat_hashtable_insert_direct() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_direct_time); // [確認_正常系] - 直接挿入したスロットに対する cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        50,
+        ts.tv_sec); // [確認_正常系] - ts.tv_sec が 50 であること。(cplat_hashtable_insert_direct() が渡した時刻を保持したことの確認)
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_purge); // [確認_正常系] - cplat_hashtable_purge_deleted() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_purged); // [確認_異常系] - 回収後のスロットに対する cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_ERR_NOT_FOUND であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -342,27 +417,39 @@ TEST_F(hashtableTimestampTest, accessors_reject_invalid_arguments)
     int actual_ret_find_missing = cplat_hashtable_find_timestamp_val(ht, "b", &ts);
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_get_null_ht); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_get_null_out); // [確認_異常系] - NULL 出力が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_get_rec0); // [確認_異常系] - レコード番号 0 が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_get_rec_hi); // [確認_異常系] - 範囲外レコードが INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_get_val_null); // [確認_異常系] - NULL 複製先が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_find_null_ht); // [確認_異常系] - find の NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_find_null_key); // [確認_異常系] - find の NULL key が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_find_null_out); // [確認_異常系] - find の NULL 出力が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_OUT_OF_RANGE,
-              actual_ret_find_long); // [確認_異常系] - 長すぎるキーが OUT_OF_RANGE であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_find_val_null); // [確認_異常系] - find_val の NULL が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_NOT_FOUND, actual_ret_find_missing); // [確認_異常系] - 無いキーが NOT_FOUND であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_get_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_get_null_out); // [確認_異常系] - 出力に NULL を渡した cplat_hashtable_get_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_get_rec0); // [確認_異常系] - レコード番号 0 を渡した cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_get_rec_hi); // [確認_異常系] - 範囲外のレコード番号を渡した cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_get_val_null); // [確認_異常系] - 複製先に NULL を渡した cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_find_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_find_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_find_null_out); // [確認_異常系] - 出力に NULL を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_RANGE,
+        actual_ret_find_long); // [確認_異常系] - 長すぎるキーを渡した cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_ERR_OUT_OF_RANGE であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_find_val_null); // [確認_異常系] - 複製先に NULL を渡した cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_NOT_FOUND,
+        actual_ret_find_missing); // [確認_異常系] - 無いキーに対する cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_ERR_NOT_FOUND であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -419,33 +506,68 @@ TEST_F(hashtableTimestampTest, table_timestamp_tracks_content_changes)
     int actual_ret_val_null_ht = cplat_hashtable_get_table_timestamp_val(NULL, &table);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_create);      // [確認_正常系] - 構築直後でもテーブル時刻を読めること。
-    EXPECT_EQ(0, created_sec);                   // [確認_正常系] - 構築直後のテーブル時刻が 0 であること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_push);        // [確認_正常系] - push_deleted が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_after_push);  // [確認_正常系] - 加齢後もテーブル時刻を読めること。
-    EXPECT_EQ(after_delete, after_push);         // [確認_正常系] - 加齢ではテーブル時刻が変わらないこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_purge);       // [確認_正常系] - purge_deleted が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_after_purge); // [確認_正常系] - 回収後もテーブル時刻を読めること。
-    EXPECT_EQ(after_delete, after_purge);        // [確認_正常系] - 回収ではテーブル時刻が変わらないこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_old);         // [確認_正常系] - 古い時刻の insert_direct が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_after_old);   // [確認_正常系] - 古い時刻の書き込み後もテーブル時刻を読めること。
-    EXPECT_EQ(after_delete, after_old);          // [確認_正常系] - 古い時刻ではテーブル時刻が進まないこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_new);         // [確認_正常系] - 新しい時刻の insert_direct が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_after_new);   // [確認_正常系] - 新しい時刻の書き込み後にテーブル時刻を読めること。
-    EXPECT_EQ(2000, after_new);                  // [確認_正常系] - 新しい時刻でテーブル時刻が進むこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_ref);         // [確認_正常系] - get_table_timestamp_ref が成功すること。
-    EXPECT_EQ(2000, ref_sec);                    // [確認_正常系] - 参照の秒がテーブル時刻と一致すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_clear);       // [確認_正常系] - clear が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_after_clear); // [確認_正常系] - clear 後にテーブル時刻を読めること。
-    EXPECT_EQ(1020, table.tv_sec);               // [確認_正常系] - clear でテーブル時刻が進むこと。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_ht); // [確認_異常系] - NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_null_out); // [確認_異常系] - NULL 出力が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_val_null); // [確認_異常系] - NULL 複製先が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_val_null_ht); // [確認_異常系] - val の NULL ht が INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_create); // [確認_正常系] - 構築直後の cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0, created_sec); // [確認_正常系] - created_sec が 0 であること。(構築直後のテーブル時刻が 0 であることの確認)
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_push); // [確認_正常系] - cplat_hashtable_push_deleted() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_after_push); // [確認_正常系] - 加齢後の cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        after_delete,
+        after_push); // [確認_正常系] - after_push が after_delete と一致すること。(加齢ではテーブル時刻が変わらないことの確認)
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_purge); // [確認_正常系] - cplat_hashtable_purge_deleted() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_after_purge); // [確認_正常系] - 回収後の cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        after_delete,
+        after_purge); // [確認_正常系] - after_purge が after_delete と一致すること。(回収ではテーブル時刻が変わらないことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_old); // [確認_正常系] - 古い時刻を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_after_old); // [確認_正常系] - 古い時刻の書き込み後の cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        after_delete,
+        after_old); // [確認_正常系] - after_old が after_delete と一致すること。(古い時刻ではテーブル時刻が進まないことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_new); // [確認_正常系] - 新しい時刻を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_after_new); // [確認_正常系] - 新しい時刻の書き込み後の cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(2000,
+              after_new); // [確認_正常系] - after_new が 2000 であること。(新しい時刻でテーブル時刻が進んだことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_ref); // [確認_正常系] - cplat_hashtable_get_table_timestamp_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(2000,
+              ref_sec); // [確認_正常系] - ref_sec が 2000 であること。(参照の秒がテーブル時刻と一致することの確認)
+    EXPECT_EQ(CPLAT_OK, actual_ret_clear); // [確認_正常系] - cplat_hashtable_clear() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_after_clear); // [確認_正常系] - clear 後の cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1020,
+        table.tv_sec); // [確認_正常系] - table.tv_sec が 1020 であること。(clear でテーブル時刻が進んだことの確認)
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_table_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_out); // [確認_異常系] - 出力に NULL を渡した cplat_hashtable_get_table_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_val_null); // [確認_異常系] - 複製先に NULL を渡した cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_val_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -490,34 +612,53 @@ TEST_F(hashtableTimestampTest, scope_table_record_timestamp_apis_are_unsupported
     int actual_ret_config = cplat_hashtable_get_config_val(ht, &read_config);
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNSUPPORTED,
-              actual_ret_get_ref); // [確認_異常系] - SCOPE_TABLE の get_timestamp_ref が UNSUPPORTED であること。
-    EXPECT_EQ(CPLAT_ERR_UNSUPPORTED,
-              actual_ret_get_val); // [確認_異常系] - SCOPE_TABLE の get_timestamp_val が UNSUPPORTED であること。
-    EXPECT_EQ(CPLAT_ERR_UNSUPPORTED,
-              actual_ret_find_ref); // [確認_異常系] - SCOPE_TABLE の find_timestamp_ref が UNSUPPORTED であること。
-    EXPECT_EQ(CPLAT_ERR_UNSUPPORTED,
-              actual_ret_find_val); // [確認_異常系] - SCOPE_TABLE の find_timestamp_val が UNSUPPORTED であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_get_null_ht); // [確認_異常系] - NULL ht が UNSUPPORTED より INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_get_null_out); // [確認_異常系] - NULL 出力が UNSUPPORTED より INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_get_val_null); // [確認_異常系] - NULL 複製先が UNSUPPORTED より INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_find_null_ht); // [確認_異常系] - find の NULL ht が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_find_null_key); // [確認_異常系] - find の NULL key が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_find_null_out); // [確認_異常系] - find の NULL 出力が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_find_val_null);       // [確認_異常系] - find_val の NULL が INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_table_ref); // [確認_正常系] - SCOPE_TABLE でもテーブル時刻参照が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_table_val); // [確認_正常系] - SCOPE_TABLE でもテーブル時刻複製が成功すること。
-    EXPECT_EQ(1000, table.tv_sec);             // [確認_正常系] - add でテーブル時刻が進むこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_config);    // [確認_正常系] - get_config_val が成功すること。
-    EXPECT_EQ(CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE,
-              read_config.timestamp_scope); // [確認_正常系] - 構築時の粒度が設定へ残ること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNSUPPORTED,
+        actual_ret_get_ref); // [確認_異常系] - SCOPE_TABLE での cplat_hashtable_get_timestamp_ref() の戻り値が CPLAT_ERR_UNSUPPORTED であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNSUPPORTED,
+        actual_ret_get_val); // [確認_異常系] - SCOPE_TABLE での cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_ERR_UNSUPPORTED であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNSUPPORTED,
+        actual_ret_find_ref); // [確認_異常系] - SCOPE_TABLE での cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_UNSUPPORTED であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNSUPPORTED,
+        actual_ret_find_val); // [確認_異常系] - SCOPE_TABLE での cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_ERR_UNSUPPORTED であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_get_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(CPLAT_ERR_UNSUPPORTED より引数検査が優先されたことの確認)
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_get_null_out); // [確認_異常系] - 出力に NULL を渡した cplat_hashtable_get_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(CPLAT_ERR_UNSUPPORTED より引数検査が優先されたことの確認)
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_get_val_null); // [確認_異常系] - 複製先に NULL を渡した cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(CPLAT_ERR_UNSUPPORTED より引数検査が優先されたことの確認)
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_find_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_find_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_find_null_out); // [確認_異常系] - 出力に NULL を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_find_val_null); // [確認_異常系] - 複製先に NULL を渡した cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_table_ref); // [確認_正常系] - SCOPE_TABLE での cplat_hashtable_get_table_timestamp_ref() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_table_val); // [確認_正常系] - SCOPE_TABLE での cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1000,
+              table.tv_sec); // [確認_正常系] - table.tv_sec が 1000 であること。(add でテーブル時刻が進んだことの確認)
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_config); // [確認_正常系] - cplat_hashtable_get_config_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE,
+        read_config
+            .timestamp_scope); // [確認_正常系] - read_config.timestamp_scope が CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE であること。(構築時の粒度が設定へ残ったことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -562,21 +703,35 @@ TEST_F(hashtableTimestampTest, scope_table_insert_direct_and_table_timestamp)
     int actual_ret_after_clear = cplat_hashtable_get_table_timestamp_val(ht, &table);
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret_add);    // [確認_正常系] - add が成功すること。
-    EXPECT_EQ(1000, after_add);             // [確認_正常系] - add でテーブル時刻が進むこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_update); // [確認_正常系] - update が成功すること。
-    EXPECT_EQ(1010, after_update);          // [確認_正常系] - update でテーブル時刻が進むこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_delete); // [確認_正常系] - delete が成功すること。
-    EXPECT_EQ(1020, after_delete);          // [確認_正常系] - delete でテーブル時刻が進むこと。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              actual_ret_nonnull);        // [確認_異常系] - SCOPE_TABLE で時刻を渡すと INVALID_ARGUMENT であること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_null); // [確認_正常系] - SCOPE_TABLE で時刻省略の insert_direct が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_after_direct); // [確認_正常系] - insert_direct 後もテーブル時刻を読めること。
-    EXPECT_EQ(after_delete,
-              after_direct); // [確認_正常系] - SCOPE_TABLE の insert_direct ではテーブル時刻が進まないこと。
-    EXPECT_EQ(CPLAT_OK, actual_ret_clear);       // [確認_正常系] - clear が成功すること。
-    EXPECT_EQ(CPLAT_OK, actual_ret_after_clear); // [確認_正常系] - clear 後にテーブル時刻を読めること。
-    EXPECT_EQ(1030, table.tv_sec);               // [確認_正常系] - clear でテーブル時刻が進むこと。
+    EXPECT_EQ(CPLAT_OK, actual_ret_add); // [確認_正常系] - cplat_hashtable_add() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1000, after_add); // [確認_正常系] - after_add が 1000 であること。(add でテーブル時刻が進んだことの確認)
+    EXPECT_EQ(CPLAT_OK, actual_ret_update); // [確認_正常系] - cplat_hashtable_update() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1010,
+        after_update); // [確認_正常系] - after_update が 1010 であること。(update でテーブル時刻が進んだことの確認)
+    EXPECT_EQ(CPLAT_OK, actual_ret_delete); // [確認_正常系] - cplat_hashtable_delete() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1020,
+        after_delete); // [確認_正常系] - after_delete が 1020 であること。(delete でテーブル時刻が進んだことの確認)
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_nonnull); // [確認_異常系] - SCOPE_TABLE で時刻を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_null); // [確認_正常系] - SCOPE_TABLE で時刻を省略した cplat_hashtable_insert_direct() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_after_direct); // [確認_正常系] - insert_direct 後の cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        after_delete,
+        after_direct); // [確認_正常系] - after_direct が after_delete と一致すること。(SCOPE_TABLE の insert_direct ではテーブル時刻が進まないことの確認)
+    EXPECT_EQ(CPLAT_OK, actual_ret_clear); // [確認_正常系] - cplat_hashtable_clear() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_after_clear); // [確認_正常系] - clear 後の cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1030,
+        table.tv_sec); // [確認_正常系] - table.tv_sec が 1030 であること。(clear でテーブル時刻が進んだことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht);

@@ -22,8 +22,8 @@ TEST_F(pathStripExtensionTest, removes_extension)
         "a/b.txt"); // [手順] - cplat_path_strip_extension(actual, size, NULL, "a/b.txt") を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_strip_extension の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("a/b", actual);     // [確認_正常系] - 拡張子を除いたパスが返ること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_strip_extension() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("a/b", actual);     // [確認_正常系] - actual が "a/b" であること。
 }
 
 // 拡張子がない場合そのままコピーされることの確認
@@ -40,8 +40,8 @@ TEST_F(pathStripExtensionTest, copies_as_is_when_no_extension)
         "noext"); // [手順] - cplat_path_strip_extension(actual, size, NULL, "noext") を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_strip_extension の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("noext", actual);   // [確認_正常系] - 入力がそのままコピーされること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_strip_extension() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("noext", actual);   // [確認_正常系] - actual が "noext" であること。
 }
 
 // NULL path_out で EINVAL が返ることの確認
@@ -62,9 +62,16 @@ TEST_F(pathStripExtensionTest, returns_einval_for_null_path_out)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret); // [確認_異常系] - cplat_path_strip_extension の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(1, cplat_error_is(&err, CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - EINVAL の要因であること。
-    EXPECT_EQ(1, cplat_error_is_set(&last_error)); // [確認_異常系] - TLS に詳細エラーが記録されること。
+        actual_ret); // [確認_異常系] - cplat_path_strip_extension() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &err,
+            CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(err の要因が CPLAT_CAUSE_INVALID_ARGUMENT であることの確認)
+    EXPECT_EQ(
+        1,
+        cplat_error_is_set(
+            &last_error)); // [確認_異常系] - cplat_error_is_set() の戻り値が 1 であること。(TLS に詳細エラーが記録されたことの確認)
 }
 
 // path_size が 0 の場合に EINVAL が返ることの確認
@@ -84,8 +91,12 @@ TEST_F(pathStripExtensionTest, returns_einval_for_zero_path_size)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret); // [確認_異常系] - path_size が 0 の cplat_path_strip_extension の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(1, cplat_error_is(&err, CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - EINVAL の要因であること。
+        actual_ret); // [確認_異常系] - path_size が 0 の cplat_path_strip_extension() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &err,
+            CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(err の要因が CPLAT_CAUSE_INVALID_ARGUMENT であることの確認)
 }
 
 // NULL path で EINVAL が返ることの確認
@@ -105,8 +116,12 @@ TEST_F(pathStripExtensionTest, returns_einval_for_null_path)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret); // [確認_異常系] - cplat_path_strip_extension の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(1, cplat_error_is(&err, CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - EINVAL の要因であること。
+        actual_ret); // [確認_異常系] - cplat_path_strip_extension() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &err,
+            CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(err の要因が CPLAT_CAUSE_INVALID_ARGUMENT であることの確認)
 }
 
 // 空文字列パスで EINVAL が返ることの確認
@@ -126,8 +141,12 @@ TEST_F(pathStripExtensionTest, returns_einval_for_empty_path)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret); // [確認_異常系] - cplat_path_strip_extension の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(1, cplat_error_is(&err, CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - EINVAL の要因であること。
+        actual_ret); // [確認_異常系] - cplat_path_strip_extension() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &err,
+            CPLAT_CAUSE_INVALID_ARGUMENT)); // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(err の要因が CPLAT_CAUSE_INVALID_ARGUMENT であることの確認)
 }
 
 // バッファー不足で ENAMETOOLONG が返ることの確認
@@ -147,6 +166,10 @@ TEST_F(pathStripExtensionTest, returns_enametoolong_when_buffer_too_small)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_BUFFER_TOO_SMALL,
-        actual_ret); // [確認_異常系] - cplat_path_strip_extension の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
-    EXPECT_EQ(1, cplat_error_is(&err, CPLAT_CAUSE_NAME_TOO_LONG)); // [確認_異常系] - ENAMETOOLONG の要因であること。
+        actual_ret); // [確認_異常系] - cplat_path_strip_extension() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &err,
+            CPLAT_CAUSE_NAME_TOO_LONG)); // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(err の要因が CPLAT_CAUSE_NAME_TOO_LONG であることの確認)
 }
