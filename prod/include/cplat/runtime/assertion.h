@@ -47,6 +47,7 @@ extern "C"
         const char *expression; /**< 偽と評価された条件式の文字列。 */
         const char *file;       /**< 条件式を記述したソース ファイル名。 */
         int line;               /**< 条件式を記述した行番号。 */
+        unsigned int pad;       /**< x64 で function のアラインメントを明示するパディング。 */
         const char *function;   /**< 条件式を記述した関数名。 */
     } cplat_assert_event;
 

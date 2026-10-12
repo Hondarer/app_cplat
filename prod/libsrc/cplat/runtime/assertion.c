@@ -70,7 +70,7 @@ int cplat_assert_register(cplat_assert_fn callback, void *context)
 
 void cplat_assert_fail_at(const char *expression, const char *file, const int line, const char *function)
 {
-    cplat_assert_event event;
+    cplat_assert_event event = {0};
     const assert_callback_entry *entry;
 
     event.expression = non_null_text(expression);
