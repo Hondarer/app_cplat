@@ -98,16 +98,20 @@
 #ifdef DOXYGEN
     #define FORCE_INLINE /**< インライン展開を強制します。コンパイラに応じた属性に展開されます。 */
     #define NO_INLINE    /**< インライン展開を抑制します。コンパイラに応じた属性に展開されます。 */
+    #define NO_RETURN    /**< 関数が呼び出し元へ戻らないことを示します。コンパイラに応じた属性に展開されます。 */
 #else                    /* !DOXYGEN */
     #if defined(COMPILER_GCC)
         #define FORCE_INLINE inline __attribute__((always_inline))
         #define NO_INLINE    __attribute__((noinline))
+        #define NO_RETURN    __attribute__((noreturn))
     #elif defined(COMPILER_MSVC)
         #define FORCE_INLINE __forceinline
         #define NO_INLINE    __declspec(noinline)
+        #define NO_RETURN    __declspec(noreturn)
     #else /* !COMPILER_GCC && !COMPILER_MSVC */
         #define FORCE_INLINE inline
         #define NO_INLINE
+        #define NO_RETURN
     #endif /* COMPILER_ */
 #endif     /* DOXYGEN */
 
