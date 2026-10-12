@@ -9,6 +9,12 @@
  *  Windows 上で cplat の ETW provider を購読し、受信イベントを stdout に表示します。
  *  既定では cplat.tracer の標準 provider GUID を購読し、Ctrl+C で終了します。
  *
+ *  終了コードは次のとおりです。
+ *
+ *  - 0: 正常終了。
+ *  - 1: 引数の誤りや Windows 以外での実行など、下記以外の失敗。
+ *  - 2: ETW session の開始権限がない。必要なグループと対処方法を標準エラー出力へ書き出します。
+ *
  *  @copyright      Copyright (C) Tetsuo Honda. 2026. All rights reserved.
  *
  *******************************************************************************

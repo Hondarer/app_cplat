@@ -206,6 +206,8 @@ cplat には通常終了の後始末を行う shutdown コールバックと、�
 Table: プロセス終了経路ごとのコールバック実行と終了コード伝達
 
 通常終了で終了コードを確実に渡したい場合は `cplat_exit()` を使用します。  
+終了コードの値と意味は、上位規範の [プロセスの終了コード](../../general/docs/coding-guideline.md#プロセスの終了コード) に従います。  
+`cplat_exit()` は 0 から 124 の範囲外の値を `CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE` (125) へ置き換えるため、cplat を使うコマンドが独自に定義する非 0 コードは 1 から 124 とします。  
 異常終了時のロギングなどは、`cplat_assert_register()` で assert コールバックとして登録します。
 
 > [!IMPORTANT]
