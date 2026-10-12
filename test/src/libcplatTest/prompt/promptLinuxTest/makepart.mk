@@ -5,4 +5,5 @@ TEST_SRCS := \
 
 # ライブラリの指定
 # read の失敗と EINTR を注入するため mock_libc を使用する
-LIBS += mock_libc
+# CPLAT_FD_SET() が展開する cplat_assert_fail_at() は mock_cplat から実 libcplat へ委譲する
+LIBS += mock_libc mock_cplat

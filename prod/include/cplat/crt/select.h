@@ -30,7 +30,7 @@
     #include <cplat/base/windows_sdk.h>
 #endif /* PLATFORM_ */
 
-#include <stdlib.h>
+#include <cplat/runtime/assertion.h>
 
 /**
  *  @ingroup        CPLAT_CRT
@@ -53,7 +53,7 @@
      *  @param[in]      fd   追加する FD です。
      *  @param[in,out]  set  FD 集合の格納先です。NULL を渡してはなりません。
      *
-     *  @warning         @p fd を集合へ追加できない場合は、`abort()` により
+     *  @warning         @p fd を集合へ追加できない場合は、@ref CPLAT_ASSERT により
      *                   プロセスを異常終了させます。追加できないのは、Linux では
      *                   @p fd が 0 未満または `FD_SETSIZE` 以上の場合、Windows では
      *                   @p fd が `INVALID_SOCKET` の場合と、集合がすでに
@@ -75,10 +75,7 @@
         { \
             const int cplat_fd_set_fd = (fd); \
             fd_set *const cplat_fd_set_set = (set); \
-            if (cplat_fd_set_fd < 0 || cplat_fd_set_fd >= FD_SETSIZE) \
-            { \
-                abort(); \
-            } \
+            CPLAT_ASSERT((cplat_fd_set_fd >= 0) && (cplat_fd_set_fd < FD_SETSIZE)); \
             FD_SET(cplat_fd_set_fd, cplat_fd_set_set); \
         } while (0)
 #elif defined(PLATFORM_WINDOWS)
@@ -97,15 +94,9 @@
         { \
             const SOCKET cplat_fd_set_fd = (SOCKET)(fd); \
             fd_set *const cplat_fd_set_set = (set); \
-            CPLAT_FD_SET_SUPPRESS_CONST_COND if (cplat_fd_set_fd == INVALID_SOCKET) \
-            { \
-                abort(); \
-            } \
+            CPLAT_FD_SET_SUPPRESS_CONST_COND CPLAT_ASSERT(cplat_fd_set_fd != INVALID_SOCKET); \
             FD_SET(cplat_fd_set_fd, cplat_fd_set_set); \
-            if (FD_ISSET(cplat_fd_set_fd, cplat_fd_set_set) == 0) \
-            { \
-                abort(); \
-            } \
+            CPLAT_ASSERT(FD_ISSET(cplat_fd_set_fd, cplat_fd_set_set) != 0); \
         } while (0)
 #endif /* DOXYGEN / PLATFORM_ */
 

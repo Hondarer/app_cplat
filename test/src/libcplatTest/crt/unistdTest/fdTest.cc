@@ -490,7 +490,7 @@ TEST_F(fdTest, fd_set_aborts_for_negative_fd)
     // Assert
     EXPECT_DEATH(
         invoke_cplat_fd_set_with_negative_fd(),
-        ""); // [確認_異常系] - invoke_cplat_fd_set_with_negative_fd() がプロセスを終了させ、出力が "" に一致すること。(負の FD を範囲検査付き FD_SET へ渡すと abort することの確認)
+        "CPLAT_ASSERT failed"); // [確認_異常系] - invoke_cplat_fd_set_with_negative_fd() がプロセスを終了させ、出力が "CPLAT_ASSERT failed" を含むこと。(負の FD を範囲検査付き FD_SET へ渡すと abort することの確認)
 }
 
 #if defined(PLATFORM_LINUX)
@@ -507,7 +507,7 @@ TEST_F(fdTest, fd_set_aborts_for_fd_out_of_range)
     // Assert
     EXPECT_DEATH(
         invoke_cplat_fd_set_with_out_of_range_fd(),
-        ""); // [確認_異常系] - invoke_cplat_fd_set_with_out_of_range_fd() がプロセスを終了させ、出力が "" に一致すること。(FD_SETSIZE と同じ FD を範囲検査付き FD_SET へ渡すと abort することの確認)
+        "CPLAT_ASSERT failed"); // [確認_異常系] - invoke_cplat_fd_set_with_out_of_range_fd() がプロセスを終了させ、出力が "CPLAT_ASSERT failed" を含むこと。(FD_SETSIZE と同じ FD を範囲検査付き FD_SET へ渡すと abort することの確認)
 }
 #elif defined(PLATFORM_WINDOWS)
 /* Windows の fd_set は SOCKET の配列であり、上限は値ではなく格納数で決まる */
@@ -523,7 +523,7 @@ TEST_F(fdTest, fd_set_aborts_when_set_is_full)
     // Assert
     EXPECT_DEATH(
         invoke_cplat_fd_set_with_full_set(),
-        ""); // [確認_異常系] - invoke_cplat_fd_set_with_full_set() がプロセスを終了させ、出力が "" に一致すること。(FD_SETSIZE 個を格納した集合へ、さらに FD を追加すると abort することの確認)
+        "CPLAT_ASSERT failed"); // [確認_異常系] - invoke_cplat_fd_set_with_full_set() がプロセスを終了させ、出力が "CPLAT_ASSERT failed" を含むこと。(FD_SETSIZE 個を格納した集合へ、さらに FD を追加すると abort することの確認)
 }
 #endif /* PLATFORM_ */
 

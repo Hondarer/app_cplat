@@ -93,7 +93,7 @@ Table: 標準メモリ確保 API と cplat 代替関数
 
 | 生 API | 問題 | cplat 代替 |
 |---|---|---|
-| `FD_SET` | 追加する FD が集合の容量に収まるかを検査せず、Linux では集合の領域外へ書き込む。Windows では満杯の集合への追加を通知せず破棄する | `CPLAT_FD_SET(fd, &set)` (追加できない場合は `abort()`) |
+| `FD_SET` | 追加する FD が集合の容量に収まるかを検査せず、Linux では集合の領域外へ書き込む。Windows では満杯の集合への追加を通知せず破棄する | `CPLAT_FD_SET(fd, &set)` (追加できない場合は `CPLAT_ASSERT` で異常終了) |
 
 Table: ファイル記述子集合操作マクロと cplat 代替マクロ
 
