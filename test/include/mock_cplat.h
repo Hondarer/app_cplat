@@ -359,6 +359,10 @@ MOCK_CPLAT_LINK_IMPL(cplat_prompt_readline_at)
 MOCK_CPLAT_LINK_IMPL(cplat_prompt_readline_with_initial_at)
 MOCK_CPLAT_LINK_IMPL(cplat_prompt_readline_fmt_at)
 
+// cplat/runtime/assertion.h
+MOCK_CPLAT_LINK_IMPL(cplat_assert_register)
+MOCK_CPLAT_LINK_IMPL(cplat_assert_fail_at)
+
 // cplat/runtime/elevated_process.h
 MOCK_CPLAT_LINK_IMPL(cplat_elevated_process_is_elevated)
 MOCK_CPLAT_LINK_IMPL(cplat_elevated_process_run_if_needed)
@@ -610,6 +614,7 @@ MOCK_CPLAT_LINK_IMPL(StartServiceCtrlDispatcherU)
 #include <cplat/net/endpoint.h>
 #include <cplat/net/socket.h>
 #include <cplat/regex/regex.h>
+#include <cplat/runtime/assertion.h>
 #include <cplat/runtime/elevated_process.h>
 #include <cplat/runtime/host.h>
 #include <cplat/runtime/memory_lock.h>
@@ -1111,6 +1116,11 @@ extern int delegate_real_cplat_prompt_readline_with_initial_at(cplat_prompt *pro
                                                                const char *file, int line);
 extern int delegate_real_cplat_prompt_readline_fmt_at(cplat_prompt *p, char *buf, size_t buf_size, const char *file,
                                                       int line, const char *fmt, va_list args);
+
+// cplat/runtime/assertion.h
+extern int delegate_real_cplat_assert_register(cplat_assert_fn callback, void *context);
+extern void delegate_real_cplat_assert_fail_at(const char *expression, const char *file, int line,
+                                               const char *function);
 
 // cplat/runtime/elevated_process.h
 extern int delegate_real_cplat_elevated_process_is_elevated(int *elevated);
@@ -1846,6 +1856,10 @@ class Mock_cplat
                 (cplat_prompt *, char *, size_t, const char *, const char *, const char *, int));
     MOCK_METHOD(int, cplat_prompt_readline_fmt_at,
                 (cplat_prompt *, char *, size_t, const char *, int, const char *, va_list));
+
+    // cplat/runtime/assertion.h
+    MOCK_METHOD(int, cplat_assert_register, (cplat_assert_fn, void *));
+    MOCK_METHOD(void, cplat_assert_fail_at, (const char *, const char *, int, const char *));
 
     // cplat/runtime/elevated_process.h
     MOCK_METHOD(int, cplat_elevated_process_is_elevated, (int *));

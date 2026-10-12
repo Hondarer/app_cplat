@@ -84,8 +84,9 @@ MSVC の対応対象は x64 に限定し、対象の検査も `platform.h` に�
 
 - 強制インライン: `FORCE_INLINE`
 - 非インライン化: `NO_INLINE`
+- 戻らない関数: `NO_RETURN`
 
-`__forceinline` や `__attribute__((noinline))` を利用側へ直接記述しません。
+`__forceinline`、`__attribute__((noinline))`、`__declspec(noreturn)` などを利用側へ直接記述しません。
 
 ### platform.h を基本入口にする
 

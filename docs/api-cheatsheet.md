@@ -490,6 +490,7 @@ Table: プラットフォームおよびアーキテクチャー検出マクロ�
 | コンパイラ名/バージョンを文字列や数値で得たい | `COMPILER_NAME` / `COMPILER_VERSION` |
 | `__attribute__((always_inline))` (GCC) / `__forceinline` (MSVC) | `FORCE_INLINE` |
 | `__attribute__((noinline))` (GCC) / `__declspec(noinline)` (MSVC) | `NO_INLINE` |
+| `__attribute__((noreturn))` (GCC) / `__declspec(noreturn)` (MSVC) | `NO_RETURN` |
 | `_Thread_local` (C, GCC) / `thread_local` (C++, GCC) / `__declspec(thread)` (MSVC) | `THREAD_LOCAL` |
 
 Table: コンパイラ検出およびインライン制御マクロの対応
@@ -795,6 +796,24 @@ Table: 管理者権限の確認と昇格における用途別 cplat API
 Table: プロセス終了時共通フックにおける用途別 cplat API
 
 `cplat_shutdown_invoke_for_test` / `cplat_shutdown_request_invoke_for_test` / `cplat_shutdown_reset_for_test` はテスト専用で、本番コードからは呼び出しません。
+
+### 継続が危険な状態での異常終了
+
+対象ヘッダー: `cplat/runtime/assertion.h`
+
+標準の `assert` や `abort()` の直接呼び出しの代わりに使用します。  
+`NDEBUG` の定義有無に関わらず常に評価し、失敗位置を標準エラー出力へ書き出してから `abort()` します。
+
+| 用途 | cplat API |
+|---|---|
+| 条件が偽の場合にプロセスを異常終了します。 | `CPLAT_ASSERT(condition)` |
+| 異常終了の直前に呼び出されるコールバックを LIFO で登録します。 | `cplat_assert_register` |
+| 失敗位置を指定して異常終了の処理を実行します (通常は `CPLAT_ASSERT` から呼び出します)。 | `cplat_assert_fail_at` |
+
+Table: 継続が危険な状態での異常終了における用途別 cplat API
+
+引数の不正や外部入力の不正など、呼び出し元が回復できる失敗には使用せず、結果コードで返します。  
+異常終了では shutdown コールバックを実行しません。
 
 ### 動的シンボル解決
 

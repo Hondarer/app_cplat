@@ -177,25 +177,46 @@ OS API の失敗後に後処理を行うアダプターは、先に詳細を保�
 
 ### プロセス終了と shutdown コールバックの関係
 
-上位規範の「異常状態の検出とプロセス終了」に従い、`assert` は使用しません。  
-プロセスの継続が危険な状態でのみ `abort()` を直接呼び出します。
+上位規範の「異常状態の検出とプロセス終了」に従い、標準の `assert` は使用しません。  
+プロセスの継続が危険な状態では、`abort()` を直接呼ばず、`cplat/runtime/assertion.h` の `CPLAT_ASSERT` を使用します。  
+`CPLAT_ASSERT` は `NDEBUG` の定義有無に関わらず常に条件を評価し、偽の場合は失敗位置を標準エラー出力へ書き出してから `abort()` します。  
+使用してよい条件は、上位規範が `abort()` に定める条件と同じです。引数の不正など、呼び出し元が回復できる失敗には使用しません。
 
-cplat には終了処理の機構が 2 つあり、`abort()` はいずれも実行しません。
+```c
+/* 望ましい */
+CPLAT_ASSERT(writer->magic == SAMPLE_WRITER_MAGIC);
 
-| 終了の経路 | shutdown コールバック | 終了コードの伝達 |
-|---|---|---|
-| `cplat_exit(code)` | 実行される | `CPLAT_SHUTDOWN_CODE_KIND_EXIT_CODE` として伝わる |
-| `exit()` の直接呼び出し、`main()` からの復帰 | 実行される | 終了コードは取得できません。 |
-| `abort()` | **実行されない** | 伝達しません。 |
+/* 望ましくない: 失敗位置が残らず、assert コールバックも呼び出されない */
+if (writer->magic != SAMPLE_WRITER_MAGIC)
+{
+    abort();
+}
+```
 
-Table: プロセス終了経路ごとの shutdown コールバック実行と終了コード伝達
+cplat には通常終了の後始末を行う shutdown コールバックと、異常終了時に呼び出す assert コールバックがあります。  
+終了の経路ごとに、実行されるコールバックが異なります。
 
-通常終了で終了コードを確実に渡したい場合は `cplat_exit()` を使用します。
+| 終了の経路 | shutdown コールバック | assert コールバック | 終了コードの伝達 |
+|---|---|---|---|
+| `cplat_exit(code)` | 実行される | 実行されない | `CPLAT_SHUTDOWN_CODE_KIND_EXIT_CODE` として伝わる |
+| `exit()` の直接呼び出し、`main()` からの復帰 | 実行される | 実行されない | 終了コードは取得できません。 |
+| `CPLAT_ASSERT` の条件が偽 | **実行されない** | 実行される | 伝達しません。 |
+| `abort()` の直接呼び出し | **実行されない** | **実行されない** | 伝達しません。 |
+
+Table: プロセス終了経路ごとのコールバック実行と終了コード伝達
+
+通常終了で終了コードを確実に渡したい場合は `cplat_exit()` を使用します。  
+異常終了時のロギングなどは、`cplat_assert_register()` で assert コールバックとして登録します。
 
 > [!IMPORTANT]
-> `abort()` が shutdown コールバックをバイパスするのは、**意図した挙動** です。  
-> `abort()` を呼ぶのは内部状態が壊れている場面であり、その状態でコールバックを実行すると、壊れたデータの書き出しや二次障害を招きます。  
-> 後始末を実行したい終了は、`abort()` ではなく `cplat_exit()` を使用してください。
+> 異常終了が shutdown コールバックをバイパスするのは、**意図した挙動** です。  
+> 異常終了は内部状態が壊れている場面であり、その状態で通常の後始末を実行すると、壊れたデータの書き出しや二次障害を招きます。  
+> 後始末を実行したい終了は、`CPLAT_ASSERT` ではなく `cplat_exit()` を使用してください。  
+> assert コールバックは、壊れた状態を前提にした最小限の記録だけを行う経路として、shutdown コールバックと分けています。
+
+> [!NOTE]
+> 公開ヘッダーのマクロ `CPLAT_FD_SET()` など、`CPLAT_ASSERT` の導入前から `abort()` を直接呼ぶ既存箇所があります。  
+> これらは変更の機会に合わせて `CPLAT_ASSERT` へ移行し、本規範を目的とした一括変更は求めません。
 
 ### スレッド ローカル記憶域
 
@@ -1083,7 +1104,7 @@ Table: 過去の規約逸脱 API とその解消内容一覧
 | ヘッダー | マクロ |
 |---|---|
 | `include/cplat/base/platform.h` と `include/cplat/crt/path.h` | `PLATFORM_WINDOWS`、`PLATFORM_LINUX`、`PLATFORM_UNKNOWN`、`PLATFORM_NAME`、`ARCH_NAME`、`PLATFORM_PATH_MAX`、`PLATFORM_PATH_SEP`、`PLATFORM_PATH_SEP_CHR`、`PLATFORM_NULL_DEVICE_PATH` |
-| `include/cplat/base/compiler.h` | `COMPILER_GCC`、`COMPILER_MSVC`、`COMPILER_UNKNOWN`、`COMPILER_NAME`、`COMPILER_VERSION`、`FORCE_INLINE`、`NO_INLINE`、`THREAD_LOCAL` |
+| `include/cplat/base/compiler.h` | `COMPILER_GCC`、`COMPILER_MSVC`、`COMPILER_UNKNOWN`、`COMPILER_NAME`、`COMPILER_VERSION`、`FORCE_INLINE`、`NO_INLINE`、`NO_RETURN`、`THREAD_LOCAL` |
 
 Table: 接頭辞 CPLAT_ を付けない汎用ヘルパー マクロ
 
