@@ -20,6 +20,7 @@
 #include "filter.h"
 
 #include <cplat/base/result.h>
+#include <cplat/runtime/abort.h>
 #include <cplat/string_catalog/format_internal.h>
 #include <cplat/sync/sync.h>
 
@@ -747,7 +748,9 @@ static truth_value truth_or(const truth_value left, const truth_value right)
  *  @param[in]      honors_jumps 短絡評価のジャンプに従う場合は true。
  *                               事前計算では false とし、結合の命令で 3 値の論理演算を行います。
  *
- *  命令列は適用の時点で検証済みです。スタックの深さの確認は、検証の漏れに備えた防御です。
+ *  命令列は、未使用の面へ複製したあとで適用の時点に検証済みです。\n
+ *  未知の命令や、評価を終えたスタックの深さが 1 でない状態は、面の内容が壊れたことを意味するため、
+ *  判定を続けずにプロセスを異常終了させます。
  */
 static truth_value evaluate_line(const evaluation_context *context, const bool honors_jumps)
 {
@@ -793,14 +796,11 @@ static truth_value evaluate_line(const evaluation_context *context, const bool h
             }
             break;
         default:
-            return TRUTH_VALUE_FALSE;
+            CPLAT_ABORT("検証済みの命令列に未知の命令があります");
         }
     }
 
-    if (depth != 1U)
-    {
-        return TRUTH_VALUE_FALSE;
-    }
+    CPLAT_ASSERT(depth == 1U);
     return (truth_value)stack[0];
 }
 

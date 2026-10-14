@@ -178,29 +178,47 @@ OS API の失敗後に後処理を行うアダプターは、先に詳細を保�
 ### プロセス終了と shutdown コールバックの関係
 
 上位規範の「異常状態の検出とプロセス終了」に従い、標準の `assert` は使用しません。  
-プロセスの継続が危険な状態では、`abort()` を直接呼ばず、`cplat/runtime/assertion.h` の `CPLAT_ASSERT` を使用します。  
+プロセスの継続が危険な状態では、`abort()` を直接呼ばず、`cplat/runtime/abort.h` の `CPLAT_ASSERT` または `CPLAT_ABORT` を使用します。  
 `CPLAT_ASSERT` は `NDEBUG` の定義有無に関わらず常に条件を評価し、偽の場合は失敗位置を標準エラー出力へ書き出してから `abort()` します。  
+条件式で表せる場合は `CPLAT_ASSERT` を使用します。  
+条件式で表せない到達不能な分岐や内部同期の失敗などには `CPLAT_ABORT` を使用し、`CPLAT_ASSERT(0)` とは書きません。  
+`CPLAT_ABORT` の理由は文字列リテラルに限ります。異常終了中に文字列を組み立てたり確保したりせず、コールバックの終了後も有効な文字列を渡すためです。  
 使用してよい条件は、上位規範が `abort()` に定める条件と同じです。引数の不正など、呼び出し元が回復できる失敗には使用しません。
 
 ```c
 /* 望ましい */
 CPLAT_ASSERT(writer->magic == SAMPLE_WRITER_MAGIC);
 
-/* 望ましくない: 失敗位置が残らず、assert コールバックも呼び出されない */
+/* 望ましくない: 失敗位置が残らず、abort コールバックも呼び出されない */
 if (writer->magic != SAMPLE_WRITER_MAGIC)
 {
     abort();
 }
 ```
 
-cplat には通常終了の後始末を行う shutdown コールバックと、異常終了時に呼び出す assert コールバックがあります。  
+```c
+/* 望ましい: 状態遷移で到達しない分岐の理由を残す */
+switch (state)
+{
+case SAMPLE_STATE_OPEN:
+    return sample_close(handle);
+default:
+    CPLAT_ABORT("sample handle の状態が不正です");
+}
+
+/* 望ましくない: 異常終了の理由が条件式から読み取れない */
+CPLAT_ASSERT(0);
+```
+
+cplat には通常終了の後始末を行う shutdown コールバックと、異常終了時に呼び出す abort コールバックがあります。  
 終了の経路ごとに、実行されるコールバックが異なります。
 
-| 終了の経路 | shutdown コールバック | assert コールバック | 終了コードの伝達 |
+| 終了の経路 | shutdown コールバック | abort コールバック | 終了コードの伝達 |
 |---|---|---|---|
 | `cplat_exit(code)` | 実行される | 実行されない | `CPLAT_SHUTDOWN_CODE_KIND_EXIT_CODE` として伝わる |
 | `exit()` の直接呼び出し、`main()` からの復帰 | 実行される | 実行されない | 終了コードは取得できません。 |
 | `CPLAT_ASSERT` の条件が偽 | **実行されない** | 実行される | 伝達しません。 |
+| `CPLAT_ABORT` の呼び出し | **実行されない** | 実行される | 伝達しません。 |
 | `abort()` の直接呼び出し | **実行されない** | **実行されない** | 伝達しません。 |
 
 Table: プロセス終了経路ごとのコールバック実行と終了コード伝達
@@ -208,13 +226,14 @@ Table: プロセス終了経路ごとのコールバック実行と終了コー�
 通常終了で終了コードを確実に渡したい場合は `cplat_exit()` を使用します。  
 終了コードの値と意味は、上位規範の [プロセスの終了コード](../../general/docs/coding-guideline.md#プロセスの終了コード) に従います。  
 `cplat_exit()` は 0 から 124 の範囲外の値を `CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE` (125) へ置き換えるため、cplat を使うコマンドが独自に定義する非 0 コードは 1 から 124 とします。  
-異常終了時のロギングなどは、`cplat_assert_register()` で assert コールバックとして登録します。
+このうち 3 は、Windows で `CPLAT_ASSERT` または `CPLAT_ABORT` が呼び出す `abort()` が使う値のため、独自の値に使用しません。  
+異常終了時のロギングなどは、`cplat_abort_register()` で abort コールバックとして登録します。
 
 > [!IMPORTANT]
 > 異常終了が shutdown コールバックをバイパスするのは、**意図した挙動** です。  
 > 異常終了は内部状態が壊れている場面であり、その状態で通常の後始末を実行すると、壊れたデータの書き出しや二次障害を招きます。  
-> 後始末を実行したい終了は、`CPLAT_ASSERT` ではなく `cplat_exit()` を使用してください。  
-> assert コールバックは、壊れた状態を前提にした最小限の記録だけを行う経路として、shutdown コールバックと分けています。
+> 通常の後始末を実行する場合は `cplat_exit()` を使用してください。  
+> abort コールバックは、壊れた状態を前提にした最小限の記録だけを行う経路として、shutdown コールバックと分けています。
 
 ### スレッド ローカル記憶域
 

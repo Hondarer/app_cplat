@@ -30,7 +30,7 @@
     #include <cplat/base/windows_sdk.h>
 #endif /* PLATFORM_ */
 
-#include <cplat/runtime/assertion.h>
+#include <cplat/runtime/abort.h>
 
 /**
  *  @ingroup        CPLAT_CRT

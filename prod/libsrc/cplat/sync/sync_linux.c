@@ -25,6 +25,7 @@
     #include <time.h>
     #include <unistd.h>
 
+    #include <cplat/runtime/abort.h>
     #include <cplat/sync/sync.h>
     #include <cplat/sync/sync_descriptor.h>
 
@@ -114,6 +115,40 @@ static int cond_init_monotonic(pthread_cond_t *cond)
     }
     pthread_condattr_destroy(&attr);
     return rc;
+}
+
+/* local rwlock の内部 mutex と条件変数は作成に成功しており、lock と unlock は同じ関数内で対にしている。
+   このため次の操作の失敗は内部状態の破壊を意味し、続行すると reader 数と writer 状態の排他が崩れる。 */
+static void rwlock_state_lock(cplat_local_rwlock *rwlock)
+{
+    if (pthread_mutex_lock(&rwlock->mutex) != 0)
+    {
+        CPLAT_ABORT("local rwlock の内部 mutex を取得できません");
+    }
+}
+
+static void rwlock_state_unlock(cplat_local_rwlock *rwlock)
+{
+    if (pthread_mutex_unlock(&rwlock->mutex) != 0)
+    {
+        CPLAT_ABORT("local rwlock の内部 mutex を解放できません");
+    }
+}
+
+static void rwlock_wake_one(pthread_cond_t *cond)
+{
+    if (pthread_cond_signal(cond) != 0)
+    {
+        CPLAT_ABORT("local rwlock の待機者を起床できません");
+    }
+}
+
+static void rwlock_wake_all(pthread_cond_t *cond)
+{
+    if (pthread_cond_broadcast(cond) != 0)
+    {
+        CPLAT_ABORT("local rwlock の待機者を起床できません");
+    }
 }
 
 static int map_wait_rc(int rc)
@@ -526,7 +561,7 @@ int cplat_local_rwlock_lock_shared(cplat_local_rwlock *rwlock, int timeout_ms)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
-    pthread_mutex_lock(&rwlock->mutex);
+    rwlock_state_lock(rwlock);
     if (timeout_ms != CPLAT_SYNC_WAIT_FOREVER)
     {
         monotonic_deadline(&abs_ts, timeout_ms);
@@ -535,7 +570,7 @@ int cplat_local_rwlock_lock_shared(cplat_local_rwlock *rwlock, int timeout_ms)
     {
         if (timeout_ms == CPLAT_SYNC_NO_WAIT)
         {
-            pthread_mutex_unlock(&rwlock->mutex);
+            rwlock_state_unlock(rwlock);
             return CPLAT_ERR_BUSY;
         }
         if (timeout_ms == CPLAT_SYNC_WAIT_FOREVER)
@@ -548,17 +583,17 @@ int cplat_local_rwlock_lock_shared(cplat_local_rwlock *rwlock, int timeout_ms)
         }
         if (rc == ETIMEDOUT)
         {
-            pthread_mutex_unlock(&rwlock->mutex);
+            rwlock_state_unlock(rwlock);
             return CPLAT_ERR_TIMEOUT;
         }
         if (rc != 0)
         {
-            pthread_mutex_unlock(&rwlock->mutex);
+            rwlock_state_unlock(rwlock);
             return CPLAT_ERR_UNKNOWN;
         }
     }
     rwlock->active_readers++;
-    pthread_mutex_unlock(&rwlock->mutex);
+    rwlock_state_unlock(rwlock);
     return CPLAT_OK;
 }
 
@@ -580,7 +615,7 @@ int cplat_local_rwlock_lock_exclusive(cplat_local_rwlock *rwlock, int timeout_ms
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
-    pthread_mutex_lock(&rwlock->mutex);
+    rwlock_state_lock(rwlock);
     rwlock->waiting_writers++;
     if (timeout_ms != CPLAT_SYNC_WAIT_FOREVER)
     {
@@ -591,7 +626,7 @@ int cplat_local_rwlock_lock_exclusive(cplat_local_rwlock *rwlock, int timeout_ms
         if (timeout_ms == CPLAT_SYNC_NO_WAIT)
         {
             rwlock->waiting_writers--;
-            pthread_mutex_unlock(&rwlock->mutex);
+            rwlock_state_unlock(rwlock);
             return CPLAT_ERR_BUSY;
         }
         if (timeout_ms == CPLAT_SYNC_WAIT_FOREVER)
@@ -605,19 +640,19 @@ int cplat_local_rwlock_lock_exclusive(cplat_local_rwlock *rwlock, int timeout_ms
         if (rc == ETIMEDOUT)
         {
             rwlock->waiting_writers--;
-            pthread_mutex_unlock(&rwlock->mutex);
+            rwlock_state_unlock(rwlock);
             return CPLAT_ERR_TIMEOUT;
         }
         if (rc != 0)
         {
             rwlock->waiting_writers--;
-            pthread_mutex_unlock(&rwlock->mutex);
+            rwlock_state_unlock(rwlock);
             return CPLAT_ERR_UNKNOWN;
         }
     }
     rwlock->waiting_writers--;
     rwlock->writer_active = 1;
-    pthread_mutex_unlock(&rwlock->mutex);
+    rwlock_state_unlock(rwlock);
     return CPLAT_OK;
 }
 
@@ -636,18 +671,18 @@ int cplat_local_rwlock_unlock_shared(cplat_local_rwlock *rwlock)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
-    pthread_mutex_lock(&rwlock->mutex);
+    rwlock_state_lock(rwlock);
     if (rwlock->active_readers == 0)
     {
-        pthread_mutex_unlock(&rwlock->mutex);
+        rwlock_state_unlock(rwlock);
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
     rwlock->active_readers--;
     if (rwlock->active_readers == 0 && rwlock->waiting_writers > 0)
     {
-        pthread_cond_signal(&rwlock->writers_cv);
+        rwlock_wake_one(&rwlock->writers_cv);
     }
-    pthread_mutex_unlock(&rwlock->mutex);
+    rwlock_state_unlock(rwlock);
     return CPLAT_OK;
 }
 
@@ -659,22 +694,22 @@ int cplat_local_rwlock_unlock_exclusive(cplat_local_rwlock *rwlock)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
-    pthread_mutex_lock(&rwlock->mutex);
+    rwlock_state_lock(rwlock);
     if (!rwlock->writer_active)
     {
-        pthread_mutex_unlock(&rwlock->mutex);
+        rwlock_state_unlock(rwlock);
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
     rwlock->writer_active = 0;
     if (rwlock->waiting_writers > 0)
     {
-        pthread_cond_signal(&rwlock->writers_cv);
+        rwlock_wake_one(&rwlock->writers_cv);
     }
     else
     {
-        pthread_cond_broadcast(&rwlock->readers_cv);
+        rwlock_wake_all(&rwlock->readers_cv);
     }
-    pthread_mutex_unlock(&rwlock->mutex);
+    rwlock_state_unlock(rwlock);
     return CPLAT_OK;
 }
 

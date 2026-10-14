@@ -807,16 +807,21 @@ Table: プロセス終了時共通フックにおける用途別 cplat API
 
 ### 継続が危険な状態での異常終了
 
-対象ヘッダー: `cplat/runtime/assertion.h`
+対象ヘッダー: `cplat/runtime/abort.h`
 
 標準の `assert` や `abort()` の直接呼び出しの代わりに使用します。  
-`NDEBUG` の定義有無に関わらず常に評価し、失敗位置を標準エラー出力へ書き出してから `abort()` します。
+`CPLAT_ASSERT` は `NDEBUG` の定義有無に関わらず条件を 1 回評価します。  
+`CPLAT_ABORT` は文字列リテラルで理由を指定し、無条件に異常終了します。  
+どちらも発生位置を標準エラー出力へ書き出し、登録したコールバックを呼び出してから `abort()` します。
 
 | 用途 | cplat API |
 |---|---|
 | 条件が偽の場合にプロセスを異常終了します。 | `CPLAT_ASSERT(condition)` |
-| 異常終了の直前に呼び出されるコールバックを LIFO で登録します。 | `cplat_assert_register` |
-| 失敗位置を指定して異常終了の処理を実行します (通常は `CPLAT_ASSERT` から呼び出します)。 | `cplat_assert_fail_at` |
+| 理由を指定して無条件にプロセスを異常終了します。 | `CPLAT_ABORT("理由")` |
+| 異常終了の直前に呼び出されるコールバックを LIFO で登録します。 | `cplat_abort_register` |
+| 種別、メッセージ、発生位置を指定して異常終了の処理を実行します (通常は `CPLAT_ASSERT` または `CPLAT_ABORT` から呼び出します)。 | `cplat_abort_at(kind, message, file, line, function)` |
+| 異常終了の理由と発生位置をコールバックへ渡します。 | `cplat_abort_event`、`cplat_abort_fn` |
+| 条件の失敗 (1) と無条件の異常終了 (2) を区別します。 | `cplat_abort_kind`、`CPLAT_ABORT_KIND_ASSERTION_FAILED`、`CPLAT_ABORT_KIND_REQUESTED` |
 
 Table: 継続が危険な状態での異常終了における用途別 cplat API
 

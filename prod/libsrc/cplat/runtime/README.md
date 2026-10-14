@@ -90,15 +90,18 @@ CodeBlock: 無名パイプによる昇格プロセスの出力の受け渡し
 
 stdout と stderr は別のパイプで受け取るため、両者の間の出力順序は保証しません。昇格プロセスの標準入力は `NUL` デバイスへ付け替え、呼び出し元からは渡しません。未昇格のプロセスから、昇格プロセスを入力で操作できないようにするためです。
 
-### assertion
+### abort
 
-`assertion` は、継続が危険な状態を検出してプロセスを異常終了させる機能です。
+`abort` は、継続が危険な状態を検出してプロセスを異常終了させる機能です。
 
 - `CPLAT_ASSERT`: 条件が偽の場合に、失敗位置を標準エラー出力へ書き出してプロセスを異常終了します。
-- `cplat_assert_register`: 異常終了の直前に呼び出すコールバックを登録します。
-- `cplat_assert_fail_at`: 失敗位置を指定して異常終了の処理を実行します。
+- `CPLAT_ABORT`: 文字列リテラルで理由を指定し、発生位置を標準エラー出力へ書き出して無条件に異常終了します。
+- `cplat_abort_register`: 異常終了の直前に呼び出すコールバックを登録します。
+- `cplat_abort_at`: 種別、メッセージ、発生位置を指定して異常終了の処理を実行します。
 
-標準の `assert` と異なり、`NDEBUG` の定義有無に関わらず常に条件を評価します。  
+`CPLAT_ASSERT` は標準の `assert` と異なり、`NDEBUG` の定義有無に関わらず常に条件を 1 回評価します。  
+`cplat_abort_event` は message、file、function、line、kind の順に異常終了の情報を保持し、`cplat_abort_fn` 型のコールバックへ渡します。  
+`cplat_abort_kind` は、条件が偽の場合の `CPLAT_ABORT_KIND_ASSERTION_FAILED` (1) と、無条件の異常終了の `CPLAT_ABORT_KIND_REQUESTED` (2) を区別します。  
 コールバックは登録の逆順に呼び出し、すべて戻ったあとで `abort()` します。  
 異常終了の処理中にロックを取らないよう、コールバックの一覧は先頭へ追加するだけの単方向リストとし、登録の解除は提供しません。
 
@@ -265,7 +268,7 @@ int sample_func(int a, int b, int *result)
 
 ## 関連ヘッダー
 
-- `cplat/runtime/assertion.h`: 継続が危険な状態での異常終了
+- `cplat/runtime/abort.h`: 継続が危険な状態での異常終了
 - `cplat/runtime/host.h`: ホスト識別情報取得
 - `cplat/runtime/module.h`: モジュール情報取得
 - `cplat/runtime/process.h`: プロセス情報取得

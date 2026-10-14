@@ -209,7 +209,7 @@
 
 #include <cplat/regex/regex.h>
 
-#include <cplat/runtime/assertion.h>
+#include <cplat/runtime/abort.h>
 #include <cplat/runtime/host.h>
 #include <cplat/runtime/module.h>
 #include <cplat/runtime/memory_lock.h>

@@ -470,9 +470,9 @@ Mock_cplat::Mock_cplat()
     ON_CALL(*this, cplat_prompt_readline_fmt_at(_, _, _, _, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_prompt_readline_fmt_at));
 
-    // cplat/runtime/assertion.h
-    ON_CALL(*this, cplat_assert_register(_, _)).WillByDefault(Invoke(delegate_real_cplat_assert_register));
-    ON_CALL(*this, cplat_assert_fail_at(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_assert_fail_at));
+    // cplat/runtime/abort.h
+    ON_CALL(*this, cplat_abort_register(_, _)).WillByDefault(Invoke(delegate_real_cplat_abort_register));
+    ON_CALL(*this, cplat_abort_at(_, _, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_abort_at));
 
     // cplat/runtime/elevated_process.h
     ON_CALL(*this, cplat_elevated_process_is_elevated(_))

@@ -36,7 +36,7 @@
 #include <cplat/mmap/mmap.h>
 #include <cplat/prompt/pinned_prompt.h>
 #include <cplat/prompt/prompt.h>
-#include <cplat/runtime/assertion.h>
+#include <cplat/runtime/abort.h>
 #include <cplat/runtime/elevated_process.h>
 #include <cplat/locale/ui_language.h>
 #include <cplat/runtime/host.h>
@@ -588,10 +588,10 @@
                                   const char *initial_text, const char *file, int line)) \
     EXPORT_ENTRY(cplat_prompt_readline_fmt_at, int(CPLAT_API *)(cplat_prompt * p, char *buf, size_t buf_size, \
                                                                 const char *file, int line, const char *fmt, ...)) \
-    /* cplat/runtime/assertion.h */ \
-    EXPORT_ENTRY(cplat_assert_register, int(CPLAT_API *)(cplat_assert_fn callback, void *context)) \
-    EXPORT_ENTRY(cplat_assert_fail_at, \
-                 void(CPLAT_API *)(const char *expression, const char *file, int line, const char *function)) \
+    /* cplat/runtime/abort.h */ \
+    EXPORT_ENTRY(cplat_abort_register, int(CPLAT_API *)(cplat_abort_fn callback, void *context)) \
+    EXPORT_ENTRY(cplat_abort_at, void(CPLAT_API *)(cplat_abort_kind kind, const char *message, const char *file, \
+                                                   int line, const char *function)) \
     /* cplat/runtime/elevated_process.h */ \
     EXPORT_ENTRY(cplat_elevated_process_is_elevated, int(CPLAT_API *)(int *elevated)) \
     EXPORT_ENTRY(cplat_elevated_process_run_if_needed, \

@@ -200,6 +200,9 @@ extern "C"
      *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
+     *  @attention      読み書きロックの状態を守る内部の同期に失敗した場合は、
+     *                  排他を保てないため、プロセスを異常終了させます。
+     *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
@@ -209,6 +212,9 @@ extern "C"
      *  @brief          共有 (読み取り) ロックを非ブロッキングで取得試行します。
      *  @param[in]      rwlock  対象の読み書きロック。NULL を渡してはなりません。
      *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_BUSY を返します。
+     *
+     *  @attention      読み書きロックの状態を守る内部の同期に失敗した場合は、
+     *                  排他を保てないため、プロセスを異常終了させます。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -225,6 +231,9 @@ extern "C"
      *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
+     *  @attention      読み書きロックの状態を守る内部の同期に失敗した場合は、
+     *                  排他を保てないため、プロセスを異常終了させます。
+     *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
@@ -234,6 +243,9 @@ extern "C"
      *  @brief          排他 (書き込み) ロックを非ブロッキングで取得試行します。
      *  @param[in]      rwlock  対象の読み書きロック。NULL を渡してはなりません。
      *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_BUSY を返します。
+     *
+     *  @attention      読み書きロックの状態を守る内部の同期に失敗した場合は、
+     *                  排他を保てないため、プロセスを異常終了させます。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -245,6 +257,9 @@ extern "C"
      *  @param[in]      rwlock  対象の読み書きロック。NULL を渡してはなりません。
      *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
      *
+     *  @attention      読み書きロックの状態を守る内部の同期に失敗した場合は、
+     *                  排他を保てないため、プロセスを異常終了させます。
+     *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
@@ -254,6 +269,9 @@ extern "C"
      *  @brief          排他 (書き込み) ロックを解放します。
      *  @param[in]      rwlock  対象の読み書きロック。NULL を渡してはなりません。
      *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+     *
+     *  @attention      読み書きロックの状態を守る内部の同期に失敗した場合は、
+     *                  排他を保てないため、プロセスを異常終了させます。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
