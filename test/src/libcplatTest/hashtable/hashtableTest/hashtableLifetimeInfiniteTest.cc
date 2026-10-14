@@ -160,7 +160,7 @@ TEST_F(hashtableLifetimeInfiniteTest, insert_direct_accepts_terminal_status)
                                       &k_insert_timestamp, 1); // [手順] - status 255 を直接書く。
     int actual_ret_find = cplat_hashtable_find_value_ref(ht, "gone", &found);
     int actual_ret_status = cplat_hashtable_get_status(ht, 1, &status);
-    int actual_ret_key = cplat_hashtable_get_key_ref(ht, 1, &key_out);
+    int actual_ret_key = cplat_hashtable_get_key_ref(ht, 1, &key_out, NULL);
     int actual_ret_validate = cplat_hashtable_validate(ht);
 
     // Assert

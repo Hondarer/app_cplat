@@ -158,7 +158,7 @@ TEST_F(hashtableMoreTest, delete_rec_and_purge)
     (void)cplat_hashtable_get_status(ht, rec, &status);
     (void)cplat_hashtable_empty_count(ht, &empty);
     const void *key_out = nullptr;
-    int actual_ret_bad_rec = cplat_hashtable_get_key_ref(ht, 0, &key_out); // [手順] - レコード番号 0 を読む。
+    int actual_ret_bad_rec = cplat_hashtable_get_key_ref(ht, 0, &key_out, NULL); // [手順] - レコード番号 0 を読む。
     int actual_ret_delete_missing = cplat_hashtable_delete(ht, "drop");    // [手順] - 回収後のキーを削除する。
 
     // Assert

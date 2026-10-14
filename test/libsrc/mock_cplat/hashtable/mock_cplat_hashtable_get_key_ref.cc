@@ -1,25 +1,27 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_hashtable_get_key_ref(const cplat_hashtable *ht, uint64_t record, const void **key_out)
+int delegate_real_cplat_hashtable_get_key_ref(const cplat_hashtable *ht, uint64_t record, const void **key_out,
+                                              size_t *key_length_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_hashtable_get_key_ref)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_hashtable_get_key_ref"));
 
-    return real_fn(ht, record, key_out);
+    return real_fn(ht, record, key_out, key_length_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_hashtable_get_key_ref, const cplat_hashtable *ht, uint64_t record, const void **key_out)
+MOCK_WEAK_IMPL(int, cplat_hashtable_get_key_ref, const cplat_hashtable *ht, uint64_t record, const void **key_out,
+               size_t *key_length_out)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 
     if (_mock_cplat != nullptr)
     {
-        mock_ret = _mock_cplat->cplat_hashtable_get_key_ref(ht, record, key_out);
+        mock_ret = _mock_cplat->cplat_hashtable_get_key_ref(ht, record, key_out, key_length_out);
     }
     else
     {
-        mock_ret = delegate_real_cplat_hashtable_get_key_ref(ht, record, key_out);
+        mock_ret = delegate_real_cplat_hashtable_get_key_ref(ht, record, key_out, key_length_out);
     }
 
     if (getTraceLevel() > TRACE_NONE)

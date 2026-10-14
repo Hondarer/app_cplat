@@ -190,8 +190,8 @@ static int hashtable_apply_migration(const cplat_hashtable *src, cplat_hashtable
             record = next_record;
             next_record++;
         }
-        ret = cplat_hashtable_insert_direct(dst, record, hashtable_entry_key(src, i), status, hashtable_data_at(src, i),
-                                            timestamp, generation);
+        ret = hashtable_insert_direct(dst, record, hashtable_entry_key(src, i), hashtable_stored_key_length(src, i),
+                                      status, hashtable_data_at(src, i), timestamp, generation);
         if (ret != CPLAT_OK)
         {
             return ret;
@@ -326,12 +326,12 @@ static void hashtable_commit_staged(cplat_hashtable *ht, cplat_hashtable *staged
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int hashtable_put_with_growth(cplat_hashtable *ht, const void *key, const void *value,
+int hashtable_put_with_growth(cplat_hashtable *ht, const void *key, size_t key_length, const void *value,
                               cplat_hashtable_add_deleted_policy deleted_policy, int allow_update, int *inserted_out)
 {
     struct hashtable_growth_request growth;
     cplat_hashtable *staged = NULL;
-    int ret = hashtable_put(ht, key, value, deleted_policy, allow_update, inserted_out, &growth);
+    int ret = hashtable_put(ht, key, key_length, value, deleted_policy, allow_update, inserted_out, &growth);
 
     if ((ret == CPLAT_OK) || (ht == NULL) || (ht->growable == 0) || (growth.pressure == HASHTABLE_GROWTH_NONE))
     {
@@ -342,7 +342,7 @@ int hashtable_put_with_growth(cplat_hashtable *ht, const void *key, const void *
     {
         return ret;
     }
-    ret = hashtable_put(staged, key, value, deleted_policy, allow_update, inserted_out, NULL);
+    ret = hashtable_put(staged, key, key_length, value, deleted_policy, allow_update, inserted_out, NULL);
     if (ret != CPLAT_OK)
     {
         cplat_hashtable_dispose(staged);
@@ -354,11 +354,11 @@ int hashtable_put_with_growth(cplat_hashtable *ht, const void *key, const void *
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int hashtable_update_with_growth(cplat_hashtable *ht, const void *key, const void *value)
+int hashtable_update_with_growth(cplat_hashtable *ht, const void *key, size_t key_length, const void *value)
 {
     struct hashtable_growth_request growth;
     cplat_hashtable *staged = NULL;
-    int ret = hashtable_update(ht, key, value, &growth);
+    int ret = hashtable_update(ht, key, key_length, value, &growth);
 
     if ((ret == CPLAT_OK) || (ht == NULL) || (ht->growable == 0) || (growth.pressure == HASHTABLE_GROWTH_NONE))
     {
@@ -369,7 +369,7 @@ int hashtable_update_with_growth(cplat_hashtable *ht, const void *key, const voi
     {
         return ret;
     }
-    ret = hashtable_update(staged, key, value, NULL);
+    ret = hashtable_update(staged, key, key_length, value, NULL);
     if (ret != CPLAT_OK)
     {
         cplat_hashtable_dispose(staged);

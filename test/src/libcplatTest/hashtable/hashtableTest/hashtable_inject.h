@@ -15,6 +15,7 @@ extern "C"
     extern unsigned char *test_hashtable_entry_status(const cplat_hashtable *ht, size_t rec);
     extern uint64_t *test_hashtable_entry_next(const cplat_hashtable *ht, size_t rec);
     extern char *test_hashtable_entry_key(const cplat_hashtable *ht, size_t rec);
+    extern uint32_t *test_hashtable_entry_key_length(const cplat_hashtable *ht, size_t rec);
     extern void *test_hashtable_key_ref_at(const cplat_hashtable *ht, size_t rec);
     extern void *test_hashtable_value_ref_at(const cplat_hashtable *ht, size_t rec);
     extern uint64_t *test_hashtable_entry_generation(const cplat_hashtable *ht, size_t rec);

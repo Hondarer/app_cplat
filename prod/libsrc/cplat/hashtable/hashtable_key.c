@@ -19,12 +19,12 @@
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-size_t hashtable_hash_key(const cplat_hashtable *ht, const void *key)
+size_t hashtable_hash_key(const cplat_hashtable *ht, const void *key, size_t key_length)
 {
     uint64_t hash = 5381;
     const unsigned char *p = (const unsigned char *)key;
 
-    if (ht->hdr->config.key_type != CPLAT_HASHTABLE_FIELD_FIXED_BINARY)
+    if (ht->hdr->config.key_type != CPLAT_HASHTABLE_FIELD_BINARY)
     {
         int c;
 
@@ -38,7 +38,8 @@ size_t hashtable_hash_key(const cplat_hashtable *ht, const void *key)
     {
         size_t i;
 
-        for (i = 0; i < ht->hdr->config.key_size; i++)
+        /* 有効長を超える 0 埋めはハッシュに入れません。 */
+        for (i = 0; i < key_length; i++)
         {
             hash = ((hash << 5) + hash) + p[i];
         }
@@ -48,22 +49,29 @@ size_t hashtable_hash_key(const cplat_hashtable *ht, const void *key)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int hashtable_key_equal(const cplat_hashtable *ht, const char *stored_key, const void *key)
+int hashtable_key_equal(const cplat_hashtable *ht, size_t rec, const void *key, size_t key_length)
 {
-    if (ht->hdr->config.key_type != CPLAT_HASHTABLE_FIELD_FIXED_BINARY)
+    const char *stored_key = hashtable_entry_key(ht, rec);
+
+    if (ht->hdr->config.key_type != CPLAT_HASHTABLE_FIELD_BINARY)
     {
         return strcmp(stored_key, (const char *)key) == 0;
     }
-    return memcmp(stored_key, key, ht->hdr->config.key_size) == 0;
+    /* 有効長が異なれば、末尾の 0 だけが違うキーも別のキーです。 */
+    if ((size_t)*hashtable_entry_key_length(ht, rec) != key_length)
+    {
+        return 0;
+    }
+    return memcmp(stored_key, key, key_length) == 0;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int hashtable_key_fits(const cplat_hashtable *ht, const void *key)
+int hashtable_key_fits(const cplat_hashtable *ht, const void *key, size_t key_length)
 {
-    if (ht->hdr->config.key_type == CPLAT_HASHTABLE_FIELD_FIXED_BINARY)
+    if (ht->hdr->config.key_type == CPLAT_HASHTABLE_FIELD_BINARY)
     {
-        return 1;
+        return key_length <= ht->hdr->config.key_size;
     }
     if (ht->hdr->config.key_type == CPLAT_HASHTABLE_FIELD_VARIABLE_STRING)
     {

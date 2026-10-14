@@ -19,6 +19,40 @@
 #include <cplat/crt/stdlib.h>
 
 /**
+ *  @brief          格納済みのバイナリ キーの有効長と 0 埋めを検査します。
+ *  @param[in]      ht   対象。NULL を渡してはなりません。
+ *  @param[in]      rec  0 相対のスロット インデックス。capacity 未満であること。
+ *  @return         整合なら 0、破損なら -1 です。
+ *
+ *  有効長が key_size 以下で、有効長より後ろがすべて 0 であることを確かめます。
+ *  バイナリ キー以外では常に 0 を返します。
+ */
+static int validate_binary_key(const cplat_hashtable *ht, size_t rec)
+{
+    const unsigned char *stored_key = (const unsigned char *)hashtable_entry_key(ht, rec);
+    size_t key_length;
+    size_t i;
+
+    if (ht->hdr->config.key_type != CPLAT_HASHTABLE_FIELD_BINARY)
+    {
+        return 0;
+    }
+    key_length = hashtable_stored_key_length(ht, rec);
+    if (key_length > ht->hdr->config.key_size)
+    {
+        return -1;
+    }
+    for (i = key_length; i < ht->hdr->config.key_size; i++)
+    {
+        if (stored_key[i] != 0)
+        {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+/**
  *  @brief          チェーンと空きヒントの整合を検査します。
  *  @param[in]      ht       対象。NULL を渡してはなりません。
  *  @param[in,out]  visited  capacity バイトの作業領域。呼び出し側が 0 埋めします。
@@ -88,12 +122,16 @@ static int hashtable_validate_impl(const cplat_hashtable *ht, unsigned char *vis
                 return -1;
             }
             stored_key = hashtable_entry_key(ht, rec);
-            if (!hashtable_key_fits(ht, stored_key))
+            if (validate_binary_key(ht, rec) != 0)
+            {
+                return -1;
+            }
+            if (!hashtable_key_fits(ht, stored_key, hashtable_stored_key_length(ht, rec)))
             {
                 return -1;
             }
             /* キーのハッシュ先と、載っているバケットが一致すること。 */
-            if (hashtable_hash_key(ht, stored_key) != idx)
+            if (hashtable_hash_key(ht, stored_key, hashtable_stored_key_length(ht, rec)) != idx)
             {
                 return -1;
             }
@@ -118,6 +156,11 @@ static int hashtable_validate_impl(const cplat_hashtable *ht, unsigned char *vis
                  (hashtable_key_ref_at(ht, i)->length != 0)) ||
                 ((hashtable_field_is_variable(ht->hdr->config.value_type) != 0) &&
                  (hashtable_value_ref_at(ht, i)->length != 0)))
+            {
+                return -1;
+            }
+            /* 空スロットのバイナリ キーの有効長は 0 に戻っているはず。 */
+            if ((ht->hdr->config.key_type == CPLAT_HASHTABLE_FIELD_BINARY) && (*hashtable_entry_key_length(ht, i) != 0))
             {
                 return -1;
             }

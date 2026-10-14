@@ -17,36 +17,35 @@
 
 #include <string.h>
 
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_hashtable_find_value_ref(const cplat_hashtable *ht, const void *key, const void **value_out)
+/**
+ *  @brief          キーで使用中のレコードを探します。
+ *  @param[in]      ht          対象。NULL を渡してはなりません。
+ *  @param[in]      key         キー。NULL を渡してはなりません。
+ *  @param[in]      key_length  バイナリ キーの有効長。文字列キーでは使いません。
+ *  @param[out]     rec_out     0 相対のスロット インデックスの格納先。成功時だけ書きます。
+ *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_OUT_OF_RANGE 、@ref CPLAT_ERR_NOT_FOUND 。
+ *
+ *  削除済みは見つからない扱いです。キーは残っていても返しません。
+ */
+static int hashtable_lookup(const cplat_hashtable *ht, const void *key, size_t key_length, size_t *rec_out)
 {
-    size_t idx;
-    uint64_t *bucket_head;
     uint64_t cur;
 
-    if ((ht == NULL) || (key == NULL) || (value_out == NULL))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    if (!hashtable_key_fits(ht, key))
+    if (!hashtable_key_fits(ht, key, key_length))
     {
         return CPLAT_ERR_OUT_OF_RANGE;
     }
 
-    idx = hashtable_hash_key(ht, key);
-    bucket_head = hashtable_bucket_head(ht);
-    cur = bucket_head[idx];
+    cur = hashtable_bucket_head(ht)[hashtable_hash_key(ht, key, key_length)];
     while (cur != 0)
     {
         size_t rec = (size_t)(cur - 1);
 
-        if (hashtable_key_equal(ht, hashtable_entry_key(ht, rec), key))
+        if (hashtable_key_equal(ht, rec, key, key_length))
         {
-            /* 削除済みは見つからない扱い。キーは残っていても返さない。 */
             if (*hashtable_entry_status(ht, rec) == REC_IN_USE)
             {
-                *value_out = hashtable_data_at(ht, rec);
+                *rec_out = rec;
                 return CPLAT_OK;
             }
             return CPLAT_ERR_NOT_FOUND;
@@ -54,6 +53,43 @@ int cplat_hashtable_find_value_ref(const cplat_hashtable *ht, const void *key, c
         cur = *hashtable_entry_next(ht, rec);
     }
     return CPLAT_ERR_NOT_FOUND;
+}
+
+static int find_value_ref(const cplat_hashtable *ht, const void *key, size_t key_length, const void **value_out)
+{
+    size_t rec;
+    int ret;
+
+    if ((ht == NULL) || (key == NULL) || (value_out == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    ret = hashtable_lookup(ht, key, key_length, &rec);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+    *value_out = hashtable_data_at(ht, rec);
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_hashtable_find_value_ref(const cplat_hashtable *ht, const void *key, const void **value_out)
+{
+    return find_value_ref(ht, key, hashtable_default_key_length(ht), value_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_hashtable_find_value_ref_with_key_length(const cplat_hashtable *ht, const void *key, size_t key_length,
+                                                   const void **value_out)
+{
+    if (hashtable_rejects_key_length(ht) != 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    return find_value_ref(ht, key, key_length, value_out);
 }
 
 static size_t stored_value_size(const cplat_hashtable *ht, size_t rec)
@@ -79,7 +115,7 @@ static size_t stored_key_size(const cplat_hashtable *ht, size_t rec)
     {
         return strlen(hashtable_entry_key(ht, rec)) + 1u;
     }
-    return ht->hdr->config.key_size;
+    return hashtable_stored_key_length(ht, rec);
 }
 
 static int copy_field(const void *src, size_t required_size, void *dest, size_t dest_size, size_t *required_size_out)
@@ -107,10 +143,26 @@ static int copy_arguments_are_valid(const void *dest, size_t dest_size, const si
            (((dest == NULL) && (dest_size == 0)) || ((dest != NULL) && (dest_size != 0)));
 }
 
-/* Doxygen コメントは、ヘッダーに記載 */
+static int find_recno(const cplat_hashtable *ht, const void *key, size_t key_length, uint64_t *record_out)
+{
+    size_t rec;
+    int ret;
 
-int cplat_hashtable_find_value_copy(const cplat_hashtable *ht, const void *key, void *dest, size_t dest_size,
-                                    size_t *required_size_out)
+    if ((ht == NULL) || (key == NULL) || (record_out == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    ret = hashtable_lookup(ht, key, key_length, &rec);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+    *record_out = (uint64_t)(rec + 1);
+    return CPLAT_OK;
+}
+
+static int find_value_copy(const cplat_hashtable *ht, const void *key, size_t key_length, void *dest, size_t dest_size,
+                           size_t *required_size_out)
 {
     uint64_t record;
     int ret;
@@ -119,7 +171,7 @@ int cplat_hashtable_find_value_copy(const cplat_hashtable *ht, const void *key, 
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
-    ret = cplat_hashtable_find_recno(ht, key, &record);
+    ret = find_recno(ht, key, key_length, &record);
     if (ret != CPLAT_OK)
     {
         return ret;
@@ -130,50 +182,48 @@ int cplat_hashtable_find_value_copy(const cplat_hashtable *ht, const void *key, 
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_hashtable_find_recno(const cplat_hashtable *ht, const void *key, uint64_t *record_out)
+int cplat_hashtable_find_value_copy(const cplat_hashtable *ht, const void *key, void *dest, size_t dest_size,
+                                    size_t *required_size_out)
 {
-    size_t idx;
-    uint64_t *bucket_head;
-    uint64_t cur;
-
-    if ((ht == NULL) || (key == NULL) || (record_out == NULL))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    if (!hashtable_key_fits(ht, key))
-    {
-        return CPLAT_ERR_OUT_OF_RANGE;
-    }
-
-    idx = hashtable_hash_key(ht, key);
-    bucket_head = hashtable_bucket_head(ht);
-    cur = bucket_head[idx];
-    while (cur != 0)
-    {
-        size_t rec = (size_t)(cur - 1);
-
-        if (hashtable_key_equal(ht, hashtable_entry_key(ht, rec), key))
-        {
-            /* 削除済みはレコード番号も返さない。 */
-            if (*hashtable_entry_status(ht, rec) == REC_IN_USE)
-            {
-                *record_out = cur;
-                return CPLAT_OK;
-            }
-            return CPLAT_ERR_NOT_FOUND;
-        }
-        cur = *hashtable_entry_next(ht, rec);
-    }
-    return CPLAT_ERR_NOT_FOUND;
+    return find_value_copy(ht, key, hashtable_default_key_length(ht), dest, dest_size, required_size_out);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_hashtable_find_timestamp_ref(const cplat_hashtable *ht, const void *key, const cplat_timespec **timestamp_out)
+int cplat_hashtable_find_value_copy_with_key_length(const cplat_hashtable *ht, const void *key, size_t key_length,
+                                                    void *dest, size_t dest_size, size_t *required_size_out)
 {
-    size_t idx;
-    uint64_t *bucket_head;
-    uint64_t cur;
+    if (hashtable_rejects_key_length(ht) != 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    return find_value_copy(ht, key, key_length, dest, dest_size, required_size_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_hashtable_find_recno(const cplat_hashtable *ht, const void *key, uint64_t *record_out)
+{
+    return find_recno(ht, key, hashtable_default_key_length(ht), record_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_hashtable_find_recno_with_key_length(const cplat_hashtable *ht, const void *key, size_t key_length,
+                                               uint64_t *record_out)
+{
+    if (hashtable_rejects_key_length(ht) != 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    return find_recno(ht, key, key_length, record_out);
+}
+
+static int find_timestamp_ref(const cplat_hashtable *ht, const void *key, size_t key_length,
+                              const cplat_timespec **timestamp_out)
+{
+    size_t rec;
+    int ret;
 
     if ((ht == NULL) || (key == NULL) || (timestamp_out == NULL))
     {
@@ -183,35 +233,36 @@ int cplat_hashtable_find_timestamp_ref(const cplat_hashtable *ht, const void *ke
     {
         return CPLAT_ERR_UNSUPPORTED;
     }
-    if (!hashtable_key_fits(ht, key))
+    ret = hashtable_lookup(ht, key, key_length, &rec);
+    if (ret != CPLAT_OK)
     {
-        return CPLAT_ERR_OUT_OF_RANGE;
+        return ret;
     }
-
-    idx = hashtable_hash_key(ht, key);
-    bucket_head = hashtable_bucket_head(ht);
-    cur = bucket_head[idx];
-    while (cur != 0)
-    {
-        size_t rec = (size_t)(cur - 1);
-
-        if (hashtable_key_equal(ht, hashtable_entry_key(ht, rec), key))
-        {
-            if (*hashtable_entry_status(ht, rec) == REC_IN_USE)
-            {
-                *timestamp_out = hashtable_entry_timestamp(ht, rec);
-                return CPLAT_OK;
-            }
-            return CPLAT_ERR_NOT_FOUND;
-        }
-        cur = *hashtable_entry_next(ht, rec);
-    }
-    return CPLAT_ERR_NOT_FOUND;
+    *timestamp_out = hashtable_entry_timestamp(ht, rec);
+    return CPLAT_OK;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_hashtable_find_timestamp_val(const cplat_hashtable *ht, const void *key, cplat_timespec *timestamp_out)
+int cplat_hashtable_find_timestamp_ref(const cplat_hashtable *ht, const void *key, const cplat_timespec **timestamp_out)
+{
+    return find_timestamp_ref(ht, key, hashtable_default_key_length(ht), timestamp_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_hashtable_find_timestamp_ref_with_key_length(const cplat_hashtable *ht, const void *key, size_t key_length,
+                                                       const cplat_timespec **timestamp_out)
+{
+    if (hashtable_rejects_key_length(ht) != 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    return find_timestamp_ref(ht, key, key_length, timestamp_out);
+}
+
+static int find_timestamp_val(const cplat_hashtable *ht, const void *key, size_t key_length,
+                              cplat_timespec *timestamp_out)
 {
     const cplat_timespec *src;
     int ret;
@@ -220,7 +271,7 @@ int cplat_hashtable_find_timestamp_val(const cplat_hashtable *ht, const void *ke
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
-    ret = cplat_hashtable_find_timestamp_ref(ht, key, &src);
+    ret = find_timestamp_ref(ht, key, key_length, &src);
     if (ret != CPLAT_OK)
     {
         return ret;
@@ -231,11 +282,27 @@ int cplat_hashtable_find_timestamp_val(const cplat_hashtable *ht, const void *ke
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_hashtable_find_generation(const cplat_hashtable *ht, const void *key, uint64_t *generation_out)
+int cplat_hashtable_find_timestamp_val(const cplat_hashtable *ht, const void *key, cplat_timespec *timestamp_out)
 {
-    size_t idx;
-    uint64_t *bucket_head;
-    uint64_t cur;
+    return find_timestamp_val(ht, key, hashtable_default_key_length(ht), timestamp_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_hashtable_find_timestamp_val_with_key_length(const cplat_hashtable *ht, const void *key, size_t key_length,
+                                                       cplat_timespec *timestamp_out)
+{
+    if (hashtable_rejects_key_length(ht) != 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    return find_timestamp_val(ht, key, key_length, timestamp_out);
+}
+
+static int find_generation(const cplat_hashtable *ht, const void *key, size_t key_length, uint64_t *generation_out)
+{
+    size_t rec;
+    int ret;
 
     if ((ht == NULL) || (key == NULL) || (generation_out == NULL))
     {
@@ -245,35 +312,38 @@ int cplat_hashtable_find_generation(const cplat_hashtable *ht, const void *key, 
     {
         return CPLAT_ERR_UNSUPPORTED;
     }
-    if (!hashtable_key_fits(ht, key))
+    ret = hashtable_lookup(ht, key, key_length, &rec);
+    if (ret != CPLAT_OK)
     {
-        return CPLAT_ERR_OUT_OF_RANGE;
+        return ret;
     }
-
-    idx = hashtable_hash_key(ht, key);
-    bucket_head = hashtable_bucket_head(ht);
-    cur = bucket_head[idx];
-    while (cur != 0)
-    {
-        size_t rec = (size_t)(cur - 1);
-
-        if (hashtable_key_equal(ht, hashtable_entry_key(ht, rec), key))
-        {
-            if (*hashtable_entry_status(ht, rec) == REC_IN_USE)
-            {
-                *generation_out = *hashtable_entry_generation(ht, rec);
-                return CPLAT_OK;
-            }
-            return CPLAT_ERR_NOT_FOUND;
-        }
-        cur = *hashtable_entry_next(ht, rec);
-    }
-    return CPLAT_ERR_NOT_FOUND;
+    *generation_out = *hashtable_entry_generation(ht, rec);
+    return CPLAT_OK;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_hashtable_get_key_ref(const cplat_hashtable *ht, uint64_t record, const void **key_out)
+int cplat_hashtable_find_generation(const cplat_hashtable *ht, const void *key, uint64_t *generation_out)
+{
+    return find_generation(ht, key, hashtable_default_key_length(ht), generation_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_hashtable_find_generation_with_key_length(const cplat_hashtable *ht, const void *key, size_t key_length,
+                                                    uint64_t *generation_out)
+{
+    if (hashtable_rejects_key_length(ht) != 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    return find_generation(ht, key, key_length, generation_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_hashtable_get_key_ref(const cplat_hashtable *ht, uint64_t record, const void **key_out,
+                                size_t *key_length_out)
 {
     size_t rec;
 
@@ -292,6 +362,10 @@ int cplat_hashtable_get_key_ref(const cplat_hashtable *ht, uint64_t record, cons
         return CPLAT_ERR_NOT_FOUND;
     }
     *key_out = hashtable_entry_key(ht, rec);
+    if (key_length_out != NULL)
+    {
+        *key_length_out = stored_key_size(ht, rec);
+    }
     return CPLAT_OK;
 }
 
@@ -301,18 +375,19 @@ int cplat_hashtable_get_key_copy(const cplat_hashtable *ht, uint64_t record, voi
                                  size_t *required_size_out)
 {
     const void *src;
+    size_t key_length;
     int ret;
 
     if (copy_arguments_are_valid(dest, dest_size, required_size_out) == 0)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
-    ret = cplat_hashtable_get_key_ref(ht, record, &src);
+    ret = cplat_hashtable_get_key_ref(ht, record, &src, &key_length);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
-    return copy_field(src, stored_key_size(ht, (size_t)(record - 1)), dest, dest_size, required_size_out);
+    return copy_field(src, key_length, dest, dest_size, required_size_out);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */

@@ -530,7 +530,7 @@ Table: Windows SDK ヘッダー取り込み構文と cplat ヘッダーの差異
 固定レコード数、固定ストレージ容量、遅延削除を持つハッシュ テーブルです。  
 単一の標準 API とは対応しません。
 
-キーと値は個別に固定長バイナリ、固定長 NUL 終端文字列、可変長 NUL 終端文字列を選択できます。  
+キーと値は個別にバイナリ (`CPLAT_HASHTABLE_FIELD_BINARY`)、固定長 NUL 終端文字列、可変長 NUL 終端文字列を選択できます。  
 通常の `cplat_hashtable_create` では、可変長文字列の容量を `key_storage_size` または `value_storage_size` で指定し、自動拡張しません。  
 断片化で連続領域が不足すると、合計空き容量が足りていても `CPLAT_ERR_STORAGE_FULL` です。  
 必要に応じて `cplat_hashtable_compact` を明示的に呼び出してから再試行します。  
@@ -543,7 +543,7 @@ Table: Windows SDK ヘッダー取り込み構文と cplat ヘッダーの差異
 空きリストは可変長ストレージ 1 個につき `capacity + 1` 要素を占め、必要バッファー サイズに含まれます。  
 必要バッファー サイズは `cplat_hashtable_required_size` で求めてください。  
 ストレージの管理方式は [hashtable 可変長ストレージの管理方式](doxybook2_internal/Files/libsrc/cplat/hashtable/hashtable-storage-allocator.md) を参照してください。  
-固定長バイナリ値は `value_size` バイトのバイト列として `memcpy` で授受します。  
+バイナリ値は `value_size` バイトのバイト列として `memcpy` で授受します。  
 値の格納境界は設定の `value_align` で決まります。  
 既定の `0` では値を隙間なく並べ、値への参照を返す API も型のアラインメントを保証しないため、型付きポインターとして直接参照せず `memcpy` で取り出します。  
 `value_align` に非 0 (2 の冪、`CPLAT_HASHTABLE_VALUE_ALIGN_MAX` 以下) を指定すると、値をその境界へ整列させ、`buf_data` にも同じ境界を要求します。  
@@ -557,7 +557,14 @@ Table: Windows SDK ヘッダー取り込み構文と cplat ヘッダーの差異
 別のレコードや別のフィールドを更新しただけでは無効になりません。  
 安全に保持する場合は、固定長文字列と可変長文字列のどちらも `*_copy` を使います。  
 `dest == NULL`、`dest_size == 0` で NUL を含む必要量を照会できます。  
-固定長バイナリも `*_copy` で取得でき、必要量は設定した固定サイズです。
+バイナリも `*_copy` で取得できます。必要量は、キーでは有効長、値では `value_size` です。
+
+バイナリ キーは `key_size` を上限とし、レコードごとに有効長を持ちます。  
+有効長を受け取らない関数は `key_size` を有効長として扱います。  
+`key_size` より短いキーは、`_with_key_length` の付く関数へ有効長と一緒に渡します。呼び出し側で `key_size` まで 0 埋めする必要はありません。  
+キーは有効長と有効長までのバイト列がともに等しい場合に一致するため、末尾の 0 だけが異なるキーも有効長が異なれば別のキーです。  
+`_with_key_length` の関数は、バイナリ キー以外のテーブルでは `CPLAT_ERR_INVALID_ARGUMENT`、有効長が `key_size` を超えると `CPLAT_ERR_OUT_OF_RANGE` です。  
+格納済みキーの有効長は、`cplat_hashtable_get_key_ref` の `key_length_out` または `cplat_hashtable_get_key_copy` の必要量で得られます。
 
 テーブルは変更時刻と世代カウンターの両方を持ちます。  
 変更時刻は実時刻のため時計の巻き戻しで逆行しますが、世代カウンターは変更のたびに 1 ずつ増える単調な値です。  
@@ -580,6 +587,7 @@ Table: Windows SDK ヘッダー取り込み構文と cplat ヘッダーの差異
 | 削除済み同一キーの追加方針 | `CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE` は新しい値で復活 / `CPLAT_HASHTABLE_ADD_DELETED_REVIVE` は削除前の値で復活 |
 | 空きがない場合に削除済みを再利用 | 設定 `reuse_deleted` を非 0 にする。既定値は 0 |
 | レコード番号を指定して直接書き込む | `cplat_hashtable_insert_direct` |
+| バイナリ キーを有効長を指定して扱う | `cplat_hashtable_add_with_key_length` / `cplat_hashtable_upsert_with_key_length` / `cplat_hashtable_insert_direct_with_key_length` / `cplat_hashtable_update_with_key_length` / `cplat_hashtable_find_value_ref_with_key_length` / `cplat_hashtable_find_value_copy_with_key_length` / `cplat_hashtable_find_recno_with_key_length` / `cplat_hashtable_find_timestamp_ref_with_key_length` / `cplat_hashtable_find_timestamp_val_with_key_length` / `cplat_hashtable_find_generation_with_key_length` / `cplat_hashtable_delete_with_key_length` |
 | 検索 | `cplat_hashtable_find_value_ref` / `cplat_hashtable_find_value_copy` / `cplat_hashtable_find_recno` / `cplat_hashtable_find_timestamp_ref` / `cplat_hashtable_find_timestamp_val` |
 | レコード番号から読む | `cplat_hashtable_get_key_ref` / `cplat_hashtable_get_key_copy` / `cplat_hashtable_get_value_ref` / `cplat_hashtable_get_value_copy` / `cplat_hashtable_get_status` / `cplat_hashtable_get_timestamp_ref` / `cplat_hashtable_get_timestamp_val` |
 | テーブル横断の変更時刻 | `cplat_hashtable_get_table_timestamp_ref` / `cplat_hashtable_get_table_timestamp_val` |

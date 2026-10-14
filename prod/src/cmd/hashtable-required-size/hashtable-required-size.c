@@ -132,7 +132,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        config.value_type = CPLAT_HASHTABLE_FIELD_FIXED_BINARY;
+        config.value_type = CPLAT_HASHTABLE_FIELD_BINARY;
         config.value_size = (size_t)options.value_size;
         config.value_align = (size_t)options.value_align;
     }

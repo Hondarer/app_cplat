@@ -43,7 +43,7 @@
     +----------------------+
     | magic (4B)           |  // CPLAT_HASHTABLE_MAGIC (0x48544142)
     +----------------------+
-    | version (4B)         |  // CPLAT_HASHTABLE_VERSION (4)
+    | version (4B)         |  // CPLAT_HASHTABLE_VERSION (5)
     +----------------------+
     | header               |  // config, next_empty, in_use_count, deleted_count, table_timestamp,
     |                      |  // key_storage_used, value_storage_used, key_free_count, value_free_count
@@ -87,7 +87,7 @@
  *  @subsection     hashtable_ident マジックと版番号
  *
  *  管理領域先頭 8 バイトは識別子です。ヘッダーより前に置きます。\n
- *  マジックは 0x48544142、版番号は 4 です。\n
+ *  マジックは 0x48544142、版番号は 5 です。\n
  *  @ref cplat_hashtable_attach は両者を検証し、不一致なら失敗します。
  *
  *  @subsection     hashtable_header ヘッダー
@@ -116,17 +116,27 @@
  *
  *  キーのオフセットとストライドは @p timestamp_scope と @p key_type で変わります。\n
  *  可変長キーは 16 バイトの永続 descriptor を置くため、キーのオフセットを
- *  uint64_t 境界へ切り上げます。固定長キーでは切り上げません。\n
+ *  uint64_t 境界へ切り上げます。\n
+ *  バイナリ キーは、status 直後の詰め物のうち 4 バイト境界の位置に、
+ *  uint32_t の有効長を置きます。SCOPE_RECORD では既存の詰め物に収まるため、
+ *  エントリは大きくなりません。SCOPE_TABLE ではキーのオフセットが 16 になります。\n
+ *  固定長文字列キーでは切り上げません。\n
  *  ストライドは、キーの終端を uint64_t 境界へ切り上げた値です。
  *
     @code
-    SCOPE_RECORD:
-    +--------+--------+-------+------------+------------+-------------+-------+
-    | next   | status | pad   | timestamp  | generation | key         | pad   |
-    | 8B     | 1B     | 7B    | timespec   | 8B         | key_size    | to 8B |
-    +--------+--------+-------+------------+------------+-------------+-------+
+    SCOPE_RECORD (バイナリ キー以外では key_length の位置も pad):
+    +--------+--------+-------+------------+------------+------------+-------------+-------+
+    | next   | status | pad   | key_length | timestamp  | generation | key         | pad   |
+    | 8B     | 1B     | 3B    | 4B         | timespec   | 8B         | key_size    | to 8B |
+    +--------+--------+-------+------------+------------+------------+-------------+-------+
 
-    SCOPE_TABLE (固定長キー):
+    SCOPE_TABLE (バイナリ キー):
+    +--------+--------+-------+------------+-------------+-------+
+    | next   | status | pad   | key_length | key         | pad   |
+    | 8B     | 1B     | 3B    | 4B         | key_size    | to 8B |
+    +--------+--------+-------+------------+-------------+-------+
+
+    SCOPE_TABLE (固定長文字列キー):
     +--------+--------+-------------+-------+
     | next   | status | key         | pad   |
     | 8B     | 1B     | key_size    | to 8B |
@@ -143,7 +153,9 @@
  *  @p status は 0 が空、1 が実装中、2 以上が削除済みの加齢です。\n
  *  @p timestamp は実時刻の変更時刻です。status が 0 のときは 0 埋めです。\n
  *  @p generation は変更のたびに 1 ずつ増える単調な値です。status が 0 のときは 0 です。\n
- *  文字列キーは NUL までを格納し、残りを 0 埋めします。
+ *  @p key_length はバイナリ キーの有効長です。status が 0 のときは 0 です。\n
+ *  バイナリ キーは有効長までを格納し、文字列キーは NUL までを格納します。
+ *  いずれも残りを 0 埋めします。
  *
  *  @subsection     hashtable_free_list 空きリスト
  *
@@ -197,8 +209,19 @@ enum
 
 enum
 {
-    ENTRY_TIMESTAMP_PAD = 7 /**< status の直後から timespec を 8 境界へ置く詰め物です。 */
+    ENTRY_TIMESTAMP_PAD = 7,      /**< status の直後から timespec を 8 境界へ置く詰め物です。 */
+    ENTRY_KEY_LENGTH_OFFSET = 12, /**< エントリ先頭からバイナリ キーの有効長までのオフセットです。 */
+    ENTRY_BINARY_KEY_OFFSET = 16  /**< SCOPE_TABLE でのバイナリ キーのオフセットです。 */
 };
+
+_Static_assert((sizeof(uint64_t) + sizeof(unsigned char) <= (size_t)ENTRY_KEY_LENGTH_OFFSET) &&
+                   ((size_t)ENTRY_KEY_LENGTH_OFFSET + sizeof(uint32_t) <=
+                    sizeof(uint64_t) + sizeof(unsigned char) + (size_t)ENTRY_TIMESTAMP_PAD) &&
+                   (ENTRY_KEY_LENGTH_OFFSET % _Alignof(uint32_t) == 0),
+               "cplat: binary key length must fit in the padding after status");
+
+_Static_assert((size_t)ENTRY_BINARY_KEY_OFFSET == (size_t)ENTRY_KEY_LENGTH_OFFSET + sizeof(uint32_t),
+               "cplat: binary key must follow its length");
 
 _Static_assert(((sizeof(uint64_t) + sizeof(unsigned char) + 7u) % _Alignof(cplat_timespec)) == 0,
                "cplat: entry time offset must satisfy alignof(cplat_timespec)");
@@ -207,7 +230,7 @@ _Static_assert(((sizeof(uint64_t) + sizeof(unsigned char) + 7u + sizeof(cplat_ti
                "cplat: entry generation offset must satisfy alignof(uint64_t)");
 
 #define CPLAT_HASHTABLE_MAGIC   0x48544142u /**< 管理領域先頭の識別子です。 */
-#define CPLAT_HASHTABLE_VERSION 4u          /**< 配置の版番号です。 */
+#define CPLAT_HASHTABLE_VERSION 5u          /**< 配置の版番号です。 */
 
 struct hashtable_string_ref
 {
@@ -452,6 +475,66 @@ static inline uint64_t *hashtable_entry_generation(const cplat_hashtable *ht, si
 }
 
 /**
+ *  @brief          指定スロットのバイナリ キーの有効長へのポインターを返します。
+ *  @param[in]      ht   対象。NULL を渡してはなりません。
+ *  @param[in]      rec  0 相対のスロット インデックス。capacity 未満であること。
+ *  @return         有効長へのポインターです。
+ *
+ *  バイナリ キーのときだけ意味を持ちます。
+ */
+static inline uint32_t *hashtable_entry_key_length(const cplat_hashtable *ht, size_t rec)
+{
+    return (uint32_t *)(void *)(hashtable_entries(ht) + rec * ht->entry_stride + (size_t)ENTRY_KEY_LENGTH_OFFSET);
+}
+
+/**
+ *  @brief          指定スロットに格納済みのキーの有効長を返します。
+ *  @param[in]      ht   対象。NULL を渡してはなりません。
+ *  @param[in]      rec  0 相対のスロット インデックス。capacity 未満であること。
+ *  @return         バイナリ キーでは有効長です。文字列キーでは 0 です。
+ *
+ *  返す値は @ref hashtable_hash_key などの @p key_length へそのまま渡せます。
+ *  文字列キーではそれらの関数が @p key_length を使わないためです。
+ */
+static inline size_t hashtable_stored_key_length(const cplat_hashtable *ht, size_t rec)
+{
+    if (ht->hdr->config.key_type != CPLAT_HASHTABLE_FIELD_BINARY)
+    {
+        return 0;
+    }
+    return (size_t)*hashtable_entry_key_length(ht, rec);
+}
+
+/**
+ *  @brief          有効長を受け取らない公開関数が使う、キーの有効長を返します。
+ *  @param[in]      ht  対象。NULL を渡せます。
+ *  @return         key_size です。@p ht が NULL のときは 0 です。
+ *
+ *  バイナリ キーでは key_size を有効長とします。文字列キーでは委譲先が使いません。\n
+ *  @p ht が NULL のときは 0 を返し、NULL の判定は委譲先に任せます。
+ */
+static inline size_t hashtable_default_key_length(const cplat_hashtable *ht)
+{
+    if (ht == NULL)
+    {
+        return 0;
+    }
+    return ht->hdr->config.key_size;
+}
+
+/**
+ *  @brief          有効長を受け取る公開関数が、このテーブルを拒否するかを返します。
+ *  @param[in]      ht  対象。NULL を渡せます。
+ *  @return         バイナリ キー以外のテーブルなら 1、それ以外なら 0 です。
+ *
+ *  @p ht が NULL のときは 0 を返し、NULL の判定は委譲先に任せます。
+ */
+static inline int hashtable_rejects_key_length(const cplat_hashtable *ht)
+{
+    return (ht != NULL) && (ht->hdr->config.key_type != CPLAT_HASHTABLE_FIELD_BINARY);
+}
+
+/**
  *  @brief          指定スロットのキー descriptor へのポインターを返します。
  *  @param[in]      ht   対象。NULL を渡してはなりません。
  *  @param[in]      rec  0 相対のスロット インデックス。capacity 未満であること。
@@ -480,7 +563,7 @@ static inline unsigned char *hashtable_key_storage(const cplat_hashtable *ht)
  *  @brief          指定スロットのキーへのポインターを返します。
  *  @param[in]      ht   対象。NULL を渡してはなりません。
  *  @param[in]      rec  0 相対のスロット インデックス。capacity 未満であること。
- *  @return         key_size バイトのキーです。
+ *  @return         key_size バイトのキー領域です。
  */
 static inline char *hashtable_entry_key(const cplat_hashtable *ht, size_t rec)
 {
@@ -642,34 +725,43 @@ void hashtable_refresh_layout(cplat_hashtable *ht);
 
 /**
  *  @brief          キーのバケット番号を求めます。
- *  @param[in]      ht   対象。NULL を渡してはなりません。
- *  @param[in]      key  キー。NULL を渡してはなりません。
+ *  @param[in]      ht          対象。NULL を渡してはなりません。
+ *  @param[in]      key         キー。NULL を渡してはなりません。
+ *  @param[in]      key_length  バイナリ キーの有効長。文字列キーでは使いません。
  *  @return         0 以上 capacity 未満のバケット番号です。
  *
  *  djb2 を使い、最後に capacity で割った余りを返します。\n
+ *  バイナリ キーは有効長までを、文字列キーは NUL の直前までを混ぜます。\n
  *  アキュムレータは幅を uint64_t に固定しています。`unsigned long` は
  *  Linux/GCC (LP64, 64bit) と Windows/MSVC (LLP64, 32bit) で幅が異なり、
  *  同じキーでも環境によってバケット番号に差異が生じるためです。\n
  *  capacity は両対象環境で size_t (64bit) のため、幅を size_t に合わせています。
  */
-size_t hashtable_hash_key(const cplat_hashtable *ht, const void *key);
+size_t hashtable_hash_key(const cplat_hashtable *ht, const void *key, size_t key_length);
 
 /**
  *  @brief          格納済みキーと探索キーが同じかを判定します。
  *  @param[in]      ht          対象。NULL を渡してはなりません。
- *  @param[in]      stored_key  スロット上のキー。
+ *  @param[in]      rec         0 相対のスロット インデックス。capacity 未満であること。
  *  @param[in]      key         探索キー。
+ *  @param[in]      key_length  バイナリ キーの有効長。文字列キーでは使いません。
  *  @return         一致なら 1、不一致なら 0 です。
+ *
+ *  バイナリ キーは、有効長と有効長までのバイト列がともに等しいときに一致とします。
  */
-int hashtable_key_equal(const cplat_hashtable *ht, const char *stored_key, const void *key);
+int hashtable_key_equal(const cplat_hashtable *ht, size_t rec, const void *key, size_t key_length);
 
 /**
- *  @brief          キーが key_size に収まるかを判定します。
- *  @param[in]      ht   対象。NULL を渡してはなりません。
- *  @param[in]      key  キー。NULL を渡してはなりません。
+ *  @brief          キーが格納できる長さかを判定します。
+ *  @param[in]      ht          対象。NULL を渡してはなりません。
+ *  @param[in]      key         キー。NULL を渡してはなりません。
+ *  @param[in]      key_length  バイナリ キーの有効長。文字列キーでは使いません。
  *  @return         収まれば 1、収まらなければ 0 です。
+ *
+ *  バイナリ キーは有効長が key_size 以下か、固定長文字列は key_size 以内に NUL があるか、
+ *  可変長文字列は NUL を含む長さが key_storage_size 未満かを判定します。
  */
-int hashtable_key_fits(const cplat_hashtable *ht, const void *key);
+int hashtable_key_fits(const cplat_hashtable *ht, const void *key, size_t key_length);
 
 /**
  *  @brief          入力フィールドの保存バイト数を返します。
@@ -729,7 +821,7 @@ void hashtable_arena_compact(cplat_hashtable *ht, struct hashtable_arena *arena,
  *  @param[in]      rec  0 相対のスロット インデックス。capacity 未満であること。
  *
  *  可変長キーでは、ストレージを 0 埋めして空きリストへ返し、descriptor を未使用へ戻します。\n
- *  固定長キーでは、キー領域を 0 埋めします。
+ *  固定長キーでは、キー領域を 0 埋めします。バイナリ キーでは有効長も 0 にします。
  */
 void hashtable_release_key(cplat_hashtable *ht, size_t rec);
 
@@ -748,12 +840,14 @@ void hashtable_release_value(cplat_hashtable *ht, size_t rec);
  *  @param[in,out]  ht              対象。NULL を渡してはなりません。
  *  @param[in]      rec             0 相対のスロット インデックス。capacity 未満であること。
  *  @param[in]      key             キー。NULL を渡してはなりません。
+ *  @param[in]      key_length      バイナリ キーの有効長。文字列キーでは使いません。
  *  @param[in]      storage_offset  可変長キーの格納先オフセット。固定長キーでは使いません。
  *
  *  @p storage_offset は @ref hashtable_key_storage_find_free が返した位置です。\n
- *  可変長キーでは、空きリストから領域を取り、descriptor を更新します。
+ *  可変長キーでは、空きリストから領域を取り、descriptor を更新します。\n
+ *  バイナリ キーでは、有効長までを複製して残りを 0 埋めし、有効長を記録します。
  */
-void hashtable_key_store(cplat_hashtable *ht, size_t rec, const void *key, size_t storage_offset);
+void hashtable_key_store(cplat_hashtable *ht, size_t rec, const void *key, size_t key_length, size_t storage_offset);
 
 /**
  *  @brief          指定スロットへ値を格納します。
@@ -875,6 +969,7 @@ uint64_t hashtable_find_best_deleted_record(const cplat_hashtable *ht, const uns
  *  @brief          キーを追加、または既存キーの値を書き換えます。
  *  @param[in,out]  ht              対象。NULL を渡してはなりません。
  *  @param[in]      key             キー。NULL を渡してはなりません。
+ *  @param[in]      key_length      バイナリ キーの有効長。文字列キーでは使いません。
  *  @param[in]      value           設定した形式の値。NULL を渡してはなりません。
  *  @param[in]      deleted_policy  削除済みの同一キーが見つかった場合の振る舞い。
  *  @param[in]      allow_update    0 なら使用中の同一キーを @ref CPLAT_ERR_DUPLICATE_KEY 、
@@ -886,19 +981,49 @@ uint64_t hashtable_find_best_deleted_record(const cplat_hashtable *ht, const uns
  *  @ref cplat_hashtable_add と @ref cplat_hashtable_upsert の共通実装です。\n
  *  @p inserted_out は @ref CPLAT_OK のときだけ書きます。
  */
-int hashtable_put(cplat_hashtable *ht, const void *key, const void *value,
+int hashtable_put(cplat_hashtable *ht, const void *key, size_t key_length, const void *value,
                   cplat_hashtable_add_deleted_policy deleted_policy, int allow_update, int *inserted_out,
                   struct hashtable_growth_request *growth_out);
+
+/**
+ *  @brief          レコード番号を指定してキーと値と変更時刻を直接書き込みます。
+ *  @param[in,out]  ht          対象。NULL を渡してはなりません。
+ *  @param[in]      record      1 相対のレコード番号。
+ *  @param[in]      key         キー。NULL を渡してはなりません。
+ *  @param[in]      key_length  バイナリ キーの有効長。文字列キーでは使いません。
+ *  @param[in]      status      書き込む使用状況。
+ *  @param[in]      value       設定した形式の値。NULL を渡してはなりません。
+ *  @param[in]      timestamp   書き込む変更時刻。
+ *  @param[in]      generation  書き込む世代カウンター。
+ *  @return         @ref cplat_hashtable_insert_direct と同じ結果コードです。
+ *
+ *  @ref cplat_hashtable_insert_direct と、その有効長版と、移行処理の共通実装です。
+ */
+int hashtable_insert_direct(cplat_hashtable *ht, uint64_t record, const void *key, size_t key_length, int status,
+                            const void *value, const cplat_timespec *timestamp, uint64_t generation);
+
+/**
+ *  @brief          キーでレコードを削除します。
+ *  @param[in,out]  ht          対象。NULL を渡してはなりません。
+ *  @param[in]      key         キー。NULL を渡してはなりません。
+ *  @param[in]      key_length  バイナリ キーの有効長。文字列キーでは使いません。
+ *  @return         @ref cplat_hashtable_delete と同じ結果コードです。
+ *
+ *  @ref cplat_hashtable_delete と、その有効長版と、
+ *  @ref cplat_hashtable_delete_rec の共通実装です。
+ */
+int hashtable_delete(cplat_hashtable *ht, const void *key, size_t key_length);
 
 /**
  *  @brief          キーで指定したレコードの値を更新します。
  *  @param[in,out]  ht          対象。
  *  @param[in]      key         キー。
+ *  @param[in]      key_length  バイナリ キーの有効長。文字列キーでは使いません。
  *  @param[in]      value       新しい値。
  *  @param[out]     growth_out  容量不足の詳細。NULL を渡せます。
  *  @return         @ref cplat_hashtable_update と同じ結果コードです。
  */
-int hashtable_update(cplat_hashtable *ht, const void *key, const void *value,
+int hashtable_update(cplat_hashtable *ht, const void *key, size_t key_length, const void *value,
                      struct hashtable_growth_request *growth_out);
 
 /**
@@ -918,6 +1043,7 @@ int hashtable_update_rec(cplat_hashtable *ht, uint64_t record, const void *value
  *  @brief          @ref hashtable_put を、不足時の自動拡張付きで実行します。
  *  @param[in,out]  ht              対象。NULL を渡してはなりません。
  *  @param[in]      key             キー。NULL を渡してはなりません。
+ *  @param[in]      key_length      バイナリ キーの有効長。文字列キーでは使いません。
  *  @param[in]      value           設定した形式の値。NULL を渡してはなりません。
  *  @param[in]      deleted_policy  削除済みの同一キーが見つかった場合の振る舞い。
  *  @param[in]      allow_update    0 以外なら使用中の同一キーの値を書き換えます。
@@ -926,17 +1052,18 @@ int hashtable_update_rec(cplat_hashtable *ht, uint64_t record, const void *value
  *
  *  自動拡張が無効なテーブルでは、@ref hashtable_put の結果をそのまま返します。
  */
-int hashtable_put_with_growth(cplat_hashtable *ht, const void *key, const void *value,
+int hashtable_put_with_growth(cplat_hashtable *ht, const void *key, size_t key_length, const void *value,
                               cplat_hashtable_add_deleted_policy deleted_policy, int allow_update, int *inserted_out);
 
 /**
  *  @brief          @ref hashtable_update を、不足時の自動拡張付きで実行します。
- *  @param[in,out]  ht     対象。NULL を渡してはなりません。
- *  @param[in]      key    キー。NULL を渡してはなりません。
- *  @param[in]      value  設定した形式の値。NULL を渡してはなりません。
+ *  @param[in,out]  ht          対象。NULL を渡してはなりません。
+ *  @param[in]      key         キー。NULL を渡してはなりません。
+ *  @param[in]      key_length  バイナリ キーの有効長。文字列キーでは使いません。
+ *  @param[in]      value       設定した形式の値。NULL を渡してはなりません。
  *  @return         @ref cplat_hashtable_update と同じ結果コードです。
  */
-int hashtable_update_with_growth(cplat_hashtable *ht, const void *key, const void *value);
+int hashtable_update_with_growth(cplat_hashtable *ht, const void *key, size_t key_length, const void *value);
 
 /**
  *  @brief          @ref hashtable_update_rec を、不足時の自動拡張付きで実行します。

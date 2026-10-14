@@ -27,9 +27,9 @@ int hashtable_validate_config(const cplat_hashtable_config *config)
     {
         return -1;
     }
-    if ((config->key_type < CPLAT_HASHTABLE_FIELD_FIXED_BINARY) ||
+    if ((config->key_type < CPLAT_HASHTABLE_FIELD_BINARY) ||
         (config->key_type > CPLAT_HASHTABLE_FIELD_VARIABLE_STRING) ||
-        (config->value_type < CPLAT_HASHTABLE_FIELD_FIXED_BINARY) ||
+        (config->value_type < CPLAT_HASHTABLE_FIELD_BINARY) ||
         (config->value_type > CPLAT_HASHTABLE_FIELD_VARIABLE_STRING))
     {
         return -1;
@@ -47,6 +47,11 @@ int hashtable_validate_config(const cplat_hashtable_config *config)
          ((config->value_size != 0) || (config->value_storage_size == 0))) ||
         ((hashtable_field_is_variable(config->value_type) == 0) &&
          ((config->value_size == 0) || (config->value_storage_size != 0))))
+    {
+        return -1;
+    }
+    /* バイナリ キーの有効長は uint32_t でエントリへ格納する。 */
+    if ((config->key_type == CPLAT_HASHTABLE_FIELD_BINARY) && ((uint64_t)config->key_size > UINT32_MAX))
     {
         return -1;
     }

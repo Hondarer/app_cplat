@@ -30,6 +30,11 @@ char *test_hashtable_entry_key(const cplat_hashtable *ht, size_t rec)
     return hashtable_entry_key(ht, rec);
 }
 
+uint32_t *test_hashtable_entry_key_length(const cplat_hashtable *ht, size_t rec)
+{
+    return hashtable_entry_key_length(ht, rec);
+}
+
 void *test_hashtable_key_ref_at(const cplat_hashtable *ht, size_t rec)
 {
     return hashtable_key_ref_at(ht, rec);

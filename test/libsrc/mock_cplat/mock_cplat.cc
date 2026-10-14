@@ -117,17 +117,31 @@ Mock_cplat::Mock_cplat()
         .WillByDefault(Invoke(delegate_real_cplat_hashtable_buffer_size));
     ON_CALL(*this, cplat_hashtable_buffer_ref(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_hashtable_buffer_ref));
     ON_CALL(*this, cplat_hashtable_add(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_hashtable_add));
+    ON_CALL(*this, cplat_hashtable_add_with_key_length(_, _, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_hashtable_add_with_key_length));
     ON_CALL(*this, cplat_hashtable_upsert(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_hashtable_upsert));
+    ON_CALL(*this, cplat_hashtable_upsert_with_key_length(_, _, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_hashtable_upsert_with_key_length));
     ON_CALL(*this, cplat_hashtable_insert_direct(_, _, _, _, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_hashtable_insert_direct));
+    ON_CALL(*this, cplat_hashtable_insert_direct_with_key_length(_, _, _, _, _, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_hashtable_insert_direct_with_key_length));
     ON_CALL(*this, cplat_hashtable_update(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_hashtable_update));
+    ON_CALL(*this, cplat_hashtable_update_with_key_length(_, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_hashtable_update_with_key_length));
     ON_CALL(*this, cplat_hashtable_update_rec(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_hashtable_update_rec));
     ON_CALL(*this, cplat_hashtable_find_value_ref(_, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_hashtable_find_value_ref));
+    ON_CALL(*this, cplat_hashtable_find_value_ref_with_key_length(_, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_hashtable_find_value_ref_with_key_length));
     ON_CALL(*this, cplat_hashtable_find_value_copy(_, _, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_hashtable_find_value_copy));
+    ON_CALL(*this, cplat_hashtable_find_value_copy_with_key_length(_, _, _, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_hashtable_find_value_copy_with_key_length));
     ON_CALL(*this, cplat_hashtable_find_recno(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_hashtable_find_recno));
-    ON_CALL(*this, cplat_hashtable_get_key_ref(_, _, _))
+    ON_CALL(*this, cplat_hashtable_find_recno_with_key_length(_, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_hashtable_find_recno_with_key_length));
+    ON_CALL(*this, cplat_hashtable_get_key_ref(_, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_hashtable_get_key_ref));
     ON_CALL(*this, cplat_hashtable_get_key_copy(_, _, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_hashtable_get_key_copy));
@@ -152,10 +166,16 @@ Mock_cplat::Mock_cplat()
         .WillByDefault(Invoke(delegate_real_cplat_hashtable_get_table_generation));
     ON_CALL(*this, cplat_hashtable_find_timestamp_ref(_, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_hashtable_find_timestamp_ref));
+    ON_CALL(*this, cplat_hashtable_find_timestamp_ref_with_key_length(_, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_hashtable_find_timestamp_ref_with_key_length));
     ON_CALL(*this, cplat_hashtable_find_timestamp_val(_, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_hashtable_find_timestamp_val));
+    ON_CALL(*this, cplat_hashtable_find_timestamp_val_with_key_length(_, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_hashtable_find_timestamp_val_with_key_length));
     ON_CALL(*this, cplat_hashtable_find_generation(_, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_hashtable_find_generation));
+    ON_CALL(*this, cplat_hashtable_find_generation_with_key_length(_, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_hashtable_find_generation_with_key_length));
     ON_CALL(*this, cplat_hashtable_count_status(_, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_hashtable_count_status));
     ON_CALL(*this, cplat_hashtable_count(_, _)).WillByDefault(Invoke(delegate_real_cplat_hashtable_count));
@@ -163,6 +183,8 @@ Mock_cplat::Mock_cplat()
         .WillByDefault(Invoke(delegate_real_cplat_hashtable_deleted_count));
     ON_CALL(*this, cplat_hashtable_empty_count(_, _)).WillByDefault(Invoke(delegate_real_cplat_hashtable_empty_count));
     ON_CALL(*this, cplat_hashtable_delete(_, _)).WillByDefault(Invoke(delegate_real_cplat_hashtable_delete));
+    ON_CALL(*this, cplat_hashtable_delete_with_key_length(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_hashtable_delete_with_key_length));
     ON_CALL(*this, cplat_hashtable_delete_rec(_, _)).WillByDefault(Invoke(delegate_real_cplat_hashtable_delete_rec));
     ON_CALL(*this, cplat_hashtable_push_deleted(_)).WillByDefault(Invoke(delegate_real_cplat_hashtable_push_deleted));
     ON_CALL(*this, cplat_hashtable_purge_deleted(_)).WillByDefault(Invoke(delegate_real_cplat_hashtable_purge_deleted));

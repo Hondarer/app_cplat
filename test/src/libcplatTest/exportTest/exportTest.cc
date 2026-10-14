@@ -186,23 +186,44 @@
                  int(CPLAT_API *)(const cplat_hashtable *ht, const void **mgmt_out, const void **data_out)) \
     EXPORT_ENTRY(cplat_hashtable_add, int(CPLAT_API *)(cplat_hashtable * ht, const void *key, const void *value, \
                                                        cplat_hashtable_add_deleted_policy deleted_policy)) \
+    EXPORT_ENTRY(cplat_hashtable_add_with_key_length, \
+                 int(CPLAT_API *)(cplat_hashtable * ht, const void *key, size_t key_length, const void *value, \
+                                  cplat_hashtable_add_deleted_policy deleted_policy)) \
     EXPORT_ENTRY(cplat_hashtable_upsert, \
                  int(CPLAT_API *)(cplat_hashtable * ht, const void *key, const void *value, int *inserted_out)) \
+    EXPORT_ENTRY(cplat_hashtable_upsert_with_key_length, \
+                 int(CPLAT_API *)(cplat_hashtable * ht, const void *key, size_t key_length, const void *value, \
+                                  int *inserted_out)) \
     EXPORT_ENTRY(cplat_hashtable_insert_direct, \
                  int(CPLAT_API *)(cplat_hashtable * ht, uint64_t record, const void *key, int status, \
                                   const void *value, const cplat_timespec *timestamp, uint64_t generation)) \
+    EXPORT_ENTRY(cplat_hashtable_insert_direct_with_key_length, \
+                 int(CPLAT_API *)(cplat_hashtable * ht, uint64_t record, const void *key, size_t key_length, \
+                                  int status, const void *value, const cplat_timespec *timestamp, \
+                                  uint64_t generation)) \
     EXPORT_ENTRY(cplat_hashtable_update, int(CPLAT_API *)(cplat_hashtable * ht, const void *key, const void *value)) \
+    EXPORT_ENTRY(cplat_hashtable_update_with_key_length, \
+                 int(CPLAT_API *)(cplat_hashtable * ht, const void *key, size_t key_length, const void *value)) \
     EXPORT_ENTRY(cplat_hashtable_update_rec, \
                  int(CPLAT_API *)(cplat_hashtable * ht, uint64_t record, const void *value)) \
     EXPORT_ENTRY(cplat_hashtable_find_value_ref, \
                  int(CPLAT_API *)(const cplat_hashtable *ht, const void *key, const void **value_out)) \
+    EXPORT_ENTRY( \
+        cplat_hashtable_find_value_ref_with_key_length, \
+        int(CPLAT_API *)(const cplat_hashtable *ht, const void *key, size_t key_length, const void **value_out)) \
     EXPORT_ENTRY(cplat_hashtable_find_value_copy, \
                  int(CPLAT_API *)(const cplat_hashtable *ht, const void *key, void *dest, size_t dest_size, \
                                   size_t *required_size_out)) \
+    EXPORT_ENTRY(cplat_hashtable_find_value_copy_with_key_length, \
+                 int(CPLAT_API *)(const cplat_hashtable *ht, const void *key, size_t key_length, void *dest, \
+                                  size_t dest_size, size_t *required_size_out)) \
     EXPORT_ENTRY(cplat_hashtable_find_recno, \
                  int(CPLAT_API *)(const cplat_hashtable *ht, const void *key, uint64_t *record_out)) \
-    EXPORT_ENTRY(cplat_hashtable_get_key_ref, \
-                 int(CPLAT_API *)(const cplat_hashtable *ht, uint64_t record, const void **key_out)) \
+    EXPORT_ENTRY( \
+        cplat_hashtable_find_recno_with_key_length, \
+        int(CPLAT_API *)(const cplat_hashtable *ht, const void *key, size_t key_length, uint64_t *record_out)) \
+    EXPORT_ENTRY(cplat_hashtable_get_key_ref, int(CPLAT_API *)(const cplat_hashtable *ht, uint64_t record, \
+                                                               const void **key_out, size_t *key_length_out)) \
     EXPORT_ENTRY(cplat_hashtable_get_key_copy, \
                  int(CPLAT_API *)(const cplat_hashtable *ht, uint64_t record, void *dest, size_t dest_size, \
                                   size_t *required_size_out)) \
@@ -230,16 +251,27 @@
                  int(CPLAT_API *)(const cplat_hashtable *ht, uint64_t *generation_out)) \
     EXPORT_ENTRY(cplat_hashtable_find_timestamp_ref, \
                  int(CPLAT_API *)(const cplat_hashtable *ht, const void *key, const cplat_timespec **timestamp_out)) \
+    EXPORT_ENTRY(cplat_hashtable_find_timestamp_ref_with_key_length, \
+                 int(CPLAT_API *)(const cplat_hashtable *ht, const void *key, size_t key_length, \
+                                  const cplat_timespec **timestamp_out)) \
     EXPORT_ENTRY(cplat_hashtable_find_timestamp_val, \
                  int(CPLAT_API *)(const cplat_hashtable *ht, const void *key, cplat_timespec *timestamp_out)) \
+    EXPORT_ENTRY(cplat_hashtable_find_timestamp_val_with_key_length, \
+                 int(CPLAT_API *)(const cplat_hashtable *ht, const void *key, size_t key_length, \
+                                  cplat_timespec *timestamp_out)) \
     EXPORT_ENTRY(cplat_hashtable_find_generation, \
                  int(CPLAT_API *)(const cplat_hashtable *ht, const void *key, uint64_t *generation_out)) \
+    EXPORT_ENTRY( \
+        cplat_hashtable_find_generation_with_key_length, \
+        int(CPLAT_API *)(const cplat_hashtable *ht, const void *key, size_t key_length, uint64_t *generation_out)) \
     EXPORT_ENTRY(cplat_hashtable_count_status, int(CPLAT_API *)(const cplat_hashtable *ht, size_t *in_use_out, \
                                                                 size_t *deleted_out, size_t *empty_out)) \
     EXPORT_ENTRY(cplat_hashtable_count, int(CPLAT_API *)(const cplat_hashtable *ht, size_t *count_out)) \
     EXPORT_ENTRY(cplat_hashtable_deleted_count, int(CPLAT_API *)(const cplat_hashtable *ht, size_t *count_out)) \
     EXPORT_ENTRY(cplat_hashtable_empty_count, int(CPLAT_API *)(const cplat_hashtable *ht, size_t *count_out)) \
     EXPORT_ENTRY(cplat_hashtable_delete, int(CPLAT_API *)(cplat_hashtable * ht, const void *key)) \
+    EXPORT_ENTRY(cplat_hashtable_delete_with_key_length, \
+                 int(CPLAT_API *)(cplat_hashtable * ht, const void *key, size_t key_length)) \
     EXPORT_ENTRY(cplat_hashtable_delete_rec, int(CPLAT_API *)(cplat_hashtable * ht, uint64_t record)) \
     EXPORT_ENTRY(cplat_hashtable_push_deleted, int(CPLAT_API *)(cplat_hashtable * ht)) \
     EXPORT_ENTRY(cplat_hashtable_purge_deleted, int(CPLAT_API *)(cplat_hashtable * ht)) \

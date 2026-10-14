@@ -75,6 +75,8 @@ int hashtable_align_up_checked(size_t offset, size_t alignment, size_t *aligned_
  *
  *  SCOPE_RECORD では next + status + pad + timespec + generation のあとです。\n
  *  SCOPE_TABLE では next + status の直後です。\n
+ *  バイナリ キーは status 直後に有効長を置くため、SCOPE_TABLE では有効長の直後へ移します。
+ *  SCOPE_RECORD では有効長が詰め物に収まるため、オフセットは変わりません。\n
  *  可変長キーは 16 バイトの永続 descriptor を置くため、uint64_t 境界へ切り上げます。
  *  切り上げないと descriptor が境界から外れ、未整列アクセスになります。
  */
@@ -86,6 +88,14 @@ static size_t entry_key_offset(const cplat_hashtable_config *config)
     if (config->timestamp_scope == CPLAT_HASHTABLE_TIMESTAMP_SCOPE_RECORD)
     {
         off += (size_t)ENTRY_TIMESTAMP_PAD + sizeof(cplat_timespec) + sizeof(uint64_t);
+    }
+    if (config->key_type == CPLAT_HASHTABLE_FIELD_BINARY)
+    {
+        if (off < (size_t)ENTRY_BINARY_KEY_OFFSET)
+        {
+            off = (size_t)ENTRY_BINARY_KEY_OFFSET;
+        }
+        return off;
     }
     if (config->key_type != CPLAT_HASHTABLE_FIELD_VARIABLE_STRING)
     {

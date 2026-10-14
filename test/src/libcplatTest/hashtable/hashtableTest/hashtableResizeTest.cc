@@ -15,7 +15,7 @@ void fill_config(cplat_hashtable_config *config, size_t capacity, unsigned char 
     *config = {};
     config->capacity = capacity;
     config->key_type = CPLAT_HASHTABLE_FIELD_FIXED_STRING;
-    config->value_type = CPLAT_HASHTABLE_FIELD_FIXED_BINARY;
+    config->value_type = CPLAT_HASHTABLE_FIELD_BINARY;
     config->timestamp_scope = CPLAT_HASHTABLE_TIMESTAMP_SCOPE_RECORD;
     config->key_size = 8;
     config->value_size = 8;
@@ -599,7 +599,7 @@ TEST_F(hashtableResizeTest, resize_rejects_every_immutable_config_field)
     {
         cplat_hashtable_config changed = config;
 
-        changed.key_type = CPLAT_HASHTABLE_FIELD_FIXED_BINARY;
+        changed.key_type = CPLAT_HASHTABLE_FIELD_BINARY;
         results.push_back(cplat_hashtable_resize(ht, &changed)); // [手順] - キーの形式を変えて呼ぶ。
     }
     {

@@ -6,7 +6,10 @@
  *  @date           2026/08/18
  *  @version        1.0.0
  *
- *  キーと値は個別に固定長バイナリ、固定長文字列、可変長文字列を選択できます。\n
+ *  キーと値は個別にバイナリ、固定長文字列、可変長文字列を選択できます。\n
+ *  バイナリ キーは key_size を最大長とし、レコードごとに有効長を持ちます。
+ *  有効長を受け取らない関数は key_size を有効長として扱い、
+ *  `_with_key_length` の付く関数は呼び出し側が指定した有効長を使います。\n
  *  @ref cplat_hashtable_create で構築したテーブルのレコード数と可変長文字列の
  *  ストレージ容量は固定です。\n
  *  断片化で連続領域が不足した場合は @ref CPLAT_ERR_STORAGE_FULL を返すため、
@@ -60,7 +63,10 @@
  *  ファイルなど管理領域と連続しない領域を想定)へ構築・再接続できます。\n
  *  片方だけを指定することはできません。
  *
- *  固定長バイナリ値は value_size バイトのバイト列として memcpy で複製します。\n
+ *  バイナリ キーは有効長までを複製し、保存領域の残りを内部で 0 埋めします。\n
+ *  キーの一致は、有効長と有効長までのバイト列がともに等しいことで判定します。
+ *  末尾の 0 だけが異なるキーも、有効長が異なれば別のキーです。\n
+ *  バイナリ値は value_size バイトのバイト列として memcpy で複製します。\n
  *  固定長文字列は NUL までを複製し、保存領域の未使用部分を内部で 0 埋めします。\n
  *  可変長文字列への参照は、そのフィールドの更新・回収・再利用、または
  *  @ref cplat_hashtable_compact / @ref cplat_hashtable_clear /
@@ -118,13 +124,14 @@ extern "C"
      */
     typedef enum cplat_hashtable_field_type
     {
-        CPLAT_HASHTABLE_FIELD_FIXED_BINARY = 0,   /**< 固定長バイナリ。全バイト 0 も有効。 */
+        CPLAT_HASHTABLE_FIELD_BINARY = 0, /**< バイナリ。キーでは key_size を既定かつ最大の長さとし、
+                                                       有効長を持つ。値では value_size バイト。全バイト 0 も有効。 */
         CPLAT_HASHTABLE_FIELD_FIXED_STRING = 1,   /**< 固定長領域の NUL 終端文字列。 */
         CPLAT_HASHTABLE_FIELD_VARIABLE_STRING = 2 /**< 固定容量ストレージ上の可変長 NUL 終端文字列。 */
     } cplat_hashtable_field_type;
 
 #define CPLAT_HASHTABLE_KEY_STRING CPLAT_HASHTABLE_FIELD_FIXED_STRING
-#define CPLAT_HASHTABLE_KEY_BINARY CPLAT_HASHTABLE_FIELD_FIXED_BINARY
+#define CPLAT_HASHTABLE_KEY_BINARY CPLAT_HASHTABLE_FIELD_BINARY
     typedef cplat_hashtable_field_type cplat_hashtable_key_type;
 
 #define CPLAT_HASHTABLE_LIFETIME_INFINITE 255 /**< 削除済みを空へ戻さない寿命です。 */
@@ -160,14 +167,15 @@ extern "C"
         cplat_hashtable_field_type value_type;           /**< 値の格納形式。 */
         cplat_hashtable_timestamp_scope timestamp_scope; /**< 変更時刻の粒度。レイアウト入力。 */
         unsigned char pad1[4];                           /**< key_size の直前の予約。常に 0。 */
-        size_t key_size;                                 /**< 固定長キーのバイト数。可変長では 0。 */
-        size_t value_size;                               /**< 固定長値のバイト数。可変長では 0。 */
-        size_t key_storage_size;                         /**< 可変長キーのストレージ容量バイト数。固定長では 0。 */
-        size_t value_storage_size;                       /**< 可変長値のストレージ容量バイト数。固定長では 0。 */
-        size_t value_align;     /**< 固定長値の格納境界。0 は詰めて配置。非 0 は 2 の冪かつ
+        size_t key_size;   /**< 固定長キーのバイト数。バイナリでは既定かつ最大の有効長で、
+                                                              UINT32_MAX 以下。可変長では 0。 */
+        size_t value_size; /**< 固定長値のバイト数。可変長では 0。 */
+        size_t key_storage_size;   /**< 可変長キーのストレージ容量バイト数。固定長では 0。 */
+        size_t value_storage_size; /**< 可変長値のストレージ容量バイト数。固定長では 0。 */
+        size_t value_align;        /**< 固定長値の格納境界。0 は詰めて配置。非 0 は 2 の冪かつ
                                  @ref CPLAT_HASHTABLE_VALUE_ALIGN_MAX 以下。可変長値では 0。 */
-        unsigned char lifetime; /**< 削除済みの寿命。2 から 254 は有限、255 は無限。 */
-        unsigned char pad2[3];  /**< reuse_deleted の直前の予約。常に 0。 */
+        unsigned char lifetime;    /**< 削除済みの寿命。2 から 254 は有限、255 は無限。 */
+        unsigned char pad2[3];     /**< reuse_deleted の直前の予約。常に 0。 */
         int reuse_deleted; /**< 0 以外なら、status=0 のレコードが無いとき最古の削除中レコードを再利用する。既定は 0。 */
     } cplat_hashtable_config;
 
@@ -446,6 +454,30 @@ extern "C"
                                                    cplat_hashtable_add_deleted_policy deleted_policy);
 
     /**
+     *  @brief          有効長を指定してキーを新規追加します。
+     *  @param[in,out]  ht              対象。NULL を渡してはなりません。
+     *  @param[in]      key             キー。NULL を渡してはなりません。
+     *  @param[in]      key_length      キーの有効長。0 以上 key_size 以下。
+     *  @param[in]      value           設定した形式の値。NULL を渡してはなりません。
+     *  @param[in]      deleted_policy  削除済みの同一キーが見つかった場合の振る舞い。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  @ref CPLAT_ERR_OUT_OF_RANGE 、@ref CPLAT_ERR_DUPLICATE_KEY 、
+     *                  @ref CPLAT_ERR_LIMIT_EXCEEDED 、@ref CPLAT_ERR_STORAGE_FULL 。
+     *
+     *  @ref cplat_hashtable_add と同じ振る舞いで、キーの有効長を @p key_length とします。\n
+     *  バイナリ キーのテーブルだけで使えます。それ以外のテーブルでは
+     *  @ref CPLAT_ERR_INVALID_ARGUMENT です。\n
+     *  @p key_length が key_size を超える場合は @ref CPLAT_ERR_OUT_OF_RANGE です。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフではありません。\n
+     *  同一テーブルへの同時呼び出しは、呼び出し側で直列化してください。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_add_with_key_length(cplat_hashtable *ht, const void *key,
+                                                                   size_t key_length, const void *value,
+                                                                   cplat_hashtable_add_deleted_policy deleted_policy);
+
+    /**
      *  @brief          キーが無ければ追加し、あれば値を書き換えます。
      *  @param[in,out]  ht            対象。NULL を渡してはなりません。
      *  @param[in]      key           キー。NULL を渡してはなりません。
@@ -473,6 +505,30 @@ extern "C"
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_upsert(cplat_hashtable *ht, const void *key, const void *value,
                                                       int *inserted_out);
+
+    /**
+     *  @brief          有効長を指定し、キーが無ければ追加し、あれば値を書き換えます。
+     *  @param[in,out]  ht              対象。NULL を渡してはなりません。
+     *  @param[in]      key             キー。NULL を渡してはなりません。
+     *  @param[in]      key_length      キーの有効長。0 以上 key_size 以下。
+     *  @param[in]      value           設定した形式の値。NULL を渡してはなりません。
+     *  @param[out]     inserted_out    新規追加なら 1、既存更新なら 0。不要なら NULL を渡せます。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  @ref CPLAT_ERR_OUT_OF_RANGE 、@ref CPLAT_ERR_LIMIT_EXCEEDED 、
+     *                  @ref CPLAT_ERR_STORAGE_FULL 。
+     *
+     *  @ref cplat_hashtable_upsert と同じ振る舞いで、キーの有効長を @p key_length とします。\n
+     *  バイナリ キーのテーブルだけで使えます。それ以外のテーブルでは
+     *  @ref CPLAT_ERR_INVALID_ARGUMENT です。\n
+     *  @p key_length が key_size を超える場合は @ref CPLAT_ERR_OUT_OF_RANGE です。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフではありません。\n
+     *  同一テーブルへの同時呼び出しは、呼び出し側で直列化してください。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_upsert_with_key_length(cplat_hashtable *ht, const void *key,
+                                                                      size_t key_length, const void *value,
+                                                                      int *inserted_out);
 
     /**
      *  @brief          レコード番号を指定してキーと値と変更時刻を直接書き込みます。
@@ -516,6 +572,36 @@ extern "C"
                                                              const cplat_timespec *timestamp, uint64_t generation);
 
     /**
+     *  @brief          有効長を指定し、レコード番号を指定してキーと値と変更時刻を直接書き込みます。
+     *  @param[in,out]  ht          対象。NULL を渡してはなりません。
+     *  @param[in]      record      1 相対のレコード番号。
+     *  @param[in]      key         キー。NULL を渡してはなりません。
+     *  @param[in]      key_length  キーの有効長。0 以上 key_size 以下。
+     *  @param[in]      status      書き込む使用状況。1 は使用中、2 以上は削除済みの加齢です。
+     *  @param[in]      value       設定した形式の値。NULL を渡してはなりません。
+     *  @param[in]      timestamp   書き込む変更時刻。粒度と対応する要否があります。
+     *  @param[in]      generation  書き込む世代カウンター。粒度と対応する要否があります。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_SKIPPED 、
+     *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_RANGE 、
+     *                  @ref CPLAT_ERR_DUPLICATE_DEFINITION 、@ref CPLAT_ERR_DUPLICATE_KEY 、
+     *                  @ref CPLAT_ERR_STORAGE_FULL 。
+     *
+     *  @ref cplat_hashtable_insert_direct と同じ振る舞いで、キーの有効長を @p key_length とします。\n
+     *  バイナリ キーのテーブルだけで使えます。それ以外のテーブルでは
+     *  @ref CPLAT_ERR_INVALID_ARGUMENT です。\n
+     *  @p key_length が key_size を超える場合は @ref CPLAT_ERR_OUT_OF_RANGE です。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフではありません。\n
+     *  同一テーブルへの同時呼び出しは、呼び出し側で直列化してください。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_insert_direct_with_key_length(cplat_hashtable *ht, uint64_t record,
+                                                                             const void *key, size_t key_length,
+                                                                             int status, const void *value,
+                                                                             const cplat_timespec *timestamp,
+                                                                             uint64_t generation);
+
+    /**
      *  @brief          使用中の既存キーの値を書き換えます。
      *  @param[in,out]  ht     対象。NULL を渡してはなりません。
      *  @param[in]      key    キー。NULL を渡してはなりません。
@@ -536,6 +622,28 @@ extern "C"
      *  同一テーブルへの同時呼び出しは、呼び出し側で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_update(cplat_hashtable *ht, const void *key, const void *value);
+
+    /**
+     *  @brief          有効長を指定し、使用中の既存キーの値を書き換えます。
+     *  @param[in,out]  ht              対象。NULL を渡してはなりません。
+     *  @param[in]      key             キー。NULL を渡してはなりません。
+     *  @param[in]      key_length      キーの有効長。0 以上 key_size 以下。
+     *  @param[in]      value           設定した形式の値。NULL を渡してはなりません。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  @ref CPLAT_ERR_OUT_OF_RANGE 、@ref CPLAT_ERR_NOT_FOUND 、
+     *                  @ref CPLAT_ERR_STORAGE_FULL 。
+     *
+     *  @ref cplat_hashtable_update と同じ振る舞いで、キーの有効長を @p key_length とします。\n
+     *  バイナリ キーのテーブルだけで使えます。それ以外のテーブルでは
+     *  @ref CPLAT_ERR_INVALID_ARGUMENT です。\n
+     *  @p key_length が key_size を超える場合は @ref CPLAT_ERR_OUT_OF_RANGE です。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフではありません。\n
+     *  同一テーブルへの同時呼び出しは、呼び出し側で直列化してください。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_update_with_key_length(cplat_hashtable *ht, const void *key,
+                                                                      size_t key_length, const void *value);
 
     /**
      *  @brief          レコード番号で値を書き換えます。
@@ -578,6 +686,29 @@ extern "C"
                                                               const void **value_out);
 
     /**
+     *  @brief          有効長を指定し、キーで値への参照を取得します。
+     *  @param[in]      ht              対象。NULL を渡してはなりません。
+     *  @param[in]      key             キー。NULL を渡してはなりません。
+     *  @param[in]      key_length      キーの有効長。0 以上 key_size 以下。
+     *  @param[out]     value_out       参照の格納先。NULL を渡してはなりません。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  @ref CPLAT_ERR_OUT_OF_RANGE 、@ref CPLAT_ERR_NOT_FOUND 。
+     *
+     *  @ref cplat_hashtable_find_value_ref と同じ振る舞いで、キーの有効長を @p key_length とします。\n
+     *  バイナリ キーのテーブルだけで使えます。それ以外のテーブルでは
+     *  @ref CPLAT_ERR_INVALID_ARGUMENT です。\n
+     *  @p key_length が key_size を超える場合は @ref CPLAT_ERR_OUT_OF_RANGE です。
+     *
+     *  @par            スレッド セーフ
+     *  本関数は条件付きスレッド セーフです。\n
+     *  異なるテーブルへの同時呼び出しはできます。\n
+     *  同一テーブルへの書き込みと同時に呼び出してはなりません。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_value_ref_with_key_length(const cplat_hashtable *ht,
+                                                                              const void *key, size_t key_length,
+                                                                              const void **value_out);
+
+    /**
      *  @brief          キーで値を容量検査付きで複製します。
      *  @param[in]      ht                 対象。NULL を渡してはなりません。
      *  @param[in]      key                キー。NULL を渡してはなりません。
@@ -590,7 +721,7 @@ extern "C"
      *
      *  @p dest が NULL かつ @p dest_size が 0 のときは、複製せず必要量だけを返します。
      *  文字列の必要量は実際の文字列長と終端 NUL の合計です。\n
-     *  固定長バイナリの必要量は value_size です。\n
+     *  バイナリの必要量は value_size です。\n
      *  @ref CPLAT_ERR_BUFFER_TOO_SMALL では @p dest を変更しません。
      *
      *  @par            スレッド セーフ
@@ -600,6 +731,33 @@ extern "C"
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_value_copy(const cplat_hashtable *ht, const void *key, void *dest,
                                                                size_t dest_size, size_t *required_size_out);
+
+    /**
+     *  @brief          有効長を指定し、キーで値を容量検査付きで複製します。
+     *  @param[in]      ht                 対象。NULL を渡してはなりません。
+     *  @param[in]      key                キー。NULL を渡してはなりません。
+     *  @param[in]      key_length         キーの有効長。0 以上 key_size 以下。
+     *  @param[out]     dest               複製先。必要量照会では NULL。
+     *  @param[in]      dest_size          複製先容量。必要量照会では 0。
+     *  @param[out]     required_size_out  必要バイト数。文字列では NUL を含みます。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL 、@ref CPLAT_ERR_OUT_OF_RANGE 、
+     *                  @ref CPLAT_ERR_NOT_FOUND 。
+     *
+     *  @ref cplat_hashtable_find_value_copy と同じ振る舞いで、キーの有効長を @p key_length とします。\n
+     *  バイナリ キーのテーブルだけで使えます。それ以外のテーブルでは
+     *  @ref CPLAT_ERR_INVALID_ARGUMENT です。\n
+     *  @p key_length が key_size を超える場合は @ref CPLAT_ERR_OUT_OF_RANGE です。
+     *
+     *  @par            スレッド セーフ
+     *  本関数は条件付きスレッド セーフです。\n
+     *  異なるテーブルへの同時呼び出しはできます。\n
+     *  同一テーブルへの書き込みと同時に呼び出してはなりません。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_value_copy_with_key_length(const cplat_hashtable *ht,
+                                                                               const void *key, size_t key_length,
+                                                                               void *dest, size_t dest_size,
+                                                                               size_t *required_size_out);
 
     /**
      *  @brief          キーからレコード番号を取得します。
@@ -616,6 +774,28 @@ extern "C"
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_recno(const cplat_hashtable *ht, const void *key,
                                                           uint64_t *record_out);
+
+    /**
+     *  @brief          有効長を指定し、キーからレコード番号を取得します。
+     *  @param[in]      ht              対象。NULL を渡してはなりません。
+     *  @param[in]      key             キー。NULL を渡してはなりません。
+     *  @param[in]      key_length      キーの有効長。0 以上 key_size 以下。
+     *  @param[out]     record_out      1 相対番号の格納先。NULL を渡してはなりません。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  @ref CPLAT_ERR_OUT_OF_RANGE 、@ref CPLAT_ERR_NOT_FOUND 。
+     *
+     *  @ref cplat_hashtable_find_recno と同じ振る舞いで、キーの有効長を @p key_length とします。\n
+     *  バイナリ キーのテーブルだけで使えます。それ以外のテーブルでは
+     *  @ref CPLAT_ERR_INVALID_ARGUMENT です。\n
+     *  @p key_length が key_size を超える場合は @ref CPLAT_ERR_OUT_OF_RANGE です。
+     *
+     *  @par            スレッド セーフ
+     *  本関数は条件付きスレッド セーフです。\n
+     *  異なるテーブルへの同時呼び出しはできます。\n
+     *  同一テーブルへの書き込みと同時に呼び出してはなりません。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_recno_with_key_length(const cplat_hashtable *ht, const void *key,
+                                                                          size_t key_length, uint64_t *record_out);
 
     /**
      *  @brief          キーで変更時刻への参照を取得します。
@@ -639,6 +819,30 @@ extern "C"
                                                                   const cplat_timespec **timestamp_out);
 
     /**
+     *  @brief          有効長を指定し、キーで変更時刻への参照を取得します。
+     *  @param[in]      ht              対象。NULL を渡してはなりません。
+     *  @param[in]      key             キー。NULL を渡してはなりません。
+     *  @param[in]      key_length      キーの有効長。0 以上 key_size 以下。
+     *  @param[out]     timestamp_out   参照の格納先。NULL を渡してはなりません。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  @ref CPLAT_ERR_UNSUPPORTED 、@ref CPLAT_ERR_OUT_OF_RANGE 、
+     *                  @ref CPLAT_ERR_NOT_FOUND 。
+     *
+     *  @ref cplat_hashtable_find_timestamp_ref と同じ振る舞いで、キーの有効長を @p key_length とします。\n
+     *  バイナリ キーのテーブルだけで使えます。それ以外のテーブルでは
+     *  @ref CPLAT_ERR_INVALID_ARGUMENT です。\n
+     *  @p key_length が key_size を超える場合は @ref CPLAT_ERR_OUT_OF_RANGE です。
+     *
+     *  @par            スレッド セーフ
+     *  本関数は条件付きスレッド セーフです。\n
+     *  異なるテーブルへの同時呼び出しはできます。\n
+     *  同一テーブルへの書き込みと同時に呼び出してはなりません。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_timestamp_ref_with_key_length(const cplat_hashtable *ht,
+                                                                                  const void *key, size_t key_length,
+                                                                                  const cplat_timespec **timestamp_out);
+
+    /**
      *  @brief          キーで変更時刻を呼び出し側へ複製します。
      *  @param[in]      ht              対象。NULL を渡してはなりません。
      *  @param[in]      key             キー。NULL を渡してはなりません。
@@ -654,6 +858,30 @@ extern "C"
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_timestamp_val(const cplat_hashtable *ht, const void *key,
                                                                   cplat_timespec *timestamp_out);
+
+    /**
+     *  @brief          有効長を指定し、キーで変更時刻を呼び出し側へ複製します。
+     *  @param[in]      ht              対象。NULL を渡してはなりません。
+     *  @param[in]      key             キー。NULL を渡してはなりません。
+     *  @param[in]      key_length      キーの有効長。0 以上 key_size 以下。
+     *  @param[out]     timestamp_out   複製先。NULL を渡してはなりません。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  @ref CPLAT_ERR_UNSUPPORTED 、@ref CPLAT_ERR_OUT_OF_RANGE 、
+     *                  @ref CPLAT_ERR_NOT_FOUND 。
+     *
+     *  @ref cplat_hashtable_find_timestamp_val と同じ振る舞いで、キーの有効長を @p key_length とします。\n
+     *  バイナリ キーのテーブルだけで使えます。それ以外のテーブルでは
+     *  @ref CPLAT_ERR_INVALID_ARGUMENT です。\n
+     *  @p key_length が key_size を超える場合は @ref CPLAT_ERR_OUT_OF_RANGE です。
+     *
+     *  @par            スレッド セーフ
+     *  本関数は条件付きスレッド セーフです。\n
+     *  異なるテーブルへの同時呼び出しはできます。\n
+     *  同一テーブルへの書き込みと同時に呼び出してはなりません。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_timestamp_val_with_key_length(const cplat_hashtable *ht,
+                                                                                  const void *key, size_t key_length,
+                                                                                  cplat_timespec *timestamp_out);
 
     /**
      *  @brief          キーで世代カウンターを取得します。
@@ -677,14 +905,42 @@ extern "C"
                                                                uint64_t *generation_out);
 
     /**
-     *  @brief          レコード番号からキーへの参照を取得します。
-     *  @param[in]      ht       対象。NULL を渡してはなりません。
-     *  @param[in]      record   1 相対のレコード番号。
-     *  @param[out]     key_out  参照の格納先。NULL を渡してはなりません。
+     *  @brief          有効長を指定し、キーで世代カウンターを取得します。
+     *  @param[in]      ht              対象。NULL を渡してはなりません。
+     *  @param[in]      key             キー。NULL を渡してはなりません。
+     *  @param[in]      key_length      キーの有効長。0 以上 key_size 以下。
+     *  @param[out]     generation_out  格納先。NULL を渡してはなりません。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  @ref CPLAT_ERR_UNSUPPORTED 、@ref CPLAT_ERR_OUT_OF_RANGE 、
+     *                  @ref CPLAT_ERR_NOT_FOUND 。
+     *
+     *  @ref cplat_hashtable_find_generation と同じ振る舞いで、キーの有効長を @p key_length とします。\n
+     *  バイナリ キーのテーブルだけで使えます。それ以外のテーブルでは
+     *  @ref CPLAT_ERR_INVALID_ARGUMENT です。\n
+     *  @p key_length が key_size を超える場合は @ref CPLAT_ERR_OUT_OF_RANGE です。
+     *
+     *  @par            スレッド セーフ
+     *  本関数は条件付きスレッド セーフです。\n
+     *  異なるテーブルへの同時呼び出しはできます。\n
+     *  同一テーブルへの書き込みと同時に呼び出してはなりません。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_find_generation_with_key_length(const cplat_hashtable *ht,
+                                                                               const void *key, size_t key_length,
+                                                                               uint64_t *generation_out);
+
+    /**
+     *  @brief          レコード番号からキーへの参照と有効長を取得します。
+     *  @param[in]      ht              対象。NULL を渡してはなりません。
+     *  @param[in]      record          1 相対のレコード番号。
+     *  @param[out]     key_out         参照の格納先。NULL を渡してはなりません。
+     *  @param[out]     key_length_out  キーのバイト数の格納先。不要なら NULL を渡せます。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_NOT_FOUND 。
      *
-     *  空は失敗、削除済みはキーを返します。
+     *  空は失敗、削除済みはキーを返します。\n
+     *  @p key_length_out へ格納するバイト数は、バイナリでは有効長、
+     *  文字列では実際の文字列長と終端 NUL の合計です。\n
+     *  @p key_length_out は @ref CPLAT_OK のときだけ書きます。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
@@ -692,7 +948,7 @@ extern "C"
      *  同一テーブルへの書き込みと同時に呼び出してはなりません。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_get_key_ref(const cplat_hashtable *ht, uint64_t record,
-                                                           const void **key_out);
+                                                           const void **key_out, size_t *key_length_out);
 
     /**
      *  @brief          レコード番号からキーを容量検査付きで複製します。
@@ -706,7 +962,7 @@ extern "C"
      *
      *  @p dest が NULL かつ @p dest_size が 0 のときは、複製せず必要量だけを返します。\n
      *  文字列の必要量は実際の文字列長と終端 NUL の合計です。\n
-     *  固定長バイナリの必要量は key_size です。\n
+     *  バイナリの必要量は有効長です。\n
      *  @ref CPLAT_ERR_BUFFER_TOO_SMALL では @p dest を変更しません。\n
      *  空は失敗、削除済みは削除直前のキーを返します。
      *
@@ -748,7 +1004,7 @@ extern "C"
      *
      *  @p dest が NULL かつ @p dest_size が 0 のときは、複製せず必要量だけを返します。\n
      *  文字列の必要量は実際の文字列長と終端 NUL の合計です。\n
-     *  固定長バイナリの必要量は value_size です。\n
+     *  バイナリの必要量は value_size です。\n
      *  @ref CPLAT_ERR_BUFFER_TOO_SMALL では @p dest を変更しません。\n
      *  空は失敗、削除済みは削除直前の値を返します。
      *
@@ -1000,6 +1256,26 @@ extern "C"
      *  同一テーブルへの同時呼び出しは、呼び出し側で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_hashtable_delete(cplat_hashtable *ht, const void *key);
+
+    /**
+     *  @brief          有効長を指定し、キーでレコードを削除します。
+     *  @param[in,out]  ht              対象。NULL を渡してはなりません。
+     *  @param[in]      key             キー。NULL を渡してはなりません。
+     *  @param[in]      key_length      キーの有効長。0 以上 key_size 以下。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  @ref CPLAT_ERR_OUT_OF_RANGE 、@ref CPLAT_ERR_NOT_FOUND 。
+     *
+     *  @ref cplat_hashtable_delete と同じ振る舞いで、キーの有効長を @p key_length とします。\n
+     *  バイナリ キーのテーブルだけで使えます。それ以外のテーブルでは
+     *  @ref CPLAT_ERR_INVALID_ARGUMENT です。\n
+     *  @p key_length が key_size を超える場合は @ref CPLAT_ERR_OUT_OF_RANGE です。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフではありません。\n
+     *  同一テーブルへの同時呼び出しは、呼び出し側で直列化してください。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_hashtable_delete_with_key_length(cplat_hashtable *ht, const void *key,
+                                                                      size_t key_length);
 
     /**
      *  @brief          レコード番号で削除します。加齢ルールは

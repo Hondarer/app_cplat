@@ -357,10 +357,10 @@ TEST_F(hashtableGuardTest, get_key_ref_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht = cplat_hashtable_get_key_ref(NULL, 1, &key_out); // [手順] - ht に NULL を渡す。
-    int actual_ret_null_out = cplat_hashtable_get_key_ref(ht, 1, NULL);      // [手順] - key_out に NULL を渡す。
-    int actual_ret_rec_hi = cplat_hashtable_get_key_ref(ht, 3, &key_out); // [手順] - capacity 超のレコード番号を渡す。
-    int actual_ret_empty = cplat_hashtable_get_key_ref(ht, 1, &key_out);  // [手順] - 空きレコードを読む。
+    int actual_ret_null_ht = cplat_hashtable_get_key_ref(NULL, 1, &key_out, NULL); // [手順] - ht に NULL を渡す。
+    int actual_ret_null_out = cplat_hashtable_get_key_ref(ht, 1, NULL, NULL);      // [手順] - key_out に NULL を渡す。
+    int actual_ret_rec_hi = cplat_hashtable_get_key_ref(ht, 3, &key_out, NULL); // [手順] - capacity 超のレコード番号を渡す。
+    int actual_ret_empty = cplat_hashtable_get_key_ref(ht, 1, &key_out, NULL);  // [手順] - 空きレコードを読む。
 
     // Assert
     EXPECT_EQ(

@@ -169,7 +169,7 @@ TEST_F(hashtableInsertDirectTest, places_deleted_without_resurrecting_key)
                                                           2); // [手順] - 寿命内の削除済みをレコード 2 へ置く。
     int actual_ret_find = cplat_hashtable_find_value_ref(ht, "gone", &found); // [手順] - 削除済みキーを検索する。
     int actual_ret_status = cplat_hashtable_get_status(ht, 2, &status);       // [手順] - レコード 2 の状態を取得する。
-    int actual_ret_key = cplat_hashtable_get_key_ref(ht, 2, &key_out);        // [手順] - レコード 2 のキーを読む。
+    int actual_ret_key = cplat_hashtable_get_key_ref(ht, 2, &key_out, NULL);        // [手順] - レコード 2 のキーを読む。
     int actual_ret_deleted = cplat_hashtable_deleted_count(ht, &deleted);     // [手順] - 削除済み件数を取得する。
     int actual_ret_again = cplat_hashtable_insert_direct(ht, 3, "gone", 1, value.data(), &k_insert_timestamp,
                                                          3); // [手順] - 同じキーを別レコードへ置く。

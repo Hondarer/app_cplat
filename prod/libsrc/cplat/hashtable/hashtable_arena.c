@@ -366,6 +366,10 @@ void hashtable_release_key(cplat_hashtable *ht, size_t rec)
     else
     {
         memset(hashtable_entry_key(ht, rec), 0, ht->hdr->config.key_size);
+        if (ht->hdr->config.key_type == CPLAT_HASHTABLE_FIELD_BINARY)
+        {
+            *hashtable_entry_key_length(ht, rec) = 0;
+        }
     }
 }
 
@@ -393,7 +397,7 @@ void hashtable_release_value(cplat_hashtable *ht, size_t rec)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-void hashtable_key_store(cplat_hashtable *ht, size_t rec, const void *key, size_t storage_offset)
+void hashtable_key_store(cplat_hashtable *ht, size_t rec, const void *key, size_t key_length, size_t storage_offset)
 {
     if (hashtable_field_is_variable(ht->hdr->config.key_type) != 0)
     {
@@ -419,7 +423,13 @@ void hashtable_key_store(cplat_hashtable *ht, size_t rec, const void *key, size_
     }
     else
     {
-        memcpy(hashtable_entry_key(ht, rec), key, ht->hdr->config.key_size);
+        char *dst = hashtable_entry_key(ht, rec);
+
+        /* 有効長の外を 0 埋めし、永続化した領域の内容を有効長だけで決まるようにする。 */
+        memcpy(dst, key, key_length);
+        memset(dst + key_length, 0, ht->hdr->config.key_size - key_length);
+        /* key_size は UINT32_MAX 以下を設定検査で保証するため、有効長は uint32_t に収まる。 */
+        *hashtable_entry_key_length(ht, rec) = (uint32_t)key_length;
     }
 }
 

@@ -164,7 +164,7 @@ TEST_F(hashtableVariableStringTest, explicit_compaction_enables_fragmented_add_a
     (void)cplat_hashtable_find_value_ref(ht, "c", &before_compact);
     uint64_t c_record = 0;
     (void)cplat_hashtable_find_recno(ht, "c", &c_record);
-    (void)cplat_hashtable_get_key_ref(ht, c_record, &key_before_compact);
+    (void)cplat_hashtable_get_key_ref(ht, c_record, &key_before_compact, NULL);
     (void)cplat_hashtable_delete(ht, "b");
     (void)cplat_hashtable_purge_deleted(ht);
     int actual_ret_fragmented = cplat_hashtable_add(
@@ -173,7 +173,7 @@ TEST_F(hashtableVariableStringTest, explicit_compaction_enables_fragmented_add_a
     (void)cplat_hashtable_find_value_ref(ht, "c", &after_failed_add);
     int actual_ret_compact = cplat_hashtable_compact(ht); // [手順] - ストレージを圧縮する。
     (void)cplat_hashtable_find_value_ref(ht, "c", &after_compact);
-    (void)cplat_hashtable_get_key_ref(ht, c_record, &key_after_compact);
+    (void)cplat_hashtable_get_key_ref(ht, c_record, &key_after_compact, NULL);
     bool vacated_key_zeroed = static_cast<const unsigned char *>(key_before_compact)[0] == 0 &&
                               static_cast<const unsigned char *>(key_before_compact)[1] == 0;
     bool vacated_value_zeroed = true;
@@ -240,7 +240,7 @@ TEST_F(hashtableVariableStringTest, purge_zero_fills_released_variable_key_and_v
     (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
     (void)cplat_hashtable_add(ht, "secret-key", "secret-value", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_find_recno(ht, "secret-key", &record);
-    (void)cplat_hashtable_get_key_ref(ht, record, &key_ref);
+    (void)cplat_hashtable_get_key_ref(ht, record, &key_ref, NULL);
     (void)cplat_hashtable_get_value_ref(ht, record, &value_ref);
     (void)cplat_hashtable_delete(ht, "secret-key");
     bool retained_while_deleted = std::strcmp(static_cast<const char *>(key_ref), "secret-key") == 0 &&
@@ -289,7 +289,7 @@ TEST_F(hashtableVariableStringTest, lifetime_expiration_zero_fills_released_vari
     (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
     (void)cplat_hashtable_add(ht, "expired", "private", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_find_recno(ht, "expired", &record);
-    (void)cplat_hashtable_get_key_ref(ht, record, &key_ref);
+    (void)cplat_hashtable_get_key_ref(ht, record, &key_ref, NULL);
     (void)cplat_hashtable_get_value_ref(ht, record, &value_ref);
     (void)cplat_hashtable_delete(ht, "expired");
     int actual_ret_push = cplat_hashtable_push_deleted(ht); // [手順] - 加齢によりライフタイムを満了させる。
@@ -372,7 +372,7 @@ TEST_F(hashtableVariableStringTest, supports_variable_key_with_fixed_binary_valu
 
     config.capacity = 2;
     config.key_type = CPLAT_HASHTABLE_FIELD_VARIABLE_STRING;
-    config.value_type = CPLAT_HASHTABLE_FIELD_FIXED_BINARY;
+    config.value_type = CPLAT_HASHTABLE_FIELD_BINARY;
     config.key_storage_size = 32;
     config.value_size = sizeof(value);
     config.lifetime = 5;
@@ -435,7 +435,7 @@ TEST_F(hashtableVariableStringTest, fixed_strings_accept_literals_and_zero_fill_
     int actual_ret_add = cplat_hashtable_add(ht, "k", "old", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_update = cplat_hashtable_update(ht, "k", "new");
     (void)cplat_hashtable_find_recno(ht, "k", &record);
-    (void)cplat_hashtable_get_key_ref(ht, record, &key_ref);
+    (void)cplat_hashtable_get_key_ref(ht, record, &key_ref, NULL);
     (void)cplat_hashtable_get_value_ref(ht, record, &value_ref);
     int actual_ret_key_copy = cplat_hashtable_get_key_copy(ht, record, key_copy, sizeof(key_copy), &key_required_size);
     int actual_ret_value_copy =
@@ -481,7 +481,7 @@ TEST_F(hashtableVariableStringTest, fixed_strings_accept_literals_and_zero_fill_
 TEST_F(hashtableVariableStringTest, supports_all_key_and_value_field_type_combinations)
 {
     const cplat_hashtable_field_type field_types[] = {
-        CPLAT_HASHTABLE_FIELD_FIXED_BINARY, CPLAT_HASHTABLE_FIELD_FIXED_STRING, CPLAT_HASHTABLE_FIELD_VARIABLE_STRING};
+        CPLAT_HASHTABLE_FIELD_BINARY, CPLAT_HASHTABLE_FIELD_FIXED_STRING, CPLAT_HASHTABLE_FIELD_VARIABLE_STRING};
     const unsigned char binary_key[] = {'k', 'e', 'y', 0};
     const unsigned char binary_value[] = {'v', 'a', 'l', 0};
 
@@ -494,9 +494,9 @@ TEST_F(hashtableVariableStringTest, supports_all_key_and_value_field_type_combin
             cplat_hashtable *ht = nullptr;
             unsigned char copied[16] = {};
             size_t required_size = 0;
-            const void *key = key_type == CPLAT_HASHTABLE_FIELD_FIXED_BINARY ? static_cast<const void *>(binary_key)
+            const void *key = key_type == CPLAT_HASHTABLE_FIELD_BINARY ? static_cast<const void *>(binary_key)
                                                                              : static_cast<const void *>("key");
-            const void *value = value_type == CPLAT_HASHTABLE_FIELD_FIXED_BINARY
+            const void *value = value_type == CPLAT_HASHTABLE_FIELD_BINARY
                                     ? static_cast<const void *>(binary_value)
                                     : static_cast<const void *>("val");
 
@@ -608,7 +608,7 @@ class storage_origin
         {
             return -1;
         }
-        if (cplat_hashtable_get_key_ref(ht, record, &ref) != CPLAT_OK)
+        if (cplat_hashtable_get_key_ref(ht, record, &ref, NULL) != CPLAT_OK)
         {
             return -1;
         }

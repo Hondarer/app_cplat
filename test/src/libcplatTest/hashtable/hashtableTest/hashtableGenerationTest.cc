@@ -16,7 +16,7 @@ void fill_config(cplat_hashtable_config *config, size_t capacity, unsigned char 
     *config = {};
     config->capacity = capacity;
     config->key_type = CPLAT_HASHTABLE_FIELD_FIXED_STRING;
-    config->value_type = CPLAT_HASHTABLE_FIELD_FIXED_BINARY;
+    config->value_type = CPLAT_HASHTABLE_FIELD_BINARY;
     config->timestamp_scope = scope;
     config->key_size = 8;
     config->value_size = 8;

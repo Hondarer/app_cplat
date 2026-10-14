@@ -81,13 +81,20 @@ MOCK_CPLAT_LINK_IMPL(cplat_hashtable_get_config_val)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_buffer_size)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_buffer_ref)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_add)
+MOCK_CPLAT_LINK_IMPL(cplat_hashtable_add_with_key_length)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_upsert)
+MOCK_CPLAT_LINK_IMPL(cplat_hashtable_upsert_with_key_length)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_insert_direct)
+MOCK_CPLAT_LINK_IMPL(cplat_hashtable_insert_direct_with_key_length)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_update)
+MOCK_CPLAT_LINK_IMPL(cplat_hashtable_update_with_key_length)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_update_rec)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_find_value_ref)
+MOCK_CPLAT_LINK_IMPL(cplat_hashtable_find_value_ref_with_key_length)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_find_value_copy)
+MOCK_CPLAT_LINK_IMPL(cplat_hashtable_find_value_copy_with_key_length)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_find_recno)
+MOCK_CPLAT_LINK_IMPL(cplat_hashtable_find_recno_with_key_length)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_get_key_ref)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_get_key_copy)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_get_value_ref)
@@ -101,13 +108,17 @@ MOCK_CPLAT_LINK_IMPL(cplat_hashtable_get_table_timestamp_ref)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_get_table_timestamp_val)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_get_table_generation)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_find_timestamp_ref)
+MOCK_CPLAT_LINK_IMPL(cplat_hashtable_find_timestamp_ref_with_key_length)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_find_timestamp_val)
+MOCK_CPLAT_LINK_IMPL(cplat_hashtable_find_timestamp_val_with_key_length)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_find_generation)
+MOCK_CPLAT_LINK_IMPL(cplat_hashtable_find_generation_with_key_length)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_count_status)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_count)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_deleted_count)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_empty_count)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_delete)
+MOCK_CPLAT_LINK_IMPL(cplat_hashtable_delete_with_key_length)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_delete_rec)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_push_deleted)
 MOCK_CPLAT_LINK_IMPL(cplat_hashtable_purge_deleted)
@@ -764,19 +775,39 @@ extern int delegate_real_cplat_hashtable_buffer_ref(const cplat_hashtable *ht, c
                                                     const void **data_out);
 extern int delegate_real_cplat_hashtable_add(cplat_hashtable *ht, const void *key, const void *value,
                                              cplat_hashtable_add_deleted_policy deleted_policy);
+extern int delegate_real_cplat_hashtable_add_with_key_length(cplat_hashtable *ht, const void *key, size_t key_length,
+                                                             const void *value,
+                                                             cplat_hashtable_add_deleted_policy deleted_policy);
 extern int delegate_real_cplat_hashtable_upsert(cplat_hashtable *ht, const void *key, const void *value,
                                                 int *inserted_out);
+extern int delegate_real_cplat_hashtable_upsert_with_key_length(cplat_hashtable *ht, const void *key, size_t key_length,
+                                                                const void *value, int *inserted_out);
 extern int delegate_real_cplat_hashtable_insert_direct(cplat_hashtable *ht, uint64_t record, const void *key,
                                                        int status, const void *value, const cplat_timespec *timestamp,
                                                        uint64_t generation);
+extern int delegate_real_cplat_hashtable_insert_direct_with_key_length(cplat_hashtable *ht, uint64_t record,
+                                                                       const void *key, size_t key_length, int status,
+                                                                       const void *value,
+                                                                       const cplat_timespec *timestamp,
+                                                                       uint64_t generation);
 extern int delegate_real_cplat_hashtable_update(cplat_hashtable *ht, const void *key, const void *value);
+extern int delegate_real_cplat_hashtable_update_with_key_length(cplat_hashtable *ht, const void *key, size_t key_length,
+                                                                const void *value);
 extern int delegate_real_cplat_hashtable_update_rec(cplat_hashtable *ht, uint64_t record, const void *value);
 extern int delegate_real_cplat_hashtable_find_value_ref(const cplat_hashtable *ht, const void *key,
                                                         const void **value_out);
+extern int delegate_real_cplat_hashtable_find_value_ref_with_key_length(const cplat_hashtable *ht, const void *key,
+                                                                        size_t key_length, const void **value_out);
 extern int delegate_real_cplat_hashtable_find_value_copy(const cplat_hashtable *ht, const void *key, void *dest,
                                                          size_t dest_size, size_t *required_size_out);
+extern int delegate_real_cplat_hashtable_find_value_copy_with_key_length(const cplat_hashtable *ht, const void *key,
+                                                                         size_t key_length, void *dest,
+                                                                         size_t dest_size, size_t *required_size_out);
 extern int delegate_real_cplat_hashtable_find_recno(const cplat_hashtable *ht, const void *key, uint64_t *record_out);
-extern int delegate_real_cplat_hashtable_get_key_ref(const cplat_hashtable *ht, uint64_t record, const void **key_out);
+extern int delegate_real_cplat_hashtable_find_recno_with_key_length(const cplat_hashtable *ht, const void *key,
+                                                                    size_t key_length, uint64_t *record_out);
+extern int delegate_real_cplat_hashtable_get_key_ref(const cplat_hashtable *ht, uint64_t record, const void **key_out,
+                                                     size_t *key_length_out);
 extern int delegate_real_cplat_hashtable_get_key_copy(const cplat_hashtable *ht, uint64_t record, void *dest,
                                                       size_t dest_size, size_t *required_size_out);
 extern int delegate_real_cplat_hashtable_get_value_ref(const cplat_hashtable *ht, uint64_t record,
@@ -799,16 +830,26 @@ extern int delegate_real_cplat_hashtable_get_table_timestamp_val(const cplat_has
 extern int delegate_real_cplat_hashtable_get_table_generation(const cplat_hashtable *ht, uint64_t *generation_out);
 extern int delegate_real_cplat_hashtable_find_timestamp_ref(const cplat_hashtable *ht, const void *key,
                                                             const cplat_timespec **timestamp_out);
+extern int delegate_real_cplat_hashtable_find_timestamp_ref_with_key_length(const cplat_hashtable *ht, const void *key,
+                                                                            size_t key_length,
+                                                                            const cplat_timespec **timestamp_out);
 extern int delegate_real_cplat_hashtable_find_timestamp_val(const cplat_hashtable *ht, const void *key,
                                                             cplat_timespec *timestamp_out);
+extern int delegate_real_cplat_hashtable_find_timestamp_val_with_key_length(const cplat_hashtable *ht, const void *key,
+                                                                            size_t key_length,
+                                                                            cplat_timespec *timestamp_out);
 extern int delegate_real_cplat_hashtable_find_generation(const cplat_hashtable *ht, const void *key,
                                                          uint64_t *generation_out);
+extern int delegate_real_cplat_hashtable_find_generation_with_key_length(const cplat_hashtable *ht, const void *key,
+                                                                         size_t key_length, uint64_t *generation_out);
 extern int delegate_real_cplat_hashtable_count_status(const cplat_hashtable *ht, size_t *in_use_out,
                                                       size_t *deleted_out, size_t *empty_out);
 extern int delegate_real_cplat_hashtable_count(const cplat_hashtable *ht, size_t *count_out);
 extern int delegate_real_cplat_hashtable_deleted_count(const cplat_hashtable *ht, size_t *count_out);
 extern int delegate_real_cplat_hashtable_empty_count(const cplat_hashtable *ht, size_t *count_out);
 extern int delegate_real_cplat_hashtable_delete(cplat_hashtable *ht, const void *key);
+extern int delegate_real_cplat_hashtable_delete_with_key_length(cplat_hashtable *ht, const void *key,
+                                                                size_t key_length);
 extern int delegate_real_cplat_hashtable_delete_rec(cplat_hashtable *ht, uint64_t record);
 extern int delegate_real_cplat_hashtable_push_deleted(cplat_hashtable *ht);
 extern int delegate_real_cplat_hashtable_purge_deleted(cplat_hashtable *ht);
@@ -1558,16 +1599,30 @@ class Mock_cplat
     MOCK_METHOD(int, cplat_hashtable_buffer_ref, (const cplat_hashtable *, const void **, const void **));
     MOCK_METHOD(int, cplat_hashtable_add,
                 (cplat_hashtable *, const void *, const void *, cplat_hashtable_add_deleted_policy));
+    MOCK_METHOD(int, cplat_hashtable_add_with_key_length,
+                (cplat_hashtable *, const void *, size_t, const void *, cplat_hashtable_add_deleted_policy));
     MOCK_METHOD(int, cplat_hashtable_upsert, (cplat_hashtable *, const void *, const void *, int *));
+    MOCK_METHOD(int, cplat_hashtable_upsert_with_key_length,
+                (cplat_hashtable *, const void *, size_t, const void *, int *));
     MOCK_METHOD(int, cplat_hashtable_insert_direct,
                 (cplat_hashtable *, uint64_t, const void *, int, const void *, const cplat_timespec *, uint64_t));
+    MOCK_METHOD(int, cplat_hashtable_insert_direct_with_key_length,
+                (cplat_hashtable *, uint64_t, const void *, size_t, int, const void *, const cplat_timespec *,
+                 uint64_t));
     MOCK_METHOD(int, cplat_hashtable_update, (cplat_hashtable *, const void *, const void *));
+    MOCK_METHOD(int, cplat_hashtable_update_with_key_length, (cplat_hashtable *, const void *, size_t, const void *));
     MOCK_METHOD(int, cplat_hashtable_update_rec, (cplat_hashtable *, uint64_t, const void *));
     MOCK_METHOD(int, cplat_hashtable_find_value_ref, (const cplat_hashtable *, const void *, const void **));
+    MOCK_METHOD(int, cplat_hashtable_find_value_ref_with_key_length,
+                (const cplat_hashtable *, const void *, size_t, const void **));
     MOCK_METHOD(int, cplat_hashtable_find_value_copy,
                 (const cplat_hashtable *, const void *, void *, size_t, size_t *));
+    MOCK_METHOD(int, cplat_hashtable_find_value_copy_with_key_length,
+                (const cplat_hashtable *, const void *, size_t, void *, size_t, size_t *));
     MOCK_METHOD(int, cplat_hashtable_find_recno, (const cplat_hashtable *, const void *, uint64_t *));
-    MOCK_METHOD(int, cplat_hashtable_get_key_ref, (const cplat_hashtable *, uint64_t, const void **));
+    MOCK_METHOD(int, cplat_hashtable_find_recno_with_key_length,
+                (const cplat_hashtable *, const void *, size_t, uint64_t *));
+    MOCK_METHOD(int, cplat_hashtable_get_key_ref, (const cplat_hashtable *, uint64_t, const void **, size_t *));
     MOCK_METHOD(int, cplat_hashtable_get_key_copy, (const cplat_hashtable *, uint64_t, void *, size_t, size_t *));
     MOCK_METHOD(int, cplat_hashtable_get_value_ref, (const cplat_hashtable *, uint64_t, const void **));
     MOCK_METHOD(int, cplat_hashtable_get_value_copy, (const cplat_hashtable *, uint64_t, void *, size_t, size_t *));
@@ -1581,13 +1636,20 @@ class Mock_cplat
     MOCK_METHOD(int, cplat_hashtable_get_table_generation, (const cplat_hashtable *, uint64_t *));
     MOCK_METHOD(int, cplat_hashtable_find_timestamp_ref,
                 (const cplat_hashtable *, const void *, const cplat_timespec **));
+    MOCK_METHOD(int, cplat_hashtable_find_timestamp_ref_with_key_length,
+                (const cplat_hashtable *, const void *, size_t, const cplat_timespec **));
     MOCK_METHOD(int, cplat_hashtable_find_timestamp_val, (const cplat_hashtable *, const void *, cplat_timespec *));
+    MOCK_METHOD(int, cplat_hashtable_find_timestamp_val_with_key_length,
+                (const cplat_hashtable *, const void *, size_t, cplat_timespec *));
     MOCK_METHOD(int, cplat_hashtable_find_generation, (const cplat_hashtable *, const void *, uint64_t *));
+    MOCK_METHOD(int, cplat_hashtable_find_generation_with_key_length,
+                (const cplat_hashtable *, const void *, size_t, uint64_t *));
     MOCK_METHOD(int, cplat_hashtable_count_status, (const cplat_hashtable *, size_t *, size_t *, size_t *));
     MOCK_METHOD(int, cplat_hashtable_count, (const cplat_hashtable *, size_t *));
     MOCK_METHOD(int, cplat_hashtable_deleted_count, (const cplat_hashtable *, size_t *));
     MOCK_METHOD(int, cplat_hashtable_empty_count, (const cplat_hashtable *, size_t *));
     MOCK_METHOD(int, cplat_hashtable_delete, (cplat_hashtable *, const void *));
+    MOCK_METHOD(int, cplat_hashtable_delete_with_key_length, (cplat_hashtable *, const void *, size_t));
     MOCK_METHOD(int, cplat_hashtable_delete_rec, (cplat_hashtable *, uint64_t));
     MOCK_METHOD(int, cplat_hashtable_push_deleted, (cplat_hashtable *));
     MOCK_METHOD(int, cplat_hashtable_purge_deleted, (cplat_hashtable *));
