@@ -8,7 +8,7 @@ app 向け mock の一般的な配置と仕組みは [テスト チュートリ�
 ## 既定動作
 
 すべての関数に `delegate_real_<func>` を用意します。  
-`Mock_cplat` が未注入の場合は、実 `libcplat` へ委譲します。  
+`mock_cplat` が未注入の場合は、実 `libcplat` へ委譲します。  
 mock 注入後の `ON_CALL` も、既定では real delegate を呼び出します。
 
 実シンボルは `resolveSharedSymbolOrExit()` で解決します。  
@@ -16,11 +16,11 @@ mock 注入後の `ON_CALL` も、既定では real delegate を呼び出しま�
 
 ## 実装箇所
 
-- 宣言と `MOCK_CPLAT_LINK_IMPL`: `test/include/mock_cplat.h`
-- Mock クラスと `ON_CALL`: `test/libsrc/mock_cplat/mock_cplat.cc`
-- 関数ラッパー: `test/libsrc/mock_cplat/<module>/mock_cplat_<func>.cc`
+- **宣言とリンク指定**: `test/include/mock_cplat.h` (`MOCK_CPLAT_LINK_IMPL`)
+- **Mock クラスと既定委譲**: `test/libsrc/mock_cplat/mock_cplat.cc` (`ON_CALL`)
+- **関数ラッパー**: `test/libsrc/mock_cplat/<module>/mock_cplat_<func>.cc`
 
-関数ラッパーは `MOCK_WEAK_IMPL` を使用します。  
+関数ラッパーには `MOCK_WEAK_IMPL` を使用します。  
 `WEAK_ATR` を関数へ直接付与しません。
 
 委譲先の戻り値を受けて返す一時受けは、型を問わず `mock_ret` とします。  
@@ -33,7 +33,7 @@ MSVC では、弱リンク実装を含むオブジェクトが静的ライブラ
 real delegate から直接参照されない関数は、`mock_cplat.h` の `MOCK_CPLAT_LINK_IMPL(func)` に追加します。
 
 `MOCK_CPLAT_LINK_IMPL` は `/INCLUDE:_mock_impl_<func>` を生成します。  
-pragma を個別の `.cc` へ重複して記載しません。
+`#pragma` を個別の `.cc` へ重複して記載しません。
 
 ## 可変長引数
 
@@ -42,7 +42,7 @@ pragma を個別の `.cc` へ重複して記載しません。
 
 ## 変更時の確認
 
-- 公開 API の追加または削除に合わせ、宣言、`MOCK_METHOD`、`ON_CALL`、関数ラッパーを確認します。
+- 公開 API の追加または削除に合わせ、宣言、`MOCK_METHOD`、`ON_CALL`、関数ラッパーを漏れなく更新したか確認します。
 - real delegate と mock ラッパーのシグネチャが公開ヘッダーと一致することを確認します。
-- 必要な `MOCK_CPLAT_LINK_IMPL` がヘッダーにあることを確認します。
-- `app/cplat` の局所テストを実行します。
+- 必要な `MOCK_CPLAT_LINK_IMPL` がヘッダーに登録されていることを確認します。
+- `app/cplat` の局所テストを実行し、テストが成功することを確認します。
