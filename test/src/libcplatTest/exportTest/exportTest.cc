@@ -814,6 +814,7 @@
     EXPORT_ENTRY(cplat_interprocess_rwlock_dispose, void(CPLAT_API *)(cplat_interprocess_rwlock * lock)) \
     EXPORT_ENTRY(cplat_call_once, void(CPLAT_API *)(cplat_once_flag * flag, cplat_once_fn func)) \
     EXPORT_ENTRY(cplat_sleep_ms, void(CPLAT_API *)(int ms)) \
+    EXPORT_ENTRY(cplat_thread_yield, void(CPLAT_API *)(void)) \
     /* cplat/trace/trace_file.h */ \
     EXPORT_ENTRY(cplat_trace_file_sink_create, \
                  cplat_trace_file_sink *(CPLAT_API *)(const char *path, size_t max_bytes, int generations, int flags)) \

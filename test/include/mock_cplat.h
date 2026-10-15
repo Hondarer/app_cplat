@@ -512,6 +512,7 @@ MOCK_CPLAT_LINK_IMPL(cplat_interprocess_rwlock_unlock)
 MOCK_CPLAT_LINK_IMPL(cplat_interprocess_rwlock_dispose)
 MOCK_CPLAT_LINK_IMPL(cplat_call_once)
 MOCK_CPLAT_LINK_IMPL(cplat_sleep_ms)
+MOCK_CPLAT_LINK_IMPL(cplat_thread_yield)
 
 // cplat/trace/trace_file.h
 MOCK_CPLAT_LINK_IMPL(cplat_trace_file_sink_create)
@@ -1371,6 +1372,7 @@ extern int delegate_real_cplat_interprocess_rwlock_unlock(cplat_interprocess_rwl
 extern void delegate_real_cplat_interprocess_rwlock_dispose(cplat_interprocess_rwlock *lock);
 extern void delegate_real_cplat_call_once(cplat_once_flag *flag, cplat_once_fn func);
 extern void delegate_real_cplat_sleep_ms(int ms);
+extern void delegate_real_cplat_thread_yield(void);
 
 // cplat/trace/trace_file.h
 extern cplat_trace_file_sink *delegate_real_cplat_trace_file_sink_create(const char *path, size_t max_bytes,
@@ -2097,6 +2099,7 @@ class Mock_cplat
     MOCK_METHOD(void, cplat_interprocess_rwlock_dispose, (cplat_interprocess_rwlock *));
     MOCK_METHOD(void, cplat_call_once, (cplat_once_flag *, cplat_once_fn));
     MOCK_METHOD(void, cplat_sleep_ms, (int));
+    MOCK_METHOD(void, cplat_thread_yield, ());
 
     // cplat/trace/trace_file.h
     MOCK_METHOD(cplat_trace_file_sink *, cplat_trace_file_sink_create, (const char *, size_t, int, int));

@@ -330,6 +330,24 @@ extern "C"
     CPLAT_EXPORT void CPLAT_API cplat_thread_detach(cplat_thread *thread);
 
     /**
+     *  @brief          現在のスレッドの実行権を手放し、実行可能な他のスレッドへ CPU を譲ります。
+     *
+     *  @details        Linux では sched_yield()、Windows では SwitchToThread() を呼び出します。\n
+     *                  実行可能な他のスレッドがない場合は、待機せずに即時リターンします。\n
+     *                  他のスレッドへ切り替わること、および切り替わった後に戻るまでの時間は保証しません。
+     *
+     *  @note           Windows では、切り替え先を現在のプロセッサで実行可能なスレッドに限ります。\n
+     *                  Linux では、通常のスケジューリング ポリシー (SCHED_OTHER) における譲渡の強さを
+     *                  カーネルのスケジューラーが決めます。\n
+     *                  他のスレッドの処理完了を待つ場合は、本関数の繰り返しではなく、条件変数または
+     *                  cplat_sleep_ms() による待機を使用してください。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT void CPLAT_API cplat_thread_yield(void);
+
+    /**
      *  @brief          識別子でプロセス横断ミューテックスを開きます (存在しない場合は生成)。
      *  @param[in]      identity  ロックを識別する名前文字列。NULL を渡してはなりません。
      *  @param[out]     lock      生成したロック ハンドルの格納先。NULL を渡してはなりません。

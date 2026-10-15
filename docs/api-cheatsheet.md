@@ -710,6 +710,7 @@ Table: 文字列カタログの条件式フィルターにおける用途別 cpl
 | プロセス横断読み書きロックを取得したい (POSIX/Win32 に単一の生 API なし) | `cplat_interprocess_rwlock_open` / `_lock_shared` / `_lock_exclusive` / `_try_lock_shared` / `_try_lock_exclusive` / `_unlock` / `_destroy` | ロック ファイル バックエンドで実装 |
 | `pthread_once` (POSIX) / `InitOnceExecuteOnce` (Win32) | `cplat_call_once(flag, func)` | - |
 | `sleep`/`usleep`/`nanosleep` (POSIX) / `Sleep` (Win32) | `cplat_sleep_ms(ms)` | Linux はシグナル割り込み時に残り時間を再計算し継続待機します。 |
+| `sched_yield` (POSIX) / `SwitchToThread` (Win32) | `cplat_thread_yield()` | 実行可能な他のスレッドへ CPU を譲ります。他のスレッドがない場合は即時に戻ります。Windows の譲渡先は現在のプロセッサで実行可能なスレッドに限ります。完了待ちには条件変数または `cplat_sleep_ms` を使用してください。 |
 | `_Atomic` / `<stdatomic.h>` (C11、GCC) ・`<intrin.h>` の Interlocked 系 (MSVC) | `cplat_atomic_load_<型>` / `_store_<型>` / `_exchange_<型>` / `_compare_exchange_<型>` / `_fetch_add_<型>` / `_fetch_sub_<型>` / `cplat_atomic_thread_fence` (対象ヘッダー: `cplat/sync/atomic.h`) | ロックを取らない共有状態の読み書き (統計カウンター、フラグ、世代番号など) に使用。型は `u8`/`i32`/`u32`/`i64`/`u64`/`ptr` (`u8` と `ptr` に `_fetch_add`/`_fetch_sub` はなし)。初期化は `CPLAT_ATOMIC_INIT()` または `{0}`。MSVC の C17 モードは `_Atomic`/`<stdatomic.h>` を持たないため代替します。`volatile` は同期を保証しないため、同期には使わず本 API を使用してください。 |
 
 Table: スレッドおよび同期プリミティブと cplat API の対応

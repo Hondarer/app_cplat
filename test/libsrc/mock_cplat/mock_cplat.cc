@@ -682,6 +682,7 @@ Mock_cplat::Mock_cplat()
         .WillByDefault(Invoke(delegate_real_cplat_interprocess_rwlock_dispose));
     ON_CALL(*this, cplat_call_once(_, _)).WillByDefault(Invoke(delegate_real_cplat_call_once));
     ON_CALL(*this, cplat_sleep_ms(_)).WillByDefault(Invoke(delegate_real_cplat_sleep_ms));
+    ON_CALL(*this, cplat_thread_yield()).WillByDefault(Invoke(delegate_real_cplat_thread_yield));
 
     // cplat/trace/trace_file.h
     ON_CALL(*this, cplat_trace_file_sink_create(_, _, _, _))
