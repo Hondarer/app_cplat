@@ -173,7 +173,7 @@
  *  CPLAT_TRACE_LEVEL_DEBUG にしてください。\n
  *  これらは既定では記録せず、調査の必要が生じたときに有効にします。
  *
- *  通常のレベルと対になる強制出力のレベルを、負の値の帯として持ちます。\n
+ *  通常のレベルと対になる強制出力のレベルを、負の値の範囲として持ちます。\n
  *  強制出力のレベルで書き込みを要求すると、出力先のスレッショルド レベルによらず出力します。
  *  重大度では選び切れない記録を、絞り込みの結果として残すための入口です。\n
  *  スレッショルド レベルが CPLAT_TRACE_LEVEL_NONE の出力先へは出力しません。
@@ -185,7 +185,7 @@
  *  ETW と syslog へは、対応する通常のレベルと同じ重大度で渡します。\n
  *  ただし CPLAT_TRACE_LEVEL_FORCE_VERBOSE と CPLAT_TRACE_LEVEL_FORCE_DEBUG は、
  *  Informational (4) と LOG_INFO (6) へ引き上げます。
- *  常時記録の対象となる帯へ入れ、cplat の外側の設定で捨てられないようにするためです。
+ *  常時記録の対象となる範囲へ入れ、cplat の外側の設定で捨てられないようにするためです。
  *
  *  | cplat_trace_level                | ETW Level         | syslog severity |
  *  | -------------------------------- | ----------------- | --------------- |
@@ -209,7 +209,7 @@ typedef enum cplat_trace_level
     CPLAT_TRACE_LEVEL_FORCE_INFO = -4,     /**< 情報。強制出力します。 */
     CPLAT_TRACE_LEVEL_FORCE_VERBOSE = -3,  /**< 詳細な診断情報。強制出力します。 */
     CPLAT_TRACE_LEVEL_FORCE_DEBUG = -2,    /**< 最も詳細な診断情報。強制出力します。 */
-    CPLAT_TRACE_LEVEL_FORCE_NONE = -1,     /**< 出力しない。強制出力の帯における対の値です。 */
+    CPLAT_TRACE_LEVEL_FORCE_NONE = -1,     /**< 出力しない。強制出力の範囲における対の値です。 */
     CPLAT_TRACE_LEVEL_CRITICAL = 0,        /**< 致命的エラー。 */
     CPLAT_TRACE_LEVEL_ERROR = 1,           /**< エラー。 */
     CPLAT_TRACE_LEVEL_WARNING = 2,         /**< 警告。 */

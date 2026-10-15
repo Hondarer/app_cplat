@@ -191,10 +191,10 @@ TEST_F(traceCoverageTest, to_syslog_level_maps_force_levels)
         info_level); // [確認_正常系] - FORCE_INFO を変換した test_tracer_to_syslog_level() の戻り値が LOG_INFO であること。
     EXPECT_EQ(
         LOG_INFO,
-        verbose_level); // [確認_正常系] - FORCE_VERBOSE を変換した test_tracer_to_syslog_level() の戻り値が LOG_INFO であること。(FORCE_VERBOSE が常時記録の帯であることの確認)
+        verbose_level); // [確認_正常系] - FORCE_VERBOSE を変換した test_tracer_to_syslog_level() の戻り値が LOG_INFO であること。(FORCE_VERBOSE が常時記録の範囲であることの確認)
     EXPECT_EQ(
         LOG_INFO,
-        debug_level); // [確認_正常系] - FORCE_DEBUG を変換した test_tracer_to_syslog_level() の戻り値が LOG_INFO であること。(FORCE_DEBUG が常時記録の帯であることの確認)
+        debug_level); // [確認_正常系] - FORCE_DEBUG を変換した test_tracer_to_syslog_level() の戻り値が LOG_INFO であること。(FORCE_DEBUG が常時記録の範囲であることの確認)
     EXPECT_EQ(
         LOG_INFO,
         none_level); // [確認_正常系] - FORCE_NONE を変換した test_tracer_to_syslog_level() の戻り値が LOG_INFO であること。

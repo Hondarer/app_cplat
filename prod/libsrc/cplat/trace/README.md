@@ -68,7 +68,7 @@ Windows EventLog はイベント タイプが Error / Warning / Information の 
 
 量の多い記録や、内部の状態を細かく残す記録は `VERBOSE` または `DEBUG` にしてください。これらは既定では記録せず、調査の必要が生じたときに有効にします。
 
-強制出力のレベルで `VERBOSE` と `DEBUG` を syslog の `LOG_INFO` と ETW の Informational へ引き上げているのは、この設計に合わせて常時記録の帯へ入れるためです。
+強制出力のレベルで `VERBOSE` と `DEBUG` を syslog の `LOG_INFO` と ETW の Informational へ引き上げているのは、この設計に合わせて常時記録の範囲へ入れるためです。
 
 ## 既定の動作
 

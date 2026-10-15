@@ -7,45 +7,45 @@
 #include <utility>
 #include <vector>
 
-/* result.h の値は ABI として凍結する。値を変更した場合、次の静的検査が失敗する。 */
-static_assert(CPLAT_OK == 0, "cplat: CPLAT_OK の ABI 値を変更してはなりません。");
-static_assert(CPLAT_SKIPPED == 1, "cplat: CPLAT_SKIPPED の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_UNKNOWN == -1, "cplat: CPLAT_ERR_UNKNOWN の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_INVALID_ARGUMENT == -2, "cplat: CPLAT_ERR_INVALID_ARGUMENT の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_UNSUPPORTED == -3, "cplat: CPLAT_ERR_UNSUPPORTED の ABI 値を変更してはなりません。");
+/* result.h の値の意図しない変更を検知する。見直しにより意図して変更した場合は本テストの期待値も併せて更新する。 */
+static_assert(CPLAT_OK == 0, "cplat: CPLAT_OK の ABI 値が一致しません。");
+static_assert(CPLAT_SKIPPED == 1, "cplat: CPLAT_SKIPPED の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_UNKNOWN == -1, "cplat: CPLAT_ERR_UNKNOWN の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_INVALID_ARGUMENT == -2, "cplat: CPLAT_ERR_INVALID_ARGUMENT の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_UNSUPPORTED == -3, "cplat: CPLAT_ERR_UNSUPPORTED の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_PERMISSION_DENIED == -4,
-              "cplat: CPLAT_ERR_PERMISSION_DENIED の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_NOT_FOUND == -6, "cplat: CPLAT_ERR_NOT_FOUND の ABI 値を変更してはなりません。");
+              "cplat: CPLAT_ERR_PERMISSION_DENIED の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_NOT_FOUND == -6, "cplat: CPLAT_ERR_NOT_FOUND の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_DUPLICATE_DEFINITION == -5,
-              "cplat: CPLAT_ERR_DUPLICATE_DEFINITION の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_DUPLICATE_KEY == -7, "cplat: CPLAT_ERR_DUPLICATE_KEY の ABI 値を変更してはなりません。");
+              "cplat: CPLAT_ERR_DUPLICATE_DEFINITION の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_DUPLICATE_KEY == -7, "cplat: CPLAT_ERR_DUPLICATE_KEY の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_IDENTITY_MISMATCH == -8,
-              "cplat: CPLAT_ERR_IDENTITY_MISMATCH の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_VERSION_MISMATCH == -9, "cplat: CPLAT_ERR_VERSION_MISMATCH の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_OUT_OF_MEMORY == -10, "cplat: CPLAT_ERR_OUT_OF_MEMORY の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_BUSY == -11, "cplat: CPLAT_ERR_BUSY の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_TIMEOUT == -12, "cplat: CPLAT_ERR_TIMEOUT の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_LIMIT_EXCEEDED == -13, "cplat: CPLAT_ERR_LIMIT_EXCEEDED の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_BUFFER_TOO_SMALL == -14, "cplat: CPLAT_ERR_BUFFER_TOO_SMALL の ABI 値を変更してはなりません。");
+              "cplat: CPLAT_ERR_IDENTITY_MISMATCH の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_VERSION_MISMATCH == -9, "cplat: CPLAT_ERR_VERSION_MISMATCH の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_OUT_OF_MEMORY == -10, "cplat: CPLAT_ERR_OUT_OF_MEMORY の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_BUSY == -11, "cplat: CPLAT_ERR_BUSY の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_TIMEOUT == -12, "cplat: CPLAT_ERR_TIMEOUT の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_LIMIT_EXCEEDED == -13, "cplat: CPLAT_ERR_LIMIT_EXCEEDED の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_BUFFER_TOO_SMALL == -14, "cplat: CPLAT_ERR_BUFFER_TOO_SMALL の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_CORRUPT_DESCRIPTOR == -15,
-              "cplat: CPLAT_ERR_CORRUPT_DESCRIPTOR の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_STORAGE_FULL == -16, "cplat: CPLAT_ERR_STORAGE_FULL の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_UNKNOWN_OPTION == -20, "cplat: CPLAT_ERR_UNKNOWN_OPTION の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_MISSING_VALUE == -21, "cplat: CPLAT_ERR_MISSING_VALUE の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_UNEXPECTED_VALUE == -22, "cplat: CPLAT_ERR_UNEXPECTED_VALUE の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_INVALID_INTEGER == -23, "cplat: CPLAT_ERR_INVALID_INTEGER の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_OUT_OF_RANGE == -24, "cplat: CPLAT_ERR_OUT_OF_RANGE の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_MISSING_REQUIRED == -25, "cplat: CPLAT_ERR_MISSING_REQUIRED の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_DUPLICATE_OPTION == -26, "cplat: CPLAT_ERR_DUPLICATE_OPTION の ABI 値を変更してはなりません。");
+              "cplat: CPLAT_ERR_CORRUPT_DESCRIPTOR の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_STORAGE_FULL == -16, "cplat: CPLAT_ERR_STORAGE_FULL の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_UNKNOWN_OPTION == -20, "cplat: CPLAT_ERR_UNKNOWN_OPTION の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_MISSING_VALUE == -21, "cplat: CPLAT_ERR_MISSING_VALUE の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_UNEXPECTED_VALUE == -22, "cplat: CPLAT_ERR_UNEXPECTED_VALUE の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_INVALID_INTEGER == -23, "cplat: CPLAT_ERR_INVALID_INTEGER の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_OUT_OF_RANGE == -24, "cplat: CPLAT_ERR_OUT_OF_RANGE の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_MISSING_REQUIRED == -25, "cplat: CPLAT_ERR_MISSING_REQUIRED の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_DUPLICATE_OPTION == -26, "cplat: CPLAT_ERR_DUPLICATE_OPTION の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_TOO_MANY_ARGUMENTS == -27,
-              "cplat: CPLAT_ERR_TOO_MANY_ARGUMENTS の ABI 値を変更してはなりません。");
+              "cplat: CPLAT_ERR_TOO_MANY_ARGUMENTS の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_TOO_MANY_OCCURRENCES == -28,
-              "cplat: CPLAT_ERR_TOO_MANY_OCCURRENCES の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_INVALID_PATTERN == -29, "cplat: CPLAT_ERR_INVALID_PATTERN の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_INVALID_ENCODING == -30, "cplat: CPLAT_ERR_INVALID_ENCODING の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_EOF == -40, "cplat: CPLAT_ERR_EOF の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_CANCELED == -41, "cplat: CPLAT_ERR_CANCELED の ABI 値を変更してはなりません。");
-static_assert(CPLAT_ERR_IN_PROGRESS == -42, "cplat: CPLAT_ERR_IN_PROGRESS の ABI 値を変更してはなりません。");
+              "cplat: CPLAT_ERR_TOO_MANY_OCCURRENCES の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_INVALID_PATTERN == -29, "cplat: CPLAT_ERR_INVALID_PATTERN の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_INVALID_ENCODING == -30, "cplat: CPLAT_ERR_INVALID_ENCODING の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_EOF == -40, "cplat: CPLAT_ERR_EOF の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_CANCELED == -41, "cplat: CPLAT_ERR_CANCELED の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_IN_PROGRESS == -42, "cplat: CPLAT_ERR_IN_PROGRESS の ABI 値が一致しません。");
 
 /* result.h が定義するエラー コードの一覧 (CPLAT_OK を除く)。 */
 static std::vector<int> all_error_codes()
