@@ -1058,6 +1058,13 @@ void cplat_call_once(cplat_once_flag *flag, void (*func)(void))
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
+void cplat_thread_yield(void)
+{
+    (void)sched_yield();
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
 void cplat_sleep_ms(int ms)
 {
     struct timespec req;

@@ -898,6 +898,13 @@ void cplat_call_once(cplat_once_flag *flag, void (*func)(void))
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
+void cplat_thread_yield(void)
+{
+    (void)SwitchToThread();
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
 void cplat_sleep_ms(int ms)
 {
     if (ms <= 0)
