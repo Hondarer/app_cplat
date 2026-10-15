@@ -2210,7 +2210,7 @@ class Mock_cplat
 #endif /* PLATFORM_LINUX */
 
     Mock_cplat();
-    ~Mock_cplat();
+    virtual ~Mock_cplat();
 };
 
 extern Mock_cplat *_mock_cplat;
