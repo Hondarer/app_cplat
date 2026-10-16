@@ -117,7 +117,7 @@ TEST_F(hashtableIntegrationTest, string_mode_demo_scenarios)
         actual_ret_empty_key); // [確認_正常系] - 空文字列キーに対する cplat_hashtable_add() の戻り値が CPLAT_OK であること。
 }
 
-// バイナリキーモードにおける領域永続化と別ハンドル再接続によるデータ復元が正常に動作することの確認
+// バイナリ キー モードにおける領域永続化と別ハンドル再接続によるデータ復元が正常に動作することの確認
 TEST_F(hashtableIntegrationTest, binary_and_persist_demo_scenarios)
 {
     // Arrange

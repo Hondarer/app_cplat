@@ -110,7 +110,7 @@ class traceFileCoverageTest : public Test
     // [サブ手順終了]
 };
 
-// フル パス解決に失敗した場合に元のパスで sink を登録することの確認
+// 完全なパス解決に失敗した場合に元のパスで sink を登録することの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, create_uses_original_path_when_full_path_resolution_fails)
 {
@@ -119,8 +119,8 @@ TEST_F(traceFileCoverageTest, create_uses_original_path_when_full_path_resolutio
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_path_get_full(_, _, _, StrEq("relative.log")))
         .WillOnce(Return(
-            CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_path_get_full() が "relative.log" と等しい文字列を指定して 1 回呼び出されること。(フル パス解決を失敗させることの確認)
-                                 // [Pre-Assert手順] - フル パス解決から CPLAT_ERR_UNKNOWN を返却する。
+            CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_path_get_full() が "relative.log" と等しい文字列を指定して 1 回呼び出されること。(完全なパス解決を失敗させることの確認)
+                                 // [Pre-Assert手順] - 完全なパス解決から CPLAT_ERR_UNKNOWN を返却する。
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("relative.log"), _, _))
         .WillOnce(Return(
             CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_file_open() が "relative.log" と等しい文字列を指定して 1 回呼び出されること。(元のパスでファイルを開くことの確認)
@@ -128,7 +128,7 @@ TEST_F(traceFileCoverageTest, create_uses_original_path_when_full_path_resolutio
 
     // Act
     cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
-        "relative.log", 0, 0, 0); // [手順] - フル パス解決が失敗する相対パスで sink を生成する。
+        "relative.log", 0, 0, 0); // [手順] - 完全なパス解決が失敗する相対パスで sink を生成する。
 
     // Assert
     ASSERT_NE(nullptr,

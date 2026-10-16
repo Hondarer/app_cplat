@@ -142,7 +142,7 @@
  */
 #define CPLAT_ERR_NOT_FOUND (-6)
 
-#define CPLAT_ERR_DUPLICATE_KEY (-7) /**< 同一キーが既に存在します。 */
+#define CPLAT_ERR_DUPLICATE_KEY (-7) /**< 同一キーがすでに存在します。 */
 
 /**
  *  @brief          期待する対象の識別値と一致しません。

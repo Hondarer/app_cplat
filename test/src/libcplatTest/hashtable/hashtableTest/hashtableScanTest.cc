@@ -56,7 +56,7 @@ class hashtableScanTest : public Test
     NiceMock<Mock_cplat> mock_cplat_;
 };
 
-// 各状態グループ（使用中、削除済み、空、およびその組み合わせ）に該当するレコード番号を順に走査取得できることの確認
+// 各状態グループ (使用中、削除済み、空、およびその組み合わせ) に該当するレコード番号を順に走査取得できることの確認
 TEST_F(hashtableScanTest, walks_each_status_group)
 {
     // Arrange
@@ -156,7 +156,7 @@ TEST_F(hashtableScanTest, reports_end_of_scan_without_error)
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
 }
 
-// 走査関数にNULLポインタ、無効なマスク値、範囲外の開始位置を指定した場合に不正引数エラーとなることの確認
+// 走査関数に NULL ポインター、無効なマスク値、範囲外の開始位置を指定した場合に不正引数エラーとなることの確認
 TEST_F(hashtableScanTest, guards_reject_invalid_arguments)
 {
     // Arrange

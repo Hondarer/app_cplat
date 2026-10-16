@@ -86,7 +86,7 @@ TEST_F(pathsEqualTest, returns_error_when_rhs_path_cannot_be_resolved)
     int equal = 1;
 
     ASSERT_EQ(CPLAT_OK, cplat_path_get_full(lhs, sizeof(lhs), nullptr,
-                                            ".")); // [状態] - カレントディレクトリから左辺パスを取得する。
+                                            ".")); // [状態] - カレント ディレクトリから左辺パスを取得する。
     // [状態確認] - cplat_path_get_full() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -218,7 +218,7 @@ TEST_F(pathsEqualTest, returns_enomem_when_lhs_normalization_allocation_fails)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_calloc(PLATFORM_PATH_MAX, sizeof(size_t)))
         .WillOnce(Return(
-            nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が PLATFORM_PATH_MAX、sizeofを指定して 1 回呼び出されること。(左辺パスの正規化用メモリを確保する呼び出しであることの確認)
+            nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が PLATFORM_PATH_MAX、sizeof を指定して 1 回呼び出されること。(左辺パスの正規化用メモリを確保する呼び出しであることの確認)
                        // [Pre-Assert手順] - cplat_calloc() から NULL を返却する。
 
     // Act

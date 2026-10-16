@@ -6,7 +6,7 @@
  *  @date           2026/08/11
  *  @version        1.0.0
  *
- *  プラットフォームごとに異なるソケット API を共通インターフェースで抽象化します。
+ *  プラットフォームごとに異なるソケット API を共通インターフェイスで抽象化します。
  *
  *  | OS      | 使用ライブラリ                    | 待機 API   | 非ブロッキング設定       |
  *  | ------- | --------------------------------- | ---------- | ------------------------ |
@@ -252,9 +252,9 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_socket_set_broadcast(cplat_socket sock, int enable, cplat_error *detail_out);
 
     /**
-     *  @brief          マルチキャスト送信に使用するローカル インターフェースを設定します。
+     *  @brief          マルチキャスト送信に使用するローカル インターフェイスを設定します。
      *  @param[in]      sock       対象のソケット。
-     *  @param[in]      interface_address ローカル インターフェースのアドレス
+     *  @param[in]      interface_address ローカル インターフェイスのアドレス
      *                             (ネットワーク バイト オーダー)。
      *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
@@ -271,7 +271,7 @@ extern "C"
      *  @param[in]      sock       対象のソケット。
      *  @param[in]      group_address マルチキャスト グループのアドレス
      *                             (ネットワーク バイト オーダー)。
-     *  @param[in]      interface_address 受信に使用するローカル インターフェースのアドレス
+     *  @param[in]      interface_address 受信に使用するローカル インターフェイスのアドレス
      *                             (ネットワーク バイト オーダー)。
      *                             @ref CPLAT_IPV4_ADDR_ANY を指定した場合は OS が選択します。
      *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
@@ -289,7 +289,7 @@ extern "C"
      *  @param[in]      sock       対象のソケット。
      *  @param[in]      group_address マルチキャスト グループのアドレス
      *                             (ネットワーク バイト オーダー)。
-     *  @param[in]      interface_address 受信に使用していたローカル インターフェースのアドレス
+     *  @param[in]      interface_address 受信に使用していたローカル インターフェイスのアドレス
      *                             (ネットワーク バイト オーダー)。
      *                             @ref cplat_socket_join_multicast_group へ指定した値と同じ値を指定します。
      *  @param[out]     detail_out エラー詳細の格納先。NULL 可。

@@ -79,11 +79,11 @@ TEST_F(stdioTempTest, opens_writable_file_and_reports_path)
             {
                 return resolve_mkostemp(tmpl, "/tmp/ptrAAAAAA");
             }); // [Pre-Assert確認_正常系] - mkostemp() が path、O_CLOEXEC を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - パスを "/tmp/ptrAAAAAA" に書き換え、番兵記述子 7 を返却する。
+                // [Pre-Assert手順] - パスを "/tmp/ptrAAAAAA" に書き換え、センチネル記述子 7 を返却する。
     EXPECT_CALL(mock_stdio_, fdopen(_, _, _, kFakeFd, StrEq("wb")))
         .WillOnce(Return(
             kStream)); // [Pre-Assert確認_正常系] - fdopen() が kFakeFd、"wb" と等しい文字列を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - 番兵ストリームを返却する。
+                       // [Pre-Assert手順] - センチネル ストリームを返却する。
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path),
@@ -117,11 +117,11 @@ TEST_F(stdioTempTest, uses_tmpdir_when_getenv_returns_a_path)
             {
                 return resolve_mkostemp(tmpl, "/var/tmp/ptrAAAAAA");
             }); // [Pre-Assert確認_正常系] - mkostemp() が path、O_CLOEXEC を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - パスを "/var/tmp/ptrAAAAAA" に書き換え、番兵記述子 7 を返却する。
+                // [Pre-Assert手順] - パスを "/var/tmp/ptrAAAAAA" に書き換え、センチネル記述子 7 を返却する。
     EXPECT_CALL(mock_stdio_, fdopen(_, _, _, kFakeFd, StrEq("wb")))
         .WillOnce(Return(
             kStream)); // [Pre-Assert確認_正常系] - fdopen() が kFakeFd、"wb" と等しい文字列を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - 番兵ストリームを返却する。
+                       // [Pre-Assert手順] - センチネル ストリームを返却する。
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path),
@@ -156,12 +156,12 @@ TEST_F(stdioTempTest, returns_unique_paths_for_repeated_calls)
             {
                 return resolve_mkostemp(tmpl, "/tmp/ptrDDDDDD");
             }); // [Pre-Assert確認_正常系] - mkostemp() が O_CLOEXEC を指定して 4 回呼び出されること。
-                // [Pre-Assert手順] - 互いに異なる 4 つのパスを順に書き込み、番兵記述子 7 を返却する。
+                // [Pre-Assert手順] - 互いに異なる 4 つのパスを順に書き込み、センチネル記述子 7 を返却する。
     EXPECT_CALL(mock_stdio_, fdopen(_, _, _, kFakeFd, StrEq("wb")))
         .Times(4)
         .WillRepeatedly(Return(
             kStream)); // [Pre-Assert確認_正常系] - fdopen() が kFakeFd、"wb" と等しい文字列を指定して 4 回呼び出されること。
-                       // [Pre-Assert手順] - 番兵ストリームを返却する。
+                       // [Pre-Assert手順] - センチネル ストリームを返却する。
 
     // Act
     FILE *fp1 = cplat_fopen_temp("ptr", "wb", path1, sizeof(path1),
@@ -198,11 +198,11 @@ TEST_F(stdioTempTest, prefix_is_part_of_basename)
             {
                 return resolve_mkostemp(tmpl, "/tmp/abcAAAAAA");
             }); // [Pre-Assert確認_正常系] - mkostemp() が path、O_CLOEXEC を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - パスを "/tmp/abcAAAAAA" に書き換え、番兵記述子 7 を返却する。
+                // [Pre-Assert手順] - パスを "/tmp/abcAAAAAA" に書き換え、センチネル記述子 7 を返却する。
     EXPECT_CALL(mock_stdio_, fdopen(_, _, _, kFakeFd, StrEq("wb")))
         .WillOnce(Return(
             kStream)); // [Pre-Assert確認_正常系] - fdopen() が kFakeFd、"wb" と等しい文字列を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - 番兵ストリームを返却する。
+                       // [Pre-Assert手順] - センチネル ストリームを返却する。
 
     // Act
     FILE *fp = cplat_fopen_temp("abc", "wb", path, sizeof(path),
@@ -229,11 +229,11 @@ TEST_F(stdioTempTest, null_prefix_is_accepted)
             {
                 return resolve_mkostemp(tmpl, "/tmp/cu_AAAAAA");
             }); // [Pre-Assert確認_正常系] - mkostemp() が path、O_CLOEXEC を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 既定 prefix のパスを書き込み、番兵記述子 7 を返却する。
+                // [Pre-Assert手順] - 既定 prefix のパスを書き込み、センチネル記述子 7 を返却する。
     EXPECT_CALL(mock_stdio_, fdopen(_, _, _, kFakeFd, StrEq("wb")))
         .WillOnce(Return(
             kStream)); // [Pre-Assert確認_正常系] - fdopen() が kFakeFd、"wb" と等しい文字列を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - 番兵ストリームを返却する。
+                       // [Pre-Assert手順] - センチネル ストリームを返却する。
 
     // Act
     FILE *fp = cplat_fopen_temp(nullptr, "wb", path, sizeof(path),
@@ -260,11 +260,11 @@ TEST_F(stdioTempTest, prefix_longer_than_three_chars_is_truncated)
             {
                 return resolve_mkostemp(tmpl, "/tmp/abcAAAAAA");
             }); // [Pre-Assert確認_正常系] - mkostemp() が path、O_CLOEXEC を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 先頭 3 文字の prefix を含むパスを書き込み、番兵記述子 7 を返却する。
+                // [Pre-Assert手順] - 先頭 3 文字の prefix を含むパスを書き込み、センチネル記述子 7 を返却する。
     EXPECT_CALL(mock_stdio_, fdopen(_, _, _, kFakeFd, StrEq("wb")))
         .WillOnce(Return(
             kStream)); // [Pre-Assert確認_正常系] - fdopen() が kFakeFd、"wb" と等しい文字列を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - 番兵ストリームを返却する。
+                       // [Pre-Assert手順] - センチネル ストリームを返却する。
 
     // Act
     FILE *fp = cplat_fopen_temp("abcd", "wb", path, sizeof(path),
@@ -448,7 +448,7 @@ TEST_F(stdioTempTest, invalid_modes_reports_fdopen_error)
             {
                 return resolve_mkostemp(tmpl, "/tmp/ptrAAAAAA");
             }); // [Pre-Assert確認_異常系] - mkostemp() が path、O_CLOEXEC を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - パスを書き込み、番兵記述子 7 を返却する。
+                // [Pre-Assert手順] - パスを書き込み、センチネル記述子 7 を返却する。
     EXPECT_CALL(mock_stdio_, fdopen(_, _, _, kFakeFd, StrEq("q")))
         .WillOnce(
             [](const char *, int, const char *, int, const char *)

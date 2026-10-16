@@ -104,7 +104,7 @@ extern "C"
      *  本関数は条件付きスレッド セーフです。\n
      *  本関数は内部で cplat_console_init() を呼び出します。\n
      *  cplat_console_init() を呼び出し済みの場合は、同時に実行できます。\n
-     *  呼び出していない場合は、プロセス起動直後のシングル スレッド フェーズで、
+     *  呼び出していない場合は、プロセス起動直後のシングルスレッド フェーズで、
      *  先に cplat_console_init() を呼び出してください。
      */
     CPLAT_EXPORT cplat_pinned_prompt *CPLAT_API cplat_pinned_prompt_create(const cplat_pinned_prompt_options *options);

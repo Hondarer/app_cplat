@@ -25,7 +25,7 @@ TEST_F(mmapFailureInjectionTest, attach_returns_error_when_read_only_size_lookup
                 fill_open_file(file, flags);
                 return CPLAT_OK;
             }); // [Pre-Assert確認_異常系] - cplat_file_open() が flags_read_only() の戻り値を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 番兵ハンドルを設定し、CPLAT_OK を返却する。
+                // [Pre-Assert手順] - センチネル ハンドルを設定し、CPLAT_OK を返却する。
     EXPECT_CALL(mock_cplat_, cplat_file_get_size(_, _, _))
         .WillOnce(
             Return(CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_file_get_size() が 1 回呼び出されること。
@@ -126,7 +126,7 @@ TEST_F(mmapFailureInjectionTest, attach_returns_error_when_existing_size_lookup_
                 fill_open_file(file, flags);
                 return CPLAT_OK;
             }); // [Pre-Assert確認_異常系] - cplat_file_open() が flags_existing_rw() の戻り値を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - CREATE_NEW だけエラーを返し、再オープンは番兵ハンドルを設定する。
+                // [Pre-Assert手順] - CREATE_NEW だけエラーを返し、再オープンはセンチネル ハンドルを設定する。
     EXPECT_CALL(mock_cplat_, cplat_file_get_size(_, _, _))
         .WillOnce(
             Return(CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_file_get_size() が 1 回呼び出されること。

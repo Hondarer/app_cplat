@@ -235,7 +235,7 @@ TEST_F(hashtableMoreTest, delete_with_lifetime_two_sets_next_empty_when_table_fu
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "b", value.data(),
-                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 満杯にする(next_empty が 0 になる)。
+                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 満杯にする (next_empty が 0 になる)。
     (void)cplat_hashtable_empty_count(ht, &empty_before);
     int actual_ret_delete = cplat_hashtable_delete(ht, "a"); // [手順] - 満杯の状態で lifetime 2 の削除をする。
     int actual_ret_add = cplat_hashtable_add(
@@ -271,11 +271,11 @@ TEST_F(hashtableMoreTest, delete_with_lifetime_two_keeps_earlier_next_empty_hint
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     (void)cplat_hashtable_insert_direct(ht, 1, "a", 1, value.data(), &k_insert_timestamp,
-                                        1); // [手順] - レコード 1 を占有する(next_empty は 2 になる)。
+                                        1); // [手順] - レコード 1 を占有する (next_empty は 2 になる)。
     (void)cplat_hashtable_insert_direct(ht, 3, "c", 1, value.data(), &k_insert_timestamp,
                                         3); // [手順] - レコード 2 を空けたままレコード 3 を占有する。
     int actual_ret_delete =
-        cplat_hashtable_delete(ht, "c"); // [手順] - レコード 3(next_empty より大きい)を lifetime 2 で削除する。
+        cplat_hashtable_delete(ht, "c"); // [手順] - レコード 3 (next_empty より大きい) を lifetime 2 で削除する。
     int actual_ret_add = cplat_hashtable_add(ht, "d", value.data(),
                                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 別キーを追加する。
     (void)cplat_hashtable_find_recno(ht, "d", &next_empty_rec);
@@ -338,8 +338,8 @@ TEST_F(hashtableMoreTest, validate_returns_out_of_memory_when_calloc_fails)
     EXPECT_CALL(mock_cplat_, cplat_calloc(_, _))
         .WillOnce(
             DoDefault()) // [Pre-Assert確認_異常系] - cplat_calloc() が 3 回呼び出されること。(create の 2 回に加えて validate 用の確保が呼び出されたことの確認)
-                         // [Pre-Assert手順] - 1 回目(create の管理領域+データ領域)は成功させる。
-        .WillOnce(DoDefault())      // [Pre-Assert手順] - 2 回目(create の内部管理データ)も成功させる。
+                         // [Pre-Assert手順] - 1 回目 (create の管理領域+データ領域) は成功させる。
+        .WillOnce(DoDefault())      // [Pre-Assert手順] - 2 回目 (create の内部管理データ) も成功させる。
         .WillOnce(Return(nullptr)); // [Pre-Assert手順] - 3 回目の cplat_calloc() から NULL を返却する。
 
     // Act
@@ -356,7 +356,7 @@ TEST_F(hashtableMoreTest, validate_returns_out_of_memory_when_calloc_fails)
     cplat_hashtable_dispose(ht);
 }
 
-// 空きスロットが無い場合に最も高い status（より古い削除状態）のレコードが再利用されることの確認
+// 空きスロットが無い場合に最も高い status (より古い削除状態) のレコードが再利用されることの確認
 TEST_F(hashtableMoreTest, add_reuses_deleted_record_with_highest_status_when_no_empty_slot)
 {
     // Arrange
@@ -379,9 +379,9 @@ TEST_F(hashtableMoreTest, add_reuses_deleted_record_with_highest_status_when_no_
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     (void)cplat_hashtable_insert_direct(ht, 1, "old", 2, value.data(), &ts_old,
-                                        1); // [手順] - status 2(削除中)のレコードを先に配置する。
+                                        1); // [手順] - status 2 (削除中) のレコードを先に配置する。
     (void)cplat_hashtable_insert_direct(ht, 2, "new", 3, value.data(), &ts_new,
-                                        2); // [手順] - status 3(削除中、より高位)のレコードを後で配置する。
+                                        2); // [手順] - status 3 (削除中、より高位) のレコードを後で配置する。
     int actual_ret_add =
         cplat_hashtable_add(ht, "fresh", value.data(),
                             CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 空きが無い状態で新規キーを追加する。
@@ -440,7 +440,7 @@ TEST_F(hashtableMoreTest, add_reuses_oldest_generation_when_status_ties_with_rec
         cplat_hashtable_add(ht, "c", value.data(),
                             CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - status 同点で新規キーを追加する。
     int actual_ret_find_c = cplat_hashtable_find_recno(ht, "c", &rec_c);
-    int actual_ret_get_status_b = cplat_hashtable_get_status(ht, 2, &status_b); // [手順] - b(レコード2)の状態を読む。
+    int actual_ret_get_status_b = cplat_hashtable_get_status(ht, 2, &status_b); // [手順] - b(レコード 2) の状態を読む。
 
     // Assert
     EXPECT_EQ(
@@ -451,12 +451,12 @@ TEST_F(hashtableMoreTest, add_reuses_oldest_generation_when_status_ties_with_rec
         actual_ret_find_c); // [確認_正常系] - キー c に対する cplat_hashtable_find_recno() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         1u,
-        rec_c); // [確認_正常系] - rec_c が 1 であること。(時刻ではなく世代が古い a(レコード 1)が再利用されたことの確認)
+        rec_c); // [確認_正常系] - rec_c が 1 であること。(時刻ではなく世代が古い a(レコード 1) が再利用されたことの確認)
     EXPECT_EQ(CPLAT_OK, actual_ret_get_status_b);
     // [確認_正常系] - cplat_hashtable_get_status() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         3,
-        status_b); // [確認_正常系] - status_b が 3 であること。(b(レコード 2)は変更されず削除中のままであることの確認)
+        status_b); // [確認_正常系] - status_b が 3 であること。(b(レコード 2) は変更されず削除中のままであることの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -482,14 +482,14 @@ TEST_F(hashtableMoreTest, add_reuses_lowest_record_number_when_status_ties_with_
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     (void)cplat_hashtable_insert_direct(ht, 1, "a", 3, value.data(), nullptr,
-                                        0); // [手順] - status 3 のレコード1を配置する。
+                                        0); // [手順] - status 3 のレコード 1 を配置する。
     (void)cplat_hashtable_insert_direct(ht, 2, "b", 3, value.data(), nullptr,
-                                        0); // [手順] - status 3 のレコード2を配置する。
+                                        0); // [手順] - status 3 のレコード 2 を配置する。
     int actual_ret_add =
         cplat_hashtable_add(ht, "c", value.data(),
                             CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - status 同点で新規キーを追加する。
     int actual_ret_find_c = cplat_hashtable_find_recno(ht, "c", &rec_c);
-    int actual_ret_get_status_b = cplat_hashtable_get_status(ht, 2, &status_b); // [手順] - b(レコード2)の状態を読む。
+    int actual_ret_get_status_b = cplat_hashtable_get_status(ht, 2, &status_b); // [手順] - b(レコード 2) の状態を読む。
 
     // Assert
     EXPECT_EQ(
@@ -500,12 +500,12 @@ TEST_F(hashtableMoreTest, add_reuses_lowest_record_number_when_status_ties_with_
         actual_ret_find_c); // [確認_正常系] - キー c に対する cplat_hashtable_find_recno() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         1u,
-        rec_c); // [確認_正常系] - rec_c が 1 であること。(レコード番号が最小の a(レコード 1)が再利用されたことの確認)
+        rec_c); // [確認_正常系] - rec_c が 1 であること。(レコード番号が最小の a(レコード 1) が再利用されたことの確認)
     EXPECT_EQ(CPLAT_OK, actual_ret_get_status_b);
     // [確認_正常系] - cplat_hashtable_get_status() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         3,
-        status_b); // [確認_正常系] - status_b が 3 であること。(b(レコード 2)は変更されず削除中のままであることの確認)
+        status_b); // [確認_正常系] - status_b が 3 であること。(b(レコード 2) は変更されず削除中のままであることの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -542,7 +542,7 @@ TEST_F(hashtableMoreTest, add_with_reuse_deleted_still_fails_when_no_deleted_rec
     cplat_hashtable_dispose(ht);
 }
 
-// 衝突チェインの先頭ではない位置にある削除中レコードを再利用して新規キーが正常に追加できることの確認
+// 衝突チェーンの先頭ではない位置にある削除中レコードを再利用して新規キーが正常に追加できることの確認
 TEST_F(hashtableMoreTest, add_reuses_deleted_record_that_is_not_at_chain_head)
 {
     // Arrange
@@ -568,17 +568,17 @@ TEST_F(hashtableMoreTest, add_reuses_deleted_record_that_is_not_at_chain_head)
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     (void)cplat_hashtable_insert_direct(ht, 1, base_key, 2, value.data(), &ts_deleted,
-                                        1); // [手順] - 削除中のレコード1を先に配置し、チェーン先頭にする。
+                                        1); // [手順] - 削除中のレコード 1 を先に配置し、チェーン先頭にする。
     int actual_ret_add_head =
         cplat_hashtable_add(ht, peer_key, value.data(),
                             CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 同じバケットへ実装中キーを追加し、
-                                                                    // レコード1をチェーンの非先頭へ追いやる。
+                                                                    // レコード 1 をチェーンの非先頭へ追いやる。
     int actual_ret_add_c = cplat_hashtable_add(
         ht, "z", value.data(),
         CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 空きが無い状態でチェーン非先頭の削除中レコードを再利用させる。
     int actual_ret_find_base = cplat_hashtable_find_recno(ht, base_key, &rec_c); // [手順] - 追い出したキーを探す。
     int actual_ret_get_status_head =
-        cplat_hashtable_get_status(ht, 2, &status_head); // [手順] - チェーン先頭(レコード2)の状態を読む。
+        cplat_hashtable_get_status(ht, 2, &status_head); // [手順] - チェーン先頭 (レコード 2) の状態を読む。
     int actual_ret_validate = cplat_hashtable_validate(ht);
 
     // Assert
@@ -595,7 +595,7 @@ TEST_F(hashtableMoreTest, add_reuses_deleted_record_that_is_not_at_chain_head)
     // [確認_正常系] - cplat_hashtable_get_status() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         1,
-        status_head); // [確認_正常系] - status_head が 1 であること。(チェーン先頭のキー(実装中)は影響を受けないことの確認)
+        status_head); // [確認_正常系] - status_head が 1 であること。(チェーン先頭のキー (実装中) は影響を受けないことの確認)
     EXPECT_EQ(CPLAT_OK,
               actual_ret_validate); // [確認_正常系] - cplat_hashtable_validate() の戻り値が CPLAT_OK であること。
 

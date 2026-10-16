@@ -112,7 +112,7 @@ TEST_F(scanfTest, fscanf_reads_width_limited_token_and_integer)
 {
     // Arrange
     char token[8] = {};
-    int value = 0; // [状態] - 番兵ストリームと、文字列と数値の格納先を用意する。
+    int value = 0; // [状態] - センチネル ストリームと、文字列と数値の格納先を用意する。
 
     // Pre-Assert
     EXPECT_CALL(mock_stdio, vfscanf(_, _, _, kStream, StrEq("%7s %d"), _))
@@ -140,7 +140,7 @@ TEST_F(scanfTest, vfscanf_reads_width_limited_token_and_integer)
 {
     // Arrange
     char token[8] = {};
-    int value = 0; // [状態] - 番兵ストリームと、文字列と数値の格納先を用意する。
+    int value = 0; // [状態] - センチネル ストリームと、文字列と数値の格納先を用意する。
 
     // Pre-Assert
     EXPECT_CALL(mock_stdio, vfscanf(_, _, _, kStream, StrEq("%7s %d"), _))

@@ -21,7 +21,7 @@ TEST_F(mmapTest, attach_creates_new_file_and_ignores_create_size_on_reattach)
                 fill_open_file(file, flags);
                 return CPLAT_OK;
             }); // [Pre-Assert確認_正常系] - cplat_file_open() が flags_create_new() の戻り値を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 番兵ハンドルを設定し、CPLAT_OK を返却する。
+                // [Pre-Assert手順] - センチネル ハンドルを設定し、CPLAT_OK を返却する。
     EXPECT_CALL(mock_cplat_, cplat_file_set_size(_, kMapSize, _))
         .WillOnce(Return(
             CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_file_set_size() が kMapSize を指定して 1 回呼び出されること。(create_size の 64 を指定したことの確認)
@@ -56,7 +56,7 @@ TEST_F(mmapTest, attach_creates_new_file_and_ignores_create_size_on_reattach)
                 fill_open_file(file, flags);
                 return CPLAT_OK;
             }); // [Pre-Assert確認_正常系] - cplat_file_open() が flags_existing_rw() の戻り値を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - CREATE_NEW はエラーを返し、既存オープンは番兵ハンドルを設定する。
+                // [Pre-Assert手順] - CREATE_NEW はエラーを返し、既存オープンはセンチネル ハンドルを設定する。
     EXPECT_CALL(mock_cplat_, cplat_file_get_size(_, _, _))
         .WillOnce(
             [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -130,7 +130,7 @@ TEST_F(mmapTest, attach_fails_for_empty_existing_file)
                 fill_open_file(file, flags);
                 return CPLAT_OK;
             }); // [Pre-Assert確認_異常系] - cplat_file_open() が flags_existing_rw() の戻り値を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 再オープンで番兵ハンドルを設定する。
+                // [Pre-Assert手順] - 再オープンでセンチネル ハンドルを設定する。
     EXPECT_CALL(mock_cplat_, cplat_file_get_size(_, _, _))
         .WillOnce(
             [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -168,7 +168,7 @@ TEST_F(mmapTest, attach_read_only_maps_existing_file)
                 fill_open_file(file, flags);
                 return CPLAT_OK;
             }); // [Pre-Assert確認_正常系] - cplat_file_open() が flags_read_only() の戻り値を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 番兵ハンドルを設定し、CPLAT_OK を返却する。
+                // [Pre-Assert手順] - センチネル ハンドルを設定し、CPLAT_OK を返却する。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_sys_mman_, mmap(_, _, _, _, kMapSize, PROT_READ, MAP_SHARED, kFakeFileHandle, 0))
         .WillOnce(Return(

@@ -8,7 +8,7 @@
  *  トレース メッセージをローテーション付きテキスト ファイルへ同期書き込みする
  *  クロスプラットフォーム プロバイダーです。\n
  *  cplat_etw_provider (Windows ETW) および cplat_syslog_sink (Linux syslog) と
- *  同じ init / write / dispose インターフェースを提供します。
+ *  同じ init / write / dispose インターフェイスを提供します。
  *
  *  @par            出力フォーマット
     @code

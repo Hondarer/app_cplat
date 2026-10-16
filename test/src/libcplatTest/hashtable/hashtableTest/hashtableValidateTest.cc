@@ -103,10 +103,10 @@ TEST_F(hashtableValidateTest, detects_bucket_link_out_of_range)
         actual_ret); // [確認_異常系] - capacity を超えるバケット リンクがあるときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
-// エントリチェインの循環破損を CORRUPT_DESCRIPTOR として検出することの確認
+// エントリ チェーンの循環破損を CORRUPT_DESCRIPTOR として検出することの確認
 TEST_F(hashtableValidateTest, detects_link_cycle)
 {
     // Arrange
@@ -134,10 +134,10 @@ TEST_F(hashtableValidateTest, detects_link_cycle)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_CORRUPT_DESCRIPTOR,
-        actual_ret); // [確認_異常系] - チェインが循環しているときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+        actual_ret); // [確認_異常系] - チェーンが循環しているときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // 同一レコードへの重複リンク破損を CORRUPT_DESCRIPTOR として検出することの確認
@@ -166,7 +166,7 @@ TEST_F(hashtableValidateTest, detects_duplicate_visit)
         actual_ret); // [確認_異常系] - 同じレコードへ二重にリンクしているときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // 空スロットへのリンク破損を CORRUPT_DESCRIPTOR として検出することの確認
@@ -191,7 +191,7 @@ TEST_F(hashtableValidateTest, detects_linked_empty_slot)
         actual_ret); // [確認_異常系] - 空スロットへリンクしているときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // 終端 NUL のないキー破損を CORRUPT_DESCRIPTOR として検出することの確認
@@ -219,7 +219,7 @@ TEST_F(hashtableValidateTest, detects_key_without_terminator)
         actual_ret); // [確認_異常系] - NUL の無いキーがあるときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // 格納キーとバケットのハッシュ不一致破損を CORRUPT_DESCRIPTOR として検出することの確認
@@ -265,7 +265,7 @@ TEST_F(hashtableValidateTest, detects_hash_mismatch)
         actual_ret); // [確認_異常系] - バケットと再計算したハッシュが一致しないときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // 次リンクが capacity を超えている破損を CORRUPT_DESCRIPTOR として検出することの確認
@@ -293,7 +293,7 @@ TEST_F(hashtableValidateTest, detects_next_link_out_of_range)
         actual_ret); // [確認_異常系] - capacity を超える次リンクがあるときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // どのバケットからもリンクされていない使用中レコードの破損を CORRUPT_DESCRIPTOR として検出することの確認
@@ -318,7 +318,7 @@ TEST_F(hashtableValidateTest, detects_unlinked_in_use_record)
         actual_ret); // [確認_異常系] - 未リンクの使用中レコードがあるときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // next_empty 管理変数が実態と一致しない破損を CORRUPT_DESCRIPTOR として検出することの確認
@@ -330,7 +330,7 @@ TEST_F(hashtableValidateTest, detects_next_empty_mismatch)
 
     fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
-                                 &ht);    // [状態] - 何も追加せずテーブルを構築する(next_empty は 1)。
+                                 &ht);    // [状態] - 何も追加せずテーブルを構築する (next_empty は 1)。
     test_hashtable_set_next_empty(ht, 2); // [状態] - next_empty を実際の最小空きスロットと異なる値へ書き換える。
 
     // Pre-Assert
@@ -344,7 +344,7 @@ TEST_F(hashtableValidateTest, detects_next_empty_mismatch)
         actual_ret); // [確認_異常系] - next_empty が実態と一致しないときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // 使用中レコード件数 (in_use_count) の不一致破損を CORRUPT_DESCRIPTOR として検出することの確認
@@ -359,7 +359,7 @@ TEST_F(hashtableValidateTest, detects_in_use_count_mismatch)
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
     (void)cplat_hashtable_add(
         ht, "a", value.data(),
-        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [状態] - 1 件追加する(in_use_count は 1 になる)。
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [状態] - 1 件追加する (in_use_count は 1 になる)。
     test_hashtable_set_counts(ht, 2, 0);        // [状態] - in_use_count を実際のスロット状態と異なる値へ書き換える。
 
     // Pre-Assert
@@ -373,7 +373,7 @@ TEST_F(hashtableValidateTest, detects_in_use_count_mismatch)
         actual_ret); // [確認_異常系] - in_use_count が実態と一致しないときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // 削除済みレコード件数 (deleted_count) の不一致破損を CORRUPT_DESCRIPTOR として検出することの確認
@@ -388,7 +388,7 @@ TEST_F(hashtableValidateTest, detects_deleted_count_mismatch)
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
     (void)cplat_hashtable_add(ht, "a", value.data(),
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [状態] - 1 件追加する。
-    (void)cplat_hashtable_delete(ht, "a"); // [状態] - 削除する(in_use_count は 0、deleted_count は 1 になる)。
+    (void)cplat_hashtable_delete(ht, "a"); // [状態] - 削除する (in_use_count は 0、deleted_count は 1 になる)。
     test_hashtable_set_counts(ht, 0, 2); // [状態] - in_use_count は正しいまま、deleted_count だけ異なる値へ書き換える。
 
     // Pre-Assert
@@ -402,7 +402,7 @@ TEST_F(hashtableValidateTest, detects_deleted_count_mismatch)
         actual_ret); // [確認_異常系] - deleted_count が実態と一致しないときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 /*
@@ -462,7 +462,7 @@ TEST_F(hashtableValidateTest, detects_free_block_overlapping_a_live_block)
         actual_ret); // [確認_異常系] - 使用中ブロックと重なる空きブロックがあるときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // 空きブロックの合計長が実態と食い違う破損を CORRUPT_DESCRIPTOR として検出することの確認
@@ -490,7 +490,7 @@ TEST_F(hashtableValidateTest, detects_free_list_total_mismatch)
         actual_ret); // [確認_異常系] - 空きの合計が実態と一致しないときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // 未結合の隣接空きブロックが存在する破損を CORRUPT_DESCRIPTOR として検出することの確認
@@ -522,7 +522,7 @@ TEST_F(hashtableValidateTest, detects_adjacent_free_blocks_left_unmerged)
         actual_ret); // [確認_異常系] - 結合されていない隣接した空きブロックがあるときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // 空きブロック個数が上限を超過している破損を CORRUPT_DESCRIPTOR として検出することの確認
@@ -548,7 +548,7 @@ TEST_F(hashtableValidateTest, detects_free_count_beyond_upper_bound)
         actual_ret); // [確認_異常系] - 空きブロックの個数が上限を超えているときの cplat_hashtable_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // cplat_hashtable_attach で空きブロック個数が上限を超過している領域への接続が CORRUPT_DESCRIPTOR で拒否されることの確認
@@ -589,5 +589,5 @@ TEST_F(hashtableValidateTest, attach_rejects_free_count_beyond_upper_bound)
 
     // Cleanup
     cplat_hashtable_dispose(attached);
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }

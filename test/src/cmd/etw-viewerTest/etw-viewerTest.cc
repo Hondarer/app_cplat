@@ -119,7 +119,7 @@ TEST_F(etw_viewerTest, main_accepts_pid_filter)
     EXPECT_EQ(
         (uint32_t)4321,
         captured_context
-            .process_id_filter); // [確認_正常系] - captured_context.process_id_filter が 4321 であること。(コマンドラインで指定した pid が context へ伝わったことの確認)
+            .process_id_filter); // [確認_正常系] - captured_context.process_id_filter が 4321 であること。(コマンド ラインで指定した pid が context へ伝わったことの確認)
 }
 
 // 数値でない pid 指定が拒否されることの確認

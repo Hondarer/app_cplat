@@ -79,7 +79,7 @@ class hashtableGenerationTest : public Test
     NiceMock<Mock_cplat> mock_cplat_;
 };
 
-// レコード粒度のハッシュテーブルで add/update/delete 操作により世代番号が進むことの確認
+// レコード粒度のハッシュ テーブルで add/update/delete 操作により世代番号が進むことの確認
 TEST_F(hashtableGenerationTest, add_update_delete_advance_generation)
 {
     // Arrange
@@ -399,7 +399,7 @@ TEST_F(hashtableGenerationTest, scope_table_has_no_record_generation)
     cplat_hashtable_dispose(ht);
 }
 
-// cplat_hashtable_find_generation が衝突チェインを走査して正しくレコード世代を取得できることの確認
+// cplat_hashtable_find_generation が衝突チェーンを走査して正しくレコード世代を取得できることの確認
 TEST_F(hashtableGenerationTest, find_generation_walks_chain)
 {
     // Arrange
@@ -425,19 +425,19 @@ TEST_F(hashtableGenerationTest, find_generation_walks_chain)
     int actual_ret_first = cplat_hashtable_find_generation(ht, "a", &first_generation);
     (void)cplat_hashtable_add(
         ht, peer, value.data(),
-        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 同一バケットへ別キーを追加してチェイン先頭をずらす。
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 同一バケットへ別キーを追加してチェーン先頭をずらす。
     int actual_ret_walked =
-        cplat_hashtable_find_generation(ht, "a", &walked_generation); // [手順] - チェインを辿って世代を読む。
+        cplat_hashtable_find_generation(ht, "a", &walked_generation); // [手順] - チェーンを辿って世代を読む。
     int actual_ret_missing =
         cplat_hashtable_find_generation(ht, "zz", &missing_generation); // [手順] - 未登録のキーで検索する。
 
     // Assert
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret_first); // [確認_正常系] - チェイン先頭のキーに対する cplat_hashtable_find_generation() の戻り値が CPLAT_OK であること。
+        actual_ret_first); // [確認_正常系] - チェーン先頭のキーに対する cplat_hashtable_find_generation() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret_walked); // [確認_正常系] - チェインを辿ったときの cplat_hashtable_find_generation() の戻り値が CPLAT_OK であること。
+        actual_ret_walked); // [確認_正常系] - チェーンを辿ったときの cplat_hashtable_find_generation() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         first_generation,
         walked_generation); // [確認_正常系] - walked_generation が first_generation と一致すること。(辿っても同じ世代が得られることの確認)

@@ -123,7 +123,7 @@ TEST_F(hashtableUpsertTest, inserts_then_updates_the_same_key)
     cplat_hashtable_dispose(ht);
 }
 
-// cplat_hashtable_upsert の inserted 出力ポインタに NULL を渡しても新規追加および更新が成功することの確認
+// cplat_hashtable_upsert の inserted 出力ポインターに NULL を渡しても新規追加および更新が成功することの確認
 TEST_F(hashtableUpsertTest, accepts_null_inserted_out)
 {
     // Arrange
@@ -200,7 +200,7 @@ TEST_F(hashtableUpsertTest, revives_deleted_key_with_the_given_value)
     cplat_hashtable_dispose(ht);
 }
 
-// ハッシュテーブル満杯時に cplat_hashtable_upsert で新規キーを追加すると LIMIT_EXCEEDED となり既存キーの更新は成功することの確認
+// ハッシュ テーブル満杯時に cplat_hashtable_upsert で新規キーを追加すると LIMIT_EXCEEDED となり既存キーの更新は成功することの確認
 TEST_F(hashtableUpsertTest, reports_limit_exceeded_when_table_is_full)
 {
     // Arrange
@@ -234,7 +234,7 @@ TEST_F(hashtableUpsertTest, reports_limit_exceeded_when_table_is_full)
     cplat_hashtable_dispose(ht);
 }
 
-// cplat_hashtable_upsert に不正な引数や範囲外キーを渡した場合に適切なエラーコードが返ることの確認
+// cplat_hashtable_upsert に不正な引数や範囲外キーを渡した場合に適切なエラー コードが返ることの確認
 TEST_F(hashtableUpsertTest, guards_reject_invalid_arguments)
 {
     // Arrange
@@ -272,7 +272,7 @@ TEST_F(hashtableUpsertTest, guards_reject_invalid_arguments)
     cplat_hashtable_dispose(ht);
 }
 
-// cplat_hashtable_upsert で同一バケットの衝突チェイン先頭ではないキーでも正常に値が更新されることの確認
+// cplat_hashtable_upsert で同一バケットの衝突チェーン先頭ではないキーでも正常に値が更新されることの確認
 TEST_F(hashtableUpsertTest, updates_key_that_is_not_at_chain_head)
 {
     // Arrange
@@ -296,16 +296,16 @@ TEST_F(hashtableUpsertTest, updates_key_that_is_not_at_chain_head)
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_upsert(ht, "a", value.data(), nullptr);
     (void)cplat_hashtable_upsert(ht, peer, value.data(),
-                                 nullptr); // [手順] - 同一バケットへ別キーを足してチェイン先頭をずらす。
+                                 nullptr); // [手順] - 同一バケットへ別キーを足してチェーン先頭をずらす。
     fill_value(&value, "v3");
     int actual_ret_upsert =
-        cplat_hashtable_upsert(ht, "a", value.data(), &inserted); // [手順] - チェイン先頭でないキーを upsert する。
+        cplat_hashtable_upsert(ht, "a", value.data(), &inserted); // [手順] - チェーン先頭でないキーを upsert する。
     int actual_ret_read = cplat_hashtable_find_value_copy(ht, "a", read_back.data(), read_back.size(), &required);
 
     // Assert
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret_upsert); // [確認_正常系] - チェイン先頭でないキーに対する cplat_hashtable_upsert() の戻り値が CPLAT_OK であること。
+        actual_ret_upsert); // [確認_正常系] - チェーン先頭でないキーに対する cplat_hashtable_upsert() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(0, inserted); // [確認_正常系] - inserted が 0 であること。(既存更新として報告されたことの確認)
     EXPECT_EQ(CPLAT_OK, actual_ret_read);
     // [確認_正常系] - cplat_hashtable_find_value_copy() の戻り値が CPLAT_OK であること。
@@ -319,7 +319,7 @@ TEST_F(hashtableUpsertTest, updates_key_that_is_not_at_chain_head)
     cplat_hashtable_dispose(ht);
 }
 
-// 可変長文字列値のハッシュテーブルで cplat_hashtable_upsert 時にストレージ容量を超える値で更新した場合に STORAGE_FULL が返ることの確認
+// 可変長文字列値のハッシュ テーブルで cplat_hashtable_upsert 時にストレージ容量を超える値で更新した場合に STORAGE_FULL が返ることの確認
 TEST_F(hashtableUpsertTest, reports_storage_full_when_variable_value_does_not_fit)
 {
     // Arrange

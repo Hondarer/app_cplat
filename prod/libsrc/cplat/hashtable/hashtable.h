@@ -16,7 +16,7 @@
  *  テーブルは、識別子・ヘッダー・バケット配列・エントリ配列からなる「管理領域」と、
  *  値配列 (data[N]) からなる「データ領域」の 2 ブロックで構成されます。\n
  *  両者は連続している必要がありません。データ領域は、
- *  メモリマップド ファイル (@c cplat_mmap) など管理領域と独立した領域を
+ *  メモリ マップド ファイル (@c cplat_mmap) など管理領域と独立した領域を
  *  想定しています。\n
  *  管理領域とデータ領域は、いずれも永続化して意味のある状態だけで構成し、
  *  アドレス情報や一時的なフラグの類は含みません。@ref cplat_hashtable_create /
@@ -96,7 +96,7 @@
  *  可変長ストレージの使用バイト数、空きリストの要素数、
  *  テーブル横断の変更時刻が続きます。\n
  *  いずれも永続化して意味のある状態です。アドレスや一時フラグの類は管理領域に
- *  含みません(それらは内部管理データ側が持ちます)。\n
+ *  含みません (それらは内部管理データ側が持ちます)。\n
  *  @p next_empty は 1 相対の最小空きスロットです。満杯のときは 0 です。\n
  *  実装中件数・削除済み件数は @ref cplat_hashtable_count_status 等が
  *  そのまま返す走査済みの値で、各更新 API が差分更新します。\n
@@ -266,7 +266,7 @@ struct hashtable_persist_header
     cplat_hashtable_config config;  /**< 構築時の設定の複製です。 */
     uint64_t next_empty;            /**< 1 相対の最小空きです。満杯のときは 0 です。 */
     uint64_t in_use_count;          /**< 実装中の件数です。 */
-    uint64_t deleted_count;         /**< 削除済み(加齢中および終端 255 を含む)の件数です。 */
+    uint64_t deleted_count;         /**< 削除済み (加齢中および終端 255 を含む) の件数です。 */
     uint64_t key_storage_used;      /**< 可変長キー ストレージの使用バイト数です。 */
     uint64_t value_storage_used;    /**< 可変長値ストレージの使用バイト数です。 */
     uint64_t key_free_count;        /**< 可変長キー ストレージの空きリストの要素数です。 */
@@ -275,7 +275,7 @@ struct hashtable_persist_header
     uint64_t table_generation;      /**< 変更のたびに 1 ずつ増える単調な値です。 */
 };
 
-/* ヘッダー サイズは hashtable_mgmt_layout の整列前提(uint64_t 境界)を満たす。 */
+/* ヘッダー サイズは hashtable_mgmt_layout の整列前提 (uint64_t 境界) を満たす。 */
 _Static_assert(sizeof(struct hashtable_persist_header) % _Alignof(uint64_t) == 0,
                "cplat: hashtable_persist_header size must be a multiple of _Alignof(uint64_t)");
 
@@ -292,7 +292,7 @@ _Static_assert(sizeof(struct hashtable_persist_header) % _Alignof(uint64_t) == 0
 struct cplat_hashtable
 {
     struct hashtable_persist_header *hdr; /**< 永続化領域の先頭です。実行時のみ有効な内部参照です。 */
-    unsigned char *data;                  /**< データ領域(値配列)の先頭です。実行時のみ有効です。 */
+    unsigned char *data;                  /**< データ領域 (値配列) の先頭です。実行時のみ有効です。 */
 
     /* 次は hdr->config から導出したレイアウトの控えです。永続化しません。 */
     size_t off_bucket_head; /**< 管理領域先頭からバケット配列までのバイト オフセットです。 */
@@ -692,7 +692,7 @@ size_t hashtable_data_region_align(const cplat_hashtable_config *config);
  *  @return         成功なら 0、あふれなら -1 です。
  *
  *  管理領域は識別子・ヘッダー・バケット配列・エントリ配列からなり、
- *  値配列(データ領域)は含みません。\n
+ *  値配列 (データ領域) は含みません。\n
  *  @p timestamp_scope はエントリ配置に使います。@p lifetime は使いません。\n
  *  @p key_type は、可変長のとき空きリストを置くために使います。\n
  *  構築済みテーブルではあふれません。呼び出し側は戻り値を捨てて構いません。
@@ -701,7 +701,7 @@ int hashtable_mgmt_layout(const cplat_hashtable_config *config, size_t *off_buck
                           size_t *mgmt_size_out);
 
 /**
- *  @brief          データ領域(値配列)の総バイト数を求めます。
+ *  @brief          データ領域 (値配列) の総バイト数を求めます。
  *  @param[in]      config         設定。NULL を渡してはなりません。
  *  @param[out]     data_size_out  データ領域の総バイト数。NULL を渡してはなりません。
  *  @return         成功なら 0、あふれなら -1 です。
@@ -714,8 +714,8 @@ int hashtable_data_region_size(const cplat_hashtable_config *config, size_t *dat
  *  @brief          @p hdr->config からレイアウトの控えを求め直します。
  *  @param[in,out]  ht  対象。NULL を渡してはなりません。
  *
- *  @ref cplat_hashtable の off_bucket_head 、off_entries 、mgmt_size 、entry_stride 、
- *  key_offset 、value_stride 、free_list_size と、可変長かどうかの旗を設定します。\n
+ *  @ref cplat_hashtable の off_bucket_head、off_entries、mgmt_size、entry_stride、
+ *  key_offset、value_stride、free_list_size と、可変長かどうかの旗を設定します。\n
  *  構築済みテーブルではあふれないため、算出の失敗は起こりません。\n
  *  @p hdr を差し替えたとき、および @p hdr->config を書き換えたときに呼びます。
  */

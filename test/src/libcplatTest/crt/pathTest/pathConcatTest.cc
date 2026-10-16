@@ -322,11 +322,11 @@ TEST_F(pathConcatTest, get_temp_dir_preserves_root_directory)
                 std::memcpy(buffer, "/", sizeof("/"));
                 return CPLAT_OK;
             })); // [Pre-Assert確認_正常系] - cplat_getenv() が 1 回呼び出されること。
-                 // [Pre-Assert手順] - TMPDIR としてルートディレクトリ "/" を返却する。
+                 // [Pre-Assert手順] - TMPDIR としてルート ディレクトリ "/" を返却する。
 
     // Act
     int result = cplat_path_get_temp_dir(
-        output, sizeof(output), nullptr); // [手順] - TMPDIR がルートディレクトリの状態で一時ディレクトリを取得する。
+        output, sizeof(output), nullptr); // [手順] - TMPDIR がルート ディレクトリの状態で一時ディレクトリを取得する。
 
     // Assert
     EXPECT_EQ(

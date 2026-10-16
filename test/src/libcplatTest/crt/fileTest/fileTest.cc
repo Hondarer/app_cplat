@@ -217,7 +217,7 @@ TEST_F(fileTest, append_open_reports_existing_size)
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq(kPath), O_WRONLY | O_CREAT | O_APPEND | kWriteThroughFlag, 0644))
         .WillOnce(Return(
             kFakeFd)); // [Pre-Assert確認_正常系] - open() が kPath と等しい文字列、O_WRONLY | O_CREAT | O_APPEND | kWriteThroughFlag、0644 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - 番兵記述子 7 を返却する。
+                       // [Pre-Assert手順] - センチネル記述子 7 を返却する。
     EXPECT_CALL(mock_sys_stat_, fstat(_, _, _, kFakeFd, _))
         .WillOnce(
             [](const char *, int, const char *, int, struct stat *st)
@@ -262,7 +262,7 @@ TEST_F(fileTest, truncate_open_resets_existing_file_size)
                 open(_, _, _, StrEq(kPath), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | kWriteThroughFlag, 0644))
         .WillOnce(Return(
             kFakeFd)); // [Pre-Assert確認_正常系] - open() が kPath と等しい文字列、O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | kWriteThroughFlag、0644 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - 番兵記述子 7 を返却する。
+                       // [Pre-Assert手順] - センチネル記述子 7 を返却する。
     EXPECT_CALL(mock_sys_stat_, fstat(_, _, _, kFakeFd, _))
         .WillOnce(
             [](const char *, int, const char *, int, struct stat *st)
@@ -318,7 +318,7 @@ TEST_F(fileTest, write_then_reopen_appends)
                 fill_stat(st, 3, 1, 1);
                 return 0;
             }); // [Pre-Assert確認_正常系] - fstat() が kFakeFd を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 番兵記述子 7 と書き込み長 3、サイズ 3 を返却する。
+                // [Pre-Assert手順] - センチネル記述子 7 と書き込み長 3、サイズ 3 を返却する。
 
     // Act
     int actual_ret_file_open = cplat_file_open(&file, kPath,
@@ -347,7 +347,7 @@ TEST_F(fileTest, write_then_reopen_appends)
     // [Pre-Assert手順] - open() にて kFakeFd を返す。
     EXPECT_CALL(mock_unistd_, write(_, _, _, kFakeFd, _, 3u))
         .WillOnce(Return(3)); // [Pre-Assert確認_正常系] - write() が kFakeFd、3u を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 番兵記述子 7 と書き込み長 3 を返却する。
+                              // [Pre-Assert手順] - センチネル記述子 7 と書き込み長 3 を返却する。
 
     // Act_2
     (void)cplat_file_close(&file, nullptr);
@@ -488,7 +488,7 @@ TEST_F(fileTest, default_access_remains_write_only)
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq(kPath), O_WRONLY | O_CREAT, 0644))
         .WillOnce(Return(
             kFakeFd)); // [Pre-Assert確認_正常系] - open() が kPath と等しい文字列、O_WRONLY | O_CREAT、0644 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 番兵記述子 7 を返却する。
+    // [Pre-Assert手順] - センチネル記述子 7 を返却する。
     EXPECT_CALL(mock_unistd_, write(_, _, _, kFakeFd, _, 3u))
         .WillOnce(Return(3)); // [Pre-Assert確認_正常系] - write() が kFakeFd、3u を指定して 1 回呼び出されること。
                               // [Pre-Assert手順] - 書き込み長 3 を返却する。
@@ -523,7 +523,7 @@ TEST_F(fileTest, explicit_write_only_open_allows_write)
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq(kPath), O_WRONLY | O_CREAT, 0644))
         .WillOnce(Return(
             kFakeFd)); // [Pre-Assert確認_正常系] - open() が kPath と等しい文字列、O_WRONLY | O_CREAT、0644 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 番兵記述子 7 を返却する。
+    // [Pre-Assert手順] - センチネル記述子 7 を返却する。
     EXPECT_CALL(mock_unistd_, write(_, _, _, kFakeFd, _, 3u))
         .WillOnce(Return(3)); // [Pre-Assert確認_正常系] - write() が kFakeFd、3u を指定して 1 回呼び出されること。
                               // [Pre-Assert手順] - 書き込み長 3 を返却する。
@@ -558,7 +558,7 @@ TEST_F(fileTest, read_only_open_rejects_write)
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq(kPath), O_RDONLY, 0644))
         .WillOnce(Return(
             kFakeFd)); // [Pre-Assert確認_正常系] - open() が kPath と等しい文字列、O_RDONLY、0644 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - 番兵記述子 7 を返却する。
+                       // [Pre-Assert手順] - センチネル記述子 7 を返却する。
     EXPECT_CALL(mock_unistd_, write(_, _, _, _, _, _))
         .Times(
             0); // [Pre-Assert確認_異常系] - write() が呼び出されないこと。(読み取り専用でオープンした後は write() へ進まないことの確認)
@@ -631,7 +631,7 @@ TEST_F(fileTest, read_write_open_allows_write_and_reports_size)
                 fill_stat(st, 5, 1, 1);
                 return 0;
             }); // [Pre-Assert確認_正常系] - fstat() が kFakeFd を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 番兵記述子 7 と書き込み長 5、サイズ 5 を返却する。
+                // [Pre-Assert手順] - センチネル記述子 7 と書き込み長 5、サイズ 5 を返却する。
 
     // Act
     int actual_ret_file_open =
@@ -669,7 +669,7 @@ TEST_F(fileTest, create_new_succeeds_for_absent_file)
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq(kPath), O_RDWR | O_CREAT | O_EXCL, 0644))
         .WillOnce(Return(
             kFakeFd)); // [Pre-Assert確認_正常系] - open() が kPath と等しい文字列、O_RDWR | O_CREAT | O_EXCL、0644 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - 番兵記述子 7 を返却する。
+                       // [Pre-Assert手順] - センチネル記述子 7 を返却する。
 
     // Act
     int actual_ret_file_open = cplat_file_open(&file, kPath,

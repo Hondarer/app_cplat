@@ -977,7 +977,7 @@ TEST_F(socketTest, socket_options_succeed)
     int actual_ret_broadcast_enabled =
         cplat_socket_set_broadcast(kSocket, 1, &detail); // [手順] - ブロードキャストを有効にする。
     int actual_ret_interface = cplat_socket_set_multicast_interface(
-        kSocket, CPLAT_IPV4_ADDR_LOOPBACK, &detail); // [手順] - マルチキャスト インターフェースを設定する。
+        kSocket, CPLAT_IPV4_ADDR_LOOPBACK, &detail); // [手順] - マルチキャスト インターフェイスを設定する。
     int actual_ret_join = cplat_socket_join_multicast_group(kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
                                                             &detail); // [手順] - マルチキャスト グループへ参加する。
     int actual_ret_leave =
@@ -1067,7 +1067,7 @@ TEST_F(socketTest, socket_options_report_invalid_and_os_failure)
         CPLAT_INVALID_SOCKET, 1, &detail); // [手順] - 無効なソケットでブロードキャストを設定する。
     int actual_ret_interface_invalid =
         cplat_socket_set_multicast_interface(CPLAT_INVALID_SOCKET, CPLAT_IPV4_ADDR_ANY,
-                                             &detail); // [手順] - 無効なソケットでインターフェースを設定する。
+                                             &detail); // [手順] - 無効なソケットでインターフェイスを設定する。
     int actual_ret_join_invalid =
         cplat_socket_join_multicast_group(CPLAT_INVALID_SOCKET, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
                                           &detail); // [手順] - 無効なソケットでグループ参加を設定する。
@@ -1077,7 +1077,7 @@ TEST_F(socketTest, socket_options_report_invalid_and_os_failure)
     int actual_ret_failure =
         cplat_socket_set_reuse_address(kSocket, 1, &detail); // [手順] - オプション設定の失敗を注入する。
     int actual_ret_interface_failure = cplat_socket_set_multicast_interface(
-        kSocket, CPLAT_IPV4_ADDR_LOOPBACK, &detail); // [手順] - インターフェース設定の失敗を注入する。
+        kSocket, CPLAT_IPV4_ADDR_LOOPBACK, &detail); // [手順] - インターフェイス設定の失敗を注入する。
     int actual_ret_join_failure =
         cplat_socket_join_multicast_group(kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
                                           &detail); // [手順] - グループ参加の失敗を注入する。
@@ -1103,7 +1103,7 @@ TEST_F(socketTest, socket_options_report_invalid_and_os_failure)
         actual_ret_failure); // [確認_異常系] - オプション設定失敗時の cplat_socket_set_reuse_address() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        actual_ret_interface_failure); // [確認_異常系] - インターフェース設定失敗時の cplat_socket_set_multicast_interface() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        actual_ret_interface_failure); // [確認_異常系] - インターフェイス設定失敗時の cplat_socket_set_multicast_interface() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         actual_ret_join_failure); // [確認_異常系] - グループ参加失敗時の cplat_socket_join_multicast_group() の戻り値が CPLAT_ERR_UNKNOWN であること。

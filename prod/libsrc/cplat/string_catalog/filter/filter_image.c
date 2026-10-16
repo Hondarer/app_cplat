@@ -449,7 +449,7 @@ static bool is_constant_allowed(const uint8_t field, const uint8_t operator_kind
     }
 }
 
-/* コンパイラーから同じ規則を使用するための入口 */
+/* コンパイラから同じ規則を使用するための入口 */
 int string_catalog_filter_is_constant_allowed(const uint8_t field, const uint8_t operator_kind,
                                               const uint8_t constant_kind)
 {

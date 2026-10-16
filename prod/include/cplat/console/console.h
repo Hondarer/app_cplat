@@ -73,7 +73,7 @@ extern "C"
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
-     *  プロセス起動直後のシングル スレッド フェーズで 1 度だけ呼び出してください。
+     *  プロセス起動直後のシングルスレッド フェーズで 1 度だけ呼び出してください。
      */
     CPLAT_EXPORT void CPLAT_API cplat_console_init(void);
 
@@ -89,7 +89,7 @@ extern "C"
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
-     *  プロセス終了直前のシングル スレッド フェーズで呼び出してください。
+     *  プロセス終了直前のシングルスレッド フェーズで呼び出してください。
      */
     CPLAT_EXPORT void CPLAT_API cplat_console_dispose(void);
 
@@ -116,7 +116,7 @@ extern "C"
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
-     *  プロセス起動直後のシングル スレッド フェーズで呼び出してください。
+     *  プロセス起動直後のシングルスレッド フェーズで呼び出してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_console_attach_parent(int *argc, char **argv, int *attached_out);
 

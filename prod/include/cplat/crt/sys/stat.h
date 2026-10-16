@@ -64,7 +64,7 @@ extern "C"
      *
      *  Linux では `stat`、Windows では `_wstat64` を使用します。\n
      *  Windows の `_wstat64` は時刻欄を現地時刻経由で `time_t` へ変換するため、
-     *  タイムゾーン設定によっては Unix epoch UTC と秒部に差異が生じます。
+     *  タイム ゾーン設定によっては Unix epoch UTC と秒部に差異が生じます。
      *  本関数は `GetFileAttributesExW` が返す UTC の `FILETIME` から秒部を取り直し、
      *  `st_atime` / `st_mtime` / `st_ctime` を Linux の `stat` と同じ Unix epoch UTC に揃えます。\n
      *  `GetFileAttributesExW` に失敗した場合は `_wstat64` の時刻欄をそのまま返します。

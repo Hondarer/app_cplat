@@ -219,7 +219,7 @@ TEST_F(fdTest, dup2_returns_zero_on_success)
 #endif /* PLATFORM_ */
 
     // Act
-    int actual_ret = cplat_dup2(kFakeFd, kDupFd, nullptr); // [手順] - 番兵記述子 7 を 8 へ複製する。
+    int actual_ret = cplat_dup2(kFakeFd, kDupFd, nullptr); // [手順] - センチネル記述子 7 を 8 へ複製する。
 
     // Assert
     EXPECT_EQ(

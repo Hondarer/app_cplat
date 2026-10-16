@@ -426,7 +426,7 @@ TEST_F(pathGetFullTest, returns_enomem_when_normalization_allocation_fails)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_calloc(PLATFORM_PATH_MAX, sizeof(size_t)))
         .WillOnce(Return(
-            nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が PLATFORM_PATH_MAX、sizeofを指定して 1 回呼び出されること。
+            nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が PLATFORM_PATH_MAX、sizeof を指定して 1 回呼び出されること。
                        // [Pre-Assert手順] - cplat_calloc() から NULL を返却する。
 
     // Act

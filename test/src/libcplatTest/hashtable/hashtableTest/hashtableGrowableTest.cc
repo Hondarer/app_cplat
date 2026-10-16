@@ -91,7 +91,7 @@ TEST_F(hashtableGrowableTest, add_grows_capacity_and_preserves_existing_record)
         actual_ret_validate); // [確認_正常系] - 自動拡張後の cplat_hashtable_validate() の戻り値が CPLAT_OK であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // 断片化による連続領域不足時にストレージを増やさず同容量で再構築することの確認
@@ -141,7 +141,7 @@ TEST_F(hashtableGrowableTest, add_rebuilds_same_size_for_fragmentation)
         actual_ret_validate); // [確認_正常系] - 同容量再構築後の cplat_hashtable_validate() の戻り値が CPLAT_OK であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // 更新値が現在容量に収まらない場合に値ストレージのみを拡張して更新成功することの確認
@@ -190,7 +190,7 @@ TEST_F(hashtableGrowableTest, update_rec_grows_value_storage)
             .capacity); // [確認_正常系] - current.capacity が 2 であること。(更新では capacity が変わらないことの確認)
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // upsert の追加およびキー指定更新において必要な領域が自動拡張されることの確認
@@ -243,7 +243,7 @@ TEST_F(hashtableGrowableTest, upsert_and_update_grow_required_regions)
         15u); // [確認_正常系] - current.value_storage_size が 15 以上であること。(新旧値が共存できる値ストレージ容量であることの確認)
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // 自動再構築用の一時領域確保失敗時に元の領域と内容が維持されることの確認
@@ -293,7 +293,7 @@ TEST_F(hashtableGrowableTest, allocation_failure_preserves_original_buffers)
     EXPECT_EQ(1u, count); // [確認_正常系] - count が 1 であること。(失敗した追加によって件数が変わらないことの確認)
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // 自動拡張上限到達時に LIMIT_EXCEEDED を返し元のテーブルが維持されることの確認
@@ -330,7 +330,7 @@ TEST_F(hashtableGrowableTest, limits_preserve_original_table)
         actual_ret_validate); // [確認_正常系] - 失敗後の cplat_hashtable_validate() の戻り値が CPLAT_OK であること。
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // 通常の create で構築したテーブルが満杯時に自動拡張せず LIMIT_EXCEEDED を返すことの確認
@@ -354,7 +354,7 @@ TEST_F(hashtableGrowableTest, ordinary_create_remains_fixed_capacity)
         actual_ret_add); // [確認_異常系] - 通常の create で構築した満杯テーブルへの cplat_hashtable_add() の戻り値が CPLAT_ERR_LIMIT_EXCEEDED であること。(自動拡張せず固定長の結果コードを維持したことの確認)
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // 初期設定と矛盾する自動拡張上限の指定が INVALID_ARGUMENT で拒否されることの確認

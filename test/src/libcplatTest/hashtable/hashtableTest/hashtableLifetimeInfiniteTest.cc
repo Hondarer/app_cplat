@@ -33,7 +33,7 @@ class hashtableLifetimeInfiniteTest : public Test
     NiceMock<Mock_cplat> mock_cplat_;
 };
 
-// lifetime に 255（無限）を指定してハッシュテーブルを作成でき、設定に反映されることの確認
+// lifetime に 255 (無限) を指定してハッシュ テーブルを作成でき、設定に反映されることの確認
 TEST_F(hashtableLifetimeInfiniteTest, create_accepts_infinite_lifetime)
 {
     // Arrange
@@ -186,7 +186,7 @@ TEST_F(hashtableLifetimeInfiniteTest, insert_direct_accepts_terminal_status)
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
 }
 
-// 有限寿命（254）のテーブルに対して設定寿命以上のステータスを直接挿入した場合はスキップされることの確認
+// 有限寿命 (254) のテーブルに対して設定寿命以上のステータスを直接挿入した場合はスキップされることの確認
 TEST_F(hashtableLifetimeInfiniteTest, insert_direct_skips_beyond_finite_max)
 {
     // Arrange

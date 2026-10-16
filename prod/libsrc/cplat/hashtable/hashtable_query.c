@@ -627,7 +627,7 @@ int cplat_hashtable_count_status(const cplat_hashtable *ht, size_t *in_use_out, 
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    /* 永続化領域のカウンタをそのまま返す。capacity に依存しない一定時間。 */
+    /* 永続化領域のカウンターをそのまま返す。capacity に依存しない一定時間。 */
     if (in_use_out != NULL)
     {
         *in_use_out = (size_t)ht->hdr->in_use_count;

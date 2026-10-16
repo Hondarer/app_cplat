@@ -220,18 +220,18 @@ TEST_F(hashtableConfigTest, buffer_ref_allows_partial_query)
         CPLAT_OK,
         actual_ret_only_mgmt); // [確認_正常系] - 管理側だけを問い合わせた cplat_hashtable_buffer_ref() の戻り値が CPLAT_OK であること。
     EXPECT_NE(nullptr,
-              mgmt); // [確認_正常系] - mgmt が nullptr 以外であること。(管理領域ポインタが取得できたことの確認)
+              mgmt); // [確認_正常系] - mgmt が nullptr 以外であること。(管理領域ポインターが取得できたことの確認)
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_only_data); // [確認_正常系] - データ側だけを問い合わせた cplat_hashtable_buffer_ref() の戻り値が CPLAT_OK であること。
     EXPECT_NE(nullptr,
-              data); // [確認_正常系] - data が nullptr 以外であること。(データ領域ポインタが取得できたことの確認)
+              data); // [確認_正常系] - data が nullptr 以外であること。(データ領域ポインターが取得できたことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht);
 }
 
-// 内部確保されたハッシュテーブルにおいて cplat_hashtable_buffer_ref が管理領域とデータ領域の連続した参照を返すことの確認
+// 内部確保されたハッシュ テーブルにおいて cplat_hashtable_buffer_ref が管理領域とデータ領域の連続した参照を返すことの確認
 TEST_F(hashtableConfigTest, buffer_ref_returns_internal_regions_contiguously)
 {
     // Arrange
@@ -264,7 +264,7 @@ TEST_F(hashtableConfigTest, buffer_ref_returns_internal_regions_contiguously)
     cplat_hashtable_dispose(ht);
 }
 
-// 外部領域指定で構築および再接続したハッシュテーブルにおいて cplat_hashtable_buffer_ref が指定領域の参照を正しく返すことの確認
+// 外部領域指定で構築および再接続したハッシュ テーブルにおいて cplat_hashtable_buffer_ref が指定領域の参照を正しく返すことの確認
 TEST_F(hashtableConfigTest, buffer_ref_returns_external_regions_as_supplied)
 {
     // Arrange

@@ -155,7 +155,7 @@ TEST_F(endpointTest, parse_rejects_malformed_text)
 }
 // [サブ手順参照 名前=endpointTest.TearDown]
 
-// 正しい IPv4 文字列がネットワークバイトオーダーの値へ変換されることの確認
+// 正しい IPv4 文字列がネットワーク バイト オーダーの値へ変換されることの確認
 // [サブ手順参照 名前=endpointTest.SetUp]
 TEST_F(endpointTest, parse_converts_valid_text)
 {
@@ -187,7 +187,7 @@ TEST_F(endpointTest, parse_converts_valid_text)
 #endif /* PLATFORM_ */
 
     // Act
-    int actual_ret = cplat_ipv4_parse("127.0.0.1", &address); // [手順] - ループバックアドレスを解析する。
+    int actual_ret = cplat_ipv4_parse("127.0.0.1", &address); // [手順] - ループバック アドレスを解析する。
 
     // Assert
     EXPECT_EQ(

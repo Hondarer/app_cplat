@@ -29,7 +29,7 @@
  */
 
 #define CPLAT_ELEVATED_PROCESS_RESULT_MESSAGE_SIZE \
-    4096 /**< 昇格プロセスの結果メッセージを受け渡すバッファのバイト数 (終端 NUL を含む)。 */
+    4096 /**< 昇格プロセスの結果メッセージを受け渡すバッファーのバイト数 (終端 NUL を含む)。 */
 
 #ifdef __cplusplus
 extern "C"
@@ -153,7 +153,7 @@ extern "C"
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
-     *  プロセス起動直後のシングル スレッド フェーズで呼び出してください。
+     *  プロセス起動直後のシングルスレッド フェーズで呼び出してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_elevated_process_extract_result_target(int *argc, char **argv, int *detected_out);
 
@@ -231,7 +231,7 @@ extern "C"
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
-     *  プロセス起動直後のシングル スレッド フェーズで呼び出してください。
+     *  プロセス起動直後のシングルスレッド フェーズで呼び出してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_elevated_process_attach_output_pipes(int *argc, char **argv, int *attached_out);
 

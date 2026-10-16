@@ -7,7 +7,7 @@
  *  @version        1.0.0
  *
  *  Windows (ETW) と Linux (syslog) の差異を抽象化し、
- *  共通のトレース レベルとインターフェースを提供します。\n
+ *  共通のトレース レベルとインターフェイスを提供します。\n
  *  内部で `cplat/trace/etw.h` (Windows) または `cplat/trace/syslog.h` (Linux) を
  *  使用します。
  *

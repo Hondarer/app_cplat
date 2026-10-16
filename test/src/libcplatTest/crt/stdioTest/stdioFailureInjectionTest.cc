@@ -96,11 +96,11 @@ TEST(stdioFailureInjectionTest, fopen_reports_success_and_clears_detail)
     EXPECT_CALL(mock_stdio, fopen(_, _, _, StrEq("opened.txt"), StrEq("rb")))
         .WillOnce(Return(
             opened)); // [Pre-Assert確認_正常系] - fopen() が "opened.txt" と等しい文字列、"rb" と等しい文字列を指定して 1 回呼び出されること。
-                      // [Pre-Assert手順] - 番兵ストリームを返却する。
+                      // [Pre-Assert手順] - センチネル ストリームを返却する。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_stdio, _wfsopen(_, _, _, _, _, _))
         .WillOnce(Return(opened)); // [Pre-Assert確認_正常系] - _wfsopen() が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - 番兵ストリームを返却する。
+                                   // [Pre-Assert手順] - センチネル ストリームを返却する。
 #endif /* PLATFORM_ */
 
     // Act
@@ -275,7 +275,7 @@ TEST(stdioFailureInjectionTest, fflush_reports_success_for_valid_stream)
                               // [Pre-Assert手順] - 0 を返却する。
 
     // Act
-    int result = cplat_fflush(stream, &detail); // [手順] - 番兵ストリームへ fflush() を実行する。
+    int result = cplat_fflush(stream, &detail); // [手順] - センチネル ストリームへ fflush() を実行する。
 
     // Assert
     EXPECT_EQ(0, result); // [確認_正常系] - cplat_fflush() の戻り値が 0 であること。
@@ -569,7 +569,7 @@ TEST(stdioFailureInjectionTest, formatted_output_and_file_position_wrappers_work
 
     // Act
 #if defined(PLATFORM_LINUX)
-    int print_result = cplat_fprintf(stream, "%s", "abc"); // [手順] - 番兵ストリームへ文字列を fprintf する。
+    int print_result = cplat_fprintf(stream, "%s", "abc"); // [手順] - センチネル ストリームへ文字列を fprintf する。
 #endif                                                     /* PLATFORM_LINUX */
     int seek_result = cplat_fseek(stream, 0, SEEK_SET);    // [手順] - ファイル位置を先頭へ移動する。
     int64_t position = cplat_ftell(stream);                // [手順] - 現在のファイル位置を取得する。

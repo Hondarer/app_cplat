@@ -60,7 +60,7 @@ class hashtableResizeTest : public Test
     NiceMock<Mock_cplat> mock_cplat_;
 };
 
-// ハッシュテーブル拡大時にレコード番号、世代番号、タイムスタンプが保持されることの確認
+// ハッシュ テーブル拡大時にレコード番号、世代番号、タイムスタンプが保持されることの確認
 TEST_F(hashtableResizeTest, grow_preserves_record_numbers_and_stamps)
 {
     // Arrange
@@ -131,7 +131,7 @@ TEST_F(hashtableResizeTest, grow_preserves_record_numbers_and_stamps)
     cplat_hashtable_dispose(ht);
 }
 
-// ハッシュテーブル縮小時に範囲外となったレコード番号が詰め直され値と世代が保持されることの確認
+// ハッシュ テーブル縮小時に範囲外となったレコード番号が詰め直され値と世代が保持されることの確認
 TEST_F(hashtableResizeTest, shrink_renumbers_records_and_keeps_values)
 {
     // Arrange

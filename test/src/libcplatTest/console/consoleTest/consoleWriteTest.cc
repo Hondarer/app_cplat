@@ -135,7 +135,7 @@ TEST_F(consoleWriteTest, repeats_write_until_all_bytes_are_written)
                               // [Pre-Assert手順] - 2 byte だけ書き込んだものとして 2 を返却する。
     EXPECT_CALL(mock_unistd, write(_, _, _, _, _, 3))
         .WillOnce(Return(3)); // [Pre-Assert確認_正常系] - write() が 3 を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 残り全てを書き込んだものとして 3 を返却する。
+                              // [Pre-Assert手順] - 残りすべてを書き込んだものとして 3 を返却する。
 
     // Act
     int actual_ret = cplat_console_write(CPLAT_STREAM_STDOUT,

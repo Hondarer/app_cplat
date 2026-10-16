@@ -209,7 +209,7 @@ int hashtable_mgmt_layout(const cplat_hashtable_config *config, size_t *off_buck
     size_t region_size;
     size_t entry_stride;
 
-    /* ヘッダー サイズは uint64_t 境界の倍数(構造体定義直後の _Static_assert で保証)。整列不要。 */
+    /* ヘッダー サイズは uint64_t 境界の倍数 (構造体定義直後の _Static_assert で保証)。整列不要。 */
 
     /* あふれ検査より前に仮値で初期化し、早期 return でも呼び出し側へ未初期化値を渡さない。
        呼び出し側の大半は戻り値を捨てるため、この関数の契約として out パラメーターは
@@ -240,7 +240,7 @@ int hashtable_mgmt_layout(const cplat_hashtable_config *config, size_t *off_buck
         return -1;
     }
 
-    /* 直前の offset は uint64_t 境界の倍数同士の和のため、既に境界上にある。整列不要。 */
+    /* 直前の offset は uint64_t 境界の倍数同士の和のため、すでに境界上にある。整列不要。 */
 
     if (off_entries != NULL)
     {

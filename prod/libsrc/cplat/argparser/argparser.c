@@ -1050,7 +1050,7 @@ static void argparser_dispose_core(cplat_argparser *parser)
  *  @param[in,out]  parser  対象のパーサー ハンドル。NULL を渡してはなりません。
  *
  *  登録済みのオプション、解析結果、エラー情報をすべて捨てます。\n
- *  ハンドルは作り直さないため、既に取得済みのポインターは有効なままです。\n
+ *  ハンドルは作り直さないため、すでに取得済みのポインターは有効なままです。\n
  *  所有区分 (library_owned) は引き継ぎます。
  */
 static void argparser_reset_core(cplat_argparser *parser)

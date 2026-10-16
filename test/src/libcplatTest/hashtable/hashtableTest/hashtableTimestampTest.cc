@@ -129,8 +129,8 @@ TEST_F(hashtableTimestampTest, add_update_delete_stamp_realtime)
     time_t added_ref_sec = (added_ref == nullptr) ? 0 : added_ref->tv_sec;
     (void)cplat_hashtable_add(
         ht, peer, value.data(),
-        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 同一バケットへ別キーを追加してチェイン先頭をずらす。
-    int actual_ret_walk = cplat_hashtable_find_timestamp_val(ht, "a", &walked); // [手順] - チェインを辿って時刻を読む。
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 同一バケットへ別キーを追加してチェーン先頭をずらす。
+    int actual_ret_walk = cplat_hashtable_find_timestamp_val(ht, "a", &walked); // [手順] - チェーンを辿って時刻を読む。
     fill_value(&value, "v2");
     int actual_ret_update = cplat_hashtable_update(ht, "a", value.data());           // [手順] - 値を更新する。
     int actual_ret_update_time = cplat_hashtable_get_timestamp_val(ht, 1, &updated); // [手順] - 更新後の時刻を読む。
@@ -173,11 +173,11 @@ TEST_F(hashtableTimestampTest, add_update_delete_stamp_realtime)
             .tv_sec); // [確認_正常系] - added_copy.tv_sec が 1000 であること。(複製の秒が追加時刻と一致することの確認)
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret_walk); // [確認_正常系] - チェインを辿ったときの cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_OK であること。
+        actual_ret_walk); // [確認_正常系] - チェーンを辿ったときの cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         1000,
         walked
-            .tv_sec); // [確認_正常系] - walked.tv_sec が 1000 であること。(チェイン走査後も追加時刻が保たれることの確認)
+            .tv_sec); // [確認_正常系] - walked.tv_sec が 1000 であること。(チェーン走査後も追加時刻が保たれることの確認)
     EXPECT_EQ(CPLAT_OK, actual_ret_update); // [確認_正常系] - cplat_hashtable_update() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_OK,
@@ -231,7 +231,7 @@ TEST_F(hashtableTimestampTest, add_revive_keeps_previous_value_and_stamps)
     size_t deleted = 0;
 
     fill_config(&config, 2, 8, 8, 5,
-                CPLAT_HASHTABLE_KEY_STRING); // [状態] - lifetime 5 の設定を用意する(削除済みが残る)。
+                CPLAT_HASHTABLE_KEY_STRING); // [状態] - lifetime 5 の設定を用意する (削除済みが残る)。
     fill_value(&value, "old");
 
     // Pre-Assert
@@ -240,7 +240,7 @@ TEST_F(hashtableTimestampTest, add_revive_keeps_previous_value_and_stamps)
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(),
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 元の値で追加する。
-    (void)cplat_hashtable_delete(ht, "a"); // [手順] - 削除する(lifetime 5 のため削除済みのまま残る)。
+    (void)cplat_hashtable_delete(ht, "a"); // [手順] - 削除する (lifetime 5 のため削除済みのまま残る)。
     (void)cplat_hashtable_get_timestamp_val(ht, 1, &before_revive);   // [手順] - 削除直後のレコード時刻を保存する。
     (void)cplat_hashtable_get_table_timestamp_val(ht, &table_before); // [手順] - 削除直後のテーブル時刻を保存する。
     fill_value(&value, "new"); // [状態] - REVIVE では無視されるはずの新しい値を用意する。
@@ -664,7 +664,7 @@ TEST_F(hashtableTimestampTest, scope_table_record_timestamp_apis_are_unsupported
     cplat_hashtable_dispose(ht);
 }
 
-// テーブル粒度設定における insert_direct の引数制約およびテーブルタイムスタンプの挙動の確認
+// テーブル粒度設定における insert_direct の引数制約およびテーブル タイムスタンプの挙動の確認
 // [サブ手順参照 名前=hashtableTimestampTest.SetUp]
 TEST_F(hashtableTimestampTest, scope_table_insert_direct_and_table_timestamp)
 {

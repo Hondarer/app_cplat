@@ -136,7 +136,7 @@ TEST_F(errorTest, set_last_copies_saved_error_and_null_clears_it)
     EXPECT_EQ(0UL, cleared_error.code); // [確認_正常系] - cleared_error.code が 0UL であること。
 }
 
-// アクセサが NULL、空、ドメイン不一致を拒否することの確認
+// アクセサーが NULL、空、ドメイン不一致を拒否することの確認
 TEST_F(errorTest, accessors_reject_null_empty_and_mismatched_domain)
 {
     // Arrange

@@ -137,7 +137,7 @@ int cplat_hashtable_create(const cplat_hashtable_config *config, void *buf_mgmt,
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
-    /* 管理領域とデータ領域は、両方 NULL(内部確保)か両方非 NULL(外部指定)のいずれかに限る。 */
+    /* 管理領域とデータ領域は、両方 NULL(内部確保) か両方非 NULL(外部指定) のいずれかに限る。 */
     if ((buf_mgmt == NULL) != (buf_data == NULL))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
@@ -493,7 +493,7 @@ void cplat_hashtable_dispose(cplat_hashtable *ht)
     {
         return;
     }
-    /* 内部確保時は永続化領域とデータ領域が1ブロックのため、hdr の解放で両方片付く。 */
+    /* 内部確保時は永続化領域とデータ領域が 1 ブロックのため、hdr の解放で両方片付く。 */
     if (ht->owns_buffer != 0)
     {
         cplat_free(ht->hdr);

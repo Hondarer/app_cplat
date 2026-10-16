@@ -1440,7 +1440,7 @@ TEST(processTest, child_stdio_helpers_handle_modes_and_errors)
     EXPECT_CALL(mock_unistd, dup2(_, _, _, 11, STDOUT_FILENO))
         .WillOnce(
             Return(-1)); // [Pre-Assert確認_異常系] - dup2() が 11、STDOUT_FILENO を指定して 1 回呼び出されること。
-                         // [Pre-Assert手順] - ネイティブハンドル 11 の dup2 から -1 を返却する。
+                         // [Pre-Assert手順] - ネイティブ ハンドル 11 の dup2 から -1 を返却する。
     EXPECT_CALL(mock_unistd, dup2(_, _, _, 12, STDERR_FILENO))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - dup2() が 12、STDERR_FILENO を指定して 1 回呼び出されること。
                               // [Pre-Assert手順] - STDERR 向け dup2 から 0 を返却する。
@@ -1458,13 +1458,13 @@ TEST(processTest, child_stdio_helpers_handle_modes_and_errors)
     spec.mode = CPLAT_PROCESS_STDIO_NATIVE_HANDLE;
     spec.native_handle = -1;
     int invalid_handle_result = test_process_setup_child_stdio_one(
-        &spec, STDOUT_FILENO, O_WRONLY); // [手順] - 負のネイティブハンドルを設定する。
+        &spec, STDOUT_FILENO, O_WRONLY); // [手順] - 負のネイティブ ハンドルを設定する。
     spec.native_handle = 11;
     int dup_failure_result =
         test_process_setup_child_stdio_one(&spec, STDOUT_FILENO, O_WRONLY); // [手順] - dup2 の失敗を処理する。
     spec.native_handle = 12;
     int native_result =
-        test_process_setup_child_stdio_one(&spec, STDERR_FILENO, O_WRONLY); // [手順] - ネイティブハンドルを接続する。
+        test_process_setup_child_stdio_one(&spec, STDERR_FILENO, O_WRONLY); // [手順] - ネイティブ ハンドルを接続する。
     int invalid_mode_value = 99;
     spec.mode = static_cast<cplat_process_stdio_mode>(invalid_mode_value);
     int invalid_mode_result = test_process_setup_child_stdio_one(
@@ -1490,7 +1490,7 @@ TEST(processTest, child_stdio_helpers_handle_modes_and_errors)
               dup_failure_result); // [確認_異常系] - dup_failure_result が -1 であること。(dup2 が失敗することの確認)
     EXPECT_EQ(
         0,
-        native_result); // [確認_正常系] - native_result が 0 であること。(ネイティブハンドル接続が成功することの確認)
+        native_result); // [確認_正常系] - native_result が 0 であること。(ネイティブ ハンドル接続が成功することの確認)
     EXPECT_EQ(
         -1,
         invalid_mode_result); // [確認_異常系] - invalid_mode_result が -1 であること。(不正モードが拒否されることの確認)
@@ -1690,7 +1690,7 @@ TEST(processTest, environment_helpers_report_invalid_and_allocation_failures)
         duplicate_result); // [確認_異常系] - 環境エントリの複製に失敗した test_process_build_environment() の戻り値が nullptr と一致すること。(エントリ複製失敗で nullptr が返ることの確認)
 }
 
-// Linux の終了済みプロセスに対する待機と終了要求が冪等であることの確認
+// Linux の終了済みプロセスに対する待機と終了要求がべき等であることの確認
 TEST(processTest, completed_process_wait_and_terminate_are_idempotent)
 {
     // Arrange

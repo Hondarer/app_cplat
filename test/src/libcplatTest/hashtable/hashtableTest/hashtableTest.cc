@@ -95,7 +95,7 @@ TEST_F(hashtableTest, required_size_allows_partial_query)
     EXPECT_GT(data_size, 0u); // [確認_正常系] - data_size が 0 より大きいこと。(データ領域サイズが取得できたことの確認)
 }
 
-// ハッシュテーブルの生成から追加・検索・ステータス取得までのラウンドトリップ確認
+// ハッシュ テーブルの生成から追加・検索・ステータス取得までのラウンド トリップ確認
 TEST_F(hashtableTest, create_and_add_find_round_trip)
 {
     // Arrange
@@ -428,7 +428,7 @@ TEST_F(hashtableTest, delete_ages_until_reuse)
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
 }
 
-// 外部バッファーを用いたハッシュテーブルの作成・アタッチ・検証・検索の確認
+// 外部バッファーを用いたハッシュ テーブルの作成・アタッチ・検証・検索の確認
 TEST_F(hashtableTest, external_buffer_attach_and_validate)
 {
     // Arrange
@@ -442,7 +442,7 @@ TEST_F(hashtableTest, external_buffer_attach_and_validate)
     unsigned char small_mgmt[8];
 
     fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - 外部バッファー用の設定を用意する。
-    std::memset(small_mgmt, 0xAB, sizeof(small_mgmt));            // [状態] - 不足バッファーの番兵を埋める。
+    std::memset(small_mgmt, 0xAB, sizeof(small_mgmt));            // [状態] - 不足バッファーのセンチネルを埋める。
 
     // Pre-Assert
 
@@ -499,7 +499,7 @@ TEST_F(hashtableTest, external_buffer_attach_and_validate)
     cplat_hashtable_dispose(reattached);
 }
 
-// 同一外部バッファーへの複数ハンドルアタッチにおいて一方の破棄が他方に影響しないことの確認
+// 同一外部バッファーへの複数ハンドル アタッチにおいて一方の破棄が他方に影響しないことの確認
 TEST_F(hashtableTest, attach_shares_buffer_without_corrupting_other_handle)
 {
     // Arrange
@@ -528,7 +528,7 @@ TEST_F(hashtableTest, attach_shares_buffer_without_corrupting_other_handle)
         ht1, "shared", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 一方のハンドルで追加する。
     int actual_ret_find_via_ht2 =
         cplat_hashtable_find_value_ref(ht2, "shared", &found); // [手順] - もう一方のハンドルから検索する。
-    cplat_hashtable_dispose(ht2); // [手順] - 一方を破棄する(owns_buffer が 0 のため共有バッファーは解放されない)。
+    cplat_hashtable_dispose(ht2); // [手順] - 一方を破棄する (owns_buffer が 0 のため共有バッファーは解放されない)。
     int actual_ret_find_via_ht1_after_dispose = cplat_hashtable_find_value_ref(
         ht1, "shared", &found); // [手順] - もう一方のハンドルが破棄後も正常に動作することを確認する。
 
@@ -556,7 +556,7 @@ TEST_F(hashtableTest, attach_shares_buffer_without_corrupting_other_handle)
     cplat_hashtable_dispose(ht1); // [破棄] - 残ったハンドルを破棄する。
 }
 
-// バイナリモードにおける全ゼロキー登録とキー・値のコピーAPIの確認
+// バイナリ モードにおける全ゼロキー登録とキー・値のコピー API の確認
 TEST_F(hashtableTest, binary_zero_key_and_copy_apis)
 {
     // Arrange
@@ -720,8 +720,8 @@ TEST_F(hashtableTest, create_frees_buffer_when_handle_calloc_fails)
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_calloc(_, _))
         .WillOnce(DoDefault())      // [Pre-Assert確認_異常系] - cplat_calloc() が 2 回呼び出されること。
-                                    // [Pre-Assert手順] - 1 回目(管理領域+データ領域)は成功させる。
-        .WillOnce(Return(nullptr)); // [Pre-Assert手順] - 2 回目(内部管理データ)から NULL を返却する。
+                                    // [Pre-Assert手順] - 1 回目 (管理領域+データ領域) は成功させる。
+        .WillOnce(Return(nullptr)); // [Pre-Assert手順] - 2 回目 (内部管理データ) から NULL を返却する。
     EXPECT_CALL(mock_cplat_, cplat_free(_))
         .Times(
             1); // [Pre-Assert確認_異常系] - cplat_free() が 1 回呼び出されること。(確保済みの管理領域+データ領域が解放されたことの確認)
@@ -771,7 +771,7 @@ TEST_F(hashtableTest, attach_returns_out_of_memory_when_calloc_fails)
               attached); // [確認_異常系] - attached が nullptr であること。(失敗後の ht_out が NULL になったことの確認)
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
 // cplat_hashtable_dispose に NULL を渡しても安全に無視されることの確認

@@ -32,7 +32,7 @@ class hashtableAttachTest : public Test
     NiceMock<Mock_cplat> mock_cplat_;
 };
 
-// 未整列の管理領域バッファを指定してアタッチを試みた場合に CPLAT_ERR_INVALID_ARGUMENT で拒否されることの確認
+// 未整列の管理領域バッファーを指定してアタッチを試みた場合に CPLAT_ERR_INVALID_ARGUMENT で拒否されることの確認
 TEST_F(hashtableAttachTest, rejects_misaligned_buffer)
 {
     // Arrange
@@ -66,7 +66,7 @@ TEST_F(hashtableAttachTest, rejects_misaligned_buffer)
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
 }
 
-// 出力先ポインタ ht_out に NULL を指定してアタッチを試みた場合に CPLAT_ERR_INVALID_ARGUMENT で拒否されることの確認
+// 出力先ポインター ht_out に NULL を指定してアタッチを試みた場合に CPLAT_ERR_INVALID_ARGUMENT で拒否されることの確認
 TEST_F(hashtableAttachTest, rejects_null_ht_out)
 {
     // Arrange
@@ -97,7 +97,7 @@ TEST_F(hashtableAttachTest, rejects_null_ht_out)
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
 }
 
-// バイナリキー種別で作成されたハッシュテーブルへ正しく再接続でき、再接続後もキー検索が行えることの確認
+// バイナリ キー種別で作成されたハッシュ テーブルへ正しく再接続でき、再接続後もキー検索が行えることの確認
 TEST_F(hashtableAttachTest, accepts_binary_key_type)
 {
     // Arrange
@@ -137,7 +137,7 @@ TEST_F(hashtableAttachTest, accepts_binary_key_type)
     cplat_hashtable_dispose(attached); // [破棄] - 再接続したテーブルを破棄する。
 }
 
-// 管理領域内のヘッダ情報（キー種別、サイズ、世代、件数等）が破損または矛盾している場合にエラーとして拒否されることの確認
+// 管理領域内のヘッダー情報 (キー種別、サイズ、世代、件数等) が破損または矛盾している場合にエラーとして拒否されることの確認
 TEST_F(hashtableAttachTest, rejects_corrupted_config_fields)
 {
     // Arrange

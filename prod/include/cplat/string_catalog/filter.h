@@ -895,7 +895,7 @@ extern "C"
      *  @param[in]      string_key  文字列キー。
      *  @param[in]      args        文字列キーの引数スキーマに従う可変長引数。
      *  @return         成功時は `CPLAT_OK` を返します。
-     *  @return         @p slot、@p matched_out、@p dest のいずれかが NULL の場合、または @p dest_size が 0 の場合は
+     *  @return         @p slot 、@p matched_out 、@p dest のいずれかが NULL の場合、または @p dest_size が 0 の場合は
      *                  `CPLAT_ERR_INVALID_ARGUMENT` を返します。
      *  @return         文字列キーの項目の検索、引数の取り出し、文字列の組み立てに失敗した場合は、
      *                  `cplat_string_catalog_vformat` と同じ結果コードを返します。

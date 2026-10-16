@@ -47,7 +47,7 @@ TEST_F(fcntlTest, creates_file_and_returns_descriptor)
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq("work.bin"), O_RDWR | O_CREAT | O_TRUNC, 0644))
         .WillOnce(Return(
             7)); // [Pre-Assert確認_正常系] - open() が "work.bin" と等しい文字列、O_RDWR | O_CREAT | O_TRUNC、0644 を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - 番兵記述子 7 を返却する。
+                 // [Pre-Assert手順] - センチネル記述子 7 を返却する。
 
     // Act
     int fd = cplat_open("work.bin", O_RDWR | O_CREAT | O_TRUNC, 0644,

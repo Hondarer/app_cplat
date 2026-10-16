@@ -263,7 +263,7 @@ TEST_F(compressTest, decompress_returns_limit_exceeded_when_original_size_exceed
     uint8_t dst[16];
     size_t dst_len = sizeof(dst);
 
-    src[3] = 0x01; // [状態] - 展開後長さ 4 GiB を示す 8 バイトヘッダーと 1 byte の本体を用意する。
+    src[3] = 0x01; // [状態] - 展開後長さ 4 GiB を示す 8 バイト ヘッダーと 1 byte の本体を用意する。
 
     // Pre-Assert
 

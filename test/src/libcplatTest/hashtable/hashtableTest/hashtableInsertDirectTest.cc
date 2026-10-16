@@ -198,7 +198,7 @@ TEST_F(hashtableInsertDirectTest, places_deleted_without_resurrecting_key)
         actual_ret_again); // [確認_異常系] - 削除済みキーを別レコードへ置いた cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_DUPLICATE_KEY であること。
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret_validate); // [確認_正常系] - 削除済みをチェインへ載せたあとの cplat_hashtable_validate() の戻り値が CPLAT_OK であること。
+        actual_ret_validate); // [確認_正常系] - 削除済みをチェーンへ載せたあとの cplat_hashtable_validate() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
@@ -250,7 +250,7 @@ TEST_F(hashtableInsertDirectTest, skips_status_that_cannot_exist)
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
 }
 
-// 直接挿入関数にNULLポインタ、無効なステータス、範囲外レコード番号、重複キー等を渡した場合にエラーとなることの確認
+// 直接挿入関数に NULL ポインター、無効なステータス、範囲外レコード番号、重複キー等を渡した場合にエラーとなることの確認
 TEST_F(hashtableInsertDirectTest, rejects_invalid_arguments_and_collisions)
 {
     // Arrange

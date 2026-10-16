@@ -34,7 +34,7 @@ class hashtableLayoutTest : public Test
 
 /*
  * hashtable_mgmt_layout 内の align_up_checked 呼び出しのうち、次の 2 箇所は現行の実装では
- * 到達不能である(how-to-test.md「到達できない条件への対処」手順 3)。
+ * 到達不能である (how-to-test.md「到達できない条件への対処」手順 3)。
  * - 先頭オフセットの整列: 入力が sizeof(struct cplat_hashtable) 固定の小さな値のため、
  *   uint64_t 境界への整列でオーバーフローする余地がない。
  * - バケット領域直後の整列: オフセットは header(8 バイト境界) + capacity * sizeof(uint64_t)
@@ -163,7 +163,7 @@ TEST_F(hashtableLayoutTest, required_size_rejects_zero_capacity)
     size_t data_size = 0;
 
     fill_config(&config, 0, 8, 8, 5,
-                CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 0 の設定を用意する(create と同じ基準で拒否される)。
+                CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 0 の設定を用意する (create と同じ基準で拒否される)。
 
     // Pre-Assert
 
@@ -203,7 +203,7 @@ TEST_F(hashtableLayoutTest, create_rejects_misaligned_external_buffer)
     EXPECT_EQ(nullptr, ht); // [確認_異常系] - ht が nullptr であること。(失敗後の ht_out が NULL になったことの確認)
 }
 
-// cplat_hashtable_create が内部確保時の管理領域とデータ領域の合計サイズオーバーフローで INVALID_ARGUMENT を返すことの確認
+// cplat_hashtable_create が内部確保時の管理領域とデータ領域の合計サイズ オーバーフローで INVALID_ARGUMENT を返すことの確認
 TEST_F(hashtableLayoutTest, create_internal_alloc_rejects_combined_size_overflow)
 {
     // Arrange
@@ -216,7 +216,7 @@ TEST_F(hashtableLayoutTest, create_internal_alloc_rejects_combined_size_overflow
     (void)cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [状態] - 管理領域サイズを求めておく。
     fill_config(&config, 1, 8, SIZE_MAX - mgmt_size + 1, 5,
                 CPLAT_HASHTABLE_KEY_STRING); // [状態] - 内部確保の mgmt_size + data_size 加算が破綻する value_size
-                                             // を用意する(capacity 1 なので data_size 単体はあふれない)。
+                                             // を用意する (capacity 1 なので data_size 単体はあふれない)。
 
     // Pre-Assert
 
@@ -267,7 +267,7 @@ TEST_F(hashtableLayoutTest, required_size_table_scope_is_smaller_than_record_sco
         record_data); // [確認_正常系] - record_data が table_data と一致すること。(データ領域サイズは粒度で変わらないことの確認)
 }
 
-// 不正な value_align (非2冪、上限超過、可変長値指定) に対して INVALID_ARGUMENT を返すことの確認
+// 不正な value_align (非 2 冪、上限超過、可変長値指定) に対して INVALID_ARGUMENT を返すことの確認
 TEST_F(hashtableLayoutTest, rejects_invalid_value_align)
 {
     // Arrange
@@ -367,10 +367,10 @@ TEST_F(hashtableLayoutTest, value_align_rounds_up_data_region_and_aligns_referen
             8u); // [確認_正常系] - second_addr % 8u が 0 であること。(2 件目の値参照が指定した境界に整列していることの確認)
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
-// cplat_hashtable_create が value_align の境界を満たさない外部データバッファーで INVALID_ARGUMENT を返すことの確認
+// cplat_hashtable_create が value_align の境界を満たさない外部データ バッファーで INVALID_ARGUMENT を返すことの確認
 TEST_F(hashtableLayoutTest, create_rejects_external_data_buffer_misaligned_for_value_align)
 {
     // Arrange
@@ -442,10 +442,10 @@ TEST_F(hashtableLayoutTest, variable_key_descriptor_is_aligned_in_table_scope)
                 uint64_t)); // [確認_正常系] - second_addr % alignof(uint64_t) が 0 であること。(2 件目のキー descriptor が uint64_t 境界にあることの確認)
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }
 
-// 8の倍数でないキーストレージ容量指定時でも内部データ領域および値記述子が uint64_t 境界に整列することの確認
+// 8 の倍数でないキーストレージ容量指定時でも内部データ領域および値記述子が uint64_t 境界に整列することの確認
 TEST_F(hashtableLayoutTest, internal_data_region_is_aligned_after_odd_key_storage)
 {
     // Arrange
@@ -489,5 +489,5 @@ TEST_F(hashtableLayoutTest, internal_data_region_is_aligned_after_odd_key_storag
                 uint64_t)); // [確認_正常系] - ref_addr % alignof(uint64_t) が 0 であること。(値 descriptor が uint64_t 境界にあることの確認)
 
     // Cleanup
-    cplat_hashtable_dispose(ht); // [破棄] - ハッシュテーブルを破棄する。
+    cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
 }

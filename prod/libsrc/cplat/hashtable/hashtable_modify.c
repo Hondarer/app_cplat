@@ -907,6 +907,6 @@ int cplat_hashtable_purge_deleted(cplat_hashtable *ht)
 
     hashtable_unlink_empty_chains(ht);
     ht->hdr->next_empty = new_next_empty;
-    ht->hdr->deleted_count = 0; /* 削除済みは無条件で全て空へ戻すため。 */
+    ht->hdr->deleted_count = 0; /* 削除済みは無条件ですべて空へ戻すため。 */
     return CPLAT_OK;
 }

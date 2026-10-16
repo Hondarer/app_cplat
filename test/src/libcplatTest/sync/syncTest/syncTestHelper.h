@@ -25,7 +25,7 @@ const int kFakeFd2 = 8;
 const char kLockIdentity[] = "sync.lock";
 const char kRwlockIdentity[] = "sync.rwlock";
 
-// open / close だけを番兵記述子へ差し替える。flock は各テストが個別に設定する。
+// open / close だけをセンチネル記述子へ差し替える。flock は各テストが個別に設定する。
 struct InterprocessOpenMocks
 {
     testing::NiceMock<Mock_fcntl> fcntl;

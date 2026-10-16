@@ -477,7 +477,7 @@ TEST_F(hashtableVariableStringTest, fixed_strings_accept_literals_and_zero_fill_
     cplat_hashtable_dispose(ht);
 }
 
-// キーおよび値の全フィールド型組み合わせ（固定長バイナリ・固定長文字列・可変長文字列）が正常に動作することの確認
+// キーおよび値の全フィールド型組み合わせ (固定長バイナリ・固定長文字列・可変長文字列) が正常に動作することの確認
 TEST_F(hashtableVariableStringTest, supports_all_key_and_value_field_type_combinations)
 {
     const cplat_hashtable_field_type field_types[] = {

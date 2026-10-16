@@ -78,7 +78,7 @@ static int is_ascii_alpha(const char ch)
 
 /*
  *  UCRT の _wstat64 は FILETIME (UTC) を SystemTimeToTzSpecificLocalTime で現地時刻へ
- *  変換してから loctotime で time_t へ戻す。OS のタイムゾーンと CRT の TZ が食い違うと、
+ *  変換してから loctotime で time_t へ戻す。OS のタイム ゾーンと CRT の TZ が食い違うと、
  *  Linux の stat および cplat_file_*_modified_timestamp が返す Unix epoch UTC と
  *  秒部に差異が生じる。
  *  see: https://learn.microsoft.com/en-us/windows/win32/sysinfo/file-times

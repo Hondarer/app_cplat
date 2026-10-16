@@ -3601,7 +3601,7 @@ TEST_F(argparserTest, error_message_formats_all_error_results)
     {
         test_argparser_set_last_error(parser, result);
         return_codes.push_back(cplat_argparser_handle_get_error_message(
-            parser, message, sizeof(message))); // [手順] - 各解析結果のエラーメッセージを取得する。
+            parser, message, sizeof(message))); // [手順] - 各解析結果のエラー メッセージを取得する。
     }
 
     // Assert
@@ -3618,7 +3618,7 @@ TEST_F(argparserTest, error_message_formats_all_error_results)
     cplat_argparser_handle_dispose(parser);
 }
 
-// snprintf が失敗した場合に解析エラーメッセージが失敗することの確認
+// snprintf が失敗した場合に解析エラー メッセージが失敗することの確認
 TEST_F(argparserTest, error_message_returns_invalid_argument_when_snprintf_fails)
 {
     // Arrange
@@ -3631,12 +3631,12 @@ TEST_F(argparserTest, error_message_returns_invalid_argument_when_snprintf_fails
     // Pre-Assert
     EXPECT_CALL(mock_stdio, snprintf(_, _, _, _, _, _))
         .WillRepeatedly(
-            Return(-1)); // [Pre-Assert確認_異常系] - エラーメッセージの snprintf() が任意の回数呼び出されること。
+            Return(-1)); // [Pre-Assert確認_異常系] - エラー メッセージの snprintf() が任意の回数呼び出されること。
                          // [Pre-Assert手順] - snprintf() にて -1 を返す。
 
     // Act
     int result = cplat_argparser_handle_get_error_message(
-        parser, message, sizeof(message)); // [手順] - snprintf() 失敗状態で解析エラーメッセージを取得する。
+        parser, message, sizeof(message)); // [手順] - snprintf() 失敗状態で解析エラー メッセージを取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -3647,7 +3647,7 @@ TEST_F(argparserTest, error_message_returns_invalid_argument_when_snprintf_fails
     cplat_argparser_handle_dispose(parser);
 }
 
-// 登録エラーメッセージの全分岐と対象名既定値が組み立てられることの確認
+// 登録エラー メッセージの全分岐と対象名既定値が組み立てられることの確認
 TEST_F(argparserTest, register_error_message_formats_all_results)
 {
     // Arrange
@@ -3681,11 +3681,11 @@ TEST_F(argparserTest, register_error_message_formats_all_results)
     {
         test_argparser_set_register_error_result(parser, 0u, result);
         return_codes.push_back(cplat_argparser_handle_get_register_error_message(
-            parser, 0u, message, sizeof(message))); // [手順] - 各登録結果のエラーメッセージを取得する。
+            parser, 0u, message, sizeof(message))); // [手順] - 各登録結果のエラー メッセージを取得する。
     }
     test_argparser_clear_register_error_target(parser, 0u);
     int null_target_result = cplat_argparser_handle_get_register_error_message(
-        parser, 0u, message, sizeof(message)); // [手順] - 対象名 NULL の登録エラーメッセージを取得する。
+        parser, 0u, message, sizeof(message)); // [手順] - 対象名 NULL の登録エラー メッセージを取得する。
 
     // Assert
     EXPECT_EQ(sizeof(results) / sizeof(results[0]),
@@ -3703,14 +3703,14 @@ TEST_F(argparserTest, register_error_message_formats_all_results)
     cplat_argparser_handle_dispose(parser);
 }
 
-// 登録エラーメッセージの snprintf 失敗が処理されることの確認
+// 登録エラー メッセージの snprintf 失敗が処理されることの確認
 TEST_F(argparserTest, register_error_message_returns_invalid_argument_when_snprintf_fails)
 {
     // Arrange
     NiceMock<Mock_stdio> mock_stdio;
     cplat_argparser *parser =
         cplat_argparser_handle_create(0, nullptr, nullptr); // [状態] - 生成済みの parser を用意する。
-    ASSERT_NE(nullptr, parser);                             // [状態確認] - ハンドルがnullptr 以外 であること。
+    ASSERT_NE(nullptr, parser);                             // [状態確認] - ハンドルが nullptr 以外 であること。
     int storage = 0;
     ASSERT_EQ(CPLAT_OK,
               cplat_argparser_handle_register_flag(parser, "-a", "--alpha", nullptr,
@@ -3725,12 +3725,12 @@ TEST_F(argparserTest, register_error_message_returns_invalid_argument_when_snpri
     // Pre-Assert
     EXPECT_CALL(mock_stdio, snprintf(_, _, _, _, _, _))
         .WillRepeatedly(
-            Return(-1)); // [Pre-Assert確認_異常系] - 登録エラーメッセージの snprintf() が任意の回数呼び出されること。
+            Return(-1)); // [Pre-Assert確認_異常系] - 登録エラー メッセージの snprintf() が任意の回数呼び出されること。
                          // [Pre-Assert手順] - snprintf() にて -1 を返す。
 
     // Act
     int result = cplat_argparser_handle_get_register_error_message(
-        parser, 0u, message, sizeof(message)); // [手順] - snprintf() 失敗状態で登録エラーメッセージを取得する。
+        parser, 0u, message, sizeof(message)); // [手順] - snprintf() 失敗状態で登録エラー メッセージを取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -3816,7 +3816,7 @@ TEST_F(argparserTest, public_api_wrappers_are_callable)
         cplat_argparser_get_register_error_target(0u); // [手順] - 公開登録エラー対象 API を呼び出す。
     int register_error_message_result = cplat_argparser_get_register_error_message(
         0u, register_error_message,
-        sizeof(register_error_message)); // [手順] - 公開登録エラーメッセージ API を呼び出す。
+        sizeof(register_error_message)); // [手順] - 公開登録エラー メッセージ API を呼び出す。
     int print_register_error_result =
         cplat_argparser_print_register_error_messages(stderr); // [手順] - 公開登録エラー出力 API を呼び出す。
 
@@ -3979,7 +3979,7 @@ TEST_F(argparserTest, print_error_messages_skips_message_when_snprintf_fails)
     // Pre-Assert
     EXPECT_CALL(mock_stdio, snprintf(_, _, _, _, _, _))
         .WillRepeatedly(Return(-1)); // [Pre-Assert確認_異常系] - snprintf() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - エラーメッセージの snprintf() から -1 を返却する。
+    // [Pre-Assert手順] - エラー メッセージの snprintf() から -1 を返却する。
     EXPECT_CALL(mock_stdio, fprintf(_, _, _, stderr, _))
         .Times(
             1); // [Pre-Assert確認_正常系] - fprintf() が stderr を指定して 1 回呼び出されること。(メッセージを省略した区切り改行だけが出力されることの確認)
@@ -4055,7 +4055,7 @@ TEST_F(argparserTest, print_register_error_messages_skips_message_when_snprintf_
     // Pre-Assert
     EXPECT_CALL(mock_stdio, snprintf(_, _, _, _, _, _))
         .WillRepeatedly(Return(-1)); // [Pre-Assert確認_異常系] - snprintf() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - 登録エラーメッセージの snprintf() から -1 を返却する。
+    // [Pre-Assert手順] - 登録エラー メッセージの snprintf() から -1 を返却する。
     EXPECT_CALL(mock_stdio, fprintf(_, _, _, stderr, _))
         .Times(
             1); // [Pre-Assert確認_正常系] - fprintf() が stderr を指定して 1 回呼び出されること。(メッセージを省略した区切り改行だけが出力されることの確認)

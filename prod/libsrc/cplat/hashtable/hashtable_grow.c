@@ -561,7 +561,7 @@ int cplat_hashtable_clear(cplat_hashtable *ht)
     (void)hashtable_data_region_size(&ht->hdr->config, &data_size);
     /* 識別子、設定、テーブル時刻は残し、バケットとエントリだけを消す。 */
     memset(hashtable_bytes(ht) + off_bucket_head, 0, mgmt_size - off_bucket_head);
-    /* 値配列(データ領域)も 0 埋めする。ポインター自体(ht->data)は変更しない。 */
+    /* 値配列 (データ領域) も 0 埋めする。ポインター自体 (ht->data) は変更しない。 */
     memset(ht->data, 0, data_size);
     ht->hdr->next_empty = 1;
     ht->hdr->in_use_count = 0;

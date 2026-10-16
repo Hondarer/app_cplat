@@ -31,7 +31,7 @@ TEST(syncInterprocessLockTest, descriptor_round_trip_reopens_same_lock)
         .WillOnce(Return(kFakeFd))
         .WillOnce(Return(
             kFakeFd2)); // [Pre-Assert確認_正常系] - open() が path と等しい文字列、O_RDWR | O_CREAT | O_CLOEXEC、0666 を指定して 2 回呼び出されること。
-                        // [Pre-Assert手順] - 番兵記述子 7 と 8 を順に返却する。
+                        // [Pre-Assert手順] - センチネル記述子 7 と 8 を順に返却する。
     EXPECT_CALL(os.sys_file, flock(_, _, _, kFakeFd, LOCK_EX | LOCK_NB))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - flock() が kFakeFd、LOCK_EX | LOCK_NB を指定して 1 回呼び出されること。
@@ -111,7 +111,7 @@ TEST(syncInterprocessLockTest, rejects_rwlock_descriptor)
     EXPECT_CALL(os.fcntl, open(_, _, _, StrEq(path), O_RDWR | O_CREAT | O_CLOEXEC, 0666))
         .WillOnce(Return(
             kFakeFd)); // [Pre-Assert確認_正常系] - open() が path と等しい文字列、O_RDWR | O_CREAT | O_CLOEXEC、0666 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - 番兵記述子 7 を返却する。
+                       // [Pre-Assert手順] - センチネル記述子 7 を返却する。
 #endif
 
     // Act
@@ -160,7 +160,7 @@ TEST(syncInterprocessLockTest, second_handle_observes_exclusive_lock)
         .WillOnce(Return(kFakeFd))
         .WillOnce(Return(
             kFakeFd2)); // [Pre-Assert確認_正常系] - open() が path と等しい文字列、O_RDWR | O_CREAT | O_CLOEXEC、0666 を指定して 2 回呼び出されること。
-                        // [Pre-Assert手順] - 番兵記述子 7 と 8 を順に返却する。
+                        // [Pre-Assert手順] - センチネル記述子 7 と 8 を順に返却する。
     EXPECT_CALL(os.sys_file, flock(_, _, _, kFakeFd, LOCK_EX | LOCK_NB))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - flock() が kFakeFd、LOCK_EX | LOCK_NB を指定して 1 回呼び出されること。

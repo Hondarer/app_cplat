@@ -87,7 +87,7 @@ enum char_class_bit : unsigned int
  *  `std::regex_traits<wchar_t>` を public 継承しているのは、MSVC の `<regex>` 内部実装
  *  (`_Matcher` など) がユーザー定義の regex_traits に対しても `std::regex_traits<>` 固有の
  *  非標準の型エイリアス (`_Uelem` など) を要求してしまう不具合を回避するためである。
- *  本クラスは標準インターフェースのメンバーをすべて再定義して基底の実装を隠蔽するため、
+ *  本クラスは標準インターフェイスのメンバーをすべて再定義して基底の実装を隠蔽するため、
  *  ロケール依存の挙動は継承しない。
  *  see: https://developercommunity.visualstudio.com/content/problem/547543/stdregex-implementation-is-depending-on-non-standa.html
  *  see: https://github.com/microsoft/STL/wiki/Changelog

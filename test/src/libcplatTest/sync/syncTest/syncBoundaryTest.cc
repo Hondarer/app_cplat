@@ -29,11 +29,11 @@ TEST(syncBoundaryTest, map_wait_rc_translates_supported_results)
 
     // Act
     int ok_result = test_sync_map_wait_rc(0);              // [手順] - 成功コードを変換する。
-    int timeout_result = test_sync_map_wait_rc(ETIMEDOUT); // [手順] - タイムアウトコードを変換する。
-    int busy_result = test_sync_map_wait_rc(EBUSY);        // [手順] - ビジーコードを変換する。
+    int timeout_result = test_sync_map_wait_rc(ETIMEDOUT); // [手順] - タイムアウト コードを変換する。
+    int busy_result = test_sync_map_wait_rc(EBUSY);        // [手順] - ビジー コードを変換する。
     int again_result = test_sync_map_wait_rc(EAGAIN);      // [手順] - 再試行コードを変換する。
     int access_result = test_sync_map_wait_rc(EACCES);     // [手順] - アクセス拒否コードを変換する。
-    int unknown_result = test_sync_map_wait_rc(EINVAL);    // [手順] - 未知のエラーコードを変換する。
+    int unknown_result = test_sync_map_wait_rc(EINVAL);    // [手順] - 未知のエラー コードを変換する。
 
     // Assert
     EXPECT_EQ(

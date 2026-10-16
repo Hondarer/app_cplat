@@ -530,7 +530,7 @@ TEST_F(traceCoverageTest, file_sink_open_failures)
 }
 // [サブ手順参照 名前=traceCoverageTest.TearDown]
 
-// snprintf 失敗と write / hex の番兵を処理することの確認
+// snprintf 失敗と write / hex のセンチネルを処理することの確認
 // [サブ手順参照 名前=traceCoverageTest.SetUp]
 TEST_F(traceCoverageTest, snprintf_and_hex_edge_paths)
 {
@@ -745,7 +745,7 @@ TEST_F(traceCoverageTest, remaining_compound_conditions)
         handle, default_path, sizeof(default_path)); // [手順] - 実行ファイル名だけのパスから既定パスを構築する。
     int actual_ret_start = cplat_tracer_start(handle); // [手順] - tracer を start する。
     ASSERT_EQ(CPLAT_OK, actual_ret_start);   // [確認_正常系] - cplat_tracer_start() の戻り値が CPLAT_OK であること。
-    start_none = cplat_tracer_start(handle); // [手順] - 既に running のハンドルを再 start する。
+    start_none = cplat_tracer_start(handle); // [手順] - すでに running のハンドルを再 start する。
     writef_null_fmt = cplat_tracer_writef_at(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
                                              nullptr); // [手順] - format NULL で writef する。
     hex_null_handle = test_tracer_hex_write_impl(nullptr, CPLAT_TRACE_LEVEL_INFO, nullptr, data, sizeof(data),
@@ -1170,7 +1170,7 @@ TEST_F(traceCoverageTest, remaining_gcov_branches)
     {
         char path_buf[64] = {};
         dirname_fail = test_tracer_build_default_file_path(
-            handle, path_buf, sizeof(path_buf)); // [手順] - 空の実行ファイルパスから既定パスを構築する。
+            handle, path_buf, sizeof(path_buf)); // [手順] - 空の実行ファイル パスから既定パスを構築する。
         (void)test_tracer_build_default_file_path(
             handle, path_buf, sizeof(path_buf)); // [手順] - 実行ファイル名だけのパスから既定パスを構築する。
     }
@@ -1235,7 +1235,7 @@ TEST_F(traceCoverageTest, remaining_gcov_branches)
     hexf_not_running = cplat_tracer_write_hexf_at(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, sizeof(data), "%s",
                                                   "l"); // [手順] - 停止中に write_hexf() する。
     test_tracer_set_file_handle(handle, file_handle_);
-    start_already_open = cplat_tracer_start(handle);          // [手順] - 既に file ハンドルがある状態で start する。
+    start_already_open = cplat_tracer_start(handle);          // [手順] - すでに file ハンドルがある状態で start する。
     name_null = cplat_tracer_get_name(handle, nullptr, 8U);   // [手順] - 出力先 NULL で名前を取得する。
     name_zero = cplat_tracer_get_name(handle, tiny_name, 0U); // [手順] - 出力サイズ 0 で名前を取得する。
     name_small =
@@ -1328,7 +1328,7 @@ TEST_F(traceCoverageTest, remaining_gcov_branches)
     // Assert
     EXPECT_EQ(
         0,
-        dirname_fail); // [確認_正常系] - 空の実行ファイルパスに対する test_tracer_build_default_file_path() の戻り値が 0 であること。(相対パスへフォールバックしたことの確認)
+        dirname_fail); // [確認_正常系] - 空の実行ファイル パスに対する test_tracer_build_default_file_path() の戻り値が 0 であること。(相対パスへフォールバックしたことの確認)
     EXPECT_EQ(CPLAT_OK,
               quiet_write); // [確認_正常系] - 全出力先無効の cplat_tracer_write() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
@@ -1453,7 +1453,7 @@ TEST_F(traceCoverageTest, remaining_lock_overflow_and_caller_managed_paths)
     test_trace_registry_reinit_lock();
     (void)cplat_internal_trace_registry_capacity();
     cplat_internal_trace_registry_dispose_all_on_shutdown(
-        &event); // [手順] - 既に shutdown 済みのレジストリを再解放する。
+        &event); // [手順] - すでに shutdown 済みのレジストリを再解放する。
     test_trace_registry_reset_shutdown_state();
     cplat_tracer_dispose(&empty); // [手順] - NULL ハンドル変数を dispose する。
 
@@ -1473,7 +1473,7 @@ TEST_F(traceCoverageTest, remaining_lock_overflow_and_caller_managed_paths)
             })
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_process_get_executable_path() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 実行ファイルパス取得時に shutdown 開始フラグを立て、通常パスを返却する。
+                          // [Pre-Assert手順] - 実行ファイル パス取得時に shutdown 開始フラグを立て、通常パスを返却する。
 
     // Act_3
     shutdown_fail =

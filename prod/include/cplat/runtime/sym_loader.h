@@ -145,7 +145,7 @@ extern "C"
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
-     *  DLL ロード直後のシングル スレッド フェーズで呼び出してください。複数スレッドから同時に @p fobj_array の同一エントリへ書き込むと競合が発生します。
+     *  DLL ロード直後のシングルスレッド フェーズで呼び出してください。複数スレッドから同時に @p fobj_array の同一エントリへ書き込むと競合が発生します。
      */
     CPLAT_EXPORT void CPLAT_API cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array,
                                                       const size_t fobj_length, const char *configpath);
@@ -158,7 +158,7 @@ extern "C"
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
-     *  DllMain / destructor コンテキストのシングル スレッド フェーズで呼び出してください。他スレッドが resolve を実行中の場合、解放と競合します。
+     *  DllMain / destructor コンテキストのシングルスレッド フェーズで呼び出してください。他スレッドが resolve を実行中の場合、解放と競合します。
      */
     CPLAT_EXPORT void CPLAT_API cplat_sym_loader_dispose(cplat_sym_loader_entry *const *fobj_array,
                                                          const size_t fobj_length);
