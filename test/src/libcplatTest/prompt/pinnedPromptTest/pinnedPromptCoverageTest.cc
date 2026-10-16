@@ -194,7 +194,7 @@ TEST(pinnedPromptCoverageTest, internal_state_handles_inactive_mutex_and_prompt_
 
     // Act
     test_pinned_prompt_set_mutex_active(screen, 0);
-    test_pinned_prompt_lock_and_unlock(screen); // [手順] - ミューテックス無効状態でロックとアンロックを行う。
+    test_pinned_prompt_lock_and_unlock(screen); // [手順] - ミューテックス無効状態でロックとロック解除を行う。
     test_pinned_prompt_set_mutex_active(screen, 1);
     null_prompt_result = test_pinned_prompt_set_prompt(screen, nullptr); // [手順] - NULL のプロンプトを設定する。
     allocation_result = test_pinned_prompt_set_prompt(
@@ -447,13 +447,13 @@ TEST(pinnedPromptCoverageTest, format_helper_handles_allocation_and_format_failu
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
-        .WillOnce(Return(nullptr))                     // 1回目: 初回確保失敗
-        .WillOnce(Invoke(delegate_real_cplat_malloc)); // 2回目: 初回確保は成功させる
+        .WillOnce(Return(nullptr))                     // 1 回目: 初回確保失敗
+        .WillOnce(Invoke(delegate_real_cplat_malloc)); // 2 回目: 初回確保は成功させる
     // [Pre-Assert確認_異常系] - cplat_malloc() が 2 回呼び出されること。
     // [Pre-Assert手順] - 1 回目は NULL、2 回目は本物の malloc 結果を返却する。
     EXPECT_CALL(mock_stdio, vsnprintf(_, _, _, _, _, _))
-        .WillOnce(Return(-1))   // 2回目: 書式処理失敗
-        .WillOnce(Return(500)); // 3回目: fmt_cap(256) を超える長さを返し realloc を誘発する
+        .WillOnce(Return(-1))   // 2 回目: 書式処理失敗
+        .WillOnce(Return(500)); // 3 回目: fmt_cap(256) を超える長さを返し realloc を誘発する
     // [Pre-Assert確認_異常系] - vsnprintf() が 2 回呼び出されること。
     // [Pre-Assert手順] - 1 回目は -1、2 回目は 500 を返却する。
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _)).WillOnce(Return(nullptr));
@@ -577,7 +577,7 @@ TEST(pinnedPromptCoverageTest, readline_reports_setup_failures)
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _))
         .WillOnce(Return(nullptr))                     // history-failure.c: 履歴コンテキスト配列確保失敗
         .WillOnce(Invoke(delegate_real_cplat_realloc)) // prompt-failure.c の事前生成: 配列確保は成功させる
-        .WillOnce(Return(nullptr));                    // 6回目の readline: プロンプト文字列の再確保失敗
+        .WillOnce(Return(nullptr));                    // 6 回目の readline: プロンプト文字列の再確保失敗
     // [Pre-Assert確認_異常系] - cplat_realloc() が 3 回呼び出されること。
     // [Pre-Assert手順] - 1 回目と 3 回目は NULL、2 回目は本物の realloc 結果を返却する。
 
@@ -732,8 +732,8 @@ TEST(pinnedPromptCoverageTest, tty_write_and_printf_cover_empty_short_and_failur
 
     // Pre-Assert
     EXPECT_CALL(mock_stdio, fwrite(_, _, _, _, _, _, _))
-        .WillOnce(Return(2U))  // short_result: 3バイト書き込みに対し2バイトの短い書き込み
-        .WillOnce(Return(0U)); // write_failure: 1バイト書き込みに対し0バイト (完全な書き込み失敗)
+        .WillOnce(Return(2U))  // short_result: 3 バイト書き込みに対し 2 バイトの短い書き込み
+        .WillOnce(Return(0U)); // write_failure: 1 バイト書き込みに対し 0 バイト (完全な書き込み失敗)
     // [Pre-Assert確認_異常系] - fwrite() が 2 回呼び出されること。
     // [Pre-Assert手順] - 1 回目は 2 バイト、2 回目は 0 バイトを返却する。
     EXPECT_CALL(mock_stdio, vsnprintf(_, _, _, _, _, _))

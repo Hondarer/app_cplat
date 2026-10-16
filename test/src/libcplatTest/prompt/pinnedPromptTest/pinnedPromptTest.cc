@@ -818,7 +818,7 @@ TEST(pinnedPromptTest, read_key_classifies_control_and_escape_sequences)
     cplat_pinned_prompt_dispose(screen);
 }
 
-// 行編集 static 関数が UTF-8 境界とカーソルエンドポイントを処理することの確認
+// 行編集 static 関数が UTF-8 境界とカーソル エンドポイントを処理することの確認
 TEST(pinnedPromptTest, edit_helpers_update_line_at_boundaries)
 {
     // Arrange

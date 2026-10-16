@@ -21,7 +21,7 @@
  *  後述の契機以外で無効になりません。\n
  *  空きリストはストレージごとに capacity + 1 要素を持ち、必要バイト数に含まれます。
  *  必要バイト数は @ref cplat_hashtable_required_size で求めてください。\n
- *  衝突はチェイン法で扱い、削除は寿命付きの加齢により空きへ戻します。\n
+ *  衝突はチェーン法で扱い、削除は寿命付きの加齢により空きへ戻します。\n
  *  lifetime が @ref CPLAT_HASHTABLE_LIFETIME_INFINITE のとき、
  *  削除済みは加齢の末に 255 で止まり、push では空へ戻りません。\n
  *  呼び出し側が用意した領域へ構築する、または構築済み領域を再接続できます。
@@ -59,8 +59,8 @@
  *  意味のある状態だけで構成し、アドレス情報や一時的なフラグの類は含みません。\n
  *  呼び出し側が両方省略すれば内部で 1 回の確保にまとめて構築し、解放も
  *  @ref cplat_hashtable_dispose の 1 回で両方が片付きます。\n
- *  両方を明示的に指定すれば、独立した 2 領域(データ領域はメモリマップド
- *  ファイルなど管理領域と連続しない領域を想定)へ構築・再接続できます。\n
+ *  両方を明示的に指定すれば、独立した 2 領域 (データ領域はメモリ マップド
+ *  ファイルなど管理領域と連続しない領域を想定) へ構築・再接続できます。\n
  *  片方だけを指定することはできません。
  *
  *  バイナリ キーは有効長までを複製し、保存領域の残りを内部で 0 埋めします。\n
@@ -247,7 +247,7 @@ extern "C"
      *  @p buf_data に必要な境界は値の形式で決まります。固定長値で value_align が 0 の
      *  ときは要件がなく、非 0 のときはその境界が必要です。\n
      *  可変長値では永続 descriptor を持つため、@p buf_data は uint64_t 境界が必要です。\n
-     *  外部領域の所有権は呼び出し側に残りますが、内部管理データ(返るハンドル自体)は
+     *  外部領域の所有権は呼び出し側に残りますが、内部管理データ (返るハンドル自体) は
      *  本関数が新規確保するため、外部指定の場合でも @ref cplat_hashtable_dispose の
      *  呼び出しは必要です。
      *
@@ -302,12 +302,12 @@ extern "C"
      *  @ref CPLAT_ERR_VERSION_MISMATCH です。\n
      *  管理領域のアラインメント不正は @ref CPLAT_ERR_INVALID_ARGUMENT 、
      *  管理領域またはデータ領域の容量不足は @ref CPLAT_ERR_BUFFER_TOO_SMALL です。\n
-     *  チェインの整合性は検証しないため、必要なら直後に
+     *  チェーンの整合性は検証しないため、必要なら直後に
      *  @ref cplat_hashtable_validate を呼び出してください。\n
      *  管理領域にはデータ領域アドレスを持たないため、@p buf_data は常に呼び出し側が
      *  渡した値をそのまま使います (プロセスをまたいだ再接続や再マップに対応するためです)。\n
      *  成功時は管理領域とデータ領域の所有権を呼び出し側のままにしますが、本関数は内部管理データ
-     *  (返るハンドル自体)を新規確保するため、使用後は必ず @ref cplat_hashtable_dispose を
+     *  (返るハンドル自体) を新規確保するため、使用後は必ず @ref cplat_hashtable_dispose を
      *  呼び出してください。
      *
      *  @par            スレッド セーフ
@@ -439,10 +439,10 @@ extern "C"
      *  テーブルの世代カウンターを 1 増やします。\n
      *  @ref CPLAT_HASHTABLE_TIMESTAMP_SCOPE_RECORD のときは、レコードにも変更時刻を刻み、
      *  増やしたあとのテーブルの世代カウンターをレコードの世代カウンターにします。\n
-     *  該当キーが存在せず、空き(status=0)のレコードも無い場合、
-     *  @p reuse_deleted が有効(非 0)なら削除中(status>=2)のレコードを再利用します。\n
-     *  status が最大、同点なら変更時刻が最も古い(@ref CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE
-     *  のときはレコード番号が最も小さい)レコードを選び、そこにあった削除中のキーを
+     *  該当キーが存在せず、空き (status=0) のレコードも無い場合、
+     *  @p reuse_deleted が有効 (非 0) なら削除中 (status>=2) のレコードを再利用します。\n
+     *  status が最大、同点なら変更時刻が最も古い (@ref CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE
+     *  のときはレコード番号が最も小さい) レコードを選び、そこにあった削除中のキーを
      *  追い出して新しいキーを追加します。\n
      *  該当する削除中のレコードも無ければ @ref CPLAT_ERR_LIMIT_EXCEEDED です。
      *
@@ -552,7 +552,7 @@ extern "C"
      *  先の lifetime が @ref CPLAT_HASHTABLE_LIFETIME_INFINITE なら
      *  status 255 も書き込めます。\n
      *  先のスロットが空でない場合は @ref CPLAT_ERR_DUPLICATE_DEFINITION 、
-     *  同一キーが既にある場合は @ref CPLAT_ERR_DUPLICATE_KEY です。\n
+     *  同一キーがすでにある場合は @ref CPLAT_ERR_DUPLICATE_KEY です。\n
      *  @ref CPLAT_HASHTABLE_TIMESTAMP_SCOPE_RECORD では @p timestamp は必須で、
      *  渡した時刻がテーブルの変更時刻より新しいときだけテーブル時刻を更新します。\n
      *  @p generation も同様に、渡した値がテーブルの世代カウンターより大きいときだけ
@@ -1023,7 +1023,7 @@ extern "C"
      *  @param[out]     status_out  状態の格納先。NULL を渡してはなりません。
      *  @return         @ref CPLAT_OK 、または @ref CPLAT_ERR_INVALID_ARGUMENT 。
      *
-     *  0 は空、1 は使用中、2 以上は削除済みの加齢カウンタです。\n
+     *  0 は空、1 は使用中、2 以上は削除済みの加齢カウンターです。\n
      *  255 は lifetime が @ref CPLAT_HASHTABLE_LIFETIME_INFINITE のときの終端です。
      *
      *  @par            スレッド セーフ
@@ -1186,7 +1186,7 @@ extern "C"
      *  @return         @ref CPLAT_OK 、または @ref CPLAT_ERR_INVALID_ARGUMENT 。
      *
      *  3 値の合計は capacity と一致します。\n
-     *  永続化領域が保持する走査済みのカウンタをそのまま返すため、capacity に
+     *  永続化領域が保持する走査済みのカウンターをそのまま返すため、capacity に
      *  依存しない一定時間で完了します。
      *
      *  @par            スレッド セーフ
@@ -1436,14 +1436,14 @@ extern "C"
      *  @brief          ハンドルを解放します。
      *  @param[in]      ht  対象。NULL のときは何もしません。
      *
-     *  内部管理データ(ハンドル自体)は、@ref cplat_hashtable_create /
+     *  内部管理データ (ハンドル自体) は、@ref cplat_hashtable_create /
      *  @ref cplat_hashtable_attach のどちらで得たかに関わらず常に解放します。\n
      *  管理領域とデータ領域を外部指定した場合や @ref cplat_hashtable_attach で
      *  再接続した場合でも、ハンドル自体の解放のため本関数を必ず呼び出してください。\n
      *  @ref cplat_hashtable_create に両方 NULL を渡して内部確保した場合のみ、
      *  管理領域とデータ領域もあわせて解放します。外部指定時は、@p buf_mgmt と
-     *  @p buf_data それぞれの解放(メモリマップド ファイルであれば
-     *  @c cplat_mmap_detach 等)が呼び出し側の責務です。
+     *  @p buf_data それぞれの解放 (メモリ マップド ファイルであれば
+     *  @c cplat_mmap_detach 等) が呼び出し側の責務です。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
