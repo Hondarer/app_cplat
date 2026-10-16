@@ -88,7 +88,7 @@ class mmapTestFixture : public Test
                     file->handle = kFakeFileHandle;
                     file->writable = 0;
                 });
-        // [状態] - `cplat_file_init` の既定動作を設定する。
+        // [状態] - cplat_file_init() の既定動作を設定する。
         ON_CALL(mock_cplat_, cplat_file_open(_, _, _, _))
             .WillByDefault(
                 [](cplat_file *file, const char *, int flags, cplat_error *)
@@ -96,7 +96,7 @@ class mmapTestFixture : public Test
                     fill_open_file(file, flags);
                     return CPLAT_OK;
                 });
-        // [状態] - `cplat_file_open` の既定動作を設定する。
+        // [状態] - cplat_file_open() の既定動作を設定する。
         ON_CALL(mock_cplat_, cplat_file_get_size(_, _, _))
             .WillByDefault(
                 [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -104,33 +104,33 @@ class mmapTestFixture : public Test
                     *size_out = kMapSize;
                     return CPLAT_OK;
                 });
-        // [状態] - `cplat_file_get_size` の既定動作を設定する。
+        // [状態] - cplat_file_get_size() の既定動作を設定する。
         ON_CALL(mock_cplat_, cplat_file_set_size(_, _, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - `cplat_file_set_size` の既定動作を設定する。
+        // [状態] - cplat_file_set_size() の既定動作を設定する。
         ON_CALL(mock_cplat_, cplat_file_close(_, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - `cplat_file_close` の既定動作を設定する。
+        // [状態] - cplat_file_close() の既定動作を設定する。
         ON_CALL(mock_cplat_, cplat_remove(_, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - `cplat_remove` の既定動作を設定する。
+        // [状態] - cplat_remove() の既定動作を設定する。
 #if defined(PLATFORM_LINUX)
         ON_CALL(mock_sys_mman_, mmap(_, _, _, _, _, _, _, _, _)).WillByDefault(Return(mapped_buf_));
-        // [状態] - `mmap` の既定動作を設定する。
+        // [状態] - mmap() の既定動作を設定する。
         ON_CALL(mock_sys_mman_, munmap(_, _, _, _, _)).WillByDefault(Return(0));
-        // [状態] - `munmap` の既定動作を設定する。
+        // [状態] - munmap() の既定動作を設定する。
         ON_CALL(mock_sys_mman_, msync(_, _, _, _, _, _)).WillByDefault(Return(0));
-        // [状態] - `msync` の既定動作を設定する。
+            // [状態] - msync() の既定動作を設定する。
 #elif defined(PLATFORM_WINDOWS)
         ON_CALL(mock_windows_, CreateFileMappingA(_, _, _, _, _, _, _, _, _)).WillByDefault(Return(kFakeMappingHandle));
-        // [状態] - `CreateFileMappingA` の既定動作を設定する。
+        // [状態] - CreateFileMappingA() の既定動作を設定する。
         ON_CALL(mock_windows_, MapViewOfFile(_, _, _, _, _, _, _, _)).WillByDefault(Return(mapped_buf_));
-        // [状態] - `MapViewOfFile` の既定動作を設定する。
+        // [状態] - MapViewOfFile() の既定動作を設定する。
         ON_CALL(mock_windows_, UnmapViewOfFile(_, _, _, _)).WillByDefault(Return(TRUE));
-        // [状態] - `UnmapViewOfFile` の既定動作を設定する。
+        // [状態] - UnmapViewOfFile() の既定動作を設定する。
         ON_CALL(mock_windows_, FlushViewOfFile(_, _, _, _, _)).WillByDefault(Return(TRUE));
-        // [状態] - `FlushViewOfFile` の既定動作を設定する。
+        // [状態] - FlushViewOfFile() の既定動作を設定する。
         ON_CALL(mock_windows_, FlushFileBuffers(_, _, _, _)).WillByDefault(Return(TRUE));
-        // [状態] - `FlushFileBuffers` の既定動作を設定する。
+        // [状態] - FlushFileBuffers() の既定動作を設定する。
         ON_CALL(mock_windows_, CloseHandle(_, _, _, _)).WillByDefault(Return(TRUE));
-        // [状態] - `CloseHandle` の既定動作を設定する。
+            // [状態] - CloseHandle() の既定動作を設定する。
 #endif /* PLATFORM_ */
     }
     // [サブ手順終了]
@@ -138,10 +138,10 @@ class mmapTestFixture : public Test
     // [サブ手順 名前=mmapTestFixture.attachNewFile]
     void attachNewFile(cplat_mmap **map)
     {
-        ASSERT_EQ(CPLAT_OK, cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, map, NULL));
+        ASSERT_EQ(CPLAT_OK, cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, map, nullptr));
         // [状態確認] - cplat_mmap_attach() の戻り値が CPLAT_OK であること。
-        ASSERT_NE(static_cast<cplat_mmap *>(NULL), *map);
-        // [状態確認] - *map が NULL 以外であること。
+        ASSERT_NE(nullptr, *map);
+        // [状態確認] - *map が nullptr 以外であること。
     }
     // [サブ手順終了]
 };

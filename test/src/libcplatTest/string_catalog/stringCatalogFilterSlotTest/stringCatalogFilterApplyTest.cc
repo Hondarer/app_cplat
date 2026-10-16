@@ -579,6 +579,7 @@ TEST_F(stringCatalogFilterApplyTest, lines_beyond_64_are_evaluated)
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_out_of_range_ret); // [確認_異常系] - 行数を超える位置に対する cplat_string_catalog_filter_slot_get_line_error() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
+    // Cleanup
     cplat_string_catalog_filter_slot_dispose(&wide_slot);
 }
 // [サブ手順参照 名前=stringCatalogFilterApplyTest.TearDown]

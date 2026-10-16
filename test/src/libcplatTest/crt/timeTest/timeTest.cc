@@ -19,7 +19,7 @@ TEST_F(timeTest, gmtime_success_epoch)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_gmtime(&utc_tm, &epoch); // [手順] - cplat_gmtime(&utc_tm, &epoch) を呼び出す。
+    int actual_ret = cplat_gmtime(&utc_tm, &epoch); // [手順] - cplat_gmtime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_gmtime() の戻り値が CPLAT_OK であること。
@@ -40,7 +40,7 @@ TEST_F(timeTest, gmtime_null_tm)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_gmtime(NULL, &epoch); // [手順] - 出力構造体に NULL を渡して cplat_gmtime を呼び出す。
+    int actual_ret = cplat_gmtime(nullptr, &epoch); // [手順] - 出力構造体に NULL を渡して cplat_gmtime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -56,7 +56,7 @@ TEST_F(timeTest, gmtime_null_time)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_gmtime(&utc_tm, NULL); // [手順] - 時刻に NULL を渡して cplat_gmtime を呼び出す。
+    int actual_ret = cplat_gmtime(&utc_tm, nullptr); // [手順] - 時刻に NULL を渡して cplat_gmtime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -87,10 +87,10 @@ TEST_F(timeTest, gmtime_zeroes_tm_when_platform_conversion_fails)
             [](const char *, const int, const char *, const time_t *timep, struct tm *result)
             {
                 EXPECT_EQ((time_t)0, *timep);
-                // [Pre-Assert確認_正常系] - *timep が (time_t)0 であること。
-                EXPECT_NE((struct tm *)NULL, result);
-                // [Pre-Assert確認_正常系] - result が (struct tm *)NULL 以外であること。
-                return (struct tm *)NULL;
+                // [Pre-Assert確認_正常系] - *timep が 0 であること。
+                EXPECT_NE(nullptr, result);
+                // [Pre-Assert確認_正常系] - result が nullptr 以外であること。
+                return nullptr;
             });
     // [Pre-Assert確認_異常系] - gmtime_r() が 1 回呼び出されること。
     // [Pre-Assert手順] - OS の時刻変換関数から失敗を返却する。
@@ -100,9 +100,9 @@ TEST_F(timeTest, gmtime_zeroes_tm_when_platform_conversion_fails)
             [](const char *, const int, const char *, struct tm *result, const time_t *timep)
             {
                 EXPECT_EQ((time_t)0, *timep);
-                // [Pre-Assert確認_正常系] - *timep が (time_t)0 であること。
-                EXPECT_NE((struct tm *)NULL, result);
-                // [Pre-Assert確認_正常系] - result が (struct tm *)NULL 以外であること。
+                // [Pre-Assert確認_正常系] - *timep が 0 であること。
+                EXPECT_NE(nullptr, result);
+                // [Pre-Assert確認_正常系] - result が nullptr 以外であること。
                 return 1;
             });
     // [Pre-Assert確認_異常系] - gmtime_s() が 1 回呼び出されること。
@@ -110,7 +110,7 @@ TEST_F(timeTest, gmtime_zeroes_tm_when_platform_conversion_fails)
 #endif
 
     // Act
-    int actual_ret = cplat_gmtime(&utc_tm, &epoch); // [手順] - cplat_gmtime(&utc_tm, &epoch) を呼び出す。
+    int actual_ret = cplat_gmtime(&utc_tm, &epoch); // [手順] - cplat_gmtime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -139,9 +139,9 @@ TEST_F(timeTest, localtime_matches_platform_result)
     memset(&actual_tm, 0xff, sizeof(actual_tm)); // [状態] - 出力構造体を 0xff で埋め、書き換えを検出できるようにする。
 
 #if defined(PLATFORM_LINUX)
-    ASSERT_NE((struct tm *)NULL,
+    ASSERT_NE(nullptr,
               localtime_r(&epoch, &expected_tm)); // [状態] - OS のローカル時刻変換で期待値 expected_tm を取得する。
-    // [状態確認] - localtime_r() の戻り値が (struct tm *)NULL 以外であること。
+    // [状態確認] - localtime_r() の戻り値が nullptr 以外であること。
 #elif defined(PLATFORM_WINDOWS)
     ASSERT_EQ(0, localtime_s(&expected_tm, &epoch)); // [状態] - OS のローカル時刻変換で期待値 expected_tm を取得する。
                                                      // [状態確認] - localtime_s() の戻り値が 0 であること。
@@ -150,8 +150,7 @@ TEST_F(timeTest, localtime_matches_platform_result)
     // Pre-Assert
 
     // Act
-    int actual_ret_localtime =
-        cplat_localtime(&actual_tm, &epoch); // [手順] - cplat_localtime(&actual_tm, &epoch) を呼び出す。
+    int actual_ret_localtime = cplat_localtime(&actual_tm, &epoch); // [手順] - cplat_localtime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_localtime); // [確認_正常系] - cplat_localtime() の戻り値が CPLAT_OK であること。
@@ -179,7 +178,7 @@ TEST_F(timeTest, localtime_null_tm)
 
     // Act
     int actual_ret_localtime =
-        cplat_localtime(NULL, &epoch); // [手順] - 出力構造体に NULL を渡して cplat_localtime を呼び出す。
+        cplat_localtime(nullptr, &epoch); // [手順] - 出力構造体に NULL を渡して cplat_localtime() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -197,7 +196,7 @@ TEST_F(timeTest, localtime_null_time)
 
     // Act
     int actual_ret_localtime =
-        cplat_localtime(&local_tm, NULL); // [手順] - 時刻に NULL を渡して cplat_localtime を呼び出す。
+        cplat_localtime(&local_tm, nullptr); // [手順] - 時刻に NULL を渡して cplat_localtime() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -217,7 +216,7 @@ TEST_F(timeTest, localtime_zeroes_tm_when_platform_conversion_fails)
     // Pre-Assert
     // OS のローカル時刻変換関数が有効な引数で 1 回呼び出されること。
 #if defined(PLATFORM_LINUX)
-    EXPECT_CALL(mock_time, localtime_r(_, _, _, _, _)).WillOnce(Return((struct tm *)NULL));
+    EXPECT_CALL(mock_time, localtime_r(_, _, _, _, _)).WillOnce(Return(nullptr));
     // [Pre-Assert確認_異常系] - localtime_r() が 1 回呼び出されること。
     // [Pre-Assert手順] - OS のローカル時刻変換関数から失敗を返却する。
 #elif defined(PLATFORM_WINDOWS)
@@ -228,7 +227,7 @@ TEST_F(timeTest, localtime_zeroes_tm_when_platform_conversion_fails)
 
     // Act
     int actual_ret_localtime =
-        cplat_localtime(&local_tm, &epoch); // [手順] - OS の変換失敗を注入して cplat_localtime を呼び出す。
+        cplat_localtime(&local_tm, &epoch); // [手順] - OS の変換失敗を注入して cplat_localtime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -265,7 +264,7 @@ TEST_F(timeTest, ctime_success_epoch)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_ctime(buf, sizeof(buf), &epoch); // [手順] - cplat_ctime(buf, 26, &epoch) を呼び出す。
+    int actual_ret = cplat_ctime(buf, sizeof(buf), &epoch); // [手順] - cplat_ctime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_ctime() の戻り値が CPLAT_OK であること。
@@ -273,9 +272,9 @@ TEST_F(timeTest, ctime_success_epoch)
     /* ctime はローカル時刻依存のため固定文字列比較は行わず、形式のみを確認する */
     len = strlen(buf);
     EXPECT_GE(len,
-              (size_t)24); // [確認_正常系] - len が (size_t)24 以上であること。(変換結果が 24 文字以上であることの確認)
+              (size_t)24); // [確認_正常系] - len が 24 以上であること。(変換結果が 24 文字以上であることの確認)
     EXPECT_LE(len,
-              (size_t)25); // [確認_正常系] - len が (size_t)25 以下であること。(変換結果が 25 文字以下であることの確認)
+              (size_t)25); // [確認_正常系] - len が 25 以下であること。(変換結果が 25 文字以下であることの確認)
     EXPECT_EQ('\n',
               buf[len - 1]); // [確認_正常系] - buf[len - 1] が '\n' であること。(変換結果が改行で終わることの確認)
 }
@@ -290,8 +289,8 @@ TEST_F(timeTest, ctime_matches_platform_result)
     memset(actual, 0xff, sizeof(actual)); // [状態] - 出力バッファーを 0xff で埋め、書き換えを検出できるようにする。
 
 #if defined(PLATFORM_LINUX)
-    ASSERT_NE((char *)NULL, ctime_r(&epoch, expected)); // [状態] - OS の ctime 系関数で期待値 expected を取得する。
-    // [状態確認] - ctime_r() の戻り値が (char *)NULL 以外であること。
+    ASSERT_NE(nullptr, ctime_r(&epoch, expected)); // [状態] - OS の ctime 系関数で期待値 expected を取得する。
+    // [状態確認] - ctime_r() の戻り値が nullptr 以外であること。
 #elif defined(PLATFORM_WINDOWS)
     ASSERT_EQ(0,
               ctime_s(expected, sizeof(expected), &epoch)); // [状態] - OS の ctime 系関数で期待値 expected を取得する。
@@ -301,8 +300,7 @@ TEST_F(timeTest, ctime_matches_platform_result)
     // Pre-Assert
 
     // Act
-    int actual_ret_ctime =
-        cplat_ctime(actual, sizeof(actual), &epoch); // [手順] - cplat_ctime(actual, 26, &epoch) を呼び出す。
+    int actual_ret_ctime = cplat_ctime(actual, sizeof(actual), &epoch); // [手順] - cplat_ctime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_ctime); // [確認_正常系] - cplat_ctime() の戻り値が CPLAT_OK であること。
@@ -321,7 +319,7 @@ TEST_F(timeTest, ctime_null_buf)
 
     // Act
     int actual_ret_ctime =
-        cplat_ctime(NULL, 26, &epoch); // [手順] - 出力バッファーに NULL を渡して cplat_ctime を呼び出す。
+        cplat_ctime(nullptr, 26, &epoch); // [手順] - 出力バッファーに NULL を渡して cplat_ctime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -339,7 +337,7 @@ TEST_F(timeTest, ctime_null_time_zeroes_buf)
 
     // Act
     int actual_ret_ctime =
-        cplat_ctime(buf, sizeof(buf), NULL); // [手順] - 時刻に NULL を渡して cplat_ctime を呼び出す。
+        cplat_ctime(buf, sizeof(buf), nullptr); // [手順] - 時刻に NULL を渡して cplat_ctime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -366,7 +364,7 @@ TEST_F(timeTest, ctime_small_buf_zeroes_buf)
 
     // Act
     int actual_ret_ctime =
-        cplat_ctime(buf, sizeof(buf), &epoch); // [手順] - サイズ 25 のバッファーを渡して cplat_ctime を呼び出す。
+        cplat_ctime(buf, sizeof(buf), &epoch); // [手順] - サイズ 25 のバッファーを渡して cplat_ctime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -393,7 +391,7 @@ TEST_F(timeTest, ctime_zero_buf_size_fails_without_write)
 
     // Act
     int actual_ret_ctime =
-        cplat_ctime(buf, 0, &epoch); // [手順] - バッファー サイズに 0 を渡して cplat_ctime を呼び出す。
+        cplat_ctime(buf, 0, &epoch); // [手順] - バッファー サイズに 0 を渡して cplat_ctime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -421,10 +419,10 @@ TEST_F(timeTest, ctime_zeroes_buf_when_platform_conversion_fails)
             [](const char *, const int, const char *, const time_t *timep, char *result)
             {
                 EXPECT_EQ((time_t)0, *timep);
-                // [Pre-Assert確認_正常系] - *timep が (time_t)0 であること。
-                EXPECT_NE((char *)NULL, result);
-                // [Pre-Assert確認_正常系] - result が (char *)NULL 以外であること。
-                return (char *)NULL;
+                // [Pre-Assert確認_正常系] - *timep が 0 であること。
+                EXPECT_NE(nullptr, result);
+                // [Pre-Assert確認_正常系] - result が nullptr 以外であること。
+                return nullptr;
             });
     // [Pre-Assert確認_異常系] - ctime_r() が 1 回呼び出されること。
     // [Pre-Assert手順] - OS の ctime 系関数から失敗を返却する。
@@ -434,11 +432,11 @@ TEST_F(timeTest, ctime_zeroes_buf_when_platform_conversion_fails)
             [](const char *, const int, const char *, char *result, size_t size, const time_t *timep)
             {
                 EXPECT_EQ((time_t)0, *timep);
-                // [Pre-Assert確認_正常系] - *timep が (time_t)0 であること。
+                // [Pre-Assert確認_正常系] - *timep が 0 であること。
                 EXPECT_EQ((size_t)26, size);
-                // [Pre-Assert確認_正常系] - size が (size_t)26 であること。
-                EXPECT_NE((char *)NULL, result);
-                // [Pre-Assert確認_正常系] - result が (char *)NULL 以外であること。
+                // [Pre-Assert確認_正常系] - size が 26 であること。
+                EXPECT_NE(nullptr, result);
+                // [Pre-Assert確認_正常系] - result が nullptr 以外であること。
                 return 1;
             });
     // [Pre-Assert確認_異常系] - ctime_s() が 1 回呼び出されること。
@@ -446,7 +444,7 @@ TEST_F(timeTest, ctime_zeroes_buf_when_platform_conversion_fails)
 #endif
 
     // Act
-    int actual_ret = cplat_ctime(buf, sizeof(buf), &epoch); // [手順] - cplat_ctime(buf, 26, &epoch) を呼び出す。
+    int actual_ret = cplat_ctime(buf, sizeof(buf), &epoch); // [手順] - cplat_ctime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret); // [確認_異常系] - cplat_ctime() の戻り値が CPLAT_ERR_UNKNOWN であること。

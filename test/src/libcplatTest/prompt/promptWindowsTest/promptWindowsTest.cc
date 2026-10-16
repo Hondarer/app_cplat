@@ -34,7 +34,7 @@ TEST_F(promptWindowsTest, enter_raw_does_nothing_for_non_terminal)
 
     // Act
     cplat_internal_prompt_platform_enter_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -59,7 +59,7 @@ TEST_F(promptWindowsTest, enter_raw_does_nothing_when_stdin_handle_invalid)
 
     // Act
     cplat_internal_prompt_platform_enter_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -97,7 +97,7 @@ TEST_F(promptWindowsTest, enter_raw_succeeds_and_changes_mode)
 
     // Act
     cplat_internal_prompt_platform_enter_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -107,12 +107,12 @@ TEST_F(promptWindowsTest, enter_raw_succeeds_and_changes_mode)
         0U,
         captured_mode &
             (DWORD)
-                ENABLE_VIRTUAL_TERMINAL_INPUT); // [確認_正常系] - captured_mode & (DWORD)ENABLE_VIRTUAL_TERMINAL_INPUT が 0 以外であること。(仮想端末入力が有効化されたことの確認)
+                ENABLE_VIRTUAL_TERMINAL_INPUT); // [確認_正常系] - captured_mode & ENABLE_VIRTUAL_TERMINAL_INPUT が 0 以外であること。(仮想端末入力が有効化されたことの確認)
     EXPECT_EQ(
         0U,
         captured_mode &
             (DWORD)(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT |
-                    ENABLE_PROCESSED_INPUT)); // [確認_正常系] - captured_mode & (DWORD)(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT) が 0 であること。(エコー・行入力・Ctrl+C シグナル化が無効化されたことの確認)
+                    ENABLE_PROCESSED_INPUT)); // [確認_正常系] - captured_mode & (ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT) が 0 であること。(エコー・行入力・Ctrl+C シグナル化が無効化されたことの確認)
 }
 
 // SetConsoleMode が失敗した場合に raw モードへ移行しないことの確認
@@ -141,7 +141,7 @@ TEST_F(promptWindowsTest, enter_raw_does_nothing_when_set_console_mode_fails)
 
     // Act
     cplat_internal_prompt_platform_enter_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -160,7 +160,7 @@ TEST_F(promptWindowsTest, enter_raw_is_ignored_while_already_raw)
 
     // Act
     cplat_internal_prompt_platform_enter_raw(
-        &handle_); // [手順] - raw モード中に cplat_internal_prompt_platform_enter_raw を呼び出す。
+        &handle_); // [手順] - raw モード中に cplat_internal_prompt_platform_enter_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -182,7 +182,7 @@ TEST_F(promptWindowsTest, leave_raw_is_ignored_when_not_raw)
 
     // Act
     cplat_internal_prompt_platform_leave_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_leave_raw を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_leave_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -213,7 +213,7 @@ TEST_F(promptWindowsTest, leave_raw_restores_mode)
 
     // Act
     cplat_internal_prompt_platform_leave_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_leave_raw を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_leave_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -254,7 +254,7 @@ TEST_F(promptWindowsTest, read_char_returns_next_byte)
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char() を呼び出す。
 
     // Assert
     EXPECT_EQ('A',
@@ -282,7 +282,7 @@ TEST_F(promptWindowsTest, read_char_returns_minus1_at_eof)
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -308,7 +308,7 @@ TEST_F(promptWindowsTest, read_char_returns_minus2_on_timeout)
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -334,7 +334,7 @@ TEST_F(promptWindowsTest, read_char_returns_minus1_when_wait_fails)
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -377,7 +377,7 @@ TEST_F(promptWindowsTest, read_char_nb_returns_next_byte_when_available)
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char_nb(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char_nb を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char_nb() を呼び出す。
 
     // Assert
     EXPECT_EQ('B',
@@ -399,13 +399,13 @@ TEST_F(promptWindowsTest, read_char_nb_returns_minus1_on_timeout)
                             // [Pre-Assert手順] - WAIT_TIMEOUT を返却する。
     EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, dummy_handle, 100U))
         .Times(
-            0); // [Pre-Assert確認_異常系] - WaitForSingleObject() が dummy_handle、100 を指定して呼び出されないこと。
+            0); // [Pre-Assert確認_異常系] - dummy_handle、100 を指定した WaitForSingleObject() の呼び出しがないこと。
     EXPECT_CALL(mock_windows, ReadFile(_, _, _, _, _, _, _, _))
         .Times(0); // [Pre-Assert確認_異常系] - ReadFile() が呼び出されないこと。
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char_nb(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char_nb を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char_nb() を呼び出す。
 
     // Assert
     EXPECT_EQ(

@@ -72,10 +72,10 @@ TEST_F(hashtableScanTest, walks_each_status_group)
     config.timestamp_scope =
         CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE; // [状態] - 時刻と世代を省いて直接配置できる粒度にする。
 
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
-    (void)cplat_hashtable_insert_direct(ht, 1, "a", 1, value.data(), NULL, 0);
-    (void)cplat_hashtable_insert_direct(ht, 2, "b", 2, value.data(), NULL, 0);
-    (void)cplat_hashtable_insert_direct(ht, 3, "c", 1, value.data(), NULL, 0);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
+    (void)cplat_hashtable_insert_direct(ht, 1, "a", 1, value.data(), nullptr, 0);
+    (void)cplat_hashtable_insert_direct(ht, 2, "b", 2, value.data(), nullptr, 0);
+    (void)cplat_hashtable_insert_direct(ht, 3, "c", 1, value.data(), nullptr, 0);
     /* レコード 4 は空のまま残す。 */
 
     // Pre-Assert
@@ -123,7 +123,7 @@ TEST_F(hashtableScanTest, reports_end_of_scan_without_error)
     int has_record = -1;
 
     fill_config(&config, 4, 5); // [状態] - 空のテーブルを用意する。
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
 
     // Pre-Assert
 
@@ -166,17 +166,17 @@ TEST_F(hashtableScanTest, guards_reject_invalid_arguments)
     int has_record = 0;
 
     fill_config(&config, 4, 5);
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
 
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht = cplat_hashtable_next_record(NULL, 0, CPLAT_HASHTABLE_SCAN_IN_USE, &record,
+    int actual_ret_null_ht = cplat_hashtable_next_record(nullptr, 0, CPLAT_HASHTABLE_SCAN_IN_USE, &record,
                                                          &has_record); // [手順] - ht に NULL を渡す。
-    int actual_ret_null_record = cplat_hashtable_next_record(ht, 0, CPLAT_HASHTABLE_SCAN_IN_USE, NULL,
+    int actual_ret_null_record = cplat_hashtable_next_record(ht, 0, CPLAT_HASHTABLE_SCAN_IN_USE, nullptr,
                                                              &has_record); // [手順] - record に NULL を渡す。
     int actual_ret_null_has = cplat_hashtable_next_record(ht, 0, CPLAT_HASHTABLE_SCAN_IN_USE, &record,
-                                                          NULL); // [手順] - has_record に NULL を渡す。
+                                                          nullptr); // [手順] - has_record に NULL を渡す。
     int actual_ret_zero_mask =
         cplat_hashtable_next_record(ht, 0, 0, &record, &has_record); // [手順] - マスクに 0 を渡す。
     int actual_ret_unknown_mask =

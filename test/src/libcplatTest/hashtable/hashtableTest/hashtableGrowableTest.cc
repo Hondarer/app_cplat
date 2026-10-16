@@ -343,7 +343,7 @@ TEST_F(hashtableGrowableTest, ordinary_create_remains_fixed_capacity)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", "one", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_add = cplat_hashtable_add(
         ht, "b", "two", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 通常の満杯テーブルへ追加する。

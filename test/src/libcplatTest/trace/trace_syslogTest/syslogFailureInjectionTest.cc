@@ -41,11 +41,11 @@ TEST_F(syslogFailureInjectionTest, create_returns_null_when_handle_allocation_fa
 
     // Act
     cplat_syslog_sink *handle = cplat_syslog_sink_create("syslogFailureInjectionTest",
-                                                         LOG_USER); // [手順] - cplat_syslog_sink_create を呼び出す。
+                                                         LOG_USER); // [手順] - cplat_syslog_sink_create() を呼び出す。
 
     // Assert
-    EXPECT_EQ((cplat_syslog_sink *)NULL,
-              handle); // [確認_異常系] - cplat_syslog_sink_create() の戻り値が NULL であること。
+    EXPECT_EQ(nullptr,
+              handle); // [確認_異常系] - cplat_syslog_sink_create() の戻り値が nullptr であること。
 }
 
 // 識別子の複製に失敗した場合に生成が失敗することの確認
@@ -63,11 +63,11 @@ TEST_F(syslogFailureInjectionTest, create_returns_null_when_ident_duplication_fa
 
     // Act
     cplat_syslog_sink *handle = cplat_syslog_sink_create("syslogFailureInjectionTest",
-                                                         LOG_USER); // [手順] - cplat_syslog_sink_create を呼び出す。
+                                                         LOG_USER); // [手順] - cplat_syslog_sink_create() を呼び出す。
 
     // Assert
-    EXPECT_EQ((cplat_syslog_sink *)NULL,
-              handle); // [確認_異常系] - cplat_syslog_sink_create() の戻り値が NULL であること。
+    EXPECT_EQ(nullptr,
+              handle); // [確認_異常系] - cplat_syslog_sink_create() の戻り値が nullptr であること。
 }
 
 // ソケットの作成に失敗しても生成が成功することの確認
@@ -86,12 +86,12 @@ TEST_F(syslogFailureInjectionTest, create_succeeds_when_socket_creation_fails)
 
     // Act
     cplat_syslog_sink *handle = cplat_syslog_sink_create("syslogFailureInjectionTest",
-                                                         LOG_USER); // [手順] - cplat_syslog_sink_create を呼び出す。
+                                                         LOG_USER); // [手順] - cplat_syslog_sink_create() を呼び出す。
 
     // Assert
     EXPECT_NE(
-        (cplat_syslog_sink *)NULL,
-        handle); // [確認_正常系] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。(初回接続に失敗してもハンドルが生成されることの確認)
+        nullptr,
+        handle); // [確認_正常系] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。(初回接続に失敗してもハンドルが生成されることの確認)
 
     // Cleanup
     cplat_syslog_sink_dispose(handle);
@@ -117,7 +117,7 @@ TEST_F(syslogFailureInjectionTest, write_reconnects_after_backoff_elapsed)
                 }
                 timestamp->tv_nsec = 0;
                 ++realtime_call;
-            })); // [状態] - cplat_clock_get_realtime が呼び出された際に初回は 0 秒、以降は 10 秒を返すようにモックを設定する。
+            })); // [状態] - cplat_clock_get_realtime() が呼び出された際に初回は 0 秒、以降は 10 秒を返すようにモックを設定する。
 
     // Pre-Assert
     EXPECT_CALL(mock_sys_socket, socket(_, _, _, _, _, _))
@@ -133,12 +133,12 @@ TEST_F(syslogFailureInjectionTest, write_reconnects_after_backoff_elapsed)
     // Act
     cplat_syslog_sink *handle = cplat_syslog_sink_create("syslogFailureInjectionTest",
                                                          LOG_USER); // [手順] - 初回接続が失敗する sink を生成する。
-    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
+    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
                                          "message"); // [手順] - バックオフ経過後の時刻でメッセージを書き込む。
 
     // Assert
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [確認_正常系] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [確認_正常系] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
     EXPECT_EQ(CPLAT_OK,
               result); // [確認_正常系] - cplat_syslog_sink_write() の戻り値が CPLAT_OK であること。
 
@@ -153,8 +153,8 @@ TEST_F(syslogFailureInjectionTest, write_drops_message_when_sendto_fails)
     // Arrange
     cplat_syslog_sink *handle = cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER);
 
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
 
     NiceMock<Mock_sys_socket> mock_sys_socket;
 
@@ -166,8 +166,8 @@ TEST_F(syslogFailureInjectionTest, write_drops_message_when_sendto_fails)
                           // [Pre-Assert手順] - errno に ECONNREFUSED を設定し、1 回目は -1 を返却する。
 
     // Act
-    int actual_ret = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
-                                             "message"); // [手順] - cplat_syslog_sink_write を呼び出す。
+    int actual_ret = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+                                             "message"); // [手順] - cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -185,8 +185,8 @@ TEST_F(syslogFailureInjectionTest, write_drops_message_when_send_buffer_is_full)
     // Arrange
     cplat_syslog_sink *handle = cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER);
 
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
 
     NiceMock<Mock_sys_socket> mock_sys_socket;
 
@@ -198,8 +198,8 @@ TEST_F(syslogFailureInjectionTest, write_drops_message_when_send_buffer_is_full)
                           // [Pre-Assert手順] - errno に EAGAIN を設定し、1 回目は -1 を返却する。
 
     // Act
-    int actual_ret = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
-                                             "message"); // [手順] - cplat_syslog_sink_write を呼び出す。
+    int actual_ret = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+                                             "message"); // [手順] - cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -219,7 +219,7 @@ TEST_F(syslogFailureInjectionTest, create_returns_null_when_reconnect_lock_creat
     EXPECT_CALL(mock_cplat_, cplat_local_lock_create(_))
         .WillOnce(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_local_lock_create() が 1 回呼び出されること。(再接続ロックの生成を失敗させることの確認)
-    // [Pre-Assert手順] - cplat_local_lock_create から CPLAT_ERR_UNKNOWN を返却する。
+    // [Pre-Assert手順] - cplat_local_lock_create() から CPLAT_ERR_UNKNOWN を返却する。
 
     // Act
     cplat_syslog_sink *handle =
@@ -227,8 +227,8 @@ TEST_F(syslogFailureInjectionTest, create_returns_null_when_reconnect_lock_creat
                                  LOG_USER); // [手順] - 再接続ロック生成失敗を注入して sink を生成する。
 
     // Assert
-    EXPECT_EQ((cplat_syslog_sink *)NULL,
-              handle); // [確認_異常系] - ロック生成失敗時の cplat_syslog_sink_create() の戻り値が NULL であること。
+    EXPECT_EQ(nullptr,
+              handle); // [確認_異常系] - ロック生成失敗時の cplat_syslog_sink_create() の戻り値が nullptr であること。
 }
 
 // 現在時刻の解決にも失敗した場合に書き込みが失敗することの確認
@@ -238,15 +238,15 @@ TEST_F(syslogFailureInjectionTest, write_returns_unknown_when_fallback_timestamp
     cplat_timespec invalid_timestamp = {1, 1000000000L};
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
     ON_CALL(mock_cplat_, cplat_clock_get_realtime(_))
         .WillByDefault(Invoke(
             [](cplat_timespec *timestamp)
             {
                 timestamp->tv_sec = 1;
                 timestamp->tv_nsec = 1000000000L;
-            })); // [状態] - cplat_clock_get_realtime が呼び出された際に不正なナノ秒値 1000000000 を返すようにモックを設定する。
+            })); // [状態] - cplat_clock_get_realtime() が呼び出された際に不正なナノ秒値 1000000000 を返すようにモックを設定する。
 
     // Pre-Assert
 
@@ -269,8 +269,8 @@ TEST_F(syslogFailureInjectionTest, write_drops_message_during_reconnect_backoff)
     // Arrange
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
     NiceMock<Mock_sys_socket> mock_sys_socket;
 
     // Pre-Assert
@@ -281,9 +281,9 @@ TEST_F(syslogFailureInjectionTest, write_drops_message_during_reconnect_backoff)
                           // [Pre-Assert手順] - errno に ECONNREFUSED を設定し、1 回目は -1 を返却する。
 
     // Act
-    int first_result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
+    int first_result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
                                                "first"); // [手順] - 初回送信を実行する。
-    int backoff_result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
+    int backoff_result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
                                                  "backoff"); // [手順] - 再接続抑制期間中に再送信する。
 
     // Assert
@@ -304,8 +304,8 @@ TEST_F(syslogFailureInjectionTest, write_returns_ok_when_send_succeeds)
     // Arrange
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
     NiceMock<Mock_sys_socket> mock_sys_socket;
 
     // Pre-Assert
@@ -315,7 +315,7 @@ TEST_F(syslogFailureInjectionTest, write_returns_ok_when_send_succeeds)
                  // [Pre-Assert手順] - sendto から 1 を返却する。
 
     // Act
-    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
+    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
                                          "message"); // [手順] - メッセージを送信する。
 
     // Assert
@@ -333,8 +333,8 @@ TEST_F(syslogFailureInjectionTest, write_reports_unknown_after_fallback_timestam
     cplat_timespec invalid_timestamp = {1, 1000000000L};
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
     NiceMock<Mock_sys_socket> mock_sys_socket;
 
     // Pre-Assert
@@ -365,7 +365,7 @@ TEST_F(syslogFailureInjectionTest, write_truncates_message_for_test_fd)
     std::string message(3000, 'x');
     const char *saved_fd = getenv("SYSLOG_TEST_FD");
     std::string saved_fd_value;
-    if (saved_fd != NULL)
+    if (saved_fd != nullptr)
     {
         saved_fd_value = saved_fd;
     }
@@ -376,13 +376,13 @@ TEST_F(syslogFailureInjectionTest, write_truncates_message_for_test_fd)
     // [状態確認] - SYSLOG_TEST_FD を設定した setenv() の戻り値が 0 であること。
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
 
     // Act
-    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
+    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
                                          message.c_str()); // [手順] - 長大なメッセージをテスト用 FD へ書き込む。
     close(pipe_fds[1]);
     pipe_fds[1] = -1;
@@ -398,12 +398,12 @@ TEST_F(syslogFailureInjectionTest, write_truncates_message_for_test_fd)
         read_size,
         static_cast<ssize_t>(
             sizeof(actual) -
-            1)); // [確認_正常系] - read() の戻り値が static_cast<ssize_t>(sizeof(actual) - 1) 以下であること。(出力が受信バッファー内に収まることの確認)
+            1)); // [確認_正常系] - read() の戻り値が sizeof(actual) - 1 以下であること。(出力が受信バッファー内に収まることの確認)
 
     // Cleanup
     cplat_syslog_sink_dispose(handle);
     close(pipe_fds[0]);
-    if (saved_fd != NULL)
+    if (saved_fd != nullptr)
     {
         setenv("SYSLOG_TEST_FD", saved_fd_value.c_str(), 1);
     }
@@ -422,7 +422,7 @@ TEST_F(syslogFailureInjectionTest, write_uses_plain_line_when_test_timestamp_for
     cplat_timespec timestamp = {1, 0};
     const char *saved_fd = getenv("SYSLOG_TEST_FD");
     std::string saved_fd_value;
-    if (saved_fd != NULL)
+    if (saved_fd != nullptr)
     {
         saved_fd_value = saved_fd;
     }
@@ -433,14 +433,14 @@ TEST_F(syslogFailureInjectionTest, write_uses_plain_line_when_test_timestamp_for
     // [状態確認] - SYSLOG_TEST_FD を設定した setenv() の戻り値が 0 であること。
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_clock_format_realtime_iso8601_local(_, _, _))
         .WillOnce(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_clock_format_realtime_iso8601_local() が 1 回呼び出されること。(時刻整形を失敗させることの確認)
-    // [Pre-Assert手順] - cplat_clock_format_realtime_iso8601_local から CPLAT_ERR_UNKNOWN を返却する。
+    // [Pre-Assert手順] - cplat_clock_format_realtime_iso8601_local() から CPLAT_ERR_UNKNOWN を返却する。
 
     // Act
     int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, &timestamp,
@@ -458,7 +458,7 @@ TEST_F(syslogFailureInjectionTest, write_uses_plain_line_when_test_timestamp_for
     // Cleanup
     cplat_syslog_sink_dispose(handle);
     close(pipe_fds[0]);
-    if (saved_fd != NULL)
+    if (saved_fd != nullptr)
     {
         setenv("SYSLOG_TEST_FD", saved_fd_value.c_str(), 1);
     }
@@ -474,13 +474,13 @@ TEST_F(syslogFailureInjectionTest, rename_reports_out_of_memory_when_duplication
     // Arrange
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_malloc(_))
         .WillOnce(Return(
             nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回呼び出されること。(新しい識別子の確保を失敗させることの確認)
-                       // [Pre-Assert手順] - cplat_malloc から NULL を返却する。
+                       // [Pre-Assert手順] - cplat_malloc() から NULL を返却する。
 
     // Act
     int result = cplat_syslog_sink_rename(handle, "renamed"); // [手順] - 識別子を変更する。
@@ -500,14 +500,14 @@ TEST_F(syslogFailureInjectionTest, rename_reports_lock_failure)
     // Arrange
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_local_lock_lock(_, CPLAT_SYNC_WAIT_FOREVER))
         .WillOnce(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が CPLAT_SYNC_WAIT_FOREVER を指定して 1 回呼び出されること。(識別子変更前のロック取得を失敗させることの確認)
-    // [Pre-Assert手順] - cplat_local_lock_lock から CPLAT_ERR_UNKNOWN を返却する。
+    // [Pre-Assert手順] - cplat_local_lock_lock() から CPLAT_ERR_UNKNOWN を返却する。
 
     // Act
     int result = cplat_syslog_sink_rename(handle, "renamed"); // [手順] - ロック失敗を注入して識別子を変更する。
@@ -527,13 +527,13 @@ TEST_F(syslogFailureInjectionTest, dispose_on_shutdown_handles_null_and_active_s
     // Arrange
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
 
     // Act
-    cplat_internal_syslog_sink_dispose_on_shutdown(NULL);   // [手順] - NULL ハンドルを shutdown 破棄する。
+    cplat_internal_syslog_sink_dispose_on_shutdown(nullptr); // [手順] - NULL ハンドルを shutdown 破棄する。
     cplat_internal_syslog_sink_dispose_on_shutdown(handle); // [手順] - 有効なハンドルを shutdown 破棄する。
 
     // Assert
@@ -560,8 +560,8 @@ TEST_F(syslogFailureInjectionTest, dispose_on_shutdown_handles_disconnected_sink
 
     // Assert
     EXPECT_NE(
-        (cplat_syslog_sink *)NULL,
-        handle); // [確認_正常系] - ソケット生成に失敗した cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+        nullptr,
+        handle); // [確認_正常系] - ソケット生成に失敗した cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
 }
 
 // syslog 本文の書式化に失敗した場合に成功扱いで戻ることの確認
@@ -570,8 +570,8 @@ TEST_F(syslogFailureInjectionTest, write_returns_ok_when_message_formatting_fail
     // Arrange
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
     NiceMock<Mock_stdio> mock_stdio;
 
     // Pre-Assert
@@ -581,7 +581,7 @@ TEST_F(syslogFailureInjectionTest, write_returns_ok_when_message_formatting_fail
                   // [Pre-Assert手順] - snprintf から -1 を返却する。
 
     // Act
-    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
+    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
                                          "message"); // [手順] - 書式化失敗時の書き込みを実行する。
 
     // Assert
@@ -601,7 +601,7 @@ TEST_F(syslogFailureInjectionTest, write_returns_unknown_when_test_timestamp_for
     cplat_timespec timestamp = {1, 0};
     const char *saved_fd = getenv("SYSLOG_TEST_FD");
     std::string saved_fd_value;
-    if (saved_fd != NULL)
+    if (saved_fd != nullptr)
     {
         saved_fd_value = saved_fd;
     }
@@ -612,8 +612,8 @@ TEST_F(syslogFailureInjectionTest, write_returns_unknown_when_test_timestamp_for
     // [状態確認] - SYSLOG_TEST_FD を設定した setenv() の戻り値が 0 であること。
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
     NiceMock<Mock_stdio> mock_stdio;
 
     // Pre-Assert
@@ -637,7 +637,7 @@ TEST_F(syslogFailureInjectionTest, write_returns_unknown_when_test_timestamp_for
     // Cleanup
     cplat_syslog_sink_dispose(handle);
     close(pipe_fds[0]);
-    if (saved_fd != NULL)
+    if (saved_fd != nullptr)
     {
         setenv("SYSLOG_TEST_FD", saved_fd_value.c_str(), 1);
     }
@@ -656,7 +656,7 @@ TEST_F(syslogFailureInjectionTest, write_truncates_test_timestamp_line)
     cplat_timespec timestamp = {1, 0};
     const char *saved_fd = getenv("SYSLOG_TEST_FD");
     std::string saved_fd_value;
-    if (saved_fd != NULL)
+    if (saved_fd != nullptr)
     {
         saved_fd_value = saved_fd;
     }
@@ -667,8 +667,8 @@ TEST_F(syslogFailureInjectionTest, write_truncates_test_timestamp_line)
     // [状態確認] - SYSLOG_TEST_FD を設定した setenv() の戻り値が 0 であること。
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
     NiceMock<Mock_stdio> mock_stdio;
 
     // Pre-Assert
@@ -694,7 +694,7 @@ TEST_F(syslogFailureInjectionTest, write_truncates_test_timestamp_line)
     // Cleanup
     cplat_syslog_sink_dispose(handle);
     close(pipe_fds[0]);
-    if (saved_fd != NULL)
+    if (saved_fd != nullptr)
     {
         setenv("SYSLOG_TEST_FD", saved_fd_value.c_str(), 1);
     }
@@ -711,8 +711,8 @@ TEST_F(syslogFailureInjectionTest, write_reports_unknown_when_fallback_send_buff
     cplat_timespec invalid_timestamp = {1, 1000000000L};
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
     NiceMock<Mock_sys_socket> mock_sys_socket;
 
     // Pre-Assert
@@ -743,8 +743,8 @@ TEST_F(syslogFailureInjectionTest, write_reports_unknown_when_fallback_send_fail
     cplat_timespec invalid_timestamp = {1, 1000000000L};
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
     NiceMock<Mock_sys_socket> mock_sys_socket;
 
     // Pre-Assert
@@ -783,8 +783,8 @@ TEST_F(syslogFailureInjectionTest, write_reports_unknown_when_fallback_socket_is
     // Arrange
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
 
@@ -829,7 +829,7 @@ TEST_F(syslogFailureInjectionTest, socket_failure_caps_backoff_interval)
                 }
                 timestamp->tv_nsec = 0;
                 ++realtime_call;
-            })); // [状態] - cplat_clock_get_realtime が呼び出された際に 0 秒、10 秒、20 秒、40 秒を順に返すようにモックを設定する。
+            })); // [状態] - cplat_clock_get_realtime() が呼び出された際に 0 秒、10 秒、20 秒、40 秒を順に返すようにモックを設定する。
 
     // Pre-Assert
     EXPECT_CALL(mock_sys_socket, socket(_, _, _, _, _, _))
@@ -843,17 +843,17 @@ TEST_F(syslogFailureInjectionTest, socket_failure_caps_backoff_interval)
     // Act
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [手順] - 初回接続を試行する。
-    int first_retry = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
+    int first_retry = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
                                               "first"); // [手順] - 1 回目の再接続を試行する。
-    int second_retry = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
+    int second_retry = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
                                                "second"); // [手順] - 2 回目の再接続を試行する。
-    int third_retry = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, NULL,
+    int third_retry = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
                                               "third"); // [手順] - 3 回目の再接続を試行する。
 
     // Assert
     ASSERT_NE(
-        (cplat_syslog_sink *)NULL,
-        handle); // [確認_正常系] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。(接続失敗後もハンドルが維持されることの確認)
+        nullptr,
+        handle); // [確認_正常系] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。(接続失敗後もハンドルが維持されることの確認)
     EXPECT_EQ(
         CPLAT_OK,
         first_retry); // [確認_正常系] - 1 回目の再接続の cplat_syslog_sink_write() の戻り値が CPLAT_OK であること。(再接続失敗が破棄扱いになることの確認)

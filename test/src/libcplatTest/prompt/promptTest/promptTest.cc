@@ -12,15 +12,15 @@
 class promptTest : public Test
 {
   protected:
-    cplat_prompt *prompt_ = NULL;
+    cplat_prompt *prompt_ = nullptr;
 
     // [サブ手順 名前=promptTest.SetUp]
     void SetUp() override
     {
         promptFakeReset();
-        prompt_ = cplat_prompt_create(NULL);
-        ASSERT_NE((cplat_prompt *)NULL, prompt_);
-        // [状態確認] - prompt_ が (cplat_prompt *)NULL 以外であること。
+        prompt_ = cplat_prompt_create(nullptr);
+        ASSERT_NE(nullptr, prompt_);
+        // [状態確認] - prompt_ が nullptr 以外であること。
         /* 端末に接続していない実行環境でも対話パスを通すため、TTY 状態を直接立てる */
         prompt_->is_tty = 1;
     }
@@ -30,7 +30,7 @@ class promptTest : public Test
     void TearDown() override
     {
         cplat_prompt_dispose(prompt_);
-        prompt_ = NULL;
+        prompt_ = nullptr;
     }
     // [サブ手順終了]
 
@@ -55,19 +55,17 @@ TEST_F(promptTest, create_applies_default_options)
     // Pre-Assert
 
     // Act
-    cplat_prompt *handle = cplat_prompt_create(NULL); // [手順] - options に NULL を指定して生成する。
+    cplat_prompt *handle = cplat_prompt_create(nullptr); // [手順] - options に NULL を指定して生成する。
 
     // Assert
-    ASSERT_NE((cplat_prompt *)NULL,
-              handle); // [確認_正常系] - cplat_prompt_create() の戻り値が (cplat_prompt *)NULL 以外であること。
-    EXPECT_EQ(
-        (size_t)CPLAT_PROMPT_HISTORY_DEFAULT,
-        handle
-            ->history_max); // [確認_正常系] - handle->history_max が (size_t)CPLAT_PROMPT_HISTORY_DEFAULT であること。
+    ASSERT_NE(nullptr,
+              handle); // [確認_正常系] - cplat_prompt_create() の戻り値が nullptr 以外であること。
+    EXPECT_EQ((size_t)CPLAT_PROMPT_HISTORY_DEFAULT,
+              handle->history_max); // [確認_正常系] - handle->history_max が CPLAT_PROMPT_HISTORY_DEFAULT であること。
     EXPECT_EQ(
         (size_t)CPLAT_PROMPT_INPUT_BYTES_DEFAULT,
         handle
-            ->input_max_bytes); // [確認_正常系] - handle->input_max_bytes が (size_t)CPLAT_PROMPT_INPUT_BYTES_DEFAULT であること。
+            ->input_max_bytes); // [確認_正常系] - handle->input_max_bytes が CPLAT_PROMPT_INPUT_BYTES_DEFAULT であること。
 
     // Cleanup
     cplat_prompt_dispose(handle);
@@ -91,8 +89,8 @@ TEST_F(promptTest, create_applies_given_options)
     cplat_prompt *handle = cplat_prompt_create(&options); // [手順] - オプションを指定して生成する。
 
     // Assert
-    ASSERT_NE((cplat_prompt *)NULL,
-              handle); // [確認_正常系] - cplat_prompt_create() の戻り値が (cplat_prompt *)NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [確認_正常系] - cplat_prompt_create() の戻り値が nullptr 以外であること。
     EXPECT_EQ(4u, handle->history_max);      // [確認_正常系] - handle->history_max が 4 であること。
     EXPECT_EQ(8u, handle->edit_cap);         // [確認_正常系] - handle->edit_cap が 8 であること。
     EXPECT_EQ(64u, handle->input_max_bytes); // [確認_正常系] - handle->input_max_bytes が 64 であること。
@@ -111,7 +109,7 @@ TEST_F(promptTest, dispose_accepts_null)
     // Pre-Assert
 
     // Act
-    cplat_prompt_dispose(NULL); // [手順] - NULL を指定して cplat_prompt_dispose を呼び出す。
+    cplat_prompt_dispose(nullptr); // [手順] - NULL を指定して cplat_prompt_dispose() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(NULL を渡した cplat_prompt_dispose() がクラッシュしないことの確認)
@@ -132,8 +130,8 @@ TEST_F(promptTest, readline_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_prompt = cplat_prompt_readline_at(NULL, buf, sizeof(buf), ">> ", "f", 1);
-    int actual_ret_null_buf = cplat_prompt_readline_at(prompt_, NULL, sizeof(buf), ">> ", "f", 1);
+    int actual_ret_null_prompt = cplat_prompt_readline_at(nullptr, buf, sizeof(buf), ">> ", "f", 1);
+    int actual_ret_null_buf = cplat_prompt_readline_at(prompt_, nullptr, sizeof(buf), ">> ", "f", 1);
     int actual_ret_zero_size = cplat_prompt_readline_at(prompt_, buf, 0u, ">> ", "f",
                                                         1); // [手順] - prompt、buf、buf_size に不正値を指定する。
 
@@ -487,8 +485,8 @@ TEST_F(promptTest, readline_stops_accepting_characters_at_input_limit)
     options.input_max_bytes = 4u;
 
     cplat_prompt *limited = cplat_prompt_create(&options); // [状態] - 入力上限 4 バイトのハンドルを用意する。
-    ASSERT_NE((cplat_prompt *)NULL,
-              limited); // [状態確認] - cplat_prompt_create() の戻り値が (cplat_prompt *)NULL 以外であること。
+    ASSERT_NE(nullptr,
+              limited); // [状態確認] - cplat_prompt_create() の戻り値が nullptr 以外であること。
     limited->is_tty = 1;
     promptFakeSetInput("abcdef\r");
 
@@ -661,8 +659,8 @@ TEST_F(promptTest, history_discards_oldest_entry_over_limit)
     options.history_max = 2u;
 
     cplat_prompt *limited = cplat_prompt_create(&options); // [状態] - 履歴上限 2 件のハンドルを用意する。
-    ASSERT_NE((cplat_prompt *)NULL,
-              limited); // [状態確認] - cplat_prompt_create() の戻り値が (cplat_prompt *)NULL 以外であること。
+    ASSERT_NE(nullptr,
+              limited); // [状態確認] - cplat_prompt_create() の戻り値が nullptr 以外であること。
     limited->is_tty = 1;
 
     for (const char *line : {"one\r", "two\r", "three\r"})
@@ -726,8 +724,8 @@ TEST_F(promptTest, readline_fmt_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_prompt = cplat_prompt_readline_fmt_at(NULL, buf, sizeof(buf), "f", 1, ">> ");
-    int actual_ret_null_buf = cplat_prompt_readline_fmt_at(prompt_, NULL, sizeof(buf), "f", 1, ">> ");
+    int actual_ret_null_prompt = cplat_prompt_readline_fmt_at(nullptr, buf, sizeof(buf), "f", 1, ">> ");
+    int actual_ret_null_buf = cplat_prompt_readline_fmt_at(prompt_, nullptr, sizeof(buf), "f", 1, ">> ");
     int actual_ret_zero_size =
         cplat_prompt_readline_fmt_at(prompt_, buf, 0u, "f", 1,
                                      ">> "); // [手順] - prompt、buf、buf_size に不正値を指定する。
@@ -761,7 +759,7 @@ TEST_F(promptTest, readline_falls_back_to_fgets_when_not_tty)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_prompt_readline_at(prompt_, buf, sizeof(buf), NULL, "promptTest.cc",
+    int actual_ret = cplat_prompt_readline_at(prompt_, buf, sizeof(buf), nullptr, "promptTest.cc",
                                               1); // [手順] - 標準入力が空の状態で 1 行読み取る。
 
     // Assert
@@ -788,10 +786,10 @@ TEST_F(promptTest, readline_fallback_reports_buffer_too_small)
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
         .WillOnce(DoAll(SetArrayArgument<0>(empty, empty + sizeof(empty)), Return(CPLAT_ERR_BUFFER_TOO_SMALL)));
     // [Pre-Assert確認_異常系] - cplat_fgets() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets から CPLAT_ERR_BUFFER_TOO_SMALL と空文字列を返却する。
+    // [Pre-Assert手順] - cplat_fgets() から CPLAT_ERR_BUFFER_TOO_SMALL と空文字列を返却する。
 
     // Act
-    int actual_ret = cplat_prompt_readline_at(prompt_, buf, sizeof(buf), NULL, "promptTest.cc",
+    int actual_ret = cplat_prompt_readline_at(prompt_, buf, sizeof(buf), nullptr, "promptTest.cc",
                                               1); // [手順] - 行が収まらない非 TTY readline を呼び出す。
 
     // Assert
@@ -912,7 +910,7 @@ TEST_F(promptTest, readline_with_initial_accepts_null_initial_text)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_prompt_readline_with_initial_at(prompt_, buf, sizeof(buf), ">> ", NULL, "promptTest.cc",
+    int actual_ret = cplat_prompt_readline_with_initial_at(prompt_, buf, sizeof(buf), ">> ", nullptr, "promptTest.cc",
                                                            1); // [手順] - 初期値に NULL を指定して 1 行読み取る。
 
     // Assert
@@ -964,8 +962,8 @@ TEST_F(promptTest, readline_with_initial_rejects_text_over_input_limit)
     options.input_initial_capacity = 4u;
     options.input_max_bytes = 8u; // [状態] - 入力上限 8 バイトのハンドルを用意する。
     cplat_prompt *handle = cplat_prompt_create(&options);
-    ASSERT_NE((cplat_prompt *)NULL,
-              handle); // [状態確認] - cplat_prompt_create() の戻り値が (cplat_prompt *)NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_prompt_create() の戻り値が nullptr 以外であること。
     handle->is_tty = 1;
 
     // Pre-Assert
@@ -1009,11 +1007,12 @@ TEST_F(promptTest, readline_with_initial_ignores_initial_text_when_not_tty)
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
         .WillOnce(DoAll(SetArrayArgument<0>(piped, piped + sizeof(piped)), Return(CPLAT_OK)));
     // [Pre-Assert確認_正常系] - cplat_fgets() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets から "piped" を返却する。
+    // [Pre-Assert手順] - cplat_fgets() から "piped" を返却する。
 
     // Act
-    int actual_ret = cplat_prompt_readline_with_initial_at(prompt_, buf, sizeof(buf), NULL, "initial", "promptTest.cc",
-                                                           1); // [手順] - 初期値を指定して非 TTY で読み取る。
+    int actual_ret =
+        cplat_prompt_readline_with_initial_at(prompt_, buf, sizeof(buf), nullptr, "initial", "promptTest.cc",
+                                              1); // [手順] - 初期値を指定して非 TTY で読み取る。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1036,10 +1035,12 @@ TEST_F(promptTest, readline_with_initial_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_handle = cplat_prompt_readline_with_initial_at(NULL, buf, sizeof(buf), ">> ", "a", "promptTest.cc",
-                                                                  1); // [手順] - ハンドルに NULL を指定する。
-    int actual_ret_buf = cplat_prompt_readline_with_initial_at(prompt_, NULL, sizeof(buf), ">> ", "a", "promptTest.cc",
-                                                               1); // [手順] - 出力先に NULL を指定する。
+    int actual_ret_handle =
+        cplat_prompt_readline_with_initial_at(nullptr, buf, sizeof(buf), ">> ", "a", "promptTest.cc",
+                                              1); // [手順] - ハンドルに NULL を指定する。
+    int actual_ret_buf =
+        cplat_prompt_readline_with_initial_at(prompt_, nullptr, sizeof(buf), ">> ", "a", "promptTest.cc",
+                                              1); // [手順] - 出力先に NULL を指定する。
     int actual_ret_size = cplat_prompt_readline_with_initial_at(prompt_, buf, 0u, ">> ", "a", "promptTest.cc",
                                                                 1); // [手順] - 出力先のバイト数に 0 を指定する。
 

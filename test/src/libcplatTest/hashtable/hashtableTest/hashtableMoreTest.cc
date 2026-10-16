@@ -84,7 +84,7 @@ TEST_F(hashtableMoreTest, attach_rejects_invalid_buffers)
     std::vector<unsigned char> buf_data(data_needed, 0);
     (void)cplat_hashtable_create(&config, buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(), &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    int actual_ret_null = cplat_hashtable_attach(NULL, mgmt_needed, buf_data.data(), buf_data.size(),
+    int actual_ret_null = cplat_hashtable_attach(nullptr, mgmt_needed, buf_data.data(), buf_data.size(),
                                                  &attached); // [手順] - buf_mgmt に NULL を渡す。
     int actual_ret_small = cplat_hashtable_attach(buf_mgmt.data(), 4, buf_data.data(), buf_data.size(),
                                                   &attached); // [手順] - 短すぎる buf_mgmt_size を渡す。
@@ -145,7 +145,7 @@ TEST_F(hashtableMoreTest, delete_rec_and_purge)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     (void)cplat_hashtable_add(ht, "keep", value.data(),
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 残すキーを追加する。
     (void)cplat_hashtable_add(ht, "drop", value.data(),
@@ -158,7 +158,7 @@ TEST_F(hashtableMoreTest, delete_rec_and_purge)
     (void)cplat_hashtable_get_status(ht, rec, &status);
     (void)cplat_hashtable_empty_count(ht, &empty);
     const void *key_out = nullptr;
-    int actual_ret_bad_rec = cplat_hashtable_get_key_ref(ht, 0, &key_out, NULL); // [手順] - レコード番号 0 を読む。
+    int actual_ret_bad_rec = cplat_hashtable_get_key_ref(ht, 0, &key_out, nullptr); // [手順] - レコード番号 0 を読む。
     int actual_ret_delete_missing = cplat_hashtable_delete(ht, "drop");    // [手順] - 回収後のキーを削除する。
 
     // Assert
@@ -197,7 +197,7 @@ TEST_F(hashtableMoreTest, delete_with_lifetime_two_expires_immediately)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_delete = cplat_hashtable_delete(ht, "a"); // [手順] - lifetime 2 で削除する。
     (void)cplat_hashtable_get_status(ht, 1, &status);
@@ -232,7 +232,7 @@ TEST_F(hashtableMoreTest, delete_with_lifetime_two_sets_next_empty_when_table_fu
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "b", value.data(),
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 満杯にする(next_empty が 0 になる)。
@@ -269,7 +269,7 @@ TEST_F(hashtableMoreTest, delete_with_lifetime_two_keeps_earlier_next_empty_hint
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     (void)cplat_hashtable_insert_direct(ht, 1, "a", 1, value.data(), &k_insert_timestamp,
                                         1); // [手順] - レコード 1 を占有する(next_empty は 2 になる)。
     (void)cplat_hashtable_insert_direct(ht, 3, "c", 1, value.data(), &k_insert_timestamp,
@@ -308,7 +308,8 @@ TEST_F(hashtableMoreTest, required_size_rejects_overflowing_layout)
     // Act
     int actual_ret_size =
         cplat_hashtable_required_size(&config, &mgmt_size, &data_size);             // [手順] - 必要サイズを求める。
-    int actual_ret_create = cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - 同じ設定で構築する。
+    int actual_ret_create =
+        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - 同じ設定で構築する。
 
     // Assert
     EXPECT_EQ(
@@ -339,10 +340,10 @@ TEST_F(hashtableMoreTest, validate_returns_out_of_memory_when_calloc_fails)
             DoDefault()) // [Pre-Assert確認_異常系] - cplat_calloc() が 3 回呼び出されること。(create の 2 回に加えて validate 用の確保が呼び出されたことの確認)
                          // [Pre-Assert手順] - 1 回目(create の管理領域+データ領域)は成功させる。
         .WillOnce(DoDefault())      // [Pre-Assert手順] - 2 回目(create の内部管理データ)も成功させる。
-        .WillOnce(Return(nullptr)); // [Pre-Assert手順] - 3 回目の cplat_calloc から NULL を返却する。
+        .WillOnce(Return(nullptr)); // [Pre-Assert手順] - 3 回目の cplat_calloc() から NULL を返却する。
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret = cplat_hashtable_validate(ht); // [手順] - validate を呼び出す。
 
@@ -376,7 +377,7 @@ TEST_F(hashtableMoreTest, add_reuses_deleted_record_with_highest_status_when_no_
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     (void)cplat_hashtable_insert_direct(ht, 1, "old", 2, value.data(), &ts_old,
                                         1); // [手順] - status 2(削除中)のレコードを先に配置する。
     (void)cplat_hashtable_insert_direct(ht, 2, "new", 3, value.data(), &ts_new,
@@ -429,7 +430,7 @@ TEST_F(hashtableMoreTest, add_reuses_oldest_generation_when_status_ties_with_rec
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     /* 変更時刻と世代カウンターを逆向きに仕込み、どちらで選んだかを判別できるようにする。 */
     (void)cplat_hashtable_insert_direct(ht, 1, "a", 3, value.data(), &ts_a,
                                         2); // [手順] - status 3、新しい時刻、古い世代を配置する。
@@ -479,10 +480,10 @@ TEST_F(hashtableMoreTest, add_reuses_lowest_record_number_when_status_ties_with_
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
-    (void)cplat_hashtable_insert_direct(ht, 1, "a", 3, value.data(), NULL,
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_insert_direct(ht, 1, "a", 3, value.data(), nullptr,
                                         0); // [手順] - status 3 のレコード1を配置する。
-    (void)cplat_hashtable_insert_direct(ht, 2, "b", 3, value.data(), NULL,
+    (void)cplat_hashtable_insert_direct(ht, 2, "b", 3, value.data(), nullptr,
                                         0); // [手順] - status 3 のレコード2を配置する。
     int actual_ret_add =
         cplat_hashtable_add(ht, "c", value.data(),
@@ -525,7 +526,7 @@ TEST_F(hashtableMoreTest, add_with_reuse_deleted_still_fails_when_no_deleted_rec
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     (void)cplat_hashtable_add(ht, "a", value.data(),
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 唯一のスロットを実装中で埋める。
     int actual_ret_add = cplat_hashtable_add(
@@ -565,7 +566,7 @@ TEST_F(hashtableMoreTest, add_reuses_deleted_record_that_is_not_at_chain_head)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     (void)cplat_hashtable_insert_direct(ht, 1, base_key, 2, value.data(), &ts_deleted,
                                         1); // [手順] - 削除中のレコード1を先に配置し、チェーン先頭にする。
     int actual_ret_add_head =

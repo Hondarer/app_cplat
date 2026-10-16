@@ -19,7 +19,7 @@ class traceFileAllocFailureTest : public Test
     void SetUp() override
     {
         ON_CALL(mock_cplat, cplat_file_open(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - `cplat_file_open` の既定動作を設定する。
+        // [状態] - cplat_file_open() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_get_size(_, _, _))
             .WillByDefault(
                 [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -27,9 +27,9 @@ class traceFileAllocFailureTest : public Test
                     *size_out = 0;
                     return 0;
                 });
-        // [状態] - `cplat_file_get_size` の既定動作を設定する。
+        // [状態] - cplat_file_get_size() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_close(_, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - `cplat_file_close` の既定動作を設定する。
+        // [状態] - cplat_file_close() の既定動作を設定する。
     }
     // [サブ手順終了]
 };
@@ -48,11 +48,11 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_registry_key_allocati
     // Act
     cplat_trace_file_sink *handle =
         cplat_trace_file_sink_create("traceFileAllocFailureTest_key.log", 0, 0,
-                                     0); // [手順] - cplat_trace_file_sink_create を呼び出す。
+                                     0); // [手順] - cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
-    EXPECT_EQ((cplat_trace_file_sink *)NULL,
-              handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が NULL であること。
+    EXPECT_EQ(nullptr,
+              handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が nullptr であること。
 }
 
 // ハンドルの確保に失敗した場合に生成が失敗することの確認
@@ -71,11 +71,11 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_handle_allocation_fai
     // Act
     cplat_trace_file_sink *handle =
         cplat_trace_file_sink_create("traceFileAllocFailureTest_handle.log", 0, 0,
-                                     0); // [手順] - cplat_trace_file_sink_create を呼び出す。
+                                     0); // [手順] - cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
-    EXPECT_EQ((cplat_trace_file_sink *)NULL,
-              handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が NULL であること。
+    EXPECT_EQ(nullptr,
+              handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が nullptr であること。
 }
 
 // パス文字列の複製に失敗した場合に生成が失敗することの確認
@@ -95,11 +95,11 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_path_duplication_fail
     // Act
     cplat_trace_file_sink *handle =
         cplat_trace_file_sink_create("traceFileAllocFailureTest_path.log", 0, 0,
-                                     0); // [手順] - cplat_trace_file_sink_create を呼び出す。
+                                     0); // [手順] - cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
-    EXPECT_EQ((cplat_trace_file_sink *)NULL,
-              handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が NULL であること。
+    EXPECT_EQ(nullptr,
+              handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が nullptr であること。
 }
 
 // レジストリ配列の拡張に失敗した場合に生成が失敗することの確認
@@ -116,9 +116,9 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_registry_expansion_fa
     // Act
     cplat_trace_file_sink *handle =
         cplat_trace_file_sink_create("traceFileAllocFailureTest_registry.log", 0, 0,
-                                     0); // [手順] - cplat_trace_file_sink_create を呼び出す。
+                                     0); // [手順] - cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
-    EXPECT_EQ((cplat_trace_file_sink *)NULL,
-              handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が NULL であること。
+    EXPECT_EQ(nullptr,
+              handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が nullptr であること。
 }

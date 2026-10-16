@@ -73,7 +73,7 @@ TEST_F(hashtableValidateTest, rejects_null_handle)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_validate(NULL); // [手順] - NULL で validate を呼ぶ。
+    int actual_ret = cplat_hashtable_validate(nullptr); // [手順] - NULL で validate を呼ぶ。
 
     // Assert
     EXPECT_EQ(
@@ -89,7 +89,7 @@ TEST_F(hashtableValidateTest, detects_bucket_link_out_of_range)
     cplat_hashtable *ht = nullptr;
 
     fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
     test_hashtable_bucket_head(ht)[0] = 5; // [状態] - バケット先頭リンクへ capacity 超の値を書く。
 
     // Pre-Assert
@@ -123,7 +123,7 @@ TEST_F(hashtableValidateTest, detects_link_cycle)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_insert_direct(ht, 1, "a", 1, value.data(), &k_insert_timestamp,
                                         1); // [手順] - レコード 1 を使用中にする。
     (void)cplat_hashtable_insert_direct(ht, 2, peer, 1, value.data(), &k_insert_timestamp,
@@ -149,7 +149,7 @@ TEST_F(hashtableValidateTest, detects_duplicate_visit)
     std::vector<unsigned char> value(8, 0);
 
     fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
     (void)cplat_hashtable_add(ht, "a", value.data(),
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [状態] - レコード 1 を使用中にする。
     test_hashtable_bucket_head(ht)[0] = 1; // [状態] - バケット 0 からもレコード 1 を指させる。
@@ -177,7 +177,7 @@ TEST_F(hashtableValidateTest, detects_linked_empty_slot)
     cplat_hashtable *ht = nullptr;
 
     fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
     test_hashtable_bucket_head(ht)[0] = 1; // [状態] - 空のレコード 1 をバケット 0 から直接リンクする。
 
     // Pre-Assert
@@ -203,7 +203,7 @@ TEST_F(hashtableValidateTest, detects_key_without_terminator)
     std::vector<unsigned char> value(8, 0);
 
     fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - key_size 8 の設定を用意する。
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
     (void)cplat_hashtable_add(ht, "a", value.data(),
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [状態] - レコード 1 に文字列キーを格納する。
     std::memset(test_hashtable_entry_key(ht, 0), 'x', 8);             // [状態] - 格納キーを NUL 無しで埋め尽くす。
@@ -251,7 +251,7 @@ TEST_F(hashtableValidateTest, detects_hash_mismatch)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(),
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - レコード 1 に "a" を格納する。
     std::memset(test_hashtable_entry_key(ht, 0), 0, 8);
@@ -277,7 +277,7 @@ TEST_F(hashtableValidateTest, detects_next_link_out_of_range)
     std::vector<unsigned char> value(8, 0);
 
     fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
     (void)cplat_hashtable_add(ht, "a", value.data(),
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [状態] - レコード 1 を使用中にする。
     *test_hashtable_entry_next(ht, 0) = 99; // [状態] - 次リンクへ capacity を超える値を書き込む。
@@ -304,7 +304,7 @@ TEST_F(hashtableValidateTest, detects_unlinked_in_use_record)
     cplat_hashtable *ht = nullptr;
 
     fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
     *test_hashtable_entry_status(ht, 0) = 1; // [状態] - どのバケットからもリンクせずレコード 1 を使用中にする。
 
     // Pre-Assert
@@ -329,7 +329,7 @@ TEST_F(hashtableValidateTest, detects_next_empty_mismatch)
     cplat_hashtable *ht = nullptr;
 
     fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0,
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
                                  &ht);    // [状態] - 何も追加せずテーブルを構築する(next_empty は 1)。
     test_hashtable_set_next_empty(ht, 2); // [状態] - next_empty を実際の最小空きスロットと異なる値へ書き換える。
 
@@ -356,7 +356,7 @@ TEST_F(hashtableValidateTest, detects_in_use_count_mismatch)
     std::vector<unsigned char> value(8, 1);
 
     fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
     (void)cplat_hashtable_add(
         ht, "a", value.data(),
         CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [状態] - 1 件追加する(in_use_count は 1 になる)。
@@ -385,7 +385,7 @@ TEST_F(hashtableValidateTest, detects_deleted_count_mismatch)
     std::vector<unsigned char> value(8, 1);
 
     fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
     (void)cplat_hashtable_add(ht, "a", value.data(),
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [状態] - 1 件追加する。
     (void)cplat_hashtable_delete(ht, "a"); // [状態] - 削除する(in_use_count は 0、deleted_count は 1 になる)。
@@ -445,7 +445,7 @@ TEST_F(hashtableValidateTest, detects_free_block_overlapping_a_live_block)
         variable_value_config(4, 32); // [状態] - capacity 4、値ストレージ 32 バイトの設定を用意する。
     cplat_hashtable *ht = nullptr;
 
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
     (void)cplat_hashtable_add(ht, "a", "1111",
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [状態] - 5 バイトの値を 1 件追加する。
     free_block_entry *free_blocks = static_cast<free_block_entry *>(test_hashtable_value_free_list(ht));
@@ -473,7 +473,7 @@ TEST_F(hashtableValidateTest, detects_free_list_total_mismatch)
         variable_value_config(4, 32); // [状態] - capacity 4、値ストレージ 32 バイトの設定を用意する。
     cplat_hashtable *ht = nullptr;
 
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
     (void)cplat_hashtable_add(ht, "a", "1111",
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [状態] - 5 バイトの値を 1 件追加する。
     free_block_entry *free_blocks = static_cast<free_block_entry *>(test_hashtable_value_free_list(ht));
@@ -501,7 +501,7 @@ TEST_F(hashtableValidateTest, detects_adjacent_free_blocks_left_unmerged)
         variable_value_config(4, 32); // [状態] - capacity 4、値ストレージ 32 バイトの設定を用意する。
     cplat_hashtable *ht = nullptr;
 
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
     (void)cplat_hashtable_add(ht, "a", "1111",
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [状態] - 5 バイトの値を 1 件追加する。
     free_block_entry *free_blocks = static_cast<free_block_entry *>(test_hashtable_value_free_list(ht));
@@ -533,7 +533,7 @@ TEST_F(hashtableValidateTest, detects_free_count_beyond_upper_bound)
         variable_value_config(4, 32); // [状態] - capacity 4、値ストレージ 32 バイトの設定を用意する。
     cplat_hashtable *ht = nullptr;
 
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
     test_hashtable_set_value_free_count(ht,
                                         6); // [状態] - 空きブロックの個数を上限 capacity + 1 より大きい値へ書き換える。
 
@@ -564,7 +564,7 @@ TEST_F(hashtableValidateTest, attach_rejects_free_count_beyond_upper_bound)
     size_t mgmt_size = 0;
     size_t data_size = 0;
 
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
     test_hashtable_set_value_free_count(ht,
                                         6); // [状態] - 空きブロックの個数を上限 capacity + 1 より大きい値へ書き換える。
     (void)cplat_hashtable_buffer_size(ht, &mgmt_size, &data_size);

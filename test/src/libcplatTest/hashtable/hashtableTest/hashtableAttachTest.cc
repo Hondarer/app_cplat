@@ -86,7 +86,7 @@ TEST_F(hashtableAttachTest, rejects_null_ht_out)
 
     // Act
     int actual_ret = cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
-                                            NULL); // [手順] - ht_out に NULL を渡す。
+                                            nullptr); // [手順] - ht_out に NULL を渡す。
 
     // Assert
     EXPECT_EQ(

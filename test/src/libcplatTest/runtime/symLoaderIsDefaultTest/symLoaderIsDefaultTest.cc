@@ -29,7 +29,7 @@ TEST_F(symLoaderIsDefaultTest, resolves_and_reports_explicit_default)
                 // [Pre-Assert手順] - resolved を明示的既定値の 2 に設定する。
 
     // Act
-    int actual_ret = cplat_sym_loader_is_default(&entry_); // [手順] - cplat_sym_loader_is_default を呼び出す。
+    int actual_ret = cplat_sym_loader_is_default(&entry_); // [手順] - cplat_sym_loader_is_default() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -55,7 +55,7 @@ TEST_F(symLoaderIsDefaultTest, reports_not_default_for_resolved_symbol)
         .Times(0); // [Pre-Assert確認_正常系] - cplat_sym_loader_resolve() が呼び出されないこと。
 
     // Act
-    int actual_ret = cplat_sym_loader_is_default(&entry_); // [手順] - cplat_sym_loader_is_default を呼び出す。
+    int actual_ret = cplat_sym_loader_is_default(&entry_); // [手順] - cplat_sym_loader_is_default() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -86,7 +86,7 @@ TEST_F(symLoaderIsDefaultTest, reports_not_default_for_unresolved_entry)
                 // [Pre-Assert手順] - resolved を定義なしの -1 に設定する。
 
     // Act
-    int actual_ret = cplat_sym_loader_is_default(&entry_); // [手順] - cplat_sym_loader_is_default を呼び出す。
+    int actual_ret = cplat_sym_loader_is_default(&entry_); // [手順] - cplat_sym_loader_is_default() を呼び出す。
 
     // Assert
     EXPECT_EQ(

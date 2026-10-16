@@ -51,7 +51,7 @@ TEST_F(symLoaderResolveTest, resolves_existing_symbol)
     // Pre-Assert
 
     // Act
-    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
+    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve() を呼び出す。
 
     // Assert
     EXPECT_NE(nullptr, func_ptr); // [確認_正常系] - cplat_sym_loader_resolve() の戻り値が nullptr 以外であること。
@@ -98,7 +98,7 @@ TEST_F(symLoaderResolveTest, marks_explicit_default_when_both_names_are_default)
     // Pre-Assert
 
     // Act
-    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
+    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr, func_ptr); // [確認_正常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
@@ -120,7 +120,7 @@ TEST_F(symLoaderResolveTest, marks_undefined_when_lib_name_is_empty)
     // Pre-Assert
 
     // Act
-    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
+    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
@@ -142,7 +142,7 @@ TEST_F(symLoaderResolveTest, marks_undefined_when_func_name_is_empty)
     // Pre-Assert
 
     // Act
-    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
+    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
@@ -169,7 +169,7 @@ TEST_F(symLoaderResolveTest, marks_name_too_long_when_extension_does_not_fit)
     // Pre-Assert
 
     // Act
-    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
+    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
@@ -192,7 +192,7 @@ TEST_F(symLoaderResolveTest, marks_open_error_when_library_is_missing)
     // Pre-Assert
 
     // Act
-    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
+    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
@@ -216,7 +216,7 @@ TEST_F(symLoaderResolveTest, releases_handle_when_symbol_is_missing)
     // Pre-Assert
 
     // Act
-    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
+    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
@@ -252,7 +252,7 @@ TEST_F(symLoaderResolveTest, returns_null_when_lock_creation_fails)
                           // [Pre-Assert手順] - 1 回目は CPLAT_ERR_UNKNOWN を返却し、以降は本物へ委譲する。
 
     // Act
-    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
+    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
@@ -280,7 +280,7 @@ TEST_F(symLoaderResolveTest, returns_null_when_lock_acquisition_fails)
                                       // [Pre-Assert手順] - 1 回目は CPLAT_ERR_UNKNOWN を返却し、以降は本物へ委譲する。
 
     // Act
-    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve を呼び出す。
+    void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr, func_ptr); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。
@@ -316,7 +316,7 @@ TEST_F(symLoaderResolveTest, reuses_lock_initialized_by_another_thread)
             CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - entry_.lock_state を読み込んだ cplat_atomic_load_i32() の戻り値が 2 であること。(ロック初期化が完了することの確認)
 
     // Cleanup
-    test_sym_loader_set_entry_lock_wait_hook(NULL);
+    test_sym_loader_set_entry_lock_wait_hook(nullptr);
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -373,7 +373,7 @@ TEST_F(symLoaderResolveTest, returns_result_resolved_while_waiting_for_lock)
 
     // Act
     void *result = cplat_sym_loader_resolve(
-        &entry_); // [手順] - ロック待機中に解決済みとなるエントリで cplat_sym_loader_resolve を呼び出す。
+        &entry_); // [手順] - ロック待機中に解決済みとなるエントリで cplat_sym_loader_resolve() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -393,7 +393,7 @@ TEST_F(symLoaderResolveTest, does_not_mark_default_when_only_library_name_is_def
 
     // Act
     void *result = cplat_sym_loader_resolve(
-        &entry_); // [手順] - ライブラリ名だけが default のエントリで cplat_sym_loader_resolve を呼び出す。
+        &entry_); // [手順] - ライブラリ名だけが default のエントリで cplat_sym_loader_resolve() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr, result); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。

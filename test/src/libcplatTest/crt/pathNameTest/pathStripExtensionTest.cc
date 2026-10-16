@@ -17,9 +17,8 @@ TEST_F(pathStripExtensionTest, removes_extension)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_strip_extension(
-        actual, sizeof(actual), NULL,
-        "a/b.txt"); // [手順] - cplat_path_strip_extension(actual, size, NULL, "a/b.txt") を呼び出す。
+    int actual_ret = cplat_path_strip_extension(actual, sizeof(actual), nullptr,
+                                                "a/b.txt"); // [手順] - cplat_path_strip_extension() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_strip_extension() の戻り値が CPLAT_OK であること。
@@ -35,9 +34,8 @@ TEST_F(pathStripExtensionTest, copies_as_is_when_no_extension)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_strip_extension(
-        actual, sizeof(actual), NULL,
-        "noext"); // [手順] - cplat_path_strip_extension(actual, size, NULL, "noext") を呼び出す。
+    int actual_ret = cplat_path_strip_extension(actual, sizeof(actual), nullptr,
+                                                "noext"); // [手順] - cplat_path_strip_extension() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_strip_extension() の戻り値が CPLAT_OK であること。
@@ -54,9 +52,8 @@ TEST_F(pathStripExtensionTest, returns_einval_for_null_path_out)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_strip_extension(
-        NULL, 16, &err,
-        "a.txt");                      // [手順] - cplat_path_strip_extension(NULL, 16, &err, "a.txt") を呼び出す。
+    int actual_ret = cplat_path_strip_extension(nullptr, 16, &err,
+                                                "a.txt"); // [手順] - cplat_path_strip_extension() を呼び出す。
     cplat_error_get_last(&last_error); // [手順] - TLS に記録された詳細エラーを取得する。
 
     // Assert
@@ -86,7 +83,7 @@ TEST_F(pathStripExtensionTest, returns_einval_for_zero_path_size)
     // Act
     int actual_ret = cplat_path_strip_extension(
         actual, 0u, &err,
-        "a.txt"); // [手順] - path_size に 0 を指定して cplat_path_strip_extension を呼び出す。
+        "a.txt"); // [手順] - path_size に 0 を指定して cplat_path_strip_extension() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -109,9 +106,8 @@ TEST_F(pathStripExtensionTest, returns_einval_for_null_path)
     // Pre-Assert
 
     // Act
-    int actual_ret =
-        cplat_path_strip_extension(actual, sizeof(actual), &err,
-                                   NULL); // [手順] - cplat_path_strip_extension(actual, size, &err, NULL) を呼び出す。
+    int actual_ret = cplat_path_strip_extension(actual, sizeof(actual), &err,
+                                                nullptr); // [手順] - cplat_path_strip_extension() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -134,9 +130,8 @@ TEST_F(pathStripExtensionTest, returns_einval_for_empty_path)
     // Pre-Assert
 
     // Act
-    int actual_ret =
-        cplat_path_strip_extension(actual, sizeof(actual), &err,
-                                   ""); // [手順] - cplat_path_strip_extension(actual, size, &err, "") を呼び出す。
+    int actual_ret = cplat_path_strip_extension(actual, sizeof(actual), &err,
+                                                ""); // [手順] - cplat_path_strip_extension() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -159,9 +154,8 @@ TEST_F(pathStripExtensionTest, returns_enametoolong_when_buffer_too_small)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_strip_extension(
-        actual, sizeof(actual), &err,
-        "abc.txt"); // [手順] - cplat_path_strip_extension(actual, 2, &err, "abc.txt") を呼び出す。
+    int actual_ret = cplat_path_strip_extension(actual, sizeof(actual), &err,
+                                                "abc.txt"); // [手順] - cplat_path_strip_extension() を呼び出す。
 
     // Assert
     EXPECT_EQ(

@@ -116,7 +116,7 @@ TEST(processTest, RunSyncReturnsChildExitCode)
     char arg0[] = "/bin/sh";
     char arg1[] = "-c";
     char arg2[] = "exit 7";
-    char *argv[] = {arg0, arg1, arg2, NULL};
+    char *argv[] = {arg0, arg1, arg2, nullptr};
     int exit_code = 0;
     int status = 7 << 8;
 
@@ -133,7 +133,7 @@ TEST(processTest, RunSyncReturnsChildExitCode)
 
     // Act
     int result = cplat_process_run_sync(&options, CPLAT_PROCESS_WAIT_FOREVER,
-                                        &exit_code); // [手順] - cplat_process_run_sync を無期限待機で呼び出す。
+                                        &exit_code); // [手順] - cplat_process_run_sync() を無期限待機で呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -149,9 +149,9 @@ TEST(processTest, EnvironmentOverridesAreAcceptedByRunSync)
     NiceMock<Mock_sys_wait> mock_sys_wait;
     cplat_process_options options = {};
     char arg0[] = "/bin/true";
-    char *argv[] = {arg0, NULL};
+    char *argv[] = {arg0, nullptr};
     char env_value[] = "CPLAT_PROCESS_TEST_VALUE=override-value";
-    char *env_overrides[] = {env_value, NULL};
+    char *env_overrides[] = {env_value, nullptr};
     int exit_code = 0;
     int status = 0;
 
@@ -186,7 +186,7 @@ TEST(processTest, WaitNoWaitReportsTimeoutForRunningProcess)
     cplat_process_options options = {};
     cplat_process *process = nullptr;
     char arg0[] = "/bin/true";
-    char *argv[] = {arg0, NULL};
+    char *argv[] = {arg0, nullptr};
     int exit_code = 0;
     int status = 0;
 
@@ -209,7 +209,8 @@ TEST(processTest, WaitNoWaitReportsTimeoutForRunningProcess)
     // [Pre-Assert手順] - 終了ステータス 0 を設定して 4244 を返却する。
 
     // Act
-    int start_result = cplat_process_start(&options, &process); // [手順] - cplat_process_start で子プロセスを起動する。
+    int start_result =
+        cplat_process_start(&options, &process); // [手順] - cplat_process_start() で子プロセスを起動する。
     ASSERT_EQ(CPLAT_OK, start_result);
     // [確認_正常系] - cplat_process_start() の戻り値が CPLAT_OK であること。
     ASSERT_NE(nullptr, process);
@@ -257,6 +258,7 @@ TEST(processTest, WaitReturnsChildExitCode)
     // [Pre-Assert手順] - 終了コード 7 を設定して TRUE を返却する。
     EXPECT_CALL(mock_windows, CloseHandle(_, _, _, fake_process)).WillOnce(Return(TRUE)); // Cleanup の destroy 用
     // [Pre-Assert確認_正常系] - CloseHandle() が fake_process を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - TRUE を返却する。
 
     // Act
     int wait_result = cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 無期限待機で終了を待つ。
@@ -303,6 +305,7 @@ TEST(processTest, WaitNoWaitReportsTimeoutForAdoptedProcess)
     // [Pre-Assert手順] - 終了コード 1 を設定して TRUE を返却する。
     EXPECT_CALL(mock_windows, CloseHandle(_, _, _, fake_process)).WillOnce(Return(TRUE)); // Cleanup の destroy 用
     // [Pre-Assert確認_正常系] - CloseHandle() が fake_process を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - TRUE を返却する。
 
     // Act
     int wait_result = cplat_process_wait(process, CPLAT_PROCESS_NO_WAIT);     // [手順] - NO_WAIT で待機する。
@@ -767,13 +770,13 @@ TEST(processTest, StartCreatesProcessWithNativeStdioHandle)
 TEST(processTest, RejectsInvalidArguments)
 {
     // Arrange
-    cplat_process *process = NULL; // [状態] - プロセス ハンドルの受け取り先を NULL で初期化する。
+    cplat_process *process = nullptr; // [状態] - プロセス ハンドルの受け取り先を NULL で初期化する。
 
     // Pre-Assert
 
     // Act
     int result =
-        cplat_process_start(NULL, &process); // [手順] - options に NULL を渡して cplat_process_start を呼び出す。
+        cplat_process_start(nullptr, &process); // [手順] - options に NULL を渡して cplat_process_start() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -808,7 +811,7 @@ TEST(processTest, GetsExecutablePath)
             }); // [Pre-Assert確認_正常系] - readlink() が "/proc/self/exe" と等しい文字列を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - 解決済みパスを書き込み、その長さを返却する。
 #elif defined(PLATFORM_WINDOWS)
-    EXPECT_CALL(mock_windows, GetModuleFileNameW(_, _, _, static_cast<HMODULE>(NULL), _, _))
+    EXPECT_CALL(mock_windows, GetModuleFileNameW(_, _, _, static_cast<HMODULE>(nullptr), _, _))
         .WillOnce(
             [](const char *, int, const char *, HMODULE, LPWSTR filename, DWORD size) -> DWORD
             {
@@ -817,7 +820,7 @@ TEST(processTest, GetsExecutablePath)
                 (void)size;
                 memcpy(filename, resolved, (len + 1U) * sizeof(wchar_t));
                 return static_cast<DWORD>(len);
-            }); // [Pre-Assert確認_正常系] - GetModuleFileNameW() が static_cast<HMODULE>(NULL) を指定して 1 回呼び出されること。
+            }); // [Pre-Assert確認_正常系] - GetModuleFileNameW() が nullptr を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - モジュール パスを書き込み、その長さを返却する。
 #endif /* PLATFORM_ */
 
@@ -852,7 +855,7 @@ TEST(processTest, ExecutablePathRejectsInvalidOutputArguments)
 
     // Act
     int null_result = cplat_process_get_executable_path(
-        NULL, sizeof(path)); // [手順] - 出力先に NULL を渡して実行ファイルのパスを取得する。
+        nullptr, sizeof(path)); // [手順] - 出力先に NULL を渡して実行ファイルのパスを取得する。
     int zero_size_result =
         cplat_process_get_executable_path(path, 0); // [手順] - 出力先サイズに 0 を渡して実行ファイルのパスを取得する。
 
@@ -899,7 +902,7 @@ TEST(processTest, GetsPidPropagatesMockedGetpid)
                                                      // [Pre-Assert手順] - pid 4321 を返却する。
 
     // Act
-    uint32_t result = cplat_process_get_pid(); // [手順] - cplat_process_get_pid を呼び出す。
+    uint32_t result = cplat_process_get_pid(); // [手順] - cplat_process_get_pid() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -920,7 +923,7 @@ TEST(processTest, GetsPidPropagatesMockedGetCurrentProcessId)
                                         // [Pre-Assert手順] - pid 4321 を返却する。
 
     // Act
-    uint32_t result = cplat_process_get_pid(); // [手順] - cplat_process_get_pid を呼び出す。
+    uint32_t result = cplat_process_get_pid(); // [手順] - cplat_process_get_pid() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -937,8 +940,8 @@ TEST(processTest, GetsTidReturnsSameValueInSameThread)
     // Pre-Assert
 
     // Act
-    uint32_t first_tid = cplat_process_get_tid();  // [手順] - cplat_process_get_tid を呼び出す。
-    uint32_t second_tid = cplat_process_get_tid(); // [手順] - 同じスレッドから cplat_process_get_tid を再度呼び出す。
+    uint32_t first_tid = cplat_process_get_tid();  // [手順] - cplat_process_get_tid() を呼び出す。
+    uint32_t second_tid = cplat_process_get_tid(); // [手順] - 同じスレッドから cplat_process_get_tid() を再度呼び出す。
 
     // Assert
     EXPECT_NE(
@@ -958,10 +961,11 @@ TEST(processTest, GetsTidDiffersBetweenThreads)
     // Pre-Assert
 
     // Act
-    std::thread worker(get_tid_in_thread, &worker_tid); // [手順] - 別のスレッドから cplat_process_get_tid を呼び出す。
+    std::thread worker(get_tid_in_thread,
+                       &worker_tid); // [手順] - 別のスレッドから cplat_process_get_tid() を呼び出す。
     worker.join();
     uint32_t current_tid =
-        cplat_process_get_tid(); // [手順] - 呼び出し元のスレッドから cplat_process_get_tid を呼び出す。
+        cplat_process_get_tid(); // [手順] - 呼び出し元のスレッドから cplat_process_get_tid() を呼び出す。
 
     // Assert
     EXPECT_NE(
@@ -981,8 +985,8 @@ TEST(processTest, GetsTidMatchesPidOnInitialThread)
     // Pre-Assert
 
     // Act
-    uint32_t tid = cplat_process_get_tid(); // [手順] - 最初のスレッドから cplat_process_get_tid を呼び出す。
-    uint32_t pid = cplat_process_get_pid(); // [手順] - cplat_process_get_pid を呼び出す。
+    uint32_t tid = cplat_process_get_tid(); // [手順] - 最初のスレッドから cplat_process_get_tid() を呼び出す。
+    uint32_t pid = cplat_process_get_pid(); // [手順] - cplat_process_get_pid() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1294,14 +1298,15 @@ TEST(processTest, RejectsInvalidWaitAndExitArguments)
     // Pre-Assert
 
     // Act
-    int null_wait = cplat_process_wait(NULL, CPLAT_PROCESS_NO_WAIT); // [手順] - NULL process で待機する。
+    int null_wait = cplat_process_wait(nullptr, CPLAT_PROCESS_NO_WAIT); // [手順] - NULL process で待機する。
     int negative_wait = cplat_process_wait(process, -1);             // [手順] - 負の timeout で待機する。
     int null_exit_process =
-        cplat_process_get_exit_code(NULL, &exit_code); // [手順] - NULL process から終了コードを取得する。
-    int null_exit_output = cplat_process_get_exit_code(process, NULL); // [手順] - NULL 出力先へ終了コードを取得する。
+        cplat_process_get_exit_code(nullptr, &exit_code); // [手順] - NULL process から終了コードを取得する。
+    int null_exit_output =
+        cplat_process_get_exit_code(process, nullptr); // [手順] - NULL 出力先へ終了コードを取得する。
     int running_exit =
         cplat_process_get_exit_code(process, &exit_code); // [手順] - 待機前 process から終了コードを取得する。
-    int null_terminate = cplat_process_terminate(NULL);   // [手順] - NULL process を terminate する。
+    int null_terminate = cplat_process_terminate(nullptr); // [手順] - NULL process を terminate する。
 
     // Assert
     EXPECT_EQ(
@@ -1325,7 +1330,7 @@ TEST(processTest, RejectsInvalidWaitAndExitArguments)
 
     // Cleanup
     cplat_process_dispose(process);
-    cplat_process_dispose(NULL);
+    cplat_process_dispose(nullptr);
 }
 
     #if defined(PLATFORM_LINUX)
@@ -1335,15 +1340,15 @@ TEST(processTest, environment_helpers_handle_keys_and_capacity)
 {
     // Arrange
     char *old_entry = strdup("KEY=old");
-    char *envp[3] = {old_entry, NULL, NULL};
+    char *envp[3] = {old_entry, nullptr, nullptr};
     char replace_entry[] = "KEY=new";
     char add_entry[] = "OTHER=value";
     char overflow_entry[] = "THIRD=value";
     char override_one[] = "PATH=/custom/bin";
     char override_two[] = "CPLAT_PROCESS_TEST_HELPER=helper";
-    char *overrides[] = {override_one, override_two, NULL};
+    char *overrides[] = {override_one, override_two, nullptr};
     char invalid_override[] = "INVALID_HELPER_ENTRY";
-    char *invalid_overrides[] = {invalid_override, NULL};
+    char *invalid_overrides[] = {invalid_override, nullptr};
 
     // Pre-Assert
 
@@ -1381,11 +1386,11 @@ TEST(processTest, environment_helpers_handle_keys_and_capacity)
         "new",
         updated_value); // [確認_正常系] - "KEY" を探した test_process_find_env_value() の戻り値が "new" であること。(上書き後の KEY が "new" であることの確認)
     EXPECT_EQ(
-        static_cast<const char *>(NULL),
-        missing_value); // [確認_異常系] - "MISSING" を探した test_process_find_env_value() の戻り値が static_cast<const char *>(NULL) と一致すること。(未登録キーが NULL であることの確認)
+        static_cast<const char *>(nullptr),
+        missing_value); // [確認_異常系] - "MISSING" を探した test_process_find_env_value() の戻り値が nullptr と一致すること。(未登録キーが nullptr であることの確認)
     ASSERT_NE(
-        static_cast<char **>(NULL),
-        built_env); // [確認_正常系] - 上書きを適用した test_process_build_environment() の戻り値が static_cast<char **>(NULL) 以外であること。(環境配列が生成されることの確認)
+        static_cast<char **>(nullptr),
+        built_env); // [確認_正常系] - 上書きを適用した test_process_build_environment() の戻り値が nullptr 以外であること。(環境配列が生成されることの確認)
     EXPECT_STREQ(
         "/custom/bin",
         test_process_find_env_value(
@@ -1397,8 +1402,8 @@ TEST(processTest, environment_helpers_handle_keys_and_capacity)
             built_env,
             "CPLAT_PROCESS_TEST_HELPER")); // [確認_正常系] - "CPLAT_PROCESS_TEST_HELPER" を探した test_process_find_env_value() の戻り値が "helper" であること。(追加した環境変数が検索できることの確認)
     EXPECT_EQ(
-        static_cast<char **>(NULL),
-        invalid_env); // [確認_異常系] - 不正な上書きを指定した test_process_build_environment() の戻り値が static_cast<char **>(NULL) と一致すること。(不正な上書きで NULL が返ることの確認)
+        static_cast<char **>(nullptr),
+        invalid_env); // [確認_異常系] - 不正な上書きを指定した test_process_build_environment() の戻り値が nullptr と一致すること。(不正な上書きで nullptr が返ることの確認)
 
     // Cleanup
     test_process_free_envp(built_env);
@@ -1503,10 +1508,10 @@ TEST(processTest, exec_path_helper_searches_path_segments)
     char relative_arg[] = "tool";
     char long_arg[PLATFORM_PATH_MAX] = {};
     char path_value[] = "PATH=/one::/two";
-    char *absolute_argv[] = {absolute_arg, NULL};
-    char *relative_argv[] = {relative_arg, NULL};
-    char *long_argv[] = {long_arg, NULL};
-    char *envp[] = {path_value, NULL};
+    char *absolute_argv[] = {absolute_arg, nullptr};
+    char *relative_argv[] = {relative_arg, nullptr};
+    char *long_argv[] = {long_arg, nullptr};
+    char *envp[] = {path_value, nullptr};
     memset(long_arg, 'x', sizeof(long_arg) - 1U);
     long_arg[sizeof(long_arg) - 1U] = '\0';
 
@@ -1518,7 +1523,7 @@ TEST(processTest, exec_path_helper_searches_path_segments)
     // Act
     test_process_exec_with_path(absolute_argv, envp); // [手順] - 絶対パスを exec する。
     test_process_exec_with_path(relative_argv, envp); // [手順] - PATH の各要素から相対パスを探索する。
-    char *empty_path_env[] = {NULL};
+    char *empty_path_env[] = {nullptr};
     test_process_exec_with_path(relative_argv, empty_path_env); // [手順] - PATH 不在時の既定値から探索する。
     test_process_exec_with_path(long_argv, envp);               // [手順] - 長すぎる候補を exec しない。
 
@@ -1646,10 +1651,10 @@ TEST(processTest, environment_helpers_report_invalid_and_allocation_failures)
 {
     // Arrange
     NiceMock<Mock_cplat> mock_cplat;
-    char *envp[] = {NULL, NULL};
+    char *envp[] = {nullptr, nullptr};
     char invalid_entry[] = "INVALID";
     char valid_entry[] = "KEY=value";
-    char *invalid_overrides[] = {invalid_entry, NULL};
+    char *invalid_overrides[] = {invalid_entry, nullptr};
     int set_result;
     char **invalid_result;
     char **calloc_result;
@@ -1659,7 +1664,7 @@ TEST(processTest, environment_helpers_report_invalid_and_allocation_failures)
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(Return(nullptr))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc() が 2 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_malloc から NULL を返却する。
+                                    // [Pre-Assert手順] - cplat_malloc() から NULL を返却する。
     EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
         .WillOnce(Return(nullptr))
         .WillOnce(DoDefault()); // [Pre-Assert確認_異常系] - cplat_calloc() が 2 回呼び出されること。
@@ -1667,22 +1672,22 @@ TEST(processTest, environment_helpers_report_invalid_and_allocation_failures)
 
     // Act
     set_result = test_process_set_env_entry(envp, 2U, valid_entry); // [手順] - 環境変数エントリの確保失敗を処理する。
-    test_process_free_envp(NULL);                                   // [手順] - NULL の環境配列を解放する。
+    test_process_free_envp(nullptr);                                // [手順] - NULL の環境配列を解放する。
     invalid_result = test_process_build_environment(invalid_overrides); // [手順] - 不正な上書き形式を処理する。
-    calloc_result = test_process_build_environment(NULL);               // [手順] - 環境配列の確保失敗を処理する。
-    duplicate_result = test_process_build_environment(NULL);            // [手順] - 環境エントリの複製失敗を処理する。
+    calloc_result = test_process_build_environment(nullptr);            // [手順] - 環境配列の確保失敗を処理する。
+    duplicate_result = test_process_build_environment(nullptr);         // [手順] - 環境エントリの複製失敗を処理する。
 
     // Assert
     EXPECT_EQ(-1, set_result); // [確認_異常系] - set_result が -1 であること。(エントリ確保が失敗することの確認)
     EXPECT_EQ(
-        static_cast<char **>(NULL),
-        invalid_result); // [確認_異常系] - 不正な上書きを指定した test_process_build_environment() の戻り値が static_cast<char **>(NULL) と一致すること。(不正な上書きで NULL が返ることの確認)
+        static_cast<char **>(nullptr),
+        invalid_result); // [確認_異常系] - 不正な上書きを指定した test_process_build_environment() の戻り値が nullptr と一致すること。(不正な上書きで nullptr が返ることの確認)
     EXPECT_EQ(
-        static_cast<char **>(NULL),
-        calloc_result); // [確認_異常系] - 環境配列の確保に失敗した test_process_build_environment() の戻り値が static_cast<char **>(NULL) と一致すること。(環境配列の確保失敗で NULL が返ることの確認)
+        static_cast<char **>(nullptr),
+        calloc_result); // [確認_異常系] - 環境配列の確保に失敗した test_process_build_environment() の戻り値が nullptr と一致すること。(環境配列の確保失敗で nullptr が返ることの確認)
     EXPECT_EQ(
-        static_cast<char **>(NULL),
-        duplicate_result); // [確認_異常系] - 環境エントリの複製に失敗した test_process_build_environment() の戻り値が static_cast<char **>(NULL) と一致すること。(エントリ複製失敗で NULL が返ることの確認)
+        static_cast<char **>(nullptr),
+        duplicate_result); // [確認_異常系] - 環境エントリの複製に失敗した test_process_build_environment() の戻り値が nullptr と一致すること。(エントリ複製失敗で nullptr が返ることの確認)
 }
 
 // Linux の終了済みプロセスに対する待機と終了要求が冪等であることの確認
@@ -1730,7 +1735,7 @@ TEST(processTest, adopt_native_reports_allocation_failure)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_calloc から NULL を返却する。
+                                    // [Pre-Assert手順] - cplat_calloc() から NULL を返却する。
 
     // Act
     cplat_process *process = cplat_internal_process_adopt_native(130); // [手順] - プロセス構造体の確保失敗を注入する。
@@ -1756,7 +1761,7 @@ TEST(processTest, run_sync_rejects_invalid_output_and_start_failure)
 
     // Act
     int null_output = cplat_process_run_sync(&options, CPLAT_PROCESS_WAIT_FOREVER,
-                                             NULL); // [手順] - 終了コード出力先に NULL を渡す。
+                                             nullptr); // [手順] - 終了コード出力先に NULL を渡す。
     options.argv = nullptr;
     int start_failure = cplat_process_run_sync(&options, CPLAT_PROCESS_WAIT_FOREVER,
                                                &exit_code); // [手順] - 不正な options で同期実行する。
@@ -1780,22 +1785,23 @@ TEST(processTest, environment_helpers_cover_empty_and_override_failure_paths)
     extern char **environ;
     NiceMock<Mock_cplat> mock_cplat;
     char **saved_environ = environ;
-    char *empty_environment[] = {NULL};
+    char *empty_environment[] = {nullptr};
     char valid_override[] = "KEY=value";
     char invalid_entry[] = "INVALID";
-    char *overrides[] = {valid_override, NULL};
-    char *empty_envp[] = {NULL};
+    char *overrides[] = {valid_override, nullptr};
+    char *empty_envp[] = {nullptr};
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_malloc から NULL を返却する。
+                                    // [Pre-Assert手順] - cplat_malloc() から NULL を返却する。
 
     // Act
-    char *null_copy = test_process_string_duplicate(NULL); // [手順] - NULL 文字列を複製する。
+    char *null_copy = test_process_string_duplicate(nullptr); // [手順] - NULL 文字列を複製する。
     int invalid_set =
         test_process_set_env_entry(empty_envp, 1U, invalid_entry);     // [手順] - '=' がない環境変数を設定する。
-    const char *null_find = test_process_find_env_value(NULL, "PATH"); // [手順] - NULL 環境配列から PATH を検索する。
+    const char *null_find =
+        test_process_find_env_value(nullptr, "PATH"); // [手順] - NULL 環境配列から PATH を検索する。
     const char *empty_find =
         test_process_find_env_value(empty_envp, "PATH"); // [手順] - 空の環境配列から PATH を検索する。
     environ = empty_environment;
@@ -1855,8 +1861,8 @@ TEST(processTest, child_runner_classifies_each_preparation_failure)
     char arg0[] = "missing-tool";
     char path_entry[] = "PATH=";
     char current_directory[PLATFORM_PATH_MAX] = {};
-    char *argv[] = {arg0, NULL};
-    char *envp[] = {path_entry, NULL};
+    char *argv[] = {arg0, nullptr};
+    char *envp[] = {path_entry, nullptr};
     options.argv = argv;
     ASSERT_NE(nullptr, getcwd(current_directory,
                               sizeof(current_directory))); // [状態] - 現在の作業ディレクトリを取得する。
@@ -1871,7 +1877,7 @@ TEST(processTest, child_runner_classifies_each_preparation_failure)
     // Act
     int chdir_result =
         test_process_run_child(&options, envp); // [手順] - 存在しない作業ディレクトリで子プロセス準備を実行する。
-    options.working_directory = NULL;
+    options.working_directory = nullptr;
     set_invalid_stdio_mode(&options.stdin_spec);
     int stdio_result = test_process_run_child(&options, envp); // [手順] - 不正な stdin 設定で子プロセス準備を実行する。
     options.stdin_spec.mode = CPLAT_PROCESS_STDIO_INHERIT;
@@ -1901,13 +1907,13 @@ TEST(processTest, start_rejects_null_process_output)
     // Arrange
     cplat_process_options options = {};
     char arg0[] = "/bin/true";
-    char *argv[] = {arg0, NULL};
+    char *argv[] = {arg0, nullptr};
     options.argv = argv;
 
     // Pre-Assert
 
     // Act
-    int result = cplat_process_start(&options, NULL); // [手順] - process の出力先を NULL として起動する。
+    int result = cplat_process_start(&options, nullptr); // [手順] - process の出力先を NULL として起動する。
 
     // Assert
     EXPECT_EQ(
@@ -1956,7 +1962,7 @@ TEST(processTest, run_sync_returns_wait_failure)
     NiceMock<Mock_sys_wait> mock_sys_wait;
     cplat_process_options options = {};
     char arg0[] = "/bin/true";
-    char *argv[] = {arg0, NULL};
+    char *argv[] = {arg0, nullptr};
     int exit_code = 0;
     options.argv = argv;
 

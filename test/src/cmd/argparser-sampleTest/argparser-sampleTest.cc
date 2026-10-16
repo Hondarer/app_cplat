@@ -53,7 +53,7 @@ TEST_F(argparser_sampleTest, main_parses_and_prints_all_kinds)
             1); // [Pre-Assert確認_正常系] - printf() が "output: out.txt" を含む文字列を指定して 1 回呼び出されること。
 
     // Act
-    int rc = __real_main(argc, (char **)&argv); // [手順] - 全種別の引数で main を呼び出す。
+    int rc = __real_main(argc, (char **)&argv); // [手順] - 全種別の引数で main() を呼び出す。
 
     // Assert
     EXPECT_EQ(EXIT_SUCCESS, rc); // [確認_正常系] - __real_main() の戻り値が EXIT_SUCCESS であること。
@@ -76,7 +76,7 @@ TEST_F(argparser_sampleTest, main_reports_parse_error_with_usage)
     // Pre-Assert
 
     // Act
-    int rc = __real_main(argc, (char **)&argv); // [手順] - 未知のオプションで main を呼び出す。
+    int rc = __real_main(argc, (char **)&argv); // [手順] - 未知のオプションで main() を呼び出す。
 
     // Assert
     EXPECT_NE(EXIT_SUCCESS, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_SUCCESS 以外であること。
@@ -92,7 +92,7 @@ TEST_F(argparser_sampleTest, main_reports_missing_required)
     // Pre-Assert
 
     // Act
-    int rc = __real_main(argc, (char **)&argv); // [手順] - 引数なしで main を呼び出す。
+    int rc = __real_main(argc, (char **)&argv); // [手順] - 引数なしで main() を呼び出す。
 
     // Assert
     EXPECT_NE(EXIT_SUCCESS, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_SUCCESS 以外であること。
@@ -110,7 +110,7 @@ TEST_F(argparser_sampleTest, main_prints_usage_on_help)
     // Pre-Assert
 
     // Act
-    int rc = __real_main(argc, (char **)&argv); // [手順] - --help で main を呼び出す。
+    int rc = __real_main(argc, (char **)&argv); // [手順] - --help で main() を呼び出す。
 
     // Assert
     EXPECT_EQ(EXIT_SUCCESS, rc); // [確認_正常系] - __real_main() の戻り値が EXIT_SUCCESS であること。

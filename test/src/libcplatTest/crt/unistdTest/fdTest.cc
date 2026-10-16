@@ -70,7 +70,7 @@ TEST_F(fdTest, write_read_lseek_roundtrip)
                         // [Pre-Assert手順] - 6 を返却する。
     EXPECT_CALL(mock_unistd_, lseek(_, _, _, kFakeFd, static_cast<off_t>(0), SEEK_SET))
         .WillOnce(Return(static_cast<off_t>(
-            0))); // [Pre-Assert確認_正常系] - lseek() が kFakeFd、static_cast<off_t>(0)、SEEK_SET を指定して 1 回呼び出されること。
+            0))); // [Pre-Assert確認_正常系] - lseek() が kFakeFd、0、SEEK_SET を指定して 1 回呼び出されること。
                   // [Pre-Assert手順] - 位置 0 を返却する。
     EXPECT_CALL(mock_unistd_, read(_, _, _, kFakeFd, buf, sizeof(buf)))
         .WillOnce(
@@ -82,7 +82,7 @@ TEST_F(fdTest, write_read_lseek_roundtrip)
                 // [Pre-Assert手順] - "abcdef" を格納し、6 を返却する。
     EXPECT_CALL(mock_unistd_, lseek(_, _, _, kFakeFd, static_cast<off_t>(0), SEEK_END))
         .WillOnce(Return(static_cast<off_t>(
-            6))); // [Pre-Assert確認_正常系] - lseek() が kFakeFd、static_cast<off_t>(0)、SEEK_END を指定して 1 回呼び出されること。
+            6))); // [Pre-Assert確認_正常系] - lseek() が kFakeFd、0、SEEK_END を指定して 1 回呼び出されること。
                   // [Pre-Assert手順] - 位置 6 を返却する。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_unistd_, _write(_, _, _, kFakeFd, data, 6u))
@@ -91,7 +91,7 @@ TEST_F(fdTest, write_read_lseek_roundtrip)
                         // [Pre-Assert手順] - 6 を返却する。
     EXPECT_CALL(mock_unistd_, _lseeki64(_, _, _, kFakeFd, static_cast<__int64>(0), SEEK_SET))
         .WillOnce(Return(static_cast<__int64>(
-            0))); // [Pre-Assert確認_正常系] - _lseeki64() が kFakeFd、static_cast<__int64>(0)、SEEK_SET を指定して 1 回呼び出されること。
+            0))); // [Pre-Assert確認_正常系] - _lseeki64() が kFakeFd、0、SEEK_SET を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - 位置 0 を返却する。
     EXPECT_CALL(mock_unistd_, _read(_, _, _, kFakeFd, buf, 16u))
         .WillOnce(
@@ -103,15 +103,15 @@ TEST_F(fdTest, write_read_lseek_roundtrip)
                 // [Pre-Assert手順] - "abcdef" を格納し、6 を返却する。
     EXPECT_CALL(mock_unistd_, _lseeki64(_, _, _, kFakeFd, static_cast<__int64>(0), SEEK_END))
         .WillOnce(Return(static_cast<__int64>(
-            6))); // [Pre-Assert確認_正常系] - _lseeki64() が kFakeFd、static_cast<__int64>(0)、SEEK_END を指定して 1 回呼び出されること。
+            6))); // [Pre-Assert確認_正常系] - _lseeki64() が kFakeFd、0、SEEK_END を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - 位置 6 を返却する。
 #endif /* PLATFORM_ */
 
     // Act
-    int64_t written = cplat_write(kFakeFd, data, 6, NULL);          // [手順] - 6 バイトを書き込む。
-    int64_t pos_head = cplat_lseek(kFakeFd, 0, SEEK_SET, NULL);     // [手順] - 読み書き位置を先頭へ移動する。
-    int64_t read_len = cplat_read(kFakeFd, buf, sizeof(buf), NULL); // [手順] - ファイル全体を読み取る。
-    int64_t pos_end = cplat_lseek(kFakeFd, 0, SEEK_END, NULL);      // [手順] - 読み書き位置を終端へ移動する。
+    int64_t written = cplat_write(kFakeFd, data, 6, nullptr);          // [手順] - 6 バイトを書き込む。
+    int64_t pos_head = cplat_lseek(kFakeFd, 0, SEEK_SET, nullptr);     // [手順] - 読み書き位置を先頭へ移動する。
+    int64_t read_len = cplat_read(kFakeFd, buf, sizeof(buf), nullptr); // [手順] - ファイル全体を読み取る。
+    int64_t pos_end = cplat_lseek(kFakeFd, 0, SEEK_END, nullptr);      // [手順] - 読み書き位置を終端へ移動する。
 
     // Assert
     EXPECT_EQ(6, written);  // [確認_正常系] - cplat_write() の戻り値が 6 であること。
@@ -146,7 +146,7 @@ TEST_F(fdTest, read_reaches_eof_returns_zero)
 #endif /* PLATFORM_ */
 
     // Act
-    int64_t read_len = cplat_read(kFakeFd, buf, sizeof(buf), NULL); // [手順] - 空ファイルから読み取る。
+    int64_t read_len = cplat_read(kFakeFd, buf, sizeof(buf), nullptr); // [手順] - 空ファイルから読み取る。
 
     // Assert
     EXPECT_EQ(0, read_len); // [確認_正常系] - cplat_read() の戻り値が 0 であること。(ファイル終端であることの確認)
@@ -167,7 +167,7 @@ TEST_F(fdTest, dup_shares_file_offset)
                               // [Pre-Assert手順] - 4 を返却する。
     EXPECT_CALL(mock_unistd_, lseek(_, _, _, kFakeFd, static_cast<off_t>(0), SEEK_CUR))
         .WillOnce(Return(static_cast<off_t>(
-            4))); // [Pre-Assert確認_正常系] - lseek() が kFakeFd、static_cast<off_t>(0)、SEEK_CUR を指定して 1 回呼び出されること。
+            4))); // [Pre-Assert確認_正常系] - lseek() が kFakeFd、0、SEEK_CUR を指定して 1 回呼び出されること。
                   // [Pre-Assert手順] - 位置 4 を返却する。
     EXPECT_CALL(mock_unistd_, close(_, _, _, kDupFd))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - close() が kDupFd を指定して 1 回呼び出されること。
@@ -181,7 +181,7 @@ TEST_F(fdTest, dup_shares_file_offset)
                               // [Pre-Assert手順] - 4 を返却する。
     EXPECT_CALL(mock_unistd_, _lseeki64(_, _, _, kFakeFd, static_cast<__int64>(0), SEEK_CUR))
         .WillOnce(Return(static_cast<__int64>(
-            4))); // [Pre-Assert確認_正常系] - _lseeki64() が kFakeFd、static_cast<__int64>(0)、SEEK_CUR を指定して 1 回呼び出されること。
+            4))); // [Pre-Assert確認_正常系] - _lseeki64() が kFakeFd、0、SEEK_CUR を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - 位置 4 を返却する。
     EXPECT_CALL(mock_unistd_, _close(_, _, _, kDupFd))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - _close() が kDupFd を指定して 1 回呼び出されること。
@@ -189,10 +189,10 @@ TEST_F(fdTest, dup_shares_file_offset)
 #endif /* PLATFORM_ */
 
     // Act
-    int dup_fd = cplat_dup(kFakeFd, NULL);                  // [手順] - ファイル記述子を複製する。
-    int64_t written = cplat_write(dup_fd, "wxyz", 4, NULL); // [手順] - 複製側へ 4 バイト書き込む。
-    int64_t pos = cplat_lseek(kFakeFd, 0, SEEK_CUR, NULL);  // [手順] - 複製元の現在位置を取得する。
-    int actual_ret_close = cplat_close(dup_fd, NULL);       // [手順] - 複製側を閉じる。
+    int dup_fd = cplat_dup(kFakeFd, nullptr);                  // [手順] - ファイル記述子を複製する。
+    int64_t written = cplat_write(dup_fd, "wxyz", 4, nullptr); // [手順] - 複製側へ 4 バイト書き込む。
+    int64_t pos = cplat_lseek(kFakeFd, 0, SEEK_CUR, nullptr);  // [手順] - 複製元の現在位置を取得する。
+    int actual_ret_close = cplat_close(dup_fd, nullptr);       // [手順] - 複製側を閉じる。
 
     // Assert
     EXPECT_EQ(kDupFd, dup_fd);      // [確認_正常系] - cplat_dup() の戻り値が kDupFd であること。
@@ -219,7 +219,7 @@ TEST_F(fdTest, dup2_returns_zero_on_success)
 #endif /* PLATFORM_ */
 
     // Act
-    int actual_ret = cplat_dup2(kFakeFd, kDupFd, NULL); // [手順] - 番兵記述子 7 を 8 へ複製する。
+    int actual_ret = cplat_dup2(kFakeFd, kDupFd, nullptr); // [手順] - 番兵記述子 7 を 8 へ複製する。
 
     // Assert
     EXPECT_EQ(
@@ -244,7 +244,7 @@ TEST_F(fdTest, close_success_returns_zero)
 #endif /* PLATFORM_ */
 
     // Act
-    int actual_ret = cplat_close(kFakeFd, NULL); // [手順] - 開いている記述子を閉じる。
+    int actual_ret = cplat_close(kFakeFd, nullptr); // [手順] - 開いている記述子を閉じる。
 
     // Assert
     EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_close() の戻り値が 0 であること。
@@ -259,14 +259,14 @@ TEST_F(fdTest, negative_fd_returns_minus1)
     // Pre-Assert
 
     // Act
-    // [手順] - 負のファイル記述子で lseek、close、dup、dup2、read、write を呼び出す。
-    int64_t actual_ret_lseek = cplat_lseek(-1, 0, SEEK_SET, NULL);
-    int actual_ret_close = cplat_close(-1, NULL);
-    int actual_ret_dup = cplat_dup(-1, NULL);
-    int actual_ret_dup2_oldfd = cplat_dup2(-1, kFakeFd, NULL);
-    int actual_ret_dup2_newfd = cplat_dup2(kFakeFd, -1, NULL);
-    int64_t actual_ret_read = cplat_read(-1, buf, sizeof(buf), NULL);
-    int64_t actual_ret_write = cplat_write(-1, buf, sizeof(buf), NULL);
+    // [手順] - 負のファイル記述子で lseek()、close()、dup()、dup2()、read()、write() を呼び出す。
+    int64_t actual_ret_lseek = cplat_lseek(-1, 0, SEEK_SET, nullptr);
+    int actual_ret_close = cplat_close(-1, nullptr);
+    int actual_ret_dup = cplat_dup(-1, nullptr);
+    int actual_ret_dup2_oldfd = cplat_dup2(-1, kFakeFd, nullptr);
+    int actual_ret_dup2_newfd = cplat_dup2(kFakeFd, -1, nullptr);
+    int64_t actual_ret_read = cplat_read(-1, buf, sizeof(buf), nullptr);
+    int64_t actual_ret_write = cplat_write(-1, buf, sizeof(buf), nullptr);
 
     // Assert
     EXPECT_EQ(-1,
@@ -290,9 +290,9 @@ TEST_F(fdTest, null_buf_returns_minus1)
     // Pre-Assert
 
     // Act
-    // [手順] - NULL バッファーで read と write を呼び出す。
-    int64_t actual_ret_read = cplat_read(kFakeFd, NULL, 4, NULL);
-    int64_t actual_ret_write = cplat_write(kFakeFd, NULL, 4, NULL);
+    // [手順] - NULL バッファーで read() と write() を呼び出す。
+    int64_t actual_ret_read = cplat_read(kFakeFd, nullptr, 4, nullptr);
+    int64_t actual_ret_write = cplat_write(kFakeFd, nullptr, 4, nullptr);
 
     // Assert
     EXPECT_EQ(-1, actual_ret_read);  // [確認_異常系] - NULL バッファーに対する cplat_read() の戻り値が -1 であること。
@@ -307,7 +307,7 @@ TEST_F(fdTest, lseek_invalid_whence_returns_minus1)
     // Pre-Assert
 
     // Act
-    int64_t actual_ret = cplat_lseek(kFakeFd, 0, 99, NULL); // [手順] - 定義外の whence を与える。
+    int64_t actual_ret = cplat_lseek(kFakeFd, 0, 99, nullptr); // [手順] - 定義外の whence を与える。
 
     // Assert
     EXPECT_EQ(
@@ -323,15 +323,15 @@ TEST_F(fdTest, lseek_returns_minus1_when_platform_lseek_fails)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_unistd_, lseek(_, _, _, _, _, _))
         .WillOnce(Return(static_cast<off_t>(-1))); // [Pre-Assert確認_異常系] - lseek() が 1 回呼び出されること。
-                                                   // [Pre-Assert手順] - 下位の lseek 系 API から -1 を返却する。
+                                                   // [Pre-Assert手順] - 下位の lseek() 系 API から -1 を返却する。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_unistd_, _lseeki64(_, _, _, _, _, _))
         .WillOnce(Return(static_cast<__int64>(-1))); // [Pre-Assert確認_異常系] - _lseeki64() が 1 回呼び出されること。
-                                                     // [Pre-Assert手順] - 下位の lseek 系 API から -1 を返却する。
+                                                     // [Pre-Assert手順] - 下位の lseek() 系 API から -1 を返却する。
 #endif /* PLATFORM_ */
 
     // Act
-    int64_t actual_ret = cplat_lseek(kFakeFd, 0, SEEK_SET, NULL); // [手順] - 有効な引数で呼び出す。
+    int64_t actual_ret = cplat_lseek(kFakeFd, 0, SEEK_SET, nullptr); // [手順] - 有効な引数で呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -347,15 +347,15 @@ TEST_F(fdTest, close_returns_minus1_when_platform_close_fails)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_unistd_, close(_, _, _, _))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - close() が 1 回呼び出されること。
-                               // [Pre-Assert手順] - 下位の close 系 API から -1 を返却する。
+                               // [Pre-Assert手順] - 下位の close() 系 API から -1 を返却する。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_unistd_, _close(_, _, _, _))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - _close() が 1 回呼び出されること。
-                               // [Pre-Assert手順] - 下位の close 系 API から -1 を返却する。
+                               // [Pre-Assert手順] - 下位の close() 系 API から -1 を返却する。
 #endif /* PLATFORM_ */
 
     // Act
-    int actual_ret = cplat_close(kFakeFd, NULL); // [手順] - 有効な記述子で呼び出す。
+    int actual_ret = cplat_close(kFakeFd, nullptr); // [手順] - 有効な記述子で呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -371,15 +371,15 @@ TEST_F(fdTest, dup_returns_minus1_when_platform_dup_fails)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_unistd_, dup(_, _, _, _))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - dup() が 1 回呼び出されること。
-                               // [Pre-Assert手順] - 下位の dup 系 API から -1 を返却する。
+                               // [Pre-Assert手順] - 下位の dup() 系 API から -1 を返却する。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_unistd_, _dup(_, _, _, _))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - _dup() が 1 回呼び出されること。
-                               // [Pre-Assert手順] - 下位の dup 系 API から -1 を返却する。
+                               // [Pre-Assert手順] - 下位の dup() 系 API から -1 を返却する。
 #endif /* PLATFORM_ */
 
     // Act
-    int actual_ret = cplat_dup(kFakeFd, NULL); // [手順] - 有効な記述子で呼び出す。
+    int actual_ret = cplat_dup(kFakeFd, nullptr); // [手順] - 有効な記述子で呼び出す。
 
     // Assert
     EXPECT_EQ(-1,
@@ -395,15 +395,15 @@ TEST_F(fdTest, dup2_returns_minus1_when_platform_dup2_fails)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_unistd_, dup2(_, _, _, _, _))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - dup2() が 1 回呼び出されること。
-                               // [Pre-Assert手順] - 下位の dup2 系 API から -1 を返却する。
+                               // [Pre-Assert手順] - 下位の dup2() 系 API から -1 を返却する。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_unistd_, _dup2(_, _, _, _, _))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - _dup2() が 1 回呼び出されること。
-                               // [Pre-Assert手順] - 下位の dup2 系 API から -1 を返却する。
+                               // [Pre-Assert手順] - 下位の dup2() 系 API から -1 を返却する。
 #endif /* PLATFORM_ */
 
     // Act
-    int actual_ret = cplat_dup2(kFakeFd, kFakeFd, NULL); // [手順] - 有効な記述子で呼び出す。
+    int actual_ret = cplat_dup2(kFakeFd, kFakeFd, nullptr); // [手順] - 有効な記述子で呼び出す。
 
     // Assert
     EXPECT_EQ(-1,
@@ -420,15 +420,15 @@ TEST_F(fdTest, read_returns_minus1_when_platform_read_fails)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_unistd_, read(_, _, _, _, _, _))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - read() が 1 回呼び出されること。
-                               // [Pre-Assert手順] - 下位の read 系 API から -1 を返却する。
+                               // [Pre-Assert手順] - 下位の read() 系 API から -1 を返却する。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_unistd_, _read(_, _, _, _, _, _))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - _read() が 1 回呼び出されること。
-                               // [Pre-Assert手順] - 下位の read 系 API から -1 を返却する。
+                               // [Pre-Assert手順] - 下位の read() 系 API から -1 を返却する。
 #endif /* PLATFORM_ */
 
     // Act
-    int64_t actual_ret = cplat_read(kFakeFd, buf, sizeof(buf), NULL); // [手順] - 有効な引数で呼び出す。
+    int64_t actual_ret = cplat_read(kFakeFd, buf, sizeof(buf), nullptr); // [手順] - 有効な引数で呼び出す。
 
     // Assert
     EXPECT_EQ(-1,
@@ -445,15 +445,15 @@ TEST_F(fdTest, write_returns_minus1_when_platform_write_fails)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_unistd_, write(_, _, _, _, _, _))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - write() が 1 回呼び出されること。
-                               // [Pre-Assert手順] - 下位の write 系 API から -1 を返却する。
+                               // [Pre-Assert手順] - 下位の write() 系 API から -1 を返却する。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_unistd_, _write(_, _, _, _, _, _))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - _write() が 1 回呼び出されること。
-                               // [Pre-Assert手順] - 下位の write 系 API から -1 を返却する。
+                               // [Pre-Assert手順] - 下位の write() 系 API から -1 を返却する。
 #endif /* PLATFORM_ */
 
     // Act
-    int64_t actual_ret = cplat_write(kFakeFd, buf, sizeof(buf), NULL); // [手順] - 有効な引数で呼び出す。
+    int64_t actual_ret = cplat_write(kFakeFd, buf, sizeof(buf), nullptr); // [手順] - 有効な引数で呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -539,10 +539,10 @@ TEST_F(fdTest, read_retries_after_interrupt)
     EXPECT_CALL(mock_unistd_, read(_, _, _, _, _, _))
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)))
         .WillOnce(Return(4)); // [Pre-Assert確認_正常系] - read() が 2 回呼び出されること。
-    // [Pre-Assert手順] - 下位の read 系 API から、errno に EINTR を設定した -1 ののち 4 を返却する。
+    // [Pre-Assert手順] - 下位の read() 系 API から、errno に EINTR を設定した -1 ののち 4 を返却する。
 
     // Act
-    int64_t actual_ret = cplat_read(kFakeFd, buf, sizeof(buf), NULL); // [手順] - 有効な引数で呼び出す。
+    int64_t actual_ret = cplat_read(kFakeFd, buf, sizeof(buf), nullptr); // [手順] - 有効な引数で呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -560,10 +560,10 @@ TEST_F(fdTest, write_retries_after_interrupt)
     EXPECT_CALL(mock_unistd_, write(_, _, _, _, _, _))
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)))
         .WillOnce(Return(4)); // [Pre-Assert確認_正常系] - write() が 2 回呼び出されること。
-    // [Pre-Assert手順] - 下位の write 系 API から、errno に EINTR を設定した -1 ののち 4 を返却する。
+    // [Pre-Assert手順] - 下位の write() 系 API から、errno に EINTR を設定した -1 ののち 4 を返却する。
 
     // Act
-    int64_t actual_ret = cplat_write(kFakeFd, buf, sizeof(buf), NULL); // [手順] - 有効な引数で呼び出す。
+    int64_t actual_ret = cplat_write(kFakeFd, buf, sizeof(buf), nullptr); // [手順] - 有効な引数で呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -600,13 +600,13 @@ TEST_F(fdTest, closed_fd_operations_return_minus1)
                                // [Pre-Assert手順] - -1 を返却する。
 
     // Act
-    // [手順] - クローズ済みのファイル記述子で lseek、read、write、dup、dup2、close を呼び出す。
-    int64_t actual_ret_lseek = cplat_lseek(kFakeFd, 0, SEEK_SET, NULL);
-    int64_t actual_ret_read = cplat_read(kFakeFd, buf, sizeof(buf), NULL);
-    int64_t actual_ret_write = cplat_write(kFakeFd, buf, sizeof(buf), NULL);
-    int actual_ret_dup = cplat_dup(kFakeFd, NULL);
-    int actual_ret_dup2 = cplat_dup2(kFakeFd, kFakeFd, NULL);
-    int actual_ret_close = cplat_close(kFakeFd, NULL);
+    // [手順] - クローズ済みのファイル記述子で lseek()、read()、write()、dup()、dup2()、close() を呼び出す。
+    int64_t actual_ret_lseek = cplat_lseek(kFakeFd, 0, SEEK_SET, nullptr);
+    int64_t actual_ret_read = cplat_read(kFakeFd, buf, sizeof(buf), nullptr);
+    int64_t actual_ret_write = cplat_write(kFakeFd, buf, sizeof(buf), nullptr);
+    int actual_ret_dup = cplat_dup(kFakeFd, nullptr);
+    int actual_ret_dup2 = cplat_dup2(kFakeFd, kFakeFd, nullptr);
+    int actual_ret_close = cplat_close(kFakeFd, nullptr);
 
     // Assert
     EXPECT_EQ(-1,

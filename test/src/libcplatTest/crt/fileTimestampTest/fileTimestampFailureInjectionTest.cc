@@ -35,17 +35,17 @@ class fileTimestampFailureInjectionTest : public testing::Test
     // [サブ手順 名前=fileTimestampFailureInjectionTest.SetUp_1]
     void SetUp() override
     {
-        FILE *stream = NULL;
+        FILE *stream = nullptr;
 
-        (void)cplat_remove(kPath, NULL);
-        stream = cplat_fopen(kPath, "wb", NULL);
+        (void)cplat_remove(kPath, nullptr);
+        stream = cplat_fopen(kPath, "wb", nullptr);
         ASSERT_NE(nullptr, stream);
         // [状態確認] - cplat_fopen() の戻り値が nullptr 以外であること。
-        ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, NULL));
+        ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, nullptr));
         // [状態確認] - cplat_fclose() の戻り値が CPLAT_OK であること。
 
         cplat_file_init(&file_);
-        ASSERT_EQ(CPLAT_OK, cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL));
+        ASSERT_EQ(CPLAT_OK, cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, nullptr));
         // [状態確認] - cplat_file_open() の戻り値が CPLAT_OK であること。
     }
     // [サブ手順終了]
@@ -53,8 +53,8 @@ class fileTimestampFailureInjectionTest : public testing::Test
     // [サブ手順 名前=fileTimestampFailureInjectionTest.TearDown_1]
     void TearDown() override
     {
-        (void)cplat_file_close(&file_, NULL);
-        (void)cplat_remove(kPath, NULL);
+        (void)cplat_file_close(&file_, nullptr);
+        (void)cplat_remove(kPath, nullptr);
     }
     // [サブ手順終了]
 
@@ -199,17 +199,17 @@ class fileTimestampFailureInjectionTest : public testing::Test
     // [サブ手順 名前=fileTimestampFailureInjectionTest.SetUp_2]
     void SetUp() override
     {
-        FILE *stream = NULL;
+        FILE *stream = nullptr;
 
-        (void)cplat_remove(kPath, NULL);
-        stream = cplat_fopen(kPath, "wb", NULL);
+        (void)cplat_remove(kPath, nullptr);
+        stream = cplat_fopen(kPath, "wb", nullptr);
         ASSERT_NE(nullptr, stream);
         // [状態確認] - cplat_fopen() の戻り値が nullptr 以外であること。
-        ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, NULL));
+        ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, nullptr));
         // [状態確認] - cplat_fclose() の戻り値が CPLAT_OK であること。
 
         cplat_file_init(&file_);
-        ASSERT_EQ(CPLAT_OK, cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL));
+        ASSERT_EQ(CPLAT_OK, cplat_file_open(&file_, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, nullptr));
         // [状態確認] - cplat_file_open() の戻り値が CPLAT_OK であること。
     }
     // [サブ手順終了]
@@ -217,8 +217,8 @@ class fileTimestampFailureInjectionTest : public testing::Test
     // [サブ手順 名前=fileTimestampFailureInjectionTest.TearDown_2]
     void TearDown() override
     {
-        (void)cplat_file_close(&file_, NULL);
-        (void)cplat_remove(kPath, NULL);
+        (void)cplat_file_close(&file_, nullptr);
+        (void)cplat_remove(kPath, nullptr);
     }
     // [サブ手順終了]
 

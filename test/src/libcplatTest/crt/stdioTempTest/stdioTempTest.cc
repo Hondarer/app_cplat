@@ -47,11 +47,11 @@ class stdioTempTest : public testing::Test
     void SetUp() override
     {
         ON_CALL(mock_cplat_, cplat_getenv(StrEq("TMPDIR"), _, _, _, _)).WillByDefault(getenv_empty_tmpdir);
-        // [状態] - `cplat_getenv` の既定動作を設定する。
+        // [状態] - cplat_getenv() の既定動作を設定する。
         ON_CALL(mock_unistd_, close(_, _, _, _)).WillByDefault(Return(0));
-        // [状態] - `close` の既定動作を設定する。
+        // [状態] - close() の既定動作を設定する。
         ON_CALL(mock_unistd_, unlink(_, _, _, _)).WillByDefault(Return(0));
-        // [状態] - `unlink` の既定動作を設定する。
+        // [状態] - unlink() の既定動作を設定する。
     }
     // [サブ手順終了]
 };
@@ -87,7 +87,7 @@ TEST_F(stdioTempTest, opens_writable_file_and_reports_path)
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path),
-                                nullptr); // [手順] - prefix "ptr"、モード "wb" で cplat_fopen_temp を呼び出す。
+                                nullptr); // [手順] - prefix "ptr"、モード "wb" で cplat_fopen_temp() を呼び出す。
 
     // Assert
     EXPECT_EQ(kStream, fp);               // [確認_正常系] - cplat_fopen_temp() の戻り値が kStream であること。
@@ -125,7 +125,7 @@ TEST_F(stdioTempTest, uses_tmpdir_when_getenv_returns_a_path)
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path),
-                                nullptr); // [手順] - TMPDIR が "/var/tmp" の状態で cplat_fopen_temp を呼び出す。
+                                nullptr); // [手順] - TMPDIR が "/var/tmp" の状態で cplat_fopen_temp() を呼び出す。
 
     // Assert
     EXPECT_EQ(kStream, fp); // [確認_正常系] - cplat_fopen_temp() の戻り値が kStream であること。
@@ -165,13 +165,13 @@ TEST_F(stdioTempTest, returns_unique_paths_for_repeated_calls)
 
     // Act
     FILE *fp1 = cplat_fopen_temp("ptr", "wb", path1, sizeof(path1),
-                                 nullptr); // [手順] - 1 回目の cplat_fopen_temp を呼び出す。
+                                 nullptr); // [手順] - 1 回目の cplat_fopen_temp() を呼び出す。
     FILE *fp2 = cplat_fopen_temp("ptr", "wb", path2, sizeof(path2),
-                                 nullptr); // [手順] - 2 回目の cplat_fopen_temp を呼び出す。
+                                 nullptr); // [手順] - 2 回目の cplat_fopen_temp() を呼び出す。
     FILE *fp3 = cplat_fopen_temp("ptr", "wb", path3, sizeof(path3),
-                                 nullptr); // [手順] - 3 回目の cplat_fopen_temp を呼び出す。
+                                 nullptr); // [手順] - 3 回目の cplat_fopen_temp() を呼び出す。
     FILE *fp4 = cplat_fopen_temp("ptr", "wb", path4, sizeof(path4),
-                                 nullptr); // [手順] - 4 回目の cplat_fopen_temp を呼び出す。
+                                 nullptr); // [手順] - 4 回目の cplat_fopen_temp() を呼び出す。
 
     // Assert
     EXPECT_EQ(kStream, fp1); // [確認_正常系] - 1 回目の cplat_fopen_temp() の戻り値が kStream であること。
@@ -206,7 +206,7 @@ TEST_F(stdioTempTest, prefix_is_part_of_basename)
 
     // Act
     FILE *fp = cplat_fopen_temp("abc", "wb", path, sizeof(path),
-                                nullptr); // [手順] - prefix "abc" で cplat_fopen_temp を呼び出す。
+                                nullptr); // [手順] - prefix "abc" で cplat_fopen_temp() を呼び出す。
 
     // Assert
     EXPECT_EQ(kStream, fp); // [確認_正常系] - cplat_fopen_temp() の戻り値が kStream であること。
@@ -237,7 +237,7 @@ TEST_F(stdioTempTest, null_prefix_is_accepted)
 
     // Act
     FILE *fp = cplat_fopen_temp(nullptr, "wb", path, sizeof(path),
-                                nullptr); // [手順] - prefix に NULL を渡して cplat_fopen_temp を呼び出す。
+                                nullptr); // [手順] - prefix に NULL を渡して cplat_fopen_temp() を呼び出す。
 
     // Assert
     EXPECT_EQ(kStream,
@@ -268,7 +268,7 @@ TEST_F(stdioTempTest, prefix_longer_than_three_chars_is_truncated)
 
     // Act
     FILE *fp = cplat_fopen_temp("abcd", "wb", path, sizeof(path),
-                                nullptr); // [手順] - 4 文字の prefix "abcd" で cplat_fopen_temp を呼び出す。
+                                nullptr); // [手順] - 4 文字の prefix "abcd" で cplat_fopen_temp() を呼び出す。
 
     // Assert
     EXPECT_EQ(kStream,
@@ -292,11 +292,11 @@ TEST_F(stdioTempTest, null_modes_returns_einval)
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", nullptr, path, sizeof(path),
-                                &err); // [手順] - modes に NULL を渡して cplat_fopen_temp を呼び出す。
+                                &err); // [手順] - modes に NULL を渡して cplat_fopen_temp() を呼び出す。
     cplat_error_get_last(&last_error); // [手順] - TLS に記録された詳細エラーを取得する。
 
     // Assert
-    EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が (FILE *)nullptr であること。
+    EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。
     EXPECT_EQ(
         1,
         cplat_error_is(
@@ -319,10 +319,10 @@ TEST_F(stdioTempTest, null_path_out_returns_einval)
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", "wb", nullptr, 0u,
-                                &err); // [手順] - path_out に NULL を渡して cplat_fopen_temp を呼び出す。
+                                &err); // [手順] - path_out に NULL を渡して cplat_fopen_temp() を呼び出す。
 
     // Assert
-    EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が (FILE *)nullptr であること。
+    EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。
     EXPECT_EQ(
         1,
         cplat_error_is(
@@ -342,10 +342,10 @@ TEST_F(stdioTempTest, zero_path_size_returns_einval)
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", "wb", path, 0u,
-                                &err); // [手順] - path_size に 0 を渡して cplat_fopen_temp を呼び出す。
+                                &err); // [手順] - path_size に 0 を渡して cplat_fopen_temp() を呼び出す。
 
     // Assert
-    EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が (FILE *)nullptr であること。
+    EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。
     EXPECT_EQ(
         1,
         cplat_error_is(
@@ -367,10 +367,10 @@ TEST_F(stdioTempTest, path_size_too_small_returns_enametoolong)
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path),
-                                &err); // [手順] - path_size に 4 を渡して cplat_fopen_temp を呼び出す。
+                                &err); // [手順] - path_size に 4 を渡して cplat_fopen_temp() を呼び出す。
 
     // Assert
-    EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が (FILE *)nullptr であること。
+    EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。
     EXPECT_EQ(
         1,
         cplat_error_is(
@@ -397,7 +397,7 @@ TEST_F(stdioTempTest, tmpdir_buffer_too_small_returns_enametoolong)
                                 &err); // [手順] - バッファー不足を返す TMPDIR を指定して呼び出す。
 
     // Assert
-    EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が (FILE *)nullptr であること。
+    EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。
     EXPECT_EQ(
         1,
         cplat_error_is(
@@ -425,10 +425,10 @@ TEST_F(stdioTempTest, mkostemp_failure_reports_errno)
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path),
-                                &err); // [手順] - mkostemp の失敗を注入して呼び出す。
+                                &err); // [手順] - mkostemp() の失敗を注入して呼び出す。
 
     // Assert
-    EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が (FILE *)nullptr であること。
+    EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。
     EXPECT_EQ(ENOENT,
               cplat_error_get_errno(&err)); // [確認_異常系] - cplat_error_get_errno() の戻り値が ENOENT であること。
 }
@@ -471,7 +471,7 @@ TEST_F(stdioTempTest, invalid_modes_reports_fdopen_error)
                                 &err); // [手順] - 不正なモードを指定して呼び出す。
 
     // Assert
-    EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が (FILE *)nullptr であること。
+    EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。
     EXPECT_EQ(EINVAL,
               cplat_error_get_errno(&err)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EINVAL であること。
 }
@@ -494,7 +494,7 @@ TEST_F(stdioTempTest, path_formatting_failure_returns_enametoolong)
                                 &err); // [手順] - パス整形失敗を注入して呼び出す。
 
     // Assert
-    EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が (FILE *)nullptr であること。
+    EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。
     EXPECT_EQ(
         1,
         cplat_error_is(

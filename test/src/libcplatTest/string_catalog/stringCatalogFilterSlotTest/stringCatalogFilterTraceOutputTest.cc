@@ -56,7 +56,7 @@ class stringCatalogFilterTraceOutputTest : public Test
         cplat_string_catalog_set_language(CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL);
         filter_test_trace_set_tracer(tracer());
         ON_CALL(mock_cplat, cplat_tracer_write_at(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - `cplat_tracer_write_at` の既定動作を設定する。
+        // [状態] - cplat_tracer_write_at() の既定動作を設定する。
     }
     // [サブ手順終了]
 
@@ -98,6 +98,7 @@ TEST_F(stringCatalogFilterTraceOutputTest, unconnected_writes_with_defined_level
                                                   HasSubstr("Job 5 failed. Error code=2")))
         .WillOnce(Return(
             CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_tracer_write_at() が tracer() の戻り値、CPLAT_TRACE_LEVEL_WARNING、nullptr、"Job 5 failed. Error code=2" を含む文字列を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_tracer_write_at() にて CPLAT_OK を返す。
 
     // Act
     actual_ret = filter_test_trace_key_job_failed((uint64_t)5U, 2); // [手順] - JOB_FAILED を出力する。
@@ -125,6 +126,7 @@ TEST_F(stringCatalogFilterTraceOutputTest, matched_trace_is_forced)
                                                   nullptr, HasSubstr("Job 5 failed.")))
         .WillOnce(Return(
             CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_tracer_write_at() が tracer() の戻り値、CPLAT_TRACE_LEVEL_TO_FORCE(CPLAT_TRACE_LEVEL_WARNING)、nullptr、"Job 5 failed." を含む文字列を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_tracer_write_at() にて CPLAT_OK を返す。
 
     // Act
     actual_ret = filter_test_trace_key_job_failed((uint64_t)5U, 2); // [手順] - JOB_FAILED を出力する。
@@ -149,6 +151,7 @@ TEST_F(stringCatalogFilterTraceOutputTest, unmatched_trace_keeps_defined_level)
     EXPECT_CALL(mock_cplat, cplat_tracer_write_at(tracer(), CPLAT_TRACE_LEVEL_WARNING, nullptr, _))
         .WillOnce(Return(
             CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_tracer_write_at() が tracer() の戻り値、CPLAT_TRACE_LEVEL_WARNING、nullptr を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_tracer_write_at() にて CPLAT_OK を返す。
 
     // Act
     actual_ret = filter_test_trace_key_job_failed((uint64_t)5U, 2); // [手順] - JOB_FAILED を出力する。
@@ -186,6 +189,7 @@ TEST_F(stringCatalogFilterTraceOutputTest, set_filter_rejects_slot_of_another_ca
         slot_,
         filter_test_trace_get_filter()); // [確認_異常系] - filter_test_trace_get_filter() の戻り値が slot_ と一致すること。(それまでの接続を保つことの確認)
 
+    // Cleanup
     cplat_string_catalog_filter_slot_dispose(&other_slot);
 }
 // [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.TearDown]
@@ -203,6 +207,7 @@ TEST_F(stringCatalogFilterTraceOutputTest, detached_filter_restores_defined_leve
     EXPECT_CALL(mock_cplat, cplat_tracer_write_at(tracer(), CPLAT_TRACE_LEVEL_WARNING, nullptr, _))
         .WillOnce(Return(
             CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_tracer_write_at() が tracer() の戻り値、CPLAT_TRACE_LEVEL_WARNING、nullptr を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_tracer_write_at() にて CPLAT_OK を返す。
 
     // Act
     actual_detach_ret = filter_test_trace_set_filter(nullptr); // [手順] - 接続を解除する。
@@ -245,7 +250,7 @@ TEST_F(stringCatalogFilterTraceOutputTest, create_filter_binds_own_catalog_and_k
             slot_)); // [確認_正常系] - cplat_string_catalog_filter_slot_get_catalog() の戻り値が filter_test_trace_catalog() の戻り値と一致すること。
     EXPECT_EQ(
         (size_t)filter_test_trace_entry_count(),
-        filter_test_trace_key_name_count()); // [確認_正常系] - filter_test_trace_key_name_count() の戻り値が size_t に変換した filter_test_trace_entry_count() の戻り値と一致すること。
+        filter_test_trace_key_name_count()); // [確認_正常系] - filter_test_trace_key_name_count() の戻り値が filter_test_trace_entry_count() の戻り値と一致すること。
     EXPECT_EQ(
         CPLAT_OK,
         actual_apply_ret); // [確認_正常系] - cplat_string_catalog_filter_slot_apply() の戻り値が CPLAT_OK であること。
@@ -282,11 +287,13 @@ TEST_F(stringCatalogFilterTraceOutputTest, attached_source_is_taken_on_write)
                 cplat_tracer_write_at(tracer(), CPLAT_TRACE_LEVEL_TO_FORCE(CPLAT_TRACE_LEVEL_WARNING), nullptr, _))
         .WillOnce(Return(
             CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_tracer_write_at() が tracer() の戻り値、CPLAT_TRACE_LEVEL_TO_FORCE(CPLAT_TRACE_LEVEL_WARNING)、nullptr を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_tracer_write_at() にて CPLAT_OK を返す。
 
     // Act
     (void)filter_test_trace_key_job_failed((uint64_t)5U, 2); // [手順] - JOB_FAILED を出力する。
 
     // Assert
+    // Cleanup
     (void)cplat_string_catalog_filter_slot_attach_source(slot_, nullptr, 0U, nullptr);
 }
 // [サブ手順参照 名前=stringCatalogFilterTraceOutputTest.TearDown]

@@ -100,7 +100,7 @@ TEST_F(hashtableGenerationTest, add_update_delete_advance_generation)
     fill_value(&value, "v1");
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     int actual_ret_created =
         cplat_hashtable_get_table_generation(ht, &created); // [手順] - 構築直後のテーブル世代を読む。
     int actual_ret_add = cplat_hashtable_add(ht, "a", value.data(),
@@ -202,10 +202,10 @@ TEST_F(hashtableGenerationTest, generation_advances_while_realtime_goes_backward
                 ts->tv_sec = next_sec;
                 ts->tv_nsec = 0;
                 next_sec -= 10;
-            }); // [状態] - cplat_clock_get_realtime が呼び出されるたびに 10 秒ずつ戻る時刻を返すようにモックを設定する。
+            }); // [状態] - cplat_clock_get_realtime() が呼び出されるたびに 10 秒ずつ戻る時刻を返すようにモックを設定する。
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(),
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - キーを追加する。
     int actual_ret_first_time = cplat_hashtable_get_timestamp_val(ht, 1, &first_time);
@@ -256,7 +256,7 @@ TEST_F(hashtableGenerationTest, reuse_deleted_selects_smallest_generation)
     fill_value(&value, "v");
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     /* レコード 1 は時刻が古く世代が新しい。レコード 2 は時刻が新しく世代が古い。 */
     int actual_ret_first =
         cplat_hashtable_insert_direct(ht, 1, "a", 2, value.data(), &old_time,
@@ -306,7 +306,7 @@ TEST_F(hashtableGenerationTest, insert_direct_keeps_largest_generation)
     fill_value(&value, "v");
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     int actual_ret_large = cplat_hashtable_insert_direct(ht, 1, "a", 1, value.data(), &timestamp,
                                                          40); // [手順] - 大きい世代でレコードを置く。
     int actual_ret_after_large = cplat_hashtable_get_table_generation(ht, &after_large);
@@ -360,17 +360,17 @@ TEST_F(hashtableGenerationTest, scope_table_has_no_record_generation)
     fill_value(&value, "v");
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_table = cplat_hashtable_get_table_generation(ht, &table_generation);
     int actual_ret_record = cplat_hashtable_get_generation(ht, 1, &record_generation);
     int actual_ret_found = cplat_hashtable_find_generation(ht, "a", &found_generation);
-    int actual_ret_direct_generation = cplat_hashtable_insert_direct(ht, 2, "b", 1, value.data(), NULL,
+    int actual_ret_direct_generation = cplat_hashtable_insert_direct(ht, 2, "b", 1, value.data(), nullptr,
                                                                      3); // [手順] - テーブル粒度で 0 以外の世代を渡す。
     int actual_ret_direct_timestamp = cplat_hashtable_insert_direct(
         ht, 2, "b", 1, value.data(), &timestamp, 0); // [手順] - テーブル粒度で NULL 以外の時刻を渡す。
     int actual_ret_direct_ok =
-        cplat_hashtable_insert_direct(ht, 2, "b", 1, value.data(), NULL, 0); // [手順] - どちらも省いて置く。
+        cplat_hashtable_insert_direct(ht, 2, "b", 1, value.data(), nullptr, 0); // [手順] - どちらも省いて置く。
 
     // Assert
     EXPECT_EQ(
@@ -390,7 +390,7 @@ TEST_F(hashtableGenerationTest, scope_table_has_no_record_generation)
         actual_ret_direct_generation); // [確認_異常系] - テーブル粒度で 0 以外の世代を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_direct_timestamp); // [確認_異常系] - テーブル粒度で NULL 以外の時刻を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_direct_timestamp); // [確認_異常系] - テーブル粒度で nullptr 以外の時刻を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_direct_ok); // [確認_正常系] - 世代と時刻を省いた cplat_hashtable_insert_direct() の戻り値が CPLAT_OK であること。
@@ -420,7 +420,7 @@ TEST_F(hashtableGenerationTest, find_generation_walks_chain)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_first = cplat_hashtable_find_generation(ht, "a", &first_generation);
     (void)cplat_hashtable_add(
@@ -466,7 +466,7 @@ TEST_F(hashtableGenerationTest, clear_and_purge_handle_generation)
     fill_value(&value, "v");
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_delete(ht, "a"); // [手順] - 削除済みレコードを作る。
     int actual_ret_before = cplat_hashtable_get_table_generation(ht, &before_purge);
@@ -528,19 +528,19 @@ TEST_F(hashtableGenerationTest, generation_guards_reject_invalid_arguments)
     fill_value(&value, "v");
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    int actual_ret_table_null_ht = cplat_hashtable_get_table_generation(NULL, &generation);
-    int actual_ret_table_null_out = cplat_hashtable_get_table_generation(ht, NULL);
-    int actual_ret_record_null_ht = cplat_hashtable_get_generation(NULL, 1, &generation);
-    int actual_ret_record_null_out = cplat_hashtable_get_generation(ht, 1, NULL);
+    int actual_ret_table_null_ht = cplat_hashtable_get_table_generation(nullptr, &generation);
+    int actual_ret_table_null_out = cplat_hashtable_get_table_generation(ht, nullptr);
+    int actual_ret_record_null_ht = cplat_hashtable_get_generation(nullptr, 1, &generation);
+    int actual_ret_record_null_out = cplat_hashtable_get_generation(ht, 1, nullptr);
     int actual_ret_record_zero = cplat_hashtable_get_generation(ht, 0, &generation);
     int actual_ret_record_over = cplat_hashtable_get_generation(ht, 5, &generation);
     int actual_ret_record_empty =
         cplat_hashtable_get_generation(ht, 2, &generation); // [手順] - 空のレコードの世代を読む。
-    int actual_ret_find_null_ht = cplat_hashtable_find_generation(NULL, "a", &generation);
-    int actual_ret_find_null_key = cplat_hashtable_find_generation(ht, NULL, &generation);
-    int actual_ret_find_null_out = cplat_hashtable_find_generation(ht, "a", NULL);
+    int actual_ret_find_null_ht = cplat_hashtable_find_generation(nullptr, "a", &generation);
+    int actual_ret_find_null_key = cplat_hashtable_find_generation(ht, nullptr, &generation);
+    int actual_ret_find_null_out = cplat_hashtable_find_generation(ht, "a", nullptr);
     int actual_ret_find_long_key = cplat_hashtable_find_generation(
         ht, "0123456789", &generation); // [手順] - key_size に収まらないキーで検索する。
 

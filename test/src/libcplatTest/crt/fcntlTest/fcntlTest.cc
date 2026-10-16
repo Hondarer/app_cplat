@@ -51,7 +51,7 @@ TEST_F(fcntlTest, creates_file_and_returns_descriptor)
 
     // Act
     int fd = cplat_open("work.bin", O_RDWR | O_CREAT | O_TRUNC, 0644,
-                        &detail); // [手順] - 存在しないパスに作成フラグを指定して cplat_open を呼び出す。
+                        &detail); // [手順] - 存在しないパスに作成フラグを指定して cplat_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(7, fd); // [確認_正常系] - cplat_open() の戻り値が 7 であること。
@@ -77,7 +77,7 @@ TEST_F(fcntlTest, returns_minus1_for_missing_file)
 
     // Act
     int fd = cplat_open("missing.bin", O_RDONLY, 0,
-                        &detail); // [手順] - 存在しないパスを読み取り専用で cplat_open に指定する。
+                        &detail); // [手順] - 存在しないパスを読み取り専用で cplat_open() に指定する。
 
     // Assert
     EXPECT_EQ(-1, fd); // [確認_異常系] - cplat_open() の戻り値が -1 であること。
@@ -98,7 +98,7 @@ TEST_F(fcntlTest, returns_minus1_for_null_path)
     // Pre-Assert
 
     // Act
-    int fd = cplat_open(NULL, O_RDONLY, 0, &detail); // [手順] - パスに NULL を指定して cplat_open を呼び出す。
+    int fd = cplat_open(nullptr, O_RDONLY, 0, &detail); // [手順] - パスに NULL を指定して cplat_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, fd); // [確認_異常系] - cplat_open() の戻り値が -1 であること。
@@ -114,7 +114,8 @@ TEST_F(fcntlTest, accepts_null_detail_out)
     // Pre-Assert
 
     // Act
-    int fd = cplat_open(NULL, O_RDONLY, 0, NULL); // [手順] - detail_out に NULL を指定して cplat_open を呼び出す。
+    int fd =
+        cplat_open(nullptr, O_RDONLY, 0, nullptr); // [手順] - detail_out に NULL を指定して cplat_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, fd); // [確認_異常系] - cplat_open() の戻り値が -1 であること。
@@ -133,11 +134,11 @@ TEST_F(fcntlTest, open_retries_after_interrupt)
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)))
         .WillOnce(Return(
             5)); // [Pre-Assert確認_正常系] - open() が "work.bin" と等しい文字列、O_RDONLY、0 を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 下位の open API から、errno に EINTR を設定した -1 ののち記述子 5 を返却する。
+    // [Pre-Assert手順] - 下位の open() API から、errno に EINTR を設定した -1 ののち記述子 5 を返却する。
 
     // Act
     int fd = cplat_open("work.bin", O_RDONLY, 0,
-                        &detail); // [手順] - 中断ののち成功する cplat_open を呼び出す。
+                        &detail); // [手順] - 中断ののち成功する cplat_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(5,
@@ -161,7 +162,7 @@ TEST_F(fcntlTest, returns_enametoolong_when_path_exceeds_wide_buffer)
 
     // Act
     int fd = cplat_open(long_path.c_str(), O_RDONLY, 0,
-                        &detail); // [手順] - 変換先バッファーに収まらないパスで cplat_open を呼び出す。
+                        &detail); // [手順] - 変換先バッファーに収まらないパスで cplat_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, fd); // [確認_異常系] - cplat_open() の戻り値が -1 であること。

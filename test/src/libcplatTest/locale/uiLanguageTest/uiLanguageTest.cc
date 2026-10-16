@@ -56,9 +56,9 @@ class uiLanguageTest : public Test
             int exists = 0;
 
             g_saved_values[index][0] = '\0';
-            (void)cplat_getenv(kEnvironmentNames[index], g_saved_values[index], kEnvironmentValueMax, &exists, NULL);
+            (void)cplat_getenv(kEnvironmentNames[index], g_saved_values[index], kEnvironmentValueMax, &exists, nullptr);
             g_saved_exists[index] = exists;
-            (void)cplat_unsetenv(kEnvironmentNames[index], NULL);
+            (void)cplat_unsetenv(kEnvironmentNames[index], nullptr);
         }
     }
     // [サブ手順終了]
@@ -70,11 +70,11 @@ class uiLanguageTest : public Test
         {
             if (g_saved_exists[index] != 0)
             {
-                (void)cplat_setenv(kEnvironmentNames[index], g_saved_values[index], 1, NULL);
+                (void)cplat_setenv(kEnvironmentNames[index], g_saved_values[index], 1, nullptr);
             }
             else
             {
-                (void)cplat_unsetenv(kEnvironmentNames[index], NULL);
+                (void)cplat_unsetenv(kEnvironmentNames[index], nullptr);
             }
         }
     }
@@ -88,7 +88,8 @@ TEST_F(uiLanguageTest, UsesLangWhenOnlyLangIsSet)
     // Arrange
     char tag[CPLAT_UI_LANGUAGE_TAG_MAX];
 
-    ASSERT_EQ(CPLAT_OK, cplat_setenv("LANG", "ja_JP.UTF-8", 1, NULL)); // [状態] - LANG へ日本語のロケールを設定する。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_setenv("LANG", "ja_JP.UTF-8", 1, nullptr)); // [状態] - LANG へ日本語のロケールを設定する。
     // [状態確認] - LANG を設定した cplat_setenv() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -109,12 +110,13 @@ TEST_F(uiLanguageTest, PrefersLcAllOverOtherVariables)
     // Arrange
     char tag[CPLAT_UI_LANGUAGE_TAG_MAX];
 
-    ASSERT_EQ(CPLAT_OK, cplat_setenv("LC_ALL", "en_US.UTF-8", 1, NULL)); // [状態] - LC_ALL へ英語のロケールを設定する。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_setenv("LC_ALL", "en_US.UTF-8", 1, nullptr)); // [状態] - LC_ALL へ英語のロケールを設定する。
     // [状態確認] - LC_ALL を設定した cplat_setenv() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
-              cplat_setenv("LC_MESSAGES", "fr_FR", 1, NULL)); // [状態] - LC_MESSAGES へ別のロケールを設定する。
+              cplat_setenv("LC_MESSAGES", "fr_FR", 1, nullptr)); // [状態] - LC_MESSAGES へ別のロケールを設定する。
     // [状態確認] - LC_MESSAGES を設定した cplat_setenv() の戻り値が CPLAT_OK であること。
-    ASSERT_EQ(CPLAT_OK, cplat_setenv("LANG", "ja_JP.UTF-8", 1, NULL)); // [状態] - LANG へ別のロケールを設定する。
+    ASSERT_EQ(CPLAT_OK, cplat_setenv("LANG", "ja_JP.UTF-8", 1, nullptr)); // [状態] - LANG へ別のロケールを設定する。
     // [状態確認] - LANG を設定した cplat_setenv() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -135,10 +137,11 @@ TEST_F(uiLanguageTest, PrefersLcMessagesOverLang)
     // Arrange
     char tag[CPLAT_UI_LANGUAGE_TAG_MAX];
 
-    ASSERT_EQ(CPLAT_OK,
-              cplat_setenv("LC_MESSAGES", "en_US.UTF-8", 1, NULL)); // [状態] - LC_MESSAGES へ英語のロケールを設定する。
+    ASSERT_EQ(CPLAT_OK, cplat_setenv("LC_MESSAGES", "en_US.UTF-8", 1,
+                                     nullptr)); // [状態] - LC_MESSAGES へ英語のロケールを設定する。
     // [状態確認] - LC_MESSAGES を設定した cplat_setenv() の戻り値が CPLAT_OK であること。
-    ASSERT_EQ(CPLAT_OK, cplat_setenv("LANG", "ja_JP.UTF-8", 1, NULL)); // [状態] - LANG へ日本語のロケールを設定する。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_setenv("LANG", "ja_JP.UTF-8", 1, nullptr)); // [状態] - LANG へ日本語のロケールを設定する。
     // [状態確認] - LANG を設定した cplat_setenv() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -159,9 +162,10 @@ TEST_F(uiLanguageTest, SkipsUninterpretableValue)
     // Arrange
     char tag[CPLAT_UI_LANGUAGE_TAG_MAX];
 
-    ASSERT_EQ(CPLAT_OK, cplat_setenv("LC_ALL", "!!!", 1, NULL));       // [状態] - LC_ALL へ解釈できない値を設定する。
+    ASSERT_EQ(CPLAT_OK, cplat_setenv("LC_ALL", "!!!", 1, nullptr)); // [状態] - LC_ALL へ解釈できない値を設定する。
     // [状態確認] - LC_ALL を設定した cplat_setenv() の戻り値が CPLAT_OK であること。
-    ASSERT_EQ(CPLAT_OK, cplat_setenv("LANG", "ja_JP.UTF-8", 1, NULL)); // [状態] - LANG へ日本語のロケールを設定する。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_setenv("LANG", "ja_JP.UTF-8", 1, nullptr)); // [状態] - LANG へ日本語のロケールを設定する。
     // [状態確認] - LANG を設定した cplat_setenv() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -184,9 +188,10 @@ TEST_F(uiLanguageTest, StopsAtLanguageNeutralLocale)
     // Arrange
     char tag[CPLAT_UI_LANGUAGE_TAG_MAX];
 
-    ASSERT_EQ(CPLAT_OK, cplat_setenv("LC_ALL", "C", 1, NULL));         // [状態] - LC_ALL へ C を設定する。
+    ASSERT_EQ(CPLAT_OK, cplat_setenv("LC_ALL", "C", 1, nullptr)); // [状態] - LC_ALL へ C を設定する。
     // [状態確認] - LC_ALL を設定した cplat_setenv() の戻り値が CPLAT_OK であること。
-    ASSERT_EQ(CPLAT_OK, cplat_setenv("LANG", "ja_JP.UTF-8", 1, NULL)); // [状態] - LANG へ日本語のロケールを設定する。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_setenv("LANG", "ja_JP.UTF-8", 1, nullptr)); // [状態] - LANG へ日本語のロケールを設定する。
     // [状態確認] - LANG を設定した cplat_setenv() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -207,7 +212,7 @@ TEST_F(uiLanguageTest, ReturnsNeutralForCLocaleWithCodeset)
     // Arrange
     char tag[CPLAT_UI_LANGUAGE_TAG_MAX];
 
-    ASSERT_EQ(CPLAT_OK, cplat_setenv("LANG", "C.UTF-8", 1, NULL)); // [状態] - LANG へ C.UTF-8 を設定する。
+    ASSERT_EQ(CPLAT_OK, cplat_setenv("LANG", "C.UTF-8", 1, nullptr)); // [状態] - LANG へ C.UTF-8 を設定する。
     // [状態確認] - LANG を設定した cplat_setenv() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -228,7 +233,7 @@ TEST_F(uiLanguageTest, ReturnsNeutralForPosixLocale)
     // Arrange
     char tag[CPLAT_UI_LANGUAGE_TAG_MAX];
 
-    ASSERT_EQ(CPLAT_OK, cplat_setenv("LANG", "POSIX", 1, NULL)); // [状態] - LANG へ POSIX を設定する。
+    ASSERT_EQ(CPLAT_OK, cplat_setenv("LANG", "POSIX", 1, nullptr)); // [状態] - LANG へ POSIX を設定する。
     // [状態確認] - LANG を設定した cplat_setenv() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -249,7 +254,8 @@ TEST_F(uiLanguageTest, ReportsSmallBuffer)
     // Arrange
     char tag[3] = {'x', 'x', '\0'};
 
-    ASSERT_EQ(CPLAT_OK, cplat_setenv("LANG", "ja_JP.UTF-8", 1, NULL)); // [状態] - LANG へ日本語のロケールを設定する。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_setenv("LANG", "ja_JP.UTF-8", 1, nullptr)); // [状態] - LANG へ日本語のロケールを設定する。
     // [状態確認] - LANG を設定した cplat_setenv() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -277,7 +283,7 @@ TEST_F(uiLanguageTest, RejectsInvalidOutputArguments)
 
     // Act
     int actual_ret_null =
-        cplat_ui_language_get_tag(NULL, sizeof(tag));        // [手順] - 出力先に NULL を渡して表示言語を取得する。
+        cplat_ui_language_get_tag(nullptr, sizeof(tag));     // [手順] - 出力先に NULL を渡して表示言語を取得する。
     int actual_ret_zero = cplat_ui_language_get_tag(tag, 0); // [手順] - 出力先サイズに 0 を渡して表示言語を取得する。
 
     // Assert
@@ -613,9 +619,9 @@ TEST_F(uiLanguageTagTest, RejectsInvalidArguments)
 
     // Act
     int actual_ret_null_value =
-        cplat_internal_ui_language_normalize(NULL, tag, sizeof(tag)); // [手順] - 正規化する値に NULL を渡す。
+        cplat_internal_ui_language_normalize(nullptr, tag, sizeof(tag)); // [手順] - 正規化する値に NULL を渡す。
     int actual_ret_null_tag =
-        cplat_internal_ui_language_normalize("ja", NULL, sizeof(tag));        // [手順] - 出力先に NULL を渡す。
+        cplat_internal_ui_language_normalize("ja", nullptr, sizeof(tag));     // [手順] - 出力先に NULL を渡す。
     int actual_ret_zero = cplat_internal_ui_language_normalize("ja", tag, 0); // [手順] - 出力先サイズに 0 を渡す。
 
     // Assert

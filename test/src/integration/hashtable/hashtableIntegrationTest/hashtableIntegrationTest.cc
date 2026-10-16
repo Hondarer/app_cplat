@@ -60,7 +60,8 @@ TEST_F(hashtableIntegrationTest, string_mode_demo_scenarios)
     // Pre-Assert
 
     // Act
-    int actual_ret_create = cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
+    int actual_ret_create =
+        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     fill_value(&value, "りんご");
     (void)cplat_hashtable_add(ht, "apple", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     fill_value(&value, "バナナ");
@@ -148,7 +149,7 @@ TEST_F(hashtableIntegrationTest, binary_and_persist_demo_scenarios)
 
     // Act
     int actual_ret_create =
-        cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - バイナリ テーブルを構築する。
+        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - バイナリ テーブルを構築する。
     fill_value(&value, "binary-value-1");
     (void)cplat_hashtable_add(ht, key1, value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     fill_value(&value, "全ゼロ");
@@ -196,8 +197,7 @@ TEST_F(hashtableIntegrationTest, binary_and_persist_demo_scenarios)
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_find); // [確認_正常系] - 再接続後の cplat_hashtable_find_value_ref() の戻り値が CPLAT_OK であること。
-    EXPECT_STREQ("いちじく", static_cast<const char *>(
-                                 found)); // [確認_正常系] - static_cast<const char *>(found) が "いちじく" であること。
+    EXPECT_STREQ("いちじく", static_cast<const char *>(found)); // [確認_正常系] - found が "いちじく" であること。
 }
 
 // レコード直接挿入による異なるライフタイムのテーブル間レコード移行が正常に動作することの確認
@@ -235,7 +235,8 @@ TEST_F(hashtableIntegrationTest, migrate_records_by_number)
     // Pre-Assert
 
     // Act
-    int actual_ret_src = cplat_hashtable_create(&src_config, NULL, 0, NULL, 0, &src); // [手順] - 移行元を構築する。
+    int actual_ret_src =
+        cplat_hashtable_create(&src_config, nullptr, 0, nullptr, 0, &src); // [手順] - 移行元を構築する。
     fill_value(&value, "りんご");
     (void)cplat_hashtable_add(src, "apple", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     fill_value(&value, "バナナ");
@@ -248,7 +249,7 @@ TEST_F(hashtableIntegrationTest, migrate_records_by_number)
     (void)cplat_hashtable_delete(src, "banana");
     (void)cplat_hashtable_get_status(src, banana_rec, &banana_status);
 
-    int actual_ret_keep = cplat_hashtable_create(&dest_config, NULL, 0, NULL, 0,
+    int actual_ret_keep = cplat_hashtable_create(&dest_config, nullptr, 0, nullptr, 0,
                                                  &dest_keep); // [手順] - lifetime 4 の移行先を構築する。
     std::vector<int> keep_copies;
     for (uint64_t rec = 1; rec <= 4; ++rec)
@@ -274,7 +275,7 @@ TEST_F(hashtableIntegrationTest, migrate_records_by_number)
     int actual_ret_keep_validate = cplat_hashtable_validate(dest_keep);
 
     dest_config.lifetime = 2; // [状態] - 削除済みを受け取れない lifetime 2 の移行先へ切り替える。
-    int actual_ret_skip = cplat_hashtable_create(&dest_config, NULL, 0, NULL, 0,
+    int actual_ret_skip = cplat_hashtable_create(&dest_config, nullptr, 0, nullptr, 0,
                                                  &dest_skip); // [手順] - lifetime 2 の移行先を構築する。
     std::vector<int> skip_copies;
     for (uint64_t rec = 1; rec <= 4; ++rec)
@@ -474,7 +475,7 @@ TEST_F(hashtableIntegrationTest, internal_buffers_round_trip_through_file)
 
     // Act
     int actual_ret_create =
-        cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - 内部確保でテーブルを構築する。
+        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - 内部確保でテーブルを構築する。
     fill_value(&value, "persisted-apple");
     (void)cplat_hashtable_add(ht, "apple", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     fill_value(&value, "persisted-banana");
@@ -483,7 +484,7 @@ TEST_F(hashtableIntegrationTest, internal_buffers_round_trip_through_file)
     int actual_ret_ref = cplat_hashtable_buffer_ref(ht, &mgmt, &data); // [手順] - 管理中の 2 領域の先頭を得る。
     int actual_ret_size = cplat_hashtable_buffer_size(ht, &mgmt_size, &data_size);
 
-    FILE *out = cplat_fopen(path.c_str(), "wb", NULL);
+    FILE *out = cplat_fopen(path.c_str(), "wb", nullptr);
     ASSERT_NE(nullptr, out); // [状態確認] - 書き出し時の cplat_fopen() の戻り値が nullptr 以外であること。
     size_t wrote_mgmt = fwrite(mgmt, 1, mgmt_size, out); // [手順] - 管理領域を書き出す。
     size_t wrote_data = fwrite(data, 1, data_size, out); // [手順] - データ領域を書き出す。
@@ -493,7 +494,7 @@ TEST_F(hashtableIntegrationTest, internal_buffers_round_trip_through_file)
     /* uint64_t の配列で確保し、管理領域に必要なアラインメントを満たす。 */
     std::vector<uint64_t> load_mgmt((mgmt_size + sizeof(uint64_t) - 1u) / sizeof(uint64_t), 0);
     std::vector<unsigned char> load_data(data_size, 0);
-    FILE *in = cplat_fopen(path.c_str(), "rb", NULL);
+    FILE *in = cplat_fopen(path.c_str(), "rb", nullptr);
     ASSERT_NE(nullptr, in); // [状態確認] - 読み戻し時の cplat_fopen() の戻り値が nullptr 以外であること。
     size_t read_mgmt = fread(load_mgmt.data(), 1, mgmt_size, in); // [手順] - 管理領域を読み戻す。
     size_t read_data = fread(load_data.data(), 1, data_size, in); // [手順] - データ領域を読み戻す。

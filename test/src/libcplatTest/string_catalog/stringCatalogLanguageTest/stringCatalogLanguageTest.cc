@@ -345,8 +345,8 @@ TEST_F(stringCatalogLanguageTest, language_from_tag_invalid_argument)
 
     // Act
     actual_ret_null_tag =
-        cplat_string_catalog_language_from_tag(NULL, &actual_language);            // [手順] - 言語タグに NULL を渡す。
-    actual_ret_null_language = cplat_string_catalog_language_from_tag("ja", NULL); // [手順] - 格納先に NULL を渡す。
+        cplat_string_catalog_language_from_tag(nullptr, &actual_language); // [手順] - 言語タグに NULL を渡す。
+    actual_ret_null_language = cplat_string_catalog_language_from_tag("ja", nullptr); // [手順] - 格納先に NULL を渡す。
 
     // Assert
     EXPECT_EQ(

@@ -85,18 +85,18 @@ TEST(syncBoundaryTest, monotonic_deadline_normalizes_nanoseconds)
 TEST(syncBoundaryTest, condvar_rejects_invalid_arguments)
 {
     // Arrange
-    cplat_condvar *cv = NULL;
-    cplat_local_lock *lock = NULL;
+    cplat_condvar *cv = nullptr;
+    cplat_local_lock *lock = nullptr;
 
     // Pre-Assert
 
     // Act
-    int create_result = cplat_condvar_create(NULL); // [手順] - NULL の格納先で condvar を生成する。
-    int wait_result = cplat_condvar_wait(NULL, NULL, CPLAT_SYNC_NO_WAIT); // [手順] - NULL 引数で待機する。
-    int signal_result = cplat_condvar_signal(NULL);                       // [手順] - NULL の condvar を通知する。
-    int broadcast_result = cplat_condvar_broadcast(NULL);                 // [手順] - NULL の condvar を一斉通知する。
-    cplat_condvar_dispose(NULL);                                          // [手順] - NULL の condvar を破棄する。
-    cplat_local_lock_dispose(NULL);                                       // [手順] - NULL の local lock を破棄する。
+    int create_result = cplat_condvar_create(nullptr); // [手順] - NULL の格納先で condvar を生成する。
+    int wait_result = cplat_condvar_wait(nullptr, nullptr, CPLAT_SYNC_NO_WAIT); // [手順] - NULL 引数で待機する。
+    int signal_result = cplat_condvar_signal(nullptr);                          // [手順] - NULL の condvar を通知する。
+    int broadcast_result = cplat_condvar_broadcast(nullptr); // [手順] - NULL の condvar を一斉通知する。
+    cplat_condvar_dispose(nullptr);                          // [手順] - NULL の condvar を破棄する。
+    cplat_local_lock_dispose(nullptr);                       // [手順] - NULL の local lock を破棄する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, create_result);
@@ -107,18 +107,18 @@ TEST(syncBoundaryTest, condvar_rejects_invalid_arguments)
     // [確認_異常系] - NULL に対する cplat_condvar_signal() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, broadcast_result);
     // [確認_異常系] - NULL に対する cplat_condvar_broadcast() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(NULL,
-              cv); // [確認_正常系] - cv が NULL であること。(NULL の condvar 破棄後も格納先が変わらないことの確認)
-    EXPECT_EQ(NULL, lock);
-    // [確認_正常系] - lock が NULL であること。(NULL の local lock 破棄後も格納先が変わらないことの確認)
+    EXPECT_EQ(nullptr,
+              cv); // [確認_正常系] - cv が nullptr であること。(NULL の condvar 破棄後も格納先が変わらないことの確認)
+    EXPECT_EQ(nullptr, lock);
+    // [確認_正常系] - lock が nullptr であること。(NULL の local lock 破棄後も格納先が変わらないことの確認)
 }
 
 // condvar の即時タイムアウト、通知、一斉通知が成功することの確認
 TEST(syncBoundaryTest, condvar_timeout_signal_and_broadcast_are_supported)
 {
     // Arrange
-    cplat_condvar *cv = NULL;
-    cplat_local_lock *lock = NULL;
+    cplat_condvar *cv = nullptr;
+    cplat_local_lock *lock = nullptr;
 
     // Pre-Assert
 
@@ -152,8 +152,8 @@ TEST(syncBoundaryTest, condvar_timeout_signal_and_broadcast_are_supported)
 TEST(syncBoundaryTest, condvar_wait_forever_returns_after_signal)
 {
     // Arrange
-    cplat_condvar *cv = NULL;
-    cplat_local_lock *lock = NULL;
+    cplat_condvar *cv = nullptr;
+    cplat_local_lock *lock = nullptr;
     std::atomic<bool> waiter_ready(false);
     int wait_result = CPLAT_ERR_UNKNOWN;
     ASSERT_EQ(CPLAT_OK, cplat_condvar_create(&cv)); // [状態] - condvar を生成する。
@@ -209,7 +209,7 @@ static void set_thread_flag(void *arg)
 TEST(syncBoundaryTest, thread_create_and_join_runs_start_function)
 {
     // Arrange
-    cplat_thread *thread = NULL;
+    cplat_thread *thread = nullptr;
     int flag = 0;
 
     // Pre-Assert
@@ -241,10 +241,10 @@ TEST(syncBoundaryTest, call_once_runs_function_only_once)
     // Pre-Assert
 
     // Act
-    cplat_call_once(&flag, count_once_call); // [手順] - call_once を 1 回目に呼び出す。
-    cplat_call_once(&flag, count_once_call); // [手順] - call_once を 2 回目に呼び出す。
-    cplat_call_once(NULL, count_once_call);  // [手順] - NULL flag で call_once を呼び出す。
-    cplat_call_once(&flag, NULL);            // [手順] - NULL 関数で call_once を呼び出す。
+    cplat_call_once(&flag, count_once_call);   // [手順] - call_once() を 1 回目に呼び出す。
+    cplat_call_once(&flag, count_once_call);   // [手順] - call_once() を 2 回目に呼び出す。
+    cplat_call_once(nullptr, count_once_call); // [手順] - NULL flag で call_once() を呼び出す。
+    cplat_call_once(&flag, nullptr);           // [手順] - NULL 関数で call_once() を呼び出す。
 
     // Assert
     EXPECT_EQ(1, s_once_call_count);

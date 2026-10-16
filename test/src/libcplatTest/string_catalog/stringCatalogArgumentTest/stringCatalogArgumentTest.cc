@@ -150,7 +150,7 @@ TEST_F(stringCatalogArgumentTest, all_argument_kinds)
     EXPECT_EQ(UINT64_C(6),
               values[6].value.uint64_value); // [確認_正常系] - values[6].value.uint64_value が UINT64_C(6) であること。
     EXPECT_EQ((size_t)7U,
-              values[7].value.size_value); // [確認_正常系] - values[7].value.size_value が (size_t)7U であること。
+              values[7].value.size_value); // [確認_正常系] - values[7].value.size_value が 7U であること。
     EXPECT_EQ(CPLAT_STRING_CATALOG_ARGUMENT_KIND_SIZE,
               values[7].kind); // [確認_正常系] - values[7].kind が CPLAT_STRING_CATALOG_ARGUMENT_KIND_SIZE であること。
 

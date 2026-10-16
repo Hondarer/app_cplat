@@ -16,15 +16,15 @@
 class promptCoverageTest : public Test
 {
   protected:
-    cplat_prompt *prompt_ = NULL;
+    cplat_prompt *prompt_ = nullptr;
 
     // [サブ手順 名前=promptCoverageTest.SetUp]
     void SetUp() override
     {
         promptFakeReset();
-        prompt_ = cplat_prompt_create(NULL);
-        ASSERT_NE((cplat_prompt *)NULL, prompt_);
-        // [状態確認] - cplat_prompt_create() の戻り値が (cplat_prompt *)NULL 以外であること。
+        prompt_ = cplat_prompt_create(nullptr);
+        ASSERT_NE(nullptr, prompt_);
+        // [状態確認] - cplat_prompt_create() の戻り値が nullptr 以外であること。
         prompt_->is_tty = 1;
     }
     // [サブ手順終了]
@@ -33,7 +33,7 @@ class promptCoverageTest : public Test
     void TearDown() override
     {
         cplat_prompt_dispose(prompt_);
-        prompt_ = NULL;
+        prompt_ = nullptr;
     }
     // [サブ手順終了]
 
@@ -114,7 +114,7 @@ TEST_F(promptCoverageTest, readline_redisplays_after_resize_with_null_prompt)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_prompt_readline_at(prompt_, buf, sizeof(buf), NULL, "promptCoverageTest.cc",
+    int actual_ret = cplat_prompt_readline_at(prompt_, buf, sizeof(buf), nullptr, "promptCoverageTest.cc",
                                               2); // [手順] - NULL のプロンプトでリサイズ通知後の入力を読み取る。
 
     // Assert
@@ -139,7 +139,7 @@ TEST_F(promptCoverageTest, readline_fallback_paths_return_input)
         .WillOnce(DoAll(SetArrayArgument<0>(first_input, first_input + sizeof(first_input)), Return(CPLAT_OK)))
         .WillOnce(DoAll(SetArrayArgument<0>(second_input, second_input + sizeof(second_input)), Return(CPLAT_OK)));
     // [Pre-Assert確認_正常系] - cplat_fgets() が 2 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets が 1 回目に "first"、2 回目に "second" を返却する。
+    // [Pre-Assert手順] - cplat_fgets() が 1 回目に "first"、2 回目に "second" を返却する。
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _)).WillOnce(Return(nullptr));
     // [Pre-Assert確認_異常系] - cplat_realloc() が 1 回呼び出されること。
     // [Pre-Assert手順] - realloc から NULL を返却する。
@@ -150,7 +150,7 @@ TEST_F(promptCoverageTest, readline_fallback_paths_return_input)
         cplat_prompt_readline_at(prompt_, first_output, sizeof(first_output), "> ", "fallback.c", 1);
     prompt_->is_tty = 1;
     int actual_ret_allocation =
-        cplat_prompt_readline_at(prompt_, second_output, sizeof(second_output), NULL, "fallback.c",
+        cplat_prompt_readline_at(prompt_, second_output, sizeof(second_output), nullptr, "fallback.c",
                                  2); // [手順] - 非 TTY と確保失敗の fallback で入力を読む。
 
     // Assert
@@ -189,9 +189,9 @@ TEST_F(promptCoverageTest, contexts_distinguish_file_and_line_and_expand_twice)
     for (size_t i = 0u; i < 5u; i++)
     {
         ASSERT_NE(
-            (cplat_internal_prompt_ctx *)NULL,
+            nullptr,
             contexts
-                [i]); // [確認_正常系 回数=5] - 新規作成時の test_prompt_find_or_create_context() の戻り値が (cplat_internal_prompt_ctx *)NULL 以外であること。
+                [i]); // [確認_正常系 回数=5] - 新規作成時の test_prompt_find_or_create_context() の戻り値が nullptr 以外であること。
     }
     EXPECT_EQ(
         &prompt_->contexts[0],
@@ -211,40 +211,39 @@ TEST_F(promptCoverageTest, history_helpers_cover_remaining_boundaries)
         test_prompt_find_or_create_context(prompt_, "history.c", 1); // [状態] - 空の履歴コンテキストを用意する。
     cplat_internal_prompt_ctx *null_entry_context = test_prompt_find_or_create_context(
         prompt_, "null-entry.c", 1); // [状態] - NULL エントリ試験用の履歴コンテキストを用意する。
-    char *first_entry = NULL;
+    char *first_entry = nullptr;
+    ASSERT_NE(nullptr,
+              context); // [状態確認] - test_prompt_find_or_create_context() の戻り値が nullptr 以外であること。
     ASSERT_NE(
-        (cplat_internal_prompt_ctx *)NULL,
-        context); // [状態確認] - test_prompt_find_or_create_context() の戻り値が (cplat_internal_prompt_ctx *)NULL 以外であること。
-    ASSERT_NE(
-        (cplat_internal_prompt_ctx *)NULL,
-        null_entry_context); // [状態確認] - NULL エントリ試験用の test_prompt_find_or_create_context() の戻り値が (cplat_internal_prompt_ctx *)NULL 以外であること。
+        nullptr,
+        null_entry_context); // [状態確認] - NULL エントリ試験用の test_prompt_find_or_create_context() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
 
     // Act
-    test_prompt_history_next(prompt_, context, NULL);
+    test_prompt_history_next(prompt_, context, nullptr);
     test_prompt_history_add(prompt_, context, "");
     test_prompt_history_add(prompt_, context, "first");
     test_prompt_history_add(prompt_, context, "first");
     null_entry_context->count = 1u;
-    null_entry_context->entries[0] = NULL;
+    null_entry_context->entries[0] = nullptr;
     test_prompt_history_add(prompt_, null_entry_context, "second");
     first_entry = context->entries[0];
-    context->entries[0] = NULL;
-    test_prompt_history_prev(prompt_, context, NULL);
+    context->entries[0] = nullptr;
+    test_prompt_history_prev(prompt_, context, nullptr);
     context->entries[0] = first_entry;
     prompt_->edit_cap = 4u;
     prompt_->input_max_bytes = 4u;
     context->browse_idx = -1;
-    test_prompt_history_prev(prompt_, context, NULL);
+    test_prompt_history_prev(prompt_, context, nullptr);
     (void)cplat_strcpy(context->saved_line, CPLAT_PROMPT_INPUT_BYTES_DEFAULT, "saved");
     context->browse_idx = 0;
-    test_prompt_history_next(prompt_, context, NULL);
+    test_prompt_history_next(prompt_, context, nullptr);
     context->count = 2u;
     context->browse_idx = 0;
-    context->entries[1] = NULL;
+    context->entries[1] = nullptr;
     test_prompt_history_next(prompt_, context,
-                             NULL); // [手順] - 重複、NULL エントリ、容量制限、前後端の履歴操作を行う。
+                             nullptr); // [手順] - 重複、NULL エントリ、容量制限、前後端の履歴操作を行う。
 
     // Assert
     EXPECT_EQ(
@@ -265,9 +264,8 @@ TEST_F(promptCoverageTest, history_add_ignores_zero_history_max)
     // Arrange
     cplat_internal_prompt_ctx *context =
         test_prompt_find_or_create_context(prompt_, "zero-history.c", 1); // [状態] - 空の履歴コンテキストを用意する。
-    ASSERT_NE(
-        (cplat_internal_prompt_ctx *)NULL,
-        context); // [状態確認] - test_prompt_find_or_create_context() の戻り値が (cplat_internal_prompt_ctx *)NULL 以外であること。
+    ASSERT_NE(nullptr,
+              context); // [状態確認] - test_prompt_find_or_create_context() の戻り値が nullptr 以外であること。
     size_t saved_history_max = prompt_->history_max;
     prompt_->history_max = 0u; // [状態] - 履歴上限を 0 にする。
 
@@ -295,16 +293,15 @@ TEST_F(promptCoverageTest, context_creation_fails_when_entries_allocation_fails)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_calloc(_, _)).WillOnce(Return(nullptr));
     // [Pre-Assert確認_異常系] - cplat_calloc() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_calloc から NULL を返却する。
+    // [Pre-Assert手順] - cplat_calloc() から NULL を返却する。
 
     // Act
     cplat_internal_prompt_ctx *context = test_prompt_find_or_create_context(prompt_, "failure.c",
                                                                             1); // [手順] - 履歴コンテキストを作成する。
 
     // Assert
-    EXPECT_EQ(
-        (cplat_internal_prompt_ctx *)NULL,
-        context); // [確認_異常系] - test_prompt_find_or_create_context() の戻り値が (cplat_internal_prompt_ctx *)NULL であること。
+    EXPECT_EQ(nullptr,
+              context); // [確認_異常系] - test_prompt_find_or_create_context() の戻り値が nullptr であること。
     EXPECT_EQ(
         0u,
         prompt_
@@ -330,7 +327,7 @@ TEST_F(promptCoverageTest, readline_fmt_handles_null_error_and_growth)
     promptFakeSetInput("a\n");
     int actual_ret_error = cplat_prompt_readline_fmt_at(prompt_, buf, sizeof(buf), "format.c", 1, "%s", "x");
     promptFakeSetInput("b\n");
-    int actual_ret_null = cplat_prompt_readline_fmt_at(prompt_, buf, sizeof(buf), "format.c", 2, NULL);
+    int actual_ret_null = cplat_prompt_readline_fmt_at(prompt_, buf, sizeof(buf), "format.c", 2, nullptr);
     promptFakeSetInput("c\n");
     int actual_ret_growth =
         cplat_prompt_readline_fmt_at(prompt_, buf, sizeof(buf), "format.c", 3, "%s",

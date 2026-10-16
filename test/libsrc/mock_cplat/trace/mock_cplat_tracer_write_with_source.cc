@@ -28,7 +28,7 @@ MOCK_WEAK_IMPL(int, cplat_tracer_write_with_source, cplat_tracer *handle, cplat_
     if (getTraceLevel() > TRACE_NONE)
     {
         printf("  > %s 0x%p, %d, %s:%d, %s -> %d\n", __func__, (void *)handle, (int)level,
-               file == NULL ? "(null)" : file, line, message == NULL ? "(null)" : message, mock_ret);
+               file == nullptr ? "(null)" : file, line, message == nullptr ? "(null)" : message, mock_ret);
     }
 
     return mock_ret;

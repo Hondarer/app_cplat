@@ -33,7 +33,7 @@ TEST_F(timespecTest, normalize_carries_nsec_overflow_into_sec)
     // Pre-Assert
 
     // Act
-    cplat_timespec_normalize(&ts); // [手順] - cplat_timespec_normalize(&ts) を呼び出す。
+    cplat_timespec_normalize(&ts); // [手順] - cplat_timespec_normalize() を呼び出す。
 
     // Assert
     EXPECT_EQ(3, ts.tv_sec); // [確認_正常系] - ts.tv_sec が 3 であること。(ナノ秒部から 2 秒繰り上がったことの確認)
@@ -49,7 +49,7 @@ TEST_F(timespecTest, normalize_borrows_sec_for_negative_nsec)
     // Pre-Assert
 
     // Act
-    cplat_timespec_normalize(&ts); // [手順] - cplat_timespec_normalize(&ts) を呼び出す。
+    cplat_timespec_normalize(&ts); // [手順] - cplat_timespec_normalize() を呼び出す。
 
     // Assert
     EXPECT_EQ(0,
@@ -66,7 +66,7 @@ TEST_F(timespecTest, normalize_keeps_already_normalized_value)
     // Pre-Assert
 
     // Act
-    cplat_timespec_normalize(&ts); // [手順] - cplat_timespec_normalize(&ts) を呼び出す。
+    cplat_timespec_normalize(&ts); // [手順] - cplat_timespec_normalize() を呼び出す。
 
     // Assert
     EXPECT_EQ(5, ts.tv_sec);            // [確認_正常系] - ts.tv_sec が 5 であること。
@@ -81,7 +81,7 @@ TEST_F(timespecTest, normalize_ignores_null)
     // Pre-Assert
 
     // Act
-    cplat_timespec_normalize(NULL); // [手順] - cplat_timespec_normalize(NULL) を呼び出す。
+    cplat_timespec_normalize(nullptr); // [手順] - cplat_timespec_normalize() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_異常系] - SUCCEED() に到達すること。(NULL を渡した cplat_timespec_normalize() がクラッシュしないことの確認)
@@ -266,22 +266,22 @@ TEST_F(timespecTest, operations_ignore_null_arguments)
     // Pre-Assert
 
     // Act
-    cplat_timespec_add(NULL, &value, &result); // [手順] - 加算の各引数に NULL を渡して呼び出す。
-    cplat_timespec_add(&value, NULL, &result);
-    cplat_timespec_add(&value, &value, NULL);
-    cplat_timespec_sub(NULL, &value, &result); // [手順] - 減算の各引数に NULL を渡して呼び出す。
-    cplat_timespec_sub(&value, NULL, &result);
-    cplat_timespec_sub(&value, &value, NULL);
-    cplat_timespec_add_ms(NULL, 100, &result); // [手順] - ミリ秒加算の各引数に NULL を渡して呼び出す。
-    cplat_timespec_add_ms(&value, 100, NULL);
-    cplat_timespec_to_native(NULL, &native); // [手順] - ネイティブ変換の各引数に NULL を渡して呼び出す。
-    cplat_timespec_to_native(&value, NULL);
-    cplat_timespec_from_native(NULL, &result); // [手順] - 逆変換の各引数に NULL を渡して呼び出す。
-    cplat_timespec_from_native(&native, NULL);
-    int cmp_null_left = cplat_timespec_cmp(NULL, &value);           // [手順] - 左辺 NULL で比較を呼び出す。
-    int cmp_null_right = cplat_timespec_cmp(&value, NULL);          // [手順] - 右辺 NULL で比較を呼び出す。
-    int64_t diff_null_end = cplat_timespec_diff_ms(NULL, &value);   // [手順] - 終点 NULL で差分計算を呼び出す。
-    int64_t diff_null_start = cplat_timespec_diff_ms(&value, NULL); // [手順] - 起点 NULL で差分計算を呼び出す。
+    cplat_timespec_add(nullptr, &value, &result); // [手順] - 加算の各引数に NULL を渡して呼び出す。
+    cplat_timespec_add(&value, nullptr, &result);
+    cplat_timespec_add(&value, &value, nullptr);
+    cplat_timespec_sub(nullptr, &value, &result); // [手順] - 減算の各引数に NULL を渡して呼び出す。
+    cplat_timespec_sub(&value, nullptr, &result);
+    cplat_timespec_sub(&value, &value, nullptr);
+    cplat_timespec_add_ms(nullptr, 100, &result); // [手順] - ミリ秒加算の各引数に NULL を渡して呼び出す。
+    cplat_timespec_add_ms(&value, 100, nullptr);
+    cplat_timespec_to_native(nullptr, &native); // [手順] - ネイティブ変換の各引数に NULL を渡して呼び出す。
+    cplat_timespec_to_native(&value, nullptr);
+    cplat_timespec_from_native(nullptr, &result); // [手順] - 逆変換の各引数に NULL を渡して呼び出す。
+    cplat_timespec_from_native(&native, nullptr);
+    int cmp_null_left = cplat_timespec_cmp(nullptr, &value);           // [手順] - 左辺 NULL で比較を呼び出す。
+    int cmp_null_right = cplat_timespec_cmp(&value, nullptr);          // [手順] - 右辺 NULL で比較を呼び出す。
+    int64_t diff_null_end = cplat_timespec_diff_ms(nullptr, &value);   // [手順] - 終点 NULL で差分計算を呼び出す。
+    int64_t diff_null_start = cplat_timespec_diff_ms(&value, nullptr); // [手順] - 起点 NULL で差分計算を呼び出す。
 
     // Assert
     EXPECT_EQ(3, result.tv_sec);  // [確認_正常系] - result.tv_sec が 3 であること。
@@ -312,7 +312,7 @@ TEST_F(timespecTest, native_conversion_round_trips_value)
                                &restored); // [手順] - cplat_timespec_from_native(&native, &restored) を呼び出す。
 
     // Assert
-    EXPECT_EQ((time_t)1712345678, native.tv_sec); // [確認_正常系] - native.tv_sec が (time_t)1712345678 であること。
+    EXPECT_EQ((time_t)1712345678, native.tv_sec); // [確認_正常系] - native.tv_sec が 1712345678 であること。
     EXPECT_EQ(987654321L, native.tv_nsec);        // [確認_正常系] - native.tv_nsec が 987654321L であること。
     EXPECT_EQ(ts.tv_sec, restored.tv_sec);        // [確認_正常系] - restored.tv_sec が ts.tv_sec と一致すること。
     EXPECT_EQ(ts.tv_nsec, restored.tv_nsec);      // [確認_正常系] - restored.tv_nsec が ts.tv_nsec と一致すること。

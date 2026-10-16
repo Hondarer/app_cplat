@@ -93,7 +93,7 @@ static void redisplay(const char *prompt_str, const char *buf, size_t len, size_
 {
     const char *prompt_str_out;
     putchar('\r');
-    if (prompt_str)
+    if (prompt_str != NULL)
     {
         prompt_str_out = prompt_str;
     }
@@ -714,7 +714,7 @@ int cplat_prompt_readline_fmt_at(cplat_prompt *p, char *buf, size_t buf_size, co
         }
     }
 
-    if (fmt)
+    if (fmt != NULL)
     {
         fmt_str = fmt;
     }

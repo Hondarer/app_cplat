@@ -65,19 +65,19 @@ class fileTestFixture : public testing::Test
     void SetUp() override
     {
         ON_CALL(mock_fcntl_, open(_, _, _, _, _, _)).WillByDefault(Return(kFakeFd));
-        // [状態] - `open` の既定動作を設定する。
+        // [状態] - open() の既定動作を設定する。
         ON_CALL(mock_unistd_, close(_, _, _, _)).WillByDefault(Return(0));
-        // [状態] - `close` の既定動作を設定する。
+        // [状態] - close() の既定動作を設定する。
         ON_CALL(mock_unistd_, fsync(_, _, _, _)).WillByDefault(Return(0));
-        // [状態] - `fsync` の既定動作を設定する。
+        // [状態] - fsync() の既定動作を設定する。
         ON_CALL(mock_unistd_, ftruncate(_, _, _, _, _)).WillByDefault(Return(0));
-        // [状態] - `ftruncate` の既定動作を設定する。
+        // [状態] - ftruncate() の既定動作を設定する。
         ON_CALL(mock_unistd_, write(_, _, _, _, _, _))
             .WillByDefault([](const char *, int, const char *, int, const void *, size_t count)
                            { return static_cast<ssize_t>(count); });
-        // [状態] - `write` の既定動作を設定する。
+        // [状態] - write() の既定動作を設定する。
         ON_CALL(mock_unistd_, read(_, _, _, _, _, _)).WillByDefault(Return(0));
-        // [状態] - `read` の既定動作を設定する。
+        // [状態] - read() の既定動作を設定する。
         ON_CALL(mock_sys_stat_, fstat(_, _, _, _, _))
             .WillByDefault(
                 [](const char *, int, const char *, int, struct stat *st)
@@ -85,7 +85,7 @@ class fileTestFixture : public testing::Test
                     fill_stat(st, 0, 1, 1);
                     return 0;
                 });
-        // [状態] - `fstat` の既定動作を設定する。
+        // [状態] - fstat() の既定動作を設定する。
     }
     // [サブ手順終了]
 };

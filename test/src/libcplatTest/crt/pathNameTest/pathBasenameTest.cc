@@ -15,7 +15,7 @@ TEST_F(pathBasenameTest, returns_name_after_last_separator)
     // Pre-Assert
 
     // Act
-    const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename(path) を呼び出す。
+    const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename() を呼び出す。
 
     // Assert
     EXPECT_STREQ("c.txt",
@@ -31,7 +31,7 @@ TEST_F(pathBasenameTest, returns_input_when_no_separator)
     // Pre-Assert
 
     // Act
-    const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename(path) を呼び出す。
+    const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename() を呼び出す。
 
     // Assert
     EXPECT_EQ(path,
@@ -47,7 +47,7 @@ TEST_F(pathBasenameTest, treats_backslash_as_separator)
     // Pre-Assert
 
     // Act
-    const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename(path) を呼び出す。
+    const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename() を呼び出す。
 
     // Assert
     EXPECT_STREQ("c", actual); // [確認_正常系] - cplat_path_basename() の戻り値が "c" であること。
@@ -62,7 +62,7 @@ TEST_F(pathBasenameTest, handles_mixed_separators)
     // Pre-Assert
 
     // Act
-    const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename(path) を呼び出す。
+    const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename() を呼び出す。
 
     // Assert
     EXPECT_STREQ("c", actual); // [確認_正常系] - cplat_path_basename() の戻り値が "c" であること。
@@ -77,7 +77,7 @@ TEST_F(pathBasenameTest, returns_empty_string_when_trailing_separator)
     // Pre-Assert
 
     // Act
-    const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename(path) を呼び出す。
+    const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename() を呼び出す。
 
     // Assert
     EXPECT_STREQ("", actual); // [確認_正常系] - cplat_path_basename() の戻り値が "" であること。
@@ -92,7 +92,7 @@ TEST_F(pathBasenameTest, returns_empty_string_for_root)
     // Pre-Assert
 
     // Act
-    const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename(path) を呼び出す。
+    const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename() を呼び出す。
 
     // Assert
     EXPECT_STREQ("", actual); // [確認_正常系] - cplat_path_basename() の戻り値が "" であること。
@@ -107,7 +107,7 @@ TEST_F(pathBasenameTest, returns_empty_string_for_empty_input)
     // Pre-Assert
 
     // Act
-    const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename(path) を呼び出す。
+    const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename() を呼び出す。
 
     // Assert
     EXPECT_STREQ("", actual); // [確認_正常系] - cplat_path_basename() の戻り値が "" であること。
@@ -121,7 +121,7 @@ TEST_F(pathBasenameTest, returns_null_for_null_input)
     // Pre-Assert
 
     // Act
-    const char *actual = cplat_path_basename(NULL); // [手順] - cplat_path_basename(NULL) を呼び出す。
+    const char *actual = cplat_path_basename(nullptr); // [手順] - cplat_path_basename() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr, actual); // [確認_異常系] - cplat_path_basename() の戻り値が nullptr であること。
@@ -136,7 +136,7 @@ TEST_F(pathBasenameTest, returns_pointer_within_input_buffer)
     // Pre-Assert
 
     // Act
-    const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename(path) を呼び出す。
+    const char *actual = cplat_path_basename(path); // [手順] - cplat_path_basename() を呼び出す。
 
     // Assert
     EXPECT_EQ(path + 4, actual); // [確認_正常系] - cplat_path_basename() の戻り値が path + 4 と一致すること。

@@ -38,7 +38,7 @@ TEST_F(isattyTest, invalid_stream_returns_zero)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_isatty(invalid_stream); // [手順] - 定義外の enum 値を渡して cplat_isatty を呼び出す。
+    int actual_ret = cplat_isatty(invalid_stream); // [手順] - 定義外の enum 値を渡して cplat_isatty() を呼び出す。
 
     // Assert
     EXPECT_EQ(0, actual_ret); // [確認_異常系] - cplat_isatty() の戻り値が 0 であること。
@@ -57,7 +57,8 @@ TEST_F(isattyTest, stdin_returns_int)
 #endif                        /* PLATFORM_LINUX */
 
     // Act
-    int actual_ret = cplat_isatty(CPLAT_STREAM_STDIN); // [手順] - CPLAT_STREAM_STDIN を渡して cplat_isatty を呼び出す。
+    int actual_ret =
+        cplat_isatty(CPLAT_STREAM_STDIN); // [手順] - CPLAT_STREAM_STDIN を渡して cplat_isatty() を呼び出す。
 
     // Assert
 #if defined(PLATFORM_LINUX)
@@ -84,7 +85,7 @@ TEST_F(isattyTest, stdout_returns_int)
 
     // Act
     int actual_ret =
-        cplat_isatty(CPLAT_STREAM_STDOUT); // [手順] - CPLAT_STREAM_STDOUT を渡して cplat_isatty を呼び出す。
+        cplat_isatty(CPLAT_STREAM_STDOUT); // [手順] - CPLAT_STREAM_STDOUT を渡して cplat_isatty() を呼び出す。
 
     // Assert
 #if defined(PLATFORM_LINUX)
@@ -111,7 +112,7 @@ TEST_F(isattyTest, stderr_returns_int)
 
     // Act
     int actual_ret =
-        cplat_isatty(CPLAT_STREAM_STDERR); // [手順] - CPLAT_STREAM_STDERR を渡して cplat_isatty を呼び出す。
+        cplat_isatty(CPLAT_STREAM_STDERR); // [手順] - CPLAT_STREAM_STDERR を渡して cplat_isatty() を呼び出す。
 
     // Assert
 #if defined(PLATFORM_LINUX)

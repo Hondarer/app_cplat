@@ -51,7 +51,7 @@ TEST_F(promptLinuxTest, enter_raw_does_nothing_for_non_terminal)
 
     // Act
     cplat_internal_prompt_platform_enter_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -79,11 +79,11 @@ TEST_F(promptLinuxTest, enter_and_leave_raw_on_terminal)
 
     // Act
     cplat_internal_prompt_platform_enter_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw() を呼び出す。
     int raw_after_enter = handle_.raw_active;
     int sigwinch_after_enter = test_prompt_sigwinch_installed();
     cplat_internal_prompt_platform_leave_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_leave_raw を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_leave_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(1,
@@ -120,7 +120,7 @@ TEST_F(promptLinuxTest, enter_raw_does_nothing_when_tcsetattr_fails)
 
     // Act
     cplat_internal_prompt_platform_enter_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -143,7 +143,7 @@ TEST_F(promptLinuxTest, enter_raw_is_ignored_while_already_raw)
 
     // Act
     cplat_internal_prompt_platform_enter_raw(
-        &handle_); // [手順] - raw モード中に cplat_internal_prompt_platform_enter_raw を呼び出す。
+        &handle_); // [手順] - raw モード中に cplat_internal_prompt_platform_enter_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -176,7 +176,7 @@ TEST_F(promptLinuxTest, enter_raw_does_not_reinstall_sigwinch_handler)
 
     // Act
     cplat_internal_prompt_platform_enter_raw(
-        &handle_); // [手順] - 登録済み状態で cplat_internal_prompt_platform_enter_raw を呼び出す。
+        &handle_); // [手順] - 登録済み状態で cplat_internal_prompt_platform_enter_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -202,7 +202,7 @@ TEST_F(promptLinuxTest, leave_raw_is_ignored_when_not_raw)
 
     // Act
     cplat_internal_prompt_platform_leave_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_leave_raw を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_leave_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -228,7 +228,7 @@ TEST_F(promptLinuxTest, leave_raw_handles_uninstalled_sigwinch_handler)
 
     // Act
     cplat_internal_prompt_platform_leave_raw(
-        &handle_); // [手順] - 未登録状態で cplat_internal_prompt_platform_leave_raw を呼び出す。
+        &handle_); // [手順] - 未登録状態で cplat_internal_prompt_platform_leave_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -294,7 +294,7 @@ TEST_F(promptLinuxTest, read_char_returns_next_byte)
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char() を呼び出す。
 
     // Assert
     EXPECT_EQ('A',
@@ -315,7 +315,7 @@ TEST_F(promptLinuxTest, read_char_returns_minus1_at_eof)
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -341,7 +341,7 @@ TEST_F(promptLinuxTest, read_char_reports_resize_on_interrupted_read)
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -371,7 +371,7 @@ TEST_F(promptLinuxTest, read_char_retries_after_interrupt_without_resize)
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_internal_prompt_platform_read_char() の戻り値が -1 であること。
@@ -405,7 +405,7 @@ TEST_F(promptLinuxTest, read_char_nb_returns_next_byte_when_available)
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char_nb(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char_nb を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char_nb() を呼び出す。
 
     // Assert
     EXPECT_EQ('B',
@@ -427,7 +427,7 @@ TEST_F(promptLinuxTest, read_char_nb_returns_minus1_on_timeout)
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char_nb(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char_nb を呼び出す。
+        &handle_); // [手順] - cplat_internal_prompt_platform_read_char_nb() を呼び出す。
 
     // Assert
     EXPECT_EQ(

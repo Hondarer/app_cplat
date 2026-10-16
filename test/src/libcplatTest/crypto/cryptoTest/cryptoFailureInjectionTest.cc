@@ -38,7 +38,7 @@ class cryptoFailureInjectionTest : public Test
     int encrypt()
     {
         cipher_len_ = cipher_.size();
-        return cplat_crypto_encrypt(cipher_.data(), &cipher_len_, plain_, sizeof(plain_), key_, nonce_, NULL, 0u);
+        return cplat_crypto_encrypt(cipher_.data(), &cipher_len_, plain_, sizeof(plain_), key_, nonce_, nullptr, 0u);
     }
 };
 
@@ -56,7 +56,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_out_of_memory_when_context_al
                                       // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
 
     // Act
-    int actual_ret = encrypt(); // [手順] - cplat_crypto_encrypt を呼び出す。
+    int actual_ret = encrypt(); // [手順] - cplat_crypto_encrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
@@ -77,7 +77,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_init_fails)
                                       // [Pre-Assert手順] - 1 回目は失敗を示す 0 を返却し、以降は本物へ委譲する。
 
     // Act
-    int actual_ret = encrypt(); // [手順] - cplat_crypto_encrypt を呼び出す。
+    int actual_ret = encrypt(); // [手順] - cplat_crypto_encrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -102,7 +102,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_key_setting_fail
                                       // [Pre-Assert手順] - 1 回目は成功を示す 1、2 回目は失敗を示す 0 を返却する。
 
     // Act
-    int actual_ret = encrypt(); // [手順] - cplat_crypto_encrypt を呼び出す。
+    int actual_ret = encrypt(); // [手順] - cplat_crypto_encrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -123,7 +123,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_nonce_length_set
                                       // [Pre-Assert手順] - 1 回目は失敗を示す 0 を返却し、以降は本物へ委譲する。
 
     // Act
-    int actual_ret = encrypt(); // [手順] - cplat_crypto_encrypt を呼び出す。
+    int actual_ret = encrypt(); // [手順] - cplat_crypto_encrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -144,7 +144,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_update_fails)
                                       // [Pre-Assert手順] - 1 回目は失敗を示す 0 を返却し、以降は本物へ委譲する。
 
     // Act
-    int actual_ret = encrypt(); // [手順] - cplat_crypto_encrypt を呼び出す。
+    int actual_ret = encrypt(); // [手順] - cplat_crypto_encrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -170,7 +170,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_aad_update_fails
     // Act
     int actual_ret =
         cplat_crypto_encrypt(cipher_.data(), &cipher_len_, plain_, sizeof(plain_), key_, nonce_, aad,
-                             sizeof(aad) - 1u); // [手順] - AAD を指定して cplat_crypto_encrypt を呼び出す。
+                             sizeof(aad) - 1u); // [手順] - AAD を指定して cplat_crypto_encrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -192,7 +192,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_final_fails)
                                       // [Pre-Assert手順] - 1 回目は失敗を示す 0 を返却し、以降は本物へ委譲する。
 
     // Act
-    int actual_ret = encrypt(); // [手順] - cplat_crypto_encrypt を呼び出す。
+    int actual_ret = encrypt(); // [手順] - cplat_crypto_encrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -214,7 +214,7 @@ TEST_F(cryptoFailureInjectionTest, encrypt_returns_unknown_when_tag_get_fails)
                                       // [Pre-Assert手順] - ノンス長設定は成功させ、タグ取得で失敗を示す 0 を返却する。
 
     // Act
-    int actual_ret = encrypt(); // [手順] - cplat_crypto_encrypt を呼び出す。
+    int actual_ret = encrypt(); // [手順] - cplat_crypto_encrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -242,8 +242,8 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_out_of_memory_when_context_al
 
     // Act
     int actual_ret =
-        cplat_crypto_decrypt(restored.data(), &restored_len, cipher_.data(), cipher_len_, key_, nonce_, NULL,
-                             0u); // [手順] - cplat_crypto_decrypt を呼び出す。
+        cplat_crypto_decrypt(restored.data(), &restored_len, cipher_.data(), cipher_len_, key_, nonce_, nullptr,
+                             0u); // [手順] - cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
@@ -271,8 +271,8 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_init_fails)
 
     // Act
     int actual_ret =
-        cplat_crypto_decrypt(restored.data(), &restored_len, cipher_.data(), cipher_len_, key_, nonce_, NULL,
-                             0u); // [手順] - cplat_crypto_decrypt を呼び出す。
+        cplat_crypto_decrypt(restored.data(), &restored_len, cipher_.data(), cipher_len_, key_, nonce_, nullptr,
+                             0u); // [手順] - cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -301,8 +301,8 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_nonce_length_set
 
     // Act
     int actual_ret =
-        cplat_crypto_decrypt(restored.data(), &restored_len, cipher_.data(), cipher_len_, key_, nonce_, NULL,
-                             0u); // [手順] - cplat_crypto_decrypt を呼び出す。
+        cplat_crypto_decrypt(restored.data(), &restored_len, cipher_.data(), cipher_len_, key_, nonce_, nullptr,
+                             0u); // [手順] - cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -335,8 +335,8 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_key_setting_fail
 
     // Act
     int actual_ret =
-        cplat_crypto_decrypt(restored.data(), &restored_len, cipher_.data(), cipher_len_, key_, nonce_, NULL,
-                             0u); // [手順] - cplat_crypto_decrypt を呼び出す。
+        cplat_crypto_decrypt(restored.data(), &restored_len, cipher_.data(), cipher_len_, key_, nonce_, nullptr,
+                             0u); // [手順] - cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -373,7 +373,7 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_aad_update_fails
 
     // Act
     int actual_ret = cplat_crypto_decrypt(restored.data(), &restored_len, cipher.data(), cipher_len, key_, nonce_, aad,
-                                          aad_len); // [手順] - AAD を指定して cplat_crypto_decrypt を呼び出す。
+                                          aad_len); // [手順] - AAD を指定して cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -403,8 +403,8 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_update_fails)
 
     // Act
     int actual_ret =
-        cplat_crypto_decrypt(restored.data(), &restored_len, cipher_.data(), cipher_len_, key_, nonce_, NULL,
-                             0u); // [手順] - cplat_crypto_decrypt を呼び出す。
+        cplat_crypto_decrypt(restored.data(), &restored_len, cipher_.data(), cipher_len_, key_, nonce_, nullptr,
+                             0u); // [手順] - cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -434,8 +434,8 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_tag_setting_fail
 
     // Act
     int actual_ret =
-        cplat_crypto_decrypt(restored.data(), &restored_len, cipher_.data(), cipher_len_, key_, nonce_, NULL,
-                             0u); // [手順] - cplat_crypto_decrypt を呼び出す。
+        cplat_crypto_decrypt(restored.data(), &restored_len, cipher_.data(), cipher_len_, key_, nonce_, nullptr,
+                             0u); // [手順] - cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -464,8 +464,8 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_final_fails)
 
     // Act
     int actual_ret =
-        cplat_crypto_decrypt(restored.data(), &restored_len, cipher_.data(), cipher_len_, key_, nonce_, NULL,
-                             0u); // [手順] - cplat_crypto_decrypt を呼び出す。
+        cplat_crypto_decrypt(restored.data(), &restored_len, cipher_.data(), cipher_len_, key_, nonce_, nullptr,
+                             0u); // [手順] - cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -489,7 +489,7 @@ TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_out_of_memory_when_
 
     // Act
     int actual_ret = cplat_passphrase_to_key(derived, (const uint8_t *)"secret",
-                                             6u); // [手順] - cplat_passphrase_to_key を呼び出す。
+                                             6u); // [手順] - cplat_passphrase_to_key() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
@@ -512,7 +512,7 @@ TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_unknown_when_digest
 
     // Act
     int actual_ret = cplat_passphrase_to_key(derived, (const uint8_t *)"secret",
-                                             6u); // [手順] - cplat_passphrase_to_key を呼び出す。
+                                             6u); // [手順] - cplat_passphrase_to_key() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -535,7 +535,7 @@ TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_unknown_when_digest
 
     // Act
     int actual_ret = cplat_passphrase_to_key(derived, (const uint8_t *)"secret",
-                                             6u); // [手順] - cplat_passphrase_to_key を呼び出す。
+                                             6u); // [手順] - cplat_passphrase_to_key() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -559,7 +559,7 @@ TEST_F(cryptoFailureInjectionTest, passphrase_to_key_returns_unknown_when_digest
 
     // Act
     int actual_ret = cplat_passphrase_to_key(derived, (const uint8_t *)"secret",
-                                             6u); // [手順] - cplat_passphrase_to_key を呼び出す。
+                                             6u); // [手順] - cplat_passphrase_to_key() を呼び出す。
 
     // Assert
     EXPECT_EQ(

@@ -49,7 +49,7 @@ TEST_F(accessTest, returns_zero_for_existing_file)
 
     // Act
     int actual_ret = cplat_access("work.bin", CPLAT_ACCESS_FMT_F_OK,
-                                  &detail); // [手順] - 存在するパスに F_OK を指定して cplat_access を呼び出す。
+                                  &detail); // [手順] - 存在するパスに F_OK を指定して cplat_access() を呼び出す。
 
     // Assert
     EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_access() の戻り値が 0 であること。
@@ -75,7 +75,7 @@ TEST_F(accessTest, returns_minus1_for_missing_file)
 
     // Act
     int actual_ret = cplat_access("missing.bin", CPLAT_ACCESS_FMT_F_OK,
-                                  &detail); // [手順] - 存在しないパスに F_OK を指定して cplat_access を呼び出す。
+                                  &detail); // [手順] - 存在しないパスに F_OK を指定して cplat_access() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_access() の戻り値が -1 であること。
@@ -96,8 +96,8 @@ TEST_F(accessTest, returns_minus1_for_null_path)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_access(NULL, CPLAT_ACCESS_FMT_F_OK,
-                                  &detail); // [手順] - パスに NULL を指定して cplat_access を呼び出す。
+    int actual_ret = cplat_access(nullptr, CPLAT_ACCESS_FMT_F_OK,
+                                  &detail); // [手順] - パスに NULL を指定して cplat_access() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_access() の戻り値が -1 であること。
@@ -121,7 +121,7 @@ TEST_F(accessTest, returns_enametoolong_when_path_exceeds_wide_buffer)
 
     // Act
     int actual_ret = cplat_access(long_path.c_str(), CPLAT_ACCESS_FMT_F_OK,
-                                  &detail); // [手順] - 変換先バッファーに収まらないパスで cplat_access を呼び出す。
+                                  &detail); // [手順] - 変換先バッファーに収まらないパスで cplat_access() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_access() の戻り値が -1 であること。

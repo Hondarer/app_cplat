@@ -26,7 +26,7 @@ static void build_path(char *path_out, size_t path_size, const char *lhs, const 
     ASSERT_GE(written, 0);
     // [状態確認] - written が 0 以上であること。
     ASSERT_LT((size_t)written, path_size);
-    // [状態確認] - (size_t)written が path_size より小さいこと。
+    // [状態確認] - written が path_size より小さいこと。
 }
 // [サブ手順終了]
 
@@ -38,7 +38,7 @@ static void build_three_part_path(char *path_out, size_t path_size, const char *
     ASSERT_GE(written, 0);
     // [状態確認] - written が 0 以上であること。
     ASSERT_LT((size_t)written, path_size);
-    // [状態確認] - (size_t)written が path_size より小さいこと。
+    // [状態確認] - written が path_size より小さいこと。
 }
 // [サブ手順終了]
 
@@ -60,7 +60,7 @@ TEST_F(pathsEqualTest, returns_einval_for_null_lhs)
 
     // Act
     int rc = cplat_path_equal(nullptr, ".", &equal,
-                              &err);   // [手順] - 左辺パスに NULL を渡して cplat_path_equal を呼び出す。
+                              &err);   // [手順] - 左辺パスに NULL を渡して cplat_path_equal() を呼び出す。
     cplat_error_get_last(&last_error); // [手順] - TLS に記録された詳細エラーを取得する。
 
     // Assert
@@ -85,15 +85,15 @@ TEST_F(pathsEqualTest, returns_error_when_rhs_path_cannot_be_resolved)
     cplat_error err;
     int equal = 1;
 
-    ASSERT_EQ(CPLAT_OK, cplat_path_get_full(lhs, sizeof(lhs), NULL,
+    ASSERT_EQ(CPLAT_OK, cplat_path_get_full(lhs, sizeof(lhs), nullptr,
                                             ".")); // [状態] - カレントディレクトリから左辺パスを取得する。
     // [状態確認] - cplat_path_get_full() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    int result = cplat_path_equal(lhs, NULL, &equal,
-                                  &err); // [手順] - 右辺に NULL を渡して cplat_path_equal を呼び出す。
+    int result = cplat_path_equal(lhs, nullptr, &equal,
+                                  &err); // [手順] - 右辺に NULL を渡して cplat_path_equal() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -116,7 +116,7 @@ TEST_F(pathsEqualTest, returns_invalid_argument_for_null_equal_out)
 
     // Act
     int result = cplat_path_equal(".", ".", nullptr,
-                                  &err); // [手順] - equal_out に NULL を渡して cplat_path_equal を呼び出す。
+                                  &err); // [手順] - equal_out に NULL を渡して cplat_path_equal() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -218,12 +218,12 @@ TEST_F(pathsEqualTest, returns_enomem_when_lhs_normalization_allocation_fails)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_calloc(PLATFORM_PATH_MAX, sizeof(size_t)))
         .WillOnce(Return(
-            nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が PLATFORM_PATH_MAX、sizeof(size_t) を指定して 1 回呼び出されること。(左辺パスの正規化用メモリを確保する呼び出しであることの確認)
-                       // [Pre-Assert手順] - cplat_calloc から NULL を返却する。
+            nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が PLATFORM_PATH_MAX、sizeofを指定して 1 回呼び出されること。(左辺パスの正規化用メモリを確保する呼び出しであることの確認)
+                       // [Pre-Assert手順] - cplat_calloc() から NULL を返却する。
 
     // Act
     int rc = cplat_path_equal("/lhs", "/rhs", &equal,
-                              &err); // [手順] - 2 つの絶対パスを指定して cplat_path_equal を呼び出す。
+                              &err); // [手順] - 2 つの絶対パスを指定して cplat_path_equal() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,

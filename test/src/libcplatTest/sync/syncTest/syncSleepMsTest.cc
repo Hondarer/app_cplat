@@ -60,7 +60,7 @@ TEST(syncSleepMsTest, elapses_at_least_specified_duration)
                 // [Pre-Assert確認_正常系] - req->tv_nsec が 50000000L であること。(50 ms が 50000000 ナノ秒であることの確認)
                 return 0;
             }); // [Pre-Assert確認_正常系] - nanosleep() が 1 回呼び出されること。
-                // [Pre-Assert手順] - nanosleep から 0 を返却する。
+                // [Pre-Assert手順] - nanosleep() から 0 を返却する。
 #endif          /* PLATFORM_LINUX */
 
     // Act
@@ -78,6 +78,6 @@ TEST(syncSleepMsTest, elapses_at_least_specified_duration)
 #else
     // Windows の GetTickCount64 は ~15 ms 精度のため余裕を持って判定する。
     EXPECT_GE(after - before, (uint64_t)target_ms - 15U);
-    // [確認_正常系] - after - before が (uint64_t)target_ms - 15U 以上であること。(GetTickCount64 の 15 ms 精度を差し引き、指定ミリ秒以上経過していることの確認)
+    // [確認_正常系] - after - before が target_ms - 15U 以上であること。(GetTickCount64 の 15 ms 精度を差し引き、指定ミリ秒以上経過していることの確認)
 #endif /* PLATFORM_LINUX */
 }

@@ -47,7 +47,7 @@ void blocked_once_callback(void)
 TEST(syncAdditionalFailureTest, local_lock_maps_unknown_trylock_error)
 {
     // Arrange
-    cplat_local_lock *lock = NULL;
+    cplat_local_lock *lock = nullptr;
     ASSERT_EQ(CPLAT_OK, cplat_local_lock_create(&lock)); // [状態] - local lock を生成する。
     // [状態確認] - cplat_local_lock_create() の戻り値が CPLAT_OK であること。
     NiceMock<Mock_pthread> mock_pthread;
@@ -55,7 +55,7 @@ TEST(syncAdditionalFailureTest, local_lock_maps_unknown_trylock_error)
     // Pre-Assert
     EXPECT_CALL(mock_pthread, pthread_mutex_trylock(_, _, _, _))
         .WillOnce(Return(EINVAL)); // [Pre-Assert確認_異常系] - pthread_mutex_trylock() が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - pthread_mutex_trylock にて EINVAL を返却する。
+                                   // [Pre-Assert手順] - pthread_mutex_trylock() にて EINVAL を返却する。
 
     // Act
     int result = cplat_local_lock_try_lock(lock); // [手順] - EINVAL を返す trylock を実行する。
@@ -72,8 +72,8 @@ TEST(syncAdditionalFailureTest, local_lock_maps_unknown_trylock_error)
 TEST(syncAdditionalFailureTest, condvar_maps_wait_signal_and_broadcast_errors)
 {
     // Arrange
-    cplat_condvar *cv = NULL;
-    cplat_local_lock *lock = NULL;
+    cplat_condvar *cv = nullptr;
+    cplat_local_lock *lock = nullptr;
     ASSERT_EQ(CPLAT_OK, cplat_condvar_create(&cv)); // [状態] - condvar を生成する。
     // [状態確認] - cplat_condvar_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_local_lock_create(&lock)); // [状態] - local lock を生成する。
@@ -83,24 +83,24 @@ TEST(syncAdditionalFailureTest, condvar_maps_wait_signal_and_broadcast_errors)
     // Pre-Assert
     EXPECT_CALL(mock_pthread, pthread_cond_wait(_, _, _, _, _))
         .WillOnce(Return(EINVAL)); // [Pre-Assert確認_異常系] - pthread_cond_wait() が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - pthread_cond_wait にて EINVAL を返却する。
+                                   // [Pre-Assert手順] - pthread_cond_wait() にて EINVAL を返却する。
     EXPECT_CALL(mock_pthread, pthread_cond_timedwait(_, _, _, _, _, _))
         .WillOnce(Return(ETIMEDOUT)); // [Pre-Assert確認_正常系] - pthread_cond_timedwait() が 1 回呼び出されること。
-                                      // [Pre-Assert手順] - pthread_cond_timedwait にて ETIMEDOUT を返却する。
+                                      // [Pre-Assert手順] - pthread_cond_timedwait() にて ETIMEDOUT を返却する。
     EXPECT_CALL(mock_pthread, pthread_cond_signal(_, _, _, _))
         .WillOnce(Return(EINVAL)); // [Pre-Assert確認_異常系] - pthread_cond_signal() が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - pthread_cond_signal にて EINVAL を返却する。
+                                   // [Pre-Assert手順] - pthread_cond_signal() にて EINVAL を返却する。
     EXPECT_CALL(mock_pthread, pthread_cond_broadcast(_, _, _, _))
         .WillOnce(Return(EINVAL)); // [Pre-Assert確認_異常系] - pthread_cond_broadcast() が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - pthread_cond_broadcast にて EINVAL を返却する。
+                                   // [Pre-Assert手順] - pthread_cond_broadcast() にて EINVAL を返却する。
 
     // Act
     int wait_result =
-        cplat_condvar_wait(cv, lock, CPLAT_SYNC_WAIT_FOREVER); // [手順] - cond_wait の EINVAL 失敗を注入する。
+        cplat_condvar_wait(cv, lock, CPLAT_SYNC_WAIT_FOREVER); // [手順] - cond_wait() の EINVAL 失敗を注入する。
     int timed_wait_result =
-        cplat_condvar_wait(cv, lock, CPLAT_SYNC_NO_WAIT); // [手順] - cond_timedwait の timeout を注入する。
-    int signal_result = cplat_condvar_signal(cv);         // [手順] - cond_signal の EINVAL 失敗を注入する。
-    int broadcast_result = cplat_condvar_broadcast(cv);   // [手順] - cond_broadcast の EINVAL 失敗を注入する。
+        cplat_condvar_wait(cv, lock, CPLAT_SYNC_NO_WAIT); // [手順] - cond_timedwait() の timeout を注入する。
+    int signal_result = cplat_condvar_signal(cv);         // [手順] - cond_signal() の EINVAL 失敗を注入する。
+    int broadcast_result = cplat_condvar_broadcast(cv);   // [手順] - cond_broadcast() の EINVAL 失敗を注入する。
 
     // Assert
     EXPECT_EQ(
@@ -124,13 +124,13 @@ TEST(syncAdditionalFailureTest, condvar_create_reports_clock_attribute_failure)
 {
     // Arrange
     NiceMock<Mock_pthread> mock_pthread;
-    cplat_condvar *cv = NULL;
+    cplat_condvar *cv = nullptr;
 
     // Pre-Assert
     EXPECT_CALL(mock_pthread, pthread_condattr_setclock(_, _, _, _, CLOCK_MONOTONIC))
         .WillOnce(Return(
             EINVAL)); // [Pre-Assert確認_異常系] - pthread_condattr_setclock() が CLOCK_MONOTONIC を指定して 1 回呼び出されること。
-                      // [Pre-Assert手順] - pthread_condattr_setclock にて EINVAL を返却する。
+                      // [Pre-Assert手順] - pthread_condattr_setclock() にて EINVAL を返却する。
 
     // Act
     int result = cplat_condvar_create(&cv); // [手順] - 時計属性設定失敗を注入して condvar を生成する。
@@ -138,7 +138,7 @@ TEST(syncAdditionalFailureTest, condvar_create_reports_clock_attribute_failure)
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
               result); // [確認_異常系] - cplat_condvar_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ((cplat_condvar *)NULL, cv); // [確認_異常系] - 生成失敗時の cv が (cplat_condvar *)NULL であること。
+    EXPECT_EQ(nullptr, cv); // [確認_異常系] - 生成失敗時の cv が nullptr であること。
 }
 
 // condvar 初期化失敗を生成失敗として処理することの確認
@@ -146,12 +146,12 @@ TEST(syncAdditionalFailureTest, condvar_create_reports_native_initialization_fai
 {
     // Arrange
     NiceMock<Mock_pthread> mock_pthread;
-    cplat_condvar *cv = NULL;
+    cplat_condvar *cv = nullptr;
 
     // Pre-Assert
     EXPECT_CALL(mock_pthread, pthread_cond_init(_, _, _, _, _))
         .WillOnce(Return(EINVAL)); // [Pre-Assert確認_異常系] - pthread_cond_init() が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - pthread_cond_init にて EINVAL を返却する。
+                                   // [Pre-Assert手順] - pthread_cond_init() にて EINVAL を返却する。
 
     // Act
     int result = cplat_condvar_create(&cv); // [手順] - native condvar 初期化失敗を注入して生成する。
@@ -160,7 +160,7 @@ TEST(syncAdditionalFailureTest, condvar_create_reports_native_initialization_fai
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         result); // [確認_異常系] - 初期化失敗時の cplat_condvar_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ((cplat_condvar *)NULL, cv); // [確認_異常系] - 初期化失敗時の cv が (cplat_condvar *)NULL であること。
+    EXPECT_EQ(nullptr, cv); // [確認_異常系] - 初期化失敗時の cv が nullptr であること。
 }
 
 // 条件変数ハンドルの確保失敗が生成失敗として報告されることの確認
@@ -168,13 +168,13 @@ TEST(syncAdditionalFailureTest, condvar_create_reports_allocation_failure)
 {
     // Arrange
     NiceMock<Mock_cplat> mock_cplat;
-    cplat_condvar *cv = NULL;
+    cplat_condvar *cv = nullptr;
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
-        .WillOnce(Return(static_cast<void *>(
-            NULL))); // [Pre-Assert確認_異常系] - condvar ハンドルの cplat_calloc() が 1 回呼び出されること。
-                     // [Pre-Assert手順] - cplat_calloc にて NULL を返却する。
+        .WillOnce(
+            Return(nullptr)); // [Pre-Assert確認_異常系] - condvar ハンドルの cplat_calloc() が 1 回呼び出されること。
+                              // [Pre-Assert手順] - cplat_calloc() にて NULL を返却する。
 
     // Act
     int result = cplat_condvar_create(&cv); // [手順] - ハンドル確保失敗を注入して condvar を生成する。
@@ -183,8 +183,8 @@ TEST(syncAdditionalFailureTest, condvar_create_reports_allocation_failure)
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         result); // [確認_異常系] - ハンドル確保失敗時の cplat_condvar_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ((cplat_condvar *)NULL,
-              cv); // [確認_異常系] - ハンドル確保失敗時の cv が (cplat_condvar *)NULL であること。
+    EXPECT_EQ(nullptr,
+              cv); // [確認_異常系] - ハンドル確保失敗時の cv が nullptr であること。
 }
 
 // ローカル RW ロックのハンドル確保失敗が生成失敗として報告されることの確認
@@ -192,13 +192,13 @@ TEST(syncAdditionalFailureTest, local_rwlock_create_reports_allocation_failure)
 {
     // Arrange
     NiceMock<Mock_cplat> mock_cplat;
-    cplat_local_rwlock *rwlock = NULL;
+    cplat_local_rwlock *rwlock = nullptr;
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
-        .WillOnce(Return(static_cast<void *>(
-            NULL))); // [Pre-Assert確認_異常系] - local rwlock ハンドルの cplat_calloc() が 1 回呼び出されること。
-                     // [Pre-Assert手順] - cplat_calloc にて NULL を返却する。
+        .WillOnce(Return(
+            nullptr)); // [Pre-Assert確認_異常系] - local rwlock ハンドルの cplat_calloc() が 1 回呼び出されること。
+                       // [Pre-Assert手順] - cplat_calloc() にて NULL を返却する。
 
     // Act
     int result = cplat_local_rwlock_create(&rwlock); // [手順] - ハンドル確保失敗を注入して local rwlock を生成する。
@@ -207,8 +207,8 @@ TEST(syncAdditionalFailureTest, local_rwlock_create_reports_allocation_failure)
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         result); // [確認_異常系] - ハンドル確保失敗時の cplat_local_rwlock_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ((cplat_local_rwlock *)NULL,
-              rwlock); // [確認_異常系] - ハンドル確保失敗時の rwlock が (cplat_local_rwlock *)NULL であること。
+    EXPECT_EQ(nullptr,
+              rwlock); // [確認_異常系] - ハンドル確保失敗時の rwlock が nullptr であること。
 }
 
 // ローカル RW ロックの mutex 初期化失敗が生成失敗として報告されることの確認
@@ -216,20 +216,20 @@ TEST(syncAdditionalFailureTest, local_rwlock_create_reports_mutex_initialization
 {
     // Arrange
     NiceMock<Mock_pthread> mock_pthread;
-    cplat_local_rwlock *rwlock = NULL;
+    cplat_local_rwlock *rwlock = nullptr;
 
     // Pre-Assert
     EXPECT_CALL(mock_pthread, pthread_mutex_init(_, _, _, _, _))
         .WillOnce(Return(ENOMEM)); // [Pre-Assert確認_異常系] - pthread_mutex_init() が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - pthread_mutex_init にて ENOMEM を返却する。
+                                   // [Pre-Assert手順] - pthread_mutex_init() にて ENOMEM を返却する。
     EXPECT_CALL(mock_pthread, pthread_mutex_destroy(_, _, _, _))
         .WillOnce(
             Return(0)); // [Pre-Assert確認_正常系] - 初期化失敗後に pthread_mutex_destroy() が 1 回呼び出されること。
-                        // [Pre-Assert手順] - pthread_mutex_destroy にて 0 を返却する。
+                        // [Pre-Assert手順] - pthread_mutex_destroy() にて 0 を返却する。
     EXPECT_CALL(mock_pthread, pthread_cond_destroy(_, _, _, _))
         .WillRepeatedly(Return(
             0)); // [Pre-Assert確認_正常系] - 初期化失敗後に pthread_cond_destroy() が任意の回数呼び出されること。
-                 // [Pre-Assert手順] - pthread_cond_destroy にて 0 を返却する。
+                 // [Pre-Assert手順] - pthread_cond_destroy() にて 0 を返却する。
 
     // Act
     int result = cplat_local_rwlock_create(&rwlock); // [手順] - mutex 初期化失敗を注入して local rwlock を生成する。
@@ -238,15 +238,15 @@ TEST(syncAdditionalFailureTest, local_rwlock_create_reports_mutex_initialization
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         result); // [確認_異常系] - mutex 初期化失敗時の cplat_local_rwlock_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ((cplat_local_rwlock *)NULL,
-              rwlock); // [確認_異常系] - 生成失敗時の rwlock が (cplat_local_rwlock *)NULL であること。
+    EXPECT_EQ(nullptr,
+              rwlock); // [確認_異常系] - 生成失敗時の rwlock が nullptr であること。
 }
 
 // rwlock の未取得状態での解放要求を拒否することの確認
 TEST(syncAdditionalFailureTest, rwlock_rejects_unlock_without_ownership)
 {
     // Arrange
-    cplat_local_rwlock *rwlock = NULL;
+    cplat_local_rwlock *rwlock = nullptr;
     ASSERT_EQ(CPLAT_OK, cplat_local_rwlock_create(&rwlock)); // [状態] - local rwlock を生成する。
     // [状態確認] - cplat_local_rwlock_create() の戻り値が CPLAT_OK であること。
 
@@ -254,9 +254,9 @@ TEST(syncAdditionalFailureTest, rwlock_rejects_unlock_without_ownership)
 
     // Act
     int shared_result =
-        cplat_local_rwlock_unlock_shared(rwlock); // [手順] - 共有ロック未取得で unlock_shared を呼び出す。
+        cplat_local_rwlock_unlock_shared(rwlock); // [手順] - 共有ロック未取得で unlock_shared() を呼び出す。
     int exclusive_result =
-        cplat_local_rwlock_unlock_exclusive(rwlock); // [手順] - 排他ロック未取得で unlock_exclusive を呼び出す。
+        cplat_local_rwlock_unlock_exclusive(rwlock); // [手順] - 排他ロック未取得で unlock_exclusive() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -274,7 +274,7 @@ TEST(syncAdditionalFailureTest, rwlock_rejects_unlock_without_ownership)
 TEST(syncAdditionalFailureTest, local_rwlock_try_lock_exclusive_reports_busy)
 {
     // Arrange
-    cplat_local_rwlock *rwlock = NULL;
+    cplat_local_rwlock *rwlock = nullptr;
     ASSERT_EQ(CPLAT_OK, cplat_local_rwlock_create(&rwlock)); // [状態] - local rwlock を生成する。
     // [状態確認] - cplat_local_rwlock_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
@@ -284,7 +284,8 @@ TEST(syncAdditionalFailureTest, local_rwlock_try_lock_exclusive_reports_busy)
     // Pre-Assert
 
     // Act
-    int result = cplat_local_rwlock_try_lock_exclusive(rwlock); // [手順] - 共有ロック保持中に排他 try_lock を呼び出す。
+    int result =
+        cplat_local_rwlock_try_lock_exclusive(rwlock); // [手順] - 共有ロック保持中に排他 try_lock() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUSY,
@@ -299,7 +300,7 @@ TEST(syncAdditionalFailureTest, local_rwlock_try_lock_exclusive_reports_busy)
 TEST(syncAdditionalFailureTest, local_rwlock_shared_wait_reports_pthread_failure)
 {
     // Arrange
-    cplat_local_rwlock *rwlock = NULL;
+    cplat_local_rwlock *rwlock = nullptr;
     ASSERT_EQ(CPLAT_OK, cplat_local_rwlock_create(&rwlock)); // [状態] - local rwlock を生成する。
     // [状態確認] - cplat_local_rwlock_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
@@ -310,19 +311,21 @@ TEST(syncAdditionalFailureTest, local_rwlock_shared_wait_reports_pthread_failure
     // Pre-Assert
     EXPECT_CALL(mock_pthread, pthread_mutex_lock(_, _, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 共有待機前に pthread_mutex_lock() が 1 回呼び出されること。
-                              // [Pre-Assert手順] - pthread_mutex_lock にて 0 を返却する。
+                              // [Pre-Assert手順] - pthread_mutex_lock() にて 0 を返却する。
     EXPECT_CALL(mock_pthread, pthread_cond_wait(_, _, _, _, _))
         .WillOnce(Return(EINVAL)); // [Pre-Assert確認_異常系] - 共有待機の pthread_cond_wait() が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - pthread_cond_wait にて EINVAL を返却する。
+                                   // [Pre-Assert手順] - pthread_cond_wait() にて EINVAL を返却する。
     EXPECT_CALL(mock_pthread, pthread_mutex_unlock(_, _, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 共有待機後に pthread_mutex_unlock() が 1 回呼び出されること。
-                              // [Pre-Assert手順] - pthread_mutex_unlock にて 0 を返却する。
+                              // [Pre-Assert手順] - pthread_mutex_unlock() にて 0 を返却する。
     EXPECT_CALL(mock_pthread, pthread_mutex_destroy(_, _, _, _))
         .WillOnce(Return(0)); // pthread_mutex_destroy は Cleanup の destroy 用
     // [Pre-Assert確認_異常系] - pthread_mutex_destroy() が 1 回呼び出されること。
+    // [Pre-Assert手順] - pthread_mutex_destroy() にて 0 を返す。
     EXPECT_CALL(mock_pthread, pthread_cond_destroy(_, _, _, _))
         .WillRepeatedly(Return(0)); // pthread_cond_destroy は Cleanup の destroy 用
     // [Pre-Assert確認_異常系] - pthread_cond_destroy() が任意の回数呼び出されること。
+    // [Pre-Assert手順] - pthread_cond_destroy() にて 0 を返す。
 
     // Act
     int result = cplat_local_rwlock_lock_shared(
@@ -341,7 +344,7 @@ TEST(syncAdditionalFailureTest, local_rwlock_shared_wait_reports_pthread_failure
 TEST(syncAdditionalFailureTest, local_rwlock_shared_wait_reports_timeout)
 {
     // Arrange
-    cplat_local_rwlock *rwlock = NULL;
+    cplat_local_rwlock *rwlock = nullptr;
     ASSERT_EQ(CPLAT_OK, cplat_local_rwlock_create(&rwlock)); // [状態] - local rwlock を生成する。
     // [状態確認] - cplat_local_rwlock_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
@@ -352,20 +355,22 @@ TEST(syncAdditionalFailureTest, local_rwlock_shared_wait_reports_timeout)
     // Pre-Assert
     EXPECT_CALL(mock_pthread, pthread_mutex_lock(_, _, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 共有待機前に pthread_mutex_lock() が 1 回呼び出されること。
-                              // [Pre-Assert手順] - pthread_mutex_lock にて 0 を返却する。
+                              // [Pre-Assert手順] - pthread_mutex_lock() にて 0 を返却する。
     EXPECT_CALL(mock_pthread, pthread_cond_timedwait(_, _, _, _, _, _))
         .WillOnce(Return(
             ETIMEDOUT)); // [Pre-Assert確認_正常系] - 共有待機の pthread_cond_timedwait() が 1 回呼び出されること。
-                         // [Pre-Assert手順] - pthread_cond_timedwait にて ETIMEDOUT を返却する。
+                         // [Pre-Assert手順] - pthread_cond_timedwait() にて ETIMEDOUT を返却する。
     EXPECT_CALL(mock_pthread, pthread_mutex_unlock(_, _, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 共有待機後に pthread_mutex_unlock() が 1 回呼び出されること。
-                              // [Pre-Assert手順] - pthread_mutex_unlock にて 0 を返却する。
+                              // [Pre-Assert手順] - pthread_mutex_unlock() にて 0 を返却する。
     EXPECT_CALL(mock_pthread, pthread_mutex_destroy(_, _, _, _))
         .WillOnce(Return(0)); // pthread_mutex_destroy は Cleanup の destroy 用
     // [Pre-Assert確認_異常系] - pthread_mutex_destroy() が 1 回呼び出されること。
+    // [Pre-Assert手順] - pthread_mutex_destroy() にて 0 を返す。
     EXPECT_CALL(mock_pthread, pthread_cond_destroy(_, _, _, _))
         .WillRepeatedly(Return(0)); // pthread_cond_destroy は Cleanup の destroy 用
     // [Pre-Assert確認_異常系] - pthread_cond_destroy() が任意の回数呼び出されること。
+    // [Pre-Assert手順] - pthread_cond_destroy() にて 0 を返す。
 
     // Act
     int result = cplat_local_rwlock_lock_shared(rwlock, 1); // [手順] - 共有待機のタイムアウトを注入する。
@@ -383,7 +388,7 @@ TEST(syncAdditionalFailureTest, local_rwlock_shared_wait_reports_timeout)
 TEST(syncAdditionalFailureTest, local_rwlock_exclusive_wait_reports_pthread_failure)
 {
     // Arrange
-    cplat_local_rwlock *rwlock = NULL;
+    cplat_local_rwlock *rwlock = nullptr;
     ASSERT_EQ(CPLAT_OK, cplat_local_rwlock_create(&rwlock)); // [状態] - local rwlock を生成する。
     // [状態確認] - cplat_local_rwlock_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
@@ -394,19 +399,21 @@ TEST(syncAdditionalFailureTest, local_rwlock_exclusive_wait_reports_pthread_fail
     // Pre-Assert
     EXPECT_CALL(mock_pthread, pthread_mutex_lock(_, _, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 排他待機前に pthread_mutex_lock() が 1 回呼び出されること。
-                              // [Pre-Assert手順] - pthread_mutex_lock にて 0 を返却する。
+                              // [Pre-Assert手順] - pthread_mutex_lock() にて 0 を返却する。
     EXPECT_CALL(mock_pthread, pthread_cond_wait(_, _, _, _, _))
         .WillOnce(Return(EINVAL)); // [Pre-Assert確認_異常系] - 排他待機の pthread_cond_wait() が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - pthread_cond_wait にて EINVAL を返却する。
+                                   // [Pre-Assert手順] - pthread_cond_wait() にて EINVAL を返却する。
     EXPECT_CALL(mock_pthread, pthread_mutex_unlock(_, _, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 排他待機後に pthread_mutex_unlock() が 1 回呼び出されること。
-                              // [Pre-Assert手順] - pthread_mutex_unlock にて 0 を返却する。
+                              // [Pre-Assert手順] - pthread_mutex_unlock() にて 0 を返却する。
     EXPECT_CALL(mock_pthread, pthread_mutex_destroy(_, _, _, _))
         .WillOnce(Return(0)); // pthread_mutex_destroy は Cleanup の destroy 用
     // [Pre-Assert確認_異常系] - pthread_mutex_destroy() が 1 回呼び出されること。
+    // [Pre-Assert手順] - pthread_mutex_destroy() にて 0 を返す。
     EXPECT_CALL(mock_pthread, pthread_cond_destroy(_, _, _, _))
         .WillRepeatedly(Return(0)); // pthread_cond_destroy は Cleanup の destroy 用
     // [Pre-Assert確認_異常系] - pthread_cond_destroy() が任意の回数呼び出されること。
+    // [Pre-Assert手順] - pthread_cond_destroy() にて 0 を返す。
 
     // Act
     int result = cplat_local_rwlock_lock_exclusive(
@@ -425,7 +432,7 @@ TEST(syncAdditionalFailureTest, local_rwlock_exclusive_wait_reports_pthread_fail
 TEST(syncAdditionalFailureTest, local_rwlock_exclusive_wait_reports_timeout)
 {
     // Arrange
-    cplat_local_rwlock *rwlock = NULL;
+    cplat_local_rwlock *rwlock = nullptr;
     ASSERT_EQ(CPLAT_OK, cplat_local_rwlock_create(&rwlock)); // [状態] - local rwlock を生成する。
     // [状態確認] - cplat_local_rwlock_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
@@ -436,20 +443,22 @@ TEST(syncAdditionalFailureTest, local_rwlock_exclusive_wait_reports_timeout)
     // Pre-Assert
     EXPECT_CALL(mock_pthread, pthread_mutex_lock(_, _, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 排他待機前に pthread_mutex_lock() が 1 回呼び出されること。
-                              // [Pre-Assert手順] - pthread_mutex_lock にて 0 を返却する。
+                              // [Pre-Assert手順] - pthread_mutex_lock() にて 0 を返却する。
     EXPECT_CALL(mock_pthread, pthread_cond_timedwait(_, _, _, _, _, _))
         .WillOnce(Return(
             ETIMEDOUT)); // [Pre-Assert確認_正常系] - 排他待機の pthread_cond_timedwait() が 1 回呼び出されること。
-                         // [Pre-Assert手順] - pthread_cond_timedwait にて ETIMEDOUT を返却する。
+                         // [Pre-Assert手順] - pthread_cond_timedwait() にて ETIMEDOUT を返却する。
     EXPECT_CALL(mock_pthread, pthread_mutex_unlock(_, _, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 排他待機後に pthread_mutex_unlock() が 1 回呼び出されること。
-                              // [Pre-Assert手順] - pthread_mutex_unlock にて 0 を返却する。
+                              // [Pre-Assert手順] - pthread_mutex_unlock() にて 0 を返却する。
     EXPECT_CALL(mock_pthread, pthread_mutex_destroy(_, _, _, _))
         .WillOnce(Return(0)); // pthread_mutex_destroy は Cleanup の destroy 用
     // [Pre-Assert確認_異常系] - pthread_mutex_destroy() が 1 回呼び出されること。
+    // [Pre-Assert手順] - pthread_mutex_destroy() にて 0 を返す。
     EXPECT_CALL(mock_pthread, pthread_cond_destroy(_, _, _, _))
         .WillRepeatedly(Return(0)); // pthread_cond_destroy は Cleanup の destroy 用
     // [Pre-Assert確認_異常系] - pthread_cond_destroy() が任意の回数呼び出されること。
+    // [Pre-Assert手順] - pthread_cond_destroy() にて 0 を返す。
 
     // Act
     int result = cplat_local_rwlock_lock_exclusive(rwlock, 1); // [手順] - 排他待機のタイムアウトを注入する。
@@ -467,7 +476,7 @@ TEST(syncAdditionalFailureTest, local_rwlock_exclusive_wait_reports_timeout)
 TEST(syncAdditionalFailureTest, local_rwlock_shared_unlock_signals_waiting_writer)
 {
     // Arrange
-    cplat_local_rwlock *rwlock = NULL;
+    cplat_local_rwlock *rwlock = nullptr;
     ASSERT_EQ(CPLAT_OK, cplat_local_rwlock_create(&rwlock)); // [状態] - local rwlock を生成する。
     // [状態確認] - cplat_local_rwlock_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
@@ -511,7 +520,7 @@ TEST(syncAdditionalFailureTest, local_rwlock_shared_unlock_signals_waiting_write
 TEST(syncAdditionalFailureTest, local_rwlock_exclusive_unlock_signals_waiting_writer)
 {
     // Arrange
-    cplat_local_rwlock *rwlock = NULL;
+    cplat_local_rwlock *rwlock = nullptr;
     ASSERT_EQ(CPLAT_OK, cplat_local_rwlock_create(&rwlock)); // [状態] - local rwlock を生成する。
     // [状態確認] - cplat_local_rwlock_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
@@ -555,22 +564,21 @@ TEST(syncAdditionalFailureTest, local_rwlock_exclusive_unlock_signals_waiting_wr
 TEST(syncAdditionalFailureTest, thread_join_reports_pthread_failure)
 {
     // Arrange
-    cplat_thread *thread = NULL;
-    ASSERT_EQ(CPLAT_OK, cplat_thread_create(&thread, [](void *) {}, NULL)); // [状態] - thread を生成する。
+    cplat_thread *thread = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_thread_create(&thread, [](void *) {}, nullptr)); // [状態] - thread を生成する。
     // [状態確認] - cplat_thread_create() の戻り値が CPLAT_OK であること。
     NiceMock<Mock_pthread> mock_pthread;
 
     // Pre-Assert
     EXPECT_CALL(mock_pthread, pthread_join(_, _, _, _, _))
         .WillOnce(Return(EINVAL)); // [Pre-Assert確認_異常系] - pthread_join() が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - pthread_join にて EINVAL を返却する。
+                                   // [Pre-Assert手順] - pthread_join() にて EINVAL を返却する。
     EXPECT_CALL(mock_pthread, pthread_detach(_, _, _, _))
-        .WillOnce(
-            DoDefault()); // [Pre-Assert確認_正常系] - join 失敗後の detach で pthread_detach() が 1 回呼び出されること。
-                          // [Pre-Assert手順] - pthread_detach は既定動作へ委譲する。
+        .Times(1); // [Pre-Assert確認_正常系] - join 失敗後の detach で pthread_detach() が 1 回呼び出されること。
 
     // Act
-    int result = cplat_thread_join(thread, CPLAT_SYNC_WAIT_FOREVER); // [手順] - pthread_join の EINVAL 失敗を注入する。
+    int result =
+        cplat_thread_join(thread, CPLAT_SYNC_WAIT_FOREVER); // [手順] - pthread_join() の EINVAL 失敗を注入する。
     cplat_thread_detach(thread); // [手順] - join 失敗後の thread を detach して解放する。
 
     // Assert
@@ -582,22 +590,20 @@ TEST(syncAdditionalFailureTest, thread_join_reports_pthread_failure)
 TEST(syncAdditionalFailureTest, thread_join_no_wait_reports_timeout)
 {
     // Arrange
-    cplat_thread *thread = NULL;
-    ASSERT_EQ(CPLAT_OK, cplat_thread_create(&thread, [](void *) {}, NULL)); // [状態] - thread を生成する。
+    cplat_thread *thread = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_thread_create(&thread, [](void *) {}, nullptr)); // [状態] - thread を生成する。
     // [状態確認] - cplat_thread_create() の戻り値が CPLAT_OK であること。
     NiceMock<Mock_pthread> mock_pthread;
 
     // Pre-Assert
     EXPECT_CALL(mock_pthread, pthread_tryjoin_np(_, _, _, _, _))
         .WillOnce(Return(EBUSY)); // [Pre-Assert確認_正常系] - pthread_tryjoin_np() が 1 回呼び出されること。
-                                  // [Pre-Assert手順] - pthread_tryjoin_np にて EBUSY を返却する。
+                                  // [Pre-Assert手順] - pthread_tryjoin_np() にて EBUSY を返却する。
     EXPECT_CALL(mock_pthread, pthread_detach(_, _, _, _))
-        .WillOnce(
-            DoDefault()); // [Pre-Assert確認_正常系] - timeout 後の detach で pthread_detach() が 1 回呼び出されること。
-                          // [Pre-Assert手順] - pthread_detach は既定動作へ委譲する。
+        .Times(1); // [Pre-Assert確認_正常系] - timeout 後の detach で pthread_detach() が 1 回呼び出されること。
 
     // Act
-    int result = cplat_thread_join(thread, CPLAT_SYNC_NO_WAIT); // [手順] - pthread_tryjoin_np の EBUSY を注入する。
+    int result = cplat_thread_join(thread, CPLAT_SYNC_NO_WAIT); // [手順] - pthread_tryjoin_np() の EBUSY を注入する。
     cplat_thread_detach(thread);                                // [手順] - timeout 後の thread を detach して解放する。
 
     // Assert
@@ -609,8 +615,8 @@ TEST(syncAdditionalFailureTest, thread_join_no_wait_reports_timeout)
 TEST(syncAdditionalFailureTest, thread_join_finite_wait_retries_then_succeeds)
 {
     // Arrange
-    cplat_thread *thread = NULL;
-    ASSERT_EQ(CPLAT_OK, cplat_thread_create(&thread, [](void *) {}, NULL)); // [状態] - thread を生成する。
+    cplat_thread *thread = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_thread_create(&thread, [](void *) {}, nullptr)); // [状態] - thread を生成する。
     // [状態確認] - cplat_thread_create() の戻り値が CPLAT_OK であること。
     NiceMock<Mock_pthread> mock_pthread;
 
@@ -632,8 +638,8 @@ TEST(syncAdditionalFailureTest, thread_join_finite_wait_retries_then_succeeds)
 TEST(syncAdditionalFailureTest, thread_join_finite_wait_reports_pthread_failure)
 {
     // Arrange
-    cplat_thread *thread = NULL;
-    ASSERT_EQ(CPLAT_OK, cplat_thread_create(&thread, [](void *) {}, NULL)); // [状態] - thread を生成する。
+    cplat_thread *thread = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_thread_create(&thread, [](void *) {}, nullptr)); // [状態] - thread を生成する。
     // [状態確認] - cplat_thread_create() の戻り値が CPLAT_OK であること。
     NiceMock<Mock_pthread> mock_pthread;
 
@@ -641,11 +647,9 @@ TEST(syncAdditionalFailureTest, thread_join_finite_wait_reports_pthread_failure)
     EXPECT_CALL(mock_pthread, pthread_tryjoin_np(_, _, _, _, _))
         .WillOnce(
             Return(EINVAL)); // [Pre-Assert確認_異常系] - 有限 join の pthread_tryjoin_np() が 1 回呼び出されること。
-                             // [Pre-Assert手順] - pthread_tryjoin_np にて EINVAL を返却する。
+                             // [Pre-Assert手順] - pthread_tryjoin_np() にて EINVAL を返却する。
     EXPECT_CALL(mock_pthread, pthread_detach(_, _, _, _))
-        .WillOnce(
-            DoDefault()); // [Pre-Assert確認_正常系] - join 失敗後の detach で pthread_detach() が 1 回呼び出されること。
-                          // [Pre-Assert手順] - pthread_detach は既定動作へ委譲する。
+        .Times(1); // [Pre-Assert確認_正常系] - join 失敗後の detach で pthread_detach() が 1 回呼び出されること。
 
     // Act
     int result = cplat_thread_join(thread, 5); // [手順] - 未知の pthread エラーを返す有限 join を実行する。
@@ -663,9 +667,9 @@ TEST(syncAdditionalFailureTest, interprocess_lock_maps_busy_and_retries_eintr)
     InterprocessOpenMocks os;
     NiceMock<Mock_sys_file> mock_sys_file;
     ON_CALL(mock_sys_file, flock(_, _, _, _, _))
-        .WillByDefault(Return(0)); // [状態] - flock が呼び出された際に 0 を返すようにモックを設定する。
+        .WillByDefault(Return(0)); // [状態] - flock() が呼び出された際に 0 を返すようにモックを設定する。
     const char *path = kLockIdentity;
-    cplat_interprocess_lock *lock = NULL;
+    cplat_interprocess_lock *lock = nullptr;
     ASSERT_EQ(CPLAT_OK, cplat_interprocess_lock_open(path, &lock)); // [状態] - interprocess lock を開いた状態とする。
     // [状態確認] - cplat_interprocess_lock_open() の戻り値が CPLAT_OK であること。
 
@@ -677,11 +681,11 @@ TEST(syncAdditionalFailureTest, interprocess_lock_maps_busy_and_retries_eintr)
                 errno = EWOULDBLOCK;
                 return -1;
             })); // [Pre-Assert確認_正常系] - flock() が LOCK_EX | LOCK_NB を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - flock は EWOULDBLOCK を設定して -1 を返却する。
+                 // [Pre-Assert手順] - flock() は EWOULDBLOCK を設定して -1 を返却する。
 
     // Act
     int busy_result =
-        cplat_interprocess_lock_try_lock(lock); // [手順] - 非ブロッキング flock が EWOULDBLOCK になる状態で取得する。
+        cplat_interprocess_lock_try_lock(lock); // [手順] - 非ブロッキング flock() が EWOULDBLOCK になる状態で取得する。
 
     // Pre-Assert_2
     EXPECT_CALL(mock_sys_file, flock(_, _, _, _, LOCK_EX))
@@ -696,7 +700,7 @@ TEST(syncAdditionalFailureTest, interprocess_lock_maps_busy_and_retries_eintr)
 
     // Act_2
     int retry_result =
-        cplat_interprocess_lock_lock(lock, CPLAT_SYNC_WAIT_FOREVER); // [手順] - EINTR 後に成功する flock を実行する。
+        cplat_interprocess_lock_lock(lock, CPLAT_SYNC_WAIT_FOREVER); // [手順] - EINTR 後に成功する flock() を実行する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUSY,
@@ -708,6 +712,7 @@ TEST(syncAdditionalFailureTest, interprocess_lock_maps_busy_and_retries_eintr)
     // Cleanup
     EXPECT_CALL(mock_sys_file, flock(_, _, _, _, LOCK_UN)).WillOnce(Return(0)); // unlock 用の flock を成功させる。
     // [Pre-Assert確認_異常系] - flock() が LOCK_UN を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - flock() にて 0 を返す。
     (void)cplat_interprocess_lock_unlock(lock);
     cplat_interprocess_lock_dispose(lock);
 }
@@ -717,22 +722,22 @@ TEST(syncAdditionalFailureTest, thread_create_reports_context_allocation_failure
 {
     // Arrange
     NiceMock<Mock_cplat> mock_cplat;
-    cplat_thread *thread = NULL;
+    cplat_thread *thread = nullptr;
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
         .WillOnce(
             Return(nullptr)); // [Pre-Assert確認_異常系] - thread ハンドルの cplat_calloc() が 1 回呼び出されること。
-                              // [Pre-Assert手順] - cplat_calloc にて NULL を返却する。
+                              // [Pre-Assert手順] - cplat_calloc() にて NULL を返却する。
 
     // Act
     int result =
-        cplat_thread_create(&thread, [](void *) {}, NULL); // [手順] - thread ハンドルの calloc 失敗を注入する。
+        cplat_thread_create(&thread, [](void *) {}, nullptr); // [手順] - thread ハンドルの calloc 失敗を注入する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
               result); // [確認_異常系] - cplat_thread_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ((cplat_thread *)NULL, thread); // [確認_異常系] - 生成失敗時の thread が (cplat_thread *)NULL であること。
+    EXPECT_EQ(nullptr, thread); // [確認_異常系] - 生成失敗時の thread が nullptr であること。
 }
 
 // interprocess rwlock の有限待機が成功、未知エラー、タイムアウトを分類することの確認
@@ -741,7 +746,7 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_finite_wait_classifies_resul
     // Arrange
     InterprocessOpenMocks os;
     const char *path = kRwlockIdentity;
-    cplat_interprocess_rwlock *lock = NULL;
+    cplat_interprocess_rwlock *lock = nullptr;
     ASSERT_EQ(CPLAT_OK,
               cplat_interprocess_rwlock_open(path, &lock)); // [状態] - interprocess rwlock を開いた状態とする。
     // [状態確認] - cplat_interprocess_rwlock_open() の戻り値が CPLAT_OK であること。
@@ -768,7 +773,7 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_finite_wait_classifies_resul
     EXPECT_CALL(mock_sys_file, flock(_, _, _, _, LOCK_UN))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - 取得した共有ロックの unlock で flock() が LOCK_UN を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - LOCK_UN の flock にて 0 を返却する。
+                 // [Pre-Assert手順] - LOCK_UN の flock() にて 0 を返却する。
     EXPECT_CALL(mock_time, clock_gettime(_, _, _, CLOCK_MONOTONIC, _))
         .Times(4)
         .WillRepeatedly(Invoke(
@@ -782,10 +787,10 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_finite_wait_classifies_resul
 
     // Act
     int null_result =
-        cplat_interprocess_rwlock_lock_shared(NULL, CPLAT_SYNC_NO_WAIT); // [手順] - NULL ハンドルを有限待機する。
+        cplat_interprocess_rwlock_lock_shared(nullptr, CPLAT_SYNC_NO_WAIT); // [手順] - NULL ハンドルを有限待機する。
     int success_result = cplat_interprocess_rwlock_lock_shared(lock, 1); // [手順] - 有限待機で共有ロックを取得する。
     int unlock_result = cplat_interprocess_rwlock_unlock(lock);          // [手順] - 取得した共有ロックを解放する。
-    int unknown_result = cplat_interprocess_rwlock_lock_shared(lock, 1); // [手順] - flock の未知エラーを処理する。
+    int unknown_result = cplat_interprocess_rwlock_lock_shared(lock, 1); // [手順] - flock() の未知エラーを処理する。
     int timeout_result = cplat_interprocess_rwlock_lock_shared(lock, 1); // [手順] - 有限待機の期限到達を処理する。
 
     // Assert
@@ -814,7 +819,7 @@ TEST(syncAdditionalFailureTest, interprocess_lock_finite_and_forever_wait_classi
     // Arrange
     InterprocessOpenMocks os;
     const char *path = kLockIdentity;
-    cplat_interprocess_lock *lock = NULL;
+    cplat_interprocess_lock *lock = nullptr;
     ASSERT_EQ(CPLAT_OK, cplat_interprocess_lock_open(path, &lock)); // [状態] - interprocess lock を開いた状態とする。
     // [状態確認] - cplat_interprocess_lock_open() の戻り値が CPLAT_OK であること。
     NiceMock<Mock_sys_file> mock_sys_file;
@@ -844,11 +849,11 @@ TEST(syncAdditionalFailureTest, interprocess_lock_finite_and_forever_wait_classi
                 errno = EIO;
                 return -1;
             })); // [Pre-Assert確認_異常系] - flock() が LOCK_EX を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - flock は EIO を設定して -1 を返却する。
+                 // [Pre-Assert手順] - flock() は EIO を設定して -1 を返却する。
     EXPECT_CALL(mock_sys_file, flock(_, _, _, _, LOCK_UN))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - 取得したロックの unlock で flock() が LOCK_UN を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - LOCK_UN の flock にて 0 を返却する。
+                 // [Pre-Assert手順] - LOCK_UN の flock() にて 0 を返却する。
     EXPECT_CALL(mock_time, clock_gettime(_, _, _, CLOCK_MONOTONIC, _))
         .Times(4)
         .WillRepeatedly(Invoke(
@@ -863,10 +868,10 @@ TEST(syncAdditionalFailureTest, interprocess_lock_finite_and_forever_wait_classi
     // Act
     int success_result = cplat_interprocess_lock_lock(lock, 1); // [手順] - 有限待機でロックを取得する。
     int unlock_result = cplat_interprocess_lock_unlock(lock);   // [手順] - 取得したロックを解放する。
-    int unknown_result = cplat_interprocess_lock_lock(lock, 1); // [手順] - 有限 flock の未知エラーを処理する。
-    int timeout_result = cplat_interprocess_lock_lock(lock, 1); // [手順] - 有限 flock の期限到達を処理する。
+    int unknown_result = cplat_interprocess_lock_lock(lock, 1); // [手順] - 有限 flock() の未知エラーを処理する。
+    int timeout_result = cplat_interprocess_lock_lock(lock, 1); // [手順] - 有限 flock() の期限到達を処理する。
     int forever_error = cplat_interprocess_lock_lock(
-        lock, CPLAT_SYNC_WAIT_FOREVER); // [手順] - ブロッキング flock の未知エラーを処理する。
+        lock, CPLAT_SYNC_WAIT_FOREVER); // [手順] - ブロッキング flock() の未知エラーを処理する。
 
     // Assert
     EXPECT_EQ(
@@ -892,7 +897,7 @@ TEST(syncAdditionalFailureTest, interprocess_lock_finite_and_forever_wait_classi
 TEST(syncAdditionalFailureTest, local_lock_finite_wait_classifies_results)
 {
     // Arrange
-    cplat_local_lock *lock = NULL;
+    cplat_local_lock *lock = nullptr;
     ASSERT_EQ(CPLAT_OK, cplat_local_lock_create(&lock)); // [状態] - local lock を生成する。
     // [状態確認] - cplat_local_lock_create() の戻り値が CPLAT_OK であること。
     NiceMock<Mock_pthread> mock_pthread;
@@ -943,61 +948,62 @@ TEST(syncAdditionalFailureTest, lock_apis_reject_null_arguments)
 {
     // Arrange
     const char *path = kLockIdentity;
-    cplat_thread *thread = NULL;
-    cplat_interprocess_lock *interprocess_lock = NULL;
-    cplat_interprocess_rwlock *interprocess_rwlock = NULL;
+    cplat_thread *thread = nullptr;
+    cplat_interprocess_lock *interprocess_lock = nullptr;
+    cplat_interprocess_rwlock *interprocess_rwlock = nullptr;
 
     // Pre-Assert
 
     // Act
-    int local_create_result = cplat_local_lock_create(NULL);    // [手順] - local lock の出力先へ NULL を指定する。
-    int local_unlock_result = cplat_local_lock_unlock(NULL);    // [手順] - NULL の local lock を解放する。
-    int rwlock_create_result = cplat_local_rwlock_create(NULL); // [手順] - local rwlock の出力先へ NULL を指定する。
+    int local_create_result = cplat_local_lock_create(nullptr);    // [手順] - local lock の出力先へ NULL を指定する。
+    int local_unlock_result = cplat_local_lock_unlock(nullptr);    // [手順] - NULL の local lock を解放する。
+    int rwlock_create_result = cplat_local_rwlock_create(nullptr); // [手順] - local rwlock の出力先へ NULL を指定する。
     int rwlock_shared_result =
-        cplat_local_rwlock_lock_shared(NULL, CPLAT_SYNC_NO_WAIT); // [手順] - NULL の local rwlock を共有取得する。
-    int rwlock_exclusive_result =
-        cplat_local_rwlock_lock_exclusive(NULL, CPLAT_SYNC_NO_WAIT); // [手順] - NULL の local rwlock を排他取得する。
+        cplat_local_rwlock_lock_shared(nullptr, CPLAT_SYNC_NO_WAIT); // [手順] - NULL の local rwlock を共有取得する。
+    int rwlock_exclusive_result = cplat_local_rwlock_lock_exclusive(
+        nullptr, CPLAT_SYNC_NO_WAIT); // [手順] - NULL の local rwlock を排他取得する。
     int rwlock_shared_unlock_result =
-        cplat_local_rwlock_unlock_shared(NULL); // [手順] - NULL の local rwlock を共有解放する。
+        cplat_local_rwlock_unlock_shared(nullptr); // [手順] - NULL の local rwlock を共有解放する。
     int rwlock_exclusive_unlock_result =
-        cplat_local_rwlock_unlock_exclusive(NULL); // [手順] - NULL の local rwlock を排他解放する。
+        cplat_local_rwlock_unlock_exclusive(nullptr); // [手順] - NULL の local rwlock を排他解放する。
     int thread_create_output_result =
-        cplat_thread_create(NULL, [](void *) {}, NULL); // [手順] - thread の出力先へ NULL を指定する。
+        cplat_thread_create(nullptr, [](void *) {}, nullptr); // [手順] - thread の出力先へ NULL を指定する。
     int thread_create_function_result =
-        cplat_thread_create(&thread, NULL, NULL); // [手順] - thread の開始関数へ NULL を指定する。
-    int thread_join_result = cplat_thread_join(NULL, CPLAT_SYNC_WAIT_FOREVER); // [手順] - NULL の thread を join する。
+        cplat_thread_create(&thread, nullptr, nullptr); // [手順] - thread の開始関数へ NULL を指定する。
+    int thread_join_result =
+        cplat_thread_join(nullptr, CPLAT_SYNC_WAIT_FOREVER); // [手順] - NULL の thread を join する。
     int interprocess_open_result =
-        cplat_interprocess_rwlock_open(NULL, &interprocess_rwlock); // [手順] - 識別子へ NULL を指定する。
+        cplat_interprocess_rwlock_open(nullptr, &interprocess_rwlock); // [手順] - 識別子へ NULL を指定する。
     int interprocess_open_empty_result =
         cplat_interprocess_rwlock_open("", &interprocess_rwlock); // [手順] - 空の識別子を指定する。
     int interprocess_open_output_result =
-        cplat_interprocess_rwlock_open(path, NULL); // [手順] - interprocess rwlock の出力先へ NULL を指定する。
+        cplat_interprocess_rwlock_open(path, nullptr); // [手順] - interprocess rwlock の出力先へ NULL を指定する。
     int lock_open_result =
-        cplat_interprocess_lock_open(NULL, &interprocess_lock); // [手順] - lock の識別子へ NULL を指定する。
+        cplat_interprocess_lock_open(nullptr, &interprocess_lock); // [手順] - lock の識別子へ NULL を指定する。
     int lock_open_empty_result =
         cplat_interprocess_lock_open("", &interprocess_lock); // [手順] - lock の識別子へ空文字列を指定する。
     int lock_open_output_result =
-        cplat_interprocess_lock_open(path, NULL); // [手順] - lock の出力先へ NULL を指定する。
-    int lock_result = cplat_interprocess_lock_lock(NULL, CPLAT_SYNC_NO_WAIT); // [手順] - NULL の lock を取得する。
+        cplat_interprocess_lock_open(path, nullptr); // [手順] - lock の出力先へ NULL を指定する。
+    int lock_result = cplat_interprocess_lock_lock(nullptr, CPLAT_SYNC_NO_WAIT); // [手順] - NULL の lock を取得する。
     int lock_negative_timeout_result =
-        cplat_interprocess_lock_lock(NULL, -1); // [手順] - 負の待機時間で lock を取得する。
+        cplat_interprocess_lock_lock(nullptr, -1); // [手順] - 負の待機時間で lock を取得する。
     int lock_export_result =
-        cplat_interprocess_lock_export_descriptor(NULL, NULL, NULL); // [手順] - NULL の lock を export する。
+        cplat_interprocess_lock_export_descriptor(nullptr, nullptr, nullptr); // [手順] - NULL の lock を export する。
     int lock_import_result = cplat_interprocess_lock_import_descriptor(
-        NULL, 0U, NULL); // [手順] - NULL の出力先へ lock descriptor を import する。
-    int lock_unlock_result = cplat_interprocess_lock_unlock(NULL); // [手順] - NULL の lock を解放する。
+        nullptr, 0U, nullptr); // [手順] - NULL の出力先へ lock descriptor を import する。
+    int lock_unlock_result = cplat_interprocess_lock_unlock(nullptr); // [手順] - NULL の lock を解放する。
     int interprocess_shared_result = cplat_interprocess_rwlock_lock_shared(
-        NULL, CPLAT_SYNC_NO_WAIT); // [手順] - NULL の interprocess rwlock を共有取得する。
+        nullptr, CPLAT_SYNC_NO_WAIT); // [手順] - NULL の interprocess rwlock を共有取得する。
     int interprocess_shared_negative_timeout_result =
-        cplat_interprocess_rwlock_lock_shared(NULL, -1); // [手順] - 負の待機時間で共有ロックを取得する。
+        cplat_interprocess_rwlock_lock_shared(nullptr, -1); // [手順] - 負の待機時間で共有ロックを取得する。
     int interprocess_exclusive_negative_timeout_result =
-        cplat_interprocess_rwlock_lock_exclusive(NULL, -1); // [手順] - 負の待機時間で排他ロックを取得する。
-    int interprocess_export_result =
-        cplat_interprocess_rwlock_export_descriptor(NULL, NULL, NULL); // [手順] - NULL のハンドルを export する。
+        cplat_interprocess_rwlock_lock_exclusive(nullptr, -1); // [手順] - 負の待機時間で排他ロックを取得する。
+    int interprocess_export_result = cplat_interprocess_rwlock_export_descriptor(
+        nullptr, nullptr, nullptr); // [手順] - NULL のハンドルを export する。
     int interprocess_import_result = cplat_interprocess_rwlock_import_descriptor(
-        NULL, 0U, NULL); // [手順] - NULL の出力先へ descriptor を import する。
+        nullptr, 0U, nullptr); // [手順] - NULL の出力先へ descriptor を import する。
     int interprocess_unlock_result =
-        cplat_interprocess_rwlock_unlock(NULL); // [手順] - NULL の interprocess rwlock を解放する。
+        cplat_interprocess_rwlock_unlock(nullptr); // [手順] - NULL の interprocess rwlock を解放する。
 
     // Assert
     EXPECT_EQ(
@@ -1089,22 +1095,22 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_open_reports_open_failure)
     // Arrange
     NiceMock<Mock_fcntl> mock_fcntl;
     const char *path = kRwlockIdentity;
-    cplat_interprocess_rwlock *lock = NULL;
+    cplat_interprocess_rwlock *lock = nullptr;
 
     // Pre-Assert
     EXPECT_CALL(mock_fcntl, open(_, _, _, _, _, _))
         .WillOnce(
             Return(-1)); // [Pre-Assert確認_異常系] - rwlock の lock file に対する open() が 1 回呼び出されること。
-                         // [Pre-Assert手順] - open にて -1 を返却する。
+                         // [Pre-Assert手順] - open() にて -1 を返却する。
 
     // Act
-    int result = cplat_interprocess_rwlock_open(path, &lock); // [手順] - open 失敗を注入して rwlock を開く。
+    int result = cplat_interprocess_rwlock_open(path, &lock); // [手順] - open() 失敗を注入して rwlock を開く。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
               result); // [確認_異常系] - cplat_interprocess_rwlock_open() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ((cplat_interprocess_rwlock *)NULL,
-              lock); // [確認_異常系] - open 失敗時の lock が (cplat_interprocess_rwlock *)NULL であること。
+    EXPECT_EQ(nullptr,
+              lock); // [確認_異常系] - open 失敗時の lock が nullptr であること。
 }
 
 // interprocess rwlock の識別子複製失敗が通知されることの確認
@@ -1114,13 +1120,13 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_open_reports_identity_duplic
     InterprocessOpenMocks os;
     NiceMock<Mock_cplat> mock_cplat;
     const char *path = kRwlockIdentity;
-    cplat_interprocess_rwlock *lock = NULL;
+    cplat_interprocess_rwlock *lock = nullptr;
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_strdup(_))
-        .WillOnce(Return(static_cast<char *>(
-            NULL))); // [Pre-Assert確認_異常系] - rwlock の識別子複製で cplat_strdup() が 1 回呼び出されること。
-                     // [Pre-Assert手順] - cplat_strdup にて NULL を返却する。
+        .WillOnce(Return(
+            nullptr)); // [Pre-Assert確認_異常系] - rwlock の識別子複製で cplat_strdup() が 1 回呼び出されること。
+                       // [Pre-Assert手順] - cplat_strdup() にて NULL を返却する。
 
     // Act
     int result = cplat_interprocess_rwlock_open(path, &lock); // [手順] - 識別子複製失敗を注入して rwlock を開く。
@@ -1129,8 +1135,8 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_open_reports_identity_duplic
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         result); // [確認_異常系] - 識別子複製失敗時の cplat_interprocess_rwlock_open() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ((cplat_interprocess_rwlock *)NULL,
-              lock); // [確認_異常系] - 識別子複製失敗時の lock が (cplat_interprocess_rwlock *)NULL であること。
+    EXPECT_EQ(nullptr,
+              lock); // [確認_異常系] - 識別子複製失敗時の lock が nullptr であること。
 }
 
 // interprocess rwlock のハンドル確保失敗が通知されることの確認
@@ -1140,13 +1146,13 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_open_reports_allocation_fail
     InterprocessOpenMocks os;
     NiceMock<Mock_cplat> mock_cplat;
     const char *path = kRwlockIdentity;
-    cplat_interprocess_rwlock *lock = NULL;
+    cplat_interprocess_rwlock *lock = nullptr;
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
-        .WillOnce(Return(static_cast<void *>(
-            NULL))); // [Pre-Assert確認_異常系] - rwlock ハンドルの cplat_calloc() が 1 回呼び出されること。
-                     // [Pre-Assert手順] - cplat_calloc にて NULL を返却する。
+        .WillOnce(
+            Return(nullptr)); // [Pre-Assert確認_異常系] - rwlock ハンドルの cplat_calloc() が 1 回呼び出されること。
+                              // [Pre-Assert手順] - cplat_calloc() にて NULL を返却する。
 
     // Act
     int result = cplat_interprocess_rwlock_open(path, &lock); // [手順] - ハンドル確保失敗を注入して rwlock を開く。
@@ -1155,8 +1161,8 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_open_reports_allocation_fail
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         result); // [確認_異常系] - ハンドル確保失敗時の cplat_interprocess_rwlock_open() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ((cplat_interprocess_rwlock *)NULL,
-              lock); // [確認_異常系] - ハンドル確保失敗時の lock が (cplat_interprocess_rwlock *)NULL であること。
+    EXPECT_EQ(nullptr,
+              lock); // [確認_異常系] - ハンドル確保失敗時の lock が nullptr であること。
 }
 
 // interprocess rwlock の WAIT_FOREVER が EINTR 後に再試行することの確認
@@ -1166,9 +1172,9 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_wait_forever_retries_eintr)
     InterprocessOpenMocks os;
     NiceMock<Mock_sys_file> mock_sys_file;
     ON_CALL(mock_sys_file, flock(_, _, _, _, _))
-        .WillByDefault(Return(0)); // [状態] - flock が呼び出された際に 0 を返すようにモックを設定する。
+        .WillByDefault(Return(0)); // [状態] - flock() が呼び出された際に 0 を返すようにモックを設定する。
     const char *path = kRwlockIdentity;
-    cplat_interprocess_rwlock *lock = NULL;
+    cplat_interprocess_rwlock *lock = nullptr;
     ASSERT_EQ(CPLAT_OK,
               cplat_interprocess_rwlock_open(path, &lock)); // [状態] - interprocess rwlock を開いた状態とする。
     // [状態確認] - cplat_interprocess_rwlock_open() の戻り値が CPLAT_OK であること。
@@ -1196,6 +1202,7 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_wait_forever_retries_eintr)
     // Cleanup
     EXPECT_CALL(mock_sys_file, flock(_, _, _, _, LOCK_UN)).WillOnce(Return(0)); // unlock 用の flock を成功させる。
     // [Pre-Assert確認_異常系] - flock() が LOCK_UN を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - flock() にて 0 を返す。
     (void)cplat_interprocess_rwlock_unlock(lock);
     cplat_interprocess_rwlock_dispose(lock);
 }
@@ -1207,9 +1214,9 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_wait_forever_reports_flock_f
     InterprocessOpenMocks os;
     NiceMock<Mock_sys_file> mock_sys_file;
     ON_CALL(mock_sys_file, flock(_, _, _, _, _))
-        .WillByDefault(Return(0)); // [状態] - flock が呼び出された際に 0 を返すようにモックを設定する。
+        .WillByDefault(Return(0)); // [状態] - flock() が呼び出された際に 0 を返すようにモックを設定する。
     const char *path = kRwlockIdentity;
-    cplat_interprocess_rwlock *lock = NULL;
+    cplat_interprocess_rwlock *lock = nullptr;
     ASSERT_EQ(CPLAT_OK,
               cplat_interprocess_rwlock_open(path, &lock)); // [状態] - interprocess rwlock を開いた状態とする。
     // [状態確認] - cplat_interprocess_rwlock_open() の戻り値が CPLAT_OK であること。
@@ -1222,11 +1229,11 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_wait_forever_reports_flock_f
                 errno = EIO;
                 return -1;
             })); // [Pre-Assert確認_異常系] - flock() が LOCK_SH を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - flock は EIO を設定して -1 を返却する。
+                 // [Pre-Assert手順] - flock() は EIO を設定して -1 を返却する。
 
     // Act
     int result = cplat_interprocess_rwlock_lock_shared(
-        lock, CPLAT_SYNC_WAIT_FOREVER); // [手順] - blocking flock の未知エラーを注入する。
+        lock, CPLAT_SYNC_WAIT_FOREVER); // [手順] - blocking flock() の未知エラーを注入する。
 
     // Assert
     EXPECT_EQ(
@@ -1244,9 +1251,9 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_unlock_reports_flock_failure
     InterprocessOpenMocks os;
     NiceMock<Mock_sys_file> mock_sys_file;
     ON_CALL(mock_sys_file, flock(_, _, _, _, _))
-        .WillByDefault(Return(0)); // [状態] - flock が呼び出された際に 0 を返すようにモックを設定する。
+        .WillByDefault(Return(0)); // [状態] - flock() が呼び出された際に 0 を返すようにモックを設定する。
     const char *path = kRwlockIdentity;
-    cplat_interprocess_rwlock *lock = NULL;
+    cplat_interprocess_rwlock *lock = nullptr;
     ASSERT_EQ(CPLAT_OK,
               cplat_interprocess_rwlock_open(path, &lock)); // [状態] - interprocess rwlock を開いた状態とする。
     // [状態確認] - cplat_interprocess_rwlock_open() の戻り値が CPLAT_OK であること。
@@ -1258,10 +1265,10 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_unlock_reports_flock_failure
     EXPECT_CALL(mock_sys_file, flock(_, _, _, _, LOCK_UN))
         .WillRepeatedly(Return(
             -1)); // [Pre-Assert確認_異常系] - unlock の flock() が LOCK_UN を指定して任意の回数呼び出されること。
-                  // [Pre-Assert手順] - LOCK_UN の flock にて -1 を返却する。
+                  // [Pre-Assert手順] - LOCK_UN の flock() にて -1 を返却する。
 
     // Act
-    int result = cplat_interprocess_rwlock_unlock(lock); // [手順] - unlock の flock 失敗を注入する。
+    int result = cplat_interprocess_rwlock_unlock(lock); // [手順] - unlock の flock() 失敗を注入する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -1277,7 +1284,7 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_try_lock_exclusive_succeeds)
     // Arrange
     InterprocessOsMocks os;
     const char *path = kRwlockIdentity;
-    cplat_interprocess_rwlock *lock = NULL;
+    cplat_interprocess_rwlock *lock = nullptr;
     ASSERT_EQ(CPLAT_OK,
               cplat_interprocess_rwlock_open(path, &lock)); // [状態] - interprocess rwlock を開いた状態とする。
     // [状態確認] - cplat_interprocess_rwlock_open() の戻り値が CPLAT_OK であること。
@@ -1285,8 +1292,8 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_try_lock_exclusive_succeeds)
     // Pre-Assert
 
     // Act
-    int result =
-        cplat_interprocess_rwlock_try_lock_exclusive(lock); // [手順] - interprocess rwlock の排他 try_lock を呼び出す。
+    int result = cplat_interprocess_rwlock_try_lock_exclusive(
+        lock); // [手順] - interprocess rwlock の排他 try_lock() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1345,8 +1352,8 @@ TEST(syncAdditionalFailureTest, interprocess_locks_cover_locked_and_finite_retry
     InterprocessOpenMocks os;
     const char *lock_path = kLockIdentity;
     const char *rwlock_path = kRwlockIdentity;
-    cplat_interprocess_lock *lock = NULL;
-    cplat_interprocess_rwlock *rwlock = NULL;
+    cplat_interprocess_lock *lock = nullptr;
+    cplat_interprocess_rwlock *rwlock = nullptr;
     ASSERT_EQ(CPLAT_OK,
               cplat_interprocess_lock_open(lock_path, &lock)); // [状態] - interprocess lock を開いた状態とする。
     // [状態確認] - cplat_interprocess_lock_open() の戻り値が CPLAT_OK であること。
@@ -1355,7 +1362,7 @@ TEST(syncAdditionalFailureTest, interprocess_locks_cover_locked_and_finite_retry
     // [状態確認] - cplat_interprocess_rwlock_open() の戻り値が CPLAT_OK であること。
     NiceMock<Mock_sys_file> mock_sys_file;
     ON_CALL(mock_sys_file, flock(_, _, _, _, _))
-        .WillByDefault(Return(0)); // [状態] - flock が呼び出された際に 0 を返すようにモックを設定する。
+        .WillByDefault(Return(0)); // [状態] - flock() が呼び出された際に 0 を返すようにモックを設定する。
     NiceMock<Mock_time> mock_time;
 
     // Pre-Assert
@@ -1368,7 +1375,7 @@ TEST(syncAdditionalFailureTest, interprocess_locks_cover_locked_and_finite_retry
                 ts->tv_nsec = 0;
                 return 0;
             })); // [Pre-Assert確認_正常系] - 有限待機の期限判定で clock_gettime() が CLOCK_MONOTONIC を指定して 4 回呼び出されること。
-    // [Pre-Assert手順] - clock_gettime にて tv_sec=0 を返却する。
+    // [Pre-Assert手順] - clock_gettime() にて tv_sec=0 を返却する。
     EXPECT_CALL(mock_sys_file, flock(_, _, _, _, LOCK_EX | LOCK_NB))
         .WillOnce(Invoke(
             [](const char *, const int, const char *, const int, const int)
@@ -1416,6 +1423,7 @@ TEST(syncAdditionalFailureTest, interprocess_locks_cover_locked_and_finite_retry
         .Times(2)
         .WillRepeatedly(Return(0)); // unlock 用の flock を成功させる。
     // [Pre-Assert確認_異常系] - flock() が LOCK_UN を指定して 2 回呼び出されること。
+    // [Pre-Assert手順] - flock() にて 0 を返す。
     (void)cplat_interprocess_lock_unlock(lock);
     (void)cplat_interprocess_rwlock_unlock(rwlock);
     cplat_interprocess_lock_dispose(lock);
@@ -1426,9 +1434,9 @@ TEST(syncAdditionalFailureTest, interprocess_locks_cover_locked_and_finite_retry
 TEST(syncAdditionalFailureTest, local_sync_rejects_negative_and_partial_arguments)
 {
     // Arrange
-    cplat_local_lock *lock = NULL;
-    cplat_local_rwlock *rwlock = NULL;
-    cplat_condvar *cv = NULL;
+    cplat_local_lock *lock = nullptr;
+    cplat_local_rwlock *rwlock = nullptr;
+    cplat_condvar *cv = nullptr;
     ASSERT_EQ(CPLAT_OK, cplat_local_lock_create(&lock)); // [状態] - local lock を生成する。
     // [状態確認] - cplat_local_lock_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_local_rwlock_create(&rwlock)); // [状態] - local rwlock を生成する。
@@ -1439,13 +1447,13 @@ TEST(syncAdditionalFailureTest, local_sync_rejects_negative_and_partial_argument
     // Pre-Assert
 
     // Act
-    int null_lock_result = cplat_local_lock_lock(NULL, CPLAT_SYNC_NO_WAIT); // [手順] - NULL local lock を取得する。
+    int null_lock_result = cplat_local_lock_lock(nullptr, CPLAT_SYNC_NO_WAIT); // [手順] - NULL local lock を取得する。
     int lock_result = cplat_local_lock_lock(lock, -2); // [手順] - 非 NULL lock に負の待機時間を指定する。
     int shared_result =
         cplat_local_rwlock_lock_shared(rwlock, -2); // [手順] - 非 NULL rwlock の共有取得へ負の待機時間を指定する。
     int exclusive_result =
         cplat_local_rwlock_lock_exclusive(rwlock, -2); // [手順] - 非 NULL rwlock の排他取得へ負の待機時間を指定する。
-    int null_lock_wait = cplat_condvar_wait(cv, NULL, 0); // [手順] - condvar 待機の lock を NULL とする。
+    int null_lock_wait = cplat_condvar_wait(cv, nullptr, 0); // [手順] - condvar 待機の lock を NULL とする。
     int negative_wait = cplat_condvar_wait(cv, lock, -2); // [手順] - condvar 待機へ負の待機時間を指定する。
 
     // Assert
@@ -1479,8 +1487,8 @@ TEST(syncAdditionalFailureTest, local_rwlock_create_reports_each_condvar_failure
 {
     // Arrange
     NiceMock<Mock_pthread> mock_pthread;
-    cplat_local_rwlock *readers_failure = NULL;
-    cplat_local_rwlock *writers_failure = NULL;
+    cplat_local_rwlock *readers_failure = nullptr;
+    cplat_local_rwlock *writers_failure = nullptr;
 
     // Pre-Assert
     EXPECT_CALL(mock_pthread, pthread_cond_init(_, _, _, _, _))
@@ -1502,19 +1510,17 @@ TEST(syncAdditionalFailureTest, local_rwlock_create_reports_each_condvar_failure
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         writers_result); // [確認_異常系] - writers の初期化失敗時の cplat_local_rwlock_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(
-        (cplat_local_rwlock *)NULL,
-        readers_failure); // [確認_異常系] - readers 初期化失敗時の readers_failure が (cplat_local_rwlock *)NULL であること。
-    EXPECT_EQ(
-        (cplat_local_rwlock *)NULL,
-        writers_failure); // [確認_異常系] - writers 初期化失敗時の writers_failure が (cplat_local_rwlock *)NULL であること。
+    EXPECT_EQ(nullptr,
+              readers_failure); // [確認_異常系] - readers 初期化失敗時の readers_failure が nullptr であること。
+    EXPECT_EQ(nullptr,
+              writers_failure); // [確認_異常系] - writers 初期化失敗時の writers_failure が nullptr であること。
 }
 
 // waiting writer を待つ reader が通知後に取得を完了することの確認
 TEST(syncAdditionalFailureTest, local_rwlock_reader_resumes_after_writer_state_clears)
 {
     // Arrange
-    cplat_local_rwlock *rwlock = NULL;
+    cplat_local_rwlock *rwlock = nullptr;
     ASSERT_EQ(CPLAT_OK, cplat_local_rwlock_create(&rwlock)); // [状態] - local rwlock を生成する。
     // [状態確認] - cplat_local_rwlock_create() の戻り値が CPLAT_OK であること。
     test_sync_set_local_rwlock_state(rwlock, 0, 0U, 1U);
@@ -1551,18 +1557,18 @@ TEST(syncAdditionalFailureTest, thread_apis_cover_context_failure_and_null_detac
 {
     // Arrange
     NiceMock<Mock_cplat> mock_cplat;
-    cplat_thread *allocation_failure = NULL;
+    cplat_thread *allocation_failure = nullptr;
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
-        .WillOnce(Return(static_cast<void *>(
-            NULL))); // [Pre-Assert確認_異常系] - thread context の cplat_malloc() が 1 回呼び出されること。
-                     // [Pre-Assert手順] - cplat_malloc にて NULL を返却する。
+        .WillOnce(
+            Return(nullptr)); // [Pre-Assert確認_異常系] - thread context の cplat_malloc() が 1 回呼び出されること。
+                              // [Pre-Assert手順] - cplat_malloc() にて NULL を返却する。
 
     // Act
     int allocation_result =
-        cplat_thread_create(&allocation_failure, [](void *) {}, NULL); // [手順] - context 確保失敗を注入する。
-    cplat_thread_detach(NULL);                                         // [手順] - NULL thread を detach する。
+        cplat_thread_create(&allocation_failure, [](void *) {}, nullptr); // [手順] - context 確保失敗を注入する。
+    cplat_thread_detach(nullptr);                                         // [手順] - NULL thread を detach する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -1574,8 +1580,8 @@ TEST(syncAdditionalFailureTest, thread_apis_cover_context_failure_and_null_detac
 TEST(syncAdditionalFailureTest, thread_join_rejects_negative_timeout)
 {
     // Arrange
-    cplat_thread *thread = NULL;
-    ASSERT_EQ(CPLAT_OK, cplat_thread_create(&thread, [](void *) {}, NULL)); // [状態] - thread を生成する。
+    cplat_thread *thread = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_thread_create(&thread, [](void *) {}, nullptr)); // [状態] - thread を生成する。
     // [状態確認] - cplat_thread_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -1596,8 +1602,8 @@ TEST(syncAdditionalFailureTest, thread_join_rejects_negative_timeout)
 TEST(syncAdditionalFailureTest, thread_join_finite_retry_uses_monotonic_deadline)
 {
     // Arrange
-    cplat_thread *thread = NULL;
-    ASSERT_EQ(CPLAT_OK, cplat_thread_create(&thread, [](void *) {}, NULL)); // [状態] - thread を生成する。
+    cplat_thread *thread = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_thread_create(&thread, [](void *) {}, nullptr)); // [状態] - thread を生成する。
     // [状態確認] - cplat_thread_create() の戻り値が CPLAT_OK であること。
     NiceMock<Mock_pthread> mock_pthread;
     NiceMock<Mock_time> mock_time;
@@ -1616,7 +1622,7 @@ TEST(syncAdditionalFailureTest, thread_join_finite_retry_uses_monotonic_deadline
                 ts->tv_nsec = 0;
                 return 0;
             })); // [Pre-Assert確認_正常系] - 有限 join の期限判定で clock_gettime() が CLOCK_MONOTONIC を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - clock_gettime にて tv_sec=0 を返却する。
+    // [Pre-Assert手順] - clock_gettime() にて tv_sec=0 を返却する。
 
     // Act
     int result = cplat_thread_join(thread, 1); // [手順] - deadline 前の EBUSY 後に thread join を再試行する。
@@ -1629,8 +1635,8 @@ TEST(syncAdditionalFailureTest, thread_join_finite_retry_uses_monotonic_deadline
 TEST(syncAdditionalFailureTest, thread_join_finite_wait_reports_deadline_timeout)
 {
     // Arrange
-    cplat_thread *thread = NULL;
-    ASSERT_EQ(CPLAT_OK, cplat_thread_create(&thread, [](void *) {}, NULL)); // [状態] - thread を生成する。
+    cplat_thread *thread = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_thread_create(&thread, [](void *) {}, nullptr)); // [状態] - thread を生成する。
     // [状態確認] - cplat_thread_create() の戻り値が CPLAT_OK であること。
     NiceMock<Mock_pthread> mock_pthread;
     NiceMock<Mock_time> mock_time;
@@ -1639,7 +1645,7 @@ TEST(syncAdditionalFailureTest, thread_join_finite_wait_reports_deadline_timeout
     // Pre-Assert
     EXPECT_CALL(mock_pthread, pthread_tryjoin_np(_, _, _, _, _))
         .WillOnce(Return(EBUSY)); // [Pre-Assert確認_正常系] - pthread_tryjoin_np() が 1 回呼び出されること。
-                                  // [Pre-Assert手順] - pthread_tryjoin_np にて EBUSY を返却する。
+                                  // [Pre-Assert手順] - pthread_tryjoin_np() にて EBUSY を返却する。
     EXPECT_CALL(mock_time, clock_gettime(_, _, _, CLOCK_MONOTONIC, _))
         .Times(2)
         .WillRepeatedly(Invoke(
@@ -1670,8 +1676,8 @@ TEST(syncAdditionalFailureTest, interprocess_locks_reject_unlocked_and_accept_nu
     InterprocessOpenMocks os;
     const char *lock_path = kLockIdentity;
     const char *rwlock_path = kRwlockIdentity;
-    cplat_interprocess_lock *lock = NULL;
-    cplat_interprocess_rwlock *rwlock = NULL;
+    cplat_interprocess_lock *lock = nullptr;
+    cplat_interprocess_rwlock *rwlock = nullptr;
     ASSERT_EQ(CPLAT_OK,
               cplat_interprocess_lock_open(lock_path, &lock)); // [状態] - interprocess lock を開いた状態とする。
     // [状態確認] - cplat_interprocess_lock_open() の戻り値が CPLAT_OK であること。
@@ -1684,9 +1690,9 @@ TEST(syncAdditionalFailureTest, interprocess_locks_reject_unlocked_and_accept_nu
     // Act
     int lock_result = cplat_interprocess_lock_unlock(lock);       // [手順] - 未取得の interprocess lock を解放する。
     int rwlock_result = cplat_interprocess_rwlock_unlock(rwlock); // [手順] - 未取得の interprocess rwlock を解放する。
-    cplat_local_rwlock_dispose(NULL);                             // [手順] - NULL local rwlock を破棄する。
-    cplat_interprocess_lock_dispose(NULL);                        // [手順] - NULL interprocess lock を破棄する。
-    cplat_interprocess_rwlock_dispose(NULL);                      // [手順] - NULL interprocess rwlock を破棄する。
+    cplat_local_rwlock_dispose(nullptr);                          // [手順] - NULL local rwlock を破棄する。
+    cplat_interprocess_lock_dispose(nullptr);                     // [手順] - NULL interprocess lock を破棄する。
+    cplat_interprocess_rwlock_dispose(nullptr);                   // [手順] - NULL interprocess rwlock を破棄する。
 
     // Assert
     EXPECT_EQ(
@@ -1731,7 +1737,7 @@ TEST(syncAdditionalFailureTest, sleep_retries_interrupted_nanosleep)
 TEST(syncAdditionalFailureTest, local_lock_finite_wait_retries_before_deadline)
 {
     // Arrange
-    cplat_local_lock *lock = NULL;
+    cplat_local_lock *lock = nullptr;
     ASSERT_EQ(CPLAT_OK, cplat_local_lock_create(&lock)); // [状態] - local lock を生成する。
     // [状態確認] - cplat_local_lock_create() の戻り値が CPLAT_OK であること。
     NiceMock<Mock_pthread> mock_pthread;
@@ -1751,7 +1757,7 @@ TEST(syncAdditionalFailureTest, local_lock_finite_wait_retries_before_deadline)
                 ts->tv_nsec = 0;
                 return 0;
             })); // [Pre-Assert確認_正常系] - 有限待機の期限判定で clock_gettime() が CLOCK_MONOTONIC を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - clock_gettime にて tv_sec=0 を返却する。
+    // [Pre-Assert手順] - clock_gettime() にて tv_sec=0 を返却する。
 
     // Act
     int result = cplat_local_lock_lock(lock, 1); // [手順] - deadline 前の EBUSY 後に local lock 取得を再試行する。
@@ -1778,7 +1784,7 @@ TEST(syncAdditionalFailureTest, sleep_stops_after_non_interrupt_error)
                 errno = EINVAL;
                 return -1;
             })); // [Pre-Assert確認_異常系] - nanosleep() が 1 回呼び出されること。
-                 // [Pre-Assert手順] - nanosleep は EINVAL を設定して -1 を返却する。
+                 // [Pre-Assert手順] - nanosleep() は EINVAL を設定して -1 を返却する。
 
     // Act
     cplat_sleep_ms(1); // [手順] - EINVAL を発生させて 1 ms sleep を実行する。

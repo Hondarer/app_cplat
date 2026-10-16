@@ -34,7 +34,7 @@ namespace
 
 static void set_valid_deadline(struct timespec *abs_timeout)
 {
-    abs_timeout->tv_sec = (time_t)(time(NULL) + 1);
+    abs_timeout->tv_sec = (time_t)(time(nullptr) + 1);
     abs_timeout->tv_nsec = 0;
 }
 
@@ -79,7 +79,7 @@ static void recording_hook(cplat_tracer_hook_entry *prev, cplat_tracer *handle, 
     rec.level = level;
     rec.padding = 0;
     rec.timestamp = *timestamp;
-    if (message != NULL)
+    if (message != nullptr)
     {
         rec.message = message;
     }
@@ -112,13 +112,13 @@ class traceHookTest : public Test
         reset_hook_records();
 
         ON_CALL(mock_cplat, cplat_shutdown_register(_, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - `cplat_shutdown_register` の既定動作を設定する。
+        // [状態] - cplat_shutdown_register() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_get_realtime_deadline_ms(_, _))
             .WillByDefault([](uint64_t, struct timespec *abs_timeout) { set_valid_deadline(abs_timeout); });
-        // [状態] - `cplat_clock_get_realtime_deadline_ms` の既定動作を設定する。
+        // [状態] - cplat_clock_get_realtime_deadline_ms() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_get_realtime(_))
             .WillByDefault([](cplat_timespec *ts) { set_fixed_realtime(ts); });
-        // [状態] - `cplat_clock_get_realtime` の既定動作を設定する。
+        // [状態] - cplat_clock_get_realtime() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_format_realtime_iso8601_local(_, _, _))
             .WillByDefault(
                 [](char *buf, size_t buf_size, const cplat_timespec *)
@@ -126,30 +126,30 @@ class traceHookTest : public Test
                     snprintf(buf, buf_size, "%s", "2026-04-26T03:04:05.678+09:00");
                     return 0;
                 });
-        // [状態] - `cplat_clock_format_realtime_iso8601_local` の既定動作を設定する。
+        // [状態] - cplat_clock_format_realtime_iso8601_local() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_trace_file_sink_create(_, _, _, _)).WillByDefault(Return(file_handle_));
-        // [状態] - `cplat_trace_file_sink_create` の既定動作を設定する。
+        // [状態] - cplat_trace_file_sink_create() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_trace_file_sink_write(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - `cplat_trace_file_sink_write` の既定動作を設定する。
+        // [状態] - cplat_trace_file_sink_write() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_trace_file_sink_dispose(_)).WillByDefault(Return());
-        // [状態] - `cplat_trace_file_sink_dispose` の既定動作を設定する。
+        // [状態] - cplat_trace_file_sink_dispose() の既定動作を設定する。
 
 #if defined(PLATFORM_LINUX)
         ON_CALL(mock_cplat, cplat_syslog_sink_create(_, _)).WillByDefault(Return(os_handle_));
-        // [状態] - `cplat_syslog_sink_create` の既定動作を設定する。
+        // [状態] - cplat_syslog_sink_create() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_write(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - `cplat_syslog_sink_write` の既定動作を設定する。
+        // [状態] - cplat_syslog_sink_write() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_rename(_, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - `cplat_syslog_sink_rename` の既定動作を設定する。
+        // [状態] - cplat_syslog_sink_rename() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_dispose(_)).WillByDefault(Return());
-        // [状態] - `cplat_syslog_sink_dispose` の既定動作を設定する。
+        // [状態] - cplat_syslog_sink_dispose() の既定動作を設定する。
 #elif defined(PLATFORM_WINDOWS)
         ON_CALL(mock_cplat, cplat_etw_provider_create(_)).WillByDefault(Return(os_handle_));
-        // [状態] - `cplat_etw_provider_create` の既定動作を設定する。
+        // [状態] - cplat_etw_provider_create() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_etw_provider_write(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - `cplat_etw_provider_write` の既定動作を設定する。
+        // [状態] - cplat_etw_provider_write() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_etw_provider_dispose(_)).WillByDefault(Return());
-        // [状態] - `cplat_etw_provider_dispose` の既定動作を設定する。
+        // [状態] - cplat_etw_provider_dispose() の既定動作を設定する。
 #endif
     }
     // [サブ手順終了]
@@ -158,8 +158,8 @@ class traceHookTest : public Test
     cplat_tracer *create_tracer()
     {
         cplat_tracer *handle = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED);
-        EXPECT_NE((cplat_tracer *)NULL, handle);
-        // [状態確認] - cplat_tracer_create() の戻り値が NULL 以外であること。
+        EXPECT_NE(nullptr, handle);
+        // [状態確認] - cplat_tracer_create() の戻り値が nullptr 以外であること。
         return handle;
     }
     // [サブ手順終了]
@@ -177,11 +177,11 @@ TEST_F(traceHookTest, test_set_hook_returns_non_null)
 
     // Act
     cplat_tracer_hook_entry *entry =
-        cplat_tracer_set_hook(tracer, recording_hook, nullptr); // [手順] - cplat_tracer_set_hook でフックを登録する。
+        cplat_tracer_set_hook(tracer, recording_hook, nullptr); // [手順] - cplat_tracer_set_hook() でフックを登録する。
 
     // Assert
-    EXPECT_NE((cplat_tracer_hook_entry *)NULL,
-              entry); // [確認_正常系] - cplat_tracer_set_hook() の戻り値が NULL 以外であること。
+    EXPECT_NE(nullptr,
+              entry); // [確認_正常系] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
 
     // Cleanup
     cplat_tracer_remove_hook(tracer, entry);
@@ -198,11 +198,11 @@ TEST_F(traceHookTest, test_set_hook_null_handle_returns_null)
 
     // Act
     cplat_tracer_hook_entry *entry = cplat_tracer_set_hook(
-        nullptr, recording_hook, nullptr); // [手順] - handle に NULL を渡して cplat_tracer_set_hook を呼び出す。
+        nullptr, recording_hook, nullptr); // [手順] - handle に NULL を渡して cplat_tracer_set_hook() を呼び出す。
 
     // Assert
-    EXPECT_EQ((cplat_tracer_hook_entry *)NULL,
-              entry); // [確認_異常系] - cplat_tracer_set_hook() の戻り値が NULL であること。
+    EXPECT_EQ(nullptr,
+              entry); // [確認_異常系] - cplat_tracer_set_hook() の戻り値が nullptr であること。
 }
 
 // fn が NULL のとき set_hook が NULL を返すことの確認
@@ -217,11 +217,11 @@ TEST_F(traceHookTest, test_set_hook_null_fn_returns_null)
 
     // Act
     cplat_tracer_hook_entry *entry = cplat_tracer_set_hook(
-        tracer, nullptr, nullptr); // [手順] - fn に NULL を渡して cplat_tracer_set_hook を呼び出す。
+        tracer, nullptr, nullptr); // [手順] - fn に NULL を渡して cplat_tracer_set_hook() を呼び出す。
 
     // Assert
-    EXPECT_EQ((cplat_tracer_hook_entry *)NULL,
-              entry); // [確認_異常系] - cplat_tracer_set_hook() の戻り値が NULL であること。
+    EXPECT_EQ(nullptr,
+              entry); // [確認_異常系] - cplat_tracer_set_hook() の戻り値が nullptr であること。
 
     // Cleanup
     cplat_tracer_dispose(&tracer);
@@ -240,11 +240,11 @@ TEST_F(traceHookTest, test_set_hook_while_started_returns_null)
 
     // Act
     cplat_tracer_hook_entry *entry = cplat_tracer_set_hook(
-        tracer, recording_hook, nullptr); // [手順] - started 状態で cplat_tracer_set_hook を呼び出す。
+        tracer, recording_hook, nullptr); // [手順] - started 状態で cplat_tracer_set_hook() を呼び出す。
 
     // Assert
-    EXPECT_EQ((cplat_tracer_hook_entry *)NULL,
-              entry); // [確認_異常系] - cplat_tracer_set_hook() の戻り値が NULL であること。
+    EXPECT_EQ(nullptr,
+              entry); // [確認_異常系] - cplat_tracer_set_hook() の戻り値が nullptr であること。
 
     // Cleanup
     cplat_tracer_stop(tracer);
@@ -261,8 +261,8 @@ TEST_F(traceHookTest, test_hook_is_called_on_write)
     cplat_tracer_hook_entry *entry = cplat_tracer_set_hook(
         tracer, recording_hook,
         reinterpret_cast<void *>(0xABCD));             // [状態] - context 0xABCD 付きで記録用フックを登録する。
-    ASSERT_NE((cplat_tracer_hook_entry *)NULL,
-              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
     cplat_tracer_start(tracer);                        // [状態] - tracer を started 状態とする。
 
     cplat_timespec ts = make_fixed_timestamp(); // [状態] - 固定タイムスタンプを用意する。
@@ -314,8 +314,8 @@ TEST_F(traceHookTest, test_hook_is_called_for_none_level)
     cplat_tracer *tracer = create_tracer();
     cplat_tracer_hook_entry *entry =
         cplat_tracer_set_hook(tracer, recording_hook, nullptr); // [状態] - 記録用フックを登録する。
-    ASSERT_NE((cplat_tracer_hook_entry *)NULL,
-              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
     cplat_tracer_start(tracer);                                 // [状態] - tracer を started 状態とする。
 
     cplat_timespec ts = make_fixed_timestamp();
@@ -383,8 +383,8 @@ TEST_F(traceHookTest, test_hook_not_called_after_remove)
     cplat_tracer *tracer = create_tracer();
     cplat_tracer_hook_entry *entry =
         cplat_tracer_set_hook(tracer, recording_hook, nullptr); // [状態] - 記録用フックを登録する。
-    ASSERT_NE((cplat_tracer_hook_entry *)NULL,
-              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
 
     cplat_tracer_remove_hook(tracer, entry); // [状態] - 登録済みフックを解除した状態とする。
 
@@ -437,10 +437,10 @@ TEST_F(traceHookTest, test_hook_chain_order)
         cplat_tracer_set_hook(tracer, chain_fn, &ctx1); // [状態] - id=1 のフックを先に登録する。
     cplat_tracer_hook_entry *e2 =
         cplat_tracer_set_hook(tracer, chain_fn, &ctx2); // [状態] - id=2 のフックを後から登録する。
-    ASSERT_NE((cplat_tracer_hook_entry *)NULL,
-              e1); // [状態確認] - id=1 の cplat_tracer_set_hook() の戻り値が NULL 以外であること。
-    ASSERT_NE((cplat_tracer_hook_entry *)NULL,
-              e2); // [状態確認] - id=2 の cplat_tracer_set_hook() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              e1); // [状態確認] - id=1 の cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
+    ASSERT_NE(nullptr,
+              e2); // [状態確認] - id=2 の cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
 
     cplat_tracer_start(tracer);
     cplat_timespec ts = make_fixed_timestamp();
@@ -482,11 +482,11 @@ TEST_F(traceHookTest, test_call_next_hook_null_prev)
     // Pre-Assert
 
     // Act
+    cplat_tracer_call_next_hook(nullptr, tracer, CPLAT_TRACE_LEVEL_INFO, &ts,
+                                "test"); // [手順] - prev に NULL を渡して cplat_tracer_call_next_hook() を呼び出す。
+
     // Assert
-    EXPECT_NO_FATAL_FAILURE(
-        cplat_tracer_call_next_hook(nullptr, tracer, CPLAT_TRACE_LEVEL_INFO, &ts,
-                                    "test")); // [手順] - prev に NULL を渡して cplat_tracer_call_next_hook を呼び出す。
-    // [確認_正常系] - cplat_tracer_call_next_hook() の中で致命的な失敗が起きないこと。
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(cplat_tracer_call_next_hook() の中で致命的な失敗が起きないことの確認)
 
     // Cleanup
     cplat_tracer_stop(tracer);
@@ -502,8 +502,8 @@ TEST_F(traceHookTest, test_hook_called_via_writef)
     cplat_tracer *tracer = create_tracer();
     cplat_tracer_hook_entry *entry =
         cplat_tracer_set_hook(tracer, recording_hook, nullptr); // [状態] - 記録用フックを登録する。
-    ASSERT_NE((cplat_tracer_hook_entry *)NULL,
-              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
     cplat_tracer_start(tracer);                                 // [状態] - tracer を started 状態とする。
 
     cplat_timespec ts = make_fixed_timestamp();
@@ -543,12 +543,12 @@ TEST_F(traceHookTest, test_hook_receives_resolved_timestamp)
     cplat_tracer *tracer = create_tracer();
     cplat_tracer_hook_entry *entry =
         cplat_tracer_set_hook(tracer, recording_hook, nullptr); // [状態] - 記録用フックを登録する。
-    ASSERT_NE((cplat_tracer_hook_entry *)NULL,
-              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
     cplat_tracer_start(tracer);                                 // [状態] - tracer を started 状態とする。
 
     // Pre-Assert
-    // [Pre-Assert手順] - cplat_clock_get_realtime は SetUp のモックで固定値 {1714100645, 678000000} を返却する。
+    // [Pre-Assert手順] - cplat_clock_get_realtime() は SetUp のモックで固定値 {1714100645, 678000000} を返却する。
 
     // Act
     cplat_tracer_write_at(
@@ -582,14 +582,14 @@ TEST_F(traceHookTest, test_remove_hook_while_started_does_nothing)
     cplat_tracer *tracer = create_tracer();
     cplat_tracer_hook_entry *entry =
         cplat_tracer_set_hook(tracer, recording_hook, nullptr); // [状態] - 記録用フックを登録する。
-    ASSERT_NE((cplat_tracer_hook_entry *)NULL,
-              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
     cplat_tracer_start(tracer);                                 // [状態] - tracer を started 状態とする。
 
     // Pre-Assert
 
     // Act
-    cplat_tracer_remove_hook(tracer, entry); // [手順] - started 状態のまま cplat_tracer_remove_hook を呼び出す。
+    cplat_tracer_remove_hook(tracer, entry); // [手順] - started 状態のまま cplat_tracer_remove_hook() を呼び出す。
 
     cplat_timespec ts = make_fixed_timestamp();
     cplat_tracer_write_at(tracer, CPLAT_TRACE_LEVEL_INFO, &ts,

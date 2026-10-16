@@ -11,26 +11,26 @@ static const cplat_string_catalog_entry s_entries[] = {
         3,
         0,
         0,
-        NULL,
+        nullptr,
         "FAKE_ID_0001",
         "first brief",
         "first details",
-        NULL,
-        {"first", NULL, NULL},
-        {"", NULL, NULL},
+        nullptr,
+        {"first", nullptr, nullptr},
+        {"", nullptr, nullptr},
     },
     {
         3,
         1,
         0,
         0,
-        NULL,
+        nullptr,
         "FAKE_ID_0003",
         "second brief",
         "second details",
-        NULL,
-        {"second", NULL, NULL},
-        {"", NULL, NULL},
+        nullptr,
+        {"second", nullptr, nullptr},
+        {"", nullptr, nullptr},
     },
 };
 
@@ -47,7 +47,7 @@ static const int s_key_index_count = (int)(sizeof(s_key_index) / sizeof(s_key_in
 static const int s_broken_key_index[] = {-1, 99};
 
 /** インデックス表を持たないカタログです。検索は線形探索の経路を通ります。 */
-static const cplat_string_catalog s_catalog_without_index = {s_entries, NULL, 2, 0};
+static const cplat_string_catalog s_catalog_without_index = {s_entries, nullptr, 2, 0};
 
 /** インデックス表を持つカタログです。 */
 static const cplat_string_catalog s_catalog_with_index = {s_entries, s_key_index, 2, 4};
@@ -62,18 +62,18 @@ static const cplat_string_catalog_entry s_other_entries[] = {
         7,
         0,
         0,
-        NULL,
+        nullptr,
         "OTHER_CATALOG_ID_0001",
         "other brief",
         "other details",
-        NULL,
-        {"other first", NULL, NULL},
-        {"", NULL, NULL},
+        nullptr,
+        {"other first", nullptr, nullptr},
+        {"", nullptr, nullptr},
     },
 };
 
 /** @ref s_other_entries を参照するカタログです。 */
-static const cplat_string_catalog s_other_catalog = {s_other_entries, NULL, 1, 0};
+static const cplat_string_catalog s_other_catalog = {s_other_entries, nullptr, 1, 0};
 
 class stringCatalogCatalogTest : public Test
 {
@@ -83,14 +83,15 @@ class stringCatalogCatalogTest : public Test
 TEST_F(stringCatalogCatalogTest, unusable_catalog_is_empty)
 {
     // Arrange
-    static const cplat_string_catalog null_entries = {NULL, NULL, 0, 0};
-    static const cplat_string_catalog negative_count = {s_entries, NULL, -1, 0};
+    static const cplat_string_catalog null_entries = {nullptr, nullptr, 0, 0};
+    static const cplat_string_catalog negative_count = {s_entries, nullptr, -1, 0};
     static const cplat_string_catalog negative_index_count = {s_entries, s_key_index, 2, -1};
 
     // Pre-Assert
 
     // Act
-    bool usable_null = cplat_internal_string_catalog_is_usable(NULL); // [手順] - NULL のカタログの使用可否を判定する。
+    bool usable_null =
+        cplat_internal_string_catalog_is_usable(nullptr); // [手順] - NULL のカタログの使用可否を判定する。
     bool usable_null_entries =
         cplat_internal_string_catalog_is_usable(&null_entries); // [手順] - 配列が NULL のカタログの使用可否を判定する。
     bool usable_negative_count =
@@ -100,11 +101,11 @@ TEST_F(stringCatalogCatalogTest, unusable_catalog_is_empty)
     bool usable_valid = cplat_internal_string_catalog_is_usable(
         &s_catalog_with_index); // [手順] - 妥当な構造のカタログの使用可否を判定する。
 
-    int count_null = cplat_internal_string_catalog_entry_count(NULL); // [手順] - NULL の件数を取得する。
+    int count_null = cplat_internal_string_catalog_entry_count(nullptr); // [手順] - NULL の件数を取得する。
     const cplat_string_catalog_entry *find_null =
-        cplat_internal_string_catalog_find_entry(NULL, 1); // [手順] - NULL からエントリを検索する。
+        cplat_internal_string_catalog_find_entry(nullptr, 1); // [手順] - NULL からエントリを検索する。
     const cplat_string_catalog_entry *at_null =
-        cplat_internal_string_catalog_entry_at(NULL, 0); // [手順] - NULL からインデックス指定で取得する。
+        cplat_internal_string_catalog_entry_at(nullptr, 0); // [手順] - NULL からインデックス指定で取得する。
     int count_null_entries =
         cplat_internal_string_catalog_entry_count(&null_entries); // [手順] - 配列が NULL の件数を取得する。
 
@@ -230,7 +231,7 @@ TEST_F(stringCatalogCatalogTest, get_entry)
     // Act
     actual_entry = cplat_string_catalog_get_entry(&s_catalog_with_index,
                                                   1);         // [手順] - 登録済みの文字列キーで項目を取得する。
-    actual_unknown = cplat_string_catalog_get_entry(NULL, 1); // [手順] - NULL のカタログで項目を取得する。
+    actual_unknown = cplat_string_catalog_get_entry(nullptr, 1); // [手順] - NULL のカタログで項目を取得する。
     actual_absent =
         cplat_string_catalog_get_entry(&s_catalog_with_index, 2); // [手順] - 未登録の文字列キーで項目を取得する。
 

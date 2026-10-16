@@ -6,7 +6,7 @@
 TEST(syncLocalRwlockTest, shared_locks_can_coexist)
 {
     // Arrange
-    cplat_local_rwlock *rwlock = NULL; // [状態] - 新規 rwlock ハンドルの格納先を用意する。
+    cplat_local_rwlock *rwlock = nullptr; // [状態] - 新規 rwlock ハンドルの格納先を用意する。
 
     // Pre-Assert
 
@@ -35,7 +35,7 @@ TEST(syncLocalRwlockTest, shared_locks_can_coexist)
 TEST(syncLocalRwlockTest, exclusive_lock_blocks_shared_try_lock)
 {
     // Arrange
-    cplat_local_rwlock *rwlock = NULL; // [状態] - 新規 rwlock ハンドルの格納先を用意する。
+    cplat_local_rwlock *rwlock = nullptr; // [状態] - 新規 rwlock ハンドルの格納先を用意する。
 
     // Pre-Assert
 
@@ -62,7 +62,7 @@ TEST(syncLocalRwlockTest, exclusive_lock_blocks_shared_try_lock)
 TEST(syncLocalRwlockTest, waiting_writer_prevents_new_reader)
 {
     // Arrange
-    cplat_local_rwlock *rwlock = NULL; // [状態] - 新規 rwlock ハンドルの格納先を用意する。
+    cplat_local_rwlock *rwlock = nullptr; // [状態] - 新規 rwlock ハンドルの格納先を用意する。
 
     // Pre-Assert
 

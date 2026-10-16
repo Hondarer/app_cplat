@@ -40,20 +40,20 @@ class traceShutdownTest : public Test
                     shutdown_context_ = context;
                     return CPLAT_OK;
                 });
-        // [状態] - `cplat_shutdown_register` の既定動作を設定する。
+        // [状態] - cplat_shutdown_register() の既定動作を設定する。
 
 #if defined(PLATFORM_LINUX)
         ON_CALL(mock_cplat, cplat_syslog_sink_create(_, _)).WillByDefault(Return(os_handle_));
-        // [状態] - `cplat_syslog_sink_create` の既定動作を設定する。
+        // [状態] - cplat_syslog_sink_create() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_dispose(_)).WillByDefault(Return());
-        // [状態] - `cplat_syslog_sink_dispose` の既定動作を設定する。
+        // [状態] - cplat_syslog_sink_dispose() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_rename(_, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - `cplat_syslog_sink_rename` の既定動作を設定する。
+        // [状態] - cplat_syslog_sink_rename() の既定動作を設定する。
 #elif defined(PLATFORM_WINDOWS)
         ON_CALL(mock_cplat, cplat_etw_provider_create(_)).WillByDefault(Return(os_handle_));
-        // [状態] - `cplat_etw_provider_create` の既定動作を設定する。
+        // [状態] - cplat_etw_provider_create() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_etw_provider_dispose(_)).WillByDefault(Return());
-        // [状態] - `cplat_etw_provider_dispose` の既定動作を設定する。
+        // [状態] - cplat_etw_provider_dispose() の既定動作を設定する。
 #endif
     }
     // [サブ手順終了]
@@ -76,7 +76,7 @@ TEST_F(traceShutdownTest, shutdown_disposes_registry_and_rejects_new_create)
     // Arrange
     cplat_tracer *handle = cplat_tracer_create(
         CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [状態] - tracer を 1 件生成し registry に登録された状態とする。
-    ASSERT_NE((cplat_tracer *)NULL, handle);      // [状態確認] - cplat_tracer_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr, handle); // [状態確認] - cplat_tracer_create() の戻り値が nullptr 以外であること。
     EXPECT_EQ(
         (size_t)1,
         cplat_internal_trace_registry_count()); // [状態確認] - cplat_internal_trace_registry_count() の戻り値が 1 であること。
@@ -98,7 +98,7 @@ TEST_F(traceShutdownTest, shutdown_disposes_registry_and_rejects_new_create)
         (size_t)0,
         cplat_internal_trace_registry_count()); // [確認_正常系] - shutdown 後の cplat_internal_trace_registry_count() の戻り値が 0 であること。(registry が空になったことの確認)
     EXPECT_EQ(
-        (cplat_tracer *)NULL,
-        created_after_shutdown); // [確認_正常系] - shutdown 開始後の cplat_tracer_create() の戻り値が NULL であること。
+        nullptr,
+        created_after_shutdown); // [確認_正常系] - shutdown 開始後の cplat_tracer_create() の戻り値が nullptr であること。
 }
 // [サブ手順参照 名前=traceShutdownTest.TearDown]

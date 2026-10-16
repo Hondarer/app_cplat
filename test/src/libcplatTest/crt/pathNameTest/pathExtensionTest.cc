@@ -15,7 +15,7 @@ TEST_F(pathExtensionTest, returns_last_extension_of_multi_dot_name)
     // Pre-Assert
 
     // Act
-    const char *actual = cplat_path_extension(path); // [手順] - cplat_path_extension(path) を呼び出す。
+    const char *actual = cplat_path_extension(path); // [手順] - cplat_path_extension() を呼び出す。
 
     // Assert
     EXPECT_STREQ(".gz",
@@ -31,7 +31,7 @@ TEST_F(pathExtensionTest, does_not_treat_leading_dot_as_extension)
     // Pre-Assert
 
     // Act
-    const char *actual = cplat_path_extension(path); // [手順] - cplat_path_extension(path) を呼び出す。
+    const char *actual = cplat_path_extension(path); // [手順] - cplat_path_extension() を呼び出す。
 
     // Assert
     EXPECT_STREQ("",
@@ -47,7 +47,7 @@ TEST_F(pathExtensionTest, ignores_dot_in_directory_component)
     // Pre-Assert
 
     // Act
-    const char *actual = cplat_path_extension(path); // [手順] - cplat_path_extension(path) を呼び出す。
+    const char *actual = cplat_path_extension(path); // [手順] - cplat_path_extension() を呼び出す。
 
     // Assert
     EXPECT_STREQ("",
@@ -63,7 +63,7 @@ TEST_F(pathExtensionTest, returns_dot_only_extension)
     // Pre-Assert
 
     // Act
-    const char *actual = cplat_path_extension(path); // [手順] - cplat_path_extension(path) を呼び出す。
+    const char *actual = cplat_path_extension(path); // [手順] - cplat_path_extension() を呼び出す。
 
     // Assert
     EXPECT_STREQ(".", actual); // [確認_正常系] - cplat_path_extension() の戻り値が "." であること。
@@ -77,7 +77,7 @@ TEST_F(pathExtensionTest, returns_null_for_null_input)
     // Pre-Assert
 
     // Act
-    const char *actual = cplat_path_extension(NULL); // [手順] - cplat_path_extension(NULL) を呼び出す。
+    const char *actual = cplat_path_extension(nullptr); // [手順] - cplat_path_extension() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr, actual); // [確認_異常系] - cplat_path_extension() の戻り値が nullptr であること。
@@ -92,7 +92,7 @@ TEST_F(pathExtensionTest, returns_pointer_to_terminator_when_no_extension)
     // Pre-Assert
 
     // Act
-    const char *actual = cplat_path_extension(path); // [手順] - cplat_path_extension(path) を呼び出す。
+    const char *actual = cplat_path_extension(path); // [手順] - cplat_path_extension() を呼び出す。
 
     // Assert
     EXPECT_EQ(

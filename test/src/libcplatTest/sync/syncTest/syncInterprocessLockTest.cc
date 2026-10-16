@@ -20,8 +20,8 @@ TEST(syncInterprocessLockTest, descriptor_round_trip_reopens_same_lock)
     make_test_interprocess_path(path_buf, sizeof(path_buf), "interprocess_lock");
     const char *path = path_buf; // [状態] - テスト用 lock file パスを用意する。
 #endif
-    cplat_interprocess_lock *lock = NULL;
-    cplat_interprocess_lock *restored = NULL;
+    cplat_interprocess_lock *lock = nullptr;
+    cplat_interprocess_lock *restored = nullptr;
     unsigned char descriptor[512];
     size_t descriptor_size = sizeof(descriptor);
 
@@ -51,7 +51,7 @@ TEST(syncInterprocessLockTest, descriptor_round_trip_reopens_same_lock)
     int import_result = cplat_interprocess_lock_import_descriptor(
         descriptor, descriptor_size, &restored); // [手順] - descriptor から interprocess lock を復元する。
     int first_lock = cplat_interprocess_lock_lock(lock, CPLAT_SYNC_NO_WAIT); // [手順] - 元ハンドルでロックを取得する。
-    int second_try = cplat_interprocess_lock_try_lock(restored); // [手順] - 復元ハンドルで try_lock を試行する。
+    int second_try = cplat_interprocess_lock_try_lock(restored); // [手順] - 復元ハンドルで try_lock() を試行する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -101,8 +101,8 @@ TEST(syncInterprocessLockTest, rejects_rwlock_descriptor)
     make_test_interprocess_path(path_buf, sizeof(path_buf), "interprocess_lock_kind");
     const char *path = path_buf; // [状態] - テスト用 lock file パスを用意する。
 #endif
-    cplat_interprocess_rwlock *rwlock = NULL;
-    cplat_interprocess_lock *lock = NULL;
+    cplat_interprocess_rwlock *rwlock = nullptr;
+    cplat_interprocess_lock *lock = nullptr;
     unsigned char descriptor[512];
     size_t descriptor_size = sizeof(descriptor);
 
@@ -130,7 +130,7 @@ TEST(syncInterprocessLockTest, rejects_rwlock_descriptor)
     EXPECT_EQ(
         CPLAT_ERR_CORRUPT_DESCRIPTOR,
         import_result); // [確認_異常系] - 種別の異なる descriptor に対する cplat_interprocess_lock_import_descriptor() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
-    EXPECT_EQ(NULL, lock); // [確認_異常系] - lock が NULL であること。
+    EXPECT_EQ(nullptr, lock); // [確認_異常系] - lock が nullptr であること。
 
     // Cleanup
 #if defined(PLATFORM_LINUX)
@@ -152,8 +152,8 @@ TEST(syncInterprocessLockTest, second_handle_observes_exclusive_lock)
     // Arrange
     InterprocessOsMocks os;
     const char *path = kLockIdentity; // [状態] - 識別子を sync.lock とする。
-    cplat_interprocess_lock *lock = NULL;
-    cplat_interprocess_lock *other = NULL;
+    cplat_interprocess_lock *lock = nullptr;
+    cplat_interprocess_lock *other = nullptr;
 
     // Pre-Assert
     EXPECT_CALL(os.fcntl, open(_, _, _, StrEq(path), O_RDWR | O_CREAT | O_CLOEXEC, 0666))
@@ -177,7 +177,7 @@ TEST(syncInterprocessLockTest, second_handle_observes_exclusive_lock)
     int other_open = cplat_interprocess_lock_open(path, &other); // [手順] - 同一識別子でもう 1 つ開く。
     int lock_result =
         cplat_interprocess_lock_lock(lock, CPLAT_SYNC_NO_WAIT); // [手順] - 1 つ目のハンドルでロックを取得する。
-    int other_try = cplat_interprocess_lock_try_lock(other);    // [手順] - 2 つ目のハンドルで try_lock を試行する。
+    int other_try = cplat_interprocess_lock_try_lock(other);    // [手順] - 2 つ目のハンドルで try_lock() を試行する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,

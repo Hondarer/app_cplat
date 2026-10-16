@@ -27,7 +27,8 @@ TEST_F(hashtable_required_sizeTest, main_prints_required_size)
     // Pre-Assert
 
     // Act
-    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - 必須オプションを渡して main を呼び出す。
+    int actual_ret =
+        __real_main(argc, const_cast<char **>(argv)); // [手順] - 必須オプションを渡して main() を呼び出す。
 
     // Assert
     EXPECT_EQ(EXIT_SUCCESS, actual_ret); // [確認_正常系] - __real_main() の戻り値が EXIT_SUCCESS であること。
@@ -44,7 +45,7 @@ TEST_F(hashtable_required_sizeTest, main_accepts_record_timestamp_flag)
     // Pre-Assert
 
     // Act
-    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - レコード時刻付きで main を呼び出す。
+    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - レコード時刻付きで main() を呼び出す。
 
     // Assert
     EXPECT_EQ(EXIT_SUCCESS, actual_ret); // [確認_正常系] - __real_main() の戻り値が EXIT_SUCCESS であること。
@@ -60,7 +61,7 @@ TEST_F(hashtable_required_sizeTest, main_rejects_missing_options)
     // Pre-Assert
 
     // Act
-    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - オプション無しで main を呼び出す。
+    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - オプション無しで main() を呼び出す。
 
     // Assert
     EXPECT_NE(EXIT_SUCCESS, actual_ret); // [確認_異常系] - __real_main() の戻り値が EXIT_SUCCESS 以外であること。

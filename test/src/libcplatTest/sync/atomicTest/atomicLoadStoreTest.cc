@@ -28,7 +28,7 @@ TEST(atomicLoadStoreTest, u8_store_and_load_are_consistent_across_memory_orders)
         EXPECT_EQ(
             (uint8_t)(10U + (uint8_t)index),
             loaded
-                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_load_u8() の戻り値が (uint8_t)(10U + (uint8_t)index) と一致すること。
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_load_u8() の戻り値が (10U + index) と一致すること。
     }
 }
 
@@ -56,7 +56,7 @@ TEST(atomicLoadStoreTest, i32_store_and_load_are_consistent_across_memory_orders
         EXPECT_EQ(
             (int32_t)(1000 + (int32_t)index),
             loaded
-                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_load_i32() の戻り値が (int32_t)(1000 + (int32_t)index) と一致すること。
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_load_i32() の戻り値が (1000 + index) と一致すること。
     }
 }
 
@@ -84,7 +84,7 @@ TEST(atomicLoadStoreTest, u32_store_and_load_are_consistent_across_memory_orders
         EXPECT_EQ(
             (uint32_t)(2000U + (uint32_t)index),
             loaded
-                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_load_u32() の戻り値が (uint32_t)(2000U + (uint32_t)index) と一致すること。
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_load_u32() の戻り値が (2000U + index) と一致すること。
     }
 }
 
@@ -112,7 +112,7 @@ TEST(atomicLoadStoreTest, i64_store_and_load_are_consistent_across_memory_orders
         EXPECT_EQ(
             (int64_t)(30000000000LL + (int64_t)index),
             loaded
-                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_load_i64() の戻り値が (int64_t)(30000000000LL + (int64_t)index) と一致すること。
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_load_i64() の戻り値が (30000000000LL + index) と一致すること。
     }
 }
 
@@ -140,7 +140,7 @@ TEST(atomicLoadStoreTest, u64_store_and_load_are_consistent_across_memory_orders
         EXPECT_EQ(
             (uint64_t)(40000000000ULL + (uint64_t)index),
             loaded
-                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_load_u64() の戻り値が (uint64_t)(40000000000ULL + (uint64_t)index) と一致すること。
+                [index]); // [確認_正常系 回数=5] - 各メモリ順序での cplat_atomic_load_u64() の戻り値が (40000000000ULL + index) と一致すること。
     }
 }
 

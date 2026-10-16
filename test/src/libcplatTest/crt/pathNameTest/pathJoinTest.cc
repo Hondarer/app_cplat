@@ -17,8 +17,8 @@ TEST_F(pathJoinTest, inserts_separator_between_plain_fragments)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_join(actual, sizeof(actual), NULL, "a",
-                                     "b"); // [手順] - cplat_path_join(actual, size, NULL, "a", "b") を呼び出す。
+    int actual_ret = cplat_path_join(actual, sizeof(actual), nullptr, "a",
+                                     "b"); // [手順] - cplat_path_join() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_join() の戻り値が CPLAT_OK であること。
@@ -34,8 +34,8 @@ TEST_F(pathJoinTest, collapses_duplicate_separators_at_boundary)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_join(actual, sizeof(actual), NULL, "a/",
-                                     "/b"); // [手順] - cplat_path_join(actual, size, NULL, "a/", "/b") を呼び出す。
+    int actual_ret = cplat_path_join(actual, sizeof(actual), nullptr, "a/",
+                                     "/b"); // [手順] - cplat_path_join() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_join() の戻り値が CPLAT_OK であること。
@@ -51,8 +51,8 @@ TEST_F(pathJoinTest, preserves_trailing_separator_at_boundary)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_join(actual, sizeof(actual), NULL, "a/",
-                                     "b"); // [手順] - 末尾だけにセパレータを持つ断片を cplat_path_join で結合する。
+    int actual_ret = cplat_path_join(actual, sizeof(actual), nullptr, "a/",
+                                     "b"); // [手順] - 末尾だけにセパレータを持つ断片を cplat_path_join() で結合する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_join() の戻り値が CPLAT_OK であること。
@@ -68,8 +68,8 @@ TEST_F(pathJoinTest, preserves_leading_separator_at_boundary)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_join(actual, sizeof(actual), NULL, "a",
-                                     "/b"); // [手順] - 先頭だけにセパレータを持つ断片を cplat_path_join で結合する。
+    int actual_ret = cplat_path_join(actual, sizeof(actual), nullptr, "a",
+                                     "/b"); // [手順] - 先頭だけにセパレータを持つ断片を cplat_path_join() で結合する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_join() の戻り値が CPLAT_OK であること。
@@ -85,8 +85,8 @@ TEST_F(pathJoinTest, preserves_absolute_first_fragment)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_join(actual, sizeof(actual), NULL, "/abs",
-                                     "b"); // [手順] - cplat_path_join(actual, size, NULL, "/abs", "b") を呼び出す。
+    int actual_ret = cplat_path_join(actual, sizeof(actual), nullptr, "/abs",
+                                     "b"); // [手順] - cplat_path_join() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_join() の戻り値が CPLAT_OK であること。
@@ -102,8 +102,8 @@ TEST_F(pathJoinTest, skips_empty_fragments)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_join(actual, sizeof(actual), NULL, "a", "",
-                                     "b"); // [手順] - cplat_path_join(actual, size, NULL, "a", "", "b") を呼び出す。
+    int actual_ret = cplat_path_join(actual, sizeof(actual), nullptr, "a", "",
+                                     "b"); // [手順] - cplat_path_join() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_join() の戻り値が CPLAT_OK であること。
@@ -119,8 +119,8 @@ TEST_F(pathJoinTest, succeeds_with_empty_result_when_all_fragments_empty)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_join(actual, sizeof(actual), NULL, "",
-                                     ""); // [手順] - cplat_path_join(actual, size, NULL, "", "") を呼び出す。
+    int actual_ret = cplat_path_join(actual, sizeof(actual), nullptr, "",
+                                     ""); // [手順] - cplat_path_join() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_join() の戻り値が CPLAT_OK であること。
@@ -136,8 +136,8 @@ TEST_F(pathJoinTest, returns_single_fragment_as_is)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_join(actual, sizeof(actual), NULL,
-                                     "only"); // [手順] - cplat_path_join(actual, size, NULL, "only") を呼び出す。
+    int actual_ret = cplat_path_join(actual, sizeof(actual), nullptr,
+                                     "only"); // [手順] - cplat_path_join() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_join() の戻り値が CPLAT_OK であること。
@@ -153,9 +153,9 @@ TEST_F(pathJoinTest, joins_maximum_sixteen_fragments)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_join(actual, sizeof(actual), NULL, "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+    int actual_ret = cplat_path_join(actual, sizeof(actual), nullptr, "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
                                      "11", "12", "13", "14", "15",
-                                     "16"); // [手順] - 16 個の断片で cplat_path_join を呼び出す。
+                                     "16"); // [手順] - 16 個の断片で cplat_path_join() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_join() の戻り値が CPLAT_OK であること。
@@ -175,7 +175,7 @@ TEST_F(pathJoinTest, returns_einval_for_null_fragment)
 
     // Act
     int actual_ret = cplat_path_join_n(actual, sizeof(actual), &err, 2, "a",
-                                       (const char *)NULL); // [手順] - 2 番目の断片に NULL を渡して呼び出す。
+                                       nullptr);            // [手順] - 2 番目の断片に NULL を渡して呼び出す。
     cplat_error_get_last(&last_error);                      // [手順] - TLS に記録された詳細エラーを取得する。
 
     // Assert
@@ -225,7 +225,7 @@ TEST_F(pathJoinTest, returns_einval_for_zero_path_size)
 
     // Act
     int actual_ret = cplat_path_join(actual, 0u, &err, "a",
-                                     "b"); // [手順] - cplat_path_join(actual, 0, &err, "a", "b") を呼び出す。
+                                     "b"); // [手順] - cplat_path_join() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -246,8 +246,8 @@ TEST_F(pathJoinTest, succeeds_when_result_exactly_fits_with_separator)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_join(actual, sizeof(actual), NULL, "a",
-                                     "b"); // [手順] - cplat_path_join(actual, 4, NULL, "a", "b") を呼び出す。
+    int actual_ret = cplat_path_join(actual, sizeof(actual), nullptr, "a",
+                                     "b"); // [手順] - cplat_path_join() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_join() の戻り値が CPLAT_OK であること。
@@ -265,7 +265,7 @@ TEST_F(pathJoinTest, returns_enametoolong_when_separator_insertion_overflows)
 
     // Act
     int actual_ret = cplat_path_join(actual, sizeof(actual), &err, "a",
-                                     "b"); // [手順] - cplat_path_join(actual, 3, &err, "a", "b") を呼び出す。
+                                     "b"); // [手順] - cplat_path_join() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -289,7 +289,7 @@ TEST_F(pathJoinTest, returns_enametoolong_without_overflow_when_no_room_for_sepa
 
     // Act
     int actual_ret = cplat_path_join(actual, sizeof(actual), &err, "a",
-                                     "b"); // [手順] - cplat_path_join(actual, 2, &err, "a", "b") を呼び出す。
+                                     "b"); // [手順] - cplat_path_join() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -312,7 +312,7 @@ TEST_F(pathJoinTest, returns_enametoolong_when_single_fragment_does_not_fit)
 
     // Act
     int actual_ret = cplat_path_join(actual, sizeof(actual), &err,
-                                     "abcde"); // [手順] - cplat_path_join(actual, 3, &err, "abcde") を呼び出す。
+                                     "abcde"); // [手順] - cplat_path_join() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -333,8 +333,8 @@ TEST_F(pathJoinTest, returns_einval_for_null_path_out)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_join(NULL, 16, &err, "a",
-                                     "b"); // [手順] - cplat_path_join(NULL, 16, &err, "a", "b") を呼び出す。
+    int actual_ret = cplat_path_join(nullptr, 16, &err, "a",
+                                     "b"); // [手順] - cplat_path_join() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,

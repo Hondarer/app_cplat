@@ -17,7 +17,7 @@ TEST_F(stringCatalogValidateTest, valid_format)
     // Pre-Assert
 
     // Act
-    actual_ret = string_catalog_validate_text("value={{ {0} }} / {1} / {0}", NULL,
+    actual_ret = string_catalog_validate_text("value={{ {0} }} / {1} / {0}", nullptr,
                                               2); // [手順] - エスケープ、並べ替え、繰り返しを含む書式を確認する。
 
     // Assert
@@ -33,7 +33,8 @@ TEST_F(stringCatalogValidateTest, no_placeholder)
     // Pre-Assert
 
     // Act
-    actual_ret = string_catalog_validate_text("開始しました。", NULL, 0); // [手順] - 位置指定を含まない書式を確認する。
+    actual_ret =
+        string_catalog_validate_text("開始しました。", nullptr, 0); // [手順] - 位置指定を含まない書式を確認する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - string_catalog_validate_text() の戻り値が CPLAT_OK であること。
@@ -48,11 +49,11 @@ TEST_F(stringCatalogValidateTest, invalid_format)
 
     // Act
     int ret_closing_brace =
-        string_catalog_validate_text("}", NULL, 0); // [手順] - 対を成さない } だけの書式を確認する。
+        string_catalog_validate_text("}", nullptr, 0); // [手順] - 対を成さない } だけの書式を確認する。
     int ret_zero_index =
-        string_catalog_validate_text("{0}", NULL, 0); // [手順] - 引数を取らない定義に位置指定がある書式を確認する。
+        string_catalog_validate_text("{0}", nullptr, 0); // [手順] - 引数を取らない定義に位置指定がある書式を確認する。
     int ret_out_of_range =
-        string_catalog_validate_text("{8}", NULL, 8); // [手順] - 上限を超えるインデックスを持つ書式を確認する。
+        string_catalog_validate_text("{8}", nullptr, 8); // [手順] - 上限を超えるインデックスを持つ書式を確認する。
 
     // Assert
     EXPECT_EQ(

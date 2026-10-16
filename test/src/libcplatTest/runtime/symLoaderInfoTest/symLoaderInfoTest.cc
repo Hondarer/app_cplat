@@ -11,7 +11,7 @@ TEST(symLoaderInfoTest, sym_loader_info_accepts_empty_array)
     // Pre-Assert
 
     // Act
-    int result = cplat_sym_loader_info(NULL, 0); // [手順] - 要素数 0 と NULL の配列を渡してシンボル情報を表示する。
+    int result = cplat_sym_loader_info(nullptr, 0); // [手順] - 要素数 0 と NULL の配列を渡してシンボル情報を表示する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -22,13 +22,13 @@ TEST(symLoaderInfoTest, sym_loader_info_accepts_empty_array)
 TEST(symLoaderInfoTest, sym_loader_info_rejects_invalid_arrays)
 {
     // Arrange
-    cplat_sym_loader_entry *entries[] = {NULL};
+    cplat_sym_loader_entry *entries[] = {nullptr};
 
     // Pre-Assert
 
     // Act
     int null_array_result =
-        cplat_sym_loader_info(NULL, 1); // [手順] - 要素数 1 と NULL の配列を渡してシンボル情報を表示する。
+        cplat_sym_loader_info(nullptr, 1); // [手順] - 要素数 1 と NULL の配列を渡してシンボル情報を表示する。
     int null_entry_result =
         cplat_sym_loader_info(entries, 1); // [手順] - NULL 要素を含む配列を渡してシンボル情報を表示する。
 

@@ -110,9 +110,9 @@ TEST_F(endpointTest, parse_rejects_null_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_text = cplat_ipv4_parse(NULL, &address); // [手順] - text に NULL を指定して解析する。
+    int actual_ret_null_text = cplat_ipv4_parse(nullptr, &address); // [手順] - text に NULL を指定して解析する。
     int actual_ret_null_output =
-        cplat_ipv4_parse("192.0.2.1", NULL); // [手順] - address_out に NULL を指定して解析する。
+        cplat_ipv4_parse("192.0.2.1", nullptr); // [手順] - address_out に NULL を指定して解析する。
 
     // Assert
     EXPECT_EQ(
@@ -135,11 +135,11 @@ TEST_F(endpointTest, parse_rejects_malformed_text)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_arpa_inet_, inet_pton(_, _, _, _, _, _)).WillOnce(Return(0));
     // [Pre-Assert確認_異常系] - inet_pton() が 1 回呼び出されること。
-    // [Pre-Assert手順] - inet_pton から形式不正を示す 0 を返却する。
+    // [Pre-Assert手順] - inet_pton() から形式不正を示す 0 を返却する。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, inet_pton(_, _, _, _, _, _)).WillOnce(Return(0));
     // [Pre-Assert確認_異常系] - inet_pton() が 1 回呼び出されること。
-    // [Pre-Assert手順] - inet_pton から形式不正を示す 0 を返却する。
+    // [Pre-Assert手順] - inet_pton() から形式不正を示す 0 を返却する。
 #endif /* PLATFORM_ */
 
     // Act
@@ -173,7 +173,7 @@ TEST_F(endpointTest, parse_converts_valid_text)
                 return 1;
             });
     // [Pre-Assert確認_正常系] - inet_pton() が 1 回呼び出されること。
-    // [Pre-Assert手順] - inet_pton からループバック アドレスを格納し、成功を示す 1 を返却する。
+    // [Pre-Assert手順] - inet_pton() からループバック アドレスを格納し、成功を示す 1 を返却する。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, inet_pton(_, _, _, _, _, _))
         .WillOnce(
@@ -183,7 +183,7 @@ TEST_F(endpointTest, parse_converts_valid_text)
                 return 1;
             });
     // [Pre-Assert確認_正常系] - inet_pton() が 1 回呼び出されること。
-    // [Pre-Assert手順] - inet_pton からループバック アドレスを格納し、成功を示す 1 を返却する。
+    // [Pre-Assert手順] - inet_pton() からループバック アドレスを格納し、成功を示す 1 を返却する。
 #endif /* PLATFORM_ */
 
     // Act
@@ -212,7 +212,7 @@ TEST_F(endpointTest, parse_returns_invalid_when_startup_fails)
         .WillOnce([](cplat_error *detail_out)
                   { return cplat_internal_error_report_winsock_error(detail_out, WSASYSNOTREADY); });
     // [Pre-Assert確認_異常系] - startup() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_internal_socket_startup が WSASYSNOTREADY を Winsock エラーとして返却する。
+    // [Pre-Assert手順] - cplat_internal_socket_startup() が WSASYSNOTREADY を Winsock エラーとして返却する。
 
     // Act
     int actual_ret = cplat_ipv4_parse("127.0.0.1", &address); // [手順] - 初期化失敗を注入して IPv4 を解析する。
@@ -237,9 +237,9 @@ TEST_F(endpointTest, resolve_rejects_null_arguments)
 
     // Act
     int actual_ret_null_text =
-        cplat_ipv4_resolve(NULL, &address, &detail); // [手順] - text に NULL を指定して名前解決する。
+        cplat_ipv4_resolve(nullptr, &address, &detail); // [手順] - text に NULL を指定して名前解決する。
     int actual_ret_null_output =
-        cplat_ipv4_resolve("localhost", NULL, &detail); // [手順] - address_out に NULL を指定して名前解決する。
+        cplat_ipv4_resolve("localhost", nullptr, &detail); // [手順] - address_out に NULL を指定して名前解決する。
 
     // Assert
     EXPECT_EQ(
@@ -271,21 +271,21 @@ TEST_F(endpointTest, resolve_reports_lookup_failure)
             [](const char *, const int, const char *, const char *, const char *, const struct addrinfo *,
                struct addrinfo **result)
             {
-                *result = NULL;
+                *result = nullptr;
                 return EAI_AGAIN;
             });
     // [Pre-Assert確認_異常系] - getaddrinfo() が 1 回呼び出されること。
-    // [Pre-Assert手順] - getaddrinfo から解決結果へ NULL を格納し、EAI_AGAIN を返却する。
+    // [Pre-Assert手順] - getaddrinfo() から解決結果へ NULL を格納し、EAI_AGAIN を返却する。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, getaddrinfo(_, _, _, _, _, _, _))
         .WillOnce(
             [](const char *, const int, const char *, PCSTR, PCSTR, const ADDRINFOA *, PADDRINFOA *result)
             {
-                *result = NULL;
+                *result = nullptr;
                 return EAI_AGAIN;
             });
     // [Pre-Assert確認_異常系] - getaddrinfo() が 1 回呼び出されること。
-    // [Pre-Assert手順] - getaddrinfo から解決結果へ NULL を格納し、EAI_AGAIN を返却する。
+    // [Pre-Assert手順] - getaddrinfo() から解決結果へ NULL を格納し、EAI_AGAIN を返却する。
 #endif /* PLATFORM_ */
 
     // Act
@@ -332,7 +332,7 @@ TEST_F(endpointTest, resolve_releases_result_when_lookup_fails)
                 return EAI_FAIL;
             });
     // [Pre-Assert確認_異常系] - getaddrinfo() が 1 回呼び出されること。
-    // [Pre-Assert手順] - getaddrinfo から解決結果を格納したうえで EAI_FAIL を返却する。
+    // [Pre-Assert手順] - getaddrinfo() から解決結果を格納したうえで EAI_FAIL を返却する。
     EXPECT_CALL(mock_netdb_, freeaddrinfo(_, _, _, _))
         .WillOnce(
             [&resolved](const char *, const int, const char *, struct addrinfo *actual)
@@ -342,6 +342,7 @@ TEST_F(endpointTest, resolve_releases_result_when_lookup_fails)
                     actual); // [Pre-Assert確認_正常系] - actual が &resolved と一致すること。(freeaddrinfo() に渡す解決結果が resolved のアドレスであることの確認)
             });
     // [Pre-Assert確認_異常系] - freeaddrinfo() が 1 回呼び出されること。
+    // [Pre-Assert手順] - freeaddrinfo() にて渡された解決結果を確認し、解放は行わない。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, getaddrinfo(_, _, _, _, _, _, _))
         .WillOnce(
@@ -351,7 +352,7 @@ TEST_F(endpointTest, resolve_releases_result_when_lookup_fails)
                 return EAI_FAIL;
             });
     // [Pre-Assert確認_異常系] - getaddrinfo() が 1 回呼び出されること。
-    // [Pre-Assert手順] - getaddrinfo から解決結果を格納したうえで EAI_FAIL を返却する。
+    // [Pre-Assert手順] - getaddrinfo() から解決結果を格納したうえで EAI_FAIL を返却する。
     EXPECT_CALL(mock_winsock_, freeaddrinfo(_, _, _, _))
         .WillOnce(
             [&resolved](const char *, const int, const char *, PADDRINFOA actual)
@@ -361,6 +362,7 @@ TEST_F(endpointTest, resolve_releases_result_when_lookup_fails)
                     actual); // [Pre-Assert確認_正常系] - actual が &resolved と一致すること。(freeaddrinfo() に渡す解決結果が resolved のアドレスであることの確認)
             });
     // [Pre-Assert確認_異常系] - freeaddrinfo() が 1 回呼び出されること。
+    // [Pre-Assert手順] - freeaddrinfo() にて渡された解決結果を確認し、解放は行わない。
 #endif /* PLATFORM_ */
 
     // Act
@@ -389,21 +391,21 @@ TEST_F(endpointTest, resolve_rejects_empty_result)
             [](const char *, const int, const char *, const char *, const char *, const struct addrinfo *,
                struct addrinfo **result)
             {
-                *result = NULL;
+                *result = nullptr;
                 return 0;
             });
     // [Pre-Assert確認_異常系] - getaddrinfo() が 1 回呼び出されること。
-    // [Pre-Assert手順] - getaddrinfo から解決結果へ NULL を格納し、成功を示す 0 を返却する。
+    // [Pre-Assert手順] - getaddrinfo() から解決結果へ NULL を格納し、成功を示す 0 を返却する。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, getaddrinfo(_, _, _, _, _, _, _))
         .WillOnce(
             [](const char *, const int, const char *, PCSTR, PCSTR, const ADDRINFOA *, PADDRINFOA *result)
             {
-                *result = NULL;
+                *result = nullptr;
                 return 0;
             });
     // [Pre-Assert確認_異常系] - getaddrinfo() が 1 回呼び出されること。
-    // [Pre-Assert手順] - getaddrinfo から解決結果へ NULL を格納し、成功を示す 0 を返却する。
+    // [Pre-Assert手順] - getaddrinfo() から解決結果へ NULL を格納し、成功を示す 0 を返却する。
 #endif /* PLATFORM_ */
 
     // Act
@@ -448,7 +450,7 @@ TEST_F(endpointTest, resolve_returns_first_ipv4_address)
                 return 0;
             });
     // [Pre-Assert確認_正常系] - getaddrinfo() が 1 回呼び出されること。
-    // [Pre-Assert手順] - getaddrinfo から有効な IPv4 の解決結果を格納し、成功を示す 0 を返却する。
+    // [Pre-Assert手順] - getaddrinfo() から有効な IPv4 の解決結果を格納し、成功を示す 0 を返却する。
     EXPECT_CALL(mock_netdb_, freeaddrinfo(_, _, _, _))
         .WillOnce(
             [&resolved](const char *, const int, const char *, struct addrinfo *actual)
@@ -458,6 +460,7 @@ TEST_F(endpointTest, resolve_returns_first_ipv4_address)
                     actual); // [Pre-Assert確認_正常系] - actual が &resolved と一致すること。(freeaddrinfo() に渡す解決結果が resolved のアドレスであることの確認)
             });
     // [Pre-Assert確認_正常系] - freeaddrinfo() が 1 回呼び出されること。
+    // [Pre-Assert手順] - freeaddrinfo() にて渡された解決結果を確認し、解放は行わない。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, getaddrinfo(_, _, _, _, _, _, _))
         .WillOnce(
@@ -467,7 +470,7 @@ TEST_F(endpointTest, resolve_returns_first_ipv4_address)
                 return 0;
             });
     // [Pre-Assert確認_正常系] - getaddrinfo() が 1 回呼び出されること。
-    // [Pre-Assert手順] - getaddrinfo から有効な IPv4 の解決結果を格納し、成功を示す 0 を返却する。
+    // [Pre-Assert手順] - getaddrinfo() から有効な IPv4 の解決結果を格納し、成功を示す 0 を返却する。
     EXPECT_CALL(mock_winsock_, freeaddrinfo(_, _, _, _))
         .WillOnce(
             [&resolved](const char *, const int, const char *, PADDRINFOA actual)
@@ -477,6 +480,7 @@ TEST_F(endpointTest, resolve_returns_first_ipv4_address)
                     actual); // [Pre-Assert確認_正常系] - actual が &resolved と一致すること。(freeaddrinfo() に渡す解決結果が resolved のアドレスであることの確認)
             });
     // [Pre-Assert確認_正常系] - freeaddrinfo() が 1 回呼び出されること。
+    // [Pre-Assert手順] - freeaddrinfo() にて渡された解決結果を確認し、解放は行わない。
 #endif /* PLATFORM_ */
 
     // Act
@@ -515,7 +519,7 @@ TEST_F(endpointTest, resolve_retries_after_interrupt)
             [](const char *, const int, const char *, const char *, const char *, const struct addrinfo *,
                struct addrinfo **result)
             {
-                *result = NULL;
+                *result = nullptr;
                 errno = EINTR;
                 return EAI_SYSTEM;
             })
@@ -527,7 +531,7 @@ TEST_F(endpointTest, resolve_retries_after_interrupt)
                 return 0;
             });
     // [Pre-Assert確認_正常系] - getaddrinfo() が 2 回呼び出されること。
-    // [Pre-Assert手順] - getaddrinfo から、errno に EINTR を設定した EAI_SYSTEM ののち、有効な IPv4 の解決結果と成功を示す 0 を返却する。
+    // [Pre-Assert手順] - getaddrinfo() から、errno に EINTR を設定した EAI_SYSTEM ののち、有効な IPv4 の解決結果と成功を示す 0 を返却する。
     EXPECT_CALL(mock_netdb_, freeaddrinfo(_, _, _, _))
         .WillOnce(
             [&resolved](const char *, const int, const char *, struct addrinfo *actual)
@@ -537,6 +541,7 @@ TEST_F(endpointTest, resolve_retries_after_interrupt)
                     actual); // [Pre-Assert確認_正常系] - actual が &resolved と一致すること。(freeaddrinfo() に渡す解決結果が resolved のアドレスであることの確認)
             });
     // [Pre-Assert確認_正常系] - freeaddrinfo() が 1 回呼び出されること。
+    // [Pre-Assert手順] - freeaddrinfo() にて渡された解決結果を確認し、解放は行わない。
 
     // Act
     int actual_ret =
@@ -569,12 +574,12 @@ TEST_F(endpointTest, resolve_reports_system_error_without_retry)
             [](const char *, const int, const char *, const char *, const char *, const struct addrinfo *,
                struct addrinfo **result)
             {
-                *result = NULL;
+                *result = nullptr;
                 errno = ENOMEM;
                 return EAI_SYSTEM;
             });
     // [Pre-Assert確認_異常系] - getaddrinfo() が 1 回だけ呼び出されること。
-    // [Pre-Assert手順] - getaddrinfo から、errno に ENOMEM を設定した EAI_SYSTEM を返却する。
+    // [Pre-Assert手順] - getaddrinfo() から、errno に ENOMEM を設定した EAI_SYSTEM を返却する。
 
     // Act
     int actual_ret = cplat_ipv4_resolve("localhost", &address, &detail); // [手順] - 中断以外の EAI_SYSTEM を注入する。
@@ -605,7 +610,7 @@ TEST_F(endpointTest, resolve_propagates_startup_failure)
         .WillOnce([](cplat_error *detail_out)
                   { return cplat_internal_error_report_winsock_error(detail_out, WSASYSNOTREADY); });
     // [Pre-Assert確認_異常系] - startup() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_internal_socket_startup が WSASYSNOTREADY を Winsock エラーとして返却する。
+    // [Pre-Assert手順] - cplat_internal_socket_startup() が WSASYSNOTREADY を Winsock エラーとして返却する。
 
     // Act
     int actual_ret = cplat_ipv4_resolve("localhost", &address, &detail); // [手順] - 初期化失敗を注入して名前解決する。
@@ -634,7 +639,7 @@ TEST_F(endpointTest, to_string_rejects_null_or_zero_sized_buffer)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_buffer = cplat_ipv4_to_string(CPLAT_IPV4_ADDR_LOOPBACK, NULL, sizeof(buffer),
+    int actual_ret_null_buffer = cplat_ipv4_to_string(CPLAT_IPV4_ADDR_LOOPBACK, nullptr, sizeof(buffer),
                                                       &detail); // [手順] - buffer に NULL を指定して文字列化する。
     int actual_ret_zero_size = cplat_ipv4_to_string(CPLAT_IPV4_ADDR_LOOPBACK, buffer, 0U,
                                                     &detail); // [手順] - buffer_size に 0 を指定して文字列化する。
@@ -686,17 +691,17 @@ TEST_F(endpointTest, to_string_reports_conversion_failure)
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_arpa_inet_, inet_ntop(_, _, _, _, _, _, _))
-        .WillOnce(DoAll(Assign(&errno, EINVAL), Return(static_cast<const char *>(NULL))));
+        .WillOnce(DoAll(Assign(&errno, EINVAL), Return(static_cast<const char *>(nullptr))));
     // [Pre-Assert確認_異常系] - inet_ntop() が 1 回呼び出されること。
-    // [Pre-Assert手順] - inet_ntop から変換失敗を示す NULL を返却する。
-    // [Pre-Assert手順] - inet_ntop の失敗時に errno を EINVAL へ設定する。
+    // [Pre-Assert手順] - inet_ntop() から変換失敗を示す NULL を返却する。
+    // [Pre-Assert手順] - inet_ntop() の失敗時に errno を EINVAL へ設定する。
 #elif defined(PLATFORM_WINDOWS)
-    EXPECT_CALL(mock_winsock_, inet_ntop(_, _, _, _, _, _, _)).WillOnce(Return(static_cast<PCSTR>(NULL)));
+    EXPECT_CALL(mock_winsock_, inet_ntop(_, _, _, _, _, _, _)).WillOnce(Return(static_cast<PCSTR>(nullptr)));
     // [Pre-Assert確認_異常系] - inet_ntop() が 1 回呼び出されること。
-    // [Pre-Assert手順] - inet_ntop から変換失敗を示す NULL を返却する。
+    // [Pre-Assert手順] - inet_ntop() から変換失敗を示す NULL を返却する。
     EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAEINVAL));
     // [Pre-Assert確認_異常系] - WSAGetLastError() が 1 回呼び出されること。
-    // [Pre-Assert手順] - WSAGetLastError から WSAEINVAL を返却する。
+    // [Pre-Assert手順] - WSAGetLastError() から WSAEINVAL を返却する。
 #endif /* PLATFORM_ */
 
     // Act
@@ -728,7 +733,7 @@ TEST_F(endpointTest, to_string_converts_address)
                 return static_cast<const char *>(dst);
             });
     // [Pre-Assert確認_正常系] - inet_ntop() が 1 回呼び出されること。
-    // [Pre-Assert手順] - inet_ntop からループバック アドレスの文字列を格納して返却する。
+    // [Pre-Assert手順] - inet_ntop() からループバック アドレスの文字列を格納して返却する。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, inet_ntop(_, _, _, _, _, _, _))
         .WillOnce(
@@ -738,7 +743,7 @@ TEST_F(endpointTest, to_string_converts_address)
                 return static_cast<PCSTR>(dst);
             });
     // [Pre-Assert確認_正常系] - inet_ntop() が 1 回呼び出されること。
-    // [Pre-Assert手順] - inet_ntop からループバック アドレスの文字列を格納して返却する。
+    // [Pre-Assert手順] - inet_ntop() からループバック アドレスの文字列を格納して返却する。
 #endif /* PLATFORM_ */
 
     // Act
@@ -772,7 +777,7 @@ TEST_F(endpointTest, to_string_propagates_startup_failure)
         .WillOnce([](cplat_error *detail_out)
                   { return cplat_internal_error_report_winsock_error(detail_out, WSASYSNOTREADY); });
     // [Pre-Assert確認_異常系] - startup() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_internal_socket_startup が WSASYSNOTREADY を Winsock エラーとして返却する。
+    // [Pre-Assert手順] - cplat_internal_socket_startup() が WSASYSNOTREADY を Winsock エラーとして返却する。
 
     // Act
     int actual_ret = cplat_ipv4_to_string(CPLAT_IPV4_ADDR_LOOPBACK, buffer, sizeof(buffer),

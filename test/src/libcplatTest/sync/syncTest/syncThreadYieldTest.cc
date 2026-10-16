@@ -16,7 +16,7 @@ TEST(syncThreadYieldTest, calls_native_yield_once)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_unistd, sched_yield(_, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - sched_yield() が 1 回呼び出されること。
-                              // [Pre-Assert手順] - sched_yield から 0 を返却する。
+                              // [Pre-Assert手順] - sched_yield() から 0 を返却する。
 #endif                        /* PLATFORM_LINUX */
 
     // Act

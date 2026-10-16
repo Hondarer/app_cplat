@@ -146,7 +146,7 @@ TEST_F(stringCatalogFormatTest, null_dest)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_format(fake_catalog(), NULL, sizeof(dest),
+    actual_ret = cplat_string_catalog_format(fake_catalog(), nullptr, sizeof(dest),
                                              FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 書き込み先へ NULL を渡す。
 
     // Assert
@@ -242,7 +242,7 @@ TEST_F(stringCatalogFormatTest, falls_back_to_neutral_text)
 {
     // Arrange
     int actual_ret;
-    fake_catalog_set_text(FAKE_CATALOG_INDEX_NO_ARGUMENT, CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE, NULL);
+    fake_catalog_set_text(FAKE_CATALOG_INDEX_NO_ARGUMENT, CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE, nullptr);
 
     // Pre-Assert
 
@@ -262,8 +262,8 @@ TEST_F(stringCatalogFormatTest, missing_neutral_text)
 {
     // Arrange
     int actual_ret;
-    fake_catalog_set_text(FAKE_CATALOG_INDEX_NO_ARGUMENT, CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE, NULL);
-    fake_catalog_set_text(FAKE_CATALOG_INDEX_NO_ARGUMENT, CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL, NULL);
+    fake_catalog_set_text(FAKE_CATALOG_INDEX_NO_ARGUMENT, CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE, nullptr);
+    fake_catalog_set_text(FAKE_CATALOG_INDEX_NO_ARGUMENT, CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL, nullptr);
 
     // Pre-Assert
 

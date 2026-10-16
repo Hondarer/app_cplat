@@ -85,7 +85,7 @@ class hashtableTimestampTest : public Test
                 {
                     set_timestamp(ts, next_sec_, 0);
                     next_sec_ += 10;
-                }); // [状態] - cplat_clock_get_realtime が呼び出された際に 10 秒ずつ進む時刻を返すようにモックを設定する。
+                }); // [状態] - cplat_clock_get_realtime() が呼び出された際に 10 秒ずつ進む時刻を返すようにモックを設定する。
     }
     // [サブ手順終了]
 };
@@ -115,7 +115,7 @@ TEST_F(hashtableTimestampTest, add_update_delete_stamp_realtime)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     int actual_ret_add = cplat_hashtable_add(ht, "a", value.data(),
                                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - キーを追加する。
     int actual_ret_add_time = cplat_hashtable_get_timestamp_val(ht, 1, &added);      // [手順] - 追加後の時刻を読む。
@@ -237,7 +237,7 @@ TEST_F(hashtableTimestampTest, add_revive_keeps_previous_value_and_stamps)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(),
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 元の値で追加する。
     (void)cplat_hashtable_delete(ht, "a"); // [手順] - 削除する(lifetime 5 のため削除済みのまま残る)。
@@ -250,7 +250,7 @@ TEST_F(hashtableTimestampTest, add_revive_keeps_previous_value_and_stamps)
     found_text = (found == nullptr) ? "" : static_cast<const char *>(found);
     (void)cplat_hashtable_get_timestamp_val(ht, 1, &after_revive);   // [手順] - 復活後のレコード時刻を取得する。
     (void)cplat_hashtable_get_table_timestamp_val(ht, &table_after); // [手順] - 復活後のテーブル時刻を取得する。
-    int actual_ret_counts = cplat_hashtable_count_status(ht, &in_use, &deleted, NULL); // [手順] - 件数を取得する。
+    int actual_ret_counts = cplat_hashtable_count_status(ht, &in_use, &deleted, nullptr); // [手順] - 件数を取得する。
 
     // Assert
     EXPECT_EQ(
@@ -296,7 +296,7 @@ TEST_F(hashtableTimestampTest, push_deleted_does_not_stamp)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_delete(ht, "a");
     (void)cplat_hashtable_get_timestamp_val(ht, 1, &before);                 // [手順] - 加齢前の時刻を保存する。
@@ -343,7 +343,7 @@ TEST_F(hashtableTimestampTest, empty_slot_time_is_not_found_and_zeroed)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     int actual_ret_empty = cplat_hashtable_get_timestamp_val(ht, 1, &ts); // [手順] - 空スロットの時刻を読む。
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_delete = cplat_hashtable_delete(ht, "a");              // [手順] - lifetime 2 で直ちに空へ戻す。
@@ -402,18 +402,18 @@ TEST_F(hashtableTimestampTest, accessors_reject_invalid_arguments)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    int actual_ret_get_null_ht = cplat_hashtable_get_timestamp_ref(NULL, 1, &ref);
-    int actual_ret_get_null_out = cplat_hashtable_get_timestamp_ref(ht, 1, NULL);
+    int actual_ret_get_null_ht = cplat_hashtable_get_timestamp_ref(nullptr, 1, &ref);
+    int actual_ret_get_null_out = cplat_hashtable_get_timestamp_ref(ht, 1, nullptr);
     int actual_ret_get_rec0 = cplat_hashtable_get_timestamp_val(ht, 0, &ts);
     int actual_ret_get_rec_hi = cplat_hashtable_get_timestamp_val(ht, 3, &ts);
-    int actual_ret_get_val_null = cplat_hashtable_get_timestamp_val(ht, 1, NULL);
-    int actual_ret_find_null_ht = cplat_hashtable_find_timestamp_ref(NULL, "a", &ref);
-    int actual_ret_find_null_key = cplat_hashtable_find_timestamp_ref(ht, NULL, &ref);
-    int actual_ret_find_null_out = cplat_hashtable_find_timestamp_ref(ht, "a", NULL);
+    int actual_ret_get_val_null = cplat_hashtable_get_timestamp_val(ht, 1, nullptr);
+    int actual_ret_find_null_ht = cplat_hashtable_find_timestamp_ref(nullptr, "a", &ref);
+    int actual_ret_find_null_key = cplat_hashtable_find_timestamp_ref(ht, nullptr, &ref);
+    int actual_ret_find_null_out = cplat_hashtable_find_timestamp_ref(ht, "a", nullptr);
     int actual_ret_find_long = cplat_hashtable_find_timestamp_val(ht, too_long, &ts);
-    int actual_ret_find_val_null = cplat_hashtable_find_timestamp_val(ht, "a", NULL);
+    int actual_ret_find_val_null = cplat_hashtable_find_timestamp_val(ht, "a", nullptr);
     int actual_ret_find_missing = cplat_hashtable_find_timestamp_val(ht, "b", &ts);
 
     // Assert
@@ -476,7 +476,7 @@ TEST_F(hashtableTimestampTest, table_timestamp_tracks_content_changes)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     int actual_ret_create =
         cplat_hashtable_get_table_timestamp_val(ht, &table); // [手順] - 構築直後のテーブル時刻を読む。
     time_t created_sec = table.tv_sec;
@@ -500,10 +500,10 @@ TEST_F(hashtableTimestampTest, table_timestamp_tracks_content_changes)
     time_t ref_sec = (table_ref == nullptr) ? 0 : table_ref->tv_sec;
     int actual_ret_clear = cplat_hashtable_clear(ht); // [手順] - テーブルを空にする。
     int actual_ret_after_clear = cplat_hashtable_get_table_timestamp_val(ht, &table);
-    int actual_ret_null_ht = cplat_hashtable_get_table_timestamp_ref(NULL, &table_ref);
-    int actual_ret_null_out = cplat_hashtable_get_table_timestamp_ref(ht, NULL);
-    int actual_ret_val_null = cplat_hashtable_get_table_timestamp_val(ht, NULL);
-    int actual_ret_val_null_ht = cplat_hashtable_get_table_timestamp_val(NULL, &table);
+    int actual_ret_null_ht = cplat_hashtable_get_table_timestamp_ref(nullptr, &table_ref);
+    int actual_ret_null_out = cplat_hashtable_get_table_timestamp_ref(ht, nullptr);
+    int actual_ret_val_null = cplat_hashtable_get_table_timestamp_val(ht, nullptr);
+    int actual_ret_val_null_ht = cplat_hashtable_get_table_timestamp_val(nullptr, &table);
 
     // Assert
     EXPECT_EQ(
@@ -594,19 +594,19 @@ TEST_F(hashtableTimestampTest, scope_table_record_timestamp_apis_are_unsupported
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_get_ref = cplat_hashtable_get_timestamp_ref(ht, 1, &ref);
     int actual_ret_get_val = cplat_hashtable_get_timestamp_val(ht, 1, &ts);
     int actual_ret_find_ref = cplat_hashtable_find_timestamp_ref(ht, "a", &ref);
     int actual_ret_find_val = cplat_hashtable_find_timestamp_val(ht, "a", &ts);
-    int actual_ret_get_null_ht = cplat_hashtable_get_timestamp_ref(NULL, 1, &ref);
-    int actual_ret_get_null_out = cplat_hashtable_get_timestamp_ref(ht, 1, NULL);
-    int actual_ret_get_val_null = cplat_hashtable_get_timestamp_val(ht, 1, NULL);
-    int actual_ret_find_null_ht = cplat_hashtable_find_timestamp_ref(NULL, "a", &ref);
-    int actual_ret_find_null_key = cplat_hashtable_find_timestamp_ref(ht, NULL, &ref);
-    int actual_ret_find_null_out = cplat_hashtable_find_timestamp_ref(ht, "a", NULL);
-    int actual_ret_find_val_null = cplat_hashtable_find_timestamp_val(ht, "a", NULL);
+    int actual_ret_get_null_ht = cplat_hashtable_get_timestamp_ref(nullptr, 1, &ref);
+    int actual_ret_get_null_out = cplat_hashtable_get_timestamp_ref(ht, 1, nullptr);
+    int actual_ret_get_val_null = cplat_hashtable_get_timestamp_val(ht, 1, nullptr);
+    int actual_ret_find_null_ht = cplat_hashtable_find_timestamp_ref(nullptr, "a", &ref);
+    int actual_ret_find_null_key = cplat_hashtable_find_timestamp_ref(ht, nullptr, &ref);
+    int actual_ret_find_null_out = cplat_hashtable_find_timestamp_ref(ht, "a", nullptr);
+    int actual_ret_find_val_null = cplat_hashtable_find_timestamp_val(ht, "a", nullptr);
     int actual_ret_table_ref = cplat_hashtable_get_table_timestamp_ref(ht, &table_ref);
     int actual_ret_table_val = cplat_hashtable_get_table_timestamp_val(ht, &table);
     int actual_ret_config = cplat_hashtable_get_config_val(ht, &read_config);
@@ -683,7 +683,7 @@ TEST_F(hashtableTimestampTest, scope_table_insert_direct_and_table_timestamp)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     int actual_ret_add = cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_get_table_timestamp_val(ht, &table);
     time_t after_add = table.tv_sec;
@@ -695,7 +695,7 @@ TEST_F(hashtableTimestampTest, scope_table_insert_direct_and_table_timestamp)
     time_t after_delete = table.tv_sec;
     int actual_ret_nonnull = cplat_hashtable_insert_direct(ht, 2, "b", 1, value.data(), &supplied,
                                                            0); // [手順] - SCOPE_TABLE で時刻を渡す。
-    int actual_ret_null = cplat_hashtable_insert_direct(ht, 2, "b", 1, value.data(), NULL,
+    int actual_ret_null = cplat_hashtable_insert_direct(ht, 2, "b", 1, value.data(), nullptr,
                                                         0); // [手順] - SCOPE_TABLE で時刻を省略する。
     int actual_ret_after_direct = cplat_hashtable_get_table_timestamp_val(ht, &table);
     time_t after_direct = table.tv_sec;

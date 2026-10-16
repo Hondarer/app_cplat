@@ -35,13 +35,13 @@ cplat_timespec make_timestamp(time_t tv_sec, int64_t tv_nsec)
 // [サブ手順 名前=fileTimestampTest.create_file]
 void create_file(const char *path)
 {
-    FILE *stream = cplat_fopen(path, "wb", NULL);
+    FILE *stream = cplat_fopen(path, "wb", nullptr);
 
     ASSERT_NE(nullptr, stream);
     // [状態確認] - cplat_fopen() の戻り値が nullptr 以外であること。
-    ASSERT_EQ(1U, cplat_fwrite("x", 1U, 1U, stream, NULL));
+    ASSERT_EQ(1U, cplat_fwrite("x", 1U, 1U, stream, nullptr));
     // [状態確認] - "x" を書き出した cplat_fwrite() の戻り値が 1U であること。
-    ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, NULL));
+    ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, nullptr));
     // [状態確認] - cplat_fclose() の戻り値が CPLAT_OK であること。
 }
 // [サブ手順終了]
@@ -54,8 +54,8 @@ class fileTimestampTest : public Test
     // [サブ手順 名前=fileTimestampTest.SetUp]
     void SetUp() override
     {
-        (void)cplat_remove(kPath, NULL);
-        (void)cplat_remove(kMissingPath, NULL);
+        (void)cplat_remove(kPath, nullptr);
+        (void)cplat_remove(kMissingPath, nullptr);
         // [サブ手順参照 名前=fileTimestampTest.create_file]
         create_file(kPath);
     }
@@ -64,7 +64,7 @@ class fileTimestampTest : public Test
     // [サブ手順 名前=fileTimestampTest.TearDown]
     void TearDown() override
     {
-        (void)cplat_remove(kPath, NULL);
+        (void)cplat_remove(kPath, nullptr);
     }
     // [サブ手順終了]
 
@@ -73,7 +73,7 @@ class fileTimestampTest : public Test
     void open_writable(cplat_file *file)
     {
         cplat_file_init(file);
-        ASSERT_EQ(CPLAT_OK, cplat_file_open(file, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, NULL));
+        ASSERT_EQ(CPLAT_OK, cplat_file_open(file, kPath, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, nullptr));
         // [状態確認] - cplat_file_open() の戻り値が CPLAT_OK であること。
     }
     // [サブ手順終了]
@@ -91,9 +91,9 @@ TEST_F(fileTimestampTest, path_set_then_path_get_round_trips)
 
     // Act
     int actual_ret_set = cplat_file_set_path_modified_timestamp(kPath, &expected,
-                                                                NULL); // [手順] - パス版で日時を設定する。
+                                                                nullptr); // [手順] - パス版で日時を設定する。
     int actual_ret_get = cplat_file_get_path_modified_timestamp(kPath, &actual,
-                                                                NULL); // [手順] - パス版で日時を取得する。
+                                                                nullptr); // [手順] - パス版で日時を取得する。
 
     // Assert
     EXPECT_EQ(
@@ -124,10 +124,10 @@ TEST_F(fileTimestampTest, handle_set_then_handle_get_round_trips)
 
     // Act
     int actual_ret_set = cplat_file_set_modified_timestamp(&file, &expected,
-                                                           NULL); // [手順] - ハンドル版で日時を設定する。
+                                                           nullptr); // [手順] - ハンドル版で日時を設定する。
     int actual_ret_get = cplat_file_get_modified_timestamp(&file, &actual,
-                                                           NULL); // [手順] - ハンドル版で日時を取得する。
-    int actual_ret_close = cplat_file_close(&file, NULL);         // [手順] - ファイルを閉じる。
+                                                           nullptr); // [手順] - ハンドル版で日時を取得する。
+    int actual_ret_close = cplat_file_close(&file, nullptr);         // [手順] - ファイルを閉じる。
     ASSERT_EQ(CPLAT_OK, actual_ret_close); // [状態確認] - cplat_file_close() の戻り値が CPLAT_OK であること。
 
     // Assert
@@ -149,7 +149,7 @@ TEST_F(fileTimestampTest, path_set_is_visible_from_handle_get)
     cplat_timespec actual = make_timestamp(0, 0);
     cplat_file file;
 
-    ASSERT_EQ(CPLAT_OK, cplat_file_set_path_modified_timestamp(kPath, &expected, NULL));
+    ASSERT_EQ(CPLAT_OK, cplat_file_set_path_modified_timestamp(kPath, &expected, nullptr));
     // [状態確認] - cplat_file_set_path_modified_timestamp() の戻り値が CPLAT_OK であること。
     // [サブ手順参照 名前=fileTimestampTest.open_writable]
     open_writable(&file); // [状態] - 設定後にファイルを開く。
@@ -158,8 +158,8 @@ TEST_F(fileTimestampTest, path_set_is_visible_from_handle_get)
 
     // Act
     int actual_ret_get = cplat_file_get_modified_timestamp(&file, &actual,
-                                                           NULL); // [手順] - ハンドル版で日時を取得する。
-    int actual_ret_close = cplat_file_close(&file, NULL);         // [手順] - ファイルを閉じる。
+                                                           nullptr); // [手順] - ハンドル版で日時を取得する。
+    int actual_ret_close = cplat_file_close(&file, nullptr);         // [手順] - ファイルを閉じる。
     ASSERT_EQ(CPLAT_OK, actual_ret_close); // [状態確認] - cplat_file_close() の戻り値が CPLAT_OK であること。
 
     // Assert
@@ -180,19 +180,19 @@ TEST_F(fileTimestampTest, seconds_agree_with_cplat_stat)
     const cplat_timespec expected = make_timestamp(1300000000, 250000000); // [状態] - サブ秒を含む時刻を用意する。
     cplat_file_stat_t file_stat;
 
-    ASSERT_EQ(CPLAT_OK, cplat_file_set_path_modified_timestamp(kPath, &expected, NULL));
+    ASSERT_EQ(CPLAT_OK, cplat_file_set_path_modified_timestamp(kPath, &expected, nullptr));
     // [状態確認] - cplat_file_set_path_modified_timestamp() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    int actual_ret_stat = cplat_stat(&file_stat, NULL, kPath); // [手順] - cplat_stat でファイル情報を取得する。
+    int actual_ret_stat = cplat_stat(&file_stat, nullptr, kPath); // [手順] - cplat_stat() でファイル情報を取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_stat); // [確認_正常系] - cplat_stat() の戻り値が CPLAT_OK であること。
     // st_mtime が設定した秒部と一致すること。
     EXPECT_EQ(expected.tv_sec, static_cast<time_t>(file_stat.st_mtime));
-    // [確認_正常系] - static_cast<time_t>(file_stat.st_mtime) が expected.tv_sec と一致すること。(設定した最終更新日時の秒部であることの確認)
+    // [確認_正常系] - file_stat.st_mtime が expected.tv_sec と一致すること。(設定した最終更新日時の秒部であることの確認)
 }
 // [サブ手順参照 名前=fileTimestampTest.TearDown]
 
@@ -210,17 +210,17 @@ TEST_F(fileTimestampTest, past_and_future_timestamps_round_trip)
 
     // Act
     int actual_ret_set_past =
-        cplat_file_set_path_modified_timestamp(kPath, &past, NULL); // [手順] - 過去の日時を設定する。
+        cplat_file_set_path_modified_timestamp(kPath, &past, nullptr); // [手順] - 過去の日時を設定する。
     ASSERT_EQ(CPLAT_OK, actual_ret_set_past);
     // [確認_正常系] - 過去の日時に対する cplat_file_set_path_modified_timestamp() の戻り値が CPLAT_OK であること。
     int actual_ret_get_past =
-        cplat_file_get_path_modified_timestamp(kPath, &actual_past, NULL); // [手順] - 過去の日時を往復させる。
+        cplat_file_get_path_modified_timestamp(kPath, &actual_past, nullptr); // [手順] - 過去の日時を往復させる。
     int actual_ret_set_future =
-        cplat_file_set_path_modified_timestamp(kPath, &future, NULL); // [手順] - 未来の日時を設定する。
+        cplat_file_set_path_modified_timestamp(kPath, &future, nullptr); // [手順] - 未来の日時を設定する。
     ASSERT_EQ(CPLAT_OK, actual_ret_set_future);
     // [確認_正常系] - 未来の日時に対する cplat_file_set_path_modified_timestamp() の戻り値が CPLAT_OK であること。
     int actual_ret_get_future =
-        cplat_file_get_path_modified_timestamp(kPath, &actual_future, NULL); // [手順] - 未来の日時を往復させる。
+        cplat_file_get_path_modified_timestamp(kPath, &actual_future, nullptr); // [手順] - 未来の日時を往復させる。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_get_past);
@@ -242,15 +242,15 @@ TEST_F(fileTimestampTest, set_does_not_change_access_time)
     cplat_file_stat_t before;
     cplat_file_stat_t after;
 
-    ASSERT_EQ(CPLAT_OK, cplat_stat(&before, NULL, kPath)); // [状態] - 設定前の最終アクセス日時を控える。
+    ASSERT_EQ(CPLAT_OK, cplat_stat(&before, nullptr, kPath)); // [状態] - 設定前の最終アクセス日時を控える。
     // [状態確認] - 設定前の cplat_stat() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int actual_ret_set = cplat_file_set_path_modified_timestamp(kPath, &expected,
-                                                                NULL); // [手順] - 最終更新日時を設定する。
-    int actual_ret_stat_after = cplat_stat(&after, NULL, kPath);       // [手順] - 設定後の最終アクセス日時を取得する。
+                                                                nullptr); // [手順] - 最終更新日時を設定する。
+    int actual_ret_stat_after = cplat_stat(&after, nullptr, kPath); // [手順] - 設定後の最終アクセス日時を取得する。
     ASSERT_EQ(CPLAT_OK, actual_ret_stat_after); // [状態確認] - 設定後の cplat_stat() の戻り値が CPLAT_OK であること。
 
     // Assert
@@ -273,7 +273,7 @@ TEST_F(fileTimestampTest, set_on_read_only_handle_is_permission_denied)
 
     cplat_error_clear(&detail);
     cplat_file_init(&file);
-    ASSERT_EQ(CPLAT_OK, cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_READ, NULL)); // [状態] - 読み取り専用で開く。
+    ASSERT_EQ(CPLAT_OK, cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_READ, nullptr)); // [状態] - 読み取り専用で開く。
     // [状態確認] - cplat_file_open() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -281,7 +281,7 @@ TEST_F(fileTimestampTest, set_on_read_only_handle_is_permission_denied)
     // Act
     int actual_ret_set = cplat_file_set_modified_timestamp(&file, &timestamp,
                                                            &detail); // [手順] - 最終更新日時の設定を試みる。
-    int actual_ret_close = cplat_file_close(&file, NULL);            // [手順] - ファイルを閉じる。
+    int actual_ret_close = cplat_file_close(&file, nullptr);         // [手順] - ファイルを閉じる。
     ASSERT_EQ(CPLAT_OK, actual_ret_close); // [状態確認] - cplat_file_close() の戻り値が CPLAT_OK であること。
 
     // Assert
@@ -362,18 +362,18 @@ TEST_F(fileTimestampTest, null_arguments_are_rejected)
     // Pre-Assert
 
     // Act
-    int actual_ret_get_path = cplat_file_get_path_modified_timestamp(NULL, &actual, NULL);
-    int actual_ret_get_path_out = cplat_file_get_path_modified_timestamp(kPath, NULL, NULL);
-    int actual_ret_set_path = cplat_file_set_path_modified_timestamp(NULL, &timestamp, NULL);
-    int actual_ret_set_path_value = cplat_file_set_path_modified_timestamp(kPath, NULL, NULL);
-    int actual_ret_get_handle = cplat_file_get_modified_timestamp(NULL, &actual, NULL);
-    int actual_ret_get_handle_closed = cplat_file_get_modified_timestamp(&file, &actual, NULL);
-    int actual_ret_set_handle = cplat_file_set_modified_timestamp(NULL, &timestamp, NULL);
-    int actual_ret_get_handle_out = cplat_file_get_modified_timestamp(&open_file, NULL, NULL);
-    int actual_ret_set_handle_value = cplat_file_set_modified_timestamp(&open_file, NULL, NULL);
+    int actual_ret_get_path = cplat_file_get_path_modified_timestamp(nullptr, &actual, nullptr);
+    int actual_ret_get_path_out = cplat_file_get_path_modified_timestamp(kPath, nullptr, nullptr);
+    int actual_ret_set_path = cplat_file_set_path_modified_timestamp(nullptr, &timestamp, nullptr);
+    int actual_ret_set_path_value = cplat_file_set_path_modified_timestamp(kPath, nullptr, nullptr);
+    int actual_ret_get_handle = cplat_file_get_modified_timestamp(nullptr, &actual, nullptr);
+    int actual_ret_get_handle_closed = cplat_file_get_modified_timestamp(&file, &actual, nullptr);
+    int actual_ret_set_handle = cplat_file_set_modified_timestamp(nullptr, &timestamp, nullptr);
+    int actual_ret_get_handle_out = cplat_file_get_modified_timestamp(&open_file, nullptr, nullptr);
+    int actual_ret_set_handle_value = cplat_file_set_modified_timestamp(&open_file, nullptr, nullptr);
     // [手順] - 各関数へ NULL または無効なハンドルを指定する。
     // 有効なハンドルと NULL の出力引数を組み合わせ、短絡評価の両側を通す。
-    int actual_ret_close = cplat_file_close(&open_file, NULL); // [手順] - ファイルを閉じる。
+    int actual_ret_close = cplat_file_close(&open_file, nullptr); // [手順] - ファイルを閉じる。
     ASSERT_EQ(CPLAT_OK, actual_ret_close); // [状態確認] - cplat_file_close() の戻り値が CPLAT_OK であること。
 
     // Assert

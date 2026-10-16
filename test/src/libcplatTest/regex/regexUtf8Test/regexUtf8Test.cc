@@ -116,23 +116,49 @@ TEST_F(regexUtf8Test, decode_rejects_invalid_utf8)
     // Pre-Assert
 
     // Act
+    bool actual_ret_invalid_1 =
+        cplat_internal_regex_utf8_decode(overlong.data(), overlong.size(), units,
+                                         offsets); // [手順] - cplat_internal_regex_utf8_decode() を呼び出す。
 
     // Assert
-    EXPECT_FALSE(cplat_internal_regex_utf8_decode(
-        overlong.data(), overlong.size(), units,
-        offsets)); // [確認_異常系] - オーバー ロング表現 C0 80 に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
-    EXPECT_FALSE(cplat_internal_regex_utf8_decode(
-        surrogate.data(), surrogate.size(), units,
-        offsets)); // [確認_異常系] - 単独サロゲート ED A0 80 に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
-    EXPECT_FALSE(cplat_internal_regex_utf8_decode(
-        too_large.data(), too_large.size(), units,
-        offsets)); // [確認_異常系] - U+10FFFF を超える F5 80 80 80 に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
-    EXPECT_FALSE(cplat_internal_regex_utf8_decode(
-        truncated.data(), truncated.size(), units,
-        offsets)); // [確認_異常系] - 途中で切れた E3 81 に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
-    EXPECT_FALSE(cplat_internal_regex_utf8_decode(
-        lone_trail.data(), lone_trail.size(), units,
-        offsets)); // [確認_異常系] - 後続バイト単独の 80 に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
+    EXPECT_FALSE(
+        actual_ret_invalid_1); // [確認_異常系] - オーバー ロング表現 C0 80 に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
+
+    // Act_2
+    bool actual_ret_invalid_2 =
+        cplat_internal_regex_utf8_decode(surrogate.data(), surrogate.size(), units,
+                                         offsets); // [手順] - cplat_internal_regex_utf8_decode() を呼び出す。
+
+    // Assert_2
+    EXPECT_FALSE(
+        actual_ret_invalid_2); // [確認_異常系] - 単独サロゲート ED A0 80 に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
+
+    // Act_3
+    bool actual_ret_invalid_3 =
+        cplat_internal_regex_utf8_decode(too_large.data(), too_large.size(), units,
+                                         offsets); // [手順] - cplat_internal_regex_utf8_decode() を呼び出す。
+
+    // Assert_3
+    EXPECT_FALSE(
+        actual_ret_invalid_3); // [確認_異常系] - U+10FFFF を超える F5 80 80 80 に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
+
+    // Act_4
+    bool actual_ret_invalid_4 =
+        cplat_internal_regex_utf8_decode(truncated.data(), truncated.size(), units,
+                                         offsets); // [手順] - cplat_internal_regex_utf8_decode() を呼び出す。
+
+    // Assert_4
+    EXPECT_FALSE(
+        actual_ret_invalid_4); // [確認_異常系] - 途中で切れた E3 81 に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
+
+    // Act_5
+    bool actual_ret_invalid_5 =
+        cplat_internal_regex_utf8_decode(lone_trail.data(), lone_trail.size(), units,
+                                         offsets); // [手順] - cplat_internal_regex_utf8_decode() を呼び出す。
+
+    // Assert_5
+    EXPECT_FALSE(
+        actual_ret_invalid_5); // [確認_異常系] - 後続バイト単独の 80 に対する cplat_internal_regex_utf8_decode() の戻り値が false であること。
 }
 
 // コード単位列を UTF-8 へ戻せることの確認
@@ -263,9 +289,9 @@ TEST_F(regexUtf8Test, decode_handles_empty_null_and_invalid_trail_inputs)
 
     // Act
     bool empty_result =
-        cplat_internal_regex_utf8_decode(NULL, 0U, units, offsets); // [手順] - NULL と長さ 0 の入力を変換する。
+        cplat_internal_regex_utf8_decode(nullptr, 0U, units, offsets); // [手順] - NULL と長さ 0 の入力を変換する。
     bool null_nonempty_result =
-        cplat_internal_regex_utf8_decode(NULL, 1U, units, offsets); // [手順] - NULL と長さ 1 の入力を変換する。
+        cplat_internal_regex_utf8_decode(nullptr, 1U, units, offsets); // [手順] - NULL と長さ 1 の入力を変換する。
     bool invalid_trail_result =
         cplat_internal_regex_utf8_decode(invalid_trail.data(), invalid_trail.size(), units,
                                          offsets); // [手順] - 不正な後続バイトを含む入力を変換する。

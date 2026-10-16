@@ -21,7 +21,7 @@ TEST(traceCommonTest, resolves_valid_explicit_timestamp)
     // Act
     int actual_ret = cplat_internal_trace_resolve_timestamp(
         &timestamp, &resolved,
-        &fallback_used); // [手順] - 有効な明示タイムスタンプを指定して cplat_internal_trace_resolve_timestamp を呼び出す。
+        &fallback_used); // [手順] - 有効な明示タイムスタンプを指定して cplat_internal_trace_resolve_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp() の戻り値が 0 であること。
@@ -52,8 +52,8 @@ TEST(traceCommonTest, resolves_current_time_for_null_timestamp)
 
     // Act
     int actual_ret = cplat_internal_trace_resolve_timestamp(
-        NULL, &resolved,
-        &fallback_used); // [手順] - timestamp に NULL を指定して cplat_internal_trace_resolve_timestamp を呼び出す。
+        nullptr, &resolved,
+        &fallback_used); // [手順] - timestamp に NULL を指定して cplat_internal_trace_resolve_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp() の戻り値が 0 であること。
@@ -85,7 +85,7 @@ TEST(traceCommonTest, falls_back_from_invalid_explicit_timestamp)
     // Act
     int actual_ret = cplat_internal_trace_resolve_timestamp(
         &timestamp, &resolved,
-        &fallback_used); // [手順] - 無効な明示タイムスタンプを指定して cplat_internal_trace_resolve_timestamp を呼び出す。
+        &fallback_used); // [手順] - 無効な明示タイムスタンプを指定して cplat_internal_trace_resolve_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp() の戻り値が 0 であること。
@@ -114,8 +114,8 @@ TEST(traceCommonTest, rejects_invalid_current_time)
 
     // Act
     int actual_ret = cplat_internal_trace_resolve_timestamp(
-        NULL, &resolved,
-        &fallback_used); // [手順] - 取得時刻が無効になる条件で cplat_internal_trace_resolve_timestamp を呼び出す。
+        nullptr, &resolved,
+        &fallback_used); // [手順] - 取得時刻が無効になる条件で cplat_internal_trace_resolve_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_internal_trace_resolve_timestamp() の戻り値が -1 であること。
@@ -137,8 +137,8 @@ TEST(traceCommonTest, rejects_null_resolved)
 
     // Act
     int actual_ret = cplat_internal_trace_resolve_timestamp(
-        &timestamp, NULL,
-        &fallback_used); // [手順] - resolved に NULL を指定して cplat_internal_trace_resolve_timestamp を呼び出す。
+        &timestamp, nullptr,
+        &fallback_used); // [手順] - resolved に NULL を指定して cplat_internal_trace_resolve_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_internal_trace_resolve_timestamp() の戻り値が -1 であること。
@@ -167,7 +167,7 @@ TEST(traceCommonTest, allows_null_fallback_used)
     // Act
     int actual_ret = cplat_internal_trace_resolve_timestamp(
         &timestamp, &resolved,
-        NULL); // [手順] - fallback_used に NULL を指定して cplat_internal_trace_resolve_timestamp を呼び出す。
+        nullptr); // [手順] - fallback_used に NULL を指定して cplat_internal_trace_resolve_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp() の戻り値が 0 であること。
@@ -196,7 +196,7 @@ TEST(traceCommonTest, formats_valid_timestamp)
     // Act
     int actual_ret = cplat_internal_trace_format_local_timestamp(
         buf, sizeof(buf),
-        &timestamp); // [手順] - 有効なタイムスタンプを指定して cplat_internal_trace_format_local_timestamp を呼び出す。
+        &timestamp); // [手順] - 有効なタイムスタンプを指定して cplat_internal_trace_format_local_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -220,7 +220,7 @@ TEST(traceCommonTest, rejects_invalid_timestamp_for_formatting)
     // Act
     int actual_ret = cplat_internal_trace_format_local_timestamp(
         buf, sizeof(buf),
-        &timestamp); // [手順] - 無効なタイムスタンプを指定して cplat_internal_trace_format_local_timestamp を呼び出す。
+        &timestamp); // [手順] - 無効なタイムスタンプを指定して cplat_internal_trace_format_local_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1,
@@ -241,7 +241,7 @@ TEST(traceCommonTest, rejects_null_timestamp_for_formatting)
     // Act
     int actual_ret = cplat_internal_trace_format_local_timestamp(
         buf, sizeof(buf),
-        NULL); // [手順] - timestamp に NULL を指定して cplat_internal_trace_format_local_timestamp を呼び出す。
+        nullptr); // [手順] - timestamp に NULL を指定して cplat_internal_trace_format_local_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1,
@@ -263,8 +263,8 @@ TEST(traceCommonTest, propagates_error_for_null_buffer)
 
     // Act
     int actual_ret = cplat_internal_trace_format_local_timestamp(
-        NULL, 32,
-        &timestamp); // [手順] - buf に NULL を指定して cplat_internal_trace_format_local_timestamp を呼び出す。
+        nullptr, 32,
+        &timestamp); // [手順] - buf に NULL を指定して cplat_internal_trace_format_local_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -289,7 +289,7 @@ TEST(traceCommonTest, propagates_error_for_zero_buffer_size)
     // Act
     int actual_ret = cplat_internal_trace_format_local_timestamp(
         buf, 0,
-        &timestamp); // [手順] - buf_size に 0 を指定して cplat_internal_trace_format_local_timestamp を呼び出す。
+        &timestamp); // [手順] - buf_size に 0 を指定して cplat_internal_trace_format_local_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -321,7 +321,7 @@ TEST(traceCommonTest, maps_all_trace_levels)
     for (size_t i = 0; i < sizeof(levels) / sizeof(levels[0]); ++i)
     {
         actual[i] = cplat_internal_trace_level_char(
-            levels[i]); // [手順] - 各トレース レベルを cplat_internal_trace_level_char で文字へ変換する。
+            levels[i]); // [手順] - 各トレース レベルを cplat_internal_trace_level_char() で文字へ変換する。
     }
 
     // Assert

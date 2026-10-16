@@ -31,7 +31,7 @@ static char *copy_line(char *dst, int size, const char *src)
 
     if (size <= 0)
     {
-        return NULL;
+        return nullptr;
     }
 
     if (len >= (size_t)size)
@@ -47,7 +47,7 @@ static int emulate_cplat_strncpy(char *dest, size_t dest_size, const char *src, 
 {
     size_t len;
 
-    if (dest == NULL || dest_size == 0U || src == NULL)
+    if (dest == nullptr || dest_size == 0U || src == nullptr)
     {
         return EINVAL;
     }
@@ -82,15 +82,15 @@ class trace_cliTest : public Test
     {
         trace_cli_session_init(&session_);
         ON_CALL(mock_cplat_, cplat_strncpy(_, _, _, _)).WillByDefault(emulate_cplat_strncpy);
-        // [状態] - `cplat_strncpy` の既定動作を設定する。
+        // [状態] - cplat_strncpy() の既定動作を設定する。
         ON_CALL(mock_cplat_, cplat_isatty(CPLAT_STREAM_STDOUT)).WillByDefault(Return(1));
-        // [状態] - `cplat_isatty` の既定動作を設定する。
+        // [状態] - cplat_isatty() の既定動作を設定する。
         ON_CALL(mock_cplat_, cplat_tracer_dispose(_)).WillByDefault(Return());
-        // [状態] - `cplat_tracer_dispose` の既定動作を設定する。
+        // [状態] - cplat_tracer_dispose() の既定動作を設定する。
         ON_CALL(mock_stdio_, printf(_, _, _, _)).WillByDefault(Return(0));
-        // [状態] - `printf` の既定動作を設定する。
+        // [状態] - printf() の既定動作を設定する。
         ON_CALL(mock_stdio_, fprintf(_, _, _, _, _)).WillByDefault(Return(0));
-        // [状態] - `fprintf` の既定動作を設定する。
+        // [状態] - fprintf() の既定動作を設定する。
     }
     // [サブ手順終了]
 
@@ -112,13 +112,15 @@ TEST_F(trace_cliTest, process_line_create_and_reject_second_create)
     EXPECT_CALL(mock_cplat_, cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED))
         .WillOnce(Return(
             handle_)); // [Pre-Assert確認_正常系] - cplat_tracer_create() が CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - cplat_tracer_create から handle_ を返却する。
+                       // [Pre-Assert手順] - cplat_tracer_create() から handle_ を返却する。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq("handle=created\n")))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - create 成功時に printf() が "handle=created\n" と等しい文字列を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
     EXPECT_CALL(mock_stdio_, fprintf(_, _, _, _, HasSubstr("既存の handle")))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_異常系] - 2 回目の create で fprintf() が "既存の handle" を含む文字列を指定して 1 回呼び出されること。(操作エラーが出力されることの確認)
+                 // [Pre-Assert手順] - fprintf() にて 0 を返却する。
 
     // Act
     int first = trace_cli_process_line(&session_, "create");  // [手順] - 1 回目の "create" を処理する。
@@ -148,10 +150,11 @@ TEST_F(trace_cliTest, process_line_set_file_level_accepts_null_keyword)
     EXPECT_CALL(mock_cplat_, cplat_tracer_set_file_level(handle_, nullptr, CPLAT_TRACE_LEVEL_INFO, 0U, 0, 0))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_tracer_set_file_level() が handle_、nullptr、CPLAT_TRACE_LEVEL_INFO、0U、0、0 を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_tracer_set_file_level から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_tracer_set_file_level() から 0 を返却する。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq(kRcSuccessTty)))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - printf() が kRcSuccessTty と等しい文字列を指定して 1 回呼び出されること。(正常戻り値が緑の "rc=0" として表示されることの確認)
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
 
     // Act
     int rc = trace_cli_process_line(&session_,
@@ -173,10 +176,11 @@ TEST_F(trace_cliTest, process_line_set_os_level_colors_error_rc)
     EXPECT_CALL(mock_cplat_, cplat_tracer_set_os_level(handle_, CPLAT_TRACE_LEVEL_INFO))
         .WillOnce(Return(
             -1)); // [Pre-Assert確認_異常系] - cplat_tracer_set_os_level() が handle_、CPLAT_TRACE_LEVEL_INFO を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - cplat_tracer_set_os_level から -1 を返却する。
+                  // [Pre-Assert手順] - cplat_tracer_set_os_level() から -1 を返却する。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq(kRcErrorTty)))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_異常系] - printf() が kRcErrorTty と等しい文字列を指定して 1 回呼び出されること。(エラー戻り値が赤の "rc=-1" として表示されることの確認)
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
 
     // Act
     int rc = trace_cli_process_line(&session_, "set-os-level INFO"); // [手順] - "set-os-level INFO" を処理する。
@@ -197,14 +201,15 @@ TEST_F(trace_cliTest, process_line_set_os_level_keeps_plain_rc_when_stdout_is_no
     EXPECT_CALL(mock_cplat_, cplat_isatty(CPLAT_STREAM_STDOUT))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_isatty() が CPLAT_STREAM_STDOUT を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_isatty から 0 (非 TTY) を返却する。
+                 // [Pre-Assert手順] - cplat_isatty() から 0 (非 TTY) を返却する。
     EXPECT_CALL(mock_cplat_, cplat_tracer_set_os_level(handle_, CPLAT_TRACE_LEVEL_INFO))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_tracer_set_os_level() が handle_、CPLAT_TRACE_LEVEL_INFO を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_tracer_set_os_level から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_tracer_set_os_level() から 0 を返却する。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq("rc=0\n")))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - printf() が "rc=0\n" と等しい文字列を指定して 1 回呼び出されること。(ANSI 色なしの "rc=0" が表示されることの確認)
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
 
     // Act
     int rc = trace_cli_process_line(&session_, "set-os-level INFO"); // [手順] - "set-os-level INFO" を処理する。
@@ -229,9 +234,11 @@ TEST_F(trace_cliTest, process_line_dispose_releases_handle)
     EXPECT_CALL(mock_cplat_, cplat_tracer_dispose(Pointee(handle_)))
         .WillOnce(
             Return()); // [Pre-Assert確認_正常系] - cplat_tracer_dispose() が指す先が handle_ であるポインターを指定して 1 回呼び出されること。
+                       // [Pre-Assert手順] - cplat_tracer_dispose() にて呼び出し元へ戻る。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq("handle=disposed\n")))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - dispose 結果として printf() が "handle=disposed\n" と等しい文字列を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
 
     // Act
     int rc = trace_cli_process_line(&session_, "dispose"); // [手順] - "dispose" を処理する。
@@ -271,10 +278,11 @@ TEST_F(trace_cliTest, process_line_write_hex_parses_quoted_hex_and_label)
                     bytes[2]); // [Pre-Assert確認_正常系] - bytes[2] が 0xFF であること。(3 byte 目であることの確認)
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_tracer_write_hex_at() が handle_、CPLAT_TRACE_LEVEL_INFO、nullptr、3U、"payload bytes" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_tracer_write_hex_at から 0 を返却する。
+                // [Pre-Assert手順] - cplat_tracer_write_hex_at() から 0 を返却する。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq(kRcSuccessTty)))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - printf() が kRcSuccessTty と等しい文字列を指定して 1 回呼び出されること。(正常戻り値が緑の "rc=0" として表示されることの確認)
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
 
     // Act
     int rc = trace_cli_process_line(
@@ -298,10 +306,11 @@ TEST_F(trace_cliTest, process_line_writef_uses_message_as_single_string)
                                                     StrEq("message with spaces")))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_tracer_writef_at() が handle_、CPLAT_TRACE_LEVEL_DEBUG、nullptr、"message with spaces" と等しい文字列を指定して 1 回呼び出されること。(空白を含む message 全体が渡されることの確認)
-    // [Pre-Assert手順] - cplat_tracer_writef_at から 0 を返却する。
+    // [Pre-Assert手順] - cplat_tracer_writef_at() から 0 を返却する。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq(kRcSuccessTty)))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - printf() が kRcSuccessTty と等しい文字列を指定して 1 回呼び出されること。(正常戻り値が緑の "rc=0" として表示されることの確認)
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
 
     // Act
     int rc = trace_cli_process_line(
@@ -322,10 +331,11 @@ TEST_F(trace_cliTest, process_line_get_os_level_calls_api_with_null_handle)
     EXPECT_CALL(mock_cplat_, cplat_tracer_get_os_level(nullptr))
         .WillOnce(Return(
             CPLAT_TRACE_LEVEL_WARNING)); // [Pre-Assert確認_正常系] - cplat_tracer_get_os_level() が nullptr を指定して 1 回呼び出されること。(handle 未生成の NULL のまま呼び出されることの確認)
-                                         // [Pre-Assert手順] - cplat_tracer_get_os_level から WARNING を返却する。
+                                         // [Pre-Assert手順] - cplat_tracer_get_os_level() から WARNING を返却する。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq("level=WARNING(2)\n")))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - 取得結果として printf() が "level=WARNING(2)\n" と等しい文字列を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
 
     // Act
     int rc = trace_cli_process_line(&session_, "get-os-level"); // [手順] - "get-os-level" を処理する。
@@ -349,9 +359,11 @@ TEST_F(trace_cliTest, process_line_help_prints_command_list)
     EXPECT_CALL(mock_stdio_, printf(_, _, _, HasSubstr("trace-cli")))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - printf() が "trace-cli" を含む文字列を指定して 1 回呼び出されること。(help 見出しが出力されることの確認)
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, HasSubstr("write-hexf")))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - printf() が "write-hexf" を含む文字列を指定して 1 回呼び出されること。(コマンド一覧が出力されることの確認)
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
 
     // Act
     int rc = trace_cli_process_line(&session_, "help"); // [手順] - "help" を処理する。
@@ -392,6 +404,7 @@ TEST_F(trace_cliTest, main_prints_usage_on_help)
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
+                             // [Pre-Assert手順] - cplat_console_init() にて呼び出し元へ戻る。
 
     // Act
     int rc = __real_main(argc, (char **)&argv); // [手順] - main() に引数を与えて呼び出す。
@@ -420,12 +433,14 @@ TEST_F(trace_cliTest, main_runs_interactive_sequence_and_disposes_handle)
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
+                             // [Pre-Assert手順] - cplat_console_init() にて呼び出し元へ戻る。
     EXPECT_CALL(mock_cplat_, cplat_prompt_create(_))
         .WillOnce(Return(prompt_handle)); // [Pre-Assert確認_正常系] - cplat_prompt_create() が 1 回呼び出されること。
-                                          // [Pre-Assert手順] - cplat_prompt_create から prompt_handle を返却する。
+                                          // [Pre-Assert手順] - cplat_prompt_create() から prompt_handle を返却する。
     EXPECT_CALL(mock_cplat_, cplat_prompt_dispose(prompt_handle))
         .WillOnce(
             Return()); // [Pre-Assert確認_正常系] - cplat_prompt_dispose() が prompt_handle を指定して 1 回呼び出されること。
+                       // [Pre-Assert手順] - cplat_prompt_dispose() にて呼び出し元へ戻る。
     EXPECT_CALL(mock_cplat_, cplat_tracer_dispose(_))
         .Times(AnyNumber())
         .WillRepeatedly(Return()); // [Pre-Assert確認_正常系] - cplat_tracer_dispose() が任意の回数呼び出されること。
@@ -433,7 +448,7 @@ TEST_F(trace_cliTest, main_runs_interactive_sequence_and_disposes_handle)
     EXPECT_CALL(mock_cplat_, cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED))
         .WillOnce(Return(
             handle_)); // [Pre-Assert確認_正常系] - create コマンドで cplat_tracer_create() が CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - cplat_tracer_create から handle_ を返却する。
+                       // [Pre-Assert手順] - cplat_tracer_create() から handle_ を返却する。
     EXPECT_CALL(mock_cplat_, cplat_tracer_get_state(handle_))
         .WillOnce(Return(CPLAT_TRACER_STATE_STOPPED))
         .WillOnce(Return(CPLAT_TRACER_STATE_STARTED))
@@ -444,18 +459,19 @@ TEST_F(trace_cliTest, main_runs_interactive_sequence_and_disposes_handle)
     EXPECT_CALL(mock_cplat_, cplat_tracer_start(handle_))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - start コマンドで cplat_tracer_start() が handle_ を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_tracer_start から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_tracer_start() から 0 を返却する。
     EXPECT_CALL(mock_cplat_, cplat_tracer_write_at(handle_, CPLAT_TRACE_LEVEL_INFO, nullptr, StrEq("hello world")))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - write コマンドで cplat_tracer_write_at() が handle_、CPLAT_TRACE_LEVEL_INFO、nullptr、"hello world" と等しい文字列を指定して 1 回呼び出されること。(message がそのまま渡されることの確認)
-                 // [Pre-Assert手順] - cplat_tracer_write_at から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_tracer_write_at() から 0 を返却する。
     EXPECT_CALL(mock_cplat_, cplat_tracer_stop(handle_))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - stop コマンドで cplat_tracer_stop() が handle_ を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_tracer_stop から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_tracer_stop() から 0 を返却する。
     EXPECT_CALL(mock_cplat_, cplat_tracer_dispose(Pointee(handle_)))
         .WillOnce(
             Return()); // [Pre-Assert確認_正常系] - dispose コマンドで cplat_tracer_dispose() が指す先が handle_ であるポインターを指定して 1 回呼び出されること。
+                       // [Pre-Assert手順] - cplat_tracer_dispose() にて呼び出し元へ戻る。
     EXPECT_CALL(mock_cplat_, cplat_prompt_readline_fmt_at(prompt_handle, _, _, _, _, _, _))
         .WillRepeatedly(
             [&](cplat_prompt *, char *buf, size_t buf_size, const char *, int, const char *, va_list) -> int
@@ -467,7 +483,7 @@ TEST_F(trace_cliTest, main_runs_interactive_sequence_and_disposes_handle)
                 copy_line(buf, (int)buf_size, lines[index++].c_str());
                 return CPLAT_OK;
             }); // [Pre-Assert確認_正常系] - cplat_prompt_readline_fmt_at() が prompt_handle を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - cplat_prompt_readline_fmt_at にて入力列を 1 行ずつ返却し、尽きたら CPLAT_ERR_EOF を返却する。
+    // [Pre-Assert手順] - cplat_prompt_readline_fmt_at() にて入力列を 1 行ずつ返却し、尽きたら CPLAT_ERR_EOF を返却する。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, _))
         .Times(AnyNumber())
         .WillRepeatedly(Return(0)); // [Pre-Assert確認_正常系] - printf() が任意の回数呼び出されること。
@@ -476,22 +492,27 @@ TEST_F(trace_cliTest, main_runs_interactive_sequence_and_disposes_handle)
         .InSequence(io_seq)
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - create 結果として printf() が "handle=created\n" と等しい文字列を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq(kRcSuccessTty)))
         .InSequence(io_seq)
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - printf() が kRcSuccessTty と等しい文字列を指定して 1 回呼び出されること。(start の戻り値が緑の "rc=0" として表示されることの確認)
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq(kRcSuccessTty)))
         .InSequence(io_seq)
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - printf() が kRcSuccessTty と等しい文字列を指定して 1 回呼び出されること。(write の戻り値が緑の "rc=0" として表示されることの確認)
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq(kRcSuccessTty)))
         .InSequence(io_seq)
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - printf() が kRcSuccessTty と等しい文字列を指定して 1 回呼び出されること。(stop の戻り値が緑の "rc=0" として表示されることの確認)
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq("handle=disposed\n")))
         .InSequence(io_seq)
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - dispose 結果として printf() が "handle=disposed\n" と等しい文字列を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
 
     // Act
     int rc = __real_main(argc, (char **)&argv); // [手順] - main() を引数なしで呼び出し、対話シーケンスを実行する。

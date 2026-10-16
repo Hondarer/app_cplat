@@ -40,9 +40,9 @@ TEST_F(compressTest, round_trip_restores_original_bytes)
     // Act
     int actual_ret_compress =
         cplat_compress(compressed.data(), &compressed_len, reinterpret_cast<const uint8_t *>(plain.data()),
-                       plain.size()); // [手順] - 平文を cplat_compress で圧縮する。
+                       plain.size()); // [手順] - 平文を cplat_compress() で圧縮する。
     int actual_ret_decompress = cplat_decompress(restored.data(), &restored_len, compressed.data(),
-                                                 compressed_len); // [手順] - 圧縮結果を cplat_decompress で展開する。
+                                                 compressed_len); // [手順] - 圧縮結果を cplat_decompress() で展開する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_compress);   // [確認_正常系] - cplat_compress() の戻り値が CPLAT_OK であること。
@@ -72,11 +72,11 @@ TEST_F(compressTest, compress_rejects_invalid_arguments)
 
     // Act
     int actual_ret_null_dst =
-        cplat_compress(NULL, &dst_len, src, sizeof(src)); // [手順] - dst に NULL を指定して呼び出す。
+        cplat_compress(nullptr, &dst_len, src, sizeof(src)); // [手順] - dst に NULL を指定して呼び出す。
     int actual_ret_null_dst_len =
-        cplat_compress(dst, NULL, src, sizeof(src)); // [手順] - dst_len に NULL を指定して呼び出す。
+        cplat_compress(dst, nullptr, src, sizeof(src)); // [手順] - dst_len に NULL を指定して呼び出す。
     int actual_ret_null_src =
-        cplat_compress(dst, &dst_len, NULL, sizeof(src));                 // [手順] - src に NULL を指定して呼び出す。
+        cplat_compress(dst, &dst_len, nullptr, sizeof(src));              // [手順] - src に NULL を指定して呼び出す。
     int actual_ret_zero_src_len = cplat_compress(dst, &dst_len, src, 0u); // [手順] - src_len に 0 を指定して呼び出す。
 
     // Assert
@@ -110,7 +110,7 @@ TEST_F(compressTest, compress_returns_limit_exceeded_when_src_len_exceeds_max)
     // Act
     int actual_ret =
         cplat_compress(dst, &dst_len, src,
-                       too_large_src_len); // [手順] - src_len が処理上限を超える値で cplat_compress を呼び出す。
+                       too_large_src_len); // [手順] - src_len が処理上限を超える値で cplat_compress() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -134,7 +134,7 @@ TEST_F(compressTest, compress_returns_buffer_too_small_for_header_only_buffer)
     // Act
     int actual_ret =
         cplat_compress(dst, &dst_len, src,
-                       sizeof(src)); // [手順] - ヘッダー分しかない出力バッファーで cplat_compress を呼び出す。
+                       sizeof(src)); // [手順] - ヘッダー分しかない出力バッファーで cplat_compress() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -154,7 +154,7 @@ TEST_F(compressTest, compress_returns_unknown_when_output_does_not_fit)
 
     // Act
     int actual_ret = cplat_compress(dst, &dst_len, reinterpret_cast<const uint8_t *>(plain.data()),
-                                    plain.size()); // [手順] - 出力が収まらないサイズで cplat_compress を呼び出す。
+                                    plain.size()); // [手順] - 出力が収まらないサイズで cplat_compress() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -174,11 +174,11 @@ TEST_F(compressTest, decompress_rejects_invalid_arguments)
 
     // Act
     int actual_ret_null_dst =
-        cplat_decompress(NULL, &dst_len, src, sizeof(src)); // [手順] - dst に NULL を指定して呼び出す。
+        cplat_decompress(nullptr, &dst_len, src, sizeof(src)); // [手順] - dst に NULL を指定して呼び出す。
     int actual_ret_null_dst_len =
-        cplat_decompress(dst, NULL, src, sizeof(src)); // [手順] - dst_len に NULL を指定して呼び出す。
+        cplat_decompress(dst, nullptr, src, sizeof(src)); // [手順] - dst_len に NULL を指定して呼び出す。
     int actual_ret_null_src =
-        cplat_decompress(dst, &dst_len, NULL, sizeof(src)); // [手順] - src に NULL を指定して呼び出す。
+        cplat_decompress(dst, &dst_len, nullptr, sizeof(src)); // [手順] - src に NULL を指定して呼び出す。
     int actual_ret_header_only = cplat_decompress(
         dst, &dst_len, src, CPLAT_COMPRESS_HEADER_SIZE); // [手順] - src_len をヘッダー長ちょうどに指定して呼び出す。
 
@@ -246,7 +246,7 @@ TEST_F(compressTest, decompress_returns_unknown_for_corrupt_stream)
     // Act
     int actual_ret =
         cplat_decompress(dst, &dst_len, src,
-                         sizeof(src)); // [手順] - 不正な DEFLATE ストリームで cplat_decompress を呼び出す。
+                         sizeof(src)); // [手順] - 不正な DEFLATE ストリームで cplat_decompress() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -270,7 +270,7 @@ TEST_F(compressTest, decompress_returns_limit_exceeded_when_original_size_exceed
     // Act
     int actual_ret =
         cplat_decompress(dst, &dst_len, src,
-                         sizeof(src)); // [手順] - 展開後長さが処理上限以上のヘッダーで cplat_decompress を呼び出す。
+                         sizeof(src)); // [手順] - 展開後長さが処理上限以上のヘッダーで cplat_decompress() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_LIMIT_EXCEEDED,
@@ -290,7 +290,7 @@ TEST_F(compressTest, compress_returns_out_of_memory_when_deflate_init_fails)
     EXPECT_CALL(mock_zlib, deflateInit2_(_, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY,
                                          StrEq(ZLIB_VERSION), static_cast<int>(sizeof(z_stream))))
         .WillOnce(Return(
-            Z_MEM_ERROR)); // [Pre-Assert確認_異常系] - deflateInit2_() が Z_DEFAULT_COMPRESSION、Z_DEFLATED、-15、8、Z_DEFAULT_STRATEGY、ZLIB_VERSION と等しい文字列、static_cast<int>(sizeof(z_stream)) を指定して 1 回呼び出されること。
+            Z_MEM_ERROR)); // [Pre-Assert確認_異常系] - deflateInit2_() が Z_DEFAULT_COMPRESSION、Z_DEFLATED、-15、8、Z_DEFAULT_STRATEGY、ZLIB_VERSION と等しい文字列、sizeof(z_stream) を指定して 1 回呼び出されること。
                            // [Pre-Assert手順] - Z_MEM_ERROR を返す。
     EXPECT_CALL(mock_zlib, deflate(_, _))
         .Times(0); // [Pre-Assert確認_異常系] - deflate() が呼び出されないこと。(初期化失敗後に処理しないことの確認)
@@ -321,7 +321,7 @@ TEST_F(compressTest, compress_returns_unknown_when_deflate_init_fails)
     EXPECT_CALL(mock_zlib, deflateInit2_(_, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY,
                                          StrEq(ZLIB_VERSION), static_cast<int>(sizeof(z_stream))))
         .WillOnce(Return(
-            Z_STREAM_ERROR)); // [Pre-Assert確認_異常系] - deflateInit2_() が Z_DEFAULT_COMPRESSION、Z_DEFLATED、-15、8、Z_DEFAULT_STRATEGY、ZLIB_VERSION と等しい文字列、static_cast<int>(sizeof(z_stream)) を指定して 1 回呼び出されること。
+            Z_STREAM_ERROR)); // [Pre-Assert確認_異常系] - deflateInit2_() が Z_DEFAULT_COMPRESSION、Z_DEFLATED、-15、8、Z_DEFAULT_STRATEGY、ZLIB_VERSION と等しい文字列、sizeof(z_stream) を指定して 1 回呼び出されること。
                               // [Pre-Assert手順] - Z_STREAM_ERROR を返す。
     EXPECT_CALL(mock_zlib, deflate(_, _))
         .Times(0); // [Pre-Assert確認_異常系] - deflate() が呼び出されないこと。(初期化失敗後に処理しないことの確認)
@@ -351,7 +351,7 @@ TEST_F(compressTest, decompress_returns_out_of_memory_when_inflate_init_fails)
     // Pre-Assert
     EXPECT_CALL(mock_zlib, inflateInit2_(_, -15, StrEq(ZLIB_VERSION), static_cast<int>(sizeof(z_stream))))
         .WillOnce(Return(
-            Z_MEM_ERROR)); // [Pre-Assert確認_異常系] - inflateInit2_() が -15、ZLIB_VERSION と等しい文字列、static_cast<int>(sizeof(z_stream)) を指定して 1 回呼び出されること。
+            Z_MEM_ERROR)); // [Pre-Assert確認_異常系] - inflateInit2_() が -15、ZLIB_VERSION と等しい文字列、sizeof(z_stream) を指定して 1 回呼び出されること。
                            // [Pre-Assert手順] - Z_MEM_ERROR を返す。
     EXPECT_CALL(mock_zlib, inflate(_, _))
         .Times(0); // [Pre-Assert確認_異常系] - inflate() が呼び出されないこと。(初期化失敗後に処理しないことの確認)
@@ -381,7 +381,7 @@ TEST_F(compressTest, decompress_returns_unknown_when_inflate_init_fails)
     // Pre-Assert
     EXPECT_CALL(mock_zlib, inflateInit2_(_, -15, StrEq(ZLIB_VERSION), static_cast<int>(sizeof(z_stream))))
         .WillOnce(Return(
-            Z_STREAM_ERROR)); // [Pre-Assert確認_異常系] - inflateInit2_() が -15、ZLIB_VERSION と等しい文字列、static_cast<int>(sizeof(z_stream)) を指定して 1 回呼び出されること。
+            Z_STREAM_ERROR)); // [Pre-Assert確認_異常系] - inflateInit2_() が -15、ZLIB_VERSION と等しい文字列、sizeof(z_stream) を指定して 1 回呼び出されること。
                               // [Pre-Assert手順] - Z_STREAM_ERROR を返す。
     EXPECT_CALL(mock_zlib, inflate(_, _))
         .Times(0); // [Pre-Assert確認_異常系] - inflate() が呼び出されないこと。(初期化失敗後に処理しないことの確認)
@@ -415,9 +415,7 @@ TEST_F(compressTest, compress_returns_out_of_memory_when_deflate_processing_fail
             Z_MEM_ERROR)); // [Pre-Assert確認_異常系] - deflate() が Z_FINISH を指定して 1 回呼び出されること。(初期化に成功した後の処理であることの確認)
                            // [Pre-Assert手順] - Z_MEM_ERROR を返す。
     EXPECT_CALL(mock_zlib, deflateEnd(_))
-        .WillOnce(
-            DoDefault()); // [Pre-Assert確認_異常系] - deflateEnd() が 1 回呼び出されること。(失敗後も終了処理を呼ぶことの確認)
-                          // [Pre-Assert手順] - 実関数へ委譲してストリームを解放する。
+        .Times(1); // [Pre-Assert確認_異常系] - deflateEnd() が 1 回呼び出されること。(失敗後も終了処理を呼ぶことの確認)
 
     // Act
     int actual_ret = cplat_compress(dst, &dst_len, src, sizeof(src)); // [手順] - 失敗を注入して呼び出す。
@@ -445,9 +443,7 @@ TEST_F(compressTest, compress_returns_unknown_when_deflate_processing_fails)
             Z_STREAM_ERROR)); // [Pre-Assert確認_異常系] - deflate() が Z_FINISH を指定して 1 回呼び出されること。(初期化に成功した後の処理であることの確認)
                               // [Pre-Assert手順] - Z_STREAM_ERROR を返す。
     EXPECT_CALL(mock_zlib, deflateEnd(_))
-        .WillOnce(
-            DoDefault()); // [Pre-Assert確認_異常系] - deflateEnd() が 1 回呼び出されること。(失敗後も終了処理を呼ぶことの確認)
-                          // [Pre-Assert手順] - 実関数へ委譲してストリームを解放する。
+        .Times(1); // [Pre-Assert確認_異常系] - deflateEnd() が 1 回呼び出されること。(失敗後も終了処理を呼ぶことの確認)
 
     // Act
     int actual_ret = cplat_compress(dst, &dst_len, src, sizeof(src)); // [手順] - 失敗を注入して呼び出す。
@@ -475,9 +471,7 @@ TEST_F(compressTest, decompress_returns_out_of_memory_when_inflate_processing_fa
             Z_MEM_ERROR)); // [Pre-Assert確認_異常系] - inflate() が Z_FINISH を指定して 1 回呼び出されること。(初期化に成功した後の処理であることの確認)
                            // [Pre-Assert手順] - Z_MEM_ERROR を返す。
     EXPECT_CALL(mock_zlib, inflateEnd(_))
-        .WillOnce(
-            DoDefault()); // [Pre-Assert確認_異常系] - inflateEnd() が 1 回呼び出されること。(失敗後も終了処理を呼ぶことの確認)
-                          // [Pre-Assert手順] - 実関数へ委譲してストリームを解放する。
+        .Times(1); // [Pre-Assert確認_異常系] - inflateEnd() が 1 回呼び出されること。(失敗後も終了処理を呼ぶことの確認)
 
     // Act
     int actual_ret = cplat_decompress(dst, &dst_len, src, sizeof(src)); // [手順] - 失敗を注入して呼び出す。
@@ -505,9 +499,7 @@ TEST_F(compressTest, decompress_returns_unknown_when_inflate_processing_fails)
             Z_STREAM_ERROR)); // [Pre-Assert確認_異常系] - inflate() が Z_FINISH を指定して 1 回呼び出されること。(初期化に成功した後の処理であることの確認)
                               // [Pre-Assert手順] - Z_STREAM_ERROR を返す。
     EXPECT_CALL(mock_zlib, inflateEnd(_))
-        .WillOnce(
-            DoDefault()); // [Pre-Assert確認_異常系] - inflateEnd() が 1 回呼び出されること。(失敗後も終了処理を呼ぶことの確認)
-                          // [Pre-Assert手順] - 実関数へ委譲してストリームを解放する。
+        .Times(1); // [Pre-Assert確認_異常系] - inflateEnd() が 1 回呼び出されること。(失敗後も終了処理を呼ぶことの確認)
 
     // Act
     int actual_ret = cplat_decompress(dst, &dst_len, src, sizeof(src)); // [手順] - 失敗を注入して呼び出す。

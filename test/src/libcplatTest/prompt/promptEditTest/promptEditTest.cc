@@ -312,16 +312,16 @@ TEST_F(promptEditTest, ensure_capacity_rejects_required_over_max)
 TEST_F(promptEditTest, ensure_capacity_rejects_null_arguments)
 {
     // Arrange
-    char *buf = NULL;
+    char *buf = nullptr;
     size_t cap = 0u;
 
     // Pre-Assert
 
     // Act
     int actual_ret_null_buf =
-        cplat_internal_prompt_edit_ensure_capacity(NULL, &cap, 16u, 8u); // [手順] - buf に NULL を指定する。
+        cplat_internal_prompt_edit_ensure_capacity(nullptr, &cap, 16u, 8u); // [手順] - buf に NULL を指定する。
     int actual_ret_null_cap =
-        cplat_internal_prompt_edit_ensure_capacity(&buf, NULL, 16u, 8u); // [手順] - cap に NULL を指定する。
+        cplat_internal_prompt_edit_ensure_capacity(&buf, nullptr, 16u, 8u); // [手順] - cap に NULL を指定する。
 
     // Assert
     EXPECT_EQ(
@@ -353,9 +353,9 @@ TEST_F(promptEditTest, resolve_options_applies_defaults_for_zero)
 
     // Assert
     EXPECT_EQ((size_t)CPLAT_PROMPT_HISTORY_DEFAULT,
-              history_max); // [確認_正常系] - history_max が (size_t)CPLAT_PROMPT_HISTORY_DEFAULT であること。
+              history_max); // [確認_正常系] - history_max が CPLAT_PROMPT_HISTORY_DEFAULT であること。
     EXPECT_EQ((size_t)CPLAT_PROMPT_INPUT_BYTES_DEFAULT,
-              max_bytes); // [確認_正常系] - max_bytes が (size_t)CPLAT_PROMPT_INPUT_BYTES_DEFAULT であること。
+              max_bytes);              // [確認_正常系] - max_bytes が CPLAT_PROMPT_INPUT_BYTES_DEFAULT であること。
     EXPECT_EQ(128u, initial_capacity); // [確認_正常系] - initial_capacity が 128 であること。
 }
 
@@ -408,8 +408,8 @@ TEST_F(promptEditTest, resolve_options_accepts_null_outputs)
     // Pre-Assert
 
     // Act
-    cplat_internal_prompt_edit_resolve_options(4u, 8u, 16u, 128u, NULL, NULL,
-                                               NULL); // [手順] - 出力先をすべて NULL にして呼び出す。
+    cplat_internal_prompt_edit_resolve_options(4u, 8u, 16u, 128u, nullptr, nullptr,
+                                               nullptr); // [手順] - 出力先をすべて NULL にして呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(出力先がすべて NULL の解決処理がクラッシュしないことの確認)
@@ -429,7 +429,7 @@ TEST_F(promptEditTest, ensure_capacity_returns_minus1_when_realloc_fails)
     EXPECT_CALL(mock_cplat, cplat_realloc(buf, 32u, 1u))
         .WillOnce(Return(
             nullptr)); // [Pre-Assert確認_異常系] - cplat_realloc() が buf、32、1 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - cplat_realloc から NULL を返却する。
+                       // [Pre-Assert手順] - cplat_realloc() から NULL を返却する。
 
     // Act
     int actual_ret =
@@ -458,7 +458,7 @@ TEST_F(promptEditTest, ensure_capacity_caps_at_max_after_overflow)
     EXPECT_CALL(mock_cplat, cplat_realloc(buf, max_size, 1u))
         .WillOnce(Return(
             nullptr)); // [Pre-Assert確認_異常系] - cplat_realloc() が buf、max_size、1 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - cplat_realloc から NULL を返却する。
+                       // [Pre-Assert手順] - cplat_realloc() から NULL を返却する。
 
     // Act
     int actual_ret =
@@ -487,7 +487,7 @@ TEST_F(promptEditTest, validate_initial_text_accepts_null_as_empty)
 
     // Act
     int actual_ret =
-        cplat_internal_prompt_edit_validate_initial_text(NULL, 16u, &length); // [手順] - NULL の初期値を検証する。
+        cplat_internal_prompt_edit_validate_initial_text(nullptr, 16u, &length); // [手順] - NULL の初期値を検証する。
 
     // Assert
     EXPECT_EQ(
@@ -598,7 +598,7 @@ TEST_F(promptEditTest, validate_initial_text_rejects_null_length_out)
 
     // Act
     int actual_ret =
-        cplat_internal_prompt_edit_validate_initial_text("abc", 16u, NULL); // [手順] - 長さの格納先に NULL を渡す。
+        cplat_internal_prompt_edit_validate_initial_text("abc", 16u, nullptr); // [手順] - 長さの格納先に NULL を渡す。
 
     // Assert
     EXPECT_EQ(

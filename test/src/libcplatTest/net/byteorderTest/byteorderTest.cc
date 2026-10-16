@@ -59,7 +59,7 @@ TEST(byteorderTest, ntoh16_reads_most_significant_byte_first)
     // Assert
     EXPECT_EQ(
         (uint16_t)0x1234U,
-        converted); // [確認_正常系] - cplat_ntoh16() の戻り値が (uint16_t)0x1234U であること。(ビッグ エンディアンのバイト列をホスト バイト オーダーの値として解釈することの確認)
+        converted); // [確認_正常系] - cplat_ntoh16() の戻り値が 0x1234U であること。(ビッグ エンディアンのバイト列をホスト バイト オーダーの値として解釈することの確認)
 }
 
 // 32 bit のネットワーク バイト オーダー変換がビッグ エンディアンのバイト列になることの確認

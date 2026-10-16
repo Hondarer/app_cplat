@@ -221,7 +221,7 @@ TEST_F(hashtableLayoutTest, create_internal_alloc_rejects_combined_size_overflow
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - 内部確保で構築する。
+    int actual_ret = cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - 内部確保で構築する。
 
     // Assert
     EXPECT_EQ(
@@ -325,9 +325,9 @@ TEST_F(hashtableLayoutTest, value_align_rounds_up_data_region_and_aligns_referen
     // Pre-Assert
 
     // Act
-    int actual_ret_packed_size = cplat_hashtable_required_size(&packed, NULL, &packed_data_size);
-    int actual_ret_aligned_size = cplat_hashtable_required_size(&aligned, NULL, &aligned_data_size);
-    int actual_ret_create = cplat_hashtable_create(&aligned, NULL, 0, NULL, 0, &ht);
+    int actual_ret_packed_size = cplat_hashtable_required_size(&packed, nullptr, &packed_data_size);
+    int actual_ret_aligned_size = cplat_hashtable_required_size(&aligned, nullptr, &aligned_data_size);
+    int actual_ret_create = cplat_hashtable_create(&aligned, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "b", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_first = cplat_hashtable_get_value_ref(ht, 1, &first_ref);
@@ -421,7 +421,7 @@ TEST_F(hashtableLayoutTest, variable_key_descriptor_is_aligned_in_table_scope)
     // Pre-Assert
 
     // Act
-    int actual_ret_create = cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    int actual_ret_create = cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "alpha", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     first_addr = reinterpret_cast<uintptr_t>(test_hashtable_key_ref_at(ht, 0));
     second_addr = reinterpret_cast<uintptr_t>(test_hashtable_key_ref_at(ht, 1));
@@ -464,9 +464,9 @@ TEST_F(hashtableLayoutTest, internal_data_region_is_aligned_after_odd_key_storag
     // Pre-Assert
 
     // Act
-    int actual_ret_create = cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    int actual_ret_create = cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     const void *data_ref = nullptr;
-    int actual_ret_buffer = cplat_hashtable_buffer_ref(ht, NULL, &data_ref);
+    int actual_ret_buffer = cplat_hashtable_buffer_ref(ht, nullptr, &data_ref);
     (void)cplat_hashtable_add(ht, "alpha", "v1", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     data_addr = reinterpret_cast<uintptr_t>(data_ref);
     ref_addr = reinterpret_cast<uintptr_t>(test_hashtable_value_ref_at(ht, 0));

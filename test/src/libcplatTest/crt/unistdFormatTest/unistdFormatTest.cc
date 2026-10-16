@@ -36,11 +36,11 @@ TEST_F(unistdFormatTest, passes_formatted_path_to_open)
     EXPECT_CALL(mock_cplat, cplat_access(StrEq("/tmp/sample_42.txt"), CPLAT_ACCESS_FMT_F_OK, &detail))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_access() が "/tmp/sample_42.txt" と等しい文字列、CPLAT_ACCESS_FMT_F_OK、&detail を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_open から成功を示す 0 を返却する。
+                 // [Pre-Assert手順] - cplat_open() から成功を示す 0 を返却する。
 
     // Act
     int actual_ret = cplat_access_fmt(CPLAT_ACCESS_FMT_F_OK, &detail, "/tmp/sample_%d.txt",
-                                      42); // [手順] - 書式引数 42 を指定して cplat_access_fmt を呼び出す。
+                                      42); // [手順] - 書式引数 42 を指定して cplat_access_fmt() を呼び出す。
 
     // Assert
     EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_access_fmt() の戻り値が 0 であること。
@@ -56,11 +56,11 @@ TEST_F(unistdFormatTest, vaccess_fmt_passes_formatted_path_to_open)
     EXPECT_CALL(mock_cplat, cplat_access(StrEq("/tmp/sample_7.txt"), CPLAT_ACCESS_FMT_F_OK, &detail))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_access() が "/tmp/sample_7.txt" と等しい文字列、CPLAT_ACCESS_FMT_F_OK、&detail を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_open から成功を示す 0 を返却する。
+                 // [Pre-Assert手順] - cplat_open() から成功を示す 0 を返却する。
 
     // Act
     int actual_ret = call_vaccess_fmt(CPLAT_ACCESS_FMT_F_OK, &detail, "/tmp/sample_%d.txt",
-                                      7); // [手順] - 書式引数 7 を指定して cplat_vaccess_fmt を呼び出す。
+                                      7); // [手順] - 書式引数 7 を指定して cplat_vaccess_fmt() を呼び出す。
 
     // Assert
     EXPECT_EQ(0, actual_ret); // [確認_正常系] - call_vaccess_fmt() の戻り値が 0 であること。
@@ -78,7 +78,7 @@ TEST_F(unistdFormatTest, returns_minus1_without_open_when_format_fails)
 
     // Act
     int actual_ret = cplat_access_fmt(CPLAT_ACCESS_FMT_F_OK, &detail,
-                                      NULL); // [手順] - 書式文字列に NULL を指定して cplat_access_fmt を呼び出す。
+                                      nullptr); // [手順] - 書式文字列に NULL を指定して cplat_access_fmt() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_access_fmt() の戻り値が -1 であること。

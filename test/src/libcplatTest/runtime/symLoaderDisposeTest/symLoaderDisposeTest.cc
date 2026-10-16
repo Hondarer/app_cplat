@@ -37,9 +37,9 @@ TEST_F(symLoaderDisposeTest, releases_handle_and_func_ptr_of_resolved_entry)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_dlfcn, dlclose(_, _, _, kFakeHandle)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - dlclose() が kFakeHandle を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - dlclose() にて 0 を返す。
 #endif /* PLATFORM_LINUX */
     // 解放 API がエントリのハンドルを 1 回閉じること。
-    // [Pre-Assert手順] - 閉じる操作は成功を返却する。
 
     // Act
     cplat_sym_loader_dispose(entries, 1u); // [手順] - 解決済みエントリ 1 件を指定して解放する。
@@ -127,11 +127,12 @@ TEST_F(symLoaderDisposeTest, releases_multiple_entries)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_dlfcn, dlclose(_, _, _, first.handle)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - dlclose() が first.handle を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - dlclose() にて 0 を返す。
     EXPECT_CALL(mock_dlfcn, dlclose(_, _, _, second.handle)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - dlclose() が second.handle を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - dlclose() にて 0 を返す。
 #endif /* PLATFORM_LINUX */
     // 2 件のハンドルがそれぞれ閉じられること。
-    // [Pre-Assert手順] - 閉じる操作は成功を返却する。
 
     // Act
     cplat_sym_loader_dispose(entries, 2u); // [手順] - 解決済みエントリ 2 件を指定して解放する。

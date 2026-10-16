@@ -360,12 +360,18 @@ TEST_F(stringCatalogFilterSourceTest, corrupt_publication_is_recorded_and_not_re
     (void)format_job_failed(&actual_matched); // [手順] - 壊れた公開内容で組み立てる。
     // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status]
     cplat_string_catalog_filter_source_status status = source_status();
+
+    // Assert
+
+    // Pre-Assert_2
     EXPECT_CALL(mock_cplat, cplat_local_lock_try_lock(_))
         .Times(
             0); // [Pre-Assert確認_異常系] - cplat_local_lock_try_lock() が呼び出されないこと。(同じ公開内容の取り込みを試みないことの確認)
+
+    // Act_2
     (void)format_job_failed(&actual_matched); // [手順] - もう一度組み立てる。
 
-    // Assert
+    // Assert_2
     EXPECT_NE(0,
               actual_matched); // [確認_異常系] - actual_matched が 0 以外であること。(以前の条件を維持したことの確認)
     EXPECT_EQ(
@@ -528,11 +534,11 @@ TEST_F(stringCatalogFilterSourceTest, get_info_reports_each_state)
     EXPECT_EQ(
         (uint32_t)kLineCapacity,
         actual_published
-            .line_capacity); // [確認_正常系] - actual_published.line_capacity が (uint32_t)kLineCapacity と一致すること。(行数の上限を返すことの確認)
+            .line_capacity); // [確認_正常系] - actual_published.line_capacity が kLineCapacity と一致すること。(行数の上限を返すことの確認)
     EXPECT_EQ(
         (uint32_t)kLineWidth,
         actual_published
-            .line_width); // [確認_正常系] - actual_published.line_width が (uint32_t)kLineWidth と一致すること。(行幅を返すことの確認)
+            .line_width); // [確認_正常系] - actual_published.line_width が kLineWidth と一致すること。(行幅を返すことの確認)
     EXPECT_NE(
         0U,
         actual_published
@@ -1211,13 +1217,19 @@ TEST_F(stringCatalogFilterSourceTest, publication_for_another_catalog_is_not_tak
         (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
         // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status 回数=2]
         cplat_string_catalog_filter_source_status status = source_status();
+
+        // Assert
+
+        // Pre-Assert_2
         EXPECT_CALL(mock_cplat, cplat_local_lock_try_lock(_))
             .Times(
                 0); // [Pre-Assert確認_異常系 回数=2] - cplat_local_lock_try_lock() が呼び出されないこと。(同じ公開内容の取り込みを試みないことの確認)
+
+        // Act_2
         (void)format_job_failed(&actual_matched); // [手順] - もう一度組み立てる。
         testing::Mock::VerifyAndClearExpectations(&mock_cplat);
 
-        // Assert
+        // Assert_2
         EXPECT_EQ(
             0,
             actual_matched); // [確認_異常系 回数=2] - actual_matched が 0 であること。(取り込まず、以前の条件で判定したことの確認)

@@ -28,18 +28,18 @@ class regexTest : public Test
 TEST_F(regexTest, create_reports_group_count)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     int result = CPLAT_ERR_UNKNOWN;
 
     // Pre-Assert
 
     // Act
     result = cplat_regex_create("(a)(b)(c)", CPLAT_REGEX_DEFAULT, &regex,
-                                NULL); // [手順] - 捕捉グループを 3 個持つパターンをコンパイルする。
+                                nullptr); // [手順] - 捕捉グループを 3 個持つパターンをコンパイルする。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, result);           // [確認_正常系] - cplat_regex_create() の戻り値が CPLAT_OK であること。
-    ASSERT_NE((cplat_regex *)NULL, regex); // [確認_正常系] - regex が NULL 以外であること。
+    ASSERT_NE(nullptr, regex);             // [確認_正常系] - regex が nullptr 以外であること。
     EXPECT_EQ(
         (size_t)4,
         cplat_regex_get_group_count(
@@ -53,21 +53,21 @@ TEST_F(regexTest, create_reports_group_count)
 TEST_F(regexTest, search_returns_byte_offsets)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     cplat_regex_match matches[1];
     int matched = -1;
     int result = CPLAT_ERR_UNKNOWN;
     const std::string text = "xxabcyy";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a.c", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "a.c" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "a.c" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     result = cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, matches, 1, &matched,
-                                NULL); // [手順] - "xxabcyy" の先頭から検索する。
+                                nullptr); // [手順] - "xxabcyy" の先頭から検索する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result);            // [確認_正常系] - cplat_regex_search() の戻り値が CPLAT_OK であること。
@@ -84,21 +84,21 @@ TEST_F(regexTest, search_returns_byte_offsets)
 TEST_F(regexTest, search_reports_no_match_as_success)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     cplat_regex_match matches[1];
     int matched = -1;
     int result = CPLAT_ERR_UNKNOWN;
     const std::string text = "xyz";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("abc", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "abc" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "abc" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     result = cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, matches, 1, &matched,
-                                NULL); // [手順] - 一致しない入力 "xyz" を検索する。
+                                nullptr); // [手順] - 一致しない入力 "xyz" を検索する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_regex_search() の戻り値が CPLAT_OK であること。
@@ -116,24 +116,24 @@ TEST_F(regexTest, search_reports_no_match_as_success)
 TEST_F(regexTest, matches_requires_whole_text)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     int matched_partial = -1;
     int matched_whole = -1;
     const std::string text = "xxabcyy";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a.c", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "a.c" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "a.c" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int actual_ret_partial =
-        cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_partial,
-                           NULL); // [手順] - "xxabcyy" を cplat_regex_search で照合する。
+        cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched_partial,
+                           nullptr); // [手順] - "xxabcyy" を cplat_regex_search() で照合する。
     int actual_ret_whole =
-        cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_whole,
-                            NULL); // [手順] - 同じ入力を cplat_regex_matches で照合する。
+        cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched_whole,
+                            nullptr); // [手順] - 同じ入力を cplat_regex_matches() で照合する。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_ret_partial); // [確認_正常系] - cplat_regex_search() の戻り値が CPLAT_OK であること。
@@ -149,25 +149,25 @@ TEST_F(regexTest, matches_requires_whole_text)
 TEST_F(regexTest, matches_treats_bmp_character_as_one_character)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     int matched_three = -1;
     int matched_two = -1;
     const std::string three = u8"あいう";
     const std::string two = u8"あい";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("^.{3}$", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "^.{3}$" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "^.{3}$" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int actual_ret_three =
-        cplat_regex_matches(regex, three.data(), three.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_three,
-                            NULL); // [手順] - 日本語 3 文字 "あいう" を照合する。
+        cplat_regex_matches(regex, three.data(), three.size(), CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched_three,
+                            nullptr); // [手順] - 日本語 3 文字 "あいう" を照合する。
     int actual_ret_two =
-        cplat_regex_matches(regex, two.data(), two.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_two,
-                            NULL); // [手順] - 日本語 2 文字 "あい" を照合する。
+        cplat_regex_matches(regex, two.data(), two.size(), CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched_two,
+                            nullptr); // [手順] - 日本語 2 文字 "あい" を照合する。
 
     // Assert
     ASSERT_EQ(
@@ -186,29 +186,29 @@ TEST_F(regexTest, matches_treats_bmp_character_as_one_character)
 TEST_F(regexTest, matches_treats_astral_character_as_two_characters)
 {
     // Arrange
-    cplat_regex *one_regex = NULL;
-    cplat_regex *two_regex = NULL;
+    cplat_regex *one_regex = nullptr;
+    cplat_regex *two_regex = nullptr;
     cplat_regex_match matches[1];
     int matched_one = -1;
     int matched_two = -1;
     const std::string text = u8"\U0001F600";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("^.$", CPLAT_REGEX_DEFAULT, &one_regex,
-                                           NULL)); // [状態] - パターン "^.$" をコンパイルしておく。
+                                           nullptr)); // [状態] - パターン "^.$" をコンパイルしておく。
     // [状態確認] - "^.$" に対する cplat_regex_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("^.{2}$", CPLAT_REGEX_DEFAULT, &two_regex,
-                                           NULL)); // [状態] - パターン "^.{2}$" をコンパイルしておく。
+                                           nullptr)); // [状態] - パターン "^.{2}$" をコンパイルしておく。
     // [状態確認] - "^.{2}$" に対する cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int actual_ret_one =
-        cplat_regex_matches(one_regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_one,
-                            NULL); // [手順] - "^.$" で U+1F600 を照合する。
+        cplat_regex_matches(one_regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched_one,
+                            nullptr); // [手順] - "^.$" で U+1F600 を照合する。
     int actual_ret_two =
         cplat_regex_matches(two_regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, matches, 1, &matched_two,
-                            NULL); // [手順] - "^.{2}$" で U+1F600 を照合する。
+                            nullptr); // [手順] - "^.{2}$" で U+1F600 を照合する。
 
     // Assert
     ASSERT_EQ(CPLAT_OK,
@@ -232,14 +232,14 @@ TEST_F(regexTest, matches_treats_astral_character_as_two_characters)
 TEST_F(regexTest, search_stores_capture_groups)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     cplat_regex_match matches[3];
     int matched = -1;
     const std::string text = u8"名前=あきら";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("^(.+)=(.+)$", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "^(.+)=(.+)$" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "^(.+)=(.+)$" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     ASSERT_EQ(
         (size_t)3,
@@ -250,7 +250,7 @@ TEST_F(regexTest, search_stores_capture_groups)
     // Act
     int actual_ret =
         cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, matches, 3, &matched,
-                           NULL); // [手順] - "名前=あきら" を検索する。
+                           nullptr); // [手順] - "名前=あきら" を検索する。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_regex_search() の戻り値が CPLAT_OK であること。
@@ -271,21 +271,21 @@ TEST_F(regexTest, search_stores_capture_groups)
 TEST_F(regexTest, search_marks_unmatched_group_as_npos)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     cplat_regex_match matches[3];
     int matched = -1;
     const std::string text = "b";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("^(a)?(b)$", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "^(a)?(b)$" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "^(a)?(b)$" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int actual_ret =
         cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, matches, 3, &matched,
-                           NULL); // [手順] - グループ 1 が一致しない入力 "b" を検索する。
+                           nullptr); // [手順] - グループ 1 が一致しない入力 "b" を検索する。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_regex_search() の戻り値が CPLAT_OK であること。
@@ -305,14 +305,14 @@ TEST_F(regexTest, search_marks_unmatched_group_as_npos)
 TEST_F(regexTest, search_truncates_groups_to_capacity)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     cplat_regex_match matches[2];
     int matched = -1;
     const std::string text = "abc";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("(a)(b)(c)", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - 捕捉グループを 3 個持つパターンをコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - 捕捉グループを 3 個持つパターンをコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     ASSERT_EQ(
         (size_t)4,
@@ -323,7 +323,7 @@ TEST_F(regexTest, search_truncates_groups_to_capacity)
     // Act
     int actual_ret =
         cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, matches, 2, &matched,
-                           NULL); // [手順] - 要素数 2 の配列を渡して検索する。
+                           nullptr); // [手順] - 要素数 2 の配列を渡して検索する。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_regex_search() の戻り値が CPLAT_OK であること。
@@ -341,19 +341,20 @@ TEST_F(regexTest, search_truncates_groups_to_capacity)
 TEST_F(regexTest, create_with_nosub_reports_single_group)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     int matched = -1;
     const std::string text = "abc";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("(a)(b)(c)", CPLAT_REGEX_NOSUB, &regex,
-                                           NULL)); // [状態] - CPLAT_REGEX_NOSUB を指定してコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - CPLAT_REGEX_NOSUB を指定してコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
-                                         NULL); // [手順] - "abc" を照合する。
+    int actual_ret =
+        cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched,
+                            nullptr); // [手順] - "abc" を照合する。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_regex_matches() の戻り値が CPLAT_OK であること。
@@ -370,30 +371,30 @@ TEST_F(regexTest, create_with_nosub_reports_single_group)
 TEST_F(regexTest, icase_folds_ascii_only)
 {
     // Arrange
-    cplat_regex *ascii_regex = NULL;
-    cplat_regex *latin_regex = NULL;
+    cplat_regex *ascii_regex = nullptr;
+    cplat_regex *latin_regex = nullptr;
     int matched_ascii = -1;
     int matched_latin = -1;
     const std::string ascii_text = "XABCX";
     const std::string latin_text = u8"ä";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("abc", CPLAT_REGEX_ICASE, &ascii_regex,
-                                           NULL)); // [状態] - ASCII のパターン "abc" を ICASE でコンパイルしておく。
+                                           nullptr)); // [状態] - ASCII のパターン "abc" を ICASE でコンパイルしておく。
     // [状態確認] - "abc" に対する cplat_regex_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_create(u8"Ä", CPLAT_REGEX_ICASE, &latin_regex,
-                                           NULL)); // [状態] - 非 ASCII のパターン "Ä" を ICASE で
-                                                   // コンパイルしておく。
+                                           nullptr)); // [状態] - 非 ASCII のパターン "Ä" を ICASE で
+                                                      // コンパイルしておく。
     // [状態確認] - u8"Ä" に対する cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int actual_ret_ascii = cplat_regex_search(ascii_regex, ascii_text.data(), ascii_text.size(), 0,
-                                              CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_ascii,
-                                              NULL); // [手順] - パターン "abc" で "XABCX" を検索する。
+                                              CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched_ascii,
+                                              nullptr); // [手順] - パターン "abc" で "XABCX" を検索する。
     int actual_ret_latin = cplat_regex_search(latin_regex, latin_text.data(), latin_text.size(), 0,
-                                              CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_latin,
-                                              NULL); // [手順] - パターン "Ä" で "ä" を検索する。
+                                              CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched_latin,
+                                              nullptr); // [手順] - パターン "Ä" で "ä" を検索する。
 
     // Assert
     ASSERT_EQ(
@@ -417,19 +418,20 @@ TEST_F(regexTest, icase_folds_ascii_only)
 TEST_F(regexTest, create_with_extended_uses_posix_ere)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     int matched = -1;
     const std::string text = "ababc";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("(ab)+c", CPLAT_REGEX_EXTENDED, &regex,
-                                           NULL)); // [状態] - CPLAT_REGEX_EXTENDED を指定してコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - CPLAT_REGEX_EXTENDED を指定してコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
-                                         NULL); // [手順] - "ababc" を照合する。
+    int actual_ret =
+        cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched,
+                            nullptr); // [手順] - "ababc" を照合する。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_regex_matches() の戻り値が CPLAT_OK であること。
@@ -443,8 +445,8 @@ TEST_F(regexTest, create_with_extended_uses_posix_ere)
 TEST_F(regexTest, search_supports_ascii_character_classes)
 {
     // Arrange
-    cplat_regex *posix_regex = NULL;
-    cplat_regex *escape_regex = NULL;
+    cplat_regex *posix_regex = nullptr;
+    cplat_regex *escape_regex = nullptr;
     cplat_regex_match posix_match[1];
     cplat_regex_match escape_match[1];
     int matched_posix = -1;
@@ -452,10 +454,10 @@ TEST_F(regexTest, search_supports_ascii_character_classes)
     const std::string text = u8"あ123い";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("[[:digit:]]+", CPLAT_REGEX_DEFAULT, &posix_regex,
-                                           NULL)); // [状態] - パターン "[[:digit:]]+" をコンパイルしておく。
+                                           nullptr)); // [状態] - パターン "[[:digit:]]+" をコンパイルしておく。
     // [状態確認] - "[[:digit:]]+" に対する cplat_regex_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("\\d+", CPLAT_REGEX_DEFAULT, &escape_regex,
-                                           NULL)); // [状態] - パターン "\\d+" をコンパイルしておく。
+                                           nullptr)); // [状態] - パターン "\\d+" をコンパイルしておく。
     // [状態確認] - "\\d+" に対する cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -463,10 +465,10 @@ TEST_F(regexTest, search_supports_ascii_character_classes)
     // Act
     int actual_ret_posix = cplat_regex_search(posix_regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT,
                                               posix_match, 1, &matched_posix,
-                                              NULL); // [手順] - "[[:digit:]]+" で "あ123い" を検索する。
+                                              nullptr); // [手順] - "[[:digit:]]+" で "あ123い" を検索する。
     int actual_ret_escape = cplat_regex_search(escape_regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT,
                                                escape_match, 1, &matched_escape,
-                                               NULL); // [手順] - "\\d+" で "あ123い" を検索する。
+                                               nullptr); // [手順] - "\\d+" で "あ123い" を検索する。
 
     // Assert
     ASSERT_EQ(
@@ -496,24 +498,24 @@ TEST_F(regexTest, search_supports_ascii_character_classes)
 TEST_F(regexTest, search_from_offset_does_not_treat_offset_as_line_start)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     int matched_from_head = -1;
     int matched_from_offset = -1;
     const std::string text = "ab";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("^b", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "^b" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "^b" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    int actual_ret_head =
-        cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_from_head,
-                           NULL); // [手順] - start_offset に 0 を指定して検索する。
-    int actual_ret_offset =
-        cplat_regex_search(regex, text.data(), text.size(), 1, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_from_offset,
-                           NULL); // [手順] - start_offset に 1 を指定して検索する。
+    int actual_ret_head = cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0,
+                                             &matched_from_head,
+                                             nullptr); // [手順] - start_offset に 0 を指定して検索する。
+    int actual_ret_offset = cplat_regex_search(regex, text.data(), text.size(), 1, CPLAT_REGEX_MATCH_DEFAULT, nullptr,
+                                               0, &matched_from_offset,
+                                               nullptr); // [手順] - start_offset に 1 を指定して検索する。
 
     // Assert
     ASSERT_EQ(
@@ -537,24 +539,24 @@ TEST_F(regexTest, search_from_offset_does_not_treat_offset_as_line_start)
 TEST_F(regexTest, search_with_anchored_matches_only_at_start_offset)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     int matched_default = -1;
     int matched_anchored = -1;
     const std::string text = "xxab";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("ab", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "ab" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "ab" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int actual_ret_default =
-        cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched_default,
-                           NULL); // [手順] - CPLAT_REGEX_MATCH_DEFAULT を指定して検索する。
-    int actual_ret_anchored =
-        cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_ANCHORED, NULL, 0, &matched_anchored,
-                           NULL); // [手順] - CPLAT_REGEX_MATCH_ANCHORED を指定して検索する。
+        cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched_default,
+                           nullptr); // [手順] - CPLAT_REGEX_MATCH_DEFAULT を指定して検索する。
+    int actual_ret_anchored = cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_ANCHORED,
+                                                 nullptr, 0, &matched_anchored,
+                                                 nullptr); // [手順] - CPLAT_REGEX_MATCH_ANCHORED を指定して検索する。
 
     // Assert
     ASSERT_EQ(
@@ -576,29 +578,37 @@ TEST_F(regexTest, search_with_anchored_matches_only_at_start_offset)
 TEST_F(regexTest, create_rejects_invalid_pattern)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
 
     // Pre-Assert
 
     // Act
+    int actual_ret_invalid_1 = cplat_regex_create("(", CPLAT_REGEX_DEFAULT, &regex,
+                                                  nullptr); // [手順] - cplat_regex_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_PATTERN,
-        cplat_regex_create(
-            "(", CPLAT_REGEX_DEFAULT, &regex,
-            NULL)); // [確認_異常系] - パターン "(" に対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_PATTERN であること。
+        actual_ret_invalid_1); // [確認_異常系] - パターン "(" に対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_PATTERN であること。
+
+    // Act_2
+    int actual_ret_invalid_2 = cplat_regex_create("[a-", CPLAT_REGEX_DEFAULT, &regex,
+                                                  nullptr); // [手順] - cplat_regex_create() を呼び出す。
+
+    // Assert_2
     EXPECT_EQ(
         CPLAT_ERR_INVALID_PATTERN,
-        cplat_regex_create(
-            "[a-", CPLAT_REGEX_DEFAULT, &regex,
-            NULL)); // [確認_異常系] - パターン "[a-" に対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_PATTERN であること。
+        actual_ret_invalid_2); // [確認_異常系] - パターン "[a-" に対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_PATTERN であること。
+
+    // Act_3
+    int actual_ret_invalid_3 = cplat_regex_create("a{2,1}", CPLAT_REGEX_DEFAULT, &regex,
+                                                  nullptr); // [手順] - cplat_regex_create() を呼び出す。
+
+    // Assert_3
     EXPECT_EQ(
         CPLAT_ERR_INVALID_PATTERN,
-        cplat_regex_create(
-            "a{2,1}", CPLAT_REGEX_DEFAULT, &regex,
-            NULL)); // [確認_異常系] - パターン "a{2,1}" に対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_PATTERN であること。
-    EXPECT_EQ((cplat_regex *)NULL, regex); // [確認_異常系] - regex が NULL であること。
+        actual_ret_invalid_3); // [確認_異常系] - パターン "a{2,1}" に対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_PATTERN であること。
+    EXPECT_EQ(nullptr, regex); // [確認_異常系] - regex が nullptr であること。
 }
 #endif /* !CPLAT_REGEX_NO_EXCEPTIONS */
 
@@ -606,53 +616,62 @@ TEST_F(regexTest, create_rejects_invalid_pattern)
 TEST_F(regexTest, create_rejects_invalid_flags)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
 
     // Pre-Assert
 
     // Act
+    int actual_ret_invalid_1 = cplat_regex_create("a", CPLAT_REGEX_EXTENDED | CPLAT_REGEX_BASIC, &regex,
+                                                  nullptr); // [手順] - cplat_regex_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_regex_create(
-            "a", CPLAT_REGEX_EXTENDED | CPLAT_REGEX_BASIC, &regex,
-            NULL)); // [確認_異常系] - EXTENDED と BASIC の同時指定に対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_1); // [確認_異常系] - EXTENDED と BASIC の同時指定に対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+
+    // Act_2
+    int actual_ret_invalid_2 = cplat_regex_create("a", 0x8000U, &regex,
+                                                  nullptr); // [手順] - cplat_regex_create() を呼び出す。
+
+    // Assert_2
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_regex_create(
-            "a", 0x8000U, &regex,
-            NULL)); // [確認_異常系] - 未定義ビット 0x8000 の指定に対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_2); // [確認_異常系] - 未定義ビット 0x8000 の指定に対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 不正な UTF-8 が CPLAT_ERR_INVALID_ENCODING になることの確認
 TEST_F(regexTest, rejects_invalid_utf8)
 {
     // Arrange
-    cplat_regex *regex = NULL;
-    cplat_regex *invalid_regex = NULL;
+    cplat_regex *regex = nullptr;
+    cplat_regex *invalid_regex = nullptr;
     int matched = -1;
     const std::string invalid_text("\xC0\x80", 2);
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "a" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "a" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
+    int actual_ret_invalid_1 = cplat_regex_create(invalid_text.c_str(), CPLAT_REGEX_DEFAULT, &invalid_regex,
+                                                  nullptr); // [手順] - cplat_regex_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ENCODING,
-        cplat_regex_create(
-            invalid_text.c_str(), CPLAT_REGEX_DEFAULT, &invalid_regex,
-            NULL)); // [確認_異常系] - 不正な UTF-8 のパターンに対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_ENCODING であること。
+        actual_ret_invalid_1); // [確認_異常系] - 不正な UTF-8 のパターンに対する cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_ENCODING であること。
+
+    // Act_2
+    int actual_ret_invalid_2 = cplat_regex_search(regex, invalid_text.data(), invalid_text.size(), 0,
+                                                  CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched,
+                                                  nullptr); // [手順] - cplat_regex_search() を呼び出す。
+
+    // Assert_2
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ENCODING,
-        cplat_regex_search(
-            regex, invalid_text.data(), invalid_text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
-            NULL)); // [確認_異常系] - 不正な UTF-8 の入力に対する cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ENCODING であること。
+        actual_ret_invalid_2); // [確認_異常系] - 不正な UTF-8 の入力に対する cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ENCODING であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -662,86 +681,115 @@ TEST_F(regexTest, rejects_invalid_utf8)
 TEST_F(regexTest, rejects_null_arguments)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     int matched = -1;
     const std::string text = "a";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "a" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "a" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
+    int actual_ret_invalid_1 = cplat_regex_create(nullptr, CPLAT_REGEX_DEFAULT, &regex,
+                                                  nullptr); // [手順] - cplat_regex_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_regex_create(
-            NULL, CPLAT_REGEX_DEFAULT, &regex,
-            NULL)); // [確認_異常系] - pattern が NULL のときの cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_1); // [確認_異常系] - pattern が NULL のときの cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+
+    // Act_2
+    int actual_ret_invalid_2 = cplat_regex_create("a", CPLAT_REGEX_DEFAULT, nullptr,
+                                                  nullptr); // [手順] - cplat_regex_create() を呼び出す。
+
+    // Assert_2
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_regex_create(
-            "a", CPLAT_REGEX_DEFAULT, NULL,
-            NULL)); // [確認_異常系] - regex_out が NULL のときの cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_2); // [確認_異常系] - regex_out が NULL のときの cplat_regex_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+
+    // Act_3
+    int actual_ret_invalid_3 =
+        cplat_regex_search(nullptr, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched,
+                           nullptr); // [手順] - cplat_regex_search() を呼び出す。
+
+    // Assert_3
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_regex_search(
-            NULL, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
-            NULL)); // [確認_異常系] - regex が NULL のときの cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_3); // [確認_異常系] - regex が NULL のときの cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+
+    // Act_4
+    int actual_ret_invalid_4 = cplat_regex_search(regex, nullptr, 0, 0, CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched,
+                                                  nullptr); // [手順] - cplat_regex_search() を呼び出す。
+
+    // Assert_4
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_regex_search(
-            regex, NULL, 0, 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
-            NULL)); // [確認_異常系] - text が NULL のときの cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_4); // [確認_異常系] - text が NULL のときの cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+
+    // Act_5
+    int actual_ret_invalid_5 =
+        cplat_regex_search(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, nullptr,
+                           nullptr); // [手順] - cplat_regex_search() を呼び出す。
+
+    // Assert_5
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_regex_search(
-            regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, NULL,
-            NULL)); // [確認_異常系] - matched_out が NULL のときの cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_5); // [確認_異常系] - matched_out が NULL のときの cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+
+    // Act_6
+    int actual_ret_invalid_6 =
+        cplat_regex_matches(nullptr, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched,
+                            nullptr); // [手順] - cplat_regex_matches() を呼び出す。
+
+    // Assert_6
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_regex_matches(
-            NULL, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
-            NULL)); // [確認_異常系] - regex が NULL のときの cplat_regex_matches() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_6); // [確認_異常系] - regex が NULL のときの cplat_regex_matches() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         (size_t)0,
         cplat_regex_get_group_count(
-            NULL)); // [確認_異常系] - regex が NULL のときの cplat_regex_get_group_count() の戻り値が 0 であること。
+            nullptr)); // [確認_異常系] - regex が NULL のときの cplat_regex_get_group_count() の戻り値が 0 であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
-    cplat_regex_dispose(NULL);
+    cplat_regex_dispose(nullptr);
 }
 
 // 不正な start_offset が CPLAT_ERR_INVALID_ARGUMENT になることの確認
 TEST_F(regexTest, search_rejects_invalid_start_offset)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     int matched = -1;
     const std::string text = u8"あい";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "a" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "a" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
+    int actual_ret_invalid_1 = cplat_regex_search(regex, text.data(), text.size(), text.size() + 1,
+                                                  CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched,
+                                                  nullptr); // [手順] - cplat_regex_search() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_regex_search(
-            regex, text.data(), text.size(), text.size() + 1, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
-            NULL)); // [確認_異常系] - 入力長を超える start_offset に対する cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_1); // [確認_異常系] - 入力長を超える start_offset に対する cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+
+    // Act_2
+    int actual_ret_invalid_2 =
+        cplat_regex_search(regex, text.data(), text.size(), 1, CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched,
+                           nullptr); // [手順] - cplat_regex_search() を呼び出す。
+
+    // Assert_2
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_regex_search(
-            regex, text.data(), text.size(), 1, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
-            NULL)); // [確認_異常系] - 文字の途中を指す start_offset 1 に対する cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_2); // [確認_異常系] - 文字の途中を指す start_offset 1 に対する cplat_regex_search() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_regex_dispose(regex);
@@ -751,19 +799,20 @@ TEST_F(regexTest, search_rejects_invalid_start_offset)
 TEST_F(regexTest, matches_accepts_empty_text)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     int matched = -1;
     const std::string text;
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("^$", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "^$" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "^$" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &matched,
-                                         NULL); // [手順] - 空の入力を照合する。
+    int actual_ret =
+        cplat_regex_matches(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &matched,
+                            nullptr); // [手順] - 空の入力を照合する。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_regex_matches() の戻り値が CPLAT_OK であること。
@@ -777,8 +826,8 @@ TEST_F(regexTest, matches_accepts_empty_text)
 TEST_F(regexTest, reports_error_detail)
 {
     // Arrange
-    cplat_regex *regex = NULL;
-    cplat_regex *invalid_regex = NULL;
+    cplat_regex *regex = nullptr;
+    cplat_regex *invalid_regex = nullptr;
     cplat_error detail;
     cplat_error last;
 
@@ -834,22 +883,22 @@ TEST_F(regexTest, reports_error_detail)
 TEST_F(regexTest, replace_substitutes_all_matches)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     char buffer[64];
     size_t required_size = 0;
     int result = CPLAT_ERR_UNKNOWN;
     const std::string text = "a1b22c";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("[0-9]+", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "[0-9]+" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "[0-9]+" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     result = cplat_regex_replace(regex, text.data(), text.size(), "#", CPLAT_REGEX_MATCH_DEFAULT, buffer,
                                  sizeof(buffer), &required_size,
-                                 NULL); // [手順] - "a1b22c" の数字列をすべて "#" へ置換する。
+                                 nullptr); // [手順] - "a1b22c" の数字列をすべて "#" へ置換する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_regex_replace() の戻り値が CPLAT_OK であること。
@@ -865,20 +914,20 @@ TEST_F(regexTest, replace_substitutes_all_matches)
 TEST_F(regexTest, replace_expands_back_references)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     char buffer[64];
     const std::string text = "user@host";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("(\\w+)@(\\w+)", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "(\\w+)@(\\w+)" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "(\\w+)@(\\w+)" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int actual_ret = cplat_regex_replace(regex, text.data(), text.size(), "$2:$1", CPLAT_REGEX_MATCH_DEFAULT, buffer,
-                                         sizeof(buffer), NULL,
-                                         NULL); // [手順] - 置換文字列 "$2:$1" で置換する。
+                                         sizeof(buffer), nullptr,
+                                         nullptr); // [手順] - 置換文字列 "$2:$1" で置換する。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_regex_replace() の戻り値が CPLAT_OK であること。
@@ -893,24 +942,24 @@ TEST_F(regexTest, replace_expands_back_references)
 TEST_F(regexTest, replace_honors_replace_flags)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     char first_only[64];
     char no_copy[64];
     const std::string text = "a1b2c";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("[0-9]", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "[0-9]" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "[0-9]" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int actual_ret_first_only = cplat_regex_replace(
-        regex, text.data(), text.size(), "#", CPLAT_REGEX_REPLACE_FIRST_ONLY, first_only, sizeof(first_only), NULL,
-        NULL); // [手順] - CPLAT_REGEX_REPLACE_FIRST_ONLY を指定して置換する。
+        regex, text.data(), text.size(), "#", CPLAT_REGEX_REPLACE_FIRST_ONLY, first_only, sizeof(first_only), nullptr,
+        nullptr); // [手順] - CPLAT_REGEX_REPLACE_FIRST_ONLY を指定して置換する。
     int actual_ret_no_copy = cplat_regex_replace(regex, text.data(), text.size(), "#", CPLAT_REGEX_REPLACE_NO_COPY,
-                                                 no_copy, sizeof(no_copy), NULL,
-                                                 NULL); // [手順] - CPLAT_REGEX_REPLACE_NO_COPY を指定して置換する。
+                                                 no_copy, sizeof(no_copy), nullptr,
+                                                 nullptr); // [手順] - CPLAT_REGEX_REPLACE_NO_COPY を指定して置換する。
 
     // Assert
     ASSERT_EQ(
@@ -936,22 +985,22 @@ TEST_F(regexTest, replace_honors_replace_flags)
 TEST_F(regexTest, replace_reports_required_size)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     size_t required_size = 0;
     char buffer[8];
     int result = CPLAT_ERR_UNKNOWN;
     const std::string text = "aaa";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "a" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "a" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    result =
-        cplat_regex_replace(regex, text.data(), text.size(), "xy", CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &required_size,
-                            NULL); // [手順] - result_out に NULL を渡して必要サイズを問い合わせる。
+    result = cplat_regex_replace(regex, text.data(), text.size(), "xy", CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0,
+                                 &required_size,
+                                 nullptr); // [手順] - result_out に NULL を渡して必要サイズを問い合わせる。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -968,7 +1017,7 @@ TEST_F(regexTest, replace_reports_required_size)
     // Act_2
     result =
         cplat_regex_replace(regex, text.data(), text.size(), "xy", CPLAT_REGEX_MATCH_DEFAULT, buffer, 6, &required_size,
-                            NULL); // [手順] - 必要サイズより 1 バイト小さい 6 を指定して置換する。
+                            nullptr); // [手順] - 必要サイズより 1 バイト小さい 6 を指定して置換する。
 
     // Assert_2
     EXPECT_EQ(
@@ -985,7 +1034,7 @@ TEST_F(regexTest, replace_reports_required_size)
     // Act_3
     result =
         cplat_regex_replace(regex, text.data(), text.size(), "xy", CPLAT_REGEX_MATCH_DEFAULT, buffer, 7, &required_size,
-                            NULL); // [手順] - ちょうどの 7 を指定して置換する。
+                            nullptr); // [手順] - ちょうどの 7 を指定して置換する。
 
     // Assert_3
     EXPECT_EQ(CPLAT_OK,
@@ -1001,20 +1050,20 @@ TEST_F(regexTest, replace_reports_required_size)
 TEST_F(regexTest, iter_enumerates_all_matches)
 {
     // Arrange
-    cplat_regex *regex = NULL;
-    cplat_regex_iter *iter = NULL;
+    cplat_regex *regex = nullptr;
+    cplat_regex_iter *iter = nullptr;
     cplat_regex_match match;
     int has_match = -1;
     std::vector<std::string> found;
     const std::string text = "a1bb22ccc333";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("[0-9]+", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "[0-9]+" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "[0-9]+" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_iter_create(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, &iter,
-                                                NULL)); // [状態] - 入力に対するイテレーターを生成しておく。
+                                                nullptr)); // [状態] - 入力に対するイテレーターを生成しておく。
     // [状態確認] - cplat_regex_iter_create() の戻り値が CPLAT_OK であること。
-    ASSERT_NE((cplat_regex_iter *)NULL, iter); // [状態確認] - iter が NULL 以外であること。
+    ASSERT_NE(nullptr, iter); // [状態確認] - iter が nullptr 以外であること。
 
     // Pre-Assert
 
@@ -1022,7 +1071,7 @@ TEST_F(regexTest, iter_enumerates_all_matches)
     for (;;)
     {
         int actual_ret_next = cplat_regex_iter_next(iter, &match, 1, &has_match,
-                                                    NULL); // [手順] - 次の一致箇所を取得する。
+                                                    nullptr); // [手順] - 次の一致箇所を取得する。
         ASSERT_EQ(CPLAT_OK,
                   actual_ret_next); // [確認_正常系 回数=3+1] - cplat_regex_iter_next() の戻り値が CPLAT_OK であること。
         if (has_match == 0)
@@ -1049,17 +1098,17 @@ TEST_F(regexTest, iter_enumerates_all_matches)
 TEST_F(regexTest, iter_terminates_on_empty_matches)
 {
     // Arrange
-    cplat_regex *regex = NULL;
-    cplat_regex_iter *iter = NULL;
+    cplat_regex *regex = nullptr;
+    cplat_regex_iter *iter = nullptr;
     int has_match = -1;
     int count = 0;
     const std::string text = "ab";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a*", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - 空一致しうるパターン "a*" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - 空一致しうるパターン "a*" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_iter_create(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, &iter,
-                                                NULL)); // [状態] - 入力 "ab" のイテレーターを生成しておく。
+                                                nullptr)); // [状態] - 入力 "ab" のイテレーターを生成しておく。
     // [状態確認] - cplat_regex_iter_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -1067,8 +1116,8 @@ TEST_F(regexTest, iter_terminates_on_empty_matches)
     // Act
     for (;;)
     {
-        int actual_ret_next = cplat_regex_iter_next(iter, NULL, 0, &has_match,
-                                                    NULL); // [手順] - 次の一致箇所を取得する。
+        int actual_ret_next = cplat_regex_iter_next(iter, nullptr, 0, &has_match,
+                                                    nullptr); // [手順] - 次の一致箇所を取得する。
         ASSERT_EQ(CPLAT_OK,
                   actual_ret_next); // [確認_正常系 回数=3+1] - cplat_regex_iter_next() の戻り値が CPLAT_OK であること。
         if (has_match == 0)
@@ -1093,17 +1142,17 @@ TEST_F(regexTest, iter_terminates_on_empty_matches)
 TEST_F(regexTest, iter_copies_input_text)
 {
     // Arrange
-    cplat_regex *regex = NULL;
-    cplat_regex_iter *iter = NULL;
+    cplat_regex *regex = nullptr;
+    cplat_regex_iter *iter = nullptr;
     cplat_regex_match match;
     int has_match = -1;
     std::string text = "abc";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("b", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "b" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "b" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_iter_create(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, &iter,
-                                                NULL)); // [状態] - 入力 "abc" のイテレーターを生成しておく。
+                                                nullptr)); // [状態] - 入力 "abc" のイテレーターを生成しておく。
     // [状態確認] - cplat_regex_iter_create() の戻り値が CPLAT_OK であること。
     text = "zzz"; // [状態] - イテレーター生成後に元の文字列を書き換える。
 
@@ -1111,7 +1160,7 @@ TEST_F(regexTest, iter_copies_input_text)
 
     // Act
     int actual_ret = cplat_regex_iter_next(iter, &match, 1, &has_match,
-                                           NULL); // [手順] - 次の一致箇所を取得する。
+                                           nullptr); // [手順] - 次の一致箇所を取得する。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_regex_iter_next() の戻り値が CPLAT_OK であること。
@@ -1133,21 +1182,21 @@ TEST_F(regexTest, iter_copies_input_text)
 TEST_F(regexTest, split_divides_text_by_matches)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     cplat_regex_match parts[8];
     size_t part_count = 0;
     const std::string text = "a,,b,c";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create(",", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - 区切りのパターン "," をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - 区切りのパターン "," をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int actual_ret =
         cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, parts, 8, &part_count,
-                          NULL); // [手順] - "a,,b,c" を上限なしで分割する。
+                          nullptr); // [手順] - "a,,b,c" を上限なしで分割する。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_ret);  // [確認_正常系] - cplat_regex_split() の戻り値が CPLAT_OK であること。
@@ -1169,21 +1218,21 @@ TEST_F(regexTest, split_divides_text_by_matches)
 TEST_F(regexTest, split_keeps_empty_parts_at_boundaries)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     cplat_regex_match parts[8];
     size_t part_count = 0;
     const std::string text = ",a,";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create(",", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - 区切りのパターン "," をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - 区切りのパターン "," をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int actual_ret =
         cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, parts, 8, &part_count,
-                          NULL); // [手順] - ",a," を上限なしで分割する。
+                          nullptr); // [手順] - ",a," を上限なしで分割する。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_ret);  // [確認_正常系] - cplat_regex_split() の戻り値が CPLAT_OK であること。
@@ -1203,21 +1252,21 @@ TEST_F(regexTest, split_keeps_empty_parts_at_boundaries)
 TEST_F(regexTest, split_returns_whole_text_when_no_match)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     cplat_regex_match parts[2];
     size_t part_count = 0;
     const std::string text = "abc";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create(",", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - 区切りのパターン "," をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - 区切りのパターン "," をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int actual_ret =
         cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, parts, 2, &part_count,
-                          NULL); // [手順] - 区切りを含まない "abc" を分割する。
+                          nullptr); // [手順] - 区切りを含まない "abc" を分割する。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_ret);  // [確認_正常系] - cplat_regex_split() の戻り値が CPLAT_OK であること。
@@ -1237,21 +1286,21 @@ TEST_F(regexTest, split_returns_whole_text_when_no_match)
 TEST_F(regexTest, split_honors_max_parts)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     cplat_regex_match parts[8];
     size_t part_count = 0;
     const std::string text = "a,b,c,d";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create(",", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - 区切りのパターン "," をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - 区切りのパターン "," をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int actual_ret =
         cplat_regex_split(regex, text.data(), text.size(), 2, CPLAT_REGEX_MATCH_DEFAULT, parts, 8, &part_count,
-                          NULL); // [手順] - max_parts に 2 を指定して分割する。
+                          nullptr); // [手順] - max_parts に 2 を指定して分割する。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_ret);  // [確認_正常系] - cplat_regex_split() の戻り値が CPLAT_OK であること。
@@ -1273,21 +1322,21 @@ TEST_F(regexTest, split_honors_max_parts)
 TEST_F(regexTest, split_reports_required_count)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     cplat_regex_match parts[2];
     size_t part_count = 0;
     int result = CPLAT_ERR_UNKNOWN;
     const std::string text = "a,b,c";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create(",", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - 区切りのパターン "," をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - 区切りのパターン "," をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    result = cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, &part_count,
-                               NULL); // [手順] - parts_out に NULL を渡して件数を問い合わせる。
+    result = cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, &part_count,
+                               nullptr); // [手順] - parts_out に NULL を渡して件数を問い合わせる。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1301,7 +1350,7 @@ TEST_F(regexTest, split_reports_required_count)
 
     // Act_2
     result = cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, parts, 2, &part_count,
-                               NULL); // [手順] - 必要件数より少ない要素数 2 の配列を渡して分割する。
+                               nullptr); // [手順] - 必要件数より少ない要素数 2 の配列を渡して分割する。
 
     // Assert_2
     EXPECT_EQ(
@@ -1323,47 +1372,67 @@ TEST_F(regexTest, split_reports_required_count)
 TEST_F(regexTest, replace_iter_split_reject_null_arguments)
 {
     // Arrange
-    cplat_regex *regex = NULL;
-    cplat_regex_iter *iter = NULL;
+    cplat_regex *regex = nullptr;
+    cplat_regex_iter *iter = nullptr;
     char buffer[8];
     size_t part_count = 0;
     int has_match = -1;
     const std::string text = "a";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - パターン "a" をコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - パターン "a" をコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
+    int actual_ret_invalid_1 = cplat_regex_replace(nullptr, text.data(), text.size(), "x", CPLAT_REGEX_MATCH_DEFAULT,
+                                                   buffer, sizeof(buffer), nullptr,
+                                                   nullptr); // [手順] - cplat_regex_replace() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_regex_replace(
-            NULL, text.data(), text.size(), "x", CPLAT_REGEX_MATCH_DEFAULT, buffer, sizeof(buffer), NULL,
-            NULL)); // [確認_異常系] - regex が NULL のときの cplat_regex_replace() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_1); // [確認_異常系] - regex が NULL のときの cplat_regex_replace() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+
+    // Act_2
+    int actual_ret_invalid_2 = cplat_regex_replace(regex, text.data(), text.size(), nullptr, CPLAT_REGEX_MATCH_DEFAULT,
+                                                   buffer, sizeof(buffer), nullptr,
+                                                   nullptr); // [手順] - cplat_regex_replace() を呼び出す。
+
+    // Assert_2
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_regex_replace(
-            regex, text.data(), text.size(), NULL, CPLAT_REGEX_MATCH_DEFAULT, buffer, sizeof(buffer), NULL,
-            NULL)); // [確認_異常系] - replacement が NULL のときの cplat_regex_replace() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_2); // [確認_異常系] - replacement が NULL のときの cplat_regex_replace() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+
+    // Act_3
+    int actual_ret_invalid_3 =
+        cplat_regex_iter_create(regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, nullptr,
+                                nullptr); // [手順] - cplat_regex_iter_create() を呼び出す。
+
+    // Assert_3
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_regex_iter_create(
-            regex, text.data(), text.size(), CPLAT_REGEX_MATCH_DEFAULT, NULL,
-            NULL)); // [確認_異常系] - iter_out が NULL のときの cplat_regex_iter_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_3); // [確認_異常系] - iter_out が NULL のときの cplat_regex_iter_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+
+    // Act_4
+    int actual_ret_invalid_4 = cplat_regex_iter_next(nullptr, nullptr, 0, &has_match,
+                                                     nullptr); // [手順] - cplat_regex_iter_next() を呼び出す。
+
+    // Assert_4
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_regex_iter_next(
-            NULL, NULL, 0, &has_match,
-            NULL)); // [確認_異常系] - iter が NULL のときの cplat_regex_iter_next() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_4); // [確認_異常系] - iter が NULL のときの cplat_regex_iter_next() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+
+    // Act_5
+    int actual_ret_invalid_5 =
+        cplat_regex_split(regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, nullptr, 0, nullptr,
+                          nullptr); // [手順] - cplat_regex_split() を呼び出す。
+
+    // Assert_5
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_regex_split(
-            regex, text.data(), text.size(), 0, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0, NULL,
-            NULL)); // [確認_異常系] - part_count_out が NULL のときの cplat_regex_split() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_5); // [確認_異常系] - part_count_out が NULL のときの cplat_regex_split() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ((size_t)0, part_count); // [確認_異常系] - part_count が 0 であること。(変更されていないことの確認)
 
     // Cleanup
@@ -1537,21 +1606,21 @@ TEST_F(regexTest, translate_exception_maps_regex_and_runtime_errors)
 TEST_F(regexTest, option_and_match_flags_cover_basic_optimize_and_boundaries)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     int matched = -1;
     const std::string text = "a";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_BASIC | CPLAT_REGEX_OPTIMIZE, &regex,
-                                           NULL)); // [状態] - BASIC と OPTIMIZE を指定してコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - BASIC と OPTIMIZE を指定してコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int result = cplat_regex_search(regex, text.data(), text.size(), 0,
                                     CPLAT_REGEX_MATCH_NOTBOL | CPLAT_REGEX_MATCH_NOTEOL | CPLAT_REGEX_MATCH_NOTEMPTY,
-                                    NULL, 0, &matched,
-                                    NULL); // [手順] - 行境界、空一致、最適化に関する照合フラグを指定して検索する。
+                                    nullptr, 0, &matched,
+                                    nullptr); // [手順] - 行境界、空一致、最適化に関する照合フラグを指定して検索する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1570,8 +1639,8 @@ TEST_F(regexTest, option_and_match_flags_cover_basic_optimize_and_boundaries)
 TEST_F(regexTest, replace_iter_split_reject_limits_and_invalid_encoding)
 {
     // Arrange
-    cplat_regex *regex = NULL;
-    cplat_regex_iter *iter = NULL;
+    cplat_regex *regex = nullptr;
+    cplat_regex_iter *iter = nullptr;
     cplat_regex_match parts[2];
     char buffer[8] = {};
     size_t part_count = 0U;
@@ -1580,47 +1649,47 @@ TEST_F(regexTest, replace_iter_split_reject_limits_and_invalid_encoding)
     const std::string large(CPLAT_REGEX_MAX_LENGTH + 1U, 'a');
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - 境界テスト用のパターンをコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - 境界テスト用のパターンをコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    int replace_null_result = cplat_regex_replace(regex, "a", 1U, "x", CPLAT_REGEX_DEFAULT, NULL, 1U, NULL,
-                                                  NULL); // [手順] - 出力先 NULL と非ゼロ容量を指定して置換する。
-    int replace_flag_result = cplat_regex_replace(regex, "a", 1U, "x", 0x8000U, buffer, sizeof(buffer), NULL,
-                                                  NULL); // [手順] - 未定義フラグを指定して置換する。
-    int replace_text_limit_result =
-        cplat_regex_replace(regex, large.data(), large.size(), "x", CPLAT_REGEX_DEFAULT, buffer, sizeof(buffer), NULL,
-                            NULL); // [手順] - 最大長を超える入力を置換する。
+    int replace_null_result = cplat_regex_replace(regex, "a", 1U, "x", CPLAT_REGEX_DEFAULT, nullptr, 1U, nullptr,
+                                                  nullptr); // [手順] - 出力先 NULL と非ゼロ容量を指定して置換する。
+    int replace_flag_result = cplat_regex_replace(regex, "a", 1U, "x", 0x8000U, buffer, sizeof(buffer), nullptr,
+                                                  nullptr); // [手順] - 未定義フラグを指定して置換する。
+    int replace_text_limit_result = cplat_regex_replace(regex, large.data(), large.size(), "x", CPLAT_REGEX_DEFAULT,
+                                                        buffer, sizeof(buffer), nullptr,
+                                                        nullptr); // [手順] - 最大長を超える入力を置換する。
     int replace_text_encoding_result = cplat_regex_replace(regex, invalid.data(), invalid.size(), "x",
-                                                           CPLAT_REGEX_DEFAULT, buffer, sizeof(buffer), NULL,
-                                                           NULL); // [手順] - 不正 UTF-8 の入力を置換する。
+                                                           CPLAT_REGEX_DEFAULT, buffer, sizeof(buffer), nullptr,
+                                                           nullptr); // [手順] - 不正 UTF-8 の入力を置換する。
     int replace_replacement_encoding_result =
-        cplat_regex_replace(regex, "a", 1U, invalid.data(), CPLAT_REGEX_DEFAULT, buffer, sizeof(buffer), NULL,
-                            NULL); // [手順] - 不正 UTF-8 の置換文字列を指定する。
-    int search_flag_result = cplat_regex_search(regex, "a", 1U, 0U, 0x8000U, NULL, 0U, &matched,
-                                                NULL); // [手順] - 未定義照合フラグを指定して検索する。
+        cplat_regex_replace(regex, "a", 1U, invalid.data(), CPLAT_REGEX_DEFAULT, buffer, sizeof(buffer), nullptr,
+                            nullptr); // [手順] - 不正 UTF-8 の置換文字列を指定する。
+    int search_flag_result = cplat_regex_search(regex, "a", 1U, 0U, 0x8000U, nullptr, 0U, &matched,
+                                                nullptr); // [手順] - 未定義照合フラグを指定して検索する。
     int search_limit_result =
-        cplat_regex_search(regex, large.data(), large.size(), 0U, CPLAT_REGEX_DEFAULT, NULL, 0U, &matched,
-                           NULL); // [手順] - 最大長を超える入力を検索する。
+        cplat_regex_search(regex, large.data(), large.size(), 0U, CPLAT_REGEX_DEFAULT, nullptr, 0U, &matched,
+                           nullptr); // [手順] - 最大長を超える入力を検索する。
     int iter_flag_result = cplat_regex_iter_create(regex, "a", 1U, 0x8000U, &iter,
-                                                   NULL); // [手順] - 未定義列挙フラグを指定する。
+                                                   nullptr); // [手順] - 未定義列挙フラグを指定する。
     int iter_limit_result = cplat_regex_iter_create(regex, large.data(), large.size(), CPLAT_REGEX_DEFAULT, &iter,
-                                                    NULL); // [手順] - 最大長を超える入力で列挙する。
+                                                    nullptr); // [手順] - 最大長を超える入力で列挙する。
     int iter_encoding_result =
         cplat_regex_iter_create(regex, invalid.data(), invalid.size(), CPLAT_REGEX_MATCH_DEFAULT, &iter,
-                                NULL); // [手順] - 不正 UTF-8 の入力で列挙する。
-    int split_null_result = cplat_regex_split(regex, "a", 1U, 0U, CPLAT_REGEX_DEFAULT, NULL, 1U, &part_count,
-                                              NULL); // [手順] - 分割出力 NULL と非ゼロ容量を指定する。
+                                nullptr); // [手順] - 不正 UTF-8 の入力で列挙する。
+    int split_null_result = cplat_regex_split(regex, "a", 1U, 0U, CPLAT_REGEX_DEFAULT, nullptr, 1U, &part_count,
+                                              nullptr); // [手順] - 分割出力 NULL と非ゼロ容量を指定する。
     int split_flag_result = cplat_regex_split(regex, "a", 1U, 0U, 0x8000U, parts, 2U, &part_count,
-                                              NULL); // [手順] - 未定義分割フラグを指定する。
+                                              nullptr); // [手順] - 未定義分割フラグを指定する。
     int split_limit_result =
         cplat_regex_split(regex, large.data(), large.size(), 0U, CPLAT_REGEX_DEFAULT, parts, 2U, &part_count,
-                          NULL); // [手順] - 最大長を超える入力を分割する。
+                          nullptr); // [手順] - 最大長を超える入力を分割する。
     int split_encoding_result =
         cplat_regex_split(regex, invalid.data(), invalid.size(), 0U, CPLAT_REGEX_DEFAULT, parts, 2U, &part_count,
-                          NULL); // [手順] - 不正 UTF-8 の入力を分割する。
+                          nullptr); // [手順] - 不正 UTF-8 の入力を分割する。
 
     // Assert
     EXPECT_EQ(
@@ -1675,25 +1744,25 @@ TEST_F(regexTest, replace_iter_split_reject_limits_and_invalid_encoding)
 TEST_F(regexTest, iter_advances_empty_match_over_astral_code_point)
 {
     // Arrange
-    cplat_regex *regex = NULL;
-    cplat_regex_iter *iter = NULL;
+    cplat_regex *regex = nullptr;
+    cplat_regex_iter *iter = nullptr;
     int has_match = -1;
     const std::string text = u8"\U0001F600";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a*", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - 空一致するパターンをコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - 空一致するパターンをコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_regex_iter_create(regex, text.data(), text.size(), CPLAT_REGEX_DEFAULT, &iter,
-                                                NULL)); // [状態] - BMP 外文字の列挙器を生成しておく。
+                                                nullptr)); // [状態] - BMP 外文字の列挙器を生成しておく。
     // [状態確認] - cplat_regex_iter_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    int first_result = cplat_regex_iter_next(iter, NULL, 0U, &has_match,
-                                             NULL); // [手順] - BMP 外文字上の空一致を取得する。
-    int second_result = cplat_regex_iter_next(iter, NULL, 0U, &has_match,
-                                              NULL); // [手順] - サロゲート ペアを越えた次の空一致を取得する。
+    int first_result = cplat_regex_iter_next(iter, nullptr, 0U, &has_match,
+                                             nullptr); // [手順] - BMP 外文字上の空一致を取得する。
+    int second_result = cplat_regex_iter_next(iter, nullptr, 0U, &has_match,
+                                              nullptr); // [手順] - サロゲート ペアを越えた次の空一致を取得する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1711,22 +1780,23 @@ TEST_F(regexTest, iter_advances_empty_match_over_astral_code_point)
 TEST_F(regexTest, replace_checks_replacement_limit_and_sed_flag)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     char buffer[32] = {};
     const std::string large_replacement(CPLAT_REGEX_MAX_LENGTH + 1U, 'x');
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("(a)", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - 捕捉グループを持つパターンをコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - 捕捉グループを持つパターンをコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    int limit_result =
-        cplat_regex_replace(regex, "a", 1U, large_replacement.data(), CPLAT_REGEX_DEFAULT, buffer, sizeof(buffer), NULL,
-                            NULL); // [手順] - 最大長を超える置換文字列を指定する。
-    int sed_result = cplat_regex_replace(regex, "a", 1U, "\\1", CPLAT_REGEX_REPLACE_SED, buffer, sizeof(buffer), NULL,
-                                         NULL); // [手順] - sed 書式の後方参照を指定する。
+    int limit_result = cplat_regex_replace(regex, "a", 1U, large_replacement.data(), CPLAT_REGEX_DEFAULT, buffer,
+                                           sizeof(buffer), nullptr,
+                                           nullptr); // [手順] - 最大長を超える置換文字列を指定する。
+    int sed_result =
+        cplat_regex_replace(regex, "a", 1U, "\\1", CPLAT_REGEX_REPLACE_SED, buffer, sizeof(buffer), nullptr,
+                            nullptr); // [手順] - sed 書式の後方参照を指定する。
 
     // Assert
     EXPECT_EQ(
@@ -1744,20 +1814,20 @@ TEST_F(regexTest, replace_checks_replacement_limit_and_sed_flag)
 TEST_F(regexTest, split_advances_empty_match_over_astral_code_point)
 {
     // Arrange
-    cplat_regex *regex = NULL;
+    cplat_regex *regex = nullptr;
     cplat_regex_match parts[2];
     size_t part_count = 0U;
     const std::string text = u8"\U0001F600";
 
     ASSERT_EQ(CPLAT_OK, cplat_regex_create("a*", CPLAT_REGEX_DEFAULT, &regex,
-                                           NULL)); // [状態] - 空一致する区切りパターンをコンパイルしておく。
-                                                   // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+                                           nullptr)); // [状態] - 空一致する区切りパターンをコンパイルしておく。
+    // [状態確認] - cplat_regex_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     int result = cplat_regex_split(regex, text.data(), text.size(), 0U, CPLAT_REGEX_DEFAULT, parts, 2U, &part_count,
-                                   NULL); // [手順] - BMP 外文字を空一致パターンで分割する。
+                                   nullptr); // [手順] - BMP 外文字を空一致パターンで分割する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,

@@ -44,7 +44,7 @@ TEST_F(rmdirTest, removes_empty_directory)
                  // [Pre-Assert手順] - 0 を返却する。
 
     // Act
-    int actual_ret_rmdir = cplat_rmdir("empty_dir", NULL); // [手順] - 空のディレクトリを削除する。
+    int actual_ret_rmdir = cplat_rmdir("empty_dir", nullptr); // [手順] - 空のディレクトリを削除する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_rmdir); // [確認_正常系] - cplat_rmdir() の戻り値が CPLAT_OK であること。
@@ -64,7 +64,7 @@ TEST_F(rmdirTest, fails_for_non_empty_directory)
                        // [Pre-Assert手順] - errno に ENOTEMPTY を設定し、-1 を返却する。
 
     // Act
-    int actual_ret_rmdir = cplat_rmdir("non_empty_dir", NULL); // [手順] - 空でないディレクトリを削除する。
+    int actual_ret_rmdir = cplat_rmdir("non_empty_dir", nullptr); // [手順] - 空でないディレクトリを削除する。
 
     // Assert
     EXPECT_NE(
@@ -81,7 +81,7 @@ TEST_F(rmdirTest, null_path_is_rejected)
     // Pre-Assert
 
     // Act
-    int actual_ret_rmdir = cplat_rmdir(NULL, NULL); // [手順] - パスに NULL を指定して呼び出す。
+    int actual_ret_rmdir = cplat_rmdir(nullptr, nullptr); // [手順] - パスに NULL を指定して呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,

@@ -33,8 +33,8 @@ void expect_ui_language_tag(NiceMock<Mock_cplat> &mock, const char *const tag)
                 memcpy(tag_out, tag, length + 1U);
                 return CPLAT_OK;
             }));
-    // [Pre-Assert手順] - 指定した表示言語タグを出力バッファーへコピーする。
     // [Pre-Assert確認_正常系] - cplat_ui_language_get_tag() が 1 回呼び出されること。
+    // [Pre-Assert手順] - 指定した表示言語タグを出力バッファーへコピーする。
 }
 // [サブ手順終了]
 
@@ -68,7 +68,7 @@ TEST_F(show_ui_languageTest, main_prints_language_tag)
         .Times(1); // [Pre-Assert確認_正常系] - printf() が "ja-JP\n" と等しい文字列を指定して 1 回呼び出されること。
 
     // Act
-    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - 引数無しで main を呼び出す。
+    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - 引数無しで main() を呼び出す。
 
     // Assert
     EXPECT_EQ(EXIT_SUCCESS, actual_ret); // [確認_正常系] - __real_main() の戻り値が EXIT_SUCCESS であること。
@@ -89,7 +89,7 @@ TEST_F(show_ui_languageTest, main_prints_empty_line_for_neutral)
         .Times(1); // [Pre-Assert確認_正常系] - printf() が "\n" と等しい文字列を指定して 1 回呼び出されること。
 
     // Act
-    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - 引数無しで main を呼び出す。
+    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - 引数無しで main() を呼び出す。
 
     // Assert
     EXPECT_EQ(EXIT_SUCCESS, actual_ret); // [確認_正常系] - __real_main() の戻り値が EXIT_SUCCESS であること。
@@ -110,7 +110,7 @@ TEST_F(show_ui_languageTest, main_reports_failure)
     EXPECT_CALL(mock_stdio_, printf(_, _, _, _)).Times(0); // [Pre-Assert確認_異常系] - printf() が呼び出されないこと。
 
     // Act
-    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - 取得が失敗する状態で main を呼び出す。
+    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - 取得が失敗する状態で main() を呼び出す。
 
     // Assert
     EXPECT_EQ(EXIT_FAILURE, actual_ret); // [確認_異常系] - __real_main() の戻り値が EXIT_FAILURE であること。
@@ -128,7 +128,7 @@ TEST_F(show_ui_languageTest, main_prints_usage_with_help)
         .Times(0); // [Pre-Assert確認_正常系] - cplat_ui_language_get_tag() が呼び出されないこと。
 
     // Act
-    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - --help を指定して main を呼び出す。
+    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - --help を指定して main() を呼び出す。
 
     // Assert
     EXPECT_EQ(EXIT_SUCCESS, actual_ret); // [確認_正常系] - __real_main() の戻り値が EXIT_SUCCESS であること。
@@ -147,7 +147,7 @@ TEST_F(show_ui_languageTest, main_rejects_unknown_option)
 
     // Act
     int actual_ret =
-        __real_main(argc, const_cast<char **>(argv)); // [手順] - 未知のオプションを指定して main を呼び出す。
+        __real_main(argc, const_cast<char **>(argv)); // [手順] - 未知のオプションを指定して main() を呼び出す。
 
     // Assert
     EXPECT_EQ(EXIT_FAILURE, actual_ret); // [確認_異常系] - __real_main() の戻り値が EXIT_FAILURE であること。

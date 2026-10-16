@@ -41,9 +41,9 @@ TEST_F(hashtableConfigTest, get_config_ref_rejects_null_arguments)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
-    int actual_ret_null_ht = cplat_hashtable_get_config_ref(NULL, &out); // [手順] - ht に NULL を渡す。
-    int actual_ret_null_out = cplat_hashtable_get_config_ref(ht, NULL);  // [手順] - config_out に NULL を渡す。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
+    int actual_ret_null_ht = cplat_hashtable_get_config_ref(nullptr, &out); // [手順] - ht に NULL を渡す。
+    int actual_ret_null_out = cplat_hashtable_get_config_ref(ht, nullptr);  // [手順] - config_out に NULL を渡す。
 
     // Assert
     EXPECT_EQ(
@@ -70,9 +70,9 @@ TEST_F(hashtableConfigTest, get_config_val_rejects_null_out_and_propagates_ref_f
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
-    int actual_ret_null_out = cplat_hashtable_get_config_val(ht, NULL);  // [手順] - config_out に NULL を渡す。
-    int actual_ret_null_ht = cplat_hashtable_get_config_val(NULL, &out); // [手順] - ht に NULL を渡す。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
+    int actual_ret_null_out = cplat_hashtable_get_config_val(ht, nullptr);  // [手順] - config_out に NULL を渡す。
+    int actual_ret_null_ht = cplat_hashtable_get_config_val(nullptr, &out); // [手順] - ht に NULL を渡す。
     int actual_ret_ok = cplat_hashtable_get_config_val(ht, &out);        // [手順] - 妥当な引数で呼び出す。
 
     // Assert
@@ -101,13 +101,15 @@ TEST_F(hashtableConfigTest, buffer_size_rejects_null_arguments)
     size_t data_size = 0;
 
     fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - 妥当な設定を用意する。
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht = cplat_hashtable_buffer_size(NULL, &mgmt_size, &data_size); // [手順] - ht に NULL を渡す。
-    int actual_ret_null_both = cplat_hashtable_buffer_size(ht, NULL, NULL); // [手順] - 両方の出力先に NULL を渡す。
+    int actual_ret_null_ht =
+        cplat_hashtable_buffer_size(nullptr, &mgmt_size, &data_size); // [手順] - ht に NULL を渡す。
+    int actual_ret_null_both =
+        cplat_hashtable_buffer_size(ht, nullptr, nullptr); // [手順] - 両方の出力先に NULL を渡す。
 
     // Assert
     EXPECT_EQ(
@@ -133,13 +135,15 @@ TEST_F(hashtableConfigTest, buffer_size_allows_partial_query_and_succeeds)
     size_t full_data_size = 0;
 
     fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - 妥当な設定を用意する。
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
 
     // Act
-    int actual_ret_only_mgmt = cplat_hashtable_buffer_size(ht, &mgmt_size, NULL); // [手順] - データ側だけ NULL を渡す。
-    int actual_ret_only_data = cplat_hashtable_buffer_size(ht, NULL, &data_size); // [手順] - 管理側だけ NULL を渡す。
+    int actual_ret_only_mgmt =
+        cplat_hashtable_buffer_size(ht, &mgmt_size, nullptr); // [手順] - データ側だけ NULL を渡す。
+    int actual_ret_only_data =
+        cplat_hashtable_buffer_size(ht, nullptr, &data_size); // [手順] - 管理側だけ NULL を渡す。
     int actual_ret_ok = cplat_hashtable_buffer_size(ht, &full_mgmt_size,
                                                     &full_data_size); // [手順] - 両方の引数を渡してサイズを取得する。
 
@@ -172,13 +176,14 @@ TEST_F(hashtableConfigTest, buffer_ref_rejects_null_arguments)
     const void *data = nullptr;
 
     fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - 妥当な設定を用意する。
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht = cplat_hashtable_buffer_ref(NULL, &mgmt, &data); // [手順] - ht に NULL を渡す。
-    int actual_ret_null_both = cplat_hashtable_buffer_ref(ht, NULL, NULL);   // [手順] - 両方の出力先に NULL を渡す。
+    int actual_ret_null_ht = cplat_hashtable_buffer_ref(nullptr, &mgmt, &data); // [手順] - ht に NULL を渡す。
+    int actual_ret_null_both =
+        cplat_hashtable_buffer_ref(ht, nullptr, nullptr); // [手順] - 両方の出力先に NULL を渡す。
 
     // Assert
     EXPECT_EQ(
@@ -202,13 +207,13 @@ TEST_F(hashtableConfigTest, buffer_ref_allows_partial_query)
     const void *data = nullptr;
 
     fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - 妥当な設定を用意する。
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - テーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
 
     // Act
-    int actual_ret_only_mgmt = cplat_hashtable_buffer_ref(ht, &mgmt, NULL); // [手順] - データ側だけ NULL を渡す。
-    int actual_ret_only_data = cplat_hashtable_buffer_ref(ht, NULL, &data); // [手順] - 管理側だけ NULL を渡す。
+    int actual_ret_only_mgmt = cplat_hashtable_buffer_ref(ht, &mgmt, nullptr); // [手順] - データ側だけ NULL を渡す。
+    int actual_ret_only_data = cplat_hashtable_buffer_ref(ht, nullptr, &data); // [手順] - 管理側だけ NULL を渡す。
 
     // Assert
     EXPECT_EQ(
@@ -242,7 +247,7 @@ TEST_F(hashtableConfigTest, buffer_ref_returns_internal_regions_contiguously)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);  // [手順] - 内部確保で構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - 内部確保で構築する。
     int actual_ret = cplat_hashtable_buffer_ref(ht, &mgmt, &data); // [手順] - 両領域の先頭を取得する。
     (void)cplat_hashtable_buffer_size(ht, &mgmt_size, &data_size);
     const unsigned char *mgmt_bytes = static_cast<const unsigned char *>(mgmt);

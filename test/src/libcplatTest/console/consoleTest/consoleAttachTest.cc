@@ -12,7 +12,7 @@ TEST_F(consoleAttachTest, reports_not_attached_without_takeover_option)
     // Arrange
     int argc = 1;
     char program[] = "consoleAttachTest";
-    char *argv[] = {program, NULL};
+    char *argv[] = {program, nullptr};
     int attached = 1; // [状態] - 未接続への書き換えを確認するため 1 で初期化する。
 
     // Pre-Assert
@@ -33,13 +33,13 @@ TEST_F(consoleAttachTest, accepts_null_attached_out)
     // Arrange
     int argc = 1;
     char program[] = "consoleAttachTest";
-    char *argv[] = {program, NULL};
+    char *argv[] = {program, nullptr};
 
     // Pre-Assert
 
     // Act
     int actual_ret = cplat_console_attach_parent(&argc, argv,
-                                                 NULL); // [手順] - attached_out に NULL を指定して呼び出す。
+                                                 nullptr); // [手順] - attached_out に NULL を指定して呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_console_attach_parent() の戻り値が CPLAT_OK であること。

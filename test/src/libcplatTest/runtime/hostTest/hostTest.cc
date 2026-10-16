@@ -54,7 +54,7 @@ TEST_F(hostTest, RejectsInvalidOutputArguments)
 
     // Act
     int actual_ret_null =
-        cplat_host_get_name(NULL, sizeof(name));        // [手順] - 出力先に NULL を渡してホスト名を取得する。
+        cplat_host_get_name(nullptr, sizeof(name));     // [手順] - 出力先に NULL を渡してホスト名を取得する。
     int actual_ret_zero = cplat_host_get_name(name, 0); // [手順] - 出力先サイズに 0 を渡してホスト名を取得する。
     int actual_ret_too_big = cplat_host_get_name(
         name, (size_t)INT_MAX + 1u); // [手順] - 出力先サイズに INT_MAX を超える値を渡してホスト名を取得する。

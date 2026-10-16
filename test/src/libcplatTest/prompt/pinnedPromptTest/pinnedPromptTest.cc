@@ -38,10 +38,10 @@ TEST(pinnedPromptTest, status_apis_reject_null_screen)
 
     // Act
     int enable_result =
-        cplat_pinned_prompt_status_enable(NULL, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
+        cplat_pinned_prompt_status_enable(nullptr, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
                                           1); // [手順] - screen に NULL を渡して上部ステータス領域を有効にする。
     int set_result = cplat_pinned_prompt_status_set(
-        NULL, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP, CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT,
+        nullptr, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP, CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT,
         "status"); // [手順] - screen に NULL を渡して上部左側の表示内容を設定する。
 
     // Assert
@@ -69,7 +69,7 @@ TEST(pinnedPromptTest, static_text_helpers_cover_empty_and_utf8_cases)
     // Pre-Assert
 
     // Act
-    size_t null_len = test_pinned_prompt_cstr_len(NULL);             // [手順] - NULL の文字列長を取得する。
+    size_t null_len = test_pinned_prompt_cstr_len(nullptr);          // [手順] - NULL の文字列長を取得する。
     size_t ascii_width = test_pinned_prompt_utf8_width("A", 1U, 0U); // [手順] - ASCII の表示幅を取得する。
     size_t combining_width =
         test_pinned_prompt_utf8_width(combining, sizeof(combining) - 1U, 0U); // [手順] - 結合文字の表示幅を取得する。
@@ -158,7 +158,7 @@ TEST(pinnedPromptTest, static_display_helpers_skip_ansi_and_limit_columns)
 TEST(pinnedPromptTest, fallback_readline_strips_newline)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_cplat> mock_cplat;
@@ -169,11 +169,11 @@ TEST(pinnedPromptTest, fallback_readline_strips_newline)
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
         .WillOnce(DoAll(SetArrayArgument<0>(input, input + sizeof(input)), Return(CPLAT_OK)));
     // [Pre-Assert確認_正常系] - cplat_fgets() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets から "answer" を返却する。
+    // [Pre-Assert手順] - cplat_fgets() から "answer" を返却する。
 
     // Act
     int result = cplat_pinned_prompt_readline(screen, output, sizeof(output),
-                                              NULL); // [手順] - 非 TTY の readline を呼び出す。
+                                              nullptr); // [手順] - 非 TTY の readline を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -188,7 +188,7 @@ TEST(pinnedPromptTest, fallback_readline_strips_newline)
 TEST(pinnedPromptTest, fallback_readline_reports_eof)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_cplat> mock_cplat;
@@ -197,7 +197,7 @@ TEST(pinnedPromptTest, fallback_readline_reports_eof)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _)).WillOnce(Return(CPLAT_ERR_EOF));
     // [Pre-Assert確認_異常系] - cplat_fgets() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets から CPLAT_ERR_EOF を返却する。
+    // [Pre-Assert手順] - cplat_fgets() から CPLAT_ERR_EOF を返却する。
 
     // Act
     int result = cplat_pinned_prompt_readline(screen, output, sizeof(output),
@@ -215,7 +215,7 @@ TEST(pinnedPromptTest, fallback_readline_reports_eof)
 TEST(pinnedPromptTest, fallback_readline_reports_buffer_too_small)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_cplat> mock_cplat;
@@ -226,11 +226,11 @@ TEST(pinnedPromptTest, fallback_readline_reports_buffer_too_small)
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
         .WillOnce(DoAll(SetArrayArgument<0>(empty, empty + sizeof(empty)), Return(CPLAT_ERR_BUFFER_TOO_SMALL)));
     // [Pre-Assert確認_異常系] - cplat_fgets() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets から CPLAT_ERR_BUFFER_TOO_SMALL と空文字列を返却する。
+    // [Pre-Assert手順] - cplat_fgets() から CPLAT_ERR_BUFFER_TOO_SMALL と空文字列を返却する。
 
     // Act
     int actual_ret = cplat_pinned_prompt_readline(screen, output, sizeof(output),
-                                                  NULL); // [手順] - 行が収まらない非 TTY readline を呼び出す。
+                                                  nullptr); // [手順] - 行が収まらない非 TTY readline を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -246,7 +246,7 @@ TEST(pinnedPromptTest, fallback_readline_reports_buffer_too_small)
 TEST(pinnedPromptTest, status_apis_accept_valid_positions_and_alignments)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
 
     // Pre-Assert
@@ -267,7 +267,7 @@ TEST(pinnedPromptTest, status_apis_accept_valid_positions_and_alignments)
                                                      "bottom"); // [手順] - 下部左側の内容を設定する。
     int bottom_right = cplat_pinned_prompt_status_set(screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM,
                                                       CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT,
-                                                      NULL); // [手順] - 下部右側の内容を NULL で消去する。
+                                                      nullptr); // [手順] - 下部右側の内容を NULL で消去する。
 
     // Assert
     EXPECT_EQ(
@@ -297,7 +297,7 @@ TEST(pinnedPromptTest, status_apis_accept_valid_positions_and_alignments)
 TEST(pinnedPromptTest, fallback_readline_with_initial_ignores_initial_text)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_cplat> mock_cplat;
@@ -308,11 +308,11 @@ TEST(pinnedPromptTest, fallback_readline_with_initial_ignores_initial_text)
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
         .WillOnce(DoAll(SetArrayArgument<0>(input, input + sizeof(input)), Return(CPLAT_OK)));
     // [Pre-Assert確認_正常系] - cplat_fgets() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets から "piped" を返却する。
+    // [Pre-Assert手順] - cplat_fgets() から "piped" を返却する。
 
     // Act
     int result = cplat_pinned_prompt_readline_with_initial(
-        screen, output, sizeof(output), NULL,
+        screen, output, sizeof(output), nullptr,
         "initial"); // [手順] - 初期値を指定して非 TTY の readline を呼び出す。
 
     // Assert
@@ -330,7 +330,7 @@ TEST(pinnedPromptTest, fallback_readline_with_initial_ignores_initial_text)
 TEST(pinnedPromptTest, readline_with_initial_rejects_invalid_initial_text_and_arguments)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_cplat> mock_cplat;
@@ -341,14 +341,14 @@ TEST(pinnedPromptTest, readline_with_initial_rejects_invalid_initial_text_and_ar
     // [Pre-Assert確認_異常系] - cplat_fgets() が呼び出されないこと。
 
     // Act
-    int actual_ret_control = cplat_pinned_prompt_readline_with_initial(screen, output, sizeof(output), NULL,
+    int actual_ret_control = cplat_pinned_prompt_readline_with_initial(screen, output, sizeof(output), nullptr,
                                                                        "a\tb"); // [手順] - タブを含む初期値を指定する。
-    int actual_ret_screen = cplat_pinned_prompt_readline_with_initial(NULL, output, sizeof(output), NULL,
+    int actual_ret_screen = cplat_pinned_prompt_readline_with_initial(nullptr, output, sizeof(output), nullptr,
                                                                       "a"); // [手順] - ハンドルに NULL を指定する。
-    int actual_ret_buf = cplat_pinned_prompt_readline_with_initial(screen, NULL, sizeof(output), NULL,
+    int actual_ret_buf = cplat_pinned_prompt_readline_with_initial(screen, nullptr, sizeof(output), nullptr,
                                                                    "a"); // [手順] - 出力先に NULL を指定する。
-    int actual_ret_size =
-        cplat_pinned_prompt_readline_with_initial(screen, output, 0U, NULL, "a"); // [手順] - バイト数に 0 を指定する。
+    int actual_ret_size = cplat_pinned_prompt_readline_with_initial(screen, output, 0U, nullptr,
+                                                                    "a"); // [手順] - バイト数に 0 を指定する。
 
     // Assert
     EXPECT_EQ(
@@ -439,7 +439,7 @@ TEST(pinnedPromptTest, platform_get_size_rejects_zero_ioctl_dimensions)
 TEST(pinnedPromptTest, platform_raw_mode_enters_and_leaves_once)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_reset_platform_state();
     NiceMock<Mock_termios> mock_termios;
@@ -485,7 +485,7 @@ TEST(pinnedPromptTest, platform_raw_mode_enters_and_leaves_once)
 TEST(pinnedPromptTest, platform_read_char_handles_resize_and_eof)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_unistd> mock_unistd;
     unsigned char character = 'B';
@@ -516,7 +516,7 @@ TEST(pinnedPromptTest, platform_read_char_handles_resize_and_eof)
         test_pinned_prompt_resize_pending()); // [確認_正常系] - test_pinned_prompt_resize_pending() の戻り値が 0 であること。(リサイズ通知が消費されたことの確認)
     EXPECT_EQ(
         static_cast<int>('B'),
-        character_result); // [確認_正常系] - 1 バイト入力の test_pinned_prompt_read_char() の戻り値が static_cast<int>('B') であること。
+        character_result); // [確認_正常系] - 1 バイト入力の test_pinned_prompt_read_char() の戻り値が 'B' であること。
     EXPECT_EQ(
         -1,
         eof_result); // [確認_正常系] - 0 バイト入力の test_pinned_prompt_read_char() の戻り値が -1 であること。(EOF であることの確認)
@@ -529,7 +529,7 @@ TEST(pinnedPromptTest, platform_read_char_handles_resize_and_eof)
 TEST(pinnedPromptTest, platform_read_char_nb_handles_select_timeout)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_sys_select> mock_select;
     NiceMock<Mock_unistd> mock_unistd;
@@ -558,7 +558,7 @@ TEST(pinnedPromptTest, platform_read_char_nb_handles_select_timeout)
         timeout_result); // [確認_正常系] - select がタイムアウトしたときの test_pinned_prompt_read_char_nb() の戻り値が -1 であること。(入力がないことの確認)
     EXPECT_EQ(
         static_cast<int>('C'),
-        character_result); // [確認_正常系] - 入力可能のときの test_pinned_prompt_read_char_nb() の戻り値が static_cast<int>('C') であること。
+        character_result); // [確認_正常系] - 入力可能のときの test_pinned_prompt_read_char_nb() の戻り値が 'C' であること。
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
@@ -568,7 +568,7 @@ TEST(pinnedPromptTest, platform_read_char_nb_handles_select_timeout)
 TEST(pinnedPromptTest, tty_readline_accepts_character_and_enter)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_reset_platform_state();
@@ -632,7 +632,7 @@ TEST(pinnedPromptTest, tty_readline_accepts_character_and_enter)
 TEST(pinnedPromptTest, tty_readline_reports_canceled_on_ctrl_c)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_reset_platform_state();
@@ -692,7 +692,7 @@ TEST(pinnedPromptTest, tty_readline_reports_canceled_on_ctrl_c)
 TEST(pinnedPromptTest, read_key_classifies_control_and_escape_sequences)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_sys_select> mock_select;
@@ -806,8 +806,7 @@ TEST(pinnedPromptTest, read_key_classifies_control_and_escape_sequences)
         invalid_csi_key); // [確認_異常系] - 未知の CSI の test_pinned_prompt_read_key() の戻り値が TEST_PINNED_PROMPT_KEY_UNKNOWN であること。
     EXPECT_EQ(
         char_value,
-        static_cast<int>(
-            'A')); // [確認_正常系] - char_value が static_cast<int>('A') であること。(読み取った文字が A であることの確認)
+        static_cast<int>('A')); // [確認_正常系] - char_value が 'A' であること。(読み取った文字が A であることの確認)
     EXPECT_EQ(
         TEST_PINNED_PROMPT_KEY_RESIZE,
         resize_key); // [確認_正常系] - リサイズ通知の test_pinned_prompt_read_key() の戻り値が TEST_PINNED_PROMPT_KEY_RESIZE であること。
@@ -823,7 +822,7 @@ TEST(pinnedPromptTest, read_key_classifies_control_and_escape_sequences)
 TEST(pinnedPromptTest, edit_helpers_update_line_at_boundaries)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
 
     // Pre-Assert
@@ -860,7 +859,7 @@ TEST(pinnedPromptTest, edit_helpers_update_line_at_boundaries)
 TEST(pinnedPromptTest, render_handles_status_regions_and_empty_layout)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_ioctl> mock_ioctl;
     struct winsize full_size = {};
@@ -880,8 +879,8 @@ TEST(pinnedPromptTest, render_handles_status_regions_and_empty_layout)
                                     "BR"); // [手順] - 上下ステータスと入力行を描画する。
     test_pinned_prompt_render(screen);     // [手順] - ステータス領域を含む TTY 描画を実行する。
     test_pinned_prompt_render(screen);     // [手順] - status_dirty が解除された状態で再描画する。
-    test_pinned_prompt_render_state(screen, 1, 1, 1, 1, "", "", NULL, NULL, NULL,
-                                    NULL); // [手順] - 空のプロンプトとステータスを描画する。
+    test_pinned_prompt_render_state(screen, 1, 1, 1, 1, "", "", nullptr, nullptr, nullptr,
+                                    nullptr); // [手順] - 空のプロンプトとステータスを描画する。
     test_pinned_prompt_render(screen);     // [手順] - 空状態の描画を実行する。
 
     // Assert
@@ -898,7 +897,7 @@ TEST(pinnedPromptTest, render_handles_status_regions_and_empty_layout)
 TEST(pinnedPromptTest, tty_readline_handles_editing_and_history)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_reset_platform_state();
@@ -989,7 +988,7 @@ TEST(pinnedPromptTest, tty_readline_handles_editing_and_history)
 TEST(pinnedPromptTest, tty_readline_continues_after_resize)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_reset_platform_state();
@@ -1127,7 +1126,7 @@ TEST(pinnedPromptTest, static_text_helpers_cover_boundary_sequences)
 TEST(pinnedPromptTest, history_helpers_cover_empty_and_duplicate_entries)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
 
     // Pre-Assert
@@ -1151,7 +1150,7 @@ TEST(pinnedPromptTest, history_helpers_cover_empty_and_duplicate_entries)
 TEST(pinnedPromptTest, platform_raw_mode_handles_failures_and_reentry)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_reset_platform_state();
     NiceMock<Mock_termios> mock_termios;
@@ -1211,7 +1210,7 @@ TEST(pinnedPromptTest, platform_raw_mode_handles_failures_and_reentry)
 TEST(pinnedPromptTest, platform_read_helpers_handle_interrupt_and_select_results)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_sys_select> mock_select;
@@ -1258,7 +1257,7 @@ TEST(pinnedPromptTest, platform_read_helpers_handle_interrupt_and_select_results
         select_timeout_result); // [確認_異常系] - select がタイムアウトしたときの test_pinned_prompt_read_char_nb() の戻り値が -1 であること。(入力がないことの確認)
     EXPECT_EQ(
         static_cast<int>('Q'),
-        select_read_result); // [確認_正常系] - select 成功後の test_pinned_prompt_read_char_nb() の戻り値が static_cast<int>('Q') であること。
+        select_read_result); // [確認_正常系] - select 成功後の test_pinned_prompt_read_char_nb() の戻り値が 'Q' であること。
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
@@ -1268,7 +1267,7 @@ TEST(pinnedPromptTest, platform_read_helpers_handle_interrupt_and_select_results
 TEST(pinnedPromptTest, prepare_output_handles_tty_visibility)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_ioctl> mock_ioctl;
     struct winsize size = {};
@@ -1286,8 +1285,8 @@ TEST(pinnedPromptTest, prepare_output_handles_tty_visibility)
     // Act
     test_pinned_prompt_set_tty(screen, 0);     // [手順] - 非 TTY 状態へ変更する。
     test_pinned_prompt_prepare_output(screen); // [手順] - 非 TTY の出力準備を行う。
-    test_pinned_prompt_render_state(screen, 1, 1, 0, 0, "P> ", "text", NULL, NULL, NULL,
-                                    NULL);     // [手順] - 表示中の TTY 状態を用意する。
+    test_pinned_prompt_render_state(screen, 1, 1, 0, 0, "P> ", "text", nullptr, nullptr, nullptr,
+                                    nullptr);  // [手順] - 表示中の TTY 状態を用意する。
     test_pinned_prompt_prepare_output(screen); // [手順] - 表示中 TTY の出力準備を行う。
 
     // Assert
@@ -1303,7 +1302,7 @@ TEST(pinnedPromptTest, prepare_output_handles_tty_visibility)
 TEST(pinnedPromptTest, write_and_printf_handle_arguments_and_short_write)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_stdio> mock_stdio;
@@ -1316,9 +1315,9 @@ TEST(pinnedPromptTest, write_and_printf_handle_arguments_and_short_write)
     // [Pre-Assert手順] - 1 回目は 2 バイト、以降は要求サイズを返却する。
 
     // Act
-    int invalid_screen = cplat_pinned_prompt_write(NULL, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, data, 3U,
+    int invalid_screen = cplat_pinned_prompt_write(nullptr, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, data, 3U,
                                                    &written); // [手順] - NULL ハンドルで書き込む。
-    int invalid_data = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, NULL, 1U,
+    int invalid_data = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, nullptr, 1U,
                                                  &written); // [手順] - NULL データを正のサイズで書き込む。
     int short_result = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, data, 3U,
                                                  &written); // [手順] - 標準出力へ短い書き込みを行う。
@@ -1326,13 +1325,13 @@ TEST(pinnedPromptTest, write_and_printf_handle_arguments_and_short_write)
                                                   &written); // [手順] - 標準出力へ全量を書き込む。
     int stderr_result = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR, data, 3U,
                                                   &written); // [手順] - 標準エラーへ全量を書き込む。
-    int empty_result = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, NULL, 0U,
+    int empty_result = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, nullptr, 0U,
                                                  &written); // [手順] - NULL データをサイズ 0 で書き込む。
     int printf_result = cplat_pinned_prompt_printf(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s-%d", "value",
                                                    7); // [手順] - 書式付き文字列を書き込む。
     int null_fmt_result = cplat_pinned_prompt_printf(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                                                     NULL); // [手順] - NULL 書式で空文字列を書き込む。
-    int null_printf_result = cplat_pinned_prompt_printf(NULL, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
+                                                     nullptr); // [手順] - NULL 書式で空文字列を書き込む。
+    int null_printf_result = cplat_pinned_prompt_printf(nullptr, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
                                                         "x"); // [手順] - NULL ハンドルで書式付き書き込みを行う。
 
     // Assert
@@ -1371,7 +1370,7 @@ TEST(pinnedPromptTest, write_and_printf_handle_arguments_and_short_write)
 TEST(pinnedPromptTest, readline_fmt_formats_and_accepts_null_format)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_cplat> mock_cplat;
@@ -1391,9 +1390,9 @@ TEST(pinnedPromptTest, readline_fmt_formats_and_accepts_null_format)
     int formatted_result = cplat_pinned_prompt_readline_fmt(screen, first_output, sizeof(first_output), "%s-%d", "p",
                                                             3); // [手順] - 書式付き readline を呼び出す。
     int null_format_result = cplat_pinned_prompt_readline_fmt(screen, second_output, sizeof(second_output),
-                                                              NULL); // [手順] - NULL 書式の readline を呼び出す。
+                                                              nullptr); // [手順] - NULL 書式の readline を呼び出す。
     int null_screen_result =
-        cplat_pinned_prompt_readline_fmt_at(NULL, second_output, sizeof(second_output), "file", 1, "%s",
+        cplat_pinned_prompt_readline_fmt_at(nullptr, second_output, sizeof(second_output), "file", 1, "%s",
                                             "x"); // [手順] - NULL ハンドルの書式付き readline を呼び出す。
 
     // Assert
@@ -1417,7 +1416,7 @@ TEST(pinnedPromptTest, readline_fmt_formats_and_accepts_null_format)
 TEST(pinnedPromptTest, status_apis_reject_invalid_position_and_alignment)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     int invalid_position_value = 99;
     int invalid_align_value = 99;
@@ -1514,7 +1513,7 @@ static void expect_tty_input(Mock_ioctl &mock_ioctl, Mock_signal &mock_signal, M
 TEST(pinnedPromptTest, tty_readline_with_initial_returns_initial_text_on_enter)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_reset_platform_state();
@@ -1549,7 +1548,7 @@ TEST(pinnedPromptTest, tty_readline_with_initial_returns_initial_text_on_enter)
 TEST(pinnedPromptTest, tty_readline_with_initial_allows_editing_from_end)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_reset_platform_state();
@@ -1584,7 +1583,7 @@ TEST(pinnedPromptTest, tty_readline_with_initial_allows_editing_from_end)
 TEST(pinnedPromptTest, tty_readline_with_initial_restores_initial_text_after_history)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_reset_platform_state();
@@ -1640,7 +1639,7 @@ TEST(pinnedPromptTest, tty_readline_with_initial_restores_initial_text_after_his
 TEST(pinnedPromptTest, tty_readline_with_initial_reports_out_of_memory_when_edit_buffer_expansion_fails)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_reset_platform_state();
@@ -1675,7 +1674,7 @@ TEST(pinnedPromptTest, tty_readline_with_initial_reports_out_of_memory_when_edit
     // [Pre-Assert手順] - 端末操作を成功させる。
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _)).WillOnce(Return(nullptr));
     // [Pre-Assert確認_異常系] - cplat_realloc() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_realloc から NULL を返却する。
+    // [Pre-Assert手順] - cplat_realloc() から NULL を返却する。
 
     // Act
     int result = cplat_pinned_prompt_readline_with_initial_at(screen, output, sizeof(output), "", long_initial.c_str(),
@@ -1783,7 +1782,7 @@ TEST(pinnedPromptTest, platform_get_size_falls_back_when_stdout_handle_invalid)
 TEST(pinnedPromptTest, platform_raw_mode_enters_and_leaves_once_on_windows)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     Mock_windows mock_windows;
     HANDLE in_handle = (HANDLE)0x1234;
@@ -1823,9 +1822,9 @@ TEST(pinnedPromptTest, platform_raw_mode_enters_and_leaves_once_on_windows)
         0U,
         captured_mode &
             (DWORD)
-                ENABLE_VIRTUAL_TERMINAL_INPUT); // [確認_正常系] - captured_mode & (DWORD)ENABLE_VIRTUAL_TERMINAL_INPUT が 0 以外であること。(仮想端末入力が有効化されたことの確認)
+                ENABLE_VIRTUAL_TERMINAL_INPUT); // [確認_正常系] - captured_mode & ENABLE_VIRTUAL_TERMINAL_INPUT が 0 以外であること。(仮想端末入力が有効化されたことの確認)
     EXPECT_EQ(0U, captured_mode & (DWORD)(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT));
-    // [確認_正常系] - captured_mode & (DWORD)(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT) が 0 であること。(エコー・行入力・Ctrl+C シグナル化が無効化されたことの確認)
+    // [確認_正常系] - captured_mode & (ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT) が 0 であること。(エコー・行入力・Ctrl+C シグナル化が無効化されたことの確認)
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
@@ -1835,7 +1834,7 @@ TEST(pinnedPromptTest, platform_raw_mode_enters_and_leaves_once_on_windows)
 TEST(pinnedPromptTest, platform_raw_mode_handles_failures_on_windows)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     Mock_windows mock_windows;
     HANDLE in_handle = (HANDLE)0x1234;
@@ -1886,7 +1885,7 @@ TEST(pinnedPromptTest, platform_raw_mode_handles_failures_on_windows)
 TEST(pinnedPromptTest, platform_read_char_handles_timeout_and_eof_on_windows)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     Mock_windows mock_windows;
     HANDLE in_handle = (HANDLE)0x1234;
@@ -1941,7 +1940,7 @@ TEST(pinnedPromptTest, platform_read_char_handles_timeout_and_eof_on_windows)
         wait_fail_result); // [確認_異常系] - WAIT_FAILED の test_pinned_prompt_read_char() の戻り値が -1 であること。(入力待ちの失敗であることの確認)
     EXPECT_EQ(
         static_cast<int>('B'),
-        character_result); // [確認_正常系] - 1 バイト入力の test_pinned_prompt_read_char() の戻り値が static_cast<int>('B') であること。
+        character_result); // [確認_正常系] - 1 バイト入力の test_pinned_prompt_read_char() の戻り値が 'B' であること。
     EXPECT_EQ(
         -1,
         eof_result); // [確認_正常系] - 0 バイト入力の test_pinned_prompt_read_char() の戻り値が -1 であること。(EOF であることの確認)
@@ -1954,7 +1953,7 @@ TEST(pinnedPromptTest, platform_read_char_handles_timeout_and_eof_on_windows)
 TEST(pinnedPromptTest, platform_read_char_nb_handles_wait_timeout_on_windows)
 {
     // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(NULL); // [状態] - ハンドルを用意する。
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
     Mock_windows mock_windows;
     HANDLE in_handle = (HANDLE)0x1234;
@@ -2002,7 +2001,7 @@ TEST(pinnedPromptTest, platform_read_char_nb_handles_wait_timeout_on_windows)
         timeout_result); // [確認_正常系] - 50 ms 待ちがタイムアウトしたときの test_pinned_prompt_read_char_nb() の戻り値が -1 であること。(入力がないことの確認)
     EXPECT_EQ(
         static_cast<int>('C'),
-        character_result); // [確認_正常系] - 入力可能なときの test_pinned_prompt_read_char_nb() の戻り値が static_cast<int>('C') であること。
+        character_result); // [確認_正常系] - 入力可能なときの test_pinned_prompt_read_char_nb() の戻り値が 'C' であること。
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);

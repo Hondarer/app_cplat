@@ -125,7 +125,7 @@ TEST_F(errorMessageTest, invalid_arguments_are_rejected)
 
     // Act
     int actual_ret_null_buf =
-        cplat_internal_errno_message(NULL, sizeof(buf), ENOENT); // [手順] - 格納先に NULL を指定して呼び出す。
+        cplat_internal_errno_message(nullptr, sizeof(buf), ENOENT); // [手順] - 格納先に NULL を指定して呼び出す。
     int actual_ret_zero_size =
         cplat_internal_errno_message(buf, 0U, ENOENT); // [手順] - サイズに 0 を指定して呼び出す。
 
@@ -173,21 +173,32 @@ TEST_F(errorMessageTest, error_message_dispatches_by_domain)
         socket_errno_result); // [確認_正常系] - socket errno ドメインに対する cplat_error_message() の戻り値が CPLAT_OK であること。
     EXPECT_FALSE(
         socket_errno_message.empty()); // [確認_正常系] - socket_errno_message.empty() の戻り値が false であること。
+
+    // Act_2
+    const int null_buffer_result =
+        cplat_error_message(nullptr, sizeof(buf), &error); // [手順] - 格納先に NULL を指定して文字列化する。
+
+    // Assert_2
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_error_message(
-            NULL, sizeof(buf),
-            &error)); // [確認_異常系] - 格納先 NULL に対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_buffer_result); // [確認_異常系] - 格納先 NULL に対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+
+    // Act_3
+    const int zero_size_result = cplat_error_message(buf, 0U, &error); // [手順] - サイズに 0 を指定して文字列化する。
+
+    // Assert_3
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_error_message(
-            buf, 0U,
-            &error)); // [確認_異常系] - サイズ 0 に対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        zero_size_result); // [確認_異常系] - サイズ 0 に対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+
+    // Act_4
+    const int null_error_result =
+        cplat_error_message(buf, sizeof(buf), nullptr); // [手順] - 詳細エラーに NULL を指定して文字列化する。
+
+    // Assert_4
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        cplat_error_message(
-            buf, sizeof(buf),
-            NULL)); // [確認_異常系] - 詳細エラー NULL に対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_error_result); // [確認_異常系] - 詳細エラー NULL に対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 空の詳細エラーが小さいバッファーへ切り詰めて格納されることの確認
@@ -303,11 +314,11 @@ TEST_F(errorMessageTest, errno_message_returns_unknown_when_strerror_r_fails)
     EXPECT_CALL(mock_string, strerror_r(_, _, _, EACCES, buf, sizeof(buf)))
         .WillOnce(Return(
             EINVAL)); // [Pre-Assert確認_異常系] - strerror_r() が EACCES、buf、sizeof(buf) を指定して 1 回呼び出されること。
-                      // [Pre-Assert手順] - strerror_r から EINVAL を返却する。
+                      // [Pre-Assert手順] - strerror_r() から EINVAL を返却する。
 
     // Act
     int actual_ret =
-        cplat_internal_errno_message(buf, sizeof(buf), EACCES); // [手順] - cplat_internal_errno_message を呼び出す。
+        cplat_internal_errno_message(buf, sizeof(buf), EACCES); // [手順] - cplat_internal_errno_message() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -329,11 +340,11 @@ TEST_F(errorMessageTest, errno_message_treats_erange_as_success)
             SetArrayArgument<4>("trunc", "trunc" + 6),
             Return(
                 ERANGE))); // [Pre-Assert確認_正常系] - strerror_r() が EACCES、buf、sizeof(buf) を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - バッファーへ切り詰め済みの文字列を書き込み、strerror_r から ERANGE を返却する。
+    // [Pre-Assert手順] - バッファーへ切り詰め済みの文字列を書き込み、strerror_r() から ERANGE を返却する。
 
     // Act
     int actual_ret =
-        cplat_internal_errno_message(buf, sizeof(buf), EACCES); // [手順] - cplat_internal_errno_message を呼び出す。
+        cplat_internal_errno_message(buf, sizeof(buf), EACCES); // [手順] - cplat_internal_errno_message() を呼び出す。
 
     // Assert
     EXPECT_EQ(

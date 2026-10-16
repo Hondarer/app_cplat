@@ -28,7 +28,7 @@ TEST_F(stringTest, strcpy_success)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_strcpy(buf, sizeof(buf), "abc"); // [手順] - "abc" を指定して cplat_strcpy を呼び出す。
+    int actual_ret = cplat_strcpy(buf, sizeof(buf), "abc"); // [手順] - "abc" を指定して cplat_strcpy() を呼び出す。
 
     // Assert
     EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_strcpy() の戻り値が 0 であること。
@@ -45,7 +45,7 @@ TEST_F(stringTest, strcpy_null_argument)
 
     // Act
     int actual_ret =
-        cplat_strcpy(buf, sizeof(buf), NULL); // [手順] - コピー元に NULL を渡して cplat_strcpy を呼び出す。
+        cplat_strcpy(buf, sizeof(buf), nullptr); // [手順] - コピー元に NULL を渡して cplat_strcpy() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -61,7 +61,7 @@ TEST_F(stringTest, strcpy_rejects_null_destination_and_zero_size)
     // Pre-Assert
 
     // Act
-    int null_destination_result = cplat_strcpy(NULL, sizeof(buf), "new"); // [手順] - コピー先に NULL を渡す。
+    int null_destination_result = cplat_strcpy(nullptr, sizeof(buf), "new"); // [手順] - コピー先に NULL を渡す。
     int zero_size_result = cplat_strcpy(buf, 0, "new");                   // [手順] - コピー先サイズに 0 を渡す。
 
     // Assert
@@ -85,7 +85,7 @@ TEST_F(stringTest, strcpy_buffer_shortage)
 
     // Act
     int actual_ret =
-        cplat_strcpy(buf, sizeof(buf), "abcd"); // [手順] - 4 文字の "abcd" を指定して cplat_strcpy を呼び出す。
+        cplat_strcpy(buf, sizeof(buf), "abcd"); // [手順] - 4 文字の "abcd" を指定して cplat_strcpy() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -103,7 +103,7 @@ TEST_F(stringTest, strncpy_truncates_to_count)
 
     // Act
     int actual_ret = cplat_strncpy(buf, sizeof(buf), "abcdef",
-                                   3); // [手順] - "abcdef" と count=3 を指定して cplat_strncpy を呼び出す。
+                                   3); // [手順] - "abcdef" と count=3 を指定して cplat_strncpy() を呼び出す。
 
     // Assert
     EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_strncpy() の戻り値が 0 であること。
@@ -119,9 +119,9 @@ TEST_F(stringTest, strncpy_rejects_null_and_limits_destination)
     // Pre-Assert
 
     // Act
-    int null_destination_result = cplat_strncpy(NULL, sizeof(buf), "abc", 3u); // [手順] - コピー先に NULL を渡す。
+    int null_destination_result = cplat_strncpy(nullptr, sizeof(buf), "abc", 3u); // [手順] - コピー先に NULL を渡す。
     int zero_size_result = cplat_strncpy(buf, 0u, "abc", 3u);                  // [手順] - コピー先サイズに 0 を渡す。
-    int null_source_result = cplat_strncpy(buf, sizeof(buf), NULL, 3u);        // [手順] - コピー元に NULL を渡す。
+    int null_source_result = cplat_strncpy(buf, sizeof(buf), nullptr, 3u);     // [手順] - コピー元に NULL を渡す。
     int limited_destination_result =
         cplat_strncpy(buf, sizeof(buf), "abcdef", 6u); // [手順] - コピー先容量を超える文字列を指定する。
 
@@ -151,7 +151,7 @@ TEST_F(stringTest, strcat_success)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_strcat(buf, sizeof(buf), "def"); // [手順] - "def" を指定して cplat_strcat を呼び出す。
+    int actual_ret = cplat_strcat(buf, sizeof(buf), "def"); // [手順] - "def" を指定して cplat_strcat() を呼び出す。
 
     // Assert
     EXPECT_EQ(0, actual_ret);    // [確認_正常系] - cplat_strcat() の戻り値が 0 であること。
@@ -253,10 +253,10 @@ TEST_F(stringTest, strncat_null_argument)
     // Pre-Assert
 
     // Act
-    int null_destination_result = cplat_strncat(NULL, sizeof(buf), "def", 1u); // [手順] - 連結先に NULL を渡す。
+    int null_destination_result = cplat_strncat(nullptr, sizeof(buf), "def", 1u); // [手順] - 連結先に NULL を渡す。
     int zero_size_result = cplat_strncat(buf, 0u, "def", 1u);                  // [手順] - 連結先サイズに 0 を渡す。
     int actual_ret =
-        cplat_strncat(buf, sizeof(buf), NULL, 1u); // [手順] - 連結元に NULL を渡して cplat_strncat を呼び出す。
+        cplat_strncat(buf, sizeof(buf), nullptr, 1u); // [手順] - 連結元に NULL を渡して cplat_strncat() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -280,9 +280,9 @@ TEST_F(stringTest, strcat_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int null_destination_result = cplat_strcat(NULL, sizeof(terminated), "new"); // [手順] - コピー先に NULL を渡す。
+    int null_destination_result = cplat_strcat(nullptr, sizeof(terminated), "new"); // [手順] - コピー先に NULL を渡す。
     int zero_size_result = cplat_strcat(terminated, 0u, "new");                  // [手順] - コピー先サイズに 0 を渡す。
-    int null_source_result = cplat_strcat(terminated, sizeof(terminated), NULL); // [手順] - コピー元に NULL を渡す。
+    int null_source_result = cplat_strcat(terminated, sizeof(terminated), nullptr); // [手順] - コピー元に NULL を渡す。
     int unterminated_result =
         cplat_strcat(unterminated, sizeof(unterminated), "e"); // [手順] - 終端のないコピー先へ連結する。
 
@@ -328,7 +328,7 @@ TEST_F(stringTest, strtok_r_splits_tokens)
 {
     // Arrange
     char text[] = "a,b,c"; // [状態] - カンマ区切りの文字列 "a,b,c" を用意する。
-    char *saveptr = NULL;
+    char *saveptr = nullptr;
     char *first;
     char *second;
     char *third;
@@ -338,17 +338,17 @@ TEST_F(stringTest, strtok_r_splits_tokens)
 
     // Act
     first = cplat_strtok_r(text, ",", &saveptr);  // [手順] - 1 回目は対象文字列を指定して呼び出す。
-    second = cplat_strtok_r(NULL, ",", &saveptr); // [手順] - 2 回目は NULL を指定して呼び出す。
-    third = cplat_strtok_r(NULL, ",", &saveptr);  // [手順] - 3 回目は NULL を指定して呼び出す。
-    fourth = cplat_strtok_r(NULL, ",", &saveptr); // [手順] - 4 回目は NULL を指定して呼び出す。
+    second = cplat_strtok_r(nullptr, ",", &saveptr); // [手順] - 2 回目は NULL を指定して呼び出す。
+    third = cplat_strtok_r(nullptr, ",", &saveptr);  // [手順] - 3 回目は NULL を指定して呼び出す。
+    fourth = cplat_strtok_r(nullptr, ",", &saveptr); // [手順] - 4 回目は NULL を指定して呼び出す。
 
     // Assert
     EXPECT_STREQ("a", first);  // [確認_正常系] - 1 回目の cplat_strtok_r() の戻り値が "a" であること。
     EXPECT_STREQ("b", second); // [確認_正常系] - 2 回目の cplat_strtok_r() の戻り値が "b" であること。
     EXPECT_STREQ("c", third);  // [確認_正常系] - 3 回目の cplat_strtok_r() の戻り値が "c" であること。
     EXPECT_EQ(
-        (char *)NULL,
-        fourth); // [確認_正常系] - 4 回目の cplat_strtok_r() の戻り値が (char *)NULL であること。(これ以上トークンがないことの確認)
+        nullptr,
+        fourth); // [確認_正常系] - 4 回目の cplat_strtok_r() の戻り値が nullptr であること。(これ以上トークンがないことの確認)
 }
 
 // 区切り文字が NULL の場合に NULL を返すことの確認
@@ -356,17 +356,17 @@ TEST_F(stringTest, strtok_r_null_delimiter_returns_null)
 {
     // Arrange
     char text[] = "a,b"; // [状態] - カンマ区切りの文字列 "a,b" を用意する。
-    char *saveptr = NULL;
+    char *saveptr = nullptr;
 
     // Pre-Assert
 
     // Act
-    char *token = cplat_strtok_r(text, NULL, &saveptr); // [手順] - 区切り文字に NULL を渡して呼び出す。
+    char *token = cplat_strtok_r(text, nullptr, &saveptr); // [手順] - 区切り文字に NULL を渡して呼び出す。
 
     // Assert
     EXPECT_EQ(
-        (char *)NULL,
-        token); // [確認_異常系] - 区切り文字が NULL の cplat_strtok_r() の戻り値が (char *)NULL であること。(トークンを返さないことの確認)
+        nullptr,
+        token); // [確認_異常系] - 区切り文字が NULL の cplat_strtok_r() の戻り値が nullptr であること。(トークンを返さないことの確認)
 }
 
 // saveptr が NULL の場合に NULL を返すことの確認
@@ -378,12 +378,12 @@ TEST_F(stringTest, strtok_r_null_saveptr_returns_null)
     // Pre-Assert
 
     // Act
-    char *token = cplat_strtok_r(text, ",", NULL); // [手順] - saveptr に NULL を指定して呼び出す。
+    char *token = cplat_strtok_r(text, ",", nullptr); // [手順] - saveptr に NULL を指定して呼び出す。
 
     // Assert
     EXPECT_EQ(
-        (char *)NULL,
-        token); // [確認_異常系] - saveptr が NULL の cplat_strtok_r() の戻り値が (char *)NULL であること。(トークンを返さないことの確認)
+        nullptr,
+        token); // [確認_異常系] - saveptr が NULL の cplat_strtok_r() の戻り値が nullptr であること。(トークンを返さないことの確認)
 }
 
 // 3 つのトークンが読み取られることの確認
@@ -512,7 +512,7 @@ TEST_F(stringTest, strdup_null_returns_null)
     // Pre-Assert
 
     // Act
-    char *dup = cplat_strdup(NULL); // [手順] - 複製元に NULL を指定して呼び出す。
+    char *dup = cplat_strdup(nullptr); // [手順] - 複製元に NULL を指定して呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -546,9 +546,9 @@ TEST_F(stringTest, wcscpy_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int null_destination_result = cplat_wcscpy(NULL, 4u, L"abc"); // [手順] - ワイド文字列のコピー先に NULL を渡す。
+    int null_destination_result = cplat_wcscpy(nullptr, 4u, L"abc"); // [手順] - ワイド文字列のコピー先に NULL を渡す。
     int zero_size_result = cplat_wcscpy(buf, 0u, L"abc");         // [手順] - ワイド文字列のコピー先サイズに 0 を渡す。
-    int null_source_result = cplat_wcscpy(buf, 4, NULL);          // [手順] - ワイド文字列のコピー元に NULL を渡す。
+    int null_source_result = cplat_wcscpy(buf, 4, nullptr);       // [手順] - ワイド文字列のコピー元に NULL を渡す。
     int short_buffer_result = cplat_wcscpy(buf, 4, L"abcd");      // [手順] - 終端を含めて容量を超える文字列を渡す。
 
     // Assert
@@ -665,9 +665,9 @@ TEST_F(stringTest, strcasecmp_orders_null_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_both_null = cplat_strcasecmp(NULL, NULL); // [手順] - 両方 NULL で比較する。
-    int actual_ret_lhs_null = cplat_strcasecmp(NULL, "a");   // [手順] - 左辺だけ NULL で比較する。
-    int actual_ret_rhs_null = cplat_strcasecmp("a", NULL);   // [手順] - 右辺だけ NULL で比較する。
+    int actual_ret_both_null = cplat_strcasecmp(nullptr, nullptr); // [手順] - 両方 NULL で比較する。
+    int actual_ret_lhs_null = cplat_strcasecmp(nullptr, "a");      // [手順] - 左辺だけ NULL で比較する。
+    int actual_ret_rhs_null = cplat_strcasecmp("a", nullptr);      // [手順] - 右辺だけ NULL で比較する。
 
     // Assert
     EXPECT_EQ(
@@ -709,7 +709,7 @@ TEST_F(stringTest, strncasecmp_zero_count_is_equal)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_strncasecmp(NULL, "abc", 0u); // [手順] - count 0 で NULL と文字列を比較する。
+    int actual_ret = cplat_strncasecmp(nullptr, "abc", 0u); // [手順] - count 0 で NULL と文字列を比較する。
 
     // Assert
     EXPECT_EQ(
@@ -725,9 +725,9 @@ TEST_F(stringTest, strncasecmp_orders_null_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_both_null = cplat_strncasecmp(NULL, NULL, 1u); // [手順] - count 1 で両方 NULL を比較する。
-    int actual_ret_lhs_null = cplat_strncasecmp(NULL, "a", 1u);   // [手順] - count 1 で左辺だけ NULL を比較する。
-    int actual_ret_rhs_null = cplat_strncasecmp("a", NULL, 1u);   // [手順] - count 1 で右辺だけ NULL を比較する。
+    int actual_ret_both_null = cplat_strncasecmp(nullptr, nullptr, 1u); // [手順] - count 1 で両方 NULL を比較する。
+    int actual_ret_lhs_null = cplat_strncasecmp(nullptr, "a", 1u);      // [手順] - count 1 で左辺だけ NULL を比較する。
+    int actual_ret_rhs_null = cplat_strncasecmp("a", nullptr, 1u);      // [手順] - count 1 で右辺だけ NULL を比較する。
 
     // Assert
     EXPECT_EQ(

@@ -28,17 +28,17 @@ class traceAllocFailureTest : public Test
     {
         set_trace_sync_mock_defaults(mock_cplat);
         ON_CALL(mock_cplat, cplat_shutdown_register(_, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - `cplat_shutdown_register` の既定動作を設定する。
+        // [状態] - cplat_shutdown_register() の既定動作を設定する。
 #if defined(PLATFORM_LINUX)
         ON_CALL(mock_cplat, cplat_syslog_sink_create(_, _)).WillByDefault(Return(os_handle_));
-        // [状態] - `cplat_syslog_sink_create` の既定動作を設定する。
+        // [状態] - cplat_syslog_sink_create() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_dispose(_)).WillByDefault(Return());
-        // [状態] - `cplat_syslog_sink_dispose` の既定動作を設定する。
+        // [状態] - cplat_syslog_sink_dispose() の既定動作を設定する。
 #elif defined(PLATFORM_WINDOWS)
         ON_CALL(mock_cplat, cplat_etw_provider_create(_)).WillByDefault(Return(os_handle_));
-        // [状態] - `cplat_etw_provider_create` の既定動作を設定する。
+        // [状態] - cplat_etw_provider_create() の既定動作を設定する。
         ON_CALL(mock_cplat, cplat_etw_provider_dispose(_)).WillByDefault(Return());
-        // [状態] - `cplat_etw_provider_dispose` の既定動作を設定する。
+        // [状態] - cplat_etw_provider_dispose() の既定動作を設定する。
 #endif /* PLATFORM_ */
     }
     // [サブ手順終了]
@@ -53,7 +53,7 @@ TEST_F(traceAllocFailureTest, create_returns_null_when_handle_allocation_fails)
     /* cplat_tracer は不透明型でサイズを指定できない。生成時の malloc はハンドル確保の 1 回だけである */
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_malloc から NULL を返却する。
+                                    // [Pre-Assert手順] - cplat_malloc() から NULL を返却する。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_cplat, cplat_syslog_sink_dispose(os_handle_))
         .Times(
@@ -62,11 +62,11 @@ TEST_F(traceAllocFailureTest, create_returns_null_when_handle_allocation_fails)
 
     // Act
     cplat_tracer *handle =
-        cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - cplat_tracer_create を呼び出す。
+        cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - cplat_tracer_create() を呼び出す。
 
     // Assert
-    EXPECT_EQ((cplat_tracer *)NULL,
-              handle); // [確認_異常系] - cplat_tracer_create() の戻り値が NULL であること。
+    EXPECT_EQ(nullptr,
+              handle); // [確認_異常系] - cplat_tracer_create() の戻り値が nullptr であること。
     EXPECT_EQ(
         (size_t)0,
         cplat_internal_trace_registry_count()); // [確認_異常系] - cplat_internal_trace_registry_count() の戻り値が 0 であること。(registry へ登録されないことの確認)
@@ -83,18 +83,18 @@ TEST_F(traceAllocFailureTest, create_returns_null_when_name_duplication_fails)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_strdup(_))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_strdup() が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_strdup から NULL を返却する。
+                                    // [Pre-Assert手順] - cplat_strdup() から NULL を返却する。
     EXPECT_CALL(mock_cplat, cplat_syslog_sink_dispose(os_handle_))
         .Times(
             1); // [Pre-Assert確認_異常系] - cplat_syslog_sink_dispose() が os_handle_ を指定して 1 回呼び出されること。
 
     // Act
     cplat_tracer *handle =
-        cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - cplat_tracer_create を呼び出す。
+        cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - cplat_tracer_create() を呼び出す。
 
     // Assert
-    EXPECT_EQ((cplat_tracer *)NULL,
-              handle); // [確認_異常系] - cplat_tracer_create() の戻り値が NULL であること。
+    EXPECT_EQ(nullptr,
+              handle); // [確認_異常系] - cplat_tracer_create() の戻り値が nullptr であること。
     EXPECT_EQ(
         (size_t)0,
         cplat_internal_trace_registry_count()); // [確認_異常系] - cplat_internal_trace_registry_count() の戻り値が 0 であること。(registry へ登録されないことの確認)
@@ -110,15 +110,15 @@ TEST_F(traceAllocFailureTest, create_returns_null_when_registry_expansion_fails)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_realloc() が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_realloc から NULL を返却する。
+                                    // [Pre-Assert手順] - cplat_realloc() から NULL を返却する。
 
     // Act
     cplat_tracer *handle =
-        cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - cplat_tracer_create を呼び出す。
+        cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - cplat_tracer_create() を呼び出す。
 
     // Assert
-    EXPECT_EQ((cplat_tracer *)NULL,
-              handle); // [確認_異常系] - cplat_tracer_create() の戻り値が NULL であること。
+    EXPECT_EQ(nullptr,
+              handle); // [確認_異常系] - cplat_tracer_create() の戻り値が nullptr であること。
     EXPECT_EQ(
         (size_t)0,
         cplat_internal_trace_registry_count()); // [確認_異常系] - cplat_internal_trace_registry_count() の戻り値が 0 であること。(registry が空のままであることの確認)
@@ -132,17 +132,17 @@ TEST_F(traceAllocFailureTest, set_name_fails_when_effective_name_allocation_fail
     cplat_tracer *handle = cplat_tracer_create(
         CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [状態] - 生成済みのトレース ハンドルを用意する。
 
-    ASSERT_NE((cplat_tracer *)NULL, handle); // [状態確認] - cplat_tracer_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr, handle); // [状態確認] - cplat_tracer_create() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_malloc から NULL を返却する。
+                                    // [Pre-Assert手順] - cplat_malloc() から NULL を返却する。
 
     // Act
     int actual_ret =
         cplat_tracer_set_name(handle, "sample",
-                              42); // [手順] - インスタンス識別 42 を指定して cplat_tracer_set_name を呼び出す。
+                              42); // [手順] - インスタンス識別 42 を指定して cplat_tracer_set_name() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,

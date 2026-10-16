@@ -20,8 +20,8 @@ TEST(syncInterprocessRwlockTest, descriptor_round_trip_reopens_same_lock)
     make_test_interprocess_path(path_buf, sizeof(path_buf), "interprocess_rwlock");
     const char *path = path_buf; // [状態] - テスト用 lock file パスを用意する。
 #endif
-    cplat_interprocess_rwlock *lock = NULL;
-    cplat_interprocess_rwlock *restored = NULL;
+    cplat_interprocess_rwlock *lock = nullptr;
+    cplat_interprocess_rwlock *restored = nullptr;
     unsigned char descriptor[512];
     size_t descriptor_size = sizeof(descriptor);
 
@@ -103,7 +103,7 @@ TEST(syncInterprocessRwlockTest, export_reports_required_descriptor_size)
     make_test_interprocess_path(path_buf, sizeof(path_buf), "interprocess_rwlock_size");
     const char *path = path_buf; // [状態] - テスト用 lock file パスを用意する。
 #endif
-    cplat_interprocess_rwlock *lock = NULL;
+    cplat_interprocess_rwlock *lock = nullptr;
     size_t descriptor_size = 0U;
     const size_t expected_size = 3U + strlen(path); // [状態] - stub の必要サイズは種別・backend・長さと識別子である。
 
@@ -118,7 +118,7 @@ TEST(syncInterprocessRwlockTest, export_reports_required_descriptor_size)
     // Act
     int create_result = cplat_interprocess_rwlock_open(path, &lock); // [手順] - interprocess rwlock を開く。
     int export_result = cplat_interprocess_rwlock_export_descriptor(
-        lock, NULL, &descriptor_size); // [手順] - NULL バッファーで必要サイズを問い合わせる。
+        lock, nullptr, &descriptor_size); // [手順] - NULL バッファーで必要サイズを問い合わせる。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -147,7 +147,7 @@ TEST(syncInterprocessRwlockTest, corrupt_descriptor_is_rejected)
 {
     // Arrange
     unsigned char descriptor[20] = {0}; // [状態] - magic を持たない descriptor を用意する。
-    cplat_interprocess_rwlock *lock = NULL;
+    cplat_interprocess_rwlock *lock = nullptr;
 
     // Pre-Assert
 
@@ -159,7 +159,7 @@ TEST(syncInterprocessRwlockTest, corrupt_descriptor_is_rejected)
     EXPECT_EQ(
         CPLAT_ERR_CORRUPT_DESCRIPTOR,
         result); // [確認_異常系] - 不正な descriptor に対する cplat_interprocess_rwlock_import_descriptor() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
-    EXPECT_EQ(NULL, lock); // [確認_異常系] - lock が NULL であること。
+    EXPECT_EQ(nullptr, lock); // [確認_異常系] - lock が nullptr であること。
 }
 
 #if defined(PLATFORM_LINUX)
@@ -170,8 +170,8 @@ TEST(syncInterprocessRwlockTest, second_handle_observes_exclusive_lock)
     // Arrange
     InterprocessOsMocks os;
     const char *path = kRwlockIdentity; // [状態] - 識別子を sync.rwlock とする。
-    cplat_interprocess_rwlock *lock = NULL;
-    cplat_interprocess_rwlock *other = NULL;
+    cplat_interprocess_rwlock *lock = nullptr;
+    cplat_interprocess_rwlock *other = nullptr;
 
     // Pre-Assert
     EXPECT_CALL(os.fcntl, open(_, _, _, StrEq(path), O_RDWR | O_CREAT | O_CLOEXEC, 0666))
@@ -196,7 +196,7 @@ TEST(syncInterprocessRwlockTest, second_handle_observes_exclusive_lock)
     int lock_result = cplat_interprocess_rwlock_lock_exclusive(
         lock, CPLAT_SYNC_NO_WAIT); // [手順] - 1 つ目のハンドルで排他ロックを取得する。
     int other_try =
-        cplat_interprocess_rwlock_try_lock_shared(other); // [手順] - 2 つ目のハンドルで共有 try_lock を試行する。
+        cplat_interprocess_rwlock_try_lock_shared(other); // [手順] - 2 つ目のハンドルで共有 try_lock() を試行する。
 
     // Assert
     EXPECT_EQ(

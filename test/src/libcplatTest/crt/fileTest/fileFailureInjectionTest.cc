@@ -55,7 +55,7 @@ TEST_F(fileFailureInjectionTest, set_size_reports_errno_when_ftruncate_fails)
                                       // [Pre-Assert手順] - errno に EIO を設定し、1 回目は -1 を返却する。
 
     // Act
-    int actual_ret = cplat_file_set_size(&file_, 16u, &detail); // [手順] - cplat_file_set_size を呼び出す。
+    int actual_ret = cplat_file_set_size(&file_, 16u, &detail); // [手順] - cplat_file_set_size() を呼び出す。
 
     // Assert
     EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - cplat_file_set_size() の戻り値が CPLAT_OK 以外であること。
@@ -81,7 +81,7 @@ TEST_F(fileFailureInjectionTest, get_size_reports_errno_when_fstat_fails)
                                       // [Pre-Assert手順] - errno に EBADF を設定し、1 回目は -1 を返却する。
 
     // Act
-    int actual_ret = cplat_file_get_size(&file_, &size, &detail); // [手順] - cplat_file_get_size を呼び出す。
+    int actual_ret = cplat_file_get_size(&file_, &size, &detail); // [手順] - cplat_file_get_size() を呼び出す。
 
     // Assert
     EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - cplat_file_get_size() の戻り値が CPLAT_OK 以外であること。
@@ -107,7 +107,7 @@ TEST_F(fileFailureInjectionTest, get_id_reports_errno_when_fstat_fails)
                                       // [Pre-Assert手順] - errno に EBADF を設定し、1 回目は -1 を返却する。
 
     // Act
-    int actual_ret = cplat_file_get_id(&file_, &id, &detail); // [手順] - cplat_file_get_id を呼び出す。
+    int actual_ret = cplat_file_get_id(&file_, &id, &detail); // [手順] - cplat_file_get_id() を呼び出す。
 
     // Assert
     EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - cplat_file_get_id() の戻り値が CPLAT_OK 以外であること。
@@ -125,7 +125,7 @@ TEST_F(fileFailureInjectionTest, init_accepts_null)
     // Pre-Assert
 
     // Act
-    cplat_file_init(NULL); // [手順] - NULL を指定して cplat_file_init を呼び出す。
+    cplat_file_init(nullptr); // [手順] - NULL を指定して cplat_file_init() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(NULL を渡した cplat_file_init() がクラッシュしないことの確認)
@@ -167,7 +167,7 @@ TEST_F(fileFailureInjectionTest, write_succeeds_for_zero_length)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_file_write(&file_, NULL, 0u,
+    int actual_ret = cplat_file_write(&file_, nullptr, 0u,
                                       &detail); // [手順] - NULL バッファーと長さ 0 を指定して書き込む。
 
     // Assert
@@ -186,7 +186,7 @@ TEST_F(fileFailureInjectionTest, write_rejects_null_buffer_for_positive_length)
 
     // Act
     int actual_ret =
-        cplat_file_write(&file_, NULL, 1u,
+        cplat_file_write(&file_, nullptr, 1u,
                          &detail); // [手順] - オープン済みファイルへ NULL バッファーと長さ 1 を指定して書き込む。
 
     // Assert
@@ -232,7 +232,7 @@ TEST_F(fileFailureInjectionTest, read_rejects_null_buffer_when_open)
 
     // Act
     int actual_ret =
-        cplat_file_read(&file_, NULL, 1u, &read,
+        cplat_file_read(&file_, nullptr, 1u, &read,
                         &detail); // [手順] - オープン済みファイルへ NULL バッファーと長さ 1 を指定して読み取る。
 
     // Assert
@@ -256,7 +256,7 @@ TEST_F(fileFailureInjectionTest, read_rejects_null_output_when_open)
 
     // Act
     int actual_ret =
-        cplat_file_read(&file_, buffer, 1u, NULL,
+        cplat_file_read(&file_, buffer, 1u, nullptr,
                         &detail); // [手順] - オープン済みファイルへ NULL の読み取りバイト数出力先を指定して読み取る。
 
     // Assert
@@ -279,7 +279,7 @@ TEST_F(fileFailureInjectionTest, get_size_rejects_null_output_when_open)
 
     // Act
     int actual_ret =
-        cplat_file_get_size(&file_, NULL,
+        cplat_file_get_size(&file_, nullptr,
                             &detail); // [手順] - オープン済みファイルへ NULL のサイズ出力先を指定してサイズを取得する。
 
     // Assert
@@ -302,7 +302,7 @@ TEST_F(fileFailureInjectionTest, get_id_rejects_null_output_when_open)
 
     // Act
     int actual_ret =
-        cplat_file_get_id(&file_, NULL,
+        cplat_file_get_id(&file_, nullptr,
                           &detail); // [手順] - オープン済みファイルへ NULL の ID 出力先を指定して ID を取得する。
 
     // Assert
@@ -348,8 +348,8 @@ TEST_F(fileFailureInjectionTest, close_rejects_null_file)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_file_close(NULL,
-                                      &detail); // [手順] - NULL を指定して cplat_file_close を呼び出す。
+    int actual_ret = cplat_file_close(nullptr,
+                                      &detail); // [手順] - NULL を指定して cplat_file_close() を呼び出す。
 
     // Assert
     EXPECT_NE(CPLAT_OK,
@@ -456,14 +456,14 @@ TEST_F(fileFailureInjectionTest, read_retries_after_interrupt)
 
     // Act
     int actual_ret = cplat_file_read(&file_, buffer, sizeof(buffer), &read_bytes,
-                                     &detail); // [手順] - cplat_file_read を呼び出す。
+                                     &detail); // [手順] - cplat_file_read() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
               actual_ret); // [確認_正常系] - 中断後に再試行した cplat_file_read() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         (size_t)4,
-        read_bytes); // [確認_正常系] - read_bytes が (size_t)4 であること。(再試行後の読み取りバイト数が 4 であることの確認)
+        read_bytes); // [確認_正常系] - read_bytes が 4 であること。(再試行後の読み取りバイト数が 4 であることの確認)
 }
 // [サブ手順参照 名前=fileFailureInjectionTest.TearDown]
 
@@ -484,7 +484,7 @@ TEST_F(fileFailureInjectionTest, write_retries_after_interrupt)
 
     // Act
     int actual_ret = cplat_file_write(&file_, buffer, sizeof(buffer),
-                                      &detail); // [手順] - cplat_file_write を呼び出す。
+                                      &detail); // [手順] - cplat_file_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,

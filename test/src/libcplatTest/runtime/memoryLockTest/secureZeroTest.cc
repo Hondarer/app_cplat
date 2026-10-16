@@ -19,7 +19,7 @@ TEST_F(secureZeroTest, clears_whole_range)
     // Pre-Assert
 
     // Act
-    cplat_secure_zero(buf, sizeof(buf)); // [手順] - バッファー全体を指定して cplat_secure_zero を呼び出す。
+    cplat_secure_zero(buf, sizeof(buf)); // [手順] - バッファー全体を指定して cplat_secure_zero() を呼び出す。
 
     // Assert
     for (size_t i = 0U; i < sizeof(buf); i++)
@@ -45,7 +45,7 @@ TEST_F(secureZeroTest, does_not_touch_outside_range)
     // Pre-Assert
 
     // Act
-    cplat_secure_zero(buf, 8U); // [手順] - 先頭 8 byte だけを指定して cplat_secure_zero を呼び出す。
+    cplat_secure_zero(buf, 8U); // [手順] - 先頭 8 byte だけを指定して cplat_secure_zero() を呼び出す。
 
     // Assert
     EXPECT_EQ(0, buf[0]);    // [確認_正常系] - buf[0] が 0 であること。
@@ -67,7 +67,7 @@ TEST_F(secureZeroTest, null_or_zero_size_is_noop)
     // Pre-Assert
 
     // Act
-    cplat_secure_zero(NULL, 8U); // [手順] - バッファーに NULL を指定して呼び出す。
+    cplat_secure_zero(nullptr, 8U); // [手順] - バッファーに NULL を指定して呼び出す。
     cplat_secure_zero(buf, 0U);  // [手順] - サイズに 0 を指定して呼び出す。
 
     // Assert

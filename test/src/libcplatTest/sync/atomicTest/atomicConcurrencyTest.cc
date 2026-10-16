@@ -102,7 +102,7 @@ TEST(atomicConcurrencyTest, concurrent_relaxed_fetch_add_u64_sums_without_loss_a
     // Assert
     EXPECT_EQ(
         (uint64_t)(kThreadCount * kFetchAddIncrementsPerThread),
-        total); // [確認_正常系] - cplat_atomic_load_u64() の戻り値が (uint64_t)(kThreadCount * kFetchAddIncrementsPerThread) と一致すること。(4 スレッド分の加算が欠落なく反映されたことの確認)
+        total); // [確認_正常系] - cplat_atomic_load_u64() の戻り値が (kThreadCount * kFetchAddIncrementsPerThread) と一致すること。(4 スレッド分の加算が欠落なく反映されたことの確認)
 }
 
 // compare_exchange (acquire/release) による自前のスピンロックで保護した通常の int が、

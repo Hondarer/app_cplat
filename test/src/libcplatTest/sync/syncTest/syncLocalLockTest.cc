@@ -12,7 +12,7 @@ TEST(syncLocalLockTest, try_lock_reports_busy_when_already_locked)
 #if defined(PLATFORM_LINUX)
     testing::NiceMock<Mock_pthread> mock_pthread;
 #endif                             /* PLATFORM_LINUX */
-    cplat_local_lock *lock = NULL; // [状態] - 新規 local lock ハンドルの格納先を用意する。
+    cplat_local_lock *lock = nullptr; // [状態] - 新規 local lock ハンドルの格納先を用意する。
 
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
@@ -26,7 +26,7 @@ TEST(syncLocalLockTest, try_lock_reports_busy_when_already_locked)
     // Act
     int create_result = cplat_local_lock_create(&lock);               // [手順] - local lock を作成する。
     int first_lock = cplat_local_lock_lock(lock, CPLAT_SYNC_NO_WAIT); // [手順] - 1 回目のロックを取得する。
-    int second_try = cplat_local_lock_try_lock(lock);                 // [手順] - ロック保持中に try_lock を試行する。
+    int second_try = cplat_local_lock_try_lock(lock);                 // [手順] - ロック保持中に try_lock() を試行する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -45,7 +45,7 @@ TEST(syncLocalLockTest, try_lock_reports_busy_when_already_locked)
 TEST(syncLocalLockTest, negative_timeout_returns_invalid_argument)
 {
     // Arrange
-    cplat_local_lock *lock = NULL; // [状態] - 新規 local lock ハンドルの格納先を用意する。
+    cplat_local_lock *lock = nullptr; // [状態] - 新規 local lock ハンドルの格納先を用意する。
 
     // Pre-Assert
 

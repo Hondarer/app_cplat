@@ -60,7 +60,7 @@ static void build_path(char *path_out, size_t path_size, const char *lhs, const 
     ASSERT_GE(written, 0);
     // [状態確認] - written が 0 以上であること。
     ASSERT_LT((size_t)written, path_size);
-    // [状態確認] - (size_t)written が path_size より小さいこと。
+    // [状態確認] - written が path_size より小さいこと。
 }
 // [サブ手順終了]
 
@@ -72,7 +72,7 @@ static void build_three_part_path(char *path_out, size_t path_size, const char *
     ASSERT_GE(written, 0);
     // [状態確認] - written が 0 以上であること。
     ASSERT_LT((size_t)written, path_size);
-    // [状態確認] - (size_t)written が path_size より小さいこと。
+    // [状態確認] - written が path_size より小さいこと。
 }
 // [サブ手順終了]
 
@@ -94,7 +94,7 @@ TEST_F(pathGetFullTest, returns_einval_for_null_path)
 
     // Act
     int rc = cplat_path_get_full(path, sizeof(path), &err,
-                                 nullptr); // [手順] - パスに NULL を渡して cplat_path_get_full を呼び出す。
+                                 nullptr); // [手順] - パスに NULL を渡して cplat_path_get_full() を呼び出す。
     cplat_error_get_last(&last_error);     // [手順] - TLS に記録された詳細エラーを取得する。
 
     // Assert
@@ -127,12 +127,12 @@ TEST_F(pathGetFullTest, rejects_invalid_output_and_empty_path)
     // Pre-Assert
 
     // Act
-    int null_result = cplat_path_get_full(NULL, 8u, &null_detail,
-                                          "."); // [手順] - 出力先に NULL を指定して cplat_path_get_full を呼び出す。
+    int null_result = cplat_path_get_full(nullptr, 8u, &null_detail,
+                                          "."); // [手順] - 出力先に NULL を指定して cplat_path_get_full() を呼び出す。
     int zero_result = cplat_path_get_full(&zero_size_output, 0u, &zero_detail,
-                                          "."); // [手順] - 出力サイズに 0 を指定して cplat_path_get_full を呼び出す。
+                                          "."); // [手順] - 出力サイズに 0 を指定して cplat_path_get_full() を呼び出す。
     int empty_result = cplat_path_get_full(empty_path_output, sizeof(empty_path_output), &empty_detail,
-                                           ""); // [手順] - 空パスを指定して cplat_path_get_full を呼び出す。
+                                           ""); // [手順] - 空パスを指定して cplat_path_get_full() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -160,7 +160,7 @@ TEST_F(pathGetFullTest, expands_current_directory_to_absolute_path)
     NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_stdlib> mock_stdlib;
     stub_linux_path_resolution(&mock_unistd,
-                               &mock_stdlib); // [状態] - getcwd と realpath を既定の作業ディレクトリへ差し替える。
+                               &mock_stdlib); // [状態] - getcwd() と realpath を既定の作業ディレクトリへ差し替える。
 #endif                                        /* PLATFORM_LINUX */
     char actual[PLATFORM_PATH_MAX] = {};
     char expected[PLATFORM_PATH_MAX] = {}; // [状態] - 出力バッファーを 2 つ用意する。
@@ -187,7 +187,7 @@ TEST_F(pathGetFullTest, normalizes_dotdot_and_backslash_segments)
     NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_stdlib> mock_stdlib;
     stub_linux_path_resolution(&mock_unistd,
-                               &mock_stdlib); // [状態] - getcwd と realpath を既定の作業ディレクトリへ差し替える。
+                               &mock_stdlib); // [状態] - getcwd() と realpath を既定の作業ディレクトリへ差し替える。
 #endif                                        /* PLATFORM_LINUX */
     char base[PLATFORM_PATH_MAX] = {};
     char candidate[PLATFORM_PATH_MAX] = {};
@@ -224,7 +224,7 @@ TEST_F(pathGetFullTest, normalizes_repeated_separators)
     // Pre-Assert
 
     // Act
-    int result = cplat_path_get_full(actual, sizeof(actual), NULL,
+    int result = cplat_path_get_full(actual, sizeof(actual), nullptr,
                                      "/tmp//"); // [手順] - 連続したセパレーターを含む絶対パスを正規化する。
 
     // Assert
@@ -245,13 +245,13 @@ TEST_F(pathGetFullTest, normalizes_parent_above_root_and_two_character_segments)
     // Pre-Assert
 
     // Act
-    int parent_result = cplat_path_get_full(parent_actual, sizeof(parent_actual), NULL,
+    int parent_result = cplat_path_get_full(parent_actual, sizeof(parent_actual), nullptr,
                                             "/../../a"); // [手順] - ルートを越える親参照を含む絶対パスを正規化する。
-    int plain_result = cplat_path_get_full(plain_actual, sizeof(plain_actual), NULL,
+    int plain_result = cplat_path_get_full(plain_actual, sizeof(plain_actual), nullptr,
                                            "/ab"); // [手順] - 2 文字の通常セグメントを持つ絶対パスを正規化する。
-    int leading_dot_result = cplat_path_get_full(leading_dot_actual, sizeof(leading_dot_actual), NULL,
+    int leading_dot_result = cplat_path_get_full(leading_dot_actual, sizeof(leading_dot_actual), nullptr,
                                                  "/.x"); // [手順] - 先頭だけがドットの 2 文字セグメントを正規化する。
-    int trailing_dot_result = cplat_path_get_full(trailing_dot_actual, sizeof(trailing_dot_actual), NULL,
+    int trailing_dot_result = cplat_path_get_full(trailing_dot_actual, sizeof(trailing_dot_actual), nullptr,
                                                   "/x."); // [手順] - 末尾だけがドットの 2 文字セグメントを正規化する。
 
     // Assert
@@ -293,7 +293,7 @@ TEST_F(pathGetFullTest, normalizes_repeated_windows_separators)
 
     // Act
     int result = cplat_path_get_full(
-        actual, sizeof(actual), NULL,
+        actual, sizeof(actual), nullptr,
         ".\\pathGetFullTest\\\\child"); // [手順] - '\\' と連続したセパレーターを含む相対パスを絶対化する。
 
     // Assert
@@ -320,7 +320,7 @@ TEST_F(pathGetFullTest, returns_enametoolong_when_relative_path_is_too_long)
     NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_stdlib> mock_stdlib;
     stub_linux_path_resolution(&mock_unistd,
-                               &mock_stdlib); // [状態] - getcwd と realpath を既定の作業ディレクトリへ差し替える。
+                               &mock_stdlib); // [状態] - getcwd() と realpath を既定の作業ディレクトリへ差し替える。
 #endif                                        /* PLATFORM_LINUX */
     char relative[PLATFORM_PATH_MAX] = {};
     char output[PLATFORM_PATH_MAX] = {'x'};
@@ -355,7 +355,7 @@ TEST_F(pathGetFullTest, returns_enametoolong_when_buffer_is_too_small)
     NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_stdlib> mock_stdlib;
     stub_linux_path_resolution(&mock_unistd,
-                               &mock_stdlib); // [状態] - getcwd と realpath を既定の作業ディレクトリへ差し替える。
+                               &mock_stdlib); // [状態] - getcwd() と realpath を既定の作業ディレクトリへ差し替える。
 #endif                                        /* PLATFORM_LINUX */
     char path[4] = {};                        // [状態] - 4 バイトの小さすぎる出力バッファーを用意する。
     cplat_error err;                          // [状態] - 詳細エラーの受け取り先を用意する。
@@ -364,7 +364,7 @@ TEST_F(pathGetFullTest, returns_enametoolong_when_buffer_is_too_small)
 
     // Act
     int rc = cplat_path_get_full(path, sizeof(path), &err,
-                                 "."); // [手順] - 小さすぎる出力バッファーで cplat_path_get_full を呼び出す。
+                                 "."); // [手順] - 小さすぎる出力バッファーで cplat_path_get_full() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -387,7 +387,7 @@ TEST_F(pathGetFullTest, returns_absolute_path_for_nonexistent_target)
     NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_stdlib> mock_stdlib;
     stub_linux_path_resolution(&mock_unistd,
-                               &mock_stdlib); // [状態] - getcwd と realpath を既定の作業ディレクトリへ差し替える。
+                               &mock_stdlib); // [状態] - getcwd() と realpath を既定の作業ディレクトリへ差し替える。
 #endif                                        /* PLATFORM_LINUX */
     char base[PLATFORM_PATH_MAX] = {};
     char candidate[PLATFORM_PATH_MAX] = {};
@@ -426,12 +426,12 @@ TEST_F(pathGetFullTest, returns_enomem_when_normalization_allocation_fails)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_calloc(PLATFORM_PATH_MAX, sizeof(size_t)))
         .WillOnce(Return(
-            nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が PLATFORM_PATH_MAX、sizeof(size_t) を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - cplat_calloc から NULL を返却する。
+            nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が PLATFORM_PATH_MAX、sizeofを指定して 1 回呼び出されること。
+                       // [Pre-Assert手順] - cplat_calloc() から NULL を返却する。
 
     // Act
     int rc = cplat_path_get_full(path, sizeof(path), &err,
-                                 "/missing"); // [手順] - 絶対パスを指定して cplat_path_get_full を呼び出す。
+                                 "/missing"); // [手順] - 絶対パスを指定して cplat_path_get_full() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
@@ -465,7 +465,7 @@ TEST_F(pathGetFullTest, resolves_symlink_to_target_path_when_target_exists)
                 // [Pre-Assert手順] - 実体ファイルのパスを書き込み、そのアドレスを返却する。
 
     // Act
-    int result = cplat_path_get_full(actual, sizeof(actual), NULL,
+    int result = cplat_path_get_full(actual, sizeof(actual), nullptr,
                                      "/work/target-link.bin"); // [手順] - symlink のパスを絶対化する。
 
     // Assert
@@ -523,7 +523,7 @@ TEST_F(pathGetFullTest, falls_back_to_normalized_path_when_realpath_fails)
                                       // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
 
     // Act
-    int actual_ret = cplat_path_get_full(actual, sizeof(actual), NULL,
+    int actual_ret = cplat_path_get_full(actual, sizeof(actual), nullptr,
                                          "/tmp/./pathGetFullTest_fallback"); // [手順] - 絶対パスを指定して呼び出す。
 
     // Assert

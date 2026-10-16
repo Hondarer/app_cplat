@@ -18,17 +18,17 @@ class fileStatIsRegularTest : public testing::Test
     // [サブ手順 名前=fileStatIsRegularTest.SetUp]
     void SetUp() override
     {
-        FILE *stream = NULL;
+        FILE *stream = nullptr;
 
-        (void)cplat_remove(kFilePath, NULL);
-        (void)cplat_rmdir(kDirPath, NULL);
+        (void)cplat_remove(kFilePath, nullptr);
+        (void)cplat_rmdir(kDirPath, nullptr);
 
-        stream = cplat_fopen(kFilePath, "wb", NULL);
+        stream = cplat_fopen(kFilePath, "wb", nullptr);
         ASSERT_NE(nullptr, stream);
         // [状態確認] - cplat_fopen() の戻り値が nullptr 以外であること。
-        ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, NULL));
+        ASSERT_EQ(CPLAT_OK, cplat_fclose(stream, nullptr));
         // [状態確認] - cplat_fclose() の戻り値が CPLAT_OK であること。
-        ASSERT_EQ(CPLAT_OK, cplat_mkdir(kDirPath, NULL));
+        ASSERT_EQ(CPLAT_OK, cplat_mkdir(kDirPath, nullptr));
         // [状態確認] - cplat_mkdir() の戻り値が CPLAT_OK であること。
     }
     // [サブ手順終了]
@@ -36,8 +36,8 @@ class fileStatIsRegularTest : public testing::Test
     // [サブ手順 名前=fileStatIsRegularTest.TearDown]
     void TearDown() override
     {
-        (void)cplat_remove(kFilePath, NULL);
-        (void)cplat_rmdir(kDirPath, NULL);
+        (void)cplat_remove(kFilePath, nullptr);
+        (void)cplat_rmdir(kDirPath, nullptr);
     }
     // [サブ手順終了]
 };
@@ -49,7 +49,7 @@ TEST_F(fileStatIsRegularTest, returns_one_for_regular_file)
     // Arrange
     cplat_file_stat_t file_stat;
 
-    ASSERT_EQ(CPLAT_OK, cplat_stat(&file_stat, NULL, kFilePath)); // [状態] - 通常ファイルの情報を取得する。
+    ASSERT_EQ(CPLAT_OK, cplat_stat(&file_stat, nullptr, kFilePath)); // [状態] - 通常ファイルの情報を取得する。
     // [状態確認] - 通常ファイルに対する cplat_stat() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -71,7 +71,7 @@ TEST_F(fileStatIsRegularTest, returns_zero_for_directory)
     // Arrange
     cplat_file_stat_t file_stat;
 
-    ASSERT_EQ(CPLAT_OK, cplat_stat(&file_stat, NULL, kDirPath)); // [状態] - ディレクトリの情報を取得する。
+    ASSERT_EQ(CPLAT_OK, cplat_stat(&file_stat, nullptr, kDirPath)); // [状態] - ディレクトリの情報を取得する。
     // [状態確認] - ディレクトリに対する cplat_stat() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -95,7 +95,7 @@ TEST_F(fileStatIsRegularTest, returns_zero_for_null)
     // Pre-Assert
 
     // Act
-    int actual_ret_is_regular = cplat_file_stat_is_regular(NULL); // [手順] - NULL を指定する。
+    int actual_ret_is_regular = cplat_file_stat_is_regular(nullptr); // [手順] - NULL を指定する。
 
     // Assert
     EXPECT_EQ(

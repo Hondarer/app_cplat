@@ -119,7 +119,7 @@ TEST_F(errorTest, set_last_copies_saved_error_and_null_clears_it)
     // Act
     cplat_error_set_last(&saved_error);   // [手順] - 保存済みの詳細エラーを現在のスレッドの TLS へ設定する。
     cplat_error_get_last(&copied_error);  // [手順] - 設定後の TLS 詳細エラーを取得する。
-    cplat_error_set_last(NULL);           // [手順] - NULL を指定して現在のスレッドの TLS をクリアする。
+    cplat_error_set_last(nullptr);        // [手順] - NULL を指定して現在のスレッドの TLS をクリアする。
     cplat_error_get_last(&cleared_error); // [手順] - クリア後の TLS 詳細エラーを取得する。
 
     // Assert
@@ -152,15 +152,15 @@ TEST_F(errorTest, accessors_reject_null_empty_and_mismatched_domain)
     // Pre-Assert
 
     // Act
-    cplat_error_clear(NULL);                          // [手順] - NULL の詳細エラーをクリアする。
-    cplat_error_capture_errno(NULL, ENOENT);          // [手順] - NULL の格納先へ errno を取り込む。
-    cplat_error_get_last(NULL);                       // [手順] - NULL の格納先へ TLS の値を取得する。
-    const int null_is_set = cplat_error_is_set(NULL); // [手順] - NULL の設定状態を取得する。
-    const cplat_error_domain null_domain = cplat_error_get_domain(NULL); // [手順] - NULL のドメインを取得する。
-    const int null_errno = cplat_error_get_errno(NULL);                  // [手順] - NULL から errno を取得する。
-    const int null_result = cplat_error_to_result(NULL);                 // [手順] - NULL を共通結果コードへ変換する。
-    const cplat_error_cause null_cause = cplat_error_get_cause(NULL);    // [手順] - NULL の要因を取得する。
-    const int null_matches = cplat_error_is(NULL, CPLAT_CAUSE_NONE);     // [手順] - NULL の要因一致を判定する。
+    cplat_error_clear(nullptr);                          // [手順] - NULL の詳細エラーをクリアする。
+    cplat_error_capture_errno(nullptr, ENOENT);          // [手順] - NULL の格納先へ errno を取り込む。
+    cplat_error_get_last(nullptr);                       // [手順] - NULL の格納先へ TLS の値を取得する。
+    const int null_is_set = cplat_error_is_set(nullptr); // [手順] - NULL の設定状態を取得する。
+    const cplat_error_domain null_domain = cplat_error_get_domain(nullptr); // [手順] - NULL のドメインを取得する。
+    const int null_errno = cplat_error_get_errno(nullptr);                  // [手順] - NULL から errno を取得する。
+    const int null_result = cplat_error_to_result(nullptr);              // [手順] - NULL を共通結果コードへ変換する。
+    const cplat_error_cause null_cause = cplat_error_get_cause(nullptr); // [手順] - NULL の要因を取得する。
+    const int null_matches = cplat_error_is(nullptr, CPLAT_CAUSE_NONE);  // [手順] - NULL の要因一致を判定する。
     const int empty_is_set = cplat_error_is_set(&empty); // [手順] - 空の詳細エラーの設定状態を取得する。
     const cplat_error_domain mismatched_domain =
         cplat_error_get_domain(&windows_error); // [手順] - Windows ドメインを取得する。

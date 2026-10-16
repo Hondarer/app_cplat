@@ -81,7 +81,7 @@ TEST_F(hashtableResizeTest, grow_preserves_record_numbers_and_stamps)
     fill_value(&value, "v1");
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "b", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_find_recno(ht, "a", &rec_a_before);
@@ -93,7 +93,7 @@ TEST_F(hashtableResizeTest, grow_preserves_record_numbers_and_stamps)
     int actual_ret_find = cplat_hashtable_find_recno(ht, "a", &rec_a_after);
     int actual_ret_generation = cplat_hashtable_get_table_generation(ht, &generation_after);
     int actual_ret_timestamp = cplat_hashtable_get_table_timestamp_val(ht, &timestamp_after);
-    int actual_ret_counts = cplat_hashtable_count_status(ht, &in_use, NULL, &empty);
+    int actual_ret_counts = cplat_hashtable_count_status(ht, &in_use, nullptr, &empty);
     int actual_ret_validate = cplat_hashtable_validate(ht);
     int actual_ret_add_more = cplat_hashtable_add(ht, "z", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
 
@@ -151,7 +151,7 @@ TEST_F(hashtableResizeTest, shrink_renumbers_records_and_keeps_values)
     fill_value(&value, "keep");
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_insert_direct(ht, 7, "a", 1, value.data(), &timestamp,
                                         4); // [手順] - 縮小後の範囲外になる番号へ置く。
     (void)cplat_hashtable_find_recno(ht, "a", &rec_before);
@@ -211,7 +211,7 @@ TEST_F(hashtableResizeTest, shrink_rejects_when_in_use_records_do_not_fit)
     fill_value(&value, "v");
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "b", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "c", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
@@ -255,7 +255,7 @@ TEST_F(hashtableResizeTest, shrink_rejects_deleted_records_when_reuse_is_disable
     fill_value(&value, "v");
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "b", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "c", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
@@ -298,7 +298,7 @@ TEST_F(hashtableResizeTest, shrink_drops_oldest_deleted_records_when_reuse_is_en
     fill_value(&value, "v");
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_insert_direct(ht, 1, "a", 1, value.data(), &timestamp, 9); // [手順] - 使用中を 1 件置く。
     (void)cplat_hashtable_insert_direct(ht, 2, "b", 2, value.data(), &timestamp,
                                         8); // [手順] - 世代が新しい削除済みを置く。
@@ -352,7 +352,7 @@ TEST_F(hashtableResizeTest, resizes_variable_storage_and_rejects_when_it_does_no
     fill_variable_config(&config, 4, 32, 32);
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "alpha", "value-alpha", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     grown = config;
     grown.key_storage_size = 128;
@@ -409,10 +409,10 @@ TEST_F(hashtableResizeTest, resize_guards_reject_invalid_arguments)
     data_buf.assign((data_size / sizeof(uint64_t)) + 1u, 0);
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_create(&config, mgmt_buf.data(), mgmt_size, data_buf.data(), data_size, &external);
-    int actual_ret_null_ht = cplat_hashtable_resize(NULL, &config);
-    int actual_ret_null_config = cplat_hashtable_resize(ht, NULL);
+    int actual_ret_null_ht = cplat_hashtable_resize(nullptr, &config);
+    int actual_ret_null_config = cplat_hashtable_resize(ht, nullptr);
     changed = config;
     changed.value_size = 16; // [状態] - 変えてはならない項目を変えた設定を用意する。
     int actual_ret_incompatible = cplat_hashtable_resize(ht, &changed);
@@ -473,7 +473,7 @@ TEST_F(hashtableResizeTest, rebuild_into_moves_table_to_caller_supplied_region)
     data_buf.assign((data_size / sizeof(uint64_t)) + 1u, 0);
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &src);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &src);
     (void)cplat_hashtable_add(src, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_find_recno(src, "a", &rec_before);
     int actual_ret_rebuild = cplat_hashtable_rebuild_into(src, &grown, mgmt_buf.data(), mgmt_size, data_buf.data(),
@@ -538,15 +538,15 @@ TEST_F(hashtableResizeTest, rebuild_into_guards_reject_invalid_arguments)
     data_buf.assign((data_size / sizeof(uint64_t)) + 1u, 0);
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &src);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &src);
     (void)cplat_hashtable_add(src, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(src, "b", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_null_src =
-        cplat_hashtable_rebuild_into(NULL, &shrunk, mgmt_buf.data(), mgmt_size, data_buf.data(), data_size, &dst);
+        cplat_hashtable_rebuild_into(nullptr, &shrunk, mgmt_buf.data(), mgmt_size, data_buf.data(), data_size, &dst);
     int actual_ret_null_mgmt =
-        cplat_hashtable_rebuild_into(src, &shrunk, NULL, mgmt_size, data_buf.data(), data_size, &dst);
+        cplat_hashtable_rebuild_into(src, &shrunk, nullptr, mgmt_size, data_buf.data(), data_size, &dst);
     int actual_ret_null_out =
-        cplat_hashtable_rebuild_into(src, &shrunk, mgmt_buf.data(), mgmt_size, data_buf.data(), data_size, NULL);
+        cplat_hashtable_rebuild_into(src, &shrunk, mgmt_buf.data(), mgmt_size, data_buf.data(), data_size, nullptr);
     /* 使用中 2 件がレコード数 1 へ収まらないため、領域へ触れずに失敗する。 */
     int actual_ret_limit =
         cplat_hashtable_rebuild_into(src, &shrunk, mgmt_buf.data(), mgmt_size, data_buf.data(), data_size, &dst);
@@ -595,7 +595,7 @@ TEST_F(hashtableResizeTest, resize_rejects_every_immutable_config_field)
     fill_config(&config, 4, 5);
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     {
         cplat_hashtable_config changed = config;
 
@@ -675,7 +675,7 @@ TEST_F(hashtableResizeTest, shrink_drops_multiple_deleted_records_in_generation_
     fill_value(&value, "v");
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_insert_direct(ht, 1, "a", 2, value.data(), &timestamp, 30);
     (void)cplat_hashtable_insert_direct(ht, 2, "b", 2, value.data(), &timestamp, 10);
     (void)cplat_hashtable_insert_direct(ht, 3, "c", 2, value.data(), &timestamp,
@@ -728,7 +728,7 @@ TEST_F(hashtableResizeTest, resize_reports_out_of_memory_when_calloc_fails)
     fill_value(&value, "v");
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     grown = config;
     grown.capacity = 8;
@@ -736,7 +736,7 @@ TEST_F(hashtableResizeTest, resize_reports_out_of_memory_when_calloc_fails)
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_calloc(_, _))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_calloc から NULL を返却する。
+                                    // [Pre-Assert手順] - cplat_calloc() から NULL を返却する。
 
     // Act_2
     int actual_ret_resize = cplat_hashtable_resize(ht, &grown); // [手順] - 確保に失敗する状態で拡大する。
@@ -772,7 +772,7 @@ TEST_F(hashtableResizeTest, rebuild_into_rejects_invalid_and_incompatible_config
     data_buf.assign((data_size / sizeof(uint64_t)) + 1u, 0);
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &src);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &src);
     cplat_hashtable_config invalid = config;
     invalid.capacity = 0; // [状態] - 設定として不正な値を用意する。
     int actual_ret_invalid =
@@ -814,7 +814,7 @@ TEST_F(hashtableResizeTest, resize_reports_out_of_memory_when_new_region_allocat
     fill_value(&value, "v");
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     grown = config;
     grown.capacity = 8;
@@ -824,7 +824,7 @@ TEST_F(hashtableResizeTest, resize_reports_out_of_memory_when_new_region_allocat
     EXPECT_CALL(mock_cplat_, cplat_calloc(_, _))
         .WillOnce(DoDefault())
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が 2 回呼び出されること。
-                                    // [Pre-Assert手順] - 2 回目の cplat_calloc から NULL を返却する。
+                                    // [Pre-Assert手順] - 2 回目の cplat_calloc() から NULL を返却する。
 
     // Act_2
     int actual_ret_resize = cplat_hashtable_resize(ht, &grown); // [手順] - 移行先の確保に失敗する状態で拡大する。

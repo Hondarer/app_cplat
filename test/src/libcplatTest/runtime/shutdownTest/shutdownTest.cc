@@ -74,7 +74,7 @@ class shutdownTest : public Test
         reset_records();
         // atexit は成功を返す。
         ON_CALL(mock_stdlib_, atexit(_, _, _, _)).WillByDefault(Return(0));
-        // [状態] - `atexit` の既定動作を設定する。
+        // [状態] - atexit() の既定動作を設定する。
     }
     // [サブ手順終了]
 
@@ -234,12 +234,14 @@ TEST_F(shutdownTest, test_request_callbacks_do_not_consume_final_shutdown)
         g_last_event
             .reason); // [確認_正常系] - g_last_event.reason が CPLAT_SHUTDOWN_REASON_SIGNAL_OR_CONSOLE_EVENT であること。
 
+    // Act_2
     reset_records();
 
     int final_invoked = 0;
     int final_result =
         cplat_shutdown_invoke_for_test(&final_event, &final_invoked); // [手順] - 続けて最終 shutdown を実行する。
 
+    // Assert_2
     ASSERT_EQ(CPLAT_OK,
               final_result); // [確認_正常系] - cplat_shutdown_invoke_for_test() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
@@ -318,7 +320,7 @@ TEST_F(shutdownTest, test_cplat_exit_preserves_exit_code)
     EXPECT_EXIT(
         {
             cplat_shutdown_reset_for_test();
-            cplat_shutdown_register(print_callback, NULL);
+            cplat_shutdown_register(print_callback, nullptr);
             cplat_exit(7);
         },
         ::testing::ExitedWithCode(7), "reason=0 kind=1 code=7");
@@ -349,7 +351,7 @@ TEST_F(shutdownTest, test_cplat_exit_clamps_code_above_range)
     EXPECT_EXIT(
         {
             cplat_shutdown_reset_for_test();
-            cplat_shutdown_register(print_callback, NULL);
+            cplat_shutdown_register(print_callback, nullptr);
             cplat_exit(256);
         },
         ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE), "reason=0 kind=1 code=125");
@@ -378,7 +380,7 @@ TEST_F(shutdownTest, test_cplat_exit_clamps_negative_code)
     EXPECT_EXIT(
         {
             cplat_shutdown_reset_for_test();
-            cplat_shutdown_register(print_callback, NULL);
+            cplat_shutdown_register(print_callback, nullptr);
             cplat_exit(-1);
         },
         ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE), "reason=0 kind=1 code=125");
@@ -408,7 +410,7 @@ TEST_F(shutdownTest, test_cplat_exit_preserves_upper_bound_code)
     EXPECT_EXIT(
         {
             cplat_shutdown_reset_for_test();
-            cplat_shutdown_register(print_callback, NULL);
+            cplat_shutdown_register(print_callback, nullptr);
             cplat_exit(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1);
         },
         ::testing::ExitedWithCode(CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1), "reason=0 kind=1 code=124");
@@ -438,8 +440,8 @@ TEST_F(shutdownTest, test_explicit_invoke_prevents_atexit_double_execution)
             cplat_shutdown_event event =
                 make_event(CPLAT_SHUTDOWN_REASON_NORMAL_EXIT, CPLAT_SHUTDOWN_CODE_KIND_NONE, 0);
             cplat_shutdown_reset_for_test();
-            cplat_shutdown_register(print_count_callback, NULL);
-            cplat_shutdown_invoke_for_test(&event, NULL);
+            cplat_shutdown_register(print_count_callback, nullptr);
+            cplat_shutdown_invoke_for_test(&event, nullptr);
             exit(0);
         },
         ::testing::ExitedWithCode(0), "count=1");
@@ -465,7 +467,7 @@ TEST_F(shutdownTest, test_sigint_is_reported_to_callback)
     EXPECT_EXIT(
         {
             cplat_shutdown_reset_for_test();
-            cplat_shutdown_request_register(print_callback, NULL);
+            cplat_shutdown_request_register(print_callback, nullptr);
             raise(SIGINT);
             fprintf(stderr, "after-sigint\n");
             exit(0);
@@ -513,7 +515,7 @@ TEST_F(shutdownTest, test_repeated_signal_request_returns_without_reraise)
     cplat_shutdown_event event =
         make_event(CPLAT_SHUTDOWN_REASON_SIGNAL_OR_CONSOLE_EVENT, CPLAT_SHUTDOWN_CODE_KIND_SIGNAL_NUMBER, SIGINT);
     ASSERT_EQ(CPLAT_OK,
-              cplat_shutdown_request_invoke_for_test(&event, NULL)); // [状態] - 終了要求を処理済みの状態にする。
+              cplat_shutdown_request_invoke_for_test(&event, nullptr)); // [状態] - 終了要求を処理済みの状態にする。
     // [状態確認] - cplat_shutdown_request_invoke_for_test() の戻り値が CPLAT_OK であること。
     NiceMock<Mock_signal> mock_signal;
 
@@ -541,21 +543,21 @@ TEST_F(shutdownTest, test_registration_and_invoke_reject_invalid_inputs)
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(Return(nullptr))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc() が 2 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_malloc から NULL を返却する。
+                                    // [Pre-Assert手順] - cplat_malloc() から NULL を返却する。
 
     // Act
     int register_null_result =
-        cplat_shutdown_register(NULL, NULL); // [手順] - NULL callback を最終 shutdown へ登録する。
+        cplat_shutdown_register(nullptr, nullptr); // [手順] - NULL callback を最終 shutdown へ登録する。
     int request_register_null_result =
-        cplat_shutdown_request_register(NULL, NULL); // [手順] - NULL callback を終了要求へ登録する。
+        cplat_shutdown_request_register(nullptr, nullptr); // [手順] - NULL callback を終了要求へ登録する。
     int register_oom_result =
-        cplat_shutdown_register(record_callback, NULL); // [手順] - malloc 失敗時に最終 callback を登録する。
+        cplat_shutdown_register(record_callback, nullptr); // [手順] - malloc 失敗時に最終 callback を登録する。
     int request_register_oom_result = cplat_shutdown_request_register(
-        record_callback, NULL); // [手順] - malloc 失敗時に終了要求 callback を登録する。
+        record_callback, nullptr); // [手順] - malloc 失敗時に終了要求 callback を登録する。
     int invoke_null_result =
-        cplat_shutdown_invoke_for_test(NULL, NULL); // [手順] - NULL イベントで最終 shutdown を実行する。
+        cplat_shutdown_invoke_for_test(nullptr, nullptr); // [手順] - NULL イベントで最終 shutdown を実行する。
     int request_invoke_null_result =
-        cplat_shutdown_request_invoke_for_test(NULL, NULL); // [手順] - NULL イベントで終了要求を実行する。
+        cplat_shutdown_request_invoke_for_test(nullptr, nullptr); // [手順] - NULL イベントで終了要求を実行する。
 
     // Assert
     EXPECT_EQ(
@@ -586,14 +588,15 @@ TEST_F(shutdownTest, test_request_registration_after_final_shutdown_is_rejected)
     // Arrange
     cplat_shutdown_event event = make_event(CPLAT_SHUTDOWN_REASON_NORMAL_EXIT, CPLAT_SHUTDOWN_CODE_KIND_NONE, 0);
     ASSERT_EQ(CPLAT_OK,
-              cplat_shutdown_invoke_for_test(&event, NULL)); // [状態] - 最終 shutdown を実行済みの状態にする。
+              cplat_shutdown_invoke_for_test(&event, nullptr)); // [状態] - 最終 shutdown を実行済みの状態にする。
     // [状態確認] - cplat_shutdown_invoke_for_test() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
-    int result = cplat_shutdown_request_register(record_callback,
-                                                 NULL); // [手順] - 最終 shutdown 開始後に終了要求 callback を登録する。
+    int result =
+        cplat_shutdown_request_register(record_callback,
+                                        nullptr); // [手順] - 最終 shutdown 開始後に終了要求 callback を登録する。
     int request_invoked = 1;
     int invoke_result = cplat_shutdown_request_invoke_for_test(
         &event, &request_invoked); // [手順] - 最終 shutdown 開始後に終了要求 callback の実行を試みる。
@@ -671,7 +674,7 @@ TEST_F(shutdownTest, test_console_event_is_reported_to_callback)
         g_last_event
             .code_kind); // [確認_正常系] - g_last_event.code_kind が CPLAT_SHUTDOWN_CODE_KIND_CONSOLE_CTRL_TYPE であること。
     EXPECT_EQ((int)CTRL_C_EVENT,
-              g_last_event.code); // [確認_正常系] - g_last_event.code が (int)CTRL_C_EVENT と一致すること。
+              g_last_event.code); // [確認_正常系] - g_last_event.code が CTRL_C_EVENT と一致すること。
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 #endif

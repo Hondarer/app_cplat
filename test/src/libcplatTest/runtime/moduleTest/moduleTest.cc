@@ -113,7 +113,7 @@ TEST_F(moduleTest, get_path_returns_unknown_when_dladdr_has_no_filename)
             [](const char *, int, const char *, const void *, void *raw_info)
             {
                 Dl_info *info = static_cast<Dl_info *>(raw_info);
-                info->dli_fname = NULL;
+                info->dli_fname = nullptr;
                 return 1;
             }); // [Pre-Assert確認_異常系] - dladdr() が 1 回呼び出されること。
                 // [Pre-Assert手順] - dli_fname が NULL の情報を返却する。
@@ -189,7 +189,7 @@ TEST_F(moduleTest, get_path_rejects_null_out_path)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_module_get_path(NULL, 16u,
+    int actual_ret = cplat_module_get_path(nullptr, 16u,
                                            self_func_addr()); // [手順] - path_out に NULL を指定して呼び出す。
 
     // Assert
@@ -223,7 +223,8 @@ TEST_F(moduleTest, get_path_rejects_null_func_addr)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_module_get_path(path, sizeof(path), NULL); // [手順] - func_addr に NULL を指定して呼び出す。
+    int actual_ret =
+        cplat_module_get_path(path, sizeof(path), nullptr); // [手順] - func_addr に NULL を指定して呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -310,7 +311,7 @@ TEST_F(moduleTest, get_path_clears_output_for_null_function_address)
 
     // Act
     const int result =
-        cplat_module_get_path(path, sizeof(path), NULL); // [手順] - func_addr に NULL を指定して呼び出す。
+        cplat_module_get_path(path, sizeof(path), nullptr); // [手順] - func_addr に NULL を指定して呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -348,7 +349,7 @@ TEST_F(moduleTest, get_basename_rejects_null_out_basename)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_module_get_basename(NULL, 16u,
+    int actual_ret = cplat_module_get_basename(nullptr, 16u,
                                                self_func_addr()); // [手順] - basename_out に NULL を指定して呼び出す。
 
     // Assert
@@ -387,7 +388,7 @@ TEST_F(moduleTest, get_basename_propagates_get_path_failure)
 
     // Act
     int actual_ret = cplat_module_get_basename(basename, sizeof(basename),
-                                               NULL); // [手順] - func_addr に NULL を指定して呼び出す。
+                                               nullptr); // [手順] - func_addr に NULL を指定して呼び出す。
 
     // Assert
     EXPECT_EQ(

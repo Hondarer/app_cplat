@@ -36,11 +36,11 @@ TEST_F(cryptoTest, round_trip_restores_original_bytes)
     // Pre-Assert
 
     // Act
-    int actual_ret_encrypt = cplat_crypto_encrypt(cipher.data(), &cipher_len, plain, plain_len, key_, nonce_, NULL,
-                                                  0u); // [手順] - AAD なしで cplat_crypto_encrypt を呼び出す。
+    int actual_ret_encrypt = cplat_crypto_encrypt(cipher.data(), &cipher_len, plain, plain_len, key_, nonce_, nullptr,
+                                                  0u); // [手順] - AAD なしで cplat_crypto_encrypt() を呼び出す。
     int actual_ret_decrypt =
-        cplat_crypto_decrypt(restored.data(), &restored_len, cipher.data(), cipher_len, key_, nonce_, NULL,
-                             0u); // [手順] - 同じ鍵とノンスで cplat_crypto_decrypt を呼び出す。
+        cplat_crypto_decrypt(restored.data(), &restored_len, cipher.data(), cipher_len, key_, nonce_, nullptr,
+                             0u); // [手順] - 同じ鍵とノンスで cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_encrypt); // [確認_正常系] - cplat_crypto_encrypt() の戻り値が CPLAT_OK であること。
@@ -70,11 +70,12 @@ TEST_F(cryptoTest, round_trip_with_aad)
     // Pre-Assert
 
     // Act
-    int actual_ret_encrypt = cplat_crypto_encrypt(cipher.data(), &cipher_len, plain, plain_len, key_, nonce_, aad,
-                                                  aad_len); // [手順] - AAD を指定して cplat_crypto_encrypt を呼び出す。
+    int actual_ret_encrypt =
+        cplat_crypto_encrypt(cipher.data(), &cipher_len, plain, plain_len, key_, nonce_, aad,
+                             aad_len); // [手順] - AAD を指定して cplat_crypto_encrypt() を呼び出す。
     int actual_ret_decrypt =
         cplat_crypto_decrypt(restored.data(), &restored_len, cipher.data(), cipher_len, key_, nonce_, aad,
-                             aad_len); // [手順] - 同じ AAD を指定して cplat_crypto_decrypt を呼び出す。
+                             aad_len); // [手順] - 同じ AAD を指定して cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_encrypt); // [確認_正常系] - cplat_crypto_encrypt() の戻り値が CPLAT_OK であること。
@@ -130,7 +131,7 @@ TEST_F(cryptoTest, decrypt_rejects_tampered_cipher_text)
     size_t cipher_len = cipher.size();
     size_t restored_len = restored.size();
 
-    ASSERT_EQ(CPLAT_OK, cplat_crypto_encrypt(cipher.data(), &cipher_len, plain, plain_len, key_, nonce_, NULL,
+    ASSERT_EQ(CPLAT_OK, cplat_crypto_encrypt(cipher.data(), &cipher_len, plain, plain_len, key_, nonce_, nullptr,
                                              0u)); // [状態] - 復号対象の暗号文を用意する。
     // [状態確認] - cplat_crypto_encrypt() の戻り値が CPLAT_OK であること。
     cipher[0] = static_cast<uint8_t>(cipher[0] ^ 0xFFu); // [状態] - 暗号文の先頭 1 byte を反転して改ざんする。
@@ -138,8 +139,9 @@ TEST_F(cryptoTest, decrypt_rejects_tampered_cipher_text)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_crypto_decrypt(restored.data(), &restored_len, cipher.data(), cipher_len, key_, nonce_, NULL,
-                                          0u); // [手順] - 改ざんした暗号文で cplat_crypto_decrypt を呼び出す。
+    int actual_ret =
+        cplat_crypto_decrypt(restored.data(), &restored_len, cipher.data(), cipher_len, key_, nonce_, nullptr,
+                             0u); // [手順] - 改ざんした暗号文で cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -160,7 +162,7 @@ TEST_F(cryptoTest, decrypt_rejects_wrong_key)
     size_t restored_len = restored.size();
     uint8_t other_key[CPLAT_CRYPTO_KEY_SIZE];
 
-    ASSERT_EQ(CPLAT_OK, cplat_crypto_encrypt(cipher.data(), &cipher_len, plain, plain_len, key_, nonce_, NULL,
+    ASSERT_EQ(CPLAT_OK, cplat_crypto_encrypt(cipher.data(), &cipher_len, plain, plain_len, key_, nonce_, nullptr,
                                              0u)); // [状態] - 復号対象の暗号文を用意する。
     // [状態確認] - cplat_crypto_encrypt() の戻り値が CPLAT_OK であること。
     std::memset(other_key, 0x33, sizeof(other_key)); // [状態] - 暗号化に使用したものと異なる鍵を用意する。
@@ -169,8 +171,8 @@ TEST_F(cryptoTest, decrypt_rejects_wrong_key)
 
     // Act
     int actual_ret =
-        cplat_crypto_decrypt(restored.data(), &restored_len, cipher.data(), cipher_len, other_key, nonce_, NULL,
-                             0u); // [手順] - 異なる鍵で cplat_crypto_decrypt を呼び出す。
+        cplat_crypto_decrypt(restored.data(), &restored_len, cipher.data(), cipher_len, other_key, nonce_, nullptr,
+                             0u); // [手順] - 異なる鍵で cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -191,10 +193,11 @@ TEST_F(cryptoTest, round_trip_of_empty_plain_text)
     // Pre-Assert
 
     // Act
-    int actual_ret_encrypt = cplat_crypto_encrypt(cipher, &cipher_len, NULL, 0u, key_, nonce_, NULL,
-                                                  0u); // [手順] - 長さ 0 の平文で cplat_crypto_encrypt を呼び出す。
-    int actual_ret_decrypt = cplat_crypto_decrypt(restored, &restored_len, cipher, cipher_len, key_, nonce_, NULL,
-                                                  0u); // [手順] - タグのみの暗号文で cplat_crypto_decrypt を呼び出す。
+    int actual_ret_encrypt = cplat_crypto_encrypt(cipher, &cipher_len, nullptr, 0u, key_, nonce_, nullptr,
+                                                  0u); // [手順] - 長さ 0 の平文で cplat_crypto_encrypt() を呼び出す。
+    int actual_ret_decrypt =
+        cplat_crypto_decrypt(restored, &restored_len, cipher, cipher_len, key_, nonce_, nullptr,
+                             0u); // [手順] - タグのみの暗号文で cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_encrypt); // [確認_正常系] - cplat_crypto_encrypt() の戻り値が CPLAT_OK であること。
@@ -216,12 +219,12 @@ TEST_F(cryptoTest, encrypt_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_dst = cplat_crypto_encrypt(NULL, &cipher_len, plain, plain_len, key_, nonce_, NULL, 0u);
-    int actual_ret_null_dst_len = cplat_crypto_encrypt(cipher, NULL, plain, plain_len, key_, nonce_, NULL, 0u);
-    int actual_ret_null_src = cplat_crypto_encrypt(cipher, &cipher_len, NULL, plain_len, key_, nonce_, NULL, 0u);
-    int actual_ret_null_key = cplat_crypto_encrypt(cipher, &cipher_len, plain, plain_len, NULL, nonce_, NULL, 0u);
+    int actual_ret_null_dst = cplat_crypto_encrypt(nullptr, &cipher_len, plain, plain_len, key_, nonce_, nullptr, 0u);
+    int actual_ret_null_dst_len = cplat_crypto_encrypt(cipher, nullptr, plain, plain_len, key_, nonce_, nullptr, 0u);
+    int actual_ret_null_src = cplat_crypto_encrypt(cipher, &cipher_len, nullptr, plain_len, key_, nonce_, nullptr, 0u);
+    int actual_ret_null_key = cplat_crypto_encrypt(cipher, &cipher_len, plain, plain_len, nullptr, nonce_, nullptr, 0u);
     int actual_ret_null_nonce =
-        cplat_crypto_encrypt(cipher, &cipher_len, plain, plain_len, key_, NULL, NULL,
+        cplat_crypto_encrypt(cipher, &cipher_len, plain, plain_len, key_, nullptr, nullptr,
                              0u); // [手順] - dst、dst_len、src、key、nonce に順に NULL を指定して呼び出す。
 
     // Assert
@@ -255,8 +258,8 @@ TEST_F(cryptoTest, encrypt_returns_buffer_too_small)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_crypto_encrypt(cipher, &cipher_len, plain, plain_len, key_, nonce_, NULL,
-                                          0u); // [手順] - 不足する出力バッファーで cplat_crypto_encrypt を呼び出す。
+    int actual_ret = cplat_crypto_encrypt(cipher, &cipher_len, plain, plain_len, key_, nonce_, nullptr,
+                                          0u); // [手順] - 不足する出力バッファーで cplat_crypto_encrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -275,16 +278,18 @@ TEST_F(cryptoTest, decrypt_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_dst = cplat_crypto_decrypt(NULL, &restored_len, cipher, sizeof(cipher), key_, nonce_, NULL, 0u);
-    int actual_ret_null_dst_len = cplat_crypto_decrypt(restored, NULL, cipher, sizeof(cipher), key_, nonce_, NULL, 0u);
+    int actual_ret_null_dst =
+        cplat_crypto_decrypt(nullptr, &restored_len, cipher, sizeof(cipher), key_, nonce_, nullptr, 0u);
+    int actual_ret_null_dst_len =
+        cplat_crypto_decrypt(restored, nullptr, cipher, sizeof(cipher), key_, nonce_, nullptr, 0u);
     int actual_ret_null_src =
-        cplat_crypto_decrypt(restored, &restored_len, NULL, sizeof(cipher), key_, nonce_, NULL, 0u);
+        cplat_crypto_decrypt(restored, &restored_len, nullptr, sizeof(cipher), key_, nonce_, nullptr, 0u);
     int actual_ret_short_src =
-        cplat_crypto_decrypt(restored, &restored_len, cipher, CPLAT_CRYPTO_TAG_SIZE - 1u, key_, nonce_, NULL, 0u);
+        cplat_crypto_decrypt(restored, &restored_len, cipher, CPLAT_CRYPTO_TAG_SIZE - 1u, key_, nonce_, nullptr, 0u);
     int actual_ret_null_key =
-        cplat_crypto_decrypt(restored, &restored_len, cipher, sizeof(cipher), NULL, nonce_, NULL, 0u);
+        cplat_crypto_decrypt(restored, &restored_len, cipher, sizeof(cipher), nullptr, nonce_, nullptr, 0u);
     int actual_ret_null_nonce =
-        cplat_crypto_decrypt(restored, &restored_len, cipher, sizeof(cipher), key_, NULL, NULL,
+        cplat_crypto_decrypt(restored, &restored_len, cipher, sizeof(cipher), key_, nullptr, nullptr,
                              0u); // [手順] - dst、dst_len、src、src_len、key、nonce に順に不正値を指定して呼び出す。
 
     // Assert
@@ -320,8 +325,8 @@ TEST_F(cryptoTest, decrypt_returns_buffer_too_small)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_crypto_decrypt(restored, &restored_len, cipher, sizeof(cipher), key_, nonce_, NULL,
-                                          0u); // [手順] - 不足する出力バッファーで cplat_crypto_decrypt を呼び出す。
+    int actual_ret = cplat_crypto_decrypt(restored, &restored_len, cipher, sizeof(cipher), key_, nonce_, nullptr,
+                                          0u); // [手順] - 不足する出力バッファーで cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -368,7 +373,7 @@ TEST_F(cryptoTest, passphrase_to_key_accepts_empty_passphrase)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_passphrase_to_key(key, NULL,
+    int actual_ret = cplat_passphrase_to_key(key, nullptr,
                                              0u); // [手順] - passphrase に NULL、長さに 0 を指定して呼び出す。
 
     // Assert
@@ -385,9 +390,9 @@ TEST_F(cryptoTest, passphrase_to_key_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_key = cplat_passphrase_to_key(NULL, (const uint8_t *)"secret", 6u);
+    int actual_ret_null_key = cplat_passphrase_to_key(nullptr, (const uint8_t *)"secret", 6u);
     int actual_ret_null_passphrase =
-        cplat_passphrase_to_key(key, NULL, 6u); // [手順] - key に NULL、passphrase に NULL を指定して呼び出す。
+        cplat_passphrase_to_key(key, nullptr, 6u); // [手順] - key に NULL、passphrase に NULL を指定して呼び出す。
 
     // Assert
     EXPECT_EQ(

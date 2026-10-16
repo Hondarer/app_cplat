@@ -29,8 +29,8 @@ TEST_F(trace_syslogTest, test_init_and_dispose)
     cplat_syslog_sink_dispose(handle); // [手順] - syslog sink を破棄する。
 
     // Assert
-    EXPECT_NE((cplat_syslog_sink *)NULL,
-              handle); // [確認_正常系] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    EXPECT_NE(nullptr,
+              handle); // [確認_正常系] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
 }
 
 // syslog sink の識別子を変更できることの確認
@@ -39,8 +39,8 @@ TEST_F(trace_syslogTest, rename_succeeds)
     // Arrange
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("before", LOG_USER); // [状態] - 変更前の識別子を "before" とする。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
 
@@ -61,16 +61,16 @@ TEST_F(trace_syslogTest, rename_rejects_invalid_arguments)
     // Arrange
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslog_test", LOG_USER); // [状態] - 初期化済みの syslog sink を用意する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
 
     // Act
     int null_handle_result =
-        cplat_syslog_sink_rename(NULL, "after"); // [手順] - handle に NULL を渡して識別子を変更する。
+        cplat_syslog_sink_rename(nullptr, "after"); // [手順] - handle に NULL を渡して識別子を変更する。
     int null_ident_result =
-        cplat_syslog_sink_rename(handle, NULL); // [手順] - new_ident に NULL を渡して識別子を変更する。
+        cplat_syslog_sink_rename(handle, nullptr); // [手順] - new_ident に NULL を渡して識別子を変更する。
 
     // Assert
     EXPECT_EQ(
@@ -90,13 +90,13 @@ TEST_F(trace_syslogTest, test_write_returns_zero)
     // Arrange
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslog_test", LOG_USER); // [状態] - 初期化済みの syslog sink を用意する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
 
     // Act
-    int result = cplat_syslog_sink_write(handle, LOG_INFO, NULL,
+    int result = cplat_syslog_sink_write(handle, LOG_INFO, nullptr,
                                          "test message"); // [手順] - LOG_INFO レベルで "test message" を書き込む。
 
     // Assert
@@ -113,18 +113,18 @@ TEST_F(trace_syslogTest, test_write_all_levels)
     // Arrange
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslog_test", LOG_USER); // [状態] - 初期化済みの syslog sink を用意する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
 
     // Act
     // [手順] - CRIT、ERR、WARNING、INFO、DEBUG の各レベルで書き込む。
-    int actual_ret_critical = cplat_syslog_sink_write(handle, LOG_CRIT, NULL, "critical");
-    int actual_ret_error = cplat_syslog_sink_write(handle, LOG_ERR, NULL, "error");
-    int actual_ret_warning = cplat_syslog_sink_write(handle, LOG_WARNING, NULL, "warning");
-    int actual_ret_info = cplat_syslog_sink_write(handle, LOG_INFO, NULL, "info");
-    int actual_ret_debug = cplat_syslog_sink_write(handle, LOG_DEBUG, NULL, "debug");
+    int actual_ret_critical = cplat_syslog_sink_write(handle, LOG_CRIT, nullptr, "critical");
+    int actual_ret_error = cplat_syslog_sink_write(handle, LOG_ERR, nullptr, "error");
+    int actual_ret_warning = cplat_syslog_sink_write(handle, LOG_WARNING, nullptr, "warning");
+    int actual_ret_info = cplat_syslog_sink_write(handle, LOG_INFO, nullptr, "info");
+    int actual_ret_debug = cplat_syslog_sink_write(handle, LOG_DEBUG, nullptr, "debug");
 
     // Assert
     EXPECT_EQ(
@@ -160,11 +160,11 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_prefixes_timestamp)
     const char *saved_fd = getenv("SYSLOG_TEST_FD");
     std::string saved_tz_value;
     std::string saved_fd_value;
-    if (saved_tz != NULL)
+    if (saved_tz != nullptr)
     {
         saved_tz_value = saved_tz;
     }
-    if (saved_fd != NULL)
+    if (saved_fd != nullptr)
     {
         saved_fd_value = saved_fd;
     }
@@ -183,8 +183,8 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_prefixes_timestamp)
 
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslog_test", LOG_USER); // [状態] - 初期化済みの syslog sink を用意する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
 
@@ -212,7 +212,7 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_prefixes_timestamp)
     // Cleanup
     cplat_syslog_sink_dispose(handle);
     close(pipe_fds[0]);
-    if (saved_fd != NULL)
+    if (saved_fd != nullptr)
     {
         setenv("SYSLOG_TEST_FD", saved_fd_value.c_str(), 1);
     }
@@ -220,7 +220,7 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_prefixes_timestamp)
     {
         unsetenv("SYSLOG_TEST_FD");
     }
-    if (saved_tz != NULL)
+    if (saved_tz != nullptr)
     {
         setenv("TZ", saved_tz_value.c_str(), 1);
     }
@@ -244,11 +244,11 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_falls_back_from_invalid_explicit_
     const char *saved_fd = getenv("SYSLOG_TEST_FD");
     std::string saved_tz_value;
     std::string saved_fd_value;
-    if (saved_tz != NULL)
+    if (saved_tz != nullptr)
     {
         saved_tz_value = saved_tz;
     }
-    if (saved_fd != NULL)
+    if (saved_fd != nullptr)
     {
         saved_fd_value = saved_fd;
     }
@@ -267,8 +267,8 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_falls_back_from_invalid_explicit_
 
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslog_test", LOG_USER); // [状態] - 初期化済みの syslog sink を用意する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
 
@@ -301,7 +301,7 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_falls_back_from_invalid_explicit_
     // Cleanup
     cplat_syslog_sink_dispose(handle);
     close(pipe_fds[0]);
-    if (saved_fd != NULL)
+    if (saved_fd != nullptr)
     {
         setenv("SYSLOG_TEST_FD", saved_fd_value.c_str(), 1);
     }
@@ -309,7 +309,7 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_falls_back_from_invalid_explicit_
     {
         unsetenv("SYSLOG_TEST_FD");
     }
-    if (saved_tz != NULL)
+    if (saved_tz != nullptr)
     {
         setenv("TZ", saved_tz_value.c_str(), 1);
     }
@@ -330,19 +330,19 @@ TEST_F(trace_syslogTest, test_null_arguments_are_safe)
     // Pre-Assert
 
     // Act
-    cplat_syslog_sink_dispose(NULL); // [手順] - NULL ハンドルで dispose を呼び出す。
+    cplat_syslog_sink_dispose(nullptr); // [手順] - NULL ハンドルで dispose を呼び出す。
 
     cplat_syslog_sink *actual_ret_create =
-        cplat_syslog_sink_create(NULL, LOG_USER); // [手順] - NULL ident で create を呼び出す。
-    int actual_ret_null_handle =
-        cplat_syslog_sink_write(NULL, LOG_INFO, NULL, "test message"); // [手順] - NULL ハンドルで write を呼び出す。
+        cplat_syslog_sink_create(nullptr, LOG_USER); // [手順] - NULL ident で create を呼び出す。
+    int actual_ret_null_handle = cplat_syslog_sink_write(nullptr, LOG_INFO, nullptr,
+                                                         "test message"); // [手順] - NULL ハンドルで write を呼び出す。
     int actual_ret_null_message =
-        cplat_syslog_sink_write(handle, LOG_INFO, NULL, NULL); // [手順] - NULL message で write を呼び出す。
+        cplat_syslog_sink_write(handle, LOG_INFO, nullptr, nullptr); // [手順] - NULL message で write を呼び出す。
 
     // Assert
     EXPECT_EQ(
-        (cplat_syslog_sink *)NULL,
-        actual_ret_create); // [確認_異常系] - NULL ident に対する cplat_syslog_sink_create() の戻り値が NULL であること。
+        nullptr,
+        actual_ret_create); // [確認_異常系] - NULL ident に対する cplat_syslog_sink_create() の戻り値が nullptr であること。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_null_handle); // [確認_異常系] - NULL ハンドルに対する cplat_syslog_sink_write() の戻り値が CPLAT_OK であること。
@@ -365,7 +365,7 @@ TEST_F(trace_syslogTest, test_fd_is_fixed_at_create)
     ssize_t nread;
     const char *saved_fd = getenv("SYSLOG_TEST_FD");
     std::string saved_fd_value;
-    if (saved_fd != NULL)
+    if (saved_fd != nullptr)
     {
         saved_fd_value = saved_fd;
     }
@@ -379,8 +379,8 @@ TEST_F(trace_syslogTest, test_fd_is_fixed_at_create)
 
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslog_test", LOG_USER); // [状態] - 初期化済みの syslog sink を用意する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
     ASSERT_EQ(0, setenv("SYSLOG_TEST_FD", "-1",
                         1)); // [状態] - 生成後に SYSLOG_TEST_FD を書き込み先のない値へ変更する。
                              // [状態確認] - SYSLOG_TEST_FD に対する setenv() の戻り値が 0 であること。
@@ -389,7 +389,7 @@ TEST_F(trace_syslogTest, test_fd_is_fixed_at_create)
 
     // Act
     int actual_ret_syslog_sink_write = cplat_syslog_sink_write(
-        handle, LOG_INFO, NULL, "fixed message"); // [手順] - タイムスタンプなしで "fixed message" を書き込む。
+        handle, LOG_INFO, nullptr, "fixed message"); // [手順] - タイムスタンプなしで "fixed message" を書き込む。
 
     close(pipe_fds[1]);
     pipe_fds[1] = -1;
@@ -410,7 +410,7 @@ TEST_F(trace_syslogTest, test_fd_is_fixed_at_create)
     // Cleanup
     cplat_syslog_sink_dispose(handle);
     close(pipe_fds[0]);
-    if (saved_fd != NULL)
+    if (saved_fd != nullptr)
     {
         setenv("SYSLOG_TEST_FD", saved_fd_value.c_str(), 1);
     }
@@ -426,7 +426,7 @@ TEST_F(trace_syslogTest, test_fd_invalid_value_is_ignored)
     // Arrange
     const char *saved_fd = getenv("SYSLOG_TEST_FD");
     std::string saved_fd_value;
-    if (saved_fd != NULL)
+    if (saved_fd != nullptr)
     {
         saved_fd_value = saved_fd;
     }
@@ -437,14 +437,14 @@ TEST_F(trace_syslogTest, test_fd_invalid_value_is_ignored)
 
     cplat_syslog_sink *handle =
         cplat_syslog_sink_create("syslog_test", LOG_USER); // [状態] - 初期化済みの syslog sink を用意する。
-    ASSERT_NE((cplat_syslog_sink *)NULL,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が NULL 以外であること。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
 
     // Act
-    int actual_ret_syslog_sink_write =
-        cplat_syslog_sink_write(handle, LOG_INFO, NULL, "ignored message"); // [手順] - "ignored message" を書き込む。
+    int actual_ret_syslog_sink_write = cplat_syslog_sink_write(
+        handle, LOG_INFO, nullptr, "ignored message"); // [手順] - "ignored message" を書き込む。
 
     // Assert
     EXPECT_EQ(
@@ -453,7 +453,7 @@ TEST_F(trace_syslogTest, test_fd_invalid_value_is_ignored)
 
     // Cleanup
     cplat_syslog_sink_dispose(handle);
-    if (saved_fd != NULL)
+    if (saved_fd != nullptr)
     {
         setenv("SYSLOG_TEST_FD", saved_fd_value.c_str(), 1);
     }

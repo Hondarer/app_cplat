@@ -27,7 +27,7 @@ TEST_F(snprintfTest, formats_into_buffer)
 
     // Act
     int actual_ret = cplat_snprintf(buf, sizeof(buf), "%s=%d", "count",
-                                    7); // [手順] - "%s=%d" に "count" と 7 を与えて cplat_snprintf を呼び出す。
+                                    7); // [手順] - "%s=%d" に "count" と 7 を与えて cplat_snprintf() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_snprintf() の戻り値が CPLAT_OK であること。
@@ -76,7 +76,7 @@ TEST_F(snprintfTest, null_dest_returns_invalid_argument)
 
     // Act
     int actual_ret =
-        cplat_snprintf(NULL, 16u, "abc"); // [手順] - 書き込み先に NULL を渡して cplat_snprintf を呼び出す。
+        cplat_snprintf(nullptr, 16u, "abc"); // [手順] - 書き込み先に NULL を渡して cplat_snprintf() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -93,7 +93,7 @@ TEST_F(snprintfTest, zero_dest_size_returns_invalid_argument)
 
     // Act
     int actual_ret =
-        cplat_snprintf(buf, 0u, "abc"); // [手順] - バッファー サイズに 0 を渡して cplat_snprintf を呼び出す。
+        cplat_snprintf(buf, 0u, "abc"); // [手順] - バッファー サイズに 0 を渡して cplat_snprintf() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -110,7 +110,7 @@ TEST_F(snprintfTest, null_format_returns_invalid_argument)
 
     // Act
     int actual_ret =
-        cplat_snprintf(buf, sizeof(buf), NULL); // [手順] - 書式に NULL を渡して cplat_snprintf を呼び出す。
+        cplat_snprintf(buf, sizeof(buf), nullptr); // [手順] - 書式に NULL を渡して cplat_snprintf() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,

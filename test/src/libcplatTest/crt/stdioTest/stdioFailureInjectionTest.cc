@@ -34,7 +34,7 @@ TEST(stdioFailureInjectionTest, fopen_reports_mocked_os_failure)
             [](const char *, const int, const char *, const char *, const char *)
             {
                 errno = EACCES;
-                return static_cast<FILE *>(NULL);
+                return nullptr;
             })); // [Pre-Assert確認_異常系] - fopen() が 1 回呼び出されること。
                  // [Pre-Assert手順] - errno に EACCES を設定し、NULL を返却する。
 #elif defined(PLATFORM_WINDOWS)
@@ -43,18 +43,18 @@ TEST(stdioFailureInjectionTest, fopen_reports_mocked_os_failure)
             [](const char *, const int, const char *, const wchar_t *, const wchar_t *, int)
             {
                 errno = EACCES;
-                return static_cast<FILE *>(NULL);
+                return nullptr;
             })); // [Pre-Assert確認_異常系] - _wfsopen() が 1 回呼び出されること。
                  // [Pre-Assert手順] - errno に EACCES を設定し、NULL を返却する。
 #endif /* PLATFORM_ */
 
     // Act
     FILE *stream =
-        cplat_fopen("mocked-failure.txt", "rb", &detail); // [手順] - fopen の EACCES 失敗を注入してファイルを開く。
+        cplat_fopen("mocked-failure.txt", "rb", &detail); // [手順] - fopen() の EACCES 失敗を注入してファイルを開く。
 
     // Assert
-    EXPECT_EQ(static_cast<FILE *>(NULL),
-              stream); // [確認_異常系] - cplat_fopen() の戻り値が static_cast<FILE *>(NULL) であること。
+    EXPECT_EQ(nullptr,
+              stream); // [確認_異常系] - cplat_fopen() の戻り値が nullptr であること。
     EXPECT_EQ(EACCES,
               cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EACCES であること。
 }
@@ -68,16 +68,14 @@ TEST(stdioFailureInjectionTest, fopen_rejects_null_arguments)
     // Pre-Assert
 
     // Act
-    FILE *null_path = cplat_fopen(NULL, "rb", &detail);    // [手順] - path に NULL を指定して fopen する。
-    FILE *null_modes = cplat_fopen("file", NULL, &detail); // [手順] - modes に NULL を指定して fopen する。
+    FILE *null_path = cplat_fopen(nullptr, "rb", &detail);    // [手順] - path に NULL を指定して fopen() する。
+    FILE *null_modes = cplat_fopen("file", nullptr, &detail); // [手順] - modes に NULL を指定して fopen() する。
 
     // Assert
-    EXPECT_EQ(
-        static_cast<FILE *>(NULL),
-        null_path); // [確認_異常系] - path に NULL を指定した cplat_fopen() の戻り値が static_cast<FILE *>(NULL) であること。
-    EXPECT_EQ(
-        static_cast<FILE *>(NULL),
-        null_modes); // [確認_異常系] - modes に NULL を指定した cplat_fopen() の戻り値が static_cast<FILE *>(NULL) であること。
+    EXPECT_EQ(nullptr,
+              null_path); // [確認_異常系] - path に NULL を指定した cplat_fopen() の戻り値が nullptr であること。
+    EXPECT_EQ(nullptr,
+              null_modes); // [確認_異常系] - modes に NULL を指定した cplat_fopen() の戻り値が nullptr であること。
     EXPECT_EQ(
         CPLAT_CAUSE_INVALID_ARGUMENT,
         cplat_error_get_cause(
@@ -106,7 +104,7 @@ TEST(stdioFailureInjectionTest, fopen_reports_success_and_clears_detail)
 #endif /* PLATFORM_ */
 
     // Act
-    FILE *stream = cplat_fopen("opened.txt", "rb", &detail); // [手順] - 成功する fopen を注入してファイルを開く。
+    FILE *stream = cplat_fopen("opened.txt", "rb", &detail); // [手順] - 成功する fopen() を注入してファイルを開く。
 
     // Assert
     EXPECT_EQ(opened, stream); // [確認_正常系] - cplat_fopen() の戻り値が opened と一致すること。
@@ -130,7 +128,7 @@ TEST(stdioFailureInjectionTest, fclose_reports_eio_when_errno_is_empty)
                                 // [Pre-Assert手順] - EOF を返却する。
 
     // Act
-    int result = cplat_fclose(stream, &detail); // [手順] - fclose が EOF を返す失敗を注入する。
+    int result = cplat_fclose(stream, &detail); // [手順] - fclose() が EOF を返す失敗を注入する。
 
     // Assert
     EXPECT_EQ(EOF, result); // [確認_異常系] - cplat_fclose() の戻り値が EOF であること。
@@ -149,7 +147,7 @@ TEST(stdioFailureInjectionTest, fclose_rejects_null_stream)
     // Pre-Assert
 
     // Act
-    int result = cplat_fclose(NULL, &detail); // [手順] - stream に NULL を指定して fclose する。
+    int result = cplat_fclose(nullptr, &detail); // [手順] - stream に NULL を指定して fclose() する。
 
     // Assert
     EXPECT_EQ(EOF, result); // [確認_異常系] - stream に NULL を指定した cplat_fclose() の戻り値が EOF であること。
@@ -174,7 +172,7 @@ TEST(stdioFailureInjectionTest, fclose_reports_success_and_clears_detail)
                               // [Pre-Assert手順] - 0 を返却する。
 
     // Act
-    int result = cplat_fclose(stream, &detail); // [手順] - 成功する fclose を注入して閉じる。
+    int result = cplat_fclose(stream, &detail); // [手順] - 成功する fclose() を注入して閉じる。
 
     // Assert
     EXPECT_EQ(0, result); // [確認_正常系] - cplat_fclose() の戻り値が 0 であること。
@@ -198,7 +196,7 @@ TEST(stdioFailureInjectionTest, fflush_reports_eio_when_errno_is_empty)
                                 // [Pre-Assert手順] - EOF を返却する。
 
     // Act
-    int result = cplat_fflush(stream, &detail); // [手順] - fflush が EOF を返す失敗を注入する。
+    int result = cplat_fflush(stream, &detail); // [手順] - fflush() が EOF を返す失敗を注入する。
 
     // Assert
     EXPECT_EQ(EOF, result); // [確認_異常系] - cplat_fflush() の戻り値が EOF であること。
@@ -227,7 +225,7 @@ TEST(stdioFailureInjectionTest, fclose_preserves_nonzero_errno)
                  // [Pre-Assert手順] - errno に EACCES を設定し、EOF を返却する。
 
     // Act
-    int result = cplat_fclose(stream, &detail); // [手順] - errno が EACCES の fclose 失敗を注入する。
+    int result = cplat_fclose(stream, &detail); // [手順] - errno が EACCES の fclose() 失敗を注入する。
 
     // Assert
     EXPECT_EQ(EOF, result); // [確認_異常系] - cplat_fclose() の戻り値が EOF であること。
@@ -254,7 +252,7 @@ TEST(stdioFailureInjectionTest, fflush_preserves_nonzero_errno)
                  // [Pre-Assert手順] - errno に EACCES を設定し、EOF を返却する。
 
     // Act
-    int result = cplat_fflush(stream, &detail); // [手順] - errno が EACCES の fflush 失敗を注入する。
+    int result = cplat_fflush(stream, &detail); // [手順] - errno が EACCES の fflush() 失敗を注入する。
 
     // Assert
     EXPECT_EQ(EOF, result); // [確認_異常系] - cplat_fflush() の戻り値が EOF であること。
@@ -277,7 +275,7 @@ TEST(stdioFailureInjectionTest, fflush_reports_success_for_valid_stream)
                               // [Pre-Assert手順] - 0 を返却する。
 
     // Act
-    int result = cplat_fflush(stream, &detail); // [手順] - 番兵ストリームへ fflush を実行する。
+    int result = cplat_fflush(stream, &detail); // [手順] - 番兵ストリームへ fflush() を実行する。
 
     // Assert
     EXPECT_EQ(0, result); // [確認_正常系] - cplat_fflush() の戻り値が 0 であること。
@@ -302,7 +300,7 @@ TEST(stdioFailureInjectionTest, freopen_reports_os_failure)
             [](const char *, int, const char *, const char *, const char *, FILE *)
             {
                 errno = ENOENT;
-                return static_cast<FILE *>(NULL);
+                return nullptr;
             }); // [Pre-Assert確認_異常系] - freopen() が "/cplat/path/does/not/exist" と等しい文字列、"rb" と等しい文字列、stream を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - errno に ENOENT を設定し、NULL を返却する。
 #elif defined(PLATFORM_WINDOWS)
@@ -311,18 +309,18 @@ TEST(stdioFailureInjectionTest, freopen_reports_os_failure)
             [](const char *, int, const char *, const wchar_t *, const wchar_t *, int)
             {
                 errno = ENOENT;
-                return static_cast<FILE *>(NULL);
+                return nullptr;
             }); // [Pre-Assert確認_異常系] - _wfsopen() が 1 回呼び出されること。
                 // [Pre-Assert手順] - errno に ENOENT を設定し、NULL を返却する。
 #endif /* PLATFORM_ */
 
     // Act
     FILE *reopened = cplat_freopen("/cplat/path/does/not/exist", "rb", stream,
-                                   &detail); // [手順] - 存在しないパスへ freopen して OS 失敗を発生させる。
+                                   &detail); // [手順] - 存在しないパスへ freopen() して OS 失敗を発生させる。
 
     // Assert
-    EXPECT_EQ(static_cast<FILE *>(NULL),
-              reopened); // [確認_異常系] - cplat_freopen() の戻り値が static_cast<FILE *>(NULL) であること。
+    EXPECT_EQ(nullptr,
+              reopened); // [確認_異常系] - cplat_freopen() の戻り値が nullptr であること。
     EXPECT_NE(
         CPLAT_OK,
         cplat_error_to_result(&detail)); // [確認_異常系] - cplat_error_to_result() の戻り値が CPLAT_OK 以外であること。
@@ -338,7 +336,7 @@ TEST(stdioFailureInjectionTest, fread_and_fwrite_classify_arguments_and_counts)
     cplat_error read_detail = {};
     cplat_error write_detail = {};
     ON_CALL(mock_stdio, ferror(_, _, _, stream))
-        .WillByDefault(Return(0)); // [状態] - ferror が呼び出された際に 0 を返すようにモックを設定する。
+        .WillByDefault(Return(0)); // [状態] - ferror() が呼び出された際に 0 を返すようにモックを設定する。
 
     // Pre-Assert
     EXPECT_CALL(mock_stdio, fread(_, _, _, _, 0u, _, _))
@@ -359,20 +357,23 @@ TEST(stdioFailureInjectionTest, fread_and_fwrite_classify_arguments_and_counts)
         .Times(0); // [Pre-Assert確認_正常系] - 要素数に 0u を指定して fwrite() が呼び出されないこと。
 
     // Act
-    size_t read_null_buffer = cplat_fread(NULL, 1u, 1u, stream, &read_detail); // [手順] - NULL 読み込み先を指定する。
-    size_t read_null_stream = cplat_fread(data, 1u, 1u, NULL, &read_detail);   // [手順] - NULL ストリームを指定する。
-    size_t read_zero_size = cplat_fread(NULL, 0u, 1u, stream, &read_detail); // [手順] - サイズ 0 の読み込みを指定する。
+    size_t read_null_buffer =
+        cplat_fread(nullptr, 1u, 1u, stream, &read_detail);                     // [手順] - NULL 読み込み先を指定する。
+    size_t read_null_stream = cplat_fread(data, 1u, 1u, nullptr, &read_detail); // [手順] - NULL ストリームを指定する。
+    size_t read_zero_size =
+        cplat_fread(nullptr, 0u, 1u, stream, &read_detail); // [手順] - サイズ 0 の読み込みを指定する。
     size_t read_zero_count =
-        cplat_fread(NULL, 1u, 0u, stream, &read_detail);                 // [手順] - 要素数 0 の読み込みを指定する。
+        cplat_fread(nullptr, 1u, 0u, stream, &read_detail);              // [手順] - 要素数 0 の読み込みを指定する。
     size_t read_full = cplat_fread(data, 1u, 1u, stream, &read_detail);  // [手順] - 全量読み込みを指定する。
     size_t read_short = cplat_fread(data, 1u, 1u, stream, &read_detail); // [手順] - 短い読み込みを指定する。
     size_t write_null_buffer =
-        cplat_fwrite(NULL, 1u, 1u, stream, &write_detail);                      // [手順] - NULL 書き込み元を指定する。
-    size_t write_null_stream = cplat_fwrite(data, 1u, 1u, NULL, &write_detail); // [手順] - NULL ストリームへ書き込む。
+        cplat_fwrite(nullptr, 1u, 1u, stream, &write_detail); // [手順] - NULL 書き込み元を指定する。
+    size_t write_null_stream =
+        cplat_fwrite(data, 1u, 1u, nullptr, &write_detail); // [手順] - NULL ストリームへ書き込む。
     size_t write_zero_size =
-        cplat_fwrite(NULL, 0u, 1u, stream, &write_detail); // [手順] - サイズ 0 の書き込みを指定する。
+        cplat_fwrite(nullptr, 0u, 1u, stream, &write_detail); // [手順] - サイズ 0 の書き込みを指定する。
     size_t write_zero_count =
-        cplat_fwrite(NULL, 1u, 0u, stream, &write_detail);                  // [手順] - 要素数 0 の書き込みを指定する。
+        cplat_fwrite(nullptr, 1u, 0u, stream, &write_detail);               // [手順] - 要素数 0 の書き込みを指定する。
     size_t write_full = cplat_fwrite(data, 1u, 1u, stream, &write_detail);  // [手順] - 全量書き込みを指定する。
     size_t write_short = cplat_fwrite(data, 1u, 1u, stream, &write_detail); // [手順] - 短い書き込みを指定する。
 
@@ -420,9 +421,9 @@ TEST(stdioFailureInjectionTest, fread_and_fgets_report_stream_errors)
             1)); // [Pre-Assert確認_異常系] - fread の後に ferror() が fread_stream を指定して 1 回呼び出されること。
                  // [Pre-Assert手順] - エラーありを返却する。
     EXPECT_CALL(mock_stdio, fgets(_, _, _, data, static_cast<int>(sizeof(data)), fgets_stream))
-        .WillOnce(Return(static_cast<char *>(
-            NULL))); // [Pre-Assert確認_異常系] - fgets() が data、static_cast<int>(sizeof(data))、fgets_stream を指定して 1 回呼び出されること。
-                     // [Pre-Assert手順] - NULL を返却する。
+        .WillOnce(Return(
+            nullptr)); // [Pre-Assert確認_異常系] - fgets() が data、sizeof(data)、fgets_stream を指定して 1 回呼び出されること。
+                       // [Pre-Assert手順] - NULL を返却する。
     EXPECT_CALL(mock_stdio, ferror(_, _, _, fgets_stream))
         .WillOnce(Return(
             1)); // [Pre-Assert確認_異常系] - fgets の後に ferror() が fgets_stream を指定して 1 回呼び出されること。
@@ -430,9 +431,9 @@ TEST(stdioFailureInjectionTest, fread_and_fgets_report_stream_errors)
 
     // Act
     size_t read_count =
-        cplat_fread(data, 1U, 1U, fread_stream, &fread_detail); // [手順] - エラー状態のストリームを fread へ渡す。
+        cplat_fread(data, 1U, 1U, fread_stream, &fread_detail); // [手順] - エラー状態のストリームを fread() へ渡す。
     int fgets_result = cplat_fgets(data, sizeof(data), fgets_stream,
-                                   &fgets_detail); // [手順] - エラー状態のストリームを fgets へ渡す。
+                                   &fgets_detail); // [手順] - エラー状態のストリームを fgets() へ渡す。
 
     // Assert
     EXPECT_EQ(0U, read_count); // [確認_異常系] - cplat_fread() の戻り値が 0U であること。
@@ -477,13 +478,15 @@ TEST(stdioFailureInjectionTest, remove_and_rename_classify_file_operations)
 
     // Act
 #if defined(PLATFORM_LINUX)
-    int rename_result = cplat_rename(old_path, new_path, &detail);  // [手順] - 既存ファイルを新しいパスへ rename する。
-    int remove_result = cplat_remove(new_path, &detail);            // [手順] - rename 後のファイルを remove する。
-    int missing_result = cplat_remove(new_path, &detail);           // [手順] - 存在しないファイルを remove する。
+    int rename_result =
+        cplat_rename(old_path, new_path, &detail);        // [手順] - 既存ファイルを新しいパスへ rename() する。
+    int remove_result = cplat_remove(new_path, &detail);  // [手順] - rename() 後のファイルを remove() する。
+    int missing_result = cplat_remove(new_path, &detail); // [手順] - 存在しないファイルを remove() する。
 #endif                                                              /* PLATFORM_LINUX */
-    int null_rename_result = cplat_rename(NULL, new_path, &detail); // [手順] - oldpath NULL の rename を実行する。
-    int null_newpath_result = cplat_rename(old_path, NULL, &detail); // [手順] - newpath NULL の rename を実行する。
-    int null_remove_result = cplat_remove(NULL, &detail);            // [手順] - path NULL の remove を実行する。
+    int null_rename_result = cplat_rename(nullptr, new_path, &detail); // [手順] - oldpath NULL の rename() を実行する。
+    int null_newpath_result =
+        cplat_rename(old_path, nullptr, &detail);            // [手順] - newpath NULL の rename() を実行する。
+    int null_remove_result = cplat_remove(nullptr, &detail); // [手順] - path NULL の remove() を実行する。
 
     // Assert
 #if defined(PLATFORM_LINUX)
@@ -522,7 +525,7 @@ TEST(stdioFailureInjectionTest, rename_reports_os_failure)
 
     // Act
     int result = cplat_rename("/cplat/path/does/not/exist", "/tmp/cplat_stdio_target.txt",
-                              &detail); // [手順] - 存在しないパスを rename して OS 失敗を発生させる。
+                              &detail); // [手順] - 存在しないパスを rename() して OS 失敗を発生させる。
 
     // Assert
     EXPECT_NE(0, result); // [確認_異常系] - cplat_rename() の戻り値が 0 以外であること。
@@ -546,9 +549,9 @@ TEST(stdioFailureInjectionTest, formatted_output_and_file_position_wrappers_work
             3)); // [Pre-Assert確認_正常系] - vfprintf() が stream、"abc" と等しい文字列を指定して 1 回呼び出されること。
                  // [Pre-Assert手順] - 出力文字数 3 を返却する。
     EXPECT_CALL(mock_stdio, fseeko(_, _, _, stream, static_cast<off_t>(0), SEEK_SET))
-        .WillOnce(Return(
-            0)); // [Pre-Assert確認_正常系] - fseeko() が stream、static_cast<off_t>(0)、SEEK_SET を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - 0 を返却する。
+        .WillOnce(
+            Return(0)); // [Pre-Assert確認_正常系] - fseeko() が stream、0、SEEK_SET を指定して 1 回呼び出されること。
+                        // [Pre-Assert手順] - 0 を返却する。
     EXPECT_CALL(mock_stdio, ftello(_, _, _, stream))
         .WillOnce(Return(
             static_cast<off_t>(0))); // [Pre-Assert確認_正常系] - ftello() が stream を指定して 1 回呼び出されること。
@@ -556,7 +559,7 @@ TEST(stdioFailureInjectionTest, formatted_output_and_file_position_wrappers_work
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_stdio, _fseeki64(_, _, _, stream, static_cast<__int64>(0), SEEK_SET))
         .WillOnce(Return(
-            0)); // [Pre-Assert確認_正常系] - _fseeki64() が stream、static_cast<__int64>(0)、SEEK_SET を指定して 1 回呼び出されること。
+            0)); // [Pre-Assert確認_正常系] - _fseeki64() が stream、0、SEEK_SET を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - 0 を返却する。
     EXPECT_CALL(mock_stdio, _ftelli64(_, _, _, stream))
         .WillOnce(Return(static_cast<__int64>(
@@ -627,11 +630,11 @@ TEST(stdioFailureInjectionTest, short_io_preserves_nonzero_errno)
                 errno = EACCES;
                 return 0u;
             })); // [Pre-Assert確認_異常系] - fread() が data、1u、1u、read_stream を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - errno に EACCES を設定して fread から 0 を返却する。
+                 // [Pre-Assert手順] - errno に EACCES を設定して fread() から 0 を返却する。
     EXPECT_CALL(mock_stdio, ferror(_, _, _, read_stream))
         .WillOnce(Return(
             1)); // [Pre-Assert確認_異常系] - fread の後に ferror() が read_stream を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - ferror からエラーありを返却する。
+                 // [Pre-Assert手順] - ferror() からエラーありを返却する。
     EXPECT_CALL(mock_stdio, fwrite(_, _, _, data, 1u, 1u, write_stream))
         .WillOnce(Invoke(
             [](const char *, const int, const char *, const void *, size_t, size_t, FILE *)
@@ -639,27 +642,27 @@ TEST(stdioFailureInjectionTest, short_io_preserves_nonzero_errno)
                 errno = ENOSPC;
                 return 0u;
             })); // [Pre-Assert確認_異常系] - fwrite() が data、1u、1u、write_stream を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - errno に ENOSPC を設定して fwrite から 0 を返却する。
+                 // [Pre-Assert手順] - errno に ENOSPC を設定して fwrite() から 0 を返却する。
     EXPECT_CALL(mock_stdio, fgets(_, _, _, data, static_cast<int>(sizeof(data)), line_stream))
         .WillOnce(Invoke(
             [](const char *, const int, const char *, char *, int, FILE *) -> char *
             {
                 errno = EIO;
-                return NULL;
-            })); // [Pre-Assert確認_異常系] - fgets() が data、static_cast<int>(sizeof(data))、line_stream を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - errno に EIO を設定して fgets から NULL を返却する。
+                return nullptr;
+            })); // [Pre-Assert確認_異常系] - fgets() が data、sizeof(data)、line_stream を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - errno に EIO を設定して fgets() から NULL を返却する。
     EXPECT_CALL(mock_stdio, ferror(_, _, _, line_stream))
         .WillOnce(Return(
             1)); // [Pre-Assert確認_異常系] - fgets の後に ferror() が line_stream を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - ferror からエラーありを返却する。
+                 // [Pre-Assert手順] - ferror() からエラーありを返却する。
 
     // Act
     size_t read_result =
-        cplat_fread(data, 1u, 1u, read_stream, &read_detail); // [手順] - EACCES で失敗する fread を実行する。
+        cplat_fread(data, 1u, 1u, read_stream, &read_detail); // [手順] - EACCES で失敗する fread() を実行する。
     size_t write_result =
-        cplat_fwrite(data, 1u, 1u, write_stream, &write_detail); // [手順] - ENOSPC で失敗する fwrite を実行する。
+        cplat_fwrite(data, 1u, 1u, write_stream, &write_detail); // [手順] - ENOSPC で失敗する fwrite() を実行する。
     int line_result =
-        cplat_fgets(data, sizeof(data), line_stream, &line_detail); // [手順] - EIO で失敗する fgets を実行する。
+        cplat_fgets(data, sizeof(data), line_stream, &line_detail); // [手順] - EIO で失敗する fgets() を実行する。
 
     // Assert
     EXPECT_EQ(0u, read_result); // [確認_異常系] - EACCES が発生した cplat_fread() の戻り値が 0u であること。
@@ -696,25 +699,25 @@ TEST(stdioFailureInjectionTest, read_errors_without_errno_default_to_eio)
     EXPECT_CALL(mock_stdio, fread(_, _, _, read_data, 1u, 1u, read_stream))
         .WillOnce(Return(
             0u)); // [Pre-Assert確認_異常系] - fread() が read_data、1u、1u、read_stream を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - errno を設定せず fread から 0 を返却する。
+                  // [Pre-Assert手順] - errno を設定せず fread() から 0 を返却する。
     EXPECT_CALL(mock_stdio, ferror(_, _, _, read_stream))
         .WillOnce(Return(
             1)); // [Pre-Assert確認_異常系] - fread の後に ferror() が read_stream を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - ferror からエラーありを返却する。
+                 // [Pre-Assert手順] - ferror() からエラーありを返却する。
     EXPECT_CALL(mock_stdio, fgets(_, _, _, line_data, static_cast<int>(sizeof(line_data)), line_stream))
-        .WillOnce(Return(static_cast<char *>(
-            NULL))); // [Pre-Assert確認_異常系] - fgets() が line_data、static_cast<int>(sizeof(line_data))、line_stream を指定して 1 回呼び出されること。
-                     // [Pre-Assert手順] - errno を設定せず fgets から NULL を返却する。
+        .WillOnce(Return(
+            nullptr)); // [Pre-Assert確認_異常系] - fgets() が line_data、sizeof(line_data)、line_stream を指定して 1 回呼び出されること。
+                       // [Pre-Assert手順] - errno を設定せず fgets() から NULL を返却する。
     EXPECT_CALL(mock_stdio, ferror(_, _, _, line_stream))
         .WillOnce(Return(
             1)); // [Pre-Assert確認_異常系] - fgets の後に ferror() が line_stream を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - ferror からエラーありを返却する。
+                 // [Pre-Assert手順] - ferror() からエラーありを返却する。
 
     // Act
     size_t read_result = cplat_fread(read_data, 1u, 1u, read_stream,
-                                     &read_detail); // [手順] - errno を設定せず失敗する fread を実行する。
+                                     &read_detail); // [手順] - errno を設定せず失敗する fread() を実行する。
     int line_result = cplat_fgets(line_data, sizeof(line_data), line_stream,
-                                  &line_detail); // [手順] - errno を設定せず失敗する fgets を実行する。
+                                  &line_detail); // [手順] - errno を設定せず失敗する fgets() を実行する。
 
     // Assert
     EXPECT_EQ(0u, read_result); // [確認_異常系] - errno がないときの cplat_fread() の戻り値が 0u であること。
@@ -744,7 +747,7 @@ TEST(stdioFailureInjectionTest, fgets_classifies_empty_text_and_exact_newline)
     EXPECT_CALL(mock_stdio, fgets(_, _, _, empty_text, 2, empty_stream))
         .WillOnce(Return(
             empty_text)); // [Pre-Assert確認_正常系] - fgets() が empty_text、2、empty_stream を指定して 1 回呼び出されること。
-                          // [Pre-Assert手順] - fgets から空文字列のバッファーを返却する。
+                          // [Pre-Assert手順] - fgets() から空文字列のバッファーを返却する。
     EXPECT_CALL(mock_stdio, fgets(_, _, _, newline_text, 2, newline_stream))
         .WillOnce(Invoke(
             [](const char *, const int, const char *, char *dest, int, FILE *) -> char *
@@ -753,13 +756,13 @@ TEST(stdioFailureInjectionTest, fgets_classifies_empty_text_and_exact_newline)
                 dest[1] = '\0';
                 return dest;
             })); // [Pre-Assert確認_正常系] - fgets() が newline_text、2、newline_stream を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - fgets から改行だけを格納したバッファーを返却する。
+                 // [Pre-Assert手順] - fgets() から改行だけを格納したバッファーを返却する。
 
     // Act
     int empty_result = cplat_fgets(empty_text, sizeof(empty_text), empty_stream,
-                                   NULL); // [手順] - 空文字列を返す fgets を実行する。
+                                   nullptr); // [手順] - 空文字列を返す fgets() を実行する。
     int newline_result = cplat_fgets(newline_text, sizeof(newline_text), newline_stream,
-                                     NULL); // [手順] - バッファー末尾が改行の fgets を実行する。
+                                     nullptr); // [手順] - バッファー末尾が改行の fgets() を実行する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -787,14 +790,14 @@ TEST(stdioFailureInjectionTest, fgets_accepts_exact_final_line)
                 dest[1] = '\0';
                 return dest;
             })); // [Pre-Assert確認_正常系] - fgets() が data、2、stream を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - fgets からバッファーを使い切る 1 文字の最終行を返却する。
+                 // [Pre-Assert手順] - fgets() からバッファーを使い切る 1 文字の最終行を返却する。
     EXPECT_CALL(mock_stdio, feof(_, _, _, stream))
         .WillOnce(
             Return(1)); // [Pre-Assert確認_正常系] - 行の終端確認で feof() が stream を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - feof から EOF 到達済みを返却する。
+                        // [Pre-Assert手順] - feof() から EOF 到達済みを返却する。
 
     // Act
-    int result = cplat_fgets(data, sizeof(data), stream, NULL); // [手順] - バッファーを使い切る最終行を読み取る。
+    int result = cplat_fgets(data, sizeof(data), stream, nullptr); // [手順] - バッファーを使い切る最終行を読み取る。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -813,10 +816,10 @@ TEST(stdioFailureInjectionTest, fgets_rejects_invalid_buffer_sizes)
 
     // Act
     int zero_result =
-        cplat_fgets(data, 0u, stream, NULL); // [手順] - dest_size に 0 を指定して cplat_fgets を呼び出す。
+        cplat_fgets(data, 0u, stream, nullptr); // [手順] - dest_size に 0 を指定して cplat_fgets() を呼び出す。
     int oversized_result =
         cplat_fgets(data, static_cast<size_t>(INT_MAX) + 1u, stream,
-                    NULL); // [手順] - dest_size に INT_MAX を 1 超える値を指定して cplat_fgets を呼び出す。
+                    nullptr); // [手順] - dest_size に INT_MAX を 1 超える値を指定して cplat_fgets() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -841,7 +844,7 @@ TEST(stdioFailureInjectionTest, snprintf_reports_formatting_failure)
 
     // Act
     int result =
-        cplat_snprintf(buffer, sizeof(buffer), "%s", "value"); // [手順] - vsnprintf が -1 を返す失敗を注入する。
+        cplat_snprintf(buffer, sizeof(buffer), "%s", "value"); // [手順] - vsnprintf() が -1 を返す失敗を注入する。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,

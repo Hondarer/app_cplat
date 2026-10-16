@@ -10,7 +10,7 @@ class mmapTest : public mmapTestFixture
 TEST_F(mmapTest, attach_creates_new_file_and_ignores_create_size_on_reattach)
 {
     // Arrange
-    cplat_mmap *map = NULL;
+    cplat_mmap *map = nullptr;
     int result; // [状態] - 新規作成用のパス mmap.dat とハンドル格納先を用意する。
 
     // Pre-Assert
@@ -29,12 +29,12 @@ TEST_F(mmapTest, attach_creates_new_file_and_ignores_create_size_on_reattach)
 
     // Act
     result = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
-                               NULL); // [手順] - create_size 64 で新規アタッチする。
+                               nullptr); // [手順] - create_size 64 で新規アタッチする。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, result); // [確認_正常系] - 新規作成の cplat_mmap_attach() の戻り値が CPLAT_OK であること。
-    ASSERT_NE((cplat_mmap *)NULL,
-              map); // [確認_正常系] - 新規作成の map が NULL 以外であること。(マップ ハンドルが設定されることの確認)
+    ASSERT_NE(nullptr,
+              map); // [確認_正常系] - 新規作成の map が nullptr 以外であること。(マップ ハンドルが設定されることの確認)
     EXPECT_EQ(
         kMapSize,
         cplat_mmap_get_size(
@@ -67,10 +67,11 @@ TEST_F(mmapTest, attach_creates_new_file_and_ignores_create_size_on_reattach)
                 // [Pre-Assert手順] - サイズ 64 を設定し、CPLAT_OK を返却する。
 
     // Act_2
-    (void)cplat_mmap_detach(map, NULL);
-    map = NULL;
-    result = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, 4096u, &map,
-                               NULL); // [手順] - 既存ファイルに対し異なる create_size (4096) を指定して再アタッチする。
+    (void)cplat_mmap_detach(map, nullptr);
+    map = nullptr;
+    result =
+        cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, 4096u, &map,
+                          nullptr); // [手順] - 既存ファイルに対し異なる create_size (4096) を指定して再アタッチする。
 
     // Assert_2
     ASSERT_EQ(CPLAT_OK,
@@ -81,7 +82,7 @@ TEST_F(mmapTest, attach_creates_new_file_and_ignores_create_size_on_reattach)
             map)); // [確認_正常系] - 再アタッチ後の cplat_mmap_get_size() の戻り値が kMapSize であること。(既存ファイルでは create_size が無視され、実サイズ 64 が報告されることの確認)
 
     // Cleanup
-    (void)cplat_mmap_detach(map, NULL);
+    (void)cplat_mmap_detach(map, nullptr);
 }
 
 // create_size に 0 を渡した新規作成が INVALID_ARGUMENT で失敗することの確認
@@ -89,7 +90,7 @@ TEST_F(mmapTest, attach_creates_new_file_and_ignores_create_size_on_reattach)
 TEST_F(mmapTest, attach_fails_when_create_size_is_zero_for_new_file)
 {
     // Arrange
-    cplat_mmap *map = NULL; // [状態] - 新規作成用のパス mmap.dat を用意する。
+    cplat_mmap *map = nullptr; // [状態] - 新規作成用のパス mmap.dat を用意する。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_file_close(_, _))
@@ -99,15 +100,15 @@ TEST_F(mmapTest, attach_fails_when_create_size_is_zero_for_new_file)
 
     // Act
     int actual_ret = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, 0u, &map,
-                                       NULL); // [手順] - create_size 0 で新規アタッチを試みる。
+                                       nullptr); // [手順] - create_size 0 で新規アタッチを試みる。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret); // [確認_異常系] - create_size が 0 の新規作成に対する cplat_mmap_attach() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
-        (cplat_mmap *)NULL,
-        map); // [確認_異常系] - map が NULL であること。(create_size が 0 ではマップ ハンドルが設定されないことの確認)
+        nullptr,
+        map); // [確認_異常系] - map が nullptr であること。(create_size が 0 ではマップ ハンドルが設定されないことの確認)
 }
 
 // サイズ 0 の既存ファイルへのアタッチが失敗することの確認
@@ -115,7 +116,7 @@ TEST_F(mmapTest, attach_fails_when_create_size_is_zero_for_new_file)
 TEST_F(mmapTest, attach_fails_for_empty_existing_file)
 {
     // Arrange
-    cplat_mmap *map = NULL; // [状態] - サイズ 0 の既存ファイルを開く前提を用意する。
+    cplat_mmap *map = nullptr; // [状態] - サイズ 0 の既存ファイルを開く前提を用意する。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_file_open(_, _, flags_create_new(), _))
@@ -141,15 +142,15 @@ TEST_F(mmapTest, attach_fails_for_empty_existing_file)
 
     // Act
     int actual_ret = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
-                                       NULL); // [手順] - サイズ 0 の既存ファイルへアタッチする。
+                                       nullptr); // [手順] - サイズ 0 の既存ファイルへアタッチする。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret); // [確認_異常系] - 空の既存ファイルに対する cplat_mmap_attach() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
-        (cplat_mmap *)NULL,
-        map); // [確認_異常系] - map が NULL であること。(空の既存ファイルではマップ ハンドルが設定されないことの確認)
+        nullptr,
+        map); // [確認_異常系] - map が nullptr であること。(空の既存ファイルではマップ ハンドルが設定されないことの確認)
 }
 
 // 既存ファイルを読み取り専用でマップできることの確認
@@ -157,7 +158,7 @@ TEST_F(mmapTest, attach_fails_for_empty_existing_file)
 TEST_F(mmapTest, attach_read_only_maps_existing_file)
 {
     // Arrange
-    cplat_mmap *map = NULL; // [状態] - 読み取り専用で開く既存ファイルのパス mmap.dat を用意する。
+    cplat_mmap *map = nullptr; // [状態] - 読み取り専用で開く既存ファイルのパス mmap.dat を用意する。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_file_open(_, _, flags_read_only(), _))
@@ -177,6 +178,7 @@ TEST_F(mmapTest, attach_read_only_maps_existing_file)
     EXPECT_CALL(mock_windows_, CreateFileMappingA(_, _, _, kFakeFileHandle, _, PAGE_READONLY, _, _, _))
         .WillOnce(Return(
             kFakeMappingHandle)); // [Pre-Assert確認_正常系] - CreateFileMappingA() が kFakeFileHandle、PAGE_READONLY を指定して 1 回呼び出されること。
+                                  // [Pre-Assert手順] - kFakeMappingHandle を返却する。
     EXPECT_CALL(mock_windows_, MapViewOfFile(_, _, _, kFakeMappingHandle, FILE_MAP_READ, 0u, 0u, kMapSize))
         .WillOnce(Return(
             mapped_buf_)); // [Pre-Assert確認_正常系] - MapViewOfFile() が kFakeMappingHandle、FILE_MAP_READ、0u、0u、kMapSize を指定して 1 回呼び出されること。
@@ -185,12 +187,12 @@ TEST_F(mmapTest, attach_read_only_maps_existing_file)
 
     // Act
     int actual_ret = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_ONLY, 0u, &map,
-                                       NULL); // [手順] - 既存ファイルを読み取り専用でアタッチする。
+                                       nullptr); // [手順] - 既存ファイルを読み取り専用でアタッチする。
 
     // Assert
     ASSERT_EQ(CPLAT_OK,
               actual_ret); // [確認_正常系] - 読み取り専用の cplat_mmap_attach() の戻り値が CPLAT_OK であること。
-    ASSERT_NE((cplat_mmap *)NULL, map); // [確認_正常系] - map が NULL 以外であること。
+    ASSERT_NE(nullptr, map); // [確認_正常系] - map が nullptr 以外であること。
     EXPECT_EQ(
         kMapSize,
         cplat_mmap_get_size(
@@ -201,7 +203,7 @@ TEST_F(mmapTest, attach_read_only_maps_existing_file)
             map)); // [確認_正常系] - cplat_mmap_get_address() の戻り値が static_cast<void *>(mapped_buf_) と一致すること。(モックの返却バッファーであることの確認)
 
     // Cleanup
-    (void)cplat_mmap_detach(map, NULL);
+    (void)cplat_mmap_detach(map, nullptr);
 }
 
 // 読み取り専用アクセスで存在しないファイルを指定すると失敗することの確認 (新規作成しない)
@@ -209,7 +211,7 @@ TEST_F(mmapTest, attach_read_only_maps_existing_file)
 TEST_F(mmapTest, attach_read_only_fails_for_missing_file)
 {
     // Arrange
-    cplat_mmap *map = NULL; // [状態] - 存在しないファイルのパス mmap.dat を用意する。
+    cplat_mmap *map = nullptr; // [状態] - 存在しないファイルのパス mmap.dat を用意する。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_file_open(_, _, flags_read_only(), _))
@@ -219,14 +221,15 @@ TEST_F(mmapTest, attach_read_only_fails_for_missing_file)
 
     // Act
     int actual_ret = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_ONLY, kMapSize, &map,
-                                       NULL); // [手順] - 存在しないファイルを READ_ONLY でアタッチを試みる。
+                                       nullptr); // [手順] - 存在しないファイルを READ_ONLY でアタッチを試みる。
 
     // Assert
     EXPECT_NE(
         CPLAT_OK,
         actual_ret); // [確認_異常系] - 存在しないファイルに対する読み取り専用の cplat_mmap_attach() の戻り値が CPLAT_OK 以外であること。
-    EXPECT_EQ((cplat_mmap *)NULL,
-              map); // [確認_異常系] - map が NULL であること。(欠落ファイルではマップ ハンドルが設定されないことの確認)
+    EXPECT_EQ(
+        nullptr,
+        map); // [確認_異常系] - map が nullptr であること。(欠落ファイルではマップ ハンドルが設定されないことの確認)
 }
 
 // 不正な引数で attach が INVALID_ARGUMENT を返すことの確認
@@ -234,7 +237,7 @@ TEST_F(mmapTest, attach_read_only_fails_for_missing_file)
 TEST_F(mmapTest, attach_invalid_arguments_fail)
 {
     // Arrange
-    cplat_mmap *map = NULL;
+    cplat_mmap *map = nullptr;
     int invalid_access_value = 99;
     cplat_mmap_access invalid_access = (cplat_mmap_access)invalid_access_value;
     int null_path_result;
@@ -245,14 +248,14 @@ TEST_F(mmapTest, attach_invalid_arguments_fail)
     // Pre-Assert
 
     // Act
-    null_path_result = cplat_mmap_attach(NULL, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
-                                         NULL); // [手順] - path に NULL を指定してアタッチする。
-    null_map_result = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, NULL,
-                                        NULL); // [手順] - map に NULL を指定してアタッチする。
+    null_path_result = cplat_mmap_attach(nullptr, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
+                                         nullptr); // [手順] - path に NULL を指定してアタッチする。
+    null_map_result = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, nullptr,
+                                        nullptr); // [手順] - map に NULL を指定してアタッチする。
     empty_path_result = cplat_mmap_attach("", CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
-                                          NULL); // [手順] - 空文字列の path を指定してアタッチする。
+                                          nullptr); // [手順] - 空文字列の path を指定してアタッチする。
     invalid_access_result = cplat_mmap_attach(kPath, invalid_access, kMapSize, &map,
-                                              NULL); // [手順] - 不正な access 値でアタッチする。
+                                              nullptr); // [手順] - 不正な access 値でアタッチする。
 
     // Assert
     EXPECT_EQ(
@@ -282,15 +285,16 @@ TEST_F(mmapTest, accessors_are_safe_for_null_handle)
     // Pre-Assert
 
     // Act
-    address = cplat_mmap_get_address(NULL);                // [手順] - get_address に NULL を渡す。
-    size = cplat_mmap_get_size(NULL);                      // [手順] - get_size に NULL を渡す。
-    flush_result = cplat_mmap_flush(NULL, NULL, 0u, NULL); // [手順] - flush に NULL ハンドルを渡す。
-    detach_result = cplat_mmap_detach(NULL, NULL);         // [手順] - detach に NULL ハンドルを渡す。
+    address = cplat_mmap_get_address(nullptr); // [手順] - cplat_mmap_get_address() に NULL を渡す。
+    size = cplat_mmap_get_size(nullptr);       // [手順] - cplat_mmap_get_size() に NULL を渡す。
+    flush_result =
+        cplat_mmap_flush(nullptr, nullptr, 0u, nullptr); // [手順] - cplat_mmap_flush() に NULL ハンドルを渡す。
+    detach_result = cplat_mmap_detach(nullptr, nullptr); // [手順] - cplat_mmap_detach() に NULL ハンドルを渡す。
 
     // Assert
-    EXPECT_EQ((void *)NULL,
-              address);         // [確認_異常系] - NULL に対する cplat_mmap_get_address() の戻り値が NULL であること。
-    EXPECT_EQ((size_t)0, size); // [確認_異常系] - NULL に対する cplat_mmap_get_size() の戻り値が (size_t)0 であること。
+    EXPECT_EQ(nullptr,
+              address); // [確認_異常系] - NULL に対する cplat_mmap_get_address() の戻り値が nullptr であること。
+    EXPECT_EQ((size_t)0, size); // [確認_異常系] - NULL に対する cplat_mmap_get_size() の戻り値が 0 であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         flush_result); // [確認_異常系] - NULL に対する cplat_mmap_flush() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -303,7 +307,7 @@ TEST_F(mmapTest, accessors_are_safe_for_null_handle)
 TEST_F(mmapTest, flush_succeeds_for_explicit_address_range)
 {
     // Arrange
-    cplat_mmap *map = NULL;
+    cplat_mmap *map = nullptr;
     // [サブ手順参照 名前=mmapTestFixture.attachNewFile]
     attachNewFile(&map); // [状態] - 書き戻し対象のマップを用意する。
 
@@ -326,7 +330,7 @@ TEST_F(mmapTest, flush_succeeds_for_explicit_address_range)
 
     // Act
     int actual_ret = cplat_mmap_flush(map, mapped_buf_, 1u,
-                                      NULL); // [手順] - マップ先頭の 1 byte を指定して書き戻す。
+                                      nullptr); // [手順] - マップ先頭の 1 byte を指定して書き戻す。
 
     // Assert
     EXPECT_EQ(
@@ -334,5 +338,5 @@ TEST_F(mmapTest, flush_succeeds_for_explicit_address_range)
         actual_ret); // [確認_正常系] - 明示したアドレス範囲に対する cplat_mmap_flush() の戻り値が CPLAT_OK であること。
 
     // Cleanup
-    (void)cplat_mmap_detach(map, NULL);
+    (void)cplat_mmap_detach(map, nullptr);
 }

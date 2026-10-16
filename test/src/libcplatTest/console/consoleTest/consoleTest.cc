@@ -16,7 +16,7 @@ class consoleTest : public Test
     {
         // console.c の単体テストでは shutdown.c を対象外とし、登録 API の呼び出しをフェイクする。
         ON_CALL(mock_cplat, cplat_shutdown_register(_, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - `cplat_shutdown_register` の既定動作を設定する。
+        // [状態] - cplat_shutdown_register() の既定動作を設定する。
     }
     // [サブ手順終了]
 };
@@ -50,8 +50,9 @@ TEST_F(consoleTest, dispose_on_shutdown_after_init)
     // Pre-Assert
 
     // Act
-    cplat_internal_console_dispose_on_shutdown(&event,
-                                               NULL); // [手順] - 正常終了イベントで dispose_on_shutdown() を呼び出す。
+    cplat_internal_console_dispose_on_shutdown(
+        &event,
+        nullptr); // [手順] - 正常終了イベントで dispose_on_shutdown() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(初期化後の cplat_internal_console_dispose_on_shutdown() がクラッシュしないことの確認)
@@ -69,7 +70,7 @@ TEST_F(consoleTest, dispose_on_shutdown_without_init)
 
     // Act
     cplat_internal_console_dispose_on_shutdown(&event,
-                                               NULL); // [手順] - init を呼ばずに dispose_on_shutdown() を呼び出す。
+                                               nullptr); // [手順] - init を呼ばずに dispose_on_shutdown() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(初期化せずに呼び出した cplat_internal_console_dispose_on_shutdown() がクラッシュしないことの確認)
@@ -87,9 +88,9 @@ TEST_F(consoleTest, double_dispose_on_shutdown)
     // Pre-Assert
 
     // Act
-    cplat_internal_console_dispose_on_shutdown(&event, NULL); // [手順] - 1 回目の dispose_on_shutdown() を呼び出す。
+    cplat_internal_console_dispose_on_shutdown(&event, nullptr); // [手順] - 1 回目の dispose_on_shutdown() を呼び出す。
     cplat_internal_console_dispose_on_shutdown(&event,
-                                               NULL); // [手順] - 続けて 2 回目の dispose_on_shutdown() を呼び出す。
+                                               nullptr); // [手順] - 続けて 2 回目の dispose_on_shutdown() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(2 回目の cplat_internal_console_dispose_on_shutdown() がクラッシュしないことの確認)
@@ -109,14 +110,14 @@ TEST_F(consoleTest, dispose_on_shutdown_process_terminating)
 
     // Act
     cplat_internal_console_dispose_on_shutdown(&terminating_event,
-                                               NULL); // [手順] - 終了中イベントで dispose_on_shutdown() を呼び出す。
+                                               nullptr); // [手順] - 終了中イベントで dispose_on_shutdown() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(終了中イベントを渡した cplat_internal_console_dispose_on_shutdown() がクラッシュしないことの確認)
 
     // Cleanup
     // init 状態を通常終了イベントで解放する。
-    cplat_internal_console_dispose_on_shutdown(&normal_event, NULL);
+    cplat_internal_console_dispose_on_shutdown(&normal_event, nullptr);
 }
 
 // init 後に printf / fprintf を呼んでもクラッシュしないことの確認

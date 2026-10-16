@@ -93,7 +93,7 @@ TEST_F(stringCatalogFilterSlotTest, create_returns_rwlock_create_result)
 
     // Act
     actual_ret =
-        cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity, kLineWidth,
+        cplat_string_catalog_filter_slot_create(filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity, kLineWidth,
                                                 &slot); // [手順] - スロットを作成する。
 
     // Assert
@@ -121,7 +121,7 @@ TEST_F(stringCatalogFilterSlotTest, create_returns_lock_create_result)
 
     // Act
     actual_ret =
-        cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity, kLineWidth,
+        cplat_string_catalog_filter_slot_create(filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity, kLineWidth,
                                                 &slot); // [手順] - スロットを作成する。
 
     // Assert
@@ -139,8 +139,9 @@ TEST_F(stringCatalogFilterSlotTest, vformat_returns_lock_result_without_formatti
     // Arrange
     int actual_ret;
     int actual_matched = 1;
-    ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity,
-                                                                kLineWidth, &slot)); // [状態] - スロットを作成する。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_string_catalog_filter_slot_create(filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity,
+                                                      kLineWidth, &slot)); // [状態] - スロットを作成する。
     // [状態確認] - cplat_string_catalog_filter_slot_create() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_strcpy(dest, sizeof(dest), "previous")); // [状態] - 格納先へ以前の内容を書き込む。
     // [状態確認] - cplat_strcpy() の戻り値が CPLAT_OK であること。
@@ -170,8 +171,9 @@ TEST_F(stringCatalogFilterSlotTest, vformat_formats_when_lock_succeeds)
     // Arrange
     int actual_ret;
     int actual_matched = 1;
-    ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity,
-                                                                kLineWidth, &slot)); // [状態] - スロットを作成する。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_string_catalog_filter_slot_create(filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity,
+                                                      kLineWidth, &slot)); // [状態] - スロットを作成する。
     // [状態確認] - cplat_string_catalog_filter_slot_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -198,8 +200,9 @@ TEST_F(stringCatalogFilterSlotTest, vformat_skips_lock_for_missing_key)
     // Arrange
     int actual_ret;
     int actual_matched = 1;
-    ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity,
-                                                                kLineWidth, &slot)); // [状態] - スロットを作成する。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_string_catalog_filter_slot_create(filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity,
+                                                      kLineWidth, &slot)); // [状態] - スロットを作成する。
     // [状態確認] - cplat_string_catalog_filter_slot_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -229,7 +232,7 @@ TEST_F(stringCatalogFilterSlotTest, create_rejects_malformed_catalog)
 
     // Act
     actual_ret = cplat_string_catalog_filter_slot_create(
-        filter_test_malformed_catalog(), NULL, 0U, NULL, kLineCapacity, kLineWidth,
+        filter_test_malformed_catalog(), nullptr, 0U, nullptr, kLineCapacity, kLineWidth,
         &slot); // [手順] - 短い説明が未定義のカタログでスロットを作成する。
 
     // Assert
@@ -245,15 +248,15 @@ TEST_F(stringCatalogFilterSlotTest, create_rejects_malformed_catalog)
 TEST_F(stringCatalogFilterSlotTest, create_rejects_null_key_name)
 {
     // Arrange
-    const cplat_string_catalog_filter_key_name key_names[] = {{NULL, FILTER_TEST_CATALOG_KEY_NUMBER, 0U}};
+    const cplat_string_catalog_filter_key_name key_names[] = {{nullptr, FILTER_TEST_CATALOG_KEY_NUMBER, 0U}};
     int actual_ret;
 
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_filter_slot_create(filter_test_catalog(), key_names, 1U, NULL, kLineCapacity, kLineWidth,
-                                                &slot); // [手順] - NULL の名前を持つテーブルでスロットを作成する。
+    actual_ret = cplat_string_catalog_filter_slot_create(
+        filter_test_catalog(), key_names, 1U, nullptr, kLineCapacity, kLineWidth,
+        &slot); // [手順] - NULL の名前を持つテーブルでスロットを作成する。
 
     // Assert
     EXPECT_EQ(
@@ -275,7 +278,7 @@ TEST_F(stringCatalogFilterSlotTest, create_rejects_missing_key_in_key_names)
 
     // Act
     actual_ret = cplat_string_catalog_filter_slot_create(
-        filter_test_catalog(), key_names, 1U, NULL, kLineCapacity, kLineWidth,
+        filter_test_catalog(), key_names, 1U, nullptr, kLineCapacity, kLineWidth,
         &slot); // [手順] - カタログに存在しない文字列キーを持つテーブルでスロットを作成する。
 
     // Assert
@@ -298,9 +301,9 @@ TEST_F(stringCatalogFilterSlotTest, create_rejects_duplicate_key_name)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_filter_slot_create(filter_test_catalog(), key_names, 2U, NULL, kLineCapacity, kLineWidth,
-                                                &slot); // [手順] - 同じ名前が 2 つあるテーブルでスロットを作成する。
+    actual_ret = cplat_string_catalog_filter_slot_create(
+        filter_test_catalog(), key_names, 2U, nullptr, kLineCapacity, kLineWidth,
+        &slot); // [手順] - 同じ名前が 2 つあるテーブルでスロットを作成する。
 
     // Assert
     EXPECT_EQ(
@@ -322,9 +325,9 @@ TEST_F(stringCatalogFilterSlotTest, create_accepts_aliases_for_same_key)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_filter_slot_create(filter_test_catalog(), key_names, 2U, NULL, kLineCapacity, kLineWidth,
-                                                &slot); // [手順] - 別名を持つテーブルでスロットを作成する。
+    actual_ret = cplat_string_catalog_filter_slot_create(filter_test_catalog(), key_names, 2U, nullptr, kLineCapacity,
+                                                         kLineWidth,
+                                                         &slot); // [手順] - 別名を持つテーブルでスロットを作成する。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -338,7 +341,7 @@ TEST_F(stringCatalogFilterSlotTest, create_accepts_aliases_for_same_key)
 TEST_F(stringCatalogFilterSlotTest, create_accepts_empty_catalog)
 {
     // Arrange
-    const cplat_string_catalog empty_catalog = {NULL, NULL, 0, 0};
+    const cplat_string_catalog empty_catalog = {nullptr, nullptr, 0, 0};
     cplat_string_catalog_filter_state actual_state = CPLAT_STRING_CATALOG_FILTER_STATE_ALWAYS_MATCH;
     int actual_create_ret;
     int actual_test_ret;
@@ -347,7 +350,7 @@ TEST_F(stringCatalogFilterSlotTest, create_accepts_empty_catalog)
 
     // Act
     actual_create_ret =
-        cplat_string_catalog_filter_slot_create(&empty_catalog, NULL, 0U, NULL, kLineCapacity, kLineWidth,
+        cplat_string_catalog_filter_slot_create(&empty_catalog, nullptr, 0U, nullptr, kLineCapacity, kLineWidth,
                                                 &slot); // [手順] - 空のカタログでスロットを作成する。
     actual_test_ret = cplat_string_catalog_filter_slot_test(slot, FILTER_TEST_CATALOG_KEY_NUMBER,
                                                             &actual_state); // [手順] - 文字列キーを判定する。
@@ -370,8 +373,9 @@ TEST_F(stringCatalogFilterSlotTest, get_catalog_returns_creation_catalog)
     // Arrange
     const cplat_string_catalog *actual_catalog;
 
-    ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity,
-                                                                kLineWidth, &slot)); // [状態] - スロットを作成する。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_string_catalog_filter_slot_create(filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity,
+                                                      kLineWidth, &slot)); // [状態] - スロットを作成する。
     // [状態確認] - cplat_string_catalog_filter_slot_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -396,7 +400,8 @@ TEST_F(stringCatalogFilterSlotTest, get_catalog_returns_null_for_null_slot)
     // Pre-Assert
 
     // Act
-    actual_catalog = cplat_string_catalog_filter_slot_get_catalog(NULL); // [手順] - NULL を指定してカタログを取得する。
+    actual_catalog =
+        cplat_string_catalog_filter_slot_get_catalog(nullptr); // [手順] - NULL を指定してカタログを取得する。
 
     // Assert
     EXPECT_EQ(
@@ -412,8 +417,9 @@ TEST_F(stringCatalogFilterSlotTest, vformat_rejects_null_dest)
     // Arrange
     int actual_ret;
     int actual_matched = 1;
-    ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, NULL, kLineCapacity,
-                                                                kLineWidth, &slot)); // [状態] - スロットを作成する。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_string_catalog_filter_slot_create(filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity,
+                                                      kLineWidth, &slot)); // [状態] - スロットを作成する。
     // [状態確認] - cplat_string_catalog_filter_slot_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
@@ -421,7 +427,7 @@ TEST_F(stringCatalogFilterSlotTest, vformat_rejects_null_dest)
         .Times(0); // [Pre-Assert確認_異常系] - cplat_local_rwlock_lock_shared() が呼び出されないこと。
 
     // Act
-    actual_ret = call_slot_vformat(slot, NULL, sizeof(dest), &actual_matched, FILTER_TEST_CATALOG_KEY_NUMBER,
+    actual_ret = call_slot_vformat(slot, nullptr, sizeof(dest), &actual_matched, FILTER_TEST_CATALOG_KEY_NUMBER,
                                    (int32_t)7); // [手順] - 格納先に NULL を渡して判定と書式展開を行う。
 
     // Assert
@@ -436,15 +442,15 @@ TEST_F(stringCatalogFilterSlotTest, vformat_rejects_null_dest)
 TEST_F(stringCatalogFilterSlotTest, create_rejects_invalid_category_names)
 {
     // Arrange
-    const char *const names_with_null[] = {"CRITICAL", NULL};
+    const char *const names_with_null[] = {"CRITICAL", nullptr};
     const cplat_string_catalog_filter_category_names invalid_names = {names_with_null, 2U, "レベル", "the level"};
     int actual_ret;
 
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_filter_slot_create(filter_test_catalog(), NULL, 0U, &invalid_names, kLineCapacity,
-                                                         kLineWidth,
+    actual_ret = cplat_string_catalog_filter_slot_create(filter_test_catalog(), nullptr, 0U, &invalid_names,
+                                                         kLineCapacity, kLineWidth,
                                                          &slot); // [手順] - NULL の名前を含む設定でスロットを作成する。
 
     // Assert

@@ -67,10 +67,10 @@ class etw_viewerTest : public Test
     void SetUp() override
     {
         ON_CALL(mock_cplat_, cplat_strncpy(_, _, _, _)).WillByDefault(emulate_cplat_strncpy);
-        // [状態] - `cplat_strncpy` の既定動作を設定する。
+        // [状態] - cplat_strncpy() の既定動作を設定する。
         ON_CALL(mock_cplat_, cplat_clock_format_realtime_iso8601_local(_, _, _))
             .WillByDefault(emulate_cplat_clock_format_realtime_iso8601_local);
-        // [状態] - `cplat_clock_format_realtime_iso8601_local` の既定動作を設定する。
+        // [状態] - cplat_clock_format_realtime_iso8601_local() の既定動作を設定する。
     }
     // [サブ手順終了]
 };
@@ -89,6 +89,7 @@ TEST_F(etw_viewerTest, main_accepts_pid_filter)
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
+                             // [Pre-Assert手順] - cplat_console_init() にて呼び出し元へ戻る。
     EXPECT_CALL(mock_cplat_, cplat_etw_session_check_access())
         .WillOnce(
             Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_etw_session_check_access() が 1 回呼び出されること。
@@ -105,7 +106,7 @@ TEST_F(etw_viewerTest, main_accepts_pid_filter)
                  // [Pre-Assert手順] - session 開始に渡された context を捕捉し、失敗を返却して打ち切る。
 
     // Act
-    int rc = __real_main(argc, (char **)&argv); // [手順] - pid フィルター付きで main を呼び出す。
+    int rc = __real_main(argc, (char **)&argv); // [手順] - pid フィルター付きで main() を呼び出す。
 
     // Assert
     EXPECT_NE(
@@ -133,9 +134,10 @@ TEST_F(etw_viewerTest, main_rejects_invalid_pid)
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
+                             // [Pre-Assert手順] - cplat_console_init() にて呼び出し元へ戻る。
 
     // Act
-    int rc = __real_main(argc, (char **)&argv); // [手順] - 不正な pid で main を呼び出す。
+    int rc = __real_main(argc, (char **)&argv); // [手順] - 不正な pid で main() を呼び出す。
 
     // Assert
     EXPECT_NE(EXIT_SUCCESS, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_SUCCESS 以外であること。
@@ -191,11 +193,13 @@ TEST_F(etw_viewerTest, handle_event_prints_service_and_message)
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq("1970-01-01T09:00:00.000+09:00 <I>worker-7[1234]: started\n")))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - printf() が "1970-01-01T09:00:00.000+09:00 <I>worker-7[1234]: started\n" と等しい文字列を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
     EXPECT_CALL(mock_stdio_, fflush(_, _, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - fflush() が 1 回呼び出されること。
+                              // [Pre-Assert手順] - fflush() にて 0 を返却する。
 
     // Act
-    etw_viewer_handle_event(&event, NULL); // [手順] - Service ありイベントを表示する。
+    etw_viewer_handle_event(&event, nullptr); // [手順] - Service ありイベントを表示する。
 
     // Assert
 }
@@ -205,17 +209,19 @@ TEST_F(etw_viewerTest, handle_event_prints_service_and_message)
 TEST_F(etw_viewerTest, handle_event_prints_message_without_service)
 {
     // Arrange
-    cplat_etw_event event = {3, 5678U, "Trace", NULL, "degraded", 116444736000000000LL};
+    cplat_etw_event event = {3, 5678U, "Trace", nullptr, "degraded", 116444736000000000LL};
 
     // Pre-Assert
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq("1970-01-01T09:00:00.000+09:00 <W>cplat.tracer[5678]: degraded\n")))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - printf() が "1970-01-01T09:00:00.000+09:00 <W>cplat.tracer[5678]: degraded\n" と等しい文字列を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - printf() にて 0 を返却する。
     EXPECT_CALL(mock_stdio_, fflush(_, _, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - fflush() が 1 回呼び出されること。
+                              // [Pre-Assert手順] - fflush() にて 0 を返却する。
 
     // Act
-    etw_viewer_handle_event(&event, NULL); // [手順] - Service なしイベントを表示する。
+    etw_viewer_handle_event(&event, nullptr); // [手順] - Service なしイベントを表示する。
 
     // Assert
 }
@@ -225,7 +231,7 @@ TEST_F(etw_viewerTest, handle_event_prints_message_without_service)
 TEST_F(etw_viewerTest, handle_event_skips_non_trace_event)
 {
     // Arrange
-    cplat_etw_event event = {5, 9012U, "EventMetadata", NULL, NULL, 116444736000000000LL};
+    cplat_etw_event event = {5, 9012U, "EventMetadata", nullptr, nullptr, 116444736000000000LL};
 
     // Pre-Assert
     EXPECT_CALL(mock_stdio_, printf(_, _, _, _))
@@ -236,7 +242,7 @@ TEST_F(etw_viewerTest, handle_event_skips_non_trace_event)
             0); // [Pre-Assert確認_正常系] - fflush() が呼び出されないこと。(Trace 以外のイベントを flush しないことの確認)
 
     // Act
-    etw_viewer_handle_event(&event, NULL); // [手順] - Trace 以外のイベントを表示処理へ渡す。
+    etw_viewer_handle_event(&event, nullptr); // [手順] - Trace 以外のイベントを表示処理へ渡す。
 
     // Assert
 }
@@ -246,7 +252,7 @@ TEST_F(etw_viewerTest, handle_event_skips_non_trace_event)
 TEST_F(etw_viewerTest, handle_event_skips_non_matching_pid_filter)
 {
     // Arrange
-    cplat_etw_event event = {4, 2222U, "Trace", NULL, "filtered", 116444736000000000LL};
+    cplat_etw_event event = {4, 2222U, "Trace", nullptr, "filtered", 116444736000000000LL};
     etw_viewer_context context = {1111U, 1};
 
     // Pre-Assert
@@ -275,9 +281,10 @@ TEST_F(etw_viewerTest, main_rejects_invalid_arguments)
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
+                             // [Pre-Assert手順] - cplat_console_init() にて呼び出し元へ戻る。
 
     // Act
-    int rc = __real_main(argc, (char **)&argv); // [手順] - 不正引数で main を呼び出す。
+    int rc = __real_main(argc, (char **)&argv); // [手順] - 不正引数で main() を呼び出す。
 
     // Assert
     EXPECT_NE(EXIT_SUCCESS, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_SUCCESS 以外であること。
@@ -293,6 +300,7 @@ TEST_F(etw_viewerTest, main_prints_usage_on_help)
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
+                             // [Pre-Assert手順] - cplat_console_init() にて呼び出し元へ戻る。
 
     // Act
     int rc = __real_main(2, (char **)&argv); // [手順] - help オプションで main() を呼び出す。
@@ -312,6 +320,7 @@ TEST_F(etw_viewerTest, main_stops_when_access_is_denied)
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
+                             // [Pre-Assert手順] - cplat_console_init() にて呼び出し元へ戻る。
     EXPECT_CALL(mock_cplat_, cplat_etw_session_check_access())
         .WillOnce(Return(
             CPLAT_ERR_PERMISSION_DENIED)); // [Pre-Assert確認_異常系] - cplat_etw_session_check_access() が 1 回呼び出されること。
@@ -319,9 +328,10 @@ TEST_F(etw_viewerTest, main_stops_when_access_is_denied)
     EXPECT_CALL(mock_stdio_, fprintf(_, _, _, _, HasSubstr("Performance Log Users")))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_異常系] - fprintf() が "Performance Log Users" を含む文字列を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - fprintf() にて 0 を返却する。
 
     // Act
-    int rc = __real_main(argc, (char **)&argv); // [手順] - 権限不足の状態で main を呼び出す。
+    int rc = __real_main(argc, (char **)&argv); // [手順] - 権限不足の状態で main() を呼び出す。
 
     // Assert
     EXPECT_NE(EXIT_SUCCESS, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_SUCCESS 以外であること。

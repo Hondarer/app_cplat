@@ -45,12 +45,12 @@ TEST_F(hashtableVariableStringTest, persists_variable_key_and_value_and_copies_w
 
     // Act
     int actual_ret_create =
-        cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - 可変長設定でテーブルを構築する。
+        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - 可変長設定でテーブルを構築する。
     int actual_ret_add =
         cplat_hashtable_add(ht, "variable-key", "variable-value",
                             CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 可変長キーと値を追加する。
     int actual_ret_find = cplat_hashtable_find_value_ref(ht, "variable-key", &found);
-    int actual_ret_query = cplat_hashtable_find_value_copy(ht, "variable-key", NULL, 0,
+    int actual_ret_query = cplat_hashtable_find_value_copy(ht, "variable-key", nullptr, 0,
                                                            &required_size); // [手順] - 必要サイズを問い合わせる。
     int actual_ret_copy = cplat_hashtable_find_value_copy(ht, "variable-key", copied, sizeof(copied),
                                                           &required_size); // [手順] - 値をバッファーへ複製する。
@@ -111,7 +111,7 @@ TEST_F(hashtableVariableStringTest, fragmented_update_returns_storage_full_and_p
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     int actual_ret_add_a = cplat_hashtable_add(ht, "a", "1111", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_add_b = cplat_hashtable_add(ht, "b", "2222", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_update = cplat_hashtable_update(ht, "a", "123456"); // [手順] - 収まらないサイズへ更新する。
@@ -157,14 +157,14 @@ TEST_F(hashtableVariableStringTest, explicit_compaction_enables_fragmented_add_a
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", "1111", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "b", "2222", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "c", "3333", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_find_value_ref(ht, "c", &before_compact);
     uint64_t c_record = 0;
     (void)cplat_hashtable_find_recno(ht, "c", &c_record);
-    (void)cplat_hashtable_get_key_ref(ht, c_record, &key_before_compact, NULL);
+    (void)cplat_hashtable_get_key_ref(ht, c_record, &key_before_compact, nullptr);
     (void)cplat_hashtable_delete(ht, "b");
     (void)cplat_hashtable_purge_deleted(ht);
     int actual_ret_fragmented = cplat_hashtable_add(
@@ -173,7 +173,7 @@ TEST_F(hashtableVariableStringTest, explicit_compaction_enables_fragmented_add_a
     (void)cplat_hashtable_find_value_ref(ht, "c", &after_failed_add);
     int actual_ret_compact = cplat_hashtable_compact(ht); // [手順] - ストレージを圧縮する。
     (void)cplat_hashtable_find_value_ref(ht, "c", &after_compact);
-    (void)cplat_hashtable_get_key_ref(ht, c_record, &key_after_compact, NULL);
+    (void)cplat_hashtable_get_key_ref(ht, c_record, &key_after_compact, nullptr);
     bool vacated_key_zeroed = static_cast<const unsigned char *>(key_before_compact)[0] == 0 &&
                               static_cast<const unsigned char *>(key_before_compact)[1] == 0;
     bool vacated_value_zeroed = true;
@@ -237,10 +237,10 @@ TEST_F(hashtableVariableStringTest, purge_zero_fills_released_variable_key_and_v
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "secret-key", "secret-value", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_find_recno(ht, "secret-key", &record);
-    (void)cplat_hashtable_get_key_ref(ht, record, &key_ref, NULL);
+    (void)cplat_hashtable_get_key_ref(ht, record, &key_ref, nullptr);
     (void)cplat_hashtable_get_value_ref(ht, record, &value_ref);
     (void)cplat_hashtable_delete(ht, "secret-key");
     bool retained_while_deleted = std::strcmp(static_cast<const char *>(key_ref), "secret-key") == 0 &&
@@ -286,10 +286,10 @@ TEST_F(hashtableVariableStringTest, lifetime_expiration_zero_fills_released_vari
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "expired", "private", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_find_recno(ht, "expired", &record);
-    (void)cplat_hashtable_get_key_ref(ht, record, &key_ref, NULL);
+    (void)cplat_hashtable_get_key_ref(ht, record, &key_ref, nullptr);
     (void)cplat_hashtable_get_value_ref(ht, record, &value_ref);
     (void)cplat_hashtable_delete(ht, "expired");
     int actual_ret_push = cplat_hashtable_push_deleted(ht); // [手順] - 加齢によりライフタイムを満了させる。
@@ -336,10 +336,10 @@ TEST_F(hashtableVariableStringTest, compact_accepts_null_and_is_noop_for_fixed_f
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "key", "value", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_find_value_ref(ht, "key", &before);
-    int actual_ret_null = cplat_hashtable_compact(NULL);  // [手順] - ht に NULL を渡す。
+    int actual_ret_null = cplat_hashtable_compact(nullptr); // [手順] - ht に NULL を渡す。
     int actual_ret_compact = cplat_hashtable_compact(ht); // [手順] - 固定長テーブルで compact を呼び出す。
     (void)cplat_hashtable_find_value_ref(ht, "key", &after);
     std::string after_text = static_cast<const char *>(after);
@@ -380,7 +380,7 @@ TEST_F(hashtableVariableStringTest, supports_variable_key_with_fixed_binary_valu
     // Pre-Assert
 
     // Act
-    int actual_ret_create = cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    int actual_ret_create = cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     int actual_ret_add = cplat_hashtable_add(ht, "key", value, CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_copy = cplat_hashtable_find_value_copy(ht, "key", copied, sizeof(copied), &required_size);
 
@@ -431,11 +431,11 @@ TEST_F(hashtableVariableStringTest, fixed_strings_accept_literals_and_zero_fill_
     // Pre-Assert
 
     // Act
-    int actual_ret_create = cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+    int actual_ret_create = cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     int actual_ret_add = cplat_hashtable_add(ht, "k", "old", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_update = cplat_hashtable_update(ht, "k", "new");
     (void)cplat_hashtable_find_recno(ht, "k", &record);
-    (void)cplat_hashtable_get_key_ref(ht, record, &key_ref, NULL);
+    (void)cplat_hashtable_get_key_ref(ht, record, &key_ref, nullptr);
     (void)cplat_hashtable_get_value_ref(ht, record, &value_ref);
     int actual_ret_key_copy = cplat_hashtable_get_key_copy(ht, record, key_copy, sizeof(key_copy), &key_required_size);
     int actual_ret_value_copy =
@@ -512,9 +512,9 @@ TEST_F(hashtableVariableStringTest, supports_all_key_and_value_field_type_combin
             // Pre-Assert
 
             // Act
-            int actual_ret_create = cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht);
+            int actual_ret_create = cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
             int actual_ret_add = cplat_hashtable_add(ht, key, value, CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-            int actual_ret_query = cplat_hashtable_find_value_copy(ht, key, NULL, 0, &required_size);
+            int actual_ret_query = cplat_hashtable_find_value_copy(ht, key, nullptr, 0, &required_size);
             int actual_ret_too_small =
                 cplat_hashtable_find_value_copy(ht, key, copied, required_size - 1, &required_size);
             bool too_small_unchanged = true;
@@ -608,7 +608,7 @@ class storage_origin
         {
             return -1;
         }
-        if (cplat_hashtable_get_key_ref(ht, record, &ref, NULL) != CPLAT_OK)
+        if (cplat_hashtable_get_key_ref(ht, record, &ref, nullptr) != CPLAT_OK)
         {
             return -1;
         }
@@ -645,7 +645,7 @@ TEST_F(hashtableVariableStringTest, first_fit_placement_is_stable_across_add_pur
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     storage_origin origin(ht, config);
     (void)cplat_hashtable_add(ht, "k1", "aaaa", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "k2", "bbbb", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
@@ -724,7 +724,7 @@ TEST_F(hashtableVariableStringTest, compaction_packs_blocks_in_offset_order_and_
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     storage_origin origin(ht, config);
     (void)cplat_hashtable_add(ht, "k1", "aaaa", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "k2", "bbbb", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
@@ -779,7 +779,7 @@ TEST_F(hashtableVariableStringTest, exact_fit_consumes_the_last_free_block_and_t
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     storage_origin origin(ht, config);
     (void)cplat_hashtable_add(ht, "k1", "aaaaaaa", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_exact_fit = cplat_hashtable_add(ht, "k2", "bbbbbbb", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
@@ -823,7 +823,7 @@ TEST_F(hashtableVariableStringTest, resize_repacks_variable_storage_and_moves_re
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
     (void)cplat_hashtable_add(ht, "k1", "aaaa", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "k2", "bbbb", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "k3", "cccc", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);

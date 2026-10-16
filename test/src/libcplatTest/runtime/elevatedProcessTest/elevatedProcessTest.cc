@@ -17,7 +17,7 @@ using testing::Return;
 extern "C" cplat_process *cplat_internal_process_adopt_native(intptr_t native_handle)
 {
     (void)native_handle;
-    return NULL;
+    return nullptr;
 }
 #endif /* PLATFORM_WINDOWS */
 
@@ -27,7 +27,7 @@ TEST(elevatedProcessTest, elevated_result_target_initializes_output)
     // Arrange
     int argc = 1;
     char program[] = "resultBehaviorTest";
-    char *argv[] = {program, NULL};
+    char *argv[] = {program, nullptr};
     int detected = 1;
 
     // Pre-Assert
@@ -102,17 +102,17 @@ TEST(elevatedProcessTest, elevated_apis_reject_null_outputs)
     // Pre-Assert
 
     // Act
-    int is_elevated_result = cplat_elevated_process_is_elevated(NULL); // [手順] - 昇格状態の出力先に NULL を渡す。
+    int is_elevated_result = cplat_elevated_process_is_elevated(nullptr); // [手順] - 昇格状態の出力先に NULL を渡す。
     int run_result = cplat_elevated_process_run_if_needed(
-        NULL, NULL, &handled); // [手順] - run_if_needed の exit_code に NULL を渡す。
+        nullptr, nullptr, &handled); // [手順] - run_if_needed() の exit_code に NULL を渡す。
     int run_handled_result = cplat_elevated_process_run_if_needed(
-        NULL, &exit_code, NULL); // [手順] - run_if_needed の handled に NULL を渡す。
+        nullptr, &exit_code, nullptr); // [手順] - run_if_needed() の handled に NULL を渡す。
     int result_run_with_result = cplat_elevated_process_run_with_result(
-        NULL, &exit_code, NULL, NULL, 0U); // [手順] - run_with_result の handled に NULL を渡す。
+        nullptr, &exit_code, nullptr, nullptr, 0U); // [手順] - run_with_result() の handled に NULL を渡す。
     int result_run_with_null_exit = cplat_elevated_process_run_with_result(
-        NULL, NULL, &handled, NULL, 0U); // [手順] - run_with_result の exit_code に NULL を渡す。
+        nullptr, nullptr, &handled, nullptr, 0U); // [手順] - run_with_result() の exit_code に NULL を渡す。
     int report_null_result =
-        cplat_elevated_process_report_result(NULL); // [手順] - report_result の message に NULL を渡す。
+        cplat_elevated_process_report_result(nullptr); // [手順] - report_result() の message に NULL を渡す。
 
     // Assert
     EXPECT_EQ(
@@ -146,9 +146,10 @@ TEST(elevatedProcessTest, run_piped_rejects_null_outputs)
 
     // Act
     int null_exit_result = cplat_elevated_process_run_piped(
-        NULL, NULL, NULL, NULL, &handled); // [手順] - run_piped の exit_code に NULL を渡す。
-    int null_handled_result = cplat_elevated_process_run_piped(NULL, NULL, NULL, &exit_code,
-                                                               NULL); // [手順] - run_piped の handled に NULL を渡す。
+        nullptr, nullptr, nullptr, nullptr, &handled); // [手順] - run_piped() の exit_code に NULL を渡す。
+    int null_handled_result =
+        cplat_elevated_process_run_piped(nullptr, nullptr, nullptr, &exit_code,
+                                         nullptr); // [手順] - run_piped() の handled に NULL を渡す。
 
     // Assert
     EXPECT_EQ(
@@ -165,7 +166,7 @@ TEST(elevatedProcessTest, attach_output_pipes_without_flag_keeps_arguments)
     // Arrange
     char program[] = "pipeTest";
     char command[] = "install";
-    char *argv[] = {program, command, NULL};
+    char *argv[] = {program, command, nullptr};
     int argc = 2;
     int attached = -1;
 
@@ -175,7 +176,7 @@ TEST(elevatedProcessTest, attach_output_pipes_without_flag_keeps_arguments)
     int result = cplat_elevated_process_attach_output_pipes(
         &argc, argv, &attached); // [手順] - 出力パイプ フラグのない引数で接続を試行する。
     int null_result =
-        cplat_elevated_process_attach_output_pipes(NULL, NULL, NULL); // [手順] - すべての引数に NULL を渡す。
+        cplat_elevated_process_attach_output_pipes(nullptr, nullptr, nullptr); // [手順] - すべての引数に NULL を渡す。
 
     // Assert
     EXPECT_EQ(
@@ -197,7 +198,7 @@ TEST(elevatedProcessTest, attach_output_pipes_removes_malformed_flag_and_fails)
     char program[] = "pipeTest";
     char flag[] = "--cplat-output-pipes=123:abc";
     char command[] = "install";
-    char *argv[] = {program, flag, command, NULL};
+    char *argv[] = {program, flag, command, nullptr};
     int argc = 3;
     int attached = -1;
 
@@ -222,12 +223,12 @@ TEST(elevatedProcessTest, attach_output_pipes_removes_malformed_flag_and_fails)
 TEST(elevatedProcessTest, attach_output_pipes_rejects_non_pipe_handles)
 {
     // Arrange
-    HANDLE event_handle = CreateEventW(NULL, TRUE, FALSE, NULL); // [手順] - パイプではないハンドルを作成する。
+    HANDLE event_handle = CreateEventW(nullptr, TRUE, FALSE, nullptr); // [手順] - パイプではないハンドルを作成する。
     std::string flag_text = "--cplat-output-pipes=" + std::to_string(GetCurrentProcessId()) + ":" +
                             std::to_string(reinterpret_cast<uintptr_t>(event_handle)) + ":" +
                             std::to_string(reinterpret_cast<uintptr_t>(event_handle));
     char program[] = "pipeTest";
-    char *argv[] = {program, &flag_text[0], NULL};
+    char *argv[] = {program, &flag_text[0], nullptr};
     int argc = 2;
     int attached = -1;
     HANDLE stdout_before = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -273,10 +274,11 @@ TEST(elevatedProcessTest, run_piped_reports_linux_elevation_state)
                                                      // [Pre-Assert手順] - geteuid から 0、1000 の順に返却する。
 
     // Act
-    int root_result = cplat_elevated_process_run_piped("--test", NULL, NULL, &root_exit_code,
-                                                       &root_handled); // [手順] - root 状態で run_piped を実行する。
-    int user_result = cplat_elevated_process_run_piped("--test", NULL, NULL, &user_exit_code,
-                                                       &user_handled); // [手順] - 非 root 状態で run_piped を実行する。
+    int root_result = cplat_elevated_process_run_piped("--test", nullptr, nullptr, &root_exit_code,
+                                                       &root_handled); // [手順] - root 状態で run_piped() を実行する。
+    int user_result =
+        cplat_elevated_process_run_piped("--test", nullptr, nullptr, &user_exit_code,
+                                         &user_handled); // [手順] - 非 root 状態で run_piped() を実行する。
 
     // Assert
     EXPECT_EQ(
@@ -300,13 +302,13 @@ TEST(elevatedProcessTest, linux_helpers_accept_optional_output_and_report_unavai
     // Arrange
     int argc = 1;
     char program[] = "resultBehaviorTest";
-    char *argv[] = {program, NULL};
+    char *argv[] = {program, nullptr};
 
     // Pre-Assert
 
     // Act
     int extract_result = cplat_elevated_process_extract_result_target(
-        &argc, argv, NULL); // [手順] - detected_out を省略して結果報告先を抽出する。
+        &argc, argv, nullptr); // [手順] - detected_out を省略して結果報告先を抽出する。
 #if defined(PLATFORM_LINUX)
     int report_result =
         cplat_elevated_process_report_result("result"); // [手順] - Linux で結果メッセージの報告を試行する。
@@ -343,11 +345,12 @@ TEST(elevatedProcessTest, run_apis_report_linux_elevation_state)
                                                         // [Pre-Assert手順] - geteuid から実効ユーザー ID 0 を返却する。
 
     // Act
-    int run_result = cplat_elevated_process_run_if_needed("--test", &exit_code,
-                                                          &handled); // [手順] - root 状態で run_if_needed を実行する。
+    int run_result =
+        cplat_elevated_process_run_if_needed("--test", &exit_code,
+                                             &handled); // [手順] - root 状態で run_if_needed() を実行する。
     int result_run_with_result = cplat_elevated_process_run_with_result(
         "--test", &exit_code, &handled, result_message,
-        sizeof(result_message)); // [手順] - root 状態で run_with_result を実行する。
+        sizeof(result_message)); // [手順] - root 状態で run_with_result() を実行する。
 
     // Assert
     EXPECT_EQ(
@@ -379,9 +382,9 @@ TEST(elevatedProcessTest, run_with_result_accepts_absent_or_zero_sized_message_b
 
     // Act
     int null_buffer_result = cplat_elevated_process_run_with_result(
-        NULL, &exit_code, &handled, NULL, 1U); // [手順] - result_message が NULL の状態で実行する。
+        nullptr, &exit_code, &handled, nullptr, 1U); // [手順] - result_message が NULL の状態で実行する。
     int zero_size_result = cplat_elevated_process_run_with_result(
-        NULL, &exit_code, &handled, result_message, 0U); // [手順] - result_message_size が 0 の状態で実行する。
+        nullptr, &exit_code, &handled, result_message, 0U); // [手順] - result_message_size が 0 の状態で実行する。
 
     // Assert
     EXPECT_EQ(
@@ -412,9 +415,9 @@ TEST(elevatedProcessTest, run_apis_reject_linux_non_root)
 
     // Act
     int run_result = cplat_elevated_process_run_if_needed(
-        NULL, &exit_code, &handled); // [手順] - 非 root 状態で run_if_needed を実行する。
+        nullptr, &exit_code, &handled); // [手順] - 非 root 状態で run_if_needed() を実行する。
     int result_run_with_result = cplat_elevated_process_run_with_result(
-        NULL, &exit_code, &handled, NULL, 0U); // [手順] - 非 root 状態で run_with_result を実行する。
+        nullptr, &exit_code, &handled, nullptr, 0U); // [手順] - 非 root 状態で run_with_result() を実行する。
 
     // Assert
     EXPECT_EQ(

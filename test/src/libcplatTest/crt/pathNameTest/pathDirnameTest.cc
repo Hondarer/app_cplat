@@ -17,9 +17,8 @@ TEST_F(pathDirnameTest, returns_parent_of_nested_path)
     // Pre-Assert
 
     // Act
-    int actual_ret =
-        cplat_path_dirname(actual, sizeof(actual), NULL,
-                           "a/b/c"); // [手順] - cplat_path_dirname(actual, size, NULL, "a/b/c") を呼び出す。
+    int actual_ret = cplat_path_dirname(actual, sizeof(actual), nullptr,
+                                        "a/b/c"); // [手順] - cplat_path_dirname() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_dirname() の戻り値が CPLAT_OK であること。
@@ -35,8 +34,8 @@ TEST_F(pathDirnameTest, returns_dot_when_no_separator)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_dirname(actual, sizeof(actual), NULL,
-                                        "c"); // [手順] - cplat_path_dirname(actual, size, NULL, "c") を呼び出す。
+    int actual_ret = cplat_path_dirname(actual, sizeof(actual), nullptr,
+                                        "c"); // [手順] - cplat_path_dirname() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_dirname() の戻り値が CPLAT_OK であること。
@@ -52,8 +51,8 @@ TEST_F(pathDirnameTest, returns_root_for_root_path)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_dirname(actual, sizeof(actual), NULL,
-                                        "/"); // [手順] - cplat_path_dirname(actual, size, NULL, "/") を呼び出す。
+    int actual_ret = cplat_path_dirname(actual, sizeof(actual), nullptr,
+                                        "/"); // [手順] - cplat_path_dirname() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_dirname() の戻り値が CPLAT_OK であること。
@@ -69,9 +68,8 @@ TEST_F(pathDirnameTest, returns_root_for_top_level_path)
     // Pre-Assert
 
     // Act
-    int actual_ret =
-        cplat_path_dirname(actual, sizeof(actual), NULL,
-                           "/name"); // [手順] - cplat_path_dirname(actual, size, NULL, "/name") を呼び出す。
+    int actual_ret = cplat_path_dirname(actual, sizeof(actual), nullptr,
+                                        "/name"); // [手順] - cplat_path_dirname() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_dirname() の戻り値が CPLAT_OK であること。
@@ -87,8 +85,8 @@ TEST_F(pathDirnameTest, strips_trailing_separator_before_computing_parent)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_dirname(actual, sizeof(actual), NULL,
-                                        "a/b/"); // [手順] - cplat_path_dirname(actual, size, NULL, "a/b/") を呼び出す。
+    int actual_ret = cplat_path_dirname(actual, sizeof(actual), nullptr,
+                                        "a/b/"); // [手順] - cplat_path_dirname() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_dirname() の戻り値が CPLAT_OK であること。
@@ -104,9 +102,8 @@ TEST_F(pathDirnameTest, normalizes_backslash_separator_in_output)
     // Pre-Assert
 
     // Act
-    int actual_ret =
-        cplat_path_dirname(actual, sizeof(actual), NULL,
-                           "a\\b\\c"); // [手順] - cplat_path_dirname(actual, size, NULL, "a\\b\\c") を呼び出す。
+    int actual_ret = cplat_path_dirname(actual, sizeof(actual), nullptr,
+                                        "a\\b\\c"); // [手順] - cplat_path_dirname() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_dirname() の戻り値が CPLAT_OK であること。
@@ -123,8 +120,8 @@ TEST_F(pathDirnameTest, returns_einval_for_null_path_out)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_dirname(NULL, 16, &err,
-                                        "a/b"); // [手順] - cplat_path_dirname(NULL, 16, &err, "a/b") を呼び出す。
+    int actual_ret = cplat_path_dirname(nullptr, 16, &err,
+                                        "a/b"); // [手順] - cplat_path_dirname() を呼び出す。
     cplat_error_get_last(&last_error);          // [手順] - TLS に記録された詳細エラーを取得する。
 
     // Assert
@@ -152,7 +149,7 @@ TEST_F(pathDirnameTest, returns_einval_for_zero_path_size)
 
     // Act
     int actual_ret = cplat_path_dirname(actual, 0u, &err,
-                                        "a/b"); // [手順] - cplat_path_dirname(actual, 0, &err, "a/b") を呼び出す。
+                                        "a/b"); // [手順] - cplat_path_dirname() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -175,7 +172,7 @@ TEST_F(pathDirnameTest, returns_einval_for_null_path)
 
     // Act
     int actual_ret = cplat_path_dirname(actual, sizeof(actual), &err,
-                                        NULL); // [手順] - path に NULL を指定して cplat_path_dirname を呼び出す。
+                                        nullptr); // [手順] - path に NULL を指定して cplat_path_dirname() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -199,7 +196,7 @@ TEST_F(pathDirnameTest, returns_einval_for_empty_path)
 
     // Act
     int actual_ret = cplat_path_dirname(actual, sizeof(actual), &err,
-                                        ""); // [手順] - cplat_path_dirname(actual, size, &err, "") を呼び出す。
+                                        ""); // [手順] - cplat_path_dirname() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -222,7 +219,7 @@ TEST_F(pathDirnameTest, returns_enametoolong_when_buffer_too_small)
 
     // Act
     int actual_ret = cplat_path_dirname(actual, sizeof(actual), &err,
-                                        "ab/c"); // [手順] - cplat_path_dirname(actual, 2, &err, "ab/c") を呼び出す。
+                                        "ab/c"); // [手順] - cplat_path_dirname() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -245,7 +242,7 @@ TEST_F(pathDirnameTest, returns_enametoolong_when_dot_does_not_fit)
 
     // Act
     int actual_ret = cplat_path_dirname(actual, sizeof(actual), &err,
-                                        "c"); // [手順] - cplat_path_dirname(actual, 1, &err, "c") を呼び出す。
+                                        "c"); // [手順] - cplat_path_dirname() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -269,7 +266,7 @@ TEST_F(pathDirnameTest, returns_enametoolong_when_root_does_not_fit)
 
     // Act
     int actual_ret = cplat_path_dirname(actual, sizeof(actual), &err,
-                                        "/name"); // [手順] - cplat_path_dirname(actual, 1, &err, "/name") を呼び出す。
+                                        "/name"); // [手順] - cplat_path_dirname() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -291,8 +288,8 @@ TEST_F(pathDirnameTest, allows_null_detail_out)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_dirname(actual, sizeof(actual), NULL,
-                                        "a/b"); // [手順] - cplat_path_dirname(actual, 1, NULL, "a/b") を呼び出す。
+    int actual_ret = cplat_path_dirname(actual, sizeof(actual), nullptr,
+                                        "a/b"); // [手順] - cplat_path_dirname() を呼び出す。
 
     // Assert
     EXPECT_EQ(

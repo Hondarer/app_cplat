@@ -47,7 +47,7 @@ TEST_F(stringCatalogVerifyTest, missing_entry_metadata)
 {
     // Arrange
     int actual_ret;
-    fake_catalog_set_brief(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, NULL);
+    fake_catalog_set_brief(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, nullptr);
 
     // Pre-Assert
 
@@ -69,7 +69,7 @@ TEST_F(stringCatalogVerifyTest, missing_details_is_allowed)
 {
     // Arrange
     int actual_ret;
-    fake_catalog_set_details(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, NULL);
+    fake_catalog_set_details(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, nullptr);
 
     // Pre-Assert
 
@@ -92,7 +92,7 @@ TEST_F(stringCatalogVerifyTest, missing_id_is_allowed)
 {
     // Arrange
     int actual_ret;
-    fake_catalog_set_id(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, NULL);
+    fake_catalog_set_id(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, nullptr);
 
     // Pre-Assert
 
@@ -115,7 +115,7 @@ TEST_F(stringCatalogVerifyTest, missing_argument_metadata)
 {
     // Arrange
     int actual_ret;
-    fake_catalog_set_argument_name(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, 0, NULL);
+    fake_catalog_set_argument_name(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, 0, nullptr);
 
     // Pre-Assert
 
@@ -137,7 +137,7 @@ TEST_F(stringCatalogVerifyTest, missing_argument_description)
 {
     // Arrange
     int actual_ret;
-    fake_catalog_set_argument_description(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, 0, NULL);
+    fake_catalog_set_argument_description(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, 0, nullptr);
 
     // Pre-Assert
 
@@ -159,7 +159,7 @@ TEST_F(stringCatalogVerifyTest, missing_argument_array)
 {
     // Arrange
     int actual_ret;
-    fake_catalog_set_arguments(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, NULL);
+    fake_catalog_set_arguments(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, nullptr);
 
     // Pre-Assert
 
@@ -230,8 +230,8 @@ TEST_F(stringCatalogVerifyTest, unused_argument_needs_no_metadata)
     // Arrange
     int actual_ret;
     fake_catalog_set_argument_kind(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, 1, CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED);
-    fake_catalog_set_argument_name(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, 1, NULL);
-    fake_catalog_set_argument_description(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, 1, NULL);
+    fake_catalog_set_argument_name(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, 1, nullptr);
+    fake_catalog_set_argument_description(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, 1, nullptr);
     fake_catalog_set_text(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL, "path {0}");
     fake_catalog_set_text(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE, "パス {0}");
     fake_catalog_set_text(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_LANGUAGE_ENGLISH, "path {0}");
@@ -279,7 +279,7 @@ TEST_F(stringCatalogVerifyTest, missing_localized_text_is_allowed)
 {
     // Arrange
     int actual_ret;
-    fake_catalog_set_text(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE, NULL);
+    fake_catalog_set_text(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE, nullptr);
 
     // Pre-Assert
 
@@ -299,7 +299,7 @@ TEST_F(stringCatalogVerifyTest, missing_neutral_text)
 {
     // Arrange
     int actual_ret;
-    fake_catalog_set_text(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL, NULL);
+    fake_catalog_set_text(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL, nullptr);
 
     // Pre-Assert
 
@@ -324,7 +324,7 @@ TEST_F(stringCatalogVerifyTest, missing_neutral_note)
 {
     // Arrange
     int actual_ret;
-    fake_catalog_set_note(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL, NULL);
+    fake_catalog_set_note(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL, nullptr);
 
     // Pre-Assert
 
@@ -449,14 +449,14 @@ TEST_F(stringCatalogVerifyTest, omitted_output_arguments)
     // Act
     fake_catalog_set_argument_count(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_ARGUMENT_MAX + 1);
     actual_ret_count =
-        cplat_string_catalog_verify(fake_catalog(), NULL,
-                                    NULL); // [手順] - 出力引数を省略して、引数個数が不正なカタログを確認する。
+        cplat_string_catalog_verify(fake_catalog(), nullptr,
+                                    nullptr); // [手順] - 出力引数を省略して、引数個数が不正なカタログを確認する。
 
     fake_catalog_reset();
-    fake_catalog_set_text(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL, NULL);
+    fake_catalog_set_text(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL, nullptr);
     actual_ret_text = cplat_string_catalog_verify(
-        fake_catalog(), NULL,
-        NULL); // [手順] - 出力引数を省略して、ニュートラル言語の書式が未設定のカタログを確認する。
+        fake_catalog(), nullptr,
+        nullptr); // [手順] - 出力引数を省略して、ニュートラル言語の書式が未設定のカタログを確認する。
 
     // Assert
     EXPECT_EQ(

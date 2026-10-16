@@ -58,7 +58,8 @@ TEST_F(hashtableKeyLengthTest, keys_with_different_lengths_are_distinct)
     size_t in_use = 0;
 
     fill_binary_config(&config, CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE);
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - バイナリ キーのテーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [状態] - バイナリ キーのテーブルを構築しておく。
 
     // Act
     int actual_ret_short = cplat_hashtable_add_with_key_length(
@@ -120,7 +121,8 @@ TEST_F(hashtableKeyLengthTest, key_length_variants_operate_on_the_given_length)
     uint64_t record_after_delete = 0;
 
     fill_binary_config(&config, CPLAT_HASHTABLE_TIMESTAMP_SCOPE_RECORD);
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - レコード時刻を持つテーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [状態] - レコード時刻を持つテーブルを構築しておく。
 
     // Act
     int actual_ret_upsert_insert =
@@ -168,7 +170,7 @@ TEST_F(hashtableKeyLengthTest, key_length_variants_operate_on_the_given_length)
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_value_ref); // [確認_正常系] - cplat_hashtable_find_value_ref_with_key_length() の戻り値が CPLAT_OK であること。
-    ASSERT_NE(nullptr, value_ref); // [確認_正常系] - value_ref が NULL でないこと。
+    ASSERT_NE(nullptr, value_ref); // [確認_正常系] - value_ref が nullptr 以外であること。
     int actual_value = 0;
     std::memcpy(&actual_value, value_ref, sizeof(actual_value));
     EXPECT_EQ(value_third,
@@ -180,7 +182,7 @@ TEST_F(hashtableKeyLengthTest, key_length_variants_operate_on_the_given_length)
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_timestamp_ref); // [確認_正常系] - cplat_hashtable_find_timestamp_ref_with_key_length() の戻り値が CPLAT_OK であること。
-    ASSERT_NE(nullptr, timestamp_ref); // [確認_正常系] - timestamp_ref が NULL でないこと。
+    ASSERT_NE(nullptr, timestamp_ref); // [確認_正常系] - timestamp_ref が nullptr 以外であること。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_timestamp_val); // [確認_正常系] - cplat_hashtable_find_timestamp_val_with_key_length() の戻り値が CPLAT_OK であること。
@@ -216,11 +218,13 @@ TEST_F(hashtableKeyLengthTest, insert_direct_and_copy_with_key_length)
     size_t required = 0;
 
     fill_binary_config(&config, CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE);
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - バイナリ キーのテーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [状態] - バイナリ キーのテーブルを構築しておく。
 
     // Act
-    int actual_ret_insert = cplat_hashtable_insert_direct_with_key_length(
-        ht, 3, k_short_key, sizeof(k_short_key), 1, &value, NULL, 0); // [手順] - レコード 3 へ短いキーを直接書き込む。
+    int actual_ret_insert =
+        cplat_hashtable_insert_direct_with_key_length(ht, 3, k_short_key, sizeof(k_short_key), 1, &value, nullptr,
+                                                      0); // [手順] - レコード 3 へ短いキーを直接書き込む。
     int actual_ret_copy = cplat_hashtable_find_value_copy_with_key_length(
         ht, k_short_key, sizeof(k_short_key), &copied, sizeof(copied), &required); // [手順] - 短いキーで値を複製する。
 
@@ -252,7 +256,8 @@ TEST_F(hashtableKeyLengthTest, get_key_returns_effective_length)
     uint64_t record = 0;
 
     fill_binary_config(&config, CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE);
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - バイナリ キーのテーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [状態] - バイナリ キーのテーブルを構築しておく。
     (void)cplat_hashtable_add_with_key_length(
         ht, k_short_key, sizeof(k_short_key), &value,
         CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [状態] - 短いキーを追加しておく。
@@ -269,7 +274,7 @@ TEST_F(hashtableKeyLengthTest, get_key_returns_effective_length)
     EXPECT_EQ(CPLAT_OK,
               actual_ret_ref); // [確認_正常系] - cplat_hashtable_get_key_ref() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(sizeof(k_short_key), key_length); // [確認_正常系] - key_length が 2 であること。
-    ASSERT_NE(nullptr, key_ref);                // [確認_正常系] - key_ref が NULL でないこと。
+    ASSERT_NE(nullptr, key_ref);                // [確認_正常系] - key_ref が nullptr 以外であること。
     EXPECT_EQ(
         0,
         std::memcmp(
@@ -300,7 +305,8 @@ TEST_F(hashtableKeyLengthTest, string_key_table_rejects_key_length_variants)
 
     fill_binary_config(&config, CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE);
     config.key_type = CPLAT_HASHTABLE_FIELD_FIXED_STRING;
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - 固定長文字列キーのテーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [状態] - 固定長文字列キーのテーブルを構築しておく。
     (void)cplat_hashtable_add(ht, "abc", &value,
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [状態] - キーを追加しておく。
 
@@ -343,7 +349,8 @@ TEST_F(hashtableKeyLengthTest, rejects_invalid_key_length_arguments)
     uint64_t record = 0;
 
     fill_binary_config(&config, CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE);
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - バイナリ キーのテーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [状態] - バイナリ キーのテーブルを構築しておく。
 
     // Act
     int actual_ret_add_long = cplat_hashtable_add_with_key_length(
@@ -352,10 +359,10 @@ TEST_F(hashtableKeyLengthTest, rejects_invalid_key_length_arguments)
     int actual_ret_find_long = cplat_hashtable_find_recno_with_key_length(
         ht, long_key, sizeof(long_key), &record); // [手順] - key_size を超える有効長で検索する。
     int actual_ret_null_ht =
-        cplat_hashtable_add_with_key_length(NULL, k_short_key, sizeof(k_short_key), &value,
+        cplat_hashtable_add_with_key_length(nullptr, k_short_key, sizeof(k_short_key), &value,
                                             CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - ht に NULL を渡す。
     int actual_ret_null_key =
-        cplat_hashtable_find_recno_with_key_length(ht, NULL, 0, &record); // [手順] - key に NULL を渡す。
+        cplat_hashtable_find_recno_with_key_length(ht, nullptr, 0, &record); // [手順] - key に NULL を渡す。
 
     // Assert
     EXPECT_EQ(
@@ -386,7 +393,8 @@ TEST_F(hashtableKeyLengthTest, accepts_zero_length_key)
     const unsigned char zeros[sizeof(k_full_key)] = {};
 
     fill_binary_config(&config, CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE);
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - バイナリ キーのテーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [状態] - バイナリ キーのテーブルを構築しておく。
 
     // Act
     int actual_ret_empty = cplat_hashtable_add_with_key_length(
@@ -426,7 +434,8 @@ TEST_F(hashtableKeyLengthTest, key_length_survives_attach_and_resize)
     const void *data = nullptr;
 
     fill_binary_config(&config, CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE);
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht); // [状態] - バイナリ キーのテーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [状態] - バイナリ キーのテーブルを構築しておく。
     (void)cplat_hashtable_add_with_key_length(
         ht, k_short_key, sizeof(k_short_key), &value,
         CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [状態] - 短いキーを追加しておく。
@@ -474,8 +483,9 @@ TEST_F(hashtableKeyLengthTest, validate_detects_broken_key_length)
     const int value = 1;
 
     fill_binary_config(&config, CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE);
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0, &ht_long); // [状態] - 有効長を壊すテーブルを構築しておく。
-    (void)cplat_hashtable_create(&config, NULL, 0, NULL, 0,
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht_long); // [状態] - 有効長を壊すテーブルを構築しておく。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
                                  &ht_padding); // [状態] - 0 埋めを壊すテーブルを構築しておく。
     (void)cplat_hashtable_add_with_key_length(
         ht_long, k_short_key, sizeof(k_short_key), &value,
