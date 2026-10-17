@@ -15,12 +15,18 @@ TEST(parseMockTest, without_mock_delegates_to_real)
     // Pre-Assert
 
     // Act
-    int actual_ret_int8 = cplat_parse_int8(&value_int8, "42", 10);       // [手順] - 文字列 42 を変換する。
-    int actual_ret_int16 = cplat_parse_int16(&value_int16, "42", 10);    // [手順] - 文字列 42 を変換する。
-    int actual_ret_int32 = cplat_parse_int32(&value_int32, "42", 10);    // [手順] - 文字列 42 を変換する。
-    int actual_ret_uint8 = cplat_parse_uint8(&value_uint8, "42", 10);    // [手順] - 文字列 42 を変換する。
-    int actual_ret_uint16 = cplat_parse_uint16(&value_uint16, "42", 10); // [手順] - 文字列 42 を変換する。
-    int actual_ret_uint32 = cplat_parse_uint32(&value_uint32, "42", 10); // [手順] - 文字列 42 を変換する。
+    int actual_ret_int8 =
+        cplat_parse_int8(&value_int8, "42", 10); // [手順] - 文字列 "42" を指定して cplat_parse_int8() を呼び出す。
+    int actual_ret_int16 =
+        cplat_parse_int16(&value_int16, "42", 10); // [手順] - 文字列 "42" を指定して cplat_parse_int16() を呼び出す。
+    int actual_ret_int32 =
+        cplat_parse_int32(&value_int32, "42", 10); // [手順] - 文字列 "42" を指定して cplat_parse_int32() を呼び出す。
+    int actual_ret_uint8 =
+        cplat_parse_uint8(&value_uint8, "42", 10); // [手順] - 文字列 "42" を指定して cplat_parse_uint8() を呼び出す。
+    int actual_ret_uint16 = cplat_parse_uint16(&value_uint16, "42",
+                                               10); // [手順] - 文字列 "42" を指定して cplat_parse_uint16() を呼び出す。
+    int actual_ret_uint32 = cplat_parse_uint32(&value_uint32, "42",
+                                               10); // [手順] - 文字列 "42" を指定して cplat_parse_uint32() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_int8);               // [確認_正常系] - int8 の変換が成功すること。
@@ -52,12 +58,18 @@ TEST(parseMockTest, injected_mock_delegates_to_real)
     // Pre-Assert
 
     // Act
-    int actual_ret_int8 = cplat_parse_int8(&value_int8, "42", 10);       // [手順] - 文字列 42 を変換する。
-    int actual_ret_int16 = cplat_parse_int16(&value_int16, "42", 10);    // [手順] - 文字列 42 を変換する。
-    int actual_ret_int32 = cplat_parse_int32(&value_int32, "42", 10);    // [手順] - 文字列 42 を変換する。
-    int actual_ret_uint8 = cplat_parse_uint8(&value_uint8, "42", 10);    // [手順] - 文字列 42 を変換する。
-    int actual_ret_uint16 = cplat_parse_uint16(&value_uint16, "42", 10); // [手順] - 文字列 42 を変換する。
-    int actual_ret_uint32 = cplat_parse_uint32(&value_uint32, "42", 10); // [手順] - 文字列 42 を変換する。
+    int actual_ret_int8 =
+        cplat_parse_int8(&value_int8, "42", 10); // [手順] - 文字列 "42" を指定して cplat_parse_int8() を呼び出す。
+    int actual_ret_int16 =
+        cplat_parse_int16(&value_int16, "42", 10); // [手順] - 文字列 "42" を指定して cplat_parse_int16() を呼び出す。
+    int actual_ret_int32 =
+        cplat_parse_int32(&value_int32, "42", 10); // [手順] - 文字列 "42" を指定して cplat_parse_int32() を呼び出す。
+    int actual_ret_uint8 =
+        cplat_parse_uint8(&value_uint8, "42", 10); // [手順] - 文字列 "42" を指定して cplat_parse_uint8() を呼び出す。
+    int actual_ret_uint16 = cplat_parse_uint16(&value_uint16, "42",
+                                               10); // [手順] - 文字列 "42" を指定して cplat_parse_uint16() を呼び出す。
+    int actual_ret_uint32 = cplat_parse_uint32(&value_uint32, "42",
+                                               10); // [手順] - 文字列 "42" を指定して cplat_parse_uint32() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_int8);               // [確認_正常系] - int8 の変換が成功すること。
@@ -90,14 +102,22 @@ TEST(parseMockTest, basic_types_without_mock_delegate_to_real)
     // Pre-Assert
 
     // Act
-    int actual_ret_char = cplat_parse_char(&value_char, "42", 10);                // [手順] - 文字列を変換する。
-    int actual_ret_schar = cplat_parse_schar(&value_schar, "42", 10);             // [手順] - 文字列を変換する。
-    int actual_ret_uchar = cplat_parse_uchar(&value_uchar, "42", 10);             // [手順] - 文字列を変換する。
-    int actual_ret_short = cplat_parse_short(&value_short, "42", 10);             // [手順] - 文字列を変換する。
-    int actual_ret_ushort = cplat_parse_ushort(&value_ushort, "42", 10);          // [手順] - 文字列を変換する。
-    int actual_ret_uint = cplat_parse_uint(&value_uint, "42", 10);                // [手順] - 文字列を変換する。
-    int actual_ret_longlong = cplat_parse_longlong(&value_longlong, "42", 10);    // [手順] - 文字列を変換する。
-    int actual_ret_ulonglong = cplat_parse_ulonglong(&value_ulonglong, "42", 10); // [手順] - 文字列を変換する。
+    int actual_ret_char =
+        cplat_parse_char(&value_char, "42", 10); // [手順] - 文字列を指定して cplat_parse_char() を呼び出す。
+    int actual_ret_schar =
+        cplat_parse_schar(&value_schar, "42", 10); // [手順] - 文字列を指定して cplat_parse_schar() を呼び出す。
+    int actual_ret_uchar =
+        cplat_parse_uchar(&value_uchar, "42", 10); // [手順] - 文字列を指定して cplat_parse_uchar() を呼び出す。
+    int actual_ret_short =
+        cplat_parse_short(&value_short, "42", 10); // [手順] - 文字列を指定して cplat_parse_short() を呼び出す。
+    int actual_ret_ushort =
+        cplat_parse_ushort(&value_ushort, "42", 10); // [手順] - 文字列を指定して cplat_parse_ushort() を呼び出す。
+    int actual_ret_uint =
+        cplat_parse_uint(&value_uint, "42", 10); // [手順] - 文字列を指定して cplat_parse_uint() を呼び出す。
+    int actual_ret_longlong = cplat_parse_longlong(&value_longlong, "42",
+                                                   10); // [手順] - 文字列を指定して cplat_parse_longlong() を呼び出す。
+    int actual_ret_ulonglong = cplat_parse_ulonglong(
+        &value_ulonglong, "42", 10); // [手順] - 文字列を指定して cplat_parse_ulonglong() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_char);                            // [確認_正常系] - 変換が成功すること。
@@ -135,14 +155,22 @@ TEST(parseMockTest, basic_types_injected_mock_delegate_to_real)
     // Pre-Assert
 
     // Act
-    int actual_ret_char = cplat_parse_char(&value_char, "42", 10);                // [手順] - 文字列を変換する。
-    int actual_ret_schar = cplat_parse_schar(&value_schar, "42", 10);             // [手順] - 文字列を変換する。
-    int actual_ret_uchar = cplat_parse_uchar(&value_uchar, "42", 10);             // [手順] - 文字列を変換する。
-    int actual_ret_short = cplat_parse_short(&value_short, "42", 10);             // [手順] - 文字列を変換する。
-    int actual_ret_ushort = cplat_parse_ushort(&value_ushort, "42", 10);          // [手順] - 文字列を変換する。
-    int actual_ret_uint = cplat_parse_uint(&value_uint, "42", 10);                // [手順] - 文字列を変換する。
-    int actual_ret_longlong = cplat_parse_longlong(&value_longlong, "42", 10);    // [手順] - 文字列を変換する。
-    int actual_ret_ulonglong = cplat_parse_ulonglong(&value_ulonglong, "42", 10); // [手順] - 文字列を変換する。
+    int actual_ret_char =
+        cplat_parse_char(&value_char, "42", 10); // [手順] - 文字列を指定して cplat_parse_char() を呼び出す。
+    int actual_ret_schar =
+        cplat_parse_schar(&value_schar, "42", 10); // [手順] - 文字列を指定して cplat_parse_schar() を呼び出す。
+    int actual_ret_uchar =
+        cplat_parse_uchar(&value_uchar, "42", 10); // [手順] - 文字列を指定して cplat_parse_uchar() を呼び出す。
+    int actual_ret_short =
+        cplat_parse_short(&value_short, "42", 10); // [手順] - 文字列を指定して cplat_parse_short() を呼び出す。
+    int actual_ret_ushort =
+        cplat_parse_ushort(&value_ushort, "42", 10); // [手順] - 文字列を指定して cplat_parse_ushort() を呼び出す。
+    int actual_ret_uint =
+        cplat_parse_uint(&value_uint, "42", 10); // [手順] - 文字列を指定して cplat_parse_uint() を呼び出す。
+    int actual_ret_longlong = cplat_parse_longlong(&value_longlong, "42",
+                                                   10); // [手順] - 文字列を指定して cplat_parse_longlong() を呼び出す。
+    int actual_ret_ulonglong = cplat_parse_ulonglong(
+        &value_ulonglong, "42", 10); // [手順] - 文字列を指定して cplat_parse_ulonglong() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_char);                            // [確認_正常系] - 変換が成功すること。

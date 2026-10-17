@@ -35,7 +35,8 @@ TEST(basicTypeParseTest, char_valid_values)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_char(&values[i], cases[i].text, cases[i].base); // [手順] - 各入力を変換する。
+        actual_ret[i] = cplat_parse_char(&values[i], cases[i].text,
+                                         cases[i].base); // [手順] - 各入力を指定して cplat_parse_char() を呼び出す。
     }
 
     // Assert
@@ -70,7 +71,7 @@ TEST(basicTypeParseTest, char_invalid_values_preserve_output)
         {"1", 1, CPLAT_ERR_INVALID_ARGUMENT},
         {"1", 37, CPLAT_ERR_INVALID_ARGUMENT},
         {"-x", 1, CPLAT_ERR_INVALID_ARGUMENT},
-    }}; // [状態] - 範囲外、不正文字列、NULL、無効基数を用意する。
+    }}; // [状態] - 範囲外、不正文字列、nullptr、無効基数を用意する。
     std::array<char, 12> values;
     values.fill(static_cast<char>(42)); // [状態] - 出力を 42 で初期化する。
     std::array<int, 12> actual_ret = {};
@@ -80,7 +81,8 @@ TEST(basicTypeParseTest, char_invalid_values_preserve_output)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_char(&values[i], cases[i].text, cases[i].base); // [手順] - 不正入力を変換する。
+        actual_ret[i] = cplat_parse_char(&values[i], cases[i].text,
+                                         cases[i].base); // [手順] - 不正入力を指定して cplat_parse_char() を呼び出す。
     }
 
     // Assert
@@ -100,7 +102,8 @@ TEST(basicTypeParseTest, char_null_output)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_parse_char(nullptr, "42", 10); // [手順] - NULL の出力先を指定する。
+    int actual_ret =
+        cplat_parse_char(nullptr, "42", 10); // [手順] - 出力先に nullptr を指定して cplat_parse_char() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - 無効引数エラーを返すこと。
@@ -137,7 +140,8 @@ TEST(basicTypeParseTest, schar_valid_values)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_schar(&values[i], cases[i].text, cases[i].base); // [手順] - 各入力を変換する。
+        actual_ret[i] = cplat_parse_schar(&values[i], cases[i].text,
+                                          cases[i].base); // [手順] - 各入力を指定して cplat_parse_schar() を呼び出す。
     }
 
     // Assert
@@ -172,7 +176,7 @@ TEST(basicTypeParseTest, schar_invalid_values_preserve_output)
         {"1", 1, CPLAT_ERR_INVALID_ARGUMENT},
         {"1", 37, CPLAT_ERR_INVALID_ARGUMENT},
         {"-x", 1, CPLAT_ERR_INVALID_ARGUMENT},
-    }}; // [状態] - 範囲外、不正文字列、NULL、無効基数を用意する。
+    }}; // [状態] - 範囲外、不正文字列、nullptr、無効基数を用意する。
     std::array<signed char, 12> values;
     values.fill(static_cast<signed char>(42)); // [状態] - 出力を 42 で初期化する。
     std::array<int, 12> actual_ret = {};
@@ -182,7 +186,8 @@ TEST(basicTypeParseTest, schar_invalid_values_preserve_output)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_schar(&values[i], cases[i].text, cases[i].base); // [手順] - 不正入力を変換する。
+        actual_ret[i] = cplat_parse_schar(
+            &values[i], cases[i].text, cases[i].base); // [手順] - 不正入力を指定して cplat_parse_schar() を呼び出す。
     }
 
     // Assert
@@ -202,7 +207,8 @@ TEST(basicTypeParseTest, schar_null_output)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_parse_schar(nullptr, "42", 10); // [手順] - NULL の出力先を指定する。
+    int actual_ret =
+        cplat_parse_schar(nullptr, "42", 10); // [手順] - 出力先に nullptr を指定して cplat_parse_schar() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - 無効引数エラーを返すこと。
@@ -238,7 +244,8 @@ TEST(basicTypeParseTest, uchar_valid_values)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_uchar(&values[i], cases[i].text, cases[i].base); // [手順] - 各入力を変換する。
+        actual_ret[i] = cplat_parse_uchar(&values[i], cases[i].text,
+                                          cases[i].base); // [手順] - 各入力を指定して cplat_parse_uchar() を呼び出す。
     }
 
     // Assert
@@ -276,7 +283,7 @@ TEST(basicTypeParseTest, uchar_invalid_values_preserve_output)
         {"-0", 10, CPLAT_ERR_OUT_OF_RANGE},
         {" \t-1", 10, CPLAT_ERR_OUT_OF_RANGE},
         {"-x", 10, CPLAT_ERR_OUT_OF_RANGE},
-    }}; // [状態] - 範囲外、不正文字列、NULL、無効基数を用意する。
+    }}; // [状態] - 範囲外、不正文字列、nullptr、無効基数を用意する。
     std::array<unsigned char, 15> values;
     values.fill(static_cast<unsigned char>(42)); // [状態] - 出力を 42 で初期化する。
     std::array<int, 15> actual_ret = {};
@@ -286,7 +293,8 @@ TEST(basicTypeParseTest, uchar_invalid_values_preserve_output)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_uchar(&values[i], cases[i].text, cases[i].base); // [手順] - 不正入力を変換する。
+        actual_ret[i] = cplat_parse_uchar(
+            &values[i], cases[i].text, cases[i].base); // [手順] - 不正入力を指定して cplat_parse_uchar() を呼び出す。
     }
 
     // Assert
@@ -306,7 +314,8 @@ TEST(basicTypeParseTest, uchar_null_output)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_parse_uchar(nullptr, "42", 10); // [手順] - NULL の出力先を指定する。
+    int actual_ret =
+        cplat_parse_uchar(nullptr, "42", 10); // [手順] - 出力先に nullptr を指定して cplat_parse_uchar() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - 無効引数エラーを返すこと。
@@ -343,7 +352,8 @@ TEST(basicTypeParseTest, short_valid_values)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_short(&values[i], cases[i].text, cases[i].base); // [手順] - 各入力を変換する。
+        actual_ret[i] = cplat_parse_short(&values[i], cases[i].text,
+                                          cases[i].base); // [手順] - 各入力を指定して cplat_parse_short() を呼び出す。
     }
 
     // Assert
@@ -378,7 +388,7 @@ TEST(basicTypeParseTest, short_invalid_values_preserve_output)
         {"1", 1, CPLAT_ERR_INVALID_ARGUMENT},
         {"1", 37, CPLAT_ERR_INVALID_ARGUMENT},
         {"-x", 1, CPLAT_ERR_INVALID_ARGUMENT},
-    }}; // [状態] - 範囲外、不正文字列、NULL、無効基数を用意する。
+    }}; // [状態] - 範囲外、不正文字列、nullptr、無効基数を用意する。
     std::array<short, 12> values;
     values.fill(static_cast<short>(42)); // [状態] - 出力を 42 で初期化する。
     std::array<int, 12> actual_ret = {};
@@ -388,7 +398,8 @@ TEST(basicTypeParseTest, short_invalid_values_preserve_output)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_short(&values[i], cases[i].text, cases[i].base); // [手順] - 不正入力を変換する。
+        actual_ret[i] = cplat_parse_short(
+            &values[i], cases[i].text, cases[i].base); // [手順] - 不正入力を指定して cplat_parse_short() を呼び出す。
     }
 
     // Assert
@@ -408,7 +419,8 @@ TEST(basicTypeParseTest, short_null_output)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_parse_short(nullptr, "42", 10); // [手順] - NULL の出力先を指定する。
+    int actual_ret =
+        cplat_parse_short(nullptr, "42", 10); // [手順] - 出力先に nullptr を指定して cplat_parse_short() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - 無効引数エラーを返すこと。
@@ -444,7 +456,8 @@ TEST(basicTypeParseTest, ushort_valid_values)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_ushort(&values[i], cases[i].text, cases[i].base); // [手順] - 各入力を変換する。
+        actual_ret[i] = cplat_parse_ushort(
+            &values[i], cases[i].text, cases[i].base); // [手順] - 各入力を指定して cplat_parse_ushort() を呼び出す。
     }
 
     // Assert
@@ -482,7 +495,7 @@ TEST(basicTypeParseTest, ushort_invalid_values_preserve_output)
         {"-0", 10, CPLAT_ERR_OUT_OF_RANGE},
         {" \t-1", 10, CPLAT_ERR_OUT_OF_RANGE},
         {"-x", 10, CPLAT_ERR_OUT_OF_RANGE},
-    }}; // [状態] - 範囲外、不正文字列、NULL、無効基数を用意する。
+    }}; // [状態] - 範囲外、不正文字列、nullptr、無効基数を用意する。
     std::array<unsigned short, 15> values;
     values.fill(static_cast<unsigned short>(42)); // [状態] - 出力を 42 で初期化する。
     std::array<int, 15> actual_ret = {};
@@ -492,7 +505,8 @@ TEST(basicTypeParseTest, ushort_invalid_values_preserve_output)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_ushort(&values[i], cases[i].text, cases[i].base); // [手順] - 不正入力を変換する。
+        actual_ret[i] = cplat_parse_ushort(
+            &values[i], cases[i].text, cases[i].base); // [手順] - 不正入力を指定して cplat_parse_ushort() を呼び出す。
     }
 
     // Assert
@@ -512,7 +526,8 @@ TEST(basicTypeParseTest, ushort_null_output)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_parse_ushort(nullptr, "42", 10); // [手順] - NULL の出力先を指定する。
+    int actual_ret =
+        cplat_parse_ushort(nullptr, "42", 10); // [手順] - 出力先に nullptr を指定して cplat_parse_ushort() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - 無効引数エラーを返すこと。
@@ -549,7 +564,8 @@ TEST(basicTypeParseTest, int_valid_values)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_int(&values[i], cases[i].text, cases[i].base); // [手順] - 各入力を変換する。
+        actual_ret[i] = cplat_parse_int(&values[i], cases[i].text,
+                                        cases[i].base); // [手順] - 各入力を指定して cplat_parse_int() を呼び出す。
     }
 
     // Assert
@@ -584,7 +600,7 @@ TEST(basicTypeParseTest, int_invalid_values_preserve_output)
         {"1", 1, CPLAT_ERR_INVALID_ARGUMENT},
         {"1", 37, CPLAT_ERR_INVALID_ARGUMENT},
         {"-x", 1, CPLAT_ERR_INVALID_ARGUMENT},
-    }}; // [状態] - 範囲外、不正文字列、NULL、無効基数を用意する。
+    }}; // [状態] - 範囲外、不正文字列、nullptr、無効基数を用意する。
     std::array<int, 12> values;
     values.fill(static_cast<int>(42)); // [状態] - 出力を 42 で初期化する。
     std::array<int, 12> actual_ret = {};
@@ -594,7 +610,8 @@ TEST(basicTypeParseTest, int_invalid_values_preserve_output)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_int(&values[i], cases[i].text, cases[i].base); // [手順] - 不正入力を変換する。
+        actual_ret[i] = cplat_parse_int(&values[i], cases[i].text,
+                                        cases[i].base); // [手順] - 不正入力を指定して cplat_parse_int() を呼び出す。
     }
 
     // Assert
@@ -614,7 +631,8 @@ TEST(basicTypeParseTest, int_null_output)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_parse_int(nullptr, "42", 10); // [手順] - NULL の出力先を指定する。
+    int actual_ret =
+        cplat_parse_int(nullptr, "42", 10); // [手順] - 出力先に nullptr を指定して cplat_parse_int() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - 無効引数エラーを返すこと。
@@ -650,7 +668,8 @@ TEST(basicTypeParseTest, uint_valid_values)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_uint(&values[i], cases[i].text, cases[i].base); // [手順] - 各入力を変換する。
+        actual_ret[i] = cplat_parse_uint(&values[i], cases[i].text,
+                                         cases[i].base); // [手順] - 各入力を指定して cplat_parse_uint() を呼び出す。
     }
 
     // Assert
@@ -688,7 +707,7 @@ TEST(basicTypeParseTest, uint_invalid_values_preserve_output)
         {"-0", 10, CPLAT_ERR_OUT_OF_RANGE},
         {" \t-1", 10, CPLAT_ERR_OUT_OF_RANGE},
         {"-x", 10, CPLAT_ERR_OUT_OF_RANGE},
-    }}; // [状態] - 範囲外、不正文字列、NULL、無効基数を用意する。
+    }}; // [状態] - 範囲外、不正文字列、nullptr、無効基数を用意する。
     std::array<unsigned int, 15> values;
     values.fill(static_cast<unsigned int>(42)); // [状態] - 出力を 42 で初期化する。
     std::array<int, 15> actual_ret = {};
@@ -698,7 +717,8 @@ TEST(basicTypeParseTest, uint_invalid_values_preserve_output)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_uint(&values[i], cases[i].text, cases[i].base); // [手順] - 不正入力を変換する。
+        actual_ret[i] = cplat_parse_uint(&values[i], cases[i].text,
+                                         cases[i].base); // [手順] - 不正入力を指定して cplat_parse_uint() を呼び出す。
     }
 
     // Assert
@@ -718,7 +738,8 @@ TEST(basicTypeParseTest, uint_null_output)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_parse_uint(nullptr, "42", 10); // [手順] - NULL の出力先を指定する。
+    int actual_ret =
+        cplat_parse_uint(nullptr, "42", 10); // [手順] - 出力先に nullptr を指定して cplat_parse_uint() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - 無効引数エラーを返すこと。
@@ -755,7 +776,8 @@ TEST(basicTypeParseTest, longlong_valid_values)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_longlong(&values[i], cases[i].text, cases[i].base); // [手順] - 各入力を変換する。
+        actual_ret[i] = cplat_parse_longlong(
+            &values[i], cases[i].text, cases[i].base); // [手順] - 各入力を指定して cplat_parse_longlong() を呼び出す。
     }
 
     // Assert
@@ -790,7 +812,7 @@ TEST(basicTypeParseTest, longlong_invalid_values_preserve_output)
         {"1", 1, CPLAT_ERR_INVALID_ARGUMENT},
         {"1", 37, CPLAT_ERR_INVALID_ARGUMENT},
         {"-x", 1, CPLAT_ERR_INVALID_ARGUMENT},
-    }}; // [状態] - 範囲外、不正文字列、NULL、無効基数を用意する。
+    }}; // [状態] - 範囲外、不正文字列、nullptr、無効基数を用意する。
     std::array<long long, 12> values;
     values.fill(static_cast<long long>(42)); // [状態] - 出力を 42 で初期化する。
     std::array<int, 12> actual_ret = {};
@@ -800,7 +822,9 @@ TEST(basicTypeParseTest, longlong_invalid_values_preserve_output)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_longlong(&values[i], cases[i].text, cases[i].base); // [手順] - 不正入力を変換する。
+        actual_ret[i] =
+            cplat_parse_longlong(&values[i], cases[i].text,
+                                 cases[i].base); // [手順] - 不正入力を指定して cplat_parse_longlong() を呼び出す。
     }
 
     // Assert
@@ -820,7 +844,8 @@ TEST(basicTypeParseTest, longlong_null_output)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_parse_longlong(nullptr, "42", 10); // [手順] - NULL の出力先を指定する。
+    int actual_ret = cplat_parse_longlong(
+        nullptr, "42", 10); // [手順] - 出力先に nullptr を指定して cplat_parse_longlong() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - 無効引数エラーを返すこと。
@@ -856,7 +881,8 @@ TEST(basicTypeParseTest, ulonglong_valid_values)
     // Act
     for (size_t i = 0; i < cases.size(); i++)
     {
-        actual_ret[i] = cplat_parse_ulonglong(&values[i], cases[i].text, cases[i].base); // [手順] - 各入力を変換する。
+        actual_ret[i] = cplat_parse_ulonglong(
+            &values[i], cases[i].text, cases[i].base); // [手順] - 各入力を指定して cplat_parse_ulonglong() を呼び出す。
     }
 
     // Assert
@@ -894,7 +920,7 @@ TEST(basicTypeParseTest, ulonglong_invalid_values_preserve_output)
         {"-0", 10, CPLAT_ERR_OUT_OF_RANGE},
         {" \t-1", 10, CPLAT_ERR_OUT_OF_RANGE},
         {"-x", 10, CPLAT_ERR_OUT_OF_RANGE},
-    }}; // [状態] - 範囲外、不正文字列、NULL、無効基数を用意する。
+    }}; // [状態] - 範囲外、不正文字列、nullptr、無効基数を用意する。
     std::array<unsigned long long, 15> values;
     values.fill(static_cast<unsigned long long>(42)); // [状態] - 出力を 42 で初期化する。
     std::array<int, 15> actual_ret = {};
@@ -905,7 +931,8 @@ TEST(basicTypeParseTest, ulonglong_invalid_values_preserve_output)
     for (size_t i = 0; i < cases.size(); i++)
     {
         actual_ret[i] =
-            cplat_parse_ulonglong(&values[i], cases[i].text, cases[i].base); // [手順] - 不正入力を変換する。
+            cplat_parse_ulonglong(&values[i], cases[i].text,
+                                  cases[i].base); // [手順] - 不正入力を指定して cplat_parse_ulonglong() を呼び出す。
     }
 
     // Assert
@@ -925,7 +952,8 @@ TEST(basicTypeParseTest, ulonglong_null_output)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_parse_ulonglong(nullptr, "42", 10); // [手順] - NULL の出力先を指定する。
+    int actual_ret = cplat_parse_ulonglong(
+        nullptr, "42", 10); // [手順] - 出力先に nullptr を指定して cplat_parse_ulonglong() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret); // [確認_異常系] - 無効引数エラーを返すこと。
