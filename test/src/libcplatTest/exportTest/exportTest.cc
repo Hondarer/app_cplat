@@ -405,6 +405,20 @@
     EXPORT_ENTRY(cplat_setenv, \
                  int(CPLAT_API *)(const char *name, const char *value, int overwrite, cplat_error *detail_out)) \
     EXPORT_ENTRY(cplat_unsetenv, int(CPLAT_API *)(const char *name, cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_parse_char, int(CPLAT_API *)(char *value_out, const char *text, int base)) \
+    EXPORT_ENTRY(cplat_parse_schar, int(CPLAT_API *)(signed char *value_out, const char *text, int base)) \
+    EXPORT_ENTRY(cplat_parse_uchar, int(CPLAT_API *)(unsigned char *value_out, const char *text, int base)) \
+    EXPORT_ENTRY(cplat_parse_short, int(CPLAT_API *)(short *value_out, const char *text, int base)) \
+    EXPORT_ENTRY(cplat_parse_ushort, int(CPLAT_API *)(unsigned short *value_out, const char *text, int base)) \
+    EXPORT_ENTRY(cplat_parse_uint, int(CPLAT_API *)(unsigned int *value_out, const char *text, int base)) \
+    EXPORT_ENTRY(cplat_parse_longlong, int(CPLAT_API *)(long long *value_out, const char *text, int base)) \
+    EXPORT_ENTRY(cplat_parse_ulonglong, int(CPLAT_API *)(unsigned long long *value_out, const char *text, int base)) \
+    EXPORT_ENTRY(cplat_parse_int8, int(CPLAT_API *)(int8_t *value_out, const char *text, int base)) \
+    EXPORT_ENTRY(cplat_parse_int16, int(CPLAT_API *)(int16_t *value_out, const char *text, int base)) \
+    EXPORT_ENTRY(cplat_parse_int32, int(CPLAT_API *)(int32_t *value_out, const char *text, int base)) \
+    EXPORT_ENTRY(cplat_parse_uint8, int(CPLAT_API *)(uint8_t *value_out, const char *text, int base)) \
+    EXPORT_ENTRY(cplat_parse_uint16, int(CPLAT_API *)(uint16_t *value_out, const char *text, int base)) \
+    EXPORT_ENTRY(cplat_parse_uint32, int(CPLAT_API *)(uint32_t *value_out, const char *text, int base)) \
     EXPORT_ENTRY(cplat_parse_int64, int(CPLAT_API *)(int64_t *value_out, const char *text, int base)) \
     EXPORT_ENTRY(cplat_parse_uint64, int(CPLAT_API *)(uint64_t *value_out, const char *text, int base)) \
     EXPORT_ENTRY(cplat_parse_int, int(CPLAT_API *)(int *value_out, const char *text, int base)) \

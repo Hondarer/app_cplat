@@ -62,7 +62,17 @@ Table: 標準の書式化・行入力 API と cplat 代替関数
 
 Table: 標準数値変換 API と cplat 代替関数
 
-`cplat_parse_uint64` は先頭の符号 `'-'` を範囲外エラーとして拒否します。  
+固定幅整数には、符号付きの `cplat_parse_int8` / `cplat_parse_int16` / `cplat_parse_int32` / `cplat_parse_int64` と、符号なしの `cplat_parse_uint8` / `cplat_parse_uint16` / `cplat_parse_uint32` / `cplat_parse_uint64` を使用します。  
+基本整数型には `cplat_parse_char` / `cplat_parse_schar` / `cplat_parse_uchar`、`cplat_parse_short` / `cplat_parse_ushort`、`cplat_parse_int` / `cplat_parse_uint`、`cplat_parse_longlong` / `cplat_parse_ulonglong` を使用します。  
+基本型の API は対応する固定幅整数の API へ委譲し、最終的な解析は符号付き・符号なしの 64 bit で行います。  
+char 系は 8 bit、short 系は 16 bit、int 系は 32 bit、long long 系は 64 bit とし、char は符号付きです。  
+対象環境は x86_64 の Linux/GCC と Windows/MSVC です。  
+基本整数型への変換は、失敗時に出力先を変更しません。
+
+8 / 16 / 32 bit の変換は、値が型の範囲に収まることを確認し、成功時だけ出力先を更新します。
+
+`cplat_parse_uint8` / `cplat_parse_uint16` / `cplat_parse_uint32` / `cplat_parse_uint64` は、先頭空白の後の負号を、`"-0"` も含めて範囲外エラーとして拒否します。
+
 `strtoull` が負値を符号なしの折り返し値として受け付ける挙動とは異なります。  
 幅が処理系に依存する `long` を返す変換 API は提供しません。
 

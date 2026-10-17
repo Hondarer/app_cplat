@@ -21,6 +21,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* 基本整数型 API の委譲先と値域が一致することを保証する。 */
+_Static_assert(CHAR_BIT == 8 && CHAR_MIN == INT8_MIN && CHAR_MAX == INT8_MAX, "cplat: char must be signed 8-bit");
+_Static_assert(SCHAR_MIN == INT8_MIN && SCHAR_MAX == INT8_MAX && UCHAR_MAX == UINT8_MAX,
+               "cplat: signed/unsigned char must be 8-bit");
+_Static_assert(SHRT_MIN == INT16_MIN && SHRT_MAX == INT16_MAX && USHRT_MAX == UINT16_MAX,
+               "cplat: short must be 16-bit");
+_Static_assert(INT_MIN == INT32_MIN && INT_MAX == INT32_MAX && UINT_MAX == UINT32_MAX, "cplat: int must be 32-bit");
+_Static_assert(LLONG_MIN == INT64_MIN && LLONG_MAX == INT64_MAX && ULLONG_MAX == UINT64_MAX,
+               "cplat: long long must be 64-bit");
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_getenv(const char *name, char *buf, const size_t buf_size, int *exists_out, cplat_error *detail_out)
@@ -298,9 +308,9 @@ int cplat_parse_uint64(uint64_t *value_out, const char *text, const int base)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_parse_int(int *value_out, const char *text, const int base)
+int cplat_parse_int8(int8_t *value_out, const char *text, const int base)
 {
-    int64_t parsed;
+    int64_t value;
     int ret;
 
     if (value_out == NULL)
@@ -308,19 +318,354 @@ int cplat_parse_int(int *value_out, const char *text, const int base)
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    parsed = 0;
-    ret = cplat_parse_int64(&parsed, text, base);
+    ret = cplat_parse_int64(&value, text, base);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
-    if ((parsed < (int64_t)INT_MIN) || (parsed > (int64_t)INT_MAX))
+    if ((value < (int64_t)INT8_MIN) || (value > (int64_t)INT8_MAX))
     {
         return CPLAT_ERR_OUT_OF_RANGE;
     }
 
-    *value_out = (int)parsed;
+    *value_out = (int8_t)value;
+    return CPLAT_OK;
+}
 
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_parse_int16(int16_t *value_out, const char *text, const int base)
+{
+    int64_t value;
+    int ret;
+
+    if (value_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = cplat_parse_int64(&value, text, base);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+    if ((value < (int64_t)INT16_MIN) || (value > (int64_t)INT16_MAX))
+    {
+        return CPLAT_ERR_OUT_OF_RANGE;
+    }
+
+    *value_out = (int16_t)value;
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_parse_int32(int32_t *value_out, const char *text, const int base)
+{
+    int64_t value;
+    int ret;
+
+    if (value_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = cplat_parse_int64(&value, text, base);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+    if ((value < (int64_t)INT32_MIN) || (value > (int64_t)INT32_MAX))
+    {
+        return CPLAT_ERR_OUT_OF_RANGE;
+    }
+
+    *value_out = (int32_t)value;
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_parse_uint8(uint8_t *value_out, const char *text, const int base)
+{
+    uint64_t value;
+    int ret;
+
+    if (value_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = cplat_parse_uint64(&value, text, base);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+    if (value > (uint64_t)UINT8_MAX)
+    {
+        return CPLAT_ERR_OUT_OF_RANGE;
+    }
+
+    *value_out = (uint8_t)value;
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_parse_uint16(uint16_t *value_out, const char *text, const int base)
+{
+    uint64_t value;
+    int ret;
+
+    if (value_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = cplat_parse_uint64(&value, text, base);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+    if (value > (uint64_t)UINT16_MAX)
+    {
+        return CPLAT_ERR_OUT_OF_RANGE;
+    }
+
+    *value_out = (uint16_t)value;
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_parse_uint32(uint32_t *value_out, const char *text, const int base)
+{
+    uint64_t value;
+    int ret;
+
+    if (value_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = cplat_parse_uint64(&value, text, base);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+    if (value > (uint64_t)UINT32_MAX)
+    {
+        return CPLAT_ERR_OUT_OF_RANGE;
+    }
+
+    *value_out = (uint32_t)value;
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_parse_char(char *value_out, const char *text, const int base)
+{
+    int8_t value;
+    int ret;
+
+    if (value_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = cplat_parse_int8(&value, text, base);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
+    *value_out = (char)value;
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_parse_schar(signed char *value_out, const char *text, const int base)
+{
+    int8_t value;
+    int ret;
+
+    if (value_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = cplat_parse_int8(&value, text, base);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
+    *value_out = (signed char)value;
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_parse_uchar(unsigned char *value_out, const char *text, const int base)
+{
+    uint8_t value;
+    int ret;
+
+    if (value_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = cplat_parse_uint8(&value, text, base);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
+    *value_out = (unsigned char)value;
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_parse_short(short *value_out, const char *text, const int base)
+{
+    int16_t value;
+    int ret;
+
+    if (value_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = cplat_parse_int16(&value, text, base);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
+    *value_out = (short)value;
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_parse_ushort(unsigned short *value_out, const char *text, const int base)
+{
+    uint16_t value;
+    int ret;
+
+    if (value_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = cplat_parse_uint16(&value, text, base);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
+    *value_out = (unsigned short)value;
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_parse_int(int *value_out, const char *text, const int base)
+{
+    int32_t value;
+    int ret;
+
+    if (value_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = cplat_parse_int32(&value, text, base);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
+    *value_out = (int)value;
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_parse_uint(unsigned int *value_out, const char *text, const int base)
+{
+    uint32_t value;
+    int ret;
+
+    if (value_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = cplat_parse_uint32(&value, text, base);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
+    *value_out = (unsigned int)value;
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_parse_longlong(long long *value_out, const char *text, const int base)
+{
+    int64_t value;
+    int ret;
+
+    if (value_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = cplat_parse_int64(&value, text, base);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
+    *value_out = (long long)value;
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_parse_ulonglong(unsigned long long *value_out, const char *text, const int base)
+{
+    uint64_t value;
+    int ret;
+
+    if (value_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = cplat_parse_uint64(&value, text, base);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
+    *value_out = (unsigned long long)value;
     return CPLAT_OK;
 }
 

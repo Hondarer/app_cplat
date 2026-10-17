@@ -158,25 +158,296 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_parse_uint64(uint64_t *value_out, const char *text, int base);
 
     /**
-     *  @brief          文字列を `int` へ変換します (`atoi` の安全版)。
+     *  @brief          文字列を 8 bit 符号付き整数へ変換します。
      *
-     *  @ref cplat_parse_int64 で解析したうえで、`int` の範囲に収まることを検査します。
+     *  @ref cplat_parse_int64 と同じ規則で文字列全体を解析し、結果の型の範囲を検査します。\n
+     *  検査に成功した場合だけ出力先を更新します。
      *
-     *  @param[out]     value_out  変換結果の格納先。NULL を渡してはなりません。\n
-     *                             失敗時の内容は不定です。
+     *  @param[out]     value_out  変換結果の格納先。NULL を渡してはなりません。失敗時は変更しません。
      *  @param[in]      text       変換する文字列 (null 終端)。NULL を渡してはなりません。
      *  @param[in]      base       基数。2 から 36、または 0 (接頭辞による自動判別) を指定します。
      *  @return         成功時は @ref CPLAT_OK を返します。
-     *  @return         @p value_out もしくは @p text が NULL の場合、または @p base が範囲外の場合は
-     *                  @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
-     *  @return         整数として解釈できない場合、または末尾に余分な文字が残る場合は
-     *                  @ref CPLAT_ERR_INVALID_INTEGER を返します。
-     *  @return         `int` で表現できない値の場合は @ref CPLAT_ERR_OUT_OF_RANGE を返します。
+     *  @return         NULL 引数または無効な基数には @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @return         整数として完全に解釈できない場合は @ref CPLAT_ERR_INVALID_INTEGER を返します。
+     *  @return         解析値が型の範囲外の場合は @ref CPLAT_ERR_OUT_OF_RANGE を返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_parse_int8(int8_t *value_out, const char *text, int base);
+
+    /**
+     *  @brief          文字列を 16 bit 符号付き整数へ変換します。
+     *
+     *  @ref cplat_parse_int64 と同じ規則で文字列全体を解析し、結果の型の範囲を検査します。\n
+     *  検査に成功した場合だけ出力先を更新します。
+     *
+     *  @param[out]     value_out  変換結果の格納先。NULL を渡してはなりません。失敗時は変更しません。
+     *  @param[in]      text       変換する文字列 (null 終端)。NULL を渡してはなりません。
+     *  @param[in]      base       基数。2 から 36、または 0 (接頭辞による自動判別) を指定します。
+     *  @return         成功時は @ref CPLAT_OK を返します。
+     *  @return         NULL 引数または無効な基数には @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @return         整数として完全に解釈できない場合は @ref CPLAT_ERR_INVALID_INTEGER を返します。
+     *  @return         解析値が型の範囲外の場合は @ref CPLAT_ERR_OUT_OF_RANGE を返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_parse_int16(int16_t *value_out, const char *text, int base);
+
+    /**
+     *  @brief          文字列を 32 bit 符号付き整数へ変換します。
+     *
+     *  @ref cplat_parse_int64 と同じ規則で文字列全体を解析し、結果の型の範囲を検査します。\n
+     *  検査に成功した場合だけ出力先を更新します。
+     *
+     *  @param[out]     value_out  変換結果の格納先。NULL を渡してはなりません。失敗時は変更しません。
+     *  @param[in]      text       変換する文字列 (null 終端)。NULL を渡してはなりません。
+     *  @param[in]      base       基数。2 から 36、または 0 (接頭辞による自動判別) を指定します。
+     *  @return         成功時は @ref CPLAT_OK を返します。
+     *  @return         NULL 引数または無効な基数には @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @return         整数として完全に解釈できない場合は @ref CPLAT_ERR_INVALID_INTEGER を返します。
+     *  @return         解析値が型の範囲外の場合は @ref CPLAT_ERR_OUT_OF_RANGE を返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_parse_int32(int32_t *value_out, const char *text, int base);
+
+    /**
+     *  @brief          文字列を 8 bit 符号なし整数へ変換します。
+     *
+     *  @ref cplat_parse_uint64 と同じ規則で文字列全体を解析し、結果の型の範囲を検査します。\n
+     *  先頭の空白の後に負号がある場合は、負のゼロも範囲外として拒否します。\n
+     *  検査に成功した場合だけ出力先を更新します。
+     *
+     *  @param[out]     value_out  変換結果の格納先。NULL を渡してはなりません。失敗時は変更しません。
+     *  @param[in]      text       変換する文字列 (null 終端)。NULL を渡してはなりません。
+     *  @param[in]      base       基数。2 から 36、または 0 (接頭辞による自動判別) を指定します。
+     *  @return         成功時は @ref CPLAT_OK を返します。
+     *  @return         NULL 引数または無効な基数には @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @return         整数として完全に解釈できない場合は @ref CPLAT_ERR_INVALID_INTEGER を返します。
+     *  @return         解析値が型の範囲外の場合は @ref CPLAT_ERR_OUT_OF_RANGE を返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_parse_uint8(uint8_t *value_out, const char *text, int base);
+
+    /**
+     *  @brief          文字列を 16 bit 符号なし整数へ変換します。
+     *
+     *  @ref cplat_parse_uint64 と同じ規則で文字列全体を解析し、結果の型の範囲を検査します。\n
+     *  先頭の空白の後に負号がある場合は、負のゼロも範囲外として拒否します。\n
+     *  検査に成功した場合だけ出力先を更新します。
+     *
+     *  @param[out]     value_out  変換結果の格納先。NULL を渡してはなりません。失敗時は変更しません。
+     *  @param[in]      text       変換する文字列 (null 終端)。NULL を渡してはなりません。
+     *  @param[in]      base       基数。2 から 36、または 0 (接頭辞による自動判別) を指定します。
+     *  @return         成功時は @ref CPLAT_OK を返します。
+     *  @return         NULL 引数または無効な基数には @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @return         整数として完全に解釈できない場合は @ref CPLAT_ERR_INVALID_INTEGER を返します。
+     *  @return         解析値が型の範囲外の場合は @ref CPLAT_ERR_OUT_OF_RANGE を返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_parse_uint16(uint16_t *value_out, const char *text, int base);
+
+    /**
+     *  @brief          文字列を 32 bit 符号なし整数へ変換します。
+     *
+     *  @ref cplat_parse_uint64 と同じ規則で文字列全体を解析し、結果の型の範囲を検査します。\n
+     *  先頭の空白の後に負号がある場合は、負のゼロも範囲外として拒否します。\n
+     *  検査に成功した場合だけ出力先を更新します。
+     *
+     *  @param[out]     value_out  変換結果の格納先。NULL を渡してはなりません。失敗時は変更しません。
+     *  @param[in]      text       変換する文字列 (null 終端)。NULL を渡してはなりません。
+     *  @param[in]      base       基数。2 から 36、または 0 (接頭辞による自動判別) を指定します。
+     *  @return         成功時は @ref CPLAT_OK を返します。
+     *  @return         NULL 引数または無効な基数には @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @return         整数として完全に解釈できない場合は @ref CPLAT_ERR_INVALID_INTEGER を返します。
+     *  @return         解析値が型の範囲外の場合は @ref CPLAT_ERR_OUT_OF_RANGE を返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_parse_uint32(uint32_t *value_out, const char *text, int base);
+
+    /**
+     *  @brief          文字列を `char` へ変換します。
+     *
+     *  @ref cplat_parse_int8 へ委譲し、文字列全体の解析と対象型の範囲検査を行います。\n
+     *  成功時だけ結果を出力先へ格納します。
+     *
+     *  @param[out]     value_out  変換結果の格納先。NULL を渡してはなりません。失敗時は値を変更しません。
+     *  @param[in]      text       変換する文字列 (null 終端)。NULL を渡してはなりません。
+     *  @param[in]      base       基数。2 から 36、または 0 (接頭辞による自動判別) を指定します。
+     *  @return         成功時は @ref CPLAT_OK を返します。
+     *  @return         NULL 引数または無効な基数の場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @return         整数として完全に解釈できない場合は @ref CPLAT_ERR_INVALID_INTEGER を返します。
+     *  @return         対象型で表現できない場合は @ref CPLAT_ERR_OUT_OF_RANGE を返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_parse_char(char *value_out, const char *text, int base);
+
+    /**
+     *  @brief          文字列を `signed char` へ変換します。
+     *
+     *  @ref cplat_parse_int8 へ委譲し、文字列全体の解析と対象型の範囲検査を行います。\n
+     *  成功時だけ結果を出力先へ格納します。
+     *
+     *  @param[out]     value_out  変換結果の格納先。NULL を渡してはなりません。失敗時は値を変更しません。
+     *  @param[in]      text       変換する文字列 (null 終端)。NULL を渡してはなりません。
+     *  @param[in]      base       基数。2 から 36、または 0 (接頭辞による自動判別) を指定します。
+     *  @return         成功時は @ref CPLAT_OK を返します。
+     *  @return         NULL 引数または無効な基数の場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @return         整数として完全に解釈できない場合は @ref CPLAT_ERR_INVALID_INTEGER を返します。
+     *  @return         対象型で表現できない場合は @ref CPLAT_ERR_OUT_OF_RANGE を返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_parse_schar(signed char *value_out, const char *text, int base);
+
+    /**
+     *  @brief          文字列を `unsigned char` へ変換します。
+     *
+     *  @ref cplat_parse_uint8 へ委譲し、文字列全体の解析と対象型の範囲検査を行います。\n
+     *  先頭空白の後の負号は、負のゼロも含めて範囲外として拒否します。\n
+     *  成功時だけ結果を出力先へ格納します。
+     *
+     *  @param[out]     value_out  変換結果の格納先。NULL を渡してはなりません。失敗時は値を変更しません。
+     *  @param[in]      text       変換する文字列 (null 終端)。NULL を渡してはなりません。
+     *  @param[in]      base       基数。2 から 36、または 0 (接頭辞による自動判別) を指定します。
+     *  @return         成功時は @ref CPLAT_OK を返します。
+     *  @return         NULL 引数または無効な基数の場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @return         整数として完全に解釈できない場合は @ref CPLAT_ERR_INVALID_INTEGER を返します。
+     *  @return         対象型で表現できない場合は @ref CPLAT_ERR_OUT_OF_RANGE を返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_parse_uchar(unsigned char *value_out, const char *text, int base);
+
+    /**
+     *  @brief          文字列を `short` へ変換します。
+     *
+     *  @ref cplat_parse_int16 へ委譲し、文字列全体の解析と対象型の範囲検査を行います。\n
+     *  成功時だけ結果を出力先へ格納します。
+     *
+     *  @param[out]     value_out  変換結果の格納先。NULL を渡してはなりません。失敗時は値を変更しません。
+     *  @param[in]      text       変換する文字列 (null 終端)。NULL を渡してはなりません。
+     *  @param[in]      base       基数。2 から 36、または 0 (接頭辞による自動判別) を指定します。
+     *  @return         成功時は @ref CPLAT_OK を返します。
+     *  @return         NULL 引数または無効な基数の場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @return         整数として完全に解釈できない場合は @ref CPLAT_ERR_INVALID_INTEGER を返します。
+     *  @return         対象型で表現できない場合は @ref CPLAT_ERR_OUT_OF_RANGE を返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_parse_short(short *value_out, const char *text, int base);
+
+    /**
+     *  @brief          文字列を `unsigned short` へ変換します。
+     *
+     *  @ref cplat_parse_uint16 へ委譲し、文字列全体の解析と対象型の範囲検査を行います。\n
+     *  先頭空白の後の負号は、負のゼロも含めて範囲外として拒否します。\n
+     *  成功時だけ結果を出力先へ格納します。
+     *
+     *  @param[out]     value_out  変換結果の格納先。NULL を渡してはなりません。失敗時は値を変更しません。
+     *  @param[in]      text       変換する文字列 (null 終端)。NULL を渡してはなりません。
+     *  @param[in]      base       基数。2 から 36、または 0 (接頭辞による自動判別) を指定します。
+     *  @return         成功時は @ref CPLAT_OK を返します。
+     *  @return         NULL 引数または無効な基数の場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @return         整数として完全に解釈できない場合は @ref CPLAT_ERR_INVALID_INTEGER を返します。
+     *  @return         対象型で表現できない場合は @ref CPLAT_ERR_OUT_OF_RANGE を返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_parse_ushort(unsigned short *value_out, const char *text, int base);
+
+    /**
+     *  @brief          文字列を `int` へ変換します。
+     *
+     *  @ref cplat_parse_int32 へ委譲し、文字列全体の解析と対象型の範囲検査を行います。\n
+     *  成功時だけ結果を出力先へ格納します。
+     *
+     *  @param[out]     value_out  変換結果の格納先。NULL を渡してはなりません。失敗時は値を変更しません。
+     *  @param[in]      text       変換する文字列 (null 終端)。NULL を渡してはなりません。
+     *  @param[in]      base       基数。2 から 36、または 0 (接頭辞による自動判別) を指定します。
+     *  @return         成功時は @ref CPLAT_OK を返します。
+     *  @return         NULL 引数または無効な基数の場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @return         整数として完全に解釈できない場合は @ref CPLAT_ERR_INVALID_INTEGER を返します。
+     *  @return         対象型で表現できない場合は @ref CPLAT_ERR_OUT_OF_RANGE を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_parse_int(int *value_out, const char *text, int base);
+
+    /**
+     *  @brief          文字列を `unsigned int` へ変換します。
+     *
+     *  @ref cplat_parse_uint32 へ委譲し、文字列全体の解析と対象型の範囲検査を行います。\n
+     *  先頭空白の後の負号は、負のゼロも含めて範囲外として拒否します。\n
+     *  成功時だけ結果を出力先へ格納します。
+     *
+     *  @param[out]     value_out  変換結果の格納先。NULL を渡してはなりません。失敗時は値を変更しません。
+     *  @param[in]      text       変換する文字列 (null 終端)。NULL を渡してはなりません。
+     *  @param[in]      base       基数。2 から 36、または 0 (接頭辞による自動判別) を指定します。
+     *  @return         成功時は @ref CPLAT_OK を返します。
+     *  @return         NULL 引数または無効な基数の場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @return         整数として完全に解釈できない場合は @ref CPLAT_ERR_INVALID_INTEGER を返します。
+     *  @return         対象型で表現できない場合は @ref CPLAT_ERR_OUT_OF_RANGE を返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_parse_uint(unsigned int *value_out, const char *text, int base);
+
+    /**
+     *  @brief          文字列を `long long` へ変換します。
+     *
+     *  @ref cplat_parse_int64 へ委譲し、文字列全体の解析と対象型の範囲検査を行います。\n
+     *  成功時だけ結果を出力先へ格納します。
+     *
+     *  @param[out]     value_out  変換結果の格納先。NULL を渡してはなりません。失敗時は値を変更しません。
+     *  @param[in]      text       変換する文字列 (null 終端)。NULL を渡してはなりません。
+     *  @param[in]      base       基数。2 から 36、または 0 (接頭辞による自動判別) を指定します。
+     *  @return         成功時は @ref CPLAT_OK を返します。
+     *  @return         NULL 引数または無効な基数の場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @return         整数として完全に解釈できない場合は @ref CPLAT_ERR_INVALID_INTEGER を返します。
+     *  @return         対象型で表現できない場合は @ref CPLAT_ERR_OUT_OF_RANGE を返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_parse_longlong(long long *value_out, const char *text, int base);
+
+    /**
+     *  @brief          文字列を `unsigned long long` へ変換します。
+     *
+     *  @ref cplat_parse_uint64 へ委譲し、文字列全体の解析と対象型の範囲検査を行います。\n
+     *  先頭空白の後の負号は、負のゼロも含めて範囲外として拒否します。\n
+     *  成功時だけ結果を出力先へ格納します。
+     *
+     *  @param[out]     value_out  変換結果の格納先。NULL を渡してはなりません。失敗時は値を変更しません。
+     *  @param[in]      text       変換する文字列 (null 終端)。NULL を渡してはなりません。
+     *  @param[in]      base       基数。2 から 36、または 0 (接頭辞による自動判別) を指定します。
+     *  @return         成功時は @ref CPLAT_OK を返します。
+     *  @return         NULL 引数または無効な基数の場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @return         整数として完全に解釈できない場合は @ref CPLAT_ERR_INVALID_INTEGER を返します。
+     *  @return         対象型で表現できない場合は @ref CPLAT_ERR_OUT_OF_RANGE を返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_parse_ulonglong(unsigned long long *value_out, const char *text, int base);
 
     /**
      *  @brief          文字列を `double` へ変換します (`atof` の安全版)。

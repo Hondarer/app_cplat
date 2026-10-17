@@ -225,6 +225,20 @@ MOCK_CPLAT_LINK_IMPL(cplat_fopen_temp)
 MOCK_CPLAT_LINK_IMPL(cplat_getenv)
 MOCK_CPLAT_LINK_IMPL(cplat_setenv)
 MOCK_CPLAT_LINK_IMPL(cplat_unsetenv)
+MOCK_CPLAT_LINK_IMPL(cplat_parse_char)
+MOCK_CPLAT_LINK_IMPL(cplat_parse_schar)
+MOCK_CPLAT_LINK_IMPL(cplat_parse_uchar)
+MOCK_CPLAT_LINK_IMPL(cplat_parse_short)
+MOCK_CPLAT_LINK_IMPL(cplat_parse_ushort)
+MOCK_CPLAT_LINK_IMPL(cplat_parse_uint)
+MOCK_CPLAT_LINK_IMPL(cplat_parse_longlong)
+MOCK_CPLAT_LINK_IMPL(cplat_parse_ulonglong)
+MOCK_CPLAT_LINK_IMPL(cplat_parse_int8)
+MOCK_CPLAT_LINK_IMPL(cplat_parse_int16)
+MOCK_CPLAT_LINK_IMPL(cplat_parse_int32)
+MOCK_CPLAT_LINK_IMPL(cplat_parse_uint8)
+MOCK_CPLAT_LINK_IMPL(cplat_parse_uint16)
+MOCK_CPLAT_LINK_IMPL(cplat_parse_uint32)
 MOCK_CPLAT_LINK_IMPL(cplat_parse_int64)
 MOCK_CPLAT_LINK_IMPL(cplat_parse_uint64)
 MOCK_CPLAT_LINK_IMPL(cplat_parse_int)
@@ -979,6 +993,20 @@ extern int delegate_real_cplat_getenv(const char *name, char *buf, size_t buf_si
                                       cplat_error *detail_out);
 extern int delegate_real_cplat_setenv(const char *name, const char *value, int overwrite, cplat_error *detail_out);
 extern int delegate_real_cplat_unsetenv(const char *name, cplat_error *detail_out);
+extern int delegate_real_cplat_parse_char(char *value_out, const char *text, int base);
+extern int delegate_real_cplat_parse_schar(signed char *value_out, const char *text, int base);
+extern int delegate_real_cplat_parse_uchar(unsigned char *value_out, const char *text, int base);
+extern int delegate_real_cplat_parse_short(short *value_out, const char *text, int base);
+extern int delegate_real_cplat_parse_ushort(unsigned short *value_out, const char *text, int base);
+extern int delegate_real_cplat_parse_uint(unsigned int *value_out, const char *text, int base);
+extern int delegate_real_cplat_parse_longlong(long long *value_out, const char *text, int base);
+extern int delegate_real_cplat_parse_ulonglong(unsigned long long *value_out, const char *text, int base);
+extern int delegate_real_cplat_parse_int8(int8_t *value_out, const char *text, int base);
+extern int delegate_real_cplat_parse_int16(int16_t *value_out, const char *text, int base);
+extern int delegate_real_cplat_parse_int32(int32_t *value_out, const char *text, int base);
+extern int delegate_real_cplat_parse_uint8(uint8_t *value_out, const char *text, int base);
+extern int delegate_real_cplat_parse_uint16(uint16_t *value_out, const char *text, int base);
+extern int delegate_real_cplat_parse_uint32(uint32_t *value_out, const char *text, int base);
 extern int delegate_real_cplat_parse_int64(int64_t *value_out, const char *text, int base);
 extern int delegate_real_cplat_parse_uint64(uint64_t *value_out, const char *text, int base);
 extern int delegate_real_cplat_parse_int(int *value_out, const char *text, int base);
@@ -1161,8 +1189,8 @@ extern int delegate_real_cplat_prompt_readline_fmt_at(cplat_prompt *p, char *buf
 
 // cplat/runtime/abort.h
 extern int delegate_real_cplat_abort_register(cplat_abort_fn callback, void *context);
-extern void delegate_real_cplat_abort_at(cplat_abort_kind kind, const char *message, const char *file,
-                                        int line, const char *function);
+extern void delegate_real_cplat_abort_at(cplat_abort_kind kind, const char *message, const char *file, int line,
+                                         const char *function);
 
 // cplat/runtime/elevated_process.h
 extern int delegate_real_cplat_elevated_process_is_elevated(int *elevated);
@@ -1760,6 +1788,20 @@ class Mock_cplat
     MOCK_METHOD(int, cplat_getenv, (const char *, char *, size_t, int *, cplat_error *));
     MOCK_METHOD(int, cplat_setenv, (const char *, const char *, int, cplat_error *));
     MOCK_METHOD(int, cplat_unsetenv, (const char *, cplat_error *));
+    MOCK_METHOD(int, cplat_parse_char, (char *, const char *, int));
+    MOCK_METHOD(int, cplat_parse_schar, (signed char *, const char *, int));
+    MOCK_METHOD(int, cplat_parse_uchar, (unsigned char *, const char *, int));
+    MOCK_METHOD(int, cplat_parse_short, (short *, const char *, int));
+    MOCK_METHOD(int, cplat_parse_ushort, (unsigned short *, const char *, int));
+    MOCK_METHOD(int, cplat_parse_uint, (unsigned int *, const char *, int));
+    MOCK_METHOD(int, cplat_parse_longlong, (long long *, const char *, int));
+    MOCK_METHOD(int, cplat_parse_ulonglong, (unsigned long long *, const char *, int));
+    MOCK_METHOD(int, cplat_parse_int8, (int8_t *, const char *, int));
+    MOCK_METHOD(int, cplat_parse_int16, (int16_t *, const char *, int));
+    MOCK_METHOD(int, cplat_parse_int32, (int32_t *, const char *, int));
+    MOCK_METHOD(int, cplat_parse_uint8, (uint8_t *, const char *, int));
+    MOCK_METHOD(int, cplat_parse_uint16, (uint16_t *, const char *, int));
+    MOCK_METHOD(int, cplat_parse_uint32, (uint32_t *, const char *, int));
     MOCK_METHOD(int, cplat_parse_int64, (int64_t *, const char *, int));
     MOCK_METHOD(int, cplat_parse_uint64, (uint64_t *, const char *, int));
     MOCK_METHOD(int, cplat_parse_int, (int *, const char *, int));
