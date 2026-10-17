@@ -13,6 +13,7 @@ TEST(basicTypeParseTest, char_valid_values)
         const char *text;
         int base;
         char expected;
+        unsigned char pad[3] = {}; // 明示的アラインメントのためのパディング。
     };
     const std::array<valid_case, 11> cases = {{
         {"0", 10, static_cast<char>(0)},
@@ -118,6 +119,7 @@ TEST(basicTypeParseTest, schar_valid_values)
         const char *text;
         int base;
         signed char expected;
+        unsigned char pad[3] = {}; // 明示的アラインメントのためのパディング。
     };
     const std::array<valid_case, 11> cases = {{
         {"0", 10, static_cast<signed char>(0)},
@@ -223,6 +225,7 @@ TEST(basicTypeParseTest, uchar_valid_values)
         const char *text;
         int base;
         unsigned char expected;
+        unsigned char pad[3] = {}; // 明示的アラインメントのためのパディング。
     };
     const std::array<valid_case, 10> cases = {{
         {"0", 10, static_cast<unsigned char>(0)},
@@ -330,6 +333,7 @@ TEST(basicTypeParseTest, short_valid_values)
         const char *text;
         int base;
         short expected;
+        unsigned char pad[2] = {}; // 明示的アラインメントのためのパディング。
     };
     const std::array<valid_case, 11> cases = {{
         {"0", 10, static_cast<short>(0)},
@@ -435,6 +439,7 @@ TEST(basicTypeParseTest, ushort_valid_values)
         const char *text;
         int base;
         unsigned short expected;
+        unsigned char pad[2] = {}; // 明示的アラインメントのためのパディング。
     };
     const std::array<valid_case, 10> cases = {{
         {"0", 10, static_cast<unsigned short>(0)},
@@ -753,20 +758,21 @@ TEST(basicTypeParseTest, longlong_valid_values)
     {
         const char *text;
         int base;
+        unsigned char pad[4] = {}; // 明示的アラインメントのためのパディング。
         long long expected;
     };
     const std::array<valid_case, 11> cases = {{
-        {"0", 10, static_cast<long long>(0)},
-        {"-9223372036854775808", 10, std::numeric_limits<long long>::min()},
-        {"9223372036854775807", 10, std::numeric_limits<long long>::max()},
-        {"+7", 10, static_cast<long long>(7)},
-        {" \t7", 10, static_cast<long long>(7)},
-        {"7f", 16, static_cast<long long>(127)},
-        {"101", 2, static_cast<long long>(5)},
-        {"z", 36, static_cast<long long>(35)},
-        {"0x10", 0, static_cast<long long>(16)},
-        {"077", 0, static_cast<long long>(63)},
-        {"-0", 10, static_cast<long long>(0)},
+        {"0", 10, {}, static_cast<long long>(0)},
+        {"-9223372036854775808", 10, {}, std::numeric_limits<long long>::min()},
+        {"9223372036854775807", 10, {}, std::numeric_limits<long long>::max()},
+        {"+7", 10, {}, static_cast<long long>(7)},
+        {" \t7", 10, {}, static_cast<long long>(7)},
+        {"7f", 16, {}, static_cast<long long>(127)},
+        {"101", 2, {}, static_cast<long long>(5)},
+        {"z", 36, {}, static_cast<long long>(35)},
+        {"0x10", 0, {}, static_cast<long long>(16)},
+        {"077", 0, {}, static_cast<long long>(63)},
+        {"-0", 10, {}, static_cast<long long>(0)},
     }}; // [状態] - 表記、基数、基本型の境界値を用意する。
     std::array<long long, 11> values = {};
     std::array<int, 11> actual_ret = {};
@@ -859,19 +865,20 @@ TEST(basicTypeParseTest, ulonglong_valid_values)
     {
         const char *text;
         int base;
+        unsigned char pad[4] = {}; // 明示的アラインメントのためのパディング。
         unsigned long long expected;
     };
     const std::array<valid_case, 10> cases = {{
-        {"0", 10, static_cast<unsigned long long>(0)},
-        {"0", 10, std::numeric_limits<unsigned long long>::min()},
-        {"18446744073709551615", 10, std::numeric_limits<unsigned long long>::max()},
-        {"+7", 10, static_cast<unsigned long long>(7)},
-        {" \t7", 10, static_cast<unsigned long long>(7)},
-        {"7f", 16, static_cast<unsigned long long>(127)},
-        {"101", 2, static_cast<unsigned long long>(5)},
-        {"z", 36, static_cast<unsigned long long>(35)},
-        {"0x10", 0, static_cast<unsigned long long>(16)},
-        {"077", 0, static_cast<unsigned long long>(63)},
+        {"0", 10, {}, static_cast<unsigned long long>(0)},
+        {"0", 10, {}, std::numeric_limits<unsigned long long>::min()},
+        {"18446744073709551615", 10, {}, std::numeric_limits<unsigned long long>::max()},
+        {"+7", 10, {}, static_cast<unsigned long long>(7)},
+        {" \t7", 10, {}, static_cast<unsigned long long>(7)},
+        {"7f", 16, {}, static_cast<unsigned long long>(127)},
+        {"101", 2, {}, static_cast<unsigned long long>(5)},
+        {"z", 36, {}, static_cast<unsigned long long>(35)},
+        {"0x10", 0, {}, static_cast<unsigned long long>(16)},
+        {"077", 0, {}, static_cast<unsigned long long>(63)},
     }}; // [状態] - 表記、基数、基本型の境界値を用意する。
     std::array<unsigned long long, 10> values = {};
     std::array<int, 10> actual_ret = {};

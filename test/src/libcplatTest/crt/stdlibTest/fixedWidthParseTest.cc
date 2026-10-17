@@ -13,6 +13,7 @@ TEST(fixedWidthParseTest, int8_valid_values)
         const char *text;
         int base;
         int8_t expected;
+        unsigned char pad[3] = {}; // 明示的アラインメントのためのパディング。
     };
     const std::array<valid_case, 12> cases = {{
         {"0", 10, static_cast<int8_t>(0)},
@@ -121,6 +122,7 @@ TEST(fixedWidthParseTest, int16_valid_values)
         const char *text;
         int base;
         int16_t expected;
+        unsigned char pad[2] = {}; // 明示的アラインメントのためのパディング。
     };
     const std::array<valid_case, 12> cases = {{
         {"0", 10, static_cast<int16_t>(0)},
@@ -339,6 +341,7 @@ TEST(fixedWidthParseTest, uint8_valid_values)
         const char *text;
         int base;
         uint8_t expected;
+        unsigned char pad[3] = {}; // 明示的アラインメントのためのパディング。
     };
     const std::array<valid_case, 9> cases = {{
         {"0", 10, static_cast<uint8_t>(0)},
@@ -448,6 +451,7 @@ TEST(fixedWidthParseTest, uint16_valid_values)
         const char *text;
         int base;
         uint16_t expected;
+        unsigned char pad[2] = {}; // 明示的アラインメントのためのパディング。
     };
     const std::array<valid_case, 9> cases = {{
         {"0", 10, static_cast<uint16_t>(0)},
