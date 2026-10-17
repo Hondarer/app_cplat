@@ -60,7 +60,7 @@ TEST_F(makedirsTest, null_path_returns_invalid_argument)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_makedirs(nullptr, nullptr); // [手順] - パスに NULL を渡して cplat_makedirs() を呼び出す。
+    int actual_ret = cplat_makedirs(nullptr, nullptr); // [手順] - パスに nullptr を渡して cplat_makedirs() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -92,17 +92,17 @@ TEST_F(makedirsTest, stat_rejects_null_arguments)
 
     // Act
     const int null_buffer_result =
-        cplat_stat(nullptr, nullptr, "missing"); // [手順] - stat() の出力先に NULL を指定する。
+        cplat_stat(nullptr, nullptr, "missing"); // [手順] - 出力先に nullptr を指定して cplat_stat() を呼び出す。
     const int null_path_result =
-        cplat_stat(&stat_buffer, nullptr, nullptr); // [手順] - stat() のパスに NULL を指定する。
+        cplat_stat(&stat_buffer, nullptr, nullptr); // [手順] - パスに nullptr を指定して cplat_stat() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_buffer_result); // [確認_異常系] - 出力先 NULL の cplat_stat() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_buffer_result); // [確認_異常系] - 出力先 nullptr の cplat_stat() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_path_result); // [確認_異常系] - パス NULL の cplat_stat() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_path_result); // [確認_異常系] - パス nullptr の cplat_stat() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 #if defined(PLATFORM_LINUX)
@@ -120,11 +120,11 @@ TEST_F(makedirsTest, stat_reports_missing_path)
                 errno = ENOENT;
                 return -1;
             }); // [Pre-Assert確認_異常系] - stat() が "missing" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - errno に ENOENT を設定し、-1 を返却する。
+                // [Pre-Assert手順] - stat() から、errno に ENOENT を設定して -1 を返す。
 
     // Act
     const int result =
-        cplat_stat(&stat_buffer, nullptr, "missing"); // [手順] - 存在しないパスを指定して stat() を呼び出す。
+        cplat_stat(&stat_buffer, nullptr, "missing"); // [手順] - 存在しないパスを指定して cplat_stat() を呼び出す。
 
     // Assert
     EXPECT_NE(CPLAT_OK,
@@ -140,11 +140,12 @@ TEST_F(makedirsTest, mkdir_rejects_null_path)
     // Pre-Assert
 
     // Act
-    const int result = cplat_mkdir(nullptr, nullptr); // [手順] - パスに NULL を指定して mkdir() を呼び出す。
+    const int result = cplat_mkdir(nullptr, nullptr); // [手順] - パスに nullptr を指定して cplat_mkdir() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              result); // [確認_異常系] - NULL パスの cplat_mkdir() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        result); // [確認_異常系] - nullptr パスの cplat_mkdir() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 #if defined(PLATFORM_LINUX)
@@ -161,10 +162,11 @@ TEST_F(makedirsTest, mkdir_reports_existing_directory)
                 errno = EEXIST;
                 return -1;
             }); // [Pre-Assert確認_異常系] - mkdir() が "existing" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - errno に EEXIST を設定し、-1 を返却する。
+                // [Pre-Assert手順] - mkdir() から、errno に EEXIST を設定して -1 を返す。
 
     // Act
-    const int result = cplat_mkdir("existing", nullptr); // [手順] - 既存ディレクトリを指定して mkdir() を呼び出す。
+    const int result =
+        cplat_mkdir("existing", nullptr); // [手順] - 既存ディレクトリを指定して cplat_mkdir() を呼び出す。
 
     // Assert
     EXPECT_NE(CPLAT_OK,
@@ -181,7 +183,8 @@ TEST_F(makedirsTest, overlong_path_returns_name_too_long)
     // Pre-Assert
 
     // Act
-    const int result = cplat_makedirs(path.c_str(), nullptr); // [手順] - 長過ぎるパスを指定して makedirs() を呼び出す。
+    const int result =
+        cplat_makedirs(path.c_str(), nullptr); // [手順] - 長過ぎるパスを指定して cplat_makedirs() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -205,16 +208,16 @@ TEST_F(makedirsTest, single_level_creates_directory)
             })
         .WillOnce(
             Return(0)); // [Pre-Assert確認_正常系] - stat() が "dir1" と等しい文字列を指定して 2 回呼び出されること。
-                        // [Pre-Assert手順] - 1 回目は ENOENT の -1、2 回目は 0 を返却する。
+                        // [Pre-Assert手順] - stat() から 1 回目は errno に ENOENT を設定して -1、2 回目は 0 を返す。
     EXPECT_CALL(mock_sys_stat_, mkdir(_, _, _, StrEq("dir1"), _))
         .WillOnce(
             Return(0)); // [Pre-Assert確認_正常系] - mkdir() が "dir1" と等しい文字列を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - 0 を返却する。
+                        // [Pre-Assert手順] - mkdir() から 0 を返す。
 
     // Act
-    int actual_ret =
-        cplat_makedirs("dir1", nullptr); // [手順] - 存在しない単一階層ディレクトリを cplat_makedirs() で作成する。
-    int ret2 = cplat_makedirs("dir1", nullptr); // [手順] - 既存ディレクトリに cplat_makedirs() を再呼び出しする。
+    int actual_ret = cplat_makedirs(
+        "dir1", nullptr); // [手順] - 存在しない単一階層ディレクトリを指定して cplat_makedirs() を呼び出す。
+    int ret2 = cplat_makedirs("dir1", nullptr); // [手順] - 既存ディレクトリを指定して cplat_makedirs() を再度呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 1 回目の cplat_makedirs() の戻り値が CPLAT_OK であること。
@@ -237,11 +240,11 @@ TEST_F(makedirsTest, nested_levels_creates_all_directories)
                 errno = ENOENT;
                 return -1;
             }); // [Pre-Assert確認_正常系] - stat() が "root" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - errno に ENOENT を設定し、-1 を返却する。
+                // [Pre-Assert手順] - stat() から、errno に ENOENT を設定して -1 を返す。
     EXPECT_CALL(mock_sys_stat_, mkdir(_, _, _, StrEq("root"), _))
         .WillOnce(
             Return(0)); // [Pre-Assert確認_正常系] - mkdir() が "root" と等しい文字列を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - 0 を返却する。
+                        // [Pre-Assert手順] - mkdir() から 0 を返す。
     EXPECT_CALL(mock_sys_stat_, stat(_, _, _, StrEq("root/sub"), _))
         .WillOnce(
             [](const char *, int, const char *, const char *, struct stat *)
@@ -249,11 +252,11 @@ TEST_F(makedirsTest, nested_levels_creates_all_directories)
                 errno = ENOENT;
                 return -1;
             }); // [Pre-Assert確認_正常系] - stat() が "root/sub" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - errno に ENOENT を設定し、-1 を返却する。
+                // [Pre-Assert手順] - stat() から、errno に ENOENT を設定して -1 を返す。
     EXPECT_CALL(mock_sys_stat_, mkdir(_, _, _, StrEq("root/sub"), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - mkdir() が "root/sub" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - 0 を返却する。
+                 // [Pre-Assert手順] - mkdir() から 0 を返す。
     EXPECT_CALL(mock_sys_stat_, stat(_, _, _, StrEq("root/sub/leaf"), _))
         .WillOnce(
             [](const char *, int, const char *, const char *, struct stat *)
@@ -261,16 +264,16 @@ TEST_F(makedirsTest, nested_levels_creates_all_directories)
                 errno = ENOENT;
                 return -1;
             }); // [Pre-Assert確認_正常系] - stat() が "root/sub/leaf" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - errno に ENOENT を設定し、-1 を返却する。
+                // [Pre-Assert手順] - stat() から、errno に ENOENT を設定して -1 を返す。
     EXPECT_CALL(mock_sys_stat_, mkdir(_, _, _, StrEq("root/sub/leaf"), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - mkdir() が "root/sub/leaf" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - 0 を返却する。
+                 // [Pre-Assert手順] - mkdir() から 0 を返す。
 
     // Act
-    int actual_ret =
-        cplat_makedirs("root/sub/leaf",
-                       nullptr); // [手順] - 中間ディレクトリが存在しない 2 階層パスを cplat_makedirs() で作成する。
+    int actual_ret = cplat_makedirs(
+        "root/sub/leaf",
+        nullptr); // [手順] - 中間ディレクトリが存在しない 2 階層パスを指定して cplat_makedirs() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_makedirs() の戻り値が CPLAT_OK であること。
@@ -290,11 +293,11 @@ TEST_F(makedirsTest, relative_path_creates_nested_directories)
                 errno = ENOENT;
                 return -1;
             }); // [Pre-Assert確認_正常系] - stat() が "rel" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - errno に ENOENT を設定し、-1 を返却する。
+                // [Pre-Assert手順] - stat() から、errno に ENOENT を設定して -1 を返す。
     EXPECT_CALL(mock_sys_stat_, mkdir(_, _, _, StrEq("rel"), _))
         .WillOnce(
             Return(0)); // [Pre-Assert確認_正常系] - mkdir() が "rel" と等しい文字列を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - 0 を返却する。
+                        // [Pre-Assert手順] - mkdir() から 0 を返す。
     EXPECT_CALL(mock_sys_stat_, stat(_, _, _, StrEq("rel/sub"), _))
         .WillOnce(
             [](const char *, int, const char *, const char *, struct stat *)
@@ -302,15 +305,15 @@ TEST_F(makedirsTest, relative_path_creates_nested_directories)
                 errno = ENOENT;
                 return -1;
             }); // [Pre-Assert確認_正常系] - stat() が "rel/sub" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - errno に ENOENT を設定し、-1 を返却する。
+                // [Pre-Assert手順] - stat() から、errno に ENOENT を設定して -1 を返す。
     EXPECT_CALL(mock_sys_stat_, mkdir(_, _, _, StrEq("rel/sub"), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - mkdir() が "rel/sub" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - 0 を返却する。
+                 // [Pre-Assert手順] - mkdir() から 0 を返す。
 
     // Act
     const int result =
-        cplat_makedirs("rel/sub", nullptr); // [手順] - 相対パスの複数階層を指定して makedirs() を呼び出す。
+        cplat_makedirs("rel/sub", nullptr); // [手順] - 相対パスの複数階層を指定して cplat_makedirs() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -331,15 +334,15 @@ TEST_F(makedirsTest, repeated_root_separators_do_not_create_intermediate_directo
                 errno = ENOENT;
                 return -1;
             }); // [Pre-Assert確認_正常系] - stat() が "///target" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - stat() で errno に ENOENT を設定し、-1 を返却する。
+                // [Pre-Assert手順] - stat() から、errno に ENOENT を設定して -1 を返す。
     EXPECT_CALL(mock_sys_stat_, mkdir(_, _, _, StrEq("///target"), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - mkdir() が "///target" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - mkdir() で 0 を返却する。
+                 // [Pre-Assert手順] - mkdir() から 0 を返す。
 
     // Act
-    const int result =
-        cplat_makedirs("///target", nullptr); // [手順] - ルート直後に区切り文字が連続するパスで makedirs() を呼び出す。
+    const int result = cplat_makedirs(
+        "///target", nullptr); // [手順] - ルート直後に区切り文字が連続するパスを指定して cplat_makedirs() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -359,15 +362,15 @@ TEST_F(makedirsTest, returns_success_when_mkdir_creates_target)
                 errno = ENOENT;
                 return -1;
             }); // [Pre-Assert確認_正常系] - stat() が "target" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - stat() で errno に ENOENT を設定し、-1 を返却する。
+                // [Pre-Assert手順] - stat() から、errno に ENOENT を設定して -1 を返す。
     EXPECT_CALL(mock_sys_stat_, mkdir(_, _, _, StrEq("target"), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - stat() の後の mkdir() が "target" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - mkdir() で 0 を返却する。
+                 // [Pre-Assert手順] - mkdir() から 0 を返す。
 
     // Act
-    int result =
-        cplat_makedirs("target", nullptr); // [手順] - stat() 失敗後に mkdir() が成功する条件で makedirs() を呼び出す。
+    int result = cplat_makedirs(
+        "target", nullptr); // [手順] - stat() が失敗した後に mkdir() が成功する状態で cplat_makedirs() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -388,7 +391,7 @@ TEST_F(makedirsTest, returns_success_when_target_appears_after_mkdir_failure)
                 errno = ENOENT;
                 return -1;
             }); // [Pre-Assert確認_正常系] - mkdir() の前の stat() が "target" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - mkdir() の前の stat() で errno に ENOENT を設定し、-1 を返却する。
+                // [Pre-Assert手順] - stat() から、mkdir() の前の呼び出しに対して errno に ENOENT を設定して -1 を返す。
     EXPECT_CALL(mock_sys_stat_, mkdir(_, _, _, StrEq("target"), _))
         .WillOnce(
             [](const char *, int, const char *, const char *, mode_t)
@@ -396,15 +399,16 @@ TEST_F(makedirsTest, returns_success_when_target_appears_after_mkdir_failure)
                 errno = EEXIST;
                 return -1;
             }); // [Pre-Assert確認_正常系] - 1 回目の stat() の後の mkdir() が "target" と等しい文字列を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - mkdir() で errno に EEXIST を設定し、-1 を返却する。
+    // [Pre-Assert手順] - mkdir() から、errno に EEXIST を設定して -1 を返す。
     EXPECT_CALL(mock_sys_stat_, stat(_, _, _, StrEq("target"), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - mkdir() の後の stat() が "target" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - mkdir() の後の stat() で 0 を返却する。
+                 // [Pre-Assert手順] - stat() から、mkdir() の後の呼び出しに対して 0 を返す。
 
     // Act
     int result = cplat_makedirs(
-        "target", nullptr); // [手順] - mkdir() 失敗後の stat() が成功する競合生成の条件で makedirs() を呼び出す。
+        "target",
+        nullptr); // [手順] - mkdir() が失敗した後の stat() が成功する競合生成の状態で cplat_makedirs() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -425,7 +429,7 @@ TEST_F(makedirsTest, returns_unknown_when_intermediate_directory_cannot_be_creat
                 errno = ENOENT;
                 return -1;
             }); // [Pre-Assert確認_異常系] - mkdir() の前の stat() が "parent" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - mkdir() の前の stat() で errno に ENOENT を設定し、-1 を返却する。
+                // [Pre-Assert手順] - stat() から、mkdir() の前の呼び出しに対して errno に ENOENT を設定して -1 を返す。
     EXPECT_CALL(mock_sys_stat_, mkdir(_, _, _, StrEq("parent"), _))
         .WillOnce(
             [](const char *, int, const char *, const char *, mode_t)
@@ -433,7 +437,7 @@ TEST_F(makedirsTest, returns_unknown_when_intermediate_directory_cannot_be_creat
                 errno = EACCES;
                 return -1;
             }); // [Pre-Assert確認_異常系] - 1 回目の stat() の後の mkdir() が "parent" と等しい文字列を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - mkdir() で errno に EACCES を設定し、-1 を返却する。
+    // [Pre-Assert手順] - mkdir() から、errno に EACCES を設定して -1 を返す。
     EXPECT_CALL(mock_sys_stat_, stat(_, _, _, StrEq("parent"), _))
         .WillOnce(
             [](const char *, int, const char *, const char *, struct stat *)
@@ -441,12 +445,12 @@ TEST_F(makedirsTest, returns_unknown_when_intermediate_directory_cannot_be_creat
                 errno = ENOENT;
                 return -1;
             }); // [Pre-Assert確認_異常系] - mkdir() の後の stat() が "parent" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - mkdir() の後の stat() で errno に ENOENT を設定し、-1 を返却する。
+                // [Pre-Assert手順] - stat() から、mkdir() の後の呼び出しに対して errno に ENOENT を設定して -1 を返す。
 
     // Act
     int result = cplat_makedirs(
         "parent/leaf",
-        nullptr); // [手順] - 中間ディレクトリの stat()、mkdir()、再 stat() が失敗する条件で makedirs() を呼び出す。
+        nullptr); // [手順] - 中間ディレクトリの stat()、mkdir()、再 stat() が失敗する状態で cplat_makedirs() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -473,11 +477,11 @@ TEST_F(makedirsTest, windows_separator_path_creates_directory)
     // Act
     int actual_ret =
         cplat_makedirs(windows_path.c_str(),
-                       nullptr); // [手順] - Windows スタイル区切りの 2 階層パスを cplat_makedirs() で作成する。
+                       nullptr); // [手順] - Windows スタイル区切りの 2 階層パスを指定して cplat_makedirs() を呼び出す。
     int actual_ret_exist =
-        cplat_stat(&st, nullptr, nested.c_str()); // [手順] - 正規化後のパスでリーフの存在を確認する。
+        cplat_stat(&st, nullptr, nested.c_str()); // [手順] - 正規化後のリーフのパスを指定して cplat_stat() を呼び出す。
     int ret2 = cplat_makedirs(windows_path.c_str(),
-                              nullptr); // [手順] - 既存ディレクトリに cplat_makedirs() を再呼び出しする。
+                              nullptr); // [手順] - 既存ディレクトリを指定して cplat_makedirs() を再度呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 1 回目の cplat_makedirs() の戻り値が CPLAT_OK であること。

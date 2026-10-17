@@ -21,15 +21,15 @@ TEST_F(mmapTest, attach_creates_new_file_and_ignores_create_size_on_reattach)
                 fill_open_file(file, flags);
                 return CPLAT_OK;
             }); // [Pre-Assert確認_正常系] - cplat_file_open() が flags_create_new() の戻り値を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - センチネル ハンドルを設定し、CPLAT_OK を返却する。
+                // [Pre-Assert手順] - cplat_file_open() から、センチネル ハンドルを設定して CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat_, cplat_file_set_size(_, kMapSize, _))
         .WillOnce(Return(
             CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_file_set_size() が kMapSize を指定して 1 回呼び出されること。(create_size の 64 を指定したことの確認)
-                        // [Pre-Assert手順] - CPLAT_OK を返却する。
+                        // [Pre-Assert手順] - cplat_file_set_size() から CPLAT_OK を返す。
 
     // Act
     result = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
-                               nullptr); // [手順] - create_size 64 で新規アタッチする。
+                               nullptr); // [手順] - create_size に 64 を指定して cplat_mmap_attach() を呼び出す。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, result); // [確認_正常系] - 新規作成の cplat_mmap_attach() の戻り値が CPLAT_OK であること。
@@ -42,13 +42,13 @@ TEST_F(mmapTest, attach_creates_new_file_and_ignores_create_size_on_reattach)
     EXPECT_EQ(
         static_cast<void *>(mapped_buf_),
         cplat_mmap_get_address(
-            map)); // [確認_正常系] - cplat_mmap_get_address() の戻り値が static_cast<void *>(mapped_buf_) と一致すること。(モックの返却バッファーであることの確認)
+            map)); // [確認_正常系] - cplat_mmap_get_address() の戻り値が static_cast<void *>(mapped_buf_) と一致すること。(モックが返すバッファーであることの確認)
 
     // Pre-Assert_2
     EXPECT_CALL(mock_cplat_, cplat_file_open(_, _, flags_create_new(), _))
         .WillOnce(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_正常系] - cplat_file_open() が flags_create_new() の戻り値を指定して 1 回呼び出されること。
-                                 // [Pre-Assert手順] - CPLAT_ERR_UNKNOWN を返却する。
+                                 // [Pre-Assert手順] - cplat_file_open() から CPLAT_ERR_UNKNOWN を返す。
     EXPECT_CALL(mock_cplat_, cplat_file_open(_, _, flags_existing_rw(), _))
         .WillOnce(
             [](cplat_file *file, const char *, int flags, cplat_error *)
@@ -56,7 +56,7 @@ TEST_F(mmapTest, attach_creates_new_file_and_ignores_create_size_on_reattach)
                 fill_open_file(file, flags);
                 return CPLAT_OK;
             }); // [Pre-Assert確認_正常系] - cplat_file_open() が flags_existing_rw() の戻り値を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - CREATE_NEW はエラーを返し、既存オープンはセンチネル ハンドルを設定する。
+                // [Pre-Assert手順] - cplat_file_open() から、センチネル ハンドルを設定して CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat_, cplat_file_get_size(_, _, _))
         .WillOnce(
             [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -64,14 +64,14 @@ TEST_F(mmapTest, attach_creates_new_file_and_ignores_create_size_on_reattach)
                 *size_out = kMapSize;
                 return CPLAT_OK;
             }); // [Pre-Assert確認_正常系] - cplat_file_get_size() が 1 回呼び出されること。
-                // [Pre-Assert手順] - サイズ 64 を設定し、CPLAT_OK を返却する。
+                // [Pre-Assert手順] - cplat_file_get_size() から、サイズ 64 を設定して CPLAT_OK を返す。
 
     // Act_2
     (void)cplat_mmap_detach(map, nullptr);
     map = nullptr;
-    result =
-        cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, 4096u, &map,
-                          nullptr); // [手順] - 既存ファイルに対し異なる create_size (4096) を指定して再アタッチする。
+    result = cplat_mmap_attach(
+        kPath, CPLAT_MMAP_ACCESS_READ_WRITE, 4096u, &map,
+        nullptr); // [手順] - 既存ファイルに対し異なる create_size (4096) を指定して cplat_mmap_attach() を呼び出す。
 
     // Assert_2
     ASSERT_EQ(CPLAT_OK,
@@ -99,8 +99,9 @@ TEST_F(mmapTest, attach_fails_when_create_size_is_zero_for_new_file)
         .Times(1); // [Pre-Assert確認_異常系] - cplat_remove() が 1 回呼び出されること。
 
     // Act
-    int actual_ret = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, 0u, &map,
-                                       nullptr); // [手順] - create_size 0 で新規アタッチを試みる。
+    int actual_ret =
+        cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, 0u, &map,
+                          nullptr); // [手順] - create_size に 0 を指定して cplat_mmap_attach() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -122,7 +123,7 @@ TEST_F(mmapTest, attach_fails_for_empty_existing_file)
     EXPECT_CALL(mock_cplat_, cplat_file_open(_, _, flags_create_new(), _))
         .WillOnce(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_file_open() が flags_create_new() の戻り値を指定して 1 回呼び出されること。
-                                 // [Pre-Assert手順] - CPLAT_ERR_UNKNOWN を返却する。
+                                 // [Pre-Assert手順] - cplat_file_open() から CPLAT_ERR_UNKNOWN を返す。
     EXPECT_CALL(mock_cplat_, cplat_file_open(_, _, flags_existing_rw(), _))
         .WillOnce(
             [](cplat_file *file, const char *, int flags, cplat_error *)
@@ -130,7 +131,7 @@ TEST_F(mmapTest, attach_fails_for_empty_existing_file)
                 fill_open_file(file, flags);
                 return CPLAT_OK;
             }); // [Pre-Assert確認_異常系] - cplat_file_open() が flags_existing_rw() の戻り値を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 再オープンでセンチネル ハンドルを設定する。
+    // [Pre-Assert手順] - cplat_file_open() から、再オープンとしてセンチネル ハンドルを設定して CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat_, cplat_file_get_size(_, _, _))
         .WillOnce(
             [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -138,11 +139,12 @@ TEST_F(mmapTest, attach_fails_for_empty_existing_file)
                 *size_out = 0u;
                 return CPLAT_OK;
             }); // [Pre-Assert確認_異常系] - cplat_file_get_size() が 1 回呼び出されること。
-                // [Pre-Assert手順] - サイズ 0 を設定し、CPLAT_OK を返却する。
+                // [Pre-Assert手順] - cplat_file_get_size() から、サイズ 0 を設定して CPLAT_OK を返す。
 
     // Act
-    int actual_ret = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
-                                       nullptr); // [手順] - サイズ 0 の既存ファイルへアタッチする。
+    int actual_ret =
+        cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
+                          nullptr); // [手順] - サイズ 0 の既存ファイルを指定して cplat_mmap_attach() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -168,26 +170,26 @@ TEST_F(mmapTest, attach_read_only_maps_existing_file)
                 fill_open_file(file, flags);
                 return CPLAT_OK;
             }); // [Pre-Assert確認_正常系] - cplat_file_open() が flags_read_only() の戻り値を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - センチネル ハンドルを設定し、CPLAT_OK を返却する。
+                // [Pre-Assert手順] - cplat_file_open() から、センチネル ハンドルを設定して CPLAT_OK を返す。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_sys_mman_, mmap(_, _, _, _, kMapSize, PROT_READ, MAP_SHARED, kFakeFileHandle, 0))
         .WillOnce(Return(
             mapped_buf_)); // [Pre-Assert確認_正常系] - mmap() が kMapSize、PROT_READ、MAP_SHARED、kFakeFileHandle、0 を指定して 1 回呼び出されること。
-                           // [Pre-Assert手順] - テスト用バッファーを返却する。
+                           // [Pre-Assert手順] - mmap() からテスト用バッファーを返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_windows_, CreateFileMappingA(_, _, _, kFakeFileHandle, _, PAGE_READONLY, _, _, _))
         .WillOnce(Return(
             kFakeMappingHandle)); // [Pre-Assert確認_正常系] - CreateFileMappingA() が kFakeFileHandle、PAGE_READONLY を指定して 1 回呼び出されること。
-                                  // [Pre-Assert手順] - kFakeMappingHandle を返却する。
+                                  // [Pre-Assert手順] - CreateFileMappingA() から kFakeMappingHandle を返す。
     EXPECT_CALL(mock_windows_, MapViewOfFile(_, _, _, kFakeMappingHandle, FILE_MAP_READ, 0u, 0u, kMapSize))
         .WillOnce(Return(
             mapped_buf_)); // [Pre-Assert確認_正常系] - MapViewOfFile() が kFakeMappingHandle、FILE_MAP_READ、0u、0u、kMapSize を指定して 1 回呼び出されること。
-                           // [Pre-Assert手順] - テスト用バッファーを返却する。
+                           // [Pre-Assert手順] - MapViewOfFile() からテスト用バッファーを返す。
 #endif /* PLATFORM_ */
 
     // Act
     int actual_ret = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_ONLY, 0u, &map,
-                                       nullptr); // [手順] - 既存ファイルを読み取り専用でアタッチする。
+                                       nullptr); // [手順] - 読み取り専用を指定して cplat_mmap_attach() を呼び出す。
 
     // Assert
     ASSERT_EQ(CPLAT_OK,
@@ -200,7 +202,7 @@ TEST_F(mmapTest, attach_read_only_maps_existing_file)
     EXPECT_EQ(
         static_cast<void *>(mapped_buf_),
         cplat_mmap_get_address(
-            map)); // [確認_正常系] - cplat_mmap_get_address() の戻り値が static_cast<void *>(mapped_buf_) と一致すること。(モックの返却バッファーであることの確認)
+            map)); // [確認_正常系] - cplat_mmap_get_address() の戻り値が static_cast<void *>(mapped_buf_) と一致すること。(モックが返すバッファーであることの確認)
 
     // Cleanup
     (void)cplat_mmap_detach(map, nullptr);
@@ -217,11 +219,12 @@ TEST_F(mmapTest, attach_read_only_fails_for_missing_file)
     EXPECT_CALL(mock_cplat_, cplat_file_open(_, _, flags_read_only(), _))
         .WillOnce(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_file_open() が flags_read_only() の戻り値を指定して 1 回呼び出されること。
-                                 // [Pre-Assert手順] - CPLAT_ERR_UNKNOWN を返却する。
+                                 // [Pre-Assert手順] - cplat_file_open() から CPLAT_ERR_UNKNOWN を返す。
 
     // Act
-    int actual_ret = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_ONLY, kMapSize, &map,
-                                       nullptr); // [手順] - 存在しないファイルを READ_ONLY でアタッチを試みる。
+    int actual_ret = cplat_mmap_attach(
+        kPath, CPLAT_MMAP_ACCESS_READ_ONLY, kMapSize, &map,
+        nullptr); // [手順] - 存在しないファイルを READ_ONLY で指定して cplat_mmap_attach() を呼び出す。
 
     // Assert
     EXPECT_NE(
@@ -248,22 +251,25 @@ TEST_F(mmapTest, attach_invalid_arguments_fail)
     // Pre-Assert
 
     // Act
-    null_path_result = cplat_mmap_attach(nullptr, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
-                                         nullptr); // [手順] - path に NULL を指定してアタッチする。
+    null_path_result =
+        cplat_mmap_attach(nullptr, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
+                          nullptr); // [手順] - path に nullptr を指定して cplat_mmap_attach() を呼び出す。
     null_map_result = cplat_mmap_attach(kPath, CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, nullptr,
-                                        nullptr); // [手順] - map に NULL を指定してアタッチする。
-    empty_path_result = cplat_mmap_attach("", CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
-                                          nullptr); // [手順] - 空文字列の path を指定してアタッチする。
-    invalid_access_result = cplat_mmap_attach(kPath, invalid_access, kMapSize, &map,
-                                              nullptr); // [手順] - 不正な access 値でアタッチする。
+                                        nullptr); // [手順] - map に nullptr を指定して cplat_mmap_attach() を呼び出す。
+    empty_path_result =
+        cplat_mmap_attach("", CPLAT_MMAP_ACCESS_READ_WRITE, kMapSize, &map,
+                          nullptr); // [手順] - 空文字列の path を指定して cplat_mmap_attach() を呼び出す。
+    invalid_access_result =
+        cplat_mmap_attach(kPath, invalid_access, kMapSize, &map,
+                          nullptr); // [手順] - 不正な access 値を指定して cplat_mmap_attach() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_path_result); // [確認_異常系] - path が NULL の cplat_mmap_attach() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_path_result); // [確認_異常系] - path が nullptr の cplat_mmap_attach() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_map_result); // [確認_異常系] - map が NULL の cplat_mmap_attach() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_map_result); // [確認_異常系] - map が nullptr の cplat_mmap_attach() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         empty_path_result); // [確認_異常系] - 空文字列の path に対する cplat_mmap_attach() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -285,21 +291,22 @@ TEST_F(mmapTest, accessors_are_safe_for_null_handle)
     // Pre-Assert
 
     // Act
-    address = cplat_mmap_get_address(nullptr); // [手順] - cplat_mmap_get_address() に NULL を渡す。
-    size = cplat_mmap_get_size(nullptr);       // [手順] - cplat_mmap_get_size() に NULL を渡す。
-    flush_result =
-        cplat_mmap_flush(nullptr, nullptr, 0u, nullptr); // [手順] - cplat_mmap_flush() に NULL ハンドルを渡す。
-    detach_result = cplat_mmap_detach(nullptr, nullptr); // [手順] - cplat_mmap_detach() に NULL ハンドルを渡す。
+    address = cplat_mmap_get_address(nullptr); // [手順] - nullptr を指定して cplat_mmap_get_address() を呼び出す。
+    size = cplat_mmap_get_size(nullptr);       // [手順] - nullptr を指定して cplat_mmap_get_size() を呼び出す。
+    flush_result = cplat_mmap_flush(nullptr, nullptr, 0u,
+                                    nullptr); // [手順] - ハンドルに nullptr を指定して cplat_mmap_flush() を呼び出す。
+    detach_result =
+        cplat_mmap_detach(nullptr, nullptr); // [手順] - ハンドルに nullptr を指定して cplat_mmap_detach() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr,
-              address); // [確認_異常系] - NULL に対する cplat_mmap_get_address() の戻り値が nullptr であること。
-    EXPECT_EQ((size_t)0, size); // [確認_異常系] - NULL に対する cplat_mmap_get_size() の戻り値が 0 であること。
+              address); // [確認_異常系] - nullptr に対する cplat_mmap_get_address() の戻り値が nullptr であること。
+    EXPECT_EQ((size_t)0, size); // [確認_異常系] - nullptr に対する cplat_mmap_get_size() の戻り値が 0 であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        flush_result); // [確認_異常系] - NULL に対する cplat_mmap_flush() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        flush_result); // [確認_異常系] - nullptr に対する cplat_mmap_flush() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(CPLAT_OK,
-              detach_result); // [確認_異常系] - NULL に対する cplat_mmap_detach() の戻り値が CPLAT_OK であること。
+              detach_result); // [確認_異常系] - nullptr に対する cplat_mmap_detach() の戻り値が CPLAT_OK であること。
 }
 
 // 指定したアドレス範囲の書き戻しが成功することの確認
@@ -316,21 +323,22 @@ TEST_F(mmapTest, flush_succeeds_for_explicit_address_range)
     EXPECT_CALL(mock_sys_mman_, msync(_, _, _, mapped_buf_, 1u, MS_SYNC))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - msync() が mapped_buf_、1u、MS_SYNC を指定して 1 回呼び出されること。(先頭 1 byte を指定したことの確認)
-                 // [Pre-Assert手順] - 成功を返却する。
+                 // [Pre-Assert手順] - msync() から成功を示す 0 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_windows_, FlushViewOfFile(_, _, _, mapped_buf_, 1u))
         .WillOnce(Return(
             TRUE)); // [Pre-Assert確認_正常系] - FlushViewOfFile() が mapped_buf_、1u を指定して 1 回呼び出されること。(先頭 1 byte を指定したことの確認)
-                    // [Pre-Assert手順] - 成功を返却する。
+                    // [Pre-Assert手順] - FlushViewOfFile() から成功を示す TRUE を返す。
     EXPECT_CALL(mock_windows_, FlushFileBuffers(_, _, _, kFakeFileHandle))
         .WillOnce(Return(
             TRUE)); // [Pre-Assert確認_正常系] - FlushFileBuffers() が kFakeFileHandle を指定して 1 回呼び出されること。
-                    // [Pre-Assert手順] - 成功を返却する。
+                    // [Pre-Assert手順] - FlushFileBuffers() から成功を示す TRUE を返す。
 #endif /* PLATFORM_ */
 
     // Act
-    int actual_ret = cplat_mmap_flush(map, mapped_buf_, 1u,
-                                      nullptr); // [手順] - マップ先頭の 1 byte を指定して書き戻す。
+    int actual_ret =
+        cplat_mmap_flush(map, mapped_buf_, 1u,
+                         nullptr); // [手順] - マップ先頭の 1 byte を指定して cplat_mmap_flush() を呼び出す。
 
     // Assert
     EXPECT_EQ(

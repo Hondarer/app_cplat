@@ -60,8 +60,9 @@ TEST_F(pathsEqualTest, returns_einval_for_null_lhs)
 
     // Act
     int rc = cplat_path_equal(nullptr, ".", &equal,
-                              &err);   // [手順] - 左辺パスに NULL を渡して cplat_path_equal() を呼び出す。
-    cplat_error_get_last(&last_error); // [手順] - TLS に記録された詳細エラーを取得する。
+                              &err); // [手順] - 左辺パスに nullptr を渡して cplat_path_equal() を呼び出す。
+    cplat_error_get_last(
+        &last_error); // [手順] - TLS に記録された詳細エラーの格納先として last_error を指定して cplat_error_get_last() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -93,7 +94,7 @@ TEST_F(pathsEqualTest, returns_error_when_rhs_path_cannot_be_resolved)
 
     // Act
     int result = cplat_path_equal(lhs, nullptr, &equal,
-                                  &err); // [手順] - 右辺に NULL を渡して cplat_path_equal() を呼び出す。
+                                  &err); // [手順] - 右辺に nullptr を渡して cplat_path_equal() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -116,7 +117,7 @@ TEST_F(pathsEqualTest, returns_invalid_argument_for_null_equal_out)
 
     // Act
     int result = cplat_path_equal(".", ".", nullptr,
-                                  &err); // [手順] - equal_out に NULL を渡して cplat_path_equal() を呼び出す。
+                                  &err); // [手順] - equal_out に nullptr を渡して cplat_path_equal() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -144,7 +145,7 @@ TEST_F(pathsEqualTest, compares_relative_and_absolute_current_directory_as_equal
 
     // Act
     int rc = cplat_path_equal(".", absolute_current_dir, &equal,
-                              &err); // [手順] - 相対パス "." と絶対パスを比較する。
+                              &err); // [手順] - 相対パス "." と絶対パスを指定して cplat_path_equal() を呼び出す。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, rc); // [確認_正常系] - cplat_path_equal() の戻り値が CPLAT_OK であること。
@@ -172,7 +173,8 @@ TEST_F(pathsEqualTest, normalizes_dotdot_and_backslash_segments_before_comparing
     // Pre-Assert
 
     // Act
-    int rc = cplat_path_equal(lhs, rhs, &equal, &err); // [手順] - 表記ゆれのある 2 つのパスを比較する。
+    int rc = cplat_path_equal(lhs, rhs, &equal,
+                              &err); // [手順] - 表記ゆれのある 2 つのパスを指定して cplat_path_equal() を呼び出す。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, rc); // [確認_正常系] - cplat_path_equal() の戻り値が CPLAT_OK であること。
@@ -199,7 +201,8 @@ TEST_F(pathsEqualTest, returns_zero_for_different_paths)
     // Pre-Assert
 
     // Act
-    int rc = cplat_path_equal(lhs, rhs, &equal, &err); // [手順] - 異なる 2 つのパスを比較する。
+    int rc = cplat_path_equal(lhs, rhs, &equal,
+                              &err); // [手順] - 異なる 2 つのパスを指定して cplat_path_equal() を呼び出す。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, rc); // [確認_正常系] - cplat_path_equal() の戻り値が CPLAT_OK であること。
@@ -219,7 +222,7 @@ TEST_F(pathsEqualTest, returns_enomem_when_lhs_normalization_allocation_fails)
     EXPECT_CALL(mock_cplat, cplat_calloc(PLATFORM_PATH_MAX, sizeof(size_t)))
         .WillOnce(Return(
             nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が PLATFORM_PATH_MAX、sizeof を指定して 1 回呼び出されること。(左辺パスの正規化用メモリを確保する呼び出しであることの確認)
-                       // [Pre-Assert手順] - cplat_calloc() から NULL を返却する。
+                       // [Pre-Assert手順] - cplat_calloc() から nullptr を返す。
 
     // Act
     int rc = cplat_path_equal("/lhs", "/rhs", &equal,
@@ -255,7 +258,8 @@ TEST_F(pathsEqualTest, keeps_case_sensitive_comparison_on_linux)
     // Pre-Assert
 
     // Act
-    int rc = cplat_path_equal(lhs, rhs, &equal, &err); // [手順] - 大小文字だけが異なるパスを比較する。
+    int rc = cplat_path_equal(lhs, rhs, &equal,
+                              &err); // [手順] - 大小文字だけが異なるパスを指定して cplat_path_equal() を呼び出す。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, rc); // [確認_正常系] - cplat_path_equal() の戻り値が CPLAT_OK であること。
@@ -282,7 +286,8 @@ TEST_F(pathsEqualTest, ignores_case_differences_on_windows)
     // Pre-Assert
 
     // Act
-    int rc = cplat_path_equal(lhs, rhs, &equal, &err); // [手順] - 大小文字だけが異なるパスを比較する。
+    int rc = cplat_path_equal(lhs, rhs, &equal,
+                              &err); // [手順] - 大小文字だけが異なるパスを指定して cplat_path_equal() を呼び出す。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, rc); // [確認_正常系] - cplat_path_equal() の戻り値が CPLAT_OK であること。

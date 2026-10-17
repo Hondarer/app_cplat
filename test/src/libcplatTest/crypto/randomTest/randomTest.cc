@@ -25,7 +25,7 @@ TEST_F(randomTest, fills_requested_size)
 
     // Act
     int actual_ret =
-        cplat_random_bytes(buf, sizeof(buf)); // [手順] - 32 byte を要求して cplat_random_bytes() を呼び出す。
+        cplat_random_bytes(buf, sizeof(buf)); // [手順] - 32 byte を指定して cplat_random_bytes() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_random_bytes() の戻り値が CPLAT_OK であること。
@@ -47,8 +47,10 @@ TEST_F(randomTest, successive_calls_differ)
     // Pre-Assert
 
     // Act
-    int actual_ret_first = cplat_random_bytes(first, sizeof(first));    // [手順] - 1 回目の取得を行う。
-    int actual_ret_second = cplat_random_bytes(second, sizeof(second)); // [手順] - 2 回目の取得を行う。
+    int actual_ret_first =
+        cplat_random_bytes(first, sizeof(first)); // [手順] - 1 回目の格納先を指定して cplat_random_bytes() を呼び出す。
+    int actual_ret_second = cplat_random_bytes(
+        second, sizeof(second)); // [手順] - 2 回目の格納先を指定して cplat_random_bytes() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -71,7 +73,8 @@ TEST_F(randomTest, zero_size_succeeds)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_random_bytes(nullptr, 0U); // [手順] - バッファーに NULL、サイズに 0 を指定して呼び出す。
+    int actual_ret = cplat_random_bytes(
+        nullptr, 0U); // [手順] - バッファーに nullptr、サイズに 0 を指定して cplat_random_bytes() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -86,7 +89,8 @@ TEST_F(randomTest, null_buffer_returns_invalid_argument)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_random_bytes(nullptr, 16U); // [手順] - バッファーに NULL、サイズに 16 を指定して呼び出す。
+    int actual_ret = cplat_random_bytes(
+        nullptr, 16U); // [手順] - バッファーに nullptr、サイズに 16 を指定して cplat_random_bytes() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -105,7 +109,7 @@ TEST_F(randomTest, size_over_int_max_returns_invalid_argument)
     // Act
     int actual_ret = cplat_random_bytes(
         buf, CPLAT_CRYPTO_RANDOM_MAX_BYTES +
-                 1U); // [手順] - 共通最大サイズを 1 byte 超えるサイズで cplat_random_bytes() を呼び出す。
+                 1U); // [手順] - 共通最大サイズを 1 byte 超えるサイズを指定して cplat_random_bytes() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -127,7 +131,7 @@ TEST_F(randomTest, returns_unknown_when_rand_bytes_fails)
         .WillOnce(Return(0))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - RAND_bytes() が buf、16 を指定して 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は失敗を示す 0 を返却し、以降は本物へ委譲する。
+    // [Pre-Assert手順] - RAND_bytes() から 1 回目は失敗を示す 0 を返し、以降は OpenSSL の処理へ委譲する。
 
     // Act
     int actual_ret = cplat_random_bytes(buf, sizeof(buf)); // [手順] - cplat_random_bytes() を呼び出す。

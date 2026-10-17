@@ -75,11 +75,11 @@ TEST_F(fileTimestampFailureInjectionTest, get_reports_fstat_failure)
     // Pre-Assert
     EXPECT_CALL(mock_sys_stat_, fstat(_, _, _, _, _))
         .WillOnce(SetErrnoAndReturn(EIO, -1)); // [Pre-Assert確認_異常系] - fstat() が 1 回呼び出されること。
-                                               // [Pre-Assert手順] - errno に EIO を設定して -1 を返却する。
+                                               // [Pre-Assert手順] - fstat() から、errno に EIO を設定して -1 を返す。
 
     // Act
-    int actual_ret_get =
-        cplat_file_get_modified_timestamp(&file_, &actual, &detail); // [手順] - 最終更新日時を取得する。
+    int actual_ret_get = cplat_file_get_modified_timestamp(
+        &file_, &actual, &detail); // [手順] - cplat_file_get_modified_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -104,11 +104,11 @@ TEST_F(fileTimestampFailureInjectionTest, set_reports_futimens_failure)
     // Pre-Assert
     EXPECT_CALL(mock_sys_stat_, futimens(_, _, _, _, _))
         .WillOnce(SetErrnoAndReturn(EIO, -1)); // [Pre-Assert確認_異常系] - futimens() が 1 回呼び出されること。
-                                               // [Pre-Assert手順] - errno に EIO を設定して -1 を返却する。
+    // [Pre-Assert手順] - futimens() から、errno に EIO を設定して -1 を返す。
 
     // Act
-    int actual_ret_set =
-        cplat_file_set_modified_timestamp(&file_, &timestamp, &detail); // [手順] - 最終更新日時を設定する。
+    int actual_ret_set = cplat_file_set_modified_timestamp(
+        &file_, &timestamp, &detail); // [手順] - cplat_file_set_modified_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -133,11 +133,11 @@ TEST_F(fileTimestampFailureInjectionTest, set_path_reports_utimensat_failure)
     // Pre-Assert
     EXPECT_CALL(mock_sys_stat_, utimensat(_, _, _, _, _, _, _))
         .WillOnce(SetErrnoAndReturn(EIO, -1)); // [Pre-Assert確認_異常系] - utimensat() が 1 回呼び出されること。
-                                               // [Pre-Assert手順] - errno に EIO を設定して -1 を返却する。
+    // [Pre-Assert手順] - utimensat() から、errno に EIO を設定して -1 を返す。
 
     // Act
-    int actual_ret_set =
-        cplat_file_set_path_modified_timestamp(kPath, &timestamp, &detail); // [手順] - 最終更新日時を設定する。
+    int actual_ret_set = cplat_file_set_path_modified_timestamp(
+        kPath, &timestamp, &detail); // [手順] - cplat_file_set_path_modified_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -162,11 +162,11 @@ TEST_F(fileTimestampFailureInjectionTest, get_path_reports_stat_failure)
     // Pre-Assert
     EXPECT_CALL(mock_sys_stat_, stat(_, _, _, _, _))
         .WillOnce(SetErrnoAndReturn(EIO, -1)); // [Pre-Assert確認_異常系] - stat() が 1 回呼び出されること。
-                                               // [Pre-Assert手順] - errno に EIO を設定して -1 を返却する。
+                                               // [Pre-Assert手順] - stat() から、errno に EIO を設定して -1 を返す。
 
     // Act
-    int actual_ret_get =
-        cplat_file_get_path_modified_timestamp(kPath, &actual, &detail); // [手順] - 最終更新日時を取得する。
+    int actual_ret_get = cplat_file_get_path_modified_timestamp(
+        kPath, &actual, &detail); // [手順] - cplat_file_get_path_modified_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -239,14 +239,14 @@ TEST_F(fileTimestampFailureInjectionTest, get_reports_GetFileTime_failure)
     // Pre-Assert
     EXPECT_CALL(mock_windows_, GetFileTime(_, _, _, _, _, _, _))
         .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - GetFileTime() が 1 回呼び出されること。
-                                  // [Pre-Assert手順] - FALSE を返却する。
+                                  // [Pre-Assert手順] - GetFileTime() から FALSE を返す。
     EXPECT_CALL(mock_windows_, GetLastError(_, _, _))
         .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
-                                            // [Pre-Assert手順] - ERROR_IO_DEVICE を返却する。
+                                            // [Pre-Assert手順] - GetLastError() から ERROR_IO_DEVICE を返す。
 
     // Act
-    int actual_ret_get =
-        cplat_file_get_modified_timestamp(&file_, &actual, &detail); // [手順] - 最終更新日時を取得する。
+    int actual_ret_get = cplat_file_get_modified_timestamp(
+        &file_, &actual, &detail); // [手順] - cplat_file_get_modified_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -271,14 +271,14 @@ TEST_F(fileTimestampFailureInjectionTest, set_reports_SetFileTime_failure)
     // Pre-Assert
     EXPECT_CALL(mock_windows_, SetFileTime(_, _, _, _, _, _, _))
         .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - SetFileTime() が 1 回呼び出されること。
-                                  // [Pre-Assert手順] - FALSE を返却する。
+                                  // [Pre-Assert手順] - SetFileTime() から FALSE を返す。
     EXPECT_CALL(mock_windows_, GetLastError(_, _, _))
         .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
-                                            // [Pre-Assert手順] - ERROR_IO_DEVICE を返却する。
+                                            // [Pre-Assert手順] - GetLastError() から ERROR_IO_DEVICE を返す。
 
     // Act
-    int actual_ret_set =
-        cplat_file_set_modified_timestamp(&file_, &timestamp, &detail); // [手順] - 最終更新日時を設定する。
+    int actual_ret_set = cplat_file_set_modified_timestamp(
+        &file_, &timestamp, &detail); // [手順] - cplat_file_set_modified_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -303,14 +303,14 @@ TEST_F(fileTimestampFailureInjectionTest, get_path_reports_GetFileTime_failure)
     // Pre-Assert
     EXPECT_CALL(mock_windows_, GetFileTime(_, _, _, _, _, _, _))
         .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - GetFileTime() が 1 回呼び出されること。
-                                  // [Pre-Assert手順] - FALSE を返却する。
+                                  // [Pre-Assert手順] - GetFileTime() から FALSE を返す。
     EXPECT_CALL(mock_windows_, GetLastError(_, _, _))
         .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
-                                            // [Pre-Assert手順] - ERROR_IO_DEVICE を返却する。
+                                            // [Pre-Assert手順] - GetLastError() から ERROR_IO_DEVICE を返す。
 
     // Act
-    int actual_ret_get =
-        cplat_file_get_path_modified_timestamp(kPath, &actual, &detail); // [手順] - 最終更新日時を取得する。
+    int actual_ret_get = cplat_file_get_path_modified_timestamp(
+        kPath, &actual, &detail); // [手順] - cplat_file_get_path_modified_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -335,14 +335,14 @@ TEST_F(fileTimestampFailureInjectionTest, set_path_reports_SetFileTime_failure)
     // Pre-Assert
     EXPECT_CALL(mock_windows_, SetFileTime(_, _, _, _, _, _, _))
         .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - SetFileTime() が 1 回呼び出されること。
-                                  // [Pre-Assert手順] - FALSE を返却する。
+                                  // [Pre-Assert手順] - SetFileTime() から FALSE を返す。
     EXPECT_CALL(mock_windows_, GetLastError(_, _, _))
         .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
-                                            // [Pre-Assert手順] - ERROR_IO_DEVICE を返却する。
+                                            // [Pre-Assert手順] - GetLastError() から ERROR_IO_DEVICE を返す。
 
     // Act
-    int actual_ret_set =
-        cplat_file_set_path_modified_timestamp(kPath, &timestamp, &detail); // [手順] - 最終更新日時を設定する。
+    int actual_ret_set = cplat_file_set_path_modified_timestamp(
+        kPath, &timestamp, &detail); // [手順] - cplat_file_set_path_modified_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -368,14 +368,14 @@ TEST_F(fileTimestampFailureInjectionTest, get_path_reports_CloseHandle_failure)
     EXPECT_CALL(mock_windows_, CloseHandle(_, _, _, _))
         .WillOnce(DoAll(Invoke(delegate_real_CloseHandle),
                         Return(FALSE))); // [Pre-Assert確認_異常系] - CloseHandle() が 1 回呼び出されること。
-                                         // [Pre-Assert手順] - 実ハンドルを閉じたうえで FALSE を返却する。
+    // [Pre-Assert手順] - CloseHandle() から、対象のハンドルを閉じたうえで FALSE を返す。
     EXPECT_CALL(mock_windows_, GetLastError(_, _, _))
         .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
-                                            // [Pre-Assert手順] - ERROR_IO_DEVICE を返却する。
+                                            // [Pre-Assert手順] - GetLastError() から ERROR_IO_DEVICE を返す。
 
     // Act
-    int actual_ret_get =
-        cplat_file_get_path_modified_timestamp(kPath, &actual, &detail); // [手順] - 最終更新日時を取得する。
+    int actual_ret_get = cplat_file_get_path_modified_timestamp(
+        kPath, &actual, &detail); // [手順] - cplat_file_get_path_modified_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -401,14 +401,14 @@ TEST_F(fileTimestampFailureInjectionTest, set_path_reports_CloseHandle_failure)
     EXPECT_CALL(mock_windows_, CloseHandle(_, _, _, _))
         .WillOnce(DoAll(Invoke(delegate_real_CloseHandle),
                         Return(FALSE))); // [Pre-Assert確認_異常系] - CloseHandle() が 1 回呼び出されること。
-                                         // [Pre-Assert手順] - 実ハンドルを閉じたうえで FALSE を返却する。
+    // [Pre-Assert手順] - CloseHandle() から、対象のハンドルを閉じたうえで FALSE を返す。
     EXPECT_CALL(mock_windows_, GetLastError(_, _, _))
         .WillOnce(Return(ERROR_IO_DEVICE)); // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
-                                            // [Pre-Assert手順] - ERROR_IO_DEVICE を返却する。
+                                            // [Pre-Assert手順] - GetLastError() から ERROR_IO_DEVICE を返す。
 
     // Act
-    int actual_ret_set =
-        cplat_file_set_path_modified_timestamp(kPath, &timestamp, &detail); // [手順] - 最終更新日時を設定する。
+    int actual_ret_set = cplat_file_set_path_modified_timestamp(
+        kPath, &timestamp, &detail); // [手順] - cplat_file_set_path_modified_timestamp() を呼び出す。
 
     // Assert
     EXPECT_EQ(

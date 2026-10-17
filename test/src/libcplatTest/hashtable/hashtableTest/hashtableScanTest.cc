@@ -81,15 +81,15 @@ TEST_F(hashtableScanTest, walks_each_status_group)
     // Pre-Assert
 
     // Act
-    std::vector<uint64_t> in_use =
-        collect(ht, CPLAT_HASHTABLE_SCAN_IN_USE, &ret_in_use); // [手順] - 使用中レコードを走査する。
-    std::vector<uint64_t> deleted =
-        collect(ht, CPLAT_HASHTABLE_SCAN_DELETED, &ret_deleted); // [手順] - 削除済みレコードを走査する。
+    std::vector<uint64_t> in_use = collect(ht, CPLAT_HASHTABLE_SCAN_IN_USE,
+                                           &ret_in_use); // [手順] - 使用中のレコードを指定して collect() を呼び出す。
+    std::vector<uint64_t> deleted = collect(
+        ht, CPLAT_HASHTABLE_SCAN_DELETED, &ret_deleted); // [手順] - 削除済みのレコードを指定して collect() を呼び出す。
     std::vector<uint64_t> empty =
-        collect(ht, CPLAT_HASHTABLE_SCAN_EMPTY, &ret_empty); // [手順] - 空レコードを走査する。
+        collect(ht, CPLAT_HASHTABLE_SCAN_EMPTY, &ret_empty); // [手順] - 空のレコードを指定して collect() を呼び出す。
     std::vector<uint64_t> all =
         collect(ht, CPLAT_HASHTABLE_SCAN_IN_USE | CPLAT_HASHTABLE_SCAN_DELETED | CPLAT_HASHTABLE_SCAN_EMPTY,
-                &ret_all); // [手順] - 全レコードを走査する。
+                &ret_all); // [手順] - 使用中、削除済み、空のレコードをすべて指定して collect() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, ret_in_use); // [確認_正常系] - 使用中の走査での ret_in_use が CPLAT_OK であること。
@@ -128,12 +128,14 @@ TEST_F(hashtableScanTest, reports_end_of_scan_without_error)
     // Pre-Assert
 
     // Act
-    int actual_ret_empty_table = cplat_hashtable_next_record(ht, 0, CPLAT_HASHTABLE_SCAN_IN_USE, &record,
-                                                             &has_record); // [手順] - 空テーブルを走査する。
+    int actual_ret_empty_table = cplat_hashtable_next_record(
+        ht, 0, CPLAT_HASHTABLE_SCAN_IN_USE, &record,
+        &has_record); // [手順] - 空テーブルに対して cplat_hashtable_next_record() を呼び出す。
     int has_record_at_end = -1;
     uint64_t record_at_end = 54321;
-    int actual_ret_at_end = cplat_hashtable_next_record(ht, 4, CPLAT_HASHTABLE_SCAN_EMPTY, &record_at_end,
-                                                        &has_record_at_end); // [手順] - 終端から走査する。
+    int actual_ret_at_end = cplat_hashtable_next_record(
+        ht, 4, CPLAT_HASHTABLE_SCAN_EMPTY, &record_at_end,
+        &has_record_at_end); // [手順] - 終端の開始位置を指定して cplat_hashtable_next_record() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -171,29 +173,34 @@ TEST_F(hashtableScanTest, guards_reject_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht = cplat_hashtable_next_record(nullptr, 0, CPLAT_HASHTABLE_SCAN_IN_USE, &record,
-                                                         &has_record); // [手順] - ht に NULL を渡す。
-    int actual_ret_null_record = cplat_hashtable_next_record(ht, 0, CPLAT_HASHTABLE_SCAN_IN_USE, nullptr,
-                                                             &has_record); // [手順] - record に NULL を渡す。
-    int actual_ret_null_has = cplat_hashtable_next_record(ht, 0, CPLAT_HASHTABLE_SCAN_IN_USE, &record,
-                                                          nullptr); // [手順] - has_record に NULL を渡す。
-    int actual_ret_zero_mask =
-        cplat_hashtable_next_record(ht, 0, 0, &record, &has_record); // [手順] - マスクに 0 を渡す。
-    int actual_ret_unknown_mask =
-        cplat_hashtable_next_record(ht, 0, 0x8u, &record, &has_record); // [手順] - 未定義のビットを渡す。
-    int actual_ret_from_over = cplat_hashtable_next_record(ht, 5, CPLAT_HASHTABLE_SCAN_IN_USE, &record,
-                                                           &has_record); // [手順] - capacity を超える開始位置を渡す。
+    int actual_ret_null_ht = cplat_hashtable_next_record(
+        nullptr, 0, CPLAT_HASHTABLE_SCAN_IN_USE, &record,
+        &has_record); // [手順] - ht に nullptr を指定して cplat_hashtable_next_record() を呼び出す。
+    int actual_ret_null_record = cplat_hashtable_next_record(
+        ht, 0, CPLAT_HASHTABLE_SCAN_IN_USE, nullptr,
+        &has_record); // [手順] - record に nullptr を指定して cplat_hashtable_next_record() を呼び出す。
+    int actual_ret_null_has = cplat_hashtable_next_record(
+        ht, 0, CPLAT_HASHTABLE_SCAN_IN_USE, &record,
+        nullptr); // [手順] - has_record に nullptr を指定して cplat_hashtable_next_record() を呼び出す。
+    int actual_ret_zero_mask = cplat_hashtable_next_record(
+        ht, 0, 0, &record, &has_record); // [手順] - マスクに 0 を指定して cplat_hashtable_next_record() を呼び出す。
+    int actual_ret_unknown_mask = cplat_hashtable_next_record(
+        ht, 0, 0x8u, &record,
+        &has_record); // [手順] - 未定義のビットを指定して cplat_hashtable_next_record() を呼び出す。
+    int actual_ret_from_over = cplat_hashtable_next_record(
+        ht, 5, CPLAT_HASHTABLE_SCAN_IN_USE, &record,
+        &has_record); // [手順] - capacity を超える開始位置を指定して cplat_hashtable_next_record() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_next_record() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_next_record() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_record); // [確認_異常系] - record に NULL を渡した cplat_hashtable_next_record() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_record); // [確認_異常系] - record に nullptr を渡した cplat_hashtable_next_record() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_has); // [確認_異常系] - has_record に NULL を渡した cplat_hashtable_next_record() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_has); // [確認_異常系] - has_record に nullptr を渡した cplat_hashtable_next_record() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_zero_mask); // [確認_異常系] - マスクに 0 を渡した cplat_hashtable_next_record() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。

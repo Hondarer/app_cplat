@@ -20,13 +20,17 @@ TEST(syncLocalLockTest, try_lock_reports_busy_when_already_locked)
         .WillOnce(testing::Return(0))
         .WillOnce(testing::Return(EBUSY));
     // [Pre-Assert確認_正常系] - pthread_mutex_trylock() が 2 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は 0、2 回目は EBUSY を返却する。
+    // [Pre-Assert手順] - pthread_mutex_trylock() から 1 回目は 0、2 回目は EBUSY を返す。
 #endif /* PLATFORM_LINUX */
 
     // Act
-    int create_result = cplat_local_lock_create(&lock);               // [手順] - local lock を作成する。
-    int first_lock = cplat_local_lock_lock(lock, CPLAT_SYNC_NO_WAIT); // [手順] - 1 回目のロックを取得する。
-    int second_try = cplat_local_lock_try_lock(lock);                 // [手順] - ロック保持中に try_lock() を試行する。
+    int create_result =
+        cplat_local_lock_create(&lock); // [手順] - ハンドルの格納先を指定して cplat_local_lock_create() を呼び出す。
+    int first_lock = cplat_local_lock_lock(
+        lock,
+        CPLAT_SYNC_NO_WAIT); // [手順] - CPLAT_SYNC_NO_WAIT を指定して 1 回目の cplat_local_lock_lock() を呼び出す。
+    int second_try =
+        cplat_local_lock_try_lock(lock); // [手順] - ロック保持中の状態で cplat_local_lock_try_lock() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -50,8 +54,10 @@ TEST(syncLocalLockTest, negative_timeout_returns_invalid_argument)
     // Pre-Assert
 
     // Act
-    int create_result = cplat_local_lock_create(&lock); // [手順] - local lock を作成する。
-    int lock_result = cplat_local_lock_lock(lock, -1);  // [手順] - 負のタイムアウト -1 を指定してロックする。
+    int create_result =
+        cplat_local_lock_create(&lock); // [手順] - ハンドルの格納先を指定して cplat_local_lock_create() を呼び出す。
+    int lock_result =
+        cplat_local_lock_lock(lock, -1); // [手順] - 負のタイムアウト -1 を指定して cplat_local_lock_lock() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,

@@ -56,8 +56,9 @@ TEST_F(stringCatalogRenderTest, plain_text)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "開始しました。", values,
-                                                           0); // [手順] - 位置指定を含まない書式を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "開始しました。", values,
+        0); // [手順] - 位置指定を含まない書式を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -79,8 +80,9 @@ TEST_F(stringCatalogRenderTest, single_placeholder)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "値は {0} です。", values,
-                                                           1); // [手順] - 位置指定を 1 個含む書式を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "値は {0} です。", values,
+        1); // [手順] - 位置指定を 1 個含む書式を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -102,8 +104,9 @@ TEST_F(stringCatalogRenderTest, reordered_placeholder)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{1} / {0}", values,
-                                                           2); // [手順] - 位置指定を逆順に並べた書式を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{1} / {0}", values,
+        2); // [手順] - 位置指定を逆順に並べた書式を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -124,8 +127,9 @@ TEST_F(stringCatalogRenderTest, repeated_placeholder)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}-{0}", values,
-                                                           1); // [手順] - 同じ位置指定を 2 回含む書式を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}-{0}", values,
+        1); // [手順] - 同じ位置指定を 2 回含む書式を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -145,8 +149,9 @@ TEST_F(stringCatalogRenderTest, escaped_braces)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "value={{ {0} }}", values,
-                                                           1); // [手順] - エスケープと位置指定を含む書式を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "value={{ {0} }}", values,
+        1); // [手順] - エスケープと位置指定を含む書式を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -154,7 +159,7 @@ TEST_F(stringCatalogRenderTest, escaped_braces)
         actual_ret); // [確認_正常系] - cplat_internal_string_catalog_render_text() の戻り値が CPLAT_OK であること。
     EXPECT_STREQ(
         "value={ 123 }",
-        dest); // [確認_正常系] - dest が "value={ 123 }" であること。({{ と }} が 1 文字の波括弧になったことの確認)
+        dest); // [確認_正常系] - dest が "value={ 123 }" であること。("{{" と "}}" が 1 文字の波括弧になったことの確認)
 }
 
 // 引数種別ごとの文字列表現の確認
@@ -170,22 +175,24 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_STRING;
     values[0].value.string_value = nullptr;
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - NULL の文字列引数を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - nullptr の文字列引数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret); // [確認_正常系] - NULL の文字列引数を展開した cplat_internal_string_catalog_render_text() の戻り値が CPLAT_OK であること。
+        actual_ret); // [確認_正常系] - nullptr の文字列引数を展開した cplat_internal_string_catalog_render_text() の戻り値が CPLAT_OK であること。
     EXPECT_STREQ(
         "(null)",
-        dest); // [確認_正常系] - NULL の文字列引数を展開した dest が "(null)" であること。(NULL が "(null)" と表現されたことの確認)
+        dest); // [確認_正常系] - nullptr の文字列引数を展開した dest が "(null)" であること。(nullptr が "(null)" と表現されたことの確認)
 
     // Act_2
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_CHAR;
     values[0].value.char_value = 'A';
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - 印字できる文字を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - 印字できる文字を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -198,8 +205,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_3
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_CHAR;
     values[0].value.char_value = (char)(unsigned char)0x8A;
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - 印字できない文字を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - 印字できない文字を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_3
     EXPECT_EQ(
@@ -212,8 +220,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_4
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_INT8;
     values[0].value.int8_value = INT8_C(-12);
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - 符号付き 8 bit 整数を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - 符号付き 8 bit 整数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_4
     EXPECT_EQ(
@@ -226,8 +235,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_5
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_UINT8;
     values[0].value.uint8_value = UINT8_C(200);
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - 符号なし 8 bit 整数を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - 符号なし 8 bit 整数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_5
     EXPECT_EQ(
@@ -240,8 +250,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_6
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_INT16;
     values[0].value.int16_value = INT16_C(-1200);
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - 符号付き 16 bit 整数を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - 符号付き 16 bit 整数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_6
     EXPECT_EQ(
@@ -254,8 +265,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_7
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_UINT16;
     values[0].value.uint16_value = UINT16_C(48000);
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - 符号なし 16 bit 整数を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - 符号なし 16 bit 整数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_7
     EXPECT_EQ(
@@ -268,8 +280,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_8
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_UINT32;
     values[0].value.uint32_value = 12U;
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - 符号なし 32 bit 整数を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - 符号なし 32 bit 整数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_8
     EXPECT_EQ(
@@ -282,8 +295,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_9
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_INT64;
     values[0].value.int64_value = INT64_C(-4294967296);
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - 符号付き 64 bit 整数を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - 符号付き 64 bit 整数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_9
     EXPECT_EQ(
@@ -296,8 +310,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_10
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_UINT64;
     values[0].value.uint64_value = UINT64_C(4294967296);
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - 符号なし 64 bit 整数を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - 符号なし 64 bit 整数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_10
     EXPECT_EQ(
@@ -310,8 +325,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_11
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_HEX8;
     values[0].value.uint8_value = UINT8_C(0x8A);
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - 8 bit の 16 進数を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - 8 bit の 16 進数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_11
     EXPECT_EQ(
@@ -324,8 +340,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_12
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_HEX16;
     values[0].value.uint16_value = UINT16_C(0xBEEF);
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - 16 bit の 16 進数を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - 16 bit の 16 進数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_12
     EXPECT_EQ(
@@ -338,8 +355,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_13
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_HEX32;
     values[0].value.uint32_value = 0x1234ABCDU;
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - 32 bit の 16 進数を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - 32 bit の 16 進数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_13
     EXPECT_EQ(
@@ -352,8 +370,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_14
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_HEX64;
     values[0].value.uint64_value = UINT64_C(0xDEADBEEF);
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - 64 bit の 16 進数を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - 64 bit の 16 進数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_14
     EXPECT_EQ(
@@ -366,8 +385,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_15
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_SIZE;
     values[0].value.size_value = (size_t)4096U;
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - バイト数を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - バイト数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_15
     EXPECT_EQ(
@@ -379,8 +399,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_16
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_SSIZE;
     values[0].value.int64_value = INT64_C(-1);
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - 符号付きのバイト数を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - 符号付きのバイト数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_16
     EXPECT_EQ(
@@ -393,8 +414,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_17
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_POINTER;
     values[0].value.pointer_value = sample_object;
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - ポインターを展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - ポインターを指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_17
     EXPECT_EQ(
@@ -413,8 +435,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_18
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_DOUBLE;
     values[0].value.double_value = 12.5;
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - 倍精度浮動小数点数を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - 倍精度浮動小数点数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_18
     EXPECT_EQ(
@@ -427,8 +450,9 @@ TEST_F(stringCatalogRenderTest, argument_kind_text)
     // Act_19
     values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_ERROR_CODE;
     values[0].value.error_code_value = 2;
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - エラー コードを展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - エラー コードを指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_19
     EXPECT_EQ(
@@ -450,8 +474,9 @@ TEST_F(stringCatalogRenderTest, unknown_argument_kind)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                           1); // [手順] - 列挙に無い引数種別を持つ値を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0}", values,
+        1); // [手順] - 列挙に無い引数種別を持つ値を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -471,8 +496,9 @@ TEST_F(stringCatalogRenderTest, truncated_output)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_internal_string_catalog_render_text(small_dest, sizeof(small_dest), "{0}", values,
-                                                           1); // [手順] - 容量に収まらない値を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        small_dest, sizeof(small_dest), "{0}", values,
+        1); // [手順] - 容量に収まらない値を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -495,9 +521,9 @@ TEST_F(stringCatalogRenderTest, truncated_after_full)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_internal_string_catalog_render_text(small_dest, sizeof(small_dest), "{0}def", values,
-                                                  1); // [手順] - 容量を使い切った後にさらに追加される書式を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        small_dest, sizeof(small_dest), "{0}def", values,
+        1); // [手順] - 容量を使い切った後にさらに追加される書式を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -520,8 +546,9 @@ TEST_F(stringCatalogRenderTest, exact_fit)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_internal_string_catalog_render_text(small_dest, sizeof(small_dest), "{0}", values,
-                                                           1); // [手順] - 容量にちょうど収まる値を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        small_dest, sizeof(small_dest), "{0}", values,
+        1); // [手順] - 容量にちょうど収まる値を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -541,31 +568,32 @@ TEST_F(stringCatalogRenderTest, invalid_format)
     // Pre-Assert
 
     // Act
-    int ret_closing_brace =
-        cplat_internal_string_catalog_render_text(dest, sizeof(dest), "a}b", values,
-                                                  1); // [手順] - 対を成さない } を含む書式を展開する。
-    int ret_open_brace = cplat_internal_string_catalog_render_text(dest, sizeof(dest), "a{", values,
-                                                                   1); // [手順] - { で終わる書式を展開する。
-    int ret_non_numeric =
-        cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{abc}", values,
-                                                  1); // [手順] - 数値以外のインデックスを含む書式を展開する。
-    int ret_symbol =
-        cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{~}", values,
-                                                  1); // [手順] - 数字以外の文字をインデックスに指定した書式を展開する。
+    int ret_closing_brace = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "a}b", values,
+        1); // [手順] - 対を成さない "}" を含む書式を指定して cplat_internal_string_catalog_render_text() を呼び出す。
+    int ret_open_brace = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "a{", values,
+        1); // [手順] - "{" で終わる書式を指定して cplat_internal_string_catalog_render_text() を呼び出す。
+    int ret_non_numeric = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{abc}", values,
+        1); // [手順] - 数値以外のインデックスを含む書式を指定して cplat_internal_string_catalog_render_text() を呼び出す。
+    int ret_symbol = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{~}", values,
+        1); // [手順] - 数字以外の文字をインデックスに指定した書式を指定して cplat_internal_string_catalog_render_text() を呼び出す。
     int ret_leading_zero = cplat_internal_string_catalog_render_text(
         dest, sizeof(dest), "{01}", values,
-        1); // [手順] - 先行ゼロを含む 2 桁のインデックスを持つ書式を展開する。
-    int ret_out_of_bounds =
-        cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{1}", values,
-                                                  1); // [手順] - 引数個数を超えるインデックスを持つ書式を展開する。
+        1); // [手順] - 先行ゼロを含む 2 桁のインデックスを持つ書式を指定して cplat_internal_string_catalog_render_text() を呼び出す。
+    int ret_out_of_bounds = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{1}", values,
+        1); // [手順] - 引数個数を超えるインデックスを持つ書式を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_MALFORMED_DEFINITION,
-        ret_closing_brace); // [確認_異常系] - 対を成さない } を含む書式を展開した cplat_internal_string_catalog_render_text() の戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
+        ret_closing_brace); // [確認_異常系] - 対を成さない "}" を含む書式を展開した cplat_internal_string_catalog_render_text() の戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
     EXPECT_EQ(
         CPLAT_ERR_MALFORMED_DEFINITION,
-        ret_open_brace); // [確認_異常系] - { で終わる書式を展開した cplat_internal_string_catalog_render_text() の戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
+        ret_open_brace); // [確認_異常系] - "{" で終わる書式を展開した cplat_internal_string_catalog_render_text() の戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
     EXPECT_EQ(
         CPLAT_ERR_MALFORMED_DEFINITION,
         ret_non_numeric); // [確認_異常系] - 数値以外のインデックスを含む書式を展開した cplat_internal_string_catalog_render_text() の戻り値が CPLAT_ERR_MALFORMED_DEFINITION であること。
@@ -601,7 +629,7 @@ TEST_F(stringCatalogRenderTest, two_digit_placeholder)
     // Act
     actual_ret_first = cplat_internal_string_catalog_render_text(
         wide_dest, sizeof(wide_dest), "{0}/{9}/{10}", values,
-        CPLAT_STRING_CATALOG_ARGUMENT_MAX); // [手順] - 1 桁と 2 桁を混ぜて展開する。
+        CPLAT_STRING_CATALOG_ARGUMENT_MAX); // [手順] - 1 桁と 2 桁のインデックスを混ぜた書式を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -614,7 +642,7 @@ TEST_F(stringCatalogRenderTest, two_digit_placeholder)
     // Act_2
     actual_ret_last = cplat_internal_string_catalog_render_text(
         wide_dest, sizeof(wide_dest), "{31}", values,
-        CPLAT_STRING_CATALOG_ARGUMENT_MAX); // [手順] - 最大インデックスを展開する。
+        CPLAT_STRING_CATALOG_ARGUMENT_MAX); // [手順] - 最大インデックスを指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -645,13 +673,13 @@ TEST_F(stringCatalogRenderTest, invalid_two_digit_placeholder)
     // Act
     actual_ret_three_digits = cplat_internal_string_catalog_render_text(
         dest, sizeof(dest), "{100}", values,
-        CPLAT_STRING_CATALOG_ARGUMENT_MAX); // [手順] - 3 桁のインデックスを展開する。
+        CPLAT_STRING_CATALOG_ARGUMENT_MAX); // [手順] - 3 桁のインデックスを指定して cplat_internal_string_catalog_render_text() を呼び出す。
     actual_ret_over_count = cplat_internal_string_catalog_render_text(
         dest, sizeof(dest), "{50}", values,
-        CPLAT_STRING_CATALOG_ARGUMENT_MAX); // [手順] - 引数個数と同じインデックスを展開する。
+        CPLAT_STRING_CATALOG_ARGUMENT_MAX); // [手順] - 引数個数と同じインデックスを指定して cplat_internal_string_catalog_render_text() を呼び出す。
     actual_ret_leading_zero = cplat_internal_string_catalog_render_text(
         dest, sizeof(dest), "{09}", values,
-        CPLAT_STRING_CATALOG_ARGUMENT_MAX); // [手順] - 先行ゼロを含む 2 桁のインデックスを展開する。
+        CPLAT_STRING_CATALOG_ARGUMENT_MAX); // [手順] - 先行ゼロを含む 2 桁のインデックスを指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -691,8 +719,9 @@ TEST_F(stringCatalogRenderTest, integer_conversion_matches_standard_library)
     {
         values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_INT64;
         values[0].value.int64_value = signed_values[index];
-        (void)cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                        1); // [手順] - 符号付き 64 bit 整数を展開する。
+        (void)cplat_internal_string_catalog_render_text(
+            dest, sizeof(dest), "{0}", values,
+            1); // [手順] - 符号付き 64 bit 整数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
         snprintf(expected_signed[index], sizeof(expected_signed[index]), "%" PRId64, signed_values[index]);
 
         memcpy(actual_signed[index], dest, sizeof(dest));
@@ -702,14 +731,16 @@ TEST_F(stringCatalogRenderTest, integer_conversion_matches_standard_library)
     {
         values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_UINT64;
         values[0].value.uint64_value = unsigned_values[index];
-        (void)cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                        1); // [手順] - 符号なし 64 bit 整数を展開する。
+        (void)cplat_internal_string_catalog_render_text(
+            dest, sizeof(dest), "{0}", values,
+            1); // [手順] - 符号なし 64 bit 整数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
         snprintf(expected_unsigned[index], sizeof(expected_unsigned[index]), "%" PRIu64, unsigned_values[index]);
         memcpy(actual_unsigned[index], dest, sizeof(dest));
 
         values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_HEX64;
-        (void)cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                        1); // [手順] - 64 bit の 16 進数を展開する。
+        (void)cplat_internal_string_catalog_render_text(
+            dest, sizeof(dest), "{0}", values,
+            1); // [手順] - 64 bit の 16 進数を指定して cplat_internal_string_catalog_render_text() を呼び出す。
         snprintf(expected_hex[index], sizeof(expected_hex[index]), "0x%016" PRIx64, unsigned_values[index]);
         memcpy(actual_hex[index], dest, sizeof(dest));
     }
@@ -718,8 +749,9 @@ TEST_F(stringCatalogRenderTest, integer_conversion_matches_standard_library)
     {
         values[0].kind = CPLAT_STRING_CATALOG_ARGUMENT_KIND_ERROR_CODE;
         values[0].value.error_code_value = error_values[index];
-        (void)cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0}", values,
-                                                        1); // [手順] - エラー コードを展開する。
+        (void)cplat_internal_string_catalog_render_text(
+            dest, sizeof(dest), "{0}", values,
+            1); // [手順] - エラー コードを指定して cplat_internal_string_catalog_render_text() を呼び出す。
         snprintf(expected_error[index], sizeof(expected_error[index]), "%d (0x%08x)", error_values[index],
                  (unsigned int)error_values[index]);
         memcpy(actual_error[index], dest, sizeof(dest));
@@ -767,9 +799,9 @@ TEST_F(stringCatalogRenderTest, unused_index_reference)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_internal_string_catalog_render_text(dest, sizeof(dest), "{0} と {1}", values,
-                                                  2); // [手順] - 値を割り当てないインデックスを参照する書式を展開する。
+    actual_ret = cplat_internal_string_catalog_render_text(
+        dest, sizeof(dest), "{0} と {1}", values,
+        2); // [手順] - 値を割り当てないインデックスを参照する書式を指定して cplat_internal_string_catalog_render_text() を呼び出す。
 
     // Assert
     EXPECT_EQ(

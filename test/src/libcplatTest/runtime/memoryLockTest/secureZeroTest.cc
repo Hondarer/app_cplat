@@ -67,8 +67,8 @@ TEST_F(secureZeroTest, null_or_zero_size_is_noop)
     // Pre-Assert
 
     // Act
-    cplat_secure_zero(nullptr, 8U); // [手順] - バッファーに NULL を指定して呼び出す。
-    cplat_secure_zero(buf, 0U);  // [手順] - サイズに 0 を指定して呼び出す。
+    cplat_secure_zero(nullptr, 8U); // [手順] - バッファーに nullptr を指定して cplat_secure_zero() を呼び出す。
+    cplat_secure_zero(buf, 0U);     // [手順] - サイズに 0 を指定して cplat_secure_zero() を呼び出す。
 
     // Assert
     EXPECT_EQ(

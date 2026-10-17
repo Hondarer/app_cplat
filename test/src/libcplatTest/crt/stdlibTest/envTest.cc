@@ -20,9 +20,10 @@ TEST_F(envTest, setenv_value_is_readable)
 
     // Act
     int actual_ret_setenv =
-        cplat_setenv("CPLAT_ENV_TEST", "value1", 1, nullptr); // [手順] - CPLAT_ENV_TEST に "value1" を設定する。
+        cplat_setenv("CPLAT_ENV_TEST", "value1", 1,
+                     nullptr); // [手順] - CPLAT_ENV_TEST と "value1" を指定して cplat_setenv() を呼び出す。
     int actual_ret_getenv = cplat_getenv("CPLAT_ENV_TEST", buf, sizeof(buf), &exists,
-                                         nullptr); // [手順] - CPLAT_ENV_TEST の値を取得する。
+                                         nullptr); // [手順] - CPLAT_ENV_TEST を指定して cplat_getenv() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_setenv); // [確認_正常系] - cplat_setenv() の戻り値が CPLAT_OK であること。
@@ -47,10 +48,12 @@ TEST_F(envTest, setenv_without_overwrite_keeps_existing_value)
     // Pre-Assert
 
     // Act
-    int actual_ret_setenv = cplat_setenv("CPLAT_ENV_TEST", "second", 0,
-                                         nullptr); // [手順] - overwrite に 0 を指定して "second" を設定する。
+    int actual_ret_setenv =
+        cplat_setenv("CPLAT_ENV_TEST", "second", 0,
+                     nullptr); // [手順] - overwrite に 0 と "second" を指定して cplat_setenv() を呼び出す。
     int actual_ret_getenv =
-        cplat_getenv("CPLAT_ENV_TEST", buf, sizeof(buf), nullptr, nullptr); // [手順] - 設定後の値を取得する。
+        cplat_getenv("CPLAT_ENV_TEST", buf, sizeof(buf), nullptr,
+                     nullptr); // [手順] - 設定後の CPLAT_ENV_TEST を指定して cplat_getenv() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -77,10 +80,12 @@ TEST_F(envTest, setenv_without_overwrite_sets_value_when_absent)
     // Pre-Assert
 
     // Act
-    int actual_ret_setenv = cplat_setenv("CPLAT_ENV_TEST", "created", 0,
-                                         nullptr); // [手順] - overwrite に 0 を指定して "created" を設定する。
+    int actual_ret_setenv =
+        cplat_setenv("CPLAT_ENV_TEST", "created", 0,
+                     nullptr); // [手順] - overwrite に 0 と "created" を指定して cplat_setenv() を呼び出す。
     int actual_ret_getenv =
-        cplat_getenv("CPLAT_ENV_TEST", buf, sizeof(buf), nullptr, nullptr); // [手順] - 設定後の値を取得する。
+        cplat_getenv("CPLAT_ENV_TEST", buf, sizeof(buf), nullptr,
+                     nullptr); // [手順] - 設定後の CPLAT_ENV_TEST を指定して cplat_getenv() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_setenv); // [確認_正常系] - cplat_setenv() の戻り値が CPLAT_OK であること。
@@ -104,9 +109,11 @@ TEST_F(envTest, unsetenv_removes_variable)
     // Pre-Assert
 
     // Act
-    int actual_ret_unsetenv = cplat_unsetenv("CPLAT_ENV_TEST", nullptr); // [手順] - CPLAT_ENV_TEST を削除する。
-    int actual_ret_getenv = cplat_getenv("CPLAT_ENV_TEST", nullptr, 0, &exists,
-                                         nullptr); // [手順] - 削除後に CPLAT_ENV_TEST の有無を取得する。
+    int actual_ret_unsetenv =
+        cplat_unsetenv("CPLAT_ENV_TEST", nullptr); // [手順] - CPLAT_ENV_TEST を指定して cplat_unsetenv() を呼び出す。
+    int actual_ret_getenv =
+        cplat_getenv("CPLAT_ENV_TEST", nullptr, 0, &exists,
+                     nullptr); // [手順] - 削除後の CPLAT_ENV_TEST を指定して cplat_getenv() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_unsetenv); // [確認_正常系] - cplat_unsetenv() の戻り値が CPLAT_OK であること。
@@ -124,17 +131,18 @@ TEST_F(envTest, setenv_rejects_invalid_name_and_value)
 
     // Act
     int actual_ret_null_name =
-        cplat_setenv(nullptr, "value1", 1, &detail);                    // [手順] - 変数名に NULL を指定して呼び出す。
-    int actual_ret_empty_name = cplat_setenv("", "value1", 1, nullptr); // [手順] - 変数名に空文字列を指定して呼び出す。
+        cplat_setenv(nullptr, "value1", 1, &detail); // [手順] - 変数名に nullptr を指定して cplat_setenv() を呼び出す。
+    int actual_ret_empty_name =
+        cplat_setenv("", "value1", 1, nullptr); // [手順] - 変数名に空文字列を指定して cplat_setenv() を呼び出す。
     int actual_ret_equal_in_name =
-        cplat_setenv("A=B", "value1", 1, nullptr); // [手順] - 変数名に '=' を含めて呼び出す。
-    int actual_ret_null_value =
-        cplat_setenv("CPLAT_ENV_TEST", nullptr, 1, nullptr); // [手順] - 値に NULL を指定して呼び出す。
+        cplat_setenv("A=B", "value1", 1, nullptr); // [手順] - 変数名に "=" を含めて cplat_setenv() を呼び出す。
+    int actual_ret_null_value = cplat_setenv("CPLAT_ENV_TEST", nullptr, 1,
+                                             nullptr); // [手順] - 値に nullptr を指定して cplat_setenv() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_name); // [確認_異常系] - 変数名が NULL のとき cplat_setenv() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_name); // [確認_異常系] - 変数名が nullptr のとき cplat_setenv() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERROR_DOMAIN_ERRNO,
         cplat_error_get_domain(
@@ -149,7 +157,7 @@ TEST_F(envTest, setenv_rejects_invalid_name_and_value)
         actual_ret_equal_in_name); // [確認_異常系] - 変数名に '=' を含むとき cplat_setenv() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_value); // [確認_異常系] - 値が NULL のとき cplat_setenv() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_value); // [確認_異常系] - 値が nullptr のとき cplat_setenv() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // cplat_unsetenv が不正な変数名を EINVAL で拒否することの確認
@@ -161,14 +169,17 @@ TEST_F(envTest, unsetenv_rejects_invalid_name)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_name = cplat_unsetenv(nullptr, &detail);   // [手順] - 変数名に NULL を指定して呼び出す。
-    int actual_ret_empty_name = cplat_unsetenv("", nullptr);       // [手順] - 変数名に空文字列を指定して呼び出す。
-    int actual_ret_equal_in_name = cplat_unsetenv("A=B", nullptr); // [手順] - 変数名に '=' を含めて呼び出す。
+    int actual_ret_null_name =
+        cplat_unsetenv(nullptr, &detail); // [手順] - 変数名に nullptr を指定して cplat_unsetenv() を呼び出す。
+    int actual_ret_empty_name =
+        cplat_unsetenv("", nullptr); // [手順] - 変数名に空文字列を指定して cplat_unsetenv() を呼び出す。
+    int actual_ret_equal_in_name =
+        cplat_unsetenv("A=B", nullptr); // [手順] - 変数名に "=" を含めて cplat_unsetenv() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_name); // [確認_異常系] - 変数名が NULL のとき cplat_unsetenv() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_name); // [確認_異常系] - 変数名が nullptr のとき cplat_unsetenv() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(EINVAL,
               cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EINVAL であること。
     EXPECT_EQ(
@@ -191,7 +202,7 @@ TEST_F(envTest, getenv_returns_einval_for_null_name)
 
     // Act
     int actual_ret = cplat_getenv(nullptr, buf, sizeof(buf), &exists,
-                                  &detail); // [手順] - 変数名に NULL を指定して cplat_getenv() を呼び出す。
+                                  &detail); // [手順] - 変数名に nullptr を指定して cplat_getenv() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -243,7 +254,7 @@ TEST_F(envTest, getenv_does_not_write_when_buffer_size_is_zero)
     // Act
     int actual_ret =
         cplat_getenv("CPLAT_ENV_TEST", buf, 0u, &exists,
-                     nullptr); // [手順] - buf は非 NULL、buf_size に 0 を指定して cplat_getenv() を呼び出す。
+                     nullptr); // [手順] - buf は nullptr 以外、buf_size に 0 を指定して cplat_getenv() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_getenv() の戻り値が CPLAT_OK であること。
@@ -266,8 +277,9 @@ TEST_F(envTest, getenv_accepts_null_buffer_when_variable_is_absent)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_getenv("CPLAT_ENV_TEST", nullptr, 0u, &exists,
-                                  nullptr); // [手順] - 未設定の環境変数を出力バッファーなしで照会する。
+    int actual_ret = cplat_getenv(
+        "CPLAT_ENV_TEST", nullptr, 0u, &exists,
+        nullptr); // [手順] - 未設定の環境変数と nullptr の出力バッファーを指定して cplat_getenv() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_getenv() の戻り値が CPLAT_OK であること。
@@ -287,8 +299,9 @@ TEST_F(envTest, getenv_accepts_null_buffer_when_variable_exists)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_getenv("CPLAT_ENV_TEST", nullptr, 0u, &exists,
-                                  nullptr); // [手順] - 設定済みの環境変数を出力バッファーなしで照会する。
+    int actual_ret = cplat_getenv(
+        "CPLAT_ENV_TEST", nullptr, 0u, &exists,
+        nullptr); // [手順] - 設定済みの環境変数と nullptr の出力バッファーを指定して cplat_getenv() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_getenv() の戻り値が CPLAT_OK であること。
@@ -345,7 +358,7 @@ TEST_F(envTest, setenv_reports_errno_when_platform_setenv_fails)
             Assign(&errno, ENOMEM),
             Return(
                 -1))); // [Pre-Assert確認_異常系] - setenv() が "CPLAT_ENV_TEST" と等しい文字列、"value1" と等しい文字列、1 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - errno に ENOMEM を設定し、setenv() から -1 を返却する。
+    // [Pre-Assert手順] - setenv() から、errno に ENOMEM を設定して -1 を返す。
 
     // Act
     int actual_ret = cplat_setenv("CPLAT_ENV_TEST", "value1", 1, &detail); // [手順] - cplat_setenv() を呼び出す。
@@ -371,7 +384,7 @@ TEST_F(envTest, unsetenv_reports_errno_when_platform_unsetenv_fails)
             Assign(&errno, EINVAL),
             Return(
                 -1))); // [Pre-Assert確認_異常系] - unsetenv() が "CPLAT_ENV_TEST" と等しい文字列を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - errno に EINVAL を設定し、unsetenv() から -1 を返却する。
+                       // [Pre-Assert手順] - unsetenv() から、errno に EINVAL を設定して -1 を返す。
 
     // Act
     int actual_ret = cplat_unsetenv("CPLAT_ENV_TEST", &detail); // [手順] - cplat_unsetenv() を呼び出す。

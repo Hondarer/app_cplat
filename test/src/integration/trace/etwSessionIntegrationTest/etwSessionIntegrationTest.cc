@@ -83,76 +83,76 @@ TEST_F(etwSessionIntegrationTest, test_session_stop_with_null)
     // Pre-Assert
 
     // Act
-    cplat_etw_session_stop(nullptr); // [手順] - NULL セッションで cplat_etw_session_stop() を呼び出す。
+    cplat_etw_session_stop(nullptr); // [手順] - nullptr のセッションを指定して cplat_etw_session_stop() を呼び出す。
 
     // Assert
-    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(NULL を渡した cplat_etw_session_stop() がクラッシュしないことの確認)
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(nullptr を渡した cplat_etw_session_stop() がクラッシュしないことの確認)
 }
 
 // session_start の必須引数 NULL が ERR_INVALID_ARGUMENT で拒否されることの確認
 TEST_F(etwSessionIntegrationTest, test_session_start_null_params)
 {
     // Arrange
-    cplat_etw_session *session = nullptr; // [状態] - session の受け取り先を NULL で初期化する。
+    cplat_etw_session *session = nullptr; // [状態] - session の受け取り先を nullptr で初期化する。
 
     // Pre-Assert
 
     // Act
-    int actual_ret_null_name =
-        cplat_etw_session_start(nullptr, TEST_PROVIDER_GUID, collect_callback, nullptr,
-                                &session); // [手順] - session_name に NULL を渡して session_start() を呼び出す。
+    int actual_ret_null_name = cplat_etw_session_start(
+        nullptr, TEST_PROVIDER_GUID, collect_callback, nullptr,
+        &session); // [手順] - session_name に nullptr を指定して cplat_etw_session_start() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_name); // [確認_異常系] - session_name が NULL の cplat_etw_session_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_name); // [確認_異常系] - session_name が nullptr の cplat_etw_session_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         nullptr,
-        session); // [確認_異常系] - session_name が NULL の cplat_etw_session_start() の後の session が nullptr であること。
+        session); // [確認_異常系] - session_name が nullptr の cplat_etw_session_start() の後の session が nullptr であること。
 
     // Act_2
-    int actual_ret_null_provider_guid =
-        cplat_etw_session_start("test", nullptr, collect_callback, nullptr,
-                                &session); // [手順] - provider_guid に NULL を渡して session_start() を呼び出す。
+    int actual_ret_null_provider_guid = cplat_etw_session_start(
+        "test", nullptr, collect_callback, nullptr,
+        &session); // [手順] - provider_guid に nullptr を指定して cplat_etw_session_start() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_provider_guid); // [確認_異常系] - provider_guid が NULL の cplat_etw_session_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_provider_guid); // [確認_異常系] - provider_guid が nullptr の cplat_etw_session_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_3
-    int actual_ret_null_callback =
-        cplat_etw_session_start("test", TEST_PROVIDER_GUID, nullptr, nullptr,
-                                &session); // [手順] - callback に NULL を渡して session_start() を呼び出す。
+    int actual_ret_null_callback = cplat_etw_session_start(
+        "test", TEST_PROVIDER_GUID, nullptr, nullptr,
+        &session); // [手順] - callback に nullptr を指定して cplat_etw_session_start() を呼び出す。
 
     // Assert_3
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_callback); // [確認_異常系] - callback が NULL の cplat_etw_session_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_callback); // [確認_異常系] - callback が nullptr の cplat_etw_session_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_4
-    int actual_ret_null_session_out =
-        cplat_etw_session_start("test", TEST_PROVIDER_GUID, collect_callback, nullptr,
-                                nullptr); // [手順] - session の受け取り先に NULL を渡して session_start() を呼び出す。
+    int actual_ret_null_session_out = cplat_etw_session_start(
+        "test", TEST_PROVIDER_GUID, collect_callback, nullptr,
+        nullptr); // [手順] - session の受け取り先に nullptr を指定して cplat_etw_session_start() を呼び出す。
 
     // Assert_4
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_session_out); // [確認_異常系] - 受け取り先が NULL の cplat_etw_session_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_session_out); // [確認_異常系] - 受け取り先が nullptr の cplat_etw_session_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 不正な GUID 文字列が ERR_INVALID_ARGUMENT で拒否されることの確認
 TEST_F(etwSessionIntegrationTest, test_session_start_invalid_guid)
 {
     // Arrange
-    cplat_etw_session *session = nullptr; // [状態] - session の受け取り先を NULL で初期化する。
+    cplat_etw_session *session = nullptr; // [状態] - session の受け取り先を nullptr で初期化する。
 
     // Pre-Assert
 
     // Act
-    int actual_ret_invalid_guid =
-        cplat_etw_session_start("test", "not-a-guid", collect_callback, nullptr,
-                                &session); // [手順] - 不正な GUID 文字列 "not-a-guid" で session_start() を呼び出す。
+    int actual_ret_invalid_guid = cplat_etw_session_start(
+        "test", "not-a-guid", collect_callback, nullptr,
+        &session); // [手順] - 不正な GUID 文字列 "not-a-guid" を指定して cplat_etw_session_start() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -204,8 +204,11 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_ascii)
 
     // Act
     Sleep(200);
-    cplat_etw_provider_write(handle, 4, nullptr, "hello world"); // [手順] - ASCII メッセージを書き込む。
-    cplat_etw_session_stop(session);                          // [手順] - session を停止して受信を確定させる。
+    cplat_etw_provider_write(
+        handle, 4, nullptr,
+        "hello world"); // [手順] - ASCII メッセージを指定して cplat_etw_provider_write() を呼び出す。
+    cplat_etw_session_stop(
+        session); // [手順] - 受信を確定させるために session を指定して cplat_etw_session_stop() を呼び出す。
 
     // Assert
     bool found = false;
@@ -260,8 +263,10 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_utf8_japanese)
 
     // Act
     Sleep(200);
-    cplat_etw_provider_write(handle, 3, nullptr, msg); // [手順] - 日本語 UTF-8 メッセージを書き込む。
-    cplat_etw_session_stop(session);                // [手順] - session を停止して受信を確定させる。
+    cplat_etw_provider_write(handle, 3, nullptr,
+                             msg); // [手順] - 日本語 UTF-8 メッセージを指定して cplat_etw_provider_write() を呼び出す。
+    cplat_etw_session_stop(
+        session); // [手順] - 受信を確定させるために session を指定して cplat_etw_session_stop() を呼び出す。
 
     // Assert
     bool found = false;
@@ -319,8 +324,10 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_utf8_mixed)
 
     // Act
     Sleep(200);
-    cplat_etw_provider_write(handle, 2, nullptr, msg); // [手順] - 混在 UTF-8 メッセージを書き込む。
-    cplat_etw_session_stop(session);                // [手順] - session を停止して受信を確定させる。
+    cplat_etw_provider_write(handle, 2, nullptr,
+                             msg); // [手順] - 混在 UTF-8 メッセージを指定して cplat_etw_provider_write() を呼び出す。
+    cplat_etw_session_stop(
+        session); // [手順] - 受信を確定させるために session を指定して cplat_etw_session_stop() を呼び出す。
 
     // Assert
     bool found = false;
@@ -373,12 +380,23 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_multiple_levels)
 
     // Act
     Sleep(200);
-    cplat_etw_provider_write(handle, 1, nullptr, "critical_msg"); // [手順] - CRITICAL を書き込む。
-    cplat_etw_provider_write(handle, 2, nullptr, "error_msg");    // [手順] - ERROR を書き込む。
-    cplat_etw_provider_write(handle, 3, nullptr, "warning_msg");  // [手順] - WARNING を書き込む。
-    cplat_etw_provider_write(handle, 4, nullptr, "info_msg");     // [手順] - INFO を書き込む。
-    cplat_etw_provider_write(handle, 5, nullptr, "verbose_msg");  // [手順] - VERBOSE を書き込む。
-    cplat_etw_session_stop(session);                           // [手順] - session を停止して受信を確定させる。
+    cplat_etw_provider_write(
+        handle, 1, nullptr,
+        "critical_msg"); // [手順] - CRITICAL レベルのメッセージを指定して cplat_etw_provider_write() を呼び出す。
+    cplat_etw_provider_write(
+        handle, 2, nullptr,
+        "error_msg"); // [手順] - ERROR レベルのメッセージを指定して cplat_etw_provider_write() を呼び出す。
+    cplat_etw_provider_write(
+        handle, 3, nullptr,
+        "warning_msg"); // [手順] - WARNING レベルのメッセージを指定して cplat_etw_provider_write() を呼び出す。
+    cplat_etw_provider_write(
+        handle, 4, nullptr,
+        "info_msg"); // [手順] - INFO レベルのメッセージを指定して cplat_etw_provider_write() を呼び出す。
+    cplat_etw_provider_write(
+        handle, 5, nullptr,
+        "verbose_msg"); // [手順] - VERBOSE レベルのメッセージを指定して cplat_etw_provider_write() を呼び出す。
+    cplat_etw_session_stop(
+        session); // [手順] - 受信を確定させるために session を指定して cplat_etw_session_stop() を呼び出す。
 
     // Assert
     bool saw_critical = false;
@@ -478,8 +496,10 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_empty_string)
 
     // Act
     Sleep(200);
-    cplat_etw_provider_write(handle, 5, nullptr, ""); // [手順] - 空文字列を書き込む。
-    cplat_etw_session_stop(session);               // [手順] - session を停止して受信を確定させる。
+    cplat_etw_provider_write(handle, 5, nullptr,
+                             ""); // [手順] - 空文字列を指定して cplat_etw_provider_write() を呼び出す。
+    cplat_etw_session_stop(
+        session); // [手順] - 受信を確定させるために session を指定して cplat_etw_session_stop() を呼び出す。
 
     // Assert
     bool found = false;
@@ -531,9 +551,11 @@ TEST_F(etwSessionSubscribeIntegrationTest, test_subscribe_service_and_message)
 
     // Act
     Sleep(200);
-    cplat_etw_provider_write(handle, 4, "worker-1",
-                             "service_msg"); // [手順] - Service と Message を持つイベントを書き込む。
-    cplat_etw_session_stop(session);         // [手順] - session を停止して受信を確定させる。
+    cplat_etw_provider_write(
+        handle, 4, "worker-1",
+        "service_msg"); // [手順] - Service と Message を持つイベントを指定して cplat_etw_provider_write() を呼び出す。
+    cplat_etw_session_stop(
+        session); // [手順] - 受信を確定させるために session を指定して cplat_etw_session_stop() を呼び出す。
 
     // Assert
     bool found = false;

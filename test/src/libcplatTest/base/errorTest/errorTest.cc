@@ -60,7 +60,7 @@ TEST_F(errorTest, capture_errno_preserves_domain_result_and_code)
     // Pre-Assert
 
     // Act
-    cplat_error_capture_errno(&error, ENOENT); // [手順] - ENOENT を詳細エラーへ取り込む。
+    cplat_error_capture_errno(&error, ENOENT); // [手順] - ENOENT を指定して cplat_error_capture_errno() を呼び出す。
 
     // Assert
     EXPECT_EQ(1, cplat_error_is_set(&error)); // [確認_正常系] - cplat_error_is_set() の戻り値が 1 であること。
@@ -94,7 +94,8 @@ TEST_F(errorTest, capture_current_errno_preserves_current_value)
     // Pre-Assert
 
     // Act
-    cplat_error_capture_current_errno(&error); // [手順] - 現在の errno を詳細エラーへ取り込む。
+    cplat_error_capture_current_errno(
+        &error); // [手順] - 現在の errno の状態で cplat_error_capture_current_errno() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERROR_DOMAIN_ERRNO,
@@ -117,10 +118,10 @@ TEST_F(errorTest, set_last_copies_saved_error_and_null_clears_it)
     // Pre-Assert
 
     // Act
-    cplat_error_set_last(&saved_error);   // [手順] - 保存済みの詳細エラーを現在のスレッドの TLS へ設定する。
-    cplat_error_get_last(&copied_error);  // [手順] - 設定後の TLS 詳細エラーを取得する。
-    cplat_error_set_last(nullptr);        // [手順] - NULL を指定して現在のスレッドの TLS をクリアする。
-    cplat_error_get_last(&cleared_error); // [手順] - クリア後の TLS 詳細エラーを取得する。
+    cplat_error_set_last(&saved_error);   // [手順] - 保存済みの詳細エラーを指定して cplat_error_set_last() を呼び出す。
+    cplat_error_get_last(&copied_error);  // [手順] - 設定後の状態で cplat_error_get_last() を呼び出す。
+    cplat_error_set_last(nullptr);        // [手順] - nullptr を指定して cplat_error_set_last() を呼び出す。
+    cplat_error_get_last(&cleared_error); // [手順] - クリア後の状態で cplat_error_get_last() を呼び出す。
 
     // Assert
     EXPECT_EQ(saved_error.domain,
@@ -152,40 +153,48 @@ TEST_F(errorTest, accessors_reject_null_empty_and_mismatched_domain)
     // Pre-Assert
 
     // Act
-    cplat_error_clear(nullptr);                          // [手順] - NULL の詳細エラーをクリアする。
-    cplat_error_capture_errno(nullptr, ENOENT);          // [手順] - NULL の格納先へ errno を取り込む。
-    cplat_error_get_last(nullptr);                       // [手順] - NULL の格納先へ TLS の値を取得する。
-    const int null_is_set = cplat_error_is_set(nullptr); // [手順] - NULL の設定状態を取得する。
-    const cplat_error_domain null_domain = cplat_error_get_domain(nullptr); // [手順] - NULL のドメインを取得する。
-    const int null_errno = cplat_error_get_errno(nullptr);                  // [手順] - NULL から errno を取得する。
-    const int null_result = cplat_error_to_result(nullptr);              // [手順] - NULL を共通結果コードへ変換する。
-    const cplat_error_cause null_cause = cplat_error_get_cause(nullptr); // [手順] - NULL の要因を取得する。
-    const int null_matches = cplat_error_is(nullptr, CPLAT_CAUSE_NONE);  // [手順] - NULL の要因一致を判定する。
-    const int empty_is_set = cplat_error_is_set(&empty); // [手順] - 空の詳細エラーの設定状態を取得する。
-    const cplat_error_domain mismatched_domain =
-        cplat_error_get_domain(&windows_error); // [手順] - Windows ドメインを取得する。
-    const cplat_error_cause windows_cause =
-        cplat_error_get_cause(&windows_error); // [手順] - Windows ドメインの要因を取得する。
-    const cplat_error_domain invalid_domain =
-        cplat_error_get_domain(&invalid_error); // [手順] - 未知のドメインを取得する。
-    const cplat_error_cause invalid_cause =
-        cplat_error_get_cause(&invalid_error); // [手順] - 未知のドメインの要因を取得する。
-    const int mismatched_errno =
-        cplat_error_get_errno(&windows_error); // [手順] - Windows ドメインから errno を取得する。
+    cplat_error_clear(nullptr); // [手順] - 詳細エラーに nullptr を指定して cplat_error_clear() を呼び出す。
+    cplat_error_capture_errno(nullptr,
+                              ENOENT); // [手順] - 格納先に nullptr を指定して cplat_error_capture_errno() を呼び出す。
+    cplat_error_get_last(nullptr);     // [手順] - 格納先に nullptr を指定して cplat_error_get_last() を呼び出す。
+    const int null_is_set =
+        cplat_error_is_set(nullptr); // [手順] - nullptr を指定して cplat_error_is_set() を呼び出す。
+    const cplat_error_domain null_domain =
+        cplat_error_get_domain(nullptr); // [手順] - nullptr を指定して cplat_error_get_domain() を呼び出す。
+    const int null_errno =
+        cplat_error_get_errno(nullptr); // [手順] - nullptr を指定して cplat_error_get_errno() を呼び出す。
+    const int null_result =
+        cplat_error_to_result(nullptr); // [手順] - nullptr を指定して cplat_error_to_result() を呼び出す。
+    const cplat_error_cause null_cause =
+        cplat_error_get_cause(nullptr); // [手順] - nullptr を指定して cplat_error_get_cause() を呼び出す。
+    const int null_matches =
+        cplat_error_is(nullptr, CPLAT_CAUSE_NONE); // [手順] - nullptr を指定して cplat_error_is() を呼び出す。
+    const int empty_is_set =
+        cplat_error_is_set(&empty); // [手順] - 空の詳細エラーを指定して cplat_error_is_set() を呼び出す。
+    const cplat_error_domain mismatched_domain = cplat_error_get_domain(
+        &windows_error); // [手順] - Windows ドメインの詳細エラーを指定して cplat_error_get_domain() を呼び出す。
+    const cplat_error_cause windows_cause = cplat_error_get_cause(
+        &windows_error); // [手順] - Windows ドメインの詳細エラーを指定して cplat_error_get_cause() を呼び出す。
+    const cplat_error_domain invalid_domain = cplat_error_get_domain(
+        &invalid_error); // [手順] - 未知のドメインを持つ詳細エラーを指定して cplat_error_get_domain() を呼び出す。
+    const cplat_error_cause invalid_cause = cplat_error_get_cause(
+        &invalid_error); // [手順] - 未知のドメインを持つ詳細エラーを指定して cplat_error_get_cause() を呼び出す。
+    const int mismatched_errno = cplat_error_get_errno(
+        &windows_error); // [手順] - Windows ドメインの詳細エラーを指定して cplat_error_get_errno() を呼び出す。
 
     // Assert
-    EXPECT_EQ(0, null_is_set); // [確認_異常系] - NULL に対する cplat_error_is_set() の戻り値が 0 であること。
+    EXPECT_EQ(0, null_is_set); // [確認_異常系] - nullptr に対する cplat_error_is_set() の戻り値が 0 であること。
     EXPECT_EQ(
         CPLAT_ERROR_DOMAIN_NONE,
-        null_domain); // [確認_異常系] - NULL に対する cplat_error_get_domain() の戻り値が CPLAT_ERROR_DOMAIN_NONE であること。
-    EXPECT_EQ(0, null_errno); // [確認_異常系] - NULL に対する cplat_error_get_errno() の戻り値が 0 であること。
+        null_domain); // [確認_異常系] - nullptr に対する cplat_error_get_domain() の戻り値が CPLAT_ERROR_DOMAIN_NONE であること。
+    EXPECT_EQ(0, null_errno); // [確認_異常系] - nullptr に対する cplat_error_get_errno() の戻り値が 0 であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_result); // [確認_異常系] - NULL に対する cplat_error_to_result() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_result); // [確認_異常系] - nullptr に対する cplat_error_to_result() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_CAUSE_NONE,
-        null_cause); // [確認_異常系] - NULL に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_NONE であること。
-    EXPECT_EQ(0, null_matches); // [確認_異常系] - NULL に対する cplat_error_is() の戻り値が 0 であること。
+        null_cause); // [確認_異常系] - nullptr に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_NONE であること。
+    EXPECT_EQ(0, null_matches); // [確認_異常系] - nullptr に対する cplat_error_is() の戻り値が 0 であること。
     EXPECT_EQ(0, empty_is_set); // [確認_正常系] - 空の詳細エラーに対する cplat_error_is_set() の戻り値が 0 であること。
     EXPECT_EQ(
         CPLAT_OK,
@@ -250,7 +259,8 @@ TEST_F(errorTest, errno_values_map_to_one_cause)
     // Act
     for (const std::pair<int, cplat_error_cause> &item : cases)
     {
-        cplat_error_capture_errno(&error, item.first); // [手順] - 各 errno を順番に詳細エラーへ取り込む。
+        cplat_error_capture_errno(
+            &error, item.first); // [手順] - 各 errno を順番に指定して cplat_error_capture_errno() を呼び出す。
         actual_causes.push_back(cplat_error_get_cause(&error));
         actual_matches.push_back(cplat_error_is(&error, item.second));
     }
@@ -278,7 +288,8 @@ TEST_F(errorTest, unknown_errno_maps_to_other)
     // Pre-Assert
 
     // Act
-    cplat_error_capture_errno(&error, EDOM); // [手順] - 対応表にない EDOM を詳細エラーへ取り込む。
+    cplat_error_capture_errno(&error,
+                              EDOM); // [手順] - 対応表にない EDOM を指定して cplat_error_capture_errno() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -297,7 +308,7 @@ TEST_F(errorTest, enosys_maps_to_unsupported)
     // Pre-Assert
 
     // Act
-    cplat_error_capture_errno(&error, ENOSYS); // [手順] - ENOSYS を詳細エラーへ取り込む。
+    cplat_error_capture_errno(&error, ENOSYS); // [手順] - ENOSYS を指定して cplat_error_capture_errno() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -317,12 +328,13 @@ TEST_F(errorTest, report_errno_records_success_and_explicit_result)
     // Pre-Assert
 
     // Act
-    int success_result = cplat_internal_error_report_errno(&detail, 0); // [手順] - errno 0 を成功として記録する。
-    int mapped_result =
-        cplat_internal_error_report_errno(&detail, ENOENT); // [手順] - ENOENT を対応する結果コードへ変換して記録する。
+    int success_result = cplat_internal_error_report_errno(
+        &detail, 0); // [手順] - errno に 0 を指定して cplat_internal_error_report_errno() を呼び出す。
+    int mapped_result = cplat_internal_error_report_errno(
+        &detail, ENOENT); // [手順] - ENOENT を指定して cplat_internal_error_report_errno() を呼び出す。
     int explicit_result = cplat_internal_error_report_errno_as(&detail, EIO, CPLAT_ERR_BUSY);
-    // [手順] - EIO に対して明示した CPLAT_ERR_BUSY を記録する。
-    cplat_error_get_last(&last_error); // [手順] - 最後に記録された詳細エラーを取得する。
+    // [手順] - EIO と CPLAT_ERR_BUSY を指定して cplat_internal_error_report_errno_as() を呼び出す。
+    cplat_error_get_last(&last_error); // [手順] - 最後に記録された状態で cplat_error_get_last() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -354,8 +366,9 @@ TEST_F(errorTest, report_success_clears_detail_and_last_error)
     // Pre-Assert
 
     // Act
-    int result = cplat_internal_error_report_success(&detail); // [手順] - 詳細エラーを成功状態へ更新する。
-    cplat_error_get_last(&last_error);                         // [手順] - 更新後の TLS 詳細エラーを取得する。
+    int result = cplat_internal_error_report_success(
+        &detail); // [手順] - 詳細エラーを指定して cplat_internal_error_report_success() を呼び出す。
+    cplat_error_get_last(&last_error); // [手順] - 更新後の状態で cplat_error_get_last() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -376,15 +389,15 @@ TEST_F(errorTest, report_socket_errno_uses_socket_domain_and_would_block_cause)
     // Pre-Assert
 
     // Act
-    int blocked_result =
-        cplat_internal_error_report_socket_errno(&error, EAGAIN); // [手順] - EAGAIN をソケット errno として記録する。
-    const cplat_error_domain blocked_domain =
-        cplat_error_get_domain(&error); // [手順] - EAGAIN の記録ドメインを取得する。
-    const cplat_error_cause blocked_cause =
-        cplat_error_get_cause(&error); // [手順] - ソケット EAGAIN の要因を取得する。
-    int success_result =
-        cplat_internal_error_report_socket_errno(&error, 0); // [手順] - errno 0 をソケット成功として記録する。
-    cplat_error_get_last(&last_error);                       // [手順] - ソケット成功後の TLS 詳細エラーを取得する。
+    int blocked_result = cplat_internal_error_report_socket_errno(
+        &error, EAGAIN); // [手順] - EAGAIN を指定して cplat_internal_error_report_socket_errno() を呼び出す。
+    const cplat_error_domain blocked_domain = cplat_error_get_domain(
+        &error); // [手順] - EAGAIN を記録した詳細エラーを指定して cplat_error_get_domain() を呼び出す。
+    const cplat_error_cause blocked_cause = cplat_error_get_cause(
+        &error); // [手順] - ソケット EAGAIN を記録した詳細エラーを指定して cplat_error_get_cause() を呼び出す。
+    int success_result = cplat_internal_error_report_socket_errno(
+        &error, 0); // [手順] - errno に 0 を指定して cplat_internal_error_report_socket_errno() を呼び出す。
+    cplat_error_get_last(&last_error); // [手順] - ソケット成功後の状態で cplat_error_get_last() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -413,7 +426,8 @@ TEST_F(errorTest, report_socket_errno_as_keeps_domain_when_result_is_not_success
 
     // Act
     int result = cplat_internal_error_report_socket_errno_as(
-        &error, 0, CPLAT_ERR_UNKNOWN); // [手順] - errno 0 と非成功結果をソケット エラーとして記録する。
+        &error, 0,
+        CPLAT_ERR_UNKNOWN); // [手順] - errno に 0 と非成功結果を指定して cplat_internal_error_report_socket_errno_as() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -435,21 +449,32 @@ TEST_F(errorTest, report_gai_error_maps_standard_codes_and_unknown_code)
 
     // Act
 #if defined(PLATFORM_LINUX)
-    int not_found_result =
-        cplat_internal_error_report_gai_error(&error, EAI_NONAME);           // [手順] - EAI_NONAME を記録する。
-    const cplat_error_cause not_found_cause = cplat_error_get_cause(&error); // [手順] - EAI_NONAME の要因を取得する。
-    int again_result = cplat_internal_error_report_gai_error(&error, EAI_AGAIN); // [手順] - EAI_AGAIN を記録する。
-    const cplat_error_cause again_cause = cplat_error_get_cause(&error); // [手順] - EAI_AGAIN の要因を取得する。
-    int memory_result = cplat_internal_error_report_gai_error(&error, EAI_MEMORY); // [手順] - EAI_MEMORY を記録する。
-    const cplat_error_cause memory_cause = cplat_error_get_cause(&error); // [手順] - EAI_MEMORY の要因を取得する。
-    int family_result = cplat_internal_error_report_gai_error(&error, EAI_FAMILY); // [手順] - EAI_FAMILY を記録する。
-    const cplat_error_cause family_cause = cplat_error_get_cause(&error); // [手順] - EAI_FAMILY の要因を取得する。
-    int flags_result =
-        cplat_internal_error_report_gai_error(&error, EAI_BADFLAGS);     // [手順] - EAI_BADFLAGS を記録する。
-    const cplat_error_cause flags_cause = cplat_error_get_cause(&error); // [手順] - EAI_BADFLAGS の要因を取得する。
-    int unknown_result = cplat_internal_error_report_gai_error(&error, -9999); // [手順] - 未知の EAI 値を記録する。
-    const cplat_error_cause unknown_cause = cplat_error_get_cause(&error); // [手順] - 未知の EAI 値の要因を取得する。
-    int success_result = cplat_internal_error_report_gai_error(&error, 0); // [手順] - EAI 0 を成功として記録する。
+    int not_found_result = cplat_internal_error_report_gai_error(
+        &error, EAI_NONAME); // [手順] - EAI_NONAME を指定して cplat_internal_error_report_gai_error() を呼び出す。
+    const cplat_error_cause not_found_cause = cplat_error_get_cause(
+        &error); // [手順] - EAI_NONAME を記録した詳細エラーを指定して cplat_error_get_cause() を呼び出す。
+    int again_result = cplat_internal_error_report_gai_error(
+        &error, EAI_AGAIN); // [手順] - EAI_AGAIN を指定して cplat_internal_error_report_gai_error() を呼び出す。
+    const cplat_error_cause again_cause = cplat_error_get_cause(
+        &error); // [手順] - EAI_AGAIN を記録した詳細エラーを指定して cplat_error_get_cause() を呼び出す。
+    int memory_result = cplat_internal_error_report_gai_error(
+        &error, EAI_MEMORY); // [手順] - EAI_MEMORY を指定して cplat_internal_error_report_gai_error() を呼び出す。
+    const cplat_error_cause memory_cause = cplat_error_get_cause(
+        &error); // [手順] - EAI_MEMORY を記録した詳細エラーを指定して cplat_error_get_cause() を呼び出す。
+    int family_result = cplat_internal_error_report_gai_error(
+        &error, EAI_FAMILY); // [手順] - EAI_FAMILY を指定して cplat_internal_error_report_gai_error() を呼び出す。
+    const cplat_error_cause family_cause = cplat_error_get_cause(
+        &error); // [手順] - EAI_FAMILY を記録した詳細エラーを指定して cplat_error_get_cause() を呼び出す。
+    int flags_result = cplat_internal_error_report_gai_error(
+        &error, EAI_BADFLAGS); // [手順] - EAI_BADFLAGS を指定して cplat_internal_error_report_gai_error() を呼び出す。
+    const cplat_error_cause flags_cause = cplat_error_get_cause(
+        &error); // [手順] - EAI_BADFLAGS を記録した詳細エラーを指定して cplat_error_get_cause() を呼び出す。
+    int unknown_result = cplat_internal_error_report_gai_error(
+        &error, -9999); // [手順] - 未知の EAI 値を指定して cplat_internal_error_report_gai_error() を呼び出す。
+    const cplat_error_cause unknown_cause = cplat_error_get_cause(
+        &error); // [手順] - 未知の EAI 値を記録した詳細エラーを指定して cplat_error_get_cause() を呼び出す。
+    int success_result = cplat_internal_error_report_gai_error(
+        &error, 0); // [手順] - EAI 0 を指定して cplat_internal_error_report_gai_error() を呼び出す。
 #else
     int success_result = CPLAT_OK;
 #endif
@@ -507,15 +532,19 @@ TEST_F(errorTest, report_gai_error_classifies_system_error_by_errno)
 
     // Act
     errno = ENOMEM; // [手順] - errno に ENOMEM を設定する。
-    int memory_result = cplat_internal_error_report_gai_error(&error, EAI_SYSTEM); // [手順] - EAI_SYSTEM を記録する。
-    const cplat_error_cause memory_cause =
-        cplat_error_get_cause(&error); // [手順] - errno が ENOMEM の EAI_SYSTEM の要因を取得する。
+    int memory_result = cplat_internal_error_report_gai_error(
+        &error,
+        EAI_SYSTEM); // [手順] - errno が ENOMEM の状態で EAI_SYSTEM を指定して cplat_internal_error_report_gai_error() を呼び出す。
+    const cplat_error_cause memory_cause = cplat_error_get_cause(
+        &error); // [手順] - errno が ENOMEM の EAI_SYSTEM を記録した詳細エラーを指定して cplat_error_get_cause() を呼び出す。
     const unsigned long memory_code =
         (unsigned long)error.code; // [手順] - errno が ENOMEM の EAI_SYSTEM の生値を取得する。
     errno = EINTR;                 // [手順] - errno に EINTR を設定する。
-    cplat_internal_error_report_gai_error(&error, EAI_SYSTEM); // [手順] - EAI_SYSTEM を記録する。
-    const cplat_error_cause interrupted_cause =
-        cplat_error_get_cause(&error); // [手順] - errno が EINTR の EAI_SYSTEM の要因を取得する。
+    cplat_internal_error_report_gai_error(
+        &error,
+        EAI_SYSTEM); // [手順] - errno が EINTR の状態で EAI_SYSTEM を指定して cplat_internal_error_report_gai_error() を呼び出す。
+    const cplat_error_cause interrupted_cause = cplat_error_get_cause(
+        &error); // [手順] - errno が EINTR の EAI_SYSTEM を記録した詳細エラーを指定して cplat_error_get_cause() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -585,20 +614,25 @@ TEST_F(errorTest, accessors_cover_socket_gai_and_extended_errno_causes)
     // Pre-Assert
 
     // Act
-    cplat_internal_error_report_socket_errno(&error, EIO); // [手順] - EIO をソケット errno として記録する。
-    const cplat_error_cause socket_io_cause = cplat_error_get_cause(&error); // [手順] - ソケット EIO の要因を取得する。
-    cplat_internal_error_report_gai_error(&error, 0);                        // [手順] - GAI 0 を記録する。
-    const cplat_error_domain gai_domain = cplat_error_get_domain(&error); // [手順] - GAI 成功値のドメインを取得する。
-    const cplat_error_domain winsock_domain =
-        cplat_error_get_domain(&winsock_error); // [手順] - WINSOCK ドメインを取得する。
-    const cplat_error_domain explicit_gai_domain =
-        cplat_error_get_domain(&gai_error); // [手順] - GAI ドメインを取得する。
-    const cplat_error_cause winsock_cause =
-        cplat_error_get_cause(&winsock_error); // [手順] - 非 Windows の WINSOCK ドメイン要因を取得する。
+    cplat_internal_error_report_socket_errno(
+        &error, EIO); // [手順] - EIO を指定して cplat_internal_error_report_socket_errno() を呼び出す。
+    const cplat_error_cause socket_io_cause = cplat_error_get_cause(
+        &error); // [手順] - ソケット EIO を記録した詳細エラーを指定して cplat_error_get_cause() を呼び出す。
+    cplat_internal_error_report_gai_error(
+        &error, 0); // [手順] - GAI 0 を指定して cplat_internal_error_report_gai_error() を呼び出す。
+    const cplat_error_domain gai_domain = cplat_error_get_domain(
+        &error); // [手順] - GAI 成功値を記録した詳細エラーを指定して cplat_error_get_domain() を呼び出す。
+    const cplat_error_domain winsock_domain = cplat_error_get_domain(
+        &winsock_error); // [手順] - WINSOCK ドメインの詳細エラーを指定して cplat_error_get_domain() を呼び出す。
+    const cplat_error_domain explicit_gai_domain = cplat_error_get_domain(
+        &gai_error); // [手順] - GAI ドメインの詳細エラーを指定して cplat_error_get_domain() を呼び出す。
+    const cplat_error_cause winsock_cause = cplat_error_get_cause(
+        &winsock_error); // [手順] - 非 Windows の WINSOCK ドメインの詳細エラーを指定して cplat_error_get_cause() を呼び出す。
     std::vector<cplat_error_cause> causes;
     for (const std::pair<int, cplat_error_cause> &item : cases)
     {
-        cplat_error_capture_errno(&error, item.first); // [手順] - 追加 errno を順番に取り込む。
+        cplat_error_capture_errno(
+            &error, item.first); // [手順] - 追加 errno を順番に指定して cplat_error_capture_errno() を呼び出す。
         causes.push_back(cplat_error_get_cause(&error));
     }
 
@@ -636,7 +670,8 @@ TEST_F(errorTest, error_is_rejects_nonmatching_cause)
 
     // Act
     int matches = cplat_error_is(
-        &error, CPLAT_CAUSE_ACCESS_DENIED); // [手順] - NOT_FOUND の詳細エラーを ACCESS_DENIED と比較する。
+        &error,
+        CPLAT_CAUSE_ACCESS_DENIED); // [手順] - NOT_FOUND の詳細エラーと ACCESS_DENIED を指定して cplat_error_is() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -654,7 +689,8 @@ TEST_F(errorTest, report_errno_as_keeps_domain_when_result_is_not_success)
 
     // Act
     int result = cplat_internal_error_report_errno_as(
-        &error, 0, CPLAT_ERR_UNKNOWN); // [手順] - errno 0 と非成功結果を明示して記録する。
+        &error, 0,
+        CPLAT_ERR_UNKNOWN); // [手順] - errno に 0 と非成功結果を指定して cplat_internal_error_report_errno_as() を呼び出す。
 
     // Assert
     EXPECT_EQ(

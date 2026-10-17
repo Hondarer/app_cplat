@@ -24,23 +24,27 @@ TEST(syncDescriptorTest, rejects_invalid_export_and_import_arguments)
 
     // Act
     int export_identity_result = cplat_internal_interprocess_sync_descriptor_export(
-        nullptr, 1U, 1U, descriptor, &descriptor_size); // [手順] - NULL identity で descriptor を出力する。
+        nullptr, 1U, 1U, descriptor,
+        &descriptor_size); // [手順] - identity に nullptr を指定して cplat_internal_interprocess_sync_descriptor_export() を呼び出す。
     int export_size_result = cplat_internal_interprocess_sync_descriptor_export(
-        "identity", 1U, 1U, descriptor, nullptr); // [手順] - NULL サイズ格納先で descriptor を出力する。
+        "identity", 1U, 1U, descriptor,
+        nullptr); // [手順] - サイズ格納先に nullptr を指定して cplat_internal_interprocess_sync_descriptor_export() を呼び出す。
     int import_descriptor_result = cplat_internal_interprocess_sync_descriptor_import(
-        nullptr, sizeof(descriptor), 1U, 1U, &identity); // [手順] - NULL descriptor を import する。
+        nullptr, sizeof(descriptor), 1U, 1U,
+        &identity); // [手順] - descriptor に nullptr を指定して cplat_internal_interprocess_sync_descriptor_import() を呼び出す。
     int import_identity_result = cplat_internal_interprocess_sync_descriptor_import(
-        descriptor, sizeof(descriptor), 1U, 1U, nullptr); // [手順] - NULL identity 格納先で import する。
+        descriptor, sizeof(descriptor), 1U, 1U,
+        nullptr); // [手順] - identity 格納先に nullptr を指定して cplat_internal_interprocess_sync_descriptor_import() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, export_identity_result);
-    // [確認_異常系] - NULL identity に対する cplat_internal_interprocess_sync_descriptor_export() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    // [確認_異常系] - nullptr identity に対する cplat_internal_interprocess_sync_descriptor_export() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, export_size_result);
-    // [確認_異常系] - NULL サイズ格納先に対する cplat_internal_interprocess_sync_descriptor_export() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    // [確認_異常系] - nullptr サイズ格納先に対する cplat_internal_interprocess_sync_descriptor_export() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, import_descriptor_result);
-    // [確認_異常系] - NULL descriptor に対する cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    // [確認_異常系] - nullptr descriptor に対する cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, import_identity_result);
-    // [確認_異常系] - NULL identity 格納先に対する cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    // [確認_異常系] - nullptr identity 格納先に対する cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // identity 長 0 とサイズ不一致を拒否することの確認
@@ -63,10 +67,11 @@ TEST(syncDescriptorTest, rejects_zero_and_mismatched_identity_lengths)
     descriptor[10] = 0U;
     descriptor[11] = 0U;
     int zero_length_result = cplat_internal_interprocess_sync_descriptor_import(
-        descriptor, 20U, 1U, 1U, &identity); // [手順] - identity length 0 の descriptor を import する。
+        descriptor, 20U, 1U, 1U,
+        &identity); // [手順] - identity length 0 の descriptor を指定して cplat_internal_interprocess_sync_descriptor_import() を呼び出す。
     int short_descriptor_result = cplat_internal_interprocess_sync_descriptor_import(
         descriptor, descriptor_size, 1U, 1U,
-        &identity); // [手順] - identity length とサイズが一致しない descriptor を import する。
+        &identity); // [手順] - identity length とサイズが一致しない descriptor を指定して cplat_internal_interprocess_sync_descriptor_import() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, zero_length_result);
@@ -88,10 +93,10 @@ TEST(syncDescriptorTest, exports_and_imports_identity)
     // Act
     int export_result = cplat_internal_interprocess_sync_descriptor_export(
         "lock-path", CPLAT_INTERPROCESS_SYNC_KIND_LOCK, 1U, descriptor,
-        &descriptor_size); // [手順] - identity "lock-path" を descriptor へ出力する。
+        &descriptor_size); // [手順] - identity "lock-path" を指定して cplat_internal_interprocess_sync_descriptor_export() を呼び出す。
     int import_result = cplat_internal_interprocess_sync_descriptor_import(
         descriptor, descriptor_size, CPLAT_INTERPROCESS_SYNC_KIND_LOCK, 1U,
-        &identity); // [手順] - 同じ種別とバックエンドで import する。
+        &identity); // [手順] - 同じ種別とバックエンドを指定して cplat_internal_interprocess_sync_descriptor_import() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, export_result);
@@ -122,11 +127,12 @@ TEST(syncDescriptorTest, reports_unknown_when_identity_allocation_fails)
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(Return(nullptr))
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回以上呼び出されること。
-    // [Pre-Assert手順] - 1 回目は nullptr を返却して identity 確保を失敗させ、以降は既定動作へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目は nullptr を返して identity 確保を失敗させ、以降は製品 (prod) の処理へ委譲する。
 
     // Act
-    int result = cplat_internal_interprocess_sync_descriptor_import(descriptor, descriptor_size, 1U, 1U,
-                                                                    &identity); // [手順] - descriptor を import する。
+    int result = cplat_internal_interprocess_sync_descriptor_import(
+        descriptor, descriptor_size, 1U, 1U,
+        &identity); // [手順] - descriptor を指定して cplat_internal_interprocess_sync_descriptor_import() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, result);
@@ -148,10 +154,11 @@ TEST(syncDescriptorTest, reports_required_size_for_absent_and_small_buffers)
 
     // Act
     int absent_result = cplat_internal_interprocess_sync_descriptor_export(
-        "identity", 1U, 1U, nullptr, &absent_size); // [手順] - descriptor を省略して必要サイズを問い合わせる。
-    int small_result =
-        cplat_internal_interprocess_sync_descriptor_export("identity", 1U, 1U, descriptor,
-                                                           &small_size); // [手順] - 容量不足の descriptor へ出力する。
+        "identity", 1U, 1U, nullptr,
+        &absent_size); // [手順] - descriptor を省略して必要サイズを問い合わせるため、nullptr を指定して cplat_internal_interprocess_sync_descriptor_export() を呼び出す。
+    int small_result = cplat_internal_interprocess_sync_descriptor_export(
+        "identity", 1U, 1U, descriptor,
+        &small_size); // [手順] - 容量不足の descriptor を指定して cplat_internal_interprocess_sync_descriptor_export() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, absent_result);
@@ -181,27 +188,31 @@ TEST(syncDescriptorTest, rejects_each_corrupt_header_field)
     // Act
     int short_header_result = cplat_internal_interprocess_sync_descriptor_import(
         descriptor, CPLAT_INTERPROCESS_SYNC_DESCRIPTOR_HEADER_SIZE - 1U, 1U, 1U,
-        &identity); // [手順] - ヘッダーより短い descriptor を import する。
+        &identity); // [手順] - ヘッダーより短い descriptor を指定して cplat_internal_interprocess_sync_descriptor_import() を呼び出す。
     descriptor[0] ^= 0xffU;
     int magic_result = cplat_internal_interprocess_sync_descriptor_import(
-        descriptor, descriptor_size, 1U, 1U, &identity); // [手順] - magic が異なる descriptor を import する。
+        descriptor, descriptor_size, 1U, 1U,
+        &identity); // [手順] - magic が異なる descriptor を指定して cplat_internal_interprocess_sync_descriptor_import() を呼び出す。
     memcpy(descriptor, original, descriptor_size);
     descriptor[4]++;
     int version_result = cplat_internal_interprocess_sync_descriptor_import(
-        descriptor, descriptor_size, 1U, 1U, &identity); // [手順] - version が異なる descriptor を import する。
+        descriptor, descriptor_size, 1U, 1U,
+        &identity); // [手順] - version が異なる descriptor を指定して cplat_internal_interprocess_sync_descriptor_import() を呼び出す。
     memcpy(descriptor, original, descriptor_size);
     descriptor[5]++;
     int kind_result = cplat_internal_interprocess_sync_descriptor_import(
-        descriptor, descriptor_size, 1U, 1U, &identity); // [手順] - kind が異なる descriptor を import する。
+        descriptor, descriptor_size, 1U, 1U,
+        &identity); // [手順] - kind が異なる descriptor を指定して cplat_internal_interprocess_sync_descriptor_import() を呼び出す。
     memcpy(descriptor, original, descriptor_size);
     descriptor[6]++;
     int backend_result = cplat_internal_interprocess_sync_descriptor_import(
-        descriptor, descriptor_size, 1U, 1U, &identity); // [手順] - backend が異なる descriptor を import する。
+        descriptor, descriptor_size, 1U, 1U,
+        &identity); // [手順] - backend が異なる descriptor を指定して cplat_internal_interprocess_sync_descriptor_import() を呼び出す。
     memcpy(descriptor, original, descriptor_size);
     descriptor[8]++;
     int length_result = cplat_internal_interprocess_sync_descriptor_import(
         descriptor, descriptor_size, 1U, 1U,
-        &identity); // [手順] - identity 長と全体サイズが異なる descriptor を import する。
+        &identity); // [手順] - identity 長と全体サイズが異なる descriptor を指定して cplat_internal_interprocess_sync_descriptor_import() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_CORRUPT_DESCRIPTOR, short_header_result);

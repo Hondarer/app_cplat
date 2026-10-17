@@ -105,7 +105,8 @@ TEST_F(stringCatalogFilterCategoryTest, level_name_and_number_give_same_result)
     // Pre-Assert
 
     // Act_1
-    actual_error_name = apply_line("category <= WARNING"); // [手順] - レベル名で書いた条件式を適用する。
+    actual_error_name =
+        apply_line("category <= WARNING"); // [手順] - レベル名で書いた条件式を指定して apply_line() を呼び出す。
     actual_failed_name = state_of(FILTER_TEST_TRACE_KEY_JOB_FAILED);
     actual_started_name = state_of(FILTER_TEST_TRACE_KEY_WORKER_STARTED);
 
@@ -121,7 +122,8 @@ TEST_F(stringCatalogFilterCategoryTest, level_name_and_number_give_same_result)
         actual_started_name); // [確認_正常系] - レベル名の条件式の WORKER_STARTED に対する state_of() の戻り値が CPLAT_STRING_CATALOG_FILTER_STATE_NEVER_MATCH であること。
 
     // Act_2
-    actual_error_number = apply_line("category <= 2"); // [手順] - 数値で書いた条件式を適用する。
+    actual_error_number =
+        apply_line("category <= 2"); // [手順] - 数値で書いた条件式を指定して apply_line() を呼び出す。
     actual_failed_number = state_of(FILTER_TEST_TRACE_KEY_JOB_FAILED);
     actual_started_number = state_of(FILTER_TEST_TRACE_KEY_WORKER_STARTED);
 
@@ -151,15 +153,15 @@ TEST_F(stringCatalogFilterCategoryTest, out_of_range_values_are_rejected)
 
     // Act
     cplat_string_catalog_filter_line_error actual_upper =
-        apply_line("category <= 7"); // [手順] - 上限を超える値を適用する。
+        apply_line("category <= 7"); // [手順] - 上限を超える値を指定して apply_line() を呼び出す。
     cplat_string_catalog_filter_line_error actual_negative =
-        apply_line("category == -1"); // [手順] - 負の値を適用する。
+        apply_line("category == -1"); // [手順] - 負の値を指定して apply_line() を呼び出す。
     cplat_string_catalog_filter_line_error actual_fraction =
-        apply_line("category between 1 and 2.5"); // [手順] - 整数でない値を適用する。
+        apply_line("category between 1 and 2.5"); // [手順] - 整数でない値を指定して apply_line() を呼び出す。
     cplat_string_catalog_filter_line_error actual_list =
-        apply_line("category in [0, 9]"); // [手順] - 列挙の一部が範囲外の値を適用する。
+        apply_line("category in [0, 9]"); // [手順] - 列挙の一部が範囲外の値を指定して apply_line() を呼び出す。
     cplat_string_catalog_filter_line_error actual_boundary =
-        apply_line("category in [0, 6, 2.0]"); // [手順] - 範囲の両端と整数値の実数を適用する。
+        apply_line("category in [0, 6, 2.0]"); // [手順] - 範囲の両端と整数値の実数を指定して apply_line() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -192,8 +194,8 @@ TEST_F(stringCatalogFilterCategoryTest, unknown_level_name_is_rejected)
     // Pre-Assert
 
     // Act
-    cplat_string_catalog_filter_line_error actual_error =
-        apply_line("category in [INFO, FOO]"); // [手順] - 未知のレベル名を含む条件式を適用する。
+    cplat_string_catalog_filter_line_error actual_error = apply_line(
+        "category in [INFO, FOO]"); // [手順] - 未知のレベル名を含む条件式を指定して apply_line() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -211,9 +213,10 @@ TEST_F(stringCatalogFilterCategoryTest, without_category_names_category_is_anony
     // Pre-Assert
 
     // Act
-    cplat_string_catalog_filter_line_error actual_large = apply_line("category <= 99"); // [手順] - 大きな値を適用する。
+    cplat_string_catalog_filter_line_error actual_large =
+        apply_line("category <= 99"); // [手順] - 大きな値を指定して apply_line() を呼び出す。
     cplat_string_catalog_filter_line_error actual_name =
-        apply_line("category <= WARNING"); // [手順] - レベル名を適用する。
+        apply_line("category <= WARNING"); // [手順] - レベル名を指定して apply_line() を呼び出す。
 
     // Assert
     EXPECT_EQ(

@@ -36,7 +36,8 @@ TEST_F(hostTest, GetsHostnameSuccess)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_host_get_name(name, sizeof(name)); // [手順] - 十分な容量のバッファーへホスト名を取得する。
+    int actual_ret = cplat_host_get_name(
+        name, sizeof(name)); // [手順] - 十分な容量のバッファーを指定して cplat_host_get_name() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_host_get_name() の戻り値が CPLAT_OK であること。
@@ -53,16 +54,18 @@ TEST_F(hostTest, RejectsInvalidOutputArguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null =
-        cplat_host_get_name(nullptr, sizeof(name));     // [手順] - 出力先に NULL を渡してホスト名を取得する。
-    int actual_ret_zero = cplat_host_get_name(name, 0); // [手順] - 出力先サイズに 0 を渡してホスト名を取得する。
+    int actual_ret_null = cplat_host_get_name(
+        nullptr, sizeof(name)); // [手順] - 出力先に nullptr を指定して cplat_host_get_name() を呼び出す。
+    int actual_ret_zero =
+        cplat_host_get_name(name, 0); // [手順] - 出力先サイズに 0 を指定して cplat_host_get_name() を呼び出す。
     int actual_ret_too_big = cplat_host_get_name(
-        name, (size_t)INT_MAX + 1u); // [手順] - 出力先サイズに INT_MAX を超える値を渡してホスト名を取得する。
+        name, (size_t)INT_MAX +
+                  1u); // [手順] - 出力先サイズに INT_MAX を超える値を指定して cplat_host_get_name() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null); // [確認_異常系] - 出力先が NULL の cplat_host_get_name() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null); // [確認_異常系] - 出力先が nullptr の cplat_host_get_name() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_zero); // [確認_異常系] - 出力先サイズが 0 の cplat_host_get_name() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -83,7 +86,8 @@ TEST_F(hostTest, ReportsSmallBuffer)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_host_get_name(name, sizeof(name)); // [手順] - 1 バイトの出力先へホスト名を取得する。
+    int actual_ret = cplat_host_get_name(
+        name, sizeof(name)); // [手順] - 1 バイトの出力先を指定して cplat_host_get_name() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -116,11 +120,11 @@ TEST_F(hostTest, CopiesMockedGethostname)
                 memcpy(buf, host, host_len + 1u);
                 return 0;
             })); // [Pre-Assert確認_正常系] - gethostname() が 1 回呼び出されること。
-                 // [Pre-Assert手順] - "testhost" を書き込み 0 を返却する。
+                 // [Pre-Assert手順] - gethostname() から、"testhost" を書き込んで 0 を返す。
 
     // Act
-    int actual_ret =
-        cplat_host_get_name(name, sizeof(name)); // [手順] - mock 化した gethostname からホスト名を取得する。
+    int actual_ret = cplat_host_get_name(
+        name, sizeof(name)); // [手順] - gethostname() が "testhost" を返す状態で cplat_host_get_name() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_host_get_name() の戻り値が CPLAT_OK であること。
@@ -134,16 +138,16 @@ TEST_F(hostTest, ReportsGethostnameNameTooLong)
     NiceMock<Mock_unistd> mock_unistd;
     char name[CPLAT_HOST_NAME_MAX] = {'x'};
 
-    errno = ENAMETOOLONG; // [状態] - gethostname 失敗時の errno を ENAMETOOLONG にする。
+    errno = ENAMETOOLONG; // [状態] - gethostname() 失敗時の errno を ENAMETOOLONG にする。
 
     // Pre-Assert
     EXPECT_CALL(mock_unistd, gethostname(_, _, _, _, _))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - gethostname() が 1 回呼び出されること。
-                               // [Pre-Assert手順] - gethostname から -1 を返却する。
+                               // [Pre-Assert手順] - gethostname() から -1 を返す。
 
     // Act
-    int actual_ret =
-        cplat_host_get_name(name, sizeof(name)); // [手順] - ENAMETOOLONG で失敗する状態でホスト名を取得する。
+    int actual_ret = cplat_host_get_name(
+        name, sizeof(name)); // [手順] - ENAMETOOLONG で失敗する状態で cplat_host_get_name() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -158,15 +162,16 @@ TEST_F(hostTest, ReportsGethostnameOsError)
     NiceMock<Mock_unistd> mock_unistd;
     char name[CPLAT_HOST_NAME_MAX] = {'x'};
 
-    errno = EACCES; // [状態] - gethostname 失敗時の errno を EACCES にする。
+    errno = EACCES; // [状態] - gethostname() 失敗時の errno を EACCES にする。
 
     // Pre-Assert
     EXPECT_CALL(mock_unistd, gethostname(_, _, _, _, _))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - gethostname() が 1 回呼び出されること。
-                               // [Pre-Assert手順] - gethostname から -1 を返却する。
+                               // [Pre-Assert手順] - gethostname() から -1 を返す。
 
     // Act
-    int actual_ret = cplat_host_get_name(name, sizeof(name)); // [手順] - EACCES で失敗する状態でホスト名を取得する。
+    int actual_ret =
+        cplat_host_get_name(name, sizeof(name)); // [手順] - EACCES で失敗する状態で cplat_host_get_name() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED,
@@ -202,7 +207,7 @@ TEST_F(hostTest, CopiesMockedComputerName)
                 *size = needed - 1u;
                 return TRUE;
             })); // [Pre-Assert確認_正常系] - GetComputerNameExW() が ComputerNameDnsHostname を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - L"testhost" を書き込み成功を返却する。
+                 // [Pre-Assert手順] - GetComputerNameExW() から、L"testhost" を書き込んで TRUE を返す。
     EXPECT_CALL(mock_cplat, cplat_wstr_to_utf8(_, sizeof(name), StrEq(L"testhost")))
         .WillOnce(Invoke(
             [](char *dest, size_t dest_size, const wchar_t *)
@@ -216,11 +221,12 @@ TEST_F(hostTest, CopiesMockedComputerName)
                 memcpy(dest, kName, sizeof(kName));
                 return (int)sizeof(kName);
             })); // [Pre-Assert確認_正常系] - cplat_wstr_to_utf8() が sizeof(name)、L"testhost" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - "testhost" を出力し、変換後のバイト数を返却する。
+                 // [Pre-Assert手順] - cplat_wstr_to_utf8() から、"testhost" を出力して変換後のバイト数を返す。
 
     // Act
-    int actual_ret =
-        cplat_host_get_name(name, sizeof(name)); // [手順] - mock 化した GetComputerNameExW からホスト名を取得する。
+    int actual_ret = cplat_host_get_name(
+        name,
+        sizeof(name)); // [手順] - GetComputerNameExW() が L"testhost" を返す状態で cplat_host_get_name() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_host_get_name() の戻り値が CPLAT_OK であること。
@@ -246,18 +252,19 @@ TEST_F(hostTest, ReportsWstrToUtf8OsError)
                 *size = (DWORD)(sizeof(kName) / sizeof(kName[0])) - 1u;
                 return TRUE;
             })); // [Pre-Assert確認_異常系] - GetComputerNameExW() が ComputerNameDnsHostname を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - L"testhost" を書き込み成功を返却する。
+                 // [Pre-Assert手順] - GetComputerNameExW() から、L"testhost" を書き込んで TRUE を返す。
     EXPECT_CALL(mock_cplat, cplat_wstr_to_utf8(_, sizeof(name), StrEq(L"testhost")))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_異常系] - cplat_wstr_to_utf8() が sizeof(name)、L"testhost" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - UTF-8 変換から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_wstr_to_utf8() から 0 を返す。
     EXPECT_CALL(mock_windows, GetLastError(_, _, _))
         .WillOnce(Return(
             ERROR_ACCESS_DENIED)); // [Pre-Assert確認_異常系] - 変換失敗時に GetLastError() が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - ERROR_ACCESS_DENIED を返却する。
+                                   // [Pre-Assert手順] - GetLastError() から ERROR_ACCESS_DENIED を返す。
 
     // Act
-    int actual_ret = cplat_host_get_name(name, sizeof(name)); // [手順] - UTF-8 変換が失敗する状態でホスト名を取得する。
+    int actual_ret = cplat_host_get_name(
+        name, sizeof(name)); // [手順] - UTF-8 変換が失敗する状態で cplat_host_get_name() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED,
@@ -278,14 +285,14 @@ TEST_F(hostTest, ReportsComputerNameMoreData)
     EXPECT_CALL(mock_windows, GetComputerNameExW(_, _, _, ComputerNameDnsHostname, _, _))
         .WillOnce(Return(
             FALSE)); // [Pre-Assert確認_異常系] - GetComputerNameExW() が ComputerNameDnsHostname を指定して 1 回呼び出されること。
-                     // [Pre-Assert手順] - FALSE を返却する。
+                     // [Pre-Assert手順] - GetComputerNameExW() から FALSE を返す。
     EXPECT_CALL(mock_windows, GetLastError(_, _, _))
         .WillOnce(Return(ERROR_MORE_DATA)); // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
-                                            // [Pre-Assert手順] - ERROR_MORE_DATA を返却する。
+                                            // [Pre-Assert手順] - GetLastError() から ERROR_MORE_DATA を返す。
 
     // Act
-    int actual_ret =
-        cplat_host_get_name(name, sizeof(name)); // [手順] - ERROR_MORE_DATA で失敗する状態でホスト名を取得する。
+    int actual_ret = cplat_host_get_name(
+        name, sizeof(name)); // [手順] - ERROR_MORE_DATA で失敗する状態で cplat_host_get_name() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -304,14 +311,14 @@ TEST_F(hostTest, ReportsComputerNameOsError)
     EXPECT_CALL(mock_windows, GetComputerNameExW(_, _, _, ComputerNameDnsHostname, _, _))
         .WillOnce(Return(
             FALSE)); // [Pre-Assert確認_異常系] - GetComputerNameExW() が ComputerNameDnsHostname を指定して 1 回呼び出されること。
-                     // [Pre-Assert手順] - FALSE を返却する。
+                     // [Pre-Assert手順] - GetComputerNameExW() から FALSE を返す。
     EXPECT_CALL(mock_windows, GetLastError(_, _, _))
         .WillOnce(Return(ERROR_ACCESS_DENIED)); // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
-                                                // [Pre-Assert手順] - ERROR_ACCESS_DENIED を返却する。
+                                                // [Pre-Assert手順] - GetLastError() から ERROR_ACCESS_DENIED を返す。
 
     // Act
-    int actual_ret =
-        cplat_host_get_name(name, sizeof(name)); // [手順] - ERROR_ACCESS_DENIED で失敗する状態でホスト名を取得する。
+    int actual_ret = cplat_host_get_name(
+        name, sizeof(name)); // [手順] - ERROR_ACCESS_DENIED で失敗する状態で cplat_host_get_name() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED,

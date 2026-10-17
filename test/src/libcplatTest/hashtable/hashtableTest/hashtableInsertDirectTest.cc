@@ -98,21 +98,28 @@ TEST_F(hashtableInsertDirectTest, places_in_use_at_requested_record)
     // Pre-Assert
 
     // Act
-    int actual_ret_create =
-        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
-    int actual_ret_direct = cplat_hashtable_insert_direct(ht, 3, "c", 1, value.data(), &k_insert_timestamp,
-                                                          3); // [手順] - レコード 3 へ実装中で直接書き込む。
-    int actual_ret_find = cplat_hashtable_find_value_ref(ht, "c", &found); // [手順] - キーで検索する。
-    int actual_ret_rec = cplat_hashtable_find_recno(ht, "c", &rec);        // [手順] - レコード番号を取得する。
-    int actual_ret_status = cplat_hashtable_get_status(ht, 3, &status);    // [手順] - レコード 3 の状態を取得する。
+    int actual_ret_create = cplat_hashtable_create(
+        &config, nullptr, 0, nullptr, 0, &ht); // [手順] - 設定を指定して cplat_hashtable_create() を呼び出す。
+    int actual_ret_direct =
+        cplat_hashtable_insert_direct(ht, 3, "c", 1, value.data(), &k_insert_timestamp,
+                                      3); // [手順] - レコード 3 を指定して cplat_hashtable_insert_direct() を呼び出す。
+    int actual_ret_find = cplat_hashtable_find_value_ref(
+        ht, "c", &found); // [手順] - キーを指定して cplat_hashtable_find_value_ref() を呼び出す。
+    int actual_ret_rec =
+        cplat_hashtable_find_recno(ht, "c", &rec); // [手順] - キーを指定して cplat_hashtable_find_recno() を呼び出す。
+    int actual_ret_status = cplat_hashtable_get_status(
+        ht, 3, &status); // [手順] - レコード 3 を指定して cplat_hashtable_get_status() を呼び出す。
     fill_value(&value, "peer");
-    int actual_ret_peer = cplat_hashtable_insert_direct(ht, 4, peer, 1, value.data(), &k_insert_timestamp,
-                                                        4); // [手順] - 同一バケットの別キーをレコード 4 へ置く。
+    int actual_ret_peer = cplat_hashtable_insert_direct(
+        ht, 4, peer, 1, value.data(), &k_insert_timestamp,
+        4); // [手順] - 同一バケットの別キーとレコード 4 を指定して cplat_hashtable_insert_direct() を呼び出す。
     fill_value(&value, "first");
     int actual_ret_add = cplat_hashtable_add(
-        ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 先頭空きへ通常追加する。
-    int actual_ret_counts = cplat_hashtable_count_status(ht, &in_use, &deleted, &empty); // [手順] - 件数を取得する。
-    int actual_ret_validate = cplat_hashtable_validate(ht);                              // [手順] - 整合性を検証する。
+        ht, "a", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 先頭空きがある状態でキーを指定して cplat_hashtable_add() を呼び出す。
+    int actual_ret_counts = cplat_hashtable_count_status(
+        ht, &in_use, &deleted, &empty);                     // [手順] - cplat_hashtable_count_status() を呼び出す。
+    int actual_ret_validate = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - cplat_hashtable_create() の戻り値が CPLAT_OK であること。
@@ -165,16 +172,23 @@ TEST_F(hashtableInsertDirectTest, places_deleted_without_resurrecting_key)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
-    int actual_ret_direct = cplat_hashtable_insert_direct(ht, 2, "gone", 3, value.data(), &k_insert_timestamp,
-                                                          2); // [手順] - 寿命内の削除済みをレコード 2 へ置く。
-    int actual_ret_find = cplat_hashtable_find_value_ref(ht, "gone", &found); // [手順] - 削除済みキーを検索する。
-    int actual_ret_status = cplat_hashtable_get_status(ht, 2, &status);       // [手順] - レコード 2 の状態を取得する。
-    int actual_ret_key = cplat_hashtable_get_key_ref(ht, 2, &key_out, nullptr); // [手順] - レコード 2 のキーを読む。
-    int actual_ret_deleted = cplat_hashtable_deleted_count(ht, &deleted);     // [手順] - 削除済み件数を取得する。
-    int actual_ret_again = cplat_hashtable_insert_direct(ht, 3, "gone", 1, value.data(), &k_insert_timestamp,
-                                                         3); // [手順] - 同じキーを別レコードへ置く。
-    int actual_ret_validate = cplat_hashtable_validate(ht);  // [手順] - 整合性を検証する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [手順] - 設定を指定して cplat_hashtable_create() を呼び出す。
+    int actual_ret_direct = cplat_hashtable_insert_direct(
+        ht, 2, "gone", 3, value.data(), &k_insert_timestamp,
+        2); // [手順] - レコード 2 に、寿命内の削除済みの状態を指定して cplat_hashtable_insert_direct() を呼び出す。
+    int actual_ret_find = cplat_hashtable_find_value_ref(
+        ht, "gone", &found); // [手順] - 削除済みキーを指定して cplat_hashtable_find_value_ref() を呼び出す。
+    int actual_ret_status = cplat_hashtable_get_status(
+        ht, 2, &status); // [手順] - レコード 2 を指定して cplat_hashtable_get_status() を呼び出す。
+    int actual_ret_key = cplat_hashtable_get_key_ref(
+        ht, 2, &key_out, nullptr); // [手順] - レコード 2 を指定して cplat_hashtable_get_key_ref() を呼び出す。
+    int actual_ret_deleted =
+        cplat_hashtable_deleted_count(ht, &deleted); // [手順] - cplat_hashtable_deleted_count() を呼び出す。
+    int actual_ret_again = cplat_hashtable_insert_direct(
+        ht, 3, "gone", 1, value.data(), &k_insert_timestamp,
+        3); // [手順] - 削除済みと同じキーとレコード 3 を指定して cplat_hashtable_insert_direct() を呼び出す。
+    int actual_ret_validate = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -219,17 +233,21 @@ TEST_F(hashtableInsertDirectTest, skips_status_that_cannot_exist)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
-    int actual_ret_eq = cplat_hashtable_insert_direct(ht, 1, "a", 5, value.data(), &k_insert_timestamp,
-                                                      1); // [手順] - status が lifetime と等しい値を置く。
-    int actual_ret_over =
-        cplat_hashtable_insert_direct(ht, 1, "a", CPLAT_HASHTABLE_LIFETIME_INFINITE, value.data(), &k_insert_timestamp,
-                                      1); // [手順] - lifetime を超える加齢値を置く。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [手順] - 設定を指定して cplat_hashtable_create() を呼び出す。
+    int actual_ret_eq = cplat_hashtable_insert_direct(
+        ht, 1, "a", 5, value.data(), &k_insert_timestamp,
+        1); // [手順] - lifetime と等しい status を指定して cplat_hashtable_insert_direct() を呼び出す。
+    int actual_ret_over = cplat_hashtable_insert_direct(
+        ht, 1, "a", CPLAT_HASHTABLE_LIFETIME_INFINITE, value.data(), &k_insert_timestamp,
+        1); // [手順] - lifetime を超える加齢値を指定して cplat_hashtable_insert_direct() を呼び出す。
     fill_config(&config, 2, 16, 8, 2, CPLAT_HASHTABLE_KEY_STRING);
     cplat_hashtable_dispose(ht);
-    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - lifetime 2 のテーブルを構築する。
-    int actual_ret_life2 = cplat_hashtable_insert_direct(ht, 1, "a", 2, value.data(), &k_insert_timestamp,
-                                                         1); // [手順] - lifetime 2 では成立しない status 2 を置く。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [手順] - lifetime 2 の設定を指定して cplat_hashtable_create() を呼び出す。
+    int actual_ret_life2 = cplat_hashtable_insert_direct(
+        ht, 1, "a", 2, value.data(), &k_insert_timestamp,
+        1); // [手順] - lifetime 2 では成立しない status 2 を指定して cplat_hashtable_insert_direct() を呼び出す。
     (void)cplat_hashtable_get_status(ht, 1, &status);
     (void)cplat_hashtable_empty_count(ht, &empty);
 
@@ -265,48 +283,61 @@ TEST_F(hashtableInsertDirectTest, rejects_invalid_arguments_and_collisions)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht = cplat_hashtable_insert_direct(nullptr, 1, "a", 1, value.data(), &k_insert_timestamp,
-                                                           1); // [手順] - ht に NULL を渡す。
+    int actual_ret_null_ht = cplat_hashtable_insert_direct(
+        nullptr, 1, "a", 1, value.data(), &k_insert_timestamp,
+        1); // [手順] - ht に nullptr を指定して cplat_hashtable_insert_direct() を呼び出す。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
-    int actual_ret_null_key = cplat_hashtable_insert_direct(ht, 1, nullptr, 1, value.data(), &k_insert_timestamp,
-                                                            1); // [手順] - key に NULL を渡す。
-    int actual_ret_null_value = cplat_hashtable_insert_direct(ht, 1, "a", 1, nullptr, &k_insert_timestamp,
-                                                              1); // [手順] - value に NULL を渡す。
-    int actual_ret_null_timestamp =
-        cplat_hashtable_insert_direct(ht, 1, "a", 1, value.data(), nullptr, 1); // [手順] - timestamp に NULL を渡す。
-    int actual_ret_status0 = cplat_hashtable_insert_direct(ht, 1, "a", 0, value.data(), &k_insert_timestamp,
-                                                           1); // [手順] - status 0 を渡す。
-    int actual_ret_status256 = cplat_hashtable_insert_direct(ht, 1, "a", 256, value.data(), &k_insert_timestamp,
-                                                             1); // [手順] - status 256 を渡す。
-    int actual_ret_rec0 = cplat_hashtable_insert_direct(ht, 0, "a", 5, value.data(), &k_insert_timestamp,
-                                                        1); // [手順] - レコード番号 0 を渡す。
-    int actual_ret_rec_hi = cplat_hashtable_insert_direct(ht, 5, "a", 5, value.data(), &k_insert_timestamp,
-                                                          5); // [手順] - capacity 超のレコード番号を渡す。
-    int actual_ret_long = cplat_hashtable_insert_direct(ht, 1, too_long, 1, value.data(), &k_insert_timestamp,
-                                                        1); // [手順] - 長すぎるキーを渡す。
-    int actual_ret_ok = cplat_hashtable_insert_direct(ht, 1, "a", 1, value.data(), &k_insert_timestamp,
-                                                      1); // [手順] - レコード 1 へ実装中で置く。
-    int actual_ret_occupied = cplat_hashtable_insert_direct(ht, 1, "b", 1, value.data(), &k_insert_timestamp,
-                                                            1); // [手順] - 使用中のレコードへ別キーを置く。
-    int actual_ret_dup_key = cplat_hashtable_insert_direct(ht, 2, "a", 1, value.data(), &k_insert_timestamp,
-                                                           2); // [手順] - 既存キーを別レコードへ置く。
+    int actual_ret_null_key = cplat_hashtable_insert_direct(
+        ht, 1, nullptr, 1, value.data(), &k_insert_timestamp,
+        1); // [手順] - key に nullptr を指定して cplat_hashtable_insert_direct() を呼び出す。
+    int actual_ret_null_value = cplat_hashtable_insert_direct(
+        ht, 1, "a", 1, nullptr, &k_insert_timestamp,
+        1); // [手順] - value に nullptr を指定して cplat_hashtable_insert_direct() を呼び出す。
+    int actual_ret_null_timestamp = cplat_hashtable_insert_direct(
+        ht, 1, "a", 1, value.data(), nullptr,
+        1); // [手順] - timestamp に nullptr を指定して cplat_hashtable_insert_direct() を呼び出す。
+    int actual_ret_status0 =
+        cplat_hashtable_insert_direct(ht, 1, "a", 0, value.data(), &k_insert_timestamp,
+                                      1); // [手順] - status 0 を指定して cplat_hashtable_insert_direct() を呼び出す。
+    int actual_ret_status256 =
+        cplat_hashtable_insert_direct(ht, 1, "a", 256, value.data(), &k_insert_timestamp,
+                                      1); // [手順] - status 256 を指定して cplat_hashtable_insert_direct() を呼び出す。
+    int actual_ret_rec0 = cplat_hashtable_insert_direct(
+        ht, 0, "a", 5, value.data(), &k_insert_timestamp,
+        1); // [手順] - レコード番号 0 を指定して cplat_hashtable_insert_direct() を呼び出す。
+    int actual_ret_rec_hi = cplat_hashtable_insert_direct(
+        ht, 5, "a", 5, value.data(), &k_insert_timestamp,
+        5); // [手順] - capacity 超のレコード番号を指定して cplat_hashtable_insert_direct() を呼び出す。
+    int actual_ret_long = cplat_hashtable_insert_direct(
+        ht, 1, too_long, 1, value.data(), &k_insert_timestamp,
+        1); // [手順] - 長すぎるキーを指定して cplat_hashtable_insert_direct() を呼び出す。
+    int actual_ret_ok =
+        cplat_hashtable_insert_direct(ht, 1, "a", 1, value.data(), &k_insert_timestamp,
+                                      1); // [手順] - レコード 1 を指定して cplat_hashtable_insert_direct() を呼び出す。
+    int actual_ret_occupied = cplat_hashtable_insert_direct(
+        ht, 1, "b", 1, value.data(), &k_insert_timestamp,
+        1); // [手順] - 使用中のレコード 1 と別キーを指定して cplat_hashtable_insert_direct() を呼び出す。
+    int actual_ret_dup_key = cplat_hashtable_insert_direct(
+        ht, 2, "a", 1, value.data(), &k_insert_timestamp,
+        2); // [手順] - 既存キーとレコード 2 を指定して cplat_hashtable_insert_direct() を呼び出す。
     (void)cplat_hashtable_delete(ht, "a");
-    int actual_ret_deleted_slot = cplat_hashtable_insert_direct(ht, 1, "b", 1, value.data(), &k_insert_timestamp,
-                                                                1); // [手順] - 削除済みスロットへ別キーを置く。
+    int actual_ret_deleted_slot = cplat_hashtable_insert_direct(
+        ht, 1, "b", 1, value.data(), &k_insert_timestamp,
+        1); // [手順] - 削除済みスロットのレコード 1 と別キーを指定して cplat_hashtable_insert_direct() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_key); // [確認_異常系] - key に nullptr を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_value); // [確認_異常系] - value に NULL を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_value); // [確認_異常系] - value に nullptr を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_timestamp); // [確認_異常系] - timestamp に NULL を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_timestamp); // [確認_異常系] - timestamp に nullptr を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_status0); // [確認_異常系] - status 0 を渡した cplat_hashtable_insert_direct() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -354,12 +385,15 @@ TEST_F(hashtableInsertDirectTest, skip_checked_before_occupancy)
 
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
-    (void)cplat_hashtable_add(ht, "keep", value.data(),
-                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - レコード 1 を占有する。
+    (void)cplat_hashtable_add(
+        ht, "keep", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - キーを指定して cplat_hashtable_add() を呼び出す。
     fill_value(&value, "skip");
-    int actual_ret_skip = cplat_hashtable_insert_direct(ht, 1, "other", 5, value.data(), &k_insert_timestamp,
-                                                        1); // [手順] - 占有スロットへ成立しない寿命値を置く。
-    int actual_ret_find = cplat_hashtable_find_value_ref(ht, "keep", &found); // [手順] - 既存キーを検索する。
+    int actual_ret_skip = cplat_hashtable_insert_direct(
+        ht, 1, "other", 5, value.data(), &k_insert_timestamp,
+        1); // [手順] - 占有スロットに成立しない寿命値を指定して cplat_hashtable_insert_direct() を呼び出す。
+    int actual_ret_find = cplat_hashtable_find_value_ref(
+        ht, "keep", &found); // [手順] - 既存キーを指定して cplat_hashtable_find_value_ref() を呼び出す。
 
     // Assert
     EXPECT_EQ(

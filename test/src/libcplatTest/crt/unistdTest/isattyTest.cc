@@ -53,7 +53,7 @@ TEST_F(isattyTest, stdin_returns_int)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_unistd_, isatty(_, _, _, STDIN_FILENO))
         .WillOnce(Return(1)); // [Pre-Assert確認_正常系] - isatty() が STDIN_FILENO を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 1 を返却する。
+                              // [Pre-Assert手順] - isatty() から 1 を返す。
 #endif                        /* PLATFORM_LINUX */
 
     // Act
@@ -80,7 +80,7 @@ TEST_F(isattyTest, stdout_returns_int)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_unistd_, isatty(_, _, _, STDOUT_FILENO))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - isatty() が STDOUT_FILENO を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 0 を返却する。
+                              // [Pre-Assert手順] - isatty() から 0 を返す。
 #endif                        /* PLATFORM_LINUX */
 
     // Act
@@ -107,7 +107,7 @@ TEST_F(isattyTest, stderr_returns_int)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_unistd_, isatty(_, _, _, STDERR_FILENO))
         .WillOnce(Return(1)); // [Pre-Assert確認_正常系] - isatty() が STDERR_FILENO を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 1 を返却する。
+                              // [Pre-Assert手順] - isatty() から 1 を返す。
 #endif                        /* PLATFORM_LINUX */
 
     // Act

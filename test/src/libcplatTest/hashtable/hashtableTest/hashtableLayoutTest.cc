@@ -55,7 +55,8 @@ TEST_F(hashtableLayoutTest, rejects_entry_stride_overflow)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - 必要サイズを求める。
+    int actual_ret = cplat_hashtable_required_size(
+        &config, &mgmt_size, &data_size); // [手順] - 設定を指定して cplat_hashtable_required_size() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -78,7 +79,8 @@ TEST_F(hashtableLayoutTest, rejects_bucket_region_offset_overflow)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - 必要サイズを求める。
+    int actual_ret = cplat_hashtable_required_size(
+        &config, &mgmt_size, &data_size); // [手順] - 設定を指定して cplat_hashtable_required_size() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -101,7 +103,8 @@ TEST_F(hashtableLayoutTest, rejects_entries_region_multiplication_overflow)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - 必要サイズを求める。
+    int actual_ret = cplat_hashtable_required_size(
+        &config, &mgmt_size, &data_size); // [手順] - 設定を指定して cplat_hashtable_required_size() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -124,7 +127,8 @@ TEST_F(hashtableLayoutTest, rejects_entries_region_offset_overflow)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - 必要サイズを求める。
+    int actual_ret = cplat_hashtable_required_size(
+        &config, &mgmt_size, &data_size); // [手順] - 設定を指定して cplat_hashtable_required_size() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -146,7 +150,8 @@ TEST_F(hashtableLayoutTest, rejects_data_region_multiplication_overflow)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - 必要サイズを求める。
+    int actual_ret = cplat_hashtable_required_size(
+        &config, &mgmt_size, &data_size); // [手順] - 設定を指定して cplat_hashtable_required_size() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -168,7 +173,8 @@ TEST_F(hashtableLayoutTest, required_size_rejects_zero_capacity)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - 必要サイズを求める。
+    int actual_ret = cplat_hashtable_required_size(
+        &config, &mgmt_size, &data_size); // [手順] - 設定を指定して cplat_hashtable_required_size() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -193,14 +199,15 @@ TEST_F(hashtableLayoutTest, create_rejects_misaligned_external_buffer)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_create(&config, buf_mgmt.data() + 1, mgmt_needed, buf_data.data(), buf_data.size(),
-                                            &ht); // [手順] - 1 バイトずれた管理領域で構築する。
+    int actual_ret =
+        cplat_hashtable_create(&config, buf_mgmt.data() + 1, mgmt_needed, buf_data.data(), buf_data.size(),
+                               &ht); // [手順] - 1 バイトずれた管理領域を指定して cplat_hashtable_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret); // [確認_異常系] - 未整列の外部バッファーを渡した cplat_hashtable_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(nullptr, ht); // [確認_異常系] - ht が nullptr であること。(失敗後の ht_out が NULL になったことの確認)
+    EXPECT_EQ(nullptr, ht); // [確認_異常系] - ht が nullptr であること。(失敗後の ht_out が nullptr になったことの確認)
 }
 
 // cplat_hashtable_create が内部確保時の管理領域とデータ領域の合計サイズ オーバーフローで INVALID_ARGUMENT を返すことの確認
@@ -221,13 +228,14 @@ TEST_F(hashtableLayoutTest, create_internal_alloc_rejects_combined_size_overflow
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - 内部確保で構築する。
+    int actual_ret = cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                            &ht); // [手順] - 内部確保を指定して cplat_hashtable_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret); // [確認_異常系] - 管理領域とデータ領域の合計サイズがオーバーフローするときの cplat_hashtable_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(nullptr, ht); // [確認_異常系] - ht が nullptr であること。(失敗後の ht_out が NULL になったことの確認)
+    EXPECT_EQ(nullptr, ht); // [確認_異常系] - ht が nullptr であること。(失敗後の ht_out が nullptr になったことの確認)
 }
 
 // SCOPE_TABLE 指定時の必要管理領域サイズが SCOPE_RECORD 指定時よりも小さくなることの確認
@@ -400,7 +408,7 @@ TEST_F(hashtableLayoutTest, create_rejects_external_data_buffer_misaligned_for_v
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret); // [確認_異常系] - 境界を満たさないデータ領域を渡した cplat_hashtable_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(nullptr,
-              ht); // [確認_異常系] - ht が nullptr であること。(失敗時にハンドルが NULL のままであることの確認)
+              ht); // [確認_異常系] - ht が nullptr であること。(失敗時にハンドルが nullptr のままであることの確認)
 }
 
 // SCOPE_TABLE において可変長キーの記述子が uint64_t 境界に整列することの確認

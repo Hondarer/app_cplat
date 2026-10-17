@@ -69,7 +69,8 @@ TEST_F(stringCatalogArgumentTest, no_argument)
     // Pre-Assert
 
     // Act
-    actual_ret = collect_arguments(&entry, values); // [手順] - 引数個数が 0 の定義で値を取り出す。
+    actual_ret =
+        collect_arguments(&entry, values); // [手順] - 引数個数が 0 の定義を指定して collect_arguments() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - collect_arguments() の戻り値が CPLAT_OK であること。
@@ -92,8 +93,9 @@ TEST_F(stringCatalogArgumentTest, unused_argument_kind_is_skipped)
     // Pre-Assert
 
     // Act
-    actual_ret = collect_arguments(&entry, values, INT32_C(1),
-                                   INT32_C(2)); // [手順] - 未使用を挟んだ定義へ、値を 2 個だけ渡して取り出す。
+    actual_ret = collect_arguments(
+        &entry, values, INT32_C(1),
+        INT32_C(2)); // [手順] - 未使用を挟んだ定義と、値 2 個だけを指定して collect_arguments() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - collect_arguments() の戻り値が CPLAT_OK であること。
@@ -129,9 +131,9 @@ TEST_F(stringCatalogArgumentTest, all_argument_kinds)
     // Pre-Assert
 
     // Act
-    actual_ret = collect_arguments(&entry, values, "text", INT32_C(-1), UINT32_C(2), UINT32_C(3), INT64_C(-4),
-                                   UINT64_C(5), UINT64_C(6),
-                                   (size_t)7U); // [手順] - 8 種類の引数種別を持つ定義で値を取り出す。
+    actual_ret = collect_arguments(
+        &entry, values, "text", INT32_C(-1), UINT32_C(2), UINT32_C(3), INT64_C(-4), UINT64_C(5), UINT64_C(6),
+        (size_t)7U); // [手順] - 8 種類の引数種別を持つ定義を指定して collect_arguments() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - collect_arguments() の戻り値が CPLAT_OK であること。
@@ -164,8 +166,9 @@ TEST_F(stringCatalogArgumentTest, all_argument_kinds)
     add_kind(CPLAT_STRING_CATALOG_ARGUMENT_KIND_ERROR_CODE);
 
     // Act
-    actual_ret = collect_arguments(&entry, values, (const void *)sample_object, 12.5,
-                                   2); // [手順] - 残る 3 種類の引数種別を持つ定義で値を取り出す。
+    actual_ret =
+        collect_arguments(&entry, values, (const void *)sample_object, 12.5,
+                          2); // [手順] - 残る 3 種類の引数種別を持つ定義を指定して collect_arguments() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - collect_arguments() の戻り値が CPLAT_OK であること。
@@ -194,8 +197,9 @@ TEST_F(stringCatalogArgumentTest, all_argument_kinds)
     add_kind(CPLAT_STRING_CATALOG_ARGUMENT_KIND_SSIZE);
 
     // Act
-    actual_ret = collect_arguments(&entry, values, 'A', -12, 200, -1200, 48000, 0x8A, 0xBEEF,
-                                   INT64_C(-1)); // [手順] - 昇格して渡る種別と SSIZE で値を取り出す。
+    actual_ret =
+        collect_arguments(&entry, values, 'A', -12, 200, -1200, 48000, 0x8A, 0xBEEF,
+                          INT64_C(-1)); // [手順] - 昇格して渡る種別と SSIZE を指定して collect_arguments() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret);            // [確認_正常系] - collect_arguments() の戻り値が CPLAT_OK であること。
@@ -232,8 +236,9 @@ TEST_F(stringCatalogArgumentTest, unknown_argument_kind)
     // Pre-Assert
 
     // Act
-    actual_ret = collect_arguments(&entry, values, INT32_C(1),
-                                   INT32_C(2)); // [手順] - 列挙に無い引数種別を含む定義で値を取り出す。
+    actual_ret = collect_arguments(
+        &entry, values, INT32_C(1),
+        INT32_C(2)); // [手順] - 列挙に無い引数種別を含む定義を指定して collect_arguments() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_MALFORMED_DEFINITION,

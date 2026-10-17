@@ -17,7 +17,7 @@ class symLoaderInitTest : public Test
 {
   protected:
     // MSVC では Mock_cplat 生成により mock_cplat の弱参照 obj がリンクに取り込まれ、
-    // cplat_fopen 等の /ALTERNATENAME が有効になる。既定動作は実 libcplat への委譲。
+    // cplat_fopen 等の /ALTERNATENAME が有効になる。既定動作は製品 (prod) の処理への委譲。
     NiceMock<Mock_cplat> mock_cplat_;
     FILE *const file_ = reinterpret_cast<FILE *>(static_cast<uintptr_t>(0x70));
 
@@ -28,16 +28,16 @@ class symLoaderInitTest : public Test
 
         // 指定パスを rb で開き、指定本文を読み取って閉じる。
         EXPECT_CALL(mock_cplat_, cplat_fopen(StrEq(path), StrEq("rb"), nullptr)).WillOnce(Return(file_));
-        // [Pre-Assert手順] - 設定ファイルを開くハンドルを返す。
+        // [Pre-Assert手順] - cplat_fopen() から設定ファイルを開くハンドルを返す。
         // [Pre-Assert確認_正常系] - cplat_fopen() が path と等しい文字列、"rb" と等しい文字列、nullptr を指定して 1 回呼び出されること。
         EXPECT_CALL(mock_cplat_, cplat_fseek(file_, 0, SEEK_END)).WillOnce(Return(0));
-        // [Pre-Assert手順] - 指定位置への移動に成功する。
+        // [Pre-Assert手順] - cplat_fseek() から 0 (指定位置への移動に成功) を返す。
         // [Pre-Assert確認_正常系] - cplat_fseek() が file_、0、SEEK_END を指定して 1 回呼び出されること。
         EXPECT_CALL(mock_cplat_, cplat_ftell(file_)).WillOnce(Return(static_cast<int64_t>(size)));
-        // [Pre-Assert手順] - 設定本文のバイト数を返す。
+        // [Pre-Assert手順] - cplat_ftell() から設定本文のバイト数を返す。
         // [Pre-Assert確認_正常系] - cplat_ftell() が file_ を指定して 1 回呼び出されること。
         EXPECT_CALL(mock_cplat_, cplat_fseek(file_, 0, SEEK_SET)).WillOnce(Return(0));
-        // [Pre-Assert手順] - 指定位置への移動に成功する。
+        // [Pre-Assert手順] - cplat_fseek() から 0 (指定位置への移動に成功) を返す。
         // [Pre-Assert確認_正常系] - cplat_fseek() が file_、0、SEEK_SET を指定して 1 回呼び出されること。
         EXPECT_CALL(mock_cplat_, cplat_fread(_, 1u, size, file_, nullptr))
             .WillOnce(
@@ -46,10 +46,10 @@ class symLoaderInitTest : public Test
                     std::memcpy(buffer, content, size);
                     return size;
                 });
-        // [Pre-Assert手順] - 設定本文を出力バッファーへコピーし、読取バイト数を返す。
+        // [Pre-Assert手順] - cplat_fread() から、設定本文を出力バッファーへコピーして読取バイト数を返す。
         // [Pre-Assert確認_正常系] - cplat_fread() が 1u、size、file_、nullptr を指定して 1 回呼び出されること。
         EXPECT_CALL(mock_cplat_, cplat_fclose(file_, nullptr)).WillOnce(Return(0));
-        // [Pre-Assert手順] - 設定ファイルのクローズに成功する。
+        // [Pre-Assert手順] - cplat_fclose() から 0 (設定ファイルのクローズに成功) を返す。
         // [Pre-Assert確認_正常系] - cplat_fclose() が file_、nullptr を指定して 1 回呼び出されること。
     }
     // [サブ手順終了]
@@ -59,7 +59,7 @@ class symLoaderInitTest : public Test
     {
         // 指定パスの fopen を失敗させる。
         EXPECT_CALL(mock_cplat_, cplat_fopen(StrEq(path), StrEq("rb"), nullptr)).WillOnce(Return(nullptr));
-        // [Pre-Assert手順] - 設定ファイルを開けず、NULL を返す。
+        // [Pre-Assert手順] - cplat_fopen() から nullptr (設定ファイルを開けない) を返す。
         // [Pre-Assert確認_正常系] - cplat_fopen() が path と等しい文字列、"rb" と等しい文字列、nullptr を指定して 1 回呼び出されること。
     }
     // [サブ手順終了]
@@ -85,11 +85,12 @@ TEST_F(symLoaderInitTest, applies_json_with_comments)
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
     expect_config_read("with_comments.json",
                        json); // コメントと末尾カンマを含む JSONC の読取が呼び出されること。
-                              // [Pre-Assert手順] - コメントと末尾カンマを含む JSONC 本文を返却する。
+    // [Pre-Assert手順] - cplat_fread() から、コメントと末尾カンマを含む JSONC 本文をコピーして読取バイト数を返す。
 
     // Act
-    cplat_sym_loader_init(entries, 1u,
-                          "with_comments.json"); // [手順] - コメントと末尾カンマを含む JSONC 設定を読み込む。
+    cplat_sym_loader_init(
+        entries, 1u,
+        "with_comments.json"); // [手順] - コメントと末尾カンマを含む JSONC 設定を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ("liboverride", entry.lib_name);    // [確認_正常系] - entry.lib_name が "liboverride" であること。
@@ -108,10 +109,11 @@ TEST_F(symLoaderInitTest, applies_matching_func_key)
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
     expect_config_read("apply_matching.json",
                        json); // 一致キー JSON の読取が呼び出されること。
-                              // [Pre-Assert手順] - 一致キー JSON 本文を返却する。
+    // [Pre-Assert手順] - cplat_fread() から、一致キー JSON 本文をコピーして読取バイト数を返す。
 
     // Act
-    cplat_sym_loader_init(entries, 1u, "apply_matching.json"); // [手順] - JSON 設定を読み込む。
+    cplat_sym_loader_init(entries, 1u,
+                          "apply_matching.json"); // [手順] - JSON 設定を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ("liboverride", entry.lib_name);    // [確認_正常系] - entry.lib_name が "liboverride" であること。
@@ -130,10 +132,12 @@ TEST_F(symLoaderInitTest, applies_explicit_default)
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
     expect_config_read("explicit_default.json",
                        json); // 明示的既定値 JSON の読取が呼び出されること。
-                              // [Pre-Assert手順] - 明示的既定値 JSON 本文を返却する。
+    // [Pre-Assert手順] - cplat_fread() から、明示的既定値 JSON 本文をコピーして読取バイト数を返す。
 
     // Act
-    cplat_sym_loader_init(entries, 1u, "explicit_default.json"); // [手順] - 明示的既定値の JSON を読み込む。
+    cplat_sym_loader_init(
+        entries, 1u,
+        "explicit_default.json"); // [手順] - 明示的既定値の JSON を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ("default", entry.lib_name);  // [確認_正常系] - entry.lib_name が "default" であること。
@@ -150,10 +154,11 @@ TEST_F(symLoaderInitTest, ignores_missing_file)
     // Pre-Assert
     // [サブ手順参照 名前=symLoaderInitTest.expect_missing_file]
     expect_missing_file("missing.json"); // 存在しない設定の fopen が呼び出されること。
-                                         // [Pre-Assert手順] - fopen から NULL を返却する。
+                                         // [Pre-Assert手順] - cplat_fopen() から nullptr を返す。
 
     // Act
-    cplat_sym_loader_init(entries, 1u, "missing.json"); // [手順] - 存在しないパスで初期化する。
+    cplat_sym_loader_init(entries, 1u,
+                          "missing.json"); // [手順] - 存在しないパスを指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ("", entry.lib_name);  // [確認_正常系] - entry.lib_name が "" であること。(空のままであることの確認)
@@ -171,10 +176,11 @@ TEST_F(symLoaderInitTest, ignores_invalid_json)
     // Pre-Assert
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
     expect_config_read("invalid.json", json); // 不正 JSON の読取が呼び出されること。
-                                              // [Pre-Assert手順] - 不正 JSON 本文を返却する。
+    // [Pre-Assert手順] - cplat_fread() から、不正 JSON 本文をコピーして読取バイト数を返す。
 
     // Act
-    cplat_sym_loader_init(entries, 1u, "invalid.json"); // [手順] - 不正 JSON を読み込む。
+    cplat_sym_loader_init(entries, 1u,
+                          "invalid.json"); // [手順] - 不正 JSON を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ("", entry.lib_name);  // [確認_正常系] - entry.lib_name が "" であること。(空のままであることの確認)
@@ -192,10 +198,11 @@ TEST_F(symLoaderInitTest, ignores_non_object_root)
     // Pre-Assert
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
     expect_config_read("array_root.json", json); // 配列ルート JSON の読取が呼び出されること。
-                                                 // [Pre-Assert手順] - 配列ルート JSON 本文を返却する。
+    // [Pre-Assert手順] - cplat_fread() から、配列ルート JSON 本文をコピーして読取バイト数を返す。
 
     // Act
-    cplat_sym_loader_init(entries, 1u, "array_root.json"); // [手順] - 配列ルートの JSON を読み込む。
+    cplat_sym_loader_init(
+        entries, 1u, "array_root.json"); // [手順] - 配列ルートの JSON を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ("", entry.lib_name);  // [確認_正常系] - entry.lib_name が "" であること。(空のままであることの確認)
@@ -214,10 +221,12 @@ TEST_F(symLoaderInitTest, ignores_missing_required_fields)
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
     expect_config_read("missing_fields.json",
                        json); // 必須フィールド欠落 JSON の読取が呼び出されること。
-                              // [Pre-Assert手順] - func 欠落の JSON 本文を返却する。
+    // [Pre-Assert手順] - cplat_fread() から、func 欠落の JSON 本文をコピーして読取バイト数を返す。
 
     // Act
-    cplat_sym_loader_init(entries, 1u, "missing_fields.json"); // [手順] - 必須フィールド欠落の JSON を読み込む。
+    cplat_sym_loader_init(
+        entries, 1u,
+        "missing_fields.json"); // [手順] - 必須フィールド欠落の JSON を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ("", entry.lib_name);  // [確認_正常系] - entry.lib_name が "" であること。(空のままであることの確認)
@@ -236,10 +245,11 @@ TEST_F(symLoaderInitTest, ignores_unknown_func_key_and_applies_known)
     // Pre-Assert
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
     expect_config_read("partial.json", json); // 複数キー JSON の読取が呼び出されること。
-                                              // [Pre-Assert手順] - 既知キーと未知キーを含む JSON 本文を返却する。
+    // [Pre-Assert手順] - cplat_fread() から、既知キーと未知キーを含む JSON 本文をコピーして読取バイト数を返す。
 
     // Act
-    cplat_sym_loader_init(entries, 1u, "partial.json"); // [手順] - 複数キーの JSON を読み込む。
+    cplat_sym_loader_init(entries, 1u,
+                          "partial.json"); // [手順] - 複数キーの JSON を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ("liboverride", entry.lib_name);    // [確認_正常系] - entry.lib_name が "liboverride" であること。
@@ -259,10 +269,12 @@ TEST_F(symLoaderInitTest, ignores_name_too_long)
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
     expect_config_read("name_too_long.json",
                        json.c_str()); // 名称長超過 JSON の読取が呼び出されること。
-                                      // [Pre-Assert手順] - 名称長超過 JSON 本文を返却する。
+    // [Pre-Assert手順] - cplat_fread() から、名称長超過 JSON 本文をコピーして読取バイト数を返す。
 
     // Act
-    cplat_sym_loader_init(entries, 1u, "name_too_long.json"); // [手順] - 名称長超過の JSON を読み込む。
+    cplat_sym_loader_init(
+        entries, 1u,
+        "name_too_long.json"); // [手順] - 名称長超過の JSON を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ("", entry.lib_name);  // [確認_正常系] - entry.lib_name が "" であること。(空のままであることの確認)
@@ -282,10 +294,11 @@ TEST_F(symLoaderInitTest, applies_multiple_entries)
     // Pre-Assert
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
     expect_config_read("multi.json", json); // 複数エントリ JSON の読取が呼び出されること。
-                                            // [Pre-Assert手順] - 複数エントリ JSON 本文を返却する。
+    // [Pre-Assert手順] - cplat_fread() から、複数エントリ JSON 本文をコピーして読取バイト数を返す。
 
     // Act
-    cplat_sym_loader_init(entries, 2u, "multi.json"); // [手順] - 複数エントリ向け JSON を読み込む。
+    cplat_sym_loader_init(
+        entries, 2u, "multi.json"); // [手順] - 複数エントリ向け JSON を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ("liba", entry_a.lib_name); // [確認_正常系] - entry_a.lib_name が "liba" であること。
@@ -307,18 +320,19 @@ TEST_F(symLoaderInitTest, ignores_document_when_cjson_parse_fails)
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read 区分=異常系]
     expect_config_read("injected_parse_failure.json",
                        json); // 正常な JSON の読取が呼び出されること。
-                              // [Pre-Assert手順] - 正常な JSON 本文を返却する。
+                              // [Pre-Assert手順] - cplat_fread() から、正常な JSON 本文をコピーして読取バイト数を返す。
     EXPECT_CALL(mock_cjson, cJSON_ParseJSONCWithLength(StrEq(json), std::strlen(json)))
         .WillOnce(Return(
             nullptr)); // [Pre-Assert確認_異常系] - cJSON_ParseJSONCWithLength() が json と等しい文字列、std::strlen() の戻り値を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - JSONC 解析から NULL を返却する。
+                       // [Pre-Assert手順] - cJSON_ParseJSONCWithLength() から nullptr を返す。
     EXPECT_CALL(
         mock_cjson,
         cJSON_Delete(nullptr)); // [Pre-Assert確認_異常系] - cJSON_Delete() が nullptr を指定して 1 回呼び出されること。
 
     // Act
-    cplat_sym_loader_init(entries, 1u,
-                          "injected_parse_failure.json"); // [手順] - JSONC 解析の失敗を注入して設定を読み込む。
+    cplat_sym_loader_init(
+        entries, 1u,
+        "injected_parse_failure.json"); // [手順] - cJSON_ParseJSONCWithLength() が失敗する状態で cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ("", entry.lib_name);  // [確認_異常系] - entry.lib_name が "" であること。(空のままであることの確認)
@@ -338,16 +352,16 @@ TEST_F(symLoaderInitTest, ignores_entry_when_cjson_string_value_is_null)
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read 区分=異常系]
     expect_config_read("injected_string_failure.json",
                        json); // 正常な JSON の読取が呼び出されること。
-                              // [Pre-Assert手順] - 正常な JSON 本文を返却する。
+                              // [Pre-Assert手順] - cplat_fread() から、正常な JSON 本文をコピーして読取バイト数を返す。
     EXPECT_CALL(mock_cjson, cJSON_GetStringValue(_))
         .WillOnce(Return(nullptr))
         .WillOnce(DoDefault()); // [Pre-Assert確認_異常系] - cJSON_GetStringValue() が 2 回呼び出されること。
-                                // [Pre-Assert手順] - lib の文字列値の取得で NULL を返却する。
+    // [Pre-Assert手順] - cJSON_GetStringValue() から 1 回目は nullptr (lib の文字列値の取得失敗) を返し、以降は cJSON の処理へ委譲する。
 
     // Act
     cplat_sym_loader_init(
         entries, 1u,
-        "injected_string_failure.json"); // [手順] - cJSON_GetStringValue の失敗を注入して設定を読み込む。
+        "injected_string_failure.json"); // [手順] - cJSON_GetStringValue() が lib の文字列値の取得に失敗する状態で cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ(
@@ -370,18 +384,20 @@ TEST_F(symLoaderInitTest, ignores_null_or_empty_config_path)
     // Pre-Assert
 
     // Act
-    cplat_sym_loader_init(entries, 1u, nullptr); // [手順] - NULL の設定パスで初期化する。
-    cplat_sym_loader_init(entries, 1u, "");   // [手順] - 空文字列の設定パスで初期化する。
+    cplat_sym_loader_init(entries, 1u,
+                          nullptr); // [手順] - 設定パスに nullptr を指定して cplat_sym_loader_init() を呼び出す。
+    cplat_sym_loader_init(entries, 1u,
+                          ""); // [手順] - 空文字列の設定パスを指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ(
         "",
         entry
-            .lib_name); // [確認_正常系] - entry.lib_name が "" であること。(NULL または空文字列の設定パスで未設定のままであることの確認)
+            .lib_name); // [確認_正常系] - entry.lib_name が "" であること。(nullptr または空文字列の設定パスで未設定のままであることの確認)
     EXPECT_STREQ(
         "",
         entry
-            .func_name); // [確認_正常系] - entry.func_name が "" であること。(NULL または空文字列の設定パスで未設定のままであることの確認)
+            .func_name); // [確認_正常系] - entry.func_name が "" であること。(nullptr または空文字列の設定パスで未設定のままであることの確認)
 }
 
 // ファイル操作の各失敗時にファイルを閉じて終了することの確認
@@ -396,18 +412,20 @@ TEST_F(symLoaderInitTest, closes_file_when_seek_or_size_operation_fails)
     EXPECT_CALL(mock_cplat_, cplat_fopen(StrEq("seek_error"), StrEq("rb"), nullptr))
         .WillOnce(Return(
             file)); // [Pre-Assert確認_異常系] - cplat_fopen() が "seek_error" と等しい文字列、"rb" と等しい文字列、nullptr を指定して 1 回呼び出されること。
-                    // [Pre-Assert手順] - seek_error 用の擬似 FILE を返却する。
+                    // [Pre-Assert手順] - cplat_fopen() から seek_error 用の擬似 FILE を返す。
     EXPECT_CALL(mock_cplat_, cplat_fseek(file, 0, SEEK_END))
         .WillOnce(Return(
             -1)); // [Pre-Assert確認_異常系] - cplat_fseek() が file、0、SEEK_END を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - 末尾への cplat_fseek() から -1 を返却する。
+                  // [Pre-Assert手順] - cplat_fseek() から -1 (末尾への移動に失敗) を返す。
     EXPECT_CALL(mock_cplat_, cplat_fclose(file, nullptr))
         .WillOnce(
             Return(0)); // [Pre-Assert確認_異常系] - cplat_fclose() が file、nullptr を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - seek 失敗後の cplat_fclose() から 0 を返却する。
+                        // [Pre-Assert手順] - cplat_fclose() から 0 (seek 失敗後のクローズに成功) を返す。
 
     // Act
-    cplat_sym_loader_init(entries, 1u, "seek_error"); // [手順] - 末尾への seek が失敗するファイルを読み込む。
+    cplat_sym_loader_init(
+        entries, 1u,
+        "seek_error"); // [手順] - 末尾への seek が失敗するファイルを指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ(
@@ -423,21 +441,22 @@ TEST_F(symLoaderInitTest, closes_file_when_seek_or_size_operation_fails)
     EXPECT_CALL(mock_cplat_, cplat_fopen(StrEq("size_error"), StrEq("rb"), nullptr))
         .WillOnce(Return(
             file)); // [Pre-Assert確認_異常系] - cplat_fopen() が "size_error" と等しい文字列、"rb" と等しい文字列、nullptr を指定して 1 回呼び出されること。
-                    // [Pre-Assert手順] - size_error 用の擬似 FILE を返却する。
+                    // [Pre-Assert手順] - cplat_fopen() から size_error 用の擬似 FILE を返す。
     EXPECT_CALL(mock_cplat_, cplat_fseek(file, 0, SEEK_END))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_異常系] - cplat_fseek() が file、0、SEEK_END を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - サイズ確認の cplat_fseek() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_fseek() から 0 (サイズ確認の末尾への移動に成功) を返す。
     EXPECT_CALL(mock_cplat_, cplat_ftell(file))
         .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - cplat_ftell() が file を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - cplat_ftell() から 0 を返却する。
+                              // [Pre-Assert手順] - cplat_ftell() から 0 を返す。
     EXPECT_CALL(mock_cplat_, cplat_fclose(file, nullptr))
         .WillOnce(
             Return(0)); // [Pre-Assert確認_異常系] - cplat_fclose() が file、nullptr を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - サイズ不正後の cplat_fclose() から 0 を返却する。
+                        // [Pre-Assert手順] - cplat_fclose() から 0 (サイズ不正後のクローズに成功) を返す。
 
     // Act_2
-    cplat_sym_loader_init(entries, 1u, "size_error"); // [手順] - サイズが 0 のファイルを読み込む。
+    cplat_sym_loader_init(
+        entries, 1u, "size_error"); // [手順] - サイズが 0 のファイルを指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert_2
     EXPECT_STREQ(
@@ -458,26 +477,27 @@ TEST_F(symLoaderInitTest, releases_resources_when_read_setup_fails)
     EXPECT_CALL(mock_cplat_, cplat_fopen(StrEq("reset_error"), StrEq("rb"), nullptr))
         .WillOnce(Return(
             file)); // [Pre-Assert確認_異常系] - cplat_fopen() が "reset_error" と等しい文字列、"rb" と等しい文字列、nullptr を指定して 1 回呼び出されること。
-                    // [Pre-Assert手順] - reset_error 用の擬似 FILE を返却する。
+                    // [Pre-Assert手順] - cplat_fopen() から reset_error 用の擬似 FILE を返す。
     EXPECT_CALL(mock_cplat_, cplat_fseek(file, 0, SEEK_END))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_異常系] - cplat_fseek() が file、0、SEEK_END を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - reset_error の末尾 seek から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_fseek() から 0 (末尾への移動に成功) を返す。
     EXPECT_CALL(mock_cplat_, cplat_ftell(file))
         .WillOnce(Return(4)); // [Pre-Assert確認_異常系] - cplat_ftell() が file を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - reset_error の cplat_ftell() から 4 を返却する。
+                              // [Pre-Assert手順] - cplat_ftell() から 4 を返す。
     EXPECT_CALL(mock_cplat_, cplat_fseek(file, 0, SEEK_SET))
         .WillOnce(Return(
             -1)); // [Pre-Assert確認_異常系] - cplat_fseek() が file、0、SEEK_SET を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - 読み込み開始位置への cplat_fseek() から -1 を返却する。
+                  // [Pre-Assert手順] - cplat_fseek() から -1 (読み込み開始位置への移動に失敗) を返す。
     EXPECT_CALL(mock_cplat_, cplat_fclose(file, nullptr))
         .WillOnce(
             Return(0)); // [Pre-Assert確認_異常系] - cplat_fclose() が file、nullptr を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - reset 失敗後の cplat_fclose() から 0 を返却する。
+                        // [Pre-Assert手順] - cplat_fclose() から 0 (reset 失敗後のクローズに成功) を返す。
 
     // Act
-    cplat_sym_loader_init(entries, 1u,
-                          "reset_error"); // [手順] - 読み込み開始位置への seek が失敗するファイルを読み込む。
+    cplat_sym_loader_init(
+        entries, 1u,
+        "reset_error"); // [手順] - 読み込み開始位置への seek が失敗するファイルを指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ(
@@ -494,30 +514,32 @@ TEST_F(symLoaderInitTest, releases_resources_when_read_setup_fails)
     EXPECT_CALL(mock_cplat_, cplat_fopen(StrEq("alloc_error"), StrEq("rb"), nullptr))
         .WillOnce(Return(
             file)); // [Pre-Assert確認_異常系] - cplat_fopen() が "alloc_error" と等しい文字列、"rb" と等しい文字列、nullptr を指定して 1 回呼び出されること。
-                    // [Pre-Assert手順] - alloc_error 用の擬似 FILE を返却する。
+                    // [Pre-Assert手順] - cplat_fopen() から alloc_error 用の擬似 FILE を返す。
     EXPECT_CALL(mock_cplat_, cplat_fseek(file, 0, SEEK_END))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_異常系] - cplat_fseek() が file、0、SEEK_END を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - alloc_error の末尾 seek から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_fseek() から 0 (末尾への移動に成功) を返す。
     EXPECT_CALL(mock_cplat_, cplat_ftell(file))
         .WillOnce(Return(4)); // [Pre-Assert確認_異常系] - cplat_ftell() が file を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - alloc_error の cplat_ftell() から 4 を返却する。
+                              // [Pre-Assert手順] - cplat_ftell() から 4 を返す。
     EXPECT_CALL(mock_cplat_, cplat_fseek(file, 0, SEEK_SET))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_異常系] - cplat_fseek() が file、0、SEEK_SET を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - alloc_error の先頭 seek から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_fseek() から 0 (先頭への移動に成功) を返す。
     EXPECT_CALL(mock_cplat_, cplat_malloc(5u))
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc() が 5u を指定して 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
     EXPECT_CALL(mock_cplat_, cplat_fclose(file, nullptr))
         .WillOnce(
             Return(0)); // [Pre-Assert確認_異常系] - cplat_fclose() が file、nullptr を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - 確保失敗後の cplat_fclose() から 0 を返却する。
+                        // [Pre-Assert手順] - cplat_fclose() から 0 (確保失敗後のクローズに成功) を返す。
 
     // Act_2
-    cplat_sym_loader_init(entries, 1u, "alloc_error"); // [手順] - 設定バッファーの確保が失敗するファイルを読み込む。
+    cplat_sym_loader_init(
+        entries, 1u,
+        "alloc_error"); // [手順] - 設定バッファーの確保が失敗するファイルを指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert_2
     EXPECT_STREQ(
@@ -534,34 +556,36 @@ TEST_F(symLoaderInitTest, releases_resources_when_read_setup_fails)
     EXPECT_CALL(mock_cplat_, cplat_fopen(StrEq("read_error"), StrEq("rb"), nullptr))
         .WillOnce(Return(
             file)); // [Pre-Assert確認_異常系] - cplat_fopen() が "read_error" と等しい文字列、"rb" と等しい文字列、nullptr を指定して 1 回呼び出されること。
-                    // [Pre-Assert手順] - read_error 用の擬似 FILE を返却する。
+                    // [Pre-Assert手順] - cplat_fopen() から read_error 用の擬似 FILE を返す。
     EXPECT_CALL(mock_cplat_, cplat_fseek(file, 0, SEEK_END))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_異常系] - cplat_fseek() が file、0、SEEK_END を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - read_error の末尾 seek から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_fseek() から 0 (末尾への移動に成功) を返す。
     EXPECT_CALL(mock_cplat_, cplat_ftell(file))
         .WillOnce(Return(4)); // [Pre-Assert確認_異常系] - cplat_ftell() が file を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - read_error の cplat_ftell() から 4 を返却する。
+                              // [Pre-Assert手順] - cplat_ftell() から 4 を返す。
     EXPECT_CALL(mock_cplat_, cplat_fseek(file, 0, SEEK_SET))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_異常系] - cplat_fseek() が file、0、SEEK_SET を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - read_error の先頭 seek から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_fseek() から 0 (先頭への移動に成功) を返す。
     EXPECT_CALL(mock_cplat_, cplat_malloc(5u))
         .WillOnce(DoDefault())
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc() が 5u を指定して 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - cplat_malloc() は本物へ委譲する。
+                          // [Pre-Assert手順] - cplat_malloc() から製品 (prod) の処理へ委譲する。
     EXPECT_CALL(mock_cplat_, cplat_fread(_, 1u, 4u, file, nullptr))
         .WillOnce(Return(
             3u)); // [Pre-Assert確認_異常系] - cplat_fread() が 1u、4u、file、nullptr を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - cplat_fread() から 3 を返却する。
+                  // [Pre-Assert手順] - cplat_fread() から 3 を返す。
     EXPECT_CALL(mock_cplat_, cplat_fclose(file, nullptr))
         .WillOnce(
             Return(0)); // [Pre-Assert確認_異常系] - cplat_fclose() が file、nullptr を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - 読み込み不足後の cplat_fclose() から 0 を返却する。
+                        // [Pre-Assert手順] - cplat_fclose() から 0 (読み込み不足後のクローズに成功) を返す。
 
     // Act_3
-    cplat_sym_loader_init(entries, 1u, "read_error"); // [手順] - 設定内容の読み込みが短くなるファイルを読み込む。
+    cplat_sym_loader_init(
+        entries, 1u,
+        "read_error"); // [手順] - 設定内容の読み込みが短くなるファイルを指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert_3
     EXPECT_STREQ(
@@ -584,11 +608,12 @@ TEST_F(symLoaderInitTest, ignores_invalid_json_entries)
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read 区分=異常系]
     expect_config_read("invalid_entries.json",
                        json); // 不正エントリ JSON の読取が呼び出されること。
-                              // [Pre-Assert手順] - 不正エントリ JSON 本文を返却する。
+    // [Pre-Assert手順] - cplat_fread() から、不正エントリ JSON 本文をコピーして読取バイト数を返す。
 
     // Act
-    cplat_sym_loader_init(entries, 1u,
-                          "invalid_entries.json"); // [手順] - 不正な JSON エントリを含む設定を読み込む。
+    cplat_sym_loader_init(
+        entries, 1u,
+        "invalid_entries.json"); // [手順] - 不正な JSON エントリを含む設定を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ(
@@ -611,13 +636,15 @@ TEST_F(symLoaderInitTest, ignores_matching_entry_when_object_array_is_null)
     // Pre-Assert
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read]
     expect_config_read("null_array.json", json); // 一致設定 JSON の読取が呼び出されること。
-                                                 // [Pre-Assert手順] - 一致設定 JSON 本文を返却する。
+    // [Pre-Assert手順] - cplat_fread() から、一致設定 JSON 本文をコピーして読取バイト数を返す。
 
     // Act
-    cplat_sym_loader_init(nullptr, 0u, "null_array.json"); // [手順] - エントリ配列に NULL を指定して設定を読み込む。
+    cplat_sym_loader_init(
+        nullptr, 0u,
+        "null_array.json"); // [手順] - エントリ配列に nullptr を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
-    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(NULL 配列の設定読み込みが異常終了しないことの確認)
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(nullptr 配列の設定読み込みが異常終了しないことの確認)
 }
 
 // NULL エントリと func_key NULL の配列要素を読み飛ばすことの確認
@@ -627,17 +654,19 @@ TEST_F(symLoaderInitTest, skips_null_cache_entries)
     const char *json = "{\"sample_func\":{\"lib\":\"liboverride\",\"func\":\"override_func\"}}";
     cplat_sym_loader_entry entry = CPLAT_SYM_LOADER_ENTRY_INIT("sample_func", void (*)(void));
     entry.func_key = nullptr;
-    cplat_sym_loader_entry *entries[] = {nullptr, &entry}; // [状態] - NULL 要素と func_key が NULL の要素を用意する。
+    cplat_sym_loader_entry *entries[] = {nullptr,
+                                         &entry}; // [状態] - nullptr 要素と func_key が nullptr の要素を用意する。
 
     // Pre-Assert
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read 区分=異常系]
     expect_config_read("null_cache_entries.json",
                        json); // 一致設定 JSON の読取が呼び出されること。
-                              // [Pre-Assert手順] - 一致設定 JSON 本文を返却する。
+    // [Pre-Assert手順] - cplat_fread() から、一致設定 JSON 本文をコピーして読取バイト数を返す。
 
     // Act
-    cplat_sym_loader_init(entries, 2u,
-                          "null_cache_entries.json"); // [手順] - 不正なキャッシュ配列を指定して設定を読み込む。
+    cplat_sym_loader_init(
+        entries, 2u,
+        "null_cache_entries.json"); // [手順] - 不正なキャッシュ配列を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ(
@@ -658,23 +687,24 @@ TEST_F(symLoaderInitTest, ignores_config_file_larger_than_limit)
     EXPECT_CALL(mock_cplat_, cplat_fopen(StrEq("large_file"), StrEq("rb"), nullptr))
         .WillOnce(Return(
             file)); // [Pre-Assert確認_異常系] - cplat_fopen() が "large_file" と等しい文字列、"rb" と等しい文字列、nullptr を指定して 1 回呼び出されること。
-                    // [Pre-Assert手順] - large_file 用の擬似 FILE を返却する。
+                    // [Pre-Assert手順] - cplat_fopen() から large_file 用の擬似 FILE を返す。
     EXPECT_CALL(mock_cplat_, cplat_fseek(file, 0, SEEK_END))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_異常系] - cplat_fseek() が file、0、SEEK_END を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - large_file の末尾 seek から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_fseek() から 0 (末尾への移動に成功) を返す。
     EXPECT_CALL(mock_cplat_, cplat_ftell(file))
         .WillOnce(Return(1024 * 1024 +
                          1)); // [Pre-Assert確認_異常系] - cplat_ftell() が file を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 上限を 1 バイト超えるサイズを返却する。
+                              // [Pre-Assert手順] - cplat_ftell() から上限を 1 バイト超えるサイズを返す。
     EXPECT_CALL(mock_cplat_, cplat_fclose(file, nullptr))
         .WillOnce(
             Return(0)); // [Pre-Assert確認_異常系] - cplat_fclose() が file、nullptr を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - 上限超過後の cplat_fclose() から 0 を返却する。
+                        // [Pre-Assert手順] - cplat_fclose() から 0 (上限超過後のクローズに成功) を返す。
 
     // Act
-    cplat_sym_loader_init(entries, 1u,
-                          "large_file"); // [手順] - 上限を 1 バイト超える設定ファイルを読み込む。
+    cplat_sym_loader_init(
+        entries, 1u,
+        "large_file"); // [手順] - 上限を 1 バイト超える設定ファイルを指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ(
@@ -701,22 +731,23 @@ TEST_F(symLoaderInitTest, ignores_invalid_function_values)
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read 区分=異常系]
     expect_config_read("null_func.json",
                        valid_json); // func 取得失敗用 JSON の読取が呼び出されること。
-                                    // [Pre-Assert手順] - 正常な JSON 本文を返却する。
+    // [Pre-Assert手順] - cplat_fread() から、正常な JSON 本文をコピーして読取バイト数を返す。
     EXPECT_CALL(mock_cjson, cJSON_GetStringValue(_))
         .WillOnce(DoDefault())
         .WillOnce(Return(nullptr))
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cJSON_GetStringValue() が 2 回以上呼び出されること。
-                                      // [Pre-Assert手順] - func の文字列取得で NULL を返却する。
+    // [Pre-Assert手順] - cJSON_GetStringValue() から 1 回目は cJSON の処理へ委譲し、2 回目は nullptr (func の文字列取得失敗) を返し、以降は cJSON の処理へ委譲する。
 
     // Act
-    cplat_sym_loader_init(null_entries, 1u,
-                          "null_func.json"); // [手順] - func の文字列取得失敗を注入して設定を読み込む。
+    cplat_sym_loader_init(
+        null_entries, 1u,
+        "null_func.json"); // [手順] - cJSON_GetStringValue() が func の文字列取得に失敗する状態で cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ(
         "",
         null_entry
-            .func_name); // [確認_異常系] - null_entry.func_name が "" であること。(NULL の func が反映されないことの確認)
+            .func_name); // [確認_異常系] - null_entry.func_name が "" であること。(nullptr の func が反映されないことの確認)
 
     // Cleanup
     Mock::VerifyAndClearExpectations(&mock_cjson);
@@ -729,11 +760,12 @@ TEST_F(symLoaderInitTest, ignores_invalid_function_values)
     expect_config_read(
         "invalid_func_values.json",
         boundary_json.c_str()); // 空または上限超過 func の JSON 読取が呼び出されること。
-                                // [Pre-Assert手順] - 境界値 JSON 本文を返却する。
+    // [Pre-Assert手順] - cplat_fread() から、境界値 JSON 本文をコピーして読取バイト数を返す。
 
     // Act_2
-    cplat_sym_loader_init(boundary_entries, 2u,
-                          "invalid_func_values.json"); // [手順] - 空または上限超過の func を含む設定を読み込む。
+    cplat_sym_loader_init(
+        boundary_entries, 2u,
+        "invalid_func_values.json"); // [手順] - 空または上限超過の func を含む設定を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert_2
     EXPECT_STREQ(

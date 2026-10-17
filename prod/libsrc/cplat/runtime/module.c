@@ -99,7 +99,7 @@ static int get_self_path_posix(char *path_out, size_t path_size, const void *fun
         return CPLAT_ERR_UNKNOWN;
     }
 
-    if (info.dli_fname)
+    if (info.dli_fname != NULL)
     {
         p = info.dli_fname;
     }
@@ -141,7 +141,7 @@ static int get_self_path_w(wchar_t *wpath_out, size_t wpath_size, const void *fu
     wchar_t buf[PLATFORM_PATH_MAX];
     DWORD n;
 
-    if (!wpath_out || wpath_size == 0 || !func_addr)
+    if (wpath_out == NULL || wpath_size == 0 || func_addr == NULL)
         return CPLAT_ERR_INVALID_ARGUMENT;
 
     if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
@@ -267,7 +267,7 @@ int cplat_module_get_basename(char *basename_out, const size_t basename_size, co
     int st;
     char path_buf[4096];
 
-    if (!basename_out || basename_size == 0)
+    if (basename_out == NULL || basename_size == 0)
         return CPLAT_ERR_INVALID_ARGUMENT;
 
     st = cplat_module_get_path(path_buf, sizeof(path_buf), func_addr);

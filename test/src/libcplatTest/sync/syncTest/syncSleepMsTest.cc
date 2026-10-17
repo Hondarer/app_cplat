@@ -13,8 +13,9 @@ TEST(syncSleepMsTest, zero_returns_immediately)
     // Pre-Assert
 
     // Act
-    cplat_sleep_ms(0);                    // [手順] - 待機時間 0 ms で呼び出す。
-    uint64_t after = test_monotonic_ms(); // [手順] - 呼び出し後の単調増加時刻を取得する。
+    cplat_sleep_ms(0); // [手順] - 待機時間に 0 ms を指定して cplat_sleep_ms() を呼び出す。
+    uint64_t after =
+        test_monotonic_ms(); // [手順] - 呼び出し後の単調増加時刻を得るため、test_monotonic_ms() を呼び出す。
 
     // Assert
     EXPECT_LT(after - before,
@@ -30,8 +31,9 @@ TEST(syncSleepMsTest, negative_returns_immediately)
     // Pre-Assert
 
     // Act
-    cplat_sleep_ms(-1);                   // [手順] - 負の待機時間で呼び出す。
-    uint64_t after = test_monotonic_ms(); // [手順] - 呼び出し後の単調増加時刻を取得する。
+    cplat_sleep_ms(-1); // [手順] - 負の待機時間 -1 を指定して cplat_sleep_ms() を呼び出す。
+    uint64_t after =
+        test_monotonic_ms(); // [手順] - 呼び出し後の単調増加時刻を得るため、test_monotonic_ms() を呼び出す。
 
     // Assert
     EXPECT_LT(
@@ -60,16 +62,17 @@ TEST(syncSleepMsTest, elapses_at_least_specified_duration)
                 // [Pre-Assert確認_正常系] - req->tv_nsec が 50000000L であること。(50 ms が 50000000 ナノ秒であることの確認)
                 return 0;
             }); // [Pre-Assert確認_正常系] - nanosleep() が 1 回呼び出されること。
-                // [Pre-Assert手順] - nanosleep() から 0 を返却する。
+                // [Pre-Assert手順] - nanosleep() から 0 を返す。
 #endif          /* PLATFORM_LINUX */
 
     // Act
 #if defined(PLATFORM_LINUX)
-    cplat_sleep_ms(target_ms); // [手順] - 指定ミリ秒待機する。
+    cplat_sleep_ms(target_ms); // [手順] - 待機時間に target_ms を指定して cplat_sleep_ms() を呼び出す。
 #else
     uint64_t before = test_monotonic_ms(); // [状態] - 呼び出し前の単調増加時刻を取得する。
-    cplat_sleep_ms(target_ms);             // [手順] - 指定ミリ秒待機する。
-    uint64_t after = test_monotonic_ms();  // [手順] - 呼び出し後の単調増加時刻を取得する。
+    cplat_sleep_ms(target_ms);             // [手順] - 待機時間に target_ms を指定して cplat_sleep_ms() を呼び出す。
+    uint64_t after =
+        test_monotonic_ms(); // [手順] - 呼び出し後の単調増加時刻を得るため、test_monotonic_ms() を呼び出す。
 #endif /* PLATFORM_LINUX */
 
     // Assert

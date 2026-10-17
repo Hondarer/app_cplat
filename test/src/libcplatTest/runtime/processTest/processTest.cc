@@ -54,13 +54,20 @@ TEST(processTest, MapsErrnoToCommonResults)
     // Pre-Assert
 
     // Act
-    int invalid_result = cplat_internal_result_from_errno(EINVAL);    // [手順] - EINVAL を共通結果コードへ変換する。
-    int permission_result = cplat_internal_result_from_errno(EACCES); // [手順] - EACCES を共通結果コードへ変換する。
-    int timeout_result = cplat_internal_result_from_errno(ETIMEDOUT); // [手順] - ETIMEDOUT を共通結果コードへ変換する。
-    int busy_result = cplat_internal_result_from_errno(EBUSY);        // [手順] - EBUSY を共通結果コードへ変換する。
-    int memory_result = cplat_internal_result_from_errno(ENOMEM);     // [手順] - ENOMEM を共通結果コードへ変換する。
-    int not_found_result = cplat_internal_result_from_errno(ENOENT);  // [手順] - ENOENT を共通結果コードへ変換する。
-    int other_result = cplat_internal_result_from_errno(EDOM);        // [手順] - EDOM を共通結果コードへ変換する。
+    int invalid_result = cplat_internal_result_from_errno(
+        EINVAL); // [手順] - EINVAL を指定して cplat_internal_result_from_errno() を呼び出す。
+    int permission_result = cplat_internal_result_from_errno(
+        EACCES); // [手順] - EACCES を指定して cplat_internal_result_from_errno() を呼び出す。
+    int timeout_result = cplat_internal_result_from_errno(
+        ETIMEDOUT); // [手順] - ETIMEDOUT を指定して cplat_internal_result_from_errno() を呼び出す。
+    int busy_result = cplat_internal_result_from_errno(
+        EBUSY); // [手順] - EBUSY を指定して cplat_internal_result_from_errno() を呼び出す。
+    int memory_result = cplat_internal_result_from_errno(
+        ENOMEM); // [手順] - ENOMEM を指定して cplat_internal_result_from_errno() を呼び出す。
+    int not_found_result = cplat_internal_result_from_errno(
+        ENOENT); // [手順] - ENOENT を指定して cplat_internal_result_from_errno() を呼び出す。
+    int other_result = cplat_internal_result_from_errno(
+        EDOM); // [手順] - EDOM を指定して cplat_internal_result_from_errno() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -96,7 +103,7 @@ TEST(processTest, MapsWindowsInsufficientBuffer)
 
     // Act
     int result = cplat_internal_result_from_windows_error(
-        ERROR_INSUFFICIENT_BUFFER); // [手順] - ERROR_INSUFFICIENT_BUFFER を共通結果コードへ変換する。
+        ERROR_INSUFFICIENT_BUFFER); // [手順] - ERROR_INSUFFICIENT_BUFFER を指定して cplat_internal_result_from_windows_error() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -125,15 +132,16 @@ TEST(processTest, RunSyncReturnsChildExitCode)
     // Pre-Assert
     EXPECT_CALL(mock_unistd, fork(_, _, _))
         .WillOnce(Return(static_cast<pid_t>(4242))); // [Pre-Assert確認_正常系] - fork() が 1 回呼び出されること。
-                                                     // [Pre-Assert手順] - 子プロセス pid 4242 を返却する。
+                                                     // [Pre-Assert手順] - fork() から子プロセスの pid 4242 を返す。
     EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 4242, _, _))
         .WillOnce(DoAll(SetArgPointee<4>(status), Return(static_cast<pid_t>(4242))));
     // [Pre-Assert確認_正常系] - waitpid() が 4242 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 終了ステータス 7 を設定して 4242 を返却する。
+    // [Pre-Assert手順] - waitpid() から、終了ステータス 7 を設定して 4242 を返す。
 
     // Act
-    int result = cplat_process_run_sync(&options, CPLAT_PROCESS_WAIT_FOREVER,
-                                        &exit_code); // [手順] - cplat_process_run_sync() を無期限待機で呼び出す。
+    int result =
+        cplat_process_run_sync(&options, CPLAT_PROCESS_WAIT_FOREVER,
+                               &exit_code); // [手順] - 無期限待機を指定して cplat_process_run_sync() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -162,15 +170,16 @@ TEST(processTest, EnvironmentOverridesAreAcceptedByRunSync)
     // Pre-Assert
     EXPECT_CALL(mock_unistd, fork(_, _, _))
         .WillOnce(Return(static_cast<pid_t>(4243))); // [Pre-Assert確認_正常系] - fork() が 1 回呼び出されること。
-                                                     // [Pre-Assert手順] - 子プロセス pid 4243 を返却する。
+                                                     // [Pre-Assert手順] - fork() から子プロセスの pid 4243 を返す。
     EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 4243, _, _))
         .WillOnce(DoAll(SetArgPointee<4>(status), Return(static_cast<pid_t>(4243))));
     // [Pre-Assert確認_正常系] - waitpid() が 4243 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 終了ステータス 0 を設定して 4243 を返却する。
+    // [Pre-Assert手順] - waitpid() から、終了ステータス 0 を設定して 4243 を返す。
 
     // Act
-    int result = cplat_process_run_sync(&options, CPLAT_PROCESS_WAIT_FOREVER,
-                                        &exit_code); // [手順] - 環境変数上書き付きで同期実行する。
+    int result = cplat_process_run_sync(
+        &options, CPLAT_PROCESS_WAIT_FOREVER,
+        &exit_code); // [手順] - 環境変数上書きと無期限待機を指定して cplat_process_run_sync() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_process_run_sync() の戻り値が CPLAT_OK であること。
@@ -195,31 +204,35 @@ TEST(processTest, WaitNoWaitReportsTimeoutForRunningProcess)
     // Pre-Assert
     EXPECT_CALL(mock_unistd, fork(_, _, _))
         .WillOnce(Return(static_cast<pid_t>(4244))); // [Pre-Assert確認_正常系] - fork() が 1 回呼び出されること。
-                                                     // [Pre-Assert手順] - 子プロセス pid 4244 を返却する。
+                                                     // [Pre-Assert手順] - fork() から子プロセスの pid 4244 を返す。
     EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 4244, _, WNOHANG))
         .WillOnce(Return(static_cast<pid_t>(
             0))); // [Pre-Assert確認_正常系] - waitpid() が 4244、WNOHANG を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - 未終了を示す 0 を返却する。
+                  // [Pre-Assert手順] - waitpid() から未終了を示す 0 を返す。
     EXPECT_CALL(mock_unistd, kill(_, _, _, 4244, SIGTERM))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - kill() が 4244、SIGTERM を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - kill から 0 を返却する。
+                              // [Pre-Assert手順] - kill() から 0 を返す。
     EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 4244, _, 0))
         .WillOnce(DoAll(SetArgPointee<4>(status), Return(static_cast<pid_t>(4244))));
     // [Pre-Assert確認_正常系] - waitpid() が 4244、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 終了ステータス 0 を設定して 4244 を返却する。
+    // [Pre-Assert手順] - waitpid() から、終了ステータス 0 を設定して 4244 を返す。
 
     // Act
     int start_result =
-        cplat_process_start(&options, &process); // [手順] - cplat_process_start() で子プロセスを起動する。
+        cplat_process_start(&options, &process); // [手順] - 起動オプションを指定して cplat_process_start() を呼び出す。
     ASSERT_EQ(CPLAT_OK, start_result);
     // [確認_正常系] - cplat_process_start() の戻り値が CPLAT_OK であること。
     ASSERT_NE(nullptr, process);
     // [確認_正常系] - process が nullptr 以外であること。
 
-    int wait_result = cplat_process_wait(process, CPLAT_PROCESS_NO_WAIT);     // [手順] - NO_WAIT で待機する。
-    int terminate_result = cplat_process_terminate(process);                  // [手順] - 子プロセスを terminate する。
-    int final_wait = cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 無期限待機で終了を待つ。
-    int exit_result = cplat_process_get_exit_code(process, &exit_code);       // [手順] - 終了コードを取得する。
+    int wait_result = cplat_process_wait(
+        process, CPLAT_PROCESS_NO_WAIT); // [手順] - NO_WAIT を指定して cplat_process_wait() を呼び出す。
+    int terminate_result = cplat_process_terminate(
+        process); // [手順] - 起動済みの子プロセスを指定して cplat_process_terminate() を呼び出す。
+    int final_wait = cplat_process_wait(
+        process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 無期限待機を指定して cplat_process_wait() を呼び出す。
+    int exit_result = cplat_process_get_exit_code(
+        process, &exit_code); // [手順] - 終了コードの出力先を指定して cplat_process_get_exit_code() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -251,18 +264,20 @@ TEST(processTest, WaitReturnsChildExitCode)
     EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, fake_process, INFINITE))
         .WillOnce(Return(
             WAIT_OBJECT_0)); // [Pre-Assert確認_正常系] - WaitForSingleObject() が fake_process、INFINITE を指定して 1 回呼び出されること。
-                             // [Pre-Assert手順] - WAIT_OBJECT_0 を返却する。
+                             // [Pre-Assert手順] - WaitForSingleObject() から WAIT_OBJECT_0 を返す。
     EXPECT_CALL(mock_windows, GetExitCodeProcess(_, _, _, fake_process, _))
         .WillOnce(DoAll(SetArgPointee<4>(7), Return(TRUE)));
     // [Pre-Assert確認_正常系] - GetExitCodeProcess() が fake_process を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 終了コード 7 を設定して TRUE を返却する。
+    // [Pre-Assert手順] - GetExitCodeProcess() から、終了コード 7 を設定して TRUE を返す。
     EXPECT_CALL(mock_windows, CloseHandle(_, _, _, fake_process)).WillOnce(Return(TRUE)); // Cleanup の destroy 用
     // [Pre-Assert確認_正常系] - CloseHandle() が fake_process を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - TRUE を返却する。
+    // [Pre-Assert手順] - CloseHandle() から TRUE を返す。
 
     // Act
-    int wait_result = cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 無期限待機で終了を待つ。
-    int exit_result = cplat_process_get_exit_code(process, &exit_code);        // [手順] - 終了コードを取得する。
+    int wait_result = cplat_process_wait(
+        process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 無期限待機を指定して cplat_process_wait() を呼び出す。
+    int exit_result = cplat_process_get_exit_code(
+        process, &exit_code); // [手順] - 終了コードの出力先を指定して cplat_process_get_exit_code() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, wait_result); // [確認_正常系] - cplat_process_wait() の戻り値が CPLAT_OK であること。
@@ -290,28 +305,32 @@ TEST(processTest, WaitNoWaitReportsTimeoutForAdoptedProcess)
     EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, fake_process, 0U))
         .WillOnce(Return(
             WAIT_TIMEOUT)); // [Pre-Assert確認_正常系] - WaitForSingleObject() が fake_process、0U を指定して 1 回呼び出されること。
-                            // [Pre-Assert手順] - WAIT_TIMEOUT を返却する。
+                            // [Pre-Assert手順] - WaitForSingleObject() から WAIT_TIMEOUT を返す。
     EXPECT_CALL(mock_windows, TerminateProcess(_, _, _, fake_process, EXIT_FAILURE))
         .WillOnce(Return(
             TRUE)); // [Pre-Assert確認_正常系] - TerminateProcess() が fake_process、EXIT_FAILURE を指定して 1 回呼び出されること。
-                    // [Pre-Assert手順] - TRUE を返却する。
+                    // [Pre-Assert手順] - TerminateProcess() から TRUE を返す。
     EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, fake_process, INFINITE))
         .WillOnce(Return(
             WAIT_OBJECT_0)); // [Pre-Assert確認_正常系] - WaitForSingleObject() が fake_process、INFINITE を指定して 1 回呼び出されること。
-                             // [Pre-Assert手順] - WAIT_OBJECT_0 を返却する。
+                             // [Pre-Assert手順] - WaitForSingleObject() から WAIT_OBJECT_0 を返す。
     EXPECT_CALL(mock_windows, GetExitCodeProcess(_, _, _, fake_process, _))
         .WillOnce(DoAll(SetArgPointee<4>(1), Return(TRUE)));
     // [Pre-Assert確認_正常系] - GetExitCodeProcess() が fake_process を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 終了コード 1 を設定して TRUE を返却する。
+    // [Pre-Assert手順] - GetExitCodeProcess() から、終了コード 1 を設定して TRUE を返す。
     EXPECT_CALL(mock_windows, CloseHandle(_, _, _, fake_process)).WillOnce(Return(TRUE)); // Cleanup の destroy 用
     // [Pre-Assert確認_正常系] - CloseHandle() が fake_process を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - TRUE を返却する。
+    // [Pre-Assert手順] - CloseHandle() から TRUE を返す。
 
     // Act
-    int wait_result = cplat_process_wait(process, CPLAT_PROCESS_NO_WAIT);     // [手順] - NO_WAIT で待機する。
-    int terminate_result = cplat_process_terminate(process);                  // [手順] - 子プロセスを terminate する。
-    int final_wait = cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 無期限待機で終了を待つ。
-    int exit_result = cplat_process_get_exit_code(process, &exit_code);       // [手順] - 終了コードを取得する。
+    int wait_result = cplat_process_wait(
+        process, CPLAT_PROCESS_NO_WAIT); // [手順] - NO_WAIT を指定して cplat_process_wait() を呼び出す。
+    int terminate_result = cplat_process_terminate(
+        process); // [手順] - 起動済みの子プロセスを指定して cplat_process_terminate() を呼び出す。
+    int final_wait = cplat_process_wait(
+        process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 無期限待機を指定して cplat_process_wait() を呼び出す。
+    int exit_result = cplat_process_get_exit_code(
+        process, &exit_code); // [手順] - 終了コードの出力先を指定して cplat_process_get_exit_code() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -349,7 +368,7 @@ TEST(processTest, StartCreatesProcessWithCreateProcessW)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, CreateFileU(_, _, _, _, _, _, _)).Times(3).WillRepeatedly(Return(stdio_handle));
     // [Pre-Assert確認_正常系] - CreateFileU() が 3 回呼び出されること。
-    // [Pre-Assert手順] - ダミーの標準ハンドルを返却する。
+    // [Pre-Assert手順] - CreateFileU() からダミーの標準ハンドルを返す。
     EXPECT_CALL(mock_windows, InitializeProcThreadAttributeList(_, _, _, _, 1U, 0U, _))
         .WillOnce(
             [](const char *, const int, const char *, LPPROC_THREAD_ATTRIBUTE_LIST, DWORD, DWORD, PSIZE_T size)
@@ -359,11 +378,11 @@ TEST(processTest, StartCreatesProcessWithCreateProcessW)
             })
         .WillOnce(Return(TRUE));
     // [Pre-Assert確認_正常系] - InitializeProcThreadAttributeList() が 1U、0U を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は必要サイズ 64 を設定し、2 回目は TRUE を返却する。
+    // [Pre-Assert手順] - InitializeProcThreadAttributeList() から 1 回目は必要サイズ 64 を設定して FALSE、2 回目は TRUE を返す。
     EXPECT_CALL(mock_windows, UpdateProcThreadAttribute(_, _, _, _, 0U, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, _, _, _, _))
         .WillOnce(Return(TRUE));
     // [Pre-Assert確認_正常系] - UpdateProcThreadAttribute() が 0U、PROC_THREAD_ATTRIBUTE_HANDLE_LIST を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - TRUE を返却する。
+    // [Pre-Assert手順] - UpdateProcThreadAttribute() から TRUE を返す。
     EXPECT_CALL(mock_windows, CreateProcessW(_, _, _, _, _, _, _, _, _, _, _, _, _))
         .WillOnce(
             [process_handle, thread_handle](const char *, const int, const char *, LPCWSTR, LPWSTR,
@@ -377,15 +396,16 @@ TEST(processTest, StartCreatesProcessWithCreateProcessW)
                 return TRUE;
             });
     // [Pre-Assert確認_正常系] - CreateProcessW() が 1 回呼び出されること。
-    // [Pre-Assert手順] - プロセス ハンドルとスレッド ハンドルを設定して TRUE を返却する。
+    // [Pre-Assert手順] - CreateProcessW() から、プロセス ハンドルとスレッド ハンドルを設定して TRUE を返す。
     EXPECT_CALL(mock_windows, DeleteProcThreadAttributeList(_, _, _, _)).Times(1);
     // [Pre-Assert確認_正常系] - DeleteProcThreadAttributeList() が 1 回呼び出されること。
     EXPECT_CALL(mock_windows, CloseHandle(_, _, _, _)).WillRepeatedly(Return(TRUE));
     // [Pre-Assert確認_正常系] - CloseHandle() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - TRUE を返却する。
+    // [Pre-Assert手順] - CloseHandle() から TRUE を返す。
 
     // Act
-    int result = cplat_process_start(&options, &process); // [手順] - CreateProcessW 成功状態でプロセスを開始する。
+    int result = cplat_process_start(
+        &options, &process); // [手順] - CreateProcessW() が成功する状態で cplat_process_start() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_process_start() の戻り値が CPLAT_OK であること。
@@ -415,7 +435,7 @@ TEST(processTest, StartReportsCreateProcessWFailure)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, CreateFileU(_, _, _, _, _, _, _)).Times(3).WillRepeatedly(Return(stdio_handle));
     // [Pre-Assert確認_異常系] - CreateFileU() が 3 回呼び出されること。
-    // [Pre-Assert手順] - ダミーの標準ハンドルを返却する。
+    // [Pre-Assert手順] - CreateFileU() からダミーの標準ハンドルを返す。
     EXPECT_CALL(mock_windows, InitializeProcThreadAttributeList(_, _, _, _, 1U, 0U, _))
         .WillOnce(
             [](const char *, const int, const char *, LPPROC_THREAD_ATTRIBUTE_LIST, DWORD, DWORD, PSIZE_T size)
@@ -425,29 +445,30 @@ TEST(processTest, StartReportsCreateProcessWFailure)
             })
         .WillOnce(Return(TRUE));
     // [Pre-Assert確認_異常系] - InitializeProcThreadAttributeList() が 1U、0U を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は必要サイズ 64 を設定し、2 回目は TRUE を返却する。
+    // [Pre-Assert手順] - InitializeProcThreadAttributeList() から 1 回目は必要サイズ 64 を設定して FALSE、2 回目は TRUE を返す。
     EXPECT_CALL(mock_windows, UpdateProcThreadAttribute(_, _, _, _, 0U, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, _, _, _, _))
         .WillOnce(Return(TRUE));
     // [Pre-Assert確認_異常系] - UpdateProcThreadAttribute() が 0U、PROC_THREAD_ATTRIBUTE_HANDLE_LIST を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - TRUE を返却する。
+    // [Pre-Assert手順] - UpdateProcThreadAttribute() から TRUE を返す。
     EXPECT_CALL(mock_windows, CreateProcessW(_, _, _, _, _, _, _, _, _, _, _, _, _)).WillOnce(Return(FALSE));
     // [Pre-Assert確認_異常系] - CreateProcessW() が 1 回呼び出されること。
-    // [Pre-Assert手順] - FALSE を返却する。
+    // [Pre-Assert手順] - CreateProcessW() から FALSE を返す。
     EXPECT_CALL(mock_windows, DeleteProcThreadAttributeList(_, _, _, _)).Times(1);
     // [Pre-Assert確認_異常系] - DeleteProcThreadAttributeList() が 1 回呼び出されること。
     EXPECT_CALL(mock_windows, CloseHandle(_, _, _, _)).WillRepeatedly(Return(TRUE));
     // [Pre-Assert確認_異常系] - CloseHandle() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - TRUE を返却する。
+    // [Pre-Assert手順] - CloseHandle() から TRUE を返す。
 
     // Act
-    int result = cplat_process_start(&options, &process); // [手順] - CreateProcessW 失敗状態でプロセスを開始する。
+    int result = cplat_process_start(
+        &options, &process); // [手順] - CreateProcessW() が失敗する状態で cplat_process_start() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
               result); // [確認_異常系] - cplat_process_start() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(
         nullptr,
-        process); // [確認_異常系] - process が nullptr であること。(CreateProcessW 失敗時に process が NULL のままであることの確認)
+        process); // [確認_異常系] - process が nullptr であること。(CreateProcessW() 失敗時に process が nullptr のままであることの確認)
 }
 
 // Windows の process_start が親の標準ハンドルを複製して起動することの確認
@@ -477,16 +498,16 @@ TEST(processTest, StartCreatesProcessWithInheritedStdio)
     // Pre-Assert
     EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_INPUT_HANDLE)).WillOnce(Return(stdin_source));
     // [Pre-Assert確認_正常系] - GetStdHandle() が STD_INPUT_HANDLE を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 親の標準入力ハンドルを返却する。
+    // [Pre-Assert手順] - GetStdHandle() から親の標準入力ハンドルを返す。
     EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_OUTPUT_HANDLE)).WillOnce(Return(stdout_source));
     // [Pre-Assert確認_正常系] - GetStdHandle() が STD_OUTPUT_HANDLE を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 親の標準出力ハンドルを返却する。
+    // [Pre-Assert手順] - GetStdHandle() から親の標準出力ハンドルを返す。
     EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_ERROR_HANDLE)).WillOnce(Return(stderr_source));
     // [Pre-Assert確認_正常系] - GetStdHandle() が STD_ERROR_HANDLE を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 親の標準エラー ハンドルを返却する。
+    // [Pre-Assert手順] - GetStdHandle() から親の標準エラー ハンドルを返す。
     EXPECT_CALL(mock_windows, GetCurrentProcess(_, _, _)).Times(3).WillRepeatedly(Return(current_process));
     // [Pre-Assert確認_正常系] - GetCurrentProcess() が 3 回呼び出されること。
-    // [Pre-Assert手順] - 現在プロセスのダミー ハンドルを返却する。
+    // [Pre-Assert手順] - GetCurrentProcess() から現在プロセスのダミー ハンドルを返す。
     EXPECT_CALL(mock_windows, DuplicateHandle(_, _, _, current_process, stdin_source, current_process, _, 0U, TRUE,
                                               DUPLICATE_SAME_ACCESS))
         .WillOnce(
@@ -497,7 +518,7 @@ TEST(processTest, StartCreatesProcessWithInheritedStdio)
                 return TRUE;
             });
     // [Pre-Assert確認_正常系] - DuplicateHandle() が current_process、stdin_source、current_process、0U、TRUE、DUPLICATE_SAME_ACCESS を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 複製後の標準入力ハンドルを設定して TRUE を返却する。
+    // [Pre-Assert手順] - DuplicateHandle() から、複製後の標準入力ハンドルを設定して TRUE を返す。
     EXPECT_CALL(mock_windows, DuplicateHandle(_, _, _, current_process, stdout_source, current_process, _, 0U, TRUE,
                                               DUPLICATE_SAME_ACCESS))
         .WillOnce(
@@ -508,7 +529,7 @@ TEST(processTest, StartCreatesProcessWithInheritedStdio)
                 return TRUE;
             });
     // [Pre-Assert確認_正常系] - DuplicateHandle() が current_process、stdout_source、current_process、0U、TRUE、DUPLICATE_SAME_ACCESS を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 複製後の標準出力ハンドルを設定して TRUE を返却する。
+    // [Pre-Assert手順] - DuplicateHandle() から、複製後の標準出力ハンドルを設定して TRUE を返す。
     EXPECT_CALL(mock_windows, DuplicateHandle(_, _, _, current_process, stderr_source, current_process, _, 0U, TRUE,
                                               DUPLICATE_SAME_ACCESS))
         .WillOnce(
@@ -519,7 +540,7 @@ TEST(processTest, StartCreatesProcessWithInheritedStdio)
                 return TRUE;
             });
     // [Pre-Assert確認_正常系] - DuplicateHandle() が current_process、stderr_source、current_process、0U、TRUE、DUPLICATE_SAME_ACCESS を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 複製後の標準エラー ハンドルを設定して TRUE を返却する。
+    // [Pre-Assert手順] - DuplicateHandle() から、複製後の標準エラー ハンドルを設定して TRUE を返す。
     EXPECT_CALL(mock_windows, InitializeProcThreadAttributeList(_, _, _, _, 1U, 0U, _))
         .WillOnce(
             [](const char *, const int, const char *, LPPROC_THREAD_ATTRIBUTE_LIST, DWORD, DWORD, PSIZE_T size)
@@ -529,11 +550,11 @@ TEST(processTest, StartCreatesProcessWithInheritedStdio)
             })
         .WillOnce(Return(TRUE));
     // [Pre-Assert確認_正常系] - InitializeProcThreadAttributeList() が 1U、0U を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は必要サイズ 64 を設定し、2 回目は TRUE を返却する。
+    // [Pre-Assert手順] - InitializeProcThreadAttributeList() から 1 回目は必要サイズ 64 を設定して FALSE、2 回目は TRUE を返す。
     EXPECT_CALL(mock_windows, UpdateProcThreadAttribute(_, _, _, _, 0U, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, _, _, _, _))
         .WillOnce(Return(TRUE));
     // [Pre-Assert確認_正常系] - UpdateProcThreadAttribute() が 0U、PROC_THREAD_ATTRIBUTE_HANDLE_LIST を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - TRUE を返却する。
+    // [Pre-Assert手順] - UpdateProcThreadAttribute() から TRUE を返す。
     EXPECT_CALL(mock_windows, CreateProcessW(_, _, _, _, _, _, _, _, _, _, _, _, _))
         .WillOnce(
             [process_handle, thread_handle](const char *, const int, const char *, LPCWSTR, LPWSTR,
@@ -547,16 +568,16 @@ TEST(processTest, StartCreatesProcessWithInheritedStdio)
                 return TRUE;
             });
     // [Pre-Assert確認_正常系] - CreateProcessW() が 1 回呼び出されること。
-    // [Pre-Assert手順] - プロセス ハンドルとスレッド ハンドルを設定して TRUE を返却する。
+    // [Pre-Assert手順] - CreateProcessW() から、プロセス ハンドルとスレッド ハンドルを設定して TRUE を返す。
     EXPECT_CALL(mock_windows, DeleteProcThreadAttributeList(_, _, _, _)).Times(1);
     // [Pre-Assert確認_正常系] - DeleteProcThreadAttributeList() が 1 回呼び出されること。
     EXPECT_CALL(mock_windows, CloseHandle(_, _, _, _)).WillRepeatedly(Return(TRUE));
     // [Pre-Assert確認_正常系] - CloseHandle() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - TRUE を返却する。
+    // [Pre-Assert手順] - CloseHandle() から TRUE を返す。
 
     // Act
-    int result =
-        cplat_process_start(&options, &process); // [手順] - 親の標準ハンドルを継承する設定でプロセスを開始する。
+    int result = cplat_process_start(
+        &options, &process); // [手順] - 親の標準ハンドルを継承する設定を指定して cplat_process_start() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_process_start() の戻り値が CPLAT_OK であること。
@@ -586,25 +607,26 @@ TEST(processTest, StartReportsDuplicateHandleFailure)
     // Pre-Assert
     EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_INPUT_HANDLE)).WillOnce(Return(stdin_source));
     // [Pre-Assert確認_異常系] - GetStdHandle() が STD_INPUT_HANDLE を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 親の標準入力ハンドルを返却する。
+    // [Pre-Assert手順] - GetStdHandle() から親の標準入力ハンドルを返す。
     EXPECT_CALL(mock_windows, GetCurrentProcess(_, _, _)).WillOnce(Return(current_process));
     // [Pre-Assert確認_異常系] - GetCurrentProcess() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 現在プロセスのダミー ハンドルを返却する。
+    // [Pre-Assert手順] - GetCurrentProcess() から現在プロセスのダミー ハンドルを返す。
     EXPECT_CALL(mock_windows, DuplicateHandle(_, _, _, current_process, stdin_source, current_process, _, 0U, TRUE,
                                               DUPLICATE_SAME_ACCESS))
         .WillOnce(Return(FALSE));
     // [Pre-Assert確認_異常系] - DuplicateHandle() が current_process、stdin_source、current_process、0U、TRUE、DUPLICATE_SAME_ACCESS を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - FALSE を返却する。
+    // [Pre-Assert手順] - DuplicateHandle() から FALSE を返す。
 
     // Act
-    int result = cplat_process_start(&options, &process); // [手順] - DuplicateHandle 失敗状態でプロセスを開始する。
+    int result = cplat_process_start(
+        &options, &process); // [手順] - DuplicateHandle() が失敗する状態で cplat_process_start() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
               result); // [確認_異常系] - cplat_process_start() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(
         nullptr,
-        process); // [確認_異常系] - process が nullptr であること。(DuplicateHandle 失敗時に process が NULL のままであることの確認)
+        process); // [確認_異常系] - process が nullptr であること。(DuplicateHandle() 失敗時に process が nullptr のままであることの確認)
 }
 
 // Windows の process_start が無効な標準ハンドルを null device へフォールバックすることの確認
@@ -629,12 +651,12 @@ TEST(processTest, StartFallsBackToNullDeviceWhenStdHandleInvalid)
     // Pre-Assert
     EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, _)).Times(3).WillRepeatedly(Return(INVALID_HANDLE_VALUE));
     // [Pre-Assert確認_異常系] - GetStdHandle() が 3 回呼び出されること。
-    // [Pre-Assert手順] - INVALID_HANDLE_VALUE を返却する。
+    // [Pre-Assert手順] - GetStdHandle() から INVALID_HANDLE_VALUE を返す。
     EXPECT_CALL(mock_windows, DuplicateHandle(_, _, _, _, _, _, _, _, _, _)).Times(0);
     // [Pre-Assert確認_異常系] - DuplicateHandle() が呼び出されないこと。
     EXPECT_CALL(mock_cplat, CreateFileU(_, _, _, _, _, _, _)).Times(3).WillRepeatedly(Return(null_handle));
     // [Pre-Assert確認_正常系] - CreateFileU() が 3 回呼び出されること。
-    // [Pre-Assert手順] - ダミーの null device ハンドルを返却する。
+    // [Pre-Assert手順] - CreateFileU() からダミーの null device ハンドルを返す。
     EXPECT_CALL(mock_windows, InitializeProcThreadAttributeList(_, _, _, _, 1U, 0U, _))
         .WillOnce(
             [](const char *, const int, const char *, LPPROC_THREAD_ATTRIBUTE_LIST, DWORD, DWORD, PSIZE_T size)
@@ -644,11 +666,11 @@ TEST(processTest, StartFallsBackToNullDeviceWhenStdHandleInvalid)
             })
         .WillOnce(Return(TRUE));
     // [Pre-Assert確認_正常系] - InitializeProcThreadAttributeList() が 1U、0U を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は必要サイズ 64 を設定し、2 回目は TRUE を返却する。
+    // [Pre-Assert手順] - InitializeProcThreadAttributeList() から 1 回目は必要サイズ 64 を設定して FALSE、2 回目は TRUE を返す。
     EXPECT_CALL(mock_windows, UpdateProcThreadAttribute(_, _, _, _, 0U, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, _, _, _, _))
         .WillOnce(Return(TRUE));
     // [Pre-Assert確認_正常系] - UpdateProcThreadAttribute() が 0U、PROC_THREAD_ATTRIBUTE_HANDLE_LIST を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - TRUE を返却する。
+    // [Pre-Assert手順] - UpdateProcThreadAttribute() から TRUE を返す。
     EXPECT_CALL(mock_windows, CreateProcessW(_, _, _, _, _, _, _, _, _, _, _, _, _))
         .WillOnce(
             [process_handle, thread_handle](const char *, const int, const char *, LPCWSTR, LPWSTR,
@@ -662,16 +684,16 @@ TEST(processTest, StartFallsBackToNullDeviceWhenStdHandleInvalid)
                 return TRUE;
             });
     // [Pre-Assert確認_正常系] - CreateProcessW() が 1 回呼び出されること。
-    // [Pre-Assert手順] - プロセス ハンドルとスレッド ハンドルを設定して TRUE を返却する。
+    // [Pre-Assert手順] - CreateProcessW() から、プロセス ハンドルとスレッド ハンドルを設定して TRUE を返す。
     EXPECT_CALL(mock_windows, DeleteProcThreadAttributeList(_, _, _, _)).Times(1);
     // [Pre-Assert確認_正常系] - DeleteProcThreadAttributeList() が 1 回呼び出されること。
     EXPECT_CALL(mock_windows, CloseHandle(_, _, _, _)).WillRepeatedly(Return(TRUE));
     // [Pre-Assert確認_正常系] - CloseHandle() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - TRUE を返却する。
+    // [Pre-Assert手順] - CloseHandle() から TRUE を返す。
 
     // Act
-    int result =
-        cplat_process_start(&options, &process); // [手順] - 無効な標準ハンドルを継承する設定でプロセスを開始する。
+    int result = cplat_process_start(
+        &options, &process); // [手順] - 無効な標準ハンドルを継承する設定を指定して cplat_process_start() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_process_start() の戻り値が CPLAT_OK であること。
@@ -707,7 +729,7 @@ TEST(processTest, StartCreatesProcessWithNativeStdioHandle)
     // Pre-Assert
     EXPECT_CALL(mock_windows, GetCurrentProcess(_, _, _)).Times(3).WillRepeatedly(Return(current_process));
     // [Pre-Assert確認_正常系] - GetCurrentProcess() が 3 回呼び出されること。
-    // [Pre-Assert手順] - 現在プロセスのダミー ハンドルを返却する。
+    // [Pre-Assert手順] - GetCurrentProcess() から現在プロセスのダミー ハンドルを返す。
     EXPECT_CALL(mock_windows, DuplicateHandle(_, _, _, current_process, native_handle, current_process, _, 0U, TRUE,
                                               DUPLICATE_SAME_ACCESS))
         .Times(3)
@@ -719,7 +741,7 @@ TEST(processTest, StartCreatesProcessWithNativeStdioHandle)
                 return TRUE;
             });
     // [Pre-Assert確認_正常系] - DuplicateHandle() が current_process、native_handle、current_process、0U、TRUE、DUPLICATE_SAME_ACCESS を指定して 3 回呼び出されること。
-    // [Pre-Assert手順] - 複製後のハンドルを設定して TRUE を返却する。
+    // [Pre-Assert手順] - DuplicateHandle() から、複製後のハンドルを設定して TRUE を返す。
     EXPECT_CALL(mock_windows, InitializeProcThreadAttributeList(_, _, _, _, 1U, 0U, _))
         .WillOnce(
             [](const char *, const int, const char *, LPPROC_THREAD_ATTRIBUTE_LIST, DWORD, DWORD, PSIZE_T size)
@@ -729,11 +751,11 @@ TEST(processTest, StartCreatesProcessWithNativeStdioHandle)
             })
         .WillOnce(Return(TRUE));
     // [Pre-Assert確認_正常系] - InitializeProcThreadAttributeList() が 1U、0U を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は必要サイズ 64 を設定し、2 回目は TRUE を返却する。
+    // [Pre-Assert手順] - InitializeProcThreadAttributeList() から 1 回目は必要サイズ 64 を設定して FALSE、2 回目は TRUE を返す。
     EXPECT_CALL(mock_windows, UpdateProcThreadAttribute(_, _, _, _, 0U, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, _, _, _, _))
         .WillOnce(Return(TRUE));
     // [Pre-Assert確認_正常系] - UpdateProcThreadAttribute() が 0U、PROC_THREAD_ATTRIBUTE_HANDLE_LIST を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - TRUE を返却する。
+    // [Pre-Assert手順] - UpdateProcThreadAttribute() から TRUE を返す。
     EXPECT_CALL(mock_windows, CreateProcessW(_, _, _, _, _, _, _, _, _, _, _, _, _))
         .WillOnce(
             [process_handle, thread_handle](const char *, const int, const char *, LPCWSTR, LPWSTR,
@@ -747,15 +769,16 @@ TEST(processTest, StartCreatesProcessWithNativeStdioHandle)
                 return TRUE;
             });
     // [Pre-Assert確認_正常系] - CreateProcessW() が 1 回呼び出されること。
-    // [Pre-Assert手順] - プロセス ハンドルとスレッド ハンドルを設定して TRUE を返却する。
+    // [Pre-Assert手順] - CreateProcessW() から、プロセス ハンドルとスレッド ハンドルを設定して TRUE を返す。
     EXPECT_CALL(mock_windows, DeleteProcThreadAttributeList(_, _, _, _)).Times(1);
     // [Pre-Assert確認_正常系] - DeleteProcThreadAttributeList() が 1 回呼び出されること。
     EXPECT_CALL(mock_windows, CloseHandle(_, _, _, _)).WillRepeatedly(Return(TRUE));
     // [Pre-Assert確認_正常系] - CloseHandle() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - TRUE を返却する。
+    // [Pre-Assert手順] - CloseHandle() から TRUE を返す。
 
     // Act
-    int result = cplat_process_start(&options, &process); // [手順] - native_handle 指定でプロセスを開始する。
+    int result =
+        cplat_process_start(&options, &process); // [手順] - native_handle を指定して cplat_process_start() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_process_start() の戻り値が CPLAT_OK であること。
@@ -770,19 +793,19 @@ TEST(processTest, StartCreatesProcessWithNativeStdioHandle)
 TEST(processTest, RejectsInvalidArguments)
 {
     // Arrange
-    cplat_process *process = nullptr; // [状態] - プロセス ハンドルの受け取り先を NULL で初期化する。
+    cplat_process *process = nullptr; // [状態] - プロセス ハンドルの受け取り先を nullptr で初期化する。
 
     // Pre-Assert
 
     // Act
-    int result =
-        cplat_process_start(nullptr, &process); // [手順] - options に NULL を渡して cplat_process_start() を呼び出す。
+    int result = cplat_process_start(
+        nullptr, &process); // [手順] - options に nullptr を指定して cplat_process_start() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
               result); // [確認_異常系] - cplat_process_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(nullptr,
-              process); // [確認_異常系] - process が nullptr であること。(ハンドルが NULL のままであることの確認)
+              process); // [確認_異常系] - process が nullptr であること。(ハンドルが nullptr のままであることの確認)
 }
 
 // 実行ファイルのパスを取得できることの確認
@@ -809,7 +832,7 @@ TEST(processTest, GetsExecutablePath)
                 memcpy(buf, resolved, len);
                 return static_cast<ssize_t>(len);
             }); // [Pre-Assert確認_正常系] - readlink() が "/proc/self/exe" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 解決済みパスを書き込み、その長さを返却する。
+                // [Pre-Assert手順] - readlink() から、解決済みパスを書き込んでその長さを返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_windows, GetModuleFileNameW(_, _, _, static_cast<HMODULE>(nullptr), _, _))
         .WillOnce(
@@ -821,12 +844,13 @@ TEST(processTest, GetsExecutablePath)
                 memcpy(filename, resolved, (len + 1U) * sizeof(wchar_t));
                 return static_cast<DWORD>(len);
             }); // [Pre-Assert確認_正常系] - GetModuleFileNameW() が nullptr を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - モジュール パスを書き込み、その長さを返却する。
+                // [Pre-Assert手順] - GetModuleFileNameW() から、モジュール パスを書き込んでその長さを返す。
 #endif /* PLATFORM_ */
 
     // Act
     int result = cplat_process_get_executable_path(
-        path, sizeof(path)); // [手順] - 十分な容量のバッファーを渡して実行ファイルのパスを取得する。
+        path,
+        sizeof(path)); // [手順] - 十分な容量のバッファーを指定して cplat_process_get_executable_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -855,14 +879,14 @@ TEST(processTest, ExecutablePathRejectsInvalidOutputArguments)
 
     // Act
     int null_result = cplat_process_get_executable_path(
-        nullptr, sizeof(path)); // [手順] - 出力先に NULL を渡して実行ファイルのパスを取得する。
-    int zero_size_result =
-        cplat_process_get_executable_path(path, 0); // [手順] - 出力先サイズに 0 を渡して実行ファイルのパスを取得する。
+        nullptr, sizeof(path)); // [手順] - 出力先に nullptr を指定して cplat_process_get_executable_path() を呼び出す。
+    int zero_size_result = cplat_process_get_executable_path(
+        path, 0); // [手順] - 出力先サイズに 0 を指定して cplat_process_get_executable_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_result); // [確認_異常系] - 出力先が NULL の cplat_process_get_executable_path() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_result); // [確認_異常系] - 出力先が nullptr の cplat_process_get_executable_path() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         zero_size_result); // [確認_異常系] - 出力先サイズが 0 の cplat_process_get_executable_path() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -878,7 +902,7 @@ TEST(processTest, ExecutablePathReportsSmallBuffer)
 
     // Act
     int result = cplat_process_get_executable_path(
-        path, sizeof(path)); // [手順] - 1 バイトの出力先へ実行ファイルのパスを取得する。
+        path, sizeof(path)); // [手順] - 1 バイトの出力先を指定して cplat_process_get_executable_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -899,7 +923,7 @@ TEST(processTest, GetsPidPropagatesMockedGetpid)
     // Pre-Assert
     EXPECT_CALL(mock_unistd, getpid(_, _, _))
         .WillOnce(Return(static_cast<pid_t>(4321))); // [Pre-Assert確認_正常系] - getpid() が 1 回呼び出されること。
-                                                     // [Pre-Assert手順] - pid 4321 を返却する。
+                                                     // [Pre-Assert手順] - getpid() から pid 4321 を返す。
 
     // Act
     uint32_t result = cplat_process_get_pid(); // [手順] - cplat_process_get_pid() を呼び出す。
@@ -920,7 +944,7 @@ TEST(processTest, GetsPidPropagatesMockedGetCurrentProcessId)
     EXPECT_CALL(mock_windows, GetCurrentProcessId(_, _, _))
         .WillOnce(Return(
             static_cast<DWORD>(4321))); // [Pre-Assert確認_正常系] - GetCurrentProcessId() が 1 回呼び出されること。
-                                        // [Pre-Assert手順] - pid 4321 を返却する。
+                                        // [Pre-Assert手順] - GetCurrentProcessId() から pid 4321 を返す。
 
     // Act
     uint32_t result = cplat_process_get_pid(); // [手順] - cplat_process_get_pid() を呼び出す。
@@ -1008,11 +1032,13 @@ TEST(processTest, ExecutablePathReportsReadlinkFailure)
     EXPECT_CALL(mock_unistd, readlink(_, _, _, StrEq("/proc/self/exe"), _, _))
         .WillOnce(Return(static_cast<ssize_t>(
             -1))); // [Pre-Assert確認_異常系] - readlink() が "/proc/self/exe" と等しい文字列を指定して 1 回呼び出されること。
-                   // [Pre-Assert手順] - readlink から -1 を返却する。
+                   // [Pre-Assert手順] - readlink() から -1 を返す。
 
     // Act
     int result = cplat_process_get_executable_path(
-        path, sizeof(path)); // [手順] - readlink が EACCES で失敗する状態で実行ファイルのパスを取得する。
+        path,
+        sizeof(
+            path)); // [手順] - readlink() が EACCES で失敗する状態で cplat_process_get_executable_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1020,7 +1046,7 @@ TEST(processTest, ExecutablePathReportsReadlinkFailure)
         result); // [確認_異常系] - cplat_process_get_executable_path() の戻り値が CPLAT_ERR_PERMISSION_DENIED であること。
     EXPECT_EQ(
         '\0',
-        path[0]); // [確認_異常系] - path[0] が '\0' であること。(readlink 失敗時に出力先が空文字列であることの確認)
+        path[0]); // [確認_異常系] - path[0] が '\0' であること。(readlink() 失敗時に出力先が空文字列であることの確認)
 }
 
 // readlink が出力バッファーを超える長さを返した場合に不足を報告することの確認
@@ -1034,11 +1060,13 @@ TEST(processTest, ExecutablePathReportsReadlinkLengthOverflow)
     EXPECT_CALL(mock_unistd, readlink(_, _, _, StrEq("/proc/self/exe"), _, _))
         .WillOnce(Return(static_cast<ssize_t>(
             8))); // [Pre-Assert確認_異常系] - readlink() が "/proc/self/exe" と等しい文字列を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - 出力先容量と同じ 8 を返却する。
+                  // [Pre-Assert手順] - readlink() から出力先容量と同じ 8 を返す。
 
     // Act
     int result = cplat_process_get_executable_path(
-        path, sizeof(path)); // [手順] - readlink が出力先容量以上の長さを返す状態でパスを取得する。
+        path,
+        sizeof(
+            path)); // [手順] - readlink() が出力先容量以上の長さを返す状態で cplat_process_get_executable_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1062,28 +1090,28 @@ TEST(processTest, RejectsInvalidArgumentVectors)
 
     // Act
     options.argv = nullptr;
-    int null_argv_result =
-        cplat_process_start(&options, &process); // [手順] - argv 自体が NULL の options でプロセスを開始する。
+    int null_argv_result = cplat_process_start(
+        &options, &process); // [手順] - argv 自体が nullptr の options を指定して cplat_process_start() を呼び出す。
     options.argv = null_first_argv;
-    int null_first_result =
-        cplat_process_start(&options, &process); // [手順] - argv[0] が NULL の options でプロセスを開始する。
+    int null_first_result = cplat_process_start(
+        &options, &process); // [手順] - argv[0] が nullptr の options を指定して cplat_process_start() を呼び出す。
     options.argv = empty_argv;
-    int empty_first_result =
-        cplat_process_start(&options, &process); // [手順] - argv[0] が空文字列の options でプロセスを開始する。
+    int empty_first_result = cplat_process_start(
+        &options, &process); // [手順] - argv[0] が空文字列の options を指定して cplat_process_start() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_argv_result); // [確認_異常系] - argv が NULL の cplat_process_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_argv_result); // [確認_異常系] - argv が nullptr の cplat_process_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_first_result); // [確認_異常系] - argv[0] が NULL の cplat_process_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_first_result); // [確認_異常系] - argv[0] が nullptr の cplat_process_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         empty_first_result); // [確認_異常系] - argv[0] が空文字列の cplat_process_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         nullptr,
-        process); // [確認_異常系] - process が nullptr であること。(不正な argv で process が NULL のままであることの確認)
+        process); // [確認_異常系] - process が nullptr であること。(不正な argv で process が nullptr のままであることの確認)
 }
 
 // 環境変数上書きの形式が不正な場合に process_start が拒否することの確認
@@ -1102,14 +1130,15 @@ TEST(processTest, RejectsInvalidEnvironmentOverride)
     // Pre-Assert
 
     // Act
-    int result = cplat_process_start(&options, &process); // [手順] - 不正な環境変数上書きでプロセスを開始する。
+    int result = cplat_process_start(
+        &options, &process); // [手順] - 不正な環境変数上書きを指定して cplat_process_start() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
               result); // [確認_異常系] - cplat_process_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         nullptr,
-        process); // [確認_異常系] - process が nullptr であること。(不正な環境変数上書きで process が NULL のままであることの確認)
+        process); // [確認_異常系] - process が nullptr であること。(不正な環境変数上書きで process が nullptr のままであることの確認)
 }
 
 // プロセス ハンドル確保に失敗した場合に process_start が失敗することの確認
@@ -1127,17 +1156,18 @@ TEST(processTest, StartReportsProcessAllocationFailure)
     EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
         .WillOnce(DoDefault())
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が 2 回呼び出されること。
-                                    // [Pre-Assert手順] - 1 回目は本物へ委譲し、2 回目は NULL を返却する。
+    // [Pre-Assert手順] - cplat_calloc() から 1 回目は製品 (prod) の処理へ委譲し、2 回目は nullptr を返す。
 
     // Act
-    int result = cplat_process_start(&options, &process); // [手順] - process ハンドル確保失敗を注入して開始する。
+    int result = cplat_process_start(
+        &options, &process); // [手順] - process ハンドルの確保が失敗する状態で cplat_process_start() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
               result); // [確認_異常系] - cplat_process_start() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(
         nullptr,
-        process); // [確認_異常系] - process が nullptr であること。(確保失敗時に process が NULL のままであることの確認)
+        process); // [確認_異常系] - process が nullptr であること。(確保失敗時に process が nullptr のままであることの確認)
 }
 
 // fork が失敗した場合に process_start が失敗することの確認
@@ -1154,15 +1184,16 @@ TEST(processTest, StartReportsForkFailure)
     // Pre-Assert
     EXPECT_CALL(mock_unistd, fork(_, _, _))
         .WillOnce(Return(static_cast<pid_t>(-1))); // [Pre-Assert確認_異常系] - fork() が 1 回呼び出されること。
-                                                   // [Pre-Assert手順] - fork から -1 を返却する。
+                                                   // [Pre-Assert手順] - fork() から -1 を返す。
 
     // Act
-    int result = cplat_process_start(&options, &process); // [手順] - fork 失敗を注入してプロセスを開始する。
+    int result =
+        cplat_process_start(&options, &process); // [手順] - fork() が失敗する状態で cplat_process_start() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
               result);           // [確認_異常系] - cplat_process_start() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(nullptr, process); // [確認_異常系] - fork 失敗時の process が nullptr であること。
+    EXPECT_EQ(nullptr, process); // [確認_異常系] - fork() 失敗時の process が nullptr であること。
 }
 
 // 待機が終了コードとシグナル終了を分類し、割り込みを再試行することの確認
@@ -1184,7 +1215,7 @@ TEST(processTest, WaitMapsExitStatesAndRetriesEintr)
     ASSERT_NE(
         nullptr,
         signaled_process); // [状態確認] - pid 124 の cplat_internal_process_adopt_native() の戻り値が nullptr 以外であること。
-    errno = EINTR;               // [状態] - 1 回目の waitpid が EINTR を返す状態とする。
+    errno = EINTR;         // [状態] - 1 回目の waitpid() が EINTR を返す状態とする。
 
     // Pre-Assert
     EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 123, _, _))
@@ -1192,22 +1223,26 @@ TEST(processTest, WaitMapsExitStatesAndRetriesEintr)
         .WillOnce(DoAll(SetArgPointee<4>(normal_status),
                         Return(static_cast<pid_t>(
                             123)))); // [Pre-Assert確認_正常系] - waitpid() が 123 を指定して 2 回呼び出されること。
-                                     // [Pre-Assert手順] - 1 回目は -1、2 回目は終了ステータス 7 を返却する。
+    // [Pre-Assert手順] - waitpid() から 1 回目は -1、2 回目は終了ステータス 7 を設定して 123 を返す。
     EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 124, _, _))
         .WillOnce(DoAll(SetArgPointee<4>(signaled_status),
                         Return(static_cast<pid_t>(
                             124)))); // [Pre-Assert確認_正常系] - waitpid() が 124 を指定して 1 回呼び出されること。
-                                     // [Pre-Assert手順] - SIGTERM 終了ステータスを設定して 124 を返却する。
+                                     // [Pre-Assert手順] - waitpid() から、SIGTERM 終了ステータスを設定して 124 を返す。
 
     // Act
     int normal_wait = cplat_process_wait(
-        normal_process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - EINTR 後に正常終了する process を待機する。
+        normal_process,
+        CPLAT_PROCESS_WAIT_FOREVER); // [手順] - EINTR 後に正常終了する process を指定して cplat_process_wait() を呼び出す。
     int normal_get = cplat_process_get_exit_code(
-        normal_process, &normal_exit_code); // [手順] - 正常終了 process の終了コードを取得する。
-    int signaled_wait =
-        cplat_process_wait(signaled_process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - シグナル終了 process を待機する。
+        normal_process,
+        &normal_exit_code); // [手順] - 正常終了した process を指定して cplat_process_get_exit_code() を呼び出す。
+    int signaled_wait = cplat_process_wait(
+        signaled_process,
+        CPLAT_PROCESS_WAIT_FOREVER); // [手順] - シグナル終了する process を指定して cplat_process_wait() を呼び出す。
     int signaled_get = cplat_process_get_exit_code(
-        signaled_process, &signaled_exit_code); // [手順] - シグナル終了 process の終了コードを取得する。
+        signaled_process,
+        &signaled_exit_code); // [手順] - シグナル終了した process を指定して cplat_process_get_exit_code() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1241,16 +1276,17 @@ TEST(processTest, WaitReportsWaitpidFailure)
     cplat_process *process = cplat_internal_process_adopt_native(125); // [状態] - pid 125 の process を用意する。
     ASSERT_NE(nullptr,
               process); // [状態確認] - cplat_internal_process_adopt_native() の戻り値が nullptr 以外であること。
-    errno = ECHILD;              // [状態] - waitpid が子プロセスなしで失敗する状態とする。
+    errno = ECHILD;     // [状態] - waitpid() が子プロセスなしで失敗する状態とする。
 
     // Pre-Assert
     EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 125, _, _))
         .WillOnce(Return(
             static_cast<pid_t>(-1))); // [Pre-Assert確認_異常系] - waitpid() が 125 を指定して 1 回呼び出されること。
-                                      // [Pre-Assert手順] - waitpid から -1 を返却する。
+                                      // [Pre-Assert手順] - waitpid() から -1 を返す。
 
     // Act
-    int result = cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - waitpid 失敗を注入して待機する。
+    int result = cplat_process_wait(
+        process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - waitpid() が失敗する状態で cplat_process_wait() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -1268,15 +1304,16 @@ TEST(processTest, TerminateReportsKillFailure)
     cplat_process *process = cplat_internal_process_adopt_native(126); // [状態] - pid 126 の process を用意する。
     ASSERT_NE(nullptr,
               process); // [状態確認] - cplat_internal_process_adopt_native() の戻り値が nullptr 以外であること。
-    errno = ESRCH;               // [状態] - terminate 対象が存在せず kill が失敗する状態とする。
+    errno = ESRCH;      // [状態] - terminate 対象が存在せず kill() が失敗する状態とする。
 
     // Pre-Assert
     EXPECT_CALL(mock_unistd, kill(_, _, _, 126, SIGTERM))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - kill() が 126、SIGTERM を指定して 1 回呼び出されること。
-                               // [Pre-Assert手順] - kill から -1 を返却する。
+                               // [Pre-Assert手順] - kill() から -1 を返す。
 
     // Act
-    int result = cplat_process_terminate(process); // [手順] - kill 失敗を注入して process を terminate する。
+    int result =
+        cplat_process_terminate(process); // [手順] - kill() が失敗する状態で cplat_process_terminate() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -1298,35 +1335,38 @@ TEST(processTest, RejectsInvalidWaitAndExitArguments)
     // Pre-Assert
 
     // Act
-    int null_wait = cplat_process_wait(nullptr, CPLAT_PROCESS_NO_WAIT); // [手順] - NULL process で待機する。
-    int negative_wait = cplat_process_wait(process, -1);             // [手順] - 負の timeout で待機する。
-    int null_exit_process =
-        cplat_process_get_exit_code(nullptr, &exit_code); // [手順] - NULL process から終了コードを取得する。
-    int null_exit_output =
-        cplat_process_get_exit_code(process, nullptr); // [手順] - NULL 出力先へ終了コードを取得する。
-    int running_exit =
-        cplat_process_get_exit_code(process, &exit_code); // [手順] - 待機前 process から終了コードを取得する。
-    int null_terminate = cplat_process_terminate(nullptr); // [手順] - NULL process を terminate する。
+    int null_wait = cplat_process_wait(
+        nullptr, CPLAT_PROCESS_NO_WAIT); // [手順] - process に nullptr を指定して cplat_process_wait() を呼び出す。
+    int negative_wait =
+        cplat_process_wait(process, -1); // [手順] - 負の timeout を指定して cplat_process_wait() を呼び出す。
+    int null_exit_process = cplat_process_get_exit_code(
+        nullptr, &exit_code); // [手順] - process に nullptr を指定して cplat_process_get_exit_code() を呼び出す。
+    int null_exit_output = cplat_process_get_exit_code(
+        process, nullptr); // [手順] - 出力先に nullptr を指定して cplat_process_get_exit_code() を呼び出す。
+    int running_exit = cplat_process_get_exit_code(
+        process, &exit_code); // [手順] - 待機前の process を指定して cplat_process_get_exit_code() を呼び出す。
+    int null_terminate = cplat_process_terminate(
+        nullptr); // [手順] - process に nullptr を指定して cplat_process_terminate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_wait); // [確認_異常系] - NULL process の cplat_process_wait() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_wait); // [確認_異常系] - nullptr process の cplat_process_wait() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         negative_wait); // [確認_異常系] - 負の timeout の cplat_process_wait() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_exit_process); // [確認_異常系] - NULL process の cplat_process_get_exit_code() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_exit_process); // [確認_異常系] - nullptr process の cplat_process_get_exit_code() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_exit_output); // [確認_異常系] - NULL 出力先の cplat_process_get_exit_code() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_exit_output); // [確認_異常系] - nullptr 出力先の cplat_process_get_exit_code() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         running_exit); // [確認_異常系] - 実行中 process の cplat_process_get_exit_code() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_terminate); // [確認_異常系] - NULL process の cplat_process_terminate() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_terminate); // [確認_異常系] - nullptr process の cplat_process_terminate() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_process_dispose(process);
@@ -1353,18 +1393,31 @@ TEST(processTest, environment_helpers_handle_keys_and_capacity)
     // Pre-Assert
 
     // Act
-    size_t key_len = test_process_env_key_len("KEY=value"); // [手順] - 環境変数エントリのキー長を取得する。
-    size_t no_key_len = test_process_env_key_len("KEY");    // [手順] - 区切りを持たないエントリのキー長を取得する。
-    int matching_key = test_process_env_key_matches("KEY=value", "KEY", 3U);    // [手順] - 一致するキーを判定する。
-    int prefix_key = test_process_env_key_matches("KEY=value", "KE", 2U);       // [手順] - 接頭辞だけのキーを判定する。
-    int different_key = test_process_env_key_matches("KEY=value", "OTHER", 5U); // [手順] - 異なるキーを判定する。
-    int replace_result = test_process_set_env_entry(envp, 3U, replace_entry);   // [手順] - 既存キーを上書きする。
-    int add_result = test_process_set_env_entry(envp, 3U, add_entry);           // [手順] - 新しいキーを追加する。
-    int overflow_result = test_process_set_env_entry(envp, 3U, overflow_entry); // [手順] - 容量超過のキーを追加する。
-    char **built_env = test_process_build_environment(overrides);             // [手順] - 現在の環境へ上書きを適用する。
-    char **invalid_env = test_process_build_environment(invalid_overrides);   // [手順] - 不正な上書きを適用する。
-    const char *updated_value = test_process_find_env_value(envp, "KEY");     // [手順] - 上書き後の値を検索する。
-    const char *missing_value = test_process_find_env_value(envp, "MISSING"); // [手順] - 存在しない値を検索する。
+    size_t key_len = test_process_env_key_len(
+        "KEY=value"); // [手順] - 環境変数エントリ "KEY=value" を指定して test_process_env_key_len() を呼び出す。
+    size_t no_key_len = test_process_env_key_len(
+        "KEY"); // [手順] - 区切りを持たないエントリ "KEY" を指定して test_process_env_key_len() を呼び出す。
+    int matching_key = test_process_env_key_matches(
+        "KEY=value", "KEY", 3U); // [手順] - 一致するキーを指定して test_process_env_key_matches() を呼び出す。
+    int prefix_key = test_process_env_key_matches(
+        "KEY=value", "KE", 2U); // [手順] - 接頭辞だけのキーを指定して test_process_env_key_matches() を呼び出す。
+    int different_key = test_process_env_key_matches(
+        "KEY=value", "OTHER", 5U); // [手順] - 異なるキーを指定して test_process_env_key_matches() を呼び出す。
+    int replace_result = test_process_set_env_entry(
+        envp, 3U, replace_entry); // [手順] - 既存キーのエントリを指定して test_process_set_env_entry() を呼び出す。
+    int add_result = test_process_set_env_entry(
+        envp, 3U, add_entry); // [手順] - 新しいキーのエントリを指定して test_process_set_env_entry() を呼び出す。
+    int overflow_result = test_process_set_env_entry(
+        envp, 3U,
+        overflow_entry); // [手順] - 容量超過となるエントリを指定して test_process_set_env_entry() を呼び出す。
+    char **built_env = test_process_build_environment(
+        overrides); // [手順] - 上書きを指定して test_process_build_environment() を呼び出す。
+    char **invalid_env = test_process_build_environment(
+        invalid_overrides); // [手順] - 不正な上書きを指定して test_process_build_environment() を呼び出す。
+    const char *updated_value = test_process_find_env_value(
+        envp, "KEY"); // [手順] - 上書き後のキー "KEY" を指定して test_process_find_env_value() を呼び出す。
+    const char *missing_value = test_process_find_env_value(
+        envp, "MISSING"); // [手順] - 存在しないキー "MISSING" を指定して test_process_find_env_value() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1423,71 +1476,80 @@ TEST(processTest, child_stdio_helpers_handle_modes_and_errors)
         .WillOnce(Return(10))
         .WillOnce(Return(13))
         .WillOnce(Return(-1)); // [Pre-Assert確認_正常系] - open() が 3 回呼び出されること。
-                               // [Pre-Assert手順] - 1 回目は 10、2 回目は 13、3 回目は -1 を返却する。
+                               // [Pre-Assert手順] - open() から 1 回目は 10、2 回目は 13、3 回目は -1 を返す。
     EXPECT_CALL(mock_unistd, dup2(_, _, _, 10, STDIN_FILENO))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - dup2() が 10、STDIN_FILENO を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - STDIN 向け dup2 から 0 を返却する。
+                              // [Pre-Assert手順] - dup2() から、STDIN 向けに 0 を返す。
     EXPECT_CALL(mock_unistd, close(_, _, _, 10))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - close() が 10 を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - fd 10 の close から 0 を返却する。
+                              // [Pre-Assert手順] - close() から、fd 10 に対して 0 を返す。
     EXPECT_CALL(mock_unistd, dup2(_, _, _, 13, STDOUT_FILENO))
         .WillOnce(
             Return(-1)); // [Pre-Assert確認_異常系] - dup2() が 13、STDOUT_FILENO を指定して 1 回呼び出されること。
-                         // [Pre-Assert手順] - NULL デバイス向け dup2 から -1 を返却する。
+                         // [Pre-Assert手順] - dup2() から、null デバイス向けに -1 を返す。
     EXPECT_CALL(mock_unistd, close(_, _, _, 13))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - close() が 13 を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - fd 13 の close から 0 を返却する。
+                              // [Pre-Assert手順] - close() から、fd 13 に対して 0 を返す。
     EXPECT_CALL(mock_unistd, dup2(_, _, _, 11, STDOUT_FILENO))
         .WillOnce(
             Return(-1)); // [Pre-Assert確認_異常系] - dup2() が 11、STDOUT_FILENO を指定して 1 回呼び出されること。
-                         // [Pre-Assert手順] - ネイティブ ハンドル 11 の dup2 から -1 を返却する。
+                         // [Pre-Assert手順] - dup2() から、ネイティブ ハンドル 11 に対して -1 を返す。
     EXPECT_CALL(mock_unistd, dup2(_, _, _, 12, STDERR_FILENO))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - dup2() が 12、STDERR_FILENO を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - STDERR 向け dup2 から 0 を返却する。
+                              // [Pre-Assert手順] - dup2() から、STDERR 向けに 0 を返す。
 
     // Act
-    int inherit_result =
-        test_process_setup_child_stdio_one(&spec, STDIN_FILENO, O_RDONLY); // [手順] - 継承モードを設定する。
+    int inherit_result = test_process_setup_child_stdio_one(
+        &spec, STDIN_FILENO,
+        O_RDONLY); // [手順] - 継承モードを指定して test_process_setup_child_stdio_one() を呼び出す。
     spec.mode = CPLAT_PROCESS_STDIO_NULL_DEVICE;
-    int null_result =
-        test_process_setup_child_stdio_one(&spec, STDIN_FILENO, O_RDONLY); // [手順] - NULL デバイスへ接続する。
+    int null_result = test_process_setup_child_stdio_one(
+        &spec, STDIN_FILENO,
+        O_RDONLY); // [手順] - null デバイスへ接続するモードを指定して test_process_setup_child_stdio_one() を呼び出す。
     int null_dup_failure_result = test_process_setup_child_stdio_one(
-        &spec, STDOUT_FILENO, O_WRONLY); // [手順] - NULL デバイスの dup2 失敗を処理する。
+        &spec, STDOUT_FILENO,
+        O_WRONLY); // [手順] - dup2() が失敗する状態で null デバイスへ接続するモードを指定して test_process_setup_child_stdio_one() を呼び出す。
     int null_open_result = test_process_setup_child_stdio_one(
-        &spec, STDOUT_FILENO, O_WRONLY); // [手順] - NULL デバイスの open 失敗を処理する。
+        &spec, STDOUT_FILENO,
+        O_WRONLY); // [手順] - open() が失敗する状態で null デバイスへ接続するモードを指定して test_process_setup_child_stdio_one() を呼び出す。
     spec.mode = CPLAT_PROCESS_STDIO_NATIVE_HANDLE;
     spec.native_handle = -1;
     int invalid_handle_result = test_process_setup_child_stdio_one(
-        &spec, STDOUT_FILENO, O_WRONLY); // [手順] - 負のネイティブ ハンドルを設定する。
+        &spec, STDOUT_FILENO,
+        O_WRONLY); // [手順] - 負のネイティブ ハンドルを指定して test_process_setup_child_stdio_one() を呼び出す。
     spec.native_handle = 11;
-    int dup_failure_result =
-        test_process_setup_child_stdio_one(&spec, STDOUT_FILENO, O_WRONLY); // [手順] - dup2 の失敗を処理する。
+    int dup_failure_result = test_process_setup_child_stdio_one(
+        &spec, STDOUT_FILENO,
+        O_WRONLY); // [手順] - dup2() が失敗する状態でネイティブ ハンドルを指定して test_process_setup_child_stdio_one() を呼び出す。
     spec.native_handle = 12;
-    int native_result =
-        test_process_setup_child_stdio_one(&spec, STDERR_FILENO, O_WRONLY); // [手順] - ネイティブ ハンドルを接続する。
+    int native_result = test_process_setup_child_stdio_one(
+        &spec, STDERR_FILENO,
+        O_WRONLY); // [手順] - ネイティブ ハンドルを指定して test_process_setup_child_stdio_one() を呼び出す。
     int invalid_mode_value = 99;
     spec.mode = static_cast<cplat_process_stdio_mode>(invalid_mode_value);
     int invalid_mode_result = test_process_setup_child_stdio_one(
-        &spec, STDERR_FILENO, O_WRONLY); // [手順] - 不正な標準入出力モードを設定する。
+        &spec, STDERR_FILENO,
+        O_WRONLY); // [手順] - 不正な標準入出力モードを指定して test_process_setup_child_stdio_one() を呼び出す。
     options.stdin_spec.mode = CPLAT_PROCESS_STDIO_INHERIT;
     options.stdout_spec.mode = CPLAT_PROCESS_STDIO_INHERIT;
     options.stderr_spec.mode = CPLAT_PROCESS_STDIO_INHERIT;
-    int all_inherit_result = test_process_setup_child_stdio(&options); // [手順] - 3 標準ストリームを継承する。
+    int all_inherit_result = test_process_setup_child_stdio(
+        &options); // [手順] - 3 標準ストリームを継承する設定を指定して test_process_setup_child_stdio() を呼び出す。
 
     // Assert
     EXPECT_EQ(0, inherit_result); // [確認_正常系] - inherit_result が 0 であること。(継承モードが成功することの確認)
-    EXPECT_EQ(0, null_result); // [確認_正常系] - null_result が 0 であること。(NULL デバイス接続が成功することの確認)
+    EXPECT_EQ(0, null_result); // [確認_正常系] - null_result が 0 であること。(null デバイス接続が成功することの確認)
     EXPECT_EQ(
         -1,
-        null_dup_failure_result); // [確認_異常系] - null_dup_failure_result が -1 であること。(NULL デバイスの dup2 が失敗することの確認)
+        null_dup_failure_result); // [確認_異常系] - null_dup_failure_result が -1 であること。(null デバイスの dup2() が失敗することの確認)
     EXPECT_EQ(
         -1,
-        null_open_result); // [確認_異常系] - null_open_result が -1 であること。(NULL デバイスの open が失敗することの確認)
+        null_open_result); // [確認_異常系] - null_open_result が -1 であること。(null デバイスの open() が失敗することの確認)
     EXPECT_EQ(
         -1,
         invalid_handle_result); // [確認_異常系] - invalid_handle_result が -1 であること。(負のハンドルが拒否されることの確認)
     EXPECT_EQ(-1,
-              dup_failure_result); // [確認_異常系] - dup_failure_result が -1 であること。(dup2 が失敗することの確認)
+              dup_failure_result); // [確認_異常系] - dup_failure_result が -1 であること。(dup2() が失敗することの確認)
     EXPECT_EQ(
         0,
         native_result); // [確認_正常系] - native_result が 0 であること。(ネイティブ ハンドル接続が成功することの確認)
@@ -1518,14 +1580,18 @@ TEST(processTest, exec_path_helper_searches_path_segments)
     // Pre-Assert
     EXPECT_CALL(mock_unistd, execve(_, _, _, _, _, _))
         .WillRepeatedly(Return(-1)); // [Pre-Assert確認_正常系] - execve() が任意の回数呼び出されること。
-                                     // [Pre-Assert手順] - PATH 探索中の execve から -1 を返却する。
+                                     // [Pre-Assert手順] - execve() から、PATH 探索中に -1 を返す。
 
     // Act
-    test_process_exec_with_path(absolute_argv, envp); // [手順] - 絶対パスを exec する。
-    test_process_exec_with_path(relative_argv, envp); // [手順] - PATH の各要素から相対パスを探索する。
+    test_process_exec_with_path(absolute_argv,
+                                envp); // [手順] - 絶対パスの argv を指定して test_process_exec_with_path() を呼び出す。
+    test_process_exec_with_path(relative_argv,
+                                envp); // [手順] - 相対パスの argv を指定して test_process_exec_with_path() を呼び出す。
     char *empty_path_env[] = {nullptr};
-    test_process_exec_with_path(relative_argv, empty_path_env); // [手順] - PATH 不在時の既定値から探索する。
-    test_process_exec_with_path(long_argv, envp);               // [手順] - 長すぎる候補を exec しない。
+    test_process_exec_with_path(
+        relative_argv, empty_path_env); // [手順] - PATH がない環境を指定して test_process_exec_with_path() を呼び出す。
+    test_process_exec_with_path(
+        long_argv, envp); // [手順] - 長すぎる候補となる argv を指定して test_process_exec_with_path() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(exec 失敗後も PATH 探索ヘルパーが戻ることの確認)
@@ -1546,10 +1612,10 @@ TEST(processTest, monotonic_time_converts_timespec_to_milliseconds)
             SetArgPointee<4>(value),
             Return(
                 0))); // [Pre-Assert確認_正常系] - clock_gettime() が CLOCK_MONOTONIC を指定して 1 回呼び出されること。
-                      // [Pre-Assert手順] - 12 秒 345 ミリ秒の timespec を設定し、0 を返却する。
+                      // [Pre-Assert手順] - clock_gettime() から、12 秒 345 ミリ秒の timespec を設定して 0 を返す。
 
     // Act
-    uint64_t result = test_process_monotonic_ms(); // [手順] - 単調時計をミリ秒へ変換する。
+    uint64_t result = test_process_monotonic_ms(); // [手順] - test_process_monotonic_ms() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1582,14 +1648,15 @@ TEST(processTest, wait_reports_timeout_at_finite_deadline)
                 *arg = (clock_count++ == 0) ? first : second;
                 return 0;
             })); // [Pre-Assert確認_正常系] - clock_gettime() が CLOCK_MONOTONIC を指定して 2 回呼び出されること。
-                 // [Pre-Assert手順] - 1 回目は 1 秒、2 回目は 2 秒の timespec を返却する。
+    // [Pre-Assert手順] - clock_gettime() から、1 回目は 1 秒、2 回目は 2 秒の timespec を設定して 0 を返す。
     EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 128, _, WNOHANG))
         .WillOnce(Return(static_cast<pid_t>(
             0))); // [Pre-Assert確認_正常系] - waitpid() が 128、WNOHANG を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - 未終了を示す 0 を返却する。
+                  // [Pre-Assert手順] - waitpid() から未終了を示す 0 を返す。
 
     // Act
-    int result = cplat_process_wait(process, 500); // [手順] - 終了しないプロセスを有限時間待機する。
+    int result = cplat_process_wait(
+        process, 500); // [手順] - 終了しないプロセスと有限の待機時間を指定して cplat_process_wait() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_TIMEOUT,
@@ -1621,21 +1688,23 @@ TEST(processTest, wait_sleeps_before_finite_deadline_and_detects_exit)
             SetArgPointee<4>(now),
             Return(
                 0))); // [Pre-Assert確認_正常系] - clock_gettime() が CLOCK_MONOTONIC を指定して 2 回呼び出されること。
-                      // [Pre-Assert手順] - 1 秒の timespec を設定し、0 を返却する。
+                      // [Pre-Assert手順] - clock_gettime() から、1 秒の timespec を設定して 0 を返す。
     EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 131, _, WNOHANG))
         .WillOnce(Return(static_cast<pid_t>(0)))
         .WillOnce(
             DoAll(SetArgPointee<4>(status),
                   Return(static_cast<pid_t>(
                       131)))); // [Pre-Assert確認_正常系] - waitpid() が 131、WNOHANG を指定して 2 回呼び出されること。
-                               // [Pre-Assert手順] - 1 回目は未終了 0、2 回目は終了ステータス 4 を返却する。
+    // [Pre-Assert手順] - waitpid() から 1 回目は未終了を示す 0、2 回目は終了ステータス 4 を設定して 131 を返す。
     EXPECT_CALL(mock_unistd, usleep(_, _, _, 1000U))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - usleep() が 1000U を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - usleep から 0 を返却する。
+                              // [Pre-Assert手順] - usleep() から 0 を返す。
 
     // Act
-    int wait_result = cplat_process_wait(process, 500);                 // [手順] - 期限前のプロセスを有限時間待機する。
-    int exit_result = cplat_process_get_exit_code(process, &exit_code); // [手順] - 終了コードを取得する。
+    int wait_result = cplat_process_wait(
+        process, 500); // [手順] - 期限前のプロセスと有限の待機時間を指定して cplat_process_wait() を呼び出す。
+    int exit_result = cplat_process_get_exit_code(
+        process, &exit_code); // [手順] - 終了コードの出力先を指定して cplat_process_get_exit_code() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, wait_result); // [確認_正常系] - cplat_process_wait() の戻り値が CPLAT_OK であること。
@@ -1664,18 +1733,23 @@ TEST(processTest, environment_helpers_report_invalid_and_allocation_failures)
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(Return(nullptr))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc() が 2 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_malloc() から NULL を返却する。
+                                    // [Pre-Assert手順] - cplat_malloc() から nullptr を返す。
     EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
         .WillOnce(Return(nullptr))
         .WillOnce(DoDefault()); // [Pre-Assert確認_異常系] - cplat_calloc() が 2 回呼び出されること。
-                                // [Pre-Assert手順] - 1 回目は NULL を返却し、2 回目は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_calloc() から 1 回目は nullptr を返し、2 回目は製品 (prod) の処理へ委譲する。
 
     // Act
-    set_result = test_process_set_env_entry(envp, 2U, valid_entry); // [手順] - 環境変数エントリの確保失敗を処理する。
-    test_process_free_envp(nullptr);                                // [手順] - NULL の環境配列を解放する。
-    invalid_result = test_process_build_environment(invalid_overrides); // [手順] - 不正な上書き形式を処理する。
-    calloc_result = test_process_build_environment(nullptr);            // [手順] - 環境配列の確保失敗を処理する。
-    duplicate_result = test_process_build_environment(nullptr);         // [手順] - 環境エントリの複製失敗を処理する。
+    set_result = test_process_set_env_entry(
+        envp, 2U,
+        valid_entry); // [手順] - 環境変数エントリの確保が失敗する状態で test_process_set_env_entry() を呼び出す。
+    test_process_free_envp(nullptr); // [手順] - 環境配列に nullptr を指定して test_process_free_envp() を呼び出す。
+    invalid_result = test_process_build_environment(
+        invalid_overrides); // [手順] - 不正な上書き形式を指定して test_process_build_environment() を呼び出す。
+    calloc_result = test_process_build_environment(
+        nullptr); // [手順] - 環境配列の確保が失敗する状態で test_process_build_environment() を呼び出す。
+    duplicate_result = test_process_build_environment(
+        nullptr); // [手順] - 環境エントリの複製が失敗する状態で test_process_build_environment() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, set_result); // [確認_異常系] - set_result が -1 であること。(エントリ確保が失敗することの確認)
@@ -1705,13 +1779,15 @@ TEST(processTest, completed_process_wait_and_terminate_are_idempotent)
         .WillOnce(DoAll(SetArgPointee<4>(status),
                         Return(static_cast<pid_t>(
                             129)))); // [Pre-Assert確認_正常系] - waitpid() が 129 を指定して 1 回呼び出されること。
-                                     // [Pre-Assert手順] - 終了ステータス 3 を設定して 129 を返却する。
+                                     // [Pre-Assert手順] - waitpid() から、終了ステータス 3 を設定して 129 を返す。
 
     // Act
-    int first_wait = cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - プロセスの終了を待機する。
-    int second_wait =
-        cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 終了済みプロセスを再度待機する。
-    int terminate_result = cplat_process_terminate(process);     // [手順] - 終了済みプロセスを terminate する。
+    int first_wait = cplat_process_wait(
+        process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 実行中のプロセスを指定して cplat_process_wait() を呼び出す。
+    int second_wait = cplat_process_wait(
+        process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 終了済みのプロセスを指定して cplat_process_wait() を呼び出す。
+    int terminate_result = cplat_process_terminate(
+        process); // [手順] - 終了済みのプロセスを指定して cplat_process_terminate() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, first_wait); // [確認_正常系] - 1 回目の cplat_process_wait() の戻り値が CPLAT_OK であること。
@@ -1735,15 +1811,16 @@ TEST(processTest, adopt_native_reports_allocation_failure)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_calloc() から NULL を返却する。
+                                    // [Pre-Assert手順] - cplat_calloc() から nullptr を返す。
 
     // Act
-    cplat_process *process = cplat_internal_process_adopt_native(130); // [手順] - プロセス構造体の確保失敗を注入する。
+    cplat_process *process = cplat_internal_process_adopt_native(
+        130); // [手順] - プロセス構造体の確保が失敗する状態で pid 130 を指定して cplat_internal_process_adopt_native() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         nullptr,
-        process); // [確認_異常系] - cplat_internal_process_adopt_native() の戻り値が nullptr であること。(確保失敗時に NULL が返ることの確認)
+        process); // [確認_異常系] - cplat_internal_process_adopt_native() の戻り値が nullptr であること。(確保失敗時に nullptr が返ることの確認)
 }
 
 // Linux の run_sync が出力引数と start 失敗を検出することの確認
@@ -1760,22 +1837,24 @@ TEST(processTest, run_sync_rejects_invalid_output_and_start_failure)
     // Pre-Assert
 
     // Act
-    int null_output = cplat_process_run_sync(&options, CPLAT_PROCESS_WAIT_FOREVER,
-                                             nullptr); // [手順] - 終了コード出力先に NULL を渡す。
+    int null_output = cplat_process_run_sync(
+        &options, CPLAT_PROCESS_WAIT_FOREVER,
+        nullptr); // [手順] - 終了コード出力先に nullptr を指定して cplat_process_run_sync() を呼び出す。
     options.argv = nullptr;
-    int start_failure = cplat_process_run_sync(&options, CPLAT_PROCESS_WAIT_FOREVER,
-                                               &exit_code); // [手順] - 不正な options で同期実行する。
+    int start_failure =
+        cplat_process_run_sync(&options, CPLAT_PROCESS_WAIT_FOREVER,
+                               &exit_code); // [手順] - 不正な options を指定して cplat_process_run_sync() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_output); // [確認_異常系] - 終了コード出力先が NULL の cplat_process_run_sync() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_output); // [確認_異常系] - 終了コード出力先が nullptr の cplat_process_run_sync() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         start_failure); // [確認_異常系] - 不正な options の cplat_process_run_sync() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         nullptr,
-        process); // [確認_異常系] - process が nullptr であること。(使用していない process が NULL のままであることの確認)
+        process); // [確認_異常系] - process が nullptr であること。(使用していない process が nullptr のままであることの確認)
 }
 
 // Linux の環境変数補助関数が NULL、空配列、上書き失敗を処理することの確認
@@ -1794,29 +1873,31 @@ TEST(processTest, environment_helpers_cover_empty_and_override_failure_paths)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_malloc() から NULL を返却する。
+                                    // [Pre-Assert手順] - cplat_malloc() から nullptr を返す。
 
     // Act
-    char *null_copy = test_process_string_duplicate(nullptr); // [手順] - NULL 文字列を複製する。
-    int invalid_set =
-        test_process_set_env_entry(empty_envp, 1U, invalid_entry);     // [手順] - '=' がない環境変数を設定する。
-    const char *null_find =
-        test_process_find_env_value(nullptr, "PATH"); // [手順] - NULL 環境配列から PATH を検索する。
-    const char *empty_find =
-        test_process_find_env_value(empty_envp, "PATH"); // [手順] - 空の環境配列から PATH を検索する。
+    char *null_copy = test_process_string_duplicate(
+        nullptr); // [手順] - nullptr を指定して test_process_string_duplicate() を呼び出す。
+    int invalid_set = test_process_set_env_entry(
+        empty_envp, 1U,
+        invalid_entry); // [手順] - '=' がない環境変数を指定して test_process_set_env_entry() を呼び出す。
+    const char *null_find = test_process_find_env_value(
+        nullptr, "PATH"); // [手順] - 環境配列に nullptr を指定して test_process_find_env_value() を呼び出す。
+    const char *empty_find = test_process_find_env_value(
+        empty_envp, "PATH"); // [手順] - 空の環境配列を指定して test_process_find_env_value() を呼び出す。
     environ = empty_environment;
-    char **override_result =
-        test_process_build_environment(overrides); // [手順] - 環境変数上書きの文字列確保失敗を発生させる。
+    char **override_result = test_process_build_environment(
+        overrides); // [手順] - 文字列の確保が失敗する状態で test_process_build_environment() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         nullptr,
-        null_copy); // [確認_異常系] - NULL 文字列に対する test_process_string_duplicate() の戻り値が nullptr であること。
+        null_copy); // [確認_異常系] - nullptr に対する test_process_string_duplicate() の戻り値が nullptr であること。
     EXPECT_EQ(-1,
               invalid_set); // [確認_異常系] - invalid_set が -1 であること。(不正形式の環境変数を拒否することの確認)
     EXPECT_EQ(
         nullptr,
-        null_find); // [確認_正常系] - NULL 環境配列で "PATH" を探した test_process_find_env_value() の戻り値が nullptr であること。
+        null_find); // [確認_正常系] - nullptr 環境配列で "PATH" を探した test_process_find_env_value() の戻り値が nullptr であること。
     EXPECT_EQ(
         nullptr,
         empty_find); // [確認_正常系] - 空の環境配列で "PATH" を探した test_process_find_env_value() の戻り値が nullptr であること。
@@ -1838,13 +1919,16 @@ TEST(processTest, child_stdio_setup_reports_each_stream_failure)
     // Pre-Assert
 
     // Act
-    int stdin_result = test_process_setup_child_stdio(&options); // [手順] - stdin 設定を不正モードで実行する。
+    int stdin_result = test_process_setup_child_stdio(
+        &options); // [手順] - stdin に不正モードを設定した options を指定して test_process_setup_child_stdio() を呼び出す。
     options.stdin_spec.mode = CPLAT_PROCESS_STDIO_INHERIT;
     set_invalid_stdio_mode(&options.stdout_spec);
-    int stdout_result = test_process_setup_child_stdio(&options); // [手順] - stdout 設定を不正モードで実行する。
+    int stdout_result = test_process_setup_child_stdio(
+        &options); // [手順] - stdout に不正モードを設定した options を指定して test_process_setup_child_stdio() を呼び出す。
     options.stdout_spec.mode = CPLAT_PROCESS_STDIO_INHERIT;
     set_invalid_stdio_mode(&options.stderr_spec);
-    int stderr_result = test_process_setup_child_stdio(&options); // [手順] - stderr 設定を不正モードで実行する。
+    int stderr_result = test_process_setup_child_stdio(
+        &options); // [手順] - stderr に不正モードを設定した options を指定して test_process_setup_child_stdio() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, stdin_result);  // [確認_異常系] - stdin_result が -1 であること。(stdin の設定が失敗することの確認)
@@ -1872,19 +1956,23 @@ TEST(processTest, child_runner_classifies_each_preparation_failure)
     // Pre-Assert
     EXPECT_CALL(mock_unistd, execve(_, _, _, _, _, _))
         .WillRepeatedly(Return(-1)); // [Pre-Assert確認_異常系] - execve() が任意の回数呼び出されること。
-                                     // [Pre-Assert手順] - 子プロセス準備中の execve から -1 を返却する。
+                                     // [Pre-Assert手順] - execve() から、子プロセス準備中に -1 を返す。
 
     // Act
-    int chdir_result =
-        test_process_run_child(&options, envp); // [手順] - 存在しない作業ディレクトリで子プロセス準備を実行する。
+    int chdir_result = test_process_run_child(
+        &options,
+        envp); // [手順] - 存在しない作業ディレクトリを指定した options で test_process_run_child() を呼び出す。
     options.working_directory = nullptr;
     set_invalid_stdio_mode(&options.stdin_spec);
-    int stdio_result = test_process_run_child(&options, envp); // [手順] - 不正な stdin 設定で子プロセス準備を実行する。
+    int stdio_result = test_process_run_child(
+        &options, envp); // [手順] - 不正な stdin 設定を指定した options で test_process_run_child() を呼び出す。
     options.stdin_spec.mode = CPLAT_PROCESS_STDIO_INHERIT;
-    int exec_result = test_process_run_child(&options, envp); // [手順] - 空の PATH で実在しないコマンドを実行する。
+    int exec_result = test_process_run_child(
+        &options,
+        envp); // [手順] - 空の PATH で実在しないコマンドを指定した options で test_process_run_child() を呼び出す。
     options.working_directory = current_directory;
-    int chdir_success_result =
-        test_process_run_child(&options, envp); // [手順] - 存在する作業ディレクトリで exec 失敗まで実行する。
+    int chdir_success_result = test_process_run_child(
+        &options, envp); // [手順] - 存在する作業ディレクトリを指定した options で test_process_run_child() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1913,12 +2001,13 @@ TEST(processTest, start_rejects_null_process_output)
     // Pre-Assert
 
     // Act
-    int result = cplat_process_start(&options, nullptr); // [手順] - process の出力先を NULL として起動する。
+    int result = cplat_process_start(
+        &options, nullptr); // [手順] - process の出力先に nullptr を指定して cplat_process_start() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        result); // [確認_異常系] - process の出力先が NULL の cplat_process_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        result); // [確認_異常系] - process の出力先が nullptr の cplat_process_start() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // Linux の無期限待機が未終了状態から終了状態へ遷移することの確認
@@ -1938,14 +2027,14 @@ TEST(processTest, wait_forever_retries_unexpected_nonblocking_result)
         .WillOnce(DoAll(SetArgPointee<4>(status),
                         Return(static_cast<pid_t>(
                             132)))); // [Pre-Assert確認_正常系] - waitpid() が 132、0 を指定して 2 回呼び出されること。
-                                     // [Pre-Assert手順] - 1 回目は未終了 0、2 回目は終了ステータス 0 を返却する。
+    // [Pre-Assert手順] - waitpid() から 1 回目は未終了を示す 0、2 回目は終了ステータス 0 を設定して 132 を返す。
     EXPECT_CALL(mock_unistd, usleep(_, _, _, 1000U))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - usleep() が 1000U を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 再試行前の usleep から 0 を返却する。
+                              // [Pre-Assert手順] - usleep() から、再試行前に 0 を返す。
 
     // Act
-    int result =
-        cplat_process_wait(process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 未終了応答後に無期限待機を継続する。
+    int result = cplat_process_wait(
+        process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 無期限待機を指定して cplat_process_wait() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - 再試行後の cplat_process_wait() の戻り値が CPLAT_OK であること。
@@ -1969,15 +2058,16 @@ TEST(processTest, run_sync_returns_wait_failure)
     // Pre-Assert
     EXPECT_CALL(mock_unistd, fork(_, _, _))
         .WillOnce(Return(static_cast<pid_t>(133))); // [Pre-Assert確認_正常系] - fork() が 1 回呼び出されること。
-                                                    // [Pre-Assert手順] - 子プロセス pid 133 を返却する。
+                                                    // [Pre-Assert手順] - fork() から子プロセスの pid 133 を返す。
     EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 133, _, WNOHANG))
         .WillOnce(Return(static_cast<pid_t>(
             0))); // [Pre-Assert確認_正常系] - waitpid() が 133、WNOHANG を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - 未終了を示す 0 を返却する。
+                  // [Pre-Assert手順] - waitpid() から未終了を示す 0 を返す。
 
     // Act
-    int result = cplat_process_run_sync(&options, CPLAT_PROCESS_NO_WAIT,
-                                        &exit_code); // [手順] - 未終了プロセスを即時 timeout で同期実行する。
+    int result =
+        cplat_process_run_sync(&options, CPLAT_PROCESS_NO_WAIT,
+                               &exit_code); // [手順] - 即時 timeout を指定して cplat_process_run_sync() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_TIMEOUT,

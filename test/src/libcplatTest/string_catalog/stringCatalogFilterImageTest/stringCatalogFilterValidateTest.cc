@@ -23,9 +23,11 @@ TEST_F(stringCatalogFilterValidateTest, valid_image_passes_validation)
     // Pre-Assert
 
     // Act
-    actual_compile_ret = compile_single_line("key == 1", image); // [手順] - 有効な条件式をコンパイルする。
-    actual_validate_ret =
-        cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - フィルター オブジェクトを検証する。
+    actual_compile_ret =
+        compile_single_line("key == 1", image); // [手順] - 有効な条件式を指定して compile_single_line() を呼び出す。
+    actual_validate_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_compile_ret); // [確認_正常系] - compile_single_line() の戻り値が CPLAT_OK であること。
@@ -48,8 +50,9 @@ TEST_F(stringCatalogFilterValidateTest, corrupted_signature_returns_corrupt_desc
     // Pre-Assert
 
     // Act
-    actual_validate_ret =
-        cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - フィルター オブジェクトを検証する。
+    actual_validate_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -82,8 +85,9 @@ TEST_F(stringCatalogFilterValidateTest, single_byte_content_change_is_detected_b
     record = filter_test_record_address(image, kLineWidth, 0U);
     record[CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(kLineWidth) - 1U] ^=
         0xFFU; // [手順] - 先頭行レコードの末尾 1 バイトを反転する。
-    actual_validate_ret_after =
-        cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - フィルター オブジェクトを再検証する。
+    actual_validate_ret_after = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - 先頭行レコードの末尾 1 バイトを反転したイメージを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -105,7 +109,8 @@ TEST_F(stringCatalogFilterValidateTest, insufficient_image_size_returns_corrupt_
 
     // Act
     actual_ret = cplat_string_catalog_filter_validate(
-        image, CPLAT_STRING_CATALOG_FILTER_HEADER_SIZE); // [手順] - ヘッダー長だけの image_size で検証する。
+        image,
+        CPLAT_STRING_CATALOG_FILTER_HEADER_SIZE); // [手順] - ヘッダー長だけの image_size を指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(

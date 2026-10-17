@@ -53,13 +53,15 @@ TEST_F(hashtableGrowableTest, add_grows_capacity_and_preserves_existing_record)
     // Pre-Assert
 
     // Act
-    int actual_ret_create =
-        cplat_hashtable_create_growable(&config, &growth, &ht); // [手順] - 上限なしの自動拡張テーブルを構築する。
+    int actual_ret_create = cplat_hashtable_create_growable(
+        &config, &growth,
+        &ht); // [手順] - 上限なしの自動拡張の設定を指定して cplat_hashtable_create_growable() を呼び出す。
     (void)cplat_hashtable_add(ht, "a", "one", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "b", "two", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_find_recno(ht, "a", &record_before);
     int actual_ret_add = cplat_hashtable_add(
-        ht, "c", "three", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 満杯のテーブルへ 3 件目を追加する。
+        ht, "c", "three",
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 満杯のテーブルに 3 件目のキーを指定して cplat_hashtable_add() を呼び出す。
     int actual_ret_find = cplat_hashtable_find_recno(ht, "a", &record_after);
     int actual_ret_config = cplat_hashtable_get_config_val(ht, &current);
     int actual_ret_count = cplat_hashtable_count(ht, &count);
@@ -114,7 +116,8 @@ TEST_F(hashtableGrowableTest, add_rebuilds_same_size_for_fragmentation)
     (void)cplat_hashtable_delete(ht, "b");
     (void)cplat_hashtable_purge_deleted(ht); // [状態] - 中央と末尾に 5 バイトずつの空きを作る。
     int actual_ret_add = cplat_hashtable_add(
-        ht, "d", "555555", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 7 バイトの値を追加する。
+        ht, "d", "555555",
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 7 バイトの値を指定して cplat_hashtable_add() を呼び出す。
     int actual_ret_find = cplat_hashtable_find_value_ref(ht, "d", &value);
     int actual_ret_config = cplat_hashtable_get_config_val(ht, &current);
     int actual_ret_validate = cplat_hashtable_validate(ht);
@@ -162,7 +165,8 @@ TEST_F(hashtableGrowableTest, update_rec_grows_value_storage)
     (void)cplat_hashtable_add(ht, "a", "1111", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "b", "2222", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_find_recno(ht, "a", &record);
-    int actual_ret_update = cplat_hashtable_update_rec(ht, record, "12345678901"); // [手順] - 12 バイトの値へ更新する。
+    int actual_ret_update = cplat_hashtable_update_rec(
+        ht, record, "12345678901"); // [手順] - 12 バイトの値を指定して cplat_hashtable_update_rec() を呼び出す。
     int actual_ret_find = cplat_hashtable_find_value_ref(ht, "a", &value);
     int actual_ret_config = cplat_hashtable_get_config_val(ht, &current);
 
@@ -209,10 +213,11 @@ TEST_F(hashtableGrowableTest, upsert_and_update_grow_required_regions)
     // Act
     (void)cplat_hashtable_create_growable(&config, &growth, &ht);
     (void)cplat_hashtable_add(ht, "a", "1111", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    int actual_ret_upsert =
-        cplat_hashtable_upsert(ht, "b", "22", &inserted); // [手順] - 満杯のテーブルへ upsert で追加する。
-    int actual_ret_update =
-        cplat_hashtable_update(ht, "b", "12345678901"); // [手順] - キー指定で 12 バイトの値へ更新する。
+    int actual_ret_upsert = cplat_hashtable_upsert(
+        ht, "b", "22",
+        &inserted); // [手順] - 満杯のテーブルに新しいキーを指定して cplat_hashtable_upsert() を呼び出す。
+    int actual_ret_update = cplat_hashtable_update(
+        ht, "b", "12345678901"); // [手順] - キーと 12 バイトの値を指定して cplat_hashtable_update() を呼び出す。
     int actual_ret_find = cplat_hashtable_find_value_ref(ht, "b", &value);
     int actual_ret_config = cplat_hashtable_get_config_val(ht, &current);
 
@@ -267,12 +272,12 @@ TEST_F(hashtableGrowableTest, allocation_failure_preserves_original_buffers)
     EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
         .WillOnce(Return(
             nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が 1 回呼び出されること。(移行計画の確保が呼び出されたことの確認)
-                       // [Pre-Assert手順] - 移行計画の確保に失敗させる。
+                       // [Pre-Assert手順] - cplat_calloc() から、移行計画の確保に対して nullptr を返す。
 
     // Act
     int actual_ret_add = cplat_hashtable_add(
         ht, "b", "two",
-        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 一時領域を確保できない状態で自動拡張を要求する。
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 一時領域を確保できない状態で自動拡張が要る 2 件目のキーを指定して cplat_hashtable_add() を呼び出す。
     int actual_ret_ref = cplat_hashtable_buffer_ref(ht, &mgmt_after, &data_after);
     int actual_ret_count = cplat_hashtable_count(ht, &count);
 
@@ -314,7 +319,8 @@ TEST_F(hashtableGrowableTest, limits_preserve_original_table)
     (void)cplat_hashtable_add(ht, "a", "one", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "b", "two", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_add = cplat_hashtable_add(
-        ht, "c", "three", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 最大レコード数へ達したテーブルへ追加する。
+        ht, "c", "three",
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 最大レコード数へ達したテーブルに 3 件目のキーを指定して cplat_hashtable_add() を呼び出す。
     int actual_ret_count = cplat_hashtable_count(ht, &count);
     int actual_ret_validate = cplat_hashtable_validate(ht);
 
@@ -346,7 +352,8 @@ TEST_F(hashtableGrowableTest, ordinary_create_remains_fixed_capacity)
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", "one", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_add = cplat_hashtable_add(
-        ht, "b", "two", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 通常の満杯テーブルへ追加する。
+        ht, "b", "two",
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 通常の満杯テーブルに 2 件目のキーを指定して cplat_hashtable_add() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -371,13 +378,14 @@ TEST_F(hashtableGrowableTest, create_rejects_invalid_growth_config)
     // Pre-Assert
 
     // Act
-    int actual_ret =
-        cplat_hashtable_create_growable(&config, &growth, &ht); // [手順] - 初期値未満かつ固定長値用の上限を指定する。
+    int actual_ret = cplat_hashtable_create_growable(
+        &config, &growth,
+        &ht); // [手順] - 初期値未満かつ固定長値用の上限を指定して cplat_hashtable_create_growable() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret); // [確認_異常系] - 不正な拡張設定を渡した cplat_hashtable_create_growable() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(nullptr,
-              ht); // [確認_異常系] - ht が nullptr であること。(失敗時に出力ハンドルが NULL になったことの確認)
+              ht); // [確認_異常系] - ht が nullptr であること。(失敗時に出力ハンドルが nullptr になったことの確認)
 }

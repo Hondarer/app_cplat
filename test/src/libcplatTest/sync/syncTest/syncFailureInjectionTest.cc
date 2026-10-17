@@ -32,10 +32,11 @@ TEST_F(syncFailureInjectionTest, local_lock_create_fails_when_mutex_init_fails)
     EXPECT_CALL(mock_pthread, pthread_mutex_init(_, _, _, _, _))
         .WillOnce(Return(ENOMEM))
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - pthread_mutex_init() が 1 回以上呼び出されること。
-                                      // [Pre-Assert手順] - 1 回目は ENOMEM を返却し、以降は本物へ委譲する。
+    // [Pre-Assert手順] - pthread_mutex_init() から 1 回目は ENOMEM を返し、以降は libc の処理へ委譲する。
 
     // Act
-    int actual_ret = cplat_local_lock_create(&lock); // [手順] - cplat_local_lock_create() を呼び出す。
+    int actual_ret =
+        cplat_local_lock_create(&lock); // [手順] - ハンドルの格納先を指定して cplat_local_lock_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -54,10 +55,11 @@ TEST_F(syncFailureInjectionTest, local_lock_create_fails_when_allocation_fails)
     EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
         .WillOnce(Return(nullptr))
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_calloc() が 1 回以上呼び出されること。
-                                      // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_calloc() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
-    int actual_ret = cplat_local_lock_create(&lock); // [手順] - cplat_local_lock_create() を呼び出す。
+    int actual_ret =
+        cplat_local_lock_create(&lock); // [手順] - ハンドルの格納先を指定して cplat_local_lock_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -79,11 +81,12 @@ TEST_F(syncFailureInjectionTest, interprocess_lock_open_fails_for_unopenable_pat
     EXPECT_CALL(os_.fcntl, open(_, _, _, StrEq(kLockIdentity), _, _))
         .WillOnce(Return(
             -1)); // [Pre-Assert確認_異常系] - open() が kLockIdentity と等しい文字列を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - -1 を返却する。
+                  // [Pre-Assert手順] - open() から -1 を返す。
 
     // Act
-    int actual_ret = cplat_interprocess_lock_open(kLockIdentity,
-                                                  &lock); // [手順] - open() 失敗を注入してロックを開く。
+    int actual_ret = cplat_interprocess_lock_open(
+        kLockIdentity,
+        &lock); // [手順] - open() が失敗する状態で kLockIdentity を指定して cplat_interprocess_lock_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -101,16 +104,18 @@ TEST_F(syncFailureInjectionTest, interprocess_lock_open_reports_open_failure)
     EXPECT_CALL(os_.fcntl, open(_, _, _, _, _, _))
         .WillOnce(Return(-1))
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - open() が 1 回以上呼び出されること。
-                                      // [Pre-Assert手順] - 1 回目は -1 を返却し、以降は本物へ委譲する。
+                                      // [Pre-Assert手順] - open() から 1 回目は -1 を返し、以降は既定動作へ委譲する。
 
     // Act
-    int actual_ret = cplat_interprocess_lock_open(kLockIdentity, &lock); // [手順] - open() 失敗を注入してロックを開く。
+    int actual_ret = cplat_interprocess_lock_open(
+        kLockIdentity,
+        &lock); // [手順] - open() が失敗する状態で kLockIdentity を指定して cplat_interprocess_lock_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - open 失敗時の cplat_interprocess_lock_open() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(nullptr, lock); // [確認_異常系] - open 失敗時の lock が nullptr であること。
+        actual_ret); // [確認_異常系] - open() 失敗時の cplat_interprocess_lock_open() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(nullptr, lock); // [確認_異常系] - open() 失敗時の lock が nullptr であること。
 }
 
 // 識別子の複製に失敗した場合に取得が失敗することの確認
@@ -125,11 +130,11 @@ TEST_F(syncFailureInjectionTest, interprocess_lock_open_fails_when_identity_dupl
     EXPECT_CALL(mock_cplat, cplat_strdup(_))
         .WillOnce(Return(nullptr))
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_strdup() が 1 回以上呼び出されること。
-                                      // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_strdup() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
-    int actual_ret =
-        cplat_interprocess_lock_open(kLockIdentity, &lock); // [手順] - cplat_interprocess_lock_open() を呼び出す。
+    int actual_ret = cplat_interprocess_lock_open(
+        kLockIdentity, &lock); // [手順] - kLockIdentity を指定して cplat_interprocess_lock_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -148,11 +153,11 @@ TEST_F(syncFailureInjectionTest, interprocess_lock_open_fails_when_allocation_fa
     EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
         .WillOnce(Return(nullptr))
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_calloc() が 1 回以上呼び出されること。
-                                      // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_calloc() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
-    int actual_ret =
-        cplat_interprocess_lock_open(kLockIdentity, &lock); // [手順] - cplat_interprocess_lock_open() を呼び出す。
+    int actual_ret = cplat_interprocess_lock_open(
+        kLockIdentity, &lock); // [手順] - kLockIdentity を指定して cplat_interprocess_lock_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -182,10 +187,11 @@ TEST_F(syncFailureInjectionTest, interprocess_lock_unlock_reports_flock_failure)
         .WillOnce(Return(-1))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - flock() が LOCK_UN を指定して 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は -1 を返却し、以降は既定の成功へ戻す。
+                          // [Pre-Assert手順] - flock() から 1 回目は -1 を返し、以降は既定動作へ委譲する。
 
     // Act
-    int actual_ret = cplat_interprocess_lock_unlock(lock); // [手順] - cplat_interprocess_lock_unlock() を呼び出す。
+    int actual_ret = cplat_interprocess_lock_unlock(
+        lock); // [手順] - ロックを取得済みのハンドルを指定して cplat_interprocess_lock_unlock() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -211,11 +217,11 @@ TEST_F(syncFailureInjectionTest, thread_create_fails_when_pthread_create_fails)
     EXPECT_CALL(mock_pthread, pthread_create(_, _, _, _, _, _, _))
         .WillOnce(Return(EAGAIN))
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - pthread_create() が 1 回以上呼び出されること。
-                                      // [Pre-Assert手順] - 1 回目は EAGAIN を返却し、以降は本物へ委譲する。
+    // [Pre-Assert手順] - pthread_create() から 1 回目は EAGAIN を返し、以降は libc の処理へ委譲する。
 
     // Act
-    int actual_ret =
-        cplat_thread_create(&thread, [](void *) {}, nullptr); // [手順] - cplat_thread_create() を呼び出す。
+    int actual_ret = cplat_thread_create(
+        &thread, [](void *) {}, nullptr); // [手順] - スレッド関数を指定して cplat_thread_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -235,19 +241,22 @@ TEST_F(syncFailureInjectionTest, local_lock_maps_pthread_failure_results)
     // Pre-Assert
     EXPECT_CALL(mock_pthread, pthread_mutex_lock(_, _, _, _))
         .WillOnce(Return(EBUSY)); // [Pre-Assert確認_異常系] - pthread_mutex_lock() が 1 回呼び出されること。
-                                  // [Pre-Assert手順] - EBUSY を返却する。
+                                  // [Pre-Assert手順] - pthread_mutex_lock() から EBUSY を返す。
     EXPECT_CALL(mock_pthread, pthread_mutex_trylock(_, _, _, _))
         .WillOnce(Return(EACCES)); // [Pre-Assert確認_異常系] - pthread_mutex_trylock() が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - EACCES を返却する。
+                                   // [Pre-Assert手順] - pthread_mutex_trylock() から EACCES を返す。
     EXPECT_CALL(mock_pthread, pthread_mutex_unlock(_, _, _, _))
         .WillOnce(Return(EINVAL)); // [Pre-Assert確認_異常系] - pthread_mutex_unlock() が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - EINVAL を返却する。
+                                   // [Pre-Assert手順] - pthread_mutex_unlock() から EINVAL を返す。
 
     // Act
-    int lock_result =
-        cplat_local_lock_lock(lock, CPLAT_SYNC_WAIT_FOREVER); // [手順] - EBUSY を返す mutex lock を実行する。
-    int try_result = cplat_local_lock_try_lock(lock);         // [手順] - EACCES を返す mutex trylock を実行する。
-    int unlock_result = cplat_local_lock_unlock(lock);        // [手順] - EINVAL を返す mutex unlock を実行する。
+    int lock_result = cplat_local_lock_lock(
+        lock,
+        CPLAT_SYNC_WAIT_FOREVER); // [手順] - pthread_mutex_lock() が EBUSY を返す状態で cplat_local_lock_lock() を呼び出す。
+    int try_result = cplat_local_lock_try_lock(
+        lock); // [手順] - pthread_mutex_trylock() が EACCES を返す状態で cplat_local_lock_try_lock() を呼び出す。
+    int unlock_result = cplat_local_lock_unlock(
+        lock); // [手順] - pthread_mutex_unlock() が EINVAL を返す状態で cplat_local_lock_unlock() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -275,10 +284,11 @@ TEST_F(syncFailureInjectionTest, condvar_create_reports_condition_attribute_fail
     EXPECT_CALL(mock_pthread, pthread_condattr_init(_, _, _, _))
         .WillOnce(Return(ENOMEM))
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - pthread_condattr_init() が 1 回以上呼び出されること。
-                                      // [Pre-Assert手順] - 1 回目は ENOMEM を返却し、以降は本物へ委譲する。
+    // [Pre-Assert手順] - pthread_condattr_init() から 1 回目は ENOMEM を返し、以降は libc の処理へ委譲する。
 
     // Act
-    int actual_ret = cplat_condvar_create(&cv); // [手順] - 条件変数を生成する。
+    int actual_ret =
+        cplat_condvar_create(&cv); // [手順] - 条件変数の格納先を指定して cplat_condvar_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(

@@ -121,7 +121,8 @@ TEST_F(stringCatalogFilterSourceTest, format_takes_published_conditions)
     // Pre-Assert
 
     // Act
-    actual_ret = format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
+    actual_ret =
+        format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てるために format_job_failed() を呼び出す。
 
     // Assert
     // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status]
@@ -162,7 +163,7 @@ TEST_F(stringCatalogFilterSourceTest, unchanged_revision_skips_lock)
 
     // Act
     actual_matched = 0;
-    (void)format_job_failed(&actual_matched); // [手順] - 2 回目の組み立てを行う。
+    (void)format_job_failed(&actual_matched); // [手順] - 2 回目の呼び出しとして format_job_failed() を呼び出す。
 
     // Assert
     EXPECT_NE(
@@ -193,7 +194,7 @@ TEST_F(stringCatalogFilterSourceTest, republished_conditions_replace_previous)
 
     // Act
     actual_matched = 1;
-    (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
+    (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てるために format_job_failed() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -232,13 +233,15 @@ TEST_F(stringCatalogFilterSourceTest, writing_source_is_not_taken_until_next_pub
     // Pre-Assert
 
     // Act
-    (void)format_job_failed(&actual_matched_while_writing); // [手順] - 書き込み中に組み立てる。
+    (void)format_job_failed(
+        &actual_matched_while_writing); // [手順] - 書き込み中の状態で format_job_failed() を呼び出す。
     // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status]
     uint64_t taken_while_writing = source_status().taken_revision;
-    int actual_ret_republish = publish_line("category <= 2", &recovered_revision); // [手順] - 公開し直す。
+    int actual_ret_republish = publish_line(
+        "category <= 2", &recovered_revision); // [手順] - 条件を再公開するために publish_line() を呼び出す。
     ASSERT_EQ(CPLAT_OK,
               actual_ret_republish); // [確認_正常系] - 公開し直した publish_line() の戻り値が CPLAT_OK であること。
-    (void)format_job_failed(&actual_matched_after_recovery); // [手順] - 公開後に組み立てる。
+    (void)format_job_failed(&actual_matched_after_recovery); // [手順] - 公開後の状態で format_job_failed() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -279,15 +282,15 @@ TEST_F(stringCatalogFilterSourceTest, torn_copy_is_discarded_and_retried)
                 uint64_t revision = cplat_atomic_load_u64(&header()->published_revision, CPLAT_MEMORY_ORDER_RELAXED);
                 cplat_atomic_store_u64(&header()->published_revision, revision + 2U, CPLAT_MEMORY_ORDER_RELAXED);
                 return delegate_real_cplat_local_lock_try_lock(mtx);
-            })) // [Pre-Assert手順] - 1 回目は版番号を読んだ後に、公開が重なった状態を作る。
-        .WillRepeatedly(
-            Invoke(delegate_real_cplat_local_lock_try_lock)); // [Pre-Assert手順] - 2 回目以降は実関数を呼ぶ。
+            })) // [Pre-Assert手順] - cplat_local_lock_try_lock() から、1 回目は版番号を読んだ後に公開が重なった状態を作って製品 (prod) の処理へ委譲する。
+        .WillRepeatedly(Invoke(
+            delegate_real_cplat_local_lock_try_lock)); // [Pre-Assert手順] - cplat_local_lock_try_lock() から 2 回目以降は製品 (prod) の処理へ委譲する。
 
     // Act
-    (void)format_job_failed(&actual_matched_torn); // [手順] - 公開が重なった状態で組み立てる。
+    (void)format_job_failed(&actual_matched_torn); // [手順] - 公開が重なった状態で format_job_failed() を呼び出す。
     // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status]
     uint64_t taken_after_torn = source_status().taken_revision;
-    (void)format_job_failed(&actual_matched_retry); // [手順] - もう一度組み立てる。
+    (void)format_job_failed(&actual_matched_retry); // [手順] - 再度 format_job_failed() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -318,13 +321,15 @@ TEST_F(stringCatalogFilterSourceTest, busy_lock_skips_take_without_waiting)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_local_lock_try_lock(
                                 _)) // [Pre-Assert確認_正常系] - cplat_local_lock_try_lock() が 1 回呼び出されること。
-        .WillOnce(Return(CPLAT_ERR_BUSY)); // [Pre-Assert手順] - 取り込みのロックで CPLAT_ERR_BUSY を返却する。
+        .WillOnce(Return(
+            CPLAT_ERR_BUSY)); // [Pre-Assert手順] - cplat_local_lock_try_lock() から、取り込みのロックの取得結果として CPLAT_ERR_BUSY を返す。
     EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, _))
         .Times(
             0); // [Pre-Assert確認_正常系] - cplat_local_lock_lock() が呼び出されないこと。(取り込みを待たないことの確認)
 
     // Act
-    actual_ret = format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
+    actual_ret =
+        format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てるために format_job_failed() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - format_job_failed() の戻り値が CPLAT_OK であること。
@@ -357,7 +362,7 @@ TEST_F(stringCatalogFilterSourceTest, corrupt_publication_is_recorded_and_not_re
 
     // Act
     actual_matched = 0;
-    (void)format_job_failed(&actual_matched); // [手順] - 壊れた公開内容で組み立てる。
+    (void)format_job_failed(&actual_matched); // [手順] - 公開内容が壊れた状態で format_job_failed() を呼び出す。
     // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status]
     cplat_string_catalog_filter_source_status status = source_status();
 
@@ -369,7 +374,7 @@ TEST_F(stringCatalogFilterSourceTest, corrupt_publication_is_recorded_and_not_re
             0); // [Pre-Assert確認_異常系] - cplat_local_lock_try_lock() が呼び出されないこと。(同じ公開内容の取り込みを試みないことの確認)
 
     // Act_2
-    (void)format_job_failed(&actual_matched); // [手順] - もう一度組み立てる。
+    (void)format_job_failed(&actual_matched); // [手順] - 再度 format_job_failed() を呼び出す。
 
     // Assert_2
     EXPECT_NE(0,
@@ -401,18 +406,21 @@ TEST_F(stringCatalogFilterSourceTest, attach_validates_region_and_detaches_with_
 
     // Act
     actual_misaligned_ret = cplat_string_catalog_filter_slot_attach_source(
-        slot_, source_ + 4, sizeof(source_) - 8U, nullptr); // [手順] - 境界に合わない領域を結び付ける。
-    actual_small_ret = cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_) - 1U,
-                                                                      nullptr); // [手順] - 小さい領域を結び付ける。
-    int actual_ret_attach =
-        cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
-                                                       nullptr); // [手順] - 正しい領域を結び付ける。
+        slot_, source_ + 4, sizeof(source_) - 8U,
+        nullptr); // [手順] - 境界に合わない領域を指定して cplat_string_catalog_filter_slot_attach_source() を呼び出す。
+    actual_small_ret = cplat_string_catalog_filter_slot_attach_source(
+        slot_, source_, sizeof(source_) - 1U,
+        nullptr); // [手順] - 小さい領域を指定して cplat_string_catalog_filter_slot_attach_source() を呼び出す。
+    int actual_ret_attach = cplat_string_catalog_filter_slot_attach_source(
+        slot_, source_, sizeof(source_),
+        nullptr); // [手順] - 正しい領域を指定して cplat_string_catalog_filter_slot_attach_source() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_attach); // [確認_正常系] - 正しい領域に対する cplat_string_catalog_filter_slot_attach_source() の戻り値が CPLAT_OK であること。
-    actual_detach_ret =
-        cplat_string_catalog_filter_slot_attach_source(slot_, nullptr, 0U, nullptr); // [手順] - 解除する。
-    (void)format_job_failed(&actual_matched);                                        // [手順] - 解除後に組み立てる。
+    actual_detach_ret = cplat_string_catalog_filter_slot_attach_source(
+        slot_, nullptr, 0U,
+        nullptr); // [手順] - 結び付けを解除するために領域に nullptr を指定して cplat_string_catalog_filter_slot_attach_source() を呼び出す。
+    (void)format_job_failed(&actual_matched); // [手順] - 結び付けを解除した状態で format_job_failed() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -446,25 +454,25 @@ TEST_F(stringCatalogFilterSourceTest, publish_rejects_invalid_input_without_chan
     // Pre-Assert
 
     // Act
-    actual_null_ret = cplat_string_catalog_filter_source_publish(nullptr, sizeof(source_), image_, sizeof(image_),
-                                                                 catalog_id_, nullptr,
-                                                                 nullptr); // [手順] - 領域に NULL を指定する。
-    actual_small_ret = cplat_string_catalog_filter_source_publish(source_, sizeof(source_) - 1U, image_, sizeof(image_),
-                                                                  catalog_id_, nullptr,
-                                                                  nullptr); // [手順] - 小さい領域を指定する。
+    actual_null_ret = cplat_string_catalog_filter_source_publish(
+        nullptr, sizeof(source_), image_, sizeof(image_), catalog_id_, nullptr,
+        nullptr); // [手順] - 領域に nullptr を指定して cplat_string_catalog_filter_source_publish() を呼び出す。
+    actual_small_ret = cplat_string_catalog_filter_source_publish(
+        source_, sizeof(source_) - 1U, image_, sizeof(image_), catalog_id_, nullptr,
+        nullptr); // [手順] - 小さい領域を指定して cplat_string_catalog_filter_source_publish() を呼び出す。
     image_[CPLAT_STRING_CATALOG_FILTER_HEADER_SIZE] ^= 0xFFU;
-    actual_corrupt_image_ret =
-        cplat_string_catalog_filter_source_publish(source_, sizeof(source_), image_, sizeof(image_), catalog_id_,
-                                                   nullptr, nullptr); // [手順] - 壊れたイメージを公開する。
+    actual_corrupt_image_ret = cplat_string_catalog_filter_source_publish(
+        source_, sizeof(source_), image_, sizeof(image_), catalog_id_, nullptr,
+        nullptr); // [手順] - 壊れたイメージを指定して cplat_string_catalog_filter_source_publish() を呼び出す。
     image_[CPLAT_STRING_CATALOG_FILTER_HEADER_SIZE] ^= 0xFFU;
-    actual_foreign_ret = cplat_string_catalog_filter_source_publish(source_, sizeof(source_), image_, sizeof(image_),
-                                                                    catalog_id_, nullptr,
-                                                                    nullptr); // [手順] - 異なる形式の領域へ公開する。
+    actual_foreign_ret = cplat_string_catalog_filter_source_publish(
+        source_, sizeof(source_), image_, sizeof(image_), catalog_id_, nullptr,
+        nullptr); // [手順] - 異なる形式の領域を指定して cplat_string_catalog_filter_source_publish() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_null_ret); // [確認_異常系] - 領域に NULL を指定した cplat_string_catalog_filter_source_publish() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_null_ret); // [確認_異常系] - 領域に nullptr を指定した cplat_string_catalog_filter_source_publish() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_small_ret); // [確認_異常系] - 小さい領域を指定した cplat_string_catalog_filter_source_publish() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -498,23 +506,24 @@ TEST_F(stringCatalogFilterSourceTest, get_info_reports_each_state)
     // Pre-Assert
 
     // Act
-    actual_unpublished_ret =
-        cplat_string_catalog_filter_source_get_info(source_, sizeof(source_),
-                                                    &actual_unpublished);        // [手順] - 未公開の情報を読む。
-    int actual_ret_publish = publish_line("category <= 2", &published_revision); // [手順] - 条件を公開する。
+    actual_unpublished_ret = cplat_string_catalog_filter_source_get_info(
+        source_, sizeof(source_),
+        &actual_unpublished); // [手順] - 未公開の領域を指定して cplat_string_catalog_filter_source_get_info() を呼び出す。
+    int actual_ret_publish =
+        publish_line("category <= 2", &published_revision); // [手順] - 条件を指定して publish_line() を呼び出す。
     ASSERT_EQ(CPLAT_OK, actual_ret_publish); // [状態確認] - publish_line() の戻り値が CPLAT_OK であること。
-    actual_published_ret =
-        cplat_string_catalog_filter_source_get_info(source_, sizeof(source_),
-                                                    &actual_published); // [手順] - 公開済みの情報を読む。
+    actual_published_ret = cplat_string_catalog_filter_source_get_info(
+        source_, sizeof(source_),
+        &actual_published); // [手順] - 公開済みの領域を指定して cplat_string_catalog_filter_source_get_info() を呼び出す。
     cplat_atomic_store_u64(&header()->published_revision, published_revision | 1U, CPLAT_MEMORY_ORDER_RELAXED);
-    actual_writing_ret =
-        cplat_string_catalog_filter_source_get_info(source_, sizeof(source_),
-                                                    &actual_writing); // [手順] - 書き込み中の情報を読む。
+    actual_writing_ret = cplat_string_catalog_filter_source_get_info(
+        source_, sizeof(source_),
+        &actual_writing); // [手順] - 書き込み中の領域を指定して cplat_string_catalog_filter_source_get_info() を呼び出す。
     cplat_atomic_store_u64(&header()->published_revision, published_revision, CPLAT_MEMORY_ORDER_RELAXED);
     header()->signature = 0x12345678U;
-    actual_foreign_ret =
-        cplat_string_catalog_filter_source_get_info(source_, sizeof(source_),
-                                                    &actual_foreign); // [手順] - 異なる形式の情報を読む。
+    actual_foreign_ret = cplat_string_catalog_filter_source_get_info(
+        source_, sizeof(source_),
+        &actual_foreign); // [手順] - 異なる形式の領域を指定して cplat_string_catalog_filter_source_get_info() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -575,9 +584,10 @@ TEST_F(stringCatalogFilterSourceTest, publish_continues_from_carried_over_revisi
     // Pre-Assert
 
     // Act
-    int actual_ret_publish = publish_line("category <= 2", &actual_revision); // [手順] - 新しい条件を公開する。
+    int actual_ret_publish =
+        publish_line("category <= 2", &actual_revision); // [手順] - 新しい条件を指定して publish_line() を呼び出す。
     ASSERT_EQ(CPLAT_OK, actual_ret_publish);  // [確認_正常系] - publish_line() の戻り値が CPLAT_OK であること。
-    (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
+    (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てるために format_job_failed() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -624,11 +634,13 @@ TEST_F(stringCatalogFilterSourceTest, publish_wraps_around_at_upper_limit)
         // Pre-Assert
 
         // Act
-        int actual_ret_publish = publish_line("category <= 2", &actual_revision); // [手順] - 新しい条件を公開する。
+        int actual_ret_publish = publish_line(
+            "category <= 2", &actual_revision); // [手順] - 新しい条件を指定して publish_line() を呼び出す。
         ASSERT_EQ(CPLAT_OK,
                   actual_ret_publish); // [確認_正常系 回数=2] - publish_line() の戻り値が CPLAT_OK であること。
         actual_matched = 0;
-        (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
+        (void)format_job_failed(
+            &actual_matched); // [手順] - JOB_FAILED を組み立てるために format_job_failed() を呼び出す。
 
         // Assert
         EXPECT_EQ(
@@ -685,7 +697,8 @@ TEST_F(stringCatalogFilterSourceTest, foreign_header_is_recorded_without_taking)
         // Pre-Assert
 
         // Act
-        (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
+        (void)format_job_failed(
+            &actual_matched); // [手順] - JOB_FAILED を組み立てるために format_job_failed() を呼び出す。
 
         // Assert
         // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status 回数=3]
@@ -720,9 +733,11 @@ TEST_F(stringCatalogFilterSourceTest, other_format_version_region_reports_versio
     // Pre-Assert
 
     // Act
-    int actual_publish_ret = publish_line("category >= 3"); // [手順] - 異なる形式版の領域へ公開する。
-    int actual_info_ret = cplat_string_catalog_filter_source_get_info(source_, sizeof(source_),
-                                                                      &actual_info); // [手順] - 情報を読む。
+    int actual_publish_ret =
+        publish_line("category >= 3"); // [手順] - 異なる形式版の領域を指定して publish_line() を呼び出す。
+    int actual_info_ret = cplat_string_catalog_filter_source_get_info(
+        source_, sizeof(source_),
+        &actual_info); // [手順] - 情報を読む対象の領域を指定して cplat_string_catalog_filter_source_get_info() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -801,8 +816,9 @@ TEST_F(stringCatalogFilterLockedSourceTest, takes_under_writer_lock_only_when_ch
     // Pre-Assert
 
     // Act
-    (void)format_job_failed(&actual_first_matched);  // [手順] - 1 回目の組み立てを行う。
-    (void)format_job_failed(&actual_second_matched); // [手順] - 版番号が変わらないまま 2 回目の組み立てを行う。
+    (void)format_job_failed(&actual_first_matched); // [手順] - 1 回目の呼び出しとして format_job_failed() を呼び出す。
+    (void)format_job_failed(
+        &actual_second_matched); // [手順] - 版番号が変わらない状態で 2 回目の呼び出しとして format_job_failed() を呼び出す。
 
     // Assert
     EXPECT_NE(
@@ -840,10 +856,11 @@ TEST_F(stringCatalogFilterLockedSourceTest, rechecks_revision_under_writer_lock)
     // Pre-Assert
 
     // Act
-    (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
+    (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てるために format_job_failed() を呼び出す。
     cplat_string_catalog_filter_source_info info;
-    int actual_ret_info =
-        cplat_string_catalog_filter_source_get_info(source_, sizeof(source_), &info); // [手順] - 公開の情報を読む。
+    int actual_ret_info = cplat_string_catalog_filter_source_get_info(
+        source_, sizeof(source_),
+        &info); // [手順] - 公開の情報を読むために領域を指定して cplat_string_catalog_filter_source_get_info() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_info); // [状態確認] - cplat_string_catalog_filter_source_get_info() の戻り値が CPLAT_OK であること。
@@ -885,7 +902,7 @@ TEST_F(stringCatalogFilterLockedSourceTest, interrupted_write_seen_under_lock_is
     // Pre-Assert
 
     // Act
-    (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
+    (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てるために format_job_failed() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -920,11 +937,12 @@ TEST_F(stringCatalogFilterLockedSourceTest, lock_failure_is_recorded_and_retried
     // Pre-Assert
 
     // Act
-    (void)format_job_failed(&actual_failed_matched); // [手順] - 排他を取得できない状態で組み立てる。
+    (void)format_job_failed(
+        &actual_failed_matched); // [手順] - 排他を取得できない状態で format_job_failed() を呼び出す。
     // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status]
     cplat_string_catalog_filter_source_status failed_status = source_status();
     counter_.lock_result = CPLAT_OK;                // [手順] - 排他を取得できる状態に戻す。
-    (void)format_job_failed(&actual_retry_matched); // [手順] - もう一度組み立てる。
+    (void)format_job_failed(&actual_retry_matched); // [手順] - 再度 format_job_failed() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -964,12 +982,12 @@ TEST_F(stringCatalogFilterLockedSourceTest, attach_rejects_incomplete_lock)
     // Pre-Assert
 
     // Act
-    int actual_without_unlock =
-        cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
-                                                       &without_unlock); // [手順] - 解放の関数がない排他を結び付ける。
-    int actual_without_lock =
-        cplat_string_catalog_filter_slot_attach_source(slot_, source_, sizeof(source_),
-                                                       &without_lock); // [手順] - 取得の関数がない排他を結び付ける。
+    int actual_without_unlock = cplat_string_catalog_filter_slot_attach_source(
+        slot_, source_, sizeof(source_),
+        &without_unlock); // [手順] - 解放の関数がない排他を指定して cplat_string_catalog_filter_slot_attach_source() を呼び出す。
+    int actual_without_lock = cplat_string_catalog_filter_slot_attach_source(
+        slot_, source_, sizeof(source_),
+        &without_lock); // [手順] - 取得の関数がない排他を指定して cplat_string_catalog_filter_slot_attach_source() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -993,9 +1011,9 @@ TEST_F(stringCatalogFilterLockedSourceTest, publish_takes_lock_once_while_writin
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_string_catalog_filter_source_publish(source_, sizeof(source_), image_, sizeof(image_),
-                                                                catalog_id_, &lock_,
-                                                                &actual_revision); // [手順] - 排他とともに公開する。
+    int actual_ret = cplat_string_catalog_filter_source_publish(
+        source_, sizeof(source_), image_, sizeof(image_), catalog_id_, &lock_,
+        &actual_revision); // [手順] - 排他を指定して cplat_string_catalog_filter_source_publish() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1028,9 +1046,9 @@ TEST_F(stringCatalogFilterLockedSourceTest, publish_lock_failure_keeps_region)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_string_catalog_filter_source_publish(source_, sizeof(source_), image_, sizeof(image_),
-                                                                catalog_id_, &lock_,
-                                                                nullptr); // [手順] - 排他とともに公開する。
+    int actual_ret = cplat_string_catalog_filter_source_publish(
+        source_, sizeof(source_), image_, sizeof(image_), catalog_id_, &lock_,
+        nullptr); // [手順] - 排他を指定して cplat_string_catalog_filter_source_publish() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1058,9 +1076,9 @@ TEST_F(stringCatalogFilterLockedSourceTest, publish_rejecting_foreign_region_rel
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_string_catalog_filter_source_publish(source_, sizeof(source_), image_, sizeof(image_),
-                                                                catalog_id_, &lock_,
-                                                                nullptr); // [手順] - 排他とともに公開する。
+    int actual_ret = cplat_string_catalog_filter_source_publish(
+        source_, sizeof(source_), image_, sizeof(image_), catalog_id_, &lock_,
+        nullptr); // [手順] - 排他を指定して cplat_string_catalog_filter_source_publish() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1089,9 +1107,9 @@ TEST_F(stringCatalogFilterLockedSourceTest, publish_rejects_incomplete_lock)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_string_catalog_filter_source_publish(source_, sizeof(source_), image_, sizeof(image_),
-                                                                catalog_id_, &without_unlock,
-                                                                nullptr); // [手順] - 解放の関数がない排他で公開する。
+    int actual_ret = cplat_string_catalog_filter_source_publish(
+        source_, sizeof(source_), image_, sizeof(image_), catalog_id_, &without_unlock,
+        nullptr); // [手順] - 解放の関数がない排他を指定して cplat_string_catalog_filter_source_publish() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1114,11 +1132,14 @@ TEST_F(stringCatalogFilterSourceTest, catalog_id_is_stable_and_distinguishes_cat
 
     // Act
     int actual_again_ret = cplat_string_catalog_filter_get_catalog_id(
-        filter_test_trace_catalog(), &actual_again); // [手順] - 同じカタログで求め直す。
-    int actual_other_ret = cplat_string_catalog_filter_get_catalog_id(filter_test_catalog(),
-                                                                      &actual_other); // [手順] - 別のカタログで求める。
-    int actual_null_ret =
-        cplat_string_catalog_filter_get_catalog_id(nullptr, &actual_other); // [手順] - NULL を指定する。
+        filter_test_trace_catalog(),
+        &actual_again); // [手順] - 同じカタログを指定して再度 cplat_string_catalog_filter_get_catalog_id() を呼び出す。
+    int actual_other_ret = cplat_string_catalog_filter_get_catalog_id(
+        filter_test_catalog(),
+        &actual_other); // [手順] - 別のカタログを指定して cplat_string_catalog_filter_get_catalog_id() を呼び出す。
+    int actual_null_ret = cplat_string_catalog_filter_get_catalog_id(
+        nullptr,
+        &actual_other); // [手順] - nullptr を指定して cplat_string_catalog_filter_get_catalog_id() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1136,7 +1157,7 @@ TEST_F(stringCatalogFilterSourceTest, catalog_id_is_stable_and_distinguishes_cat
         actual_other); // [確認_正常系] - actual_other が catalog_id_ 以外であること。(異なるカタログで異なる値になることの確認)
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_null_ret); // [確認_異常系] - NULL を指定した cplat_string_catalog_filter_get_catalog_id() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_null_ret); // [確認_異常系] - nullptr を指定した cplat_string_catalog_filter_get_catalog_id() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterSourceTest.TearDown]
 
@@ -1153,11 +1174,13 @@ TEST_F(stringCatalogFilterSourceTest, publish_records_catalog_id_and_rejects_zer
 
     // Act
     int actual_zero_ret = cplat_string_catalog_filter_source_publish(
-        source_, sizeof(source_), image_, sizeof(image_), 0U, nullptr, nullptr); // [手順] - 識別値 0 で公開する。
-    int actual_ret_publish = publish_line("category <= 2");                      // [手順] - 識別値を指定して公開する。
+        source_, sizeof(source_), image_, sizeof(image_), 0U, nullptr,
+        nullptr); // [手順] - 識別値 0 を指定して cplat_string_catalog_filter_source_publish() を呼び出す。
+    int actual_ret_publish = publish_line("category <= 2"); // [手順] - 識別値を指定して publish_line() を呼び出す。
     ASSERT_EQ(CPLAT_OK, actual_ret_publish); // [確認_正常系] - publish_line() の戻り値が CPLAT_OK であること。
-    int actual_ret_info = cplat_string_catalog_filter_source_get_info(source_, sizeof(source_),
-                                                                      &actual_info); // [手順] - 公開の情報を読む。
+    int actual_ret_info = cplat_string_catalog_filter_source_get_info(
+        source_, sizeof(source_),
+        &actual_info); // [手順] - 公開の情報を読むために領域を指定して cplat_string_catalog_filter_source_get_info() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_info); // [状態確認] - cplat_string_catalog_filter_source_get_info() の戻り値が CPLAT_OK であること。
@@ -1214,7 +1237,8 @@ TEST_F(stringCatalogFilterSourceTest, publication_for_another_catalog_is_not_tak
         // Pre-Assert
 
         // Act
-        (void)format_job_failed(&actual_matched); // [手順] - JOB_FAILED を組み立てる。
+        (void)format_job_failed(
+            &actual_matched); // [手順] - JOB_FAILED を組み立てるために format_job_failed() を呼び出す。
         // [サブ手順参照 名前=stringCatalogFilterSourceTest.source_status 回数=2]
         cplat_string_catalog_filter_source_status status = source_status();
 
@@ -1226,7 +1250,7 @@ TEST_F(stringCatalogFilterSourceTest, publication_for_another_catalog_is_not_tak
                 0); // [Pre-Assert確認_異常系 回数=2] - cplat_local_lock_try_lock() が呼び出されないこと。(同じ公開内容の取り込みを試みないことの確認)
 
         // Act_2
-        (void)format_job_failed(&actual_matched); // [手順] - もう一度組み立てる。
+        (void)format_job_failed(&actual_matched); // [手順] - 再度 format_job_failed() を呼び出す。
         testing::Mock::VerifyAndClearExpectations(&mock_cplat);
 
         // Assert_2

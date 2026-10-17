@@ -16,7 +16,7 @@ class consoleTest : public Test
     {
         // console.c の単体テストでは shutdown.c を対象外とし、登録 API の呼び出しをフェイクする。
         ON_CALL(mock_cplat, cplat_shutdown_register(_, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - cplat_shutdown_register() の既定動作を設定する。
+        // [状態] - cplat_shutdown_register() から CPLAT_OK を返すように既定動作を設定する。
     }
     // [サブ手順終了]
 };
@@ -32,7 +32,7 @@ TEST_F(consoleTest, init_succeeds)
     // Pre-Assert
 
     // Act
-    cplat_console_init(); // [手順] - コンソール ヘルパーを初期化する。
+    cplat_console_init(); // [手順] - cplat_console_init() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(cplat_console_init() がクラッシュしないことの確認)
@@ -52,7 +52,7 @@ TEST_F(consoleTest, dispose_on_shutdown_after_init)
     // Act
     cplat_internal_console_dispose_on_shutdown(
         &event,
-        nullptr); // [手順] - 正常終了イベントで dispose_on_shutdown() を呼び出す。
+        nullptr); // [手順] - 正常終了イベントを指定して cplat_internal_console_dispose_on_shutdown() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(初期化後の cplat_internal_console_dispose_on_shutdown() がクラッシュしないことの確認)
@@ -69,8 +69,9 @@ TEST_F(consoleTest, dispose_on_shutdown_without_init)
     // Pre-Assert
 
     // Act
-    cplat_internal_console_dispose_on_shutdown(&event,
-                                               nullptr); // [手順] - init を呼ばずに dispose_on_shutdown() を呼び出す。
+    cplat_internal_console_dispose_on_shutdown(
+        &event,
+        nullptr); // [手順] - init を呼んでいない状態で cplat_internal_console_dispose_on_shutdown() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(初期化せずに呼び出した cplat_internal_console_dispose_on_shutdown() がクラッシュしないことの確認)
@@ -88,9 +89,11 @@ TEST_F(consoleTest, double_dispose_on_shutdown)
     // Pre-Assert
 
     // Act
-    cplat_internal_console_dispose_on_shutdown(&event, nullptr); // [手順] - 1 回目の dispose_on_shutdown() を呼び出す。
-    cplat_internal_console_dispose_on_shutdown(&event,
-                                               nullptr); // [手順] - 続けて 2 回目の dispose_on_shutdown() を呼び出す。
+    cplat_internal_console_dispose_on_shutdown(
+        &event, nullptr); // [手順] - 1 回目として cplat_internal_console_dispose_on_shutdown() を呼び出す。
+    cplat_internal_console_dispose_on_shutdown(
+        &event,
+        nullptr); // [手順] - 続けて 2 回目として cplat_internal_console_dispose_on_shutdown() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(2 回目の cplat_internal_console_dispose_on_shutdown() がクラッシュしないことの確認)
@@ -109,8 +112,9 @@ TEST_F(consoleTest, dispose_on_shutdown_process_terminating)
     // Pre-Assert
 
     // Act
-    cplat_internal_console_dispose_on_shutdown(&terminating_event,
-                                               nullptr); // [手順] - 終了中イベントで dispose_on_shutdown() を呼び出す。
+    cplat_internal_console_dispose_on_shutdown(
+        &terminating_event,
+        nullptr); // [手順] - プロセス終了中イベントを指定して cplat_internal_console_dispose_on_shutdown() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(終了中イベントを渡した cplat_internal_console_dispose_on_shutdown() がクラッシュしないことの確認)
@@ -130,8 +134,8 @@ TEST_F(consoleTest, write_after_init)
     // Pre-Assert
 
     // Act
-    printf("consoleTest: stdout\n");          // [手順] - stdout に書き込む。
-    fprintf(stderr, "consoleTest: stderr\n"); // [手順] - stderr に書き込む。
+    printf("consoleTest: stdout\n");          // [手順] - stdout へ書き込む文字列を指定して printf() を呼び出す。
+    fprintf(stderr, "consoleTest: stderr\n"); // [手順] - stderr へ書き込む文字列を指定して fprintf() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(初期化後の printf() と fprintf() がクラッシュしないことの確認)
@@ -155,9 +159,9 @@ TEST_F(consoleTest, nop_stdout_fd_unchanged)
     // Pre-Assert
 
     // Act
-    cplat_console_init(); // [手順] - コンソール ヘルパーを初期化する。
+    cplat_console_init(); // [手順] - cplat_console_init() を呼び出す。
     int fd_after_init = fileno(stdout);
-    cplat_console_dispose(); // [手順] - no-op の dispose を呼び出す。
+    cplat_console_dispose(); // [手順] - cplat_console_dispose() を呼び出す。
     int fd_after_dispose = fileno(stdout);
 
     // Assert
@@ -179,9 +183,9 @@ TEST_F(consoleTest, nop_stderr_fd_unchanged)
     // Pre-Assert
 
     // Act
-    cplat_console_init(); // [手順] - コンソール ヘルパーを初期化する。
+    cplat_console_init(); // [手順] - cplat_console_init() を呼び出す。
     int fd_after_init = fileno(stderr);
-    cplat_console_dispose(); // [手順] - no-op の dispose を呼び出す。
+    cplat_console_dispose(); // [手順] - cplat_console_dispose() を呼び出す。
     int fd_after_dispose = fileno(stderr);
 
     // Assert
@@ -204,7 +208,7 @@ TEST_F(consoleTest, nop_dispose_stdout_fd_unchanged)
     // Pre-Assert
 
     // Act
-    cplat_console_dispose(); // [手順] - no-op の dispose を呼び出す。
+    cplat_console_dispose(); // [手順] - 初期化済みの状態で cplat_console_dispose() を呼び出す。
 
     // Assert
     EXPECT_EQ(

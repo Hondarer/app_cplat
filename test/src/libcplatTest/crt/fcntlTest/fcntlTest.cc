@@ -47,7 +47,7 @@ TEST_F(fcntlTest, creates_file_and_returns_descriptor)
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq("work.bin"), O_RDWR | O_CREAT | O_TRUNC, 0644))
         .WillOnce(Return(
             7)); // [Pre-Assert確認_正常系] - open() が "work.bin" と等しい文字列、O_RDWR | O_CREAT | O_TRUNC、0644 を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - センチネル記述子 7 を返却する。
+                 // [Pre-Assert手順] - open() から、センチネル記述子 7 を返す。
 
     // Act
     int fd = cplat_open("work.bin", O_RDWR | O_CREAT | O_TRUNC, 0644,
@@ -73,11 +73,11 @@ TEST_F(fcntlTest, returns_minus1_for_missing_file)
             Assign(&errno, ENOENT),
             Return(
                 -1))); // [Pre-Assert確認_異常系] - open() が "missing.bin" と等しい文字列、O_RDONLY、0 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - errno に ENOENT を設定し、-1 を返却する。
+                       // [Pre-Assert手順] - open() から、errno に ENOENT を設定して -1 を返す。
 
     // Act
     int fd = cplat_open("missing.bin", O_RDONLY, 0,
-                        &detail); // [手順] - 存在しないパスを読み取り専用で cplat_open() に指定する。
+                        &detail); // [手順] - 存在しないパスと読み取り専用を指定して cplat_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, fd); // [確認_異常系] - cplat_open() の戻り値が -1 であること。
@@ -98,7 +98,7 @@ TEST_F(fcntlTest, returns_minus1_for_null_path)
     // Pre-Assert
 
     // Act
-    int fd = cplat_open(nullptr, O_RDONLY, 0, &detail); // [手順] - パスに NULL を指定して cplat_open() を呼び出す。
+    int fd = cplat_open(nullptr, O_RDONLY, 0, &detail); // [手順] - パスに nullptr を指定して cplat_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, fd); // [確認_異常系] - cplat_open() の戻り値が -1 であること。
@@ -114,8 +114,8 @@ TEST_F(fcntlTest, accepts_null_detail_out)
     // Pre-Assert
 
     // Act
-    int fd =
-        cplat_open(nullptr, O_RDONLY, 0, nullptr); // [手順] - detail_out に NULL を指定して cplat_open() を呼び出す。
+    int fd = cplat_open(nullptr, O_RDONLY, 0,
+                        nullptr); // [手順] - detail_out に nullptr を指定して cplat_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, fd); // [確認_異常系] - cplat_open() の戻り値が -1 であること。
@@ -134,7 +134,7 @@ TEST_F(fcntlTest, open_retries_after_interrupt)
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)))
         .WillOnce(Return(
             5)); // [Pre-Assert確認_正常系] - open() が "work.bin" と等しい文字列、O_RDONLY、0 を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 下位の open() API から、errno に EINTR を設定した -1 ののち記述子 5 を返却する。
+    // [Pre-Assert手順] - open() から 1 回目は errno に EINTR を設定して -1、2 回目は記述子 5 を返す。
 
     // Act
     int fd = cplat_open("work.bin", O_RDONLY, 0,

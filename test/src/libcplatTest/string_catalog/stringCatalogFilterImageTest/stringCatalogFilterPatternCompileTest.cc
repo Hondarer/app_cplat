@@ -74,8 +74,9 @@ TEST_F(stringCatalogFilterPatternCompileTest, pattern_constants_are_numbered_per
     // Pre-Assert
 
     // Act
-    int actual_ret_compile = compile_single_line("id matches \"^FILTER\" && arg.job_name matches_i \"IMP\"",
-                                                 image_); // [手順] - 2 つのパターンを含む条件式をコンパイルする。
+    int actual_ret_compile =
+        compile_single_line("id matches \"^FILTER\" && arg.job_name matches_i \"IMP\"",
+                            image_); // [手順] - 2 つのパターンを含む条件式を指定して compile_single_line() を呼び出す。
     ASSERT_EQ(CPLAT_OK, actual_ret_compile); // [確認_正常系] - compile_single_line() の戻り値が CPLAT_OK であること。
     record = filter_test_record_address(image_, kLineWidth, 0U);
     constants = string_catalog_filter_record_constants(record, (uint32_t)kLineWidth);
@@ -132,12 +133,13 @@ TEST_F(stringCatalogFilterPatternCompileTest, decompiled_pattern_recompiles_to_s
 
     // Act
     int actual_ret_decompile = cplat_string_catalog_filter_decompile_line(
-        image_, kImageSize, 0U, actual_text, sizeof(actual_text)); // [手順] - デコンパイルする。
+        image_, kImageSize, 0U, actual_text,
+        sizeof(actual_text)); // [手順] - 行 0 を指定して cplat_string_catalog_filter_decompile_line() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_decompile); // [確認_正常系] - cplat_string_catalog_filter_decompile_line() の戻り値が CPLAT_OK であること。
-    int actual_ret_recompile =
-        compile_single_line(actual_text, recompiled); // [手順] - 復元した条件式を再コンパイルする。
+    int actual_ret_recompile = compile_single_line(
+        actual_text, recompiled); // [手順] - 復元した条件式を指定して compile_single_line() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -167,9 +169,9 @@ TEST_F(stringCatalogFilterPatternCompileTest, invalid_pattern_is_diagnosed_at_co
     // Pre-Assert
 
     // Act
-    (void)compile_single_line("arg.job_name matches \"(imp\"", image_, kImageSize, kLineWidth, kLineCapacity,
-                              &diagnostic, 1U,
-                              &invalid_count); // [手順] - 閉じていない括弧を含むパターンをコンパイルする。
+    (void)compile_single_line(
+        "arg.job_name matches \"(imp\"", image_, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
+        &invalid_count); // [手順] - 閉じていない括弧を含むパターンを指定して compile_single_line() を呼び出す。
 
     // Assert
     EXPECT_EQ(1U, invalid_count); // [確認_異常系] - invalid_count が 1U であること。
@@ -192,14 +194,14 @@ TEST_F(stringCatalogFilterPatternCompileTest, pattern_requires_string_field_and_
     // Pre-Assert
 
     // Act
-    const cplat_string_catalog_filter_line_error actual_key =
-        compile_error_of("key matches \"1\""); // [手順] - 文字列キーへ書く。
-    const cplat_string_catalog_filter_line_error actual_category =
-        compile_error_of("category matches \"1\""); // [手順] - 分類値へ書く。
-    const cplat_string_catalog_filter_line_error actual_number =
-        compile_error_of("arg.job_name matches 1"); // [手順] - 数値をパターンにする。
-    const cplat_string_catalog_filter_line_error actual_null =
-        compile_error_of("arg.job_name matches null"); // [手順] - null をパターンにする。
+    const cplat_string_catalog_filter_line_error actual_key = compile_error_of(
+        "key matches \"1\""); // [手順] - 文字列キーにパターンを書いた条件式を指定して compile_error_of() を呼び出す。
+    const cplat_string_catalog_filter_line_error actual_category = compile_error_of(
+        "category matches \"1\""); // [手順] - 分類値にパターンを書いた条件式を指定して compile_error_of() を呼び出す。
+    const cplat_string_catalog_filter_line_error actual_number = compile_error_of(
+        "arg.job_name matches 1"); // [手順] - 数値をパターンにした条件式を指定して compile_error_of() を呼び出す。
+    const cplat_string_catalog_filter_line_error actual_null = compile_error_of(
+        "arg.job_name matches null"); // [手順] - null をパターンにした条件式を指定して compile_error_of() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -226,10 +228,11 @@ TEST_F(stringCatalogFilterPatternCompileTest, pattern_count_is_limited_per_line)
 
     // Act
     const cplat_string_catalog_filter_line_error actual_at_limit = compile_error_of(
-        "id matches \"a\" || id matches \"b\" || id matches \"c\" || id matches \"d\""); // [手順] - 上限の 4 個を書く。
-    const cplat_string_catalog_filter_line_error actual_over_limit =
-        compile_error_of("id matches \"a\" || id matches \"b\" || id matches \"c\" || id matches \"d\" || id matches "
-                         "\"e\""); // [手順] - 5 個を書く。
+        "id matches \"a\" || id matches \"b\" || id matches \"c\" || id matches "
+        "\"d\""); // [手順] - 上限の 4 個のパターンを書いた条件式を指定して compile_error_of() を呼び出す。
+    const cplat_string_catalog_filter_line_error actual_over_limit = compile_error_of(
+        "id matches \"a\" || id matches \"b\" || id matches \"c\" || id matches \"d\" || id matches "
+        "\"e\""); // [手順] - 上限を超える 5 個のパターンを書いた条件式を指定して compile_error_of() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -259,9 +262,13 @@ TEST_F(stringCatalogFilterPatternCompileTest, pattern_slot_beyond_count_is_rejec
     // Act
     string_catalog_filter_read_record_header(record, &header);
     header.pattern_count = 0U;
-    string_catalog_filter_write_record_header(record, &header);            // [手順] - 見出しのパターンの数を 0 にする。
-    rehash(image_, record);                                                // [手順] - ハッシュ値を計算し直す。
-    actual_ret = cplat_string_catalog_filter_validate(image_, kImageSize); // [手順] - 検証する。
+    string_catalog_filter_write_record_header(
+        record,
+        &header); // [手順] - 見出しのパターンの数を 0 にしたヘッダーを指定して string_catalog_filter_write_record_header() を呼び出す。
+    rehash(image_, record); // [手順] - 書き換えたレコードを指定して rehash() を呼び出す。
+    actual_ret = cplat_string_catalog_filter_validate(
+        image_,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(

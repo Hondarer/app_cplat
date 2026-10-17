@@ -34,7 +34,7 @@ void expect_ui_language_tag(NiceMock<Mock_cplat> &mock, const char *const tag)
                 return CPLAT_OK;
             }));
     // [Pre-Assert確認_正常系] - cplat_ui_language_get_tag() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 指定した表示言語タグを出力バッファーへコピーする。
+    // [Pre-Assert手順] - cplat_ui_language_get_tag() から、指定した表示言語タグを出力バッファーへコピーして CPLAT_OK を返す。
 }
 // [サブ手順終了]
 
@@ -63,12 +63,13 @@ TEST_F(show_ui_languageTest, main_prints_language_tag)
     // Pre-Assert
     // [サブ手順参照 名前=show_ui_languageTest.expect_ui_language_tag]
     expect_ui_language_tag(mock_cplat_, "ja-JP"); // 表示言語の取得が 1 回呼び出されること。
-                                                  // [Pre-Assert手順] - 言語タグ ja-JP を返却する。
+    // [Pre-Assert手順] - cplat_ui_language_get_tag() から、言語タグ "ja-JP" を出力バッファーに設定して CPLAT_OK を返す。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq("ja-JP\n")))
         .Times(1); // [Pre-Assert確認_正常系] - printf() が "ja-JP\n" と等しい文字列を指定して 1 回呼び出されること。
 
     // Act
-    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - 引数無しで main() を呼び出す。
+    int actual_ret =
+        __real_main(argc, const_cast<char **>(argv)); // [手順] - 引数を指定しない状態で __real_main() を呼び出す。
 
     // Assert
     EXPECT_EQ(EXIT_SUCCESS, actual_ret); // [確認_正常系] - __real_main() の戻り値が EXIT_SUCCESS であること。
@@ -84,12 +85,13 @@ TEST_F(show_ui_languageTest, main_prints_empty_line_for_neutral)
     // Pre-Assert
     // [サブ手順参照 名前=show_ui_languageTest.expect_ui_language_tag]
     expect_ui_language_tag(mock_cplat_, ""); // 表示言語の取得が 1 回呼び出されること。
-                                             // [Pre-Assert手順] - ニュートラルを表す空文字列を返却する。
+    // [Pre-Assert手順] - cplat_ui_language_get_tag() から、ニュートラルを表す空文字列を出力バッファーに設定して CPLAT_OK を返す。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq("\n")))
         .Times(1); // [Pre-Assert確認_正常系] - printf() が "\n" と等しい文字列を指定して 1 回呼び出されること。
 
     // Act
-    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - 引数無しで main() を呼び出す。
+    int actual_ret =
+        __real_main(argc, const_cast<char **>(argv)); // [手順] - 引数を指定しない状態で __real_main() を呼び出す。
 
     // Assert
     EXPECT_EQ(EXIT_SUCCESS, actual_ret); // [確認_正常系] - __real_main() の戻り値が EXIT_SUCCESS であること。
@@ -106,11 +108,12 @@ TEST_F(show_ui_languageTest, main_reports_failure)
     EXPECT_CALL(mock_cplat_, cplat_ui_language_get_tag(_, _))
         .WillOnce(Return(
             CPLAT_ERR_INVALID_ARGUMENT)); // [Pre-Assert確認_異常系] - cplat_ui_language_get_tag() が 1 回呼び出されること。
-                                          // [Pre-Assert手順] - CPLAT_ERR_INVALID_ARGUMENT を返却する。
+    // [Pre-Assert手順] - cplat_ui_language_get_tag() から CPLAT_ERR_INVALID_ARGUMENT を返す。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, _)).Times(0); // [Pre-Assert確認_異常系] - printf() が呼び出されないこと。
 
     // Act
-    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - 取得が失敗する状態で main() を呼び出す。
+    int actual_ret =
+        __real_main(argc, const_cast<char **>(argv)); // [手順] - 取得が失敗する状態で __real_main() を呼び出す。
 
     // Assert
     EXPECT_EQ(EXIT_FAILURE, actual_ret); // [確認_異常系] - __real_main() の戻り値が EXIT_FAILURE であること。
@@ -128,7 +131,8 @@ TEST_F(show_ui_languageTest, main_prints_usage_with_help)
         .Times(0); // [Pre-Assert確認_正常系] - cplat_ui_language_get_tag() が呼び出されないこと。
 
     // Act
-    int actual_ret = __real_main(argc, const_cast<char **>(argv)); // [手順] - --help を指定して main() を呼び出す。
+    int actual_ret =
+        __real_main(argc, const_cast<char **>(argv)); // [手順] - --help を指定して __real_main() を呼び出す。
 
     // Assert
     EXPECT_EQ(EXIT_SUCCESS, actual_ret); // [確認_正常系] - __real_main() の戻り値が EXIT_SUCCESS であること。
@@ -147,7 +151,7 @@ TEST_F(show_ui_languageTest, main_rejects_unknown_option)
 
     // Act
     int actual_ret =
-        __real_main(argc, const_cast<char **>(argv)); // [手順] - 未知のオプションを指定して main() を呼び出す。
+        __real_main(argc, const_cast<char **>(argv)); // [手順] - 未知のオプションを指定して __real_main() を呼び出す。
 
     // Assert
     EXPECT_EQ(EXIT_FAILURE, actual_ret); // [確認_異常系] - __real_main() の戻り値が EXIT_FAILURE であること。

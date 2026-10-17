@@ -181,7 +181,7 @@ TEST_F(errorContractTest, all_detail_out_apis_accept_null)
          []() { (void)cplat_mmap_attach(nullptr, CPLAT_MMAP_ACCESS_READ_ONLY, 0U, nullptr, nullptr); }, 1, 0U},
         {"cplat_mmap_flush", []() { (void)cplat_mmap_flush(nullptr, nullptr, 0U, nullptr); }, 1, 0U},
         {"cplat_mmap_detach", []() { (void)cplat_mmap_detach(nullptr, nullptr); }, 0, 0U},
-    }; // [状態] - detail_out に NULL を指定する公開関数 59 件と公開マクロ 2 件を用意する。
+    }; // [状態] - detail_out に nullptr を指定する公開関数 59 件と公開マクロ 2 件を用意する。
     std::vector<int> tls_set_results;
 
     // Pre-Assert
@@ -195,7 +195,7 @@ TEST_F(errorContractTest, all_detail_out_apis_accept_null)
         item.invoke();
         cplat_error_get_last(&last_error);
         tls_set_results.push_back(cplat_error_is_set(&last_error));
-    } // [手順] - 全公開 API の detail_out に NULL を指定し、呼び出し後の TLS を取得する。
+    } // [手順] - 全公開 API の detail_out に nullptr を指定し、呼び出し後の TLS を取得する。
 
     // Assert
     EXPECT_EQ(cases.size(),
@@ -206,7 +206,7 @@ TEST_F(errorContractTest, all_detail_out_apis_accept_null)
         if (cases[index].expected_tls_set >= 0)
         {
             EXPECT_EQ(cases[index].expected_tls_set, tls_set_results[index]) << cases[index].name;
-            // [確認_正常系 回数=60] - tls_set_results[index] が cases[index].expected_tls_set と一致すること。(各公開 API が NULL の detail_out を参照せず、TLS を規約どおり更新したことの確認)
+            // [確認_正常系 回数=60] - tls_set_results[index] が cases[index].expected_tls_set と一致すること。(各公開 API が nullptr の detail_out を参照せず、TLS を規約どおり更新したことの確認)
         }
     }
 }
@@ -226,11 +226,12 @@ TEST_F(errorContractTest, real_api_records_failure_and_clears_it_on_success)
 
     // Act
     FILE *missing =
-        cplat_fopen("cplat_error_tls_missing_file", "rb", nullptr); // [手順] - 詳細エラー出力なしで失敗させる。
-    cplat_error_get_last(&failure_error);                        // [手順] - 失敗直後の TLS 詳細エラーを取得する。
+        cplat_fopen("cplat_error_tls_missing_file", "rb",
+                    nullptr); // [手順] - 詳細エラー出力なしで存在しないファイルを指定して cplat_fopen() を呼び出す。
+    cplat_error_get_last(&failure_error); // [手順] - 失敗直後の状態で cplat_error_get_last() を呼び出す。
     FILE *existing = cplat_fopen_temp("err", "w+b", temp_path, sizeof(temp_path),
-                                      nullptr); // [手順] - 次の詳細エラー記録対象 API を成功させる。
-    cplat_error_get_last(&success_error);    // [手順] - 成功直後の TLS 詳細エラーを取得する。
+                                      nullptr); // [手順] - 詳細エラー出力なしで cplat_fopen_temp() を呼び出す。
+    cplat_error_get_last(&success_error);       // [手順] - 成功直後の状態で cplat_error_get_last() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr,
@@ -263,9 +264,9 @@ TEST_F(errorContractTest, nested_paths_equal_success_clears_previous_failure)
     // Pre-Assert
 
     // Act
-    const int result =
-        cplat_path_equal(".", ".", &equal, nullptr);             // [手順] - 内部で 2 回絶対パス化する比較を成功させる。
-    cplat_error_get_last(&last_error);                           // [手順] - 比較成功直後の TLS 詳細エラーを取得する。
+    const int result = cplat_path_equal(
+        ".", ".", &equal, nullptr);    // [手順] - 相対パス "." どうしを指定して cplat_path_equal() を呼び出す。
+    cplat_error_get_last(&last_error); // [手順] - 比較成功直後の状態で cplat_error_get_last() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -296,23 +297,25 @@ TEST_F(errorContractTest, last_error_is_isolated_between_threads)
     // Pre-Assert
 
     // Act
-    const int create_not_found_result =
-        cplat_thread_create(&not_found_thread, record_thread_local_error,
-                            &not_found_case); // [手順] - NOT_FOUND を記録するスレッドを起動する。
-    const int create_invalid_result =
-        cplat_thread_create(&invalid_thread, record_thread_local_error,
-                            &invalid_case); // [手順] - INVALID_ARGUMENT を記録するスレッドを起動する。
+    const int create_not_found_result = cplat_thread_create(
+        &not_found_thread, record_thread_local_error,
+        &not_found_case); // [手順] - NOT_FOUND を記録する関数を指定して cplat_thread_create() を呼び出す。
+    const int create_invalid_result = cplat_thread_create(
+        &invalid_thread, record_thread_local_error,
+        &invalid_case); // [手順] - INVALID_ARGUMENT を記録する関数を指定して cplat_thread_create() を呼び出す。
     if (create_not_found_result == CPLAT_OK)
     {
-        join_not_found_result =
-            cplat_thread_join(not_found_thread, CPLAT_SYNC_WAIT_FOREVER); // [手順] - NOT_FOUND スレッドを待機する。
+        join_not_found_result = cplat_thread_join(
+            not_found_thread,
+            CPLAT_SYNC_WAIT_FOREVER); // [手順] - NOT_FOUND スレッドを指定して cplat_thread_join() を呼び出す。
     }
     if (create_invalid_result == CPLAT_OK)
     {
         join_invalid_result = cplat_thread_join(
-            invalid_thread, CPLAT_SYNC_WAIT_FOREVER); // [手順] - INVALID_ARGUMENT スレッドを待機する。
+            invalid_thread,
+            CPLAT_SYNC_WAIT_FOREVER); // [手順] - INVALID_ARGUMENT スレッドを指定して cplat_thread_join() を呼び出す。
     }
-    cplat_error_get_last(&main_error); // [手順] - 子スレッド終了後にメイン スレッドの TLS 詳細エラーを取得する。
+    cplat_error_get_last(&main_error); // [手順] - 子スレッド終了後の状態で cplat_error_get_last() を呼び出す。
 
     // Assert
     EXPECT_EQ(

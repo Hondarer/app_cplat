@@ -40,20 +40,20 @@ class traceShutdownTest : public Test
                     shutdown_context_ = context;
                     return CPLAT_OK;
                 });
-        // [状態] - cplat_shutdown_register() の既定動作を設定する。
+        // [状態] - cplat_shutdown_register() から、渡されたコールバックとコンテキストを記録して CPLAT_OK を返すように既定動作を設定する。
 
 #if defined(PLATFORM_LINUX)
         ON_CALL(mock_cplat, cplat_syslog_sink_create(_, _)).WillByDefault(Return(os_handle_));
-        // [状態] - cplat_syslog_sink_create() の既定動作を設定する。
+        // [状態] - cplat_syslog_sink_create() から os_handle_ を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_dispose(_)).WillByDefault(Return());
-        // [状態] - cplat_syslog_sink_dispose() の既定動作を設定する。
+        // [状態] - cplat_syslog_sink_dispose() から戻るように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_rename(_, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - cplat_syslog_sink_rename() の既定動作を設定する。
+        // [状態] - cplat_syslog_sink_rename() から CPLAT_OK を返すように既定動作を設定する。
 #elif defined(PLATFORM_WINDOWS)
         ON_CALL(mock_cplat, cplat_etw_provider_create(_)).WillByDefault(Return(os_handle_));
-        // [状態] - cplat_etw_provider_create() の既定動作を設定する。
+        // [状態] - cplat_etw_provider_create() から os_handle_ を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_etw_provider_dispose(_)).WillByDefault(Return());
-        // [状態] - cplat_etw_provider_dispose() の既定動作を設定する。
+        // [状態] - cplat_etw_provider_dispose() から戻るように既定動作を設定する。
 #endif
     }
     // [サブ手順終了]
@@ -89,9 +89,11 @@ TEST_F(traceShutdownTest, shutdown_disposes_registry_and_rejects_new_create)
     // Pre-Assert
 
     // Act
-    shutdown_callback_(&event, shutdown_context_); // [手順] - 登録された tracer shutdown callback を直接呼び出す。
+    shutdown_callback_(
+        &event,
+        shutdown_context_); // [手順] - 通常終了のイベントを指定して、登録された shutdown コールバックの shutdown_callback_() を呼び出す。
     cplat_tracer *created_after_shutdown = cplat_tracer_create(
-        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - shutdown 後に新しい tracer の生成を試みる。
+        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - shutdown 後の状態で cplat_tracer_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(

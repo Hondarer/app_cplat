@@ -54,7 +54,8 @@ TEST_F(pathStripExtensionTest, returns_einval_for_null_path_out)
     // Act
     int actual_ret = cplat_path_strip_extension(nullptr, 16, &err,
                                                 "a.txt"); // [手順] - cplat_path_strip_extension() を呼び出す。
-    cplat_error_get_last(&last_error); // [手順] - TLS に記録された詳細エラーを取得する。
+    cplat_error_get_last(
+        &last_error); // [手順] - TLS に記録された詳細エラーの格納先として last_error を指定して cplat_error_get_last() を呼び出す。
 
     // Assert
     EXPECT_EQ(

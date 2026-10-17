@@ -73,23 +73,26 @@ TEST_F(hashtableGuardTest, add_rejects_null_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht = cplat_hashtable_add(nullptr, "a", value.data(),
-                                                 CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - ht に NULL を渡す。
+    int actual_ret_null_ht = cplat_hashtable_add(
+        nullptr, "a", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - ht に nullptr を指定して cplat_hashtable_add() を呼び出す。
     int actual_ret_null_key = cplat_hashtable_add(
-        ht, nullptr, value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - key に NULL を渡す。
-    int actual_ret_null_value =
-        cplat_hashtable_add(ht, "a", nullptr, CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - value に NULL を渡す。
+        ht, nullptr, value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - key に nullptr を指定して cplat_hashtable_add() を呼び出す。
+    int actual_ret_null_value = cplat_hashtable_add(
+        ht, "a", nullptr,
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - value に nullptr を指定して cplat_hashtable_add() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_add() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_add() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_add() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_key); // [確認_異常系] - key に nullptr を渡した cplat_hashtable_add() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_value); // [確認_異常系] - value に NULL を渡した cplat_hashtable_add() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_value); // [確認_異常系] - value に nullptr を渡した cplat_hashtable_add() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
@@ -115,29 +118,37 @@ TEST_F(hashtableGuardTest, update_rejects_invalid_arguments_and_walks_chain)
 
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
-    int actual_ret_null_ht = cplat_hashtable_update(nullptr, "a", value.data());  // [手順] - ht に NULL を渡す。
-    int actual_ret_null_key = cplat_hashtable_update(ht, nullptr, value.data());  // [手順] - key に NULL を渡す。
-    int actual_ret_null_value = cplat_hashtable_update(ht, "a", nullptr);         // [手順] - value に NULL を渡す。
-    int actual_ret_too_long = cplat_hashtable_update(ht, too_long, value.data()); // [手順] - 長すぎるキーで更新する。
-    (void)cplat_hashtable_add(ht, "a", value.data(),
-                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - "a" を先に追加する。
-    (void)cplat_hashtable_add(ht, peer, value.data(),
-                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 同一バケットの別キーを後から追加する。
-    int actual_ret_walk =
-        cplat_hashtable_update(ht, "a", value.data());       // [手順] - チェーン先頭ではないキーを更新する。
-    int actual_ret_delete = cplat_hashtable_delete(ht, "a"); // [手順] - "a" を削除済みにする。
-    int actual_ret_deleted = cplat_hashtable_update(ht, "a", value.data()); // [手順] - 削除済みキーを更新する。
+    int actual_ret_null_ht = cplat_hashtable_update(
+        nullptr, "a", value.data()); // [手順] - ht に nullptr を指定して cplat_hashtable_update() を呼び出す。
+    int actual_ret_null_key = cplat_hashtable_update(
+        ht, nullptr, value.data()); // [手順] - key に nullptr を指定して cplat_hashtable_update() を呼び出す。
+    int actual_ret_null_value = cplat_hashtable_update(
+        ht, "a", nullptr); // [手順] - value に nullptr を指定して cplat_hashtable_update() を呼び出す。
+    int actual_ret_too_long = cplat_hashtable_update(
+        ht, too_long, value.data()); // [手順] - 長すぎるキーを指定して cplat_hashtable_update() を呼び出す。
+    (void)cplat_hashtable_add(
+        ht, "a", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - "a" を指定して cplat_hashtable_add() を呼び出す。
+    (void)cplat_hashtable_add(
+        ht, peer, value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 同一バケットの別キーを指定して cplat_hashtable_add() を呼び出す。
+    int actual_ret_walk = cplat_hashtable_update(
+        ht, "a", value.data()); // [手順] - チェーン先頭ではないキーを指定して cplat_hashtable_update() を呼び出す。
+    int actual_ret_delete =
+        cplat_hashtable_delete(ht, "a"); // [手順] - "a" を指定して cplat_hashtable_delete() を呼び出す。
+    int actual_ret_deleted = cplat_hashtable_update(
+        ht, "a", value.data()); // [手順] - 削除済みキーを指定して cplat_hashtable_update() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_update() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_update() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_update() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_key); // [確認_異常系] - key に nullptr を渡した cplat_hashtable_update() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_value); // [確認_異常系] - value に NULL を渡した cplat_hashtable_update() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_value); // [確認_異常系] - value に nullptr を渡した cplat_hashtable_update() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_RANGE,
         actual_ret_too_long); // [確認_異常系] - 長すぎるキーを渡した cplat_hashtable_update() の戻り値が CPLAT_ERR_OUT_OF_RANGE であること。
@@ -167,20 +178,24 @@ TEST_F(hashtableGuardTest, update_rec_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht = cplat_hashtable_update_rec(nullptr, 1, value.data()); // [手順] - ht に NULL を渡す。
-    int actual_ret_null_value = cplat_hashtable_update_rec(ht, 1, nullptr);        // [手順] - value に NULL を渡す。
-    int actual_ret_rec0 = cplat_hashtable_update_rec(ht, 0, value.data());      // [手順] - レコード番号 0 を渡す。
-    int actual_ret_rec_hi =
-        cplat_hashtable_update_rec(ht, 3, value.data()); // [手順] - capacity 超のレコード番号を渡す。
-    int actual_ret_empty = cplat_hashtable_update_rec(ht, 1, value.data()); // [手順] - 空きレコードを更新する。
+    int actual_ret_null_ht = cplat_hashtable_update_rec(
+        nullptr, 1, value.data()); // [手順] - ht に nullptr を指定して cplat_hashtable_update_rec() を呼び出す。
+    int actual_ret_null_value = cplat_hashtable_update_rec(
+        ht, 1, nullptr); // [手順] - value に nullptr を指定して cplat_hashtable_update_rec() を呼び出す。
+    int actual_ret_rec0 = cplat_hashtable_update_rec(
+        ht, 0, value.data()); // [手順] - レコード番号 0 を指定して cplat_hashtable_update_rec() を呼び出す。
+    int actual_ret_rec_hi = cplat_hashtable_update_rec(
+        ht, 3, value.data()); // [手順] - capacity 超のレコード番号を指定して cplat_hashtable_update_rec() を呼び出す。
+    int actual_ret_empty = cplat_hashtable_update_rec(
+        ht, 1, value.data()); // [手順] - 空きレコードを指定して cplat_hashtable_update_rec() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_update_rec() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_update_rec() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_value); // [確認_異常系] - value に NULL を渡した cplat_hashtable_update_rec() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_value); // [確認_異常系] - value に nullptr を渡した cplat_hashtable_update_rec() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_rec0); // [確認_異常系] - レコード番号 0 を渡した cplat_hashtable_update_rec() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -211,21 +226,25 @@ TEST_F(hashtableGuardTest, find_value_ref_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht = cplat_hashtable_find_value_ref(nullptr, "a", &found); // [手順] - ht に NULL を渡す。
-    int actual_ret_null_key = cplat_hashtable_find_value_ref(ht, nullptr, &found); // [手順] - key に NULL を渡す。
-    int actual_ret_null_out = cplat_hashtable_find_value_ref(ht, "a", nullptr); // [手順] - value_out に NULL を渡す。
-    int actual_ret_too_long = cplat_hashtable_find_value_ref(ht, too_long, &found); // [手順] - 長すぎるキーで検索する。
+    int actual_ret_null_ht = cplat_hashtable_find_value_ref(
+        nullptr, "a", &found); // [手順] - ht に nullptr を指定して cplat_hashtable_find_value_ref() を呼び出す。
+    int actual_ret_null_key = cplat_hashtable_find_value_ref(
+        ht, nullptr, &found); // [手順] - key に nullptr を指定して cplat_hashtable_find_value_ref() を呼び出す。
+    int actual_ret_null_out = cplat_hashtable_find_value_ref(
+        ht, "a", nullptr); // [手順] - value_out に nullptr を指定して cplat_hashtable_find_value_ref() を呼び出す。
+    int actual_ret_too_long = cplat_hashtable_find_value_ref(
+        ht, too_long, &found); // [手順] - 長すぎるキーを指定して cplat_hashtable_find_value_ref() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_find_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_find_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_find_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_key); // [確認_異常系] - key に nullptr を渡した cplat_hashtable_find_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_out); // [確認_異常系] - value_out に NULL を渡した cplat_hashtable_find_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_out); // [確認_異常系] - value_out に nullptr を渡した cplat_hashtable_find_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_RANGE,
         actual_ret_too_long); // [確認_異常系] - 長すぎるキーを渡した cplat_hashtable_find_value_ref() の戻り値が CPLAT_ERR_OUT_OF_RANGE であること。
@@ -253,19 +272,23 @@ TEST_F(hashtableGuardTest, find_value_copy_rejects_invalid_arguments_and_succeed
     // Pre-Assert
 
     // Act
-    int actual_ret_null_size = cplat_hashtable_find_value_copy(ht, "a", copied.data(), copied.size(),
-                                                               nullptr); // [手順] - required_size_out に NULL を渡す。
-    int actual_ret_bad_pair =
-        cplat_hashtable_find_value_copy(ht, "a", nullptr, 1, &required_size); // [手順] - 不正な照会指定を渡す。
-    int actual_ret_not_found = cplat_hashtable_find_value_copy(ht, "missing", copied.data(), copied.size(),
-                                                               &required_size); // [手順] - 存在しないキーで検索する。
-    int actual_ret_ok = cplat_hashtable_find_value_copy(ht, "a", copied.data(), copied.size(),
-                                                        &required_size); // [手順] - 妥当な引数で検索する。
+    int actual_ret_null_size = cplat_hashtable_find_value_copy(
+        ht, "a", copied.data(), copied.size(),
+        nullptr); // [手順] - required_size_out に nullptr を指定して cplat_hashtable_find_value_copy() を呼び出す。
+    int actual_ret_bad_pair = cplat_hashtable_find_value_copy(
+        ht, "a", nullptr, 1,
+        &required_size); // [手順] - 複製先に nullptr、サイズに 1 を指定した不正な組み合わせで cplat_hashtable_find_value_copy() を呼び出す。
+    int actual_ret_not_found = cplat_hashtable_find_value_copy(
+        ht, "missing", copied.data(), copied.size(),
+        &required_size); // [手順] - 存在しないキーを指定して cplat_hashtable_find_value_copy() を呼び出す。
+    int actual_ret_ok = cplat_hashtable_find_value_copy(
+        ht, "a", copied.data(), copied.size(),
+        &required_size); // [手順] - 妥当な引数を指定して cplat_hashtable_find_value_copy() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_size); // [確認_異常系] - required_size_out に NULL を渡した cplat_hashtable_find_value_copy() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_size); // [確認_異常系] - required_size_out に nullptr を渡した cplat_hashtable_find_value_copy() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_bad_pair); // [確認_異常系] - 不正な照会指定を渡した cplat_hashtable_find_value_copy() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -305,27 +328,34 @@ TEST_F(hashtableGuardTest, find_recno_rejects_invalid_arguments_and_walks_chain)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht = cplat_hashtable_find_recno(nullptr, "a", &rec);  // [手順] - ht に NULL を渡す。
-    int actual_ret_null_key = cplat_hashtable_find_recno(ht, nullptr, &rec);  // [手順] - key に NULL を渡す。
-    int actual_ret_null_out = cplat_hashtable_find_recno(ht, "a", nullptr);   // [手順] - record_out に NULL を渡す。
-    int actual_ret_too_long = cplat_hashtable_find_recno(ht, too_long, &rec); // [手順] - 長すぎるキーで検索する。
-    int actual_ret_absent = cplat_hashtable_find_recno(ht, "a", &rec);        // [手順] - 何も無いテーブルで検索する。
+    int actual_ret_null_ht = cplat_hashtable_find_recno(
+        nullptr, "a", &rec); // [手順] - ht に nullptr を指定して cplat_hashtable_find_recno() を呼び出す。
+    int actual_ret_null_key = cplat_hashtable_find_recno(
+        ht, nullptr, &rec); // [手順] - key に nullptr を指定して cplat_hashtable_find_recno() を呼び出す。
+    int actual_ret_null_out = cplat_hashtable_find_recno(
+        ht, "a", nullptr); // [手順] - record_out に nullptr を指定して cplat_hashtable_find_recno() を呼び出す。
+    int actual_ret_too_long = cplat_hashtable_find_recno(
+        ht, too_long, &rec); // [手順] - 長すぎるキーを指定して cplat_hashtable_find_recno() を呼び出す。
+    int actual_ret_absent = cplat_hashtable_find_recno(
+        ht, "a", &rec); // [手順] - 何も無いテーブルに対して cplat_hashtable_find_recno() を呼び出す。
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, peer, value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    int actual_ret_walk = cplat_hashtable_find_recno(ht, "a", &rec); // [手順] - チェーン先頭ではないキーを検索する。
+    int actual_ret_walk = cplat_hashtable_find_recno(
+        ht, "a", &rec); // [手順] - チェーン先頭ではないキーを指定して cplat_hashtable_find_recno() を呼び出す。
     (void)cplat_hashtable_delete(ht, "a");
-    int actual_ret_deleted = cplat_hashtable_find_recno(ht, "a", &rec); // [手順] - 削除済みキーを検索する。
+    int actual_ret_deleted = cplat_hashtable_find_recno(
+        ht, "a", &rec); // [手順] - 削除済みキーを指定して cplat_hashtable_find_recno() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_find_recno() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_find_recno() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_find_recno() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_key); // [確認_異常系] - key に nullptr を渡した cplat_hashtable_find_recno() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_out); // [確認_異常系] - record_out に NULL を渡した cplat_hashtable_find_recno() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_out); // [確認_異常系] - record_out に nullptr を渡した cplat_hashtable_find_recno() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_RANGE,
         actual_ret_too_long); // [確認_異常系] - 長すぎるキーを渡した cplat_hashtable_find_recno() の戻り値が CPLAT_ERR_OUT_OF_RANGE であること。
@@ -357,19 +387,23 @@ TEST_F(hashtableGuardTest, get_key_ref_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht = cplat_hashtable_get_key_ref(nullptr, 1, &key_out, nullptr); // [手順] - ht に NULL を渡す。
-    int actual_ret_null_out = cplat_hashtable_get_key_ref(ht, 1, nullptr, nullptr); // [手順] - key_out に NULL を渡す。
-    int actual_ret_rec_hi =
-        cplat_hashtable_get_key_ref(ht, 3, &key_out, nullptr); // [手順] - capacity 超のレコード番号を渡す。
-    int actual_ret_empty = cplat_hashtable_get_key_ref(ht, 1, &key_out, nullptr); // [手順] - 空きレコードを読む。
+    int actual_ret_null_ht = cplat_hashtable_get_key_ref(
+        nullptr, 1, &key_out, nullptr); // [手順] - ht に nullptr を指定して cplat_hashtable_get_key_ref() を呼び出す。
+    int actual_ret_null_out = cplat_hashtable_get_key_ref(
+        ht, 1, nullptr, nullptr); // [手順] - key_out に nullptr を指定して cplat_hashtable_get_key_ref() を呼び出す。
+    int actual_ret_rec_hi = cplat_hashtable_get_key_ref(
+        ht, 3, &key_out,
+        nullptr); // [手順] - capacity 超のレコード番号を指定して cplat_hashtable_get_key_ref() を呼び出す。
+    int actual_ret_empty = cplat_hashtable_get_key_ref(
+        ht, 1, &key_out, nullptr); // [手順] - 空きレコードを指定して cplat_hashtable_get_key_ref() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_key_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_get_key_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_out); // [確認_異常系] - key_out に NULL を渡した cplat_hashtable_get_key_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_out); // [確認_異常系] - key_out に nullptr を渡した cplat_hashtable_get_key_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_rec_hi); // [確認_異常系] - capacity 超のレコード番号を渡した cplat_hashtable_get_key_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -396,16 +430,17 @@ TEST_F(hashtableGuardTest, get_key_copy_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_size =
-        cplat_hashtable_get_key_copy(ht, 1, key.data(), key.size(), nullptr); // [手順] - 必要量出力に NULL を渡す。
-    int actual_ret_propagated =
-        cplat_hashtable_get_key_copy(ht, 0, key.data(), key.size(),
-                                     &required_size); // [手順] - 不正な record で内部エラーを伝播させる。
+    int actual_ret_null_size = cplat_hashtable_get_key_copy(
+        ht, 1, key.data(), key.size(),
+        nullptr); // [手順] - 必要量の出力先に nullptr を指定して cplat_hashtable_get_key_copy() を呼び出す。
+    int actual_ret_propagated = cplat_hashtable_get_key_copy(
+        ht, 0, key.data(), key.size(),
+        &required_size); // [手順] - 不正な record 0 を指定して cplat_hashtable_get_key_copy() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_size); // [確認_異常系] - required_size_out に NULL を渡した cplat_hashtable_get_key_copy() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_size); // [確認_異常系] - required_size_out に nullptr を渡した cplat_hashtable_get_key_copy() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_propagated); // [確認_異常系] - 不正な record を渡した cplat_hashtable_get_key_copy() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(cplat_hashtable_get_key_ref() の失敗が伝播したことの確認)
@@ -428,20 +463,24 @@ TEST_F(hashtableGuardTest, get_value_ref_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht = cplat_hashtable_get_value_ref(nullptr, 1, &value_out); // [手順] - ht に NULL を渡す。
-    int actual_ret_null_out = cplat_hashtable_get_value_ref(ht, 1, nullptr);     // [手順] - value_out に NULL を渡す。
-    int actual_ret_rec0 = cplat_hashtable_get_value_ref(ht, 0, &value_out);      // [手順] - レコード番号 0 を渡す。
-    int actual_ret_rec_hi =
-        cplat_hashtable_get_value_ref(ht, 3, &value_out); // [手順] - capacity 超のレコード番号を渡す。
-    int actual_ret_empty = cplat_hashtable_get_value_ref(ht, 1, &value_out); // [手順] - 空きレコードを読む。
+    int actual_ret_null_ht = cplat_hashtable_get_value_ref(
+        nullptr, 1, &value_out); // [手順] - ht に nullptr を指定して cplat_hashtable_get_value_ref() を呼び出す。
+    int actual_ret_null_out = cplat_hashtable_get_value_ref(
+        ht, 1, nullptr); // [手順] - value_out に nullptr を指定して cplat_hashtable_get_value_ref() を呼び出す。
+    int actual_ret_rec0 = cplat_hashtable_get_value_ref(
+        ht, 0, &value_out); // [手順] - レコード番号 0 を指定して cplat_hashtable_get_value_ref() を呼び出す。
+    int actual_ret_rec_hi = cplat_hashtable_get_value_ref(
+        ht, 3, &value_out); // [手順] - capacity 超のレコード番号を指定して cplat_hashtable_get_value_ref() を呼び出す。
+    int actual_ret_empty = cplat_hashtable_get_value_ref(
+        ht, 1, &value_out); // [手順] - 空きレコードを指定して cplat_hashtable_get_value_ref() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_get_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_out); // [確認_異常系] - value_out に NULL を渡した cplat_hashtable_get_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_out); // [確認_異常系] - value_out に nullptr を渡した cplat_hashtable_get_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_rec0); // [確認_異常系] - レコード番号 0 を渡した cplat_hashtable_get_value_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -471,16 +510,17 @@ TEST_F(hashtableGuardTest, get_value_copy_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_size = cplat_hashtable_get_value_copy(ht, 1, value.data(), value.size(),
-                                                              nullptr); // [手順] - required_size_out に NULL を渡す。
-    int actual_ret_propagated =
-        cplat_hashtable_get_value_copy(ht, 0, value.data(), value.size(),
-                                       &required_size); // [手順] - 不正な record で内部エラーを伝播させる。
+    int actual_ret_null_size = cplat_hashtable_get_value_copy(
+        ht, 1, value.data(), value.size(),
+        nullptr); // [手順] - required_size_out に nullptr を指定して cplat_hashtable_get_value_copy() を呼び出す。
+    int actual_ret_propagated = cplat_hashtable_get_value_copy(
+        ht, 0, value.data(), value.size(),
+        &required_size); // [手順] - 不正な record 0 を指定して cplat_hashtable_get_value_copy() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_size); // [確認_異常系] - required_size_out に NULL を渡した cplat_hashtable_get_value_copy() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_size); // [確認_異常系] - required_size_out に nullptr を渡した cplat_hashtable_get_value_copy() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_propagated); // [確認_異常系] - 不正な record を渡した cplat_hashtable_get_value_copy() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(cplat_hashtable_get_value_ref() の失敗が伝播したことの確認)
@@ -503,18 +543,22 @@ TEST_F(hashtableGuardTest, get_status_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht = cplat_hashtable_get_status(nullptr, 1, &status); // [手順] - ht に NULL を渡す。
-    int actual_ret_null_out = cplat_hashtable_get_status(ht, 1, nullptr);     // [手順] - status_out に NULL を渡す。
-    int actual_ret_rec0 = cplat_hashtable_get_status(ht, 0, &status);      // [手順] - レコード番号 0 を渡す。
-    int actual_ret_rec_hi = cplat_hashtable_get_status(ht, 3, &status);    // [手順] - capacity 超のレコード番号を渡す。
+    int actual_ret_null_ht = cplat_hashtable_get_status(
+        nullptr, 1, &status); // [手順] - ht に nullptr を指定して cplat_hashtable_get_status() を呼び出す。
+    int actual_ret_null_out = cplat_hashtable_get_status(
+        ht, 1, nullptr); // [手順] - status_out に nullptr を指定して cplat_hashtable_get_status() を呼び出す。
+    int actual_ret_rec0 = cplat_hashtable_get_status(
+        ht, 0, &status); // [手順] - レコード番号 0 を指定して cplat_hashtable_get_status() を呼び出す。
+    int actual_ret_rec_hi = cplat_hashtable_get_status(
+        ht, 3, &status); // [手順] - capacity 超のレコード番号を指定して cplat_hashtable_get_status() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_status() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_get_status() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_out); // [確認_異常系] - status_out に NULL を渡した cplat_hashtable_get_status() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_out); // [確認_異常系] - status_out に nullptr を渡した cplat_hashtable_get_status() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_rec0); // [確認_異常系] - レコード番号 0 を渡した cplat_hashtable_get_status() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -535,12 +579,14 @@ TEST_F(hashtableGuardTest, count_status_rejects_null_handle)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_count_status(nullptr, &in_use, nullptr, nullptr); // [手順] - ht に NULL を渡す。
+    int actual_ret = cplat_hashtable_count_status(
+        nullptr, &in_use, nullptr,
+        nullptr); // [手順] - ht に nullptr を指定して cplat_hashtable_count_status() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_count_status() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_count_status() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // cplat_hashtable_count, deleted_count, empty_count の引数不正時の拒否確認
@@ -557,36 +603,38 @@ TEST_F(hashtableGuardTest, count_wrappers_reject_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_count_null_ht = cplat_hashtable_count(nullptr, &count); // [手順] - count: ht に NULL を渡す。
-    int actual_ret_count_null_out = cplat_hashtable_count(ht, nullptr);    // [手順] - count: count に NULL を渡す。
-    int actual_ret_deleted_null_ht =
-        cplat_hashtable_deleted_count(nullptr, &count); // [手順] - deleted_count: ht に NULL を渡す。
-    int actual_ret_deleted_null_out =
-        cplat_hashtable_deleted_count(ht, nullptr); // [手順] - deleted_count: count に NULL を渡す。
-    int actual_ret_empty_null_ht =
-        cplat_hashtable_empty_count(nullptr, &count); // [手順] - empty_count: ht に NULL を渡す。
-    int actual_ret_empty_null_out =
-        cplat_hashtable_empty_count(ht, nullptr); // [手順] - empty_count: count に NULL を渡す。
+    int actual_ret_count_null_ht = cplat_hashtable_count(
+        nullptr, &count); // [手順] - ht に nullptr を指定して cplat_hashtable_count() を呼び出す。
+    int actual_ret_count_null_out =
+        cplat_hashtable_count(ht, nullptr); // [手順] - count に nullptr を指定して cplat_hashtable_count() を呼び出す。
+    int actual_ret_deleted_null_ht = cplat_hashtable_deleted_count(
+        nullptr, &count); // [手順] - ht に nullptr を指定して cplat_hashtable_deleted_count() を呼び出す。
+    int actual_ret_deleted_null_out = cplat_hashtable_deleted_count(
+        ht, nullptr); // [手順] - count に nullptr を指定して cplat_hashtable_deleted_count() を呼び出す。
+    int actual_ret_empty_null_ht = cplat_hashtable_empty_count(
+        nullptr, &count); // [手順] - ht に nullptr を指定して cplat_hashtable_empty_count() を呼び出す。
+    int actual_ret_empty_null_out = cplat_hashtable_empty_count(
+        ht, nullptr); // [手順] - count に nullptr を指定して cplat_hashtable_empty_count() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_count_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_count_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_count_null_out); // [確認_異常系] - 出力先に NULL を渡した cplat_hashtable_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_count_null_out); // [確認_異常系] - 出力先に nullptr を渡した cplat_hashtable_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_deleted_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_deleted_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_deleted_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_deleted_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_deleted_null_out); // [確認_異常系] - 出力先に NULL を渡した cplat_hashtable_deleted_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_deleted_null_out); // [確認_異常系] - 出力先に nullptr を渡した cplat_hashtable_deleted_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_empty_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_empty_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_empty_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_empty_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_empty_null_out); // [確認_異常系] - 出力先に NULL を渡した cplat_hashtable_empty_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_empty_null_out); // [確認_異常系] - 出力先に nullptr を渡した cplat_hashtable_empty_count() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
@@ -608,20 +656,25 @@ TEST_F(hashtableGuardTest, delete_rejects_invalid_arguments_and_already_deleted)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht = cplat_hashtable_delete(nullptr, "a");  // [手順] - ht に NULL を渡す。
-    int actual_ret_null_key = cplat_hashtable_delete(ht, nullptr);  // [手順] - key に NULL を渡す。
-    int actual_ret_too_long = cplat_hashtable_delete(ht, too_long); // [手順] - 長すぎるキーで削除する。
+    int actual_ret_null_ht =
+        cplat_hashtable_delete(nullptr, "a"); // [手順] - ht に nullptr を指定して cplat_hashtable_delete() を呼び出す。
+    int actual_ret_null_key =
+        cplat_hashtable_delete(ht, nullptr); // [手順] - key に nullptr を指定して cplat_hashtable_delete() を呼び出す。
+    int actual_ret_too_long =
+        cplat_hashtable_delete(ht, too_long); // [手順] - 長すぎるキーを指定して cplat_hashtable_delete() を呼び出す。
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    int actual_ret_first = cplat_hashtable_delete(ht, "a");  // [手順] - 1 回目の削除。
-    int actual_ret_second = cplat_hashtable_delete(ht, "a"); // [手順] - 削除済みキーへの 2 回目の削除。
+    int actual_ret_first =
+        cplat_hashtable_delete(ht, "a"); // [手順] - "a" を指定して cplat_hashtable_delete() を呼び出す。
+    int actual_ret_second =
+        cplat_hashtable_delete(ht, "a"); // [手順] - 削除済みの "a" を指定して cplat_hashtable_delete() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_delete() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_delete() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_delete() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_key); // [確認_異常系] - key に nullptr を渡した cplat_hashtable_delete() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_RANGE,
         actual_ret_too_long); // [確認_異常系] - 長すぎるキーを渡した cplat_hashtable_delete() の戻り値が CPLAT_ERR_OUT_OF_RANGE であること。
@@ -648,15 +701,19 @@ TEST_F(hashtableGuardTest, delete_rec_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht = cplat_hashtable_delete_rec(nullptr, 1); // [手順] - ht に NULL を渡す。
-    int actual_ret_rec0 = cplat_hashtable_delete_rec(ht, 0);      // [手順] - レコード番号 0 を渡す。
-    int actual_ret_rec_hi = cplat_hashtable_delete_rec(ht, 3);    // [手順] - capacity 超のレコード番号を渡す。
-    int actual_ret_empty = cplat_hashtable_delete_rec(ht, 1);     // [手順] - 空きレコードを削除する。
+    int actual_ret_null_ht = cplat_hashtable_delete_rec(
+        nullptr, 1); // [手順] - ht に nullptr を指定して cplat_hashtable_delete_rec() を呼び出す。
+    int actual_ret_rec0 = cplat_hashtable_delete_rec(
+        ht, 0); // [手順] - レコード番号 0 を指定して cplat_hashtable_delete_rec() を呼び出す。
+    int actual_ret_rec_hi = cplat_hashtable_delete_rec(
+        ht, 3); // [手順] - capacity 超のレコード番号を指定して cplat_hashtable_delete_rec() を呼び出す。
+    int actual_ret_empty =
+        cplat_hashtable_delete_rec(ht, 1); // [手順] - 空きレコードを指定して cplat_hashtable_delete_rec() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_delete_rec() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_delete_rec() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_rec0); // [確認_異常系] - レコード番号 0 を渡した cplat_hashtable_delete_rec() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -679,20 +736,21 @@ TEST_F(hashtableGuardTest, lifecycle_wrappers_reject_null_handle)
     // Pre-Assert
 
     // Act
-    int actual_ret_push =
-        cplat_hashtable_push_deleted(nullptr); // [手順] - cplat_hashtable_push_deleted() に NULL を渡す。
-    int actual_ret_purge =
-        cplat_hashtable_purge_deleted(nullptr);            // [手順] - cplat_hashtable_purge_deleted() に NULL を渡す。
-    int actual_ret_clear = cplat_hashtable_clear(nullptr); // [手順] - cplat_hashtable_clear() に NULL を渡す。
+    int actual_ret_push = cplat_hashtable_push_deleted(
+        nullptr); // [手順] - nullptr を指定して cplat_hashtable_push_deleted() を呼び出す。
+    int actual_ret_purge = cplat_hashtable_purge_deleted(
+        nullptr); // [手順] - nullptr を指定して cplat_hashtable_purge_deleted() を呼び出す。
+    int actual_ret_clear =
+        cplat_hashtable_clear(nullptr); // [手順] - nullptr を指定して cplat_hashtable_clear() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_push); // [確認_異常系] - NULL を渡した cplat_hashtable_push_deleted() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_push); // [確認_異常系] - nullptr を渡した cplat_hashtable_push_deleted() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_purge); // [確認_異常系] - NULL を渡した cplat_hashtable_purge_deleted() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_purge); // [確認_異常系] - nullptr を渡した cplat_hashtable_purge_deleted() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_clear); // [確認_異常系] - NULL を渡した cplat_hashtable_clear() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_clear); // [確認_異常系] - nullptr を渡した cplat_hashtable_clear() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }

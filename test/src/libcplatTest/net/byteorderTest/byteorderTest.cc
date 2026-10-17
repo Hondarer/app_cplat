@@ -28,7 +28,7 @@ TEST(byteorderTest, hton16_places_most_significant_byte_first)
     // Pre-Assert
 
     // Act
-    uint16_t converted = cplat_hton16((uint16_t)0x1234U); // [手順] - 0x1234 をネットワーク バイト オーダーへ変換する。
+    uint16_t converted = cplat_hton16((uint16_t)0x1234U); // [手順] - 0x1234 を指定して cplat_hton16() を呼び出す。
 
     // Assert
     to_bytes(converted, bytes);
@@ -54,7 +54,8 @@ TEST(byteorderTest, ntoh16_reads_most_significant_byte_first)
     // Pre-Assert
 
     // Act
-    uint16_t converted = cplat_ntoh16(network); // [手順] - バイト列をホスト バイト オーダーへ変換する。
+    uint16_t converted =
+        cplat_ntoh16(network); // [手順] - ビッグ エンディアンのバイト列を指定して cplat_ntoh16() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -71,7 +72,7 @@ TEST(byteorderTest, hton32_places_most_significant_byte_first)
     // Pre-Assert
 
     // Act
-    uint32_t converted = cplat_hton32(0x12345678U); // [手順] - 0x12345678 をネットワーク バイト オーダーへ変換する。
+    uint32_t converted = cplat_hton32(0x12345678U); // [手順] - 0x12345678 を指定して cplat_hton32() を呼び出す。
 
     // Assert
     to_bytes(converted, bytes);
@@ -101,7 +102,8 @@ TEST(byteorderTest, ntoh32_reads_most_significant_byte_first)
     // Pre-Assert
 
     // Act
-    uint32_t converted = cplat_ntoh32(network); // [手順] - バイト列をホスト バイト オーダーへ変換する。
+    uint32_t converted =
+        cplat_ntoh32(network); // [手順] - ビッグ エンディアンのバイト列を指定して cplat_ntoh32() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -122,7 +124,7 @@ TEST(byteorderTest, hton16_and_ntoh16_round_trip)
     for (size_t i = 0U; i < 7U; ++i)
     {
         actual_ret[i] = cplat_ntoh16(cplat_hton16(
-            values[i])); // [手順] - 各値をネットワーク バイト オーダーへ変換してからホスト バイト オーダーへ戻す。
+            values[i])); // [手順] - 各値を cplat_hton16() で変換した結果を指定して cplat_ntoh16() を呼び出す。
     }
 
     // Assert
@@ -147,7 +149,7 @@ TEST(byteorderTest, hton32_and_ntoh32_round_trip)
     for (size_t i = 0U; i < 8U; ++i)
     {
         actual_ret[i] = cplat_ntoh32(cplat_hton32(
-            values[i])); // [手順] - 各値をネットワーク バイト オーダーへ変換してからホスト バイト オーダーへ戻す。
+            values[i])); // [手順] - 各値を cplat_hton32() で変換した結果を指定して cplat_ntoh32() を呼び出す。
     }
 
     // Assert
@@ -168,8 +170,10 @@ TEST(byteorderTest, hton16_swaps_boundary_values)
     // Pre-Assert
 
     // Act
-    uint16_t converted_low = cplat_hton16((uint16_t)0x00FFU);  // [手順] - 下位バイトのみの値を変換する。
-    uint16_t converted_high = cplat_hton16((uint16_t)0xFF00U); // [手順] - 上位バイトのみの値を変換する。
+    uint16_t converted_low =
+        cplat_hton16((uint16_t)0x00FFU); // [手順] - 下位バイトのみの値を指定して cplat_hton16() を呼び出す。
+    uint16_t converted_high =
+        cplat_hton16((uint16_t)0xFF00U); // [手順] - 上位バイトのみの値を指定して cplat_hton16() を呼び出す。
 
     // Assert
     to_bytes(converted_low, low_only);
@@ -202,7 +206,7 @@ TEST(byteorderTest, hton64_places_most_significant_byte_first)
 
     // Act
     uint64_t converted = cplat_hton64(
-        UINT64_C(0x123456789ABCDEF0)); // [手順] - 0x123456789ABCDEF0 をネットワーク バイト オーダーへ変換する。
+        UINT64_C(0x123456789ABCDEF0)); // [手順] - 0x123456789ABCDEF0 を指定して cplat_hton64() を呼び出す。
 
     // Assert
     to_bytes(converted, bytes);
@@ -244,7 +248,8 @@ TEST(byteorderTest, ntoh64_reads_most_significant_byte_first)
     // Pre-Assert
 
     // Act
-    uint64_t converted = cplat_ntoh64(network); // [手順] - バイト列をホスト バイト オーダーへ変換する。
+    uint64_t converted =
+        cplat_ntoh64(network); // [手順] - ビッグ エンディアンのバイト列を指定して cplat_ntoh64() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -267,7 +272,7 @@ TEST(byteorderTest, hton64_and_ntoh64_round_trip)
     for (size_t i = 0U; i < 8U; ++i)
     {
         actual_ret[i] = cplat_ntoh64(cplat_hton64(
-            values[i])); // [手順] - 各値をネットワーク バイト オーダーへ変換してからホスト バイト オーダーへ戻す。
+            values[i])); // [手順] - 各値を cplat_hton64() で変換した結果を指定して cplat_ntoh64() を呼び出す。
     }
 
     // Assert

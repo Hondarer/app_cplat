@@ -11,7 +11,7 @@ class allocTest : public Test
 TEST_F(allocTest, malloc_allocates_requested_size)
 {
     // Arrange
-    uint8_t *buf = nullptr; // [状態] - 確保結果の格納先を NULL で初期化する。
+    uint8_t *buf = nullptr; // [状態] - 確保結果の格納先を nullptr で初期化する。
 
     // Pre-Assert
 
@@ -39,7 +39,7 @@ TEST_F(allocTest, malloc_allocates_requested_size)
 TEST_F(allocTest, malloc_rejects_zero_size)
 {
     // Arrange
-    void *ptr = nullptr; // [状態] - 確保結果の格納先を NULL で初期化する。
+    void *ptr = nullptr; // [状態] - 確保結果の格納先を nullptr で初期化する。
 
     // Pre-Assert
 
@@ -54,12 +54,13 @@ TEST_F(allocTest, malloc_rejects_zero_size)
 TEST_F(allocTest, malloc_returns_null_on_failure)
 {
     // Arrange
-    void *ptr = nullptr; // [状態] - 確保結果の格納先を NULL で初期化する。
+    void *ptr = nullptr; // [状態] - 確保結果の格納先を nullptr で初期化する。
 
     // Pre-Assert
 
     // Act
-    ptr = cplat_malloc(SIZE_MAX / 2U); // [手順] - 確保できない大きさ (SIZE_MAX / 2) を指定して呼び出す。
+    ptr = cplat_malloc(SIZE_MAX /
+                       2U); // [手順] - 確保できない大きさ (SIZE_MAX / 2) を指定して cplat_malloc() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr, ptr); // [確認_異常系] - cplat_malloc() の戻り値が nullptr であること。
@@ -69,7 +70,7 @@ TEST_F(allocTest, malloc_returns_null_on_failure)
 TEST_F(allocTest, malloc_zerofill_clears_whole_area)
 {
     // Arrange
-    uint8_t *buf = nullptr; // [状態] - 確保結果の格納先を NULL で初期化する。
+    uint8_t *buf = nullptr; // [状態] - 確保結果の格納先を nullptr で初期化する。
     int nonzero_count = 0;
     size_t i;
 
@@ -101,7 +102,7 @@ TEST_F(allocTest, malloc_zerofill_clears_whole_area)
 TEST_F(allocTest, malloc_zerofill_rejects_zero_size)
 {
     // Arrange
-    void *ptr = nullptr; // [状態] - 確保結果の格納先を NULL で初期化する。
+    void *ptr = nullptr; // [状態] - 確保結果の格納先を nullptr で初期化する。
 
     // Pre-Assert
 
@@ -116,14 +117,14 @@ TEST_F(allocTest, malloc_zerofill_rejects_zero_size)
 TEST_F(allocTest, calloc_allocates_and_clears)
 {
     // Arrange
-    int32_t *values = nullptr; // [状態] - 確保結果の格納先を NULL で初期化する。
+    int32_t *values = nullptr; // [状態] - 確保結果の格納先を nullptr で初期化する。
     int nonzero_count = 0;
     size_t i;
 
     // Pre-Assert
 
     // Act
-    // [手順] - 要素数 8、要素サイズ 4 で cplat_calloc() を呼び出す。
+    // [手順] - 要素数 8、要素サイズ 4 を指定して cplat_calloc() を呼び出す。
     values = (int32_t *)cplat_calloc(8U, sizeof(*values));
 
     // Assert
@@ -147,12 +148,12 @@ TEST_F(allocTest, calloc_allocates_and_clears)
 TEST_F(allocTest, calloc_rejects_zero_count)
 {
     // Arrange
-    void *ptr = nullptr; // [状態] - 確保結果の格納先を NULL で初期化する。
+    void *ptr = nullptr; // [状態] - 確保結果の格納先を nullptr で初期化する。
 
     // Pre-Assert
 
     // Act
-    ptr = cplat_calloc(0U, 4U); // [手順] - 要素数 0、要素サイズ 4 で cplat_calloc() を呼び出す。
+    ptr = cplat_calloc(0U, 4U); // [手順] - 要素数 0、要素サイズ 4 を指定して cplat_calloc() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr,
@@ -163,12 +164,12 @@ TEST_F(allocTest, calloc_rejects_zero_count)
 TEST_F(allocTest, calloc_rejects_zero_size)
 {
     // Arrange
-    void *ptr = nullptr; // [状態] - 確保結果の格納先を NULL で初期化する。
+    void *ptr = nullptr; // [状態] - 確保結果の格納先を nullptr で初期化する。
 
     // Pre-Assert
 
     // Act
-    ptr = cplat_calloc(4U, 0U); // [手順] - 要素数 4、要素サイズ 0 で cplat_calloc() を呼び出す。
+    ptr = cplat_calloc(4U, 0U); // [手順] - 要素数 4、要素サイズ 0 を指定して cplat_calloc() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr,
@@ -179,13 +180,13 @@ TEST_F(allocTest, calloc_rejects_zero_size)
 TEST_F(allocTest, calloc_rejects_size_overflow)
 {
     // Arrange
-    void *ptr = nullptr;                      // [状態] - 確保結果の格納先を NULL で初期化する。
+    void *ptr = nullptr;                      // [状態] - 確保結果の格納先を nullptr で初期化する。
     const size_t huge = (SIZE_MAX / 8U) + 1U; // [状態] - 8 倍すると size_t を回り込む要素数を用意する。
 
     // Pre-Assert
 
     // Act
-    ptr = cplat_calloc(huge, 8U); // [手順] - 乗算が回り込む要素数と要素サイズ 8 で cplat_calloc() を呼び出す。
+    ptr = cplat_calloc(huge, 8U); // [手順] - 乗算が回り込む要素数と要素サイズ 8 を指定して cplat_calloc() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr,
@@ -196,8 +197,8 @@ TEST_F(allocTest, calloc_rejects_size_overflow)
 TEST_F(allocTest, realloc_preserves_existing_content)
 {
     // Arrange
-    int32_t *values = nullptr;     // [状態] - 確保結果の格納先を NULL で初期化する。
-    int32_t *new_values = nullptr; // [状態] - 再確保結果の格納先を NULL で初期化する。
+    int32_t *values = nullptr;     // [状態] - 確保結果の格納先を nullptr で初期化する。
+    int32_t *new_values = nullptr; // [状態] - 再確保結果の格納先を nullptr で初期化する。
 
     values = (int32_t *)cplat_calloc(4U, sizeof(*values)); // [状態] - 4 要素の領域を確保する。
     ASSERT_NE(nullptr, values); // [状態確認] - cplat_calloc() の戻り値が nullptr 以外であること。
@@ -210,7 +211,8 @@ TEST_F(allocTest, realloc_preserves_existing_content)
     // Pre-Assert
 
     // Act
-    new_values = (int32_t *)cplat_realloc(values, 16U, sizeof(*new_values)); // [手順] - 要素数 16 へ伸長する。
+    new_values = (int32_t *)cplat_realloc(
+        values, 16U, sizeof(*new_values)); // [手順] - 要素数 16 への伸長を指定して cplat_realloc() を呼び出す。
 
     // Assert
     ASSERT_NE(nullptr,
@@ -226,18 +228,18 @@ TEST_F(allocTest, realloc_preserves_existing_content)
 TEST_F(allocTest, realloc_allocates_when_ptr_is_null)
 {
     // Arrange
-    int32_t *values = nullptr; // [状態] - 確保結果の格納先を NULL で初期化する。
+    int32_t *values = nullptr; // [状態] - 確保結果の格納先を nullptr で初期化する。
 
     // Pre-Assert
 
     // Act
-    // [手順] - ptr に NULL を渡して cplat_realloc() を呼び出す。
+    // [手順] - ptr に nullptr を指定して cplat_realloc() を呼び出す。
     values = (int32_t *)cplat_realloc(nullptr, 4U, sizeof(*values));
 
     // Assert
     // ptr に NULL を渡した cplat_realloc の戻り値が NULL でないこと。
     ASSERT_NE(nullptr, values);
-    // [確認_異常系] - ptr に NULL を渡した cplat_realloc() の戻り値が nullptr 以外であること。
+    // [確認_異常系] - ptr に nullptr を渡した cplat_realloc() の戻り値が nullptr 以外であること。
 
     // Cleanup
     cplat_free(values);
@@ -247,8 +249,8 @@ TEST_F(allocTest, realloc_allocates_when_ptr_is_null)
 TEST_F(allocTest, realloc_rejects_zero_count_without_free)
 {
     // Arrange
-    int32_t *values = nullptr; // [状態] - 確保結果の格納先を NULL で初期化する。
-    void *ptr = nullptr;       // [状態] - 再確保結果の格納先を NULL で初期化する。
+    int32_t *values = nullptr; // [状態] - 確保結果の格納先を nullptr で初期化する。
+    void *ptr = nullptr;       // [状態] - 再確保結果の格納先を nullptr で初期化する。
 
     values = (int32_t *)cplat_calloc(4U, sizeof(*values)); // [状態] - 4 要素の領域を確保する。
     ASSERT_NE(nullptr, values); // [状態確認] - cplat_calloc() の戻り値が nullptr 以外であること。
@@ -275,8 +277,8 @@ TEST_F(allocTest, realloc_rejects_zero_count_without_free)
 TEST_F(allocTest, realloc_rejects_size_overflow_without_free)
 {
     // Arrange
-    int32_t *values = nullptr;                // [状態] - 確保結果の格納先を NULL で初期化する。
-    void *ptr = nullptr;                      // [状態] - 再確保結果の格納先を NULL で初期化する。
+    int32_t *values = nullptr;                // [状態] - 確保結果の格納先を nullptr で初期化する。
+    void *ptr = nullptr;                      // [状態] - 再確保結果の格納先を nullptr で初期化する。
     const size_t huge = (SIZE_MAX / 8U) + 1U; // [状態] - 8 倍すると size_t を回り込む要素数を用意する。
 
     values = (int32_t *)cplat_calloc(4U, sizeof(*values)); // [状態] - 4 要素の領域を確保する。
@@ -288,7 +290,7 @@ TEST_F(allocTest, realloc_rejects_size_overflow_without_free)
     // Pre-Assert
 
     // Act
-    // [手順] - 乗算が回り込む要素数と要素サイズ 8 で cplat_realloc() を呼び出す。
+    // [手順] - 乗算が回り込む要素数と要素サイズ 8 を指定して cplat_realloc() を呼び出す。
     ptr = cplat_realloc(values, huge, 8U);
 
     // Assert
@@ -305,8 +307,8 @@ TEST_F(allocTest, realloc_rejects_size_overflow_without_free)
 TEST_F(allocTest, realloc_zerofill_clears_extended_range_only)
 {
     // Arrange
-    int32_t *values = nullptr;     // [状態] - 確保結果の格納先を NULL で初期化する。
-    int32_t *new_values = nullptr; // [状態] - 再確保結果の格納先を NULL で初期化する。
+    int32_t *values = nullptr;     // [状態] - 確保結果の格納先を nullptr で初期化する。
+    int32_t *new_values = nullptr; // [状態] - 再確保結果の格納先を nullptr で初期化する。
     int nonzero_count = 0;
     size_t i;
 
@@ -360,8 +362,8 @@ TEST_F(allocTest, realloc_zerofill_clears_extended_range_only)
 TEST_F(allocTest, realloc_zerofill_skips_when_not_extended)
 {
     // Arrange
-    int32_t *values = nullptr;     // [状態] - 確保結果の格納先を NULL で初期化する。
-    int32_t *new_values = nullptr; // [状態] - 再確保結果の格納先を NULL で初期化する。
+    int32_t *values = nullptr;     // [状態] - 確保結果の格納先を nullptr で初期化する。
+    int32_t *new_values = nullptr; // [状態] - 再確保結果の格納先を nullptr で初期化する。
 
     values = (int32_t *)cplat_calloc(8U, sizeof(*values)); // [状態] - 8 要素の領域を確保する。
     ASSERT_NE(nullptr, values); // [状態確認] - cplat_calloc() の戻り値が nullptr 以外であること。
@@ -395,18 +397,18 @@ TEST_F(allocTest, free_accepts_null)
     // Pre-Assert
 
     // Act
-    cplat_free(nullptr); // [手順] - NULL を指定して cplat_free() を呼び出す。
+    cplat_free(nullptr); // [手順] - nullptr を指定して cplat_free() を呼び出す。
 
     // Assert
-    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(NULL を渡した cplat_free() が異常終了せずに戻ったことの確認)
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(nullptr を渡した cplat_free() が異常終了せずに戻ったことの確認)
 }
 
 // 確保できない大きさの再確保が元の領域を解放せずに NULL を返すことの確認
 TEST_F(allocTest, realloc_returns_null_on_failure_without_free)
 {
     // Arrange
-    int32_t *values = nullptr; // [状態] - 確保結果の格納先を NULL で初期化する。
-    void *ptr = nullptr;       // [状態] - 再確保結果の格納先を NULL で初期化する。
+    int32_t *values = nullptr; // [状態] - 確保結果の格納先を nullptr で初期化する。
+    void *ptr = nullptr;       // [状態] - 再確保結果の格納先を nullptr で初期化する。
 
     values = (int32_t *)cplat_calloc(4U, sizeof(*values)); // [状態] - 4 要素の領域を確保する。
     ASSERT_NE(nullptr, values); // [状態確認] - cplat_calloc() の戻り値が nullptr 以外であること。
@@ -417,7 +419,7 @@ TEST_F(allocTest, realloc_returns_null_on_failure_without_free)
     // Pre-Assert
 
     // Act
-    // [手順] - 確保できない要素数 (SIZE_MAX / 4) と要素サイズ 4 で cplat_realloc() を呼び出す。
+    // [手順] - 確保できない要素数 (SIZE_MAX / 4) と要素サイズ 4 を指定して cplat_realloc() を呼び出す。
     ptr = cplat_realloc(values, SIZE_MAX / 4U, 4U);
 
     // Assert
@@ -433,8 +435,8 @@ TEST_F(allocTest, realloc_returns_null_on_failure_without_free)
 TEST_F(allocTest, realloc_zerofill_rejects_zero_count_without_free)
 {
     // Arrange
-    int32_t *values = nullptr; // [状態] - 確保結果の格納先を NULL で初期化する。
-    void *ptr = nullptr;       // [状態] - 再確保結果の格納先を NULL で初期化する。
+    int32_t *values = nullptr; // [状態] - 確保結果の格納先を nullptr で初期化する。
+    void *ptr = nullptr;       // [状態] - 再確保結果の格納先を nullptr で初期化する。
 
     values = (int32_t *)cplat_calloc(4U, sizeof(*values)); // [状態] - 4 要素の領域を確保する。
     ASSERT_NE(nullptr, values); // [状態確認] - cplat_calloc() の戻り値が nullptr 以外であること。
@@ -463,8 +465,8 @@ TEST_F(allocTest, realloc_zerofill_rejects_zero_count_without_free)
 TEST_F(allocTest, realloc_zerofill_returns_null_on_failure_without_free)
 {
     // Arrange
-    int32_t *values = nullptr; // [状態] - 確保結果の格納先を NULL で初期化する。
-    void *ptr = nullptr;       // [状態] - 再確保結果の格納先を NULL で初期化する。
+    int32_t *values = nullptr; // [状態] - 確保結果の格納先を nullptr で初期化する。
+    void *ptr = nullptr;       // [状態] - 再確保結果の格納先を nullptr で初期化する。
 
     values = (int32_t *)cplat_calloc(4U, sizeof(*values)); // [状態] - 4 要素の領域を確保する。
     ASSERT_NE(nullptr, values); // [状態確認] - cplat_calloc() の戻り値が nullptr 以外であること。
@@ -475,7 +477,7 @@ TEST_F(allocTest, realloc_zerofill_returns_null_on_failure_without_free)
     // Pre-Assert
 
     // Act
-    // [手順] - 旧要素数 4、確保できない新要素数 (SIZE_MAX / 4) と要素サイズ 4 で cplat_realloc_zerofill() を呼び出す。
+    // [手順] - 旧要素数 4、確保できない新要素数 (SIZE_MAX / 4) と要素サイズ 4 を指定して cplat_realloc_zerofill() を呼び出す。
     ptr = cplat_realloc_zerofill(values, 4U, SIZE_MAX / 4U, 4U);
 
     // Assert

@@ -65,22 +65,24 @@ TEST_F(stringCatalogFilterDecompileTest, decompile_then_recompile_matches_origin
     // Pre-Assert
 
     // Act
-    actual_compile_ret =
-        compile_lines(lines, 7U, image); // [手順] - 7 種類の判定要素を含む条件式リストをコンパイルする。
-    actual_matches_in =
-        decompiled_text_recompiles_to_same_bytes(image, 0U, decoded); // [手順] - in の行を復元、再コンパイルする。
-    actual_matches_between =
-        decompiled_text_recompiles_to_same_bytes(image, 1U, decoded); // [手順] - between の行を復元、再コンパイルする。
-    actual_matches_hex =
-        decompiled_text_recompiles_to_same_bytes(image, 2U, decoded); // [手順] - 16 進数の行を復元、再コンパイルする。
+    actual_compile_ret = compile_lines(
+        lines, 7U, image); // [手順] - 7 種類の判定要素を含む条件式リストを指定して compile_lines() を呼び出す。
+    actual_matches_in = decompiled_text_recompiles_to_same_bytes(
+        image, 0U, decoded); // [手順] - in の行を指定して decompiled_text_recompiles_to_same_bytes() を呼び出す。
+    actual_matches_between = decompiled_text_recompiles_to_same_bytes(
+        image, 1U, decoded); // [手順] - between の行を指定して decompiled_text_recompiles_to_same_bytes() を呼び出す。
+    actual_matches_hex = decompiled_text_recompiles_to_same_bytes(
+        image, 2U, decoded); // [手順] - 16 進数の行を指定して decompiled_text_recompiles_to_same_bytes() を呼び出す。
     actual_matches_float = decompiled_text_recompiles_to_same_bytes(
-        image, 3U, decoded); // [手順] - 浮動小数点数の行を復元、再コンパイルする。
-    actual_matches_char =
-        decompiled_text_recompiles_to_same_bytes(image, 4U, decoded); // [手順] - 文字定数の行を復元、再コンパイルする。
+        image, 3U,
+        decoded); // [手順] - 浮動小数点数の行を指定して decompiled_text_recompiles_to_same_bytes() を呼び出す。
+    actual_matches_char = decompiled_text_recompiles_to_same_bytes(
+        image, 4U, decoded); // [手順] - 文字定数の行を指定して decompiled_text_recompiles_to_same_bytes() を呼び出す。
     actual_matches_escaped_string = decompiled_text_recompiles_to_same_bytes(
-        image, 5U, decoded); // [手順] - エスケープを含む文字列の行を復元、再コンパイルする。
-    actual_matches_has =
-        decompiled_text_recompiles_to_same_bytes(image, 6U, decoded); // [手順] - has の行を復元、再コンパイルする。
+        image, 5U,
+        decoded); // [手順] - エスケープを含む文字列の行を指定して decompiled_text_recompiles_to_same_bytes() を呼び出す。
+    actual_matches_has = decompiled_text_recompiles_to_same_bytes(
+        image, 6U, decoded); // [手順] - has の行を指定して decompiled_text_recompiles_to_same_bytes() を呼び出す。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_compile_ret); // [確認_正常系] - compile_lines() の戻り値が CPLAT_OK であること。
@@ -112,10 +114,11 @@ TEST_F(stringCatalogFilterDecompileTest, not_of_predicate_is_decompiled_with_par
     // Pre-Assert
 
     // Act
-    actual_compile_ret = compile_single_line("!(key == 1)", image); // [手順] - "!(key == 1)" をコンパイルする。
-    actual_decompile_ret =
-        cplat_string_catalog_filter_decompile_line(image, kImageSize, 0U, actual_text,
-                                                   sizeof(actual_text)); // [手順] - 行 0 を復元する。
+    actual_compile_ret = compile_single_line(
+        "!(key == 1)", image); // [手順] - "!(key == 1)" を指定して compile_single_line() を呼び出す。
+    actual_decompile_ret = cplat_string_catalog_filter_decompile_line(
+        image, kImageSize, 0U, actual_text,
+        sizeof(actual_text)); // [手順] - 行 0 を指定して cplat_string_catalog_filter_decompile_line() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_compile_ret); // [確認_正常系] - compile_single_line() の戻り値が CPLAT_OK であること。
@@ -137,11 +140,12 @@ TEST_F(stringCatalogFilterDecompileTest, right_grouped_and_chain_keeps_parenthes
     // Pre-Assert
 
     // Act
-    actual_compile_ret = compile_single_line("key == 1 && (key == 2 && key == 3)",
-                                             image); // [手順] - 右側を括弧でまとめた && の連結をコンパイルする。
-    actual_decompile_ret =
-        cplat_string_catalog_filter_decompile_line(image, kImageSize, 0U, actual_text,
-                                                   sizeof(actual_text)); // [手順] - 行 0 を復元する。
+    actual_compile_ret = compile_single_line(
+        "key == 1 && (key == 2 && key == 3)",
+        image); // [手順] - 右側を括弧でまとめた "&&" の連結を指定して compile_single_line() を呼び出す。
+    actual_decompile_ret = cplat_string_catalog_filter_decompile_line(
+        image, kImageSize, 0U, actual_text,
+        sizeof(actual_text)); // [手順] - 行 0 を指定して cplat_string_catalog_filter_decompile_line() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_compile_ret); // [確認_正常系] - compile_single_line() の戻り値が CPLAT_OK であること。
@@ -164,9 +168,12 @@ TEST_F(stringCatalogFilterDecompileTest, small_destination_is_truncated_and_null
     // Pre-Assert
 
     // Act
-    actual_compile_ret = compile_single_line("key == 1", image); // [手順] - "key == 1" をコンパイルする。
+    actual_compile_ret =
+        compile_single_line("key == 1", image); // [手順] - "key == 1" を指定して compile_single_line() を呼び出す。
     actual_decompile_ret = cplat_string_catalog_filter_decompile_line(
-        image, kImageSize, 0U, actual_text, sizeof(actual_text)); // [手順] - 3 バイトの出力先へ復元する。
+        image, kImageSize, 0U, actual_text,
+        sizeof(
+            actual_text)); // [手順] - 3 バイトの出力先を指定して cplat_string_catalog_filter_decompile_line() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_compile_ret); // [確認_正常系] - compile_single_line() の戻り値が CPLAT_OK であること。

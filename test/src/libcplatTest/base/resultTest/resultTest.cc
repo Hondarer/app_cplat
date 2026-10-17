@@ -98,7 +98,9 @@ TEST_F(resultTest, all_codes_are_distinct)
     // Pre-Assert
 
     // Act
-    unique_codes.insert(codes.begin(), codes.end()); // [手順] - 全コードを集合へ挿入して重複を排除する。
+    unique_codes.insert(
+        codes.begin(),
+        codes.end()); // [手順] - 重複を排除するために全コードを指定して unique_codes.insert() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -142,9 +144,10 @@ TEST_F(resultTest, length_errors_map_to_buffer_too_small)
     // Pre-Assert
 
     // Act
-    const int name_too_long_result =
-        cplat_internal_result_from_errno(ENAMETOOLONG); // [手順] - ENAMETOOLONG を共通結果コードへ変換する。
-    const int range_result = cplat_internal_result_from_errno(ERANGE); // [手順] - ERANGE を共通結果コードへ変換する。
+    const int name_too_long_result = cplat_internal_result_from_errno(
+        ENAMETOOLONG); // [手順] - ENAMETOOLONG を指定して cplat_internal_result_from_errno() を呼び出す。
+    const int range_result = cplat_internal_result_from_errno(
+        ERANGE); // [手順] - ERANGE を指定して cplat_internal_result_from_errno() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -178,7 +181,8 @@ TEST_F(resultTest, errno_values_map_to_expected_results)
     // Act
     for (const std::pair<int, int> &item : cases)
     {
-        actual.push_back(cplat_internal_result_from_errno(item.first)); // [手順] - 対応表の errno を順番に変換する。
+        actual.push_back(cplat_internal_result_from_errno(
+            item.first)); // [手順] - 対応表の errno を順番に指定して cplat_internal_result_from_errno() を呼び出す。
     }
 
     // Assert

@@ -135,15 +135,16 @@ TEST_F(socketTest, open_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_output =
-        cplat_socket_open(CPLAT_SOCKET_TCP, nullptr, nullptr); // [手順] - 出力先に NULL を指定する。
-    int actual_ret_invalid_kind = cplat_socket_open(static_cast<cplat_socket_kind>(invalid_kind_value), &socket,
-                                                    nullptr); // [手順] - 未定義の種別を指定する。
+    int actual_ret_null_output = cplat_socket_open(
+        CPLAT_SOCKET_TCP, nullptr, nullptr); // [手順] - 出力先に nullptr を指定して cplat_socket_open() を呼び出す。
+    int actual_ret_invalid_kind =
+        cplat_socket_open(static_cast<cplat_socket_kind>(invalid_kind_value), &socket,
+                          nullptr); // [手順] - 未定義の種別を指定して cplat_socket_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_output); // [確認_異常系] - 出力先が NULL の cplat_socket_open() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_output); // [確認_異常系] - 出力先が nullptr の cplat_socket_open() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_invalid_kind); // [確認_異常系] - 未定義の種別を指定した cplat_socket_open() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -163,23 +164,25 @@ TEST_F(socketTest, open_returns_socket_for_each_kind)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_sys_socket_, socket(_, _, _, AF_INET, SOCK_STREAM, 0)).WillOnce(Return(7));
     // [Pre-Assert確認_正常系] - socket() が AF_INET、SOCK_STREAM、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - socket() にて 7 を返す。
+    // [Pre-Assert手順] - socket() から 7 を返す。
     EXPECT_CALL(mock_sys_socket_, socket(_, _, _, AF_INET, SOCK_DGRAM, 0)).WillOnce(Return(8));
     // [Pre-Assert確認_正常系] - socket() が AF_INET、SOCK_DGRAM、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - socket() にて 8 を返す。
+    // [Pre-Assert手順] - socket() から 8 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, socket(_, _, _, AF_INET, SOCK_STREAM, 0)).WillOnce(Return((SOCKET)7));
     // [Pre-Assert確認_正常系] - socket() が AF_INET、SOCK_STREAM、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - socket() にて 7 を返す。
+    // [Pre-Assert手順] - socket() から 7 を返す。
     EXPECT_CALL(mock_winsock_, socket(_, _, _, AF_INET, SOCK_DGRAM, 0)).WillOnce(Return((SOCKET)8));
     // [Pre-Assert確認_正常系] - socket() が AF_INET、SOCK_DGRAM、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - socket() にて 8 を返す。
+    // [Pre-Assert手順] - socket() から 8 を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位のソケット生成 API から TCP に 7、UDP に 8 のハンドルを返却する。
+    // [Pre-Assert手順] - socket() から TCP に 7、UDP に 8 のハンドルを返す。
 
     // Act
-    int actual_ret_tcp = cplat_socket_open(CPLAT_SOCKET_TCP, &tcp_socket, nullptr); // [手順] - TCP ソケットを生成する。
-    int actual_ret_udp = cplat_socket_open(CPLAT_SOCKET_UDP, &udp_socket, nullptr); // [手順] - UDP ソケットを生成する。
+    int actual_ret_tcp = cplat_socket_open(CPLAT_SOCKET_TCP, &tcp_socket,
+                                           nullptr); // [手順] - TCP を指定して cplat_socket_open() を呼び出す。
+    int actual_ret_udp = cplat_socket_open(CPLAT_SOCKET_UDP, &udp_socket,
+                                           nullptr); // [手順] - UDP を指定して cplat_socket_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -205,19 +208,20 @@ TEST_F(socketTest, open_reports_socket_failure)
     EXPECT_CALL(mock_sys_socket_, socket(_, _, _, AF_INET, SOCK_STREAM, 0))
         .WillOnce(DoAll(Assign(&errno, EMFILE), Return(-1)));
     // [Pre-Assert確認_異常系] - socket() が AF_INET、SOCK_STREAM、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - socket() にて errno に EMFILE を設定し、-1 を返す。
+    // [Pre-Assert手順] - socket() から、errno に EMFILE を設定して -1 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, socket(_, _, _, AF_INET, SOCK_STREAM, 0)).WillOnce(Return(INVALID_SOCKET));
     // [Pre-Assert確認_異常系] - socket() が AF_INET、SOCK_STREAM、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - socket() にて INVALID_SOCKET を返す。
+    // [Pre-Assert手順] - socket() から INVALID_SOCKET を返す。
     EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAEMFILE));
     // [Pre-Assert確認_異常系] - WSAGetLastError() が 1 回呼び出されること。
-    // [Pre-Assert手順] - WSAGetLastError() にて WSAEMFILE を返す。
+    // [Pre-Assert手順] - WSAGetLastError() から WSAEMFILE を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位のソケット生成 API から失敗を返却し、失敗要因を EMFILE 相当として通知する。
+    // [Pre-Assert手順] - socket() から、Linux では errno に EMFILE を設定して -1、Windows では INVALID_SOCKET を返し、WSAGetLastError() から WSAEMFILE を返す。
 
     // Act
-    int actual_ret = cplat_socket_open(CPLAT_SOCKET_TCP, &socket, &detail); // [手順] - ソケット生成失敗を注入する。
+    int actual_ret = cplat_socket_open(CPLAT_SOCKET_TCP, &socket,
+                                       &detail); // [手順] - socket() が失敗する状態で cplat_socket_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -249,11 +253,12 @@ TEST_F(socketTest, open_propagates_startup_failure)
     // Pre-Assert
     EXPECT_CALL(mock_winsock_, WSAStartup(_, _, _, _, _)).WillOnce(Return(WSASYSNOTREADY));
     // [Pre-Assert確認_異常系] - WSAStartup() が 1 回呼び出されること。
-    // [Pre-Assert手順] - WSAStartup() から WSASYSNOTREADY を返却する。
+    // [Pre-Assert手順] - WSAStartup() から WSASYSNOTREADY を返す。
 
     // Act
-    int actual_ret = cplat_socket_open(CPLAT_SOCKET_TCP, &socket,
-                                       &detail); // [手順] - 初期化失敗を注入してソケットを生成する。
+    int actual_ret =
+        cplat_socket_open(CPLAT_SOCKET_TCP, &socket,
+                          &detail); // [手順] - Winsock の初期化が失敗する状態で cplat_socket_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -280,7 +285,7 @@ TEST_F(socketTest, close_ignores_invalid_socket)
     expectNoCloseCall();
 
     // Act
-    cplat_socket_close(CPLAT_INVALID_SOCKET); // [手順] - 無効なソケットを閉じる。
+    cplat_socket_close(CPLAT_INVALID_SOCKET); // [手順] - 無効なソケットを指定して cplat_socket_close() を呼び出す。
 
     // Assert
     EXPECT_TRUE(
@@ -297,16 +302,16 @@ TEST_F(socketTest, close_calls_os_close)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_cplat_, cplat_close(kSocket, _)).WillOnce(Return(CPLAT_OK));
     // [Pre-Assert確認_正常系] - cplat_close() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_close() にて CPLAT_OK を返す。
+    // [Pre-Assert手順] - cplat_close() から CPLAT_OK を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, closesocket(_, _, _, (SOCKET)kSocket)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - closesocket() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - closesocket() にて 0 を返す。
+    // [Pre-Assert手順] - closesocket() から 0 を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位のクローズ API から成功を返却する。
+    // [Pre-Assert手順] - cplat_close() から CPLAT_OK を返し、Windows では closesocket() から 0 を返す。
 
     // Act
-    cplat_socket_close(kSocket); // [手順] - 有効なソケットを閉じる。
+    cplat_socket_close(kSocket); // [手順] - 有効なソケットを指定して cplat_socket_close() を呼び出す。
 
     // Assert
     EXPECT_TRUE(
@@ -336,7 +341,7 @@ TEST_F(socketTest, close_preserves_last_error)
                 return CPLAT_OK;
             });
     // [Pre-Assert確認_異常系] - cplat_close() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_close() にて cplat_error_set_last() で overwritten のエラー情報 (CPLAT_ERROR_DOMAIN_ERRNO、CPLAT_ERR_PERMISSION_DENIED、EACCES) を設定し、CPLAT_OK を返す。
+    // [Pre-Assert手順] - cplat_close() から、cplat_error_set_last() で overwritten のエラー情報 (CPLAT_ERROR_DOMAIN_ERRNO、CPLAT_ERR_PERMISSION_DENIED、EACCES) を設定して CPLAT_OK を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, closesocket(_, _, _, (SOCKET)kSocket))
         .WillOnce(
@@ -348,12 +353,13 @@ TEST_F(socketTest, close_preserves_last_error)
                 return 0;
             });
     // [Pre-Assert確認_異常系] - closesocket() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - closesocket() にて cplat_error_set_last() で overwritten のエラー情報 (CPLAT_ERROR_DOMAIN_ERRNO、CPLAT_ERR_PERMISSION_DENIED、EACCES) を設定し、0 を返す。
+    // [Pre-Assert手順] - closesocket() から、cplat_error_set_last() で overwritten のエラー情報 (CPLAT_ERROR_DOMAIN_ERRNO、CPLAT_ERR_PERMISSION_DENIED、EACCES) を設定して 0 を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位のクローズ API から直前エラーを EACCES へ書き換える。
+    // [Pre-Assert手順] - cplat_close() から、直前エラーを EACCES へ書き換えて CPLAT_OK を返し、Windows では closesocket() から、同じエラーを書き込んで 0 を返す。
 
     // Act
-    cplat_socket_close(kSocket); // [手順] - 直前エラーを書き換えるクローズ API を伴ってソケットを閉じる。
+    cplat_socket_close(
+        kSocket); // [手順] - 下位のクローズ API が直前エラーを書き換える状態で cplat_socket_close() を呼び出す。
 
     // Assert
     cplat_error_get_last(&actual);
@@ -385,7 +391,8 @@ TEST_F(socketTest, shutdown_ignores_invalid_socket)
     expectNoShutdownCall();
 
     // Act
-    cplat_socket_shutdown(CPLAT_INVALID_SOCKET); // [手順] - 無効なソケットをシャットダウンする。
+    cplat_socket_shutdown(
+        CPLAT_INVALID_SOCKET); // [手順] - 無効なソケットを指定して cplat_socket_shutdown() を呼び出す。
 
     // Assert
     EXPECT_TRUE(
@@ -402,16 +409,16 @@ TEST_F(socketTest, shutdown_calls_os_shutdown)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_sys_socket_, shutdown(_, _, _, (int)kSocket, SHUT_RDWR)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - shutdown() が kSocket、SHUT_RDWR を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - shutdown() にて 0 を返す。
+    // [Pre-Assert手順] - shutdown() から 0 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, shutdown(_, _, _, (SOCKET)kSocket, SD_BOTH)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - shutdown() が kSocket、SD_BOTH を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - shutdown() にて 0 を返す。
+    // [Pre-Assert手順] - shutdown() から 0 を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位のシャットダウン API から成功を返却する。
+    // [Pre-Assert手順] - shutdown() から成功を表す 0 を返す。
 
     // Act
-    cplat_socket_shutdown(kSocket); // [手順] - 有効なソケットをシャットダウンする。
+    cplat_socket_shutdown(kSocket); // [手順] - 有効なソケットを指定して cplat_socket_shutdown() を呼び出す。
 
     // Assert
     EXPECT_TRUE(
@@ -428,18 +435,20 @@ TEST_F(socketTest, connection_operations_reject_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_bind_socket = cplat_socket_bind(CPLAT_INVALID_SOCKET, &kEndpoint,
-                                                   &detail); // [手順] - bind() のソケットに無効値を指定する。
-    int actual_ret_bind_endpoint =
-        cplat_socket_bind(kSocket, nullptr, &detail); // [手順] - bind() のエンドポイントに NULL を指定する。
-    int actual_ret_listen_socket =
-        cplat_socket_listen(CPLAT_INVALID_SOCKET, 1, &detail); // [手順] - listen() のソケットに無効値を指定する。
-    int actual_ret_listen_backlog =
-        cplat_socket_listen(kSocket, -1, &detail); // [手順] - listen() に負の待ち受け数を指定する。
-    int actual_ret_connect_socket = cplat_socket_connect(CPLAT_INVALID_SOCKET, &kEndpoint,
-                                                         &detail); // [手順] - connect() のソケットに無効値を指定する。
-    int actual_ret_connect_endpoint =
-        cplat_socket_connect(kSocket, nullptr, &detail); // [手順] - connect() のエンドポイントに NULL を指定する。
+    int actual_ret_bind_socket =
+        cplat_socket_bind(CPLAT_INVALID_SOCKET, &kEndpoint,
+                          &detail); // [手順] - 無効なソケットを指定して cplat_socket_bind() を呼び出す。
+    int actual_ret_bind_endpoint = cplat_socket_bind(
+        kSocket, nullptr, &detail); // [手順] - エンドポイントに nullptr を指定して cplat_socket_bind() を呼び出す。
+    int actual_ret_listen_socket = cplat_socket_listen(
+        CPLAT_INVALID_SOCKET, 1, &detail); // [手順] - 無効なソケットを指定して cplat_socket_listen() を呼び出す。
+    int actual_ret_listen_backlog = cplat_socket_listen(
+        kSocket, -1, &detail); // [手順] - 負の待ち受け数を指定して cplat_socket_listen() を呼び出す。
+    int actual_ret_connect_socket =
+        cplat_socket_connect(CPLAT_INVALID_SOCKET, &kEndpoint,
+                             &detail); // [手順] - 無効なソケットを指定して cplat_socket_connect() を呼び出す。
+    int actual_ret_connect_endpoint = cplat_socket_connect(
+        kSocket, nullptr, &detail); // [手順] - エンドポイントに nullptr を指定して cplat_socket_connect() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -447,7 +456,7 @@ TEST_F(socketTest, connection_operations_reject_invalid_arguments)
         actual_ret_bind_socket); // [確認_異常系] - 無効なソケットを指定した cplat_socket_bind() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_bind_endpoint); // [確認_異常系] - NULL のエンドポイントを指定した cplat_socket_bind() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_bind_endpoint); // [確認_異常系] - nullptr のエンドポイントを指定した cplat_socket_bind() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_listen_socket); // [確認_異常系] - 無効なソケットを指定した cplat_socket_listen() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -459,7 +468,7 @@ TEST_F(socketTest, connection_operations_reject_invalid_arguments)
         actual_ret_connect_socket); // [確認_異常系] - 無効なソケットを指定した cplat_socket_connect() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_connect_endpoint); // [確認_異常系] - NULL のエンドポイントを指定した cplat_socket_connect() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_connect_endpoint); // [確認_異常系] - nullptr のエンドポイントを指定した cplat_socket_connect() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 // [サブ手順参照 名前=socketTest.TearDown]
 
@@ -472,39 +481,42 @@ TEST_F(socketTest, connection_operations_succeed)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_sys_socket_, bind(_, _, _, (int)kSocket, _, _)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - bind() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - bind() にて 0 を返す。
+    // [Pre-Assert手順] - bind() から 0 を返す。
     EXPECT_CALL(mock_sys_socket_, listen(_, _, _, (int)kSocket, SOMAXCONN)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - listen() が kSocket、SOMAXCONN を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - listen() にて 0 を返す。
+    // [Pre-Assert手順] - listen() から 0 を返す。
     EXPECT_CALL(mock_sys_socket_, listen(_, _, _, (int)kSocket, 3)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - listen() が kSocket、3 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - listen() にて 0 を返す。
+    // [Pre-Assert手順] - listen() から 0 を返す。
     EXPECT_CALL(mock_sys_socket_, connect(_, _, _, (int)kSocket, _, _)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - connect() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - connect() にて 0 を返す。
+    // [Pre-Assert手順] - connect() から 0 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, bind(_, _, _, (SOCKET)kSocket, _, _)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - bind() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - bind() にて 0 を返す。
+    // [Pre-Assert手順] - bind() から 0 を返す。
     EXPECT_CALL(mock_winsock_, listen(_, _, _, (SOCKET)kSocket, SOMAXCONN)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - listen() が kSocket、SOMAXCONN を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - listen() にて 0 を返す。
+    // [Pre-Assert手順] - listen() から 0 を返す。
     EXPECT_CALL(mock_winsock_, listen(_, _, _, (SOCKET)kSocket, 3)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - listen() が kSocket、3 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - listen() にて 0 を返す。
+    // [Pre-Assert手順] - listen() から 0 を返す。
     EXPECT_CALL(mock_winsock_, connect(_, _, _, (SOCKET)kSocket, _, _)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - connect() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - connect() にて 0 を返す。
+    // [Pre-Assert手順] - connect() から 0 を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の bind()、listen()、connect() の各 API から成功を返却する。
+    // [Pre-Assert手順] - bind() から 0 を返し、listen() と connect() からも成功を表す 0 を返す。
 
     // Act
-    int actual_ret_bind = cplat_socket_bind(kSocket, &kEndpoint, nullptr); // [手順] - bind() を成功させる。
+    int actual_ret_bind = cplat_socket_bind(
+        kSocket, &kEndpoint, nullptr); // [手順] - bind() が成功する状態で cplat_socket_bind() を呼び出す。
     int actual_ret_listen_default =
-        cplat_socket_listen(kSocket, CPLAT_SOCKET_BACKLOG_DEFAULT, nullptr); // [手順] - 既定値で listen() を呼び出す。
-    int actual_ret_listen_explicit =
-        cplat_socket_listen(kSocket, 3, nullptr); // [手順] - 明示した待ち受け数で listen() を呼び出す。
-    int actual_ret_connect = cplat_socket_connect(kSocket, &kEndpoint, nullptr); // [手順] - connect() を成功させる。
+        cplat_socket_listen(kSocket, CPLAT_SOCKET_BACKLOG_DEFAULT,
+                            nullptr); // [手順] - 待ち受け数に既定値を指定して cplat_socket_listen() を呼び出す。
+    int actual_ret_listen_explicit = cplat_socket_listen(
+        kSocket, 3, nullptr); // [手順] - 明示した待ち受け数を指定して cplat_socket_listen() を呼び出す。
+    int actual_ret_connect = cplat_socket_connect(
+        kSocket, &kEndpoint, nullptr); // [手順] - connect() が成功する状態で cplat_socket_connect() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -531,38 +543,40 @@ TEST_F(socketTest, connection_operations_report_os_failures)
     EXPECT_CALL(mock_sys_socket_, bind(_, _, _, (int)kSocket, _, _))
         .WillOnce(DoAll(Assign(&errno, EADDRINUSE), Return(-1)));
     // [Pre-Assert確認_異常系] - bind() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - bind() にて errno に EADDRINUSE を設定し、-1 を返す。
+    // [Pre-Assert手順] - bind() から、errno に EADDRINUSE を設定して -1 を返す。
     EXPECT_CALL(mock_sys_socket_, listen(_, _, _, (int)kSocket, _)).WillOnce(DoAll(Assign(&errno, EIO), Return(-1)));
     // [Pre-Assert確認_異常系] - listen() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - listen() にて errno に EIO を設定し、-1 を返す。
+    // [Pre-Assert手順] - listen() から、errno に EIO を設定して -1 を返す。
     EXPECT_CALL(mock_sys_socket_, connect(_, _, _, (int)kSocket, _, _))
         .WillOnce(DoAll(Assign(&errno, ECONNREFUSED), Return(-1)));
     // [Pre-Assert確認_異常系] - connect() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - connect() にて errno に ECONNREFUSED を設定し、-1 を返す。
+    // [Pre-Assert手順] - connect() から、errno に ECONNREFUSED を設定して -1 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, bind(_, _, _, (SOCKET)kSocket, _, _)).WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_異常系] - bind() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - bind() にて SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - bind() から SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, listen(_, _, _, (SOCKET)kSocket, _)).WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_異常系] - listen() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - listen() にて SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - listen() から SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, connect(_, _, _, (SOCKET)kSocket, _, _)).WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_異常系] - connect() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - connect() にて SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - connect() から SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, WSAGetLastError)
         .WillOnce(Return(WSAEADDRINUSE))
         .WillOnce(Return(WSAENETDOWN))
         .WillOnce(Return(WSAECONNREFUSED));
     // [Pre-Assert確認_異常系] - WSAGetLastError() が 3 回呼び出されること。
-    // [Pre-Assert手順] - WSAGetLastError() にて 1 回目は WSAEADDRINUSE、2 回目は WSAENETDOWN、3 回目は WSAECONNREFUSED を返す。
+    // [Pre-Assert手順] - WSAGetLastError() から 1 回目は WSAEADDRINUSE、2 回目は WSAENETDOWN、3 回目は WSAECONNREFUSED を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の bind()、listen()、connect() の各 API から失敗を返却し、それぞれの失敗要因を通知する。
+    // [Pre-Assert手順] - bind() から、Linux では errno に EADDRINUSE を設定して -1、Windows では SOCKET_ERROR を返し、listen() と connect() からも失敗を返し、それぞれ errno または WSAGetLastError() で失敗要因を通知する。
 
     // Act
-    int actual_ret_bind = cplat_socket_bind(kSocket, &kEndpoint, &detail); // [手順] - bind() の失敗を注入する。
-    int actual_ret_listen = cplat_socket_listen(kSocket, 1, &detail);      // [手順] - listen() の失敗を注入する。
-    int actual_ret_connect =
-        cplat_socket_connect(kSocket, &kEndpoint, &detail); // [手順] - connect() の失敗を注入する。
+    int actual_ret_bind = cplat_socket_bind(
+        kSocket, &kEndpoint, &detail); // [手順] - bind() が失敗する状態で cplat_socket_bind() を呼び出す。
+    int actual_ret_listen = cplat_socket_listen(
+        kSocket, 1, &detail); // [手順] - listen() が失敗する状態で cplat_socket_listen() を呼び出す。
+    int actual_ret_connect = cplat_socket_connect(
+        kSocket, &kEndpoint, &detail); // [手順] - connect() が失敗する状態で cplat_socket_connect() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -589,20 +603,21 @@ TEST_F(socketTest, connect_reports_in_progress_for_nonblocking_completion)
         .WillOnce(
             DoAll(Assign(&errno, EINPROGRESS),
                   Return(-1))); // [Pre-Assert確認_正常系] - connect() が kSocket を指定して 1 回呼び出されること。
-                                // [Pre-Assert手順] - connect() から EINPROGRESS を返却する。
+                                // [Pre-Assert手順] - connect() から、errno に EINPROGRESS を設定して -1 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, connect(_, _, _, (SOCKET)kSocket, _, _))
         .WillOnce(
             Return(SOCKET_ERROR)); // [Pre-Assert確認_正常系] - connect() が kSocket を指定して 1 回呼び出されること。
-                                   // [Pre-Assert手順] - connect() から SOCKET_ERROR を返却する。
+                                   // [Pre-Assert手順] - connect() から SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, WSAGetLastError)
         .WillOnce(Return(WSAEWOULDBLOCK)); // [Pre-Assert確認_正常系] - WSAGetLastError() が 1 回呼び出されること。
-                                           // [Pre-Assert手順] - WSAGetLastError() から WSAEWOULDBLOCK を返却する。
+                                           // [Pre-Assert手順] - WSAGetLastError() から WSAEWOULDBLOCK を返す。
 #endif /* PLATFORM_ */
 
     // Act
-    int result = cplat_socket_connect(kSocket, &kEndpoint,
-                                      &detail); // [手順] - 非ブロッキング connect() の継続状態を処理する。
+    int result = cplat_socket_connect(
+        kSocket, &kEndpoint,
+        &detail); // [手順] - 非ブロッキング接続が継続中の状態で cplat_socket_connect() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_IN_PROGRESS,
@@ -630,10 +645,11 @@ TEST_F(socketTest, accept_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_socket = cplat_socket_accept(CPLAT_INVALID_SOCKET, nullptr, &accepted,
-                                                nullptr); // [手順] - accept() の待ち受けソケットに無効値を指定する。
-    int actual_ret_output =
-        cplat_socket_accept(kSocket, nullptr, nullptr, nullptr); // [手順] - accept() の出力先に NULL を指定する。
+    int actual_ret_socket =
+        cplat_socket_accept(CPLAT_INVALID_SOCKET, nullptr, &accepted,
+                            nullptr); // [手順] - 無効な待ち受けソケットを指定して cplat_socket_accept() を呼び出す。
+    int actual_ret_output = cplat_socket_accept(
+        kSocket, nullptr, nullptr, nullptr); // [手順] - 出力先に nullptr を指定して cplat_socket_accept() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -641,7 +657,7 @@ TEST_F(socketTest, accept_rejects_invalid_arguments)
         actual_ret_socket); // [確認_異常系] - 無効なソケットを指定した cplat_socket_accept() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_output); // [確認_異常系] - 出力先が NULL の cplat_socket_accept() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_output); // [確認_異常系] - 出力先が nullptr の cplat_socket_accept() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 // [サブ手順参照 名前=socketTest.TearDown]
 
@@ -665,7 +681,7 @@ TEST_F(socketTest, accept_returns_peer_and_socket)
                 return 8;
             });
     // [Pre-Assert確認_正常系] - accept() が kSocket を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - accept() にて address の IPv4 アドレスに CPLAT_IPV4_ADDR_LOOPBACK、ポートに cplat_hton16() で変換した 54321U、*length に sizeof(*native) を設定し、8 を返す。
+    // [Pre-Assert手順] - accept() から、address の IPv4 アドレスに CPLAT_IPV4_ADDR_LOOPBACK、ポートに cplat_hton16() で変換した 54321U、*length に sizeof(*native) を設定して 8 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, accept(_, _, _, (SOCKET)kSocket, _, _))
         .WillRepeatedly(
@@ -678,15 +694,16 @@ TEST_F(socketTest, accept_returns_peer_and_socket)
                 return (SOCKET)8;
             });
     // [Pre-Assert確認_正常系] - accept() が kSocket を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - accept() にて address の IPv4 アドレスに CPLAT_IPV4_ADDR_LOOPBACK、ポートに cplat_hton16() で変換した 54321U、*length に sizeof(*native) を設定し、8 を返す。
+    // [Pre-Assert手順] - accept() から、address の IPv4 アドレスに CPLAT_IPV4_ADDR_LOOPBACK、ポートに cplat_hton16() で変換した 54321U、*length に sizeof(*native) を設定して 8 を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の accept() API から接続元のエンドポイントと新しいソケットのハンドルを返却する。
+    // [Pre-Assert手順] - accept() から、接続元のエンドポイントを出力引数に設定して新しいソケットのハンドル 8 を返す。
 
     // Act
-    int actual_ret = cplat_socket_accept(kSocket, &peer, &accepted, nullptr); // [手順] - 接続を受け付ける。
-    int actual_ret_without_peer =
-        cplat_socket_accept(kSocket, nullptr, &accepted,
-                            nullptr); // [手順] - 接続元エンドポイントの出力先を NULL にして接続を受け付ける。
+    int actual_ret = cplat_socket_accept(kSocket, &peer, &accepted,
+                                         nullptr); // [手順] - 接続を受け付ける状態で cplat_socket_accept() を呼び出す。
+    int actual_ret_without_peer = cplat_socket_accept(
+        kSocket, nullptr, &accepted,
+        nullptr); // [手順] - 接続元エンドポイントの出力先に nullptr を指定して cplat_socket_accept() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -716,19 +733,20 @@ TEST_F(socketTest, accept_reports_os_failure)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_sys_socket_, accept(_, _, _, (int)kSocket, _, _)).WillOnce(DoAll(Assign(&errno, EIO), Return(-1)));
     // [Pre-Assert確認_異常系] - accept() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - accept() にて errno に EIO を設定し、-1 を返す。
+    // [Pre-Assert手順] - accept() から、errno に EIO を設定して -1 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, accept(_, _, _, (SOCKET)kSocket, _, _)).WillOnce(Return(INVALID_SOCKET));
     // [Pre-Assert確認_異常系] - accept() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - accept() にて INVALID_SOCKET を返す。
+    // [Pre-Assert手順] - accept() から INVALID_SOCKET を返す。
     EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAENETDOWN));
     // [Pre-Assert確認_異常系] - WSAGetLastError() が 1 回呼び出されること。
-    // [Pre-Assert手順] - WSAGetLastError() にて WSAENETDOWN を返す。
+    // [Pre-Assert手順] - WSAGetLastError() から WSAENETDOWN を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の accept() API から失敗を返却し、失敗要因を通知する。
+    // [Pre-Assert手順] - accept() から、Linux では errno に EIO を設定して -1、Windows では INVALID_SOCKET を返し、WSAGetLastError() から WSAENETDOWN を返す。
 
     // Act
-    int actual_ret = cplat_socket_accept(kSocket, nullptr, &accepted, &detail); // [手順] - accept() の失敗を注入する。
+    int actual_ret = cplat_socket_accept(
+        kSocket, nullptr, &accepted, &detail); // [手順] - accept() が失敗する状態で cplat_socket_accept() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -762,7 +780,7 @@ TEST_F(socketTest, pending_error_reports_empty_pending_and_failure)
             })
         .WillOnce(DoAll(Assign(&errno, EBADF), Return(-1)));
     // [Pre-Assert確認_異常系] - getsockopt() が kSocket、SOL_SOCKET、SO_ERROR を指定して 3 回呼び出されること。
-    // [Pre-Assert手順] - getsockopt() にて 1 回目は value が指す int に 0 を設定して 0、2 回目は value が指す int に ECONNREFUSED を設定して 0、3 回目は errno に EBADF を設定して -1 を返す。
+    // [Pre-Assert手順] - getsockopt() から、1 回目は value が指す int に 0 を設定して 0、2 回目は value が指す int に ECONNREFUSED を設定して 0、3 回目は errno に EBADF を設定して -1 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, getsockopt(_, _, _, (SOCKET)kSocket, SOL_SOCKET, SO_ERROR, _, _))
         .WillOnce(
@@ -779,22 +797,23 @@ TEST_F(socketTest, pending_error_reports_empty_pending_and_failure)
             })
         .WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_異常系] - getsockopt() が kSocket、SOL_SOCKET、SO_ERROR を指定して 3 回呼び出されること。
-    // [Pre-Assert手順] - getsockopt() にて 1 回目は value が指す int に 0 を設定して 0、2 回目は value が指す int に WSAECONNREFUSED を設定して 0、3 回目は SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - getsockopt() から、1 回目は value が指す int に 0 を設定して 0、2 回目は value が指す int に WSAECONNREFUSED を設定して 0、3 回目は SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAENOTSOCK));
     // [Pre-Assert確認_異常系] - WSAGetLastError() が 1 回呼び出されること。
-    // [Pre-Assert手順] - WSAGetLastError() にて WSAENOTSOCK を返す。
+    // [Pre-Assert手順] - WSAGetLastError() から WSAENOTSOCK を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の getsockopt() API から、保留エラーなし、保留エラーあり、取得失敗の順に応答する。
+    // [Pre-Assert手順] - getsockopt() から、1 回目は保留エラーなし、2 回目は保留エラーありを出力引数に設定して 0 を返し、3 回目は取得失敗を表す -1 (Windows では SOCKET_ERROR) を返す。
 
     // Act
-    int actual_ret_invalid = cplat_socket_get_pending_error(CPLAT_INVALID_SOCKET,
-                                                            &detail); // [手順] - 無効なソケットの保留エラーを取得する。
-    int actual_ret_empty =
-        cplat_socket_get_pending_error(kSocket, &detail); // [手順] - 保留エラーがない状態を取得する。
-    int actual_ret_pending =
-        cplat_socket_get_pending_error(kSocket, &detail); // [手順] - 保留エラーがある状態を取得する。
-    int actual_ret_failure =
-        cplat_socket_get_pending_error(kSocket, &detail); // [手順] - getsockopt() の失敗を注入する。
+    int actual_ret_invalid = cplat_socket_get_pending_error(
+        CPLAT_INVALID_SOCKET,
+        &detail); // [手順] - 無効なソケットを指定して cplat_socket_get_pending_error() を呼び出す。
+    int actual_ret_empty = cplat_socket_get_pending_error(
+        kSocket, &detail); // [手順] - 保留エラーがない状態で cplat_socket_get_pending_error() を呼び出す。
+    int actual_ret_pending = cplat_socket_get_pending_error(
+        kSocket, &detail); // [手順] - 保留エラーがある状態で cplat_socket_get_pending_error() を呼び出す。
+    int actual_ret_failure = cplat_socket_get_pending_error(
+        kSocket, &detail); // [手順] - getsockopt() が失敗する状態で cplat_socket_get_pending_error() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -808,7 +827,7 @@ TEST_F(socketTest, pending_error_reports_empty_pending_and_failure)
         actual_ret_pending); // [確認_異常系] - 保留エラーがある場合の cplat_socket_get_pending_error() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        actual_ret_failure); // [確認_異常系] - getsockopt 失敗時の cplat_socket_get_pending_error() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        actual_ret_failure); // [確認_異常系] - getsockopt() 失敗時の cplat_socket_get_pending_error() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 // [サブ手順参照 名前=socketTest.TearDown]
 
@@ -825,13 +844,13 @@ TEST_F(socketTest, nonblocking_reports_invalid_and_os_failure)
         .WillOnce(Return(O_NONBLOCK))
         .WillOnce(DoAll(Assign(&errno, EBADF), Return(-1)));
     // [Pre-Assert確認_異常系] - fcntl() が kSocket、F_GETFL、0 を指定して 3 回呼び出されること。
-    // [Pre-Assert手順] - fcntl() にて 1 回目は O_RDONLY、2 回目は O_NONBLOCK、3 回目は errno に EBADF を設定して -1 を返す。
+    // [Pre-Assert手順] - fcntl() から、1 回目は O_RDONLY、2 回目は O_NONBLOCK、3 回目は errno に EBADF を設定して -1 を返す。
     EXPECT_CALL(mock_fcntl_, fcntl(_, _, _, (int)kSocket, F_SETFL, O_RDONLY | O_NONBLOCK)).WillOnce(Return(0));
     // [Pre-Assert確認_異常系] - fcntl() が kSocket、F_SETFL、O_RDONLY | O_NONBLOCK を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - fcntl() にて 0 を返す。
+    // [Pre-Assert手順] - fcntl() から 0 を返す。
     EXPECT_CALL(mock_fcntl_, fcntl(_, _, _, (int)kSocket, F_SETFL, 0)).WillOnce(Return(0));
     // [Pre-Assert確認_異常系] - fcntl() が kSocket、F_SETFL、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - fcntl() にて 0 を返す。
+    // [Pre-Assert手順] - fcntl() から 0 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, ioctlsocket(_, _, _, (SOCKET)kSocket, FIONBIO, _))
         .WillOnce(
@@ -852,20 +871,23 @@ TEST_F(socketTest, nonblocking_reports_invalid_and_os_failure)
             })
         .WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_異常系] - ioctlsocket() が kSocket、FIONBIO を指定して 3 回呼び出されること。
-    // [Pre-Assert手順] - ioctlsocket() にて 1 回目と 2 回目は 0、3 回目は SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - ioctlsocket() から 1 回目と 2 回目は 0、3 回目は SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAENETDOWN));
     // [Pre-Assert確認_異常系] - WSAGetLastError() が 1 回呼び出されること。
-    // [Pre-Assert手順] - WSAGetLastError() にて WSAENETDOWN を返す。
+    // [Pre-Assert手順] - WSAGetLastError() から WSAENETDOWN を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の非ブロッキング設定 API から、有効化の成功、無効化の成功、失敗の順に応答する。
+    // [Pre-Assert手順] - fcntl() から、有効化と無効化に必要なフラグと設定成功の 0 を返したのち、errno に EBADF を設定して -1 を返し、Windows では ioctlsocket() から 1 回目と 2 回目は 0、3 回目は SOCKET_ERROR を返す。
 
     // Act
-    int actual_ret_invalid =
-        cplat_socket_set_nonblocking(CPLAT_INVALID_SOCKET, 1, &detail);         // [手順] - 無効なソケットを指定する。
-    int actual_ret_enable = cplat_socket_set_nonblocking(kSocket, 1, &detail);  // [手順] - 非ブロッキングを有効にする。
-    int actual_ret_disable = cplat_socket_set_nonblocking(kSocket, 0, &detail); // [手順] - 非ブロッキングを無効にする。
-    int actual_ret_failure =
-        cplat_socket_set_nonblocking(kSocket, 1, &detail); // [手順] - 非ブロッキング設定の失敗を注入する。
+    int actual_ret_invalid = cplat_socket_set_nonblocking(
+        CPLAT_INVALID_SOCKET, 1,
+        &detail); // [手順] - 無効なソケットを指定して cplat_socket_set_nonblocking() を呼び出す。
+    int actual_ret_enable = cplat_socket_set_nonblocking(
+        kSocket, 1, &detail); // [手順] - 非ブロッキングの有効化を指定して cplat_socket_set_nonblocking() を呼び出す。
+    int actual_ret_disable = cplat_socket_set_nonblocking(
+        kSocket, 0, &detail); // [手順] - 非ブロッキングの無効化を指定して cplat_socket_set_nonblocking() を呼び出す。
+    int actual_ret_failure = cplat_socket_set_nonblocking(
+        kSocket, 1, &detail); // [手順] - 非ブロッキング設定が失敗する状態で cplat_socket_set_nonblocking() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -893,16 +915,17 @@ TEST_F(socketTest, nonblocking_reports_set_failure)
     // Pre-Assert
     EXPECT_CALL(mock_fcntl_, fcntl(_, _, _, (int)kSocket, F_GETFL, 0)).WillOnce(Return(O_RDONLY));
     // [Pre-Assert確認_異常系] - fcntl() が kSocket、F_GETFL、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 下位の非ブロッキング設定 API から、現在の設定の取得に成功したのち設定の反映で失敗を返却する。
+    // [Pre-Assert手順] - fcntl() から、現在の設定の取得では O_RDONLY を返し、その後の設定の反映では errno に EIO を設定して -1 を返す。
     EXPECT_CALL(mock_fcntl_, fcntl(_, _, _, (int)kSocket, F_SETFL, O_NONBLOCK))
         .WillOnce(DoAll(
             Assign(&errno, EIO),
             Return(
                 -1))); // [Pre-Assert確認_異常系] - fcntl() が kSocket、F_SETFL、O_NONBLOCK を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - errno に EIO を設定し、-1 を返却する。
+                       // [Pre-Assert手順] - fcntl() から、errno に EIO を設定して -1 を返す。
 
     // Act
-    int actual_ret = cplat_socket_set_nonblocking(kSocket, 1, &detail); // [手順] - F_SETFL の失敗を注入する。
+    int actual_ret = cplat_socket_set_nonblocking(
+        kSocket, 1, &detail); // [手順] - F_SETFL の設定が失敗する状態で cplat_socket_set_nonblocking() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -924,65 +947,68 @@ TEST_F(socketTest, socket_options_succeed)
         .WillOnce(Return(0))
         .WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - setsockopt() が kSocket、SOL_SOCKET、SO_REUSEADDR を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて 0 を返す。
+    // [Pre-Assert手順] - setsockopt() から 0 を返す。
     EXPECT_CALL(mock_sys_socket_, setsockopt(_, _, _, (int)kSocket, SOL_SOCKET, SO_BROADCAST, _, _))
         .WillOnce(Return(0))
         .WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - setsockopt() が kSocket、SOL_SOCKET、SO_BROADCAST を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて 0 を返す。
+    // [Pre-Assert手順] - setsockopt() から 0 を返す。
     EXPECT_CALL(mock_sys_socket_, setsockopt(_, _, _, (int)kSocket, IPPROTO_IP, IP_MULTICAST_IF, _, _))
         .WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - setsockopt() が kSocket、IPPROTO_IP、IP_MULTICAST_IF を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて 0 を返す。
+    // [Pre-Assert手順] - setsockopt() から 0 を返す。
     EXPECT_CALL(mock_sys_socket_, setsockopt(_, _, _, (int)kSocket, IPPROTO_IP, IP_ADD_MEMBERSHIP, _, _))
         .WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - setsockopt() が kSocket、IPPROTO_IP、IP_ADD_MEMBERSHIP を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて 0 を返す。
+    // [Pre-Assert手順] - setsockopt() から 0 を返す。
     EXPECT_CALL(mock_sys_socket_, setsockopt(_, _, _, (int)kSocket, IPPROTO_IP, IP_DROP_MEMBERSHIP, _, _))
         .WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - setsockopt() が kSocket、IPPROTO_IP、IP_DROP_MEMBERSHIP を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて 0 を返す。
+    // [Pre-Assert手順] - setsockopt() から 0 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, setsockopt(_, _, _, (SOCKET)kSocket, SOL_SOCKET, SO_REUSEADDR, _, _))
         .WillOnce(Return(0))
         .WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - setsockopt() が kSocket、SOL_SOCKET、SO_REUSEADDR を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて 0 を返す。
+    // [Pre-Assert手順] - setsockopt() から 0 を返す。
     EXPECT_CALL(mock_winsock_, setsockopt(_, _, _, (SOCKET)kSocket, SOL_SOCKET, SO_BROADCAST, _, _))
         .WillOnce(Return(0))
         .WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - setsockopt() が kSocket、SOL_SOCKET、SO_BROADCAST を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて 0 を返す。
+    // [Pre-Assert手順] - setsockopt() から 0 を返す。
     EXPECT_CALL(mock_winsock_, setsockopt(_, _, _, (SOCKET)kSocket, IPPROTO_IP, IP_MULTICAST_IF, _, _))
         .WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - setsockopt() が kSocket、IPPROTO_IP、IP_MULTICAST_IF を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて 0 を返す。
+    // [Pre-Assert手順] - setsockopt() から 0 を返す。
     EXPECT_CALL(mock_winsock_, setsockopt(_, _, _, (SOCKET)kSocket, IPPROTO_IP, IP_ADD_MEMBERSHIP, _, _))
         .WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - setsockopt() が kSocket、IPPROTO_IP、IP_ADD_MEMBERSHIP を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて 0 を返す。
+    // [Pre-Assert手順] - setsockopt() から 0 を返す。
     EXPECT_CALL(mock_winsock_, setsockopt(_, _, _, (SOCKET)kSocket, IPPROTO_IP, IP_DROP_MEMBERSHIP, _, _))
         .WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - setsockopt() が kSocket、IPPROTO_IP、IP_DROP_MEMBERSHIP を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて 0 を返す。
+    // [Pre-Assert手順] - setsockopt() から 0 を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の setsockopt() API から成功を返却する。
+    // [Pre-Assert手順] - setsockopt() から成功を表す 0 を返す。
 
     // Act
-    int actual_ret_reuse = cplat_socket_set_reuse_address(kSocket, 1, &detail); // [手順] - アドレス再利用を有効にする。
-    int actual_ret_reuse_disabled =
-        cplat_socket_set_reuse_address(kSocket, 0, &detail); // [手順] - アドレス再利用を無効にする。
-    int actual_ret_broadcast =
-        cplat_socket_set_broadcast(kSocket, 0, &detail); // [手順] - ブロードキャストを無効にする。
-    int actual_ret_broadcast_enabled =
-        cplat_socket_set_broadcast(kSocket, 1, &detail); // [手順] - ブロードキャストを有効にする。
+    int actual_ret_reuse = cplat_socket_set_reuse_address(
+        kSocket, 1, &detail); // [手順] - アドレス再利用の有効化を指定して cplat_socket_set_reuse_address() を呼び出す。
+    int actual_ret_reuse_disabled = cplat_socket_set_reuse_address(
+        kSocket, 0, &detail); // [手順] - アドレス再利用の無効化を指定して cplat_socket_set_reuse_address() を呼び出す。
+    int actual_ret_broadcast = cplat_socket_set_broadcast(
+        kSocket, 0, &detail); // [手順] - ブロードキャストの無効化を指定して cplat_socket_set_broadcast() を呼び出す。
+    int actual_ret_broadcast_enabled = cplat_socket_set_broadcast(
+        kSocket, 1, &detail); // [手順] - ブロードキャストの有効化を指定して cplat_socket_set_broadcast() を呼び出す。
     int actual_ret_interface = cplat_socket_set_multicast_interface(
-        kSocket, CPLAT_IPV4_ADDR_LOOPBACK, &detail); // [手順] - マルチキャスト インターフェイスを設定する。
-    int actual_ret_join = cplat_socket_join_multicast_group(kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
-                                                            &detail); // [手順] - マルチキャスト グループへ参加する。
-    int actual_ret_leave =
-        cplat_socket_leave_multicast_group(kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
-                                           &detail); // [手順] - マルチキャスト グループから離脱する。
+        kSocket, CPLAT_IPV4_ADDR_LOOPBACK,
+        &detail); // [手順] - マルチキャスト インターフェイスを指定して cplat_socket_set_multicast_interface() を呼び出す。
+    int actual_ret_join = cplat_socket_join_multicast_group(
+        kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
+        &detail); // [手順] - 参加するマルチキャスト グループを指定して cplat_socket_join_multicast_group() を呼び出す。
+    int actual_ret_leave = cplat_socket_leave_multicast_group(
+        kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
+        &detail); // [手順] - 離脱するマルチキャスト グループを指定して cplat_socket_leave_multicast_group() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1019,71 +1045,73 @@ TEST_F(socketTest, socket_options_report_invalid_and_os_failure)
     EXPECT_CALL(mock_sys_socket_, setsockopt(_, _, _, (int)kSocket, SOL_SOCKET, SO_REUSEADDR, _, _))
         .WillOnce(DoAll(Assign(&errno, ENOPROTOOPT), Return(-1)));
     // [Pre-Assert確認_異常系] - setsockopt() が kSocket、SOL_SOCKET、SO_REUSEADDR を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて errno に ENOPROTOOPT を設定し、-1 を返す。
+    // [Pre-Assert手順] - setsockopt() から、errno に ENOPROTOOPT を設定して -1 を返す。
     EXPECT_CALL(mock_sys_socket_, setsockopt(_, _, _, (int)kSocket, IPPROTO_IP, IP_MULTICAST_IF, _, _))
         .WillOnce(DoAll(Assign(&errno, ENODEV), Return(-1)));
     // [Pre-Assert確認_異常系] - setsockopt() が kSocket、IPPROTO_IP、IP_MULTICAST_IF を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて errno に ENODEV を設定し、-1 を返す。
+    // [Pre-Assert手順] - setsockopt() から、errno に ENODEV を設定して -1 を返す。
     EXPECT_CALL(mock_sys_socket_, setsockopt(_, _, _, (int)kSocket, IPPROTO_IP, IP_ADD_MEMBERSHIP, _, _))
         .WillOnce(DoAll(Assign(&errno, ENODEV), Return(-1)));
     // [Pre-Assert確認_異常系] - setsockopt() が kSocket、IPPROTO_IP、IP_ADD_MEMBERSHIP を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて errno に ENODEV を設定し、-1 を返す。
+    // [Pre-Assert手順] - setsockopt() から、errno に ENODEV を設定して -1 を返す。
     EXPECT_CALL(mock_sys_socket_, setsockopt(_, _, _, (int)kSocket, IPPROTO_IP, IP_DROP_MEMBERSHIP, _, _))
         .WillOnce(DoAll(Assign(&errno, ENODEV), Return(-1)));
     // [Pre-Assert確認_異常系] - setsockopt() が kSocket、IPPROTO_IP、IP_DROP_MEMBERSHIP を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて errno に ENODEV を設定し、-1 を返す。
+    // [Pre-Assert手順] - setsockopt() から、errno に ENODEV を設定して -1 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, setsockopt(_, _, _, (SOCKET)kSocket, SOL_SOCKET, SO_REUSEADDR, _, _))
         .WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_異常系] - setsockopt() が kSocket、SOL_SOCKET、SO_REUSEADDR を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - setsockopt() から SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, setsockopt(_, _, _, (SOCKET)kSocket, IPPROTO_IP, IP_MULTICAST_IF, _, _))
         .WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_異常系] - setsockopt() が kSocket、IPPROTO_IP、IP_MULTICAST_IF を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - setsockopt() から SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, setsockopt(_, _, _, (SOCKET)kSocket, IPPROTO_IP, IP_ADD_MEMBERSHIP, _, _))
         .WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_異常系] - setsockopt() が kSocket、IPPROTO_IP、IP_ADD_MEMBERSHIP を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - setsockopt() から SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, setsockopt(_, _, _, (SOCKET)kSocket, IPPROTO_IP, IP_DROP_MEMBERSHIP, _, _))
         .WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_異常系] - setsockopt() が kSocket、IPPROTO_IP、IP_DROP_MEMBERSHIP を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - setsockopt() にて SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - setsockopt() から SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, WSAGetLastError)
         .WillOnce(Return(WSAENOPROTOOPT))
         .WillOnce(Return(WSAENETDOWN))
         .WillOnce(Return(WSAENETDOWN))
         .WillOnce(Return(WSAENETDOWN));
     // [Pre-Assert確認_異常系] - WSAGetLastError() が 4 回呼び出されること。
-    // [Pre-Assert手順] - WSAGetLastError() にて 1 回目は WSAENOPROTOOPT、2 回目は WSAENETDOWN、3 回目は WSAENETDOWN、4 回目は WSAENETDOWN を返す。
+    // [Pre-Assert手順] - WSAGetLastError() から 1 回目は WSAENOPROTOOPT、2 回目は WSAENETDOWN、3 回目は WSAENETDOWN、4 回目は WSAENETDOWN を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の setsockopt() API から失敗を返却し、それぞれの失敗要因を通知する。
+    // [Pre-Assert手順] - setsockopt() から、Linux では errno にそれぞれの失敗要因を設定して -1、Windows では SOCKET_ERROR を返し、WSAGetLastError() からそれぞれの失敗要因を返す。
 
     // Act
-    int actual_ret_reuse_invalid =
-        cplat_socket_set_reuse_address(CPLAT_INVALID_SOCKET, 1,
-                                       &detail); // [手順] - 無効なソケットで再利用を設定する。
+    int actual_ret_reuse_invalid = cplat_socket_set_reuse_address(
+        CPLAT_INVALID_SOCKET, 1,
+        &detail); // [手順] - 無効なソケットとアドレス再利用の有効化を指定して cplat_socket_set_reuse_address() を呼び出す。
     int actual_ret_broadcast_invalid = cplat_socket_set_broadcast(
-        CPLAT_INVALID_SOCKET, 1, &detail); // [手順] - 無効なソケットでブロードキャストを設定する。
-    int actual_ret_interface_invalid =
-        cplat_socket_set_multicast_interface(CPLAT_INVALID_SOCKET, CPLAT_IPV4_ADDR_ANY,
-                                             &detail); // [手順] - 無効なソケットでインターフェイスを設定する。
-    int actual_ret_join_invalid =
-        cplat_socket_join_multicast_group(CPLAT_INVALID_SOCKET, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
-                                          &detail); // [手順] - 無効なソケットでグループ参加を設定する。
-    int actual_ret_leave_invalid =
-        cplat_socket_leave_multicast_group(CPLAT_INVALID_SOCKET, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
-                                           &detail); // [手順] - 無効なソケットでグループ離脱を設定する。
-    int actual_ret_failure =
-        cplat_socket_set_reuse_address(kSocket, 1, &detail); // [手順] - オプション設定の失敗を注入する。
+        CPLAT_INVALID_SOCKET, 1,
+        &detail); // [手順] - 無効なソケットとブロードキャストの有効化を指定して cplat_socket_set_broadcast() を呼び出す。
+    int actual_ret_interface_invalid = cplat_socket_set_multicast_interface(
+        CPLAT_INVALID_SOCKET, CPLAT_IPV4_ADDR_ANY,
+        &detail); // [手順] - 無効なソケットとマルチキャスト インターフェイスを指定して cplat_socket_set_multicast_interface() を呼び出す。
+    int actual_ret_join_invalid = cplat_socket_join_multicast_group(
+        CPLAT_INVALID_SOCKET, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
+        &detail); // [手順] - 無効なソケットと参加するマルチキャスト グループを指定して cplat_socket_join_multicast_group() を呼び出す。
+    int actual_ret_leave_invalid = cplat_socket_leave_multicast_group(
+        CPLAT_INVALID_SOCKET, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
+        &detail); // [手順] - 無効なソケットと離脱するマルチキャスト グループを指定して cplat_socket_leave_multicast_group() を呼び出す。
+    int actual_ret_failure = cplat_socket_set_reuse_address(
+        kSocket, 1, &detail); // [手順] - オプション設定が失敗する状態で cplat_socket_set_reuse_address() を呼び出す。
     int actual_ret_interface_failure = cplat_socket_set_multicast_interface(
-        kSocket, CPLAT_IPV4_ADDR_LOOPBACK, &detail); // [手順] - インターフェイス設定の失敗を注入する。
-    int actual_ret_join_failure =
-        cplat_socket_join_multicast_group(kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
-                                          &detail); // [手順] - グループ参加の失敗を注入する。
-    int actual_ret_leave_failure =
-        cplat_socket_leave_multicast_group(kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
-                                           &detail); // [手順] - グループ離脱の失敗を注入する。
+        kSocket, CPLAT_IPV4_ADDR_LOOPBACK,
+        &detail); // [手順] - インターフェイス設定が失敗する状態で cplat_socket_set_multicast_interface() を呼び出す。
+    int actual_ret_join_failure = cplat_socket_join_multicast_group(
+        kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
+        &detail); // [手順] - グループ参加が失敗する状態で cplat_socket_join_multicast_group() を呼び出す。
+    int actual_ret_leave_failure = cplat_socket_leave_multicast_group(
+        kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
+        &detail); // [手順] - グループ離脱が失敗する状態で cplat_socket_leave_multicast_group() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1133,56 +1161,64 @@ TEST_F(socketTest, send_and_recv_report_results)
         .WillOnce(Return((ssize_t)3))
         .WillOnce(DoAll(Assign(&errno, EPIPE), Return((ssize_t)-1)));
     // [Pre-Assert確認_正常系] - send() が kSocket、4U、MSG_NOSIGNAL を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - send() にて 1 回目は 3、2 回目は errno に EPIPE を設定して -1 を返す。
+    // [Pre-Assert手順] - send() から、1 回目は 3、2 回目は errno に EPIPE を設定して -1 を返す。
     EXPECT_CALL(mock_sys_socket_, recv(_, _, _, (int)kSocket, _, 4U, 0))
         .WillOnce(Return((ssize_t)2))
         .WillOnce(DoAll(Assign(&errno, ECONNRESET), Return((ssize_t)-1)));
     // [Pre-Assert確認_正常系] - recv() が kSocket、4U、0 を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - recv() にて 1 回目は 2、2 回目は errno に ECONNRESET を設定して -1 を返す。
+    // [Pre-Assert手順] - recv() から、1 回目は 2、2 回目は errno に ECONNRESET を設定して -1 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)kSocket, _, 4, 0))
         .WillOnce(Return(3))
         .WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_正常系] - send() が kSocket、4、0 を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - send() にて 1 回目は 3、2 回目は SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - send() から 1 回目は 3、2 回目は SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, recv(_, _, _, (SOCKET)kSocket, _, 4, 0))
         .WillOnce(Return(2))
         .WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_正常系] - recv() が kSocket、4、0 を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - recv() にて 1 回目は 2、2 回目は SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - recv() から 1 回目は 2、2 回目は SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAECONNRESET)).WillOnce(Return(WSAECONNRESET));
     // [Pre-Assert確認_正常系] - WSAGetLastError() が 2 回呼び出されること。
-    // [Pre-Assert手順] - WSAGetLastError() にて 1 回目は WSAECONNRESET、2 回目は WSAECONNRESET を返す。
+    // [Pre-Assert手順] - WSAGetLastError() から 1 回目は WSAECONNRESET、2 回目は WSAECONNRESET を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の send() から 3 バイト送信ののち失敗、recv() から 2 バイト受信ののち失敗を返却し、それぞれの失敗要因を通知する。
+    // [Pre-Assert手順] - send() から 1 回目は送信バイト数 3、2 回目は失敗を返し、recv() から 1 回目は受信バイト数 2、2 回目は失敗を返し、それぞれ errno または WSAGetLastError() で失敗要因を通知する。
 
     // Act
-    int actual_ret_invalid_send = cplat_socket_send(CPLAT_INVALID_SOCKET, buffer, sizeof(buffer), &sent,
-                                                    &detail); // [手順] - 無効なソケットで送信する。
-    int actual_ret_invalid_send_buffer = cplat_socket_send(kSocket, nullptr, sizeof(buffer), &sent,
-                                                           &detail); // [手順] - NULL の送信バッファーを指定する。
-    int actual_ret_invalid_send_output = cplat_socket_send(kSocket, buffer, sizeof(buffer), nullptr,
-                                                           &detail); // [手順] - NULL の送信バイト数出力先を指定する。
+    int actual_ret_invalid_send =
+        cplat_socket_send(CPLAT_INVALID_SOCKET, buffer, sizeof(buffer), &sent,
+                          &detail); // [手順] - 無効なソケットを指定して cplat_socket_send() を呼び出す。
+    int actual_ret_invalid_send_buffer =
+        cplat_socket_send(kSocket, nullptr, sizeof(buffer), &sent,
+                          &detail); // [手順] - 送信バッファーに nullptr を指定して cplat_socket_send() を呼び出す。
+    int actual_ret_invalid_send_output =
+        cplat_socket_send(kSocket, buffer, sizeof(buffer), nullptr,
+                          &detail); // [手順] - 送信バイト数出力先に nullptr を指定して cplat_socket_send() を呼び出す。
     int actual_ret_invalid_send_length =
         cplat_socket_send(kSocket, buffer, CPLAT_SOCKET_MAX_TRANSFER + (size_t)1U, &sent,
-                          &detail); // [手順] - 最大転送量を超える送信長を指定する。
-    int actual_ret_invalid_recv_socket = cplat_socket_recv(CPLAT_INVALID_SOCKET, buffer, sizeof(buffer), &received,
-                                                           &detail); // [手順] - 無効なソケットで受信する。
-    int actual_ret_invalid_recv = cplat_socket_recv(kSocket, nullptr, sizeof(buffer), &received,
-                                                    &detail); // [手順] - NULL の受信バッファーを指定する。
-    int actual_ret_invalid_recv_output = cplat_socket_recv(kSocket, buffer, sizeof(buffer), nullptr,
-                                                           &detail); // [手順] - NULL の受信バイト数出力先を指定する。
+                          &detail); // [手順] - 最大転送量を超える送信長を指定して cplat_socket_send() を呼び出す。
+    int actual_ret_invalid_recv_socket =
+        cplat_socket_recv(CPLAT_INVALID_SOCKET, buffer, sizeof(buffer), &received,
+                          &detail); // [手順] - 無効なソケットを指定して cplat_socket_recv() を呼び出す。
+    int actual_ret_invalid_recv =
+        cplat_socket_recv(kSocket, nullptr, sizeof(buffer), &received,
+                          &detail); // [手順] - 受信バッファーに nullptr を指定して cplat_socket_recv() を呼び出す。
+    int actual_ret_invalid_recv_output =
+        cplat_socket_recv(kSocket, buffer, sizeof(buffer), nullptr,
+                          &detail); // [手順] - 受信バイト数出力先に nullptr を指定して cplat_socket_recv() を呼び出す。
     int actual_ret_invalid_recv_length =
         cplat_socket_recv(kSocket, buffer, CPLAT_SOCKET_MAX_TRANSFER + (size_t)1U, &received,
-                          &detail); // [手順] - 最大転送量を超える受信長を指定する。
-    int actual_ret_send =
-        cplat_socket_send(kSocket, buffer, sizeof(buffer), &sent, &detail); // [手順] - 送信成功を注入する。
-    int actual_ret_recv =
-        cplat_socket_recv(kSocket, buffer, sizeof(buffer), &received, &detail); // [手順] - 受信成功を注入する。
+                          &detail); // [手順] - 最大転送量を超える受信長を指定して cplat_socket_recv() を呼び出す。
+    int actual_ret_send = cplat_socket_send(kSocket, buffer, sizeof(buffer), &sent,
+                                            &detail); // [手順] - 送信が成功する状態で cplat_socket_send() を呼び出す。
+    int actual_ret_recv = cplat_socket_recv(kSocket, buffer, sizeof(buffer), &received,
+                                            &detail); // [手順] - 受信が成功する状態で cplat_socket_recv() を呼び出す。
     int actual_ret_send_failure =
-        cplat_socket_send(kSocket, buffer, sizeof(buffer), &sent_failure, &detail); // [手順] - 送信失敗を注入する。
-    int actual_ret_recv_failure = cplat_socket_recv(kSocket, buffer, sizeof(buffer), &received_failure,
-                                                    &detail); // [手順] - 受信失敗を注入する。
+        cplat_socket_send(kSocket, buffer, sizeof(buffer), &sent_failure,
+                          &detail); // [手順] - 送信が失敗する状態で cplat_socket_send() を呼び出す。
+    int actual_ret_recv_failure =
+        cplat_socket_recv(kSocket, buffer, sizeof(buffer), &received_failure,
+                          &detail); // [手順] - 受信が失敗する状態で cplat_socket_recv() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1190,10 +1226,10 @@ TEST_F(socketTest, send_and_recv_report_results)
         actual_ret_invalid_send); // [確認_異常系] - 無効なソケットを指定した cplat_socket_send() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_invalid_send_buffer); // [確認_異常系] - NULL の送信バッファーを指定した cplat_socket_send() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_send_buffer); // [確認_異常系] - nullptr の送信バッファーを指定した cplat_socket_send() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_invalid_send_output); // [確認_異常系] - NULL の送信バイト数出力先を指定した cplat_socket_send() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_send_output); // [確認_異常系] - nullptr の送信バイト数出力先を指定した cplat_socket_send() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_invalid_send_length); // [確認_異常系] - 最大転送量を超える長さを指定した cplat_socket_send() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -1202,10 +1238,10 @@ TEST_F(socketTest, send_and_recv_report_results)
         actual_ret_invalid_recv_socket); // [確認_異常系] - 無効なソケットを指定した cplat_socket_recv() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_invalid_recv); // [確認_異常系] - NULL の受信バッファーを指定した cplat_socket_recv() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_recv); // [確認_異常系] - nullptr の受信バッファーを指定した cplat_socket_recv() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_invalid_recv_output); // [確認_異常系] - NULL の受信バイト数出力先を指定した cplat_socket_recv() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_recv_output); // [確認_異常系] - nullptr の受信バイト数出力先を指定した cplat_socket_recv() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_invalid_recv_length); // [確認_異常系] - 最大転送量を超える長さを指定した cplat_socket_recv() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -1239,7 +1275,7 @@ TEST_F(socketTest, datagram_operations_succeed)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_sys_socket_, sendto(_, _, _, (int)kSocket, _, 4U, 0, _, _)).WillOnce(Return((ssize_t)4));
     // [Pre-Assert確認_正常系] - sendto() が kSocket、4U、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - sendto() にて 4 を返す。
+    // [Pre-Assert手順] - sendto() から 4 を返す。
     EXPECT_CALL(mock_sys_socket_, recvfrom(_, _, _, (int)kSocket, _, 4U, 0, _, _))
         .WillRepeatedly(
             [](const char *, const int, const char *, int, void *, size_t, int, struct sockaddr *address, socklen_t *)
@@ -1250,11 +1286,11 @@ TEST_F(socketTest, datagram_operations_succeed)
                 return (ssize_t)2;
             });
     // [Pre-Assert確認_正常系] - recvfrom() が kSocket、4U、0 を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - recvfrom() にて address の IPv4 アドレスに CPLAT_IPV4_ADDR_LOOPBACK、ポートに kEndpoint.port を設定し、2 を返す。
+    // [Pre-Assert手順] - recvfrom() から、address の IPv4 アドレスに CPLAT_IPV4_ADDR_LOOPBACK、ポートに kEndpoint.port を設定して 2 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, sendto(_, _, _, (SOCKET)kSocket, _, 4, 0, _, _)).WillOnce(Return(4));
     // [Pre-Assert確認_正常系] - sendto() が kSocket、4、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - sendto() にて 4 を返す。
+    // [Pre-Assert手順] - sendto() から 4 を返す。
     EXPECT_CALL(mock_winsock_, recvfrom(_, _, _, (SOCKET)kSocket, _, 4, 0, _, _))
         .WillRepeatedly(
             [](const char *, const int, const char *, SOCKET, char *, int, int, struct sockaddr *address, int *)
@@ -1265,18 +1301,20 @@ TEST_F(socketTest, datagram_operations_succeed)
                 return 2;
             });
     // [Pre-Assert確認_正常系] - recvfrom() が kSocket、4、0 を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - recvfrom() にて address の IPv4 アドレスに CPLAT_IPV4_ADDR_LOOPBACK、ポートに kEndpoint.port を設定し、2 を返す。
+    // [Pre-Assert手順] - recvfrom() から、address の IPv4 アドレスに CPLAT_IPV4_ADDR_LOOPBACK、ポートに kEndpoint.port を設定して 2 を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の sendto() から 4 バイトの送信を、recvfrom() から送信元のエンドポイントと受信バイト数を返却する。
+    // [Pre-Assert手順] - sendto() から送信バイト数 4 を返し、recvfrom() から、送信元のエンドポイントを出力引数に設定して受信バイト数 2 を返す。
 
     // Act
-    int actual_ret_send = cplat_socket_sendto(kSocket, buffer, sizeof(buffer), &kEndpoint, &transferred,
-                                              nullptr); // [手順] - データグラムを送信する。
-    int actual_ret_recv = cplat_socket_recvfrom(kSocket, buffer, sizeof(buffer), &peer, &transferred,
-                                                nullptr); // [手順] - データグラムを受信する。
-    int actual_ret_recv_without_peer =
-        cplat_socket_recvfrom(kSocket, buffer, sizeof(buffer), nullptr, &transferred,
-                              nullptr); // [手順] - 接続元エンドポイントの出力先を NULL にしてデータグラムを受信する。
+    int actual_ret_send =
+        cplat_socket_sendto(kSocket, buffer, sizeof(buffer), &kEndpoint, &transferred,
+                            nullptr); // [手順] - 送信するデータグラムを指定して cplat_socket_sendto() を呼び出す。
+    int actual_ret_recv =
+        cplat_socket_recvfrom(kSocket, buffer, sizeof(buffer), &peer, &transferred,
+                              nullptr); // [手順] - データグラムを受信する状態で cplat_socket_recvfrom() を呼び出す。
+    int actual_ret_recv_without_peer = cplat_socket_recvfrom(
+        kSocket, buffer, sizeof(buffer), nullptr, &transferred,
+        nullptr); // [手順] - 接続元エンドポイントの出力先に nullptr を指定して cplat_socket_recvfrom() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1311,55 +1349,58 @@ TEST_F(socketTest, datagram_operations_report_invalid_and_os_failure)
     EXPECT_CALL(mock_sys_socket_, sendto(_, _, _, (int)kSocket, _, 4U, 0, _, _))
         .WillOnce(DoAll(Assign(&errno, ENETUNREACH), Return((ssize_t)-1)));
     // [Pre-Assert確認_異常系] - sendto() が kSocket、4U、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - sendto() にて errno に ENETUNREACH を設定し、-1 を返す。
+    // [Pre-Assert手順] - sendto() から、errno に ENETUNREACH を設定して -1 を返す。
     EXPECT_CALL(mock_sys_socket_, recvfrom(_, _, _, (int)kSocket, _, 4U, 0, _, _))
         .WillOnce(DoAll(Assign(&errno, ECONNREFUSED), Return((ssize_t)-1)));
     // [Pre-Assert確認_異常系] - recvfrom() が kSocket、4U、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - recvfrom() にて errno に ECONNREFUSED を設定し、-1 を返す。
+    // [Pre-Assert手順] - recvfrom() から、errno に ECONNREFUSED を設定して -1 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, sendto(_, _, _, (SOCKET)kSocket, _, 4, 0, _, _)).WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_異常系] - sendto() が kSocket、4、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - sendto() にて SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - sendto() から SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, recvfrom(_, _, _, (SOCKET)kSocket, _, 4, 0, _, _)).WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_異常系] - recvfrom() が kSocket、4、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - recvfrom() にて SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - recvfrom() から SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAENETUNREACH)).WillOnce(Return(WSAECONNREFUSED));
     // [Pre-Assert確認_異常系] - WSAGetLastError() が 2 回呼び出されること。
-    // [Pre-Assert手順] - WSAGetLastError() にて 1 回目は WSAENETUNREACH、2 回目は WSAECONNREFUSED を返す。
+    // [Pre-Assert手順] - WSAGetLastError() から 1 回目は WSAENETUNREACH、2 回目は WSAECONNREFUSED を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の sendto() と recvfrom() から失敗を返却し、それぞれの失敗要因を通知する。
+    // [Pre-Assert手順] - sendto() から、Linux では errno に ENETUNREACH を設定して -1、Windows では SOCKET_ERROR を返し、recvfrom() からも失敗を返し、それぞれ errno または WSAGetLastError() で失敗要因を通知する。
 
     // Act
     int actual_ret_send_invalid_socket =
         cplat_socket_sendto(CPLAT_INVALID_SOCKET, buffer, sizeof(buffer), &kEndpoint, &transferred,
-                            &detail); // [手順] - 無効なソケットで sendto() を呼び出す。
+                            &detail); // [手順] - 無効なソケットを指定して cplat_socket_sendto() を呼び出す。
     int actual_ret_send_invalid_buffer =
         cplat_socket_sendto(kSocket, nullptr, sizeof(buffer), &kEndpoint, &transferred,
-                            &detail); // [手順] - NULL の送信バッファーで sendto() を呼び出す。
-    int actual_ret_send_invalid_output =
-        cplat_socket_sendto(kSocket, buffer, sizeof(buffer), &kEndpoint, nullptr,
-                            &detail); // [手順] - NULL の送信バイト数出力先で sendto() を呼び出す。
+                            &detail); // [手順] - 送信バッファーに nullptr を指定して cplat_socket_sendto() を呼び出す。
+    int actual_ret_send_invalid_output = cplat_socket_sendto(
+        kSocket, buffer, sizeof(buffer), &kEndpoint, nullptr,
+        &detail); // [手順] - 送信バイト数出力先に nullptr を指定して cplat_socket_sendto() を呼び出す。
     int actual_ret_send_invalid_length =
         cplat_socket_sendto(kSocket, buffer, CPLAT_SOCKET_MAX_TRANSFER + (size_t)1U, &kEndpoint, &transferred,
-                            &detail); // [手順] - 最大転送量を超える長さで sendto() を呼び出す。
+                            &detail); // [手順] - 最大転送量を超える長さを指定して cplat_socket_sendto() を呼び出す。
     int actual_ret_send_invalid =
         cplat_socket_sendto(kSocket, buffer, sizeof(buffer), nullptr, &transferred,
-                            &detail); // [手順] - sendto() のエンドポイントに NULL を指定する。
+                            &detail); // [手順] - エンドポイントに nullptr を指定して cplat_socket_sendto() を呼び出す。
     int actual_ret_recv_invalid_socket =
         cplat_socket_recvfrom(CPLAT_INVALID_SOCKET, buffer, sizeof(buffer), nullptr, &transferred,
-                              &detail); // [手順] - 無効なソケットで recvfrom() を呼び出す。
-    int actual_ret_recv_invalid_buffer =
-        cplat_socket_recvfrom(kSocket, nullptr, sizeof(buffer), nullptr, &transferred,
-                              &detail); // [手順] - NULL の受信バッファーで recvfrom() を呼び出す。
-    int actual_ret_recv_invalid_length =
-        cplat_socket_recvfrom(kSocket, buffer, CPLAT_SOCKET_MAX_TRANSFER + (size_t)1U, nullptr, &transferred,
-                              &detail); // [手順] - 最大転送量を超える長さで recvfrom() を呼び出す。
-    int actual_ret_recv_invalid = cplat_socket_recvfrom(kSocket, buffer, sizeof(buffer), nullptr, nullptr,
-                                                        &detail); // [手順] - recvfrom() の出力先に NULL を指定する。
-    int actual_ret_send_failure = cplat_socket_sendto(kSocket, buffer, sizeof(buffer), &kEndpoint, &transferred,
-                                                      &detail); // [手順] - sendto() の失敗を注入する。
-    int actual_ret_recv_failure = cplat_socket_recvfrom(kSocket, buffer, sizeof(buffer), nullptr, &transferred,
-                                                        &detail); // [手順] - recvfrom() の失敗を注入する。
+                              &detail); // [手順] - 無効なソケットを指定して cplat_socket_recvfrom() を呼び出す。
+    int actual_ret_recv_invalid_buffer = cplat_socket_recvfrom(
+        kSocket, nullptr, sizeof(buffer), nullptr, &transferred,
+        &detail); // [手順] - 受信バッファーに nullptr を指定して cplat_socket_recvfrom() を呼び出す。
+    int actual_ret_recv_invalid_length = cplat_socket_recvfrom(
+        kSocket, buffer, CPLAT_SOCKET_MAX_TRANSFER + (size_t)1U, nullptr, &transferred,
+        &detail); // [手順] - 最大転送量を超える長さを指定して cplat_socket_recvfrom() を呼び出す。
+    int actual_ret_recv_invalid = cplat_socket_recvfrom(
+        kSocket, buffer, sizeof(buffer), nullptr, nullptr,
+        &detail); // [手順] - 受信バイト数の出力先に nullptr を指定して cplat_socket_recvfrom() を呼び出す。
+    int actual_ret_send_failure =
+        cplat_socket_sendto(kSocket, buffer, sizeof(buffer), &kEndpoint, &transferred,
+                            &detail); // [手順] - sendto() が失敗する状態で cplat_socket_sendto() を呼び出す。
+    int actual_ret_recv_failure =
+        cplat_socket_recvfrom(kSocket, buffer, sizeof(buffer), nullptr, &transferred,
+                              &detail); // [手順] - recvfrom() が失敗する状態で cplat_socket_recvfrom() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1367,28 +1408,28 @@ TEST_F(socketTest, datagram_operations_report_invalid_and_os_failure)
         actual_ret_send_invalid_socket); // [確認_異常系] - 無効なソケットを指定した cplat_socket_sendto() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_send_invalid_buffer); // [確認_異常系] - NULL の送信バッファーを指定した cplat_socket_sendto() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_send_invalid_buffer); // [確認_異常系] - nullptr の送信バッファーを指定した cplat_socket_sendto() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_send_invalid_output); // [確認_異常系] - NULL の送信バイト数出力先を指定した cplat_socket_sendto() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_send_invalid_output); // [確認_異常系] - nullptr の送信バイト数出力先を指定した cplat_socket_sendto() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_send_invalid_length); // [確認_異常系] - 最大転送量を超える長さを指定した cplat_socket_sendto() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_send_invalid); // [確認_異常系] - NULL のエンドポイントを指定した cplat_socket_sendto() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_send_invalid); // [確認_異常系] - nullptr のエンドポイントを指定した cplat_socket_sendto() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_recv_invalid_socket); // [確認_異常系] - 無効なソケットを指定した cplat_socket_recvfrom() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_recv_invalid_buffer); // [確認_異常系] - NULL の受信バッファーを指定した cplat_socket_recvfrom() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_recv_invalid_buffer); // [確認_異常系] - nullptr の受信バッファーを指定した cplat_socket_recvfrom() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_recv_invalid_length); // [確認_異常系] - 最大転送量を超える長さを指定した cplat_socket_recvfrom() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_recv_invalid); // [確認_異常系] - NULL の出力先を指定した cplat_socket_recvfrom() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_recv_invalid); // [確認_異常系] - nullptr の出力先を指定した cplat_socket_recvfrom() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         actual_ret_send_failure); // [確認_異常系] - 失敗を注入した cplat_socket_sendto() の戻り値が CPLAT_ERR_UNKNOWN であること。
@@ -1413,10 +1454,10 @@ TEST_F(socketTest, send_all_reports_results)
         .WillOnce(Return((ssize_t)0))
         .WillOnce(DoAll(Assign(&errno, EPIPE), Return((ssize_t)-1)));
     // [Pre-Assert確認_正常系] - send() が kSocket、4U、MSG_NOSIGNAL を指定して 4 回呼び出されること。
-    // [Pre-Assert手順] - send() にて 1 回目は 4、2 回目は 2、3 回目は 0、4 回目は errno に EPIPE を設定して -1 を返す。
+    // [Pre-Assert手順] - send() から、1 回目は 4、2 回目は 2、3 回目は 0、4 回目は errno に EPIPE を設定して -1 を返す。
     EXPECT_CALL(mock_sys_socket_, send(_, _, _, (int)kSocket, _, 2U, MSG_NOSIGNAL)).WillOnce(Return((ssize_t)2));
     // [Pre-Assert確認_正常系] - send() が kSocket、2U、MSG_NOSIGNAL を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - send() にて 2 を返す。
+    // [Pre-Assert手順] - send() から 2 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)kSocket, _, 4, 0))
         .WillOnce(Return(4))
@@ -1424,32 +1465,38 @@ TEST_F(socketTest, send_all_reports_results)
         .WillOnce(Return(0))
         .WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_正常系] - send() が kSocket、4、0 を指定して 4 回呼び出されること。
-    // [Pre-Assert手順] - send() にて 1 回目は 4、2 回目は 2、3 回目は 0、4 回目は SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - send() から 1 回目は 4、2 回目は 2、3 回目は 0、4 回目は SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)kSocket, _, 2, 0)).WillOnce(Return(2));
     // [Pre-Assert確認_正常系] - send() が kSocket、2、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - send() にて 2 を返す。
+    // [Pre-Assert手順] - send() から 2 を返す。
     EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAECONNRESET));
     // [Pre-Assert確認_正常系] - WSAGetLastError() が 1 回呼び出されること。
-    // [Pre-Assert手順] - WSAGetLastError() にて WSAECONNRESET を返す。
+    // [Pre-Assert手順] - WSAGetLastError() から WSAECONNRESET を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の send() から、全量送信、部分送信、0 バイト送信、失敗の順に応答する。
+    // [Pre-Assert手順] - send() から、全量送信の 4、部分送信の 2、0 バイト送信の 0、失敗を表す -1 (Windows では SOCKET_ERROR) の順に返す。
 
     // Act
-    int actual_ret_empty = cplat_socket_send_all(kSocket, buffer, 0U, &detail); // [手順] - 長さ 0 のデータを送信する。
+    int actual_ret_empty = cplat_socket_send_all(
+        kSocket, buffer, 0U, &detail); // [手順] - 長さ 0 のデータを指定して cplat_socket_send_all() を呼び出す。
     int actual_ret_full =
-        cplat_socket_send_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - 全送信成功を注入する。
-    int actual_ret_partial =
-        cplat_socket_send_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - 部分送信を注入する。
+        cplat_socket_send_all(kSocket, buffer, sizeof(buffer),
+                              &detail); // [手順] - 全送信が成功する状態で cplat_socket_send_all() を呼び出す。
+    int actual_ret_partial = cplat_socket_send_all(
+        kSocket, buffer, sizeof(buffer), &detail); // [手順] - 部分送信になる状態で cplat_socket_send_all() を呼び出す。
     int actual_ret_zero =
-        cplat_socket_send_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - 0 バイト送信を注入する。
-    int actual_ret_failure =
-        cplat_socket_send_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - 送信失敗を注入する。
-    int actual_ret_invalid = cplat_socket_send_all(CPLAT_INVALID_SOCKET, buffer, sizeof(buffer),
-                                                   &detail); // [手順] - 無効なソケットを指定する。
-    int actual_ret_invalid_buffer =
-        cplat_socket_send_all(kSocket, nullptr, sizeof(buffer), &detail); // [手順] - NULL の送信バッファーを指定する。
-    int actual_ret_invalid_length = cplat_socket_send_all(kSocket, buffer, CPLAT_SOCKET_MAX_TRANSFER + (size_t)1U,
-                                                          &detail); // [手順] - 最大転送量を超える送信長を指定する。
+        cplat_socket_send_all(kSocket, buffer, sizeof(buffer),
+                              &detail); // [手順] - 0 バイト送信になる状態で cplat_socket_send_all() を呼び出す。
+    int actual_ret_failure = cplat_socket_send_all(
+        kSocket, buffer, sizeof(buffer), &detail); // [手順] - 送信が失敗する状態で cplat_socket_send_all() を呼び出す。
+    int actual_ret_invalid =
+        cplat_socket_send_all(CPLAT_INVALID_SOCKET, buffer, sizeof(buffer),
+                              &detail); // [手順] - 無効なソケットを指定して cplat_socket_send_all() を呼び出す。
+    int actual_ret_invalid_buffer = cplat_socket_send_all(
+        kSocket, nullptr, sizeof(buffer),
+        &detail); // [手順] - 送信バッファーに nullptr を指定して cplat_socket_send_all() を呼び出す。
+    int actual_ret_invalid_length = cplat_socket_send_all(
+        kSocket, buffer, CPLAT_SOCKET_MAX_TRANSFER + (size_t)1U,
+        &detail); // [手順] - 最大転送量を超える送信長を指定して cplat_socket_send_all() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1472,7 +1519,7 @@ TEST_F(socketTest, send_all_reports_results)
         actual_ret_invalid); // [確認_異常系] - 無効なソケットを指定した cplat_socket_send_all() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_invalid_buffer); // [確認_異常系] - NULL の送信バッファーを指定した cplat_socket_send_all() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_buffer); // [確認_異常系] - nullptr の送信バッファーを指定した cplat_socket_send_all() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_invalid_length); // [確認_異常系] - 最大転送量を超える長さを指定した cplat_socket_send_all() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -1494,10 +1541,10 @@ TEST_F(socketTest, recv_all_reports_results)
         .WillOnce(Return((ssize_t)0))
         .WillOnce(DoAll(Assign(&errno, ECONNRESET), Return((ssize_t)-1)));
     // [Pre-Assert確認_正常系] - recv() が kSocket、4U、0 を指定して 4 回呼び出されること。
-    // [Pre-Assert手順] - recv() にて 1 回目は 4、2 回目は 2、3 回目は 0、4 回目は errno に ECONNRESET を設定して -1 を返す。
+    // [Pre-Assert手順] - recv() から、1 回目は 4、2 回目は 2、3 回目は 0、4 回目は errno に ECONNRESET を設定して -1 を返す。
     EXPECT_CALL(mock_sys_socket_, recv(_, _, _, (int)kSocket, _, 2U, 0)).WillOnce(Return((ssize_t)2));
     // [Pre-Assert確認_正常系] - recv() が kSocket、2U、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - recv() にて 2 を返す。
+    // [Pre-Assert手順] - recv() から 2 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, recv(_, _, _, (SOCKET)kSocket, _, 4, 0))
         .WillOnce(Return(4))
@@ -1505,31 +1552,37 @@ TEST_F(socketTest, recv_all_reports_results)
         .WillOnce(Return(0))
         .WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_正常系] - recv() が kSocket、4、0 を指定して 4 回呼び出されること。
-    // [Pre-Assert手順] - recv() にて 1 回目は 4、2 回目は 2、3 回目は 0、4 回目は SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - recv() から 1 回目は 4、2 回目は 2、3 回目は 0、4 回目は SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, recv(_, _, _, (SOCKET)kSocket, _, 2, 0)).WillOnce(Return(2));
     // [Pre-Assert確認_正常系] - recv() が kSocket、2、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - recv() にて 2 を返す。
+    // [Pre-Assert手順] - recv() から 2 を返す。
     EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAECONNRESET));
     // [Pre-Assert確認_正常系] - WSAGetLastError() が 1 回呼び出されること。
-    // [Pre-Assert手順] - WSAGetLastError() にて WSAECONNRESET を返す。
+    // [Pre-Assert手順] - WSAGetLastError() から WSAECONNRESET を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の recv() から、全量受信、部分受信、0 バイト受信、失敗の順に応答する。
+    // [Pre-Assert手順] - recv() から、全量受信の 4、部分受信の 2、0 バイト受信の 0、失敗を表す -1 (Windows では SOCKET_ERROR) の順に返す。
 
     // Act
-    int actual_ret_empty = cplat_socket_recv_all(kSocket, buffer, 0U, &detail); // [手順] - 長さ 0 のデータを受信する。
+    int actual_ret_empty = cplat_socket_recv_all(
+        kSocket, buffer, 0U, &detail); // [手順] - 長さ 0 のデータを指定して cplat_socket_recv_all() を呼び出す。
     int actual_ret_full =
-        cplat_socket_recv_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - 全受信成功を注入する。
-    int actual_ret_partial =
-        cplat_socket_recv_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - 部分受信を注入する。
-    int actual_ret_eof = cplat_socket_recv_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - EOF を注入する。
-    int actual_ret_failure =
-        cplat_socket_recv_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - 受信失敗を注入する。
-    int actual_ret_invalid = cplat_socket_recv_all(CPLAT_INVALID_SOCKET, buffer, sizeof(buffer),
-                                                   &detail); // [手順] - 無効なソケットを指定する。
-    int actual_ret_invalid_buffer =
-        cplat_socket_recv_all(kSocket, nullptr, sizeof(buffer), &detail); // [手順] - NULL の受信バッファーを指定する。
-    int actual_ret_invalid_length = cplat_socket_recv_all(kSocket, buffer, CPLAT_SOCKET_MAX_TRANSFER + (size_t)1U,
-                                                          &detail); // [手順] - 最大転送量を超える受信長を指定する。
+        cplat_socket_recv_all(kSocket, buffer, sizeof(buffer),
+                              &detail); // [手順] - 全受信が成功する状態で cplat_socket_recv_all() を呼び出す。
+    int actual_ret_partial = cplat_socket_recv_all(
+        kSocket, buffer, sizeof(buffer), &detail); // [手順] - 部分受信になる状態で cplat_socket_recv_all() を呼び出す。
+    int actual_ret_eof = cplat_socket_recv_all(
+        kSocket, buffer, sizeof(buffer), &detail); // [手順] - EOF が返される状態で cplat_socket_recv_all() を呼び出す。
+    int actual_ret_failure = cplat_socket_recv_all(
+        kSocket, buffer, sizeof(buffer), &detail); // [手順] - 受信が失敗する状態で cplat_socket_recv_all() を呼び出す。
+    int actual_ret_invalid =
+        cplat_socket_recv_all(CPLAT_INVALID_SOCKET, buffer, sizeof(buffer),
+                              &detail); // [手順] - 無効なソケットを指定して cplat_socket_recv_all() を呼び出す。
+    int actual_ret_invalid_buffer = cplat_socket_recv_all(
+        kSocket, nullptr, sizeof(buffer),
+        &detail); // [手順] - 受信バッファーに nullptr を指定して cplat_socket_recv_all() を呼び出す。
+    int actual_ret_invalid_length = cplat_socket_recv_all(
+        kSocket, buffer, CPLAT_SOCKET_MAX_TRANSFER + (size_t)1U,
+        &detail); // [手順] - 最大転送量を超える受信長を指定して cplat_socket_recv_all() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1552,7 +1605,7 @@ TEST_F(socketTest, recv_all_reports_results)
         actual_ret_invalid); // [確認_異常系] - 無効なソケットを指定した cplat_socket_recv_all() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_invalid_buffer); // [確認_異常系] - NULL の受信バッファーを指定した cplat_socket_recv_all() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_buffer); // [確認_異常系] - nullptr の受信バッファーを指定した cplat_socket_recv_all() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_invalid_length); // [確認_異常系] - 最大転送量を超える長さを指定した cplat_socket_recv_all() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -1575,41 +1628,45 @@ TEST_F(socketTest, send_and_recv_reject_transfer_exceeding_request)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_sys_socket_, send(_, _, _, (int)kSocket, _, 4U, MSG_NOSIGNAL)).WillOnce(Return((ssize_t)5));
     // [Pre-Assert確認_異常系] - send() が kSocket、4U、MSG_NOSIGNAL を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - send() にて 5 を返す。
+    // [Pre-Assert手順] - send() から 5 を返す。
     EXPECT_CALL(mock_sys_socket_, recv(_, _, _, (int)kSocket, _, 4U, 0)).WillOnce(Return((ssize_t)5));
     // [Pre-Assert確認_異常系] - recv() が kSocket、4U、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - recv() にて 5 を返す。
+    // [Pre-Assert手順] - recv() から 5 を返す。
     EXPECT_CALL(mock_sys_socket_, sendto(_, _, _, (int)kSocket, _, 4U, 0, _, _)).WillOnce(Return((ssize_t)5));
     // [Pre-Assert確認_異常系] - sendto() が kSocket、4U、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - sendto() にて 5 を返す。
+    // [Pre-Assert手順] - sendto() から 5 を返す。
     EXPECT_CALL(mock_sys_socket_, recvfrom(_, _, _, (int)kSocket, _, 4U, 0, _, _)).WillOnce(Return((ssize_t)5));
     // [Pre-Assert確認_異常系] - recvfrom() が kSocket、4U、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - recvfrom() にて 5 を返す。
+    // [Pre-Assert手順] - recvfrom() から 5 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)kSocket, _, 4, 0)).WillOnce(Return(5));
     // [Pre-Assert確認_異常系] - send() が kSocket、4、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - send() にて 5 を返す。
+    // [Pre-Assert手順] - send() から 5 を返す。
     EXPECT_CALL(mock_winsock_, recv(_, _, _, (SOCKET)kSocket, _, 4, 0)).WillOnce(Return(5));
     // [Pre-Assert確認_異常系] - recv() が kSocket、4、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - recv() にて 5 を返す。
+    // [Pre-Assert手順] - recv() から 5 を返す。
     EXPECT_CALL(mock_winsock_, sendto(_, _, _, (SOCKET)kSocket, _, 4, 0, _, _)).WillOnce(Return(5));
     // [Pre-Assert確認_異常系] - sendto() が kSocket、4、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - sendto() にて 5 を返す。
+    // [Pre-Assert手順] - sendto() から 5 を返す。
     EXPECT_CALL(mock_winsock_, recvfrom(_, _, _, (SOCKET)kSocket, _, 4, 0, _, _)).WillOnce(Return(5));
     // [Pre-Assert確認_異常系] - recvfrom() が kSocket、4、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - recvfrom() にて 5 を返す。
+    // [Pre-Assert手順] - recvfrom() から 5 を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の各 API から、要求量を超える 5 バイトの転送を返却する。
+    // [Pre-Assert手順] - send() から要求量を超える転送バイト数 5 を返し、recv()、sendto()、recvfrom() からも同じ値を返す。
 
     // Act
     int actual_ret_send =
-        cplat_socket_send(kSocket, buffer, sizeof(buffer), &sent, &detail); // [手順] - 4 バイトを送信する。
+        cplat_socket_send(kSocket, buffer, sizeof(buffer), &sent,
+                          &detail); // [手順] - 送信長に 4 バイトを指定して cplat_socket_send() を呼び出す。
     int actual_ret_recv =
-        cplat_socket_recv(kSocket, buffer, sizeof(buffer), &received, &detail); // [手順] - 4 バイトを受信する。
-    int actual_ret_sendto = cplat_socket_sendto(kSocket, buffer, sizeof(buffer), &kEndpoint, &sent_to,
-                                                &detail); // [手順] - 4 バイトを指定したエンドポイントへ送信する。
-    int actual_ret_recvfrom = cplat_socket_recvfrom(kSocket, buffer, sizeof(buffer), &peer, &received_from,
-                                                    &detail); // [手順] - 4 バイトを受信する。
+        cplat_socket_recv(kSocket, buffer, sizeof(buffer), &received,
+                          &detail); // [手順] - 受信長に 4 バイトを指定して cplat_socket_recv() を呼び出す。
+    int actual_ret_sendto = cplat_socket_sendto(
+        kSocket, buffer, sizeof(buffer), &kEndpoint, &sent_to,
+        &detail); // [手順] - 送信長に 4 バイトと送信先エンドポイントを指定して cplat_socket_sendto() を呼び出す。
+    int actual_ret_recvfrom =
+        cplat_socket_recvfrom(kSocket, buffer, sizeof(buffer), &peer, &received_from,
+                              &detail); // [手順] - 受信長に 4 バイトを指定して cplat_socket_recvfrom() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1644,37 +1701,39 @@ TEST_F(socketTest, send_all_and_recv_all_reject_transfer_exceeding_remaining)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_sys_socket_, send(_, _, _, (int)kSocket, _, 4U, MSG_NOSIGNAL)).WillOnce(Return((ssize_t)2));
     // [Pre-Assert確認_異常系] - send() が kSocket、4U、MSG_NOSIGNAL を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - send() にて 2 を返す。
+    // [Pre-Assert手順] - send() から 2 を返す。
     EXPECT_CALL(mock_sys_socket_, send(_, _, _, (int)kSocket, _, 2U, MSG_NOSIGNAL)).WillOnce(Return((ssize_t)3));
     // [Pre-Assert確認_異常系] - send() が kSocket、2U、MSG_NOSIGNAL を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - send() にて 3 を返す。
+    // [Pre-Assert手順] - send() から 3 を返す。
     EXPECT_CALL(mock_sys_socket_, recv(_, _, _, (int)kSocket, _, 4U, 0)).WillOnce(Return((ssize_t)2));
     // [Pre-Assert確認_異常系] - recv() が kSocket、4U、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - recv() にて 2 を返す。
+    // [Pre-Assert手順] - recv() から 2 を返す。
     EXPECT_CALL(mock_sys_socket_, recv(_, _, _, (int)kSocket, _, 2U, 0)).WillOnce(Return((ssize_t)3));
     // [Pre-Assert確認_異常系] - recv() が kSocket、2U、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - recv() にて 3 を返す。
+    // [Pre-Assert手順] - recv() から 3 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)kSocket, _, 4, 0)).WillOnce(Return(2));
     // [Pre-Assert確認_異常系] - send() が kSocket、4、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - send() にて 2 を返す。
+    // [Pre-Assert手順] - send() から 2 を返す。
     EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)kSocket, _, 2, 0)).WillOnce(Return(3));
     // [Pre-Assert確認_異常系] - send() が kSocket、2、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - send() にて 3 を返す。
+    // [Pre-Assert手順] - send() から 3 を返す。
     EXPECT_CALL(mock_winsock_, recv(_, _, _, (SOCKET)kSocket, _, 4, 0)).WillOnce(Return(2));
     // [Pre-Assert確認_異常系] - recv() が kSocket、4、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - recv() にて 2 を返す。
+    // [Pre-Assert手順] - recv() から 2 を返す。
     EXPECT_CALL(mock_winsock_, recv(_, _, _, (SOCKET)kSocket, _, 2, 0)).WillOnce(Return(3));
     // [Pre-Assert確認_異常系] - recv() が kSocket、2、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - recv() にて 3 を返す。
+    // [Pre-Assert手順] - recv() から 3 を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の各 API から、2 バイトの転送ののち残量を超える 3 バイトの転送を返却する。
+    // [Pre-Assert手順] - send() から 1 回目は転送バイト数 2、2 回目は残量を超える 3 を返し、recv() からも同じ順に返す。
 
     // Act
-    int actual_ret_send_all =
-        cplat_socket_send_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - 4 バイトを全量送信する。
-    int actual_ret_recv_all =
-        cplat_socket_recv_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - 4 バイトを全量受信する。
+    int actual_ret_send_all = cplat_socket_send_all(
+        kSocket, buffer, sizeof(buffer),
+        &detail); // [手順] - 全量送信するデータに 4 バイトを指定して cplat_socket_send_all() を呼び出す。
+    int actual_ret_recv_all = cplat_socket_recv_all(
+        kSocket, buffer, sizeof(buffer),
+        &detail); // [手順] - 全量受信する長さに 4 バイトを指定して cplat_socket_recv_all() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1713,7 +1772,7 @@ TEST_F(socketTest, wait_single_reports_results)
             })
         .WillOnce(DoAll(Assign(&errno, EBADF), Return(-1)));
     // [Pre-Assert確認_正常系] - poll() が 1、0 を指定して 4 回呼び出されること。
-    // [Pre-Assert手順] - poll() にて 1 回目は 0、2 回目は fds->revents に 0 を設定して 1、3 回目は fds->revents に fds->events を設定して 1、4 回目は errno に EBADF を設定して -1 を返す。
+    // [Pre-Assert手順] - poll() から、1 回目は 0、2 回目は fds->revents に 0 を設定して 1、3 回目は fds->revents に fds->events を設定して 1、4 回目は errno に EBADF を設定して -1 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, WSAPoll(_, _, _, _, 1, 0))
         .WillOnce(Return(0))
@@ -1731,26 +1790,30 @@ TEST_F(socketTest, wait_single_reports_results)
             })
         .WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_正常系] - WSAPoll() が 1、0 を指定して 4 回呼び出されること。
-    // [Pre-Assert手順] - WSAPoll() にて 1 回目は 0、2 回目は fds->revents に 0 を設定して 1、3 回目は fds->revents に POLLRDNORM を設定して 1、4 回目は SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - WSAPoll() から、1 回目は 0、2 回目は fds->revents に 0 を設定して 1、3 回目は fds->revents に POLLRDNORM を設定して 1、4 回目は SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAEBADF));
     // [Pre-Assert確認_正常系] - WSAGetLastError() が 1 回呼び出されること。
-    // [Pre-Assert手順] - WSAGetLastError() にて WSAEBADF を返す。
+    // [Pre-Assert手順] - WSAGetLastError() から WSAEBADF を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の待機 API から、タイムアウト、条件成立、失敗の順に応答する。
+    // [Pre-Assert手順] - poll() から 1 回目はタイムアウトの 0、2 回目と 3 回目は条件成立の 1、4 回目は失敗の -1 を返し、Windows では WSAPoll() から 0、1、1、SOCKET_ERROR の順に返す。
 
     // Act
-    int actual_ret_invalid_socket = cplat_socket_wait_readable(CPLAT_INVALID_SOCKET, 0, &ready,
-                                                               &detail); // [手順] - 無効なソケットで待機する。
-    int actual_ret_invalid_output =
-        cplat_socket_wait_readable(kSocket, 0, nullptr, &detail); // [手順] - 待機結果の出力先に NULL を指定する。
-    int actual_ret_timeout =
-        cplat_socket_wait_readable(kSocket, 0, &ready, &detail); // [手順] - タイムアウトを注入する。
-    int actual_ret_not_ready =
-        cplat_socket_wait_readable(kSocket, 0, &ready, &detail); // [手順] - イベント不一致を注入する。
+    int actual_ret_invalid_socket = cplat_socket_wait_readable(
+        CPLAT_INVALID_SOCKET, 0, &ready,
+        &detail); // [手順] - 無効なソケットを指定して cplat_socket_wait_readable() を呼び出す。
+    int actual_ret_invalid_output = cplat_socket_wait_readable(
+        kSocket, 0, nullptr,
+        &detail); // [手順] - 待機結果の出力先に nullptr を指定して cplat_socket_wait_readable() を呼び出す。
+    int actual_ret_timeout = cplat_socket_wait_readable(
+        kSocket, 0, &ready, &detail); // [手順] - 待機がタイムアウトする状態で cplat_socket_wait_readable() を呼び出す。
+    int actual_ret_not_ready = cplat_socket_wait_readable(
+        kSocket, 0, &ready,
+        &detail); // [手順] - 待機イベントが一致しない状態で cplat_socket_wait_readable() を呼び出す。
     ready_after_not_ready = ready;
-    int actual_ret_ready = cplat_socket_wait_writable(kSocket, 0, &ready, &detail); // [手順] - 書き込み可能を注入する。
-    int actual_ret_failure =
-        cplat_socket_wait_readable(kSocket, 0, &ready, &detail); // [手順] - 待機 API の失敗を注入する。
+    int actual_ret_ready = cplat_socket_wait_writable(
+        kSocket, 0, &ready, &detail); // [手順] - 書き込み可能な状態で cplat_socket_wait_writable() を呼び出す。
+    int actual_ret_failure = cplat_socket_wait_readable(
+        kSocket, 0, &ready, &detail); // [手順] - 待機 API が失敗する状態で cplat_socket_wait_readable() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1758,7 +1821,7 @@ TEST_F(socketTest, wait_single_reports_results)
         actual_ret_invalid_socket); // [確認_異常系] - 無効なソケットを指定した cplat_socket_wait_readable() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_invalid_output); // [確認_異常系] - NULL の出力先を指定した cplat_socket_wait_readable() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_output); // [確認_異常系] - nullptr の出力先を指定した cplat_socket_wait_readable() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_timeout); // [確認_正常系] - タイムアウト時の cplat_socket_wait_readable() の戻り値が CPLAT_OK であること。
@@ -1793,23 +1856,28 @@ TEST_F(socketTest, wait_multi_rejects_invalid_and_waits_without_valid_socket)
     // [Pre-Assert確認_異常系] - cplat_sleep_ms() が 5 を指定して 1 回呼び出されること。
 
     // Act
-    int actual_ret_null_socks =
-        cplat_socket_wait_readable_multi(nullptr, 1U, 0, ready, &detail); // [手順] - ソケット配列に NULL を指定する。
-    int actual_ret_zero_count =
-        cplat_socket_wait_readable_multi(socks, 0U, 0, ready, &detail); // [手順] - 要素数 0 を指定する。
-    int actual_ret_large_count = cplat_socket_wait_readable_multi(socks, CPLAT_SOCKET_WAIT_MAX + 1U, 0, ready,
-                                                                  &detail); // [手順] - 最大数を超える要素数を指定する。
-    int actual_ret_null_ready =
-        cplat_socket_wait_readable_multi(socks, 1U, 0, nullptr, &detail); // [手順] - 結果配列に NULL を指定する。
-    int actual_ret_wait =
-        cplat_socket_wait_readable_multi(socks, 1U, 5, ready, &detail); // [手順] - 全無効ソケットで待機する。
+    int actual_ret_null_socks = cplat_socket_wait_readable_multi(
+        nullptr, 1U, 0, ready,
+        &detail); // [手順] - ソケット配列に nullptr を指定して cplat_socket_wait_readable_multi() を呼び出す。
+    int actual_ret_zero_count = cplat_socket_wait_readable_multi(
+        socks, 0U, 0, ready, &detail); // [手順] - 要素数に 0 を指定して cplat_socket_wait_readable_multi() を呼び出す。
+    int actual_ret_large_count = cplat_socket_wait_readable_multi(
+        socks, CPLAT_SOCKET_WAIT_MAX + 1U, 0, ready,
+        &detail); // [手順] - 最大数を超える要素数を指定して cplat_socket_wait_readable_multi() を呼び出す。
+    int actual_ret_null_ready = cplat_socket_wait_readable_multi(
+        socks, 1U, 0, nullptr,
+        &detail); // [手順] - 結果配列に nullptr を指定して cplat_socket_wait_readable_multi() を呼び出す。
+    int actual_ret_wait = cplat_socket_wait_readable_multi(
+        socks, 1U, 5, ready,
+        &detail); // [手順] - すべてのソケットが無効な状態で cplat_socket_wait_readable_multi() を呼び出す。
     int actual_ret_wait_without_timeout = cplat_socket_wait_readable_multi(
-        socks, 1U, 0, ready, &detail); // [手順] - 全無効ソケットで待機時間 0 を指定する。
+        socks, 1U, 0, ready,
+        &detail); // [手順] - すべてのソケットが無効な状態で待機時間に 0 を指定して cplat_socket_wait_readable_multi() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_socks); // [確認_異常系] - NULL のソケット配列を指定した cplat_socket_wait_readable_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_socks); // [確認_異常系] - nullptr のソケット配列を指定した cplat_socket_wait_readable_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_zero_count); // [確認_異常系] - 要素数 0 を指定した cplat_socket_wait_readable_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -1818,7 +1886,7 @@ TEST_F(socketTest, wait_multi_rejects_invalid_and_waits_without_valid_socket)
         actual_ret_large_count); // [確認_異常系] - 最大数を超える要素数を指定した cplat_socket_wait_readable_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ready); // [確認_異常系] - NULL の結果配列を指定した cplat_socket_wait_readable_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ready); // [確認_異常系] - nullptr の結果配列を指定した cplat_socket_wait_readable_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_wait); // [確認_正常系] - 全無効ソケットを指定した cplat_socket_wait_readable_multi() の戻り値が CPLAT_OK であること。
@@ -1859,7 +1927,7 @@ TEST_F(socketTest, wait_multi_reports_results)
             })
         .WillOnce(DoAll(Assign(&errno, EBADF), Return(-1)));
     // [Pre-Assert確認_正常系] - poll() が 2、0 を指定して 3 回呼び出されること。
-    // [Pre-Assert手順] - poll() にて 1 回目は fds[0].revents に 0、fds[1].revents に POLLERR を設定して 0、2 回目は fds[0].revents に POLLIN、fds[1].revents に POLLHUP を設定して 2、3 回目は errno に EBADF を設定して -1 を返す。
+    // [Pre-Assert手順] - poll() から、1 回目は fds[0].revents に 0、fds[1].revents に POLLERR を設定して 0、2 回目は fds[0].revents に POLLIN、fds[1].revents に POLLHUP を設定して 2、3 回目は errno に EBADF を設定して -1 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, WSAPoll(_, _, _, _, 2, 0))
         .WillOnce(
@@ -1878,21 +1946,23 @@ TEST_F(socketTest, wait_multi_reports_results)
             })
         .WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_正常系] - WSAPoll() が 2、0 を指定して 3 回呼び出されること。
-    // [Pre-Assert手順] - WSAPoll() にて 1 回目は fds[0].revents に 0、fds[1].revents に POLLERR を設定して 0、2 回目は fds[0].revents に POLLRDNORM、fds[1].revents に POLLHUP を設定して 2、3 回目は SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - WSAPoll() から、1 回目は fds[0].revents に 0、fds[1].revents に POLLERR を設定して 0、2 回目は fds[0].revents に POLLRDNORM、fds[1].revents に POLLHUP を設定して 2、3 回目は SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAENETDOWN));
     // [Pre-Assert確認_正常系] - WSAGetLastError() が 1 回呼び出されること。
-    // [Pre-Assert手順] - WSAGetLastError() にて WSAENETDOWN を返す。
+    // [Pre-Assert手順] - WSAGetLastError() から WSAENETDOWN を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の待機 API から、一部のソケットが受信可能、いずれも非受信、失敗の順に応答する。
+    // [Pre-Assert手順] - poll() から、一部のソケットの受信可能または非受信を出力引数に設定して 1 回目は 0、2 回目は 2、3 回目は -1 を返し、Windows では WSAPoll() から同様に設定して 0、2、SOCKET_ERROR を返す。
 
     // Act
-    int actual_ret_timeout =
-        cplat_socket_wait_readable_multi(socks, 3U, 0, ready, &detail); // [手順] - タイムアウトを注入する。
-    int actual_ret_ready = cplat_socket_wait_readable_multi(socks, 3U, 0, ready,
-                                                            &detail); // [手順] - 複数ソケットの準備完了を注入する。
+    int actual_ret_timeout = cplat_socket_wait_readable_multi(
+        socks, 3U, 0, ready,
+        &detail); // [手順] - 待機がタイムアウトする状態で cplat_socket_wait_readable_multi() を呼び出す。
+    int actual_ret_ready = cplat_socket_wait_readable_multi(
+        socks, 3U, 0, ready,
+        &detail); // [手順] - 複数ソケットが準備完了になる状態で cplat_socket_wait_readable_multi() を呼び出す。
     std::memcpy(ready_after_ready, ready, sizeof(ready_after_ready));
-    int actual_ret_failure =
-        cplat_socket_wait_readable_multi(socks, 3U, 0, ready, &detail); // [手順] - 待機失敗を注入する。
+    int actual_ret_failure = cplat_socket_wait_readable_multi(
+        socks, 3U, 0, ready, &detail); // [手順] - 待機が失敗する状態で cplat_socket_wait_readable_multi() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1939,11 +2009,12 @@ TEST_F(socketTest, wait_single_retries_after_interrupt)
                 return 1;
             });
     // [Pre-Assert確認_正常系] - poll() が 1、0 を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 下位の待機 API から、シグナルによる中断ののち条件成立を返却する。
+    // [Pre-Assert手順] - poll() から、1 回目は errno に EINTR を設定して -1、2 回目は fds->revents に fds->events を設定して条件成立の 1 を返す。
 
     // Act
-    int actual_ret =
-        cplat_socket_wait_readable(kSocket, 0, &ready, &detail); // [手順] - タイムアウト 0 で受信可能を待機する。
+    int actual_ret = cplat_socket_wait_readable(
+        kSocket, 0, &ready,
+        &detail); // [手順] - 受信可能になるまでの待機のタイムアウトに 0 を指定して cplat_socket_wait_readable() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1973,11 +2044,12 @@ TEST_F(socketTest, wait_single_retries_without_deadline_after_interrupt)
                 return 1;
             });
     // [Pre-Assert確認_正常系] - poll() が 1、CPLAT_SOCKET_WAIT_FOREVER を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 下位の待機 API から、シグナルによる中断ののち条件成立を返却する。
+    // [Pre-Assert手順] - poll() から、1 回目は errno に EINTR を設定して -1、2 回目は fds->revents に fds->events を設定して条件成立の 1 を返す。
 
     // Act
-    int actual_ret = cplat_socket_wait_readable(kSocket, CPLAT_SOCKET_WAIT_FOREVER, &ready,
-                                                &detail); // [手順] - 無期限で受信可能を待機する。
+    int actual_ret = cplat_socket_wait_readable(
+        kSocket, CPLAT_SOCKET_WAIT_FOREVER, &ready,
+        &detail); // [手順] - 受信可能になるまでの待機時間に無期限を指定して cplat_socket_wait_readable() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -2000,10 +2072,10 @@ TEST_F(socketTest, wait_single_recomputes_remaining_after_interrupt)
         .WillOnce(Return((uint64_t)1000U))
         .WillOnce(Return((uint64_t)1040U));
     // [Pre-Assert確認_正常系] - cplat_clock_get_monotonic_ms() が 2 回呼び出されること。
-    // [Pre-Assert手順] - 単調時刻から、開始時に 1000 ms、中断時に 1040 ms を返却する。
+    // [Pre-Assert手順] - cplat_clock_get_monotonic_ms() から開始時に 1000 ms、中断時に 1040 ms を返す。
     EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, 100)).WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)));
     // [Pre-Assert確認_正常系] - poll() が 1、100 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 下位の待機 API からシグナルによる中断を返却する。
+    // [Pre-Assert手順] - poll() から、errno に EINTR を設定して -1 を返す。
     EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, 60))
         .WillOnce(
             [](const char *, const int, const char *, struct pollfd *fds, nfds_t, int)
@@ -2012,11 +2084,12 @@ TEST_F(socketTest, wait_single_recomputes_remaining_after_interrupt)
                 return 1;
             });
     // [Pre-Assert確認_正常系] - poll() が 1、60 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 下位の待機 API から条件成立を返却する。
+    // [Pre-Assert手順] - poll() から、fds->revents に fds->events を設定して条件成立の 1 を返す。
 
     // Act
-    int actual_ret =
-        cplat_socket_wait_readable(kSocket, 100, &ready, &detail); // [手順] - タイムアウト 100 ms で待機する。
+    int actual_ret = cplat_socket_wait_readable(
+        kSocket, 100, &ready,
+        &detail); // [手順] - タイムアウトに 100 ms を指定して cplat_socket_wait_readable() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -2040,14 +2113,15 @@ TEST_F(socketTest, wait_single_reports_not_ready_when_deadline_expires_after_int
         .WillOnce(Return((uint64_t)1000U))
         .WillOnce(Return((uint64_t)1100U));
     // [Pre-Assert確認_正常系] - cplat_clock_get_monotonic_ms() が 2 回呼び出されること。
-    // [Pre-Assert手順] - 単調時刻から、開始時に 1000 ms、中断時に期限を過ぎた 1100 ms を返却する。
+    // [Pre-Assert手順] - cplat_clock_get_monotonic_ms() から開始時に 1000 ms、中断時に期限を過ぎた 1100 ms を返す。
     EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, 50)).WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)));
     // [Pre-Assert確認_正常系] - poll() が 1、50 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 下位の待機 API からシグナルによる中断を返却する。
+    // [Pre-Assert手順] - poll() から、errno に EINTR を設定して -1 を返す。
 
     // Act
-    int actual_ret =
-        cplat_socket_wait_readable(kSocket, 50, &ready, &detail); // [手順] - タイムアウト 50 ms で待機する。
+    int actual_ret = cplat_socket_wait_readable(
+        kSocket, 50, &ready,
+        &detail); // [手順] - タイムアウトに 50 ms を指定して cplat_socket_wait_readable() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -2077,11 +2151,12 @@ TEST_F(socketTest, wait_multi_retries_after_interrupt)
                 return 1;
             });
     // [Pre-Assert確認_正常系] - poll() が 2、0 を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 下位の待機 API から、シグナルによる中断ののち 1 番目のソケットの受信可能を返却する。
+    // [Pre-Assert手順] - poll() から、1 回目は errno に EINTR を設定して -1、2 回目は fds[0].revents に POLLIN、fds[1].revents に 0 を設定して 1 番目のソケットの受信可能を表す 1 を返す。
 
     // Act
-    int actual_ret = cplat_socket_wait_readable_multi(socks, 2U, 0, ready,
-                                                      &detail); // [手順] - 2 個のソケットで受信可能を待機する。
+    int actual_ret = cplat_socket_wait_readable_multi(
+        socks, 2U, 0, ready,
+        &detail); // [手順] - 受信可能になるまで待機するソケットを 2 個指定して cplat_socket_wait_readable_multi() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -2107,10 +2182,11 @@ TEST_F(socketTest, accept_retries_after_interrupt)
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)))
         .WillOnce(Return(8));
     // [Pre-Assert確認_正常系] - accept() が kSocket を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 下位の accept() API から、シグナルによる中断ののち新しいソケットのハンドルを返却する。
+    // [Pre-Assert手順] - accept() から、1 回目は errno に EINTR を設定して -1、2 回目は新しいソケットのハンドル 8 を返す。
 
     // Act
-    int actual_ret = cplat_socket_accept(kSocket, nullptr, &accepted, &detail); // [手順] - 接続を受け付ける。
+    int actual_ret = cplat_socket_accept(kSocket, nullptr, &accepted,
+                                         &detail); // [手順] - 接続を受け付ける状態で cplat_socket_accept() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -2135,18 +2211,20 @@ TEST_F(socketTest, send_and_recv_retry_after_interrupt)
         .WillOnce(DoAll(Assign(&errno, EINTR), Return((ssize_t)-1)))
         .WillOnce(Return((ssize_t)4));
     // [Pre-Assert確認_正常系] - send() が kSocket、4U、MSG_NOSIGNAL を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 下位の send() API から、シグナルによる中断ののち 4 バイトの転送を返却する。
+    // [Pre-Assert手順] - send() から、1 回目は errno に EINTR を設定して -1、2 回目は転送バイト数 4 を返す。
     EXPECT_CALL(mock_sys_socket_, recv(_, _, _, (int)kSocket, _, 4U, 0))
         .WillOnce(DoAll(Assign(&errno, EINTR), Return((ssize_t)-1)))
         .WillOnce(Return((ssize_t)4));
     // [Pre-Assert確認_正常系] - recv() が kSocket、4U、0 を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 下位の recv() API から、シグナルによる中断ののち 4 バイトの転送を返却する。
+    // [Pre-Assert手順] - recv() から、1 回目は errno に EINTR を設定して -1、2 回目は転送バイト数 4 を返す。
 
     // Act
     int actual_ret_send =
-        cplat_socket_send(kSocket, buffer, sizeof(buffer), &sent, &detail); // [手順] - 4 バイト送信する。
+        cplat_socket_send(kSocket, buffer, sizeof(buffer), &sent,
+                          &detail); // [手順] - 送信長に 4 バイトを指定して cplat_socket_send() を呼び出す。
     int actual_ret_recv =
-        cplat_socket_recv(kSocket, buffer, sizeof(buffer), &received, &detail); // [手順] - 4 バイト受信する。
+        cplat_socket_recv(kSocket, buffer, sizeof(buffer), &received,
+                          &detail); // [手順] - 受信長に 4 バイトを指定して cplat_socket_recv() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -2176,18 +2254,20 @@ TEST_F(socketTest, sendto_and_recvfrom_retry_after_interrupt)
         .WillOnce(DoAll(Assign(&errno, EINTR), Return((ssize_t)-1)))
         .WillOnce(Return((ssize_t)4));
     // [Pre-Assert確認_正常系] - sendto() が kSocket、4U、0 を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 下位の sendto() API から、シグナルによる中断ののち 4 バイトの転送を返却する。
+    // [Pre-Assert手順] - sendto() から、1 回目は errno に EINTR を設定して -1、2 回目は転送バイト数 4 を返す。
     EXPECT_CALL(mock_sys_socket_, recvfrom(_, _, _, (int)kSocket, _, 4U, 0, _, _))
         .WillOnce(DoAll(Assign(&errno, EINTR), Return((ssize_t)-1)))
         .WillOnce(Return((ssize_t)4));
     // [Pre-Assert確認_正常系] - recvfrom() が kSocket、4U、0 を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 下位の recvfrom() API から、シグナルによる中断ののち 4 バイトの転送を返却する。
+    // [Pre-Assert手順] - recvfrom() から、1 回目は errno に EINTR を設定して -1、2 回目は転送バイト数 4 を返す。
 
     // Act
-    int actual_ret_sendto = cplat_socket_sendto(kSocket, buffer, sizeof(buffer), &kEndpoint, &sent,
-                                                &detail); // [手順] - 4 バイトを指定したエンドポイントへ送信する。
-    int actual_ret_recvfrom = cplat_socket_recvfrom(kSocket, buffer, sizeof(buffer), &peer, &received,
-                                                    &detail); // [手順] - 4 バイトを受信する。
+    int actual_ret_sendto = cplat_socket_sendto(
+        kSocket, buffer, sizeof(buffer), &kEndpoint, &sent,
+        &detail); // [手順] - 送信長に 4 バイトと送信先エンドポイントを指定して cplat_socket_sendto() を呼び出す。
+    int actual_ret_recvfrom =
+        cplat_socket_recvfrom(kSocket, buffer, sizeof(buffer), &peer, &received,
+                              &detail); // [手順] - 受信長に 4 バイトを指定して cplat_socket_recvfrom() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -2214,18 +2294,20 @@ TEST_F(socketTest, send_all_and_recv_all_retry_after_interrupt)
         .WillOnce(DoAll(Assign(&errno, EINTR), Return((ssize_t)-1)))
         .WillOnce(Return((ssize_t)4));
     // [Pre-Assert確認_正常系] - send() が kSocket、4U、MSG_NOSIGNAL を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 下位の send() API から、シグナルによる中断ののち 4 バイトの転送を返却する。
+    // [Pre-Assert手順] - send() から、1 回目は errno に EINTR を設定して -1、2 回目は転送バイト数 4 を返す。
     EXPECT_CALL(mock_sys_socket_, recv(_, _, _, (int)kSocket, _, 4U, 0))
         .WillOnce(DoAll(Assign(&errno, EINTR), Return((ssize_t)-1)))
         .WillOnce(Return((ssize_t)4));
     // [Pre-Assert確認_正常系] - recv() が kSocket、4U、0 を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 下位の recv() API から、シグナルによる中断ののち 4 バイトの転送を返却する。
+    // [Pre-Assert手順] - recv() から、1 回目は errno に EINTR を設定して -1、2 回目は転送バイト数 4 を返す。
 
     // Act
-    int actual_ret_send_all =
-        cplat_socket_send_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - 4 バイトを全量送信する。
-    int actual_ret_recv_all =
-        cplat_socket_recv_all(kSocket, buffer, sizeof(buffer), &detail); // [手順] - 4 バイトを全量受信する。
+    int actual_ret_send_all = cplat_socket_send_all(
+        kSocket, buffer, sizeof(buffer),
+        &detail); // [手順] - 全量送信するデータに 4 バイトを指定して cplat_socket_send_all() を呼び出す。
+    int actual_ret_recv_all = cplat_socket_recv_all(
+        kSocket, buffer, sizeof(buffer),
+        &detail); // [手順] - 全量受信する長さに 4 バイトを指定して cplat_socket_recv_all() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -2246,7 +2328,7 @@ TEST_F(socketTest, connect_completes_after_interrupt)
     EXPECT_CALL(mock_sys_socket_, connect(_, _, _, (int)kSocket, _, _))
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)));
     // [Pre-Assert確認_正常系] - connect() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 下位の connect() API からシグナルによる中断を返却する。
+    // [Pre-Assert手順] - connect() から、errno に EINTR を設定して -1 を返す。
     EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, CPLAT_SOCKET_WAIT_FOREVER))
         .WillOnce(
             [](const char *, const int, const char *, struct pollfd *fds, nfds_t, int)
@@ -2255,7 +2337,7 @@ TEST_F(socketTest, connect_completes_after_interrupt)
                 return 1;
             });
     // [Pre-Assert確認_正常系] - poll() が 1、CPLAT_SOCKET_WAIT_FOREVER を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 下位の待機 API から書き込み可能を返却する。
+    // [Pre-Assert手順] - poll() から、fds->revents に fds->events を設定して書き込み可能を表す 1 を返す。
     EXPECT_CALL(mock_sys_socket_, getsockopt(_, _, _, (int)kSocket, SOL_SOCKET, SO_ERROR, _, _))
         .WillOnce(
             [](const char *, const int, const char *, int, int, int, void *value, socklen_t *)
@@ -2264,10 +2346,11 @@ TEST_F(socketTest, connect_completes_after_interrupt)
                 return 0;
             });
     // [Pre-Assert確認_正常系] - getsockopt() が kSocket、SOL_SOCKET、SO_ERROR を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 下位の getsockopt() API から保留エラーなしを返却する。
+    // [Pre-Assert手順] - getsockopt() から、value が指す int に保留エラーなしを表す 0 を設定して 0 を返す。
 
     // Act
-    int actual_ret = cplat_socket_connect(kSocket, &kEndpoint, &detail); // [手順] - ブロッキング モードで接続する。
+    int actual_ret = cplat_socket_connect(
+        kSocket, &kEndpoint, &detail); // [手順] - ブロッキング モードの状態で cplat_socket_connect() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -2286,7 +2369,7 @@ TEST_F(socketTest, connect_reports_pending_error_after_interrupt)
     EXPECT_CALL(mock_sys_socket_, connect(_, _, _, (int)kSocket, _, _))
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)));
     // [Pre-Assert確認_異常系] - connect() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 下位の connect() API からシグナルによる中断を返却する。
+    // [Pre-Assert手順] - connect() から、errno に EINTR を設定して -1 を返す。
     EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, CPLAT_SOCKET_WAIT_FOREVER))
         .WillOnce(
             [](const char *, const int, const char *, struct pollfd *fds, nfds_t, int)
@@ -2295,7 +2378,7 @@ TEST_F(socketTest, connect_reports_pending_error_after_interrupt)
                 return 1;
             });
     // [Pre-Assert確認_異常系] - poll() が 1、CPLAT_SOCKET_WAIT_FOREVER を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 下位の待機 API から書き込み可能を返却する。
+    // [Pre-Assert手順] - poll() から、fds->revents に fds->events を設定して書き込み可能を表す 1 を返す。
     EXPECT_CALL(mock_sys_socket_, getsockopt(_, _, _, (int)kSocket, SOL_SOCKET, SO_ERROR, _, _))
         .WillOnce(
             [](const char *, const int, const char *, int, int, int, void *value, socklen_t *)
@@ -2304,10 +2387,11 @@ TEST_F(socketTest, connect_reports_pending_error_after_interrupt)
                 return 0;
             });
     // [Pre-Assert確認_異常系] - getsockopt() が kSocket、SOL_SOCKET、SO_ERROR を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 下位の getsockopt() API から接続拒否の保留エラーを返却する。
+    // [Pre-Assert手順] - getsockopt() から、value が指す int に接続拒否の保留エラー ECONNREFUSED を設定して 0 を返す。
 
     // Act
-    int actual_ret = cplat_socket_connect(kSocket, &kEndpoint, &detail); // [手順] - ブロッキング モードで接続する。
+    int actual_ret = cplat_socket_connect(
+        kSocket, &kEndpoint, &detail); // [手順] - ブロッキング モードの状態で cplat_socket_connect() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -2330,16 +2414,17 @@ TEST_F(socketTest, connect_reports_wait_failure_after_interrupt)
     EXPECT_CALL(mock_sys_socket_, connect(_, _, _, (int)kSocket, _, _))
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)));
     // [Pre-Assert確認_異常系] - connect() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 下位の connect() API からシグナルによる中断を返却する。
+    // [Pre-Assert手順] - connect() から、errno に EINTR を設定して -1 を返す。
     EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, CPLAT_SOCKET_WAIT_FOREVER))
         .WillOnce(DoAll(Assign(&errno, EBADF), Return(-1)));
     // [Pre-Assert確認_異常系] - poll() が 1、CPLAT_SOCKET_WAIT_FOREVER を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 下位の待機 API から不正な記述子による失敗を返却する。
+    // [Pre-Assert手順] - poll() から、errno に EBADF を設定して -1 を返す。
     EXPECT_CALL(mock_sys_socket_, getsockopt(_, _, _, _, _, _, _, _)).Times(0);
     // [Pre-Assert確認_異常系] - getsockopt() が呼び出されないこと。
 
     // Act
-    int actual_ret = cplat_socket_connect(kSocket, &kEndpoint, &detail); // [手順] - ブロッキング モードで接続する。
+    int actual_ret = cplat_socket_connect(
+        kSocket, &kEndpoint, &detail); // [手順] - ブロッキング モードの状態で cplat_socket_connect() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -2362,15 +2447,16 @@ TEST_F(socketTest, connect_reports_timeout_when_not_writable_after_interrupt)
     EXPECT_CALL(mock_sys_socket_, connect(_, _, _, (int)kSocket, _, _))
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)));
     // [Pre-Assert確認_異常系] - connect() が kSocket を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 下位の connect() API からシグナルによる中断を返却する。
+    // [Pre-Assert手順] - connect() から、errno に EINTR を設定して -1 を返す。
     EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, CPLAT_SOCKET_WAIT_FOREVER)).WillOnce(Return(0));
     // [Pre-Assert確認_異常系] - poll() が 1、CPLAT_SOCKET_WAIT_FOREVER を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 下位の待機 API から条件不成立を返却する。
+    // [Pre-Assert手順] - poll() から条件不成立を表す 0 を返す。
     EXPECT_CALL(mock_sys_socket_, getsockopt(_, _, _, _, _, _, _, _)).Times(0);
     // [Pre-Assert確認_正常系] - getsockopt() が呼び出されないこと。
 
     // Act
-    int actual_ret = cplat_socket_connect(kSocket, &kEndpoint, &detail); // [手順] - ブロッキング モードで接続する。
+    int actual_ret = cplat_socket_connect(
+        kSocket, &kEndpoint, &detail); // [手順] - ブロッキング モードの状態で cplat_socket_connect() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -2397,32 +2483,33 @@ TEST_F(socketTest, shutdown_receive_reports_results)
         .WillOnce(Return(0))
         .WillOnce(DoAll(Assign(&errno, EBADF), Return(-1)));
     // [Pre-Assert確認_正常系] - shutdown() が kSocket、SHUT_RD を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - shutdown() にて 1 回目は 0、2 回目は errno に EBADF を設定して -1 を返す。
+    // [Pre-Assert手順] - shutdown() から、1 回目は 0、2 回目は errno に EBADF を設定して -1 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, closesocket(_, _, _, (SOCKET)kSocket))
         .WillOnce(Return(0))
         .WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_正常系] - closesocket() が kSocket を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - closesocket() にて 1 回目は 0、2 回目は SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - closesocket() から 1 回目は 0、2 回目は SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAEBADF));
     // [Pre-Assert確認_正常系] - WSAGetLastError() が 1 回呼び出されること。
-    // [Pre-Assert手順] - WSAGetLastError() にて WSAEBADF を返す。
+    // [Pre-Assert手順] - WSAGetLastError() から WSAEBADF を返す。
 #endif /* PLATFORM_ */
-    // [Pre-Assert手順] - 下位の受信停止 API から、成功ののち失敗を返却し、失敗要因を通知する。
+    // [Pre-Assert手順] - shutdown() から 1 回目は 0、2 回目は errno に EBADF を設定して -1 を返し、Windows では closesocket() から 1 回目は 0、2 回目は SOCKET_ERROR を返して WSAGetLastError() から失敗要因を返す。
 
     // Act
-    int actual_ret_null =
-        cplat_socket_shutdown_receive(nullptr, &detail); // [手順] - ソケット出力先に NULL を指定する。
-    int actual_ret_invalid =
-        cplat_socket_shutdown_receive(&invalid_socket, &detail);              // [手順] - 無効なソケットを指定する。
-    int actual_ret_success = cplat_socket_shutdown_receive(&socket, &detail); // [手順] - 受信停止を成功させる。
-    int actual_ret_failure =
-        cplat_socket_shutdown_receive(&failure_socket, &detail); // [手順] - 受信停止の失敗を注入する。
+    int actual_ret_null = cplat_socket_shutdown_receive(
+        nullptr, &detail); // [手順] - ソケット出力先に nullptr を指定して cplat_socket_shutdown_receive() を呼び出す。
+    int actual_ret_invalid = cplat_socket_shutdown_receive(
+        &invalid_socket, &detail); // [手順] - 無効なソケットを指定して cplat_socket_shutdown_receive() を呼び出す。
+    int actual_ret_success = cplat_socket_shutdown_receive(
+        &socket, &detail); // [手順] - 受信停止が成功する状態で cplat_socket_shutdown_receive() を呼び出す。
+    int actual_ret_failure = cplat_socket_shutdown_receive(
+        &failure_socket, &detail); // [手順] - 受信停止が失敗する状態で cplat_socket_shutdown_receive() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null); // [確認_異常系] - NULL の出力先を指定した cplat_socket_shutdown_receive() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null); // [確認_異常系] - nullptr の出力先を指定した cplat_socket_shutdown_receive() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_invalid); // [確認_異常系] - 無効なソケットを指定した cplat_socket_shutdown_receive() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。

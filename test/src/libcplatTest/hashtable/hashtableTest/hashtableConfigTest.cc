@@ -42,16 +42,18 @@ TEST_F(hashtableConfigTest, get_config_ref_rejects_null_arguments)
 
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
-    int actual_ret_null_ht = cplat_hashtable_get_config_ref(nullptr, &out); // [手順] - ht に NULL を渡す。
-    int actual_ret_null_out = cplat_hashtable_get_config_ref(ht, nullptr);  // [手順] - config_out に NULL を渡す。
+    int actual_ret_null_ht = cplat_hashtable_get_config_ref(
+        nullptr, &out); // [手順] - ht に nullptr を指定して cplat_hashtable_get_config_ref() を呼び出す。
+    int actual_ret_null_out = cplat_hashtable_get_config_ref(
+        ht, nullptr); // [手順] - config_out に nullptr を指定して cplat_hashtable_get_config_ref() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_config_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_get_config_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_out); // [確認_異常系] - config_out に NULL を渡した cplat_hashtable_get_config_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_out); // [確認_異常系] - config_out に nullptr を渡した cplat_hashtable_get_config_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -71,17 +73,20 @@ TEST_F(hashtableConfigTest, get_config_val_rejects_null_out_and_propagates_ref_f
 
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
-    int actual_ret_null_out = cplat_hashtable_get_config_val(ht, nullptr);  // [手順] - config_out に NULL を渡す。
-    int actual_ret_null_ht = cplat_hashtable_get_config_val(nullptr, &out); // [手順] - ht に NULL を渡す。
-    int actual_ret_ok = cplat_hashtable_get_config_val(ht, &out);        // [手順] - 妥当な引数で呼び出す。
+    int actual_ret_null_out = cplat_hashtable_get_config_val(
+        ht, nullptr); // [手順] - config_out に nullptr を指定して cplat_hashtable_get_config_val() を呼び出す。
+    int actual_ret_null_ht = cplat_hashtable_get_config_val(
+        nullptr, &out); // [手順] - ht に nullptr を指定して cplat_hashtable_get_config_val() を呼び出す。
+    int actual_ret_ok = cplat_hashtable_get_config_val(
+        ht, &out); // [手順] - 妥当な引数を指定して cplat_hashtable_get_config_val() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_out); // [確認_異常系] - config_out に NULL を渡した cplat_hashtable_get_config_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_out); // [確認_異常系] - config_out に nullptr を渡した cplat_hashtable_get_config_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_config_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(cplat_hashtable_get_config_ref() の失敗が伝播したことの確認)
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_get_config_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(cplat_hashtable_get_config_ref() の失敗が伝播したことの確認)
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_ok); // [確認_正常系] - 妥当な引数での cplat_hashtable_get_config_val() の戻り値が CPLAT_OK であること。
@@ -106,18 +111,19 @@ TEST_F(hashtableConfigTest, buffer_size_rejects_null_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht =
-        cplat_hashtable_buffer_size(nullptr, &mgmt_size, &data_size); // [手順] - ht に NULL を渡す。
-    int actual_ret_null_both =
-        cplat_hashtable_buffer_size(ht, nullptr, nullptr); // [手順] - 両方の出力先に NULL を渡す。
+    int actual_ret_null_ht = cplat_hashtable_buffer_size(
+        nullptr, &mgmt_size,
+        &data_size); // [手順] - ht に nullptr を指定して cplat_hashtable_buffer_size() を呼び出す。
+    int actual_ret_null_both = cplat_hashtable_buffer_size(
+        ht, nullptr, nullptr); // [手順] - 両方の出力先 に nullptr を指定して cplat_hashtable_buffer_size() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_buffer_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_buffer_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_both); // [確認_異常系] - 両方の出力先に NULL を渡した cplat_hashtable_buffer_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_both); // [確認_異常系] - 両方の出力先に nullptr を渡した cplat_hashtable_buffer_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -140,12 +146,14 @@ TEST_F(hashtableConfigTest, buffer_size_allows_partial_query_and_succeeds)
     // Pre-Assert
 
     // Act
-    int actual_ret_only_mgmt =
-        cplat_hashtable_buffer_size(ht, &mgmt_size, nullptr); // [手順] - データ側だけ NULL を渡す。
-    int actual_ret_only_data =
-        cplat_hashtable_buffer_size(ht, nullptr, &data_size); // [手順] - 管理側だけ NULL を渡す。
-    int actual_ret_ok = cplat_hashtable_buffer_size(ht, &full_mgmt_size,
-                                                    &full_data_size); // [手順] - 両方の引数を渡してサイズを取得する。
+    int actual_ret_only_mgmt = cplat_hashtable_buffer_size(
+        ht, &mgmt_size,
+        nullptr); // [手順] - データ側だけに nullptr を指定して cplat_hashtable_buffer_size() を呼び出す。
+    int actual_ret_only_data = cplat_hashtable_buffer_size(
+        ht, nullptr, &data_size); // [手順] - 管理側だけに nullptr を指定して cplat_hashtable_buffer_size() を呼び出す。
+    int actual_ret_ok = cplat_hashtable_buffer_size(
+        ht, &full_mgmt_size,
+        &full_data_size); // [手順] - 両方の出力先を指定して cplat_hashtable_buffer_size() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -181,17 +189,18 @@ TEST_F(hashtableConfigTest, buffer_ref_rejects_null_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_ht = cplat_hashtable_buffer_ref(nullptr, &mgmt, &data); // [手順] - ht に NULL を渡す。
-    int actual_ret_null_both =
-        cplat_hashtable_buffer_ref(ht, nullptr, nullptr); // [手順] - 両方の出力先に NULL を渡す。
+    int actual_ret_null_ht = cplat_hashtable_buffer_ref(
+        nullptr, &mgmt, &data); // [手順] - ht に nullptr を指定して cplat_hashtable_buffer_ref() を呼び出す。
+    int actual_ret_null_both = cplat_hashtable_buffer_ref(
+        ht, nullptr, nullptr); // [手順] - 両方の出力先 に nullptr を指定して cplat_hashtable_buffer_ref() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_buffer_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_buffer_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_both); // [確認_異常系] - 両方の出力先に NULL を渡した cplat_hashtable_buffer_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_both); // [確認_異常系] - 両方の出力先に nullptr を渡した cplat_hashtable_buffer_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -212,8 +221,10 @@ TEST_F(hashtableConfigTest, buffer_ref_allows_partial_query)
     // Pre-Assert
 
     // Act
-    int actual_ret_only_mgmt = cplat_hashtable_buffer_ref(ht, &mgmt, nullptr); // [手順] - データ側だけ NULL を渡す。
-    int actual_ret_only_data = cplat_hashtable_buffer_ref(ht, nullptr, &data); // [手順] - 管理側だけ NULL を渡す。
+    int actual_ret_only_mgmt = cplat_hashtable_buffer_ref(
+        ht, &mgmt, nullptr); // [手順] - データ側だけに nullptr を指定して cplat_hashtable_buffer_ref() を呼び出す。
+    int actual_ret_only_data = cplat_hashtable_buffer_ref(
+        ht, nullptr, &data); // [手順] - 管理側だけに nullptr を指定して cplat_hashtable_buffer_ref() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -247,8 +258,10 @@ TEST_F(hashtableConfigTest, buffer_ref_returns_internal_regions_contiguously)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - 内部確保で構築する。
-    int actual_ret = cplat_hashtable_buffer_ref(ht, &mgmt, &data); // [手順] - 両領域の先頭を取得する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [手順] - 内部確保を指定して cplat_hashtable_create() を呼び出す。
+    int actual_ret = cplat_hashtable_buffer_ref(
+        ht, &mgmt, &data); // [手順] - 両方の出力先を指定して cplat_hashtable_buffer_ref() を呼び出す。
     (void)cplat_hashtable_buffer_size(ht, &mgmt_size, &data_size);
     const unsigned char *mgmt_bytes = static_cast<const unsigned char *>(mgmt);
 
@@ -287,10 +300,10 @@ TEST_F(hashtableConfigTest, buffer_ref_returns_external_regions_as_supplied)
 
     // Act
     (void)cplat_hashtable_create(&config, buf_mgmt.data(), mgmt_size, buf_data.data(), buf_data.size(),
-                                 &ht); // [手順] - 外部指定で構築する。
+                                 &ht); // [手順] - 外部バッファーを指定して cplat_hashtable_create() を呼び出す。
     int actual_ret_create = cplat_hashtable_buffer_ref(ht, &mgmt, &data);
     (void)cplat_hashtable_attach(buf_mgmt.data(), mgmt_size, buf_data.data(), buf_data.size(),
-                                 &attached); // [手順] - 同じ領域へ再接続する。
+                                 &attached); // [手順] - 同じ領域を指定して cplat_hashtable_attach() を呼び出す。
     int actual_ret_attach = cplat_hashtable_buffer_ref(attached, &attached_mgmt, &attached_data);
 
     // Assert

@@ -86,18 +86,21 @@ TEST(atomicConcurrencyTest, concurrent_relaxed_fetch_add_u64_sums_without_loss_a
     // Act
     for (index = 0; index < kThreadCount; index++)
     {
-        int actual_ret_create = cplat_thread_create(&threads[index], fetch_add_worker,
-                                                    &args); // [手順] - fetch_add を繰り返すスレッドを 4 本起動する。
+        int actual_ret_create = cplat_thread_create(
+            &threads[index], fetch_add_worker,
+            &args); // [手順] - cplat_atomic_fetch_add_u64() を繰り返すスレッドを指定して 4 回 cplat_thread_create() を呼び出す。
         ASSERT_EQ(CPLAT_OK, actual_ret_create); // [状態確認] - cplat_thread_create() の戻り値が CPLAT_OK であること。
     }
     for (index = 0; index < kThreadCount; index++)
     {
-        int actual_ret_join =
-            cplat_thread_join(threads[index], CPLAT_SYNC_WAIT_FOREVER); // [手順] - 各スレッドの終了を待機する。
+        int actual_ret_join = cplat_thread_join(
+            threads[index],
+            CPLAT_SYNC_WAIT_FOREVER); // [手順] - 終了を待つ各スレッドを指定して cplat_thread_join() を呼び出す。
         ASSERT_EQ(CPLAT_OK, actual_ret_join); // [状態確認] - cplat_thread_join() の戻り値が CPLAT_OK であること。
     }
-    const uint64_t total =
-        cplat_atomic_load_u64(&counter, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 最終的な合計値を読み取る。
+    const uint64_t total = cplat_atomic_load_u64(
+        &counter,
+        CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 最終的な合計値を読み取るため、SEQ_CST を指定して cplat_atomic_load_u64() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -124,15 +127,16 @@ TEST(atomicConcurrencyTest, compare_exchange_protected_spinlock_counts_correctly
     // Act
     for (index = 0; index < kThreadCount; index++)
     {
-        int actual_ret_create =
-            cplat_thread_create(&threads[index], spinlock_counter_worker,
-                                &args); // [手順] - スピンロックで保護したカウント アップを行うスレッドを 4 本起動する。
+        int actual_ret_create = cplat_thread_create(
+            &threads[index], spinlock_counter_worker,
+            &args); // [手順] - スピンロックで保護したカウント アップを行うスレッドを指定して 4 回 cplat_thread_create() を呼び出す。
         ASSERT_EQ(CPLAT_OK, actual_ret_create); // [状態確認] - cplat_thread_create() の戻り値が CPLAT_OK であること。
     }
     for (index = 0; index < kThreadCount; index++)
     {
-        int actual_ret_join =
-            cplat_thread_join(threads[index], CPLAT_SYNC_WAIT_FOREVER); // [手順] - 各スレッドの終了を待機する。
+        int actual_ret_join = cplat_thread_join(
+            threads[index],
+            CPLAT_SYNC_WAIT_FOREVER); // [手順] - 終了を待つ各スレッドを指定して cplat_thread_join() を呼び出す。
         ASSERT_EQ(CPLAT_OK, actual_ret_join); // [状態確認] - cplat_thread_join() の戻り値が CPLAT_OK であること。
     }
 

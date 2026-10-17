@@ -52,15 +52,17 @@ TEST_F(hashtableAttachTest, rejects_misaligned_buffer)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_attach(buf_mgmt.data() + 1, mgmt_needed, buf_data.data(), buf_data.size(),
-                                            &attached); // [手順] - 1 バイトずれた管理領域へ再接続する。
+    int actual_ret = cplat_hashtable_attach(
+        buf_mgmt.data() + 1, mgmt_needed, buf_data.data(), buf_data.size(),
+        &attached); // [手順] - 1 バイトずれた管理領域を指定して cplat_hashtable_attach() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret); // [確認_異常系] - 未整列の管理領域を渡した cplat_hashtable_attach() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(nullptr,
-              attached); // [確認_異常系] - attached が nullptr であること。(失敗後の ht_out が NULL になったことの確認)
+    EXPECT_EQ(
+        nullptr,
+        attached); // [確認_異常系] - attached が nullptr であること。(失敗後の ht_out が nullptr になったことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
@@ -85,13 +87,14 @@ TEST_F(hashtableAttachTest, rejects_null_ht_out)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
-                                            nullptr); // [手順] - ht_out に NULL を渡す。
+    int actual_ret =
+        cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
+                               nullptr); // [手順] - ht_out に nullptr を指定して cplat_hashtable_attach() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret); // [確認_異常系] - ht_out に NULL を渡した cplat_hashtable_attach() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret); // [確認_異常系] - ht_out に nullptr を渡した cplat_hashtable_attach() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - テーブルを破棄する。
@@ -120,11 +123,13 @@ TEST_F(hashtableAttachTest, accepts_binary_key_type)
 
     // Act
     (void)cplat_hashtable_create(&config, buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
-                                 &ht); // [手順] - バイナリ キーのテーブルを構築する。
+                                 &ht); // [手順] - バイナリ キーの設定を指定して cplat_hashtable_create() を呼び出す。
     (void)cplat_hashtable_add(ht, key, value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    int actual_ret_attach = cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
-                                                   &attached); // [手順] - バイナリ キーのテーブルへ再接続する。
-    int actual_ret_find = cplat_hashtable_find_value_ref(attached, key, &found); // [手順] - 再接続先から値を検索する。
+    int actual_ret_attach = cplat_hashtable_attach(
+        buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
+        &attached); // [手順] - バイナリ キーのテーブルの領域を指定して cplat_hashtable_attach() を呼び出す。
+    int actual_ret_find = cplat_hashtable_find_value_ref(
+        attached, key, &found); // [手順] - 再接続先のハンドルを指定して cplat_hashtable_find_value_ref() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_attach); // [確認_正常系] - cplat_hashtable_attach() の戻り値が CPLAT_OK であること。
@@ -157,14 +162,15 @@ TEST_F(hashtableAttachTest, rejects_corrupted_config_fields)
 
     // Act
     (void)cplat_hashtable_create(&config, buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
-                                 &ht); // [手順] - 外部バッファーへ構築する。
+                                 &ht); // [手順] - 外部バッファーを指定して cplat_hashtable_create() を呼び出す。
 
     bad_config = config;
     {
         int invalid_key_type = 2;
         std::memcpy(&bad_config.key_type, &invalid_key_type, sizeof(bad_config.key_type));
     }
-    test_hashtable_set_config(ht, &bad_config); // [手順] - key_type を不正な値へ書き換える。
+    test_hashtable_set_config(
+        ht, &bad_config); // [手順] - key_type を不正な値にした設定を指定して test_hashtable_set_config() を呼び出す。
     int actual_ret_key_type =
         cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(), &attached);
 
@@ -173,7 +179,9 @@ TEST_F(hashtableAttachTest, rejects_corrupted_config_fields)
         int invalid_scope = 2;
         std::memcpy(&bad_config.timestamp_scope, &invalid_scope, sizeof(bad_config.timestamp_scope));
     }
-    test_hashtable_set_config(ht, &bad_config); // [手順] - timestamp_scope を不正な値へ書き換える。
+    test_hashtable_set_config(
+        ht,
+        &bad_config); // [手順] - timestamp_scope を不正な値にした設定を指定して test_hashtable_set_config() を呼び出す。
     int actual_ret_scope =
         cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(), &attached);
 
@@ -202,16 +210,19 @@ TEST_F(hashtableAttachTest, rejects_corrupted_config_fields)
         cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(), &attached);
 
     test_hashtable_set_config(ht, &config);
-    test_hashtable_set_next_empty(ht, 99); // [手順] - next_empty を capacity 超へ書き換える。
+    test_hashtable_set_next_empty(
+        ht, 99); // [手順] - capacity 超の next_empty を指定して test_hashtable_set_next_empty() を呼び出す。
     int actual_ret_next_empty =
         cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(), &attached);
 
     test_hashtable_set_next_empty(ht, 1);
-    test_hashtable_set_counts(ht, 3, 0); // [手順] - in_use_count を capacity 超へ書き換える。
+    test_hashtable_set_counts(
+        ht, 3, 0); // [手順] - capacity 超の in_use_count を指定して test_hashtable_set_counts() を呼び出す。
     int actual_ret_in_use_count =
         cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(), &attached);
 
-    test_hashtable_set_counts(ht, 0, 3); // [手順] - deleted_count を capacity 超へ書き換える。
+    test_hashtable_set_counts(
+        ht, 0, 3); // [手順] - capacity 超の deleted_count を指定して test_hashtable_set_counts() を呼び出す。
     int actual_ret_deleted_count =
         cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(), &attached);
 
@@ -223,13 +234,13 @@ TEST_F(hashtableAttachTest, rejects_corrupted_config_fields)
         cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(), &attached);
 
     test_hashtable_set_config(ht, &config);
-    int actual_ret_mgmt_too_small =
-        cplat_hashtable_attach(buf_mgmt.data(), mgmt_needed - 1, buf_data.data(), buf_data.size(),
-                               &attached); // [手順] - 管理領域の buf_mgmt_size 不足で再接続する。
+    int actual_ret_mgmt_too_small = cplat_hashtable_attach(
+        buf_mgmt.data(), mgmt_needed - 1, buf_data.data(), buf_data.size(),
+        &attached); // [手順] - buf_mgmt_size が不足する管理領域を指定して cplat_hashtable_attach() を呼び出す。
     std::vector<unsigned char> small_data(1, 0);
-    int actual_ret_data_too_small =
-        cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), small_data.data(), small_data.size(),
-                               &attached); // [手順] - データ領域の buf_data_size 不足で再接続する。
+    int actual_ret_data_too_small = cplat_hashtable_attach(
+        buf_mgmt.data(), buf_mgmt.size(), small_data.data(), small_data.size(),
+        &attached); // [手順] - buf_data_size が不足するデータ領域を指定して cplat_hashtable_attach() を呼び出す。
 
     // Assert
     EXPECT_EQ(

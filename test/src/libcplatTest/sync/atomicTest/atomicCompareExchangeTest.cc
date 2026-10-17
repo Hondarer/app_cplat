@@ -25,12 +25,13 @@ TEST(atomicCompareExchangeTest, u8_compare_exchange_succeeds_and_updates_value_f
 
         desired_values[index] = (uint8_t)(30U + (uint8_t)index);
         expected_before[index] = expected;
-        exchanged[index] =
-            cplat_atomic_compare_exchange_u8(&atomic, &expected, desired_values[index],
-                                             kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
+        exchanged[index] = cplat_atomic_compare_exchange_u8(
+            &atomic, &expected, desired_values[index],
+            kAllMemoryOrders
+                [index]); // [手順] - 現在値に一致させた期待値を指定して cplat_atomic_compare_exchange_u8() を呼び出す。
         expected_after[index] = expected;
-        loaded_after[index] =
-            cplat_atomic_load_u8(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
+        loaded_after[index] = cplat_atomic_load_u8(
+            &atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の状態で cplat_atomic_load_u8() を呼び出す。
         current = desired_values[index];
     }
 
@@ -67,9 +68,10 @@ TEST(atomicCompareExchangeTest, u8_compare_exchange_fails_and_reports_current_va
     {
         uint8_t expected = (uint8_t)(5U + (uint8_t)index); // 現在値 200 と一致しない期待値
 
-        exchanged[index] =
-            cplat_atomic_compare_exchange_u8(&atomic, &expected, (uint8_t)(1U + (uint8_t)index),
-                                             kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
+        exchanged[index] = cplat_atomic_compare_exchange_u8(
+            &atomic, &expected, (uint8_t)(1U + (uint8_t)index),
+            kAllMemoryOrders
+                [index]); // [手順] - 一致しない期待値を指定して cplat_atomic_compare_exchange_u8() を呼び出す。
         expected_after[index] = expected;
     }
 
@@ -113,12 +115,13 @@ TEST(atomicCompareExchangeTest, i32_compare_exchange_succeeds_and_updates_value_
 
         desired_values[index] = (int32_t)(2000 + (int32_t)index);
         expected_before[index] = expected;
-        exchanged[index] =
-            cplat_atomic_compare_exchange_i32(&atomic, &expected, desired_values[index],
-                                              kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
+        exchanged[index] = cplat_atomic_compare_exchange_i32(
+            &atomic, &expected, desired_values[index],
+            kAllMemoryOrders
+                [index]); // [手順] - 現在値に一致させた期待値を指定して cplat_atomic_compare_exchange_i32() を呼び出す。
         expected_after[index] = expected;
-        loaded_after[index] =
-            cplat_atomic_load_i32(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
+        loaded_after[index] = cplat_atomic_load_i32(
+            &atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の状態で cplat_atomic_load_i32() を呼び出す。
         current = desired_values[index];
     }
 
@@ -155,9 +158,10 @@ TEST(atomicCompareExchangeTest, i32_compare_exchange_fails_and_reports_current_v
     {
         int32_t expected = (int32_t)(999 + (int32_t)index); // 現在値 777 と一致しない期待値
 
-        exchanged[index] =
-            cplat_atomic_compare_exchange_i32(&atomic, &expected, (int32_t)(1 + (int32_t)index),
-                                              kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
+        exchanged[index] = cplat_atomic_compare_exchange_i32(
+            &atomic, &expected, (int32_t)(1 + (int32_t)index),
+            kAllMemoryOrders
+                [index]); // [手順] - 一致しない期待値を指定して cplat_atomic_compare_exchange_i32() を呼び出す。
         expected_after[index] = expected;
     }
 
@@ -201,12 +205,13 @@ TEST(atomicCompareExchangeTest, u32_compare_exchange_succeeds_and_updates_value_
 
         desired_values[index] = (uint32_t)(3000U + (uint32_t)index);
         expected_before[index] = expected;
-        exchanged[index] =
-            cplat_atomic_compare_exchange_u32(&atomic, &expected, desired_values[index],
-                                              kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
+        exchanged[index] = cplat_atomic_compare_exchange_u32(
+            &atomic, &expected, desired_values[index],
+            kAllMemoryOrders
+                [index]); // [手順] - 現在値に一致させた期待値を指定して cplat_atomic_compare_exchange_u32() を呼び出す。
         expected_after[index] = expected;
-        loaded_after[index] =
-            cplat_atomic_load_u32(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
+        loaded_after[index] = cplat_atomic_load_u32(
+            &atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の状態で cplat_atomic_load_u32() を呼び出す。
         current = desired_values[index];
     }
 
@@ -243,9 +248,10 @@ TEST(atomicCompareExchangeTest, u32_compare_exchange_fails_and_reports_current_v
     {
         uint32_t expected = (uint32_t)(999U + (uint32_t)index); // 現在値 777 と一致しない期待値
 
-        exchanged[index] =
-            cplat_atomic_compare_exchange_u32(&atomic, &expected, (uint32_t)(1U + (uint32_t)index),
-                                              kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
+        exchanged[index] = cplat_atomic_compare_exchange_u32(
+            &atomic, &expected, (uint32_t)(1U + (uint32_t)index),
+            kAllMemoryOrders
+                [index]); // [手順] - 一致しない期待値を指定して cplat_atomic_compare_exchange_u32() を呼び出す。
         expected_after[index] = expected;
     }
 
@@ -289,12 +295,13 @@ TEST(atomicCompareExchangeTest, i64_compare_exchange_succeeds_and_updates_value_
 
         desired_values[index] = (int64_t)(70000000000LL + (int64_t)index);
         expected_before[index] = expected;
-        exchanged[index] =
-            cplat_atomic_compare_exchange_i64(&atomic, &expected, desired_values[index],
-                                              kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
+        exchanged[index] = cplat_atomic_compare_exchange_i64(
+            &atomic, &expected, desired_values[index],
+            kAllMemoryOrders
+                [index]); // [手順] - 現在値に一致させた期待値を指定して cplat_atomic_compare_exchange_i64() を呼び出す。
         expected_after[index] = expected;
-        loaded_after[index] =
-            cplat_atomic_load_i64(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
+        loaded_after[index] = cplat_atomic_load_i64(
+            &atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の状態で cplat_atomic_load_i64() を呼び出す。
         current = desired_values[index];
     }
 
@@ -331,9 +338,10 @@ TEST(atomicCompareExchangeTest, i64_compare_exchange_fails_and_reports_current_v
     {
         int64_t expected = (int64_t)(999 + (int64_t)index); // 現在値 777 と一致しない期待値
 
-        exchanged[index] =
-            cplat_atomic_compare_exchange_i64(&atomic, &expected, (int64_t)(1 + (int64_t)index),
-                                              kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
+        exchanged[index] = cplat_atomic_compare_exchange_i64(
+            &atomic, &expected, (int64_t)(1 + (int64_t)index),
+            kAllMemoryOrders
+                [index]); // [手順] - 一致しない期待値を指定して cplat_atomic_compare_exchange_i64() を呼び出す。
         expected_after[index] = expected;
     }
 
@@ -377,12 +385,13 @@ TEST(atomicCompareExchangeTest, u64_compare_exchange_succeeds_and_updates_value_
 
         desired_values[index] = (uint64_t)(80000000000ULL + (uint64_t)index);
         expected_before[index] = expected;
-        exchanged[index] =
-            cplat_atomic_compare_exchange_u64(&atomic, &expected, desired_values[index],
-                                              kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
+        exchanged[index] = cplat_atomic_compare_exchange_u64(
+            &atomic, &expected, desired_values[index],
+            kAllMemoryOrders
+                [index]); // [手順] - 現在値に一致させた期待値を指定して cplat_atomic_compare_exchange_u64() を呼び出す。
         expected_after[index] = expected;
-        loaded_after[index] =
-            cplat_atomic_load_u64(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
+        loaded_after[index] = cplat_atomic_load_u64(
+            &atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の状態で cplat_atomic_load_u64() を呼び出す。
         current = desired_values[index];
     }
 
@@ -419,9 +428,10 @@ TEST(atomicCompareExchangeTest, u64_compare_exchange_fails_and_reports_current_v
     {
         uint64_t expected = (uint64_t)(999U + (uint64_t)index); // 現在値 777 と一致しない期待値
 
-        exchanged[index] =
-            cplat_atomic_compare_exchange_u64(&atomic, &expected, (uint64_t)(1U + (uint64_t)index),
-                                              kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
+        exchanged[index] = cplat_atomic_compare_exchange_u64(
+            &atomic, &expected, (uint64_t)(1U + (uint64_t)index),
+            kAllMemoryOrders
+                [index]); // [手順] - 一致しない期待値を指定して cplat_atomic_compare_exchange_u64() を呼び出す。
         expected_after[index] = expected;
     }
 
@@ -449,7 +459,7 @@ TEST(atomicCompareExchangeTest, ptr_compare_exchange_succeeds_and_updates_value_
 {
     // Arrange
     int markers[kAllMemoryOrderCount] = {0};
-    cplat_atomic_ptr atomic = CPLAT_ATOMIC_INIT(nullptr); // [状態] - NULL で初期化したアトミック変数を用意する。
+    cplat_atomic_ptr atomic = CPLAT_ATOMIC_INIT(nullptr); // [状態] - nullptr で初期化したアトミック変数を用意する。
     int exchanged[kAllMemoryOrderCount] = {0};
     void *expected_before[kAllMemoryOrderCount] = {nullptr};
     void *expected_after[kAllMemoryOrderCount] = {nullptr};
@@ -467,12 +477,13 @@ TEST(atomicCompareExchangeTest, ptr_compare_exchange_succeeds_and_updates_value_
         markers[index] = (int)index;
         desired_values[index] = &markers[index];
         expected_before[index] = expected;
-        exchanged[index] =
-            cplat_atomic_compare_exchange_ptr(&atomic, &expected, desired_values[index],
-                                              kAllMemoryOrders[index]); // [手順] - 期待値を現在値に一致させて交換する。
+        exchanged[index] = cplat_atomic_compare_exchange_ptr(
+            &atomic, &expected, desired_values[index],
+            kAllMemoryOrders
+                [index]); // [手順] - 現在値に一致させた期待値を指定して cplat_atomic_compare_exchange_ptr() を呼び出す。
         expected_after[index] = expected;
-        loaded_after[index] =
-            cplat_atomic_load_ptr(&atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の値を読み取る。
+        loaded_after[index] = cplat_atomic_load_ptr(
+            &atomic, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - 交換後の状態で cplat_atomic_load_ptr() を呼び出す。
         current = desired_values[index];
     }
 
@@ -512,9 +523,10 @@ TEST(atomicCompareExchangeTest, ptr_compare_exchange_fails_and_reports_current_v
     {
         void *expected = &other_marker; // 現在値 &current_marker と一致しない期待値
 
-        exchanged[index] =
-            cplat_atomic_compare_exchange_ptr(&atomic, &expected, &other_marker,
-                                              kAllMemoryOrders[index]); // [手順] - 一致しない期待値で交換を試行する。
+        exchanged[index] = cplat_atomic_compare_exchange_ptr(
+            &atomic, &expected, &other_marker,
+            kAllMemoryOrders
+                [index]); // [手順] - 一致しない期待値を指定して cplat_atomic_compare_exchange_ptr() を呼び出す。
         expected_after[index] = expected;
     }
 

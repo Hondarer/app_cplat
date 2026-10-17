@@ -74,7 +74,7 @@ class shutdownTest : public Test
         reset_records();
         // atexit は成功を返す。
         ON_CALL(mock_stdlib_, atexit(_, _, _, _)).WillByDefault(Return(0));
-        // [状態] - atexit() の既定動作を設定する。
+        // [状態] - atexit() から 0 を返すように既定動作を設定する。
     }
     // [サブ手順終了]
 
@@ -111,8 +111,8 @@ TEST_F(shutdownTest, test_callbacks_are_invoked_in_lifo_order)
 
     // Act
     int invoked = 0;
-    int result =
-        cplat_shutdown_invoke_for_test(&event, &invoked); // [手順] - 3 件の callback を shutdown イベントで実行する。
+    int result = cplat_shutdown_invoke_for_test(
+        &event, &invoked); // [手順] - shutdown イベントを指定して cplat_shutdown_invoke_for_test() を呼び出す。
 
     // Assert
     ASSERT_EQ(CPLAT_OK,
@@ -158,12 +158,14 @@ TEST_F(shutdownTest, test_multiple_invoke_runs_callbacks_only_once)
     // Act
     int first_invoked = 0;
     int second_invoked = 0;
-    int first_result =
-        cplat_shutdown_invoke_for_test(&event, &first_invoked); // [手順] - 1 回目の shutdown を実行する。
-    int second_result =
-        cplat_shutdown_invoke_for_test(&event, &second_invoked); // [手順] - 2 回目の shutdown を実行する。
-    int register_after_shutdown =
-        cplat_shutdown_register(record_callback, &id); // [手順] - shutdown 後に新規登録を試みる。
+    int first_result = cplat_shutdown_invoke_for_test(
+        &event,
+        &first_invoked); // [手順] - 1 回目として shutdown イベントを指定して cplat_shutdown_invoke_for_test() を呼び出す。
+    int second_result = cplat_shutdown_invoke_for_test(
+        &event,
+        &second_invoked); // [手順] - 2 回目として shutdown イベントを指定して cplat_shutdown_invoke_for_test() を呼び出す。
+    int register_after_shutdown = cplat_shutdown_register(
+        record_callback, &id); // [手順] - shutdown 後に callback を指定して cplat_shutdown_register() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -212,7 +214,8 @@ TEST_F(shutdownTest, test_request_callbacks_do_not_consume_final_shutdown)
     // Act
     int request_invoked = 0;
     int request_result = cplat_shutdown_request_invoke_for_test(
-        &request_event, &request_invoked); // [手順] - 終了要求 callback を実行する。
+        &request_event,
+        &request_invoked); // [手順] - 終了要求イベントを指定して cplat_shutdown_request_invoke_for_test() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -238,8 +241,9 @@ TEST_F(shutdownTest, test_request_callbacks_do_not_consume_final_shutdown)
     reset_records();
 
     int final_invoked = 0;
-    int final_result =
-        cplat_shutdown_invoke_for_test(&final_event, &final_invoked); // [手順] - 続けて最終 shutdown を実行する。
+    int final_result = cplat_shutdown_invoke_for_test(
+        &final_event,
+        &final_invoked); // [手順] - 続けて最終 shutdown のイベントを指定して cplat_shutdown_invoke_for_test() を呼び出す。
 
     // Assert_2
     ASSERT_EQ(CPLAT_OK,
@@ -275,12 +279,14 @@ TEST_F(shutdownTest, test_request_callback_runs_only_once)
     // Act
     int first_invoked = 0;
     int second_invoked = 0;
-    int first_result =
-        cplat_shutdown_request_invoke_for_test(&event, &first_invoked); // [手順] - 1 回目の終了要求を実行する。
-    int second_result =
-        cplat_shutdown_request_invoke_for_test(&event, &second_invoked); // [手順] - 2 回目の終了要求を実行する。
-    int register_after_request =
-        cplat_shutdown_request_register(record_callback, &id); // [手順] - 通知後に新規登録を試みる。
+    int first_result = cplat_shutdown_request_invoke_for_test(
+        &event,
+        &first_invoked); // [手順] - 1 回目として終了要求イベントを指定して cplat_shutdown_request_invoke_for_test() を呼び出す。
+    int second_result = cplat_shutdown_request_invoke_for_test(
+        &event,
+        &second_invoked); // [手順] - 2 回目として終了要求イベントを指定して cplat_shutdown_request_invoke_for_test() を呼び出す。
+    int register_after_request = cplat_shutdown_request_register(
+        record_callback, &id); // [手順] - 通知後に callback を指定して cplat_shutdown_request_register() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -309,7 +315,7 @@ TEST_F(shutdownTest, test_cplat_exit_preserves_exit_code)
     testing::Mock::AllowLeak(&mock_stdlib_);
     ON_CALL(mock_stdlib_, atexit(_, _, _, _))
         .WillByDefault(
-            Invoke(delegate_real_atexit)); // [状態] - atexit が呼び出された際に本物へ委譲するようにモックを設定する。
+            Invoke(delegate_real_atexit)); // [状態] - atexit() から libc の処理へ委譲するように既定動作を設定する。
 
     // Pre-Assert
 
@@ -338,7 +344,7 @@ TEST_F(shutdownTest, test_cplat_exit_clamps_code_above_range)
     testing::Mock::AllowLeak(&mock_stdlib_);
     ON_CALL(mock_stdlib_, atexit(_, _, _, _))
         .WillByDefault(
-            Invoke(delegate_real_atexit)); // [状態] - atexit が呼び出された際に本物へ委譲するようにモックを設定する。
+            Invoke(delegate_real_atexit)); // [状態] - atexit() から libc の処理へ委譲するように既定動作を設定する。
 
     // Pre-Assert
 
@@ -368,7 +374,7 @@ TEST_F(shutdownTest, test_cplat_exit_clamps_negative_code)
     testing::Mock::AllowLeak(&mock_stdlib_);
     ON_CALL(mock_stdlib_, atexit(_, _, _, _))
         .WillByDefault(
-            Invoke(delegate_real_atexit)); // [状態] - atexit が呼び出された際に本物へ委譲するようにモックを設定する。
+            Invoke(delegate_real_atexit)); // [状態] - atexit() から libc の処理へ委譲するように既定動作を設定する。
 
     // Pre-Assert
 
@@ -398,7 +404,7 @@ TEST_F(shutdownTest, test_cplat_exit_preserves_upper_bound_code)
     testing::Mock::AllowLeak(&mock_stdlib_);
     ON_CALL(mock_stdlib_, atexit(_, _, _, _))
         .WillByDefault(
-            Invoke(delegate_real_atexit)); // [状態] - atexit が呼び出された際に本物へ委譲するようにモックを設定する。
+            Invoke(delegate_real_atexit)); // [状態] - atexit() から libc の処理へ委譲するように既定動作を設定する。
 
     // Pre-Assert
 
@@ -427,7 +433,7 @@ TEST_F(shutdownTest, test_explicit_invoke_prevents_atexit_double_execution)
     testing::Mock::AllowLeak(&mock_stdlib_);
     ON_CALL(mock_stdlib_, atexit(_, _, _, _))
         .WillByDefault(
-            Invoke(delegate_real_atexit)); // [状態] - atexit が呼び出された際に本物へ委譲するようにモックを設定する。
+            Invoke(delegate_real_atexit)); // [状態] - atexit() から libc の処理へ委譲するように既定動作を設定する。
 
     // Pre-Assert
 
@@ -491,13 +497,14 @@ TEST_F(shutdownTest, test_unhandled_signal_invokes_final_callbacks_and_reraises)
     // Pre-Assert
     EXPECT_CALL(mock_signal, signal(_, _, _, _, SIG_DFL))
         .WillOnce(Return(SIG_DFL)); // [Pre-Assert確認_正常系] - signal() が SIG_DFL を指定して 1 回呼び出されること。
-                                    // [Pre-Assert手順] - signal から SIG_DFL を返却する。
+                                    // [Pre-Assert手順] - signal() から SIG_DFL を返す。
     EXPECT_CALL(mock_signal, raise(_, _, _, SIGTERM))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - raise() が SIGTERM を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - raise から 0 を返却する。
+                              // [Pre-Assert手順] - raise() から 0 を返す。
 
     // Act
-    test_shutdown_signal_handler(SIGTERM); // [手順] - callback がない SIGTERM のシグナル ハンドラーを実行する。
+    test_shutdown_signal_handler(
+        SIGTERM); // [手順] - callback がない状態で SIGTERM を指定して test_shutdown_signal_handler() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -525,7 +532,8 @@ TEST_F(shutdownTest, test_repeated_signal_request_returns_without_reraise)
     EXPECT_CALL(mock_signal, raise(_, _, _, _)).Times(0); // [Pre-Assert確認_正常系] - raise() が呼び出されないこと。
 
     // Act
-    test_shutdown_signal_handler(SIGINT); // [手順] - 終了要求処理済みの状態で SIGINT のハンドラーを実行する。
+    test_shutdown_signal_handler(
+        SIGINT); // [手順] - 終了要求処理済みの状態で SIGINT を指定して test_shutdown_signal_handler() を呼び出す。
 
     // Assert
     EXPECT_EQ(0, g_call_count); // [確認_正常系] - g_call_count が 0 であること。(callback が追加実行されないことの確認)
@@ -543,29 +551,32 @@ TEST_F(shutdownTest, test_registration_and_invoke_reject_invalid_inputs)
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(Return(nullptr))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc() が 2 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_malloc() から NULL を返却する。
+                                    // [Pre-Assert手順] - cplat_malloc() から nullptr を返す。
 
     // Act
-    int register_null_result =
-        cplat_shutdown_register(nullptr, nullptr); // [手順] - NULL callback を最終 shutdown へ登録する。
-    int request_register_null_result =
-        cplat_shutdown_request_register(nullptr, nullptr); // [手順] - NULL callback を終了要求へ登録する。
-    int register_oom_result =
-        cplat_shutdown_register(record_callback, nullptr); // [手順] - malloc 失敗時に最終 callback を登録する。
+    int register_null_result = cplat_shutdown_register(
+        nullptr, nullptr); // [手順] - callback に nullptr を指定して cplat_shutdown_register() を呼び出す。
+    int request_register_null_result = cplat_shutdown_request_register(
+        nullptr, nullptr); // [手順] - callback に nullptr を指定して cplat_shutdown_request_register() を呼び出す。
+    int register_oom_result = cplat_shutdown_register(
+        record_callback,
+        nullptr); // [手順] - メモリ確保が失敗する状態で callback を指定して cplat_shutdown_register() を呼び出す。
     int request_register_oom_result = cplat_shutdown_request_register(
-        record_callback, nullptr); // [手順] - malloc 失敗時に終了要求 callback を登録する。
-    int invoke_null_result =
-        cplat_shutdown_invoke_for_test(nullptr, nullptr); // [手順] - NULL イベントで最終 shutdown を実行する。
-    int request_invoke_null_result =
-        cplat_shutdown_request_invoke_for_test(nullptr, nullptr); // [手順] - NULL イベントで終了要求を実行する。
+        record_callback,
+        nullptr); // [手順] - メモリ確保が失敗する状態で callback を指定して cplat_shutdown_request_register() を呼び出す。
+    int invoke_null_result = cplat_shutdown_invoke_for_test(
+        nullptr, nullptr); // [手順] - イベントに nullptr を指定して cplat_shutdown_invoke_for_test() を呼び出す。
+    int request_invoke_null_result = cplat_shutdown_request_invoke_for_test(
+        nullptr,
+        nullptr); // [手順] - イベントに nullptr を指定して cplat_shutdown_request_invoke_for_test() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        register_null_result); // [確認_異常系] - NULL callback に対する cplat_shutdown_register() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        register_null_result); // [確認_異常系] - nullptr callback に対する cplat_shutdown_register() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        request_register_null_result); // [確認_異常系] - NULL callback に対する cplat_shutdown_request_register() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        request_register_null_result); // [確認_異常系] - nullptr callback に対する cplat_shutdown_request_register() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_MEMORY,
         register_oom_result); // [確認_異常系] - malloc 失敗時の cplat_shutdown_register() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
@@ -574,10 +585,10 @@ TEST_F(shutdownTest, test_registration_and_invoke_reject_invalid_inputs)
         request_register_oom_result); // [確認_異常系] - malloc 失敗時の cplat_shutdown_request_register() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        invoke_null_result); // [確認_異常系] - NULL イベントに対する cplat_shutdown_invoke_for_test() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        invoke_null_result); // [確認_異常系] - nullptr イベントに対する cplat_shutdown_invoke_for_test() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        request_invoke_null_result); // [確認_異常系] - NULL イベントに対する cplat_shutdown_request_invoke_for_test() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        request_invoke_null_result); // [確認_異常系] - nullptr イベントに対する cplat_shutdown_request_invoke_for_test() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 
@@ -594,12 +605,13 @@ TEST_F(shutdownTest, test_request_registration_after_final_shutdown_is_rejected)
     // Pre-Assert
 
     // Act
-    int result =
-        cplat_shutdown_request_register(record_callback,
-                                        nullptr); // [手順] - 最終 shutdown 開始後に終了要求 callback を登録する。
+    int result = cplat_shutdown_request_register(
+        record_callback,
+        nullptr); // [手順] - 最終 shutdown 開始後に callback を指定して cplat_shutdown_request_register() を呼び出す。
     int request_invoked = 1;
     int invoke_result = cplat_shutdown_request_invoke_for_test(
-        &event, &request_invoked); // [手順] - 最終 shutdown 開始後に終了要求 callback の実行を試みる。
+        &event,
+        &request_invoked); // [手順] - 最終 shutdown 開始後に終了要求イベントを指定して cplat_shutdown_request_invoke_for_test() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -630,7 +642,7 @@ TEST_F(shutdownTest, test_reset_discards_pending_callbacks)
     // Pre-Assert
 
     // Act
-    cplat_shutdown_reset_for_test(); // [手順] - 未実行の 2 種類の callback を登録した状態をリセットする。
+    cplat_shutdown_reset_for_test(); // [手順] - 未実行の 2 種類の callback を登録した状態で cplat_shutdown_reset_for_test() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -658,7 +670,8 @@ TEST_F(shutdownTest, test_console_event_is_reported_to_callback)
     // Act
     int invoked = 0;
     int result = cplat_shutdown_request_invoke_for_test(
-        &event, &invoked); // [手順] - CTRL_C_EVENT 相当の request callback を実行する。
+        &event,
+        &invoked); // [手順] - CTRL_C_EVENT 相当の終了要求イベントを指定して cplat_shutdown_request_invoke_for_test() を呼び出す。
 
     // Assert
     ASSERT_EQ(CPLAT_OK,

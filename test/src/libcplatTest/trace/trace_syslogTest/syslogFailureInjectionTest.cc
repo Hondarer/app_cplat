@@ -37,11 +37,12 @@ TEST_F(syslogFailureInjectionTest, create_returns_null_when_handle_allocation_fa
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回以上呼び出されること。(ハンドル確保の失敗を注入することの確認)
-                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
-    cplat_syslog_sink *handle = cplat_syslog_sink_create("syslogFailureInjectionTest",
-                                                         LOG_USER); // [手順] - cplat_syslog_sink_create() を呼び出す。
+    cplat_syslog_sink *handle = cplat_syslog_sink_create(
+        "syslogFailureInjectionTest",
+        LOG_USER); // [手順] - 識別子 "syslogFailureInjectionTest" と LOG_USER を指定して cplat_syslog_sink_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr,
@@ -59,11 +60,12 @@ TEST_F(syslogFailureInjectionTest, create_returns_null_when_ident_duplication_fa
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc() が 2 回以上呼び出されること。(識別子の複製の失敗を注入することの確認)
-                          // [Pre-Assert手順] - 2 回目は NULL を返却し、他は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目は製品 (prod) の処理へ委譲し、2 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
-    cplat_syslog_sink *handle = cplat_syslog_sink_create("syslogFailureInjectionTest",
-                                                         LOG_USER); // [手順] - cplat_syslog_sink_create() を呼び出す。
+    cplat_syslog_sink *handle = cplat_syslog_sink_create(
+        "syslogFailureInjectionTest",
+        LOG_USER); // [手順] - 識別子 "syslogFailureInjectionTest" と LOG_USER を指定して cplat_syslog_sink_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr,
@@ -82,11 +84,12 @@ TEST_F(syslogFailureInjectionTest, create_succeeds_when_socket_creation_fails)
         .WillOnce(DoAll(Assign(&errno, EMFILE), Return(-1)))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - socket() が 1 回以上呼び出されること。(初回のソケット生成を失敗させることの確認)
-                          // [Pre-Assert手順] - errno に EMFILE を設定し、1 回目は -1 を返却する。
+    // [Pre-Assert手順] - socket() から 1 回目は、errno に EMFILE を設定して -1 を返し、以降は libc の処理へ委譲する。
 
     // Act
-    cplat_syslog_sink *handle = cplat_syslog_sink_create("syslogFailureInjectionTest",
-                                                         LOG_USER); // [手順] - cplat_syslog_sink_create() を呼び出す。
+    cplat_syslog_sink *handle = cplat_syslog_sink_create(
+        "syslogFailureInjectionTest",
+        LOG_USER); // [手順] - 識別子 "syslogFailureInjectionTest" と LOG_USER を指定して cplat_syslog_sink_create() を呼び出す。
 
     // Assert
     EXPECT_NE(
@@ -117,24 +120,26 @@ TEST_F(syslogFailureInjectionTest, write_reconnects_after_backoff_elapsed)
                 }
                 timestamp->tv_nsec = 0;
                 ++realtime_call;
-            })); // [状態] - cplat_clock_get_realtime() が呼び出された際に初回は 0 秒、以降は 10 秒を返すようにモックを設定する。
+            })); // [状態] - cplat_clock_get_realtime() から、初回は 0 秒、以降は 10 秒を設定して戻るように既定動作を設定する。
 
     // Pre-Assert
     EXPECT_CALL(mock_sys_socket, socket(_, _, _, _, _, _))
         .WillOnce(Return(-1))
         .WillOnce(Return(
             123)); // [Pre-Assert確認_正常系] - socket() が 2 回呼び出されること。(初回接続とバックオフ経過後の再接続であることの確認)
-                   // [Pre-Assert手順] - 初回は失敗し、再接続時は fd 123 を返却する。
+                   // [Pre-Assert手順] - socket() から 1 回目は -1、2 回目は 123 を返す。
     EXPECT_CALL(mock_sys_socket, sendto(_, _, _, 123, _, _, _, _, _))
         .WillOnce(Return(
             1)); // [Pre-Assert確認_正常系] - sendto() が 123 を指定して 1 回呼び出されること。(再接続した fd へメッセージを送信することの確認)
-                 // [Pre-Assert手順] - sendto から 1 を返却する。
+                 // [Pre-Assert手順] - sendto() から 1 を返す。
 
     // Act
-    cplat_syslog_sink *handle = cplat_syslog_sink_create("syslogFailureInjectionTest",
-                                                         LOG_USER); // [手順] - 初回接続が失敗する sink を生成する。
-    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                         "message"); // [手順] - バックオフ経過後の時刻でメッセージを書き込む。
+    cplat_syslog_sink *handle = cplat_syslog_sink_create(
+        "syslogFailureInjectionTest",
+        LOG_USER); // [手順] - socket() が失敗する状態で cplat_syslog_sink_create() を呼び出す。
+    int result = cplat_syslog_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "message"); // [手順] - バックオフ経過後の時刻の状態で、"message" を指定して cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     ASSERT_NE(nullptr,
@@ -163,11 +168,12 @@ TEST_F(syslogFailureInjectionTest, write_drops_message_when_sendto_fails)
         .WillOnce(DoAll(Assign(&errno, ECONNREFUSED), Return(-1)))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - sendto() が 1 回以上呼び出されること。(初回送信を失敗させることの確認)
-                          // [Pre-Assert手順] - errno に ECONNREFUSED を設定し、1 回目は -1 を返却する。
+    // [Pre-Assert手順] - sendto() から 1 回目は、errno に ECONNREFUSED を設定して -1 を返し、以降は libc の処理へ委譲する。
 
     // Act
-    int actual_ret = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                             "message"); // [手順] - cplat_syslog_sink_write() を呼び出す。
+    int actual_ret =
+        cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+                                "message"); // [手順] - "message" を指定して cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -195,11 +201,12 @@ TEST_F(syslogFailureInjectionTest, write_drops_message_when_send_buffer_is_full)
         .WillOnce(DoAll(Assign(&errno, EAGAIN), Return(-1)))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - sendto() が 1 回以上呼び出されること。(送信バッファー満杯を注入することの確認)
-                          // [Pre-Assert手順] - errno に EAGAIN を設定し、1 回目は -1 を返却する。
+    // [Pre-Assert手順] - sendto() から 1 回目は、errno に EAGAIN を設定して -1 を返し、以降は libc の処理へ委譲する。
 
     // Act
-    int actual_ret = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                             "message"); // [手順] - cplat_syslog_sink_write() を呼び出す。
+    int actual_ret =
+        cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+                                "message"); // [手順] - "message" を指定して cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -219,12 +226,12 @@ TEST_F(syslogFailureInjectionTest, create_returns_null_when_reconnect_lock_creat
     EXPECT_CALL(mock_cplat_, cplat_local_lock_create(_))
         .WillOnce(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_local_lock_create() が 1 回呼び出されること。(再接続ロックの生成を失敗させることの確認)
-    // [Pre-Assert手順] - cplat_local_lock_create() から CPLAT_ERR_UNKNOWN を返却する。
+    // [Pre-Assert手順] - cplat_local_lock_create() から CPLAT_ERR_UNKNOWN を返す。
 
     // Act
-    cplat_syslog_sink *handle =
-        cplat_syslog_sink_create("syslogFailureInjectionTest",
-                                 LOG_USER); // [手順] - 再接続ロック生成失敗を注入して sink を生成する。
+    cplat_syslog_sink *handle = cplat_syslog_sink_create(
+        "syslogFailureInjectionTest",
+        LOG_USER); // [手順] - 再接続ロックの生成が失敗する状態で cplat_syslog_sink_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr,
@@ -246,13 +253,14 @@ TEST_F(syslogFailureInjectionTest, write_returns_unknown_when_fallback_timestamp
             {
                 timestamp->tv_sec = 1;
                 timestamp->tv_nsec = 1000000000L;
-            })); // [状態] - cplat_clock_get_realtime() が呼び出された際に不正なナノ秒値 1000000000 を返すようにモックを設定する。
+            })); // [状態] - cplat_clock_get_realtime() から、不正なナノ秒値 1000000000 を設定して戻るように既定動作を設定する。
 
     // Pre-Assert
 
     // Act
-    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, &invalid_timestamp,
-                                         "message"); // [手順] - 不正な時刻で書き込みを実行する。
+    int result = cplat_syslog_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, &invalid_timestamp,
+        "message"); // [手順] - 不正な明示タイムスタンプと "message" を指定して cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -278,13 +286,15 @@ TEST_F(syslogFailureInjectionTest, write_drops_message_during_reconnect_backoff)
         .WillOnce(DoAll(Assign(&errno, ECONNREFUSED), Return(-1)))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - sendto() が 1 回以上呼び出されること。(初回送信を ECONNREFUSED で失敗させることの確認)
-                          // [Pre-Assert手順] - errno に ECONNREFUSED を設定し、1 回目は -1 を返却する。
+    // [Pre-Assert手順] - sendto() から 1 回目は、errno に ECONNREFUSED を設定して -1 を返し、以降は libc の処理へ委譲する。
 
     // Act
-    int first_result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                               "first"); // [手順] - 初回送信を実行する。
-    int backoff_result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                                 "backoff"); // [手順] - 再接続抑制期間中に再送信する。
+    int first_result =
+        cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+                                "first"); // [手順] - "first" を指定して cplat_syslog_sink_write() を呼び出す。
+    int backoff_result = cplat_syslog_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "backoff"); // [手順] - 再接続抑制期間中の状態で、"backoff" を指定して cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -312,11 +322,12 @@ TEST_F(syslogFailureInjectionTest, write_returns_ok_when_send_succeeds)
     EXPECT_CALL(mock_sys_socket, sendto(_, _, _, _, _, _, _, _, _))
         .WillOnce(Return(
             1)); // [Pre-Assert確認_正常系] - sendto() が 1 回呼び出されること。(syslog ソケットへの送信を成功させることの確認)
-                 // [Pre-Assert手順] - sendto から 1 を返却する。
+                 // [Pre-Assert手順] - sendto() から 1 を返す。
 
     // Act
-    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                         "message"); // [手順] - メッセージを送信する。
+    int result =
+        cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+                                "message"); // [手順] - "message" を指定して cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -341,11 +352,12 @@ TEST_F(syslogFailureInjectionTest, write_reports_unknown_after_fallback_timestam
     EXPECT_CALL(mock_sys_socket, sendto(_, _, _, _, _, _, _, _, _))
         .WillOnce(Return(
             1)); // [Pre-Assert確認_正常系] - sendto() が 1 回呼び出されること。(代替時刻での送信を成功させることの確認)
-                 // [Pre-Assert手順] - sendto から 1 を返却する。
+                 // [Pre-Assert手順] - sendto() から 1 を返す。
 
     // Act
-    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, &invalid_timestamp,
-                                         "message"); // [手順] - 不正時刻を指定して送信する。
+    int result = cplat_syslog_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, &invalid_timestamp,
+        "message"); // [手順] - 不正な明示タイムスタンプと "message" を指定して cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -369,7 +381,7 @@ TEST_F(syslogFailureInjectionTest, write_truncates_message_for_test_fd)
     {
         saved_fd_value = saved_fd;
     }
-    ASSERT_EQ(0, pipe(pipe_fds));                               // [状態] - pipe を生成する。
+    ASSERT_EQ(0, pipe(pipe_fds));                               // [状態] - パイプを生成する。
                                                                 // [状態確認] - pipe() の戻り値が 0 であること。
     std::string fd_text = std::to_string(pipe_fds[1]);          // [状態] - テスト用 FD をパイプの書き込み側とする。
     ASSERT_EQ(0, setenv("SYSLOG_TEST_FD", fd_text.c_str(), 1)); // [状態] - SYSLOG_TEST_FD をパイプの書き込み側とする。
@@ -382,11 +394,13 @@ TEST_F(syslogFailureInjectionTest, write_truncates_message_for_test_fd)
     // Pre-Assert
 
     // Act
-    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                         message.c_str()); // [手順] - 長大なメッセージをテスト用 FD へ書き込む。
+    int result = cplat_syslog_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        message.c_str()); // [手順] - 長大なメッセージを指定して cplat_syslog_sink_write() を呼び出す。
     close(pipe_fds[1]);
     pipe_fds[1] = -1;
-    ssize_t read_size = read(pipe_fds[0], actual, sizeof(actual) - 1); // [手順] - 切り詰め後のメッセージを読み取る。
+    ssize_t read_size = read(pipe_fds[0], actual,
+                             sizeof(actual) - 1); // [手順] - テスト用 FD の読み取り側を指定して read() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -426,7 +440,7 @@ TEST_F(syslogFailureInjectionTest, write_uses_plain_line_when_test_timestamp_for
     {
         saved_fd_value = saved_fd;
     }
-    ASSERT_EQ(0, pipe(pipe_fds));                               // [状態] - pipe を生成する。
+    ASSERT_EQ(0, pipe(pipe_fds));                               // [状態] - パイプを生成する。
                                                                 // [状態確認] - pipe() の戻り値が 0 であること。
     std::string fd_text = std::to_string(pipe_fds[1]);          // [状態] - テスト用 FD をパイプの書き込み側とする。
     ASSERT_EQ(0, setenv("SYSLOG_TEST_FD", fd_text.c_str(), 1)); // [状態] - SYSLOG_TEST_FD をパイプの書き込み側とする。
@@ -440,14 +454,16 @@ TEST_F(syslogFailureInjectionTest, write_uses_plain_line_when_test_timestamp_for
     EXPECT_CALL(mock_cplat_, cplat_clock_format_realtime_iso8601_local(_, _, _))
         .WillOnce(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_clock_format_realtime_iso8601_local() が 1 回呼び出されること。(時刻整形を失敗させることの確認)
-    // [Pre-Assert手順] - cplat_clock_format_realtime_iso8601_local() から CPLAT_ERR_UNKNOWN を返却する。
+    // [Pre-Assert手順] - cplat_clock_format_realtime_iso8601_local() から CPLAT_ERR_UNKNOWN を返す。
 
     // Act
-    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, &timestamp,
-                                         "message"); // [手順] - 時刻整形失敗時の書き込みを実行する。
+    int result =
+        cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, &timestamp,
+                                "message"); // [手順] - "message" を指定して cplat_syslog_sink_write() を呼び出す。
     close(pipe_fds[1]);
     pipe_fds[1] = -1;
-    ssize_t read_size = read(pipe_fds[0], actual, sizeof(actual) - 1); // [手順] - 本文だけの出力を読み取る。
+    ssize_t read_size = read(pipe_fds[0], actual,
+                             sizeof(actual) - 1); // [手順] - テスト用 FD の読み取り側を指定して read() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -480,10 +496,11 @@ TEST_F(syslogFailureInjectionTest, rename_reports_out_of_memory_when_duplication
     EXPECT_CALL(mock_cplat_, cplat_malloc(_))
         .WillOnce(Return(
             nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回呼び出されること。(新しい識別子の確保を失敗させることの確認)
-                       // [Pre-Assert手順] - cplat_malloc() から NULL を返却する。
+                       // [Pre-Assert手順] - cplat_malloc() から nullptr を返す。
 
     // Act
-    int result = cplat_syslog_sink_rename(handle, "renamed"); // [手順] - 識別子を変更する。
+    int result = cplat_syslog_sink_rename(
+        handle, "renamed"); // [手順] - 識別子 "renamed" を指定して cplat_syslog_sink_rename() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -507,10 +524,11 @@ TEST_F(syslogFailureInjectionTest, rename_reports_lock_failure)
     EXPECT_CALL(mock_cplat_, cplat_local_lock_lock(_, CPLAT_SYNC_WAIT_FOREVER))
         .WillOnce(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が CPLAT_SYNC_WAIT_FOREVER を指定して 1 回呼び出されること。(識別子変更前のロック取得を失敗させることの確認)
-    // [Pre-Assert手順] - cplat_local_lock_lock() から CPLAT_ERR_UNKNOWN を返却する。
+    // [Pre-Assert手順] - cplat_local_lock_lock() から CPLAT_ERR_UNKNOWN を返す。
 
     // Act
-    int result = cplat_syslog_sink_rename(handle, "renamed"); // [手順] - ロック失敗を注入して識別子を変更する。
+    int result = cplat_syslog_sink_rename(
+        handle, "renamed"); // [手順] - cplat_local_lock_lock() が失敗する状態で cplat_syslog_sink_rename() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -533,11 +551,13 @@ TEST_F(syslogFailureInjectionTest, dispose_on_shutdown_handles_null_and_active_s
     // Pre-Assert
 
     // Act
-    cplat_internal_syslog_sink_dispose_on_shutdown(nullptr); // [手順] - NULL ハンドルを shutdown 破棄する。
-    cplat_internal_syslog_sink_dispose_on_shutdown(handle); // [手順] - 有効なハンドルを shutdown 破棄する。
+    cplat_internal_syslog_sink_dispose_on_shutdown(
+        nullptr); // [手順] - handle に nullptr を指定して cplat_internal_syslog_sink_dispose_on_shutdown() を呼び出す。
+    cplat_internal_syslog_sink_dispose_on_shutdown(
+        handle); // [手順] - 有効なハンドルを指定して cplat_internal_syslog_sink_dispose_on_shutdown() を呼び出す。
 
     // Assert
-    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(NULL と有効なハンドルの shutdown 破棄が完了したことの確認)
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(nullptr と有効なハンドルの shutdown 破棄が完了したことの確認)
 }
 
 // ソケット未接続の sink を shutdown 時に破棄できることの確認
@@ -550,13 +570,14 @@ TEST_F(syslogFailureInjectionTest, dispose_on_shutdown_handles_disconnected_sink
     EXPECT_CALL(mock_sys_socket, socket(_, _, _, _, _, _))
         .WillOnce(Return(
             -1)); // [Pre-Assert確認_異常系] - socket() が 1 回呼び出されること。(初回のソケット生成を失敗させることの確認)
-                  // [Pre-Assert手順] - socket から -1 を返却する。
+                  // [Pre-Assert手順] - socket() から -1 を返す。
 
     // Act
-    cplat_syslog_sink *handle =
-        cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [手順] - ソケット未接続の sink を生成する。
+    cplat_syslog_sink *handle = cplat_syslog_sink_create(
+        "syslogFailureInjectionTest",
+        LOG_USER); // [手順] - socket() が失敗する状態で cplat_syslog_sink_create() を呼び出す。
     cplat_internal_syslog_sink_dispose_on_shutdown(
-        handle); // [手順] - ソケット未接続の sink を shutdown 経路で破棄する。
+        handle); // [手順] - ソケット未接続の sink を指定して cplat_internal_syslog_sink_dispose_on_shutdown() を呼び出す。
 
     // Assert
     EXPECT_NE(
@@ -578,11 +599,12 @@ TEST_F(syslogFailureInjectionTest, write_returns_ok_when_message_formatting_fail
     EXPECT_CALL(mock_stdio, snprintf(_, _, _, _, _, _))
         .WillOnce(Return(
             -1)); // [Pre-Assert確認_異常系] - snprintf() が 1 回呼び出されること。(syslog 本文の書式化を失敗させることの確認)
-                  // [Pre-Assert手順] - snprintf から -1 を返却する。
+                  // [Pre-Assert手順] - snprintf() から -1 を返す。
 
     // Act
-    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                         "message"); // [手順] - 書式化失敗時の書き込みを実行する。
+    int result = cplat_syslog_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "message"); // [手順] - snprintf() が失敗する状態で、"message" を指定して cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -605,7 +627,7 @@ TEST_F(syslogFailureInjectionTest, write_returns_unknown_when_test_timestamp_for
     {
         saved_fd_value = saved_fd;
     }
-    ASSERT_EQ(0, pipe(pipe_fds));                               // [状態] - pipe を生成する。
+    ASSERT_EQ(0, pipe(pipe_fds));                               // [状態] - パイプを生成する。
                                                                 // [状態確認] - pipe() の戻り値が 0 であること。
     std::string fd_text = std::to_string(pipe_fds[1]);          // [状態] - テスト用 FD をパイプの書き込み側とする。
     ASSERT_EQ(0, setenv("SYSLOG_TEST_FD", fd_text.c_str(), 1)); // [状態] - SYSLOG_TEST_FD をパイプの書き込み側とする。
@@ -621,11 +643,12 @@ TEST_F(syslogFailureInjectionTest, write_returns_unknown_when_test_timestamp_for
         .WillOnce(DoDefault())
         .WillOnce(Return(
             -1)); // [Pre-Assert確認_異常系] - snprintf() が 2 回呼び出されること。(時刻付き行の書式化を失敗させることの確認)
-                  // [Pre-Assert手順] - 1 回目は既定動作、2 回目は -1 を返却する。
+                  // [Pre-Assert手順] - snprintf() から 1 回目は libc の処理へ委譲し、2 回目は -1 を返す。
 
     // Act
-    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, &timestamp,
-                                         "message"); // [手順] - 時刻付き行の書式化失敗を実行する。
+    int result = cplat_syslog_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, &timestamp,
+        "message"); // [手順] - 明示タイムスタンプと "message" を指定して、時刻付き行の書式化が失敗する状態で cplat_syslog_sink_write() を呼び出す。
     close(pipe_fds[1]);
     pipe_fds[1] = -1;
 
@@ -660,7 +683,7 @@ TEST_F(syslogFailureInjectionTest, write_truncates_test_timestamp_line)
     {
         saved_fd_value = saved_fd;
     }
-    ASSERT_EQ(0, pipe(pipe_fds));                               // [状態] - pipe を生成する。
+    ASSERT_EQ(0, pipe(pipe_fds));                               // [状態] - パイプを生成する。
                                                                 // [状態確認] - pipe() の戻り値が 0 であること。
     std::string fd_text = std::to_string(pipe_fds[1]);          // [状態] - テスト用 FD をパイプの書き込み側とする。
     ASSERT_EQ(0, setenv("SYSLOG_TEST_FD", fd_text.c_str(), 1)); // [状態] - SYSLOG_TEST_FD をパイプの書き込み側とする。
@@ -676,14 +699,16 @@ TEST_F(syslogFailureInjectionTest, write_truncates_test_timestamp_line)
         .WillOnce(DoDefault())
         .WillOnce(Return(
             3000)); // [Pre-Assert確認_異常系] - snprintf() が 2 回呼び出されること。(時刻付き行の長さをバッファーより大きくすることの確認)
-    // [Pre-Assert手順] - 1 回目は既定動作、2 回目は 3000 を返却する。
+    // [Pre-Assert手順] - snprintf() から 1 回目は libc の処理へ委譲し、2 回目は 3000 を返す。
 
     // Act
-    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, &timestamp,
-                                         "message"); // [手順] - 長い時刻付き行を書き込む。
+    int result = cplat_syslog_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, &timestamp,
+        "message"); // [手順] - 明示タイムスタンプと "message" を指定して、長い時刻付き行になる状態で cplat_syslog_sink_write() を呼び出す。
     close(pipe_fds[1]);
     pipe_fds[1] = -1;
-    ssize_t read_size = read(pipe_fds[0], actual, sizeof(actual) - 1); // [手順] - 補正後の行を読み取る。
+    ssize_t read_size = read(pipe_fds[0], actual,
+                             sizeof(actual) - 1); // [手順] - テスト用 FD の読み取り側を指定して read() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -721,11 +746,12 @@ TEST_F(syslogFailureInjectionTest, write_reports_unknown_when_fallback_send_buff
             Assign(&errno, EAGAIN),
             Return(
                 -1))); // [Pre-Assert確認_異常系] - sendto() が 1 回呼び出されること。(代替時刻での送信を EAGAIN にすることの確認)
-                       // [Pre-Assert手順] - errno に EAGAIN を設定し、sendto から -1 を返却する。
+                       // [Pre-Assert手順] - sendto() から、errno に EAGAIN を設定して -1 を返す。
 
     // Act
-    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, &invalid_timestamp,
-                                         "message"); // [手順] - 代替時刻で送信する。
+    int result = cplat_syslog_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, &invalid_timestamp,
+        "message"); // [手順] - 不正な明示タイムスタンプと "message" を指定して cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -753,11 +779,12 @@ TEST_F(syslogFailureInjectionTest, write_reports_unknown_when_fallback_send_fail
             Assign(&errno, ECONNREFUSED),
             Return(
                 -1))); // [Pre-Assert確認_異常系] - sendto() が 1 回呼び出されること。(代替時刻での送信を一般エラーにすることの確認)
-                       // [Pre-Assert手順] - errno に ECONNREFUSED を設定し、sendto から -1 を返却する。
+                       // [Pre-Assert手順] - sendto() から、errno に ECONNREFUSED を設定して -1 を返す。
 
     // Act
-    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, &invalid_timestamp,
-                                         "message"); // [手順] - 代替時刻で送信する。
+    int result = cplat_syslog_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, &invalid_timestamp,
+        "message"); // [手順] - 不正な明示タイムスタンプと "message" を指定して cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -778,7 +805,7 @@ TEST_F(syslogFailureInjectionTest, write_reports_unknown_when_fallback_socket_is
     // Pre-Assert
     EXPECT_CALL(mock_sys_socket, socket(_, _, _, _, _, _))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - create 時の socket() が 1 回呼び出されること。
-                               // [Pre-Assert手順] - socket から -1 を返却する。
+                               // [Pre-Assert手順] - socket() から -1 を返す。
 
     // Arrange
     cplat_syslog_sink *handle =
@@ -789,8 +816,9 @@ TEST_F(syslogFailureInjectionTest, write_reports_unknown_when_fallback_socket_is
     // Pre-Assert
 
     // Act
-    int result = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, &invalid_timestamp,
-                                         "message"); // [手順] - 再接続抑制期間中に代替時刻で送信する。
+    int result = cplat_syslog_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, &invalid_timestamp,
+        "message"); // [手順] - 再接続抑制期間中の状態で、不正な明示タイムスタンプと "message" を指定して cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -829,7 +857,7 @@ TEST_F(syslogFailureInjectionTest, socket_failure_caps_backoff_interval)
                 }
                 timestamp->tv_nsec = 0;
                 ++realtime_call;
-            })); // [状態] - cplat_clock_get_realtime() が呼び出された際に 0 秒、10 秒、20 秒、40 秒を順に返すようにモックを設定する。
+            })); // [状態] - cplat_clock_get_realtime() から、0 秒、10 秒、20 秒、40 秒を順に設定して戻るように既定動作を設定する。
 
     // Pre-Assert
     EXPECT_CALL(mock_sys_socket, socket(_, _, _, _, _, _))
@@ -838,17 +866,21 @@ TEST_F(syslogFailureInjectionTest, socket_failure_caps_backoff_interval)
         .WillOnce(Return(-1))
         .WillOnce(Return(
             -1)); // [Pre-Assert確認_異常系] - socket() が 4 回呼び出されること。(連続するソケット生成を失敗させることの確認)
-                  // [Pre-Assert手順] - socket から 4 回とも -1 を返却する。
+                  // [Pre-Assert手順] - socket() から 4 回とも -1 を返す。
 
     // Act
-    cplat_syslog_sink *handle =
-        cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [手順] - 初回接続を試行する。
-    int first_retry = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                              "first"); // [手順] - 1 回目の再接続を試行する。
-    int second_retry = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                               "second"); // [手順] - 2 回目の再接続を試行する。
-    int third_retry = cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                              "third"); // [手順] - 3 回目の再接続を試行する。
+    cplat_syslog_sink *handle = cplat_syslog_sink_create(
+        "syslogFailureInjectionTest",
+        LOG_USER); // [手順] - socket() が失敗する状態で cplat_syslog_sink_create() を呼び出す。
+    int first_retry =
+        cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+                                "first"); // [手順] - "first" を指定して cplat_syslog_sink_write() を呼び出す。
+    int second_retry =
+        cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+                                "second"); // [手順] - "second" を指定して cplat_syslog_sink_write() を呼び出す。
+    int third_retry =
+        cplat_syslog_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+                                "third"); // [手順] - "third" を指定して cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     ASSERT_NE(

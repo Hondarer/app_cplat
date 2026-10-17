@@ -92,30 +92,34 @@ TEST_F(stringCatalogFilterPatternTest, matches_is_partial_match)
 
     // Act
     // [サブ手順参照 名前=stringCatalogFilterPatternTest.apply_line]
-    std::size_t actual_ret_partial =
-        apply_line("arg.job_name matches \"port\""); // [手順] - 部分に一致するパターンを適用する。
+    std::size_t actual_ret_partial = apply_line(
+        "arg.job_name matches \"port\""); // [手順] - 部分に一致するパターンを指定して apply_line() を呼び出す。
     // 条件式のコンパイルと適用が成功すること。
     ASSERT_EQ(
         0U,
         actual_ret_partial); // [確認_正常系] - 部分に一致するパターンに対する apply_line() の戻り値が 0U であること。(無効行数が 0 で、コンパイルと適用が成功したことの確認)
     // [サブ手順参照 名前=stringCatalogFilterPatternTest.job_received_matched]
-    const int actual_import = job_received_matched("import-1");          // [手順] - 途中に port を含む名前で判定する。
+    const int actual_import = job_received_matched(
+        "import-1"); // [手順] - 途中に port を含む名前を指定して job_received_matched() を呼び出す。
     // JOB_RECEIVED の組み立てが成功すること。
     // [サブ手順参照 名前=stringCatalogFilterPatternTest.job_received_matched]
-    const int actual_build = job_received_matched("build-1");            // [手順] - port を含まない名前で判定する。
+    const int actual_build =
+        job_received_matched("build-1"); // [手順] - port を含まない名前を指定して job_received_matched() を呼び出す。
     // JOB_RECEIVED の組み立てが成功すること。
     // [サブ手順参照 名前=stringCatalogFilterPatternTest.apply_line]
-    std::size_t actual_ret_anchored =
-        apply_line("arg.job_name matches \"^imp.*-[0-9]$\""); // [手順] - 位置を固定したパターンを適用する。
+    std::size_t actual_ret_anchored = apply_line(
+        "arg.job_name matches \"^imp.*-[0-9]$\""); // [手順] - 位置を固定したパターンを指定して apply_line() を呼び出す。
     // 条件式のコンパイルと適用が成功すること。
     ASSERT_EQ(
         0U,
         actual_ret_anchored); // [確認_正常系] - 位置を固定したパターンに対する apply_line() の戻り値が 0U であること。(無効行数が 0 で、コンパイルと適用が成功したことの確認)
     // [サブ手順参照 名前=stringCatalogFilterPatternTest.job_received_matched]
-    const int actual_anchored = job_received_matched("import-1");        // [手順] - 全体が一致する名前で判定する。
+    const int actual_anchored =
+        job_received_matched("import-1"); // [手順] - 全体が一致する名前を指定して job_received_matched() を呼び出す。
     // JOB_RECEIVED の組み立てが成功すること。
     // [サブ手順参照 名前=stringCatalogFilterPatternTest.job_received_matched]
-    const int actual_prefixed = job_received_matched("reimport-1");      // [手順] - 先頭が異なる名前で判定する。
+    const int actual_prefixed =
+        job_received_matched("reimport-1"); // [手順] - 先頭が異なる名前を指定して job_received_matched() を呼び出す。
     // JOB_RECEIVED の組み立てが成功すること。
 
     // Assert
@@ -140,8 +144,8 @@ TEST_F(stringCatalogFilterPatternTest, matches_i_ignores_ascii_case)
 
     // Act
     // [サブ手順参照 名前=stringCatalogFilterPatternTest.apply_line]
-    std::size_t actual_ret_sensitive =
-        apply_line("arg.job_name matches \"IMPORT\""); // [手順] - 大文字のパターンを matches で適用する。
+    std::size_t actual_ret_sensitive = apply_line(
+        "arg.job_name matches \"IMPORT\""); // [手順] - 大文字のパターンと matches を指定して apply_line() を呼び出す。
     // 条件式のコンパイルと適用が成功すること。
     ASSERT_EQ(
         0U,
@@ -150,8 +154,8 @@ TEST_F(stringCatalogFilterPatternTest, matches_i_ignores_ascii_case)
     const int actual_sensitive = job_received_matched("import-1");
     // JOB_RECEIVED の組み立てが成功すること。
     // [サブ手順参照 名前=stringCatalogFilterPatternTest.apply_line]
-    std::size_t actual_ret_insensitive =
-        apply_line("arg.job_name matches_i \"IMPORT\""); // [手順] - 同じパターンを matches_i で適用する。
+    std::size_t actual_ret_insensitive = apply_line(
+        "arg.job_name matches_i \"IMPORT\""); // [手順] - 同じパターンと matches_i を指定して apply_line() を呼び出す。
     // 条件式のコンパイルと適用が成功すること。
     ASSERT_EQ(
         0U,
@@ -180,7 +184,8 @@ TEST_F(stringCatalogFilterPatternTest, id_pattern_is_resolved_at_apply)
 
     // Act
     // [サブ手順参照 名前=stringCatalogFilterPatternTest.apply_line]
-    std::size_t actual_ret_id = apply_line("id matches \"0005$\""); // [手順] - ID の末尾に一致するパターンを適用する。
+    std::size_t actual_ret_id =
+        apply_line("id matches \"0005$\""); // [手順] - ID の末尾に一致するパターンを指定して apply_line() を呼び出す。
     // 条件式のコンパイルと適用が成功すること。
 
     // Assert
@@ -219,11 +224,13 @@ TEST_F(stringCatalogFilterPatternTest, subject_longer_than_limit_is_not_matched)
 
     // Act
     // [サブ手順参照 名前=stringCatalogFilterPatternTest.job_received_matched]
-    const int actual_at_limit = job_received_matched(at_limit.c_str()); // [手順] - 上限ちょうどの長さで判定する。
+    const int actual_at_limit = job_received_matched(
+        at_limit.c_str()); // [手順] - 上限ちょうどの長さを指定して job_received_matched() を呼び出す。
     // JOB_RECEIVED の組み立てが成功すること。
     const int actual_over_limit =
         // [サブ手順参照 名前=stringCatalogFilterPatternTest.job_received_matched]
-        job_received_matched(over_limit.c_str()); // [手順] - 上限を 1 バイト超える長さで判定する。
+        job_received_matched(
+            over_limit.c_str()); // [手順] - 上限を 1 バイト超える長さを指定して job_received_matched() を呼び出す。
     // JOB_RECEIVED の組み立てが成功すること。
 
     // Assert
@@ -246,15 +253,17 @@ TEST_F(stringCatalogFilterPatternTest, null_subject_is_not_matched)
 
     // Act
     // [サブ手順参照 名前=stringCatalogFilterPatternTest.job_received_matched]
-    const int actual_empty_name = job_received_matched("");     // [手順] - 空の名前で判定する。
+    const int actual_empty_name =
+        job_received_matched(""); // [手順] - 空の名前を指定して job_received_matched() を呼び出す。
     // JOB_RECEIVED の組み立てが成功すること。
     // [サブ手順参照 名前=stringCatalogFilterPatternTest.job_received_matched]
-    const int actual_null_name = job_received_matched(nullptr); // [手順] - NULL の名前で判定する。
+    const int actual_null_name =
+        job_received_matched(nullptr); // [手順] - nullptr の名前を指定して job_received_matched() を呼び出す。
     // JOB_RECEIVED の組み立てが成功すること。
 
     // Assert
     EXPECT_NE(0, actual_empty_name); // [確認_正常系] - 空のパターンは空の文字列にも一致すること。
-    EXPECT_EQ(0, actual_null_name);  // [確認_異常系] - NULL はパターンに一致しないこと。
+    EXPECT_EQ(0, actual_null_name);  // [確認_異常系] - nullptr はパターンに一致しないこと。
 }
 // [サブ手順参照 名前=stringCatalogFilterPatternTest.TearDown]
 
@@ -272,16 +281,16 @@ TEST_F(stringCatalogFilterPatternTest, reapplied_line_keeps_pattern)
 
     // Act
     // [サブ手順参照 名前=stringCatalogFilterPatternTest.apply_line]
-    std::size_t actual_ret_second =
-        apply_line("arg.job_name matches \"port\""); // [手順] - 同じ条件式を適用し直す (2 面目)。
+    std::size_t actual_ret_second = apply_line(
+        "arg.job_name matches \"port\""); // [手順] - 同じ条件式を指定し、2 面目へ適用するために apply_line() を呼び出す。
     // 条件式のコンパイルと適用が成功すること。
     ASSERT_EQ(0U, actual_ret_second); // [確認_正常系] - 2 面目に適用した apply_line() の戻り値が 0U であること。
     // [サブ手順参照 名前=stringCatalogFilterPatternTest.job_received_matched]
     const int actual_second = job_received_matched("import-1");
     // JOB_RECEIVED の組み立てが成功すること。
     // [サブ手順参照 名前=stringCatalogFilterPatternTest.apply_line]
-    std::size_t actual_ret_third =
-        apply_line("arg.job_name matches \"port\""); // [手順] - もう一度適用し直す (1 面目へ戻る)。
+    std::size_t actual_ret_third = apply_line(
+        "arg.job_name matches \"port\""); // [手順] - 同じ条件式を指定し、1 面目へ戻すために apply_line() を呼び出す。
     // 条件式のコンパイルと適用が成功すること。
     ASSERT_EQ(0U, actual_ret_third); // [確認_正常系] - 1 面目へ戻した apply_line() の戻り値が 0U であること。
     // [サブ手順参照 名前=stringCatalogFilterPatternTest.job_received_matched]
@@ -306,10 +315,11 @@ TEST_F(stringCatalogFilterPatternTest, pattern_on_non_string_argument_is_never_s
     // Act
     const std::size_t actual_invalid =
         // [サブ手順参照 名前=stringCatalogFilterPatternTest.apply_line]
-        apply_line("arg.priority matches \"3\""); // [手順] - 整数の引数へパターンを書く。
+        apply_line(
+            "arg.priority matches \"3\""); // [手順] - 整数の引数に対するパターンを指定して apply_line() を呼び出す。
     // 条件式のコンパイルと適用が成功すること。
-    int actual_ret_get_line_error =
-        cplat_string_catalog_filter_slot_get_line_error(slot_, 0U, &actual_error); // [手順] - 行の状態を取得する。
+    int actual_ret_get_line_error = cplat_string_catalog_filter_slot_get_line_error(
+        slot_, 0U, &actual_error); // [手順] - cplat_string_catalog_filter_slot_get_line_error() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_get_line_error); // [状態確認] - cplat_string_catalog_filter_slot_get_line_error() の戻り値が CPLAT_OK であること。
@@ -342,10 +352,14 @@ TEST_F(stringCatalogFilterPatternTest, pattern_is_described_in_both_languages)
     // Act
     (void)cplat_string_catalog_set_language(CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE);
     int actual_ret_japanese = cplat_string_catalog_filter_slot_describe_line(
-        slot_, 0U, actual_japanese, sizeof(actual_japanese)); // [手順] - 日本語で説明する。
+        slot_, 0U, actual_japanese,
+        sizeof(
+            actual_japanese)); // [手順] - 日本語を設定した状態で cplat_string_catalog_filter_slot_describe_line() を呼び出す。
     (void)cplat_string_catalog_set_language(CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL);
     int actual_ret_neutral = cplat_string_catalog_filter_slot_describe_line(
-        slot_, 0U, actual_neutral, sizeof(actual_neutral)); // [手順] - ニュートラル言語で説明する。
+        slot_, 0U, actual_neutral,
+        sizeof(
+            actual_neutral)); // [手順] - ニュートラル言語を設定した状態で cplat_string_catalog_filter_slot_describe_line() を呼び出す。
 
     // Assert
     ASSERT_EQ(

@@ -44,24 +44,27 @@ TEST_F(hashtableVariableStringTest, persists_variable_key_and_value_and_copies_w
     // Pre-Assert
 
     // Act
-    int actual_ret_create =
-        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - 可変長設定でテーブルを構築する。
-    int actual_ret_add =
-        cplat_hashtable_add(ht, "variable-key", "variable-value",
-                            CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 可変長キーと値を追加する。
+    int actual_ret_create = cplat_hashtable_create(
+        &config, nullptr, 0, nullptr, 0, &ht); // [手順] - 可変長の設定を指定して cplat_hashtable_create() を呼び出す。
+    int actual_ret_add = cplat_hashtable_add(
+        ht, "variable-key", "variable-value",
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 可変長のキーと値を指定して cplat_hashtable_add() を呼び出す。
     int actual_ret_find = cplat_hashtable_find_value_ref(ht, "variable-key", &found);
-    int actual_ret_query = cplat_hashtable_find_value_copy(ht, "variable-key", nullptr, 0,
-                                                           &required_size); // [手順] - 必要サイズを問い合わせる。
-    int actual_ret_copy = cplat_hashtable_find_value_copy(ht, "variable-key", copied, sizeof(copied),
-                                                          &required_size); // [手順] - 値をバッファーへ複製する。
+    int actual_ret_query = cplat_hashtable_find_value_copy(
+        ht, "variable-key", nullptr, 0,
+        &required_size); // [手順] - 複製先に nullptr、サイズに 0 を指定して cplat_hashtable_find_value_copy() を呼び出す。
+    int actual_ret_copy = cplat_hashtable_find_value_copy(
+        ht, "variable-key", copied, sizeof(copied),
+        &required_size); // [手順] - 複製先のバッファーを指定して cplat_hashtable_find_value_copy() を呼び出す。
     (void)cplat_hashtable_buffer_size(ht, &mgmt_size, &data_size);
     (void)cplat_hashtable_buffer_ref(ht, &mgmt, &data);
     std::vector<unsigned char> mgmt_copy(static_cast<const unsigned char *>(mgmt),
                                          static_cast<const unsigned char *>(mgmt) + mgmt_size);
     std::vector<unsigned char> data_copy(static_cast<const unsigned char *>(data),
                                          static_cast<const unsigned char *>(data) + data_size);
-    int actual_ret_attach = cplat_hashtable_attach(mgmt_copy.data(), mgmt_copy.size(), data_copy.data(),
-                                                   data_copy.size(), &attached); // [手順] - 複製領域へ再接続する。
+    int actual_ret_attach =
+        cplat_hashtable_attach(mgmt_copy.data(), mgmt_copy.size(), data_copy.data(), data_copy.size(),
+                               &attached); // [手順] - 複製領域を指定して cplat_hashtable_attach() を呼び出す。
     const void *attached_value = nullptr;
     int actual_ret_attached_find = cplat_hashtable_find_value_ref(attached, "variable-key", &attached_value);
     std::string found_text = static_cast<const char *>(found);
@@ -114,7 +117,8 @@ TEST_F(hashtableVariableStringTest, fragmented_update_returns_storage_full_and_p
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     int actual_ret_add_a = cplat_hashtable_add(ht, "a", "1111", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_add_b = cplat_hashtable_add(ht, "b", "2222", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    int actual_ret_update = cplat_hashtable_update(ht, "a", "123456"); // [手順] - 収まらないサイズへ更新する。
+    int actual_ret_update = cplat_hashtable_update(
+        ht, "a", "123456"); // [手順] - 収まらないサイズの値を指定して cplat_hashtable_update() を呼び出す。
     int actual_ret_find = cplat_hashtable_find_value_ref(ht, "a", &found);
     int actual_ret_validate = cplat_hashtable_validate(ht);
     std::string found_text = static_cast<const char *>(found);
@@ -168,10 +172,11 @@ TEST_F(hashtableVariableStringTest, explicit_compaction_enables_fragmented_add_a
     (void)cplat_hashtable_delete(ht, "b");
     (void)cplat_hashtable_purge_deleted(ht);
     int actual_ret_fragmented = cplat_hashtable_add(
-        ht, "d", "55555", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 断片化状態で追加を試みる。
+        ht, "d", "55555",
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 断片化状態でキーを指定して cplat_hashtable_add() を呼び出す。
     const void *after_failed_add = nullptr;
     (void)cplat_hashtable_find_value_ref(ht, "c", &after_failed_add);
-    int actual_ret_compact = cplat_hashtable_compact(ht); // [手順] - ストレージを圧縮する。
+    int actual_ret_compact = cplat_hashtable_compact(ht); // [手順] - cplat_hashtable_compact() を呼び出す。
     (void)cplat_hashtable_find_value_ref(ht, "c", &after_compact);
     (void)cplat_hashtable_get_key_ref(ht, c_record, &key_after_compact, nullptr);
     bool vacated_key_zeroed = static_cast<const unsigned char *>(key_before_compact)[0] == 0 &&
@@ -181,8 +186,9 @@ TEST_F(hashtableVariableStringTest, explicit_compaction_enables_fragmented_add_a
     {
         vacated_value_zeroed = vacated_value_zeroed && (static_cast<const unsigned char *>(before_compact)[i] == 0);
     }
-    int actual_ret_retry =
-        cplat_hashtable_add(ht, "d", "55555", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 圧縮後に再度追加する。
+    int actual_ret_retry = cplat_hashtable_add(
+        ht, "d", "55555",
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 圧縮後にキーを指定して cplat_hashtable_add() を呼び出す。
     int actual_ret_find = cplat_hashtable_find_value_ref(ht, "d", &added);
     int actual_ret_validate = cplat_hashtable_validate(ht);
     std::string compacted_text = static_cast<const char *>(after_compact);
@@ -245,7 +251,7 @@ TEST_F(hashtableVariableStringTest, purge_zero_fills_released_variable_key_and_v
     (void)cplat_hashtable_delete(ht, "secret-key");
     bool retained_while_deleted = std::strcmp(static_cast<const char *>(key_ref), "secret-key") == 0 &&
                                   std::strcmp(static_cast<const char *>(value_ref), "secret-value") == 0;
-    int actual_ret_purge = cplat_hashtable_purge_deleted(ht); // [手順] - 削除済みをパージする。
+    int actual_ret_purge = cplat_hashtable_purge_deleted(ht); // [手順] - cplat_hashtable_purge_deleted() を呼び出す。
     bool key_zeroed = true;
     bool value_zeroed = true;
     for (size_t i = 0; i < std::strlen("secret-key") + 1u; i++)
@@ -292,7 +298,7 @@ TEST_F(hashtableVariableStringTest, lifetime_expiration_zero_fills_released_vari
     (void)cplat_hashtable_get_key_ref(ht, record, &key_ref, nullptr);
     (void)cplat_hashtable_get_value_ref(ht, record, &value_ref);
     (void)cplat_hashtable_delete(ht, "expired");
-    int actual_ret_push = cplat_hashtable_push_deleted(ht); // [手順] - 加齢によりライフタイムを満了させる。
+    int actual_ret_push = cplat_hashtable_push_deleted(ht); // [手順] - cplat_hashtable_push_deleted() を呼び出す。
     bool key_zeroed = true;
     bool value_zeroed = true;
     for (size_t i = 0; i < std::strlen("expired") + 1u; i++)
@@ -339,15 +345,17 @@ TEST_F(hashtableVariableStringTest, compact_accepts_null_and_is_noop_for_fixed_f
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "key", "value", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_find_value_ref(ht, "key", &before);
-    int actual_ret_null = cplat_hashtable_compact(nullptr); // [手順] - ht に NULL を渡す。
-    int actual_ret_compact = cplat_hashtable_compact(ht); // [手順] - 固定長テーブルで compact を呼び出す。
+    int actual_ret_null =
+        cplat_hashtable_compact(nullptr); // [手順] - ht に nullptr を指定して cplat_hashtable_compact() を呼び出す。
+    int actual_ret_compact =
+        cplat_hashtable_compact(ht); // [手順] - 固定長テーブルに対して cplat_hashtable_compact() を呼び出す。
     (void)cplat_hashtable_find_value_ref(ht, "key", &after);
     std::string after_text = static_cast<const char *>(after);
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null); // [確認_異常系] - NULL を渡した cplat_hashtable_compact() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null); // [確認_異常系] - nullptr を渡した cplat_hashtable_compact() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_compact); // [確認_正常系] - 固定長テーブルでの cplat_hashtable_compact() の戻り値が CPLAT_OK であること。
@@ -645,27 +653,33 @@ TEST_F(hashtableVariableStringTest, first_fit_placement_is_stable_across_add_pur
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [手順] - 設定を指定して cplat_hashtable_create() を呼び出す。
     storage_origin origin(ht, config);
     (void)cplat_hashtable_add(ht, "k1", "aaaa", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "k2", "bbbb", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "k3", "cccc", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    (void)cplat_hashtable_add(ht, "k4", "dddd",
-                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 5 バイト値を 4 件詰める。
+    (void)cplat_hashtable_add(
+        ht, "k4", "dddd",
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 5 バイト値のキーを指定して cplat_hashtable_add() を呼び出す。
     (void)cplat_hashtable_delete(ht, "k2");
-    (void)cplat_hashtable_purge_deleted(ht); // [手順] - 2 件目を回収し、途中に空きブロックを作る。
+    (void)cplat_hashtable_purge_deleted(ht); // [手順] - cplat_hashtable_purge_deleted() を呼び出す。
     int actual_ret_reuse_free_block = cplat_hashtable_add(ht, "k5", "ee", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    long actual_offset_reuse_free_block =
-        origin.value_offset(ht, "k5"); // [手順] - 空きブロックに収まる 3 バイト値を追加する。
+    long actual_offset_reuse_free_block = origin.value_offset(
+        ht,
+        "k5"); // [手順] - 空きブロックに収まる 3 バイト値を追加した k5 を指定して origin.value_offset() を呼び出す。
     int actual_ret_skip_free_block = cplat_hashtable_add(ht, "k6", "ffffff", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    long actual_offset_skip_free_block =
-        origin.value_offset(ht, "k6"); // [手順] - 空きブロックに収まらない 7 バイト値を追加する。
+    long actual_offset_skip_free_block = origin.value_offset(
+        ht,
+        "k6"); // [手順] - 空きブロックに収まらない 7 バイト値を追加した k6 を指定して origin.value_offset() を呼び出す。
     (void)cplat_hashtable_add(ht, "k7", "gg", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_shrink = cplat_hashtable_update(ht, "k1", "hh");
-    long actual_offset_shrink = origin.value_offset(ht, "k1"); // [手順] - 先頭の値を短い値へ更新する。
+    long actual_offset_shrink =
+        origin.value_offset(ht, "k1"); // [手順] - 短い値へ更新した k1 を指定して origin.value_offset() を呼び出す。
     int actual_ret_merge_own = cplat_hashtable_update(ht, "k3", "iiiiii");
-    long actual_offset_merge_own =
-        origin.value_offset(ht, "k3"); // [手順] - 自ブロックと隣接する空きブロックの結合が要る更新を行う。
+    long actual_offset_merge_own = origin.value_offset(
+        ht,
+        "k3"); // [手順] - 自ブロックと隣接する空きブロックの結合が要る更新をした k3 を指定して origin.value_offset() を呼び出す。
     for (const char *key : {"k1", "k3", "k4", "k5", "k6", "k7"})
     {
         actual_value_offsets.push_back(origin.value_offset(ht, key));
@@ -724,7 +738,8 @@ TEST_F(hashtableVariableStringTest, compaction_packs_blocks_in_offset_order_and_
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [手順] - 設定を指定して cplat_hashtable_create() を呼び出す。
     storage_origin origin(ht, config);
     (void)cplat_hashtable_add(ht, "k1", "aaaa", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "k2", "bbbb", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
@@ -736,15 +751,16 @@ TEST_F(hashtableVariableStringTest, compaction_packs_blocks_in_offset_order_and_
     (void)cplat_hashtable_add(ht, "k6", "ffffff", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "k7", "gg", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_update(ht, "k1", "hh");
-    (void)cplat_hashtable_update(ht, "k3", "iiiiii");     // [手順] - 空きブロックが残る状態を作る。
-    int actual_ret_compact = cplat_hashtable_compact(ht); // [手順] - 明示的に圧縮する。
+    (void)cplat_hashtable_update(ht, "k3",
+                                 "iiiiii"); // [手順] - 収まらない値を指定して cplat_hashtable_update() を呼び出す。
+    int actual_ret_compact = cplat_hashtable_compact(ht); // [手順] - cplat_hashtable_compact() を呼び出す。
     for (const char *key : {"k1", "k5", "k3", "k4", "k6", "k7"})
     {
         actual_value_offsets.push_back(origin.value_offset(ht, key));
     }
-    int actual_ret_add_after_compact =
-        cplat_hashtable_add(ht, "k8", "jjj",
-                            CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 圧縮で空いた末尾へ追加する。
+    int actual_ret_add_after_compact = cplat_hashtable_add(
+        ht, "k8", "jjj",
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 圧縮で空いた末尾にキーを指定して cplat_hashtable_add() を呼び出す。
     long actual_offset_after_compact = origin.value_offset(ht, "k8");
     int actual_ret_validate = cplat_hashtable_validate(ht);
 
@@ -779,13 +795,16 @@ TEST_F(hashtableVariableStringTest, exact_fit_consumes_the_last_free_block_and_t
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [手順] - 設定を指定して cplat_hashtable_create() を呼び出す。
     storage_origin origin(ht, config);
     (void)cplat_hashtable_add(ht, "k1", "aaaaaaa", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     int actual_ret_exact_fit = cplat_hashtable_add(ht, "k2", "bbbbbbb", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    long actual_offset_exact_fit = origin.value_offset(ht, "k2"); // [手順] - 残り 8 バイトへ 8 バイト値を追加する。
-    int actual_ret_full = cplat_hashtable_add(ht, "k3", "c",
-                                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - さらに追加する。
+    long actual_offset_exact_fit = origin.value_offset(
+        ht, "k2"); // [手順] - 残り 8 バイトへ 8 バイト値を追加した k2 を指定して origin.value_offset() を呼び出す。
+    int actual_ret_full = cplat_hashtable_add(
+        ht, "k3", "c",
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - さらに別のキーを指定して cplat_hashtable_add() を呼び出す。
     int actual_ret_validate = cplat_hashtable_validate(ht);
 
     // Assert
@@ -823,12 +842,13 @@ TEST_F(hashtableVariableStringTest, resize_repacks_variable_storage_and_moves_re
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [手順] - 設定を指定して cplat_hashtable_create() を呼び出す。
     (void)cplat_hashtable_add(ht, "k1", "aaaa", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "k2", "bbbb", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_add(ht, "k3", "cccc", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_delete(ht, "k2");
-    (void)cplat_hashtable_purge_deleted(ht); // [手順] - 中間の 1 件を回収し、ストレージの途中に空きブロックを作る。
+    (void)cplat_hashtable_purge_deleted(ht); // [手順] - cplat_hashtable_purge_deleted() を呼び出す。
     {
         storage_origin origin(ht, config);
 
@@ -838,7 +858,8 @@ TEST_F(hashtableVariableStringTest, resize_repacks_variable_storage_and_moves_re
         }
         (void)cplat_hashtable_find_value_ref(ht, "k3", &before_resize);
     }
-    int actual_ret_resize = cplat_hashtable_resize(ht, &grown); // [手順] - capacity を広げる。
+    int actual_ret_resize =
+        cplat_hashtable_resize(ht, &grown); // [手順] - 広げた capacity を指定して cplat_hashtable_resize() を呼び出す。
     {
         storage_origin origin(ht, grown);
 

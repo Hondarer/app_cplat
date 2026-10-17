@@ -25,10 +25,12 @@ TEST_F(stringCatalogFilterCompileTest, blank_whitespace_and_comment_lines_are_no
     // Pre-Assert
 
     // Act
-    actual_compile_ret =
-        compile_lines(lines, 4U, image); // [手順] - 空行、空白行、コメント行、有効行を含む 4 行をコンパイルする。
-    actual_info_ret =
-        cplat_string_catalog_filter_get_info(image, kImageSize, &actual_info); // [手順] - ヘッダー情報を取得する。
+    actual_compile_ret = compile_lines(
+        lines, 4U,
+        image); // [手順] - 空行、空白行、コメント行、有効行を含む 4 行を指定して compile_lines() を呼び出す。
+    actual_info_ret = cplat_string_catalog_filter_get_info(
+        image, kImageSize,
+        &actual_info); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_get_info() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_compile_ret); // [確認_正常系] - compile_lines() の戻り値が CPLAT_OK であること。
@@ -53,8 +55,9 @@ TEST_F(stringCatalogFilterCompileTest, lexical_errors_are_diagnosed)
     // Pre-Assert
 
     // Act
-    actual_ret = compile_single_line("id == \"abc", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
-                                     &actual_invalid_count); // [手順] - 閉じない引用符の行をコンパイルする。
+    actual_ret = compile_single_line(
+        "id == \"abc", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
+        &actual_invalid_count); // [手順] - 閉じない引用符の行を指定して compile_single_line() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -72,8 +75,9 @@ TEST_F(stringCatalogFilterCompileTest, lexical_errors_are_diagnosed)
             .column); // [確認_正常系] - diagnostic.column が 6U であること。(開き引用符の位置が誤りの位置であることの確認)
 
     // Act_2
-    actual_ret = compile_single_line("key == 0x", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
-                                     &actual_invalid_count); // [手順] - 0x の後に桁がない行をコンパイルする。
+    actual_ret = compile_single_line(
+        "key == 0x", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
+        &actual_invalid_count); // [手順] - 0x の後に桁がない行を指定して compile_single_line() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -90,8 +94,9 @@ TEST_F(stringCatalogFilterCompileTest, lexical_errors_are_diagnosed)
             .column); // [確認_正常系] - diagnostic.column が 7U であること。("0x" の開始位置が誤りの位置であることの確認)
 
     // Act_3
-    actual_ret = compile_single_line("key == -0x1", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
-                                     &actual_invalid_count); // [手順] - 符号付き 16 進数の行をコンパイルする。
+    actual_ret = compile_single_line(
+        "key == -0x1", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
+        &actual_invalid_count); // [手順] - 符号付き 16 進数の行を指定して compile_single_line() を呼び出す。
 
     // Assert_3
     EXPECT_EQ(
@@ -120,8 +125,9 @@ TEST_F(stringCatalogFilterCompileTest, syntax_errors_are_diagnosed)
     // Pre-Assert
 
     // Act
-    actual_ret = compile_single_line("key == 1 &&", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
-                                     &actual_invalid_count); // [手順] - 右辺が続かない && の行をコンパイルする。
+    actual_ret = compile_single_line(
+        "key == 1 &&", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
+        &actual_invalid_count); // [手順] - 右辺が続かない "&&" の行を指定して compile_single_line() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -139,7 +145,7 @@ TEST_F(stringCatalogFilterCompileTest, syntax_errors_are_diagnosed)
     // Act_2
     actual_ret = compile_single_line(
         "x.y", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
-        &actual_invalid_count); // [手順] - key/id/category/arg のいずれでもない識別子の行をコンパイルする。
+        &actual_invalid_count); // [手順] - key/id/category/arg のいずれでもない識別子の行を指定して compile_single_line() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -168,9 +174,9 @@ TEST_F(stringCatalogFilterCompileTest, type_mismatch_errors_are_diagnosed)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        compile_single_line("category starts_with \"x\"", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
-                            &actual_invalid_count); // [手順] - 数値フィールドへ文字列演算子を使う行をコンパイルする。
+    actual_ret = compile_single_line(
+        "category starts_with \"x\"", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
+        &actual_invalid_count); // [手順] - 数値フィールドへ文字列演算子を使う行を指定して compile_single_line() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -183,9 +189,9 @@ TEST_F(stringCatalogFilterCompileTest, type_mismatch_errors_are_diagnosed)
             .error); // [確認_正常系] - diagnostic.error が CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH であること。
 
     // Act_2
-    actual_ret =
-        compile_single_line("id < 3", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
-                            &actual_invalid_count); // [手順] - 文字列フィールドへ大小比較を使う行をコンパイルする。
+    actual_ret = compile_single_line(
+        "id < 3", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
+        &actual_invalid_count); // [手順] - 文字列フィールドへ大小比較を使う行を指定して compile_single_line() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -200,7 +206,7 @@ TEST_F(stringCatalogFilterCompileTest, type_mismatch_errors_are_diagnosed)
     // Act_3
     actual_ret = compile_single_line(
         "key == null", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
-        &actual_invalid_count); // [手順] - null と比較できないフィールドへ null を使う行をコンパイルする。
+        &actual_invalid_count); // [手順] - null と比較できないフィールドへ null を使う行を指定して compile_single_line() を呼び出す。
 
     // Assert_3
     EXPECT_EQ(
@@ -225,9 +231,9 @@ TEST_F(stringCatalogFilterCompileTest, argument_index_limit_exceeded_is_diagnose
     // Pre-Assert
 
     // Act
-    actual_ret =
-        compile_single_line("arg[50] == 1", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
-                            &actual_invalid_count); // [手順] - 引数個数の上限 (50) と同じ添字の行をコンパイルする。
+    actual_ret = compile_single_line(
+        "arg[50] == 1", image, kImageSize, kLineWidth, kLineCapacity, &diagnostic, 1U,
+        &actual_invalid_count); // [手順] - 引数個数の上限 (50) と同じ添字の行を指定して compile_single_line() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret);     // [確認_正常系] - compile_single_line() の戻り値が CPLAT_OK であること。
@@ -254,9 +260,10 @@ TEST_F(stringCatalogFilterCompileTest, line_capacity_exceeded_is_diagnosed)
     // Act
     actual_compile_ret = compile_lines(
         lines, 3U, image, CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(2U, kLineWidth), kLineWidth, 2U, &diagnostic, 1U,
-        &actual_invalid_count); // [手順] - 行数の上限 2 に対し、有効な行を 3 行与えてコンパイルする。
-    (void)cplat_string_catalog_filter_get_info(image, CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(2U, kLineWidth),
-                                               &actual_info); // [手順] - ヘッダー情報を取得する。
+        &actual_invalid_count); // [手順] - 行数の上限 2 に対し、有効な行を 3 行指定して compile_lines() を呼び出す。
+    (void)cplat_string_catalog_filter_get_info(
+        image, CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(2U, kLineWidth),
+        &actual_info); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_get_info() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_compile_ret); // [確認_正常系] - compile_lines() の戻り値が CPLAT_OK であること。
@@ -289,7 +296,8 @@ TEST_F(stringCatalogFilterCompileTest, image_buffer_too_small_returns_buffer_too
 
     // Act
     actual_ret = compile_single_line(
-        line, image, kImageSize - 1U); // [手順] - 必要量より 1 バイト小さい image_size でコンパイルする。
+        line, image,
+        kImageSize - 1U); // [手順] - 必要量より 1 バイト小さい image_size を指定して compile_single_line() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -316,16 +324,16 @@ TEST_F(stringCatalogFilterCompileTest, out_of_range_width_or_capacity_returns_in
     // Act
     actual_ret_narrow_width = cplat_string_catalog_filter_compile(
         row, 1U, CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MIN - 1U, kLineCapacity, image, kImageSize, nullptr, 0U,
-        &invalid_count); // [手順] - 行幅の下限より 1 小さい行幅でコンパイルする。
+        &invalid_count); // [手順] - 行幅の下限より 1 小さい行幅を指定して cplat_string_catalog_filter_compile() を呼び出す。
     actual_ret_wide_width = cplat_string_catalog_filter_compile(
         row, 1U, CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX + 1U, kLineCapacity, image, kImageSize, nullptr, 0U,
-        &invalid_count); // [手順] - 行幅の上限より 1 大きい行幅でコンパイルする。
-    actual_ret_zero_capacity =
-        cplat_string_catalog_filter_compile(row, 1U, kLineWidth, 0U, image, kImageSize, nullptr, 0U,
-                                            &invalid_count); // [手順] - 行数の上限 0 でコンパイルする。
+        &invalid_count); // [手順] - 行幅の上限より 1 大きい行幅を指定して cplat_string_catalog_filter_compile() を呼び出す。
+    actual_ret_zero_capacity = cplat_string_catalog_filter_compile(
+        row, 1U, kLineWidth, 0U, image, kImageSize, nullptr, 0U,
+        &invalid_count); // [手順] - 行数の上限 0 を指定して cplat_string_catalog_filter_compile() を呼び出す。
     actual_ret_large_capacity = cplat_string_catalog_filter_compile(
         row, 1U, kLineWidth, CPLAT_STRING_CATALOG_FILTER_LINE_MAX + 1U, image, kImageSize, nullptr, 0U,
-        &invalid_count); // [手順] - 行数の上限より 1 大きい行数上限でコンパイルする。
+        &invalid_count); // [手順] - 行数の上限より 1 大きい行数上限を指定して cplat_string_catalog_filter_compile() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -355,10 +363,12 @@ TEST_F(stringCatalogFilterCompileTest, image_size_macro_matches_get_info_result)
     // Pre-Assert
 
     // Act
-    actual_compile_ret = compile_single_line(line, image, CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(4U, 64U), 64U,
-                                             4U); // [手順] - 行数上限 4・行幅 64 でコンパイルする。
-    actual_info_ret = cplat_string_catalog_filter_get_info(image, CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(4U, 64U),
-                                                           &actual_info); // [手順] - ヘッダー情報を取得する。
+    actual_compile_ret =
+        compile_single_line(line, image, CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(4U, 64U), 64U,
+                            4U); // [手順] - 行数上限 4・行幅 64 を指定して compile_single_line() を呼び出す。
+    actual_info_ret = cplat_string_catalog_filter_get_info(
+        image, CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(4U, 64U),
+        &actual_info); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_get_info() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_compile_ret); // [確認_正常系] - compile_single_line() の戻り値が CPLAT_OK であること。

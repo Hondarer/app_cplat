@@ -19,7 +19,7 @@ class traceFileAllocFailureTest : public Test
     void SetUp() override
     {
         ON_CALL(mock_cplat, cplat_file_open(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - cplat_file_open() の既定動作を設定する。
+        // [状態] - cplat_file_open() から CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_get_size(_, _, _))
             .WillByDefault(
                 [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -27,9 +27,9 @@ class traceFileAllocFailureTest : public Test
                     *size_out = 0;
                     return 0;
                 });
-        // [状態] - cplat_file_get_size() の既定動作を設定する。
+        // [状態] - cplat_file_get_size() から、サイズに 0 を設定して 0 を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_close(_, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - cplat_file_close() の既定動作を設定する。
+        // [状態] - cplat_file_close() から CPLAT_OK を返すように既定動作を設定する。
     }
     // [サブ手順終了]
 };
@@ -43,7 +43,7 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_registry_key_allocati
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(Return(nullptr))
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回以上呼び出されること。
-                                      // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
     cplat_trace_file_sink *handle =
@@ -66,7 +66,7 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_handle_allocation_fai
         .WillOnce(DoDefault())
         .WillOnce(Return(nullptr))
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc() が 2 回以上呼び出されること。
-                                      // [Pre-Assert手順] - 2 回目は NULL を返却し、他は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目は製品 (prod) の処理へ委譲し、2 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
     cplat_trace_file_sink *handle =
@@ -90,7 +90,7 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_path_duplication_fail
         .WillOnce(DoDefault())
         .WillOnce(Return(nullptr))
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc() が 3 回以上呼び出されること。
-                                      // [Pre-Assert手順] - 3 回目は NULL を返却し、他は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1、2 回目は製品 (prod) の処理へ委譲し、3 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
     cplat_trace_file_sink *handle =
@@ -111,7 +111,7 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_registry_expansion_fa
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _))
         .WillOnce(Return(nullptr))
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_realloc() が 1 回以上呼び出されること。
-                                      // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_realloc() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
     cplat_trace_file_sink *handle =

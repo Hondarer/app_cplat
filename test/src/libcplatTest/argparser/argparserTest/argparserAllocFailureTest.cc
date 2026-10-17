@@ -43,7 +43,7 @@ TEST_F(argparserAllocFailureTest, register_fails_when_spec_array_expansion_fails
     // Arrange
 
     // Pre-Assert
-    /* 名前の複製など他の確保は本物へ委譲する。
+    /* 名前の複製など他の確保は製品 (prod) の処理へ委譲する。
        gMock は後から宣言した期待値を優先するため、汎用の期待値を先に宣言する */
     EXPECT_CALL(mock_cplat_, cplat_malloc(_))
         .Times(AnyNumber()); // [Pre-Assert確認_正常系] - cplat_malloc() が任意の回数呼び出されること。
@@ -51,12 +51,12 @@ TEST_F(argparserAllocFailureTest, register_fails_when_spec_array_expansion_fails
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - 登録項目配列の拡張に対する cplat_realloc() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降 (エラー記録用の確保) は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_realloc() から 1 回目は nullptr を返し、以降 (エラー記録用の確保) は製品 (prod) の処理へ委譲する。
 
     // Act
-    int actual_ret =
-        cplat_argparser_handle_register_option_string(parser_, "-a", "--alpha", "VALUE", "説明", 0u,
-                                                      &storage_); // [手順] - 文字列オプション --alpha を登録する。
+    int actual_ret = cplat_argparser_handle_register_option_string(
+        parser_, "-a", "--alpha", "VALUE", "説明", 0u,
+        &storage_); // [手順] - 文字列オプション --alpha を指定して cplat_argparser_handle_register_option_string() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -76,12 +76,12 @@ TEST_F(argparserAllocFailureTest, register_fails_when_name_duplication_fails)
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - 名前の複製に対する cplat_malloc() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
-    int actual_ret =
-        cplat_argparser_handle_register_option_string(parser_, "-a", "--alpha", "VALUE", "説明", 0u,
-                                                      &storage_); // [手順] - 文字列オプション --alpha を登録する。
+    int actual_ret = cplat_argparser_handle_register_option_string(
+        parser_, "-a", "--alpha", "VALUE", "説明", 0u,
+        &storage_); // [手順] - 文字列オプション --alpha を指定して cplat_argparser_handle_register_option_string() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -101,12 +101,12 @@ TEST_F(argparserAllocFailureTest, positional_register_fails_when_spec_array_expa
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - 位置引数の登録項目配列の拡張に対する cplat_realloc() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物の realloc() へ委譲する。
+    // [Pre-Assert手順] - cplat_realloc() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
-    int actual_ret =
-        cplat_argparser_handle_register_positional_string(parser_, "input", "説明", 0u,
-                                                          &storage_); // [手順] - 文字列位置引数 input を登録する。
+    int actual_ret = cplat_argparser_handle_register_positional_string(
+        parser_, "input", "説明", 0u,
+        &storage_); // [手順] - 文字列位置引数 input を指定して cplat_argparser_handle_register_positional_string() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -126,12 +126,12 @@ TEST_F(argparserAllocFailureTest, positional_register_fails_when_name_duplicatio
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - 位置引数名の複製に対する cplat_malloc() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物の malloc() へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
-    int actual_ret =
-        cplat_argparser_handle_register_positional_string(parser_, "input", nullptr, 0u,
-                                                          &storage_); // [手順] - 文字列位置引数 input を登録する。
+    int actual_ret = cplat_argparser_handle_register_positional_string(
+        parser_, "input", nullptr, 0u,
+        &storage_); // [手順] - 文字列位置引数 input を指定して cplat_argparser_handle_register_positional_string() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -156,7 +156,7 @@ TEST_F(argparserAllocFailureTest, print_usage_fails_when_buffer_allocation_fails
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - 使用方法の組み立てバッファーの確保に対する cplat_malloc() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
     int actual_ret =
@@ -181,12 +181,12 @@ TEST_F(argparserAllocFailureTest, register_fails_when_short_name_duplication_fai
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - short_name の複製に対する cplat_malloc() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物の malloc() へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
     int actual_ret = cplat_argparser_handle_register_option_string(
         parser_, "-a", "--alpha", "VALUE", "説明", 0u,
-        &storage_); // [手順] - short_name を含む文字列オプションを登録する。
+        &storage_); // [手順] - short_name を含む文字列オプションを指定して cplat_argparser_handle_register_option_string() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -207,12 +207,12 @@ TEST_F(argparserAllocFailureTest, register_fails_when_long_name_duplication_fail
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - long_name の複製に対する cplat_malloc() が 2 回以上呼び出されること。
-    // [Pre-Assert手順] - 1 回目は本物へ委譲し、2 回目は NULL を返却し、以降は本物の malloc() へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目は製品 (prod) の処理へ委譲し、2 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
     int actual_ret = cplat_argparser_handle_register_option_string(
         parser_, "-a", "--alpha", "VALUE", "説明", 0u,
-        &storage_); // [手順] - long_name を含む文字列オプションを登録する。
+        &storage_); // [手順] - long_name を含む文字列オプションを指定して cplat_argparser_handle_register_option_string() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -234,12 +234,12 @@ TEST_F(argparserAllocFailureTest, register_fails_when_value_name_duplication_fai
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - value_name の複製に対する cplat_malloc() が 3 回以上呼び出されること。
-    // [Pre-Assert手順] - 1 回目と 2 回目は本物へ委譲し、3 回目は NULL を返却し、以降は本物の malloc() へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目と 2 回目は製品 (prod) の処理へ委譲し、3 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
     int actual_ret = cplat_argparser_handle_register_option_string(
         parser_, "-a", "--alpha", "VALUE", "説明", 0u,
-        &storage_); // [手順] - value_name を含む文字列オプションを登録する。
+        &storage_); // [手順] - value_name を含む文字列オプションを指定して cplat_argparser_handle_register_option_string() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -262,12 +262,12 @@ TEST_F(argparserAllocFailureTest, register_fails_when_description_duplication_fa
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - description の複製に対する cplat_malloc() が 4 回以上呼び出されること。
-    // [Pre-Assert手順] - 1 回目から 3 回目は本物へ委譲し、4 回目は NULL を返却し、以降は本物の malloc() へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目から 3 回目は製品 (prod) の処理へ委譲し、4 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
     int actual_ret = cplat_argparser_handle_register_option_string(
         parser_, "-a", "--alpha", "VALUE", "説明", 0u,
-        &storage_); // [手順] - description を含む文字列オプションを登録する。
+        &storage_); // [手順] - description を含む文字列オプションを指定して cplat_argparser_handle_register_option_string() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -288,11 +288,12 @@ TEST_F(argparserAllocFailureTest, register_error_is_not_recorded_when_realloc_fa
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - 登録エラー配列の確保に対する cplat_realloc() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物の realloc() へ委譲する。
+    // [Pre-Assert手順] - cplat_realloc() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
-    int actual_ret = cplat_argparser_handle_register_flag(parser_, nullptr, nullptr, nullptr,
-                                                          &storage); // [手順] - 名前なし登録で登録エラーを発生させる。
+    int actual_ret = cplat_argparser_handle_register_flag(
+        parser_, nullptr, nullptr, nullptr,
+        &storage); // [手順] - 名前なしの登録を指定して cplat_argparser_handle_register_flag() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -319,11 +320,12 @@ TEST_F(argparserAllocFailureTest, create_fails_when_program_name_duplication_fai
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - program_name の複製に対する cplat_malloc() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物の malloc() へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
     cplat_argparser *parser = cplat_argparser_handle_create(
-        0, nullptr, &options); // [手順] - program_name と description を指定して parser を生成する。
+        0, nullptr,
+        &options); // [手順] - program_name と description を指定して cplat_argparser_handle_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -347,11 +349,12 @@ TEST_F(argparserAllocFailureTest, create_fails_when_program_description_duplicat
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - program_description の複製に対する cplat_malloc() が 2 回以上呼び出されること。
-    // [Pre-Assert手順] - 1 回目は本物へ委譲し、2 回目は NULL を返却し、以降は本物の malloc() へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目は製品 (prod) の処理へ委譲し、2 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
     cplat_argparser *parser = cplat_argparser_handle_create(
-        0, nullptr, &options); // [手順] - program_name と description を指定して parser を生成する。
+        0, nullptr,
+        &options); // [手順] - program_name と description を指定して cplat_argparser_handle_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -372,11 +375,11 @@ TEST_F(argparserAllocFailureTest, create_continues_when_program_name_duplication
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - argv[0] のベース名の複製に対する cplat_malloc() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は NULL を返却し、以降は本物の malloc() へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
-    cplat_argparser *parser =
-        cplat_argparser_handle_create(1, argv, nullptr); // [手順] - ベース名複製が失敗する状態で parser を生成する。
+    cplat_argparser *parser = cplat_argparser_handle_create(
+        1, argv, nullptr); // [手順] - ベース名複製が失敗する状態で cplat_argparser_handle_create() を呼び出す。
 
     // Assert
     ASSERT_NE(

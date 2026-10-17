@@ -40,7 +40,8 @@ TEST_F(timeTest, gmtime_null_tm)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_gmtime(nullptr, &epoch); // [手順] - 出力構造体に NULL を渡して cplat_gmtime() を呼び出す。
+    int actual_ret =
+        cplat_gmtime(nullptr, &epoch); // [手順] - 出力構造体に nullptr を渡して cplat_gmtime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -56,7 +57,7 @@ TEST_F(timeTest, gmtime_null_time)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_gmtime(&utc_tm, nullptr); // [手順] - 時刻に NULL を渡して cplat_gmtime() を呼び出す。
+    int actual_ret = cplat_gmtime(&utc_tm, nullptr); // [手順] - 時刻に nullptr を渡して cplat_gmtime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -93,7 +94,7 @@ TEST_F(timeTest, gmtime_zeroes_tm_when_platform_conversion_fails)
                 return nullptr;
             });
     // [Pre-Assert確認_異常系] - gmtime_r() が 1 回呼び出されること。
-    // [Pre-Assert手順] - OS の時刻変換関数から失敗を返却する。
+    // [Pre-Assert手順] - gmtime_r() から、失敗を示す nullptr を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_time, gmtime_s(_, _, _, _, _))
         .WillOnce(
@@ -106,7 +107,7 @@ TEST_F(timeTest, gmtime_zeroes_tm_when_platform_conversion_fails)
                 return 1;
             });
     // [Pre-Assert確認_異常系] - gmtime_s() が 1 回呼び出されること。
-    // [Pre-Assert手順] - OS の時刻変換関数から失敗を返却する。
+    // [Pre-Assert手順] - gmtime_s() から、失敗を示す 1 を返す。
 #endif
 
     // Act
@@ -178,7 +179,7 @@ TEST_F(timeTest, localtime_null_tm)
 
     // Act
     int actual_ret_localtime =
-        cplat_localtime(nullptr, &epoch); // [手順] - 出力構造体に NULL を渡して cplat_localtime() を呼び出す。
+        cplat_localtime(nullptr, &epoch); // [手順] - 出力構造体に nullptr を渡して cplat_localtime() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -196,7 +197,7 @@ TEST_F(timeTest, localtime_null_time)
 
     // Act
     int actual_ret_localtime =
-        cplat_localtime(&local_tm, nullptr); // [手順] - 時刻に NULL を渡して cplat_localtime() を呼び出す。
+        cplat_localtime(&local_tm, nullptr); // [手順] - 時刻に nullptr を渡して cplat_localtime() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -218,11 +219,11 @@ TEST_F(timeTest, localtime_zeroes_tm_when_platform_conversion_fails)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_time, localtime_r(_, _, _, _, _)).WillOnce(Return(nullptr));
     // [Pre-Assert確認_異常系] - localtime_r() が 1 回呼び出されること。
-    // [Pre-Assert手順] - OS のローカル時刻変換関数から失敗を返却する。
+    // [Pre-Assert手順] - localtime_r() から、失敗を示す nullptr を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_time, localtime_s(_, _, _, _, _)).WillOnce(Return(1));
     // [Pre-Assert確認_異常系] - localtime_s() が 1 回呼び出されること。
-    // [Pre-Assert手順] - OS のローカル時刻変換関数から失敗を返却する。
+    // [Pre-Assert手順] - localtime_s() から、失敗を示す 1 を返す。
 #endif
 
     // Act
@@ -319,7 +320,7 @@ TEST_F(timeTest, ctime_null_buf)
 
     // Act
     int actual_ret_ctime =
-        cplat_ctime(nullptr, 26, &epoch); // [手順] - 出力バッファーに NULL を渡して cplat_ctime() を呼び出す。
+        cplat_ctime(nullptr, 26, &epoch); // [手順] - 出力バッファーに nullptr を渡して cplat_ctime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -337,7 +338,7 @@ TEST_F(timeTest, ctime_null_time_zeroes_buf)
 
     // Act
     int actual_ret_ctime =
-        cplat_ctime(buf, sizeof(buf), nullptr); // [手順] - 時刻に NULL を渡して cplat_ctime() を呼び出す。
+        cplat_ctime(buf, sizeof(buf), nullptr); // [手順] - 時刻に nullptr を渡して cplat_ctime() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -425,7 +426,7 @@ TEST_F(timeTest, ctime_zeroes_buf_when_platform_conversion_fails)
                 return nullptr;
             });
     // [Pre-Assert確認_異常系] - ctime_r() が 1 回呼び出されること。
-    // [Pre-Assert手順] - OS の ctime 系関数から失敗を返却する。
+    // [Pre-Assert手順] - ctime_r() から、失敗を示す nullptr を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_time, ctime_s(_, _, _, _, _, _))
         .WillOnce(
@@ -440,7 +441,7 @@ TEST_F(timeTest, ctime_zeroes_buf_when_platform_conversion_fails)
                 return 1;
             });
     // [Pre-Assert確認_異常系] - ctime_s() が 1 回呼び出されること。
-    // [Pre-Assert手順] - OS の ctime 系関数から失敗を返却する。
+    // [Pre-Assert手順] - ctime_s() から、失敗を示す 1 を返す。
 #endif
 
     // Act

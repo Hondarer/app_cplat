@@ -52,18 +52,20 @@ TEST_F(hashtableTest, required_size_rejects_null_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_config =
-        cplat_hashtable_required_size(nullptr, &mgmt_size, &data_size); // [手順] - config に NULL を渡す。
-    int actual_ret_null_both =
-        cplat_hashtable_required_size(&config, nullptr, nullptr); // [手順] - 両方の出力先に NULL を渡す。
+    int actual_ret_null_config = cplat_hashtable_required_size(
+        nullptr, &mgmt_size,
+        &data_size); // [手順] - config に nullptr を指定して cplat_hashtable_required_size() を呼び出す。
+    int actual_ret_null_both = cplat_hashtable_required_size(
+        &config, nullptr,
+        nullptr); // [手順] - 両方の出力先 に nullptr を指定して cplat_hashtable_required_size() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_config); // [確認_異常系] - config に NULL を渡した cplat_hashtable_required_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_config); // [確認_異常系] - config に nullptr を渡した cplat_hashtable_required_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_both); // [確認_異常系] - 両方の出力先に NULL を渡した cplat_hashtable_required_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_both); // [確認_異常系] - 両方の出力先に nullptr を渡した cplat_hashtable_required_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // cplat_hashtable_required_size で片側の出力先のみ NULL を指定した場合に正常取得できることの確認
@@ -79,10 +81,12 @@ TEST_F(hashtableTest, required_size_allows_partial_query)
     // Pre-Assert
 
     // Act
-    int actual_ret_only_mgmt =
-        cplat_hashtable_required_size(&config, &mgmt_size, nullptr); // [手順] - データ側だけ NULL を渡す。
-    int actual_ret_only_data =
-        cplat_hashtable_required_size(&config, nullptr, &data_size); // [手順] - 管理側だけ NULL を渡す。
+    int actual_ret_only_mgmt = cplat_hashtable_required_size(
+        &config, &mgmt_size,
+        nullptr); // [手順] - データ側だけに nullptr を指定して cplat_hashtable_required_size() を呼び出す。
+    int actual_ret_only_data = cplat_hashtable_required_size(
+        &config, nullptr,
+        &data_size); // [手順] - 管理側だけに nullptr を指定して cplat_hashtable_required_size() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -116,14 +120,19 @@ TEST_F(hashtableTest, create_and_add_find_round_trip)
     // Pre-Assert
 
     // Act
-    int actual_ret_create =
-        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - 内部確保でテーブルを構築する。
-    int actual_ret_add = cplat_hashtable_add(ht, "apple", value.data(),
-                                             CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - apple を追加する。
-    int actual_ret_find = cplat_hashtable_find_value_ref(ht, "apple", &found);       // [手順] - apple を検索する。
-    int actual_ret_rec = cplat_hashtable_find_recno(ht, "apple", &rec);   // [手順] - apple のレコード番号を取得する。
-    int actual_ret_status = cplat_hashtable_get_status(ht, rec, &status); // [手順] - レコード状態を取得する。
-    int actual_ret_counts = cplat_hashtable_count_status(ht, &in_use, &deleted, &empty); // [手順] - 件数を取得する。
+    int actual_ret_create = cplat_hashtable_create(
+        &config, nullptr, 0, nullptr, 0, &ht); // [手順] - 内部確保を指定して cplat_hashtable_create() を呼び出す。
+    int actual_ret_add = cplat_hashtable_add(
+        ht, "apple", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - apple を指定して cplat_hashtable_add() を呼び出す。
+    int actual_ret_find = cplat_hashtable_find_value_ref(
+        ht, "apple", &found); // [手順] - apple を指定して cplat_hashtable_find_value_ref() を呼び出す。
+    int actual_ret_rec = cplat_hashtable_find_recno(
+        ht, "apple", &rec); // [手順] - apple を指定して cplat_hashtable_find_recno() を呼び出す。
+    int actual_ret_status = cplat_hashtable_get_status(
+        ht, rec, &status); // [手順] - apple のレコード番号を指定して cplat_hashtable_get_status() を呼び出す。
+    int actual_ret_counts = cplat_hashtable_count_status(
+        ht, &in_use, &deleted, &empty); // [手順] - cplat_hashtable_count_status() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - cplat_hashtable_create() の戻り値が CPLAT_OK であること。
@@ -163,49 +172,55 @@ TEST_F(hashtableTest, create_rejects_invalid_config)
 
     // Act
     int actual_ret_null_out =
-        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, nullptr); // [手順] - ht_out に NULL を渡す。
+        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                               nullptr); // [手順] - ht_out に nullptr を指定して cplat_hashtable_create() を呼び出す。
     int actual_ret_null_config =
-        cplat_hashtable_create(nullptr, nullptr, 0, nullptr, 0, &ht); // [手順] - config に NULL を渡す。
-    int actual_ret_capacity =
-        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - capacity 0 で構築する。
+        cplat_hashtable_create(nullptr, nullptr, 0, nullptr, 0,
+                               &ht); // [手順] - config に nullptr を指定して cplat_hashtable_create() を呼び出す。
+    int actual_ret_capacity = cplat_hashtable_create(
+        &config, nullptr, 0, nullptr, 0, &ht); // [手順] - capacity 0 を指定して cplat_hashtable_create() を呼び出す。
     fill_config(&config, 4, 0, 8, 5, CPLAT_HASHTABLE_KEY_STRING);
-    int actual_ret_key_size =
-        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - key_size 0 で構築する。
+    int actual_ret_key_size = cplat_hashtable_create(
+        &config, nullptr, 0, nullptr, 0, &ht); // [手順] - key_size 0 を指定して cplat_hashtable_create() を呼び出す。
     fill_config(&config, 4, 8, 0, 5, CPLAT_HASHTABLE_KEY_STRING);
-    int actual_ret_value_size =
-        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - value_size 0 で構築する。
+    int actual_ret_value_size = cplat_hashtable_create(
+        &config, nullptr, 0, nullptr, 0, &ht); // [手順] - value_size 0 を指定して cplat_hashtable_create() を呼び出す。
     fill_config(&config, 4, 8, 8, 1, CPLAT_HASHTABLE_KEY_STRING);
-    int actual_ret_lifetime =
-        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - lifetime 1 で構築する。
+    int actual_ret_lifetime = cplat_hashtable_create(
+        &config, nullptr, 0, nullptr, 0, &ht); // [手順] - lifetime 1 を指定して cplat_hashtable_create() を呼び出す。
     fill_config(&config, 4, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);
     {
         int invalid_key_type = 2;
         std::memcpy(&config.key_type, &invalid_key_type, sizeof(config.key_type));
     }
     int actual_ret_key_type =
-        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - 不正な key_type で構築する。
+        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                               &ht); // [手順] - 不正な key_type を指定して cplat_hashtable_create() を呼び出す。
     fill_config(&config, 4, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);
     {
         int invalid_scope = 2;
         std::memcpy(&config.timestamp_scope, &invalid_scope, sizeof(config.timestamp_scope));
     }
     int actual_ret_scope =
-        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - 不正な timestamp_scope で構築する。
+        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                               &ht); // [手順] - 不正な timestamp_scope を指定して cplat_hashtable_create() を呼び出す。
     fill_config(&config, 4, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - 妥当な設定へ戻す。
     unsigned char mgmt_only[8];
     unsigned char data_only[8];
-    int actual_ret_mgmt_only = cplat_hashtable_create(&config, mgmt_only, sizeof(mgmt_only), nullptr, 0,
-                                                      &ht); // [手順] - 管理領域だけ非 NULL で構築する。
-    int actual_ret_data_only = cplat_hashtable_create(&config, nullptr, 0, data_only, sizeof(data_only),
-                                                      &ht); // [手順] - データ領域だけ非 NULL で構築する。
+    int actual_ret_mgmt_only = cplat_hashtable_create(
+        &config, mgmt_only, sizeof(mgmt_only), nullptr, 0,
+        &ht); // [手順] - 管理領域だけ nullptr 以外を指定して cplat_hashtable_create() を呼び出す。
+    int actual_ret_data_only = cplat_hashtable_create(
+        &config, nullptr, 0, data_only, sizeof(data_only),
+        &ht); // [手順] - データ領域だけ nullptr 以外を指定して cplat_hashtable_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_out); // [確認_異常系] - ht_out に NULL を渡した cplat_hashtable_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_out); // [確認_異常系] - ht_out に nullptr を渡した cplat_hashtable_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_config); // [確認_異常系] - config に NULL を渡した cplat_hashtable_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_config); // [確認_異常系] - config に nullptr を渡した cplat_hashtable_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_capacity); // [確認_異常系] - capacity 0 を渡した cplat_hashtable_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -226,11 +241,11 @@ TEST_F(hashtableTest, create_rejects_invalid_config)
         actual_ret_scope); // [確認_異常系] - 不正な timestamp_scope を渡した cplat_hashtable_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_mgmt_only); // [確認_異常系] - 管理領域だけ非 NULL を渡した cplat_hashtable_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_mgmt_only); // [確認_異常系] - 管理領域だけ nullptr 以外を渡した cplat_hashtable_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_data_only); // [確認_異常系] - データ領域だけ非 NULL を渡した cplat_hashtable_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(nullptr, ht);    // [確認_異常系] - ht が nullptr であること。(失敗後の ht_out が NULL になったことの確認)
+        actual_ret_data_only); // [確認_異常系] - データ領域だけ nullptr 以外を渡した cplat_hashtable_create() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(nullptr, ht); // [確認_異常系] - ht が nullptr であること。(失敗後の ht_out が nullptr になったことの確認)
 }
 
 // cplat_hashtable_required_size の不正な config パラメーターの拒否確認
@@ -246,31 +261,34 @@ TEST_F(hashtableTest, required_size_rejects_invalid_config)
     // Pre-Assert
 
     // Act
-    int actual_ret_capacity =
-        cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - capacity 0 で問い合わせる。
+    int actual_ret_capacity = cplat_hashtable_required_size(
+        &config, &mgmt_size, &data_size); // [手順] - capacity 0 を指定して cplat_hashtable_required_size() を呼び出す。
     fill_config(&config, 4, 0, 8, 5, CPLAT_HASHTABLE_KEY_STRING);
-    int actual_ret_key_size =
-        cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - key_size 0 で問い合わせる。
+    int actual_ret_key_size = cplat_hashtable_required_size(
+        &config, &mgmt_size, &data_size); // [手順] - key_size 0 を指定して cplat_hashtable_required_size() を呼び出す。
     fill_config(&config, 4, 8, 0, 5, CPLAT_HASHTABLE_KEY_STRING);
-    int actual_ret_value_size =
-        cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - value_size 0 で問い合わせる。
+    int actual_ret_value_size = cplat_hashtable_required_size(
+        &config, &mgmt_size,
+        &data_size); // [手順] - value_size 0 を指定して cplat_hashtable_required_size() を呼び出す。
     fill_config(&config, 4, 8, 8, 1, CPLAT_HASHTABLE_KEY_STRING);
-    int actual_ret_lifetime =
-        cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - lifetime 1 で問い合わせる。
+    int actual_ret_lifetime = cplat_hashtable_required_size(
+        &config, &mgmt_size, &data_size); // [手順] - lifetime 1 を指定して cplat_hashtable_required_size() を呼び出す。
     fill_config(&config, 4, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);
     {
         int invalid_key_type = 2;
         std::memcpy(&config.key_type, &invalid_key_type, sizeof(config.key_type));
     }
-    int actual_ret_key_type =
-        cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - 不正な key_type で問い合わせる。
+    int actual_ret_key_type = cplat_hashtable_required_size(
+        &config, &mgmt_size,
+        &data_size); // [手順] - 不正な key_type を指定して cplat_hashtable_required_size() を呼び出す。
     fill_config(&config, 4, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);
     {
         int invalid_scope = 2;
         std::memcpy(&config.timestamp_scope, &invalid_scope, sizeof(config.timestamp_scope));
     }
     int actual_ret_scope = cplat_hashtable_required_size(
-        &config, &mgmt_size, &data_size); // [手順] - 不正な timestamp_scope で問い合わせる。
+        &config, &mgmt_size,
+        &data_size); // [手順] - 不正な timestamp_scope を指定して cplat_hashtable_required_size() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -308,16 +326,20 @@ TEST_F(hashtableTest, add_rejects_duplicate_and_too_long_key)
     // Pre-Assert
 
     // Act
-    int actual_ret_create =
-        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
-    int actual_ret_add = cplat_hashtable_add(ht, "k", value.data(),
-                                             CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 短いキーを追加する。
-    int actual_ret_dup = cplat_hashtable_add(ht, "k", value.data(),
-                                             CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 同じキーを再追加する。
+    int actual_ret_create = cplat_hashtable_create(
+        &config, nullptr, 0, nullptr, 0, &ht); // [手順] - 設定を指定して cplat_hashtable_create() を呼び出す。
+    int actual_ret_add = cplat_hashtable_add(
+        ht, "k", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 短いキーを指定して cplat_hashtable_add() を呼び出す。
+    int actual_ret_dup = cplat_hashtable_add(
+        ht, "k", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 同じキーを指定して cplat_hashtable_add() を呼び出す。
     int actual_ret_long = cplat_hashtable_add(
-        ht, too_long, value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 長すぎるキーを追加する。
+        ht, too_long, value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 長すぎるキーを指定して cplat_hashtable_add() を呼び出す。
     int actual_ret_empty = cplat_hashtable_add(
-        ht, "", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 空文字列キーを追加する。
+        ht, "", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 空文字列キーを指定して cplat_hashtable_add() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - cplat_hashtable_create() の戻り値が CPLAT_OK であること。
@@ -356,10 +378,11 @@ TEST_F(hashtableTest, add_rejects_invalid_deleted_policy)
     // Pre-Assert
 
     // Act
-    int actual_ret_create =
-        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
-    int actual_ret_add =
-        cplat_hashtable_add(ht, "a", value.data(), invalid_policy); // [手順] - 不正な deleted_policy で追加する。
+    int actual_ret_create = cplat_hashtable_create(
+        &config, nullptr, 0, nullptr, 0, &ht); // [手順] - 設定を指定して cplat_hashtable_create() を呼び出す。
+    int actual_ret_add = cplat_hashtable_add(
+        ht, "a", value.data(),
+        invalid_policy); // [手順] - 不正な deleted_policy を指定して cplat_hashtable_add() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - cplat_hashtable_create() の戻り値が CPLAT_OK であること。
@@ -390,23 +413,32 @@ TEST_F(hashtableTest, delete_ages_until_reuse)
     // Pre-Assert
 
     // Act
-    int actual_ret_create =
-        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
-    (void)cplat_hashtable_add(ht, "a", value.data(),
-                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 1 件目を追加する。
-    (void)cplat_hashtable_add(ht, "b", value.data(),
-                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 2 件目を追加する。
-    int actual_ret_delete = cplat_hashtable_delete(ht, "a");          // [手順] - a を削除する。
-    (void)cplat_hashtable_get_status(ht, 1, &status_after_delete);    // [手順] - 削除直後の状態を取得する。
-    add_full = cplat_hashtable_add(ht, "c", value.data(),
-                                   CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 満杯のまま別キーを追加する。
-    (void)cplat_hashtable_push_deleted(ht);                                // [手順] - 加齢する。
+    int actual_ret_create = cplat_hashtable_create(
+        &config, nullptr, 0, nullptr, 0, &ht); // [手順] - 設定を指定して cplat_hashtable_create() を呼び出す。
+    (void)cplat_hashtable_add(
+        ht, "a", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 1 件目のキーを指定して cplat_hashtable_add() を呼び出す。
+    (void)cplat_hashtable_add(
+        ht, "b", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 2 件目のキーを指定して cplat_hashtable_add() を呼び出す。
+    int actual_ret_delete =
+        cplat_hashtable_delete(ht, "a"); // [手順] - a を指定して cplat_hashtable_delete() を呼び出す。
+    (void)cplat_hashtable_get_status(
+        ht, 1,
+        &status_after_delete); // [手順] - 削除したレコード 1 を指定して cplat_hashtable_get_status() を呼び出す。
+    add_full = cplat_hashtable_add(
+        ht, "c", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 満杯のまま別キーを指定して cplat_hashtable_add() を呼び出す。
+    (void)cplat_hashtable_push_deleted(ht);     // [手順] - cplat_hashtable_push_deleted() を呼び出す。
     (void)cplat_hashtable_push_deleted(ht);
     (void)cplat_hashtable_push_deleted(ht);
-    (void)cplat_hashtable_get_status(ht, 1, &status_after_push); // [手順] - 寿命到達後の状態を取得する。
+    (void)cplat_hashtable_get_status(
+        ht, 1,
+        &status_after_push); // [手順] - 寿命到達後のレコード 1 を指定して cplat_hashtable_get_status() を呼び出す。
     add_after_purge = cplat_hashtable_add(
-        ht, "c", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 空きが生じたあと別キーを追加する。
-    (void)cplat_hashtable_empty_count(ht, &empty);                     // [手順] - 空件数を取得する。
+        ht, "c", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 空きが生じたあと別キーを指定して cplat_hashtable_add() を呼び出す。
+    (void)cplat_hashtable_empty_count(ht, &empty); // [手順] - cplat_hashtable_empty_count() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - cplat_hashtable_create() の戻り値が CPLAT_OK であること。
@@ -447,29 +479,32 @@ TEST_F(hashtableTest, external_buffer_attach_and_validate)
     // Pre-Assert
 
     // Act
-    int actual_ret_size =
-        cplat_hashtable_required_size(&config, &mgmt_needed, &data_needed); // [手順] - 必要サイズを求める。
+    int actual_ret_size = cplat_hashtable_required_size(
+        &config, &mgmt_needed, &data_needed); // [手順] - 設定を指定して cplat_hashtable_required_size() を呼び出す。
     std::vector<unsigned char> buf_mgmt(mgmt_needed, 0);
     std::vector<unsigned char> buf_data(data_needed, 0);
     std::vector<unsigned char> small_data(1, 0);
-    int actual_ret_small_mgmt =
-        cplat_hashtable_create(&config, small_mgmt, sizeof(small_mgmt), buf_data.data(), buf_data.size(),
-                               &ht); // [手順] - 管理領域だけ不足したバッファーで構築する。
-    int actual_ret_small_data =
-        cplat_hashtable_create(&config, buf_mgmt.data(), buf_mgmt.size(), small_data.data(), small_data.size(),
-                               &ht); // [手順] - データ領域だけ不足したバッファーで構築する。
-    int actual_ret_create =
-        cplat_hashtable_create(&config, buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
-                               &ht); // [手順] - 十分な管理領域とデータ領域で構築する。
-    (void)cplat_hashtable_add(ht, "fig", value.data(),
-                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - キーを追加する。
+    int actual_ret_small_mgmt = cplat_hashtable_create(
+        &config, small_mgmt, sizeof(small_mgmt), buf_data.data(), buf_data.size(),
+        &ht); // [手順] - 管理領域だけ不足したバッファーを指定して cplat_hashtable_create() を呼び出す。
+    int actual_ret_small_data = cplat_hashtable_create(
+        &config, buf_mgmt.data(), buf_mgmt.size(), small_data.data(), small_data.size(),
+        &ht); // [手順] - データ領域だけ不足したバッファーを指定して cplat_hashtable_create() を呼び出す。
+    int actual_ret_create = cplat_hashtable_create(
+        &config, buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
+        &ht); // [手順] - 十分な管理領域とデータ領域を指定して cplat_hashtable_create() を呼び出す。
+    (void)cplat_hashtable_add(
+        ht, "fig", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - キーを指定して cplat_hashtable_add() を呼び出す。
     std::vector<unsigned char> buf_mgmt2 = buf_mgmt;
     std::vector<unsigned char> buf_data2 = buf_data;
-    int actual_ret_attach =
-        cplat_hashtable_attach(buf_mgmt2.data(), buf_mgmt2.size(), buf_data2.data(), buf_data2.size(),
-                               &reattached); // [手順] - 複製した管理領域とデータ領域へ再接続する。
-    int actual_ret_validate = cplat_hashtable_validate(reattached);                  // [手順] - 整合性を検証する。
-    int actual_ret_find = cplat_hashtable_find_value_ref(reattached, "fig", &found); // [手順] - 再接続後に検索する。
+    int actual_ret_attach = cplat_hashtable_attach(
+        buf_mgmt2.data(), buf_mgmt2.size(), buf_data2.data(), buf_data2.size(),
+        &reattached); // [手順] - 複製した管理領域とデータ領域を指定して cplat_hashtable_attach() を呼び出す。
+    int actual_ret_validate = cplat_hashtable_validate(reattached); // [手順] - cplat_hashtable_validate() を呼び出す。
+    int actual_ret_find = cplat_hashtable_find_value_ref(
+        reattached, "fig",
+        &found); // [手順] - 再接続したハンドルを指定して cplat_hashtable_find_value_ref() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -519,18 +554,22 @@ TEST_F(hashtableTest, attach_shares_buffer_without_corrupting_other_handle)
     // Pre-Assert
 
     // Act
-    int actual_ret_create = cplat_hashtable_create(&config, buf_mgmt.data(), buf_mgmt.size(), buf_data.data(),
-                                                   buf_data.size(), &ht1); // [手順] - 外部バッファーで構築する。
+    int actual_ret_create =
+        cplat_hashtable_create(&config, buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
+                               &ht1); // [手順] - 外部バッファーを指定して cplat_hashtable_create() を呼び出す。
     int actual_ret_attach =
         cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
-                               &ht2); // [手順] - 同一のバッファーへ、もう一つ独立したハンドルで再接続する。
+                               &ht2); // [手順] - 同一のバッファーを指定して cplat_hashtable_attach() を呼び出す。
     int actual_ret_add = cplat_hashtable_add(
-        ht1, "shared", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 一方のハンドルで追加する。
-    int actual_ret_find_via_ht2 =
-        cplat_hashtable_find_value_ref(ht2, "shared", &found); // [手順] - もう一方のハンドルから検索する。
-    cplat_hashtable_dispose(ht2); // [手順] - 一方を破棄する (owns_buffer が 0 のため共有バッファーは解放されない)。
+        ht1, "shared", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 一方のハンドルを指定して cplat_hashtable_add() を呼び出す。
+    int actual_ret_find_via_ht2 = cplat_hashtable_find_value_ref(
+        ht2, "shared", &found); // [手順] - もう一方のハンドルを指定して cplat_hashtable_find_value_ref() を呼び出す。
+    cplat_hashtable_dispose(
+        ht2); // [手順] - owns_buffer が 0 のため共有バッファーは解放されない状態で、一方のハンドルを指定して cplat_hashtable_dispose() を呼び出す。
     int actual_ret_find_via_ht1_after_dispose = cplat_hashtable_find_value_ref(
-        ht1, "shared", &found); // [手順] - もう一方のハンドルが破棄後も正常に動作することを確認する。
+        ht1, "shared",
+        &found); // [手順] - 破棄後にもう一方のハンドルを指定して cplat_hashtable_find_value_ref() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -583,21 +622,27 @@ TEST_F(hashtableTest, binary_zero_key_and_copy_apis)
     // Pre-Assert
 
     // Act
-    int actual_ret_create =
-        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
-    int actual_ret_add1 = cplat_hashtable_add(ht, key1, value.data(),
-                                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - key1 を追加する。
+    int actual_ret_create = cplat_hashtable_create(
+        &config, nullptr, 0, nullptr, 0, &ht); // [手順] - 設定を指定して cplat_hashtable_create() を呼び出す。
+    int actual_ret_add1 = cplat_hashtable_add(
+        ht, key1, value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - key1 を指定して cplat_hashtable_add() を呼び出す。
     unsigned char zero_key[8] = {0};
     int actual_ret_zero = cplat_hashtable_add(
-        ht, zero_key, value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 全ゼロ キーを追加する。
+        ht, zero_key, value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 全ゼロ キーを指定して cplat_hashtable_add() を呼び出す。
     const void *found2 = nullptr;
-    int actual_ret_miss = cplat_hashtable_find_value_ref(ht, key2, &found2); // [手順] - 異なるキーを検索する。
-    int actual_ret_tail = cplat_hashtable_find_value_ref(ht, key3, &found2); // [手順] - 末尾だけ違うキーを検索する。
+    int actual_ret_miss = cplat_hashtable_find_value_ref(
+        ht, key2, &found2); // [手順] - 異なるキーを指定して cplat_hashtable_find_value_ref() を呼び出す。
+    int actual_ret_tail = cplat_hashtable_find_value_ref(
+        ht, key3, &found2); // [手順] - 末尾だけ違うキーを指定して cplat_hashtable_find_value_ref() を呼び出す。
     (void)cplat_hashtable_find_recno(ht, key1, &rec);
-    int actual_ret_key_copy = cplat_hashtable_get_key_copy(ht, rec, key_copy.data(), key_copy.size(),
-                                                           &key_required_size); // [手順] - キーを複製する。
-    int actual_ret_value_copy = cplat_hashtable_get_value_copy(ht, rec, value_copy.data(), value_copy.size(),
-                                                               &value_required_size); // [手順] - 値を複製する。
+    int actual_ret_key_copy = cplat_hashtable_get_key_copy(
+        ht, rec, key_copy.data(), key_copy.size(),
+        &key_required_size); // [手順] - キーの複製先を指定して cplat_hashtable_get_key_copy() を呼び出す。
+    int actual_ret_value_copy = cplat_hashtable_get_value_copy(
+        ht, rec, value_copy.data(), value_copy.size(),
+        &value_required_size); // [手順] - 値の複製先を指定して cplat_hashtable_get_value_copy() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_create); // [確認_正常系] - cplat_hashtable_create() の戻り値が CPLAT_OK であること。
@@ -655,17 +700,22 @@ TEST_F(hashtableTest, update_and_clear)
     // Pre-Assert
 
     // Act
-    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - テーブルを構築する。
-    (void)cplat_hashtable_add(ht, "k", value.data(),
-                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - キーを追加する。
+    (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                 &ht); // [手順] - 設定を指定して cplat_hashtable_create() を呼び出す。
+    (void)cplat_hashtable_add(
+        ht, "k", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - キーを指定して cplat_hashtable_add() を呼び出す。
     fill_value(&value, "two");
-    int actual_ret_update = cplat_hashtable_update(ht, "k", value.data()); // [手順] - キーで更新する。
+    int actual_ret_update =
+        cplat_hashtable_update(ht, "k", value.data()); // [手順] - キーを指定して cplat_hashtable_update() を呼び出す。
     (void)cplat_hashtable_find_recno(ht, "k", &rec);
     fill_value(&value, "three");
-    int actual_ret_update_rec = cplat_hashtable_update_rec(ht, rec, value.data()); // [手順] - レコード番号で更新する。
-    int actual_ret_find = cplat_hashtable_find_value_ref(ht, "k", &found);         // [手順] - 更新後の値を取得する。
+    int actual_ret_update_rec = cplat_hashtable_update_rec(
+        ht, rec, value.data()); // [手順] - レコード番号を指定して cplat_hashtable_update_rec() を呼び出す。
+    int actual_ret_find = cplat_hashtable_find_value_ref(
+        ht, "k", &found); // [手順] - キーを指定して cplat_hashtable_find_value_ref() を呼び出す。
     std::string found_text = (found == nullptr) ? "" : static_cast<const char *>(found);
-    int actual_ret_clear = cplat_hashtable_clear(ht); // [手順] - テーブルを空にする。
+    int actual_ret_clear = cplat_hashtable_clear(ht); // [手順] - cplat_hashtable_clear() を呼び出す。
     (void)cplat_hashtable_count(ht, &in_use);
 
     // Assert
@@ -696,16 +746,17 @@ TEST_F(hashtableTest, create_returns_out_of_memory_when_calloc_fails)
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_calloc(_, _))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_calloc() から NULL を返却する。
+                                    // [Pre-Assert手順] - cplat_calloc() から nullptr を返す。
 
     // Act
-    int actual_ret = cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - 内部確保で構築する。
+    int actual_ret = cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                            &ht); // [手順] - 内部確保を指定して cplat_hashtable_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_MEMORY,
         actual_ret); // [確認_異常系] - 確保に失敗するときの cplat_hashtable_create() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
-    EXPECT_EQ(nullptr, ht); // [確認_異常系] - ht が nullptr であること。(失敗後の ht_out が NULL になったことの確認)
+    EXPECT_EQ(nullptr, ht); // [確認_異常系] - ht が nullptr であること。(失敗後の ht_out が nullptr になったことの確認)
 }
 
 // cplat_hashtable_create で内部管理データ確保失敗時に確保済み領域が解放されることの確認
@@ -719,21 +770,23 @@ TEST_F(hashtableTest, create_frees_buffer_when_handle_calloc_fails)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_calloc(_, _))
-        .WillOnce(DoDefault())      // [Pre-Assert確認_異常系] - cplat_calloc() が 2 回呼び出されること。
-                                    // [Pre-Assert手順] - 1 回目 (管理領域+データ領域) は成功させる。
-        .WillOnce(Return(nullptr)); // [Pre-Assert手順] - 2 回目 (内部管理データ) から NULL を返却する。
+        .WillOnce(DoDefault()) // [Pre-Assert確認_異常系] - cplat_calloc() が 2 回呼び出されること。
+        // [Pre-Assert手順] - cplat_calloc() から 1 回目 (管理領域+データ領域) は製品 (prod) の処理へ委譲する。
+        .WillOnce(
+            Return(nullptr)); // [Pre-Assert手順] - cplat_calloc() から 2 回目 (内部管理データ) は nullptr を返す。
     EXPECT_CALL(mock_cplat_, cplat_free(_))
         .Times(
             1); // [Pre-Assert確認_異常系] - cplat_free() が 1 回呼び出されること。(確保済みの管理領域+データ領域が解放されたことの確認)
 
     // Act
-    int actual_ret = cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [手順] - 内部確保で構築する。
+    int actual_ret = cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                                            &ht); // [手順] - 内部確保を指定して cplat_hashtable_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_MEMORY,
         actual_ret); // [確認_異常系] - 内部管理データの確保に失敗するときの cplat_hashtable_create() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
-    EXPECT_EQ(nullptr, ht); // [確認_異常系] - ht が nullptr であること。(失敗後の ht_out が NULL になったことの確認)
+    EXPECT_EQ(nullptr, ht); // [確認_異常系] - ht が nullptr であること。(失敗後の ht_out が nullptr になったことの確認)
 }
 
 // cplat_hashtable_attach で内部管理データ確保失敗時に OUT_OF_MEMORY を返すことの確認
@@ -757,18 +810,20 @@ TEST_F(hashtableTest, attach_returns_out_of_memory_when_calloc_fails)
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_calloc(_, _))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - 内部管理データの calloc から NULL を返却する。
+    // [Pre-Assert手順] - cplat_calloc() から、内部管理データの確保に対して nullptr を返す。
 
     // Act
-    int actual_ret = cplat_hashtable_attach(buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
-                                            &attached); // [手順] - 同じ外部バッファーへ再接続する。
+    int actual_ret = cplat_hashtable_attach(
+        buf_mgmt.data(), buf_mgmt.size(), buf_data.data(), buf_data.size(),
+        &attached); // [手順] - 同じ外部バッファーを指定して cplat_hashtable_attach() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_MEMORY,
         actual_ret); // [確認_異常系] - 内部管理データの確保に失敗するときの cplat_hashtable_attach() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
-    EXPECT_EQ(nullptr,
-              attached); // [確認_異常系] - attached が nullptr であること。(失敗後の ht_out が NULL になったことの確認)
+    EXPECT_EQ(
+        nullptr,
+        attached); // [確認_異常系] - attached が nullptr であること。(失敗後の ht_out が nullptr になったことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(ht); // [破棄] - ハッシュ テーブルを破棄する。
@@ -783,8 +838,8 @@ TEST_F(hashtableTest, destroy_null_is_safe)
     EXPECT_CALL(mock_cplat_, cplat_free(_)).Times(0); // [Pre-Assert確認_正常系] - cplat_free() が呼び出されないこと。
 
     // Act
-    cplat_hashtable_dispose(nullptr); // [手順] - NULL で destroy を呼ぶ。
+    cplat_hashtable_dispose(nullptr); // [手順] - nullptr を指定して cplat_hashtable_dispose() を呼び出す。
 
     // Assert
-    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(NULL を渡した cplat_hashtable_dispose() がクラッシュしないことの確認)
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(nullptr を渡した cplat_hashtable_dispose() がクラッシュしないことの確認)
 }

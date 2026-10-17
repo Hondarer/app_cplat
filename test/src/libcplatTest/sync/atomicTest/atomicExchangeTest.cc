@@ -21,8 +21,9 @@ TEST(atomicExchangeTest, u8_exchange_returns_previous_value_for_every_memory_ord
         const uint8_t desired = (uint8_t)(20U + (uint8_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] =
-            cplat_atomic_exchange_u8(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
+        previous_values[index] = cplat_atomic_exchange_u8(
+            &atomic, desired,
+            kAllMemoryOrders[index]); // [手順] - 各メモリ順序を指定して cplat_atomic_exchange_u8() を呼び出す。
         current = desired;
     }
 
@@ -58,8 +59,9 @@ TEST(atomicExchangeTest, i32_exchange_returns_previous_value_for_every_memory_or
         const int32_t desired = (int32_t)(500 + (int32_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] =
-            cplat_atomic_exchange_i32(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
+        previous_values[index] = cplat_atomic_exchange_i32(
+            &atomic, desired,
+            kAllMemoryOrders[index]); // [手順] - 各メモリ順序を指定して cplat_atomic_exchange_i32() を呼び出す。
         current = desired;
     }
 
@@ -95,8 +97,9 @@ TEST(atomicExchangeTest, u32_exchange_returns_previous_value_for_every_memory_or
         const uint32_t desired = (uint32_t)(600U + (uint32_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] =
-            cplat_atomic_exchange_u32(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
+        previous_values[index] = cplat_atomic_exchange_u32(
+            &atomic, desired,
+            kAllMemoryOrders[index]); // [手順] - 各メモリ順序を指定して cplat_atomic_exchange_u32() を呼び出す。
         current = desired;
     }
 
@@ -132,8 +135,9 @@ TEST(atomicExchangeTest, i64_exchange_returns_previous_value_for_every_memory_or
         const int64_t desired = (int64_t)(50000000000LL + (int64_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] =
-            cplat_atomic_exchange_i64(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
+        previous_values[index] = cplat_atomic_exchange_i64(
+            &atomic, desired,
+            kAllMemoryOrders[index]); // [手順] - 各メモリ順序を指定して cplat_atomic_exchange_i64() を呼び出す。
         current = desired;
     }
 
@@ -169,8 +173,9 @@ TEST(atomicExchangeTest, u64_exchange_returns_previous_value_for_every_memory_or
         const uint64_t desired = (uint64_t)(60000000000ULL + (uint64_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] =
-            cplat_atomic_exchange_u64(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
+        previous_values[index] = cplat_atomic_exchange_u64(
+            &atomic, desired,
+            kAllMemoryOrders[index]); // [手順] - 各メモリ順序を指定して cplat_atomic_exchange_u64() を呼び出す。
         current = desired;
     }
 
@@ -194,7 +199,7 @@ TEST(atomicExchangeTest, ptr_exchange_returns_previous_value_for_every_memory_or
 {
     // Arrange
     int markers[kAllMemoryOrderCount] = {0};
-    cplat_atomic_ptr atomic = CPLAT_ATOMIC_INIT(nullptr); // [状態] - NULL で初期化したアトミック変数を用意する。
+    cplat_atomic_ptr atomic = CPLAT_ATOMIC_INIT(nullptr); // [状態] - nullptr で初期化したアトミック変数を用意する。
     void *previous_values[kAllMemoryOrderCount] = {nullptr};
     void *expected_previous[kAllMemoryOrderCount] = {nullptr};
     void *current = nullptr;
@@ -209,8 +214,9 @@ TEST(atomicExchangeTest, ptr_exchange_returns_previous_value_for_every_memory_or
         void *const desired = &markers[index];
 
         expected_previous[index] = current;
-        previous_values[index] =
-            cplat_atomic_exchange_ptr(&atomic, desired, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で交換する。
+        previous_values[index] = cplat_atomic_exchange_ptr(
+            &atomic, desired,
+            kAllMemoryOrders[index]); // [手順] - 各メモリ順序を指定して cplat_atomic_exchange_ptr() を呼び出す。
         current = desired;
     }
 

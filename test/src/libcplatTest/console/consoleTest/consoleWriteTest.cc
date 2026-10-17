@@ -26,12 +26,13 @@ TEST_F(consoleWriteTest, writes_to_stdout)
     EXPECT_CALL(mock_unistd, write(_, _, _, STDOUT_FILENO, _, sizeof(text) - 1U))
         .WillOnce(Return(static_cast<ssize_t>(sizeof(text) - 1U)));
     // [Pre-Assert確認_正常系] - write() が STDOUT_FILENO、sizeof(text) - 1U を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 要求長と同じバイト数を返却する。
+    // [Pre-Assert手順] - write() から、要求長と同じバイト数を返す。
 #endif /* PLATFORM_LINUX */
 
     // Act
-    int actual_ret = cplat_console_write(CPLAT_STREAM_STDOUT,
-                                         "consoleWriteTest: stdout\n"); // [手順] - stdout に文字列を書き込む。
+    int actual_ret = cplat_console_write(
+        CPLAT_STREAM_STDOUT,
+        "consoleWriteTest: stdout\n"); // [手順] - stdout と文字列を指定して cplat_console_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_console_write() の戻り値が CPLAT_OK であること。
@@ -51,12 +52,13 @@ TEST_F(consoleWriteTest, writes_to_stderr)
     EXPECT_CALL(mock_unistd, write(_, _, _, STDERR_FILENO, _, sizeof(text) - 1U))
         .WillOnce(Return(static_cast<ssize_t>(sizeof(text) - 1U)));
     // [Pre-Assert確認_正常系] - write() が STDERR_FILENO、sizeof(text) - 1U を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 要求長と同じバイト数を返却する。
+    // [Pre-Assert手順] - write() から、要求長と同じバイト数を返す。
 #endif /* PLATFORM_LINUX */
 
     // Act
-    int actual_ret = cplat_console_write(CPLAT_STREAM_STDERR,
-                                         "consoleWriteTest: stderr\n"); // [手順] - stderr に文字列を書き込む。
+    int actual_ret = cplat_console_write(
+        CPLAT_STREAM_STDERR,
+        "consoleWriteTest: stderr\n"); // [手順] - stderr と文字列を指定して cplat_console_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_console_write() の戻り値が CPLAT_OK であること。
@@ -94,7 +96,7 @@ TEST_F(consoleWriteTest, returns_invalid_argument_for_null_text)
     // Act
     int actual_ret =
         cplat_console_write(CPLAT_STREAM_STDOUT,
-                            nullptr); // [手順] - text に NULL を指定して cplat_console_write() を呼び出す。
+                            nullptr); // [手順] - text に nullptr を指定して cplat_console_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -132,14 +134,15 @@ TEST_F(consoleWriteTest, repeats_write_until_all_bytes_are_written)
     // Pre-Assert
     EXPECT_CALL(mock_unistd, write(_, _, _, _, _, 5))
         .WillOnce(Return(2)); // [Pre-Assert確認_正常系] - write() が 5 を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 2 byte だけ書き込んだものとして 2 を返却する。
+                              // [Pre-Assert手順] - write() から、2 byte だけ書き込んだものとして 2 を返す。
     EXPECT_CALL(mock_unistd, write(_, _, _, _, _, 3))
         .WillOnce(Return(3)); // [Pre-Assert確認_正常系] - write() が 3 を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 残りすべてを書き込んだものとして 3 を返却する。
+                              // [Pre-Assert手順] - write() から、残りすべてを書き込んだものとして 3 を返す。
 
     // Act
-    int actual_ret = cplat_console_write(CPLAT_STREAM_STDOUT,
-                                         "abcde"); // [手順] - 5 byte の文字列を cplat_console_write() で書き込む。
+    int actual_ret =
+        cplat_console_write(CPLAT_STREAM_STDOUT,
+                            "abcde"); // [手順] - 5 byte の文字列を指定して cplat_console_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_console_write() の戻り値が CPLAT_OK であること。
@@ -156,11 +159,12 @@ TEST_F(consoleWriteTest, returns_unknown_when_write_fails)
     EXPECT_CALL(mock_unistd, write(_, _, _, _, _, _))
         .WillOnce(DoAll(Assign(&errno, EIO),
                         Return(-1))); // [Pre-Assert確認_異常系] - write() が 1 回呼び出されること。
-                                      // [Pre-Assert手順] - errno に EIO を設定し、write() から -1 を返却する。
+                                      // [Pre-Assert手順] - write() から、errno に EIO を設定して -1 を返す。
 
     // Act
-    int actual_ret = cplat_console_write(CPLAT_STREAM_STDOUT,
-                                         "abcde"); // [手順] - 5 byte の文字列を cplat_console_write() で書き込む。
+    int actual_ret =
+        cplat_console_write(CPLAT_STREAM_STDOUT,
+                            "abcde"); // [手順] - 5 byte の文字列を指定して cplat_console_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -177,12 +181,13 @@ TEST_F(consoleWriteTest, retries_write_after_interrupt)
     EXPECT_CALL(mock_unistd, write(_, _, _, _, _, _))
         .WillOnce(DoAll(Assign(&errno, EINTR),
                         Return(-1))) // [Pre-Assert確認_正常系] - write() が 2 回呼び出されること。
-                                     // [Pre-Assert手順] - errno に EINTR を設定し、write() から -1 を返却する。
-        .WillOnce(Return(5));        // [Pre-Assert手順] - 2 回目の write() から 5 を返却する。
+                                     // [Pre-Assert手順] - write() から、errno に EINTR を設定して -1 を返す。
+        .WillOnce(Return(5));        // [Pre-Assert手順] - write() から 2 回目は 5 を返す。
 
     // Act
-    int actual_ret = cplat_console_write(CPLAT_STREAM_STDOUT,
-                                         "abcde"); // [手順] - 5 byte の文字列を cplat_console_write() で書き込む。
+    int actual_ret =
+        cplat_console_write(CPLAT_STREAM_STDOUT,
+                            "abcde"); // [手順] - 5 byte の文字列を指定して cplat_console_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,

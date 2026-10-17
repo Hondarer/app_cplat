@@ -76,10 +76,10 @@ class trace_fileTest : public Test
     {
         ON_CALL(mock_cplat, cplat_clock_get_realtime_deadline_ms(_, _))
             .WillByDefault([](uint64_t, struct timespec *abs_timeout) { set_valid_deadline(abs_timeout); });
-        // [状態] - cplat_clock_get_realtime_deadline_ms() の既定動作を設定する。
+        // [状態] - cplat_clock_get_realtime_deadline_ms() から、有効な期限を設定して戻るように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_get_realtime(_))
             .WillByDefault([](cplat_timespec *ts) { set_fixed_realtime(ts); });
-        // [状態] - cplat_clock_get_realtime() の既定動作を設定する。
+        // [状態] - cplat_clock_get_realtime() から、固定の現在時刻を設定して戻るように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_format_realtime_iso8601_local(_, _, _))
             .WillByDefault(
                 [](char *buf, size_t buf_size, const cplat_timespec *)
@@ -87,9 +87,9 @@ class trace_fileTest : public Test
                     snprintf(buf, buf_size, "%s", "2026-04-26T03:04:05.678+09:00");
                     return 0;
                 });
-        // [状態] - cplat_clock_format_realtime_iso8601_local() の既定動作を設定する。
+        // [状態] - cplat_clock_format_realtime_iso8601_local() から、"2026-04-26T03:04:05.678+09:00" を格納して 0 を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_open(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - cplat_file_open() の既定動作を設定する。
+        // [状態] - cplat_file_open() から CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_get_size(_, _, _))
             .WillByDefault(
                 [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -97,15 +97,15 @@ class trace_fileTest : public Test
                     *size_out = 0;
                     return 0;
                 });
-        // [状態] - cplat_file_get_size() の既定動作を設定する。
+        // [状態] - cplat_file_get_size() から、サイズに 0 を設定して 0 を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_write(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - cplat_file_write() の既定動作を設定する。
+        // [状態] - cplat_file_write() から CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_close(_, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - cplat_file_close() の既定動作を設定する。
+        // [状態] - cplat_file_close() から CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_remove(_, _)).WillByDefault(Return(0));
-        // [状態] - cplat_remove() の既定動作を設定する。
+        // [状態] - cplat_remove() から 0 を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_rename(_, _, _)).WillByDefault(Return(0));
-        // [状態] - cplat_rename() の既定動作を設定する。
+        // [状態] - cplat_rename() から 0 を返すように既定動作を設定する。
 
         // 共有モード用の既定動作: ハンドルとパスの同一性は常に一致させる
         ON_CALL(mock_cplat, cplat_file_get_id(_, _, _))
@@ -115,7 +115,7 @@ class trace_fileTest : public Test
                     set_file_id(id_out, kDefaultFileIndex);
                     return 0;
                 });
-        // [状態] - cplat_file_get_id() の既定動作を設定する。
+        // [状態] - cplat_file_get_id() から、既定のファイル同一性を設定して 0 を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_get_path_id(_, _, _))
             .WillByDefault(
                 [](const char *, cplat_file_id *id_out, cplat_error *)
@@ -123,7 +123,7 @@ class trace_fileTest : public Test
                     set_file_id(id_out, kDefaultFileIndex);
                     return 0;
                 });
-        // [状態] - cplat_file_get_path_id() の既定動作を設定する。
+        // [状態] - cplat_file_get_path_id() から、既定のファイル同一性を設定して 0 を返すように既定動作を設定する。
 
         // プロセス間ロックはダミー ハンドルで成功させる (実体は作らない)
         ON_CALL(mock_cplat, cplat_interprocess_lock_open(_, _))
@@ -134,13 +134,13 @@ class trace_fileTest : public Test
                     *lock = (cplat_interprocess_lock *)&dummy_lock;
                     return CPLAT_OK;
                 });
-        // [状態] - cplat_interprocess_lock_open() の既定動作を設定する。
+        // [状態] - cplat_interprocess_lock_open() から、ダミーのロックを設定して CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_interprocess_lock_try_lock(_)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - cplat_interprocess_lock_try_lock() の既定動作を設定する。
+        // [状態] - cplat_interprocess_lock_try_lock() から CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_interprocess_lock_unlock(_)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - cplat_interprocess_lock_unlock() の既定動作を設定する。
+        // [状態] - cplat_interprocess_lock_unlock() から CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_interprocess_lock_dispose(_)).WillByDefault(Return());
-        // [状態] - cplat_interprocess_lock_dispose() の既定動作を設定する。
+        // [状態] - cplat_interprocess_lock_dispose() から戻るように既定動作を設定する。
     }
     // [サブ手順終了]
 };
@@ -154,8 +154,8 @@ TEST_F(trace_fileTest, test_create_returns_null_for_null_path)
     // Pre-Assert
 
     // Act
-    cplat_trace_file_sink *handle =
-        cplat_trace_file_sink_create(nullptr, 0, 0, 0); // [手順] - NULL path で create を呼ぶ。
+    cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
+        nullptr, 0, 0, 0); // [手順] - path に nullptr を指定して cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr,
@@ -172,7 +172,7 @@ TEST_F(trace_fileTest, test_create_opens_file_with_default_flags)
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_file_open() が "trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_file_open() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_file_open() から 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_get_size(_, _, _))
         .WillOnce(
             [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -180,11 +180,12 @@ TEST_F(trace_fileTest, test_create_opens_file_with_default_flags)
                 *size_out = 123;
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_file_get_size() が 1 回呼び出されること。
-                // [Pre-Assert手順] - サイズ 123 を返却する。
+                // [Pre-Assert手順] - cplat_file_get_size() から、サイズに 123 を設定して 0 を返す。
 
     // Act
-    cplat_trace_file_sink *handle =
-        cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [手順] - 既定値で create を呼ぶ。
+    cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
+        "trace.log", 0, 0,
+        0); // [手順] - パス "trace.log" と既定値を指定して cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
     EXPECT_NE(nullptr,
@@ -206,12 +207,12 @@ TEST_F(trace_fileTest, test_create_opens_buffered_file_without_write_through)
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("buffered.log"), open_flags_buffered(), _))
         .WillOnce(Return(
             CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_file_open() が "buffered.log" と等しい文字列、open_flags_buffered() の戻り値を指定して 1 回呼び出されること。(write-through を含まない flags で開いたことの確認)
-                        // [Pre-Assert手順] - cplat_file_open() から CPLAT_OK を返却する。
+                        // [Pre-Assert手順] - cplat_file_open() から CPLAT_OK を返す。
 
     // Act
     cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
         "buffered.log", 0, 0,
-        CPLAT_TRACE_FILE_SINK_OS_BUFFERED); // [手順] - OS バッファー指定で sink を生成する。
+        CPLAT_TRACE_FILE_SINK_OS_BUFFERED); // [手順] - パス "buffered.log" と OS バッファー モードを指定して cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
     ASSERT_NE(nullptr,
@@ -232,14 +233,14 @@ TEST_F(trace_fileTest, test_create_retries_file_open_after_initial_failure)
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(
             -1)); // [Pre-Assert確認_正常系] - 初回の cplat_file_open() が "trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - cplat_file_open() から -1 を返却する。
+                  // [Pre-Assert手順] - cplat_file_open() から -1 を返す。
     EXPECT_CALL(mock_cplat, cplat_sleep_ms(3000))
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_sleep_ms() が 3000 を指定して 1 回呼び出されること。
-                             // [Pre-Assert手順] - 3 秒相当の待機を行う。
+                             // [Pre-Assert手順] - cplat_sleep_ms() から戻る。
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - リトライの cplat_file_open() が "trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_file_open() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_file_open() から 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_get_size(_, _, _))
         .WillOnce(
             [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -247,11 +248,12 @@ TEST_F(trace_fileTest, test_create_retries_file_open_after_initial_failure)
                 *size_out = 0;
                 return 0;
             }); // [Pre-Assert確認_正常系] - リトライ成功後の cplat_file_get_size() が 1 回呼び出されること。
-                // [Pre-Assert手順] - サイズ 0 を返却する。
+                // [Pre-Assert手順] - cplat_file_get_size() から、サイズに 0 を設定して 0 を返す。
 
     // Act
-    cplat_trace_file_sink *handle =
-        cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [手順] - 初回 open 失敗後に create を継続する。
+    cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
+        "trace.log", 0, 0,
+        0); // [手順] - 初回の cplat_file_open() が失敗する状態で、パス "trace.log" を指定して cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
     EXPECT_NE(nullptr,
@@ -274,38 +276,39 @@ TEST_F(trace_fileTest, test_create_returns_null_after_file_open_retry_exhausted)
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(
             -1)); // [Pre-Assert確認_異常系] - 初回の cplat_file_open() が "trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - cplat_file_open() から -1 を返却する。
+                  // [Pre-Assert手順] - cplat_file_open() から -1 を返す。
     EXPECT_CALL(mock_cplat, cplat_sleep_ms(3000))
         .WillOnce(
             Return()); // [Pre-Assert確認_異常系] - 1 回目のリトライ前に cplat_sleep_ms() が 3000 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - 3 秒相当の待機を行う。
+                       // [Pre-Assert手順] - cplat_sleep_ms() から戻る。
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(
             -1)); // [Pre-Assert確認_異常系] - 1 回目のリトライの cplat_file_open() が "trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - cplat_file_open() から -1 を返却する。
+                  // [Pre-Assert手順] - cplat_file_open() から -1 を返す。
     EXPECT_CALL(mock_cplat, cplat_sleep_ms(3000))
         .WillOnce(
             Return()); // [Pre-Assert確認_異常系] - 2 回目のリトライ前に cplat_sleep_ms() が 3000 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - 3 秒相当の待機を行う。
+                       // [Pre-Assert手順] - cplat_sleep_ms() から戻る。
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(
             -1)); // [Pre-Assert確認_異常系] - 2 回目のリトライの cplat_file_open() が "trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - cplat_file_open() から -1 を返却する。
+                  // [Pre-Assert手順] - cplat_file_open() から -1 を返す。
     EXPECT_CALL(mock_cplat, cplat_sleep_ms(3000))
         .WillOnce(
             Return()); // [Pre-Assert確認_異常系] - 3 回目のリトライ前に cplat_sleep_ms() が 3000 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - 3 秒相当の待機を行う。
+                       // [Pre-Assert手順] - cplat_sleep_ms() から戻る。
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(
             -1)); // [Pre-Assert確認_異常系] - 3 回目のリトライの cplat_file_open() が "trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - cplat_file_open() から -1 を返却する。
+                  // [Pre-Assert手順] - cplat_file_open() から -1 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _))
         .Times(AtLeast(
             1)); // [Pre-Assert確認_異常系] - cplat_file_close() が 1 回以上呼び出されること。(失敗経路で開いたファイルを閉じることの確認)
 
     // Act
-    cplat_trace_file_sink *handle =
-        cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [手順] - open 失敗を継続させる。
+    cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
+        "trace.log", 0, 0,
+        0); // [手順] - cplat_file_open() が失敗し続ける状態で、パス "trace.log" を指定して cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr,
@@ -332,11 +335,12 @@ TEST_F(trace_fileTest, test_write_formats_info_line)
                 // [Pre-Assert確認_正常系] - actual が "2026-04-26T03:04:05.678+09:00 I hello\n" であること。
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_file_write() が 1 回呼び出されること。
-                // [Pre-Assert手順] - 書式化した行を確認し、0 を返却する。
+                // [Pre-Assert手順] - cplat_file_write() から、書式化した行を確認して 0 を返す。
 
     // Act
-    int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                             "hello"); // [手順] - INFO 行を書き込む。
+    int result = cplat_trace_file_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "hello"); // [手順] - INFO レベルと "hello" を指定して cplat_trace_file_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -366,11 +370,12 @@ TEST_F(trace_fileTest, test_write_formats_debug_marker)
                 // [Pre-Assert確認_正常系] - actual が "2026-04-26T03:04:05.678+09:00 D debug line\n" であること。
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_file_write() が 1 回呼び出されること。
-                // [Pre-Assert手順] - D marker の行を確認し、0 を返却する。
+                // [Pre-Assert手順] - cplat_file_write() から、D marker の行を確認して 0 を返す。
 
     // Act
-    int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_DEBUG, nullptr,
-                                             "debug line"); // [手順] - DEBUG 行を書き込む。
+    int result = cplat_trace_file_sink_write(
+        handle, CPLAT_TRACE_LEVEL_DEBUG, nullptr,
+        "debug line"); // [手順] - DEBUG レベルと "debug line" を指定して cplat_trace_file_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -404,11 +409,12 @@ TEST_F(trace_fileTest, test_write_uses_explicit_timestamp_without_internal_clock
                 // [Pre-Assert確認_正常系] - actual が "2026-04-26T03:04:05.678+09:00 I explicit hello\n" であること。
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_file_write() が 1 回呼び出されること。
-                // [Pre-Assert手順] - 書式化した行を確認し、0 を返却する。
+                // [Pre-Assert手順] - cplat_file_write() から、書式化した行を確認して 0 を返す。
 
     // Act
-    int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, &timestamp,
-                                             "explicit hello"); // [手順] - 明示タイムスタンプ付きで書き込む。
+    int result = cplat_trace_file_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, &timestamp,
+        "explicit hello"); // [手順] - 明示タイムスタンプと "explicit hello" を指定して cplat_trace_file_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -432,11 +438,12 @@ TEST_F(trace_fileTest, test_write_returns_minus_one_on_file_error)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_file_write(_, _, _, _))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - cplat_file_write() が 1 回呼び出されること。
-                               // [Pre-Assert手順] - cplat_file_write() から -1 を返却する。
+                               // [Pre-Assert手順] - cplat_file_write() から -1 を返す。
 
     // Act
-    int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                             "write error"); // [手順] - 書き込み失敗を発生させる。
+    int result = cplat_trace_file_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "write error"); // [手順] - cplat_file_write() が失敗する状態で、"write error" を指定して cplat_trace_file_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -470,11 +477,12 @@ TEST_F(trace_fileTest, test_write_falls_back_from_invalid_explicit_timestamp)
                 // [Pre-Assert確認_正常系] - actual が "2026-04-26T03:04:05.678+09:00 I invalid\n" であること。
                 return 0;
             }); // [Pre-Assert確認_異常系] - cplat_file_write() が 1 回呼び出されること。
-                // [Pre-Assert手順] - 代替時刻の行を確認し、0 を返却する。
+                // [Pre-Assert手順] - cplat_file_write() から、代替時刻の行を確認して 0 を返す。
 
     // Act
-    int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, &invalid_timestamp,
-                                             "invalid"); // [手順] - 不正タイムスタンプで書き込む。
+    int result = cplat_trace_file_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, &invalid_timestamp,
+        "invalid"); // [手順] - 不正なタイムスタンプと "invalid" を指定して cplat_trace_file_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -497,7 +505,7 @@ TEST_F(trace_fileTest, test_write_rotates_when_size_limit_is_reached)
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - create 時に cplat_file_open() が "trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_file_open() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_file_open() から 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_get_size(_, _, _))
         .WillOnce(
             [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -505,7 +513,7 @@ TEST_F(trace_fileTest, test_write_rotates_when_size_limit_is_reached)
                 *size_out = 0;
                 return 0;
             }); // [Pre-Assert確認_正常系] - create 時に cplat_file_get_size() が 1 回呼び出されること。
-                // [Pre-Assert手順] - size_out に 0 を設定し、0 を返却する。
+                // [Pre-Assert手順] - cplat_file_get_size() から、size_out に 0 を設定して 0 を返す。
 
     // Arrange
     cplat_trace_file_sink *handle =
@@ -517,31 +525,32 @@ TEST_F(trace_fileTest, test_write_rotates_when_size_limit_is_reached)
     EXPECT_CALL(mock_cplat, cplat_file_write(_, _, _, _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - 元ファイルへの書き込みで cplat_file_write() が 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_file_write() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_file_write() から 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // ローテーション前の close
     // [Pre-Assert確認_正常系] - ローテーション前に cplat_file_close() が 1 回呼び出されること。
     EXPECT_CALL(mock_cplat, cplat_remove(StrEq("trace.log.2"), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_remove() が "trace.log.2" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_remove() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_remove() から 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_rename(StrEq("trace.log.1"), StrEq("trace.log.2"), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_rename() が "trace.log.1" と等しい文字列、"trace.log.2" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_rename() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_rename() から 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_rename(StrEq("trace.log"), StrEq("trace.log.1"), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_rename() が "trace.log" と等しい文字列、"trace.log.1" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - 現在ファイルの rename から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_rename() から、現在ファイルに対して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_truncate(), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - ローテーション後の cplat_file_open() が "trace.log" と等しい文字列、open_flags_truncate() の戻り値を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - truncate 付き open から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_file_open() から、truncate 付きの open に対して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // dispose 分
     // [Pre-Assert確認_正常系] - dispose 時に cplat_file_close() が 1 回呼び出されること。
 
     // Act
-    int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                             "rotate me"); // [手順] - 上限 1 byte のファイルへ 1 行書き込む。
+    int result = cplat_trace_file_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "rotate me"); // [手順] - 上限 1 byte の sink と "rotate me" を指定して cplat_trace_file_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -565,7 +574,7 @@ TEST_F(trace_fileTest, test_write_does_not_retry_open_after_rotation)
         EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
             .WillOnce(Return(
                 0)); // [Pre-Assert確認_正常系] - create 時に cplat_file_open() が "trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。
-                     // [Pre-Assert手順] - cplat_file_open() から 0 を返却する。
+                     // [Pre-Assert手順] - cplat_file_open() から 0 を返す。
         EXPECT_CALL(mock_cplat, cplat_file_get_size(_, _, _))
             .WillOnce(
                 [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -573,7 +582,7 @@ TEST_F(trace_fileTest, test_write_does_not_retry_open_after_rotation)
                     *size_out = 0;
                     return 0;
                 }); // [Pre-Assert確認_正常系] - create 時に cplat_file_get_size() が 1 回呼び出されること。
-                    // [Pre-Assert手順] - size_out に 0 を設定し、0 を返却する。
+                    // [Pre-Assert手順] - cplat_file_get_size() から、size_out に 0 を設定して 0 を返す。
     }
 
     // Arrange
@@ -588,25 +597,25 @@ TEST_F(trace_fileTest, test_write_does_not_retry_open_after_rotation)
         EXPECT_CALL(mock_cplat, cplat_file_write(_, _, _, _))
             .WillOnce(
                 Return(0)); // [Pre-Assert確認_異常系] - ローテーション前の cplat_file_write() が 1 回呼び出されること。
-                            // [Pre-Assert手順] - cplat_file_write() から 0 を返却する。
+                            // [Pre-Assert手順] - cplat_file_write() から 0 を返す。
         EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // ローテーション前の close
         // [Pre-Assert確認_正常系] - ローテーション前に cplat_file_close() が 1 回呼び出されること。
         EXPECT_CALL(mock_cplat, cplat_remove(StrEq("trace.log.2"), _))
             .WillOnce(Return(
                 0)); // [Pre-Assert確認_異常系] - cplat_remove() が "trace.log.2" と等しい文字列を指定して 1 回呼び出されること。
-                     // [Pre-Assert手順] - cplat_remove() から 0 を返却する。
+                     // [Pre-Assert手順] - cplat_remove() から 0 を返す。
         EXPECT_CALL(mock_cplat, cplat_rename(StrEq("trace.log.1"), StrEq("trace.log.2"), _))
             .WillOnce(Return(
                 0)); // [Pre-Assert確認_異常系] - cplat_rename() が "trace.log.1" と等しい文字列、"trace.log.2" と等しい文字列を指定して 1 回呼び出されること。
-                     // [Pre-Assert手順] - 旧世代の rename から 0 を返却する。
+                     // [Pre-Assert手順] - cplat_rename() から、旧世代に対して 0 を返す。
         EXPECT_CALL(mock_cplat, cplat_rename(StrEq("trace.log"), StrEq("trace.log.1"), _))
             .WillOnce(Return(
                 0)); // [Pre-Assert確認_異常系] - cplat_rename() が "trace.log" と等しい文字列、"trace.log.1" と等しい文字列を指定して 1 回呼び出されること。
-                     // [Pre-Assert手順] - 現在ファイルの rename から 0 を返却する。
+                     // [Pre-Assert手順] - cplat_rename() から、現在ファイルに対して 0 を返す。
         EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_truncate(), _))
             .WillOnce(Return(
                 -1)); // [Pre-Assert確認_異常系] - ローテーション後の cplat_file_open() が "trace.log" と等しい文字列、open_flags_truncate() の戻り値を指定して 1 回呼び出されること。
-                      // [Pre-Assert手順] - truncate 付き open から -1 を返却する。
+                      // [Pre-Assert手順] - cplat_file_open() から、truncate 付きの open に対して -1 を返す。
         EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // dispose 分
         // [Pre-Assert確認_正常系] - dispose 時に cplat_file_close() が 1 回呼び出されること。
     }
@@ -617,7 +626,7 @@ TEST_F(trace_fileTest, test_write_does_not_retry_open_after_rotation)
     // Act
     int result = cplat_trace_file_sink_write(
         handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-        "rotate once"); // [手順] - 上限 1 byte のファイルへ書き込み、ローテーション後の open を失敗させる。
+        "rotate once"); // [手順] - ローテーション後の cplat_file_open() が失敗する状態で、上限 1 byte の sink と "rotate once" を指定して cplat_trace_file_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -637,10 +646,11 @@ TEST_F(trace_fileTest, test_dispose_with_null_handle_is_safe)
     // Pre-Assert
 
     // Act
-    cplat_trace_file_sink_dispose(nullptr); // [手順] - NULL ハンドルで dispose を呼び出す。
+    cplat_trace_file_sink_dispose(
+        nullptr); // [手順] - handle に nullptr を指定して cplat_trace_file_sink_dispose() を呼び出す。
 
     // Assert
-    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(NULL を渡した cplat_trace_file_sink_dispose() がクラッシュしないことの確認)
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(nullptr を渡した cplat_trace_file_sink_dispose() がクラッシュしないことの確認)
 }
 
 // パスに区切り文字が含まれる場合に makedirs が親ディレクトリ パスで呼ばれることの確認
@@ -653,15 +663,16 @@ TEST_F(trace_fileTest, test_create_calls_makedirs_for_path_with_separator)
     EXPECT_CALL(mock_cplat, cplat_makedirs(StrEq("sub"), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_makedirs() が "sub" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_makedirs() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_makedirs() から 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("sub/trace.log"), open_flags_default(), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - 親ディレクトリの作成後に cplat_file_open() が "sub/trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_file_open() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_file_open() から 0 を返す。
 
     // Act
-    cplat_trace_file_sink *handle =
-        cplat_trace_file_sink_create("sub/trace.log", 0, 0, 0); // [手順] - 区切り文字を含むパスで create を呼ぶ。
+    cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
+        "sub/trace.log", 0, 0,
+        0); // [手順] - 区切り文字を含むパス "sub/trace.log" を指定して cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
     EXPECT_NE(nullptr,
@@ -684,11 +695,11 @@ TEST_F(trace_fileTest, test_create_normalizes_windows_separator_for_parent_direc
     EXPECT_CALL(mock_cplat, cplat_makedirs(StrEq("sub/dir"), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_makedirs() が "sub/dir" と等しい文字列を指定して 1 回呼び出されること。(区切り文字を正規化した親ディレクトリであることの確認)
-                 // [Pre-Assert手順] - cplat_makedirs() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_makedirs() から 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("sub\\dir\\trace.log"), open_flags_default(), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_file_open() が "sub\\dir\\trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。(呼び出し元のパス文字列のまま開くことの確認)
-                 // [Pre-Assert手順] - cplat_file_open() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_file_open() から 0 を返す。
 
     // Act
     cplat_trace_file_sink *handle = cplat_trace_file_sink_create("sub\\dir\\trace.log", 0, 0, 0);
@@ -721,10 +732,11 @@ TEST_F(trace_fileTest, test_single_mode_does_not_use_interprocess_lock_or_identi
             0); // [Pre-Assert確認_正常系] - cplat_file_get_id() が呼び出されないこと。(ハンドルの同一性を取得しないことの確認)
 
     // Act
-    cplat_trace_file_sink *handle =
-        cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [手順] - flags なしの create を呼ぶ。
-    int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                             "single"); // [手順] - 1 行書き込む。
+    cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
+        "trace.log", 0, 0, 0); // [手順] - flags に 0 を指定して cplat_trace_file_sink_create() を呼び出す。
+    int result = cplat_trace_file_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "single"); // [手順] - "single" を指定して cplat_trace_file_sink_write() を呼び出す。
 
     // Assert
     EXPECT_NE(nullptr,
@@ -746,14 +758,15 @@ TEST_F(trace_fileTest, test_create_shared_opens_lock_file)
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_file_open() が "trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_file_open() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_file_open() から 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_interprocess_lock_open(StrEq("trace.log.lock"), _))
         .Times(
             1); // [Pre-Assert確認_正常系] - cplat_interprocess_lock_open() が "trace.log.lock" と等しい文字列を指定して 1 回呼び出されること。
 
     // Act
     cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
-        "trace.log", 0, 0, CPLAT_TRACE_FILE_SINK_SHARED); // [手順] - 共有モードで create を呼ぶ。
+        "trace.log", 0, 0,
+        CPLAT_TRACE_FILE_SINK_SHARED); // [手順] - 共有モードを指定して cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
     EXPECT_NE(nullptr,
@@ -777,14 +790,15 @@ TEST_F(trace_fileTest, test_create_shared_returns_null_when_lock_open_fails)
     EXPECT_CALL(mock_cplat, cplat_interprocess_lock_open(StrEq("trace.log.lock"), _))
         .WillOnce(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_interprocess_lock_open() が "trace.log.lock" と等しい文字列を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_interprocess_lock_open() から CPLAT_ERR_UNKNOWN を返却する。
+    // [Pre-Assert手順] - cplat_interprocess_lock_open() から CPLAT_ERR_UNKNOWN を返す。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _))
         .Times(AtLeast(
             1)); // [Pre-Assert確認_異常系] - cplat_file_close() が 1 回以上呼び出されること。(オープン済みファイルを閉じることの確認)
 
     // Act
     cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
-        "trace.log", 0, 0, CPLAT_TRACE_FILE_SINK_SHARED); // [手順] - 共有モードで create を呼ぶ。
+        "trace.log", 0, 0,
+        CPLAT_TRACE_FILE_SINK_SHARED); // [手順] - 共有モードを指定して cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr,
@@ -800,8 +814,8 @@ TEST_F(trace_fileTest, test_create_returns_null_for_negative_flags)
     // Pre-Assert
 
     // Act
-    cplat_trace_file_sink *handle =
-        cplat_trace_file_sink_create("trace.log", 0, 0, -1); // [手順] - 負の flags で create を呼ぶ。
+    cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
+        "trace.log", 0, 0, -1); // [手順] - flags に -1 を指定して cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr,
@@ -827,22 +841,23 @@ TEST_F(trace_fileTest, test_shared_write_reopens_after_external_rotation)
                 set_file_id(id_out, kDefaultFileIndex + 1); // 別実体を示す
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_file_get_path_id() が "trace.log" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 別実体のファイル同一性を返却する。
+                // [Pre-Assert手順] - cplat_file_get_path_id() から、別のファイル同一性を設定して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _))
         .Times(1); // [Pre-Assert確認_正常系] - 旧ハンドルの cplat_file_close() が 1 回呼び出されること。
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - 開き直しの cplat_file_open() が "trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - 開き直しの cplat_file_open() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_file_open() から、開き直しに対して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_write(_, _, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 開き直し後の cplat_file_write() が 1 回呼び出されること。
-                              // [Pre-Assert手順] - 開き直し後の cplat_file_write() から 0 を返却する。
+                              // [Pre-Assert手順] - cplat_file_write() から、開き直し後の呼び出しに対して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // dispose 分
     // [Pre-Assert確認_正常系] - dispose 時に cplat_file_close() が 1 回呼び出されること。
 
     // Act
-    int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                             "after rotate"); // [手順] - 1 行書き込む。
+    int result = cplat_trace_file_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "after rotate"); // [手順] - "after rotate" を指定して cplat_trace_file_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -872,13 +887,13 @@ TEST_F(trace_fileTest, test_shared_write_reopen_does_not_retry_after_external_ro
                     set_file_id(id_out, kDefaultFileIndex + 1);
                     return 0;
                 }); // [Pre-Assert確認_異常系] - cplat_file_get_path_id() が "trace.log" と等しい文字列を指定して 1 回呼び出されること。
-        // [Pre-Assert手順] - 別実体のファイル同一性を返却する。
+        // [Pre-Assert手順] - cplat_file_get_path_id() から、別のファイル同一性を設定して 0 を返す。
         EXPECT_CALL(mock_cplat, cplat_file_close(_, _))
             .Times(1); // [Pre-Assert確認_異常系] - 旧ハンドルの cplat_file_close() が 1 回呼び出されること。
         EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
             .WillOnce(Return(
                 -1)); // [Pre-Assert確認_異常系] - 開き直しの cplat_file_open() が "trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。
-                      // [Pre-Assert手順] - cplat_file_open() から -1 を返却する。
+                      // [Pre-Assert手順] - cplat_file_open() から -1 を返す。
         EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // dispose 分
         // [Pre-Assert確認_正常系] - dispose 時に cplat_file_close() が 1 回呼び出されること。
     }
@@ -888,8 +903,9 @@ TEST_F(trace_fileTest, test_shared_write_reopen_does_not_retry_after_external_ro
         .Times(0); // [Pre-Assert確認_異常系] - ファイルを開き直せない場合に cplat_file_write() が呼び出されないこと。
 
     // Act
-    int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                             "after rotate"); // [手順] - 1 行書き込む。
+    int result = cplat_trace_file_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "after rotate"); // [手順] - "after rotate" を指定して cplat_trace_file_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -913,7 +929,7 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - create 時に cplat_file_open() が "trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_file_open() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_file_open() から 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_get_size(_, _, _))
         .WillOnce(
             [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -921,7 +937,7 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
                 *size_out = 0;
                 return 0;
             }); // [Pre-Assert確認_正常系] - create 時に cplat_file_get_size() が 1 回呼び出されること。
-                // [Pre-Assert手順] - size_out に 0 を設定し、0 を返却する。
+                // [Pre-Assert手順] - cplat_file_get_size() から、size_out に 0 を設定して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_get_id(_, _, _))
         .Times(1); // [Pre-Assert確認_正常系] - create 時に cplat_file_get_id() が 1 回呼び出されること。
     EXPECT_CALL(mock_cplat, cplat_interprocess_lock_open(StrEq("trace.log.lock"), _))
@@ -940,7 +956,7 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
     // [Pre-Assert確認_正常系] - 書き込み前に cplat_file_get_path_id() が "trace.log" と等しい文字列を指定して 1 回呼び出されること。
     EXPECT_CALL(mock_cplat, cplat_file_write(_, _, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - cplat_file_write() が 1 回呼び出されること。
-                              // [Pre-Assert手順] - cplat_file_write() から 0 を返却する。
+                              // [Pre-Assert手順] - cplat_file_write() から 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_get_size(_, _, _))
         .WillOnce(
             [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -948,13 +964,13 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
                 *size_out = 10;
                 return 0;
             }); // [Pre-Assert確認_正常系] - 書き込み後の cplat_file_get_size() が 1 回呼び出されること。(実サイズがしきい値以上であることの確認)
-                // [Pre-Assert手順] - サイズ 10 を返却する。
+                // [Pre-Assert手順] - cplat_file_get_size() から、サイズに 10 を設定して 0 を返す。
 
     // プロセス間ロック下の再確認 → ローテーション
     EXPECT_CALL(mock_cplat, cplat_interprocess_lock_try_lock(_))
         .WillOnce(Return(
             CPLAT_OK)); // [Pre-Assert確認_正常系] - ローテーション前に cplat_interprocess_lock_try_lock() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_interprocess_lock_try_lock() から CPLAT_OK を返却する。
+    // [Pre-Assert手順] - cplat_interprocess_lock_try_lock() から CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat, cplat_file_get_path_id(StrEq("trace.log"), _, _)).Times(1); // ロック下の同一性再確認
     // [Pre-Assert確認_正常系] - ロック下に cplat_file_get_path_id() が "trace.log" と等しい文字列を指定して 1 回呼び出されること。
     EXPECT_CALL(mock_cplat, cplat_file_get_size(_, _, _))
@@ -964,25 +980,25 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
                 *size_out = 10;
                 return 0;
             }); // [Pre-Assert確認_正常系] - ロック下の cplat_file_get_size() が 1 回呼び出されること。(実サイズを再確認したことの確認)
-    // [Pre-Assert手順] - ロック下のサイズ 10 を返却する。
+    // [Pre-Assert手順] - cplat_file_get_size() から、ロック下のサイズとして 10 を設定して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // ローテーション前の close
     // [Pre-Assert確認_正常系] - ローテーション前に cplat_file_close() が 1 回呼び出されること。
     EXPECT_CALL(mock_cplat, cplat_remove(StrEq("trace.log.2"), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_remove() が "trace.log.2" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_remove() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_remove() から 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_rename(StrEq("trace.log.1"), StrEq("trace.log.2"), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_rename() が "trace.log.1" と等しい文字列、"trace.log.2" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - 旧世代の rename から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_rename() から、旧世代に対して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_rename(StrEq("trace.log"), StrEq("trace.log.1"), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_rename() が "trace.log" と等しい文字列、"trace.log.1" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - 現在ファイルの rename から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_rename() から、現在ファイルに対して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - 開き直しの cplat_file_open() が "trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。(切り詰めずに追記モードで開き直すことの確認)
-                 // [Pre-Assert手順] - 追記モードの open から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_file_open() から、追記モードの open に対して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_get_size(_, _, _))
         .WillOnce(
             [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -990,20 +1006,21 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
                 *size_out = 0;
                 return 0;
             }); // [Pre-Assert確認_正常系] - 開き直し時に cplat_file_get_size() が 1 回呼び出されること。
-                // [Pre-Assert手順] - size_out に 0 を設定し、0 を返却する。
+                // [Pre-Assert手順] - cplat_file_get_size() から、size_out に 0 を設定して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_get_id(_, _, _))
         .Times(
             1); // [Pre-Assert確認_正常系] - 開き直し時に cplat_file_get_id() が 1 回呼び出されること。(開き直したファイルの同一性をキャッシュすることの確認)
     EXPECT_CALL(mock_cplat, cplat_interprocess_lock_unlock(_))
         .WillOnce(Return(
             CPLAT_OK)); // [Pre-Assert確認_正常系] - ローテーション後に cplat_interprocess_lock_unlock() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_interprocess_lock_unlock() から CPLAT_OK を返却する。
+    // [Pre-Assert手順] - cplat_interprocess_lock_unlock() から CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // dispose 分
     // [Pre-Assert確認_正常系] - dispose 時に cplat_file_close() が 1 回呼び出されること。
 
     // Act
-    int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                             "rotate me"); // [手順] - 上限 1 byte のファイルへ 1 行書き込む。
+    int result = cplat_trace_file_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "rotate me"); // [手順] - 上限 1 byte の sink と "rotate me" を指定して cplat_trace_file_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1034,7 +1051,7 @@ TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_other_process_already
             1); // [Pre-Assert確認_正常系] - 書き込み前に cplat_file_get_path_id() が "trace.log" と等しい文字列を指定して 1 回呼び出されること。
     EXPECT_CALL(mock_cplat, cplat_file_write(_, _, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - cplat_file_write() が 1 回呼び出されること。
-                              // [Pre-Assert手順] - cplat_file_write() から 0 を返却する。
+                              // [Pre-Assert手順] - cplat_file_write() から 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_get_size(_, _, _))
         .WillOnce(
             [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -1042,11 +1059,11 @@ TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_other_process_already
                 *size_out = 10;
                 return 0;
             }); // [Pre-Assert確認_正常系] - 書き込み後の cplat_file_get_size() が 1 回呼び出されること。(実サイズがしきい値以上であることの確認)
-                // [Pre-Assert手順] - サイズ 10 を返却する。
+                // [Pre-Assert手順] - cplat_file_get_size() から、サイズに 10 を設定して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_interprocess_lock_try_lock(_))
         .WillOnce(
             Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_interprocess_lock_try_lock() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_interprocess_lock_try_lock() から CPLAT_OK を返却する。
+    // [Pre-Assert手順] - cplat_interprocess_lock_try_lock() から CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat, cplat_file_get_path_id(StrEq("trace.log"), _, _))
         .WillOnce(
             [](const char *, cplat_file_id *id_out, cplat_error *)
@@ -1054,13 +1071,13 @@ TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_other_process_already
                 set_file_id(id_out, kDefaultFileIndex + 1); // 他プロセスがローテーション済み
                 return 0;
             }); // [Pre-Assert確認_正常系] - ロック下の再確認で cplat_file_get_path_id() が "trace.log" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 別実体のファイル同一性を返却する。
+                // [Pre-Assert手順] - cplat_file_get_path_id() から、別のファイル同一性を設定して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // 開き直し前の close
     // [Pre-Assert確認_正常系] - 開き直し前に cplat_file_close() が 1 回呼び出されること。
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_file_open() が "trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。(リネームせず開き直しだけ行うことの確認)
-                 // [Pre-Assert手順] - cplat_file_open() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_file_open() から 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_get_size(_, _, _))
         .WillOnce(
             [](const cplat_file *, size_t *size_out, cplat_error *)
@@ -1068,19 +1085,20 @@ TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_other_process_already
                 *size_out = 0;
                 return 0;
             }); // [Pre-Assert確認_正常系] - 開き直し時に cplat_file_get_size() が 1 回呼び出されること。
-                // [Pre-Assert手順] - size_out に 0 を設定し、0 を返却する。
+                // [Pre-Assert手順] - cplat_file_get_size() から、size_out に 0 を設定して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_get_id(_, _, _))
         .Times(
             1); // [Pre-Assert確認_正常系] - 開き直し時に cplat_file_get_id() が 1 回呼び出されること。(開き直したファイルの同一性をキャッシュすることの確認)
     EXPECT_CALL(mock_cplat, cplat_interprocess_lock_unlock(_)).WillOnce(Return(CPLAT_OK)); // 開き直し後のロック解放
     // [Pre-Assert確認_正常系] - 開き直し後に cplat_interprocess_lock_unlock() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_interprocess_lock_unlock() から CPLAT_OK を返却する。
+    // [Pre-Assert手順] - cplat_interprocess_lock_unlock() から CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat, cplat_file_close(_, _)).Times(1); // dispose 分
     // [Pre-Assert確認_正常系] - dispose 時に cplat_file_close() が 1 回呼び出されること。
 
     // Act
-    int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                             "already rotated"); // [手順] - 1 行書き込む。
+    int result = cplat_trace_file_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "already rotated"); // [手順] - "already rotated" を指定して cplat_trace_file_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1108,19 +1126,20 @@ TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_lock_is_busy)
                 *size_out = 10;
                 return 0;
             }); // [Pre-Assert確認_異常系] - cplat_file_get_size() が 1 回呼び出されること。(実サイズがしきい値以上であることの確認)
-                // [Pre-Assert手順] - サイズ 10 を返却する。
+                // [Pre-Assert手順] - cplat_file_get_size() から、サイズに 10 を設定して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_interprocess_lock_try_lock(_))
         .WillOnce(Return(
             CPLAT_ERR_BUSY)); // [Pre-Assert確認_異常系] - cplat_interprocess_lock_try_lock() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_interprocess_lock_try_lock() から CPLAT_ERR_BUSY を返却する。
+    // [Pre-Assert手順] - cplat_interprocess_lock_try_lock() から CPLAT_ERR_BUSY を返す。
     EXPECT_CALL(mock_cplat, cplat_rename(_, _, _))
         .Times(0); // [Pre-Assert確認_異常系] - cplat_rename() が呼び出されないこと。
     EXPECT_CALL(mock_cplat, cplat_interprocess_lock_unlock(_))
         .Times(0); // [Pre-Assert確認_異常系] - cplat_interprocess_lock_unlock() が呼び出されないこと。
 
     // Act
-    int result = cplat_trace_file_sink_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                             "lock busy"); // [手順] - 1 行書き込む。
+    int result = cplat_trace_file_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "lock busy"); // [手順] - "lock busy" を指定して cplat_trace_file_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1141,13 +1160,13 @@ TEST_F(trace_fileTest, test_create_same_path_shares_handle_in_single_process)
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("trace.log"), open_flags_default(), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_file_open() が "trace.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。(同一パスの create を 2 回呼んでもオープンは 1 回であることの確認)
-                 // [Pre-Assert手順] - cplat_file_open() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_file_open() から 0 を返す。
 
     // Act
-    cplat_trace_file_sink *first =
-        cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [手順] - 1 回目の create を呼ぶ。
-    cplat_trace_file_sink *second =
-        cplat_trace_file_sink_create("trace.log", 0, 0, 0); // [手順] - 同一パスで 2 回目の create を呼ぶ。
+    cplat_trace_file_sink *first = cplat_trace_file_sink_create(
+        "trace.log", 0, 0, 0); // [手順] - パス "trace.log" を指定して cplat_trace_file_sink_create() を呼び出す。
+    cplat_trace_file_sink *second = cplat_trace_file_sink_create(
+        "trace.log", 0, 0, 0); // [手順] - 同一パス "trace.log" を指定して cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
     ASSERT_NE(nullptr,
@@ -1187,12 +1206,14 @@ TEST_F(trace_fileTest, test_shared_handle_survives_until_last_dispose)
                 // [Pre-Assert確認_正常系] - "after first dispose" を探した actual.find() の戻り値が std::string::npos 以外であること。
                 return 0;
             }); // [Pre-Assert確認_正常系] - 1 回目の dispose の後に cplat_file_write() が 1 回呼び出されること。
-                // [Pre-Assert手順] - 書き込み内容を確認し、0 を返却する。
+                // [Pre-Assert手順] - cplat_file_write() から、書き込み内容を確認して 0 を返す。
 
     // Act
-    cplat_trace_file_sink_dispose(first); // [手順] - 1 人目の利用者が解放する。
-    int result = cplat_trace_file_sink_write(second, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                             "after first dispose"); // [手順] - 2 人目の利用者が書き込む。
+    cplat_trace_file_sink_dispose(
+        first); // [手順] - 1 人目の sink を指定して cplat_trace_file_sink_dispose() を呼び出す。
+    int result = cplat_trace_file_sink_write(
+        second, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "after first dispose"); // [手順] - 2 人目の sink と "after first dispose" を指定して cplat_trace_file_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1217,7 +1238,8 @@ TEST_F(trace_fileTest, test_create_same_path_with_mismatched_shared_flag_returns
 
     // Act
     cplat_trace_file_sink *second = cplat_trace_file_sink_create(
-        "trace.log", 0, 0, CPLAT_TRACE_FILE_SINK_SHARED); // [手順] - 同一パスを共有モードで create する。
+        "trace.log", 0, 0,
+        CPLAT_TRACE_FILE_SINK_SHARED); // [手順] - 占有モードで開いた同一パスと共有モードを指定して cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1238,17 +1260,17 @@ TEST_F(trace_fileTest, test_create_different_paths_returns_distinct_handles)
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("first.log"), open_flags_default(), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_file_open() が "first.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - 1 つ目の cplat_file_open() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_file_open() から、1 つ目に対して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_file_open(_, StrEq("second.log"), open_flags_default(), _))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - cplat_file_open() が "second.log" と等しい文字列、open_flags_default() の戻り値を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - 2 つ目の cplat_file_open() から 0 を返却する。
+                 // [Pre-Assert手順] - cplat_file_open() から、2 つ目に対して 0 を返す。
 
     // Act
-    cplat_trace_file_sink *first =
-        cplat_trace_file_sink_create("first.log", 0, 0, 0); // [手順] - 1 つ目のパスで create を呼ぶ。
-    cplat_trace_file_sink *second =
-        cplat_trace_file_sink_create("second.log", 0, 0, 0); // [手順] - 2 つ目のパスで create を呼ぶ。
+    cplat_trace_file_sink *first = cplat_trace_file_sink_create(
+        "first.log", 0, 0, 0); // [手順] - パス "first.log" を指定して cplat_trace_file_sink_create() を呼び出す。
+    cplat_trace_file_sink *second = cplat_trace_file_sink_create(
+        "second.log", 0, 0, 0); // [手順] - パス "second.log" を指定して cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
     ASSERT_NE(nullptr,

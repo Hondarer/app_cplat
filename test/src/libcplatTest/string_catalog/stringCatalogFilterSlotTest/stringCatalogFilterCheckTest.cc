@@ -80,7 +80,8 @@ TEST_F(stringCatalogFilterCheckTest, numeric_comparison_warns_mixed_and_type_mis
     // Pre-Assert
 
     // Act
-    actual_ret = check("arg.value == 5"); // [手順] - 文字列、整数、ポインターに分かれる value を数値と比較する。
+    actual_ret = check(
+        "arg.value == 5"); // [手順] - 文字列、整数、ポインターに分かれる value を数値と比較する条件式を指定して check() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - check() の戻り値が CPLAT_OK であること。
@@ -131,7 +132,7 @@ TEST_F(stringCatalogFilterCheckTest, null_comparison_warns_only_integer_entry)
     // Pre-Assert
 
     // Act
-    actual_ret = check("arg.value == null"); // [手順] - value を null と比較する。
+    actual_ret = check("arg.value == null"); // [手順] - value を null と比較する条件式を指定して check() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - check() の戻り値が CPLAT_OK であること。
@@ -163,7 +164,8 @@ TEST_F(stringCatalogFilterCheckTest, mixed_warning_is_reported_once_per_name)
     // Pre-Assert
 
     // Act
-    actual_ret = check("arg.value == 5 || arg.value == \"x\""); // [手順] - value を数値と文字列の両方と比較する。
+    actual_ret = check(
+        "arg.value == 5 || arg.value == \"x\""); // [手順] - value を数値と文字列の両方と比較する条件式を指定して check() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - check() の戻り値が CPLAT_OK であること。
@@ -203,7 +205,8 @@ TEST_F(stringCatalogFilterCheckTest, never_satisfiable_line_is_diagnosed_and_war
     // Pre-Assert
 
     // Act
-    actual_ret = check("arg.count starts_with \"1\""); // [手順] - 整数だけの count を文字列で判定する。
+    actual_ret = check(
+        "arg.count starts_with \"1\""); // [手順] - 整数だけの count を文字列で判定する条件式を指定して check() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - check() の戻り値が CPLAT_OK であること。
@@ -243,9 +246,11 @@ TEST_F(stringCatalogFilterCheckTest, has_and_index_reference_are_not_warned_as_m
     // Pre-Assert
 
     // Act
-    actual_has_ret = check("has(arg.value)"); // [手順] - value の有無だけを判定する。
+    actual_has_ret =
+        check("has(arg.value)"); // [手順] - value の有無だけを判定する条件式を指定して check() を呼び出す。
     actual_has_count = warning_count_;
-    actual_index_ret = check("arg[0] == 5"); // [手順] - 0 番目の引数を数値と比較する。
+    actual_index_ret =
+        check("arg[0] == 5"); // [手順] - 0 番目の引数を数値と比較する条件式を指定して check() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_has_ret); // [確認_正常系] - has に対する check() の戻り値が CPLAT_OK であること。
@@ -282,9 +287,9 @@ TEST_F(stringCatalogFilterCheckTest, warning_count_exceeding_capacity_is_reporte
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_filter_slot_check(slot_, image, kImageSize, nullptr, 0U, nullptr, actual_warnings, 1U,
-                                               &actual_count); // [手順] - 容量 1 で確認する。
+    actual_ret = cplat_string_catalog_filter_slot_check(
+        slot_, image, kImageSize, nullptr, 0U, nullptr, actual_warnings, 1U,
+        &actual_count); // [手順] - 容量 1 の警告の格納先を指定して cplat_string_catalog_filter_slot_check() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -323,11 +328,13 @@ TEST_F(stringCatalogFilterCheckTest, check_keeps_applied_conditions)
     // Pre-Assert
 
     // Act
-    actual_ret = check("key == FILTER_TEST_MIXED_KEY_TEXT_VALUE"); // [手順] - 別の条件式を確認する。
-    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_MIXED_KEY_NUMBER_VALUE,
-                                                &actual_number_state); // [手順] - 適用中の状態を取得する。
-    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_MIXED_KEY_TEXT_VALUE,
-                                                &actual_text_state); // [手順] - 適用中の状態を取得する。
+    actual_ret = check("key == FILTER_TEST_MIXED_KEY_TEXT_VALUE"); // [手順] - 別の条件式を指定して check() を呼び出す。
+    (void)cplat_string_catalog_filter_slot_test(
+        slot_, FILTER_TEST_MIXED_KEY_NUMBER_VALUE,
+        &actual_number_state); // [手順] - 適用中の状態で FILTER_TEST_MIXED_KEY_NUMBER_VALUE を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
+    (void)cplat_string_catalog_filter_slot_test(
+        slot_, FILTER_TEST_MIXED_KEY_TEXT_VALUE,
+        &actual_text_state); // [手順] - 適用中の状態で FILTER_TEST_MIXED_KEY_TEXT_VALUE を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - check() の戻り値が CPLAT_OK であること。
@@ -354,8 +361,9 @@ TEST_F(stringCatalogFilterCheckTest, corrupt_image_is_rejected)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_filter_slot_check(slot_, image, kImageSize, nullptr, 0U, nullptr, nullptr, 0U,
-                                                        &actual_count); // [手順] - 壊れた領域を確認する。
+    actual_ret = cplat_string_catalog_filter_slot_check(
+        slot_, image, kImageSize, nullptr, 0U, nullptr, nullptr, 0U,
+        &actual_count); // [手順] - 壊れた領域を指定して cplat_string_catalog_filter_slot_check() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -387,10 +395,10 @@ TEST_F(stringCatalogFilterCheckTest, null_arguments_are_rejected)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_slot); // [確認_異常系] - スロットが NULL の cplat_string_catalog_filter_slot_check() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_slot); // [確認_異常系] - スロットが nullptr の cplat_string_catalog_filter_slot_check() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_image); // [確認_異常系] - 領域が NULL の cplat_string_catalog_filter_slot_check() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_image); // [確認_異常系] - 領域が nullptr の cplat_string_catalog_filter_slot_check() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 // [サブ手順参照 名前=stringCatalogFilterCheckTest.TearDown]
 
@@ -404,8 +412,9 @@ TEST_F(stringCatalogFilterCheckTest, describe_notes_mixed_argument_in_japanese)
     // Pre-Assert
 
     // Act
-    actual_ret = describe("arg.value == 5 && arg.value != 6",
-                          CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - value を 2 回比較する条件式を説明する。
+    actual_ret = describe(
+        "arg.value == 5 && arg.value != 6",
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - value を 2 回比較する条件式を指定して describe() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - describe() の戻り値が CPLAT_OK であること。
@@ -427,7 +436,9 @@ TEST_F(stringCatalogFilterCheckTest, describe_notes_mixed_argument_in_neutral)
     // Pre-Assert
 
     // Act
-    actual_ret = describe("arg.value == null", CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL); // [手順] - 条件式を説明する。
+    actual_ret = describe(
+        "arg.value == null",
+        CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL); // [手順] - value を null と比較する条件式を指定して describe() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - describe() の戻り値が CPLAT_OK であること。
@@ -450,9 +461,12 @@ TEST_F(stringCatalogFilterCheckTest, describe_does_not_note_unmixed_or_has_only_
 
     // Act
     actual_count_ret =
-        describe("arg.count == 1", CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - count を説明する。
+        describe("arg.count == 1",
+                 CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - count の条件式を指定して describe() を呼び出す。
     actual_count_noted = (std::strstr(description_, "注意") != nullptr);
-    actual_has_ret = describe("has(arg.value)", CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - has を説明する。
+    actual_has_ret =
+        describe("has(arg.value)",
+                 CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - has() の条件式を指定して describe() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,

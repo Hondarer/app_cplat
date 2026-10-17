@@ -19,12 +19,24 @@ TEST(atomicInitLayoutTest, static_init_holds_initial_value_for_every_type)
     // Pre-Assert
 
     // Act
-    const uint8_t loaded_u8 = cplat_atomic_load_u8(&s_u8, CPLAT_MEMORY_ORDER_SEQ_CST);     // [手順] - u8 を読み取る。
-    const int32_t loaded_i32 = cplat_atomic_load_i32(&s_i32, CPLAT_MEMORY_ORDER_SEQ_CST);  // [手順] - i32 を読み取る。
-    const uint32_t loaded_u32 = cplat_atomic_load_u32(&s_u32, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - u32 を読み取る。
-    const int64_t loaded_i64 = cplat_atomic_load_i64(&s_i64, CPLAT_MEMORY_ORDER_SEQ_CST);  // [手順] - i64 を読み取る。
-    const uint64_t loaded_u64 = cplat_atomic_load_u64(&s_u64, CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - u64 を読み取る。
-    void *const loaded_ptr = cplat_atomic_load_ptr(&s_ptr, CPLAT_MEMORY_ORDER_SEQ_CST);    // [手順] - ptr を読み取る。
+    const uint8_t loaded_u8 = cplat_atomic_load_u8(
+        &s_u8,
+        CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - u8 のアトミック変数を指定して cplat_atomic_load_u8() を呼び出す。
+    const int32_t loaded_i32 = cplat_atomic_load_i32(
+        &s_i32,
+        CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - i32 のアトミック変数を指定して cplat_atomic_load_i32() を呼び出す。
+    const uint32_t loaded_u32 = cplat_atomic_load_u32(
+        &s_u32,
+        CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - u32 のアトミック変数を指定して cplat_atomic_load_u32() を呼び出す。
+    const int64_t loaded_i64 = cplat_atomic_load_i64(
+        &s_i64,
+        CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - i64 のアトミック変数を指定して cplat_atomic_load_i64() を呼び出す。
+    const uint64_t loaded_u64 = cplat_atomic_load_u64(
+        &s_u64,
+        CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - u64 のアトミック変数を指定して cplat_atomic_load_u64() を呼び出す。
+    void *const loaded_ptr = cplat_atomic_load_ptr(
+        &s_ptr,
+        CPLAT_MEMORY_ORDER_SEQ_CST); // [手順] - ptr のアトミック変数を指定して cplat_atomic_load_ptr() を呼び出す。
 
     // Assert
     EXPECT_EQ(200U, loaded_u8); // [確認_正常系] - cplat_atomic_load_u8() の戻り値が 200U であること。

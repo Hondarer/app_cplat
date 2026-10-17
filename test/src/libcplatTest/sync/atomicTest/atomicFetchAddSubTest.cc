@@ -21,8 +21,9 @@ TEST(atomicFetchAddSubTest, i32_fetch_add_returns_previous_value_for_every_memor
         const int32_t operand = (int32_t)(10 + (int32_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] =
-            cplat_atomic_fetch_add_i32(&atomic, operand, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で加算する。
+        previous_values[index] = cplat_atomic_fetch_add_i32(
+            &atomic, operand,
+            kAllMemoryOrders[index]); // [手順] - 各メモリ順序を指定して cplat_atomic_fetch_add_i32() を呼び出す。
         current = (int32_t)(current + operand);
     }
 
@@ -58,8 +59,9 @@ TEST(atomicFetchAddSubTest, i32_fetch_sub_returns_previous_value_for_every_memor
         const int32_t operand = (int32_t)(10 + (int32_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] =
-            cplat_atomic_fetch_sub_i32(&atomic, operand, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で減算する。
+        previous_values[index] = cplat_atomic_fetch_sub_i32(
+            &atomic, operand,
+            kAllMemoryOrders[index]); // [手順] - 各メモリ順序を指定して cplat_atomic_fetch_sub_i32() を呼び出す。
         current = (int32_t)(current - operand);
     }
 
@@ -95,8 +97,9 @@ TEST(atomicFetchAddSubTest, u32_fetch_add_returns_previous_value_for_every_memor
         const uint32_t operand = (uint32_t)(10U + (uint32_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] =
-            cplat_atomic_fetch_add_u32(&atomic, operand, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で加算する。
+        previous_values[index] = cplat_atomic_fetch_add_u32(
+            &atomic, operand,
+            kAllMemoryOrders[index]); // [手順] - 各メモリ順序を指定して cplat_atomic_fetch_add_u32() を呼び出す。
         current = (uint32_t)(current + operand);
     }
 
@@ -132,8 +135,9 @@ TEST(atomicFetchAddSubTest, u32_fetch_sub_returns_previous_value_for_every_memor
         const uint32_t operand = (uint32_t)(10U + (uint32_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] =
-            cplat_atomic_fetch_sub_u32(&atomic, operand, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で減算する。
+        previous_values[index] = cplat_atomic_fetch_sub_u32(
+            &atomic, operand,
+            kAllMemoryOrders[index]); // [手順] - 各メモリ順序を指定して cplat_atomic_fetch_sub_u32() を呼び出す。
         current = (uint32_t)(current - operand);
     }
 
@@ -169,8 +173,9 @@ TEST(atomicFetchAddSubTest, i64_fetch_add_returns_previous_value_for_every_memor
         const int64_t operand = (int64_t)(10000000000LL + (int64_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] =
-            cplat_atomic_fetch_add_i64(&atomic, operand, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で加算する。
+        previous_values[index] = cplat_atomic_fetch_add_i64(
+            &atomic, operand,
+            kAllMemoryOrders[index]); // [手順] - 各メモリ順序を指定して cplat_atomic_fetch_add_i64() を呼び出す。
         current = (int64_t)(current + operand);
     }
 
@@ -207,8 +212,9 @@ TEST(atomicFetchAddSubTest, i64_fetch_sub_returns_previous_value_for_every_memor
         const int64_t operand = (int64_t)(10000000000LL + (int64_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] =
-            cplat_atomic_fetch_sub_i64(&atomic, operand, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で減算する。
+        previous_values[index] = cplat_atomic_fetch_sub_i64(
+            &atomic, operand,
+            kAllMemoryOrders[index]); // [手順] - 各メモリ順序を指定して cplat_atomic_fetch_sub_i64() を呼び出す。
         current = (int64_t)(current - operand);
     }
 
@@ -244,8 +250,9 @@ TEST(atomicFetchAddSubTest, u64_fetch_add_returns_previous_value_for_every_memor
         const uint64_t operand = (uint64_t)(10000000000ULL + (uint64_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] =
-            cplat_atomic_fetch_add_u64(&atomic, operand, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で加算する。
+        previous_values[index] = cplat_atomic_fetch_add_u64(
+            &atomic, operand,
+            kAllMemoryOrders[index]); // [手順] - 各メモリ順序を指定して cplat_atomic_fetch_add_u64() を呼び出す。
         current = (uint64_t)(current + operand);
     }
 
@@ -282,8 +289,9 @@ TEST(atomicFetchAddSubTest, u64_fetch_sub_returns_previous_value_for_every_memor
         const uint64_t operand = (uint64_t)(10000000000ULL + (uint64_t)index);
 
         expected_previous[index] = current;
-        previous_values[index] =
-            cplat_atomic_fetch_sub_u64(&atomic, operand, kAllMemoryOrders[index]); // [手順] - 各メモリ順序で減算する。
+        previous_values[index] = cplat_atomic_fetch_sub_u64(
+            &atomic, operand,
+            kAllMemoryOrders[index]); // [手順] - 各メモリ順序を指定して cplat_atomic_fetch_sub_u64() を呼び出す。
         current = (uint64_t)(current - operand);
     }
 

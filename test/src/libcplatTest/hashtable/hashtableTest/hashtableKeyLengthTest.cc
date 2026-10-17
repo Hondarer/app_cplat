@@ -64,13 +64,13 @@ TEST_F(hashtableKeyLengthTest, keys_with_different_lengths_are_distinct)
     // Act
     int actual_ret_short = cplat_hashtable_add_with_key_length(
         ht, k_short_key, sizeof(k_short_key), &value_short,
-        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 有効長 2 のキーを追加する。
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 有効長 2 のキーを指定して cplat_hashtable_add_with_key_length() を呼び出す。
     int actual_ret_with_zero = cplat_hashtable_add_with_key_length(
         ht, k_short_key_with_zero, sizeof(k_short_key_with_zero), &value_with_zero,
-        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 末尾に 0 を足した有効長 3 のキーを追加する。
-    int actual_ret_full =
-        cplat_hashtable_add(ht, k_full_key, &value_full,
-                            CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 0 埋めした key_size のキーを追加する。
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 末尾に 0 を足した有効長 3 のキーを指定して cplat_hashtable_add_with_key_length() を呼び出す。
+    int actual_ret_full = cplat_hashtable_add(
+        ht, k_full_key, &value_full,
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 0 埋めした key_size のキーを指定して cplat_hashtable_add() を呼び出す。
     int actual_ret_count = cplat_hashtable_count(ht, &in_use);
     int actual_value_short = read_int_value(ht, k_short_key, sizeof(k_short_key));
     int actual_value_with_zero = read_int_value(ht, k_short_key_with_zero, sizeof(k_short_key_with_zero));
@@ -125,33 +125,42 @@ TEST_F(hashtableKeyLengthTest, key_length_variants_operate_on_the_given_length)
                                  &ht); // [状態] - レコード時刻を持つテーブルを構築しておく。
 
     // Act
-    int actual_ret_upsert_insert =
-        cplat_hashtable_upsert_with_key_length(ht, k_short_key, sizeof(k_short_key), &value_first,
-                                               &inserted_first); // [手順] - 未登録の短いキーを upsert する。
-    int actual_ret_upsert_update =
-        cplat_hashtable_upsert_with_key_length(ht, k_short_key, sizeof(k_short_key), &value_second,
-                                               &inserted_second); // [手順] - 同じ短いキーを再度 upsert する。
-    int actual_ret_update = cplat_hashtable_update_with_key_length(ht, k_short_key, sizeof(k_short_key),
-                                                                   &value_third); // [手順] - 短いキーの値を更新する。
-    int actual_ret_value_ref = cplat_hashtable_find_value_ref_with_key_length(ht, k_short_key, sizeof(k_short_key),
-                                                                              &value_ref); // [手順] - 値の参照を得る。
-    int actual_ret_recno = cplat_hashtable_find_recno_with_key_length(ht, k_short_key, sizeof(k_short_key),
-                                                                      &record); // [手順] - レコード番号を得る。
+    int actual_ret_upsert_insert = cplat_hashtable_upsert_with_key_length(
+        ht, k_short_key, sizeof(k_short_key), &value_first,
+        &inserted_first); // [手順] - 未登録の短いキーを指定して cplat_hashtable_upsert_with_key_length() を呼び出す。
+    int actual_ret_upsert_update = cplat_hashtable_upsert_with_key_length(
+        ht, k_short_key, sizeof(k_short_key), &value_second,
+        &inserted_second); // [手順] - 同じ短いキーを指定して cplat_hashtable_upsert_with_key_length() を呼び出す。
+    int actual_ret_update = cplat_hashtable_update_with_key_length(
+        ht, k_short_key, sizeof(k_short_key),
+        &value_third); // [手順] - 短いキーと新しい値を指定して cplat_hashtable_update_with_key_length() を呼び出す。
+    int actual_ret_value_ref = cplat_hashtable_find_value_ref_with_key_length(
+        ht, k_short_key, sizeof(k_short_key),
+        &value_ref); // [手順] - 短いキーを指定して cplat_hashtable_find_value_ref_with_key_length() を呼び出す。
+    int actual_ret_recno = cplat_hashtable_find_recno_with_key_length(
+        ht, k_short_key, sizeof(k_short_key),
+        &record); // [手順] - 短いキーを指定して cplat_hashtable_find_recno_with_key_length() を呼び出す。
     int actual_ret_timestamp_ref = cplat_hashtable_find_timestamp_ref_with_key_length(
-        ht, k_short_key, sizeof(k_short_key), &timestamp_ref); // [手順] - 変更時刻の参照を得る。
+        ht, k_short_key, sizeof(k_short_key),
+        &timestamp_ref); // [手順] - 短いキーを指定して cplat_hashtable_find_timestamp_ref_with_key_length() を呼び出す。
     int actual_ret_timestamp_val = cplat_hashtable_find_timestamp_val_with_key_length(
-        ht, k_short_key, sizeof(k_short_key), &timestamp_val); // [手順] - 変更時刻を複製する。
+        ht, k_short_key, sizeof(k_short_key),
+        &timestamp_val); // [手順] - 短いキーを指定して cplat_hashtable_find_timestamp_val_with_key_length() を呼び出す。
     int actual_timestamp_compare = (timestamp_ref != nullptr)
                                        ? std::memcmp(timestamp_ref, &timestamp_val, sizeof(timestamp_val))
                                        : -1; // [手順] - 削除で 0 埋めされる前に、参照先と複製した変更時刻を比べる。
     int actual_ret_generation = cplat_hashtable_find_generation_with_key_length(
-        ht, k_short_key, sizeof(k_short_key), &generation); // [手順] - 世代カウンターを得る。
+        ht, k_short_key, sizeof(k_short_key),
+        &generation); // [手順] - 短いキーを指定して cplat_hashtable_find_generation_with_key_length() を呼び出す。
     int actual_ret_full_key = cplat_hashtable_find_recno(
-        ht, k_full_key, &record_after_delete); // [手順] - 0 埋めした key_size のキーで検索する。
-    int actual_ret_delete =
-        cplat_hashtable_delete_with_key_length(ht, k_short_key, sizeof(k_short_key)); // [手順] - 短いキーを削除する。
+        ht, k_full_key,
+        &record_after_delete); // [手順] - 0 埋めした key_size のキーを指定して cplat_hashtable_find_recno() を呼び出す。
+    int actual_ret_delete = cplat_hashtable_delete_with_key_length(
+        ht, k_short_key,
+        sizeof(k_short_key)); // [手順] - 短いキーを指定して cplat_hashtable_delete_with_key_length() を呼び出す。
     int actual_ret_after_delete = cplat_hashtable_find_recno_with_key_length(
-        ht, k_short_key, sizeof(k_short_key), &record_after_delete); // [手順] - 削除後に短いキーで検索する。
+        ht, k_short_key, sizeof(k_short_key),
+        &record_after_delete); // [手順] - 削除後に短いキーを指定して cplat_hashtable_find_recno_with_key_length() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -222,11 +231,12 @@ TEST_F(hashtableKeyLengthTest, insert_direct_and_copy_with_key_length)
                                  &ht); // [状態] - バイナリ キーのテーブルを構築しておく。
 
     // Act
-    int actual_ret_insert =
-        cplat_hashtable_insert_direct_with_key_length(ht, 3, k_short_key, sizeof(k_short_key), 1, &value, nullptr,
-                                                      0); // [手順] - レコード 3 へ短いキーを直接書き込む。
+    int actual_ret_insert = cplat_hashtable_insert_direct_with_key_length(
+        ht, 3, k_short_key, sizeof(k_short_key), 1, &value, nullptr,
+        0); // [手順] - レコード 3 と短いキーを指定して cplat_hashtable_insert_direct_with_key_length() を呼び出す。
     int actual_ret_copy = cplat_hashtable_find_value_copy_with_key_length(
-        ht, k_short_key, sizeof(k_short_key), &copied, sizeof(copied), &required); // [手順] - 短いキーで値を複製する。
+        ht, k_short_key, sizeof(k_short_key), &copied, sizeof(copied),
+        &required); // [手順] - 短いキーを指定して cplat_hashtable_find_value_copy_with_key_length() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -265,10 +275,12 @@ TEST_F(hashtableKeyLengthTest, get_key_returns_effective_length)
                                                      &record); // [状態] - レコード番号を得ておく。
 
     // Act
-    int actual_ret_ref =
-        cplat_hashtable_get_key_ref(ht, record, &key_ref, &key_length); // [手順] - キーの参照と有効長を得る。
-    int actual_ret_copy = cplat_hashtable_get_key_copy(ht, record, copied.data(), copied.size(),
-                                                       &required); // [手順] - キーを複製する。
+    int actual_ret_ref = cplat_hashtable_get_key_ref(
+        ht, record, &key_ref,
+        &key_length); // [手順] - レコード番号を指定して cplat_hashtable_get_key_ref() を呼び出す。
+    int actual_ret_copy = cplat_hashtable_get_key_copy(
+        ht, record, copied.data(), copied.size(),
+        &required); // [手順] - キーの複製先を指定して cplat_hashtable_get_key_copy() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -311,13 +323,17 @@ TEST_F(hashtableKeyLengthTest, string_key_table_rejects_key_length_variants)
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [状態] - キーを追加しておく。
 
     // Act
-    int actual_ret_ref = cplat_hashtable_get_key_ref(ht, 1, &key_ref, &key_length); // [手順] - キーの参照と長さを得る。
-    int actual_ret_add =
-        cplat_hashtable_add_with_key_length(ht, "xyz", 3, &value,
-                                            CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 有効長版で追加する。
-    int actual_ret_find =
-        cplat_hashtable_find_recno_with_key_length(ht, "abc", 3, &record);        // [手順] - 有効長版で検索する。
-    int actual_ret_delete = cplat_hashtable_delete_with_key_length(ht, "abc", 3); // [手順] - 有効長版で削除する。
+    int actual_ret_ref = cplat_hashtable_get_key_ref(
+        ht, 1, &key_ref, &key_length); // [手順] - レコード 1 を指定して cplat_hashtable_get_key_ref() を呼び出す。
+    int actual_ret_add = cplat_hashtable_add_with_key_length(
+        ht, "xyz", 3, &value,
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 有効長 3 のキー "xyz" を指定して cplat_hashtable_add_with_key_length() を呼び出す。
+    int actual_ret_find = cplat_hashtable_find_recno_with_key_length(
+        ht, "abc", 3,
+        &record); // [手順] - 有効長 3 のキー "abc" を指定して cplat_hashtable_find_recno_with_key_length() を呼び出す。
+    int actual_ret_delete = cplat_hashtable_delete_with_key_length(
+        ht, "abc",
+        3); // [手順] - 有効長 3 のキー "abc" を指定して cplat_hashtable_delete_with_key_length() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -355,14 +371,16 @@ TEST_F(hashtableKeyLengthTest, rejects_invalid_key_length_arguments)
     // Act
     int actual_ret_add_long = cplat_hashtable_add_with_key_length(
         ht, long_key, sizeof(long_key), &value,
-        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - key_size を超える有効長で追加する。
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - key_size を超える有効長を指定して cplat_hashtable_add_with_key_length() を呼び出す。
     int actual_ret_find_long = cplat_hashtable_find_recno_with_key_length(
-        ht, long_key, sizeof(long_key), &record); // [手順] - key_size を超える有効長で検索する。
-    int actual_ret_null_ht =
-        cplat_hashtable_add_with_key_length(nullptr, k_short_key, sizeof(k_short_key), &value,
-                                            CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - ht に NULL を渡す。
-    int actual_ret_null_key =
-        cplat_hashtable_find_recno_with_key_length(ht, nullptr, 0, &record); // [手順] - key に NULL を渡す。
+        ht, long_key, sizeof(long_key),
+        &record); // [手順] - key_size を超える有効長を指定して cplat_hashtable_find_recno_with_key_length() を呼び出す。
+    int actual_ret_null_ht = cplat_hashtable_add_with_key_length(
+        nullptr, k_short_key, sizeof(k_short_key), &value,
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - ht に nullptr を指定して cplat_hashtable_add_with_key_length() を呼び出す。
+    int actual_ret_null_key = cplat_hashtable_find_recno_with_key_length(
+        ht, nullptr, 0,
+        &record); // [手順] - key に nullptr を指定して cplat_hashtable_find_recno_with_key_length() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -373,10 +391,10 @@ TEST_F(hashtableKeyLengthTest, rejects_invalid_key_length_arguments)
         actual_ret_find_long); // [確認_異常系] - key_size を超える有効長を渡した cplat_hashtable_find_recno_with_key_length() の戻り値が CPLAT_ERR_OUT_OF_RANGE であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_add_with_key_length() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_add_with_key_length() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_find_recno_with_key_length() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_key); // [確認_異常系] - key に nullptr を渡した cplat_hashtable_find_recno_with_key_length() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -398,10 +416,11 @@ TEST_F(hashtableKeyLengthTest, accepts_zero_length_key)
 
     // Act
     int actual_ret_empty = cplat_hashtable_add_with_key_length(
-        ht, zeros, 0, &value_empty, CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 有効長 0 のキーを追加する。
-    int actual_ret_zeros =
-        cplat_hashtable_add(ht, zeros, &value_zeros,
-                            CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - すべて 0 のキーを追加する。
+        ht, zeros, 0, &value_empty,
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 有効長 0 のキーを指定して cplat_hashtable_add_with_key_length() を呼び出す。
+    int actual_ret_zeros = cplat_hashtable_add(
+        ht, zeros, &value_zeros,
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - すべて 0 のキーを指定して cplat_hashtable_add() を呼び出す。
     int actual_value_empty = read_int_value(ht, zeros, 0);
     int actual_value_zeros = read_int_value(ht, zeros, sizeof(zeros));
 
@@ -449,10 +468,11 @@ TEST_F(hashtableKeyLengthTest, key_length_survives_attach_and_resize)
     grown.capacity = 16;
 
     // Act
-    int actual_ret_attach = cplat_hashtable_attach(mgmt_copy.data(), mgmt_size, data_copy.data(), data_size,
-                                                   &attached); // [手順] - 複製した領域へ再接続する。
+    int actual_ret_attach =
+        cplat_hashtable_attach(mgmt_copy.data(), mgmt_size, data_copy.data(), data_size,
+                               &attached); // [手順] - 複製した領域を指定して cplat_hashtable_attach() を呼び出す。
     int actual_value_attached = read_int_value(attached, k_short_key, sizeof(k_short_key));
-    int actual_ret_resize = cplat_hashtable_resize(ht, &grown); // [手順] - 元のテーブルを拡大する。
+    int actual_ret_resize = cplat_hashtable_resize(ht, &grown); // [手順] - cplat_hashtable_resize() を呼び出す。
     int actual_value_resized = read_int_value(ht, k_short_key, sizeof(k_short_key));
     int actual_ret_validate = cplat_hashtable_validate(ht);
 
@@ -498,8 +518,10 @@ TEST_F(hashtableKeyLengthTest, validate_detects_broken_key_length)
     test_hashtable_entry_key(ht_padding, 0)[sizeof(k_short_key)] = 0x7F; // [状態] - 有効長の直後へ 0 以外を書く。
 
     // Act
-    int actual_ret_long = cplat_hashtable_validate(ht_long);       // [手順] - 有効長を壊したテーブルを検証する。
-    int actual_ret_padding = cplat_hashtable_validate(ht_padding); // [手順] - 0 埋めを壊したテーブルを検証する。
+    int actual_ret_long = cplat_hashtable_validate(
+        ht_long); // [手順] - 有効長を壊したテーブルを指定して cplat_hashtable_validate() を呼び出す。
+    int actual_ret_padding = cplat_hashtable_validate(
+        ht_padding); // [手順] - 0 埋めを壊したテーブルを指定して cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -526,7 +548,8 @@ TEST_F(hashtableKeyLengthTest, rejects_binary_key_size_over_uint32_max)
     config.key_size = static_cast<size_t>(UINT32_MAX) + 1u; // [状態] - UINT32_MAX を超える key_size を設定する。
 
     // Act
-    int actual_ret = cplat_hashtable_required_size(&config, &mgmt_size, &data_size); // [手順] - 必要サイズを求める。
+    int actual_ret = cplat_hashtable_required_size(
+        &config, &mgmt_size, &data_size); // [手順] - 設定を指定して cplat_hashtable_required_size() を呼び出す。
 
     // Assert
     EXPECT_EQ(

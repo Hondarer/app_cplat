@@ -16,7 +16,7 @@ TEST_F(fileTest, init_and_close_are_safe_for_unopened_handle)
     // Pre-Assert
 
     // Act
-    cplat_file_init(&file);           // [手順] - cplat_file_init() で初期化する。
+    cplat_file_init(&file);           // [手順] - 初期化対象のハンドルを指定して cplat_file_init() を呼び出す。
     cplat_file_close(&file, nullptr); // [手順] - 未オープンのまま cplat_file_close() を呼び出す。
     cplat_file_close(&file, nullptr); // [手順] - 続けてもう一度 cplat_file_close() を呼び出す。
 
@@ -47,10 +47,10 @@ TEST_F(fileTest, invalid_arguments_fail)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_open_file); // [確認_異常系] - file が NULL の cplat_file_open() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_open_file); // [確認_異常系] - file が nullptr の cplat_file_open() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_open_path); // [確認_異常系] - path が NULL の cplat_file_open() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_open_path); // [確認_異常系] - path が nullptr の cplat_file_open() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_write); // [確認_異常系] - 未オープンの cplat_file_write() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -59,10 +59,10 @@ TEST_F(fileTest, invalid_arguments_fail)
         actual_ret_get_size_closed); // [確認_異常系] - 未オープンの cplat_file_get_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_get_size_file); // [確認_異常系] - file が NULL の cplat_file_get_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_get_size_file); // [確認_異常系] - file が nullptr の cplat_file_get_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_get_size_out); // [確認_異常系] - size が NULL の cplat_file_get_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_get_size_out); // [確認_異常系] - size が nullptr の cplat_file_get_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 負のフラグでオープンすると CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
@@ -108,7 +108,7 @@ TEST_F(fileTest, file_id_invalid_arguments_fail)
             Assign(&errno, ENOENT),
             Return(
                 -1))); // [Pre-Assert確認_異常系] - stat() が "missing.dat" と等しい文字列を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - errno に ENOENT を設定し、-1 を返却する。
+                       // [Pre-Assert手順] - stat() から、errno に ENOENT を設定して -1 を返す。
 #endif                                /* PLATFORM_LINUX */
 
     // Act
@@ -124,16 +124,16 @@ TEST_F(fileTest, file_id_invalid_arguments_fail)
         actual_ret_get_id_closed); // [確認_異常系] - 未オープンの cplat_file_get_id() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_get_id_file); // [確認_異常系] - file が NULL の cplat_file_get_id() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_get_id_file); // [確認_異常系] - file が nullptr の cplat_file_get_id() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_get_path_null); // [確認_異常系] - path が NULL の cplat_file_get_path_id() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_get_path_null); // [確認_異常系] - path が nullptr の cplat_file_get_path_id() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_NOT_FOUND,
         actual_ret_get_path_missing); // [確認_異常系] - 存在しないパスの cplat_file_get_path_id() の戻り値が CPLAT_ERR_NOT_FOUND であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_get_path_id); // [確認_異常系] - id が NULL の cplat_file_get_path_id() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_get_path_id); // [確認_異常系] - id が nullptr の cplat_file_get_path_id() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // CREATE_NEW を CREATE なしで指定すると CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
@@ -148,9 +148,9 @@ TEST_F(fileTest, create_new_without_create_fails)
     // Pre-Assert
 
     // Act
-    int actual_ret_file_open =
-        cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE_NEW | CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE,
-                        nullptr); // [手順] - CREATE を指定せず CREATE_NEW | READ | WRITE でオープンを試みる。
+    int actual_ret_file_open = cplat_file_open(
+        &file, kPath, CPLAT_FILE_OPEN_CREATE_NEW | CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE,
+        nullptr); // [手順] - CREATE を指定せず CREATE_NEW | READ | WRITE を指定して cplat_file_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -193,7 +193,8 @@ TEST_F(fileTest, read_invalid_arguments_fail)
 
     // Act
     int actual_ret_not_open =
-        cplat_file_read(&file, buf, sizeof(buf), &read_len, nullptr); // [手順] - 未オープンのハンドルで読み取りを行う。
+        cplat_file_read(&file, buf, sizeof(buf), &read_len,
+                        nullptr); // [手順] - 未オープンのハンドルを指定して cplat_file_read() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -217,7 +218,7 @@ TEST_F(fileTest, append_open_reports_existing_size)
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq(kPath), O_WRONLY | O_CREAT | O_APPEND | kWriteThroughFlag, 0644))
         .WillOnce(Return(
             kFakeFd)); // [Pre-Assert確認_正常系] - open() が kPath と等しい文字列、O_WRONLY | O_CREAT | O_APPEND | kWriteThroughFlag、0644 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - センチネル記述子 7 を返却する。
+                       // [Pre-Assert手順] - open() から、センチネル記述子 7 を返す。
     EXPECT_CALL(mock_sys_stat_, fstat(_, _, _, kFakeFd, _))
         .WillOnce(
             [](const char *, int, const char *, int, struct stat *st)
@@ -225,14 +226,14 @@ TEST_F(fileTest, append_open_reports_existing_size)
                 fill_stat(st, 5, 1, 1);
                 return 0;
             }); // [Pre-Assert確認_正常系] - fstat() が kFakeFd を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - サイズ 5 を設定する。
+                // [Pre-Assert手順] - fstat() から、サイズ 5 を設定して 0 を返す。
 
     // Act
     int actual_ret_file_open =
         cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
-                        nullptr); // [手順] - CREATE | APPEND | WRITE_THROUGH でオープンする。
+                        nullptr); // [手順] - CREATE | APPEND | WRITE_THROUGH を指定して cplat_file_open() を呼び出す。
     int actual_ret_file_get_size =
-        cplat_file_get_size(&file, &size, nullptr); // [手順] - cplat_file_get_size() でサイズを取得する。
+        cplat_file_get_size(&file, &size, nullptr); // [手順] - cplat_file_get_size() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -241,7 +242,7 @@ TEST_F(fileTest, append_open_reports_existing_size)
     ASSERT_EQ(CPLAT_OK,
               actual_ret_file_get_size); // [確認_正常系] - cplat_file_get_size() の戻り値が CPLAT_OK であること。
     EXPECT_EQ((size_t)5,
-              size); // [確認_正常系] - size が 5 であること。(fstat が設定したサイズ 5 が報告されたことの確認)
+              size); // [確認_正常系] - size が 5 であること。(fstat() が設定したサイズ 5 が報告されたことの確認)
 
     // Cleanup
     (void)cplat_file_close(&file, nullptr);
@@ -262,7 +263,7 @@ TEST_F(fileTest, truncate_open_resets_existing_file_size)
                 open(_, _, _, StrEq(kPath), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | kWriteThroughFlag, 0644))
         .WillOnce(Return(
             kFakeFd)); // [Pre-Assert確認_正常系] - open() が kPath と等しい文字列、O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | kWriteThroughFlag、0644 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - センチネル記述子 7 を返却する。
+                       // [Pre-Assert手順] - open() から、センチネル記述子 7 を返す。
     EXPECT_CALL(mock_sys_stat_, fstat(_, _, _, kFakeFd, _))
         .WillOnce(
             [](const char *, int, const char *, int, struct stat *st)
@@ -270,15 +271,15 @@ TEST_F(fileTest, truncate_open_resets_existing_file_size)
                 fill_stat(st, 0, 1, 1);
                 return 0;
             }); // [Pre-Assert確認_正常系] - fstat() が kFakeFd を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - サイズ 0 を設定する。
+                // [Pre-Assert手順] - fstat() から、サイズ 0 を設定して 0 を返す。
 
     // Act
-    int actual_ret_file_open = cplat_file_open(&file, kPath,
-                                               CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_TRUNCATE |
-                                                   CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
-                                               nullptr); // [手順] - TRUNCATE を含むフラグでオープンする。
+    int actual_ret_file_open = cplat_file_open(
+        &file, kPath,
+        CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_TRUNCATE | CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
+        nullptr); // [手順] - TRUNCATE を含むフラグを指定して cplat_file_open() を呼び出す。
     int actual_ret_file_get_size =
-        cplat_file_get_size(&file, &size, nullptr); // [手順] - cplat_file_get_size() でサイズを取得する。
+        cplat_file_get_size(&file, &size, nullptr); // [手順] - cplat_file_get_size() を呼び出す。
 
     // Assert
     ASSERT_EQ(CPLAT_OK,
@@ -286,7 +287,7 @@ TEST_F(fileTest, truncate_open_resets_existing_file_size)
     ASSERT_EQ(CPLAT_OK,
               actual_ret_file_get_size); // [確認_正常系] - cplat_file_get_size() の戻り値が CPLAT_OK であること。
     EXPECT_EQ((size_t)0,
-              size); // [確認_正常系] - size が 0 であること。(fstat が設定したサイズ 0 が報告されたことの確認)
+              size); // [確認_正常系] - size が 0 であること。(fstat() が設定したサイズ 0 が報告されたことの確認)
 
     // Cleanup
     (void)cplat_file_close(&file, nullptr);
@@ -307,10 +308,10 @@ TEST_F(fileTest, write_then_reopen_appends)
                 open(_, _, _, StrEq(kPath), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | kWriteThroughFlag, 0644))
         .WillOnce(Return(kFakeFd));
     // [Pre-Assert確認_正常系] - open() が kPath と等しい文字列、O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | kWriteThroughFlag、0644 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - open() にて kFakeFd を返す。
+    // [Pre-Assert手順] - open() から kFakeFd を返す。
     EXPECT_CALL(mock_unistd_, write(_, _, _, kFakeFd, _, 3u)).WillOnce(Return(3));
     // [Pre-Assert確認_正常系] - write() が kFakeFd、3u を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - write() にて 3 を返す。
+    // [Pre-Assert手順] - write() から 3 を返す。
     EXPECT_CALL(mock_sys_stat_, fstat(_, _, _, kFakeFd, _))
         .WillOnce(
             [](const char *, int, const char *, int, struct stat *st)
@@ -318,14 +319,15 @@ TEST_F(fileTest, write_then_reopen_appends)
                 fill_stat(st, 3, 1, 1);
                 return 0;
             }); // [Pre-Assert確認_正常系] - fstat() が kFakeFd を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - センチネル記述子 7 と書き込み長 3、サイズ 3 を返却する。
+                // [Pre-Assert手順] - fstat() から、サイズ 3 を設定して 0 を返す。
 
     // Act
-    int actual_ret_file_open = cplat_file_open(&file, kPath,
-                                               CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_TRUNCATE |
-                                                   CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
-                                               nullptr);                    // [手順] - 新規作成でオープンする。
-    int actual_ret_file_write = cplat_file_write(&file, "abc", 3, nullptr); // [手順] - "abc" 3 バイトを書き込む。
+    int actual_ret_file_open = cplat_file_open(
+        &file, kPath,
+        CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_TRUNCATE | CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
+        nullptr); // [手順] - 新規作成となるパスを指定して cplat_file_open() を呼び出す。
+    int actual_ret_file_write = cplat_file_write(
+        &file, "abc", 3, nullptr); // [手順] - "abc" と長さ 3 を指定して cplat_file_write() を呼び出す。
     int actual_ret_file_get_size = cplat_file_get_size(&file, &size, nullptr);
 
     // Assert
@@ -338,23 +340,24 @@ TEST_F(fileTest, write_then_reopen_appends)
         CPLAT_OK,
         actual_ret_file_get_size); // [確認_正常系] - 書き込み後の cplat_file_get_size() の戻り値が CPLAT_OK であること。
     EXPECT_EQ((size_t)3,
-              size); // [確認_正常系] - size が 3 であること。(fstat が設定したサイズ 3 が報告されたことの確認)
+              size); // [確認_正常系] - size が 3 であること。(fstat() が設定したサイズ 3 が報告されたことの確認)
 
     // Pre-Assert_2
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq(kPath), O_WRONLY | O_CREAT | O_APPEND | kWriteThroughFlag, 0644))
         .WillOnce(Return(kFakeFd));
     // [Pre-Assert確認_正常系] - open() が kPath と等しい文字列、O_WRONLY | O_CREAT | O_APPEND | kWriteThroughFlag、0644 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - open() にて kFakeFd を返す。
+    // [Pre-Assert手順] - open() から kFakeFd を返す。
     EXPECT_CALL(mock_unistd_, write(_, _, _, kFakeFd, _, 3u))
         .WillOnce(Return(3)); // [Pre-Assert確認_正常系] - write() が kFakeFd、3u を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - センチネル記述子 7 と書き込み長 3 を返却する。
+                              // [Pre-Assert手順] - write() から書き込み長 3 を返す。
 
     // Act_2
     (void)cplat_file_close(&file, nullptr);
     int actual_ret_file_open_2 =
         cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
-                        nullptr); // [手順] - クローズ後に追記モードで再オープンする。
-    int actual_ret_file_write_2 = cplat_file_write(&file, "def", 3, nullptr); // [手順] - "def" 3 バイトを追記する。
+                        nullptr); // [手順] - クローズ後に追記モードを指定して cplat_file_open() を呼び出す。
+    int actual_ret_file_write_2 = cplat_file_write(
+        &file, "def", 3, nullptr); // [手順] - "def" と長さ 3 を指定して cplat_file_write() を呼び出す。
 
     // Assert_2
     ASSERT_EQ(
@@ -388,7 +391,7 @@ TEST_F(fileTest, file_id_matches_between_handle_and_path)
                 return 0;
             });
     // [Pre-Assert確認_正常系] - fstat() が kFakeFd を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - fstat() にて volume 11、index 22 を設定し、0 を返す。
+    // [Pre-Assert手順] - fstat() から、volume 11、index 22 を設定して 0 を返す。
     EXPECT_CALL(mock_sys_stat_, stat(_, _, _, StrEq(kPath), _))
         .WillOnce(
             [](const char *, int, const char *, const char *, struct stat *st)
@@ -396,17 +399,17 @@ TEST_F(fileTest, file_id_matches_between_handle_and_path)
                 fill_stat(st, 0, 11, 22);
                 return 0;
             }); // [Pre-Assert確認_正常系] - stat() が kPath と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - volume 11、index 22 を設定する。
+                // [Pre-Assert手順] - stat() から、volume 11、index 22 を設定して 0 を返す。
 
     // Act
     int actual_ret_file_open =
         cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
-                        nullptr);              // [手順] - オープンする。
+                        nullptr);              // [手順] - cplat_file_open() を呼び出す。
     ASSERT_EQ(CPLAT_OK, actual_ret_file_open); // [状態確認] - cplat_file_open() の戻り値が CPLAT_OK であること。
     int actual_ret_file_get_id =
-        cplat_file_get_id(&file, &handle_id, nullptr); // [手順] - ハンドルから同一性 ID を取得する。
-    int actual_ret_file_get_path_id =
-        cplat_file_get_path_id(kPath, &path_id, nullptr); // [手順] - パスから同一性 ID を取得する。
+        cplat_file_get_id(&file, &handle_id, nullptr); // [手順] - ハンドルを指定して cplat_file_get_id() を呼び出す。
+    int actual_ret_file_get_path_id = cplat_file_get_path_id(
+        kPath, &path_id, nullptr); // [手順] - パスを指定して cplat_file_get_path_id() を呼び出す。
 
     // Assert
     ASSERT_EQ(CPLAT_OK,
@@ -440,7 +443,7 @@ TEST_F(fileTest, file_id_differs_when_path_stat_differs)
                 return 0;
             });
     // [Pre-Assert確認_正常系] - fstat() が kFakeFd を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - fstat() にて volume 11、index 22 を設定し、0 を返す。
+    // [Pre-Assert手順] - fstat() から、volume 11、index 22 を設定して 0 を返す。
     EXPECT_CALL(mock_sys_stat_, stat(_, _, _, StrEq(kPath), _))
         .WillOnce(
             [](const char *, int, const char *, const char *, struct stat *st)
@@ -448,17 +451,17 @@ TEST_F(fileTest, file_id_differs_when_path_stat_differs)
                 fill_stat(st, 0, 11, 33);
                 return 0;
             }); // [Pre-Assert確認_正常系] - stat() が kPath と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - ハンドル側とパス側で異なる index を設定する。
+                // [Pre-Assert手順] - stat() から、ハンドル側と異なる index 33 を設定して 0 を返す。
 
     // Act
     int actual_ret_file_open =
         cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_APPEND | CPLAT_FILE_OPEN_WRITE_THROUGH,
-                        nullptr);              // [手順] - オープンする。
+                        nullptr);              // [手順] - cplat_file_open() を呼び出す。
     ASSERT_EQ(CPLAT_OK, actual_ret_file_open); // [状態確認] - cplat_file_open() の戻り値が CPLAT_OK であること。
     int actual_ret_file_get_id =
-        cplat_file_get_id(&file, &handle_id, nullptr); // [手順] - ハンドルから同一性 ID を取得する。
-    int actual_ret_file_get_path_id =
-        cplat_file_get_path_id(kPath, &path_id, nullptr); // [手順] - パスから同一性 ID を取得する。
+        cplat_file_get_id(&file, &handle_id, nullptr); // [手順] - ハンドルを指定して cplat_file_get_id() を呼び出す。
+    int actual_ret_file_get_path_id = cplat_file_get_path_id(
+        kPath, &path_id, nullptr); // [手順] - パスを指定して cplat_file_get_path_id() を呼び出す。
 
     // Assert
     ASSERT_EQ(CPLAT_OK,
@@ -488,15 +491,17 @@ TEST_F(fileTest, default_access_remains_write_only)
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq(kPath), O_WRONLY | O_CREAT, 0644))
         .WillOnce(Return(
             kFakeFd)); // [Pre-Assert確認_正常系] - open() が kPath と等しい文字列、O_WRONLY | O_CREAT、0644 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - センチネル記述子 7 を返却する。
+    // [Pre-Assert手順] - open() から、センチネル記述子 7 を返す。
     EXPECT_CALL(mock_unistd_, write(_, _, _, kFakeFd, _, 3u))
         .WillOnce(Return(3)); // [Pre-Assert確認_正常系] - write() が kFakeFd、3u を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 書き込み長 3 を返却する。
+                              // [Pre-Assert手順] - write() から書き込み長 3 を返す。
 
     // Act
-    int actual_ret_file_open = cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE,
-                                               nullptr); // [手順] - READ/WRITE を指定せず CREATE のみでオープンする。
-    int actual_ret_file_write = cplat_file_write(&file, "abc", 3, nullptr); // [手順] - "abc" 3 バイトを書き込む。
+    int actual_ret_file_open =
+        cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE,
+                        nullptr); // [手順] - READ/WRITE を指定せず CREATE のみを指定して cplat_file_open() を呼び出す。
+    int actual_ret_file_write = cplat_file_write(
+        &file, "abc", 3, nullptr); // [手順] - "abc" と長さ 3 を指定して cplat_file_write() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -523,16 +528,17 @@ TEST_F(fileTest, explicit_write_only_open_allows_write)
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq(kPath), O_WRONLY | O_CREAT, 0644))
         .WillOnce(Return(
             kFakeFd)); // [Pre-Assert確認_正常系] - open() が kPath と等しい文字列、O_WRONLY | O_CREAT、0644 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - センチネル記述子 7 を返却する。
+    // [Pre-Assert手順] - open() から、センチネル記述子 7 を返す。
     EXPECT_CALL(mock_unistd_, write(_, _, _, kFakeFd, _, 3u))
         .WillOnce(Return(3)); // [Pre-Assert確認_正常系] - write() が kFakeFd、3u を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 書き込み長 3 を返却する。
+                              // [Pre-Assert手順] - write() から書き込み長 3 を返す。
 
     // Act
     int open_result = cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_WRITE,
-                                      nullptr); // [手順] - CREATE | WRITE でオープンする。
+                                      nullptr); // [手順] - CREATE | WRITE を指定して cplat_file_open() を呼び出す。
     int write_result =
-        cplat_file_write(&file, "abc", 3u, nullptr); // [手順] - オープンしたファイルへ 3 バイトを書き込む。
+        cplat_file_write(&file, "abc", 3u,
+                         nullptr); // [手順] - オープンしたファイルに 3 バイトを指定して cplat_file_write() を呼び出す。
 
     // Assert
     ASSERT_EQ(CPLAT_OK,
@@ -558,15 +564,17 @@ TEST_F(fileTest, read_only_open_rejects_write)
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq(kPath), O_RDONLY, 0644))
         .WillOnce(Return(
             kFakeFd)); // [Pre-Assert確認_正常系] - open() が kPath と等しい文字列、O_RDONLY、0644 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - センチネル記述子 7 を返却する。
+                       // [Pre-Assert手順] - open() から、センチネル記述子 7 を返す。
     EXPECT_CALL(mock_unistd_, write(_, _, _, _, _, _))
         .Times(
             0); // [Pre-Assert確認_異常系] - write() が呼び出されないこと。(読み取り専用でオープンした後は write() へ進まないことの確認)
 
     // Act
-    int actual_ret_file_open = cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_READ,
-                                               nullptr); // [手順] - CPLAT_FILE_OPEN_READ のみでオープンする。
-    int actual_ret_file_write = cplat_file_write(&file, "x", 1, nullptr); // [手順] - 1 バイトの書き込みを試みる。
+    int actual_ret_file_open =
+        cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_READ,
+                        nullptr); // [手順] - CPLAT_FILE_OPEN_READ のみを指定して cplat_file_open() を呼び出す。
+    int actual_ret_file_write =
+        cplat_file_write(&file, "x", 1, nullptr); // [手順] - 1 バイトを指定して cplat_file_write() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -595,11 +603,12 @@ TEST_F(fileTest, read_only_open_fails_for_missing_file)
             Assign(&errno, ENOENT),
             Return(
                 -1))); // [Pre-Assert確認_異常系] - open() が kPath と等しい文字列、O_RDONLY、0644 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - errno に ENOENT を設定し、-1 を返却する。
+                       // [Pre-Assert手順] - open() から、errno に ENOENT を設定して -1 を返す。
 
     // Act
-    int actual_ret_file_open = cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_READ,
-                                               nullptr); // [手順] - CREATE を伴わずに READ のみでオープンを試みる。
+    int actual_ret_file_open =
+        cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_READ,
+                        nullptr); // [手順] - CREATE を伴わず READ のみを指定して cplat_file_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -620,10 +629,10 @@ TEST_F(fileTest, read_write_open_allows_write_and_reports_size)
     // Pre-Assert
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq(kPath), O_RDWR | O_CREAT, 0644)).WillOnce(Return(kFakeFd));
     // [Pre-Assert確認_正常系] - open() が kPath と等しい文字列、O_RDWR | O_CREAT、0644 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - open() にて kFakeFd を返す。
+    // [Pre-Assert手順] - open() から kFakeFd を返す。
     EXPECT_CALL(mock_unistd_, write(_, _, _, kFakeFd, _, 5u)).WillOnce(Return(5));
     // [Pre-Assert確認_正常系] - write() が kFakeFd、5u を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - write() にて 5 を返す。
+    // [Pre-Assert手順] - write() から 5 を返す。
     EXPECT_CALL(mock_sys_stat_, fstat(_, _, _, kFakeFd, _))
         .WillOnce(
             [](const char *, int, const char *, int, struct stat *st)
@@ -631,14 +640,16 @@ TEST_F(fileTest, read_write_open_allows_write_and_reports_size)
                 fill_stat(st, 5, 1, 1);
                 return 0;
             }); // [Pre-Assert確認_正常系] - fstat() が kFakeFd を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - センチネル記述子 7 と書き込み長 5、サイズ 5 を返却する。
+                // [Pre-Assert手順] - fstat() から、サイズ 5 を設定して 0 を返す。
 
     // Act
     int actual_ret_file_open =
         cplat_file_open(&file, kPath, CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE,
-                        nullptr); // [手順] - CREATE | READ | WRITE でオープンする。
-    int actual_ret_file_write = cplat_file_write(&file, "abcde", 5, nullptr);  // [手順] - "abcde" 5 バイトを書き込む。
-    int actual_ret_file_get_size = cplat_file_get_size(&file, &size, nullptr); // [手順] - サイズを取得する。
+                        nullptr); // [手順] - CREATE | READ | WRITE を指定して cplat_file_open() を呼び出す。
+    int actual_ret_file_write = cplat_file_write(
+        &file, "abcde", 5, nullptr); // [手順] - "abcde" と長さ 5 を指定して cplat_file_write() を呼び出す。
+    int actual_ret_file_get_size =
+        cplat_file_get_size(&file, &size, nullptr); // [手順] - cplat_file_get_size() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -650,7 +661,7 @@ TEST_F(fileTest, read_write_open_allows_write_and_reports_size)
     ASSERT_EQ(CPLAT_OK,
               actual_ret_file_get_size); // [確認_正常系] - cplat_file_get_size() の戻り値が CPLAT_OK であること。
     EXPECT_EQ((size_t)5,
-              size); // [確認_正常系] - size が 5 であること。(fstat が設定したサイズ 5 が報告されたことの確認)
+              size); // [確認_正常系] - size が 5 であること。(fstat() が設定したサイズ 5 が報告されたことの確認)
 
     // Cleanup
     (void)cplat_file_close(&file, nullptr);
@@ -669,13 +680,13 @@ TEST_F(fileTest, create_new_succeeds_for_absent_file)
     EXPECT_CALL(mock_fcntl_, open(_, _, _, StrEq(kPath), O_RDWR | O_CREAT | O_EXCL, 0644))
         .WillOnce(Return(
             kFakeFd)); // [Pre-Assert確認_正常系] - open() が kPath と等しい文字列、O_RDWR | O_CREAT | O_EXCL、0644 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - センチネル記述子 7 を返却する。
+                       // [Pre-Assert手順] - open() から、センチネル記述子 7 を返す。
 
     // Act
-    int actual_ret_file_open = cplat_file_open(&file, kPath,
-                                               CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_CREATE_NEW |
-                                                   CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE,
-                                               nullptr); // [手順] - CREATE | CREATE_NEW | READ | WRITE でオープンする。
+    int actual_ret_file_open = cplat_file_open(
+        &file, kPath,
+        CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_CREATE_NEW | CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE,
+        nullptr); // [手順] - CREATE | CREATE_NEW | READ | WRITE を指定して cplat_file_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -701,13 +712,13 @@ TEST_F(fileTest, create_new_fails_for_existing_file)
             Assign(&errno, EEXIST),
             Return(
                 -1))); // [Pre-Assert確認_異常系] - open() が kPath と等しい文字列、O_RDWR | O_CREAT | O_EXCL、0644 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - errno に EEXIST を設定し、-1 を返却する。
+                       // [Pre-Assert手順] - open() から、errno に EEXIST を設定して -1 を返す。
 
     // Act
     int actual_ret_file_open = cplat_file_open(
         &file, kPath,
         CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_CREATE_NEW | CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE,
-        nullptr); // [手順] - 既存ファイルに対して CREATE | CREATE_NEW でオープンを試みる。
+        nullptr); // [手順] - 既存ファイルに対して CREATE | CREATE_NEW を指定して cplat_file_open() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -732,7 +743,7 @@ TEST_F(fileTest, set_size_extends_and_truncates_file)
     // Pre-Assert
     EXPECT_CALL(mock_unistd_, ftruncate(_, _, _, kFakeFd, 128)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - ftruncate() が kFakeFd、128 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - ftruncate() にて 0 を返す。
+    // [Pre-Assert手順] - ftruncate() から 0 を返す。
     EXPECT_CALL(mock_sys_stat_, fstat(_, _, _, kFakeFd, _))
         .WillOnce(
             [](const char *, int, const char *, int, struct stat *st)
@@ -740,10 +751,11 @@ TEST_F(fileTest, set_size_extends_and_truncates_file)
                 fill_stat(st, 128, 1, 1);
                 return 0;
             }); // [Pre-Assert確認_正常系] - fstat() が kFakeFd を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - ftruncate() は 0、fstat() はサイズ 128 を返却する。
+                // [Pre-Assert手順] - fstat() から、サイズ 128 を設定して 0 を返す。
 
     // Act
-    int actual_ret_set_size_1 = cplat_file_set_size(&file, 128, nullptr); // [手順] - サイズを 128 バイトへ拡張する。
+    int actual_ret_set_size_1 = cplat_file_set_size(
+        &file, 128, nullptr); // [手順] - 128 バイトへの拡張を指定して cplat_file_set_size() を呼び出す。
     int actual_ret_get_size_1 = cplat_file_get_size(&file, &size, nullptr);
 
     // Assert
@@ -753,12 +765,12 @@ TEST_F(fileTest, set_size_extends_and_truncates_file)
     ASSERT_EQ(CPLAT_OK, actual_ret_get_size_1);
     // [確認_正常系] - 1 回目の cplat_file_get_size() の戻り値が CPLAT_OK であること。
     EXPECT_EQ((size_t)128,
-              size); // [確認_正常系] - size が 128 であること。(fstat が設定したサイズ 128 が報告されたことの確認)
+              size); // [確認_正常系] - size が 128 であること。(fstat() が設定したサイズ 128 が報告されたことの確認)
 
     // Pre-Assert_2
     EXPECT_CALL(mock_unistd_, ftruncate(_, _, _, kFakeFd, 16)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - ftruncate() が kFakeFd、16 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - ftruncate() にて 0 を返す。
+    // [Pre-Assert手順] - ftruncate() から 0 を返す。
     EXPECT_CALL(mock_sys_stat_, fstat(_, _, _, kFakeFd, _))
         .WillOnce(
             [](const char *, int, const char *, int, struct stat *st)
@@ -766,10 +778,11 @@ TEST_F(fileTest, set_size_extends_and_truncates_file)
                 fill_stat(st, 16, 1, 1);
                 return 0;
             }); // [Pre-Assert確認_正常系] - fstat() が kFakeFd を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - ftruncate() は 0、fstat() はサイズ 16 を返却する。
+                // [Pre-Assert手順] - fstat() から、サイズ 16 を設定して 0 を返す。
 
     // Act_2
-    int actual_ret_set_size_2 = cplat_file_set_size(&file, 16, nullptr); // [手順] - サイズを 16 バイトへ縮小する。
+    int actual_ret_set_size_2 = cplat_file_set_size(
+        &file, 16, nullptr); // [手順] - 16 バイトへの縮小を指定して cplat_file_set_size() を呼び出す。
     int actual_ret_get_size_2 = cplat_file_get_size(&file, &size, nullptr);
 
     // Assert_2
@@ -779,7 +792,7 @@ TEST_F(fileTest, set_size_extends_and_truncates_file)
     ASSERT_EQ(CPLAT_OK, actual_ret_get_size_2);
     // [確認_正常系] - 2 回目の cplat_file_get_size() の戻り値が CPLAT_OK であること。
     EXPECT_EQ((size_t)16,
-              size); // [確認_正常系] - size が 16 であること。(fstat が設定したサイズ 16 が報告されたことの確認)
+              size); // [確認_正常系] - size が 16 であること。(fstat() が設定したサイズ 16 が報告されたことの確認)
 
     // Cleanup
     (void)cplat_file_close(&file, nullptr);
@@ -806,11 +819,11 @@ TEST_F(fileTest, read_returns_written_content)
                 memcpy(out, "abcde", 6);
                 return 5;
             }); // [Pre-Assert確認_正常系] - read() が kFakeFd、sizeof(buf) を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - "abcde" を書き込み、5 を返却する。
+                // [Pre-Assert手順] - read() から、"abcde" を書き込んで 5 を返す。
 
     // Act
-    int actual_ret_read =
-        cplat_file_read(&file, buf, sizeof(buf), &read_len, nullptr); // [手順] - 16 バイトを要求して読み取る。
+    int actual_ret_read = cplat_file_read(&file, buf, sizeof(buf), &read_len,
+                                          nullptr); // [手順] - 16 バイトを要求して cplat_file_read() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_read); // [確認_正常系] - cplat_file_read() の戻り値が CPLAT_OK であること。
@@ -845,13 +858,13 @@ TEST_F(fileTest, read_at_end_of_file_returns_zero_length)
             })
         .WillOnce(
             Return(0)); // [Pre-Assert確認_正常系] - read() が kFakeFd、sizeof(buf) を指定して 2 回呼び出されること。
-                        // [Pre-Assert手順] - 1 回目は 2 バイト、2 回目は 0 を返却する。
+                        // [Pre-Assert手順] - read() から 1 回目は 2 バイト、2 回目は 0 を返す。
 
     // Act
     int actual_ret_read = cplat_file_read(&file, buf, sizeof(buf), &read_len, nullptr);
     size_t first_len = read_len;
-    int actual_ret_read_eof =
-        cplat_file_read(&file, buf, sizeof(buf), &read_len, nullptr); // [手順] - 終端到達後に再度読み取りを行う。
+    int actual_ret_read_eof = cplat_file_read(&file, buf, sizeof(buf), &read_len,
+                                              nullptr); // [手順] - 終端到達後に再度 cplat_file_read() を呼び出す。
 
     // Assert
     ASSERT_EQ(CPLAT_OK, actual_ret_read); // [確認_正常系] - 1 回目の cplat_file_read() の戻り値が CPLAT_OK であること。
@@ -886,10 +899,11 @@ TEST_F(fileTest, flush_reports_success)
     // Pre-Assert
     EXPECT_CALL(mock_unistd_, fsync(_, _, _, kFakeFd))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - fsync() が kFakeFd を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 0 を返却する。
+                              // [Pre-Assert手順] - fsync() から 0 を返す。
 
     // Act
-    int result = cplat_file_flush(&file, &detail); // [手順] - 書き込み済みハンドルを flush する。
+    int result =
+        cplat_file_flush(&file, &detail); // [手順] - 書き込み済みハンドルを指定して cplat_file_flush() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_file_flush() の戻り値が CPLAT_OK であること。

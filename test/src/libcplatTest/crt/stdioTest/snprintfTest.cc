@@ -43,7 +43,8 @@ TEST_F(snprintfTest, exact_fit_succeeds)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_snprintf(buf, sizeof(buf), "abc"); // [手順] - 3 文字の "abc" を書式として渡す。
+    int actual_ret = cplat_snprintf(buf, sizeof(buf),
+                                    "abc"); // [手順] - 3 文字の "abc" を書式に指定して cplat_snprintf() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_snprintf() の戻り値が CPLAT_OK であること。
@@ -59,7 +60,9 @@ TEST_F(snprintfTest, truncation_clears_buffer)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_snprintf(buf, sizeof(buf), "abcd"); // [手順] - 終端を含めて 5 バイトを要する "abcd" を渡す。
+    int actual_ret = cplat_snprintf(
+        buf, sizeof(buf),
+        "abcd"); // [手順] - 終端を含めて 5 バイトを要する "abcd" を指定して cplat_snprintf() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -76,7 +79,7 @@ TEST_F(snprintfTest, null_dest_returns_invalid_argument)
 
     // Act
     int actual_ret =
-        cplat_snprintf(nullptr, 16u, "abc"); // [手順] - 書き込み先に NULL を渡して cplat_snprintf() を呼び出す。
+        cplat_snprintf(nullptr, 16u, "abc"); // [手順] - 書き込み先に nullptr を渡して cplat_snprintf() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -110,7 +113,7 @@ TEST_F(snprintfTest, null_format_returns_invalid_argument)
 
     // Act
     int actual_ret =
-        cplat_snprintf(buf, sizeof(buf), nullptr); // [手順] - 書式に NULL を渡して cplat_snprintf() を呼び出す。
+        cplat_snprintf(buf, sizeof(buf), nullptr); // [手順] - 書式に nullptr を渡して cplat_snprintf() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -126,8 +129,9 @@ TEST_F(snprintfTest, vsnprintf_formats_into_buffer)
     // Pre-Assert
 
     // Act
-    int actual_ret = call_cplat_vsnprintf(buf, sizeof(buf), "%s-%s", "a",
-                                          "b"); // [手順] - va_list 経由で "%s-%s" に "a" と "b" を与えて呼び出す。
+    int actual_ret =
+        call_cplat_vsnprintf(buf, sizeof(buf), "%s-%s", "a",
+                             "b"); // [手順] - "%s-%s" と "a"、"b" を指定して call_cplat_vsnprintf() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - call_cplat_vsnprintf() の戻り値が CPLAT_OK であること。
@@ -143,8 +147,9 @@ TEST_F(snprintfTest, vsnprintf_truncation_clears_buffer)
     // Pre-Assert
 
     // Act
-    int actual_ret = call_cplat_vsnprintf(buf, sizeof(buf), "%s",
-                                          "abcd"); // [手順] - va_list 経由で収まらない "abcd" を書き込ませる。
+    int actual_ret = call_cplat_vsnprintf(
+        buf, sizeof(buf), "%s",
+        "abcd"); // [手順] - バッファーに収まらない "abcd" を指定して call_cplat_vsnprintf() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,

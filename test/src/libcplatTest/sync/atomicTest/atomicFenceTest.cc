@@ -12,7 +12,8 @@ TEST(atomicFenceTest, thread_fence_can_be_called_with_every_memory_order)
     // Act
     for (std::size_t index = 0; index < kAllMemoryOrderCount; index++)
     {
-        cplat_atomic_thread_fence(kAllMemoryOrders[index]); // [手順] - 各メモリ順序でフェンスを呼び出す。
+        cplat_atomic_thread_fence(
+            kAllMemoryOrders[index]); // [手順] - 各メモリ順序を指定して cplat_atomic_thread_fence() を呼び出す。
     }
 
     // Assert

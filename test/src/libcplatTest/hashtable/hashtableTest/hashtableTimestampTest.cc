@@ -116,32 +116,40 @@ TEST_F(hashtableTimestampTest, add_update_delete_stamp_realtime)
 
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
-    int actual_ret_add = cplat_hashtable_add(ht, "a", value.data(),
-                                             CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - キーを追加する。
-    int actual_ret_add_time = cplat_hashtable_get_timestamp_val(ht, 1, &added);      // [手順] - 追加後の時刻を読む。
+    int actual_ret_add = cplat_hashtable_add(
+        ht, "a", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - キーを指定して cplat_hashtable_add() を呼び出す。
+    int actual_ret_add_time = cplat_hashtable_get_timestamp_val(
+        ht, 1, &added); // [手順] - 追加したレコード 1 を指定して cplat_hashtable_get_timestamp_val() を呼び出す。
     cplat_timespec table_added = {};
-    int actual_ret_table_add =
-        cplat_hashtable_get_table_timestamp_val(ht, &table_added); // [手順] - 追加後のテーブル時刻を読む。
-    int actual_ret_find_ref =
-        cplat_hashtable_find_timestamp_ref(ht, "a", &added_ref); // [手順] - キーで時刻参照を取る。
-    int actual_ret_find_val =
-        cplat_hashtable_find_timestamp_val(ht, "a", &added_copy); // [手順] - キーで時刻を複製する。
+    int actual_ret_table_add = cplat_hashtable_get_table_timestamp_val(
+        ht, &table_added); // [手順] - cplat_hashtable_get_table_timestamp_val() を呼び出す。
+    int actual_ret_find_ref = cplat_hashtable_find_timestamp_ref(
+        ht, "a", &added_ref); // [手順] - キーを指定して cplat_hashtable_find_timestamp_ref() を呼び出す。
+    int actual_ret_find_val = cplat_hashtable_find_timestamp_val(
+        ht, "a", &added_copy); // [手順] - キーを指定して cplat_hashtable_find_timestamp_val() を呼び出す。
     time_t added_ref_sec = (added_ref == nullptr) ? 0 : added_ref->tv_sec;
     (void)cplat_hashtable_add(
         ht, peer, value.data(),
-        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 同一バケットへ別キーを追加してチェーン先頭をずらす。
-    int actual_ret_walk = cplat_hashtable_find_timestamp_val(ht, "a", &walked); // [手順] - チェーンを辿って時刻を読む。
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 同一バケットの別キーを指定して cplat_hashtable_add() を呼び出す。
+    int actual_ret_walk = cplat_hashtable_find_timestamp_val(
+        ht, "a",
+        &walked); // [手順] - チェーン先頭ではないキーを指定して cplat_hashtable_find_timestamp_val() を呼び出す。
     fill_value(&value, "v2");
-    int actual_ret_update = cplat_hashtable_update(ht, "a", value.data());           // [手順] - 値を更新する。
-    int actual_ret_update_time = cplat_hashtable_get_timestamp_val(ht, 1, &updated); // [手順] - 更新後の時刻を読む。
+    int actual_ret_update =
+        cplat_hashtable_update(ht, "a", value.data()); // [手順] - 値を指定して cplat_hashtable_update() を呼び出す。
+    int actual_ret_update_time = cplat_hashtable_get_timestamp_val(
+        ht, 1, &updated); // [手順] - 更新したレコード 1 を指定して cplat_hashtable_get_timestamp_val() を呼び出す。
     cplat_timespec table_updated = {};
     int actual_ret_table_update = cplat_hashtable_get_table_timestamp_val(ht, &table_updated);
-    int actual_ret_delete = cplat_hashtable_delete(ht, "a");                          // [手順] - キーを削除する。
-    int actual_ret_deleted_time = cplat_hashtable_get_timestamp_val(ht, 1, &deleted); // [手順] - 削除後の時刻を読む。
+    int actual_ret_delete =
+        cplat_hashtable_delete(ht, "a"); // [手順] - キーを指定して cplat_hashtable_delete() を呼び出す。
+    int actual_ret_deleted_time = cplat_hashtable_get_timestamp_val(
+        ht, 1, &deleted); // [手順] - 削除したレコード 1 を指定して cplat_hashtable_get_timestamp_val() を呼び出す。
     cplat_timespec table_deleted = {};
     int actual_ret_table_delete = cplat_hashtable_get_table_timestamp_val(ht, &table_deleted);
-    int actual_ret_find_deleted =
-        cplat_hashtable_find_timestamp_val(ht, "a", &added); // [手順] - 削除済みキーで検索する。
+    int actual_ret_find_deleted = cplat_hashtable_find_timestamp_val(
+        ht, "a", &added); // [手順] - 削除済みキーを指定して cplat_hashtable_find_timestamp_val() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_add); // [確認_正常系] - cplat_hashtable_add() の戻り値が CPLAT_OK であること。
@@ -238,19 +246,31 @@ TEST_F(hashtableTimestampTest, add_revive_keeps_previous_value_and_stamps)
 
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
-    (void)cplat_hashtable_add(ht, "a", value.data(),
-                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 元の値で追加する。
-    (void)cplat_hashtable_delete(ht, "a"); // [手順] - 削除する (lifetime 5 のため削除済みのまま残る)。
-    (void)cplat_hashtable_get_timestamp_val(ht, 1, &before_revive);   // [手順] - 削除直後のレコード時刻を保存する。
-    (void)cplat_hashtable_get_table_timestamp_val(ht, &table_before); // [手順] - 削除直後のテーブル時刻を保存する。
+    (void)cplat_hashtable_add(
+        ht, "a", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 元の値を指定して cplat_hashtable_add() を呼び出す。
+    (void)cplat_hashtable_delete(
+        ht,
+        "a"); // [手順] - lifetime 5 のため削除済みのまま残る状態で、キーを指定して cplat_hashtable_delete() を呼び出す。
+    (void)cplat_hashtable_get_timestamp_val(
+        ht, 1,
+        &before_revive); // [手順] - 削除直後のレコード 1 を指定して cplat_hashtable_get_timestamp_val() を呼び出す。
+    (void)cplat_hashtable_get_table_timestamp_val(
+        ht, &table_before);    // [手順] - 削除直後の状態で cplat_hashtable_get_table_timestamp_val() を呼び出す。
     fill_value(&value, "new"); // [状態] - REVIVE では無視されるはずの新しい値を用意する。
-    int actual_ret_revive = cplat_hashtable_add(ht, "a", value.data(),
-                                                CPLAT_HASHTABLE_ADD_DELETED_REVIVE); // [手順] - REVIVE で復活させる。
-    int actual_ret_find = cplat_hashtable_find_value_ref(ht, "a", &found);           // [手順] - 復活後の値を取得する。
+    int actual_ret_revive = cplat_hashtable_add(
+        ht, "a", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_REVIVE); // [手順] - REVIVE を指定して cplat_hashtable_add() を呼び出す。
+    int actual_ret_find = cplat_hashtable_find_value_ref(
+        ht, "a", &found); // [手順] - キーを指定して cplat_hashtable_find_value_ref() を呼び出す。
     found_text = (found == nullptr) ? "" : static_cast<const char *>(found);
-    (void)cplat_hashtable_get_timestamp_val(ht, 1, &after_revive);   // [手順] - 復活後のレコード時刻を取得する。
-    (void)cplat_hashtable_get_table_timestamp_val(ht, &table_after); // [手順] - 復活後のテーブル時刻を取得する。
-    int actual_ret_counts = cplat_hashtable_count_status(ht, &in_use, &deleted, nullptr); // [手順] - 件数を取得する。
+    (void)cplat_hashtable_get_timestamp_val(
+        ht, 1,
+        &after_revive); // [手順] - 復活後のレコード 1 を指定して cplat_hashtable_get_timestamp_val() を呼び出す。
+    (void)cplat_hashtable_get_table_timestamp_val(
+        ht, &table_after); // [手順] - 復活後の状態で cplat_hashtable_get_table_timestamp_val() を呼び出す。
+    int actual_ret_counts = cplat_hashtable_count_status(
+        ht, &in_use, &deleted, nullptr); // [手順] - cplat_hashtable_count_status() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -299,9 +319,11 @@ TEST_F(hashtableTimestampTest, push_deleted_does_not_stamp)
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_delete(ht, "a");
-    (void)cplat_hashtable_get_timestamp_val(ht, 1, &before);                 // [手順] - 加齢前の時刻を保存する。
-    int actual_ret_push = cplat_hashtable_push_deleted(ht);                  // [手順] - 削除済みを 1 段階加齢する。
-    int actual_ret_after = cplat_hashtable_get_timestamp_val(ht, 1, &after); // [手順] - 加齢後の時刻を読む。
+    (void)cplat_hashtable_get_timestamp_val(
+        ht, 1, &before); // [手順] - 加齢前のレコード 1 を指定して cplat_hashtable_get_timestamp_val() を呼び出す。
+    int actual_ret_push = cplat_hashtable_push_deleted(ht); // [手順] - cplat_hashtable_push_deleted() を呼び出す。
+    int actual_ret_after = cplat_hashtable_get_timestamp_val(
+        ht, 1, &after); // [手順] - 加齢後のレコード 1 を指定して cplat_hashtable_get_timestamp_val() を呼び出す。
     int actual_ret_status = 0;
     int status = -1;
     actual_ret_status = cplat_hashtable_get_status(ht, 1, &status);
@@ -344,15 +366,19 @@ TEST_F(hashtableTimestampTest, empty_slot_time_is_not_found_and_zeroed)
 
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
-    int actual_ret_empty = cplat_hashtable_get_timestamp_val(ht, 1, &ts); // [手順] - 空スロットの時刻を読む。
+    int actual_ret_empty = cplat_hashtable_get_timestamp_val(
+        ht, 1, &ts); // [手順] - 空のレコード 1 を指定して cplat_hashtable_get_timestamp_val() を呼び出す。
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    int actual_ret_delete = cplat_hashtable_delete(ht, "a");              // [手順] - lifetime 2 で直ちに空へ戻す。
-    int actual_ret_after = cplat_hashtable_get_timestamp_val(ht, 1, &ts); // [手順] - 空へ戻したスロットの時刻を読む。
+    int actual_ret_delete = cplat_hashtable_delete(
+        ht, "a"); // [手順] - lifetime 2 の状態でキーを指定して cplat_hashtable_delete() を呼び出す。
+    int actual_ret_after = cplat_hashtable_get_timestamp_val(
+        ht, 1, &ts); // [手順] - 空へ戻したレコード 1 を指定して cplat_hashtable_get_timestamp_val() を呼び出す。
     int actual_ret_insert = cplat_hashtable_insert_direct(ht, 1, "b", 1, value.data(), &insert_timestamp, 1);
     int actual_ret_direct_time = cplat_hashtable_get_timestamp_val(ht, 1, &ts);
     (void)cplat_hashtable_delete(ht, "b");
     (void)cplat_hashtable_insert_direct(ht, 2, "c", 3, value.data(), &insert_timestamp, 2);
-    int actual_ret_purge = cplat_hashtable_purge_deleted(ht); // [手順] - 削除済みを空へ戻す。
+    int actual_ret_purge = cplat_hashtable_purge_deleted(
+        ht); // [手順] - 削除済みのレコードがある状態で cplat_hashtable_purge_deleted() を呼び出す。
     int actual_ret_purged = cplat_hashtable_get_timestamp_val(ht, 2, &ts);
 
     // Assert
@@ -419,10 +445,10 @@ TEST_F(hashtableTimestampTest, accessors_reject_invalid_arguments)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_get_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_get_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_get_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_get_null_out); // [確認_異常系] - 出力に NULL を渡した cplat_hashtable_get_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_get_null_out); // [確認_異常系] - 出力に nullptr を渡した cplat_hashtable_get_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_get_rec0); // [確認_異常系] - レコード番号 0 を渡した cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -431,22 +457,22 @@ TEST_F(hashtableTimestampTest, accessors_reject_invalid_arguments)
         actual_ret_get_rec_hi); // [確認_異常系] - 範囲外のレコード番号を渡した cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_get_val_null); // [確認_異常系] - 複製先に NULL を渡した cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_get_val_null); // [確認_異常系] - 複製先に nullptr を渡した cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_find_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_find_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_find_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_find_null_key); // [確認_異常系] - key に nullptr を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_find_null_out); // [確認_異常系] - 出力に NULL を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_find_null_out); // [確認_異常系] - 出力に nullptr を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_RANGE,
         actual_ret_find_long); // [確認_異常系] - 長すぎるキーを渡した cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_ERR_OUT_OF_RANGE であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_find_val_null); // [確認_異常系] - 複製先に NULL を渡した cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_find_val_null); // [確認_異常系] - 複製先に nullptr を渡した cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_NOT_FOUND,
         actual_ret_find_missing); // [確認_異常系] - 無いキーに対する cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_ERR_NOT_FOUND であること。
@@ -477,17 +503,19 @@ TEST_F(hashtableTimestampTest, table_timestamp_tracks_content_changes)
 
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
-    int actual_ret_create =
-        cplat_hashtable_get_table_timestamp_val(ht, &table); // [手順] - 構築直後のテーブル時刻を読む。
+    int actual_ret_create = cplat_hashtable_get_table_timestamp_val(
+        ht, &table); // [手順] - 構築直後の状態で cplat_hashtable_get_table_timestamp_val() を呼び出す。
     time_t created_sec = table.tv_sec;
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
     (void)cplat_hashtable_delete(ht, "a");
-    (void)cplat_hashtable_get_table_timestamp_val(ht, &table); // [手順] - 削除後のテーブル時刻を保存する。
+    (void)cplat_hashtable_get_table_timestamp_val(
+        ht, &table); // [手順] - 削除後の状態で cplat_hashtable_get_table_timestamp_val() を呼び出す。
     time_t after_delete = table.tv_sec;
-    int actual_ret_push = cplat_hashtable_push_deleted(ht); // [手順] - 削除済みを加齢する。
+    int actual_ret_push = cplat_hashtable_push_deleted(ht); // [手順] - cplat_hashtable_push_deleted() を呼び出す。
     int actual_ret_after_push = cplat_hashtable_get_table_timestamp_val(ht, &table);
     time_t after_push = table.tv_sec;
-    int actual_ret_purge = cplat_hashtable_purge_deleted(ht); // [手順] - 削除済みを空へ戻す。
+    int actual_ret_purge = cplat_hashtable_purge_deleted(
+        ht); // [手順] - 削除済みのレコードがある状態で cplat_hashtable_purge_deleted() を呼び出す。
     int actual_ret_after_purge = cplat_hashtable_get_table_timestamp_val(ht, &table);
     time_t after_purge = table.tv_sec;
     int actual_ret_old = cplat_hashtable_insert_direct(ht, 1, "b", 1, value.data(), &older, 1);
@@ -498,7 +526,7 @@ TEST_F(hashtableTimestampTest, table_timestamp_tracks_content_changes)
     time_t after_new = table.tv_sec;
     int actual_ret_ref = cplat_hashtable_get_table_timestamp_ref(ht, &table_ref);
     time_t ref_sec = (table_ref == nullptr) ? 0 : table_ref->tv_sec;
-    int actual_ret_clear = cplat_hashtable_clear(ht); // [手順] - テーブルを空にする。
+    int actual_ret_clear = cplat_hashtable_clear(ht); // [手順] - cplat_hashtable_clear() を呼び出す。
     int actual_ret_after_clear = cplat_hashtable_get_table_timestamp_val(ht, &table);
     int actual_ret_null_ht = cplat_hashtable_get_table_timestamp_ref(nullptr, &table_ref);
     int actual_ret_null_out = cplat_hashtable_get_table_timestamp_ref(ht, nullptr);
@@ -558,16 +586,16 @@ TEST_F(hashtableTimestampTest, table_timestamp_tracks_content_changes)
         table.tv_sec); // [確認_正常系] - table.tv_sec が 1020 であること。(clear でテーブル時刻が進んだことの確認)
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_table_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_get_table_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_out); // [確認_異常系] - 出力に NULL を渡した cplat_hashtable_get_table_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_out); // [確認_異常系] - 出力に nullptr を渡した cplat_hashtable_get_table_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_val_null); // [確認_異常系] - 複製先に NULL を渡した cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_val_null); // [確認_異常系] - 複製先に nullptr を渡した cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_val_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_val_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_get_table_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -626,25 +654,25 @@ TEST_F(hashtableTimestampTest, scope_table_record_timestamp_apis_are_unsupported
         actual_ret_find_val); // [確認_異常系] - SCOPE_TABLE での cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_ERR_UNSUPPORTED であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_get_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_get_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(CPLAT_ERR_UNSUPPORTED より引数検査が優先されたことの確認)
+        actual_ret_get_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_get_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(CPLAT_ERR_UNSUPPORTED より引数検査が優先されたことの確認)
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_get_null_out); // [確認_異常系] - 出力に NULL を渡した cplat_hashtable_get_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(CPLAT_ERR_UNSUPPORTED より引数検査が優先されたことの確認)
+        actual_ret_get_null_out); // [確認_異常系] - 出力に nullptr を渡した cplat_hashtable_get_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(CPLAT_ERR_UNSUPPORTED より引数検査が優先されたことの確認)
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_get_val_null); // [確認_異常系] - 複製先に NULL を渡した cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(CPLAT_ERR_UNSUPPORTED より引数検査が優先されたことの確認)
+        actual_ret_get_val_null); // [確認_異常系] - 複製先に nullptr を渡した cplat_hashtable_get_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。(CPLAT_ERR_UNSUPPORTED より引数検査が優先されたことの確認)
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_find_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_find_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_find_null_key); // [確認_異常系] - key に NULL を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_find_null_key); // [確認_異常系] - key に nullptr を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_find_null_out); // [確認_異常系] - 出力に NULL を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_find_null_out); // [確認_異常系] - 出力に nullptr を渡した cplat_hashtable_find_timestamp_ref() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_find_val_null); // [確認_異常系] - 複製先に NULL を渡した cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_find_val_null); // [確認_異常系] - 複製先に nullptr を渡した cplat_hashtable_find_timestamp_val() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_table_ref); // [確認_正常系] - SCOPE_TABLE での cplat_hashtable_get_table_timestamp_ref() の戻り値が CPLAT_OK であること。
@@ -693,10 +721,12 @@ TEST_F(hashtableTimestampTest, scope_table_insert_direct_and_table_timestamp)
     int actual_ret_delete = cplat_hashtable_delete(ht, "a");
     (void)cplat_hashtable_get_table_timestamp_val(ht, &table);
     time_t after_delete = table.tv_sec;
-    int actual_ret_nonnull = cplat_hashtable_insert_direct(ht, 2, "b", 1, value.data(), &supplied,
-                                                           0); // [手順] - SCOPE_TABLE で時刻を渡す。
-    int actual_ret_null = cplat_hashtable_insert_direct(ht, 2, "b", 1, value.data(), nullptr,
-                                                        0); // [手順] - SCOPE_TABLE で時刻を省略する。
+    int actual_ret_nonnull = cplat_hashtable_insert_direct(
+        ht, 2, "b", 1, value.data(), &supplied,
+        0); // [手順] - SCOPE_TABLE で時刻を指定して cplat_hashtable_insert_direct() を呼び出す。
+    int actual_ret_null = cplat_hashtable_insert_direct(
+        ht, 2, "b", 1, value.data(), nullptr,
+        0); // [手順] - SCOPE_TABLE で時刻を省略して cplat_hashtable_insert_direct() を呼び出す。
     int actual_ret_after_direct = cplat_hashtable_get_table_timestamp_val(ht, &table);
     time_t after_direct = table.tv_sec;
     int actual_ret_clear = cplat_hashtable_clear(ht);

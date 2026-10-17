@@ -122,7 +122,8 @@ TEST_F(pathDirnameTest, returns_einval_for_null_path_out)
     // Act
     int actual_ret = cplat_path_dirname(nullptr, 16, &err,
                                         "a/b"); // [手順] - cplat_path_dirname() を呼び出す。
-    cplat_error_get_last(&last_error);          // [手順] - TLS に記録された詳細エラーを取得する。
+    cplat_error_get_last(
+        &last_error); // [手順] - TLS に記録された詳細エラーの格納先として last_error を指定して cplat_error_get_last() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -171,13 +172,14 @@ TEST_F(pathDirnameTest, returns_einval_for_null_path)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_dirname(actual, sizeof(actual), &err,
-                                        nullptr); // [手順] - path に NULL を指定して cplat_path_dirname() を呼び出す。
+    int actual_ret =
+        cplat_path_dirname(actual, sizeof(actual), &err,
+                           nullptr); // [手順] - path に nullptr を指定して cplat_path_dirname() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret); // [確認_異常系] - path が NULL の cplat_path_dirname() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret); // [確認_異常系] - path が nullptr の cplat_path_dirname() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         1,
         cplat_error_is(
@@ -294,5 +296,5 @@ TEST_F(pathDirnameTest, allows_null_detail_out)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_BUFFER_TOO_SMALL,
-        actual_ret); // [確認_異常系] - detail_out が NULL の cplat_path_dirname() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+        actual_ret); // [確認_異常系] - detail_out が nullptr の cplat_path_dirname() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
 }

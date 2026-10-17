@@ -77,13 +77,13 @@ TEST_F(clockTest, monotonic_ms_converts_platform_value)
                 return 0;
             });
     // [Pre-Assert確認_正常系] - clock_gettime() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 単調増加クロック取得 API にて 12345 ミリ秒相当の値を返す。
+    // [Pre-Assert手順] - clock_gettime() から、12 秒 345678901 ナノ秒 (12345 ミリ秒相当) を設定して 0 を返す。
 #elif defined(PLATFORM_WINDOWS)
     Mock_windows mock_windows;
 
     EXPECT_CALL(mock_windows, GetTickCount64(_, _, _)).WillOnce(Return(12345ULL));
     // [Pre-Assert確認_正常系] - GetTickCount64() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 単調増加クロック取得 API にて 12345 ミリ秒相当の値を返す。
+    // [Pre-Assert手順] - GetTickCount64() から 12345 ミリ秒相当の 12345ULL を返す。
 #endif
 
     // Act
@@ -114,17 +114,18 @@ TEST_F(clockTest, monotonic_returns_split_platform_value)
                 return 0;
             });
     // [Pre-Assert確認_正常系] - clock_gettime() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 単調増加クロック取得 API にて 12 秒相当の時刻を返す。
+    // [Pre-Assert手順] - clock_gettime() から、12 秒 345678901 ナノ秒を設定して 0 を返す。
 #elif defined(PLATFORM_WINDOWS)
     Mock_windows mock_windows;
 
     EXPECT_CALL(mock_windows, GetTickCount64(_, _, _)).WillOnce(Return(12345ULL));
     // [Pre-Assert確認_正常系] - GetTickCount64() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 単調増加クロック取得 API にて 12 秒相当の時刻を返す。
+    // [Pre-Assert手順] - GetTickCount64() から 12 秒相当の 12345ULL を返す。
 #endif
 
     // Act
-    cplat_clock_get_monotonic(&actual_ts); // [手順] - cplat_clock_get_monotonic(&actual_ts) を呼び出す。
+    cplat_clock_get_monotonic(
+        &actual_ts); // [手順] - 出力先 actual_ts を指定して cplat_clock_get_monotonic() を呼び出す。
 
     // Assert
     EXPECT_EQ(12, actual_ts.tv_sec); // [確認_正常系] - actual_ts.tv_sec が 12 であること。
@@ -162,7 +163,7 @@ TEST_F(clockTest, realtime_returns_split_platform_value)
                 return 0;
             });
     // [Pre-Assert確認_正常系] - clock_gettime() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 実時刻取得 API にて期待する秒部とナノ秒部を返す。
+    // [Pre-Assert手順] - clock_gettime() から、期待する秒部とナノ秒部を設定して 0 を返す。
 #elif defined(PLATFORM_WINDOWS)
     const int32_t expected_nsec = 987654300;
     Mock_windows mock_windows;
@@ -171,11 +172,12 @@ TEST_F(clockTest, realtime_returns_split_platform_value)
         .WillOnce([&](const char *, const int, const char *, LPFILETIME file_time)
                   { *file_time = to_filetime(expected_sec, expected_nsec); });
     // [Pre-Assert確認_正常系] - GetSystemTimeAsFileTime() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 実時刻取得 API にて期待する秒部とナノ秒部を返す。
+    // [Pre-Assert手順] - GetSystemTimeAsFileTime() から、期待する秒部とナノ秒部を設定して戻る。
 #endif
 
     // Act
-    cplat_clock_get_realtime(&actual_ts); // [手順] - cplat_clock_get_realtime(&actual_ts) を呼び出す。
+    cplat_clock_get_realtime(
+        &actual_ts); // [手順] - 出力先 actual_ts を指定して cplat_clock_get_realtime() を呼び出す。
 
     // Assert
     EXPECT_EQ(expected_sec, actual_ts.tv_sec); // [確認_正常系] - actual_ts.tv_sec が expected_sec と一致すること。
@@ -209,7 +211,7 @@ TEST_F(clockTest, realtime_utc_uses_platform_conversion_result)
                 return 0;
             });
     // [Pre-Assert確認_正常系] - clock_gettime() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 実時刻取得 API にて期待する秒部とナノ秒部を返す。
+    // [Pre-Assert手順] - clock_gettime() から、期待する秒部とナノ秒部を設定して 0 を返す。
 #elif defined(PLATFORM_WINDOWS)
     Mock_windows mock_windows;
 
@@ -217,7 +219,7 @@ TEST_F(clockTest, realtime_utc_uses_platform_conversion_result)
         .WillOnce([&](const char *, const int, const char *, LPFILETIME file_time)
                   { *file_time = to_filetime(expected_sec, expected_nsec); });
     // [Pre-Assert確認_正常系] - GetSystemTimeAsFileTime() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 実時刻取得 API にて期待する秒部とナノ秒部を返す。
+    // [Pre-Assert手順] - GetSystemTimeAsFileTime() から、期待する秒部とナノ秒部を設定して戻る。
 #endif
 
     EXPECT_CALL(mock_cplat, cplat_gmtime(_, _))
@@ -235,11 +237,12 @@ TEST_F(clockTest, realtime_utc_uses_platform_conversion_result)
                 *utc_tm = expected_tm;
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_gmtime() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_gmtime() にて UTC 分解結果として 2024-04-05 06:07:08 相当を設定し、成功を返す。
+    // [Pre-Assert手順] - cplat_gmtime() から、UTC 分解結果として 2024-04-05 06:07:08 相当を設定して 0 を返す。
 
     // Act
     cplat_clock_get_realtime_utc(
-        &actual_tm, &actual_nsec); // [手順] - cplat_clock_get_realtime_utc(&actual_tm, &actual_nsec) を呼び出す。
+        &actual_tm,
+        &actual_nsec); // [手順] - 出力先 actual_tm と actual_nsec を指定して cplat_clock_get_realtime_utc() を呼び出す。
 
     // Assert
     // [サブ手順参照 名前=clockTest.expect_tm_equal]
@@ -283,7 +286,7 @@ TEST_F(clockTest, realtime_utc_zeroes_tm_when_cplat_gmtime_fails)
                 return 0;
             });
     // [Pre-Assert確認_異常系] - clock_gettime() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 実時刻取得 API にて期待する秒部とナノ秒部を返す。
+    // [Pre-Assert手順] - clock_gettime() から、期待する秒部とナノ秒部を設定して 0 を返す。
 #elif defined(PLATFORM_WINDOWS)
     Mock_windows mock_windows;
 
@@ -291,7 +294,7 @@ TEST_F(clockTest, realtime_utc_zeroes_tm_when_cplat_gmtime_fails)
         .WillOnce([&](const char *, const int, const char *, LPFILETIME file_time)
                   { *file_time = to_filetime(expected_sec, expected_nsec); });
     // [Pre-Assert確認_異常系] - GetSystemTimeAsFileTime() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 実時刻取得 API にて期待する秒部とナノ秒部を返す。
+    // [Pre-Assert手順] - GetSystemTimeAsFileTime() から、期待する秒部とナノ秒部を設定して戻る。
 #endif
 
     EXPECT_CALL(mock_cplat, cplat_gmtime(_, _))
@@ -304,11 +307,12 @@ TEST_F(clockTest, realtime_utc_zeroes_tm_when_cplat_gmtime_fails)
                 // [Pre-Assert確認_正常系] - utc_tm が &actual_tm と一致すること。
                 return -1;
             }); // [Pre-Assert確認_異常系] - cplat_gmtime() が 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_gmtime() にて失敗を返し、clock.c 側の 0 初期化処理へ進ませる。
+                // [Pre-Assert手順] - cplat_gmtime() から、clock.c 側の 0 初期化処理へ進ませるために -1 を返す。
 
     // Act
     cplat_clock_get_realtime_utc(
-        &actual_tm, &actual_nsec); // [手順] - cplat_clock_get_realtime_utc(&actual_tm, &actual_nsec) を呼び出す。
+        &actual_tm,
+        &actual_nsec); // [手順] - 出力先 actual_tm と actual_nsec を指定して cplat_clock_get_realtime_utc() を呼び出す。
 
     // Assert
     // [サブ手順参照 名前=clockTest.expect_tm_equal 区分=異常系]
@@ -342,7 +346,7 @@ TEST_F(clockTest, format_realtime_iso8601_local_outputs_offset_and_milliseconds)
                 *tm_value = local_tm;
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_localtime() が 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_localtime() からローカル時刻の分解値を返却する。
+                // [Pre-Assert手順] - cplat_localtime() から、ローカル時刻の分解値を設定して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_gmtime(_, _))
         .WillOnce(
             [&](struct tm *tm_value, const time_t *timep)
@@ -352,11 +356,12 @@ TEST_F(clockTest, format_realtime_iso8601_local_outputs_offset_and_milliseconds)
                 *tm_value = utc_tm;
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_gmtime() が 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_gmtime() から UTC の分解値を返却する。
+                // [Pre-Assert手順] - cplat_gmtime() から、UTC の分解値を設定して 0 を返す。
 
     // Act
     int actual_ret_format_realtime_iso8601_local = cplat_clock_format_realtime_iso8601_local(
-        actual, sizeof(actual), &timestamp); // [手順] - cplat_clock_format_realtime_iso8601_local() を呼び出す。
+        actual, sizeof(actual),
+        &timestamp); // [手順] - 出力先とタイムスタンプを指定して cplat_clock_format_realtime_iso8601_local() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -389,7 +394,7 @@ TEST_F(clockTest, format_realtime_iso8601_local_supports_negative_offset)
                 return 0;
             });
     // [Pre-Assert確認_正常系] - cplat_localtime() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_localtime() と cplat_gmtime() からそれぞれの分解値を返却する。
+    // [Pre-Assert手順] - cplat_localtime() から、ローカル時刻の分解値を設定して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_gmtime(_, _))
         .WillOnce(
             [&](struct tm *tm_value, const time_t *)
@@ -397,11 +402,12 @@ TEST_F(clockTest, format_realtime_iso8601_local_supports_negative_offset)
                 *tm_value = utc_tm;
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_gmtime() が 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_gmtime() から UTC の分解値を返却する。
+                // [Pre-Assert手順] - cplat_gmtime() から、UTC の分解値を設定して 0 を返す。
 
     // Act
     int actual_ret_format_realtime_iso8601_local = cplat_clock_format_realtime_iso8601_local(
-        actual, sizeof(actual), &timestamp); // [手順] - cplat_clock_format_realtime_iso8601_local() を呼び出す。
+        actual, sizeof(actual),
+        &timestamp); // [手順] - 出力先とタイムスタンプを指定して cplat_clock_format_realtime_iso8601_local() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -433,11 +439,12 @@ TEST_F(clockTest, format_realtime_iso8601_utc_outputs_z_suffix)
                 *tm_value = utc_tm;
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_gmtime() が 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_gmtime() から UTC の分解値を返却する。
+                // [Pre-Assert手順] - cplat_gmtime() から、UTC の分解値を設定して 0 を返す。
 
     // Act
     int actual_ret_format_realtime_iso8601_utc = cplat_clock_format_realtime_iso8601_utc(
-        actual, sizeof(actual), &timestamp); // [手順] - cplat_clock_format_realtime_iso8601_utc() を呼び出す。
+        actual, sizeof(actual),
+        &timestamp); // [手順] - 出力先とタイムスタンプを指定して cplat_clock_format_realtime_iso8601_utc() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -460,7 +467,7 @@ TEST_F(clockTest, format_realtime_iso8601_local_falls_back_when_nsec_is_invalid)
     // Act
     int actual_ret_format_realtime_iso8601_local = cplat_clock_format_realtime_iso8601_local(
         actual, sizeof(actual),
-        &invalid_timestamp); // [手順] - 不正なタイムスタンプで cplat_clock_format_realtime_iso8601_local() を呼び出す。
+        &invalid_timestamp); // [手順] - 不正なタイムスタンプを指定して cplat_clock_format_realtime_iso8601_local() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -480,7 +487,8 @@ TEST_F(clockTest, format_realtime_iso8601_local_rejects_invalid_arguments)
 
     // Act
     int result = cplat_clock_format_realtime_iso8601_local(
-        nullptr, 0U, &invalid_timestamp); // [手順] - NULL バッファーと不正な nsec で local formatter を呼び出す。
+        nullptr, 0U,
+        &invalid_timestamp); // [手順] - 出力先に nullptr、タイムスタンプに不正な nsec を指定して cplat_clock_format_realtime_iso8601_local() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -498,12 +506,13 @@ TEST_F(clockTest, format_realtime_iso8601_local_rejects_null_timestamp)
 
     // Act
     int result = cplat_clock_format_realtime_iso8601_local(
-        &actual, 0u, nullptr); // [手順] - NULL タイムスタンプとサイズ 0 のバッファーで local formatter を呼び出す。
+        &actual, 0u,
+        nullptr); // [手順] - タイムスタンプに nullptr、出力先のサイズに 0 を指定して cplat_clock_format_realtime_iso8601_local() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        result); // [確認_異常系] - NULL タイムスタンプを渡した cplat_clock_format_realtime_iso8601_local() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        result); // [確認_異常系] - nullptr タイムスタンプを渡した cplat_clock_format_realtime_iso8601_local() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ('x', actual); // [確認_異常系] - actual が 'x' であること。(サイズ 0 の出力先が変更されないことの確認)
 }
 
@@ -518,7 +527,8 @@ TEST_F(clockTest, format_realtime_iso8601_utc_falls_back_when_nsec_is_invalid)
 
     // Act
     int result = cplat_clock_format_realtime_iso8601_utc(
-        actual, sizeof(actual), &invalid_timestamp); // [手順] - 不正な nsec で UTC formatter を呼び出す。
+        actual, sizeof(actual),
+        &invalid_timestamp); // [手順] - 不正な nsec のタイムスタンプを指定して cplat_clock_format_realtime_iso8601_utc() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -540,18 +550,19 @@ TEST_F(clockTest, format_realtime_iso8601_utc_rejects_invalid_timestamp_fields)
 
     // Act
     int null_result = cplat_clock_format_realtime_iso8601_utc(
-        null_actual, sizeof(null_actual), nullptr); // [手順] - NULL タイムスタンプで UTC formatter を呼び出す。
+        null_actual, sizeof(null_actual),
+        nullptr); // [手順] - タイムスタンプに nullptr を指定して cplat_clock_format_realtime_iso8601_utc() を呼び出す。
     int negative_result = cplat_clock_format_realtime_iso8601_utc(
         negative_actual, sizeof(negative_actual),
-        &negative_nsec); // [手順] - 負のナノ秒を指定して UTC formatter を呼び出す。
+        &negative_nsec); // [手順] - 負のナノ秒のタイムスタンプを指定して cplat_clock_format_realtime_iso8601_utc() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_result); // [確認_異常系] - NULL タイムスタンプを渡した cplat_clock_format_realtime_iso8601_utc() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_result); // [確認_異常系] - nullptr タイムスタンプを渡した cplat_clock_format_realtime_iso8601_utc() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_STREQ(
         "0000-00-00T00:00:00.000Z",
-        null_actual); // [確認_異常系] - NULL タイムスタンプに対する null_actual が "0000-00-00T00:00:00.000Z" であること。
+        null_actual); // [確認_異常系] - nullptr タイムスタンプに対する null_actual が "0000-00-00T00:00:00.000Z" であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         negative_result); // [確認_異常系] - 負のナノ秒を渡した cplat_clock_format_realtime_iso8601_utc() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -571,11 +582,12 @@ TEST_F(clockTest, format_realtime_iso8601_local_falls_back_when_localtime_fails)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_localtime(_, _))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - cplat_localtime() が 1 回呼び出されること。
-                               // [Pre-Assert手順] - cplat_localtime() から -1 を返却する。
+                               // [Pre-Assert手順] - cplat_localtime() から -1 を返す。
 
     // Act
     int result = cplat_clock_format_realtime_iso8601_local(
-        actual, sizeof(actual), &timestamp); // [手順] - localtime が失敗する状態で local formatter を呼び出す。
+        actual, sizeof(actual),
+        &timestamp); // [手順] - cplat_localtime() が失敗する状態で cplat_clock_format_realtime_iso8601_local() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -604,14 +616,15 @@ TEST_F(clockTest, format_realtime_iso8601_local_falls_back_when_gmtime_fails)
                 *tm_value = local_tm;
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_localtime() が 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_localtime() から用意した分解時刻を返却する。
+                // [Pre-Assert手順] - cplat_localtime() から、用意した分解時刻を設定して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_gmtime(_, _))
         .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - cplat_gmtime() が 1 回呼び出されること。
-                               // [Pre-Assert手順] - cplat_gmtime() から -1 を返却する。
+                               // [Pre-Assert手順] - cplat_gmtime() から -1 を返す。
 
     // Act
     int result = cplat_clock_format_realtime_iso8601_local(
-        actual, sizeof(actual), &timestamp); // [手順] - gmtime が失敗する状態で local formatter を呼び出す。
+        actual, sizeof(actual),
+        &timestamp); // [手順] - cplat_gmtime() が失敗する状態で cplat_clock_format_realtime_iso8601_local() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -641,11 +654,12 @@ TEST_F(clockTest, format_realtime_iso8601_utc_falls_back_when_gmtime_fails)
                 // [Pre-Assert確認_正常系] - tm_value が nullptr 以外であること。
                 return -1;
             }); // [Pre-Assert確認_異常系] - cplat_gmtime() が 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_gmtime() から -1 を返却する。
+                // [Pre-Assert手順] - cplat_gmtime() から -1 を返す。
 
     // Act
     int actual_ret_format_realtime_iso8601_utc = cplat_clock_format_realtime_iso8601_utc(
-        actual, sizeof(actual), &timestamp); // [手順] - cplat_clock_format_realtime_iso8601_utc() を呼び出す。
+        actual, sizeof(actual),
+        &timestamp); // [手順] - 出力先とタイムスタンプを指定して cplat_clock_format_realtime_iso8601_utc() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -675,7 +689,7 @@ TEST_F(clockTest, format_realtime_iso8601_local_rejects_small_buffer)
                 *tm_value = local_tm;
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_localtime() が 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_localtime() から用意した分解時刻を返却する。
+                // [Pre-Assert手順] - cplat_localtime() から、用意した分解時刻を設定して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_gmtime(_, _))
         .WillOnce(
             [&](struct tm *tm_value, const time_t *)
@@ -683,11 +697,12 @@ TEST_F(clockTest, format_realtime_iso8601_local_rejects_small_buffer)
                 *tm_value = utc_tm;
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_gmtime() が 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_gmtime() から用意した分解時刻を返却する。
+                // [Pre-Assert手順] - cplat_gmtime() から、用意した分解時刻を設定して 0 を返す。
 
     // Act
     int result = cplat_clock_format_realtime_iso8601_local(
-        actual, sizeof(actual), &timestamp); // [手順] - 小さいバッファーで local formatter を呼び出す。
+        actual, sizeof(actual),
+        &timestamp); // [手順] - 小さいバッファーを指定して cplat_clock_format_realtime_iso8601_local() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -717,11 +732,12 @@ TEST_F(clockTest, format_realtime_iso8601_utc_rejects_small_buffer)
                 *tm_value = utc_tm;
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_gmtime() が 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_gmtime() から用意した分解時刻を返却する。
+                // [Pre-Assert手順] - cplat_gmtime() から、用意した分解時刻を設定して 0 を返す。
 
     // Act
     int result = cplat_clock_format_realtime_iso8601_utc(
-        actual, sizeof(actual), &timestamp); // [手順] - 小さいバッファーで UTC formatter を呼び出す。
+        actual, sizeof(actual),
+        &timestamp); // [手順] - 小さいバッファーを指定して cplat_clock_format_realtime_iso8601_utc() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -753,7 +769,7 @@ TEST_F(clockTest, format_realtime_iso8601_local_rejects_null_buffer)
                 *tm_value = local_tm;
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_localtime() が 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_localtime() から用意した分解時刻を返却する。
+                // [Pre-Assert手順] - cplat_localtime() から、用意した分解時刻を設定して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_gmtime(_, _))
         .WillOnce(
             [&](struct tm *tm_value, const time_t *)
@@ -761,17 +777,17 @@ TEST_F(clockTest, format_realtime_iso8601_local_rejects_null_buffer)
                 *tm_value = utc_tm;
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_gmtime() が 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_gmtime() から用意した分解時刻を返却する。
+                // [Pre-Assert手順] - cplat_gmtime() から、用意した分解時刻を設定して 0 を返す。
 
     // Act
     int result = cplat_clock_format_realtime_iso8601_local(
         nullptr, CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1u,
-        &timestamp); // [手順] - NULL バッファーで local formatter を呼び出す。
+        &timestamp); // [手順] - 出力先に nullptr を指定して cplat_clock_format_realtime_iso8601_local() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        result); // [確認_異常系] - NULL バッファーを渡した cplat_clock_format_realtime_iso8601_local() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        result); // [確認_異常系] - nullptr バッファーを渡した cplat_clock_format_realtime_iso8601_local() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // 有効なタイムスタンプでも NULL バッファーを UTC formatter が拒否することの確認
@@ -792,17 +808,17 @@ TEST_F(clockTest, format_realtime_iso8601_utc_rejects_null_buffer)
                 *tm_value = utc_tm;
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_gmtime() が 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_gmtime() から用意した分解時刻を返却する。
+                // [Pre-Assert手順] - cplat_gmtime() から、用意した分解時刻を設定して 0 を返す。
 
     // Act
-    int result =
-        cplat_clock_format_realtime_iso8601_utc(nullptr, CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN + 1u,
-                                                &timestamp); // [手順] - NULL バッファーで UTC formatter を呼び出す。
+    int result = cplat_clock_format_realtime_iso8601_utc(
+        nullptr, CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN + 1u,
+        &timestamp); // [手順] - 出力先に nullptr を指定して cplat_clock_format_realtime_iso8601_utc() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        result); // [確認_異常系] - NULL バッファーを渡した cplat_clock_format_realtime_iso8601_utc() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        result); // [確認_異常系] - nullptr バッファーを渡した cplat_clock_format_realtime_iso8601_utc() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 
 // 年初および紀元前相当の時刻を local formatter が処理できることの確認
@@ -825,7 +841,7 @@ TEST_F(clockTest, format_realtime_iso8601_local_supports_early_date)
                 *tm_value = local_tm;
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_localtime() が 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_localtime() から用意した分解時刻を返却する。
+                // [Pre-Assert手順] - cplat_localtime() から、用意した分解時刻を設定して 0 を返す。
     EXPECT_CALL(mock_cplat, cplat_gmtime(_, _))
         .WillOnce(
             [&](struct tm *tm_value, const time_t *)
@@ -833,11 +849,12 @@ TEST_F(clockTest, format_realtime_iso8601_local_supports_early_date)
                 *tm_value = utc_tm;
                 return 0;
             }); // [Pre-Assert確認_正常系] - cplat_gmtime() が 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_gmtime() から用意した分解時刻を返却する。
+                // [Pre-Assert手順] - cplat_gmtime() から、用意した分解時刻を設定して 0 を返す。
 
     // Act
     int result = cplat_clock_format_realtime_iso8601_local(
-        actual, sizeof(actual), &timestamp); // [手順] - 年初の早い日付で local formatter を呼び出す。
+        actual, sizeof(actual),
+        &timestamp); // [手順] - 年初の早い日付のタイムスタンプを指定して cplat_clock_format_realtime_iso8601_local() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -868,7 +885,7 @@ TEST_F(clockTest, realtime_deadline_ms_adds_timeout_without_nsec_carry)
                 return 0;
             });
     // [Pre-Assert確認_正常系] - clock_gettime() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 実時刻取得 API にて 100 秒台の時刻を返す。
+    // [Pre-Assert手順] - clock_gettime() から、100 秒台の時刻を設定して 0 を返す。
 #elif defined(PLATFORM_WINDOWS)
     Mock_windows mock_windows;
 
@@ -876,13 +893,13 @@ TEST_F(clockTest, realtime_deadline_ms_adds_timeout_without_nsec_carry)
         .WillOnce([](const char *, const int, const char *, LPFILETIME file_time)
                   { *file_time = to_filetime(100, 100000000); });
     // [Pre-Assert確認_正常系] - GetSystemTimeAsFileTime() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 実時刻取得 API にて 100 秒台の時刻を返す。
+    // [Pre-Assert手順] - GetSystemTimeAsFileTime() から、100 秒台の時刻を設定して戻る。
 #endif
 
     // Act
     cplat_clock_get_realtime_deadline_ms(
         timeout_ms,
-        &abs_timeout); // [手順] - cplat_clock_get_realtime_deadline_ms(timeout_ms, &abs_timeout) を呼び出す。
+        &abs_timeout); // [手順] - タイムアウト timeout_ms と出力先 abs_timeout を指定して cplat_clock_get_realtime_deadline_ms() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -917,7 +934,7 @@ TEST_F(clockTest, realtime_deadline_ms_carries_nsec_overflow)
                 return 0;
             });
     // [Pre-Assert確認_異常系] - clock_gettime() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 実時刻取得 API にて 100 秒台の時刻を返す。
+    // [Pre-Assert手順] - clock_gettime() から、100 秒台の時刻を設定して 0 を返す。
 #elif defined(PLATFORM_WINDOWS)
     Mock_windows mock_windows;
 
@@ -925,13 +942,13 @@ TEST_F(clockTest, realtime_deadline_ms_carries_nsec_overflow)
         .WillOnce([](const char *, const int, const char *, LPFILETIME file_time)
                   { *file_time = to_filetime(100, 800000000); });
     // [Pre-Assert確認_異常系] - GetSystemTimeAsFileTime() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 実時刻取得 API にて 100 秒台の時刻を返す。
+    // [Pre-Assert手順] - GetSystemTimeAsFileTime() から、100 秒台の時刻を設定して戻る。
 #endif
 
     // Act
     cplat_clock_get_realtime_deadline_ms(
         timeout_ms,
-        &abs_timeout); // [手順] - cplat_clock_get_realtime_deadline_ms(timeout_ms, &abs_timeout) を呼び出す。
+        &abs_timeout); // [手順] - タイムアウト timeout_ms と出力先 abs_timeout を指定して cplat_clock_get_realtime_deadline_ms() を呼び出す。
 
     // Assert
     EXPECT_EQ(

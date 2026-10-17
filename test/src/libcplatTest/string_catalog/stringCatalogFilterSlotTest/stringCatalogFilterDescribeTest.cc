@@ -75,8 +75,9 @@ TEST_F(stringCatalogFilterDescribeTest, key_equal_is_described_with_brief_and_id
     // Pre-Assert
 
     // Act
-    actual_ret = describe("key == FILTER_TEST_TRACE_KEY_JOB_PROGRESS",
-                          CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 文字列キーの一致を日本語で説明する。
+    actual_ret = describe(
+        "key == FILTER_TEST_TRACE_KEY_JOB_PROGRESS",
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 文字列キーの一致を表す条件式を日本語で指定して describe() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - describe() の戻り値が CPLAT_OK であること。
@@ -96,9 +97,9 @@ TEST_F(stringCatalogFilterDescribeTest, single_entry_line_uses_argument_descript
     // Pre-Assert
 
     // Act
-    actual_ret =
-        describe("arg.buffer == null",
-                 CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - BUFFER_ALLOCATED だけが持つ引数の条件を説明する。
+    actual_ret = describe(
+        "arg.buffer == null",
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - BUFFER_ALLOCATED だけが持つ引数の条件式を指定して describe() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - describe() の戻り値が CPLAT_OK であること。
@@ -120,7 +121,7 @@ TEST_F(stringCatalogFilterDescribeTest, shared_argument_description_is_used_for_
     // Act
     actual_ret = describe(
         "arg[46] between 90 and 99",
-        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 全項目が持つ app 定義のコンテキスト引数を説明する。
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 全項目が持つ app 定義のコンテキスト引数の条件式を指定して describe() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - describe() の戻り値が CPLAT_OK であること。
@@ -141,9 +142,9 @@ TEST_F(stringCatalogFilterDescribeTest, not_and_nested_or_are_parenthesized)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        describe("!(category <= 2) && (key == 99 || id ends_with \"0002\")",
-                 CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 否定と、括弧で囲んだ論理和を含む条件を説明する。
+    actual_ret = describe(
+        "!(category <= 2) && (key == 99 || id ends_with \"0002\")",
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 否定と、括弧で囲んだ論理和を含む条件式を指定して describe() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - describe() の戻り値が CPLAT_OK であること。
@@ -165,11 +166,13 @@ TEST_F(stringCatalogFilterDescribeTest, neutral_language_uses_neutral_phrases)
     // Pre-Assert
 
     // Act
-    actual_ret_neutral = describe("category <= 2 || arg.job_name contains_i \"exp\"",
-                                  CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL); // [手順] - ニュートラル言語で説明する。
+    actual_ret_neutral =
+        describe("category <= 2 || arg.job_name contains_i \"exp\"",
+                 CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL); // [手順] - ニュートラル言語を指定して describe() を呼び出す。
     std::memcpy(actual_neutral, description_, std::strlen(description_) + 1U);
-    actual_ret_english = describe("category <= 2 || arg.job_name contains_i \"exp\"",
-                                  CPLAT_STRING_CATALOG_LANGUAGE_ENGLISH); // [手順] - 英語で説明する。
+    actual_ret_english =
+        describe("category <= 2 || arg.job_name contains_i \"exp\"",
+                 CPLAT_STRING_CATALOG_LANGUAGE_ENGLISH); // [手順] - 英語を指定して describe() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -197,8 +200,9 @@ TEST_F(stringCatalogFilterDescribeTest, disabled_line_is_not_described)
     // Pre-Assert
 
     // Act
-    actual_ret = describe("key == NO_SUCH_KEY",
-                          CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 未解決のキー名を含む行を説明する。
+    actual_ret = describe(
+        "key == NO_SUCH_KEY",
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 未解決のキー名を含む行を指定して describe() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -227,9 +231,10 @@ TEST_F(stringCatalogFilterDescribeTest, small_buffer_is_truncated)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_filter_slot_describe_line(slot_, 0U, actual_text,
-                                                       sizeof(actual_text)); // [手順] - 8 バイトの出力先で説明する。
+    actual_ret = cplat_string_catalog_filter_slot_describe_line(
+        slot_, 0U, actual_text,
+        sizeof(
+            actual_text)); // [手順] - 8 バイトの出力先を指定して cplat_string_catalog_filter_slot_describe_line() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -267,8 +272,9 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_list_matching_names)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        describe("category <= 2", CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 分類値の比較を日本語で説明する。
+    actual_ret = describe(
+        "category <= 2",
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 分類値の比較を表す条件式を日本語で指定して describe() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - describe() の戻り値が CPLAT_OK であること。
@@ -293,11 +299,12 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_use_complement_when_short
     // Pre-Assert
 
     // Act
-    actual_ret_japanese =
-        describe("category != 4", CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 日本語で説明する。
+    actual_ret_japanese = describe(
+        "category != 4", CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 日本語を指定して describe() を呼び出す。
     std::memcpy(actual_japanese, description_, std::strlen(description_) + 1U);
     actual_ret_neutral =
-        describe("category != 4", CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL); // [手順] - ニュートラル言語で説明する。
+        describe("category != 4",
+                 CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL); // [手順] - ニュートラル言語を指定して describe() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -332,14 +339,16 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_describe_single_any_and_n
 
     // Act
     actual_ret_single = describe(
-        "category == 3", CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL); // [手順] - 1 つの名前だけが該当する条件を説明する。
+        "category == 3",
+        CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL); // [手順] - 1 つの名前だけが該当する条件式を指定して describe() を呼び出す。
     std::memcpy(actual_single, description_, std::strlen(description_) + 1U);
     actual_ret_any = describe(
-        "category >= 0", CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - すべての名前が該当する条件を説明する。
+        "category >= 0",
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - すべての名前が該当する条件式を指定して describe() を呼び出す。
     std::memcpy(actual_any, description_, std::strlen(description_) + 1U);
-    actual_ret_none =
-        describe("category < 0 || key == FILTER_TEST_TRACE_KEY_JOB_FAILED",
-                 CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - どの名前も該当しない判定要素を含む条件を説明する。
+    actual_ret_none = describe(
+        "category < 0 || key == FILTER_TEST_TRACE_KEY_JOB_FAILED",
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - どの名前も該当しない判定要素を含む条件式を指定して describe() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -375,8 +384,8 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_absent_use_numbers_and_re
     // Pre-Assert
 
     // Act_1
-    actual_ret_invalid =
-        recreate_slot_with_category_names(&invalid_names); // [手順] - NULL の名前を含む設定でスロットを作り直す。
+    actual_ret_invalid = recreate_slot_with_category_names(
+        &invalid_names); // [手順] - nullptr の名前を含む設定を指定して recreate_slot_with_category_names() を呼び出す。
 
     // Assert_1
     EXPECT_EQ(
@@ -390,8 +399,9 @@ TEST_F(stringCatalogFilterDescribeTest, category_names_absent_use_numbers_and_re
     // [状態確認] - recreate_slot_with_category_names() の戻り値が CPLAT_OK であること。
 
     // Act_2
-    actual_ret_describe =
-        describe("category <= 2", CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 分類値の比較を説明する。
+    actual_ret_describe = describe(
+        "category <= 2",
+        CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE); // [手順] - 分類値の比較を表す条件式を指定して describe() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(CPLAT_OK, actual_ret_describe); // [確認_正常系] - describe() の戻り値が CPLAT_OK であること。

@@ -45,7 +45,7 @@ TEST_F(accessTest, returns_zero_for_existing_file)
     EXPECT_CALL(mock_unistd_, access(_, _, _, StrEq("work.bin"), CPLAT_ACCESS_FMT_F_OK))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - access() が "work.bin" と等しい文字列、CPLAT_ACCESS_FMT_F_OK を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - 0 を返却する。
+                 // [Pre-Assert手順] - access() から 0 を返す。
 
     // Act
     int actual_ret = cplat_access("work.bin", CPLAT_ACCESS_FMT_F_OK,
@@ -71,7 +71,7 @@ TEST_F(accessTest, returns_minus1_for_missing_file)
             Assign(&errno, ENOENT),
             Return(
                 -1))); // [Pre-Assert確認_異常系] - access() が "missing.bin" と等しい文字列、CPLAT_ACCESS_FMT_F_OK を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - errno に ENOENT を設定し、-1 を返却する。
+                       // [Pre-Assert手順] - access() から、errno に ENOENT を設定して -1 を返す。
 
     // Act
     int actual_ret = cplat_access("missing.bin", CPLAT_ACCESS_FMT_F_OK,
@@ -97,7 +97,7 @@ TEST_F(accessTest, returns_minus1_for_null_path)
 
     // Act
     int actual_ret = cplat_access(nullptr, CPLAT_ACCESS_FMT_F_OK,
-                                  &detail); // [手順] - パスに NULL を指定して cplat_access() を呼び出す。
+                                  &detail); // [手順] - パスに nullptr を指定して cplat_access() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_access() の戻り値が -1 であること。

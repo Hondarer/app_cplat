@@ -55,7 +55,8 @@ TEST_F(promptTest, create_applies_default_options)
     // Pre-Assert
 
     // Act
-    cplat_prompt *handle = cplat_prompt_create(nullptr); // [手順] - options に NULL を指定して生成する。
+    cplat_prompt *handle =
+        cplat_prompt_create(nullptr); // [手順] - options に nullptr を指定して cplat_prompt_create() を呼び出す。
 
     // Assert
     ASSERT_NE(nullptr,
@@ -86,7 +87,8 @@ TEST_F(promptTest, create_applies_given_options)
     // Pre-Assert
 
     // Act
-    cplat_prompt *handle = cplat_prompt_create(&options); // [手順] - オプションを指定して生成する。
+    cplat_prompt *handle =
+        cplat_prompt_create(&options); // [手順] - オプションを指定して cplat_prompt_create() を呼び出す。
 
     // Assert
     ASSERT_NE(nullptr,
@@ -109,10 +111,10 @@ TEST_F(promptTest, dispose_accepts_null)
     // Pre-Assert
 
     // Act
-    cplat_prompt_dispose(nullptr); // [手順] - NULL を指定して cplat_prompt_dispose() を呼び出す。
+    cplat_prompt_dispose(nullptr); // [手順] - nullptr を指定して cplat_prompt_dispose() を呼び出す。
 
     // Assert
-    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(NULL を渡した cplat_prompt_dispose() がクラッシュしないことの確認)
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(nullptr を渡した cplat_prompt_dispose() がクラッシュしないことの確認)
 }
 // [サブ手順参照 名前=promptTest.TearDown]
 
@@ -132,16 +134,17 @@ TEST_F(promptTest, readline_rejects_invalid_arguments)
     // Act
     int actual_ret_null_prompt = cplat_prompt_readline_at(nullptr, buf, sizeof(buf), ">> ", "f", 1);
     int actual_ret_null_buf = cplat_prompt_readline_at(prompt_, nullptr, sizeof(buf), ">> ", "f", 1);
-    int actual_ret_zero_size = cplat_prompt_readline_at(prompt_, buf, 0u, ">> ", "f",
-                                                        1); // [手順] - prompt、buf、buf_size に不正値を指定する。
+    int actual_ret_zero_size =
+        cplat_prompt_readline_at(prompt_, buf, 0u, ">> ", "f",
+                                 1); // [手順] - buf_size に 0 を指定して cplat_prompt_readline_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_prompt); // [確認_異常系] - prompt が NULL のときの cplat_prompt_readline_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_prompt); // [確認_異常系] - prompt が nullptr のときの cplat_prompt_readline_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_buf); // [確認_異常系] - buf が NULL のときの cplat_prompt_readline_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_buf); // [確認_異常系] - buf が nullptr のときの cplat_prompt_readline_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_zero_size); // [確認_異常系] - buf_size が 0 のときの cplat_prompt_readline_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -162,7 +165,8 @@ TEST_F(promptTest, readline_returns_typed_line_on_enter)
     // Pre-Assert
 
     // Act
-    int actual_ret = readline("abc\r", buf, sizeof(buf)); // [手順] - "abc" と Enter を入力する。
+    int actual_ret =
+        readline("abc\r", buf, sizeof(buf)); // [手順] - "abc" と Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - readline() の戻り値が CPLAT_OK であること。
@@ -186,7 +190,8 @@ TEST_F(promptTest, readline_returns_eof_when_input_ends)
     // Pre-Assert
 
     // Act
-    int actual_ret = readline("ab", buf, sizeof(buf)); // [手順] - Enter を含まない入力を与えて末尾まで読ませる。
+    int actual_ret =
+        readline("ab", buf, sizeof(buf)); // [手順] - Enter を含まない入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_EOF, actual_ret); // [確認_異常系] - readline() の戻り値が CPLAT_ERR_EOF であること。
@@ -207,7 +212,8 @@ TEST_F(promptTest, readline_returns_canceled_on_ctrl_c)
     // Pre-Assert
 
     // Act
-    int actual_ret = readline("ab\x03", buf, sizeof(buf)); // [手順] - "ab" に続けて Ctrl+C (0x03) を入力する。
+    int actual_ret = readline(
+        "ab\x03", buf, sizeof(buf)); // [手順] - "ab" に続けて Ctrl+C (0x03) の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_CANCELED, actual_ret); // [確認_異常系] - readline() の戻り値が CPLAT_ERR_CANCELED であること。
@@ -225,8 +231,9 @@ TEST_F(promptTest, readline_backspace_removes_previous_character)
     // Pre-Assert
 
     // Act
-    int actual_ret =
-        readline("abc\x7F\r", buf, sizeof(buf)); // [手順] - "abc" の後に Backspace (0x7F) と Enter を入力する。
+    int actual_ret = readline(
+        "abc\x7F\r", buf,
+        sizeof(buf)); // [手順] - "abc" の後に Backspace (0x7F) と Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - readline() の戻り値が CPLAT_OK であること。
@@ -244,9 +251,10 @@ TEST_F(promptTest, readline_backspace_at_head_does_nothing)
     // Pre-Assert
 
     // Act
-    int actual_ret = readline("\x7F"
-                              "a\r",
-                              buf, sizeof(buf)); // [手順] - 行頭で Backspace を入力してから "a" と Enter を入力する。
+    int actual_ret = readline(
+        "\x7F"
+        "a\r",
+        buf, sizeof(buf)); // [手順] - 行頭の Backspace の後に "a" と Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - readline() の戻り値が CPLAT_OK であること。
@@ -264,8 +272,9 @@ TEST_F(promptTest, readline_delete_removes_character_at_cursor)
     // Pre-Assert
 
     // Act
-    int actual_ret = readline("abc\x1B[D\x1B[3~\r", buf,
-                              sizeof(buf)); // [手順] - "abc" の後に左矢印、Delete、Enter を入力する。
+    int actual_ret =
+        readline("abc\x1B[D\x1B[3~\r", buf,
+                 sizeof(buf)); // [手順] - "abc" の後に左矢印、Delete、Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - readline() の戻り値が CPLAT_OK であること。
@@ -283,9 +292,10 @@ TEST_F(promptTest, readline_inserts_at_cursor_after_left_arrow)
     // Pre-Assert
 
     // Act
-    int actual_ret = readline("ac\x1B[D"
-                              "b\r",
-                              buf, sizeof(buf)); // [手順] - "ac" の後に左矢印、"b"、Enter を入力する。
+    int actual_ret =
+        readline("ac\x1B[D"
+                 "b\r",
+                 buf, sizeof(buf)); // [手順] - "ac" の後に左矢印、"b"、Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - readline() の戻り値が CPLAT_OK であること。
@@ -303,10 +313,11 @@ TEST_F(promptTest, readline_right_arrow_moves_cursor_forward)
     // Pre-Assert
 
     // Act
-    int actual_ret = readline("ac\x1B[D\x1B[C"
-                              "b\r",
-                              buf,
-                              sizeof(buf)); // [手順] - "ac" の後に左矢印、右矢印、"b"、Enter を入力する。
+    int actual_ret = readline(
+        "ac\x1B[D\x1B[C"
+        "b\r",
+        buf,
+        sizeof(buf)); // [手順] - "ac" の後に左矢印、右矢印、"b"、Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - readline() の戻り値が CPLAT_OK であること。
@@ -326,14 +337,16 @@ TEST_F(promptTest, readline_home_and_end_move_cursor_to_line_edges)
     // Pre-Assert
 
     // Act
-    int actual_ret_home = readline("bc\x1B[H"
-                                   "a\r",
-                                   buf, sizeof(buf)); // [手順] - "bc" の後に Home、"a"、Enter を入力する。
+    int actual_ret_home =
+        readline("bc\x1B[H"
+                 "a\r",
+                 buf, sizeof(buf)); // [手順] - "bc" の後に Home、"a"、Enter の入力を指定して readline() を呼び出す。
     std::string after_home(buf);
-    int actual_ret_end = readline("bc\x1B[H\x1B[F"
-                                  "d\r",
-                                  buf,
-                                  sizeof(buf)); // [手順] - "bc" の後に Home、End、"d"、Enter を入力する。
+    int actual_ret_end =
+        readline("bc\x1B[H\x1B[F"
+                 "d\r",
+                 buf,
+                 sizeof(buf)); // [手順] - "bc" の後に Home、End、"d"、Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_home); // [確認_正常系] - Home を含む readline() の戻り値が CPLAT_OK であること。
@@ -354,7 +367,8 @@ TEST_F(promptTest, readline_clears_line_on_single_escape)
 
     // Act
     int actual_ret =
-        readline("abc\x1B", buf, sizeof(buf)); // [手順] - "abc" の後に ESC を入力し、以降の入力を与えない。
+        readline("abc\x1B", buf,
+                 sizeof(buf)); // [手順] - "abc" の後に ESC があり、以降の入力がない状態で readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_EOF, actual_ret); // [確認_異常系] - readline() の戻り値が CPLAT_ERR_EOF であること。
@@ -372,10 +386,11 @@ TEST_F(promptTest, readline_ignores_unknown_escape_sequence)
     // Pre-Assert
 
     // Act
-    int actual_ret = readline("\x1B[Z"
-                              "a\r",
-                              buf,
-                              sizeof(buf)); // [手順] - 未対応の ESC [ Z を入力してから "a" と Enter を入力する。
+    int actual_ret =
+        readline("\x1B[Z"
+                 "a\r",
+                 buf,
+                 sizeof(buf)); // [手順] - 未対応の ESC [ Z の後に "a" と Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - readline() の戻り値が CPLAT_OK であること。
@@ -394,15 +409,17 @@ TEST_F(promptTest, readline_numeric_escape_sequences_move_cursor)
     // Pre-Assert
 
     // Act
-    int actual_ret_home = readline("bc\x1B[1~"
-                                   "a\r",
-                                   buf,
-                                   sizeof(buf)); // [手順] - "bc" の後に ESC [ 1 ~ (Home)、"a"、Enter を入力する。
+    int actual_ret_home = readline(
+        "bc\x1B[1~"
+        "a\r",
+        buf,
+        sizeof(buf)); // [手順] - "bc" の後に ESC [ 1 ~ (Home)、"a"、Enter の入力を指定して readline() を呼び出す。
     std::string after_home(buf);
-    int actual_ret_end = readline("bc\x1B[1~\x1B[4~"
-                                  "d\r",
-                                  buf,
-                                  sizeof(buf)); // [手順] - "bc" の後に Home、ESC [ 4 ~ (End)、"d"、Enter を入力する。
+    int actual_ret_end = readline(
+        "bc\x1B[1~\x1B[4~"
+        "d\r",
+        buf,
+        sizeof(buf)); // [手順] - "bc" の後に Home、ESC [ 4 ~ (End)、"d"、Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_home); // [確認_正常系] - Home を含む readline() の戻り値が CPLAT_OK であること。
@@ -422,11 +439,12 @@ TEST_F(promptTest, readline_ignores_incomplete_numeric_escape_sequence)
     // Pre-Assert
 
     // Act
-    int actual_ret =
-        readline("\x1B[3X"
-                 "a\r",
-                 buf,
-                 sizeof(buf)); // [手順] - '~' で終わらない ESC [ 3 X を入力してから "a" と Enter を入力する。
+    int actual_ret = readline(
+        "\x1B[3X"
+        "a\r",
+        buf,
+        sizeof(
+            buf)); // [手順] - '~' で終わらない ESC [ 3 X の後に "a" と Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - readline() の戻り値が CPLAT_OK であること。
@@ -444,9 +462,10 @@ TEST_F(promptTest, readline_backspace_removes_whole_utf8_character)
     // Pre-Assert
 
     // Act
-    int actual_ret =
-        readline("a\xE3\x81\x82\x7F\r", buf,
-                 sizeof(buf)); // [手順] - "a" と 3 バイトの日本語 1 文字の後に Backspace と Enter を入力する。
+    int actual_ret = readline(
+        "a\xE3\x81\x82\x7F\r", buf,
+        sizeof(
+            buf)); // [手順] - "a" と 3 バイトの日本語 1 文字の後に Backspace と Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - readline() の戻り値が CPLAT_OK であること。
@@ -465,7 +484,8 @@ TEST_F(promptTest, readline_truncates_line_to_buffer_size)
     // Pre-Assert
 
     // Act
-    int actual_ret = readline("abcdef\r", buf, sizeof(buf)); // [手順] - 6 文字を入力して Enter を押す。
+    int actual_ret =
+        readline("abcdef\r", buf, sizeof(buf)); // [手順] - 6 文字と Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - readline() の戻り値が CPLAT_OK であること。
@@ -493,8 +513,9 @@ TEST_F(promptTest, readline_stops_accepting_characters_at_input_limit)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_prompt_readline_at(limited, buf, sizeof(buf), ">> ", "promptTest.cc",
-                                              1); // [手順] - 上限を超える 6 文字を入力して Enter を押す。
+    int actual_ret = cplat_prompt_readline_at(
+        limited, buf, sizeof(buf), ">> ", "promptTest.cc",
+        1); // [手順] - 上限を超える 6 文字と Enter の入力を指定して cplat_prompt_readline_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_prompt_readline_at() の戻り値が CPLAT_OK であること。
@@ -525,7 +546,8 @@ TEST_F(promptTest, history_up_recalls_previous_line)
     // Pre-Assert
 
     // Act
-    int actual_ret = readline("\x1B[A\r", buf, sizeof(buf)); // [手順] - 上矢印を押して Enter を押す。
+    int actual_ret =
+        readline("\x1B[A\r", buf, sizeof(buf)); // [手順] - 上矢印と Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - readline() の戻り値が CPLAT_OK であること。
@@ -548,8 +570,9 @@ TEST_F(promptTest, history_down_returns_to_newer_entry)
     // Pre-Assert
 
     // Act
-    int actual_ret = readline("\x1B[A\x1B[A\x1B[B\r", buf,
-                              sizeof(buf)); // [手順] - 上矢印を 2 回、下矢印を 1 回押して Enter を押す。
+    int actual_ret =
+        readline("\x1B[A\x1B[A\x1B[B\r", buf,
+                 sizeof(buf)); // [手順] - 上矢印 2 回、下矢印 1 回、Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - readline() の戻り値が CPLAT_OK であること。
@@ -571,8 +594,9 @@ TEST_F(promptTest, history_down_restores_saved_line_at_newest)
     // Pre-Assert
 
     // Act
-    int actual_ret = readline("ab\x1B[A\x1B[B\r", buf,
-                              sizeof(buf)); // [手順] - "ab" を入力後に上矢印と下矢印を押して Enter を押す。
+    int actual_ret =
+        readline("ab\x1B[A\x1B[B\r", buf,
+                 sizeof(buf)); // [手順] - "ab" の後に上矢印、下矢印、Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - readline() の戻り値が CPLAT_OK であること。
@@ -590,9 +614,10 @@ TEST_F(promptTest, history_up_does_nothing_when_empty)
     // Pre-Assert
 
     // Act
-    int actual_ret = readline("\x1B[A"
-                              "a\r",
-                              buf, sizeof(buf)); // [手順] - 履歴が空の状態で上矢印、"a"、Enter を入力する。
+    int actual_ret = readline(
+        "\x1B[A"
+        "a\r",
+        buf, sizeof(buf)); // [手順] - 履歴が空の状態で上矢印、"a"、Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - readline() の戻り値が CPLAT_OK であること。
@@ -615,7 +640,7 @@ TEST_F(promptTest, history_does_not_record_empty_line)
     // Act
     int actual_ret = readline("\x1B[A"
                               "a\r",
-                              buf, sizeof(buf)); // [手順] - 上矢印、"a"、Enter を入力する。
+                              buf, sizeof(buf)); // [手順] - 上矢印、"a"、Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - readline() の戻り値が CPLAT_OK であること。
@@ -637,10 +662,11 @@ TEST_F(promptTest, history_is_independent_per_call_site)
     // Pre-Assert
 
     // Act
-    int actual_ret = readline("\x1B[A"
-                              "x\r",
-                              buf, sizeof(buf), "b.cc",
-                              20); // [手順] - 別の呼び出し位置 b.cc:20 で上矢印、"x"、Enter を入力する。
+    int actual_ret =
+        readline("\x1B[A"
+                 "x\r",
+                 buf, sizeof(buf), "b.cc",
+                 20); // [手順] - 別の呼び出し位置 b.cc:20 で上矢印、"x"、Enter の入力を指定して readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - readline() の戻り値が CPLAT_OK であること。
@@ -675,8 +701,9 @@ TEST_F(promptTest, history_discards_oldest_entry_over_limit)
 
     // Act
     promptFakeSetInput("\x1B[A\x1B[A\x1B[A\r");
-    int actual_ret = cplat_prompt_readline_at(limited, buf, sizeof(buf), ">> ", "promptTest.cc",
-                                              1); // [手順] - 上矢印を 3 回押して Enter を押す。
+    int actual_ret = cplat_prompt_readline_at(
+        limited, buf, sizeof(buf), ">> ", "promptTest.cc",
+        1); // [手順] - 上矢印 3 回と Enter の入力を指定して cplat_prompt_readline_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_prompt_readline_at() の戻り値が CPLAT_OK であること。
@@ -705,8 +732,9 @@ TEST_F(promptTest, readline_fmt_reads_line)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_prompt_readline_fmt_at(prompt_, buf, sizeof(buf), "promptTest.cc", 1, "[%d] ",
-                                                  7); // [手順] - 書式引数 7 を指定して 1 行読み取る。
+    int actual_ret =
+        cplat_prompt_readline_fmt_at(prompt_, buf, sizeof(buf), "promptTest.cc", 1, "[%d] ",
+                                     7); // [手順] - 書式引数 7 を指定して cplat_prompt_readline_fmt_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_prompt_readline_fmt_at() の戻り値が CPLAT_OK であること。
@@ -726,17 +754,17 @@ TEST_F(promptTest, readline_fmt_rejects_invalid_arguments)
     // Act
     int actual_ret_null_prompt = cplat_prompt_readline_fmt_at(nullptr, buf, sizeof(buf), "f", 1, ">> ");
     int actual_ret_null_buf = cplat_prompt_readline_fmt_at(prompt_, nullptr, sizeof(buf), "f", 1, ">> ");
-    int actual_ret_zero_size =
-        cplat_prompt_readline_fmt_at(prompt_, buf, 0u, "f", 1,
-                                     ">> "); // [手順] - prompt、buf、buf_size に不正値を指定する。
+    int actual_ret_zero_size = cplat_prompt_readline_fmt_at(
+        prompt_, buf, 0u, "f", 1,
+        ">> "); // [手順] - buf_size に 0 を指定して cplat_prompt_readline_fmt_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_prompt); // [確認_異常系] - prompt が NULL のときの cplat_prompt_readline_fmt_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_prompt); // [確認_異常系] - prompt が nullptr のときの cplat_prompt_readline_fmt_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_buf); // [確認_異常系] - buf が NULL のときの cplat_prompt_readline_fmt_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_buf); // [確認_異常系] - buf が nullptr のときの cplat_prompt_readline_fmt_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_zero_size); // [確認_異常系] - buf_size が 0 のときの cplat_prompt_readline_fmt_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -759,8 +787,9 @@ TEST_F(promptTest, readline_falls_back_to_fgets_when_not_tty)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_prompt_readline_at(prompt_, buf, sizeof(buf), nullptr, "promptTest.cc",
-                                              1); // [手順] - 標準入力が空の状態で 1 行読み取る。
+    int actual_ret =
+        cplat_prompt_readline_at(prompt_, buf, sizeof(buf), nullptr, "promptTest.cc",
+                                 1); // [手順] - 標準入力が空の状態で cplat_prompt_readline_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_EOF,
@@ -786,11 +815,12 @@ TEST_F(promptTest, readline_fallback_reports_buffer_too_small)
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
         .WillOnce(DoAll(SetArrayArgument<0>(empty, empty + sizeof(empty)), Return(CPLAT_ERR_BUFFER_TOO_SMALL)));
     // [Pre-Assert確認_異常系] - cplat_fgets() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets() から CPLAT_ERR_BUFFER_TOO_SMALL と空文字列を返却する。
+    // [Pre-Assert手順] - cplat_fgets() から、空文字列を設定して CPLAT_ERR_BUFFER_TOO_SMALL を返す。
 
     // Act
-    int actual_ret = cplat_prompt_readline_at(prompt_, buf, sizeof(buf), nullptr, "promptTest.cc",
-                                              1); // [手順] - 行が収まらない非 TTY readline を呼び出す。
+    int actual_ret =
+        cplat_prompt_readline_at(prompt_, buf, sizeof(buf), nullptr, "promptTest.cc",
+                                 1); // [手順] - 行が収まらない非 TTY の状態で cplat_prompt_readline_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -817,7 +847,8 @@ TEST_F(promptTest, readline_with_initial_returns_initial_text_on_enter)
 
     // Act
     int actual_ret = cplat_prompt_readline_with_initial_at(
-        prompt_, buf, sizeof(buf), ">> ", "edit 1 abc", "promptTest.cc", 1); // [手順] - 初期値を指定して 1 行読み取る。
+        prompt_, buf, sizeof(buf), ">> ", "edit 1 abc", "promptTest.cc",
+        1); // [手順] - 初期値を指定して cplat_prompt_readline_with_initial_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -838,8 +869,9 @@ TEST_F(promptTest, readline_with_initial_places_cursor_at_end)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_prompt_readline_with_initial_at(prompt_, buf, sizeof(buf), ">> ", "abc", "promptTest.cc",
-                                                           1); // [手順] - 初期値 "abc" を指定して 1 行読み取る。
+    int actual_ret = cplat_prompt_readline_with_initial_at(
+        prompt_, buf, sizeof(buf), ">> ", "abc", "promptTest.cc",
+        1); // [手順] - 初期値 "abc" を指定して cplat_prompt_readline_with_initial_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -861,8 +893,9 @@ TEST_F(promptTest, readline_with_initial_allows_insert_at_head)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_prompt_readline_with_initial_at(prompt_, buf, sizeof(buf), ">> ", "bc", "promptTest.cc",
-                                                           1); // [手順] - 初期値 "bc" を指定して 1 行読み取る。
+    int actual_ret = cplat_prompt_readline_with_initial_at(
+        prompt_, buf, sizeof(buf), ">> ", "bc", "promptTest.cc",
+        1); // [手順] - 初期値 "bc" を指定して cplat_prompt_readline_with_initial_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -885,9 +918,9 @@ TEST_F(promptTest, readline_with_initial_restores_initial_text_after_history)
     // Pre-Assert
 
     // Act
-    int actual_ret =
-        cplat_prompt_readline_with_initial_at(prompt_, buf, sizeof(buf), ">> ", "initial", "promptTest.cc",
-                                              1); // [手順] - 同じ呼び出し元の履歴で初期値付きの入力を読み取る。
+    int actual_ret = cplat_prompt_readline_with_initial_at(
+        prompt_, buf, sizeof(buf), ">> ", "initial", "promptTest.cc",
+        1); // [手順] - 同じ呼び出し元の履歴を持つ状態で初期値を指定して cplat_prompt_readline_with_initial_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -910,8 +943,9 @@ TEST_F(promptTest, readline_with_initial_accepts_null_initial_text)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_prompt_readline_with_initial_at(prompt_, buf, sizeof(buf), ">> ", nullptr, "promptTest.cc",
-                                                           1); // [手順] - 初期値に NULL を指定して 1 行読み取る。
+    int actual_ret = cplat_prompt_readline_with_initial_at(
+        prompt_, buf, sizeof(buf), ">> ", nullptr, "promptTest.cc",
+        1); // [手順] - 初期値に nullptr を指定して cplat_prompt_readline_with_initial_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -932,11 +966,13 @@ TEST_F(promptTest, readline_with_initial_rejects_control_character_without_readi
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_prompt_readline_with_initial_at(prompt_, buf, sizeof(buf), ">> ", "a\nb", "promptTest.cc",
-                                                           1); // [手順] - 改行を含む初期値を指定する。
+    int actual_ret = cplat_prompt_readline_with_initial_at(
+        prompt_, buf, sizeof(buf), ">> ", "a\nb", "promptTest.cc",
+        1); // [手順] - 改行を含む初期値を指定して cplat_prompt_readline_with_initial_at() を呼び出す。
     int actual_enter_raw_count = promptFakeEnterRawCount();
-    int actual_ret_next = cplat_prompt_readline_at(prompt_, buf, sizeof(buf), ">> ", "promptTest.cc",
-                                                   1); // [手順] - 続けて初期値なしで 1 行読み取る。
+    int actual_ret_next =
+        cplat_prompt_readline_at(prompt_, buf, sizeof(buf), ">> ", "promptTest.cc",
+                                 1); // [手順] - 続けて初期値なしで cplat_prompt_readline_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -969,12 +1005,12 @@ TEST_F(promptTest, readline_with_initial_rejects_text_over_input_limit)
     // Pre-Assert
 
     // Act
-    int actual_ret_fit =
-        cplat_prompt_readline_with_initial_at(handle, buf, sizeof(buf), ">> ", "1234567", "promptTest.cc",
-                                              1); // [手順] - NUL を含めて 8 バイトの初期値で読み取る (入力は EOF)。
-    int actual_ret_over =
-        cplat_prompt_readline_with_initial_at(handle, buf, sizeof(buf), ">> ", "12345678", "promptTest.cc",
-                                              1); // [手順] - NUL を含めて 9 バイトの初期値を指定する。
+    int actual_ret_fit = cplat_prompt_readline_with_initial_at(
+        handle, buf, sizeof(buf), ">> ", "1234567", "promptTest.cc",
+        1); // [手順] - NUL を含めて 8 バイトの初期値 (入力は EOF) を指定して cplat_prompt_readline_with_initial_at() を呼び出す。
+    int actual_ret_over = cplat_prompt_readline_with_initial_at(
+        handle, buf, sizeof(buf), ">> ", "12345678", "promptTest.cc",
+        1); // [手順] - NUL を含めて 9 バイトの初期値を指定して cplat_prompt_readline_with_initial_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1007,12 +1043,12 @@ TEST_F(promptTest, readline_with_initial_ignores_initial_text_when_not_tty)
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
         .WillOnce(DoAll(SetArrayArgument<0>(piped, piped + sizeof(piped)), Return(CPLAT_OK)));
     // [Pre-Assert確認_正常系] - cplat_fgets() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets() から "piped" を返却する。
+    // [Pre-Assert手順] - cplat_fgets() から、"piped" を設定して CPLAT_OK を返す。
 
     // Act
-    int actual_ret =
-        cplat_prompt_readline_with_initial_at(prompt_, buf, sizeof(buf), nullptr, "initial", "promptTest.cc",
-                                              1); // [手順] - 初期値を指定して非 TTY で読み取る。
+    int actual_ret = cplat_prompt_readline_with_initial_at(
+        prompt_, buf, sizeof(buf), nullptr, "initial", "promptTest.cc",
+        1); // [手順] - 初期値を指定し、非 TTY の状態で cplat_prompt_readline_with_initial_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1035,22 +1071,23 @@ TEST_F(promptTest, readline_with_initial_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int actual_ret_handle =
-        cplat_prompt_readline_with_initial_at(nullptr, buf, sizeof(buf), ">> ", "a", "promptTest.cc",
-                                              1); // [手順] - ハンドルに NULL を指定する。
-    int actual_ret_buf =
-        cplat_prompt_readline_with_initial_at(prompt_, nullptr, sizeof(buf), ">> ", "a", "promptTest.cc",
-                                              1); // [手順] - 出力先に NULL を指定する。
-    int actual_ret_size = cplat_prompt_readline_with_initial_at(prompt_, buf, 0u, ">> ", "a", "promptTest.cc",
-                                                                1); // [手順] - 出力先のバイト数に 0 を指定する。
+    int actual_ret_handle = cplat_prompt_readline_with_initial_at(
+        nullptr, buf, sizeof(buf), ">> ", "a", "promptTest.cc",
+        1); // [手順] - ハンドルに nullptr を指定して cplat_prompt_readline_with_initial_at() を呼び出す。
+    int actual_ret_buf = cplat_prompt_readline_with_initial_at(
+        prompt_, nullptr, sizeof(buf), ">> ", "a", "promptTest.cc",
+        1); // [手順] - 出力先に nullptr を指定して cplat_prompt_readline_with_initial_at() を呼び出す。
+    int actual_ret_size = cplat_prompt_readline_with_initial_at(
+        prompt_, buf, 0u, ">> ", "a", "promptTest.cc",
+        1); // [手順] - 出力先のバイト数に 0 を指定して cplat_prompt_readline_with_initial_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_handle); // [確認_異常系] - ハンドルが NULL のときの cplat_prompt_readline_with_initial_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_handle); // [確認_異常系] - ハンドルが nullptr のときの cplat_prompt_readline_with_initial_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_buf); // [確認_異常系] - 出力先が NULL のときの cplat_prompt_readline_with_initial_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_buf); // [確認_異常系] - 出力先が nullptr のときの cplat_prompt_readline_with_initial_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_size); // [確認_異常系] - バイト数が 0 のときの cplat_prompt_readline_with_initial_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。

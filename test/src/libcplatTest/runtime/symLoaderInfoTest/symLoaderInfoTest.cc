@@ -11,7 +11,8 @@ TEST(symLoaderInfoTest, sym_loader_info_accepts_empty_array)
     // Pre-Assert
 
     // Act
-    int result = cplat_sym_loader_info(nullptr, 0); // [手順] - 要素数 0 と NULL の配列を渡してシンボル情報を表示する。
+    int result = cplat_sym_loader_info(
+        nullptr, 0); // [手順] - 要素数 0 と nullptr の配列を指定して cplat_sym_loader_info() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -27,18 +28,18 @@ TEST(symLoaderInfoTest, sym_loader_info_rejects_invalid_arrays)
     // Pre-Assert
 
     // Act
-    int null_array_result =
-        cplat_sym_loader_info(nullptr, 1); // [手順] - 要素数 1 と NULL の配列を渡してシンボル情報を表示する。
-    int null_entry_result =
-        cplat_sym_loader_info(entries, 1); // [手順] - NULL 要素を含む配列を渡してシンボル情報を表示する。
+    int null_array_result = cplat_sym_loader_info(
+        nullptr, 1); // [手順] - 要素数 1 と nullptr の配列を指定して cplat_sym_loader_info() を呼び出す。
+    int null_entry_result = cplat_sym_loader_info(
+        entries, 1); // [手順] - nullptr 要素を含む配列を指定して cplat_sym_loader_info() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_array_result); // [確認_異常系] - 配列が NULL の cplat_sym_loader_info() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_array_result); // [確認_異常系] - 配列が nullptr の cplat_sym_loader_info() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_entry_result); // [確認_異常系] - 配列要素が NULL の cplat_sym_loader_info() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_entry_result); // [確認_異常系] - 配列要素が nullptr の cplat_sym_loader_info() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // シンボル情報 API が解決状態を結果コードへ反映することの確認
@@ -57,9 +58,10 @@ TEST(symLoaderInfoTest, sym_loader_info_reports_resolution_state)
     // Pre-Assert
 
     // Act
-    int resolved_result = cplat_sym_loader_info(resolved_entries, 1); // [手順] - 解決済みのエントリ情報を表示する。
-    int unresolved_result =
-        cplat_sym_loader_info(unresolved_entries, 1); // [手順] - 解決失敗済みのエントリ情報を表示する。
+    int resolved_result = cplat_sym_loader_info(
+        resolved_entries, 1); // [手順] - 解決済みのエントリを指定して cplat_sym_loader_info() を呼び出す。
+    int unresolved_result = cplat_sym_loader_info(
+        unresolved_entries, 1); // [手順] - 解決失敗済みのエントリを指定して cplat_sym_loader_info() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -86,7 +88,8 @@ TEST(symLoaderInfoTest, sym_loader_info_resolves_unresolved_entry)
     // Pre-Assert
 
     // Act
-    int result = cplat_sym_loader_info(entries, 1u); // [手順] - 未解決エントリの情報を表示する。
+    int result =
+        cplat_sym_loader_info(entries, 1u); // [手順] - 未解決のエントリを指定して cplat_sym_loader_info() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,

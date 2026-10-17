@@ -77,7 +77,8 @@ TEST_F(statTimestampTest, seconds_agree_with_set_modified_timestamp)
     // Pre-Assert
 
     // Act
-    int actual_ret_stat = cplat_stat(&file_stat, nullptr, kPath); // [手順] - cplat_stat() でファイル情報を取得する。
+    int actual_ret_stat =
+        cplat_stat(&file_stat, nullptr, kPath); // [手順] - ファイルのパスを指定して cplat_stat() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_stat); // [確認_正常系] - cplat_stat() の戻り値が CPLAT_OK であること。

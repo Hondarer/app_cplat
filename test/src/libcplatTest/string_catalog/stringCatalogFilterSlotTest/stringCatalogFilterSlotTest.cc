@@ -81,20 +81,20 @@ TEST_F(stringCatalogFilterSlotTest, create_returns_rwlock_create_result)
     // Arrange
     int actual_ret;
     slot = reinterpret_cast<cplat_string_catalog_filter_slot *>(
-        static_cast<uintptr_t>(0x1)); // [状態] - 格納先を非 NULL の値で初期化する。
+        static_cast<uintptr_t>(0x1)); // [状態] - 格納先を非 nullptr の値で初期化する。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_create(_))
         .WillOnce(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_正常系] - cplat_local_rwlock_create() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 読み書きロックの作成で CPLAT_ERR_UNKNOWN を返却する。
+    // [Pre-Assert手順] - cplat_local_rwlock_create() から、読み書きロックの作成結果として CPLAT_ERR_UNKNOWN を返す。
     EXPECT_CALL(mock_cplat, cplat_local_lock_create(_))
         .Times(0); // [Pre-Assert確認_異常系] - cplat_local_lock_create() が呼び出されないこと。
 
     // Act
-    actual_ret =
-        cplat_string_catalog_filter_slot_create(filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity, kLineWidth,
-                                                &slot); // [手順] - スロットを作成する。
+    actual_ret = cplat_string_catalog_filter_slot_create(
+        filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity, kLineWidth,
+        &slot); // [手順] - cplat_string_catalog_filter_slot_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -115,14 +115,14 @@ TEST_F(stringCatalogFilterSlotTest, create_returns_lock_create_result)
     EXPECT_CALL(mock_cplat, cplat_local_lock_create(_))
         .WillOnce(Return(
             CPLAT_ERR_PERMISSION_DENIED)); // [Pre-Assert確認_正常系] - cplat_local_lock_create() が 1 回呼び出されること。
-    // [Pre-Assert手順] - ミューテックスの作成で CPLAT_ERR_PERMISSION_DENIED を返却する。
+    // [Pre-Assert手順] - cplat_local_lock_create() から、ミューテックスの作成結果として CPLAT_ERR_PERMISSION_DENIED を返す。
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_dispose(_))
         .Times(1); // [Pre-Assert確認_異常系] - cplat_local_rwlock_dispose() が 1 回呼び出されること。
 
     // Act
-    actual_ret =
-        cplat_string_catalog_filter_slot_create(filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity, kLineWidth,
-                                                &slot); // [手順] - スロットを作成する。
+    actual_ret = cplat_string_catalog_filter_slot_create(
+        filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity, kLineWidth,
+        &slot); // [手順] - cplat_string_catalog_filter_slot_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -150,11 +150,11 @@ TEST_F(stringCatalogFilterSlotTest, vformat_returns_lock_result_without_formatti
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_, _))
         .WillOnce(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_正常系] - cplat_local_rwlock_lock_shared() が 1 回呼び出されること。
-    // [Pre-Assert手順] - 共有ロックの取得で CPLAT_ERR_UNKNOWN を返却する。
+    // [Pre-Assert手順] - cplat_local_rwlock_lock_shared() から、共有ロックの取得結果として CPLAT_ERR_UNKNOWN を返す。
 
     // Act
     actual_ret = call_slot_vformat(slot, dest, sizeof(dest), &actual_matched, FILTER_TEST_CATALOG_KEY_NUMBER,
-                                   (int32_t)7); // [手順] - 判定と書式展開を行う。
+                                   (int32_t)7); // [手順] - call_slot_vformat() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -181,8 +181,9 @@ TEST_F(stringCatalogFilterSlotTest, vformat_formats_when_lock_succeeds)
         .Times(1); // [Pre-Assert確認_正常系] - cplat_local_rwlock_lock_shared() が 1 回呼び出されること。
 
     // Act
-    actual_ret = call_slot_vformat(slot, dest, sizeof(dest), &actual_matched, FILTER_TEST_CATALOG_KEY_NUMBER,
-                                   (int32_t)7); // [手順] - 条件のないスロットで判定と書式展開を行う。
+    actual_ret =
+        call_slot_vformat(slot, dest, sizeof(dest), &actual_matched, FILTER_TEST_CATALOG_KEY_NUMBER,
+                          (int32_t)7); // [手順] - 条件のないスロットを指定して call_slot_vformat() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - call_slot_vformat() の戻り値が CPLAT_OK であること。
@@ -210,9 +211,9 @@ TEST_F(stringCatalogFilterSlotTest, vformat_skips_lock_for_missing_key)
         .Times(0); // [Pre-Assert確認_異常系] - cplat_local_rwlock_lock_shared() が呼び出されないこと。
 
     // Act
-    actual_ret =
-        call_slot_vformat(slot, dest, sizeof(dest), &actual_matched,
-                          FILTER_TEST_CATALOG_KEY_MISSING); // [手順] - 存在しない文字列キーで判定と書式展開を行う。
+    actual_ret = call_slot_vformat(
+        slot, dest, sizeof(dest), &actual_matched,
+        FILTER_TEST_CATALOG_KEY_MISSING); // [手順] - 存在しない文字列キーを指定して call_slot_vformat() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
@@ -233,7 +234,7 @@ TEST_F(stringCatalogFilterSlotTest, create_rejects_malformed_catalog)
     // Act
     actual_ret = cplat_string_catalog_filter_slot_create(
         filter_test_malformed_catalog(), nullptr, 0U, nullptr, kLineCapacity, kLineWidth,
-        &slot); // [手順] - 短い説明が未定義のカタログでスロットを作成する。
+        &slot); // [手順] - 短い説明が未定義のカタログを指定して cplat_string_catalog_filter_slot_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -256,7 +257,7 @@ TEST_F(stringCatalogFilterSlotTest, create_rejects_null_key_name)
     // Act
     actual_ret = cplat_string_catalog_filter_slot_create(
         filter_test_catalog(), key_names, 1U, nullptr, kLineCapacity, kLineWidth,
-        &slot); // [手順] - NULL の名前を持つテーブルでスロットを作成する。
+        &slot); // [手順] - nullptr の名前を持つテーブルを指定して cplat_string_catalog_filter_slot_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -279,7 +280,7 @@ TEST_F(stringCatalogFilterSlotTest, create_rejects_missing_key_in_key_names)
     // Act
     actual_ret = cplat_string_catalog_filter_slot_create(
         filter_test_catalog(), key_names, 1U, nullptr, kLineCapacity, kLineWidth,
-        &slot); // [手順] - カタログに存在しない文字列キーを持つテーブルでスロットを作成する。
+        &slot); // [手順] - カタログに存在しない文字列キーを持つテーブルを指定して cplat_string_catalog_filter_slot_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -303,7 +304,7 @@ TEST_F(stringCatalogFilterSlotTest, create_rejects_duplicate_key_name)
     // Act
     actual_ret = cplat_string_catalog_filter_slot_create(
         filter_test_catalog(), key_names, 2U, nullptr, kLineCapacity, kLineWidth,
-        &slot); // [手順] - 同じ名前が 2 つあるテーブルでスロットを作成する。
+        &slot); // [手順] - 同じ名前が 2 つあるテーブルを指定して cplat_string_catalog_filter_slot_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -325,9 +326,9 @@ TEST_F(stringCatalogFilterSlotTest, create_accepts_aliases_for_same_key)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_filter_slot_create(filter_test_catalog(), key_names, 2U, nullptr, kLineCapacity,
-                                                         kLineWidth,
-                                                         &slot); // [手順] - 別名を持つテーブルでスロットを作成する。
+    actual_ret = cplat_string_catalog_filter_slot_create(
+        filter_test_catalog(), key_names, 2U, nullptr, kLineCapacity, kLineWidth,
+        &slot); // [手順] - 別名を持つテーブルを指定して cplat_string_catalog_filter_slot_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -349,11 +350,12 @@ TEST_F(stringCatalogFilterSlotTest, create_accepts_empty_catalog)
     // Pre-Assert
 
     // Act
-    actual_create_ret =
-        cplat_string_catalog_filter_slot_create(&empty_catalog, nullptr, 0U, nullptr, kLineCapacity, kLineWidth,
-                                                &slot); // [手順] - 空のカタログでスロットを作成する。
-    actual_test_ret = cplat_string_catalog_filter_slot_test(slot, FILTER_TEST_CATALOG_KEY_NUMBER,
-                                                            &actual_state); // [手順] - 文字列キーを判定する。
+    actual_create_ret = cplat_string_catalog_filter_slot_create(
+        &empty_catalog, nullptr, 0U, nullptr, kLineCapacity, kLineWidth,
+        &slot); // [手順] - 空のカタログを指定して cplat_string_catalog_filter_slot_create() を呼び出す。
+    actual_test_ret = cplat_string_catalog_filter_slot_test(
+        slot, FILTER_TEST_CATALOG_KEY_NUMBER,
+        &actual_state); // [手順] - 文字列キーを指定して cplat_string_catalog_filter_slot_test() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -381,7 +383,8 @@ TEST_F(stringCatalogFilterSlotTest, get_catalog_returns_creation_catalog)
     // Pre-Assert
 
     // Act
-    actual_catalog = cplat_string_catalog_filter_slot_get_catalog(slot); // [手順] - カタログを取得する。
+    actual_catalog = cplat_string_catalog_filter_slot_get_catalog(
+        slot); // [手順] - cplat_string_catalog_filter_slot_get_catalog() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -400,8 +403,8 @@ TEST_F(stringCatalogFilterSlotTest, get_catalog_returns_null_for_null_slot)
     // Pre-Assert
 
     // Act
-    actual_catalog =
-        cplat_string_catalog_filter_slot_get_catalog(nullptr); // [手順] - NULL を指定してカタログを取得する。
+    actual_catalog = cplat_string_catalog_filter_slot_get_catalog(
+        nullptr); // [手順] - nullptr を指定して cplat_string_catalog_filter_slot_get_catalog() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -428,7 +431,7 @@ TEST_F(stringCatalogFilterSlotTest, vformat_rejects_null_dest)
 
     // Act
     actual_ret = call_slot_vformat(slot, nullptr, sizeof(dest), &actual_matched, FILTER_TEST_CATALOG_KEY_NUMBER,
-                                   (int32_t)7); // [手順] - 格納先に NULL を渡して判定と書式展開を行う。
+                                   (int32_t)7); // [手順] - 格納先に nullptr を指定して call_slot_vformat() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -449,9 +452,9 @@ TEST_F(stringCatalogFilterSlotTest, create_rejects_invalid_category_names)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_filter_slot_create(filter_test_catalog(), nullptr, 0U, &invalid_names,
-                                                         kLineCapacity, kLineWidth,
-                                                         &slot); // [手順] - NULL の名前を含む設定でスロットを作成する。
+    actual_ret = cplat_string_catalog_filter_slot_create(
+        filter_test_catalog(), nullptr, 0U, &invalid_names, kLineCapacity, kLineWidth,
+        &slot); // [手順] - nullptr の名前を含む設定を指定して cplat_string_catalog_filter_slot_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(

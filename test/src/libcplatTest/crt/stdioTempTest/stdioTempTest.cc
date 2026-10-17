@@ -47,11 +47,11 @@ class stdioTempTest : public testing::Test
     void SetUp() override
     {
         ON_CALL(mock_cplat_, cplat_getenv(StrEq("TMPDIR"), _, _, _, _)).WillByDefault(getenv_empty_tmpdir);
-        // [状態] - cplat_getenv() の既定動作を設定する。
+        // [状態] - cplat_getenv() から、TMPDIR として空文字列を書き込んで CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_unistd_, close(_, _, _, _)).WillByDefault(Return(0));
-        // [状態] - close() の既定動作を設定する。
+        // [状態] - close() から 0 を返すように既定動作を設定する。
         ON_CALL(mock_unistd_, unlink(_, _, _, _)).WillByDefault(Return(0));
-        // [状態] - unlink() の既定動作を設定する。
+        // [状態] - unlink() から 0 を返すように既定動作を設定する。
     }
     // [サブ手順終了]
 };
@@ -79,11 +79,11 @@ TEST_F(stdioTempTest, opens_writable_file_and_reports_path)
             {
                 return resolve_mkostemp(tmpl, "/tmp/ptrAAAAAA");
             }); // [Pre-Assert確認_正常系] - mkostemp() が path、O_CLOEXEC を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - パスを "/tmp/ptrAAAAAA" に書き換え、センチネル記述子 7 を返却する。
+                // [Pre-Assert手順] - mkostemp() から、パスを "/tmp/ptrAAAAAA" に書き換えてセンチネル記述子 7 を返す。
     EXPECT_CALL(mock_stdio_, fdopen(_, _, _, kFakeFd, StrEq("wb")))
         .WillOnce(Return(
             kStream)); // [Pre-Assert確認_正常系] - fdopen() が kFakeFd、"wb" と等しい文字列を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - センチネル ストリームを返却する。
+                       // [Pre-Assert手順] - fdopen() から、センチネル ストリームを返す。
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path),
@@ -110,18 +110,18 @@ TEST_F(stdioTempTest, uses_tmpdir_when_getenv_returns_a_path)
                 buffer[buffer_size - 1u] = '\0';
                 return CPLAT_OK;
             }); // [Pre-Assert確認_正常系] - cplat_getenv() が "TMPDIR" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - "/var/tmp" を格納し、CPLAT_OK を返却する。
+                // [Pre-Assert手順] - cplat_getenv() から、"/var/tmp" を格納して CPLAT_OK を返す。
     EXPECT_CALL(mock_unistd_, mkostemp(_, _, _, path, O_CLOEXEC))
         .WillOnce(
             [](const char *, int, const char *, char *tmpl, int)
             {
                 return resolve_mkostemp(tmpl, "/var/tmp/ptrAAAAAA");
             }); // [Pre-Assert確認_正常系] - mkostemp() が path、O_CLOEXEC を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - パスを "/var/tmp/ptrAAAAAA" に書き換え、センチネル記述子 7 を返却する。
+    // [Pre-Assert手順] - mkostemp() から、パスを "/var/tmp/ptrAAAAAA" に書き換えてセンチネル記述子 7 を返す。
     EXPECT_CALL(mock_stdio_, fdopen(_, _, _, kFakeFd, StrEq("wb")))
         .WillOnce(Return(
             kStream)); // [Pre-Assert確認_正常系] - fdopen() が kFakeFd、"wb" と等しい文字列を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - センチネル ストリームを返却する。
+                       // [Pre-Assert手順] - fdopen() から、センチネル ストリームを返す。
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path),
@@ -156,12 +156,12 @@ TEST_F(stdioTempTest, returns_unique_paths_for_repeated_calls)
             {
                 return resolve_mkostemp(tmpl, "/tmp/ptrDDDDDD");
             }); // [Pre-Assert確認_正常系] - mkostemp() が O_CLOEXEC を指定して 4 回呼び出されること。
-                // [Pre-Assert手順] - 互いに異なる 4 つのパスを順に書き込み、センチネル記述子 7 を返却する。
+    // [Pre-Assert手順] - mkostemp() から、互いに異なる 4 つのパスを順に書き込んでセンチネル記述子 7 を返す。
     EXPECT_CALL(mock_stdio_, fdopen(_, _, _, kFakeFd, StrEq("wb")))
         .Times(4)
         .WillRepeatedly(Return(
             kStream)); // [Pre-Assert確認_正常系] - fdopen() が kFakeFd、"wb" と等しい文字列を指定して 4 回呼び出されること。
-                       // [Pre-Assert手順] - センチネル ストリームを返却する。
+                       // [Pre-Assert手順] - fdopen() から、センチネル ストリームを返す。
 
     // Act
     FILE *fp1 = cplat_fopen_temp("ptr", "wb", path1, sizeof(path1),
@@ -198,11 +198,11 @@ TEST_F(stdioTempTest, prefix_is_part_of_basename)
             {
                 return resolve_mkostemp(tmpl, "/tmp/abcAAAAAA");
             }); // [Pre-Assert確認_正常系] - mkostemp() が path、O_CLOEXEC を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - パスを "/tmp/abcAAAAAA" に書き換え、センチネル記述子 7 を返却する。
+                // [Pre-Assert手順] - mkostemp() から、パスを "/tmp/abcAAAAAA" に書き換えてセンチネル記述子 7 を返す。
     EXPECT_CALL(mock_stdio_, fdopen(_, _, _, kFakeFd, StrEq("wb")))
         .WillOnce(Return(
             kStream)); // [Pre-Assert確認_正常系] - fdopen() が kFakeFd、"wb" と等しい文字列を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - センチネル ストリームを返却する。
+                       // [Pre-Assert手順] - fdopen() から、センチネル ストリームを返す。
 
     // Act
     FILE *fp = cplat_fopen_temp("abc", "wb", path, sizeof(path),
@@ -229,19 +229,19 @@ TEST_F(stdioTempTest, null_prefix_is_accepted)
             {
                 return resolve_mkostemp(tmpl, "/tmp/cu_AAAAAA");
             }); // [Pre-Assert確認_正常系] - mkostemp() が path、O_CLOEXEC を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 既定 prefix のパスを書き込み、センチネル記述子 7 を返却する。
+                // [Pre-Assert手順] - mkostemp() から、既定 prefix のパスを書き込んでセンチネル記述子 7 を返す。
     EXPECT_CALL(mock_stdio_, fdopen(_, _, _, kFakeFd, StrEq("wb")))
         .WillOnce(Return(
             kStream)); // [Pre-Assert確認_正常系] - fdopen() が kFakeFd、"wb" と等しい文字列を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - センチネル ストリームを返却する。
+                       // [Pre-Assert手順] - fdopen() から、センチネル ストリームを返す。
 
     // Act
     FILE *fp = cplat_fopen_temp(nullptr, "wb", path, sizeof(path),
-                                nullptr); // [手順] - prefix に NULL を渡して cplat_fopen_temp() を呼び出す。
+                                nullptr); // [手順] - prefix に nullptr を渡して cplat_fopen_temp() を呼び出す。
 
     // Assert
     EXPECT_EQ(kStream,
-              fp); // [確認_正常系] - prefix が NULL の cplat_fopen_temp() の戻り値が kStream であること。
+              fp); // [確認_正常系] - prefix が nullptr の cplat_fopen_temp() の戻り値が kStream であること。
     EXPECT_STREQ("/tmp/cu_AAAAAA",
                  path); // [確認_正常系] - path が "/tmp/cu_AAAAAA" であること。(既定の prefix "cu_" を含むことの確認)
 }
@@ -260,11 +260,11 @@ TEST_F(stdioTempTest, prefix_longer_than_three_chars_is_truncated)
             {
                 return resolve_mkostemp(tmpl, "/tmp/abcAAAAAA");
             }); // [Pre-Assert確認_正常系] - mkostemp() が path、O_CLOEXEC を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 先頭 3 文字の prefix を含むパスを書き込み、センチネル記述子 7 を返却する。
+    // [Pre-Assert手順] - mkostemp() から、先頭 3 文字の prefix を含むパスを書き込んでセンチネル記述子 7 を返す。
     EXPECT_CALL(mock_stdio_, fdopen(_, _, _, kFakeFd, StrEq("wb")))
         .WillOnce(Return(
             kStream)); // [Pre-Assert確認_正常系] - fdopen() が kFakeFd、"wb" と等しい文字列を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - センチネル ストリームを返却する。
+                       // [Pre-Assert手順] - fdopen() から、センチネル ストリームを返す。
 
     // Act
     FILE *fp = cplat_fopen_temp("abcd", "wb", path, sizeof(path),
@@ -292,8 +292,9 @@ TEST_F(stdioTempTest, null_modes_returns_einval)
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", nullptr, path, sizeof(path),
-                                &err); // [手順] - modes に NULL を渡して cplat_fopen_temp() を呼び出す。
-    cplat_error_get_last(&last_error); // [手順] - TLS に記録された詳細エラーを取得する。
+                                &err); // [手順] - modes に nullptr を渡して cplat_fopen_temp() を呼び出す。
+    cplat_error_get_last(
+        &last_error); // [手順] - TLS に記録された詳細エラーの格納先として last_error を指定して cplat_error_get_last() を呼び出す。
 
     // Assert
     EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。
@@ -319,7 +320,7 @@ TEST_F(stdioTempTest, null_path_out_returns_einval)
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", "wb", nullptr, 0u,
-                                &err); // [手順] - path_out に NULL を渡して cplat_fopen_temp() を呼び出す。
+                                &err); // [手順] - path_out に nullptr を渡して cplat_fopen_temp() を呼び出す。
 
     // Assert
     EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。
@@ -390,11 +391,11 @@ TEST_F(stdioTempTest, tmpdir_buffer_too_small_returns_enametoolong)
     EXPECT_CALL(mock_cplat_, cplat_getenv(StrEq("TMPDIR"), _, _, _, _))
         .WillOnce(Return(
             CPLAT_ERR_BUFFER_TOO_SMALL)); // [Pre-Assert確認_異常系] - cplat_getenv() が "TMPDIR" と等しい文字列を指定して 1 回呼び出されること。
-                                          // [Pre-Assert手順] - CPLAT_ERR_BUFFER_TOO_SMALL を返却する。
+                                          // [Pre-Assert手順] - cplat_getenv() から CPLAT_ERR_BUFFER_TOO_SMALL を返す。
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path),
-                                &err); // [手順] - バッファー不足を返す TMPDIR を指定して呼び出す。
+                                &err); // [手順] - バッファー不足を返す TMPDIR の状態で cplat_fopen_temp() を呼び出す。
 
     // Assert
     EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。
@@ -421,11 +422,11 @@ TEST_F(stdioTempTest, mkostemp_failure_reports_errno)
                 errno = ENOENT;
                 return -1;
             }); // [Pre-Assert確認_異常系] - mkostemp() が path、O_CLOEXEC を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - errno に ENOENT を設定し、-1 を返却する。
+                // [Pre-Assert手順] - mkostemp() から、errno に ENOENT を設定して -1 を返す。
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path),
-                                &err); // [手順] - mkostemp() の失敗を注入して呼び出す。
+                                &err); // [手順] - mkostemp() が失敗する状態で cplat_fopen_temp() を呼び出す。
 
     // Assert
     EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。
@@ -448,7 +449,7 @@ TEST_F(stdioTempTest, invalid_modes_reports_fdopen_error)
             {
                 return resolve_mkostemp(tmpl, "/tmp/ptrAAAAAA");
             }); // [Pre-Assert確認_異常系] - mkostemp() が path、O_CLOEXEC を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - パスを書き込み、センチネル記述子 7 を返却する。
+                // [Pre-Assert手順] - mkostemp() から、パスを書き込んでセンチネル記述子 7 を返す。
     EXPECT_CALL(mock_stdio_, fdopen(_, _, _, kFakeFd, StrEq("q")))
         .WillOnce(
             [](const char *, int, const char *, int, const char *)
@@ -456,19 +457,19 @@ TEST_F(stdioTempTest, invalid_modes_reports_fdopen_error)
                 errno = EINVAL;
                 return static_cast<FILE *>(nullptr);
             }); // [Pre-Assert確認_異常系] - fdopen() が kFakeFd、"q" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - errno に EINVAL を設定し、NULL を返却する。
+                // [Pre-Assert手順] - fdopen() から、errno に EINVAL を設定して nullptr を返す。
     EXPECT_CALL(mock_unistd_, close(_, _, _, kFakeFd))
         .WillOnce(Return(
-            0)); // [Pre-Assert確認_異常系] - fdopen の失敗後に close() が kFakeFd を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - 0 を返却する。
+            0)); // [Pre-Assert確認_異常系] - fdopen() の失敗後に close() が kFakeFd を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - close() から 0 を返す。
     EXPECT_CALL(mock_unistd_, unlink(_, _, _, StrEq("/tmp/ptrAAAAAA")))
         .WillOnce(Return(
-            0)); // [Pre-Assert確認_異常系] - fdopen の失敗後に unlink() が "/tmp/ptrAAAAAA" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - 0 を返却する。
+            0)); // [Pre-Assert確認_異常系] - fdopen() の失敗後に unlink() が "/tmp/ptrAAAAAA" と等しい文字列を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - unlink() から 0 を返す。
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", "q", path, sizeof(path),
-                                &err); // [手順] - 不正なモードを指定して呼び出す。
+                                &err); // [手順] - 不正なモードを指定して cplat_fopen_temp() を呼び出す。
 
     // Assert
     EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。
@@ -487,11 +488,11 @@ TEST_F(stdioTempTest, path_formatting_failure_returns_enametoolong)
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_snprintf(_, _, _))
         .WillOnce(Return(CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_snprintf() が 1 回呼び出されること。
-                                              // [Pre-Assert手順] - CPLAT_ERR_UNKNOWN を返却する。
+                                              // [Pre-Assert手順] - cplat_snprintf() から CPLAT_ERR_UNKNOWN を返す。
 
     // Act
     FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path),
-                                &err); // [手順] - パス整形失敗を注入して呼び出す。
+                                &err); // [手順] - パス整形が失敗する状態で cplat_fopen_temp() を呼び出す。
 
     // Assert
     EXPECT_EQ((FILE *)nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。

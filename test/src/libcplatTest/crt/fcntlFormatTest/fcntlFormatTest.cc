@@ -37,7 +37,7 @@ TEST_F(fcntlFormatTest, passes_formatted_path_to_open)
     EXPECT_CALL(mock_cplat, cplat_open(StrEq("/tmp/sample_42.txt"), O_RDONLY, 0, &detail))
         .WillOnce(Return(
             7)); // [Pre-Assert確認_正常系] - cplat_open() が "/tmp/sample_42.txt" と等しい文字列、O_RDONLY、0、&detail を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_open() からファイル記述子 7 を返却する。
+                 // [Pre-Assert手順] - cplat_open() からファイル記述子 7 を返す。
 
     // Act
     int actual_ret = cplat_open_fmt(O_RDONLY, 0, &detail, "/tmp/sample_%d.txt",
@@ -57,11 +57,11 @@ TEST_F(fcntlFormatTest, vopen_fmt_passes_formatted_path_to_open)
     EXPECT_CALL(mock_cplat, cplat_open(StrEq("/tmp/sample_7.txt"), O_RDONLY, 0, &detail))
         .WillOnce(Return(
             3)); // [Pre-Assert確認_正常系] - cplat_open() が "/tmp/sample_7.txt" と等しい文字列、O_RDONLY、0、&detail を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_open() からファイル記述子 3 を返却する。
+                 // [Pre-Assert手順] - cplat_open() からファイル記述子 3 を返す。
 
     // Act
     int actual_ret = call_vopen_fmt(O_RDONLY, 0, &detail, "/tmp/sample_%d.txt",
-                                    7); // [手順] - 書式引数 7 を指定して cplat_vopen_fmt() を呼び出す。
+                                    7); // [手順] - 書式引数 7 を指定して call_vopen_fmt() を呼び出す。
 
     // Assert
     EXPECT_EQ(3, actual_ret); // [確認_正常系] - call_vopen_fmt() の戻り値が 3 であること。
@@ -79,7 +79,7 @@ TEST_F(fcntlFormatTest, returns_minus1_without_open_when_format_fails)
 
     // Act
     int actual_ret = cplat_open_fmt(O_RDONLY, 0, &detail,
-                                    nullptr); // [手順] - 書式文字列に NULL を指定して cplat_open_fmt() を呼び出す。
+                                    nullptr); // [手順] - 書式文字列に nullptr を指定して cplat_open_fmt() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_open_fmt() の戻り値が -1 であること。

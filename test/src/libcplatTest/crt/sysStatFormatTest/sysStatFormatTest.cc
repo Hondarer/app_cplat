@@ -20,7 +20,7 @@ TEST_F(sysStatFormatTest, test_null_buf)
 
     // Act
     int actual_ret = cplat_stat_fmt(nullptr, nullptr, "test_%d.txt",
-                                    1); // [手順] - buf に NULL を渡して cplat_stat_fmt() を呼び出す。
+                                    1); // [手順] - buf に nullptr を渡して cplat_stat_fmt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -40,7 +40,7 @@ TEST_F(sysStatFormatTest, test_null_format)
 
     // Act
     int actual_ret =
-        cplat_stat_fmt(&st, nullptr, nullptr); // [手順] - format に NULL を渡して cplat_stat_fmt() を呼び出す。
+        cplat_stat_fmt(&st, nullptr, nullptr); // [手順] - format に nullptr を渡して cplat_stat_fmt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -82,7 +82,7 @@ TEST_F(sysStatFormatTest, test_successful_call_with_format)
     EXPECT_CALL(mock_cplat, cplat_stat(&st, _, StrEq("test_123.txt")))
         .WillOnce(Return(
             CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_stat() が &st、"test_123.txt" と等しい文字列を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - cplat_stat() から CPLAT_OK を返却する。
+                        // [Pre-Assert手順] - cplat_stat() から CPLAT_OK を返す。
 
     // Act
     int actual_ret = cplat_stat_fmt(
@@ -104,7 +104,7 @@ TEST_F(sysStatFormatTest, test_successful_call_with_multiple_parameters)
     EXPECT_CALL(mock_cplat, cplat_stat(&st, _, StrEq("output_1_2_3.txt")))
         .WillOnce(Return(
             CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_stat() が &st、"output_1_2_3.txt" と等しい文字列を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - cplat_stat() から CPLAT_OK を返却する。
+                        // [Pre-Assert手順] - cplat_stat() から CPLAT_OK を返す。
 
     // Act
     int actual_ret = cplat_stat_fmt(
@@ -126,7 +126,7 @@ TEST_F(sysStatFormatTest, test_stat_returns_error)
     EXPECT_CALL(mock_cplat, cplat_stat(&st, _, StrEq("nonexistent.txt")))
         .WillOnce(Return(
             CPLAT_ERR_NOT_FOUND)); // [Pre-Assert確認_異常系] - cplat_stat() が &st、"nonexistent.txt" と等しい文字列を指定して 1 回呼び出されること。
-                                   // [Pre-Assert手順] - cplat_stat() から CPLAT_ERR_NOT_FOUND を返却する。
+                                   // [Pre-Assert手順] - cplat_stat() から CPLAT_ERR_NOT_FOUND を返す。
 
     // Act
     int actual_ret = cplat_stat_fmt(
@@ -150,7 +150,7 @@ TEST_F(sysStatFormatTest, mkdir_fmt_rejects_null_format)
 
     // Act
     const int result =
-        cplat_mkdir_fmt(nullptr, nullptr); // [手順] - format に NULL を指定して cplat_mkdir_fmt() を呼び出す。
+        cplat_mkdir_fmt(nullptr, nullptr); // [手順] - format に nullptr を指定して cplat_mkdir_fmt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -168,7 +168,7 @@ TEST_F(sysStatFormatTest, mkdir_fmt_passes_formatted_path)
     EXPECT_CALL(mock_cplat, cplat_mkdir(StrEq("temporary_42"), &detail))
         .WillOnce(Return(
             CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_mkdir() が "temporary_42" と等しい文字列、&detail を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - cplat_mkdir() にて CPLAT_OK を返す。
+                        // [Pre-Assert手順] - cplat_mkdir() から CPLAT_OK を返す。
 
     // Act
     const int result =

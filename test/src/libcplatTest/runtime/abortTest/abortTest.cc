@@ -174,7 +174,7 @@ TEST_F(abortTest, null_location_is_treated_as_empty)
     // Pre-Assert
 
     // Act
-    // [手順] - 失敗位置をすべて NULL として異常終了の処理を実行する。
+    // [手順] - 失敗位置をすべて nullptr として異常終了の処理を実行する。
 
     // Assert
     EXPECT_DEATH(
@@ -206,19 +206,21 @@ TEST_F(abortTest, register_rejects_invalid_inputs)
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
-        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_malloc() から NULL を返却する。
+        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回呼び出されること。
+                                    // [Pre-Assert手順] - cplat_malloc() から nullptr を返す。
 
     // Act
-    int null_result = cplat_abort_register(nullptr, nullptr); // [手順] - NULL コールバックを登録する。
-    int oom_result =
-        cplat_abort_register(print_id_callback, nullptr); // [手順] - メモリ確保の失敗時にコールバックを登録する。
+    int null_result = cplat_abort_register(
+        nullptr, nullptr); // [手順] - コールバックに nullptr を指定して cplat_abort_register() を呼び出す。
+    int oom_result = cplat_abort_register(
+        print_id_callback,
+        nullptr); // [手順] - メモリ確保が失敗する状態でコールバックを指定して cplat_abort_register() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              null_result); // [確認_異常系] - cplat_abort_register が NULL コールバックを拒否すること。
+              null_result); // [確認_異常系] - cplat_abort_register() が nullptr コールバックを拒否すること。
     EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
-              oom_result); // [確認_異常系] - cplat_abort_register がメモリ不足を通知すること。
+              oom_result); // [確認_異常系] - cplat_abort_register() がメモリ不足を通知すること。
 }
 
 // 無条件の異常終了で理由と発生位置を出力することの確認
@@ -280,7 +282,7 @@ TEST_F(abortTest, unknown_kind_outputs_generic_prefix_and_aborts)
     // Pre-Assert
 
     // Act
-    // [手順] - 定義外の種別 3 を指定して cplat_abort_at() を実行する。
+    // [手順] - 定義外の種別 3 を指定して cplat_abort_at() を呼び出す。
 
     // Assert
     EXPECT_DEATH(

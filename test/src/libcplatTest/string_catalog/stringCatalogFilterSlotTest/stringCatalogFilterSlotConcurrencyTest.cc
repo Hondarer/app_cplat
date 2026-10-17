@@ -103,16 +103,17 @@ TEST_F(stringCatalogFilterSlotConcurrencyTest, concurrent_apply_does_not_break_c
     // Act
     for (std::size_t index = 0; index < 4U; index++)
     {
-        int actual_ret_create =
-            cplat_thread_create(&threads[index], format_worker,
-                                &args[index]);  // [手順] - format を繰り返すスレッドを 4 本起動する。
+        int actual_ret_create = cplat_thread_create(
+            &threads[index], format_worker,
+            &args
+                [index]); // [手順] - 判定と書式展開を繰り返すスレッドを 4 本起動するため、format_worker() を指定して cplat_thread_create() を呼び出す。
         ASSERT_EQ(CPLAT_OK, actual_ret_create); // [状態確認] - cplat_thread_create() の戻り値が CPLAT_OK であること。
     }
     for (iteration = 0; iteration < 200; iteration++)
     {
         int actual_ret_apply = cplat_string_catalog_filter_slot_apply(
             slot_, ((iteration % 2) == 0) ? image_key2 : image_key3, kImageSize, nullptr, 0U,
-            nullptr); // [手順] - 2 種類のイメージを交互に 200 回適用する。
+            nullptr); // [手順] - 2 種類のイメージを交互に指定して 200 回 cplat_string_catalog_filter_slot_apply() を呼び出す。
         ASSERT_EQ(
             CPLAT_OK,
             actual_ret_apply); // [確認_正常系 回数=200] - cplat_string_catalog_filter_slot_apply() の戻り値が CPLAT_OK であること。
@@ -120,8 +121,9 @@ TEST_F(stringCatalogFilterSlotConcurrencyTest, concurrent_apply_does_not_break_c
     stop_flag = 1; // [手順] - ワーカー スレッドへ終了を通知する。
     for (std::size_t index = 0; index < 4U; index++)
     {
-        int actual_ret_join =
-            cplat_thread_join(threads[index], CPLAT_SYNC_WAIT_FOREVER); // [手順] - 各スレッドの終了を待機する。
+        int actual_ret_join = cplat_thread_join(
+            threads[index],
+            CPLAT_SYNC_WAIT_FOREVER); // [手順] - 各スレッドの終了を待機するために cplat_thread_join() を呼び出す。
         ASSERT_EQ(CPLAT_OK, actual_ret_join); // [状態確認] - cplat_thread_join() の戻り値が CPLAT_OK であること。
     }
 

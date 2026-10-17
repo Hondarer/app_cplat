@@ -66,7 +66,8 @@ TEST_F(stringCatalogFilterSlotCompareTest, signed_int32_and_large_uint_constant_
     actual_ret = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, (uint32_t)1, (uint64_t)1, "job",
         (int32_t)-1,
-        FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - priority に -1 を渡して判定と書式展開を行う。
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - priority に -1 を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -95,7 +96,8 @@ TEST_F(stringCatalogFilterSlotCompareTest, uint64_max_value_matches_equal)
     actual_ret = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched, FILTER_TEST_TRACE_KEY_WORKER_STOPPED, (uint32_t)1,
         (uint64_t)0xFFFFFFFFFFFFFFFFULL,
-        FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - processed_count に UINT64 の最大値を渡す。
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - processed_count に UINT64 の最大値を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -123,7 +125,8 @@ TEST_F(stringCatalogFilterSlotCompareTest, nan_ratio_matches_not_equal)
     // Act
     actual_ret = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched, FILTER_TEST_TRACE_KEY_JOB_PROGRESS, (uint64_t)1, std::nan(""),
-        FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - ratio に NaN を渡して判定と書式展開を行う。
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - ratio に NaN を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -150,7 +153,8 @@ TEST_F(stringCatalogFilterSlotCompareTest, nan_ratio_does_not_match_less_than)
     // Act
     actual_ret = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched, FILTER_TEST_TRACE_KEY_JOB_PROGRESS, (uint64_t)1, std::nan(""),
-        FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - ratio に NaN を渡して判定と書式展開を行う。
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - ratio に NaN を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -176,7 +180,9 @@ TEST_F(stringCatalogFilterSlotCompareTest, starts_with_i_ignores_case)
     // Act
     actual_ret = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, (uint32_t)1, (uint64_t)1,
-        "job-42", (int32_t)0, FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - 小文字表記の job_name を渡す。
+        "job-42", (int32_t)0,
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - 小文字表記の job_name を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -205,14 +211,15 @@ TEST_F(stringCatalogFilterSlotCompareTest, null_string_argument_matches_equal_nu
     actual_ret = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, (uint32_t)1, (uint64_t)1,
         (const char *)nullptr, (int32_t)0,
-        FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - job_name に NULL を渡す。
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - job_name に nullptr を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
               actual_ret); // [確認_正常系] - cplat_string_catalog_filter_slot_format() の戻り値が CPLAT_OK であること。
     EXPECT_NE(
         0,
-        actual_matched); // [確認_正常系] - actual_matched が 0 以外であること。(NULL の引数は == null で真になることの確認)
+        actual_matched); // [確認_正常系] - actual_matched が 0 以外であること。(nullptr の引数は == null で真になることの確認)
 }
 // [サブ手順参照 名前=stringCatalogFilterSlotCompareTest.TearDown]
 
@@ -234,14 +241,15 @@ TEST_F(stringCatalogFilterSlotCompareTest, null_string_argument_does_not_match_s
     actual_ret = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, (uint32_t)1, (uint64_t)1,
         (const char *)nullptr, (int32_t)0,
-        FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - job_name に NULL を渡す。
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - job_name に nullptr を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
               actual_ret); // [確認_正常系] - cplat_string_catalog_filter_slot_format() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         0,
-        actual_matched); // [確認_正常系] - actual_matched が 0 であること。(NULL の引数は文字列判定演算がすべて偽になることの確認)
+        actual_matched); // [確認_正常系] - actual_matched が 0 であること。(nullptr の引数は文字列判定演算がすべて偽になることの確認)
 }
 // [サブ手順参照 名前=stringCatalogFilterSlotCompareTest.TearDown]
 
@@ -263,14 +271,15 @@ TEST_F(stringCatalogFilterSlotCompareTest, null_string_argument_matches_not_equa
     actual_ret = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, (uint32_t)1, (uint64_t)1,
         (const char *)nullptr, (int32_t)0,
-        FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - job_name に NULL を渡す。
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - job_name に nullptr を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
               actual_ret); // [確認_正常系] - cplat_string_catalog_filter_slot_format() の戻り値が CPLAT_OK であること。
     EXPECT_NE(
         0,
-        actual_matched); // [確認_正常系] - actual_matched が 0 以外であること。(NULL の引数は != で真になることの確認)
+        actual_matched); // [確認_正常系] - actual_matched が 0 以外であること。(nullptr の引数は != で真になることの確認)
 }
 // [サブ手順参照 名前=stringCatalogFilterSlotCompareTest.TearDown]
 
@@ -294,29 +303,32 @@ TEST_F(stringCatalogFilterSlotCompareTest, pointer_argument_equal_null_distingui
     // Act
     actual_ret_null = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched_null, FILTER_TEST_TRACE_KEY_BUFFER_ALLOCATED, (const void *)nullptr,
-        (size_t)0, FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - buffer に NULL を渡す。
+        (size_t)0,
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - buffer に nullptr を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret_null); // [確認_正常系] - NULL を渡した cplat_string_catalog_filter_slot_format() の戻り値が CPLAT_OK であること。
+        actual_ret_null); // [確認_正常系] - nullptr を渡した cplat_string_catalog_filter_slot_format() の戻り値が CPLAT_OK であること。
     EXPECT_NE(
         0,
-        actual_matched_null); // [確認_正常系] - actual_matched_null が 0 以外であること。(NULL のポインターは == null で真になることの確認)
+        actual_matched_null); // [確認_正常系] - actual_matched_null が 0 以外であること。(nullptr のポインターは == null で真になることの確認)
 
     // Act_2
     actual_ret_non_null = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched_non_null, FILTER_TEST_TRACE_KEY_BUFFER_ALLOCATED,
         (const void *)&dummy_target, (size_t)4,
-        FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - buffer に非 NULL を渡す。
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - buffer に nullptr 以外を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret_non_null); // [確認_正常系] - 非 NULL を渡した cplat_string_catalog_filter_slot_format() の戻り値が CPLAT_OK であること。
+        actual_ret_non_null); // [確認_正常系] - 非 nullptr を渡した cplat_string_catalog_filter_slot_format() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         0,
-        actual_matched_non_null); // [確認_正常系] - actual_matched_non_null が 0 であること。(非 NULL のポインターは == null で偽になることの確認)
+        actual_matched_non_null); // [確認_正常系] - actual_matched_non_null が 0 であること。(非 nullptr のポインターは == null で偽になることの確認)
 }
 // [サブ手順参照 名前=stringCatalogFilterSlotCompareTest.TearDown]
 
@@ -335,10 +347,11 @@ TEST_F(stringCatalogFilterSlotCompareTest, char_argument_matches_character_liter
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_filter_slot_format(slot_, dest, sizeof(dest), &actual_matched,
-                                                FILTER_TEST_TRACE_KEY_COMMAND_RECEIVED, (int)'s', (int)0, (int64_t)0,
-                                                FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - command に 's' を渡す。
+    actual_ret = cplat_string_catalog_filter_slot_format(
+        slot_, dest, sizeof(dest), &actual_matched, FILTER_TEST_TRACE_KEY_COMMAND_RECEIVED, (int)'s', (int)0,
+        (int64_t)0,
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - command に 's' を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -362,10 +375,11 @@ TEST_F(stringCatalogFilterSlotCompareTest, hex8_argument_matches_hexadecimal_lit
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_filter_slot_format(slot_, dest, sizeof(dest), &actual_matched,
-                                                FILTER_TEST_TRACE_KEY_COMMAND_RECEIVED, (int)'a', (int)0xFF, (int64_t)0,
-                                                FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - status に 0xFF を渡す。
+    actual_ret = cplat_string_catalog_filter_slot_format(
+        slot_, dest, sizeof(dest), &actual_matched, FILTER_TEST_TRACE_KEY_COMMAND_RECEIVED, (int)'a', (int)0xFF,
+        (int64_t)0,
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - status に 0xFF を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -393,7 +407,9 @@ TEST_F(stringCatalogFilterSlotCompareTest, between_boundary_values_are_inclusive
     // Act
     int actual_ret_lower = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched_lower, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, (uint32_t)1, (uint64_t)1,
-        "job", (int32_t)1, FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - priority に下限の 1 を渡す。
+        "job", (int32_t)1,
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - priority に下限の 1 を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -406,7 +422,9 @@ TEST_F(stringCatalogFilterSlotCompareTest, between_boundary_values_are_inclusive
     // Act_2
     int actual_ret_upper = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched_upper, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, (uint32_t)1, (uint64_t)1,
-        "job", (int32_t)10, FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - priority に上限の 10 を渡す。
+        "job", (int32_t)10,
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - priority に上限の 10 を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert_2
     ASSERT_EQ(
@@ -419,7 +437,9 @@ TEST_F(stringCatalogFilterSlotCompareTest, between_boundary_values_are_inclusive
     // Act_3
     int actual_ret_below = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched_below, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, (uint32_t)1, (uint64_t)1,
-        "job", (int32_t)0, FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - priority に下限未満の 0 を渡す。
+        "job", (int32_t)0,
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - priority に下限未満の 0 を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert_3
     ASSERT_EQ(
@@ -432,7 +452,9 @@ TEST_F(stringCatalogFilterSlotCompareTest, between_boundary_values_are_inclusive
     // Act_4
     int actual_ret_above = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched_above, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, (uint32_t)1, (uint64_t)1,
-        "job", (int32_t)11, FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - priority に上限超過の 11 を渡す。
+        "job", (int32_t)11,
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - priority に上限超過の 11 を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert_4
     ASSERT_EQ(
@@ -461,7 +483,9 @@ TEST_F(stringCatalogFilterSlotCompareTest, in_operator_matches_any_listed_value)
     // Act
     int actual_ret_listed = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched_listed, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, (uint32_t)1, (uint64_t)1,
-        "job", (int32_t)5, FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - priority に列挙値の 5 を渡す。
+        "job", (int32_t)5,
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - priority に列挙値の 5 を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -474,7 +498,9 @@ TEST_F(stringCatalogFilterSlotCompareTest, in_operator_matches_any_listed_value)
     // Act_2
     int actual_ret_unlisted = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched_unlisted, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, (uint32_t)1,
-        (uint64_t)1, "job", (int32_t)6, FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - priority に列挙にない 6 を渡す。
+        (uint64_t)1, "job", (int32_t)6,
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - priority に列挙にない 6 を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert_2
     ASSERT_EQ(
@@ -504,7 +530,8 @@ TEST_F(stringCatalogFilterSlotCompareTest, has_argument_name_is_true_only_for_en
     int actual_ret_with_argument = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched_with_argument, FILTER_TEST_TRACE_KEY_BUFFER_ALLOCATED,
         (const void *)nullptr, (size_t)0,
-        FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - buffer を持つ BUFFER_ALLOCATED を判定する。
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - buffer を持つ BUFFER_ALLOCATED を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -517,7 +544,8 @@ TEST_F(stringCatalogFilterSlotCompareTest, has_argument_name_is_true_only_for_en
     // Act_2
     int actual_ret_without_argument = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched_without_argument, FILTER_TEST_TRACE_KEY_WORKER_STARTED, (uint32_t)1,
-        FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - buffer を持たない WORKER_STARTED を判定する。
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - buffer を持たない WORKER_STARTED を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert_2
     ASSERT_EQ(
@@ -546,7 +574,8 @@ TEST_F(stringCatalogFilterSlotCompareTest, unused_argument_index_never_matches)
     // Act
     actual_ret = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched, FILTER_TEST_TRACE_KEY_WORKER_STARTED, (uint32_t)1,
-        FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - WORKER_STARTED を判定する。
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - WORKER_STARTED を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -576,7 +605,8 @@ TEST_F(stringCatalogFilterSlotCompareTest, generated_context_arguments_are_compa
     actual_ret = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, (uint32_t)1, (uint64_t)1, "job",
         (int32_t)0,
-        FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - source_file_name="f.c"、function_name="fn" を渡す。
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - source_file_name に "f.c"、function_name に "fn" を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -602,10 +632,11 @@ TEST_F(stringCatalogFilterSlotCompareTest, app_defined_sequence_number_context_a
 
     // Act
     // [サブ手順参照 名前=stringCatalogFilterSlotCompareTest.apply_filter]
-    apply_filter("arg.sequence_number == 5"); // [手順] - sequence_number == 5 を適用する。
+    apply_filter("arg.sequence_number == 5"); // [手順] - sequence_number == 5 を指定して apply_filter() を呼び出す。
     int actual_ret_equal = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched_equal, FILTER_TEST_TRACE_KEY_WORKER_STARTED, (uint32_t)1,
-        FILTER_TEST_CONTEXT_ARGS(5)); // [手順] - sequence_number に 5 を渡す。
+        FILTER_TEST_CONTEXT_ARGS(
+            5)); // [手順] - sequence_number に 5 を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -617,10 +648,12 @@ TEST_F(stringCatalogFilterSlotCompareTest, app_defined_sequence_number_context_a
 
     // Act_2
     // [サブ手順参照 名前=stringCatalogFilterSlotCompareTest.apply_filter]
-    apply_filter("arg.sequence_number between 90 and 99"); // [手順] - sequence_number の上限付近の範囲を適用する。
+    apply_filter(
+        "arg.sequence_number between 90 and 99"); // [手順] - sequence_number の上限付近の範囲を指定して apply_filter() を呼び出す。
     int actual_ret_between = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched_between, FILTER_TEST_TRACE_KEY_WORKER_STARTED, (uint32_t)1,
-        FILTER_TEST_CONTEXT_ARGS(95)); // [手順] - sequence_number に 95 を渡す。
+        FILTER_TEST_CONTEXT_ARGS(
+            95)); // [手順] - sequence_number に 95 を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert_2
     ASSERT_EQ(
@@ -632,10 +665,12 @@ TEST_F(stringCatalogFilterSlotCompareTest, app_defined_sequence_number_context_a
 
     // Act_3
     // [サブ手順参照 名前=stringCatalogFilterSlotCompareTest.apply_filter]
-    apply_filter("arg[46] < 10"); // [手順] - 添字指定で sequence_number を判定する条件式を適用する。
+    apply_filter(
+        "arg[46] < 10"); // [手順] - 添字指定で sequence_number を判定する条件式を指定して apply_filter() を呼び出す。
     int actual_ret_index_below = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched_index_below, FILTER_TEST_TRACE_KEY_WORKER_STARTED, (uint32_t)1,
-        FILTER_TEST_CONTEXT_ARGS(5)); // [手順] - sequence_number に 5 を渡す。
+        FILTER_TEST_CONTEXT_ARGS(
+            5)); // [手順] - sequence_number に 5 を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert_3
     ASSERT_EQ(
@@ -648,7 +683,8 @@ TEST_F(stringCatalogFilterSlotCompareTest, app_defined_sequence_number_context_a
     // Act_4
     int actual_ret_index_above = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched_index_above, FILTER_TEST_TRACE_KEY_WORKER_STARTED, (uint32_t)1,
-        FILTER_TEST_CONTEXT_ARGS(15)); // [手順] - sequence_number に 15 を渡す。
+        FILTER_TEST_CONTEXT_ARGS(
+            15)); // [手順] - sequence_number に 15 を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert_4
     ASSERT_EQ(
@@ -682,9 +718,9 @@ TEST_F(stringCatalogFilterSlotCompareTest, has_sequence_number_is_always_match_f
     // Act
     for (std::size_t index = 0; index < 7U; index++)
     {
-        int actual_ret_test =
-            cplat_string_catalog_filter_slot_test(slot_, keys[index],
-                                                  &actual_states[index]); // [手順] - 各キーの事前計算状態を取得する。
+        int actual_ret_test = cplat_string_catalog_filter_slot_test(
+            slot_, keys[index],
+            &actual_states[index]); // [手順] - 各キーを指定して cplat_string_catalog_filter_slot_test() を呼び出す。
         ASSERT_EQ(
             CPLAT_OK,
             actual_ret_test); // [確認_正常系 回数=7] - cplat_string_catalog_filter_slot_test() の戻り値が CPLAT_OK であること。
@@ -716,11 +752,12 @@ TEST_F(stringCatalogFilterSlotCompareTest, type_mismatched_predicate_is_always_f
     // Pre-Assert
 
     // Act
-    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
-                                                &actual_state); // [手順] - 事前計算状態を取得する。
+    (void)cplat_string_catalog_filter_slot_test(
+        slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
+        &actual_state); // [手順] - 事前計算状態を取得するために文字列キーを指定して cplat_string_catalog_filter_slot_test() を呼び出す。
     actual_ret = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, (uint32_t)1, (uint64_t)1, "job",
-        (int32_t)0, FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - 判定と書式展開を行う。
+        (int32_t)0, FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -749,13 +786,14 @@ TEST_F(stringCatalogFilterSlotCompareTest, type_mismatched_not_equal_predicate_i
     // Pre-Assert
 
     // Act
-    int actual_ret_apply = cplat_string_catalog_filter_slot_apply(slot_, image, kImageSize, nullptr, 0U,
-                                                                  &actual_invalid); // [手順] - 条件式を適用する。
+    int actual_ret_apply = cplat_string_catalog_filter_slot_apply(
+        slot_, image, kImageSize, nullptr, 0U,
+        &actual_invalid); // [手順] - 条件式を指定して cplat_string_catalog_filter_slot_apply() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_apply); // [確認_正常系] - cplat_string_catalog_filter_slot_apply() の戻り値が CPLAT_OK であること。
-    int actual_ret_line_error =
-        cplat_string_catalog_filter_slot_get_line_error(slot_, 0U, &actual_error); // [手順] - 行の状態を取得する。
+    int actual_ret_line_error = cplat_string_catalog_filter_slot_get_line_error(
+        slot_, 0U, &actual_error); // [手順] - cplat_string_catalog_filter_slot_get_line_error() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -786,11 +824,12 @@ TEST_F(stringCatalogFilterSlotCompareTest, negated_type_mismatched_predicate_is_
     // Pre-Assert
 
     // Act
-    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
-                                                &actual_state); // [手順] - 事前計算状態を取得する。
+    (void)cplat_string_catalog_filter_slot_test(
+        slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
+        &actual_state); // [手順] - 事前計算状態を取得するために文字列キーを指定して cplat_string_catalog_filter_slot_test() を呼び出す。
     actual_ret = cplat_string_catalog_filter_slot_format(
         slot_, dest, sizeof(dest), &actual_matched, FILTER_TEST_TRACE_KEY_JOB_RECEIVED, (uint32_t)1, (uint64_t)1, "job",
-        (int32_t)0, FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - 判定と書式展開を行う。
+        (int32_t)0, FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - cplat_string_catalog_filter_slot_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -814,15 +853,17 @@ TEST_F(stringCatalogFilterSlotCompareTest, missing_argument_predicate_is_false_a
 
     // Act
     // [サブ手順参照 名前=stringCatalogFilterSlotCompareTest.apply_filter]
-    apply_filter("arg.job_name != \"x\""); // [手順] - job_name を != で比較する条件式を適用する。
+    apply_filter(
+        "arg.job_name != \"x\""); // [手順] - job_name を != で比較する条件式を指定して apply_filter() を呼び出す。
     (void)cplat_string_catalog_filter_slot_test(
         slot_, FILTER_TEST_TRACE_KEY_WORKER_STARTED,
-        &actual_not_equal_state);             // [手順] - job_name の無い項目の状態を取得する。
+        &actual_not_equal_state); // [手順] - job_name の無い項目を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
     // [サブ手順参照 名前=stringCatalogFilterSlotCompareTest.apply_filter]
-    apply_filter("!(arg.job_name == \"x\")"); // [手順] - job_name の比較を否定する条件式を適用する。
+    apply_filter(
+        "!(arg.job_name == \"x\")"); // [手順] - job_name の比較を否定する条件式を指定して apply_filter() を呼び出す。
     (void)cplat_string_catalog_filter_slot_test(
         slot_, FILTER_TEST_TRACE_KEY_WORKER_STARTED,
-        &actual_negated_state); // [手順] - job_name の無い項目の状態を取得する。
+        &actual_negated_state); // [手順] - job_name の無い項目を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -854,11 +895,13 @@ TEST_F(stringCatalogFilterSlotCompareTest, destination_is_formatted_regardless_o
     // Act
     actual_ret = cplat_string_catalog_filter_slot_format(
         slot_, actual_dest, sizeof(actual_dest), &actual_matched, FILTER_TEST_TRACE_KEY_WORKER_STARTED, (uint32_t)7,
-        FILTER_TEST_CONTEXT_ARGS(sequence_number)); // [手順] - フィルターを通して文字列を組み立てる。
+        FILTER_TEST_CONTEXT_ARGS(
+            sequence_number)); // [手順] - フィルターを通す状態で cplat_string_catalog_filter_slot_format() を呼び出す。
     expected_ret = cplat_string_catalog_format(
         filter_test_trace_catalog(), expected_dest, sizeof(expected_dest), FILTER_TEST_TRACE_KEY_WORKER_STARTED,
         (uint32_t)7,
-        FILTER_TEST_CONTEXT_ARGS(sequence_number)); // [手順] - フィルターを介さず、同じ引数で直接組み立てる。
+        FILTER_TEST_CONTEXT_ARGS(
+            sequence_number)); // [手順] - フィルターを介さずに同じ引数を指定して cplat_string_catalog_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,

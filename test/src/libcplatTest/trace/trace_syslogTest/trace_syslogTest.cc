@@ -25,8 +25,10 @@ TEST_F(trace_syslogTest, test_init_and_dispose)
 
     // Act
     cplat_syslog_sink *handle = cplat_syslog_sink_create(
-        "syslog_test", LOG_USER);      // [手順] - ident "syslog_test"、facility LOG_USER で syslog sink を初期化する。
-    cplat_syslog_sink_dispose(handle); // [手順] - syslog sink を破棄する。
+        "syslog_test",
+        LOG_USER); // [手順] - ident "syslog_test" と facility LOG_USER を指定して cplat_syslog_sink_create() を呼び出す。
+    cplat_syslog_sink_dispose(
+        handle); // [手順] - 生成した syslog sink を指定して cplat_syslog_sink_dispose() を呼び出す。
 
     // Assert
     EXPECT_NE(nullptr,
@@ -45,7 +47,8 @@ TEST_F(trace_syslogTest, rename_succeeds)
     // Pre-Assert
 
     // Act
-    int result = cplat_syslog_sink_rename(handle, "after"); // [手順] - syslog sink の識別子を "after" へ変更する。
+    int result = cplat_syslog_sink_rename(
+        handle, "after"); // [手順] - 識別子 "after" を指定して cplat_syslog_sink_rename() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -67,18 +70,18 @@ TEST_F(trace_syslogTest, rename_rejects_invalid_arguments)
     // Pre-Assert
 
     // Act
-    int null_handle_result =
-        cplat_syslog_sink_rename(nullptr, "after"); // [手順] - handle に NULL を渡して識別子を変更する。
-    int null_ident_result =
-        cplat_syslog_sink_rename(handle, nullptr); // [手順] - new_ident に NULL を渡して識別子を変更する。
+    int null_handle_result = cplat_syslog_sink_rename(
+        nullptr, "after"); // [手順] - handle に nullptr を指定して cplat_syslog_sink_rename() を呼び出す。
+    int null_ident_result = cplat_syslog_sink_rename(
+        handle, nullptr); // [手順] - new_ident に nullptr を指定して cplat_syslog_sink_rename() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_handle_result); // [確認_異常系] - handle が NULL の cplat_syslog_sink_rename() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_handle_result); // [確認_異常系] - handle が nullptr の cplat_syslog_sink_rename() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_ident_result); // [確認_異常系] - new_ident が NULL の cplat_syslog_sink_rename() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_ident_result); // [確認_異常系] - new_ident が nullptr の cplat_syslog_sink_rename() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_syslog_sink_dispose(handle);
@@ -96,8 +99,9 @@ TEST_F(trace_syslogTest, test_write_returns_zero)
     // Pre-Assert
 
     // Act
-    int result = cplat_syslog_sink_write(handle, LOG_INFO, nullptr,
-                                         "test message"); // [手順] - LOG_INFO レベルで "test message" を書き込む。
+    int result = cplat_syslog_sink_write(
+        handle, LOG_INFO, nullptr,
+        "test message"); // [手順] - LOG_INFO レベルと "test message" を指定して cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -119,7 +123,7 @@ TEST_F(trace_syslogTest, test_write_all_levels)
     // Pre-Assert
 
     // Act
-    // [手順] - CRIT、ERR、WARNING、INFO、DEBUG の各レベルで書き込む。
+    // [手順] - CRIT、ERR、WARNING、INFO、DEBUG の各レベルを指定して cplat_syslog_sink_write() を呼び出す。
     int actual_ret_critical = cplat_syslog_sink_write(handle, LOG_CRIT, nullptr, "critical");
     int actual_ret_error = cplat_syslog_sink_write(handle, LOG_ERR, nullptr, "error");
     int actual_ret_warning = cplat_syslog_sink_write(handle, LOG_WARNING, nullptr, "warning");
@@ -171,7 +175,7 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_prefixes_timestamp)
     cplat_timespec timestamp = {
         1412916640LL, 0}; // [状態] - 明示タイムスタンプを 2014-10-10T13:50:40+09:00 相当の {1412916640, 0} とする。
 
-    ASSERT_EQ(0, pipe(pipe_fds));                          // [状態] - pipe を生成する。
+    ASSERT_EQ(0, pipe(pipe_fds));                          // [状態] - パイプを生成する。
                                                            // [状態確認] - pipe() の戻り値が 0 であること。
     ASSERT_EQ(0, setenv("TZ", "Asia/Tokyo", 1));           // [状態] - TZ を Asia/Tokyo とする。
     // [状態確認] - TZ に対する setenv() の戻り値が 0 であること。
@@ -190,11 +194,12 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_prefixes_timestamp)
 
     // Act
     int actual_ret_syslog_sink_write = cplat_syslog_sink_write(
-        handle, LOG_INFO, &timestamp, "test message"); // [手順] - 明示タイムスタンプ付きで "test message" を書き込む。
+        handle, LOG_INFO, &timestamp,
+        "test message"); // [手順] - 明示タイムスタンプと "test message" を指定して cplat_syslog_sink_write() を呼び出す。
 
     close(pipe_fds[1]);
     pipe_fds[1] = -1;
-    nread = read(pipe_fds[0], actual, sizeof(actual) - 1); // [手順] - pipe から書き込まれた 1 行を読み取る。
+    nread = read(pipe_fds[0], actual, sizeof(actual) - 1); // [手順] - パイプの読み取り側を指定して read() を呼び出す。
     ASSERT_GT(nread, 0);
     // [状態確認] - read() の戻り値が 0 より大きいこと。
     actual[nread] = '\0';
@@ -255,7 +260,7 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_falls_back_from_invalid_explicit_
     cplat_timespec invalid_timestamp = {1714100645LL,
                                         1000000000}; // [状態] - nsec が 10 億の不正な明示タイムスタンプを用意する。
 
-    ASSERT_EQ(0, pipe(pipe_fds));                          // [状態] - pipe を生成する。
+    ASSERT_EQ(0, pipe(pipe_fds));                          // [状態] - パイプを生成する。
                                                            // [状態確認] - pipe() の戻り値が 0 であること。
     ASSERT_EQ(0, setenv("TZ", "Asia/Tokyo", 1));           // [状態] - TZ を Asia/Tokyo とする。
     // [状態確認] - TZ に対する setenv() の戻り値が 0 であること。
@@ -273,13 +278,13 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_falls_back_from_invalid_explicit_
     // Pre-Assert
 
     // Act
-    int actual_ret_syslog_sink_write =
-        cplat_syslog_sink_write(handle, LOG_INFO, &invalid_timestamp,
-                                "invalid ts"); // [手順] - 不正な明示タイムスタンプ付きで "invalid ts" を書き込む。
+    int actual_ret_syslog_sink_write = cplat_syslog_sink_write(
+        handle, LOG_INFO, &invalid_timestamp,
+        "invalid ts"); // [手順] - 不正な明示タイムスタンプと "invalid ts" を指定して cplat_syslog_sink_write() を呼び出す。
 
     close(pipe_fds[1]);
     pipe_fds[1] = -1;
-    nread = read(pipe_fds[0], actual, sizeof(actual) - 1); // [手順] - pipe から書き込まれた 1 行を読み取る。
+    nread = read(pipe_fds[0], actual, sizeof(actual) - 1); // [手順] - パイプの読み取り側を指定して read() を呼び出す。
     ASSERT_GT(nread, 0);
     // [状態確認] - read() の戻り値が 0 より大きいこと。
     actual[nread] = '\0';
@@ -330,25 +335,28 @@ TEST_F(trace_syslogTest, test_null_arguments_are_safe)
     // Pre-Assert
 
     // Act
-    cplat_syslog_sink_dispose(nullptr); // [手順] - NULL ハンドルで dispose を呼び出す。
+    cplat_syslog_sink_dispose(
+        nullptr); // [手順] - handle に nullptr を指定して cplat_syslog_sink_dispose() を呼び出す。
 
-    cplat_syslog_sink *actual_ret_create =
-        cplat_syslog_sink_create(nullptr, LOG_USER); // [手順] - NULL ident で create を呼び出す。
-    int actual_ret_null_handle = cplat_syslog_sink_write(nullptr, LOG_INFO, nullptr,
-                                                         "test message"); // [手順] - NULL ハンドルで write を呼び出す。
-    int actual_ret_null_message =
-        cplat_syslog_sink_write(handle, LOG_INFO, nullptr, nullptr); // [手順] - NULL message で write を呼び出す。
+    cplat_syslog_sink *actual_ret_create = cplat_syslog_sink_create(
+        nullptr, LOG_USER); // [手順] - ident に nullptr を指定して cplat_syslog_sink_create() を呼び出す。
+    int actual_ret_null_handle = cplat_syslog_sink_write(
+        nullptr, LOG_INFO, nullptr,
+        "test message"); // [手順] - handle に nullptr を指定して cplat_syslog_sink_write() を呼び出す。
+    int actual_ret_null_message = cplat_syslog_sink_write(
+        handle, LOG_INFO, nullptr,
+        nullptr); // [手順] - message に nullptr を指定して cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         nullptr,
-        actual_ret_create); // [確認_異常系] - NULL ident に対する cplat_syslog_sink_create() の戻り値が nullptr であること。
+        actual_ret_create); // [確認_異常系] - nullptr ident に対する cplat_syslog_sink_create() の戻り値が nullptr であること。
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret_null_handle); // [確認_異常系] - NULL ハンドルに対する cplat_syslog_sink_write() の戻り値が CPLAT_OK であること。
+        actual_ret_null_handle); // [確認_異常系] - nullptr ハンドルに対する cplat_syslog_sink_write() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret_null_message); // [確認_異常系] - NULL message に対する cplat_syslog_sink_write() の戻り値が CPLAT_OK であること。
+        actual_ret_null_message); // [確認_異常系] - nullptr message に対する cplat_syslog_sink_write() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_syslog_sink_dispose(handle);
@@ -370,7 +378,7 @@ TEST_F(trace_syslogTest, test_fd_is_fixed_at_create)
         saved_fd_value = saved_fd;
     }
 
-    ASSERT_EQ(0, pipe(pipe_fds));                          // [状態] - pipe を生成する。
+    ASSERT_EQ(0, pipe(pipe_fds));                          // [状態] - パイプを生成する。
                                                            // [状態確認] - pipe() の戻り値が 0 であること。
     snprintf(fd_text, sizeof(fd_text), "%d", pipe_fds[1]); // [状態] - テスト用 FD をパイプの書き込み側とする。
     ASSERT_EQ(0, setenv("SYSLOG_TEST_FD", fd_text,
@@ -389,11 +397,12 @@ TEST_F(trace_syslogTest, test_fd_is_fixed_at_create)
 
     // Act
     int actual_ret_syslog_sink_write = cplat_syslog_sink_write(
-        handle, LOG_INFO, nullptr, "fixed message"); // [手順] - タイムスタンプなしで "fixed message" を書き込む。
+        handle, LOG_INFO, nullptr,
+        "fixed message"); // [手順] - タイムスタンプに nullptr と "fixed message" を指定して cplat_syslog_sink_write() を呼び出す。
 
     close(pipe_fds[1]);
     pipe_fds[1] = -1;
-    nread = read(pipe_fds[0], actual, sizeof(actual) - 1); // [手順] - pipe から書き込まれた 1 行を読み取る。
+    nread = read(pipe_fds[0], actual, sizeof(actual) - 1); // [手順] - パイプの読み取り側を指定して read() を呼び出す。
     ASSERT_GT(nread, 0);
     // [状態確認] - read() の戻り値が 0 より大きいこと。
     actual[nread] = '\0';
@@ -444,7 +453,8 @@ TEST_F(trace_syslogTest, test_fd_invalid_value_is_ignored)
 
     // Act
     int actual_ret_syslog_sink_write = cplat_syslog_sink_write(
-        handle, LOG_INFO, nullptr, "ignored message"); // [手順] - "ignored message" を書き込む。
+        handle, LOG_INFO, nullptr,
+        "ignored message"); // [手順] - "ignored message" を指定して cplat_syslog_sink_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(

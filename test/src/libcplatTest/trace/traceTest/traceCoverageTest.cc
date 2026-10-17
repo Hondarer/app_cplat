@@ -57,13 +57,13 @@ class traceCoverageTest : public Test
         set_trace_sync_mock_defaults(mock_cplat);
         test_trace_registry_reset_shutdown_state();
         ON_CALL(mock_cplat, cplat_shutdown_register(_, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - cplat_shutdown_register() の既定動作を設定する。
+        // [状態] - cplat_shutdown_register() から CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_trace_file_sink_create(_, _, _, _)).WillByDefault(Return(file_handle_));
-        // [状態] - cplat_trace_file_sink_create() の既定動作を設定する。
+        // [状態] - cplat_trace_file_sink_create() から file_handle_ を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_trace_file_sink_write(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - cplat_trace_file_sink_write() の既定動作を設定する。
+        // [状態] - cplat_trace_file_sink_write() から CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_trace_file_sink_dispose(_)).WillByDefault(Return());
-        // [状態] - cplat_trace_file_sink_dispose() の既定動作を設定する。
+        // [状態] - cplat_trace_file_sink_dispose() から戻るように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
             .WillByDefault(
                 [](char *path_out, size_t path_size)
@@ -71,29 +71,29 @@ class traceCoverageTest : public Test
                     snprintf(path_out, path_size, "%s", "/opt/bin/myapp");
                     return CPLAT_OK;
                 });
-        // [状態] - cplat_process_get_executable_path() の既定動作を設定する。
+        // [状態] - cplat_process_get_executable_path() から、"/opt/bin/myapp" を格納して CPLAT_OK を返すように既定動作を設定する。
 #if defined(PLATFORM_LINUX)
         ON_CALL(mock_cplat, cplat_syslog_sink_create(_, _)).WillByDefault(Return(os_handle_));
-        // [状態] - cplat_syslog_sink_create() の既定動作を設定する。
+        // [状態] - cplat_syslog_sink_create() から os_handle_ を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_write(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - cplat_syslog_sink_write() の既定動作を設定する。
+        // [状態] - cplat_syslog_sink_write() から CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_rename(_, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - cplat_syslog_sink_rename() の既定動作を設定する。
+        // [状態] - cplat_syslog_sink_rename() から CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_syslog_sink_dispose(_)).WillByDefault(Return());
-        // [状態] - cplat_syslog_sink_dispose() の既定動作を設定する。
+        // [状態] - cplat_syslog_sink_dispose() から戻るように既定動作を設定する。
 #elif defined(PLATFORM_WINDOWS)
         ON_CALL(mock_cplat, cplat_etw_provider_create(_)).WillByDefault(Return(os_handle_));
-        // [状態] - cplat_etw_provider_create() の既定動作を設定する。
+        // [状態] - cplat_etw_provider_create() から os_handle_ を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_etw_provider_write(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - cplat_etw_provider_write() の既定動作を設定する。
+        // [状態] - cplat_etw_provider_write() から CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_etw_provider_dispose(_)).WillByDefault(Return());
-        // [状態] - cplat_etw_provider_dispose() の既定動作を設定する。
+        // [状態] - cplat_etw_provider_dispose() から戻るように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_eventlog_sink_create(_)).WillByDefault(Return(eventlog_handle_));
-        // [状態] - cplat_eventlog_sink_create() の既定動作を設定する。
+        // [状態] - cplat_eventlog_sink_create() から eventlog_handle_ を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_eventlog_sink_write(_, _, _, _, _, _)).WillByDefault(Return(CPLAT_OK));
-        // [状態] - cplat_eventlog_sink_write() の既定動作を設定する。
+        // [状態] - cplat_eventlog_sink_write() から CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_eventlog_sink_dispose(_)).WillByDefault(Return());
-        // [状態] - cplat_eventlog_sink_dispose() の既定動作を設定する。
+        // [状態] - cplat_eventlog_sink_dispose() から戻るように既定動作を設定する。
 #endif /* PLATFORM_ */
     }
     // [サブ手順終了]
@@ -119,14 +119,22 @@ TEST_F(traceCoverageTest, to_syslog_level_covers_all_cases)
     // Pre-Assert
 
     // Act
-    int critical_level = test_tracer_to_syslog_level(CPLAT_TRACE_LEVEL_CRITICAL); // [手順] - CRITICAL を変換する。
-    int error_level = test_tracer_to_syslog_level(CPLAT_TRACE_LEVEL_ERROR);       // [手順] - ERROR を変換する。
-    int warning_level = test_tracer_to_syslog_level(CPLAT_TRACE_LEVEL_WARNING);   // [手順] - WARNING を変換する。
-    int info_level = test_tracer_to_syslog_level(CPLAT_TRACE_LEVEL_INFO);         // [手順] - INFO を変換する。
-    int verbose_level = test_tracer_to_syslog_level(CPLAT_TRACE_LEVEL_VERBOSE);   // [手順] - VERBOSE を変換する。
-    int debug_level = test_tracer_to_syslog_level(CPLAT_TRACE_LEVEL_DEBUG);       // [手順] - DEBUG を変換する。
-    int none_level = test_tracer_to_syslog_level(CPLAT_TRACE_LEVEL_NONE);         // [手順] - NONE を変換する。
-    int default_level = test_tracer_to_syslog_level(invalid_level);               // [手順] - 未定義レベルを変換する。
+    int critical_level = test_tracer_to_syslog_level(
+        CPLAT_TRACE_LEVEL_CRITICAL); // [手順] - CRITICAL を指定して test_tracer_to_syslog_level() を呼び出す。
+    int error_level = test_tracer_to_syslog_level(
+        CPLAT_TRACE_LEVEL_ERROR); // [手順] - ERROR を指定して test_tracer_to_syslog_level() を呼び出す。
+    int warning_level = test_tracer_to_syslog_level(
+        CPLAT_TRACE_LEVEL_WARNING); // [手順] - WARNING を指定して test_tracer_to_syslog_level() を呼び出す。
+    int info_level = test_tracer_to_syslog_level(
+        CPLAT_TRACE_LEVEL_INFO); // [手順] - INFO を指定して test_tracer_to_syslog_level() を呼び出す。
+    int verbose_level = test_tracer_to_syslog_level(
+        CPLAT_TRACE_LEVEL_VERBOSE); // [手順] - VERBOSE を指定して test_tracer_to_syslog_level() を呼び出す。
+    int debug_level = test_tracer_to_syslog_level(
+        CPLAT_TRACE_LEVEL_DEBUG); // [手順] - DEBUG を指定して test_tracer_to_syslog_level() を呼び出す。
+    int none_level = test_tracer_to_syslog_level(
+        CPLAT_TRACE_LEVEL_NONE); // [手順] - NONE を指定して test_tracer_to_syslog_level() を呼び出す。
+    int default_level = test_tracer_to_syslog_level(
+        invalid_level); // [手順] - 未定義レベルを指定して test_tracer_to_syslog_level() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -165,16 +173,20 @@ TEST_F(traceCoverageTest, to_syslog_level_maps_force_levels)
     // Pre-Assert
 
     // Act
-    int critical_level =
-        test_tracer_to_syslog_level(CPLAT_TRACE_LEVEL_FORCE_CRITICAL); // [手順] - FORCE_CRITICAL を変換する。
-    int error_level = test_tracer_to_syslog_level(CPLAT_TRACE_LEVEL_FORCE_ERROR); // [手順] - FORCE_ERROR を変換する。
-    int warning_level =
-        test_tracer_to_syslog_level(CPLAT_TRACE_LEVEL_FORCE_WARNING);           // [手順] - FORCE_WARNING を変換する。
-    int info_level = test_tracer_to_syslog_level(CPLAT_TRACE_LEVEL_FORCE_INFO); // [手順] - FORCE_INFO を変換する。
-    int verbose_level =
-        test_tracer_to_syslog_level(CPLAT_TRACE_LEVEL_FORCE_VERBOSE);             // [手順] - FORCE_VERBOSE を変換する。
-    int debug_level = test_tracer_to_syslog_level(CPLAT_TRACE_LEVEL_FORCE_DEBUG); // [手順] - FORCE_DEBUG を変換する。
-    int none_level = test_tracer_to_syslog_level(CPLAT_TRACE_LEVEL_FORCE_NONE);   // [手順] - FORCE_NONE を変換する。
+    int critical_level = test_tracer_to_syslog_level(
+        CPLAT_TRACE_LEVEL_FORCE_CRITICAL); // [手順] - FORCE_CRITICAL を指定して test_tracer_to_syslog_level() を呼び出す。
+    int error_level = test_tracer_to_syslog_level(
+        CPLAT_TRACE_LEVEL_FORCE_ERROR); // [手順] - FORCE_ERROR を指定して test_tracer_to_syslog_level() を呼び出す。
+    int warning_level = test_tracer_to_syslog_level(
+        CPLAT_TRACE_LEVEL_FORCE_WARNING); // [手順] - FORCE_WARNING を指定して test_tracer_to_syslog_level() を呼び出す。
+    int info_level = test_tracer_to_syslog_level(
+        CPLAT_TRACE_LEVEL_FORCE_INFO); // [手順] - FORCE_INFO を指定して test_tracer_to_syslog_level() を呼び出す。
+    int verbose_level = test_tracer_to_syslog_level(
+        CPLAT_TRACE_LEVEL_FORCE_VERBOSE); // [手順] - FORCE_VERBOSE を指定して test_tracer_to_syslog_level() を呼び出す。
+    int debug_level = test_tracer_to_syslog_level(
+        CPLAT_TRACE_LEVEL_FORCE_DEBUG); // [手順] - FORCE_DEBUG を指定して test_tracer_to_syslog_level() を呼び出す。
+    int none_level = test_tracer_to_syslog_level(
+        CPLAT_TRACE_LEVEL_FORCE_NONE); // [手順] - FORCE_NONE を指定して test_tracer_to_syslog_level() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -210,9 +222,10 @@ TEST_F(traceCoverageTest, force_level_conversion_macros_are_symmetric)
     // Pre-Assert
 
     // Act
-    cplat_trace_level forced =
-        CPLAT_TRACE_LEVEL_TO_FORCE(CPLAT_TRACE_LEVEL_WARNING);         // [手順] - WARNING を強制出力へ変換する。
-    cplat_trace_level restored = CPLAT_TRACE_LEVEL_FROM_FORCE(forced); // [手順] - 強制出力を通常へ戻す。
+    cplat_trace_level forced = CPLAT_TRACE_LEVEL_TO_FORCE(
+        CPLAT_TRACE_LEVEL_WARNING); // [手順] - WARNING を指定して CPLAT_TRACE_LEVEL_TO_FORCE() を呼び出す。
+    cplat_trace_level restored = CPLAT_TRACE_LEVEL_FROM_FORCE(
+        forced); // [手順] - 強制出力のレベルを指定して CPLAT_TRACE_LEVEL_FROM_FORCE() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -245,18 +258,18 @@ TEST_F(traceCoverageTest, create_fails_when_syslog_or_rwlock_setup_fails)
         .WillOnce(Return(nullptr))
         .WillRepeatedly(
             Return(os_handle_)); // [Pre-Assert確認_異常系] - cplat_syslog_sink_create() が 1 回以上呼び出されること。
-                                 // [Pre-Assert手順] - 1 回目は NULL、以降はダミー sink を返却する。
+    // [Pre-Assert手順] - cplat_syslog_sink_create() から 1 回目は nullptr、以降は os_handle_ を返す。
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_create(_))
         .WillOnce(Return(CPLAT_ERR_UNKNOWN))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_rwlock_create() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は UNKNOWN、以降は既定動作を返却する。
+    // [Pre-Assert手順] - cplat_local_rwlock_create() から 1 回目は CPLAT_ERR_UNKNOWN を返し、以降は既定動作へ委譲する。
 
     // Act
     syslog_failure = cplat_tracer_create(
-        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - syslog sink 生成失敗状態で create する。
-    rwlock_failure =
-        cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - rwlock 生成失敗状態で create する。
+        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - syslog sink の生成が失敗する状態で cplat_tracer_create() を呼び出す。
+    rwlock_failure = cplat_tracer_create(
+        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - rwlock の生成が失敗する状態で cplat_tracer_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -286,15 +299,19 @@ TEST_F(traceCoverageTest, shutdown_and_inactive_dispose_paths)
 
     // Act
     test_trace_registry_set_shutdown_started(1U);
-    rejected =
-        cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - シャットダウン開始後に create する。
+    rejected = cplat_tracer_create(
+        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - シャットダウン開始後の状態で cplat_tracer_create() を呼び出す。
     test_trace_registry_reset_shutdown_state();
-    first_dispose = test_tracer_begin_dispose(handle);    // [手順] - アクティブ ハンドルの解放を開始する。
-    second_begin = test_tracer_begin_dispose(handle);     // [手順] - 非アクティブ ハンドルの解放を再開始する。
-    cplat_tracer_dispose(nullptr);                        // [手順] - NULL のポインターを dispose する。
-    cplat_tracer_dispose(&handle);                        // [手順] - 解放開始済みハンドルを dispose する。
-    int null_active = test_tracer_handle_is_active(nullptr); // [手順] - NULL ハンドルのアクティブ判定を行う。
-    int null_begin = test_tracer_begin_dispose(nullptr);     // [手順] - NULL ハンドルの解放開始を行う。
+    first_dispose = test_tracer_begin_dispose(
+        handle); // [手順] - アクティブ ハンドルを指定して test_tracer_begin_dispose() を呼び出す。
+    second_begin = test_tracer_begin_dispose(
+        handle);                   // [手順] - 非アクティブ ハンドルを指定して test_tracer_begin_dispose() を呼び出す。
+    cplat_tracer_dispose(nullptr); // [手順] - nullptr を指定して cplat_tracer_dispose() を呼び出す。
+    cplat_tracer_dispose(&handle); // [手順] - 解放開始済みハンドルを指定して cplat_tracer_dispose() を呼び出す。
+    int null_active = test_tracer_handle_is_active(
+        nullptr); // [手順] - nullptr ハンドルを指定して test_tracer_handle_is_active() を呼び出す。
+    int null_begin = test_tracer_begin_dispose(
+        nullptr); // [手順] - nullptr ハンドルを指定して test_tracer_begin_dispose() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr,
@@ -307,10 +324,10 @@ TEST_F(traceCoverageTest, shutdown_and_inactive_dispose_paths)
         second_begin); // [確認_異常系] - 非アクティブ ハンドルに対する test_tracer_begin_dispose() の戻り値が -1 であること。(解放の再開始が拒否されたことの確認)
     EXPECT_EQ(
         0,
-        null_active); // [確認_異常系] - NULL ハンドルに対する test_tracer_handle_is_active() の戻り値が 0 であること。(NULL ハンドルが非アクティブであることの確認)
+        null_active); // [確認_異常系] - nullptr ハンドルに対する test_tracer_handle_is_active() の戻り値が 0 であること。(nullptr ハンドルが非アクティブであることの確認)
     EXPECT_EQ(
         -1,
-        null_begin); // [確認_異常系] - NULL ハンドルに対する test_tracer_begin_dispose() の戻り値が -1 であること。(NULL ハンドルの解放開始が拒否されたことの確認)
+        null_begin); // [確認_異常系] - nullptr ハンドルに対する test_tracer_begin_dispose() の戻り値が -1 であること。(nullptr ハンドルの解放開始が拒否されたことの確認)
 }
 // [サブ手順参照 名前=traceCoverageTest.TearDown]
 
@@ -341,21 +358,26 @@ TEST_F(traceCoverageTest, enter_shared_fails_on_timeout_and_lifecycle_change)
         .WillOnce(Return(CPLAT_ERR_TIMEOUT))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_rwlock_lock_shared() が 3 回以上呼び出されること。
-    // [Pre-Assert手順] - 1 回目と 3 回目は TIMEOUT、2 回目は DISPOSING へ変更して OK、以降は既定動作を返却する。
+    // [Pre-Assert手順] - cplat_local_rwlock_lock_shared() から 1 回目と 3 回目は CPLAT_ERR_TIMEOUT を返し、2 回目は、ライフサイクルを DISPOSING へ変更して CPLAT_OK を返し、以降は既定動作へ委譲する。
 
     // Act
-    file_level = cplat_tracer_get_file_level(handle); // [手順] - 共有ロック タイムアウト状態で file レベルを取得する。
+    file_level = cplat_tracer_get_file_level(
+        handle); // [手順] - 共有ロックがタイムアウトする状態で cplat_tracer_get_file_level() を呼び出す。
     stderr_level = cplat_tracer_get_stderr_level(
-        handle); // [手順] - ロック中に DISPOSING へ変わった状態で stderr レベルを取得する。
+        handle); // [手順] - ロック中に DISPOSING へ変わる状態で cplat_tracer_get_stderr_level() を呼び出す。
     test_tracer_set_lifecycle_state(handle, kLifecycleDisposed);
-    start_result = cplat_tracer_start(handle); // [手順] - 非アクティブ ハンドルで start する。
+    start_result =
+        cplat_tracer_start(handle); // [手順] - 非アクティブ ハンドルを指定して cplat_tracer_start() を呼び出す。
     test_tracer_set_lifecycle_state(handle, 0);
     test_tracer_set_running(handle, 1);
-    write_result = cplat_tracer_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                      "msg");      // [手順] - 共有ロック失敗の残り回数で write する。
-    os_level = cplat_tracer_get_os_level(handle);  // [手順] - ロック失敗後に os レベルを取得する。
-    state = cplat_tracer_get_state(handle);        // [手順] - ロック失敗後に状態を取得する。
-    int stop_inactive = cplat_tracer_stop(handle); // [手順] - 非アクティブ化したハンドルを stop する。
+    write_result = cplat_tracer_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "msg"); // [手順] - 共有ロックの失敗が残っている状態で、INFO レベルと "msg" を指定して cplat_tracer_write() を呼び出す。
+    os_level =
+        cplat_tracer_get_os_level(handle);  // [手順] - ロック失敗後の状態で cplat_tracer_get_os_level() を呼び出す。
+    state = cplat_tracer_get_state(handle); // [手順] - ロック失敗後の状態で cplat_tracer_get_state() を呼び出す。
+    int stop_inactive =
+        cplat_tracer_stop(handle); // [手順] - 非アクティブ化したハンドルを指定して cplat_tracer_stop() を呼び出す。
     (void)os_level;
     (void)state;
     (void)stop_inactive;
@@ -407,43 +429,53 @@ TEST_F(traceCoverageTest, setters_cover_invalid_and_allocation_failures)
         .WillOnce(Return(nullptr))
         .WillRepeatedly(Invoke(
             delegate_real_cplat_strdup)); // [Pre-Assert確認_異常系] - cplat_strdup() が 3 回以上呼び出されること。
-    // [Pre-Assert手順] - 1 回目は本物へ委譲し、2 回目と 3 回目は NULL を返却し、以降は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_strdup() から 1 回目は製品 (prod) の処理へ委譲し、2 回目と 3 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
     EXPECT_CALL(mock_cplat, cplat_syslog_sink_rename(_, _))
         .WillOnce(Return(CPLAT_OK))
         .WillOnce(Return(-1))
         .WillRepeatedly(
             Return(CPLAT_OK)); // [Pre-Assert確認_異常系] - cplat_syslog_sink_rename() が 2 回以上呼び出されること。
-                               // [Pre-Assert手順] - 1 回目は CPLAT_OK、2 回目は -1、以降は CPLAT_OK を返却する。
+    // [Pre-Assert手順] - cplat_syslog_sink_rename() から 1 回目は CPLAT_OK、2 回目は -1、以降は CPLAT_OK を返す。
 #endif                                     /* PLATFORM_LINUX */
 
     // Act
-    negative_name = cplat_tracer_set_name(handle, "n", -1); // [手順] - 負の identifier で set_name() する。
-    name_null = cplat_tracer_set_name(handle, nullptr, 0);  // [手順] - name NULL と identifier 0 で set_name() する。
+    negative_name = cplat_tracer_set_name(
+        handle, "n", -1); // [手順] - 負の identifier を指定して cplat_tracer_set_name() を呼び出す。
+    name_null = cplat_tracer_set_name(
+        handle, nullptr,
+        0); // [手順] - name に nullptr、identifier に 0 を指定して cplat_tracer_set_name() を呼び出す。
     test_tracer_set_lifecycle_state(handle, kLifecycleDisposed);
-    file_name_inactive =
-        cplat_tracer_set_file_name(handle, "log", 0); // [手順] - 非アクティブ ハンドルで set_file_name() する。
+    file_name_inactive = cplat_tracer_set_file_name(
+        handle, "log", 0); // [手順] - 非アクティブ ハンドルを指定して cplat_tracer_set_file_name() を呼び出す。
     test_tracer_set_lifecycle_state(handle, 0);
 #if defined(PLATFORM_LINUX)
-    file_name_oom = cplat_tracer_set_file_name(handle, "log", 0); // [手順] - strdup 失敗状態で set_file_name() する。
-    file_level_oom = cplat_tracer_set_file_level(handle, "/tmp/a.log", CPLAT_TRACE_LEVEL_INFO, 0, 0,
-                                                 0);              // [手順] - パス複製失敗状態で set_file_level() する。
-    rename_failure = cplat_tracer_set_name(handle, "renamed", 0); // [手順] - syslog rename 失敗状態で set_name() する。
+    file_name_oom = cplat_tracer_set_file_name(
+        handle, "log", 0); // [手順] - cplat_strdup() が失敗する状態で cplat_tracer_set_file_name() を呼び出す。
+    file_level_oom = cplat_tracer_set_file_level(
+        handle, "/tmp/a.log", CPLAT_TRACE_LEVEL_INFO, 0, 0,
+        0); // [手順] - パスの複製が失敗する状態で cplat_tracer_set_file_level() を呼び出す。
+    rename_failure = cplat_tracer_set_name(
+        handle, "renamed",
+        0); // [手順] - cplat_syslog_sink_rename() が失敗する状態で cplat_tracer_set_name() を呼び出す。
 #endif                                                            /* PLATFORM_LINUX */
     test_tracer_set_lifecycle_state(handle, kLifecycleDisposed);
     stderr_inactive = cplat_tracer_set_stderr_level(
-        handle, CPLAT_TRACE_LEVEL_ERROR); // [手順] - 非アクティブで stderr レベルを設定する。
-    os_inactive =
-        cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_ERROR); // [手順] - 非アクティブで os レベルを設定する。
-    cplat_tracer_hook_entry *hook_inactive =
-        cplat_tracer_set_hook(handle, nullptr, nullptr); // [手順] - 非アクティブ ハンドルで set_hook する。
-    cplat_tracer_remove_hook(handle, nullptr);           // [手順] - NULL hook を remove する。
+        handle,
+        CPLAT_TRACE_LEVEL_ERROR); // [手順] - 非アクティブ ハンドルを指定して cplat_tracer_set_stderr_level() を呼び出す。
+    os_inactive = cplat_tracer_set_os_level(
+        handle,
+        CPLAT_TRACE_LEVEL_ERROR); // [手順] - 非アクティブ ハンドルを指定して cplat_tracer_set_os_level() を呼び出す。
+    cplat_tracer_hook_entry *hook_inactive = cplat_tracer_set_hook(
+        handle, nullptr, nullptr); // [手順] - 非アクティブ ハンドルを指定して cplat_tracer_set_hook() を呼び出す。
+    cplat_tracer_remove_hook(handle,
+                             nullptr); // [手順] - hook に nullptr を指定して cplat_tracer_remove_hook() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         negative_name); // [確認_異常系] - 負の identifier での cplat_tracer_set_name() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(CPLAT_OK,
-              name_null); // [確認_正常系] - name が NULL の cplat_tracer_set_name() の戻り値が CPLAT_OK であること。
+              name_null); // [確認_正常系] - name が nullptr の cplat_tracer_set_name() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         file_name_inactive); // [確認_異常系] - 非アクティブ ハンドルでの cplat_tracer_set_file_name() の戻り値が CPLAT_ERR_UNKNOWN であること。
@@ -491,27 +523,31 @@ TEST_F(traceCoverageTest, file_sink_open_failures)
     EXPECT_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
         .WillRepeatedly(Return(
             CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_process_get_executable_path() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - cplat_process_get_executable_path() から CPLAT_ERR_UNKNOWN を返却する。
+    // [Pre-Assert手順] - cplat_process_get_executable_path() から CPLAT_ERR_UNKNOWN を返す。
     EXPECT_CALL(mock_cplat, cplat_trace_file_sink_create(_, _, _, _))
         .WillOnce(Return(nullptr))
         .WillOnce(Return(nullptr))
         .WillRepeatedly(Return(
             file_handle_)); // [Pre-Assert確認_異常系] - cplat_trace_file_sink_create() が 2 回以上呼び出されること。
-    // [Pre-Assert手順] - 1 回目と 2 回目は NULL、以降はダミー sink を返却する。
+    // [Pre-Assert手順] - cplat_trace_file_sink_create() から 1 回目と 2 回目は nullptr、以降は file_handle_ を返す。
 
     // Act
-    default_path =
-        test_tracer_build_default_file_path(handle, path, sizeof(path)); // [手順] - 既定パス構築を失敗させる。
-    int actual_ret_set_file_level = cplat_tracer_set_file_level(handle, nullptr, CPLAT_TRACE_LEVEL_INFO, 0, 0,
-                                                                0); // [手順] - NULL パスで file レベルを設定する。
+    default_path = test_tracer_build_default_file_path(
+        handle, path,
+        sizeof(path)); // [手順] - 既定パスの構築が失敗する状態で test_tracer_build_default_file_path() を呼び出す。
+    int actual_ret_set_file_level = cplat_tracer_set_file_level(
+        handle, nullptr, CPLAT_TRACE_LEVEL_INFO, 0, 0,
+        0); // [手順] - path に nullptr を指定して cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
-        actual_ret_set_file_level); // [確認_正常系] - NULL パスでの cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
-    start_result = cplat_tracer_start(handle); // [手順] - file sink 生成失敗状態で start する。
+        actual_ret_set_file_level); // [確認_正常系] - nullptr パスでの cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
+    start_result =
+        cplat_tracer_start(handle); // [手順] - file sink の生成が失敗する状態で cplat_tracer_start() を呼び出す。
     test_tracer_set_running(handle, 1);
     test_tracer_set_file_handle(handle, file_handle_);
-    reopen_result = cplat_tracer_set_file_level(handle, "/tmp/b.log", CPLAT_TRACE_LEVEL_DEBUG, 10, 1,
-                                                0); // [手順] - 稼働中に新しい sink 生成を失敗させる。
+    reopen_result = cplat_tracer_set_file_level(
+        handle, "/tmp/b.log", CPLAT_TRACE_LEVEL_DEBUG, 10, 1,
+        0); // [手順] - 稼働中に新しい sink の生成が失敗する状態で cplat_tracer_set_file_level() を呼び出す。
 
     // Assert
     EXPECT_NE(
@@ -557,33 +593,43 @@ TEST_F(traceCoverageTest, snprintf_and_hex_edge_paths)
     EXPECT_CALL(mock_cplat, cplat_snprintf(_, _, _))
         .WillOnce(Return(CPLAT_ERR_UNKNOWN))
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_snprintf() が 1 回以上呼び出されること。
-    // [Pre-Assert手順] - 1 回目は CPLAT_ERR_UNKNOWN を返却し、以降は既定動作を返却する。
+    // [Pre-Assert手順] - cplat_snprintf() から 1 回目は CPLAT_ERR_UNKNOWN を返し、以降は既定動作へ委譲する。
 
     // Act
-    name_result =
-        cplat_tracer_get_file_name(handle, name, sizeof(name)); // [手順] - snprintf 失敗状態でファイル名を取得する。
-    hex_null = test_tracer_hex_write_impl(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, nullptr, 1U,
-                                          "l"); // [手順] - data NULL で hex を書き込む。
-    hex_empty = cplat_tracer_write_hex_at(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, 0U,
-                                          "l"); // [手順] - size 0 で hex を書き込む。
-    hex_long = test_tracer_hex_write_impl(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, sizeof(data),
-                                          long_label.c_str()); // [手順] - MAX_BODY に近い label で hex を書き込む。
-    hex_mid = test_tracer_hex_write_impl(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, 400U,
-                                         mid_label.c_str()); // [手順] - 省略記号だけが入る残り幅で hex を書き込む。
-    writef_null = cplat_tracer_writef_at(nullptr, CPLAT_TRACE_LEVEL_INFO, nullptr, "%s",
-                                         "x"); // [手順] - NULL ハンドルで writef する。
-    hexf_null = cplat_tracer_vwrite_hexf_at(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, nullptr, 1U, "%s",
-                                            nullptr); // [手順] - data NULL で vwrite_hexf する。
-    int write_hexf_null_format = cplat_tracer_write_hexf_at(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, sizeof(data),
-                                                            nullptr); // [手順] - format NULL で write_hexf() する。
+    name_result = cplat_tracer_get_file_name(
+        handle, name,
+        sizeof(name)); // [手順] - cplat_snprintf() が失敗する状態で cplat_tracer_get_file_name() を呼び出す。
+    hex_null = test_tracer_hex_write_impl(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr, nullptr, 1U,
+        "l"); // [手順] - data に nullptr を指定して test_tracer_hex_write_impl() を呼び出す。
+    hex_empty =
+        cplat_tracer_write_hex_at(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, 0U,
+                                  "l"); // [手順] - size に 0 を指定して cplat_tracer_write_hex_at() を呼び出す。
+    hex_long = test_tracer_hex_write_impl(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, sizeof(data),
+        long_label
+            .c_str()); // [手順] - MAX_BODY に近い長さの label を指定して test_tracer_hex_write_impl() を呼び出す。
+    hex_mid = test_tracer_hex_write_impl(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, 400U,
+        mid_label
+            .c_str()); // [手順] - 省略記号だけが入る残り幅になる label を指定して test_tracer_hex_write_impl() を呼び出す。
+    writef_null =
+        cplat_tracer_writef_at(nullptr, CPLAT_TRACE_LEVEL_INFO, nullptr, "%s",
+                               "x"); // [手順] - handle に nullptr を指定して cplat_tracer_writef_at() を呼び出す。
+    hexf_null = cplat_tracer_vwrite_hexf_at(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr, nullptr, 1U, "%s",
+        nullptr); // [手順] - data に nullptr を指定して cplat_tracer_vwrite_hexf_at() を呼び出す。
+    int write_hexf_null_format = cplat_tracer_write_hexf_at(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, sizeof(data),
+        nullptr); // [手順] - format に nullptr を指定して cplat_tracer_write_hexf_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_BUFFER_TOO_SMALL,
-        name_result); // [確認_異常系] - snprintf 失敗時の cplat_tracer_get_file_name() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+        name_result); // [確認_異常系] - cplat_snprintf() 失敗時の cplat_tracer_get_file_name() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
     EXPECT_EQ(
         CPLAT_OK,
-        hex_null); // [確認_正常系] - data が NULL の test_tracer_hex_write_impl() の戻り値が CPLAT_OK であること。
+        hex_null); // [確認_正常系] - data が nullptr の test_tracer_hex_write_impl() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK,
               hex_empty); // [確認_正常系] - size が 0 の cplat_tracer_write_hex_at() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
@@ -593,13 +639,13 @@ TEST_F(traceCoverageTest, snprintf_and_hex_edge_paths)
               hex_mid); // [確認_正常系] - 残り幅が狭い test_tracer_hex_write_impl() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_OK,
-        writef_null); // [確認_正常系] - NULL ハンドルでの cplat_tracer_writef_at() の戻り値が CPLAT_OK であること。
+        writef_null); // [確認_正常系] - nullptr ハンドルでの cplat_tracer_writef_at() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_OK,
-        hexf_null); // [確認_正常系] - data が NULL の cplat_tracer_vwrite_hexf_at() の戻り値が CPLAT_OK であること。
+        hexf_null); // [確認_正常系] - data が nullptr の cplat_tracer_vwrite_hexf_at() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_OK,
-        write_hexf_null_format); // [確認_正常系] - format が NULL の cplat_tracer_write_hexf_at() の戻り値が CPLAT_OK であること。
+        write_hexf_null_format); // [確認_正常系] - format が nullptr の cplat_tracer_write_hexf_at() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_tracer_dispose(&handle);
@@ -620,18 +666,21 @@ TEST_F(traceCoverageTest, hook_alloc_failure_and_shutdown_repeat)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_malloc() から NULL を返却する。
+                                    // [Pre-Assert手順] - cplat_malloc() から nullptr を返す。
 
     // Act
     cplat_tracer_hook_entry *created =
-        cplat_tracer_set_hook(handle, coverage_hook, nullptr); // [手順] - malloc 失敗状態で hook を登録する。
+        cplat_tracer_set_hook(handle, coverage_hook,
+                              nullptr); // [手順] - cplat_malloc() が失敗する状態で cplat_tracer_set_hook() を呼び出す。
     test_trace_registry_append_null();
     cplat_internal_trace_registry_dispose_all_on_shutdown(
-        &event); // [手順] - NULL エントリを含むレジストリをシャットダウンする。
+        &event); // [手順] - nullptr エントリを含むレジストリの状態で cplat_internal_trace_registry_dispose_all_on_shutdown() を呼び出す。
     cplat_internal_trace_registry_dispose_all_on_shutdown(
-        &event); // [手順] - シャットダウン済みレジストリを再シャットダウンする。
-    cplat_internal_trace_registry_dispose_all_on_shutdown(nullptr); // [手順] - NULL event でシャットダウンする。
-    cplat_tracer_remove_hook(handle, hook); // [手順] - シャットダウン後のハンドルから hook を外す。
+        &event); // [手順] - シャットダウン済みレジストリの状態で cplat_internal_trace_registry_dispose_all_on_shutdown() を呼び出す。
+    cplat_internal_trace_registry_dispose_all_on_shutdown(
+        nullptr); // [手順] - event に nullptr を指定して cplat_internal_trace_registry_dispose_all_on_shutdown() を呼び出す。
+    cplat_tracer_remove_hook(
+        handle, hook); // [手順] - シャットダウン後のハンドルを指定して cplat_tracer_remove_hook() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr,
@@ -671,18 +720,20 @@ TEST_F(traceCoverageTest, write_fails_when_timestamp_resolution_fails)
             })
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_clock_get_realtime() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は不正な時刻を書き込み、以降は既定動作を返却する。
+    // [Pre-Assert手順] - cplat_clock_get_realtime() から 1 回目は、不正な時刻を設定して戻り、以降は既定動作へ委譲する。
     EXPECT_CALL(mock_cplat, cplat_clock_format_realtime_iso8601_local(_, _, _))
         .WillOnce(Return(CPLAT_ERR_UNKNOWN))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_clock_format_realtime_iso8601_local() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は CPLAT_ERR_UNKNOWN を返却し、以降は既定動作を返却する。
+    // [Pre-Assert手順] - cplat_clock_format_realtime_iso8601_local() から 1 回目は CPLAT_ERR_UNKNOWN を返し、以降は既定動作へ委譲する。
 
     // Act
-    write_result = cplat_tracer_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                      "msg"); // [手順] - 時刻解決失敗状態で write する。
-    int format_result = cplat_tracer_write(handle, CPLAT_TRACE_LEVEL_INFO, &ts,
-                                           "msg"); // [手順] - 時刻整形失敗状態で write する。
+    write_result = cplat_tracer_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "msg"); // [手順] - 時刻解決が失敗する状態で、INFO レベルと "msg" を指定して cplat_tracer_write() を呼び出す。
+    int format_result = cplat_tracer_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, &ts,
+        "msg"); // [手順] - 時刻整形が失敗する状態で、明示タイムスタンプと "msg" を指定して cplat_tracer_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -730,70 +781,81 @@ TEST_F(traceCoverageTest, remaining_compound_conditions)
                 snprintf(path_out, path_size, "%s", "/opt/bin/myapp");
                 return CPLAT_OK;
             }); // [Pre-Assert確認_正常系] - cplat_process_get_executable_path() が 1 回以上呼び出されること。
-                // [Pre-Assert手順] - 1 回目は "myapp"、以降は "/opt/bin/myapp" を返却する。
+    // [Pre-Assert手順] - cplat_process_get_executable_path() から 1 回目は "myapp"、以降は "/opt/bin/myapp" を格納して CPLAT_OK を返す。
 
     // Act
-    test_tracer_unregister(handle); // [手順] - 登録済みハンドルを 1 回外す。
-    test_tracer_unregister(handle); // [手順] - 未登録ハンドルをもう一度外す。
+    test_tracer_unregister(handle); // [手順] - 登録済みハンドルを指定して test_tracer_unregister() を呼び出す。
+    test_tracer_unregister(handle); // [手順] - 未登録ハンドルを指定して test_tracer_unregister() を呼び出す。
     test_trace_registry_set_shutdown_started(1U);
-    active_during_shutdown = test_tracer_handle_is_active(handle); // [手順] - シャットダウン中のアクティブ判定を行う。
+    active_during_shutdown = test_tracer_handle_is_active(
+        handle); // [手順] - シャットダウン中の状態で test_tracer_handle_is_active() を呼び出す。
     test_trace_registry_reset_shutdown_state();
-    name_small = cplat_tracer_get_file_name(handle, tiny_name,
-                                            sizeof(tiny_name)); // [手順] - 2 バイト出力先でファイル名を取得する。
+    name_small = cplat_tracer_get_file_name(
+        handle, tiny_name,
+        sizeof(tiny_name)); // [手順] - 2 バイトの出力先を指定して cplat_tracer_get_file_name() を呼び出す。
     char default_path[64] = {};
     (void)test_tracer_build_default_file_path(
-        handle, default_path, sizeof(default_path)); // [手順] - 実行ファイル名だけのパスから既定パスを構築する。
-    int actual_ret_start = cplat_tracer_start(handle); // [手順] - tracer を start する。
+        handle, default_path,
+        sizeof(
+            default_path)); // [手順] - 実行ファイル名だけのパスになる状態で test_tracer_build_default_file_path() を呼び出す。
+    int actual_ret_start = cplat_tracer_start(handle); // [手順] - cplat_tracer_start() を呼び出す。
     ASSERT_EQ(CPLAT_OK, actual_ret_start);   // [確認_正常系] - cplat_tracer_start() の戻り値が CPLAT_OK であること。
-    start_none = cplat_tracer_start(handle); // [手順] - すでに running のハンドルを再 start する。
-    writef_null_fmt = cplat_tracer_writef_at(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                             nullptr); // [手順] - format NULL で writef する。
-    hex_null_handle = test_tracer_hex_write_impl(nullptr, CPLAT_TRACE_LEVEL_INFO, nullptr, data, sizeof(data),
-                                                 "l"); // [手順] - NULL ハンドルで hex を書く。
-    hex_empty_label = test_tracer_hex_write_impl(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, sizeof(data),
-                                                 empty_label); // [手順] - 空 label で hex を書く。
+    start_none =
+        cplat_tracer_start(handle); // [手順] - すでに running のハンドルを指定して cplat_tracer_start() を呼び出す。
+    writef_null_fmt =
+        cplat_tracer_writef_at(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+                               nullptr); // [手順] - format に nullptr を指定して cplat_tracer_writef_at() を呼び出す。
+    hex_null_handle = test_tracer_hex_write_impl(
+        nullptr, CPLAT_TRACE_LEVEL_INFO, nullptr, data, sizeof(data),
+        "l"); // [手順] - nullptr ハンドルを指定して test_tracer_hex_write_impl() を呼び出す。
+    hex_empty_label = test_tracer_hex_write_impl(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, sizeof(data),
+        empty_label); // [手順] - 空の label を指定して test_tracer_hex_write_impl() を呼び出す。
     test_tracer_install_null_fn_hook(handle);
-    (void)cplat_tracer_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                             "hook"); // [手順] - fn NULL の hook で write する。
+    (void)cplat_tracer_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "hook"); // [手順] - fn が nullptr の hook を登録した状態で、"hook" を指定して cplat_tracer_write() を呼び出す。
     test_tracer_clear_hook_head(handle);
-    utf8_cut =
-        (int)test_tracer_utf8_safe_truncate("\xE3\x81\x82", 2U); // [手順] - 継続バイト位置で UTF-8 を切り詰める。
+    utf8_cut = (int)test_tracer_utf8_safe_truncate(
+        "\xE3\x81\x82",
+        2U); // [手順] - 継続バイトの位置になる長さ 2 を指定して test_tracer_utf8_safe_truncate() を呼び出す。
     test_tracer_set_running(handle, 1);
     test_tracer_set_file_handle(handle, file_handle_);
-    int actual_ret_set_level_debug_null =
-        cplat_tracer_set_file_level(handle, nullptr, CPLAT_TRACE_LEVEL_DEBUG, 0, 0,
-                                    0); // [手順] - 稼働中に path NULL のまましきい値だけ変える。
+    int actual_ret_set_level_debug_null = cplat_tracer_set_file_level(
+        handle, nullptr, CPLAT_TRACE_LEVEL_DEBUG, 0, 0,
+        0); // [手順] - 稼働中に path を nullptr のまま、しきい値だけを変えて cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
-        actual_ret_set_level_debug_null); // [確認_正常系] - 稼働中に path が NULL の cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
-    int actual_ret_set_level_same_info =
-        cplat_tracer_set_file_level(handle, "/tmp/same.log", CPLAT_TRACE_LEVEL_INFO, 8, 2,
-                                    1); // [手順] - 稼働中に same.log へ file レベルを設定する。
+        actual_ret_set_level_debug_null); // [確認_正常系] - 稼働中に path が nullptr の cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
+    int actual_ret_set_level_same_info = cplat_tracer_set_file_level(
+        handle, "/tmp/same.log", CPLAT_TRACE_LEVEL_INFO, 8, 2,
+        1); // [手順] - 稼働中に "/tmp/same.log" を指定して cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_set_level_same_info); // [確認_正常系] - "/tmp/same.log" へ INFO を設定した cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
-    int actual_ret_set_level_same_debug =
-        cplat_tracer_set_file_level(handle, "/tmp/same.log", CPLAT_TRACE_LEVEL_DEBUG, 8, 2,
-                                    1); // [手順] - 稼働中に同一構造パラメーターでしきい値だけ変える。
+    int actual_ret_set_level_same_debug = cplat_tracer_set_file_level(
+        handle, "/tmp/same.log", CPLAT_TRACE_LEVEL_DEBUG, 8, 2,
+        1); // [手順] - 稼働中に同一の構造パラメーターのまま、しきい値だけを変えて cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_set_level_same_debug); // [確認_正常系] - 同一構造パラメーターでしきい値だけ変えた cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
-    int actual_ret_set_level_other =
-        cplat_tracer_set_file_level(handle, "/tmp/other.log", CPLAT_TRACE_LEVEL_DEBUG, 8, 2,
-                                    1); // [手順] - 稼働中にパスを変えて開き直す。
+    int actual_ret_set_level_other = cplat_tracer_set_file_level(
+        handle, "/tmp/other.log", CPLAT_TRACE_LEVEL_DEBUG, 8, 2,
+        1); // [手順] - 稼働中にパスを変えて、開き直すように cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_set_level_other); // [確認_正常系] - パスを変えて開き直した cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
     test_tracer_set_file_handle(handle, nullptr);
-    int actual_ret_set_level_none = cplat_tracer_set_file_level(handle, nullptr, CPLAT_TRACE_LEVEL_NONE, 0, 0,
-                                                                0); // [手順] - 稼働中・file なしで出力を無効化する。
+    int actual_ret_set_level_none = cplat_tracer_set_file_level(
+        handle, nullptr, CPLAT_TRACE_LEVEL_NONE, 0, 0,
+        0); // [手順] - 稼働中に file なしで、出力を無効化するように cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_set_level_none); // [確認_正常系] - 稼働中・file なしで出力を無効化した cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
     test_tracer_set_file_handle(handle, nullptr);
-    int actual_ret_set_level_opened =
-        cplat_tracer_set_file_level(handle, "/tmp/opened.log", CPLAT_TRACE_LEVEL_INFO, 1, 0,
-                                    0); // [手順] - 稼働中・旧ハンドルなしで新しい sink を開く。
+    int actual_ret_set_level_opened = cplat_tracer_set_file_level(
+        handle, "/tmp/opened.log", CPLAT_TRACE_LEVEL_INFO, 1, 0,
+        0); // [手順] - 稼働中に旧ハンドルなしで、新しい sink を開くように cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_set_level_opened); // [確認_正常系] - 稼働中・旧ハンドルなしで新しい sink を開いた cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
@@ -810,19 +872,22 @@ TEST_F(traceCoverageTest, remaining_compound_conditions)
             .WillOnce(DoDefault())
             .WillOnce(Return(
                 CPLAT_ERR_BUFFER_TOO_SMALL)); // [Pre-Assert確認_正常系] - cplat_snprintf() が 3 回呼び出されること。
-        // [Pre-Assert手順] - 3 回目の cplat_snprintf() にて CPLAT_ERR_BUFFER_TOO_SMALL を返却する。
+        // [Pre-Assert手順] - cplat_snprintf() から 1 回目と 2 回目は既定動作へ委譲し、3 回目は CPLAT_ERR_BUFFER_TOO_SMALL を返す。
         // Arrange
         char path_buf[64] = {};
         // Act
         (void)test_tracer_build_default_file_path(
             handle, path_buf,
-            sizeof(path_buf)); // [手順] - .log 付与の cplat_snprintf() が過大長を返す。
+            sizeof(
+                path_buf)); // [手順] - .log 付与の cplat_snprintf() が過大長を返す状態で test_tracer_build_default_file_path() を呼び出す。
     }
     cplat_tracer_remove_hook(handle, reinterpret_cast<cplat_tracer_hook_entry *>(static_cast<uintptr_t>(0x2)));
-    test_tracer_call_next_null(handle);                   // [手順] - NULL prev で次 hook を呼ぶ。
-    test_tracer_call_next_with_fn(handle, coverage_hook); // [手順] - fn 付き prev で次 hook を呼ぶ。
+    test_tracer_call_next_null(handle); // [手順] - prev に nullptr を指定して test_tracer_call_next_null() を呼び出す。
+    test_tracer_call_next_with_fn(
+        handle, coverage_hook); // [手順] - fn 付きの prev を指定して test_tracer_call_next_with_fn() を呼び出す。
     test_tracer_set_file_handle(handle, nullptr);
-    cplat_tracer_dispose(&handle); // [手順] - tracer が所有する同期リソースを dispose で解放する。
+    cplat_tracer_dispose(
+        &handle); // [手順] - tracer が所有する同期リソースを解放するように cplat_tracer_dispose() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -835,10 +900,10 @@ TEST_F(traceCoverageTest, remaining_compound_conditions)
               start_none); // [確認_正常系] - 再 start の cplat_tracer_start() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_OK,
-        writef_null_fmt); // [確認_正常系] - format が NULL の cplat_tracer_writef_at() の戻り値が CPLAT_OK であること。
+        writef_null_fmt); // [確認_正常系] - format が nullptr の cplat_tracer_writef_at() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_OK,
-        hex_null_handle); // [確認_正常系] - NULL ハンドルの test_tracer_hex_write_impl() の戻り値が CPLAT_OK であること。
+        hex_null_handle); // [確認_正常系] - nullptr ハンドルの test_tracer_hex_write_impl() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_OK,
         hex_empty_label); // [確認_正常系] - 空 label の test_tracer_hex_write_impl() の戻り値が CPLAT_OK であること。
@@ -862,13 +927,15 @@ TEST_F(traceCoverageTest, release_normal_disposes_open_file_and_hooks)
 
     // Act
     cplat_tracer_hook_entry *hook = cplat_tracer_set_hook(handle, coverage_hook, nullptr);
-    int actual_ret_set_file_level = cplat_tracer_set_file_level(handle, "/tmp/c.log", CPLAT_TRACE_LEVEL_INFO, 0, 0,
-                                                                0); // [手順] - ファイル出力を有効にする。
+    int actual_ret_set_file_level = cplat_tracer_set_file_level(
+        handle, "/tmp/c.log", CPLAT_TRACE_LEVEL_INFO, 0, 0,
+        0); // [手順] - パス "/tmp/c.log" と INFO レベルを指定して cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(CPLAT_OK,
               actual_ret_set_file_level); // [状態確認] - cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
-    started = cplat_tracer_start(handle); // [手順] - ファイル出力を有効にして start する。
+    started = cplat_tracer_start(handle); // [手順] - ファイル出力が有効な状態で cplat_tracer_start() を呼び出す。
     (void)hook;
-    cplat_tracer_dispose(&handle); // [手順] - 開いているファイルと hook を持つハンドルを dispose する。
+    cplat_tracer_dispose(
+        &handle); // [手順] - 開いているファイルと hook を持つハンドルを指定して cplat_tracer_dispose() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -902,29 +969,31 @@ TEST_F(traceCoverageTest, register_during_shutdown_and_stale_file_handle)
                 test_trace_registry_set_shutdown_started(1U);
                 return os_handle_;
             })); // [Pre-Assert確認_正常系] - cplat_syslog_sink_create() が 1 回呼び出されること。
-                 // [Pre-Assert手順] - 生成中に shutdown 開始フラグを立て、ダミー sink を返却する。
+                 // [Pre-Assert手順] - cplat_syslog_sink_create() から、shutdown 開始フラグを立ててダミー sink を返す。
 #endif           /* PLATFORM_LINUX */
 
     // Act
 #if defined(PLATFORM_LINUX)
     rejected = cplat_tracer_create(
-        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - syslog 生成中にシャットダウンを開始して create する。
+        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - syslog sink の生成中にシャットダウンが開始される状態で cplat_tracer_create() を呼び出す。
 #endif                                            /* PLATFORM_LINUX */
     test_trace_registry_reset_shutdown_state();
     test_tracer_set_running(handle, 0);
     test_tracer_set_file_handle(handle, file_handle_);
-    file_level_result =
-        cplat_tracer_set_file_level(handle, nullptr, CPLAT_TRACE_LEVEL_NONE, 0, 0,
-                                    0); // [手順] - 停止中に残っている file ハンドルを set_file_level() で閉じる。
+    file_level_result = cplat_tracer_set_file_level(
+        handle, nullptr, CPLAT_TRACE_LEVEL_NONE, 0, 0,
+        0); // [手順] - 停止中に残っている file ハンドルを閉じるように、path に nullptr を指定して cplat_tracer_set_file_level() を呼び出す。
     test_tracer_set_file_handle(handle, file_handle_);
     test_tracer_set_lifecycle_state(handle, kLifecycleDisposed);
-    stop_result = cplat_tracer_stop(handle);                // [手順] - 非アクティブ ハンドルを stop する。
-    os_level_seen = (int)cplat_tracer_get_os_level(handle); // [手順] - 非アクティブ ハンドルの os レベルを取得する。
+    stop_result =
+        cplat_tracer_stop(handle); // [手順] - 非アクティブ ハンドルを指定して cplat_tracer_stop() を呼び出す。
+    os_level_seen = (int)cplat_tracer_get_os_level(
+        handle); // [手順] - 非アクティブ ハンドルを指定して cplat_tracer_get_os_level() を呼び出す。
     test_tracer_set_lifecycle_state(handle, 0);
     test_tracer_set_file_handle(handle, file_handle_);
     test_trace_registry_append_null();
     cplat_internal_trace_registry_dispose_all_on_shutdown(
-        &event); // [手順] - 開いている file ハンドルをシャットダウン解放する。
+        &event); // [手順] - 開いている file ハンドルを持つ状態で cplat_internal_trace_registry_dispose_all_on_shutdown() を呼び出す。
 
     // Assert
 #if defined(PLATFORM_LINUX)
@@ -968,14 +1037,15 @@ TEST_F(traceCoverageTest, exclusive_lock_lifecycle_and_set_file_level_enter_fail
             }))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_rwlock_lock_exclusive() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は DISPOSING へ変更して OK を返却し、以降は既定動作を返却する。
+    // [Pre-Assert手順] - cplat_local_rwlock_lock_exclusive() から 1 回目は、ライフサイクルを DISPOSING へ変更して CPLAT_OK を返し、以降は既定動作へ委譲する。
 
     // Act
-    start_result = cplat_tracer_start(handle); // [手順] - ロック中に DISPOSING へ変わった状態で start する。
+    start_result =
+        cplat_tracer_start(handle); // [手順] - ロック中に DISPOSING へ変わる状態で cplat_tracer_start() を呼び出す。
     test_tracer_set_lifecycle_state(handle, kLifecycleDisposed);
-    file_level_result =
-        cplat_tracer_set_file_level(handle, "/tmp/d.log", CPLAT_TRACE_LEVEL_INFO, 0, 0,
-                                    0); // [手順] - 非アクティブ ハンドルでパス付き set_file_level() する。
+    file_level_result = cplat_tracer_set_file_level(
+        handle, "/tmp/d.log", CPLAT_TRACE_LEVEL_INFO, 0, 0,
+        0); // [手順] - 非アクティブ ハンドルとパス "/tmp/d.log" を指定して cplat_tracer_set_file_level() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1015,7 +1085,7 @@ TEST_F(traceCoverageTest, default_path_snprintf_failure_and_normal_file_release)
     EXPECT_CALL(mock_cplat, cplat_trace_file_sink_create(_, _, _, _))
         .WillRepeatedly(Return(
             file_handle_)); // [Pre-Assert確認_正常系] - cplat_trace_file_sink_create() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - cplat_trace_file_sink_create() からダミー sink を返却する。
+    // [Pre-Assert手順] - cplat_trace_file_sink_create() から file_handle_ を返す。
 
     // Act
     {
@@ -1028,38 +1098,46 @@ TEST_F(traceCoverageTest, default_path_snprintf_failure_and_normal_file_release)
             .WillOnce(DoDefault())
             .WillOnce(Return(CPLAT_ERR_UNKNOWN))
             .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_snprintf() が 6 回以上呼び出されること。
-        // [Pre-Assert手順] - 3 回目と 6 回目の cplat_snprintf() にて CPLAT_ERR_UNKNOWN を返却する。
+        // [Pre-Assert手順] - cplat_snprintf() から 3 回目と 6 回目は CPLAT_ERR_UNKNOWN を返し、他は既定動作へ委譲する。
         // Act
         default_path = test_tracer_build_default_file_path(
-            handle, path, sizeof(path)); // [手順] - ファイル名組み立て後の .log 付与で cplat_snprintf() を失敗させる。
-        int actual_ret_set_file_level = cplat_tracer_set_file_level(handle, nullptr, CPLAT_TRACE_LEVEL_INFO, 0, 0,
-                                                                    0); // [手順] - NULL パスで file レベルを設定する。
+            handle, path,
+            sizeof(
+                path)); // [手順] - ファイル名の組み立て後の .log 付与で cplat_snprintf() が失敗する状態で test_tracer_build_default_file_path() を呼び出す。
+        int actual_ret_set_file_level = cplat_tracer_set_file_level(
+            handle, nullptr, CPLAT_TRACE_LEVEL_INFO, 0, 0,
+            0); // [手順] - path に nullptr を指定して cplat_tracer_set_file_level() を呼び出す。
         ASSERT_EQ(
             CPLAT_OK,
-            actual_ret_set_file_level); // [確認_正常系] - NULL パスでの cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
-        start_result = cplat_tracer_start(handle); // [手順] - 既定パス失敗と sink 生成失敗の状態で start する。
+            actual_ret_set_file_level); // [確認_正常系] - nullptr パスでの cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
+        start_result = cplat_tracer_start(
+            handle); // [手順] - 既定パスの構築と sink の生成が失敗する状態で cplat_tracer_start() を呼び出す。
     }
     test_tracer_set_running(handle, 0);
     test_tracer_set_file_handle(handle, file_handle_);
-    cplat_tracer_dispose(&handle); // [手順] - 停止中に残した file ハンドルを通常解放する。
+    cplat_tracer_dispose(
+        &handle); // [手順] - 停止中に file ハンドルが残っているハンドルを指定して cplat_tracer_dispose() を呼び出す。
     handle = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED);
     ASSERT_NE(nullptr,
               handle); // [状態確認] - 再生成した cplat_tracer_create() の戻り値が nullptr 以外であること。
-    int actual_ret_start = cplat_tracer_start(handle); // [手順] - hex 出力のために tracer を start する。
+    int actual_ret_start = cplat_tracer_start(handle); // [手順] - cplat_tracer_start() を呼び出す。
     ASSERT_EQ(CPLAT_OK,
               actual_ret_start); // [確認_正常系] - hex 出力前の cplat_tracer_start() の戻り値が CPLAT_OK であること。
-    hex_plain = test_tracer_hex_write_impl(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, payload, sizeof(payload),
-                                           nullptr); // [手順] - label なしの長い payload を hex 出力する。
-    hex_long_label = test_tracer_hex_write_impl(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, payload, sizeof(payload),
-                                                label_1021.c_str()); // [手順] - 長さ 1021 の label で hex 出力する。
-    hex_ellipsis_only =
-        test_tracer_hex_write_impl(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, payload, sizeof(payload),
-                                   label_1018.c_str()); // [手順] - 省略記号だけが入る残り幅で hex 出力する。
+    hex_plain = test_tracer_hex_write_impl(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr, payload, sizeof(payload),
+        nullptr); // [手順] - label に nullptr、長い payload を指定して test_tracer_hex_write_impl() を呼び出す。
+    hex_long_label = test_tracer_hex_write_impl(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr, payload, sizeof(payload),
+        label_1021.c_str()); // [手順] - 長さ 1021 の label を指定して test_tracer_hex_write_impl() を呼び出す。
+    hex_ellipsis_only = test_tracer_hex_write_impl(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr, payload, sizeof(payload),
+        label_1018
+            .c_str()); // [手順] - 省略記号だけが入る残り幅になる長さ 1018 の label を指定して test_tracer_hex_write_impl() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         -1,
-        default_path); // [確認_異常系] - snprintf 失敗時の test_tracer_build_default_file_path() の戻り値が -1 であること。(既定パス構築が失敗したことの確認)
+        default_path); // [確認_異常系] - cplat_snprintf() 失敗時の test_tracer_build_default_file_path() の戻り値が -1 であること。(既定パス構築が失敗したことの確認)
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         start_result); // [確認_異常系] - 既定パス失敗時の cplat_tracer_start() の戻り値が CPLAT_ERR_UNKNOWN であること。
@@ -1146,167 +1224,191 @@ TEST_F(traceCoverageTest, remaining_gcov_branches)
                 snprintf(path_out, path_size, "%s", "/opt/bin/myapp");
                 return CPLAT_OK;
             }); // [Pre-Assert確認_異常系] - cplat_process_get_executable_path() が 4 回以上呼び出されること。
-                // [Pre-Assert手順] - resolve 用、空文字、resolve 用、"myapp"、以降は通常パスを返却する。
+    // [Pre-Assert手順] - cplat_process_get_executable_path() から 1 回目は "/opt/bin/myapp"、2 回目は空文字、3 回目は "/opt/bin/myapp"、4 回目は "myapp"、以降は "/opt/bin/myapp" を格納して CPLAT_OK を返す。
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_cplat, cplat_syslog_sink_write(_, _, _, _))
         .WillOnce(Return(-1))
         .WillRepeatedly(
             Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_syslog_sink_write() が 1 回以上呼び出されること。
-                               // [Pre-Assert手順] - 1 回目は -1、以降は OK を返却する。
+    // [Pre-Assert手順] - cplat_syslog_sink_write() から 1 回目は -1、以降は CPLAT_OK を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_cplat, cplat_eventlog_sink_write(_, _, _, _, _, _))
         .WillOnce(Return(-1))
         .WillRepeatedly(
             Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_eventlog_sink_write() が 1 回以上呼び出されること。
-                               // [Pre-Assert手順] - 1 回目は -1、以降は OK を返却する。
+    // [Pre-Assert手順] - cplat_eventlog_sink_write() から 1 回目は -1、以降は CPLAT_OK を返す。
 #endif /* PLATFORM_ */
     EXPECT_CALL(mock_cplat, cplat_trace_file_sink_write(_, _, _, _))
         .WillOnce(Return(-1))
         .WillRepeatedly(
             Return(CPLAT_OK)); // [Pre-Assert確認_異常系] - cplat_trace_file_sink_write() が 1 回以上呼び出されること。
-                               // [Pre-Assert手順] - 1 回目は -1、以降は OK を返却する。
+    // [Pre-Assert手順] - cplat_trace_file_sink_write() から 1 回目は -1、以降は CPLAT_OK を返す。
 
     // Act
     {
         char path_buf[64] = {};
         dirname_fail = test_tracer_build_default_file_path(
-            handle, path_buf, sizeof(path_buf)); // [手順] - 空の実行ファイル パスから既定パスを構築する。
+            handle, path_buf,
+            sizeof(
+                path_buf)); // [手順] - 実行ファイル パスが空の状態で test_tracer_build_default_file_path() を呼び出す。
         (void)test_tracer_build_default_file_path(
-            handle, path_buf, sizeof(path_buf)); // [手順] - 実行ファイル名だけのパスから既定パスを構築する。
+            handle, path_buf,
+            sizeof(
+                path_buf)); // [手順] - 実行ファイル名だけのパスになる状態で test_tracer_build_default_file_path() を呼び出す。
     }
-    int actual_ret_set_level_none = cplat_tracer_set_file_level(handle, nullptr, CPLAT_TRACE_LEVEL_NONE, 0, 0,
-                                                                0); // [手順] - file 出力を無効にする。
+    int actual_ret_set_level_none =
+        cplat_tracer_set_file_level(handle, nullptr, CPLAT_TRACE_LEVEL_NONE, 0, 0,
+                                    0); // [手順] - NONE レベルを指定して cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_set_level_none); // [確認_正常系] - 開始前に file 出力を無効化した cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
-    int actual_ret_start = cplat_tracer_start(handle); // [手順] - tracer を start する。
+    int actual_ret_start = cplat_tracer_start(handle); // [手順] - cplat_tracer_start() を呼び出す。
     ASSERT_EQ(CPLAT_OK, actual_ret_start); // [確認_正常系] - cplat_tracer_start() の戻り値が CPLAT_OK であること。
-    quiet_write = cplat_tracer_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                     "quiet"); // [手順] - 全出力先を無効にして write する。
+    quiet_write = cplat_tracer_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "quiet"); // [手順] - 全出力先が無効な状態で、INFO レベルと "quiet" を指定して cplat_tracer_write() を呼び出す。
     {
         cplat_timespec only_ts = {};
         only_ts.tv_sec = 1;
         only_ts.tv_nsec = 0;
-        (void)cplat_tracer_write(handle, CPLAT_TRACE_LEVEL_INFO, &only_ts,
-                                 "ts-only"); // [手順] - 出力先なし・時刻だけ指定して write する。
+        (void)cplat_tracer_write(
+            handle, CPLAT_TRACE_LEVEL_INFO, &only_ts,
+            "ts-only"); // [手順] - 出力先なしで、明示タイムスタンプと "ts-only" を指定して cplat_tracer_write() を呼び出す。
     }
     (void)cplat_tracer_write_hexf_at(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, 0U, "%s",
-                                     "z"); // [手順] - size 0 で write_hexf() する。
-    int actual_ret_set_stderr_debug =
-        cplat_tracer_set_stderr_level(handle, CPLAT_TRACE_LEVEL_DEBUG); // [手順] - stderr レベルを DEBUG とする。
+                                     "z"); // [手順] - size に 0 を指定して cplat_tracer_write_hexf_at() を呼び出す。
+    int actual_ret_set_stderr_debug = cplat_tracer_set_stderr_level(
+        handle,
+        CPLAT_TRACE_LEVEL_DEBUG); // [手順] - DEBUG レベルを指定して cplat_tracer_set_stderr_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_set_stderr_debug); // [確認_正常系] - DEBUG を指定した cplat_tracer_set_stderr_level() の戻り値が CPLAT_OK であること。
-    fallback_write = cplat_tracer_write(handle, CPLAT_TRACE_LEVEL_INFO, &invalid_ts,
-                                        "fallback"); // [手順] - 不正な明示時刻で write する。
-    int actual_ret_set_os_debug =
-        cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_DEBUG); // [手順] - os レベルを DEBUG とする。
+    fallback_write = cplat_tracer_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, &invalid_ts,
+        "fallback"); // [手順] - 不正な明示タイムスタンプと "fallback" を指定して cplat_tracer_write() を呼び出す。
+    int actual_ret_set_os_debug = cplat_tracer_set_os_level(
+        handle, CPLAT_TRACE_LEVEL_DEBUG); // [手順] - DEBUG レベルを指定して cplat_tracer_set_os_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_set_os_debug); // [確認_正常系] - DEBUG を指定した cplat_tracer_set_os_level() の戻り値が CPLAT_OK であること。
-    os_fail_write = cplat_tracer_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                       "os"); // [手順] - OS バックエンド書き込み失敗状態で write する。
-    int actual_ret_set_os_none =
-        cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE); // [手順] - os レベルを NONE とする。
+    os_fail_write = cplat_tracer_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "os"); // [手順] - OS バックエンドの書き込みが失敗する状態で、"os" を指定して cplat_tracer_write() を呼び出す。
+    int actual_ret_set_os_none = cplat_tracer_set_os_level(
+        handle, CPLAT_TRACE_LEVEL_NONE); // [手順] - NONE レベルを指定して cplat_tracer_set_os_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_set_os_none); // [確認_正常系] - NONE を指定した cplat_tracer_set_os_level() の戻り値が CPLAT_OK であること。
-    int actual_ret_set_stderr_none =
-        cplat_tracer_set_stderr_level(handle, CPLAT_TRACE_LEVEL_NONE); // [手順] - stderr レベルを NONE とする。
+    int actual_ret_set_stderr_none = cplat_tracer_set_stderr_level(
+        handle, CPLAT_TRACE_LEVEL_NONE); // [手順] - NONE レベルを指定して cplat_tracer_set_stderr_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_set_stderr_none); // [確認_正常系] - NONE を指定した cplat_tracer_set_stderr_level() の戻り値が CPLAT_OK であること。
     test_tracer_set_file_handle(handle, file_handle_);
-    int actual_ret_set_level_fail = cplat_tracer_set_file_level(handle, "/tmp/fail.log", CPLAT_TRACE_LEVEL_DEBUG, 8, 1,
-                                                                0); // [手順] - 書き込み失敗用の file レベルを設定する。
+    int actual_ret_set_level_fail = cplat_tracer_set_file_level(
+        handle, "/tmp/fail.log", CPLAT_TRACE_LEVEL_DEBUG, 8, 1,
+        0); // [手順] - パス "/tmp/fail.log" と DEBUG レベルを指定して cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_set_level_fail); // [確認_正常系] - "/tmp/fail.log" を指定した cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
-    file_fail_write = cplat_tracer_write(handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                         "file"); // [手順] - file 書き込み失敗状態で write する。
-    hex_size_zero = test_tracer_hex_write_impl(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, 0U,
-                                               "l"); // [手順] - size 0 で hex_write_impl() を呼び出す。
-    int actual_ret_stop = cplat_tracer_stop(handle); // [手順] - tracer を stop する。
+    file_fail_write = cplat_tracer_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "file"); // [手順] - file の書き込みが失敗する状態で、"file" を指定して cplat_tracer_write() を呼び出す。
+    hex_size_zero =
+        test_tracer_hex_write_impl(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, 0U,
+                                   "l"); // [手順] - size に 0 を指定して test_tracer_hex_write_impl() を呼び出す。
+    int actual_ret_stop = cplat_tracer_stop(handle); // [手順] - cplat_tracer_stop() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_stop); // [確認_正常系] - hex 書き込みの前の cplat_tracer_stop() の戻り値が CPLAT_OK であること。
-    hex_not_running = cplat_tracer_write_hex_at(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, sizeof(data),
-                                                "l"); // [手順] - 停止中に write_hex() する。
-    hexf_not_running = cplat_tracer_write_hexf_at(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, sizeof(data), "%s",
-                                                  "l"); // [手順] - 停止中に write_hexf() する。
+    hex_not_running =
+        cplat_tracer_write_hex_at(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, sizeof(data),
+                                  "l"); // [手順] - 停止中の状態で cplat_tracer_write_hex_at() を呼び出す。
+    hexf_not_running =
+        cplat_tracer_write_hexf_at(handle, CPLAT_TRACE_LEVEL_INFO, nullptr, data, sizeof(data), "%s",
+                                   "l"); // [手順] - 停止中の状態で cplat_tracer_write_hexf_at() を呼び出す。
     test_tracer_set_file_handle(handle, file_handle_);
-    start_already_open = cplat_tracer_start(handle);          // [手順] - すでに file ハンドルがある状態で start する。
-    name_null = cplat_tracer_get_name(handle, nullptr, 8U);   // [手順] - 出力先 NULL で名前を取得する。
-    name_zero = cplat_tracer_get_name(handle, tiny_name, 0U); // [手順] - 出力サイズ 0 で名前を取得する。
-    name_small =
-        cplat_tracer_get_name(handle, tiny_name, sizeof(tiny_name)); // [手順] - 2 バイト出力先で名前を取得する。
+    start_already_open =
+        cplat_tracer_start(handle); // [手順] - すでに file ハンドルがある状態で cplat_tracer_start() を呼び出す。
+    name_null = cplat_tracer_get_name(handle, nullptr,
+                                      8U); // [手順] - 出力先に nullptr を指定して cplat_tracer_get_name() を呼び出す。
+    name_zero = cplat_tracer_get_name(handle, tiny_name,
+                                      0U); // [手順] - 出力サイズに 0 を指定して cplat_tracer_get_name() を呼び出す。
+    name_small = cplat_tracer_get_name(
+        handle, tiny_name,
+        sizeof(tiny_name)); // [手順] - 2 バイトの出力先を指定して cplat_tracer_get_name() を呼び出す。
     {
         // Pre-Assert
         EXPECT_CALL(mock_cplat, cplat_snprintf(_, _, _))
             .WillOnce(Return(CPLAT_ERR_UNKNOWN))
             .WillRepeatedly(DoDefault()); // [Pre-Assert確認_正常系] - cplat_snprintf() が 1 回以上呼び出されること。
-        // [Pre-Assert手順] - 1 回目の cplat_snprintf() にて CPLAT_ERR_UNKNOWN を返却する。
+        // [Pre-Assert手順] - cplat_snprintf() から 1 回目は CPLAT_ERR_UNKNOWN を返し、以降は既定動作へ委譲する。
         // Act
-        name_snprintf = cplat_tracer_get_name(handle, name_buf,
-                                              sizeof(name_buf)); // [手順] - cplat_snprintf() 失敗状態で名前を取得する。
+        name_snprintf = cplat_tracer_get_name(
+            handle, name_buf,
+            sizeof(name_buf)); // [手順] - cplat_snprintf() が失敗する状態で cplat_tracer_get_name() を呼び出す。
     }
-    disable_open_file = cplat_tracer_set_file_level(handle, nullptr, CPLAT_TRACE_LEVEL_NONE, 0, 0,
-                                                    0); // [手順] - 稼働中に開いている file を無効化する。
+    disable_open_file = cplat_tracer_set_file_level(
+        handle, nullptr, CPLAT_TRACE_LEVEL_NONE, 0, 0,
+        0); // [手順] - 稼働中に開いている file を無効化するように、NONE レベルを指定して cplat_tracer_set_file_level() を呼び出す。
     test_tracer_set_running(handle, 1);
     test_tracer_set_file_handle(handle, file_handle_);
-    int actual_ret_set_level_combo =
-        cplat_tracer_set_file_level(handle, "/tmp/combo.log", CPLAT_TRACE_LEVEL_INFO, 8, 2,
-                                    1); // [手順] - 複合パラメーターで file レベルを設定する。
+    int actual_ret_set_level_combo = cplat_tracer_set_file_level(
+        handle, "/tmp/combo.log", CPLAT_TRACE_LEVEL_INFO, 8, 2,
+        1); // [手順] - 複合パラメーターを指定して cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_set_level_combo); // [確認_正常系] - "/tmp/combo.log" を指定した cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
-    int actual_ret_set_level_keep_path =
-        cplat_tracer_set_file_level(handle, nullptr, CPLAT_TRACE_LEVEL_DEBUG, 8, 2,
-                                    1); // [手順] - path NULL かつ file_path ありで設定する。
+    int actual_ret_set_level_keep_path = cplat_tracer_set_file_level(
+        handle, nullptr, CPLAT_TRACE_LEVEL_DEBUG, 8, 2,
+        1); // [手順] - path に nullptr を指定し、file_path がある状態で cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
-        actual_ret_set_level_keep_path); // [確認_正常系] - path が NULL かつ file_path ありの cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
+        actual_ret_set_level_keep_path); // [確認_正常系] - path が nullptr かつ file_path ありの cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
     test_tracer_set_file_handle(handle, file_handle_);
     test_tracer_clear_file_path(handle);
-    int actual_ret_set_level_nopath =
-        cplat_tracer_set_file_level(handle, "/tmp/nopath.log", CPLAT_TRACE_LEVEL_INFO, 8, 2,
-                                    1); // [手順] - file_path NULL かつ path ありで設定する。
+    int actual_ret_set_level_nopath = cplat_tracer_set_file_level(
+        handle, "/tmp/nopath.log", CPLAT_TRACE_LEVEL_INFO, 8, 2,
+        1); // [手順] - file_path が nullptr で、path を指定して cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
-        actual_ret_set_level_nopath); // [確認_正常系] - file_path が NULL かつ path ありの cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
-    int actual_ret_set_level_same2 = cplat_tracer_set_file_level(handle, "/tmp/same2.log", CPLAT_TRACE_LEVEL_INFO, 8, 2,
-                                                                 1); // [手順] - same2.log へ file レベルを設定する。
+        actual_ret_set_level_nopath); // [確認_正常系] - file_path が nullptr かつ path ありの cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
+    int actual_ret_set_level_same2 = cplat_tracer_set_file_level(
+        handle, "/tmp/same2.log", CPLAT_TRACE_LEVEL_INFO, 8, 2,
+        1); // [手順] - パス "/tmp/same2.log" を指定して cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_set_level_same2); // [確認_正常系] - "/tmp/same2.log" へ INFO を設定した cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
-    int actual_ret_set_level_max_bytes =
-        cplat_tracer_set_file_level(handle, "/tmp/same2.log", CPLAT_TRACE_LEVEL_INFO, 16, 2,
-                                    1); // [手順] - 同一パスで max_bytes だけ変える。
+    int actual_ret_set_level_max_bytes = cplat_tracer_set_file_level(
+        handle, "/tmp/same2.log", CPLAT_TRACE_LEVEL_INFO, 16, 2,
+        1); // [手順] - 同一パスのまま max_bytes だけを変えて cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_set_level_max_bytes); // [確認_正常系] - 同一パスで max_bytes だけ変えた cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
-    int actual_ret_set_level_generations =
-        cplat_tracer_set_file_level(handle, "/tmp/same2.log", CPLAT_TRACE_LEVEL_INFO, 16, 3,
-                                    1); // [手順] - 同一パスで generations だけ変える。
+    int actual_ret_set_level_generations = cplat_tracer_set_file_level(
+        handle, "/tmp/same2.log", CPLAT_TRACE_LEVEL_INFO, 16, 3,
+        1); // [手順] - 同一パスのまま generations だけを変えて cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_set_level_generations); // [確認_正常系] - 同一パスで generations だけ変えた cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
-    int actual_ret_set_level_flags =
-        cplat_tracer_set_file_level(handle, "/tmp/same2.log", CPLAT_TRACE_LEVEL_INFO, 16, 3,
-                                    0); // [手順] - 同一パスで flags だけ変える。
+    int actual_ret_set_level_flags = cplat_tracer_set_file_level(
+        handle, "/tmp/same2.log", CPLAT_TRACE_LEVEL_INFO, 16, 3,
+        0); // [手順] - 同一パスのまま flags だけを変えて cplat_tracer_set_file_level() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_set_level_flags); // [確認_正常系] - 同一パスで flags だけ変えた cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
-    int actual_ret_stop_after = cplat_tracer_stop(handle); // [手順] - tracer を stop する。
+    int actual_ret_stop_after = cplat_tracer_stop(handle); // [手順] - cplat_tracer_stop() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_stop_after); // [確認_正常系] - hook 操作の前の cplat_tracer_stop() の戻り値が CPLAT_OK であること。
     cplat_tracer_hook_entry *hook = cplat_tracer_set_hook(handle, coverage_hook, nullptr);
     cplat_tracer_hook_entry *hook2 = cplat_tracer_set_hook(handle, coverage_hook, nullptr);
     cplat_tracer_remove_hook(handle, reinterpret_cast<cplat_tracer_hook_entry *>(static_cast<uintptr_t>(0x3)));
-    cplat_tracer_remove_hook(handle, hook2); // [手順] - 登録済み hook を取り除く。
+    cplat_tracer_remove_hook(handle,
+                             hook2); // [手順] - 登録済みの hook を指定して cplat_tracer_remove_hook() を呼び出す。
     cplat_tracer_remove_hook(handle, hook);
-    test_tracer_call_next_null_fn(handle); // [手順] - fn NULL の prev で次 hook を呼ぶ。
+    test_tracer_call_next_null_fn(
+        handle); // [手順] - fn が nullptr の prev を指定して test_tracer_call_next_null_fn() を呼び出す。
 
     // Pre-Assert_2
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_, _))
@@ -1314,16 +1416,18 @@ TEST_F(traceCoverageTest, remaining_gcov_branches)
         .WillOnce(Return(CPLAT_ERR_TIMEOUT))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_rwlock_lock_shared() が 2 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目と 2 回目は TIMEOUT、以降は既定動作を返却する。
+    // [Pre-Assert手順] - cplat_local_rwlock_lock_shared() から 1 回目と 2 回目は CPLAT_ERR_TIMEOUT を返し、以降は既定動作へ委譲する。
 
     // Act_2
-    (void)cplat_tracer_get_file_name(handle, name_buf,
-                                     sizeof(name_buf));              // [手順] - 共有ロック失敗でファイル名を取得する。
-    (void)cplat_tracer_get_name(handle, name_buf, sizeof(name_buf)); // [手順] - 共有ロック失敗で名前を取得する。
+    (void)cplat_tracer_get_file_name(
+        handle, name_buf,
+        sizeof(name_buf)); // [手順] - 共有ロックが失敗する状態で cplat_tracer_get_file_name() を呼び出す。
+    (void)cplat_tracer_get_name(
+        handle, name_buf, sizeof(name_buf)); // [手順] - 共有ロックが失敗する状態で cplat_tracer_get_name() を呼び出す。
     test_tracer_unregister(handle);
     test_tracer_set_lifecycle_state(disposed, kLifecycleDisposed);
     cplat_internal_trace_registry_dispose_all_on_shutdown(
-        &event); // [手順] - DISPOSED ハンドルを含むレジストリをシャットダウンする。
+        &event); // [手順] - DISPOSED ハンドルを含むレジストリの状態で cplat_internal_trace_registry_dispose_all_on_shutdown() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1354,7 +1458,7 @@ TEST_F(traceCoverageTest, remaining_gcov_branches)
         start_already_open); // [確認_正常系] - file ハンドルありの cplat_tracer_start() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        name_null); // [確認_異常系] - 出力先が NULL の cplat_tracer_get_name() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        name_null); // [確認_異常系] - 出力先が nullptr の cplat_tracer_get_name() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         name_zero); // [確認_異常系] - サイズが 0 の cplat_tracer_get_name() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -1363,7 +1467,7 @@ TEST_F(traceCoverageTest, remaining_gcov_branches)
         name_small); // [確認_異常系] - 2 バイト出力先の cplat_tracer_get_name() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
     EXPECT_EQ(
         CPLAT_ERR_BUFFER_TOO_SMALL,
-        name_snprintf); // [確認_異常系] - snprintf 失敗時の cplat_tracer_get_name() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+        name_snprintf); // [確認_異常系] - cplat_snprintf() 失敗時の cplat_tracer_get_name() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
     EXPECT_EQ(
         CPLAT_OK,
         disable_open_file); // [確認_正常系] - 稼働中に file を無効化した cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
@@ -1411,23 +1515,26 @@ TEST_F(traceCoverageTest, remaining_lock_overflow_and_caller_managed_paths)
         .WillOnce(Return(CPLAT_ERR_UNKNOWN))
         .WillOnce(Return(CPLAT_ERR_UNKNOWN))
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が 3 回以上呼び出されること。
-                                      // [Pre-Assert手順] - 1 回目から 3 回目は UNKNOWN、以降は既定動作を返却する。
+    // [Pre-Assert手順] - cplat_local_lock_lock() から 1 回目から 3 回目は CPLAT_ERR_UNKNOWN を返し、以降は既定動作へ委譲する。
 
     // Act
-    capacity_on_lock_fail = cplat_internal_trace_registry_capacity(); // [手順] - lock 失敗状態で容量を取得する。
-    test_tracer_unregister(managed);                                  // [手順] - lock 失敗状態で登録解除する。
+    capacity_on_lock_fail =
+        cplat_internal_trace_registry_capacity(); // [手順] - lock が失敗する状態で cplat_internal_trace_registry_capacity() を呼び出す。
+    test_tracer_unregister(managed); // [手順] - lock が失敗する状態で test_tracer_unregister() を呼び出す。
     register_fail = cplat_tracer_create(
-        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - lock 失敗状態で tracer-managed を生成する。
+        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - lock が失敗する状態で、tracer-managed を指定して cplat_tracer_create() を呼び出す。
     test_trace_registry_set_counts((~(size_t)0) / 2U + 1U, (~(size_t)0) / 2U + 1U);
     overflow_max = cplat_tracer_create(
-        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - 容量が SIZE_MAX/2 を超える状態で生成する。
+        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - 容量が SIZE_MAX/2 を超える状態で cplat_tracer_create() を呼び出す。
     test_trace_registry_set_counts((~(size_t)0) / 2U, (~(size_t)0) / 2U);
-    overflow_half =
-        cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - 容量が SIZE_MAX/2 の状態で生成する。
+    overflow_half = cplat_tracer_create(
+        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - 容量が SIZE_MAX/2 の状態で cplat_tracer_create() を呼び出す。
     test_trace_registry_set_counts(2U, 8U);
-    caller_start = cplat_tracer_start(caller); // [手順] - caller-managed ハンドルを開始する。
-    caller_write = cplat_tracer_write(caller, CPLAT_TRACE_LEVEL_INFO, nullptr,
-                                      "caller"); // [手順] - caller-managed ハンドルへ write する。
+    caller_start =
+        cplat_tracer_start(caller); // [手順] - caller-managed ハンドルを指定して cplat_tracer_start() を呼び出す。
+    caller_write = cplat_tracer_write(
+        caller, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "caller"); // [手順] - caller-managed ハンドルと INFO レベルと "caller" を指定して cplat_tracer_write() を呼び出す。
 
     // Pre-Assert_2
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_exclusive(_, _))
@@ -1435,34 +1542,37 @@ TEST_F(traceCoverageTest, remaining_lock_overflow_and_caller_managed_paths)
         .WillOnce(Return(CPLAT_ERR_UNKNOWN))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_rwlock_lock_exclusive() が 2 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目と 2 回目は UNKNOWN、以降は既定動作を返却する。
+    // [Pre-Assert手順] - cplat_local_rwlock_lock_exclusive() から 1 回目と 2 回目は CPLAT_ERR_UNKNOWN を返し、以降は既定動作へ委譲する。
 
     // Act_2
     exclusive_fail = cplat_tracer_set_stderr_level(
-        managed, CPLAT_TRACE_LEVEL_DEBUG); // [手順] - 排他ロック失敗状態で stderr レベルを設定する。
-    cplat_tracer_dispose(&managed);        // [手順] - 排他ロック失敗状態で dispose する。
+        managed,
+        CPLAT_TRACE_LEVEL_DEBUG); // [手順] - 排他ロックが失敗する状態で、DEBUG レベルを指定して cplat_tracer_set_stderr_level() を呼び出す。
+    cplat_tracer_dispose(&managed); // [手順] - 排他ロックが失敗する状態で cplat_tracer_dispose() を呼び出す。
     if (managed != nullptr)
     {
         dispose_lock_fail = 1;
         cplat_tracer_dispose(&managed);
     }
     (void)cplat_tracer_stop(caller);
-    (void)cplat_tracer_set_hook(caller, coverage_hook, nullptr); // [手順] - shutdown 解放用に hook を登録する。
+    (void)cplat_tracer_set_hook(
+        caller, coverage_hook,
+        nullptr); // [手順] - shutdown 解放用の hook を指定して cplat_tracer_set_hook() を呼び出す。
     cplat_internal_trace_registry_dispose_all_on_shutdown(
-        &first_event); // [手順] - hook 付き caller-managed を shutdown 解放する。
+        &first_event); // [手順] - hook 付き caller-managed を持つ状態で cplat_internal_trace_registry_dispose_all_on_shutdown() を呼び出す。
     test_trace_registry_reinit_lock();
     (void)cplat_internal_trace_registry_capacity();
     cplat_internal_trace_registry_dispose_all_on_shutdown(
-        &event); // [手順] - すでに shutdown 済みのレジストリを再解放する。
+        &event); // [手順] - すでに shutdown 済みのレジストリの状態で cplat_internal_trace_registry_dispose_all_on_shutdown() を呼び出す。
     test_trace_registry_reset_shutdown_state();
-    cplat_tracer_dispose(&empty); // [手順] - NULL ハンドル変数を dispose する。
+    cplat_tracer_dispose(&empty); // [手順] - nullptr のハンドル変数を指定して cplat_tracer_dispose() を呼び出す。
 
     // Pre-Assert_3
     EXPECT_CALL(mock_cplat, cplat_shutdown_register(_, _))
         .WillOnce(Return(CPLAT_ERR_UNKNOWN))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_shutdown_register() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は UNKNOWN、以降は既定動作を返却する。
+    // [Pre-Assert手順] - cplat_shutdown_register() から 1 回目は CPLAT_ERR_UNKNOWN を返し、以降は既定動作へ委譲する。
     EXPECT_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
         .WillOnce(
             [](char *path_out, size_t path_size)
@@ -1473,14 +1583,14 @@ TEST_F(traceCoverageTest, remaining_lock_overflow_and_caller_managed_paths)
             })
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_process_get_executable_path() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 実行ファイル パス取得時に shutdown 開始フラグを立て、通常パスを返却する。
+    // [Pre-Assert手順] - cplat_process_get_executable_path() から、shutdown 開始フラグを立て、通常パスを格納して CPLAT_OK を返す。
 
     // Act_3
-    shutdown_fail =
-        cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - shutdown 登録失敗状態で生成する。
+    shutdown_fail = cplat_tracer_create(
+        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - shutdown の登録が失敗する状態で cplat_tracer_create() を呼び出す。
     test_trace_registry_reset_shutdown_state();
     register_fail_caller = cplat_tracer_create(
-        CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED); // [手順] - 登録直前シャットダウンで caller-managed を生成する。
+        CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED); // [手順] - 登録直前にシャットダウンが開始される状態で、caller-managed を指定して cplat_tracer_create() を呼び出す。
     test_trace_registry_reset_shutdown_state();
     lock_clear = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED);
     ASSERT_NE(nullptr,
@@ -1488,7 +1598,7 @@ TEST_F(traceCoverageTest, remaining_lock_overflow_and_caller_managed_paths)
     test_tracer_set_file_handle(lock_clear, file_handle_);
     g_test_file_shutdown_hook = test_trace_registry_null_lock;
     cplat_internal_trace_registry_dispose_all_on_shutdown(
-        &lock_clear_event); // [手順] - file sink 解放中にレジストリ lock を NULL にする。
+        &lock_clear_event); // [手順] - file sink の解放中にレジストリ lock を nullptr にする状態で cplat_internal_trace_registry_dispose_all_on_shutdown() を呼び出す。
     g_test_file_shutdown_hook = nullptr;
     lock_clear = nullptr;
 

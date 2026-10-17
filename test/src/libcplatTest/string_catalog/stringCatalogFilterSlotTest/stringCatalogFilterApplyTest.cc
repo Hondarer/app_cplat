@@ -53,9 +53,10 @@ TEST_F(stringCatalogFilterApplyTest, freshly_created_slot_marks_all_keys_never_m
     // Act
     actual_ret_worker_started = cplat_string_catalog_filter_slot_test(
         slot_, FILTER_TEST_TRACE_KEY_WORKER_STARTED,
-        &actual_state_worker_started); // [手順] - WORKER_STARTED の状態を取得する。
+        &actual_state_worker_started); // [手順] - WORKER_STARTED を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
     actual_ret_job_failed = cplat_string_catalog_filter_slot_test(
-        slot_, FILTER_TEST_TRACE_KEY_JOB_FAILED, &actual_state_job_failed); // [手順] - JOB_FAILED の状態を取得する。
+        slot_, FILTER_TEST_TRACE_KEY_JOB_FAILED,
+        &actual_state_job_failed); // [手順] - JOB_FAILED を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -89,14 +90,15 @@ TEST_F(stringCatalogFilterApplyTest, category_le_2_marks_warning_and_above_as_al
     // Pre-Assert
 
     // Act
-    actual_apply_ret = cplat_string_catalog_filter_slot_apply(slot_, image, kImageSize, nullptr, 0U,
-                                                              nullptr); // [手順] - スロットへ適用する。
+    actual_apply_ret = cplat_string_catalog_filter_slot_apply(
+        slot_, image, kImageSize, nullptr, 0U,
+        nullptr); // [手順] - イメージを指定して cplat_string_catalog_filter_slot_apply() を呼び出す。
     (void)cplat_string_catalog_filter_slot_test(
         slot_, FILTER_TEST_TRACE_KEY_JOB_FAILED,
-        &actual_state_job_failed); // [手順] - JOB_FAILED (WARNING=2) の状態を取得する。
+        &actual_state_job_failed); // [手順] - JOB_FAILED (WARNING=2) を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
     (void)cplat_string_catalog_filter_slot_test(
         slot_, FILTER_TEST_TRACE_KEY_WORKER_STARTED,
-        &actual_state_worker_started); // [手順] - WORKER_STARTED (INFO=3) の状態を取得する。
+        &actual_state_worker_started); // [手順] - WORKER_STARTED (INFO=3) を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -132,12 +134,14 @@ TEST_F(stringCatalogFilterApplyTest, key_name_and_integer_resolve_to_same_result
 
     // Act
     int actual_ret_apply_by_name = cplat_string_catalog_filter_slot_apply(
-        slot_, image_by_name, kImageSize, nullptr, 0U, nullptr); // [手順] - 名前指定の条件式を適用する。
+        slot_, image_by_name, kImageSize, nullptr, 0U,
+        nullptr); // [手順] - 名前指定の条件式のイメージを指定して cplat_string_catalog_filter_slot_apply() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_apply_by_name); // [確認_正常系] - 名前指定の条件式を適用した cplat_string_catalog_filter_slot_apply() の戻り値が CPLAT_OK であること。
-    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
-                                                &actual_state_by_name); // [手順] - JOB_RECEIVED の状態を取得する。
+    (void)cplat_string_catalog_filter_slot_test(
+        slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
+        &actual_state_by_name); // [手順] - JOB_RECEIVED を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -146,12 +150,14 @@ TEST_F(stringCatalogFilterApplyTest, key_name_and_integer_resolve_to_same_result
 
     // Act_2
     int actual_ret_apply_by_integer = cplat_string_catalog_filter_slot_apply(
-        slot_, image_by_integer, kImageSize, nullptr, 0U, nullptr); // [手順] - 整数指定の条件式を適用する。
+        slot_, image_by_integer, kImageSize, nullptr, 0U,
+        nullptr); // [手順] - 整数指定の条件式のイメージを指定して cplat_string_catalog_filter_slot_apply() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_apply_by_integer); // [確認_正常系] - 整数指定の条件式を適用した cplat_string_catalog_filter_slot_apply() の戻り値が CPLAT_OK であること。
-    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
-                                                &actual_state_by_integer); // [手順] - JOB_RECEIVED の状態を取得する。
+    (void)cplat_string_catalog_filter_slot_test(
+        slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
+        &actual_state_by_integer); // [手順] - JOB_RECEIVED を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -180,14 +186,15 @@ TEST_F(stringCatalogFilterApplyTest, argument_predicate_marks_only_entries_with_
     // Pre-Assert
 
     // Act
-    actual_apply_ret = cplat_string_catalog_filter_slot_apply(slot_, image, kImageSize, nullptr, 0U,
-                                                              nullptr); // [手順] - スロットへ適用する。
+    actual_apply_ret = cplat_string_catalog_filter_slot_apply(
+        slot_, image, kImageSize, nullptr, 0U,
+        nullptr); // [手順] - イメージを指定して cplat_string_catalog_filter_slot_apply() を呼び出す。
     (void)cplat_string_catalog_filter_slot_test(
         slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
-        &actual_state_job_received); // [手順] - JOB_RECEIVED (priority を持つ) の状態を取得する。
+        &actual_state_job_received); // [手順] - JOB_RECEIVED (priority を持つ) を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
     (void)cplat_string_catalog_filter_slot_test(
         slot_, FILTER_TEST_TRACE_KEY_WORKER_STARTED,
-        &actual_state_worker_started); // [手順] - WORKER_STARTED (priority を持たない) の状態を取得する。
+        &actual_state_worker_started); // [手順] - WORKER_STARTED (priority を持たない) を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -222,15 +229,18 @@ TEST_F(stringCatalogFilterApplyTest, unresolved_key_name_disables_line_and_is_di
     // Pre-Assert
 
     // Act
-    actual_apply_ret = cplat_string_catalog_filter_slot_apply(slot_, image, kImageSize, diagnostics, 4U,
-                                                              &actual_invalid_count); // [手順] - スロットへ適用する。
+    actual_apply_ret = cplat_string_catalog_filter_slot_apply(
+        slot_, image, kImageSize, diagnostics, 4U,
+        &actual_invalid_count); // [手順] - イメージと診断情報の格納先を指定して cplat_string_catalog_filter_slot_apply() を呼び出す。
     int actual_ret_line0 = cplat_string_catalog_filter_slot_get_line_error(
-        slot_, 0U, &actual_line0_error); // [手順] - 行 0 の原因を取得する。
+        slot_, 0U,
+        &actual_line0_error); // [手順] - 行 0 を指定して cplat_string_catalog_filter_slot_get_line_error() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_line0); // [状態確認] - 行 0 の原因を取得した cplat_string_catalog_filter_slot_get_line_error() の戻り値が CPLAT_OK であること。
     int actual_ret_line1 = cplat_string_catalog_filter_slot_get_line_error(
-        slot_, 1U, &actual_line1_error); // [手順] - 行 1 の原因を取得する。
+        slot_, 1U,
+        &actual_line1_error); // [手順] - 行 1 を指定して cplat_string_catalog_filter_slot_get_line_error() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_line1); // [状態確認] - 行 1 の原因を取得した cplat_string_catalog_filter_slot_get_line_error() の戻り値が CPLAT_OK であること。
@@ -272,10 +282,12 @@ TEST_F(stringCatalogFilterApplyTest, unresolved_argument_name_disables_line_and_
     // Pre-Assert
 
     // Act
-    actual_apply_ret = cplat_string_catalog_filter_slot_apply(slot_, image, kImageSize, diagnostics, 4U,
-                                                              &actual_invalid_count); // [手順] - スロットへ適用する。
+    actual_apply_ret = cplat_string_catalog_filter_slot_apply(
+        slot_, image, kImageSize, diagnostics, 4U,
+        &actual_invalid_count); // [手順] - イメージと診断情報の格納先を指定して cplat_string_catalog_filter_slot_apply() を呼び出す。
     int actual_ret_line0 = cplat_string_catalog_filter_slot_get_line_error(
-        slot_, 0U, &actual_line0_error); // [手順] - 行 0 の原因を取得する。
+        slot_, 0U,
+        &actual_line0_error); // [手順] - 行 0 を指定して cplat_string_catalog_filter_slot_get_line_error() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_line0); // [状態確認] - 行 0 の原因を取得した cplat_string_catalog_filter_slot_get_line_error() の戻り値が CPLAT_OK であること。
@@ -327,9 +339,11 @@ TEST_F(stringCatalogFilterApplyTest, apply_with_corrupt_image_keeps_previous_sta
 
     // Act
     actual_corrupt_apply_ret = cplat_string_catalog_filter_slot_apply(
-        slot_, corrupt_image, kImageSize, nullptr, 0U, nullptr); // [手順] - 破損したイメージを適用しようとする。
-    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
-                                                &actual_state_after); // [手順] - 適用の試行後の状態を取得する。
+        slot_, corrupt_image, kImageSize, nullptr, 0U,
+        nullptr); // [手順] - 破損したイメージを指定して cplat_string_catalog_filter_slot_apply() を呼び出す。
+    (void)cplat_string_catalog_filter_slot_test(
+        slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
+        &actual_state_after); // [手順] - 適用の試行後の状態で JOB_RECEIVED を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -366,10 +380,12 @@ TEST_F(stringCatalogFilterApplyTest, apply_with_other_format_version_reports_ver
     // Pre-Assert
 
     // Act
-    actual_apply_ret = cplat_string_catalog_filter_slot_apply(slot_, other_version_image, kImageSize, nullptr, 0U,
-                                                              nullptr); // [手順] - 形式版が異なるイメージを適用する。
-    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
-                                                &actual_state_after); // [手順] - 適用の試行後の状態を取得する。
+    actual_apply_ret = cplat_string_catalog_filter_slot_apply(
+        slot_, other_version_image, kImageSize, nullptr, 0U,
+        nullptr); // [手順] - 形式版が異なるイメージを指定して cplat_string_catalog_filter_slot_apply() を呼び出す。
+    (void)cplat_string_catalog_filter_slot_test(
+        slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
+        &actual_state_after); // [手順] - 適用の試行後の状態で JOB_RECEIVED を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -418,9 +434,11 @@ TEST_F(stringCatalogFilterApplyTest, apply_with_structurally_broken_image_keeps_
 
     // Act
     actual_broken_apply_ret = cplat_string_catalog_filter_slot_apply(
-        slot_, broken_image, kImageSize, nullptr, 0U, nullptr); // [手順] - 構造が壊れたイメージを適用しようとする。
-    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
-                                                &actual_state_after); // [手順] - 適用の試行後の状態を取得する。
+        slot_, broken_image, kImageSize, nullptr, 0U,
+        nullptr); // [手順] - 構造が壊れたイメージを指定して cplat_string_catalog_filter_slot_apply() を呼び出す。
+    (void)cplat_string_catalog_filter_slot_test(
+        slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
+        &actual_state_after); // [手順] - 適用の試行後の状態で JOB_RECEIVED を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -466,9 +484,11 @@ TEST_F(stringCatalogFilterApplyTest, apply_with_mismatched_line_width_returns_co
 
     // Act
     actual_mismatched_apply_ret = cplat_string_catalog_filter_slot_apply(
-        slot_, mismatched_image, kImageSize, nullptr, 0U, nullptr); // [手順] - 行幅が異なるイメージを適用しようとする。
-    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
-                                                &actual_state_after); // [手順] - 適用の試行後の状態を取得する。
+        slot_, mismatched_image, kImageSize, nullptr, 0U,
+        nullptr); // [手順] - 行幅が異なるイメージを指定して cplat_string_catalog_filter_slot_apply() を呼び出す。
+    (void)cplat_string_catalog_filter_slot_test(
+        slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
+        &actual_state_after); // [手順] - 適用の試行後の状態で JOB_RECEIVED を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -496,11 +516,13 @@ TEST_F(stringCatalogFilterApplyTest, apply_copies_image_so_caller_buffer_can_be_
     // Pre-Assert
 
     // Act
-    actual_apply_ret = cplat_string_catalog_filter_slot_apply(slot_, image, kImageSize, nullptr, 0U,
-                                                              nullptr); // [手順] - スロットへ適用する。
+    actual_apply_ret = cplat_string_catalog_filter_slot_apply(
+        slot_, image, kImageSize, nullptr, 0U,
+        nullptr); // [手順] - イメージを指定して cplat_string_catalog_filter_slot_apply() を呼び出す。
     std::memset(image, 0, kImageSize); // [手順] - 適用に使った呼び出し側の領域を 0 で上書きする。
-    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
-                                                &actual_state); // [手順] - 領域を上書きした後に判定状態を取得する。
+    (void)cplat_string_catalog_filter_slot_test(
+        slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
+        &actual_state); // [手順] - 領域を上書きした後の状態で JOB_RECEIVED を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -550,17 +572,21 @@ TEST_F(stringCatalogFilterApplyTest, lines_beyond_64_are_evaluated)
     (void)cplat_string_catalog_filter_slot_format(
         wide_slot, dest, sizeof(dest), &actual_matched_last, FILTER_TEST_TRACE_KEY_WORKER_STARTED,
         (uint32_t)(1000U + 129U),
-        FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - 最後の行 (行 129) に一致する値で判定する。
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - 最後の行 (行 129) に一致する値を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
     (void)cplat_string_catalog_filter_slot_format(
         wide_slot, dest, sizeof(dest), &actual_matched_other, FILTER_TEST_TRACE_KEY_WORKER_STARTED, (uint32_t)999U,
-        FILTER_TEST_CONTEXT_ARGS(7)); // [手順] - どの行にも一致しない値で判定する。
+        FILTER_TEST_CONTEXT_ARGS(
+            7)); // [手順] - どの行にも一致しない値を指定して cplat_string_catalog_filter_slot_format() を呼び出す。
     int actual_ret_last_line = cplat_string_catalog_filter_slot_get_line_error(
-        wide_slot, 129U, &actual_last_error); // [手順] - 最後の行の状態を取得する。
+        wide_slot, 129U,
+        &actual_last_error); // [手順] - 最後の行を指定して cplat_string_catalog_filter_slot_get_line_error() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_last_line); // [状態確認] - 最後の行の状態を取得した cplat_string_catalog_filter_slot_get_line_error() の戻り値が CPLAT_OK であること。
     const int actual_out_of_range_ret = cplat_string_catalog_filter_slot_get_line_error(
-        wide_slot, 130U, &actual_last_error); // [手順] - 行数を超える位置を問い合わせる。
+        wide_slot, 130U,
+        &actual_last_error); // [手順] - 行数を超える位置を指定して cplat_string_catalog_filter_slot_get_line_error() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -606,10 +632,12 @@ TEST_F(stringCatalogFilterApplyTest, never_satisfiable_lines_are_diagnosed_at_ap
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_string_catalog_filter_slot_apply(slot_, image, kImageSize, diagnostics, 4U,
-                                                            &actual_invalid_count); // [手順] - スロットへ適用する。
-    (void)cplat_string_catalog_filter_slot_test(slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
-                                                &actual_state); // [手順] - 成立し得る行の対象の状態を取得する。
+    int actual_ret = cplat_string_catalog_filter_slot_apply(
+        slot_, image, kImageSize, diagnostics, 4U,
+        &actual_invalid_count); // [手順] - イメージと診断情報の格納先を指定して cplat_string_catalog_filter_slot_apply() を呼び出す。
+    (void)cplat_string_catalog_filter_slot_test(
+        slot_, FILTER_TEST_TRACE_KEY_JOB_RECEIVED,
+        &actual_state); // [手順] - 成立し得る行の対象を指定して cplat_string_catalog_filter_slot_test() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,

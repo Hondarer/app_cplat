@@ -74,7 +74,8 @@ TEST_F(symLoaderResolveTest, second_call_returns_cached_result)
     // Pre-Assert
 
     // Act
-    void *second = cplat_sym_loader_resolve(&entry_); // [手順] - 同じエントリで 2 回目の解決を行う。
+    void *second = cplat_sym_loader_resolve(
+        &entry_); // [手順] - 2 回目として同じエントリを指定して cplat_sym_loader_resolve() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -249,7 +250,7 @@ TEST_F(symLoaderResolveTest, returns_null_when_lock_creation_fails)
         .WillOnce(Return(CPLAT_ERR_UNKNOWN))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_lock_create() が 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - 1 回目は CPLAT_ERR_UNKNOWN を返却し、以降は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_local_lock_create() から 1 回目は CPLAT_ERR_UNKNOWN を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
     void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve() を呼び出す。
@@ -277,7 +278,7 @@ TEST_F(symLoaderResolveTest, returns_null_when_lock_acquisition_fails)
     EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, _))
         .WillOnce(Return(CPLAT_ERR_UNKNOWN))
         .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が 1 回以上呼び出されること。
-                                      // [Pre-Assert手順] - 1 回目は CPLAT_ERR_UNKNOWN を返却し、以降は本物へ委譲する。
+    // [Pre-Assert手順] - cplat_local_lock_lock() から 1 回目は CPLAT_ERR_UNKNOWN を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
     void *func_ptr = cplat_sym_loader_resolve(&entry_); // [手順] - cplat_sym_loader_resolve() を呼び出す。
@@ -305,7 +306,7 @@ TEST_F(symLoaderResolveTest, reuses_lock_initialized_by_another_thread)
 
     // Act
     int result = test_sym_loader_ensure_entry_lock_initialized(
-        &entry_); // [手順] - 他スレッドの初期化中を表すエントリでロック初期化確認を実行する。
+        &entry_); // [手順] - 他スレッドの初期化中を表すエントリを指定して test_sym_loader_ensure_entry_lock_initialized() を呼び出す。
 
     // Assert
     EXPECT_EQ(0, result); // [確認_正常系] - test_sym_loader_ensure_entry_lock_initialized() の戻り値が 0 であること。
@@ -328,7 +329,8 @@ TEST_F(symLoaderResolveTest, default_lock_wait_yields_execution)
     // Pre-Assert
 
     // Act
-    test_sym_loader_default_entry_lock_wait(&entry_); // [手順] - ロック初期化待機の既定処理を 1 回実行する。
+    test_sym_loader_default_entry_lock_wait(
+        &entry_); // [手順] - エントリを指定して test_sym_loader_default_entry_lock_wait() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(test_sym_loader_default_entry_lock_wait() が呼び出し元へ制御を戻すことの確認)
@@ -345,7 +347,7 @@ TEST_F(symLoaderResolveTest, reports_lock_initialization_failure_from_another_th
 
     // Act
     int result = test_sym_loader_ensure_entry_lock_initialized(
-        &entry_); // [手順] - 他スレッドの初期化失敗を表すエントリでロック初期化確認を実行する。
+        &entry_); // [手順] - 他スレッドの初期化失敗を表すエントリを指定して test_sym_loader_ensure_entry_lock_initialized() を呼び出す。
 
     // Assert
     EXPECT_EQ(-1, result); // [確認_異常系] - test_sym_loader_ensure_entry_lock_initialized() の戻り値が -1 であること。
@@ -369,11 +371,11 @@ TEST_F(symLoaderResolveTest, returns_result_resolved_while_waiting_for_lock)
                 cplat_atomic_store_ptr(&entry_.func_ptr, reinterpret_cast<void *>(1), CPLAT_MEMORY_ORDER_RELAXED);
                 return CPLAT_OK;
             })); // [Pre-Assert確認_正常系] - cplat_local_lock_lock() が 1 回呼び出されること。
-                 // [Pre-Assert手順] - resolved と func_ptr を設定し、CPLAT_OK を返却する。
+                 // [Pre-Assert手順] - cplat_local_lock_lock() から、resolved と func_ptr を設定して CPLAT_OK を返す。
 
     // Act
     void *result = cplat_sym_loader_resolve(
-        &entry_); // [手順] - ロック待機中に解決済みとなるエントリで cplat_sym_loader_resolve() を呼び出す。
+        &entry_); // [手順] - ロック待機中に解決済みとなるエントリを指定して cplat_sym_loader_resolve() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -393,7 +395,7 @@ TEST_F(symLoaderResolveTest, does_not_mark_default_when_only_library_name_is_def
 
     // Act
     void *result = cplat_sym_loader_resolve(
-        &entry_); // [手順] - ライブラリ名だけが default のエントリで cplat_sym_loader_resolve() を呼び出す。
+        &entry_); // [手順] - ライブラリ名だけが default のエントリを指定して cplat_sym_loader_resolve() を呼び出す。
 
     // Assert
     EXPECT_EQ(nullptr, result); // [確認_異常系] - cplat_sym_loader_resolve() の戻り値が nullptr であること。

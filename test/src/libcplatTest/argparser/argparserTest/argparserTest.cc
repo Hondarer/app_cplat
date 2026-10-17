@@ -54,15 +54,17 @@ TEST_F(argparserTest, create_and_dispose)
 
     // Act
     cplat_argparser *parser = cplat_argparser_handle_create(
-        0, nullptr, nullptr); // [手順] - オプション NULL で cplat_argparser_handle_create() を呼び出す。
+        0, nullptr, nullptr); // [手順] - オプションに nullptr を指定して cplat_argparser_handle_create() を呼び出す。
     bool handle_created = parser != nullptr;
-    cplat_argparser_handle_dispose(parser); // [手順] - 生成したハンドルを dispose する。
-    cplat_argparser_handle_dispose(nullptr); // [手順] - NULL ハンドルで dispose() を呼び出す。
+    cplat_argparser_handle_dispose(
+        parser); // [手順] - 生成した parser を指定して cplat_argparser_handle_dispose() を呼び出す。
+    cplat_argparser_handle_dispose(
+        nullptr); // [手順] - ハンドルに nullptr を指定して cplat_argparser_handle_dispose() を呼び出す。
 
     // Assert
     EXPECT_TRUE(
         handle_created); // [確認_正常系] - handle_created が true であること。(cplat_argparser_handle_create() の戻り値が nullptr 以外であることの確認)
-    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(NULL を渡した dispose がクラッシュしないことの確認)
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(nullptr を渡した dispose がクラッシュしないことの確認)
 }
 
 // メモリ確保に失敗した場合に create が NULL を返すことの確認
@@ -73,7 +75,7 @@ TEST_F(argparserTest, create_returns_null_on_alloc_failure)
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_calloc(_, _))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が 1 回呼び出されること。
-                                    // [Pre-Assert手順] - cplat_calloc() から NULL を返却する。
+                                    // [Pre-Assert手順] - cplat_calloc() から nullptr を返す。
 
     // Act
     cplat_argparser *parser =
@@ -87,16 +89,16 @@ TEST_F(argparserTest, create_returns_null_on_alloc_failure)
 TEST_F(argparserTest, is_valid_short_name_rejects_invalid_names)
 {
     // Arrange
-    const char *name_without_dash = "a-";     // [状態] - 先頭が '-' ではない 2 文字の名前を用意する。
-    const char *name_with_double_dash = "--"; // [状態] - 2 文字とも '-' である名前を用意する。
+    const char *name_without_dash = "a-";     // [状態] - 先頭が "-" ではない 2 文字の名前を用意する。
+    const char *name_with_double_dash = "--"; // [状態] - 2 文字とも "-" である名前を用意する。
 
     // Pre-Assert
 
     // Act
     int null_name_result = test_argparser_is_valid_short_name(
-        nullptr); // [手順] - NULL を指定して test_argparser_is_valid_short_name() を呼び出す。
+        nullptr); // [手順] - nullptr を指定して test_argparser_is_valid_short_name() を呼び出す。
     int name_without_dash_result = test_argparser_is_valid_short_name(
-        name_without_dash); // [手順] - 先頭が '-' ではない名前を指定して test_argparser_is_valid_short_name() を呼び出す。
+        name_without_dash); // [手順] - 先頭が "-" ではない名前を指定して test_argparser_is_valid_short_name() を呼び出す。
     int name_with_double_dash_result = test_argparser_is_valid_short_name(
         name_with_double_dash); // [手順] - "--" を指定して test_argparser_is_valid_short_name() を呼び出す。
     int valid_name_result = test_argparser_is_valid_short_name(
@@ -105,10 +107,10 @@ TEST_F(argparserTest, is_valid_short_name_rejects_invalid_names)
     // Assert
     EXPECT_EQ(
         0,
-        null_name_result); // [確認_異常系] - NULL を指定した test_argparser_is_valid_short_name() の戻り値が 0 であること。(不正な短い名前と判定したことの確認)
+        null_name_result); // [確認_異常系] - nullptr を指定した test_argparser_is_valid_short_name() の戻り値が 0 であること。(不正な短い名前と判定したことの確認)
     EXPECT_EQ(
         0,
-        name_without_dash_result); // [確認_異常系] - 先頭が '-' ではない名前を指定した test_argparser_is_valid_short_name() の戻り値が 0 であること。(不正な短い名前と判定したことの確認)
+        name_without_dash_result); // [確認_異常系] - 先頭が "-" ではない名前を指定した test_argparser_is_valid_short_name() の戻り値が 0 であること。(不正な短い名前と判定したことの確認)
     EXPECT_EQ(
         0,
         name_with_double_dash_result); // [確認_異常系] - "--" を指定した test_argparser_is_valid_short_name() の戻り値が 0 であること。(不正な短い名前と判定したことの確認)
@@ -133,8 +135,7 @@ TEST_F(argparserTest, default_shutdown_callback_keeps_process_lifetime_lock)
     event.code_kind = CPLAT_SHUTDOWN_CODE_KIND_NONE;
     ON_CALL(mock_cplat_, cplat_local_lock_dispose(_))
         .WillByDefault(
-            [](cplat_local_lock
-                   *) {}); // [状態] - cplat_local_lock_dispose() が呼び出された際に何もしないようにモックを設定する。
+            [](cplat_local_lock *) {}); // [状態] - cplat_local_lock_dispose() から戻るように既定動作を設定する。
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat_, cplat_local_lock_dispose(_))
@@ -142,7 +143,7 @@ TEST_F(argparserTest, default_shutdown_callback_keeps_process_lifetime_lock)
             0); // [Pre-Assert確認_正常系] - cplat_local_lock_dispose() が呼び出されないこと。(default 用の共有ロックが破棄されないことの確認)
 
     // Act
-    // [手順] - 16 スレッドから並行に default の終了コールバックを呼び出す。
+    // [手順] - 16 スレッドから並行に default の終了コールバック g_default_shutdown_callback() を呼び出す。
     for (size_t i = 0; i < kThreadCount; i++)
     {
         threads[i] = std::thread([&event]() { g_default_shutdown_callback(&event, g_default_shutdown_context); });
@@ -165,9 +166,10 @@ TEST_F(argparserTest, default_returns_same_handle_across_calls)
 
     // Act
     cplat_argparser *first = test_argparser_default_acquire(
-        0, nullptr, nullptr, 0); // [手順] - 1 回目の test_argparser_default_acquire() を呼び出す。
+        0, nullptr, nullptr, 0); // [手順] - 初回の default 取得として test_argparser_default_acquire() を呼び出す。
     cplat_argparser *second = test_argparser_default_acquire(
-        0, nullptr, nullptr, 0); // [手順] - 続けて 2 回目の test_argparser_default_acquire() を呼び出す。
+        0, nullptr, nullptr,
+        0); // [手順] - 続けて 2 回目の default 取得として test_argparser_default_acquire() を呼び出す。
 
     // Assert
     ASSERT_NE(
@@ -199,11 +201,13 @@ TEST_F(argparserTest, default_options_applied_only_on_first_call)
 
     // Act
     cplat_argparser *second = test_argparser_default_acquire(
-        0, nullptr, &options, 0); // [手順] - 生成オプション付きで 2 回目の default を呼び出す。
+        0, nullptr, &options,
+        0); // [手順] - 生成オプションを指定して 2 回目の test_argparser_default_acquire() を呼び出す。
 
     char after[256];
     int actual_ret_argparser_get_usage = cplat_argparser_handle_get_usage(
-        second, after, sizeof(after), nullptr); // [手順] - 2 回目時点の usage を取得する。
+        second, after, sizeof(after),
+        nullptr); // [手順] - 2 回目の default 取得後の状態で cplat_argparser_handle_get_usage() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_argparser_get_usage); // [状態確認] - 2 回目時点の usage を取得した cplat_argparser_handle_get_usage() の戻り値が CPLAT_OK であること。
@@ -231,9 +235,10 @@ TEST_F(argparserTest, dispose_ignores_default_handle)
     // Pre-Assert
 
     // Act
-    cplat_argparser_handle_dispose(first); // [手順] - default ハンドルを dispose() に渡す。
-    cplat_argparser *second =
-        test_argparser_default_acquire(0, nullptr, nullptr, 0); // [手順] - 再度 default を呼び出す。
+    cplat_argparser_handle_dispose(
+        first); // [手順] - default ハンドルを指定して cplat_argparser_handle_dispose() を呼び出す。
+    cplat_argparser *second = test_argparser_default_acquire(
+        0, nullptr, nullptr, 0); // [手順] - 再度 test_argparser_default_acquire() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -295,7 +300,7 @@ TEST_F(argparserTest, register_rejects_invalid_arguments)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_1); // [確認_異常系] - parser が NULL の場合の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_1); // [確認_異常系] - parser が nullptr の場合の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_2
     int actual_ret_operation_2 = cplat_argparser_handle_register_flag(
@@ -304,7 +309,7 @@ TEST_F(argparserTest, register_rejects_invalid_arguments)
     // Assert_2
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_2); // [確認_異常系] - 格納先が NULL の場合の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_2); // [確認_異常系] - 格納先が nullptr の場合の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_3
     int actual_ret_operation_3 = cplat_argparser_handle_register_flag(
@@ -313,7 +318,7 @@ TEST_F(argparserTest, register_rejects_invalid_arguments)
     // Assert_3
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_3); // [確認_異常系] - 両方の名前が NULL の場合の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_3); // [確認_異常系] - 両方の名前が nullptr の場合の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_4
     int actual_ret_operation_4 = cplat_argparser_handle_register_flag(
@@ -369,7 +374,7 @@ TEST_F(argparserTest, register_rejects_invalid_arguments)
     // Assert_9
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_9); // [確認_異常系] - capacity が 0 かつ count が NULL の場合の cplat_argparser_handle_register_option_string_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_9); // [確認_異常系] - capacity が 0 かつ count が nullptr の場合の cplat_argparser_handle_register_option_string_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_10
     int actual_ret_operation_10 = cplat_argparser_handle_register_positional_int(
@@ -379,7 +384,7 @@ TEST_F(argparserTest, register_rejects_invalid_arguments)
     // Assert_10
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_10); // [確認_異常系] - 名前が NULL の場合の cplat_argparser_handle_register_positional_int() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_10); // [確認_異常系] - 名前が nullptr の場合の cplat_argparser_handle_register_positional_int() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     size_t positional_count = 0;
 
     // Act_11
@@ -390,7 +395,7 @@ TEST_F(argparserTest, register_rejects_invalid_arguments)
     // Assert_11
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_11); // [確認_異常系] - 格納先が NULL の場合の cplat_argparser_handle_register_positional_int_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_11); // [確認_異常系] - 格納先が nullptr の場合の cplat_argparser_handle_register_positional_int_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_12
     int actual_ret_operation_12 = cplat_argparser_handle_register_positional_int_array(
@@ -410,7 +415,7 @@ TEST_F(argparserTest, register_rejects_invalid_arguments)
     // Assert_13
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_13); // [確認_異常系] - count が NULL の場合の cplat_argparser_handle_register_positional_int_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_13); // [確認_異常系] - count が nullptr の場合の cplat_argparser_handle_register_positional_int_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_argparser_handle_dispose(parser);
@@ -498,12 +503,12 @@ TEST_F(argparserTest, register_accepts_required_positionals_in_sequence)
     // Pre-Assert
 
     // Act
-    int first_result =
-        cplat_argparser_handle_register_positional_string(parser, "first", nullptr, CPLAT_ARGPARSER_REQUIRED,
-                                                          &first); // [手順] - 必須位置引数 "first" を登録する。
-    int second_result =
-        cplat_argparser_handle_register_positional_string(parser, "second", nullptr, CPLAT_ARGPARSER_REQUIRED,
-                                                          &second); // [手順] - 必須位置引数 "second" を続けて登録する。
+    int first_result = cplat_argparser_handle_register_positional_string(
+        parser, "first", nullptr, CPLAT_ARGPARSER_REQUIRED,
+        &first); // [手順] - 必須位置引数 "first" を指定して cplat_argparser_handle_register_positional_string() を呼び出す。
+    int second_result = cplat_argparser_handle_register_positional_string(
+        parser, "second", nullptr, CPLAT_ARGPARSER_REQUIRED,
+        &second); // [手順] - 必須位置引数 "second" を続けて指定して cplat_argparser_handle_register_positional_string() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -582,16 +587,20 @@ TEST_F(argparserTest, register_error_collection_accumulates_all_failures)
 
     // Act
     int actual_ret_argparser_register_flag = cplat_argparser_handle_register_flag(
-        parser, "-a", "--aa", nullptr, &a); // [手順] - 成功する登録を行う (コレクションに積まれない)。
+        parser, "-a", "--aa", nullptr,
+        &a); // [手順] - フラグ "-a" / "--aa" (コレクションに積まれない成功する登録) を指定して cplat_argparser_handle_register_flag() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_argparser_register_flag); // [確認_正常系] - 成功する登録に対する cplat_argparser_handle_register_flag() の戻り値が CPLAT_OK であること。
     int actual_ret_argparser_register_flag_2 = cplat_argparser_handle_register_flag(
-        parser, "-a", "--bb", nullptr, &b); // [手順] - 短い名前の重複 (1 件目のエラー) を発生させる。
+        parser, "-a", "--bb", nullptr,
+        &b); // [手順] - 重複する短い名前 (1 件目のエラー) を指定して cplat_argparser_handle_register_flag() を呼び出す。
     int actual_ret_argparser_register_flag_3 = cplat_argparser_handle_register_flag(
-        parser, "-c", "--cc", nullptr, nullptr); // [手順] - 格納先 NULL (2 件目のエラー) を発生させる。
+        parser, "-c", "--cc", nullptr,
+        nullptr); // [手順] - 格納先に nullptr (2 件目のエラー) を指定して cplat_argparser_handle_register_flag() を呼び出す。
     int actual_ret_argparser_register_flag_4 = cplat_argparser_handle_register_flag(
-        parser, "-d", "--aa", nullptr, &b); // [手順] - 別の重複 (3 件目のエラー) を発生させる。
+        parser, "-d", "--aa", nullptr,
+        &b); // [手順] - 重複する長い名前 (3 件目のエラー) を指定して cplat_argparser_handle_register_flag() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -599,7 +608,7 @@ TEST_F(argparserTest, register_error_collection_accumulates_all_failures)
         actual_ret_argparser_register_flag_2); // [確認_異常系] - 短い名前が重複する場合の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_DUPLICATE_DEFINITION であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_argparser_register_flag_3); // [確認_異常系] - 格納先が NULL の場合の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_argparser_register_flag_3); // [確認_異常系] - 格納先が nullptr の場合の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_DUPLICATE_DEFINITION,
         actual_ret_argparser_register_flag_4); // [確認_異常系] - 長い名前 "--aa" が重複する場合の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_DUPLICATE_DEFINITION であること。
@@ -677,26 +686,27 @@ TEST_F(argparserTest, register_error_getters_default_when_absent_or_out_of_range
     EXPECT_EQ(
         (size_t)0,
         cplat_argparser_handle_get_register_error_count(
-            nullptr)); // [確認_異常系] - NULL ハンドルの場合の cplat_argparser_handle_get_register_error_count() の戻り値が 0 であること。(登録エラー件数が既定値であることの確認)
+            nullptr)); // [確認_異常系] - nullptr ハンドルの場合の cplat_argparser_handle_get_register_error_count() の戻り値が 0 であること。(登録エラー件数が既定値であることの確認)
     EXPECT_EQ(
         CPLAT_OK,
         cplat_argparser_handle_get_register_error(
             nullptr,
-            0)); // [確認_異常系] - NULL ハンドルの場合の cplat_argparser_handle_get_register_error() の戻り値が CPLAT_OK であること。
+            0)); // [確認_異常系] - nullptr ハンドルの場合の cplat_argparser_handle_get_register_error() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         nullptr,
         cplat_argparser_handle_get_register_error_target(
             nullptr,
-            0)); // [確認_異常系] - NULL ハンドルの場合の cplat_argparser_handle_get_register_error_target() の戻り値が nullptr であること。
+            0)); // [確認_異常系] - nullptr ハンドルの場合の cplat_argparser_handle_get_register_error_target() の戻り値が nullptr であること。
 
     // Act_2
     int actual_ret_argparser_register_flag = cplat_argparser_handle_register_flag(
-        parser, "-a", nullptr, nullptr, nullptr); // [手順] - エラーを 1 件発生させる。
+        parser, "-a", nullptr, nullptr,
+        nullptr); // [手順] - 格納先に nullptr (エラー 1 件) を指定して cplat_argparser_handle_register_flag() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_argparser_register_flag); // [確認_異常系] - 格納先が NULL の場合の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_argparser_register_flag); // [確認_異常系] - 格納先が nullptr の場合の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     ASSERT_EQ((size_t)1, cplat_argparser_handle_get_register_error_count(parser));
     // [確認_異常系] - cplat_argparser_handle_get_register_error_count() の戻り値が 1 であること。(登録エラーが 1 件積み上がったことの確認)
     EXPECT_EQ(
@@ -738,7 +748,9 @@ TEST_F(argparserTest, register_error_message_formatting)
 
     // Act
     int actual_ret_argparser_get_register_error_message = cplat_argparser_handle_get_register_error_message(
-        parser, 0, message, sizeof(message)); // [手順] - 1 件目のエラー メッセージを取得する。
+        parser, 0, message,
+        sizeof(
+            message)); // [手順] - 1 件目のエラーを指定して cplat_argparser_handle_get_register_error_message() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -767,7 +779,7 @@ TEST_F(argparserTest, register_error_message_formatting)
     // Assert_3
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_message_2); // [確認_異常系] - parser が NULL の場合の cplat_argparser_handle_get_register_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_message_2); // [確認_異常系] - parser が nullptr の場合の cplat_argparser_handle_get_register_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_4
     int actual_ret_message_3 = cplat_argparser_handle_get_register_error_message(
@@ -777,7 +789,7 @@ TEST_F(argparserTest, register_error_message_formatting)
     // Assert_4
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_message_3); // [確認_異常系] - buffer が NULL の場合の cplat_argparser_handle_get_register_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_message_3); // [確認_異常系] - buffer が nullptr の場合の cplat_argparser_handle_get_register_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_5
     int actual_ret_message_4 = cplat_argparser_handle_get_register_error_message(
@@ -819,7 +831,7 @@ TEST_F(argparserTest, print_register_error_messages_rejects_invalid_arguments)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_1); // [確認_異常系] - parser が NULL の場合の cplat_argparser_handle_print_register_error_messages() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_1); // [確認_異常系] - parser が nullptr の場合の cplat_argparser_handle_print_register_error_messages() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_2
     int actual_ret_operation_2 = cplat_argparser_handle_print_register_error_messages(
@@ -828,7 +840,7 @@ TEST_F(argparserTest, print_register_error_messages_rejects_invalid_arguments)
     // Assert_2
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_2); // [確認_異常系] - stream が NULL の場合の cplat_argparser_handle_print_register_error_messages() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_2); // [確認_異常系] - stream が nullptr の場合の cplat_argparser_handle_print_register_error_messages() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_argparser_handle_dispose(parser);
@@ -849,7 +861,7 @@ TEST_F(argparserTest, print_register_error_messages_is_noop_without_error)
 
     // Act
     int result = cplat_argparser_handle_print_register_error_messages(
-        parser, stderr); // [手順] - print_register_error_messages() を呼び出す。
+        parser, stderr); // [手順] - cplat_argparser_handle_print_register_error_messages() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -884,7 +896,6 @@ TEST_F(argparserTest, print_register_error_messages_writes_all_to_stream)
     // Pre-Assert
     EXPECT_CALL(mock_stdio, fprintf(_, _, _, stderr, _))
         .Times(AnyNumber()); // [Pre-Assert確認_異常系] - fprintf() が stderr を指定して任意の回数呼び出されること。
-                             // [Pre-Assert手順] - 区切りの空行の fprintf() 呼び出しを許容する。
     EXPECT_CALL(mock_stdio,
                 fprintf(_, _, _, stderr, HasSubstr("error: failed to register '--bb': duplicate definition")))
         .Times(
@@ -895,7 +906,7 @@ TEST_F(argparserTest, print_register_error_messages_writes_all_to_stream)
 
     // Act
     int result = cplat_argparser_handle_print_register_error_messages(
-        parser, stderr); // [手順] - print_register_error_messages() を呼び出す。
+        parser, stderr); // [手順] - cplat_argparser_handle_print_register_error_messages() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -926,7 +937,8 @@ TEST_F(argparserTest, register_grows_beyond_initial_capacity)
         snprintf(long_name, sizeof(long_name), "--opt%02d", i);
         int actual_ret_register_flag = cplat_argparser_handle_register_flag(
             parser, nullptr, long_name, nullptr,
-            &storages[i]); // [手順] - "--opt00" から "--opt19" まで 20 個のフラグを登録する。
+            &storages
+                [i]); // [手順] - "--opt00" から "--opt19" までの 20 個のフラグを順に指定して cplat_argparser_handle_register_flag() を呼び出す。
         ASSERT_EQ(
             CPLAT_OK,
             actual_ret_register_flag); // [確認_正常系 回数=20] - cplat_argparser_handle_register_flag() の戻り値が CPLAT_OK であること。
@@ -970,9 +982,10 @@ TEST_F(argparserTest, flag_counts_occurrences_and_resets_on_reparse)
     // Act
     char *argv_1[] = {cstr("prog"), cstr("-v"), cstr("--verbose"), cstr("-v")};
     const int argc_1 = (int)(sizeof(argv_1) / sizeof(argv_1[0]));
-    test_argparser_apply_args(parser, argc_1, argv_1); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse =
-        cplat_argparser_handle_parse(parser); // [手順] - フラグが 3 回出現する引数を解析する。
+    test_argparser_apply_args(
+        parser, argc_1, argv_1); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser); // [手順] - フラグが 3 回出現する引数を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -983,8 +996,10 @@ TEST_F(argparserTest, flag_counts_occurrences_and_resets_on_reparse)
     // Act_2
     char *argv_2[] = {cstr("prog")};
     const int argc_2 = (int)(sizeof(argv_2) / sizeof(argv_2[0]));
-    test_argparser_apply_args(parser, argc_2, argv_2);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(parser); // [手順] - フラグなしの引数で再解析する。
+    test_argparser_apply_args(
+        parser, argc_2, argv_2); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(
+        parser); // [手順] - フラグなしの引数を解析対象とした状態で再度 cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -1013,7 +1028,8 @@ TEST_F(argparserTest, flag_with_value_is_unexpected_value)
     // Pre-Assert
 
     // Act
-    int result = cplat_argparser_handle_parse(parser); // [手順] - "--verbose=1" を解析する。
+    int result = cplat_argparser_handle_parse(
+        parser); // [手順] - "--verbose=1" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1053,7 +1069,8 @@ TEST_F(argparserTest, flag_with_short_value_is_unexpected_value)
     // Pre-Assert
 
     // Act
-    int result = cplat_argparser_handle_parse(parser); // [手順] - "-v=1" を解析する。
+    int result = cplat_argparser_handle_parse(
+        parser); // [手順] - "-v=1" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1094,8 +1111,10 @@ TEST_F(argparserTest, option_int_accepts_all_syntaxes)
     // Act
     char *argv_1[] = {cstr("prog"), cstr("-c"), cstr("5")};
     const int argc_1 = (int)(sizeof(argv_1) / sizeof(argv_1[0]));
-    test_argparser_apply_args(parser, argc_1, argv_1);                     // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse = cplat_argparser_handle_parse(parser); // [手順] - "-c 5" を解析する。
+    test_argparser_apply_args(
+        parser, argc_1, argv_1); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser); // [手順] - "-c 5" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1106,8 +1125,10 @@ TEST_F(argparserTest, option_int_accepts_all_syntaxes)
     // Act_2
     char *argv_2[] = {cstr("prog"), cstr("--count"), cstr("6")};
     const int argc_2 = (int)(sizeof(argv_2) / sizeof(argv_2[0]));
-    test_argparser_apply_args(parser, argc_2, argv_2);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(parser); // [手順] - "--count 6" を解析する。
+    test_argparser_apply_args(
+        parser, argc_2, argv_2); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(
+        parser); // [手順] - "--count 6" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -1118,8 +1139,10 @@ TEST_F(argparserTest, option_int_accepts_all_syntaxes)
     // Act_3
     char *argv_3[] = {cstr("prog"), cstr("--count=7")};
     const int argc_3 = (int)(sizeof(argv_3) / sizeof(argv_3[0]));
-    test_argparser_apply_args(parser, argc_3, argv_3);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_3 = cplat_argparser_handle_parse(parser); // [手順] - "--count=7" を解析する。
+    test_argparser_apply_args(
+        parser, argc_3, argv_3); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_3 = cplat_argparser_handle_parse(
+        parser); // [手順] - "--count=7" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_3
     EXPECT_EQ(
@@ -1130,8 +1153,10 @@ TEST_F(argparserTest, option_int_accepts_all_syntaxes)
     // Act_4
     char *argv_4[] = {cstr("prog"), cstr("-c=8")};
     const int argc_4 = (int)(sizeof(argv_4) / sizeof(argv_4[0]));
-    test_argparser_apply_args(parser, argc_4, argv_4);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_4 = cplat_argparser_handle_parse(parser); // [手順] - "-c=8" を解析する。
+    test_argparser_apply_args(
+        parser, argc_4, argv_4); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_4 = cplat_argparser_handle_parse(
+        parser); // [手順] - "-c=8" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_4
     EXPECT_EQ(
@@ -1143,8 +1168,10 @@ TEST_F(argparserTest, option_int_accepts_all_syntaxes)
     // Act_5
     char *argv_5[] = {cstr("prog"), cstr("-c"), cstr("-5")};
     const int argc_5 = (int)(sizeof(argv_5) / sizeof(argv_5[0]));
-    test_argparser_apply_args(parser, argc_5, argv_5);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_5 = cplat_argparser_handle_parse(parser); // [手順] - "-c -5" を解析する。
+    test_argparser_apply_args(
+        parser, argc_5, argv_5); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_5 = cplat_argparser_handle_parse(
+        parser); // [手順] - "-c -5" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_5
     EXPECT_EQ(
@@ -1156,9 +1183,10 @@ TEST_F(argparserTest, option_int_accepts_all_syntaxes)
     count = 42;
     char *argv_6[] = {cstr("prog")};
     const int argc_6 = (int)(sizeof(argv_6) / sizeof(argv_6[0]));
-    test_argparser_apply_args(parser, argc_6, argv_6); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_6 =
-        cplat_argparser_handle_parse(parser); // [手順] - オプション非出現の引数を解析する。
+    test_argparser_apply_args(
+        parser, argc_6, argv_6); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_6 = cplat_argparser_handle_parse(
+        parser); // [手順] - オプション非出現の引数を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_6
     EXPECT_EQ(
@@ -1191,8 +1219,10 @@ TEST_F(argparserTest, option_int_boundary_and_conversion_errors)
     snprintf(int_max, sizeof(int_max), "%d", INT_MAX);
     char *argv_1[] = {cstr("prog"), cstr("-c"), int_max};
     const int argc_1 = (int)(sizeof(argv_1) / sizeof(argv_1[0]));
-    test_argparser_apply_args(parser, argc_1, argv_1);                     // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse = cplat_argparser_handle_parse(parser); // [手順] - INT_MAX を解析する。
+    test_argparser_apply_args(
+        parser, argc_1, argv_1); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser); // [手順] - INT_MAX を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1205,8 +1235,10 @@ TEST_F(argparserTest, option_int_boundary_and_conversion_errors)
     // Act_2
     char *argv_2[] = {cstr("prog"), cstr("-c"), int_min};
     const int argc_2 = (int)(sizeof(argv_2) / sizeof(argv_2[0]));
-    test_argparser_apply_args(parser, argc_2, argv_2);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(parser); // [手順] - INT_MIN を解析する。
+    test_argparser_apply_args(
+        parser, argc_2, argv_2); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(
+        parser); // [手順] - INT_MIN を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -1217,9 +1249,10 @@ TEST_F(argparserTest, option_int_boundary_and_conversion_errors)
     // Act_3
     char *argv_3[] = {cstr("prog"), cstr("--count=2147483648")};
     const int argc_3 = (int)(sizeof(argv_3) / sizeof(argv_3[0]));
-    test_argparser_apply_args(parser, argc_3, argv_3); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_3 =
-        cplat_argparser_handle_parse(parser); // [手順] - INT_MAX + 1 の "2147483648" を解析する。
+    test_argparser_apply_args(
+        parser, argc_3, argv_3); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_3 = cplat_argparser_handle_parse(
+        parser); // [手順] - INT_MAX + 1 の "2147483648" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_3
     EXPECT_EQ(
@@ -1233,8 +1266,10 @@ TEST_F(argparserTest, option_int_boundary_and_conversion_errors)
     // Act_4
     char *argv_4[] = {cstr("prog"), cstr("--count=12a")};
     const int argc_4 = (int)(sizeof(argv_4) / sizeof(argv_4[0]));
-    test_argparser_apply_args(parser, argc_4, argv_4);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_4 = cplat_argparser_handle_parse(parser); // [手順] - 数値でない "12a" を解析する。
+    test_argparser_apply_args(
+        parser, argc_4, argv_4); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_4 = cplat_argparser_handle_parse(
+        parser); // [手順] - 数値でない "12a" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_4
     EXPECT_EQ(
@@ -1252,8 +1287,10 @@ TEST_F(argparserTest, option_int_boundary_and_conversion_errors)
     // Act_5
     char *argv_5[] = {cstr("prog"), cstr("--count=")};
     const int argc_5 = (int)(sizeof(argv_5) / sizeof(argv_5[0]));
-    test_argparser_apply_args(parser, argc_5, argv_5);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_5 = cplat_argparser_handle_parse(parser); // [手順] - 空値の "--count=" を解析する。
+    test_argparser_apply_args(
+        parser, argc_5, argv_5); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_5 = cplat_argparser_handle_parse(
+        parser); // [手順] - 空値の "--count=" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_5
     EXPECT_EQ(
@@ -1286,8 +1323,10 @@ TEST_F(argparserTest, positional_int_accepts_negative_value_without_hiding_unkno
     // Act
     char *argv_1[] = {cstr("prog"), cstr("-42")};
     const int argc_1 = (int)(sizeof(argv_1) / sizeof(argv_1[0]));
-    test_argparser_apply_args(parser, argc_1, argv_1);                     // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse = cplat_argparser_handle_parse(parser); // [手順] - 負数 "-42" を解析する。
+    test_argparser_apply_args(
+        parser, argc_1, argv_1); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser); // [手順] - 負数 "-42" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1298,9 +1337,10 @@ TEST_F(argparserTest, positional_int_accepts_negative_value_without_hiding_unkno
     // Act_2
     char *argv_2[] = {cstr("prog"), cstr("-2147483649")};
     const int argc_2 = (int)(sizeof(argv_2) / sizeof(argv_2[0]));
-    test_argparser_apply_args(parser, argc_2, argv_2); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_2 =
-        cplat_argparser_handle_parse(parser); // [手順] - INT_MIN - 1 の "-2147483649" を解析する。
+    test_argparser_apply_args(
+        parser, argc_2, argv_2); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(
+        parser); // [手順] - INT_MIN - 1 の "-2147483649" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -1314,8 +1354,10 @@ TEST_F(argparserTest, positional_int_accepts_negative_value_without_hiding_unkno
     // Act_3
     char *argv_3[] = {cstr("prog"), cstr("-x")};
     const int argc_3 = (int)(sizeof(argv_3) / sizeof(argv_3[0]));
-    test_argparser_apply_args(parser, argc_3, argv_3);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_3 = cplat_argparser_handle_parse(parser); // [手順] - 数値でない "-x" を解析する。
+    test_argparser_apply_args(
+        parser, argc_3, argv_3); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_3 = cplat_argparser_handle_parse(
+        parser); // [手順] - 数値でない "-x" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_3
     EXPECT_EQ(
@@ -1348,8 +1390,10 @@ TEST_F(argparserTest, option_string_points_into_argv)
     // Act
     char *argv_1[] = {cstr("prog"), cstr("-n"), cstr("abc")};
     const int argc_1 = (int)(sizeof(argv_1) / sizeof(argv_1[0]));
-    test_argparser_apply_args(parser, argc_1, argv_1);                     // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse = cplat_argparser_handle_parse(parser); // [手順] - "-n abc" を解析する。
+    test_argparser_apply_args(
+        parser, argc_1, argv_1); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser); // [手順] - "-n abc" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1363,8 +1407,10 @@ TEST_F(argparserTest, option_string_points_into_argv)
     // Act_2
     char *argv_2[] = {cstr("prog"), cstr("--name=xyz")};
     const int argc_2 = (int)(sizeof(argv_2) / sizeof(argv_2[0]));
-    test_argparser_apply_args(parser, argc_2, argv_2);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(parser); // [手順] - "--name=xyz" を解析する。
+    test_argparser_apply_args(
+        parser, argc_2, argv_2); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(
+        parser); // [手順] - "--name=xyz" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -1375,8 +1421,10 @@ TEST_F(argparserTest, option_string_points_into_argv)
     // Act_3
     char *argv_3[] = {cstr("prog"), cstr("--name=")};
     const int argc_3 = (int)(sizeof(argv_3) / sizeof(argv_3[0]));
-    test_argparser_apply_args(parser, argc_3, argv_3);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_3 = cplat_argparser_handle_parse(parser); // [手順] - 空値の "--name=" を解析する。
+    test_argparser_apply_args(
+        parser, argc_3, argv_3); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_3 = cplat_argparser_handle_parse(
+        parser); // [手順] - 空値の "--name=" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_3
     EXPECT_EQ(
@@ -1388,8 +1436,10 @@ TEST_F(argparserTest, option_string_points_into_argv)
     // Act_4
     char *argv_4[] = {cstr("prog"), cstr("-n=xyz")};
     const int argc_4 = (int)(sizeof(argv_4) / sizeof(argv_4[0]));
-    test_argparser_apply_args(parser, argc_4, argv_4);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_4 = cplat_argparser_handle_parse(parser); // [手順] - "-n=xyz" を解析する。
+    test_argparser_apply_args(
+        parser, argc_4, argv_4); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_4 = cplat_argparser_handle_parse(
+        parser); // [手順] - "-n=xyz" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_4
     EXPECT_EQ(
@@ -1400,8 +1450,10 @@ TEST_F(argparserTest, option_string_points_into_argv)
     // Act_5
     char *argv_5[] = {cstr("prog"), cstr("-n=")};
     const int argc_5 = (int)(sizeof(argv_5) / sizeof(argv_5[0]));
-    test_argparser_apply_args(parser, argc_5, argv_5);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_5 = cplat_argparser_handle_parse(parser); // [手順] - 空値の "-n=" を解析する。
+    test_argparser_apply_args(
+        parser, argc_5, argv_5); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_5 = cplat_argparser_handle_parse(
+        parser); // [手順] - 空値の "-n=" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_5
     EXPECT_EQ(
@@ -1439,8 +1491,10 @@ TEST_F(argparserTest, option_string_accepts_value_with_spaces)
     input = nullptr;
     char *argv_1[] = {cstr("prog"), cstr("parameter string")};
     const int argc_1 = (int)(sizeof(argv_1) / sizeof(argv_1[0]));
-    test_argparser_apply_args(parser, argc_1, argv_1);                     // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse = cplat_argparser_handle_parse(parser); // [手順] - 空白を含む位置引数を解析する。
+    test_argparser_apply_args(
+        parser, argc_1, argv_1); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser); // [手順] - 空白を含む位置引数を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1452,9 +1506,10 @@ TEST_F(argparserTest, option_string_accepts_value_with_spaces)
     // Act_2
     char *argv_2[] = {cstr("prog"), cstr("--param=parameter string")};
     const int argc_2 = (int)(sizeof(argv_2) / sizeof(argv_2[0]));
-    test_argparser_apply_args(parser, argc_2, argv_2); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_2 =
-        cplat_argparser_handle_parse(parser); // [手順] - "--param=parameter string()" を解析する。
+    test_argparser_apply_args(
+        parser, argc_2, argv_2); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(
+        parser); // [手順] - "--param=parameter string()" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -1466,9 +1521,10 @@ TEST_F(argparserTest, option_string_accepts_value_with_spaces)
     // Act_3
     char *argv_3[] = {cstr("prog"), cstr("-p=parameter string")};
     const int argc_3 = (int)(sizeof(argv_3) / sizeof(argv_3[0]));
-    test_argparser_apply_args(parser, argc_3, argv_3); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_3 =
-        cplat_argparser_handle_parse(parser); // [手順] - "-p=parameter string()" を解析する。
+    test_argparser_apply_args(
+        parser, argc_3, argv_3); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_3 = cplat_argparser_handle_parse(
+        parser); // [手順] - "-p=parameter string()" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_3
     EXPECT_EQ(
@@ -1480,9 +1536,10 @@ TEST_F(argparserTest, option_string_accepts_value_with_spaces)
     // Act_4
     char *argv_4[] = {cstr("prog"), cstr("--param"), cstr("parameter string")};
     const int argc_4 = (int)(sizeof(argv_4) / sizeof(argv_4[0]));
-    test_argparser_apply_args(parser, argc_4, argv_4); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_4 =
-        cplat_argparser_handle_parse(parser); // [手順] - "--param" と後続トークンを解析する。
+    test_argparser_apply_args(
+        parser, argc_4, argv_4); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_4 = cplat_argparser_handle_parse(
+        parser); // [手順] - "--param" と後続トークンを解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_4
     EXPECT_EQ(
@@ -1494,8 +1551,10 @@ TEST_F(argparserTest, option_string_accepts_value_with_spaces)
     // Act_5
     char *argv_5[] = {cstr("prog"), cstr("-p"), cstr("parameter string")};
     const int argc_5 = (int)(sizeof(argv_5) / sizeof(argv_5[0]));
-    test_argparser_apply_args(parser, argc_5, argv_5);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_5 = cplat_argparser_handle_parse(parser); // [手順] - "-p" と後続トークンを解析する。
+    test_argparser_apply_args(
+        parser, argc_5, argv_5); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_5 = cplat_argparser_handle_parse(
+        parser); // [手順] - "-p" と後続トークンを解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_5
     EXPECT_EQ(
@@ -1527,9 +1586,10 @@ TEST_F(argparserTest, option_string_stores_argv_verbatim)
     param = nullptr;
     char *argv_1[] = {cstr("prog"), cstr("--param=\"quoted value\"")};
     const int argc_1 = (int)(sizeof(argv_1) / sizeof(argv_1[0]));
-    test_argparser_apply_args(parser, argc_1, argv_1); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse =
-        cplat_argparser_handle_parse(parser); // [手順] - 両端にクオートが残存した値を解析する。
+    test_argparser_apply_args(
+        parser, argc_1, argv_1); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser); // [手順] - 両端にクオートが残存した値を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1543,9 +1603,10 @@ TEST_F(argparserTest, option_string_stores_argv_verbatim)
     // Act_2
     char *argv_2[] = {cstr("prog"), cstr("-p"), cstr("say \"hi\" now")};
     const int argc_2 = (int)(sizeof(argv_2) / sizeof(argv_2[0]));
-    test_argparser_apply_args(parser, argc_2, argv_2); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_2 =
-        cplat_argparser_handle_parse(parser); // [手順] - 値の途中にクオートを含むトークンを解析する。
+    test_argparser_apply_args(
+        parser, argc_2, argv_2); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(
+        parser); // [手順] - 値の途中にクオートを含むトークンを解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -1582,8 +1643,10 @@ TEST_F(argparserTest, positional_assignment_and_overflow)
     // Act
     char *argv_1[] = {cstr("prog"), cstr("in.txt"), cstr("3")};
     const int argc_1 = (int)(sizeof(argv_1) / sizeof(argv_1[0]));
-    test_argparser_apply_args(parser, argc_1, argv_1);                     // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse = cplat_argparser_handle_parse(parser); // [手順] - "in.txt 3" を解析する。
+    test_argparser_apply_args(
+        parser, argc_1, argv_1); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser); // [手順] - "in.txt 3" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1595,9 +1658,10 @@ TEST_F(argparserTest, positional_assignment_and_overflow)
     // Act_2
     char *argv_2[] = {cstr("prog"), cstr("in.txt"), cstr("abc")};
     const int argc_2 = (int)(sizeof(argv_2) / sizeof(argv_2[0]));
-    test_argparser_apply_args(parser, argc_2, argv_2); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_2 =
-        cplat_argparser_handle_parse(parser); // [手順] - int 位置引数に "abc" を渡して解析する。
+    test_argparser_apply_args(
+        parser, argc_2, argv_2); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(
+        parser); // [手順] - int 位置引数に "abc" を渡した状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -1615,9 +1679,10 @@ TEST_F(argparserTest, positional_assignment_and_overflow)
     // Act_3
     char *argv_3[] = {cstr("prog"), cstr("a"), cstr("1"), cstr("extra")};
     const int argc_3 = (int)(sizeof(argv_3) / sizeof(argv_3[0]));
-    test_argparser_apply_args(parser, argc_3, argv_3); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_3 =
-        cplat_argparser_handle_parse(parser); // [手順] - 登録数を超える 3 つの位置引数を解析する。
+    test_argparser_apply_args(
+        parser, argc_3, argv_3); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_3 = cplat_argparser_handle_parse(
+        parser); // [手順] - 登録数を超える 3 つの位置引数を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_3
     EXPECT_EQ(
@@ -1639,8 +1704,10 @@ TEST_F(argparserTest, positional_assignment_and_overflow)
     // Act_4
     char *argv_4[] = {cstr("prog")};
     const int argc_4 = (int)(sizeof(argv_4) / sizeof(argv_4[0]));
-    test_argparser_apply_args(parser, argc_4, argv_4);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_4 = cplat_argparser_handle_parse(parser); // [手順] - 位置引数なしで解析する。
+    test_argparser_apply_args(
+        parser, argc_4, argv_4); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_4 = cplat_argparser_handle_parse(
+        parser); // [手順] - 位置引数なしの状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_4
     EXPECT_EQ(
@@ -1692,9 +1759,10 @@ TEST_F(argparserTest, positional_string_array_assignment_and_reparse)
     // Act
     char *argv_1[] = {cstr("prog"), cstr("in.txt"), cstr("a.txt"), cstr("-v"), cstr("b.txt")};
     const int argc_1 = (int)(sizeof(argv_1) / sizeof(argv_1[0]));
-    test_argparser_apply_args(parser, argc_1, argv_1); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse =
-        cplat_argparser_handle_parse(parser); // [手順] - 単数位置引数、可変長位置引数、フラグが混在する入力を解析する。
+    test_argparser_apply_args(
+        parser, argc_1, argv_1); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser); // [手順] - 単数位置引数、可変長位置引数、フラグが混在する入力を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1709,9 +1777,10 @@ TEST_F(argparserTest, positional_string_array_assignment_and_reparse)
     // Act_2
     char *argv_2[] = {cstr("prog"), cstr("in.txt"), cstr("a.txt"), cstr("b.txt"), cstr("c.txt")};
     const int argc_2 = (int)(sizeof(argv_2) / sizeof(argv_2[0]));
-    test_argparser_apply_args(parser, argc_2, argv_2); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_2 =
-        cplat_argparser_handle_parse(parser); // [手順] - 容量 2 を超える 3 件の可変長位置引数を解析する。
+    test_argparser_apply_args(
+        parser, argc_2, argv_2); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(
+        parser); // [手順] - 容量 2 を超える 3 件の可変長位置引数を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -1733,9 +1802,10 @@ TEST_F(argparserTest, positional_string_array_assignment_and_reparse)
     // Act_3
     char *argv_3[] = {cstr("prog"), cstr("in.txt")};
     const int argc_3 = (int)(sizeof(argv_3) / sizeof(argv_3[0]));
-    test_argparser_apply_args(parser, argc_3, argv_3); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_3 =
-        cplat_argparser_handle_parse(parser); // [手順] - 可変長位置引数を省略して再解析する。
+    test_argparser_apply_args(
+        parser, argc_3, argv_3); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_3 = cplat_argparser_handle_parse(
+        parser); // [手順] - 可変長位置引数を省略した状態で再度 cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_3
     EXPECT_EQ(
@@ -1768,9 +1838,10 @@ TEST_F(argparserTest, positional_int_array_conversion_and_required)
     // Act
     char *argv_1[] = {cstr("prog"), cstr("-42"), cstr("7")};
     const int argc_1 = (int)(sizeof(argv_1) / sizeof(argv_1[0]));
-    test_argparser_apply_args(parser, argc_1, argv_1); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse =
-        cplat_argparser_handle_parse(parser); // [手順] - 負数と正数を可変長 int 位置引数として解析する。
+    test_argparser_apply_args(
+        parser, argc_1, argv_1); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser); // [手順] - 負数と正数を可変長 int 位置引数として渡した状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1783,9 +1854,10 @@ TEST_F(argparserTest, positional_int_array_conversion_and_required)
     // Act_2
     char *argv_2[] = {cstr("prog"), cstr("12a")};
     const int argc_2 = (int)(sizeof(argv_2) / sizeof(argv_2[0]));
-    test_argparser_apply_args(parser, argc_2, argv_2); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_2 =
-        cplat_argparser_handle_parse(parser); // [手順] - 整数へ変換できない "12a" を解析する。
+    test_argparser_apply_args(
+        parser, argc_2, argv_2); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(
+        parser); // [手順] - 整数へ変換できない "12a" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -1803,9 +1875,10 @@ TEST_F(argparserTest, positional_int_array_conversion_and_required)
     // Act_3
     char *argv_3[] = {cstr("prog"), cstr("-2147483649")};
     const int argc_3 = (int)(sizeof(argv_3) / sizeof(argv_3[0]));
-    test_argparser_apply_args(parser, argc_3, argv_3); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_3 =
-        cplat_argparser_handle_parse(parser); // [手順] - int の下限を下回る値を解析する。
+    test_argparser_apply_args(
+        parser, argc_3, argv_3); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_3 = cplat_argparser_handle_parse(
+        parser); // [手順] - int の下限を下回る値を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_3
     EXPECT_EQ(
@@ -1819,9 +1892,10 @@ TEST_F(argparserTest, positional_int_array_conversion_and_required)
     // Act_4
     char *argv_4[] = {cstr("prog")};
     const int argc_4 = (int)(sizeof(argv_4) / sizeof(argv_4[0]));
-    test_argparser_apply_args(parser, argc_4, argv_4); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_4 =
-        cplat_argparser_handle_parse(parser); // [手順] - 必須の可変長位置引数を省略して解析する。
+    test_argparser_apply_args(
+        parser, argc_4, argv_4); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_4 = cplat_argparser_handle_parse(
+        parser); // [手順] - 必須の可変長位置引数を省略した状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_4
     EXPECT_EQ(
@@ -1840,7 +1914,8 @@ TEST_F(argparserTest, positional_int_array_conversion_and_required)
 
     // Act_5
     int actual_ret_argparser_get_usage = cplat_argparser_handle_get_usage(
-        parser, usage, sizeof(usage), nullptr); // [手順] - 必須の可変長位置引数を含む usage を組み立てる。
+        parser, usage, sizeof(usage),
+        nullptr); // [手順] - 必須の可変長位置引数を含む状態で cplat_argparser_handle_get_usage() を呼び出す。
 
     // Assert_5
     ASSERT_EQ(
@@ -1873,8 +1948,10 @@ TEST_F(argparserTest, unknown_option_detection)
     // Act
     char *argv_1[] = {cstr("prog"), cstr("-x")};
     const int argc_1 = (int)(sizeof(argv_1) / sizeof(argv_1[0]));
-    test_argparser_apply_args(parser, argc_1, argv_1);                     // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse = cplat_argparser_handle_parse(parser); // [手順] - 未登録の "-x" を解析する。
+    test_argparser_apply_args(
+        parser, argc_1, argv_1); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser); // [手順] - 未登録の "-x" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1891,9 +1968,10 @@ TEST_F(argparserTest, unknown_option_detection)
     // Act_2
     char *argv_2[] = {cstr("prog"), cstr("-vv")};
     const int argc_2 = (int)(sizeof(argv_2) / sizeof(argv_2[0]));
-    test_argparser_apply_args(parser, argc_2, argv_2); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_2 =
-        cplat_argparser_handle_parse(parser); // [手順] - 短オプション連結の "-vv" を解析する。
+    test_argparser_apply_args(
+        parser, argc_2, argv_2); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(
+        parser); // [手順] - 短オプション連結の "-vv" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -1907,8 +1985,10 @@ TEST_F(argparserTest, unknown_option_detection)
     // Act_3
     char *argv_3[] = {cstr("prog"), cstr("--bogus")};
     const int argc_3 = (int)(sizeof(argv_3) / sizeof(argv_3[0]));
-    test_argparser_apply_args(parser, argc_3, argv_3);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_3 = cplat_argparser_handle_parse(parser); // [手順] - 未登録の "--bogus" を解析する。
+    test_argparser_apply_args(
+        parser, argc_3, argv_3); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_3 = cplat_argparser_handle_parse(
+        parser); // [手順] - 未登録の "--bogus" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_3
     EXPECT_EQ(
@@ -1940,7 +2020,8 @@ TEST_F(argparserTest, missing_value_at_end)
     // Pre-Assert
 
     // Act
-    int result = cplat_argparser_handle_parse(parser); // [手順] - 値なしの末尾 "--count" を解析する。
+    int result = cplat_argparser_handle_parse(
+        parser); // [手順] - 値なしの末尾 "--count" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_MISSING_VALUE,
@@ -1975,7 +2056,8 @@ TEST_F(argparserTest, duplicate_option_occurrence)
     // Pre-Assert
 
     // Act
-    int result = cplat_argparser_handle_parse(parser); // [手順] - "-c 1" と "--count=2" を併記して解析する。
+    int result = cplat_argparser_handle_parse(
+        parser); // [手順] - "-c 1" と "--count=2" を併記した状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -2013,9 +2095,10 @@ TEST_F(argparserTest, array_option_multiple_occurrences)
     // Act
     char *argv_1[] = {cstr("prog"), cstr("-i"), cstr("dir1"), cstr("--include=dir2")};
     const int argc_1 = (int)(sizeof(argv_1) / sizeof(argv_1[0]));
-    test_argparser_apply_args(parser, argc_1, argv_1); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse =
-        cplat_argparser_handle_parse(parser); // [手順] - "-i dir1 --include=dir2" を解析する。
+    test_argparser_apply_args(
+        parser, argc_1, argv_1); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser); // [手順] - "-i dir1 --include=dir2" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -2028,9 +2111,10 @@ TEST_F(argparserTest, array_option_multiple_occurrences)
     // Act_2
     char *argv_2[] = {cstr("prog"), cstr("-i"), cstr("a"), cstr("-i"), cstr("b"), cstr("-i"), cstr("c")};
     const int argc_2 = (int)(sizeof(argv_2) / sizeof(argv_2[0]));
-    test_argparser_apply_args(parser, argc_2, argv_2); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_2 =
-        cplat_argparser_handle_parse(parser); // [手順] - 容量 2 を超える 3 回の出現を解析する。
+    test_argparser_apply_args(
+        parser, argc_2, argv_2); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(
+        parser); // [手順] - 容量 2 を超える 3 回の出現を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -2048,9 +2132,10 @@ TEST_F(argparserTest, array_option_multiple_occurrences)
     // Act_3
     char *argv_3[] = {cstr("prog")};
     const int argc_3 = (int)(sizeof(argv_3) / sizeof(argv_3[0]));
-    test_argparser_apply_args(parser, argc_3, argv_3); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_3 =
-        cplat_argparser_handle_parse(parser); // [手順] - オプション非出現の引数を解析する。
+    test_argparser_apply_args(
+        parser, argc_3, argv_3); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_3 = cplat_argparser_handle_parse(
+        parser); // [手順] - オプション非出現の引数を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_3
     EXPECT_EQ(
@@ -2083,8 +2168,10 @@ TEST_F(argparserTest, array_option_int_and_required)
     // Act
     char *argv_1[] = {cstr("prog"), cstr("-p"), cstr("80"), cstr("-p"), cstr("443")};
     const int argc_1 = (int)(sizeof(argv_1) / sizeof(argv_1[0]));
-    test_argparser_apply_args(parser, argc_1, argv_1);                     // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse = cplat_argparser_handle_parse(parser); // [手順] - "-p 80 -p 443" を解析する。
+    test_argparser_apply_args(
+        parser, argc_1, argv_1); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser); // [手順] - "-p 80 -p 443" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -2097,9 +2184,10 @@ TEST_F(argparserTest, array_option_int_and_required)
     // Act_2
     char *argv_2[] = {cstr("prog")};
     const int argc_2 = (int)(sizeof(argv_2) / sizeof(argv_2[0]));
-    test_argparser_apply_args(parser, argc_2, argv_2); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_2 =
-        cplat_argparser_handle_parse(parser); // [手順] - オプション非出現の引数を解析する。
+    test_argparser_apply_args(
+        parser, argc_2, argv_2); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(
+        parser); // [手順] - オプション非出現の引数を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -2135,7 +2223,8 @@ TEST_F(argparserTest, missing_required_option)
     // Pre-Assert
 
     // Act
-    int result = cplat_argparser_handle_parse(parser); // [手順] - オプション非出現の引数を解析する。
+    int result = cplat_argparser_handle_parse(
+        parser); // [手順] - オプション非出現の引数を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -2172,9 +2261,10 @@ TEST_F(argparserTest, reparse_clears_error_state)
     // Act
     char *argv_1[] = {cstr("prog"), cstr("-x")};
     const int argc_1 = (int)(sizeof(argv_1) / sizeof(argv_1[0]));
-    test_argparser_apply_args(parser, argc_1, argv_1); // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse =
-        cplat_argparser_handle_parse(parser); // [手順] - 未登録の "-x" で解析エラーを発生させる。
+    test_argparser_apply_args(
+        parser, argc_1, argv_1); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser); // [手順] - 未登録の "-x" で解析エラーを発生させる状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -2188,8 +2278,10 @@ TEST_F(argparserTest, reparse_clears_error_state)
     // Act_2
     char *argv_2[] = {cstr("prog"), cstr("-v")};
     const int argc_2 = (int)(sizeof(argv_2) / sizeof(argv_2[0]));
-    test_argparser_apply_args(parser, argc_2, argv_2);                       // [手順] - 解析対象の引数を差し替える。
-    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(parser); // [手順] - 正しい引数 "-v" で再解析する。
+    test_argparser_apply_args(
+        parser, argc_2, argv_2); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(
+        parser); // [手順] - 正しい引数 "-v" の状態で再度 cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -2237,7 +2329,8 @@ TEST_F(argparserTest, multiple_handles_are_independent)
     // Pre-Assert
 
     // Act
-    int actual_ret_argparser_parse = cplat_argparser_handle_parse(parser1); // [手順] - parser1 で "-a" を解析する。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser1); // [手順] - parser1 を指定し、"-a" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -2245,8 +2338,8 @@ TEST_F(argparserTest, multiple_handles_are_independent)
         actual_ret_argparser_parse); // [確認_正常系] - parser1 で "-a" を解析した cplat_argparser_handle_parse() の戻り値が CPLAT_OK であること。
 
     // Act_2
-    int actual_ret_argparser_parse_2 =
-        cplat_argparser_handle_parse(parser2); // [手順] - "-a" 未登録の parser2 でも同じ引数を解析する。
+    int actual_ret_argparser_parse_2 = cplat_argparser_handle_parse(
+        parser2); // [手順] - "-a" 未登録の parser2 を指定し、同じ引数を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -2287,7 +2380,8 @@ TEST_F(argparserTest, error_message_formatting)
 
     // Act
     int actual_ret_argparser_get_error_message = cplat_argparser_handle_get_error_message(
-        parser, message, sizeof(message)); // [手順] - 未解析の状態でエラー メッセージを取得する。
+        parser, message,
+        sizeof(message)); // [手順] - 未解析の状態で cplat_argparser_handle_get_error_message() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -2296,8 +2390,8 @@ TEST_F(argparserTest, error_message_formatting)
     EXPECT_STREQ("no error", message);           // [確認_正常系] - 未解析時の message が "no error" であること。
 
     // Act_2
-    int actual_ret_argparser_parse =
-        cplat_argparser_handle_parse(parser); // [手順] - 未登録の "--bogus" で解析エラーを発生させる。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser); // [手順] - 未登録の "--bogus" で解析エラーを発生させる状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
@@ -2335,7 +2429,7 @@ TEST_F(argparserTest, error_message_formatting)
     // Assert_5
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_message_8); // [確認_異常系] - parser が NULL の場合の cplat_argparser_handle_get_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_message_8); // [確認_異常系] - parser が nullptr の場合の cplat_argparser_handle_get_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_6
     int actual_ret_message_9 = cplat_argparser_handle_get_error_message(
@@ -2344,7 +2438,7 @@ TEST_F(argparserTest, error_message_formatting)
     // Assert_6
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_message_9); // [確認_異常系] - buffer が NULL の場合の cplat_argparser_handle_get_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_message_9); // [確認_異常系] - buffer が nullptr の場合の cplat_argparser_handle_get_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_7
     int actual_ret_message_10 = cplat_argparser_handle_get_error_message(
@@ -2407,7 +2501,8 @@ TEST_F(argparserTest, usage_formatting)
     char usage[1024];
     size_t required_size = 0;
     int actual_ret_argparser_get_usage = cplat_argparser_handle_get_usage(
-        parser, usage, sizeof(usage), &required_size); // [手順] - get_usage() で usage を組み立てる。
+        parser, usage, sizeof(usage),
+        &required_size); // [手順] - usage 用のバッファーと required_size を指定して cplat_argparser_handle_get_usage() を呼び出す。
     ASSERT_EQ(
         CPLAT_OK,
         actual_ret_argparser_get_usage); // [確認_正常系] - cplat_argparser_handle_get_usage() の戻り値が CPLAT_OK であること。
@@ -2458,12 +2553,13 @@ TEST_F(argparserTest, usage_formatting)
 
     // Act_2
     int actual_ret_argparser_get_usage_2 = cplat_argparser_handle_get_usage(
-        parser, nullptr, 0, &query_size); // [手順] - buffer NULL でサイズ問い合わせのみ行う。
+        parser, nullptr, 0,
+        &query_size); // [手順] - buffer に nullptr を指定してサイズ問い合わせのみ行う cplat_argparser_handle_get_usage() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret_argparser_get_usage_2); // [確認_正常系] - buffer が NULL の場合の cplat_argparser_handle_get_usage() の戻り値が CPLAT_OK であること。
+        actual_ret_argparser_get_usage_2); // [確認_正常系] - buffer が nullptr の場合の cplat_argparser_handle_get_usage() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(required_size, query_size); // [確認_正常系] - query_size が required_size と一致すること。
 
     char small_buffer[16];
@@ -2491,7 +2587,7 @@ TEST_F(argparserTest, usage_formatting)
     // Assert_4
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_2); // [確認_異常系] - parser が NULL の場合の cplat_argparser_handle_get_usage() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_2); // [確認_異常系] - parser が nullptr の場合の cplat_argparser_handle_get_usage() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_5
     int actual_ret_operation_3 = cplat_argparser_handle_get_usage(
@@ -2500,7 +2596,7 @@ TEST_F(argparserTest, usage_formatting)
     // Assert_5
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_3); // [確認_異常系] - buffer と required が NULL の場合の cplat_argparser_handle_get_usage() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_3); // [確認_異常系] - buffer と required が nullptr の場合の cplat_argparser_handle_get_usage() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_6
     int actual_ret_operation_4 = cplat_argparser_handle_get_usage(
@@ -2509,7 +2605,7 @@ TEST_F(argparserTest, usage_formatting)
     // Assert_6
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_4); // [確認_異常系] - サイズが 0 で required が NULL の場合の cplat_argparser_handle_get_usage() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_4); // [確認_異常系] - サイズが 0 で required が nullptr の場合の cplat_argparser_handle_get_usage() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_argparser_handle_dispose(parser);
@@ -2532,7 +2628,7 @@ TEST_F(argparserTest, print_usage_rejects_invalid_arguments)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_1); // [確認_異常系] - parser が NULL の場合の cplat_argparser_handle_print_usage() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_1); // [確認_異常系] - parser が nullptr の場合の cplat_argparser_handle_print_usage() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_2
     int actual_ret_operation_2 = cplat_argparser_handle_print_usage(
@@ -2541,7 +2637,7 @@ TEST_F(argparserTest, print_usage_rejects_invalid_arguments)
     // Assert_2
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_2); // [確認_異常系] - stream が NULL の場合の cplat_argparser_handle_print_usage() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_2); // [確認_異常系] - stream が nullptr の場合の cplat_argparser_handle_print_usage() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_argparser_handle_dispose(parser);
@@ -2569,7 +2665,8 @@ TEST_F(argparserTest, print_usage_writes_to_stream)
             1); // [Pre-Assert確認_正常系] - fprintf() が stdout、"Usage: sample [OPTIONS]" を含む文字列を指定して 1 回呼び出されること。
 
     // Act
-    int result = cplat_argparser_handle_print_usage(parser, stdout); // [手順] - print_usage() を呼び出す。
+    int result = cplat_argparser_handle_print_usage(
+        parser, stdout); // [手順] - cplat_argparser_handle_print_usage() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -2596,7 +2693,7 @@ TEST_F(argparserTest, print_error_messages_rejects_invalid_arguments)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_1); // [確認_異常系] - parser が NULL の場合の cplat_argparser_handle_print_error_messages() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_1); // [確認_異常系] - parser が nullptr の場合の cplat_argparser_handle_print_error_messages() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_2
     int actual_ret_operation_2 = cplat_argparser_handle_print_error_messages(
@@ -2605,7 +2702,7 @@ TEST_F(argparserTest, print_error_messages_rejects_invalid_arguments)
     // Assert_2
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_2); // [確認_異常系] - stream が NULL の場合の cplat_argparser_handle_print_error_messages() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_2); // [確認_異常系] - stream が nullptr の場合の cplat_argparser_handle_print_error_messages() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_argparser_handle_dispose(parser);
@@ -2625,8 +2722,8 @@ TEST_F(argparserTest, print_error_messages_is_noop_without_error)
         .Times(0); // [Pre-Assert確認_正常系] - fprintf() が呼び出されないこと。
 
     // Act
-    int result =
-        cplat_argparser_handle_print_error_messages(parser, stderr); // [手順] - print_error_messages() を呼び出す。
+    int result = cplat_argparser_handle_print_error_messages(
+        parser, stderr); // [手順] - cplat_argparser_handle_print_error_messages() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -2658,14 +2755,13 @@ TEST_F(argparserTest, print_error_messages_writes_to_stream)
     // Pre-Assert
     EXPECT_CALL(mock_stdio, fprintf(_, _, _, stderr, _))
         .Times(AnyNumber()); // [Pre-Assert確認_異常系] - fprintf() が stderr を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - 区切りの空行の fprintf() 呼び出しを許容する。
     EXPECT_CALL(mock_stdio, fprintf(_, _, _, stderr, HasSubstr("error: unknown option '--bogus'")))
         .Times(
             1); // [Pre-Assert確認_正常系] - fprintf() が stderr、"error: unknown option '--bogus'" を含む文字列を指定して 1 回呼び出されること。
 
     // Act
-    int result =
-        cplat_argparser_handle_print_error_messages(parser, stderr); // [手順] - print_error_messages() を呼び出す。
+    int result = cplat_argparser_handle_print_error_messages(
+        parser, stderr); // [手順] - cplat_argparser_handle_print_error_messages() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -2689,7 +2785,7 @@ TEST_F(argparserTest, usage_program_name_resolution)
         parser); // [状態確認] - argv を指定した cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
     ASSERT_NE(
         nullptr,
-        no_argv_parser); // [状態確認] - argv が NULL の場合の cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
+        no_argv_parser); // [状態確認] - argv が nullptr の場合の cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
     int verbose = 0;
     ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_register_flag(parser, "-v", nullptr, nullptr,
                                                              &verbose)); // [状態] - フラグ "-v" を登録する。
@@ -2699,8 +2795,9 @@ TEST_F(argparserTest, usage_program_name_resolution)
     // Pre-Assert
 
     // Act
-    int actual_ret_argparser_get_usage =
-        cplat_argparser_handle_get_usage(parser, usage, sizeof(usage), nullptr); // [手順] - 解析前に usage を取得する。
+    int actual_ret_argparser_get_usage = cplat_argparser_handle_get_usage(
+        parser, usage, sizeof(usage),
+        nullptr); // [手順] - 解析前の状態で cplat_argparser_handle_get_usage() を呼び出す。
 
     // Assert
     ASSERT_EQ(
@@ -2712,8 +2809,8 @@ TEST_F(argparserTest, usage_program_name_resolution)
             "Usage: mytool [OPTIONS]\n")); // [確認_正常系] - 解析前の std::string(usage) が "Usage: mytool [OPTIONS]\n" を含む文字列であること。
 
     // Act_2
-    int actual_ret_argparser_parse =
-        cplat_argparser_handle_parse(parser); // [手順] - argv[0] を "/usr/local/bin/mytool" として解析する。
+    int actual_ret_argparser_parse = cplat_argparser_handle_parse(
+        parser); // [手順] - argv[0] を "/usr/local/bin/mytool" とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert_2
     ASSERT_EQ(
@@ -2721,8 +2818,9 @@ TEST_F(argparserTest, usage_program_name_resolution)
         actual_ret_argparser_parse); // [確認_正常系] - argv[0] を "/usr/local/bin/mytool" とした cplat_argparser_handle_parse() の戻り値が CPLAT_OK であること。
 
     // Act_3
-    int actual_ret_argparser_get_usage_2 =
-        cplat_argparser_handle_get_usage(parser, usage, sizeof(usage), nullptr); // [手順] - 解析後に usage を取得する。
+    int actual_ret_argparser_get_usage_2 = cplat_argparser_handle_get_usage(
+        parser, usage, sizeof(usage),
+        nullptr); // [手順] - 解析後の状態で cplat_argparser_handle_get_usage() を呼び出す。
 
     // Assert_3
     ASSERT_EQ(
@@ -2735,7 +2833,8 @@ TEST_F(argparserTest, usage_program_name_resolution)
 
     // Act_4
     int actual_ret_argparser_get_usage_3 = cplat_argparser_handle_get_usage(
-        no_argv_parser, usage, sizeof(usage), nullptr); // [手順] - argv を持たない parser から usage を取得する。
+        no_argv_parser, usage, sizeof(usage),
+        nullptr); // [手順] - argv を持たない parser を指定して cplat_argparser_handle_get_usage() を呼び出す。
 
     // Assert_4
     ASSERT_EQ(
@@ -2772,19 +2871,19 @@ TEST_F(argparserTest, handle_get_program_name_resolution)
         resolved_parser); // [状態確認] - program_name 未指定時の cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
     ASSERT_NE(
         nullptr,
-        no_argv_parser); // [状態確認] - argv が NULL の場合の cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
+        no_argv_parser); // [状態確認] - argv が nullptr の場合の cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
 
     // Act
     const char *actual_named = cplat_argparser_handle_get_program_name(
-        named_parser); // [手順] - program_name 指定の parser からプログラム名を取得する。
+        named_parser); // [手順] - program_name 指定の parser を指定して cplat_argparser_handle_get_program_name() を呼び出す。
     const char *actual_resolved = cplat_argparser_handle_get_program_name(
-        resolved_parser); // [手順] - program_name 未指定の parser からプログラム名を取得する。
+        resolved_parser); // [手順] - program_name 未指定の parser を指定して cplat_argparser_handle_get_program_name() を呼び出す。
     const char *actual_no_argv = cplat_argparser_handle_get_program_name(
-        no_argv_parser); // [手順] - argv を持たない parser からプログラム名を取得する。
-    const char *actual_null_parser =
-        cplat_argparser_handle_get_program_name(nullptr); // [手順] - NULL ハンドルでプログラム名を取得する。
+        no_argv_parser); // [手順] - argv を持たない parser を指定して cplat_argparser_handle_get_program_name() を呼び出す。
+    const char *actual_null_parser = cplat_argparser_handle_get_program_name(
+        nullptr); // [手順] - nullptr ハンドルを指定して cplat_argparser_handle_get_program_name() を呼び出す。
 
     // Assert
     EXPECT_STREQ(
@@ -2798,7 +2897,7 @@ TEST_F(argparserTest, handle_get_program_name_resolution)
         actual_no_argv); // [確認_正常系] - argv を持たない場合の cplat_argparser_handle_get_program_name() の戻り値が nullptr であること。
     EXPECT_EQ(
         nullptr,
-        actual_null_parser); // [確認_異常系] - NULL ハンドルに対する cplat_argparser_handle_get_program_name() の戻り値が nullptr であること。
+        actual_null_parser); // [確認_異常系] - nullptr ハンドルに対する cplat_argparser_handle_get_program_name() の戻り値が nullptr であること。
 
     // Cleanup
     cplat_argparser_handle_dispose(named_parser);
@@ -2817,11 +2916,12 @@ TEST_F(argparserTest, default_get_program_name_resolution)
 
     // Act
     const char *actual_no_argv =
-        cplat_argparser_get_program_name(); // [手順] - argv を持たない既定パーサーからプログラム名を取得する。
-    cplat_argparser_init(argc, argv,
-                         nullptr); // [手順] - argv[0] を "/usr/local/bin/mytool" として既定パーサーを初期化し直す。
+        cplat_argparser_get_program_name(); // [手順] - argv を持たない既定パーサーの状態で cplat_argparser_get_program_name() を呼び出す。
+    cplat_argparser_init(
+        argc, argv,
+        nullptr); // [手順] - argv[0] を "/usr/local/bin/mytool" として cplat_argparser_init() を呼び出す。
     const char *actual_resolved =
-        cplat_argparser_get_program_name(); // [手順] - 既定パーサーからプログラム名を取得する。
+        cplat_argparser_get_program_name(); // [手順] - 既定パーサーの状態で cplat_argparser_get_program_name() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -2861,8 +2961,9 @@ TEST_F(argparserTest, usage_program_name_strips_executable_extension)
         // Pre-Assert
 
         // Act
-        int actual_ret_argparser_get_usage =
-            cplat_argparser_handle_get_usage(parser, usage, sizeof(usage), nullptr); // [手順] - usage を取得する。
+        int actual_ret_argparser_get_usage = cplat_argparser_handle_get_usage(
+            parser, usage, sizeof(usage),
+            nullptr); // [手順] - usage を取得する cplat_argparser_handle_get_usage() を呼び出す。
 
         // Assert
         EXPECT_EQ(
@@ -2887,13 +2988,13 @@ TEST_F(argparserTest, parse_rejects_invalid_arguments)
     cplat_argparser *zero_argc_parser =
         cplat_argparser_handle_create(0, argv, nullptr); // [状態] - argc 0 で生成した parser を用意する。
     cplat_argparser *null_argv_parser =
-        cplat_argparser_handle_create(argc, nullptr, nullptr); // [状態] - argv NULL で生成した parser を用意する。
+        cplat_argparser_handle_create(argc, nullptr, nullptr); // [状態] - argv nullptr で生成した parser を用意する。
     ASSERT_NE(
         nullptr,
         zero_argc_parser); // [状態確認] - argc が 0 の場合の cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
     ASSERT_NE(
         nullptr,
-        null_argv_parser); // [状態確認] - argv が NULL の場合の cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
+        null_argv_parser); // [状態確認] - argv が nullptr の場合の cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
 
@@ -2904,7 +3005,7 @@ TEST_F(argparserTest, parse_rejects_invalid_arguments)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_1); // [確認_異常系] - parser が NULL の場合の cplat_argparser_handle_parse() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_1); // [確認_異常系] - parser が nullptr の場合の cplat_argparser_handle_parse() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_2
     int actual_ret_operation_2 =
@@ -2922,20 +3023,20 @@ TEST_F(argparserTest, parse_rejects_invalid_arguments)
     // Assert_3
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_operation_3); // [確認_異常系] - argv が NULL の場合の cplat_argparser_handle_parse() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_operation_3); // [確認_異常系] - argv が nullptr の場合の cplat_argparser_handle_parse() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     EXPECT_EQ(
         CPLAT_OK,
         cplat_argparser_handle_get_error(
-            nullptr)); // [確認_異常系] - NULL ハンドルに対する cplat_argparser_handle_get_error() の戻り値が CPLAT_OK であること。
+            nullptr)); // [確認_異常系] - nullptr ハンドルに対する cplat_argparser_handle_get_error() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         nullptr,
         cplat_argparser_handle_get_error_target(
-            nullptr)); // [確認_異常系] - NULL ハンドルに対する cplat_argparser_handle_get_error_target() の戻り値が nullptr であること。
+            nullptr)); // [確認_異常系] - nullptr ハンドルに対する cplat_argparser_handle_get_error_target() の戻り値が nullptr であること。
     EXPECT_EQ(
         -1,
         cplat_argparser_handle_get_error_index(
-            nullptr)); // [確認_異常系] - NULL ハンドルに対する cplat_argparser_handle_get_error_index() の戻り値が -1 であること。
+            nullptr)); // [確認_異常系] - nullptr ハンドルに対する cplat_argparser_handle_get_error_index() の戻り値が -1 であること。
 
     // Cleanup
     cplat_argparser_handle_dispose(zero_argc_parser);
@@ -2953,17 +3054,21 @@ TEST_F(argparserTest, is_valid_long_name_rejects_invalid_names)
     // Pre-Assert
 
     // Act
-    int null_result = test_argparser_is_valid_long_name(nullptr);     // [手順] - NULL を指定して長い名前を検証する。
-    int short_result = test_argparser_is_valid_long_name(short_name); // [手順] - 短すぎる名前を検証する。
-    int wrong_prefix_result =
-        test_argparser_is_valid_long_name(wrong_prefix);              // [手順] - 接頭辞が不正な名前を検証する。
-    int equal_result = test_argparser_is_valid_long_name(with_equal); // [手順] - "=" を含む名前を検証する。
-    int valid_result = test_argparser_is_valid_long_name("--name");   // [手順] - 正しい長い名前を検証する。
+    int null_result = test_argparser_is_valid_long_name(
+        nullptr); // [手順] - nullptr を指定して test_argparser_is_valid_long_name() を呼び出す。
+    int short_result = test_argparser_is_valid_long_name(
+        short_name); // [手順] - 短すぎる名前を指定して test_argparser_is_valid_long_name() を呼び出す。
+    int wrong_prefix_result = test_argparser_is_valid_long_name(
+        wrong_prefix); // [手順] - 接頭辞が不正な名前を指定して test_argparser_is_valid_long_name() を呼び出す。
+    int equal_result = test_argparser_is_valid_long_name(
+        with_equal); // [手順] - "=" を含む名前を指定して test_argparser_is_valid_long_name() を呼び出す。
+    int valid_result = test_argparser_is_valid_long_name(
+        "--name"); // [手順] - 正しい長い名前 "--name" を指定して test_argparser_is_valid_long_name() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         0,
-        null_result); // [確認_異常系] - NULL に対する test_argparser_is_valid_long_name() の戻り値が 0 であること。(不正な長い名前と判定したことの確認)
+        null_result); // [確認_異常系] - nullptr に対する test_argparser_is_valid_long_name() の戻り値が 0 であること。(不正な長い名前と判定したことの確認)
     EXPECT_EQ(
         0,
         short_result); // [確認_異常系] - "--" に対する test_argparser_is_valid_long_name() の戻り値が 0 であること。(長さ不足を検出したことの確認)
@@ -2991,14 +3096,16 @@ TEST_F(argparserTest, positional_register_rejects_null_parser_and_invalid_flags)
 
     // Act
     int null_parser_result = cplat_argparser_handle_register_positional_int(
-        nullptr, "value", nullptr, 0u, &storage); // [手順] - parser NULL で位置引数を登録する。
+        nullptr, "value", nullptr, 0u,
+        &storage); // [手順] - parser に nullptr を指定して cplat_argparser_handle_register_positional_int() を呼び出す。
     int invalid_flags_result = cplat_argparser_handle_register_positional_int(
-        parser, "value", nullptr, 0x100u, &storage); // [手順] - 未定義フラグで位置引数を登録する。
+        parser, "value", nullptr, 0x100u,
+        &storage); // [手順] - 未定義フラグを指定して cplat_argparser_handle_register_positional_int() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_parser_result); // [確認_異常系] - parser が NULL の場合の cplat_argparser_handle_register_positional_int() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_parser_result); // [確認_異常系] - parser が nullptr の場合の cplat_argparser_handle_register_positional_int() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         invalid_flags_result); // [確認_異常系] - 不正フラグに対する cplat_argparser_handle_register_positional_int() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -3018,19 +3125,22 @@ TEST_F(argparserTest, default_returns_null_when_lock_creation_fails)
     EXPECT_CALL(mock_cplat_, cplat_local_lock_create(_))
         .WillOnce(
             Return(CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_local_lock_create() が 1 回呼び出されること。
-    // [Pre-Assert手順] - default 用ロックの生成から CPLAT_ERR_UNKNOWN を返却する。
+    // [Pre-Assert手順] - cplat_local_lock_create() から、default 用ロックの生成に対して CPLAT_ERR_UNKNOWN を返す。
 
     // Act
     cplat_argparser *parser = test_argparser_default_acquire(
-        0, nullptr, nullptr, 0); // [手順] - ロック生成失敗状態で default parser を取得する。
-    test_argparser_default_dispose_on_shutdown(nullptr,
-                                               nullptr); // [手順] - NULL event で shutdown callback を呼び出す。
+        0, nullptr, nullptr, 0); // [手順] - ロック生成が失敗する状態で test_argparser_default_acquire() を呼び出す。
+    test_argparser_default_dispose_on_shutdown(
+        nullptr,
+        nullptr); // [手順] - event に nullptr を指定して test_argparser_default_dispose_on_shutdown() を呼び出す。
     event.reason = CPLAT_SHUTDOWN_REASON_PROCESS_TERMINATING;
-    test_argparser_default_dispose_on_shutdown(&event,
-                                               nullptr); // [手順] - 通常終了以外の event で callback を呼び出す。
+    test_argparser_default_dispose_on_shutdown(
+        &event,
+        nullptr); // [手順] - 通常終了以外の event を指定して test_argparser_default_dispose_on_shutdown() を呼び出す。
     event.reason = CPLAT_SHUTDOWN_REASON_NORMAL_EXIT;
-    test_argparser_default_dispose_on_shutdown(&event,
-                                               nullptr); // [手順] - ロック未生成状態で通常終了 callback を呼び出す。
+    test_argparser_default_dispose_on_shutdown(
+        &event,
+        nullptr); // [手順] - ロック未生成の状態で通常終了の event を指定して test_argparser_default_dispose_on_shutdown() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -3047,11 +3157,12 @@ TEST_F(argparserTest, default_returns_null_when_parser_allocation_fails)
     EXPECT_CALL(mock_cplat_, cplat_calloc(_, _))
         .WillOnce(Return(
             nullptr)); // [Pre-Assert確認_異常系] - default parser 本体を確保する cplat_calloc() が 1 回呼び出されること。
-                       // [Pre-Assert手順] - cplat_calloc() から NULL を返却する。
+                       // [Pre-Assert手順] - cplat_calloc() から nullptr を返す。
 
     // Act
     cplat_argparser *parser = test_argparser_default_acquire(
-        0, nullptr, nullptr, 0); // [手順] - parser 本体の確保が失敗する状態で default parser を取得する。
+        0, nullptr, nullptr,
+        0); // [手順] - parser 本体の確保が失敗する状態で test_argparser_default_acquire() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -3068,11 +3179,11 @@ TEST_F(argparserTest, default_returns_null_when_shutdown_registration_fails)
     EXPECT_CALL(mock_cplat_, cplat_shutdown_register(_, _))
         .WillOnce(
             Return(CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_shutdown_register() が 1 回呼び出されること。
-    // [Pre-Assert手順] - shutdown callback 登録から CPLAT_ERR_UNKNOWN を返却する。
+    // [Pre-Assert手順] - cplat_shutdown_register() から、shutdown callback の登録に対して CPLAT_ERR_UNKNOWN を返す。
 
     // Act
     cplat_argparser *parser = test_argparser_default_acquire(
-        0, nullptr, nullptr, 0); // [手順] - shutdown 登録失敗状態で default parser を取得する。
+        0, nullptr, nullptr, 0); // [手順] - shutdown 登録が失敗する状態で test_argparser_default_acquire() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -3094,11 +3205,12 @@ TEST_F(argparserTest, default_shutdown_callback_returns_when_locking_fails)
     EXPECT_CALL(mock_cplat_, cplat_local_lock_lock(_, _))
         .WillOnce(
             Return(CPLAT_ERR_BUSY)); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が 1 回呼び出されること。
-    // [Pre-Assert手順] - shutdown callback のロック取得から CPLAT_ERR_BUSY を返却する。
+    // [Pre-Assert手順] - cplat_local_lock_lock() から、shutdown callback のロック取得に対して CPLAT_ERR_BUSY を返す。
 
     // Act
-    test_argparser_default_dispose_on_shutdown(&event,
-                                               nullptr); // [手順] - ロック取得失敗状態で shutdown callback を呼び出す。
+    test_argparser_default_dispose_on_shutdown(
+        &event,
+        nullptr); // [手順] - ロック取得が失敗する状態で test_argparser_default_dispose_on_shutdown() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_異常系] - SUCCEED() に到達すること。(ロック取得失敗時も test_argparser_default_dispose_on_shutdown() がクラッシュせず終了することの確認)
@@ -3113,11 +3225,11 @@ TEST_F(argparserTest, default_returns_null_when_locking_fails)
     EXPECT_CALL(mock_cplat_, cplat_local_lock_lock(_, _))
         .WillOnce(
             Return(CPLAT_ERR_BUSY)); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が 1 回呼び出されること。
-    // [Pre-Assert手順] - default parser のロック取得から CPLAT_ERR_BUSY を返却する。
+    // [Pre-Assert手順] - cplat_local_lock_lock() から、default parser のロック取得に対して CPLAT_ERR_BUSY を返す。
 
     // Act
     cplat_argparser *parser = test_argparser_default_acquire(
-        0, nullptr, nullptr, 0); // [手順] - ロック取得失敗状態で default parser を取得する。
+        0, nullptr, nullptr, 0); // [手順] - ロック取得が失敗する状態で test_argparser_default_acquire() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -3141,127 +3253,131 @@ TEST_F(argparserTest, register_wrappers_reject_invalid_storage_and_registration)
 
     // Act
     int option_int_null = cplat_argparser_handle_register_option_int(
-        parser, "-i", nullptr, nullptr, nullptr, 0u, nullptr); // [手順] - int オプションの storage NULL を検証する。
+        parser, "-i", nullptr, nullptr, nullptr, 0u,
+        nullptr); // [手順] - storage に nullptr を指定して cplat_argparser_handle_register_option_int() を呼び出す。
     int option_string_null = cplat_argparser_handle_register_option_string(
         parser, "-s", nullptr, nullptr, nullptr, 0u,
-        nullptr); // [手順] - string() オプションの storage NULL を検証する。
-    int option_int_array_storage_null =
-        cplat_argparser_handle_register_option_int_array(parser, "-a", nullptr, nullptr, nullptr, 0u, nullptr, 1u,
-                                                         &int_count); // [手順] - int 配列の storage NULL を検証する。
-    int option_int_array_capacity_zero =
-        cplat_argparser_handle_register_option_int_array(parser, "-b", nullptr, nullptr, nullptr, 0u, int_array, 0u,
-                                                         &int_count); // [手順] - int 配列の capacity 0 を検証する。
-    int option_int_array_count_null =
-        cplat_argparser_handle_register_option_int_array(parser, "-c", nullptr, nullptr, nullptr, 0u, int_array, 1u,
-                                                         nullptr); // [手順] - int 配列の count NULL を検証する。
+        nullptr); // [手順] - storage に nullptr を指定して cplat_argparser_handle_register_option_string() を呼び出す。
+    int option_int_array_storage_null = cplat_argparser_handle_register_option_int_array(
+        parser, "-a", nullptr, nullptr, nullptr, 0u, nullptr, 1u,
+        &int_count); // [手順] - storage に nullptr を指定して cplat_argparser_handle_register_option_int_array() を呼び出す。
+    int option_int_array_capacity_zero = cplat_argparser_handle_register_option_int_array(
+        parser, "-b", nullptr, nullptr, nullptr, 0u, int_array, 0u,
+        &int_count); // [手順] - capacity に 0 を指定して cplat_argparser_handle_register_option_int_array() を呼び出す。
+    int option_int_array_count_null = cplat_argparser_handle_register_option_int_array(
+        parser, "-c", nullptr, nullptr, nullptr, 0u, int_array, 1u,
+        nullptr); // [手順] - count に nullptr を指定して cplat_argparser_handle_register_option_int_array() を呼び出す。
     int option_string_array_storage_null = cplat_argparser_handle_register_option_string_array(
         parser, "-d", nullptr, nullptr, nullptr, 0u, nullptr, 1u,
-        &string_count); // [手順] - string() 配列の storage NULL を検証する。
+        &string_count); // [手順] - storage に nullptr を指定して cplat_argparser_handle_register_option_string_array() を呼び出す。
     int option_string_array_capacity_zero = cplat_argparser_handle_register_option_string_array(
         parser, "-e", nullptr, nullptr, nullptr, 0u, string_array, 0u,
-        &string_count); // [手順] - string() 配列の capacity 0 を検証する。
+        &string_count); // [手順] - capacity に 0 を指定して cplat_argparser_handle_register_option_string_array() を呼び出す。
     int option_string_array_count_null = cplat_argparser_handle_register_option_string_array(
         parser, "-f", nullptr, nullptr, nullptr, 0u, string_array, 1u,
-        nullptr); // [手順] - string() 配列の count NULL を検証する。
+        nullptr); // [手順] - count に nullptr を指定して cplat_argparser_handle_register_option_string_array() を呼び出す。
     int positional_int_null = cplat_argparser_handle_register_positional_int(
-        parser, "value", nullptr, 0u, nullptr); // [手順] - int 位置引数の storage NULL を検証する。
+        parser, "value", nullptr, 0u,
+        nullptr); // [手順] - storage に nullptr を指定して cplat_argparser_handle_register_positional_int() を呼び出す。
     int positional_string_null = cplat_argparser_handle_register_positional_string(
-        parser, "text", nullptr, 0u, nullptr); // [手順] - string() 位置引数の storage NULL を検証する。
+        parser, "text", nullptr, 0u,
+        nullptr); // [手順] - storage に nullptr を指定して cplat_argparser_handle_register_positional_string() を呼び出す。
     int positional_int_array_storage_null = cplat_argparser_handle_register_positional_int_array(
         parser, "values", nullptr, 0u, nullptr, 1u,
-        &int_count); // [手順] - int 配列位置引数の storage NULL を検証する。
+        &int_count); // [手順] - storage に nullptr を指定して cplat_argparser_handle_register_positional_int_array() を呼び出す。
     int positional_int_array_capacity_zero = cplat_argparser_handle_register_positional_int_array(
         parser, "values2", nullptr, 0u, int_array, 0u,
-        &int_count); // [手順] - int 配列位置引数の capacity 0 を検証する。
+        &int_count); // [手順] - capacity に 0 を指定して cplat_argparser_handle_register_positional_int_array() を呼び出す。
     int positional_int_array_count_null = cplat_argparser_handle_register_positional_int_array(
-        parser, "values3", nullptr, 0u, int_array, 1u, nullptr); // [手順] - int 配列位置引数の count NULL を検証する。
+        parser, "values3", nullptr, 0u, int_array, 1u,
+        nullptr); // [手順] - count に nullptr を指定して cplat_argparser_handle_register_positional_int_array() を呼び出す。
     int positional_string_array_storage_null = cplat_argparser_handle_register_positional_string_array(
         parser, "texts", nullptr, 0u, nullptr, 1u,
-        &string_count); // [手順] - string() 配列位置引数の storage NULL を検証する。
+        &string_count); // [手順] - storage に nullptr を指定して cplat_argparser_handle_register_positional_string_array() を呼び出す。
     int positional_string_array_capacity_zero = cplat_argparser_handle_register_positional_string_array(
         parser, "texts2", nullptr, 0u, string_array, 0u,
-        &string_count); // [手順] - string() 配列位置引数の capacity 0 を検証する。
+        &string_count); // [手順] - capacity に 0 を指定して cplat_argparser_handle_register_positional_string_array() を呼び出す。
     int positional_string_array_count_null = cplat_argparser_handle_register_positional_string_array(
         parser, "texts3", nullptr, 0u, string_array, 1u,
-        nullptr); // [手順] - string() 配列位置引数の count NULL を検証する。
+        nullptr); // [手順] - count に nullptr を指定して cplat_argparser_handle_register_positional_string_array() を呼び出す。
 
     int actual_ret_register_int_array = cplat_argparser_handle_register_option_int_array(
         parser, "-x", "--x", nullptr, nullptr, 0u, int_array, 1u,
-        &int_count); // [手順] - int 配列オプション "-x" / "--x" を登録する。
+        &int_count); // [手順] - int 配列オプション "-x" / "--x" を指定して cplat_argparser_handle_register_option_int_array() を呼び出す。
     ASSERT_EQ(CPLAT_OK, actual_ret_register_int_array);
     // [確認_正常系] - cplat_argparser_handle_register_option_int_array() の戻り値が CPLAT_OK であること。
-    int option_int_array_duplicate =
-        cplat_argparser_handle_register_option_int_array(parser, "-x", "--x2", nullptr, nullptr, 0u, int_array, 1u,
-                                                         &int_count); // [手順] - int 配列の重複登録を検証する。
+    int option_int_array_duplicate = cplat_argparser_handle_register_option_int_array(
+        parser, "-x", "--x2", nullptr, nullptr, 0u, int_array, 1u,
+        &int_count); // [手順] - 重複する int 配列オプションを指定して cplat_argparser_handle_register_option_int_array() を呼び出す。
     int actual_ret_register_string_array = cplat_argparser_handle_register_option_string_array(
         parser, "-y", "--y", nullptr, nullptr, 0u, string_array, 1u,
-        &string_count); // [手順] - string() 配列オプション "-y" / "--y" を登録する。
+        &string_count); // [手順] - string 配列オプション "-y" / "--y" を指定して cplat_argparser_handle_register_option_string_array() を呼び出す。
     ASSERT_EQ(CPLAT_OK, actual_ret_register_string_array);
     // [確認_正常系] - cplat_argparser_handle_register_option_string_array() の戻り値が CPLAT_OK であること。
     int option_string_array_duplicate = cplat_argparser_handle_register_option_string_array(
         parser, "-y", "--y2", nullptr, nullptr, 0u, string_array, 1u,
-        &string_count); // [手順] - string() 配列の重複登録を検証する。
+        &string_count); // [手順] - 重複する string 配列オプションを指定して cplat_argparser_handle_register_option_string_array() を呼び出す。
     int actual_ret_register_positional_array = cplat_argparser_handle_register_positional_string_array(
         parser, "tail", nullptr, 0u, string_array, 1u,
-        &string_count); // [手順] - 可変長 string() 位置引数 "tail" を登録する。
+        &string_count); // [手順] - 可変長 string 位置引数 "tail" を指定して cplat_argparser_handle_register_positional_string_array() を呼び出す。
     ASSERT_EQ(CPLAT_OK, actual_ret_register_positional_array);
     // [確認_正常系] - cplat_argparser_handle_register_positional_string_array() の戻り値が CPLAT_OK であること。
     int positional_int_array_duplicate = cplat_argparser_handle_register_positional_int_array(
         parser, "tail2", nullptr, 0u, int_array, 1u,
-        &int_count); // [手順] - 可変長位置引数後の int 配列登録を検証する。
+        &int_count); // [手順] - 可変長位置引数の後に続く int 配列を指定して cplat_argparser_handle_register_positional_int_array() を呼び出す。
     int positional_string_array_duplicate = cplat_argparser_handle_register_positional_string_array(
         parser, "tail3", nullptr, 0u, string_array, 1u,
-        &string_count); // [手順] - 可変長位置引数後の string() 配列登録を検証する。
+        &string_count); // [手順] - 可変長位置引数の後に続く string 配列を指定して cplat_argparser_handle_register_positional_string_array() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        option_int_null); // [確認_異常系] - storage が NULL の場合の cplat_argparser_handle_register_option_int() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        option_int_null); // [確認_異常系] - storage が nullptr の場合の cplat_argparser_handle_register_option_int() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        option_string_null); // [確認_異常系] - storage が NULL の場合の cplat_argparser_handle_register_option_string() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        option_string_null); // [確認_異常系] - storage が nullptr の場合の cplat_argparser_handle_register_option_string() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        option_int_array_storage_null); // [確認_異常系] - storage が NULL の場合の cplat_argparser_handle_register_option_int_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        option_int_array_storage_null); // [確認_異常系] - storage が nullptr の場合の cplat_argparser_handle_register_option_int_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         option_int_array_capacity_zero); // [確認_異常系] - capacity が 0 の場合の cplat_argparser_handle_register_option_int_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        option_int_array_count_null); // [確認_異常系] - count が NULL の場合の cplat_argparser_handle_register_option_int_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        option_int_array_count_null); // [確認_異常系] - count が nullptr の場合の cplat_argparser_handle_register_option_int_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        option_string_array_storage_null); // [確認_異常系] - storage が NULL の場合の cplat_argparser_handle_register_option_string_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        option_string_array_storage_null); // [確認_異常系] - storage が nullptr の場合の cplat_argparser_handle_register_option_string_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         option_string_array_capacity_zero); // [確認_異常系] - capacity が 0 の場合の cplat_argparser_handle_register_option_string_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        option_string_array_count_null); // [確認_異常系] - count が NULL の場合の cplat_argparser_handle_register_option_string_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        option_string_array_count_null); // [確認_異常系] - count が nullptr の場合の cplat_argparser_handle_register_option_string_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        positional_int_null); // [確認_異常系] - storage が NULL の場合の cplat_argparser_handle_register_positional_int() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        positional_int_null); // [確認_異常系] - storage が nullptr の場合の cplat_argparser_handle_register_positional_int() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        positional_string_null); // [確認_異常系] - storage が NULL の場合の cplat_argparser_handle_register_positional_string() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        positional_string_null); // [確認_異常系] - storage が nullptr の場合の cplat_argparser_handle_register_positional_string() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        positional_int_array_storage_null); // [確認_異常系] - storage が NULL の場合の cplat_argparser_handle_register_positional_int_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        positional_int_array_storage_null); // [確認_異常系] - storage が nullptr の場合の cplat_argparser_handle_register_positional_int_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         positional_int_array_capacity_zero); // [確認_異常系] - capacity が 0 の場合の cplat_argparser_handle_register_positional_int_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        positional_int_array_count_null); // [確認_異常系] - count が NULL の場合の cplat_argparser_handle_register_positional_int_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        positional_int_array_count_null); // [確認_異常系] - count が nullptr の場合の cplat_argparser_handle_register_positional_int_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        positional_string_array_storage_null); // [確認_異常系] - storage が NULL の場合の cplat_argparser_handle_register_positional_string_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        positional_string_array_storage_null); // [確認_異常系] - storage が nullptr の場合の cplat_argparser_handle_register_positional_string_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         positional_string_array_capacity_zero); // [確認_異常系] - capacity が 0 の場合の cplat_argparser_handle_register_positional_string_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        positional_string_array_count_null); // [確認_異常系] - count が NULL の場合の cplat_argparser_handle_register_positional_string_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        positional_string_array_count_null); // [確認_異常系] - count が nullptr の場合の cplat_argparser_handle_register_positional_string_array() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_DUPLICATE_DEFINITION,
         option_int_array_duplicate); // [確認_異常系] - 重複登録時の cplat_argparser_handle_register_option_int_array() の戻り値が CPLAT_ERR_DUPLICATE_DEFINITION であること。
@@ -3302,35 +3418,46 @@ TEST_F(argparserTest, parse_rejects_null_tokens_and_handles_negative_positionals
 
     // Act
     char *null_token_argv[] = {cstr("prog"), nullptr};
-    test_argparser_apply_args(parser, 2, null_token_argv);        // [手順] - 解析対象の引数を差し替える。
-    int null_token_result = cplat_argparser_handle_parse(parser); // [手順] - argv 中の NULL token を解析する。
+    test_argparser_apply_args(
+        parser, 2,
+        null_token_argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int null_token_result = cplat_argparser_handle_parse(
+        parser); // [手順] - argv 中の nullptr token を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
     char *long_null_value_argv[] = {cstr("prog"), cstr("--count"), nullptr};
-    test_argparser_apply_args(parser, 3, long_null_value_argv); // [手順] - 解析対象の引数を差し替える。
-    int long_null_value_result =
-        cplat_argparser_handle_parse(parser); // [手順] - 長形式オプションの NULL 値を解析する。
+    test_argparser_apply_args(
+        parser, 3,
+        long_null_value_argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int long_null_value_result = cplat_argparser_handle_parse(
+        parser); // [手順] - 長形式オプションの nullptr 値を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
     char *short_null_value_argv[] = {cstr("prog"), cstr("-c"), nullptr};
-    test_argparser_apply_args(parser, 3, short_null_value_argv); // [手順] - 解析対象の引数を差し替える。
-    int short_null_value_result =
-        cplat_argparser_handle_parse(parser); // [手順] - 短形式オプションの NULL 値を解析する。
+    test_argparser_apply_args(
+        parser, 3,
+        short_null_value_argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int short_null_value_result = cplat_argparser_handle_parse(
+        parser); // [手順] - 短形式オプションの nullptr 値を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
     char *short_missing_value_argv[] = {cstr("prog"), cstr("-c")};
-    test_argparser_apply_args(parser, 2, short_missing_value_argv); // [手順] - 解析対象の引数を差し替える。
-    int short_missing_value_result =
-        cplat_argparser_handle_parse(parser); // [手順] - 末尾の短形式オプションを解析する。
+    test_argparser_apply_args(
+        parser, 2,
+        short_missing_value_argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int short_missing_value_result = cplat_argparser_handle_parse(
+        parser); // [手順] - 末尾の短形式オプションを解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
     char *negative_array_argv[] = {cstr("prog"), cstr("-1")};
-    test_argparser_apply_args(parser, 2, negative_array_argv); // [手順] - 解析対象の引数を差し替える。
-    int negative_array_result =
-        cplat_argparser_handle_parse(parser); // [手順] - 負数を可変長 int 位置引数として解析する。
+    test_argparser_apply_args(
+        parser, 2,
+        negative_array_argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int negative_array_result = cplat_argparser_handle_parse(
+        parser); // [手順] - 負数を可変長 int 位置引数として渡した状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_token_result); // [確認_異常系] - NULL token に対する cplat_argparser_handle_parse() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_token_result); // [確認_異常系] - nullptr token に対する cplat_argparser_handle_parse() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        long_null_value_result); // [確認_異常系] - 長形式の NULL 値に対する cplat_argparser_handle_parse() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        long_null_value_result); // [確認_異常系] - 長形式の nullptr 値に対する cplat_argparser_handle_parse() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        short_null_value_result); // [確認_異常系] - 短形式の NULL 値に対する cplat_argparser_handle_parse() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        short_null_value_result); // [確認_異常系] - 短形式の nullptr 値に対する cplat_argparser_handle_parse() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_MISSING_VALUE,
         short_missing_value_result); // [確認_異常系] - 末尾の短形式オプションに対する cplat_argparser_handle_parse() の戻り値が CPLAT_ERR_MISSING_VALUE であること。
@@ -3356,17 +3483,23 @@ TEST_F(argparserTest, parse_classifies_bare_prefixes_and_unregistered_negative_v
 
     // Act
     char *double_dash_argv[] = {cstr("prog"), cstr("--")};
-    test_argparser_apply_args(parser, 2, double_dash_argv); // [手順] - 解析対象の引数を差し替える。
-    int double_dash_result =
-        cplat_argparser_handle_parse(parser); // [手順] - 長形式オプションの接頭辞だけである "--" を解析する。
+    test_argparser_apply_args(
+        parser, 2,
+        double_dash_argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int double_dash_result = cplat_argparser_handle_parse(
+        parser); // [手順] - 長形式オプションの接頭辞だけである "--" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
     char *single_dash_argv[] = {cstr("prog"), cstr("-")};
-    test_argparser_apply_args(parser, 2, single_dash_argv); // [手順] - 解析対象の引数を差し替える。
-    int single_dash_result =
-        cplat_argparser_handle_parse(parser); // [手順] - 短形式オプションの接頭辞だけである "-" を解析する。
+    test_argparser_apply_args(
+        parser, 2,
+        single_dash_argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int single_dash_result = cplat_argparser_handle_parse(
+        parser); // [手順] - 短形式オプションの接頭辞だけである "-" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
     char *negative_argv[] = {cstr("prog"), cstr("-1")};
-    test_argparser_apply_args(parser, 2, negative_argv); // [手順] - 解析対象の引数を差し替える。
-    int negative_result =
-        cplat_argparser_handle_parse(parser); // [手順] - 位置引数登録のない parser で負数形式の "-1" を解析する。
+    test_argparser_apply_args(
+        parser, 2,
+        negative_argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int negative_result = cplat_argparser_handle_parse(
+        parser); // [手順] - 位置引数登録のない parser で負数形式の "-1" を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -3407,13 +3540,17 @@ TEST_F(argparserTest, parse_searches_options_with_only_one_name)
 
     // Act
     char *unknown_long_argv[] = {cstr("prog"), cstr("--zeta")};
-    test_argparser_apply_args(parser, 2, unknown_long_argv); // [手順] - 解析対象の引数を差し替える。
-    int unknown_long_result =
-        cplat_argparser_handle_parse(parser); // [手順] - 同じ長さの未登録長形式オプション --zeta を解析する。
+    test_argparser_apply_args(
+        parser, 2,
+        unknown_long_argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int unknown_long_result = cplat_argparser_handle_parse(
+        parser); // [手順] - 同じ長さの未登録長形式オプション --zeta を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
     char *unknown_short_argv[] = {cstr("prog"), cstr("-b")};
-    test_argparser_apply_args(parser, 2, unknown_short_argv); // [手順] - 解析対象の引数を差し替える。
-    int unknown_short_result =
-        cplat_argparser_handle_parse(parser); // [手順] - 同じ長さの未登録短形式オプション -b を解析する。
+    test_argparser_apply_args(
+        parser, 2,
+        unknown_short_argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int unknown_short_result = cplat_argparser_handle_parse(
+        parser); // [手順] - 同じ長さの未登録短形式オプション -b を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -3438,9 +3575,12 @@ TEST_F(argparserTest, record_register_result_ignores_null_parser_and_success)
     // Pre-Assert
 
     // Act
-    test_argparser_record_register_result(nullptr, CPLAT_OK); // [手順] - NULL parser と成功結果を登録結果記録へ渡す。
-    test_argparser_record_register_result(parser,
-                                          CPLAT_OK); // [手順] - 有効な parser と成功結果を登録結果記録へ渡す。
+    test_argparser_record_register_result(
+        nullptr,
+        CPLAT_OK); // [手順] - parser に nullptr と成功結果を指定して test_argparser_record_register_result() を呼び出す。
+    test_argparser_record_register_result(
+        parser,
+        CPLAT_OK); // [手順] - 有効な parser と成功結果を指定して test_argparser_record_register_result() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -3480,16 +3620,23 @@ TEST_F(argparserTest, parse_handles_positional_search_and_array_conversion_failu
 
     // Act
     char *unknown_long_argv[] = {cstr("prog"), cstr("--unknown")};
-    test_argparser_apply_args(parser, 2, unknown_long_argv); // [手順] - 解析対象の引数を差し替える。
-    int unknown_long_result =
-        cplat_argparser_handle_parse(parser); // [手順] - 位置引数登録済み parser で未知長形式オプションを解析する。
+    test_argparser_apply_args(
+        parser, 2,
+        unknown_long_argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int unknown_long_result = cplat_argparser_handle_parse(
+        parser); // [手順] - 位置引数登録済み parser で未知長形式オプションを解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
     char *negative_string_argv[] = {cstr("prog"), cstr("-1")};
-    test_argparser_apply_args(parser, 2, negative_string_argv); // [手順] - 解析対象の引数を差し替える。
-    int negative_string_result =
-        cplat_argparser_handle_parse(parser); // [手順] - 文字列位置引数へ負数形式のトークンを解析する。
+    test_argparser_apply_args(
+        parser, 2,
+        negative_string_argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int negative_string_result = cplat_argparser_handle_parse(
+        parser); // [手順] - 負数形式のトークンを文字列位置引数へ渡した状態で cplat_argparser_handle_parse() を呼び出す。
     char *invalid_array_argv[] = {cstr("prog"), cstr("--number=bad")};
-    test_argparser_apply_args(parser, 2, invalid_array_argv);        // [手順] - 解析対象の引数を差し替える。
-    int invalid_array_result = cplat_argparser_handle_parse(parser); // [手順] - int 配列へ変換できない値を解析する。
+    test_argparser_apply_args(
+        parser, 2,
+        invalid_array_argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int invalid_array_result = cplat_argparser_handle_parse(
+        parser); // [手順] - int 配列へ変換できない値を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -3517,11 +3664,13 @@ TEST_F(argparserTest, parse_accepts_null_program_name)
     // Pre-Assert
 
     // Act
-    test_argparser_apply_args(parser, 1, argv);        // [手順] - 解析対象の引数を差し替える。
-    int result = cplat_argparser_handle_parse(parser); // [手順] - argv[0] が NULL の argv を解析する。
+    test_argparser_apply_args(
+        parser, 1, argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int result = cplat_argparser_handle_parse(
+        parser); // [手順] - argv[0] が nullptr の argv を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - argv[0] が NULL の解析結果が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - argv[0] が nullptr の解析結果が CPLAT_OK であること。
 
     // Cleanup
     cplat_argparser_handle_dispose(parser);
@@ -3553,11 +3702,14 @@ TEST_F(argparserTest, usage_handles_short_name_default_value_and_long_label)
     // Pre-Assert
 
     // Act
-    test_argparser_apply_args(parser, 2, unexpected_argv);        // [手順] - 解析対象の引数を差し替える。
-    int unexpected_result = cplat_argparser_handle_parse(parser); // [手順] - 短い名前のみのフラグへ値を指定する。
-    int usage_result =
-        cplat_argparser_handle_get_usage(parser, usage, sizeof(usage),
-                                         nullptr); // [手順] - 既定値名と長いラベルを含む usage を取得する。
+    test_argparser_apply_args(
+        parser, 2,
+        unexpected_argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int unexpected_result = cplat_argparser_handle_parse(
+        parser); // [手順] - 短い名前のみのフラグへ値を指定した状態で cplat_argparser_handle_parse() を呼び出す。
+    int usage_result = cplat_argparser_handle_get_usage(
+        parser, usage, sizeof(usage),
+        nullptr); // [手順] - 既定値名と長いラベルを含む状態で cplat_argparser_handle_get_usage() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNEXPECTED_VALUE,
@@ -3601,7 +3753,8 @@ TEST_F(argparserTest, error_message_formats_all_error_results)
     {
         test_argparser_set_last_error(parser, result);
         return_codes.push_back(cplat_argparser_handle_get_error_message(
-            parser, message, sizeof(message))); // [手順] - 各解析結果のエラー メッセージを取得する。
+            parser, message,
+            sizeof(message))); // [手順] - 各解析結果の状態で cplat_argparser_handle_get_error_message() を呼び出す。
     }
 
     // Assert
@@ -3632,16 +3785,18 @@ TEST_F(argparserTest, error_message_returns_invalid_argument_when_snprintf_fails
     EXPECT_CALL(mock_stdio, snprintf(_, _, _, _, _, _))
         .WillRepeatedly(
             Return(-1)); // [Pre-Assert確認_異常系] - エラー メッセージの snprintf() が任意の回数呼び出されること。
-                         // [Pre-Assert手順] - snprintf() にて -1 を返す。
+                         // [Pre-Assert手順] - snprintf() から -1 を返す。
 
     // Act
     int result = cplat_argparser_handle_get_error_message(
-        parser, message, sizeof(message)); // [手順] - snprintf() 失敗状態で解析エラー メッセージを取得する。
+        parser, message,
+        sizeof(
+            message)); // [手順] - snprintf() が失敗する状態で cplat_argparser_handle_get_error_message() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              result);           // [確認_異常系] - snprintf 失敗時の取得結果が INVALID_ARGUMENT であること。
-    EXPECT_EQ('\0', message[0]); // [確認_異常系] - snprintf 失敗時にメッセージ先頭が NUL になること。
+              result);           // [確認_異常系] - snprintf() 失敗時の取得結果が INVALID_ARGUMENT であること。
+    EXPECT_EQ('\0', message[0]); // [確認_異常系] - snprintf() 失敗時にメッセージ先頭が NUL になること。
 
     // Cleanup
     cplat_argparser_handle_dispose(parser);
@@ -3681,11 +3836,15 @@ TEST_F(argparserTest, register_error_message_formats_all_results)
     {
         test_argparser_set_register_error_result(parser, 0u, result);
         return_codes.push_back(cplat_argparser_handle_get_register_error_message(
-            parser, 0u, message, sizeof(message))); // [手順] - 各登録結果のエラー メッセージを取得する。
+            parser, 0u, message,
+            sizeof(
+                message))); // [手順] - 各登録結果の状態で cplat_argparser_handle_get_register_error_message() を呼び出す。
     }
     test_argparser_clear_register_error_target(parser, 0u);
     int null_target_result = cplat_argparser_handle_get_register_error_message(
-        parser, 0u, message, sizeof(message)); // [手順] - 対象名 NULL の登録エラー メッセージを取得する。
+        parser, 0u, message,
+        sizeof(
+            message)); // [手順] - 対象名が nullptr の状態で cplat_argparser_handle_get_register_error_message() を呼び出す。
 
     // Assert
     EXPECT_EQ(sizeof(results) / sizeof(results[0]),
@@ -3696,8 +3855,8 @@ TEST_F(argparserTest, register_error_message_formats_all_results)
                   return_code); // [確認_正常系 回数=6] - 各登録結果のメッセージ取得結果が CPLAT_OK であること。
     }
     EXPECT_EQ(CPLAT_OK,
-              null_target_result); // [確認_正常系] - 対象名 NULL のメッセージ取得結果が CPLAT_OK であること。
-    EXPECT_THAT(std::string(message), HasSubstr("'?'")); // [確認_正常系] - 対象名 NULL が ? として表示されること。
+              null_target_result); // [確認_正常系] - 対象名 nullptr のメッセージ取得結果が CPLAT_OK であること。
+    EXPECT_THAT(std::string(message), HasSubstr("'?'")); // [確認_正常系] - 対象名 nullptr が ? として表示されること。
 
     // Cleanup
     cplat_argparser_handle_dispose(parser);
@@ -3726,16 +3885,18 @@ TEST_F(argparserTest, register_error_message_returns_invalid_argument_when_snpri
     EXPECT_CALL(mock_stdio, snprintf(_, _, _, _, _, _))
         .WillRepeatedly(
             Return(-1)); // [Pre-Assert確認_異常系] - 登録エラー メッセージの snprintf() が任意の回数呼び出されること。
-                         // [Pre-Assert手順] - snprintf() にて -1 を返す。
+                         // [Pre-Assert手順] - snprintf() から -1 を返す。
 
     // Act
     int result = cplat_argparser_handle_get_register_error_message(
-        parser, 0u, message, sizeof(message)); // [手順] - snprintf() 失敗状態で登録エラー メッセージを取得する。
+        parser, 0u, message,
+        sizeof(
+            message)); // [手順] - snprintf() が失敗する状態で cplat_argparser_handle_get_register_error_message() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
-              result);           // [確認_異常系] - snprintf 失敗時の取得結果が INVALID_ARGUMENT であること。
-    EXPECT_EQ('\0', message[0]); // [確認_異常系] - snprintf 失敗時にメッセージ先頭が NUL になること。
+              result);           // [確認_異常系] - snprintf() 失敗時の取得結果が INVALID_ARGUMENT であること。
+    EXPECT_EQ('\0', message[0]); // [確認_異常系] - snprintf() 失敗時にメッセージ先頭が NUL になること。
 
     // Cleanup
     cplat_argparser_handle_dispose(parser);
@@ -3768,57 +3929,70 @@ TEST_F(argparserTest, public_api_wrappers_are_callable)
 
     // Act
     char *parse_argv[] = {cstr("prog")};
-    cplat_argparser_init(1, parse_argv, "public API"); // [手順] - 公開 default parser を初期化する。
-    int flag_result =
-        cplat_argparser_register_flag("-f", "--flag", nullptr, &flag); // [手順] - 公開 flag 登録 API を呼び出す。
+    cplat_argparser_init(1, parse_argv,
+                         "public API"); // [手順] - 公開 API 用の説明文を指定して cplat_argparser_init() を呼び出す。
+    int flag_result = cplat_argparser_register_flag(
+        "-f", "--flag", nullptr,
+        &flag); // [手順] - フラグ "-f" / "--flag" を指定して cplat_argparser_register_flag() を呼び出す。
     int int_result = cplat_argparser_register_option_int(
-        "-i", "--integer", nullptr, nullptr, 0u, &int_value); // [手順] - 公開 int オプション登録 API を呼び出す。
-    int string_result =
-        cplat_argparser_register_option_string("-s", "--string", nullptr, nullptr, 0u,
-                                               &string_value); // [手順] - 公開 string() オプション登録 API を呼び出す。
-    int int_array_result =
-        cplat_argparser_register_option_int_array("-a", "--array-int", nullptr, nullptr, 0u, int_values, 2u,
-                                                  &int_value_count); // [手順] - 公開 int 配列登録 API を呼び出す。
+        "-i", "--integer", nullptr, nullptr, 0u,
+        &int_value); // [手順] - int オプション "-i" / "--integer" を指定して cplat_argparser_register_option_int() を呼び出す。
+    int string_result = cplat_argparser_register_option_string(
+        "-s", "--string", nullptr, nullptr, 0u,
+        &string_value); // [手順] - string オプション "-s" / "--string" を指定して cplat_argparser_register_option_string() を呼び出す。
+    int int_array_result = cplat_argparser_register_option_int_array(
+        "-a", "--array-int", nullptr, nullptr, 0u, int_values, 2u,
+        &int_value_count); // [手順] - int 配列オプション "-a" / "--array-int" を指定して cplat_argparser_register_option_int_array() を呼び出す。
     int string_array_result = cplat_argparser_register_option_string_array(
         "-b", "--array-string", nullptr, nullptr, 0u, string_values, 2u,
-        &string_value_count); // [手順] - 公開 string() 配列登録 API を呼び出す。
+        &string_value_count); // [手順] - string 配列オプション "-b" / "--array-string" を指定して cplat_argparser_register_option_string_array() を呼び出す。
     int positional_int_result = cplat_argparser_register_positional_int(
-        "posint", nullptr, 0u, &positional_int); // [手順] - 公開 int 位置引数登録 API を呼び出す。
+        "posint", nullptr, 0u,
+        &positional_int); // [手順] - int 位置引数 "posint" を指定して cplat_argparser_register_positional_int() を呼び出す。
     int positional_string_result = cplat_argparser_register_positional_string(
-        "posstr", nullptr, 0u, &positional_string); // [手順] - 公開 string() 位置引数登録 API を呼び出す。
+        "posstr", nullptr, 0u,
+        &positional_string); // [手順] - string 位置引数 "posstr" を指定して cplat_argparser_register_positional_string() を呼び出す。
     int positional_string_array_result = cplat_argparser_register_positional_string_array(
         "posstrs", nullptr, 0u, positional_string_values, 2u,
-        &positional_string_value_count); // [手順] - 公開 string() 配列位置引数登録 API を呼び出す。
+        &positional_string_value_count); // [手順] - string 配列位置引数 "posstrs" を指定して cplat_argparser_register_positional_string_array() を呼び出す。
     int invalid_register_result = cplat_argparser_register_flag(
-        nullptr, nullptr, nullptr, &flag); // [手順] - 公開登録 API で登録エラーを 1 件発生させる。
+        nullptr, nullptr, nullptr,
+        &flag); // [手順] - 登録エラーを 1 件発生させる引数を指定して cplat_argparser_register_flag() を呼び出す。
     int positional_int_array_result = cplat_argparser_register_positional_int_array(
         "posints", nullptr, 0u, positional_int_values, 2u,
-        &positional_int_value_count);           // [手順] - 公開 int 配列位置引数登録 API を呼び出す。
-    int parse_result = cplat_argparser_parse(); // [手順] - 公開 parse API をオプション非出現の引数で呼び出す。
+        &positional_int_value_count); // [手順] - int 配列位置引数 "posints" を指定して cplat_argparser_register_positional_int_array() を呼び出す。
+    int parse_result =
+        cplat_argparser_parse(); // [手順] - オプション非出現の引数の状態で cplat_argparser_parse() を呼び出す。
     char *error_argv[] = {cstr("prog"), cstr("--unknown")};
-    test_argparser_apply_args(test_argparser_default_acquire(0, nullptr, nullptr, 0), 2,
-                              error_argv);            // [手順] - 解析対象の引数を未知オプション付きへ差し替える。
-    int error_parse_result = cplat_argparser_parse(); // [手順] - 公開 parse API で解析エラーを発生させる。
-    int error_result = cplat_argparser_get_error();   // [手順] - 公開 get_error API を呼び出す。
-    const char *error_target = cplat_argparser_get_error_target(); // [手順] - 公開 get_error_target API を呼び出す。
-    int error_index = cplat_argparser_get_error_index();           // [手順] - 公開 get_error_index API を呼び出す。
+    test_argparser_apply_args(
+        test_argparser_default_acquire(0, nullptr, nullptr, 0), 2,
+        error_argv); // [手順] - 未知オプション付きの引数を指定して test_argparser_apply_args() を呼び出す。
+    int error_parse_result =
+        cplat_argparser_parse(); // [手順] - 解析エラーを発生させる状態で cplat_argparser_parse() を呼び出す。
+    int error_result = cplat_argparser_get_error(); // [手順] - cplat_argparser_get_error() を呼び出す。
+    const char *error_target =
+        cplat_argparser_get_error_target();              // [手順] - cplat_argparser_get_error_target() を呼び出す。
+    int error_index = cplat_argparser_get_error_index(); // [手順] - cplat_argparser_get_error_index() を呼び出す。
     int error_message_result = cplat_argparser_get_error_message(
-        error_message, sizeof(error_message)); // [手順] - 公開 get_error_message API を呼び出す。
-    int usage_result =
-        cplat_argparser_get_usage(usage, sizeof(usage), &required_size); // [手順] - 公開 get_usage() API を呼び出す。
-    int print_usage_result = cplat_argparser_print_usage(stdout);        // [手順] - 公開 print_usage() API を呼び出す。
-    int print_error_result =
-        cplat_argparser_print_error_messages(stderr); // [手順] - 公開 print_error_messages() API を呼び出す。
+        error_message, sizeof(error_message)); // [手順] - cplat_argparser_get_error_message() を呼び出す。
+    int usage_result = cplat_argparser_get_usage(usage, sizeof(usage),
+                                                 &required_size); // [手順] - cplat_argparser_get_usage() を呼び出す。
+    int print_usage_result =
+        cplat_argparser_print_usage(stdout); // [手順] - 標準出力を指定して cplat_argparser_print_usage() を呼び出す。
+    int print_error_result = cplat_argparser_print_error_messages(
+        stderr); // [手順] - 標準エラーを指定して cplat_argparser_print_error_messages() を呼び出す。
     size_t register_error_count =
-        cplat_argparser_get_register_error_count();                     // [手順] - 公開登録エラー件数 API を呼び出す。
-    int register_error_result = cplat_argparser_get_register_error(0u); // [手順] - 公開登録エラー取得 API を呼び出す。
-    const char *register_error_target =
-        cplat_argparser_get_register_error_target(0u); // [手順] - 公開登録エラー対象 API を呼び出す。
+        cplat_argparser_get_register_error_count(); // [手順] - cplat_argparser_get_register_error_count() を呼び出す。
+    int register_error_result = cplat_argparser_get_register_error(
+        0u); // [手順] - 0 番目を指定して cplat_argparser_get_register_error() を呼び出す。
+    const char *register_error_target = cplat_argparser_get_register_error_target(
+        0u); // [手順] - 0 番目を指定して cplat_argparser_get_register_error_target() を呼び出す。
     int register_error_message_result = cplat_argparser_get_register_error_message(
         0u, register_error_message,
-        sizeof(register_error_message)); // [手順] - 公開登録エラー メッセージ API を呼び出す。
-    int print_register_error_result =
-        cplat_argparser_print_register_error_messages(stderr); // [手順] - 公開登録エラー出力 API を呼び出す。
+        sizeof(
+            register_error_message)); // [手順] - 0 番目を指定して cplat_argparser_get_register_error_message() を呼び出す。
+    int print_register_error_result = cplat_argparser_print_register_error_messages(
+        stderr); // [手順] - 標準エラーを指定して cplat_argparser_print_register_error_messages() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -3912,13 +4086,15 @@ TEST_F(argparserTest, print_usage_returns_buffer_too_small_when_usage_changes)
                 previous_description = test_argparser_replace_program_description(parser, long_description);
                 return delegate_real_cplat_malloc(size);
             }); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回呼び出されること。
-    // [Pre-Assert手順] - usage バッファー確保前に説明文を変更し、本物の malloc() へ委譲する。
+    // [Pre-Assert手順] - cplat_malloc() から、usage バッファー確保前に説明文を変更し、製品 (prod) の処理へ委譲する。
 
     // Act
     int result = cplat_argparser_handle_print_usage(
-        parser, stdout); // [手順] - usage 組み立て中に説明文を変更して print_usage() を呼び出す。
+        parser,
+        stdout); // [手順] - usage 組み立て中に説明文を変更して cplat_argparser_handle_print_usage() を呼び出す。
     test_argparser_replace_program_description(
-        parser, previous_description); // [手順] - parser の説明文を元のポインターへ戻す。
+        parser,
+        previous_description); // [手順] - 元の説明文のポインターを指定して test_argparser_replace_program_description() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -3939,7 +4115,8 @@ TEST_F(argparserTest, print_error_messages_writes_buffer_too_small_message)
     ASSERT_NE(nullptr, parser); // [状態確認] - cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
     std::string unknown_option = "--" + std::string(600u, 'x');
     char *argv[] = {cstr("prog"), const_cast<char *>(unknown_option.c_str())};
-    test_argparser_apply_args(parser, 2, argv); // [手順] - 解析対象の引数を差し替える。
+    test_argparser_apply_args(
+        parser, 2, argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
     ASSERT_EQ(CPLAT_ERR_UNKNOWN_OPTION,
               cplat_argparser_handle_parse(parser)); // [状態] - 600 文字の未知オプションで解析エラーを発生させる。
     // [状態確認] - cplat_argparser_handle_parse() の戻り値が CPLAT_ERR_UNKNOWN_OPTION であること。
@@ -3947,11 +4124,10 @@ TEST_F(argparserTest, print_error_messages_writes_buffer_too_small_message)
     // Pre-Assert
     EXPECT_CALL(mock_stdio, fprintf(_, _, _, stderr, _))
         .Times(AnyNumber()); // [Pre-Assert確認_異常系] - fprintf() が stderr を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - error message と区切り行の fprintf() を許容する。
 
     // Act
     int result = cplat_argparser_handle_print_error_messages(
-        parser, stderr); // [手順] - 長いエラーを print_error_messages() で出力する。
+        parser, stderr); // [手順] - 長いエラーの状態で cplat_argparser_handle_print_error_messages() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -3971,7 +4147,8 @@ TEST_F(argparserTest, print_error_messages_skips_message_when_snprintf_fails)
         cplat_argparser_handle_create(0, nullptr, nullptr); // [状態] - 生成済みの parser を用意する。
     ASSERT_NE(nullptr, parser); // [状態確認] - cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
     char *argv[] = {cstr("prog"), cstr("--unknown")};
-    test_argparser_apply_args(parser, 2, argv); // [手順] - 解析対象の引数を差し替える。
+    test_argparser_apply_args(
+        parser, 2, argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
     ASSERT_EQ(CPLAT_ERR_UNKNOWN_OPTION,
               cplat_argparser_handle_parse(parser)); // [状態] - 未知オプションで解析エラーを発生させる。
     // [状態確認] - cplat_argparser_handle_parse() の戻り値が CPLAT_ERR_UNKNOWN_OPTION であること。
@@ -3979,19 +4156,19 @@ TEST_F(argparserTest, print_error_messages_skips_message_when_snprintf_fails)
     // Pre-Assert
     EXPECT_CALL(mock_stdio, snprintf(_, _, _, _, _, _))
         .WillRepeatedly(Return(-1)); // [Pre-Assert確認_異常系] - snprintf() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - エラー メッセージの snprintf() から -1 を返却する。
+    // [Pre-Assert手順] - snprintf() から、エラー メッセージの出力に対して -1 を返す。
     EXPECT_CALL(mock_stdio, fprintf(_, _, _, stderr, _))
         .Times(
             1); // [Pre-Assert確認_正常系] - fprintf() が stderr を指定して 1 回呼び出されること。(メッセージを省略した区切り改行だけが出力されることの確認)
 
     // Act
     int result = cplat_argparser_handle_print_error_messages(
-        parser, stderr); // [手順] - snprintf() 失敗状態で print_error_messages() を呼び出す。
+        parser, stderr); // [手順] - snprintf() 失敗状態で cplat_argparser_handle_print_error_messages() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        result); // [確認_異常系] - snprintf 失敗時の cplat_argparser_handle_print_error_messages() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        result); // [確認_異常系] - snprintf() 失敗時の cplat_argparser_handle_print_error_messages() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_argparser_handle_dispose(parser);
@@ -4019,11 +4196,11 @@ TEST_F(argparserTest, print_register_error_messages_writes_buffer_too_small_mess
     // Pre-Assert
     EXPECT_CALL(mock_stdio, fprintf(_, _, _, stderr, _))
         .Times(AnyNumber()); // [Pre-Assert確認_異常系] - fprintf() が stderr を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - 登録エラーと区切り行の fprintf() を許容する。
 
     // Act
     int result = cplat_argparser_handle_print_register_error_messages(
-        parser, stderr); // [手順] - 長い対象の登録エラーを出力する。
+        parser,
+        stderr); // [手順] - 長い対象の登録エラーの状態で cplat_argparser_handle_print_register_error_messages() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -4055,19 +4232,20 @@ TEST_F(argparserTest, print_register_error_messages_skips_message_when_snprintf_
     // Pre-Assert
     EXPECT_CALL(mock_stdio, snprintf(_, _, _, _, _, _))
         .WillRepeatedly(Return(-1)); // [Pre-Assert確認_異常系] - snprintf() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - 登録エラー メッセージの snprintf() から -1 を返却する。
+    // [Pre-Assert手順] - snprintf() から、登録エラー メッセージの出力に対して -1 を返す。
     EXPECT_CALL(mock_stdio, fprintf(_, _, _, stderr, _))
         .Times(
             1); // [Pre-Assert確認_正常系] - fprintf() が stderr を指定して 1 回呼び出されること。(メッセージを省略した区切り改行だけが出力されることの確認)
 
     // Act
     int result = cplat_argparser_handle_print_register_error_messages(
-        parser, stderr); // [手順] - snprintf() 失敗状態で登録エラーを出力する。
+        parser,
+        stderr); // [手順] - snprintf() が失敗する状態で cplat_argparser_handle_print_register_error_messages() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        result); // [確認_異常系] - snprintf 失敗時の cplat_argparser_handle_print_register_error_messages() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        result); // [確認_異常系] - snprintf() 失敗時の cplat_argparser_handle_print_register_error_messages() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_argparser_handle_dispose(parser);
@@ -4090,8 +4268,10 @@ TEST_F(argparserTest, parse_skips_short_name_when_length_differs)
 
     // Act
     char *argv[] = {cstr("prog"), cstr("-a")};
-    test_argparser_apply_args(parser, 2, argv);        // [手順] - 解析対象の引数を差し替える。
-    int result = cplat_argparser_handle_parse(parser); // [手順] - 長さ 2 の短いオプション -a を解析する。
+    test_argparser_apply_args(
+        parser, 2, argv); // [手順] - 差し替える解析対象の引数を指定して test_argparser_apply_args() を呼び出す。
+    int result = cplat_argparser_handle_parse(
+        parser); // [手順] - 長さ 2 の短いオプション -a を解析対象とした状態で cplat_argparser_handle_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -4123,14 +4303,17 @@ TEST_F(argparserTest, default_init_resets_previous_registrations)
     // Pre-Assert
 
     // Act
-    cplat_argparser_init(2, argv, "second description"); // [手順] - 同じプロセスで再初期化する。
+    cplat_argparser_init(2, argv, "second description"); // [手順] - 同じプロセスで cplat_argparser_init() を呼び出す。
     size_t register_error_count_after_reset =
-        cplat_argparser_get_register_error_count(); // [手順] - 再初期化直後の登録エラー件数を取得する。
-    int second_register = cplat_argparser_register_flag("-f", "--first", nullptr,
-                                                        &second_flag); // [手順] - 同じ名前を登録し直す。
-    int usage_result = cplat_argparser_get_usage(second_usage, sizeof(second_usage),
-                                                 nullptr);                   // [手順] - 再初期化後の usage を取得する。
-    int parse_result = cplat_argparser_parse();                              // [手順] - 再登録したフラグを解析する。
+        cplat_argparser_get_register_error_count(); // [手順] - 再初期化直後の状態で cplat_argparser_get_register_error_count() を呼び出す。
+    int second_register = cplat_argparser_register_flag(
+        "-f", "--first", nullptr,
+        &second_flag); // [手順] - 同じ名前のフラグを指定して cplat_argparser_register_flag() を呼び出す。
+    int usage_result =
+        cplat_argparser_get_usage(second_usage, sizeof(second_usage),
+                                  nullptr); // [手順] - 再初期化後の状態で cplat_argparser_get_usage() を呼び出す。
+    int parse_result =
+        cplat_argparser_parse(); // [手順] - 再登録したフラグを解析対象とした状態で cplat_argparser_parse() を呼び出す。
 
     // Assert
     EXPECT_EQ(

@@ -31,27 +31,33 @@ TEST(syncInterprocessLockTest, descriptor_round_trip_reopens_same_lock)
         .WillOnce(Return(kFakeFd))
         .WillOnce(Return(
             kFakeFd2)); // [Pre-Assert確認_正常系] - open() が path と等しい文字列、O_RDWR | O_CREAT | O_CLOEXEC、0666 を指定して 2 回呼び出されること。
-                        // [Pre-Assert手順] - センチネル記述子 7 と 8 を順に返却する。
+                        // [Pre-Assert手順] - open() から 1 回目はセンチネル記述子 7、2 回目は 8 を返す。
     EXPECT_CALL(os.sys_file, flock(_, _, _, kFakeFd, LOCK_EX | LOCK_NB))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - flock() が kFakeFd、LOCK_EX | LOCK_NB を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - 0 を返却する。
+                 // [Pre-Assert手順] - flock() から 0 を返す。
     EXPECT_CALL(os.sys_file, flock(_, _, _, kFakeFd2, LOCK_EX | LOCK_NB))
         .WillOnce(DoAll(
             Assign(&errno, EWOULDBLOCK),
             Return(
                 -1))); // [Pre-Assert確認_正常系] - flock() が kFakeFd2、LOCK_EX | LOCK_NB を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - errno に EWOULDBLOCK を設定し、-1 を返却する。
+                       // [Pre-Assert手順] - flock() から、errno に EWOULDBLOCK を設定して -1 を返す。
 #endif
 
     // Act
-    int open_result = cplat_interprocess_lock_open(path, &lock); // [手順] - interprocess lock を開く。
+    int open_result = cplat_interprocess_lock_open(
+        path, &lock); // [手順] - path を指定して cplat_interprocess_lock_open() を呼び出す。
     int export_result = cplat_interprocess_lock_export_descriptor(
-        lock, descriptor, &descriptor_size); // [手順] - descriptor をバッファーへ出力する。
+        lock, descriptor,
+        &descriptor_size); // [手順] - descriptor のバッファーを指定して cplat_interprocess_lock_export_descriptor() を呼び出す。
     int import_result = cplat_interprocess_lock_import_descriptor(
-        descriptor, descriptor_size, &restored); // [手順] - descriptor から interprocess lock を復元する。
-    int first_lock = cplat_interprocess_lock_lock(lock, CPLAT_SYNC_NO_WAIT); // [手順] - 元ハンドルでロックを取得する。
-    int second_try = cplat_interprocess_lock_try_lock(restored); // [手順] - 復元ハンドルで try_lock() を試行する。
+        descriptor, descriptor_size,
+        &restored); // [手順] - descriptor を指定して cplat_interprocess_lock_import_descriptor() を呼び出す。
+    int first_lock = cplat_interprocess_lock_lock(
+        lock,
+        CPLAT_SYNC_NO_WAIT); // [手順] - 元ハンドルと CPLAT_SYNC_NO_WAIT を指定して cplat_interprocess_lock_lock() を呼び出す。
+    int second_try = cplat_interprocess_lock_try_lock(
+        restored); // [手順] - 復元ハンドルを指定して cplat_interprocess_lock_try_lock() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -73,13 +79,13 @@ TEST(syncInterprocessLockTest, descriptor_round_trip_reopens_same_lock)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(os.sys_file, flock(_, _, _, kFakeFd, LOCK_UN))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - flock() が kFakeFd、LOCK_UN を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 0 を返却する。
+                              // [Pre-Assert手順] - flock() から 0 を返す。
     EXPECT_CALL(os.unistd, close(_, _, _, kFakeFd))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - close() が kFakeFd を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 0 を返却する。
+                              // [Pre-Assert手順] - close() から 0 を返す。
     EXPECT_CALL(os.unistd, close(_, _, _, kFakeFd2))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - close() が kFakeFd2 を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 0 を返却する。
+                              // [Pre-Assert手順] - close() から 0 を返す。
 #endif
     (void)cplat_interprocess_lock_unlock(lock);
     cplat_interprocess_lock_dispose(restored);
@@ -111,15 +117,18 @@ TEST(syncInterprocessLockTest, rejects_rwlock_descriptor)
     EXPECT_CALL(os.fcntl, open(_, _, _, StrEq(path), O_RDWR | O_CREAT | O_CLOEXEC, 0666))
         .WillOnce(Return(
             kFakeFd)); // [Pre-Assert確認_正常系] - open() が path と等しい文字列、O_RDWR | O_CREAT | O_CLOEXEC、0666 を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - センチネル記述子 7 を返却する。
+                       // [Pre-Assert手順] - open() からセンチネル記述子 7 を返す。
 #endif
 
     // Act
-    int open_result = cplat_interprocess_rwlock_open(path, &rwlock); // [手順] - interprocess rwlock を開く。
+    int open_result = cplat_interprocess_rwlock_open(
+        path, &rwlock); // [手順] - path を指定して cplat_interprocess_rwlock_open() を呼び出す。
     int export_result = cplat_interprocess_rwlock_export_descriptor(
-        rwlock, descriptor, &descriptor_size); // [手順] - rwlock の descriptor を出力する。
+        rwlock, descriptor,
+        &descriptor_size); // [手順] - rwlock と descriptor のバッファーを指定して cplat_interprocess_rwlock_export_descriptor() を呼び出す。
     int import_result = cplat_interprocess_lock_import_descriptor(
-        descriptor, descriptor_size, &lock); // [手順] - rwlock の descriptor を lock として import する。
+        descriptor, descriptor_size,
+        &lock); // [手順] - rwlock の descriptor を指定して cplat_interprocess_lock_import_descriptor() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -136,7 +145,7 @@ TEST(syncInterprocessLockTest, rejects_rwlock_descriptor)
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(os.unistd, close(_, _, _, kFakeFd))
         .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - close() が kFakeFd を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 0 を返却する。
+                              // [Pre-Assert手順] - close() から 0 を返す。
 #endif
     cplat_interprocess_rwlock_dispose(rwlock);
 #if defined(PLATFORM_WINDOWS)
@@ -160,24 +169,29 @@ TEST(syncInterprocessLockTest, second_handle_observes_exclusive_lock)
         .WillOnce(Return(kFakeFd))
         .WillOnce(Return(
             kFakeFd2)); // [Pre-Assert確認_正常系] - open() が path と等しい文字列、O_RDWR | O_CREAT | O_CLOEXEC、0666 を指定して 2 回呼び出されること。
-                        // [Pre-Assert手順] - センチネル記述子 7 と 8 を順に返却する。
+                        // [Pre-Assert手順] - open() から 1 回目はセンチネル記述子 7、2 回目は 8 を返す。
     EXPECT_CALL(os.sys_file, flock(_, _, _, kFakeFd, LOCK_EX | LOCK_NB))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - flock() が kFakeFd、LOCK_EX | LOCK_NB を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - 0 を返却する。
+                 // [Pre-Assert手順] - flock() から 0 を返す。
     EXPECT_CALL(os.sys_file, flock(_, _, _, kFakeFd2, LOCK_EX | LOCK_NB))
         .WillOnce(DoAll(
             Assign(&errno, EWOULDBLOCK),
             Return(
                 -1))); // [Pre-Assert確認_正常系] - flock() が kFakeFd2、LOCK_EX | LOCK_NB を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - errno に EWOULDBLOCK を設定し、-1 を返却する。
+                       // [Pre-Assert手順] - flock() から、errno に EWOULDBLOCK を設定して -1 を返す。
 
     // Act
-    int open_result = cplat_interprocess_lock_open(path, &lock); // [手順] - 1 つ目の interprocess lock を開く。
-    int other_open = cplat_interprocess_lock_open(path, &other); // [手順] - 同一識別子でもう 1 つ開く。
-    int lock_result =
-        cplat_interprocess_lock_lock(lock, CPLAT_SYNC_NO_WAIT); // [手順] - 1 つ目のハンドルでロックを取得する。
-    int other_try = cplat_interprocess_lock_try_lock(other);    // [手順] - 2 つ目のハンドルで try_lock() を試行する。
+    int open_result = cplat_interprocess_lock_open(
+        path, &lock); // [手順] - 1 つ目として path を指定して cplat_interprocess_lock_open() を呼び出す。
+    int other_open = cplat_interprocess_lock_open(
+        path,
+        &other); // [手順] - 同一識別子 path と 2 つ目の格納先を指定して cplat_interprocess_lock_open() を呼び出す。
+    int lock_result = cplat_interprocess_lock_lock(
+        lock,
+        CPLAT_SYNC_NO_WAIT); // [手順] - 1 つ目のハンドルと CPLAT_SYNC_NO_WAIT を指定して cplat_interprocess_lock_lock() を呼び出す。
+    int other_try = cplat_interprocess_lock_try_lock(
+        other); // [手順] - 2 つ目のハンドルを指定して cplat_interprocess_lock_try_lock() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -194,13 +208,13 @@ TEST(syncInterprocessLockTest, second_handle_observes_exclusive_lock)
     // Cleanup
     EXPECT_CALL(os.sys_file, flock(_, _, _, kFakeFd, LOCK_UN))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - flock() が kFakeFd、LOCK_UN を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 0 を返却する。
+                              // [Pre-Assert手順] - flock() から 0 を返す。
     EXPECT_CALL(os.unistd, close(_, _, _, kFakeFd))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - close() が kFakeFd を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 0 を返却する。
+                              // [Pre-Assert手順] - close() から 0 を返す。
     EXPECT_CALL(os.unistd, close(_, _, _, kFakeFd2))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - close() が kFakeFd2 を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - 0 を返却する。
+                              // [Pre-Assert手順] - close() から 0 を返す。
     (void)cplat_interprocess_lock_unlock(lock);
     cplat_interprocess_lock_dispose(other);
     cplat_interprocess_lock_dispose(lock);

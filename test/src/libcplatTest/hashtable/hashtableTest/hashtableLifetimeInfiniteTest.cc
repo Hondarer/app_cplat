@@ -48,8 +48,10 @@ TEST_F(hashtableLifetimeInfiniteTest, create_accepts_infinite_lifetime)
 
     // Act
     int actual_ret_create =
-        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);               // [手順] - 寿命無限で構築する。
-    int actual_ret_config = cplat_hashtable_get_config_ref(ht, &got);               // [手順] - 設定を読む。
+        cplat_hashtable_create(&config, nullptr, 0, nullptr, 0,
+                               &ht); // [手順] - 寿命無限の設定を指定して cplat_hashtable_create() を呼び出す。
+    int actual_ret_config =
+        cplat_hashtable_get_config_ref(ht, &got); // [手順] - cplat_hashtable_get_config_ref() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -89,15 +91,17 @@ TEST_F(hashtableLifetimeInfiniteTest, push_stops_at_terminal_status)
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "keep", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    int actual_ret_delete = cplat_hashtable_delete(ht, "keep"); // [手順] - キーを削除して status 2 にする。
+    int actual_ret_delete =
+        cplat_hashtable_delete(ht, "keep"); // [手順] - キーを指定して cplat_hashtable_delete() を呼び出す。
     for (i = 0; i < (CPLAT_HASHTABLE_LIFETIME_INFINITE - 3); ++i)
     {
-        (void)cplat_hashtable_push_deleted(ht); // [手順] - status が 254 になるまで加齢する。
+        (void)cplat_hashtable_push_deleted(ht); // [手順] - cplat_hashtable_push_deleted() を呼び出す。
     }
     (void)cplat_hashtable_get_status(ht, 1, &status_after_age);
-    int actual_ret_to_terminal = cplat_hashtable_push_deleted(ht); // [手順] - 254 から 255 へ加齢する。
+    int actual_ret_to_terminal =
+        cplat_hashtable_push_deleted(ht); // [手順] - cplat_hashtable_push_deleted() を呼び出す。
     (void)cplat_hashtable_get_status(ht, 1, &status_at_terminal);
-    int actual_ret_hold1 = cplat_hashtable_push_deleted(ht); // [手順] - 255 のままさらに加齢する。
+    int actual_ret_hold1 = cplat_hashtable_push_deleted(ht); // [手順] - cplat_hashtable_push_deleted() を呼び出す。
     int actual_ret_hold2 = cplat_hashtable_push_deleted(ht);
     (void)cplat_hashtable_get_status(ht, 1, &status_after_hold);
     (void)cplat_hashtable_empty_count(ht, &empty);
@@ -156,9 +160,9 @@ TEST_F(hashtableLifetimeInfiniteTest, insert_direct_accepts_terminal_status)
 
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
-    int actual_ret_direct =
-        cplat_hashtable_insert_direct(ht, 1, "gone", CPLAT_HASHTABLE_LIFETIME_INFINITE, value.data(),
-                                      &k_insert_timestamp, 1); // [手順] - status 255 を直接書く。
+    int actual_ret_direct = cplat_hashtable_insert_direct(
+        ht, 1, "gone", CPLAT_HASHTABLE_LIFETIME_INFINITE, value.data(), &k_insert_timestamp,
+        1); // [手順] - status 255 を指定して cplat_hashtable_insert_direct() を呼び出す。
     int actual_ret_find = cplat_hashtable_find_value_ref(ht, "gone", &found);
     int actual_ret_status = cplat_hashtable_get_status(ht, 1, &status);
     int actual_ret_key = cplat_hashtable_get_key_ref(ht, 1, &key_out, nullptr);
@@ -201,11 +205,12 @@ TEST_F(hashtableLifetimeInfiniteTest, insert_direct_skips_beyond_finite_max)
 
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
-    int actual_ret_eq = cplat_hashtable_insert_direct(ht, 1, "a", 254, value.data(), &k_insert_timestamp,
-                                                      1); // [手順] - status 254 を lifetime 254 へ置く。
+    int actual_ret_eq =
+        cplat_hashtable_insert_direct(ht, 1, "a", 254, value.data(), &k_insert_timestamp,
+                                      1); // [手順] - status 254 を指定して cplat_hashtable_insert_direct() を呼び出す。
     int actual_ret_over =
         cplat_hashtable_insert_direct(ht, 1, "a", CPLAT_HASHTABLE_LIFETIME_INFINITE, value.data(), &k_insert_timestamp,
-                                      1); // [手順] - status 255 を lifetime 254 へ置く。
+                                      1); // [手順] - status 255 を指定して cplat_hashtable_insert_direct() を呼び出す。
     (void)cplat_hashtable_get_status(ht, 1, &status);
 
     // Assert
@@ -244,16 +249,16 @@ TEST_F(hashtableLifetimeInfiniteTest, add_reuses_and_purge_expires_terminal_stat
     (void)cplat_hashtable_insert_direct(ht, 1, "reuse", CPLAT_HASHTABLE_LIFETIME_INFINITE, value.data(),
                                         &k_insert_timestamp, 1);
     std::memcpy(value.data(), "new", 4);
-    int actual_ret_add =
-        cplat_hashtable_add(ht, "reuse", value.data(),
-                            CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 終端の削除済みキーを再追加する。
+    int actual_ret_add = cplat_hashtable_add(
+        ht, "reuse", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 終端の削除済みキーを指定して cplat_hashtable_add() を呼び出す。
     int actual_ret_find = cplat_hashtable_find_value_ref(ht, "reuse", &found);
     std::string found_text = (found == nullptr) ? "" : static_cast<const char *>(found);
     (void)cplat_hashtable_get_status(ht, 1, &status_after_add);
     (void)cplat_hashtable_delete(ht, "reuse");
     (void)cplat_hashtable_insert_direct(ht, 2, "drop", CPLAT_HASHTABLE_LIFETIME_INFINITE, value.data(),
                                         &k_insert_timestamp, 2);
-    int actual_ret_purge = cplat_hashtable_purge_deleted(ht); // [手順] - 終端を含む削除済みを回収する。
+    int actual_ret_purge = cplat_hashtable_purge_deleted(ht); // [手順] - cplat_hashtable_purge_deleted() を呼び出す。
     (void)cplat_hashtable_get_status(ht, 2, &status_after_purge);
     (void)cplat_hashtable_empty_count(ht, &empty);
 

@@ -11,11 +11,14 @@ TEST(syncLocalRwlockTest, shared_locks_can_coexist)
     // Pre-Assert
 
     // Act
-    int create_result = cplat_local_rwlock_create(&rwlock); // [手順] - rwlock を作成する。
-    int first_lock =
-        cplat_local_rwlock_lock_shared(rwlock, CPLAT_SYNC_NO_WAIT); // [手順] - 1 つ目の共有ロックを取得する。
-    int second_lock =
-        cplat_local_rwlock_lock_shared(rwlock, CPLAT_SYNC_NO_WAIT); // [手順] - 2 つ目の共有ロックを取得する。
+    int create_result = cplat_local_rwlock_create(
+        &rwlock); // [手順] - rwlock の格納先を指定して cplat_local_rwlock_create() を呼び出す。
+    int first_lock = cplat_local_rwlock_lock_shared(
+        rwlock,
+        CPLAT_SYNC_NO_WAIT); // [手順] - 1 つ目の共有ロックとして CPLAT_SYNC_NO_WAIT を指定して cplat_local_rwlock_lock_shared() を呼び出す。
+    int second_lock = cplat_local_rwlock_lock_shared(
+        rwlock,
+        CPLAT_SYNC_NO_WAIT); // [手順] - 2 つ目の共有ロックとして CPLAT_SYNC_NO_WAIT を指定して cplat_local_rwlock_lock_shared() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -40,10 +43,13 @@ TEST(syncLocalRwlockTest, exclusive_lock_blocks_shared_try_lock)
     // Pre-Assert
 
     // Act
-    int create_result = cplat_local_rwlock_create(&rwlock); // [手順] - rwlock を作成する。
-    int exclusive_lock =
-        cplat_local_rwlock_lock_exclusive(rwlock, CPLAT_SYNC_NO_WAIT); // [手順] - 排他ロックを取得する。
-    int shared_try = cplat_local_rwlock_try_lock_shared(rwlock); // [手順] - 排他ロック中に共有ロック取得を試行する。
+    int create_result = cplat_local_rwlock_create(
+        &rwlock); // [手順] - rwlock の格納先を指定して cplat_local_rwlock_create() を呼び出す。
+    int exclusive_lock = cplat_local_rwlock_lock_exclusive(
+        rwlock,
+        CPLAT_SYNC_NO_WAIT); // [手順] - CPLAT_SYNC_NO_WAIT を指定して cplat_local_rwlock_lock_exclusive() を呼び出す。
+    int shared_try = cplat_local_rwlock_try_lock_shared(
+        rwlock); // [手順] - 排他ロック中の状態で cplat_local_rwlock_try_lock_shared() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -67,11 +73,16 @@ TEST(syncLocalRwlockTest, waiting_writer_prevents_new_reader)
     // Pre-Assert
 
     // Act
-    int create_result = cplat_local_rwlock_create(&rwlock);                       // [手順] - rwlock を作成する。
-    int shared_lock = cplat_local_rwlock_lock_shared(rwlock, CPLAT_SYNC_NO_WAIT); // [手順] - 先行 reader を取得する。
-    int writer_try =
-        cplat_local_rwlock_lock_exclusive(rwlock, 5U); // [手順] - writer 待機を発生させてタイムアウトさせる。
-    int second_reader = cplat_local_rwlock_try_lock_shared(rwlock); // [手順] - writer 待機後に新規 reader を試行する。
+    int create_result = cplat_local_rwlock_create(
+        &rwlock); // [手順] - rwlock の格納先を指定して cplat_local_rwlock_create() を呼び出す。
+    int shared_lock = cplat_local_rwlock_lock_shared(
+        rwlock,
+        CPLAT_SYNC_NO_WAIT); // [手順] - 先行 reader として CPLAT_SYNC_NO_WAIT を指定して cplat_local_rwlock_lock_shared() を呼び出す。
+    int writer_try = cplat_local_rwlock_lock_exclusive(
+        rwlock,
+        5U); // [手順] - writer 待機が発生してタイムアウトするよう 5U を指定して cplat_local_rwlock_lock_exclusive() を呼び出す。
+    int second_reader = cplat_local_rwlock_try_lock_shared(
+        rwlock); // [手順] - writer 待機後の状態で cplat_local_rwlock_try_lock_shared() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,

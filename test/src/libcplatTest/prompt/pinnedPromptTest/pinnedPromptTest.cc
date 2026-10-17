@@ -37,12 +37,12 @@ TEST(pinnedPromptTest, status_apis_reject_null_screen)
     // Pre-Assert
 
     // Act
-    int enable_result =
-        cplat_pinned_prompt_status_enable(nullptr, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
-                                          1); // [手順] - screen に NULL を渡して上部ステータス領域を有効にする。
+    int enable_result = cplat_pinned_prompt_status_enable(
+        nullptr, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
+        1); // [手順] - screen に nullptr を指定して cplat_pinned_prompt_status_enable() を呼び出す。
     int set_result = cplat_pinned_prompt_status_set(
         nullptr, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP, CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT,
-        "status"); // [手順] - screen に NULL を渡して上部左側の表示内容を設定する。
+        "status"); // [手順] - screen に nullptr を指定して cplat_pinned_prompt_status_set() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -69,28 +69,37 @@ TEST(pinnedPromptTest, static_text_helpers_cover_empty_and_utf8_cases)
     // Pre-Assert
 
     // Act
-    size_t null_len = test_pinned_prompt_cstr_len(nullptr);          // [手順] - NULL の文字列長を取得する。
-    size_t ascii_width = test_pinned_prompt_utf8_width("A", 1U, 0U); // [手順] - ASCII の表示幅を取得する。
+    size_t null_len =
+        test_pinned_prompt_cstr_len(nullptr); // [手順] - nullptr を指定して test_pinned_prompt_cstr_len() を呼び出す。
+    size_t ascii_width = test_pinned_prompt_utf8_width(
+        "A", 1U, 0U); // [手順] - ASCII 文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
     size_t combining_width =
-        test_pinned_prompt_utf8_width(combining, sizeof(combining) - 1U, 0U); // [手順] - 結合文字の表示幅を取得する。
-    size_t cjk_width =
-        test_pinned_prompt_utf8_width(cjk, sizeof(cjk) - 1U, 0U); // [手順] - CJK 文字の表示幅を取得する。
+        test_pinned_prompt_utf8_width(combining, sizeof(combining) - 1U,
+                                      0U); // [手順] - 結合文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
+    size_t cjk_width = test_pinned_prompt_utf8_width(
+        cjk, sizeof(cjk) - 1U, 0U); // [手順] - CJK 文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
     size_t hiragana_width =
-        test_pinned_prompt_utf8_width(hiragana, sizeof(hiragana) - 1U, 0U); // [手順] - ひらがなの表示幅を取得する。
+        test_pinned_prompt_utf8_width(hiragana, sizeof(hiragana) - 1U,
+                                      0U); // [手順] - ひらがなを指定して test_pinned_prompt_utf8_width() を呼び出す。
     size_t katakana_width =
-        test_pinned_prompt_utf8_width(katakana, sizeof(katakana) - 1U, 0U); // [手順] - カタカナの表示幅を取得する。
+        test_pinned_prompt_utf8_width(katakana, sizeof(katakana) - 1U,
+                                      0U); // [手順] - カタカナを指定して test_pinned_prompt_utf8_width() を呼び出す。
     size_t compatibility_width = test_pinned_prompt_utf8_width(
-        compatibility_ideograph, sizeof(compatibility_ideograph) - 1U, 0U); // [手順] - CJK 拡張文字の表示幅を取得する。
-    size_t emoji_width =
-        test_pinned_prompt_utf8_width(emoji, sizeof(emoji) - 1U, 0U); // [手順] - 4 バイト文字の表示幅を取得する。
-    size_t invalid_width =
-        test_pinned_prompt_utf8_width("\xC2", 1U, 0U); // [手順] - 不完全な UTF-8 の表示幅を取得する。
-    size_t sgr_len = test_pinned_prompt_ansi_len(sgr, sizeof(sgr) - 1U, 0U); // [手順] - ANSI SGR 長を取得する。
+        compatibility_ideograph, sizeof(compatibility_ideograph) - 1U,
+        0U); // [手順] - CJK 拡張文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
+    size_t emoji_width = test_pinned_prompt_utf8_width(
+        emoji, sizeof(emoji) - 1U, 0U); // [手順] - 4 バイト文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
+    size_t invalid_width = test_pinned_prompt_utf8_width(
+        "\xC2", 1U, 0U); // [手順] - 不完全な UTF-8 を指定して test_pinned_prompt_utf8_width() を呼び出す。
+    size_t sgr_len = test_pinned_prompt_ansi_len(
+        sgr, sizeof(sgr) - 1U, 0U); // [手順] - ANSI SGR を指定して test_pinned_prompt_ansi_len() を呼び出す。
     size_t invalid_sgr_len =
-        test_pinned_prompt_ansi_len(invalid_sgr, sizeof(invalid_sgr) - 1U, 0U); // [手順] - 不正 SGR 長を取得する。
+        test_pinned_prompt_ansi_len(invalid_sgr, sizeof(invalid_sgr) - 1U,
+                                    0U); // [手順] - 不正な SGR を指定して test_pinned_prompt_ansi_len() を呼び出す。
 
     // Assert
-    EXPECT_EQ(0U, null_len); // [確認_正常系] - NULL を指定した test_pinned_prompt_cstr_len() の戻り値が 0 であること。
+    EXPECT_EQ(0U,
+              null_len); // [確認_正常系] - nullptr を指定した test_pinned_prompt_cstr_len() の戻り値が 0 であること。
     EXPECT_EQ(1U,
               ascii_width); // [確認_正常系] - "A" を指定した test_pinned_prompt_utf8_width() の戻り値が 1 であること。
     EXPECT_EQ(
@@ -130,14 +139,16 @@ TEST(pinnedPromptTest, static_display_helpers_skip_ansi_and_limit_columns)
     // Pre-Assert
 
     // Act
-    size_t visible_one_col =
-        test_pinned_prompt_visible_bytes(text, text_len, 0U, 1U); // [手順] - 1 列に収まる可視バイト数を取得する。
-    size_t visible_three_cols =
-        test_pinned_prompt_visible_bytes(text, text_len, 0U, 3U); // [手順] - 3 列に収まる可視バイト数を取得する。
-    size_t display_width = test_pinned_prompt_display_width(text, text_len, 0U,
-                                                            text_len); // [手順] - ANSI を含む全範囲の表示幅を取得する。
-    size_t clipped_width =
-        test_pinned_prompt_display_width(text, text_len, 0U, 2U); // [手順] - ANSI 途中までの範囲の表示幅を取得する。
+    size_t visible_one_col = test_pinned_prompt_visible_bytes(
+        text, text_len, 0U, 1U); // [手順] - 表示列数 1 を指定して test_pinned_prompt_visible_bytes() を呼び出す。
+    size_t visible_three_cols = test_pinned_prompt_visible_bytes(
+        text, text_len, 0U, 3U); // [手順] - 表示列数 3 を指定して test_pinned_prompt_visible_bytes() を呼び出す。
+    size_t display_width = test_pinned_prompt_display_width(
+        text, text_len, 0U,
+        text_len); // [手順] - ANSI を含む全範囲を指定して test_pinned_prompt_display_width() を呼び出す。
+    size_t clipped_width = test_pinned_prompt_display_width(
+        text, text_len, 0U,
+        2U); // [手順] - ANSI 途中までの範囲を指定して test_pinned_prompt_display_width() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -169,11 +180,12 @@ TEST(pinnedPromptTest, fallback_readline_strips_newline)
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
         .WillOnce(DoAll(SetArrayArgument<0>(input, input + sizeof(input)), Return(CPLAT_OK)));
     // [Pre-Assert確認_正常系] - cplat_fgets() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets() から "answer" を返却する。
+    // [Pre-Assert手順] - cplat_fgets() から、"answer" を設定して CPLAT_OK を返す。
 
     // Act
-    int result = cplat_pinned_prompt_readline(screen, output, sizeof(output),
-                                              nullptr); // [手順] - 非 TTY の readline を呼び出す。
+    int result =
+        cplat_pinned_prompt_readline(screen, output, sizeof(output),
+                                     nullptr); // [手順] - 非 TTY の状態で cplat_pinned_prompt_readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -197,11 +209,12 @@ TEST(pinnedPromptTest, fallback_readline_reports_eof)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _)).WillOnce(Return(CPLAT_ERR_EOF));
     // [Pre-Assert確認_異常系] - cplat_fgets() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets() から CPLAT_ERR_EOF を返却する。
+    // [Pre-Assert手順] - cplat_fgets() から CPLAT_ERR_EOF を返す。
 
     // Act
-    int result = cplat_pinned_prompt_readline(screen, output, sizeof(output),
-                                              "prompt"); // [手順] - EOF を返す非 TTY readline を呼び出す。
+    int result = cplat_pinned_prompt_readline(
+        screen, output, sizeof(output),
+        "prompt"); // [手順] - EOF を返す非 TTY の状態で cplat_pinned_prompt_readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_EOF,
@@ -226,11 +239,12 @@ TEST(pinnedPromptTest, fallback_readline_reports_buffer_too_small)
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
         .WillOnce(DoAll(SetArrayArgument<0>(empty, empty + sizeof(empty)), Return(CPLAT_ERR_BUFFER_TOO_SMALL)));
     // [Pre-Assert確認_異常系] - cplat_fgets() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets() から CPLAT_ERR_BUFFER_TOO_SMALL と空文字列を返却する。
+    // [Pre-Assert手順] - cplat_fgets() から、空文字列を設定して CPLAT_ERR_BUFFER_TOO_SMALL を返す。
 
     // Act
-    int actual_ret = cplat_pinned_prompt_readline(screen, output, sizeof(output),
-                                                  nullptr); // [手順] - 行が収まらない非 TTY readline を呼び出す。
+    int actual_ret = cplat_pinned_prompt_readline(
+        screen, output, sizeof(output),
+        nullptr); // [手順] - 行が収まらない非 TTY の状態で cplat_pinned_prompt_readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -252,22 +266,24 @@ TEST(pinnedPromptTest, status_apis_accept_valid_positions_and_alignments)
     // Pre-Assert
 
     // Act
-    int top_enable = cplat_pinned_prompt_status_enable(screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
-                                                       1); // [手順] - 上部ステータスを有効にする。
-    int bottom_disable = cplat_pinned_prompt_status_enable(screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM,
-                                                           0); // [手順] - 下部ステータスを無効にする。
-    int top_left = cplat_pinned_prompt_status_set(screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
-                                                  CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT,
-                                                  "top"); // [手順] - 上部左側の内容を設定する。
-    int top_right = cplat_pinned_prompt_status_set(screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
-                                                   CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT,
-                                                   "right"); // [手順] - 上部右側の内容を設定する。
-    int bottom_left = cplat_pinned_prompt_status_set(screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM,
-                                                     CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT,
-                                                     "bottom"); // [手順] - 下部左側の内容を設定する。
-    int bottom_right = cplat_pinned_prompt_status_set(screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM,
-                                                      CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT,
-                                                      nullptr); // [手順] - 下部右側の内容を NULL で消去する。
+    int top_enable = cplat_pinned_prompt_status_enable(
+        screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
+        1); // [手順] - 上部ステータスを有効にする指定で cplat_pinned_prompt_status_enable() を呼び出す。
+    int bottom_disable = cplat_pinned_prompt_status_enable(
+        screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM,
+        0); // [手順] - 下部ステータスを無効にする指定で cplat_pinned_prompt_status_enable() を呼び出す。
+    int top_left = cplat_pinned_prompt_status_set(
+        screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP, CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT,
+        "top"); // [手順] - 上部左側の内容を指定して cplat_pinned_prompt_status_set() を呼び出す。
+    int top_right = cplat_pinned_prompt_status_set(
+        screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP, CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT,
+        "right"); // [手順] - 上部右側の内容を指定して cplat_pinned_prompt_status_set() を呼び出す。
+    int bottom_left = cplat_pinned_prompt_status_set(
+        screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM, CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT,
+        "bottom"); // [手順] - 下部左側の内容を指定して cplat_pinned_prompt_status_set() を呼び出す。
+    int bottom_right = cplat_pinned_prompt_status_set(
+        screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM, CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT,
+        nullptr); // [手順] - 下部右側の内容に nullptr を指定して cplat_pinned_prompt_status_set() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -287,7 +303,7 @@ TEST(pinnedPromptTest, status_apis_accept_valid_positions_and_alignments)
         bottom_left); // [確認_正常系] - 下部左側を指定した cplat_pinned_prompt_status_set() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_OK,
-        bottom_right); // [確認_正常系] - 下部右側に NULL を指定した cplat_pinned_prompt_status_set() の戻り値が CPLAT_OK であること。
+        bottom_right); // [確認_正常系] - 下部右側に nullptr を指定した cplat_pinned_prompt_status_set() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
@@ -308,19 +324,19 @@ TEST(pinnedPromptTest, fallback_readline_with_initial_ignores_initial_text)
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
         .WillOnce(DoAll(SetArrayArgument<0>(input, input + sizeof(input)), Return(CPLAT_OK)));
     // [Pre-Assert確認_正常系] - cplat_fgets() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets() から "piped" を返却する。
+    // [Pre-Assert手順] - cplat_fgets() から、"piped" を設定して CPLAT_OK を返す。
 
     // Act
     int result = cplat_pinned_prompt_readline_with_initial(
         screen, output, sizeof(output), nullptr,
-        "initial"); // [手順] - 初期値を指定して非 TTY の readline を呼び出す。
+        "initial"); // [手順] - 初期値を指定し、非 TTY の状態で cplat_pinned_prompt_readline_with_initial() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
               result); // [確認_正常系] - cplat_pinned_prompt_readline_with_initial() の戻り値が CPLAT_OK であること。
     EXPECT_STREQ(
         "piped",
-        output); // [確認_正常系] - output が "piped" であること。(初期値ではなく cplat_fgets の入力が格納されたことの確認)
+        output); // [確認_正常系] - output が "piped" であること。(初期値ではなく cplat_fgets() の入力が格納されたことの確認)
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
@@ -341,14 +357,18 @@ TEST(pinnedPromptTest, readline_with_initial_rejects_invalid_initial_text_and_ar
     // [Pre-Assert確認_異常系] - cplat_fgets() が呼び出されないこと。
 
     // Act
-    int actual_ret_control = cplat_pinned_prompt_readline_with_initial(screen, output, sizeof(output), nullptr,
-                                                                       "a\tb"); // [手順] - タブを含む初期値を指定する。
-    int actual_ret_screen = cplat_pinned_prompt_readline_with_initial(nullptr, output, sizeof(output), nullptr,
-                                                                      "a"); // [手順] - ハンドルに NULL を指定する。
-    int actual_ret_buf = cplat_pinned_prompt_readline_with_initial(screen, nullptr, sizeof(output), nullptr,
-                                                                   "a"); // [手順] - 出力先に NULL を指定する。
-    int actual_ret_size = cplat_pinned_prompt_readline_with_initial(screen, output, 0U, nullptr,
-                                                                    "a"); // [手順] - バイト数に 0 を指定する。
+    int actual_ret_control = cplat_pinned_prompt_readline_with_initial(
+        screen, output, sizeof(output), nullptr,
+        "a\tb"); // [手順] - タブを含む初期値を指定して cplat_pinned_prompt_readline_with_initial() を呼び出す。
+    int actual_ret_screen = cplat_pinned_prompt_readline_with_initial(
+        nullptr, output, sizeof(output), nullptr,
+        "a"); // [手順] - ハンドルに nullptr を指定して cplat_pinned_prompt_readline_with_initial() を呼び出す。
+    int actual_ret_buf = cplat_pinned_prompt_readline_with_initial(
+        screen, nullptr, sizeof(output), nullptr,
+        "a"); // [手順] - 出力先に nullptr を指定して cplat_pinned_prompt_readline_with_initial() を呼び出す。
+    int actual_ret_size = cplat_pinned_prompt_readline_with_initial(
+        screen, output, 0U, nullptr,
+        "a"); // [手順] - バイト数に 0 を指定して cplat_pinned_prompt_readline_with_initial() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -357,10 +377,10 @@ TEST(pinnedPromptTest, readline_with_initial_rejects_invalid_initial_text_and_ar
     EXPECT_STREQ("", output); // [確認_異常系] - output が "" であること。(拒否時に出力先が空になることの確認)
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_screen); // [確認_異常系] - ハンドルに NULL を指定した cplat_pinned_prompt_readline_with_initial() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_screen); // [確認_異常系] - ハンドルに nullptr を指定した cplat_pinned_prompt_readline_with_initial() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_buf); // [確認_異常系] - 出力先に NULL を指定した cplat_pinned_prompt_readline_with_initial() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_buf); // [確認_異常系] - 出力先に nullptr を指定した cplat_pinned_prompt_readline_with_initial() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_size); // [確認_異常系] - バイト数に 0 を指定した cplat_pinned_prompt_readline_with_initial() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -391,23 +411,26 @@ TEST(pinnedPromptTest, platform_get_size_uses_valid_ioctl_dimensions)
                         Return(0)))
         .WillOnce(Return(-1));
     // [Pre-Assert確認_正常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は列数 120・行数 40 を返却し、2 回目は -1 を返却する。
+    // [Pre-Assert手順] - ioctl() から 1 回目は、列数 120・行数 40 の端末サイズを設定して 0 を返し、2 回目は -1 を返す。
 
     // Act
-    test_pinned_prompt_get_size(&valid_cols, &valid_rows);       // [手順] - 正常な ioctl から端末サイズを取得する。
-    test_pinned_prompt_get_size(&fallback_cols, &fallback_rows); // [手順] - ioctl 失敗時の既定端末サイズを取得する。
+    test_pinned_prompt_get_size(
+        &valid_cols, &valid_rows); // [手順] - ioctl() が成功する状態で test_pinned_prompt_get_size() を呼び出す。
+    test_pinned_prompt_get_size(
+        &fallback_cols, &fallback_rows); // [手順] - ioctl() が失敗する状態で test_pinned_prompt_get_size() を呼び出す。
 
     // Assert
-    EXPECT_EQ(120,
-              valid_cols); // [確認_正常系] - valid_cols が 120 であること。(ioctl 成功時の列数が 120 であることの確認)
+    EXPECT_EQ(
+        120,
+        valid_cols); // [確認_正常系] - valid_cols が 120 であること。(ioctl() 成功時の列数が 120 であることの確認)
     EXPECT_EQ(40,
-              valid_rows); // [確認_正常系] - valid_rows が 40 であること。(ioctl 成功時の行数が 40 であることの確認)
+              valid_rows); // [確認_正常系] - valid_rows が 40 であること。(ioctl() 成功時の行数が 40 であることの確認)
     EXPECT_EQ(
         80,
-        fallback_cols); // [確認_異常系] - fallback_cols が 80 であること。(ioctl 失敗時の既定の列数が 80 であることの確認)
+        fallback_cols); // [確認_異常系] - fallback_cols が 80 であること。(ioctl() 失敗時の既定の列数が 80 であることの確認)
     EXPECT_EQ(
         24,
-        fallback_rows); // [確認_異常系] - fallback_rows が 24 であること。(ioctl 失敗時の既定の行数が 24 であることの確認)
+        fallback_rows); // [確認_異常系] - fallback_rows が 24 であること。(ioctl() 失敗時の既定の行数が 24 であることの確認)
 }
 
 // 端末サイズの 0 値が既定値へフォールバックすることの確認
@@ -425,10 +448,11 @@ TEST(pinnedPromptTest, platform_get_size_rejects_zero_ioctl_dimensions)
                                            void *arg) { *static_cast<struct winsize *>(arg) = zero_size; }),
                         Return(0)));
     // [Pre-Assert確認_異常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - ioctl から列数 0・行数 0 の端末サイズを返却する。
+    // [Pre-Assert手順] - ioctl() から、列数 0・行数 0 の端末サイズを設定して 0 を返す。
 
     // Act
-    test_pinned_prompt_get_size(&cols, &rows); // [手順] - 列数と行数が 0 の ioctl 結果を処理する。
+    test_pinned_prompt_get_size(
+        &cols, &rows); // [手順] - ioctl() が列数と行数を 0 で返す状態で test_pinned_prompt_get_size() を呼び出す。
 
     // Assert
     EXPECT_EQ(80, cols); // [確認_異常系] - cols が 80 であること。(列数 0 が既定値 80 へ置き換わることの確認)
@@ -450,23 +474,25 @@ TEST(pinnedPromptTest, platform_raw_mode_enters_and_leaves_once)
     EXPECT_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
         .WillOnce(DoAll(SetArgPointee<4>(original), Return(0)));
     // [Pre-Assert確認_正常系] - tcgetattr() が STDIN_FILENO を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - tcgetattr から元の端末設定を返却する。
+    // [Pre-Assert手順] - tcgetattr() から、元の端末設定を設定して 0 を返す。
     EXPECT_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _)).Times(2).WillRepeatedly(Return(0));
     // [Pre-Assert確認_正常系] - tcsetattr() が STDIN_FILENO を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - tcsetattr から 0 を返却する。
+    // [Pre-Assert手順] - tcsetattr() から 0 を返す。
     EXPECT_CALL(mock_signal, sigemptyset(_, _, _, _)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - sigemptyset() が 1 回呼び出されること。
-    // [Pre-Assert手順] - sigemptyset から 0 を返却する。
+    // [Pre-Assert手順] - sigemptyset() から 0 を返す。
     EXPECT_CALL(mock_signal, sigaction(_, _, _, SIGWINCH, _, _)).Times(2).WillRepeatedly(Return(0));
     // [Pre-Assert確認_正常系] - sigaction() が SIGWINCH を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - sigaction から 0 を返却する。
+    // [Pre-Assert手順] - sigaction() から 0 を返す。
 
     // Act
-    test_pinned_prompt_enter_raw(screen); // [手順] - raw モードへ移行する。
-    test_pinned_prompt_enter_raw(screen); // [手順] - raw モード移行済みの状態で再度移行する。
+    test_pinned_prompt_enter_raw(screen); // [手順] - test_pinned_prompt_enter_raw() を呼び出す。
+    test_pinned_prompt_enter_raw(
+        screen); // [手順] - raw モード移行済みの状態で test_pinned_prompt_enter_raw() を呼び出す。
     int active_after_enter = test_pinned_prompt_raw_active(screen);
-    test_pinned_prompt_leave_raw(screen); // [手順] - raw モードから復帰する。
-    test_pinned_prompt_leave_raw(screen); // [手順] - raw モード復帰済みの状態で再度復帰する。
+    test_pinned_prompt_leave_raw(screen); // [手順] - test_pinned_prompt_leave_raw() を呼び出す。
+    test_pinned_prompt_leave_raw(
+        screen); // [手順] - raw モード復帰済みの状態で test_pinned_prompt_leave_raw() を呼び出す。
     int active_after_leave = test_pinned_prompt_raw_active(screen);
 
     // Assert
@@ -500,12 +526,15 @@ TEST(pinnedPromptTest, platform_read_char_handles_resize_and_eof)
                         Return(static_cast<ssize_t>(1))))
         .WillOnce(Return(static_cast<ssize_t>(0)));
     // [Pre-Assert確認_正常系] - read() が STDIN_FILENO を指定して 3 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は -1、2 回目は文字 B、3 回目は 0 バイトを返却する。
+    // [Pre-Assert手順] - read() から 1 回目は -1、2 回目は文字 B、3 回目は 0 バイトの読み取り結果を返す。
 
     // Act
-    int resize_result = test_pinned_prompt_read_char(screen); // [手順] - EINTR とリサイズ通知がある状態で入力を読む。
-    int character_result = test_pinned_prompt_read_char(screen); // [手順] - 1 バイト入力を読み取る。
-    int eof_result = test_pinned_prompt_read_char(screen);       // [手順] - 0 バイト入力を EOF として読み取る。
+    int resize_result = test_pinned_prompt_read_char(
+        screen); // [手順] - EINTR とリサイズ通知がある状態で test_pinned_prompt_read_char() を呼び出す。
+    int character_result = test_pinned_prompt_read_char(
+        screen); // [手順] - 1 バイトの入力がある状態で test_pinned_prompt_read_char() を呼び出す。
+    int eof_result = test_pinned_prompt_read_char(
+        screen); // [手順] - 0 バイトの入力 (EOF) がある状態で test_pinned_prompt_read_char() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -538,24 +567,24 @@ TEST(pinnedPromptTest, platform_read_char_nb_handles_select_timeout)
     // Pre-Assert
     EXPECT_CALL(mock_select, select(_, _, _, _, _, _, _, _)).WillOnce(Return(0)).WillOnce(Return(1));
     // [Pre-Assert確認_正常系] - select() が 2 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目はタイムアウト (0)、2 回目は入力可 (1) を返却する。
+    // [Pre-Assert手順] - select() から 1 回目はタイムアウト (0)、2 回目は入力可 (1) を返す。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
         .WillOnce(DoAll(Invoke([character](const char *, const int, const char *, const int, void *arg, const size_t)
                                { *static_cast<unsigned char *>(arg) = character; }),
                         Return(static_cast<ssize_t>(1))));
     // [Pre-Assert確認_正常系] - read() が STDIN_FILENO を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - read から文字 C を返却する。
+    // [Pre-Assert手順] - read() から、文字 C を設定して 1 を返す。
 
     // Act
-    int timeout_result =
-        test_pinned_prompt_read_char_nb(screen); // [手順] - select がタイムアウトする状態で入力を読む。
-    int character_result =
-        test_pinned_prompt_read_char_nb(screen); // [手順] - select が入力可能を返す状態で入力を読む。
+    int timeout_result = test_pinned_prompt_read_char_nb(
+        screen); // [手順] - select() がタイムアウトする状態で test_pinned_prompt_read_char_nb() を呼び出す。
+    int character_result = test_pinned_prompt_read_char_nb(
+        screen); // [手順] - select() が入力可能を返す状態で test_pinned_prompt_read_char_nb() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         -1,
-        timeout_result); // [確認_正常系] - select がタイムアウトしたときの test_pinned_prompt_read_char_nb() の戻り値が -1 であること。(入力がないことの確認)
+        timeout_result); // [確認_正常系] - select() がタイムアウトしたときの test_pinned_prompt_read_char_nb() の戻り値が -1 であること。(入力がないことの確認)
     EXPECT_EQ(
         static_cast<int>('C'),
         character_result); // [確認_正常系] - 入力可能のときの test_pinned_prompt_read_char_nb() の戻り値が 'C' であること。
@@ -588,22 +617,22 @@ TEST(pinnedPromptTest, tty_readline_accepts_character_and_enter)
     EXPECT_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
         .WillOnce(DoAll(SetArgPointee<4>(original), Return(0)));
     // [Pre-Assert確認_正常系] - tcgetattr() が STDIN_FILENO を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - tcgetattr から元の端末設定を返却する。
+    // [Pre-Assert手順] - tcgetattr() から、元の端末設定を設定して 0 を返す。
     EXPECT_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _)).Times(2).WillRepeatedly(Return(0));
     // [Pre-Assert確認_正常系] - tcsetattr() が STDIN_FILENO を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - tcsetattr から 0 を返却する。
+    // [Pre-Assert手順] - tcsetattr() から 0 を返す。
     EXPECT_CALL(mock_signal, sigemptyset(_, _, _, _)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - sigemptyset() が 1 回呼び出されること。
-    // [Pre-Assert手順] - sigemptyset から 0 を返却する。
+    // [Pre-Assert手順] - sigemptyset() から 0 を返す。
     EXPECT_CALL(mock_signal, sigaction(_, _, _, SIGWINCH, _, _)).Times(2).WillRepeatedly(Return(0));
     // [Pre-Assert確認_正常系] - sigaction() が SIGWINCH を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - sigaction から 0 を返却する。
+    // [Pre-Assert手順] - sigaction() から 0 を返す。
     EXPECT_CALL(mock_ioctl, ioctl(_, _, _, STDOUT_FILENO, TIOCGWINSZ, _))
         .WillRepeatedly(DoAll(Invoke([size](const char *, const int, const char *, const int, const unsigned long,
                                             void *arg) { *static_cast<struct winsize *>(arg) = size; }),
                               Return(0)));
     // [Pre-Assert確認_正常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - ioctl から列数 80・行数 24 の端末サイズを返却する。
+    // [Pre-Assert手順] - ioctl() から、列数 80・行数 24 の端末サイズを設定して 0 を返す。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
         .WillOnce(DoAll(Invoke([first](const char *, const int, const char *, const int, void *arg, const size_t)
                                { *static_cast<unsigned char *>(arg) = first; }),
@@ -612,11 +641,12 @@ TEST(pinnedPromptTest, tty_readline_accepts_character_and_enter)
                                { *static_cast<unsigned char *>(arg) = second; }),
                         Return(static_cast<ssize_t>(1))));
     // [Pre-Assert確認_正常系] - read() が STDIN_FILENO を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は文字 a、2 回目は改行を返却する。
+    // [Pre-Assert手順] - read() から 1 回目は文字 a、2 回目は改行を 1 バイトずつ設定して 1 を返す。
 
     // Act
-    int result = cplat_pinned_prompt_readline(screen, output, sizeof(output),
-                                              "prompt> "); // [手順] - TTY の readline へ文字 a と Enter を入力する。
+    int result = cplat_pinned_prompt_readline(
+        screen, output, sizeof(output),
+        "prompt> "); // [手順] - 文字 a と Enter の入力がある TTY の状態で cplat_pinned_prompt_readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -651,32 +681,33 @@ TEST(pinnedPromptTest, tty_readline_reports_canceled_on_ctrl_c)
     EXPECT_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
         .WillOnce(DoAll(SetArgPointee<4>(original), Return(0)));
     // [Pre-Assert確認_異常系] - tcgetattr() が STDIN_FILENO を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - tcgetattr から元の端末設定を返却する。
+    // [Pre-Assert手順] - tcgetattr() から、元の端末設定を設定して 0 を返す。
     EXPECT_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _)).Times(2).WillRepeatedly(Return(0));
     // [Pre-Assert確認_異常系] - tcsetattr() が STDIN_FILENO を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - tcsetattr から 0 を返却する。
+    // [Pre-Assert手順] - tcsetattr() から 0 を返す。
     EXPECT_CALL(mock_signal, sigemptyset(_, _, _, _)).WillOnce(Return(0));
     // [Pre-Assert確認_異常系] - sigemptyset() が 1 回呼び出されること。
-    // [Pre-Assert手順] - sigemptyset から 0 を返却する。
+    // [Pre-Assert手順] - sigemptyset() から 0 を返す。
     EXPECT_CALL(mock_signal, sigaction(_, _, _, SIGWINCH, _, _)).Times(2).WillRepeatedly(Return(0));
     // [Pre-Assert確認_異常系] - sigaction() が SIGWINCH を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - sigaction から 0 を返却する。
+    // [Pre-Assert手順] - sigaction() から 0 を返す。
     EXPECT_CALL(mock_ioctl, ioctl(_, _, _, STDOUT_FILENO, TIOCGWINSZ, _))
         .WillRepeatedly(DoAll(Invoke([size](const char *, const int, const char *, const int, const unsigned long,
                                             void *arg) { *static_cast<struct winsize *>(arg) = size; }),
                               Return(0)));
     // [Pre-Assert確認_異常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - ioctl から列数 80・行数 24 の端末サイズを返却する。
+    // [Pre-Assert手順] - ioctl() から、列数 80・行数 24 の端末サイズを設定して 0 を返す。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
         .WillOnce(DoAll(Invoke([cancel](const char *, const int, const char *, const int, void *arg, const size_t)
                                { *static_cast<unsigned char *>(arg) = cancel; }),
                         Return(static_cast<ssize_t>(1))));
     // [Pre-Assert確認_異常系] - read() が STDIN_FILENO を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - read から Ctrl-C を返却する。
+    // [Pre-Assert手順] - read() から、Ctrl-C を設定して 1 を返す。
 
     // Act
-    int result = cplat_pinned_prompt_readline(screen, output, sizeof(output),
-                                              "prompt> "); // [手順] - TTY の readline へ Ctrl-C を入力する。
+    int result = cplat_pinned_prompt_readline(
+        screen, output, sizeof(output),
+        "prompt> "); // [手順] - Ctrl-C の入力がある TTY の状態で cplat_pinned_prompt_readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_CANCELED,
@@ -718,36 +749,56 @@ TEST(pinnedPromptTest, read_key_classifies_control_and_escape_sequences)
                 return (input_pos == sizeof(input) + 1U) ? static_cast<ssize_t>(-1) : static_cast<ssize_t>(0);
             }));
     // [Pre-Assert確認_正常系] - read() が STDIN_FILENO を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - 用意したキー列を順に返却し、消費後は EINTR と EOF を返却する。
+    // [Pre-Assert手順] - read() から、用意したキー列を 1 バイトずつ設定して 1 を順に返し、消費後は EINTR と EOF を返す。
     EXPECT_CALL(mock_select, select(_, _, _, _, _, _, _, _)).WillOnce(Return(0)).WillRepeatedly(Return(1));
     // [Pre-Assert確認_正常系] - select() が 1 回以上呼び出されること。
-    // [Pre-Assert手順] - 1 回目はタイムアウト (0)、以降は入力可 (1) を返却する。
+    // [Pre-Assert手順] - select() から 1 回目はタイムアウト (0)、以降は入力可 (1) を返す。
 
     // Act
-    int char_key = test_pinned_prompt_read_key(screen, &ch); // [手順] - ASCII 文字をキー分類する。
+    int char_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - ASCII 文字の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
     int char_value = ch;
-    int enter_key = test_pinned_prompt_read_key(screen, &ch);          // [手順] - 改行をキー分類する。
-    int backspace_key = test_pinned_prompt_read_key(screen, &ch);      // [手順] - DEL をキー分類する。
-    int control_key = test_pinned_prompt_read_key(screen, &ch);        // [手順] - 制御文字をキー分類する。
-    int high_bit_key = test_pinned_prompt_read_key(screen, &ch);       // [手順] - 8 ビット文字をキー分類する。
-    int clear_key = test_pinned_prompt_read_key(screen, &ch);          // [手順] - 単独の ESC をキー分類する。
-    int unknown_escape_key = test_pinned_prompt_read_key(screen, &ch); // [手順] - 未知の ESC 文字列を分類する。
-    int up_key = test_pinned_prompt_read_key(screen, &ch);             // [手順] - 上矢印を分類する。
-    int down_key = test_pinned_prompt_read_key(screen, &ch);           // [手順] - 下矢印を分類する。
-    int right_key = test_pinned_prompt_read_key(screen, &ch);          // [手順] - 右矢印を分類する。
-    int left_key = test_pinned_prompt_read_key(screen, &ch);           // [手順] - 左矢印を分類する。
-    int home_key = test_pinned_prompt_read_key(screen, &ch);           // [手順] - Home を分類する。
-    int end_key = test_pinned_prompt_read_key(screen, &ch);            // [手順] - End を分類する。
-    int home_tilde_key = test_pinned_prompt_read_key(screen, &ch);     // [手順] - ESC [ 1 ~ を分類する。
-    int delete_key = test_pinned_prompt_read_key(screen, &ch);         // [手順] - ESC [ 3 ~ を分類する。
-    int end_tilde_key = test_pinned_prompt_read_key(screen, &ch);      // [手順] - ESC [ 4 ~ を分類する。
-    int invalid_tilde_key = test_pinned_prompt_read_key(screen, &ch);  // [手順] - 不正な終端を分類する。
-    int invalid_csi_key = test_pinned_prompt_read_key(screen, &ch);    // [手順] - 未知の CSI を分類する。
+    int enter_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - 改行の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int backspace_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - DEL の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int control_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - 制御文字の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int high_bit_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - 8 ビット文字の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int clear_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - 単独の ESC の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int unknown_escape_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - 未知の ESC 文字列の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int up_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - 上矢印の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int down_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - 下矢印の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int right_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - 右矢印の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int left_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - 左矢印の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int home_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - Home の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int end_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - End の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int home_tilde_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - "\x1B[1~" の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int delete_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - "\x1B[3~" の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int end_tilde_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - "\x1B[4~" の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int invalid_tilde_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - 不正な終端の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int invalid_csi_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - 未知の CSI の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
 
     test_pinned_prompt_set_resize_pending(1);
     errno = EINTR;
-    int resize_key = test_pinned_prompt_read_key(screen, &ch); // [手順] - リサイズ通知をキー分類する。
-    int eof_key = test_pinned_prompt_read_key(screen, &ch);    // [手順] - EOF をキー分類する。
+    int resize_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - リサイズ通知がある状態で test_pinned_prompt_read_key() を呼び出す。
+    int eof_key = test_pinned_prompt_read_key(
+        screen, &ch); // [手順] - EOF の入力がある状態で test_pinned_prompt_read_key() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -828,16 +879,25 @@ TEST(pinnedPromptTest, edit_helpers_update_line_at_boundaries)
     // Pre-Assert
 
     // Act
-    test_pinned_prompt_set_edit_line(screen, "ab");           // [手順] - ASCII の編集行を設定する。
-    test_pinned_prompt_insert_byte(screen, 'X');              // [手順] - 編集行末尾へ X を挿入する。
-    test_pinned_prompt_backspace(screen);                     // [手順] - 編集行末尾の X を削除する。
-    test_pinned_prompt_set_edit_line(screen, "ab");           // [手順] - 削除対象を持つ編集行を設定する。
-    test_pinned_prompt_set_cursor(screen, 1U);                // [手順] - カーソルを b の直前へ移動する。
-    test_pinned_prompt_delete(screen);                        // [手順] - カーソル位置の b を削除する。
-    test_pinned_prompt_backspace(screen);                     // [手順] - カーソル先頭で backspace を実行する。
-    test_pinned_prompt_set_edit_line(screen, "\xE6\x97\xA5"); // [手順] - UTF-8 の編集行を設定する。
-    test_pinned_prompt_backspace(screen);                     // [手順] - UTF-8 文字を境界単位で削除する。
-    test_pinned_prompt_delete(screen);                        // [手順] - 編集行末尾で delete を実行する。
+    test_pinned_prompt_set_edit_line(
+        screen, "ab"); // [手順] - ASCII の編集行を指定して test_pinned_prompt_set_edit_line() を呼び出す。
+    test_pinned_prompt_insert_byte(screen, 'X'); // [手順] - X を指定して test_pinned_prompt_insert_byte() を呼び出す。
+    test_pinned_prompt_backspace(
+        screen); // [手順] - 編集行末尾に X がある状態で test_pinned_prompt_backspace() を呼び出す。
+    test_pinned_prompt_set_edit_line(
+        screen, "ab"); // [手順] - 削除対象を持つ編集行を指定して test_pinned_prompt_set_edit_line() を呼び出す。
+    test_pinned_prompt_set_cursor(screen,
+                                  1U); // [手順] - b の直前の位置を指定して test_pinned_prompt_set_cursor() を呼び出す。
+    test_pinned_prompt_delete(
+        screen); // [手順] - カーソルが b の直前にある状態で test_pinned_prompt_delete() を呼び出す。
+    test_pinned_prompt_backspace(
+        screen); // [手順] - カーソルが先頭にある状態で test_pinned_prompt_backspace() を呼び出す。
+    test_pinned_prompt_set_edit_line(
+        screen, "\xE6\x97\xA5"); // [手順] - UTF-8 の編集行を指定して test_pinned_prompt_set_edit_line() を呼び出す。
+    test_pinned_prompt_backspace(
+        screen); // [手順] - 編集行が UTF-8 文字の状態で test_pinned_prompt_backspace() を呼び出す。
+    test_pinned_prompt_delete(
+        screen); // [手順] - カーソルが編集行末尾にある状態で test_pinned_prompt_delete() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -872,16 +932,20 @@ TEST(pinnedPromptTest, render_handles_status_regions_and_empty_layout)
                                                  void *arg) { *static_cast<struct winsize *>(arg) = full_size; }),
                               Return(0)));
     // [Pre-Assert確認_正常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - ioctl から列数 24・行数 8 の端末サイズを返却する。
+    // [Pre-Assert手順] - ioctl() から、列数 24・行数 8 の端末サイズを設定して 0 を返す。
 
     // Act
-    test_pinned_prompt_render_state(screen, 1, 1, 1, 1, "P> ", "abc", "TOP", "RIGHT", "BOTTOM",
-                                    "BR"); // [手順] - 上下ステータスと入力行を描画する。
-    test_pinned_prompt_render(screen);     // [手順] - ステータス領域を含む TTY 描画を実行する。
-    test_pinned_prompt_render(screen);     // [手順] - status_dirty が解除された状態で再描画する。
-    test_pinned_prompt_render_state(screen, 1, 1, 1, 1, "", "", nullptr, nullptr, nullptr,
-                                    nullptr); // [手順] - 空のプロンプトとステータスを描画する。
-    test_pinned_prompt_render(screen);     // [手順] - 空状態の描画を実行する。
+    test_pinned_prompt_render_state(
+        screen, 1, 1, 1, 1, "P> ", "abc", "TOP", "RIGHT", "BOTTOM",
+        "BR"); // [手順] - 上下ステータスと入力行を指定して test_pinned_prompt_render_state() を呼び出す。
+    test_pinned_prompt_render(
+        screen); // [手順] - ステータス領域を含む TTY の状態で test_pinned_prompt_render() を呼び出す。
+    test_pinned_prompt_render(
+        screen); // [手順] - status_dirty が解除された状態で test_pinned_prompt_render() を呼び出す。
+    test_pinned_prompt_render_state(
+        screen, 1, 1, 1, 1, "", "", nullptr, nullptr, nullptr,
+        nullptr); // [手順] - 空のプロンプトとステータスを指定して test_pinned_prompt_render_state() を呼び出す。
+    test_pinned_prompt_render(screen); // [手順] - 空状態で test_pinned_prompt_render() を呼び出す。
 
     // Assert
     EXPECT_STREQ(
@@ -922,22 +986,22 @@ TEST(pinnedPromptTest, tty_readline_handles_editing_and_history)
         .Times(3)
         .WillRepeatedly(DoAll(SetArgPointee<4>(original), Return(0)));
     // [Pre-Assert確認_正常系] - tcgetattr() が STDIN_FILENO を指定して 3 回呼び出されること。
-    // [Pre-Assert手順] - tcgetattr から元の端末設定を返却する。
+    // [Pre-Assert手順] - tcgetattr() から、元の端末設定を設定して 0 を返す。
     EXPECT_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _)).Times(6).WillRepeatedly(Return(0));
     // [Pre-Assert確認_正常系] - tcsetattr() が STDIN_FILENO を指定して 6 回呼び出されること。
-    // [Pre-Assert手順] - tcsetattr から 0 を返却する。
+    // [Pre-Assert手順] - tcsetattr() から 0 を返す。
     EXPECT_CALL(mock_signal, sigemptyset(_, _, _, _)).Times(3).WillRepeatedly(Return(0));
     // [Pre-Assert確認_正常系] - sigemptyset() が 3 回呼び出されること。
-    // [Pre-Assert手順] - sigemptyset から 0 を返却する。
+    // [Pre-Assert手順] - sigemptyset() から 0 を返す。
     EXPECT_CALL(mock_signal, sigaction(_, _, _, SIGWINCH, _, _)).Times(6).WillRepeatedly(Return(0));
     // [Pre-Assert確認_正常系] - sigaction() が SIGWINCH を指定して 6 回呼び出されること。
-    // [Pre-Assert手順] - sigaction から 0 を返却する。
+    // [Pre-Assert手順] - sigaction() から 0 を返す。
     EXPECT_CALL(mock_ioctl, ioctl(_, _, _, STDOUT_FILENO, TIOCGWINSZ, _))
         .WillRepeatedly(DoAll(Invoke([size](const char *, const int, const char *, const int, const unsigned long,
                                             void *arg) { *static_cast<struct winsize *>(arg) = size; }),
                               Return(0)));
     // [Pre-Assert確認_正常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - ioctl から列数 80・行数 24 の端末サイズを返却する。
+    // [Pre-Assert手順] - ioctl() から、列数 80・行数 24 の端末サイズを設定して 0 を返す。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
         .WillRepeatedly(Invoke(
             [&input, &input_pos](const char *, const int, const char *, const int, void *arg, const size_t)
@@ -950,18 +1014,21 @@ TEST(pinnedPromptTest, tty_readline_handles_editing_and_history)
                 return static_cast<ssize_t>(1);
             }));
     // [Pre-Assert確認_正常系] - read() が STDIN_FILENO を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - 用意したキー列を順に返却する。
+    // [Pre-Assert手順] - read() から、用意したキー列を 1 バイトずつ設定して 1 を順に返す。
     EXPECT_CALL(mock_select, select(_, _, _, _, _, _, _, _)).WillRepeatedly(Return(1));
     // [Pre-Assert確認_正常系] - select() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - select から入力可 (1) を返却する。
+    // [Pre-Assert手順] - select() から入力可 (1) を返す。
 
     // Act
-    int first_result = cplat_pinned_prompt_readline_at(screen, first_output, sizeof(first_output), "", "history.c",
-                                                       10); // [手順] - 編集キーを含む最初の入力を確定する。
-    int second_result = cplat_pinned_prompt_readline_at(screen, second_output, sizeof(second_output), "", "history.c",
-                                                        10); // [手順] - 2 件目の入力を同じ履歴へ追加する。
-    int third_result = cplat_pinned_prompt_readline_at(screen, third_output, sizeof(third_output), "", "history.c",
-                                                       10); // [手順] - 上下キーで履歴を参照して入力を確定する。
+    int first_result = cplat_pinned_prompt_readline_at(
+        screen, first_output, sizeof(first_output), "", "history.c",
+        10); // [手順] - 編集キーを含む最初の入力がある状態で cplat_pinned_prompt_readline_at() を呼び出す。
+    int second_result = cplat_pinned_prompt_readline_at(
+        screen, second_output, sizeof(second_output), "", "history.c",
+        10); // [手順] - 2 件目の入力を同じ呼び出し位置の履歴へ追加する状態で cplat_pinned_prompt_readline_at() を呼び出す。
+    int third_result = cplat_pinned_prompt_readline_at(
+        screen, third_output, sizeof(third_output), "", "history.c",
+        10); // [手順] - 上下キーで履歴を参照する入力がある状態で cplat_pinned_prompt_readline_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1008,22 +1075,22 @@ TEST(pinnedPromptTest, tty_readline_continues_after_resize)
     EXPECT_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
         .WillOnce(DoAll(SetArgPointee<4>(original), Return(0)));
     // [Pre-Assert確認_正常系] - tcgetattr() が STDIN_FILENO を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - tcgetattr から元の端末設定を返却する。
+    // [Pre-Assert手順] - tcgetattr() から、元の端末設定を設定して 0 を返す。
     EXPECT_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _)).Times(2).WillRepeatedly(Return(0));
     // [Pre-Assert確認_正常系] - tcsetattr() が STDIN_FILENO を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - tcsetattr から 0 を返却する。
+    // [Pre-Assert手順] - tcsetattr() から 0 を返す。
     EXPECT_CALL(mock_signal, sigemptyset(_, _, _, _)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - sigemptyset() が 1 回呼び出されること。
-    // [Pre-Assert手順] - sigemptyset から 0 を返却する。
+    // [Pre-Assert手順] - sigemptyset() から 0 を返す。
     EXPECT_CALL(mock_signal, sigaction(_, _, _, SIGWINCH, _, _)).Times(2).WillRepeatedly(Return(0));
     // [Pre-Assert確認_正常系] - sigaction() が SIGWINCH を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - sigaction から 0 を返却する。
+    // [Pre-Assert手順] - sigaction() から 0 を返す。
     EXPECT_CALL(mock_ioctl, ioctl(_, _, _, STDOUT_FILENO, TIOCGWINSZ, _))
         .WillRepeatedly(DoAll(Invoke([size](const char *, const int, const char *, const int, const unsigned long,
                                             void *arg) { *static_cast<struct winsize *>(arg) = size; }),
                               Return(0)));
     // [Pre-Assert確認_正常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - ioctl から列数 80・行数 24 の端末サイズを返却する。
+    // [Pre-Assert手順] - ioctl() から、列数 80・行数 24 の端末サイズを設定して 0 を返す。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
         .WillRepeatedly(Invoke(
             [&read_count](const char *, const int, const char *, const int, void *arg, const size_t)
@@ -1037,11 +1104,12 @@ TEST(pinnedPromptTest, tty_readline_continues_after_resize)
                 return static_cast<ssize_t>(1);
             }));
     // [Pre-Assert確認_正常系] - read() が STDIN_FILENO を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - 1 回目は EINTR、以降は改行を返却する。
+    // [Pre-Assert手順] - read() から 1 回目は EINTR、以降は改行を返す。
 
     // Act
-    int result = cplat_pinned_prompt_readline(screen, output, sizeof(output),
-                                              ""); // [手順] - リサイズ通知後に Enter を入力する。
+    int result = cplat_pinned_prompt_readline(
+        screen, output, sizeof(output),
+        ""); // [手順] - リサイズ通知後に Enter の入力がある状態で cplat_pinned_prompt_readline() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_pinned_prompt_readline() の戻り値が CPLAT_OK であること。
@@ -1069,27 +1137,36 @@ TEST(pinnedPromptTest, static_text_helpers_cover_boundary_sequences)
     // Pre-Assert
 
     // Act
-    size_t at_end = test_pinned_prompt_utf8_width("A", 1U, 1U); // [手順] - 文字列末尾の表示幅を取得する。
-    size_t two_byte_width =
-        test_pinned_prompt_utf8_width(two_byte, sizeof(two_byte) - 1U, 0U); // [手順] - 2 バイト文字の表示幅を取得する。
-    size_t three_byte_width = test_pinned_prompt_utf8_width(three_byte, sizeof(three_byte) - 1U,
-                                                            0U); // [手順] - CJK 以外の 3 バイト文字の表示幅を取得する。
+    size_t at_end = test_pinned_prompt_utf8_width(
+        "A", 1U, 1U); // [手順] - 文字列末尾の位置を指定して test_pinned_prompt_utf8_width() を呼び出す。
+    size_t two_byte_width = test_pinned_prompt_utf8_width(
+        two_byte, sizeof(two_byte) - 1U,
+        0U); // [手順] - 2 バイト文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
+    size_t three_byte_width = test_pinned_prompt_utf8_width(
+        three_byte, sizeof(three_byte) - 1U,
+        0U); // [手順] - CJK 以外の 3 バイト文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
     size_t astral_wide_width = test_pinned_prompt_utf8_width(
-        astral_wide, sizeof(astral_wide) - 1U, 0U); // [手順] - 2FFFF を超える 4 バイト文字の表示幅を取得する。
+        astral_wide, sizeof(astral_wide) - 1U,
+        0U); // [手順] - 2FFFF を超える 4 バイト文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
     size_t truncated_three_width = test_pinned_prompt_utf8_width(
-        truncated_three, sizeof(truncated_three) - 1U, 0U); // [手順] - 不完全な 3 バイト文字の表示幅を取得する。
+        truncated_three, sizeof(truncated_three) - 1U,
+        0U); // [手順] - 不完全な 3 バイト文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
     size_t truncated_four_width = test_pinned_prompt_utf8_width(
-        truncated_four, sizeof(truncated_four) - 1U, 0U); // [手順] - 不完全な 4 バイト文字の表示幅を取得する。
-    size_t valid_sgr_len = test_pinned_prompt_ansi_len(valid_sgr, sizeof(valid_sgr) - 1U,
-                                                       0U); // [手順] - パラメーター付き SGR の長さを取得する。
-    size_t invalid_sgr_len = test_pinned_prompt_ansi_len(invalid_sgr, sizeof(invalid_sgr) - 1U,
-                                                         0U); // [手順] - 不正終端 SGR の長さを取得する。
-    size_t incomplete_sgr_len = test_pinned_prompt_ansi_len(incomplete_sgr, sizeof(incomplete_sgr) - 1U,
-                                                            0U); // [手順] - 未完了 SGR の長さを取得する。
-    size_t zero_visible =
-        test_pinned_prompt_visible_bytes("A", 1U, 0U, 0U); // [手順] - 表示列数 0 の可視バイト数を取得する。
-    size_t clipped_display =
-        test_pinned_prompt_display_width("ABC", 3U, 1U, 8U); // [手順] - 終端を超える表示幅を取得する。
+        truncated_four, sizeof(truncated_four) - 1U,
+        0U); // [手順] - 不完全な 4 バイト文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
+    size_t valid_sgr_len = test_pinned_prompt_ansi_len(
+        valid_sgr, sizeof(valid_sgr) - 1U,
+        0U); // [手順] - パラメーター付き SGR を指定して test_pinned_prompt_ansi_len() を呼び出す。
+    size_t invalid_sgr_len = test_pinned_prompt_ansi_len(
+        invalid_sgr, sizeof(invalid_sgr) - 1U,
+        0U); // [手順] - 不正終端の SGR を指定して test_pinned_prompt_ansi_len() を呼び出す。
+    size_t incomplete_sgr_len =
+        test_pinned_prompt_ansi_len(incomplete_sgr, sizeof(incomplete_sgr) - 1U,
+                                    0U); // [手順] - 未完了の SGR を指定して test_pinned_prompt_ansi_len() を呼び出す。
+    size_t zero_visible = test_pinned_prompt_visible_bytes(
+        "A", 1U, 0U, 0U); // [手順] - 表示列数 0 を指定して test_pinned_prompt_visible_bytes() を呼び出す。
+    size_t clipped_display = test_pinned_prompt_display_width(
+        "ABC", 3U, 1U, 8U); // [手順] - 終端を超える範囲を指定して test_pinned_prompt_display_width() を呼び出す。
 
     // Assert
     EXPECT_EQ(0U, at_end); // [確認_正常系] - 末尾位置の test_pinned_prompt_utf8_width() の戻り値が 0 であること。
@@ -1132,7 +1209,8 @@ TEST(pinnedPromptTest, history_helpers_cover_empty_and_duplicate_entries)
     // Pre-Assert
 
     // Act
-    test_pinned_prompt_history_edge_cases(screen); // [手順] - 空履歴、重複履歴、履歴移動の境界を処理する。
+    test_pinned_prompt_history_edge_cases(
+        screen); // [手順] - 空履歴、重複履歴、履歴移動の境界の状態で test_pinned_prompt_history_edge_cases() を呼び出す。
 
     // Assert
     EXPECT_STREQ(
@@ -1163,38 +1241,43 @@ TEST(pinnedPromptTest, platform_raw_mode_handles_failures_and_reentry)
         .WillOnce(DoAll(SetArgPointee<4>(original), Return(0)))
         .WillOnce(DoAll(SetArgPointee<4>(original), Return(0)));
     // [Pre-Assert確認_異常系] - tcgetattr() が STDIN_FILENO を指定して 3 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は -1 を返却し、以降は元の端末設定を返却する。
+    // [Pre-Assert手順] - tcgetattr() から 1 回目は -1 を返し、以降は元の端末設定を設定して 0 を返す。
     EXPECT_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _)).WillOnce(Return(-1)).WillRepeatedly(Return(0));
     // [Pre-Assert確認_異常系] - tcsetattr() が STDIN_FILENO を指定して 1 回以上呼び出されること。
-    // [Pre-Assert手順] - 1 回目は -1 を返却し、以降は 0 を返却する。
+    // [Pre-Assert手順] - tcsetattr() から 1 回目は -1 を返し、以降は 0 を返す。
     EXPECT_CALL(mock_signal, sigemptyset(_, _, _, _)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - sigemptyset() が 1 回呼び出されること。
-    // [Pre-Assert手順] - sigemptyset から 0 を返却する。
+    // [Pre-Assert手順] - sigemptyset() から 0 を返す。
     EXPECT_CALL(mock_signal, sigaction(_, _, _, SIGWINCH, _, _)).Times(2).WillRepeatedly(Return(0));
     // [Pre-Assert確認_正常系] - sigaction() が SIGWINCH を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - sigaction から 0 を返却する。
+    // [Pre-Assert手順] - sigaction() から 0 を返す。
 
     // Act
-    test_pinned_prompt_enter_raw(screen); // [手順] - tcgetattr 失敗を含む raw モード移行を行う。
-    int after_getattr_failure =
-        test_pinned_prompt_raw_active(screen); // [手順] - tcgetattr 失敗後の raw 状態を取得する。
-    test_pinned_prompt_enter_raw(screen);      // [手順] - tcsetattr 失敗を含む raw モード移行を行う。
-    int after_setattr_failure =
-        test_pinned_prompt_raw_active(screen);               // [手順] - tcsetattr 失敗後の raw 状態を取得する。
-    test_pinned_prompt_enter_raw(screen);                    // [手順] - raw モードを正常に開始する。
-    int after_enter = test_pinned_prompt_raw_active(screen); // [手順] - raw モード開始後の状態を取得する。
-    test_pinned_prompt_enter_raw(screen);                    // [手順] - raw モード中に再度開始する。
-    test_pinned_prompt_leave_raw(screen);                    // [手順] - raw モードを解除する。
-    int after_leave = test_pinned_prompt_raw_active(screen); // [手順] - raw モード解除後の状態を取得する。
-    test_pinned_prompt_leave_raw(screen);                    // [手順] - raw モード解除済みの状態で再度解除する。
+    test_pinned_prompt_enter_raw(
+        screen); // [手順] - tcgetattr() が失敗する状態で test_pinned_prompt_enter_raw() を呼び出す。
+    int after_getattr_failure = test_pinned_prompt_raw_active(
+        screen); // [手順] - tcgetattr() の失敗後の状態で test_pinned_prompt_raw_active() を呼び出す。
+    test_pinned_prompt_enter_raw(
+        screen); // [手順] - tcsetattr() が失敗する状態で test_pinned_prompt_enter_raw() を呼び出す。
+    int after_setattr_failure = test_pinned_prompt_raw_active(
+        screen); // [手順] - tcsetattr() の失敗後の状態で test_pinned_prompt_raw_active() を呼び出す。
+    test_pinned_prompt_enter_raw(screen); // [手順] - test_pinned_prompt_enter_raw() を呼び出す。
+    int after_enter = test_pinned_prompt_raw_active(
+        screen); // [手順] - raw モード開始後の状態で test_pinned_prompt_raw_active() を呼び出す。
+    test_pinned_prompt_enter_raw(screen); // [手順] - raw モード中の状態で test_pinned_prompt_enter_raw() を呼び出す。
+    test_pinned_prompt_leave_raw(screen); // [手順] - test_pinned_prompt_leave_raw() を呼び出す。
+    int after_leave = test_pinned_prompt_raw_active(
+        screen); // [手順] - raw モード解除後の状態で test_pinned_prompt_raw_active() を呼び出す。
+    test_pinned_prompt_leave_raw(
+        screen); // [手順] - raw モード解除済みの状態で test_pinned_prompt_leave_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         0,
-        after_getattr_failure); // [確認_異常系] - tcgetattr 失敗後の test_pinned_prompt_raw_active() の戻り値が 0 であること。(raw モードが無効であることの確認)
+        after_getattr_failure); // [確認_異常系] - tcgetattr() 失敗後の test_pinned_prompt_raw_active() の戻り値が 0 であること。(raw モードが無効であることの確認)
     EXPECT_EQ(
         0,
-        after_setattr_failure); // [確認_異常系] - tcsetattr 失敗後の test_pinned_prompt_raw_active() の戻り値が 0 であること。(raw モードが無効であることの確認)
+        after_setattr_failure); // [確認_異常系] - tcsetattr() 失敗後の test_pinned_prompt_raw_active() の戻り値が 0 であること。(raw モードが無効であることの確認)
     EXPECT_EQ(
         1,
         after_enter); // [確認_正常系] - raw モード開始後の test_pinned_prompt_raw_active() の戻り値が 1 であること。(raw モードが有効であることの確認)
@@ -1238,26 +1321,29 @@ TEST(pinnedPromptTest, platform_read_helpers_handle_interrupt_and_select_results
                 return static_cast<ssize_t>(1);
             }));
     // [Pre-Assert確認_異常系] - read() が STDIN_FILENO を指定して 3 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は EINTR、2 回目は EAGAIN、3 回目は文字 Q を返却する。
+    // [Pre-Assert手順] - read() から 1 回目は EINTR、2 回目は EAGAIN、3 回目は文字 Q を返す。
     EXPECT_CALL(mock_select, select(_, _, _, _, _, _, _, _)).WillOnce(Return(0)).WillOnce(Return(1));
     // [Pre-Assert確認_異常系] - select() が 2 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目はタイムアウト (0)、2 回目は入力可 (1) を返却する。
+    // [Pre-Assert手順] - select() から 1 回目はタイムアウト (0)、2 回目は入力可 (1) を返す。
 
     // Act
-    int non_eintr_result = test_pinned_prompt_read_char(screen); // [手順] - EINTR 後に非 EINTR read 失敗を処理する。
-    int select_timeout_result = test_pinned_prompt_read_char_nb(screen); // [手順] - select のタイムアウトを処理する。
-    int select_read_result = test_pinned_prompt_read_char_nb(screen);    // [手順] - select 成功後に 1 文字を読み取る。
+    int non_eintr_result = test_pinned_prompt_read_char(
+        screen); // [手順] - EINTR の後に EINTR 以外の read() の失敗がある状態で test_pinned_prompt_read_char() を呼び出す。
+    int select_timeout_result = test_pinned_prompt_read_char_nb(
+        screen); // [手順] - select() がタイムアウトする状態で test_pinned_prompt_read_char_nb() を呼び出す。
+    int select_read_result = test_pinned_prompt_read_char_nb(
+        screen); // [手順] - select() が成功し、1 文字を読み取れる状態で test_pinned_prompt_read_char_nb() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         -1,
-        non_eintr_result); // [確認_異常系] - 非 EINTR の read 失敗時の test_pinned_prompt_read_char() の戻り値が -1 であること。
+        non_eintr_result); // [確認_異常系] - 非 EINTR の read() 失敗時の test_pinned_prompt_read_char() の戻り値が -1 であること。
     EXPECT_EQ(
         -1,
-        select_timeout_result); // [確認_異常系] - select がタイムアウトしたときの test_pinned_prompt_read_char_nb() の戻り値が -1 であること。(入力がないことの確認)
+        select_timeout_result); // [確認_異常系] - select() がタイムアウトしたときの test_pinned_prompt_read_char_nb() の戻り値が -1 であること。(入力がないことの確認)
     EXPECT_EQ(
         static_cast<int>('Q'),
-        select_read_result); // [確認_正常系] - select 成功後の test_pinned_prompt_read_char_nb() の戻り値が 'Q' であること。
+        select_read_result); // [確認_正常系] - select() 成功後の test_pinned_prompt_read_char_nb() の戻り値が 'Q' であること。
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
@@ -1280,14 +1366,17 @@ TEST(pinnedPromptTest, prepare_output_handles_tty_visibility)
                                             void *arg) { *static_cast<struct winsize *>(arg) = size; }),
                               Return(0)));
     // [Pre-Assert確認_正常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - ioctl から列数 40・行数 8 の端末サイズを返却する。
+    // [Pre-Assert手順] - ioctl() から、列数 40・行数 8 の端末サイズを設定して 0 を返す。
 
     // Act
-    test_pinned_prompt_set_tty(screen, 0);     // [手順] - 非 TTY 状態へ変更する。
-    test_pinned_prompt_prepare_output(screen); // [手順] - 非 TTY の出力準備を行う。
-    test_pinned_prompt_render_state(screen, 1, 1, 0, 0, "P> ", "text", nullptr, nullptr, nullptr,
-                                    nullptr);  // [手順] - 表示中の TTY 状態を用意する。
-    test_pinned_prompt_prepare_output(screen); // [手順] - 表示中 TTY の出力準備を行う。
+    test_pinned_prompt_set_tty(screen, 0); // [手順] - 非 TTY を指定して test_pinned_prompt_set_tty() を呼び出す。
+    test_pinned_prompt_prepare_output(
+        screen); // [手順] - 非 TTY の状態で test_pinned_prompt_prepare_output() を呼び出す。
+    test_pinned_prompt_render_state(
+        screen, 1, 1, 0, 0, "P> ", "text", nullptr, nullptr, nullptr,
+        nullptr); // [手順] - 表示中の TTY 状態を指定して test_pinned_prompt_render_state() を呼び出す。
+    test_pinned_prompt_prepare_output(
+        screen); // [手順] - 表示中の TTY の状態で test_pinned_prompt_prepare_output() を呼び出す。
 
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(非 TTY と表示中の TTY の出力準備が完了したことの確認)
@@ -1312,35 +1401,44 @@ TEST(pinnedPromptTest, write_and_printf_handle_arguments_and_short_write)
     // Pre-Assert
     EXPECT_CALL(mock_stdio, fwrite(_, _, _, _, _, _, _)).WillOnce(Return(2U)).WillRepeatedly(ReturnArg<5>());
     // [Pre-Assert確認_異常系] - fwrite() が 1 回以上呼び出されること。
-    // [Pre-Assert手順] - 1 回目は 2 バイト、以降は要求サイズを返却する。
+    // [Pre-Assert手順] - fwrite() から 1 回目は 2 バイト、以降は要求サイズを返す。
 
     // Act
-    int invalid_screen = cplat_pinned_prompt_write(nullptr, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, data, 3U,
-                                                   &written); // [手順] - NULL ハンドルで書き込む。
-    int invalid_data = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, nullptr, 1U,
-                                                 &written); // [手順] - NULL データを正のサイズで書き込む。
-    int short_result = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, data, 3U,
-                                                 &written); // [手順] - 標準出力へ短い書き込みを行う。
-    int stdout_result = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, data, 3U,
-                                                  &written); // [手順] - 標準出力へ全量を書き込む。
-    int stderr_result = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR, data, 3U,
-                                                  &written); // [手順] - 標準エラーへ全量を書き込む。
-    int empty_result = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, nullptr, 0U,
-                                                 &written); // [手順] - NULL データをサイズ 0 で書き込む。
-    int printf_result = cplat_pinned_prompt_printf(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s-%d", "value",
-                                                   7); // [手順] - 書式付き文字列を書き込む。
-    int null_fmt_result = cplat_pinned_prompt_printf(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                                                     nullptr); // [手順] - NULL 書式で空文字列を書き込む。
-    int null_printf_result = cplat_pinned_prompt_printf(nullptr, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                                                        "x"); // [手順] - NULL ハンドルで書式付き書き込みを行う。
+    int invalid_screen = cplat_pinned_prompt_write(
+        nullptr, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, data, 3U,
+        &written); // [手順] - ハンドルに nullptr を指定して cplat_pinned_prompt_write() を呼び出す。
+    int invalid_data = cplat_pinned_prompt_write(
+        screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, nullptr, 1U,
+        &written); // [手順] - データに nullptr、サイズに正の値を指定して cplat_pinned_prompt_write() を呼び出す。
+    int short_result = cplat_pinned_prompt_write(
+        screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, data, 3U,
+        &written); // [手順] - 標準出力で短い書き込みになる状態で cplat_pinned_prompt_write() を呼び出す。
+    int stdout_result =
+        cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, data, 3U,
+                                  &written); // [手順] - 標準出力を指定して cplat_pinned_prompt_write() を呼び出す。
+    int stderr_result =
+        cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR, data, 3U,
+                                  &written); // [手順] - 標準エラーを指定して cplat_pinned_prompt_write() を呼び出す。
+    int empty_result = cplat_pinned_prompt_write(
+        screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, nullptr, 0U,
+        &written); // [手順] - データに nullptr、サイズに 0 を指定して cplat_pinned_prompt_write() を呼び出す。
+    int printf_result =
+        cplat_pinned_prompt_printf(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s-%d", "value",
+                                   7); // [手順] - 書式付き文字列を指定して cplat_pinned_prompt_printf() を呼び出す。
+    int null_fmt_result = cplat_pinned_prompt_printf(
+        screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
+        nullptr); // [手順] - 書式に nullptr を指定して cplat_pinned_prompt_printf() を呼び出す。
+    int null_printf_result = cplat_pinned_prompt_printf(
+        nullptr, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
+        "x"); // [手順] - ハンドルに nullptr を指定して cplat_pinned_prompt_printf() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        invalid_screen); // [確認_異常系] - NULL ハンドルの cplat_pinned_prompt_write() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        invalid_screen); // [確認_異常系] - nullptr ハンドルの cplat_pinned_prompt_write() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        invalid_data); // [確認_異常系] - NULL データの cplat_pinned_prompt_write() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        invalid_data); // [確認_異常系] - nullptr データの cplat_pinned_prompt_write() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         short_result); // [確認_異常系] - 短い書き込みの cplat_pinned_prompt_write() の戻り値が CPLAT_ERR_UNKNOWN であること。
@@ -1357,10 +1455,10 @@ TEST(pinnedPromptTest, write_and_printf_handle_arguments_and_short_write)
         printf_result); // [確認_正常系] - 書式付きの cplat_pinned_prompt_printf() の戻り値が 7 であること。(書式 "value-7" の 7 バイトを書き込んだことの確認)
     EXPECT_EQ(
         0,
-        null_fmt_result); // [確認_正常系] - NULL 書式の cplat_pinned_prompt_printf() の戻り値が 0 であること。(空文字列を書き込んだことの確認)
+        null_fmt_result); // [確認_正常系] - nullptr 書式の cplat_pinned_prompt_printf() の戻り値が 0 であること。(空文字列を書き込んだことの確認)
     EXPECT_EQ(
         -1,
-        null_printf_result); // [確認_異常系] - NULL ハンドルの cplat_pinned_prompt_printf() の戻り値が -1 であること。
+        null_printf_result); // [確認_異常系] - nullptr ハンドルの cplat_pinned_prompt_printf() の戻り値が -1 であること。
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
@@ -1384,16 +1482,18 @@ TEST(pinnedPromptTest, readline_fmt_formats_and_accepts_null_format)
         .WillOnce(DoAll(SetArrayArgument<0>(first_input, first_input + sizeof(first_input)), Return(CPLAT_OK)))
         .WillOnce(DoAll(SetArrayArgument<0>(second_input, second_input + sizeof(second_input)), Return(CPLAT_OK)));
     // [Pre-Assert確認_正常系] - cplat_fgets() が 2 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は "first"、2 回目は "second" を返却する。
+    // [Pre-Assert手順] - cplat_fgets() から 1 回目は "first"、2 回目は "second" を設定して CPLAT_OK を返す。
 
     // Act
-    int formatted_result = cplat_pinned_prompt_readline_fmt(screen, first_output, sizeof(first_output), "%s-%d", "p",
-                                                            3); // [手順] - 書式付き readline を呼び出す。
-    int null_format_result = cplat_pinned_prompt_readline_fmt(screen, second_output, sizeof(second_output),
-                                                              nullptr); // [手順] - NULL 書式の readline を呼び出す。
-    int null_screen_result =
-        cplat_pinned_prompt_readline_fmt_at(nullptr, second_output, sizeof(second_output), "file", 1, "%s",
-                                            "x"); // [手順] - NULL ハンドルの書式付き readline を呼び出す。
+    int formatted_result =
+        cplat_pinned_prompt_readline_fmt(screen, first_output, sizeof(first_output), "%s-%d", "p",
+                                         3); // [手順] - 書式を指定して cplat_pinned_prompt_readline_fmt() を呼び出す。
+    int null_format_result = cplat_pinned_prompt_readline_fmt(
+        screen, second_output, sizeof(second_output),
+        nullptr); // [手順] - 書式に nullptr を指定して cplat_pinned_prompt_readline_fmt() を呼び出す。
+    int null_screen_result = cplat_pinned_prompt_readline_fmt_at(
+        nullptr, second_output, sizeof(second_output), "file", 1, "%s",
+        "x"); // [手順] - ハンドルに nullptr を指定して cplat_pinned_prompt_readline_fmt_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1402,11 +1502,11 @@ TEST(pinnedPromptTest, readline_fmt_formats_and_accepts_null_format)
     EXPECT_STREQ("first", first_output); // [確認_正常系] - first_output が "first" であること。
     EXPECT_EQ(
         CPLAT_OK,
-        null_format_result); // [確認_正常系] - NULL 書式の cplat_pinned_prompt_readline_fmt() の戻り値が CPLAT_OK であること。
+        null_format_result); // [確認_正常系] - nullptr 書式の cplat_pinned_prompt_readline_fmt() の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("second", second_output); // [確認_正常系] - second_output が "second" であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_screen_result); // [確認_異常系] - NULL ハンドルの cplat_pinned_prompt_readline_fmt_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_screen_result); // [確認_異常系] - nullptr ハンドルの cplat_pinned_prompt_readline_fmt_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
@@ -1428,17 +1528,17 @@ TEST(pinnedPromptTest, status_apis_reject_invalid_position_and_alignment)
     // Pre-Assert
 
     // Act
-    int invalid_enable =
-        cplat_pinned_prompt_status_enable(screen, invalid_position, 1); // [手順] - 不正な位置を有効化する。
-    int invalid_top_align =
-        cplat_pinned_prompt_status_set(screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP, invalid_align,
-                                       "x"); // [手順] - 上部へ不正な配置を設定する。
-    int invalid_bottom_align =
-        cplat_pinned_prompt_status_set(screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM, invalid_align,
-                                       "x"); // [手順] - 下部へ不正な配置を設定する。
-    int invalid_set_position =
-        cplat_pinned_prompt_status_set(screen, invalid_position, CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT,
-                                       "x"); // [手順] - 不正な位置へ内容を設定する。
+    int invalid_enable = cplat_pinned_prompt_status_enable(
+        screen, invalid_position, 1); // [手順] - 不正な位置を指定して cplat_pinned_prompt_status_enable() を呼び出す。
+    int invalid_top_align = cplat_pinned_prompt_status_set(
+        screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP, invalid_align,
+        "x"); // [手順] - 上部と不正な配置を指定して cplat_pinned_prompt_status_set() を呼び出す。
+    int invalid_bottom_align = cplat_pinned_prompt_status_set(
+        screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM, invalid_align,
+        "x"); // [手順] - 下部と不正な配置を指定して cplat_pinned_prompt_status_set() を呼び出す。
+    int invalid_set_position = cplat_pinned_prompt_status_set(
+        screen, invalid_position, CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT,
+        "x"); // [手順] - 不正な位置を指定して cplat_pinned_prompt_status_set() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1476,22 +1576,22 @@ static void expect_tty_input(Mock_ioctl &mock_ioctl, Mock_signal &mock_signal, M
     EXPECT_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
         .WillOnce(DoAll(SetArgPointee<4>(original), Return(0)));
     // [Pre-Assert確認_正常系] - tcgetattr() が STDIN_FILENO を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 端末設定の取得に成功し、元の設定を返す。
+    // [Pre-Assert手順] - tcgetattr() から、元の端末設定を設定して 0 を返す。
     EXPECT_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _)).WillRepeatedly(Return(0));
     // [Pre-Assert確認_正常系] - tcsetattr() が STDIN_FILENO を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - 端末設定の変更に成功する。
+    // [Pre-Assert手順] - tcsetattr() から 0 を返す。
     EXPECT_CALL(mock_signal, sigemptyset(_, _, _, _)).WillRepeatedly(Return(0));
     // [Pre-Assert確認_正常系] - sigemptyset() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - シグナル集合の初期化に成功する。
+    // [Pre-Assert手順] - sigemptyset() から 0 を返す。
     EXPECT_CALL(mock_signal, sigaction(_, _, _, SIGWINCH, _, _)).WillRepeatedly(Return(0));
     // [Pre-Assert確認_正常系] - sigaction() が SIGWINCH を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - SIGWINCH のハンドラー登録に成功する。
+    // [Pre-Assert手順] - sigaction() から 0 を返す。
     EXPECT_CALL(mock_ioctl, ioctl(_, _, _, STDOUT_FILENO, TIOCGWINSZ, _))
         .WillRepeatedly(DoAll(Invoke([size](const char *, const int, const char *, const int, const unsigned long,
                                             void *arg) { *static_cast<struct winsize *>(arg) = size; }),
                               Return(0)));
     // [Pre-Assert確認_正常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - 端末サイズとして 80 列、24 行を返す。
+    // [Pre-Assert手順] - ioctl() から、列数 80・行数 24 の端末サイズを設定して 0 を返す。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
         .WillRepeatedly(Invoke(
             [bytes, position](const char *, const int, const char *, const int, void *arg, const size_t) -> ssize_t
@@ -1505,7 +1605,7 @@ static void expect_tty_input(Mock_ioctl &mock_ioctl, Mock_signal &mock_signal, M
                 return 1;
             }));
     // [Pre-Assert確認_正常系] - read() が STDIN_FILENO を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - 指定した入力列を 1 バイトずつ返し、終端では 0 を返す。
+    // [Pre-Assert手順] - read() から、指定した入力列を 1 バイトずつ設定して 1 を返し、終端では 0 を返す。
 }
 // [サブ手順終了]
 
@@ -1527,12 +1627,12 @@ TEST(pinnedPromptTest, tty_readline_with_initial_returns_initial_text_on_enter)
     // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
     expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "\n");
     // 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
-    // [Pre-Assert手順] - 端末操作を成功させ、入力として改行だけを返却する。
+    // [Pre-Assert手順] - read() から、入力として改行だけを返し、端末操作も成功させる。
 
     // Act
-    int result =
-        cplat_pinned_prompt_readline_with_initial(screen, output, sizeof(output), "prompt> ",
-                                                  "edit 1 abc"); // [手順] - 初期値を指定して Enter を入力する。
+    int result = cplat_pinned_prompt_readline_with_initial(
+        screen, output, sizeof(output), "prompt> ",
+        "edit 1 abc"); // [手順] - 初期値を指定して cplat_pinned_prompt_readline_with_initial() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1562,11 +1662,12 @@ TEST(pinnedPromptTest, tty_readline_with_initial_allows_editing_from_end)
     // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
     expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "\x7F-3\n");
     // 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
-    // [Pre-Assert手順] - 端末操作を成功させ、Backspace、"-3"、改行を返却する。
+    // [Pre-Assert手順] - read() から、Backspace、"-3"、改行を順に返し、端末操作も成功させる。
 
     // Act
-    int result = cplat_pinned_prompt_readline_with_initial(screen, output, sizeof(output), "prompt> ",
-                                                           "arg.priority < 0"); // [手順] - 初期値を編集して確定する。
+    int result = cplat_pinned_prompt_readline_with_initial(
+        screen, output, sizeof(output), "prompt> ",
+        "arg.priority < 0"); // [手順] - 初期値を指定して cplat_pinned_prompt_readline_with_initial() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -1613,15 +1714,15 @@ TEST(pinnedPromptTest, tty_readline_with_initial_restores_initial_text_after_his
     // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
     expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "\x1B[A\x1B[B\n");
     // 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
-    // [Pre-Assert手順] - 端末操作を成功させ、上矢印、下矢印、改行を返却する。
+    // [Pre-Assert手順] - read() から、上矢印、下矢印、改行を順に返し、端末操作も成功させる。
     EXPECT_CALL(mock_select, select(_, _, _, _, _, _, _, _)).WillRepeatedly(Return(1));
     // [Pre-Assert確認_正常系] - select() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - select から入力可 (1) を返却し、ESC の後続を同じキー入力として読ませる。
+    // [Pre-Assert手順] - select() から入力可 (1) を返し、ESC の後続を同じキー入力として読ませる。
 
     // Act
-    int result =
-        cplat_pinned_prompt_readline_with_initial_at(screen, output, sizeof(output), "", "initial", "history.c",
-                                                     1); // [手順] - 同じ呼び出し元の履歴で初期値付きの入力を読み取る。
+    int result = cplat_pinned_prompt_readline_with_initial_at(
+        screen, output, sizeof(output), "", "initial", "history.c",
+        1); // [手順] - 同じ呼び出し元の履歴を持つ状態で初期値を指定して cplat_pinned_prompt_readline_with_initial_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1671,14 +1772,15 @@ TEST(pinnedPromptTest, tty_readline_with_initial_reports_out_of_memory_when_edit
     // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
     expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "\n");
     // 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
-    // [Pre-Assert手順] - 端末操作を成功させる。
+    // [Pre-Assert手順] - read() から、入力として改行だけを返し、端末操作も成功させる。
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _)).WillOnce(Return(nullptr));
     // [Pre-Assert確認_異常系] - cplat_realloc() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_realloc() から NULL を返却する。
+    // [Pre-Assert手順] - cplat_realloc() から nullptr を返す。
 
     // Act
-    int result = cplat_pinned_prompt_readline_with_initial_at(screen, output, sizeof(output), "", long_initial.c_str(),
-                                                              "alloc.c", 1); // [手順] - 長い初期値で 1 行読み取る。
+    int result = cplat_pinned_prompt_readline_with_initial_at(
+        screen, output, sizeof(output), "", long_initial.c_str(), "alloc.c",
+        1); // [手順] - 長い初期値を指定して cplat_pinned_prompt_readline_with_initial_at() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1719,7 +1821,7 @@ TEST(pinnedPromptTest, platform_get_size_uses_valid_console_buffer_info)
     // Pre-Assert
     EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_OUTPUT_HANDLE)).Times(2).WillRepeatedly(Return(out_handle));
     // [Pre-Assert確認_正常系] - GetStdHandle() が STD_OUTPUT_HANDLE を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - ダミーの標準出力ハンドルを返却する。
+    // [Pre-Assert手順] - GetStdHandle() からダミーの標準出力ハンドルを返す。
     EXPECT_CALL(mock_windows, GetConsoleScreenBufferInfo(_, _, _, out_handle, _))
         .WillOnce(
             [](const char *, const int, const char *, HANDLE, PCONSOLE_SCREEN_BUFFER_INFO info)
@@ -1729,26 +1831,29 @@ TEST(pinnedPromptTest, platform_get_size_uses_valid_console_buffer_info)
             })
         .WillOnce(Return(FALSE));
     // [Pre-Assert確認_正常系] - GetConsoleScreenBufferInfo() が out_handle を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は列数 120・行数 40 を返却し、2 回目は FALSE を返却する。
+    // [Pre-Assert手順] - GetConsoleScreenBufferInfo() から 1 回目は、列数 120・行数 40 のウィンドウを設定して TRUE を返し、2 回目は FALSE を返す。
 
     // Act
-    test_pinned_prompt_get_size(&valid_cols, &valid_rows); // [手順] - 正常なコンソール情報から端末サイズを取得する。
-    test_pinned_prompt_get_size(&fallback_cols,
-                                &fallback_rows); // [手順] - コンソール情報取得失敗時の既定端末サイズを取得する。
+    test_pinned_prompt_get_size(
+        &valid_cols,
+        &valid_rows); // [手順] - コンソール情報の取得が成功する状態で test_pinned_prompt_get_size() を呼び出す。
+    test_pinned_prompt_get_size(
+        &fallback_cols,
+        &fallback_rows); // [手順] - コンソール情報の取得が失敗する状態で test_pinned_prompt_get_size() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         120,
-        valid_cols); // [確認_正常系] - valid_cols が 120 であること。(GetConsoleScreenBufferInfo 成功時の列数が 120 であることの確認)
+        valid_cols); // [確認_正常系] - valid_cols が 120 であること。(GetConsoleScreenBufferInfo() 成功時の列数が 120 であることの確認)
     EXPECT_EQ(
         40,
-        valid_rows); // [確認_正常系] - valid_rows が 40 であること。(GetConsoleScreenBufferInfo 成功時の行数が 40 であることの確認)
+        valid_rows); // [確認_正常系] - valid_rows が 40 であること。(GetConsoleScreenBufferInfo() 成功時の行数が 40 であることの確認)
     EXPECT_EQ(
         80,
-        fallback_cols); // [確認_異常系] - fallback_cols が 80 であること。(GetConsoleScreenBufferInfo 失敗時の既定の列数が 80 であることの確認)
+        fallback_cols); // [確認_異常系] - fallback_cols が 80 であること。(GetConsoleScreenBufferInfo() 失敗時の既定の列数が 80 であることの確認)
     EXPECT_EQ(
         24,
-        fallback_rows); // [確認_異常系] - fallback_rows が 24 であること。(GetConsoleScreenBufferInfo 失敗時の既定の行数が 24 であることの確認)
+        fallback_rows); // [確認_異常系] - fallback_rows が 24 であること。(GetConsoleScreenBufferInfo() 失敗時の既定の行数が 24 であることの確認)
 }
 
 // 標準出力ハンドルが無効な場合に既定の端末サイズへフォールバックすることの確認
@@ -1762,12 +1867,13 @@ TEST(pinnedPromptTest, platform_get_size_falls_back_when_stdout_handle_invalid)
     // Pre-Assert
     EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_OUTPUT_HANDLE)).WillOnce(Return(INVALID_HANDLE_VALUE));
     // [Pre-Assert確認_異常系] - GetStdHandle() が STD_OUTPUT_HANDLE を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - INVALID_HANDLE_VALUE を返却する。
+    // [Pre-Assert手順] - GetStdHandle() から INVALID_HANDLE_VALUE を返す。
     EXPECT_CALL(mock_windows, GetConsoleScreenBufferInfo(_, _, _, _, _)).Times(0);
     // [Pre-Assert確認_異常系] - GetConsoleScreenBufferInfo() が呼び出されないこと。
 
     // Act
-    test_pinned_prompt_get_size(&cols, &rows); // [手順] - 無効な標準出力ハンドルから端末サイズを取得する。
+    test_pinned_prompt_get_size(
+        &cols, &rows); // [手順] - 無効な標準出力ハンドルの状態で test_pinned_prompt_get_size() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1792,23 +1898,25 @@ TEST(pinnedPromptTest, platform_raw_mode_enters_and_leaves_once_on_windows)
     // Pre-Assert
     EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_INPUT_HANDLE)).WillOnce(Return(in_handle));
     // [Pre-Assert確認_正常系] - GetStdHandle() が STD_INPUT_HANDLE を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - ダミーの標準入力ハンドルを返却する。
+    // [Pre-Assert手順] - GetStdHandle() からダミーの標準入力ハンドルを返す。
     EXPECT_CALL(mock_windows, GetConsoleMode(_, _, _, in_handle, _))
         .WillOnce(DoAll(SetArgPointee<4>(orig_mode), Return(TRUE)));
     // [Pre-Assert確認_正常系] - GetConsoleMode() が in_handle を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 元のコンソール モードを返却する。
+    // [Pre-Assert手順] - GetConsoleMode() から、元のコンソール モードを設定して TRUE を返す。
     EXPECT_CALL(mock_windows, SetConsoleMode(_, _, _, in_handle, _))
         .WillOnce(DoAll(SaveArg<4>(&captured_mode), Return(TRUE)))
         .WillOnce(Return(TRUE));
     // [Pre-Assert確認_正常系] - SetConsoleMode() が in_handle を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - TRUE を返却する。
+    // [Pre-Assert手順] - SetConsoleMode() から TRUE を返す。
 
     // Act
-    test_pinned_prompt_enter_raw(screen); // [手順] - raw モードへ移行する。
-    test_pinned_prompt_enter_raw(screen); // [手順] - raw モード移行済みの状態で再度移行する。
+    test_pinned_prompt_enter_raw(screen); // [手順] - test_pinned_prompt_enter_raw() を呼び出す。
+    test_pinned_prompt_enter_raw(
+        screen); // [手順] - raw モード移行済みの状態で test_pinned_prompt_enter_raw() を呼び出す。
     int active_after_enter = test_pinned_prompt_raw_active(screen);
-    test_pinned_prompt_leave_raw(screen); // [手順] - raw モードから復帰する。
-    test_pinned_prompt_leave_raw(screen); // [手順] - raw モード復帰済みの状態で再度復帰する。
+    test_pinned_prompt_leave_raw(screen); // [手順] - test_pinned_prompt_leave_raw() を呼び出す。
+    test_pinned_prompt_leave_raw(
+        screen); // [手順] - raw モード復帰済みの状態で test_pinned_prompt_leave_raw() を呼び出す。
     int active_after_leave = test_pinned_prompt_raw_active(screen);
 
     // Assert
@@ -1848,22 +1956,25 @@ TEST(pinnedPromptTest, platform_raw_mode_handles_failures_on_windows)
         .WillOnce(Return(in_handle))
         .WillOnce(Return(in_handle));
     // [Pre-Assert確認_異常系] - GetStdHandle() が STD_INPUT_HANDLE を指定して 3 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は INVALID_HANDLE_VALUE、以降はダミー ハンドルを返却する。
+    // [Pre-Assert手順] - GetStdHandle() から 1 回目は INVALID_HANDLE_VALUE を返し、以降はダミー ハンドルを返す。
     EXPECT_CALL(mock_windows, GetConsoleMode(_, _, _, in_handle, _))
         .WillOnce(Return(FALSE))
         .WillOnce(DoAll(SetArgPointee<4>(0U), Return(TRUE)));
     // [Pre-Assert確認_異常系] - GetConsoleMode() が in_handle を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は FALSE、2 回目は元モード 0 を返却する。
+    // [Pre-Assert手順] - GetConsoleMode() から 1 回目は FALSE を返し、2 回目は元モード 0 を設定して TRUE を返す。
     EXPECT_CALL(mock_windows, SetConsoleMode(_, _, _, in_handle, _)).WillOnce(Return(FALSE));
     // [Pre-Assert確認_異常系] - SetConsoleMode() が in_handle を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - FALSE を返却する。
+    // [Pre-Assert手順] - SetConsoleMode() から FALSE を返す。
 
     // Act
-    test_pinned_prompt_enter_raw(screen); // [手順] - 無効な標準入力ハンドルで raw モードへ移行する。
+    test_pinned_prompt_enter_raw(
+        screen); // [手順] - 無効な標準入力ハンドルの状態で test_pinned_prompt_enter_raw() を呼び出す。
     after_invalid_handle = test_pinned_prompt_raw_active(screen);
-    test_pinned_prompt_enter_raw(screen); // [手順] - GetConsoleMode 失敗状態で raw モードへ移行する。
+    test_pinned_prompt_enter_raw(
+        screen); // [手順] - GetConsoleMode() が失敗する状態で test_pinned_prompt_enter_raw() を呼び出す。
     after_get_mode_failure = test_pinned_prompt_raw_active(screen);
-    test_pinned_prompt_enter_raw(screen); // [手順] - SetConsoleMode 失敗状態で raw モードへ移行する。
+    test_pinned_prompt_enter_raw(
+        screen); // [手順] - SetConsoleMode() が失敗する状態で test_pinned_prompt_enter_raw() を呼び出す。
     after_set_mode_failure = test_pinned_prompt_raw_active(screen);
 
     // Assert
@@ -1872,10 +1983,10 @@ TEST(pinnedPromptTest, platform_raw_mode_handles_failures_on_windows)
         after_invalid_handle); // [確認_異常系] - 無効ハンドル後の test_pinned_prompt_raw_active() の戻り値が 0 であること。(raw モードが無効であることの確認)
     EXPECT_EQ(
         0,
-        after_get_mode_failure); // [確認_異常系] - GetConsoleMode 失敗後の test_pinned_prompt_raw_active() の戻り値が 0 であること。(raw モードが無効であることの確認)
+        after_get_mode_failure); // [確認_異常系] - GetConsoleMode() 失敗後の test_pinned_prompt_raw_active() の戻り値が 0 であること。(raw モードが無効であることの確認)
     EXPECT_EQ(
         0,
-        after_set_mode_failure); // [確認_異常系] - SetConsoleMode 失敗後の test_pinned_prompt_raw_active() の戻り値が 0 であること。(raw モードが無効であることの確認)
+        after_set_mode_failure); // [確認_異常系] - SetConsoleMode() 失敗後の test_pinned_prompt_raw_active() の戻り値が 0 であること。(raw モードが無効であることの確認)
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
@@ -1897,21 +2008,21 @@ TEST(pinnedPromptTest, platform_read_char_handles_timeout_and_eof_on_windows)
     // Pre-Assert
     EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_INPUT_HANDLE)).WillOnce(Return(in_handle));
     // [Pre-Assert確認_正常系] - GetStdHandle() が STD_INPUT_HANDLE を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - ダミーの標準入力ハンドルを返却する。
+    // [Pre-Assert手順] - GetStdHandle() からダミーの標準入力ハンドルを返す。
     EXPECT_CALL(mock_windows, GetConsoleMode(_, _, _, in_handle, _))
         .WillOnce(DoAll(SetArgPointee<4>(0U), Return(TRUE)));
     // [Pre-Assert確認_正常系] - GetConsoleMode() が in_handle を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 元のコンソール モードを返却する。
+    // [Pre-Assert手順] - GetConsoleMode() から、元のコンソール モードを設定して TRUE を返す。
     EXPECT_CALL(mock_windows, SetConsoleMode(_, _, _, in_handle, _)).WillOnce(Return(TRUE)).WillOnce(Return(TRUE));
     // [Pre-Assert確認_正常系] - SetConsoleMode() が in_handle を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - TRUE を返却する。
+    // [Pre-Assert手順] - SetConsoleMode() から TRUE を返す。
     EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, in_handle, 100U))
         .WillOnce(Return(WAIT_TIMEOUT))
         .WillOnce(Return(WAIT_FAILED))
         .WillOnce(Return(WAIT_OBJECT_0))
         .WillOnce(Return(WAIT_OBJECT_0));
     // [Pre-Assert確認_正常系] - WaitForSingleObject() が in_handle、100 を指定して 4 回呼び出されること。
-    // [Pre-Assert手順] - TIMEOUT、FAILED、OBJECT_0、OBJECT_0 の順に返却する。
+    // [Pre-Assert手順] - WaitForSingleObject() から WAIT_TIMEOUT、WAIT_FAILED、WAIT_OBJECT_0、WAIT_OBJECT_0 の順に返す。
     EXPECT_CALL(mock_windows, ReadFile(_, _, _, in_handle, _, 1U, _, _))
         .WillOnce(
             [](const char *, const int, const char *, HANDLE, LPVOID buffer, DWORD, LPDWORD bytes_read, LPOVERLAPPED)
@@ -1922,14 +2033,18 @@ TEST(pinnedPromptTest, platform_read_char_handles_timeout_and_eof_on_windows)
             })
         .WillOnce(DoAll(SetArgPointee<6>(0U), Return(TRUE)));
     // [Pre-Assert確認_正常系] - ReadFile() が in_handle、1 を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は文字 B、2 回目は 0 バイトを返却する。
+    // [Pre-Assert手順] - ReadFile() から 1 回目は、文字 B を設定して TRUE を返し、2 回目は、読み取りバイト数に 0 を設定して TRUE を返す。
 
     // Act
-    test_pinned_prompt_enter_raw(screen);                    // [手順] - 入力待ちの前に raw モードへ移行する。
-    timeout_result = test_pinned_prompt_read_char(screen);   // [手順] - WAIT_TIMEOUT の入力待ちを処理する。
-    wait_fail_result = test_pinned_prompt_read_char(screen); // [手順] - WAIT_FAILED の入力待ちを処理する。
-    character_result = test_pinned_prompt_read_char(screen); // [手順] - 1 バイト入力を読み取る。
-    eof_result = test_pinned_prompt_read_char(screen);       // [手順] - 0 バイト入力を EOF として読み取る。
+    test_pinned_prompt_enter_raw(screen); // [手順] - 入力待ちの前の状態で test_pinned_prompt_enter_raw() を呼び出す。
+    timeout_result = test_pinned_prompt_read_char(
+        screen); // [手順] - WAIT_TIMEOUT になる状態で test_pinned_prompt_read_char() を呼び出す。
+    wait_fail_result = test_pinned_prompt_read_char(
+        screen); // [手順] - WAIT_FAILED になる状態で test_pinned_prompt_read_char() を呼び出す。
+    character_result = test_pinned_prompt_read_char(
+        screen); // [手順] - 1 バイトの入力がある状態で test_pinned_prompt_read_char() を呼び出す。
+    eof_result = test_pinned_prompt_read_char(
+        screen); // [手順] - 0 バイトの入力 (EOF) がある状態で test_pinned_prompt_read_char() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -1963,22 +2078,22 @@ TEST(pinnedPromptTest, platform_read_char_nb_handles_wait_timeout_on_windows)
     // Pre-Assert
     EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_INPUT_HANDLE)).WillOnce(Return(in_handle));
     // [Pre-Assert確認_正常系] - GetStdHandle() が STD_INPUT_HANDLE を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - ダミーの標準入力ハンドルを返却する。
+    // [Pre-Assert手順] - GetStdHandle() からダミーの標準入力ハンドルを返す。
     EXPECT_CALL(mock_windows, GetConsoleMode(_, _, _, in_handle, _))
         .WillOnce(DoAll(SetArgPointee<4>(0U), Return(TRUE)));
     // [Pre-Assert確認_正常系] - GetConsoleMode() が in_handle を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 元のコンソール モードを返却する。
+    // [Pre-Assert手順] - GetConsoleMode() から、元のコンソール モードを設定して TRUE を返す。
     EXPECT_CALL(mock_windows, SetConsoleMode(_, _, _, in_handle, _)).WillOnce(Return(TRUE)).WillOnce(Return(TRUE));
     // [Pre-Assert確認_正常系] - SetConsoleMode() が in_handle を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - TRUE を返却する。
+    // [Pre-Assert手順] - SetConsoleMode() から TRUE を返す。
     EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, in_handle, 50U))
         .WillOnce(Return(WAIT_TIMEOUT))
         .WillOnce(Return(WAIT_OBJECT_0));
     // [Pre-Assert確認_正常系] - WaitForSingleObject() が in_handle、50 を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は TIMEOUT、2 回目は OBJECT_0 を返却する。
+    // [Pre-Assert手順] - WaitForSingleObject() から 1 回目は WAIT_TIMEOUT、2 回目は WAIT_OBJECT_0 を返す。
     EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, in_handle, 100U)).WillOnce(Return(WAIT_OBJECT_0));
     // [Pre-Assert確認_正常系] - WaitForSingleObject() が in_handle、100 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - OBJECT_0 を返却する。
+    // [Pre-Assert手順] - WaitForSingleObject() から WAIT_OBJECT_0 を返す。
     EXPECT_CALL(mock_windows, ReadFile(_, _, _, in_handle, _, 1U, _, _))
         .WillOnce(
             [](const char *, const int, const char *, HANDLE, LPVOID buffer, DWORD, LPDWORD bytes_read, LPOVERLAPPED)
@@ -1988,12 +2103,14 @@ TEST(pinnedPromptTest, platform_read_char_nb_handles_wait_timeout_on_windows)
                 return TRUE;
             });
     // [Pre-Assert確認_正常系] - ReadFile() が in_handle、1 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - 文字 C を返却する。
+    // [Pre-Assert手順] - ReadFile() から、文字 C を設定して TRUE を返す。
 
     // Act
-    test_pinned_prompt_enter_raw(screen);                     // [手順] - 入力待ちの前に raw モードへ移行する。
-    timeout_result = test_pinned_prompt_read_char_nb(screen); // [手順] - 50 ms 待ちがタイムアウトする状態で入力を読む。
-    character_result = test_pinned_prompt_read_char_nb(screen); // [手順] - 入力可能な状態で 1 文字を読む。
+    test_pinned_prompt_enter_raw(screen); // [手順] - 入力待ちの前の状態で test_pinned_prompt_enter_raw() を呼び出す。
+    timeout_result = test_pinned_prompt_read_char_nb(
+        screen); // [手順] - 50 ms の待機がタイムアウトする状態で test_pinned_prompt_read_char_nb() を呼び出す。
+    character_result = test_pinned_prompt_read_char_nb(
+        screen); // [手順] - 入力可能な状態で test_pinned_prompt_read_char_nb() を呼び出す。
 
     // Assert
     EXPECT_EQ(

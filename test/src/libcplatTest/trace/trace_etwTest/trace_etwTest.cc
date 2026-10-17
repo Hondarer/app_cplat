@@ -23,7 +23,8 @@ TEST_F(trace_etwTest, test_init_and_dispose)
     // Pre-Assert
 
     // Act
-    cplat_etw_provider *handle = cplat_etw_provider_create(s_test_provider); // [手順] - ETW provider を登録する。
+    cplat_etw_provider *handle = cplat_etw_provider_create(
+        s_test_provider); // [手順] - s_test_provider を指定して cplat_etw_provider_create() を呼び出す。
 
     // Assert
     EXPECT_NE(nullptr,
@@ -45,8 +46,9 @@ TEST_F(trace_etwTest, test_write_returns_zero)
     // Pre-Assert
 
     // Act
-    int result = cplat_etw_provider_write(handle, 4, nullptr,
-                                          "test message"); // [手順] - INFO レベル (4) で "test message" を書き込む。
+    int result = cplat_etw_provider_write(
+        handle, 4, nullptr,
+        "test message"); // [手順] - INFO レベル (4) と "test message" を指定して cplat_etw_provider_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -68,7 +70,7 @@ TEST_F(trace_etwTest, test_write_all_levels)
     // Pre-Assert
 
     // Act
-    // [手順] - CRITICAL、ERROR、WARNING、INFO、VERBOSE の各レベルで書き込む。
+    // [手順] - CRITICAL、ERROR、WARNING、INFO、VERBOSE の各レベルを指定して cplat_etw_provider_write() を呼び出す。
     int actual_ret_critical = cplat_etw_provider_write(handle, 1, nullptr, "critical");
     int actual_ret_error = cplat_etw_provider_write(handle, 2, nullptr, "error");
     int actual_ret_warning = cplat_etw_provider_write(handle, 3, nullptr, "warning");
@@ -106,25 +108,27 @@ TEST_F(trace_etwTest, test_null_arguments_are_safe)
     // Pre-Assert
 
     // Act
-    cplat_etw_provider_dispose(nullptr); // [手順] - NULL ハンドルで dispose() を呼び出す。
+    cplat_etw_provider_dispose(
+        nullptr); // [手順] - nullptr ハンドルを指定して cplat_etw_provider_dispose() を呼び出す。
 
-    cplat_etw_provider *actual_ret_create =
-        cplat_etw_provider_create(nullptr); // [手順] - NULL provider_ref で create() を呼び出す。
-    int actual_ret_null_handle =
-        cplat_etw_provider_write(nullptr, 4, nullptr, "test message"); // [手順] - NULL ハンドルで write() を呼び出す。
-    int actual_ret_null_message =
-        cplat_etw_provider_write(handle, 4, nullptr, nullptr); // [手順] - NULL message で write() を呼び出す。
+    cplat_etw_provider *actual_ret_create = cplat_etw_provider_create(
+        nullptr); // [手順] - provider_ref に nullptr を指定して cplat_etw_provider_create() を呼び出す。
+    int actual_ret_null_handle = cplat_etw_provider_write(
+        nullptr, 4, nullptr,
+        "test message"); // [手順] - ハンドルに nullptr を指定して cplat_etw_provider_write() を呼び出す。
+    int actual_ret_null_message = cplat_etw_provider_write(
+        handle, 4, nullptr, nullptr); // [手順] - message に nullptr を指定して cplat_etw_provider_write() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         nullptr,
-        actual_ret_create); // [確認_異常系] - NULL provider_ref に対する cplat_etw_provider_create() の戻り値が nullptr であること。
+        actual_ret_create); // [確認_異常系] - nullptr provider_ref に対する cplat_etw_provider_create() の戻り値が nullptr であること。
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret_null_handle); // [確認_異常系] - NULL ハンドルに対する cplat_etw_provider_write() の戻り値が CPLAT_OK であること。
+        actual_ret_null_handle); // [確認_異常系] - nullptr ハンドルに対する cplat_etw_provider_write() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret_null_message); // [確認_異常系] - NULL message に対する cplat_etw_provider_write() の戻り値が CPLAT_OK であること。
+        actual_ret_null_message); // [確認_異常系] - nullptr message に対する cplat_etw_provider_write() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_etw_provider_dispose(handle);

@@ -97,23 +97,24 @@ TEST_F(cryptoTest, round_trip_with_nonnull_zero_length_aad)
     std::vector<uint8_t> cipher(plain_len + CPLAT_CRYPTO_TAG_SIZE);
     std::vector<uint8_t> restored(plain_len);
     size_t cipher_len = cipher.size();
-    size_t restored_len = restored.size(); // [状態] - 平文と非 NULL かつ長さ 0 の AAD を用意する。
+    size_t restored_len = restored.size(); // [状態] - 平文と、nullptr 以外で長さ 0 の AAD を用意する。
 
     // Pre-Assert
 
     // Act
-    int actual_ret_encrypt = cplat_crypto_encrypt(cipher.data(), &cipher_len, plain, plain_len, key_, nonce_, aad,
-                                                  aad_len); // [手順] - 非 NULL かつ長さ 0 の AAD を指定して暗号化する。
-    int actual_ret_decrypt =
-        cplat_crypto_decrypt(restored.data(), &restored_len, cipher.data(), cipher_len, key_, nonce_, aad,
-                             aad_len); // [手順] - 非 NULL かつ長さ 0 の AAD を指定して復号する。
+    int actual_ret_encrypt = cplat_crypto_encrypt(
+        cipher.data(), &cipher_len, plain, plain_len, key_, nonce_, aad,
+        aad_len); // [手順] - nullptr 以外で長さ 0 の AAD を指定して cplat_crypto_encrypt() を呼び出す。
+    int actual_ret_decrypt = cplat_crypto_decrypt(
+        restored.data(), &restored_len, cipher.data(), cipher_len, key_, nonce_, aad,
+        aad_len); // [手順] - nullptr 以外で長さ 0 の AAD を指定して cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret_encrypt); // [確認_正常系] - cplat_crypto_encrypt() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK, actual_ret_decrypt); // [確認_正常系] - cplat_crypto_decrypt() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         plain_len,
-        restored_len); // [確認_正常系] - 非 NULL かつ長さ 0 の AAD を指定した restored_len が plain_len と一致すること。
+        restored_len); // [確認_正常系] - nullptr 以外で長さ 0 の AAD を指定した restored_len が plain_len と一致すること。
     EXPECT_EQ(
         0, memcmp(plain, restored.data(),
                   plain_len)); // [確認_正常系] - memcmp() の戻り値が 0 であること。(復号結果が平文と一致することの確認)
@@ -223,26 +224,26 @@ TEST_F(cryptoTest, encrypt_rejects_invalid_arguments)
     int actual_ret_null_dst_len = cplat_crypto_encrypt(cipher, nullptr, plain, plain_len, key_, nonce_, nullptr, 0u);
     int actual_ret_null_src = cplat_crypto_encrypt(cipher, &cipher_len, nullptr, plain_len, key_, nonce_, nullptr, 0u);
     int actual_ret_null_key = cplat_crypto_encrypt(cipher, &cipher_len, plain, plain_len, nullptr, nonce_, nullptr, 0u);
-    int actual_ret_null_nonce =
-        cplat_crypto_encrypt(cipher, &cipher_len, plain, plain_len, key_, nullptr, nullptr,
-                             0u); // [手順] - dst、dst_len、src、key、nonce に順に NULL を指定して呼び出す。
+    int actual_ret_null_nonce = cplat_crypto_encrypt(
+        cipher, &cipher_len, plain, plain_len, key_, nullptr, nullptr,
+        0u); // [手順] - dst、dst_len、src、key、nonce に順に nullptr を指定して cplat_crypto_encrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_dst); // [確認_異常系] - dst が NULL の cplat_crypto_encrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_dst); // [確認_異常系] - dst が nullptr の cplat_crypto_encrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_dst_len); // [確認_異常系] - dst_len が NULL の cplat_crypto_encrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_dst_len); // [確認_異常系] - dst_len が nullptr の cplat_crypto_encrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_src); // [確認_異常系] - src が NULL かつ src_len が 0 より大きい cplat_crypto_encrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_src); // [確認_異常系] - src が nullptr かつ src_len が 0 より大きい cplat_crypto_encrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_key); // [確認_異常系] - key が NULL の cplat_crypto_encrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_key); // [確認_異常系] - key が nullptr の cplat_crypto_encrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_nonce); // [確認_異常系] - nonce が NULL の cplat_crypto_encrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_nonce); // [確認_異常系] - nonce が nullptr の cplat_crypto_encrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 暗号文とタグが収まらない出力バッファーが拒否されることの確認
@@ -258,8 +259,9 @@ TEST_F(cryptoTest, encrypt_returns_buffer_too_small)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_crypto_encrypt(cipher, &cipher_len, plain, plain_len, key_, nonce_, nullptr,
-                                          0u); // [手順] - 不足する出力バッファーで cplat_crypto_encrypt() を呼び出す。
+    int actual_ret =
+        cplat_crypto_encrypt(cipher, &cipher_len, plain, plain_len, key_, nonce_, nullptr,
+                             0u); // [手順] - 不足する出力バッファーを指定して cplat_crypto_encrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -288,29 +290,29 @@ TEST_F(cryptoTest, decrypt_rejects_invalid_arguments)
         cplat_crypto_decrypt(restored, &restored_len, cipher, CPLAT_CRYPTO_TAG_SIZE - 1u, key_, nonce_, nullptr, 0u);
     int actual_ret_null_key =
         cplat_crypto_decrypt(restored, &restored_len, cipher, sizeof(cipher), nullptr, nonce_, nullptr, 0u);
-    int actual_ret_null_nonce =
-        cplat_crypto_decrypt(restored, &restored_len, cipher, sizeof(cipher), key_, nullptr, nullptr,
-                             0u); // [手順] - dst、dst_len、src、src_len、key、nonce に順に不正値を指定して呼び出す。
+    int actual_ret_null_nonce = cplat_crypto_decrypt(
+        restored, &restored_len, cipher, sizeof(cipher), key_, nullptr, nullptr,
+        0u); // [手順] - dst、dst_len、src、src_len、key、nonce に順に不正値を指定して cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_dst); // [確認_異常系] - dst が NULL の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_dst); // [確認_異常系] - dst が nullptr の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_dst_len); // [確認_異常系] - dst_len が NULL の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_dst_len); // [確認_異常系] - dst_len が nullptr の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_src); // [確認_異常系] - src が NULL の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_src); // [確認_異常系] - src が nullptr の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_short_src); // [確認_異常系] - src_len がタグ長未満の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_key); // [確認_異常系] - key が NULL の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_key); // [確認_異常系] - key が nullptr の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_nonce); // [確認_異常系] - nonce が NULL の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_nonce); // [確認_異常系] - nonce が nullptr の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 平文が収まらない出力バッファーが拒否されることの確認
@@ -325,8 +327,9 @@ TEST_F(cryptoTest, decrypt_returns_buffer_too_small)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_crypto_decrypt(restored, &restored_len, cipher, sizeof(cipher), key_, nonce_, nullptr,
-                                          0u); // [手順] - 不足する出力バッファーで cplat_crypto_decrypt() を呼び出す。
+    int actual_ret =
+        cplat_crypto_decrypt(restored, &restored_len, cipher, sizeof(cipher), key_, nonce_, nullptr,
+                             0u); // [手順] - 不足する出力バッファーを指定して cplat_crypto_decrypt() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -346,9 +349,9 @@ TEST_F(cryptoTest, passphrase_to_key_derives_deterministic_key)
 
     // Act
     int actual_ret_first = cplat_passphrase_to_key(first, passphrase, sizeof(passphrase) - 1u);
-    int actual_ret_second =
-        cplat_passphrase_to_key(second, passphrase,
-                                sizeof(passphrase) - 1u); // [手順] - 同じパスフレーズで 2 回導出する。
+    int actual_ret_second = cplat_passphrase_to_key(
+        second, passphrase,
+        sizeof(passphrase) - 1u); // [手順] - 同じパスフレーズを指定して 2 回 cplat_passphrase_to_key() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -373,8 +376,9 @@ TEST_F(cryptoTest, passphrase_to_key_accepts_empty_passphrase)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_passphrase_to_key(key, nullptr,
-                                             0u); // [手順] - passphrase に NULL、長さに 0 を指定して呼び出す。
+    int actual_ret = cplat_passphrase_to_key(
+        key, nullptr,
+        0u); // [手順] - passphrase に nullptr、長さに 0 を指定して cplat_passphrase_to_key() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_passphrase_to_key() の戻り値が CPLAT_OK であること。
@@ -391,14 +395,15 @@ TEST_F(cryptoTest, passphrase_to_key_rejects_invalid_arguments)
 
     // Act
     int actual_ret_null_key = cplat_passphrase_to_key(nullptr, (const uint8_t *)"secret", 6u);
-    int actual_ret_null_passphrase =
-        cplat_passphrase_to_key(key, nullptr, 6u); // [手順] - key に NULL、passphrase に NULL を指定して呼び出す。
+    int actual_ret_null_passphrase = cplat_passphrase_to_key(
+        key, nullptr,
+        6u); // [手順] - key に nullptr、passphrase に nullptr を指定して cplat_passphrase_to_key() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_key); // [確認_異常系] - key が NULL の cplat_passphrase_to_key() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_key); // [確認_異常系] - key が nullptr の cplat_passphrase_to_key() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_passphrase); // [確認_異常系] - passphrase が NULL かつ長さが 0 より大きい cplat_passphrase_to_key() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_passphrase); // [確認_異常系] - passphrase が nullptr かつ長さが 0 より大きい cplat_passphrase_to_key() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }

@@ -67,7 +67,8 @@ TEST_F(errorMessageTest, known_codes_map_to_distinct_texts)
     // Act
     for (int code : codes)
     {
-        texts.insert(std::string(cplat_result_to_string(code))); // [手順] - 各コードを文字列化して集合へ挿入する。
+        texts.insert(std::string(cplat_result_to_string(
+            code))); // [手順] - 各コードを文字列化して集合へ挿入するために texts.insert() を呼び出す。
     }
 
     // Assert
@@ -89,7 +90,8 @@ TEST_F(errorMessageTest, unknown_code_maps_to_default_text)
     // Pre-Assert
 
     // Act
-    const char *text = cplat_result_to_string(-9999); // [手順] - 定義されていない値 -9999 を文字列化する。
+    const char *text = cplat_result_to_string(
+        -9999); // [手順] - 定義されていない値 -9999 を指定して cplat_result_to_string() を呼び出す。
 
     // Assert
     EXPECT_STREQ("unknown result code",
@@ -105,7 +107,8 @@ TEST_F(errorMessageTest, errno_is_converted_to_message)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_internal_errno_message(buf, sizeof(buf), ENOENT); // [手順] - ENOENT を指定して呼び出す。
+    int actual_ret = cplat_internal_errno_message(
+        buf, sizeof(buf), ENOENT); // [手順] - ENOENT を指定して cplat_internal_errno_message() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_internal_errno_message() の戻り値が CPLAT_OK であること。
@@ -124,15 +127,16 @@ TEST_F(errorMessageTest, invalid_arguments_are_rejected)
     // Pre-Assert
 
     // Act
-    int actual_ret_null_buf =
-        cplat_internal_errno_message(nullptr, sizeof(buf), ENOENT); // [手順] - 格納先に NULL を指定して呼び出す。
-    int actual_ret_zero_size =
-        cplat_internal_errno_message(buf, 0U, ENOENT); // [手順] - サイズに 0 を指定して呼び出す。
+    int actual_ret_null_buf = cplat_internal_errno_message(
+        nullptr, sizeof(buf),
+        ENOENT); // [手順] - 格納先に nullptr を指定して cplat_internal_errno_message() を呼び出す。
+    int actual_ret_zero_size = cplat_internal_errno_message(
+        buf, 0U, ENOENT); // [手順] - サイズに 0 を指定して cplat_internal_errno_message() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_buf); // [確認_異常系] - 格納先が NULL の場合に cplat_internal_errno_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_buf); // [確認_異常系] - 格納先が nullptr の場合に cplat_internal_errno_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_zero_size); // [確認_異常系] - サイズが 0 の場合に cplat_internal_errno_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -148,15 +152,16 @@ TEST_F(errorMessageTest, error_message_dispatches_by_domain)
     // Pre-Assert
 
     // Act
-    cplat_error_clear(&error); // [手順] - 空の詳細エラーを文字列化する。
+    cplat_error_clear(&error); // [手順] - 詳細エラーを指定して cplat_error_clear() を呼び出す。
     const int none_result = cplat_error_message(buf, sizeof(buf), &error);
     const std::string none_message(buf);
-    cplat_error_capture_errno(&error, ENOENT); // [手順] - errno ドメインの詳細エラーを文字列化する。
+    cplat_error_capture_errno(&error, ENOENT); // [手順] - ENOENT を指定して cplat_error_capture_errno() を呼び出す。
     const int errno_result = cplat_error_message(buf, sizeof(buf), &error);
     const std::string errno_message(buf);
     error.domain = CPLAT_ERROR_DOMAIN_SOCKET_ERRNO;
-    const int socket_errno_result =
-        cplat_error_message(buf, sizeof(buf), &error); // [手順] - socket errno ドメインの詳細エラーを文字列化する。
+    const int socket_errno_result = cplat_error_message(
+        buf, sizeof(buf),
+        &error); // [手順] - socket errno ドメインの詳細エラーを指定して cplat_error_message() を呼び出す。
     const std::string socket_errno_message(buf);
 
     // Assert
@@ -175,16 +180,17 @@ TEST_F(errorMessageTest, error_message_dispatches_by_domain)
         socket_errno_message.empty()); // [確認_正常系] - socket_errno_message.empty() の戻り値が false であること。
 
     // Act_2
-    const int null_buffer_result =
-        cplat_error_message(nullptr, sizeof(buf), &error); // [手順] - 格納先に NULL を指定して文字列化する。
+    const int null_buffer_result = cplat_error_message(
+        nullptr, sizeof(buf), &error); // [手順] - 格納先に nullptr を指定して cplat_error_message() を呼び出す。
 
     // Assert_2
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_buffer_result); // [確認_異常系] - 格納先 NULL に対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_buffer_result); // [確認_異常系] - 格納先 nullptr に対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_3
-    const int zero_size_result = cplat_error_message(buf, 0U, &error); // [手順] - サイズに 0 を指定して文字列化する。
+    const int zero_size_result =
+        cplat_error_message(buf, 0U, &error); // [手順] - サイズに 0 を指定して cplat_error_message() を呼び出す。
 
     // Assert_3
     EXPECT_EQ(
@@ -192,13 +198,13 @@ TEST_F(errorMessageTest, error_message_dispatches_by_domain)
         zero_size_result); // [確認_異常系] - サイズ 0 に対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 
     // Act_4
-    const int null_error_result =
-        cplat_error_message(buf, sizeof(buf), nullptr); // [手順] - 詳細エラーに NULL を指定して文字列化する。
+    const int null_error_result = cplat_error_message(
+        buf, sizeof(buf), nullptr); // [手順] - 詳細エラーに nullptr を指定して cplat_error_message() を呼び出す。
 
     // Assert_4
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_error_result); // [確認_異常系] - 詳細エラー NULL に対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_error_result); // [確認_異常系] - 詳細エラー nullptr に対する cplat_error_message() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 空の詳細エラーが小さいバッファーへ切り詰めて格納されることの確認
@@ -213,8 +219,9 @@ TEST_F(errorMessageTest, empty_error_message_is_truncated_to_buffer)
     // Pre-Assert
 
     // Act
-    int result = cplat_error_message(buf, sizeof(buf),
-                                     &error); // [手順] - 4 バイトのバッファーへ空の詳細エラーを文字列化する。
+    int result = cplat_error_message(
+        buf, sizeof(buf),
+        &error); // [手順] - 4 バイトのバッファーと空の詳細エラーを指定して cplat_error_message() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -238,9 +245,11 @@ TEST_F(errorMessageTest, windows_error_domain_is_rejected_on_linux)
 
     // Act
     const int windows_result = cplat_error_message(
-        windows_buf, sizeof(windows_buf), &windows_error); // [手順] - Windows ドメインを持つ詳細エラーを文字列化する。
+        windows_buf, sizeof(windows_buf),
+        &windows_error); // [手順] - Windows ドメインを持つ詳細エラーを指定して cplat_error_message() を呼び出す。
     const int winsock_result = cplat_error_message(
-        winsock_buf, sizeof(winsock_buf), &winsock_error); // [手順] - Winsock ドメインを持つ詳細エラーを文字列化する。
+        winsock_buf, sizeof(winsock_buf),
+        &winsock_error); // [手順] - Winsock ドメインを持つ詳細エラーを指定して cplat_error_message() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -263,7 +272,8 @@ TEST_F(errorMessageTest, gai_domain_is_converted_to_message_on_linux)
     // Pre-Assert
 
     // Act
-    int result = cplat_error_message(buf, sizeof(buf), &error); // [手順] - GAI ドメインを文字列化する。
+    int result = cplat_error_message(
+        buf, sizeof(buf), &error); // [手順] - GAI ドメインの詳細エラーを指定して cplat_error_message() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -286,8 +296,9 @@ TEST_F(errorMessageTest, unknown_error_domain_is_rejected)
     // Pre-Assert
 
     // Act
-    int result =
-        cplat_error_message(buf, sizeof(buf), &error); // [手順] - 未知のドメインを持つ詳細エラーを文字列化する。
+    int result = cplat_error_message(
+        buf, sizeof(buf),
+        &error); // [手順] - 未知のドメインを持つ詳細エラーを指定して cplat_error_message() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -314,7 +325,7 @@ TEST_F(errorMessageTest, errno_message_returns_unknown_when_strerror_r_fails)
     EXPECT_CALL(mock_string, strerror_r(_, _, _, EACCES, buf, sizeof(buf)))
         .WillOnce(Return(
             EINVAL)); // [Pre-Assert確認_異常系] - strerror_r() が EACCES、buf、sizeof(buf) を指定して 1 回呼び出されること。
-                      // [Pre-Assert手順] - strerror_r() から EINVAL を返却する。
+                      // [Pre-Assert手順] - strerror_r() から EINVAL を返す。
 
     // Act
     int actual_ret =
@@ -340,7 +351,7 @@ TEST_F(errorMessageTest, errno_message_treats_erange_as_success)
             SetArrayArgument<4>("trunc", "trunc" + 6),
             Return(
                 ERANGE))); // [Pre-Assert確認_正常系] - strerror_r() が EACCES、buf、sizeof(buf) を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - バッファーへ切り詰め済みの文字列を書き込み、strerror_r() から ERANGE を返却する。
+    // [Pre-Assert手順] - strerror_r() から、バッファーへ切り詰め済みの文字列を書き込んで ERANGE を返す。
 
     // Act
     int actual_ret =

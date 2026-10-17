@@ -52,7 +52,7 @@ TEST_F(moduleTest, get_path_returns_absolute_path_of_owning_module_linux)
                 info->dli_fname = "/opt/cplat/moduleTest";
                 return 1;
             }); // [Pre-Assert確認_正常系] - dladdr() が 1 回呼び出されること。
-                // [Pre-Assert手順] - 所属モジュール パスを持つ情報を返却する。
+                // [Pre-Assert手順] - dladdr() から、所属モジュール パスを持つ情報を設定して 1 を返す。
     EXPECT_CALL(mock_cplat, cplat_path_get_full(_, _, _, StrEq(kModulePath)))
         .WillOnce(
             [](char *path_out, size_t path_size, cplat_error *detail_out, const char *)
@@ -66,12 +66,12 @@ TEST_F(moduleTest, get_path_returns_absolute_path_of_owning_module_linux)
                 std::memcpy(path_out, resolved, sizeof(resolved));
                 return CPLAT_OK;
             }); // [Pre-Assert確認_正常系] - cplat_path_get_full() が kModulePath と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 正規化済みパスを書き込み、CPLAT_OK を返却する。
+                // [Pre-Assert手順] - cplat_path_get_full() から、正規化済みパスを書き込んで CPLAT_OK を返す。
 
     // Act
-    int actual_ret =
-        cplat_module_get_path(path, sizeof(path),
-                              self_func_addr()); // [手順] - テスト バイナリ内の関数アドレスを指定して呼び出す。
+    int actual_ret = cplat_module_get_path(
+        path, sizeof(path),
+        self_func_addr()); // [手順] - テスト バイナリ内の関数アドレスを指定して cplat_module_get_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_module_get_path() の戻り値が CPLAT_OK であること。
@@ -88,12 +88,12 @@ TEST_F(moduleTest, get_path_returns_unknown_when_dladdr_fails)
     // Pre-Assert
     EXPECT_CALL(mock_dlfcn, dladdr(_, _, _, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - dladdr() が 1 回呼び出されること。
-                              // [Pre-Assert手順] - dladdr から失敗を返却する。
+                              // [Pre-Assert手順] - dladdr() から 0 を返す。
 
     // Act
-    int actual_ret =
-        cplat_module_get_path(path, sizeof(path),
-                              self_func_addr()); // [手順] - dladdr の失敗を注入してモジュール パスを取得する。
+    int actual_ret = cplat_module_get_path(
+        path, sizeof(path),
+        self_func_addr()); // [手順] - dladdr() が失敗する状態で cplat_module_get_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -116,11 +116,12 @@ TEST_F(moduleTest, get_path_returns_unknown_when_dladdr_has_no_filename)
                 info->dli_fname = nullptr;
                 return 1;
             }); // [Pre-Assert確認_異常系] - dladdr() が 1 回呼び出されること。
-                // [Pre-Assert手順] - dli_fname が NULL の情報を返却する。
+                // [Pre-Assert手順] - dladdr() から、dli_fname が nullptr の情報を設定して 1 を返す。
 
     // Act
     int actual_ret = cplat_module_get_path(
-        path, sizeof(path), self_func_addr()); // [手順] - ファイル名のない dladdr 情報でモジュール パスを取得する。
+        path, sizeof(path),
+        self_func_addr()); // [手順] - ファイル名のない dladdr() の情報が返る状態で cplat_module_get_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -143,11 +144,12 @@ TEST_F(moduleTest, get_path_returns_unknown_when_dladdr_has_empty_filename)
                 info->dli_fname = "";
                 return 1;
             }); // [Pre-Assert確認_異常系] - dladdr() が 1 回呼び出されること。
-                // [Pre-Assert手順] - 空の dli_fname を返却する。
+                // [Pre-Assert手順] - dladdr() から、空の dli_fname を持つ情報を設定して 1 を返す。
 
     // Act
     int actual_ret = cplat_module_get_path(
-        path, sizeof(path), self_func_addr()); // [手順] - 空のファイル名を持つ dladdr 情報でモジュール パスを取得する。
+        path, sizeof(path),
+        self_func_addr()); // [手順] - 空のファイル名を持つ dladdr() の情報が返る状態で cplat_module_get_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -163,9 +165,9 @@ TEST_F(moduleTest, get_path_returns_absolute_path_of_owning_module_windows)
     // Pre-Assert
 
     // Act
-    int actual_ret =
-        cplat_module_get_path(path, sizeof(path),
-                              self_func_addr()); // [手順] - テスト バイナリ内の関数アドレスを指定して呼び出す。
+    int actual_ret = cplat_module_get_path(
+        path, sizeof(path),
+        self_func_addr()); // [手順] - テスト バイナリ内の関数アドレスを指定して cplat_module_get_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_module_get_path() の戻り値が CPLAT_OK であること。
@@ -189,8 +191,9 @@ TEST_F(moduleTest, get_path_rejects_null_out_path)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_module_get_path(nullptr, 16u,
-                                           self_func_addr()); // [手順] - path_out に NULL を指定して呼び出す。
+    int actual_ret = cplat_module_get_path(
+        nullptr, 16u,
+        self_func_addr()); // [手順] - path_out に nullptr を指定して cplat_module_get_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -206,8 +209,9 @@ TEST_F(moduleTest, get_path_rejects_zero_size)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_module_get_path(path, 0u,
-                                           self_func_addr()); // [手順] - path_size に 0 を指定して呼び出す。
+    int actual_ret = cplat_module_get_path(
+        path, 0u,
+        self_func_addr()); // [手順] - path_size に 0 を指定して cplat_module_get_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -223,8 +227,8 @@ TEST_F(moduleTest, get_path_rejects_null_func_addr)
     // Pre-Assert
 
     // Act
-    int actual_ret =
-        cplat_module_get_path(path, sizeof(path), nullptr); // [手順] - func_addr に NULL を指定して呼び出す。
+    int actual_ret = cplat_module_get_path(
+        path, sizeof(path), nullptr); // [手順] - func_addr に nullptr を指定して cplat_module_get_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -240,8 +244,9 @@ TEST_F(moduleTest, get_path_returns_buffer_too_small)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_module_get_path(path, sizeof(path),
-                                           self_func_addr()); // [手順] - 不足するバッファーを指定して呼び出す。
+    int actual_ret = cplat_module_get_path(
+        path, sizeof(path),
+        self_func_addr()); // [手順] - 不足するバッファーを指定して cplat_module_get_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -263,11 +268,12 @@ TEST_F(moduleTest, get_path_returns_unknown_when_normalization_fails)
                 *detail_out = {CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_UNKNOWN, EIO};
                 return CPLAT_ERR_UNKNOWN;
             }); // [Pre-Assert確認_異常系] - cplat_path_get_full() が 1 回呼び出されること。
-                // [Pre-Assert手順] - 詳細に EIO を設定し、CPLAT_ERR_UNKNOWN を返却する。
+                // [Pre-Assert手順] - cplat_path_get_full() から、詳細に EIO を設定して CPLAT_ERR_UNKNOWN を返す。
 
     // Act
-    const int result =
-        cplat_module_get_path(path, sizeof(path), self_func_addr()); // [手順] - パス正規化失敗を注入して呼び出す。
+    const int result = cplat_module_get_path(
+        path, sizeof(path),
+        self_func_addr()); // [手順] - パス正規化が失敗する状態で cplat_module_get_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -289,11 +295,12 @@ TEST_F(moduleTest, get_path_returns_buffer_too_small_when_normalization_reports_
                 *detail_out = {CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_BUFFER_TOO_SMALL, ENAMETOOLONG};
                 return CPLAT_ERR_BUFFER_TOO_SMALL;
             }); // [Pre-Assert確認_異常系] - cplat_path_get_full() が 1 回呼び出されること。
-                // [Pre-Assert手順] - 詳細に ENAMETOOLONG を設定し、CPLAT_ERR_BUFFER_TOO_SMALL を返却する。
+    // [Pre-Assert手順] - cplat_path_get_full() から、詳細に ENAMETOOLONG を設定して CPLAT_ERR_BUFFER_TOO_SMALL を返す。
 
     // Act
-    const int result = cplat_module_get_path(path, sizeof(path),
-                                             self_func_addr()); // [手順] - 長過ぎるパスのエラーを注入して呼び出す。
+    const int result = cplat_module_get_path(
+        path, sizeof(path),
+        self_func_addr()); // [手順] - 長過ぎるパスのエラーが返る状態で cplat_module_get_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
@@ -310,8 +317,8 @@ TEST_F(moduleTest, get_path_clears_output_for_null_function_address)
     // Pre-Assert
 
     // Act
-    const int result =
-        cplat_module_get_path(path, sizeof(path), nullptr); // [手順] - func_addr に NULL を指定して呼び出す。
+    const int result = cplat_module_get_path(
+        path, sizeof(path), nullptr); // [手順] - func_addr に nullptr を指定して cplat_module_get_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -334,7 +341,8 @@ TEST_F(moduleTest, get_basename_returns_module_name_without_extension)
 
     // Act
     int actual_ret = cplat_module_get_basename(
-        basename, sizeof(basename), self_func_addr()); // [手順] - テスト バイナリ内の関数アドレスを指定して呼び出す。
+        basename, sizeof(basename),
+        self_func_addr()); // [手順] - テスト バイナリ内の関数アドレスを指定して cplat_module_get_basename() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_module_get_basename() の戻り値が CPLAT_OK であること。
@@ -349,8 +357,9 @@ TEST_F(moduleTest, get_basename_rejects_null_out_basename)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_module_get_basename(nullptr, 16u,
-                                               self_func_addr()); // [手順] - basename_out に NULL を指定して呼び出す。
+    int actual_ret = cplat_module_get_basename(
+        nullptr, 16u,
+        self_func_addr()); // [手順] - basename_out に nullptr を指定して cplat_module_get_basename() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -367,8 +376,9 @@ TEST_F(moduleTest, get_basename_rejects_zero_size)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_module_get_basename(basename, 0u,
-                                               self_func_addr()); // [手順] - basename_size に 0 を指定して呼び出す。
+    int actual_ret = cplat_module_get_basename(
+        basename, 0u,
+        self_func_addr()); // [手順] - basename_size に 0 を指定して cplat_module_get_basename() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -387,8 +397,9 @@ TEST_F(moduleTest, get_basename_propagates_get_path_failure)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_module_get_basename(basename, sizeof(basename),
-                                               nullptr); // [手順] - func_addr に NULL を指定して呼び出す。
+    int actual_ret = cplat_module_get_basename(
+        basename, sizeof(basename),
+        nullptr); // [手順] - func_addr に nullptr を指定して cplat_module_get_basename() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -408,8 +419,9 @@ TEST_F(moduleTest, get_basename_returns_buffer_too_small)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_module_get_basename(basename, sizeof(basename),
-                                               self_func_addr()); // [手順] - 不足するバッファーを指定して呼び出す。
+    int actual_ret = cplat_module_get_basename(
+        basename, sizeof(basename),
+        self_func_addr()); // [手順] - 不足するバッファーを指定して cplat_module_get_basename() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -435,7 +447,8 @@ TEST_F(moduleTest, extension_cut_finds_versioned_so)
     // Pre-Assert
 
     // Act
-    const char *cut = test_find_shared_lib_extension_cut(name); // [手順] - 切り出し位置を取得する。
+    const char *cut = test_find_shared_lib_extension_cut(
+        name); // [手順] - 切り出し元の名前を指定して test_find_shared_lib_extension_cut() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -452,7 +465,8 @@ TEST_F(moduleTest, extension_cut_finds_plain_so)
     // Pre-Assert
 
     // Act
-    const char *cut = test_find_shared_lib_extension_cut(name); // [手順] - 切り出し位置を取得する。
+    const char *cut = test_find_shared_lib_extension_cut(
+        name); // [手順] - 切り出し元の名前を指定して test_find_shared_lib_extension_cut() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -469,7 +483,8 @@ TEST_F(moduleTest, extension_cut_finds_dylib)
     // Pre-Assert
 
     // Act
-    const char *cut = test_find_shared_lib_extension_cut(name); // [手順] - 切り出し位置を取得する。
+    const char *cut = test_find_shared_lib_extension_cut(
+        name); // [手順] - 切り出し元の名前を指定して test_find_shared_lib_extension_cut() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -486,7 +501,8 @@ TEST_F(moduleTest, extension_cut_returns_null_for_other_extension)
     // Pre-Assert
 
     // Act
-    const char *cut = test_find_shared_lib_extension_cut(name); // [手順] - 切り出し位置を取得する。
+    const char *cut = test_find_shared_lib_extension_cut(
+        name); // [手順] - 切り出し元の名前を指定して test_find_shared_lib_extension_cut() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -503,7 +519,8 @@ TEST_F(moduleTest, extension_cut_returns_null_for_short_name)
     // Pre-Assert
 
     // Act
-    const char *cut = test_find_shared_lib_extension_cut(name); // [手順] - 切り出し位置を取得する。
+    const char *cut = test_find_shared_lib_extension_cut(
+        name); // [手順] - 切り出し元の名前を指定して test_find_shared_lib_extension_cut() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -521,11 +538,12 @@ TEST_F(moduleTest, basename_core_handles_shared_and_regular_extensions)
     // Pre-Assert
 
     // Act
-    int shared_result =
-        test_get_basename_from_path(shared_basename, sizeof(shared_basename),
-                                    "/usr/lib/libsample.so.1"); // [手順] - バージョン付き共有ライブラリ名を取得する。
+    int shared_result = test_get_basename_from_path(
+        shared_basename, sizeof(shared_basename),
+        "/usr/lib/libsample.so.1"); // [手順] - バージョン付き共有ライブラリのパスを指定して test_get_basename_from_path() を呼び出す。
     int regular_result = test_get_basename_from_path(
-        regular_basename, sizeof(regular_basename), "/usr/bin/sample.txt"); // [手順] - 通常拡張子を持つ名前を取得する。
+        regular_basename, sizeof(regular_basename),
+        "/usr/bin/sample.txt"); // [手順] - 通常拡張子を持つパスを指定して test_get_basename_from_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -553,14 +571,15 @@ TEST_F(moduleTest, basename_core_rejects_empty_and_small_outputs)
     // Pre-Assert
 
     // Act
-    int empty_result = test_get_basename_from_path(empty_basename, sizeof(empty_basename),
-                                                   ""); // [手順] - 空のパスから basename を取得する。
-    int shared_result =
-        test_get_basename_from_path(shared_basename, sizeof(shared_basename),
-                                    "libsample.so"); // [手順] - 容量不足の出力先へ共有ライブラリ名を取得する。
-    int regular_result =
-        test_get_basename_from_path(regular_basename, sizeof(regular_basename),
-                                    "sample.txt"); // [手順] - 容量不足の出力先へ通常拡張子名を取得する。
+    int empty_result =
+        test_get_basename_from_path(empty_basename, sizeof(empty_basename),
+                                    ""); // [手順] - 空のパスを指定して test_get_basename_from_path() を呼び出す。
+    int shared_result = test_get_basename_from_path(
+        shared_basename, sizeof(shared_basename),
+        "libsample.so"); // [手順] - 容量不足の出力先と共有ライブラリ名のパスを指定して test_get_basename_from_path() を呼び出す。
+    int regular_result = test_get_basename_from_path(
+        regular_basename, sizeof(regular_basename),
+        "sample.txt"); // [手順] - 容量不足の出力先と通常拡張子のパスを指定して test_get_basename_from_path() を呼び出す。
 
     // Assert
     EXPECT_EQ(

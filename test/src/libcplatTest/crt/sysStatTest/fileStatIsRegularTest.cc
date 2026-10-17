@@ -55,7 +55,8 @@ TEST_F(fileStatIsRegularTest, returns_one_for_regular_file)
     // Pre-Assert
 
     // Act
-    int actual_ret_is_regular = cplat_file_stat_is_regular(&file_stat); // [手順] - 種別を判定する。
+    int actual_ret_is_regular = cplat_file_stat_is_regular(
+        &file_stat); // [手順] - ファイル情報を指定して cplat_file_stat_is_regular() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -77,7 +78,8 @@ TEST_F(fileStatIsRegularTest, returns_zero_for_directory)
     // Pre-Assert
 
     // Act
-    int actual_ret_is_regular = cplat_file_stat_is_regular(&file_stat); // [手順] - 種別を判定する。
+    int actual_ret_is_regular = cplat_file_stat_is_regular(
+        &file_stat); // [手順] - ファイル情報を指定して cplat_file_stat_is_regular() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -95,11 +97,12 @@ TEST_F(fileStatIsRegularTest, returns_zero_for_null)
     // Pre-Assert
 
     // Act
-    int actual_ret_is_regular = cplat_file_stat_is_regular(nullptr); // [手順] - NULL を指定する。
+    int actual_ret_is_regular =
+        cplat_file_stat_is_regular(nullptr); // [手順] - nullptr を指定して cplat_file_stat_is_regular() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         0,
-        actual_ret_is_regular); // [確認_異常系] - NULL に対する cplat_file_stat_is_regular() の戻り値が 0 であること。
+        actual_ret_is_regular); // [確認_異常系] - nullptr に対する cplat_file_stat_is_regular() の戻り値が 0 であること。
 }
 // [サブ手順参照 名前=fileStatIsRegularTest.TearDown]

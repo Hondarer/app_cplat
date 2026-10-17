@@ -87,11 +87,13 @@ TEST_F(hashtableUpsertTest, inserts_then_updates_the_same_key)
 
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
-    int actual_ret_first = cplat_hashtable_upsert(ht, "a", value.data(),
-                                                  &inserted_first); // [手順] - 未登録のキーを upsert する。
+    int actual_ret_first = cplat_hashtable_upsert(
+        ht, "a", value.data(),
+        &inserted_first); // [手順] - 未登録のキーを指定して cplat_hashtable_upsert() を呼び出す。
     fill_value(&value, "v2");
-    int actual_ret_second = cplat_hashtable_upsert(ht, "a", value.data(),
-                                                   &inserted_second); // [手順] - 同じキーを再度 upsert する。
+    int actual_ret_second =
+        cplat_hashtable_upsert(ht, "a", value.data(),
+                               &inserted_second); // [手順] - 同じキーを指定して cplat_hashtable_upsert() を呼び出す。
     int actual_ret_read = cplat_hashtable_find_value_copy(ht, "a", read_back.data(), read_back.size(), &required);
     int actual_ret_count = cplat_hashtable_count(ht, &in_use);
 
@@ -136,18 +138,18 @@ TEST_F(hashtableUpsertTest, accepts_null_inserted_out)
 
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
-    int actual_ret_insert =
-        cplat_hashtable_upsert(ht, "a", value.data(), nullptr); // [手順] - 格納先を省いて upsert する。
-    int actual_ret_update =
-        cplat_hashtable_upsert(ht, "a", value.data(), nullptr); // [手順] - 格納先を省いて再度 upsert する。
+    int actual_ret_insert = cplat_hashtable_upsert(
+        ht, "a", value.data(), nullptr); // [手順] - 格納先を省略して cplat_hashtable_upsert() を呼び出す。
+    int actual_ret_update = cplat_hashtable_upsert(
+        ht, "a", value.data(), nullptr); // [手順] - 格納先を省略して cplat_hashtable_upsert() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret_insert); // [確認_正常系] - 格納先に NULL を渡した新規追加の cplat_hashtable_upsert() の戻り値が CPLAT_OK であること。
+        actual_ret_insert); // [確認_正常系] - 格納先に nullptr を渡した新規追加の cplat_hashtable_upsert() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret_update); // [確認_正常系] - 格納先に NULL を渡した既存更新の cplat_hashtable_upsert() の戻り値が CPLAT_OK であること。
+        actual_ret_update); // [確認_正常系] - 格納先に nullptr を渡した既存更新の cplat_hashtable_upsert() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);
@@ -171,10 +173,10 @@ TEST_F(hashtableUpsertTest, revives_deleted_key_with_the_given_value)
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_add(ht, "a", value.data(), CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE);
-    (void)cplat_hashtable_delete(ht, "a"); // [手順] - キーを削除済みにする。
+    (void)cplat_hashtable_delete(ht, "a"); // [手順] - キーを指定して cplat_hashtable_delete() を呼び出す。
     fill_value(&value, "v2");
-    int actual_ret_upsert =
-        cplat_hashtable_upsert(ht, "a", value.data(), &inserted); // [手順] - 削除済みのキーを upsert する。
+    int actual_ret_upsert = cplat_hashtable_upsert(
+        ht, "a", value.data(), &inserted); // [手順] - 削除済みのキーを指定して cplat_hashtable_upsert() を呼び出す。
     int actual_ret_status = cplat_hashtable_get_status(ht, 1, &status);
     int actual_ret_read = cplat_hashtable_find_value_copy(ht, "a", read_back.data(), read_back.size(), &required);
 
@@ -216,10 +218,12 @@ TEST_F(hashtableUpsertTest, reports_limit_exceeded_when_table_is_full)
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_upsert(ht, "a", value.data(), nullptr);
     (void)cplat_hashtable_upsert(ht, "b", value.data(), nullptr);
-    int actual_ret_full =
-        cplat_hashtable_upsert(ht, "c", value.data(), &inserted); // [手順] - 満杯の状態で新しいキーを upsert する。
-    int actual_ret_existing =
-        cplat_hashtable_upsert(ht, "a", value.data(), &inserted); // [手順] - 満杯でも登録済みのキーを upsert する。
+    int actual_ret_full = cplat_hashtable_upsert(
+        ht, "c", value.data(),
+        &inserted); // [手順] - 満杯の状態で新しいキーを指定して cplat_hashtable_upsert() を呼び出す。
+    int actual_ret_existing = cplat_hashtable_upsert(
+        ht, "a", value.data(),
+        &inserted); // [手順] - 満杯の状態で登録済みのキーを指定して cplat_hashtable_upsert() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -251,19 +255,20 @@ TEST_F(hashtableUpsertTest, guards_reject_invalid_arguments)
     int actual_ret_null_ht = cplat_hashtable_upsert(nullptr, "a", value.data(), &inserted);
     int actual_ret_null_key = cplat_hashtable_upsert(ht, nullptr, value.data(), &inserted);
     int actual_ret_null_value = cplat_hashtable_upsert(ht, "a", nullptr, &inserted);
-    int actual_ret_long_key = cplat_hashtable_upsert(ht, "0123456789", value.data(),
-                                                     &inserted); // [手順] - key_size に収まらないキーを渡す。
+    int actual_ret_long_key = cplat_hashtable_upsert(
+        ht, "0123456789", value.data(),
+        &inserted); // [手順] - key_size に収まらないキーを指定して cplat_hashtable_upsert() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ht); // [確認_異常系] - ht に NULL を渡した cplat_hashtable_upsert() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ht); // [確認_異常系] - ht に nullptr を渡した cplat_hashtable_upsert() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_key); // [確認_異常系] - キーに NULL を渡した cplat_hashtable_upsert() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_key); // [確認_異常系] - キーに nullptr を渡した cplat_hashtable_upsert() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_value); // [確認_異常系] - 値に NULL を渡した cplat_hashtable_upsert() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_value); // [確認_異常系] - 値に nullptr を渡した cplat_hashtable_upsert() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_OUT_OF_RANGE,
         actual_ret_long_key); // [確認_異常系] - key_size に収まらないキーを渡した cplat_hashtable_upsert() の戻り値が CPLAT_ERR_OUT_OF_RANGE であること。
@@ -295,11 +300,13 @@ TEST_F(hashtableUpsertTest, updates_key_that_is_not_at_chain_head)
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
     (void)cplat_hashtable_upsert(ht, "a", value.data(), nullptr);
-    (void)cplat_hashtable_upsert(ht, peer, value.data(),
-                                 nullptr); // [手順] - 同一バケットへ別キーを足してチェーン先頭をずらす。
+    (void)cplat_hashtable_upsert(
+        ht, peer, value.data(),
+        nullptr); // [手順] - 同一バケットの別キーを指定して cplat_hashtable_upsert() を呼び出す。
     fill_value(&value, "v3");
-    int actual_ret_upsert =
-        cplat_hashtable_upsert(ht, "a", value.data(), &inserted); // [手順] - チェーン先頭でないキーを upsert する。
+    int actual_ret_upsert = cplat_hashtable_upsert(
+        ht, "a", value.data(),
+        &inserted); // [手順] - チェーン先頭ではないキーを指定して cplat_hashtable_upsert() を呼び出す。
     int actual_ret_read = cplat_hashtable_find_value_copy(ht, "a", read_back.data(), read_back.size(), &required);
 
     // Assert
@@ -338,9 +345,11 @@ TEST_F(hashtableUpsertTest, reports_storage_full_when_variable_value_does_not_fi
 
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
-    int actual_ret_insert = cplat_hashtable_upsert(ht, "a", "short", &inserted); // [手順] - 収まる値で追加する。
-    int actual_ret_update = cplat_hashtable_upsert(ht, "a", "far too long for the storage",
-                                                   &inserted); // [手順] - 収まらない値で同じキーを更新する。
+    int actual_ret_insert = cplat_hashtable_upsert(
+        ht, "a", "short", &inserted); // [手順] - 収まる値を指定して cplat_hashtable_upsert() を呼び出す。
+    int actual_ret_update = cplat_hashtable_upsert(
+        ht, "a", "far too long for the storage",
+        &inserted); // [手順] - 収まらない値で同じキーを指定して cplat_hashtable_upsert() を呼び出す。
 
     // Assert
     EXPECT_EQ(

@@ -103,8 +103,10 @@ TEST_F(stringCatalogFilterStructureTest, rehash_without_change_keeps_image_valid
     // Pre-Assert
 
     // Act
-    rehash(image, record);                                                // [手順] - ハッシュ値を計算し直す。
-    actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
+    rehash(image, record); // [手順] - 書き換えたレコードを指定して rehash() を呼び出す。
+    actual_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -129,9 +131,13 @@ TEST_F(stringCatalogFilterStructureTest, backward_jump_is_rejected)
     // Act
     instruction = read_instruction(record, jump_index);
     instruction.operand = 0U;
-    write_instruction(jump_index, instruction); // [手順] - ジャンプ先を先頭の命令へ書き換える。
-    rehash(image, record);                      // [手順] - ハッシュ値を計算し直す。
-    actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
+    write_instruction(
+        jump_index,
+        instruction);      // [手順] - ジャンプ先を先頭の命令にした命令を指定して write_instruction() を呼び出す。
+    rehash(image, record); // [手順] - 書き換えたレコードを指定して rehash() を呼び出す。
+    actual_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -157,9 +163,13 @@ TEST_F(stringCatalogFilterStructureTest, jump_beyond_end_is_rejected)
     // Act
     instruction = read_instruction(record, jump_index);
     instruction.operand = (uint16_t)(read_record_header(record).instruction_count + 1U);
-    write_instruction(jump_index, instruction); // [手順] - ジャンプ先を命令列の末尾の次の次へ書き換える。
-    rehash(image, record);                      // [手順] - ハッシュ値を計算し直す。
-    actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
+    write_instruction(
+        jump_index,
+        instruction); // [手順] - ジャンプ先を命令列の末尾の次の次にした命令を指定して write_instruction() を呼び出す。
+    rehash(image, record); // [手順] - 書き換えたレコードを指定して rehash() を呼び出す。
+    actual_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -182,9 +192,13 @@ TEST_F(stringCatalogFilterStructureTest, unknown_opcode_is_rejected)
     // Act
     instruction = read_instruction(record, 0U);
     instruction.opcode = 0x7FU;
-    write_instruction(0U, instruction); // [手順] - 先頭の命令の種類を存在しない値へ書き換える。
-    rehash(image, record);              // [手順] - ハッシュ値を計算し直す。
-    actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
+    write_instruction(
+        0U,
+        instruction); // [手順] - 先頭の命令の種類を存在しない値にした命令を指定して write_instruction() を呼び出す。
+    rehash(image, record); // [手順] - 書き換えたレコードを指定して rehash() を呼び出す。
+    actual_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -207,9 +221,13 @@ TEST_F(stringCatalogFilterStructureTest, stack_underflow_is_rejected)
     // Act
     std::memset(&instruction, 0, sizeof(instruction));
     instruction.opcode = (uint8_t)STRING_CATALOG_FILTER_OPCODE_AND;
-    write_instruction(0U, instruction); // [手順] - 先頭の判定要素を、値を 2 個消費する論理積へ書き換える。
-    rehash(image, record);              // [手順] - ハッシュ値を計算し直す。
-    actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
+    write_instruction(
+        0U,
+        instruction); // [手順] - 先頭の判定要素を、値を 2 個消費する論理積にした命令を指定して write_instruction() を呼び出す。
+    rehash(image, record); // [手順] - 書き換えたレコードを指定して rehash() を呼び出す。
+    actual_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -235,9 +253,12 @@ TEST_F(stringCatalogFilterStructureTest, logical_instruction_with_field_is_rejec
     // Act
     instruction = read_instruction(record, not_index);
     instruction.field = (uint8_t)STRING_CATALOG_FILTER_FIELD_KEY;
-    write_instruction(not_index, instruction);                            // [手順] - 否定の命令へフィールドを書き込む。
-    rehash(image, record);                                                // [手順] - ハッシュ値を計算し直す。
-    actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
+    write_instruction(
+        not_index, instruction); // [手順] - フィールドを書き込んだ否定の命令を指定して write_instruction() を呼び出す。
+    rehash(image, record);       // [手順] - 書き換えたレコードを指定して rehash() を呼び出す。
+    actual_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -260,9 +281,13 @@ TEST_F(stringCatalogFilterStructureTest, stack_depth_mismatch_is_rejected)
     // Act
     header = read_record_header(record);
     header.stack_depth = (uint8_t)(header.stack_depth + 1U);
-    string_catalog_filter_write_record_header(record, &header);           // [手順] - スタックの深さを 1 増やす。
-    rehash(image, record);                                                // [手順] - ハッシュ値を計算し直す。
-    actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
+    string_catalog_filter_write_record_header(
+        record,
+        &header); // [手順] - スタックの深さを 1 増やしたヘッダーを指定して string_catalog_filter_write_record_header() を呼び出す。
+    rehash(image, record); // [手順] - 書き換えたレコードを指定して rehash() を呼び出す。
+    actual_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -285,9 +310,13 @@ TEST_F(stringCatalogFilterStructureTest, empty_instruction_list_is_rejected)
     // Act
     header = read_record_header(record);
     header.instruction_count = 0U;
-    string_catalog_filter_write_record_header(record, &header);           // [手順] - 命令数を 0 にする。
-    rehash(image, record);                                                // [手順] - ハッシュ値を計算し直す。
-    actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
+    string_catalog_filter_write_record_header(
+        record,
+        &header); // [手順] - 命令数を 0 にしたヘッダーを指定して string_catalog_filter_write_record_header() を呼び出す。
+    rehash(image, record); // [手順] - 書き換えたレコードを指定して rehash() を呼び出す。
+    actual_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -310,9 +339,13 @@ TEST_F(stringCatalogFilterStructureTest, constant_offset_out_of_range_is_rejecte
     // Act
     instruction = read_instruction(record, 0U);
     instruction.operand = (uint16_t)(read_record_header(record).constant_size + 8U);
-    write_instruction(0U, instruction); // [手順] - 定数の参照位置を、使用している定数領域の外へ書き換える。
-    rehash(image, record);              // [手順] - ハッシュ値を計算し直す。
-    actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
+    write_instruction(
+        0U,
+        instruction); // [手順] - 定数の参照位置を、使用している定数領域の外にした命令を指定して write_instruction() を呼び出す。
+    rehash(image, record); // [手順] - 書き換えたレコードを指定して rehash() を呼び出す。
+    actual_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -335,9 +368,13 @@ TEST_F(stringCatalogFilterStructureTest, operator_and_constant_mismatch_is_rejec
     // Act
     instruction = read_instruction(record, 0U);
     instruction.operator_kind = (uint8_t)STRING_CATALOG_FILTER_OPERATOR_LESS;
-    write_instruction(0U, instruction); // [手順] - 演算子を、文字列には使えない大小比較へ書き換える。
-    rehash(image, record);              // [手順] - ハッシュ値を計算し直す。
-    actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
+    write_instruction(
+        0U,
+        instruction); // [手順] - 演算子を、文字列には使えない大小比較にした命令を指定して write_instruction() を呼び出す。
+    rehash(image, record); // [手順] - 書き換えたレコードを指定して rehash() を呼び出す。
+    actual_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -360,8 +397,10 @@ TEST_F(stringCatalogFilterStructureTest, unknown_constant_kind_is_rejected)
     // Act
     constants = record + (string_catalog_filter_record_constants(record, (uint32_t)kLineWidth) - record);
     constants[read_instruction(record, 0U).operand] = 0x7FU; // [手順] - 参照先の定数の種類を存在しない値へ書き換える。
-    rehash(image, record);                                   // [手順] - ハッシュ値を計算し直す。
-    actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
+    rehash(image, record); // [手順] - 書き換えたレコードを指定して rehash() を呼び出す。
+    actual_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -384,19 +423,29 @@ TEST_F(stringCatalogFilterStructureTest, different_format_version_is_rejected)
     // Act
     string_catalog_filter_read_image_header(image, &header);
     header.format_version = (uint16_t)(STRING_CATALOG_FILTER_FORMAT_VERSION + 1U);
-    string_catalog_filter_write_image_header(image, &header);             // [手順] - 形式版を 1 つ進める。
-    string_catalog_filter_update_content_hash(image, &header);            // [手順] - 全体のハッシュ値を計算し直す。
-    actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
+    string_catalog_filter_write_image_header(
+        image,
+        &header); // [手順] - 形式版を 1 つ進めたヘッダーを指定して string_catalog_filter_write_image_header() を呼び出す。
+    string_catalog_filter_update_content_hash(
+        image,
+        &header); // [手順] - 書き換えたヘッダーを指定して string_catalog_filter_update_content_hash() を呼び出す。
+    actual_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     cplat_string_catalog_filter_info actual_info;
     char actual_text[64];
-    int actual_info_ret =
-        cplat_string_catalog_filter_get_info(image, kImageSize, &actual_info);              // [手順] - 情報を取得する。
-    int actual_remove_ret = cplat_string_catalog_filter_remove_line(image, kImageSize, 0U); // [手順] - 行を削除する。
-    int actual_compile_ret = cplat_string_catalog_filter_compile_line(image, kImageSize, 0U, "key == 1",
-                                                                      nullptr); // [手順] - 行を書き換える。
+    int actual_info_ret = cplat_string_catalog_filter_get_info(
+        image, kImageSize,
+        &actual_info); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_get_info() を呼び出す。
+    int actual_remove_ret = cplat_string_catalog_filter_remove_line(
+        image, kImageSize, 0U); // [手順] - 行 0 を指定して cplat_string_catalog_filter_remove_line() を呼び出す。
+    int actual_compile_ret = cplat_string_catalog_filter_compile_line(
+        image, kImageSize, 0U, "key == 1",
+        nullptr); // [手順] - 行 0 と "key == 1" を指定して cplat_string_catalog_filter_compile_line() を呼び出す。
     int actual_decompile_ret = cplat_string_catalog_filter_decompile_line(
-        image, kImageSize, 0U, actual_text, sizeof(actual_text)); // [手順] - 行を逆コンパイルする。
+        image, kImageSize, 0U, actual_text,
+        sizeof(actual_text)); // [手順] - 行 0 を指定して cplat_string_catalog_filter_decompile_line() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -431,9 +480,15 @@ TEST_F(stringCatalogFilterStructureTest, different_byte_order_is_rejected)
     // Act
     string_catalog_filter_read_image_header(image, &header);
     header.byte_order_mark = 0x0201U;
-    string_catalog_filter_write_image_header(image, &header);             // [手順] - バイト順序の目印を逆順の値にする。
-    string_catalog_filter_update_content_hash(image, &header);            // [手順] - 全体のハッシュ値を計算し直す。
-    actual_ret = cplat_string_catalog_filter_validate(image, kImageSize); // [手順] - 検証する。
+    string_catalog_filter_write_image_header(
+        image,
+        &header); // [手順] - バイト順序の目印を逆順の値にしたヘッダーを指定して string_catalog_filter_write_image_header() を呼び出す。
+    string_catalog_filter_update_content_hash(
+        image,
+        &header); // [手順] - 書き換えたヘッダーを指定して string_catalog_filter_update_content_hash() を呼び出す。
+    actual_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(

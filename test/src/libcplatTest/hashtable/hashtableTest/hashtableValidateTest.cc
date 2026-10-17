@@ -73,12 +73,13 @@ TEST_F(hashtableValidateTest, rejects_null_handle)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_validate(nullptr); // [手順] - NULL で validate を呼ぶ。
+    int actual_ret =
+        cplat_hashtable_validate(nullptr); // [手順] - nullptr を指定して cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret); // [確認_異常系] - NULL を渡した cplat_hashtable_validate() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret); // [確認_異常系] - nullptr を渡した cplat_hashtable_validate() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // バケット先頭リンクが capacity を超えている破損を CORRUPT_DESCRIPTOR として検出することの確認
@@ -95,7 +96,7 @@ TEST_F(hashtableValidateTest, detects_bucket_link_out_of_range)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
+    int actual_ret = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -124,12 +125,14 @@ TEST_F(hashtableValidateTest, detects_link_cycle)
 
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
-    (void)cplat_hashtable_insert_direct(ht, 1, "a", 1, value.data(), &k_insert_timestamp,
-                                        1); // [手順] - レコード 1 を使用中にする。
-    (void)cplat_hashtable_insert_direct(ht, 2, peer, 1, value.data(), &k_insert_timestamp,
-                                        2); // [手順] - 同一バケットのレコード 2 を使用中にする。
+    (void)cplat_hashtable_insert_direct(
+        ht, 1, "a", 1, value.data(), &k_insert_timestamp,
+        1); // [手順] - レコード 1 を指定して cplat_hashtable_insert_direct() を呼び出す。
+    (void)cplat_hashtable_insert_direct(
+        ht, 2, peer, 1, value.data(), &k_insert_timestamp,
+        2); // [手順] - 同一バケットのレコード 2 を指定して cplat_hashtable_insert_direct() を呼び出す。
     *test_hashtable_entry_next(ht, 0) = 2;  // [手順] - レコード 1 の次リンクをレコード 2 へ向け、2 件の循環にする。
-    int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
+    int actual_ret = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -158,7 +161,7 @@ TEST_F(hashtableValidateTest, detects_duplicate_visit)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
+    int actual_ret = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -183,7 +186,7 @@ TEST_F(hashtableValidateTest, detects_linked_empty_slot)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
+    int actual_ret = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -211,7 +214,7 @@ TEST_F(hashtableValidateTest, detects_key_without_terminator)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
+    int actual_ret = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -252,12 +255,13 @@ TEST_F(hashtableValidateTest, detects_hash_mismatch)
 
     // Act
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht);
-    (void)cplat_hashtable_add(ht, "a", value.data(),
-                              CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - レコード 1 に "a" を格納する。
+    (void)cplat_hashtable_add(
+        ht, "a", value.data(),
+        CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - "a" を指定して cplat_hashtable_add() を呼び出す。
     std::memset(test_hashtable_entry_key(ht, 0), 0, 8);
     std::memcpy(test_hashtable_entry_key(ht, 0), mismatched_key,
                 std::strlen(mismatched_key) + 1);  // [手順] - バケットは変えず格納キーだけを差し替える。
-    int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
+    int actual_ret = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -285,7 +289,7 @@ TEST_F(hashtableValidateTest, detects_next_link_out_of_range)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
+    int actual_ret = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -310,7 +314,7 @@ TEST_F(hashtableValidateTest, detects_unlinked_in_use_record)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
+    int actual_ret = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -336,7 +340,7 @@ TEST_F(hashtableValidateTest, detects_next_empty_mismatch)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
+    int actual_ret = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -365,7 +369,7 @@ TEST_F(hashtableValidateTest, detects_in_use_count_mismatch)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
+    int actual_ret = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -394,7 +398,7 @@ TEST_F(hashtableValidateTest, detects_deleted_count_mismatch)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
+    int actual_ret = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -454,7 +458,7 @@ TEST_F(hashtableValidateTest, detects_free_block_overlapping_a_live_block)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
+    int actual_ret = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -482,7 +486,7 @@ TEST_F(hashtableValidateTest, detects_free_list_total_mismatch)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
+    int actual_ret = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -514,7 +518,7 @@ TEST_F(hashtableValidateTest, detects_adjacent_free_blocks_left_unmerged)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
+    int actual_ret = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -540,7 +544,7 @@ TEST_F(hashtableValidateTest, detects_free_count_beyond_upper_bound)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_validate(ht); // [手順] - 整合性を検証する。
+    int actual_ret = cplat_hashtable_validate(ht); // [手順] - cplat_hashtable_validate() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -577,15 +581,17 @@ TEST_F(hashtableValidateTest, attach_rejects_free_count_beyond_upper_bound)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_hashtable_attach(mgmt_copy.data(), mgmt_copy.size(), data_copy.data(), data_copy.size(),
-                                            &attached); // [手順] - 壊れた領域へ再接続する。
+    int actual_ret =
+        cplat_hashtable_attach(mgmt_copy.data(), mgmt_copy.size(), data_copy.data(), data_copy.size(),
+                               &attached); // [手順] - 壊れた領域を指定して cplat_hashtable_attach() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_CORRUPT_DESCRIPTOR,
         actual_ret); // [確認_異常系] - 空きブロックの個数が上限を超えている領域に対する cplat_hashtable_attach() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
-    EXPECT_EQ(nullptr,
-              attached); // [確認_異常系] - attached が nullptr であること。(失敗後の ht_out が NULL になったことの確認)
+    EXPECT_EQ(
+        nullptr,
+        attached); // [確認_異常系] - attached が nullptr であること。(失敗後の ht_out が nullptr になったことの確認)
 
     // Cleanup
     cplat_hashtable_dispose(attached);

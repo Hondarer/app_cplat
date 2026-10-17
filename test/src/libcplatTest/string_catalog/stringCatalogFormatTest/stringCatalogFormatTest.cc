@@ -53,9 +53,9 @@ TEST_F(stringCatalogFormatTest, no_argument)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_format(fake_catalog(), dest, sizeof(dest),
-                                    FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 引数を取らない文字列を組み立てる。
+    actual_ret = cplat_string_catalog_format(
+        fake_catalog(), dest, sizeof(dest),
+        FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 引数を取らない文字列キーを指定して cplat_string_catalog_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_string_catalog_format() の戻り値が CPLAT_OK であること。
@@ -76,14 +76,15 @@ TEST_F(stringCatalogFormatTest, language_changes_order_only)
     // Pre-Assert
 
     // Act
-    actual_ret_japanese =
-        cplat_string_catalog_format(fake_catalog(), dest, sizeof(dest), FAKE_CATALOG_KEY_TWO_ARGUMENTS, "config.json",
-                                    INT32_C(2)); // [手順] - 日本語のまま 2 引数の文字列を組み立てる。
+    actual_ret_japanese = cplat_string_catalog_format(
+        fake_catalog(), dest, sizeof(dest), FAKE_CATALOG_KEY_TWO_ARGUMENTS, "config.json",
+        INT32_C(
+            2)); // [手順] - 日本語を設定した状態で 2 引数の文字列キーを指定して cplat_string_catalog_format() を呼び出す。
 
     cplat_string_catalog_set_language(CPLAT_STRING_CATALOG_LANGUAGE_ENGLISH);
-    actual_ret_english = cplat_string_catalog_format(fake_catalog(), english_dest, sizeof(english_dest),
-                                                     FAKE_CATALOG_KEY_TWO_ARGUMENTS, "config.json",
-                                                     INT32_C(2)); // [手順] - 言語を英語へ変更し、同じ引数で組み立てる。
+    actual_ret_english = cplat_string_catalog_format(
+        fake_catalog(), english_dest, sizeof(english_dest), FAKE_CATALOG_KEY_TWO_ARGUMENTS, "config.json",
+        INT32_C(2)); // [手順] - 英語へ変更した状態で同じ引数を指定して cplat_string_catalog_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -109,9 +110,9 @@ TEST_F(stringCatalogFormatTest, neutral_language)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_format(fake_catalog(), dest, sizeof(dest), FAKE_CATALOG_KEY_TWO_ARGUMENTS, "config.json",
-                                    INT32_C(2)); // [手順] - ニュートラル言語で文字列を組み立てる。
+    actual_ret = cplat_string_catalog_format(
+        fake_catalog(), dest, sizeof(dest), FAKE_CATALOG_KEY_TWO_ARGUMENTS, "config.json",
+        INT32_C(2)); // [手順] - ニュートラル言語を設定した状態で cplat_string_catalog_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_string_catalog_format() の戻り値が CPLAT_OK であること。
@@ -128,8 +129,9 @@ TEST_F(stringCatalogFormatTest, vformat_accepts_argument_list)
     // Pre-Assert
 
     // Act
-    actual_ret = call_vformat(dest, sizeof(dest), FAKE_CATALOG_KEY_ONE_ARGUMENT,
-                              (size_t)4096U); // [手順] - va_list を渡して文字列を組み立てる。
+    actual_ret =
+        call_vformat(dest, sizeof(dest), FAKE_CATALOG_KEY_ONE_ARGUMENT,
+                     (size_t)4096U); // [手順] - va_list を使って文字列を組み立てるために call_vformat() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - call_vformat() の戻り値が CPLAT_OK であること。
@@ -146,13 +148,14 @@ TEST_F(stringCatalogFormatTest, null_dest)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_format(fake_catalog(), nullptr, sizeof(dest),
-                                             FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 書き込み先へ NULL を渡す。
+    actual_ret = cplat_string_catalog_format(
+        fake_catalog(), nullptr, sizeof(dest),
+        FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 書き込み先へ nullptr を指定して cplat_string_catalog_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret); // [確認_異常系] - 書き込み先が NULL の場合の cplat_string_catalog_format() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret); // [確認_異常系] - 書き込み先が nullptr の場合の cplat_string_catalog_format() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // 書き込み先の容量が 0 の場合に引数不正となることの確認
@@ -165,8 +168,9 @@ TEST_F(stringCatalogFormatTest, zero_dest_size)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_format(fake_catalog(), dest, 0U,
-                                             FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 書き込み先の容量へ 0 を渡す。
+    actual_ret = cplat_string_catalog_format(
+        fake_catalog(), dest, 0U,
+        FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 書き込み先の容量へ 0 を指定して cplat_string_catalog_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -184,9 +188,9 @@ TEST_F(stringCatalogFormatTest, unknown_string_key)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_format(fake_catalog(), dest, sizeof(dest),
-                                    FAKE_CATALOG_KEY_UNKNOWN); // [手順] - カタログに登録していない文字列キーを渡す。
+    actual_ret = cplat_string_catalog_format(
+        fake_catalog(), dest, sizeof(dest),
+        FAKE_CATALOG_KEY_UNKNOWN); // [手順] - カタログに登録していない文字列キーを指定して cplat_string_catalog_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
@@ -207,7 +211,7 @@ TEST_F(stringCatalogFormatTest, argument_count_over_max)
     // Act
     actual_ret = cplat_string_catalog_format(
         fake_catalog(), dest, sizeof(dest),
-        FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 引数個数が上限を超える定義で文字列を組み立てる。
+        FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 引数個数が上限を超える定義を指定して cplat_string_catalog_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -226,9 +230,9 @@ TEST_F(stringCatalogFormatTest, argument_count_negative)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_format(fake_catalog(), dest, sizeof(dest),
-                                    FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 引数個数が負の定義で文字列を組み立てる。
+    actual_ret = cplat_string_catalog_format(
+        fake_catalog(), dest, sizeof(dest),
+        FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 引数個数が負の定義を指定して cplat_string_catalog_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -249,7 +253,7 @@ TEST_F(stringCatalogFormatTest, falls_back_to_neutral_text)
     // Act
     actual_ret = cplat_string_catalog_format(
         fake_catalog(), dest, sizeof(dest),
-        FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 日本語のリソースが無い文字列を日本語で組み立てる。
+        FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 日本語を設定した状態で日本語のリソースが無い文字列キーを指定して cplat_string_catalog_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_string_catalog_format() の戻り値が CPLAT_OK であること。
@@ -270,7 +274,7 @@ TEST_F(stringCatalogFormatTest, missing_neutral_text)
     // Act
     actual_ret = cplat_string_catalog_format(
         fake_catalog(), dest, sizeof(dest),
-        FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - どの言語にもリソースが無い文字列を組み立てる。
+        FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - どの言語にもリソースが無い文字列を指定して cplat_string_catalog_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -295,24 +299,32 @@ TEST_F(stringCatalogFormatTest, metadata)
     // Pre-Assert
 
     // Act
-    actual_id = cplat_string_catalog_get_id(fake_catalog(),
-                                            FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - ID を取得する。
+    actual_id = cplat_string_catalog_get_id(
+        fake_catalog(),
+        FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - ID を取得する文字列キーを指定して cplat_string_catalog_get_id() を呼び出す。
     actual_note_japanese = cplat_string_catalog_get_note(
-        fake_catalog(), FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 日本語の備考を取得する。
+        fake_catalog(),
+        FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 日本語を設定した状態で備考の対象となる文字列キーを指定して cplat_string_catalog_get_note() を呼び出す。
 
     cplat_string_catalog_set_language(CPLAT_STRING_CATALOG_LANGUAGE_ENGLISH);
     actual_note_fallback = cplat_string_catalog_get_note(
-        fake_catalog(), FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 英語の備考が無い状態で備考を取得する。
-    actual_category =
-        cplat_string_catalog_get_category(fake_catalog(), FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 分類値を取得する。
+        fake_catalog(),
+        FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 英語の備考が無い状態で文字列キーを指定して cplat_string_catalog_get_note() を呼び出す。
+    actual_category = cplat_string_catalog_get_category(
+        fake_catalog(),
+        FAKE_CATALOG_KEY_NO_ARGUMENT); // [手順] - 分類値の対象となる文字列キーを指定して cplat_string_catalog_get_category() を呼び出す。
     actual_unknown_category = cplat_string_catalog_get_category(
-        fake_catalog(), FAKE_CATALOG_KEY_UNKNOWN); // [手順] - 未登録の文字列キーで分類値を取得する。
+        fake_catalog(),
+        FAKE_CATALOG_KEY_UNKNOWN); // [手順] - 未登録の文字列キーを指定して cplat_string_catalog_get_category() を呼び出す。
     actual_unknown_id = cplat_string_catalog_get_id(
-        fake_catalog(), FAKE_CATALOG_KEY_UNKNOWN); // [手順] - 未登録の文字列キーで ID を取得する。
+        fake_catalog(),
+        FAKE_CATALOG_KEY_UNKNOWN); // [手順] - 未登録の文字列キーを指定して cplat_string_catalog_get_id() を呼び出す。
     actual_unknown_note = cplat_string_catalog_get_note(
-        fake_catalog(), FAKE_CATALOG_KEY_UNKNOWN); // [手順] - 未登録の文字列キーで備考を取得する。
+        fake_catalog(),
+        FAKE_CATALOG_KEY_UNKNOWN); // [手順] - 未登録の文字列キーを指定して cplat_string_catalog_get_note() を呼び出す。
     actual_entry = cplat_string_catalog_get_entry(
-        fake_catalog(), FAKE_CATALOG_KEY_TWO_ARGUMENTS); // [手順] - 文字列キーの項目メタデータを取得する。
+        fake_catalog(),
+        FAKE_CATALOG_KEY_TWO_ARGUMENTS); // [手順] - 項目メタデータの対象となる文字列キーを指定して cplat_string_catalog_get_entry() を呼び出す。
 
     // Assert
     ASSERT_NE(nullptr, actual_id); // [確認_正常系] - cplat_string_catalog_get_id() の戻り値が nullptr 以外であること。
@@ -363,8 +375,9 @@ TEST_F(stringCatalogFormatTest, unknown_argument_kind)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_format(fake_catalog(), dest, sizeof(dest), FAKE_CATALOG_KEY_ONE_ARGUMENT,
-                                             (size_t)1U); // [手順] - 列挙に無い引数種別を持つ定義で文字列を組み立てる。
+    actual_ret = cplat_string_catalog_format(
+        fake_catalog(), dest, sizeof(dest), FAKE_CATALOG_KEY_ONE_ARGUMENT,
+        (size_t)1U); // [手順] - 列挙に無い引数種別を持つ定義を指定して cplat_string_catalog_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -386,9 +399,9 @@ TEST_F(stringCatalogFormatTest, truncated_output)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_format(fake_catalog(), small_dest, sizeof(small_dest), FAKE_CATALOG_KEY_ONE_ARGUMENT,
-                                    (size_t)4096U); // [手順] - 結果が収まらない容量で文字列を組み立てる。
+    actual_ret = cplat_string_catalog_format(
+        fake_catalog(), small_dest, sizeof(small_dest), FAKE_CATALOG_KEY_ONE_ARGUMENT,
+        (size_t)4096U); // [手順] - 結果が収まらない容量を指定して cplat_string_catalog_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(

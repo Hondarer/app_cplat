@@ -66,10 +66,11 @@ TEST_F(scanfTest, scanf_reads_width_limited_token_and_integer)
             {
                 return fill_token_and_int(args, "alpha", 42);
             }); // [Pre-Assert確認_正常系] - vscanf() が "%7s %d" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 文字列に "alpha"、数値に 42 を格納し、2 を返却する。
+                // [Pre-Assert手順] - vscanf() から、文字列に "alpha"、数値に 42 を格納して 2 を返す。
 
     // Act
-    int count = cplat_scanf("%7s %d", token, &value); // [手順] - 幅 7 の文字列と整数を cplat_scanf() で読み取る。
+    int count = cplat_scanf("%7s %d", token,
+                            &value); // [手順] - 幅 7 の文字列と整数を読み取る書式を指定して cplat_scanf() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -93,11 +94,12 @@ TEST_F(scanfTest, vscanf_reads_width_limited_token_and_integer)
             {
                 return fill_token_and_int(args, "bravo", 24);
             }); // [Pre-Assert確認_正常系] - vscanf() が "%7s %d" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 文字列に "bravo"、数値に 24 を格納し、2 を返却する。
+                // [Pre-Assert手順] - vscanf() から、文字列に "bravo"、数値に 24 を格納して 2 を返す。
 
     // Act
-    int count =
-        call_cplat_vscanf("%7s %d", token, &value); // [手順] - 幅 7 の文字列と整数を cplat_vscanf() で読み取る。
+    int count = call_cplat_vscanf(
+        "%7s %d", token,
+        &value); // [手順] - 幅 7 の文字列と整数を読み取る書式を指定して call_cplat_vscanf() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -121,11 +123,12 @@ TEST_F(scanfTest, fscanf_reads_width_limited_token_and_integer)
             {
                 return fill_token_and_int(args, "charlie", 17);
             }); // [Pre-Assert確認_正常系] - vfscanf() が kStream、"%7s %d" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 文字列に "charlie"、数値に 17 を格納し、2 を返却する。
+                // [Pre-Assert手順] - vfscanf() から、文字列に "charlie"、数値に 17 を格納して 2 を返す。
 
     // Act
-    int count = cplat_fscanf(kStream, "%7s %d", token,
-                             &value); // [手順] - 幅 7 の文字列と整数を cplat_fscanf() で読み取る。
+    int count =
+        cplat_fscanf(kStream, "%7s %d", token,
+                     &value); // [手順] - 幅 7 の文字列と整数を読み取る書式を指定して cplat_fscanf() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -149,11 +152,12 @@ TEST_F(scanfTest, vfscanf_reads_width_limited_token_and_integer)
             {
                 return fill_token_and_int(args, "delta", 71);
             }); // [Pre-Assert確認_正常系] - vfscanf() が kStream、"%7s %d" と等しい文字列を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 文字列に "delta"、数値に 71 を格納し、2 を返却する。
+                // [Pre-Assert手順] - vfscanf() から、文字列に "delta"、数値に 71 を格納して 2 を返す。
 
     // Act
-    int count = call_cplat_vfscanf(kStream, "%7s %d", token,
-                                   &value); // [手順] - 幅 7 の文字列と整数を cplat_vfscanf() で読み取る。
+    int count = call_cplat_vfscanf(
+        kStream, "%7s %d", token,
+        &value); // [手順] - 幅 7 の文字列と整数を読み取る書式を指定して call_cplat_vfscanf() を呼び出す。
 
     // Assert
     EXPECT_EQ(

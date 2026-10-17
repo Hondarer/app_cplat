@@ -51,8 +51,9 @@ TEST_F(pathJoinTest, preserves_trailing_separator_at_boundary)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_join(actual, sizeof(actual), nullptr, "a/",
-                                     "b"); // [手順] - 末尾だけにセパレータを持つ断片を cplat_path_join() で結合する。
+    int actual_ret =
+        cplat_path_join(actual, sizeof(actual), nullptr, "a/",
+                        "b"); // [手順] - 末尾だけにセパレータを持つ断片を指定して cplat_path_join() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_join() の戻り値が CPLAT_OK であること。
@@ -68,8 +69,9 @@ TEST_F(pathJoinTest, preserves_leading_separator_at_boundary)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_join(actual, sizeof(actual), nullptr, "a",
-                                     "/b"); // [手順] - 先頭だけにセパレータを持つ断片を cplat_path_join() で結合する。
+    int actual_ret =
+        cplat_path_join(actual, sizeof(actual), nullptr, "a",
+                        "/b"); // [手順] - 先頭だけにセパレータを持つ断片を指定して cplat_path_join() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_join() の戻り値が CPLAT_OK であること。
@@ -174,9 +176,11 @@ TEST_F(pathJoinTest, returns_einval_for_null_fragment)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_join_n(actual, sizeof(actual), &err, 2, "a",
-                                       nullptr);            // [手順] - 2 番目の断片に NULL を渡して呼び出す。
-    cplat_error_get_last(&last_error);                      // [手順] - TLS に記録された詳細エラーを取得する。
+    int actual_ret =
+        cplat_path_join_n(actual, sizeof(actual), &err, 2, "a",
+                          nullptr); // [手順] - 2 番目の断片に nullptr を指定して cplat_path_join_n() を呼び出す。
+    cplat_error_get_last(
+        &last_error); // [手順] - TLS に記録された詳細エラーの格納先として last_error を指定して cplat_error_get_last() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
@@ -202,7 +206,8 @@ TEST_F(pathJoinTest, returns_einval_for_zero_part_count)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_path_join_n(actual, sizeof(actual), &err, 0); // [手順] - part_count に 0 を渡して呼び出す。
+    int actual_ret = cplat_path_join_n(actual, sizeof(actual), &err,
+                                       0); // [手順] - part_count に 0 を指定して cplat_path_join_n() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,

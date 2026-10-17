@@ -47,7 +47,7 @@ TEST_F(promptLinuxTest, enter_raw_does_nothing_for_non_terminal)
     EXPECT_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
         .WillOnce(
             Return(-1)); // [Pre-Assert確認_異常系] - tcgetattr() が STDIN_FILENO を指定して 1 回呼び出されること。
-                         // [Pre-Assert手順] - tcgetattr から -1 を返却する。
+                         // [Pre-Assert手順] - tcgetattr() から -1 を返す。
 
     // Act
     cplat_internal_prompt_platform_enter_raw(
@@ -57,7 +57,7 @@ TEST_F(promptLinuxTest, enter_raw_does_nothing_for_non_terminal)
     EXPECT_EQ(
         0,
         handle_
-            .raw_active); // [確認_異常系] - handle_.raw_active が 0 であること。(tcgetattr の失敗で raw モードへ移行しないことの確認)
+            .raw_active); // [確認_異常系] - handle_.raw_active が 0 であること。(tcgetattr() の失敗で raw モードへ移行しないことの確認)
 }
 
 // 端末に対して raw モードへ移行し復帰できることの確認
@@ -72,10 +72,10 @@ TEST_F(promptLinuxTest, enter_and_leave_raw_on_terminal)
     EXPECT_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
         .WillOnce(DoAll(SetArgPointee<4>(original), Return(0)));
     // [Pre-Assert確認_正常系] - tcgetattr() が STDIN_FILENO を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - tcgetattr が元の端末設定を返却する。
+    // [Pre-Assert手順] - tcgetattr() から、元の端末設定を設定して 0 を返す。
     EXPECT_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _)).Times(2).WillRepeatedly(Return(0));
     // [Pre-Assert確認_正常系] - tcsetattr() が STDIN_FILENO を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - tcsetattr から 0 を返却する。
+    // [Pre-Assert手順] - tcsetattr() から 0 を返す。
 
     // Act
     cplat_internal_prompt_platform_enter_raw(
@@ -112,11 +112,11 @@ TEST_F(promptLinuxTest, enter_raw_does_nothing_when_tcsetattr_fails)
     EXPECT_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
         .WillOnce(DoAll(SetArgPointee<4>(original), Return(0)));
     // [Pre-Assert確認_正常系] - tcgetattr() が STDIN_FILENO を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - tcgetattr が元の端末設定を返却する。
+    // [Pre-Assert手順] - tcgetattr() から、元の端末設定を設定して 0 を返す。
     EXPECT_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _))
         .WillOnce(
             Return(-1)); // [Pre-Assert確認_異常系] - tcsetattr() が STDIN_FILENO を指定して 1 回呼び出されること。
-                         // [Pre-Assert手順] - tcsetattr から -1 を返却する。
+                         // [Pre-Assert手順] - tcsetattr() から -1 を返す。
 
     // Act
     cplat_internal_prompt_platform_enter_raw(
@@ -169,10 +169,10 @@ TEST_F(promptLinuxTest, enter_raw_does_not_reinstall_sigwinch_handler)
     EXPECT_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
         .WillOnce(DoAll(SetArgPointee<4>(original), Return(0)));
     // [Pre-Assert確認_正常系] - tcgetattr() が STDIN_FILENO を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - tcgetattr が元の端末設定を返却する。
+    // [Pre-Assert手順] - tcgetattr() から、元の端末設定を設定して 0 を返す。
     EXPECT_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - tcsetattr() が STDIN_FILENO を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - tcsetattr が 0 を返却する。
+    // [Pre-Assert手順] - tcsetattr() から 0 を返す。
 
     // Act
     cplat_internal_prompt_platform_enter_raw(
@@ -224,7 +224,7 @@ TEST_F(promptLinuxTest, leave_raw_handles_uninstalled_sigwinch_handler)
     // Pre-Assert
     EXPECT_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - tcsetattr() が STDIN_FILENO を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - tcsetattr が 0 を返却する。
+    // [Pre-Assert手順] - tcsetattr() から 0 を返す。
 
     // Act
     cplat_internal_prompt_platform_leave_raw(
@@ -249,9 +249,10 @@ TEST_F(promptLinuxTest, sigwinch_handler_records_pending_resize)
 
     ON_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
         .WillByDefault(
-            DoAll(SetArgPointee<4>(original), Return(0))); // [状態] - tcgetattr が元の端末設定を返すようにする。
+            DoAll(SetArgPointee<4>(original),
+                  Return(0))); // [状態] - tcgetattr() から、元の端末設定を設定して 0 を返すように既定動作を設定する。
     ON_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _))
-        .WillByDefault(Return(0)); // [状態] - tcsetattr が成功するようにする。
+        .WillByDefault(Return(0)); // [状態] - tcsetattr() から 0 を返すように既定動作を設定する。
     cplat_internal_prompt_platform_enter_raw(&handle_);
     ASSERT_EQ(
         1, test_prompt_sigwinch_installed()); // [状態確認] - test_prompt_sigwinch_installed() の戻り値が 1 であること。
@@ -259,7 +260,7 @@ TEST_F(promptLinuxTest, sigwinch_handler_records_pending_resize)
     // Pre-Assert
 
     // Act
-    raise(SIGWINCH); // [手順] - 自プロセスへ SIGWINCH を送出する。
+    raise(SIGWINCH); // [手順] - SIGWINCH を指定して raise() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -290,7 +291,7 @@ TEST_F(promptLinuxTest, read_char_returns_next_byte)
                 *static_cast<unsigned char *>(buf) = static_cast<unsigned char>('A');
                 return 1;
             }); // [Pre-Assert確認_正常系] - read() が STDIN_FILENO、1 を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 'A' を書き込み、1 を返却する。
+                // [Pre-Assert手順] - read() から、'A' を書き込んで 1 を返す。
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char(
@@ -311,7 +312,7 @@ TEST_F(promptLinuxTest, read_char_returns_minus1_at_eof)
     // Pre-Assert
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, 1u))
         .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - read() が STDIN_FILENO、1 を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - EOF を示す 0 を返却する。
+                              // [Pre-Assert手順] - read() から、EOF を示す 0 を返す。
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char(
@@ -337,7 +338,7 @@ TEST_F(promptLinuxTest, read_char_reports_resize_on_interrupted_read)
         .WillOnce(
             DoAll(Assign(&errno, EINTR),
                   Return(-1))); // [Pre-Assert確認_異常系] - read() が STDIN_FILENO、1 を指定して 1 回呼び出されること。
-                                // [Pre-Assert手順] - errno に EINTR を設定し、read から -1 を返却する。
+                                // [Pre-Assert手順] - read() から、errno に EINTR を設定して -1 を返す。
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char(
@@ -367,7 +368,7 @@ TEST_F(promptLinuxTest, read_char_retries_after_interrupt_without_resize)
         .WillOnce(
             DoAll(Assign(&errno, EIO),
                   Return(-1))); // [Pre-Assert確認_異常系] - read() が STDIN_FILENO、1 を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - 1 回目は errno に EINTR、2 回目は errno に EIO を設定して -1 を返却する。
+    // [Pre-Assert手順] - read() から、1 回目は errno に EINTR、2 回目は errno に EIO を設定して -1 を返す。
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char(
@@ -393,7 +394,7 @@ TEST_F(promptLinuxTest, read_char_nb_returns_next_byte_when_available)
     EXPECT_CALL(mock_select, select(_, _, _, STDIN_FILENO + 1, _, _, _, _))
         .WillOnce(
             Return(1)); // [Pre-Assert確認_正常系] - select() が STDIN_FILENO + 1 を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - 入力ありを示す 1 を返却する。
+                        // [Pre-Assert手順] - select() から、入力ありを示す 1 を返す。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, 1u))
         .WillOnce(
             [](const char *, int, const char *, int, void *buf, size_t) -> ssize_t
@@ -401,7 +402,7 @@ TEST_F(promptLinuxTest, read_char_nb_returns_next_byte_when_available)
                 *static_cast<unsigned char *>(buf) = static_cast<unsigned char>('B');
                 return 1;
             }); // [Pre-Assert確認_正常系] - read() が STDIN_FILENO、1 を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - 'B' を書き込み、1 を返却する。
+                // [Pre-Assert手順] - read() から、'B' を書き込んで 1 を返す。
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char_nb(
@@ -423,7 +424,7 @@ TEST_F(promptLinuxTest, read_char_nb_returns_minus1_on_timeout)
     EXPECT_CALL(mock_select, select(_, _, _, STDIN_FILENO + 1, _, _, _, _))
         .WillOnce(
             Return(0)); // [Pre-Assert確認_異常系] - select() が STDIN_FILENO + 1 を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - タイムアウトを示す 0 を返却する。
+                        // [Pre-Assert手順] - select() から、タイムアウトを示す 0 を返す。
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char_nb(

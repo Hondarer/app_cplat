@@ -34,8 +34,9 @@ TEST_F(stringCatalogVerifyTest, valid_catalog)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_verify(fake_catalog(), &string_key, &language); // [手順] - 既定のカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - 既定のカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_string_catalog_verify() の戻り値が CPLAT_OK であること。
@@ -52,8 +53,9 @@ TEST_F(stringCatalogVerifyTest, missing_entry_metadata)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                             &language); // [手順] - 短い説明が未設定のカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - 短い説明が未設定のカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -74,8 +76,9 @@ TEST_F(stringCatalogVerifyTest, missing_details_is_allowed)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                             &language); // [手順] - 詳細説明が未設定のカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - 詳細説明が未設定のカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -97,8 +100,9 @@ TEST_F(stringCatalogVerifyTest, missing_id_is_allowed)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                             &language); // [手順] - ID が未設定のカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - ID が未設定のカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -120,8 +124,9 @@ TEST_F(stringCatalogVerifyTest, missing_argument_metadata)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                             &language); // [手順] - 引数名が未設定のカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - 引数名が未設定のカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -142,8 +147,9 @@ TEST_F(stringCatalogVerifyTest, missing_argument_description)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                             &language); // [手順] - 引数説明が未設定のカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - 引数説明が未設定のカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -164,8 +170,9 @@ TEST_F(stringCatalogVerifyTest, missing_argument_array)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                             &language); // [手順] - 引数定義配列が未設定のカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - 引数定義配列が未設定のカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -186,8 +193,9 @@ TEST_F(stringCatalogVerifyTest, invalid_format)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                             &language); // [手順] - 引数個数を超える位置指定を持つカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - 引数個数を超える位置指定を持つカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -210,8 +218,9 @@ TEST_F(stringCatalogVerifyTest, unused_argument_index_in_format)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                             &language); // [手順] - 未使用のインデックスを参照するカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - 未使用のインデックスを参照するカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -241,7 +250,7 @@ TEST_F(stringCatalogVerifyTest, unused_argument_needs_no_metadata)
     // Act
     actual_ret = cplat_string_catalog_verify(
         fake_catalog(), &string_key,
-        &language); // [手順] - 名前と説明が未設定の、値を受け取らない引数を持つカタログを確認する。
+        &language); // [手順] - 名前と説明が未設定の、値を受け取らない引数を持つカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -263,9 +272,9 @@ TEST_F(stringCatalogVerifyTest, unused_argument_kind_is_allowed)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                    &language); // [手順] - 未使用のインデックスを参照しないカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - 未使用のインデックスを参照しないカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -284,8 +293,9 @@ TEST_F(stringCatalogVerifyTest, missing_localized_text_is_allowed)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                             &language); // [手順] - 日本語のリソースが未設定のカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - 日本語のリソースが未設定のカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -304,9 +314,9 @@ TEST_F(stringCatalogVerifyTest, missing_neutral_text)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                    &language); // [手順] - ニュートラル言語の書式が未設定のカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - ニュートラル言語の書式が未設定のカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -329,9 +339,9 @@ TEST_F(stringCatalogVerifyTest, missing_neutral_note)
     // Pre-Assert
 
     // Act
-    actual_ret =
-        cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                    &language); // [手順] - ニュートラル言語の備考が未設定のカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - ニュートラル言語の備考が未設定のカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -354,8 +364,9 @@ TEST_F(stringCatalogVerifyTest, argument_count_over_max)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                             &language); // [手順] - 引数個数が上限を超えるカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - 引数個数が上限を超えるカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -379,8 +390,9 @@ TEST_F(stringCatalogVerifyTest, duplicated_string_key)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                             &language); // [手順] - 文字列キーが重複したカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - 文字列キーが重複したカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -404,8 +416,9 @@ TEST_F(stringCatalogVerifyTest, duplicated_id_is_allowed)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                             &language); // [手順] - ID が重複したカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - ID が重複したカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -427,8 +440,9 @@ TEST_F(stringCatalogVerifyTest, argument_count_negative)
     // Pre-Assert
 
     // Act
-    actual_ret = cplat_string_catalog_verify(fake_catalog(), &string_key,
-                                             &language); // [手順] - 引数個数が負のカタログを確認する。
+    actual_ret = cplat_string_catalog_verify(
+        fake_catalog(), &string_key,
+        &language); // [手順] - 引数個数が負のカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -448,15 +462,15 @@ TEST_F(stringCatalogVerifyTest, omitted_output_arguments)
 
     // Act
     fake_catalog_set_argument_count(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_ARGUMENT_MAX + 1);
-    actual_ret_count =
-        cplat_string_catalog_verify(fake_catalog(), nullptr,
-                                    nullptr); // [手順] - 出力引数を省略して、引数個数が不正なカタログを確認する。
+    actual_ret_count = cplat_string_catalog_verify(
+        fake_catalog(), nullptr,
+        nullptr); // [手順] - 出力引数を省略して、引数個数が不正なカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     fake_catalog_reset();
     fake_catalog_set_text(FAKE_CATALOG_INDEX_TWO_ARGUMENTS, CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL, nullptr);
     actual_ret_text = cplat_string_catalog_verify(
         fake_catalog(), nullptr,
-        nullptr); // [手順] - 出力引数を省略して、ニュートラル言語の書式が未設定のカタログを確認する。
+        nullptr); // [手順] - 出力引数を省略して、ニュートラル言語の書式が未設定のカタログを指定して cplat_string_catalog_verify() を呼び出す。
 
     // Assert
     EXPECT_EQ(
