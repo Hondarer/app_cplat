@@ -513,9 +513,8 @@ TEST_F(traceFileCoverageTest, write_handles_format_truncation_and_lock_failure)
             DoDefault()); // [Pre-Assert確認_異常系] - snprintf() が 1 回以上呼び出されること。(トレース行の書式化を行うことの確認)
                           // [Pre-Assert手順] - snprintf() から 1 回目は -1 を返し、以降は libc の処理へ委譲する。
     EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, CPLAT_SYNC_WAIT_FOREVER))
-        .WillOnce(
-            DoDefault()); // [Pre-Assert確認_正常系] - cplat_local_lock_lock() が CPLAT_SYNC_WAIT_FOREVER を指定して 1 回呼び出されること。(書式化失敗時にレジストリ ロックを取得することの確認)
-                          // [Pre-Assert手順] - cplat_local_lock_lock() から製品 (prod) の処理へ委譲する。
+        .Times(
+            1); // [Pre-Assert確認_正常系] - cplat_local_lock_lock() が CPLAT_SYNC_WAIT_FOREVER を指定して 1 回呼び出されること。(書式化失敗時にレジストリ ロックを取得することの確認)
     EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, 100))
         .WillOnce(Return(CPLAT_OK))
         .WillOnce(Return(

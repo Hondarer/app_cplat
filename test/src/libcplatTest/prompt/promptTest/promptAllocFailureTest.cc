@@ -180,9 +180,8 @@ TEST_F(promptAllocFailureTest, readline_fmt_continues_with_empty_prompt_when_all
     /* 書式バッファー以外の確保 (コンテキストの退避バッファーなど) は製品 (prod) の処理へ委譲する。
        gMock は後から宣言した期待値を優先するため、汎用の期待値を先に宣言する */
     EXPECT_CALL(mock_cplat, cplat_malloc(_))
-        .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_正常系] - 書式バッファー以外の cplat_malloc() が任意の回数呼び出されること。
-                          // [Pre-Assert手順] - cplat_malloc() から製品 (prod) の処理へ委譲する。
+        .Times(
+            AnyNumber()); // [Pre-Assert確認_正常系] - 書式バッファー以外の cplat_malloc() が任意の回数呼び出されること。
     EXPECT_CALL(mock_cplat, cplat_malloc(256u))
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc() が 256 を指定して 1 回呼び出されること。
                                     // [Pre-Assert手順] - cplat_malloc() から nullptr を返す。

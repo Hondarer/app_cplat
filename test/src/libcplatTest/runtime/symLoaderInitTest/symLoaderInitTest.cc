@@ -569,10 +569,7 @@ TEST_F(symLoaderInitTest, releases_resources_when_read_setup_fails)
             0)); // [Pre-Assert確認_異常系] - cplat_fseek() が file、0、SEEK_SET を指定して 1 回呼び出されること。
                  // [Pre-Assert手順] - cplat_fseek() から 0 (先頭への移動に成功) を返す。
     EXPECT_CALL(mock_cplat_, cplat_malloc(5u))
-        .WillOnce(DoDefault())
-        .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc() が 5u を指定して 1 回以上呼び出されること。
-                          // [Pre-Assert手順] - cplat_malloc() から製品 (prod) の処理へ委譲する。
+        .Times(AtLeast(1)); // [Pre-Assert確認_異常系] - cplat_malloc() が 5u を指定して 1 回以上呼び出されること。
     EXPECT_CALL(mock_cplat_, cplat_fread(_, 1u, 4u, file, nullptr))
         .WillOnce(Return(
             3u)); // [Pre-Assert確認_異常系] - cplat_fread() が 1u、4u、file、nullptr を指定して 1 回呼び出されること。
