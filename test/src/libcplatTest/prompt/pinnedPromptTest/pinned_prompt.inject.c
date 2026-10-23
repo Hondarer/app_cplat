@@ -9,29 +9,14 @@
 
 #include "pinned_prompt.inject.h"
 
+void test_pinned_prompt_resize(cplat_pinned_prompt *screen)
+{
+    pinned_prompt_resize_locked(screen);
+}
+
 size_t test_pinned_prompt_cstr_len(const char *text)
 {
     return cstr_len(text);
-}
-
-size_t test_pinned_prompt_utf8_width(const char *text, size_t len, size_t pos)
-{
-    return utf8_char_display_width(text, len, pos);
-}
-
-size_t test_pinned_prompt_ansi_len(const char *text, size_t len, size_t pos)
-{
-    return ansi_sgr_sequence_len(text, len, pos);
-}
-
-size_t test_pinned_prompt_visible_bytes(const char *text, size_t len, size_t start, size_t max_cols)
-{
-    return pinned_prompt_visible_bytes_from(text, len, start, max_cols);
-}
-
-size_t test_pinned_prompt_display_width(const char *text, size_t len, size_t start, size_t end)
-{
-    return pinned_prompt_display_width_between(text, len, start, end);
 }
 
 void test_pinned_prompt_set_tty(cplat_pinned_prompt *screen, int is_tty)

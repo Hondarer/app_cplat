@@ -20,6 +20,7 @@
 #include <stdio.h>
 
 #include <cplat/prompt/prompt.h>
+#include <cplat/prompt/prompt_edit.h>
 #include <cplat/base/platform.h>
 
 #if defined(PLATFORM_LINUX)
@@ -68,6 +69,12 @@ extern "C"
         char *prompt_fmt_buf;
         size_t prompt_fmt_cap;
 
+        cplat_prompt_completion_fn completion_fn;
+        void *completion_user_data;
+        cplat_prompt_completions completions;
+        size_t view_start;
+        size_t cols;
+
         /* TTY 状態 */
         int is_tty;
 
@@ -80,11 +87,18 @@ extern "C"
 #elif defined(PLATFORM_WINDOWS)
     /* HANDLE は 8 バイト アライン。is_tty (int) との間に 4 バイトのパディングが必要なため明示メンバーで定義する。 */
     char _pad[4]; /* HANDLE 前の 8 バイト アライン用パディング */
+    cplat_internal_prompt_utf16_input windows_input;
     HANDLE stdin_handle;
     DWORD orig_in_mode;
     int raw_active;
 #endif
     };
+
+    /**
+     *  @brief          出力端末の幅を返します。取得失敗時は 80 桁です。
+     *  @return         端末の桁数です。
+     */
+    size_t cplat_internal_prompt_platform_get_columns(void);
 
     /* ---- プラットフォーム抽象インターフェイス (各 _platform.c で実装) ---- */
 

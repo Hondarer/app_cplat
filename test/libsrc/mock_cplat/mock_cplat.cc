@@ -475,6 +475,12 @@ Mock_cplat::Mock_cplat()
         .WillByDefault(Invoke(delegate_real_cplat_pinned_prompt_status_set));
 
     // cplat/prompt/prompt.h
+    ON_CALL(*this, cplat_prompt_completions_add(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_prompt_completions_add));
+    ON_CALL(*this, cplat_prompt_completion_set(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_prompt_completion_set));
+    ON_CALL(*this, cplat_pinned_prompt_completion_set(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_pinned_prompt_completion_set));
     ON_CALL(*this, cplat_prompt_create(_)).WillByDefault(Invoke(delegate_real_cplat_prompt_create));
     ON_CALL(*this, cplat_prompt_dispose(_)).WillByDefault(Invoke(delegate_real_cplat_prompt_dispose));
     ON_CALL(*this, cplat_prompt_readline_at(_, _, _, _, _, _))

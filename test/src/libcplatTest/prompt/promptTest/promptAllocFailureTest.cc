@@ -271,3 +271,39 @@ TEST_F(promptAllocFailureTest, readline_with_initial_reports_out_of_memory_when_
         promptFakeLeaveRawCount()); // [確認_異常系] - promptFakeLeaveRawCount() の戻り値が leave_raw_count_before + 1 と一致すること。(raw モードを解除して戻ることの確認)
 }
 // [サブ手順参照 名前=promptAllocFailureTest.TearDown]
+
+namespace
+{
+void allocation_completion(const char *, size_t, cplat_prompt_completions *candidates, void *user_data)
+{
+    *static_cast<int *>(user_data) = cplat_prompt_completions_add(candidates, 0U, "start ");
+}
+} // namespace
+
+// 候補を保持するメモリの確保に失敗しても入力済みの内容を維持することの確認
+// [サブ手順参照 名前=promptAllocFailureTest.SetUp]
+TEST_F(promptAllocFailureTest, completion_allocation_failure_keeps_input)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    char output[16] = {};
+    int add_result = CPLAT_OK;
+    cplat_prompt_completion_set(prompt_, allocation_completion, &add_result);
+    promptFakeSetInput("s\t\r");
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_realloc(_, 4U, sizeof(cplat_internal_prompt_ctx)))
+        .WillOnce(Invoke(delegate_real_cplat_realloc));
+    // [Pre-Assert確認_正常系] - 履歴コンテキストの領域を 1 回確保すること。
+    // [Pre-Assert手順] - 実際のメモリ確保へ委譲する。
+    EXPECT_CALL(mock_cplat, cplat_realloc(_, _, 1U)).WillOnce(Return(nullptr));
+    // [Pre-Assert確認_異常系] - 候補の領域を 1 回拡張すること。
+    // [Pre-Assert手順] - メモリ不足を返す。
+    // Act
+    int result = cplat_prompt_readline_at(prompt_, output, sizeof(output), "", "allocation", 1);
+    // [手順] - 候補の確保に失敗する入力を読み取る。
+    // Assert
+    EXPECT_EQ(CPLAT_OK, result);                    // [確認_正常系] - 入力を継続できること。
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY, add_result); // [確認_異常系] - 候補の追加がメモリ不足を返すこと。
+    EXPECT_STREQ("s", output);                      // [確認_異常系] - 入力済みの内容を維持すること。
+}
+// [サブ手順参照 名前=promptAllocFailureTest.TearDown]

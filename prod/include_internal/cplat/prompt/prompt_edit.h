@@ -15,11 +15,153 @@
 #define CPLAT_PROMPT_EDIT_H
 
 #include <stddef.h>
+#include <cplat/prompt/prompt.h>
+
+/** UTF-16 入力のサロゲートと、未取得の UTF-8 バイトを保持します。ゼロ初期化して使用します。 */
+typedef struct cplat_internal_prompt_utf16_input
+{
+    unsigned int high_surrogate;
+    unsigned int pending_unit;
+    unsigned int has_pending_unit;
+    unsigned int length;
+    unsigned int offset;
+    unsigned char bytes[4];
+} cplat_internal_prompt_utf16_input;
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+    /**
+     *  @brief          UTF-16 のコード単位を受け取り、完成した文字を UTF-8 として保持します。
+     *  @param[in,out]  input   ゼロ初期化済みの入力状態です。NULL は指定できません。
+     *  @param[in]      unit    0 から 0xFFFF の UTF-16 コード単位です。
+     *
+     *  `bytes` の未取得分を読み終え、`has_pending_unit` の値を処理してから呼び出します。\n
+     *  上位サロゲートは次の入力まで保留します。不正な組み合わせは U+FFFD に置換し、\n
+     *  その後のコード単位は `pending_unit` に保持して失わないようにします。\n
+     *  同じ状態への呼び出しは呼び出し側で直列化してください。
+     */
+    void cplat_internal_prompt_edit_utf16_feed(cplat_internal_prompt_utf16_input *input, unsigned int unit);
+
+    /* ハンドルが候補の領域を所有し、呼び出しのたびに件数を初期化します。 */
+    struct cplat_prompt_completions
+    {
+        const char *line;
+        char *candidate;
+        size_t cursor;
+        size_t max_bytes;
+        size_t count;
+        size_t start;
+        size_t capacity;
+    };
+
+    /**
+     *  @brief          1 文字の表示幅を返します。
+     *  @param[in]      buf 文字列です。
+     *  @param[in]      len バイト数です。
+     *  @param[in]      pos 文字の位置です。
+     */
+    size_t cplat_internal_prompt_edit_char_display_width(const char *buf, size_t len, size_t pos);
+
+    /**
+     *  @brief          SGR のバイト数を返します。
+     *  @param[in]      buf 文字列です。
+     *  @param[in]      len バイト数です。
+     *  @param[in]      pos 開始位置です。
+     */
+    size_t cplat_internal_prompt_edit_sgr_sequence_len(const char *buf, size_t len, size_t pos);
+
+    /**
+     *  @brief          表示幅に収まるバイト数を返します。
+     *  @param[in]      buf 文字列です。
+     *  @param[in]      len バイト数です。
+     *  @param[in]      start 表示開始位置です。
+     *  @param[in]      max_cols 表示幅です。
+     */
+    size_t cplat_internal_prompt_edit_visible_bytes_from(const char *buf, size_t len, size_t start, size_t max_cols);
+
+    /**
+     *  @brief          指定範囲の表示幅を返します。
+     *  @param[in]      buf 文字列です。
+     *  @param[in]      len バイト数です。
+     *  @param[in]      start 開始位置です。
+     *  @param[in]      end 終了位置です。
+     */
+    size_t cplat_internal_prompt_edit_display_width_between(const char *buf, size_t len, size_t start, size_t end);
+
+    /**
+     *  @brief          SGR を除く文字列全体の表示幅を返します。
+     *  @param[in]      text 文字列です。NULL は空文字列です。
+     */
+    size_t cplat_internal_prompt_edit_display_width(const char *text);
+
+    /**
+     *  @brief          カーソルが見える表示開始位置を返します。
+     *  @param[in]      buf 編集内容です。
+     *  @param[in]      len バイト数です。
+     *  @param[in]      cursor カーソル位置です。
+     *  @param[in]      view_start 表示開始位置です。
+     *  @param[in]      input_cols 入力欄の幅です。
+     */
+    size_t cplat_internal_prompt_edit_adjust_view_start(const char *buf, size_t len, size_t cursor, size_t view_start,
+                                                        size_t input_cols);
+
+    /**
+     *  @brief          末尾の UTF-8 文字が完成していれば 1 を返します。
+     *  @param[in]      buf 編集内容です。
+     *  @param[in]      len バイト数です。
+     */
+    int cplat_internal_prompt_edit_utf8_complete(const char *buf, size_t len);
+
+    /**
+     *  @brief          候補の件数と入力情報を初期化します。
+     *  @param[in,out]  completions 候補の状態です。
+     *  @param[in]      line 入力内容です。
+     *  @param[in]      cursor カーソル位置です。
+     *  @param[in]      max_bytes 入力の最大容量です。
+     */
+    void cplat_internal_prompt_edit_completions_reset(cplat_prompt_completions *completions, const char *line,
+                                                      size_t cursor, size_t max_bytes);
+
+    /**
+     *  @brief          候補の保持領域を解放します。
+     *  @param[in,out]  completions 候補の状態です。
+     */
+    void cplat_internal_prompt_edit_completions_dispose(cplat_prompt_completions *completions);
+
+    /**
+     *  @brief          唯一の候補の続きを返します。表示対象がなければ NULL です。
+     *  @param[in]      completions 候補の状態です。
+     */
+    const char *cplat_internal_prompt_edit_completion_suffix(const cplat_prompt_completions *completions);
+
+    /**
+     *  @brief          行末の編集後に候補を求めます。
+     *  @param[in,out]  completions 候補の状態です。
+     *  @param[in]      fn 補完関数です。NULL は解除です。
+     *  @param[in,out]  user_data 利用側の値です。
+     *  @param[in]      line 入力内容です。
+     *  @param[in]      len バイト数です。
+     *  @param[in]      cursor カーソル位置です。
+     *  @param[in]      max_bytes 入力の最大容量です。
+     */
+    void cplat_internal_prompt_edit_complete(cplat_prompt_completions *completions, cplat_prompt_completion_fn fn,
+                                             void *user_data, const char *line, size_t len, size_t cursor,
+                                             size_t max_bytes);
+
+    /**
+     *  @brief          候補を入力へ入れ、成功時に 1 を返します。
+     *  @param[in,out]  completions 候補の状態です。
+     *  @param[in,out]  buf 編集バッファーです。
+     *  @param[in,out]  cap バッファー容量です。
+     *  @param[in]      max_bytes 最大容量です。
+     *  @param[in,out]  len 入力の長さです。
+     *  @param[in,out]  cursor カーソル位置です。
+     */
+    int cplat_internal_prompt_edit_completion_accept(cplat_prompt_completions *completions, char **buf, size_t *cap,
+                                                     size_t max_bytes, size_t *len, size_t *cursor);
 
     /**
      *  @brief          指定位置以前にある UTF-8 文字境界を取得します。

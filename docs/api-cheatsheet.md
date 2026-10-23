@@ -755,6 +755,7 @@ Table: コマンド ライン引数解析における用途別 cplat API
 | 1 行の対話的入力を読み取る | `cplat_prompt_create` / `cplat_prompt_readline` / `cplat_prompt_readline_at` / `cplat_prompt_readline_fmt` / `cplat_prompt_readline_fmt_at` / `cplat_prompt_dispose` |
 | 入力欄に初期値を入れた状態で 1 行の対話的入力を読み取る (既存の値を編集させる) | `cplat_prompt_readline_with_initial` / `cplat_prompt_readline_with_initial_at` / `cplat_pinned_prompt_readline_with_initial` / `cplat_pinned_prompt_readline_with_initial_at` |
 | 画面下部に固定したプロンプトへ入力しつつ、その上にログを流す | `cplat_pinned_prompt_create` / `cplat_pinned_prompt_readline` / `cplat_pinned_prompt_readline_fmt` / `cplat_pinned_prompt_write` / `cplat_pinned_prompt_printf` / `cplat_pinned_prompt_status_enable` / `cplat_pinned_prompt_status_set` / `cplat_pinned_prompt_dispose` |
+| 入力中の語を補完する (候補が 1 つに定まると灰色で表示し、Tab または → で確定する) | `cplat_prompt_completion_set` / `cplat_pinned_prompt_completion_set` / `cplat_prompt_completions_add` |
 
 Table: 対話的プロンプト入力における用途別 cplat API
 

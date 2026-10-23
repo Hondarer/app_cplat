@@ -1,4 +1,5 @@
 #include <testfw.h>
+#include <mock_cplat.h>
 #include <cplat/prompt/prompt_internal.h>
 
 #if defined(PLATFORM_WINDOWS)
@@ -241,16 +242,16 @@ TEST_F(promptWindowsTest, read_char_returns_next_byte)
         .WillOnce(Return(
             WAIT_OBJECT_0)); // [Pre-Assert確認_正常系] - WaitForSingleObject() が dummy_handle、100 を指定して 1 回呼び出されること。
                              // [Pre-Assert手順] - WaitForSingleObject() から WAIT_OBJECT_0 を返す。
-    EXPECT_CALL(mock_windows, ReadFile(_, _, _, dummy_handle, _, 1U, _, _))
+    EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, dummy_handle, _, 1U, _, _))
         .WillOnce(
             [byte_value](const char *, int, const char *, HANDLE, LPVOID buffer, DWORD, LPDWORD bytes_read,
-                         LPOVERLAPPED)
+                         PCONSOLE_READCONSOLE_CONTROL)
             {
-                *static_cast<char *>(buffer) = byte_value;
+                *static_cast<WCHAR *>(buffer) = byte_value;
                 *bytes_read = 1UL;
                 return TRUE;
-            }); // [Pre-Assert確認_正常系] - ReadFile() が dummy_handle、1 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - ReadFile() から、出力バッファーへ 'A' を書き込み、読み取りバイト数に 1 を設定して TRUE を返す。
+            }); // [Pre-Assert確認_正常系] - ReadConsoleW() が dummy_handle、1 を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - ReadConsoleW() から、出力バッファーへ 'A' を書き込み、読み取りバイト数に 1 を設定して TRUE を返す。
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char(
@@ -274,11 +275,11 @@ TEST_F(promptWindowsTest, read_char_returns_minus1_at_eof)
         .WillOnce(Return(
             WAIT_OBJECT_0)); // [Pre-Assert確認_正常系] - WaitForSingleObject() が dummy_handle、100 を指定して 1 回呼び出されること。
                              // [Pre-Assert手順] - WaitForSingleObject() から WAIT_OBJECT_0 を返す。
-    EXPECT_CALL(mock_windows, ReadFile(_, _, _, dummy_handle, _, 1U, _, _))
+    EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, dummy_handle, _, 1U, _, _))
         .WillOnce(DoAll(
             SetArgPointee<6>(0UL),
-            Return(TRUE))); // [Pre-Assert確認_異常系] - ReadFile() が dummy_handle、1 を指定して 1 回呼び出されること。
-                            // [Pre-Assert手順] - ReadFile() から、読み取りバイト数に 0 を設定して TRUE を返す。
+            Return(TRUE))); // [Pre-Assert確認_異常系] - ReadConsoleW() が dummy_handle、1 を指定して 1 回呼び出されること。
+                            // [Pre-Assert手順] - ReadConsoleW() から、読み取りバイト数に 0 を設定して TRUE を返す。
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char(
@@ -303,8 +304,8 @@ TEST_F(promptWindowsTest, read_char_returns_minus2_on_timeout)
         .WillOnce(Return(
             WAIT_TIMEOUT)); // [Pre-Assert確認_正常系] - WaitForSingleObject() が dummy_handle、100 を指定して 1 回呼び出されること。
                             // [Pre-Assert手順] - WaitForSingleObject() から WAIT_TIMEOUT を返す。
-    EXPECT_CALL(mock_windows, ReadFile(_, _, _, _, _, _, _, _))
-        .Times(0); // [Pre-Assert確認_正常系] - ReadFile() が呼び出されないこと。
+    EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_正常系] - ReadConsoleW() が呼び出されないこと。
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char(
@@ -329,8 +330,8 @@ TEST_F(promptWindowsTest, read_char_returns_minus1_when_wait_fails)
         .WillOnce(Return(
             WAIT_FAILED)); // [Pre-Assert確認_異常系] - WaitForSingleObject() が dummy_handle、100 を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - WaitForSingleObject() から、WAIT_TIMEOUT でも WAIT_OBJECT_0 でもない WAIT_FAILED を返す。
-    EXPECT_CALL(mock_windows, ReadFile(_, _, _, _, _, _, _, _))
-        .Times(0); // [Pre-Assert確認_異常系] - ReadFile() が呼び出されないこと。
+    EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - ReadConsoleW() が呼び出されないこと。
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char(
@@ -364,16 +365,16 @@ TEST_F(promptWindowsTest, read_char_nb_returns_next_byte_when_available)
         .WillOnce(Return(
             WAIT_OBJECT_0)); // [Pre-Assert確認_正常系] - WaitForSingleObject() が dummy_handle、100 を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - WaitForSingleObject() から WAIT_OBJECT_0 を返す。
-    EXPECT_CALL(mock_windows, ReadFile(_, _, _, dummy_handle, _, 1U, _, _))
+    EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, dummy_handle, _, 1U, _, _))
         .WillOnce(
             [byte_value](const char *, int, const char *, HANDLE, LPVOID buffer, DWORD, LPDWORD bytes_read,
-                         LPOVERLAPPED)
+                         PCONSOLE_READCONSOLE_CONTROL)
             {
-                *static_cast<char *>(buffer) = byte_value;
+                *static_cast<WCHAR *>(buffer) = byte_value;
                 *bytes_read = 1UL;
                 return TRUE;
-            }); // [Pre-Assert確認_正常系] - ReadFile() が dummy_handle、1 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - ReadFile() から、出力バッファーへ 'B' を書き込み、読み取りバイト数に 1 を設定して TRUE を返す。
+            }); // [Pre-Assert確認_正常系] - ReadConsoleW() が dummy_handle、1 を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - ReadConsoleW() から、出力バッファーへ 'B' を書き込み、読み取りバイト数に 1 を設定して TRUE を返す。
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char_nb(
@@ -400,8 +401,8 @@ TEST_F(promptWindowsTest, read_char_nb_returns_minus1_on_timeout)
     EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, dummy_handle, 100U))
         .Times(
             0); // [Pre-Assert確認_異常系] - dummy_handle、100 を指定した WaitForSingleObject() の呼び出しがないこと。
-    EXPECT_CALL(mock_windows, ReadFile(_, _, _, _, _, _, _, _))
-        .Times(0); // [Pre-Assert確認_異常系] - ReadFile() が呼び出されないこと。
+    EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - ReadConsoleW() が呼び出されないこと。
 
     // Act
     int actual_ret = cplat_internal_prompt_platform_read_char_nb(
@@ -413,4 +414,162 @@ TEST_F(promptWindowsTest, read_char_nb_returns_minus1_on_timeout)
         actual_ret); // [確認_異常系] - cplat_internal_prompt_platform_read_char_nb() の戻り値が -1 であること。(50 ミリ秒待っても入力がないことの確認)
 }
 
+// 出力端末の幅を取得し、取得失敗時は 80 桁を返すことの確認
+TEST_F(promptWindowsTest, columns_use_console_window_and_fallback)
+{
+    // Arrange
+    Mock_windows mock_windows;
+    CONSOLE_SCREEN_BUFFER_INFO info = {};
+    info.srWindow.Left = 10;
+    info.srWindow.Right = 109;
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_OUTPUT_HANDLE)).WillRepeatedly(Return((HANDLE)0x1234));
+    // [Pre-Assert確認_正常系] - 出力ハンドルを取得すること。
+    EXPECT_CALL(mock_windows, GetConsoleScreenBufferInfo(_, _, _, _, _))
+        .WillOnce(DoAll(SetArgPointee<4>(info), Return(TRUE)))
+        .WillOnce(Return(FALSE))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, HANDLE, CONSOLE_SCREEN_BUFFER_INFO *out)
+            {
+                out->srWindow.Left = 2;
+                out->srWindow.Right = 1;
+                return TRUE;
+            }));
+    // [Pre-Assert確認_正常系] - サイズ取得を 3 回行うこと。
+    // [Pre-Assert手順] - 正常値、失敗、逆順の座標を返す。
+    // Act
+    size_t columns = cplat_internal_prompt_platform_get_columns();  // [手順] - 正常な端末幅を取得する。
+    size_t fallback = cplat_internal_prompt_platform_get_columns(); // [手順] - 取得失敗時の幅を取得する。
+    size_t invalid = cplat_internal_prompt_platform_get_columns();  // [手順] - 逆順の座標で幅を取得する。
+    // Assert
+    EXPECT_EQ(100U, columns); // [確認_正常系] - ウィンドウ幅が 100 桁であること。
+    EXPECT_EQ(80U, fallback); // [確認_異常系] - 取得失敗時は 80 桁であること。
+    EXPECT_EQ(80U, invalid);  // [確認_異常系] - 不正な座標では 80 桁であること。
+}
+
 #endif /* PLATFORM_WINDOWS */
+
+#if defined(PLATFORM_WINDOWS)
+// 不完全な UTF-8 の後続バイトを待機せずに取得することの確認
+TEST_F(promptWindowsTest, reads_surrogate_pair_and_drains_utf8)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, _, 100U)).Times(2).WillRepeatedly(Return(WAIT_OBJECT_0));
+    // [Pre-Assert確認_正常系] - UTF-16 の入力ごとに 1 回だけ待機すること。
+    EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, _, _, 1U, _, _))
+        .WillOnce(
+            [](const char *, int, const char *, HANDLE, LPVOID buf, DWORD, LPDWORD read, PCONSOLE_READCONSOLE_CONTROL)
+            {
+                *static_cast<WCHAR *>(buf) = 0xD83DU;
+                *read = 1U;
+                return TRUE;
+            })
+        .WillOnce(
+            [](const char *, int, const char *, HANDLE, LPVOID buf, DWORD, LPDWORD read, PCONSOLE_READCONSOLE_CONTROL)
+            {
+                *static_cast<WCHAR *>(buf) = 0xDE00U;
+                *read = 1U;
+                return TRUE;
+            });
+    // [Pre-Assert確認_正常系] - ReadConsoleW() が 2 回呼び出されること。
+    // [Pre-Assert手順] - サロゲートペアを返す。
+    // Act
+    int first = cplat_internal_prompt_platform_read_char(&handle_);     // [手順] - UTF-8 の先頭を読む。
+    int second = cplat_internal_prompt_platform_read_char_nb(&handle_); // [手順] - バッファー内の続きを読む。
+    int third = cplat_internal_prompt_platform_read_char(&handle_);     // [手順] - 3 バイト目を読む。
+    int fourth = cplat_internal_prompt_platform_read_char(&handle_);    // [手順] - 4 バイト目を読む。
+    // Assert
+    EXPECT_EQ(0xF0, first);  // [確認_正常系] - 先頭を取得すること。
+    EXPECT_EQ(0x9F, second); // [確認_正常系] - 2 バイト目を取得すること。
+    EXPECT_EQ(0x98, third);  // [確認_正常系] - 3 バイト目を取得すること。
+    EXPECT_EQ(0x80, fourth); // [確認_正常系] - 最終バイトを取得すること。
+}
+#endif
+#if defined(PLATFORM_WINDOWS)
+// ReadConsoleW mock が未注入時と既定動作で実 API へ委譲することの確認
+TEST_F(promptWindowsTest, readconsole_mock_uses_real_delegate)
+{
+    // Arrange
+    WCHAR character = 0;
+    DWORD count = 0;
+    // Pre-Assert
+    // Act 1
+    BOOL direct =
+        mock_ReadConsoleW(__FILE__, __LINE__, __func__, INVALID_HANDLE_VALUE, &character, 1U, &count, nullptr);
+    // [手順] - mock 未注入で無効ハンドルを渡す。
+    // Assert 1
+    EXPECT_FALSE(direct); // [確認_異常系] - 実 API が無効ハンドルを拒否すること。
+    // Arrange 2
+    NiceMock<Mock_windows> mock_windows;
+    // Pre-Assert 2
+    // Act 2
+    BOOL injected =
+        mock_ReadConsoleW(__FILE__, __LINE__, __func__, INVALID_HANDLE_VALUE, &character, 1U, &count, nullptr);
+    // [手順] - 既定 delegate へ無効ハンドルを渡す。
+    // Assert 2
+    EXPECT_FALSE(injected); // [確認_異常系] - 既定動作でも実 API が無効ハンドルを拒否すること。
+}
+#endif
+#if defined(PLATFORM_WINDOWS)
+// 上位サロゲートの待機中にタイムアウトしても状態を失わないことの確認
+TEST_F(promptWindowsTest, preserves_high_surrogate_across_timeout)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, _, 100U))
+        .WillOnce(Return(WAIT_OBJECT_0))
+        .WillOnce(Return(WAIT_TIMEOUT))
+        .WillOnce(Return(WAIT_OBJECT_0));
+    // [Pre-Assert確認_正常系] - 2 コード単位の間でタイムアウトを受け付けること。
+    EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, _, _, 1U, _, _))
+        .WillOnce(
+            [](const char *, int, const char *, HANDLE, LPVOID p, DWORD, LPDWORD n, PCONSOLE_READCONSOLE_CONTROL)
+            {
+                *static_cast<WCHAR *>(p) = 0xD83DU;
+                *n = 1U;
+                return TRUE;
+            })
+        .WillOnce(
+            [](const char *, int, const char *, HANDLE, LPVOID p, DWORD, LPDWORD n, PCONSOLE_READCONSOLE_CONTROL)
+            {
+                *static_cast<WCHAR *>(p) = 0xDE00U;
+                *n = 1U;
+                return TRUE;
+            });
+    // [Pre-Assert確認_正常系] - ReadConsoleW() が 2 回呼び出されること。
+    // [Pre-Assert手順] - 上位・下位サロゲートを返す。
+    // Act 1
+    int timeout = cplat_internal_prompt_platform_read_char(&handle_); // [手順] - 上位サロゲートの後でタイムアウトする。
+    // Assert 1
+    EXPECT_EQ(-2, timeout);                                   // [確認_正常系] - タイムアウトを返すこと。
+    EXPECT_EQ(0xD83DU, handle_.windows_input.high_surrogate); // [確認_正常系] - 上位サロゲートを保持すること。
+    // Act 2
+    int first = cplat_internal_prompt_platform_read_char(&handle_); // [手順] - 続く下位サロゲートを受け取る。
+    // Assert 2
+    EXPECT_EQ(0xF0, first);                      // [確認_正常系] - 完成した UTF-8 の先頭を返すこと。
+    EXPECT_EQ(4U, handle_.windows_input.length); // [確認_正常系] - 4 バイトへ変換すること。
+}
+
+// 不正なサロゲートの直後に来た ASCII を消費し直すことの確認
+TEST_F(promptWindowsTest, drains_deferred_unit_before_waiting)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    cplat_internal_prompt_edit_utf16_feed(&handle_.windows_input, 0xD800U);
+    cplat_internal_prompt_edit_utf16_feed(&handle_.windows_input, 0x41U);
+    handle_.windows_input.offset = handle_.windows_input.length;
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, _, _)).Times(0);
+    // [Pre-Assert確認_正常系] - 保留中の入力を待機せず処理すること。
+    EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, _, _, _, _, _)).Times(0);
+    // [Pre-Assert確認_正常系] - 保留中の入力より先にコンソールを読まないこと。
+    // Act
+    int actual = cplat_internal_prompt_platform_read_char_nb(&handle_); // [手順] - 保留したコード単位を読む。
+    // Assert
+    EXPECT_EQ('A', actual);                                // [確認_正常系] - 後続文字を失わないこと。
+    EXPECT_EQ(0U, handle_.windows_input.has_pending_unit); // [確認_正常系] - 保留状態を解除すること。
+}
+#endif

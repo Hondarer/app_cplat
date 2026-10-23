@@ -5,6 +5,7 @@
 #include <sys/mock_select.h>
 
 #include <errno.h>
+#include <mock_ioctl.h>
 
 #if defined(PLATFORM_LINUX)
 
@@ -434,6 +435,34 @@ TEST_F(promptLinuxTest, read_char_nb_returns_minus1_on_timeout)
     EXPECT_EQ(
         -1,
         actual_ret); // [確認_異常系] - cplat_internal_prompt_platform_read_char_nb() の戻り値が -1 であること。(入力がないことの確認)
+}
+
+// 出力端末の幅を取得し、失敗または幅 0 の場合は 80 桁を返すことの確認
+TEST_F(promptLinuxTest, columns_use_winsize_and_fallback)
+{
+    // Arrange
+    NiceMock<Mock_ioctl> mock_ioctl;
+    struct winsize size = {};
+    size.ws_col = 100;
+    // Pre-Assert
+    EXPECT_CALL(mock_ioctl, ioctl(_, _, _, STDOUT_FILENO, TIOCGWINSZ, _))
+        .WillOnce(DoAll(testing::Invoke([size](const char *, int, const char *, int, unsigned long, void *out)
+                                        { *static_cast<struct winsize *>(out) = size; }),
+                        Return(0)))
+        .WillOnce(Return(-1))
+        .WillOnce(DoAll(testing::Invoke([](const char *, int, const char *, int, unsigned long, void *out)
+                                        { static_cast<struct winsize *>(out)->ws_col = 0; }),
+                        Return(0)));
+    // [Pre-Assert確認_正常系] - 出力端末のサイズを 3 回取得すること。
+    // [Pre-Assert手順] - 正常値、失敗、幅 0 を返す。
+    // Act
+    size_t columns = cplat_internal_prompt_platform_get_columns();  // [手順] - 正常な端末幅を取得する。
+    size_t fallback = cplat_internal_prompt_platform_get_columns(); // [手順] - 失敗時の端末幅を取得する。
+    size_t zero = cplat_internal_prompt_platform_get_columns();     // [手順] - 幅 0 の端末幅を取得する。
+    // Assert
+    EXPECT_EQ(100U, columns); // [確認_正常系] - 100 桁を取得すること。
+    EXPECT_EQ(80U, fallback); // [確認_異常系] - 失敗時は 80 桁であること。
+    EXPECT_EQ(80U, zero);     // [確認_異常系] - 幅 0 では 80 桁であること。
 }
 
 #endif /* PLATFORM_LINUX */

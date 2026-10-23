@@ -21,4 +21,7 @@ int promptFakeLeaveRawCount(void);
 /* 呼び出し回数と入力列を初期化する。 */
 void promptFakeReset(void);
 
+/* 再描画で返す端末幅を指定する。 */
+void promptFakeSetColumns(size_t columns);
+
 #endif /* PROMPT_PLATFORM_FAKE_H */

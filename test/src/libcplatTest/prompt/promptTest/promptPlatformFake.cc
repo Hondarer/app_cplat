@@ -15,6 +15,7 @@ std::vector<int> g_input;
 size_t g_pos = 0u;
 int g_enter_raw = 0;
 int g_leave_raw = 0;
+size_t g_columns = 80U;
 
 int next_byte()
 {
@@ -60,10 +61,15 @@ void promptFakeReset(void)
     g_pos = 0u;
     g_enter_raw = 0;
     g_leave_raw = 0;
+    g_columns = 80U;
 }
 
 extern "C"
 {
+    size_t cplat_internal_prompt_platform_get_columns(void)
+    {
+        return g_columns;
+    }
 
     void cplat_internal_prompt_platform_enter_raw(cplat_prompt *p)
     {
@@ -88,4 +94,9 @@ extern "C"
         (void)p;
         return next_byte();
     }
+}
+
+void promptFakeSetColumns(size_t columns)
+{
+    g_columns = columns;
 }

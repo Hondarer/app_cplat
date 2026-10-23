@@ -17,18 +17,6 @@ extern "C"
     /* pinned_prompt.c の static 関数 cstr_len へのアクセサー。 */
     extern size_t test_pinned_prompt_cstr_len(const char *text);
 
-    /* UTF-8 の表示幅判定へ直接アクセスするアクセサー。 */
-    extern size_t test_pinned_prompt_utf8_width(const char *text, size_t len, size_t pos);
-
-    /* ANSI SGR シーケンス長判定へ直接アクセスするアクセサー。 */
-    extern size_t test_pinned_prompt_ansi_len(const char *text, size_t len, size_t pos);
-
-    /* 表示列数に基づく可視バイト数計算へ直接アクセスするアクセサー。 */
-    extern size_t test_pinned_prompt_visible_bytes(const char *text, size_t len, size_t start, size_t max_cols);
-
-    /* 指定範囲の表示幅計算へ直接アクセスするアクセサー。 */
-    extern size_t test_pinned_prompt_display_width(const char *text, size_t len, size_t start, size_t end);
-
     /* 非 TTY のフォールバック経路を選択するためのテスト用状態変更。 */
     extern void test_pinned_prompt_set_tty(cplat_pinned_prompt *screen, int is_tty);
 
@@ -36,6 +24,7 @@ extern "C"
     enum test_pinned_prompt_key
     {
         TEST_PINNED_PROMPT_KEY_CHAR = 0,
+        TEST_PINNED_PROMPT_KEY_TAB,
         TEST_PINNED_PROMPT_KEY_ENTER,
         TEST_PINNED_PROMPT_KEY_BACKSPACE,
         TEST_PINNED_PROMPT_KEY_DELETE,
@@ -70,6 +59,7 @@ extern "C"
                                                 const char *edit_line, const char *top_left, const char *top_right,
                                                 const char *bottom_left, const char *bottom_right);
     extern void test_pinned_prompt_render(cplat_pinned_prompt *screen);
+    extern void test_pinned_prompt_resize(cplat_pinned_prompt *screen);
 
     /* 履歴と出力準備の境界経路へ直接アクセスする。 */
     extern void test_pinned_prompt_history_edge_cases(cplat_pinned_prompt *screen);

@@ -9,6 +9,19 @@
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
+size_t cplat_internal_prompt_platform_get_columns(void)
+{
+    CONSOLE_SCREEN_BUFFER_INFO info;
+    /* see: https://learn.microsoft.com/en-us/windows/console/getconsolescreenbufferinfo */
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info) && info.srWindow.Right >= info.srWindow.Left)
+    {
+        return (size_t)(info.srWindow.Right - info.srWindow.Left) + 1U;
+    }
+    return 80U;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
 void cplat_internal_prompt_platform_enter_raw(cplat_prompt *p)
 {
     DWORD new_mode;
@@ -53,30 +66,51 @@ void cplat_internal_prompt_platform_leave_raw(cplat_prompt *p)
 
 int cplat_internal_prompt_platform_read_char(cplat_prompt *p)
 {
-    DWORD result;
-    DWORD n_read;
-    char ch;
-
-    result = WaitForSingleObject(p->stdin_handle, 100U);
-    if (result == WAIT_TIMEOUT)
+    cplat_internal_prompt_utf16_input *input = &p->windows_input;
+    while (input->offset == input->length)
     {
-        return -2; /* リサイズ チェック用タイムアウト */
+        unsigned int unit;
+        if (input->has_pending_unit)
+        {
+            unit = input->pending_unit;
+            input->has_pending_unit = 0U;
+        }
+        else
+        {
+            DWORD n_read;
+            WCHAR character;
+            DWORD result = WaitForSingleObject(p->stdin_handle, 100U);
+            if (result == WAIT_TIMEOUT)
+            {
+                return -2;
+            }
+            if (result != WAIT_OBJECT_0)
+            {
+                return -1;
+            }
+            /* サロゲートを個別に UTF-8 変換すると置換文字になるため、UTF-16 で読み取ります。
+             * see: https://learn.microsoft.com/en-us/windows/console/readconsole
+             * see: https://github.com/microsoft/terminal/blob/main/src/host/stream.cpp */
+            if (!ReadConsoleW(p->stdin_handle, &character, 1U, &n_read, NULL) || n_read == 0U)
+            {
+                return -1;
+            }
+            unit = (unsigned int)character;
+        }
+        cplat_internal_prompt_edit_utf16_feed(input, unit);
     }
-    if (result != WAIT_OBJECT_0)
-    {
-        return -1;
-    }
-    if (!ReadFile(p->stdin_handle, &ch, 1, &n_read, NULL) || n_read == 0)
-    {
-        return -1;
-    }
-    return (unsigned char)ch;
+    return (int)input->bytes[input->offset++];
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_internal_prompt_platform_read_char_nb(cplat_prompt *p)
 {
+    if (p->windows_input.offset < p->windows_input.length || p->windows_input.has_pending_unit)
+    {
+        return cplat_internal_prompt_platform_read_char(p);
+    }
+
     DWORD result = WaitForSingleObject(p->stdin_handle, 50); /* 50ms */
     if (result != WAIT_OBJECT_0)
     {

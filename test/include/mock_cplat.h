@@ -378,6 +378,9 @@ MOCK_CPLAT_LINK_IMPL(cplat_pinned_prompt_status_enable)
 MOCK_CPLAT_LINK_IMPL(cplat_pinned_prompt_status_set)
 
 // cplat/prompt/prompt.h
+MOCK_CPLAT_LINK_IMPL(cplat_prompt_completions_add)
+MOCK_CPLAT_LINK_IMPL(cplat_prompt_completion_set)
+MOCK_CPLAT_LINK_IMPL(cplat_pinned_prompt_completion_set)
 MOCK_CPLAT_LINK_IMPL(cplat_prompt_create)
 MOCK_CPLAT_LINK_IMPL(cplat_prompt_dispose)
 MOCK_CPLAT_LINK_IMPL(cplat_prompt_readline_at)
@@ -1177,6 +1180,12 @@ extern int delegate_real_cplat_pinned_prompt_status_set(cplat_pinned_prompt *scr
                                                         cplat_pinned_prompt_status_align align, const char *content);
 
 // cplat/prompt/prompt.h
+extern int delegate_real_cplat_prompt_completions_add(cplat_prompt_completions *completions, size_t start,
+                                                      const char *candidate);
+extern int delegate_real_cplat_prompt_completion_set(cplat_prompt *prompt, cplat_prompt_completion_fn fn,
+                                                     void *user_data);
+extern int delegate_real_cplat_pinned_prompt_completion_set(cplat_pinned_prompt *screen, cplat_prompt_completion_fn fn,
+                                                            void *user_data);
 extern cplat_prompt *delegate_real_cplat_prompt_create(const cplat_prompt_options *options);
 extern void delegate_real_cplat_prompt_dispose(cplat_prompt *prompt);
 extern int delegate_real_cplat_prompt_readline_at(cplat_prompt *prompt, char *buf, size_t buf_size,
@@ -1955,6 +1964,9 @@ class Mock_cplat
                  const char *));
 
     // cplat/prompt/prompt.h
+    MOCK_METHOD(int, cplat_prompt_completions_add, (cplat_prompt_completions *, size_t, const char *));
+    MOCK_METHOD(int, cplat_prompt_completion_set, (cplat_prompt *, cplat_prompt_completion_fn, void *));
+    MOCK_METHOD(int, cplat_pinned_prompt_completion_set, (cplat_pinned_prompt *, cplat_prompt_completion_fn, void *));
     MOCK_METHOD(cplat_prompt *, cplat_prompt_create, (const cplat_prompt_options *));
     MOCK_METHOD(void, cplat_prompt_dispose, (cplat_prompt *));
     MOCK_METHOD(int, cplat_prompt_readline_at, (cplat_prompt *, char *, size_t, const char *, const char *, int));

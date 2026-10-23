@@ -593,6 +593,12 @@
                  int(CPLAT_API *)(cplat_pinned_prompt * screen, cplat_pinned_prompt_status_position position, \
                                   cplat_pinned_prompt_status_align align, const char *content)) \
     /* cplat/prompt/prompt.h */ \
+    EXPORT_ENTRY(cplat_prompt_completions_add, \
+                 int(CPLAT_API *)(cplat_prompt_completions * completions, size_t start, const char *candidate)) \
+    EXPORT_ENTRY(cplat_prompt_completion_set, \
+                 int(CPLAT_API *)(cplat_prompt * prompt, cplat_prompt_completion_fn fn, void *user_data)) \
+    EXPORT_ENTRY(cplat_pinned_prompt_completion_set, \
+                 int(CPLAT_API *)(cplat_pinned_prompt * screen, cplat_prompt_completion_fn fn, void *user_data)) \
     EXPORT_ENTRY(cplat_prompt_create, cplat_prompt *(CPLAT_API *)(const cplat_prompt_options *options)) \
     EXPORT_ENTRY(cplat_prompt_dispose, void(CPLAT_API *)(cplat_prompt * prompt)) \
     EXPORT_ENTRY(cplat_prompt_readline_at, int(CPLAT_API *)(cplat_prompt * prompt, char *buf, size_t buf_size, \

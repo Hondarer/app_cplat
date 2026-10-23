@@ -89,6 +89,52 @@ extern "C"
      */
     typedef struct cplat_prompt cplat_prompt;
 
+    /** @brief 補完関数の呼び出し中だけ有効な候補の受け取り先です。 */
+    typedef struct cplat_prompt_completions cplat_prompt_completions;
+
+    /**
+     *  @brief          入力が空でない行末で、文字入力、削除、候補の確定後に候補を返します。
+     *  @param[in]      line NUL 終端の入力です。末尾の UTF-8 文字が完成したときだけ呼ばれます。
+     *  @param[in]      cursor 行末のバイト位置です。
+     *  @param[in,out]  completions 候補の受け取り先です。呼び出しの間だけ有効です。
+     *  @param[in,out]  user_data 登録時の値です。
+     *
+     *  入力と出力が端末の場合だけ呼ばれます。履歴、初期値、カーソル移動、Esc の直後は呼びません。
+     *  pinned_prompt では mutex を保持したまま呼ばれます。補完関数から pinned_prompt の API を呼ばないでください。
+     *  他スレッドの出力を待たせるため、短時間で処理を終えてください。
+     */
+    typedef void (*cplat_prompt_completion_fn)(const char *line, size_t cursor, cplat_prompt_completions *completions,
+                                               void *user_data);
+
+    /**
+     *  @brief          入力済みの部分を含む候補を追加します。
+     *  @param[in,out]  completions 補完関数へ渡された受け取り先です。NULL は指定できません。
+     *  @param[in]      start 置換開始位置のバイト位置です。
+     *  @param[in]      candidate NUL 終端の候補です。複製するため、戻った後に解放できます。
+     *  @retval         CPLAT_OK 受け付けました。同じ開始位置と文字列は 1 件として扱います。
+     *  @retval         CPLAT_ERR_INVALID_ARGUMENT NULL、行末より後または UTF-8 文字途中の開始位置、
+     *                  制御文字 (0x01〜0x1F、0x7F)、入力済み部分と先頭が一致しない候補です。
+     *  @retval         CPLAT_ERR_BUFFER_TOO_SMALL 置換後の入力が NUL 終端込みで上限を超えます。
+     *  @retval         CPLAT_ERR_OUT_OF_MEMORY 1 件目の保持領域を確保できません。
+     *
+     *  NUL は候補の終端です。不正な候補は件数に数えません。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_prompt_completions_add(cplat_prompt_completions *completions, size_t start,
+                                                            const char *candidate);
+
+    /**
+     *  @brief          補完関数を登録します。唯一の候補の続きを灰色で表示し、Tab または行末の → で補います。
+     *  @param[in,out]  prompt ハンドルです。
+     *  @param[in]      fn 補完関数です。NULL で解除します。
+     *  @param[in,out]  user_data 補完関数へ渡す値です。所有権は移りません。
+     *  @retval         CPLAT_OK 登録または解除しました。
+     *  @retval         CPLAT_ERR_INVALID_ARGUMENT ハンドルが NULL です。
+     *  @par            スレッド セーフ
+     *  同じハンドルへの同時呼び出しには対応しません。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_prompt_completion_set(cplat_prompt *prompt, cplat_prompt_completion_fn fn,
+                                                           void *user_data);
+
     /**
      *  @brief  プロンプトの生成オプションです。
      */

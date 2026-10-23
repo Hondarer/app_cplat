@@ -7,6 +7,7 @@
 
 #if defined(PLATFORM_LINUX)
 
+    #include <sys/ioctl.h>
     #include <errno.h>
     #include <signal.h>
 
@@ -18,6 +19,19 @@ static void prompt_sigwinch_handler(int sig)
 {
     (void)sig;
     s_resize_pending = 1;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+size_t cplat_internal_prompt_platform_get_columns(void)
+{
+    struct winsize size = {0};
+    /* see: https://man7.org/linux/man-pages/man2/TIOCGWINSZ.2const.html */
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) == 0 && size.ws_col > 0U)
+    {
+        return (size_t)size.ws_col;
+    }
+    return 80U;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */

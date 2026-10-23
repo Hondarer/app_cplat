@@ -39,6 +39,7 @@
 typedef enum pinned_prompt_key
 {
     PINNED_PROMPT_KEY_CHAR = 0,
+    PINNED_PROMPT_KEY_TAB,
     PINNED_PROMPT_KEY_ENTER,
     PINNED_PROMPT_KEY_BACKSPACE,
     PINNED_PROMPT_KEY_DELETE,
@@ -91,6 +92,10 @@ struct cplat_pinned_prompt
     char *status_bottom_left;
     char *status_bottom_right;
 
+    cplat_prompt_completion_fn completion_fn;
+    void *completion_user_data;
+    cplat_prompt_completions completions;
+
     size_t edit_len;
     size_t edit_cap;
     size_t cursor;
@@ -124,6 +129,7 @@ struct cplat_pinned_prompt
     struct termios orig_term;
     char padding[4];
 #elif defined(PLATFORM_WINDOWS)
+    cplat_internal_prompt_utf16_input windows_input;
     HANDLE stdin_handle;
     DWORD orig_in_mode;
     char padding[4];
@@ -142,145 +148,6 @@ static size_t cstr_len(const char *s)
     {
         return 0U;
     }
-}
-
-static size_t utf8_char_display_width(const char *buf, size_t len, size_t pos)
-{
-    unsigned char first_byte;
-    unsigned int code_point;
-
-    if (pos >= len)
-        return 0U;
-
-    first_byte = (unsigned char)buf[pos];
-
-    if ((first_byte & 0x80U) == 0U)
-    {
-        return 1U;
-    }
-
-    if ((first_byte & 0xE0U) == 0xC0U && pos + 1U < len)
-    {
-        code_point = ((unsigned int)(first_byte & 0x1FU) << 6U) | (unsigned int)((unsigned char)buf[pos + 1U] & 0x3FU);
-        if (code_point >= 0x0300U && code_point <= 0x036FU)
-            return 0U;
-        return 1U;
-    }
-
-    if ((first_byte & 0xF0U) == 0xE0U && pos + 2U < len)
-    {
-        code_point = ((unsigned int)(first_byte & 0x0FU) << 12U) |
-                     ((unsigned int)((unsigned char)buf[pos + 1U] & 0x3FU) << 6U) |
-                     (unsigned int)((unsigned char)buf[pos + 2U] & 0x3FU);
-
-        if (code_point >= 0x4E00U && code_point <= 0x9FFFU)
-            return 2U;
-        if (code_point >= 0x3040U && code_point <= 0x309FU)
-            return 2U;
-        if (code_point >= 0x30A0U && code_point <= 0x30FFU)
-            return 2U;
-        if (code_point >= 0x3400U && code_point <= 0x4DBFU)
-            return 2U;
-        return 1U;
-    }
-
-    if ((first_byte & 0xF8U) == 0xF0U && pos + 3U < len)
-    {
-        code_point = ((unsigned int)(first_byte & 0x07U) << 18U) |
-                     ((unsigned int)((unsigned char)buf[pos + 1U] & 0x3FU) << 12U) |
-                     ((unsigned int)((unsigned char)buf[pos + 2U] & 0x3FU) << 6U) |
-                     (unsigned int)((unsigned char)buf[pos + 3U] & 0x3FU);
-
-        if (code_point >= 0x20000U && code_point <= 0x2FFFFU)
-            return 2U;
-        return 1U;
-    }
-
-    return 1U;
-}
-
-static size_t ansi_sgr_sequence_len(const char *buf, size_t len, size_t pos)
-{
-    size_t i;
-
-    if (pos + 2U >= len || (unsigned char)buf[pos] != 0x1BU || buf[pos + 1U] != '[')
-    {
-        return 0U;
-    }
-
-    i = pos + 2U;
-    while (i < len)
-    {
-        unsigned char ch;
-
-        ch = (unsigned char)buf[i];
-        if (ch == 'm')
-        {
-            return i - pos + 1U;
-        }
-        if ((ch >= 0x30U && ch <= 0x3FU) || (ch >= 0x20U && ch <= 0x2FU))
-        {
-            i++;
-            continue;
-        }
-        return 0U;
-    }
-    return 0U;
-}
-
-static size_t pinned_prompt_visible_bytes_from(const char *buf, size_t len, size_t start, size_t max_cols)
-{
-    size_t pos;
-    size_t cols;
-    size_t char_width;
-    size_t sgr_len;
-
-    pos = start;
-    cols = 0U;
-    while (pos < len)
-    {
-        sgr_len = ansi_sgr_sequence_len(buf, len, pos);
-        if (sgr_len > 0U)
-        {
-            pos += sgr_len;
-            continue;
-        }
-        if (cols >= max_cols)
-        {
-            break;
-        }
-        char_width = utf8_char_display_width(buf, len, pos);
-        if (cols + char_width > max_cols)
-            break;
-        cols += char_width;
-        pos = cplat_internal_prompt_edit_utf8_next_boundary(buf, len, pos);
-    }
-    return pos - start;
-}
-
-static size_t pinned_prompt_display_width_between(const char *buf, size_t len, size_t start, size_t end)
-{
-    size_t pos;
-    size_t width;
-    size_t sgr_len;
-
-    if (end > len)
-        end = len;
-
-    pos = start;
-    width = 0U;
-    while (pos < end)
-    {
-        sgr_len = ansi_sgr_sequence_len(buf, end, pos);
-        if (sgr_len > 0U)
-        {
-            pos += sgr_len;
-            continue;
-        }
-        width += utf8_char_display_width(buf, len, pos);
-        pos = cplat_internal_prompt_edit_utf8_next_boundary(buf, len, pos);
-    }
-    return width;
 }
 
 static FILE *pinned_prompt_channel_file(cplat_pinned_prompt_channel channel)
@@ -424,7 +291,10 @@ static int pinned_prompt_platform_read_char_nb(cplat_pinned_prompt *screen)
     struct timeval tv;
 
     FD_ZERO(&fds);
-    CPLAT_FD_SET(STDIN_FILENO, &fds);
+    /* STDIN_FILENO は定数 0 のため、FD 範囲検査の偽の 2 分岐には到達しません。
+     * gcovr 8.6 は指定した本数を検証した後、この行の全 4 分岐を集計から除外します。
+     * see: https://gcovr.com/en/8.6/guide/exclusion-markers.html */
+    CPLAT_FD_SET(STDIN_FILENO, &fds); /* GCOVR_EXCL_BR_WITHOUT_HIT: 2/4 */
     tv.tv_sec = 0;
     tv.tv_usec = 50000;
 
@@ -495,28 +365,49 @@ static void pinned_prompt_platform_leave_raw(cplat_pinned_prompt *screen)
 
 static int pinned_prompt_platform_read_char(cplat_pinned_prompt *screen)
 {
-    DWORD result;
-    DWORD n_read;
-    char ch;
-
-    result = WaitForSingleObject(screen->stdin_handle, 100U);
-    if (result == WAIT_TIMEOUT)
+    cplat_internal_prompt_utf16_input *input = &screen->windows_input;
+    while (input->offset == input->length)
     {
-        return -2; /* リサイズ チェック用タイムアウト */
+        unsigned int unit;
+        if (input->has_pending_unit)
+        {
+            unit = input->pending_unit;
+            input->has_pending_unit = 0U;
+        }
+        else
+        {
+            DWORD n_read;
+            WCHAR character;
+            DWORD result = WaitForSingleObject(screen->stdin_handle, 100U);
+            if (result == WAIT_TIMEOUT)
+            {
+                return -2;
+            }
+            if (result != WAIT_OBJECT_0)
+            {
+                return -1;
+            }
+            /* サロゲートを個別に UTF-8 変換すると置換文字になるため、UTF-16 で読み取ります。
+             * see: https://learn.microsoft.com/en-us/windows/console/readconsole
+             * see: https://github.com/microsoft/terminal/blob/main/src/host/stream.cpp */
+            if (!ReadConsoleW(screen->stdin_handle, &character, 1U, &n_read, NULL) || n_read == 0U)
+            {
+                return -1;
+            }
+            unit = (unsigned int)character;
+        }
+        cplat_internal_prompt_edit_utf16_feed(input, unit);
     }
-    if (result != WAIT_OBJECT_0)
-    {
-        return -1;
-    }
-    if (!ReadFile(screen->stdin_handle, &ch, 1, &n_read, NULL) || n_read == 0U)
-    {
-        return -1;
-    }
-    return (unsigned char)ch;
+    return (int)input->bytes[input->offset++];
 }
 
 static int pinned_prompt_platform_read_char_nb(cplat_pinned_prompt *screen)
 {
+    if (screen->windows_input.offset < screen->windows_input.length || screen->windows_input.has_pending_unit)
+    {
+        return pinned_prompt_platform_read_char(screen);
+    }
+
     DWORD result;
 
     result = WaitForSingleObject(screen->stdin_handle, 50);
@@ -566,7 +457,14 @@ static int pinned_prompt_platform_read_char_nb(cplat_pinned_prompt *screen)
 
 static void pinned_prompt_update_size(cplat_pinned_prompt *screen)
 {
+    int previous_cols = screen->cols;
+    int previous_rows = screen->rows;
+
     pinned_prompt_platform_get_size(&screen->cols, &screen->rows);
+    if (screen->cols != previous_cols || screen->rows != previous_rows)
+    {
+        screen->status_dirty = 1;
+    }
 }
 
 static int pinned_prompt_set_prompt(cplat_pinned_prompt *screen, const char *prompt_str)
@@ -600,9 +498,8 @@ static void pinned_prompt_adjust_view(cplat_pinned_prompt *screen)
 {
     size_t prompt_cols;
     size_t input_cols;
-    size_t cursor_cols;
 
-    prompt_cols = cstr_len(screen->prompt_buf);
+    prompt_cols = cplat_internal_prompt_edit_display_width(screen->prompt_buf);
     if ((size_t)screen->cols > prompt_cols + 1U)
     {
         input_cols = (size_t)screen->cols - prompt_cols - 1U;
@@ -612,21 +509,8 @@ static void pinned_prompt_adjust_view(cplat_pinned_prompt *screen)
         input_cols = 1U;
     }
 
-    screen->view_start =
-        cplat_internal_prompt_edit_utf8_sanitize_boundary(screen->edit_buf, screen->edit_len, screen->view_start);
-    if (screen->cursor < screen->view_start)
-    {
-        screen->view_start = screen->cursor;
-    }
-    cursor_cols =
-        pinned_prompt_display_width_between(screen->edit_buf, screen->edit_len, screen->view_start, screen->cursor);
-    while (cursor_cols > input_cols)
-    {
-        screen->view_start =
-            cplat_internal_prompt_edit_utf8_next_boundary(screen->edit_buf, screen->edit_len, screen->view_start);
-        cursor_cols =
-            pinned_prompt_display_width_between(screen->edit_buf, screen->edit_len, screen->view_start, screen->cursor);
-    }
+    screen->view_start = cplat_internal_prompt_edit_adjust_view_start(screen->edit_buf, screen->edit_len,
+                                                                      screen->cursor, screen->view_start, input_cols);
 }
 
 static void pinned_prompt_render_separator(cplat_pinned_prompt *screen, int row)
@@ -656,8 +540,8 @@ static void pinned_prompt_render_status_line(cplat_pinned_prompt *screen, int ro
     left_len = cstr_len(left_content);
     right_len = cstr_len(right_content);
 
-    left_width = pinned_prompt_display_width_between(left_content, left_len, 0U, left_len);
-    right_width = pinned_prompt_display_width_between(right_content, right_len, 0U, right_len);
+    left_width = cplat_internal_prompt_edit_display_width_between(left_content, left_len, 0U, left_len);
+    right_width = cplat_internal_prompt_edit_display_width_between(right_content, right_len, 0U, right_len);
 
     (void)printf("\033[%d;1H\033[2K", row);
 
@@ -773,11 +657,17 @@ static void pinned_prompt_render_locked(cplat_pinned_prompt *screen)
         return;
     }
 
+    /* UTF-8 の入力途中に制御シーケンスを出すと、端末が不完全な文字を確定してしまいます。 */
+    if (!cplat_internal_prompt_edit_utf8_complete(screen->edit_buf, screen->cursor))
+    {
+        return;
+    }
+
     pinned_prompt_update_size(screen);
     pinned_prompt_adjust_view(screen);
     pinned_prompt_calc_layout(screen, &layout);
 
-    prompt_cols = cstr_len(screen->prompt_buf);
+    prompt_cols = cplat_internal_prompt_edit_display_width(screen->prompt_buf);
     if ((size_t)screen->cols > prompt_cols + 1U)
     {
         input_cols = (size_t)screen->cols - prompt_cols - 1U;
@@ -786,10 +676,10 @@ static void pinned_prompt_render_locked(cplat_pinned_prompt *screen)
     {
         input_cols = 1U;
     }
-    visible_bytes =
-        pinned_prompt_visible_bytes_from(screen->edit_buf, screen->edit_len, screen->view_start, input_cols);
-    cursor_cols =
-        pinned_prompt_display_width_between(screen->edit_buf, screen->edit_len, screen->view_start, screen->cursor);
+    visible_bytes = cplat_internal_prompt_edit_visible_bytes_from(screen->edit_buf, screen->edit_len,
+                                                                  screen->view_start, input_cols);
+    cursor_cols = cplat_internal_prompt_edit_display_width_between(screen->edit_buf, screen->edit_len,
+                                                                   screen->view_start, screen->cursor);
     cursor_col = prompt_cols + cursor_cols + 1U;
     if (cursor_col > (size_t)screen->cols)
     {
@@ -802,25 +692,21 @@ static void pinned_prompt_render_locked(cplat_pinned_prompt *screen)
     {
         pinned_prompt_clear_control_area(screen, &layout);
 
-        if ((!screen->status_top_enabled || layout.show_top_status) &&
-            (!screen->status_bottom_enabled || layout.show_bottom_status))
+        if (layout.show_top_status)
         {
-            screen->status_dirty = 0;
+            pinned_prompt_render_status_line(screen, layout.top_status_row, screen->status_top_left,
+                                             screen->status_top_right);
         }
-    }
+        pinned_prompt_render_separator(screen, layout.prompt_sep_row);
 
-    if (layout.show_top_status)
-    {
-        pinned_prompt_render_status_line(screen, layout.top_status_row, screen->status_top_left,
-                                         screen->status_top_right);
-    }
-    pinned_prompt_render_separator(screen, layout.prompt_sep_row);
-
-    if (layout.show_bottom_status)
-    {
-        pinned_prompt_render_separator(screen, layout.bottom_sep_row);
-        pinned_prompt_render_status_line(screen, layout.bottom_status_row, screen->status_bottom_left,
-                                         screen->status_bottom_right);
+        if (layout.show_bottom_status)
+        {
+            pinned_prompt_render_separator(screen, layout.bottom_sep_row);
+            pinned_prompt_render_status_line(screen, layout.bottom_status_row, screen->status_bottom_left,
+                                             screen->status_bottom_right);
+        }
+        /* 小さい端末で非表示の領域も、サイズ変更時に改めて描画対象にします。 */
+        screen->status_dirty = 0;
     }
 
     (void)printf("\033[%d;1H\033[2K", layout.prompt_row);
@@ -829,10 +715,35 @@ static void pinned_prompt_render_locked(cplat_pinned_prompt *screen)
     {
         (void)fwrite(screen->edit_buf + screen->view_start, 1U, visible_bytes, stdout);
     }
+    {
+        const char *suffix = cplat_internal_prompt_edit_completion_suffix(&screen->completions);
+        if (suffix != NULL && cursor_cols < input_cols)
+        {
+            size_t bytes =
+                cplat_internal_prompt_edit_visible_bytes_from(suffix, strlen(suffix), 0U, input_cols - cursor_cols);
+            (void)fputs("\033[90m", stdout);
+            (void)fwrite(suffix, 1U, bytes, stdout);
+            (void)fputs("\033[0m", stdout);
+        }
+    }
 
     (void)printf("\033[%d;%zuH\033[?25h", layout.prompt_row, cursor_col);
     (void)fflush(stdout);
     screen->prev_main_bottom_row = layout.main_bottom_row;
+}
+
+static void pinned_prompt_resize_locked(cplat_pinned_prompt *screen)
+{
+    int previous_cols = screen->cols;
+    int previous_rows = screen->rows;
+
+    /* Windows の入力待ちタイムアウトでも呼ばれるため、実際のサイズ変更だけを描画します。 */
+    pinned_prompt_update_size(screen);
+    if (screen->cols != previous_cols || screen->rows != previous_rows)
+    {
+        screen->status_dirty = 1;
+        pinned_prompt_render_locked(screen);
+    }
 }
 
 static void pinned_prompt_hide_prompt_locked(cplat_pinned_prompt *screen)
@@ -872,6 +783,7 @@ static void pinned_prompt_cleanup_terminal_locked(cplat_pinned_prompt *screen)
     pinned_prompt_calc_layout(screen, &layout);
     (void)printf("\033[r");
     pinned_prompt_clear_control_area(screen, &layout);
+    screen->status_dirty = 1;
     (void)printf("\033[%d;1H\033[?25h", layout.prompt_row);
     (void)fflush(stdout);
     screen->prompt_visible = 0;
@@ -919,6 +831,10 @@ static pinned_prompt_key pinned_prompt_read_key(cplat_pinned_prompt *screen, int
     if (c == '\r' || c == '\n')
     {
         return PINNED_PROMPT_KEY_ENTER;
+    }
+    if (c == '\t')
+    {
+        return PINNED_PROMPT_KEY_TAB;
     }
     if (c == 0x03)
     {
@@ -1104,6 +1020,7 @@ static void pinned_prompt_set_edit_line(cplat_pinned_prompt *screen, const char 
 
 static void pinned_prompt_clear_edit_line(cplat_pinned_prompt *screen, pinned_prompt_history_ctx *ctx)
 {
+    screen->completions.count = 0U;
     screen->edit_len = 0U;
     screen->edit_buf[0] = '\0';
     screen->cursor = 0U;
@@ -1382,6 +1299,7 @@ void cplat_pinned_prompt_dispose(cplat_pinned_prompt *screen)
         }
     }
     cplat_free(screen->history_contexts);
+    cplat_internal_prompt_edit_completions_dispose(&screen->completions);
     cplat_free(screen->edit_buf);
     cplat_free(screen->prompt_buf);
     cplat_free(screen->fmt_buf);
@@ -1395,6 +1313,12 @@ void cplat_pinned_prompt_dispose(cplat_pinned_prompt *screen)
     }
     cplat_free(screen);
 }
+static void pinned_prompt_complete(cplat_pinned_prompt *screen)
+{
+    cplat_internal_prompt_edit_complete(&screen->completions, screen->completion_fn, screen->completion_user_data,
+                                        screen->edit_buf, screen->edit_len, screen->cursor, screen->input_max_bytes);
+}
+
 /**
  *  @brief          入力欄の初期値を指定して 1 行のコマンド入力を受け取ります。
  *  @param[in,out]  screen          固定プロンプト画面の状態。
@@ -1445,6 +1369,7 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
         pinned_prompt_platform_leave_raw(screen);
         return CPLAT_ERR_UNKNOWN;
     }
+    screen->completions.count = 0U;
     screen->edit_len = 0U;
     screen->edit_buf[0] = '\0';
     screen->cursor = 0U;
@@ -1478,8 +1403,30 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
         key = pinned_prompt_read_key(screen, &ch);
 
         pinned_prompt_lock(screen);
+        if (key == PINNED_PROMPT_KEY_RIGHT && screen->cursor == screen->edit_len)
+        {
+            key = PINNED_PROMPT_KEY_TAB;
+        }
+        if (key != PINNED_PROMPT_KEY_TAB && key != PINNED_PROMPT_KEY_RESIZE && key != PINNED_PROMPT_KEY_UNKNOWN)
+        {
+            screen->completions.count = 0U;
+        }
         switch (key)
         {
+        case PINNED_PROMPT_KEY_TAB:
+            if (cplat_internal_prompt_edit_completion_accept(&screen->completions, &screen->edit_buf, &screen->edit_cap,
+                                                             screen->input_max_bytes, &screen->edit_len,
+                                                             &screen->cursor))
+            {
+                pinned_prompt_complete(screen);
+            }
+            else
+            {
+                screen->completions.count = 0U;
+            }
+            pinned_prompt_render_locked(screen);
+            break;
+
         case PINNED_PROMPT_KEY_ENTER:
         {
             size_t copy;
@@ -1521,10 +1468,12 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
             break;
         case PINNED_PROMPT_KEY_BACKSPACE:
             pinned_prompt_backspace(screen);
+            pinned_prompt_complete(screen);
             pinned_prompt_render_locked(screen);
             break;
         case PINNED_PROMPT_KEY_DELETE:
             pinned_prompt_delete(screen);
+            pinned_prompt_complete(screen);
             pinned_prompt_render_locked(screen);
             break;
         case PINNED_PROMPT_KEY_LEFT:
@@ -1554,12 +1503,11 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
             break;
         case PINNED_PROMPT_KEY_CHAR:
             pinned_prompt_insert_byte(screen, ch);
+            pinned_prompt_complete(screen);
             pinned_prompt_render_locked(screen);
             break;
         case PINNED_PROMPT_KEY_RESIZE:
-            pinned_prompt_update_size(screen);
-            screen->status_dirty = 1;
-            pinned_prompt_render_locked(screen);
+            pinned_prompt_resize_locked(screen);
             break;
         case PINNED_PROMPT_KEY_UNKNOWN:
         default:
@@ -1886,4 +1834,21 @@ int cplat_pinned_prompt_status_set(cplat_pinned_prompt *screen, cplat_pinned_pro
     }
     pinned_prompt_unlock(screen);
     return ret;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_pinned_prompt_completion_set(cplat_pinned_prompt *screen, cplat_prompt_completion_fn fn, void *user_data)
+{
+    if (screen == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    pinned_prompt_lock(screen);
+    screen->completion_fn = fn;
+    screen->completion_user_data = user_data;
+    screen->completions.count = 0U;
+    pinned_prompt_render_locked(screen);
+    pinned_prompt_unlock(screen);
+    return CPLAT_OK;
 }

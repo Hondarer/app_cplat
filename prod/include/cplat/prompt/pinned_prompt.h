@@ -47,6 +47,21 @@ extern "C"
     typedef struct cplat_pinned_prompt cplat_pinned_prompt;
 
     /**
+     *  @brief          固定プロンプトの補完関数を登録します。
+     *  @param[in,out]  screen ハンドルです。
+     *  @param[in]      fn 補完関数です。NULL で解除します。
+     *  @param[in,out]  user_data 補完関数へ渡す値です。所有権は移りません。
+     *  @retval         CPLAT_OK 登録または解除しました。
+     *  @retval         CPLAT_ERR_INVALID_ARGUMENT ハンドルが NULL です。
+     *  @par            スレッド セーフ
+     *  mutex を取得して登録を変更します。別スレッドの入力待ち中でも呼べます。
+     *  補完関数は mutex の保持中に呼ばれるため、補完関数から pinned_prompt の API を呼ばないでください。
+     *  呼び出し条件は @ref cplat_prompt_completion_fn と同じです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_pinned_prompt_completion_set(cplat_pinned_prompt *screen,
+                                                                  cplat_prompt_completion_fn fn, void *user_data);
+
+    /**
      *  @brief  固定プロンプトの上へ出力するときに使用する出力先です。
      */
     typedef enum cplat_pinned_prompt_channel

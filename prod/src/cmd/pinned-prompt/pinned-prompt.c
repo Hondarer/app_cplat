@@ -48,6 +48,24 @@ typedef struct pinned_prompt_cli_session
     int reserved;
 } pinned_prompt_cli_session;
 
+static void complete_command(const char *line, size_t cursor, cplat_prompt_completions *completions, void *user_data)
+{
+    static const char *const commands[] = {"help ", "echo ", "start ", "stop ", "status ", "read ", "exit ", "quit "};
+    size_t i;
+    (void)user_data;
+    if (strchr(line, ' ') != NULL || strchr(line, '\t') != NULL)
+    {
+        return;
+    }
+    for (i = 0U; i < sizeof(commands) / sizeof(commands[0]); i++)
+    {
+        if (strncmp(commands[i], line, cursor) == 0)
+        {
+            (void)cplat_prompt_completions_add(completions, 0U, commands[i]);
+        }
+    }
+}
+
 static char *skip_spaces(char *s)
 {
     while (*s == ' ' || *s == '\t')
@@ -600,6 +618,7 @@ static int session_init(pinned_prompt_cli_session *session)
         fprintf(stderr, "pinned-prompt の作成に失敗しました。\n");
         return -1;
     }
+    (void)cplat_pinned_prompt_completion_set(session->screen, complete_command, NULL);
 
     worker_init(&session->stdout_worker, session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "stdout");
     worker_init(&session->stderr_worker, session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR, "stderr");

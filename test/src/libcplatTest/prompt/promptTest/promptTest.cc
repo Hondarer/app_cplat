@@ -1,11 +1,13 @@
 #include <testfw.h>
 #include <mock_cplat.h>
+#include <mock_stdio.h>
 #include <cplat/base/result.h>
 #include <cplat/prompt/prompt.h>
 #include <cplat/prompt/prompt_internal.h>
 
 #include <cstring>
 #include <string>
+#include <vector>
 
 #include "promptPlatformFake.h"
 
@@ -92,9 +94,9 @@ TEST_F(promptTest, create_applies_given_options)
 
     // Assert
     ASSERT_NE(nullptr,
-              handle); // [確認_正常系] - cplat_prompt_create() の戻り値が nullptr 以外であること。
-    EXPECT_EQ(4u, handle->history_max);      // [確認_正常系] - handle->history_max が 4 であること。
-    EXPECT_EQ(8u, handle->edit_cap);         // [確認_正常系] - handle->edit_cap が 8 であること。
+              handle);                  // [確認_正常系] - cplat_prompt_create() の戻り値が nullptr 以外であること。
+    EXPECT_EQ(4u, handle->history_max); // [確認_正常系] - handle->history_max が 4 であること。
+    EXPECT_EQ(8u, handle->edit_cap);    // [確認_正常系] - handle->edit_cap が 8 であること。
     EXPECT_EQ(64u, handle->input_max_bytes); // [確認_正常系] - handle->input_max_bytes が 64 であること。
 
     // Cleanup
@@ -1091,5 +1093,346 @@ TEST_F(promptTest, readline_with_initial_rejects_invalid_arguments)
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_size); // [確認_異常系] - バイト数が 0 のときの cplat_prompt_readline_with_initial_at() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+}
+// [サブ手順参照 名前=promptTest.TearDown]
+
+namespace
+{
+struct CompletionProbe
+{
+    size_t calls = 0U;
+    std::string lines;
+};
+void complete_path(const char *line, size_t cursor, cplat_prompt_completions *candidates, void *user_data)
+{
+    auto *probe = static_cast<CompletionProbe *>(user_data);
+    probe->calls++;
+    probe->lines += std::string(line) + "|";
+    if (std::string(line) == "s")
+    {
+        (void)cplat_prompt_completions_add(candidates, 0U, "src/");
+    }
+    else if (std::string(line) == "src/")
+    {
+        (void)cplat_prompt_completions_add(candidates, cursor, "file ");
+    }
+}
+} // namespace
+
+// Tab と行末右矢印が候補を確定し、確定直後に次の候補を求めることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
+TEST_F(promptTest, completion_accepts_tab_then_right_and_requeries)
+{
+    // Arrange
+    CompletionProbe probe;
+    char output[64] = {};
+    cplat_prompt_completion_set(prompt_, complete_path, &probe);
+    // Pre-Assert
+    // Act
+    int result = readline("s\t\033[C\r", output, sizeof(output)); // [手順] - 文字入力、Tab、右矢印、Enter を入力する。
+    // Assert
+    EXPECT_EQ(CPLAT_OK, result);                 // [確認_正常系] - 入力が成功すること。
+    EXPECT_STREQ("src/file ", output);           // [確認_正常系] - 両方の候補が確定すること。
+    EXPECT_EQ(3, probe.calls);                   // [確認_正常系] - 入力と 2 回の確定で計 3 回呼ぶこと。
+    EXPECT_EQ("s|src/|src/file |", probe.lines); // [確認_正常系] - 各確定後の入力を渡すこと。
+}
+// [サブ手順参照 名前=promptTest.TearDown]
+
+// Enter が灰色の候補を入力結果へ含めないことの確認
+// [サブ手順参照 名前=promptTest.SetUp]
+TEST_F(promptTest, completion_enter_excludes_suggestion)
+{
+    // Arrange
+    CompletionProbe probe;
+    char output[32] = {};
+    cplat_prompt_completion_set(prompt_, complete_path, &probe);
+    // Pre-Assert
+    // Act
+    int result = readline("s\r", output, sizeof(output)); // [手順] - 候補表示中に Enter を入力する。
+    // Assert
+    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - 入力が成功すること。
+    EXPECT_STREQ("s", output);   // [確認_正常系] - 入力済みの部分だけ返すこと。
+    EXPECT_EQ(1, probe.calls);   // [確認_正常系] - Enter では補完を呼ばないこと。
+}
+// [サブ手順参照 名前=promptTest.TearDown]
+
+// カーソル移動と初期値では補完を呼ばず、編集後にだけ呼ぶことの確認
+// [サブ手順参照 名前=promptTest.SetUp]
+TEST_F(promptTest, completion_trigger_conditions)
+{
+    // Arrange
+    CompletionProbe probe;
+    char output[32] = {};
+    cplat_prompt_completion_set(prompt_, complete_path, &probe);
+    promptFakeSetInput("\033[D\033[C\033[H\033[F\t\r");
+    // Pre-Assert
+    // Act
+    int result = cplat_prompt_readline_with_initial_at(prompt_, output, sizeof(output), "", "s", "init", 1);
+    // [手順] - 初期値からカーソルだけを移動して確定する。
+    // Assert
+    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - 入力が成功すること。
+    EXPECT_EQ(0, probe.calls);   // [確認_正常系] - 初期値と移動で候補を求めないこと。
+    EXPECT_STREQ("s", output);   // [確認_正常系] - Tab で変化しないこと。
+}
+// [サブ手順参照 名前=promptTest.TearDown]
+
+// UTF-8 の入力途中と空入力と行中では補完を呼ばないことの確認
+// [サブ手順参照 名前=promptTest.SetUp]
+TEST_F(promptTest, completion_waits_for_utf8_and_end_of_line)
+{
+    // Arrange
+    CompletionProbe probe;
+    char output[32] = {};
+    cplat_prompt_completion_set(prompt_, complete_path, &probe);
+    // Pre-Assert
+    // Act
+    int result = readline("\xE3\x81\x82\033[Dq\033[3~\x7F\r", output, sizeof(output));
+    // [手順] - 日本語を完成させ、行頭へ移動して挿入と削除を行う。
+    // Assert
+    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - 入力が成功すること。
+    EXPECT_EQ(2, probe.calls);   // [確認_正常系] - 日本語完成時と Delete 後の行末だけで呼ぶこと。
+    EXPECT_STREQ("", output);    // [確認_正常系] - 最後の削除で空入力になること。
+}
+// [サブ手順参照 名前=promptTest.TearDown]
+
+// 補完登録の NULL 検査と解除が機能することの確認
+// [サブ手順参照 名前=promptTest.SetUp]
+TEST_F(promptTest, completion_registration_and_unregister)
+{
+    // Arrange
+    CompletionProbe probe;
+    char output[32] = {};
+    cplat_prompt_completion_set(prompt_, complete_path, &probe);
+    // Pre-Assert
+    // Act
+    int invalid = cplat_prompt_completion_set(nullptr, complete_path, &probe); // [手順] - NULL ハンドルへ登録する。
+    int cleared = cplat_prompt_completion_set(prompt_, nullptr, nullptr);      // [手順] - 登録を解除する。
+    int result = readline("s\t\033[C\r", output, sizeof(output)); // [手順] - 解除後に Tab と右矢印を入力する。
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, invalid); // [確認_異常系] - NULL ハンドルを拒否すること。
+    EXPECT_EQ(CPLAT_OK, cleared);                   // [確認_正常系] - 解除が成功すること。
+    EXPECT_EQ(CPLAT_OK, result);                    // [確認_正常系] - 入力が成功すること。
+    EXPECT_STREQ("s", output);                      // [確認_正常系] - 補完を行わないこと。
+    EXPECT_EQ(0, probe.calls);                      // [確認_正常系] - 補完関数を呼ばないこと。
+}
+// [サブ手順参照 名前=promptTest.TearDown]
+
+// 日本語と色指定のあるプロンプトで横スクロールし、候補を右端で切ることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
+TEST_F(promptTest, completion_render_clips_and_scrolls_in_display_columns)
+{
+    // Arrange
+    CompletionProbe probe;
+    char output[64] = {};
+    std::string written;
+    NiceMock<Mock_stdio> mock_stdio;
+    promptFakeSetColumns(7U);
+    cplat_prompt_completion_set(prompt_, complete_path, &probe);
+    promptFakeSetInput("s\t\r");
+    // Pre-Assert
+    EXPECT_CALL(mock_stdio, fwrite(_, _, _, _, _, _, _))
+        .WillRepeatedly(Invoke(
+            [&written](const char *, int, const char *, const void *data, size_t size, size_t count, FILE *)
+            {
+                written.append(static_cast<const char *>(data), size * count);
+                written += '|';
+                return count;
+            }));
+    // [Pre-Assert確認_正常系] - 描画する入力と候補を出力すること。
+    // [Pre-Assert手順] - 出力バイト列を記録する。
+    // Act
+    int result = cplat_prompt_readline_at(prompt_, output, sizeof(output), "\033[32m\xE3\x81\x82> \033[0m", "width", 1);
+    // [手順] - 幅 7 の端末で幅 4 のプロンプトを使い補完を確定する。
+    // Assert
+    EXPECT_EQ(CPLAT_OK, result);                      // [確認_正常系] - 入力が成功すること。
+    EXPECT_STREQ("src/", output);                     // [確認_正常系] - 表示で切った候補も全体を確定すること。
+    EXPECT_NE(std::string::npos, written.find("r|")); // [確認_正常系] - 残り幅 1 桁の候補だけを描画すること。
+    EXPECT_EQ(2U, prompt_->view_start);               // [確認_正常系] - カーソルが見える位置へ入力の先頭をずらすこと。
+}
+// [サブ手順参照 名前=promptTest.TearDown]
+
+// 出力が非端末の場合にも補完経路を使わないことの確認
+// [サブ手順参照 名前=promptTest.SetUp]
+TEST_F(promptTest, redirected_output_disables_interactive_input)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    CompletionProbe probe;
+    char output[16] = {};
+    const char input[] = "s\t";
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_isatty(CPLAT_STREAM_STDIN)).WillOnce(Return(1));
+    // [Pre-Assert確認_正常系] - 入力の端末判定を行うこと。
+    EXPECT_CALL(mock_cplat, cplat_isatty(CPLAT_STREAM_STDOUT)).WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - 出力の端末判定を行うこと。
+    EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
+        .WillOnce(DoAll(SetArrayArgument<0>(input, input + sizeof(input)), Return(CPLAT_OK)));
+    // [Pre-Assert確認_正常系] - 通常の行入力を行うこと。
+    // [Pre-Assert手順] - Tab を含む行を返す。
+    // Act
+    auto *handle = cplat_prompt_create(nullptr);
+    cplat_prompt_completion_set(handle, complete_path, &probe);
+    int result = cplat_prompt_readline_at(handle, output, sizeof(output), nullptr, "pipe", 1);
+    // [手順] - 出力を端末以外へ接続して行を読む。
+    // Assert
+    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - 入力が成功すること。
+    EXPECT_STREQ("s\t", output); // [確認_正常系] - Tab を通常の文字として保つこと。
+    EXPECT_EQ(0, probe.calls);   // [確認_正常系] - 補完を呼ばないこと。
+    // Cleanup
+    cplat_prompt_dispose(handle);
+}
+// [サブ手順参照 名前=promptTest.TearDown]
+
+// 履歴の呼び出し直後は候補を求めず、表示中の候補も消すことの確認
+// [サブ手順参照 名前=promptTest.SetUp]
+TEST_F(promptTest, completion_history_clears_suggestion_without_callback)
+{
+    // Arrange
+    CompletionProbe probe;
+    char output[16] = {};
+    cplat_prompt_completion_set(prompt_, complete_path, &probe);
+    int prepared = readline("s\r", output, sizeof(output));
+    ASSERT_EQ(CPLAT_OK, prepared); // [状態確認] - 履歴を準備できること。
+    // Pre-Assert
+    // Act
+    int result = readline("\033[A\t\r", output, sizeof(output)); // [手順] - 履歴を呼び出して Tab と Enter を押す。
+    // Assert
+    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - 入力が成功すること。
+    EXPECT_STREQ("s", output);   // [確認_正常系] - 履歴へ候補を付け足さないこと。
+    EXPECT_EQ(1U, probe.calls);  // [確認_正常系] - 履歴の呼び出しで補完しないこと。
+}
+// [サブ手順参照 名前=promptTest.TearDown]
+
+// 削除の後に候補を求め直し、Shift+Tab は補完状態を変えないことの確認
+// [サブ手順参照 名前=promptTest.SetUp]
+TEST_F(promptTest, completion_requeries_after_deletions_and_ignores_shift_tab)
+{
+    // Arrange
+    CompletionProbe probe;
+    char output[16] = {};
+    cplat_prompt_completion_set(prompt_, complete_path, &probe);
+    // Pre-Assert
+    // Act
+    int backspace = readline("sx\x7F\t\r", output, sizeof(output)); // [手順] - Backspace の直後に補完を確定する。
+    std::string first_output(output);
+    int forward_delete = readline("sx\033[D\033[3~\033[Z\t\r", output, sizeof(output));
+    // [手順] - Delete の直後に Shift+Tab を無視して補完を確定する。
+    // Assert
+    EXPECT_EQ(CPLAT_OK, backspace);      // [確認_正常系] - Backspace の入力が成功すること。
+    EXPECT_EQ("src/", first_output);     // [確認_正常系] - Backspace の後に候補を求め直すこと。
+    EXPECT_EQ(CPLAT_OK, forward_delete); // [確認_正常系] - Delete の入力が成功すること。
+    EXPECT_STREQ("src/", output);        // [確認_正常系] - Shift+Tab 後も候補を確定できること。
+    EXPECT_EQ(8U, probe.calls);          // [確認_正常系] - 文字入力、削除、確定の計 8 回だけ呼ぶこと。
+}
+// [サブ手順参照 名前=promptTest.TearDown]
+
+namespace
+{
+void ambiguous_completion(const char *, size_t, cplat_prompt_completions *candidates, void *)
+{
+    (void)cplat_prompt_completions_add(candidates, 0U, "start ");
+    (void)cplat_prompt_completions_add(candidates, 0U, "stop ");
+}
+} // namespace
+
+// 複数候補では共通部分も補完せず、狭い端末でも入力を返すことの確認
+// [サブ手順参照 名前=promptTest.SetUp]
+TEST_F(promptTest, completion_ambiguous_candidates_do_not_accept)
+{
+    // Arrange
+    char output[16] = {};
+    promptFakeSetColumns(1U);
+    cplat_prompt_completion_set(prompt_, ambiguous_completion, nullptr);
+    // Pre-Assert
+    // Act
+    int result = readline("st\t\r", output, sizeof(output)); // [手順] - 複数の候補がある状態で Tab を押す。
+    // Assert
+    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - 入力が成功すること。
+    EXPECT_STREQ("st", output);  // [確認_正常系] - 共通部分を含めて補完しないこと。
+}
+// [サブ手順参照 名前=promptTest.TearDown]
+
+// 入出力の両方が端末の場合に対話入力を有効にすることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
+TEST_F(promptTest, create_detects_input_and_output_terminals)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_isatty(CPLAT_STREAM_STDIN)).WillOnce(Return(1));
+    // [Pre-Assert確認_正常系] - 入力の端末判定を 1 回行うこと。
+    // [Pre-Assert手順] - 端末であることを返す。
+    EXPECT_CALL(mock_cplat, cplat_isatty(CPLAT_STREAM_STDOUT)).WillOnce(Return(1));
+    // [Pre-Assert確認_正常系] - 出力の端末判定を 1 回行うこと。
+    // [Pre-Assert手順] - 端末であることを返す。
+    // Act
+    cplat_prompt *handle = cplat_prompt_create(nullptr); // [手順] - 両方が端末の状態で生成する。
+    // Assert
+    ASSERT_NE(nullptr, handle);   // [確認_正常系] - ハンドルを生成できること。
+    EXPECT_EQ(1, handle->is_tty); // [確認_正常系] - 対話入力を有効にすること。
+    // Cleanup
+    cplat_prompt_dispose(handle);
+}
+// [サブ手順参照 名前=promptTest.TearDown]
+
+// 横スクロール後の履歴切り替えで短い入力も行頭から見えることの確認
+// [サブ手順参照 名前=promptTest.SetUp]
+TEST_F(promptTest, history_resets_horizontal_view_for_shorter_line)
+{
+    // Arrange
+    char output[32] = {};
+    size_t previous_view = 0U;
+    promptFakeSetColumns(8U);
+    ASSERT_EQ(CPLAT_OK, readline("a\r", output, sizeof(output)));
+    // [状態確認] - 短い履歴を準備できること。
+    // Pre-Assert
+    // Act
+    int previous = readline("0123456789\033[A\r", output, sizeof(output));
+    // [手順] - 長い入力から短い履歴を呼び出す。
+    previous_view = prompt_->view_start;
+    int prepared = readline("0123456789\r", output, sizeof(output));
+    // [手順] - 長い履歴を準備する。
+    int next = readline("a\033[A\033[B\r", output, sizeof(output));
+    // [手順] - 長い履歴を呼び出してから短い編集中の入力へ戻る。
+    // Assert
+    EXPECT_EQ(CPLAT_OK, previous);      // [確認_正常系] - 短い履歴を確定できること。
+    EXPECT_EQ(0U, previous_view);       // [確認_正常系] - 短い履歴の先頭を表示すること。
+    EXPECT_EQ(CPLAT_OK, prepared);      // [確認_正常系] - 長い履歴を確定できること。
+    EXPECT_EQ(CPLAT_OK, next);          // [確認_正常系] - 編集中の入力へ戻れること。
+    EXPECT_STREQ("a", output);          // [確認_正常系] - 編集中の短い入力を復元すること。
+    EXPECT_EQ(0U, prompt_->view_start); // [確認_正常系] - 編集中の入力も先頭から表示すること。
+}
+// [サブ手順参照 名前=promptTest.TearDown]
+
+// マルチバイト入力を文字単位で描画することの確認
+TEST_F(promptTest, renders_complete_utf8_characters)
+{
+    // [サブ手順参照 名前=promptTest.SetUp]
+    // Arrange
+    NiceMock<Mock_stdio> mock_stdio;
+    std::vector<std::string> rendered;
+    char output[32] = {};
+    // Pre-Assert
+    ON_CALL(mock_stdio, fwrite(_, _, _, _, _, _, _))
+        .WillByDefault(
+            [&rendered](const char *, int, const char *, const void *data, size_t size, size_t count, FILE *)
+            {
+                if (count > 0U)
+                    rendered.emplace_back(static_cast<const char *>(data), size * count);
+                return count;
+            });
+    // [状態] - 入力行として出力したバイト列を記録する。
+    // Act
+    int result = readline("\xE3\x83\x86\xE3\x82\xB9\xE3\x83\x88\r", output, sizeof(output));
+    // [手順] - 「テスト」を 1 バイトずつ入力する。
+    // Assert
+    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - 入力を確定できること。
+    EXPECT_STREQ("\xE3\x83\x86\xE3\x82\xB9\xE3\x83\x88", output);
+    // [確認_正常系] - 入力された文字列を保持すること。
+    ASSERT_EQ(3U, rendered.size());                     // [確認_正常系] - 完成した 3 文字についてだけ描画すること。
+    EXPECT_EQ("\xE3\x83\x86", rendered[0]);             // [確認_正常系] - 「テ」を描画すること。
+    EXPECT_EQ("\xE3\x83\x86\xE3\x82\xB9", rendered[1]); // [確認_正常系] - 「テス」を描画すること。
+    EXPECT_EQ("\xE3\x83\x86\xE3\x82\xB9\xE3\x83\x88", rendered[2]);
+    // [確認_正常系] - 「テスト」を描画すること。
 }
 // [サブ手順参照 名前=promptTest.TearDown]

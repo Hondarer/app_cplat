@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <tuple>
 
 using testing::_;
 using testing::DoAll;
@@ -53,124 +54,12 @@ TEST(pinnedPromptTest, status_apis_reject_null_screen)
         set_result); // [確認_異常系] - cplat_pinned_prompt_status_set() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
-// 固定プロンプトの文字列長ヘルパーが NULL を 0 として扱うことの確認
-TEST(pinnedPromptTest, static_text_helpers_cover_empty_and_utf8_cases)
-{
-    // Arrange
-    const char combining[] = "\xCC\x81";
-    const char cjk[] = "\xE6\x97\xA5";
-    const char hiragana[] = "\xE3\x81\x82";
-    const char katakana[] = "\xE3\x82\xA2";
-    const char compatibility_ideograph[] = "\xE3\x90\x80";
-    const char emoji[] = "\xF0\x9F\x98\x80";
-    const char sgr[] = "\x1B[31mX";
-    const char invalid_sgr[] = "\x1B[X";
-
-    // Pre-Assert
-
-    // Act
-    size_t null_len =
-        test_pinned_prompt_cstr_len(nullptr); // [手順] - nullptr を指定して test_pinned_prompt_cstr_len() を呼び出す。
-    size_t ascii_width = test_pinned_prompt_utf8_width(
-        "A", 1U, 0U); // [手順] - ASCII 文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
-    size_t combining_width =
-        test_pinned_prompt_utf8_width(combining, sizeof(combining) - 1U,
-                                      0U); // [手順] - 結合文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
-    size_t cjk_width = test_pinned_prompt_utf8_width(
-        cjk, sizeof(cjk) - 1U, 0U); // [手順] - CJK 文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
-    size_t hiragana_width =
-        test_pinned_prompt_utf8_width(hiragana, sizeof(hiragana) - 1U,
-                                      0U); // [手順] - ひらがなを指定して test_pinned_prompt_utf8_width() を呼び出す。
-    size_t katakana_width =
-        test_pinned_prompt_utf8_width(katakana, sizeof(katakana) - 1U,
-                                      0U); // [手順] - カタカナを指定して test_pinned_prompt_utf8_width() を呼び出す。
-    size_t compatibility_width = test_pinned_prompt_utf8_width(
-        compatibility_ideograph, sizeof(compatibility_ideograph) - 1U,
-        0U); // [手順] - CJK 拡張文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
-    size_t emoji_width = test_pinned_prompt_utf8_width(
-        emoji, sizeof(emoji) - 1U, 0U); // [手順] - 4 バイト文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
-    size_t invalid_width = test_pinned_prompt_utf8_width(
-        "\xC2", 1U, 0U); // [手順] - 不完全な UTF-8 を指定して test_pinned_prompt_utf8_width() を呼び出す。
-    size_t sgr_len = test_pinned_prompt_ansi_len(
-        sgr, sizeof(sgr) - 1U, 0U); // [手順] - ANSI SGR を指定して test_pinned_prompt_ansi_len() を呼び出す。
-    size_t invalid_sgr_len =
-        test_pinned_prompt_ansi_len(invalid_sgr, sizeof(invalid_sgr) - 1U,
-                                    0U); // [手順] - 不正な SGR を指定して test_pinned_prompt_ansi_len() を呼び出す。
-
-    // Assert
-    EXPECT_EQ(0U,
-              null_len); // [確認_正常系] - nullptr を指定した test_pinned_prompt_cstr_len() の戻り値が 0 であること。
-    EXPECT_EQ(1U,
-              ascii_width); // [確認_正常系] - "A" を指定した test_pinned_prompt_utf8_width() の戻り値が 1 であること。
-    EXPECT_EQ(
-        0U,
-        combining_width); // [確認_正常系] - 結合文字を指定した test_pinned_prompt_utf8_width() の戻り値が 0 であること。
-    EXPECT_EQ(
-        2U, cjk_width); // [確認_正常系] - CJK 文字を指定した test_pinned_prompt_utf8_width() の戻り値が 2 であること。
-    EXPECT_EQ(
-        2U,
-        hiragana_width); // [確認_正常系] - ひらがなを指定した test_pinned_prompt_utf8_width() の戻り値が 2 であること。
-    EXPECT_EQ(
-        2U,
-        katakana_width); // [確認_正常系] - カタカナを指定した test_pinned_prompt_utf8_width() の戻り値が 2 であること。
-    EXPECT_EQ(
-        2U,
-        compatibility_width); // [確認_正常系] - CJK 拡張文字を指定した test_pinned_prompt_utf8_width() の戻り値が 2 であること。
-    EXPECT_EQ(
-        1U,
-        emoji_width); // [確認_正常系] - 絵文字を指定した test_pinned_prompt_utf8_width() の戻り値が 1 であること。(2FFFF 未満の絵文字の表示幅が 1 であることの確認)
-    EXPECT_EQ(
-        1U,
-        invalid_width); // [確認_正常系] - 不完全な UTF-8 を指定した test_pinned_prompt_utf8_width() の戻り値が 1 であること。
-    EXPECT_EQ(5U,
-              sgr_len); // [確認_正常系] - ANSI SGR を指定した test_pinned_prompt_ansi_len() の戻り値が 5 であること。
-    EXPECT_EQ(
-        0U,
-        invalid_sgr_len); // [確認_正常系] - 不正な ANSI シーケンスを指定した test_pinned_prompt_ansi_len() の戻り値が 0 であること。
-}
-
-// 固定プロンプトの表示幅計算が ANSI と全角文字を処理することの確認
-TEST(pinnedPromptTest, static_display_helpers_skip_ansi_and_limit_columns)
-{
-    // Arrange
-    const char text[] = "\x1B[31m日A";
-    const size_t text_len = sizeof(text) - 1U;
-
-    // Pre-Assert
-
-    // Act
-    size_t visible_one_col = test_pinned_prompt_visible_bytes(
-        text, text_len, 0U, 1U); // [手順] - 表示列数 1 を指定して test_pinned_prompt_visible_bytes() を呼び出す。
-    size_t visible_three_cols = test_pinned_prompt_visible_bytes(
-        text, text_len, 0U, 3U); // [手順] - 表示列数 3 を指定して test_pinned_prompt_visible_bytes() を呼び出す。
-    size_t display_width = test_pinned_prompt_display_width(
-        text, text_len, 0U,
-        text_len); // [手順] - ANSI を含む全範囲を指定して test_pinned_prompt_display_width() を呼び出す。
-    size_t clipped_width = test_pinned_prompt_display_width(
-        text, text_len, 0U,
-        2U); // [手順] - ANSI 途中までの範囲を指定して test_pinned_prompt_display_width() を呼び出す。
-
-    // Assert
-    EXPECT_EQ(
-        5U,
-        visible_one_col); // [確認_正常系] - 1 列を指定した test_pinned_prompt_visible_bytes() の戻り値が 5 であること。(SGR と全角文字が 1 列に収まることの確認)
-    EXPECT_EQ(
-        text_len,
-        visible_three_cols); // [確認_正常系] - 3 列を指定した test_pinned_prompt_visible_bytes() の戻り値が text_len と一致すること。(3 列制限で全内容が収まることの確認)
-    EXPECT_EQ(
-        3U,
-        display_width); // [確認_正常系] - 全範囲を指定した test_pinned_prompt_display_width() の戻り値が 3 であること。(全角文字と ASCII の幅合計が 3 であることの確認)
-    EXPECT_EQ(
-        2U,
-        clipped_width); // [確認_正常系] - 2 バイトまでを指定した test_pinned_prompt_display_width() の戻り値が 2 であること。(ANSI 途中までの範囲が通常文字 2 列として計算されることの確認)
-}
-
 // 非 TTY の readline が cplat_fgets の入力を返すことの確認
 TEST(pinnedPromptTest, fallback_readline_strips_newline)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_cplat> mock_cplat;
     char input[] = "answer";
@@ -201,7 +90,7 @@ TEST(pinnedPromptTest, fallback_readline_reports_eof)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_cplat> mock_cplat;
     char output[8] = "stale";
@@ -229,7 +118,7 @@ TEST(pinnedPromptTest, fallback_readline_reports_buffer_too_small)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_cplat> mock_cplat;
     char empty[] = "";
@@ -261,7 +150,7 @@ TEST(pinnedPromptTest, status_apis_accept_valid_positions_and_alignments)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
 
     // Pre-Assert
 
@@ -314,7 +203,7 @@ TEST(pinnedPromptTest, fallback_readline_with_initial_ignores_initial_text)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_cplat> mock_cplat;
     char input[] = "piped";
@@ -347,7 +236,7 @@ TEST(pinnedPromptTest, readline_with_initial_rejects_invalid_initial_text_and_ar
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_cplat> mock_cplat;
     char output[32] = "stale";
@@ -464,7 +353,7 @@ TEST(pinnedPromptTest, platform_raw_mode_enters_and_leaves_once)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_reset_platform_state();
     NiceMock<Mock_termios> mock_termios;
     NiceMock<Mock_signal> mock_signal;
@@ -512,7 +401,7 @@ TEST(pinnedPromptTest, platform_read_char_handles_resize_and_eof)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_unistd> mock_unistd;
     unsigned char character = 'B';
     test_pinned_prompt_set_resize_pending(1);
@@ -559,7 +448,7 @@ TEST(pinnedPromptTest, platform_read_char_nb_handles_select_timeout)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_sys_select> mock_select;
     NiceMock<Mock_unistd> mock_unistd;
     unsigned char character = 'C';
@@ -598,7 +487,7 @@ TEST(pinnedPromptTest, tty_readline_accepts_character_and_enter)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_reset_platform_state();
     NiceMock<Mock_ioctl> mock_ioctl;
@@ -632,7 +521,7 @@ TEST(pinnedPromptTest, tty_readline_accepts_character_and_enter)
                                             void *arg) { *static_cast<struct winsize *>(arg) = size; }),
                               Return(0)));
     // [Pre-Assert確認_正常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - ioctl() から、列数 80・行数 24 の端末サイズを設定して 0 を返す。
+    // [Pre-Assert手順] - ioctl() から、指定した列数・行数 24 の端末サイズを設定して 0 を返す。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
         .WillOnce(DoAll(Invoke([first](const char *, const int, const char *, const int, void *arg, const size_t)
                                { *static_cast<unsigned char *>(arg) = first; }),
@@ -663,7 +552,7 @@ TEST(pinnedPromptTest, tty_readline_reports_canceled_on_ctrl_c)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_reset_platform_state();
     NiceMock<Mock_ioctl> mock_ioctl;
@@ -696,7 +585,7 @@ TEST(pinnedPromptTest, tty_readline_reports_canceled_on_ctrl_c)
                                             void *arg) { *static_cast<struct winsize *>(arg) = size; }),
                               Return(0)));
     // [Pre-Assert確認_異常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - ioctl() から、列数 80・行数 24 の端末サイズを設定して 0 を返す。
+    // [Pre-Assert手順] - ioctl() から、指定した列数・行数 24 の端末サイズを設定して 0 を返す。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
         .WillOnce(DoAll(Invoke([cancel](const char *, const int, const char *, const int, void *arg, const size_t)
                                { *static_cast<unsigned char *>(arg) = cancel; }),
@@ -724,7 +613,7 @@ TEST(pinnedPromptTest, read_key_classifies_control_and_escape_sequences)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_sys_select> mock_select;
     const unsigned char input[] = {'A', '\n', 0x7FU, 0x01U, 0x80U, 0x1BU, 0x1BU, 'x', 0x1BU, '[', 'A',   0x1BU,
@@ -874,7 +763,7 @@ TEST(pinnedPromptTest, edit_helpers_update_line_at_boundaries)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
 
     // Pre-Assert
 
@@ -920,7 +809,7 @@ TEST(pinnedPromptTest, render_handles_status_regions_and_empty_layout)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_ioctl> mock_ioctl;
     struct winsize full_size = {};
     full_size.ws_col = 24U;
@@ -962,7 +851,7 @@ TEST(pinnedPromptTest, tty_readline_handles_editing_and_history)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_reset_platform_state();
     NiceMock<Mock_ioctl> mock_ioctl;
@@ -1001,7 +890,7 @@ TEST(pinnedPromptTest, tty_readline_handles_editing_and_history)
                                             void *arg) { *static_cast<struct winsize *>(arg) = size; }),
                               Return(0)));
     // [Pre-Assert確認_正常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - ioctl() から、列数 80・行数 24 の端末サイズを設定して 0 を返す。
+    // [Pre-Assert手順] - ioctl() から、指定した列数・行数 24 の端末サイズを設定して 0 を返す。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
         .WillRepeatedly(Invoke(
             [&input, &input_pos](const char *, const int, const char *, const int, void *arg, const size_t)
@@ -1056,7 +945,7 @@ TEST(pinnedPromptTest, tty_readline_continues_after_resize)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_reset_platform_state();
     NiceMock<Mock_ioctl> mock_ioctl;
@@ -1090,7 +979,7 @@ TEST(pinnedPromptTest, tty_readline_continues_after_resize)
                                             void *arg) { *static_cast<struct winsize *>(arg) = size; }),
                               Return(0)));
     // [Pre-Assert確認_正常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - ioctl() から、列数 80・行数 24 の端末サイズを設定して 0 を返す。
+    // [Pre-Assert手順] - ioctl() から、指定した列数・行数 24 の端末サイズを設定して 0 を返す。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
         .WillRepeatedly(Invoke(
             [&read_count](const char *, const int, const char *, const int, void *arg, const size_t)
@@ -1121,90 +1010,12 @@ TEST(pinnedPromptTest, tty_readline_continues_after_resize)
 
     #endif /* PLATFORM_LINUX */
 
-// 固定プロンプトの文字幅と ANSI 解析が境界値を処理することの確認
-TEST(pinnedPromptTest, static_text_helpers_cover_boundary_sequences)
-{
-    // Arrange
-    const char two_byte[] = "\xC3\xA9";
-    const char three_byte[] = "\xE2\x82\xAC";
-    const char astral_wide[] = "\xF0\xB0\x80\x80";
-    const char truncated_three[] = "\xE3\x81";
-    const char truncated_four[] = "\xF0\x9F\x98";
-    const char valid_sgr[] = "\x1B[1;31mX";
-    const char invalid_sgr[] = "\x1B[1x";
-    const char incomplete_sgr[] = "\x1B[1";
-
-    // Pre-Assert
-
-    // Act
-    size_t at_end = test_pinned_prompt_utf8_width(
-        "A", 1U, 1U); // [手順] - 文字列末尾の位置を指定して test_pinned_prompt_utf8_width() を呼び出す。
-    size_t two_byte_width = test_pinned_prompt_utf8_width(
-        two_byte, sizeof(two_byte) - 1U,
-        0U); // [手順] - 2 バイト文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
-    size_t three_byte_width = test_pinned_prompt_utf8_width(
-        three_byte, sizeof(three_byte) - 1U,
-        0U); // [手順] - CJK 以外の 3 バイト文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
-    size_t astral_wide_width = test_pinned_prompt_utf8_width(
-        astral_wide, sizeof(astral_wide) - 1U,
-        0U); // [手順] - 2FFFF を超える 4 バイト文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
-    size_t truncated_three_width = test_pinned_prompt_utf8_width(
-        truncated_three, sizeof(truncated_three) - 1U,
-        0U); // [手順] - 不完全な 3 バイト文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
-    size_t truncated_four_width = test_pinned_prompt_utf8_width(
-        truncated_four, sizeof(truncated_four) - 1U,
-        0U); // [手順] - 不完全な 4 バイト文字を指定して test_pinned_prompt_utf8_width() を呼び出す。
-    size_t valid_sgr_len = test_pinned_prompt_ansi_len(
-        valid_sgr, sizeof(valid_sgr) - 1U,
-        0U); // [手順] - パラメーター付き SGR を指定して test_pinned_prompt_ansi_len() を呼び出す。
-    size_t invalid_sgr_len = test_pinned_prompt_ansi_len(
-        invalid_sgr, sizeof(invalid_sgr) - 1U,
-        0U); // [手順] - 不正終端の SGR を指定して test_pinned_prompt_ansi_len() を呼び出す。
-    size_t incomplete_sgr_len =
-        test_pinned_prompt_ansi_len(incomplete_sgr, sizeof(incomplete_sgr) - 1U,
-                                    0U); // [手順] - 未完了の SGR を指定して test_pinned_prompt_ansi_len() を呼び出す。
-    size_t zero_visible = test_pinned_prompt_visible_bytes(
-        "A", 1U, 0U, 0U); // [手順] - 表示列数 0 を指定して test_pinned_prompt_visible_bytes() を呼び出す。
-    size_t clipped_display = test_pinned_prompt_display_width(
-        "ABC", 3U, 1U, 8U); // [手順] - 終端を超える範囲を指定して test_pinned_prompt_display_width() を呼び出す。
-
-    // Assert
-    EXPECT_EQ(0U, at_end); // [確認_正常系] - 末尾位置の test_pinned_prompt_utf8_width() の戻り値が 0 であること。
-    EXPECT_EQ(
-        1U, two_byte_width); // [確認_正常系] - 2 バイト文字の test_pinned_prompt_utf8_width() の戻り値が 1 であること。
-    EXPECT_EQ(
-        1U,
-        three_byte_width); // [確認_正常系] - CJK 以外の 3 バイト文字の test_pinned_prompt_utf8_width() の戻り値が 1 であること。
-    EXPECT_EQ(
-        1U,
-        astral_wide_width); // [確認_正常系] - 2FFFF を超える 4 バイト文字の test_pinned_prompt_utf8_width() の戻り値が 1 であること。
-    EXPECT_EQ(
-        1U,
-        truncated_three_width); // [確認_異常系] - 不完全な 3 バイト文字の test_pinned_prompt_utf8_width() の戻り値が 1 であること。
-    EXPECT_EQ(
-        1U,
-        truncated_four_width); // [確認_異常系] - 不完全な 4 バイト文字の test_pinned_prompt_utf8_width() の戻り値が 1 であること。
-    EXPECT_EQ(
-        7U,
-        valid_sgr_len); // [確認_正常系] - パラメーター付き SGR の test_pinned_prompt_ansi_len() の戻り値が 7 であること。
-    EXPECT_EQ(
-        0U, invalid_sgr_len); // [確認_異常系] - 不正終端 SGR の test_pinned_prompt_ansi_len() の戻り値が 0 であること。
-    EXPECT_EQ(
-        0U,
-        incomplete_sgr_len); // [確認_異常系] - 未完了 SGR の test_pinned_prompt_ansi_len() の戻り値が 0 であること。
-    EXPECT_EQ(
-        0U, zero_visible); // [確認_正常系] - 表示列数 0 の test_pinned_prompt_visible_bytes() の戻り値が 0 であること。
-    EXPECT_EQ(
-        2U,
-        clipped_display); // [確認_正常系] - 終端を超える範囲の test_pinned_prompt_display_width() の戻り値が 2 であること。(範囲を終端で切った表示幅が 2 であることの確認)
-}
-
 // 固定プロンプトの履歴補助関数が空状態と重複入力を処理することの確認
 TEST(pinnedPromptTest, history_helpers_cover_empty_and_duplicate_entries)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
 
     // Pre-Assert
 
@@ -1229,7 +1040,7 @@ TEST(pinnedPromptTest, platform_raw_mode_handles_failures_and_reentry)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_reset_platform_state();
     NiceMock<Mock_termios> mock_termios;
     NiceMock<Mock_signal> mock_signal;
@@ -1294,7 +1105,7 @@ TEST(pinnedPromptTest, platform_read_helpers_handle_interrupt_and_select_results
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_sys_select> mock_select;
     int read_count = 0;
@@ -1354,7 +1165,7 @@ TEST(pinnedPromptTest, prepare_output_handles_tty_visibility)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_ioctl> mock_ioctl;
     struct winsize size = {};
     size.ws_col = 40U;
@@ -1392,7 +1203,7 @@ TEST(pinnedPromptTest, write_and_printf_handle_arguments_and_short_write)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_stdio> mock_stdio;
     const char data[] = "abc";
@@ -1469,7 +1280,7 @@ TEST(pinnedPromptTest, readline_fmt_formats_and_accepts_null_format)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_cplat> mock_cplat;
     char first_input[] = "first";
@@ -1517,7 +1328,7 @@ TEST(pinnedPromptTest, status_apis_reject_invalid_position_and_alignment)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     int invalid_position_value = 99;
     int invalid_align_value = 99;
     const cplat_pinned_prompt_status_position invalid_position =
@@ -1560,18 +1371,24 @@ TEST(pinnedPromptTest, status_apis_reject_invalid_position_and_alignment)
 
 /**
  *  @brief          TTY の readline へ、指定したバイト列を 1 バイトずつ入力するモックを設定します。
+ *  @param[in,out]  mock_ioctl 端末サイズのモックです。
+ *  @param[in,out]  mock_signal シグナルのモックです。
+ *  @param[in,out]  mock_termios 端末設定のモックです。
+ *  @param[in,out]  mock_unistd 入力のモックです。
+ *  @param[in]      bytes 入力するバイト列です。
+ *  @param[in]      columns 端末の列数です。
  *
  *  端末設定、SIGWINCH、端末サイズの取得は成功として扱います。
  */
 // [サブ手順 名前=pinnedPromptTest.expect_tty_input]
 static void expect_tty_input(Mock_ioctl &mock_ioctl, Mock_signal &mock_signal, Mock_termios &mock_termios,
-                             Mock_unistd &mock_unistd, const std::string &bytes)
+                             Mock_unistd &mock_unistd, const std::string &bytes, unsigned short columns = 80U)
 {
     struct termios original = {};
     struct winsize size = {};
     auto position = std::make_shared<size_t>(0U);
 
-    size.ws_col = 80;
+    size.ws_col = columns;
     size.ws_row = 24;
     EXPECT_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
         .WillOnce(DoAll(SetArgPointee<4>(original), Return(0)));
@@ -1591,7 +1408,7 @@ static void expect_tty_input(Mock_ioctl &mock_ioctl, Mock_signal &mock_signal, M
                                             void *arg) { *static_cast<struct winsize *>(arg) = size; }),
                               Return(0)));
     // [Pre-Assert確認_正常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - ioctl() から、列数 80・行数 24 の端末サイズを設定して 0 を返す。
+    // [Pre-Assert手順] - ioctl() から、指定した列数・行数 24 の端末サイズを設定して 0 を返す。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
         .WillRepeatedly(Invoke(
             [bytes, position](const char *, const int, const char *, const int, void *arg, const size_t) -> ssize_t
@@ -1614,7 +1431,7 @@ TEST(pinnedPromptTest, tty_readline_with_initial_returns_initial_text_on_enter)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_reset_platform_state();
     NiceMock<Mock_ioctl> mock_ioctl;
@@ -1649,7 +1466,7 @@ TEST(pinnedPromptTest, tty_readline_with_initial_allows_editing_from_end)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_reset_platform_state();
     NiceMock<Mock_ioctl> mock_ioctl;
@@ -1685,7 +1502,7 @@ TEST(pinnedPromptTest, tty_readline_with_initial_restores_initial_text_after_his
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_reset_platform_state();
     char first_output[32] = {};
@@ -1741,7 +1558,7 @@ TEST(pinnedPromptTest, tty_readline_with_initial_reports_out_of_memory_when_edit
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_reset_platform_state();
     char first_output[32] = {};
@@ -1791,6 +1608,145 @@ TEST(pinnedPromptTest, tty_readline_with_initial_reports_out_of_memory_when_edit
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
 }
+
+namespace
+{
+void pinned_completion(const char *line, size_t cursor, cplat_prompt_completions *candidates, void *user_data)
+{
+    auto *calls = static_cast<int *>(user_data);
+    (*calls)++;
+    if (std::string(line) == "s")
+    {
+        (void)cplat_prompt_completions_add(candidates, 0U, "src/");
+    }
+    else if (std::string(line) == "src/")
+    {
+        (void)cplat_prompt_completions_add(candidates, cursor, "file ");
+    }
+}
+} // namespace
+
+class pinnedPromptCompletionKeysTest : public testing::TestWithParam<std::tuple<const char *, const char *, int>>
+{
+};
+
+// 固定プロンプトが補完キーと呼び出し条件を守ることの確認
+TEST_P(pinnedPromptCompletionKeysTest, keys_and_trigger_conditions)
+{
+    // Arrange
+    auto *screen = cplat_pinned_prompt_create(nullptr);
+    ASSERT_NE(nullptr, screen); // [状態確認] - ハンドルを生成できること。
+    test_pinned_prompt_set_tty(screen, 1);
+    test_pinned_prompt_reset_platform_state();
+    NiceMock<Mock_ioctl> mock_ioctl;
+    NiceMock<Mock_signal> mock_signal;
+    NiceMock<Mock_termios> mock_termios;
+    NiceMock<Mock_unistd> mock_unistd;
+    int calls = 0;
+    char output[64] = {};
+    cplat_pinned_prompt_completion_set(screen, pinned_completion, &calls);
+    // Pre-Assert
+    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, std::get<0>(GetParam()));
+    // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
+    // Act
+    int result = cplat_pinned_prompt_readline(screen, output, sizeof(output), "\033[32m\xE3\x81\x82> \033[0m");
+    // [手順] - パラメーターの入力列を固定プロンプトで読み取る。
+    // Assert
+    EXPECT_EQ(CPLAT_OK, result);                   // [確認_正常系] - 入力が成功すること。
+    EXPECT_STREQ(std::get<1>(GetParam()), output); // [確認_正常系] - 入力結果が期待値と一致すること。
+    EXPECT_EQ(std::get<2>(GetParam()), calls);     // [確認_正常系] - 補完の呼び出し回数が一致すること。
+    // Cleanup
+    cplat_pinned_prompt_dispose(screen);
+}
+
+INSTANTIATE_TEST_SUITE_P(completion, pinnedPromptCompletionKeysTest,
+                         testing::Values(std::make_tuple("s\t\033[C\r", "src/file ", 3), std::make_tuple("s\r", "s", 1),
+                                         std::make_tuple("s\033[D\033[C\t\r", "s", 1),
+                                         std::make_tuple("s\x7F\r", "", 1),
+                                         std::make_tuple("s\033[Hq\033[3~\r", "q", 2),
+                                         std::make_tuple("\xE3\x81\x82\r", "\xE3\x81\x82", 1),
+                                         std::make_tuple("\t\r", "", 0)));
+
+// 固定プロンプトの補完登録で NULL を拒否し、登録解除後は呼ばないことの確認
+TEST(pinnedPromptTest, completion_set_rejects_null_and_unregisters)
+{
+    // Arrange
+    auto *screen = cplat_pinned_prompt_create(nullptr);
+    ASSERT_NE(nullptr, screen); // [状態確認] - ハンドルを生成できること。
+    test_pinned_prompt_set_tty(screen, 1);
+    test_pinned_prompt_reset_platform_state();
+    NiceMock<Mock_ioctl> mock_ioctl;
+    NiceMock<Mock_signal> mock_signal;
+    NiceMock<Mock_termios> mock_termios;
+    NiceMock<Mock_unistd> mock_unistd;
+    int calls = 0;
+    char output[16] = {};
+    cplat_pinned_prompt_completion_set(screen, pinned_completion, &calls);
+    // Pre-Assert
+    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "s\t\r");
+    // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
+    // Act
+    int invalid = cplat_pinned_prompt_completion_set(nullptr, nullptr, nullptr);   // [手順] - NULL ハンドルへ登録する。
+    int cleared = cplat_pinned_prompt_completion_set(screen, nullptr, nullptr);    // [手順] - 登録を解除する。
+    int result = cplat_pinned_prompt_readline(screen, output, sizeof(output), ""); // [手順] - 解除後に入力する。
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, invalid); // [確認_異常系] - NULL ハンドルを拒否すること。
+    EXPECT_EQ(CPLAT_OK, cleared);                   // [確認_正常系] - 解除が成功すること。
+    EXPECT_EQ(CPLAT_OK, result);                    // [確認_正常系] - 入力が成功すること。
+    EXPECT_STREQ("s", output);                      // [確認_正常系] - Tab で入力を変えないこと。
+    EXPECT_EQ(0, calls);                            // [確認_正常系] - 解除後は呼び出さないこと。
+    // Cleanup
+    cplat_pinned_prompt_dispose(screen);
+}
+
+class pinnedPromptCompletionWidthTest : public testing::TestWithParam<unsigned short>
+{
+};
+
+// 固定プロンプトが候補を右端で切り、入力が右端に達した場合は候補を描かないことの確認
+TEST_P(pinnedPromptCompletionWidthTest, clips_at_right_edge)
+{
+    // Arrange
+    auto *screen = cplat_pinned_prompt_create(nullptr);
+    ASSERT_NE(nullptr, screen); // [状態確認] - ハンドルを生成できること。
+    test_pinned_prompt_set_tty(screen, 1);
+    test_pinned_prompt_reset_platform_state();
+    NiceMock<Mock_ioctl> mock_ioctl;
+    NiceMock<Mock_signal> mock_signal;
+    NiceMock<Mock_termios> mock_termios;
+    NiceMock<Mock_unistd> mock_unistd;
+    NiceMock<Mock_stdio> mock_stdio;
+    int calls = 0;
+    char output[16] = {};
+    std::string written;
+    cplat_pinned_prompt_completion_set(screen, pinned_completion, &calls);
+    // Pre-Assert
+    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "s\r", GetParam());
+    // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
+    EXPECT_CALL(mock_stdio, fwrite(_, _, _, _, _, _, _))
+        .WillRepeatedly(Invoke(
+            [&written](const char *, int, const char *, const void *data, size_t size, size_t count, FILE *)
+            {
+                written.append(static_cast<const char *>(data), size * count);
+                written += '|';
+                return count;
+            }));
+    // [Pre-Assert確認_正常系] - 描画バイト列を出力すること。
+    // [Pre-Assert手順] - 出力を記録する。
+    // Act
+    int result = cplat_pinned_prompt_readline(screen, output, sizeof(output), "\033[32m\xE3\x81\x82> \033[0m");
+    // [手順] - 日本語のプロンプトでパラメーターの端末幅の入力を読む。
+    // Assert
+    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - 入力が成功すること。
+    EXPECT_STREQ("s", output);   // [確認_正常系] - 表示した候補を Enter で含めないこと。
+    EXPECT_EQ(GetParam() == 7U, written.find("r|") != std::string::npos);
+    // [確認_正常系] - 残り 1 桁の場合だけ候補の先頭 1 文字を描くこと。
+    // Cleanup
+    cplat_pinned_prompt_dispose(screen);
+}
+
+INSTANTIATE_TEST_SUITE_P(completion, pinnedPromptCompletionWidthTest,
+                         testing::Values(static_cast<unsigned short>(7U), static_cast<unsigned short>(6U)));
 
 #endif /* PLATFORM_LINUX */
 
@@ -1889,7 +1845,7 @@ TEST(pinnedPromptTest, platform_raw_mode_enters_and_leaves_once_on_windows)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     Mock_windows mock_windows;
     HANDLE in_handle = (HANDLE)0x1234;
     DWORD orig_mode = ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT;
@@ -1943,7 +1899,7 @@ TEST(pinnedPromptTest, platform_raw_mode_handles_failures_on_windows)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     Mock_windows mock_windows;
     HANDLE in_handle = (HANDLE)0x1234;
     int after_invalid_handle = 0;
@@ -1997,7 +1953,7 @@ TEST(pinnedPromptTest, platform_read_char_handles_timeout_and_eof_on_windows)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     Mock_windows mock_windows;
     HANDLE in_handle = (HANDLE)0x1234;
     int timeout_result = 0;
@@ -2023,17 +1979,17 @@ TEST(pinnedPromptTest, platform_read_char_handles_timeout_and_eof_on_windows)
         .WillOnce(Return(WAIT_OBJECT_0));
     // [Pre-Assert確認_正常系] - WaitForSingleObject() が in_handle、100 を指定して 4 回呼び出されること。
     // [Pre-Assert手順] - WaitForSingleObject() から WAIT_TIMEOUT、WAIT_FAILED、WAIT_OBJECT_0、WAIT_OBJECT_0 の順に返す。
-    EXPECT_CALL(mock_windows, ReadFile(_, _, _, in_handle, _, 1U, _, _))
+    EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, in_handle, _, 1U, _, _))
         .WillOnce(
-            [](const char *, const int, const char *, HANDLE, LPVOID buffer, DWORD, LPDWORD bytes_read, LPOVERLAPPED)
+            [](const char *, const int, const char *, HANDLE, LPVOID buffer, DWORD, LPDWORD bytes_read, PCONSOLE_READCONSOLE_CONTROL)
             {
-                *static_cast<char *>(buffer) = 'B';
+                *static_cast<WCHAR *>(buffer) = 'B';
                 *bytes_read = 1U;
                 return TRUE;
             })
         .WillOnce(DoAll(SetArgPointee<6>(0U), Return(TRUE)));
-    // [Pre-Assert確認_正常系] - ReadFile() が in_handle、1 を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - ReadFile() から 1 回目は、文字 B を設定して TRUE を返し、2 回目は、読み取りバイト数に 0 を設定して TRUE を返す。
+    // [Pre-Assert確認_正常系] - ReadConsoleW() が in_handle、1 を指定して 2 回呼び出されること。
+    // [Pre-Assert手順] - ReadConsoleW() から 1 回目は、文字 B を設定して TRUE を返し、2 回目は、読み取りバイト数に 0 を設定して TRUE を返す。
 
     // Act
     test_pinned_prompt_enter_raw(screen); // [手順] - 入力待ちの前の状態で test_pinned_prompt_enter_raw() を呼び出す。
@@ -2069,7 +2025,7 @@ TEST(pinnedPromptTest, platform_read_char_nb_handles_wait_timeout_on_windows)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     Mock_windows mock_windows;
     HANDLE in_handle = (HANDLE)0x1234;
     int timeout_result = 0;
@@ -2094,16 +2050,16 @@ TEST(pinnedPromptTest, platform_read_char_nb_handles_wait_timeout_on_windows)
     EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, in_handle, 100U)).WillOnce(Return(WAIT_OBJECT_0));
     // [Pre-Assert確認_正常系] - WaitForSingleObject() が in_handle、100 を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - WaitForSingleObject() から WAIT_OBJECT_0 を返す。
-    EXPECT_CALL(mock_windows, ReadFile(_, _, _, in_handle, _, 1U, _, _))
+    EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, in_handle, _, 1U, _, _))
         .WillOnce(
-            [](const char *, const int, const char *, HANDLE, LPVOID buffer, DWORD, LPDWORD bytes_read, LPOVERLAPPED)
+            [](const char *, const int, const char *, HANDLE, LPVOID buffer, DWORD, LPDWORD bytes_read, PCONSOLE_READCONSOLE_CONTROL)
             {
-                *static_cast<char *>(buffer) = 'C';
+                *static_cast<WCHAR *>(buffer) = 'C';
                 *bytes_read = 1U;
                 return TRUE;
             });
-    // [Pre-Assert確認_正常系] - ReadFile() が in_handle、1 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - ReadFile() から、文字 C を設定して TRUE を返す。
+    // [Pre-Assert確認_正常系] - ReadConsoleW() が in_handle、1 を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - ReadConsoleW() から、文字 C を設定して TRUE を返す。
 
     // Act
     test_pinned_prompt_enter_raw(screen); // [手順] - 入力待ちの前の状態で test_pinned_prompt_enter_raw() を呼び出す。
@@ -2125,3 +2081,366 @@ TEST(pinnedPromptTest, platform_read_char_nb_handles_wait_timeout_on_windows)
 }
 
 #endif /* PLATFORM_WINDOWS */
+
+class pinnedPromptResizeTest : public testing::TestWithParam<std::tuple<int, int, int>>
+{
+};
+
+// 同じ端末サイズでは出力せず、幅または高さが変わったときだけ再描画することの確認
+TEST_P(pinnedPromptResizeTest, redraws_only_when_dimensions_change)
+{
+    // Arrange
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
+    const int cols = std::get<0>(GetParam());
+    const int rows = std::get<1>(GetParam());
+    const int redraws = std::get<2>(GetParam());
+    test_pinned_prompt_render_state(screen, 1, 1, 0, 0, "test> ", "h", "", "", "", "");
+    test_pinned_prompt_set_internal_state(screen, 80, 24, 22, 1, 0, 0, 1U, 0U);
+    NiceMock<Mock_stdio> mock_stdio;
+#if defined(PLATFORM_LINUX)
+    NiceMock<Mock_ioctl> mock_platform;
+    struct winsize size = {};
+    size.ws_col = static_cast<unsigned short>(cols);
+    size.ws_row = static_cast<unsigned short>(rows);
+#elif defined(PLATFORM_WINDOWS)
+    NiceMock<Mock_windows> mock_platform;
+    HANDLE out_handle = (HANDLE)0x1234;
+#endif
+
+    // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_platform, ioctl(_, _, _, STDOUT_FILENO, TIOCGWINSZ, _))
+        .WillRepeatedly(DoAll(Invoke([size](const char *, int, const char *, int, unsigned long, void *arg)
+                                     { *static_cast<struct winsize *>(arg) = size; }),
+                              Return(0)));
+    // [Pre-Assert確認_正常系] - ioctl() が任意の回数呼び出されること。
+    // [Pre-Assert手順] - 指定した幅と高さを返す。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_platform, GetStdHandle(_, _, _, STD_OUTPUT_HANDLE)).WillRepeatedly(Return(out_handle));
+    // [Pre-Assert確認_正常系] - GetStdHandle() が任意の回数呼び出されること。
+    // [Pre-Assert手順] - ダミーの出力ハンドルを返す。
+    EXPECT_CALL(mock_platform, GetConsoleScreenBufferInfo(_, _, _, out_handle, _))
+        .WillRepeatedly(
+            [cols, rows](const char *, int, const char *, HANDLE, PCONSOLE_SCREEN_BUFFER_INFO info)
+            {
+                *info = {};
+                info->srWindow.Right = static_cast<SHORT>(cols - 1);
+                info->srWindow.Bottom = static_cast<SHORT>(rows - 1);
+                return TRUE;
+            });
+    // [Pre-Assert確認_正常系] - GetConsoleScreenBufferInfo() が任意の回数呼び出されること。
+    // [Pre-Assert手順] - 指定した幅と高さを返す。
+#endif
+    ON_CALL(mock_stdio, fflush(_, _, _, stdout)).WillByDefault(Return(0));
+    EXPECT_CALL(mock_stdio, fflush(_, _, _, stdout)).Times(redraws);
+    // [Pre-Assert確認_正常系] - サイズ不変では 0 回、幅または高さが変わる場合だけ 1 回、描画出力を flush すること。
+    // [Pre-Assert手順] - fflush() から 0 を返す。
+
+    // Act
+    test_pinned_prompt_resize(screen); // [手順] - サイズの変更を確認する。
+    test_pinned_prompt_resize(screen); // [手順] - 同じサイズで再度確認する。
+
+    // Assert
+    // fflush() の呼び出し回数は Pre-Assert の EXPECT_CALL で確認する。
+
+    // Cleanup
+    test_pinned_prompt_set_tty(screen, 0);
+    cplat_pinned_prompt_dispose(screen);
+}
+
+// 文字入力時に固定領域を再描画せず、変更時に更新することの確認
+TEST_P(pinnedPromptResizeTest, typing_preserves_fixed_area)
+{
+    // Arrange
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
+    const int cols = std::get<0>(GetParam());
+    const int rows = std::get<1>(GetParam());
+    test_pinned_prompt_render_state(screen, 1, 1, 1, 1, "test> ", "h", "", "", "", "");
+    test_pinned_prompt_set_internal_state(screen, cols, rows, 22, 1, 1, 1, 1U, 0U);
+    NiceMock<Mock_stdio> mock_stdio;
+#if defined(PLATFORM_LINUX)
+    NiceMock<Mock_ioctl> mock_platform;
+    struct winsize size = {};
+    size.ws_col = static_cast<unsigned short>(cols);
+    size.ws_row = static_cast<unsigned short>(rows);
+#elif defined(PLATFORM_WINDOWS)
+    NiceMock<Mock_windows> mock_platform;
+    HANDLE out_handle = (HANDLE)0x1234;
+#endif
+
+    // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_platform, ioctl(_, _, _, STDOUT_FILENO, TIOCGWINSZ, _))
+        .WillRepeatedly(DoAll(Invoke([size](const char *, int, const char *, int, unsigned long, void *arg)
+                                     { *static_cast<struct winsize *>(arg) = size; }),
+                              Return(0)));
+    // [Pre-Assert確認_正常系] - ioctl() が任意の回数呼び出されること。
+    // [Pre-Assert手順] - 指定した幅と高さを返す。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_platform, GetStdHandle(_, _, _, STD_OUTPUT_HANDLE)).WillRepeatedly(Return(out_handle));
+    // [Pre-Assert確認_正常系] - GetStdHandle() が任意の回数呼び出されること。
+    // [Pre-Assert手順] - ダミーの出力ハンドルを返す。
+    EXPECT_CALL(mock_platform, GetConsoleScreenBufferInfo(_, _, _, out_handle, _))
+        .WillRepeatedly(
+            [cols, rows](const char *, int, const char *, HANDLE, PCONSOLE_SCREEN_BUFFER_INFO info)
+            {
+                *info = {};
+                info->srWindow.Right = static_cast<SHORT>(cols - 1);
+                info->srWindow.Bottom = static_cast<SHORT>(rows - 1);
+                return TRUE;
+            });
+    // [Pre-Assert確認_正常系] - GetConsoleScreenBufferInfo() が任意の回数呼び出されること。
+    // [Pre-Assert手順] - 指定した幅と高さを返す。
+#endif
+    int separator_draws = 0;
+    const int separators = rows >= 3 ? 2 : 1;
+    ON_CALL(mock_stdio, printf(_, _, testing::StrEq("pinned_prompt_render_separator"), _))
+        .WillByDefault(
+            [&separator_draws](const char *, int, const char *, const char *)
+            {
+                ++separator_draws;
+                return 0;
+            });
+    // [状態] - セパレーターの描画回数を記録する。
+
+    // Act 1
+    test_pinned_prompt_render(screen); // [手順] - 最初の固定領域を描画する。
+
+    // Assert 1
+    EXPECT_EQ(separators, separator_draws); // [確認_正常系] - 表示可能なセパレーターを初回だけ描画すること。
+
+    // Act 2
+    test_pinned_prompt_set_edit_line(screen, "help"); // [状態] - 入力された文字列を設定する。
+    test_pinned_prompt_render(screen);                // [手順] - 文字入力後の入力行を描画する。
+    test_pinned_prompt_set_cursor(screen, 0U);        // [状態] - カーソルを先頭へ移す。
+    test_pinned_prompt_render(screen);                // [手順] - カーソル移動後の入力行を描画する。
+
+    // Assert 2
+    EXPECT_EQ(separators, separator_draws); // [確認_正常系] - 文字入力とカーソル移動でセパレーターを描画しないこと。
+
+    // Act 3
+    int status_result = cplat_pinned_prompt_status_set(screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
+                                                       CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT, "updated");
+    // [手順] - 上部ステータスの内容を変更する。
+
+    // Assert 3
+    EXPECT_EQ(CPLAT_OK, status_result);         // [確認_正常系] - ステータス変更が成功すること。
+    EXPECT_EQ(separators * 2, separator_draws); // [確認_正常系] - ステータス変更後に固定領域を描画すること。
+
+    // Act 4
+    test_pinned_prompt_render(screen); // [手順] - 同じ状態で再び入力行を描画する。
+
+    // Assert 4
+    EXPECT_EQ(separators * 2,
+              separator_draws); // [確認_正常系] - 非表示のステータスがあっても固定領域を繰り返し描画しないこと。
+
+    // Act 5
+    test_pinned_prompt_cleanup_terminal(screen); // [状態] - 固定領域を消去する。
+    test_pinned_prompt_set_internal_state(screen, cols, rows, 22, 1, 1, 1, 0U, 0U);
+    test_pinned_prompt_render(screen); // [手順] - 消去された固定領域を再表示する。
+
+    // Assert 5
+    EXPECT_EQ(separators * 3, separator_draws); // [確認_正常系] - 固定領域を消去した後は再描画すること。
+
+    // Act 6
+    test_pinned_prompt_set_internal_state(screen, cols + 1, rows, 22, 1, 1, 1, 0U, 0U);
+    test_pinned_prompt_render(screen); // [手順] - 幅変更を描画時に検出する。
+
+    // Assert 6
+    EXPECT_EQ(separators * 4, separator_draws); // [確認_正常系] - 描画時に検出した幅変更でも固定領域を描画すること。
+
+    // Cleanup
+    test_pinned_prompt_set_tty(screen, 0);
+    cplat_pinned_prompt_dispose(screen);
+}
+// UTF-8 の入力途中には描画せず、完成後に描画することの確認
+TEST_P(pinnedPromptResizeTest, utf8_renders_only_complete_characters)
+{
+    // Arrange
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
+    const int cols = std::get<0>(GetParam());
+    const int rows = std::get<1>(GetParam());
+    test_pinned_prompt_render_state(screen, 1, 1, 0, 0, "test> ", "h", "", "", "", "");
+    test_pinned_prompt_set_internal_state(screen, 80, 24, 22, 1, 0, 0, 1U, 0U);
+    NiceMock<Mock_stdio> mock_stdio;
+#if defined(PLATFORM_LINUX)
+    NiceMock<Mock_ioctl> mock_platform;
+    struct winsize size = {};
+    size.ws_col = static_cast<unsigned short>(cols);
+    size.ws_row = static_cast<unsigned short>(rows);
+#elif defined(PLATFORM_WINDOWS)
+    NiceMock<Mock_windows> mock_platform;
+    HANDLE out_handle = (HANDLE)0x1234;
+#endif
+
+    // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_platform, ioctl(_, _, _, STDOUT_FILENO, TIOCGWINSZ, _))
+        .WillRepeatedly(DoAll(Invoke([size](const char *, int, const char *, int, unsigned long, void *arg)
+                                     { *static_cast<struct winsize *>(arg) = size; }),
+                              Return(0)));
+    // [Pre-Assert確認_正常系] - ioctl() が任意の回数呼び出されること。
+    // [Pre-Assert手順] - 指定した幅と高さを返す。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_platform, GetStdHandle(_, _, _, STD_OUTPUT_HANDLE)).WillRepeatedly(Return(out_handle));
+    // [Pre-Assert確認_正常系] - GetStdHandle() が任意の回数呼び出されること。
+    // [Pre-Assert手順] - ダミーの出力ハンドルを返す。
+    EXPECT_CALL(mock_platform, GetConsoleScreenBufferInfo(_, _, _, out_handle, _))
+        .WillRepeatedly(
+            [cols, rows](const char *, int, const char *, HANDLE, PCONSOLE_SCREEN_BUFFER_INFO info)
+            {
+                *info = {};
+                info->srWindow.Right = static_cast<SHORT>(cols - 1);
+                info->srWindow.Bottom = static_cast<SHORT>(rows - 1);
+                return TRUE;
+            });
+    // [Pre-Assert確認_正常系] - GetConsoleScreenBufferInfo() が任意の回数呼び出されること。
+    // [Pre-Assert手順] - 指定した幅と高さを返す。
+#endif
+    int frames = 0;
+    ON_CALL(mock_stdio, fflush(_, _, _, stdout))
+        .WillByDefault(
+            [&frames](const char *, int, const char *, FILE *)
+            {
+                ++frames;
+                return 0;
+            });
+    // [状態] - 画面更新の回数を記録する。
+
+    // Act 1
+    test_pinned_prompt_set_edit_line(screen, "\xE3");
+    test_pinned_prompt_render(screen); // [手順] - 「ト」の先頭バイトだけで描画を試みる。
+    test_pinned_prompt_set_edit_line(screen, "\xE3\x83");
+    test_pinned_prompt_render(screen); // [手順] - 「ト」の 2 バイト目までで描画を試みる。
+
+    // Assert 1
+    EXPECT_EQ(0, frames); // [確認_正常系] - 不完全な UTF-8 を出力しないこと。
+
+    // Act 2
+    test_pinned_prompt_set_edit_line(screen, "\xE3\x83\x88");
+    test_pinned_prompt_render(screen); // [手順] - 完成した「ト」を描画する。
+
+    // Assert 2
+    EXPECT_EQ(1, frames); // [確認_正常系] - 完成した文字を 1 回描画すること。
+
+    // Act 3
+    test_pinned_prompt_set_edit_line(screen, "\xE3"
+                                             "ab");
+    test_pinned_prompt_set_cursor(screen, 1U);
+    test_pinned_prompt_render(screen); // [手順] - 行の途中に不完全な文字を挿入した状態で描画を試みる。
+
+    // Assert 3
+    EXPECT_EQ(1, frames); // [確認_正常系] - 行末が ASCII でもカーソル直前の文字が完成するまで描画しないこと。
+
+    // Act 4
+    test_pinned_prompt_set_edit_line(screen, "\xE3\x83\x88"
+                                             "ab");
+    test_pinned_prompt_set_cursor(screen, 3U);
+    test_pinned_prompt_render(screen); // [手順] - 行途中で完成した「ト」を描画する。
+
+    // Assert 4
+    EXPECT_EQ(2, frames); // [確認_正常系] - 行途中で完成した文字を描画すること。
+    EXPECT_STREQ("\xE3\x83\x88"
+                 "ab",
+                 test_pinned_prompt_edit_text(screen));
+    // [確認_正常系] - 後続の文字列を保持すること。
+
+    // Cleanup
+    test_pinned_prompt_set_tty(screen, 0);
+    cplat_pinned_prompt_dispose(screen);
+}
+INSTANTIATE_TEST_SUITE_P(dimensions, pinnedPromptResizeTest,
+                         testing::Values(std::make_tuple(80, 24, 0), std::make_tuple(120, 24, 1),
+                                         std::make_tuple(80, 40, 1), std::make_tuple(120, 40, 1),
+                                         std::make_tuple(80, 2, 1), std::make_tuple(80, 1, 1)));
+
+#if defined(PLATFORM_WINDOWS)
+// UTF-8 の続きが内部に残っている場合に入力イベントを待ち直さないことの確認
+TEST(pinnedPromptTest, reads_surrogate_pair_and_drains_utf8_on_windows)
+{
+    // Arrange
+    auto *screen = cplat_pinned_prompt_create(nullptr);
+    ASSERT_NE(nullptr, screen); // [状態確認] - ハンドルを用意できること。
+    NiceMock<Mock_windows> mock_windows;
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, _, 100U)).Times(2).WillRepeatedly(Return(WAIT_OBJECT_0));
+    // [Pre-Assert確認_正常系] - UTF-16 の 2 コード単位に対してだけ待機すること。
+    EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, _, _, 1U, _, _))
+        .WillOnce(
+            [](const char *, int, const char *, HANDLE, LPVOID buf, DWORD, LPDWORD read, PCONSOLE_READCONSOLE_CONTROL)
+            {
+                *static_cast<WCHAR *>(buf) = 0xD83DU;
+                *read = 1U;
+                return TRUE;
+            })
+        .WillOnce(
+            [](const char *, int, const char *, HANDLE, LPVOID buf, DWORD, LPDWORD read, PCONSOLE_READCONSOLE_CONTROL)
+            {
+                *static_cast<WCHAR *>(buf) = 0xDE00U;
+                *read = 1U;
+                return TRUE;
+            });
+    // [Pre-Assert確認_正常系] - ReadConsoleW() が 2 回呼び出されること。
+    // [Pre-Assert手順] - 笑顔の絵文字のサロゲートペアを返す。
+    // Act
+    int first = test_pinned_prompt_read_char(screen);     // [手順] - 先頭バイトを読む。
+    int second = test_pinned_prompt_read_char_nb(screen); // [手順] - 待機せずに残りを読む。
+    int third = test_pinned_prompt_read_char(screen);     // [手順] - 3 バイト目を読む。
+    int fourth = test_pinned_prompt_read_char(screen);    // [手順] - 4 バイト目を読む。
+    // Assert
+    EXPECT_EQ(0xF0, first);  // [確認_正常系] - 先頭バイトを取得できること。
+    EXPECT_EQ(0x9F, second); // [確認_正常系] - 2 バイト目を取得できること。
+    EXPECT_EQ(0x98, third);  // [確認_正常系] - 3 バイト目を取得できること。
+    EXPECT_EQ(0x80, fourth); // [確認_正常系] - 最終バイトを取得できること。
+    // Cleanup
+    test_pinned_prompt_set_tty(screen, 0);
+    cplat_pinned_prompt_dispose(screen);
+}
+#endif
+#if defined(PLATFORM_WINDOWS)
+// 不正なサロゲートの後に来た文字を失わずに返すことの確認
+TEST(pinnedPromptTest, preserves_deferred_character_on_windows)
+{
+    // Arrange
+    auto *screen = cplat_pinned_prompt_create(nullptr);
+    ASSERT_NE(nullptr, screen); // [状態確認] - ハンドルを用意する。
+    NiceMock<Mock_windows> mock_windows;
+    std::string actual;
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, WaitForSingleObject(_, _, _, _, 100U)).Times(2).WillRepeatedly(Return(WAIT_OBJECT_0));
+    // [Pre-Assert確認_正常系] - 2 コード単位だけを待機すること。
+    EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, _, _, 1U, _, _))
+        .WillOnce(
+            [](const char *, int, const char *, HANDLE, LPVOID p, DWORD, LPDWORD n, PCONSOLE_READCONSOLE_CONTROL)
+            {
+                *static_cast<WCHAR *>(p) = 0xD800U;
+                *n = 1U;
+                return TRUE;
+            })
+        .WillOnce(
+            [](const char *, int, const char *, HANDLE, LPVOID p, DWORD, LPDWORD n, PCONSOLE_READCONSOLE_CONTROL)
+            {
+                *static_cast<WCHAR *>(p) = L'A';
+                *n = 1U;
+                return TRUE;
+            });
+    // [Pre-Assert確認_正常系] - ReadConsoleW() が 2 回呼び出されること。
+    // [Pre-Assert手順] - 不正な組み合わせを返す。
+    // Act
+    actual.push_back(static_cast<char>(test_pinned_prompt_read_char(screen)));
+    actual.push_back(static_cast<char>(test_pinned_prompt_read_char_nb(screen)));
+    actual.push_back(static_cast<char>(test_pinned_prompt_read_char(screen)));
+    actual.push_back(static_cast<char>(test_pinned_prompt_read_char_nb(screen)));
+    // [手順] - 置換文字と保留された後続文字を順に読む。
+    // Assert
+    EXPECT_EQ("\xEF\xBF\xBD"
+              "A",
+              actual); // [確認_正常系] - 置換後にも後続文字を保持すること。
+    // Cleanup
+    test_pinned_prompt_set_tty(screen, 0);
+    cplat_pinned_prompt_dispose(screen);
+}
+#endif
