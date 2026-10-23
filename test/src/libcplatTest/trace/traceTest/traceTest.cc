@@ -1963,10 +1963,10 @@ TEST_F(traceTest, start_and_stop_are_idempotent)
 
 // create 直後にすべての出力先が無効で、set_file_level 未呼び出しの start がトレース ファイルを作らないことの確認
 // cplat-req: id=CPLAT-TRACE-FUNC-011; uuid=94ce1fc3-c198-49fe-816e-70ec4f6212ce
-// [サブ手順参照 名前=traceTest.SetUp]
 TEST_F(traceTest, start_without_level_settings_creates_no_output)
 {
     // Arrange
+    // [サブ手順参照 名前=traceTest.SetUp]
     // [サブ手順参照 名前=traceTest.create_logger]
     cplat_tracer *handle = create_logger();
 
