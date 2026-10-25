@@ -5,7 +5,7 @@
 
 #include <cplat/base/result.h>
 #include <cplat/crt/stdlib.h>
-#include <cplat/prompt/prompt_internal.h>
+#include "prompt_state.h"
 
 #include <cplat/crt/stdio.h>
 #include <cplat/crt/string.h>
@@ -38,6 +38,7 @@ typedef enum prompt_key
     KEY_RESIZE,
     KEY_UNKNOWN,
     KEY_EOF,
+    KEY_ERROR,
 } prompt_key;
 
 /* ================================================================
@@ -47,7 +48,7 @@ typedef enum prompt_key
 /* インデックス計算: oldest=0, newest=count-1 */
 #define HIST_IDX(p, ctx, i) (((ctx)->head + (i)) % (p)->history_max)
 
-static void history_add(cplat_prompt *p, cplat_internal_prompt_ctx *ctx, const char *line)
+static void history_add(cplat_prompt *p, prompt_history_context *ctx, const char *line)
 {
     size_t line_size;
     size_t slot;
@@ -102,7 +103,10 @@ static void redisplay(cplat_prompt *p, const char *prompt_str, const char *buf, 
     {
         return;
     }
-    p->cols = cplat_internal_prompt_platform_get_columns();
+    int cols;
+    int rows;
+    prompt_platform_get_size(&cols, &rows);
+    p->cols = (size_t)cols;
     input_cols = 1U;
     if (p->cols > prompt_cols + 1U)
     {
@@ -145,12 +149,16 @@ static void prompt_complete(cplat_prompt *p)
 
 static prompt_key read_key(cplat_prompt *p, int *ch_out)
 {
-    int c = cplat_internal_prompt_platform_read_char(p);
-    if (c == -1)
+    int c = prompt_platform_read_char(&p->platform);
+    if (c == PROMPT_PLATFORM_ERROR)
+    {
+        return KEY_ERROR;
+    }
+    if (c == PROMPT_PLATFORM_EOF)
     {
         return KEY_EOF;
     }
-    if (c == -2)
+    if (c == PROMPT_PLATFORM_RESIZE)
     {
         return KEY_RESIZE;
     }
@@ -173,15 +181,23 @@ static prompt_key read_key(cplat_prompt *p, int *ch_out)
     if (c == 0x1B)
     {
         /* ESC シーケンス */
-        int c2 = cplat_internal_prompt_platform_read_char_nb(p);
+        int c2 = prompt_platform_read_char_nb(&p->platform);
+        if (c2 == PROMPT_PLATFORM_ERROR)
+        {
+            return KEY_ERROR;
+        }
         /* 単独の ESC (次の文字が来なければ) は行消去とする */
-        if (c2 == -1)
+        if (c2 == PROMPT_PLATFORM_TIMEOUT || c2 == PROMPT_PLATFORM_EOF)
         {
             return KEY_CLEAR;
         }
         if (c2 == '[')
         {
-            int c3 = cplat_internal_prompt_platform_read_char_nb(p);
+            int c3 = prompt_platform_read_char_nb(&p->platform);
+            if (c3 == PROMPT_PLATFORM_ERROR)
+            {
+                return KEY_ERROR;
+            }
             switch (c3)
             {
             case 'A':
@@ -198,7 +214,11 @@ static prompt_key read_key(cplat_prompt *p, int *ch_out)
                 return KEY_END;
             case '1':
             {
-                int c4 = cplat_internal_prompt_platform_read_char_nb(p);
+                int c4 = prompt_platform_read_char_nb(&p->platform);
+                if (c4 == PROMPT_PLATFORM_ERROR)
+                {
+                    return KEY_ERROR;
+                }
                 if (c4 == '~')
                 {
                     return KEY_HOME;
@@ -210,7 +230,11 @@ static prompt_key read_key(cplat_prompt *p, int *ch_out)
             }
             case '3':
             {
-                int c4 = cplat_internal_prompt_platform_read_char_nb(p);
+                int c4 = prompt_platform_read_char_nb(&p->platform);
+                if (c4 == PROMPT_PLATFORM_ERROR)
+                {
+                    return KEY_ERROR;
+                }
                 if (c4 == '~')
                 {
                     return KEY_DELETE;
@@ -222,7 +246,11 @@ static prompt_key read_key(cplat_prompt *p, int *ch_out)
             }
             case '4':
             {
-                int c4 = cplat_internal_prompt_platform_read_char_nb(p);
+                int c4 = prompt_platform_read_char_nb(&p->platform);
+                if (c4 == PROMPT_PLATFORM_ERROR)
+                {
+                    return KEY_ERROR;
+                }
                 if (c4 == '~')
                 {
                     return KEY_END;
@@ -251,7 +279,7 @@ static prompt_key read_key(cplat_prompt *p, int *ch_out)
  * 履歴ブラウズ
  * ================================================================ */
 
-static void history_browse_prev(cplat_prompt *p, cplat_internal_prompt_ctx *ctx, const char *prompt_str)
+static void history_browse_prev(cplat_prompt *p, prompt_history_context *ctx, const char *prompt_str)
 {
     const char *entry;
     size_t len;
@@ -291,7 +319,7 @@ static void history_browse_prev(cplat_prompt *p, cplat_internal_prompt_ctx *ctx,
     redisplay(p, prompt_str, p->edit_buf, p->edit_len, p->cursor);
 }
 
-static void history_browse_next(cplat_prompt *p, cplat_internal_prompt_ctx *ctx, const char *prompt_str)
+static void history_browse_next(cplat_prompt *p, prompt_history_context *ctx, const char *prompt_str)
 {
     if (ctx->browse_idx == -1)
     {
@@ -336,10 +364,10 @@ static void history_browse_next(cplat_prompt *p, cplat_internal_prompt_ctx *ctx,
  * コンテキスト管理
  * ================================================================ */
 
-static cplat_internal_prompt_ctx *find_or_create_ctx(cplat_prompt *p, const char *file, int line)
+static prompt_history_context *find_or_create_ctx(cplat_prompt *p, const char *file, int line)
 {
     size_t i;
-    cplat_internal_prompt_ctx *ctx;
+    prompt_history_context *ctx;
 
     /* 既存コンテキストを検索 */
     for (i = 0; i < p->ctx_count; i++)
@@ -354,7 +382,7 @@ static cplat_internal_prompt_ctx *find_or_create_ctx(cplat_prompt *p, const char
     if (p->ctx_count == p->ctx_cap)
     {
         size_t new_cap;
-        cplat_internal_prompt_ctx *new_contexts;
+        prompt_history_context *new_contexts;
         if (p->ctx_cap)
         {
             new_cap = p->ctx_cap * 2;
@@ -363,8 +391,7 @@ static cplat_internal_prompt_ctx *find_or_create_ctx(cplat_prompt *p, const char
         {
             new_cap = 4;
         }
-        new_contexts =
-            (cplat_internal_prompt_ctx *)cplat_realloc(p->contexts, new_cap, sizeof(cplat_internal_prompt_ctx));
+        new_contexts = (prompt_history_context *)cplat_realloc(p->contexts, new_cap, sizeof(prompt_history_context));
         if (new_contexts == NULL)
         {
             return NULL;
@@ -441,7 +468,7 @@ cplat_prompt *cplat_prompt_create(const cplat_prompt_options *options)
         return NULL;
     }
     p->edit_buf[0] = '\0';
-    p->is_tty = cplat_isatty(CPLAT_STREAM_STDIN) && cplat_isatty(CPLAT_STREAM_STDOUT);
+    p->is_tty = prompt_platform_is_tty();
     return p;
 }
 
@@ -455,13 +482,13 @@ void cplat_prompt_dispose(cplat_prompt *prompt)
         return;
     }
     /* raw モード中なら復元 */
-    cplat_internal_prompt_platform_leave_raw(prompt);
+    (void)prompt_platform_leave_raw(&prompt->platform);
 
     /* 全コンテキストのリソースを解放 */
     for (i = 0; i < prompt->ctx_count; i++)
     {
         size_t j;
-        cplat_internal_prompt_ctx *ctx = &prompt->contexts[i];
+        prompt_history_context *ctx = &prompt->contexts[i];
         for (j = 0; j < prompt->history_max; j++)
         {
             cplat_free(ctx->entries[j]);
@@ -510,13 +537,17 @@ static int prompt_readline_fallback(char *buf, const size_t buf_size, const char
 static int prompt_readline_core(cplat_prompt *p, char *buf, const size_t buf_size, const char *prompt_str,
                                 const char *initial_text, const size_t initial_length, const char *file, int line)
 {
-    cplat_internal_prompt_ctx *ctx;
+    prompt_history_context *ctx;
 
     buf[0] = '\0';
 
     /* TTY でなければ cplat_fgets へフォールバックする */
     if (!p->is_tty)
     {
+        if (prompt_platform_leave_raw(&p->platform) != 0)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
         return prompt_readline_fallback(buf, buf_size, prompt_str);
     }
 
@@ -525,11 +556,23 @@ static int prompt_readline_core(cplat_prompt *p, char *buf, const size_t buf_siz
     if (ctx == NULL)
     {
         /* コンテキスト取得失敗時は cplat_fgets へフォールバックする */
+        if (prompt_platform_leave_raw(&p->platform) != 0)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
         return prompt_readline_fallback(buf, buf_size, prompt_str);
     }
 
     /* raw モードに移行 */
-    cplat_internal_prompt_platform_enter_raw(p);
+    int enter_result = prompt_platform_enter_raw(&p->platform);
+    if (enter_result < 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+    if (enter_result > 0)
+    {
+        return prompt_readline_fallback(buf, buf_size, prompt_str);
+    }
 
     /* 編集バッファー初期化。初期値があれば入力欄へ入れ、カーソルを末尾に置く */
     p->view_start = 0U;
@@ -544,7 +587,10 @@ static int prompt_readline_core(cplat_prompt *p, char *buf, const size_t buf_siz
         if (cplat_internal_prompt_edit_ensure_capacity(&p->edit_buf, &p->edit_cap, p->input_max_bytes,
                                                        initial_length + 1U) != 0)
         {
-            cplat_internal_prompt_platform_leave_raw(p);
+            if (prompt_platform_leave_raw(&p->platform) != 0)
+            {
+                return CPLAT_ERR_UNKNOWN;
+            }
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
         memcpy(p->edit_buf, initial_text, initial_length);
@@ -608,21 +654,35 @@ static int prompt_readline_core(cplat_prompt *p, char *buf, const size_t buf_siz
             {
                 history_add(p, ctx, p->edit_buf);
             }
-            cplat_internal_prompt_platform_leave_raw(p);
+            if (prompt_platform_leave_raw(&p->platform) != 0)
+            {
+                return CPLAT_ERR_UNKNOWN;
+            }
             return CPLAT_OK;
+
+        case KEY_ERROR:
+            buf[0] = '\0';
+            (void)prompt_platform_leave_raw(&p->platform);
+            return CPLAT_ERR_UNKNOWN;
 
         case KEY_EOF:
             putchar('\n');
             fflush(stdout);
             buf[0] = '\0';
-            cplat_internal_prompt_platform_leave_raw(p);
+            if (prompt_platform_leave_raw(&p->platform) != 0)
+            {
+                return CPLAT_ERR_UNKNOWN;
+            }
             return CPLAT_ERR_EOF;
 
         case KEY_CTRL_C:
             putchar('\n');
             fflush(stdout);
             buf[0] = '\0';
-            cplat_internal_prompt_platform_leave_raw(p);
+            if (prompt_platform_leave_raw(&p->platform) != 0)
+            {
+                return CPLAT_ERR_UNKNOWN;
+            }
             return CPLAT_ERR_CANCELED;
 
         case KEY_BACKSPACE:

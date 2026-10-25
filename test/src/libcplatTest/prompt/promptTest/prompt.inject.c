@@ -9,22 +9,22 @@
 
 #include "prompt.inject.h"
 
-void test_prompt_history_add(cplat_prompt *prompt, cplat_internal_prompt_ctx *context, const char *line)
+void test_prompt_history_add(cplat_prompt *prompt, prompt_history_context *context, const char *line)
 {
     history_add(prompt, context, line);
 }
 
-void test_prompt_history_prev(cplat_prompt *prompt, cplat_internal_prompt_ctx *context, const char *prompt_string)
+void test_prompt_history_prev(cplat_prompt *prompt, prompt_history_context *context, const char *prompt_string)
 {
     history_browse_prev(prompt, context, prompt_string);
 }
 
-void test_prompt_history_next(cplat_prompt *prompt, cplat_internal_prompt_ctx *context, const char *prompt_string)
+void test_prompt_history_next(cplat_prompt *prompt, prompt_history_context *context, const char *prompt_string)
 {
     history_browse_next(prompt, context, prompt_string);
 }
 
-cplat_internal_prompt_ctx *test_prompt_find_or_create_context(cplat_prompt *prompt, const char *file, int line)
+prompt_history_context *test_prompt_find_or_create_context(cplat_prompt *prompt, const char *file, int line)
 {
     return find_or_create_ctx(prompt, file, line);
 }

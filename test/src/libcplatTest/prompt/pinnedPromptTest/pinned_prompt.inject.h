@@ -38,6 +38,7 @@ extern "C"
         TEST_PINNED_PROMPT_KEY_CLEAR,
         TEST_PINNED_PROMPT_KEY_RESIZE,
         TEST_PINNED_PROMPT_KEY_UNKNOWN,
+        TEST_PINNED_PROMPT_KEY_ERROR,
         TEST_PINNED_PROMPT_KEY_EOF
     };
 
@@ -100,6 +101,11 @@ extern "C"
     extern void test_pinned_prompt_set_status_dirty(cplat_pinned_prompt *screen, int dirty);
     extern void test_pinned_prompt_destroy_mutex(cplat_pinned_prompt *screen);
     extern void test_pinned_prompt_history_add_after_null_last(cplat_pinned_prompt *screen);
+
+    /* 共通層の境界で移行・復元失敗、または指定段階の入力失敗を注入する。 */
+    extern void test_pinned_prompt_failures(int enter_result, int leave_result);
+    /* 入力列は呼び出し中に生存する配列です。NULL で実 OS 処理への委譲に戻します。 */
+    extern void test_pinned_prompt_input_results(const int *results, size_t count);
 
     /* raw モード状態を取得する。 */
     extern int test_pinned_prompt_raw_active(const cplat_pinned_prompt *screen);

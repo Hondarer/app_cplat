@@ -1,72 +1,83 @@
 /**
+ *******************************************************************************
  *  @file           prompt_windows.c
  *  @brief          SetConsoleMode の VT 入力を使用する Windows 向けプロンプト処理を実装します。
+ *******************************************************************************
  */
 
-#include <cplat/prompt/prompt_internal.h>
+#include "prompt_platform.h"
 
 #if defined(PLATFORM_WINDOWS)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-size_t cplat_internal_prompt_platform_get_columns(void)
+int prompt_platform_os_get_size(int *cols_out, int *rows_out)
 {
     CONSOLE_SCREEN_BUFFER_INFO info;
+    HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
     /* see: https://learn.microsoft.com/en-us/windows/console/getconsolescreenbufferinfo */
-    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info) && info.srWindow.Right >= info.srWindow.Left)
+    if (output != INVALID_HANDLE_VALUE && output != NULL && GetConsoleScreenBufferInfo(output, &info))
     {
-        return (size_t)(info.srWindow.Right - info.srWindow.Left) + 1U;
+        *cols_out = (int)info.srWindow.Right - (int)info.srWindow.Left + 1;
+        *rows_out = (int)info.srWindow.Bottom - (int)info.srWindow.Top + 1;
+        return 0;
     }
-    return 80U;
+    return -1;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-void cplat_internal_prompt_platform_enter_raw(cplat_prompt *p)
+int prompt_platform_os_enter_raw(prompt_platform_context *context)
 {
     DWORD new_mode;
-    if (p->raw_active)
+    if (context->raw_active)
     {
-        return;
+        return -1;
     }
-    p->stdin_handle = GetStdHandle(STD_INPUT_HANDLE);
-    if (p->stdin_handle == INVALID_HANDLE_VALUE)
+    context->stdin_handle = GetStdHandle(STD_INPUT_HANDLE);
+    if (context->stdin_handle == INVALID_HANDLE_VALUE || context->stdin_handle == NULL)
     {
-        return;
+        return -1;
     }
-    if (!GetConsoleMode(p->stdin_handle, &p->orig_in_mode))
+    if (!GetConsoleMode(context->stdin_handle, &context->orig_in_mode))
     {
-        return;
+        return -1;
     }
     /* ENABLE_VIRTUAL_TERMINAL_INPUT : ESC シーケンスを仮想端末入力として受け取る
      * ENABLE_ECHO_INPUT              : エコー無効
      * ENABLE_LINE_INPUT              : 行単位読み取り無効 (文字単位に変更)
      * ENABLE_PROCESSED_INPUT         : Ctrl+C をシグナルではなく文字として受け取る */
-    new_mode = (p->orig_in_mode | ENABLE_VIRTUAL_TERMINAL_INPUT) &
+    new_mode = (context->orig_in_mode | ENABLE_VIRTUAL_TERMINAL_INPUT) &
                ~((DWORD)(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT));
-    if (SetConsoleMode(p->stdin_handle, new_mode))
+    if (SetConsoleMode(context->stdin_handle, new_mode))
     {
-        p->raw_active = 1;
+        context->raw_active = 1;
+        return 0;
     }
+    return -1;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-void cplat_internal_prompt_platform_leave_raw(cplat_prompt *p)
+int prompt_platform_os_leave_raw(prompt_platform_context *context)
 {
-    if (!p->raw_active)
+    if (!context->raw_active)
     {
-        return;
+        return 0;
     }
-    SetConsoleMode(p->stdin_handle, p->orig_in_mode);
-    p->raw_active = 0;
+    if (!SetConsoleMode(context->stdin_handle, context->orig_in_mode))
+    {
+        return -1;
+    }
+    context->raw_active = 0;
+    return 0;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_internal_prompt_platform_read_char(cplat_prompt *p)
+int prompt_platform_read_char(prompt_platform_context *context)
 {
-    cplat_internal_prompt_utf16_input *input = &p->windows_input;
+    cplat_internal_prompt_utf16_input *input = &context->windows_input;
     while (input->offset == input->length)
     {
         unsigned int unit;
@@ -79,21 +90,25 @@ int cplat_internal_prompt_platform_read_char(cplat_prompt *p)
         {
             DWORD n_read;
             WCHAR character;
-            DWORD result = WaitForSingleObject(p->stdin_handle, 100U);
+            DWORD result = WaitForSingleObject(context->stdin_handle, 100U);
             if (result == WAIT_TIMEOUT)
             {
-                return -2;
+                return PROMPT_PLATFORM_RESIZE;
             }
             if (result != WAIT_OBJECT_0)
             {
-                return -1;
+                return PROMPT_PLATFORM_ERROR;
             }
             /* サロゲートを個別に UTF-8 変換すると置換文字になるため、UTF-16 で読み取ります。
              * see: https://learn.microsoft.com/en-us/windows/console/readconsole
              * see: https://github.com/microsoft/terminal/blob/main/src/host/stream.cpp */
-            if (!ReadConsoleW(p->stdin_handle, &character, 1U, &n_read, NULL) || n_read == 0U)
+            if (!ReadConsoleW(context->stdin_handle, &character, 1U, &n_read, NULL))
             {
-                return -1;
+                return PROMPT_PLATFORM_ERROR;
+            }
+            if (n_read == 0U)
+            {
+                return PROMPT_PLATFORM_EOF;
             }
             unit = (unsigned int)character;
         }
@@ -104,19 +119,23 @@ int cplat_internal_prompt_platform_read_char(cplat_prompt *p)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_internal_prompt_platform_read_char_nb(cplat_prompt *p)
+int prompt_platform_read_char_nb(prompt_platform_context *context)
 {
-    if (p->windows_input.offset < p->windows_input.length || p->windows_input.has_pending_unit)
+    if (context->windows_input.offset < context->windows_input.length || context->windows_input.has_pending_unit)
     {
-        return cplat_internal_prompt_platform_read_char(p);
+        return prompt_platform_read_char(context);
     }
 
-    DWORD result = WaitForSingleObject(p->stdin_handle, 50); /* 50ms */
+    DWORD result = WaitForSingleObject(context->stdin_handle, 50); /* 50ms */
+    if (result == WAIT_TIMEOUT)
+    {
+        return PROMPT_PLATFORM_TIMEOUT;
+    }
     if (result != WAIT_OBJECT_0)
     {
-        return -1;
+        return PROMPT_PLATFORM_ERROR;
     }
-    return cplat_internal_prompt_platform_read_char(p);
+    return prompt_platform_read_char(context);
 }
 
 #endif /* PLATFORM_WINDOWS */

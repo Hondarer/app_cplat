@@ -1,2 +1,4 @@
 /prompt_edit.c
+/prompt_linux.c
+/prompt_platform.c
 /prompt_windows.c

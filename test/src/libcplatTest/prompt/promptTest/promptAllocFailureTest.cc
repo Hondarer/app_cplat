@@ -2,7 +2,7 @@
 #include <mock_cplat.h>
 #include <cplat/base/result.h>
 #include <cplat/prompt/prompt.h>
-#include <cplat/prompt/prompt_internal.h>
+#include "../../../../../prod/libsrc/cplat/prompt/prompt_state.h"
 
 #include <cstring>
 #include <string>
@@ -291,7 +291,7 @@ TEST_F(promptAllocFailureTest, completion_allocation_failure_keeps_input)
     cplat_prompt_completion_set(prompt_, allocation_completion, &add_result);
     promptFakeSetInput("s\t\r");
     // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_realloc(_, 4U, sizeof(cplat_internal_prompt_ctx)))
+    EXPECT_CALL(mock_cplat, cplat_realloc(_, 4U, sizeof(prompt_history_context)))
         .WillOnce(Invoke(delegate_real_cplat_realloc));
     // [Pre-Assert確認_正常系] - 履歴コンテキストの領域を 1 回確保すること。
     // [Pre-Assert手順] - 実際のメモリ確保へ委譲する。

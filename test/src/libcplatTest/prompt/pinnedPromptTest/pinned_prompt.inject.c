@@ -364,71 +364,40 @@ void test_pinned_prompt_history_release_entries(cplat_pinned_prompt *screen)
 
 int test_pinned_prompt_raw_active(const cplat_pinned_prompt *screen)
 {
-    return screen->raw_active;
+    return screen->platform.raw_active;
 }
 
 void test_pinned_prompt_set_raw_active(cplat_pinned_prompt *screen, int active)
 {
-    screen->raw_active = active;
+    screen->platform.raw_active = active;
 }
 
 void test_pinned_prompt_get_size(int *cols, int *rows)
 {
-    pinned_prompt_platform_get_size(cols, rows);
+    prompt_platform_get_size(cols, rows);
 }
 
 void test_pinned_prompt_enter_raw(cplat_pinned_prompt *screen)
 {
-    pinned_prompt_platform_enter_raw(screen);
+    (void)prompt_platform_os_enter_raw(&screen->platform);
 }
 
 void test_pinned_prompt_leave_raw(cplat_pinned_prompt *screen)
 {
-    pinned_prompt_platform_leave_raw(screen);
+    (void)prompt_platform_os_leave_raw(&screen->platform);
 }
 
 int test_pinned_prompt_read_char(cplat_pinned_prompt *screen)
 {
-    return pinned_prompt_platform_read_char(screen);
+    return prompt_platform_read_char(&screen->platform);
 }
 
 int test_pinned_prompt_read_char_nb(cplat_pinned_prompt *screen)
 {
-    return pinned_prompt_platform_read_char_nb(screen);
+    return prompt_platform_read_char_nb(&screen->platform);
 }
 
 int test_pinned_prompt_platform_is_tty(void)
 {
-    return pinned_prompt_platform_is_tty();
+    return prompt_platform_is_tty();
 }
-
-#if defined(PLATFORM_LINUX)
-
-void test_pinned_prompt_reset_platform_state(void)
-{
-    s_pinned_resize_pending = 0;
-    memset(&s_pinned_prev_sigwinch, 0, sizeof(s_pinned_prev_sigwinch));
-    s_pinned_sigwinch_installed = 0;
-}
-
-void test_pinned_prompt_set_resize_pending(int value)
-{
-    s_pinned_resize_pending = (sig_atomic_t)value;
-}
-
-int test_pinned_prompt_resize_pending(void)
-{
-    return (int)s_pinned_resize_pending;
-}
-
-void test_pinned_prompt_set_sigwinch_installed(int installed)
-{
-    s_pinned_sigwinch_installed = installed;
-}
-
-void test_pinned_prompt_raise_resize_handler(void)
-{
-    pinned_prompt_sigwinch_handler(SIGWINCH);
-}
-
-#endif /* PLATFORM_LINUX */

@@ -7,3 +7,8 @@ TEST_SRCS := \
 # read の失敗と EINTR を注入するため mock_libc を使用する
 # CPLAT_FD_SET() が展開する cplat_abort_at() は mock_cplat から実 libcplat へ委譲する
 LIBS += mock_libc mock_cplat
+
+ADD_SRCS += $(MYAPP_DIR)/prod/libsrc/cplat/prompt/prompt_platform.c
+
+INCDIR += $(MYAPP_DIR)/prod/libsrc/cplat/prompt
+ADD_SRCS += $(MYAPP_DIR)/prod/libsrc/cplat/prompt/prompt_windows.c $(MYAPP_DIR)/prod/libsrc/cplat/prompt/prompt_edit.c

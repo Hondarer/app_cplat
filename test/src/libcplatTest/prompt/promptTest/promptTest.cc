@@ -3,7 +3,7 @@
 #include <mock_stdio.h>
 #include <cplat/base/result.h>
 #include <cplat/prompt/prompt.h>
-#include <cplat/prompt/prompt_internal.h>
+#include "../../../../../prod/libsrc/cplat/prompt/prompt_state.h"
 
 #include <cstring>
 #include <string>

@@ -472,7 +472,7 @@ TEST(pinnedPromptTest, platform_read_char_nb_handles_select_timeout)
 
     // Assert
     EXPECT_EQ(
-        -1,
+        -4,
         timeout_result); // [確認_正常系] - select() がタイムアウトしたときの test_pinned_prompt_read_char_nb() の戻り値が -1 であること。(入力がないことの確認)
     EXPECT_EQ(
         static_cast<int>('C'),
@@ -958,7 +958,7 @@ TEST(pinnedPromptTest, tty_readline_continues_after_resize)
     int read_count = 0;
     size.ws_col = 80U;
     size.ws_row = 24U;
-    test_pinned_prompt_set_resize_pending(1);
+    test_pinned_prompt_set_resize_pending(0);
 
     // Pre-Assert
     EXPECT_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
@@ -986,6 +986,7 @@ TEST(pinnedPromptTest, tty_readline_continues_after_resize)
             {
                 if (read_count++ == 0)
                 {
+                    test_pinned_prompt_set_resize_pending(1);
                     errno = EINTR;
                     return static_cast<ssize_t>(-1);
                 }
@@ -1147,10 +1148,10 @@ TEST(pinnedPromptTest, platform_read_helpers_handle_interrupt_and_select_results
 
     // Assert
     EXPECT_EQ(
-        -1,
+        -3,
         non_eintr_result); // [確認_異常系] - 非 EINTR の read() 失敗時の test_pinned_prompt_read_char() の戻り値が -1 であること。
     EXPECT_EQ(
-        -1,
+        -4,
         select_timeout_result); // [確認_異常系] - select() がタイムアウトしたときの test_pinned_prompt_read_char_nb() の戻り値が -1 であること。(入力がないことの確認)
     EXPECT_EQ(
         static_cast<int>('Q'),
@@ -2007,7 +2008,7 @@ TEST(pinnedPromptTest, platform_read_char_handles_timeout_and_eof_on_windows)
         -2,
         timeout_result); // [確認_正常系] - WAIT_TIMEOUT の test_pinned_prompt_read_char() の戻り値が -2 であること。(タイムアウトであることの確認)
     EXPECT_EQ(
-        -1,
+        -3,
         wait_fail_result); // [確認_異常系] - WAIT_FAILED の test_pinned_prompt_read_char() の戻り値が -1 であること。(入力待ちの失敗であることの確認)
     EXPECT_EQ(
         static_cast<int>('B'),
@@ -2070,7 +2071,7 @@ TEST(pinnedPromptTest, platform_read_char_nb_handles_wait_timeout_on_windows)
 
     // Assert
     EXPECT_EQ(
-        -1,
+        -4,
         timeout_result); // [確認_正常系] - 50 ms 待ちがタイムアウトしたときの test_pinned_prompt_read_char_nb() の戻り値が -1 であること。(入力がないことの確認)
     EXPECT_EQ(
         static_cast<int>('C'),

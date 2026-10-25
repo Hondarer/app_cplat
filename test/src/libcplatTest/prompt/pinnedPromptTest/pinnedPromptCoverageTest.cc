@@ -62,12 +62,9 @@ TEST(pinnedPromptCoverageTest, platform_helpers_cover_short_circuits_and_install
             Return(0)));
     // [Pre-Assert確認_異常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して任意の回数呼び出されること。
     // [Pre-Assert手順] - ioctl() から、列数 80・行数 0 の端末サイズを設定して 0 を返す。
-    EXPECT_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _)).WillOnce(Return(0));
-    // [Pre-Assert確認_正常系] - tcgetattr() が STDIN_FILENO を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - tcgetattr() から 0 を返す。
-    EXPECT_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _)).Times(2).WillRepeatedly(Return(0));
-    // [Pre-Assert確認_正常系] - tcsetattr() が STDIN_FILENO を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - tcsetattr() から 0 を返す。
+    EXPECT_CALL(mock_termios, tcgetattr(_, _, _, _, _)).Times(0);
+    EXPECT_CALL(mock_termios, tcsetattr(_, _, _, _, _, _)).Times(0);
+    // [Pre-Assert確認_異常系] - 復元未完の通知状態があれば端末設定を変更しないこと。
 
     // Act
     int stdin_not_tty =
@@ -566,6 +563,7 @@ TEST(pinnedPromptCoverageTest, readline_reports_setup_failures)
     raw_failure = cplat_pinned_prompt_readline_at(
         screen, output, sizeof(output), "", "raw.c",
         4); // [手順] - raw モードへの移行が失敗する状態で cplat_pinned_prompt_readline_at() を呼び出す。
+    test_pinned_prompt_failures(2, 0);
     test_pinned_prompt_set_raw_active(screen, 1);
     history_failure = cplat_pinned_prompt_readline_at(
         screen, output, sizeof(output), "", "history-failure.c",
@@ -576,6 +574,7 @@ TEST(pinnedPromptCoverageTest, readline_reports_setup_failures)
     ASSERT_EQ(
         0,
         actual_ret_history_state); // [状態確認] - test_pinned_prompt_history_failure_state() の戻り値が 0 であること。
+    test_pinned_prompt_failures(2, 0);
     test_pinned_prompt_set_raw_active(screen, 1);
     prompt_failure = cplat_pinned_prompt_readline_at(
         screen, output, sizeof(output), "long prompt", "prompt-failure.c",
@@ -603,6 +602,7 @@ TEST(pinnedPromptCoverageTest, readline_reports_setup_failures)
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
+    test_pinned_prompt_failures(0, 0);
 }
 
 // readline がクリア、移動、未知キー、切り捨て、EOF を処理することの確認
@@ -661,14 +661,17 @@ TEST(pinnedPromptCoverageTest, readline_covers_remaining_key_actions)
     // [Pre-Assert手順] - select() から 10 回目はタイムアウト (0)、それ以外は入力可 (1) を返す。
 
     // Act
+    test_pinned_prompt_failures(2, 0);
     test_pinned_prompt_set_raw_active(screen, 1);
     int first_result = cplat_pinned_prompt_readline_at(
         screen, first_output, sizeof(first_output), "", "keys.c",
         1); // [手順] - 右移動、Home、End、削除、クリア、未知キーを含む入力の状態で cplat_pinned_prompt_readline_at() を呼び出す。
+    test_pinned_prompt_failures(2, 0);
     test_pinned_prompt_set_raw_active(screen, 1);
     int short_result = cplat_pinned_prompt_readline_at(
         screen, short_output, sizeof(short_output), "", "keys.c",
         2); // [手順] - 出力バッファーより長い入力の状態で cplat_pinned_prompt_readline_at() を呼び出す。
+    test_pinned_prompt_failures(2, 0);
     test_pinned_prompt_set_raw_active(screen, 1);
     int eof_result = cplat_pinned_prompt_readline_at(
         screen, eof_output, sizeof(eof_output), "", "keys.c",
@@ -693,6 +696,7 @@ TEST(pinnedPromptCoverageTest, readline_covers_remaining_key_actions)
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
+    test_pinned_prompt_failures(0, 0);
 }
 
 #endif /* PLATFORM_LINUX */
@@ -1248,7 +1252,7 @@ TEST(pinnedPromptCoverageTest, platform_helpers_cover_tty_short_circuits_on_wind
     EXPECT_EQ(80,
               cols); // [確認_正常系] - cols が 80 であること。(行数 0 のコンソール情報でも列数 80 が返ったことの確認)
     EXPECT_EQ(
-        0,
+        24,
         rows); // [確認_正常系] - rows が 0 であること。(Windows では行数 0 が既定値へ置き換わらず 0 のままであることの確認)
 }
 

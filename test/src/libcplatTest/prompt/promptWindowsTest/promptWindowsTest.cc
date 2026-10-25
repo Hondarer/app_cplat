@@ -1,19 +1,27 @@
 #include <testfw.h>
 #include <mock_cplat.h>
-#include <cplat/prompt/prompt_internal.h>
+#include "../../../../../prod/libsrc/cplat/prompt/prompt_state.h"
 
 #if defined(PLATFORM_WINDOWS)
 
     #include <mock_windows.h>
 
+static size_t platform_columns(void)
+{
+    int cols;
+    int rows;
+    prompt_platform_get_size(&cols, &rows);
+    return (size_t)cols;
+}
+
 class promptWindowsTest : public Test
 {
   protected:
-    cplat_prompt handle_ = {};
+    prompt_platform_context handle_ = {};
 };
 
 /*
- * cplat_internal_prompt_platform_enter_raw / cplat_internal_prompt_platform_leave_raw
+ * prompt_platform_os_enter_raw / prompt_platform_os_leave_raw
  */
 
 // 端末でない標準入力では raw モードへ移行しないことの確認
@@ -34,8 +42,7 @@ TEST_F(promptWindowsTest, enter_raw_does_nothing_for_non_terminal)
                      // [Pre-Assert手順] - GetConsoleMode() から FALSE を返す。
 
     // Act
-    cplat_internal_prompt_platform_enter_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw() を呼び出す。
+    prompt_platform_os_enter_raw(&handle_); // [手順] - prompt_platform_os_enter_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -59,8 +66,7 @@ TEST_F(promptWindowsTest, enter_raw_does_nothing_when_stdin_handle_invalid)
         .Times(0); // [Pre-Assert確認_異常系] - GetConsoleMode() が呼び出されないこと。
 
     // Act
-    cplat_internal_prompt_platform_enter_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw() を呼び出す。
+    prompt_platform_os_enter_raw(&handle_); // [手順] - prompt_platform_os_enter_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -97,8 +103,7 @@ TEST_F(promptWindowsTest, enter_raw_succeeds_and_changes_mode)
                          // [Pre-Assert手順] - SetConsoleMode() から TRUE を返す。
 
     // Act
-    cplat_internal_prompt_platform_enter_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw() を呼び出す。
+    prompt_platform_os_enter_raw(&handle_); // [手順] - prompt_platform_os_enter_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -141,8 +146,7 @@ TEST_F(promptWindowsTest, enter_raw_does_nothing_when_set_console_mode_fails)
                      // [Pre-Assert手順] - SetConsoleMode() から FALSE を返す。
 
     // Act
-    cplat_internal_prompt_platform_enter_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_enter_raw() を呼び出す。
+    prompt_platform_os_enter_raw(&handle_); // [手順] - prompt_platform_os_enter_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -160,8 +164,7 @@ TEST_F(promptWindowsTest, enter_raw_is_ignored_while_already_raw)
     // Pre-Assert
 
     // Act
-    cplat_internal_prompt_platform_enter_raw(
-        &handle_); // [手順] - raw モード中に cplat_internal_prompt_platform_enter_raw() を呼び出す。
+    prompt_platform_os_enter_raw(&handle_); // [手順] - raw モード中に prompt_platform_os_enter_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -182,8 +185,7 @@ TEST_F(promptWindowsTest, leave_raw_is_ignored_when_not_raw)
     // Pre-Assert
 
     // Act
-    cplat_internal_prompt_platform_leave_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_leave_raw() を呼び出す。
+    prompt_platform_os_leave_raw(&handle_); // [手順] - prompt_platform_os_leave_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -213,8 +215,7 @@ TEST_F(promptWindowsTest, leave_raw_restores_mode)
                          // [Pre-Assert手順] - SetConsoleMode() から TRUE を返す。
 
     // Act
-    cplat_internal_prompt_platform_leave_raw(
-        &handle_); // [手順] - cplat_internal_prompt_platform_leave_raw() を呼び出す。
+    prompt_platform_os_leave_raw(&handle_); // [手順] - prompt_platform_os_leave_raw() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -225,7 +226,7 @@ TEST_F(promptWindowsTest, leave_raw_restores_mode)
 }
 
 /*
- * cplat_internal_prompt_platform_read_char
+ * prompt_platform_read_char
  */
 
 // 標準入力から 1 バイトが読み取れることの確認
@@ -254,12 +255,11 @@ TEST_F(promptWindowsTest, read_char_returns_next_byte)
     // [Pre-Assert手順] - ReadConsoleW() から、出力バッファーへ 'A' を書き込み、読み取りバイト数に 1 を設定して TRUE を返す。
 
     // Act
-    int actual_ret = cplat_internal_prompt_platform_read_char(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char() を呼び出す。
+    int actual_ret = prompt_platform_read_char(&handle_); // [手順] - prompt_platform_read_char() を呼び出す。
 
     // Assert
     EXPECT_EQ('A',
-              actual_ret); // [確認_正常系] - cplat_internal_prompt_platform_read_char() の戻り値が 'A' であること。
+              actual_ret); // [確認_正常系] - prompt_platform_read_char() の戻り値が 'A' であること。
 }
 
 // 標準入力が閉じられた場合に EOF が返ることの確認
@@ -282,13 +282,12 @@ TEST_F(promptWindowsTest, read_char_returns_minus1_at_eof)
                             // [Pre-Assert手順] - ReadConsoleW() から、読み取りバイト数に 0 を設定して TRUE を返す。
 
     // Act
-    int actual_ret = cplat_internal_prompt_platform_read_char(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char() を呼び出す。
+    int actual_ret = prompt_platform_read_char(&handle_); // [手順] - prompt_platform_read_char() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         -1,
-        actual_ret); // [確認_異常系] - cplat_internal_prompt_platform_read_char() の戻り値が -1 であること。(EOF であることの確認)
+        actual_ret); // [確認_異常系] - prompt_platform_read_char() の戻り値が -1 であること。(EOF であることの確認)
 }
 
 // 入力がない場合に待機がタイムアウトしリサイズ チェック通知が返ることの確認
@@ -308,17 +307,16 @@ TEST_F(promptWindowsTest, read_char_returns_minus2_on_timeout)
         .Times(0); // [Pre-Assert確認_正常系] - ReadConsoleW() が呼び出されないこと。
 
     // Act
-    int actual_ret = cplat_internal_prompt_platform_read_char(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char() を呼び出す。
+    int actual_ret = prompt_platform_read_char(&handle_); // [手順] - prompt_platform_read_char() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         -2,
-        actual_ret); // [確認_正常系] - cplat_internal_prompt_platform_read_char() の戻り値が -2 であること。(リサイズ チェック用タイムアウトであることの確認)
+        actual_ret); // [確認_正常系] - prompt_platform_read_char() の戻り値が -2 であること。(リサイズ チェック用タイムアウトであることの確認)
 }
 
 // 待機に失敗した場合に読み取り失敗が返ることの確認
-TEST_F(promptWindowsTest, read_char_returns_minus1_when_wait_fails)
+TEST_F(promptWindowsTest, read_char_reports_wait_error)
 {
     // Arrange
     Mock_windows mock_windows;
@@ -334,17 +332,16 @@ TEST_F(promptWindowsTest, read_char_returns_minus1_when_wait_fails)
         .Times(0); // [Pre-Assert確認_異常系] - ReadConsoleW() が呼び出されないこと。
 
     // Act
-    int actual_ret = cplat_internal_prompt_platform_read_char(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char() を呼び出す。
+    int actual_ret = prompt_platform_read_char(&handle_); // [手順] - prompt_platform_read_char() を呼び出す。
 
     // Assert
     EXPECT_EQ(
-        -1,
-        actual_ret); // [確認_異常系] - cplat_internal_prompt_platform_read_char() の戻り値が -1 であること。(読み取り失敗であることの確認)
+        PROMPT_PLATFORM_ERROR,
+        actual_ret); // [確認_異常系] - prompt_platform_read_char() の戻り値が PROMPT_PLATFORM_ERROR であること。(読み取り失敗であることの確認)
 }
 
 /*
- * cplat_internal_prompt_platform_read_char_nb
+ * prompt_platform_read_char_nb
  */
 
 // 入力がある場合に 1 バイトが読み取れることの確認
@@ -377,16 +374,15 @@ TEST_F(promptWindowsTest, read_char_nb_returns_next_byte_when_available)
     // [Pre-Assert手順] - ReadConsoleW() から、出力バッファーへ 'B' を書き込み、読み取りバイト数に 1 を設定して TRUE を返す。
 
     // Act
-    int actual_ret = cplat_internal_prompt_platform_read_char_nb(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char_nb() を呼び出す。
+    int actual_ret = prompt_platform_read_char_nb(&handle_); // [手順] - prompt_platform_read_char_nb() を呼び出す。
 
     // Assert
     EXPECT_EQ('B',
-              actual_ret); // [確認_正常系] - cplat_internal_prompt_platform_read_char_nb() の戻り値が 'B' であること。
+              actual_ret); // [確認_正常系] - prompt_platform_read_char_nb() の戻り値が 'B' であること。
 }
 
 // 入力がない場合にタイムアウトすることの確認
-TEST_F(promptWindowsTest, read_char_nb_returns_minus1_on_timeout)
+TEST_F(promptWindowsTest, read_char_nb_reports_timeout)
 {
     // Arrange
     Mock_windows mock_windows;
@@ -405,13 +401,12 @@ TEST_F(promptWindowsTest, read_char_nb_returns_minus1_on_timeout)
         .Times(0); // [Pre-Assert確認_異常系] - ReadConsoleW() が呼び出されないこと。
 
     // Act
-    int actual_ret = cplat_internal_prompt_platform_read_char_nb(
-        &handle_); // [手順] - cplat_internal_prompt_platform_read_char_nb() を呼び出す。
+    int actual_ret = prompt_platform_read_char_nb(&handle_); // [手順] - prompt_platform_read_char_nb() を呼び出す。
 
     // Assert
     EXPECT_EQ(
-        -1,
-        actual_ret); // [確認_異常系] - cplat_internal_prompt_platform_read_char_nb() の戻り値が -1 であること。(50 ミリ秒待っても入力がないことの確認)
+        PROMPT_PLATFORM_TIMEOUT,
+        actual_ret); // [確認_異常系] - prompt_platform_read_char_nb() の戻り値が PROMPT_PLATFORM_TIMEOUT であること。(50 ミリ秒待っても入力がないことの確認)
 }
 
 // 出力端末の幅を取得し、取得失敗時は 80 桁を返すことの確認
@@ -438,9 +433,9 @@ TEST_F(promptWindowsTest, columns_use_console_window_and_fallback)
     // [Pre-Assert確認_正常系] - サイズ取得を 3 回行うこと。
     // [Pre-Assert手順] - 正常値、失敗、逆順の座標を返す。
     // Act
-    size_t columns = cplat_internal_prompt_platform_get_columns();  // [手順] - 正常な端末幅を取得する。
-    size_t fallback = cplat_internal_prompt_platform_get_columns(); // [手順] - 取得失敗時の幅を取得する。
-    size_t invalid = cplat_internal_prompt_platform_get_columns();  // [手順] - 逆順の座標で幅を取得する。
+    size_t columns = platform_columns();  // [手順] - 正常な端末幅を取得する。
+    size_t fallback = platform_columns(); // [手順] - 取得失敗時の幅を取得する。
+    size_t invalid = platform_columns();  // [手順] - 逆順の座標で幅を取得する。
     // Assert
     EXPECT_EQ(100U, columns); // [確認_正常系] - ウィンドウ幅が 100 桁であること。
     EXPECT_EQ(80U, fallback); // [確認_異常系] - 取得失敗時は 80 桁であること。
@@ -476,10 +471,10 @@ TEST_F(promptWindowsTest, reads_surrogate_pair_and_drains_utf8)
     // [Pre-Assert確認_正常系] - ReadConsoleW() が 2 回呼び出されること。
     // [Pre-Assert手順] - サロゲートペアを返す。
     // Act
-    int first = cplat_internal_prompt_platform_read_char(&handle_);     // [手順] - UTF-8 の先頭を読む。
-    int second = cplat_internal_prompt_platform_read_char_nb(&handle_); // [手順] - バッファー内の続きを読む。
-    int third = cplat_internal_prompt_platform_read_char(&handle_);     // [手順] - 3 バイト目を読む。
-    int fourth = cplat_internal_prompt_platform_read_char(&handle_);    // [手順] - 4 バイト目を読む。
+    int first = prompt_platform_read_char(&handle_);     // [手順] - UTF-8 の先頭を読む。
+    int second = prompt_platform_read_char_nb(&handle_); // [手順] - バッファー内の続きを読む。
+    int third = prompt_platform_read_char(&handle_);     // [手順] - 3 バイト目を読む。
+    int fourth = prompt_platform_read_char(&handle_);    // [手順] - 4 バイト目を読む。
     // Assert
     EXPECT_EQ(0xF0, first);  // [確認_正常系] - 先頭を取得すること。
     EXPECT_EQ(0x9F, second); // [確認_正常系] - 2 バイト目を取得すること。
@@ -542,12 +537,12 @@ TEST_F(promptWindowsTest, preserves_high_surrogate_across_timeout)
     // [Pre-Assert確認_正常系] - ReadConsoleW() が 2 回呼び出されること。
     // [Pre-Assert手順] - 上位・下位サロゲートを返す。
     // Act 1
-    int timeout = cplat_internal_prompt_platform_read_char(&handle_); // [手順] - 上位サロゲートの後でタイムアウトする。
+    int timeout = prompt_platform_read_char(&handle_); // [手順] - 上位サロゲートの後でタイムアウトする。
     // Assert 1
     EXPECT_EQ(-2, timeout);                                   // [確認_正常系] - タイムアウトを返すこと。
     EXPECT_EQ(0xD83DU, handle_.windows_input.high_surrogate); // [確認_正常系] - 上位サロゲートを保持すること。
     // Act 2
-    int first = cplat_internal_prompt_platform_read_char(&handle_); // [手順] - 続く下位サロゲートを受け取る。
+    int first = prompt_platform_read_char(&handle_); // [手順] - 続く下位サロゲートを受け取る。
     // Assert 2
     EXPECT_EQ(0xF0, first);                      // [確認_正常系] - 完成した UTF-8 の先頭を返すこと。
     EXPECT_EQ(4U, handle_.windows_input.length); // [確認_正常系] - 4 バイトへ変換すること。
@@ -567,7 +562,7 @@ TEST_F(promptWindowsTest, drains_deferred_unit_before_waiting)
     EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, _, _, _, _, _)).Times(0);
     // [Pre-Assert確認_正常系] - 保留中の入力より先にコンソールを読まないこと。
     // Act
-    int actual = cplat_internal_prompt_platform_read_char_nb(&handle_); // [手順] - 保留したコード単位を読む。
+    int actual = prompt_platform_read_char_nb(&handle_); // [手順] - 保留したコード単位を読む。
     // Assert
     EXPECT_EQ('A', actual);                                // [確認_正常系] - 後続文字を失わないこと。
     EXPECT_EQ(0U, handle_.windows_input.has_pending_unit); // [確認_正常系] - 保留状態を解除すること。

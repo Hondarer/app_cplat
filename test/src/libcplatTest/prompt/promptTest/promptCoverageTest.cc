@@ -4,7 +4,7 @@
 #include <cplat/base/result.h>
 #include <cplat/crt/string.h>
 #include <cplat/prompt/prompt.h>
-#include <cplat/prompt/prompt_internal.h>
+#include "../../../../../prod/libsrc/cplat/prompt/prompt_state.h"
 
 #include <cstring>
 #include <string>
@@ -176,7 +176,7 @@ TEST_F(promptCoverageTest, contexts_distinguish_file_and_line_and_expand_twice)
     // Arrange
     static const char first_file[] = "first.c";
     static const char second_file[] = "second.c";
-    cplat_internal_prompt_ctx *contexts[6] = {}; // [状態] - 異なるファイル名と行番号で 6 個のコンテキストを作成する。
+    prompt_history_context *contexts[6] = {}; // [状態] - 異なるファイル名と行番号で 6 個のコンテキストを作成する。
 
     // Pre-Assert
 
@@ -212,9 +212,9 @@ TEST_F(promptCoverageTest, contexts_distinguish_file_and_line_and_expand_twice)
 TEST_F(promptCoverageTest, history_helpers_cover_remaining_boundaries)
 {
     // Arrange
-    cplat_internal_prompt_ctx *context =
+    prompt_history_context *context =
         test_prompt_find_or_create_context(prompt_, "history.c", 1); // [状態] - 空の履歴コンテキストを用意する。
-    cplat_internal_prompt_ctx *null_entry_context = test_prompt_find_or_create_context(
+    prompt_history_context *null_entry_context = test_prompt_find_or_create_context(
         prompt_, "null-entry.c", 1); // [状態] - nullptr エントリ試験用の履歴コンテキストを用意する。
     char *first_entry = nullptr;
     ASSERT_NE(nullptr,
@@ -268,7 +268,7 @@ TEST_F(promptCoverageTest, history_helpers_cover_remaining_boundaries)
 TEST_F(promptCoverageTest, history_add_ignores_zero_history_max)
 {
     // Arrange
-    cplat_internal_prompt_ctx *context =
+    prompt_history_context *context =
         test_prompt_find_or_create_context(prompt_, "zero-history.c", 1); // [状態] - 空の履歴コンテキストを用意する。
     ASSERT_NE(nullptr,
               context); // [状態確認] - test_prompt_find_or_create_context() の戻り値が nullptr 以外であること。
@@ -303,7 +303,7 @@ TEST_F(promptCoverageTest, context_creation_fails_when_entries_allocation_fails)
     // [Pre-Assert手順] - cplat_calloc() から nullptr を返す。
 
     // Act
-    cplat_internal_prompt_ctx *context =
+    prompt_history_context *context =
         test_prompt_find_or_create_context(prompt_, "failure.c",
                                            1); // [手順] - test_prompt_find_or_create_context() を呼び出す。
 

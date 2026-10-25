@@ -36,7 +36,6 @@
 #include <cplat/crt/path_format.h>
 
 #include <cplat/prompt/prompt_edit.h>
-#include <cplat/prompt/prompt_internal.h>
 
 #include <cplat/string_catalog/catalog_internal.h>
 #include <cplat/string_catalog/format_internal.h>

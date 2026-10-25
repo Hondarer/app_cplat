@@ -8,3 +8,8 @@ LIBS += mock_libc mock_cplat
 
 ADD_SRCS := \
 	$(MYAPP_DIR)/prod/libsrc/cplat/prompt/prompt_edit.c
+
+ADD_SRCS += $(MYAPP_DIR)/prod/libsrc/cplat/prompt/prompt_platform.c
+
+INCDIR += $(MYAPP_DIR)/prod/libsrc/cplat/prompt
+ADD_SRCS += $(MYAPP_DIR)/prod/libsrc/cplat/prompt/prompt_linux.c

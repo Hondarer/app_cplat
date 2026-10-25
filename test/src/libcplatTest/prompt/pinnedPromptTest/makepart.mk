@@ -9,3 +9,5 @@ ADD_SRCS := \
 
 # ライブラリの指定
 LIBS += mock_libc mock_cplat
+
+INCDIR += $(MYAPP_DIR)/prod/libsrc/cplat/prompt

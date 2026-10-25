@@ -9,9 +9,7 @@
 #include <cplat/crt/stdlib.h>
 #include <cplat/prompt/pinned_prompt.h>
 
-#if defined(PLATFORM_LINUX)
-    #include <signal.h>
-#endif
+#include "prompt_platform.h"
 #include <cplat/console/console.h>
 #include <cplat/crt/stdio.h>
 #include <cplat/crt/string.h>
@@ -25,16 +23,6 @@
 #include <string.h>
 
 #define PINNED_PROMPT_INPUT_INITIAL_DEFAULT 256U
-
-#if defined(PLATFORM_LINUX)
-    #include <errno.h>
-    #include <sys/ioctl.h>
-    #include <cplat/crt/select.h>
-    #include <termios.h>
-    #include <unistd.h>
-#elif defined(PLATFORM_WINDOWS)
-    #include <cplat/base/windows_sdk.h>
-#endif
 
 typedef enum pinned_prompt_key
 {
@@ -53,6 +41,7 @@ typedef enum pinned_prompt_key
     PINNED_PROMPT_KEY_CLEAR,
     PINNED_PROMPT_KEY_RESIZE,
     PINNED_PROMPT_KEY_UNKNOWN,
+    PINNED_PROMPT_KEY_ERROR,
     PINNED_PROMPT_KEY_EOF
 } pinned_prompt_key;
 
@@ -116,7 +105,6 @@ struct cplat_pinned_prompt
 
     int mutex_active;
     int is_tty;
-    int raw_active;
     int prompt_visible;
     int status_top_enabled;
     int status_bottom_enabled;
@@ -124,16 +112,8 @@ struct cplat_pinned_prompt
     int cols;
     int rows;
     int prev_main_bottom_row; /* 前回描画時の main_bottom_row (9999=未設定) */
-
-#if defined(PLATFORM_LINUX)
-    struct termios orig_term;
     char padding[4];
-#elif defined(PLATFORM_WINDOWS)
-    cplat_internal_prompt_utf16_input windows_input;
-    HANDLE stdin_handle;
-    DWORD orig_in_mode;
-    char padding[4];
-#endif
+    prompt_platform_context platform;
 };
 
 #define PINNED_PROMPT_HIST_IDX(s, ctx, i) (((ctx)->head + (i)) % (s)->history_max)
@@ -178,289 +158,12 @@ static void pinned_prompt_unlock(cplat_pinned_prompt *screen)
     }
 }
 
-#if defined(PLATFORM_LINUX)
-
-static volatile sig_atomic_t s_pinned_resize_pending = 0;
-static struct sigaction s_pinned_prev_sigwinch;
-static int s_pinned_sigwinch_installed = 0;
-
-static void pinned_prompt_sigwinch_handler(int sig)
-{
-    (void)sig;
-    s_pinned_resize_pending = 1;
-}
-
-static int pinned_prompt_platform_is_tty(void)
-{
-    return cplat_isatty(CPLAT_STREAM_STDIN) && cplat_isatty(CPLAT_STREAM_STDOUT);
-}
-
-static void pinned_prompt_platform_get_size(int *cols, int *rows)
-{
-    struct winsize ws;
-
-    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0U && ws.ws_row > 0U)
-    {
-        *cols = (int)ws.ws_col;
-        *rows = (int)ws.ws_row;
-        return;
-    }
-    *cols = 80;
-    *rows = 24;
-}
-
-static void pinned_prompt_platform_enter_raw(cplat_pinned_prompt *screen)
-{
-    struct termios raw;
-    struct sigaction sa;
-
-    if (screen->raw_active)
-    {
-        return;
-    }
-    if (tcgetattr(STDIN_FILENO, &screen->orig_term) != 0)
-    {
-        return;
-    }
-    raw = screen->orig_term;
-    raw.c_lflag &= ~((tcflag_t)(ICANON | ECHO | ISIG));
-    raw.c_iflag &= ~((tcflag_t)(ICRNL | IXON));
-    raw.c_cc[VMIN] = 1;
-    raw.c_cc[VTIME] = 0;
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) != 0)
-    {
-        return;
-    }
-    screen->raw_active = 1;
-
-    if (!s_pinned_sigwinch_installed)
-    {
-        memset(&sa, 0, sizeof(sa));
-        sa.sa_handler = pinned_prompt_sigwinch_handler;
-        sigemptyset(&sa.sa_mask);
-        sigaction(SIGWINCH, &sa, &s_pinned_prev_sigwinch);
-        s_pinned_sigwinch_installed = 1;
-    }
-}
-
-static void pinned_prompt_platform_leave_raw(cplat_pinned_prompt *screen)
-{
-    if (!screen->raw_active)
-    {
-        return;
-    }
-    (void)tcsetattr(STDIN_FILENO, TCSAFLUSH, &screen->orig_term);
-    screen->raw_active = 0;
-
-    if (s_pinned_sigwinch_installed)
-    {
-        sigaction(SIGWINCH, &s_pinned_prev_sigwinch, NULL);
-        s_pinned_sigwinch_installed = 0;
-    }
-}
-
-static int pinned_prompt_platform_read_char(cplat_pinned_prompt *screen)
-{
-    unsigned char c;
-    ssize_t n;
-
-    (void)screen;
-    for (;;)
-    {
-        n = read(STDIN_FILENO, &c, 1);
-        if (n == 1)
-        {
-            return (int)c;
-        }
-        if (n < 0 && errno == EINTR)
-        {
-            if (s_pinned_resize_pending)
-            {
-                s_pinned_resize_pending = 0;
-                return -2; /* リサイズ通知 */
-            }
-            continue;
-        }
-        return -1;
-    }
-}
-
-static int pinned_prompt_platform_read_char_nb(cplat_pinned_prompt *screen)
-{
-    fd_set fds;
-    struct timeval tv;
-
-    FD_ZERO(&fds);
-    /* STDIN_FILENO は定数 0 のため、FD 範囲検査の偽の 2 分岐には到達しません。
-     * gcovr 8.6 は指定した本数を検証した後、この行の全 4 分岐を集計から除外します。
-     * see: https://gcovr.com/en/8.6/guide/exclusion-markers.html */
-    CPLAT_FD_SET(STDIN_FILENO, &fds); /* GCOVR_EXCL_BR_WITHOUT_HIT: 2/4 */
-    tv.tv_sec = 0;
-    tv.tv_usec = 50000;
-
-    if (select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv) <= 0)
-    {
-        return -1;
-    }
-    return pinned_prompt_platform_read_char(screen);
-}
-
-#elif defined(PLATFORM_WINDOWS)
-
-static int pinned_prompt_platform_is_tty(void)
-{
-    return cplat_isatty(CPLAT_STREAM_STDIN) && cplat_isatty(CPLAT_STREAM_STDOUT);
-}
-
-static void pinned_prompt_platform_get_size(int *cols, int *rows)
-{
-    HANDLE out_handle;
-    CONSOLE_SCREEN_BUFFER_INFO info;
-
-    out_handle = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (out_handle != INVALID_HANDLE_VALUE && GetConsoleScreenBufferInfo(out_handle, &info))
-    {
-        *cols = (int)(info.srWindow.Right - info.srWindow.Left + 1);
-        *rows = (int)(info.srWindow.Bottom - info.srWindow.Top + 1);
-        return;
-    }
-    *cols = 80;
-    *rows = 24;
-}
-
-static void pinned_prompt_platform_enter_raw(cplat_pinned_prompt *screen)
-{
-    DWORD new_mode;
-
-    if (screen->raw_active)
-    {
-        return;
-    }
-    screen->stdin_handle = GetStdHandle(STD_INPUT_HANDLE);
-    if (screen->stdin_handle == INVALID_HANDLE_VALUE)
-    {
-        return;
-    }
-    if (!GetConsoleMode(screen->stdin_handle, &screen->orig_in_mode))
-    {
-        return;
-    }
-    new_mode = (screen->orig_in_mode | ENABLE_VIRTUAL_TERMINAL_INPUT) &
-               ~((DWORD)(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT));
-    if (SetConsoleMode(screen->stdin_handle, new_mode))
-    {
-        screen->raw_active = 1;
-    }
-}
-
-static void pinned_prompt_platform_leave_raw(cplat_pinned_prompt *screen)
-{
-    if (!screen->raw_active)
-    {
-        return;
-    }
-    (void)SetConsoleMode(screen->stdin_handle, screen->orig_in_mode);
-    screen->raw_active = 0;
-}
-
-static int pinned_prompt_platform_read_char(cplat_pinned_prompt *screen)
-{
-    cplat_internal_prompt_utf16_input *input = &screen->windows_input;
-    while (input->offset == input->length)
-    {
-        unsigned int unit;
-        if (input->has_pending_unit)
-        {
-            unit = input->pending_unit;
-            input->has_pending_unit = 0U;
-        }
-        else
-        {
-            DWORD n_read;
-            WCHAR character;
-            DWORD result = WaitForSingleObject(screen->stdin_handle, 100U);
-            if (result == WAIT_TIMEOUT)
-            {
-                return -2;
-            }
-            if (result != WAIT_OBJECT_0)
-            {
-                return -1;
-            }
-            /* サロゲートを個別に UTF-8 変換すると置換文字になるため、UTF-16 で読み取ります。
-             * see: https://learn.microsoft.com/en-us/windows/console/readconsole
-             * see: https://github.com/microsoft/terminal/blob/main/src/host/stream.cpp */
-            if (!ReadConsoleW(screen->stdin_handle, &character, 1U, &n_read, NULL) || n_read == 0U)
-            {
-                return -1;
-            }
-            unit = (unsigned int)character;
-        }
-        cplat_internal_prompt_edit_utf16_feed(input, unit);
-    }
-    return (int)input->bytes[input->offset++];
-}
-
-static int pinned_prompt_platform_read_char_nb(cplat_pinned_prompt *screen)
-{
-    if (screen->windows_input.offset < screen->windows_input.length || screen->windows_input.has_pending_unit)
-    {
-        return pinned_prompt_platform_read_char(screen);
-    }
-
-    DWORD result;
-
-    result = WaitForSingleObject(screen->stdin_handle, 50);
-    if (result != WAIT_OBJECT_0)
-    {
-        return -1;
-    }
-    return pinned_prompt_platform_read_char(screen);
-}
-
-#else
-
-static int pinned_prompt_platform_is_tty(void)
-{
-    return 0;
-}
-
-static void pinned_prompt_platform_get_size(int *cols, int *rows)
-{
-    *cols = 80;
-    *rows = 24;
-}
-
-static void pinned_prompt_platform_enter_raw(cplat_pinned_prompt *screen)
-{
-    (void)screen;
-}
-
-static void pinned_prompt_platform_leave_raw(cplat_pinned_prompt *screen)
-{
-    (void)screen;
-}
-
-static int pinned_prompt_platform_read_char(cplat_pinned_prompt *screen)
-{
-    (void)screen;
-    return -1;
-}
-
-static int pinned_prompt_platform_read_char_nb(cplat_pinned_prompt *screen)
-{
-    (void)screen;
-    return -1;
-}
-
-#endif
-
 static void pinned_prompt_update_size(cplat_pinned_prompt *screen)
 {
     int previous_cols = screen->cols;
     int previous_rows = screen->rows;
 
-    pinned_prompt_platform_get_size(&screen->cols, &screen->rows);
+    prompt_platform_get_size(&screen->cols, &screen->rows);
     if (screen->cols != previous_cols || screen->rows != previous_rows)
     {
         screen->status_dirty = 1;
@@ -819,12 +522,16 @@ static pinned_prompt_key pinned_prompt_read_key(cplat_pinned_prompt *screen, int
     int c3;
     int c4;
 
-    c = pinned_prompt_platform_read_char(screen);
-    if (c == -1)
+    c = prompt_platform_read_char(&screen->platform);
+    if (c == PROMPT_PLATFORM_ERROR)
+    {
+        return PINNED_PROMPT_KEY_ERROR;
+    }
+    if (c == PROMPT_PLATFORM_EOF)
     {
         return PINNED_PROMPT_KEY_EOF;
     }
-    if (c == -2)
+    if (c == PROMPT_PLATFORM_RESIZE)
     {
         return PINNED_PROMPT_KEY_RESIZE;
     }
@@ -846,14 +553,22 @@ static pinned_prompt_key pinned_prompt_read_key(cplat_pinned_prompt *screen, int
     }
     if (c == 0x1B)
     {
-        c2 = pinned_prompt_platform_read_char_nb(screen);
-        if (c2 == -1)
+        c2 = prompt_platform_read_char_nb(&screen->platform);
+        if (c2 == PROMPT_PLATFORM_ERROR)
+        {
+            return PINNED_PROMPT_KEY_ERROR;
+        }
+        if (c2 == PROMPT_PLATFORM_TIMEOUT || c2 == PROMPT_PLATFORM_EOF)
         {
             return PINNED_PROMPT_KEY_CLEAR;
         }
         if (c2 == '[')
         {
-            c3 = pinned_prompt_platform_read_char_nb(screen);
+            c3 = prompt_platform_read_char_nb(&screen->platform);
+            if (c3 == PROMPT_PLATFORM_ERROR)
+            {
+                return PINNED_PROMPT_KEY_ERROR;
+            }
             switch (c3)
             {
             case 'A':
@@ -869,21 +584,33 @@ static pinned_prompt_key pinned_prompt_read_key(cplat_pinned_prompt *screen, int
             case 'F':
                 return PINNED_PROMPT_KEY_END;
             case '1':
-                c4 = pinned_prompt_platform_read_char_nb(screen);
+                c4 = prompt_platform_read_char_nb(&screen->platform);
+                if (c4 == PROMPT_PLATFORM_ERROR)
+                {
+                    return PINNED_PROMPT_KEY_ERROR;
+                }
                 if (c4 == '~')
                 {
                     return PINNED_PROMPT_KEY_HOME;
                 }
                 return PINNED_PROMPT_KEY_UNKNOWN;
             case '3':
-                c4 = pinned_prompt_platform_read_char_nb(screen);
+                c4 = prompt_platform_read_char_nb(&screen->platform);
+                if (c4 == PROMPT_PLATFORM_ERROR)
+                {
+                    return PINNED_PROMPT_KEY_ERROR;
+                }
                 if (c4 == '~')
                 {
                     return PINNED_PROMPT_KEY_DELETE;
                 }
                 return PINNED_PROMPT_KEY_UNKNOWN;
             case '4':
-                c4 = pinned_prompt_platform_read_char_nb(screen);
+                c4 = prompt_platform_read_char_nb(&screen->platform);
+                if (c4 == PROMPT_PLATFORM_ERROR)
+                {
+                    return PINNED_PROMPT_KEY_ERROR;
+                }
                 if (c4 == '~')
                 {
                     return PINNED_PROMPT_KEY_END;
@@ -1225,7 +952,7 @@ cplat_pinned_prompt *cplat_pinned_prompt_create(const cplat_pinned_prompt_option
     screen->history_max = history_max;
     screen->input_max_bytes = input_max_bytes;
     screen->edit_cap = input_initial_capacity;
-    screen->is_tty = pinned_prompt_platform_is_tty();
+    screen->is_tty = prompt_platform_is_tty();
     pinned_prompt_update_size(screen);
 
     if (cplat_local_lock_create(&screen->mutex) != CPLAT_OK)
@@ -1277,7 +1004,7 @@ void cplat_pinned_prompt_dispose(cplat_pinned_prompt *screen)
     }
     pinned_prompt_lock(screen);
     pinned_prompt_cleanup_terminal_locked(screen);
-    pinned_prompt_platform_leave_raw(screen);
+    (void)prompt_platform_leave_raw(&screen->platform);
     pinned_prompt_unlock(screen);
 
     if (screen->history_contexts != NULL)
@@ -1346,11 +1073,19 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
 
     if (!screen->is_tty)
     {
+        if (prompt_platform_leave_raw(&screen->platform) != 0)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
         return pinned_prompt_readline_fallback(buf, buf_size, prompt_str);
     }
 
-    pinned_prompt_platform_enter_raw(screen);
-    if (!screen->raw_active)
+    int enter_result = prompt_platform_enter_raw(&screen->platform);
+    if (enter_result < 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+    if (enter_result > 0)
     {
         return pinned_prompt_readline_fallback(buf, buf_size, prompt_str);
     }
@@ -1360,13 +1095,13 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
     if (history_ctx == NULL)
     {
         pinned_prompt_unlock(screen);
-        pinned_prompt_platform_leave_raw(screen);
+        (void)prompt_platform_leave_raw(&screen->platform);
         return CPLAT_ERR_UNKNOWN;
     }
     if (pinned_prompt_set_prompt(screen, prompt_str) != 0)
     {
         pinned_prompt_unlock(screen);
-        pinned_prompt_platform_leave_raw(screen);
+        (void)prompt_platform_leave_raw(&screen->platform);
         return CPLAT_ERR_UNKNOWN;
     }
     screen->completions.count = 0U;
@@ -1382,7 +1117,10 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
                                                        initial_length + 1U) != 0)
         {
             pinned_prompt_unlock(screen);
-            pinned_prompt_platform_leave_raw(screen);
+            if (prompt_platform_leave_raw(&screen->platform) != 0)
+            {
+                return CPLAT_ERR_UNKNOWN;
+            }
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
         /* カーソルは末尾に置く。表示範囲は描画時にカーソルが見える位置へ調整される */
@@ -1450,6 +1188,12 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
             done = 1;
             break;
         }
+        case PINNED_PROMPT_KEY_ERROR:
+            buf[0] = '\0';
+            pinned_prompt_cleanup_terminal_locked(screen);
+            result = CPLAT_ERR_UNKNOWN;
+            done = 1;
+            break;
         case PINNED_PROMPT_KEY_EOF:
             buf[0] = '\0';
             pinned_prompt_finish_prompt_locked(screen);
@@ -1517,7 +1261,10 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
         pinned_prompt_unlock(screen);
     }
 
-    pinned_prompt_platform_leave_raw(screen);
+    if (prompt_platform_leave_raw(&screen->platform) != 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
     return result;
 }
 
