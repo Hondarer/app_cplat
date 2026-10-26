@@ -57,6 +57,7 @@ static cplat_error_cause error_cause_from_errno(const int errno_value)
     switch (errno_value)
     {
     case ENOENT:
+    case ESRCH:
 #if defined(ENODEV)
     case ENODEV:
 #endif

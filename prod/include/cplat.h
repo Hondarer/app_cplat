@@ -24,6 +24,8 @@
  *  また、以下のヘッダーは特定プラットフォーム専用の API のみを宣言するため、
  *  このアンブレラ ヘッダーには含まれていません。
  *  利用箇所を `#if defined(PLATFORM_*)` で明示する前提のもと、個別にインクルードしてください。
+ *  - `<cplat/runtime/process_priority_linux.h>` : Linux 専用 (スケジューリングと優先度)。
+ *  - `<cplat/runtime/process_priority_windows.h>` : Windows 専用 (プロセスとスレッドの優先度)。
  *  - `<cplat/trace/etw.h>` : Windows 専用 (ETW TraceLogging)。
  *  - `<cplat/trace/eventlog.h>` : Windows 専用 (イベント ログ)。
  *  - `<cplat/trace/syslog.h>` : Linux 専用 (syslog)。

@@ -164,7 +164,7 @@ extern "C"
         /**
          *  @brief          対象が存在しません。
          *
-         *  - errno: `ENOENT` / `ENODEV` / `ENXIO`
+         *  - errno: `ENOENT` / `ESRCH` / `ENODEV` / `ENXIO`
          *  - Win32: `ERROR_FILE_NOT_FOUND` / `ERROR_PATH_NOT_FOUND` / `ERROR_BAD_NETPATH` /
          *    `ERROR_INVALID_DRIVE` / `ERROR_SERVICE_DOES_NOT_EXIST`
          *  - GAI:   `EAI_NONAME` / `EAI_NODATA`

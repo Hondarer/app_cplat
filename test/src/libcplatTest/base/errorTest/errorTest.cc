@@ -249,6 +249,7 @@ TEST_F(errorTest, errno_values_map_to_one_cause)
                                                                   {EROFS, CPLAT_CAUSE_READ_ONLY},
                                                                   {ERANGE, CPLAT_CAUSE_BUFFER_TOO_SMALL},
                                                                   {ENOTSUP, CPLAT_CAUSE_UNSUPPORTED},
+                                                                  {ESRCH, CPLAT_CAUSE_NOT_FOUND},
                                                                   {EIO, CPLAT_CAUSE_IO_ERROR}};
     cplat_error error;
     std::vector<cplat_error_cause> actual_causes;
@@ -271,11 +272,11 @@ TEST_F(errorTest, errno_values_map_to_one_cause)
         EXPECT_EQ(
             cases[index].second,
             actual_causes
-                [index]); // [確認_正常系 回数=19] - cases[index].first に対する cplat_error_get_cause() の戻り値が cases[index].second と一致すること。
+                [index]); // [確認_正常系 回数=20] - cases[index].first に対する cplat_error_get_cause() の戻り値が cases[index].second と一致すること。
         EXPECT_EQ(
             1,
             actual_matches
-                [index]); // [確認_正常系 回数=19] - cases[index].second に対する cplat_error_is() の戻り値が 1 であること。
+                [index]); // [確認_正常系 回数=20] - cases[index].second に対する cplat_error_is() の戻り値が 1 であること。
     }
 }
 

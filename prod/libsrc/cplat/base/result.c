@@ -29,7 +29,7 @@ int cplat_internal_result_from_errno(const int errno_value)
     {
         result = CPLAT_ERR_INVALID_ARGUMENT;
     }
-    else if (errno_value == ENOENT)
+    else if ((errno_value == ENOENT) || (errno_value == ESRCH))
     {
         result = CPLAT_ERR_NOT_FOUND;
     }
@@ -52,6 +52,22 @@ int cplat_internal_result_from_errno(const int errno_value)
     else if ((errno_value == ENAMETOOLONG) || (errno_value == ERANGE))
     {
         result = CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+#if defined(ENOTSUP)
+    else if (errno_value == ENOTSUP)
+    {
+        result = CPLAT_ERR_UNSUPPORTED;
+    }
+#endif
+#if defined(EOPNOTSUPP) && (!defined(ENOTSUP) || (EOPNOTSUPP != ENOTSUP))
+    else if (errno_value == EOPNOTSUPP)
+    {
+        result = CPLAT_ERR_UNSUPPORTED;
+    }
+#endif
+    else if (errno_value == ENOSYS)
+    {
+        result = CPLAT_ERR_UNSUPPORTED;
     }
     else
     {
@@ -142,6 +158,10 @@ int cplat_internal_result_from_windows_error(const unsigned long error_code)
     else if (error_code == ERROR_INSUFFICIENT_BUFFER)
     {
         result = CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+    else if ((error_code == ERROR_NOT_SUPPORTED) || (error_code == ERROR_CALL_NOT_IMPLEMENTED))
+    {
+        result = CPLAT_ERR_UNSUPPORTED;
     }
     else
     {

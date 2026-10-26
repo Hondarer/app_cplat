@@ -110,15 +110,9 @@
 /**
  *  @brief          現在のプラットフォームまたは状態では操作がサポートされていません。
  *
+ *  - errno: `ENOTSUP` / `EOPNOTSUPP` / `ENOSYS`
+ *  - Win32: `ERROR_NOT_SUPPORTED` / `ERROR_CALL_NOT_IMPLEMENTED`
  *  - Winsock: `WSAEOPNOTSUPP` / `WSAEAFNOSUPPORT` / `WSAEPROTONOSUPPORT`
- *
- *  @note           `cplat_internal_result_from_errno()`/`_windows_error()` (`base/result.c`) は
- *                  errno の `ENOTSUP`/`ENOSYS` や Win32 の `ERROR_NOT_SUPPORTED` を
- *                  この結果コードへ変換しません (`CPLAT_ERR_UNKNOWN` になります)。\n
- *                  要因レベルの分類 (`cplat_error_cause` の
- *                  @ref CPLAT_CAUSE_UNSUPPORTED) は 4 ドメインすべてに対応するため、
- *                  errno/Win32 由来の未サポートを判定したい場合は
- *                  `cplat_error_get_cause()` の戻り値を確認してください。
  */
 #define CPLAT_ERR_UNSUPPORTED (-3)
 
@@ -136,7 +130,7 @@
 /**
  *  @brief          対象が存在しません (ホスト名を解決できない場合など)。
  *
- *  - errno: `ENOENT`
+ *  - errno: `ENOENT` / `ESRCH`
  *  - Win32: `ERROR_FILE_NOT_FOUND` / `ERROR_PATH_NOT_FOUND`
  *  - Winsock: `WSAHOST_NOT_FOUND`
  */

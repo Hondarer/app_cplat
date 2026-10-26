@@ -393,6 +393,41 @@ Table: モジュール・プロセス情報取得 API と cplat 代替ラッパ�
 
 `cplat_process_dispose`/`cplat_process_run_sync` はハンドル破棄、`start` +`wait` +`get_exit_code` の合成 API です。
 
+### 実行優先度 (Linux 専用)
+
+対象ヘッダー: `cplat/runtime/process_priority_linux.h`
+
+| 生 API | cplat 代替 | 差異の要点 |
+|---|---|---|
+| `sched_setscheduler()` / `sched_getscheduler()` + `sched_getparam()` | `cplat_process_priority_linux_set_policy(...)` / `cplat_process_priority_linux_get_policy(...)` | ポリシーは cplat 独自の列挙型で指定し、`SCHED_RESET_ON_FORK` は独立した引数で扱います |
+| `sched_setattr()` / `sched_getattr()` (`SCHED_DEADLINE`) | `cplat_process_priority_linux_set_deadline(...)` / `cplat_process_priority_linux_get_deadline(...)` | glibc 2.28 にラッパーがないため `syscall()` で呼び出します |
+| `setpriority(PRIO_PROCESS)` / `getpriority(PRIO_PROCESS)` | `cplat_process_priority_linux_set_nice(...)` / `cplat_process_priority_linux_get_nice(...)` | 範囲外の nice 値は丸めずに拒否します。取得値の -1 を失敗と区別します |
+| `ioprio_set()` / `ioprio_get()` | `cplat_process_priority_linux_set_io_priority(...)` / `cplat_process_priority_linux_get_io_priority(...)` | クラスとレベルを別の引数で扱います |
+| `sched_setattr()` / `sched_getattr()` (`SCHED_FLAG_UTIL_CLAMP`) | `cplat_process_priority_linux_set_utilization_clamp(...)` / `cplat_process_priority_linux_get_utilization_clamp(...)` | ポリシーを変えずにクランプだけを変更します。非対応のカーネルでは `CPLAT_ERR_UNSUPPORTED` を返します |
+
+Table: Linux の実行優先度 API と cplat 代替ラッパーの差異
+
+ID はスレッド ID として扱い、0 は呼び出しスレッドです。PID を渡すと、そのプロセスのメイン スレッドだけが変わります。  
+権限不足は `CPLAT_ERR_PERMISSION_DENIED`、対象不在は `CPLAT_ERR_NOT_FOUND` で通知します。
+
+### 実行優先度 (Windows 専用)
+
+対象ヘッダー: `cplat/runtime/process_priority_windows.h`
+
+| 生 API | cplat 代替 | 差異の要点 |
+|---|---|---|
+| `SetPriorityClass()` / `GetPriorityClass()` | `cplat_process_priority_windows_set_class(...)` / `cplat_process_priority_windows_get_class(...)` | `REALTIME` の黙った格下げを検出し、元のクラスへ戻して `CPLAT_ERR_PERMISSION_DENIED` を返します |
+| `SetPriorityClass(PROCESS_MODE_BACKGROUND_BEGIN / END)` | `cplat_process_priority_windows_begin_background_mode(...)` / `cplat_process_priority_windows_end_background_mode(...)` | 自プロセス専用です。二重の開始とモード外での終了は `CPLAT_SKIPPED` を返します |
+| `SetProcessInformation()` / `GetProcessInformation()` (`ProcessMemoryPriority`) | `cplat_process_priority_windows_set_memory_priority(...)` / `cplat_process_priority_windows_get_memory_priority(...)` | - |
+| `SetProcessInformation()` / `GetProcessInformation()` (`ProcessPowerThrottling`) | `cplat_process_priority_windows_set_power_throttling(...)` / `cplat_process_priority_windows_get_power_throttling(...)` | 実行速度の抑制 (EcoQoS) だけを扱い、他の制御を保ちます |
+| `SetProcessPriorityBoost()` / `GetProcessPriorityBoost()` | `cplat_process_priority_windows_set_priority_boost(...)` / `cplat_process_priority_windows_get_priority_boost(...)` | OS の「無効にするか」と逆の意味の「有効か」で扱います |
+| `SetThreadPriority()` / `GetThreadPriority()` | `cplat_process_priority_windows_set_thread_priority(...)` / `cplat_process_priority_windows_get_thread_priority(...)` | 対象をスレッド ID で指定します |
+
+Table: Windows の実行優先度 API と cplat 代替ラッパーの差異
+
+ID 0 は自プロセスまたは呼び出しスレッドです。それ以外の ID は関数内で開いて操作し、閉じます。  
+対象を開けない場合と特権が不足する場合は `CPLAT_ERR_PERMISSION_DENIED`、存在しない ID は `CPLAT_ERR_NOT_FOUND` で通知します。
+
 ### 暗号論的乱数
 
 対象ヘッダー: `cplat/crypto/random.h`

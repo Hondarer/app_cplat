@@ -2,6 +2,10 @@
 #include <cplat/base/result.h>
 #include <cplat/base/result_internal.h>
 
+#if defined(PLATFORM_WINDOWS)
+    #include <cplat/base/windows_sdk.h>
+#endif /* PLATFORM_WINDOWS */
+
 #include <errno.h>
 #include <set>
 #include <utility>
@@ -171,8 +175,12 @@ TEST_F(resultTest, errno_values_map_to_expected_results)
         {EAGAIN, CPLAT_ERR_BUSY},
         {ENOMEM, CPLAT_ERR_OUT_OF_MEMORY},
         {ENOENT, CPLAT_ERR_NOT_FOUND},
+        {ESRCH, CPLAT_ERR_NOT_FOUND},
         {ENAMETOOLONG, CPLAT_ERR_BUFFER_TOO_SMALL},
         {ERANGE, CPLAT_ERR_BUFFER_TOO_SMALL},
+        {ENOTSUP, CPLAT_ERR_UNSUPPORTED},
+        {EOPNOTSUPP, CPLAT_ERR_UNSUPPORTED},
+        {ENOSYS, CPLAT_ERR_UNSUPPORTED},
         {EIO, CPLAT_ERR_UNKNOWN}}; // [状態] - errno と期待する共通結果コードの対応表を用意する。
     std::vector<int> actual;
 
@@ -193,6 +201,30 @@ TEST_F(resultTest, errno_values_map_to_expected_results)
         EXPECT_EQ(
             cases[index].second,
             actual
-                [index]); // [確認_正常系 回数=11] - cases[index].first に対する cplat_internal_result_from_errno() の戻り値が cases[index].second と一致すること。
+                [index]); // [確認_正常系 回数=15] - cases[index].first に対する cplat_internal_result_from_errno() の戻り値が cases[index].second と一致すること。
     }
 }
+
+#if defined(PLATFORM_WINDOWS)
+// 未サポートを表す Win32 エラーが CPLAT_ERR_UNSUPPORTED へ変換されることの確認
+TEST_F(resultTest, windows_unsupported_errors_map_to_unsupported)
+{
+    // Arrange
+
+    // Pre-Assert
+
+    // Act
+    int not_supported_result = cplat_internal_result_from_windows_error(
+        ERROR_NOT_SUPPORTED); // [手順] - ERROR_NOT_SUPPORTED を指定して cplat_internal_result_from_windows_error() を呼び出す。
+    int not_implemented_result = cplat_internal_result_from_windows_error(
+        ERROR_CALL_NOT_IMPLEMENTED); // [手順] - ERROR_CALL_NOT_IMPLEMENTED を指定して cplat_internal_result_from_windows_error() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_UNSUPPORTED,
+        not_supported_result); // [確認_正常系] - ERROR_NOT_SUPPORTED に対する cplat_internal_result_from_windows_error() の戻り値が CPLAT_ERR_UNSUPPORTED であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNSUPPORTED,
+        not_implemented_result); // [確認_正常系] - ERROR_CALL_NOT_IMPLEMENTED に対する cplat_internal_result_from_windows_error() の戻り値が CPLAT_ERR_UNSUPPORTED であること。
+}
+#endif /* PLATFORM_WINDOWS */
