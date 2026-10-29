@@ -61,6 +61,7 @@
     #include <cplat/win32/win32.h>
 #elif defined(PLATFORM_LINUX)
     #include <cplat/runtime/process_priority_linux.h>
+    #include <cplat/runtime/stack_limit_linux.h>
     #include <cplat/trace/syslog.h>
 #endif /* PLATFORM_ */
 
@@ -998,6 +999,9 @@
         EXPORT_ENTRY(cplat_process_priority_linux_get_io_priority, int(CPLAT_API *)(uint32_t thread_id, cplat_process_priority_linux_io_class *io_class_out, int *level_out, cplat_error *detail_out)) \
         EXPORT_ENTRY(cplat_process_priority_linux_set_utilization_clamp, int(CPLAT_API *)(uint32_t thread_id, uint32_t minimum, uint32_t maximum, cplat_error *detail_out)) \
         EXPORT_ENTRY(cplat_process_priority_linux_get_utilization_clamp, int(CPLAT_API *)(uint32_t thread_id, uint32_t *minimum_out, uint32_t *maximum_out, cplat_error *detail_out)) \
+        /* cplat/runtime/stack_limit_linux.h */ \
+        EXPORT_ENTRY(cplat_stack_limit_linux_get, int(CPLAT_API *)(uint64_t *soft_limit_bytes_out, uint64_t *hard_limit_bytes_out, cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_stack_limit_linux_raise_to_hard_limit, int(CPLAT_API *)(uint64_t *soft_limit_bytes_out, cplat_error *detail_out)) \
         /* cplat/trace/syslog.h */ \
         EXPORT_ENTRY(cplat_syslog_sink_create, cplat_syslog_sink *(CPLAT_API *)(const char *ident, int facility)) \
         EXPORT_ENTRY(cplat_syslog_sink_write, int(CPLAT_API *)(cplat_syslog_sink * handle, int level, \

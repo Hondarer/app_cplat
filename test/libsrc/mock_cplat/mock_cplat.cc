@@ -836,6 +836,10 @@ Mock_cplat::Mock_cplat()
     ON_CALL(*this, cplat_process_priority_linux_set_utilization_clamp(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_set_utilization_clamp));
     ON_CALL(*this, cplat_process_priority_linux_get_utilization_clamp(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_get_utilization_clamp));
 
+    // cplat/runtime/stack_limit_linux.h
+    ON_CALL(*this, cplat_stack_limit_linux_get(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_stack_limit_linux_get));
+    ON_CALL(*this, cplat_stack_limit_linux_raise_to_hard_limit(_, _)).WillByDefault(Invoke(delegate_real_cplat_stack_limit_linux_raise_to_hard_limit));
+
     // cplat/trace/syslog.h
     ON_CALL(*this, cplat_syslog_sink_create(_, _)).WillByDefault(Invoke(delegate_real_cplat_syslog_sink_create));
     ON_CALL(*this, cplat_syslog_sink_write(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_syslog_sink_write));

@@ -680,6 +680,7 @@ MOCK_CPLAT_LINK_IMPL(StartServiceCtrlDispatcherU)
     #include <cplat/win32/win32.h>
 #elif defined(PLATFORM_LINUX)
     #include <cplat/runtime/process_priority_linux.h>
+    #include <cplat/runtime/stack_limit_linux.h>
     #include <cplat/trace/syslog.h>
 #endif /* PLATFORM_ */
 
@@ -1582,6 +1583,10 @@ extern int delegate_real_cplat_process_priority_linux_get_io_priority(uint32_t t
 extern int delegate_real_cplat_process_priority_linux_set_utilization_clamp(uint32_t thread_id, uint32_t minimum, uint32_t maximum, cplat_error *detail_out);
 extern int delegate_real_cplat_process_priority_linux_get_utilization_clamp(uint32_t thread_id, uint32_t *minimum_out, uint32_t *maximum_out, cplat_error *detail_out);
 
+// cplat/runtime/stack_limit_linux.h
+extern int delegate_real_cplat_stack_limit_linux_get(uint64_t *soft_limit_bytes_out, uint64_t *hard_limit_bytes_out, cplat_error *detail_out);
+extern int delegate_real_cplat_stack_limit_linux_raise_to_hard_limit(uint64_t *soft_limit_bytes_out, cplat_error *detail_out);
+
 // cplat/trace/syslog.h
 extern cplat_syslog_sink *delegate_real_cplat_syslog_sink_create(const char *ident, int facility);
 extern int delegate_real_cplat_syslog_sink_write(cplat_syslog_sink *handle, int level, const cplat_timespec *timestamp,
@@ -2323,6 +2328,10 @@ class Mock_cplat
     MOCK_METHOD(int, cplat_process_priority_linux_get_io_priority, (uint32_t, cplat_process_priority_linux_io_class *, int *, cplat_error *));
     MOCK_METHOD(int, cplat_process_priority_linux_set_utilization_clamp, (uint32_t, uint32_t, uint32_t, cplat_error *));
     MOCK_METHOD(int, cplat_process_priority_linux_get_utilization_clamp, (uint32_t, uint32_t *, uint32_t *, cplat_error *));
+
+    // cplat/runtime/stack_limit_linux.h
+    MOCK_METHOD(int, cplat_stack_limit_linux_get, (uint64_t *, uint64_t *, cplat_error *));
+    MOCK_METHOD(int, cplat_stack_limit_linux_raise_to_hard_limit, (uint64_t *, cplat_error *));
 
     // cplat/trace/syslog.h
     MOCK_METHOD(cplat_syslog_sink *, cplat_syslog_sink_create, (const char *, int));

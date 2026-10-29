@@ -410,6 +410,19 @@ Table: Linux の実行優先度 API と cplat 代替ラッパーの差異
 ID はスレッド ID として扱い、0 は呼び出しスレッドです。PID を渡すと、そのプロセスのメイン スレッドだけが変わります。  
 権限不足は `CPLAT_ERR_PERMISSION_DENIED`、対象不在は `CPLAT_ERR_NOT_FOUND` で通知します。
 
+### スタック サイズの上限 (Linux 専用)
+
+対象ヘッダー: `cplat/runtime/stack_limit_linux.h`
+
+| 生 API | cplat 代替 | 差異の要点 |
+|---|---|---|
+| `getrlimit(RLIMIT_STACK)` | `cplat_stack_limit_linux_get(...)` | `RLIM_INFINITY` を `CPLAT_STACK_LIMIT_LINUX_UNLIMITED` (`UINT64_MAX`) で返します |
+| `getrlimit(RLIMIT_STACK)` + `setrlimit(RLIMIT_STACK)` | `cplat_stack_limit_linux_raise_to_hard_limit(...)` | ソフト リミットをハード リミットまで引き上げます。すでに等しい場合は `CPLAT_SKIPPED` を返します |
+
+Table: Linux のスタック サイズの資源上限 API と cplat 代替ラッパーの差異
+
+引き上げはメイン スレッドのスタックにだけ適用されます。他のスレッドは、作成時にスタック サイズを指定してください。
+
 ### 実行優先度 (Windows 専用)
 
 対象ヘッダー: `cplat/runtime/process_priority_windows.h`
