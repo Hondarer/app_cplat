@@ -15,6 +15,10 @@
  *  - glibc は、起動時のソフト リミットをスレッドの既定のスタック サイズとして保持する
  *    (`RLIM_INFINITY` の場合は `ARCH_STACK_DEFAULT_SIZE` を使用する)。
  *    see: https://sourceware.org/git/?p=glibc.git;a=blob;f=nptl/nptl-init.c;hb=glibc-2.28
+ *  - カーネルは、実効 ID が変わる、またはケーパビリティを得るプログラムの exec (secureexec) で、
+ *    ソフト リミットを `_STK_LIM` (8 MiB) までに制限する (`begin_new_exec()`、`cap_bprm_creds_from_file()`)。
+ *    see: https://github.com/torvalds/linux/blob/v6.6/fs/exec.c
+ *    see: https://github.com/torvalds/linux/blob/v6.6/security/commoncap.c
  *
  *  @copyright      Copyright (C) Tetsuo Honda. 2026. All rights reserved.
  *
