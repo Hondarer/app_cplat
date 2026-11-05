@@ -79,6 +79,7 @@ static void copy_text(char *dest, size_t size, const char *text)
     sanitize_commas(dest);
 }
 
+#if defined(PLATFORM_LINUX)
 /**
  *  @brief          文字列の末尾から改行と空白を取り除きます。
  *  @param[in,out]  text  対象の文字列。NULL を渡してはなりません。
@@ -99,6 +100,8 @@ static void trim_trailing(char *text)
         length--;
     }
 }
+
+#endif /* PLATFORM_LINUX */
 
 /**
  *  @brief          CPU の型名を収集します。
