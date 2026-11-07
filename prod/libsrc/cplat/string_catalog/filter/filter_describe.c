@@ -235,10 +235,12 @@ static void append(describe_writer *writer, const char *text, const size_t lengt
         {
             writer->is_truncated = true;
         }
+
         return;
     }
 
     available = writer->size - 1U - writer->length;
+
     if (copy_length > available)
     {
         copy_length = available;
@@ -276,7 +278,7 @@ static void append_sentence(describe_writer *writer, const char *text)
     }
     else
     {
-        /* 句点で終わらない説明は、そのまま書き出す */
+        /* 句点で終わらない説明は、そのまま書き出す。 */
     }
 
     append(writer, text, length);
@@ -292,6 +294,7 @@ static void append_before(describe_context *context, const char *before)
     {
         append_text(writer, " ");
     }
+
     append_text(writer, before);
 }
 
@@ -306,6 +309,7 @@ static void append_constant(describe_context *context, const string_catalog_filt
         append_text(&context->writer, context->phrases->null_text);
         return;
     }
+
     (void)string_catalog_filter_format_constant(constant, text, sizeof(text));
     append_text(&context->writer, text);
 }
@@ -328,10 +332,12 @@ static bool key_of_constant(const describe_context *context, const string_catalo
             return false;
         }
         *key_out = (int)constant->magnitude;
+
         if ((constant->header.flags & STRING_CATALOG_FILTER_CONSTANT_FLAG_NEGATIVE) != 0U)
         {
             *key_out = -*key_out;
         }
+
         return true;
     default:
         return false;
@@ -350,7 +356,7 @@ static void append_entry(describe_context *context, const string_catalog_filter_
         entry = cplat_string_catalog_get_entry(context->source->catalog, key);
     }
 
-    /* カタログにない文字列キーは、条件式に書いた表記のまま示す */
+    /* カタログにない文字列キーは、条件式に書いた表記のまま示す。 */
     if (entry == NULL)
     {
         append_text(&context->writer, phrases->key_name_prefix);
@@ -361,6 +367,7 @@ static void append_entry(describe_context *context, const string_catalog_filter_
     append_text(&context->writer, phrases->entry_open);
     append_sentence(&context->writer, entry->brief);
     append_text(&context->writer, phrases->entry_close);
+
     if (entry->id != NULL)
     {
         append_text(&context->writer, phrases->entry_id_open);
@@ -385,6 +392,7 @@ static const cplat_string_catalog_argument *find_argument(const cplat_string_cat
         {
             return &entry->arguments[index];
         }
+
         return NULL;
     }
 
@@ -396,6 +404,7 @@ static const cplat_string_catalog_argument *find_argument(const cplat_string_cat
             return &entry->arguments[argument];
         }
     }
+
     return NULL;
 }
 
@@ -438,15 +447,18 @@ static void append_argument(describe_context *context, const string_catalog_filt
             {
                 continue;
             }
+
             if (common == NULL)
             {
                 common = argument;
                 continue;
             }
+
             if (strcmp(common->name, argument->name) != 0)
             {
                 is_name_common = false;
             }
+
             if (strcmp(common->description, argument->description) != 0)
             {
                 is_description_common = false;
@@ -455,6 +467,7 @@ static void append_argument(describe_context *context, const string_catalog_filt
     }
 
     append_text(&context->writer, context->phrases->argument_prefix);
+
     if (name != NULL)
     {
         append_text(&context->writer, name);
@@ -498,7 +511,8 @@ static uint32_t append_subject(describe_context *context, const string_catalog_f
         return instruction->operand;
     case STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME:
         append_argument(context, instruction);
-        /* 比較対象は引数名の定数の直後から並ぶ */
+
+        /* 比較対象は引数名の定数の直後から並ぶ。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, instruction->operand,
                                                   &constant);
         return constant.next_offset;
@@ -522,8 +536,10 @@ static void append_constants(describe_context *context, const string_catalog_fil
         {
             append_text(&context->writer, context->phrases->list_separator);
         }
+
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
         offset = constant.next_offset;
+
         if (is_entry)
         {
             append_entry(context, &constant);
@@ -630,6 +646,7 @@ static bool is_category_matched(const describe_context *context, const string_ca
             return false;
         }
     }
+
     return false;
 }
 
@@ -671,15 +688,17 @@ static void append_category_predicate(describe_context *context, const string_ca
         append_before(context, phrases->category_none);
         return;
     }
+
     if (matched_count == names->count)
     {
         append_before(context, phrases->category_any);
         return;
     }
 
-    /* 満たさない名前のほうが少なければ、補集合を「以外」で表す。列挙を短くするため */
+    /* 満たさない名前のほうが少なければ、補集合を「以外」で表す。列挙を短くするため。 */
     is_complement = ((names->count - matched_count) < matched_count);
     listed_count = matched_count;
+
     if (is_complement)
     {
         listed_count = names->count - matched_count;
@@ -700,15 +719,17 @@ static void append_category_predicate(describe_context *context, const string_ca
 
     for (size_t value = 0; value < names->count; value++)
     {
-        /* 補集合を表す場合は、条件を満たさない名前を並べる */
+        /* 補集合を表す場合は、条件を満たさない名前を並べる。 */
         if (is_category_matched(context, instruction, (double)value) == is_complement)
         {
             continue;
         }
+
         if (written > 0U)
         {
             append_text(&context->writer, phrases->list_separator);
         }
+
         append_text(&context->writer, names->names[value]);
         written++;
     }
@@ -738,7 +759,7 @@ static void append_predicate(describe_context *context, const string_catalog_fil
         return;
     }
 
-    /* 分類値の名前が設定されていれば、分類値を名前で表す。設定がなければ数値のまま表す */
+    /* 分類値の名前が設定されていれば、分類値を名前で表す。設定がなければ数値のまま表す。 */
     if ((instruction->field == (uint8_t)STRING_CATALOG_FILTER_FIELD_CATEGORY) &&
         (context->source->category_names != NULL))
     {
@@ -847,6 +868,7 @@ static void append_node(describe_context *context, const uint16_t node, const in
         {
             append_text(&context->writer, phrases->or_text);
         }
+
         append_node(context, context->right[node], precedence);
         break;
 
@@ -871,11 +893,12 @@ bool string_catalog_filter_find_mixed_argument(const cplat_string_catalog *catal
     bool has_other = false;
 
     memset(mixed_out, 0, sizeof(*mixed_out));
+
     for (int entry_index = 0; entry_index < catalog->entry_count; entry_index++)
     {
         const cplat_string_catalog_entry *entry = &catalog->entries[entry_index];
 
-        /* 適用時の名前の解決と同じく、項目ごとに最初に名前が一致した引数を対象とする */
+        /* 適用時の名前の解決と同じく、項目ごとに最初に名前が一致した引数を対象とする。 */
         for (int argument = 0; argument < entry->argument_count; argument++)
         {
             const cplat_string_catalog_argument *candidate = &entry->arguments[argument];
@@ -885,6 +908,7 @@ bool string_catalog_filter_find_mixed_argument(const cplat_string_catalog *catal
             {
                 continue;
             }
+
             if ((candidate->kind == CPLAT_STRING_CATALOG_ARGUMENT_KIND_STRING) && !has_string)
             {
                 mixed_out->string_entry = entry;
@@ -899,15 +923,18 @@ bool string_catalog_filter_find_mixed_argument(const cplat_string_catalog *catal
             }
             else
             {
-                /* 区分ごとに最初の項目だけを代表として残す */
+                /* 区分ごとに最初の項目だけを代表として残す。 */
             }
+
             break;
         }
+
         if (has_string && has_other)
         {
             return true;
         }
     }
+
     return false;
 }
 
@@ -927,11 +954,13 @@ static void append_mixed_notes(describe_context *context)
     string_catalog_filter_mixed_argument mixed;
 
     string_catalog_filter_read_record_header(context->source->record, &header);
+
     for (uint32_t index = 0; index < header.instruction_count; index++)
     {
         bool is_noted = false;
 
         string_catalog_filter_read_instruction(context->source->record, index, &instruction);
+
         if ((instruction.opcode != (uint8_t)STRING_CATALOG_FILTER_OPCODE_PREDICATE) ||
             (instruction.field != (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME) ||
             (instruction.operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_HAS))
@@ -941,6 +970,7 @@ static void append_mixed_notes(describe_context *context)
 
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, instruction.operand,
                                                   &constant);
+
         for (size_t other = 0; other < noted_count; other++)
         {
             if (strcmp(noted[other], constant.text) == 0)
@@ -949,6 +979,7 @@ static void append_mixed_notes(describe_context *context)
                 break;
             }
         }
+
         if (is_noted || (noted_count >= CPLAT_STRING_CATALOG_FILTER_ARGUMENT_REFERENCE_MAX) ||
             !string_catalog_filter_find_mixed_argument(context->source->catalog, constant.text, &mixed))
         {
@@ -976,6 +1007,7 @@ int string_catalog_filter_describe_record(const string_catalog_filter_describe_s
     context = &context_storage;
     memset(context, 0, sizeof(*context));
     context->source = source;
+
     if (source->is_japanese != 0)
     {
         context->phrases = &s_japanese;
@@ -1000,5 +1032,6 @@ int string_catalog_filter_describe_record(const string_catalog_filter_describe_s
     {
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
+
     return CPLAT_OK;
 }

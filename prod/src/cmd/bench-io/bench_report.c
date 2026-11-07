@@ -54,7 +54,7 @@ static void sanitize_commas(char *text)
 /**
  *  @brief          文字列を上限付きで複製します。
  *  @param[out]     dest  格納先。NULL を渡してはなりません。
- *  @param[in]      size  @p dest のサイズ (バイト)。1 以上を指定します。
+ *  @param[in]      size  @p dest のサイズ [byte]。1 以上を指定します。
  *  @param[in]      text  複製する文字列。NULL の場合は "unknown" を格納します。
  *
  *  格納する文字列に含まれるカンマは `sanitize_commas()` により空白へ置き換えます。
@@ -68,11 +68,13 @@ static void copy_text(char *dest, size_t size, const char *text)
     {
         source = "unknown";
     }
+
     length = strlen(source);
     if (length >= size)
     {
         length = size - 1U;
     }
+
     memcpy(dest, source, length);
     dest[length] = '\0';
 
@@ -96,6 +98,7 @@ static void trim_trailing(char *text)
         {
             break;
         }
+
         text[length - 1U] = '\0';
         length--;
     }
@@ -114,10 +117,12 @@ static void collect_cpu_model(bench_environment *env)
     char line[256];
 
     copy_text(env->cpu_model, sizeof(env->cpu_model), NULL);
+
     if (stream == NULL)
     {
         return;
     }
+
     while (fgets(line, (int)sizeof(line), stream) != NULL)
     {
         if (strncmp(line, "model name", 10) == 0)
@@ -129,9 +134,11 @@ static void collect_cpu_model(bench_environment *env)
                 copy_text(env->cpu_model, sizeof(env->cpu_model), separator + 1);
                 trim_trailing(env->cpu_model);
             }
+
             break;
         }
     }
+
     (void)fclose(stream);
 #elif defined(PLATFORM_WINDOWS)
     int exists = 0;
@@ -142,7 +149,7 @@ static void collect_cpu_model(bench_environment *env)
     }
     else
     {
-        /* cplat_getenv は copy_text を経由せず直接書き込むため、ここでカンマを取り除きます。 */
+        /* cplat_getenv は copy_text を経由せず直接書き込むため、ここでカンマを取り除く。 */
         sanitize_commas(env->cpu_model);
     }
 #else
@@ -166,25 +173,36 @@ static void collect_fs_type(const char *dir, bench_environment *env)
         copy_text(env->fs_type, sizeof(env->fs_type), NULL);
         return;
     }
-    /* statfs はファイル システム名を返さないため、magic 値をそのまま記録します。 */
-    /* 主要な値の対応は Linux の statfs(2) を参照します。                         */
-    /* see: https://man7.org/linux/man-pages/man2/statfs.2.html                 */
+
+    /*
+     * statfs はファイル システム名を返さないため、magic 値をそのまま記録する。
+     * 主要な値の対応は Linux の statfs(2) を参照する。
+     * see: https://man7.org/linux/man-pages/man2/statfs.2.html
+     */
     (void)cplat_snprintf(text, sizeof(text), "magic=0x%lx", (unsigned long)info.f_type);
     copy_text(env->fs_type, sizeof(env->fs_type), text);
 #elif defined(PLATFORM_WINDOWS)
     char fs_name[MAX_PATH + 1];
     char root[MAX_PATH + 1];
 
+    /*
+     * GetVolumeInformationU はボリュームのルート パスを要求するため、
+     * GetVolumePathNameU で対象パスのマウント ポイントを先に求める。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getvolumeinformationw
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getvolumepathnamew
+     */
     if (GetVolumePathNameU(dir, root, (DWORD)sizeof(root)) == 0)
     {
         copy_text(env->fs_type, sizeof(env->fs_type), NULL);
         return;
     }
+
     if (GetVolumeInformationU(root, NULL, 0, NULL, NULL, NULL, fs_name, (DWORD)sizeof(fs_name)) == 0)
     {
         copy_text(env->fs_type, sizeof(env->fs_type), NULL);
         return;
     }
+
     copy_text(env->fs_type, sizeof(env->fs_type), fs_name);
 #else
     (void)dir;
@@ -222,6 +240,7 @@ void bench_report_begin_csv(FILE *csv, const bench_environment *env)
     {
         return;
     }
+
     (void)cplat_fprintf(csv, "# os=%s\n", env->os_name);
     (void)cplat_fprintf(csv, "# cpu_model=%s\n", env->cpu_model);
     (void)cplat_fprintf(csv, "# fs_type=%s\n", env->fs_type);
@@ -239,6 +258,7 @@ void bench_report_begin_table(const bench_environment *env)
     {
         return;
     }
+
     printf("os=%s  cpu=%s  fs=%s\n", env->os_name, env->cpu_model, env->fs_type);
     printf("%-16s %-14s %12s %10s %14s %12s %12s\n", "api", "pattern", "file_size", "records", "median_ns", "ns/record",
            "MiB/s");
@@ -267,9 +287,12 @@ void bench_report_row(FILE *csv, const bench_environment *env, const bench_case 
     {
         ns_per_record = (double)timing->median_ns / (double)ctx->touch_count;
     }
+
     bytes = (double)ctx->touch_count * (double)BENCH_RECORD_SIZE;
+
     if (timing->median_ns > 0U)
     {
+        /* バイト数と所要時間から、1 [s] あたりの転送量 [MiB/s] を求める。 */
         mib_per_sec = (bytes * 1000000000.0) / ((double)timing->median_ns * 1024.0 * 1024.0);
     }
 
@@ -281,6 +304,7 @@ void bench_report_row(FILE *csv, const bench_environment *env, const bench_case 
     {
         return;
     }
+
     (void)cplat_fprintf(csv, "%s,\"%s\",%s,%s,%s,%s,%llu,%d,%llu,%llu,%llu,%llu,%llu,%.3f,%.3f\n", env->os_name,
                         env->cpu_model, env->fs_type, env->cache_state, api_name, pattern_name,
                         (unsigned long long)ctx->file_size, BENCH_RECORD_SIZE, (unsigned long long)ctx->touch_count,

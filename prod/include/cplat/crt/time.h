@@ -12,8 +12,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_CRT_TIME_H
 #define CPLAT_CRT_TIME_H
@@ -62,7 +64,7 @@ extern "C"
     /**
      *  @brief          `ctime_r` / `ctime_s` のラッパー。エポック秒をローカル時刻の文字列へ変換します。
      *  @param[out]     buf       変換結果の格納先。NULL を渡してはなりません。
-     *  @param[in]      buf_size  @p buf のサイズ (バイト)。26 以上が必要です。
+     *  @param[in]      buf_size  @p buf のサイズ [byte]。26 以上が必要です。
      *  @param[in]      timep     変換するエポック秒へのポインター。NULL を渡してはなりません。
      *  @return         成功時は @ref CPLAT_OK を返します。
      *  @return         @p buf または @p timep が NULL の場合、または @p buf_size が 26 未満の場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。

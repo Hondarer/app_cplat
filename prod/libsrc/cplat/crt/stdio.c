@@ -57,6 +57,7 @@ FILE *cplat_fopen(const char *path, const char *modes, cplat_error *detail_out)
         {
             (void)cplat_internal_error_report_success(detail_out);
         }
+
         return fp;
     }
 #elif defined(PLATFORM_WINDOWS)
@@ -80,9 +81,11 @@ FILE *cplat_fopen(const char *path, const char *modes, cplat_error *detail_out)
             return NULL;
         }
 
-        /* Linux の fopen は強制ロックを持たず常に共有可。_wfopen_s は排他オープンとなるため、
-         * 挙動をそろえるために _wfsopen + _SH_DENYNO を採用する。
-         * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fsopen-wfsopen */
+        /*
+         * Linux の fopen() は強制ロックを持たず常に共有可能である。_wfopen_s() は排他オープンとなるため、
+         * 挙動を揃えるために _wfsopen() と _SH_DENYNO を採用する。
+         * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fsopen-wfsopen
+         */
         errno = 0;
         fp = _wfsopen(wpath, wmodes, _SH_DENYNO);
         if (fp == NULL)
@@ -124,6 +127,7 @@ FILE *cplat_freopen(const char *path, const char *modes, FILE *stream, cplat_err
         {
             (void)cplat_internal_error_report_success(detail_out);
         }
+
         return fp;
     }
 #elif defined(PLATFORM_WINDOWS)
@@ -149,10 +153,12 @@ FILE *cplat_freopen(const char *path, const char *modes, FILE *stream, cplat_err
             return NULL;
         }
 
-        /* Windows CRT には _fsopen 相当の freopen 版が無いため、共有モードで開いた
-         * 新規 FILE* の fd を _dup2 で既存 stream に複製して FILE* を維持する。
-         * これにより Linux の freopen と同じく共有可能なオープン挙動になる。
-         * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fsopen-wfsopen */
+        /*
+         * Windows CRT には _fsopen() 相当の freopen() 版がないため、共有モードで開いた
+         * 新規 FILE * の fd を _dup2() で既存 stream に複製して FILE * を維持する。
+         * これにより Linux の freopen() と同じく共有可能なオープン挙動になる。
+         * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fsopen-wfsopen
+         */
         errno = 0;
         new_fp = _wfsopen(wpath, wmodes, _SH_DENYNO);
         if (new_fp == NULL)
@@ -173,7 +179,8 @@ FILE *cplat_freopen(const char *path, const char *modes, FILE *stream, cplat_err
             (void)cplat_internal_error_report_errno(detail_out, saved);
             return NULL;
         }
-        (void)fclose(new_fp); /* new_fd を解放。stream は old_fd を介して新ファイルを保持 */
+
+        (void)fclose(new_fp); /* new_fd を解放し、stream は old_fd を介して新ファイルを保持 */
         clearerr(stream);
         (void)cplat_internal_error_report_success(detail_out);
         return stream;
@@ -209,6 +216,7 @@ int cplat_fclose(FILE *stream, cplat_error *detail_out)
     }
 
     (void)cplat_internal_error_report_success(detail_out);
+
     return result;
 }
 
@@ -234,6 +242,7 @@ int cplat_fflush(FILE *stream, cplat_error *detail_out)
     }
 
     (void)cplat_internal_error_report_success(detail_out);
+
     return result;
 }
 
@@ -251,10 +260,12 @@ size_t cplat_fread(void *buffer, const size_t size, const size_t count, FILE *st
 
     if (size == 0u || count == 0u)
     {
-        /* NOTE: C 標準では、size または count が 0 の fread は 0 を返し、ストリームの状態を変えない。
+        /*
+         * C 標準では、size または count が 0 の fread() は 0 を返し、ストリームの状態を変えない。
          * 一方で、ライブラリ関数へ渡すポインターは長さ 0 でも有効である必要があるため、
-         * NULL の buffer を fread へ渡さないよう、fread を呼ばずに同じ結果を返す。
-         * see: https://en.cppreference.com/w/c/io/fread */
+         * NULL の buffer を fread() へ渡さないよう、fread() を呼ばずに同じ結果を返す。
+         * see: https://en.cppreference.com/w/c/io/fread
+         */
         (void)cplat_internal_error_report_success(detail_out);
         return 0u;
     }
@@ -263,18 +274,21 @@ size_t cplat_fread(void *buffer, const size_t size, const size_t count, FILE *st
     read_count = fread(buffer, size, count, stream);
     if (read_count < count && ferror(stream) != 0)
     {
-        /* NOTE: Windows UCRT では NUL の書き込み専用ストリームを fread で読み取ると、
-         * ストリームのエラー指示は ferror に反映されても errno が 0 の場合がある。
-         * ferror はストリームのエラー指示を返すが、errno はシステム呼び出しのエラー値と
+        /*
+         * Windows UCRT では NUL の書き込み専用ストリームを fread() で読み取ると、
+         * ストリームのエラー指示は ferror() に反映されても errno が 0 の場合がある。
+         * ferror() はストリームのエラー指示を返すが、errno はシステム呼び出しのエラー値と
          * 常に一致するとは限らないため、errno == 0 のストリーム エラーを EIO で表す。
          * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/ferror?view=msvc-170
-         * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/errno-doserrno-sys-errlist-and-sys-nerr?view=msvc-170 */
+         * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/errno-doserrno-sys-errlist-and-sys-nerr?view=msvc-170
+         */
         int errno_value = errno;
 
         if (errno_value == 0)
         {
             errno_value = EIO;
         }
+
         (void)cplat_internal_error_report_errno(detail_out, errno_value);
     }
     else
@@ -299,10 +313,12 @@ size_t cplat_fwrite(const void *buffer, const size_t size, const size_t count, F
 
     if (size == 0u || count == 0u)
     {
-        /* NOTE: C 標準では、size または count が 0 の fwrite は 0 を返し、ストリームの状態を変えない。
+        /*
+         * C 標準では、size または count が 0 の fwrite() は 0 を返し、ストリームの状態を変えない。
          * 一方で、ライブラリ関数へ渡すポインターは長さ 0 でも有効である必要があるため、
-         * NULL の buffer を fwrite へ渡さないよう、fwrite を呼ばずに同じ結果を返す。
-         * see: https://en.cppreference.com/w/c/io/fwrite */
+         * NULL の buffer を fwrite() へ渡さないよう、fwrite() を呼ばずに同じ結果を返す。
+         * see: https://en.cppreference.com/w/c/io/fwrite
+         */
         (void)cplat_internal_error_report_success(detail_out);
         return 0u;
     }
@@ -317,6 +333,7 @@ size_t cplat_fwrite(const void *buffer, const size_t size, const size_t count, F
         {
             errno_value = EIO;
         }
+
         (void)cplat_internal_error_report_errno(detail_out, errno_value);
     }
     else
@@ -366,6 +383,7 @@ int cplat_remove(const char *path, cplat_error *detail_out)
     }
 
     (void)cplat_internal_error_report_success(detail_out);
+
     return result;
 }
 
@@ -420,6 +438,7 @@ int cplat_rename(const char *oldpath, const char *newpath, cplat_error *detail_o
             (void)cplat_internal_error_report_windows_error(detail_out, error_code);
             return -1;
         }
+
         (void)cplat_internal_error_report_success(detail_out);
         return 0;
     }
@@ -546,8 +565,10 @@ int cplat_vsnprintf(char *dest, const size_t dest_size, const char *format, va_l
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    /* MSVC の UCRT では vsnprintf が C99 準拠であり、切り詰め時も必要文字数を返す。
-     * see: https://learn.microsoft.com/cpp/c-runtime-library/reference/vsnprintf-vsnprintf-vsnprintf-l-vsnwprintf-vsnwprintf-l */
+    /*
+     * MSVC の UCRT では vsnprintf() が C99 準拠であり、切り詰め時も必要文字数を返す。
+     * see: https://learn.microsoft.com/cpp/c-runtime-library/reference/vsnprintf-vsnprintf-vsnprintf-l-vsnwprintf-vsnwprintf-l
+     */
     needed = vsnprintf(dest, dest_size, format, args); /* 置換対象外: ラッパーの実体 */
 
     if (needed < 0)
@@ -556,8 +577,10 @@ int cplat_vsnprintf(char *dest, const size_t dest_size, const char *format, va_l
         return CPLAT_ERR_UNKNOWN;
     }
 
-    /* vsnprintf の戻り値は終端を除いて必要だった文字数であり、書き込んだ文字数ではない。
-     * 宛先の容量以上であれば切り詰めが起きている。 */
+    /*
+     * vsnprintf() の戻り値は終端を除いて必要だった文字数であり、書き込んだ文字数ではない。
+     * 宛先の容量以上であれば切り詰めが起きている。
+     */
     if ((size_t)needed >= dest_size)
     {
         dest[0] = '\0';
@@ -580,16 +603,19 @@ int cplat_fgets(char *dest, const size_t dest_size, FILE *stream, cplat_error *d
 
     dest[0] = '\0';
     errno = 0;
+
     if (fgets(dest, (int)dest_size, stream) == NULL)
     {
         if (ferror(stream) != 0)
         {
-            /* NOTE: Windows UCRT では NUL の書き込み専用ストリームを fgets で読み取ると、
-             * ストリームのエラー指示は ferror に反映されても errno が 0 の場合がある。
-             * ferror はストリームのエラー指示を返すが、errno はシステム呼び出しのエラー値と
+            /*
+             * Windows UCRT では NUL の書き込み専用ストリームを fgets() で読み取ると、
+             * ストリームのエラー指示は ferror() に反映されても errno が 0 の場合がある。
+             * ferror() はストリームのエラー指示を返すが、errno はシステム呼び出しのエラー値と
              * 常に一致するとは限らないため、errno == 0 のストリーム エラーを EIO で表す。
              * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/ferror?view=msvc-170
-             * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/errno-doserrno-sys-errlist-and-sys-nerr?view=msvc-170 */
+             * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/errno-doserrno-sys-errlist-and-sys-nerr?view=msvc-170
+             */
             int errno_value = errno;
 
             if (errno_value == 0)
@@ -600,16 +626,18 @@ int cplat_fgets(char *dest, const size_t dest_size, FILE *stream, cplat_error *d
             return cplat_internal_error_report_errno(detail_out, errno_value);
         }
 
-        /* EOF は OS 呼び出し由来の詳細を持たないため、詳細をクリアして結果コードだけで表す */
+        /* EOF は OS 呼び出し由来の詳細を持たないため、詳細をクリアして結果コードだけで表す。 */
         (void)cplat_internal_error_report_success(detail_out);
         return CPLAT_ERR_EOF;
     }
 
     len = strlen(dest);
 
-    /* 宛先を使い切っており、かつ改行で終わっていない場合は、行の途中で打ち切られている。
+    /*
+     * 宛先を使い切っており、かつ改行で終わっていない場合は、行の途中で打ち切られている。
      * ファイル末尾が改行なしで終わる場合は EOF フラグが立つため、切り詰めと区別できる。
-     * dest_size が 1 のときは len が 0 になり 1 文字も格納できないため、常に切り詰めとして扱う。 */
+     * dest_size が 1 のときは len が 0 になり 1 文字も格納できないため、常に切り詰めとして扱う。
+     */
     if (len + 1 == dest_size && (len == 0 || dest[len - 1] != '\n') && feof(stream) == 0)
     {
         dest[0] = '\0';
@@ -617,11 +645,13 @@ int cplat_fgets(char *dest, const size_t dest_size, FILE *stream, cplat_error *d
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
 
+    /* 末尾の改行文字 (CR、LF) を除去する。 */
     if (len > 0 && dest[len - 1] == '\n')
     {
         len--;
         dest[len] = '\0';
     }
+
     if (len > 0 && dest[len - 1] == '\r')
     {
         len--;

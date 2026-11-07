@@ -63,13 +63,13 @@ static const struct
 
 int cplat_string_catalog_set_language(const cplat_string_catalog_language language)
 {
-    /* 列挙の基底型は処理系定義のため、符号なし整数へキャストして上限値のみを判定します。 */
+    /* 列挙の基底型は処理系定義のため、符号なし整数へキャストして上限値のみを判定する。 */
     if ((unsigned int)language >= (unsigned int)CPLAT_STRING_CATALOG_LANGUAGE_COUNT)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    /* 明示的な設定を実行環境よりも優先します。ニュートラル言語の設定も上書きしません。 */
+    /* 明示的な設定を実行環境よりも優先する。ニュートラル言語の設定も上書きしない。 */
     cplat_atomic_store_i32(&s_language, (int32_t)language, CPLAT_MEMORY_ORDER_RELEASE);
 
     return CPLAT_OK;
@@ -88,12 +88,14 @@ cplat_string_catalog_language cplat_string_catalog_get_language(void)
 
         if (cplat_ui_language_get_tag(tag, sizeof(tag)) == CPLAT_OK)
         {
-            /* 対応する言語が存在しない場合はニュートラル言語のままとします。 */
+            /* 対応する言語が存在しない場合はニュートラル言語のままとする。 */
             (void)cplat_string_catalog_language_from_tag(tag, &language);
         }
 
-        /* 他スレッドが先に決定または設定した場合は、その言語を採用します。
-           交換しなかった場合は、current に読み取った現在の言語が入ります。 */
+        /*
+         * 他スレッドが先に決定または設定した場合は、その言語を採用する。
+         * 交換しなかった場合は、current に読み取った現在の言語が入る。
+         */
         if (cplat_atomic_compare_exchange_i32(&s_language, &current, (int32_t)language, CPLAT_MEMORY_ORDER_ACQ_REL))
         {
             current = (int32_t)language;
@@ -117,15 +119,16 @@ int cplat_string_catalog_language_from_tag(const char *const tag, cplat_string_c
 
     *language_out = CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL;
 
-    /* 空文字列はニュートラル言語の指定とみなします。 */
+    /* 空文字列はニュートラル言語の指定とみなす。 */
     if (tag[0] == '\0')
     {
         return CPLAT_OK;
     }
 
-    /* 表記体系と地域は言語の後ろに続きます。対応付けには言語のみを使用します。 */
+    /* 表記体系と地域は言語の後ろに続く。対応付けには言語のみを使用する。 */
     length = strcspn(tag, "-");
 
+    /* 言語タグと一致する言語を対応表から線形探索する。 */
     for (index = 0U; index < LANGUAGE_MAP_COUNT; index++)
     {
         const char *const tag_language = s_language_map[index].tag_language;

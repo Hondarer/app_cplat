@@ -53,10 +53,13 @@ static void complete_command(const char *line, size_t cursor, cplat_prompt_compl
     static const char *const commands[] = {"help ", "echo ", "start ", "stop ", "status ", "read ", "exit ", "quit "};
     size_t i;
     (void)user_data;
+
+    /* 空白やタブを含む場合は引数入力中とみなし、コマンド名の補完を行わない。 */
     if (strchr(line, ' ') != NULL || strchr(line, '\t') != NULL)
     {
         return;
     }
+
     for (i = 0U; i < sizeof(commands) / sizeof(commands[0]); i++)
     {
         if (strncmp(commands[i], line, cursor) == 0)
@@ -72,6 +75,7 @@ static char *skip_spaces(char *s)
     {
         s++;
     }
+
     return s;
 }
 
@@ -89,15 +93,18 @@ static int split_command(char *line, char **command, char **arg)
     }
 
     *command = cursor;
+
     while (*cursor != '\0' && *cursor != ' ' && *cursor != '\t')
     {
         cursor++;
     }
+
     if (*cursor != '\0')
     {
         *cursor = '\0';
         cursor++;
     }
+
     cursor = skip_spaces(cursor);
     if (*cursor != '\0')
     {
@@ -107,9 +114,14 @@ static int split_command(char *line, char **command, char **arg)
     {
         *arg = NULL;
     }
+
     return 0;
 }
 
+/*
+ * 文字列中のエスケープ シーケンスをインプレースでデコードする。
+ * \e と \E は ESC (0x1b) へ、\\ は \ へ変換し、それ以外のエスケープは元のまま残す。
+ */
 static void decode_cli_escapes(char *s)
 {
     char *read_pos;
@@ -122,11 +134,13 @@ static void decode_cli_escapes(char *s)
 
     read_pos = s;
     write_pos = s;
+
     while (*read_pos != '\0')
     {
         if (*read_pos == '\\')
         {
             read_pos++;
+
             if (*read_pos == 'e' || *read_pos == 'E')
             {
                 *write_pos = '\033';
@@ -134,6 +148,7 @@ static void decode_cli_escapes(char *s)
                 read_pos++;
                 continue;
             }
+
             if (*read_pos == '\\')
             {
                 *write_pos = '\\';
@@ -141,17 +156,21 @@ static void decode_cli_escapes(char *s)
                 read_pos++;
                 continue;
             }
+
             *write_pos = '\\';
             write_pos++;
+
             if (*read_pos == '\0')
             {
                 break;
             }
         }
+
         *write_pos = *read_pos;
         write_pos++;
         read_pos++;
     }
+
     *write_pos = '\0';
 }
 
@@ -193,16 +212,20 @@ static int worker_ensure_sync(pinned_prompt_cli_worker *worker)
     {
         return 0;
     }
+
     if (cplat_local_lock_create(&worker->mutex) != CPLAT_OK)
     {
         return -1;
     }
+
     if (cplat_condvar_create(&worker->condvar) != CPLAT_OK)
     {
         (void)cplat_local_lock_dispose(worker->mutex);
         return -1;
     }
+
     worker->sync_initialized = 1;
+
     return 0;
 }
 
@@ -213,6 +236,8 @@ static void worker_thread_proc(void *arg)
 
     worker = (pinned_prompt_cli_worker *)arg;
     (void)cplat_local_lock_lock(worker->mutex, CPLAT_SYNC_WAIT_FOREVER);
+
+    /* 停止要求があるまで PINNED_PROMPT_CLI_TICK_MS の間隔で待機し、定期的に tick を出力する。 */
     for (;;)
     {
         if (worker->stop_requested)
@@ -221,6 +246,7 @@ static void worker_thread_proc(void *arg)
         }
 
         (void)cplat_condvar_wait(worker->condvar, worker->mutex, PINNED_PROMPT_CLI_TICK_MS);
+
         if (worker->stop_requested)
         {
             break;
@@ -238,6 +264,7 @@ static void worker_thread_proc(void *arg)
 
         (void)cplat_local_lock_lock(worker->mutex, CPLAT_SYNC_WAIT_FOREVER);
     }
+
     worker->thread_running = 0;
     (void)cplat_local_lock_unlock(worker->mutex);
 }
@@ -263,6 +290,7 @@ static void worker_start(pinned_prompt_cli_worker *worker)
     {
         worker->stop_requested = 0;
         worker->tick_count = 0U;
+
         if (cplat_thread_create(&worker->thread, worker_thread_proc, worker) == CPLAT_OK)
         {
             worker->thread_running = 1;
@@ -273,6 +301,7 @@ static void worker_start(pinned_prompt_cli_worker *worker)
             failed = 1;
         }
     }
+
     (void)cplat_local_lock_unlock(worker->mutex);
 
     if (running)
@@ -303,6 +332,7 @@ static void worker_stop(pinned_prompt_cli_worker *worker, int announce)
             cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s worker not running\n",
                                        worker->name);
         }
+
         return;
     }
 
@@ -313,11 +343,13 @@ static void worker_stop(pinned_prompt_cli_worker *worker, int announce)
         worker->stop_requested = 1;
         (void)cplat_condvar_signal(worker->condvar);
     }
+
     (void)cplat_local_lock_unlock(worker->mutex);
 
     if (running)
     {
         cplat_thread_join(worker->thread, CPLAT_SYNC_WAIT_FOREVER);
+
         if (announce)
         {
             cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s worker stopped\n",
@@ -348,14 +380,17 @@ static pinned_prompt_cli_worker *find_worker(pinned_prompt_cli_session *session,
     {
         return NULL;
     }
+
     if (strcmp(name, "stdout") == 0)
     {
         return &session->stdout_worker;
     }
+
     if (strcmp(name, "stderr") == 0)
     {
         return &session->stderr_worker;
     }
+
     return NULL;
 }
 
@@ -369,6 +404,7 @@ static void process_start(pinned_prompt_cli_session *session, const char *arg)
         cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR, "usage: start stdout|stderr\n");
         return;
     }
+
     worker_start(worker);
 }
 
@@ -376,6 +412,7 @@ static void process_stop(pinned_prompt_cli_session *session, const char *arg)
 {
     pinned_prompt_cli_worker *worker;
 
+    /* all が指定された場合は両方のワーカーを停止する。 */
     if (arg != NULL && strcmp(arg, "all") == 0)
     {
         worker_stop(&session->stdout_worker, 1);
@@ -390,6 +427,7 @@ static void process_stop(pinned_prompt_cli_session *session, const char *arg)
                                    "usage: stop stdout|stderr|all\n");
         return;
     }
+
     worker_stop(worker, 1);
 }
 
@@ -554,6 +592,7 @@ static void process_line(pinned_prompt_cli_session *session, char *line)
     (void)cplat_strcpy(original_line, sizeof(original_line), line);
 
     (void)split_command(line, &command, &arg);
+
     if (command == NULL)
     {
         return;
@@ -561,6 +600,7 @@ static void process_line(pinned_prompt_cli_session *session, char *line)
 
     cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "echo: %s\n", original_line);
 
+    /* 入力されたコマンド名に応じて各処理を実行する。 */
     if (strcmp(command, "help") == 0)
     {
         print_help(session->screen);
@@ -568,8 +608,10 @@ static void process_line(pinned_prompt_cli_session *session, char *line)
     else if (strcmp(command, "echo") == 0)
     {
         decode_cli_escapes(arg);
+
         {
             const char *echo_str;
+
             if (arg != NULL)
             {
                 echo_str = arg;
@@ -578,6 +620,7 @@ static void process_line(pinned_prompt_cli_session *session, char *line)
             {
                 echo_str = "";
             }
+
             cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s\n", echo_str);
         }
     }
@@ -618,10 +661,12 @@ static int session_init(pinned_prompt_cli_session *session)
         fprintf(stderr, "pinned-prompt の作成に失敗しました。\n");
         return -1;
     }
+
     (void)cplat_pinned_prompt_completion_set(session->screen, complete_command, NULL);
 
     worker_init(&session->stdout_worker, session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "stdout");
     worker_init(&session->stderr_worker, session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR, "stderr");
+
     return 0;
 }
 
@@ -673,6 +718,8 @@ int main(int argc, char *argv[])
     }
 
     print_help(session.screen);
+
+    /* 終了要求を受け取るまで対話的に 1 行ずつ読み込み、コマンドを処理する。 */
     while (!session.exit_requested)
     {
         ret = cplat_pinned_prompt_readline(session.screen, line, sizeof(line), "pinned-prompt> ");
@@ -680,9 +727,11 @@ int main(int argc, char *argv[])
         {
             break;
         }
+
         process_line(&session, line);
     }
 
     session_dispose(&session);
+
     return EXIT_SUCCESS;
 }

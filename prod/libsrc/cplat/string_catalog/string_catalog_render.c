@@ -25,7 +25,7 @@
 #include <stdint.h>
 #include <string.h>
 
-/** 1 個の値を文字列化する一時領域のバイト数です。最長はエラー コードの併記表現で 24 バイトです。 */
+/** 1 個の値を文字列化する一時領域のバイト数です。最長はエラー コードの併記表現で 24 [byte] です。 */
 #define VALUE_TEXT_MAX 64
 
 /** 10 進数へ変換した符号なし 64 bit 整数の最大桁数です。 */
@@ -58,7 +58,7 @@ static size_t decimal_from_uint64(char *const out, uint64_t value)
     size_t count = 0U;
     size_t index;
 
-    /* 下位の桁から得られるため、いったん逆順に作ってから並べ替える */
+    /* 下位の桁から得られるため、いったん逆順に作ってから並べ替える。 */
     do
     {
         digits[count] = (char)('0' + (int)(value % 10U));
@@ -86,7 +86,7 @@ static size_t decimal_from_int64(char *const out, const int64_t value)
     {
         out[0] = '-';
 
-        /* -value は最小値でオーバーフローするため、符号なしで絶対値を作る */
+        /* -value は最小値でオーバーフローするため、符号なしで絶対値を作る。 */
         return 1U + decimal_from_uint64(&out[1], (uint64_t)0U - (uint64_t)value);
     }
 
@@ -98,7 +98,7 @@ static size_t decimal_from_int64(char *const out, const int64_t value)
  *  @param[out]     out    書き込み先。@p digits に 2 を加えたバイト数以上の空きが必要です。
  *  @param[in]      value  変換する値。
  *  @param[in]      digits 出力する桁数。16 以下を指定してください。
- *  @return         書き込んだバイト数を返します。`0x` の 2 バイトを含みます。NUL 終端しません。
+ *  @return         書き込んだバイト数を返します。`0x` の 2 [byte] を含みます。NUL 終端しません。
  *
  *  英小文字で出力します。@p digits に収まらない上位の桁は出力しません。
  */
@@ -153,7 +153,7 @@ static void render_buffer_append(render_buffer *buffer, const char *text, const 
         return;
     }
 
-    /* NUL 終端の 1 バイトを除いた、本文を書き込める最大バイト数 */
+    /* NUL 終端の 1 [byte] を除いた、本文を書き込める最大バイト数。 */
     capacity = buffer->dest_size - 1U;
     copy_length = length;
 
@@ -189,14 +189,14 @@ static void render_buffer_append_string(render_buffer *buffer, const char *text)
 static int render_buffer_append_argument(render_buffer *buffer,
                                          const cplat_internal_string_catalog_argument_value *value)
 {
-    /* 各種別の出力は VALUE_TEXT_MAX に収まるため、切り詰めは発生しない */
+    /* 各種別の出力は VALUE_TEXT_MAX に収まるため、切り詰めは発生しない。 */
     char value_text[VALUE_TEXT_MAX];
     size_t text_length;
 
     switch (value->kind)
     {
     case CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED:
-        /* 値を持たないインデックスを書式が参照しているため、書式の誤りとして扱う */
+        /* 値を持たないインデックスを書式が参照しているため、書式の誤りとして扱う。 */
         return CPLAT_ERR_MALFORMED_DEFINITION;
 
     case CPLAT_STRING_CATALOG_ARGUMENT_KIND_STRING:
@@ -208,17 +208,18 @@ static int render_buffer_append_argument(render_buffer *buffer,
         {
             render_buffer_append_string(buffer, value->value.string_value);
         }
+
         return CPLAT_OK;
 
     case CPLAT_STRING_CATALOG_ARGUMENT_KIND_DOUBLE:
-        /* 有効桁数を保つ丸め処理は独自実装せず、標準ライブラリに委任する */
+        /* 有効桁数を保つ丸め処理は独自実装せず、標準ライブラリに委任する。 */
         (void)cplat_snprintf(value_text, sizeof(value_text), "%g", value->value.double_value);
         render_buffer_append_string(buffer, value_text);
         return CPLAT_OK;
 
     case CPLAT_STRING_CATALOG_ARGUMENT_KIND_CHAR:
     {
-        /* isprint はロケールに依存するため、ASCII の印字可能範囲を直接判定する */
+        /* isprint() はロケールに依存するため、ASCII の印字可能範囲を直接判定する。 */
         const unsigned int code = (unsigned int)(unsigned char)value->value.char_value;
 
         if ((code >= CHAR_PRINTABLE_MIN) && (code <= CHAR_PRINTABLE_MAX))
@@ -239,6 +240,7 @@ static int render_buffer_append_argument(render_buffer *buffer,
             text_length += 1U;
         }
     }
+
     break;
 
     case CPLAT_STRING_CATALOG_ARGUMENT_KIND_INT8:
@@ -298,7 +300,7 @@ static int render_buffer_append_argument(render_buffer *buffer,
         break;
 
     case CPLAT_STRING_CATALOG_ARGUMENT_KIND_POINTER:
-        /* %p の表現はプラットフォームで異なるため、ポインター幅の 16 進表現へ揃える */
+        /* %p の表現はプラットフォームで異なるため、ポインター幅の 16 進表現へ揃える。 */
         text_length = hex_from_uint64(value_text, (uint64_t)(uintptr_t)value->value.pointer_value, 16U);
         break;
 
@@ -347,7 +349,7 @@ static int render_scan_text(render_buffer *buffer, const char *text,
         int index;
         int ret;
 
-        /* 位置指定とエスケープ以外は、連続する範囲をまとめて追加する */
+        /* 位置指定とエスケープ以外は、連続する範囲をまとめて追加する。 */
         plain_length = strcspn(&text[position], "{}");
         if (plain_length > 0U)
         {
@@ -362,6 +364,7 @@ static int render_scan_text(render_buffer *buffer, const char *text,
             {
                 return CPLAT_ERR_MALFORMED_DEFINITION;
             }
+
             render_buffer_append(buffer, "}", 1U);
             position += 2U;
             continue;
@@ -375,11 +378,12 @@ static int render_scan_text(render_buffer *buffer, const char *text,
         }
 
         /*
-         *  位置指定のインデックスは 10 進数で、桁数は INDEX_DIGITS_MAX までとする。
-         *  同一インデックスの表記揺れを防ぐため、先行ゼロは許可しない。
+         * 位置指定のインデックスは 10 進数で、桁数は INDEX_DIGITS_MAX までとする。
+         * 同一インデックスの表記揺れを防ぐため、先行ゼロは許可しない。
          */
         digit_count = 0;
         index = 0;
+
         while ((digit_count < INDEX_DIGITS_MAX) && (text[position + 1U + (size_t)digit_count] >= '0') &&
                (text[position + 1U + (size_t)digit_count] <= '9'))
         {
@@ -402,7 +406,7 @@ static int render_scan_text(render_buffer *buffer, const char *text,
             return CPLAT_ERR_MALFORMED_DEFINITION;
         }
 
-        /* 値を伴う展開では、引数を割り当てないインデックスを値の種別から検出する */
+        /* 値を伴う展開では、引数を割り当てないインデックスを値の種別から検出する。 */
         if ((arguments != NULL) && (arguments[index].kind == CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED))
         {
             return CPLAT_ERR_MALFORMED_DEFINITION;

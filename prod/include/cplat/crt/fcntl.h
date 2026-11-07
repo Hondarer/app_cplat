@@ -12,8 +12,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_CRT_FCNTL_H
 #define CPLAT_CRT_FCNTL_H

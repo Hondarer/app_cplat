@@ -27,10 +27,10 @@
 #endif /* PLATFORM_ */
 
 /* 変換定数 */
-#define MSEC_PER_SEC  (1000ULL)      /* ミリ秒 / 秒 */
-#define NSEC_PER_SEC  (1000000000LL) /* ナノ秒 / 秒 */
-#define NSEC_PER_MSEC (1000000ULL)   /* ナノ秒 / ミリ秒 */
-#define SEC_PER_DAY   (86400LL)      /* 秒 / 日 */
+#define MSEC_PER_SEC  (1000ULL)
+#define NSEC_PER_SEC  (1000000000LL)
+#define NSEC_PER_MSEC (1000000ULL)
+#define SEC_PER_DAY   (86400LL)
 
 static const char s_iso8601_local_fallback[] = "0000-00-00T00:00:00.000+00:00";
 static const char s_iso8601_utc_fallback[] = "0000-00-00T00:00:00.000Z";
@@ -42,9 +42,17 @@ static void clock_write_fallback(char *buf, const size_t buf_size, const char *f
         return;
     }
 
+    /* 代替文字列の格納は試みるだけであり、失敗しても呼び出し元が返す結果コードは変えない。 */
     (void)cplat_snprintf(buf, buf_size, "%s", fallback);
 }
 
+/*
+ * グレゴリオ暦の年月日を、1970-01-01 を 0 とする通算日で返す。負の値はそれより前である。
+ * ローカル時刻と UTC の日付差から時差を求めるために使う。
+ * 146097 は 400 年の日数、719468 は内部起点 0000-03-01 から 1970-01-01 までの日数である。
+ * 定数と手順は days_from_civil と同じである。
+ * see: https://howardhinnant.github.io/date_algorithms.html#days_from_civil
+ */
 static int64_t clock_days_from_civil(const int year, const unsigned month, const unsigned day)
 {
     int adjusted_year = year - (month <= 2);
@@ -55,6 +63,11 @@ static int64_t clock_days_from_civil(const int year, const unsigned month, const
     unsigned doy;
     unsigned doe;
 
+    /*
+     * C の整数除算は 0 方向へ切り捨てる。負の年をそのまま 400 で割ると era がずれるため、
+     * 399 を引いてから割り、年が -400 以上 -1 以下のとき era が -1 になるようにする。
+     * see: https://en.cppreference.com/w/c/language/operator_arithmetic
+     */
     if (adjusted_year >= 0)
     {
         era_base = adjusted_year;
@@ -63,18 +76,20 @@ static int64_t clock_days_from_civil(const int year, const unsigned month, const
     {
         era_base = adjusted_year - 399;
     }
+
     era = era_base / 400;
 
     yoe = (unsigned)(adjusted_year - era * 400);
 
     if (month > 2)
     {
-        month_offset = (unsigned)-3;
+        month_offset = (unsigned)-3; /* 3 月を 0 起点に戻すため、符号なしで -3 を加える */
     }
     else
     {
         month_offset = 9;
     }
+
     doy = (153 * (month + month_offset) + 2) / 5 + day - 1;
 
     doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
@@ -82,6 +97,10 @@ static int64_t clock_days_from_civil(const int year, const unsigned month, const
     return (int64_t)era * 146097 + (int64_t)doe - 719468;
 }
 
+/*
+ * 同一瞬間のローカル時刻と UTC から、ローカルの時差を分で求めて offset_minutes へ書く。
+ * 日付をまたぐため、通算日の差と当日秒の差を秒へ直してから 60 で割る。
+ */
 static void clock_utc_offset_minutes(const struct tm *local_tm, const struct tm *utc_tm, int *offset_minutes)
 {
     int64_t local_days;
@@ -100,6 +119,7 @@ static void clock_utc_offset_minutes(const struct tm *local_tm, const struct tm 
     *offset_minutes = (int)(delta_seconds / 60);
 }
 
+/* 成功で 0、バッファー不足または書式化の失敗で -1 を返す。 */
 static int clock_format_iso8601_utc_from_tm(char *buf, const size_t buf_size, const struct tm *utc_tm,
                                             const int64_t tv_nsec)
 {
@@ -108,15 +128,18 @@ static int clock_format_iso8601_utc_from_tm(char *buf, const size_t buf_size, co
         return -1;
     }
 
+    /* ミリ秒未満のナノ秒は切り捨て、ミリ秒を 3 桁で出力する。 */
     if (cplat_snprintf(buf, buf_size, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", utc_tm->tm_year + 1900, utc_tm->tm_mon + 1,
                        utc_tm->tm_mday, utc_tm->tm_hour, utc_tm->tm_min, utc_tm->tm_sec,
                        (int)(tv_nsec / 1000000)) != CPLAT_OK)
     {
         return -1;
     }
+
     return 0;
 }
 
+/* 成功で 0、バッファー不足または書式化の失敗で -1 を返す。 */
 static int clock_format_iso8601_local_from_tm(char *buf, const size_t buf_size, const struct tm *local_tm,
                                               const int64_t tv_nsec, const int offset_minutes)
 {
@@ -140,15 +163,18 @@ static int clock_format_iso8601_local_from_tm(char *buf, const size_t buf_size, 
         offset_sign = '+';
         abs_offset_minutes = offset_minutes;
     }
+
     offset_hours = abs_offset_minutes / 60;
     offset_mins = abs_offset_minutes % 60;
 
+    /* ミリ秒未満のナノ秒は切り捨て、ミリ秒を 3 桁で出力する。 */
     if (cplat_snprintf(buf, buf_size, "%04d-%02d-%02dT%02d:%02d:%02d.%03d%c%02d:%02d", local_tm->tm_year + 1900,
                        local_tm->tm_mon + 1, local_tm->tm_mday, local_tm->tm_hour, local_tm->tm_min, local_tm->tm_sec,
                        (int)(tv_nsec / 1000000), offset_sign, offset_hours, offset_mins) != CPLAT_OK)
     {
         return -1;
     }
+
     return 0;
 }
 
@@ -202,9 +228,10 @@ void cplat_clock_get_realtime_utc(struct tm *utc_tm, int32_t *tv_nsec)
     cplat_timespec realtime_ts;
 
     cplat_clock_get_realtime(&realtime_ts);
-    /* 正規化済みの tv_nsec (0 以上 999,999,999 以下) は int32_t の表現範囲内に収まる */
-    *tv_nsec = (int32_t)realtime_ts.tv_nsec;
 
+    *tv_nsec = (int32_t)realtime_ts.tv_nsec; /* 正規化済みの 0 以上 999,999,999 以下は int32_t に収まる */
+
+    /* cplat_gmtime が失敗したときは、未初期化の struct tm を残さないよう零埋めする。 */
     if (cplat_gmtime(utc_tm, &realtime_ts.tv_sec) != 0)
     {
         memset(utc_tm, 0, sizeof(*utc_tm));
@@ -230,7 +257,9 @@ int cplat_clock_format_realtime_iso8601_local(char *buf, const size_t buf_size, 
         clock_write_fallback(buf, buf_size, s_iso8601_local_fallback);
         return CPLAT_ERR_UNKNOWN;
     }
+
     clock_utc_offset_minutes(&local_tm, &utc_tm, &offset_minutes);
+
     if (clock_format_iso8601_local_from_tm(buf, buf_size, &local_tm, timestamp->tv_nsec, offset_minutes) != 0)
     {
         clock_write_fallback(buf, buf_size, s_iso8601_local_fallback);

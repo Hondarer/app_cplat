@@ -10,8 +10,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef PROMPT_STATE_PRIVATE_H
 #define PROMPT_STATE_PRIVATE_H
@@ -35,10 +37,10 @@ extern "C"
     /* ---- 1 つの呼び出し元に対応する履歴コンテキスト ---- */
     typedef struct prompt_history_context
     {
-        /* ポインター類を先に並べてパディングを排除 */
+        /* ポインター類を先に並べてパディングを排除する。 */
         const char *file; /* __FILE__ の文字列ポインター (コピー不要) */
         char **entries;   /* リング バッファー (history_max 個の char*) */
-        char *saved_line; /* ブラウズ前の編集内容退避 (LINE_MAX バイト) */
+        char *saved_line; /* ブラウズ前の編集内容退避 (LINE_MAX [byte]) */
         size_t count;     /* 有効エントリ数 */
         size_t head;      /* リング先頭インデックス (最古) */
         int line;         /* __LINE__ */
@@ -48,7 +50,7 @@ extern "C"
     /* ---- メイン ハンドル (不透明型の実体) ---- */
     struct cplat_prompt
     {
-        /* 編集バッファー (readline_at 呼び出しごとに初期化) */
+        /* 編集バッファー (readline_at 呼び出しごとに初期化する)。 */
         char *edit_buf;         /* 編集中の入力バッファー */
         size_t edit_len;        /* 現在の文字数 (NUL 除く) */
         size_t edit_cap;        /* edit_buf の容量 */

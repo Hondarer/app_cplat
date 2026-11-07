@@ -38,6 +38,7 @@ static uint64_t monotonic_ns(void)
     cplat_timespec value;
 
     cplat_clock_get_monotonic(&value);
+
     return ((uint64_t)value.tv_sec * 1000000000U) + (uint64_t)value.tv_nsec;
 }
 
@@ -58,11 +59,14 @@ static int run_worker(const char *path, int messages, int buffered)
     {
         flags |= CPLAT_TRACE_FILE_SINK_OS_BUFFERED;
     }
+
     sink = cplat_trace_file_sink_create(path, 4096U, 3, flags);
     if (sink == NULL)
     {
         return 1;
     }
+
+    /* 指定された行数のメッセージを共有シンクへ順次出力する。 */
     for (index = 0; index < messages; index++)
     {
         if (cplat_trace_file_sink_write(sink, CPLAT_TRACE_LEVEL_INFO, NULL, "benchmark message") != CPLAT_OK)
@@ -71,7 +75,9 @@ static int run_worker(const char *path, int messages, int buffered)
             return 1;
         }
     }
+
     cplat_trace_file_sink_dispose(sink);
+
     return 0;
 }
 
@@ -96,15 +102,20 @@ static int measure_filtered(int messages)
         cplat_tracer_dispose(&tracer);
         return 1;
     }
+
     begin = monotonic_ns();
+
+    /* 出力先が無効な tracer に対してメッセージを発行し、破棄処理の負荷を測定する。 */
     for (index = 0; index < messages; index++)
     {
         (void)cplat_tracer_writef(tracer, CPLAT_TRACE_LEVEL_INFO, NULL, "filtered=%d", index);
     }
+
     elapsed = monotonic_ns() - begin;
     printf("filtered,processes=1,messages=%d,total_ns=%llu,ns_per_message=%llu\n", messages,
            (unsigned long long)elapsed, (unsigned long long)(elapsed / (uint64_t)messages));
     cplat_tracer_dispose(&tracer);
+
     return 0;
 }
 
@@ -132,9 +143,12 @@ static int measure_files(char *executable, char *path, int processes, int messag
     {
         return 1;
     }
+
     (void)snprintf(messages_text, sizeof(messages_text), "%d", messages);
     (void)snprintf(buffered_text, sizeof(buffered_text), "%d", buffered);
     begin = monotonic_ns();
+
+    /* worker プロセスを並行して起動する。 */
     for (index = 0; index < processes; index++)
     {
         char *args[] = {executable, "--worker", path, messages_text, buffered_text, NULL};
@@ -145,12 +159,15 @@ static int measure_files(char *executable, char *path, int processes, int messag
         options.stdin_spec.mode = CPLAT_PROCESS_STDIO_NULL_DEVICE;
         options.stdout_spec.mode = CPLAT_PROCESS_STDIO_NULL_DEVICE;
         options.stderr_spec.mode = CPLAT_PROCESS_STDIO_INHERIT;
+
         if (cplat_process_start(&options, &children[index]) != CPLAT_OK)
         {
             failed = 1;
             break;
         }
     }
+
+    /* 全 worker プロセスの終了を待機し、終了コードを回収する。 */
     for (index = 0; index < processes; index++)
     {
         int exit_code = 1;
@@ -161,10 +178,13 @@ static int measure_files(char *executable, char *path, int processes, int messag
         {
             failed = 1;
         }
+
         cplat_process_dispose(children[index]);
     }
+
     elapsed = monotonic_ns() - begin;
     const char *mode;
+
     if (buffered != 0)
     {
         mode = "buffered";
@@ -173,10 +193,12 @@ static int measure_files(char *executable, char *path, int processes, int messag
     {
         mode = "durable";
     }
+
     printf("file_%s,processes=%d,messages=%d,total_ns=%llu,ns_per_message=%llu\n", mode, processes,
            processes * messages, (unsigned long long)elapsed,
            (unsigned long long)(elapsed / ((uint64_t)processes * (uint64_t)messages)));
     free(children);
+
     return failed;
 }
 
@@ -194,31 +216,39 @@ int main(int argc, char **argv)
 
     cplat_console_init();
 
+    /* worker モードで起動された場合は worker 処理を実行して終了する。 */
     if (argc == 5 && strcmp(argv[1], "--worker") == 0)
     {
         return run_worker(argv[2], atoi(argv[3]), atoi(argv[4]));
     }
+
     if (argc > 1)
     {
         path = argv[1];
     }
+
     if (argc > 2)
     {
         processes = atoi(argv[2]);
     }
+
     if (argc > 3)
     {
         messages = atoi(argv[3]);
     }
+
     if (processes <= 0 || messages <= 0)
     {
         fprintf(stderr, "usage: bench-tracer [path [processes [messages]]]\n");
         return 1;
     }
+
+    /* 破棄経路、非バッファー、OS バッファーありの順に測定を実行する。 */
     if (measure_filtered(messages * processes) != 0 || measure_files(argv[0], path, processes, messages, 0) != 0 ||
         measure_files(argv[0], path, processes, messages, 1) != 0)
     {
         return 1;
     }
+
     return 0;
 }

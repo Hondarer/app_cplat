@@ -30,6 +30,7 @@ int cplat_internal_interprocess_sync_descriptor_export(const char *identity, con
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     identity_len = strlen(identity);
     required = CPLAT_INTERPROCESS_SYNC_DESCRIPTOR_HEADER_SIZE + identity_len;
     if (descriptor == NULL || *descriptor_size < required)
@@ -44,13 +45,16 @@ int cplat_internal_interprocess_sync_descriptor_export(const char *identity, con
     out[5] = kind;
     out[6] = backend;
     out[7] = 0U;
+
+    /* identity 長をリトル エンディアンで格納する。 */
     out[8] = (uint8_t)(identity_len & 0xffU);
     out[9] = (uint8_t)((identity_len >> 8) & 0xffU);
     out[10] = (uint8_t)((identity_len >> 16) & 0xffU);
     out[11] = (uint8_t)((identity_len >> 24) & 0xffU);
-    memset(out + 12, 0, 8);
+    memset(out + 12, 0, 8); /* offset 12-19 の予約領域を 0 で埋める */
     memcpy(out + CPLAT_INTERPROCESS_SYNC_DESCRIPTOR_HEADER_SIZE, identity, identity_len);
     *descriptor_size = required;
+
     return CPLAT_OK;
 }
 
@@ -67,27 +71,37 @@ int cplat_internal_interprocess_sync_descriptor_import(const void *descriptor, c
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
+    /* ヘッダー長、マジック文字列、種別、バックエンドの一致を確認する。 */
     if (descriptor_size < CPLAT_INTERPROCESS_SYNC_DESCRIPTOR_HEADER_SIZE ||
         memcmp(in, DESCRIPTOR_MAGIC, sizeof(DESCRIPTOR_MAGIC)) != 0 || in[5] != kind || in[6] != backend)
     {
         return CPLAT_ERR_CORRUPT_DESCRIPTOR;
     }
+
+    /* フォーマット バージョンの一致を確認する。 */
     if (in[4] != CPLAT_INTERPROCESS_SYNC_DESCRIPTOR_VERSION)
     {
         return CPLAT_ERR_VERSION_MISMATCH;
     }
+
+    /* リトル エンディアンのバイト列から identity 長を復元し、ディスクリプター長との整合性を確認する。 */
     identity_len = (uint32_t)in[8] | ((uint32_t)in[9] << 8) | ((uint32_t)in[10] << 16) | ((uint32_t)in[11] << 24);
     if (identity_len == 0 || descriptor_size != CPLAT_INTERPROCESS_SYNC_DESCRIPTOR_HEADER_SIZE + (size_t)identity_len)
     {
         return CPLAT_ERR_CORRUPT_DESCRIPTOR;
     }
+
+    /* NUL 終端を含めた領域を確保し、identity 文字列を取り出す。 */
     identity = (char *)cplat_malloc((size_t)identity_len + 1U);
     if (identity == NULL)
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     memcpy(identity, in + CPLAT_INTERPROCESS_SYNC_DESCRIPTOR_HEADER_SIZE, identity_len);
     identity[identity_len] = '\0';
     *identity_out = identity;
+
     return CPLAT_OK;
 }

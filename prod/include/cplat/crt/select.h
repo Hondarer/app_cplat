@@ -16,8 +16,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_CRT_SELECT_H
 #define CPLAT_CRT_SELECT_H
@@ -37,14 +39,21 @@
  *  @{
  */
 
-/* Linux の FD_SET() は、FD_SETSIZE 以上の値を検査せず fd_set へ書き込みます。
- * see: https://man7.org/linux/man-pages/man3/FD_SET.3.html */
+/*
+ * Linux の FD_SET() は、FD_SETSIZE 以上の値を検査せず fd_set へ書き込む。
+ * 負の fd を FD_SET() へ渡した場合は未定義動作になる。
+ * このため Linux では、fd の値が 0 以上 FD_SETSIZE 未満であることを検査する。
+ * 規則の正本は app/cplat/docs/coding-guideline.md の「ファイル記述子集合への追加」節である。
+ * see: https://man7.org/linux/man-pages/man3/FD_SET.3.html
+ */
 
-/* Windows の fd_set は SOCKET の配列と格納数であり、FD_SETSIZE は格納できる
- * SOCKET の数の上限です。SOCKET の値そのものは FD_SETSIZE と無関係のため、
- * 値の範囲ではなく格納数の上限を検査します。
- * Windows の FD_SET() は集合が満杯の場合、追加せずに通知もしません。
- * see: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-fd_set */
+/*
+ * Windows の fd_set は SOCKET の配列と格納数であり、FD_SETSIZE は格納できる
+ * SOCKET の数の上限である。SOCKET の値そのものは FD_SETSIZE と無関係のため、
+ * 値の範囲ではなく格納数の上限を検査する。
+ * Windows の FD_SET() は集合が満杯の場合、追加せずに通知もしない。
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-fd_set
+ */
 
 #ifdef DOXYGEN
     /**
@@ -79,10 +88,12 @@
             FD_SET(cplat_fd_set_fd, cplat_fd_set_set); \
         } while (0)
 #elif defined(PLATFORM_WINDOWS)
-    /* 定数を fd へ渡す使用も意図したものであるため、検査条件が定数になる場合の C4127 を
-     * 抑制します。__pragma は MSVC の拡張のため、COMPILER_MSVC の場合だけ展開します。
-     * suppress はマクロを展開した 1 行に効くため、抑制範囲はマクロ本体全体です。
-     * see: https://learn.microsoft.com/en-us/cpp/preprocessor/warning */
+    /*
+     * 定数を fd へ渡す使用も意図したものであるため、検査条件が定数になる場合の C4127 を
+     * 抑制する。__pragma は MSVC の拡張のため、COMPILER_MSVC の場合だけ展開する。
+     * suppress はマクロを展開した 1 行に効くため、抑制範囲はマクロ本体全体である。
+     * see: https://learn.microsoft.com/en-us/cpp/preprocessor/warning
+     */
     #if defined(COMPILER_MSVC)
         #define CPLAT_FD_SET_SUPPRESS_CONST_COND __pragma(warning(suppress : 4127))
     #else /* !COMPILER_MSVC */

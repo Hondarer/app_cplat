@@ -80,9 +80,14 @@ int cplat_isatty(const cplat_stream stream)
         return 0;
     }
 
+    /*
+     * NUL デバイスなどのキャラクター デバイスも FILE_TYPE_CHAR を返すため、
+     * GetConsoleMode() の成否により実際のコンソール端末であるかを確認する。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfiletype
+     */
     return (GetFileType(h) == FILE_TYPE_CHAR) && GetConsoleMode(h, &mode);
 
-#else
+#else /* !PLATFORM_LINUX && !PLATFORM_WINDOWS */
 
     (void)stream;
     return 0;
@@ -102,9 +107,11 @@ int64_t cplat_lseek(const int fd, const int64_t offset, const int whence, cplat_
         return -1;
     }
 
-    /* MSVC の _lseeki64 は不正な whence で invalid parameter handler を起動するため、 */
-    /* OS の API を呼び出す前に検査する。                                              */
-    /* see: https://learn.microsoft.com/cpp/c-runtime-library/reference/lseek-lseeki64 */
+    /*
+     * MSVC の _lseeki64() は不正な whence で invalid parameter handler を起動するため、
+     * OS の API を呼び出す前に検査する。
+     * see: https://learn.microsoft.com/cpp/c-runtime-library/reference/lseek-lseeki64
+     */
     if (whence != SEEK_SET && whence != SEEK_CUR && whence != SEEK_END)
     {
         (void)cplat_internal_error_report_errno(detail_out, EINVAL);
@@ -126,6 +133,7 @@ int64_t cplat_lseek(const int fd, const int64_t offset, const int whence, cplat_
     {
         (void)cplat_internal_error_report_success(detail_out);
     }
+
     return result;
 }
 
@@ -143,9 +151,11 @@ int cplat_close(const int fd, cplat_error *detail_out)
 
     errno = 0;
 #if defined(PLATFORM_LINUX)
-    /* EINTR で復帰した場合も再試行しない。Linux では中断された時点で記述子が
-       解放済みであり、呼び直すと別スレッドが再利用した記述子を閉じうる。
-       see: https://man7.org/linux/man-pages/man2/close.2.html */
+    /*
+     * EINTR で復帰した場合も再試行しない。Linux では中断された時点で記述子が
+     * 解放済みであり、呼び直すと別スレッドが再利用した記述子を閉じうる。
+     * see: https://man7.org/linux/man-pages/man2/close.2.html
+     */
     result = close(fd);
 #elif defined(PLATFORM_WINDOWS)
     result = _close(fd);
@@ -159,6 +169,7 @@ int cplat_close(const int fd, cplat_error *detail_out)
     {
         (void)cplat_internal_error_report_success(detail_out);
     }
+
     return result;
 }
 
@@ -189,6 +200,7 @@ int cplat_dup(const int fd, cplat_error *detail_out)
     {
         (void)cplat_internal_error_report_success(detail_out);
     }
+
     return result;
 }
 
@@ -202,8 +214,10 @@ int cplat_dup2(const int oldfd, const int newfd, cplat_error *detail_out)
         return -1;
     }
 
-    /* POSIX の dup2 は成功時に newfd を、Windows の _dup2 は 0 を返す。 */
-    /* 本関数は成功時 0 に正規化する。                                   */
+    /*
+     * POSIX の dup2() は成功時に newfd を、Windows の _dup2() は 0 を返す。
+     * 本関数は成功時 0 に正規化する。
+     */
 #if defined(PLATFORM_LINUX)
     if (dup2(oldfd, newfd) == -1)
     {
@@ -218,6 +232,7 @@ int cplat_dup2(const int oldfd, const int newfd, cplat_error *detail_out)
     }
 #endif /* PLATFORM_ */
     (void)cplat_internal_error_report_success(detail_out);
+
     return 0;
 }
 
@@ -244,7 +259,7 @@ int64_t cplat_read(const int fd, void *buf, const size_t count, cplat_error *det
     {
         unsigned int request;
 
-        /* _read の引数は unsigned int のため、INT_MAX に切り詰める (部分読み取り)。 */
+        /* _read() の引数は unsigned int のため、INT_MAX に切り詰める (部分読み取り)。 */
         if (count > (size_t)INT_MAX)
         {
             request = (unsigned int)INT_MAX;
@@ -266,6 +281,7 @@ int64_t cplat_read(const int fd, void *buf, const size_t count, cplat_error *det
     {
         (void)cplat_internal_error_report_success(detail_out);
     }
+
     return result;
 }
 
@@ -292,7 +308,7 @@ int64_t cplat_write(const int fd, const void *buf, const size_t count, cplat_err
     {
         unsigned int request;
 
-        /* _write の引数は unsigned int のため、INT_MAX に切り詰める (部分書き込み)。 */
+        /* _write() の引数は unsigned int のため、INT_MAX に切り詰める (部分書き込み)。 */
         if (count > (size_t)INT_MAX)
         {
             request = (unsigned int)INT_MAX;
@@ -314,6 +330,7 @@ int64_t cplat_write(const int fd, const void *buf, const size_t count, cplat_err
     {
         (void)cplat_internal_error_report_success(detail_out);
     }
+
     return result;
 }
 
@@ -354,5 +371,6 @@ int cplat_access(const char *path, const int mode, cplat_error *detail_out)
     {
         (void)cplat_internal_error_report_success(detail_out);
     }
+
     return result;
 }

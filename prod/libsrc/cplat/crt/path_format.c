@@ -27,6 +27,7 @@ int cplat_internal_vformat_path(char *path, const size_t path_size, const char *
         {
             *error_out = EINVAL;
         }
+
         return -1;
     }
 
@@ -37,14 +38,17 @@ int cplat_internal_vformat_path(char *path, const size_t path_size, const char *
         {
             *error_out = ENAMETOOLONG;
         }
+
         return -1;
     }
+
     if (ret != CPLAT_OK)
     {
         if (error_out != NULL)
         {
             *error_out = EINVAL;
         }
+
         return -1;
     }
 

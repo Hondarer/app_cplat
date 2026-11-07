@@ -12,8 +12,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_STACK_LIMIT_LINUX_H
 #define CPLAT_STACK_LIMIT_LINUX_H
@@ -43,10 +45,10 @@ extern "C"
 
     /**
      *  @brief          自プロセスのスタック サイズの資源上限 (`RLIMIT_STACK`) を取得します。
-     *  @param[out]     soft_limit_bytes_out  ソフト リミット (バイト) の格納先。上限がない場合は
+     *  @param[out]     soft_limit_bytes_out  ソフト リミット [byte] の格納先。上限がない場合は
      *                                        @ref CPLAT_STACK_LIMIT_LINUX_UNLIMITED を格納します。
      *                                        NULL を渡してはなりません。
-     *  @param[out]     hard_limit_bytes_out  ハード リミット (バイト) の格納先。上限がない場合は
+     *  @param[out]     hard_limit_bytes_out  ハード リミット [byte] の格納先。上限がない場合は
      *                                        @ref CPLAT_STACK_LIMIT_LINUX_UNLIMITED を格納します。
      *                                        NULL を渡してはなりません。
      *  @param[out]     detail_out            エラー詳細の格納先。NULL を指定した場合、本引数へは
@@ -68,7 +70,7 @@ extern "C"
 
     /**
      *  @brief          自プロセスのスタック サイズのソフト リミットを、ハード リミットまで引き上げます。
-     *  @param[out]     soft_limit_bytes_out  処理後のソフト リミット (バイト) の格納先。上限がない場合は
+     *  @param[out]     soft_limit_bytes_out  処理後のソフト リミット [byte] の格納先。上限がない場合は
      *                                        @ref CPLAT_STACK_LIMIT_LINUX_UNLIMITED を格納します。
      *                                        NULL を指定した場合は格納しません。
      *  @param[out]     detail_out            エラー詳細の格納先。NULL を指定した場合、本引数へは

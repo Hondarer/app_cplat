@@ -12,8 +12,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_CRT_UNISTD_H
 #define CPLAT_CRT_UNISTD_H
@@ -90,7 +92,7 @@ extern "C"
     /**
      *  @brief          ファイル記述子の読み書き位置を移動します (`lseek` / `_lseeki64` ラッパー)。
      *  @param[in]      fd      対象のファイル記述子。cplat_open() が返した値を渡します。
-     *  @param[in]      offset  @p whence を基準とする移動量 (バイト)。
+     *  @param[in]      offset  @p whence を基準とする移動量 [byte]。
      *  @param[in]      whence  基準位置 (`SEEK_SET`、`SEEK_CUR`、`SEEK_END` のいずれか)。
      *  @param[out]     detail_out  エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。

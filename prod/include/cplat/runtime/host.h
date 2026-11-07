@@ -12,8 +12,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_RUNTIME_HOST_H
 #define CPLAT_RUNTIME_HOST_H
@@ -44,7 +46,7 @@ extern "C"
     /**
      *  @brief          現在のホストの DNS ホスト名を取得します。
      *  @param[out]     name_out   UTF-8 ホスト名の格納先。NULL を渡してはなりません。
-     *  @param[in]      name_size  @p name_out のサイズ (バイト)。0 および `INT_MAX` を超える値を渡してはなりません。
+     *  @param[in]      name_size  @p name_out のサイズ [byte]。0 および `INT_MAX` を超える値を渡してはなりません。
      *  @retval         CPLAT_OK                    ホスト名を取得しました。
      *  @retval         CPLAT_ERR_INVALID_ARGUMENT  @p name_out が NULL、@p name_size が 0、または `INT_MAX` を超えます。
      *  @retval         CPLAT_ERR_BUFFER_TOO_SMALL  @p name_out の容量が不足しています。

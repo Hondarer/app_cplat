@@ -37,8 +37,11 @@ static cplat_once_flag s_shutdown_lock_once = {0};
 static cplat_once_flag s_shutdown_hook_once = {0};
 static int s_shutdown_started = 0;
 static int s_shutdown_request_started = 0;
-/* cplat_exit はロックなしで書き、atexit 経路が読む。
-   終了コードを書いてから有効フラグを release で書き、有効フラグを acquire で読んでから終了コードを読む。 */
+
+/*
+ * cplat_exit はロックなしで書き、atexit 経路が読む。
+ * 終了コードを書いてから有効フラグを release で書き、有効フラグを acquire で読んでから終了コードを読む。
+ */
 static cplat_atomic_i32 s_exit_code = CPLAT_ATOMIC_INIT(0);
 static cplat_atomic_i32 s_exit_code_valid = CPLAT_ATOMIC_INIT(0);
 
@@ -63,6 +66,7 @@ static cplat_shutdown_event make_normal_exit_event(void)
     cplat_shutdown_event event;
 
     event.reason = CPLAT_SHUTDOWN_REASON_NORMAL_EXIT;
+
     if (cplat_atomic_load_i32(&s_exit_code_valid, CPLAT_MEMORY_ORDER_ACQUIRE) != 0)
     {
         event.code_kind = CPLAT_SHUTDOWN_CODE_KIND_EXIT_CODE;
@@ -73,6 +77,7 @@ static cplat_shutdown_event make_normal_exit_event(void)
         event.code_kind = CPLAT_SHUTDOWN_CODE_KIND_NONE;
         event.code = 0;
     }
+
     return event;
 }
 
@@ -86,6 +91,11 @@ static void free_callback_list(shutdown_callback_entry *entry)
     }
 }
 
+/*
+ * 登録済みのシャットダウン コールバックを一度だけ順に呼び出し、エントリを解放する。
+ * コールバック実行中にロックを保持し続けないよう、リストを取り出してロック外で実行する。
+ * event が NULL の場合は -1、すでに実行開始済みの場合は 1、実行した場合は 0 を返す。
+ */
 static int invoke_shutdown_callbacks_once(const cplat_shutdown_event *event)
 {
     shutdown_callback_entry *callbacks;
@@ -97,6 +107,7 @@ static int invoke_shutdown_callbacks_once(const cplat_shutdown_event *event)
     }
 
     shutdown_lock();
+
     if (s_shutdown_started)
     {
         shutdown_unlock();
@@ -120,6 +131,12 @@ static int invoke_shutdown_callbacks_once(const cplat_shutdown_event *event)
     return 0;
 }
 
+/*
+ * 登録済みのシャットダウン要求コールバックを一度だけ順に呼び出し、エントリを解放する。
+ * 登録エントリがあり処理された場合は handled_out に 1、それ以外は 0 を設定する。
+ * event が NULL の場合は -1、すでに通常シャットダウンまたは要求処理が開始済みの場合は 1、
+ * 実行した場合は 0 を返す。
+ */
 static int invoke_shutdown_request_callbacks_once(const cplat_shutdown_event *event, int *handled_out)
 {
     shutdown_callback_entry *callbacks;
@@ -136,6 +153,7 @@ static int invoke_shutdown_request_callbacks_once(const cplat_shutdown_event *ev
     }
 
     shutdown_lock();
+
     if (s_shutdown_started || s_shutdown_request_started)
     {
         shutdown_unlock();
@@ -186,6 +204,7 @@ static void shutdown_signal_handler(int signal_number)
     {
         return;
     }
+
     if (request_result == 1)
     {
         return;
@@ -193,10 +212,17 @@ static void shutdown_signal_handler(int signal_number)
 
     (void)invoke_shutdown_callbacks_once(&event);
 
+    /* 既定の動作に戻して同じシグナルを再送出し、シグナルによる終了として親プロセスへ伝える。 */
     signal(signal_number, SIG_DFL);
     raise(signal_number);
 }
 #elif defined(PLATFORM_WINDOWS)
+/*
+ * コンソール制御イベント (Ctrl+C、終了通知など) を処理する。
+ * 要求コールバックによって処理された場合はイベント消費を示す TRUE を返し、
+ * それ以外はシャットダウン コールバックを実行した後に FALSE を返して OS の既定処理に委ねる。
+ * see: https://learn.microsoft.com/en-us/windows/console/handlerroutine
+ */
 static BOOL WINAPI shutdown_console_ctrl_handler(DWORD ctrl_type)
 {
     cplat_shutdown_event event;
@@ -211,6 +237,7 @@ static BOOL WINAPI shutdown_console_ctrl_handler(DWORD ctrl_type)
     {
         event.reason = CPLAT_SHUTDOWN_REASON_PROCESS_TERMINATING;
     }
+
     event.code_kind = CPLAT_SHUTDOWN_CODE_KIND_CONSOLE_CTRL_TYPE;
     event.code = (int)ctrl_type;
 
@@ -219,12 +246,14 @@ static BOOL WINAPI shutdown_console_ctrl_handler(DWORD ctrl_type)
     {
         return TRUE;
     }
+
     if (request_result == 1)
     {
         return TRUE;
     }
 
     (void)invoke_shutdown_callbacks_once(&event);
+
     return FALSE;
 }
 #endif
@@ -265,6 +294,7 @@ int cplat_shutdown_register(cplat_shutdown_fn callback, void *context)
     entry->context = context;
 
     shutdown_lock();
+
     if (s_shutdown_started)
     {
         result = CPLAT_ERR_UNKNOWN;
@@ -274,6 +304,7 @@ int cplat_shutdown_register(cplat_shutdown_fn callback, void *context)
         entry->next = s_shutdown_callbacks;
         s_shutdown_callbacks = entry;
     }
+
     shutdown_unlock();
 
     if (result != CPLAT_OK)
@@ -324,6 +355,7 @@ int cplat_shutdown_request_register(cplat_shutdown_fn callback, void *context)
     entry->context = context;
 
     shutdown_lock();
+
     if (s_shutdown_started || s_shutdown_request_started)
     {
         result = CPLAT_ERR_UNKNOWN;
@@ -333,6 +365,7 @@ int cplat_shutdown_request_register(cplat_shutdown_fn callback, void *context)
         entry->next = s_shutdown_request_callbacks;
         s_shutdown_request_callbacks = entry;
     }
+
     shutdown_unlock();
 
     if (result != CPLAT_OK)
@@ -353,6 +386,7 @@ int cplat_shutdown_invoke_for_test(const cplat_shutdown_event *event, int *invok
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (invoked_out != NULL)
     {
         if (rc == 0)
@@ -364,6 +398,7 @@ int cplat_shutdown_invoke_for_test(const cplat_shutdown_event *event, int *invok
             *invoked_out = 0;
         }
     }
+
     return CPLAT_OK;
 }
 
@@ -377,6 +412,7 @@ int cplat_shutdown_request_invoke_for_test(const cplat_shutdown_event *event, in
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (invoked_out != NULL)
     {
         if (rc == 0)
@@ -388,6 +424,7 @@ int cplat_shutdown_request_invoke_for_test(const cplat_shutdown_event *event, in
             *invoked_out = 0;
         }
     }
+
     return CPLAT_OK;
 }
 

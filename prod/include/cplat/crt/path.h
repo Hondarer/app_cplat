@@ -42,8 +42,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_CRT_PATH_H
 #define CPLAT_CRT_PATH_H
@@ -107,7 +109,7 @@
  *  @brief          パス断片を指定順にそのまま連結します。
  *
  *  @param[out]     path_out   連結結果の格納先。NULL を渡してはなりません。
- *  @param[in]      path_size  @p path_out のサイズ (バイト)。0 を渡してはなりません。
+ *  @param[in]      path_size  @p path_out のサイズ [byte]。0 を渡してはなりません。
  *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
  *                  エラー詳細を設定せず、返却しません。
  *                  NULL 以外を指定した場合、成功時は空の値を格納します。
@@ -126,7 +128,7 @@
  *  @brief          パス断片をパス区切り文字で自動補完しながら連結します。
  *
  *  @param[out]     path_out   連結結果の格納先。NULL を渡してはなりません。
- *  @param[in]      path_size  @p path_out のサイズ (バイト)。0 を渡してはなりません。
+ *  @param[in]      path_size  @p path_out のサイズ [byte]。0 を渡してはなりません。
  *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
  *                  エラー詳細を設定せず、返却しません。
  *                  NULL 以外を指定した場合、成功時は空の値を格納します。
@@ -164,7 +166,7 @@ extern "C"
     /**
      *  @brief          パスを絶対化し、区切り文字を '/' に正規化して返します。
      *  @param[out]     path_out    絶対化済みパス (UTF-8) の格納先。NULL を渡してはなりません。
-     *  @param[in]      path_size   @p path_out のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      path_size   @p path_out のサイズ [byte]。0 を渡してはなりません。
      *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
@@ -212,7 +214,7 @@ extern "C"
      *  @param[out]     path_out    一時ディレクトリの絶対パス (UTF-8) の格納先。
      *                              末尾パス区切り文字 (@ref PLATFORM_PATH_SEP_CHR) は付きません。
      *                              NULL を渡してはなりません。
-     *  @param[in]      path_size   @p path_out のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      path_size   @p path_out のサイズ [byte]。0 を渡してはなりません。
      *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
@@ -234,7 +236,7 @@ extern "C"
     /**
      *  @brief          パス断片を指定順にそのまま連結します。
      *  @param[out]     path_out    連結結果の格納先。NULL を渡してはなりません。
-     *  @param[in]      path_size   @p path_out のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      path_size   @p path_out のサイズ [byte]。0 を渡してはなりません。
      *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
@@ -255,7 +257,7 @@ extern "C"
     /**
      *  @brief          パス断片を指定順にそのまま連結します (`cplat_path_concat_n` の `va_list` 版)。
      *  @param[out]     path_out    連結結果の格納先。NULL を渡してはなりません。
-     *  @param[in]      path_size   @p path_out のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      path_size   @p path_out のサイズ [byte]。0 を渡してはなりません。
      *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
@@ -291,7 +293,7 @@ extern "C"
     /**
      *  @brief          パスの親ディレクトリ部分を取得します。
      *  @param[out]     path_out   親ディレクトリ パス (UTF-8) の格納先。NULL を渡してはなりません。
-     *  @param[in]      path_size  @p path_out のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      path_size  @p path_out のサイズ [byte]。0 を渡してはなりません。
      *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
@@ -336,7 +338,7 @@ extern "C"
     /**
      *  @brief          パスから拡張子を除いた文字列を取得します。
      *  @param[out]     path_out   拡張子を除いたパス (UTF-8) の格納先。NULL を渡してはなりません。
-     *  @param[in]      path_size  @p path_out のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      path_size  @p path_out のサイズ [byte]。0 を渡してはなりません。
      *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
@@ -360,7 +362,7 @@ extern "C"
     /**
      *  @brief          パス断片をパス区切り文字で自動補完しながら連結します。
      *  @param[out]     path_out    連結結果の格納先。NULL を渡してはなりません。
-     *  @param[in]      path_size   @p path_out のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      path_size   @p path_out のサイズ [byte]。0 を渡してはなりません。
      *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
@@ -387,7 +389,7 @@ extern "C"
     /**
      *  @brief          パス断片をパス区切り文字で自動補完しながら連結します (`cplat_path_join_n` の `va_list` 版)。
      *  @param[out]     path_out    連結結果の格納先。NULL を渡してはなりません。
-     *  @param[in]      path_size   @p path_out のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      path_size   @p path_out のサイズ [byte]。0 を渡してはなりません。
      *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。

@@ -64,14 +64,17 @@ static int has_valid_argv(char *const *argv)
     {
         return 0;
     }
+
     if (argv[0] == NULL)
     {
         return 0;
     }
+
     if (argv[0][0] == '\0')
     {
         return 0;
     }
+
     return 1;
 }
 
@@ -87,6 +90,7 @@ static uint64_t monotonic_ms(void)
     struct timespec ts;
 
     clock_gettime(CLOCK_MONOTONIC, &ts);
+
     return (uint64_t)ts.tv_sec * 1000ULL + (uint64_t)ts.tv_nsec / 1000000ULL;
 }
 
@@ -106,6 +110,7 @@ static char *string_duplicate(const char *text)
     {
         memcpy(copy, text, len);
     }
+
     return copy;
 }
 
@@ -118,6 +123,7 @@ static size_t env_key_len(const char *entry)
     {
         return 0;
     }
+
     return (size_t)(sep - entry);
 }
 
@@ -127,10 +133,12 @@ static int env_key_matches(const char *entry, const char *key, const size_t key_
     {
         return 0;
     }
+
     if (entry[key_len] != '=')
     {
         return 0;
     }
+
     return 1;
 }
 
@@ -149,6 +157,7 @@ static void free_envp(char **envp)
         cplat_free(envp[i]);
         i++;
     }
+
     cplat_free(envp);
 }
 
@@ -179,6 +188,7 @@ static int set_env_entry(char **envp, const size_t capacity, const char *entry)
             envp[i] = copy;
             return 0;
         }
+
         i++;
     }
 
@@ -190,6 +200,7 @@ static int set_env_entry(char **envp, const size_t capacity, const char *entry)
 
     envp[i] = copy;
     envp[i + 1] = NULL;
+
     return 0;
 }
 
@@ -201,6 +212,7 @@ static char **build_environment(char *const *overrides)
     size_t i;
     char **envp;
 
+    /* 現在の環境変数の件数を計測する。 */
     env_count = 0;
     while (environ[env_count] != NULL)
     {
@@ -208,6 +220,8 @@ static char **build_environment(char *const *overrides)
     }
 
     override_count = 0;
+
+    /* 上書き指定の件数を計測し、各エントリの書式を検証する。 */
     if (overrides != NULL)
     {
         while (overrides[override_count] != NULL)
@@ -216,6 +230,7 @@ static char **build_environment(char *const *overrides)
             {
                 return NULL;
             }
+
             override_count++;
         }
     }
@@ -227,6 +242,7 @@ static char **build_environment(char *const *overrides)
         return NULL;
     }
 
+    /* 現在の環境変数を複製して格納する。 */
     i = 0;
     while (i < env_count)
     {
@@ -236,10 +252,13 @@ static char **build_environment(char *const *overrides)
             free_envp(envp);
             return NULL;
         }
+
         i++;
     }
+
     envp[i] = NULL;
 
+    /* 上書き指定のエントリを反映する。 */
     i = 0;
     while (overrides != NULL && overrides[i] != NULL)
     {
@@ -248,6 +267,7 @@ static char **build_environment(char *const *overrides)
             free_envp(envp);
             return NULL;
         }
+
         i++;
     }
 
@@ -267,8 +287,10 @@ static const char *find_env_value(char *const *envp, const char *key)
         {
             return envp[i] + key_len + 1;
         }
+
         i++;
     }
+
     return NULL;
 }
 
@@ -283,8 +305,10 @@ static int setup_child_stdio_one(const cplat_process_stdio *spec, const int targ
 
     if (spec->mode == CPLAT_PROCESS_STDIO_NULL_DEVICE)
     {
-        /* mode は O_CREAT を指定しないため使用されないが、testfw の open mock と
-           Linux/Windows の可変引数差異を避けるため明示的に渡す。 */
+        /*
+         * mode は O_CREAT を指定しないため使用されないが、testfw の open mock と
+         * Linux/Windows の可変引数差異を避けるため明示的に渡す。
+         */
         source_fd = open(PLATFORM_NULL_DEVICE_PATH, null_flags, 0);
         if (source_fd < 0)
         {
@@ -297,6 +321,7 @@ static int setup_child_stdio_one(const cplat_process_stdio *spec, const int targ
         {
             return -1;
         }
+
         source_fd = (int)spec->native_handle;
     }
     else
@@ -310,6 +335,7 @@ static int setup_child_stdio_one(const cplat_process_stdio *spec, const int targ
         {
             close(source_fd);
         }
+
         return -1;
     }
 
@@ -317,6 +343,7 @@ static int setup_child_stdio_one(const cplat_process_stdio *spec, const int targ
     {
         close(source_fd);
     }
+
     return 0;
 }
 
@@ -326,14 +353,17 @@ static int setup_child_stdio(const cplat_process_options *options)
     {
         return -1;
     }
+
     if (setup_child_stdio_one(&options->stdout_spec, STDOUT_FILENO, O_WRONLY) != 0)
     {
         return -1;
     }
+
     if (setup_child_stdio_one(&options->stderr_spec, STDERR_FILENO, O_WRONLY) != 0)
     {
         return -1;
     }
+
     return 0;
 }
 
@@ -344,12 +374,14 @@ static void exec_with_path(char *const *argv, char *const *envp)
     const char *segment_end;
     size_t name_len;
 
+    /* 実行ファイル名にパス区切り文字が含まれる場合は、PATH を走査せず直接実行する。 */
     if (strchr(argv[0], '/') != NULL)
     {
         execve(argv[0], argv, envp);
         return;
     }
 
+    /* PATH 環境変数が未設定または空の場合は、標準の既定パスを使用する。 */
     path_value = find_env_value(envp, "PATH");
     if (path_value == NULL || path_value[0] == '\0')
     {
@@ -358,6 +390,8 @@ static void exec_with_path(char *const *argv, char *const *envp)
 
     name_len = strlen(argv[0]);
     segment = path_value;
+
+    /* PATH の各ディレクトリを走査し、実行ファイルを探索して起動を試行する。 */
     while (*segment != '\0')
     {
         char candidate[PLATFORM_PATH_MAX];
@@ -368,12 +402,16 @@ static void exec_with_path(char *const *argv, char *const *envp)
         {
             segment_end = segment + strlen(segment);
         }
+
         dir_len = (size_t)(segment_end - segment);
+
+        /* 区切り文字が連続する場合など、空のセグメントはカレント ディレクトリを表す。 */
         if (dir_len == 0)
         {
             dir_len = 1;
             segment = ".";
         }
+
         if (dir_len + 1 + name_len + 1 <= sizeof(candidate))
         {
             memcpy(candidate, segment, dir_len);
@@ -381,6 +419,7 @@ static void exec_with_path(char *const *argv, char *const *envp)
             memcpy(candidate + dir_len + 1, argv[0], name_len + 1);
             execve(candidate, argv, envp);
         }
+
         if (*segment_end == '\0')
         {
             segment = segment_end;
@@ -392,9 +431,11 @@ static void exec_with_path(char *const *argv, char *const *envp)
     }
 }
 
-/* fork 後の子プロセスでは、親の他スレッドが保持していたロックが解放されないまま複製される。
-   stdio や strerror は内部でロックやロケールを使うため、非同期シグナル安全な関数だけで組み立てる。
-   see: https://pubs.opengroup.org/onlinepubs/9799919799/functions/fork.html */
+/*
+ * fork 後の子プロセスでは、親の他スレッドが保持していたロックが解放されないまま複製される。
+ * stdio や strerror は内部でロックやロケールを使うため、非同期シグナル安全な関数だけで組み立てる。
+ * see: https://pubs.opengroup.org/onlinepubs/9799919799/functions/fork.html
+ */
 
 static size_t child_append_text(char *buf, const size_t buf_size, size_t len, const char *text)
 {
@@ -404,6 +445,7 @@ static size_t child_append_text(char *buf, const size_t buf_size, size_t len, co
         len++;
         text++;
     }
+
     return len;
 }
 
@@ -424,6 +466,7 @@ static size_t child_append_uint(char *buf, const size_t buf_size, size_t len, un
         buf[len] = digits[count];
         len++;
     }
+
     return len;
 }
 
@@ -436,9 +479,11 @@ static void child_report_exec_failure(const char *program, const int error_numbe
     len = child_append_text(message, sizeof(message), len, "エラー: exec(\"");
     len = child_append_text(message, sizeof(message), len, program);
     len = child_append_text(message, sizeof(message), len, "\") が失敗しました: errno=");
+
     /* errno は正の値のため、符号なしで出力する。 */
     len = child_append_uint(message, sizeof(message), len, (unsigned int)error_number);
     len = child_append_text(message, sizeof(message), len, "\n");
+
     /* 書き込みの失敗は報告先がないため無視する。glibc の warn_unused_result は (void) で抑止できない。 */
     written = write(STDERR_FILENO, message, len);
     (void)written;
@@ -453,12 +498,19 @@ static int run_child_process(const cplat_process_options *options, char *const *
             return 127;
         }
     }
+
     if (setup_child_stdio(options) != 0)
     {
         return 127;
     }
+
     exec_with_path(options->argv, envp);
     child_report_exec_failure(options->argv[0], errno);
+
+    /*
+     * execve() が成功した場合は復帰しない。
+     * ここへ到達した場合は起動に失敗しているため、シェルの慣例に従い終了コード 127 を返す。
+     */
     return 127;
 }
 
@@ -495,8 +547,10 @@ static int wide_buffer_reserve(wide_buffer *buf, const size_t need)
     {
         return -1;
     }
+
     buf->data = new_data;
     buf->cap = new_cap;
+
     return 0;
 }
 
@@ -506,9 +560,11 @@ static int wide_buffer_append_char(wide_buffer *buf, const wchar_t ch)
     {
         return -1;
     }
+
     buf->data[buf->len] = ch;
     buf->len++;
     buf->data[buf->len] = L'\0';
+
     return 0;
 }
 
@@ -521,21 +577,30 @@ static int wide_buffer_append_text(wide_buffer *buf, const wchar_t *text)
     {
         return -1;
     }
+
     memcpy(buf->data + buf->len, text, (len + 1) * sizeof(*text));
     buf->len += len;
+
     return 0;
 }
 
+/*
+ * Windows のコマンド ライン解析規則に従い、引数をエスケープして引用符で囲む。
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-commandlinetoargvw
+ */
 static int append_windows_quoted_arg(wide_buffer *buf, const wchar_t *arg)
 {
     size_t i;
     int need_quote;
 
     need_quote = 0;
+
+    /* 空文字列、または空白文字や二重引用符を含む場合は引用符で囲む必要がある。 */
     if (arg[0] == L'\0')
     {
         need_quote = 1;
     }
+
     i = 0;
     while (arg[i] != L'\0')
     {
@@ -543,6 +608,7 @@ static int append_windows_quoted_arg(wide_buffer *buf, const wchar_t *arg)
         {
             need_quote = 1;
         }
+
         i++;
     }
 
@@ -556,12 +622,14 @@ static int append_windows_quoted_arg(wide_buffer *buf, const wchar_t *arg)
         return -1;
     }
 
+    /* 連続するバックスラッシュを数え、二重引用符の直前であれば 2 倍にエスケープする。 */
     i = 0;
     while (arg[i] != L'\0')
     {
         size_t slash_count;
 
         slash_count = 0;
+
         while (arg[i] == L'\\')
         {
             slash_count++;
@@ -576,12 +644,15 @@ static int append_windows_quoted_arg(wide_buffer *buf, const wchar_t *arg)
                 {
                     return -1;
                 }
+
                 slash_count--;
             }
+
             if (wide_buffer_append_char(buf, L'\\') != 0 || wide_buffer_append_char(buf, L'"') != 0)
             {
                 return -1;
             }
+
             i++;
         }
         else
@@ -592,19 +663,23 @@ static int append_windows_quoted_arg(wide_buffer *buf, const wchar_t *arg)
                 {
                     return -1;
                 }
+
                 slash_count--;
             }
+
             if (arg[i] != L'\0')
             {
                 if (wide_buffer_append_char(buf, arg[i]) != 0)
                 {
                     return -1;
                 }
+
                 i++;
             }
         }
     }
 
+    /* 引数末尾のバックスラッシュは、閉じる二重引用符をエスケープしないよう 2 倍にする。 */
     i = wcslen(arg);
     while (i > 0 && arg[i - 1] == L'\\')
     {
@@ -612,6 +687,7 @@ static int append_windows_quoted_arg(wide_buffer *buf, const wchar_t *arg)
         {
             return -1;
         }
+
         i--;
     }
 
@@ -635,6 +711,7 @@ static wchar_t *build_command_line(char *const *argv)
             cplat_free(buf.data);
             return NULL;
         }
+
         if (i > 0)
         {
             if (wide_buffer_append_char(&buf, L' ') != 0)
@@ -644,15 +721,19 @@ static wchar_t *build_command_line(char *const *argv)
                 return NULL;
             }
         }
+
         rc = append_windows_quoted_arg(&buf, wide_arg);
         cplat_free(wide_arg);
+
         if (rc != 0)
         {
             cplat_free(buf.data);
             return NULL;
         }
+
         i++;
     }
+
     return buf.data;
 }
 
@@ -665,23 +746,29 @@ static size_t wide_env_key_len(const wchar_t *entry)
     {
         return 0;
     }
+
+    /* 先頭の '=' はドライブごとのカレント ディレクトリを保持する特殊環境変数のため、キーとして扱わない。 */
     if (sep == entry)
     {
         return 0;
     }
+
     return (size_t)(sep - entry);
 }
 
 static int wide_env_key_matches(const wchar_t *entry, const wchar_t *key, const size_t key_len)
 {
+    /* Windows の環境変数名は大文字と小文字を区別しない。 */
     if (_wcsnicmp(entry, key, key_len) != 0)
     {
         return 0;
     }
+
     if (entry[key_len] != L'=')
     {
         return 0;
     }
+
     return 1;
 }
 
@@ -700,6 +787,7 @@ static void free_wide_env_list(wchar_t **list)
         cplat_free(list[i]);
         i++;
     }
+
     cplat_free(list);
 }
 
@@ -714,6 +802,7 @@ static wchar_t *wide_string_duplicate(const wchar_t *text)
     {
         memcpy(copy, text, len * sizeof(*copy));
     }
+
     return copy;
 }
 
@@ -744,6 +833,7 @@ static int set_wide_env_entry(wchar_t **list, const size_t capacity, const wchar
             list[i] = copy;
             return 0;
         }
+
         i++;
     }
 
@@ -752,8 +842,10 @@ static int set_wide_env_entry(wchar_t **list, const size_t capacity, const wchar
         cplat_free(copy);
         return -1;
     }
+
     list[i] = copy;
     list[i + 1] = NULL;
+
     return 0;
 }
 
@@ -781,6 +873,7 @@ static wchar_t *build_environment_block(char *const *overrides)
         return NULL;
     }
 
+    /* 現在の環境変数ブロックからエントリ数を計測する。 */
     env_count = 0;
     cursor = current;
     while (*cursor != L'\0')
@@ -789,6 +882,7 @@ static wchar_t *build_environment_block(char *const *overrides)
         cursor += wcslen(cursor) + 1;
     }
 
+    /* 上書き指定のエントリ数を計測し、書式を検証する。 */
     override_count = 0;
     while (overrides[override_count] != NULL)
     {
@@ -797,6 +891,7 @@ static wchar_t *build_environment_block(char *const *overrides)
             FreeEnvironmentStringsW(current);
             return NULL;
         }
+
         override_count++;
     }
 
@@ -808,6 +903,7 @@ static wchar_t *build_environment_block(char *const *overrides)
         return NULL;
     }
 
+    /* 現在の環境変数エントリを複製して配列へ格納する。 */
     i = 0;
     cursor = current;
     while (*cursor != L'\0')
@@ -819,12 +915,15 @@ static wchar_t *build_environment_block(char *const *overrides)
             FreeEnvironmentStringsW(current);
             return NULL;
         }
+
         i++;
         cursor += wcslen(cursor) + 1;
     }
+
     list[i] = NULL;
     FreeEnvironmentStringsW(current);
 
+    /* 上書き指定のエントリを反映する。 */
     i = 0;
     while (overrides[i] != NULL)
     {
@@ -836,16 +935,19 @@ static wchar_t *build_environment_block(char *const *overrides)
             free_wide_env_list(list);
             return NULL;
         }
+
         if (set_wide_env_entry(list, capacity, wide_entry) != 0)
         {
             cplat_free(wide_entry);
             free_wide_env_list(list);
             return NULL;
         }
+
         cplat_free(wide_entry);
         i++;
     }
 
+    /* 二重 NULL 終端の環境変数ブロックに必要な全体の長さを計算する。 */
     block_len = 1;
     i = 0;
     while (list[i] != NULL)
@@ -861,6 +963,7 @@ static wchar_t *build_environment_block(char *const *overrides)
         return NULL;
     }
 
+    /* 各環境変数文字列を単一のブロックへ連続して複写する。 */
     out = block;
     i = 0;
     while (list[i] != NULL)
@@ -872,8 +975,10 @@ static wchar_t *build_environment_block(char *const *overrides)
         out += len;
         i++;
     }
+
     *out = L'\0';
     free_wide_env_list(list);
+
     return block;
 }
 
@@ -888,10 +993,13 @@ static int duplicate_inheritable_handle(HANDLE source, HANDLE *duplicated)
     HANDLE current;
 
     current = GetCurrentProcess();
+
+    /* 子プロセスへ継承可能なハンドルとして複製する。 */
     if (!DuplicateHandle(current, source, current, duplicated, 0, TRUE, DUPLICATE_SAME_ACCESS))
     {
         return -1;
     }
+
     return 0;
 }
 
@@ -901,6 +1009,7 @@ static int prepare_stdio_handle(const cplat_process_stdio *spec, const DWORD std
     HANDLE source;
 
     *prepared = NULL;
+
     if (spec->mode == CPLAT_PROCESS_STDIO_INHERIT)
     {
         source = GetStdHandle(std_id);
@@ -911,9 +1020,11 @@ static int prepare_stdio_handle(const cplat_process_stdio *spec, const DWORD std
             {
                 return -1;
             }
+
             *prepared = source;
             return 0;
         }
+
         return duplicate_inheritable_handle(source, prepared);
     }
 
@@ -924,6 +1035,7 @@ static int prepare_stdio_handle(const cplat_process_stdio *spec, const DWORD std
         {
             return -1;
         }
+
         *prepared = source;
         return 0;
     }
@@ -935,6 +1047,7 @@ static int prepare_stdio_handle(const cplat_process_stdio *spec, const DWORD std
         {
             return -1;
         }
+
         return duplicate_inheritable_handle(source, prepared);
     }
 
@@ -952,6 +1065,7 @@ static void close_stdio_handles(HANDLE handles[3])
         {
             CloseHandle(handles[i]);
         }
+
         i++;
     }
 }
@@ -982,6 +1096,7 @@ static void release_process_start_resources(struct process_start_resources *res)
     {
         DeleteProcThreadAttributeList(res->attribute_list);
     }
+
     cplat_free(res->attribute_list);
     close_stdio_handles(res->stdio_handles);
     cplat_free(res->working_directory);
@@ -1008,17 +1123,20 @@ int cplat_process_get_executable_path(char *path_out, const size_t path_size)
             path_out[0] = '\0';
             return CPLAT_ERR_BUFFER_TOO_SMALL;
         }
+
         len = readlink("/proc/self/exe", path_out, path_size - 1);
         if (len < 0)
         {
             path_out[0] = '\0';
             return cplat_internal_result_from_errno(errno);
         }
+
         if ((size_t)len >= path_size)
         {
             path_out[0] = '\0';
             return CPLAT_ERR_BUFFER_TOO_SMALL;
         }
+
         path_out[len] = '\0';
         return CPLAT_OK;
     }
@@ -1028,30 +1146,37 @@ int cplat_process_get_executable_path(char *path_out, const size_t path_size)
         DWORD n;
         int result;
 
-        /* GetModuleFileNameU はパス区切り文字を正規化しない。
-           '\\' を '/' へ正規化する cplat_wpath_to_utf8 を使うため、ここでは W 版を直接使う */
+        /*
+         * GetModuleFileNameU はパス区切り文字を正規化しない。
+         * '\\' を '/' へ正規化する cplat_wpath_to_utf8 を使うため、ここでは W 版を直接使う。
+         */
         n = GetModuleFileNameW(NULL, wbuf, (DWORD)(sizeof(wbuf) / sizeof(wbuf[0])));
         if (n == 0)
         {
             path_out[0] = '\0';
             return cplat_internal_result_from_windows_error(GetLastError());
         }
+
         if (n >= (DWORD)(sizeof(wbuf) / sizeof(wbuf[0])))
         {
             path_out[0] = '\0';
             return CPLAT_ERR_BUFFER_TOO_SMALL;
         }
+
         wbuf[n] = L'\0';
+
         if (cplat_wpath_to_utf8(path_out, path_size, wbuf) < 0)
         {
             result = cplat_internal_result_from_windows_error(GetLastError());
             path_out[0] = '\0';
             return result;
         }
+
         return CPLAT_OK;
     }
 #else
     path_out[0] = '\0';
+
     return CPLAT_ERR_UNSUPPORTED;
 #endif /* PLATFORM_ */
 }
@@ -1074,9 +1199,11 @@ uint32_t cplat_process_get_pid(void)
 uint32_t cplat_process_get_tid(void)
 {
 #if defined(PLATFORM_LINUX)
-    /* glibc がラッパー関数 gettid() を提供するのは 2.30 以降であり、本リポジトリが対象とする
-       glibc 2.28 では宣言されない。移植先の glibc の版に依存しないよう、システム コールを直接呼ぶ。
-       see: https://man7.org/linux/man-pages/man2/gettid.2.html */
+    /*
+     * glibc がラッパー関数 gettid() を提供するのは 2.30 以降であり、本リポジトリが対象とする
+     * glibc 2.28 では宣言されない。移植先の glibc の版に依存しないよう、システム コールを直接呼ぶ。
+     * see: https://man7.org/linux/man-pages/man2/gettid.2.html
+     */
     return (uint32_t)syscall(SYS_gettid);
 #elif defined(PLATFORM_WINDOWS)
     return (uint32_t)GetCurrentThreadId();
@@ -1095,10 +1222,12 @@ int cplat_process_start(const cplat_process_options *options, cplat_process **pr
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (has_valid_argv(options->argv) == 0)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     *process = NULL;
 
 #if defined(PLATFORM_LINUX)
@@ -1132,6 +1261,7 @@ int cplat_process_start(const cplat_process_options *options, cplat_process **pr
         {
             _exit(run_child_process(options, envp));
         }
+
         /* GCOVR_EXCL_STOP */
 
         free_envp(envp);
@@ -1194,17 +1324,24 @@ int cplat_process_start(const cplat_process_options *options, cplat_process **pr
             release_process_start_resources(&res);
             return CPLAT_ERR_UNKNOWN;
         }
+
         if (!InitializeProcThreadAttributeList(res.attribute_list, 1, 0, &attr_size))
         {
             release_process_start_resources(&res);
             return CPLAT_ERR_UNKNOWN;
         }
+
         res.attribute_list_initialized = 1;
         startup.lpAttributeList = res.attribute_list;
 
         inherit_handles[0] = res.stdio_handles[0];
         inherit_handles[1] = res.stdio_handles[1];
         inherit_handles[2] = res.stdio_handles[2];
+
+        /*
+         * 指定した標準入出力ハンドルだけを子プロセスへ明示的に継承させるため、
+         * PROC_THREAD_ATTRIBUTE_HANDLE_LIST を設定する。
+         */
         if (!UpdateProcThreadAttribute(startup.lpAttributeList, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, inherit_handles,
                                        sizeof(inherit_handles), NULL, NULL))
         {
@@ -1213,8 +1350,11 @@ int cplat_process_start(const cplat_process_options *options, cplat_process **pr
         }
 
         create_flags = EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT;
-        /* res.command_line と res.environment_block は組み立て済みのワイド文字列であり、
-           CreateProcessU を経由すると UTF-8 への往復変換が増えるだけになる */
+
+        /*
+         * res.command_line と res.environment_block は組み立て済みのワイド文字列であり、
+         * CreateProcessU を経由すると UTF-8 への往復変換が増えるだけになる。
+         */
         created = CreateProcessW(NULL, res.command_line, NULL, NULL, TRUE, create_flags, res.environment_block,
                                  res.working_directory, &startup.StartupInfo, &process_info);
 
@@ -1232,6 +1372,7 @@ int cplat_process_start(const cplat_process_options *options, cplat_process **pr
             CloseHandle(process_info.hProcess);
             return CPLAT_ERR_UNKNOWN;
         }
+
         new_process->process = process_info.hProcess;
         *process = new_process;
         return CPLAT_OK;
@@ -1249,6 +1390,7 @@ int cplat_process_wait(cplat_process *process, const int timeout_ms)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (process->exited != 0)
     {
         return CPLAT_OK;
@@ -1261,6 +1403,7 @@ int cplat_process_wait(cplat_process *process, const int timeout_ms)
         uint64_t deadline;
 
         wait_options = 0;
+
         if (timeout_ms != CPLAT_PROCESS_WAIT_FOREVER)
         {
             wait_options = WNOHANG;
@@ -1271,6 +1414,9 @@ int cplat_process_wait(cplat_process *process, const int timeout_ms)
             deadline = 0;
         }
 
+        /*
+         * WNOHANG で子プロセスの状態をポーリングし、終了していなければ 1 [ms] 待機して期限まで繰り返す。
+         */
         while (1)
         {
             pid_t rc;
@@ -1286,25 +1432,31 @@ int cplat_process_wait(cplat_process *process, const int timeout_ms)
                 {
                     process_set_exit_code(process, -1);
                 }
+
                 return CPLAT_OK;
             }
+
             if (rc < 0)
             {
                 if (errno == EINTR)
                 {
                     continue;
                 }
+
                 return CPLAT_ERR_UNKNOWN;
             }
+
             if (timeout_ms == CPLAT_PROCESS_NO_WAIT)
             {
                 return CPLAT_ERR_TIMEOUT;
             }
+
             if (timeout_ms != CPLAT_PROCESS_WAIT_FOREVER && monotonic_ms() >= deadline)
             {
                 return CPLAT_ERR_TIMEOUT;
             }
-            usleep(1000);
+
+            usleep(1000); /* 1 [ms] */
         }
     }
 #elif defined(PLATFORM_WINDOWS)
@@ -1327,6 +1479,7 @@ int cplat_process_wait(cplat_process *process, const int timeout_ms)
         {
             return CPLAT_ERR_TIMEOUT;
         }
+
         if (wait_result != WAIT_OBJECT_0)
         {
             return CPLAT_ERR_UNKNOWN;
@@ -1337,6 +1490,8 @@ int cplat_process_wait(cplat_process *process, const int timeout_ms)
         {
             return CPLAT_ERR_UNKNOWN;
         }
+
+        /* GetExitCodeProcess() の終了コードが INT_MAX を超える場合は EXIT_FAILURE へ丸める。 */
         if (child_exit_code > INT_MAX)
         {
             process_set_exit_code(process, EXIT_FAILURE);
@@ -1345,6 +1500,7 @@ int cplat_process_wait(cplat_process *process, const int timeout_ms)
         {
             process_set_exit_code(process, (int)child_exit_code);
         }
+
         return CPLAT_OK;
     }
 #else
@@ -1360,11 +1516,14 @@ int cplat_process_get_exit_code(cplat_process *process, int *exit_code)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (process->exited == 0)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     *exit_code = process->exit_code;
+
     return CPLAT_OK;
 }
 
@@ -1376,6 +1535,7 @@ int cplat_process_terminate(cplat_process *process)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (process->exited != 0)
     {
         return CPLAT_OK;
@@ -1386,12 +1546,14 @@ int cplat_process_terminate(cplat_process *process)
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     return CPLAT_OK;
 #elif defined(PLATFORM_WINDOWS)
     if (!TerminateProcess(process->process, EXIT_FAILURE))
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     return CPLAT_OK;
 #else
     return CPLAT_ERR_UNSUPPORTED;
@@ -1450,6 +1612,7 @@ int cplat_process_run_sync(const cplat_process_options *options, const int timeo
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     *exit_code = EXIT_FAILURE;
 
     process = NULL;
@@ -1464,6 +1627,8 @@ int cplat_process_run_sync(const cplat_process_options *options, const int timeo
     {
         result = cplat_process_get_exit_code(process, exit_code);
     }
+
     cplat_process_dispose(process);
+
     return result;
 }

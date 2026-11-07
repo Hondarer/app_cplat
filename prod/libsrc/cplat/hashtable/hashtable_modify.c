@@ -20,6 +20,10 @@
 #include <cplat/clock/clock.h>
 #include <string.h>
 
+/*
+ * 入力ポインターがハッシュ テーブルの管理領域またはデータ領域の内部を指しているかを判定する。
+ * 領域内部を指している場合は 1、領域外を指している場合は 0 を返す。
+ */
 static int input_points_into_table(const cplat_hashtable *ht, const void *input)
 {
     uintptr_t p = (uintptr_t)input;
@@ -30,6 +34,7 @@ static int input_points_into_table(const cplat_hashtable *ht, const void *input)
 
     (void)hashtable_mgmt_layout(&ht->hdr->config, NULL, NULL, &mgmt_size);
     (void)hashtable_data_region_size(&ht->hdr->config, &data_size);
+
     return ((p >= mgmt) && (p - mgmt < mgmt_size)) || ((p >= data) && (p - data < data_size));
 }
 
@@ -50,6 +55,7 @@ static uint64_t scan_next_empty(cplat_hashtable *ht, size_t start_idx)
             return (uint64_t)(i + 1);
         }
     }
+
     return 0;
 }
 
@@ -63,13 +69,16 @@ static void stamp_record(cplat_hashtable *ht, size_t rec)
     cplat_timespec now;
 
     cplat_clock_get_realtime(&now);
+
     /* 実時刻は時計の巻き戻しで逆行しうるため、順序判定は世代カウンターで行う。 */
     ht->hdr->table_generation++;
+
     if (hashtable_has_record_timestamp(ht) != 0)
     {
         *hashtable_entry_timestamp(ht, rec) = now;
         *hashtable_entry_generation(ht, rec) = ht->hdr->table_generation;
     }
+
     ht->hdr->table_timestamp = now;
 }
 
@@ -102,10 +111,12 @@ uint64_t hashtable_find_best_deleted_record(const cplat_hashtable *ht, const uns
         {
             continue;
         }
+
         if ((keep != NULL) && (keep[i] == 0))
         {
             continue;
         }
+
         if (!found)
         {
             better = 1;
@@ -123,21 +134,25 @@ uint64_t hashtable_find_best_deleted_record(const cplat_hashtable *ht, const uns
         {
             better = 0;
         }
+
         if (better != 0)
         {
             found = 1;
             best_rec = i;
             best_status = status;
+
             if (has_record_timestamp != 0)
             {
                 best_generation = *hashtable_entry_generation(ht, i);
             }
         }
     }
+
     if (found == 0)
     {
         return 0;
     }
+
     return (uint64_t)(best_rec + 1);
 }
 
@@ -163,6 +178,7 @@ static void hashtable_unlink_record(cplat_hashtable *ht, size_t rec)
             *hashtable_entry_next(ht, rec) = 0;
             return;
         }
+
         link = hashtable_entry_next(ht, (size_t)(*link - 1));
     }
 }
@@ -180,6 +196,10 @@ static void store_inserted(int *inserted_out, int inserted)
     }
 }
 
+/*
+ * 現在のストレージ使用量と今回の入力サイズから、トランザクションに必要な最小容量を算出する。
+ * 加算であふれた場合は SIZE_MAX、正常時は加算結果のバイト数を返す。
+ */
 static size_t storage_min_for_transaction(uint64_t used, size_t input_size)
 {
     size_t minimum;
@@ -188,6 +208,7 @@ static size_t storage_min_for_transaction(uint64_t used, size_t input_size)
     {
         return SIZE_MAX;
     }
+
     return minimum;
 }
 
@@ -216,19 +237,23 @@ int hashtable_put(cplat_hashtable *ht, const void *key, size_t key_length, const
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if ((input_points_into_table(ht, key) != 0) || (input_points_into_table(ht, value) != 0))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if ((deleted_policy != CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE) &&
         (deleted_policy != CPLAT_HASHTABLE_ADD_DELETED_REVIVE))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (!hashtable_key_fits(ht, key, key_length))
     {
         return CPLAT_ERR_OUT_OF_RANGE;
     }
+
     if (hashtable_fixed_string_fits(ht->hdr->config.value_type, ht->hdr->config.value_size, value) == 0)
     {
         return CPLAT_ERR_OUT_OF_RANGE;
@@ -248,6 +273,7 @@ int hashtable_put(cplat_hashtable *ht, const void *key, size_t key_length, const
                 {
                     return CPLAT_ERR_DUPLICATE_KEY;
                 }
+
                 /* upsert は使用中の同一キーの値を書き換える。 */
                 if (hashtable_value_storage_find_free(ht, rec, 1, value, &value_storage_offset) == 0)
                 {
@@ -258,14 +284,17 @@ int hashtable_put(cplat_hashtable *ht, const void *key, size_t key_length, const
                             ht->hdr->value_storage_used,
                             hashtable_field_input_size(ht->hdr->config.value_type, 0, value));
                     }
+
                     return CPLAT_ERR_STORAGE_FULL;
                 }
+
                 hashtable_release_value(ht, rec);
                 hashtable_value_store(ht, rec, value, value_storage_offset);
                 stamp_record(ht, rec);
                 store_inserted(inserted_out, 0);
                 return CPLAT_OK;
             }
+
             /* 削除済みの同一キーは、同じレコードを再利用する。 */
             if (deleted_policy == CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE)
             {
@@ -278,11 +307,14 @@ int hashtable_put(cplat_hashtable *ht, const void *key, size_t key_length, const
                             ht->hdr->value_storage_used,
                             hashtable_field_input_size(ht->hdr->config.value_type, 0, value));
                     }
+
                     return CPLAT_ERR_STORAGE_FULL;
                 }
+
                 hashtable_release_value(ht, rec);
                 hashtable_value_store(ht, rec, value, value_storage_offset);
             }
+
             /* REVIVE はスロットに残っている削除前の値をそのまま使う。 */
             *hashtable_entry_status(ht, rec) = REC_IN_USE;
             stamp_record(ht, rec);
@@ -291,6 +323,7 @@ int hashtable_put(cplat_hashtable *ht, const void *key, size_t key_length, const
             store_inserted(inserted_out, 1);
             return CPLAT_OK;
         }
+
         cur = *hashtable_entry_next(ht, rec);
     }
 
@@ -299,11 +332,13 @@ int hashtable_put(cplat_hashtable *ht, const void *key, size_t key_length, const
     {
         rec_no = hashtable_find_best_deleted_record(ht, NULL);
     }
+
     if (rec_no == 0)
     {
         if (growth_out != NULL)
         {
             growth_out->pressure |= HASHTABLE_GROWTH_CAPACITY;
+
             if (hashtable_field_is_variable(ht->hdr->config.key_type) != 0)
             {
                 growth_out->key_storage_min = storage_min_for_transaction(
@@ -313,6 +348,7 @@ int hashtable_put(cplat_hashtable *ht, const void *key, size_t key_length, const
                     growth_out->pressure |= HASHTABLE_GROWTH_KEY_STORAGE;
                 }
             }
+
             if (hashtable_field_is_variable(ht->hdr->config.value_type) != 0)
             {
                 growth_out->value_storage_min = storage_min_for_transaction(
@@ -323,6 +359,7 @@ int hashtable_put(cplat_hashtable *ht, const void *key, size_t key_length, const
                 }
             }
         }
+
         return CPLAT_ERR_LIMIT_EXCEEDED;
     }
 
@@ -331,6 +368,7 @@ int hashtable_put(cplat_hashtable *ht, const void *key, size_t key_length, const
                                                     &key_storage_offset);
     value_has_space = hashtable_value_storage_find_free(ht, rec, *hashtable_entry_status(ht, rec) != REC_EMPTY, value,
                                                         &value_storage_offset);
+
     if (key_has_space == 0)
     {
         if (growth_out != NULL)
@@ -340,6 +378,7 @@ int hashtable_put(cplat_hashtable *ht, const void *key, size_t key_length, const
                 ht->hdr->key_storage_used, hashtable_field_input_size(ht->hdr->config.key_type, 0, key));
         }
     }
+
     if (value_has_space == 0)
     {
         if (growth_out != NULL)
@@ -349,30 +388,38 @@ int hashtable_put(cplat_hashtable *ht, const void *key, size_t key_length, const
                 ht->hdr->value_storage_used, hashtable_field_input_size(ht->hdr->config.value_type, 0, value));
         }
     }
+
     if ((key_has_space == 0) || (value_has_space == 0))
     {
         return CPLAT_ERR_STORAGE_FULL;
     }
+
     if (*hashtable_entry_status(ht, rec) != REC_EMPTY)
     {
-        hashtable_unlink_record(ht, rec); /* 削除中の既存キーをチェーンから外す。 */
+        hashtable_unlink_record(ht, rec); /* 削除中の既存キーをチェーンから外す */
         ht->hdr->deleted_count--;
         hashtable_release_key(ht, rec);
         hashtable_release_value(ht, rec);
     }
+
     hashtable_value_store(ht, rec, value, value_storage_offset);
     *hashtable_entry_status(ht, rec) = REC_IN_USE;
     hashtable_key_store(ht, rec, key, key_length, key_storage_offset);
     stamp_record(ht, rec);
+
     /* 新しいレコードをチェーン先頭へ挿す。 */
     *hashtable_entry_next(ht, rec) = bucket_head[idx];
     bucket_head[idx] = rec_no;
-    if (rec_no == ht->hdr->next_empty) /* 空きスロットを使ったときだけ、次の空きを探し直す。 */
+
+    /* 空きスロットを使ったときだけ、次の空きを探し直す。 */
+    if (rec_no == ht->hdr->next_empty)
     {
         ht->hdr->next_empty = scan_next_empty(ht, rec + 1);
     }
+
     ht->hdr->in_use_count++;
     store_inserted(inserted_out, 1);
+
     return CPLAT_OK;
 }
 
@@ -393,6 +440,7 @@ int cplat_hashtable_add_with_key_length(cplat_hashtable *ht, const void *key, si
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     return hashtable_put_with_growth(ht, key, key_length, value, deleted_policy, 0, NULL);
 }
 
@@ -413,6 +461,7 @@ int cplat_hashtable_upsert_with_key_length(cplat_hashtable *ht, const void *key,
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     return hashtable_put_with_growth(ht, key, key_length, value, CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE, 1,
                                      inserted_out);
 }
@@ -436,6 +485,7 @@ int cplat_hashtable_insert_direct_with_key_length(cplat_hashtable *ht, uint64_t 
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     return hashtable_insert_direct(ht, record, key, key_length, status, value, timestamp, generation);
 }
 
@@ -455,10 +505,12 @@ int hashtable_insert_direct(cplat_hashtable *ht, uint64_t record, const void *ke
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if ((input_points_into_table(ht, key) != 0) || (input_points_into_table(ht, value) != 0))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (hashtable_has_record_timestamp(ht) != 0)
     {
         if (timestamp == NULL)
@@ -470,22 +522,27 @@ int hashtable_insert_direct(cplat_hashtable *ht, uint64_t record, const void *ke
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if ((status < REC_IN_USE) || (status > CPLAT_HASHTABLE_LIFETIME_INFINITE))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (!hashtable_key_fits(ht, key, key_length))
     {
         return CPLAT_ERR_OUT_OF_RANGE;
     }
+
     if (hashtable_fixed_string_fits(ht->hdr->config.value_type, ht->hdr->config.value_size, value) == 0)
     {
         return CPLAT_ERR_OUT_OF_RANGE;
     }
+
     if ((record == 0) || (record > ht->hdr->config.capacity))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     /* 有限寿命では、加齢後に存在し得ない status は書かずに省略する。 */
     if ((status >= REC_DELETED) && (ht->hdr->config.lifetime != CPLAT_HASHTABLE_LIFETIME_INFINITE) &&
         (status >= (int)ht->hdr->config.lifetime))
@@ -510,6 +567,7 @@ int hashtable_insert_direct(cplat_hashtable *ht, uint64_t record, const void *ke
         {
             return CPLAT_ERR_DUPLICATE_KEY;
         }
+
         cur = *hashtable_entry_next(ht, existing);
     }
 
@@ -518,29 +576,37 @@ int hashtable_insert_direct(cplat_hashtable *ht, uint64_t record, const void *ke
     {
         return CPLAT_ERR_STORAGE_FULL;
     }
+
     hashtable_value_store(ht, rec, value, value_storage_offset);
     hashtable_key_store(ht, rec, key, key_length, key_storage_offset);
     *hashtable_entry_status(ht, rec) = (unsigned char)status;
+
     if (hashtable_has_record_timestamp(ht) != 0)
     {
         *hashtable_entry_timestamp(ht, rec) = *timestamp;
+
         if (cplat_timespec_cmp(timestamp, &ht->hdr->table_timestamp) > 0)
         {
             ht->hdr->table_timestamp = *timestamp;
         }
+
         *hashtable_entry_generation(ht, rec) = generation;
+
         if (generation > ht->hdr->table_generation)
         {
             ht->hdr->table_generation = generation;
         }
     }
+
     *hashtable_entry_next(ht, rec) = bucket_head[idx];
     bucket_head[idx] = record;
+
     /* 最小空きを使ったときだけ、次の空きを探し直す。 */
     if (ht->hdr->next_empty == record)
     {
         ht->hdr->next_empty = scan_next_empty(ht, rec + 1);
     }
+
     if (status == REC_IN_USE)
     {
         ht->hdr->in_use_count++;
@@ -549,6 +615,7 @@ int hashtable_insert_direct(cplat_hashtable *ht, uint64_t record, const void *ke
     {
         ht->hdr->deleted_count++;
     }
+
     return CPLAT_OK;
 }
 
@@ -571,14 +638,17 @@ int hashtable_update(cplat_hashtable *ht, const void *key, size_t key_length, co
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (input_points_into_table(ht, value) != 0)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (!hashtable_key_fits(ht, key, key_length))
     {
         return CPLAT_ERR_OUT_OF_RANGE;
     }
+
     if (hashtable_fixed_string_fits(ht->hdr->config.value_type, ht->hdr->config.value_size, value) == 0)
     {
         return CPLAT_ERR_OUT_OF_RANGE;
@@ -598,6 +668,7 @@ int hashtable_update(cplat_hashtable *ht, const void *key, size_t key_length, co
             {
                 return CPLAT_ERR_NOT_FOUND;
             }
+
             if (hashtable_value_storage_find_free(ht, rec, 1, value, &value_storage_offset) == 0)
             {
                 if (growth_out != NULL)
@@ -606,15 +677,19 @@ int hashtable_update(cplat_hashtable *ht, const void *key, size_t key_length, co
                     growth_out->value_storage_min = storage_min_for_transaction(
                         ht->hdr->value_storage_used, hashtable_field_input_size(ht->hdr->config.value_type, 0, value));
                 }
+
                 return CPLAT_ERR_STORAGE_FULL;
             }
+
             hashtable_release_value(ht, rec);
             hashtable_value_store(ht, rec, value, value_storage_offset);
             stamp_record(ht, rec);
             return CPLAT_OK;
         }
+
         cur = *hashtable_entry_next(ht, rec);
     }
+
     return CPLAT_ERR_NOT_FOUND;
 }
 
@@ -633,6 +708,7 @@ int cplat_hashtable_update_with_key_length(cplat_hashtable *ht, const void *key,
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     return hashtable_update_with_growth(ht, key, key_length, value);
 }
 
@@ -653,23 +729,28 @@ int hashtable_update_rec(cplat_hashtable *ht, uint64_t record, const void *value
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (input_points_into_table(ht, value) != 0)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (hashtable_fixed_string_fits(ht->hdr->config.value_type, ht->hdr->config.value_size, value) == 0)
     {
         return CPLAT_ERR_OUT_OF_RANGE;
     }
+
     if ((record == 0) || (record > ht->hdr->config.capacity))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     rec = (size_t)(record - 1);
     if (*hashtable_entry_status(ht, rec) != REC_IN_USE)
     {
         return CPLAT_ERR_NOT_FOUND;
     }
+
     if (hashtable_value_storage_find_free(ht, rec, 1, value, &value_storage_offset) == 0)
     {
         if (growth_out != NULL)
@@ -678,11 +759,14 @@ int hashtable_update_rec(cplat_hashtable *ht, uint64_t record, const void *value
             growth_out->value_storage_min = storage_min_for_transaction(
                 ht->hdr->value_storage_used, hashtable_field_input_size(ht->hdr->config.value_type, 0, value));
         }
+
         return CPLAT_ERR_STORAGE_FULL;
     }
+
     hashtable_release_value(ht, rec);
     hashtable_value_store(ht, rec, value, value_storage_offset);
     stamp_record(ht, rec);
+
     return CPLAT_OK;
 }
 
@@ -706,6 +790,7 @@ static void hashtable_expire_record(cplat_hashtable *ht, size_t rec)
     *hashtable_entry_status(ht, rec) = REC_EMPTY;
     hashtable_release_value(ht, rec);
     hashtable_release_key(ht, rec);
+
     if (hashtable_has_record_timestamp(ht) != 0)
     {
         memset(hashtable_entry_timestamp(ht, rec), 0, sizeof(cplat_timespec));
@@ -728,6 +813,7 @@ int cplat_hashtable_delete_with_key_length(cplat_hashtable *ht, const void *key,
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     return hashtable_delete(ht, key, key_length);
 }
 
@@ -742,6 +828,7 @@ int hashtable_delete(cplat_hashtable *ht, const void *key, size_t key_length)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (!hashtable_key_fits(ht, key, key_length))
     {
         return CPLAT_ERR_OUT_OF_RANGE;
@@ -759,10 +846,12 @@ int hashtable_delete(cplat_hashtable *ht, const void *key, size_t key_length)
             {
                 return CPLAT_ERR_NOT_FOUND;
             }
+
             *hashtable_entry_status(ht, rec) = REC_DELETED;
             stamp_record(ht, rec);
             ht->hdr->in_use_count--;
-            /* lifetime が 2 のときは、削除済みのまま置けないので直ちに空へ戻す。 */
+
+            /* lifetime が REC_DELETED 以下のときは、削除済みのまま置けないので直ちに空へ戻す。 */
             if (REC_DELETED >= ht->hdr->config.lifetime)
             {
                 uint64_t rec_no = (uint64_t)(rec + 1);
@@ -770,6 +859,7 @@ int hashtable_delete(cplat_hashtable *ht, const void *key, size_t key_length)
                 hashtable_expire_record(ht, rec);
                 *link = *hashtable_entry_next(ht, rec);
                 *hashtable_entry_next(ht, rec) = 0;
+
                 if ((ht->hdr->next_empty == 0) || (rec_no < ht->hdr->next_empty))
                 {
                     ht->hdr->next_empty = rec_no;
@@ -779,10 +869,13 @@ int hashtable_delete(cplat_hashtable *ht, const void *key, size_t key_length)
             {
                 ht->hdr->deleted_count++;
             }
+
             return CPLAT_OK;
         }
+
         link = hashtable_entry_next(ht, rec);
     }
+
     return CPLAT_ERR_NOT_FOUND;
 }
 
@@ -796,15 +889,18 @@ int cplat_hashtable_delete_rec(cplat_hashtable *ht, uint64_t record)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if ((record == 0) || (record > ht->hdr->config.capacity))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     rec = (size_t)(record - 1);
     if (*hashtable_entry_status(ht, rec) != REC_IN_USE)
     {
         return CPLAT_ERR_NOT_FOUND;
     }
+
     return hashtable_delete(ht, hashtable_entry_key(ht, rec), hashtable_stored_key_length(ht, rec));
 }
 
@@ -857,10 +953,11 @@ int cplat_hashtable_push_deleted(cplat_hashtable *ht)
     {
         unsigned char *status = hashtable_entry_status(ht, i);
 
-        /* 255 は増やさない。無限寿命では空へ戻さない。 */
+        /* CPLAT_HASHTABLE_LIFETIME_INFINITE は増やさない。無限寿命では空へ戻さない。 */
         if ((*status >= REC_DELETED) && (*status < CPLAT_HASHTABLE_LIFETIME_INFINITE))
         {
             (*status)++;
+
             if ((*status >= ht->hdr->config.lifetime) &&
                 (ht->hdr->config.lifetime != CPLAT_HASHTABLE_LIFETIME_INFINITE))
             {
@@ -868,6 +965,7 @@ int cplat_hashtable_push_deleted(cplat_hashtable *ht)
                 expired_count++;
             }
         }
+
         if ((new_next_empty == 0) && (*status == REC_EMPTY))
         {
             new_next_empty = (uint64_t)(i + 1);
@@ -877,6 +975,7 @@ int cplat_hashtable_push_deleted(cplat_hashtable *ht)
     hashtable_unlink_empty_chains(ht);
     ht->hdr->next_empty = new_next_empty;
     ht->hdr->deleted_count -= expired_count;
+
     return CPLAT_OK;
 }
 
@@ -894,11 +993,12 @@ int cplat_hashtable_purge_deleted(cplat_hashtable *ht)
 
     for (i = 0; i < ht->hdr->config.capacity; i++)
     {
-        /* 加齢せず、削除済みをすべて空へ戻す。255 も含める。 */
+        /* 加齢せず、削除済みをすべて空へ戻す。CPLAT_HASHTABLE_LIFETIME_INFINITE も含める。 */
         if (*hashtable_entry_status(ht, i) >= REC_DELETED)
         {
             hashtable_expire_record(ht, i);
         }
+
         if ((new_next_empty == 0) && (*hashtable_entry_status(ht, i) == REC_EMPTY))
         {
             new_next_empty = (uint64_t)(i + 1);
@@ -907,6 +1007,7 @@ int cplat_hashtable_purge_deleted(cplat_hashtable *ht)
 
     hashtable_unlink_empty_chains(ht);
     ht->hdr->next_empty = new_next_empty;
-    ht->hdr->deleted_count = 0; /* 削除済みは無条件ですべて空へ戻すため。 */
+    ht->hdr->deleted_count = 0; /* 削除済みは無条件ですべて空へ戻すため */
+
     return CPLAT_OK;
 }

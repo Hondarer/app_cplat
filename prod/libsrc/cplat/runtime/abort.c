@@ -26,8 +26,10 @@ typedef struct abort_callback_entry
     struct abort_callback_entry *next;
 } abort_callback_entry;
 
-/* 異常終了の処理中にロックを取らずに辿れるよう、先頭へ追加するだけの単方向リストとする。
-   登録の解除を提供しないため、要素は解放しない。 */
+/*
+ * 異常終了の処理中にロックを取らずに辿れるよう、先頭へ追加するだけの単方向リストとする。
+ * 登録の解除を提供しないため、要素は解放しない。
+ */
 static cplat_atomic_ptr s_abort_callbacks = CPLAT_ATOMIC_INIT(NULL);
 static cplat_atomic_i32 s_abort_started = CPLAT_ATOMIC_INIT(0);
 static THREAD_LOCAL int s_abort_running_on_this_thread = 0;
@@ -38,6 +40,7 @@ static const char *non_null_text(const char *text)
     {
         return "";
     }
+
     return text;
 }
 
@@ -56,10 +59,16 @@ int cplat_abort_register(cplat_abort_fn callback, void *context)
     {
         return CPLAT_ERR_OUT_OF_MEMORY;
     }
+
     entry->callback = callback;
     entry->context = context;
 
+    /*
+     * 他の登録と重なっても、読み取った先頭の前へ要素を一度だけ繋ぐ。
+     * 比較交換が失敗したときは、更新された先頭でやり直す。
+     */
     head = cplat_atomic_load_ptr(&s_abort_callbacks, CPLAT_MEMORY_ORDER_ACQUIRE);
+
     do
     {
         entry->next = (abort_callback_entry *)head;
@@ -77,7 +86,7 @@ static const char *kind_prefix(const cplat_abort_kind kind)
     case CPLAT_ABORT_KIND_REQUESTED:
         return "CPLAT_ABORT";
     default:
-        /* 定義外の種別でも異常終了の処理は続ける。理由は書き出せるため、接頭辞だけを汎用にする */
+        /* 定義外の種別でも異常終了の処理は続ける。理由は書き出せるため、接頭辞だけを汎用にする。 */
         return "cplat abort";
     }
 }
@@ -94,20 +103,22 @@ void cplat_abort_at(const cplat_abort_kind kind, const char *message, const char
     event.line = line;
     event.kind = kind;
 
+    /* 標準エラーへの書き出しに失敗しても、コールバックと異常終了へ進む。 */
     (void)fprintf(stderr, "%s: %s, file %s, line %d, function %s\n", kind_prefix(event.kind), event.message,
                   event.file, event.line, event.function);
     (void)fflush(stderr);
 
     if (s_abort_running_on_this_thread != 0)
     {
-        /* コールバック内で再び異常終了を始めた。残りのコールバックは呼ばずに終了する */
+        /* コールバック内で再び異常終了を始めた。残りのコールバックは呼ばずに終了する。 */
         abort();
     }
+
     s_abort_running_on_this_thread = 1;
 
     if (cplat_atomic_exchange_i32(&s_abort_started, 1, CPLAT_MEMORY_ORDER_ACQ_REL) != 0)
     {
-        /* 別のスレッドが異常終了の処理中。そのスレッドの abort() でプロセスが終了するまで待つ */
+        /* 別のスレッドが異常終了の処理中。そのスレッドの abort() でプロセスが終了するまで待つ。 */
         for (;;)
         {
             cplat_sleep_ms(1000);

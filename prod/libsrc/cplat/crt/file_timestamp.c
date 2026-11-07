@@ -1,9 +1,9 @@
 /*
- *  glibc は struct stat の st_mtim と、utimensat および AT_FDCWD を __USE_XOPEN2K8 の
- *  内側に置く。makefw の既定である -std=c17 (厳密 ISO) では __STRICT_ANSI__ が定義され、
- *  _DEFAULT_SOURCE が自動定義されないため、これらが宣言されない。
- *  サブ秒の最終更新日時を扱うために本ファイルでのみ機能テスト マクロを定義する。
- *  see: prod/libsrc/cplat/runtime/memory_lock.c の同種の定義
+ * glibc は struct stat の st_mtim と、utimensat および AT_FDCWD を __USE_XOPEN2K8 の
+ * 内側に置く。makefw の既定である -std=c17 (厳密 ISO) では __STRICT_ANSI__ が定義され、
+ * _DEFAULT_SOURCE が自動定義されないため、これらが宣言されない。
+ * サブ秒の最終更新日時を扱うために本ファイルでのみ機能テスト マクロを定義する。
+ * 同種の定義は prod/libsrc/cplat/runtime/memory_lock.c にある。
  */
 #ifndef _GNU_SOURCE
     #define _GNU_SOURCE
@@ -57,8 +57,8 @@ static int file_is_open(const cplat_file *file)
 #if defined(PLATFORM_LINUX)
 
 /*
- *  utimensat と futimens へ渡す時刻の組を組み立てる。
- *  最終アクセス日時は UTIME_OMIT で据え置き、最終更新日時だけを設定する。
+ * utimensat と futimens へ渡す時刻の組を組み立てる。
+ * 最終アクセス日時は UTIME_OMIT で据え置き、最終更新日時だけを設定する。
  */
 static void build_times(const cplat_timespec *timestamp, struct timespec *times)
 {
@@ -76,8 +76,9 @@ static void stat_to_timestamp(const struct stat *file_stat, cplat_timespec *time
 #elif defined(PLATFORM_WINDOWS)
 
 /*
- *  属性アクセスだけを要求してパスを一時的に開く。
- *  他プロセスの読み書きと削除を妨げない共有モードを指定する。
+ * 属性アクセスだけを要求してパスを一時的に開く。
+ * 他プロセスの読み書きと削除を妨げない共有モードを指定する。
+ * 成功時は開いたハンドルを返し、失敗時は INVALID_HANDLE_VALUE を返す。
  */
 static HANDLE open_for_attributes(const char *path, DWORD desired_access, cplat_error *detail_out, int *failed_out)
 {
@@ -147,9 +148,9 @@ int cplat_file_set_modified_timestamp(cplat_file *file, const cplat_timespec *ti
     }
 
     /*
-     *  両プラットフォームで挙動をそろえるため、書き込みアクセスを要求する。
-     *  Linux の futimens は読み取り専用の記述子でも所有者なら成功するため、
-     *  厳しい側の Windows に合わせてここで失敗させる。
+     * 両プラットフォームで挙動をそろえるため、書き込みアクセスを要求する。
+     * Linux の futimens は読み取り専用の記述子でも所有者なら成功するため、
+     * 厳しい側の Windows に合わせてここで失敗させる。
      */
     if (file->writable == 0)
     {
@@ -227,6 +228,7 @@ int cplat_file_get_path_modified_timestamp(const char *path, cplat_timespec *tim
             (void)CloseHandle(handle);
             return cplat_internal_error_report_windows_error(detail_out, error_code);
         }
+
         if (!CloseHandle(handle))
         {
             return cplat_internal_error_report_windows_error(detail_out, GetLastError());
@@ -283,6 +285,7 @@ int cplat_file_set_path_modified_timestamp(const char *path, const cplat_timespe
             (void)CloseHandle(handle);
             return cplat_internal_error_report_windows_error(detail_out, error_code);
         }
+
         if (!CloseHandle(handle))
         {
             return cplat_internal_error_report_windows_error(detail_out, GetLastError());

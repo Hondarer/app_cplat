@@ -72,6 +72,7 @@ const char *bench_api_name(bench_api api, int durable)
         {
             name = "stdio-rec+sync";
         }
+
         break;
     case BENCH_API_STDIO_BLK:
         name = "stdio-blk";
@@ -79,6 +80,7 @@ const char *bench_api_name(bench_api api, int durable)
         {
             name = "stdio-blk+sync";
         }
+
         break;
     case BENCH_API_MMAP_ONCE:
         name = "mmap-once";
@@ -86,6 +88,7 @@ const char *bench_api_name(bench_api api, int durable)
         {
             name = "mmap-once+sync";
         }
+
         break;
     case BENCH_API_MMAP_EACH:
         name = "mmap-each";
@@ -93,12 +96,14 @@ const char *bench_api_name(bench_api api, int durable)
         {
             name = "mmap-each+sync";
         }
+
         break;
     case BENCH_API_COUNT:
     default:
         name = "unknown";
         break;
     }
+
     return name;
 }
 
@@ -133,6 +138,7 @@ const char *bench_pattern_name(bench_pattern pattern)
         name = "unknown";
         break;
     }
+
     return name;
 }
 
@@ -147,6 +153,7 @@ static int is_mmap_api(bench_api api)
     {
         return 1;
     }
+
     return 0;
 }
 
@@ -163,6 +170,7 @@ static int invoke_iteration(void *arg)
     {
         return bench_mmap_iterate(invocation->ctx, invocation->job);
     }
+
     return bench_stdio_iterate(invocation->ctx, invocation->job);
 }
 
@@ -180,18 +188,26 @@ static int drop_page_cache(void *arg)
 #if defined(PLATFORM_LINUX)
     FILE *stream;
 
+    /*
+     * drop_caches はダーティなページを破棄しない。
+     * 破棄できるページを増やすため、書き込みの前に sync() する。
+     * see: https://docs.kernel.org/admin-guide/sysctl/vm.html#drop-caches
+     */
     sync();
     stream = cplat_fopen("/proc/sys/vm/drop_caches", "w", NULL);
     if (stream == NULL)
     {
         return -1;
     }
+
     if (fwrite("3\n", 1U, 2U, stream) != 2U)
     {
         (void)fclose(stream);
         return -1;
     }
+
     (void)fclose(stream);
+
     return 0;
 #else
     return -1;
@@ -215,6 +231,7 @@ static int parse_size(const char *text, size_t *size)
         value = (value * 10ULL) + (unsigned long long)(text[index] - '0');
         index++;
     }
+
     if (index == 0U)
     {
         return -1;
@@ -244,12 +261,15 @@ static int parse_size(const char *text, size_t *size)
     {
         return -1;
     }
+
     value = value * multiplier;
     if (value < (unsigned long long)BENCH_RECORD_SIZE)
     {
         return -1;
     }
+
     *size = (size_t)value;
+
     return 0;
 }
 
@@ -268,6 +288,7 @@ static int list_contains(const char *list, const char *name)
     {
         return 1;
     }
+
     while (*cursor != '\0')
     {
         const char *separator = strchr(cursor, ',');
@@ -281,23 +302,27 @@ static int list_contains(const char *list, const char *name)
         {
             length = (size_t)(separator - cursor);
         }
+
         if (length == name_length && strncmp(cursor, name, length) == 0)
         {
             return 1;
         }
+
         if (separator == NULL)
         {
             break;
         }
+
         cursor = separator + 1;
     }
+
     return 0;
 }
 
 /**
  *  @brief          測定対象ファイルを生成し、全レコードを初期化します。
  *  @param[in]      path  生成するファイルのパス。NULL を渡してはなりません。
- *  @param[in]      size  ファイル サイズ (バイト)。
+ *  @param[in]      size  ファイル サイズ [byte]。
  *  @return         成功時は 0、失敗時は -1 を返します。
  */
 static int create_data_file(const char *path, size_t size)
@@ -311,6 +336,7 @@ static int create_data_file(const char *path, size_t size)
     {
         return -1;
     }
+
     block = (bench_record *)cplat_calloc((size_t)BENCH_BLOCK_RECORDS, sizeof(bench_record));
     if (block == NULL)
     {
@@ -327,24 +353,29 @@ static int create_data_file(const char *path, size_t size)
         {
             chunk = (size_t)BENCH_BLOCK_RECORDS;
         }
+
         for (index = 0U; index < chunk; index++)
         {
             bench_fill_record(written + index, &block[index]);
         }
+
         if (fwrite(block, sizeof(*block), chunk, stream) != chunk)
         {
             cplat_free(block);
             (void)fclose(stream);
             return -1;
         }
+
         written += chunk;
     }
 
     cplat_free(block);
+
     if (fclose(stream) != 0)
     {
         return -1;
     }
+
     return 0;
 }
 
@@ -360,11 +391,12 @@ static uint64_t xorshift64_next(uint64_t *state)
 {
     uint64_t value = *state;
 
-    /* 符号なしの左シフトで上位ビットを捨てるのは xorshift64 の計算の一部であり、意図どおり */
+    /* 符号なしの左シフトで上位ビットを捨てるのは xorshift64 の計算の一部であり、意図どおりである。 */
     /* coverity[overflow_const : SUPPRESS] */
     value ^= value << 13;
     value ^= value >> 7;
-    /* 符号なしの左シフトで上位ビットを捨てるのは xorshift64 の計算の一部であり、意図どおり */
+
+    /* 符号なしの左シフトで上位ビットを捨てるのは xorshift64 の計算の一部であり、意図どおりである。 */
     /* coverity[overflow_const : SUPPRESS] */
     value ^= value << 17;
     *state = value;
@@ -390,10 +422,12 @@ static size_t *create_random_order(size_t record_count, size_t touch_count)
     {
         return NULL;
     }
+
     for (index = 0U; index < touch_count; index++)
     {
         order[index] = (size_t)(xorshift64_next(&state) % (uint64_t)record_count);
     }
+
     return order;
 }
 
@@ -411,16 +445,19 @@ static int is_supported_case(bench_api api, bench_pattern pattern, int durable)
     {
         return 0;
     }
+
     /* アタッチを測定ループの外で行う形態では、オープン コストの分離が成立しない。 */
     if (api == BENCH_API_MMAP_ONCE && pattern == BENCH_PATTERN_OPEN_CLOSE)
     {
         return 0;
     }
+
     /* ブロック単位アクセスは逐次パターンでのみ意味を持つ。 */
     if (api == BENCH_API_STDIO_BLK && pattern != BENCH_PATTERN_SEQ_READ && pattern != BENCH_PATTERN_SEQ_WRITE)
     {
         return 0;
     }
+
     return 1;
 }
 
@@ -447,6 +484,7 @@ static size_t resolve_touch_count(bench_pattern pattern, size_t record_count)
         {
             touch = (size_t)BENCH_RANDOM_TOUCH_MAX;
         }
+
         break;
     case BENCH_PATTERN_POINT_LOOKUP:
     case BENCH_PATTERN_OPEN_CLOSE:
@@ -457,6 +495,7 @@ static size_t resolve_touch_count(bench_pattern pattern, size_t record_count)
         touch = 0U;
         break;
     }
+
     return touch;
 }
 
@@ -466,7 +505,7 @@ static size_t resolve_touch_count(bench_pattern pattern, size_t record_count)
  *  @param[in,out]  ctx          共有状態。NULL を渡してはなりません。
  *  @param[in]      env          測定環境の情報。NULL を渡してはなりません。
  *  @param[in,out]  csv          CSV の出力先。NULL の場合は CSV を出力しません。
- *  @param[in]      min_ms       1 試行の測定区間の下限 (ミリ秒)。
+ *  @param[in]      min_ms       1 試行の測定区間の下限 [ms]。
  *  @param[in]      trials       試行回数。
  *  @param[in]      cold         ページ キャッシュを破棄して測定する場合は 1。
  *  @return         成功時は 0、失敗時は -1 を返します。
@@ -491,6 +530,7 @@ static int execute_case(const bench_case *job, bench_context *ctx, const bench_e
     {
         setup_result = bench_stdio_setup(ctx, job);
     }
+
     if (setup_result != 0)
     {
         (void)cplat_fprintf(stderr, "error: setup failed for %s/%s\n", bench_api_name(job->api, job->durable),
@@ -508,6 +548,7 @@ static int execute_case(const bench_case *job, bench_context *ctx, const bench_e
         measure_result = bench_timer_measure(invoke_iteration, &invocation, min_ms, trials, 0U, &timing);
     }
 
+    /* 測定の成否にかかわらず、準備で確保した資源を解放する。 */
     if (is_mmap_api(job->api) != 0)
     {
         bench_mmap_teardown(ctx, job);
@@ -525,18 +566,19 @@ static int execute_case(const bench_case *job, bench_context *ctx, const bench_e
     }
 
     bench_report_row(csv, env, job, ctx, &timing);
+
     return 0;
 }
 
 /**
  *  @brief          1 つのファイル サイズについて、全 API 形態と全パターンを測定します。
  *  @param[in]      dir       作業ディレクトリのパス。NULL を渡してはなりません。
- *  @param[in]      size      対象ファイルのサイズ (バイト)。
+ *  @param[in]      size      対象ファイルのサイズ [byte]。
  *  @param[in]      api_list  対象とする API 形態のリスト。NULL の場合は全形態。
  *  @param[in]      pat_list  対象とするアクセス パターンのリスト。NULL の場合は全パターン。
  *  @param[in]      env       測定環境の情報。NULL を渡してはなりません。
  *  @param[in,out]  csv       CSV の出力先。NULL の場合は CSV を出力しません。
- *  @param[in]      min_ms    1 試行の測定区間の下限 (ミリ秒)。
+ *  @param[in]      min_ms    1 試行の測定区間の下限 [ms]。
  *  @param[in]      trials    試行回数。
  *  @param[in]      cold      ページ キャッシュを破棄して測定する場合は 1。
  *  @param[in]      keep      測定後にファイルを残す場合は 1。
@@ -580,6 +622,7 @@ static int run_size(const char *dir, size_t size, const char *api_list, const ch
         {
             continue;
         }
+
         for (pattern_index = 0; pattern_index < (int)BENCH_PATTERN_COUNT; pattern_index++)
         {
             int durable;
@@ -588,6 +631,7 @@ static int run_size(const char *dir, size_t size, const char *api_list, const ch
             {
                 continue;
             }
+
             for (durable = 0; durable <= 1; durable++)
             {
                 bench_case job;
@@ -596,6 +640,7 @@ static int run_size(const char *dir, size_t size, const char *api_list, const ch
                 {
                     continue;
                 }
+
                 job.file_size = size;
                 job.api = (bench_api)api_index;
                 job.pattern = (bench_pattern)pattern_index;
@@ -603,6 +648,7 @@ static int run_size(const char *dir, size_t size, const char *api_list, const ch
                 job._pad_struct_end = 0;
 
                 ctx.touch_count = resolve_touch_count(job.pattern, record_count);
+
                 if (execute_case(&job, &ctx, env, csv, min_ms, trials, cold) != 0)
                 {
                     failures++;
@@ -612,6 +658,7 @@ static int run_size(const char *dir, size_t size, const char *api_list, const ch
     }
 
     cplat_free(order);
+
     if (keep == 0)
     {
         (void)cplat_remove(path, NULL);
@@ -621,6 +668,7 @@ static int run_size(const char *dir, size_t size, const char *api_list, const ch
     {
         return -1;
     }
+
     return 0;
 }
 
@@ -679,18 +727,22 @@ int main(int argc, char *argv[])
         cplat_argparser_print_usage(stdout);
         return EXIT_SUCCESS;
     }
+
     if (parse_result != CPLAT_OK)
     {
         cplat_argparser_print_error_messages(stderr);
         cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
     }
+
     if (min_ms <= 0 || trials <= 0 || trials > BENCH_TIMER_MAX_TRIALS)
     {
         (void)cplat_fprintf(stderr, "error: --min-ms は 1 以上、--trials は 1 以上 %d 以下を指定してください。\n",
                             BENCH_TIMER_MAX_TRIALS);
         return EXIT_FAILURE;
     }
+
+    /* ページ キャッシュを破棄できることを、測定を始める前に確認する。 */
     if (cold != 0 && drop_page_cache(NULL) != 0)
     {
         (void)cplat_fprintf(stderr, "error: ページ キャッシュを破棄できません。"
@@ -699,9 +751,10 @@ int main(int argc, char *argv[])
     }
 
     bench_report_collect_environment(dir, &env);
+
     if (cold != 0)
     {
-        memcpy(env.cache_state, "cold", 5U);
+        memcpy(env.cache_state, "cold", 5U); /* 終端 NUL を含む */
     }
 
     if (csv_path != NULL)
@@ -712,11 +765,13 @@ int main(int argc, char *argv[])
             (void)cplat_fprintf(stderr, "error: failed to open %s\n", csv_path);
             return EXIT_FAILURE;
         }
+
         bench_report_begin_csv(csv, &env);
     }
 
     bench_report_begin_table(&env);
 
+    /* カンマ区切りのサイズごとに測定する。 */
     cursor = sizes;
     while (*cursor != '\0')
     {
@@ -733,12 +788,14 @@ int main(int argc, char *argv[])
         {
             length = (size_t)(separator - cursor);
         }
+
         if (length == 0U || length >= sizeof(token))
         {
             (void)cplat_fprintf(stderr, "error: invalid size token\n");
             failures++;
             break;
         }
+
         memcpy(token, cursor, length);
         token[length] = '\0';
 
@@ -748,6 +805,7 @@ int main(int argc, char *argv[])
             failures++;
             break;
         }
+
         if (run_size(dir, size, api_list, pattern_list, &env, csv, (uint64_t)min_ms, (size_t)trials, cold, keep) != 0)
         {
             failures++;
@@ -757,6 +815,7 @@ int main(int argc, char *argv[])
         {
             break;
         }
+
         cursor = separator + 1;
     }
 
@@ -779,5 +838,6 @@ int main(int argc, char *argv[])
     {
         return EXIT_FAILURE;
     }
+
     return EXIT_SUCCESS;
 }

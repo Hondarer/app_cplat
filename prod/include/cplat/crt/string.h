@@ -12,8 +12,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_CRT_STRING_H
 #define CPLAT_CRT_STRING_H
@@ -38,7 +40,7 @@ extern "C"
     /**
      *  @brief          バッファー サイズ付き安全 strcpy (`strcpy_s` / `strlcpy` 相当) です。
      *  @param[out]     dest       コピー先バッファー。NULL を渡してはなりません。
-     *  @param[in]      dest_size  @p dest のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      dest_size  @p dest のサイズ [byte]。0 を渡してはなりません。
      *  @param[in]      src        コピー元文字列。NULL を渡してはなりません。
      *  @return         成功時は @ref CPLAT_OK 、引数不正時は @ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  バッファー不足時は @ref CPLAT_ERR_BUFFER_TOO_SMALL を返します。
@@ -51,7 +53,7 @@ extern "C"
     /**
      *  @brief          バッファー サイズ付き安全 strncpy (`strncpy_s` 相当) です。
      *  @param[out]     dest       コピー先バッファー。NULL を渡してはなりません。
-     *  @param[in]      dest_size  @p dest のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      dest_size  @p dest のサイズ [byte]。0 を渡してはなりません。
      *  @param[in]      src        コピー元文字列。NULL を渡してはなりません。
      *  @param[in]      count      コピーする最大文字数。
      *  @return         成功時は @ref CPLAT_OK 、引数不正時は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
@@ -64,7 +66,7 @@ extern "C"
     /**
      *  @brief          バッファー サイズ付き安全 strcat (`strcat_s` / `strlcat` 相当) です。
      *  @param[in,out]  dest       連結先バッファー。NULL を渡してはなりません。
-     *  @param[in]      dest_size  @p dest のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      dest_size  @p dest のサイズ [byte]。0 を渡してはなりません。
      *  @param[in]      src        連結する文字列。NULL を渡してはなりません。
      *  @return         成功時は @ref CPLAT_OK 、引数不正時は @ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  バッファー不足時は @ref CPLAT_ERR_BUFFER_TOO_SMALL を返します。
@@ -77,7 +79,7 @@ extern "C"
     /**
      *  @brief          バッファー サイズ付き安全 strncat (`strncat_s` 相当) です。
      *  @param[in,out]  dest       連結先バッファー。NULL を渡してはなりません。
-     *  @param[in]      dest_size  @p dest のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      dest_size  @p dest のサイズ [byte]。0 を渡してはなりません。
      *  @param[in]      src        連結する文字列。NULL を渡してはなりません。
      *  @param[in]      count      @p src から連結する最大文字数。
      *  @return         成功時は @ref CPLAT_OK 、引数不正時は @ref CPLAT_ERR_INVALID_ARGUMENT 、

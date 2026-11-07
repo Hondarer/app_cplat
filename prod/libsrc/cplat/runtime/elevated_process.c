@@ -93,6 +93,7 @@ static int is_current_session_interactive(void)
     {
         return -1;
     }
+
     return (session_id != 0);
 }
 
@@ -116,11 +117,13 @@ static int start_elevated_self(const char *arguments, cplat_process **child_out)
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     wide_exe_path = cplat_utf8_to_wstr_alloc(exe_path);
     if (wide_exe_path == NULL)
     {
         return CPLAT_ERR_OUT_OF_MEMORY;
     }
+
     wide_arguments = cplat_utf8_to_wstr_alloc(arguments);
     if (wide_arguments == NULL)
     {
@@ -140,6 +143,7 @@ static int start_elevated_self(const char *arguments, cplat_process **child_out)
     executed = ShellExecuteExW(&exec_info);
     cplat_free(wide_arguments);
     cplat_free(wide_exe_path);
+
     if (!executed)
     {
         return CPLAT_ERR_UNKNOWN;
@@ -151,6 +155,7 @@ static int start_elevated_self(const char *arguments, cplat_process **child_out)
         CloseHandle(exec_info.hProcess);
         return CPLAT_ERR_UNKNOWN;
     }
+
     return CPLAT_OK;
 }
 
@@ -167,10 +172,13 @@ static void write_to_own_std_stream(cplat_elevated_process_stream stream, const 
     (void)context;
 
     fp = stdout;
+
     if (stream == CPLAT_ELEVATED_PROCESS_STREAM_STDERR)
     {
         fp = stderr;
     }
+
+    /* このコールバックは戻り値を持たないため、書き込みの失敗は返さない。 */
     (void)fwrite(data, 1, size, fp);
     (void)fflush(fp);
 }
@@ -198,16 +206,19 @@ static void pump_output_pipe(HANDLE read_handle, cplat_elevated_process_stream s
         {
             return;
         }
+
         to_read = (DWORD)sizeof(buffer);
         if (available < to_read)
         {
             to_read = available;
         }
+
         bytes_read = 0;
         if (!ReadFile(read_handle, buffer, to_read, &bytes_read, NULL) || bytes_read == 0)
         {
             return;
         }
+
         output_fn(stream, buffer, (size_t)bytes_read, context);
     }
 }
@@ -244,6 +255,7 @@ static int reopen_std_stream(FILE *stream, HANDLE handle, int open_flags, DWORD 
         CloseHandle(handle);
         return -1;
     }
+
     if (new_fd != expected_fd)
     {
         if (_dup2(new_fd, expected_fd) != 0)
@@ -251,11 +263,13 @@ static int reopen_std_stream(FILE *stream, HANDLE handle, int open_flags, DWORD 
             (void)_close(new_fd);
             return -1;
         }
+
         (void)_close(new_fd);
     }
 
     clearerr(stream);
     (void)SetStdHandle(std_handle_id, (HANDLE)_get_osfhandle(expected_fd));
+
     return 0;
 }
 
@@ -298,14 +312,17 @@ static int extract_output_pipes_arg(int *argc, char **argv, DWORD *parent_pid, u
         }
 
         value = argv[i] + prefix_len;
+
         for (j = i; j < n - 1; j++)
         {
             argv[j] = argv[j + 1];
         }
+
         argv[n - 1] = NULL;
         *argc = n - 1;
         break;
     }
+
     if (value == NULL)
     {
         return 0;
@@ -317,19 +334,23 @@ static int extract_output_pipes_arg(int *argc, char **argv, DWORD *parent_pid, u
     {
         return -1;
     }
+
     value = endp + 1;
     *stdout_handle = strtoull(value, &endp, 10);
     if (endp == value || *endp != ':' || *stdout_handle == 0)
     {
         return -1;
     }
+
     value = endp + 1;
     *stderr_handle = strtoull(value, &endp, 10);
     if (endp == value || *endp != '\0' || *stderr_handle == 0)
     {
         return -1;
     }
+
     *parent_pid = (DWORD)pid;
+
     return 1;
 }
 #endif /* PLATFORM_ */
@@ -350,6 +371,7 @@ int cplat_elevated_process_is_elevated(int *elevated)
     {
         *elevated = 1;
     }
+
     return CPLAT_OK;
 #elif defined(PLATFORM_WINDOWS)
     {
@@ -369,8 +391,10 @@ int cplat_elevated_process_is_elevated(int *elevated)
                 {
                     *elevated = 1;
                 }
+
                 rc = CPLAT_OK;
             }
+
             CloseHandle(token);
         }
 
@@ -412,13 +436,16 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
         if (elevated != 0)
         {
             return CPLAT_OK;
         }
 
-        /* セッション 0 (非対話セッション) では UAC ダイアログを表示できないため、
-           昇格を試みず即座に失敗させる。 */
+        /*
+         * セッション 0 (非対話セッション) では UAC ダイアログを表示できないため、
+         * 昇格を試みず即座に失敗させる。
+         */
         if (is_current_session_interactive() == 0)
         {
             *exit_code = EXIT_FAILURE;
@@ -431,16 +458,20 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
             return CPLAT_ERR_UNKNOWN;
         }
 
-        /* 親にコンソールがある場合のみ、昇格プロセスへ親コンソールを引き継ぐ。
-           昇格プロセス側は cplat_console_attach_parent() で再接続する。 */
+        /*
+         * 親にコンソールがある場合のみ、昇格プロセスへ親コンソールを引き継ぐ。
+         * 昇格プロセス側は cplat_console_attach_parent() で再接続する。
+         */
         inherit_console = (GetConsoleWindow() != NULL);
         diag_enabled = 0;
+
         if (GetEnvironmentVariableA(CPLAT_CONSOLE_ATTACH_DIAG_ENV, NULL, 0) > 0)
         {
             diag_enabled = 1;
         }
 
         effective_arguments = arguments;
+
         if (inherit_console != 0 || diag_enabled != 0)
         {
             DWORD parent_pid;
@@ -451,32 +482,41 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
             int ret;
 
             parent_pid = 0;
-            /* 親コンソールの window ハンドルを引き継ぎ、子側が一時コンソールではなく
-               親コンソールへ確実に再接続できたかを確認できるようにする。 */
+
+            /*
+             * 親コンソールの window ハンドルを引き継ぎ、子側が一時コンソールではなく
+             * 親コンソールへ確実に再接続できたかを確認できるようにする。
+             */
             parent_console_window = 0;
             arg_len = 0;
+
             if (arguments != NULL)
             {
                 arg_len = strlen(arguments);
             }
-            /* 区切り空白 + フラグ + '=' + PID (最大 10 桁) + ':' + HWND (最大 20 桁) + 終端の余裕を確保する */
+
+            /* 区切り空白 + フラグ + '=' + PID (最大 10 桁) + ':' + HWND (最大 20 桁) + 終端の余裕を確保する。 */
             buf_sz = arg_len + 1;
+
             if (diag_enabled != 0)
             {
                 buf_sz += strlen(CPLAT_CONSOLE_ATTACH_DIAG_FLAG) + 1;
             }
+
             if (inherit_console != 0)
             {
                 parent_pid = GetCurrentProcessId();
                 parent_console_window = (unsigned long long)(uintptr_t)GetConsoleWindow();
                 buf_sz += strlen(CPLAT_CONSOLE_HANDOVER_FLAG) + 49;
             }
+
             combined_arguments = (char *)cplat_malloc(buf_sz);
             if (combined_arguments == NULL)
             {
                 *exit_code = EXIT_FAILURE;
                 return CPLAT_ERR_OUT_OF_MEMORY;
             }
+
             if (arg_len > 0)
             {
                 ret = cplat_snprintf(combined_arguments, buf_sz, "%s", arguments);
@@ -491,15 +531,18 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
             {
                 combined_arguments[0] = '\0';
             }
+
             if (diag_enabled != 0)
             {
                 const char *separator;
 
                 separator = "";
+
                 if (combined_arguments[0] != '\0')
                 {
                     separator = " ";
                 }
+
                 ret = cplat_snprintf(extra, sizeof(extra), "%s%s", separator, CPLAT_CONSOLE_ATTACH_DIAG_FLAG);
                 if (ret != CPLAT_OK)
                 {
@@ -507,6 +550,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
                     *exit_code = EXIT_FAILURE;
                     return CPLAT_ERR_UNKNOWN;
                 }
+
                 ret = cplat_strcat(combined_arguments, buf_sz, extra);
                 if (ret != CPLAT_OK)
                 {
@@ -515,15 +559,18 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
                     return CPLAT_ERR_UNKNOWN;
                 }
             }
+
             if (inherit_console != 0)
             {
                 const char *separator;
 
                 separator = "";
+
                 if (combined_arguments[0] != '\0')
                 {
                     separator = " ";
                 }
+
                 ret = cplat_snprintf(extra, sizeof(extra), "%s%s=%lu:%llu", separator, CPLAT_CONSOLE_HANDOVER_FLAG,
                                      (unsigned long)parent_pid, parent_console_window);
                 if (ret != CPLAT_OK)
@@ -532,6 +579,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
                     *exit_code = EXIT_FAILURE;
                     return CPLAT_ERR_UNKNOWN;
                 }
+
                 ret = cplat_strcat(combined_arguments, buf_sz, extra);
                 if (ret != CPLAT_OK)
                 {
@@ -540,6 +588,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
                     return CPLAT_ERR_UNKNOWN;
                 }
             }
+
             effective_arguments = combined_arguments;
         }
 
@@ -550,6 +599,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
+
         if (effective_arguments != NULL)
         {
             wide_arguments = cplat_utf8_to_wstr_alloc(effective_arguments);
@@ -561,6 +611,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
                 return CPLAT_ERR_OUT_OF_MEMORY;
             }
         }
+
         cplat_free(combined_arguments);
         combined_arguments = NULL;
 
@@ -571,8 +622,11 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
         exec_info.lpVerb = L"runas";
         exec_info.lpFile = wide_exe_path;
         exec_info.lpParameters = wide_arguments;
-        /* コンソール引き継ぎ時は昇格プロセスの一時コンソールを隠す。
-           引き継がない場合は従来どおり通常表示とする。 */
+
+        /*
+         * コンソール引き継ぎ時は昇格プロセスの一時コンソールを隠す。
+         * 引き継がない場合は従来どおり通常表示とする。
+         */
         if (inherit_console != 0)
         {
             exec_info.nShow = SW_HIDE;
@@ -591,6 +645,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
         cplat_free(wide_arguments);
         cplat_free(wide_exe_path);
 
@@ -601,6 +656,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
         if (cplat_process_wait(child_process, CPLAT_PROCESS_WAIT_FOREVER) != CPLAT_OK ||
             cplat_process_get_exit_code(child_process, &child_exit_code) != CPLAT_OK)
         {
@@ -608,6 +664,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
         cplat_process_dispose(child_process);
 
         *exit_code = child_exit_code;
@@ -617,18 +674,24 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
     {
         int elevated;
 
+        /* Linux では別プロセスを起動しないため、引数は使わない。 */
         (void)arguments;
+
+        /* Linux では実効ユーザー ID の確認が失敗しない。 */
         (void)cplat_elevated_process_is_elevated(&elevated);
+
         if (elevated == 0)
         {
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
         return CPLAT_OK;
     }
 #else
     (void)arguments;
     *exit_code = EXIT_FAILURE;
+
     return CPLAT_ERR_UNSUPPORTED;
 #endif /* PLATFORM_ */
 }
@@ -645,6 +708,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
 
     *exit_code = 0;
     *handled = 0;
+
     if (result_message != NULL && result_message_size > 0)
     {
         result_message[0] = '\0';
@@ -672,13 +736,16 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
         if (elevated != 0)
         {
             return CPLAT_OK;
         }
 
-        /* セッション 0 (非対話セッション) では UAC ダイアログを表示できないため、
-           昇格を試みず即座に失敗させる。 */
+        /*
+         * セッション 0 (非対話セッション) では UAC ダイアログを表示できないため、
+         * 昇格を試みず即座に失敗させる。
+         */
         if (is_current_session_interactive() == 0)
         {
             *exit_code = EXIT_FAILURE;
@@ -691,20 +758,25 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
             return CPLAT_ERR_UNKNOWN;
         }
 
-        /* 昇格プロセスが結果メッセージを書き込む一時ファイルを確保する。GetTempFileNameW は
-           一意な空ファイルを作成するため、並行する別プロセスとの衝突を避けられる。 */
-        /* 本関数内の一時ファイル操作はワイドのまま完結するため、*U ラッパーを経由しない */
+        /*
+         * 昇格プロセスが結果メッセージを書き込む一時ファイルを確保する。GetTempFileNameW は
+         * 一意な空ファイルを作成するため、並行する別プロセスとの衝突を避けられる。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettempfilenamew
+         */
+        /* 本関数内の一時ファイル操作はワイドのまま完結するため、*U ラッパーを経由しない。 */
         temp_len = GetTempPathW((DWORD)(sizeof(wide_temp_dir) / sizeof(wide_temp_dir[0])), wide_temp_dir);
         if (temp_len == 0 || temp_len >= sizeof(wide_temp_dir) / sizeof(wide_temp_dir[0]))
         {
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
         if (GetTempFileNameW(wide_temp_dir, L"cur", 0, wide_result_path) == 0)
         {
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
         if (cplat_wpath_to_utf8(result_path, sizeof(result_path), wide_result_path) < 0)
         {
             DeleteFileW(wide_result_path);
@@ -713,11 +785,13 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         }
 
         arg_len = 0;
+
         if (arguments != NULL)
         {
             arg_len = strlen(arguments);
         }
-        /* 区切り空白 + フラグ + '=' + '"' + パス + '"' + 終端の余裕を確保する */
+
+        /* 区切り空白 + フラグ + '=' + '"' + パス + '"' + 終端の余裕を確保する。 */
         buf_sz = arg_len + 1 + strlen(CPLAT_PROCESS_RESULT_TARGET_FLAG) + 1 + 1 + strlen(result_path) + 1 + 1;
         combined_arguments = (char *)cplat_malloc(buf_sz);
         if (combined_arguments == NULL)
@@ -725,11 +799,14 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
-        /* result_path はユーザー プロファイル配下 (ユーザー名に空白を含みうる) から生成されるため、
-           クォートしないと CRT のコマンド ライン分割で複数トークンとなり、
-           cplat_elevated_process_extract_result_target() でのフラグ抽出に失敗する。
-           クォート区間内の空白はトークン区切りにならず、クォート文字自体は結果の argv から除去される。
-           see: https://learn.microsoft.com/en-us/cpp/c-language/parsing-c-command-line-arguments */
+
+        /*
+         * result_path はユーザー プロファイル配下 (ユーザー名に空白を含みうる) から生成されるため、
+         * クォートしないと CRT のコマンド ライン分割で複数トークンとなり、
+         * cplat_elevated_process_extract_result_target() でのフラグ抽出に失敗する。
+         * クォート区間内の空白はトークン区切りにならず、クォート文字自体は結果の argv から除去される。
+         * see: https://learn.microsoft.com/en-us/cpp/c-language/parsing-c-command-line-arguments
+         */
         if (arg_len > 0)
         {
             (void)cplat_snprintf(combined_arguments, buf_sz, "%s %s=\"%s\"", arguments,
@@ -749,8 +826,10 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
+
         wide_arguments = cplat_utf8_to_wstr_alloc(combined_arguments);
         cplat_free(combined_arguments);
+
         if (wide_arguments == NULL)
         {
             cplat_free(wide_exe_path);
@@ -766,6 +845,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         exec_info.lpVerb = L"runas";
         exec_info.lpFile = wide_exe_path;
         exec_info.lpParameters = wide_arguments;
+
         /* コンソールを一切引き継がないため、昇格プロセスは常に非表示で起動する。 */
         exec_info.nShow = SW_HIDE;
 
@@ -779,6 +859,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
         cplat_free(wide_arguments);
         cplat_free(wide_exe_path);
 
@@ -790,6 +871,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
         if (cplat_process_wait(child_process, CPLAT_PROCESS_WAIT_FOREVER) != CPLAT_OK ||
             cplat_process_get_exit_code(child_process, &child_exit_code) != CPLAT_OK)
         {
@@ -798,6 +880,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
         cplat_process_dispose(child_process);
 
         if (result_message != NULL && result_message_size > 0)
@@ -815,9 +898,11 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
                 {
                     result_message[bytes_read] = '\0';
                 }
+
                 CloseHandle(h);
             }
         }
+
         DeleteFileW(wide_result_path);
 
         *exit_code = child_exit_code;
@@ -827,16 +912,20 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
     {
         int elevated;
 
-        /* 別プロセスを起動しないため、報告の余地がない。 */
+        /* 別プロセスを起動しないため、引数は使わず、報告の余地がない。 */
         (void)result_message;
         (void)result_message_size;
         (void)arguments;
+
+        /* Linux では実効ユーザー ID の確認が失敗しない。 */
         (void)cplat_elevated_process_is_elevated(&elevated);
+
         if (elevated == 0)
         {
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
         return CPLAT_OK;
     }
 #else
@@ -844,6 +933,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
     (void)result_message;
     (void)result_message_size;
     *exit_code = EXIT_FAILURE;
+
     return CPLAT_ERR_UNSUPPORTED;
 #endif /* PLATFORM_ */
 }
@@ -885,6 +975,7 @@ int cplat_elevated_process_extract_result_target(int *argc, char **argv, int *de
         {
             value_len = sizeof(s_result_target_path) - 1;
         }
+
         memcpy(s_result_target_path, argv[i] + prefix_len, value_len);
         s_result_target_path[value_len] = '\0';
 
@@ -892,22 +983,28 @@ int cplat_elevated_process_extract_result_target(int *argc, char **argv, int *de
         {
             argv[j] = argv[j + 1];
         }
+
         argv[n - 1] = NULL;
         *argc = n - 1;
+
         if (detected_out != NULL)
         {
             *detected_out = 1;
         }
+
         return CPLAT_OK;
     }
+
     return CPLAT_OK;
 #else
     (void)argc;
     (void)argv;
+
     if (detected_out != NULL)
     {
         *detected_out = 0;
     }
+
     return CPLAT_OK;
 #endif /* PLATFORM_ */
 }
@@ -931,23 +1028,27 @@ int cplat_elevated_process_report_result(const char *message)
         {
             return CPLAT_ERR_UNKNOWN;
         }
+
         h = CreateFileU(s_result_target_path, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS,
                         FILE_ATTRIBUTE_NORMAL, NULL);
         if (h == INVALID_HANDLE_VALUE)
         {
             return CPLAT_ERR_UNKNOWN;
         }
+
         len = strlen(message);
         if (!WriteFile(h, message, (DWORD)len, &written, NULL))
         {
             CloseHandle(h);
             return CPLAT_ERR_UNKNOWN;
         }
+
         CloseHandle(h);
         return CPLAT_OK;
     }
 #else
     (void)message;
+
     return CPLAT_ERR_UNKNOWN;
 #endif /* PLATFORM_ */
 }
@@ -987,13 +1088,16 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
         if (elevated != 0)
         {
             return CPLAT_OK;
         }
 
-        /* セッション 0 (非対話セッション) では UAC ダイアログを表示できないため、
-           昇格を試みず即座に失敗させる。 */
+        /*
+         * セッション 0 (非対話セッション) では UAC ダイアログを表示できないため、
+         * 昇格を試みず即座に失敗させる。
+         */
         if (is_current_session_interactive() == 0)
         {
             *exit_code = EXIT_FAILURE;
@@ -1006,16 +1110,19 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
             effective_output_fn = write_to_own_std_stream;
         }
 
-        /* UAC 昇格 (ShellExecuteExW の runas) ではハンドルを継承できないため、継承不可の
-           無名パイプを作成し、昇格プロセス側が OpenProcess(PROCESS_DUP_HANDLE) と
-           DuplicateHandle で書き込み側を自分へ複製する。高い整合性レベルのプロセスは、
-           同じユーザーの低い整合性レベルのプロセスをこの権限で開ける。
-           see: https://learn.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-duplicatehandle */
+        /*
+         * UAC 昇格 (ShellExecuteExW の runas) ではハンドルを継承できないため、継承不可の
+         * 無名パイプを作成し、昇格プロセス側が OpenProcess(PROCESS_DUP_HANDLE) と
+         * DuplicateHandle で書き込み側を自分へ複製する。高い整合性レベルのプロセスは、
+         * 同じユーザーの低い整合性レベルのプロセスをこの権限で開ける。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-duplicatehandle
+         */
         if (!CreatePipe(&stdout_read, &stdout_write, NULL, 0))
         {
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
         if (!CreatePipe(&stderr_read, &stderr_write, NULL, 0))
         {
             CloseHandle(stdout_read);
@@ -1026,11 +1133,13 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
 
         base_arguments = "";
         separator = "";
+
         if (arguments != NULL && arguments[0] != '\0')
         {
             base_arguments = arguments;
             separator = " ";
         }
+
         /* 区切り空白 + フラグ + '=' + PID (最大 10 桁) + ':' と ハンドル値 (最大 20 桁) の 2 組 + 終端 */
         buf_sz = strlen(base_arguments) + 1 + strlen(CPLAT_PROCESS_OUTPUT_PIPES_FLAG) + 1 + 10 + 2 * (1 + 20) + 1;
         combined_arguments = (char *)cplat_malloc(buf_sz);
@@ -1043,16 +1152,20 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
+
         rc = cplat_snprintf(combined_arguments, buf_sz, "%s%s%s=%lu:%llu:%llu", base_arguments, separator,
                             CPLAT_PROCESS_OUTPUT_PIPES_FLAG, (unsigned long)GetCurrentProcessId(),
                             (unsigned long long)(uintptr_t)stdout_write, (unsigned long long)(uintptr_t)stderr_write);
         child_process = NULL;
+
         if (rc == CPLAT_OK)
         {
             *handled = 1;
             rc = start_elevated_self(combined_arguments, &child_process);
         }
+
         cplat_free(combined_arguments);
+
         if (rc != CPLAT_OK)
         {
             CloseHandle(stdout_read);
@@ -1060,15 +1173,19 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
             CloseHandle(stderr_read);
             CloseHandle(stderr_write);
             *exit_code = EXIT_FAILURE;
+
             if (rc == CPLAT_ERR_OUT_OF_MEMORY)
             {
                 return CPLAT_ERR_OUT_OF_MEMORY;
             }
+
             return CPLAT_ERR_UNKNOWN;
         }
 
-        /* パイプの容量を超える出力で昇格プロセスが書き込み待ちにならないよう、
-           終了を待つ間も出力を読み取り続ける。 */
+        /*
+         * パイプの容量を超える出力で昇格プロセスが書き込み待ちにならないよう、
+         * 終了を待つ間も出力を読み取り続ける。
+         */
         do
         {
             wait_result = cplat_process_wait(child_process, CPLAT_PROCESS_OUTPUT_POLL_INTERVAL_MS);
@@ -1076,8 +1193,10 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
             pump_output_pipe(stderr_read, CPLAT_ELEVATED_PROCESS_STREAM_STDERR, effective_output_fn, context);
         } while (wait_result == CPLAT_ERR_TIMEOUT);
 
-        /* 昇格プロセスの書き込みは終了時点でパイプへ格納済みのため、残りを読み切る。
-           昇格プロセスが起動した孫プロセスが書き込み側を保持していても待機しない。 */
+        /*
+         * 昇格プロセスの書き込みは終了時点でパイプへ格納済みのため、残りを読み切る。
+         * 昇格プロセスが起動した孫プロセスが書き込み側を保持していても待機しない。
+         */
         CloseHandle(stdout_write);
         CloseHandle(stderr_write);
         pump_output_pipe(stdout_read, CPLAT_ELEVATED_PROCESS_STREAM_STDOUT, effective_output_fn, context);
@@ -1091,6 +1210,7 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
         cplat_process_dispose(child_process);
 
         *exit_code = child_exit_code;
@@ -1100,15 +1220,20 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
     {
         int elevated;
 
+        /* Linux では別プロセスを起動しないため、引数と出力のコールバックは使わない。 */
         (void)arguments;
         (void)output_fn;
         (void)context;
+
+        /* Linux では実効ユーザー ID の確認が失敗しない。 */
         (void)cplat_elevated_process_is_elevated(&elevated);
+
         if (elevated == 0)
         {
             *exit_code = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
         return CPLAT_OK;
     }
 #else
@@ -1116,6 +1241,7 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
     (void)output_fn;
     (void)context;
     *exit_code = EXIT_FAILURE;
+
     return CPLAT_ERR_UNSUPPORTED;
 #endif /* PLATFORM_ */
 }
@@ -1150,6 +1276,7 @@ int cplat_elevated_process_attach_output_pipes(int *argc, char **argv, int *atta
         {
             return CPLAT_OK;
         }
+
         if (found < 0)
         {
             return CPLAT_ERR_UNKNOWN;
@@ -1160,6 +1287,7 @@ int cplat_elevated_process_attach_output_pipes(int *argc, char **argv, int *atta
         {
             return CPLAT_ERR_UNKNOWN;
         }
+
         stdout_handle = NULL;
         stderr_handle = NULL;
         stdout_duplicated = DuplicateHandle(parent_process, (HANDLE)(uintptr_t)stdout_value, GetCurrentProcess(),
@@ -1176,15 +1304,19 @@ int cplat_elevated_process_attach_output_pipes(int *argc, char **argv, int *atta
             {
                 CloseHandle(stdout_handle);
             }
+
             if (stderr_duplicated)
             {
                 CloseHandle(stderr_handle);
             }
+
             return CPLAT_ERR_UNKNOWN;
         }
 
-        /* 昇格プロセスのコンソールは非表示のため、標準入力の読み取りで応答不能にならないよう
-           NUL デバイスへ付け替える。ワイド文字列リテラルを渡すため、CreateFileU を使わない。 */
+        /*
+         * 昇格プロセスのコンソールは非表示のため、標準入力の読み取りで応答不能にならないよう
+         * NUL デバイスへ付け替える。ワイド文字列リテラルを渡すため、CreateFileU を使わない。
+         */
         stdin_handle =
             CreateFileW(L"NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
         if (stdin_handle == INVALID_HANDLE_VALUE)
@@ -1201,11 +1333,13 @@ int cplat_elevated_process_attach_output_pipes(int *argc, char **argv, int *atta
             CloseHandle(stdin_handle);
             return CPLAT_ERR_UNKNOWN;
         }
+
         if (reopen_std_stream(stderr, stderr_handle, _O_BINARY | _O_WRONLY, STD_ERROR_HANDLE) != 0)
         {
             CloseHandle(stdin_handle);
             return CPLAT_ERR_UNKNOWN;
         }
+
         if (reopen_std_stream(stdin, stdin_handle, _O_BINARY | _O_RDONLY, STD_INPUT_HANDLE) != 0)
         {
             return CPLAT_ERR_UNKNOWN;
@@ -1218,11 +1352,13 @@ int cplat_elevated_process_attach_output_pipes(int *argc, char **argv, int *atta
         {
             *attached_out = 1;
         }
+
         return CPLAT_OK;
     }
 #else
     (void)argc;
     (void)argv;
+
     return CPLAT_OK;
 #endif /* PLATFORM_ */
 }

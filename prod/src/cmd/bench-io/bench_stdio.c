@@ -57,6 +57,7 @@ static int seq_read_by_record(bench_context *ctx)
     {
         return -1;
     }
+
     for (index = 0U; index < ctx->touch_count; index++)
     {
         bench_record record;
@@ -66,9 +67,12 @@ static int seq_read_by_record(bench_context *ctx)
             (void)fclose(stream);
             return -1;
         }
+
         ctx->checksum += accumulate(&record);
     }
+
     (void)fclose(stream);
+
     return 0;
 }
 
@@ -87,6 +91,7 @@ static int seq_read_by_block(bench_context *ctx, bench_record *block)
     {
         return -1;
     }
+
     while (remaining > 0U)
     {
         size_t chunk = (size_t)BENCH_BLOCK_RECORDS;
@@ -96,18 +101,23 @@ static int seq_read_by_block(bench_context *ctx, bench_record *block)
         {
             chunk = remaining;
         }
+
         if (fread(block, sizeof(*block), chunk, stream) != chunk)
         {
             (void)fclose(stream);
             return -1;
         }
+
         for (index = 0U; index < chunk; index++)
         {
             ctx->checksum += accumulate(&block[index]);
         }
+
         remaining -= chunk;
     }
+
     (void)fclose(stream);
+
     return 0;
 }
 
@@ -126,23 +136,32 @@ static int seq_write_by_record(bench_context *ctx, int durable)
     {
         return -1;
     }
+
     for (index = 0U; index < ctx->touch_count; index++)
     {
         bench_record record;
 
         bench_fill_record(index, &record);
+
         if (fwrite(&record, sizeof(record), 1U, stream) != 1U)
         {
             (void)fclose(stream);
             return -1;
         }
     }
+
+    /*
+     * fsync 相当は行わない。cplat にそのラッパーがない。
+     * 正本は app/cplat/docs/fileio-api-selection-guideline.md の「耐久性を要求した場合」節である。
+     */
     if (durable != 0 && fflush(stream) != 0)
     {
         (void)fclose(stream);
         return -1;
     }
+
     (void)fclose(stream);
+
     return 0;
 }
 
@@ -162,6 +181,7 @@ static int seq_write_by_block(bench_context *ctx, bench_record *block, int durab
     {
         return -1;
     }
+
     while (written < ctx->touch_count)
     {
         size_t chunk = ctx->touch_count - written;
@@ -171,23 +191,33 @@ static int seq_write_by_block(bench_context *ctx, bench_record *block, int durab
         {
             chunk = (size_t)BENCH_BLOCK_RECORDS;
         }
+
         for (index = 0U; index < chunk; index++)
         {
             bench_fill_record(written + index, &block[index]);
         }
+
         if (fwrite(block, sizeof(*block), chunk, stream) != chunk)
         {
             (void)fclose(stream);
             return -1;
         }
+
         written += chunk;
     }
+
+    /*
+     * fsync 相当は行わない。cplat にそのラッパーがない。
+     * 正本は app/cplat/docs/fileio-api-selection-guideline.md の「耐久性を要求した場合」節である。
+     */
     if (durable != 0 && fflush(stream) != 0)
     {
         (void)fclose(stream);
         return -1;
     }
+
     (void)fclose(stream);
+
     return 0;
 }
 
@@ -205,6 +235,7 @@ static int rand_read(bench_context *ctx)
     {
         return -1;
     }
+
     for (index = 0U; index < ctx->touch_count; index++)
     {
         bench_record record;
@@ -215,14 +246,18 @@ static int rand_read(bench_context *ctx)
             (void)fclose(stream);
             return -1;
         }
+
         if (fread(&record, sizeof(record), 1U, stream) != 1U)
         {
             (void)fclose(stream);
             return -1;
         }
+
         ctx->checksum += accumulate(&record);
     }
+
     (void)fclose(stream);
+
     return 0;
 }
 
@@ -241,6 +276,7 @@ static int rand_update(bench_context *ctx, int durable)
     {
         return -1;
     }
+
     for (index = 0U; index < ctx->touch_count; index++)
     {
         bench_record record;
@@ -251,30 +287,41 @@ static int rand_update(bench_context *ctx, int durable)
             (void)fclose(stream);
             return -1;
         }
+
         if (fread(&record, sizeof(record), 1U, stream) != 1U)
         {
             (void)fclose(stream);
             return -1;
         }
+
         record.counter++;
         ctx->checksum += accumulate(&record);
+
         if (cplat_fseek(stream, offset, SEEK_SET) != 0)
         {
             (void)fclose(stream);
             return -1;
         }
+
         if (fwrite(&record, sizeof(record), 1U, stream) != 1U)
         {
             (void)fclose(stream);
             return -1;
         }
     }
+
+    /*
+     * fsync 相当は行わない。cplat にそのラッパーがない。
+     * 正本は app/cplat/docs/fileio-api-selection-guideline.md の「耐久性を要求した場合」節である。
+     */
     if (durable != 0 && fflush(stream) != 0)
     {
         (void)fclose(stream);
         return -1;
     }
+
     (void)fclose(stream);
+
     return 0;
 }
 
@@ -293,18 +340,22 @@ static int point_lookup(bench_context *ctx)
     {
         return -1;
     }
+
     if (cplat_fseek(stream, offset, SEEK_SET) != 0)
     {
         (void)fclose(stream);
         return -1;
     }
+
     if (fread(&record, sizeof(record), 1U, stream) != 1U)
     {
         (void)fclose(stream);
         return -1;
     }
+
     ctx->checksum += accumulate(&record);
     (void)fclose(stream);
+
     return 0;
 }
 
@@ -321,8 +372,10 @@ static int open_close(bench_context *ctx)
     {
         return -1;
     }
-    ctx->checksum++;
+
+    ctx->checksum++; /* 読み取るレコードがなく、最適化による除去を防ぐ */
     (void)fclose(stream);
+
     return 0;
 }
 
@@ -336,6 +389,7 @@ int bench_stdio_setup(bench_context *ctx, const bench_case *item)
     {
         return -1;
     }
+
     if (item->api != BENCH_API_STDIO_BLK)
     {
         ctx->state = NULL;
@@ -347,13 +401,16 @@ int bench_stdio_setup(bench_context *ctx, const bench_case *item)
     {
         return -1;
     }
+
     state->block = (bench_record *)cplat_calloc((size_t)BENCH_BLOCK_RECORDS, sizeof(bench_record));
     if (state->block == NULL)
     {
         cplat_free(state);
         return -1;
     }
+
     ctx->state = state;
+
     return 0;
 }
 
@@ -368,6 +425,7 @@ int bench_stdio_iterate(bench_context *ctx, const bench_case *item)
     {
         return -1;
     }
+
     state = (stdio_state *)ctx->state;
 
     switch (item->pattern)
@@ -381,6 +439,7 @@ int bench_stdio_iterate(bench_context *ctx, const bench_case *item)
         {
             result = seq_read_by_record(ctx);
         }
+
         break;
     case BENCH_PATTERN_SEQ_WRITE:
         if (item->api == BENCH_API_STDIO_BLK)
@@ -391,6 +450,7 @@ int bench_stdio_iterate(bench_context *ctx, const bench_case *item)
         {
             result = seq_write_by_record(ctx, item->durable);
         }
+
         break;
     case BENCH_PATTERN_RAND_READ:
         result = rand_read(ctx);
@@ -409,6 +469,7 @@ int bench_stdio_iterate(bench_context *ctx, const bench_case *item)
         result = -1;
         break;
     }
+
     return result;
 }
 
@@ -422,11 +483,13 @@ void bench_stdio_teardown(bench_context *ctx, const bench_case *item)
     {
         return;
     }
+
     state = (stdio_state *)ctx->state;
     if (state == NULL)
     {
         return;
     }
+
     cplat_free(state->block);
     cplat_free(state);
     ctx->state = NULL;

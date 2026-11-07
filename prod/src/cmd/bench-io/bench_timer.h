@@ -6,7 +6,7 @@
  *  @date           2026/07/29
  *  @version        1.0.0
  *
- *  Windows の単調増加クロックは `GetTickCount64()` に基づき分解能が約 15 ms であるため、
+ *  Windows の単調増加クロックは `GetTickCount64()` に基づき分解能が約 15 [ms] であるため、
  *  1 回の測定区間が指定時間以上になるまで反復回数を倍増させ、
  *  クロック分解能の影響を相対的に小さくします。
  *
@@ -27,9 +27,9 @@
 typedef struct bench_timing
 {
     uint64_t iterations; /**< 1 試行あたりの反復回数。 */
-    uint64_t median_ns;  /**< 1 反復あたりの所要時間の中央値 (ナノ秒)。 */
-    uint64_t min_ns;     /**< 1 反復あたりの所要時間の最小値 (ナノ秒)。 */
-    uint64_t max_ns;     /**< 1 反復あたりの所要時間の最大値 (ナノ秒)。 */
+    uint64_t median_ns;  /**< 1 反復あたりの所要時間の中央値 [ns]。 */
+    uint64_t min_ns;     /**< 1 反復あたりの所要時間の最小値 [ns]。 */
+    uint64_t max_ns;     /**< 1 反復あたりの所要時間の最大値 [ns]。 */
 } bench_timing;
 
 /**
@@ -49,7 +49,7 @@ typedef int (*bench_iteration_fn)(void *arg);
  *  @brief          測定対象を繰り返し実行し、1 反復あたりの所要時間を求めます。
  *  @param[in]      fn               測定対象を 1 反復ぶん実行するコールバック。NULL を渡してはなりません。
  *  @param[in,out]  arg              @p fn へ渡すデータ。
- *  @param[in]      min_duration_ms  1 試行の測定区間の下限 (ミリ秒)。1 以上を指定します。
+ *  @param[in]      min_duration_ms  1 試行の測定区間の下限 [ms]。1 以上を指定します。
  *  @param[in]      trial_count      試行回数。1 以上 @ref BENCH_TIMER_MAX_TRIALS 以下を指定します。
  *  @param[in]      fixed_iterations 反復回数を固定する場合はその値、自動調整する場合は 0 を指定します。
  *  @param[out]     timing           測定結果の格納先。NULL を渡してはなりません。

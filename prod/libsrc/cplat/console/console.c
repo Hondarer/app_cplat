@@ -32,12 +32,13 @@
     #include <stdlib.h> /* strtoul, strtoull */
     #include <string.h> /* strncmp, strlen */
 
-/* 初期化前のコンソール状態を保存 */
+/* 初期化前のコンソール状態を保存する。 */
 static UINT s_orig_output_cp = 0;
 static UINT s_orig_input_cp = 0;
 static DWORD s_orig_stdout_mode = 0;
 static DWORD s_orig_stderr_mode = 0;
-/* 初期化状態と親コンソールへの再接続の有無。ロックを取らずに複数のスレッドから参照するため、アトミック型で保持する */
+
+/* 初期化状態と親コンソールへの再接続の有無。ロックを取らずに複数のスレッドから参照するため、アトミック型で保持する。 */
 static cplat_atomic_i32 s_initialized = CPLAT_ATOMIC_INIT(0);
 static cplat_atomic_i32 s_attached_parent = CPLAT_ATOMIC_INIT(0);
 static cplat_once_flag s_console_shutdown_once = {0};
@@ -96,6 +97,7 @@ static int reopen_crt_std_fd(HANDLE handle, FILE *stream, const char *name, int 
         console_diag_logf("reopen %s _open_osfhandle failed errno=%d expected_fd=%d", name, errno, expected_fd);
         return -1;
     }
+
     if (new_fd != expected_fd)
     {
         console_diag_logf("reopen %s unexpected fd new_fd=%d expected_fd=%d", name, new_fd, expected_fd);
@@ -103,9 +105,14 @@ static int reopen_crt_std_fd(HANDLE handle, FILE *stream, const char *name, int 
 
     clearerr(stream);
     console_diag_logf("reopen %s success fd=%d", name, new_fd);
+
     return 0;
 }
 
+/*
+ * 環境変数 CPLAT_CONSOLE_ATTACH_DIAG の設定値から診断ログが有効かを判定する。
+ * 有効な場合は 1 を返す。未設定、空文字、"0"、バッファーに収まらない 8 文字以上の値の場合は 0 を返す。
+ */
 static int console_diag_enabled(void)
 {
     char value[8];
@@ -116,13 +123,19 @@ static int console_diag_enabled(void)
     {
         return 0;
     }
+
     if (len == 1 && value[0] == '0')
     {
         return 0;
     }
+
     return 1;
 }
 
+/*
+ * 診断ログ ファイルの絶対パスを %TEMP% 配下に生成する。
+ * 成功時は 0、失敗時は -1 を返す。
+ */
 static int build_console_diag_log_path(wchar_t *path_out, size_t path_len)
 {
     static const wchar_t file_name[] = L"cplat_console_attach.log";
@@ -135,7 +148,7 @@ static int build_console_diag_log_path(wchar_t *path_out, size_t path_len)
         return -1;
     }
 
-    /* 取得したパスは以降 CreateFileW へワイドのまま渡すため、*U ラッパーを経由しない */
+    /* 取得したパスは以降 CreateFileW へワイドのまま渡すため、*U ラッパーを経由しない。 */
     temp_len = GetTempPathW((DWORD)(sizeof(temp_path) / sizeof(temp_path[0])), temp_path);
     if (temp_len == 0 || temp_len >= sizeof(temp_path) / sizeof(temp_path[0]))
     {
@@ -147,6 +160,7 @@ static int build_console_diag_log_path(wchar_t *path_out, size_t path_len)
     {
         return -1;
     }
+
     return 0;
 }
 
@@ -172,12 +186,14 @@ static void console_diag_logf(const char *fmt, ...)
     {
         return;
     }
+
     if (build_console_diag_log_path(path, sizeof(path) / sizeof(path[0])) != 0)
     {
         return;
     }
 
     GetLocalTime(&now);
+
     if (cplat_snprintf(line, sizeof(line), "%04u-%02u-%02u %02u:%02u:%02u.%03u pid=%lu ", (unsigned int)now.wYear,
                        (unsigned int)now.wMonth, (unsigned int)now.wDay, (unsigned int)now.wHour,
                        (unsigned int)now.wMinute, (unsigned int)now.wSecond, (unsigned int)now.wMilliseconds,
@@ -185,11 +201,13 @@ static void console_diag_logf(const char *fmt, ...)
     {
         return;
     }
+
     prefix_len = (int)strlen(line);
 
     va_start(args, fmt);
     message_len = vsnprintf(message, sizeof(message), fmt, args); /* 置換対象外: 意図的な切り詰め */
     va_end(args);
+
     if (message_len < 0)
     {
         return;
@@ -203,17 +221,19 @@ static void console_diag_logf(const char *fmt, ...)
             return;
         }
     }
+
     memcpy(line + prefix_len, message, (size_t)message_len);
     line[prefix_len + message_len] = '\n';
     line[prefix_len + message_len + 1] = '\0';
 
-    /* path は GetTempPathW 由来のワイド文字列であり UTF-8 が関与しないため CreateFileU を使わない */
+    /* path は GetTempPathW 由来のワイド文字列であり、UTF-8 が関与しないため CreateFileU を使わない。 */
     handle = CreateFileW(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS,
                          FILE_ATTRIBUTE_NORMAL, NULL);
     if (handle == INVALID_HANDLE_VALUE)
     {
         return;
     }
+
     (void)WriteFile(handle, line, (DWORD)(prefix_len + message_len + 1), &written, NULL);
     CloseHandle(handle);
 }
@@ -230,7 +250,7 @@ void cplat_console_init(void)
 
     cplat_call_once(&s_console_shutdown_once, register_console_shutdown_callback);
 
-    /* 二重初期化を防ぐ */
+    /* 二重初期化を防ぐ。 */
     {
         int32_t expected = 0;
 
@@ -238,9 +258,11 @@ void cplat_console_init(void)
             return;
     }
 
-    /* stdout / stderr のいずれもコンソール (TTY) でなければ何もしない。
-       stdout だけをリダイレクトした場合も stderr のコンソール出力に設定が要るため、
-       コンソール全体で共有するコード ページを UTF-8 へ変更する (利用側の制約とする) */
+    /*
+     * stdout / stderr のいずれもコンソール (TTY) でなければ何もしない。
+     * stdout だけをリダイレクトした場合も stderr のコンソール出力に設定が要るため、
+     * コンソール全体で共有するコード ページを UTF-8 へ変更する (利用側の制約とする)。
+     */
     if (!cplat_isatty(CPLAT_STREAM_STDOUT) && !cplat_isatty(CPLAT_STREAM_STDERR))
     {
         console_diag_logf("console_init isatty=0 skip");
@@ -248,7 +270,7 @@ void cplat_console_init(void)
         return;
     }
 
-    /* コンソールの入出力コード ページを UTF-8 に設定 (すでに UTF-8 なら変更しない) */
+    /* コンソールの入出力コード ページを UTF-8 に設定する (すでに UTF-8 なら変更しない)。 */
     current_cp = GetConsoleCP();
     if (current_cp != CP_UTF8)
     {
@@ -263,13 +285,14 @@ void cplat_console_init(void)
         SetConsoleOutputCP(CP_UTF8);
     }
 
-    /* Virtual Terminal Processing を有効化 (ANSI エスケープ シーケンス対応) */
+    /* stdout の Virtual Terminal Processing を有効化する (ANSI エスケープ シーケンス対応)。 */
     h = GetStdHandle(STD_OUTPUT_HANDLE);
     if (GetConsoleMode(h, &mode))
     {
         if (!(mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING))
         {
             s_orig_stdout_mode = mode;
+
             if (!SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
             {
                 console_diag_logf("console_init SetConsoleMode stdout failed handle=0x%p error=%lu", (void *)h,
@@ -283,12 +306,14 @@ void cplat_console_init(void)
                           (unsigned long)GetLastError());
     }
 
+    /* stderr の Virtual Terminal Processing を有効化する。 */
     h = GetStdHandle(STD_ERROR_HANDLE);
     if (GetConsoleMode(h, &mode))
     {
         if (!(mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING))
         {
             s_orig_stderr_mode = mode;
+
             if (!SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
             {
                 console_diag_logf("console_init SetConsoleMode stderr failed handle=0x%p error=%lu", (void *)h,
@@ -309,7 +334,7 @@ void cplat_console_dispose(void)
 {
     HANDLE h;
 
-    /* initialized を 1 → 0 に変更。変更できなければ元々未初期化なので何もしない。 */
+    /* s_initialized を 1 から 0 に変更する。変更できなければ元から未初期化のため何もしない。 */
     {
         int32_t expected = 1;
 
@@ -317,7 +342,7 @@ void cplat_console_dispose(void)
             return;
     }
 
-    /* コンソール モードを元に戻す */
+    /* コンソール モードを元に戻す。 */
     if (s_orig_stdout_mode != 0)
     {
         h = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -332,7 +357,7 @@ void cplat_console_dispose(void)
         s_orig_stderr_mode = 0;
     }
 
-    /* コード ページを元に戻す */
+    /* コード ページを元に戻す。 */
     if (s_orig_input_cp != 0)
     {
         SetConsoleCP(s_orig_input_cp);
@@ -380,6 +405,7 @@ static int extract_handover_args(int *argc, char **argv, DWORD *pid_out, HWND *w
     pid = 0;
     window = NULL;
 
+    /* argv から引き継ぎフラグを探索する。 */
     for (i = 1; i < n; i++)
     {
         char *endp;
@@ -398,7 +424,7 @@ static int extract_handover_args(int *argc, char **argv, DWORD *pid_out, HWND *w
             pid = (DWORD)value;
             found = 1;
 
-            /* 区切り ':' に続く HWND を任意で解析する (旧形式の PID のみでも受理する) */
+            /* 区切り ':' に続く HWND を任意で解析する (旧形式の PID のみでも受理する)。 */
             if (*endp == ':')
             {
                 const char *window_text = endp + 1;
@@ -406,6 +432,7 @@ static int extract_handover_args(int *argc, char **argv, DWORD *pid_out, HWND *w
                 unsigned long long window_value;
 
                 window_value = strtoull(window_text, &window_endp, 10);
+
                 if (window_endp != window_text && *window_endp == '\0')
                 {
                     window = (HWND)(uintptr_t)window_value;
@@ -413,11 +440,12 @@ static int extract_handover_args(int *argc, char **argv, DWORD *pid_out, HWND *w
             }
         }
 
-        /* フラグを取り除いて後続を前へ詰める (不正値でも除去する) */
+        /* フラグを取り除いて後続を前へ詰める (不正値でも除去する)。 */
         for (j = i; j < n - 1; j++)
         {
             argv[j] = argv[j + 1];
         }
+
         argv[n - 1] = NULL;
         *argc = n - 1;
         break;
@@ -428,9 +456,14 @@ static int extract_handover_args(int *argc, char **argv, DWORD *pid_out, HWND *w
         *pid_out = pid;
         *window_out = window;
     }
+
     return found;
 }
 
+/*
+ * argv から診断ログ有効化フラグを取り出して除去する。
+ * フラグを検出した場合は 1、検出しなかった場合は 0 を返す。
+ */
 static int extract_diag_arg(int *argc, char **argv)
 {
     int n;
@@ -442,6 +475,8 @@ static int extract_diag_arg(int *argc, char **argv)
     }
 
     n = *argc;
+
+    /* argv から診断ログ有効化フラグを探索する。 */
     for (i = 1; i < n; i++)
     {
         int j;
@@ -451,14 +486,17 @@ static int extract_diag_arg(int *argc, char **argv)
             continue;
         }
 
+        /* フラグを取り除いて後続を前へ詰める。 */
         for (j = i; j < n - 1; j++)
         {
             argv[j] = argv[j + 1];
         }
+
         argv[n - 1] = NULL;
         *argc = n - 1;
         return 1;
     }
+
     return 0;
 }
 
@@ -483,32 +521,39 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
 
     parent_pid = 0;
     parent_window = NULL;
+
     if (extract_diag_arg(argc, argv) != 0)
     {
         (void)SetEnvironmentVariableA(CPLAT_CONSOLE_ATTACH_DIAG_ENV, "1");
     }
+
     if (!extract_handover_args(argc, argv, &parent_pid, &parent_window))
     {
         return CPLAT_OK;
     }
+
     argc_value = -1;
+
     if (argc != NULL)
     {
         argc_value = *argc;
     }
 
-    /* 昇格時に割り当てられた一時コンソールを切り離し、親コンソールへ接続する。
-       昇格直後は子の一時コンソール (conhost) 割り当てが非同期に進むため、
-       自前コンソールへ繋がったままだと AttachConsole が ERROR_ACCESS_DENIED で
-       失敗することがある。割り当てが落ち着くまで有界リトライする。\n
-       さらに、AttachConsole が成功しても親コンソールの window ハンドルが取得できる
-       状態になるまでには間がある。親 HWND が判っている場合は GetConsoleWindow() が
-       親 HWND に一致するまで待ち、一時コンソールへ出力が吸われるのを防ぐ。
-       全試行で一致しない場合は、素の AttachConsole 成功を受理してフォールバックする。 */
+    /*
+     * 昇格時に割り当てられた一時コンソールを切り離し、親コンソールへ接続する。
+     * 昇格直後は子の一時コンソール (conhost) 割り当てが非同期に進むため、
+     * 自前コンソールへ繋がったままだと AttachConsole が ERROR_ACCESS_DENIED で
+     * 失敗することがある。割り当てが落ち着くまで有界リトライする。
+     * さらに、AttachConsole が成功しても親コンソールの window ハンドルが取得できる
+     * 状態になるまでには間がある。親 HWND が判っている場合は GetConsoleWindow() が
+     * 親 HWND に一致するまで待ち、一時コンソールへ出力が吸われるのを防ぐ。
+     * 全試行で一致しない場合は、素の AttachConsole 成功を受理してフォールバックする。
+     */
     attached = 0;
     attached_once = 0;
     console_diag_logf("attach_parent begin parent_pid=%lu parent_hwnd=0x%p argc=%d", (unsigned long)parent_pid,
                       (void *)parent_window, argc_value);
+
     for (attempt = 0; attempt < CPLAT_CONSOLE_ATTACH_MAX_ATTEMPTS; attempt++)
     {
         if (attached_once == 0)
@@ -524,6 +569,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
             {
                 attached_once = 1;
                 console_diag_logf("attempt=%d AttachConsole success hwnd=0x%p", attempt, (void *)GetConsoleWindow());
+
                 if (parent_window == NULL)
                 {
                     attached = 1;
@@ -543,14 +589,17 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
 
             console_diag_logf("attempt=%d attached_once current_hwnd=0x%p parent_hwnd=0x%p", attempt,
                               (void *)current_window, (void *)parent_window);
+
             if (current_window == parent_window)
             {
                 attached = 1;
                 break;
             }
         }
+
         Sleep(CPLAT_CONSOLE_ATTACH_RETRY_INTERVAL_MS);
     }
+
     if (attached == 0 && attached_once == 0)
     {
         /* AttachConsole 自体が一度も成功しなかった場合のみ失敗とする。 */
@@ -558,12 +607,15 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
                           (void *)GetConsoleWindow());
         return CPLAT_ERR_UNKNOWN;
     }
+
     console_diag_logf("attach_parent proceed attached=%d attached_once=%d final_hwnd=0x%p", attached, attached_once,
                       (void *)GetConsoleWindow());
 
-    /* Win32 レベルの標準ハンドルを親コンソールへ付け替える
-       (GetStdHandle / WriteConsole 系や tracer の stderr sink が参照する) */
-    /* 次の 3 件はワイド文字列リテラルを渡すため、CreateFileU を使わない */
+    /*
+     * Win32 レベルの標準ハンドルを親コンソールへ付け替える
+     * (GetStdHandle / WriteConsole 系や tracer の stderr sink が参照する)。
+     */
+    /* 次の 3 件はワイド文字列リテラルを渡すため、CreateFileU を使わない。 */
     h_out = CreateFileW(L"CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
                         OPEN_EXISTING, 0, NULL);
     if (h_out != INVALID_HANDLE_VALUE)
@@ -577,6 +629,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
 
         console_diag_logf("SetStdHandle stdout skipped CreateFileW failed error=%lu", (unsigned long)open_error);
     }
+
     h_err = CreateFileW(L"CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
                         OPEN_EXISTING, 0, NULL);
     if (h_err != INVALID_HANDLE_VALUE)
@@ -590,6 +643,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
 
         console_diag_logf("SetStdHandle stderr skipped CreateFileW failed error=%lu", (unsigned long)open_error);
     }
+
     h_in = CreateFileW(L"CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
                        0, NULL);
     if (h_in != INVALID_HANDLE_VALUE)
@@ -604,26 +658,33 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
         console_diag_logf("SetStdHandle stdin skipped CreateFileW failed error=%lu", (unsigned long)open_error);
     }
 
-    /* CRT レベルの標準ストリームを親コンソールへ再接続する (fgets 等の入力で参照する)。
-       printf/fprintf (FILE* 経由) は再接続後に書き込みを拒否することがあるため
-       (README.md 参照)、再接続後の出力には本ファイル末尾の cplat_console_write()
-       (Win32 の WriteConsoleU を呼ぶ) を使うこと。本関数による fd の再接続は、
-       fgets 等の入力経路向けに維持している。
-       CONOUT$ / CONIN$ は GENERIC_READ | GENERIC_WRITE で開いているため `_O_RDWR` を渡す。 */
+    /*
+     * CRT レベルの標準ストリームを親コンソールへ再接続する (fgets 等の入力で参照する)。
+     * printf/fprintf (FILE* 経由) は再接続後に書き込みを拒否することがあるため
+     * (README.md 参照)、再接続後の出力には本ファイル末尾の cplat_console_write()
+     * (Win32 の WriteConsoleU を呼ぶ) を使うこと。本関数による fd の再接続は、
+     * fgets 等の入力経路向けに維持している。
+     * CONOUT$ / CONIN$ は GENERIC_READ | GENERIC_WRITE で開いているため _O_RDWR を渡す。
+     */
     if (reopen_crt_std_fd(h_out, stdout, "stdout", _O_TEXT | _O_RDWR) == 0)
     {
-        /* 失敗しても Win32 ハンドルは付け替え済みのため処理を継続する */
+        /* 失敗しても Win32 ハンドルは付け替え済みのため処理を継続する。 */
         (void)setvbuf(stdout, NULL, _IONBF, 0);
     }
+
     if (reopen_crt_std_fd(h_err, stderr, "stderr", _O_TEXT | _O_RDWR) == 0)
     {
-        /* 失敗しても Win32 ハンドルは付け替え済みのため処理を継続する */
+        /* 失敗しても Win32 ハンドルは付け替え済みのため処理を継続する。 */
         (void)setvbuf(stderr, NULL, _IONBF, 0);
     }
+
+    /* 失敗しても Win32 ハンドルは付け替え済みのため処理を継続する。 */
     (void)reopen_crt_std_fd(h_in, stdin, "stdin", _O_TEXT | _O_RDWR);
 
-    /* 親コンソールへ再接続したことを記録する。終了時のフラッシュ後に conhost が
-       書き込みを処理し終えるのを待ち合わせるために参照する。 */
+    /*
+     * 親コンソールへ再接続したことを記録する。終了時のフラッシュ後に conhost が
+     * 書き込みを処理し終えるのを待ち合わせるために参照する。
+     */
     cplat_atomic_store_i32(&s_attached_parent, 1, CPLAT_MEMORY_ORDER_SEQ_CST);
     console_diag_logf("attach_parent end attached=%d attached_once=%d", attached, attached_once);
 
@@ -631,6 +692,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
     {
         *attached_out = 1;
     }
+
     return CPLAT_OK;
 }
 
@@ -642,15 +704,17 @@ void cplat_internal_console_dispose_on_shutdown(const cplat_shutdown_event *even
     if (event == NULL || event->reason != CPLAT_SHUTDOWN_REASON_NORMAL_EXIT)
         return;
 
-    /* stdout/stderr をフラッシュしてからコンソール状態を戻す */
+    /* stdout / stderr をフラッシュしてからコンソール状態を元に戻す。 */
     fflush(stdout);
     fflush(stderr);
     console_diag_logf("dispose_on_shutdown after fflush attached_parent=%ld",
                       (long)cplat_atomic_load_i32(&s_attached_parent, CPLAT_MEMORY_ORDER_SEQ_CST));
 
-    /* 昇格時に親コンソールへ再接続していた場合、終了時フラッシュで書き込んだ内容を
-       conhost が処理し終える前にプロセスが終了すると、内容が画面に出ないことがある。
-       コンソールへの同期 API を 1 度呼び出して直前の書き込みが処理されたことを保証する。 */
+    /*
+     * 昇格時に親コンソールへ再接続していた場合、終了時フラッシュで書き込んだ内容を
+     * conhost が処理し終える前にプロセスが終了すると、内容が画面に出ないことがある。
+     * コンソールへの同期 API を 1 度呼び出して直前の書き込みが処理されたことを保証する。
+     */
     if (cplat_atomic_load_i32(&s_attached_parent, CPLAT_MEMORY_ORDER_SEQ_CST) != 0)
     {
         HANDLE h_out;
@@ -681,6 +745,7 @@ int cplat_console_write(cplat_stream stream, const char *text)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (stream == CPLAT_STREAM_STDOUT)
     {
         std_handle = STD_OUTPUT_HANDLE;
@@ -705,14 +770,18 @@ int cplat_console_write(cplat_stream stream, const char *text)
     {
         return CPLAT_OK;
     }
-    /* リダイレクト先がコンソールでない場合 WriteConsoleU は失敗するため WriteFile にフォールバックする。
-       リダイレクト先はコード ページ変換を行わないため、UTF-8 のまま書き込む */
+
+    /*
+     * リダイレクト先がコンソールでない場合 WriteConsoleU は失敗するため WriteFile にフォールバックする。
+     * リダイレクト先はコード ページ変換を行わないため、UTF-8 のまま書き込む。
+     */
     if (WriteFile(h, text, len, &written, NULL))
     {
         return CPLAT_OK;
     }
 
     console_diag_logf("console_write failed error=%lu", (unsigned long)GetLastError());
+
     return CPLAT_ERR_UNKNOWN;
 }
 
@@ -727,21 +796,26 @@ int cplat_console_write(cplat_stream stream, const char *text)
 /* Doxygen コメントは、ヘッダーに記載 */
 
 void cplat_console_init(void) {}
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 void cplat_console_dispose(void) {}
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
 {
     (void)argc;
     (void)argv;
+
     if (attached_out != NULL)
     {
         *attached_out = 0;
     }
+
     return CPLAT_OK;
 }
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 void cplat_internal_console_dispose_on_shutdown(const cplat_shutdown_event *event, void *context)
@@ -749,6 +823,7 @@ void cplat_internal_console_dispose_on_shutdown(const cplat_shutdown_event *even
     (void)event;
     (void)context;
 }
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_console_write(cplat_stream stream, const char *text)
@@ -761,6 +836,7 @@ int cplat_console_write(cplat_stream stream, const char *text)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (stream == CPLAT_STREAM_STDOUT)
     {
         fd = STDOUT_FILENO;
@@ -776,11 +852,13 @@ int cplat_console_write(cplat_stream stream, const char *text)
 
     cursor = text;
     len = strlen(text);
+
+    /* 全データが書き込まれるまで繰り返し write() を呼び出す。 */
     while (len > 0)
     {
         ssize_t written;
 
-        /* 端末は低速デバイスであり、シグナルで write が中断されうる。中断を吸収する。 */
+        /* 端末は低速デバイスであり、シグナルで write() が中断されうる。中断を吸収する。 */
         do
         {
             written = write(fd, cursor, len);
@@ -790,9 +868,11 @@ int cplat_console_write(cplat_stream stream, const char *text)
         {
             return CPLAT_ERR_UNKNOWN;
         }
+
         cursor += written;
         len -= (size_t)written;
     }
+
     return CPLAT_OK;
 }
 

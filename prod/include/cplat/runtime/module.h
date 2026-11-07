@@ -12,8 +12,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_MODULE_H
 #define CPLAT_MODULE_H
@@ -43,7 +45,7 @@ extern "C"
     /**
      *  @brief          関数アドレスが属するモジュールの完全なパスを取得します。
      *  @param[out]     path_out      完全なパス (UTF-8) の格納先。NULL を渡してはなりません。
-     *  @param[in]      path_size     @p path_out のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      path_size     @p path_out のサイズ [byte]。0 を渡してはなりません。
      *  @param[in]      func_addr     モジュールを特定するための関数アドレス。NULL を渡してはなりません。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
@@ -55,7 +57,7 @@ extern "C"
     /**
      *  @brief          関数アドレスが属するモジュールのベース名を取得します。
      *  @param[out]     basename_out   ベース名 (UTF-8) の格納先。NULL を渡してはなりません。
-     *  @param[in]      basename_size  @p basename_out のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      basename_size  @p basename_out のサイズ [byte]。0 を渡してはなりません。
      *  @param[in]      func_addr      モジュールを特定するための関数アドレス。NULL を渡してはなりません。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *

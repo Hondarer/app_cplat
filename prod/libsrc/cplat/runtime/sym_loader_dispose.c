@@ -19,12 +19,13 @@ void cplat_sym_loader_dispose(cplat_sym_loader_entry *const *fobj_array, const s
 {
     size_t fobj_index;
 
-    /* DllMain / destructor コンテキストから呼ばれるため、
+    /*
+     * DllMain / destructor コンテキストから呼ばれるため、
      * ローダー ロック保持中にミューテックスを取得すると
      * デッドロックを引き起こす恐れがある。
      * このコンテキストではシングルスレッド動作が保証されるため、
-     * ロックなしで解放する。 */
-
+     * ロックなしで解放する。
+     */
     for (fobj_index = 0; fobj_index < fobj_length; fobj_index++)
     {
         cplat_sym_loader_entry *cache = fobj_array[fobj_index];

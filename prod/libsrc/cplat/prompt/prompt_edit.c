@@ -13,6 +13,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+/*
+ * UTF-8 の後続バイト (0x80〜0xBF) であるかを判定する。
+ * 後続バイトであれば 1、それ以外であれば 0 を返す。
+ */
 static int utf8_is_continuation(unsigned char c)
 {
     return (c & 0xC0U) == 0x80U;
@@ -26,11 +30,14 @@ size_t cplat_internal_prompt_edit_utf8_prev_boundary(const char *buf, size_t pos
     {
         return 0U;
     }
+
     pos--;
+
     while (pos > 0U && utf8_is_continuation((unsigned char)buf[pos]))
     {
         pos--;
     }
+
     return pos;
 }
 
@@ -42,11 +49,14 @@ size_t cplat_internal_prompt_edit_utf8_next_boundary(const char *buf, size_t len
     {
         return len;
     }
+
     pos++;
+
     while (pos < len && utf8_is_continuation((unsigned char)buf[pos]))
     {
         pos++;
     }
+
     return pos;
 }
 
@@ -62,6 +72,7 @@ size_t cplat_internal_prompt_edit_utf8_sanitize_boundary(const char *buf, size_t
     {
         pos--;
     }
+
     return pos;
 }
 
@@ -76,16 +87,22 @@ int cplat_internal_prompt_edit_ensure_capacity(char **buf, size_t *cap, size_t m
     {
         return -1;
     }
+
+    /* 要求容量が現在の容量以下の場合は無処理で成功とする。 */
     if (required <= *cap)
     {
         return 0;
     }
+
+    /* 要求容量が最大容量を超える場合は失敗とする。 */
     if (required > max_bytes)
     {
         return -1;
     }
 
     new_cap = *cap;
+
+    /* 要求容量を満たすまで容量を倍増させ、最大容量を超える場合は最大容量に合わせる。 */
     while (new_cap < required)
     {
         size_t next_cap = new_cap * 2U;
@@ -93,6 +110,7 @@ int cplat_internal_prompt_edit_ensure_capacity(char **buf, size_t *cap, size_t m
         {
             next_cap = max_bytes;
         }
+
         new_cap = next_cap;
     }
 
@@ -101,8 +119,10 @@ int cplat_internal_prompt_edit_ensure_capacity(char **buf, size_t *cap, size_t m
     {
         return -1;
     }
+
     *buf = new_buf;
     *cap = new_cap;
+
     return 0;
 }
 
@@ -116,26 +136,34 @@ void cplat_internal_prompt_edit_resolve_options(size_t requested_history_max, si
     size_t resolved_max_bytes = requested_max_bytes;
     size_t resolved_initial_capacity = requested_initial_capacity;
 
+    /* 履歴の最大保持数が未指定の場合は既定値を補う。 */
     if (resolved_history_max == 0U)
     {
         resolved_history_max = CPLAT_PROMPT_HISTORY_DEFAULT;
     }
+
+    /* 入力の最大バイト数が未指定の場合は既定値を補い、終端 NUL を含めるため最小 2 [byte] を保証する。 */
     if (resolved_max_bytes == 0U)
     {
         resolved_max_bytes = CPLAT_PROMPT_INPUT_BYTES_DEFAULT;
     }
+
     if (resolved_max_bytes < 2U)
     {
         resolved_max_bytes = 2U;
     }
+
+    /* 初期容量が未指定の場合は既定値を補い、最小 2 [byte] から最大容量の範囲に収める。 */
     if (resolved_initial_capacity == 0U)
     {
         resolved_initial_capacity = initial_capacity_default;
     }
+
     if (resolved_initial_capacity < 2U)
     {
         resolved_initial_capacity = 2U;
     }
+
     if (resolved_initial_capacity > resolved_max_bytes)
     {
         resolved_initial_capacity = resolved_max_bytes;
@@ -145,10 +173,12 @@ void cplat_internal_prompt_edit_resolve_options(size_t requested_history_max, si
     {
         *history_max = resolved_history_max;
     }
+
     if (initial_capacity != NULL)
     {
         *initial_capacity = resolved_initial_capacity;
     }
+
     if (max_bytes != NULL)
     {
         *max_bytes = resolved_max_bytes;
@@ -165,6 +195,7 @@ int cplat_internal_prompt_edit_validate_initial_text(const char *initial_text, s
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     *length_out = 0U;
 
     if (initial_text == NULL)
@@ -172,6 +203,7 @@ int cplat_internal_prompt_edit_validate_initial_text(const char *initial_text, s
         return CPLAT_OK;
     }
 
+    /* 制御文字 (0x00〜0x1F、0x7F) が含まれていないか走査する。 */
     while (initial_text[length] != '\0')
     {
         const unsigned char byte = (unsigned char)initial_text[length];
@@ -180,15 +212,18 @@ int cplat_internal_prompt_edit_validate_initial_text(const char *initial_text, s
         {
             return CPLAT_ERR_INVALID_ARGUMENT;
         }
+
         length++;
     }
 
+    /* 文字列長が入力欄の最大容量 (終端 NUL を除く) を超えていないか検査する。 */
     if ((max_bytes == 0U) || (length > (max_bytes - 1U)))
     {
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
 
     *length_out = length;
+
     return CPLAT_OK;
 }
 
@@ -241,8 +276,10 @@ size_t cplat_internal_prompt_edit_char_display_width(const char *buf, size_t len
                      ((unsigned int)((unsigned char)buf[pos + 2U] & 0x3FU) << 6U) |
                      (unsigned int)((unsigned char)buf[pos + 3U] & 0x3FU);
 
-        /* Unicode 17.0 の East_Asian_Width=W に含まれる補助平面の絵文字を 2 桁として扱います。
-         * see: https://www.unicode.org/Public/17.0.0/ucd/EastAsianWidth.txt */
+        /*
+         * Unicode 17.0 の East_Asian_Width=W に含まれる補助平面の絵文字を 2 桁として扱う。
+         * see: https://www.unicode.org/Public/17.0.0/ucd/EastAsianWidth.txt
+         */
         static const unsigned int wide_symbols[][2] = {
             {0x1F004U, 0x1F004U}, {0x1F0CFU, 0x1F0CFU}, {0x1F18EU, 0x1F18EU}, {0x1F191U, 0x1F19AU},
             {0x1F200U, 0x1F202U}, {0x1F210U, 0x1F23BU}, {0x1F240U, 0x1F248U}, {0x1F250U, 0x1F251U},
@@ -258,6 +295,7 @@ size_t cplat_internal_prompt_edit_char_display_width(const char *buf, size_t len
             {0x1FADFU, 0x1FAEAU}, {0x1FAEFU, 0x1FAF8U},
         };
         size_t i;
+
         for (i = 0U; i < sizeof(wide_symbols) / sizeof(wide_symbols[0]); i++)
         {
             if (code_point >= wide_symbols[i][0] && code_point <= wide_symbols[i][1])
@@ -286,6 +324,8 @@ size_t cplat_internal_prompt_edit_sgr_sequence_len(const char *buf, size_t len, 
     }
 
     i = pos + 2U;
+
+    /* エスケープ シーケンスの終端文字 'm' を検索し、SGR シーケンス全体の長さを算出する。 */
     while (i < len)
     {
         unsigned char ch;
@@ -295,13 +335,16 @@ size_t cplat_internal_prompt_edit_sgr_sequence_len(const char *buf, size_t len, 
         {
             return i - pos + 1U;
         }
+
         if ((ch >= 0x30U && ch <= 0x3FU) || (ch >= 0x20U && ch <= 0x2FU))
         {
             i++;
             continue;
         }
+
         return 0U;
     }
+
     return 0U;
 }
 
@@ -316,6 +359,8 @@ size_t cplat_internal_prompt_edit_visible_bytes_from(const char *buf, size_t len
 
     pos = start;
     cols = 0U;
+
+    /* 表示幅の上限に達するまで文字ごとの表示幅を加算し、収まるバイト数を算出する。 */
     while (pos < len)
     {
         sgr_len = cplat_internal_prompt_edit_sgr_sequence_len(buf, len, pos);
@@ -324,16 +369,19 @@ size_t cplat_internal_prompt_edit_visible_bytes_from(const char *buf, size_t len
             pos += sgr_len;
             continue;
         }
+
         if (cols >= max_cols)
         {
             break;
         }
+
         char_width = cplat_internal_prompt_edit_char_display_width(buf, len, pos);
         if (cols + char_width > max_cols)
             break;
         cols += char_width;
         pos = cplat_internal_prompt_edit_utf8_next_boundary(buf, len, pos);
     }
+
     return pos - start;
 }
 
@@ -350,6 +398,8 @@ size_t cplat_internal_prompt_edit_display_width_between(const char *buf, size_t 
 
     pos = start;
     width = 0U;
+
+    /* 範囲内の各文字の表示幅を合算する。SGR シーケンスは表示幅に含めない。 */
     while (pos < end)
     {
         sgr_len = cplat_internal_prompt_edit_sgr_sequence_len(buf, end, pos);
@@ -358,9 +408,11 @@ size_t cplat_internal_prompt_edit_display_width_between(const char *buf, size_t 
             pos += sgr_len;
             continue;
         }
+
         width += cplat_internal_prompt_edit_char_display_width(buf, len, pos);
         pos = cplat_internal_prompt_edit_utf8_next_boundary(buf, len, pos);
     }
+
     return width;
 }
 
@@ -369,10 +421,12 @@ size_t cplat_internal_prompt_edit_display_width_between(const char *buf, size_t 
 size_t cplat_internal_prompt_edit_display_width(const char *text)
 {
     size_t len = 0U;
+
     if (text != NULL)
     {
         len = strlen(text);
     }
+
     return cplat_internal_prompt_edit_display_width_between(text, len, 0U, len);
 }
 
@@ -382,14 +436,19 @@ size_t cplat_internal_prompt_edit_adjust_view_start(const char *buf, size_t len,
                                                     size_t input_cols)
 {
     view_start = cplat_internal_prompt_edit_utf8_sanitize_boundary(buf, len, view_start);
+
+    /* カーソルが表示開始位置より左にある場合は表示開始位置をカーソル位置まで戻す。 */
     if (cursor < view_start)
     {
         view_start = cursor;
     }
+
+    /* カーソルが表示幅に収まるまで表示開始位置を右へ進める。 */
     while (cplat_internal_prompt_edit_display_width_between(buf, len, view_start, cursor) > input_cols)
     {
         view_start = cplat_internal_prompt_edit_utf8_next_boundary(buf, len, view_start);
     }
+
     return view_start;
 }
 
@@ -400,12 +459,16 @@ int cplat_internal_prompt_edit_utf8_complete(const char *buf, size_t len)
     size_t pos;
     size_t required;
     unsigned char first;
+
     if (len == 0U)
     {
         return 1;
     }
+
     pos = cplat_internal_prompt_edit_utf8_prev_boundary(buf, len);
     first = (unsigned char)buf[pos];
+
+    /* 先頭バイトの値から UTF-8 文字に必要なバイト数を判定し、末尾の文字が完成しているか検証する。 */
     if (first < 0x80U)
     {
         required = 1U;
@@ -426,6 +489,7 @@ int cplat_internal_prompt_edit_utf8_complete(const char *buf, size_t len)
     {
         return 0;
     }
+
     return len - pos == required;
 }
 
@@ -456,15 +520,18 @@ void cplat_internal_prompt_edit_completions_dispose(cplat_prompt_completions *co
 const char *cplat_internal_prompt_edit_completion_suffix(const cplat_prompt_completions *completions)
 {
     const char *suffix;
+
     if (completions->count != 1U)
     {
         return NULL;
     }
+
     suffix = completions->candidate + completions->cursor - completions->start;
     if (*suffix == '\0')
     {
         return NULL;
     }
+
     return suffix;
 }
 
@@ -475,29 +542,35 @@ int cplat_prompt_completions_add(cplat_prompt_completions *completions, size_t s
     size_t length;
     size_t prefix;
     int result;
+
     if (completions == NULL || candidate == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (start > completions->cursor ||
         cplat_internal_prompt_edit_utf8_sanitize_boundary(completions->line, completions->cursor, start) != start)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     result = cplat_internal_prompt_edit_validate_initial_text(candidate, completions->max_bytes, &length);
     if (result != CPLAT_OK)
     {
         return result;
     }
+
     prefix = completions->cursor - start;
     if (length < prefix || memcmp(candidate, completions->line + start, prefix) != 0)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (start >= completions->max_bytes || length >= completions->max_bytes - start)
     {
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
+
     if (completions->count == 0U)
     {
         if (cplat_internal_prompt_edit_ensure_capacity(&completions->candidate, &completions->capacity,
@@ -505,6 +578,7 @@ int cplat_prompt_completions_add(cplat_prompt_completions *completions, size_t s
         {
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
+
         memcpy(completions->candidate, candidate, length + 1U);
         completions->start = start;
         completions->count = 1U;
@@ -514,6 +588,7 @@ int cplat_prompt_completions_add(cplat_prompt_completions *completions, size_t s
         /* 2 件以上かどうかだけを保持し、候補数のオーバーフローを避ける。 */
         completions->count = 2U;
     }
+
     return CPLAT_OK;
 }
 
@@ -523,6 +598,7 @@ void cplat_internal_prompt_edit_complete(cplat_prompt_completions *completions, 
                                          void *user_data, const char *line, size_t len, size_t cursor, size_t max_bytes)
 {
     cplat_internal_prompt_edit_completions_reset(completions, line, cursor, max_bytes);
+
     if (fn != NULL && len > 0U && cursor == len && cplat_internal_prompt_edit_utf8_complete(line, len))
     {
         fn(line, cursor, completions, user_data);
@@ -536,19 +612,23 @@ int cplat_internal_prompt_edit_completion_accept(cplat_prompt_completions *compl
 {
     const char *suffix = cplat_internal_prompt_edit_completion_suffix(completions);
     size_t length;
+
     if (suffix == NULL)
     {
         return 0;
     }
+
     length = completions->start + strlen(completions->candidate);
     if (cplat_internal_prompt_edit_ensure_capacity(buf, cap, max_bytes, length + 1U) != 0)
     {
         return 0;
     }
+
     memcpy(*buf + completions->start, completions->candidate, length - completions->start + 1U);
     *len = length;
     *cursor = length;
     completions->count = 0U;
+
     return 1;
 }
 
@@ -557,10 +637,16 @@ int cplat_internal_prompt_edit_completion_accept(cplat_prompt_completions *compl
 void cplat_internal_prompt_edit_utf16_feed(cplat_internal_prompt_utf16_input *input, unsigned int unit)
 {
     unsigned int code_point = unit;
+
+    /*
+     * 保留中の上位サロゲートがある場合は、後続のコード単位と組み合わせてコード ポイントを合成する。
+     * 上位サロゲートは後続の入力を待つため保留し、孤立した下位サロゲートは置換文字 U+FFFD とする。
+     */
     if (input->high_surrogate != 0U)
     {
         unsigned int high = input->high_surrogate;
         input->high_surrogate = 0U;
+
         if (unit >= 0xDC00U && unit <= 0xDFFFU)
         {
             code_point = 0x10000U + ((high - 0xD800U) << 10U) + (unit - 0xDC00U);
@@ -583,6 +669,8 @@ void cplat_internal_prompt_edit_utf16_feed(cplat_internal_prompt_utf16_input *in
     }
 
     input->offset = 0U;
+
+    /* コード ポイントの範囲に応じて UTF-8 バイト列へエンコードする。 */
     if (code_point <= 0x7FU)
     {
         input->length = 1U;

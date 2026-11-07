@@ -39,6 +39,7 @@ int cplat_getenv(const char *name, char *buf, const size_t buf_size, int *exists
     {
         *exists_out = 0;
     }
+
     if (name == NULL)
     {
         return cplat_internal_error_report_errno(detail_out, EINVAL);
@@ -53,12 +54,15 @@ int cplat_getenv(const char *name, char *buf, const size_t buf_size, int *exists
             {
                 buf[0] = '\0';
             }
+
             return cplat_internal_error_report_success(detail_out);
         }
+
         if (exists_out != NULL)
         {
             *exists_out = 1;
         }
+
         if (buf != NULL)
         {
             size_t len = strlen(val);
@@ -66,8 +70,10 @@ int cplat_getenv(const char *name, char *buf, const size_t buf_size, int *exists
             {
                 return cplat_internal_error_report_errno(detail_out, ERANGE);
             }
+
             memcpy(buf, val, len + 1);
         }
+
         return cplat_internal_error_report_success(detail_out);
     }
 #elif defined(PLATFORM_WINDOWS)
@@ -81,18 +87,22 @@ int cplat_getenv(const char *name, char *buf, const size_t buf_size, int *exists
             free(val);
             return cplat_internal_error_report_errno(detail_out, (int)err);
         }
+
         if (val == NULL)
         {
             if (buf != NULL && buf_size > 0)
             {
                 buf[0] = '\0';
             }
+
             return cplat_internal_error_report_success(detail_out);
         }
+
         if (exists_out != NULL)
         {
             *exists_out = 1;
         }
+
         if (buf != NULL)
         {
             if (val_len > buf_size)
@@ -100,26 +110,33 @@ int cplat_getenv(const char *name, char *buf, const size_t buf_size, int *exists
                 free(val);
                 return cplat_internal_error_report_errno(detail_out, ERANGE);
             }
+
             memcpy(buf, val, val_len);
         }
+
         free(val);
         return cplat_internal_error_report_success(detail_out);
     }
 #endif /* PLATFORM_ */
 }
 
-/* 環境変数名として妥当かを判定する。空文字列と '=' を含む名前は POSIX / MSVC の
- * いずれでも不正であるため、プラットフォーム差を出さないよう先に弾く。 */
+/*
+ * 環境変数名として妥当かを判定する。空文字列と '=' を含む名前は POSIX と MSVC の
+ * いずれでも不正であるため、プラットフォーム差を出さないよう先に弾く。
+ * 妥当な場合は 1、不正な場合は 0 を返す。
+ */
 static int env_name_is_valid(const char *name)
 {
     if (name == NULL || name[0] == '\0')
     {
         return 0;
     }
+
     if (strchr(name, '=') != NULL)
     {
         return 0;
     }
+
     return 1;
 }
 
@@ -140,11 +157,12 @@ int cplat_setenv(const char *name, const char *value, const int overwrite, cplat
 
             return cplat_internal_error_report_errno(detail_out, errno_value);
         }
+
         return cplat_internal_error_report_success(detail_out);
     }
 #elif defined(PLATFORM_WINDOWS)
     {
-        /* _putenv_s に overwrite 相当の引数はないため、既存の有無を自前で確認する */
+        /* _putenv_s() に overwrite 相当の引数はないため、既存の有無を自前で確認する。 */
         if (overwrite == 0)
         {
             int exists = 0;
@@ -166,6 +184,7 @@ int cplat_setenv(const char *name, const char *value, const int overwrite, cplat
 
             return cplat_internal_error_report_errno(detail_out, errno_value);
         }
+
         return cplat_internal_error_report_success(detail_out);
     }
 #endif /* PLATFORM_ */
@@ -188,12 +207,15 @@ int cplat_unsetenv(const char *name, cplat_error *detail_out)
 
             return cplat_internal_error_report_errno(detail_out, errno_value);
         }
+
         return cplat_internal_error_report_success(detail_out);
     }
 #elif defined(PLATFORM_WINDOWS)
     {
-        /* Windows は値に空文字列を指定した _putenv_s を削除として扱う。
-         * see: https://learn.microsoft.com/cpp/c-runtime-library/reference/putenv-s-wputenv-s */
+        /*
+         * Windows は値に空文字列を指定した _putenv_s() を削除として扱う。
+         * see: https://learn.microsoft.com/cpp/c-runtime-library/reference/putenv-s-wputenv-s
+         */
         if (_putenv_s(name, "") != 0)
         {
             int errno_value = errno;
@@ -205,6 +227,7 @@ int cplat_unsetenv(const char *name, cplat_error *detail_out)
 
             return cplat_internal_error_report_errno(detail_out, errno_value);
         }
+
         return cplat_internal_error_report_success(detail_out);
     }
 #endif /* PLATFORM_ */
@@ -224,6 +247,7 @@ static int parse_base_is_valid(const int base)
     {
         return 1;
     }
+
     if ((base >= 2) && (base <= 36))
     {
         return 1;
@@ -253,6 +277,7 @@ int cplat_parse_int64(int64_t *value_out, const char *text, const int base)
     {
         return CPLAT_ERR_INVALID_INTEGER;
     }
+
     if (errno == ERANGE)
     {
         return CPLAT_ERR_OUT_OF_RANGE;
@@ -276,13 +301,16 @@ int cplat_parse_uint64(uint64_t *value_out, const char *text, const int base)
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    /* strtoull は '-' 付きの入力を符号なしの折り返し値として受け付けるため、変換前に拒否する。
-     * see: https://en.cppreference.com/w/c/string/byte/strtoul */
+    /*
+     * strtoull() は '-' 付きの入力を符号なしの折り返し値として受け付けるため、変換前に拒否する。
+     * see: https://en.cppreference.com/w/c/string/byte/strtoul
+     */
     cursor = text;
     while (isspace((unsigned char)*cursor) != 0)
     {
         cursor++;
     }
+
     if (*cursor == '-')
     {
         return CPLAT_ERR_OUT_OF_RANGE;
@@ -296,6 +324,7 @@ int cplat_parse_uint64(uint64_t *value_out, const char *text, const int base)
     {
         return CPLAT_ERR_INVALID_INTEGER;
     }
+
     if (errno == ERANGE)
     {
         return CPLAT_ERR_OUT_OF_RANGE;
@@ -323,12 +352,14 @@ int cplat_parse_int8(int8_t *value_out, const char *text, const int base)
     {
         return ret;
     }
+
     if ((value < (int64_t)INT8_MIN) || (value > (int64_t)INT8_MAX))
     {
         return CPLAT_ERR_OUT_OF_RANGE;
     }
 
     *value_out = (int8_t)value;
+
     return CPLAT_OK;
 }
 
@@ -349,12 +380,14 @@ int cplat_parse_int16(int16_t *value_out, const char *text, const int base)
     {
         return ret;
     }
+
     if ((value < (int64_t)INT16_MIN) || (value > (int64_t)INT16_MAX))
     {
         return CPLAT_ERR_OUT_OF_RANGE;
     }
 
     *value_out = (int16_t)value;
+
     return CPLAT_OK;
 }
 
@@ -375,12 +408,14 @@ int cplat_parse_int32(int32_t *value_out, const char *text, const int base)
     {
         return ret;
     }
+
     if ((value < (int64_t)INT32_MIN) || (value > (int64_t)INT32_MAX))
     {
         return CPLAT_ERR_OUT_OF_RANGE;
     }
 
     *value_out = (int32_t)value;
+
     return CPLAT_OK;
 }
 
@@ -401,12 +436,14 @@ int cplat_parse_uint8(uint8_t *value_out, const char *text, const int base)
     {
         return ret;
     }
+
     if (value > (uint64_t)UINT8_MAX)
     {
         return CPLAT_ERR_OUT_OF_RANGE;
     }
 
     *value_out = (uint8_t)value;
+
     return CPLAT_OK;
 }
 
@@ -427,12 +464,14 @@ int cplat_parse_uint16(uint16_t *value_out, const char *text, const int base)
     {
         return ret;
     }
+
     if (value > (uint64_t)UINT16_MAX)
     {
         return CPLAT_ERR_OUT_OF_RANGE;
     }
 
     *value_out = (uint16_t)value;
+
     return CPLAT_OK;
 }
 
@@ -453,12 +492,14 @@ int cplat_parse_uint32(uint32_t *value_out, const char *text, const int base)
     {
         return ret;
     }
+
     if (value > (uint64_t)UINT32_MAX)
     {
         return CPLAT_ERR_OUT_OF_RANGE;
     }
 
     *value_out = (uint32_t)value;
+
     return CPLAT_OK;
 }
 
@@ -482,6 +523,7 @@ int cplat_parse_char(char *value_out, const char *text, const int base)
 
     /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
     *value_out = (char)value;
+
     return CPLAT_OK;
 }
 
@@ -505,6 +547,7 @@ int cplat_parse_schar(signed char *value_out, const char *text, const int base)
 
     /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
     *value_out = (signed char)value;
+
     return CPLAT_OK;
 }
 
@@ -528,6 +571,7 @@ int cplat_parse_uchar(unsigned char *value_out, const char *text, const int base
 
     /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
     *value_out = (unsigned char)value;
+
     return CPLAT_OK;
 }
 
@@ -551,6 +595,7 @@ int cplat_parse_short(short *value_out, const char *text, const int base)
 
     /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
     *value_out = (short)value;
+
     return CPLAT_OK;
 }
 
@@ -574,6 +619,7 @@ int cplat_parse_ushort(unsigned short *value_out, const char *text, const int ba
 
     /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
     *value_out = (unsigned short)value;
+
     return CPLAT_OK;
 }
 
@@ -597,6 +643,7 @@ int cplat_parse_int(int *value_out, const char *text, const int base)
 
     /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
     *value_out = (int)value;
+
     return CPLAT_OK;
 }
 
@@ -620,6 +667,7 @@ int cplat_parse_uint(unsigned int *value_out, const char *text, const int base)
 
     /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
     *value_out = (unsigned int)value;
+
     return CPLAT_OK;
 }
 
@@ -643,6 +691,7 @@ int cplat_parse_longlong(long long *value_out, const char *text, const int base)
 
     /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
     *value_out = (long long)value;
+
     return CPLAT_OK;
 }
 
@@ -666,6 +715,7 @@ int cplat_parse_ulonglong(unsigned long long *value_out, const char *text, const
 
     /* 委譲先と目的型の値域はファイル先頭の静的検査で一致を保証する。 */
     *value_out = (unsigned long long)value;
+
     return CPLAT_OK;
 }
 
@@ -690,8 +740,10 @@ int cplat_parse_double(double *value_out, const char *text)
         return CPLAT_ERR_INVALID_INTEGER;
     }
 
-    /* strtod はオーバーフローとアンダーフローの双方で ERANGE を設定する。
-     * see: https://en.cppreference.com/w/c/string/byte/strtof */
+    /*
+     * strtod() はオーバーフローとアンダーフローの双方で ERANGE を設定する。
+     * see: https://en.cppreference.com/w/c/string/byte/strtof
+     */
     if (errno == ERANGE)
     {
         return CPLAT_ERR_OUT_OF_RANGE;
@@ -702,10 +754,12 @@ int cplat_parse_double(double *value_out, const char *text)
     return CPLAT_OK;
 }
 
-/* NOTE: 以降の確保・解放関数は、上位規範「動的メモリの確保と解放」および
- *       cplat 規範「メモリ確保の代替」が定める代替の実体である。
- *       本ファイル内の malloc / calloc / realloc / free の直接呼び出しは、
- *       ラッパーが元関数へ委譲するための意図的な例外であり、置換対象外とする。 */
+/*
+ * 以降の確保・解放関数は、上位規範「動的メモリの確保と解放」および
+ * cplat 規範「メモリ確保の代替」が定める代替の実体である。
+ * 本ファイル内の malloc() / calloc() / realloc() / free() の直接呼び出しは、
+ * ラッパーが元関数へ委譲するための意図的な例外であり、置換対象外とする。
+ */
 
 /**
  *  @brief          要素数と要素サイズの乗算が size_t を回り込むかを検査します。
@@ -739,7 +793,7 @@ void *cplat_malloc(const size_t size)
         return NULL;
     }
 
-    return malloc(size); /* ラッパーの実体。置換対象外 */
+    return malloc(size); /* ラッパーの実体であり置換対象外 */
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -753,7 +807,7 @@ void *cplat_malloc_zerofill(const size_t size)
         return NULL;
     }
 
-    ptr = calloc(1U, size); /* ラッパーの実体。置換対象外 */
+    ptr = calloc(1U, size); /* ラッパーの実体であり置換対象外 */
 
     return ptr;
 }
@@ -767,7 +821,7 @@ void *cplat_calloc(const size_t count, const size_t size)
         return NULL;
     }
 
-    return calloc(count, size); /* ラッパーの実体。置換対象外 */
+    return calloc(count, size); /* ラッパーの実体であり置換対象外 */
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -779,7 +833,7 @@ void *cplat_realloc(void *ptr, const size_t count, const size_t size)
         return NULL;
     }
 
-    return realloc(ptr, count * size); /* ラッパーの実体。置換対象外 */
+    return realloc(ptr, count * size); /* ラッパーの実体であり置換対象外 */
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -793,7 +847,7 @@ void *cplat_realloc_zerofill(void *ptr, const size_t old_count, const size_t cou
         return NULL;
     }
 
-    new_ptr = realloc(ptr, count * size); /* ラッパーの実体。置換対象外 */
+    new_ptr = realloc(ptr, count * size); /* ラッパーの実体であり置換対象外 */
     if (new_ptr == NULL)
     {
         return NULL;
@@ -801,9 +855,11 @@ void *cplat_realloc_zerofill(void *ptr, const size_t old_count, const size_t cou
 
     if (old_count < count)
     {
-        /* 拡張した範囲のみをゼロ初期化する。
+        /*
+         * 拡張した範囲のみをゼロ初期化する。
          * old_count は count 未満であり、count * size は上で回り込みを検査済みのため、
-         * old_count * size と (count - old_count) * size はいずれも回り込まない。 */
+         * old_count * size と (count - old_count) * size はいずれも回り込まない。
+         */
         memset((char *)new_ptr + (old_count * size), 0, (count - old_count) * size);
     }
 
@@ -814,5 +870,5 @@ void *cplat_realloc_zerofill(void *ptr, const size_t old_count, const size_t cou
 
 void cplat_free(void *ptr)
 {
-    free(ptr); /* ラッパーの実体。置換対象外。free(NULL) は無害 */
+    free(ptr); /* ラッパーの実体であり置換対象外 (free(NULL) は無害) */
 }

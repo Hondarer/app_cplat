@@ -30,7 +30,7 @@
 /* usage で説明文の表示を開始する列 (行頭から) */
 #define ARGPARSER_USAGE_DESC_COLUMN (28)
 
-/* print_error_messages のエラー メッセージ組み立て用スタック バッファー サイズ */
+/* print_error_messages のエラー メッセージ組み立て用スタック バッファー サイズ [byte] */
 #define ARGPARSER_ERROR_MESSAGE_BYTES (512)
 
 /* value_name 未指定時の既定表示名 */
@@ -61,14 +61,14 @@ typedef struct argparser_spec
 {
     argparser_spec_kind kind;
     unsigned int flags;
-    char *short_name;  /* "-x" 形式。位置引数では NULL */
-    char *long_name;   /* "--xxx" 形式。位置引数では名前を保持する */
-    char *value_name;  /* 値付きオプションの値表示名。他は NULL */
-    char *description; /* usage 用説明文。NULL 可 */
+    char *short_name;  /* "-x" 形式 (位置引数では NULL) */
+    char *long_name;   /* "--xxx" 形式 (位置引数では名前を保持) */
+    char *value_name;  /* 値付きオプションの値表示名 (他は NULL) */
+    char *description; /* usage 用説明文 (NULL 可) */
     int *int_storage;
     const char **string_storage;
-    size_t capacity; /* 配列オプションの要素数。他は 0 */
-    size_t *count;   /* 配列オプションの出現数出力先。他は NULL */
+    size_t capacity; /* 配列オプションの要素数 (他は 0) */
+    size_t *count;   /* 配列オプションの出現数出力先 (他は NULL) */
     size_t found;    /* 解析中の出現回数 */
 } argparser_spec;
 
@@ -77,7 +77,7 @@ typedef struct argparser_register_error
 {
     int result;       /* 発生した結果コード (OK 以外) */
     unsigned int pad; /* 明示的アラインメント */
-    char *target;     /* 対象名 (複製)。対象がない場合は NULL */
+    char *target;     /* 対象名 (複製、対象がない場合は NULL) */
 } argparser_register_error;
 
 struct cplat_argparser
@@ -85,23 +85,25 @@ struct cplat_argparser
     argparser_spec *specs;
     size_t spec_count;
     size_t spec_capacity;
-    char *program_name;          /* 生成オプション指定のプログラム名。NULL 可 */
-    char *program_description;   /* 生成オプション指定の説明文。NULL 可 */
-    char *resolved_program_name; /* 初期化時に argv[0] から求めたベース名。NULL 可 */
+    char *program_name;          /* 生成オプション指定のプログラム名 (NULL 可) */
+    char *program_description;   /* 生成オプション指定の説明文 (NULL 可) */
+    char *resolved_program_name; /* 初期化時に argv[0] から求めたベース名 (NULL 可) */
     char *last_error_target;
-    char *const *argv; /* 初期化時に受け取ったコマンド ライン引数。複製しない。NULL 可 */
-    int argc;          /* argv の要素数。未設定は 0 */
+    char *const *argv; /* 初期化時に受け取ったコマンド ライン引数 (複製しない、NULL 可) */
+    int argc;          /* argv の要素数 (未設定は 0) */
     int last_error;
     int last_error_index;
     int library_owned;
-    argparser_register_error *register_errors; /* register 系エラーを発生順に積み上げる配列。NULL 可 */
+    argparser_register_error *register_errors; /* register 系エラーを発生順に積み上げる配列 (NULL 可) */
     size_t register_error_count;
     size_t register_error_capacity;
 };
 
-/* ================================================================
+/*
+ * ================================================================
  * 内部ヘルパー
- * ================================================================ */
+ * ================================================================
+ */
 
 /**
  *  @brief          文字列を複製します。
@@ -123,6 +125,7 @@ static char *argparser_strdup(const char *text)
     {
         return NULL;
     }
+
     memcpy(copied, text, size);
 
     return copied;
@@ -139,14 +142,17 @@ static int argparser_is_valid_short_name(const char *name)
     {
         return 0;
     }
+
     if (strlen(name) != 2)
     {
         return 0;
     }
+
     if (name[0] != '-')
     {
         return 0;
     }
+
     if (name[1] == '-')
     {
         return 0;
@@ -166,14 +172,17 @@ static int argparser_is_valid_long_name(const char *name)
     {
         return 0;
     }
+
     if (strlen(name) < 3)
     {
         return 0;
     }
+
     if (strncmp(name, "--", 2) != 0)
     {
         return 0;
     }
+
     if (strchr(name, '=') != NULL)
     {
         return 0;
@@ -284,7 +293,8 @@ static int argparser_set_error(cplat_argparser *parser, int error, const char *t
 {
     argparser_clear_error(parser);
     parser->last_error = error;
-    /* 複製に失敗した場合は対象名なし (NULL) として記録を継続する */
+
+    /* 複製に失敗した場合は対象名なし (NULL) として記録を継続する。 */
     parser->last_error_target = argparser_strdup(target);
     parser->last_error_index = index;
 
@@ -309,6 +319,7 @@ static void argparser_record_register_result(cplat_argparser *parser, int result
         return;
     }
 
+    /* 配列が満杯の場合は容量を 2 倍に拡張する。メモリ確保失敗時は記録を諦めて復帰する。 */
     if (parser->register_error_count == parser->register_error_capacity)
     {
         size_t new_capacity = parser->register_error_capacity * 2;
@@ -316,18 +327,22 @@ static void argparser_record_register_result(cplat_argparser *parser, int result
         {
             new_capacity = ARGPARSER_INITIAL_CAPACITY;
         }
+
         argparser_register_error *new_errors =
             cplat_realloc(parser->register_errors, new_capacity, sizeof(argparser_register_error));
         if (new_errors == NULL)
         {
             return;
         }
+
         parser->register_errors = new_errors;
         parser->register_error_capacity = new_capacity;
     }
 
     argparser_register_error *entry = &parser->register_errors[parser->register_error_count];
     entry->result = result;
+
+    /* 長いオプション名を優先し、なければ短いオプション名または位置引数名を複製して記録する。 */
     if (long_name != NULL)
     {
         entry->target = argparser_strdup(long_name);
@@ -336,6 +351,7 @@ static void argparser_record_register_result(cplat_argparser *parser, int result
     {
         entry->target = argparser_strdup(short_name_or_name);
     }
+
     parser->register_error_count++;
 }
 
@@ -349,6 +365,7 @@ static void argparser_record_register_result(cplat_argparser *parser, int result
  */
 static int argparser_prepare_spec_slot(cplat_argparser *parser, const char *short_name, const char *long_name)
 {
+    /* 既存の登録項目と短い名前または長い名前が重複していないか検査する。 */
     for (size_t i = 0; i < parser->spec_count; i++)
     {
         const argparser_spec *spec = &parser->specs[i];
@@ -356,12 +373,14 @@ static int argparser_prepare_spec_slot(cplat_argparser *parser, const char *shor
         {
             return CPLAT_ERR_DUPLICATE_DEFINITION;
         }
+
         if (long_name != NULL && spec->long_name != NULL && strcmp(spec->long_name, long_name) == 0)
         {
             return CPLAT_ERR_DUPLICATE_DEFINITION;
         }
     }
 
+    /* 配列が満杯の場合は容量を 2 倍に拡張する。 */
     if (parser->spec_count == parser->spec_capacity)
     {
         size_t new_capacity = parser->spec_capacity * 2;
@@ -369,11 +388,13 @@ static int argparser_prepare_spec_slot(cplat_argparser *parser, const char *shor
         {
             new_capacity = ARGPARSER_INITIAL_CAPACITY;
         }
+
         argparser_spec *new_specs = cplat_realloc(parser->specs, new_capacity, sizeof(argparser_spec));
         if (new_specs == NULL)
         {
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
+
         parser->specs = new_specs;
         parser->spec_capacity = new_capacity;
     }
@@ -402,16 +423,19 @@ static int argparser_copy_spec_strings(argparser_spec *spec, const char *short_n
     {
         failed = 1;
     }
+
     spec->long_name = argparser_strdup(long_name);
     if (long_name != NULL && spec->long_name == NULL)
     {
         failed = 1;
     }
+
     spec->value_name = argparser_strdup(value_name);
     if (value_name != NULL && spec->value_name == NULL)
     {
         failed = 1;
     }
+
     spec->description = argparser_strdup(description);
     if (description != NULL && spec->description == NULL)
     {
@@ -521,7 +545,7 @@ static int argparser_register_positional_core(cplat_argparser *parser, argparser
     }
     else
     {
-        /* 可変長位置引数は位置引数列の末尾に 1 件だけ登録できる */
+        /* 可変長位置引数は位置引数列の末尾に 1 件だけ登録できる。 */
         for (size_t i = 0; i < parser->spec_count; i++)
         {
             if (argparser_spec_is_positional_array(&parser->specs[i]) != 0)
@@ -531,7 +555,7 @@ static int argparser_register_positional_core(cplat_argparser *parser, argparser
             }
         }
 
-        /* 任意の位置引数の後に必須の位置引数は登録できない (割り当てが曖昧になるため) */
+        /* 任意の位置引数の後に必須の位置引数は登録できない (割り当てが曖昧になるため)。 */
         if (result == CPLAT_OK && (flags & CPLAT_ARGPARSER_REQUIRED) != 0u)
         {
             for (size_t i = 0; i < parser->spec_count; i++)
@@ -586,6 +610,7 @@ static argparser_spec *argparser_find_long(const cplat_argparser *parser, const 
         {
             continue;
         }
+
         if (strlen(spec->long_name) == name_len && strncmp(spec->long_name, name, name_len) == 0)
         {
             return spec;
@@ -611,6 +636,7 @@ static argparser_spec *argparser_find_short(const cplat_argparser *parser, const
         {
             continue;
         }
+
         if (strlen(spec->short_name) == name_len && strncmp(spec->short_name, token, name_len) == 0)
         {
             return spec;
@@ -634,12 +660,14 @@ static int argparser_store_option_value(cplat_argparser *parser, argparser_spec 
 {
     const char *display_name = argparser_spec_display_name(spec);
 
+    /* 単一値オプションの重複を検査し、値を変換または格納する。 */
     if (spec->kind == ARGPARSER_SPEC_OPTION_INT || spec->kind == ARGPARSER_SPEC_OPTION_STRING)
     {
         if (spec->found > 0)
         {
             return argparser_set_error(parser, CPLAT_ERR_DUPLICATE_OPTION, display_name, index);
         }
+
         if (spec->kind == ARGPARSER_SPEC_OPTION_INT)
         {
             int int_error = cplat_parse_int(spec->int_storage, value, 10);
@@ -655,10 +683,12 @@ static int argparser_store_option_value(cplat_argparser *parser, argparser_spec 
     }
     else
     {
+        /* 配列オプションの出現数超過を検査し、値を変換または格納する。 */
         if (*spec->count >= spec->capacity)
         {
             return argparser_set_error(parser, CPLAT_ERR_TOO_MANY_OCCURRENCES, display_name, index);
         }
+
         if (spec->kind == ARGPARSER_SPEC_OPTION_INT_ARRAY)
         {
             int int_error = cplat_parse_int(&spec->int_storage[*spec->count], value, 10);
@@ -671,6 +701,7 @@ static int argparser_store_option_value(cplat_argparser *parser, argparser_spec 
         {
             spec->string_storage[*spec->count] = value;
         }
+
         (*spec->count)++;
     }
 
@@ -691,6 +722,7 @@ static int argparser_store_option_value(cplat_argparser *parser, argparser_spec 
 static int argparser_store_positional(cplat_argparser *parser, const char *token, const int index,
                                       size_t *positional_index)
 {
+    /* 定義順に位置引数を走査し、トークンを割り当てる。 */
     while (*positional_index < parser->spec_count)
     {
         argparser_spec *spec = &parser->specs[*positional_index];
@@ -700,12 +732,14 @@ static int argparser_store_positional(cplat_argparser *parser, const char *token
             continue;
         }
 
+        /* 可変長位置引数は positional_index を進めずに配列へ追記する。 */
         if (argparser_spec_is_positional_array(spec) != 0)
         {
             if (*spec->count >= spec->capacity)
             {
                 return argparser_set_error(parser, CPLAT_ERR_TOO_MANY_ARGUMENTS, token, index);
             }
+
             if (spec->kind == ARGPARSER_SPEC_POSITIONAL_INT_ARRAY)
             {
                 int int_error = cplat_parse_int(&spec->int_storage[*spec->count], token, 10);
@@ -718,6 +752,7 @@ static int argparser_store_positional(cplat_argparser *parser, const char *token
             {
                 spec->string_storage[*spec->count] = token;
             }
+
             (*spec->count)++;
             spec->found++;
 
@@ -726,6 +761,7 @@ static int argparser_store_positional(cplat_argparser *parser, const char *token
 
         (*positional_index)++;
 
+        /* 単数位置引数は値を変換または格納し、次の位置引数へ進める。 */
         if (spec->kind == ARGPARSER_SPEC_POSITIONAL_INT)
         {
             int int_error = cplat_parse_int(spec->int_storage, token, 10);
@@ -738,6 +774,7 @@ static int argparser_store_positional(cplat_argparser *parser, const char *token
         {
             *spec->string_storage = token;
         }
+
         spec->found++;
 
         return CPLAT_OK;
@@ -772,25 +809,30 @@ static void argparser_resolve_program_name(cplat_argparser *parser, const char *
 
     const size_t base_length = strlen(copied);
     const size_t extension_length = sizeof(s_executable_extension) - 1u;
+
+    /* Linux と Windows で同一の表示名とするため、末尾の ".exe" を大文字小文字を区別せずに除去する。 */
     if ((base_length > extension_length) &&
         (cplat_strcasecmp(copied + base_length - extension_length, s_executable_extension) == 0))
     {
         copied[base_length - extension_length] = '\0';
     }
+
     cplat_free(parser->resolved_program_name);
     parser->resolved_program_name = copied;
 }
 
-/* ================================================================
+/*
+ * ================================================================
  * usage 組み立て
- * ================================================================ */
+ * ================================================================
+ */
 
 /* usage 文字列の書き込み状態 */
 typedef struct argparser_usage_writer
 {
-    char *buffer;       /* 書き込み先。NULL の場合はサイズ計測のみ */
-    size_t buffer_size; /* buffer のバイト数 */
-    size_t needed;      /* NUL 終端を除く必要バイト数 (書き込み済みとは限らない) */
+    char *buffer;       /* 書き込み先 (NULL の場合はサイズ計測のみ) */
+    size_t buffer_size; /* buffer のサイズ [byte] */
+    size_t needed;      /* NUL 終端を除く必要サイズ [byte] (書き込み済みとは限らない) */
 } argparser_usage_writer;
 
 /**
@@ -811,8 +853,10 @@ static void argparser_usage_write(argparser_usage_writer *writer, const char *te
         {
             writable = length;
         }
+
         memcpy(&writer->buffer[writer->needed], text, writable);
     }
+
     writer->needed += length;
 }
 
@@ -869,14 +913,17 @@ static void argparser_usage_write_description(argparser_usage_writer *writer, co
     {
         argparser_usage_write(writer, spec->description);
     }
+
     if ((spec->flags & CPLAT_ARGPARSER_REQUIRED) != 0u)
     {
         if (spec->description != NULL)
         {
             argparser_usage_write(writer, " ");
         }
+
         argparser_usage_write(writer, "(required)");
     }
+
     argparser_usage_write(writer, "\n");
 }
 
@@ -890,6 +937,7 @@ static void argparser_usage_build(const cplat_argparser *parser, argparser_usage
     int has_option = 0;
     int has_positional = 0;
 
+    /* 登録項目にオプションまたは位置引数が存在するか確認する。 */
     for (size_t i = 0; i < parser->spec_count; i++)
     {
         if (argparser_spec_is_positional(&parser->specs[i]) != 0)
@@ -914,12 +962,16 @@ static void argparser_usage_build(const cplat_argparser *parser, argparser_usage
         program_name = s_default_program_name;
     }
 
+    /* Usage 行 ("Usage: {program} [OPTIONS] <args>...") を組み立てる。 */
     argparser_usage_write(writer, "Usage: ");
     argparser_usage_write(writer, program_name);
+
     if (has_option != 0)
     {
         argparser_usage_write(writer, " [OPTIONS]");
     }
+
+    /* 各位置引数の書式 (<arg> または [arg]、可変長は "...") を Usage 行へ追記する。 */
     for (size_t i = 0; i < parser->spec_count; i++)
     {
         const argparser_spec *spec = &parser->specs[i];
@@ -927,11 +979,13 @@ static void argparser_usage_build(const cplat_argparser *parser, argparser_usage
         {
             continue;
         }
+
         if ((spec->flags & CPLAT_ARGPARSER_REQUIRED) != 0u)
         {
             argparser_usage_write(writer, " <");
             argparser_usage_write(writer, spec->long_name);
             argparser_usage_write(writer, ">");
+
             if (argparser_spec_is_positional_array(spec) != 0)
             {
                 argparser_usage_write(writer, "...");
@@ -941,18 +995,23 @@ static void argparser_usage_build(const cplat_argparser *parser, argparser_usage
         {
             argparser_usage_write(writer, " [");
             argparser_usage_write(writer, spec->long_name);
+
             if (argparser_spec_is_positional_array(spec) != 0)
             {
                 argparser_usage_write(writer, "...");
             }
+
             argparser_usage_write(writer, "]");
         }
     }
+
     argparser_usage_write(writer, "\n");
 
+    /* 位置引数の説明一覧 ("Positional arguments:") を組み立てる。 */
     if (has_positional != 0)
     {
         argparser_usage_write(writer, "\nPositional arguments:\n");
+
         for (size_t i = 0; i < parser->spec_count; i++)
         {
             const argparser_spec *spec = &parser->specs[i];
@@ -960,6 +1019,7 @@ static void argparser_usage_build(const cplat_argparser *parser, argparser_usage
             {
                 continue;
             }
+
             size_t label_start = writer->needed;
             argparser_usage_write(writer, "  ");
             argparser_usage_write(writer, spec->long_name);
@@ -967,9 +1027,11 @@ static void argparser_usage_build(const cplat_argparser *parser, argparser_usage
         }
     }
 
+    /* オプションの説明一覧 ("Options:") を組み立てる。 */
     if (has_option != 0)
     {
         argparser_usage_write(writer, "\nOptions:\n");
+
         for (size_t i = 0; i < parser->spec_count; i++)
         {
             const argparser_spec *spec = &parser->specs[i];
@@ -977,8 +1039,10 @@ static void argparser_usage_build(const cplat_argparser *parser, argparser_usage
             {
                 continue;
             }
+
             size_t label_start = writer->needed;
             argparser_usage_write(writer, "  ");
+
             if (spec->short_name != NULL && spec->long_name != NULL)
             {
                 argparser_usage_write(writer, spec->short_name);
@@ -991,23 +1055,27 @@ static void argparser_usage_build(const cplat_argparser *parser, argparser_usage
             }
             else
             {
-                /* short 名の桁 ("-x, ") を空白で揃える */
+                /* 短いオプション名の桁 ("-x, ") を空白で揃える。 */
                 argparser_usage_write_spaces(writer, 4);
                 argparser_usage_write(writer, spec->long_name);
             }
+
             if (argparser_spec_takes_value(spec) != 0)
             {
                 argparser_usage_write(writer, " ");
                 argparser_usage_write(writer, argparser_spec_value_name(spec));
             }
+
             argparser_usage_write_description(writer, label_start, spec);
         }
     }
 }
 
-/* ================================================================
+/*
+ * ================================================================
  * 公開 API
- * ================================================================ */
+ * ================================================================
+ */
 
 /**
  *  @brief          パーサー ハンドルが所有する領域を解放します。
@@ -1023,15 +1091,18 @@ static void argparser_release_members(cplat_argparser *parser)
     {
         argparser_free_spec(&parser->specs[i]);
     }
+
     cplat_free(parser->specs);
     cplat_free(parser->program_name);
     cplat_free(parser->program_description);
     cplat_free(parser->resolved_program_name);
     cplat_free(parser->last_error_target);
+
     for (size_t i = 0; i < parser->register_error_count; i++)
     {
         cplat_free(parser->register_errors[i].target);
     }
+
     cplat_free(parser->register_errors);
 }
 
@@ -1058,6 +1129,7 @@ static void argparser_reset_core(cplat_argparser *parser)
     int library_owned = parser->library_owned;
 
     argparser_release_members(parser);
+
     /* 宣言済みハンドルの再初期化のため、集成体初期化子ではなく memset を使う。 */
     memset(parser, 0, sizeof(*parser));
     parser->last_error_index = -1;
@@ -1085,11 +1157,13 @@ static int argparser_apply_options(cplat_argparser *parser, const cplat_argparse
     {
         return -1;
     }
+
     parser->program_description = argparser_strdup(options->program_description);
     if ((options->program_description != NULL) && (parser->program_description == NULL))
     {
         return -1;
     }
+
     return 0;
 }
 
@@ -1114,6 +1188,7 @@ static void argparser_apply_args(cplat_argparser *parser, int argc, char *const 
     {
         return;
     }
+
     argparser_resolve_program_name(parser, argv[0]);
 }
 
@@ -1127,6 +1202,7 @@ cplat_argparser *cplat_argparser_handle_create(const int argc, char *const *argv
     {
         return NULL;
     }
+
     parser->last_error_index = -1;
 
     if (argparser_apply_options(parser, options) != 0)
@@ -1134,6 +1210,7 @@ cplat_argparser *cplat_argparser_handle_create(const int argc, char *const *argv
         cplat_argparser_handle_dispose(parser);
         return NULL;
     }
+
     argparser_apply_args(parser, argc, argv);
 
     return parser;
@@ -1153,17 +1230,24 @@ void cplat_argparser_handle_dispose(cplat_argparser *parser)
 
 /* プロセス共有の既定パーサー ハンドル */
 static cplat_argparser *s_default_parser = NULL;
-/* 破棄と並行取得の競合を避けるため、初期化後はプロセス終了まで同じロックを使用する */
+
+/* 破棄と並行取得の競合を避けるため、初期化後はプロセス終了まで同じロックを使用する。 */
 static cplat_local_lock *s_default_lock = NULL;
 static cplat_once_flag s_default_initialize_once = {0};
 
+/*
+ * プロセス正常終了時に、プロセス共有の既定パーサー ハンドルを破棄する。
+ * 排他ロック下でインスタンス ポインターを取り出し、ロック解放後に領域を解放する。
+ */
 static void argparser_default_dispose_on_shutdown(const cplat_shutdown_event *event, void *context)
 {
     (void)context;
+
     if (event == NULL || event->reason != CPLAT_SHUTDOWN_REASON_NORMAL_EXIT)
     {
         return;
     }
+
     cplat_local_lock *lock = s_default_lock;
     if (lock == NULL)
     {
@@ -1174,6 +1258,7 @@ static void argparser_default_dispose_on_shutdown(const cplat_shutdown_event *ev
     {
         return;
     }
+
     cplat_argparser *parser = s_default_parser;
     s_default_parser = NULL;
     (void)cplat_local_lock_unlock(lock);
@@ -1184,6 +1269,10 @@ static void argparser_default_dispose_on_shutdown(const cplat_shutdown_event *ev
     }
 }
 
+/*
+ * 既定パーサー用の排他ロックを生成し、シャットダウン時の自動破棄コールバックを登録する。
+ * cplat_call_once() から 1 度だけ呼び出される。
+ */
 static void argparser_default_initialize(void)
 {
     if (cplat_local_lock_create(&s_default_lock) != CPLAT_OK)
@@ -1191,6 +1280,7 @@ static void argparser_default_initialize(void)
         s_default_lock = NULL;
         return;
     }
+
     if (cplat_shutdown_register(argparser_default_dispose_on_shutdown, NULL) != CPLAT_OK)
     {
         cplat_local_lock_dispose(s_default_lock);
@@ -1223,6 +1313,7 @@ static cplat_argparser *argparser_default_acquire(const int argc, char *const *a
     {
         return NULL;
     }
+
     if (s_default_parser == NULL)
     {
         s_default_parser = cplat_argparser_handle_create(argc, argv, options);
@@ -1237,6 +1328,7 @@ static cplat_argparser *argparser_default_acquire(const int argc, char *const *a
         (void)argparser_apply_options(s_default_parser, options);
         argparser_apply_args(s_default_parser, argc, argv);
     }
+
     cplat_argparser *parser = s_default_parser;
     (void)cplat_local_lock_unlock(lock);
 
@@ -1270,6 +1362,7 @@ int cplat_argparser_handle_register_flag(cplat_argparser *parser, const char *sh
     {
         return result;
     }
+
     spec->int_storage = storage;
 
     return CPLAT_OK;
@@ -1302,6 +1395,7 @@ int cplat_argparser_handle_register_option_int(cplat_argparser *parser, const ch
     {
         return result;
     }
+
     spec->int_storage = storage;
 
     return CPLAT_OK;
@@ -1336,6 +1430,7 @@ int cplat_argparser_handle_register_option_string(cplat_argparser *parser, const
     {
         return result;
     }
+
     spec->string_storage = storage;
 
     return CPLAT_OK;
@@ -1370,6 +1465,7 @@ int cplat_argparser_handle_register_option_int_array(cplat_argparser *parser, co
     {
         return result;
     }
+
     spec->int_storage = storage;
     spec->capacity = capacity;
     spec->count = count;
@@ -1408,6 +1504,7 @@ int cplat_argparser_handle_register_option_string_array(cplat_argparser *parser,
     {
         return result;
     }
+
     spec->string_storage = storage;
     spec->capacity = capacity;
     spec->count = count;
@@ -1444,6 +1541,7 @@ int cplat_argparser_handle_register_positional_int(cplat_argparser *parser, cons
     {
         return result;
     }
+
     spec->int_storage = storage;
 
     return CPLAT_OK;
@@ -1477,6 +1575,7 @@ int cplat_argparser_handle_register_positional_string(cplat_argparser *parser, c
     {
         return result;
     }
+
     spec->string_storage = storage;
 
     return CPLAT_OK;
@@ -1510,6 +1609,7 @@ int cplat_argparser_handle_register_positional_int_array(cplat_argparser *parser
     {
         return result;
     }
+
     spec->int_storage = storage;
     spec->capacity = capacity;
     spec->count = count;
@@ -1545,6 +1645,7 @@ int cplat_argparser_handle_register_positional_string_array(cplat_argparser *par
     {
         return result;
     }
+
     spec->string_storage = storage;
     spec->capacity = capacity;
     spec->count = count;
@@ -1576,15 +1677,17 @@ int cplat_argparser_handle_parse(cplat_argparser *parser)
 
     argparser_clear_error(parser);
 
-    /* 再実行に備えて出現状態を初期化する */
+    /* 再実行に備えて出現状態を初期化する。 */
     for (size_t i = 0; i < parser->spec_count; i++)
     {
         argparser_spec *spec = &parser->specs[i];
         spec->found = 0;
+
         if (spec->kind == ARGPARSER_SPEC_FLAG)
         {
             *spec->int_storage = 0;
         }
+
         if (spec->count != NULL)
         {
             *spec->count = 0;
@@ -1593,6 +1696,7 @@ int cplat_argparser_handle_parse(cplat_argparser *parser)
 
     size_t positional_index = 0;
 
+    /* argv[1] 以降の各トークンをオプションまたは位置引数として解析する。 */
     for (int i = 1; i < argc; i++)
     {
         const char *token = argv[i];
@@ -1603,9 +1707,10 @@ int cplat_argparser_handle_parse(cplat_argparser *parser)
 
         if (strncmp(token, "--", 2) == 0 && token[2] != '\0')
         {
-            /* 長いオプション ("--xxx" / "--xxx=value") */
+            /* 長いオプション ("--xxx" または "--xxx=value") を解析する。 */
             const char *equal = strchr(token, '=');
             size_t name_len = strlen(token);
+
             if (equal != NULL)
             {
                 name_len = (size_t)(equal - token);
@@ -1617,6 +1722,7 @@ int cplat_argparser_handle_parse(cplat_argparser *parser)
                 return argparser_set_error(parser, CPLAT_ERR_UNKNOWN_OPTION, token, i);
             }
 
+            /* フラグ オプションの値指定を拒否し、出現回数を加算する。 */
             if (spec->kind == ARGPARSER_SPEC_FLAG)
             {
                 if (equal != NULL)
@@ -1624,13 +1730,16 @@ int cplat_argparser_handle_parse(cplat_argparser *parser)
                     return argparser_set_error(parser, CPLAT_ERR_UNEXPECTED_VALUE, argparser_spec_display_name(spec),
                                                i);
                 }
+
                 (*spec->int_storage)++;
                 spec->found++;
                 continue;
             }
 
+            /* 埋め込み値 ("--xxx=value") または次の引数から値を取得する。 */
             const char *value = NULL;
             int value_index = i;
+
             if (equal != NULL)
             {
                 value = equal + 1;
@@ -1641,9 +1750,11 @@ int cplat_argparser_handle_parse(cplat_argparser *parser)
                 {
                     return argparser_set_error(parser, CPLAT_ERR_MISSING_VALUE, argparser_spec_display_name(spec), i);
                 }
+
                 i++;
                 value = argv[i];
                 value_index = i;
+
                 if (value == NULL)
                 {
                     return CPLAT_ERR_INVALID_ARGUMENT;
@@ -1655,27 +1766,34 @@ int cplat_argparser_handle_parse(cplat_argparser *parser)
             {
                 return result;
             }
+
             continue;
         }
 
         if (token[0] == '-' && token[1] != '\0')
         {
-            /* 短いオプション ("-x" / "-x=value")。連結 ("-abc") と "--" は未サポートのため未知扱い */
+            /*
+             * 短いオプション ("-x" または "-x=value") を解析する。
+             * 連結 ("-abc") と "--" は未サポートのため未知扱いとする。
+             */
             const char *equal = strchr(token, '=');
             size_t name_len = strlen(token);
+
             if (equal != NULL)
             {
                 name_len = (size_t)(equal - token);
             }
 
             argparser_spec *spec = NULL;
+
             if (name_len == 2)
             {
                 spec = argparser_find_short(parser, token, name_len);
             }
+
             if (spec == NULL)
             {
-                /* 次の位置引数が整数の場合、負数は短いオプションではなく位置引数として扱う */
+                /* 次の位置引数が整数の場合、負数は短いオプションではなく位置引数として扱う。 */
                 if (token[1] >= '0' && token[1] <= '9')
                 {
                     size_t next_positional_index = positional_index;
@@ -1692,20 +1810,26 @@ int cplat_argparser_handle_parse(cplat_argparser *parser)
                                 {
                                     return result;
                                 }
+
                                 break;
                             }
+
                             return argparser_set_error(parser, CPLAT_ERR_UNKNOWN_OPTION, token, i);
                         }
+
                         next_positional_index++;
                     }
+
                     if (next_positional_index < parser->spec_count)
                     {
                         continue;
                     }
                 }
+
                 return argparser_set_error(parser, CPLAT_ERR_UNKNOWN_OPTION, token, i);
             }
 
+            /* フラグ オプションの値指定を拒否し、出現回数を加算する。 */
             if (spec->kind == ARGPARSER_SPEC_FLAG)
             {
                 if (equal != NULL)
@@ -1713,13 +1837,16 @@ int cplat_argparser_handle_parse(cplat_argparser *parser)
                     return argparser_set_error(parser, CPLAT_ERR_UNEXPECTED_VALUE, argparser_spec_display_name(spec),
                                                i);
                 }
+
                 (*spec->int_storage)++;
                 spec->found++;
                 continue;
             }
 
+            /* 埋め込み値 ("-x=value") または次の引数から値を取得する。 */
             const char *value = NULL;
             int value_index = i;
+
             if (equal != NULL)
             {
                 value = equal + 1;
@@ -1730,9 +1857,11 @@ int cplat_argparser_handle_parse(cplat_argparser *parser)
                 {
                     return argparser_set_error(parser, CPLAT_ERR_MISSING_VALUE, argparser_spec_display_name(spec), i);
                 }
+
                 i++;
                 value = argv[i];
                 value_index = i;
+
                 if (value == NULL)
                 {
                     return CPLAT_ERR_INVALID_ARGUMENT;
@@ -1744,10 +1873,11 @@ int cplat_argparser_handle_parse(cplat_argparser *parser)
             {
                 return result;
             }
+
             continue;
         }
 
-        /* 位置引数 ("-" 単独を含む) */
+        /* 位置引数 ("-" 単独を含む) を割り当てて格納する。 */
         int result = argparser_store_positional(parser, token, i, &positional_index);
         if (result != CPLAT_OK)
         {
@@ -1755,17 +1885,19 @@ int cplat_argparser_handle_parse(cplat_argparser *parser)
         }
     }
 
-    /* 必須チェック */
+    /* 必須指定されたオプションおよび位置引数が指定されたか検査する。 */
     for (size_t i = 0; i < parser->spec_count; i++)
     {
         const argparser_spec *spec = &parser->specs[i];
         if ((spec->flags & CPLAT_ARGPARSER_REQUIRED) != 0u && spec->found == 0)
         {
             const char *display_name = spec->long_name;
+
             if (argparser_spec_is_positional(spec) == 0)
             {
                 display_name = argparser_spec_display_name(spec);
             }
+
             return argparser_set_error(parser, CPLAT_ERR_MISSING_REQUIRED, display_name, -1);
         }
     }
@@ -1852,9 +1984,12 @@ int cplat_argparser_handle_get_error_message(const cplat_argparser *parser, char
         target = "?";
     }
 
-    /* -Wformat-nonliteral を避けるため、エラー種別ごとにリテラル書式で組み立てる */
-    /* 切り詰め時も途中までを残す (呼び出し側が部分メッセージを表示する)。 */
+    /*
+     * -Wformat-nonliteral を避けるため、エラー種別ごとにリテラル書式で組み立てる。
+     * 切り詰め時も途中までを残す (呼び出し側が部分メッセージを表示する)。
+     */
     int written = 0;
+
     switch (parser->last_error)
     {
     case CPLAT_ERR_UNKNOWN_OPTION:
@@ -1901,6 +2036,7 @@ int cplat_argparser_handle_get_error_message(const cplat_argparser *parser, char
         buffer[0] = '\0';
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if ((size_t)written >= buffer_size)
     {
         return CPLAT_ERR_BUFFER_TOO_SMALL;
@@ -1929,6 +2065,7 @@ const char *cplat_argparser_handle_get_program_name(const cplat_argparser *parse
     {
         return parser->program_name;
     }
+
     return parser->resolved_program_name;
 }
 
@@ -1948,10 +2085,12 @@ int cplat_argparser_handle_get_usage(const cplat_argparser *parser, char *buffer
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (buffer == NULL && required_size == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (buffer != NULL && buffer_size == 0)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
@@ -1976,6 +2115,7 @@ int cplat_argparser_handle_get_usage(const cplat_argparser *parser, char *buffer
         {
             nul_position = buffer_size - 1;
         }
+
         buffer[nul_position] = '\0';
 
         if ((writer.needed + 1) > buffer_size)
@@ -2020,6 +2160,7 @@ int cplat_argparser_handle_print_usage(const cplat_argparser *parser, FILE *stre
     }
 
     cplat_free(buffer);
+
     return result;
 }
 
@@ -2038,6 +2179,7 @@ int cplat_argparser_handle_print_error_messages(const cplat_argparser *parser, F
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (parser->last_error == CPLAT_OK)
     {
         return CPLAT_OK;
@@ -2049,6 +2191,7 @@ int cplat_argparser_handle_print_error_messages(const cplat_argparser *parser, F
     {
         fprintf(stream, "error: %s\n", message);
     }
+
     fprintf(stream, "\n");
 
     return result;
@@ -2134,9 +2277,12 @@ int cplat_argparser_handle_get_register_error_message(const cplat_argparser *par
         target = "?";
     }
 
-    /* -Wformat-nonliteral を避けるため、結果コードごとにリテラル書式で組み立てる */
-    /* 切り詰め時も途中までを残す (呼び出し側が部分メッセージを表示する)。 */
+    /*
+     * -Wformat-nonliteral を避けるため、結果コードごとにリテラル書式で組み立てる。
+     * 切り詰め時も途中までを残す (呼び出し側が部分メッセージを表示する)。
+     */
     int written = 0;
+
     switch (parser->register_errors[index].result)
     {
     case CPLAT_ERR_INVALID_ARGUMENT:
@@ -2163,6 +2309,7 @@ int cplat_argparser_handle_get_register_error_message(const cplat_argparser *par
         buffer[0] = '\0';
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if ((size_t)written >= buffer_size)
     {
         return CPLAT_ERR_BUFFER_TOO_SMALL;
@@ -2199,6 +2346,7 @@ int cplat_argparser_handle_print_register_error_messages(const cplat_argparser *
             fprintf(stream, "error: %s\n", message);
         }
     }
+
     if (parser->register_error_count > 0)
     {
         fprintf(stream, "\n");

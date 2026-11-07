@@ -32,9 +32,11 @@
 
     #include <cplat/base/windows_sdk.h>
 
-/* SCM 関連型 (SC_HANDLE / SERVICE_TABLE_ENTRYW 等) は winsvc.h が提供する。    */
-/* windows_sdk.h が WIN32_LEAN_AND_MEAN 付きで windows.h を取り込むが、         */
-/* winsvc.h は WIN32_LEAN_AND_MEAN の対象外のため windows.h 経由で取り込まれる。 */
+/*
+ * SCM 関連型 (SC_HANDLE / SERVICE_TABLE_ENTRYW 等) は winsvc.h が提供する。
+ * windows_sdk.h が WIN32_LEAN_AND_MEAN 付きで windows.h を取り込むが、
+ * winsvc.h は WIN32_LEAN_AND_MEAN の対象外のため windows.h 経由で取り込まれる。
+ */
 
 /**
  *  @brief          StartServiceCtrlDispatcherU 用の UTF-8 サービス エントリです。
@@ -88,9 +90,9 @@ CPLAT_EXPORT HANDLE CPLAT_API CreateFileU(const char *utf8_path, DWORD desired_a
  *  @param[in]      open_mode               パイプのアクセス モード。
  *  @param[in]      pipe_mode               パイプの種類、読み取りモード、待機モード。
  *  @param[in]      max_instances           最大インスタンス数。
- *  @param[in]      out_buffer_size         出力バッファーのサイズ (バイト)。
- *  @param[in]      in_buffer_size          入力バッファーのサイズ (バイト)。
- *  @param[in]      default_timeout         クライアントの待機タイムアウト (ミリ秒)。
+ *  @param[in]      out_buffer_size         出力バッファーのサイズ [byte]。
+ *  @param[in]      in_buffer_size          入力バッファーのサイズ [byte]。
+ *  @param[in]      default_timeout         クライアントの待機タイムアウト [ms]。
  *  @param[in]      security_attributes     セキュリティ属性へのポインター。NULL 可。
  *  @return         成功時はパイプのサーバー エンド ハンドル。失敗時は INVALID_HANDLE_VALUE。
  *  @see            CreateNamedPipeW
@@ -114,7 +116,7 @@ CPLAT_EXPORT HANDLE CPLAT_API CreateNamedPipeU(const char *utf8_name, DWORD open
  *                  変換失敗時は 0 を返します。
  *  @param[in]      module      モジュールのハンドル。NULL のとき呼び出し元プロセスの実行ファイル。
  *  @param[out]     utf8_buf    パスの書き込み先バッファー (UTF-8)。
- *  @param[in]      size        utf8_buf のサイズ (バイト)。
+ *  @param[in]      size        utf8_buf のサイズ [byte]。
  *  @return         書き込んだバイト数 (NUL 終端を除く)。失敗時は 0。
  *  @see            GetModuleFileNameW
  *                  https://learn.microsoft.com/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulefilenamew
@@ -163,7 +165,7 @@ CPLAT_EXPORT BOOL CPLAT_API WriteConsoleU(HANDLE console, const char *utf8_text,
  *                  変換失敗またはバッファー不足時は SetLastError を設定して FALSE を返します。
  *  @param[in]      utf8_path           対象のパス (UTF-8)。
  *  @param[out]     utf8_volume_root    マウント ポイントの書き込み先 (UTF-8)。
- *  @param[in]      size                utf8_volume_root のサイズ (バイト)。
+ *  @param[in]      size                utf8_volume_root のサイズ [byte]。
  *  @return         成功時は非 0。失敗時は 0。
  *  @see            GetVolumePathNameW
  *                  https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-getvolumepathnamew
@@ -183,12 +185,12 @@ CPLAT_EXPORT BOOL CPLAT_API GetVolumePathNameU(const char *utf8_path, char *utf8
  *                  変換失敗またはバッファー不足時は SetLastError を設定して FALSE を返します。
  *  @param[in]      utf8_root_path          ボリュームのルート パス (UTF-8)。NULL のとき現在のディレクトリのボリューム。
  *  @param[out]     utf8_volume_name        ボリューム名の書き込み先 (UTF-8)。NULL 可。
- *  @param[in]      volume_name_size        utf8_volume_name のサイズ (バイト)。
+ *  @param[in]      volume_name_size        utf8_volume_name のサイズ [byte]。
  *  @param[out]     serial_number           シリアル番号の格納先。NULL 可。
  *  @param[out]     max_component_length    ファイル名の最大長の格納先。NULL 可。
  *  @param[out]     file_system_flags       ファイル システムのフラグの格納先。NULL 可。
  *  @param[out]     utf8_file_system_name   ファイル システム名の書き込み先 (UTF-8)。NULL 可。
- *  @param[in]      file_system_name_size   utf8_file_system_name のサイズ (バイト)。
+ *  @param[in]      file_system_name_size   utf8_file_system_name のサイズ [byte]。
  *  @return         成功時は非 0。失敗時は 0。
  *  @see            GetVolumeInformationW
  *                  https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-getvolumeinformationw

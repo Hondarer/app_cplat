@@ -25,7 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* 圧縮 API の処理上限に合わせ、展開後長さの上限は 4 GiB - 1 byte とする。 */
+/* 圧縮 API の処理上限に合わせ、展開後長さの上限は 4 [GiB] - 1 [byte] とする。 */
 #define COMPRESS_CLI_MAX_UNCOMPRESSED_SIZE ((size_t)CPLAT_COMPRESS_MAX_UNCOMPRESSED_SIZE)
 
 /* エラー メッセージの格納に使用するバッファーのバイト数。 */
@@ -48,21 +48,30 @@ static const char *compress_cli_error_text(const cplat_error *error, char *buf, 
     return buf;
 }
 
+/*
+ * ビッグ エンディアンの 64 ビット符号なし整数を読み取り、ホストのバイト オーダーで返す。
+ */
 static uint64_t compress_cli_read_u64_be(const uint8_t *data)
 {
     uint64_t orig_len_nbo;
 
     memcpy(&orig_len_nbo, data, sizeof(orig_len_nbo));
+
     return cplat_ntoh64(orig_len_nbo);
 }
 
+/*
+ * ファイル読み込み失敗時に確保済み資源を解放し、エラー コード -1 を返す。
+ */
 static int compress_cli_read_file_fail(FILE *file, uint8_t *data)
 {
     if (file != NULL)
     {
         (void)fclose(file);
     }
+
     cplat_free(data);
+
     return -1;
 }
 
@@ -92,6 +101,7 @@ static int compress_cli_read_file(const char *path, size_t max_size, uint8_t **d
         return -1;
     }
 
+    /* ファイル末尾へ移動してサイズを取得し、上限以内であることを検証する。 */
     if (cplat_fseek(file, 0, SEEK_END) != 0)
     {
         fprintf(stderr, "入力ファイルのサイズ取得に失敗しました: %s\n", path);
@@ -119,6 +129,7 @@ static int compress_cli_read_file(const char *path, size_t max_size, uint8_t **d
         return compress_cli_read_file_fail(file, data);
     }
 
+    /* 空ファイルでない場合は入力バッファーを確保し、全データを読み込む。 */
     if (file_size > 0u)
     {
         data = (uint8_t *)cplat_malloc(file_size);
@@ -145,6 +156,7 @@ static int compress_cli_read_file(const char *path, size_t max_size, uint8_t **d
 
     *data_out = data;
     *size_out = file_size;
+
     return 0;
 }
 
@@ -175,6 +187,8 @@ static int compress_cli_write_file(const char *path, const uint8_t *data, size_t
             {
                 fprintf(stderr, "出力ファイルのクローズに失敗しました: %s\n", path);
             }
+
+            /* 不完全な出力ファイルを残さないため削除する。失敗時のエラーは無視する。 */
             (void)cplat_remove(path, NULL);
             return -1;
         }
@@ -183,6 +197,8 @@ static int compress_cli_write_file(const char *path, const uint8_t *data, size_t
     if (fclose(file) != 0)
     {
         fprintf(stderr, "出力ファイルのクローズに失敗しました: %s\n", path);
+
+        /* クローズ失敗時は不完全な可能性があるため削除する。失敗時のエラーは無視する。 */
         (void)cplat_remove(path, NULL);
         return -1;
     }
@@ -197,6 +213,7 @@ static int compress_cli_resolve_paths(const compress_cli_options *options, char 
     char message[COMPRESS_CLI_ERROR_MESSAGE_SIZE];
     int path_equal = 0;
 
+    /* 入力パスと出力パスが同一ファイルを指していないか検証する。 */
     if (cplat_path_equal(options->input_path, options->output_path, &path_equal, &error) != CPLAT_OK)
     {
         fprintf(stderr, "入力パスと出力パスの比較に失敗しました (%s)\n",
@@ -210,6 +227,7 @@ static int compress_cli_resolve_paths(const compress_cli_options *options, char 
         return -1;
     }
 
+    /* 入力パスと出力パスを正規化する。 */
     if (cplat_path_get_full(input_full, input_full_size, &error, options->input_path) != CPLAT_OK)
     {
         fprintf(stderr, "入力パスの正規化に失敗しました: %s (%s)\n", options->input_path,
@@ -231,6 +249,7 @@ static int compress_cli_run_compress_return(uint8_t *input_data, uint8_t *compre
 {
     cplat_free(compressed_data);
     cplat_free(input_data);
+
     return rc;
 }
 
@@ -254,6 +273,7 @@ static int compress_cli_run_compress(const char *input_path, const char *output_
         return compress_cli_run_compress_return(input_data, compressed_data, rc);
     }
 
+    /* 圧縮による膨張とヘッダー領域を見込み、作業バッファーを確保する。 */
     compressed_capacity = input_size * 2u + CPLAT_COMPRESS_HEADER_SIZE;
     if (compressed_capacity < 256u)
     {
@@ -286,6 +306,7 @@ static int compress_cli_run_decompress_return(uint8_t *input_data, uint8_t *deco
 {
     cplat_free(decompressed_data);
     cplat_free(input_data);
+
     return rc;
 }
 
@@ -303,12 +324,14 @@ static int compress_cli_run_decompress(const char *input_path, const char *outpu
         return -1;
     }
 
+    /* ヘッダー長以下のデータは展開対象として不正なため除外する。 */
     if (input_size <= CPLAT_COMPRESS_HEADER_SIZE)
     {
         fprintf(stderr, "展開入力が不正です。ヘッダーのみ、または空です: %s\n", input_path);
         return compress_cli_run_decompress_return(input_data, decompressed_data, rc);
     }
 
+    /* ヘッダーから展開後サイズを読み取り、上限以内であることを検証する。 */
     expected_size = compress_cli_read_u64_be(input_data);
     if (expected_size == 0U)
     {
@@ -394,6 +417,7 @@ int main(int argc, char *argv[])
 
     int parse_result = cplat_argparser_parse();
 
+    /* ヘルプ要求時は使用法を表示して終了する。 */
     if (options.need_help != 0)
     {
         cplat_argparser_print_usage(stdout);
@@ -407,6 +431,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    /* 圧縮モードと展開モードのどちらか一方のみが指定されていることを検証する。 */
     if ((compress_count + decompress_count) != 1)
     {
         cplat_argparser_print_error_messages(stderr);
@@ -434,6 +459,8 @@ int main(int argc, char *argv[])
     }
 
     int exit_code = EXIT_SUCCESS;
+
+    /* 指定されたモードに応じて圧縮または展開を実行する。 */
     if (options.mode == COMPRESS_CLI_MODE_COMPRESS)
     {
         if (compress_cli_run_compress(input_full, output_full) != 0)

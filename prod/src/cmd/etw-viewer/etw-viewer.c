@@ -70,6 +70,7 @@ static int parse_process_id_arg(const char *text, uint32_t *process_id_out)
 
     errno = 0;
     value = strtoul(text, &endptr, 10);
+
     /* プロセス ID は Windows DWORD のため、コーディング規範の例外として UINT32_MAX 上限を維持する。 */
     if (errno != 0 || endptr == text || *endptr != '\0' || value > UINT32_MAX)
     {
@@ -77,6 +78,7 @@ static int parse_process_id_arg(const char *text, uint32_t *process_id_out)
     }
 
     *process_id_out = (uint32_t)value;
+
     return 0;
 }
 
@@ -126,6 +128,9 @@ const char *etw_viewer_level_name(int level)
     }
 }
 
+/*
+ * ETW イベント レベルを優先度文字 (C, E, W, I, V, U) へ変換する。
+ */
 static char etw_viewer_priority_letter(int level)
 {
     switch (level)
@@ -155,6 +160,7 @@ int etw_viewer_format_timestamp_utc(int64_t timestamp_100ns, char *buffer, size_
     {
         return -1;
     }
+
     if (timestamp_100ns < filetime_unix_epoch_100ns)
     {
         return -1;
@@ -163,6 +169,7 @@ int etw_viewer_format_timestamp_utc(int64_t timestamp_100ns, char *buffer, size_
     unix_100ns = timestamp_100ns - filetime_unix_epoch_100ns;
     ts.tv_sec = (time_t)(unix_100ns / 10000000LL);
     ts.tv_nsec = (unix_100ns % 10000000LL) * 100LL;
+
     return cplat_clock_format_realtime_iso8601_local(buffer, buffer_size, &ts);
 }
 
@@ -178,14 +185,19 @@ void etw_viewer_handle_event(const cplat_etw_event *event, void *context)
     {
         return;
     }
+
+    /* cplat の Trace イベント以外のイベントは無視する。 */
     if (event->event_name == NULL || strcmp(event->event_name, "Trace") != 0)
     {
         return;
     }
+
     if (event->message == NULL)
     {
         return;
     }
+
+    /* プロセス ID フィルターが指定されている場合、一致しないプロセスのイベントを除外する。 */
     if (viewer_context != NULL && viewer_context->has_process_id_filter &&
         event->process_id != viewer_context->process_id_filter)
     {
@@ -200,7 +212,9 @@ void etw_viewer_handle_event(const cplat_etw_event *event, void *context)
     {
         tag = ETW_VIEWER_DEFAULT_TAG;
     }
+
     message = event->message;
+
     if (etw_viewer_format_timestamp_utc(event->timestamp_100ns, timestamp_text, sizeof(timestamp_text)) != 0)
     {
         timestamp_value = "(invalid-timestamp)";
@@ -289,6 +303,7 @@ int main(int argc, char *argv[])
             cplat_argparser_print_usage(stderr);
             return EXIT_FAILURE;
         }
+
         options.has_process_id_filter = 1;
     }
 
@@ -302,45 +317,54 @@ int main(int argc, char *argv[])
     viewer_context.process_id_filter = options.process_id_filter;
     viewer_context.has_process_id_filter = options.has_process_id_filter;
 
+    /* ETW セッションの開始に必要な権限があるか確認する。 */
     ret = cplat_etw_session_check_access();
     if (ret == CPLAT_ERR_PERMISSION_DENIED)
     {
         print_access_error();
         return EXIT_ACCESS_DENIED;
     }
+
     if (ret != CPLAT_OK)
     {
         fprintf(stderr, "ETW session の権限確認に失敗しました。\n");
         return EXIT_FAILURE;
     }
 
+    /* Ctrl+C などの終了要求を受け取るコールバックを登録する。 */
     if (cplat_shutdown_request_register(etw_viewer_shutdown_request_callback, NULL) != CPLAT_OK)
     {
         fprintf(stderr, "終了要求 callback の登録に失敗しました。\n");
         return EXIT_FAILURE;
     }
 
+    /* ETW セッションを開始し、イベントの受信を開始する。 */
     ret = cplat_etw_session_start(session_name, CPLAT_TRACER_DEFAULT_PROVIDER_GUID_STR, etw_viewer_handle_event,
                                   &viewer_context, &session);
     if (ret != CPLAT_OK)
     {
         int exit_code = EXIT_FAILURE;
+
         if (ret == CPLAT_ERR_PERMISSION_DENIED)
         {
             exit_code = EXIT_ACCESS_DENIED;
         }
+
         print_start_error(ret, session_name);
         return exit_code;
     }
 
     printf("session=%s provider=%s\n", session_name, CPLAT_TRACER_DEFAULT_PROVIDER_GUID_STR);
+
     if (options.has_process_id_filter)
     {
         printf("filter.pid=%" PRIu32 "\n", options.process_id_filter);
     }
+
     printf("Ctrl+C で終了します。\n");
     fflush(stdout);
 
+    /* 終了要求を受け取るまで待機ループを継続する。 */
     while (!g_stop_requested)
     {
         cplat_sleep_ms(ETW_VIEWER_WAIT_MS);

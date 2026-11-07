@@ -96,6 +96,7 @@ static int memory_lock_lock(void)
     int result = CPLAT_OK;
 
     cplat_call_once(&s_memory_lock_lock_once, init_memory_lock_lock);
+
     if (s_memory_lock_lock == NULL)
     {
         result = CPLAT_ERR_UNKNOWN;
@@ -185,10 +186,12 @@ static int convert_flags_to_mlockall_flags(int flags, int *native_flags)
         {
             converted |= MCL_CURRENT;
         }
+
         if ((flags & CPLAT_MEMORY_LOCK_FUTURE) != 0)
         {
             converted |= MCL_FUTURE;
         }
+
         if ((flags & CPLAT_MEMORY_LOCK_ONFAULT) != 0)
         {
     #if defined(MCL_ONFAULT)
@@ -322,6 +325,7 @@ static int append_scope_range(cplat_memory_lock_scope *scope, uintptr_t base, ui
     if (scope->count == scope->capacity)
     {
         size_t new_capacity = 16U;
+
         if (scope->capacity > 0U)
         {
             new_capacity = scope->capacity * 2U;
@@ -363,6 +367,7 @@ static int ensure_windows_registry_capacity(size_t required_capacity)
     if (required_capacity > s_windows_locked_range_capacity)
     {
         size_t new_capacity = 16U;
+
         if (s_windows_locked_range_capacity > 0U)
         {
             new_capacity = s_windows_locked_range_capacity;
@@ -419,6 +424,7 @@ static int insert_windows_registry_range(size_t index, uintptr_t base, uintptr_t
             s_windows_locked_ranges[move_index] = s_windows_locked_ranges[move_index - 1U];
             move_index--;
         }
+
         s_windows_locked_ranges[index].base = base;
         s_windows_locked_ranges[index].end = end;
         s_windows_locked_ranges[index].ref_count = ref_count;
@@ -441,6 +447,7 @@ static void remove_windows_registry_range(size_t index)
         s_windows_locked_ranges[move_index] = s_windows_locked_ranges[move_index + 1U];
         move_index++;
     }
+
     s_windows_locked_range_count--;
 }
 
@@ -466,6 +473,7 @@ static int split_windows_registry_at(uintptr_t boundary)
             entry->end = boundary;
             result = insert_windows_registry_range(index + 1U, boundary, old_end, ref_count);
         }
+
         index++;
     }
 
@@ -488,6 +496,7 @@ static int find_windows_registry_range(uintptr_t address, size_t *index_out)
         if ((s_windows_locked_ranges[index].base <= address) && (address < s_windows_locked_ranges[index].end))
         {
             found = 1;
+
             if (index_out != NULL)
             {
                 *index_out = index;
@@ -521,6 +530,7 @@ static uintptr_t find_next_windows_registry_base(uintptr_t address, uintptr_t en
         {
             next = base;
         }
+
         index++;
     }
 
@@ -572,6 +582,7 @@ static int release_windows_scope_ranges(cplat_memory_lock_scope *scope)
         cplat_memory_lock_range_entry *entry = NULL;
 
         index--;
+
         if (find_windows_registry_range(scope->entries[index].base, &registry_index) == 0)
         {
             result = CPLAT_ERR_UNKNOWN;
@@ -587,6 +598,7 @@ static int release_windows_scope_ranges(cplat_memory_lock_scope *scope)
             else
             {
                 entry->ref_count--;
+
                 if (entry->ref_count == 0U)
                 {
                     SIZE_T size = (SIZE_T)(entry->end - entry->base);
@@ -594,6 +606,7 @@ static int release_windows_scope_ranges(cplat_memory_lock_scope *scope)
                     {
                         result = map_windows_error_to_memory_lock_result(GetLastError());
                     }
+
                     remove_windows_registry_range(registry_index);
                 }
             }
@@ -629,6 +642,7 @@ static int acquire_windows_range(cplat_memory_lock_scope *scope, uintptr_t base,
     {
         result = split_windows_registry_at(base);
     }
+
     if (result == CPLAT_OK)
     {
         result = split_windows_registry_at(end);
@@ -652,6 +666,7 @@ static int acquire_windows_range(cplat_memory_lock_scope *scope, uintptr_t base,
             {
                 s_windows_locked_ranges[registry_index].ref_count--;
             }
+
             current = range_end;
         }
         else
@@ -682,6 +697,7 @@ static int acquire_windows_range(cplat_memory_lock_scope *scope, uintptr_t base,
                     }
                 }
             }
+
             current = range_end;
         }
     }
@@ -713,6 +729,7 @@ static int prefault_stack(size_t stack_prefault_bytes)
 
         uintptr_t current = (uintptr_t)&marker;
         size_t available = 0U;
+
         if ((current > (uintptr_t)stack_low) && (current < (uintptr_t)stack_high))
         {
             available = (size_t)(current - (uintptr_t)stack_low);
@@ -839,6 +856,7 @@ int cplat_memory_lock_self(const cplat_memory_lock_self_options *options, cplat_
 #if defined(PLATFORM_LINUX)
         int native_flags = 0;
         (void)convert_flags_to_mlockall_flags(options->flags, &native_flags);
+
         {
             cplat_memory_lock_scope *new_scope =
                 (cplat_memory_lock_scope *)cplat_calloc(1U, sizeof(cplat_memory_lock_scope));
@@ -862,6 +880,7 @@ int cplat_memory_lock_self(const cplat_memory_lock_self_options *options, cplat_
                         new_scope->flags = options->flags;
                         *scope = new_scope;
                     }
+
                     memory_lock_unlock();
                 }
 
@@ -930,6 +949,7 @@ int cplat_memory_lock_self(const cplat_memory_lock_self_options *options, cplat_
                     {
                         *scope = new_scope;
                     }
+
                     memory_lock_unlock();
                 }
 
@@ -969,6 +989,7 @@ int cplat_memory_lock_scope_release(cplat_memory_lock_scope *scope)
                 else
                 {
                     s_linux_self_lock_scope_count--;
+
                     if (s_linux_self_lock_scope_count == 0U)
                     {
                         if (munlockall() != 0)
@@ -977,9 +998,11 @@ int cplat_memory_lock_scope_release(cplat_memory_lock_scope *scope)
                         }
                     }
                 }
+
                 memory_lock_unlock();
             }
         }
+
         cplat_free(scope);
 #elif defined(PLATFORM_WINDOWS)
         result = memory_lock_lock();
@@ -988,6 +1011,7 @@ int cplat_memory_lock_scope_release(cplat_memory_lock_scope *scope)
             result = release_windows_scope_ranges(scope);
             memory_lock_unlock();
         }
+
         cplat_free(scope->entries);
         cplat_free(scope);
 #else

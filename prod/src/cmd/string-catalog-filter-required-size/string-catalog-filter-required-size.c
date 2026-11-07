@@ -25,11 +25,15 @@
 
 typedef struct filter_required_size_options
 {
-    int line_capacity;
-    int line_width;
+    int line_capacity; /* 条件行数の上限 */
+    int line_width;    /* 条件行 1 行あたりのバイト数 [byte] */
     int need_help;
 } filter_required_size_options;
 
+/*
+ * コマンドライン オプションの定義を登録する。
+ * 成功時は 0、登録エラー発生時は -1 を返す。
+ */
 static int register_options(filter_required_size_options *options)
 {
     (void)cplat_argparser_register_flag("-h", "--help", "show this help", &options->need_help);
@@ -38,11 +42,13 @@ static int register_options(filter_required_size_options *options)
                                               &options->line_capacity);
     (void)cplat_argparser_register_option_int("-w", "--line-width", "N", "bytes per condition line (8-1024)",
                                               CPLAT_ARGPARSER_REQUIRED, &options->line_width);
+
     if (cplat_argparser_get_register_error_count() > 0)
     {
         (void)cplat_argparser_print_register_error_messages(stderr);
         return -1;
     }
+
     return 0;
 }
 
@@ -56,17 +62,20 @@ int main(int argc, char **argv)
     cplat_argparser_init(argc, argv,
                          "Print the source-region and filter-image sizes in bytes required for a string catalog "
                          "filter.");
+
     if (register_options(&options) != 0)
     {
         return EXIT_FAILURE;
     }
 
     ret = cplat_argparser_parse();
+
     if (options.need_help != 0)
     {
         (void)cplat_argparser_print_usage(stdout);
         return EXIT_SUCCESS;
     }
+
     if (ret != CPLAT_OK)
     {
         (void)cplat_argparser_print_error_messages(stderr);
@@ -74,12 +83,13 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    /* スロットの作成と同じ範囲に限る。範囲外の値で求めた大きさは、どのスロットにも結び付けられないため */
+    /* スロットの作成と同じ範囲に限る。範囲外の値で求めた大きさは、どのスロットにも結び付けられないためである。 */
     if ((options.line_capacity < 1) || (options.line_capacity > (int)CPLAT_STRING_CATALOG_FILTER_LINE_MAX))
     {
         (void)fprintf(stderr, "line capacity must be between 1 and %u.\n", CPLAT_STRING_CATALOG_FILTER_LINE_MAX);
         return EXIT_FAILURE;
     }
+
     if ((options.line_width < (int)CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MIN) ||
         (options.line_width > (int)CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX))
     {
@@ -88,10 +98,12 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
+    /* ソース領域とフィルター オブジェクトに必要なバイト数を標準出力へ出力する。 */
     if (printf("%zu %zu\n", (size_t)CPLAT_STRING_CATALOG_FILTER_SOURCE_SIZE(options.line_capacity, options.line_width),
                (size_t)CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(options.line_capacity, options.line_width)) < 0)
     {
         return EXIT_FAILURE;
     }
+
     return EXIT_SUCCESS;
 }

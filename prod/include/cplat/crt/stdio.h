@@ -18,8 +18,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_CRT_STDIO_H
 #define CPLAT_CRT_STDIO_H
@@ -129,7 +131,7 @@ extern "C"
      *  @ref CPLAT_ERR_BUFFER_TOO_SMALL を返します。
      *
      *  @param[out]     dest       書き込み先バッファー。NULL を渡してはなりません。
-     *  @param[in]      dest_size  @p dest のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      dest_size  @p dest のサイズ [byte]。0 を渡してはなりません。
      *  @param[in]      format     printf 形式の書式文字列。NULL を渡してはなりません。
      *  @param[in]      ...        書式引数。
      *  @return         成功時は @ref CPLAT_OK 、引数不正時は @ref CPLAT_ERR_INVALID_ARGUMENT 、
@@ -150,7 +152,7 @@ extern "C"
     /**
      *  @brief          バッファーへ書式化して書き込みます (@ref cplat_snprintf の `va_list` 版)。
      *  @param[out]     dest       書き込み先バッファー。NULL を渡してはなりません。
-     *  @param[in]      dest_size  @p dest のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      dest_size  @p dest のサイズ [byte]。0 を渡してはなりません。
      *  @param[in]      format     printf 形式の書式文字列。NULL を渡してはなりません。
      *  @param[in]      args       書式引数リスト。
      *  @return         成功時は @ref CPLAT_OK 、引数不正時は @ref CPLAT_ERR_INVALID_ARGUMENT 、
@@ -175,7 +177,7 @@ extern "C"
      *  取得した行の末尾にある改行 (LF、CR、CRLF) は除去して格納します。
      *
      *  @param[out]     dest       行の格納先バッファー。NULL を渡してはなりません。
-     *  @param[in]      dest_size  @p dest のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      dest_size  @p dest のサイズ [byte]。0 を渡してはなりません。
      *  @param[in]      stream     読み取り元ストリーム。NULL を渡してはなりません。
      *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
@@ -372,7 +374,7 @@ extern "C"
     /**
      *  @brief          ストリーム位置を移動します (64bit 対応 `fseek` ラッパー)。
      *  @param[in]      stream  対象のストリーム。NULL を渡してはなりません。
-     *  @param[in]      offset  移動量 (バイト)。
+     *  @param[in]      offset  移動量 [byte]。
      *  @param[in]      whence  基点 (SEEK_SET、SEEK_CUR、SEEK_END)。
      *  @return         成功時は 0、失敗時は -1 を返します。
      *
@@ -386,7 +388,7 @@ extern "C"
     /**
      *  @brief          ストリームの現在位置を取得します (64bit 対応 `ftell` ラッパー)。
      *  @param[in]      stream  対象のストリーム。NULL を渡してはなりません。
-     *  @return         成功時は現在位置 (バイト)、失敗時は -1 を返します。
+     *  @return         成功時は現在位置 [byte]、失敗時は -1 を返します。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
@@ -480,7 +482,7 @@ extern "C"
      *                               一時ファイルは常に新規作成のため "r"/"rb" は意味を持ちませんが、
      *                               API 層での制限は課しません。
      *  @param[out]     path_out     生成された一時ファイル絶対パス (UTF-8) の格納先。
-     *  @param[in]      path_size    @p path_out のサイズ (バイト)。PLATFORM_PATH_MAX 以上を推奨します。
+     *  @param[in]      path_size    @p path_out のサイズ [byte]。PLATFORM_PATH_MAX 以上を推奨します。
      *  @param[out]     detail_out   エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。

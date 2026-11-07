@@ -12,7 +12,7 @@
  *  @section        timespec_layout レイアウト互換の方針
  *
  *  cplat_timespec は、x86-64 上で Linux の `struct timespec`
- *  (`time_t` 8 バイト + `long` 8 バイト = 16 バイト) と同一のバイナリ レイアウトを持ちます。\n
+ *  (`time_t` 8 [byte] + `long` 8 [byte] = 16 [byte]) と同一のバイナリ レイアウトを持ちます。\n
  *  Windows の UCRT `struct timespec` は `tv_nsec` が `long` (32 ビット) でレイアウトが異なるため、
  *  OS を問わず同一表現となる本型を標準時刻型として使用します。
  *
@@ -35,8 +35,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef TIMESPEC_H
 #define TIMESPEC_H
@@ -59,7 +61,7 @@ extern "C"
     /**
      *  @brief          プラットフォーム互換の標準時刻型です。
      *
-     *  Linux x86-64 の `struct timespec` とバイナリ レイアウト互換 (16 バイト) の時刻構造体です。\n
+     *  Linux x86-64 の `struct timespec` とバイナリ レイアウト互換 (16 [byte]) の時刻構造体です。\n
      *  絶対時刻 (Unix epoch 基準) にも単調クロック値にも使用でき、意味は値を生成した API 側で決まります。
      *
      *  @note           `tv_nsec` は 0 以上 999,999,999 以下に正規化して扱います。\n
@@ -68,8 +70,11 @@ extern "C"
     typedef struct cplat_timespec
     {
         time_t tv_sec; /**< 秒部。絶対時刻の場合は Unix epoch (1970-01-01T00:00:00Z) からの経過秒。 */
-        /* tv_nsec は Linux x86-64 の struct timespec::tv_nsec (long, 64 ビット) と
-           バイナリ レイアウトを一致させるため、コーディング規範の例外として固定幅型 int64_t を使用する。 */
+
+        /*
+         * tv_nsec は Linux x86-64 の struct timespec::tv_nsec (long, 64 ビット) と
+         * バイナリ レイアウトを一致させるため、コーディング規範の例外として固定幅型 int64_t を使用する。
+         */
         int64_t tv_nsec; /**< ナノ秒部 (0 以上 999,999,999 以下)。 */
     } cplat_timespec;
 

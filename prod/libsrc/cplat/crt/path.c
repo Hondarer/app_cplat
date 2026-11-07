@@ -24,6 +24,10 @@
     #include <unistd.h>
 #endif
 
+/*
+ * パス文字列を出力バッファーへコピーする。
+ * 成功時は CPLAT_OK を返し、バッファーに収まらない場合は ENAMETOOLONG に対応する結果コードを返す。
+ */
 static int copy_path_text(char *path_out, const size_t path_size, cplat_error *detail_out, const char *text)
 {
     size_t len;
@@ -36,9 +40,15 @@ static int copy_path_text(char *path_out, const size_t path_size, cplat_error *d
     }
 
     memcpy(path_out, text, len + 1u);
+
     return cplat_internal_error_report_success(detail_out);
 }
 
+/*
+ * 正規化された 2 つのパス文字列を比較する。
+ * Windows では大文字・小文字を区別せず比較し、Linux では完全一致で比較する。
+ * 一致する場合は 1、一致しない場合は 0 を返す。
+ */
 static int compare_normalized_paths(const char *lhs, const char *rhs)
 {
 #if defined(PLATFORM_WINDOWS)
@@ -48,9 +58,11 @@ static int compare_normalized_paths(const char *lhs, const char *rhs)
         {
             return 0;
         }
+
         lhs++;
         rhs++;
     }
+
     if (*lhs == '\0' && *rhs == '\0')
     {
         return 1;
@@ -72,6 +84,10 @@ static int compare_normalized_paths(const char *lhs, const char *rhs)
 }
 
 #if defined(PLATFORM_LINUX)
+/*
+ * POSIX 形式の絶対パスに含まれる '.'、'..'、連続するセパレーターをインプレースで正規化する。
+ * 成功時は CPLAT_OK を返し、一時メモリの確保に失敗した場合は CPLAT_ERR_OUT_OF_MEMORY を返す。
+ */
 static int normalize_absolute_posix_path(char *path)
 {
     size_t read_idx;
@@ -99,10 +115,12 @@ static int normalize_absolute_posix_path(char *path)
         }
 
         seg_start = read_idx;
+
         while (path[read_idx] != '\0' && path[read_idx] != PLATFORM_PATH_SEP_CHR)
         {
             read_idx++;
         }
+
         seg_len = read_idx - seg_start;
 
         if (seg_len == 0u)
@@ -121,23 +139,32 @@ static int normalize_absolute_posix_path(char *path)
             {
                 write_idx = restore_points[--restore_count];
             }
+
             continue;
         }
 
         restore_points[restore_count++] = write_idx;
+
         if (write_idx > 1u)
         {
             path[write_idx++] = PLATFORM_PATH_SEP_CHR;
         }
+
         memmove(path + write_idx, path + seg_start, seg_len);
         write_idx += seg_len;
     }
 
     path[write_idx] = '\0';
     cplat_free(restore_points);
+
     return CPLAT_OK;
 }
 
+/*
+ * 相対パスの場合はカレント ワーキング ディレクトリを前置して絶対パスを組み立てる。
+ * 既に絶対パスの場合はそのまま出力バッファーへコピーする。
+ * 成功時は CPLAT_OK を返し、失敗時は結果コードを返す。
+ */
 static int build_absolute_posix_path(char *path_out, const size_t path_size, cplat_error *detail_out, const char *path)
 {
     if (path[0] == PLATFORM_PATH_SEP_CHR)
@@ -184,10 +211,12 @@ int cplat_vpath_concat_n(char *path_out, const size_t path_size, cplat_error *de
     path_out[0] = '\0';
 
     va_copy(args_copy, args);
+
     for (idx = 0u; idx < part_count; ++idx)
     {
         const char *part = va_arg(args_copy, const char *);
         size_t part_len;
+
         if (part == NULL)
         {
             va_end(args_copy);
@@ -200,8 +229,10 @@ int cplat_vpath_concat_n(char *path_out, const size_t path_size, cplat_error *de
             va_end(args_copy);
             return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
         }
+
         required_size += part_len;
     }
+
     va_end(args_copy);
 
     for (idx = 0u; idx < part_count; ++idx)
@@ -211,6 +242,7 @@ int cplat_vpath_concat_n(char *path_out, const size_t path_size, cplat_error *de
         memcpy(path_out + offset, part, part_len);
         offset += part_len;
     }
+
     path_out[offset] = '\0';
 
     return cplat_internal_error_report_success(detail_out);
@@ -221,6 +253,7 @@ int cplat_vpath_concat_n(char *path_out, const size_t path_size, cplat_error *de
 char *cplat_path_normalize_sep(char *path)
 {
     char *p;
+
     for (p = path; *p != '\0'; ++p)
     {
         if (*p == '\\')
@@ -228,6 +261,7 @@ char *cplat_path_normalize_sep(char *path)
             *p = PLATFORM_PATH_SEP_CHR;
         }
     }
+
     return path;
 }
 
@@ -241,6 +275,7 @@ int cplat_path_get_full(char *path_out, const size_t path_size, cplat_error *det
         {
             path_out[0] = '\0';
         }
+
         return cplat_internal_error_report_errno(detail_out, EINVAL);
     }
 
@@ -257,6 +292,7 @@ int cplat_path_get_full(char *path_out, const size_t path_size, cplat_error *det
         }
 
         cplat_path_normalize_sep(candidate);
+
         {
             int normalize_result = normalize_absolute_posix_path(candidate);
             if (normalize_result != CPLAT_OK)
@@ -286,6 +322,7 @@ int cplat_path_get_full(char *path_out, const size_t path_size, cplat_error *det
             path_out[0] = '\0';
             return copy_result;
         }
+
         cplat_path_normalize_sep(normalized_input);
 
         if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), normalized_input) < 0)
@@ -302,6 +339,7 @@ int cplat_path_get_full(char *path_out, const size_t path_size, cplat_error *det
             path_out[0] = '\0';
             return cplat_internal_error_report_windows_error(detail_out, error_code);
         }
+
         if (needed >= (DWORD)(sizeof(wfull) / sizeof(wfull[0])))
         {
             path_out[0] = '\0';
@@ -314,6 +352,7 @@ int cplat_path_get_full(char *path_out, const size_t path_size, cplat_error *det
             return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
         }
     }
+
     return cplat_internal_error_report_success(detail_out);
 #endif /* PLATFORM_ */
 }
@@ -344,6 +383,7 @@ int cplat_path_equal(const char *lhs, const char *rhs, int *equal_out, cplat_err
     }
 
     *equal_out = compare_normalized_paths(lhs_full, rhs_full);
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -362,13 +402,16 @@ int cplat_path_get_temp_dir(char *path_out, const size_t path_size, cplat_error 
         const char *tmpdir;
         size_t len;
 
-        /* TMPDIR が設定されていても本バッファーに収まらない場合は、切り詰めた値を
-           一時ディレクトリとして採用すると誤ったパスを返すため、失敗として扱う */
+        /*
+         * TMPDIR が設定されていても本バッファーに収まらない場合は、切り詰めた値を
+         * 一時ディレクトリとして採用すると誤ったパスを返すため、失敗として扱う。
+         */
         if (cplat_getenv("TMPDIR", tmpdir_buf, sizeof(tmpdir_buf), NULL, NULL) == CPLAT_ERR_BUFFER_TOO_SMALL)
         {
             path_out[0] = '\0';
             return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
         }
+
         if (tmpdir_buf[0] == '\0')
         {
             tmpdir = "/tmp";
@@ -388,6 +431,7 @@ int cplat_path_get_temp_dir(char *path_out, const size_t path_size, cplat_error 
         {
             return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
         }
+
         return cplat_internal_error_report_success(detail_out);
     }
 #elif defined(PLATFORM_WINDOWS)
@@ -396,8 +440,10 @@ int cplat_path_get_temp_dir(char *path_out, const size_t path_size, cplat_error 
         DWORD dwret;
         size_t len;
 
-        /* 取得結果は直後に cplat_wpath_to_utf8 で変換するため、
-           GetTempPathU を新設せず W 版と既存の変換関数を組み合わせる */
+        /*
+         * 取得結果は直後に cplat_wpath_to_utf8 で変換するため、
+         * GetTempPathU を新設せず W 版と既存の変換関数を組み合わせる。
+         */
         dwret = GetTempPathW((DWORD)(sizeof(wdir) / sizeof(wdir[0])), wdir);
         if (dwret == 0u)
         {
@@ -405,6 +451,7 @@ int cplat_path_get_temp_dir(char *path_out, const size_t path_size, cplat_error 
 
             return cplat_internal_error_report_windows_error(detail_out, error_code);
         }
+
         if (dwret >= (DWORD)(sizeof(wdir) / sizeof(wdir[0])))
         {
             return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
@@ -415,12 +462,13 @@ int cplat_path_get_temp_dir(char *path_out, const size_t path_size, cplat_error 
             return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
         }
 
-        /* GetTempPathW は末尾 '\' を付けて返す。変換後は '/' になるので除去する */
+        /* GetTempPathW は末尾 '\' を付けて返す。変換後は '/' になるので除去する。 */
         len = strlen(path_out);
         while (len > 1u && path_out[len - 1u] == PLATFORM_PATH_SEP_CHR)
         {
             path_out[--len] = '\0';
         }
+
         return cplat_internal_error_report_success(detail_out);
     }
 #endif /* PLATFORM_ */

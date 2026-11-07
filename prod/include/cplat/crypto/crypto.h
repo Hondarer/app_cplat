@@ -20,7 +20,7 @@
     [暗号文: src_len バイト] [GCM 認証タグ: CPLAT_CRYPTO_TAG_SIZE バイト]
     @endcode
  *
- *  ノンス構成 (12 バイト):
+ *  ノンス構成 (12 [byte]):
     @code
     [session_id: 4B NBO] [seq_num: 4B NBO] [padding: 4B 0x00]
     @endcode
@@ -34,8 +34,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CRYPTO_H
 #define CRYPTO_H
@@ -50,9 +52,9 @@
  *  @{
  */
 
-#define CPLAT_CRYPTO_KEY_SIZE   32U /**< AES-256-GCM 鍵サイズ (バイト)。 */
-#define CPLAT_CRYPTO_NONCE_SIZE 12U /**< AES-256-GCM ノンス サイズ (バイト)。 */
-#define CPLAT_CRYPTO_TAG_SIZE   16U /**< AES-256-GCM 認証タグ サイズ (バイト)。暗号文の直後に付加する。 */
+#define CPLAT_CRYPTO_KEY_SIZE   32U /**< AES-256-GCM 鍵サイズ [byte]。 */
+#define CPLAT_CRYPTO_NONCE_SIZE 12U /**< AES-256-GCM ノンス サイズ [byte]。 */
+#define CPLAT_CRYPTO_TAG_SIZE   16U /**< AES-256-GCM 認証タグ サイズ [byte]。暗号文の直後に付加する。 */
 
 #ifdef __cplusplus
 extern "C"
@@ -108,9 +110,9 @@ extern "C"
      *  入力バイト列の SHA-256 ダイジェストをそのまま鍵として使用します。\n
      *  送受信の双方で同一のパスフレーズを指定すれば、同一の鍵が導出されます。
      *
-     *  @param[out]     key             出力鍵バッファー (CPLAT_CRYPTO_KEY_SIZE = 32 バイト)。
+     *  @param[out]     key             出力鍵バッファー (CPLAT_CRYPTO_KEY_SIZE = 32 [byte])。
      *  @param[in]      passphrase      パスフレーズへのポインター (任意のバイト列)。
-     *  @param[in]      passphrase_len  パスフレーズの長さ (バイト)。0 の場合も有効。
+     *  @param[in]      passphrase_len  パスフレーズの長さ [byte]。0 の場合も有効。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ

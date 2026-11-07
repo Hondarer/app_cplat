@@ -79,7 +79,7 @@ static int set_int_option(cplat_socket sock, int level, int optname, int value, 
  *  @brief          シグナルによる中断を吸収して poll を実行します。
  *  @param[in,out]  fds        poll へ渡す記述子の配列。
  *  @param[in]      count      @p fds の要素数。
- *  @param[in]      timeout_ms タイムアウト時間 (ミリ秒)。負値は無期限を表します。
+ *  @param[in]      timeout_ms タイムアウト時間 [ms]。負値は無期限を表します。
  *  @return         poll の戻り値を返します。失敗した場合は負値を返し、errno を保持します。
  *
  *  中断された場合は、単調時刻から残り時間を再計算して待機を継続します。
@@ -104,6 +104,7 @@ static int poll_with_deadline(struct pollfd *fds, nfds_t count, int timeout_ms)
         {
             return poll_result;
         }
+
         if (errno != EINTR)
         {
             return poll_result;
@@ -118,6 +119,7 @@ static int poll_with_deadline(struct pollfd *fds, nfds_t count, int timeout_ms)
                 /* 残り時間が尽きた。タイムアウトと同じく条件不成立を返す。 */
                 return 0;
             }
+
             remaining_ms = (int)(deadline - now);
         }
     }
@@ -127,7 +129,7 @@ static int poll_with_deadline(struct pollfd *fds, nfds_t count, int timeout_ms)
  *  @brief          単一のソケットに対して poll による待機を行います。
  *  @param[in]      sock       対象のソケット。
  *  @param[in]      events     待機するイベント。
- *  @param[in]      timeout_ms タイムアウト時間 (ミリ秒)。
+ *  @param[in]      timeout_ms タイムアウト時間 [ms]。
  *  @param[out]     ready_out  条件が成立した場合に 1、タイムアウトした場合に 0 を格納します。
  *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
  *  @return         共通結果コードを返します。
@@ -194,9 +196,11 @@ static ssize_t retry_send(int fd, const void *buf, size_t len)
 
     do
     {
-        /* MSG_NOSIGNAL はプロセス全体の設定を変更せず、この送信による SIGPIPE だけを抑制する。
+        /*
+         * MSG_NOSIGNAL はプロセス全体の設定を変更せず、この送信による SIGPIPE だけを抑制する。
          * EPIPE は従来どおり返される。
-         * see: https://man7.org/linux/man-pages/man2/send.2.html */
+         * see: https://man7.org/linux/man-pages/man2/send.2.html
+         */
         transferred = send(fd, buf, len, MSG_NOSIGNAL);
     } while ((transferred < 0) && (errno == EINTR));
 
@@ -313,12 +317,17 @@ void cplat_socket_close(const cplat_socket sock)
         return;
     }
 
-    /* cplat_close() は TLS の直前エラーを更新するため、解放経路で呼び出しても
-       呼び出し前の診断情報が失われないように保存と復元を行う。 */
+    /*
+     * cplat_close() は TLS の直前エラーを更新するため、解放経路で呼び出しても
+     * 呼び出し前の診断情報が失われないように保存と復元を行う。
+     */
     cplat_error_get_last(&saved);
-    /* EINTR で復帰した場合も再試行しない。Linux では中断された時点で記述子が
-       解放済みであり、呼び直すと別スレッドが再利用した記述子を閉じうる。
-       see: https://man7.org/linux/man-pages/man2/close.2.html */
+
+    /*
+     * EINTR で復帰した場合も再試行しない。Linux では中断された時点で記述子が
+     * 解放済みであり、呼び直すと別スレッドが再利用した記述子を閉じうる。
+     * see: https://man7.org/linux/man-pages/man2/close.2.html
+     */
     (void)cplat_close((int)sock, NULL);
     cplat_error_set_last(&saved);
 }
@@ -430,6 +439,7 @@ static int wait_connect_completion(cplat_socket sock, cplat_error *detail_out)
     {
         return wait_result;
     }
+
     if (ready == 0)
     {
         return cplat_internal_error_report_errno_as(detail_out, ETIMEDOUT, CPLAT_ERR_TIMEOUT);
@@ -457,15 +467,18 @@ int cplat_socket_connect(const cplat_socket sock, const cplat_ipv4_endpoint *end
         {
             return cplat_internal_error_report_socket_errno_as(detail_out, errno, CPLAT_ERR_IN_PROGRESS);
         }
+
         if (errno != EINTR)
         {
             return cplat_internal_error_report_socket_errno(detail_out, errno);
         }
 
-        /* シグナルで中断された接続確立は非同期に継続する。connect を呼び直すと
-           EALREADY または EISCONN になるため、書き込み可能になるまで待機し、
-           SO_ERROR で結果を確認する。
-           see: https://man7.org/linux/man-pages/man2/connect.2.html */
+        /*
+         * シグナルで中断された接続確立は非同期に継続する。connect を呼び直すと
+         * EALREADY または EISCONN になるため、書き込み可能になるまで待機し、
+         * SO_ERROR で結果を確認する。
+         * see: https://man7.org/linux/man-pages/man2/connect.2.html
+         */
         return wait_connect_completion(sock, detail_out);
     }
 
@@ -783,10 +796,12 @@ int cplat_socket_send_all(const cplat_socket sock, const void *buf, const size_t
         {
             return cplat_internal_error_report_socket_errno(detail_out, errno);
         }
+
         if (transferred == 0)
         {
             return cplat_internal_error_report_errno_as(detail_out, EIO, CPLAT_ERR_UNKNOWN);
         }
+
         /* OS が要求量を超える転送量を返すことはないが、残量の計算を守るため異常として扱う。 */
         if ((size_t)transferred > remaining)
         {
@@ -820,10 +835,12 @@ int cplat_socket_recv_all(const cplat_socket sock, void *buf, const size_t len, 
         {
             return cplat_internal_error_report_socket_errno(detail_out, errno);
         }
+
         if (transferred == 0)
         {
             return cplat_internal_error_report_errno_as(detail_out, 0, CPLAT_ERR_EOF);
         }
+
         /* OS が要求量を超える転送量を返すことはないが、残量の計算を守るため異常として扱う。 */
         if ((size_t)transferred > remaining)
         {
@@ -865,9 +882,11 @@ int cplat_socket_wait_readable_multi(const cplat_socket *socks, const size_t cou
         return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
     }
 
+    /* 有効なソケットを待機対象の配列へ集約し、出力配列を初期化する。 */
     for (index = 0U; index < count; ++index)
     {
         ready_out[index] = 0U;
+
         if (socks[index] != CPLAT_INVALID_SOCKET)
         {
             poll_fds[valid_count].fd = (int)socks[index];
@@ -879,12 +898,15 @@ int cplat_socket_wait_readable_multi(const cplat_socket *socks, const size_t cou
 
     if (valid_count == 0U)
     {
-        /* 有効なソケットがない場合も timeout_ms だけ待つ。即座に返すと呼び出し側の
-           ポーリング ループが待機なしで回り続けるため。 */
+        /*
+         * 有効なソケットがない場合も timeout_ms だけ待つ。即座に返すと呼び出し側の
+         * ポーリング ループが待機なしで回り続けるためである。
+         */
         if (timeout_ms > 0)
         {
             cplat_sleep_ms(timeout_ms);
         }
+
         return cplat_internal_error_report_success(detail_out);
     }
 
@@ -895,6 +917,8 @@ int cplat_socket_wait_readable_multi(const cplat_socket *socks, const size_t cou
     }
 
     valid_count = 0U;
+
+    /* 待機結果を走査し、イベントが検出されたソケットのフラグを立てる。 */
     for (index = 0U; index < count; ++index)
     {
         if (socks[index] != CPLAT_INVALID_SOCKET)
@@ -905,6 +929,7 @@ int cplat_socket_wait_readable_multi(const cplat_socket *socks, const size_t cou
             {
                 ready_out[index] = 1U;
             }
+
             ++valid_count;
         }
     }

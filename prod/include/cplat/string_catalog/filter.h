@@ -99,7 +99,7 @@
  *  @brief          行幅から行レコードのバイト数を求めます。
  *  @param[in]      width 行幅。
  *
- *  命令領域と定数領域は、いずれも行幅 1 文字あたり 8 バイトです。
+ *  命令領域と定数領域は、いずれも行幅 1 文字あたり 8 [byte] です。
  */
 #define CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(width) \
     (CPLAT_STRING_CATALOG_FILTER_RECORD_HEADER_SIZE + (16U * (size_t)(width)))

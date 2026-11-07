@@ -88,7 +88,7 @@ const cplat_string_catalog_entry *cplat_internal_string_catalog_find_entry(const
 
     if ((catalog->key_index != NULL) && (string_key >= 0) && (string_key < catalog->key_index_count))
     {
-        /* インデックス表の内容は利用側で用意されるため、参照前に有効範囲内であることを確認する */
+        /* インデックス表の内容は利用側で用意されるため、参照前に有効範囲内であることを確認する。 */
         const int entry_index = catalog->key_index[string_key];
 
         if ((entry_index < 0) || (entry_index >= catalog->entry_count))
@@ -99,6 +99,7 @@ const cplat_string_catalog_entry *cplat_internal_string_catalog_find_entry(const
         return &catalog->entries[entry_index];
     }
 
+    /* インデックス表が指定されていないか範囲外の場合は、全項目を線形探索する。 */
     for (index = 0; index < catalog->entry_count; index++)
     {
         if (catalog->entries[index].key == string_key)

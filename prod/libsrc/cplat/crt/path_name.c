@@ -21,6 +21,10 @@ static int path_is_sep(const char c)
     return c == '/' || c == '\\';
 }
 
+/*
+ * パス文字列を出力バッファーへコピーする。
+ * 成功時は CPLAT_OK を返し、バッファーに収まらない場合は ENAMETOOLONG に対応する結果コードを返す。
+ */
 static int copy_path_name_text(char *path_out, const size_t path_size, cplat_error *detail_out, const char *text)
 {
     size_t len;
@@ -38,6 +42,7 @@ static int copy_path_name_text(char *path_out, const size_t path_size, cplat_err
     }
 
     memcpy(path_out, text, len + 1u);
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -83,7 +88,7 @@ int cplat_path_dirname(char *path_out, const size_t path_size, cplat_error *deta
         return cplat_internal_error_report_errno(detail_out, EINVAL);
     }
 
-    /* 末尾のセパレータ群を除去する (ルートのみの場合は残す) */
+    /* 末尾のセパレータ群を除去する (ルートのみの場合は残す)。 */
     end = path + strlen(path);
     while (end > path + 1 && path_is_sep(*(end - 1)))
     {
@@ -91,6 +96,7 @@ int cplat_path_dirname(char *path_out, const size_t path_size, cplat_error *deta
     }
 
     last_sep = NULL;
+
     for (p = path; p < end; ++p)
     {
         if (path_is_sep(*p))
@@ -104,7 +110,7 @@ int cplat_path_dirname(char *path_out, const size_t path_size, cplat_error *deta
         return copy_path_name_text(path_out, path_size, detail_out, ".");
     }
 
-    /* 最後のセパレータより前がすべてセパレータの場合 (例: "/name") はルートを返す */
+    /* 最後のセパレータより前がすべてセパレータの場合 (例: "/name") はルートを返す。 */
     if (last_sep == path)
     {
         return copy_path_name_text(path_out, path_size, detail_out, PLATFORM_PATH_SEP);
@@ -128,6 +134,7 @@ int cplat_path_dirname(char *path_out, const size_t path_size, cplat_error *deta
             path_out[p - path] = *p;
         }
     }
+
     path_out[len] = '\0';
 
     return cplat_internal_error_report_success(detail_out);
@@ -148,6 +155,7 @@ const char *cplat_path_extension(const char *path)
 
     base = cplat_path_basename(path);
     dot = NULL;
+
     for (p = base; *p != '\0'; ++p)
     {
         if (*p == '.')
@@ -211,6 +219,7 @@ int cplat_vpath_join_n(char *path_out, const size_t path_size, cplat_error *deta
 
     /* 1st pass: 引数検証と必要サイズの算出 (セパレータ補完分も含める) */
     va_copy(args_copy, args);
+
     {
         int have_prev_nonempty = 0;
         int prev_ends_with_sep = 0;
@@ -240,19 +249,22 @@ int cplat_vpath_join_n(char *path_out, const size_t path_size, cplat_error *deta
             {
                 if (prev_ends_with_sep && part_starts_with_sep)
                 {
-                    /* 前後とも境界がセパレータ: 重複を畳むため先頭 1 文字を捨てる */
+                    /* 前後とも境界がセパレータ: 重複を畳むため先頭 1 文字を捨てる。 */
                     skip_leading = 1u;
                 }
                 else if (!prev_ends_with_sep && !part_starts_with_sep)
                 {
-                    /* どちらもセパレータでない: 1 つ補完する。
-                       required_size はすでに終端 '\0' の 1 バイトを見込んでいるため、
-                       補完後も path_size に収まるかを "以上" で判定する必要がある。 */
+                    /*
+                     * どちらもセパレータでない: 1 つ補完する。
+                     * required_size はすでに終端 '\0' の 1 [byte] を見込んでいるため、
+                     * 補完後も path_size に収まるかを "以上" で判定する必要がある。
+                     */
                     if (required_size >= path_size)
                     {
                         va_end(args_copy);
                         return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
                     }
+
                     required_size += 1u;
                 }
             }
@@ -262,12 +274,14 @@ int cplat_vpath_join_n(char *path_out, const size_t path_size, cplat_error *deta
                 va_end(args_copy);
                 return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
             }
+
             required_size += part_len - skip_leading;
 
             have_prev_nonempty = 1;
             prev_ends_with_sep = path_is_sep(part[part_len - 1u]);
         }
     }
+
     va_end(args_copy);
 
     /* 2nd pass: 書き込み */

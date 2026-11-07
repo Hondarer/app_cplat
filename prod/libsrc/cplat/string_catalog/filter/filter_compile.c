@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* 行レコードのバイト数はヘッダーへ 32 ビットで格納するため、行幅の上限で収まることを固定する */
+/* 行レコードのバイト数はヘッダーへ 32 ビットで格納するため、行幅の上限で収まることを固定する。 */
 _Static_assert(CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX) <= UINT32_MAX,
                "cplat: filter record size must fit in uint32_t");
 
@@ -102,7 +102,7 @@ typedef struct compiler
     uint32_t error_column;
     uint32_t pattern_count; /**< 正規表現のパターンの定数の数。 */
 
-    /** 文字列の字句の復号結果。NUL の 1 バイトを含め、8 バイト単位に切り上げた大きさです。 */
+    /** 文字列の字句の復号結果。NUL の 1 [byte] を含め、8 [byte] 単位に切り上げた大きさです。 */
     char string_buffer[CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX + 8U];
 } compiler;
 
@@ -130,20 +130,27 @@ static bool is_identifier_part(const char character)
     return is_identifier_start(character) || is_digit(character);
 }
 
+/*
+ * 16 進数の文字を数値へ変換する。
+ * 16 進数の文字なら 0 から 15、それ以外は -1 を返す。
+ */
 static int hex_value(const char character)
 {
     if (is_digit(character))
     {
         return character - '0';
     }
+
     if ((character >= 'a') && (character <= 'f'))
     {
         return (character - 'a') + 10;
     }
+
     if ((character >= 'A') && (character <= 'F'))
     {
         return (character - 'A') + 10;
     }
+
     return -1;
 }
 
@@ -155,15 +162,21 @@ static bool fail(compiler *state, const cplat_string_catalog_filter_line_error e
         state->error = error;
         state->error_column = (uint32_t)column;
     }
+
     return false;
 }
 
+/*
+ * 入力文字列の指定位置の文字を参照する。
+ * 終端以降の位置を指定した場合は NUL 文字を返す。
+ */
 static char peek_at(const compiler *state, const size_t position)
 {
     if (position >= state->text_length)
     {
         return '\0';
     }
+
     return state->text[position];
 }
 
@@ -199,11 +212,13 @@ static int read_quoted_byte(compiler *state)
     case 'x':
         high = hex_value(peek_at(state, state->position + 2U));
         low = hex_value(peek_at(state, state->position + 3U));
-        /* NUL は文字列を途中で終わらせるため受け付けない */
+
+        /* NUL は文字列を途中で終わらせるため受け付けない。 */
         if ((high < 0) || (low < 0) || ((high == 0) && (low == 0)))
         {
             return -1;
         }
+
         state->position += 4U;
         return (high * 16) + low;
     default:
@@ -211,11 +226,17 @@ static int read_quoted_byte(compiler *state)
     }
 }
 
+/*
+ * 文字列リテラルを解析して内部バッファーへ復号する。
+ * 成功時は true、終端欠落や不正なエスケープ文字の検出時は false を返す。
+ */
 static bool lex_string(compiler *state, token *result)
 {
     uint32_t length = 0U;
 
     state->position++; /* 開きの引用符 */
+
+    /* 閉じ引用符に達するまで文字を復号してバッファーへ格納する。 */
     for (;;)
     {
         int byte;
@@ -224,31 +245,40 @@ static bool lex_string(compiler *state, token *result)
         {
             return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, result->column);
         }
+
         if (state->text[state->position] == '"')
         {
             state->position++;
             break;
         }
+
         byte = read_quoted_byte(state);
         if (byte < 0)
         {
             return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, state->position);
         }
+
         state->string_buffer[length++] = (char)byte;
     }
 
     state->string_buffer[length] = '\0';
     result->kind = TOKEN_KIND_STRING;
     result->text_length = length;
+
     return true;
 }
 
+/*
+ * 文字リテラルを解析する。
+ * 成功時は true、終端欠落や不正なエスケープ文字の検出時は false を返す。
+ */
 static bool lex_character(compiler *state, token *result)
 {
     int byte;
     int value;
 
     state->position++; /* 開きの引用符 */
+
     if ((state->position >= state->text_length) || (state->text[state->position] == '\''))
     {
         return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, result->column);
@@ -259,11 +289,13 @@ static bool lex_character(compiler *state, token *result)
     {
         return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, result->column);
     }
+
     state->position++;
 
-    /* CHAR 型の引数と同じく、char へ変換した値を比較に使用する */
+    /* CHAR 型の引数と同じく、char へ変換した値を比較に使用する。 */
     value = (int)(char)byte;
     result->kind = TOKEN_KIND_CHARACTER;
+
     if (value < 0)
     {
         result->flags = STRING_CATALOG_FILTER_CONSTANT_FLAG_NEGATIVE;
@@ -273,9 +305,14 @@ static bool lex_character(compiler *state, token *result)
     {
         result->magnitude = (uint64_t)value;
     }
+
     return true;
 }
 
+/*
+ * 数値リテラル (16 進数、10 進整数、浮動小数点数) を解析する。
+ * 成功時は true、範囲外や不正な書式の場合は false を返す。
+ */
 static bool lex_number(compiler *state, token *result)
 {
     const size_t start = state->position;
@@ -293,11 +330,12 @@ static bool lex_number(compiler *state, token *result)
     {
         size_t digits = 0U;
 
-        /* 16 進数は符号を持たない */
+        /* 16 進数は符号を持たない。 */
         if (is_negative)
         {
             return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, start);
         }
+
         position += 2U;
         while (hex_value(peek_at(state, position)) >= 0)
         {
@@ -305,14 +343,17 @@ static bool lex_number(compiler *state, token *result)
             {
                 return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, start);
             }
+
             magnitude = (magnitude << 4) | (uint64_t)hex_value(peek_at(state, position));
             position++;
             digits++;
         }
+
         if (digits == 0U)
         {
             return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, start);
         }
+
         result->kind = TOKEN_KIND_INTEGER;
         result->flags = STRING_CATALOG_FILTER_CONSTANT_FLAG_HEXADECIMAL;
     }
@@ -324,21 +365,25 @@ static bool lex_number(compiler *state, token *result)
         {
             position++;
         }
+
         if (peek_at(state, position) == '.')
         {
             is_float = true;
             position++;
+
             while (is_digit(peek_at(state, position)))
             {
                 position++;
             }
         }
+
         if ((peek_at(state, position) == 'e') || (peek_at(state, position) == 'E'))
         {
             size_t exponent_digits = 0U;
 
             is_float = true;
             position++;
+
             if ((peek_at(state, position) == '+') || (peek_at(state, position) == '-'))
             {
                 position++;
@@ -348,6 +393,7 @@ static bool lex_number(compiler *state, token *result)
                 position++;
                 exponent_digits++;
             }
+
             if (exponent_digits == 0U)
             {
                 return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, start);
@@ -366,6 +412,7 @@ static bool lex_number(compiler *state, token *result)
             {
                 return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, start);
             }
+
             result->kind = TOKEN_KIND_FLOAT;
         }
         else
@@ -376,6 +423,7 @@ static bool lex_number(compiler *state, token *result)
             {
                 digit_start++;
             }
+
             for (size_t index = digit_start; index < position; index++)
             {
                 const uint64_t digit = (uint64_t)(state->text[index] - '0');
@@ -384,14 +432,18 @@ static bool lex_number(compiler *state, token *result)
                 {
                     return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, start);
                 }
+
                 magnitude = (magnitude * 10U) + digit;
             }
-            /* 負の値は int64_t の範囲に収める。-0 は 0 として扱う */
+
+            /* 負の値は int64_t の範囲に収める。-0 は 0 として扱う。 */
             if (is_negative && (magnitude > ((uint64_t)INT64_MAX + 1U)))
             {
                 return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, start);
             }
+
             result->kind = TOKEN_KIND_INTEGER;
+
             if (is_negative && (magnitude != 0U))
             {
                 result->flags = STRING_CATALOG_FILTER_CONSTANT_FLAG_NEGATIVE;
@@ -399,7 +451,7 @@ static bool lex_number(compiler *state, token *result)
         }
     }
 
-    /* 数値の直後に識別子の文字が続く表記 (12abc など) は誤り */
+    /* 数値の直後に識別子の文字が続く表記 (12abc など) は誤りである。 */
     if (is_identifier_part(peek_at(state, position)) || (peek_at(state, position) == '.'))
     {
         return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, start);
@@ -407,6 +459,7 @@ static bool lex_number(compiler *state, token *result)
 
     result->magnitude = magnitude;
     state->position = position;
+
     return true;
 }
 
@@ -440,6 +493,7 @@ static bool advance(compiler *state)
         {
             state->position++;
         }
+
         result->kind = TOKEN_KIND_IDENTIFIER;
         result->length = (uint32_t)(state->position - result->column);
         return true;
@@ -451,6 +505,7 @@ static bool advance(compiler *state)
         {
             return false;
         }
+
         result->length = (uint32_t)(state->position - result->column);
         return true;
     }
@@ -459,12 +514,14 @@ static bool advance(compiler *state)
     {
         return lex_string(state, result);
     }
+
     if (character == '\'')
     {
         return lex_character(state, result);
     }
 
     state->position++;
+
     switch (character)
     {
     case '(':
@@ -489,7 +546,7 @@ static bool advance(compiler *state)
         break;
     }
 
-    /* 2 文字の演算子と、その先頭 1 文字だけの演算子 */
+    /* 2 文字の演算子と、その先頭 1 文字だけの演算子を判定する。 */
     if ((character == '=') && (next == '='))
     {
         result->kind = TOKEN_KIND_EQUAL;
@@ -535,6 +592,7 @@ static bool advance(compiler *state)
     }
 
     state->position++;
+
     return true;
 }
 
@@ -547,17 +605,26 @@ static bool is_word(const compiler *state, const char *word)
            (memcmp(state->text + state->current.column, word, length) == 0);
 }
 
+/*
+ * 現在の字句が指定した種類と一致するかを確認し、一致すれば次の字句へ進む。
+ * 不一致の場合は構文エラーを記録して false を返す。
+ */
 static bool expect(compiler *state, const token_kind kind)
 {
     if (state->current.kind != kind)
     {
         return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, state->current.column);
     }
+
     return advance(state);
 }
 
 /* ===== 命令と定数の生成 ===== */
 
+/*
+ * 命令を行レコードへ書き込み、評価に必要なスタック深さを更新する。
+ * 容量超過時はエラーを記録して false を返す。
+ */
 static bool emit_instruction(compiler *state, const string_catalog_filter_instruction *instruction, uint32_t *index_out)
 {
     if (state->instruction_count >= state->instruction_capacity)
@@ -566,10 +633,12 @@ static bool emit_instruction(compiler *state, const string_catalog_filter_instru
     }
 
     string_catalog_filter_write_instruction(state->record, state->instruction_count, instruction);
+
     if (index_out != NULL)
     {
         *index_out = state->instruction_count;
     }
+
     state->instruction_count++;
 
     switch (instruction->opcode)
@@ -584,19 +653,23 @@ static bool emit_instruction(compiler *state, const string_catalog_filter_instru
     default:
         break;
     }
+
     if (state->depth > state->max_depth)
     {
         state->max_depth = state->depth;
     }
+
     return true;
 }
 
+/* 論理演算の命令を行レコードへ書き込む。 */
 static bool emit_logical(compiler *state, const string_catalog_filter_opcode opcode)
 {
     string_catalog_filter_instruction instruction;
 
     memset(&instruction, 0, sizeof(instruction));
     instruction.opcode = (uint8_t)opcode;
+
     return emit_instruction(state, &instruction, NULL);
 }
 
@@ -618,6 +691,7 @@ static bool emit_constant(compiler *state, const string_catalog_filter_constant_
     if (payload != NULL)
     {
         stored_size = payload_size;
+
         if ((header->kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_STRING) ||
             (header->kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_IDENTIFIER) ||
             (header->kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_ARGUMENT_NAME))
@@ -633,8 +707,9 @@ static bool emit_constant(compiler *state, const string_catalog_filter_constant_
         return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED, state->current.column);
     }
 
-    /* 領域は 0 で埋めてあるため、NUL と切り上げの余りは書き込まない */
+    /* 領域は 0 で埋めてあるため、NUL と切り上げの余りは書き込まない。 */
     memcpy(constants + state->constant_size, header, sizeof(*header));
+
     if (payload != NULL)
     {
         memcpy(constants + state->constant_size + STRING_CATALOG_FILTER_CONSTANT_HEADER_SIZE, payload, payload_size);
@@ -642,6 +717,7 @@ static bool emit_constant(compiler *state, const string_catalog_filter_constant_
 
     *offset_out = state->constant_size;
     state->constant_size += STRING_CATALOG_FILTER_CONSTANT_HEADER_SIZE + stored_size;
+
     return true;
 }
 
@@ -671,6 +747,7 @@ static bool parse_literal(compiler *state, uint8_t *kind_out)
         {
             header.kind = (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_CHARACTER;
         }
+
         header.flags = current->flags;
         is_emitted =
             emit_constant(state, &header, &current->magnitude, STRING_CATALOG_FILTER_CONSTANT_NUMBER_SIZE, &offset);
@@ -694,11 +771,13 @@ static bool parse_literal(compiler *state, uint8_t *kind_out)
             is_emitted = emit_constant(state, &header, NULL, 0U, &offset);
             break;
         }
-        /* 文字列キーの名前。整数への解決は適用の時点で行う */
+
+        /* 文字列キーの名前。整数への解決は適用の時点で行う。 */
         if (state->identifier_count >= CPLAT_STRING_CATALOG_FILTER_IDENTIFIER_REFERENCE_MAX)
         {
             return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED, current->column);
         }
+
         header.kind = (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_IDENTIFIER;
         header.slot = (uint16_t)state->identifier_count;
         header.length = current->length;
@@ -707,6 +786,7 @@ static bool parse_literal(compiler *state, uint8_t *kind_out)
         {
             state->identifier_count++;
         }
+
         break;
 
     case TOKEN_KIND_END:
@@ -735,6 +815,7 @@ static bool parse_literal(compiler *state, uint8_t *kind_out)
     }
 
     *kind_out = header.kind;
+
     return advance(state);
 }
 
@@ -745,6 +826,7 @@ static bool parse_argument_reference(compiler *state, string_catalog_filter_inst
     {
         return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, state->current.column);
     }
+
     if (!advance(state))
     {
         return false;
@@ -763,6 +845,7 @@ static bool parse_argument_reference(compiler *state, string_catalog_filter_inst
         {
             return false;
         }
+
         if (state->current.kind != TOKEN_KIND_IDENTIFIER)
         {
             return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, state->current.column);
@@ -772,12 +855,13 @@ static bool parse_argument_reference(compiler *state, string_catalog_filter_inst
         name_length = state->current.length;
         constants = string_catalog_filter_record_constants(state->record, state->line_width);
 
-        /* 同じ引数名には同じ参照番号を割り当てる。適用時の名前解決を種類の数だけに抑えるためです。 */
+        /* 同じ引数名には同じ参照番号を割り当てる。適用時の名前解決を種類の数だけに抑えるためである。 */
         for (slot = 0U; slot < state->argument_reference_count; slot++)
         {
             string_catalog_filter_constant_header existing;
 
             memcpy(&existing, constants + state->argument_name_offsets[slot], sizeof(existing));
+
             if ((existing.length == name_length) &&
                 (memcmp(constants + state->argument_name_offsets[slot] + STRING_CATALOG_FILTER_CONSTANT_HEADER_SIZE,
                         name, name_length) == 0))
@@ -785,6 +869,7 @@ static bool parse_argument_reference(compiler *state, string_catalog_filter_inst
                 break;
             }
         }
+
         if (slot == state->argument_reference_count)
         {
             if (state->argument_reference_count >= CPLAT_STRING_CATALOG_FILTER_ARGUMENT_REFERENCE_MAX)
@@ -797,10 +882,12 @@ static bool parse_argument_reference(compiler *state, string_catalog_filter_inst
         header.kind = (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_ARGUMENT_NAME;
         header.slot = (uint16_t)slot;
         header.length = name_length;
+
         if (!emit_constant(state, &header, name, name_length, &offset))
         {
             return false;
         }
+
         if (slot == state->argument_reference_count)
         {
             state->argument_name_offsets[slot] = (uint16_t)offset;
@@ -819,20 +906,25 @@ static bool parse_argument_reference(compiler *state, string_catalog_filter_inst
         {
             return false;
         }
+
         if ((state->current.kind != TOKEN_KIND_INTEGER) || (state->current.flags != 0U))
         {
             return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, state->current.column);
         }
+
         if (state->current.magnitude >= CPLAT_STRING_CATALOG_ARGUMENT_MAX)
         {
             return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED, state->current.column);
         }
+
         instruction->field = (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_INDEX;
         instruction->argument = (uint8_t)state->current.magnitude;
+
         if (!advance(state))
         {
             return false;
         }
+
         return expect(state, TOKEN_KIND_RIGHT_BRACKET);
     }
 
@@ -903,10 +995,12 @@ static bool parse_checked_literal(compiler *state, const string_catalog_filter_i
     {
         return false;
     }
+
     if (string_catalog_filter_is_constant_allowed(instruction->field, instruction->operator_kind, *kind_out) == 0)
     {
         return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH, column);
     }
+
     return true;
 }
 
@@ -933,16 +1027,18 @@ static bool parse_pattern(compiler *state, const string_catalog_filter_instructi
     {
         return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH, column);
     }
+
     if (state->pattern_count >= CPLAT_STRING_CATALOG_FILTER_PATTERN_REFERENCE_MAX)
     {
         return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED, column);
     }
 
-    /* 字句の復号結果は次の字句で上書きされるため、格納した定数からパターンを読む */
+    /* 字句の復号結果は次の字句で上書きされるため、格納した定数からパターンを読む。 */
     if (!parse_literal(state, &kind))
     {
         return false;
     }
+
     memcpy(&header, constants + offset, sizeof(header));
     header.kind = (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_PATTERN;
     header.slot = (uint16_t)state->pattern_count;
@@ -954,12 +1050,18 @@ static bool parse_pattern(compiler *state, const string_catalog_filter_instructi
     {
         return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_INVALID_PATTERN, column);
     }
+
     cplat_regex_dispose(regex);
 
     state->pattern_count++;
+
     return true;
 }
 
+/*
+ * 2 つの定数の型分類 (文字列型か否か) が一致するかを判定する。
+ * in 演算子のリスト要素で型分類が一致していれば true、混在していれば false を返す。
+ */
 static bool is_same_class(const uint8_t first_kind, const uint8_t kind)
 {
     const bool is_first_string = (first_kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_STRING);
@@ -968,6 +1070,7 @@ static bool is_same_class(const uint8_t first_kind, const uint8_t kind)
     return is_first_string == is_string;
 }
 
+/* 判定要素 (has、key、id、category、arg) を解析して命令を生成する。 */
 static bool parse_predicate(compiler *state)
 {
     string_catalog_filter_instruction instruction;
@@ -979,6 +1082,7 @@ static bool parse_predicate(compiler *state)
     instruction.opcode = (uint8_t)STRING_CATALOG_FILTER_OPCODE_PREDICATE;
 
     state->predicate_count++;
+
     if (state->predicate_count > CPLAT_STRING_CATALOG_FILTER_PREDICATE_MAX)
     {
         return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED, state->current.column);
@@ -991,6 +1095,7 @@ static bool parse_predicate(compiler *state)
         {
             return false;
         }
+
         instruction.operator_kind = (uint8_t)STRING_CATALOG_FILTER_OPERATOR_HAS;
         return emit_instruction(state, &instruction, NULL);
     }
@@ -998,6 +1103,7 @@ static bool parse_predicate(compiler *state)
     if (is_word(state, "key"))
     {
         instruction.field = (uint8_t)STRING_CATALOG_FILTER_FIELD_KEY;
+
         if (!advance(state))
         {
             return false;
@@ -1006,6 +1112,7 @@ static bool parse_predicate(compiler *state)
     else if (is_word(state, "id"))
     {
         instruction.field = (uint8_t)STRING_CATALOG_FILTER_FIELD_ID;
+
         if (!advance(state))
         {
             return false;
@@ -1014,6 +1121,7 @@ static bool parse_predicate(compiler *state)
     else if (is_word(state, "category"))
     {
         instruction.field = (uint8_t)STRING_CATALOG_FILTER_FIELD_CATEGORY;
+
         if (!advance(state))
         {
             return false;
@@ -1029,7 +1137,7 @@ static bool parse_predicate(compiler *state)
         return false;
     }
 
-    /* 引数名の定数を除き、比較対象の定数はこの位置から並ぶ */
+    /* 引数名の定数を除き、比較対象の定数はこの位置から並ぶ。 */
     literal_offset = state->constant_size;
 
     switch (instruction.operator_kind)
@@ -1047,6 +1155,7 @@ static bool parse_predicate(compiler *state)
             {
                 return false;
             }
+
             if (instruction.operand_count == 0U)
             {
                 first_kind = kind;
@@ -1055,21 +1164,25 @@ static bool parse_predicate(compiler *state)
             {
                 return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_TYPE_MISMATCH, column);
             }
+
             instruction.operand_count++;
 
             if (state->current.kind != TOKEN_KIND_COMMA)
             {
                 break;
             }
+
             if (!advance(state))
             {
                 return false;
             }
         }
+
         if (!expect(state, TOKEN_KIND_RIGHT_BRACKET))
         {
             return false;
         }
+
         break;
 
     case STRING_CATALOG_FILTER_OPERATOR_MATCHES:
@@ -1090,10 +1203,12 @@ static bool parse_predicate(compiler *state)
         {
             return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, state->current.column);
         }
+
         if (!advance(state) || !parse_checked_literal(state, &instruction, &kind))
         {
             return false;
         }
+
         instruction.operand_count = 2U;
         break;
 
@@ -1116,16 +1231,23 @@ static bool parse_predicate(compiler *state)
 
 static bool parse_or(compiler *state);
 
+/*
+ * 式のネストの深さを 1 増やし、上限を超えていないか確認する。
+ * 上限を超えた場合はエラーを記録して false を返す。
+ */
 static bool enter_nesting(compiler *state)
 {
     state->nesting++;
+
     if (state->nesting > CPLAT_STRING_CATALOG_FILTER_NESTING_MAX)
     {
         return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED, state->current.column);
     }
+
     return true;
 }
 
+/* 単項演算子 (NOT) および括弧で囲まれた式、または判定要素を解析する。 */
 static bool parse_unary(compiler *state)
 {
     if (state->current.kind == TOKEN_KIND_NOT)
@@ -1135,6 +1257,7 @@ static bool parse_unary(compiler *state)
         {
             return false;
         }
+
         state->nesting--;
         return true;
     }
@@ -1146,6 +1269,7 @@ static bool parse_unary(compiler *state)
         {
             return false;
         }
+
         state->nesting--;
         return true;
     }
@@ -1170,6 +1294,10 @@ static bool parse_binary(compiler *state, const token_kind operator_token,
         return false;
     }
 
+    /*
+     * 演算子が続く間、短絡評価のジャンプ命令と後続の被演算子、結合命令を生成する。
+     * ジャンプ命令のアドレス解決は結合命令の直後に行う。
+     */
     while (state->current.kind == operator_token)
     {
         string_catalog_filter_instruction jump;
@@ -1177,13 +1305,14 @@ static bool parse_binary(compiler *state, const token_kind operator_token,
 
         memset(&jump, 0, sizeof(jump));
         jump.opcode = (uint8_t)jump_opcode;
+
         if (!emit_instruction(state, &jump, &jump_index) || !advance(state) || !parse_operand(state) ||
             !emit_logical(state, join_opcode))
         {
             return false;
         }
 
-        /* ジャンプ先は結合の命令の直後 */
+        /* ジャンプ先は結合の命令の直後である。 */
         jump.operand = (uint16_t)state->instruction_count;
         string_catalog_filter_write_instruction(state->record, jump_index, &jump);
     }
@@ -1191,12 +1320,14 @@ static bool parse_binary(compiler *state, const token_kind operator_token,
     return true;
 }
 
+/* 論理積 (&&) で結ばれた式を解析する。 */
 static bool parse_and(compiler *state)
 {
     return parse_binary(state, TOKEN_KIND_AND, STRING_CATALOG_FILTER_OPCODE_JUMP_IF_FALSE,
                         STRING_CATALOG_FILTER_OPCODE_AND, parse_unary);
 }
 
+/* 論理和 (||) で結ばれた式を解析する。 */
 static bool parse_or(compiler *state)
 {
     return parse_binary(state, TOKEN_KIND_OR, STRING_CATALOG_FILTER_OPCODE_JUMP_IF_TRUE,
@@ -1224,6 +1355,7 @@ int string_catalog_filter_compile_record(const char *text, const size_t text_len
     state->instruction_capacity = string_catalog_filter_instruction_capacity(line_width);
     state->constant_capacity = string_catalog_filter_constant_capacity(line_width);
 
+    /* 条件式の長さ上限を確認し、論理和から順に構文解析を行う。 */
     if (text_length > line_width)
     {
         (void)fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED, line_width);
@@ -1246,6 +1378,7 @@ int string_catalog_filter_compile_record(const char *text, const size_t text_len
         return CPLAT_ERR_MALFORMED_DEFINITION;
     }
 
+    /* コンパイル結果を行レコードの見出しへ反映し、行ハッシュを算出する。 */
     memset(&header, 0, sizeof(header));
     header.instruction_count = (uint16_t)state->instruction_count;
     header.constant_size = (uint16_t)state->constant_size;
@@ -1260,6 +1393,7 @@ int string_catalog_filter_compile_record(const char *text, const size_t text_len
 
     *error_out = CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE;
     *column_out = 0U;
+
     return CPLAT_OK;
 }
 
@@ -1290,9 +1424,13 @@ static bool trim_line(const char *row, const size_t width, size_t *start_out, si
 
     *start_out = start;
     *length_out = end - start;
+
     return (end > start) && (row[start] != '#');
 }
 
+/*
+ * 診断情報の配列に空きがある場合、指定した行と位置の誤り情報を記録する。
+ */
 static void record_diagnostic(cplat_string_catalog_filter_diagnostic *diagnostics, const size_t diagnostic_capacity,
                               const size_t invalid_count, const size_t line_index, const size_t column,
                               const cplat_string_catalog_filter_line_error error)
@@ -1322,6 +1460,7 @@ int cplat_string_catalog_filter_compile(const char *lines, const size_t line_cou
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (image_size < CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(line_capacity, line_width))
     {
         return CPLAT_ERR_BUFFER_TOO_SMALL;
@@ -1337,6 +1476,7 @@ int cplat_string_catalog_filter_compile(const char *lines, const size_t line_cou
     header.record_size = (uint32_t)CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(line_width);
     header.image_size = CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(line_capacity, line_width);
 
+    /* 各行をコンパイルして行レコードへ格納し、診断情報を記録する。 */
     for (size_t index = 0; index < line_count; index++)
     {
         const char *row = lines + (index * line_width);
@@ -1377,6 +1517,7 @@ int cplat_string_catalog_filter_compile(const char *lines, const size_t line_cou
     {
         *invalid_count_out = invalid_count;
     }
+
     return CPLAT_OK;
 }
 
@@ -1411,12 +1552,14 @@ static int compile_text(const char *text, const uint32_t line_width, unsigned ch
         diagnostic_out->line_index = 0U;
         diagnostic_out->column = column;
         diagnostic_out->error = error;
+
         if (ret == CPLAT_OK)
         {
             diagnostic_out->column = 0U;
             diagnostic_out->error = CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE;
         }
     }
+
     return ret;
 }
 
@@ -1430,12 +1573,15 @@ static int prepare_edit(void *image, const size_t image_size, const char *text,
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     ret = cplat_string_catalog_filter_validate(image, image_size);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
+
     string_catalog_filter_read_image_header(image, header);
+
     return CPLAT_OK;
 }
 
@@ -1452,6 +1598,7 @@ int cplat_string_catalog_filter_compile_line(void *image, const size_t image_siz
     {
         return ret;
     }
+
     if (line_index >= header.line_count)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
@@ -1462,6 +1609,7 @@ int cplat_string_catalog_filter_compile_line(void *image, const size_t image_siz
     {
         return ret;
     }
+
     if (diagnostic_out != NULL)
     {
         diagnostic_out->line_index = (uint32_t)line_index;
@@ -1470,6 +1618,7 @@ int cplat_string_catalog_filter_compile_line(void *image, const size_t image_siz
     memcpy(string_catalog_filter_record_address(image, header.record_size, (uint32_t)line_index), record,
            header.record_size);
     string_catalog_filter_update_content_hash(image, &header);
+
     return CPLAT_OK;
 }
 
@@ -1487,10 +1636,12 @@ int cplat_string_catalog_filter_insert_line(void *image, const size_t image_size
     {
         return ret;
     }
+
     if (line_index > header.line_count)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (header.line_count >= header.line_capacity)
     {
         return CPLAT_ERR_STORAGE_FULL;
@@ -1501,18 +1652,20 @@ int cplat_string_catalog_filter_insert_line(void *image, const size_t image_size
     {
         return ret;
     }
+
     if (diagnostic_out != NULL)
     {
         diagnostic_out->line_index = (uint32_t)line_index;
     }
 
-    /* 挿入位置から後ろの行を 1 つ後ろへずらす */
+    /* 挿入位置から後ろの行を 1 つ後ろへずらす。 */
     target = string_catalog_filter_record_address(image, header.record_size, (uint32_t)line_index);
     memmove(target + header.record_size, target, (size_t)header.record_size * ((size_t)header.line_count - line_index));
     memcpy(target, record, header.record_size);
 
     header.line_count++;
     string_catalog_filter_update_content_hash(image, &header);
+
     return CPLAT_OK;
 }
 
@@ -1526,5 +1679,6 @@ int string_catalog_filter_create_pattern(const char *pattern, const uint8_t oper
     {
         flags |= CPLAT_REGEX_ICASE;
     }
+
     return cplat_regex_create(pattern, flags, regex_out, NULL);
 }

@@ -18,7 +18,7 @@
  *  | NTP 補正の影響        | 受けない                       | 受ける (時刻が前後する可能性あり)     |
  *  | 値の単調増加          | 保証される                     | 保証されない                          |
  *  | 精度 (Linux)          | ナノ秒                         | ナノ秒                                |
- *  | 精度 (Windows)        | ミリ秒 (GetTickCount64)        | 100 ナノ秒 (FILETIME)                 |
+ *  | 精度 (Windows)        | ミリ秒 (GetTickCount64)        | 100 [ns] (FILETIME)                   |
  *  | 主な用途              | 経過時間測定・タイムアウト判定 | 実時刻の刻印 (ログ・セッション ID 等) |
  *
  *  Table: 単調増加クロックと実時刻クロックの比較
@@ -41,8 +41,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CLOCK_H
 #define CLOCK_H
@@ -79,7 +81,7 @@ extern "C"
      *  | --------------------- | -------------------------------- | -------------------------------- |
      *  | 基準点                | 起動時 (不定)                    | 起動時 (不定)                    |
      *  | 内部 API              | `clock_gettime(CLOCK_MONOTONIC)` | `GetTickCount64()`               |
-     *  | 精度                  | ナノ秒 (ms に切り捨て)           | ～15 ms (ハードウェア依存)       |
+     *  | 精度                  | ナノ秒 (ms に切り捨て)           | ～15 [ms] (ハードウェア依存)     |
      *  | オーバーフロー        | 実質なし (uint64_t)              | 実質なし (uint64_t, ～5.8 億年)  |
      *
      *  Table: cplat_clock_get_monotonic_ms の返す値の特性
@@ -90,12 +92,12 @@ extern "C"
      *  @note           返す値の絶対値に意味はありません。必ず 2 点間の差分として使用してください。
      *
      *  @remark         Windows では GetTickCount64() の分解能がハードウェアに依存し、
-     *                  通常 15 ms 程度です。1 ms 未満の精度が必要な場合は
+     *                  通常 15 [ms] 程度です。1 [ms] 未満の精度が必要な場合は
      *                  cplat_clock_get_monotonic() を使用してください。
      *
      *  使用例:
         @code{.c}
-        uint64_t deadline = cplat_clock_get_monotonic_ms() + 500; // 500 ms タイムアウト
+        uint64_t deadline = cplat_clock_get_monotonic_ms() + 500; // 500 [ms] タイムアウト
         while (cplat_clock_get_monotonic_ms() < deadline)
         {
             // 処理
@@ -118,7 +120,7 @@ extern "C"
      *  | 基準点                | 起動時 (不定)                    | 起動時 (不定)                     |
      *  | 内部 API              | `clock_gettime(CLOCK_MONOTONIC)` | `GetTickCount64()`                |
      *  | tv_sec の精度         | ナノ秒                           | ミリ秒 (tv_nsec は ms 単位で格納) |
-     *  | tv_nsec の範囲        | 0 ～ 999,999,999                 | 0 ～ 999,000,000 (1 ms 刻み)      |
+     *  | tv_nsec の範囲        | 0 ～ 999,999,999                 | 0 ～ 999,000,000 (1 [ms] 刻み)    |
      *
      *  Table: cplat_clock_get_monotonic の返す値の特性
      *
@@ -128,7 +130,7 @@ extern "C"
      *  @note           返す値の絶対値に意味はありません。必ず 2 点間の差分として使用してください。
      *
      *  @note           Windows では内部で GetTickCount64() を使用するため、
-     *                  tv_nsec の有効桁は ms 単位 (1,000,000 ns 刻み) になります。
+     *                  tv_nsec の有効桁は ms 単位 (1,000,000 [ns] 刻み) になります。
      *                  ms 以上の精度が必要な場合は QueryPerformanceCounter() の利用を検討してください。
      *
      *  @remark         ms 精度で十分な場合は cplat_clock_get_monotonic_ms() の使用を推奨します。
@@ -162,7 +164,7 @@ extern "C"
      *  | --------------------- | ------------------------------- | ------------------------------------- |
      *  | 内部 API              | `clock_gettime(CLOCK_REALTIME)` | `GetSystemTimeAsFileTime()`           |
      *  | 基準点                | Unix epoch (1970-01-01)         | Unix epoch に変換 (内部は 1601-01-01) |
-     *  | 精度                  | ナノ秒                          | 100 ナノ秒 (tv_nsec は 100 ns 刻み)   |
+     *  | 精度                  | ナノ秒                          | 100 [ns] (tv_nsec は 100 [ns] 刻み)   |
      *  | NTP 補正の影響        | 受ける                          | 受ける                                |
      *
      *  Table: cplat_clock_get_realtime の返す値の特性
@@ -175,11 +177,11 @@ extern "C"
      *                  差分が負値になるなど正しい結果が得られないことがあります。\n
      *                  経過時間の測定には cplat_clock_get_monotonic_ms() または cplat_clock_get_monotonic() を使用してください。
      *
-     *  @note           Windows では FILETIME (100 ns 単位、1601-01-01 起算) を内部で使用し、
-     *                  Unix epoch へ変換しています。変換オフセットは 11,644,473,600 秒
+     *  @note           Windows では FILETIME (100 [ns] 単位、1601-01-01 起算) を内部で使用し、
+     *                  Unix epoch へ変換しています。変換オフセットは 11,644,473,600 [s]
      *                  (1601-01-01 から 1970-01-01 までの差) です。
      *
-     *  @note           Windows では tv_nsec の有効桁は 100 ns 単位 (100 刻み) になります。
+     *  @note           Windows では tv_nsec の有効桁は 100 [ns] 単位 (100 刻み) になります。
      *
      *  使用例 (セッション開始時刻の記録):
         @code{.c}
@@ -273,7 +275,7 @@ extern "C"
 
     /**
      *  @brief          現在時刻から指定ミリ秒後の absolute deadline を返します。
-     *  @param[in]      timeout_ms  現在時刻へ加算するタイムアウト値 (ミリ秒)。
+     *  @param[in]      timeout_ms  現在時刻へ加算するタイムアウト値 [ms]。
      *  @param[out]     abs_timeout absolute deadline を受け取る `struct timespec`。
      *
      *  現在の実時刻を取得し、指定ミリ秒を加算した absolute deadline を返します。\n

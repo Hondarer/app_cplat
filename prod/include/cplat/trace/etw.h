@@ -24,8 +24,10 @@
  *
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 /**
  *  @struct         cplat_etw_event
@@ -37,15 +39,20 @@ typedef struct cplat_etw_event
 {
     /** イベント レベル (1-5)。 */
     int level;
+
     /** イベント発行元のプロセス ID (Windows DWORD 互換のためコーディング規範の例外として uint32_t を維持)。 */
     uint32_t process_id;
+
     /** イベント名。取得できない場合は NULL。 */
     const char *event_name;
+
     /** Service フィールド。存在しない場合は NULL。 */
     const char *service;
+
     /** Message フィールド。存在しない場合は NULL。 */
     const char *message;
-    /** ETW が付与したタイムスタンプ。EVENT_HEADER::TimeStamp の生値 (100ns 単位)。 */
+
+    /** ETW が付与したタイムスタンプ。EVENT_HEADER::TimeStamp の生値 (100 [ns] 単位)。 */
     int64_t timestamp_100ns;
 } cplat_etw_event;
 

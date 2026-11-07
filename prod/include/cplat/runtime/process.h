@@ -12,8 +12,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_PROCESS_H
 #define CPLAT_PROCESS_H
@@ -38,7 +40,7 @@ extern "C"
     /**
      *  @brief          現在のプロセスの実行ファイル本体の絶対パスを取得します。
      *  @param[out]     path_out      絶対パス (UTF-8) の格納先。NULL を渡してはなりません。
-     *  @param[in]      path_size     @p path_out のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      path_size     @p path_out のサイズ [byte]。0 を渡してはなりません。
      *  @retval         CPLAT_OK                    実行ファイルのパスを取得しました。
      *  @retval         CPLAT_ERR_INVALID_ARGUMENT  @p path_out が NULL、または @p path_size が 0 です。
      *  @retval         CPLAT_ERR_BUFFER_TOO_SMALL  @p path_out の容量が不足しています。
@@ -85,7 +87,7 @@ extern "C"
     CPLAT_EXPORT uint32_t CPLAT_API cplat_process_get_tid(void);
 
 #define CPLAT_PROCESS_WAIT_FOREVER INT_MAX /**< タイムアウトなしで待機する (INT_MAX)。 */
-#define CPLAT_PROCESS_NO_WAIT      0       /**< 即時リターン (タイムアウト 0 ms)。 */
+#define CPLAT_PROCESS_NO_WAIT      0       /**< 即時リターン (タイムアウト 0 [ms])。 */
 
     /** @brief 子プロセスの標準入出力ハンドルの扱い。 */
     typedef enum cplat_process_stdio_mode
@@ -138,7 +140,7 @@ extern "C"
     /**
      *  @brief          子プロセスの終了を待機します。
      *  @param[in]      process     対象のプロセス ハンドル。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms  タイムアウト (ms)。@ref CPLAT_PROCESS_WAIT_FOREVER または
+     *  @param[in]      timeout_ms  タイムアウト [ms]。@ref CPLAT_PROCESS_WAIT_FOREVER または
      *                              @ref CPLAT_PROCESS_NO_WAIT も指定可能です。
      *  @return         結果コードを返します。
      *
@@ -191,7 +193,7 @@ extern "C"
     /**
      *  @brief          子プロセスを起動し、終了まで同期的に待機します。
      *  @param[in]      options     起動オプション。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms  タイムアウト (ms)。
+     *  @param[in]      timeout_ms  タイムアウト [ms]。
      *  @param[out]     exit_code   終了コードの格納先。NULL を渡してはなりません。
      *  @return         結果コードを返します。
      *

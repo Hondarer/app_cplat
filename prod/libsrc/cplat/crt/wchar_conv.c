@@ -40,8 +40,10 @@ static int utf8_to_wide(wchar_t *wbuf, const size_t wbuf_count, const char *utf8
         return -1;
     }
 
-    /* MultiByteToWideChar は失敗時に 0 を返す。公開契約の失敗値は -1 である。 */
-    /* see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar */
+    /*
+     * MultiByteToWideChar() は失敗時に 0 を返す。公開契約の失敗値は -1 である。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
+     */
     converted = MultiByteToWideChar(CP_UTF8, 0, utf8_text, -1, wbuf, (int)wbuf_count);
     if (converted <= 0)
     {
@@ -67,8 +69,10 @@ static int wide_to_utf8(char *dest, const size_t dest_size, const wchar_t *wtext
         return -1;
     }
 
-    /* WideCharToMultiByte は失敗時に 0 を返す。公開契約の失敗値は -1 である。 */
-    /* see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte */
+    /*
+     * WideCharToMultiByte() は失敗時に 0 を返す。公開契約の失敗値は -1 である。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
+     */
     converted = WideCharToMultiByte(CP_UTF8, 0, wtext, -1, dest, (int)dest_size, NULL, NULL);
     if (converted <= 0)
     {
@@ -111,7 +115,7 @@ int cplat_wpath_to_utf8(char *dest, const size_t dest_size, const wchar_t *wpath
         return -1;
     }
 
-    /* Windows API が返す '\\' を '/' に正規化する */
+    /* Windows API が返す '\\' を '/' に正規化する。 */
     for (char *p = dest; *p != '\0'; ++p)
     {
         if (*p == '\\')
@@ -135,6 +139,7 @@ wchar_t *cplat_utf8_to_wstr_alloc(const char *utf8_text)
         return NULL;
     }
 
+    /* 変換に必要なバッファー要素数 (終端 NUL を含む) を算出する。 */
     wtext_count = MultiByteToWideChar(CP_UTF8, 0, utf8_text, -1, NULL, 0);
     if (wtext_count <= 0)
     {
@@ -147,6 +152,7 @@ wchar_t *cplat_utf8_to_wstr_alloc(const char *utf8_text)
         return NULL;
     }
 
+    /* ワイド文字列へ変換する。失敗時は確保したバッファーを解放する。 */
     if (MultiByteToWideChar(CP_UTF8, 0, utf8_text, -1, wtext, wtext_count) <= 0)
     {
         cplat_free(wtext);
@@ -168,6 +174,7 @@ char *cplat_wstr_to_utf8_alloc(const wchar_t *wtext)
         return NULL;
     }
 
+    /* 変換に必要なバッファー バイト数 (終端 NUL を含む) を算出する。 */
     utf8_count = WideCharToMultiByte(CP_UTF8, 0, wtext, -1, NULL, 0, NULL, NULL);
     if (utf8_count <= 0)
     {
@@ -180,6 +187,7 @@ char *cplat_wstr_to_utf8_alloc(const wchar_t *wtext)
         return NULL;
     }
 
+    /* UTF-8 文字列へ変換する。失敗時は確保したバッファーを解放する。 */
     if (WideCharToMultiByte(CP_UTF8, 0, wtext, -1, utf8_text, utf8_count, NULL, NULL) <= 0)
     {
         cplat_free(utf8_text);

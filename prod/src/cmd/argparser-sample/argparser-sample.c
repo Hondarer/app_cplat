@@ -53,8 +53,9 @@ static int register_argparser(argparser_sample_options *options)
     cplat_argparser_register_positional_string("input", "input file", CPLAT_ARGPARSER_REQUIRED, &options->input_path);
     cplat_argparser_register_positional_string("output", "output file", 0, &options->output_path);
 
+    /* オプションの登録に失敗した場合 (コーディング エラーの場合)。 */
     if (cplat_argparser_get_register_error_count() > 0)
-    { /* オプションの登録に失敗した場合 (コーディング エラーの場合) */
+    {
         cplat_argparser_print_register_error_messages(stderr);
         return -1;
     }
@@ -76,9 +77,11 @@ static void print_result(const argparser_sample_options *options)
     {
         name = "(none)";
     }
+
     printf("name: %s\n", name);
 
     printf("includes: %zu\n", options->include_count);
+
     for (size_t i = 0; i < options->include_count; i++)
     {
         printf("  include[%zu]: %s\n", i, options->includes[i]);
@@ -91,6 +94,7 @@ static void print_result(const argparser_sample_options *options)
     {
         output = "(none)";
     }
+
     printf("output: %s\n", output);
 }
 
@@ -112,7 +116,7 @@ int main(int argc, char *argv[])
 
     if (options.need_help != 0)
     {
-        /* 必須引数が省略されていても -h, --help を優先する */
+        /* 必須引数が省略されていても -h, --help を優先する。 */
         cplat_argparser_print_usage(stdout);
         return EXIT_SUCCESS;
     }

@@ -30,27 +30,35 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define TRACE_CLI_LINE_MAX 4096
+#define TRACE_CLI_LINE_MAX 4096 /* 入力行バッファーの最大長 [byte] */
 
+/* トレース レベル値に対応する表示名の一覧。 */
 static const char *const g_trace_level_names[] = {
     "CRITICAL", "ERROR", "WARNING", "INFO", "VERBOSE", "DEBUG", "NONE",
 };
 
+/* tracer ハンドルが存在しないときのプロンプト表示状態。 */
 enum trace_cli_prompt_state
 {
     TRACE_CLI_PROMPT_STATE_UNCREATED = 0,
     TRACE_CLI_PROMPT_STATE_DISPOSED = 1
 };
 
+/*
+ * 文字列の先頭から空白文字を読み飛ばす。
+ * 最初の非空白文字または終端文字へのポインターを返す。引数が NULL の場合は NULL を返す。
+ */
 static char *skip_spaces(char *p)
 {
     while (p != NULL && *p != '\0' && isspace((unsigned char)*p))
     {
         p++;
     }
+
     return p;
 }
 
+/* 文字列末尾の連続する空白文字を除去する。引数が NULL の場合は何もしない。 */
 static void trim_right(char *s)
 {
     size_t len;
@@ -65,9 +73,14 @@ static void trim_right(char *s)
     {
         len--;
     }
+
     s[len] = '\0';
 }
 
+/*
+ * 大文字と小文字を区別せずに 2 つの文字列を比較する。
+ * 一致する場合は 1、不一致の場合または引数に NULL が含まれる場合は 0 を返す。
+ */
 static int str_case_equal(const char *lhs, const char *rhs)
 {
     size_t i;
@@ -88,11 +101,17 @@ static int str_case_equal(const char *lhs, const char *rhs)
     return lhs[i] == '\0' && rhs[i] == '\0';
 }
 
+/* 文字列が大文字小文字を区別せず "null" であるかを判定する。一致する場合は 1、それ以外は 0 を返す。 */
 static int is_null_keyword(const char *token)
 {
     return str_case_equal(token, "null");
 }
 
+/*
+ * 文字列から次のトークンを 1 個切り出し、cursor を次の位置へ進める。
+ * クォート (' または ") で囲まれたトークンは、囲みを除去して内部の文字列を返す。
+ * トークンを検出した場合はその先頭ポインターを返し、トークンがない場合または未終端クォートの場合は NULL を返す。
+ */
 static char *next_token(char **cursor)
 {
     char *p;
@@ -111,38 +130,52 @@ static char *next_token(char **cursor)
         return NULL;
     }
 
+    /* クォートで囲まれたトークンを切り出す。 */
     if (*p == '"' || *p == '\'')
     {
         quote = *p;
         start = ++p;
+
         while (*p != '\0' && *p != quote)
         {
             p++;
         }
+
         if (*p == '\0')
         {
             *cursor = p;
             return NULL;
         }
+
         *p = '\0';
         *cursor = p + 1;
         return start;
     }
 
+    /* 空白区切りの通常のトークンを切り出す。 */
     start = p;
+
     while (*p != '\0' && !isspace((unsigned char)*p))
     {
         p++;
     }
+
     if (*p != '\0')
     {
         *p = '\0';
         p++;
     }
+
     *cursor = p;
+
     return start;
 }
 
+/*
+ * 現在位置から残りの引数文字列全体を取得する。
+ * クォートで囲まれている場合は囲みの内部を返し、それ以外は現在位置から末尾までの文字列を返す。
+ * 引数がない場合やクォートが不正な場合は NULL を返す。
+ */
 static char *rest_argument(char **cursor)
 {
     char *p;
@@ -168,20 +201,24 @@ static char *rest_argument(char **cursor)
             *cursor = p;
             return NULL;
         }
+
         p = skip_spaces(p);
         if (*p != '\0')
         {
             *cursor = p;
             return NULL;
         }
+
         *cursor = p;
         return quoted;
     }
 
     *cursor = p + strlen(p);
+
     return p;
 }
 
+/* トレース レベルに対応する名前文字列を返す。範囲外の値の場合は "UNKNOWN" を返す。 */
 static const char *level_to_name(cplat_trace_level level)
 {
     if ((int)level >= 0 && (size_t)level < sizeof(g_trace_level_names) / sizeof(g_trace_level_names[0]))
@@ -192,6 +229,10 @@ static const char *level_to_name(cplat_trace_level level)
     return "UNKNOWN";
 }
 
+/*
+ * 文字列をトレース レベルに変換する。
+ * 成功時は 1 を返して level に値を格納し、不正な文字列または NULL の場合は 0 を返す。
+ */
 static int parse_trace_level(const char *token, cplat_trace_level *level)
 {
     size_t i;
@@ -213,6 +254,7 @@ static int parse_trace_level(const char *token, cplat_trace_level *level)
     return 0;
 }
 
+/* 文字列を 10 進数の 64 ビット符号付き整数へ変換する。成功時は 1、変換失敗時または NULL の場合は 0 を返す。 */
 static int parse_int64_value(const char *token, int64_t *value)
 {
     if (token == NULL || value == NULL)
@@ -224,9 +266,11 @@ static int parse_int64_value(const char *token, int64_t *value)
     {
         return 0;
     }
+
     return 1;
 }
 
+/* 文字列を 10 進数の int 型整数へ変換する。成功時は 1、変換失敗時または NULL の場合は 0 を返す。 */
 static int parse_int_value(const char *token, int *value)
 {
     if (token == NULL || value == NULL)
@@ -238,9 +282,11 @@ static int parse_int_value(const char *token, int *value)
     {
         return 0;
     }
+
     return 1;
 }
 
+/* tracer の状態に対応する表示名 ("started"、"stopped"、"disposed") を返す。 */
 static const char *tracer_state_to_name(cplat_tracer_state state)
 {
     switch (state)
@@ -255,12 +301,14 @@ static const char *tracer_state_to_name(cplat_tracer_state state)
     }
 }
 
+/* プロンプトに表示するセッション状態の文字列を返す。session が NULL または解放済みの場合は "disposed" を返す。 */
 static const char *session_prompt_state_to_name(const trace_cli_session *session)
 {
     if (session == NULL)
     {
         return "disposed";
     }
+
     if (session->handle != NULL)
     {
         return tracer_state_to_name(cplat_tracer_get_state(session->handle));
@@ -274,6 +322,7 @@ static const char *session_prompt_state_to_name(const trace_cli_session *session
     return "uncreated";
 }
 
+/* 文字列を 10 進数の size_t 型整数へ変換する。成功時は 1、変換失敗時または NULL の場合は 0 を返す。 */
 static int parse_size_value(const char *token, size_t *value)
 {
     uint64_t parsed;
@@ -287,27 +336,39 @@ static int parse_size_value(const char *token, size_t *value)
     {
         return 0;
     }
+
     *value = (size_t)parsed;
+
     return 1;
 }
 
+/* 16 進数の 1 文字を数値 (0-15) に変換する。16 進文字でない場合は -1 を返す。 */
 static int hex_nibble(char c)
 {
     if (c >= '0' && c <= '9')
     {
         return c - '0';
     }
+
     if (c >= 'a' && c <= 'f')
     {
         return 10 + (c - 'a');
     }
+
     if (c >= 'A' && c <= 'F')
     {
         return 10 + (c - 'A');
     }
+
     return -1;
 }
 
+/*
+ * 16 進文字列 (空白混在可) をバイト配列へ変換する。
+ * 成功時は 1 を返し、*data に動的確保したバッファー、*size にバイト数を格納する。
+ * バッファーは呼び出し元が cplat_free() で解放する。
+ * 引数が不正、奇数桁、無効な文字、またはメモリ確保に失敗した場合は 0 を返す。
+ */
 static int parse_hex_bytes(const char *text, unsigned char **data, size_t *size)
 {
     size_t digits = 0U;
@@ -321,16 +382,19 @@ static int parse_hex_bytes(const char *text, unsigned char **data, size_t *size)
         return 0;
     }
 
+    /* 空白を除いた 16 進文字の桁数を数え、無効な文字が含まれていないか確認する。 */
     for (p = text; *p != '\0'; p++)
     {
         if (isspace((unsigned char)*p))
         {
             continue;
         }
+
         if (hex_nibble(*p) < 0)
         {
             return 0;
         }
+
         digits++;
     }
 
@@ -352,6 +416,7 @@ static int parse_hex_bytes(const char *text, unsigned char **data, size_t *size)
         return 0;
     }
 
+    /* 16 進文字を 2 桁ずつ 1 [byte] に変換してバッファーへ格納する。 */
     for (p = text; *p != '\0'; p++)
     {
         int nibble;
@@ -381,14 +446,17 @@ static int parse_hex_bytes(const char *text, unsigned char **data, size_t *size)
 
     *data = buf;
     *size = digits / 2U;
+
     return 1;
 }
 
+/* トレース レベルの名前と数値を標準出力へ表示する。 */
 static void print_level_result(cplat_trace_level level)
 {
     printf("level=%s(%d)\n", level_to_name(level), (int)level);
 }
 
+/* 結果コードを表示する。標準出力が端末の場合は、成功 (0) を緑、失敗 (非 0) を赤で色付けして表示する。 */
 static void print_rc_result(int ret)
 {
     if (!cplat_isatty(CPLAT_STREAM_STDOUT))
@@ -430,6 +498,7 @@ struct trace_cli_command
     int (*handler)(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
 };
 
+/* コマンドの使用方法を標準エラー出力へ表示する。 */
 static void print_command_usage(const struct trace_cli_command *cmd)
 {
     fprintf(stderr, "使用方法: %s%s\n", cmd->name, cmd->usage_args);
@@ -459,37 +528,45 @@ void trace_cli_session_dispose(trace_cli_session *session)
     session->prompt_state = TRACE_CLI_PROMPT_STATE_DISPOSED;
 }
 
+/* 対話セッション開始時の案内メッセージを表示する。 */
 static void print_interactive_hint(void)
 {
     printf("help でコマンド一覧を表示します。exit で終了します。\n");
 }
 
+/* help コマンドを処理する。正常終了として 0 を返す。 */
 static int cmd_help(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor)
 {
     (void)session;
     (void)cmd;
     (void)cursor;
     trace_cli_print_help();
+
     return 0;
 }
 
+/* exit および quit コマンドを処理する。対話ループを終了するため 1 を返す。 */
 static int cmd_exit(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor)
 {
     (void)cmd;
     (void)cursor;
     session->exit_requested = 1;
+
     return 1;
 }
 
+/* create コマンドを処理する。成功時は 0、既存ハンドルが存在する場合は -1 を返す。 */
 static int cmd_create(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor)
 {
     (void)cmd;
     (void)cursor;
+
     if (session->handle != NULL)
     {
         fprintf(stderr, "エラー: 既存の handle を dispose してから create を実行してください。\n");
         return -1;
     }
+
     session->handle = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED);
     if (session->handle == NULL)
     {
@@ -500,9 +577,11 @@ static int cmd_create(trace_cli_session *session, const struct trace_cli_command
     {
         printf("handle=created\n");
     }
+
     return 0;
 }
 
+/* dispose コマンドを処理する。ハンドルを解放して 0 を返す。 */
 static int cmd_dispose(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor)
 {
     (void)cmd;
@@ -511,25 +590,31 @@ static int cmd_dispose(trace_cli_session *session, const struct trace_cli_comman
     session->handle = NULL;
     session->prompt_state = TRACE_CLI_PROMPT_STATE_DISPOSED;
     printf("handle=disposed\n");
+
     return 0;
 }
 
+/* start コマンドを処理し、tracer の開始結果を表示する。常に 0 を返す。 */
 static int cmd_start(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor)
 {
     (void)cmd;
     (void)cursor;
     print_rc_result(cplat_tracer_start(session->handle));
+
     return 0;
 }
 
+/* stop コマンドを処理し、tracer の停止結果を表示する。常に 0 を返す。 */
 static int cmd_stop(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor)
 {
     (void)cmd;
     (void)cursor;
     print_rc_result(cplat_tracer_stop(session->handle));
+
     return 0;
 }
 
+/* set-name コマンドを処理し、tracer の名称と識別子を設定する。成功時は 0、引数不正時は -1 を返す。 */
 static int cmd_set_name(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor)
 {
     char *name_token;
@@ -544,12 +629,14 @@ static int cmd_set_name(trace_cli_session *session, const struct trace_cli_comma
         print_command_usage(cmd);
         return -1;
     }
+
     identifier_token = next_token(cursor);
     if (identifier_token != NULL && !parse_int64_value(identifier_token, &identifier))
     {
         fprintf(stderr, "エラー: identifier は整数で指定してください。\n");
         return -1;
     }
+
     if (next_token(cursor) != NULL)
     {
         print_command_usage(cmd);
@@ -560,19 +647,24 @@ static int cmd_set_name(trace_cli_session *session, const struct trace_cli_comma
     {
         name = name_token;
     }
+
     ret = cplat_tracer_set_name(session->handle, name, identifier);
     print_rc_result(ret);
+
     return 0;
 }
 
+/* get-os-level コマンドを処理し、現在の OS ログ レベルを表示する。常に 0 を返す。 */
 static int cmd_get_os_level(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor)
 {
     (void)cmd;
     (void)cursor;
     print_level_result(cplat_tracer_get_os_level(session->handle));
+
     return 0;
 }
 
+/* set-os-level コマンドを処理し、OS ログ レベルを設定する。成功時は 0、引数不正時は -1 を返す。 */
 static int cmd_set_os_level(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor)
 {
     char *level_token;
@@ -584,23 +676,29 @@ static int cmd_set_os_level(trace_cli_session *session, const struct trace_cli_c
         print_command_usage(cmd);
         return -1;
     }
+
     if (!parse_trace_level(level_token, &level))
     {
         fprintf(stderr, "エラー: level が不正です。\n");
         return -1;
     }
+
     print_rc_result(cplat_tracer_set_os_level(session->handle, level));
+
     return 0;
 }
 
+/* get-file-level コマンドを処理し、現在のファイル ログ レベルを表示する。常に 0 を返す。 */
 static int cmd_get_file_level(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor)
 {
     (void)cmd;
     (void)cursor;
     print_level_result(cplat_tracer_get_file_level(session->handle));
+
     return 0;
 }
 
+/* set-file-level コマンドを処理し、ファイル ログの出力設定を更新する。成功時は 0、引数不正時は -1 を返す。 */
 static int cmd_set_file_level(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor)
 {
     char *path_token;
@@ -620,6 +718,7 @@ static int cmd_set_file_level(trace_cli_session *session, const struct trace_cli
         print_command_usage(cmd);
         return -1;
     }
+
     if (!parse_trace_level(level_token, &level))
     {
         fprintf(stderr, "エラー: level が不正です。\n");
@@ -650,19 +749,24 @@ static int cmd_set_file_level(trace_cli_session *session, const struct trace_cli
     {
         path = path_token;
     }
+
     ret = cplat_tracer_set_file_level(session->handle, path, level, max_bytes, generations, 0);
     print_rc_result(ret);
+
     return 0;
 }
 
+/* get-stderr-level コマンドを処理し、現在の標準エラー ログ レベルを表示する。常に 0 を返す。 */
 static int cmd_get_stderr_level(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor)
 {
     (void)cmd;
     (void)cursor;
     print_level_result(cplat_tracer_get_stderr_level(session->handle));
+
     return 0;
 }
 
+/* set-stderr-level コマンドを処理し、標準エラー ログ レベルを設定する。成功時は 0、引数不正時は -1 を返す。 */
 static int cmd_set_stderr_level(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor)
 {
     char *level_token;
@@ -674,15 +778,19 @@ static int cmd_set_stderr_level(trace_cli_session *session, const struct trace_c
         print_command_usage(cmd);
         return -1;
     }
+
     if (!parse_trace_level(level_token, &level))
     {
         fprintf(stderr, "エラー: level が不正です。\n");
         return -1;
     }
+
     print_rc_result(cplat_tracer_set_stderr_level(session->handle, level));
+
     return 0;
 }
 
+/* write および writef コマンドを処理し、指定レベルでメッセージを出力する。成功時は 0、引数不正時は -1 を返す。 */
 static int cmd_write(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor)
 {
     char *level_token;
@@ -696,11 +804,13 @@ static int cmd_write(trace_cli_session *session, const struct trace_cli_command 
         print_command_usage(cmd);
         return -1;
     }
+
     if (!parse_trace_level(level_token, &level))
     {
         fprintf(stderr, "エラー: level が不正です。\n");
         return -1;
     }
+
     message = rest_argument(cursor);
     if (message == NULL)
     {
@@ -708,6 +818,7 @@ static int cmd_write(trace_cli_session *session, const struct trace_cli_command 
         return -1;
     }
 
+    /* コマンド名に応じて通常出力と書式付き出力を切り替える。 */
     if (strcmp(cmd->name, "write") == 0)
     {
         ret = cplat_tracer_write_at(session->handle, level, NULL, message);
@@ -716,10 +827,13 @@ static int cmd_write(trace_cli_session *session, const struct trace_cli_command 
     {
         ret = cplat_tracer_writef_at(session->handle, level, NULL, "%s", message);
     }
+
     print_rc_result(ret);
+
     return 0;
 }
 
+/* write-hex および write-hexf コマンドを処理し、16 進バイナリを出力する。成功時は 0、引数不正時は -1 を返す。 */
 static int cmd_write_hex(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor)
 {
     char *level_token;
@@ -738,11 +852,13 @@ static int cmd_write_hex(trace_cli_session *session, const struct trace_cli_comm
         print_command_usage(cmd);
         return -1;
     }
+
     if (!parse_trace_level(level_token, &level))
     {
         fprintf(stderr, "エラー: level が不正です。\n");
         return -1;
     }
+
     if (!parse_hex_bytes(hex_token, &data, &size))
     {
         fprintf(stderr, "エラー: hex は 16 進文字列で指定してください。\n");
@@ -758,6 +874,7 @@ static int cmd_write_hex(trace_cli_session *session, const struct trace_cli_comm
         return -1;
     }
 
+    /* コマンド名に応じて通常出力と書式付き出力を切り替える。 */
     if (strcmp(cmd->name, "write-hex") == 0)
     {
         ret = cplat_tracer_write_hex_at(session->handle, level, NULL, data, size, label);
@@ -765,6 +882,7 @@ static int cmd_write_hex(trace_cli_session *session, const struct trace_cli_comm
     else
     {
         const char *label_str;
+
         if (label != NULL)
         {
             label_str = label;
@@ -773,10 +891,13 @@ static int cmd_write_hex(trace_cli_session *session, const struct trace_cli_comm
         {
             label_str = "";
         }
+
         ret = cplat_tracer_write_hexf_at(session->handle, level, NULL, data, size, "%s", label_str);
     }
+
     print_rc_result(ret);
     cplat_free(data);
+
     return 0;
 }
 
@@ -802,6 +923,7 @@ static const struct trace_cli_command g_commands[] = {
     {"write-hexf", " <level> <hex> [label...]", 0, 0, cmd_write_hex},
 };
 
+/* コマンド名に一致するコマンド定義を検索する。見つかった場合は定義へのポインター、未登録の場合は NULL を返す。 */
 static const struct trace_cli_command *find_command(const char *name)
 {
     size_t i;
@@ -813,6 +935,7 @@ static const struct trace_cli_command *find_command(const char *name)
             return &g_commands[i];
         }
     }
+
     return NULL;
 }
 
@@ -823,10 +946,12 @@ void trace_cli_print_help(void)
     printf("trace-cli: cplat.tracer interactive CLI\n");
     printf("使用可能な level: CRITICAL ERROR WARNING INFO VERBOSE DEBUG NONE\n");
     printf("コマンド:\n");
+
     for (i = 0U; i < sizeof(g_commands) / sizeof(g_commands[0]); i++)
     {
         printf("  %s%s\n", g_commands[i].name, g_commands[i].usage_args);
     }
+
     printf("hex は 01ABFF または \"01 AB FF\" の形式で指定できます。\n");
 }
 
@@ -859,6 +984,7 @@ int trace_cli_process_line(trace_cli_session *session, const char *line)
         return -1;
     }
 
+    /* 引数を取らないコマンドに余剰引数が渡された場合はエラーとする。 */
     if (cmd->no_args && next_token(&cursor) != NULL)
     {
         print_command_usage(cmd);
@@ -902,10 +1028,12 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    /* 対話セッションを初期化し、案内メッセージを表示する。 */
     trace_cli_session_init(&session);
     prompt = cplat_prompt_create(NULL);
     print_interactive_hint();
 
+    /* ユーザーからの入力行を 1 行ずつ読み取ってコマンドを実行する。 */
     while (!session.exit_requested)
     {
         if (cplat_prompt_readline_fmt(prompt, line, sizeof(line), "trace-cli[%s]> ",
@@ -913,14 +1041,19 @@ int main(int argc, char *argv[])
         {
             break;
         }
+
         if (line[0] == '\0')
         {
             continue;
         }
+
+        /* エラー時も対話ループを継続するため戻り値は処理しない */
         trace_cli_process_line(&session, line);
     }
 
+    /* セッションとプロンプトの資源を解放する。 */
     trace_cli_session_dispose(&session);
     cplat_prompt_dispose(prompt);
+
     return EXIT_SUCCESS;
 }

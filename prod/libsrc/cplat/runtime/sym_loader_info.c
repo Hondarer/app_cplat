@@ -28,6 +28,8 @@ int cplat_sym_loader_info(cplat_sym_loader_entry *const *fobj_array, const size_
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
+    /* 配列要素に NULL が含まれていないか検証する。 */
     for (fobj_index = 0; fobj_index < fobj_length; fobj_index++)
     {
         if (fobj_array[fobj_index] == NULL)
@@ -36,6 +38,7 @@ int cplat_sym_loader_info(cplat_sym_loader_entry *const *fobj_array, const size_
         }
     }
 
+    /* 各エントリの情報を標準出力へ出力し、未解決のエントリがあれば解決を試みる。 */
     for (fobj_index = 0; fobj_index < fobj_length; fobj_index++)
     {
         cplat_sym_loader_entry *fobj = fobj_array[fobj_index];
@@ -45,6 +48,7 @@ int cplat_sym_loader_info(cplat_sym_loader_entry *const *fobj_array, const size_
         {
             (void)cplat_sym_loader_resolve(fobj);
         }
+
         resolved = cplat_atomic_load_i32(&fobj->resolved, CPLAT_MEMORY_ORDER_ACQUIRE);
         printf("- [%zu] %s\n", fobj_index, fobj->func_key);
         printf("    - resolved : %d\n", (int)resolved);
@@ -53,6 +57,7 @@ int cplat_sym_loader_info(cplat_sym_loader_entry *const *fobj_array, const size_
         printf("    - handle   : %p\n", (void *)fobj->handle);
         printf("    - func_ptr : %p\n", cplat_atomic_load_ptr(&fobj->func_ptr, CPLAT_MEMORY_ORDER_RELAXED));
 
+        /* 1 つでも解決に失敗したエントリがある場合は、最終結果をエラーとする。 */
         if (resolved < 0)
         {
             result = CPLAT_ERR_UNKNOWN;

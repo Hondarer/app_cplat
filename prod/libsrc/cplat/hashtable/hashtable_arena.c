@@ -66,6 +66,7 @@ static int arena_free_block_adjoins(const struct hashtable_arena *arena, uint64_
     {
         return 0;
     }
+
     if (((arena->free_list[index].offset + arena->free_list[index].length) == own_offset) ||
         (arena->free_list[index].offset == (own_offset + own_length)))
     {
@@ -98,6 +99,7 @@ static int arena_find_fit(const struct hashtable_arena *arena, uint64_t own_offs
     uint64_t merged_length = own_length;
     uint64_t i;
     int merged_pending;
+
     if (own_length != 0)
     {
         merged_pending = 1;
@@ -107,6 +109,7 @@ static int arena_find_fit(const struct hashtable_arena *arena, uint64_t own_offs
         merged_pending = 0;
     }
 
+    /* 置き換え対象ブロックがある場合は、隣接する空きブロックと結合した領域を求める。 */
     if (own_length != 0)
     {
         for (i = 0; i < count; i++)
@@ -114,6 +117,7 @@ static int arena_find_fit(const struct hashtable_arena *arena, uint64_t own_offs
             if (arena_free_block_adjoins(arena, i, own_offset, own_length) != 0)
             {
                 merged_length += arena->free_list[i].length;
+
                 if (arena->free_list[i].offset < merged_offset)
                 {
                     merged_offset = arena->free_list[i].offset;
@@ -121,6 +125,8 @@ static int arena_find_fit(const struct hashtable_arena *arena, uint64_t own_offs
             }
         }
     }
+
+    /* 空きリストをオフセット昇順に走査し、先着適合する位置を探す。 */
     for (i = 0; i < count; i++)
     {
         if ((merged_pending != 0) && (merged_offset < arena->free_list[i].offset))
@@ -130,23 +136,28 @@ static int arena_find_fit(const struct hashtable_arena *arena, uint64_t own_offs
                 *offset_out = (size_t)merged_offset;
                 return 1;
             }
+
             merged_pending = 0;
         }
+
         if (arena_free_block_adjoins(arena, i, own_offset, own_length) != 0)
         {
-            continue; /* 結合済みのため、単独では評価しない。 */
+            continue; /* 結合済みのため、単独では評価しない */
         }
+
         if ((uint64_t)needed <= arena->free_list[i].length)
         {
             *offset_out = (size_t)arena->free_list[i].offset;
             return 1;
         }
     }
+
     if ((merged_pending != 0) && ((uint64_t)needed <= merged_length))
     {
         *offset_out = (size_t)merged_offset;
         return 1;
     }
+
     return 0;
 }
 
@@ -167,6 +178,7 @@ static void arena_take(struct hashtable_arena *arena, size_t offset, size_t leng
     uint64_t end = start + (uint64_t)length;
     uint64_t i;
 
+    /* 対象区間を含む空きブロックを探し、確保した区間を取り除いて空きブロックを更新または分割する。 */
     for (i = 0; i < count; i++)
     {
         uint64_t free_end = arena->free_list[i].offset + arena->free_list[i].length;
@@ -175,6 +187,7 @@ static void arena_take(struct hashtable_arena *arena, size_t offset, size_t leng
         {
             continue;
         }
+
         if ((arena->free_list[i].offset == start) && (end == free_end))
         {
             memmove(&arena->free_list[i], &arena->free_list[i + 1u],
@@ -199,6 +212,7 @@ static void arena_take(struct hashtable_arena *arena, size_t offset, size_t leng
             arena->free_list[i + 1u].length = free_end - end;
             *arena->free_count = count + 1u;
         }
+
         return;
     }
 }
@@ -224,10 +238,13 @@ static void arena_give(struct hashtable_arena *arena, size_t offset, size_t leng
     {
         return;
     }
+
+    /* 返す区間の挿入位置をオフセット昇順で探す。 */
     while ((i < count) && (arena->free_list[i].offset < start))
     {
         i++;
     }
+
     if ((i > 0u) && ((arena->free_list[i - 1u].offset + arena->free_list[i - 1u].length) == start))
     {
         merge_prev = 1;
@@ -236,6 +253,7 @@ static void arena_give(struct hashtable_arena *arena, size_t offset, size_t leng
     {
         merge_prev = 0;
     }
+
     if ((i < count) && (arena->free_list[i].offset == end))
     {
         merge_next = 1;
@@ -244,6 +262,8 @@ static void arena_give(struct hashtable_arena *arena, size_t offset, size_t leng
     {
         merge_next = 0;
     }
+
+    /* 前後の空きブロックとの隣接状況に応じて結合、または新規ブロックとして挿入する。 */
     if ((merge_prev != 0) && (merge_next != 0))
     {
         arena->free_list[i - 1u].length += (uint64_t)length + arena->free_list[i].length;
@@ -282,6 +302,7 @@ void hashtable_arena_compact(cplat_hashtable *ht, struct hashtable_arena *arena,
     uint64_t i;
     size_t rec;
 
+    /* 空きブロックを飛ばしながら使用中区間を左へ詰める。 */
     for (i = 0; i < count; i++)
     {
         uint64_t run_length = arena->free_list[i].offset - prev_end;
@@ -290,9 +311,11 @@ void hashtable_arena_compact(cplat_hashtable *ht, struct hashtable_arena *arena,
         {
             memmove(arena->storage + (size_t)(prev_end - shift), arena->storage + (size_t)prev_end, (size_t)run_length);
         }
+
         shift += arena->free_list[i].length;
         prev_end = arena->free_list[i].offset + arena->free_list[i].length;
     }
+
     if ((prev_end < (uint64_t)arena->storage_size) && (shift != 0))
     {
         memmove(arena->storage + (size_t)(prev_end - shift), arena->storage + (size_t)prev_end,
@@ -305,6 +328,8 @@ void hashtable_arena_compact(cplat_hashtable *ht, struct hashtable_arena *arena,
         running += arena->free_list[i].length;
         arena->free_list[i].length = running;
     }
+
+    /* 各 descriptor のオフセットから、その位置より前方にある空き容量の累積和を減算する。 */
     for (rec = 0; rec < ht->hdr->config.capacity; rec++)
     {
         struct hashtable_string_ref *ref = get_ref(ht, rec);
@@ -328,13 +353,16 @@ void hashtable_arena_compact(cplat_hashtable *ht, struct hashtable_arena *arena,
                 high = mid;
             }
         }
+
         if (low != 0u)
         {
             ref->offset -= arena->free_list[low - 1u].length;
         }
     }
 
+    /* 詰め終わった後の末尾未使用領域を 0 埋めし、空きリストを初期状態へ戻す。 */
     memset(arena->storage + (size_t)used, 0, arena->storage_size - (size_t)used);
+
     if ((uint64_t)arena->storage_size > used)
     {
         arena->free_list[0].offset = used;
@@ -366,6 +394,7 @@ void hashtable_release_key(cplat_hashtable *ht, size_t rec)
     else
     {
         memset(hashtable_entry_key(ht, rec), 0, ht->hdr->config.key_size);
+
         if (ht->hdr->config.key_type == CPLAT_HASHTABLE_FIELD_BINARY)
         {
             *hashtable_entry_key_length(ht, rec) = 0;
@@ -428,6 +457,7 @@ void hashtable_key_store(cplat_hashtable *ht, size_t rec, const void *key, size_
         /* 有効長の外を 0 埋めし、永続化した領域の内容を有効長だけで決まるようにする。 */
         memcpy(dst, key, key_length);
         memset(dst + key_length, 0, ht->hdr->config.key_size - key_length);
+
         /* key_size は UINT32_MAX 以下を設定検査で保証するため、有効長は uint32_t に収まる。 */
         *hashtable_entry_key_length(ht, rec) = (uint32_t)key_length;
     }
@@ -477,32 +507,40 @@ int hashtable_arena_validate(const struct hashtable_arena *arena, uint64_t used,
     {
         return -1;
     }
+
+    /* 各空きブロックの長さ、範囲、オフセット昇順、未結合ブロックの不在を検査する。 */
     for (i = 0; i < count; i++)
     {
         if (arena->free_list[i].length == 0)
         {
             return -1;
         }
+
         if (arena->free_list[i].offset > (uint64_t)arena->storage_size)
         {
             return -1;
         }
+
         if (arena->free_list[i].length > ((uint64_t)arena->storage_size - arena->free_list[i].offset))
         {
             return -1;
         }
+
         /* 2 個目以降は、直前の空きブロックの終端より後ろから始まること。等しい場合は未結合で不正。 */
         if ((i != 0u) && (arena->free_list[i].offset <= prev_end))
         {
             return -1;
         }
+
         prev_end = arena->free_list[i].offset + arena->free_list[i].length;
         total += arena->free_list[i].length;
     }
+
     if (total != ((uint64_t)arena->storage_size - used))
     {
         return -1;
     }
+
     return 0;
 }
 
@@ -514,6 +552,7 @@ int hashtable_arena_validate_used_block(const struct hashtable_arena *arena, uin
     uint64_t low = 0;
     uint64_t high = count;
 
+    /* 二分探索により、指定オフセットを挟む前後の空きブロックの位置を特定する。 */
     while (low < high)
     {
         uint64_t mid = low + ((high - low) / 2u);
@@ -527,14 +566,17 @@ int hashtable_arena_validate_used_block(const struct hashtable_arena *arena, uin
             high = mid;
         }
     }
+
     if ((low != 0u) && ((arena->free_list[low - 1u].offset + arena->free_list[low - 1u].length) > offset))
     {
         return -1;
     }
+
     if ((low < count) && ((offset + length) > arena->free_list[low].offset))
     {
         return -1;
     }
+
     return 0;
 }
 
@@ -549,6 +591,7 @@ void hashtable_reset_arenas(cplat_hashtable *ht)
         hashtable_key_arena(ht, &arena);
         arena_reset(&arena);
     }
+
     if (hashtable_field_is_variable(ht->hdr->config.value_type) != 0)
     {
         hashtable_value_arena(ht, &arena);
@@ -571,6 +614,7 @@ int hashtable_key_storage_find_free(const cplat_hashtable *ht, size_t rec, int r
         *offset_out = 0;
         return 1;
     }
+
     if (replace != 0)
     {
         const struct hashtable_string_ref *own = hashtable_key_ref_at(ht, rec);
@@ -578,8 +622,10 @@ int hashtable_key_storage_find_free(const cplat_hashtable *ht, size_t rec, int r
         own_offset = own->offset;
         own_length = own->length;
     }
+
     hashtable_key_arena(ht, &arena);
     needed = hashtable_field_input_size(ht->hdr->config.key_type, 0, key);
+
     return arena_find_fit(&arena, own_offset, own_length, needed, offset_out);
 }
 
@@ -598,6 +644,7 @@ int hashtable_value_storage_find_free(const cplat_hashtable *ht, size_t rec, int
         *offset_out = 0;
         return 1;
     }
+
     if (replace != 0)
     {
         const struct hashtable_string_ref *own = hashtable_value_ref_at(ht, rec);
@@ -605,7 +652,9 @@ int hashtable_value_storage_find_free(const cplat_hashtable *ht, size_t rec, int
         own_offset = own->offset;
         own_length = own->length;
     }
+
     hashtable_value_arena(ht, &arena);
     needed = hashtable_field_input_size(ht->hdr->config.value_type, 0, value);
+
     return arena_find_fit(&arena, own_offset, own_length, needed, offset_out);
 }

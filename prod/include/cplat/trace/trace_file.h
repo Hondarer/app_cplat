@@ -20,8 +20,10 @@
  *
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #include <stddef.h>
 #include <cplat/base/platform.h>
@@ -38,7 +40,7 @@
 /* ===== 設定定数 ===== */
 
 /**
- *  @brief          トレース ファイル 1 世代あたりの既定最大サイズ (バイト) です。
+ *  @brief          トレース ファイル 1 世代あたりの既定最大サイズ [byte] です。
  *
  *  この値を超えるとローテーションが実行されます。\n
  *  cplat_trace_file_sink_create の max_bytes に 0 を指定した場合に使用されます。

@@ -8,8 +8,10 @@
  *
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_PROMPT_EDIT_H
 #define CPLAT_PROMPT_EDIT_H
@@ -45,7 +47,7 @@ extern "C"
      */
     void cplat_internal_prompt_edit_utf16_feed(cplat_internal_prompt_utf16_input *input, unsigned int unit);
 
-    /* ハンドルが候補の領域を所有し、呼び出しのたびに件数を初期化します。 */
+    /* ハンドルが候補の領域を所有し、呼び出しのたびに件数を初期化する。 */
     struct cplat_prompt_completions
     {
         const char *line;

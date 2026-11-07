@@ -37,6 +37,8 @@ static int hashtable_lookup(const cplat_hashtable *ht, const void *key, size_t k
     }
 
     cur = hashtable_bucket_head(ht)[hashtable_hash_key(ht, key, key_length)];
+
+    /* バケットのハッシュ連鎖をたどり、キーが一致する使用中レコードを探索する。 */
     while (cur != 0)
     {
         size_t rec = (size_t)(cur - 1);
@@ -48,13 +50,23 @@ static int hashtable_lookup(const cplat_hashtable *ht, const void *key, size_t k
                 *rec_out = rec;
                 return CPLAT_OK;
             }
+
+            /* 削除済みレコードはキーが残っていても見つからない扱いとする。 */
             return CPLAT_ERR_NOT_FOUND;
         }
+
         cur = *hashtable_entry_next(ht, rec);
     }
+
     return CPLAT_ERR_NOT_FOUND;
 }
 
+/*
+ * キーで使用中のレコードを検索し、データ領域内の値への参照ポインターを取得する。
+ * 成功時は CPLAT_OK を返し、*value_out に値へのポインターを設定する。
+ * 引数が不正な場合は CPLAT_ERR_INVALID_ARGUMENT、キー長が範囲外の場合は CPLAT_ERR_OUT_OF_RANGE、
+ * 対象キーが存在しないか削除済みの場合は CPLAT_ERR_NOT_FOUND を返す。
+ */
 static int find_value_ref(const cplat_hashtable *ht, const void *key, size_t key_length, const void **value_out)
 {
     size_t rec;
@@ -64,12 +76,15 @@ static int find_value_ref(const cplat_hashtable *ht, const void *key, size_t key
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     ret = hashtable_lookup(ht, key, key_length, &rec);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
+
     *value_out = hashtable_data_at(ht, rec);
+
     return CPLAT_OK;
 }
 
@@ -89,60 +104,96 @@ int cplat_hashtable_find_value_ref_with_key_length(const cplat_hashtable *ht, co
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     return find_value_ref(ht, key, key_length, value_out);
 }
 
+/*
+ * 指定スロットに格納されている値のバイト数を、格納形式に応じて算出する。
+ * 可変長文字列は登録時の有効長、固定長文字列は終端ヌル文字を含む長さ、固定長バイナリは設定された固定サイズを返す。
+ */
 static size_t stored_value_size(const cplat_hashtable *ht, size_t rec)
 {
     if (hashtable_field_is_variable(ht->hdr->config.value_type) != 0)
     {
         return (size_t)hashtable_value_ref_at(ht, rec)->length;
     }
+
     if (ht->hdr->config.value_type == CPLAT_HASHTABLE_FIELD_FIXED_STRING)
     {
         return strlen((const char *)hashtable_data_at(ht, rec)) + 1u;
     }
+
     return ht->hdr->config.value_size;
 }
 
+/*
+ * 指定スロットに格納されているキーのバイト数を、格納形式に応じて算出する。
+ * 可変長文字列は登録時の有効長、固定長文字列は終端ヌル文字を含む長さ、バイナリは格納時の有効長を返す。
+ */
 static size_t stored_key_size(const cplat_hashtable *ht, size_t rec)
 {
     if (hashtable_field_is_variable(ht->hdr->config.key_type) != 0)
     {
         return (size_t)hashtable_key_ref_at(ht, rec)->length;
     }
+
     if (ht->hdr->config.key_type == CPLAT_HASHTABLE_FIELD_FIXED_STRING)
     {
         return strlen(hashtable_entry_key(ht, rec)) + 1u;
     }
+
     return hashtable_stored_key_length(ht, rec);
 }
 
+/*
+ * 呼び出し元のバッファーへフィールド データを複製する。
+ * dest が NULL のときは必要サイズの通知のみを行い、CPLAT_OK を返す。
+ * バッファー サイズが不足している場合は CPLAT_ERR_BUFFER_TOO_SMALL、引数の組み合わせが不正な場合は
+ * CPLAT_ERR_INVALID_ARGUMENT、複製に成功した場合は CPLAT_OK を返す。
+ */
 static int copy_field(const void *src, size_t required_size, void *dest, size_t dest_size, size_t *required_size_out)
 {
     if ((required_size_out == NULL) || ((dest == NULL) && (dest_size != 0)) || ((dest != NULL) && (dest_size == 0)))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     *required_size_out = required_size;
+
+    /* バッファーが指定されていない場合は必要サイズの取得のみで成功とする。 */
     if (dest == NULL)
     {
         return CPLAT_OK;
     }
+
     if (dest_size < required_size)
     {
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
+
     memcpy(dest, src, required_size);
+
     return CPLAT_OK;
 }
 
+/*
+ * 複製先バッファーとサイズ受け取り用ポインターの妥当性を検証する。
+ * required_size_out が非 NULL であり、dest と dest_size の双方が指定されているか、
+ * 双方が未指定 (dest が NULL かつ dest_size が 0) である場合に 1 を返し、それ以外は 0 を返す。
+ */
 static int copy_arguments_are_valid(const void *dest, size_t dest_size, const size_t *required_size_out)
 {
     return (required_size_out != NULL) &&
            (((dest == NULL) && (dest_size == 0)) || ((dest != NULL) && (dest_size != 0)));
 }
 
+/*
+ * キーで使用中のレコードを検索し、1 相対のレコード番号を取得する。
+ * 成功時は CPLAT_OK を返し、*record_out にレコード番号を設定する。
+ * 引数が不正な場合は CPLAT_ERR_INVALID_ARGUMENT、キー長が範囲外の場合は CPLAT_ERR_OUT_OF_RANGE、
+ * 対象キーが存在しないか削除済みの場合は CPLAT_ERR_NOT_FOUND を返す。
+ */
 static int find_recno(const cplat_hashtable *ht, const void *key, size_t key_length, uint64_t *record_out)
 {
     size_t rec;
@@ -152,15 +203,25 @@ static int find_recno(const cplat_hashtable *ht, const void *key, size_t key_len
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     ret = hashtable_lookup(ht, key, key_length, &rec);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
-    *record_out = (uint64_t)(rec + 1);
+
+    *record_out = (uint64_t)(rec + 1); /* 0 相対の内部インデックスから 1 相対のレコード番号へ変換する */
+
     return CPLAT_OK;
 }
 
+/*
+ * キーで使用中のレコードを検索し、その値を呼び出し元バッファーへ複製する。
+ * dest が NULL のときは必要サイズの通知のみを行う。
+ * 成功時は CPLAT_OK を返し、引数が不正な場合は CPLAT_ERR_INVALID_ARGUMENT、
+ * バッファー サイズが不足している場合は CPLAT_ERR_BUFFER_TOO_SMALL、未検出または削除済みの場合は
+ * CPLAT_ERR_NOT_FOUND、キー長が範囲外の場合は CPLAT_ERR_OUT_OF_RANGE を返す。
+ */
 static int find_value_copy(const cplat_hashtable *ht, const void *key, size_t key_length, void *dest, size_t dest_size,
                            size_t *required_size_out)
 {
@@ -171,11 +232,13 @@ static int find_value_copy(const cplat_hashtable *ht, const void *key, size_t ke
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     ret = find_recno(ht, key, key_length, &record);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
+
     return copy_field(hashtable_data_at(ht, (size_t)(record - 1)), stored_value_size(ht, (size_t)(record - 1)), dest,
                       dest_size, required_size_out);
 }
@@ -197,6 +260,7 @@ int cplat_hashtable_find_value_copy_with_key_length(const cplat_hashtable *ht, c
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     return find_value_copy(ht, key, key_length, dest, dest_size, required_size_out);
 }
 
@@ -216,9 +280,16 @@ int cplat_hashtable_find_recno_with_key_length(const cplat_hashtable *ht, const 
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     return find_recno(ht, key, key_length, record_out);
 }
 
+/*
+ * キーで使用中のレコードを検索し、レコードの更新時刻への参照ポインターを取得する。
+ * レコード単位のタイムスタンプが無効な設定の場合は CPLAT_ERR_UNSUPPORTED を返す。
+ * 引数が不正な場合は CPLAT_ERR_INVALID_ARGUMENT、キー長が範囲外の場合は CPLAT_ERR_OUT_OF_RANGE、
+ * 未検出または削除済みの場合は CPLAT_ERR_NOT_FOUND、成功時は CPLAT_OK を返す。
+ */
 static int find_timestamp_ref(const cplat_hashtable *ht, const void *key, size_t key_length,
                               const cplat_timespec **timestamp_out)
 {
@@ -229,16 +300,20 @@ static int find_timestamp_ref(const cplat_hashtable *ht, const void *key, size_t
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (hashtable_has_record_timestamp(ht) == 0)
     {
         return CPLAT_ERR_UNSUPPORTED;
     }
+
     ret = hashtable_lookup(ht, key, key_length, &rec);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
+
     *timestamp_out = hashtable_entry_timestamp(ht, rec);
+
     return CPLAT_OK;
 }
 
@@ -258,9 +333,16 @@ int cplat_hashtable_find_timestamp_ref_with_key_length(const cplat_hashtable *ht
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     return find_timestamp_ref(ht, key, key_length, timestamp_out);
 }
 
+/*
+ * キーで使用中のレコードを検索し、レコードの更新時刻の値を呼び出し元領域へ取得する。
+ * レコード単位のタイムスタンプが無効な設定の場合は CPLAT_ERR_UNSUPPORTED を返す。
+ * 引数が不正な場合は CPLAT_ERR_INVALID_ARGUMENT、キー長が範囲外の場合は CPLAT_ERR_OUT_OF_RANGE、
+ * 未検出または削除済みの場合は CPLAT_ERR_NOT_FOUND、成功時は CPLAT_OK を返す。
+ */
 static int find_timestamp_val(const cplat_hashtable *ht, const void *key, size_t key_length,
                               cplat_timespec *timestamp_out)
 {
@@ -271,12 +353,15 @@ static int find_timestamp_val(const cplat_hashtable *ht, const void *key, size_t
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     ret = find_timestamp_ref(ht, key, key_length, &src);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
+
     *timestamp_out = *src;
+
     return CPLAT_OK;
 }
 
@@ -296,9 +381,16 @@ int cplat_hashtable_find_timestamp_val_with_key_length(const cplat_hashtable *ht
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     return find_timestamp_val(ht, key, key_length, timestamp_out);
 }
 
+/*
+ * キーで使用中のレコードを検索し、レコードの世代カウンター値を取得する。
+ * レコード単位のタイムスタンプが無効な設定の場合は CPLAT_ERR_UNSUPPORTED を返す。
+ * 引数が不正な場合は CPLAT_ERR_INVALID_ARGUMENT、キー長が範囲外の場合は CPLAT_ERR_OUT_OF_RANGE、
+ * 未検出または削除済みの場合は CPLAT_ERR_NOT_FOUND、成功時は CPLAT_OK を返す。
+ */
 static int find_generation(const cplat_hashtable *ht, const void *key, size_t key_length, uint64_t *generation_out)
 {
     size_t rec;
@@ -308,16 +400,20 @@ static int find_generation(const cplat_hashtable *ht, const void *key, size_t ke
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (hashtable_has_record_timestamp(ht) == 0)
     {
         return CPLAT_ERR_UNSUPPORTED;
     }
+
     ret = hashtable_lookup(ht, key, key_length, &rec);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
+
     *generation_out = *hashtable_entry_generation(ht, rec);
+
     return CPLAT_OK;
 }
 
@@ -337,6 +433,7 @@ int cplat_hashtable_find_generation_with_key_length(const cplat_hashtable *ht, c
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     return find_generation(ht, key, key_length, generation_out);
 }
 
@@ -351,21 +448,27 @@ int cplat_hashtable_get_key_ref(const cplat_hashtable *ht, uint64_t record, cons
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if ((record == 0) || (record > ht->hdr->config.capacity))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     rec = (size_t)(record - 1);
-    /* 空は失敗。削除済みは削除直前のキーを返す。 */
+
+    /* 空スロットは失敗とする。削除済みスロットは削除直前のキーを返す。 */
     if (*hashtable_entry_status(ht, rec) == REC_EMPTY)
     {
         return CPLAT_ERR_NOT_FOUND;
     }
+
     *key_out = hashtable_entry_key(ht, rec);
+
     if (key_length_out != NULL)
     {
         *key_length_out = stored_key_size(ht, rec);
     }
+
     return CPLAT_OK;
 }
 
@@ -382,11 +485,13 @@ int cplat_hashtable_get_key_copy(const cplat_hashtable *ht, uint64_t record, voi
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     ret = cplat_hashtable_get_key_ref(ht, record, &src, &key_length);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
+
     return copy_field(src, key_length, dest, dest_size, required_size_out);
 }
 
@@ -400,17 +505,22 @@ int cplat_hashtable_get_value_ref(const cplat_hashtable *ht, uint64_t record, co
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if ((record == 0) || (record > ht->hdr->config.capacity))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     rec = (size_t)(record - 1);
-    /* 空は失敗。削除済みは削除直前の値を返す。 */
+
+    /* 空スロットは失敗とする。削除済みスロットは削除直前の値を返す。 */
     if (*hashtable_entry_status(ht, rec) == REC_EMPTY)
     {
         return CPLAT_ERR_NOT_FOUND;
     }
+
     *value_out = hashtable_data_at(ht, rec);
+
     return CPLAT_OK;
 }
 
@@ -426,11 +536,13 @@ int cplat_hashtable_get_value_copy(const cplat_hashtable *ht, uint64_t record, v
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     ret = cplat_hashtable_get_value_ref(ht, record, &src);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
+
     return copy_field(src, stored_value_size(ht, (size_t)(record - 1)), dest, dest_size, required_size_out);
 }
 
@@ -442,11 +554,14 @@ int cplat_hashtable_get_status(const cplat_hashtable *ht, uint64_t record, int *
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if ((record == 0) || (record > ht->hdr->config.capacity))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     *status_out = (int)*hashtable_entry_status(ht, (size_t)(record - 1));
+
     return CPLAT_OK;
 }
 
@@ -462,10 +577,12 @@ int cplat_hashtable_next_record(const cplat_hashtable *ht, uint64_t from, unsign
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if ((status_mask == 0) || ((status_mask & ~known_bits) != 0))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     /* from は直前に返したレコード番号。capacity と等しいときは走査済みで、終端を返す。 */
     if (from > ht->hdr->config.capacity)
     {
@@ -473,6 +590,8 @@ int cplat_hashtable_next_record(const cplat_hashtable *ht, uint64_t from, unsign
     }
 
     *has_record_out = 0;
+
+    /* 指定されたレコード番号の次から走査し、マスクに合致する状態のスロットを探索する。 */
     for (i = (size_t)from; i < ht->hdr->config.capacity; i++)
     {
         unsigned char status = *hashtable_entry_status(ht, i);
@@ -490,6 +609,7 @@ int cplat_hashtable_next_record(const cplat_hashtable *ht, uint64_t from, unsign
         {
             bit = CPLAT_HASHTABLE_SCAN_DELETED;
         }
+
         if ((status_mask & bit) != 0)
         {
             *record_out = (uint64_t)(i + 1);
@@ -497,6 +617,7 @@ int cplat_hashtable_next_record(const cplat_hashtable *ht, uint64_t from, unsign
             return CPLAT_OK;
         }
     }
+
     return CPLAT_OK;
 }
 
@@ -510,20 +631,27 @@ int cplat_hashtable_get_timestamp_ref(const cplat_hashtable *ht, uint64_t record
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (hashtable_has_record_timestamp(ht) == 0)
     {
         return CPLAT_ERR_UNSUPPORTED;
     }
+
     if ((record == 0) || (record > ht->hdr->config.capacity))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     rec = (size_t)(record - 1);
+
+    /* 空スロットは失敗とする。削除済みスロットは削除直前のタイムスタンプを返す。 */
     if (*hashtable_entry_status(ht, rec) == REC_EMPTY)
     {
         return CPLAT_ERR_NOT_FOUND;
     }
+
     *timestamp_out = hashtable_entry_timestamp(ht, rec);
+
     return CPLAT_OK;
 }
 
@@ -538,12 +666,15 @@ int cplat_hashtable_get_timestamp_val(const cplat_hashtable *ht, uint64_t record
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     ret = cplat_hashtable_get_timestamp_ref(ht, record, &src);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
+
     *timestamp_out = *src;
+
     return CPLAT_OK;
 }
 
@@ -557,20 +688,27 @@ int cplat_hashtable_get_generation(const cplat_hashtable *ht, uint64_t record, u
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (hashtable_has_record_timestamp(ht) == 0)
     {
         return CPLAT_ERR_UNSUPPORTED;
     }
+
     if ((record == 0) || (record > ht->hdr->config.capacity))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     rec = (size_t)(record - 1);
+
+    /* 空スロットは失敗とする。削除済みスロットは削除直前の世代カウンターを返す。 */
     if (*hashtable_entry_status(ht, rec) == REC_EMPTY)
     {
         return CPLAT_ERR_NOT_FOUND;
     }
+
     *generation_out = *hashtable_entry_generation(ht, rec);
+
     return CPLAT_OK;
 }
 
@@ -582,7 +720,9 @@ int cplat_hashtable_get_table_timestamp_ref(const cplat_hashtable *ht, const cpl
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     *timestamp_out = &ht->hdr->table_timestamp;
+
     return CPLAT_OK;
 }
 
@@ -597,12 +737,15 @@ int cplat_hashtable_get_table_timestamp_val(const cplat_hashtable *ht, cplat_tim
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     ret = cplat_hashtable_get_table_timestamp_ref(ht, &src);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
+
     *timestamp_out = *src;
+
     return CPLAT_OK;
 }
 
@@ -614,7 +757,9 @@ int cplat_hashtable_get_table_generation(const cplat_hashtable *ht, uint64_t *ge
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     *generation_out = ht->hdr->table_generation;
+
     return CPLAT_OK;
 }
 
@@ -627,19 +772,22 @@ int cplat_hashtable_count_status(const cplat_hashtable *ht, size_t *in_use_out, 
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    /* 永続化領域のカウンターをそのまま返す。capacity に依存しない一定時間。 */
+    /* 永続化領域のカウンターをそのまま返す。処理時間は capacity に依存せず一定である。 */
     if (in_use_out != NULL)
     {
         *in_use_out = (size_t)ht->hdr->in_use_count;
     }
+
     if (deleted_out != NULL)
     {
         *deleted_out = (size_t)ht->hdr->deleted_count;
     }
+
     if (empty_out != NULL)
     {
         *empty_out = (size_t)(ht->hdr->config.capacity - ht->hdr->in_use_count - ht->hdr->deleted_count);
     }
+
     return CPLAT_OK;
 }
 
@@ -651,6 +799,7 @@ int cplat_hashtable_count(const cplat_hashtable *ht, size_t *count_out)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     return cplat_hashtable_count_status(ht, count_out, NULL, NULL);
 }
 
@@ -662,6 +811,7 @@ int cplat_hashtable_deleted_count(const cplat_hashtable *ht, size_t *count_out)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     return cplat_hashtable_count_status(ht, NULL, count_out, NULL);
 }
 
@@ -673,5 +823,6 @@ int cplat_hashtable_empty_count(const cplat_hashtable *ht, size_t *count_out)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     return cplat_hashtable_count_status(ht, NULL, NULL, count_out);
 }

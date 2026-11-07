@@ -61,7 +61,7 @@ extern "C"
      *  @brief          ファイルをアタッチし、プロセスのアドレス空間へマップします。
      *  @param[in]      path         マップするファイルのパス (UTF-8)。NULL を渡してはなりません。
      *  @param[in]      access       アクセス モード (@ref cplat_mmap_access)。
-     *  @param[in]      create_size  新規作成時のファイル サイズ (バイト)。\n
+     *  @param[in]      create_size  新規作成時のファイル サイズ [byte]。\n
      *                               @p access が @ref CPLAT_MMAP_ACCESS_READ_WRITE で、
      *                               @p path のファイルが存在しない場合にのみ使用します。
      *                               0 を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。\n
@@ -101,7 +101,7 @@ extern "C"
     /**
      *  @brief          マップ サイズを取得します。
      *  @param[in]      map  対象のハンドル。NULL を渡してはなりません。
-     *  @return         マップ サイズ (バイト)。@p map が NULL の場合は 0 を返します。
+     *  @return         マップ サイズ [byte]。@p map が NULL の場合は 0 を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -112,7 +112,7 @@ extern "C"
      *  @brief          マップした内容をディスクへ反映します。
      *  @param[in]      map      対象のハンドル。NULL を渡してはなりません。
      *  @param[in]      address  反映対象の先頭アドレス。NULL の場合はマップ全体を対象にします。
-     *  @param[in]      length   反映対象のサイズ (バイト)。@p address が NULL の場合は無視されます。
+     *  @param[in]      length   反映対象のサイズ [byte]。@p address が NULL の場合は無視されます。
      *  @param[out]     detail_out  エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。

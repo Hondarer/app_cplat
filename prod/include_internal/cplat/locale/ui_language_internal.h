@@ -11,8 +11,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは複数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは複数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_LOCALE_UI_LANGUAGE_INTERNAL_H
 #define CPLAT_LOCALE_UI_LANGUAGE_INTERNAL_H
@@ -28,7 +30,7 @@ extern "C"
      *  @brief          ロケールの指定を言語タグへ正規化します。
      *  @param[in]      value     正規化するロケールの指定 (null 終端文字列)。NULL を渡してはなりません。
      *  @param[out]     tag_out   言語タグの格納先。NULL を渡してはなりません。
-     *  @param[in]      tag_size  @p tag_out のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      tag_size  @p tag_out のサイズ [byte]。0 を渡してはなりません。
      *  @retval         CPLAT_OK                    言語タグを格納しました。\n
      *                                              ニュートラルの指定では空文字列を格納します。
      *  @retval         CPLAT_ERR_INVALID_ARGUMENT  引数が不正、または @p value を言語タグとして解釈できません。

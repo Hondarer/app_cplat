@@ -36,7 +36,7 @@ static const char *const s_environment_names[] = {"LC_ALL", "LC_MESSAGES", "LANG
 /**
  *  @brief          環境変数から表示言語を決定します。
  *  @param[out]     tag_out       言語タグの格納先。NULL を渡してはなりません。
- *  @param[in]      tag_size      @p tag_out のサイズ (バイト)。0 を渡してはなりません。
+ *  @param[in]      tag_size      @p tag_out のサイズ [byte]。0 を渡してはなりません。
  *  @param[out]     decided_out   表示言語を決定した場合は 1、決定していない場合は 0 を格納します。
  *                                NULL を渡してはなりません。
  *  @retval         CPLAT_OK                    評価を完了しました。
@@ -57,7 +57,7 @@ static int decide_from_environment(char *const tag_out, const size_t tag_size, i
         int exists = 0;
         int ret;
 
-        /* 言語タグに収まらない長さの指定は、言語タグとして解釈できないため次の候補へ進みます。 */
+        /* 言語タグに収まらない長さの指定は、言語タグとして解釈できないため次の候補へ進む。 */
         ret = cplat_getenv(s_environment_names[index], value, sizeof(value), &exists, NULL);
         if ((ret != CPLAT_OK) || (exists == 0) || (value[0] == '\0'))
         {
@@ -70,6 +70,7 @@ static int decide_from_environment(char *const tag_out, const size_t tag_size, i
             *decided_out = 1;
             return CPLAT_OK;
         }
+
         if (ret == CPLAT_ERR_BUFFER_TOO_SMALL)
         {
             return ret;
@@ -84,7 +85,7 @@ static int decide_from_environment(char *const tag_out, const size_t tag_size, i
 /**
  *  @brief          Windows の利用者設定から表示言語を決定します。
  *  @param[out]     tag_out       言語タグの格納先。NULL を渡してはなりません。
- *  @param[in]      tag_size      @p tag_out のサイズ (バイト)。0 を渡してはなりません。
+ *  @param[in]      tag_size      @p tag_out のサイズ [byte]。0 を渡してはなりません。
  *  @param[out]     decided_out   表示言語を決定した場合は 1、決定していない場合は 0 を格納します。
  *                                NULL を渡してはなりません。
  *  @retval         CPLAT_OK                    評価を完了しました。
@@ -102,9 +103,12 @@ static int decide_from_windows(char *const tag_out, const size_t tag_size, int *
 
     *decided_out = 0;
 
-    /* 地域設定を返す GetUserDefaultLocaleName は、表示言語と別に設定できるため第一の候補としません。
-       表示言語の優先順位は NUL 区切りの一覧で返り、先頭要素が最優先の表示言語となります。
-       see: https://learn.microsoft.com/en-us/windows/win32/api/winnls/nf-winnls-getuserpreferreduilanguages */
+    /*
+     * 地域設定を返す GetUserDefaultLocaleName() は、表示言語と別に設定できるため第一の候補としない。
+     * 表示言語の優先順位は NUL 区切りの一覧で返り、先頭要素が最優先の表示言語となる。
+     * バッファーに NULL を渡し pcchLanguagesBuffer を 0 にすると、必要な wchar_t の個数が返る。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/winnls/nf-winnls-getuserpreferreduilanguages
+     */
     if ((GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &language_count, NULL, &buffer_length) != 0) &&
         (buffer_length > 0U))
     {
@@ -115,7 +119,7 @@ static int decide_from_windows(char *const tag_out, const size_t tag_size, int *
             if ((GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &language_count, names, &buffer_length) != 0) &&
                 (language_count > 0U))
             {
-                /* 一覧の先頭要素は NUL 終端されているため、そのまま 1 つの文字列として扱えます。 */
+                /* 一覧の先頭要素は NUL 終端されているため、そのまま 1 つの文字列として扱える。 */
                 if (cplat_wstr_to_utf8(value, sizeof(value), names) > 0)
                 {
                     converted = 1;
@@ -125,6 +129,7 @@ static int decide_from_windows(char *const tag_out, const size_t tag_size, int *
                     converted = 0;
                 }
             }
+
             cplat_free(names);
         }
     }
@@ -157,13 +162,13 @@ static int decide_from_windows(char *const tag_out, const size_t tag_size, int *
         *decided_out = 1;
         return CPLAT_OK;
     }
+
     if (ret == CPLAT_ERR_BUFFER_TOO_SMALL)
     {
         return ret;
     }
 
-    /* 解釈できない名前は使用せず、ニュートラルとして扱う */
-    return CPLAT_OK;
+    return CPLAT_OK; /* 解釈できない名前は使用せず、ニュートラルとして扱う */
 }
 
 #endif /* PLATFORM_WINDOWS */
@@ -185,9 +190,14 @@ int cplat_ui_language_get_tag(char *const tag_out, const size_t tag_size)
     ret = decide_from_environment(tag_out, tag_size, &decided);
     if (ret != CPLAT_OK)
     {
+        /*
+         * 容量が不足したときは言語タグを格納しない。
+         * 正本は app/cplat/docs/functional-spec/locale.md の「機能要件」節である。
+         */
         tag_out[0] = '\0';
         return ret;
     }
+
     if (decided != 0)
     {
         return CPLAT_OK;
@@ -197,16 +207,21 @@ int cplat_ui_language_get_tag(char *const tag_out, const size_t tag_size)
     ret = decide_from_windows(tag_out, tag_size, &decided);
     if (ret != CPLAT_OK)
     {
+        /*
+         * 容量が不足したときは言語タグを格納しない。
+         * 正本は app/cplat/docs/functional-spec/locale.md の「機能要件」節である。
+         */
         tag_out[0] = '\0';
         return ret;
     }
+
     if (decided != 0)
     {
         return CPLAT_OK;
     }
 #endif /* PLATFORM_WINDOWS */
 
-    /* Linux では、システムの設定がログイン時に環境変数へ反映されるため、環境変数以外の候補は評価しません。 */
+    /* Linux では、システムの設定がログイン時に環境変数へ反映されるため、環境変数以外の候補は評価しない。 */
     tag_out[0] = '\0';
 
     return CPLAT_OK;

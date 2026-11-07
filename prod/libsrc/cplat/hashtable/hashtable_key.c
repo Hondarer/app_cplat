@@ -28,7 +28,7 @@ size_t hashtable_hash_key(const cplat_hashtable *ht, const void *key, size_t key
     {
         int c;
 
-        /* 文字列は先頭の NUL までだけを混ぜ、残り 0 埋めはハッシュに入れません。 */
+        /* 文字列は先頭の NUL までだけを混ぜ、残り 0 埋めはハッシュに入れない。 */
         while ((c = *p++) != 0)
         {
             hash = ((hash << 5) + hash) + (uint64_t)c;
@@ -38,12 +38,13 @@ size_t hashtable_hash_key(const cplat_hashtable *ht, const void *key, size_t key
     {
         size_t i;
 
-        /* 有効長を超える 0 埋めはハッシュに入れません。 */
+        /* 有効長を超える 0 埋めはハッシュに入れない。 */
         for (i = 0; i < key_length; i++)
         {
             hash = ((hash << 5) + hash) + p[i];
         }
     }
+
     return (size_t)hash % ht->hdr->config.capacity;
 }
 
@@ -57,11 +58,13 @@ int hashtable_key_equal(const cplat_hashtable *ht, size_t rec, const void *key, 
     {
         return strcmp(stored_key, (const char *)key) == 0;
     }
-    /* 有効長が異なれば、末尾の 0 だけが違うキーも別のキーです。 */
+
+    /* 有効長が異なれば、末尾の 0 だけが違うキーも別のキーである。 */
     if ((size_t)*hashtable_entry_key_length(ht, rec) != key_length)
     {
         return 0;
     }
+
     return memcmp(stored_key, key, key_length) == 0;
 }
 
@@ -73,10 +76,12 @@ int hashtable_key_fits(const cplat_hashtable *ht, const void *key, size_t key_le
     {
         return key_length <= ht->hdr->config.key_size;
     }
+
     if (ht->hdr->config.key_type == CPLAT_HASHTABLE_FIELD_VARIABLE_STRING)
     {
         return strlen((const char *)key) < ht->hdr->config.key_storage_size;
     }
+
     return memchr(key, '\0', ht->hdr->config.key_size) != NULL;
 }
 
@@ -88,6 +93,7 @@ size_t hashtable_field_input_size(cplat_hashtable_field_type type, size_t fixed_
     {
         return strlen((const char *)value) + 1u;
     }
+
     return fixed_size;
 }
 

@@ -35,7 +35,7 @@
 /** 1 行分のスタック バッファー サイズ。 */
 #define TRACE_FILE_LINE_BUF 1100
 
-/** ファイル書き込みロック取得のタイムアウト (ミリ秒)。 */
+/** ファイル書き込みロック取得のタイムアウト [ms]。 */
 #define FILE_LOCK_TIMEOUT_MS 100
 
 /** タイムスタンプ部分の文字数 ("YYYY-MM-DDTHH:MM:SS.sss+09:00" = 29 文字)。 */
@@ -50,7 +50,7 @@
 /** ファイル オープン失敗時のリトライ回数。 */
 #define TRACE_FILE_OPEN_RETRY_COUNT 3
 
-/** ファイル オープン失敗時のリトライ間隔 (ミリ秒)。 */
+/** ファイル オープン失敗時のリトライ間隔 [ms]。 */
 #define TRACE_FILE_OPEN_RETRY_INTERVAL_MS 3000
 
 /** プロセス内 sink レジストリの初期容量。 */
@@ -65,30 +65,43 @@ struct cplat_trace_file_sink
 {
     /** ヒープ確保済みファイル パス文字列。 */
     char *path;
+
     /** ローテーション排他用ロック ファイルのパス文字列 (共有モードのみ非 NULL)。 */
     char *lock_path;
+
     /** ファイル 1 世代あたりの最大バイト数。 */
     size_t max_bytes;
+
     /** 現ファイルへの書き込み済みバイト数 (単一プロセス モードのインメモリ追跡)。 */
     size_t current_bytes;
+
     /** スレッド安全のための mutex。 */
     cplat_local_lock *mutex;
+
     /** ローテーション排他用プロセス間ロック (共有モードのみ非 NULL)。 */
     cplat_interprocess_lock *rotate_lock;
+
     /** オープン中ファイルの同一性 (共有モードで使用)。 */
     cplat_file_id self_id;
+
     /** 低レベル ファイル I/O ハンドル。 */
     cplat_file file;
+
     /** 保持する旧世代数。 */
     int generations;
+
     /** sink の動作フラグ。 */
     int flags;
+
     /** 共有モードの場合 1 (CPLAT_TRACE_FILE_SINK_SHARED 指定時)。 */
     int shared;
+
     /** mutex が初期化済みかどうかのフラグ。 */
     int mutex_initialized;
+
     /** self_id が有効かどうかのフラグ。 */
     int self_id_valid;
+
     /** 64 bit アーキテクチャーで構造体末尾の暗黙パディングを防ぐ。 */
     int pad;
 };
@@ -102,10 +115,13 @@ struct sink_registry_entry
 {
     /** 正規化済みパス文字列 (ヒープ確保)。 */
     char *key;
+
     /** 共有対象の sink。 */
     cplat_trace_file_sink *sink;
+
     /** 参照カウント。0 になったら解放する。 */
     int refcount;
+
     /** 明示的アラインメント。 */
     unsigned int pad;
 };
@@ -168,7 +184,9 @@ static char *build_registry_key(const char *path)
     {
         return NULL;
     }
+
     memcpy(key, src, len + 1);
+
     return key;
 }
 
@@ -205,6 +223,7 @@ static struct sink_registry_entry *sink_registry_find_by_key_locked(const char *
             return &s_sink_registry.items[i];
         }
     }
+
     return NULL;
 }
 
@@ -224,6 +243,7 @@ static struct sink_registry_entry *sink_registry_find_by_sink_locked(const cplat
             return &s_sink_registry.items[i];
         }
     }
+
     return NULL;
 }
 
@@ -255,6 +275,7 @@ static int sink_registry_register_locked(char *key, cplat_trace_file_sink *sink)
         {
             return -1;
         }
+
         s_sink_registry.items = new_items;
         s_sink_registry.capacity = new_capacity;
     }
@@ -264,6 +285,7 @@ static int sink_registry_register_locked(char *key, cplat_trace_file_sink *sink)
     s_sink_registry.items[s_sink_registry.count].refcount = 1;
     s_sink_registry.items[s_sink_registry.count].pad = 0;
     s_sink_registry.count++;
+
     return 0;
 }
 
@@ -357,6 +379,7 @@ static int open_file_with_retry(cplat_trace_file_sink *p)
     for (retry_count = 0; retry_count < TRACE_FILE_OPEN_RETRY_COUNT; retry_count++)
     {
         cplat_sleep_ms(TRACE_FILE_OPEN_RETRY_INTERVAL_MS);
+
         if (open_file(p) == 0)
         {
             return 0;
@@ -433,7 +456,6 @@ static void close_file(cplat_trace_file_sink *p)
  */
 static void rotate_file(cplat_trace_file_sink *p)
 {
-    /* パス構築用スタック バッファー */
     char old_path[PLATFORM_PATH_MAX];
     char new_path[PLATFORM_PATH_MAX];
     int gen;
@@ -441,25 +463,23 @@ static void rotate_file(cplat_trace_file_sink *p)
 
     close_file(p);
 
-    /* 最老世代のファイルを削除する (失敗は無視) */
+    /* 最老世代のファイルを削除する。失敗は無視する。 */
     if (cplat_snprintf(new_path, sizeof(new_path), "%s.%d", p->path, p->generations) == CPLAT_OK)
     {
         (void)cplat_remove(new_path, NULL);
     }
 
-    /* path.(gen-1) → path.gen のカスケード リネーム */
+    /* path.(gen-1) を path.gen へ順にリネームする。 */
     for (gen = p->generations; gen >= 1; gen--)
     {
-        /* 移動先: path.gen */
         if (cplat_snprintf(new_path, sizeof(new_path), "%s.%d", p->path, gen) != CPLAT_OK)
         {
             break;
         }
 
-        /* 移動元: gen==1 のときは path そのもの */
+        /* gen が 1 の移動元は、世代番号を付けない path そのものである。 */
         if (gen == 1)
         {
-            /* old_path に path をコピー */
             if (cplat_snprintf(old_path, sizeof(old_path), "%s", p->path) != CPLAT_OK)
             {
                 break;
@@ -474,6 +494,7 @@ static void rotate_file(cplat_trace_file_sink *p)
         }
 
         cplat_error_clear(&detail);
+
         if (cplat_rename(old_path, new_path, &detail) != 0)
         {
             if (detail.result == CPLAT_ERR_NOT_FOUND)
@@ -481,16 +502,18 @@ static void rotate_file(cplat_trace_file_sink *p)
                 continue;
             }
 
-            /* リネーム失敗: カスケードをここで打ち切る */
+            /* リネームに失敗したため、カスケードをここで打ち切る。 */
             break;
         }
     }
 
-    /* 新規ファイルを作成して開く (失敗しても未オープンのまま続行) */
+    /* 新規ファイルを作成して開く。失敗しても未オープンのまま続行する。 */
     if (p->shared != 0)
     {
-        /* 共有モード: リネーム直後に他プロセスの writer が path を再作成して
-           書き込んでいる場合があるため、切り詰めずに追記モードで開く。 */
+        /*
+         * 共有モード: リネーム直後に他プロセスの writer が path を再作成して
+         * 書き込んでいる場合があるため、切り詰めずに追記モードで開く。
+         */
         open_file(p);
     }
     else
@@ -514,11 +537,12 @@ static void check_rotate_shared(cplat_trace_file_sink *p)
 {
     size_t real_bytes;
 
-    /* インメモリ集計ではなく実サイズで判定する (複数 writer の合計を反映) */
+    /* インメモリ集計ではなく実サイズで判定する。複数 writer の合計を反映する。 */
     if (cplat_file_get_size(&p->file, &real_bytes, NULL) != CPLAT_OK)
     {
         return;
     }
+
     if (real_bytes < p->max_bytes)
     {
         return;
@@ -531,13 +555,13 @@ static void check_rotate_shared(cplat_trace_file_sink *p)
 
     if (sink_points_to_current_file(p) == 0)
     {
-        /* 他プロセスが先にローテーション済み: 開き直すだけにする */
+        /* 他プロセスが先にローテーションしているため、開き直すだけにする。 */
         close_file(p);
         open_file(p);
     }
     else
     {
-        /* ロック下で実サイズを再確認してからローテーションする */
+        /* ロック下で実サイズを再確認してからローテーションする。 */
         if (cplat_file_get_size(&p->file, &real_bytes, NULL) == CPLAT_OK && real_bytes >= p->max_bytes)
         {
             rotate_file(p);
@@ -595,7 +619,7 @@ static cplat_trace_file_sink *create_new_sink(const char *path, const size_t pat
         return NULL;
     }
 
-    /* 失敗パスで free_sink を使えるよう、先にすべてのメンバーを安全な値にする */
+    /* 失敗パスで free_sink() を使えるよう、先にすべてのメンバーを安全な値にする。 */
     handle->path = NULL;
     handle->lock_path = NULL;
     handle->mutex = NULL;
@@ -607,6 +631,7 @@ static cplat_trace_file_sink *create_new_sink(const char *path, const size_t pat
     cplat_file_init(&handle->file);
 
     handle->shared = 0;
+
     if ((flags & CPLAT_TRACE_FILE_SINK_SHARED) != 0)
     {
         handle->shared = 1;
@@ -620,6 +645,7 @@ static cplat_trace_file_sink *create_new_sink(const char *path, const size_t pat
     {
         handle->max_bytes = CPLAT_TRACE_FILE_SINK_DEFAULT_MAX_BYTES;
     }
+
     if (generations > 0)
     {
         handle->generations = generations;
@@ -629,37 +655,36 @@ static cplat_trace_file_sink *create_new_sink(const char *path, const size_t pat
         handle->generations = CPLAT_TRACE_FILE_SINK_DEFAULT_GENERATIONS;
     }
 
-    /* パス文字列をヒープへ複製する */
     handle->path = (char *)cplat_malloc(path_len + 1);
     if (handle->path == NULL)
     {
         free_sink(handle);
         return NULL;
     }
+
     memcpy(handle->path, path, path_len + 1);
 
-    /* 同期プリミティブを初期化する */
     if (cplat_local_lock_create(&handle->mutex) != CPLAT_OK)
     {
         free_sink(handle);
         return NULL;
     }
+
     handle->mutex_initialized = 1;
 
     /* 親ディレクトリの確認と生成は初回だけ行う。ローテーション後の再オープンでは繰り返さない。 */
     if (cplat_path_dirname(dir, sizeof(dir), NULL, handle->path) == CPLAT_OK && strcmp(dir, ".") != 0)
     {
-        (void)cplat_makedirs(dir, NULL);
+        (void)cplat_makedirs(dir, NULL); /* 失敗は直後のオープンで判定する */
     }
 
-    /* ファイルを開く; 失敗したらリソースを解放して NULL を返す */
     if (open_file_with_retry(handle) != 0)
     {
         free_sink(handle);
         return NULL;
     }
 
-    /* 共有モード: ローテーション排他用のプロセス間ロックを開く */
+    /* 共有モードでは、ローテーション排他用のプロセス間ロックを開く。 */
     if (handle->shared != 0)
     {
         handle->lock_path = (char *)cplat_malloc(path_len + sizeof(TRACE_FILE_LOCK_SUFFIX));
@@ -668,6 +693,8 @@ static cplat_trace_file_sink *create_new_sink(const char *path, const size_t pat
             free_sink(handle);
             return NULL;
         }
+
+        /* 宛先長は path とサフィックスの和なので、切り詰めでは失敗しない。 */
         (void)cplat_snprintf(handle->lock_path, path_len + sizeof(TRACE_FILE_LOCK_SUFFIX), "%s%s", path,
                              TRACE_FILE_LOCK_SUFFIX);
 
@@ -702,7 +729,7 @@ cplat_trace_file_sink *cplat_trace_file_sink_create(const char *path, const size
 
     path_len = strlen(path);
 
-    /* パスが長すぎてローテーションやロック ファイルのサフィックスを付加できない場合は拒否する */
+    /* パスが長すぎてローテーションやロック ファイルのサフィックスを付加できない場合は拒否する。 */
     if (path_len + TRACE_FILE_SUFFIX_MAX >= (size_t)PLATFORM_PATH_MAX)
     {
         return NULL;
@@ -719,20 +746,23 @@ cplat_trace_file_sink *cplat_trace_file_sink_create(const char *path, const size
         return NULL;
     }
 
-    /* プロセス内で同一パスの sink を共有する (占有モードのプロセス内調停)。
-     * 生成自体もロック内で行い、同一パスの並行生成を直列化する。 */
+    /*
+     * プロセス内で同一パスの sink を共有する (占有モードのプロセス内調停)。
+     * 生成自体もロック内で行い、同一パスの並行生成を直列化する。
+     */
     sink_registry_lock();
 
     entry = sink_registry_find_by_key_locked(key);
     if (entry != NULL)
     {
-        /* 占有モードと共有モードの混在は意味的に矛盾するため拒否する */
+        /* 占有モードと共有モードの混在は意味的に矛盾するため拒否する。 */
         if (entry->sink->shared != requested_shared)
         {
             sink_registry_unlock();
             cplat_free(key);
             return NULL;
         }
+
         entry->refcount++;
         handle = entry->sink;
         sink_registry_unlock();
@@ -757,6 +787,7 @@ cplat_trace_file_sink *cplat_trace_file_sink_create(const char *path, const size
     }
 
     sink_registry_unlock();
+
     return handle;
 }
 
@@ -771,16 +802,18 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
     int ret;
 
     (void)timestamp;
+
     if (handle == NULL || message == NULL)
     {
         return CPLAT_OK;
     }
+
     if (timestamp_text == NULL)
     {
         return CPLAT_ERR_UNKNOWN;
     }
 
-    /* 1 行全体をスタック バッファーへフォーマットする (syscall 回数を最小化) */
+    /* 1 行全体をスタック バッファーへフォーマットする。syscall 回数を最小化する。 */
     len =
         snprintf(buf, sizeof(buf), "%s %c %s\n", timestamp_text,
                  cplat_internal_trace_level_char((cplat_trace_level)level), message); /* 置換対象外: 意図的な切り詰め */
@@ -788,25 +821,26 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     if (len >= (int)sizeof(buf))
     {
-        /* 切り詰め: バッファー末尾を必ず改行で終端する */
+        /* 切り詰めた場合は、バッファー末尾を改行で終端する。 */
         len = (int)sizeof(buf) - 1;
         buf[len - 1] = '\n';
     }
 
-    /* ロック取得 (タイムアウト付き) */
     if (cplat_local_lock_lock(handle->mutex, FILE_LOCK_TIMEOUT_MS) != CPLAT_OK)
     {
         return CPLAT_ERR_UNKNOWN;
     }
 
-    /* 共有モード: 他プロセスのローテーションで path の実体が入れ替わっていたら開き直す */
+    /* 共有モードでは、他プロセスのローテーションで path の実体が入れ替わっていたら開き直す。 */
     if (handle->shared != 0)
     {
         if (sink_points_to_current_file(handle) == 0)
         {
             close_file(handle);
+
             if (open_file(handle) != 0)
             {
                 cplat_local_lock_unlock(handle->mutex);
@@ -815,10 +849,10 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
         }
     }
 
-    /* ファイルへ書き込む (FILE_FLAG_WRITE_THROUGH / O_DSYNC により自動フラッシュ) */
+    /* ファイルへ書き込む。FILE_FLAG_WRITE_THROUGH / O_DSYNC により自動フラッシュする。 */
     ret = cplat_file_write(&handle->file, buf, (size_t)len, NULL);
 
-    /* 書き込み成功時: サイズを追跡しローテーションしきい値を確認する */
+    /* 書き込み成功時は、サイズを追跡しローテーションしきい値を確認する。 */
     if (ret == 0)
     {
         if (handle->shared != 0)
@@ -827,7 +861,7 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
         }
         else
         {
-            /* size_t のオーバーフローを防ぐ (実用上は発生しないが防御的に扱う) */
+            /* size_t のオーバーフローを防ぐ。実用上は発生しないが防御的に扱う。 */
             if (handle->current_bytes <= (size_t)-1 - (size_t)len)
             {
                 handle->current_bytes += (size_t)len;
@@ -840,7 +874,6 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
         }
     }
 
-    /* ロック解放 */
     cplat_local_lock_unlock(handle->mutex);
 
     if (ret != 0)
@@ -872,6 +905,7 @@ int cplat_trace_file_sink_write(cplat_trace_file_sink *handle, const int level, 
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     if (cplat_internal_trace_format_local_timestamp(timestamp_text, sizeof(timestamp_text), &resolved) != 0)
     {
         return CPLAT_ERR_UNKNOWN;
@@ -882,6 +916,7 @@ int cplat_trace_file_sink_write(cplat_trace_file_sink *handle, const int level, 
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     return CPLAT_OK;
 }
 
@@ -903,6 +938,7 @@ void cplat_trace_file_sink_dispose(cplat_trace_file_sink *handle)
     if (entry != NULL)
     {
         entry->refcount--;
+
         if (entry->refcount > 0)
         {
             should_free = 0;
@@ -913,9 +949,11 @@ void cplat_trace_file_sink_dispose(cplat_trace_file_sink *handle)
             sink_registry_remove_locked(entry);
         }
     }
+
     sink_registry_unlock();
 
     cplat_free(key_to_free);
+
     if (should_free)
     {
         free_sink(handle);
@@ -933,15 +971,17 @@ void cplat_internal_trace_file_sink_dispose_on_shutdown(cplat_trace_file_sink *h
         return;
     }
 
-    /* shutdown 経路ではロックを取得しない (呼び出し側がスレッドの静止を保証する) */
+    /* shutdown 経路ではロックを取得しない。呼び出し側がスレッドの静止を保証する。 */
     entry = sink_registry_find_by_sink_locked(handle);
     if (entry != NULL)
     {
         entry->refcount--;
+
         if (entry->refcount > 0)
         {
             return;
         }
+
         cplat_free(entry->key);
         sink_registry_remove_locked(entry);
     }

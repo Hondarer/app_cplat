@@ -39,6 +39,10 @@ typedef struct hashtable_required_size_options
     int record_timestamp;
 } hashtable_required_size_options;
 
+/*
+ * コマンド ライン オプションを登録する。
+ * 登録エラー発生時は -1、正常時は 0 を返す。
+ */
 static int register_options(hashtable_required_size_options *options)
 {
     (void)cplat_argparser_register_flag("-h", "--help", "show this help", &options->need_help);
@@ -60,11 +64,13 @@ static int register_options(hashtable_required_size_options *options)
     (void)cplat_argparser_register_flag(NULL, "--record-timestamp",
                                         "include per-record timestamps and generations in the management region",
                                         &options->record_timestamp);
+
     if (cplat_argparser_get_register_error_count() > 0)
     {
         (void)cplat_argparser_print_register_error_messages(stderr);
         return -1;
     }
+
     return 0;
 }
 
@@ -81,17 +87,20 @@ int main(int argc, char **argv)
     cplat_argparser_init(argc, argv,
                          "Print the management-region and data-region buffer sizes required to construct a hash "
                          "table.");
+
     if (register_options(&options) != 0)
     {
         return EXIT_FAILURE;
     }
 
     ret = cplat_argparser_parse();
+
     if (options.need_help != 0)
     {
         (void)cplat_argparser_print_usage(stdout);
         return EXIT_SUCCESS;
     }
+
     if (ret != CPLAT_OK)
     {
         (void)cplat_argparser_print_error_messages(stderr);
@@ -104,6 +113,8 @@ int main(int argc, char **argv)
         (void)fprintf(stderr, "value alignment must not be negative.\n");
         return EXIT_FAILURE;
     }
+
+    /* キャパシティおよび選択された形式のキー・値サイズが正の値であることを検証する。 */
     if ((options.capacity <= 0) ||
         (((options.variable_key == 0) && (options.key_size <= 0)) ||
          ((options.variable_key != 0) && (options.key_storage_size <= 0))) ||
@@ -115,6 +126,8 @@ int main(int argc, char **argv)
     }
 
     config.capacity = (size_t)options.capacity;
+
+    /* キーの格納形式 (固定長または可変長文字列) に応じて設定を構成する。 */
     if (options.variable_key != 0)
     {
         config.key_type = CPLAT_HASHTABLE_FIELD_VARIABLE_STRING;
@@ -125,6 +138,8 @@ int main(int argc, char **argv)
         config.key_type = CPLAT_HASHTABLE_FIELD_FIXED_STRING;
         config.key_size = (size_t)options.key_size;
     }
+
+    /* 値の格納形式 (固定長バイナリまたは可変長文字列) に応じて設定を構成する。 */
     if (options.variable_value != 0)
     {
         config.value_type = CPLAT_HASHTABLE_FIELD_VARIABLE_STRING;
@@ -136,6 +151,8 @@ int main(int argc, char **argv)
         config.value_size = (size_t)options.value_size;
         config.value_align = (size_t)options.value_align;
     }
+
+    /* タイムスタンプの記録範囲 (テーブル単位またはレコード単位) を設定する。 */
     if (options.record_timestamp != 0)
     {
         config.timestamp_scope = CPLAT_HASHTABLE_TIMESTAMP_SCOPE_RECORD;
@@ -144,8 +161,11 @@ int main(int argc, char **argv)
     {
         config.timestamp_scope = CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE;
     }
+
+    /* 構成検証を通過する有効な最小寿命 (2) を設定する。 */
     config.lifetime = 2;
 
+    /* 管理領域とデータ領域の必要バイト数を計算する。 */
     ret = cplat_hashtable_required_size(&config, &mgmt_size, &data_size);
     if (ret != CPLAT_OK)
     {
@@ -157,5 +177,6 @@ int main(int argc, char **argv)
     {
         return EXIT_FAILURE;
     }
+
     return EXIT_SUCCESS;
 }

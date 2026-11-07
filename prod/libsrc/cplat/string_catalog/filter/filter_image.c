@@ -179,13 +179,15 @@ int string_catalog_filter_read_constant(const unsigned char *constants, const ui
         {
             return CPLAT_ERR_CORRUPT_DESCRIPTOR;
         }
-        /* 空の文字列と空のパターンは許可する。空のパターンはすべての文字列に一致する */
+
+        /* 空の文字列と空のパターンは許可する。空のパターンはすべての文字列に一致する。 */
         if ((header.kind != (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_STRING) &&
             (header.kind != (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_PATTERN) && (header.length == 0U))
         {
             return CPLAT_ERR_CORRUPT_DESCRIPTOR;
         }
-        /* NUL を含めて 8 バイト単位へ切り上げる */
+
+        /* NUL を含めて 8 [byte] 単位へ切り上げる。 */
         payload_size =
             ((header.length + STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT) / STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT) *
             STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT;
@@ -210,21 +212,24 @@ int string_catalog_filter_read_constant(const unsigned char *constants, const ui
         {
             return CPLAT_ERR_CORRUPT_DESCRIPTOR;
         }
+
         if ((header.flags & STRING_CATALOG_FILTER_CONSTANT_FLAG_NEGATIVE) != 0U)
         {
-            /* 負の値は、0 ではなく、int64_t で表せる絶対値だけを正規の形とする */
+            /* 負の値は、0 ではなく、int64_t で表せる絶対値だけを正規の形とする。 */
             if ((constant_out->magnitude == 0U) || (constant_out->magnitude > ((uint64_t)INT64_MAX + 1U)) ||
                 ((header.flags & STRING_CATALOG_FILTER_CONSTANT_FLAG_HEXADECIMAL) != 0U))
             {
                 return CPLAT_ERR_CORRUPT_DESCRIPTOR;
             }
         }
+
         if ((header.kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_CHARACTER) &&
             (((header.flags & STRING_CATALOG_FILTER_CONSTANT_FLAG_HEXADECIMAL) != 0U) ||
              (constant_out->magnitude > 255U)))
         {
             return CPLAT_ERR_CORRUPT_DESCRIPTOR;
         }
+
         break;
 
     case STRING_CATALOG_FILTER_CONSTANT_KIND_FLOAT:
@@ -240,11 +245,13 @@ int string_catalog_filter_read_constant(const unsigned char *constants, const ui
     case STRING_CATALOG_FILTER_CONSTANT_KIND_ARGUMENT_NAME:
     case STRING_CATALOG_FILTER_CONSTANT_KIND_PATTERN:
         constant_out->text = (const char *)(constants + payload_offset);
-        /* 終端の NUL があり、途中に NUL を含まないこと */
+
+        /* 終端の NUL があり、途中に NUL を含まないこと。 */
         if ((constant_out->text[header.length] != '\0') || (memchr(constant_out->text, '\0', header.length) != NULL))
         {
             return CPLAT_ERR_CORRUPT_DESCRIPTOR;
         }
+
         break;
 
     default:
@@ -252,6 +259,7 @@ int string_catalog_filter_read_constant(const unsigned char *constants, const ui
     }
 
     constant_out->next_offset = payload_offset + payload_size;
+
     return CPLAT_OK;
 }
 
@@ -277,7 +285,7 @@ uint64_t string_catalog_filter_compute_line_hash(const unsigned char *record, co
 
     string_catalog_filter_read_record_header(record, &header);
 
-    /* ハッシュ値自身を除く見出しと、命令と定数の使用範囲を対象とする */
+    /* ハッシュ値自身を除く見出しと、命令と定数の使用範囲を対象とする。 */
     hash = string_catalog_filter_hash_bytes(hash, record + sizeof(header.line_hash),
                                             CPLAT_STRING_CATALOG_FILTER_RECORD_HEADER_SIZE - sizeof(header.line_hash));
     hash =
@@ -285,6 +293,7 @@ uint64_t string_catalog_filter_compute_line_hash(const unsigned char *record, co
                                          (size_t)header.instruction_count * sizeof(string_catalog_filter_instruction));
     hash = string_catalog_filter_hash_bytes(hash, string_catalog_filter_record_constants(record, line_width),
                                             header.constant_size);
+
     return hash;
 }
 
@@ -298,6 +307,7 @@ uint64_t string_catalog_filter_compute_content_hash(const void *image, const str
     hash = string_catalog_filter_hash_bytes(hash,
                                             string_catalog_filter_record_address_const(image, header->record_size, 0U),
                                             (size_t)header->record_size * header->line_count);
+
     return hash;
 }
 
@@ -355,6 +365,7 @@ int string_catalog_filter_check_header(const void *image, const size_t image_siz
     }
 
     *header_out = header;
+
     return CPLAT_OK;
 }
 
@@ -431,7 +442,7 @@ static bool is_constant_allowed(const uint8_t field, const uint8_t operator_kind
                is_string_operator(operator_kind);
 
     case CONSTANT_CLASS_PATTERN:
-        /* 正規表現のパターンは matches と matches_i だけが受け取り、それらはパターンだけを受け取る */
+        /* 正規表現のパターンは matches と matches_i だけが受け取り、それらはパターンだけを受け取る。 */
         return is_pattern_operator(operator_kind) &&
                ((field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ID) || is_argument_field(field));
 
@@ -449,7 +460,7 @@ static bool is_constant_allowed(const uint8_t field, const uint8_t operator_kind
     }
 }
 
-/* コンパイラから同じ規則を使用するための入口 */
+/* コンパイラから同じ規則を使用するための入口である。 */
 int string_catalog_filter_is_constant_allowed(const uint8_t field, const uint8_t operator_kind,
                                               const uint8_t constant_kind)
 {
@@ -506,7 +517,7 @@ static int check_predicate(const string_catalog_filter_instruction *instruction,
         break;
 
     case STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME:
-        /* 引数名の定数が先頭にあり、比較対象の定数はその直後から並ぶ */
+        /* 引数名の定数が先頭にあり、比較対象の定数はその直後から並ぶ。 */
         if ((instruction->argument >= header->argument_reference_count) || (offset >= header->constant_size) ||
             (constant_starts[offset / STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT] == 0U) ||
             (string_catalog_filter_read_constant(constants, header->constant_size, offset, &constant) != CPLAT_OK) ||
@@ -526,7 +537,7 @@ static int check_predicate(const string_catalog_filter_instruction *instruction,
         break;
     }
 
-    /* 比較対象を持たない判定要素は、operand を使用しない。正規の形として 0 を求める */
+    /* 比較対象を持たない判定要素は、operand を使用しない。正規の形として 0 を求める。 */
     if ((instruction->operand_count == 0U) &&
         (instruction->field != (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME) && (instruction->operand != 0U))
     {
@@ -547,7 +558,7 @@ static int check_predicate(const string_catalog_filter_instruction *instruction,
             return CPLAT_ERR_CORRUPT_DESCRIPTOR;
         }
 
-        /* in の要素は区分をそろえる */
+        /* in の要素は区分をそろえる。 */
         if (index == 0U)
         {
             first_class = (uint8_t)class_of_constant(constant.header.kind);
@@ -562,6 +573,7 @@ static int check_predicate(const string_catalog_filter_instruction *instruction,
         {
             return CPLAT_ERR_CORRUPT_DESCRIPTOR;
         }
+
         if ((constant.header.kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_PATTERN) &&
             (constant.header.slot >= header->pattern_count))
         {
@@ -599,33 +611,37 @@ int string_catalog_filter_check_record(const unsigned char *record, const uint32
         return CPLAT_ERR_CORRUPT_DESCRIPTOR;
     }
 
-    /* 定数を先頭から順にたどり、各定数の開始位置を記録する */
+    /* 定数を先頭から順にたどり、各定数の開始位置を記録する。 */
     while (offset < header.constant_size)
     {
         if (string_catalog_filter_read_constant(constants, header.constant_size, offset, &constant) != CPLAT_OK)
         {
             return CPLAT_ERR_CORRUPT_DESCRIPTOR;
         }
+
         if ((constant.header.kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_ARGUMENT_NAME) &&
             (constant.header.slot >= header.argument_reference_count))
         {
             return CPLAT_ERR_CORRUPT_DESCRIPTOR;
         }
+
         if ((constant.header.kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_IDENTIFIER) &&
             (constant.header.slot >= header.identifier_count))
         {
             return CPLAT_ERR_CORRUPT_DESCRIPTOR;
         }
+
         if ((constant.header.kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_PATTERN) &&
             (constant.header.slot >= header.pattern_count))
         {
             return CPLAT_ERR_CORRUPT_DESCRIPTOR;
         }
+
         constant_starts[offset / STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT] = 1U;
         offset = constant.next_offset;
     }
 
-    /* 命令列を先頭から評価したときのスタックの深さを追跡する */
+    /* 命令列を先頭から評価したときのスタックの深さを追跡する。 */
     for (uint32_t index = 0; index < header.instruction_count; index++)
     {
         string_catalog_filter_read_instruction(record, index, &instruction);
@@ -658,6 +674,7 @@ int string_catalog_filter_check_record(const unsigned char *record, const uint32
                 {
                     return CPLAT_ERR_CORRUPT_DESCRIPTOR;
                 }
+
                 depth--;
             }
             else if (depth < 1)
@@ -668,7 +685,7 @@ int string_catalog_filter_check_record(const unsigned char *record, const uint32
             if ((instruction.opcode == (uint8_t)STRING_CATALOG_FILTER_OPCODE_JUMP_IF_FALSE) ||
                 (instruction.opcode == (uint8_t)STRING_CATALOG_FILTER_OPCODE_JUMP_IF_TRUE))
             {
-                /* ジャンプは前方のみ。移動先は命令列の末尾を含む */
+                /* ジャンプは前方のみ。移動先は命令列の末尾を含む。 */
                 if ((instruction.operand <= index) || (instruction.operand > header.instruction_count))
                 {
                     return CPLAT_ERR_CORRUPT_DESCRIPTOR;
@@ -678,6 +695,7 @@ int string_catalog_filter_check_record(const unsigned char *record, const uint32
             {
                 return CPLAT_ERR_CORRUPT_DESCRIPTOR;
             }
+
             break;
 
         default:
@@ -689,6 +707,7 @@ int string_catalog_filter_check_record(const unsigned char *record, const uint32
             max_depth = depth;
         }
     }
+
     depth_before[header.instruction_count] = (int16_t)depth;
 
     if ((depth != 1) || (max_depth != (int)header.stack_depth))
@@ -696,10 +715,11 @@ int string_catalog_filter_check_record(const unsigned char *record, const uint32
         return CPLAT_ERR_CORRUPT_DESCRIPTOR;
     }
 
-    /* ジャンプした先で、ジャンプしなかった場合と同じ深さになること */
+    /* ジャンプした先で、ジャンプしなかった場合と同じ深さになること。 */
     for (uint32_t index = 0; index < header.instruction_count; index++)
     {
         string_catalog_filter_read_instruction(record, index, &instruction);
+
         if (((instruction.opcode == (uint8_t)STRING_CATALOG_FILTER_OPCODE_JUMP_IF_FALSE) ||
              (instruction.opcode == (uint8_t)STRING_CATALOG_FILTER_OPCODE_JUMP_IF_TRUE)) &&
             (depth_before[instruction.operand] != depth_before[index]))
@@ -778,6 +798,7 @@ int cplat_string_catalog_filter_get_info(const void *image, const size_t image_s
     info_out->line_width = header.line_width;
     info_out->line_count = header.line_count;
     info_out->format_version = header.format_version;
+
     return CPLAT_OK;
 }
 
@@ -801,12 +822,13 @@ int cplat_string_catalog_filter_remove_line(void *image, const size_t image_size
     }
 
     string_catalog_filter_read_image_header(image, &header);
+
     if (line_index >= header.line_count)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    /* 後続の行を 1 つ前へ詰め、末尾を 0 で埋める */
+    /* 後続の行を 1 つ前へ詰め、末尾を 0 で埋める。 */
     target = string_catalog_filter_record_address(image, header.record_size, (uint32_t)line_index);
     memmove(target, target + header.record_size,
             (size_t)header.record_size * ((size_t)header.line_count - line_index - 1U));
@@ -815,6 +837,7 @@ int cplat_string_catalog_filter_remove_line(void *image, const size_t image_size
 
     header.line_count--;
     string_catalog_filter_update_content_hash(image, &header);
+
     return CPLAT_OK;
 }
 
@@ -831,10 +854,12 @@ static void writer_append(text_writer *writer, const char *text, const size_t le
         {
             writer->is_truncated = true;
         }
+
         return;
     }
 
     available = writer->size - 1U - writer->length;
+
     if (copy_length > available)
     {
         copy_length = available;
@@ -851,7 +876,7 @@ static void writer_append_text(text_writer *writer, const char *text)
     writer_append(writer, text, strlen(text));
 }
 
-/** 1 バイトを、引用符の内側の表記で書き出します。 */
+/** 1 [byte] を、引用符の内側の表記で書き出します。 */
 static void writer_append_escaped_byte(text_writer *writer, const unsigned char byte, const char quote)
 {
     char buffer[8];
@@ -901,20 +926,23 @@ static void write_constant(text_writer *writer, const string_catalog_filter_cons
         {
             (void)snprintf(buffer, sizeof(buffer), "%" PRIu64, constant->magnitude);
         }
+
         writer_append_text(writer, buffer);
         break;
 
     case STRING_CATALOG_FILTER_CONSTANT_KIND_FLOAT:
-        /* 元の値へ戻せる最短の桁数で書き出す。17 桁あれば倍精度の値は必ず元へ戻る */
+        /* 元の値へ戻せる最短の桁数で書き出す。17 桁あれば倍精度の値は必ず元へ戻る。 */
         for (int precision = 15; precision <= 17; precision++)
         {
             (void)snprintf(buffer, sizeof(buffer), "%.*g", precision, constant->real);
+
             if (strtod(buffer, NULL) == constant->real)
             {
                 break;
             }
         }
-        /* 整数の表記にならないよう、小数点か指数部を必ず含める */
+
+        /* 整数の表記にならないよう、小数点か指数部を必ず含める。 */
         if (strpbrk(buffer, ".eE") == NULL)
         {
             const size_t length = strlen(buffer);
@@ -923,17 +951,20 @@ static void write_constant(text_writer *writer, const string_catalog_filter_cons
             buffer[length + 1U] = '0';
             buffer[length + 2U] = '\0';
         }
+
         writer_append_text(writer, buffer);
         break;
 
     case STRING_CATALOG_FILTER_CONSTANT_KIND_CHARACTER:
     {
-        /* 格納値は (int)(char) の値。char へ戻したバイトを表記する */
+        /* 格納値は (int)(char) の値。char へ戻したバイトを表記する。 */
         int value = (int)constant->magnitude;
+
         if ((constant->header.flags & STRING_CATALOG_FILTER_CONSTANT_FLAG_NEGATIVE) != 0U)
         {
             value = -value;
         }
+
         writer_append(writer, "'", 1U);
         writer_append_escaped_byte(writer, (unsigned char)(char)value, '\'');
         writer_append(writer, "'", 1U);
@@ -947,6 +978,7 @@ static void write_constant(text_writer *writer, const string_catalog_filter_cons
         {
             writer_append_escaped_byte(writer, (unsigned char)constant->text[index], '"');
         }
+
         writer_append(writer, "\"", 1U);
         break;
 
@@ -991,6 +1023,7 @@ static const char *operator_text(const uint8_t operator_kind)
     {
         return "";
     }
+
     return texts[operator_kind];
 }
 
@@ -1058,6 +1091,7 @@ static void write_predicate(decompile_context *context, const string_catalog_fil
                 writer_append_text(&context->writer, ", ");
             }
         }
+
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
         write_constant(&context->writer, &constant);
         offset = constant.next_offset;
@@ -1133,6 +1167,7 @@ static void write_node(decompile_context *context, const uint16_t node, const in
         {
             writer_append_text(&context->writer, " || ");
         }
+
         write_node(context, context->right[node], precedence, true);
         break;
 
@@ -1157,10 +1192,11 @@ uint16_t string_catalog_filter_build_tree(const unsigned char *record, uint16_t 
 
     string_catalog_filter_read_record_header(record, &record_header);
 
-    /* ジャンプは短絡評価のためだけの命令であり、木には現れない */
+    /* ジャンプは短絡評価のためだけの命令であり、木には現れない。 */
     for (uint16_t index = 0; index < record_header.instruction_count; index++)
     {
         string_catalog_filter_read_instruction(record, index, &instruction);
+
         switch (instruction.opcode)
         {
         case STRING_CATALOG_FILTER_OPCODE_PREDICATE:
@@ -1182,7 +1218,7 @@ uint16_t string_catalog_filter_build_tree(const unsigned char *record, uint16_t 
         }
     }
 
-    /* 検証済みのため、深さは 1 に戻っている */
+    /* 検証済みのため、深さは 1 に戻っている。 */
     return stack[0];
 }
 
@@ -1198,10 +1234,12 @@ int string_catalog_filter_format_constant(const string_catalog_filter_constant *
     writer.size = dest_size;
     dest[0] = '\0';
     write_constant(&writer, constant);
+
     if (writer.is_truncated)
     {
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
+
     return CPLAT_OK;
 }
 
@@ -1219,6 +1257,7 @@ int cplat_string_catalog_filter_decompile_line(const void *image, const size_t i
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     dest[0] = '\0';
 
     ret = string_catalog_filter_check_header(image, image_size, &header);
@@ -1226,6 +1265,7 @@ int cplat_string_catalog_filter_decompile_line(const void *image, const size_t i
     {
         return ret;
     }
+
     if (line_index >= header.line_count)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
@@ -1250,5 +1290,6 @@ int cplat_string_catalog_filter_decompile_line(const void *image, const size_t i
     {
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
+
     return CPLAT_OK;
 }

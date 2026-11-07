@@ -53,10 +53,10 @@
     /** /dev/log への UNIX ドメイン ソケット パス。 */
     #define DEVLOG_PATH "/dev/log"
 
-    /** 初回バックオフ間隔 (秒)。 */
+    /** 初回バックオフ間隔 [s]。 */
     #define BACKOFF_INIT_SEC 5
 
-    /** バックオフ最大間隔 (秒)。 */
+    /** バックオフ最大間隔 [s]。 */
     #define BACKOFF_MAX_SEC 60
 
     /** メッセージ バッファー サイズ (RFC 3164 推奨最大長)。 */
@@ -88,7 +88,7 @@ struct cplat_syslog_sink
     /** UNIX ドメイン ソケット fd。未接続時は -1。reconnect_lock で保護。 */
     int fd;
 
-    /** 現在のバックオフ間隔 (秒)。reconnect_lock で保護。 */
+    /** 現在のバックオフ間隔 [s]。reconnect_lock で保護。 */
     int backoff_sec;
 
     /** 生成時に確定したプロセス ID。 */
@@ -148,6 +148,7 @@ static void try_open_socket_locked(cplat_syslog_sink *h)
     int fd;
 
     cplat_clock_get_realtime(&now);
+
     if (now.tv_sec < h->next_connect)
     {
         return; /* バックオフ期間中 */
@@ -162,7 +163,8 @@ static void try_open_socket_locked(cplat_syslog_sink *h)
     }
 
     h->fd = fd;
-    /* バックオフは送信成功時にリセットする */
+
+    /* バックオフは送信成功時にリセットする。 */
 }
 
 /**
@@ -177,10 +179,12 @@ static void read_test_fd(int *exists_out, int *fd_out)
 
     *exists_out = 0;
     *fd_out = -1;
+
     if (cplat_getenv("SYSLOG_TEST_FD", value, sizeof(value), exists_out, NULL) != CPLAT_OK || *exists_out == 0)
     {
         return;
     }
+
     if (cplat_parse_int(&fd, value, 10) == CPLAT_OK && fd >= 0)
     {
         *fd_out = fd;
@@ -201,6 +205,7 @@ static void write_test_fd(const int test_fd, const char *buf, const size_t nbyte
     {
         return;
     }
+
     /* テスト用の経路であり、書き込みの失敗は報告しない。glibc の warn_unused_result は (void) で抑止できない。 */
     written = write(test_fd, buf, nbytes);
     (void)written;
@@ -231,6 +236,7 @@ cplat_syslog_sink *cplat_syslog_sink_create(const char *ident, const int facilit
         cplat_free(handle);
         return NULL;
     }
+
     memcpy(handle->ident, ident, len);
 
     handle->facility = facility;
@@ -245,13 +251,15 @@ cplat_syslog_sink *cplat_syslog_sink_create(const char *ident, const int facilit
     handle->address.sun_family = AF_UNIX;
     (void)cplat_strncpy(handle->address.sun_path, sizeof(handle->address.sun_path), DEVLOG_PATH,
                         sizeof(handle->address.sun_path) - 1u);
+
     if (cplat_local_lock_create(&handle->reconnect_lock) != CPLAT_OK)
     {
         cplat_free(handle->ident);
         cplat_free(handle);
         return NULL;
     }
-    /* 初回接続を試みる (失敗しても構わない) */
+
+    /* 初回接続を試みる (失敗しても構わない)。 */
     cplat_local_lock_lock(handle->reconnect_lock, CPLAT_SYNC_WAIT_FOREVER);
     try_open_socket_locked(handle);
     cplat_local_lock_unlock(handle->reconnect_lock);
@@ -279,17 +287,19 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
     {
         return CPLAT_OK;
     }
-    /* timestamp が NULL の場合はタイムスタンプなしで送信するため、解決は行わない */
+
+    /* timestamp が NULL の場合はタイムスタンプなしで送信するため、解決は行わない。 */
     if (timestamp != NULL)
     {
         if (cplat_internal_trace_resolve_timestamp(timestamp, &resolved, &fallback_used) != 0)
         {
             return CPLAT_ERR_UNKNOWN;
         }
+
         effective_timestamp = &resolved;
     }
 
-    /* syslog priority = (facility & ~7) | (severity & 7) */
+    /* syslog priority は (facility & ~7) | (severity & 7) である。 */
     prio = (handle->facility & ~7) | (level & 7);
 
     /* RFC 3164 形式: <PRI>TAG[PID]: MSG */
@@ -299,13 +309,16 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
     {
         return CPLAT_OK;
     }
+
     if ((size_t)n >= sizeof(buf))
     {
         n = (int)(sizeof(buf) - 1);
     }
 
-    /* SYSLOG_TEST_FD が設定されていればテスト用 FD に送信し、/dev/log へは送信しない。
-       値は参照せず、設定の有無だけを判定する */
+    /*
+     * SYSLOG_TEST_FD が設定されていればテスト用 FD に送信し、/dev/log へは送信しない。
+     * 値は参照せず、設定の有無だけを判定する。
+     */
     if (handle->test_fd_exists != 0)
     {
         if (effective_timestamp != NULL && cplat_clock_format_realtime_iso8601_local(
@@ -317,12 +330,14 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
             {
                 return CPLAT_ERR_UNKNOWN;
             }
+
             if ((size_t)debug_len >= sizeof(debug_buf))
             {
                 debug_buf[sizeof(debug_buf) - 2] = '\n';
                 debug_buf[sizeof(debug_buf) - 1] = '\0';
                 debug_len = (int)(sizeof(debug_buf) - 1);
             }
+
             write_test_fd(handle->test_fd, debug_buf, (size_t)debug_len);
         }
         else
@@ -330,6 +345,7 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
             buf[n] = '\n';
             write_test_fd(handle->test_fd, buf, (size_t)(n + 1));
         }
+
         if (fallback_used)
         {
             return CPLAT_ERR_UNKNOWN;
@@ -342,13 +358,15 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
 
     cplat_local_lock_lock(handle->reconnect_lock, CPLAT_SYNC_WAIT_FOREVER);
 
-    /* ソケットが無ければ低頻度で再接続を試みる */
+    /* ソケットが無ければ低頻度で再接続を試みる。 */
     if (handle->fd < 0)
     {
         try_open_socket_locked(handle);
+
         if (handle->fd < 0)
         {
             cplat_local_lock_unlock(handle->reconnect_lock);
+
             if (fallback_used)
             {
                 return CPLAT_ERR_UNKNOWN;
@@ -360,18 +378,21 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
         }
     }
 
-    /* sendto は MSG_DONTWAIT で即時返るため、ロック保持中に実行する */
+    /* sendto() は MSG_DONTWAIT で即時返るため、ロック保持中に実行する。 */
     sent = sendto(handle->fd, buf, (size_t)n, MSG_DONTWAIT, (struct sockaddr *)&handle->address,
                   (socklen_t)sizeof(handle->address));
 
     if (sent < 0)
     {
-        /* Linux では EWOULDBLOCK と EAGAIN が同値のため、1 つの判定で両方を扱う。
-           see: https://man7.org/linux/man-pages/man3/errno.3.html */
+        /*
+         * Linux では EWOULDBLOCK と EAGAIN が同値のため、1 つの判定で両方を扱う。
+         * see: https://man7.org/linux/man-pages/man3/errno.3.html
+         */
         if (errno == EAGAIN)
         {
-            /* 送信バッファー満杯: drop のみ、再接続不要 */
+            /* 送信バッファー満杯: drop のみ、再接続不要。 */
             cplat_local_lock_unlock(handle->reconnect_lock);
+
             if (fallback_used)
             {
                 return CPLAT_ERR_UNKNOWN;
@@ -381,9 +402,11 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
                 return CPLAT_OK;
             }
         }
-        /* その他エラー (ENOENT, ECONNREFUSED 等): ソケットを閉じてバックオフ */
+
+        /* その他エラー (ENOENT, ECONNREFUSED 等): ソケットを閉じてバックオフ。 */
         close_and_backoff_locked(handle);
         cplat_local_lock_unlock(handle->reconnect_lock);
+
         if (fallback_used)
         {
             return CPLAT_ERR_UNKNOWN;
@@ -394,10 +417,11 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
         }
     }
 
-    /* 送信成功: バックオフをリセット */
+    /* 送信成功: バックオフをリセット。 */
     handle->backoff_sec = BACKOFF_INIT_SEC;
 
     cplat_local_lock_unlock(handle->reconnect_lock);
+
     if (fallback_used)
     {
         return CPLAT_ERR_UNKNOWN;
@@ -421,6 +445,7 @@ void cplat_syslog_sink_dispose(cplat_syslog_sink *handle)
     {
         close(handle->fd);
     }
+
     cplat_local_lock_dispose(handle->reconnect_lock);
     cplat_free(handle->ident);
     cplat_free(handle);
@@ -445,6 +470,7 @@ int cplat_syslog_sink_rename(cplat_syslog_sink *handle, const char *new_ident)
     {
         return CPLAT_ERR_OUT_OF_MEMORY;
     }
+
     memcpy(dup, new_ident, len);
 
     result = cplat_local_lock_lock(handle->reconnect_lock, CPLAT_SYNC_WAIT_FOREVER);
@@ -453,6 +479,7 @@ int cplat_syslog_sink_rename(cplat_syslog_sink *handle, const char *new_ident)
         cplat_free(dup);
         return result;
     }
+
     cplat_free(handle->ident);
     handle->ident = dup;
     result = cplat_local_lock_unlock(handle->reconnect_lock);
@@ -473,6 +500,7 @@ void cplat_internal_syslog_sink_dispose_on_shutdown(cplat_syslog_sink *handle)
     {
         close(handle->fd);
     }
+
     cplat_local_lock_dispose(handle->reconnect_lock);
     cplat_free(handle->ident);
     cplat_free(handle);

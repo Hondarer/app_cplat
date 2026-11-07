@@ -15,8 +15,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_LOCALE_UI_LANGUAGE_H
 #define CPLAT_LOCALE_UI_LANGUAGE_H
@@ -48,7 +50,7 @@ extern "C"
      *  @brief          実行環境が示す表示言語を言語タグで取得します。
      *  @param[out]     tag_out   言語タグの格納先。NULL を渡してはなりません。\n
      *                            表示言語がニュートラルの場合は空文字列を格納します。
-     *  @param[in]      tag_size  @p tag_out のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      tag_size  @p tag_out のサイズ [byte]。0 を渡してはなりません。
      *  @retval         CPLAT_OK                    表示言語を格納しました。
      *  @retval         CPLAT_ERR_INVALID_ARGUMENT  @p tag_out が NULL、または @p tag_size が 0 です。
      *  @retval         CPLAT_ERR_BUFFER_TOO_SMALL  @p tag_out の容量が不足しています。

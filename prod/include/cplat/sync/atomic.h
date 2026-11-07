@@ -35,8 +35,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_SYNC_ATOMIC_H
 #define CPLAT_SYNC_ATOMIC_H
@@ -69,8 +71,10 @@
 #define CPLAT_ATOMIC_INIT(initial_value) {(initial_value)}
 
 #if defined(COMPILER_MSVC)
-    /* _ReadWriteBarrier はコンパイラの並べ替えだけを止める。MSVC の標準ライブラリと同じく、非推奨の警告を抑止して使う。
-       see: https://learn.microsoft.com/cpp/intrinsics/readwritebarrier */
+    /*
+     * _ReadWriteBarrier はコンパイラの並べ替えだけを止める。MSVC の標準ライブラリと同じく、非推奨の警告を抑止して使う。
+     * see: https://learn.microsoft.com/cpp/intrinsics/readwritebarrier
+     */
     #define CPLAT_ATOMIC_COMPILER_BARRIER() \
         __pragma(warning(push)) __pragma(warning(disable : 4996)) _ReadWriteBarrier() __pragma(warning(pop))
 #endif /* COMPILER_MSVC */
@@ -130,10 +134,12 @@ extern "C"
 
 #if defined(COMPILER_GCC)
 
-    /* ===== GCC: __atomic 組み込み関数 =====
+    /*
+     * ===== GCC: __atomic 組み込み関数 =====
      * 組み込み関数はメモリ順序に定数を要求するため、switch で定数へ写す。
      * 引数が定数なら、インライン展開後に分岐は消える。
-     * see: https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html */
+     * see: https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html
+     */
 
     /** 読み取りに使えない順序 (RELEASE と ACQ_REL) は SEQ_CST として扱います。 */
     #define CPLAT_ATOMIC_GCC_LOAD(type, pointer, order) \
@@ -237,13 +243,15 @@ extern "C"
 
 #elif defined(COMPILER_MSVC)
 
-    /* ===== MSVC: <intrin.h> の intrinsic =====
+    /*
+     * ===== MSVC: <intrin.h> の intrinsic =====
      * MSVC の標準ライブラリ <atomic> と同じ方式とする。
      * x64 のメモリ モデル (TSO) では、通常の読み取りは acquire、通常の書き込みは release の性質を持つ。
      * そのため読み取りと release の書き込みはコンパイラの並べ替えだけを止め、
      * seq_cst の書き込みと読み書きを伴う操作は Interlocked (完全なメモリ バリアを伴う) で行う。
      * see: https://learn.microsoft.com/cpp/intrinsics/iso-volatile-load-store
-     * see: https://learn.microsoft.com/cpp/intrinsics/interlockedexchange-intrinsic-functions */
+     * see: https://learn.microsoft.com/cpp/intrinsics/interlockedexchange-intrinsic-functions
+     */
 
 #else
     #error "cplat/sync/atomic.h: 対応していないコンパイラです。"
@@ -272,6 +280,7 @@ extern "C"
     {
         CPLAT_ATOMIC_COMPILER_BARRIER();
     }
+
     return loaded;
 #endif /* COMPILER_ */
     }
@@ -348,11 +357,14 @@ extern "C"
         (uint8_t)_InterlockedCompareExchange8((volatile char *)&atomic->value, (char)desired, (char)*expected);
 
     (void)order;
+
     if (previous == *expected)
     {
         return 1;
     }
+
     *expected = previous;
+
     return 0;
 #endif /* COMPILER_ */
     }
@@ -380,6 +392,7 @@ extern "C"
     {
         CPLAT_ATOMIC_COMPILER_BARRIER();
     }
+
     return loaded;
 #endif /* COMPILER_ */
     }
@@ -464,11 +477,14 @@ extern "C"
         (int32_t)_InterlockedCompareExchange((volatile long *)&atomic->value, (long)desired, (long)*expected);
 
     (void)order;
+
     if (previous == *expected)
     {
         return 1;
     }
+
     *expected = previous;
+
     return 0;
 #endif /* COMPILER_ */
     }
@@ -511,7 +527,8 @@ extern "C"
         return CPLAT_ATOMIC_GCC_RMW(int32_t, __atomic_fetch_sub, &atomic->value, operand, order);
 #else
     (void)order;
-    /* 2 の補数の否定は符号なしで計算し、INT32_MIN でも未定義動作にしない */
+
+    /* 2 の補数の否定は符号なしで計算し、INT32_MIN でも未定義動作にしない。 */
     return (int32_t)_InterlockedExchangeAdd((volatile long *)&atomic->value, (long)(int32_t)(0U - (uint32_t)operand));
 #endif /* COMPILER_ */
     }
@@ -573,6 +590,7 @@ extern "C"
                                                                    (int32_t)desired, order);
 
         *expected = (uint32_t)signed_expected;
+
         return is_exchanged;
     }
 
@@ -621,6 +639,7 @@ extern "C"
     {
         CPLAT_ATOMIC_COMPILER_BARRIER();
     }
+
     return loaded;
 #endif /* COMPILER_ */
     }
@@ -695,11 +714,14 @@ extern "C"
         (int64_t)_InterlockedCompareExchange64((volatile __int64 *)&atomic->value, desired, *expected);
 
     (void)order;
+
     if (previous == *expected)
     {
         return 1;
     }
+
     *expected = previous;
+
     return 0;
 #endif /* COMPILER_ */
     }
@@ -737,7 +759,7 @@ extern "C"
 #if defined(COMPILER_GCC)
         return CPLAT_ATOMIC_GCC_RMW(int64_t, __atomic_fetch_sub, &atomic->value, operand, order);
 #else
-    /* 2 の補数の否定は符号なしで計算し、INT64_MIN でも未定義動作にしない */
+    /* 2 の補数の否定は符号なしで計算し、INT64_MIN でも未定義動作にしない。 */
     return cplat_atomic_fetch_add_i64(atomic, (int64_t)(0U - (uint64_t)operand), order);
 #endif /* COMPILER_ */
     }
@@ -797,6 +819,7 @@ extern "C"
                                                                    (int64_t)desired, order);
 
         *expected = (uint64_t)signed_expected;
+
         return is_exchanged;
     }
 
@@ -894,11 +917,14 @@ extern "C"
     void *const previous = _InterlockedCompareExchangePointer((void *volatile *)&atomic->value, desired, *expected);
 
     (void)order;
+
     if (previous == *expected)
     {
         return 1;
     }
+
     *expected = previous;
+
     return 0;
 #endif /* COMPILER_ */
     }
@@ -943,13 +969,13 @@ extern "C"
     case CPLAT_MEMORY_ORDER_ACQUIRE:
     case CPLAT_MEMORY_ORDER_RELEASE:
     case CPLAT_MEMORY_ORDER_ACQ_REL:
-        /* x64 では、acquire と release の順序はハードウェアが保証する。コンパイラの並べ替えだけを止める */
+        /* x64 では、acquire と release の順序はハードウェアが保証する。コンパイラの並べ替えだけを止める。 */
         CPLAT_ATOMIC_COMPILER_BARRIER();
         break;
     case CPLAT_MEMORY_ORDER_SEQ_CST:
     default:
     {
-        /* 書き込みとその後の読み取りの並べ替えを止めるため、完全なメモリ バリアを伴う操作を行う */
+        /* 書き込みとその後の読み取りの並べ替えを止めるため、完全なメモリ バリアを伴う操作を行う。 */
         long guard = 0;
 
         (void)_InterlockedExchange(&guard, 0);

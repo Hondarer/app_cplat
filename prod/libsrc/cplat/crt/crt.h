@@ -52,14 +52,17 @@ extern "C"
      */
     static inline int crt_check_wpath_length(const char *utf8_path, cplat_error *detail_out)
     {
-        /* 出力先を NULL、サイズを 0 にすると、必要なワイド文字数 (null 終端含む) を返す。 */
-        /* see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar */
+        /*
+         * 出力先を NULL、サイズを 0 にすると、必要なワイド文字数 (null 終端含む) を返す。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
+         */
         const int needed = MultiByteToWideChar(CP_UTF8, 0, utf8_path, -1, NULL, 0);
 
         if (needed <= 0 || needed > PLATFORM_PATH_MAX)
         {
             return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
         }
+
         return CPLAT_OK;
     }
 

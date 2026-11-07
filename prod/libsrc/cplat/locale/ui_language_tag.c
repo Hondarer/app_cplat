@@ -44,6 +44,10 @@ static int is_alpha_text(const char *const text, const size_t length)
 {
     size_t index;
 
+    /*
+     * isalpha() の引数は unsigned char の値か EOF でなければならない。char をそのまま渡すと未定義動作になる。
+     * see: https://man7.org/linux/man-pages/man3/isalpha.3.html
+     */
     for (index = 0U; index < length; index++)
     {
         if (isalpha((unsigned char)text[index]) == 0)
@@ -65,6 +69,10 @@ static int is_digit_text(const char *const text, const size_t length)
 {
     size_t index;
 
+    /*
+     * isdigit() の引数は unsigned char の値か EOF でなければならない。char をそのまま渡すと未定義動作になる。
+     * see: https://man7.org/linux/man-pages/man3/isalpha.3.html
+     */
     for (index = 0U; index < length; index++)
     {
         if (isdigit((unsigned char)text[index]) == 0)
@@ -116,6 +124,11 @@ static void append_subtag(char *const tag, size_t *const tag_length_inout, const
         tag_length++;
     }
 
+    /*
+     * toupper() と tolower() の引数は unsigned char の値か EOF でなければならない。
+     * char をそのまま渡すと未定義動作になる。
+     * see: https://man7.org/linux/man-pages/man3/toupper.3.html
+     */
     for (index = 0U; index < length; index++)
     {
         const unsigned char source = (unsigned char)text[index];
@@ -128,6 +141,7 @@ static void append_subtag(char *const tag, size_t *const tag_length_inout, const
         {
             tag[tag_length] = (char)tolower(source);
         }
+
         tag_length++;
     }
 
@@ -138,7 +152,7 @@ static void append_subtag(char *const tag, size_t *const tag_length_inout, const
 
 int cplat_internal_ui_language_normalize(const char *const value, char *const tag_out, const size_t tag_size)
 {
-    /* 言語、表記体系、地域と区切りを合わせても言語タグの上限に収まるため、組み立て先は上限の配列とする */
+    /* 言語、表記体系、地域と区切りを合わせても言語タグの上限に収まるため、組み立て先は上限の配列とする。 */
     char tag[CPLAT_UI_LANGUAGE_TAG_MAX];
     char work[CPLAT_UI_LANGUAGE_TAG_MAX];
     size_t tag_length = 0U;
@@ -153,21 +167,23 @@ int cplat_internal_ui_language_normalize(const char *const value, char *const ta
         {
             tag_out[0] = '\0';
         }
+
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
     tag_out[0] = '\0';
 
-    /* 文字コード (`.` 以降) と修飾子 (`@` 以降) は言語を表さないため取り除く */
+    /* 文字コード ('.' 以降) と修飾子 ('@' 以降) は言語を表さないため取り除く。 */
     work_length = strcspn(value, ".@");
     if ((work_length == 0U) || (work_length >= sizeof(work)))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     memcpy(work, value, work_length);
     work[work_length] = '\0';
 
-    /* C と POSIX は、言語が不明であることではなく、言語に依存しない出力の指定である */
+    /* C と POSIX は、言語が不明であることではなく、言語に依存しない出力の指定である。 */
     if ((cplat_strcasecmp(work, "C") == 0) || (cplat_strcasecmp(work, "POSIX") == 0))
     {
         return CPLAT_OK;
@@ -178,15 +194,15 @@ int cplat_internal_ui_language_normalize(const char *const value, char *const ta
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
-    append_subtag(tag, &tag_length, work, offset, 0U);
+
+    append_subtag(tag, &tag_length, work, offset, 0U); /* 言語は小文字 */
 
     while (work[offset] != '\0')
     {
         const char *subtag;
         size_t length;
 
-        /* 区切り文字を読み飛ばす */
-        offset++;
+        offset++; /* 区切り文字を読み飛ばす */
         subtag = &work[offset];
         length = subtag_length(subtag);
 
@@ -195,21 +211,21 @@ int cplat_internal_ui_language_normalize(const char *const value, char *const ta
             return CPLAT_ERR_INVALID_ARGUMENT;
         }
 
+        /* 表記体系は、地域より前に現れた場合だけ受け付ける。 */
         if ((has_script == 0) && (has_region == 0) && (length == SCRIPT_LENGTH) && (is_alpha_text(subtag, length) != 0))
         {
-            append_subtag(tag, &tag_length, subtag, length, 1U);
+            append_subtag(tag, &tag_length, subtag, length, 1U); /* 表記体系は先頭だけ大文字 */
             has_script = 1;
         }
         else if ((has_region == 0) && ((((length == REGION_ALPHA_LENGTH) && (is_alpha_text(subtag, length) != 0))) ||
                                        ((length == REGION_DIGIT_LENGTH) && (is_digit_text(subtag, length) != 0))))
         {
-            append_subtag(tag, &tag_length, subtag, length, length);
+            append_subtag(tag, &tag_length, subtag, length, length); /* 地域は大文字 */
             has_region = 1;
         }
         else
         {
-            /* 表記体系と地域より後ろの区別は、表示する文言の選択に使用しないため取り込まない */
-            break;
+            break; /* 表記体系と地域より後ろの区別は、表示する文言の選択に使用しないため取り込まない */
         }
 
         offset += length;

@@ -12,8 +12,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_ELEVATED_PROCESS_H
 #define CPLAT_ELEVATED_PROCESS_H
@@ -113,7 +115,7 @@ extern "C"
      *  @param[out]     result_message       昇格プロセスが報告したメッセージ (UTF-8) の格納先。NULL 可。
      *  @param[in]      result_message_size  @p result_message のバイト数。
      *                                       通常は @ref CPLAT_ELEVATED_PROCESS_RESULT_MESSAGE_SIZE を指定します。
-     *                                       報告されたメッセージが @p result_message_size - 1 バイトを
+     *                                       報告されたメッセージが @p result_message_size - 1 [byte] を
      *                                       超える場合、超えた部分は切り捨てます。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNSUPPORTED 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *

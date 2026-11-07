@@ -39,11 +39,12 @@ static int cmp_sign(const int diff)
     {
         return -1;
     }
+
     return 1;
 }
 
 /**
- *  @brief          1 バイトを ASCII 大小無視で比較し、比較を終えるかどうかを判定します。
+ *  @brief          1 [byte] を ASCII 大小無視で比較し、比較を終えるかどうかを判定します。
  *  @param[in]      lhs_char  1 つ目の文字列のバイト。
  *  @param[in]      rhs_char  2 つ目の文字列のバイト。
  *  @param[out]     result    比較を終える場合の結果。@p lhs_char 側が小さいとき -1、一致するとき 0、大きいとき 1 です。
@@ -60,6 +61,7 @@ static int ascii_casecmp_byte(const char lhs_char, const char rhs_char, int *res
         *result = cmp_sign(diff);
         return 1;
     }
+
     if (left == '\0')
     {
         *result = 0;
@@ -131,6 +133,7 @@ int cplat_strcpy(char *dest, const size_t dest_size, const char *src)
     }
 
     memcpy(dest, src, len + 1);
+
     return CPLAT_OK;
 }
 
@@ -150,6 +153,7 @@ int cplat_strncpy(char *dest, const size_t dest_size, const char *src, const siz
     {
         len = count;
     }
+
     if (len >= dest_size)
     {
         len = dest_size - 1;
@@ -157,6 +161,7 @@ int cplat_strncpy(char *dest, const size_t dest_size, const char *src, const siz
 
     memcpy(dest, src, len);
     dest[len] = '\0';
+
     return CPLAT_OK;
 }
 
@@ -177,6 +182,7 @@ int cplat_strcat(char *dest, const size_t dest_size, const char *src)
     {
         dest_len++;
     }
+
     if (dest_len >= dest_size)
     {
         dest[0] = '\0';
@@ -190,6 +196,7 @@ int cplat_strcat(char *dest, const size_t dest_size, const char *src)
     }
 
     memcpy(dest + dest_len, src, src_len + 1);
+
     return CPLAT_OK;
 }
 
@@ -210,13 +217,14 @@ int cplat_strncat(char *dest, const size_t dest_size, const char *src, const siz
     {
         dest_len++;
     }
+
     if (dest_len >= dest_size)
     {
         dest[0] = '\0';
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
 
-    /* src が count 文字未満で終端している場合に備え、終端までの長さで頭打ちにする */
+    /* src が count 文字未満で終端している場合に備え、終端までの長さで頭打ちにする。 */
     src_len = 0;
     while (src_len < count && src[src_len] != '\0')
     {
@@ -230,6 +238,7 @@ int cplat_strncat(char *dest, const size_t dest_size, const char *src, const siz
 
     memcpy(dest + dest_len, src, src_len);
     dest[dest_len + src_len] = '\0';
+
     return CPLAT_OK;
 }
 
@@ -245,8 +254,10 @@ char *cplat_strtok_r(char *str, const char *delim, char **saveptr)
 #if defined(PLATFORM_LINUX)
     return strtok_r(str, delim, saveptr);
 #elif defined(PLATFORM_WINDOWS)
-    /* Windows では再入可能版の名前が strtok_s である。引数と意味は strtok_r と同じ。
-     * see: https://learn.microsoft.com/cpp/c-runtime-library/reference/strtok-s-strtok-s-l-wcstok-s-wcstok-s-l-mbstok-s-mbstok-s-l */
+    /*
+     * Windows では再入可能版の名前が strtok_s() である。引数と意味は strtok_r() と同じである。
+     * see: https://learn.microsoft.com/cpp/c-runtime-library/reference/strtok-s-strtok-s-l-wcstok-s-wcstok-s-l-mbstok-s-mbstok-s-l
+     */
     return strtok_s(str, delim, saveptr);
 #endif /* PLATFORM_ */
 }
@@ -270,6 +281,7 @@ int cplat_wcscpy(wchar_t *dest, const size_t dest_size, const wchar_t *src)
     }
 
     wmemcpy(dest, src, len + 1);
+
     return CPLAT_OK;
 }
 
@@ -290,6 +302,7 @@ int cplat_sscanf(const char *buffer, const char *format, ...)
     va_start(args, format);
     result = cplat_vsscanf(buffer, format, args);
     va_end(args);
+
     return result;
 }
 
@@ -305,8 +318,10 @@ char *cplat_strdup(const char *src)
 #if defined(PLATFORM_LINUX)
     return strdup(src);
 #elif defined(PLATFORM_WINDOWS)
-    /* MSVC では strdup が C4996 で非推奨のため _strdup を使用する。
-     * see: https://learn.microsoft.com/cpp/c-runtime-library/reference/strdup-wcsdup-mbsdup */
+    /*
+     * MSVC では strdup() が C4996 で非推奨のため _strdup() を使用する。
+     * see: https://learn.microsoft.com/cpp/c-runtime-library/reference/strdup-wcsdup-mbsdup
+     */
     return _strdup(src);
 #endif /* PLATFORM_ */
 }
@@ -319,10 +334,12 @@ int cplat_strcasecmp(const char *lhs, const char *rhs)
     {
         return 0;
     }
+
     if (lhs == NULL)
     {
         return -1;
     }
+
     if (rhs == NULL)
     {
         return 1;
@@ -339,14 +356,17 @@ int cplat_strncasecmp(const char *lhs, const char *rhs, const size_t count)
     {
         return 0;
     }
+
     if (lhs == NULL && rhs == NULL)
     {
         return 0;
     }
+
     if (lhs == NULL)
     {
         return -1;
     }
+
     if (rhs == NULL)
     {
         return 1;

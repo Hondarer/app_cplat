@@ -11,8 +11,8 @@ extern "C"
     typedef struct trace_cli_session
     {
         cplat_tracer *handle;
-        int prompt_state;
-        int exit_requested;
+        int prompt_state;   /* プロンプト表示用のセッション状態 */
+        int exit_requested; /* 終了要求フラグ (1 で終了) */
     } trace_cli_session;
 
     void trace_cli_session_init(trace_cli_session *session);

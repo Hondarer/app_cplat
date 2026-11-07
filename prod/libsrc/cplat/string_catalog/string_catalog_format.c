@@ -96,6 +96,7 @@ int cplat_internal_string_catalog_prepare_format(const cplat_string_catalog *con
 
     *entry_out = entry;
     *text_out = text;
+
     return CPLAT_OK;
 }
 
@@ -155,6 +156,7 @@ int cplat_string_catalog_verify(const cplat_string_catalog *const catalog, int *
 
     entry_count = cplat_internal_string_catalog_entry_count(catalog);
 
+    /* カタログ内の全項目について、定義、引数、全言語の書式を順に確認する。 */
     for (entry_index = 0; entry_index < entry_count; entry_index++)
     {
         const cplat_string_catalog_entry *entry;
@@ -163,8 +165,10 @@ int cplat_string_catalog_verify(const cplat_string_catalog *const catalog, int *
 
         entry = cplat_internal_string_catalog_entry_at(catalog, entry_index);
 
-        /* ID と分類値はライブラリが解釈しないため、未設定、重複、範囲は確認しない */
-        /* 文字列キーの重複は、検索で先の項目へ到達することにより検出する */
+        /*
+         * ID と分類値はライブラリが解釈しないため、未設定、重複、範囲は確認しない。
+         * 文字列キーの重複は、検索で先の項目へ到達することにより検出する。
+         */
         if ((entry->argument_count < 0) || (entry->argument_count > CPLAT_STRING_CATALOG_ARGUMENT_MAX) ||
             ((entry->argument_count > 0) && (entry->arguments == NULL)) || (entry->brief == NULL) ||
             (cplat_internal_string_catalog_find_entry(catalog, entry->key) != entry))
@@ -173,18 +177,22 @@ int cplat_string_catalog_verify(const cplat_string_catalog *const catalog, int *
             {
                 *string_key_out = entry->key;
             }
+
             if (language_out != NULL)
             {
-                /* 引数個数とインデックス表の不正は言語に依存しないため、言語ではない値を格納する */
+                /* 引数個数とインデックス表の不正は言語に依存しないため、言語ではない値を格納する。 */
                 *language_out = CPLAT_STRING_CATALOG_LANGUAGE_COUNT;
             }
+
             return CPLAT_ERR_MALFORMED_DEFINITION;
         }
 
+        /* 各引数定義の種別と必須情報の有無を確認する。 */
         for (argument_index = 0; argument_index < entry->argument_count; argument_index++)
         {
             const cplat_string_catalog_argument *argument = &entry->arguments[argument_index];
-            /* 値を受け取らないインデックスは要素を明示しない初期化子で埋めるため、名前と説明を求めない */
+
+            /* 値を受け取らないインデックスは要素を明示しない初期化子で埋めるため、名前と説明を求めない。 */
             const bool has_value = (argument->kind != CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED);
 
             if (!is_valid_argument_kind(argument->kind) ||
@@ -194,14 +202,17 @@ int cplat_string_catalog_verify(const cplat_string_catalog *const catalog, int *
                 {
                     *string_key_out = entry->key;
                 }
+
                 if (language_out != NULL)
                 {
                     *language_out = CPLAT_STRING_CATALOG_LANGUAGE_COUNT;
                 }
+
                 return CPLAT_ERR_MALFORMED_DEFINITION;
             }
         }
 
+        /* すべての言語について、書式文字列の存在と構文の妥当性を確認する。 */
         for (language_index = 0; language_index < (int)CPLAT_STRING_CATALOG_LANGUAGE_COUNT; language_index++)
         {
             const char *text = select_localized(entry->texts, (cplat_string_catalog_language)language_index);
@@ -223,10 +234,12 @@ int cplat_string_catalog_verify(const cplat_string_catalog *const catalog, int *
                 {
                     *string_key_out = entry->key;
                 }
+
                 if (language_out != NULL)
                 {
                     *language_out = (cplat_string_catalog_language)language_index;
                 }
+
                 return ret;
             }
         }

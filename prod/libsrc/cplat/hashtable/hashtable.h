@@ -86,7 +86,7 @@
  *
  *  @subsection     hashtable_ident マジックと版番号
  *
- *  管理領域先頭 8 バイトは識別子です。ヘッダーより前に置きます。\n
+ *  管理領域先頭 8 [byte] は識別子です。ヘッダーより前に置きます。\n
  *  マジックは 0x48544142、版番号は 5 です。\n
  *  @ref cplat_hashtable_attach は両者を検証し、不一致なら失敗します。
  *
@@ -115,9 +115,9 @@
  *  @subsection     hashtable_entries エントリ
  *
  *  キーのオフセットとストライドは @p timestamp_scope と @p key_type で変わります。\n
- *  可変長キーは 16 バイトの永続 descriptor を置くため、キーのオフセットを
+ *  可変長キーは 16 [byte] の永続 descriptor を置くため、キーのオフセットを
  *  uint64_t 境界へ切り上げます。\n
- *  バイナリ キーは、status 直後の詰め物のうち 4 バイト境界の位置に、
+ *  バイナリ キーは、status 直後の詰め物のうち 4 [byte] 境界の位置に、
  *  uint32_t の有効長を置きます。SCOPE_RECORD では既存の詰め物に収まるため、
  *  エントリは大きくなりません。SCOPE_TABLE ではキーのオフセットが 16 になります。\n
  *  固定長文字列キーでは切り上げません。\n
@@ -234,8 +234,8 @@ _Static_assert(((sizeof(uint64_t) + sizeof(unsigned char) + 7u + sizeof(cplat_ti
 
 struct hashtable_string_ref
 {
-    uint64_t offset;
-    uint64_t length;
+    uint64_t offset; /* ストレージ先頭からのバイト オフセット */
+    uint64_t length; /* バイト数。0 なら未使用 */
 };
 
 /**
@@ -294,7 +294,7 @@ struct cplat_hashtable
     struct hashtable_persist_header *hdr; /**< 永続化領域の先頭です。実行時のみ有効な内部参照です。 */
     unsigned char *data;                  /**< データ領域 (値配列) の先頭です。実行時のみ有効です。 */
 
-    /* 次は hdr->config から導出したレイアウトの控えです。永続化しません。 */
+    /* 次は hdr->config から導出したレイアウトの控えである。永続化しない。 */
     size_t off_bucket_head; /**< 管理領域先頭からバケット配列までのバイト オフセットです。 */
     size_t off_entries;     /**< 管理領域先頭からエントリ配列までのバイト オフセットです。 */
     size_t mgmt_size;       /**< 管理領域の総バイト数です。 */
@@ -502,6 +502,7 @@ static inline size_t hashtable_stored_key_length(const cplat_hashtable *ht, size
     {
         return 0;
     }
+
     return (size_t)*hashtable_entry_key_length(ht, rec);
 }
 
@@ -519,6 +520,7 @@ static inline size_t hashtable_default_key_length(const cplat_hashtable *ht)
     {
         return 0;
     }
+
     return ht->hdr->config.key_size;
 }
 
@@ -575,6 +577,7 @@ static inline char *hashtable_entry_key(const cplat_hashtable *ht, size_t rec)
 
         return (char *)(hashtable_key_storage(ht) + (size_t)ref->offset);
     }
+
     return (char *)slot;
 }
 
@@ -627,6 +630,7 @@ static inline unsigned char *hashtable_data_at(const cplat_hashtable *ht, size_t
     {
         return hashtable_value_storage(ht) + (size_t)hashtable_value_ref_at(ht, rec)->offset;
     }
+
     return hashtable_data(ht) + rec * ht->value_stride;
 }
 

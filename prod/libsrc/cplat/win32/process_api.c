@@ -31,17 +31,19 @@ BOOL CreateProcessU(const char *utf8_application_name, const char *utf8_command_
 {
     BOOL result;
     wchar_t *wapp = NULL;
-    wchar_t *wcmdline = NULL; /* CreateProcessW が書き換え可能なバッファーを要求するため確保する */
+    wchar_t *wcmdline = NULL; /* CreateProcessW() が書き換え可能なバッファーを要求するため確保する */
     wchar_t *wcurdir = NULL;
 
     if (utf8_application_name != NULL)
     {
         wapp = cplat_utf8_to_wstr_alloc(utf8_application_name);
     }
+
     if (utf8_command_line != NULL)
     {
         wcmdline = cplat_utf8_to_wstr_alloc(utf8_command_line);
     }
+
     if (utf8_current_directory != NULL)
     {
         wcurdir = cplat_utf8_to_wstr_alloc(utf8_current_directory);
@@ -62,6 +64,7 @@ BOOL CreateProcessU(const char *utf8_application_name, const char *utf8_command_
     cplat_free(wapp);
     cplat_free(wcmdline);
     cplat_free(wcurdir);
+
     return result;
 }
 

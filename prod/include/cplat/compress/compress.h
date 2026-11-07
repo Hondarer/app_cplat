@@ -23,8 +23,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef COMPRESS_H
 #define COMPRESS_H
@@ -42,7 +44,7 @@
 /** 圧縮ペイロード先頭に付加する展開後長さフィールドのバイト数。 */
 #define CPLAT_COMPRESS_HEADER_SIZE 8U
 
-/** 圧縮および展開が扱う展開後長さの上限 (バイト)。4 GiB 未満です。 */
+/** 圧縮および展開が扱う展開後長さの上限 [byte]。4 [GiB] 未満です。 */
 #define CPLAT_COMPRESS_MAX_UNCOMPRESSED_SIZE UINT32_MAX
 
 #ifdef __cplusplus
@@ -53,7 +55,7 @@ extern "C"
     /**
      *  @brief          データを圧縮します。
      *  @param[out]     dst      圧縮後データを格納するバッファー。
-     *                           先頭 8 バイトに元サイズ (NBO) が書き込まれます。
+     *                           先頭 8 [byte] に元サイズ (NBO) が書き込まれます。
      *  @param[in,out]  dst_len  入力: dst のバッファー サイズ。
      *                           出力: 書き込んだバイト数。
      *  @param[in]      src      圧縮前データへのポインター。
@@ -73,7 +75,7 @@ extern "C"
      *  @param[out]     dst      展開後データを格納するバッファー。
      *  @param[in,out]  dst_len  入力: dst のバッファー サイズ。
      *                           出力: 書き込んだバイト数。
-     *  @param[in]      src      圧縮後データへのポインター (先頭 8 バイトは元サイズ)。
+     *  @param[in]      src      圧縮後データへのポインター (先頭 8 [byte] は元サイズ)。
      *  @param[in]      src_len  圧縮後データのバイト数 (ヘッダーを含む)。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_LIMIT_EXCEEDED 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *

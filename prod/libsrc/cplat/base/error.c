@@ -16,9 +16,11 @@
 #include <errno.h>
 #include <stddef.h>
 
-/* EAI_* の定数を参照するために取り込む。Linux の EAI_* は errno とも Winsock とも
-   異なる番号体系であり、CPLAT_ERROR_DOMAIN_GAI の解釈に必要となる。
-   Windows の EAI_* は Winsock エラー コードと同一値であるため windows_sdk.h で足りる。 */
+/*
+ * EAI_* の定数を参照するために取り込む。Linux の EAI_* は errno とも Winsock とも
+ * 異なる番号体系であり、CPLAT_ERROR_DOMAIN_GAI の解釈に必要となる。
+ * Windows の EAI_* は Winsock エラー コードと同一値であるため windows_sdk.h で足りる。
+ */
 #if defined(PLATFORM_LINUX)
     #include <netdb.h>
 #elif defined(PLATFORM_WINDOWS)
@@ -97,6 +99,11 @@ static cplat_error_cause error_cause_from_errno(const int errno_value)
 #endif
         cause = CPLAT_CAUSE_DISK_FULL;
         break;
+
+    /*
+     * 通常の errno の EAGAIN は CPLAT_CAUSE_BUSY とする。
+     * ソケットの EAGAIN と EWOULDBLOCK は、error_cause_from_socket_errno() が CPLAT_CAUSE_WOULD_BLOCK へ分ける。
+     */
     case EBUSY:
     case EAGAIN:
 #if defined(ETXTBSY)
@@ -123,6 +130,11 @@ static cplat_error_cause error_cause_from_errno(const int errno_value)
     case ERANGE:
         cause = CPLAT_CAUSE_BUFFER_TOO_SMALL;
         break;
+
+/*
+ * Linux では ENOTSUP と EOPNOTSUPP が同値のことがある。
+ * 同値の case を並べるとコンパイルできないため、値が異なるときだけ EOPNOTSUPP を書く。
+ */
 #if defined(ENOTSUP)
     case ENOTSUP:
         cause = CPLAT_CAUSE_UNSUPPORTED;
@@ -266,6 +278,9 @@ static cplat_error_cause error_cause_from_gai_error(const int error_code)
 #if defined(EAI_NONAME)
     case EAI_NONAME:
 #endif
+/*
+ * EAI_NODATA と EAI_NONAME が同値のときは、同じ case を並べられない。
+ */
 #if defined(EAI_NODATA) && (!defined(EAI_NONAME) || (EAI_NODATA != EAI_NONAME))
     case EAI_NODATA:
 #endif
@@ -299,8 +314,10 @@ static cplat_error_cause error_cause_from_gai_error(const int error_code)
 #endif
 #if defined(EAI_SYSTEM)
     case EAI_SYSTEM:
-        /* 要因は EAI_* ではなく errno 側にある。名前解決はソケット操作ではないため、
-           一般の errno として分類する。 */
+        /*
+         * 要因は EAI_* ではなく errno 側にある。名前解決はソケット操作ではないため、
+         * 一般の errno として分類する。
+         */
         cause = error_cause_from_errno(errno);
         break;
 #endif
@@ -699,6 +716,7 @@ cplat_error_cause cplat_error_get_cause(const cplat_error *error)
 #if defined(PLATFORM_WINDOWS)
             cause = error_cause_from_windows_error(error->code);
 #else
+            /* Windows 以外のビルドには Win32 エラーの要因変換がないため、その他とする。 */
             cause = CPLAT_CAUSE_OTHER;
 #endif
         }
@@ -707,6 +725,7 @@ cplat_error_cause cplat_error_get_cause(const cplat_error *error)
 #if defined(PLATFORM_WINDOWS)
             cause = error_cause_from_winsock_error(error->code);
 #else
+            /* Windows 以外のビルドには Winsock エラーの要因変換がないため、その他とする。 */
             cause = CPLAT_CAUSE_OTHER;
 #endif
         }
@@ -725,10 +744,12 @@ int cplat_error_is(const cplat_error *error, const cplat_error_cause cause)
 {
     int matches = 0;
 
-    /* 引数の要因が有効な列挙値であるかは検査しない。cplat_error_get_cause() は
-       定義済みの要因しか返さないため、未定義の値を指定しても一致しない。
-       上限を列挙の末尾と比較する形にすると、要因を追加するたびに更新が必要になり、
-       更新漏れがあると追加した要因の判定が常に不一致になる。 */
+    /*
+     * 引数の要因が有効な列挙値であるかは検査しない。cplat_error_get_cause() は
+     * 定義済みの要因しか返さないため、未定義の値を指定しても一致しない。
+     * 上限を列挙の末尾と比較する形にすると、要因を追加するたびに更新が必要になり、
+     * 更新漏れがあると追加した要因の判定が常に不一致になる。
+     */
     if ((error != NULL) && (cplat_error_get_cause(error) == cause))
     {
         matches = 1;

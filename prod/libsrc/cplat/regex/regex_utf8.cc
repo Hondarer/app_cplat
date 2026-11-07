@@ -68,10 +68,12 @@ bool is_inside_pair(const std::wstring &units, std::size_t index)
     {
         return false;
     }
+
     if (!is_low_surrogate(units[index]))
     {
         return false;
     }
+
     return is_high_surrogate(units[index - 1]);
 }
 
@@ -134,6 +136,7 @@ bool cplat_internal_regex_utf8_decode(const char *text, std::size_t text_len, st
             {
                 return false;
             }
+
             code_point = (code_point << 6) | (trail & 0x3FU);
         }
 
@@ -142,19 +145,23 @@ bool cplat_internal_regex_utf8_decode(const char *text, std::size_t text_len, st
         {
             return false;
         }
+
         if ((sequence_len == 3) && (code_point < 0x800UL))
         {
             return false;
         }
+
         if ((sequence_len == 4) && (code_point < SUPPLEMENTARY_MIN))
         {
             return false;
         }
+
         /* 単独サロゲートと範囲外のコード ポイントを拒否する。 */
         if ((code_point >= SURROGATE_HIGH_MIN) && (code_point <= SURROGATE_LOW_MAX))
         {
             return false;
         }
+
         if (code_point > CODE_POINT_MAX)
         {
             return false;
@@ -177,7 +184,8 @@ bool cplat_internal_regex_utf8_decode(const char *text, std::size_t text_len, st
         pos += sequence_len;
     }
 
-    offsets_out.push_back(text_len);
+    offsets_out.push_back(text_len); /* 終端位置に対応するバイト オフセット */
+
     return true;
 }
 
@@ -198,10 +206,12 @@ bool cplat_internal_regex_utf8_encode(const std::wstring &units, std::string &te
             {
                 return false;
             }
+
             if (!is_low_surrogate(units[index + 1]))
             {
                 return false;
             }
+
             const unsigned long high = code_point - SURROGATE_HIGH_MIN;
             const unsigned long low = (static_cast<unsigned int>(units[index + 1]) & 0xFFFFU) - SURROGATE_LOW_MIN;
             code_point = SUPPLEMENTARY_MIN + (high << 10) + low;
@@ -252,12 +262,15 @@ std::size_t cplat_internal_regex_offset_of_begin(const std::wstring &units, cons
     {
         return 0;
     }
+
     if (index >= offsets.size())
     {
         return offsets.back();
     }
+
     /* 上位サロゲートの位置へ丸めるため、写像表の値をそのまま使用する。 */
     static_cast<void>(units);
+
     return offsets[index];
 }
 
@@ -270,15 +283,18 @@ std::size_t cplat_internal_regex_offset_of_end(const std::wstring &units, const 
     {
         return 0;
     }
+
     if (index >= offsets.size())
     {
         return offsets.back();
     }
+
     if (is_inside_pair(units, index))
     {
         /* サロゲート ペアの内側で終わる場合は、そのコード ポイントの末尾まで含める。 */
         return offsets[index + 1];
     }
+
     return offsets[index];
 }
 
@@ -294,12 +310,14 @@ bool cplat_internal_regex_index_of_offset(const std::vector<std::size_t> &offset
     {
         return false;
     }
+
     if (*found != offset)
     {
         return false;
     }
 
     index_out = static_cast<std::size_t>(found - offsets.begin());
+
     return true;
 }
 

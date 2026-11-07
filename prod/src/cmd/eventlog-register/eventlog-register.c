@@ -70,6 +70,7 @@ static int ensure_elevated(const char *command, int *handled)
     {
         return -1;
     }
+
     return 0;
 }
 
@@ -87,14 +88,17 @@ static int report_status(const int ret, const char *action, const char *message_
     if (ret == CPLAT_OK)
     {
         printf("イベント ソース '%s' を%sしました。\n", CPLAT_TRACER_DEFAULT_PROVIDER_NAME, action);
+
         if (message_file_path != NULL)
         {
             printf("メッセージ DLL: %s\n"
                    "注: メッセージ DLL は、イベント ソースの登録が有効な期間を通じて必要です。\n",
                    message_file_path);
         }
+
         return 0;
     }
+
     if (ret == CPLAT_ERR_PERMISSION_DENIED)
     {
         fprintf(stderr, "アクセスが拒否されました。管理者として実行してください。\n");
@@ -112,6 +116,7 @@ static int report_status(const int ret, const char *action, const char *message_
     {
         fprintf(stderr, "システム エラーにより%sに失敗しました。\n", action);
     }
+
     return -1;
 }
 
@@ -131,6 +136,7 @@ static int do_install(void)
     HMODULE resources;
     HRSRC table;
 
+    /* 管理者権限がない場合は UAC 昇格を試行し、昇格側で処理済みなら終了する。 */
     rc = ensure_elevated("install", &handled);
     if (rc != 0 || handled != 0)
     {
@@ -143,24 +149,29 @@ static int do_install(void)
     {
         return report_status(ret, "登録", NULL);
     }
+
     ret = cplat_path_dirname(directory, sizeof(directory), NULL, module_path);
     if (ret != CPLAT_OK)
     {
         return report_status(ret, "登録", NULL);
     }
+
     ret = cplat_path_join(message_file, sizeof(message_file), NULL, directory, "libcplat_eventlog_messages.dll");
     if (ret != CPLAT_OK)
     {
         return report_status(ret, "登録", NULL);
     }
+
     if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), message_file) < 0)
     {
         return report_status(CPLAT_ERR_UNKNOWN, "登録", NULL);
     }
 
-    /* 実行コードを読み込まず、登録前にメッセージ テーブルの存在を確認する。
-       LoadLibraryExW が要求するパス区切りへ変換する。
-       see: https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw */
+    /*
+     * 実行コードを読み込まず、登録前にメッセージ テーブルの存在を確認する。
+     * LoadLibraryExW が要求するパス区切りへ変換する。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw
+     */
     for (wchar_t *separator = wpath; *separator != L'\0'; ++separator)
     {
         if (*separator == L'/')
@@ -168,14 +179,17 @@ static int do_install(void)
             *separator = L'\\';
         }
     }
+
     resources = LoadLibraryExW(wpath, NULL, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE);
     if (resources == NULL)
     {
         return report_status(CPLAT_ERR_NOT_FOUND, "登録", NULL);
     }
+
     /* mc.exe が生成するテーブルは ID 1、リソース種別は RT_MESSAGETABLE (11)。 */
     table = FindResourceW(resources, MAKEINTRESOURCEW(1), MAKEINTRESOURCEW(11));
     FreeLibrary(resources);
+
     if (table == NULL)
     {
         return report_status(CPLAT_ERR_CORRUPT_DESCRIPTOR, "登録", NULL);
@@ -186,6 +200,7 @@ static int do_install(void)
     {
         return report_status(ret, "登録", message_file);
     }
+
     return report_status(ret, "登録", NULL);
 }
 
@@ -199,6 +214,7 @@ static int do_uninstall(void)
     int rc;
     int ret;
 
+    /* 管理者権限がない場合は UAC 昇格を試行し、昇格側で処理済みなら終了する。 */
     rc = ensure_elevated("uninstall", &handled);
     if (rc != 0 || handled != 0)
     {
@@ -206,6 +222,7 @@ static int do_uninstall(void)
     }
 
     ret = cplat_eventlog_unregister_source(CPLAT_TRACER_DEFAULT_PROVIDER_NAME);
+
     return report_status(ret, "削除", NULL);
 }
 
@@ -217,12 +234,13 @@ int eventlog_register_run(const char *command)
     {
         return do_install();
     }
+
     if (strcmp(command, "uninstall") == 0)
     {
         return do_uninstall();
     }
 
-    /* command は main() の argparser 検証により install/uninstall のいずれかへ確定するため到達しない */
+    /* command は main() の argparser 検証により install/uninstall のいずれかへ確定するため到達しない。 */
     return -1;
 }
 
@@ -251,8 +269,10 @@ int main(int argc, char *argv[])
 {
     int run_result;
 
-    /* 昇格ワーカーとして再起動された場合、出力パイプ フラグを argv から取り除き、
-       stdout / stderr を呼び出し元プロセスのパイプへ接続する。引数解析より前に呼び出す。 */
+    /*
+     * 昇格ワーカーとして再起動された場合、出力パイプ フラグを argv から取り除き、
+     * stdout / stderr を呼び出し元プロセスのパイプへ接続する。引数解析より前に呼び出す。
+     */
     if (cplat_elevated_process_attach_output_pipes(&argc, argv, NULL) != CPLAT_OK)
     {
         return EXIT_FAILURE;

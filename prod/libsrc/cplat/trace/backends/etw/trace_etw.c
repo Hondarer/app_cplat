@@ -79,6 +79,13 @@ static void write_trace_event(cplat_etw_provider_ref_t ref, const int level, con
 {
     uint32_t process_id = (uint32_t)GetCurrentProcessId();
 
+    /*
+     * TraceLoggingLevel() はコンパイル時定数しか受け付けないため、レベルごとに書き分ける。
+     * 明示したレベル以外は VERBOSE の ETW レベルで書く。
+     * DEBUG と VERBOSE を同じ詳細度にする。
+     * 正本は app/cplat/prod/libsrc/cplat/trace/README.md の「トレース レベル」節である。
+     * see: https://learn.microsoft.com/windows/win32/api/traceloggingprovider/nf-traceloggingprovider-tracelogginglevel
+     */
     if (service != NULL)
     {
         switch (level)
@@ -173,6 +180,7 @@ void cplat_internal_etw_provider_dispose_on_shutdown(cplat_etw_provider *handle,
     {
         TraceLoggingUnregister(handle->provider_ref);
     }
+
     cplat_free(handle);
 }
 

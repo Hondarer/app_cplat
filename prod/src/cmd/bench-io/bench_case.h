@@ -23,7 +23,7 @@
 
 #include "bench_timer.h"
 
-/** @brief 1 レコードのサイズ (バイト)。 */
+/** @brief 1 レコードのサイズ [byte]。 */
 #define BENCH_RECORD_SIZE 64
 
 /** @brief ブロック単位アクセスで 1 回に扱うレコード数 (64 KB 相当)。 */
@@ -70,7 +70,7 @@ typedef enum
  */
 typedef struct bench_case
 {
-    size_t file_size;      /**< 対象ファイルのサイズ (バイト)。 */
+    size_t file_size;      /**< 対象ファイルのサイズ [byte]。 */
     bench_api api;         /**< API 形態。 */
     bench_pattern pattern; /**< アクセス パターン。 */
     int durable;           /**< 書き込み後にディスクへの反映を要求する場合は 1。 */
@@ -85,7 +85,7 @@ typedef struct bench_context
     const char *path;    /**< 対象ファイルのパス。 */
     const size_t *order; /**< ランダム アクセスのレコード番号列。 */
     void *state;         /**< API 実装が保持する状態 (アタッチ済みハンドルなど)。 */
-    size_t file_size;    /**< 対象ファイルのサイズ (バイト)。 */
+    size_t file_size;    /**< 対象ファイルのサイズ [byte]。 */
     size_t record_count; /**< 対象ファイルに含まれるレコード数。 */
     size_t touch_count;  /**< 1 反復でアクセスするレコード数。 */
     uint64_t checksum;   /**< 最適化による処理除去を防ぐための集計値。 */

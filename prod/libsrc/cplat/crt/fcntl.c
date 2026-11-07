@@ -36,6 +36,7 @@ int cplat_open(const char *path, const int flags, const int mode, cplat_error *d
 
 #if defined(PLATFORM_LINUX)
     errno = 0;
+
     /* FIFO のオープンなど待機を伴う場合はシグナルで中断されうる。中断を吸収する。 */
     do
     {

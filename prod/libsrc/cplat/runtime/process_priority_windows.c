@@ -25,18 +25,25 @@
     #include <cplat/base/error_internal.h>
     #include <cplat/runtime/process_priority_windows.h>
 
-/* OpenProcess() / OpenThread() は、存在しない ID に ERROR_INVALID_PARAMETER を返す。
-   ERROR_INVALID_PARAMETER は他の用途でも使われるため、対象を開く箇所でだけ対象不在へ変換する。
-   see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocess */
+/*
+ * OpenProcess() / OpenThread() は、存在しない ID に ERROR_INVALID_PARAMETER を返す。
+ * ERROR_INVALID_PARAMETER は他の用途でも使われるため、対象を開く箇所でだけ対象不在へ変換する。
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocess
+ */
 static int report_open_error(cplat_error *detail_out, DWORD error_code)
 {
     if (error_code == ERROR_INVALID_PARAMETER)
     {
         return cplat_internal_error_report_windows_error_as(detail_out, error_code, CPLAT_ERR_NOT_FOUND);
     }
+
     return cplat_internal_error_report_windows_error(detail_out, error_code);
 }
 
+/*
+ * プロセス ID が 0 のときは擬似ハンドルを取得し、0 以外のときは指定のアクセス権でプロセスを開く。
+ * 成功時は CPLAT_OK、失敗時はエラー コードを返す。
+ */
 static int open_process(uint32_t process_id, DWORD desired_access, HANDLE *process, cplat_error *detail_out)
 {
     HANDLE opened;
@@ -52,10 +59,16 @@ static int open_process(uint32_t process_id, DWORD desired_access, HANDLE *proce
     {
         return report_open_error(detail_out, GetLastError());
     }
+
     *process = opened;
+
     return CPLAT_OK;
 }
 
+/*
+ * スレッド ID が 0 のときは擬似ハンドルを取得し、0 以外のときは指定のアクセス権でスレッドを開く。
+ * 成功時は CPLAT_OK、失敗時はエラー コードを返す。
+ */
 static int open_thread(uint32_t thread_id, DWORD desired_access, HANDLE *thread, cplat_error *detail_out)
 {
     HANDLE opened;
@@ -71,7 +84,9 @@ static int open_thread(uint32_t thread_id, DWORD desired_access, HANDLE *thread,
     {
         return report_open_error(detail_out, GetLastError());
     }
+
     *thread = opened;
+
     return CPLAT_OK;
 }
 
@@ -84,6 +99,10 @@ static void close_target(uint32_t id, HANDLE handle)
     }
 }
 
+/*
+ * cplat の優先度クラスを Windows の優先度クラスへ変換する。
+ * 変換できた場合は 1、未知の優先度クラスの場合は 0 を返す。
+ */
 static int to_os_class(cplat_process_priority_windows_class priority_class, DWORD *os_class)
 {
     switch (priority_class)
@@ -111,6 +130,10 @@ static int to_os_class(cplat_process_priority_windows_class priority_class, DWOR
     }
 }
 
+/*
+ * Windows の優先度クラスを cplat の優先度クラスへ変換する。
+ * 変換できた場合は 1、未知の優先度クラスの場合は 0 を返す。
+ */
 static int from_os_class(DWORD os_class, cplat_process_priority_windows_class *priority_class)
 {
     switch (os_class)
@@ -138,6 +161,10 @@ static int from_os_class(DWORD os_class, cplat_process_priority_windows_class *p
     }
 }
 
+/*
+ * cplat のスレッド優先度を Windows のスレッド優先度へ変換する。
+ * 変換できた場合は 1、未知のスレッド優先度の場合は 0 を返す。
+ */
 static int to_os_thread_priority(cplat_process_priority_windows_thread_priority thread_priority, int *os_priority)
 {
     switch (thread_priority)
@@ -168,6 +195,10 @@ static int to_os_thread_priority(cplat_process_priority_windows_thread_priority 
     }
 }
 
+/*
+ * Windows のスレッド優先度を cplat のスレッド優先度へ変換する。
+ * 変換できた場合は 1、未知のスレッド優先度の場合は 0 を返す。
+ */
 static int from_os_thread_priority(int os_priority, cplat_process_priority_windows_thread_priority *thread_priority)
 {
     switch (os_priority)
@@ -221,6 +252,7 @@ int cplat_process_priority_windows_set_class(uint32_t process_id, cplat_process_
         return result;
     }
 
+    /* 格下げ検出時の復元用に、設定前の優先度クラスを保持する。 */
     if (os_class == REALTIME_PRIORITY_CLASS)
     {
         previous_class = GetPriorityClass(process);
@@ -241,10 +273,12 @@ int cplat_process_priority_windows_set_class(uint32_t process_id, cplat_process_
 
     if (os_class == REALTIME_PRIORITY_CLASS)
     {
-        /* 特権 SeIncreaseBasePriorityPrivilege がない場合、OS は失敗を返さずに HIGH を設定する。
-           この挙動は公式文書に記載がないため、OS の特権判定を再現せず、設定後の結果を確認する。
-           格下げを検出した場合は、失敗時に状態を変えない契約を保つため元のクラスへ戻す。
-           see: https://learn.microsoft.com/en-us/windows/win32/procthread/scheduling-priorities */
+        /*
+         * 特権 SeIncreaseBasePriorityPrivilege がない場合、OS は失敗を返さずに HIGH を設定する。
+         * この挙動は公式文書に記載がないため、OS の特権判定を再現せず、設定後の結果を確認する。
+         * 格下げを検出した場合は、失敗時に状態を変えない契約を保つため元のクラスへ戻す。
+         * see: https://learn.microsoft.com/en-us/windows/win32/procthread/scheduling-priorities
+         */
         current_class = GetPriorityClass(process);
         if (current_class == 0)
         {
@@ -252,6 +286,7 @@ int cplat_process_priority_windows_set_class(uint32_t process_id, cplat_process_
             close_target(process_id, process);
             return result;
         }
+
         if (current_class != REALTIME_PRIORITY_CLASS)
         {
             (void)SetPriorityClass(process, previous_class);
@@ -261,6 +296,7 @@ int cplat_process_priority_windows_set_class(uint32_t process_id, cplat_process_
     }
 
     close_target(process_id, process);
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -293,13 +329,16 @@ int cplat_process_priority_windows_get_class(uint32_t process_id,
         close_target(process_id, process);
         return result;
     }
+
     close_target(process_id, process);
 
     if (!from_os_class(os_class, &priority_class))
     {
         return cplat_internal_error_report_windows_error(detail_out, ERROR_INVALID_DATA);
     }
+
     *priority_class_out = priority_class;
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -311,17 +350,21 @@ int cplat_process_priority_windows_begin_background_mode(cplat_error *detail_out
 
     if (!SetPriorityClass(GetCurrentProcess(), PROCESS_MODE_BACKGROUND_BEGIN))
     {
-        /* すでにモード中の場合、OS は ERROR_PROCESS_MODE_ALREADY_BACKGROUND で失敗する。
-           要求どおりの状態であり失敗ではないため、省略として扱う。
-           see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setpriorityclass */
+        /*
+         * すでにモード中の場合、OS は ERROR_PROCESS_MODE_ALREADY_BACKGROUND で失敗する。
+         * 要求どおりの状態であり失敗ではないため、省略として扱う。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setpriorityclass
+         */
         error_code = GetLastError();
         if (error_code == ERROR_PROCESS_MODE_ALREADY_BACKGROUND)
         {
             (void)cplat_internal_error_report_success(detail_out);
             return CPLAT_SKIPPED;
         }
+
         return cplat_internal_error_report_windows_error(detail_out, error_code);
     }
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -333,16 +376,20 @@ int cplat_process_priority_windows_end_background_mode(cplat_error *detail_out)
 
     if (!SetPriorityClass(GetCurrentProcess(), PROCESS_MODE_BACKGROUND_END))
     {
-        /* モード外の場合、OS は ERROR_PROCESS_MODE_NOT_BACKGROUND で失敗する。
-           see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setpriorityclass */
+        /*
+         * モード外の場合、OS は ERROR_PROCESS_MODE_NOT_BACKGROUND で失敗する。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setpriorityclass
+         */
         error_code = GetLastError();
         if (error_code == ERROR_PROCESS_MODE_NOT_BACKGROUND)
         {
             (void)cplat_internal_error_report_success(detail_out);
             return CPLAT_SKIPPED;
         }
+
         return cplat_internal_error_report_windows_error(detail_out, error_code);
     }
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -371,6 +418,7 @@ int cplat_process_priority_windows_set_memory_priority(uint32_t process_id,
 
     memset(&information, 0, sizeof(information));
     information.MemoryPriority = (ULONG)memory_priority;
+
     if (!SetProcessInformation(process, ProcessMemoryPriority, &information, (DWORD)sizeof(information)))
     {
         result = cplat_internal_error_report_windows_error(detail_out, GetLastError());
@@ -379,6 +427,7 @@ int cplat_process_priority_windows_set_memory_priority(uint32_t process_id,
     }
 
     close_target(process_id, process);
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -403,12 +452,14 @@ int cplat_process_priority_windows_get_memory_priority(
     }
 
     memset(&information, 0, sizeof(information));
+
     if (!GetProcessInformation(process, ProcessMemoryPriority, &information, (DWORD)sizeof(information)))
     {
         result = cplat_internal_error_report_windows_error(detail_out, GetLastError());
         close_target(process_id, process);
         return result;
     }
+
     close_target(process_id, process);
 
     if ((information.MemoryPriority < (ULONG)CPLAT_PROCESS_PRIORITY_WINDOWS_MEMORY_PRIORITY_VERY_LOW) ||
@@ -416,7 +467,9 @@ int cplat_process_priority_windows_get_memory_priority(
     {
         return cplat_internal_error_report_windows_error(detail_out, ERROR_INVALID_DATA);
     }
+
     *memory_priority_out = (cplat_process_priority_windows_memory_priority)information.MemoryPriority;
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -443,11 +496,14 @@ int cplat_process_priority_windows_set_power_throttling(
         return result;
     }
 
-    /* SetProcessInformation() は状態全体を置き換えるため、取得できる場合は現在の状態を基にして
-       実行速度の制御ビットだけを変更し、他の制御 (タイマー分解能など) を保つ。
-       see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setprocessinformation */
+    /*
+     * SetProcessInformation() は状態全体を置き換えるため、取得できる場合は現在の状態を基にして
+     * 実行速度の制御ビットだけを変更し、他の制御 (タイマー分解能など) を保つ。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setprocessinformation
+     */
     memset(&state, 0, sizeof(state));
     state.Version = PROCESS_POWER_THROTTLING_CURRENT_VERSION;
+
     if (!GetProcessInformation(process, ProcessPowerThrottling, &state, (DWORD)sizeof(state)))
     {
         memset(&state, 0, sizeof(state));
@@ -479,6 +535,7 @@ int cplat_process_priority_windows_set_power_throttling(
     }
 
     close_target(process_id, process);
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -505,12 +562,14 @@ int cplat_process_priority_windows_get_power_throttling(
 
     memset(&state, 0, sizeof(state));
     state.Version = PROCESS_POWER_THROTTLING_CURRENT_VERSION;
+
     if (!GetProcessInformation(process, ProcessPowerThrottling, &state, (DWORD)sizeof(state)))
     {
         result = cplat_internal_error_report_windows_error(detail_out, GetLastError());
         close_target(process_id, process);
         return result;
     }
+
     close_target(process_id, process);
 
     if ((state.ControlMask & PROCESS_POWER_THROTTLING_EXECUTION_SPEED) == 0U)
@@ -525,6 +584,7 @@ int cplat_process_priority_windows_get_power_throttling(
     {
         *power_throttling_out = CPLAT_PROCESS_PRIORITY_WINDOWS_POWER_THROTTLING_DISABLED;
     }
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -555,6 +615,7 @@ int cplat_process_priority_windows_set_priority_boost(uint32_t process_id, int e
     }
 
     close_target(process_id, process);
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -583,9 +644,11 @@ int cplat_process_priority_windows_get_priority_boost(uint32_t process_id, int *
         close_target(process_id, process);
         return result;
     }
+
     close_target(process_id, process);
 
     *enabled_out = disabled ? 0 : 1;
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -618,6 +681,7 @@ int cplat_process_priority_windows_set_thread_priority(uint32_t thread_id,
     }
 
     close_target(thread_id, thread);
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -649,6 +713,7 @@ int cplat_process_priority_windows_get_thread_priority(
         close_target(thread_id, thread);
         return result;
     }
+
     close_target(thread_id, thread);
 
     /* REALTIME クラス内でだけ使える値 (-7 〜 -3、3 〜 6) は列挙型に含めない。 */
@@ -656,7 +721,9 @@ int cplat_process_priority_windows_get_thread_priority(
     {
         return cplat_internal_error_report_windows_error(detail_out, ERROR_INVALID_DATA);
     }
+
     *thread_priority_out = thread_priority;
+
     return cplat_internal_error_report_success(detail_out);
 }
 

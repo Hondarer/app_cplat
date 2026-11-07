@@ -36,8 +36,10 @@ int cplat_ipv4_parse(const char *text, uint32_t *address_out)
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    /* inet_pton は形式が正しい場合にだけ 1 を返す。0 は形式不正、負値は AF 不正を表す。
-       see: https://learn.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-inet_pton */
+    /*
+     * inet_pton は形式が正しい場合にだけ 1 を返す。0 は形式不正、負値は AF 不正を表す。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-inet_pton
+     */
     if (inet_pton(AF_INET, text, &parsed) != 1)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
@@ -79,6 +81,7 @@ int cplat_ipv4_resolve(const char *text, uint32_t *address_out, cplat_error *det
         {
             freeaddrinfo(resolved);
         }
+
         return cplat_internal_error_report_gai_error(detail_out, gai_result);
     }
 
@@ -87,7 +90,7 @@ int cplat_ipv4_resolve(const char *text, uint32_t *address_out, cplat_error *det
         return cplat_internal_error_report_gai_error(detail_out, WSAHOST_NOT_FOUND);
     }
 
-    /* 複数アドレスが返された場合は先頭を採用する */
+    /* 複数アドレスが返された場合は先頭を採用する。 */
     sin = (const struct sockaddr_in *)(const void *)resolved->ai_addr;
     memcpy(address_out, &sin->sin_addr.S_un.S_addr, sizeof(*address_out));
 

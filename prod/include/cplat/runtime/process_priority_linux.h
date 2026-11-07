@@ -46,8 +46,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_PROCESS_PRIORITY_LINUX_H
 #define CPLAT_PROCESS_PRIORITY_LINUX_H
@@ -90,9 +92,9 @@ extern "C"
      */
     typedef struct cplat_process_priority_linux_deadline
     {
-        uint64_t runtime_nanoseconds;  /**< 周期あたりの実行時間 (ナノ秒)。 */
-        uint64_t deadline_nanoseconds; /**< 周期の開始から期限までの時間 (ナノ秒)。 */
-        uint64_t period_nanoseconds;   /**< 周期 (ナノ秒)。0 は deadline_nanoseconds と同じ値を表します。 */
+        uint64_t runtime_nanoseconds;  /**< 周期あたりの実行時間 [ns]。 */
+        uint64_t deadline_nanoseconds; /**< 周期の開始から期限までの時間 [ns]。 */
+        uint64_t period_nanoseconds;   /**< 周期 [ns]。0 は deadline_nanoseconds と同じ値を表します。 */
     } cplat_process_priority_linux_deadline;
 
     /**

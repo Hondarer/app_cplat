@@ -131,6 +131,7 @@ class regex_traits : public std::regex_traits<wchar_t>
         {
             return static_cast<char_type>(target + (L'a' - L'A'));
         }
+
         return target;
     }
 #if defined(COMPILER_GCC)
@@ -145,10 +146,12 @@ class regex_traits : public std::regex_traits<wchar_t>
     template <typename ForwardIt> string_type transform_primary(ForwardIt first, ForwardIt last) const
     {
         string_type result(first, last); /* TESTFW_EXCL_EH_ARCS */
+
         for (string_type::iterator it = result.begin(); it != result.end(); ++it)
         {
             *it = translate_nocase(*it);
         }
+
         return result;
     }
 
@@ -162,6 +165,7 @@ class regex_traits : public std::regex_traits<wchar_t>
     char_class_type lookup_classname(ForwardIt first, ForwardIt last, bool icase = false) const
     {
         std::string name;
+
         for (ForwardIt it = first; it != last; ++it)
         {
             const wchar_t target = *it;
@@ -172,11 +176,13 @@ class regex_traits : public std::regex_traits<wchar_t>
                 {
                     narrowed = static_cast<char>(narrowed + ('a' - 'A'));
                 }
+
                 name.push_back(narrowed); /* TESTFW_EXCL_EH_ARCS */
             }
         }
 
         char_class_type mask = 0;
+
         if (name == "alnum")
         {
             mask = CLASS_ALNUM;
@@ -234,10 +240,12 @@ class regex_traits : public std::regex_traits<wchar_t>
             mask = 0;
         }
 
+        /* 大文字小文字を無視する場合、lower と upper は英字全体に一致させる。 */
         if (icase && ((mask == CLASS_LOWER) || (mask == CLASS_UPPER)))
         {
             mask = CLASS_ALPHA;
         }
+
         return mask;
     }
 
@@ -265,54 +273,67 @@ class regex_traits : public std::regex_traits<wchar_t>
         const bool is_word = is_alnum || (target == L'_');
 
         unsigned int actual = 0;
+
         if (is_upper)
         {
             actual |= CLASS_UPPER;
         }
+
         if (is_lower)
         {
             actual |= CLASS_LOWER;
         }
+
         if (is_digit)
         {
             actual |= CLASS_DIGIT;
         }
+
         if (is_space)
         {
             actual |= CLASS_SPACE;
         }
+
         if (is_blank)
         {
             actual |= CLASS_BLANK;
         }
+
         if (is_cntrl)
         {
             actual |= CLASS_CNTRL;
         }
+
         if (is_alpha)
         {
             actual |= CLASS_ALPHA;
         }
+
         if (is_alnum)
         {
             actual |= CLASS_ALNUM;
         }
+
         if (is_graph)
         {
             actual |= CLASS_GRAPH;
         }
+
         if (is_print)
         {
             actual |= CLASS_PRINT;
         }
+
         if (is_punct)
         {
             actual |= CLASS_PUNCT;
         }
+
         if (is_xdigit)
         {
             actual |= CLASS_XDIGIT;
         }
+
         if (is_word)
         {
             actual |= CLASS_WORD;
@@ -324,6 +345,7 @@ class regex_traits : public std::regex_traits<wchar_t>
     int value(char_type target, int radix) const
     {
         int digit = -1;
+
         if ((target >= L'0') && (target <= L'9'))
         {
             digit = static_cast<int>(target - L'0');
@@ -345,6 +367,7 @@ class regex_traits : public std::regex_traits<wchar_t>
         {
             return -1;
         }
+
         return digit;
     }
 
@@ -389,6 +412,7 @@ int report_plain(cplat_error *detail_out, int result) noexcept
 {
     cplat_error_clear(detail_out);
     cplat_error_clear_last();
+
     return result;
 }
 
@@ -398,6 +422,7 @@ int report_success(cplat_error *detail_out) noexcept
     return cplat_internal_error_report_success(detail_out);
 }
 
+/* errno に対応する詳細情報を記録し、結果コードを返す。 */
 int report_errno_as(cplat_error *detail_out, int errno_value, int result) noexcept
 {
     return cplat_internal_error_report_errno_as(detail_out, errno_value, result);
@@ -459,7 +484,10 @@ int translate_exception(cplat_error *detail_out)
 }
 #endif /* !CPLAT_REGEX_NO_EXCEPTIONS */
 
-/* コンパイル フラグを std::regex_constants の値へ変換する。 */
+/*
+ * コンパイル フラグを std::regex_constants の構文オプションへ変換する。
+ * 変換に成功した場合は true、不正なフラグの組み合わせの場合は false を返す。
+ */
 bool to_syntax_option(unsigned int flags, std::regex_constants::syntax_option_type &option_out)
 {
     if ((flags & CPLAT_REGEX_EXTENDED) != 0 && (flags & CPLAT_REGEX_BASIC) != 0)
@@ -468,6 +496,7 @@ bool to_syntax_option(unsigned int flags, std::regex_constants::syntax_option_ty
     }
 
     std::regex_constants::syntax_option_type option = std::regex_constants::ECMAScript;
+
     if ((flags & CPLAT_REGEX_EXTENDED) != 0)
     {
         option = std::regex_constants::extended;
@@ -485,16 +514,19 @@ bool to_syntax_option(unsigned int flags, std::regex_constants::syntax_option_ty
     {
         option |= std::regex_constants::icase;
     }
+
     if ((flags & CPLAT_REGEX_NOSUB) != 0)
     {
         option |= std::regex_constants::nosubs;
     }
+
     if ((flags & CPLAT_REGEX_OPTIMIZE) != 0)
     {
         option |= std::regex_constants::optimize;
     }
 
     option_out = option;
+
     return true;
 }
 
@@ -507,14 +539,17 @@ std::regex_constants::match_flag_type to_match_flag(unsigned int match_flags)
     {
         flag |= std::regex_constants::match_not_bol;
     }
+
     if ((match_flags & CPLAT_REGEX_MATCH_NOTEOL) != 0)
     {
         flag |= std::regex_constants::match_not_eol;
     }
+
     if ((match_flags & CPLAT_REGEX_MATCH_NOTEMPTY) != 0)
     {
         flag |= std::regex_constants::match_not_null;
     }
+
     if ((match_flags & CPLAT_REGEX_MATCH_ANCHORED) != 0)
     {
         flag |= std::regex_constants::match_continuous;
@@ -647,13 +682,14 @@ size_t cplat_regex_get_group_count(const cplat_regex *regex)
     {
         return 0;
     }
+
     return regex->group_count;
 }
 
 namespace
 {
 
-/* search と matches の共通処理を行う。 */
+/* search と matches の共通照合処理を実行し、結果コードを返す。 */
 int execute(const cplat_regex *regex, const char *text, std::size_t text_len, std::size_t start_offset,
             unsigned int match_flags, bool whole_match, cplat_regex_match *matches_out, std::size_t matches_capacity,
             int *matched_out, cplat_error *detail_out)
@@ -669,10 +705,12 @@ int execute(const cplat_regex *regex, const char *text, std::size_t text_len, st
     {
         return report_plain(detail_out, CPLAT_ERR_INVALID_ARGUMENT);
     }
+
     if (start_offset > text_len)
     {
         return report_plain(detail_out, CPLAT_ERR_INVALID_ARGUMENT);
     }
+
     if (text_len > CPLAT_REGEX_MAX_LENGTH)
     {
         return report_plain(detail_out, CPLAT_ERR_LIMIT_EXCEEDED);
@@ -701,6 +739,7 @@ int execute(const cplat_regex *regex, const char *text, std::size_t text_len, st
         }
 
         std::regex_constants::match_flag_type flag = to_match_flag(match_flags);
+
         if (start_index > 0)
         {
             /* 開始位置より前に文字が存在することをエンジンへ伝え、^ と \b を正しく評価させる。 */
@@ -709,6 +748,7 @@ int execute(const cplat_regex *regex, const char *text, std::size_t text_len, st
 
         match_type matched;
         bool found = false;
+
         if (whole_match)
         {
             found = std::regex_match(units.cbegin() + static_cast<std::ptrdiff_t>(start_index), units.cend(),
@@ -783,14 +823,17 @@ int cplat_regex_replace(const cplat_regex *regex, const char *text, const size_t
     {
         return report_plain(detail_out, CPLAT_ERR_INVALID_ARGUMENT);
     }
+
     if ((result_out == nullptr) && (result_size != 0))
     {
         return report_plain(detail_out, CPLAT_ERR_INVALID_ARGUMENT);
     }
+
     if ((flags & ~(MATCH_FLAG_MASK | REPLACE_FLAG_MASK)) != 0)
     {
         return report_plain(detail_out, CPLAT_ERR_INVALID_ARGUMENT);
     }
+
     if (text_len > CPLAT_REGEX_MAX_LENGTH)
     {
         return report_plain(detail_out, CPLAT_ERR_LIMIT_EXCEEDED);
@@ -827,14 +870,17 @@ int cplat_regex_replace(const cplat_regex *regex, const char *text, const size_t
         }
 
         std::regex_constants::match_flag_type flag = to_match_flag(flags);
+
         if ((flags & CPLAT_REGEX_REPLACE_FIRST_ONLY) != 0)
         {
             flag |= std::regex_constants::format_first_only;
         }
+
         if ((flags & CPLAT_REGEX_REPLACE_NO_COPY) != 0)
         {
             flag |= std::regex_constants::format_no_copy;
         }
+
         if ((flags & CPLAT_REGEX_REPLACE_SED) != 0)
         {
             flag |= std::regex_constants::format_sed;
@@ -850,7 +896,8 @@ int cplat_regex_replace(const cplat_regex *regex, const char *text, const size_t
             return report_plain(detail_out, CPLAT_ERR_UNKNOWN);
         }
 
-        const std::size_t required_size = encoded.size() + 1;
+        const std::size_t required_size = encoded.size() + 1; /* ヌル終端文字を含めたバイト数 */
+
         if (required_size_out != nullptr)
         {
             *required_size_out = required_size;
@@ -861,6 +908,7 @@ int cplat_regex_replace(const cplat_regex *regex, const char *text, const size_t
             /* 必要サイズの問い合わせのため、置換結果は書き込まない。 */
             return report_success(detail_out);
         }
+
         if (result_size < required_size)
         {
             return report_plain(detail_out, CPLAT_ERR_BUFFER_TOO_SMALL);
@@ -894,6 +942,7 @@ struct cplat_regex_iter
     std::vector<std::size_t> offsets; /**< コード単位索引から UTF-8 バイト オフセットへの写像表。 */
     std::size_t position;             /**< 次に照合を開始するコード単位索引。 */
     unsigned int match_flags;         /**< 照合フラグ。 */
+
     /* 末尾に詰め物が入らないよう、bool ではなく match_flags と同じ幅の型で保持する。 */
     unsigned int finished; /**< 列挙が終わった場合に 1、それ以外は 0。 */
 };
@@ -901,7 +950,10 @@ struct cplat_regex_iter
 namespace
 {
 
-/* 指定位置から次の一致箇所を探し、見つかった範囲をコード単位索引で返す。 */
+/*
+ * 指定位置から次の一致箇所を探し、見つかった範囲をコード単位索引で返す。
+ * 一致が見つかった場合は true、見つからなかった場合は false を返す。
+ */
 bool find_next(const cplat_regex *regex, const std::wstring &units, unsigned int match_flags, std::size_t position,
                match_type &matched_out, std::size_t &begin_out, std::size_t &end_out)
 {
@@ -911,6 +963,7 @@ bool find_next(const cplat_regex *regex, const std::wstring &units, unsigned int
     }
 
     std::regex_constants::match_flag_type flag = to_match_flag(match_flags);
+
     if (position > 0)
     {
         flag |= std::regex_constants::match_prev_avail;
@@ -926,6 +979,7 @@ bool find_next(const cplat_regex *regex, const std::wstring &units, unsigned int
 
     begin_out = position + static_cast<std::size_t>(matched_out.position(0)); /* TESTFW_EXCL_EH_ARCS */
     end_out = begin_out + static_cast<std::size_t>(matched_out.length(0));    /* TESTFW_EXCL_EH_ARCS */
+
     return true;
 }
 
@@ -937,6 +991,7 @@ std::size_t advance_position(const std::wstring &units, std::size_t position)
     {
         next++;
     }
+
     return next;
 }
 
@@ -958,6 +1013,7 @@ int cplat_regex_iter_create(const cplat_regex *regex, const char *text, const si
     {
         return report_plain(detail_out, CPLAT_ERR_INVALID_ARGUMENT);
     }
+
     if (text_len > CPLAT_REGEX_MAX_LENGTH)
     {
         return report_plain(detail_out, CPLAT_ERR_LIMIT_EXCEEDED);
@@ -1085,14 +1141,17 @@ int cplat_regex_split(const cplat_regex *regex, const char *text, const size_t t
     {
         return report_plain(detail_out, CPLAT_ERR_INVALID_ARGUMENT);
     }
+
     if ((parts_out == nullptr) && (parts_capacity != 0))
     {
         return report_plain(detail_out, CPLAT_ERR_INVALID_ARGUMENT);
     }
+
     if ((match_flags & ~MATCH_FLAG_MASK) != 0)
     {
         return report_plain(detail_out, CPLAT_ERR_INVALID_ARGUMENT);
     }
+
     if (text_len > CPLAT_REGEX_MAX_LENGTH)
     {
         return report_plain(detail_out, CPLAT_ERR_LIMIT_EXCEEDED);
@@ -1149,6 +1208,7 @@ int cplat_regex_split(const cplat_regex *regex, const char *text, const size_t t
                 {
                     position = next;
                 }
+
                 continue;
             }
 
@@ -1161,6 +1221,7 @@ int cplat_regex_split(const cplat_regex *regex, const char *text, const size_t t
             position = end_index;
         }
 
+        /* 最後の区切り以降の残りの文字列を最後の要素として追加する。 */
         cplat_regex_match last_part;
         last_part.begin = cplat_internal_regex_offset_of_begin(units, offsets, part_begin); /* TESTFW_EXCL_EH_ARCS */
         last_part.end = cplat_internal_regex_offset_of_end(units, offsets, units.size());   /* TESTFW_EXCL_EH_ARCS */

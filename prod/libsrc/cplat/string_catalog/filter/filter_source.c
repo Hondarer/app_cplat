@@ -51,6 +51,7 @@ static int check_known_header(const string_catalog_filter_source_header *header)
     {
         return CPLAT_OK;
     }
+
     return string_catalog_filter_source_check_header(header);
 }
 
@@ -64,7 +65,8 @@ static int check_known_header(const string_catalog_filter_source_header *header)
  *
  *  前回の値に 2 を加えると 64 ビットを超える場合は、@ref REVISION_WRAPPED へ戻します。\n
  *  読み取り側は大小ではなく不一致で変化を判定するため、戻った値でも取り込みます。
- *  1 秒に 10 億回公開しても上限に届くには約 292 年かかるため、通常は、壊れた値や意図的に大きくした値でだけ起こります。
+ *  1 [s] に 10 億回公開しても上限に届くには約 292 年かかるため、
+ *  通常は、壊れた値や意図的に大きくした値でだけ起こります。
  */
 static uint64_t next_revision(const uint64_t base)
 {
@@ -72,6 +74,7 @@ static uint64_t next_revision(const uint64_t base)
     {
         return base + 2U;
     }
+
     return REVISION_WRAPPED;
 }
 
@@ -79,19 +82,22 @@ static uint64_t next_revision(const uint64_t base)
 
 int string_catalog_filter_source_check_header(const string_catalog_filter_source_header *header)
 {
-    /* 署名だけでは別の形式と破損を区別できないため、署名の不一致は破損として扱う */
+    /* 署名だけでは別の形式と破損を区別できないため、署名の不一致は破損として扱う。 */
     if (header->signature != STRING_CATALOG_FILTER_SOURCE_SIGNATURE)
     {
         return CPLAT_ERR_CORRUPT_DESCRIPTOR;
     }
+
     if (header->format_version != STRING_CATALOG_FILTER_SOURCE_FORMAT_VERSION)
     {
         return CPLAT_ERR_VERSION_MISMATCH;
     }
+
     if (header->header_size != CPLAT_STRING_CATALOG_FILTER_SOURCE_HEADER_SIZE)
     {
         return CPLAT_ERR_CORRUPT_DESCRIPTOR;
     }
+
     return CPLAT_OK;
 }
 
@@ -103,10 +109,11 @@ static uint64_t hash_bytes(uint64_t hash, const unsigned char *bytes, const size
         hash ^= bytes[index];
         hash *= CATALOG_ID_PRIME;
     }
+
     return hash;
 }
 
-/** 32 ビットの値を、実行環境のバイト順序によらずリトル エンディアンの 4 バイトとしてハッシュへ加えます。 */
+/** 32 ビットの値を、実行環境のバイト順序によらずリトル エンディアンの 4 [byte] としてハッシュへ加えます。 */
 static uint64_t hash_u32(const uint64_t hash, const uint32_t value)
 {
     const unsigned char bytes[4] = {(unsigned char)(value & 0xFFU), (unsigned char)((value >> 8) & 0xFFU),
@@ -122,6 +129,7 @@ static uint64_t hash_text(const uint64_t hash, const char *text)
     {
         return hash_u32(hash, CATALOG_ID_NULL_LENGTH);
     }
+
     return hash_bytes(hash_u32(hash, (uint32_t)strlen(text)), (const unsigned char *)text, strlen(text));
 }
 
@@ -137,12 +145,14 @@ int cplat_string_catalog_filter_get_catalog_id(const cplat_string_catalog *catal
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    /* 判定に関わる定義だけを使う。書式や説明文を変えても、条件式の解釈は変わらないため */
+    /* 判定に関わる定義だけを使う。書式や説明文を変えても、条件式の解釈は変わらないため。 */
     hash = hash_u32(hash, (uint32_t)catalog->entry_count);
+
     for (int entry_index = 0; entry_index < catalog->entry_count; entry_index++)
     {
         const cplat_string_catalog_entry *entry = &catalog->entries[entry_index];
         int argument_count;
+
         if ((entry->argument_count > 0) && (entry->arguments != NULL))
         {
             argument_count = entry->argument_count;
@@ -156,6 +166,7 @@ int cplat_string_catalog_filter_get_catalog_id(const cplat_string_catalog *catal
         hash = hash_u32(hash, (uint32_t)entry->category);
         hash = hash_text(hash, entry->id);
         hash = hash_u32(hash, (uint32_t)argument_count);
+
         for (int argument = 0; argument < argument_count; argument++)
         {
             hash = hash_u32(hash, (uint32_t)entry->arguments[argument].kind);
@@ -163,7 +174,7 @@ int cplat_string_catalog_filter_get_catalog_id(const cplat_string_catalog *catal
         }
     }
 
-    /* 0 は識別値を持たない以前の版の領域を表すため、使わない */
+    /* 0 は識別値を持たない以前の版の領域を表すため、使わない。 */
     if (hash == 0U)
     {
         *catalog_id_out = 1U;
@@ -172,6 +183,7 @@ int cplat_string_catalog_filter_get_catalog_id(const cplat_string_catalog *catal
     {
         *catalog_id_out = hash;
     }
+
     return CPLAT_OK;
 }
 
@@ -183,6 +195,7 @@ bool string_catalog_filter_source_is_region_valid(const void *source, const size
     {
         return false;
     }
+
     return (source_size >= CPLAT_STRING_CATALOG_FILTER_SOURCE_HEADER_SIZE) &&
            ((source_size - CPLAT_STRING_CATALOG_FILTER_SOURCE_HEADER_SIZE) >= image_size);
 }
@@ -202,8 +215,9 @@ bool string_catalog_filter_source_end_read(const void *source, const uint64_t re
 {
     const string_catalog_filter_source_header *header = (const string_catalog_filter_source_header *)source;
 
-    /* 内容の読み取りが、版番号の読み直しより後へ並べ替わらないようにする */
+    /* 内容の読み取りが、版番号の読み直しより後へ並べ替わらないようにする。 */
     cplat_atomic_thread_fence(CPLAT_MEMORY_ORDER_ACQUIRE);
+
     return cplat_atomic_load_u64(&header->published_revision, CPLAT_MEMORY_ORDER_RELAXED) == revision;
 }
 
@@ -226,17 +240,22 @@ int cplat_string_catalog_filter_source_publish(void *source, const size_t source
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     ret = cplat_string_catalog_filter_validate(image, image_size);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
+
+    /* 直前の cplat_string_catalog_filter_validate() で検証済みのため成功が確定している。 */
     (void)cplat_string_catalog_filter_get_info(image, image_size, &info);
+
     if (!string_catalog_filter_source_is_region_valid(source, source_size, (size_t)info.image_size))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
-    /* ヘッダーの確認と書き込みは排他の下で行う。ほかの書き込み側と競合せずにヘッダーを読めるようにするため */
+
+    /* ヘッダーの確認と書き込みは排他の下で行う。ほかの書き込み側と競合せずにヘッダーを読めるようにするため。 */
     if (lock != NULL)
     {
         ret = lock->lock(lock->context);
@@ -245,6 +264,7 @@ int cplat_string_catalog_filter_source_publish(void *source, const size_t source
             return ret;
         }
     }
+
     ret = check_known_header(header);
     if (ret != CPLAT_OK)
     {
@@ -252,13 +272,14 @@ int cplat_string_catalog_filter_source_publish(void *source, const size_t source
         {
             lock->unlock(lock->context);
         }
+
         return ret;
     }
 
-    /* 書き込みの途中で中断した領域では版番号が奇数のまま残るため、偶数へ戻して基準にする */
+    /* 書き込みの途中で中断した領域では版番号が奇数のまま残るため、偶数へ戻して基準にする。 */
     base = cplat_atomic_load_u64(&header->published_revision, CPLAT_MEMORY_ORDER_RELAXED) & ~REVISION_WRITING_BIT;
 
-    /* 版番号を奇数にしてから書き込む。内容の書き込みが、奇数にするより前へ並べ替わらないようにする */
+    /* 版番号を奇数にしてから書き込む。内容の書き込みが、奇数にするより前へ並べ替わらないようにする。 */
     cplat_atomic_store_u64(&header->published_revision, base | REVISION_WRITING_BIT, CPLAT_MEMORY_ORDER_RELAXED);
     cplat_atomic_thread_fence(CPLAT_MEMORY_ORDER_RELEASE);
 
@@ -278,6 +299,7 @@ int cplat_string_catalog_filter_source_publish(void *source, const size_t source
 
     next = next_revision(base);
     cplat_atomic_store_u64(&header->published_revision, next, CPLAT_MEMORY_ORDER_RELEASE);
+
     if (lock != NULL)
     {
         lock->unlock(lock->context);
@@ -287,6 +309,7 @@ int cplat_string_catalog_filter_source_publish(void *source, const size_t source
     {
         *revision_out = next;
     }
+
     return CPLAT_OK;
 }
 
@@ -304,6 +327,7 @@ int cplat_string_catalog_filter_source_get_info(const void *source, const size_t
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     memset(info_out, 0, sizeof(*info_out));
 
     revision = string_catalog_filter_source_begin_read(source);
@@ -311,15 +335,19 @@ int cplat_string_catalog_filter_source_get_info(const void *source, const size_t
     {
         return CPLAT_OK;
     }
+
     if ((revision & REVISION_WRITING_BIT) != 0U)
     {
         return CPLAT_ERR_BUSY;
     }
+
     memcpy(&copy, header, sizeof(copy));
+
     if (!string_catalog_filter_source_end_read(source, revision))
     {
         return CPLAT_ERR_BUSY;
     }
+
     ret = string_catalog_filter_source_check_header(&copy);
     if (ret != CPLAT_OK)
     {
@@ -333,5 +361,6 @@ int cplat_string_catalog_filter_source_get_info(const void *source, const size_t
     info_out->line_capacity = copy.line_capacity;
     info_out->line_width = copy.line_width;
     info_out->catalog_id = copy.catalog_id;
+
     return CPLAT_OK;
 }

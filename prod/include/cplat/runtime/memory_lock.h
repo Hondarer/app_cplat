@@ -12,8 +12,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_MEMORY_LOCK_H
 #define CPLAT_MEMORY_LOCK_H
@@ -59,7 +61,7 @@ extern "C"
     /**
      *  @brief          指定したメモリ範囲をロックします。
      *  @param[in]      address  ロック対象範囲の先頭アドレス。NULL を渡してはなりません。
-     *  @param[in]      size     ロック対象範囲のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      size     ロック対象範囲のサイズ [byte]。0 を渡してはなりません。
      *  @return         結果コードを返します。
      *
      *  実際にロックされる範囲は OS のページ単位に丸められます。\n
@@ -73,7 +75,7 @@ extern "C"
     /**
      *  @brief          指定したメモリ範囲のロックを解除します。
      *  @param[in]      address  解除対象範囲の先頭アドレス。NULL を渡してはなりません。
-     *  @param[in]      size     解除対象範囲のサイズ (バイト)。0 を渡してはなりません。
+     *  @param[in]      size     解除対象範囲のサイズ [byte]。0 を渡してはなりません。
      *  @return         結果コードを返します。
      *
      *  実際に解除される範囲は OS のページ単位に丸められます。\n
@@ -87,7 +89,7 @@ extern "C"
     /**
      *  @brief          機密データを保持していたメモリ範囲を確実にゼロ クリアします。
      *  @param[out]     buf   クリア対象の先頭アドレス。@p size が 0 の場合に限り NULL も指定できます。
-     *  @param[in]      size  クリア対象のサイズ (バイト)。
+     *  @param[in]      size  クリア対象のサイズ [byte]。
      *
      *  鍵、パスフレーズ、復号済み平文など、解放前に消去すべきデータに使用します。\n
      *  Linux では `explicit_bzero`、Windows では `SecureZeroMemory` を使用します。

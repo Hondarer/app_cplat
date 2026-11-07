@@ -48,20 +48,24 @@
         #define SCHED_RESET_ON_FORK 0x40000000
     #endif
 
-    /* sched_attr.sched_flags の値。
-       see: https://man7.org/linux/man-pages/man2/sched_setattr.2.html */
+    /*
+     * sched_attr.sched_flags の値
+     * see: https://man7.org/linux/man-pages/man2/sched_setattr.2.html
+     */
     #define PROCESS_PRIORITY_SCHED_FLAG_RESET_ON_FORK  0x01ULL
     #define PROCESS_PRIORITY_SCHED_FLAG_KEEP_POLICY    0x08ULL
     #define PROCESS_PRIORITY_SCHED_FLAG_KEEP_PARAMS    0x10ULL
     #define PROCESS_PRIORITY_SCHED_FLAG_UTIL_CLAMP_MIN 0x20ULL
     #define PROCESS_PRIORITY_SCHED_FLAG_UTIL_CLAMP_MAX 0x40ULL
 
-    /* sched_attr の版ごとの大きさ。最初の版はデッド ラインまで、
-       2 番目の版 (Linux 5.3 以降) は CPU 使用率クランプまでを持つ。 */
-    #define PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION0 48U
-    #define PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION1 56U
+    /*
+     * sched_attr の版ごとの大きさ [byte] である。最初の版はデッド ラインまで、
+     * 2 番目の版 (Linux 5.3 以降) は CPU 使用率クランプまでを持つ。
+     */
+    #define PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION0 48U /* [byte] */
+    #define PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION1 56U /* [byte] */
 
-    /* CPU 使用率クランプの上限値 (SCHED_CAPACITY_SCALE)。 */
+    /* CPU 使用率クランプの上限値 (SCHED_CAPACITY_SCALE) */
     #define PROCESS_PRIORITY_UTILIZATION_SCALE 1024U
 
     /* see: https://man7.org/linux/man-pages/man2/ioprio_set.2.html */
@@ -70,12 +74,14 @@
     #define PROCESS_PRIORITY_IOPRIO_LEVEL_MASK  0x7
     #define PROCESS_PRIORITY_IOPRIO_LEVEL_MAX   7
 
-    /* CPU 使用率クランプ (CONFIG_UCLAMP_TASK) が有効なカーネルにだけ存在する sysctl。
-       無効なカーネルでも sched_getattr() は成功して 0 と 0 を返すため、この有無で判定する。
-       see: https://docs.kernel.org/admin-guide/sysctl/kernel.html#sched-util-clamp-min */
+    /*
+     * CPU 使用率クランプ (CONFIG_UCLAMP_TASK) が有効なカーネルにだけ存在する sysctl パスである。
+     * 無効なカーネルでも sched_getattr() は成功して 0 と 0 を返すため、この有無で判定する。
+     * see: https://docs.kernel.org/admin-guide/sysctl/kernel.html#sched-util-clamp-min
+     */
     #define PROCESS_PRIORITY_UTILIZATION_CLAMP_SYSCTL "/proc/sys/kernel/sched_util_clamp_min"
 
-/* カーネルの struct sched_attr (2 番目の版) と同じ配置。 */
+/* カーネルの struct sched_attr (2 番目の版) と同じ配置である。 */
 typedef struct process_priority_sched_attr
 {
     uint32_t size;
@@ -90,16 +96,26 @@ typedef struct process_priority_sched_attr
     uint32_t sched_util_max;
 } process_priority_sched_attr;
 
+/*
+ * スレッド ID を OS のスレッド ID (pid_t) へ変換する。
+ * thread_id が INT32_MAX を超えて pid_t で表現できない場合は 0 を返し、正常に変換できた場合は 1 を返す。
+ */
 static int to_os_thread_id(uint32_t thread_id, pid_t *os_thread_id)
 {
     if (thread_id > (uint32_t)INT32_MAX)
     {
         return 0;
     }
+
     *os_thread_id = (pid_t)thread_id;
+
     return 1;
 }
 
+/*
+ * ライブラリのポリシー列挙値を Linux のスケジューリング ポリシー値へ変換する。
+ * 変換できた場合は 1 を返し、SCHED_DEADLINE や未知のポリシー値など変換できない場合は 0 を返す。
+ */
 static int to_os_policy(cplat_process_priority_linux_policy policy, int *os_policy)
 {
     switch (policy)
@@ -127,6 +143,10 @@ static int to_os_policy(cplat_process_priority_linux_policy policy, int *os_poli
     }
 }
 
+/*
+ * Linux のスケジューリング ポリシー値をライブラリのポリシー列挙値へ変換する。
+ * 変換できた場合は 1 を返し、未知のポリシー値など対応する列挙値がない場合は 0 を返す。
+ */
 static int from_os_policy(int os_policy, cplat_process_priority_linux_policy *policy)
 {
     switch (os_policy)
@@ -154,6 +174,11 @@ static int from_os_policy(int os_policy, cplat_process_priority_linux_policy *po
     }
 }
 
+/*
+ * 指定されたポリシーに対する静的優先度の妥当性を判定する。
+ * リアルタイム ポリシー (FIFO または RR) の場合は 1 から 99 の範囲、
+ * それ以外は 0 であれば 1 を返し、それ以外は 0 を返す。
+ */
 static int is_valid_static_priority(cplat_process_priority_linux_policy policy, int static_priority)
 {
     if ((policy == CPLAT_PROCESS_PRIORITY_LINUX_POLICY_FIFO) ||
@@ -161,9 +186,13 @@ static int is_valid_static_priority(cplat_process_priority_linux_policy policy, 
     {
         return (static_priority >= 1) && (static_priority <= 99);
     }
+
     return static_priority == 0;
 }
 
+/*
+ * システム コール経由で sched_setattr() を呼び出す。
+ */
 static long sched_setattr_call(pid_t os_thread_id, process_priority_sched_attr *attr)
 {
     #if defined(SYS_sched_setattr)
@@ -172,10 +201,14 @@ static long sched_setattr_call(pid_t os_thread_id, process_priority_sched_attr *
     (void)os_thread_id;
     (void)attr;
     errno = ENOSYS;
+
     return -1;
     #endif
 }
 
+/*
+ * システム コール経由で sched_getattr() を呼び出す。
+ */
 static long sched_getattr_call(pid_t os_thread_id, process_priority_sched_attr *attr, unsigned int size)
 {
     #if defined(SYS_sched_getattr)
@@ -185,10 +218,15 @@ static long sched_getattr_call(pid_t os_thread_id, process_priority_sched_attr *
     (void)attr;
     (void)size;
     errno = ENOSYS;
+
     return -1;
     #endif
 }
 
+/*
+ * CPU 使用率クランプ機能がシステムで利用可能かどうかを判定する。
+ * sysctl ファイルが存在すれば 1 を返し、存在しなければ 0 を返す。
+ */
 static int is_utilization_clamp_available(void)
 {
     return access(PROCESS_PRIORITY_UTILIZATION_CLAMP_SYSCTL, F_OK) == 0;
@@ -209,10 +247,12 @@ int cplat_process_priority_linux_set_policy(uint32_t thread_id, cplat_process_pr
         return cplat_internal_error_report_errno(detail_out, EINVAL);
     }
 
+    /* fork 時にポリシーを既定値へリセットするフラグを付与する。 */
     if (reset_on_fork != 0)
     {
         os_policy |= SCHED_RESET_ON_FORK;
     }
+
     memset(&param, 0, sizeof(param));
     param.sched_priority = static_priority;
 
@@ -220,6 +260,7 @@ int cplat_process_priority_linux_set_policy(uint32_t thread_id, cplat_process_pr
     {
         return cplat_internal_error_report_errno(detail_out, errno);
     }
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -245,11 +286,14 @@ int cplat_process_priority_linux_get_policy(uint32_t thread_id, cplat_process_pr
     {
         return cplat_internal_error_report_errno(detail_out, errno);
     }
+
     memset(&param, 0, sizeof(param));
+
     if (sched_getparam(os_thread_id, &param) != 0)
     {
         return cplat_internal_error_report_errno(detail_out, errno);
     }
+
     if (!from_os_policy(os_policy & ~SCHED_RESET_ON_FORK, &policy))
     {
         return cplat_internal_error_report_errno(detail_out, EOVERFLOW);
@@ -258,6 +302,7 @@ int cplat_process_priority_linux_get_policy(uint32_t thread_id, cplat_process_pr
     *policy_out = policy;
     *static_priority_out = param.sched_priority;
     *reset_on_fork_out = ((os_policy & SCHED_RESET_ON_FORK) != 0) ? 1 : 0;
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -276,6 +321,7 @@ int cplat_process_priority_linux_set_deadline(uint32_t thread_id,
         return cplat_internal_error_report_errno(detail_out, EINVAL);
     }
 
+    /* デッドライン スケジューリング用の最初の版の構造体サイズを設定する。 */
     memset(&attr, 0, sizeof(attr));
     attr.size = PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION0;
     attr.sched_policy = SCHED_DEADLINE;
@@ -288,6 +334,7 @@ int cplat_process_priority_linux_set_deadline(uint32_t thread_id,
     {
         return cplat_internal_error_report_errno(detail_out, errno);
     }
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -305,6 +352,7 @@ int cplat_process_priority_linux_get_deadline(uint32_t thread_id, cplat_process_
     }
 
     memset(&attr, 0, sizeof(attr));
+
     if (sched_getattr_call(os_thread_id, &attr, PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION0) != 0)
     {
         return cplat_internal_error_report_errno(detail_out, errno);
@@ -314,6 +362,7 @@ int cplat_process_priority_linux_get_deadline(uint32_t thread_id, cplat_process_
     deadline_out->runtime_nanoseconds = attr.sched_runtime;
     deadline_out->deadline_nanoseconds = attr.sched_deadline;
     deadline_out->period_nanoseconds = attr.sched_period;
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -323,8 +372,10 @@ int cplat_process_priority_linux_set_nice(uint32_t thread_id, int nice_value, cp
 {
     pid_t os_thread_id;
 
-    /* setpriority() は範囲外の値を黙って丸めるため、範囲を先に検査する。
-       see: https://man7.org/linux/man-pages/man2/setpriority.2.html */
+    /*
+     * setpriority() は範囲外の値を黙って丸めるため、範囲を先に検査する。
+     * see: https://man7.org/linux/man-pages/man2/setpriority.2.html
+     */
     if (!to_os_thread_id(thread_id, &os_thread_id) || (nice_value < -20) || (nice_value > 19))
     {
         return cplat_internal_error_report_errno(detail_out, EINVAL);
@@ -334,6 +385,7 @@ int cplat_process_priority_linux_set_nice(uint32_t thread_id, int nice_value, cp
     {
         return cplat_internal_error_report_errno(detail_out, errno);
     }
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -349,9 +401,11 @@ int cplat_process_priority_linux_get_nice(uint32_t thread_id, int *nice_value_ou
         return cplat_internal_error_report_errno(detail_out, EINVAL);
     }
 
-    /* getpriority() は正当な値として -1 を返すため、errno を 0 にしてから呼び出し、
-       errno の変化で失敗を判定する。
-       see: https://man7.org/linux/man-pages/man2/getpriority.2.html */
+    /*
+     * getpriority() は正当な値として -1 を返すため、errno を 0 にしてから呼び出し、
+     * errno の変化で失敗を判定する。
+     * see: https://man7.org/linux/man-pages/man2/getpriority.2.html
+     */
     errno = 0;
     nice_value = getpriority(PRIO_PROCESS, (id_t)os_thread_id);
     if ((nice_value == -1) && (errno != 0))
@@ -360,6 +414,7 @@ int cplat_process_priority_linux_get_nice(uint32_t thread_id, int *nice_value_ou
     }
 
     *nice_value_out = nice_value;
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -386,6 +441,7 @@ int cplat_process_priority_linux_set_io_priority(uint32_t thread_id, cplat_proce
         valid_level = 0;
         break;
     }
+
     if (!to_os_thread_id(thread_id, &os_thread_id) || !valid_level)
     {
         return cplat_internal_error_report_errno(detail_out, EINVAL);
@@ -440,6 +496,7 @@ int cplat_process_priority_linux_get_io_priority(uint32_t thread_id,
     /* Linux 6.5 以降はレベルの上位ビットに I/O 優先度のヒントを持つため、レベルだけを取り出す。 */
     *io_class_out = (cplat_process_priority_linux_io_class)os_class;
     *level_out = (int)(ioprio & PROCESS_PRIORITY_IOPRIO_LEVEL_MASK);
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -469,15 +526,19 @@ int cplat_process_priority_linux_set_utilization_clamp(uint32_t thread_id, uint3
     {
         const int errno_value = errno;
 
-        /* 2 番目の版の sched_attr を知らないカーネル (Linux 5.3 より前) は E2BIG を返す。
-           E2BIG は他の用途と共有されるため、共通写像ではなくここで非対応へ変換する。
-           see: https://man7.org/linux/man-pages/man2/sched_setattr.2.html */
+        /*
+         * 2 番目の版の sched_attr を知らないカーネル (Linux 5.3 より前) は E2BIG を返す。
+         * E2BIG は他の用途と共有されるため、共通写像ではなくここで非対応へ変換する。
+         * see: https://man7.org/linux/man-pages/man2/sched_setattr.2.html
+         */
         if (errno_value == E2BIG)
         {
             return cplat_internal_error_report_errno_as(detail_out, errno_value, CPLAT_ERR_UNSUPPORTED);
         }
+
         return cplat_internal_error_report_errno(detail_out, errno_value);
     }
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -500,6 +561,7 @@ int cplat_process_priority_linux_get_utilization_clamp(uint32_t thread_id, uint3
     }
 
     memset(&attr, 0, sizeof(attr));
+
     if (sched_getattr_call(os_thread_id, &attr, PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION1) != 0)
     {
         return cplat_internal_error_report_errno(detail_out, errno);
@@ -513,6 +575,7 @@ int cplat_process_priority_linux_get_utilization_clamp(uint32_t thread_id, uint3
 
     *minimum_out = attr.sched_util_min;
     *maximum_out = attr.sched_util_max;
+
     return cplat_internal_error_report_success(detail_out);
 }
 

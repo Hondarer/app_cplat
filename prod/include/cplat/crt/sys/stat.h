@@ -12,8 +12,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_CRT_SYS_STAT_H
 #define CPLAT_CRT_SYS_STAT_H
@@ -33,8 +35,10 @@
 
 #ifndef CPLAT_FILE_STAT_T_DEFINED
     #define CPLAT_FILE_STAT_T_DEFINED
-    /* OS / SDK が定義する stat 型の alias であるため、_t サフィックスを残す。
-     * see: コーディング規範「予約識別子の回避」の例外 */
+    /*
+     * OS / SDK が定義する stat 型の alias であるため、_t サフィックスを残す。
+     * 例外の正本は app/general/docs/coding-guideline.md の「予約識別子の回避」節である。
+     */
     #ifdef DOXYGEN
 /**
  *  @brief  プラットフォーム固有のファイル情報構造体

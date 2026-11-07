@@ -33,8 +33,10 @@ int cplat_ipv4_parse(const char *text, uint32_t *address_out)
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    /* inet_pton は形式が正しい場合にだけ 1 を返す。0 は形式不正、負値は AF 不正を表す。
-       see: https://pubs.opengroup.org/onlinepubs/9699919799/functions/inet_ntop.html */
+    /*
+     * inet_pton は形式が正しい場合にだけ 1 を返す。0 は形式不正、負値は AF 不正を表す。
+     * see: https://pubs.opengroup.org/onlinepubs/9699919799/functions/inet_ntop.html
+     */
     if (inet_pton(AF_INET, text, &parsed) != 1)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
@@ -62,8 +64,11 @@ int cplat_ipv4_resolve(const char *text, uint32_t *address_out, cplat_error *det
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
 
-    /* EAI_SYSTEM は errno に要因が入る。シグナルによる中断であれば再試行し、
-       利用者へ中断を観測させない。 */
+    /*
+     * EAI_SYSTEM は errno に要因が入る。シグナルによる中断であれば再試行し、
+     * 利用者へ中断を観測させない。
+     * see: https://man7.org/linux/man-pages/man3/getaddrinfo.3.html
+     */
     do
     {
         gai_result = getaddrinfo(text, NULL, &hints, &resolved);
@@ -75,6 +80,7 @@ int cplat_ipv4_resolve(const char *text, uint32_t *address_out, cplat_error *det
         {
             freeaddrinfo(resolved);
         }
+
         return cplat_internal_error_report_gai_error(detail_out, gai_result);
     }
 
@@ -83,7 +89,7 @@ int cplat_ipv4_resolve(const char *text, uint32_t *address_out, cplat_error *det
         return cplat_internal_error_report_gai_error(detail_out, EAI_NONAME);
     }
 
-    /* 複数アドレスが返された場合は先頭を採用する */
+    /* 複数アドレスが返された場合は先頭を採用する。 */
     sin = (const struct sockaddr_in *)(const void *)resolved->ai_addr;
     memcpy(address_out, &sin->sin_addr.s_addr, sizeof(*address_out));
 

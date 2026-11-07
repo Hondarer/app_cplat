@@ -8,6 +8,11 @@
  *******************************************************************************
  */
 
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
+
 #ifndef CPLAT_BASE_ERROR_INTERNAL_H
 #define CPLAT_BASE_ERROR_INTERNAL_H
 

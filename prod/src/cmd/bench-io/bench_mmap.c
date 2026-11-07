@@ -52,6 +52,7 @@ static int is_write_pattern(bench_pattern pattern)
     {
         return 1;
     }
+
     return 0;
 }
 
@@ -106,7 +107,7 @@ static int access_mapped(bench_context *ctx, const bench_case *item, cplat_mmap 
         ctx->checksum += accumulate(&records[ctx->order[0]]);
         break;
     case BENCH_PATTERN_OPEN_CLOSE:
-        ctx->checksum++;
+        ctx->checksum++; /* 読み取るレコードがなく、最適化による除去を防ぐ */
         break;
     case BENCH_PATTERN_COUNT:
     default:
@@ -121,6 +122,7 @@ static int access_mapped(bench_context *ctx, const bench_case *item, cplat_mmap 
             result = -1;
         }
     }
+
     return result;
 }
 
@@ -134,6 +136,8 @@ int bench_mmap_setup(bench_context *ctx, const bench_case *item)
     {
         return -1;
     }
+
+    /* BENCH_API_MMAP_ONCE 以外は反復の中でアタッチするため、ここでは状態を持たない。 */
     if (item->api != BENCH_API_MMAP_ONCE)
     {
         ctx->state = NULL;
@@ -145,12 +149,15 @@ int bench_mmap_setup(bench_context *ctx, const bench_case *item)
     {
         return -1;
     }
+
     if (cplat_mmap_attach(ctx->path, CPLAT_MMAP_ACCESS_READ_WRITE, ctx->file_size, &state->map, NULL) != CPLAT_OK)
     {
         cplat_free(state);
         return -1;
     }
+
     ctx->state = state;
+
     return 0;
 }
 
@@ -173,6 +180,7 @@ int bench_mmap_iterate(bench_context *ctx, const bench_case *item)
         return access_mapped(ctx, item, state->map);
     }
 
+    /* BENCH_API_MMAP_ONCE 以外は、この反復の中でアタッチしてからデタッチする。 */
     if (cplat_mmap_attach(ctx->path, CPLAT_MMAP_ACCESS_READ_WRITE, ctx->file_size, &map, NULL) != CPLAT_OK)
     {
         return -1;
@@ -181,6 +189,7 @@ int bench_mmap_iterate(bench_context *ctx, const bench_case *item)
     result = access_mapped(ctx, item, map);
 
     (void)cplat_mmap_detach(map, NULL);
+
     return result;
 }
 
@@ -194,11 +203,13 @@ void bench_mmap_teardown(bench_context *ctx, const bench_case *item)
     {
         return;
     }
+
     state = (mmap_state *)ctx->state;
     if (state == NULL)
     {
         return;
     }
+
     (void)cplat_mmap_detach(state->map, NULL);
     cplat_free(state);
     ctx->state = NULL;

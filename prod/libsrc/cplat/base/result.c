@@ -53,6 +53,11 @@ int cplat_internal_result_from_errno(const int errno_value)
     {
         result = CPLAT_ERR_BUFFER_TOO_SMALL;
     }
+
+/*
+ * Linux では ENOTSUP と EOPNOTSUPP が同値のことがある。
+ * 同値のときは同じ比較を重ねない。
+ */
 #if defined(ENOTSUP)
     else if (errno_value == ENOTSUP)
     {

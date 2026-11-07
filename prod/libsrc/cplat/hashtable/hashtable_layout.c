@@ -28,7 +28,9 @@ int hashtable_add_checked(size_t a, size_t b, size_t *sum_out)
     {
         return 1;
     }
+
     *sum_out = a + b;
+
     return 0;
 }
 
@@ -46,7 +48,9 @@ static int mul_checked(size_t a, size_t b, size_t *product_out)
     {
         return 1;
     }
+
     *product_out = a * b;
+
     return 0;
 }
 
@@ -56,6 +60,7 @@ int hashtable_align_up_checked(size_t offset, size_t alignment, size_t *aligned_
 {
     size_t rem = offset % alignment;
     size_t pad;
+
     if (rem == 0)
     {
         pad = 0;
@@ -77,7 +82,7 @@ int hashtable_align_up_checked(size_t offset, size_t alignment, size_t *aligned_
  *  SCOPE_TABLE では next + status の直後です。\n
  *  バイナリ キーは status 直後に有効長を置くため、SCOPE_TABLE では有効長の直後へ移します。
  *  SCOPE_RECORD では有効長が詰め物に収まるため、オフセットは変わりません。\n
- *  可変長キーは 16 バイトの永続 descriptor を置くため、uint64_t 境界へ切り上げます。
+ *  可変長キーは 16 [byte] の永続 descriptor を置くため、uint64_t 境界へ切り上げます。
  *  切り上げないと descriptor が境界から外れ、未整列アクセスになります。
  */
 static size_t entry_key_offset(const cplat_hashtable_config *config)
@@ -89,27 +94,36 @@ static size_t entry_key_offset(const cplat_hashtable_config *config)
     {
         off += (size_t)ENTRY_TIMESTAMP_PAD + sizeof(cplat_timespec) + sizeof(uint64_t);
     }
+
     if (config->key_type == CPLAT_HASHTABLE_FIELD_BINARY)
     {
         if (off < (size_t)ENTRY_BINARY_KEY_OFFSET)
         {
             off = (size_t)ENTRY_BINARY_KEY_OFFSET;
         }
+
         return off;
     }
+
     if (config->key_type != CPLAT_HASHTABLE_FIELD_VARIABLE_STRING)
     {
         return off;
     }
-    /* off は最大でも 40 のため、切り上げであふれません。 */
+
+    /* off は最大でも 40 [byte] のため、切り上げであふれない。 */
     rem = off % _Alignof(struct hashtable_string_ref);
     if (rem != 0)
     {
         off += _Alignof(struct hashtable_string_ref) - rem;
     }
+
     return off;
 }
 
+/*
+ * 1 エントリ内でキーが占めるスロットのバイト数を返す。
+ * 可変長キーの場合は参照 descriptor のサイズ、固定長キーの場合は key_size を返す。
+ */
 static size_t key_slot_size(const cplat_hashtable_config *config)
 {
     if (hashtable_field_is_variable(config->key_type) != 0)
@@ -138,6 +152,7 @@ static int value_stride_checked(const cplat_hashtable_config *config, size_t *st
         *stride_out = config->value_size;
         return 0;
     }
+
     return hashtable_align_up_checked(config->value_size, config->value_align, stride_out);
 }
 
@@ -149,10 +164,12 @@ size_t hashtable_data_region_align(const cplat_hashtable_config *config)
     {
         return _Alignof(struct hashtable_string_ref);
     }
+
     if (config->value_align == 0)
     {
         return 1u;
     }
+
     return config->value_align;
 }
 
@@ -173,6 +190,7 @@ static int entry_stride_checked(const cplat_hashtable_config *config, size_t *st
     {
         return 1;
     }
+
     return hashtable_align_up_checked(raw, _Alignof(uint64_t), stride_out);
 }
 
@@ -193,10 +211,12 @@ static int hashtable_free_list_region_size(const cplat_hashtable_config *config,
     {
         return -1;
     }
+
     if (mul_checked(count, sizeof(struct hashtable_free_block), size_out) != 0)
     {
         return -1;
     }
+
     return 0;
 }
 
@@ -211,25 +231,31 @@ int hashtable_mgmt_layout(const cplat_hashtable_config *config, size_t *off_buck
 
     /* ヘッダー サイズは uint64_t 境界の倍数 (構造体定義直後の _Static_assert で保証)。整列不要。 */
 
-    /* あふれ検査より前に仮値で初期化し、早期 return でも呼び出し側へ未初期化値を渡さない。
-       呼び出し側の大半は戻り値を捨てるため、この関数の契約として out パラメーターは
-       常に定義済みの値を持つ必要がある。 */
+    /*
+     * あふれ検査より前に仮値で初期化し、早期 return でも呼び出し側へ未初期化値を渡さない。
+     * 呼び出し側の大半は戻り値を捨てるため、この関数の契約として out パラメーターは
+     * 常に定義済みの値を持つ必要がある。
+     */
     if (off_bucket_head != NULL)
     {
         *off_bucket_head = offset;
     }
+
     if (off_entries != NULL)
     {
         *off_entries = offset;
     }
+
     if (mgmt_size_out != NULL)
     {
         *mgmt_size_out = offset;
     }
+
     if (mul_checked(config->capacity, sizeof(uint64_t), &region_size) != 0)
     {
         return -1;
     }
+
     if (hashtable_add_checked(offset, region_size, &offset) != 0)
     {
         return -1;
@@ -246,14 +272,17 @@ int hashtable_mgmt_layout(const cplat_hashtable_config *config, size_t *off_buck
     {
         *off_entries = offset;
     }
+
     if (mul_checked(config->capacity, entry_stride, &region_size) != 0)
     {
         return -1;
     }
+
     if (hashtable_add_checked(offset, region_size, &offset) != 0)
     {
         return -1;
     }
+
     /* 空きリストはキー ストレージの直前に置く。キー ストレージは管理領域の末尾のままとする。 */
     if (hashtable_field_is_variable(config->key_type) != 0)
     {
@@ -261,6 +290,7 @@ int hashtable_mgmt_layout(const cplat_hashtable_config *config, size_t *off_buck
         {
             return -1;
         }
+
         if (hashtable_add_checked(offset, region_size, &offset) != 0)
         {
             return -1;
@@ -276,6 +306,7 @@ int hashtable_mgmt_layout(const cplat_hashtable_config *config, size_t *off_buck
     {
         *mgmt_size_out = offset;
     }
+
     return 0;
 }
 
@@ -294,29 +325,36 @@ int hashtable_data_region_size(const cplat_hashtable_config *config, size_t *dat
         {
             return -1;
         }
+
         if (mul_checked(config->capacity, stride, data_size_out) != 0)
         {
             return -1;
         }
+
         return 0;
     }
+
     if (mul_checked(config->capacity, sizeof(struct hashtable_string_ref), &size) != 0)
     {
         return -1;
     }
+
     /* 空きリストは値ストレージの直前に置く。値ストレージはデータ領域の末尾のままとする。 */
     if (hashtable_free_list_region_size(config, &free_list_size) != 0)
     {
         return -1;
     }
+
     if (hashtable_add_checked(size, free_list_size, &size) != 0)
     {
         return -1;
     }
+
     if (hashtable_add_checked(size, config->value_storage_size, data_size_out) != 0)
     {
         return -1;
     }
+
     return 0;
 }
 
@@ -326,8 +364,10 @@ void hashtable_refresh_layout(cplat_hashtable *ht)
 {
     const cplat_hashtable_config *config = &ht->hdr->config;
 
-    /* 構築済みテーブルの設定はあふれないため、算出は失敗しない。
-       算出前に 0 で初期化し、万一の失敗時も未初期化値を残さない。 */
+    /*
+     * 構築済みテーブルの設定はあふれないため、算出は失敗しない。
+     * 算出前に 0 で初期化し、万一の失敗時も未初期化値を残さない。
+     */
     ht->off_bucket_head = 0;
     ht->off_entries = 0;
     ht->mgmt_size = 0;

@@ -41,9 +41,11 @@ static void startup_once(void)
     startup_result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
     if (startup_result != 0)
     {
-        /* WSAStartup() は失敗理由を戻り値で返す。この時点では WSAGetLastError() を
-           呼び出せないため、戻り値をそのまま記録する。
-           see: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsastartup */
+        /*
+         * WSAStartup() は失敗理由を戻り値で返す。この時点では WSAGetLastError() を
+         * 呼び出せないため、戻り値をそのまま記録する。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsastartup
+         */
         s_startup_error = (unsigned long)startup_result;
         return;
     }
@@ -163,7 +165,7 @@ static int set_int_option(cplat_socket sock, int level, int optname, int value, 
  *  @brief          単一のソケットに対して WSAPoll による待機を行います。
  *  @param[in]      sock       対象のソケット。
  *  @param[in]      events     待機するイベント。
- *  @param[in]      timeout_ms タイムアウト時間 (ミリ秒)。
+ *  @param[in]      timeout_ms タイムアウト時間 [ms]。
  *  @param[out]     ready_out  条件が成立した場合に 1、タイムアウトした場合に 0 を格納します。
  *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
  *  @return         共通結果コードを返します。
@@ -412,8 +414,10 @@ int cplat_socket_set_nonblocking(const cplat_socket sock, const int enable, cpla
         mode = 1UL;
     }
 
-    /* Windows には fcntl(F_SETFL) 相当がないため、FIONBIO で切り替える。
-       see: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-ioctlsocket */
+    /*
+     * Windows には fcntl(F_SETFL) 相当がないため、FIONBIO で切り替える。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-ioctlsocket
+     */
     if (ioctlsocket((SOCKET)sock, (long)FIONBIO, &mode) == SOCKET_ERROR)
     {
         return report_last_winsock_error(detail_out);
@@ -676,10 +680,12 @@ int cplat_socket_send_all(const cplat_socket sock, const void *buf, const size_t
         {
             return report_last_winsock_error(detail_out);
         }
+
         if (transferred == 0)
         {
             return cplat_internal_error_report_errno_as(detail_out, EIO, CPLAT_ERR_UNKNOWN);
         }
+
         /* OS が要求量を超える転送量を返すことはないが、残量の計算を守るため異常として扱う。 */
         if ((size_t)transferred > remaining)
         {
@@ -713,10 +719,12 @@ int cplat_socket_recv_all(const cplat_socket sock, void *buf, const size_t len, 
         {
             return report_last_winsock_error(detail_out);
         }
+
         if (transferred == 0)
         {
             return cplat_internal_error_report_errno_as(detail_out, 0, CPLAT_ERR_EOF);
         }
+
         /* OS が要求量を超える転送量を返すことはないが、残量の計算を守るため異常として扱う。 */
         if ((size_t)transferred > remaining)
         {
@@ -758,9 +766,11 @@ int cplat_socket_wait_readable_multi(const cplat_socket *socks, const size_t cou
         return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
     }
 
+    /* 有効なソケットを待機対象の配列へ集約し、出力配列を初期化する。 */
     for (index = 0U; index < count; ++index)
     {
         ready_out[index] = 0U;
+
         if (socks[index] != CPLAT_INVALID_SOCKET)
         {
             poll_fds[valid_count].fd = (SOCKET)socks[index];
@@ -772,12 +782,15 @@ int cplat_socket_wait_readable_multi(const cplat_socket *socks, const size_t cou
 
     if (valid_count == 0U)
     {
-        /* 有効なソケットがない場合も timeout_ms だけ待つ。即座に返すと呼び出し側の
-           ポーリング ループが待機なしで回り続けるため。 */
+        /*
+         * 有効なソケットがない場合も timeout_ms だけ待つ。即座に返すと呼び出し側の
+         * ポーリング ループが待機なしで回り続けるためである。
+         */
         if (timeout_ms > 0)
         {
             cplat_sleep_ms(timeout_ms);
         }
+
         return cplat_internal_error_report_success(detail_out);
     }
 
@@ -788,6 +801,8 @@ int cplat_socket_wait_readable_multi(const cplat_socket *socks, const size_t cou
     }
 
     valid_count = 0U;
+
+    /* 待機結果を走査し、イベントが検出されたソケットのフラグを立てる。 */
     for (index = 0U; index < count; ++index)
     {
         if (socks[index] != CPLAT_INVALID_SOCKET)
@@ -798,6 +813,7 @@ int cplat_socket_wait_readable_multi(const cplat_socket *socks, const size_t cou
             {
                 ready_out[index] = 1U;
             }
+
             ++valid_count;
         }
     }
@@ -814,8 +830,10 @@ int cplat_socket_shutdown_receive(cplat_socket *sock_inout, cplat_error *detail_
         return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
     }
 
-    /* Windows は受信方向の半クローズでは待機中の recv が解除されないため、
-       ソケットを閉じて呼び出し側へ無効値を書き戻す。 */
+    /*
+     * Windows は受信方向の半クローズでは待機中の recv が解除されないため、
+     * ソケットを閉じて呼び出し側へ無効値を書き戻す。
+     */
     if (closesocket((SOCKET)*sock_inout) == SOCKET_ERROR)
     {
         return report_last_winsock_error(detail_out);

@@ -17,7 +17,7 @@
  */
 static int trace_timestamp_is_valid(const cplat_timespec *timestamp)
 {
-    return timestamp != NULL && timestamp->tv_nsec >= 0 && timestamp->tv_nsec < 1000000000;
+    return timestamp != NULL && timestamp->tv_nsec >= 0 && timestamp->tv_nsec < 1000000000; /* tv_nsec は 1 [s] 未満 */
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -29,11 +29,16 @@ int cplat_internal_trace_resolve_timestamp(const cplat_timespec *timestamp, cpla
     {
         return -1;
     }
+
     if (fallback_used != NULL)
     {
         *fallback_used = 0;
     }
 
+    /*
+     * 指定されたタイムスタンプが有効であれば採用する。
+     * 無効な場合は代替フラグを立てて現在時刻による解決へフォールバックする。
+     */
     if (timestamp != NULL)
     {
         if (trace_timestamp_is_valid(timestamp))
@@ -41,17 +46,21 @@ int cplat_internal_trace_resolve_timestamp(const cplat_timespec *timestamp, cpla
             *resolved = *timestamp;
             return 0;
         }
+
         if (fallback_used != NULL)
         {
             *fallback_used = 1;
         }
     }
 
+    /* タイムスタンプが未指定または無効値の場合、現在時刻を取得して解決する。 */
     cplat_clock_get_realtime(resolved);
+
     if (trace_timestamp_is_valid(resolved))
     {
         return 0;
     }
+
     return -1;
 }
 
@@ -63,6 +72,7 @@ int cplat_internal_trace_format_local_timestamp(char *buf, const size_t buf_size
     {
         return -1;
     }
+
     return cplat_clock_format_realtime_iso8601_local(buf, buf_size, timestamp);
 }
 
@@ -72,7 +82,10 @@ char cplat_internal_trace_level_char(const cplat_trace_level level)
 {
     switch (level)
     {
-    /* 強制出力かどうかは絞り込みの結果であり、記録の重大度ではないため、表記を分けない */
+    /*
+     * 強制出力かどうかは絞り込みの結果であり、記録の重大度ではないため、表記を分けない。
+     * 正本は app/cplat/docs/functional-spec/trace.md の「詳細度によらない出力」節である。
+     */
     case CPLAT_TRACE_LEVEL_FORCE_CRITICAL:
     case CPLAT_TRACE_LEVEL_CRITICAL:
         return 'C';

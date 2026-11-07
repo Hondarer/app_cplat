@@ -16,8 +16,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_SYNC_H
 #define CPLAT_SYNC_H
@@ -41,7 +43,7 @@ extern "C"
 #endif /* __cplusplus */
 
 #define CPLAT_SYNC_WAIT_FOREVER INT_MAX /**< タイムアウトなしで待機する (INT_MAX)。 */
-#define CPLAT_SYNC_NO_WAIT      0       /**< 即時リターン (タイムアウト 0 ms)。 */
+#define CPLAT_SYNC_NO_WAIT      0       /**< 即時リターン (タイムアウト 0 [ms])。 */
 
     /** @brief プロセス横断同期のバックエンド種別。 */
     typedef enum cplat_interprocess_sync_backend
@@ -58,6 +60,7 @@ extern "C"
 
     /** スレッド関数ポインター型。 */
     typedef void (*cplat_thread_fn)(void *);
+
     /** call_once で 1 回だけ呼び出される関数ポインター型。 */
     typedef void (*cplat_once_fn)(void);
 
@@ -80,7 +83,7 @@ extern "C"
     /**
      *  @brief          ミューテックスをロックします。
      *  @param[in]      mtx        対象のミューテックス。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms タイムアウト (ms)。@ref CPLAT_SYNC_WAIT_FOREVER または
+     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_SYNC_WAIT_FOREVER または
      *                             @ref CPLAT_SYNC_NO_WAIT も指定可能です。
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、
@@ -137,7 +140,7 @@ extern "C"
      *  @brief          条件変数を待機します (@p mtx を atomically ロック解除後に待機し、シグナル受信後に再ロック)。
      *  @param[in]      cv         対象の条件変数。NULL を渡してはなりません。
      *  @param[in]      mtx        待機中にロック解除するミューテックス。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms タイムアウト (ms)。@ref CPLAT_SYNC_WAIT_FOREVER または
+     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_SYNC_WAIT_FOREVER または
      *                             @ref CPLAT_SYNC_NO_WAIT も指定可能です。
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、
@@ -193,7 +196,7 @@ extern "C"
     /**
      *  @brief          共有 (読み取り) ロックを取得します。
      *  @param[in]      rwlock     対象の読み書きロック。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms タイムアウト (ms)。@ref CPLAT_SYNC_WAIT_FOREVER または
+     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_SYNC_WAIT_FOREVER または
      *                             @ref CPLAT_SYNC_NO_WAIT も指定可能です。
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、
@@ -224,7 +227,7 @@ extern "C"
     /**
      *  @brief          排他 (書き込み) ロックを取得します。
      *  @param[in]      rwlock     対象の読み書きロック。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms タイムアウト (ms)。@ref CPLAT_SYNC_WAIT_FOREVER または
+     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_SYNC_WAIT_FOREVER または
      *                             @ref CPLAT_SYNC_NO_WAIT も指定可能です。
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、
@@ -304,7 +307,7 @@ extern "C"
     /**
      *  @brief          スレッドの終了を待機します。
      *  @param[in]      thread     対象のスレッド ハンドル。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms タイムアウト (ms)。@ref CPLAT_SYNC_WAIT_FOREVER または
+     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_SYNC_WAIT_FOREVER または
      *                             @ref CPLAT_SYNC_NO_WAIT も指定可能です。
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、
@@ -361,7 +364,7 @@ extern "C"
     /**
      *  @brief          エクスポートされたディスクリプタからプロセス横断ミューテックスをインポートします。
      *  @param[in]      descriptor       インポートするディスクリプタ データ。NULL を渡してはなりません。
-     *  @param[in]      descriptor_size  @p descriptor のサイズ (バイト)。
+     *  @param[in]      descriptor_size  @p descriptor のサイズ [byte]。
      *  @param[out]     lock             インポートしたロック ハンドルの格納先。NULL を渡してはなりません。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_CORRUPT_DESCRIPTOR 、@ref CPLAT_ERR_VERSION_MISMATCH 、
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
@@ -389,7 +392,7 @@ extern "C"
     /**
      *  @brief          プロセス横断ミューテックスをロックします。
      *  @param[in]      lock       対象のロック。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms タイムアウト (ms)。@ref CPLAT_SYNC_WAIT_FOREVER または
+     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_SYNC_WAIT_FOREVER または
      *                             @ref CPLAT_SYNC_NO_WAIT も指定可能です。
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、
@@ -446,7 +449,7 @@ extern "C"
     /**
      *  @brief          エクスポートされたディスクリプタからプロセス横断読み書きロックをインポートします。
      *  @param[in]      descriptor       インポートするディスクリプタ データ。NULL を渡してはなりません。
-     *  @param[in]      descriptor_size  @p descriptor のサイズ (バイト)。
+     *  @param[in]      descriptor_size  @p descriptor のサイズ [byte]。
      *  @param[out]     lock             インポートしたロック ハンドルの格納先。NULL を渡してはなりません。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_CORRUPT_DESCRIPTOR 、@ref CPLAT_ERR_VERSION_MISMATCH 、
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
@@ -475,7 +478,7 @@ extern "C"
     /**
      *  @brief          プロセス横断共有 (読み取り) ロックを取得します。
      *  @param[in]      lock       対象のロック。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms タイムアウト (ms)。@ref CPLAT_SYNC_WAIT_FOREVER または
+     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_SYNC_WAIT_FOREVER または
      *                             @ref CPLAT_SYNC_NO_WAIT も指定可能です。
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、
@@ -500,7 +503,7 @@ extern "C"
     /**
      *  @brief          プロセス横断排他 (書き込み) ロックを取得します。
      *  @param[in]      lock       対象のロック。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms タイムアウト (ms)。@ref CPLAT_SYNC_WAIT_FOREVER または
+     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_SYNC_WAIT_FOREVER または
      *                             @ref CPLAT_SYNC_NO_WAIT も指定可能です。
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、
@@ -557,7 +560,7 @@ extern "C"
 
     /**
      *  @brief      指定時間だけ現在のスレッドをスリープします。
-     *  @param[in]  ms  スリープする時間 (ms)。0 以下の値を渡した場合は即時リターンします (no-op)。
+     *  @param[in]  ms  スリープする時間 [ms]。0 以下の値を渡した場合は即時リターンします (no-op)。
      *
      *  @note           Linux では、待機中にシグナルを受信した場合も、
      *                  残り時間を再計算して待機を継続するため、規定時間が経過するまで待機します。

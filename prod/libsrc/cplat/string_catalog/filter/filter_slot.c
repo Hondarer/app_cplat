@@ -248,6 +248,7 @@ static bool normalize_arguments(const cplat_string_catalog_entry *entry,
             return false;
         }
     }
+
     return true;
 }
 
@@ -256,16 +257,19 @@ static number number_from_signed(const int64_t value)
     number result;
 
     memset(&result, 0, sizeof(result));
+
     if (value < 0)
     {
         result.is_negative = true;
-        /* INT64_MIN でも回り込まないよう、1 を足してから符号を反転する */
+
+        /* INT64_MIN でも回り込まないよう、1 を足してから符号を反転する。 */
         result.magnitude = (uint64_t)(-(value + 1)) + 1U;
     }
     else
     {
         result.magnitude = (uint64_t)value;
     }
+
     return result;
 }
 
@@ -275,6 +279,7 @@ static number number_from_unsigned(const uint64_t value)
 
     memset(&result, 0, sizeof(result));
     result.magnitude = value;
+
     return result;
 }
 
@@ -285,6 +290,7 @@ static number number_from_real(const double value)
     memset(&result, 0, sizeof(result));
     result.is_real = true;
     result.real = value;
+
     return result;
 }
 
@@ -294,10 +300,12 @@ static double real_of_number(const number *value)
     {
         return value->real;
     }
+
     if (value->is_negative)
     {
         return -(double)value->magnitude;
     }
+
     return (double)value->magnitude;
 }
 
@@ -316,14 +324,17 @@ static int compare_numbers(const number *left, const number *right)
         {
             return ORDER_UNORDERED;
         }
+
         if (left_real < right_real)
         {
             return -1;
         }
+
         if (left_real > right_real)
         {
             return 1;
         }
+
         return 0;
     }
 
@@ -333,20 +344,29 @@ static int compare_numbers(const number *left, const number *right)
         {
             return -1;
         }
+
         return 1;
     }
+
     if (left->magnitude == right->magnitude)
     {
         return 0;
     }
-    /* 負どうしでは、絶対値の大きい方が小さい */
+
+    /* 負どうしでは、絶対値の大きい方が小さい。 */
     if ((left->magnitude < right->magnitude) != left->is_negative)
     {
         return -1;
     }
+
     return 1;
 }
 
+/*
+ * 比較結果が演算子を満たす場合に true を返す。
+ * NaN を含む比較は ORDER_UNORDERED になり、!= だけが真になる。
+ * 規則は app/cplat/docs/proposals/string-catalog-filter-design.md の「引数のデータ型と比較規則」節に記録されている。
+ */
 static bool is_order_accepted(const uint8_t operator_kind, const int order)
 {
     switch (operator_kind)
@@ -378,8 +398,10 @@ static number number_from_constant(const evaluation_context *context, const stri
         return number_from_real(constant->real);
     case STRING_CATALOG_FILTER_CONSTANT_KIND_IDENTIFIER:
         return number_from_signed(context->identifier_values[constant->header.slot]);
+
     default:
     {
+        /* 整数と文字は、絶対値と符号のフラグから作る。 */
         number result = number_from_unsigned(constant->magnitude);
         result.is_negative = ((constant->header.flags & STRING_CATALOG_FILTER_CONSTANT_FLAG_NEGATIVE) != 0U);
         return result;
@@ -395,6 +417,7 @@ static unsigned char to_lower_ascii(const unsigned char character)
     {
         return (unsigned char)(character + ('a' - 'A'));
     }
+
     return character;
 }
 
@@ -404,6 +427,7 @@ static bool equals_bytes(const char *left, const char *right, const size_t lengt
     {
         return memcmp(left, right, length) == 0;
     }
+
     for (size_t index = 0; index < length; index++)
     {
         if (to_lower_ascii((unsigned char)left[index]) != to_lower_ascii((unsigned char)right[index]))
@@ -411,6 +435,7 @@ static bool equals_bytes(const char *left, const char *right, const size_t lengt
             return false;
         }
     }
+
     return true;
 }
 
@@ -418,6 +443,11 @@ static bool match_string(const uint8_t operator_kind, const char *subject, const
                          const size_t pattern_length)
 {
     const size_t subject_length = strlen(subject);
+
+    /*
+     * starts_with、ends_with、contains の大文字と小文字を区別しない版は、STARTS_WITH_I 以降の値である。
+     * 区別する版は、それより前の値である。
+     */
     const bool ignores_case = (operator_kind >= (uint8_t)STRING_CATALOG_FILTER_OPERATOR_STARTS_WITH_I);
 
     switch (operator_kind)
@@ -447,6 +477,7 @@ static bool match_string(const uint8_t operator_kind, const char *subject, const
                 return true;
             }
         }
+
         return false;
     default:
         return false;
@@ -469,11 +500,13 @@ static bool match_pattern(const cplat_regex *regex, const char *subject)
     {
         return false;
     }
+
     if (cplat_regex_search(regex, subject, subject_length, 0U, CPLAT_REGEX_MATCH_DEFAULT, NULL, 0U, &is_found, NULL) !=
         CPLAT_OK)
     {
         return false;
     }
+
     return is_found != 0;
 }
 
@@ -486,6 +519,10 @@ static truth_value evaluate_string(const evaluation_context *context,
 {
     string_catalog_filter_constant constant;
 
+    /*
+     * 比較対象を順に評価し、1 つでも成立すれば真とする。
+     * 定数は検証済みであり、読み取りは失敗しない。
+     */
     for (uint16_t index = 0; index < instruction->operand_count; index++)
     {
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
@@ -493,21 +530,23 @@ static truth_value evaluate_string(const evaluation_context *context,
 
         if (constant.header.kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_NULL)
         {
-            /* null との比較は == と != だけが成立し得る */
+            /* null との比較は == と != だけが成立し得る。 */
             if ((subject == NULL) == (instruction->operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_EQUAL))
             {
                 return TRUTH_VALUE_TRUE;
             }
+
             return TRUTH_VALUE_FALSE;
         }
 
         if (subject == NULL)
         {
-            /* NULL は、どの文字列とも等しくない。文字列の判定演算はすべて偽とする */
+            /* NULL は、どの文字列とも等しくない。文字列の判定演算はすべて偽とする。 */
             if (instruction->operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_NOT_EQUAL)
             {
                 return TRUTH_VALUE_TRUE;
             }
+
             return TRUTH_VALUE_FALSE;
         }
 
@@ -523,6 +562,7 @@ static truth_value evaluate_string(const evaluation_context *context,
             return TRUTH_VALUE_TRUE;
         }
     }
+
     return TRUTH_VALUE_FALSE;
 }
 
@@ -533,6 +573,10 @@ static truth_value evaluate_number(const evaluation_context *context,
 {
     string_catalog_filter_constant constant;
 
+    /*
+     * between は下限以上かつ上限以下である。順序が定まらない比較は不一致である。
+     * 定数は検証済みであり、読み取りは失敗しない。
+     */
     if (instruction->operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_BETWEEN)
     {
         number lower;
@@ -552,9 +596,11 @@ static truth_value evaluate_number(const evaluation_context *context,
         {
             return TRUTH_VALUE_TRUE;
         }
+
         return TRUTH_VALUE_FALSE;
     }
 
+    /* いずれかの定数が比較を満たせば真とする。定数は検証済みであり、読み取りは失敗しない。 */
     for (uint16_t index = 0; index < instruction->operand_count; index++)
     {
         number literal;
@@ -568,6 +614,7 @@ static truth_value evaluate_number(const evaluation_context *context,
             return TRUTH_VALUE_TRUE;
         }
     }
+
     return TRUTH_VALUE_FALSE;
 }
 
@@ -599,6 +646,7 @@ static truth_value evaluate_predicate(const evaluation_context *context,
     int argument_index = -1;
     argument_class kind_class;
 
+    /* フィールドの種別に応じて、比較する対象を決める。 */
     switch (instruction->field)
     {
     case STRING_CATALOG_FILTER_FIELD_KEY:
@@ -616,7 +664,11 @@ static truth_value evaluate_predicate(const evaluation_context *context,
 
     case STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME:
         argument_index = context->argument_map[instruction->argument];
-        /* 比較対象は引数名の定数の直後から並ぶ */
+
+        /*
+         * 比較対象は引数名の定数の直後から並ぶ。
+         * 定数は検証済みであり、読み取りは失敗しない。
+         */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
         offset = constant.next_offset;
         break;
@@ -633,34 +685,40 @@ static truth_value evaluate_predicate(const evaluation_context *context,
         return TRUTH_VALUE_FALSE;
     }
 
+    /* has は、引数が項目に定義されているかどうかだけを判定する。 */
     if (instruction->operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_HAS)
     {
         if (argument_index >= 0)
         {
             return TRUTH_VALUE_TRUE;
         }
+
         return TRUTH_VALUE_FALSE;
     }
 
-    /* 項目に対応する引数がない場合、その引数を参照する比較は偽 */
+    /* 項目に対応する引数がない場合、その引数を参照する比較は偽である。 */
     if (argument_index < 0)
     {
         return TRUTH_VALUE_FALSE;
     }
 
     kind_class = class_of_argument(entry->arguments[argument_index].kind);
+
+    /* 定数は検証済みであり、読み取りは失敗しない。 */
     (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
+
     if (!is_argument_comparable(kind_class, constant.header.kind))
     {
         return TRUTH_VALUE_FALSE;
     }
 
-    /* 事前計算では、引数の値に依存する判定要素を不定とする */
+    /* 事前計算では、引数の値に依存する判定要素を不定とする。 */
     if (context->values == NULL)
     {
         return TRUTH_VALUE_UNKNOWN;
     }
 
+    /* 型区分に応じて、引数の値を比較する。 */
     switch (kind_class)
     {
     case ARGUMENT_CLASS_STRING:
@@ -671,12 +729,16 @@ static truth_value evaluate_predicate(const evaluation_context *context,
         {
             const bool is_null = (context->values[argument_index].value.unsigned_value == 0U);
 
+            /* null との比較は == と != だけが成立し得る。 */
             if (is_null == (instruction->operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_EQUAL))
             {
                 return TRUTH_VALUE_TRUE;
             }
+
             return TRUTH_VALUE_FALSE;
         }
+
+        /* NULL 以外は、アドレスを符号なし整数として比較する。 */
         {
             const number subject = number_from_unsigned(context->values[argument_index].value.unsigned_value);
             return evaluate_number(context, instruction, offset, &subject);
@@ -709,10 +771,12 @@ static truth_value truth_not(const truth_value value)
     {
         return TRUTH_VALUE_FALSE;
     }
+
     if (value == TRUTH_VALUE_FALSE)
     {
         return TRUTH_VALUE_TRUE;
     }
+
     return TRUTH_VALUE_UNKNOWN;
 }
 
@@ -722,10 +786,12 @@ static truth_value truth_and(const truth_value left, const truth_value right)
     {
         return TRUTH_VALUE_FALSE;
     }
+
     if ((left == TRUTH_VALUE_TRUE) && (right == TRUTH_VALUE_TRUE))
     {
         return TRUTH_VALUE_TRUE;
     }
+
     return TRUTH_VALUE_UNKNOWN;
 }
 
@@ -735,10 +801,12 @@ static truth_value truth_or(const truth_value left, const truth_value right)
     {
         return TRUTH_VALUE_TRUE;
     }
+
     if ((left == TRUTH_VALUE_FALSE) && (right == TRUTH_VALUE_FALSE))
     {
         return TRUTH_VALUE_FALSE;
     }
+
     return TRUTH_VALUE_UNKNOWN;
 }
 
@@ -801,6 +869,7 @@ static truth_value evaluate_line(const evaluation_context *context, const bool h
     }
 
     CPLAT_ASSERT(depth == 1U);
+
     return (truth_value)stack[0];
 }
 
@@ -849,6 +918,7 @@ static void dispose_patterns(const cplat_string_catalog_filter_slot *slot, filte
     {
         return;
     }
+
     for (size_t index = 0; index < count; index++)
     {
         if (plane->patterns[index] != NULL)
@@ -879,7 +949,8 @@ static bool allocate_plane(const cplat_string_catalog_filter_slot *slot, filter_
 
     memset(plane, 0, sizeof(*plane));
     plane->image = (unsigned char *)malloc(slot->image_size);
-    /* 項目数が 0 のカタログでも確保に失敗と区別できるよう、要素数は 1 以上とする */
+
+    /* 項目数が 0 のカタログでも確保に失敗と区別できるよう、要素数は 1 以上とする。 */
     plane->entry_states = (uint8_t *)calloc(slot->entry_count + 1U, sizeof(*plane->entry_states));
     plane->entry_dependent_lines =
         (uint64_t *)calloc((slot->entry_count + 1U) * slot->line_word_count, sizeof(*plane->entry_dependent_lines));
@@ -901,6 +972,7 @@ static bool allocate_plane(const cplat_string_catalog_filter_slot *slot, filter_
         free_plane(slot, plane);
         return false;
     }
+
     return true;
 }
 
@@ -923,6 +995,7 @@ static bool is_key_name_table_valid(const cplat_string_catalog *catalog,
         {
             return false;
         }
+
         for (size_t other = 0; other < index; other++)
         {
             if (strcmp(key_names[index].name, key_names[other].name) == 0)
@@ -931,6 +1004,7 @@ static bool is_key_name_table_valid(const cplat_string_catalog *catalog,
             }
         }
     }
+
     return true;
 }
 
@@ -945,11 +1019,13 @@ static bool is_category_names_valid(const cplat_string_catalog_filter_category_n
     {
         return true;
     }
+
     if ((category_names->names == NULL) || (category_names->count == 0U) ||
         (category_names->subject_japanese == NULL) || (category_names->subject_neutral == NULL))
     {
         return false;
     }
+
     for (size_t index = 0; index < category_names->count; index++)
     {
         if (category_names->names[index] == NULL)
@@ -957,6 +1033,7 @@ static bool is_category_names_valid(const cplat_string_catalog_filter_category_n
             return false;
         }
     }
+
     return true;
 }
 
@@ -970,6 +1047,7 @@ static const cplat_string_catalog_filter_key_name *find_key_name(const cplat_str
             return &slot->key_names[index];
         }
     }
+
     return NULL;
 }
 
@@ -1006,7 +1084,7 @@ resolve_category_constant(const cplat_string_catalog_filter_category_names *name
         return CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE;
 
     case STRING_CATALOG_FILTER_CONSTANT_KIND_FLOAT:
-        /* 分類値は整数のため、整数でない値は範囲外として扱う */
+        /* 分類値は整数のため、整数でない値は範囲外として扱う。 */
         if ((constant->real < 0.0) || (constant->real >= (double)names->count) ||
             (constant->real != floor(constant->real)))
         {
@@ -1015,7 +1093,7 @@ resolve_category_constant(const cplat_string_catalog_filter_category_names *name
         return CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE;
 
     default:
-        /* 文字列と null は、コンパイルの時点で分類値との比較から除かれている */
+        /* 文字列と null は、コンパイルの時点で分類値との比較から除かれている。 */
         return CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE;
     }
 }
@@ -1043,6 +1121,7 @@ resolve_category_predicates(const cplat_string_catalog_filter_slot *slot, const 
         uint32_t offset;
 
         string_catalog_filter_read_instruction(record, index, &instruction);
+
         if ((instruction.opcode != (uint8_t)STRING_CATALOG_FILTER_OPCODE_PREDICATE) ||
             (instruction.field != (uint8_t)STRING_CATALOG_FILTER_FIELD_CATEGORY))
         {
@@ -1050,6 +1129,8 @@ resolve_category_predicates(const cplat_string_catalog_filter_slot *slot, const 
         }
 
         offset = instruction.operand;
+
+        /* 定数は検証済みであり、読み取りは失敗しない。 */
         for (uint16_t operand = 0; operand < instruction.operand_count; operand++)
         {
             cplat_string_catalog_filter_line_error error;
@@ -1064,6 +1145,7 @@ resolve_category_predicates(const cplat_string_catalog_filter_slot *slot, const 
             }
         }
     }
+
     return CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE;
 }
 
@@ -1091,11 +1173,13 @@ static cplat_string_catalog_filter_line_error compile_line_patterns(const cplat_
     string_catalog_filter_constant constant;
 
     string_catalog_filter_read_record_header(record, &header);
+
     for (uint32_t index = 0; index < header.instruction_count; index++)
     {
         uint32_t offset;
 
         string_catalog_filter_read_instruction(record, index, &instruction);
+
         if ((instruction.opcode != (uint8_t)STRING_CATALOG_FILTER_OPCODE_PREDICATE) ||
             ((instruction.operator_kind != (uint8_t)STRING_CATALOG_FILTER_OPERATOR_MATCHES) &&
              (instruction.operator_kind != (uint8_t)STRING_CATALOG_FILTER_OPERATOR_MATCHES_I)))
@@ -1103,22 +1187,32 @@ static cplat_string_catalog_filter_line_error compile_line_patterns(const cplat_
             continue;
         }
 
-        /* 名前で指定した引数では、引数名の定数の直後にパターンが並ぶ */
+        /*
+         * 名前で指定した引数では、引数名の定数の直後にパターンが並ぶ。
+         * 定数は検証済みであり、読み取りは失敗しない。
+         */
         offset = instruction.operand;
         (void)string_catalog_filter_read_constant(constants, header.constant_size, offset, &constant);
+
         if (instruction.field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME)
         {
             (void)string_catalog_filter_read_constant(constants, header.constant_size, constant.next_offset, &constant);
         }
+
         if (string_catalog_filter_create_pattern(constant.text, instruction.operator_kind,
                                                  &patterns[constant.header.slot]) != CPLAT_OK)
         {
             return CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_INVALID_PATTERN;
         }
     }
+
     return CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE;
 }
 
+/*
+ * 1 行の名前を解決し、項目ごとの判定結果を事前計算する。
+ * 解決できた場合は CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE を返し、それ以外は無効にする原因を返す。
+ */
 static cplat_string_catalog_filter_line_error resolve_line(const cplat_string_catalog_filter_slot *slot,
                                                            filter_plane *plane, const uint32_t line_index)
 {
@@ -1140,14 +1234,17 @@ static cplat_string_catalog_filter_line_error resolve_line(const cplat_string_ca
     memset(maps, -1, slot->entry_count * CPLAT_STRING_CATALOG_FILTER_ARGUMENT_REFERENCE_MAX * sizeof(*maps));
     memset(identifiers, 0, CPLAT_STRING_CATALOG_FILTER_IDENTIFIER_REFERENCE_MAX * sizeof(*identifiers));
 
-    /* 分類値の比較を先に確かめる。分類値と比較する識別子は分類値の名前で解決し、文字列キーの名前では解決しない */
+    /*
+     * 分類値の比較を先に確かめる。分類値と比較する識別子は分類値の名前で解決し、
+     * 文字列キーの名前では解決しない。
+     */
     error = resolve_category_predicates(slot, record, constants, &header, identifiers, is_category_identifier);
     if (error != CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE)
     {
         return error;
     }
 
-    /* 定数をたどり、文字列キーの名前と引数名を解決する */
+    /* 定数をたどり、文字列キーの名前と引数名を解決する。定数は検証済みであり、読み取りは失敗しない。 */
     while (offset < header.constant_size)
     {
         (void)string_catalog_filter_read_constant(constants, header.constant_size, offset, &constant);
@@ -1156,7 +1253,7 @@ static cplat_string_catalog_filter_line_error resolve_line(const cplat_string_ca
         if ((constant.header.kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_IDENTIFIER) &&
             is_category_identifier[constant.header.slot])
         {
-            /* 分類値の名前で解決済み */
+            /* 分類値の名前で解決済みである。 */
         }
         else if (constant.header.kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_IDENTIFIER)
         {
@@ -1166,6 +1263,7 @@ static cplat_string_catalog_filter_line_error resolve_line(const cplat_string_ca
             {
                 return CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_UNRESOLVED_KEY_NAME;
             }
+
             identifiers[constant.header.slot] = key_name->key;
         }
         else if (constant.header.kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_ARGUMENT_NAME)
@@ -1189,6 +1287,7 @@ static cplat_string_catalog_filter_line_error resolve_line(const cplat_string_ca
                     }
                 }
             }
+
             if (!is_found)
             {
                 return CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_UNRESOLVED_ARGUMENT_NAME;
@@ -1196,10 +1295,11 @@ static cplat_string_catalog_filter_line_error resolve_line(const cplat_string_ca
         }
         else
         {
-            /* 比較対象の定数は、名前の解決を必要としない */
+            /* 比較対象の定数は、名前の解決を必要としない。 */
         }
     }
 
+    /* 引数の値を使わずに、項目ごとの判定結果を事前計算する。 */
     for (size_t entry_index = 0; entry_index < slot->entry_count; entry_index++)
     {
         evaluation_context context;
@@ -1220,12 +1320,15 @@ static cplat_string_catalog_filter_line_error resolve_line(const cplat_string_ca
         }
     }
 
-    /* どの項目でも常に不一致となる行は、型の合わない比較や矛盾する条件の書き誤りと考えられるため通知する。
-     * 決して一致しない行のため、無効にしても判定の結果は変わらない */
+    /*
+     * どの項目でも常に不一致となる行は、型の合わない比較や矛盾する条件の書き誤りと考えられるため通知する。
+     * 決して一致しない行のため、無効にしても判定の結果は変わらない。
+     */
     if (!is_satisfiable)
     {
         return CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NEVER_SATISFIABLE;
     }
+
     return CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE;
 }
 
@@ -1244,13 +1347,15 @@ static bool find_reusable_line(const cplat_string_catalog_filter_slot *slot, con
         string_catalog_filter_record_header candidate_header;
 
         string_catalog_filter_read_record_header(candidate, &candidate_header);
-        /* ハッシュ値の衝突に備え、一致した場合は内容を比較する */
+
+        /* ハッシュ値の衝突に備え、一致した場合は内容を比較する。 */
         if ((candidate_header.line_hash == header.line_hash) && (memcmp(candidate, record, slot->record_size) == 0))
         {
             *line_index_out = index;
             return true;
         }
     }
+
     return false;
 }
 
@@ -1264,20 +1369,21 @@ static void build_plane(const cplat_string_catalog_filter_slot *slot, filter_pla
     string_catalog_filter_read_image_header(target->image, &header);
     target->line_count = header.line_count;
 
-    /* 未使用の面が前回の構築で保持した正規表現を破棄する。判定はこの面を参照していない */
+    /* 未使用の面が前回の構築で保持した正規表現を破棄する。判定はこの面を参照していない。 */
     dispose_patterns(slot, target);
 
+    /* 各行の正規表現をコンパイルし、同一内容の行は結果を再利用し、それ以外は名前を解決する。 */
     for (uint32_t line_index = 0; line_index < header.line_count; line_index++)
     {
         const unsigned char *record =
             string_catalog_filter_record_address_const(target->image, slot->record_size, line_index);
         uint32_t reusable_index;
 
-        /* 正規表現は面ごとに保持するため、内容が同一の行を再利用する場合もコンパイルする */
+        /* 正規表現は面ごとに保持するため、内容が同一の行を再利用する場合もコンパイルする。 */
         target->line_errors[line_index] = compile_line_patterns(slot, target, line_index);
         if (target->line_errors[line_index] != CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE)
         {
-            /* 無効な行として扱う。事前計算は行わない */
+            /* 無効な行として扱う。事前計算は行わない。 */
         }
         else if (find_reusable_line(slot, current, record, &reusable_index))
         {
@@ -1303,11 +1409,12 @@ static void build_plane(const cplat_string_catalog_filter_slot *slot, filter_pla
                 diagnostics[*invalid_count].column = 0U;
                 diagnostics[*invalid_count].error = target->line_errors[line_index];
             }
+
             (*invalid_count)++;
         }
     }
 
-    /* 行ごとの結果を、論理和の規則で項目ごとに集約する */
+    /* 行ごとの結果を、論理和の規則で項目ごとに集約する。 */
     for (size_t entry_index = 0; entry_index < slot->entry_count; entry_index++)
     {
         uint64_t *dependent_lines = dependent_lines_of(slot, target, entry_index);
@@ -1315,6 +1422,7 @@ static void build_plane(const cplat_string_catalog_filter_slot *slot, filter_pla
         bool is_always = false;
 
         memset(dependent_lines, 0, slot->line_word_count * sizeof(*dependent_lines));
+
         for (uint32_t line_index = 0; line_index < target->line_count; line_index++)
         {
             uint8_t state;
@@ -1323,12 +1431,14 @@ static void build_plane(const cplat_string_catalog_filter_slot *slot, filter_pla
             {
                 continue;
             }
+
             state = line_states_of(slot, target, line_index)[entry_index];
             if (state == (uint8_t)TRUTH_VALUE_TRUE)
             {
                 is_always = true;
                 break;
             }
+
             if (state == (uint8_t)TRUTH_VALUE_UNKNOWN)
             {
                 dependent_lines[line_index / LINE_WORD_BITS] |= (uint64_t)1U << (line_index % LINE_WORD_BITS);
@@ -1362,7 +1472,9 @@ static bool find_entry_index(const cplat_string_catalog_filter_slot *slot, const
     {
         return false;
     }
+
     *entry_index_out = (size_t)(entry - slot->catalog->entries);
+
     return true;
 }
 
@@ -1384,6 +1496,7 @@ int cplat_string_catalog_filter_slot_create(const cplat_string_catalog *catalog,
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     *slot_out = NULL;
 
     if ((catalog == NULL) || (catalog->entry_count < 0) || ((catalog->entry_count > 0) && (catalog->entries == NULL)) ||
@@ -1395,8 +1508,10 @@ int cplat_string_catalog_filter_slot_create(const cplat_string_catalog *catalog,
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    /* 判定と説明文はカタログの引数定義を直接参照するため、作成時に定義全体を検査する。
-     * 項目数が 0 のカタログは、どの文字列キーにも一致しない何もしないカタログとして検査せずに受け付ける */
+    /*
+     * 判定と説明文はカタログの引数定義を直接参照するため、作成時に定義全体を検査する。
+     * 項目数が 0 のカタログは、どの文字列キーにも一致しない何もしないカタログとして検査せずに受け付ける。
+     */
     if (catalog->entry_count > 0)
     {
         ret = cplat_string_catalog_verify(catalog, NULL, NULL);
@@ -1405,6 +1520,7 @@ int cplat_string_catalog_filter_slot_create(const cplat_string_catalog *catalog,
             return ret;
         }
     }
+
     if (!is_key_name_table_valid(catalog, key_names, key_name_count) || !is_category_names_valid(category_names))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
@@ -1426,6 +1542,8 @@ int cplat_string_catalog_filter_slot_create(const cplat_string_catalog *catalog,
     slot->record_size = (uint32_t)CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(line_width);
     slot->image_size = CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(line_capacity, line_width);
     slot->line_word_count = (line_capacity + LINE_WORD_BITS - 1U) / LINE_WORD_BITS;
+
+    /* 作成時に拒否する引数と同じ条件では失敗しないため、戻り値を無視する。 */
     (void)cplat_string_catalog_filter_get_catalog_id(catalog, &slot->catalog_id);
 
     if (!allocate_plane(slot, &slot->planes[0]) || !allocate_plane(slot, &slot->planes[1]))
@@ -1434,24 +1552,29 @@ int cplat_string_catalog_filter_slot_create(const cplat_string_catalog *catalog,
         return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
-    /* ロックの作成に失敗した場合は、作成関数の結果コードをそのまま返す */
+    /* ロックの作成に失敗した場合は、作成関数の結果コードをそのまま返す。 */
     ret = cplat_local_rwlock_create(&slot->plane_lock);
     if (ret == CPLAT_OK)
     {
         ret = cplat_local_lock_create(&slot->apply_lock);
     }
+
     if (ret != CPLAT_OK)
     {
         cplat_string_catalog_filter_slot_dispose(&slot);
         return ret;
     }
 
-    /* 行を持たないフィルター オブジェクトを適用した状態から始める。全項目が「常に不一致」となる */
+    /*
+     * 行を持たないフィルター オブジェクトを適用した状態から始める。全項目が「常に不一致」となる。
+     * 行数、行幅、領域の大きさは作成時に検査済みであり、行数が 0 のコンパイルは失敗しない。
+     */
     (void)cplat_string_catalog_filter_compile(NULL, 0U, line_width, line_capacity, slot->planes[0].image,
                                               slot->image_size, NULL, 0U, NULL);
     slot->active_plane = 0;
 
     *slot_out = slot;
+
     return CPLAT_OK;
 }
 
@@ -1468,10 +1591,12 @@ void cplat_string_catalog_filter_slot_dispose(cplat_string_catalog_filter_slot *
     {
         cplat_local_rwlock_dispose((*slot)->plane_lock);
     }
+
     if ((*slot)->apply_lock != NULL)
     {
         cplat_local_lock_dispose((*slot)->apply_lock);
     }
+
     free_plane(*slot, &(*slot)->planes[0]);
     free_plane(*slot, &(*slot)->planes[1]);
     free(*slot);
@@ -1486,6 +1611,7 @@ const cplat_string_catalog *cplat_string_catalog_filter_slot_get_catalog(const c
     {
         return NULL;
     }
+
     return slot->catalog;
 }
 
@@ -1502,11 +1628,13 @@ static int validate_copied_image(const cplat_string_catalog_filter_slot *slot, c
     if (ret == CPLAT_OK)
     {
         string_catalog_filter_read_image_header(target->image, &header);
+
         if ((header.line_capacity != slot->line_capacity) || (header.line_width != slot->line_width))
         {
             ret = CPLAT_ERR_CORRUPT_DESCRIPTOR;
         }
     }
+
     return ret;
 }
 
@@ -1539,29 +1667,37 @@ static int apply_image_locked(cplat_string_catalog_filter_slot *slot, const void
 
     *torn_out = false;
 
-    /* 面を書き換えるのは適用だけであり、適用は apply_lock で直列化している。
-     * そのため active_plane と参照中の面は、ここではロックなしで読める。 */
+    /*
+     * 面を書き換えるのは適用だけであり、適用は apply_lock で直列化している。
+     * そのため active_plane と参照中の面は、ここではロックなしで読める。
+     */
     target_plane = 1 - slot->active_plane;
     target = &slot->planes[target_plane];
     current = &slot->planes[slot->active_plane];
 
-    /* 引き渡された領域は、複製してから検証する。
-     * 共有メモリの領域が検証後に書き換えられても、検証済みの内容だけを使用するためです。 */
+    /*
+     * 引き渡された領域は、複製してから検証する。
+     * 共有メモリの領域が検証後に書き換えられても、検証済みの内容だけを使用するためである。
+     */
     ret = CPLAT_ERR_CORRUPT_DESCRIPTOR;
+
     if (image_size >= slot->image_size)
     {
         memcpy(target->image, image, slot->image_size);
 
-        /* ソース領域からの複製では、複製の間に公開が重なっていないことを確かめる。
-         * 重なった場合は未使用の面へ複製しただけなので、捨てても参照中の条件に影響しない */
+        /*
+         * ソース領域からの複製では、複製の間に公開が重なっていないことを確かめる。
+         * 重なった場合は未使用の面へ複製しただけなので、捨てても参照中の条件に影響しない。
+         */
         *torn_out = (source != NULL) && !string_catalog_filter_source_end_read(source, revision);
     }
 
-    /* 書き込み側の排他は複製と確認の間だけ保持する。検証と適用は排他の外で行い、書き込み側を待たせない */
+    /* 書き込み側の排他は複製と確認の間だけ保持する。検証と適用は排他の外で行い、書き込み側を待たせない。 */
     if (writer_lock != NULL)
     {
         writer_lock->unlock(writer_lock->context);
     }
+
     if (*torn_out)
     {
         return CPLAT_ERR_CORRUPT_DESCRIPTOR;
@@ -1576,7 +1712,7 @@ static int apply_image_locked(cplat_string_catalog_filter_slot *slot, const void
     {
         build_plane(slot, target, current, diagnostics, diagnostic_capacity, &invalid_count);
 
-        /* 判定の途中で面が変わらないよう、切り替えは排他モードで行う */
+        /* 判定の途中で面が変わらないよう、切り替えは排他モードで行う。 */
         ret = cplat_local_rwlock_lock_exclusive(slot->plane_lock, CPLAT_SYNC_WAIT_FOREVER);
         if (ret == CPLAT_OK)
         {
@@ -1589,6 +1725,7 @@ static int apply_image_locked(cplat_string_catalog_filter_slot *slot, const void
     {
         *invalid_count_out = invalid_count;
     }
+
     return ret;
 }
 
@@ -1611,9 +1748,11 @@ int cplat_string_catalog_filter_slot_apply(cplat_string_catalog_filter_slot *slo
     {
         return ret;
     }
+
     ret = apply_image_locked(slot, image, image_size, diagnostics, diagnostic_capacity, invalid_count_out, NULL, 0U,
                              NULL, &torn);
     (void)cplat_local_lock_unlock(slot->apply_lock);
+
     return ret;
 }
 
@@ -1627,6 +1766,7 @@ static void add_warning(cplat_string_catalog_filter_warning *warnings, const siz
     {
         warnings[*count] = *warning;
     }
+
     (*count)++;
 }
 
@@ -1653,17 +1793,21 @@ static void collect_line_warnings(const cplat_string_catalog_filter_slot *slot, 
     cplat_string_catalog_filter_warning warning;
 
     string_catalog_filter_read_record_header(record, &header);
+
     for (uint32_t index = 0; index < header.instruction_count; index++)
     {
         const char *name = NULL;
         uint32_t offset;
 
         string_catalog_filter_read_instruction(record, index, &instruction);
+
         if (instruction.opcode != (uint8_t)STRING_CATALOG_FILTER_OPCODE_PREDICATE)
         {
             continue;
         }
+
         predicate_index++;
+
         if (((instruction.field != (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME) &&
              (instruction.field != (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_INDEX)) ||
             (instruction.operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_HAS))
@@ -1675,17 +1819,22 @@ static void collect_line_warnings(const cplat_string_catalog_filter_slot *slot, 
         warning.line_index = line_index;
         warning.predicate_index = predicate_index - 1U;
 
-        /* 名前で指定した引数では、比較対象は引数名の定数の直後から並ぶ */
+        /*
+         * 名前で指定した引数では、比較対象は引数名の定数の直後から並ぶ。
+         * 定数は検証済みであり、読み取りは失敗しない。
+         */
         offset = instruction.operand;
+
         if (instruction.field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME)
         {
             (void)string_catalog_filter_read_constant(constants, header.constant_size, offset, &constant);
             name = constant.text;
             offset = constant.next_offset;
         }
+
         (void)string_catalog_filter_read_constant(constants, header.constant_size, offset, &constant);
 
-        /* 型区分の混在は、引数名ごとに最初の比較要素で 1 回だけ警告する */
+        /* 型区分の混在は、引数名ごとに最初の比較要素で 1 回だけ警告する。 */
         if (name != NULL)
         {
             string_catalog_filter_mixed_argument mixed;
@@ -1699,6 +1848,7 @@ static void collect_line_warnings(const cplat_string_catalog_filter_slot *slot, 
                     break;
                 }
             }
+
             if (!is_noted && (noted_count < CPLAT_STRING_CATALOG_FILTER_ARGUMENT_REFERENCE_MAX) &&
                 string_catalog_filter_find_mixed_argument(slot->catalog, name, &mixed))
             {
@@ -1730,7 +1880,7 @@ static void collect_line_warnings(const cplat_string_catalog_filter_slot *slot, 
             }
             else
             {
-                /* 項目に引数が無い。型の不一致の対象外 */
+                /* 項目に引数が無い。型の不一致の対象外である。 */
             }
 
             if ((argument_index < 0) ||
@@ -1738,6 +1888,7 @@ static void collect_line_warnings(const cplat_string_catalog_filter_slot *slot, 
             {
                 continue;
             }
+
             warning.kind = CPLAT_STRING_CATALOG_FILTER_WARNING_TYPE_MISMATCH;
             warning.string_key = entry->key;
             warning.argument_index = argument_index;
@@ -1772,9 +1923,10 @@ int cplat_string_catalog_filter_slot_check(cplat_string_catalog_filter_slot *slo
         return ret;
     }
 
-    /* 未使用の面へ構築し、切り替えない。未使用の面は適用のたびに作り直すため、残った内容は判定に影響しない */
+    /* 未使用の面へ構築し、切り替えない。未使用の面は適用のたびに作り直すため、残った内容は判定に影響しない。 */
     target = &slot->planes[1 - slot->active_plane];
     ret = CPLAT_ERR_CORRUPT_DESCRIPTOR;
+
     if (image_size >= slot->image_size)
     {
         memcpy(target->image, image, slot->image_size);
@@ -1784,9 +1936,10 @@ int cplat_string_catalog_filter_slot_check(cplat_string_catalog_filter_slot *slo
     if (ret == CPLAT_OK)
     {
         build_plane(slot, target, &slot->planes[slot->active_plane], diagnostics, diagnostic_capacity, &invalid_count);
+
         for (uint32_t line_index = 0; line_index < target->line_count; line_index++)
         {
-            /* 成立し得ない行は、型の不一致が原因であり得るため対象に含める */
+            /* 成立し得ない行は、型の不一致が原因であり得るため対象に含める。 */
             if ((target->line_errors[line_index] == CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE) ||
                 (target->line_errors[line_index] == CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NEVER_SATISFIABLE))
             {
@@ -1794,6 +1947,7 @@ int cplat_string_catalog_filter_slot_check(cplat_string_catalog_filter_slot *slo
             }
         }
     }
+
     (void)cplat_local_lock_unlock(slot->apply_lock);
 
     if (ret == CPLAT_OK)
@@ -1802,11 +1956,13 @@ int cplat_string_catalog_filter_slot_check(cplat_string_catalog_filter_slot *slo
         {
             *invalid_count_out = invalid_count;
         }
+
         if (warning_count_out != NULL)
         {
             *warning_count_out = warning_count;
         }
     }
+
     return ret;
 }
 
@@ -1839,12 +1995,19 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
     {
         return;
     }
+
+    /*
+     * 0 は未公開、奇数は書き込み中のため、取り込みを始めない。
+     * 取り込み済みの版番号と等しければ、ロックを取らずに戻る。
+     * taken_revision はこの比較しかしないため、読み取りは RELAXED で足りる。
+     */
     revision = string_catalog_filter_source_begin_read(slot->source);
     if ((revision == 0U) || ((revision & 1U) != 0U) ||
         (revision == cplat_atomic_load_u64(&slot->taken_revision, CPLAT_MEMORY_ORDER_RELAXED)))
     {
         return;
     }
+
     if (cplat_local_lock_try_lock(slot->apply_lock) != CPLAT_OK)
     {
         return;
@@ -1856,18 +2019,21 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
         ret = writer_lock->lock(writer_lock->context);
         if (ret != CPLAT_OK)
         {
-            /* 取り込みを試みていないため取り込み済みとはせず、次の判定で改めて試みる */
+            /* 取り込みを試みていないため取り込み済みとはせず、次の判定で改めて試みる。 */
             slot->source_last_result = ret;
             (void)cplat_local_lock_unlock(slot->apply_lock);
             return;
         }
 
-        /* 排他の下で版番号を読み直す。待つ間に公開が進んでいれば、新しい版番号を取り込む */
+        /* 排他の下で版番号を読み直す。待つ間に公開が進んでいれば、新しい版番号を取り込む。 */
         revision = string_catalog_filter_source_begin_read(slot->source);
     }
 
-    /* ロックを待つ間に、ほかのスレッドが同じ版番号を取り込んでいる場合がある。
-     * 排他の下で奇数が見えるのは、書き込みの途中で書き込み側が停止した場合だけで、次の公開まで取り込まない */
+    /*
+     * ロックを待つ間に、ほかのスレッドが同じ版番号を取り込んでいる場合がある。
+     * 排他の下で奇数が見えるのは、書き込みの途中で書き込み側が停止した場合だけで、次の公開まで取り込まない。
+     * taken_revision は apply_lock の下で読み、この値でほかのデータを受け取らないため RELAXED で足りる。
+     */
     if ((revision == 0U) || ((revision & 1U) != 0U) ||
         (revision == cplat_atomic_load_u64(&slot->taken_revision, CPLAT_MEMORY_ORDER_RELAXED)))
     {
@@ -1875,11 +2041,12 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
         {
             writer_lock->unlock(writer_lock->context);
         }
+
         (void)cplat_local_lock_unlock(slot->apply_lock);
         return;
     }
 
-    /* ヘッダーも版番号の読み直しで一貫性を確かめる。一貫しない場合は次の判定で改めて取り込む */
+    /* ヘッダーも版番号の読み直しで一貫性を確かめる。一貫しない場合は次の判定で改めて取り込む。 */
     memcpy(&header, slot->source, sizeof(header));
     ret = string_catalog_filter_source_check_header(&header);
     if ((ret == CPLAT_OK) &&
@@ -1890,21 +2057,26 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
     }
     else if ((ret == CPLAT_OK) && (header.catalog_id != slot->catalog_id))
     {
-        /* 別のカタログ (別の版の定義を含む) 向けの公開内容は、名前が解決できても意味が異なり得るため取り込まない */
+        /* 別のカタログ (別の版の定義を含む) 向けの公開内容は、名前が解決できても意味が異なり得るため取り込まない。 */
         ret = CPLAT_ERR_IDENTITY_MISMATCH;
     }
+
     if (ret != CPLAT_OK)
     {
         if (writer_lock != NULL)
         {
             writer_lock->unlock(writer_lock->context);
         }
+
         if (string_catalog_filter_source_end_read(slot->source, revision))
         {
             slot->source_last_result = ret;
             slot->source_last_invalid_count = 0U;
+
+            /* apply_lock の下での書き込みであり、この値でほかのデータを渡さないため RELAXED で足りる。 */
             cplat_atomic_store_u64(&slot->taken_revision, revision, CPLAT_MEMORY_ORDER_RELAXED);
         }
+
         (void)cplat_local_lock_unlock(slot->apply_lock);
         return;
     }
@@ -1912,10 +2084,12 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
     ret = apply_image_locked(slot, (const unsigned char *)slot->source + CPLAT_STRING_CATALOG_FILTER_SOURCE_HEADER_SIZE,
                              slot->source_size - CPLAT_STRING_CATALOG_FILTER_SOURCE_HEADER_SIZE, NULL, 0U,
                              &invalid_count, slot->source, revision, writer_lock, &torn);
+
     if (!torn)
     {
-        /* 適用に失敗した公開内容も記録し、同じ内容の取り込みを繰り返さない */
+        /* 適用に失敗した公開内容も記録し、同じ内容の取り込みを繰り返さない。 */
         slot->source_last_result = ret;
+
         if (ret == CPLAT_OK)
         {
             slot->source_last_invalid_count = invalid_count;
@@ -1924,8 +2098,11 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
         {
             slot->source_last_invalid_count = 0U;
         }
+
+        /* apply_lock の下での書き込みであり、この値でほかのデータを渡さないため RELAXED で足りる。 */
         cplat_atomic_store_u64(&slot->taken_revision, revision, CPLAT_MEMORY_ORDER_RELAXED);
     }
+
     (void)cplat_local_lock_unlock(slot->apply_lock);
 }
 
@@ -1939,16 +2116,19 @@ int cplat_string_catalog_filter_slot_attach_source(cplat_string_catalog_filter_s
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if ((source != NULL) && !string_catalog_filter_source_is_region_valid(source, source_size, slot->image_size))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if ((lock != NULL) && ((lock->lock == NULL) || (lock->unlock == NULL)))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
     slot->source = source;
+
     if (source != NULL)
     {
         slot->source_size = source_size;
@@ -1957,14 +2137,20 @@ int cplat_string_catalog_filter_slot_attach_source(cplat_string_catalog_filter_s
     {
         slot->source_size = 0U;
     }
+
     memset(&slot->source_lock, 0, sizeof(slot->source_lock));
+
     if ((source != NULL) && (lock != NULL))
     {
         slot->source_lock = *lock;
     }
+
     slot->source_last_result = CPLAT_OK;
     slot->source_last_invalid_count = 0U;
+
+    /* 判定付きの組み立てと同時に呼ばない契約であり、この書き込みでほかのデータを渡さないため RELAXED で足りる。 */
     cplat_atomic_store_u64(&slot->taken_revision, 0U, CPLAT_MEMORY_ORDER_RELAXED);
+
     return CPLAT_OK;
 }
 
@@ -1980,17 +2166,21 @@ int cplat_string_catalog_filter_slot_get_source_status(cplat_string_catalog_filt
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    /* 結果コードと無効にした行の数は、同じ取り込みの値をそろえて返す */
+    /* 結果コードと無効にした行の数は、同じ取り込みの値をそろえて返す。 */
     ret = cplat_local_lock_lock(slot->apply_lock, CPLAT_SYNC_WAIT_FOREVER);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
+
     memset(status_out, 0, sizeof(*status_out));
+
+    /* apply_lock の下での読み取りであり、この値でほかのデータを受け取らないため RELAXED で足りる。 */
     status_out->taken_revision = cplat_atomic_load_u64(&slot->taken_revision, CPLAT_MEMORY_ORDER_RELAXED);
     status_out->last_result = slot->source_last_result;
     status_out->last_invalid_count = slot->source_last_invalid_count;
     (void)cplat_local_lock_unlock(slot->apply_lock);
+
     return CPLAT_OK;
 }
 
@@ -2006,6 +2196,7 @@ int cplat_string_catalog_filter_slot_snapshot(cplat_string_catalog_filter_slot *
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (image_size < slot->image_size)
     {
         return CPLAT_ERR_BUFFER_TOO_SMALL;
@@ -2021,6 +2212,7 @@ int cplat_string_catalog_filter_slot_snapshot(cplat_string_catalog_filter_slot *
     memcpy(image_out, plane->image, slot->image_size);
 
     (void)cplat_local_rwlock_unlock_shared(slot->plane_lock);
+
     return CPLAT_OK;
 }
 
@@ -2054,6 +2246,7 @@ int cplat_string_catalog_filter_slot_get_line_error(cplat_string_catalog_filter_
     }
 
     (void)cplat_local_rwlock_unlock_shared(slot->plane_lock);
+
     return ret;
 }
 
@@ -2069,6 +2262,7 @@ int cplat_string_catalog_filter_slot_test(cplat_string_catalog_filter_slot *slot
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (!find_entry_index(slot, string_key, &entry_index))
     {
         return CPLAT_ERR_NOT_FOUND;
@@ -2079,8 +2273,10 @@ int cplat_string_catalog_filter_slot_test(cplat_string_catalog_filter_slot *slot
     {
         return ret;
     }
+
     *state_out = (cplat_string_catalog_filter_state)slot->planes[slot->active_plane].entry_states[entry_index];
     (void)cplat_local_rwlock_unlock_shared(slot->plane_lock);
+
     return CPLAT_OK;
 }
 
@@ -2099,6 +2295,7 @@ int cplat_string_catalog_filter_slot_describe_line(cplat_string_catalog_filter_s
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     dest[0] = '\0';
 
     ret = cplat_local_rwlock_lock_shared(slot->plane_lock, CPLAT_SYNC_WAIT_FOREVER);
@@ -2114,7 +2311,7 @@ int cplat_string_catalog_filter_slot_describe_line(cplat_string_catalog_filter_s
     }
     else if (!is_line_enabled(plane, (uint32_t)line_index))
     {
-        /* 名前を解決できずに無効とした行は、メタ情報と結び付けられない */
+        /* 名前を解決できずに無効とした行は、メタ情報と結び付けられない。 */
         ret = CPLAT_ERR_MALFORMED_DEFINITION;
     }
     else
@@ -2128,8 +2325,9 @@ int cplat_string_catalog_filter_slot_describe_line(cplat_string_catalog_filter_s
         source.line_width = slot->line_width;
         source.is_japanese = (cplat_string_catalog_get_language() == CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE);
 
-        /* 事前計算で「常に不一致」とならなかった項目が 1 つだけなら、その行は 1 つの項目に限定されている */
+        /* 事前計算で「常に不一致」とならなかった項目が 1 つだけなら、その行は 1 つの項目に限定されている。 */
         states = line_states_of(slot, plane, (uint32_t)line_index);
+
         for (size_t entry_index = 0; entry_index < slot->entry_count; entry_index++)
         {
             if (states[entry_index] != (uint8_t)TRUTH_VALUE_FALSE)
@@ -2138,6 +2336,7 @@ int cplat_string_catalog_filter_slot_describe_line(cplat_string_catalog_filter_s
                 candidate_count++;
             }
         }
+
         if (candidate_count != 1U)
         {
             source.single_entry = NULL;
@@ -2147,6 +2346,7 @@ int cplat_string_catalog_filter_slot_describe_line(cplat_string_catalog_filter_s
     }
 
     (void)cplat_local_rwlock_unlock_shared(slot->plane_lock);
+
     return ret;
 }
 
@@ -2171,9 +2371,11 @@ static bool is_line_matched(const cplat_string_catalog_filter_slot *slot, filter
     context.identifier_values = identifier_values_of(plane, line_index);
     context.patterns = patterns_of(plane, line_index);
     context.values = values;
+
     return evaluate_line(&context, true) == TRUTH_VALUE_TRUE;
 }
 
+/* 参照中の面で 1 項目の一致を判定する。共有モードのロックの下で呼び出す。 */
 static bool is_matched(const cplat_string_catalog_filter_slot *slot, filter_plane *plane, const size_t entry_index,
                        const cplat_internal_string_catalog_argument_value *shared)
 {
@@ -2196,7 +2398,7 @@ static bool is_matched(const cplat_string_catalog_filter_slot *slot, filter_plan
         return false;
     }
 
-    /* 引数の値に依存する行だけを、語ごとに立っているビットをたどって評価する */
+    /* 引数の値に依存する行だけを、語ごとに立っているビットをたどって評価する。 */
     for (size_t word_index = 0; word_index < slot->line_word_count; word_index++)
     {
         uint64_t lines = dependent_lines[word_index];
@@ -2210,6 +2412,7 @@ static bool is_matched(const cplat_string_catalog_filter_slot *slot, filter_plan
             }
         }
     }
+
     return false;
 }
 
@@ -2229,32 +2432,35 @@ int cplat_string_catalog_filter_slot_vformat(cplat_string_catalog_filter_slot *s
         {
             *matched_out = 0;
         }
+
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     *matched_out = 0;
     dest[0] = '\0';
 
-    /* 判定の前に、ソース領域の公開内容が変わっていれば取り込む。通常は版番号の比較 1 回で戻る */
+    /* 判定の前に、ソース領域の公開内容が変わっていれば取り込む。通常は版番号の比較 1 回で戻る。 */
     refresh_from_source(slot);
 
-    /* 可変長引数は 1 回だけ取り出し、判定と書式展開で同じ値を使用する */
+    /* 可変長引数は 1 回だけ取り出し、判定と書式展開で同じ値を使用する。 */
     ret = cplat_internal_string_catalog_prepare_format(slot->catalog, string_key, args, &entry, &text, values);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
 
-    /* 判定できない場合は不一致と区別するため、文字列を組み立てずに結果コードを返す */
+    /* 判定できない場合は不一致と区別するため、文字列を組み立てずに結果コードを返す。 */
     ret = cplat_local_rwlock_lock_shared(slot->plane_lock, CPLAT_SYNC_WAIT_FOREVER);
     if (ret != CPLAT_OK)
     {
         return ret;
     }
+
     *matched_out =
         is_matched(slot, &slot->planes[slot->active_plane], (size_t)(entry - slot->catalog->entries), values);
     (void)cplat_local_rwlock_unlock_shared(slot->plane_lock);
 
-    /* 書式展開はロックの外で行う。判定の結果によらず文字列を組み立てる */
+    /* 書式展開はロックの外で行う。判定の結果によらず文字列を組み立てる。 */
     return cplat_internal_string_catalog_render_text(dest, dest_size, text, values, entry->argument_count);
 }
 
@@ -2269,5 +2475,6 @@ int cplat_string_catalog_filter_slot_format(cplat_string_catalog_filter_slot *sl
     va_start(args, string_key);
     ret = cplat_string_catalog_filter_slot_vformat(slot, dest, dest_size, matched_out, string_key, args);
     va_end(args);
+
     return ret;
 }

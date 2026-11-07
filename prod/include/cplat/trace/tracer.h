@@ -60,15 +60,17 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_TRACER_H
 #define CPLAT_TRACER_H
 
-/* size_t (cplat_tracer_write_hex / cplat_tracer_write_hexf で使用) */
+/* size_t は cplat_tracer_write_hex() と cplat_tracer_write_hexf() で使用する。 */
 #include <stddef.h>
-/* int64_t (cplat_tracer_set_name で使用) */
+/* int64_t は cplat_tracer_set_name() で使用する。 */
 #include <inttypes.h>
 #include <cplat/base/platform.h>
 #include <cplat/base/result.h>
@@ -124,7 +126,7 @@
 /**
  *  @brief          cplat_tracer_write が受け付けるメッセージの最大バイト数 (null 終端含む) です。
  *
- *  ETW (約 65,000 バイト) と syslog (RFC 3164: 1,024 バイト) の
+ *  ETW (約 65,000 [byte]) と syslog (RFC 3164: 1,024 [byte]) の
  *  推奨上限のうち小さい方を採用し、クロスプラットフォームでの
  *  安全な転送を保証します。\n
  *  本文の最大長は `CPLAT_TRACER_MESSAGE_MAX_BYTES` @c - @c 1 (= 1,023) バイトです。
@@ -134,7 +136,7 @@
 /**
  *  @brief          cplat_tracer_write_hex がラベルなしで HEX 出力できるバイナリ データの最大バイト数です。
  *
- *  1 バイトあたり 3 文字 (HH + スペース) を消費し、最終バイトは 2 文字です。\n
+ *  1 [byte] あたり 3 文字 (HH + スペース) を消費し、最終バイトは 2 文字です。\n
  *  ラベル (@p message) を指定した場合はラベル長 + セパレータ (": ") 分だけ
  *  出力可能なバイナリ データ量が減少します。\n
  *  データがこの上限を超える場合は切り詰めが行われ、
@@ -298,9 +300,9 @@ typedef enum cplat_tracer_concurrency_mode
 /* ===== 既定のトレース レベル ===== */
 
 /*
- *  すべての出力先の既定のトレース レベルを CPLAT_TRACE_LEVEL_NONE (無効) とします。
- *  利用者が出力先ごとに詳細度を設定するまで、トレースは副作用を持ちません。
- *  ログ ファイルの生成のような副作用を、利用者の意図しないうちに起こさないための方針です。
+ * すべての出力先の既定のトレース レベルを CPLAT_TRACE_LEVEL_NONE (無効) とする。
+ * 利用者が出力先ごとに詳細度を設定するまで、トレースは副作用を持たない。
+ * ログ ファイルの生成のような副作用を、利用者の意図しないうちに起こさないための方針である。
  */
 
 /**
@@ -1129,6 +1131,12 @@ extern "C"
 /**
  *  @brief          ソース ファイル名と行番号を自動付与する cplat_tracer_writef マクロです。
  */
+
+/*
+ * fmt は直前の文字列リテラルと連結するため、括弧で囲まない。
+ * 可変引数が空でも末尾のカンマが残らないように、##__VA_ARGS__ を使う。
+ * 正本は app/general/docs/coding-guideline.md の「引数と本体の括弧」節と「処理系拡張」節である。
+ */
 #define cplat_tracer_writef(handle, level, timestamp, fmt, ...) \
     cplat_tracer_writef_at((handle), (level), (timestamp), "[%s:%d] " fmt, cplat_path_basename(__FILE__), \
                            __LINE__, ##__VA_ARGS__)
@@ -1143,6 +1151,12 @@ extern "C"
 
 /**
  *  @brief          ソース ファイル名と行番号を自動付与する cplat_tracer_write_hexf マクロです。
+ */
+
+/*
+ * fmt は直前の文字列リテラルと連結するため、括弧で囲まない。
+ * 可変引数が空でも末尾のカンマが残らないように、##__VA_ARGS__ を使う。
+ * 正本は app/general/docs/coding-guideline.md の「引数と本体の括弧」節と「処理系拡張」節である。
  */
 #define cplat_tracer_write_hexf(handle, level, timestamp, data, size, fmt, ...) \
     cplat_tracer_write_hexf_at((handle), (level), (timestamp), (data), (size), "[%s:%d] " fmt, \

@@ -25,8 +25,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_NET_SOCKET_H
 #define CPLAT_NET_SOCKET_H
@@ -427,7 +429,7 @@ extern "C"
     /**
      *  @brief          ソケットが受信可能になるまで待機します。
      *  @param[in]      sock       対象のソケット。
-     *  @param[in]      timeout_ms タイムアウト時間 (ミリ秒)。
+     *  @param[in]      timeout_ms タイムアウト時間 [ms]。
      *                             @ref CPLAT_SOCKET_WAIT_FOREVER または
      *                             @ref CPLAT_SOCKET_NO_WAIT も指定できます。
      *  @param[out]     ready_out  受信可能な場合に 1、タイムアウトした場合に 0 を格納します。
@@ -448,7 +450,7 @@ extern "C"
     /**
      *  @brief          ソケットが送信可能になるまで待機します。
      *  @param[in]      sock       対象のソケット。
-     *  @param[in]      timeout_ms タイムアウト時間 (ミリ秒)。
+     *  @param[in]      timeout_ms タイムアウト時間 [ms]。
      *                             @ref CPLAT_SOCKET_WAIT_FOREVER または
      *                             @ref CPLAT_SOCKET_NO_WAIT も指定できます。
      *  @param[out]     ready_out  送信可能な場合に 1、タイムアウトした場合に 0 を格納します。
@@ -470,7 +472,7 @@ extern "C"
      *  @brief          複数のソケットのいずれかが受信可能になるまで待機します。
      *  @param[in]      socks      対象のソケットの配列。@ref CPLAT_INVALID_SOCKET を含めても構いません。
      *  @param[in]      count      @p socks の要素数。1 以上 @ref CPLAT_SOCKET_WAIT_MAX 以下を指定します。
-     *  @param[in]      timeout_ms タイムアウト時間 (ミリ秒)。
+     *  @param[in]      timeout_ms タイムアウト時間 [ms]。
      *                             @ref CPLAT_SOCKET_WAIT_FOREVER または
      *                             @ref CPLAT_SOCKET_NO_WAIT も指定できます。
      *  @param[out]     ready_out  各ソケットが受信可能かどうかを格納する配列。

@@ -37,18 +37,25 @@ struct cplat_etw_session
 {
     /** トレース セッション ハンドル。 */
     TRACEHANDLE session_handle;
+
     /** トレース処理ハンドル。 */
     TRACEHANDLE trace_handle;
+
     /** ProcessTrace ワーカー スレッド。 */
     cplat_thread *thread_handle;
+
     /** イベント受信コールバック。 */
     cplat_etw_event_fn callback;
+
     /** コールバックに渡すユーザー データ。 */
     void *context;
+
     /** セッション プロパティ (可変長)。 */
     EVENT_TRACE_PROPERTIES *properties;
+
     /** セッション名 (ワイド文字列)。 */
     wchar_t *session_name_w;
+
     /** プロバイダー GUID (イベント フィルタリング用)。 */
     GUID provider_guid;
 };
@@ -67,10 +74,12 @@ static void dispose_session(cplat_etw_session *session)
         {
             CloseTrace(session->trace_handle);
         }
+
         if (session->session_handle != 0)
         {
             ControlTraceW(session->session_handle, NULL, session->properties, EVENT_TRACE_CONTROL_STOP);
         }
+
         cplat_free(session->session_name_w);
         cplat_free(session->properties);
         cplat_free(session);
@@ -110,6 +119,7 @@ static int parse_guid(const char *str, GUID *guid)
     guid->Data4[5] = (UCHAR)d[8];
     guid->Data4[6] = (UCHAR)d[9];
     guid->Data4[7] = (UCHAR)d[10];
+
     return 0;
 }
 
@@ -134,6 +144,10 @@ static TRACE_EVENT_INFO *get_trace_event_info(PEVENT_RECORD pEvent)
     ULONG size = 0;
     ULONG status;
 
+    /*
+     * バッファーが足りないとき、戻り値は ERROR_INSUFFICIENT_BUFFER になり、必要サイズが書き込まれる。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/tdh/nf-tdh-tdhgeteventinformation
+     */
     status = TdhGetEventInformation(pEvent, 0, NULL, NULL, &size);
     if (status != ERROR_INSUFFICIENT_BUFFER || size == 0)
     {
@@ -212,6 +226,7 @@ static int read_uint32_field(const unsigned char *cursor, const USHORT remaining
     *value_out =
         (uint32_t)cursor[0] | ((uint32_t)cursor[1] << 8) | ((uint32_t)cursor[2] << 16) | ((uint32_t)cursor[3] << 24);
     *consumed_out = 4U;
+
     return 0;
 }
 
@@ -233,14 +248,17 @@ static void extract_event_fields(PEVENT_RECORD pEvent, const TRACE_EVENT_INFO *i
     {
         *service_out = NULL;
     }
+
     if (message_out != NULL)
     {
         *message_out = NULL;
     }
+
     if (process_id_out != NULL)
     {
         *process_id_out = 0U;
     }
+
     if (pEvent == NULL || message_out == NULL)
     {
         return;
@@ -273,10 +291,12 @@ static void extract_event_fields(PEVENT_RECORD pEvent, const TRACE_EVENT_INFO *i
         {
             continue;
         }
+
         if (prop->NameOffset == 0)
         {
             continue;
         }
+
         name = (const wchar_t *)((const unsigned char *)info + prop->NameOffset);
         if (name == NULL)
         {
@@ -316,6 +336,7 @@ static void extract_event_fields(PEVENT_RECORD pEvent, const TRACE_EVENT_INFO *i
         }
         else
         {
+            /* 消費バイト数を決められない型のため、解析を打ち切る。 */
             break;
         }
 
@@ -352,7 +373,7 @@ static VOID WINAPI event_record_callback(PEVENT_RECORD pEvent)
         return;
     }
 
-    /* プロバイダー GUID でフィルタリング */
+    /* プロバイダー GUID が一致しないイベントを捨てる。 */
     if (!guid_equal(&pEvent->EventHeader.ProviderId, &session->provider_guid))
     {
         return;
@@ -360,11 +381,14 @@ static VOID WINAPI event_record_callback(PEVENT_RECORD pEvent)
 
     info = get_trace_event_info(pEvent);
     event_name_w = get_event_name(info);
+
+    /* 書き込み側が付けるイベント名 Trace 以外は捨てる。 */
     if (event_name_w == NULL || wcscmp(event_name_w, L"Trace") != 0)
     {
         cplat_free(info);
         return;
     }
+
     event_name_utf8 = cplat_wstr_to_utf8_alloc(event_name_w);
 
     service = NULL;
@@ -374,6 +398,7 @@ static VOID WINAPI event_record_callback(PEVENT_RECORD pEvent)
     cplat_free(info);
 
     event.level = pEvent->EventHeader.EventDescriptor.Level;
+
     if (payload_process_id != 0U)
     {
         event.process_id = payload_process_id;
@@ -382,6 +407,7 @@ static VOID WINAPI event_record_callback(PEVENT_RECORD pEvent)
     {
         event.process_id = pEvent->EventHeader.ProcessId;
     }
+
     event.event_name = event_name_utf8;
     event.service = service;
     event.message = message;
@@ -399,6 +425,7 @@ static void trace_thread_proc(void *param)
     cplat_etw_session *session = (cplat_etw_session *)param;
 
     ProcessTrace(&session->trace_handle, 1, NULL, NULL);
+
     return;
 }
 
@@ -427,6 +454,10 @@ int cplat_etw_session_check_access(void)
     props->LogFileMode = EVENT_TRACE_REAL_TIME_MODE;
     props->LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
 
+    /*
+     * セッションを開始できるかどうかで権限を判定する。
+     * 開始できた場合は直ちに停止する。
+     */
     status = StartTraceW(&handle, probe_name, props);
 
     if (status == ERROR_SUCCESS)
@@ -444,6 +475,7 @@ int cplat_etw_session_check_access(void)
     }
 
     cplat_free(props);
+
     return result;
 }
 
@@ -463,6 +495,7 @@ int cplat_etw_session_start(const char *session_name, const char *provider_guid_
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     *session_out = NULL;
 
     if (session_name == NULL || provider_guid_str == NULL || callback == NULL)
@@ -491,16 +524,20 @@ int cplat_etw_session_start(const char *session_name, const char *provider_guid_
     session->session_name_w = NULL;
     session->provider_guid = provider_guid;
 
-    /* セッション名をワイド文字列に変換して確保 */
     session->session_name_w = cplat_utf8_to_wstr_alloc(session_name);
     if (session->session_name_w == NULL)
     {
         dispose_session(session);
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     name_len_w = wcslen(session->session_name_w) + 1;
 
-    /* EVENT_TRACE_PROPERTIES を確保 (セッション名領域を含む) */
+    /*
+     * EVENT_TRACE_PROPERTIES の直後にセッション名を置く領域を含めて確保する。
+     * セッション名は StartTraceW() が LoggerNameOffset の位置へコピーする。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/ns-evntrace-event_trace_properties
+     */
     props_size = sizeof(EVENT_TRACE_PROPERTIES) + (name_len_w * sizeof(wchar_t));
     session->properties = (EVENT_TRACE_PROPERTIES *)cplat_malloc(props_size);
     if (session->properties == NULL)
@@ -509,32 +546,49 @@ int cplat_etw_session_start(const char *session_name, const char *provider_guid_
         return CPLAT_ERR_UNKNOWN;
     }
 
-    /* リアルタイム セッションを開始 */
+    /* リアルタイム セッションを開始する。 */
     memset(session->properties, 0, props_size);
     session->properties->Wnode.BufferSize = (ULONG)props_size;
     session->properties->Wnode.Flags = WNODE_FLAG_TRACED_GUID;
-    session->properties->Wnode.ClientContext = 1; /* QPC */
+
+    /*
+     * ClientContext は性能カウンター (QPC) を時刻源にする。
+     * see: https://learn.microsoft.com/en-us/windows/win32/etw/wnode-header
+     */
+    session->properties->Wnode.ClientContext = 1;
+
     session->properties->LogFileMode = EVENT_TRACE_REAL_TIME_MODE;
     session->properties->LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
+
+    /*
+     * FlushTimer の単位は秒であり、指定値は仕様が定める最小間隔である。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/ns-evntrace-event_trace_properties
+     */
     session->properties->FlushTimer = 1;
 
     status = StartTraceW(&session->session_handle, session->session_name_w, session->properties);
 
     if (status == ERROR_ACCESS_DENIED)
     {
-        session->session_handle = 0;
+        session->session_handle = 0; /* 失敗したハンドルを停止対象にしない */
         dispose_session(session);
         return CPLAT_ERR_PERMISSION_DENIED;
     }
 
     if (status != ERROR_SUCCESS)
     {
-        session->session_handle = 0;
+        session->session_handle = 0; /* 失敗したハンドルを停止対象にしない */
         dispose_session(session);
         return CPLAT_ERR_UNKNOWN;
     }
 
-    /* プロバイダーを有効化 */
+    /*
+     * プロバイダーを有効化する。
+     * Level は VERBOSE 以下を通す。
+     * MatchAnyKeyword はレガシと TraceLogging の両方ですべてのキーワードを有効にする。
+     * MatchAllKeyword は追加のキーワード条件を付けず、Timeout はコールバックの完了を待たない。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/nf-evntrace-enabletraceex2
+     */
     etp.Version = ENABLE_TRACE_PARAMETERS_VERSION_2;
     status = EnableTraceEx2(session->session_handle, &provider_guid, EVENT_CONTROL_CODE_ENABLE_PROVIDER, 5,
                             0xFFFFFFFFFFFFFFFF, 0, 0, &etp);
@@ -544,7 +598,7 @@ int cplat_etw_session_start(const char *session_name, const char *provider_guid_
         return CPLAT_ERR_UNKNOWN;
     }
 
-    /* トレースをオープンしワーカー スレッドを起動 */
+    /* リアルタイムの EventRecord コールバックでトレースを開く。 */
     {
         EVENT_TRACE_LOGFILEW trace_logfile = {0};
         trace_logfile.LoggerName = session->session_name_w;
@@ -554,12 +608,17 @@ int cplat_etw_session_start(const char *session_name, const char *provider_guid_
 
         session->trace_handle = OpenTraceW(&trace_logfile);
     }
+
     if (session->trace_handle == INVALID_PROCESSTRACE_HANDLE)
     {
         dispose_session(session);
         return CPLAT_ERR_UNKNOWN;
     }
 
+    /*
+     * ProcessTrace() は処理が終わるまでブロックするため、別スレッドで実行する。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/nf-evntrace-processtrace
+     */
     if (cplat_thread_create(&session->thread_handle, trace_thread_proc, session) != CPLAT_OK)
     {
         dispose_session(session);
@@ -567,6 +626,7 @@ int cplat_etw_session_start(const char *session_name, const char *provider_guid_
     }
 
     *session_out = session;
+
     return CPLAT_OK;
 }
 
@@ -579,19 +639,19 @@ void cplat_etw_session_stop(cplat_etw_session *session)
         return;
     }
 
-    /* セッション停止 (バッファー フラッシュ → ProcessTrace が残イベントを処理して戻る) */
+    /*
+     * セッションを停止する。バッファーをフラッシュすると ProcessTrace() が残イベントを処理して戻る。
+     */
     if (session->session_handle != 0 && session->properties != NULL)
     {
         ControlTraceW(session->session_handle, NULL, session->properties, EVENT_TRACE_CONTROL_STOP);
     }
 
-    /* ワーカー スレッド join */
     if (session->thread_handle != NULL)
     {
         cplat_thread_join(session->thread_handle, CPLAT_SYNC_WAIT_FOREVER);
     }
 
-    /* トレース ハンドル クローズ */
     if (session->trace_handle != INVALID_PROCESSTRACE_HANDLE)
     {
         CloseTrace(session->trace_handle);

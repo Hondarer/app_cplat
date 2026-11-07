@@ -31,7 +31,7 @@
     #include <wchar.h>
 #endif /* PLATFORM_ */
 
-/* prefix の有効文字数上限 (Windows GetTempFileNameW の制約に準拠) */
+/* prefix の有効文字数上限 (Windows の GetTempFileNameW() の制約に準拠) */
 #define CPLAT_TEMP_PREFIX_MAX 3u
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -72,13 +72,16 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
             pfx = "cu_";
         }
 
-        /* TMPDIR が本バッファーに収まらない場合、切り詰めた値では誤ったディレクトリに
-           一時ファイルを作成するため、失敗として扱う */
+        /*
+         * TMPDIR が本バッファーに収まらない場合、切り詰めた値では誤ったディレクトリに
+         * 一時ファイルを作成するため、失敗として扱う。
+         */
         if (cplat_getenv("TMPDIR", tmpdir_buf, sizeof(tmpdir_buf), NULL, NULL) == CPLAT_ERR_BUFFER_TOO_SMALL)
         {
             (void)cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
             return NULL;
         }
+
         if (tmpdir_buf[0] == '\0')
         {
             tmpdir = "/tmp";
@@ -113,6 +116,7 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
             (void)cplat_internal_error_report_errno(detail_out, saved);
             return NULL;
         }
+
         (void)cplat_internal_error_report_success(detail_out);
         return fp;
     }
@@ -128,8 +132,10 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
         DWORD dwret;
         UINT uret;
 
-        /* 以降の GetTempFileNameW / DeleteFileW へワイドのまま渡すため、
-           *U ラッパーを経由しない (UTF-8 への往復変換が増えるだけになる) */
+        /*
+         * 以降の GetTempFileNameW() と DeleteFileW() へワイドのまま渡すため、
+         * *U ラッパーを経由しない (UTF-8 への往復変換が増えるだけになる)。
+         */
         dwret = GetTempPathW((DWORD)(sizeof(wdir) / sizeof(wdir[0])), wdir);
         if (dwret == 0u)
         {
@@ -138,6 +144,7 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
             (void)cplat_internal_error_report_windows_error(detail_out, error_code);
             return NULL;
         }
+
         if (dwret > (DWORD)(sizeof(wdir) / sizeof(wdir[0])))
         {
             (void)cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
@@ -146,6 +153,7 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
 
         {
             const char *pfx;
+
             if (prefix != NULL && prefix[0] != '\0')
             {
                 pfx = prefix;
@@ -154,8 +162,10 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
             {
                 pfx = "cu_";
             }
+
             err = mbstowcs_s(&converted, wprefix, sizeof(wprefix) / sizeof(wprefix[0]), pfx, _TRUNCATE);
-            /* STRUNCATE: 4 文字以上の prefix が CPLAT_TEMP_PREFIX_MAX に切り詰められた場合。正常扱い。 */
+
+            /* STRUNCATE は 4 文字以上の prefix が CPLAT_TEMP_PREFIX_MAX に切り詰められた場合であり、正常として扱う。 */
             if (err != 0 && err != STRUNCATE)
             {
                 (void)cplat_internal_error_report_errno(detail_out, EINVAL);
@@ -187,8 +197,10 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
             return NULL;
         }
 
-        /* Linux 側 (fdopen 経由) と挙動をそろえるため _wfsopen + _SH_DENYNO を採用する。
-         * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fsopen-wfsopen */
+        /*
+         * Linux 側 (fdopen() 経由) と挙動を揃えるため _wfsopen() と _SH_DENYNO を採用する。
+         * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fsopen-wfsopen
+         */
         errno = 0;
         fp = _wfsopen(wfile, wmodes, _SH_DENYNO);
         if (fp == NULL)
@@ -198,6 +210,7 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
             (void)cplat_internal_error_report_errno(detail_out, saved);
             return NULL;
         }
+
         (void)cplat_internal_error_report_success(detail_out);
         return fp;
     }

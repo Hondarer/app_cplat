@@ -41,19 +41,19 @@ static int ensure_one_dir(const char *dir, cplat_error *detail_out)
 {
     cplat_file_stat_t st;
 
-    /* すでに存在する場合は成功 */
+    /* すでに存在する場合は成功。 */
     if (cplat_stat(&st, detail_out, dir) == CPLAT_OK)
     {
         return CPLAT_OK;
     }
 
-    /* 存在しないので生成する */
+    /* 存在しないので生成する。 */
     if (cplat_mkdir(dir, detail_out) == CPLAT_OK)
     {
         return CPLAT_OK;
     }
 
-    /* mkdir 失敗: 競合生成の可能性があるため再確認する */
+    /* mkdir 失敗: 競合生成の可能性があるため再確認する。 */
     if (cplat_stat(&st, detail_out, dir) == CPLAT_OK)
     {
         return CPLAT_OK;
@@ -69,20 +69,23 @@ static int is_ascii_alpha(const char ch)
     {
         return 1;
     }
+
     if (ch >= 'a' && ch <= 'z')
     {
         return 1;
     }
+
     return 0;
 }
 
 /*
- *  UCRT の _wstat64 は FILETIME (UTC) を SystemTimeToTzSpecificLocalTime で現地時刻へ
- *  変換してから loctotime で time_t へ戻す。OS のタイム ゾーンと CRT の TZ が食い違うと、
- *  Linux の stat および cplat_file_*_modified_timestamp が返す Unix epoch UTC と
- *  秒部に差異が生じる。
- *  see: https://learn.microsoft.com/en-us/windows/win32/sysinfo/file-times
- *  see: https://learn.microsoft.com/en-us/windows/win32/api/timezoneapi/nf-timezoneapi-systemtimetotzspecificlocaltime
+ * ファイル属性から直接取得した UTC 時刻で stat 構造体の時刻フィールドを上書きする。
+ * UCRT の _wstat64() は FILETIME (UTC) を SystemTimeToTzSpecificLocalTime() で現地時刻へ
+ * 変換してから loctotime() で time_t へ戻す。OS のタイム ゾーンと CRT の TZ が食い違うと、
+ * Linux の stat() および cplat_file_*_modified_timestamp が返す Unix epoch UTC と
+ * 秒部に差異が生じる。
+ * see: https://learn.microsoft.com/en-us/windows/win32/sysinfo/file-times
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/timezoneapi/nf-timezoneapi-systemtimetotzspecificlocaltime
  */
 static void overlay_utc_file_times(const wchar_t *wpath, cplat_file_stat_t *buf)
 {
@@ -103,6 +106,11 @@ static void overlay_utc_file_times(const wchar_t *wpath, cplat_file_stat_t *buf)
 }
 #endif /* PLATFORM_WINDOWS */
 
+/*
+ * パスのルート接頭辞の長さを算出する。
+ * ドライブ レター接頭辞、UNC サーバー・共有名接頭辞、またはルート セパレーターの長さ [byte] を返す。
+ * ルート接頭辞を持たない相対パスの場合は 0 を返す。
+ */
 static size_t path_root_prefix_len(const char *path)
 {
 #if defined(PLATFORM_WINDOWS)
@@ -115,26 +123,34 @@ static size_t path_root_prefix_len(const char *path)
     {
         size_t i = 2u;
 
+        /* サーバー名部分を走査する。 */
         while (path[i] != '\0' && path[i] != PLATFORM_PATH_SEP_CHR)
         {
             i++;
         }
+
         if (path[i] == '\0')
         {
             return i;
         }
+
+        /* サーバー名と共有名の間のセパレーターをスキップする。 */
         while (path[i] == PLATFORM_PATH_SEP_CHR)
         {
             i++;
         }
+
         if (path[i] == '\0')
         {
             return i;
         }
+
+        /* 共有名部分を走査する。 */
         while (path[i] != '\0' && path[i] != PLATFORM_PATH_SEP_CHR)
         {
             i++;
         }
+
         return i;
     }
 #endif /* PLATFORM_WINDOWS */
@@ -178,6 +194,7 @@ int cplat_rmdir(const char *path, cplat_error *detail_out)
     {
         return cplat_internal_error_report_errno(detail_out, errno);
     }
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -201,7 +218,6 @@ int cplat_makedirs(const char *path, cplat_error *detail_out)
         return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
     }
 
-    /* パスをローカル バッファーに複製する */
     memcpy(buf, path, path_len + 1);
 
 #if defined(PLATFORM_WINDOWS)
@@ -210,24 +226,27 @@ int cplat_makedirs(const char *path, cplat_error *detail_out)
 
     root_len = path_root_prefix_len(buf);
 
+    /* パスを親階層から順に辿り、中間ディレクトリを順次生成する。 */
     for (i = root_len; i < path_len; i++)
     {
         if (buf[i] == PLATFORM_PATH_SEP_CHR)
         {
             if (i > root_len && buf[i - 1u] != PLATFORM_PATH_SEP_CHR)
             {
-                /* 中間ディレクトリを一時終端して生成する */
+                /* 中間ディレクトリを一時終端して生成する。 */
                 buf[i] = '\0';
+
                 if (ensure_one_dir(buf, detail_out) != CPLAT_OK)
                 {
                     return CPLAT_ERR_UNKNOWN;
                 }
+
                 buf[i] = PLATFORM_PATH_SEP_CHR;
             }
         }
     }
 
-    /* 末尾要素 (= パス全体) を生成する */
+    /* 末尾要素 (= パス全体) を生成する。 */
     return ensure_one_dir(buf, detail_out);
 }
 
@@ -266,6 +285,7 @@ int cplat_stat(cplat_file_stat_t *buf, cplat_error *detail_out, const char *path
     {
         return cplat_internal_error_report_errno(detail_out, errno);
     }
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -300,6 +320,7 @@ int cplat_mkdir(const char *path, cplat_error *detail_out)
     {
         return cplat_internal_error_report_errno(detail_out, errno);
     }
+
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -313,11 +334,13 @@ int cplat_file_stat_is_regular(const cplat_file_stat_t *file_stat)
     }
 
 #if defined(PLATFORM_LINUX)
-    /* glibc は S_IFMT と S_IFREG を __USE_MISC の内側に置くため、
-     * 厳密 ISO モードでも参照できる S_ISREG を使用する。 */
+    /*
+     * glibc は S_IFMT と S_IFREG を __USE_MISC の内側に置くため、
+     * 厳密 ISO モードでも参照できる S_ISREG() を使用する。
+     */
     return S_ISREG(file_stat->st_mode) != 0;
 #elif defined(PLATFORM_WINDOWS)
-    /* MSVC の <sys/stat.h> に S_ISREG はないため、種別ビットの比較で判定する。 */
+    /* MSVC の <sys/stat.h> に S_ISREG() はないため、種別ビットの比較で判定する。 */
     return (file_stat->st_mode & _S_IFMT) == _S_IFREG;
 #endif /* PLATFORM_ */
 }

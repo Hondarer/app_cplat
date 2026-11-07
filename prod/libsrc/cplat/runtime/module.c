@@ -64,6 +64,7 @@ static const char *find_shared_lib_extension_cut(const char *s)
     {
         return s + (len - 3);
     }
+
     if (len >= 6 && strcmp(s + (len - 6), ".dylib") == 0)
     {
         return s + (len - 6);
@@ -84,7 +85,7 @@ static const char *find_shared_lib_extension_cut(const char *s)
  *  realpath() で可能な限り絶対化・正規化します。
  *
  *  @param[out]     path_out    出力 (UTF-8、NULL 終端)。
- *  @param[in]      path_size   出力バッファーのサイズ (バイト)。
+ *  @param[in]      path_size   出力バッファーのサイズ [byte]。
  *  @param[in]      func_addr   所属モジュールを特定するための関数アドレス。
  *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、@ref CPLAT_ERR_UNKNOWN のいずれか。
  */
@@ -107,6 +108,7 @@ static int get_self_path_posix(char *path_out, size_t path_size, const void *fun
     {
         p = "";
     }
+
     if (p[0] == '\0')
         return CPLAT_ERR_UNKNOWN;
 
@@ -150,16 +152,18 @@ static int get_self_path_w(wchar_t *wpath_out, size_t wpath_size, const void *fu
         return CPLAT_ERR_UNKNOWN;
     }
 
-    /* 本関数はワイド文字列を出力するため、UTF-8 を返す GetModuleFileNameU は使えない */
+    /* 本関数はワイド文字列を出力するため、UTF-8 を返す GetModuleFileNameU() は使えない。 */
     n = GetModuleFileNameW(hm, buf, (DWORD)(sizeof(buf) / sizeof(buf[0])));
     if (n == 0 || n >= (DWORD)(sizeof(buf) / sizeof(buf[0])))
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     buf[n] = L'\0';
     if (wcslen(buf) + 1 > wpath_size)
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     (void)cplat_wcscpy(wpath_out, wpath_size, buf);
+
     return CPLAT_OK;
 }
 
@@ -193,6 +197,7 @@ static int get_basename_from_path(char *basename_out, size_t basename_size, cons
             basename_out[0] = '\0';
             return CPLAT_ERR_BUFFER_TOO_SMALL;
         }
+
         memcpy(basename_out, fname, len);
         basename_out[len] = '\0';
         return CPLAT_OK;
@@ -221,6 +226,7 @@ int cplat_module_get_path(char *path_out, const size_t path_size, const void *fu
         {
             path_out[0] = '\0';
         }
+
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
@@ -237,16 +243,19 @@ int cplat_module_get_path(char *path_out, const size_t path_size, const void *fu
             path_out[0] = '\0';
         return st;
     }
+
     if (cplat_wpath_to_utf8(utf8_path, sizeof(utf8_path), wpath) < 0)
     {
         if (path_out && path_size)
             path_out[0] = '\0';
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
+
     if (cplat_path_get_full(path_out, path_size, &err, utf8_path) != CPLAT_OK)
     {
         if (path_out && path_size)
             path_out[0] = '\0';
+
         if (cplat_error_is(&err, CPLAT_CAUSE_NAME_TOO_LONG))
         {
             return CPLAT_ERR_BUFFER_TOO_SMALL;
@@ -256,6 +265,7 @@ int cplat_module_get_path(char *path_out, const size_t path_size, const void *fu
             return CPLAT_ERR_UNKNOWN;
         }
     }
+
     return CPLAT_OK;
 #endif /* PLATFORM_ */
 }

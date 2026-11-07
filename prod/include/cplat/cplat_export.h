@@ -13,8 +13,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_EXPORT_H
 #define CPLAT_EXPORT_H
@@ -24,6 +26,7 @@
  *  @{
  */
 
+/* 文書生成の Doxyfile は PREDEFINED で DOXYGEN を定義するため、この分岐のマクロは修飾子へ展開しない。 */
 #ifdef DOXYGEN
 
     /**
@@ -53,7 +56,10 @@
     #define CPLAT_API
 
 #else /* !DOXYGEN */
-
+    /*
+     * CPLAT_DLL_EXPORT() は PREFIX_STATIC と PREFIX_EXPORTS が 0 または 1 であることを前提とする。
+     * 正本は cplat/base/dll_exports.h のファイル コメントである。
+     */
     #ifndef CPLAT_STATIC
         #define CPLAT_STATIC 0
     #endif /* CPLAT_STATIC */

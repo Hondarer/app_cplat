@@ -37,19 +37,23 @@ int cplat_random_bytes(void *buf, const size_t size)
     {
         return CPLAT_OK;
     }
+
     if (buf == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
-    /* クロスプラットフォームの最大値を超える要求は、OS API へ渡す前に引数不正として扱う */
+
+    /* クロスプラットフォームの最大値を超える要求は、OS API へ渡す前に引数不正として扱う。 */
     if (size > CPLAT_CRYPTO_RANDOM_MAX_BYTES)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    /* BCRYPT_USE_SYSTEM_PREFERRED_RNG を指定すると、アルゴリズム プロバイダーの */
-    /* ハンドルを開かずにシステム既定の乱数源を使用できる。                       */
-    /* see: https://learn.microsoft.com/windows/win32/api/bcrypt/nf-bcrypt-bcryptgenrandom */
+    /*
+     * BCRYPT_USE_SYSTEM_PREFERRED_RNG を指定すると、アルゴリズム プロバイダーの
+     * ハンドルを開かずに、システム既定の乱数源を使用できる。
+     * see: https://learn.microsoft.com/windows/win32/api/bcrypt/nf-bcrypt-bcryptgenrandom
+     */
     status = BCryptGenRandom(NULL, (PUCHAR)buf, (ULONG)size, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
     if (!BCRYPT_SUCCESS(status))
     {

@@ -31,11 +31,12 @@ int main(int argc, char **argv)
     int need_help = 0;
     int ret;
 
-    /* 後始末はシャットダウン コールバックが行うため、cplat_console_dispose は呼び出さない */
+    /* 後始末はシャットダウン コールバックが行うため、cplat_console_dispose は呼び出さない。 */
     cplat_console_init();
 
     cplat_argparser_init(argc, argv, "Print the display language of the current environment as a language tag.");
     (void)cplat_argparser_register_flag("-h", "--help", "show this help", &need_help);
+
     if (cplat_argparser_get_register_error_count() > 0)
     {
         (void)cplat_argparser_print_register_error_messages(stderr);
@@ -43,11 +44,13 @@ int main(int argc, char **argv)
     }
 
     ret = cplat_argparser_parse();
+
     if (need_help != 0)
     {
         (void)cplat_argparser_print_usage(stdout);
         return EXIT_SUCCESS;
     }
+
     if (ret != CPLAT_OK)
     {
         (void)cplat_argparser_print_error_messages(stderr);
@@ -62,7 +65,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    /* ニュートラルは空文字列で表すため、この場合は空行を出力する */
+    /* ニュートラルは空文字列で表すため、この場合は空行を出力する。 */
     (void)printf("%s\n", tag);
 
     return EXIT_SUCCESS;

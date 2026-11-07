@@ -16,8 +16,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CONSOLE_UTIL_INTERNAL_H
 #define CONSOLE_UTIL_INTERNAL_H
@@ -67,7 +69,7 @@
 #define CPLAT_CONSOLE_ATTACH_MAX_ATTEMPTS 100
 
 /**
- *  @brief          昇格時の AttachConsole リトライ間隔 [ms]です。
+ *  @brief          昇格時の AttachConsole リトライ間隔 [ms] です。
  *
  *  CPLAT_CONSOLE_ATTACH_MAX_ATTEMPTS と合わせて最悪待ち時間を決めます。
  *  通常は 1 回目か 2 回目で接続できるため、待ち時間は無視できます。

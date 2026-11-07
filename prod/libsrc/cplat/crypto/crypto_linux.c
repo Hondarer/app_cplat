@@ -52,13 +52,17 @@ int cplat_crypto_encrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
         return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
+    /*
+     * ノンス長の設定は、ノンスを渡すより前にしかできない。
+     * 先に暗号アルゴリズムだけを指定し、既定と同じノンス長を明示してから鍵とノンスを渡す。
+     * see: https://docs.openssl.org/3.5/man3/EVP_EncryptInit/
+     */
     if (EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL) != 1)
     {
         EVP_CIPHER_CTX_free(ctx);
         return CPLAT_ERR_UNKNOWN;
     }
 
-    /* ノンス長を 12 バイトに設定 (既定値と同一だが明示する) */
     if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, (int)CPLAT_CRYPTO_NONCE_SIZE, NULL) != 1)
     {
         EVP_CIPHER_CTX_free(ctx);
@@ -71,7 +75,11 @@ int cplat_crypto_encrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
         return CPLAT_ERR_UNKNOWN;
     }
 
-    /* AAD を入力 (ヘッダー改ざん検知用) */
+    /*
+     * 追加認証データは、出力先を NULL にした EVP_EncryptUpdate() で渡す。
+     * ヘッダーの改ざん検知に使う。
+     * see: https://docs.openssl.org/3.5/man3/EVP_EncryptInit/
+     */
     if (aad != NULL && aad_len > 0)
     {
         if (EVP_EncryptUpdate(ctx, NULL, &outl, aad, (int)aad_len) != 1)
@@ -81,8 +89,13 @@ int cplat_crypto_encrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
         }
     }
 
-    /* 平文を暗号化 (in-place 対応: dst == src 可)。平文 0B の場合はスキップ。 */
+    /*
+     * 平文を暗号化する。dst と src が同一でも暗号化できる。
+     * 平文が 0 [byte] のときは EVP_EncryptUpdate() を呼ばない。
+     * そのとき終端処理の書き込み位置を決める outl を 0 にする。
+     */
     outl = 0;
+
     if (src_len > 0)
     {
         if (EVP_EncryptUpdate(ctx, dst, &outl, src, (int)src_len) != 1)
@@ -92,14 +105,20 @@ int cplat_crypto_encrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
         }
     }
 
-    /* GCM では EncryptFinal は追加データを出力しない (final_len == 0) */
+    /*
+     * GCM では EVP_EncryptFinal_ex() は追加の暗号文を出力しない。final_len は 0 になる。
+     * see: https://wiki.openssl.org/index.php/EVP_Authenticated_Encryption_and_Decryption
+     */
     if (EVP_EncryptFinal_ex(ctx, dst + outl, &final_len) != 1)
     {
         EVP_CIPHER_CTX_free(ctx);
         return CPLAT_ERR_UNKNOWN;
     }
 
-    /* GCM 認証タグ (16 バイト) を暗号文の直後に書き込む */
+    /*
+     * 認証タグは終端処理の後でなければ取り出せない。暗号文の直後へ書き込む。
+     * see: https://docs.openssl.org/3.5/man3/EVP_EncryptInit/
+     */
     if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, (int)CPLAT_CRYPTO_TAG_SIZE, dst + src_len) != 1)
     {
         EVP_CIPHER_CTX_free(ctx);
@@ -109,6 +128,7 @@ int cplat_crypto_encrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
     *dst_len = src_len + CPLAT_CRYPTO_TAG_SIZE;
 
     EVP_CIPHER_CTX_free(ctx);
+
     return CPLAT_OK;
 }
 
@@ -141,6 +161,11 @@ int cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
         return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
+    /*
+     * ノンス長の設定は、ノンスを渡すより前にしかできない。
+     * 先に暗号アルゴリズムだけを指定し、既定と同じノンス長を明示してから鍵とノンスを渡す。
+     * see: https://docs.openssl.org/3.5/man3/EVP_EncryptInit/
+     */
     if (EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL) != 1)
     {
         EVP_CIPHER_CTX_free(ctx);
@@ -159,6 +184,11 @@ int cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
         return CPLAT_ERR_UNKNOWN;
     }
 
+    /*
+     * 追加認証データは、出力先を NULL にした EVP_DecryptUpdate() で渡す。
+     * ヘッダーの改ざん検知に使う。
+     * see: https://docs.openssl.org/3.5/man3/EVP_EncryptInit/
+     */
     if (aad != NULL && aad_len > 0)
     {
         if (EVP_DecryptUpdate(ctx, NULL, &outl, aad, (int)aad_len) != 1)
@@ -168,8 +198,12 @@ int cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
         }
     }
 
-    /* 平文 0B の場合はスキップ */
+    /*
+     * 平文が 0 [byte] のときは EVP_DecryptUpdate() を呼ばない。
+     * そのとき終端処理の書き込み位置を決める outl を 0 にする。
+     */
     outl = 0;
+
     if (plain_len > 0)
     {
         if (EVP_DecryptUpdate(ctx, dst, &outl, src, (int)plain_len) != 1)
@@ -179,12 +213,17 @@ int cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
         }
     }
 
-    /* 認証タグを設定 (暗号文の末尾 CPLAT_CRYPTO_TAG_SIZE バイト)。
-       EVP_CIPHER_CTX_ctrl は void * を要求するため const を外すために
-       ローカル バッファーにコピーしてから渡す (-Wcast-qual 回避)。 */
+    /*
+     * 認証タグは暗号文の末尾 CPLAT_CRYPTO_TAG_SIZE [byte] にある。
+     * EVP_CIPHER_CTX_ctrl() は void * を要求するため、const を外すために
+     * ローカル バッファーへコピーしてから渡す (-Wcast-qual 回避)。
+     * タグの設定は EVP_DecryptFinal_ex() より前に行う。
+     * see: https://docs.openssl.org/3.5/man3/EVP_EncryptInit/
+     */
     {
         uint8_t tag_buf[CPLAT_CRYPTO_TAG_SIZE];
         memcpy(tag_buf, src + plain_len, CPLAT_CRYPTO_TAG_SIZE);
+
         if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, (int)CPLAT_CRYPTO_TAG_SIZE, tag_buf) != 1)
         {
             EVP_CIPHER_CTX_free(ctx);
@@ -192,7 +231,7 @@ int cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
         }
     }
 
-    /* DecryptFinal でタグ検証を行う。失敗時は CPLAT_ERR_UNKNOWN を返す (認証タグ不一致)。 */
+    /* EVP_DecryptFinal_ex() で認証タグを検証する。失敗時は CPLAT_ERR_UNKNOWN を返す (認証タグ不一致)。 */
     if (EVP_DecryptFinal_ex(ctx, dst + outl, &final_len) != 1)
     {
         EVP_CIPHER_CTX_free(ctx);
@@ -202,6 +241,7 @@ int cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
     *dst_len = plain_len;
 
     EVP_CIPHER_CTX_free(ctx);
+
     return CPLAT_OK;
 }
 
@@ -210,6 +250,12 @@ int cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
 int cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, const size_t passphrase_len)
 {
     EVP_MD_CTX *ctx;
+
+    /*
+     * EVP_DigestFinal_ex() は、書き込んだダイジェストのバイト数を len に格納する。
+     * 呼び出し前の len は、出力バッファーの容量としては使われない。
+     * see: https://docs.openssl.org/master/man3/EVP_DigestInit/
+     */
     unsigned int len = CPLAT_CRYPTO_KEY_SIZE;
 
     if (key == NULL || (passphrase == NULL && passphrase_len > 0))
@@ -225,6 +271,7 @@ int cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, const size_
 
     {
         const uint8_t *pass_data;
+
         if (passphrase != NULL)
         {
             pass_data = passphrase;
@@ -233,6 +280,7 @@ int cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, const size_
         {
             pass_data = (const uint8_t *)"";
         }
+
         if (EVP_DigestInit_ex(ctx, EVP_sha256(), NULL) != 1 || EVP_DigestUpdate(ctx, pass_data, passphrase_len) != 1 ||
             EVP_DigestFinal_ex(ctx, key, &len) != 1)
         {
@@ -242,6 +290,7 @@ int cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, const size_
     }
 
     EVP_MD_CTX_free(ctx);
+
     return CPLAT_OK;
 }
 

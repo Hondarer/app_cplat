@@ -65,10 +65,13 @@ int cplat_file_open(cplat_file *file, const char *path, int flags, cplat_error *
     {
         return cplat_internal_error_report_errno(detail_out, EINVAL);
     }
+
     if ((flags & CPLAT_FILE_OPEN_CREATE_NEW) != 0 && (flags & CPLAT_FILE_OPEN_CREATE) == 0)
     {
-        /* CREATE_NEW は CREATE との併用が必須。単独指定は Linux では O_EXCL が黙って無視され、
-           Windows では OPEN_EXISTING 相当の動作となるため、意図と乖離しないよう明示的に失敗させます。 */
+        /*
+         * CREATE_NEW は CREATE との併用が必須である。単独指定は Linux では O_EXCL が黙って無視され、
+         * Windows では OPEN_EXISTING 相当の動作となるため、意図と乖離しないよう明示的に失敗させる。
+         */
         return cplat_internal_error_report_errno(detail_out, EINVAL);
     }
 
@@ -89,7 +92,7 @@ int cplat_file_open(cplat_file *file, const char *path, int flags, cplat_error *
 
         if (!has_read && !has_write)
         {
-            has_write = 1; /* 既定は書き込み専用として扱い、CPLAT_FILE_OPEN_WRITE が指定されているものとして扱う。 */
+            has_write = 1; /* 既定は書き込み専用として扱い、CPLAT_FILE_OPEN_WRITE が指定されているものとして扱う */
         }
 
         if (has_read && has_write)
@@ -109,18 +112,22 @@ int cplat_file_open(cplat_file *file, const char *path, int flags, cplat_error *
         {
             open_flags |= O_CREAT;
         }
+
         if ((flags & CPLAT_FILE_OPEN_CREATE_NEW) != 0)
         {
             open_flags |= O_EXCL;
         }
+
         if ((flags & CPLAT_FILE_OPEN_TRUNCATE) != 0)
         {
             open_flags |= O_TRUNC;
         }
+
         if ((flags & CPLAT_FILE_OPEN_APPEND) != 0)
         {
             open_flags |= O_APPEND;
         }
+
         if ((flags & CPLAT_FILE_OPEN_WRITE_THROUGH) != 0)
         {
     #if defined(O_DSYNC)
@@ -131,6 +138,7 @@ int cplat_file_open(cplat_file *file, const char *path, int flags, cplat_error *
         }
 
         file->handle = open(path, open_flags, 0644);
+
         if (file_is_open(file))
         {
             file->writable = has_write;
@@ -144,8 +152,11 @@ int cplat_file_open(cplat_file *file, const char *path, int flags, cplat_error *
 #elif defined(PLATFORM_WINDOWS)
     {
         int ret;
-        /* このハンドルによって他プロセスの読み取り、書き込み、削除を妨げない。
-           Linux の open() には対応する共有拒否モードがない (file.h の cplat_file_open 参照)。 */
+
+        /*
+         * このハンドルによって他プロセスの読み取り、書き込み、削除を妨げない。
+         * Linux の open() には対応する共有拒否モードがない (file.h の cplat_file_open 参照)。
+         */
         DWORD share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
         DWORD desired_access;
         DWORD creation_disposition;
@@ -157,7 +168,7 @@ int cplat_file_open(cplat_file *file, const char *path, int flags, cplat_error *
 
         if (!has_read && !has_write)
         {
-            has_write = 1; /* 既定は書き込み専用として扱い、CPLAT_FILE_OPEN_WRITE が指定されているものとして扱う。 */
+            has_write = 1; /* 既定は書き込み専用として扱い、CPLAT_FILE_OPEN_WRITE が指定されているものとして扱う */
         }
 
         ret = crt_check_wpath_length(path, detail_out);
@@ -198,9 +209,11 @@ int cplat_file_open(cplat_file *file, const char *path, int flags, cplat_error *
 
         if (has_write)
         {
-            /* APPEND かつ TRUNCATE なしのとき FILE_APPEND_DATA で開くと書き込みが EOF へ原子的に向かう。 */
-            /* FILE_READ_ATTRIBUTES は後続の GetFileSizeEx (cplat_file_get_size) に必要。           */
-            /* TRUNCATE ありの場合は既存ファイルをゼロ化して先頭から書くため GENERIC_WRITE を使う。    */
+            /*
+             * APPEND かつ TRUNCATE なしのとき FILE_APPEND_DATA で開くと書き込みが EOF へ原子的に向かう。
+             * FILE_READ_ATTRIBUTES は後続の GetFileSizeEx (cplat_file_get_size) に必要。
+             * TRUNCATE ありの場合は既存ファイルをゼロ化して先頭から書くため GENERIC_WRITE を使う。
+             */
             use_append_access = ((flags & CPLAT_FILE_OPEN_APPEND) != 0) && ((flags & CPLAT_FILE_OPEN_TRUNCATE) == 0);
             if (use_append_access != 0)
             {
@@ -210,6 +223,7 @@ int cplat_file_open(cplat_file *file, const char *path, int flags, cplat_error *
             {
                 desired_access = GENERIC_WRITE;
             }
+
             if (has_read)
             {
                 desired_access |= GENERIC_READ;
@@ -222,17 +236,22 @@ int cplat_file_open(cplat_file *file, const char *path, int flags, cplat_error *
         }
 
         file->handle = CreateFileU(path, desired_access, share_mode, NULL, creation_disposition, file_flags, NULL);
+
         if (!file_is_open(file))
         {
             return cplat_internal_error_report_windows_error(detail_out, GetLastError());
         }
+
         file->writable = has_write;
 
-        /* GENERIC_WRITE 経路の APPEND: 手動で末尾へシークする。 */
-        /* FILE_APPEND_DATA 経路は OS が書き込みを EOF へ原子的に向けるためシーク不要。 */
+        /*
+         * GENERIC_WRITE 経路の APPEND: 手動で末尾へシークする。
+         * FILE_APPEND_DATA 経路は OS が書き込みを EOF へ原子的に向けるためシーク不要。
+         */
         if (use_append_access == 0 && (flags & CPLAT_FILE_OPEN_APPEND) != 0)
         {
             pos.QuadPart = 0;
+
             if (!SetFilePointerEx(file->handle, pos, NULL, FILE_END))
             {
                 const DWORD error_code = GetLastError();
@@ -255,6 +274,7 @@ int cplat_file_write(cplat_file *file, const void *buf, size_t len, cplat_error 
     {
         return cplat_internal_error_report_errno(detail_out, EINVAL);
     }
+
     if (!file->writable)
     {
         return cplat_internal_error_report_errno(detail_out, EACCES);
@@ -274,8 +294,10 @@ int cplat_file_write(cplat_file *file, const void *buf, size_t len, cplat_error 
         {
             ssize_t written;
 
-            /* シグナルによる中断を吸収する。転送済みのバイトがある場合、write は
-               成功として転送量を返すため、この再試行は転送量を重複させない。 */
+            /*
+             * シグナルによる中断を吸収する。転送済みのバイトがある場合、write は
+             * 成功として転送量を返すため、この再試行は転送量を重複させない。
+             */
             do
             {
                 written = write(file->handle, cursor, remaining);
@@ -300,6 +322,7 @@ int cplat_file_write(cplat_file *file, const void *buf, size_t len, cplat_error 
         while (remaining > 0u)
         {
             DWORD chunk;
+
             /* WriteFile の DWORD 境界に合わせるため、コーディング規範の例外として UINT32_MAX を維持する。 */
             if (remaining > (size_t)UINT32_MAX)
             {
@@ -309,12 +332,14 @@ int cplat_file_write(cplat_file *file, const void *buf, size_t len, cplat_error 
             {
                 chunk = (DWORD)remaining;
             }
+
             DWORD written = 0;
 
             if (!WriteFile(file->handle, cursor, chunk, &written, NULL))
             {
                 return cplat_internal_error_report_windows_error(detail_out, GetLastError());
             }
+
             if (written == 0u)
             {
                 return cplat_internal_error_report_errno(detail_out, EIO);
@@ -352,10 +377,12 @@ int cplat_file_set_size(cplat_file *file, size_t size, cplat_error *detail_out)
         LARGE_INTEGER pos;
 
         pos.QuadPart = (LONGLONG)size;
+
         if (!SetFilePointerEx(file->handle, pos, NULL, FILE_BEGIN))
         {
             return cplat_internal_error_report_windows_error(detail_out, GetLastError());
         }
+
         if (!SetEndOfFile(file->handle))
         {
             return cplat_internal_error_report_windows_error(detail_out, GetLastError());
@@ -551,6 +578,7 @@ int cplat_file_get_path_id(const char *path, cplat_file_id *id_out, cplat_error 
             (void)CloseHandle(handle);
             return cplat_internal_error_report_windows_error(detail_out, error_code);
         }
+
         if (!CloseHandle(handle))
         {
             return cplat_internal_error_report_windows_error(detail_out, GetLastError());
@@ -606,6 +634,7 @@ int cplat_file_close(cplat_file *file, cplat_error *detail_out)
         const int handle = file->handle;
 
         file->handle = -1;
+
         if (close(handle) != 0)
         {
             return cplat_internal_error_report_errno(detail_out, errno);
@@ -617,6 +646,7 @@ int cplat_file_close(cplat_file *file, cplat_error *detail_out)
         const HANDLE handle = file->handle;
 
         file->handle = INVALID_HANDLE_VALUE;
+
         if (!CloseHandle(handle))
         {
             return cplat_internal_error_report_windows_error(detail_out, GetLastError());

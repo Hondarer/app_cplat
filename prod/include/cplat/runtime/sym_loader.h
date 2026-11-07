@@ -22,8 +22,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef CPLAT_SYM_LOADER_H
 #define CPLAT_SYM_LOADER_H
@@ -86,6 +88,7 @@ extern "C"
         char lib_name[CPLAT_SYM_LOADER_NAME_MAX];  /**< 拡張子なしライブラリ名。[0]=='\0' = 未設定。 */
         char func_name[CPLAT_SYM_LOADER_NAME_MAX]; /**< 関数シンボル名。[0]=='\0' = 未設定。 */
         CPLAT_MODULE_HANDLE handle;                /**< キャッシュ済みハンドル (NULL = 未ロード)。 */
+
         /* 次の 3 つは、ロックを取らない高速経路から読むため、アトミック型で保持する。 */
         cplat_atomic_ptr func_ptr;   /**< キャッシュ済み関数ポインター (NULL = 未取得)。 */
         cplat_atomic_i32 resolved;   /**< 解決済フラグ (0 = 未解決)。 */

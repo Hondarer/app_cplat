@@ -32,6 +32,9 @@
 #include <string.h>
 
 #if defined(PLATFORM_LINUX)
+/*
+ * エントリ ロックの初期化完了を待機する間、CPU を他のスレッドへ譲る。
+ */
 static void wait_for_entry_lock_initialization(cplat_sym_loader_entry *fobj)
 {
     (void)fobj;
@@ -52,6 +55,10 @@ static void yield_while_entry_lock_initializing(cplat_sym_loader_entry *fobj)
 #endif /* PLATFORM_ */
 }
 
+/*
+ * キャッシュ エントリの排他制御ロックを一度だけ初期化する。
+ * 成功時は 0、初期化に失敗した場合は -1 を返す。
+ */
 static int ensure_entry_lock_initialized(cplat_sym_loader_entry *fobj)
 {
     int32_t expected = 0;
@@ -63,6 +70,7 @@ static int ensure_entry_lock_initialized(cplat_sym_loader_entry *fobj)
             cplat_atomic_store_i32(&fobj->lock_state, -1, CPLAT_MEMORY_ORDER_RELEASE);
             return -1;
         }
+
         cplat_atomic_store_i32(&fobj->lock_state, 2, CPLAT_MEMORY_ORDER_RELEASE);
         return 0;
     }
@@ -99,9 +107,11 @@ void *cplat_sym_loader_resolve(cplat_sym_loader_entry *fobj)
 #endif /* PLATFORM_ */
     char lib_with_ext[CPLAT_SYM_LOADER_NAME_MAX];
 
-    /* ロード完了後は resolved が 0 以外になる。早期リターンで判定する。
+    /*
+     * ロード完了後は resolved が 0 以外になる。早期リターンで判定する。
      * resolved の acquire 読み取りは、func_ptr の書き込みのあとに行う resolved の release 書き込みと対になる。
-     * resolved が 0 以外に見えた時点で、func_ptr の書き込みも見える。 */
+     * resolved が 0 以外に見えた時点で、func_ptr の書き込みも見える。
+     */
     if (cplat_atomic_load_i32(&fobj->resolved, CPLAT_MEMORY_ORDER_ACQUIRE) != 0)
     {
         return cplat_atomic_load_ptr(&fobj->func_ptr, CPLAT_MEMORY_ORDER_RELAXED);
@@ -112,10 +122,12 @@ void *cplat_sym_loader_resolve(cplat_sym_loader_entry *fobj)
         return NULL;
     }
 
-    /* ロード処理を排他制御する。
+    /*
+     * ロード処理を排他制御する。
      * ロック取得後に再度 resolved を確認し、他スレッドが先にロードを
      * 完了していた場合は処理をスキップする (double-checked locking)。
-     * ロックの下の読み取りは、ロックが順序を保証するため RELAXED でよい。 */
+     * ロックの下の読み取りは、ロックが順序を保証するため RELAXED でよい。
+     */
     if (cplat_local_lock_lock(fobj->lock, CPLAT_SYNC_WAIT_FOREVER) != CPLAT_OK)
     {
         return NULL;
@@ -129,18 +141,21 @@ void *cplat_sym_loader_resolve(cplat_sym_loader_entry *fobj)
             cplat_atomic_store_i32(&fobj->resolved, 2, CPLAT_MEMORY_ORDER_RELEASE);
             return unlock_entry_and_return_func_ptr(fobj);
         }
+
         if (fobj->lib_name[0] == '\0' || fobj->func_name[0] == '\0')
         {
             /* resolved=-1: 定義なし (定義ファイル不存在、定義行が不存在) */
             cplat_atomic_store_i32(&fobj->resolved, -1, CPLAT_MEMORY_ORDER_RELEASE);
             return unlock_entry_and_return_func_ptr(fobj);
         }
+
         if (strlen(fobj->lib_name) + strlen(ext) >= CPLAT_SYM_LOADER_NAME_MAX)
         {
             /* resolved=-2: 名称長さオーバー */
             cplat_atomic_store_i32(&fobj->resolved, -2, CPLAT_MEMORY_ORDER_RELEASE);
             return unlock_entry_and_return_func_ptr(fobj);
         }
+
         (void)cplat_strcpy(lib_with_ext, sizeof(lib_with_ext), fobj->lib_name);
         (void)cplat_strcat(lib_with_ext, sizeof(lib_with_ext), ext);
 
@@ -156,8 +171,10 @@ void *cplat_sym_loader_resolve(cplat_sym_loader_entry *fobj)
             return unlock_entry_and_return_func_ptr(fobj);
         }
 
-        /* func_ptr を書き込んでから resolved を release で書き込む。
-         * 高速経路の acquire 読み取りと対になり、func_ptr の可視性を保証する。 */
+        /*
+         * func_ptr を書き込んでから resolved を release で書き込む。
+         * 高速経路の acquire 読み取りと対になり、func_ptr の可視性を保証する。
+         */
         {
 #if defined(PLATFORM_LINUX)
             void *ptr = dlsym(fobj->handle, fobj->func_name);
@@ -166,6 +183,7 @@ void *cplat_sym_loader_resolve(cplat_sym_loader_entry *fobj)
 #endif /* PLATFORM_ */
 
             cplat_atomic_store_ptr(&fobj->func_ptr, ptr, CPLAT_MEMORY_ORDER_RELAXED);
+
             if (ptr == NULL)
             {
 #if defined(PLATFORM_LINUX)

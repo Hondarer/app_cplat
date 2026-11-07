@@ -38,6 +38,7 @@ HMODULE LoadLibraryU(const char *utf8_file_name)
 
     result = LoadLibraryW(wfile_name);
     cplat_free(wfile_name);
+
     return result;
 }
 

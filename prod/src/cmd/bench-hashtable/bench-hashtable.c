@@ -29,10 +29,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-/** @brief キー 1 件あたりのストレージ確保量 (バイト) です。 */
+/** @brief キー 1 件あたりのストレージ確保量 [byte] です。 */
 #define BENCH_KEY_BYTES 16
 
-/** @brief 値 1 件あたりのストレージ確保量 (バイト) です。 */
+/** @brief 値 1 件あたりのストレージ確保量 [byte] です。 */
 #define BENCH_VALUE_BYTES 24
 
 /** @brief 1 ケースあたりの試行回数です。 */
@@ -115,6 +115,7 @@ static size_t bench_scenario_units(bench_scenario scenario, size_t capacity)
     {
         return capacity / 2u;
     }
+
     return capacity;
 }
 
@@ -175,11 +176,13 @@ static int bench_add_range(cplat_hashtable *ht, size_t from, size_t count, size_
 
         bench_make_key(from + (i * step), key);
         bench_make_value(from + (i * step), value);
+
         if (cplat_hashtable_add(ht, key, value, CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE) != CPLAT_OK)
         {
             return -1;
         }
     }
+
     return 0;
 }
 
@@ -198,11 +201,13 @@ static int bench_fragment_storage(cplat_hashtable *ht, size_t capacity)
         char key[BENCH_TEXT_SIZE];
 
         bench_make_key(i, key);
+
         if (cplat_hashtable_delete(ht, key) != CPLAT_OK)
         {
             return -1;
         }
     }
+
     if (cplat_hashtable_purge_deleted(ht) == CPLAT_OK)
     {
         return 0;
@@ -226,14 +231,17 @@ static int bench_prepare(void *arg)
     cplat_hashtable_dispose(state->ht);
     state->ht = NULL;
     bench_make_config(state->capacity, &config);
+
     if (cplat_hashtable_create(&config, NULL, 0, NULL, 0, &state->ht) != CPLAT_OK)
     {
         state->failed = 1;
         return -1;
     }
+
     switch (state->scenario)
     {
     case BENCH_SCENARIO_FILL:
+        /* 空のテーブルへの追加を測定するため、事前のデータ追加は行わない。 */
         break;
     case BENCH_SCENARIO_UPDATE:
     case BENCH_SCENARIO_RESIZE:
@@ -255,12 +263,14 @@ static int bench_prepare(void *arg)
             state->failed = 1;
             return -1;
         }
+
         break;
     case BENCH_SCENARIO_COUNT:
     default:
         state->failed = 1;
         return -1;
     }
+
     return 0;
 }
 
@@ -287,6 +297,7 @@ static int bench_iterate(void *arg)
 
             bench_make_key(i, key);
             bench_make_value(i + state->capacity, value);
+
             if (cplat_hashtable_update(state->ht, key, value) != CPLAT_OK)
             {
                 return -1;
@@ -341,6 +352,7 @@ static int bench_run_case(FILE *csv, const bench_hashtable_case *item)
 
     ret = bench_timer_measure_cold(bench_iterate, &state, bench_prepare, &state, BENCH_TRIALS, &timing);
     cplat_hashtable_dispose(state.ht);
+
     if ((ret != 0) || (state.failed != 0))
     {
         (void)fprintf(stderr, "measurement failed: capacity=%zu scenario=%s\n", item->capacity,
@@ -356,14 +368,17 @@ static int bench_run_case(FILE *csv, const bench_hashtable_case *item)
     {
         per_unit_ns = 0.0;
     }
+
     (void)printf("%10zu  %-8s  %14.3f  %12.1f\n", item->capacity, bench_scenario_name(item->scenario),
                  (double)timing.median_ns / 1000000.0, per_unit_ns);
+
     if (csv != NULL)
     {
         (void)fprintf(csv, "%zu,%s,%llu,%llu,%llu,%.1f\n", item->capacity, bench_scenario_name(item->scenario),
                       (unsigned long long)timing.median_ns, (unsigned long long)timing.min_ns,
                       (unsigned long long)timing.max_ns, per_unit_ns);
     }
+
     return 0;
 }
 
@@ -389,11 +404,13 @@ static int register_options(bench_hashtable_options *options)
         NULL, "--max-capacity", "N", "largest number of slots to measure (default 16384)", 0, &options->max_capacity);
     (void)cplat_argparser_register_option_string(NULL, "--csv", "PATH", "also write results as CSV", 0,
                                                  &options->csv_path);
+
     if (cplat_argparser_get_register_error_count() > 0)
     {
         (void)cplat_argparser_print_register_error_messages(stderr);
         return -1;
     }
+
     return 0;
 }
 
@@ -409,27 +426,33 @@ int main(int argc, char **argv)
     cplat_console_init();
 
     cplat_argparser_init(argc, argv, "Measure hash table variable-length storage operations.");
+
     if (register_options(&options) != 0)
     {
         return EXIT_FAILURE;
     }
+
     ret = cplat_argparser_parse();
+
     if (options.need_help != 0)
     {
         (void)cplat_argparser_print_usage(stdout);
         return EXIT_SUCCESS;
     }
+
     if (ret != CPLAT_OK)
     {
         (void)cplat_argparser_print_error_messages(stderr);
         (void)cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
     }
+
     if (options.max_capacity < 0)
     {
         (void)fprintf(stderr, "max capacity must not be negative.\n");
         return EXIT_FAILURE;
     }
+
     if (options.max_capacity > 0)
     {
         max_capacity = (size_t)options.max_capacity;
@@ -447,11 +470,14 @@ int main(int argc, char **argv)
             (void)fprintf(stderr, "cannot open %s for writing.\n", options.csv_path);
             return EXIT_FAILURE;
         }
+
         (void)fprintf(csv, "capacity,scenario,median_ns,min_ns,max_ns,ns_per_unit\n");
     }
 
     (void)printf("%10s  %-8s  %14s  %12s\n", "capacity", "scenario", "median (ms)", "ns/unit");
     (void)printf("--------------------------------------------------------\n");
+
+    /* capacity を 4 倍ずつ増やしながら、各シナリオの測定を実行する。 */
     for (capacity = 256u; capacity <= max_capacity; capacity *= 4u)
     {
         int scenario;
@@ -462,6 +488,7 @@ int main(int argc, char **argv)
 
             item.capacity = capacity;
             item.scenario = (bench_scenario)scenario;
+
             if (bench_run_case(csv, &item) != 0)
             {
                 failures++;
@@ -473,6 +500,7 @@ int main(int argc, char **argv)
     {
         (void)fclose(csv);
     }
+
     if (failures == 0)
     {
         return EXIT_SUCCESS;

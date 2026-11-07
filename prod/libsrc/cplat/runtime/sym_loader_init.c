@@ -81,6 +81,8 @@ void cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array, const size
     }
 
     size = cplat_ftell(fp);
+
+    /* ファイル サイズが 0 以下、または上限の CONFIG_FILE_MAX を超える場合は読み込みを中止する。 */
     if ((size <= 0) || (size > CONFIG_FILE_MAX))
     {
         goto out_close;
@@ -103,6 +105,7 @@ void cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array, const size
     {
         goto out_free_buffer;
     }
+
     buffer[file_size] = '\0';
 
     root = cJSON_ParseJSONCWithLength(buffer, file_size);
@@ -111,6 +114,7 @@ void cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array, const size
         goto out_free_json;
     }
 
+    /* JSONC オブジェクトの各エントリを走査し、対応するキーのキャッシュ エントリにライブラリ名と関数名を取り込む。 */
     for (entry = root->child; entry != NULL; entry = entry->next)
     {
         const cJSON *lib_item;
@@ -128,6 +132,7 @@ void cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array, const size
         }
 
         func_key = entry->string;
+
         /* cJSON の object 子要素ではプロパティ名 string が必ず設定される。 */
         if (func_key[0] == '\0')
         {
@@ -154,6 +159,7 @@ void cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array, const size
         {
             continue;
         }
+
         if ((lib_len > (size_t)SYMBOL_LOADER_NAME_WIDTH) || (func_len > (size_t)SYMBOL_LOADER_NAME_WIDTH))
         {
             continue;
@@ -164,6 +170,7 @@ void cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array, const size
             continue;
         }
 
+        /* func_key が一致するキャッシュ エントリを検索し、ライブラリ名と関数名を設定する。 */
         for (fobj_index = 0; fobj_index < fobj_length; fobj_index++)
         {
             cplat_sym_loader_entry *cache = fobj_array[fobj_index];
@@ -172,6 +179,7 @@ void cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array, const size
             {
                 continue;
             }
+
             if (strcmp(cache->func_key, func_key) != 0)
             {
                 continue;
@@ -191,5 +199,6 @@ out_free_buffer:
     buffer = NULL;
 out_close:
     (void)cplat_fclose(fp, NULL);
+
     return;
 }

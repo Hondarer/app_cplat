@@ -159,6 +159,7 @@ int cplat_error_message(char *buf, const size_t buf_size, const cplat_error *err
         {
             copy_size = buf_size;
         }
+
         memcpy(buf, message, copy_size);
         buf[copy_size - 1U] = '\0';
         result = CPLAT_OK;
@@ -170,13 +171,17 @@ int cplat_error_message(char *buf, const size_t buf_size, const cplat_error *err
     else if (error->domain == CPLAT_ERROR_DOMAIN_GAI)
     {
 #if defined(PLATFORM_LINUX)
-        /* glibc の gai_strerror() はスレッド セーフであり、静的な定数文字列を返す。
-           see: https://man7.org/linux/man-pages/man3/gai_strerror.3.html */
+        /*
+         * glibc の gai_strerror() はスレッド セーフであり、静的な定数文字列を返す。
+         * see: https://man7.org/linux/man-pages/man3/gai_strerror.3.html
+         */
         result = cplat_strcpy(buf, buf_size, gai_strerror((int)error->code));
 #elif defined(PLATFORM_WINDOWS)
-        /* Windows の EAI_* は Winsock エラー コードと同一値のため FormatMessage で
-           文字列化できる。gai_strerrorA() は静的バッファーを使用しスレッド セーフでない。
-           see: https://learn.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-gai_strerrora */
+        /*
+         * Windows の EAI_* は Winsock エラー コードと同一値のため FormatMessage で
+         * 文字列化できる。gai_strerrorA() は静的バッファーを使用しスレッド セーフでない。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-gai_strerrora
+         */
         result = cplat_internal_win32_error_message(buf, buf_size, error->code);
 #else
         buf[0] = '\0';
@@ -185,8 +190,10 @@ int cplat_error_message(char *buf, const size_t buf_size, const cplat_error *err
     }
     else if ((error->domain == CPLAT_ERROR_DOMAIN_WINDOWS) || (error->domain == CPLAT_ERROR_DOMAIN_WINSOCK))
     {
-        /* Winsock エラーも Win32 と同じく FormatMessage が文字列化できる。
-           see: https://learn.microsoft.com/en-us/windows/win32/winsock/windows-sockets-error-codes-2 */
+        /*
+         * Winsock エラーも Win32 と同じく FormatMessage が文字列化できる。
+         * see: https://learn.microsoft.com/en-us/windows/win32/winsock/windows-sockets-error-codes-2
+         */
 #if defined(PLATFORM_WINDOWS)
         result = cplat_internal_win32_error_message(buf, buf_size, error->code);
 #else
@@ -212,14 +219,17 @@ int cplat_internal_errno_message(char *buf, const size_t buf_size, const int err
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
+    /* 失敗しても呼び出し元が空文字列を読めるよう、先に終端する。 */
     buf[0] = '\0';
 
 #if defined(PLATFORM_LINUX)
     {
-    /* strerror_r には 2 系統がある。XSI 準拠版は int を返して buf へ書き込み、    */
-    /* GNU 拡張版は char * を返す (buf を使わず静的文字列を返すことがある)。       */
-    /* glibc は _GNU_SOURCE 定義時のみ GNU 版を提供する。                          */
-    /* see: https://man7.org/linux/man-pages/man3/strerror_r.3.html                */
+    /*
+     * strerror_r には 2 系統がある。XSI 準拠版は int を返して buf へ書き込み、
+     * GNU 拡張版は char * を返す (buf を使わず静的文字列を返すことがある)。
+     * glibc は _GNU_SOURCE 定義時のみ GNU 版を提供する。
+     * see: https://man7.org/linux/man-pages/man3/strerror_r.3.html
+     */
     #if defined(__GLIBC__) && defined(_GNU_SOURCE)
         const char *message = strerror_r(errno_value, buf, buf_size);
 
@@ -227,6 +237,7 @@ int cplat_internal_errno_message(char *buf, const size_t buf_size, const int err
         {
             return CPLAT_ERR_UNKNOWN;
         }
+
         if (message != buf)
         {
             size_t len = strlen(message);
@@ -235,9 +246,11 @@ int cplat_internal_errno_message(char *buf, const size_t buf_size, const int err
             {
                 len = buf_size - 1U;
             }
+
             memcpy(buf, message, len);
             buf[len] = '\0';
         }
+
         return CPLAT_OK;
     #else
         /* XSI 版は成功で 0 を返す。ERANGE は切り詰めを表すため成功として扱う。 */
@@ -248,17 +261,22 @@ int cplat_internal_errno_message(char *buf, const size_t buf_size, const int err
             buf[0] = '\0';
             return CPLAT_ERR_UNKNOWN;
         }
+
         return CPLAT_OK;
     #endif /* __GLIBC__ && _GNU_SOURCE */
     }
 #elif defined(PLATFORM_WINDOWS)
     {
-        /* strerror_s はバッファーが不足する場合も切り詰めて NUL 終端する。 */
+        /*
+         * strerror_s はバッファーが不足する場合も切り詰めて NUL 終端する。
+         * see: https://learn.microsoft.com/cpp/c-runtime-library/reference/strerror-s-strerror-s-wcserror-s-wcserror-s
+         */
         if (strerror_s(buf, buf_size, errno_value) != 0)
         {
             buf[0] = '\0';
             return CPLAT_ERR_UNKNOWN;
         }
+
         return CPLAT_OK;
     }
 #endif /* PLATFORM_ */
@@ -280,10 +298,13 @@ int cplat_internal_win32_error_message(char *buf, const size_t buf_size, const u
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
+    /* 失敗しても呼び出し元が空文字列を読めるよう、先に終端する。 */
     buf[0] = '\0';
 
-    /* ALLOCATE_BUFFER 指定時、lpBuffer には確保先ポインターのアドレスを渡す。 */
-    /* see: https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-formatmessagew */
+    /*
+     * FORMAT_MESSAGE_ALLOCATE_BUFFER のとき、lpBuffer には確保先ポインターのアドレスを渡す。
+     * see: https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-formatmessagew
+     */
     wlen =
         FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                        NULL, (DWORD)error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&wmessage, 0, NULL);
@@ -292,7 +313,7 @@ int cplat_internal_win32_error_message(char *buf, const size_t buf_size, const u
         return CPLAT_ERR_UNKNOWN;
     }
 
-    /* FormatMessageW のメッセージは末尾に改行を含むため取り除く */
+    /* FormatMessageW のメッセージは末尾に改行を含むため取り除く。 */
     while (wlen > 0 && (wmessage[wlen - 1] == L'\r' || wmessage[wlen - 1] == L'\n'))
     {
         wmessage[wlen - 1] = L'\0';
@@ -300,7 +321,8 @@ int cplat_internal_win32_error_message(char *buf, const size_t buf_size, const u
     }
 
     utf8 = cplat_wstr_to_utf8_alloc(wmessage);
-    LocalFree(wmessage);
+    LocalFree(wmessage); /* ALLOCATE_BUFFER で確保したワイド文字列 */
+
     if (utf8 == NULL)
     {
         return CPLAT_ERR_UNKNOWN;
@@ -311,6 +333,7 @@ int cplat_internal_win32_error_message(char *buf, const size_t buf_size, const u
     {
         len = buf_size - 1U;
     }
+
     memcpy(buf, utf8, len);
     buf[len] = '\0';
     cplat_free(utf8);

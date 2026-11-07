@@ -37,6 +37,7 @@ int cplat_internal_string_catalog_collect_arguments(const cplat_string_catalog_e
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
+    /* 各引数定義の種別に応じた型で、可変長引数から値を順に取り出す。 */
     for (index = 0; index < entry->argument_count; index++)
     {
         const cplat_string_catalog_argument_kind kind = entry->arguments[index].kind;
@@ -47,14 +48,14 @@ int cplat_internal_string_catalog_collect_arguments(const cplat_string_catalog_e
         switch (kind)
         {
         case CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED:
-            /* 引数を割り当てないインデックスのため、可変長引数から値を取り出さない */
+            /* 引数を割り当てないインデックスのため、可変長引数から値を取り出さない。 */
             break;
 
         case CPLAT_STRING_CATALOG_ARGUMENT_KIND_STRING:
             values[index].value.string_value = va_arg(args, const char *);
             break;
 
-        /* 昇格後の `int` として取り出し、種別に応じた型幅へ変換する */
+        /* 昇格後の int として取り出し、種別に応じた型幅へ変換する。 */
         case CPLAT_STRING_CATALOG_ARGUMENT_KIND_CHAR:
             values[index].value.char_value = (char)va_arg(args, int);
             break;
@@ -113,7 +114,7 @@ int cplat_internal_string_catalog_collect_arguments(const cplat_string_catalog_e
             break;
 
         default:
-            /* 未知の種別では取り出す型を特定できないため、以降の引数の走査も中止する */
+            /* 未知の種別では取り出す型を特定できないため、以降の引数の走査も中止する。 */
             return CPLAT_ERR_MALFORMED_DEFINITION;
         }
     }

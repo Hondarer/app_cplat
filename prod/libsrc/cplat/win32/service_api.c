@@ -35,6 +35,7 @@ SC_HANDLE OpenSCManagerU(const char *utf8_machine_name, const char *utf8_databas
     {
         wmachine = cplat_utf8_to_wstr_alloc(utf8_machine_name);
     }
+
     if (utf8_database_name != NULL)
     {
         wdatabase = cplat_utf8_to_wstr_alloc(utf8_database_name);
@@ -51,6 +52,7 @@ SC_HANDLE OpenSCManagerU(const char *utf8_machine_name, const char *utf8_databas
     result = OpenSCManagerW(wmachine, wdatabase, desired_access);
     cplat_free(wmachine);
     cplat_free(wdatabase);
+
     return result;
 }
 
@@ -74,26 +76,32 @@ SC_HANDLE CreateServiceU(SC_HANDLE scm, const char *utf8_service_name, const cha
     {
         wservice_name = cplat_utf8_to_wstr_alloc(utf8_service_name);
     }
+
     if (utf8_display_name != NULL)
     {
         wdisplay_name = cplat_utf8_to_wstr_alloc(utf8_display_name);
     }
+
     if (utf8_binary_path_name != NULL)
     {
         wbinary_path_name = cplat_utf8_to_wstr_alloc(utf8_binary_path_name);
     }
+
     if (utf8_load_order_group != NULL)
     {
         wload_order_group = cplat_utf8_to_wstr_alloc(utf8_load_order_group);
     }
+
     if (utf8_dependencies != NULL)
     {
         wdependencies = cplat_utf8_to_wstr_alloc(utf8_dependencies);
     }
+
     if (utf8_service_start_name != NULL)
     {
         wservice_start_name = cplat_utf8_to_wstr_alloc(utf8_service_start_name);
     }
+
     if (utf8_password != NULL)
     {
         wpassword = cplat_utf8_to_wstr_alloc(utf8_password);
@@ -127,6 +135,7 @@ SC_HANDLE CreateServiceU(SC_HANDLE scm, const char *utf8_service_name, const cha
     cplat_free(wdependencies);
     cplat_free(wservice_start_name);
     cplat_free(wpassword);
+
     return result;
 }
 
@@ -146,6 +155,7 @@ SC_HANDLE OpenServiceU(SC_HANDLE scm, const char *utf8_service_name, DWORD desir
 
     result = OpenServiceW(scm, wservice_name, desired_access);
     cplat_free(wservice_name);
+
     return result;
 }
 
@@ -180,6 +190,7 @@ BOOL ChangeServiceConfig2U(SC_HANDLE service, DWORD info_level, const char *utf8
     desc_w.lpDescription = wtext;
     result = ChangeServiceConfig2W(service, SERVICE_CONFIG_DESCRIPTION, &desc_w);
     cplat_free(wtext);
+
     return result;
 }
 
@@ -200,6 +211,7 @@ SERVICE_STATUS_HANDLE RegisterServiceCtrlHandlerExU(const char *utf8_service_nam
 
     result = RegisterServiceCtrlHandlerExW(wservice_name, handler_proc, context);
     cplat_free(wservice_name);
+
     return result;
 }
 
@@ -219,14 +231,14 @@ BOOL StartServiceCtrlDispatcherU(const cplat_service_entry_u *service_table)
         return FALSE;
     }
 
-    /* テーブルのエントリ数を数える (終端: service_name == NULL) */
+    /* テーブルのエントリ数を数える (終端: service_name == NULL)。 */
     count = 0;
     while (service_table[count].service_name != NULL)
     {
         count++;
     }
 
-    /* W テーブルを確保する (終端要素を含むため count + 1) */
+    /* W テーブルを確保する (終端要素を含むため count + 1)。 */
     w_table = (SERVICE_TABLE_ENTRYW *)cplat_calloc(count + 1U, sizeof(SERVICE_TABLE_ENTRYW));
     if (w_table == NULL)
     {
@@ -234,16 +246,18 @@ BOOL StartServiceCtrlDispatcherU(const cplat_service_entry_u *service_table)
         return FALSE;
     }
 
-    /* 各エントリのサービス名を wide 化する (calloc で lpServiceName は全 NULL 初期化済み) */
+    /* 各エントリのサービス名を wide 化する (calloc() で lpServiceName は全 NULL 初期化済み)。 */
     for (i = 0; i < count; i++)
     {
         w_table[i].lpServiceName = cplat_utf8_to_wstr_alloc(service_table[i].service_name);
         w_table[i].lpServiceProc = service_table[i].service_proc;
     }
-    /* 終端要素は calloc で 0 初期化済み */
 
-    /* 変換の成否を確認する */
+    /* 終端要素は calloc() で 0 初期化済み。 */
+
+    /* 変換の成否を確認する。 */
     ok = TRUE;
+
     for (i = 0; i < count; i++)
     {
         if (w_table[i].lpServiceName == NULL)
@@ -267,7 +281,9 @@ BOOL StartServiceCtrlDispatcherU(const cplat_service_entry_u *service_table)
     {
         cplat_free(w_table[i].lpServiceName);
     }
+
     cplat_free(w_table);
+
     return result;
 }
 

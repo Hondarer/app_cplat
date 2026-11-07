@@ -17,8 +17,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef SYSLOG_TEST_H
 #define SYSLOG_TEST_H
@@ -66,6 +68,7 @@ static int syslog_test_fd_write(const char *buf, size_t nbytes)
     {
         (void)write(test_fd, buf, nbytes);
     }
+
     return 1;
 }
 

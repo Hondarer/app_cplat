@@ -29,10 +29,15 @@
     #include <cplat/base/result.h>
     #include <cplat/crypto/crypto.h>
 
-/* BCrypt を使用した AES-256-GCM 暗号化の共通実装。
-   is_encrypt: TRUE = 暗号化、FALSE = 復号 (タグ検証含む)。
-   src/src_len: 暗号化時は平文、復号時は暗号文 (タグを除く)。
-   tag: 暗号化時は出力バッファー、復号時は検証用入力バッファー。 */
+/*
+ * BCrypt で AES-256-GCM の暗号化または復号を行う。
+ * is_encrypt が TRUE のときは暗号化し、FALSE のときは復号する。復号ではタグ検証を含む。
+ * src と src_len は、暗号化では平文、復号ではタグを除いた暗号文である。
+ * tag は、暗号化では出力バッファー、復号では検証する入力バッファーである。
+ * 成功したときは CPLAT_OK を返し、dst_len に書き込んだバイト数を格納する。
+ * アルゴリズムのオープン、モード設定、鍵生成、暗号化または復号が失敗したときは CPLAT_ERR_UNKNOWN を返す。
+ * これらの失敗時は dst_len を更新しない。
+ */
 static int bcrypt_aes_gcm(const BOOL is_encrypt, uint8_t *dst, size_t *dst_len, const uint8_t *src,
                           const size_t src_len, const uint8_t *key, const uint8_t *nonce, const uint8_t *aad,
                           const size_t aad_len, uint8_t *tag, const ULONG tag_len)
@@ -64,10 +69,20 @@ static int bcrypt_aes_gcm(const BOOL is_encrypt, uint8_t *dst, size_t *dst_len, 
         return CPLAT_ERR_UNKNOWN;
     }
 
+    /*
+     * cbSize と dwInfoVersion は直接代入しない。BCRYPT_INIT_AUTH_MODE_INFO() で初期化する。
+     * see: https://learn.microsoft.com/windows/win32/api/bcrypt/ns-bcrypt-bcrypt_authenticated_cipher_mode_info
+     */
     BCRYPT_INIT_AUTH_MODE_INFO(auth_info);
     auth_info.pbNonce = (PUCHAR)nonce;
     auth_info.cbNonce = (ULONG)CPLAT_CRYPTO_NONCE_SIZE;
     auth_info.pbAuthData = (PUCHAR)aad;
+
+    /*
+     * 追加認証データがない場合、API は pbAuthData を NULL、cbAuthData を 0 にするよう要求する。
+     * aad が NULL のときは aad_len を使わない。
+     * see: https://learn.microsoft.com/windows/win32/api/bcrypt/ns-bcrypt-bcrypt_authenticated_cipher_mode_info
+     */
     if (aad != NULL)
     {
         auth_info.cbAuthData = (ULONG)aad_len;
@@ -76,9 +91,14 @@ static int bcrypt_aes_gcm(const BOOL is_encrypt, uint8_t *dst, size_t *dst_len, 
     {
         auth_info.cbAuthData = 0U;
     }
+
     auth_info.pbTag = (PUCHAR)tag;
     auth_info.cbTag = tag_len;
 
+    /*
+     * GCM のノンスは pbNonce で渡す。BCryptEncrypt() と BCryptDecrypt() の IV 引数は使わない。
+     * see: https://learn.microsoft.com/windows/win32/api/bcrypt/ns-bcrypt-bcrypt_authenticated_cipher_mode_info
+     */
     if (is_encrypt)
     {
         status = BCryptEncrypt(h_key, (PUCHAR)src, (ULONG)src_len, &auth_info, NULL, 0, (PUCHAR)dst, (ULONG)*dst_len,
@@ -99,6 +119,7 @@ static int bcrypt_aes_gcm(const BOOL is_encrypt, uint8_t *dst, size_t *dst_len, 
     }
 
     *dst_len = (size_t)len;
+
     return CPLAT_OK;
 }
 
@@ -120,10 +141,14 @@ int cplat_crypto_encrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
 
+    /*
+     * 暗号文長は平文長と等しい。正本は app/cplat/docs/functional-spec/crypto.md の「暗号化の形式」節である。
+     * 認証タグは tag へ出るため、BCrypt へ渡す出力先の長さは平文長である。
+     */
     enc_len = src_len;
 
     {
-        /* BCrypt は src=NULL を受け付けないため、空バッファーを用意する */
+        /* BCrypt は src が NULL だと受け付けないため、空のバッファーを用意する。 */
         static const uint8_t empty_src[1] = {0};
         const uint8_t *actual_src;
         int bcrypt_result;
@@ -145,9 +170,10 @@ int cplat_crypto_encrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
         }
     }
 
-    /* タグ (16B) を暗号文の直後に付加する */
+    /* 認証タグを暗号文の直後に付加する。 */
     memcpy(dst + enc_len, tag, CPLAT_CRYPTO_TAG_SIZE);
     *dst_len = enc_len + CPLAT_CRYPTO_TAG_SIZE;
+
     return CPLAT_OK;
 }
 
@@ -171,8 +197,10 @@ int cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
 
-    /* タグは暗号文の末尾 CPLAT_CRYPTO_TAG_SIZE バイト。BCrypt がタグ検証を行う。
-       STATUS_AUTH_TAG_MISMATCH 時は bcrypt_aes_gcm が CPLAT_ERR_UNKNOWN を返す。 */
+    /*
+     * タグは暗号文の末尾 CPLAT_CRYPTO_TAG_SIZE [byte] である。BCryptDecrypt() がタグを検証する。
+     * STATUS_AUTH_TAG_MISMATCH のときは bcrypt_aes_gcm() が CPLAT_ERR_UNKNOWN を返す。
+     */
     return bcrypt_aes_gcm(FALSE, dst, dst_len, src, plain_len, key, nonce, aad, aad_len, (uint8_t *)(src + plain_len),
                           (ULONG)CPLAT_CRYPTO_TAG_SIZE);
 }
@@ -188,7 +216,7 @@ int cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, const size_
     const uint8_t *data;
     ULONG data_len;
 
-    /* 引数検証は Linux 実装 (crypto_linux.c) と同じく関数先頭で行う */
+    /* 引数検証は Linux 実装 (crypto_linux.c) と同じく、関数の先頭で行う。 */
     if (key == NULL || (passphrase == NULL && passphrase_len > 0))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;

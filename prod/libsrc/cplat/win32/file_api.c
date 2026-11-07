@@ -44,6 +44,7 @@ HANDLE CreateFileU(const char *utf8_path, DWORD desired_access, DWORD share_mode
     result = CreateFileW(wpath, desired_access, share_mode, security_attributes, creation_disposition,
                          flags_and_attributes, template_file);
     cplat_free(wpath);
+
     return result;
 }
 
@@ -66,6 +67,7 @@ HANDLE CreateNamedPipeU(const char *utf8_name, DWORD open_mode, DWORD pipe_mode,
     result = CreateNamedPipeW(wname, open_mode, pipe_mode, max_instances, out_buffer_size, in_buffer_size,
                               default_timeout, security_attributes);
     cplat_free(wname);
+
     return result;
 }
 
@@ -91,7 +93,7 @@ DWORD GetModuleFileNameU(HMODULE module, char *utf8_buf, DWORD size)
         return 0;
     }
 
-    /* パス区切り文字の正規化は行わない (wstr_to_utf8 を使用) */
+    /* パス区切り文字の正規化は行わない (cplat_wstr_to_utf8_alloc() を使用)。 */
     utf8 = cplat_wstr_to_utf8_alloc(wbuf);
     if (utf8 == NULL)
     {
@@ -102,7 +104,7 @@ DWORD GetModuleFileNameU(HMODULE module, char *utf8_buf, DWORD size)
     utf8_len = strlen(utf8);
     if (utf8_len >= (size_t)size)
     {
-        /* バッファー不足: 切り詰めて NUL 終端する */
+        /* バッファー不足: 切り詰めて NUL 終端する。 */
         memcpy(utf8_buf, utf8, (size_t)(size - 1U));
         utf8_buf[size - 1U] = '\0';
         cplat_free(utf8);
@@ -113,6 +115,7 @@ DWORD GetModuleFileNameU(HMODULE module, char *utf8_buf, DWORD size)
     memcpy(utf8_buf, utf8, utf8_len + 1U);
     written = (DWORD)utf8_len;
     cplat_free(utf8);
+
     return written;
 }
 
@@ -129,24 +132,27 @@ BOOL WriteConsoleU(HANDLE console, const char *utf8_text, DWORD utf8_length, DWO
     {
         *written_length = 0;
     }
+
     if (utf8_text == NULL)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
 
-    /* utf8_length バイトだけを対象とするため、NUL 終端した複製を作ってから変換する */
+    /* utf8_length [byte] だけを対象とするため、NUL 終端した複製を作ってから変換する。 */
     utf8_copy = (char *)cplat_malloc((size_t)utf8_length + 1u);
     if (utf8_copy == NULL)
     {
         SetLastError(ERROR_NOT_ENOUGH_MEMORY);
         return FALSE;
     }
+
     memcpy(utf8_copy, utf8_text, (size_t)utf8_length);
     utf8_copy[utf8_length] = '\0';
 
     wtext = cplat_utf8_to_wstr_alloc(utf8_copy);
     cplat_free(utf8_copy);
+
     if (wtext == NULL)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
@@ -158,12 +164,17 @@ BOOL WriteConsoleU(HANDLE console, const char *utf8_text, DWORD utf8_length, DWO
     {
         *written_length = utf8_length;
     }
+
     cplat_free(wtext);
+
     return result;
 }
 
-/* UTF-16 文字列を UTF-8 へ変換して固定長バッファーへ書き込む。
- * 収まらない場合は ERROR_INSUFFICIENT_BUFFER を設定して 0 を返す。 */
+/*
+ * UTF-16 文字列を UTF-8 へ変換して固定長バッファーへ書き込む。
+ * 成功時、または utf8_buf が NULL か size が 0 のときは TRUE を返す。
+ * 変換失敗時は ERROR_INVALID_PARAMETER、収まらない場合は ERROR_INSUFFICIENT_BUFFER を設定して FALSE を返す。
+ */
 static BOOL copy_wstr_as_utf8(char *utf8_buf, DWORD size, const wchar_t *wtext)
 {
     char *utf8;
@@ -191,6 +202,7 @@ static BOOL copy_wstr_as_utf8(char *utf8_buf, DWORD size, const wchar_t *wtext)
 
     memcpy(utf8_buf, utf8, utf8_len + 1u);
     cplat_free(utf8);
+
     return TRUE;
 }
 
@@ -213,6 +225,7 @@ BOOL GetVolumePathNameU(const char *utf8_path, char *utf8_volume_root, DWORD siz
         cplat_free(wpath);
         return FALSE;
     }
+
     cplat_free(wpath);
 
     return copy_wstr_as_utf8(utf8_volume_root, size, wroot);
@@ -247,12 +260,14 @@ BOOL GetVolumeInformationU(const char *utf8_root_path, char *utf8_volume_name, D
         cplat_free(wroot);
         return FALSE;
     }
+
     cplat_free(wroot);
 
     if (!copy_wstr_as_utf8(utf8_volume_name, volume_name_size, wvolume))
     {
         return FALSE;
     }
+
     return copy_wstr_as_utf8(utf8_file_system_name, file_system_name_size, wfs);
 }
 

@@ -67,8 +67,11 @@ static cplat_once_flag s_executable_path_once = {0};
 static wchar_t s_executable_path[PLATFORM_PATH_MAX] = L"";
 
 static cplat_once_flag s_user_sid_once = {0};
-/* TOKEN_USER 本体に続けて可変長 SID を格納するため、最大 SID サイズ分を確保する。
-   union により TOKEN_USER の境界整合を保証する。 */
+
+/*
+ * TOKEN_USER 本体に続けて可変長 SID を格納するため、最大 SID サイズ分を確保する。
+ * union により TOKEN_USER の境界整合を保証する。
+ */
 static union
 {
     TOKEN_USER token_user;
@@ -121,6 +124,7 @@ static void map_level(const int level, const int has_file_identifier, const int 
     if (level >= 0 && level < CPLAT_EVENTLOG_LEVEL_COUNT)
     {
         *category = (WORD)(level + 1);
+
         if (has_file_identifier && has_instance_identifier)
         {
             base_id = EVENTLOG_EVENT_ID_BOTH_IDENTIFIERS;
@@ -137,6 +141,7 @@ static void map_level(const int level, const int has_file_identifier, const int 
         {
             base_id = EVENTLOG_EVENT_ID_NO_IDENTIFIER;
         }
+
         *event_id = (DWORD)(base_id + level);
     }
     else
@@ -173,6 +178,7 @@ static void copy_wstr(wchar_t *dst, const size_t dst_count, const wchar_t *src)
         dst[i] = src[i];
         i++;
     }
+
     dst[i] = L'\0';
 }
 
@@ -188,6 +194,7 @@ static void init_executable_path_cache(void)
     wchar_t *wpath;
 
     s_executable_path[0] = L'\0';
+
     if (cplat_process_get_executable_path(path, sizeof(path)) != CPLAT_OK)
     {
         return;
@@ -233,6 +240,7 @@ static void init_user_sid_cache(void)
     DWORD needed = 0;
 
     s_user_sid = NULL;
+
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token))
     {
         return;
@@ -242,6 +250,7 @@ static void init_user_sid_cache(void)
     {
         s_user_sid = s_user_sid_buffer.token_user.User.Sid;
     }
+
     CloseHandle(token);
 }
 
@@ -282,6 +291,7 @@ static int format_identifier_string(const int64_t identifier, char *buf, const s
     {
         return 0;
     }
+
     return 1;
 }
 
@@ -310,6 +320,7 @@ static int build_source_key_path(const char *source_name, wchar_t *key_path, con
     {
         return -1;
     }
+
     return 0;
 }
 
@@ -324,10 +335,12 @@ static int registry_status(const LONG rc)
     {
         return CPLAT_OK;
     }
+
     if (rc == ERROR_ACCESS_DENIED)
     {
         return CPLAT_ERR_PERMISSION_DENIED;
     }
+
     return CPLAT_ERR_UNKNOWN;
 }
 
@@ -352,6 +365,7 @@ cplat_eventlog_sink *cplat_eventlog_sink_create(const char *source_name)
 
     source = RegisterEventSourceW(NULL, wsource);
     cplat_free(wsource);
+
     if (source == NULL)
     {
         return NULL;
@@ -365,6 +379,7 @@ cplat_eventlog_sink *cplat_eventlog_sink_create(const char *source_name)
     }
 
     handle->source = source;
+
     return handle;
 }
 
@@ -398,6 +413,7 @@ int cplat_eventlog_sink_write(cplat_eventlog_sink *handle, const int level, cons
 
     wmsg = cplat_utf8_to_wstr_alloc(message);
     wfile_id = cplat_utf8_to_wstr_alloc(file_id);
+
     if (instance_name != NULL)
     {
         winstance = cplat_utf8_to_wstr_alloc(instance_name);
@@ -406,6 +422,7 @@ int cplat_eventlog_sink_write(cplat_eventlog_sink *handle, const int level, cons
     {
         winstance = cplat_utf8_to_wstr_alloc("");
     }
+
     winstance_id = cplat_utf8_to_wstr_alloc(instance_id);
 
     if (wmsg == NULL || wfile_id == NULL || winstance == NULL || winstance_id == NULL)
@@ -433,6 +450,7 @@ int cplat_eventlog_sink_write(cplat_eventlog_sink *handle, const int level, cons
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     return CPLAT_OK;
 }
 
@@ -449,6 +467,7 @@ void cplat_eventlog_sink_dispose(cplat_eventlog_sink *handle)
     {
         DeregisterEventSource(handle->source);
     }
+
     cplat_free(handle);
 }
 
@@ -465,6 +484,7 @@ void cplat_internal_eventlog_sink_dispose_on_shutdown(cplat_eventlog_sink *handl
     {
         DeregisterEventSource(handle->source);
     }
+
     cplat_free(handle);
 }
 
@@ -506,8 +526,10 @@ int cplat_eventlog_register_source(const char *source_name, const char *message_
                             (DWORD)sizeof(category_count));
     }
 
-    /* メッセージ リソース (MESSAGETABLE) を持つファイルの絶対パスが渡された場合は、
-       EventMessageFile / CategoryMessageFile に登録して Event Viewer に解決させる。 */
+    /*
+     * メッセージ リソース (MESSAGETABLE) を持つファイルの絶対パスが渡された場合は、
+     * EventMessageFile / CategoryMessageFile に登録して Event Viewer に解決させる。
+     */
     if (rc == ERROR_SUCCESS && message_file_path != NULL)
     {
         wchar_t *wpath;
@@ -522,8 +544,10 @@ int cplat_eventlog_register_source(const char *source_name, const char *message_
             DWORD bytes;
             wchar_t *p;
 
-            /* Event Log サービスは LoadLibraryEx でメッセージ ファイルを読み込むため、
-               パス セパレーターを Windows 慣例の '\\' に変換する。 */
+            /*
+             * Event Log サービスは LoadLibraryEx でメッセージ ファイルを読み込むため、
+             * パス セパレーターを Windows 慣例の '\\' に変換する。
+             */
             for (p = wpath; *p != L'\0'; p++)
             {
                 if (*p == L'/')
@@ -538,11 +562,13 @@ int cplat_eventlog_register_source(const char *source_name, const char *message_
             {
                 rc = RegSetValueExW(hkey, L"CategoryMessageFile", 0, REG_SZ, (const BYTE *)wpath, bytes);
             }
+
             cplat_free(wpath);
         }
     }
 
     RegCloseKey(hkey);
+
     return registry_status(rc);
 }
 
@@ -568,6 +594,7 @@ int cplat_eventlog_unregister_source(const char *source_name)
     {
         return CPLAT_OK;
     }
+
     return registry_status(rc);
 }
 

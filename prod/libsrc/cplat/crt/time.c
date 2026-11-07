@@ -31,6 +31,7 @@ int cplat_gmtime(struct tm *utc_tm, const time_t *timep)
         memset(utc_tm, 0, sizeof(*utc_tm));
         return CPLAT_ERR_UNKNOWN;
     }
+
     return CPLAT_OK;
 #elif defined(PLATFORM_WINDOWS)
     if (gmtime_s(utc_tm, timep) != 0)
@@ -38,6 +39,7 @@ int cplat_gmtime(struct tm *utc_tm, const time_t *timep)
         memset(utc_tm, 0, sizeof(*utc_tm));
         return CPLAT_ERR_UNKNOWN;
     }
+
     return CPLAT_OK;
 #endif /* PLATFORM_ */
 }
@@ -57,6 +59,7 @@ int cplat_localtime(struct tm *local_tm, const time_t *timep)
         memset(local_tm, 0, sizeof(*local_tm));
         return CPLAT_ERR_UNKNOWN;
     }
+
     return CPLAT_OK;
 #elif defined(PLATFORM_WINDOWS)
     if (localtime_s(local_tm, timep) != 0)
@@ -64,6 +67,7 @@ int cplat_localtime(struct tm *local_tm, const time_t *timep)
         memset(local_tm, 0, sizeof(*local_tm));
         return CPLAT_ERR_UNKNOWN;
     }
+
     return CPLAT_OK;
 #endif /* PLATFORM_ */
 }
@@ -77,9 +81,11 @@ int cplat_ctime(char *buf, const size_t buf_size, const time_t *timep)
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    /* ctime_r は格納先に 26 バイト以上を要求する。               */
-    /* 両プラットフォームで挙動を揃えるため、委譲前に検査する。   */
-    /* see: https://man7.org/linux/man-pages/man3/ctime_r.3.html  */
+    /*
+     * ctime_r() は格納先に 26 [byte] 以上を要求する。
+     * 両プラットフォームで挙動を揃えるため、委譲前に検査する。
+     * see: https://man7.org/linux/man-pages/man3/ctime_r.3.html
+     */
     if (timep == NULL || buf_size < 26)
     {
         memset(buf, 0, buf_size);
@@ -92,6 +98,7 @@ int cplat_ctime(char *buf, const size_t buf_size, const time_t *timep)
         memset(buf, 0, buf_size);
         return CPLAT_ERR_UNKNOWN;
     }
+
     return CPLAT_OK;
 #elif defined(PLATFORM_WINDOWS)
     if (ctime_s(buf, buf_size, timep) != 0)
@@ -99,6 +106,7 @@ int cplat_ctime(char *buf, const size_t buf_size, const time_t *timep)
         memset(buf, 0, buf_size);
         return CPLAT_ERR_UNKNOWN;
     }
+
     return CPLAT_OK;
 #endif /* PLATFORM_ */
 }

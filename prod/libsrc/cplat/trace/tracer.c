@@ -164,14 +164,17 @@ static void trace_shutdown_callback(const cplat_shutdown_event *event, void *con
 static int registry_lock(void)
 {
     cplat_call_once(&s_registry_lock_once, init_registry_lock);
+
     if (s_registry_lock_init_result != CPLAT_OK)
     {
         return -1;
     }
+
     if (cplat_local_lock_lock(s_registry_lock, CPLAT_SYNC_WAIT_FOREVER) != CPLAT_OK)
     {
         return -1;
     }
+
     return 0;
 }
 
@@ -202,6 +205,7 @@ static int registry_expand_locked(void)
         {
             return -1;
         }
+
         new_capacity = s_trace_registry.capacity * 2;
     }
 
@@ -218,10 +222,16 @@ static int registry_expand_locked(void)
 
     s_trace_registry.items = new_items;
     s_trace_registry.capacity = new_capacity;
+
     return 0;
 }
 
 #if defined(PLATFORM_WINDOWS)
+/*
+ * Windows 向け共通バックエンド (ETW および EventLog) の参照カウントをインクリメントする。
+ * 初回参照時に各バックエンドを初期化する。レジストリ ロック保持下で呼び出すこと。
+ * 戻り値は成功時に 0、ETW プロバイダー生成失敗時に -1 である。
+ */
 static int windows_backend_acquire_locked(void)
 {
     if (s_trace_ref == 0)
@@ -231,19 +241,28 @@ static int windows_backend_acquire_locked(void)
         {
             return -1;
         }
+
         s_eventlog_handle = cplat_eventlog_sink_create(CPLAT_TRACER_DEFAULT_PROVIDER_NAME);
     }
+
     s_trace_ref++;
+
     return 0;
 }
 
+/*
+ * Windows 向け共通バックエンド (ETW および EventLog) の参照カウントをデクリメントする。
+ * 参照カウントが 0 になった場合は各バックエンドを解放する。レジストリ ロック保持下で呼び出すこと。
+ */
 static void windows_backend_release_locked(void)
 {
     if (s_trace_ref == 0)
     {
         return;
     }
+
     s_trace_ref--;
+
     if (s_trace_ref == 0)
     {
         cplat_etw_provider_dispose(s_etw_handle);
@@ -278,12 +297,14 @@ static int registry_register_handle(cplat_tracer *handle)
         {
             rc = registry_expand_locked();
         }
+
         if (rc == 0)
         {
 #if defined(PLATFORM_WINDOWS)
             rc = windows_backend_acquire_locked();
 #endif /* PLATFORM_WINDOWS */
         }
+
         if (rc == 0)
         {
             s_trace_registry.items[s_trace_registry.count++] = handle;
@@ -291,6 +312,7 @@ static int registry_register_handle(cplat_tracer *handle)
     }
 
     registry_unlock();
+
     return rc;
 }
 
@@ -308,6 +330,7 @@ static int registry_unregister_handle(cplat_tracer *handle)
         return -1;
     }
 
+    /* 登録済みハンドルを線形探索し、見つかった場合は末尾要素と入れ替えて削除する。 */
     for (i = 0; i < s_trace_registry.count; i++)
     {
         if (s_trace_registry.items[i] == handle)
@@ -324,10 +347,12 @@ static int registry_unregister_handle(cplat_tracer *handle)
     }
 
     registry_unlock();
+
     if (found)
     {
         return 0;
     }
+
     return -1;
 }
 
@@ -341,8 +366,10 @@ size_t cplat_internal_trace_registry_count(void)
     {
         return 0;
     }
+
     count = s_trace_registry.count;
     registry_unlock();
+
     return count;
 }
 
@@ -356,8 +383,10 @@ size_t cplat_internal_trace_registry_capacity(void)
     {
         return 0;
     }
+
     capacity = s_trace_registry.capacity;
     registry_unlock();
+
     return capacity;
 }
 
@@ -384,6 +413,7 @@ static int begin_dispose(cplat_tracer *handle)
     }
 
     handle->lifecycle_state = TRACE_HANDLE_DISPOSING;
+
     return 0;
 }
 
@@ -409,7 +439,8 @@ static int to_syslog_level(const cplat_trace_level lv)
         return LOG_WARNING;
     case CPLAT_TRACE_LEVEL_INFO:
         return LOG_INFO;
-    /* 強制出力は syslog 側の既定の設定で捨てられないよう、最下位から 1 段引き上げる */
+
+    /* 強制出力は syslog 側の既定の設定で捨てられないよう、最下位から 1 段引き上げる。 */
     case CPLAT_TRACE_LEVEL_FORCE_INFO:
     case CPLAT_TRACE_LEVEL_FORCE_VERBOSE:
     case CPLAT_TRACE_LEVEL_FORCE_DEBUG:
@@ -447,7 +478,8 @@ static int to_etw_level(const cplat_trace_level lv)
         return 3;
     case CPLAT_TRACE_LEVEL_INFO:
         return 4;
-    /* 強制出力は ETW セッション側の既定の設定で捨てられないよう、最下位から 1 段引き上げる */
+
+    /* 強制出力は ETW セッション側の既定の設定で捨てられないよう、最下位から 1 段引き上げる。 */
     case CPLAT_TRACE_LEVEL_FORCE_INFO:
     case CPLAT_TRACE_LEVEL_FORCE_VERBOSE:
     case CPLAT_TRACE_LEVEL_FORCE_DEBUG:
@@ -493,6 +525,7 @@ static int config_lock_exclusive(cplat_tracer *handle)
     {
         return CPLAT_OK;
     }
+
     return cplat_local_rwlock_lock_exclusive(handle->config_rwlock, CPLAT_SYNC_WAIT_FOREVER);
 }
 
@@ -521,6 +554,7 @@ static int config_lock_shared_timed(cplat_tracer *handle)
     {
         return 0;
     }
+
     if (cplat_local_rwlock_lock_shared(handle->config_rwlock, LOCK_TIMEOUT_MS) == CPLAT_OK)
     {
         return 0;
@@ -559,15 +593,18 @@ static int tracer_enter_shared(cplat_tracer *handle)
     {
         return -1;
     }
+
     if (config_lock_shared_timed(handle) != 0)
     {
         return -1;
     }
+
     if (handle->lifecycle_state != TRACE_HANDLE_ACTIVE)
     {
         config_unlock_shared(handle);
         return -1;
     }
+
     return 0;
 }
 
@@ -585,11 +622,13 @@ static int tracer_enter_shared_running(cplat_tracer *handle)
     {
         return -1;
     }
+
     if (!handle->running)
     {
         config_unlock_shared(handle);
         return -1;
     }
+
     return 0;
 }
 
@@ -609,15 +648,18 @@ static int tracer_enter_exclusive(cplat_tracer *handle)
     {
         return -1;
     }
+
     if (config_lock_exclusive(handle) != CPLAT_OK)
     {
         return -1;
     }
+
     if (handle->lifecycle_state != TRACE_HANDLE_ACTIVE)
     {
         config_unlock_exclusive(handle);
         return -1;
     }
+
     return 0;
 }
 
@@ -636,11 +678,13 @@ static int tracer_enter_exclusive_stopped(cplat_tracer *handle)
     {
         return -1;
     }
+
     if (handle->running)
     {
         config_unlock_exclusive(handle);
         return -1;
     }
+
     return 0;
 }
 
@@ -685,11 +729,13 @@ static char *build_effective_name(const char *name, const int64_t identifier)
         {
             return NULL;
         }
+
         if (cplat_snprintf(result, total, "%s_%" PRId64, base, identifier) != CPLAT_OK)
         {
             cplat_free(result);
             return NULL;
         }
+
         return result;
     }
 }
@@ -783,6 +829,7 @@ static int resolve_file_name(const cplat_tracer *handle, char *file_name_out, co
         }
 #endif /* PLATFORM_WINDOWS */
     }
+
     if (ret != CPLAT_OK)
     {
         return CPLAT_ERR_BUFFER_TOO_SMALL;
@@ -796,10 +843,12 @@ static int resolve_file_name(const cplat_tracer *handle, char *file_name_out, co
     {
         ret = cplat_snprintf(file_name_out, file_name_size, "%s", name_buf);
     }
+
     if (ret != CPLAT_OK)
     {
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
+
     return CPLAT_OK;
 }
 
@@ -871,10 +920,12 @@ static cplat_trace_file_sink *open_file_sink_with(const cplat_tracer *handle, co
             eff_path = default_path;
         }
     }
+
     if (eff_path == NULL)
     {
         return NULL;
     }
+
     return cplat_trace_file_sink_create(eff_path, max_bytes, generations, flags);
 }
 
@@ -892,6 +943,7 @@ static int stop_handle_for_cleanup(cplat_tracer *handle)
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     if (!handle->running)
     {
         config_unlock_exclusive(handle);
@@ -899,12 +951,15 @@ static int stop_handle_for_cleanup(cplat_tracer *handle)
     }
 
     handle->running = 0;
+
     if (handle->file_handle != NULL)
     {
         cplat_trace_file_sink_dispose(handle->file_handle);
         handle->file_handle = NULL;
     }
+
     config_unlock_exclusive(handle);
+
     return CPLAT_OK;
 }
 
@@ -928,6 +983,7 @@ static void trace_handle_release_normal(cplat_tracer *handle)
         next = hook->next;
         cplat_free(hook);
     }
+
     handle->hook_head = NULL;
 
     cplat_free(handle->file_path);
@@ -938,6 +994,7 @@ static void trace_handle_release_normal(cplat_tracer *handle)
 #if defined(PLATFORM_LINUX)
     cplat_syslog_sink_dispose(handle->syslog_handle);
     cplat_free(handle->effective_name);
+
     if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
     {
         (void)cplat_local_rwlock_dispose(handle->config_rwlock);
@@ -945,6 +1002,7 @@ static void trace_handle_release_normal(cplat_tracer *handle)
 #elif defined(PLATFORM_WINDOWS)
     cplat_free(handle->eventlog_instance_name);
     cplat_free(handle->service_name);
+
     if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
     {
         (void)cplat_local_rwlock_dispose(handle->config_rwlock);
@@ -980,6 +1038,7 @@ static void trace_handle_release_on_shutdown(cplat_tracer *handle)
         next = hook->next;
         cplat_free(hook);
     }
+
     handle->hook_head = NULL;
 
 #if defined(PLATFORM_LINUX)
@@ -1013,7 +1072,9 @@ cplat_tracer *cplat_tracer_create(const cplat_tracer_concurrency_mode concurrenc
         return NULL;
     }
 
+    /* プロセス終了時の自動解放コールバックを一度だけ登録する。 */
     cplat_call_once(&s_trace_shutdown_once, register_trace_shutdown_callback);
+
     if (s_shutdown_registration_result != CPLAT_OK)
     {
         return NULL;
@@ -1088,6 +1149,7 @@ cplat_tracer *cplat_tracer_create(const cplat_tracer_concurrency_mode concurrenc
         {
             return NULL;
         }
+
         eventlog_name = cplat_strdup(effective_name);
         if (eventlog_name == NULL)
         {
@@ -1134,6 +1196,7 @@ cplat_tracer *cplat_tracer_create(const cplat_tracer_concurrency_mode concurrenc
     }
 #endif /* PLATFORM_ */
 
+    /* レジストリにハンドルを登録する。登録失敗時は確保した資源を解放する。 */
     if (registry_register_handle(handle) != 0)
     {
 #if defined(PLATFORM_LINUX)
@@ -1147,6 +1210,7 @@ cplat_tracer *cplat_tracer_create(const cplat_tracer_concurrency_mode concurrenc
         {
             (void)cplat_local_rwlock_dispose(handle->config_rwlock);
         }
+
         cplat_free(handle);
         return NULL;
     }
@@ -1164,14 +1228,17 @@ int cplat_tracer_start(cplat_tracer *handle)
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     if (handle->running)
     {
         config_unlock_exclusive(handle);
         return CPLAT_OK;
     }
 
-    /* ファイル トレースが有効な場合、この時点の設定 (パスと有効名) でトレース ファイルを開く。
-     * 失敗しても started 状態へは遷移し、ファイル以外のトレース出力を継続する (best-effort)。 */
+    /*
+     * ファイル トレースが有効な場合、この時点の設定 (パスと有効名) でトレース ファイルを開く。
+     * 失敗しても started 状態へは遷移し、ファイル以外のトレース出力を継続する (best-effort)。
+     */
     if (handle->file_level != CPLAT_TRACE_LEVEL_NONE && handle->file_handle == NULL)
     {
         handle->file_handle = open_file_sink_with(handle, handle->file_path, handle->file_max_bytes,
@@ -1184,6 +1251,7 @@ int cplat_tracer_start(cplat_tracer *handle)
 
     handle->running = 1;
     config_unlock_exclusive(handle);
+
     return result;
 }
 
@@ -1218,7 +1286,9 @@ cplat_tracer_state cplat_tracer_get_state(cplat_tracer *handle)
     {
         state = CPLAT_TRACER_STATE_STOPPED;
     }
+
     config_unlock_shared(handle);
+
     return state;
 }
 
@@ -1227,7 +1297,7 @@ cplat_tracer_state cplat_tracer_get_state(cplat_tracer *handle)
 /**
  *  @brief          UTF-8 文字境界を考慮して文字列を切り詰める位置を返します。
  *  @param[in]      s    切り詰め対象の UTF-8 文字列。
- *  @param[in]      pos  切り詰め開始位置 (バイト単位)。
+ *  @param[in]      pos  切り詰め開始位置 [byte]。
  *  @return         文字境界に合わせた切り詰め位置。
  */
 static size_t utf8_safe_truncate(const char *s, const size_t pos)
@@ -1238,17 +1308,23 @@ static size_t utf8_safe_truncate(const char *s, const size_t pos)
     {
         result--;
     }
+
     return result;
 }
 
 static int should_output(const cplat_trace_level msg_level, const cplat_trace_level threshold);
 
+/*
+ * 指定されたトレース レベルにおいて、出力対象となる出力先やフックが存在するかを判定する。
+ * 出力先が存在する場合は 1、すべての出力先で出力不要な場合は 0 を返す。
+ */
 static int has_output_target(const cplat_tracer *handle, const cplat_trace_level level)
 {
     if (handle->hook_head != NULL || should_output(level, handle->stderr_level))
     {
         return 1;
     }
+
     if (handle->file_handle != NULL && should_output(level, handle->file_level))
     {
         return 1;
@@ -1280,6 +1356,7 @@ static int write_os_backends(cplat_tracer *handle, const cplat_trace_level level
     {
         return cplat_syslog_sink_write(handle->syslog_handle, to_syslog_level(level), timestamp, msg);
     }
+
     return CPLAT_OK;
 #elif defined(PLATFORM_WINDOWS)
     int etw_result = 0;
@@ -1302,6 +1379,7 @@ static int write_os_backends(cplat_tracer *handle, const cplat_trace_level level
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     return CPLAT_OK;
 #endif /* PLATFORM_ */
 }
@@ -1318,6 +1396,7 @@ static int should_output(const cplat_trace_level msg_level, const cplat_trace_le
     {
         return 0;
     }
+
     return (int)msg_level <= (int)threshold;
 }
 
@@ -1373,12 +1452,14 @@ static int write_dual(cplat_tracer *handle, const cplat_trace_level level, const
 #endif
                            handle->hook_head != NULL || timestamp != NULL;
 
+    /* 文字列形式のタイムスタンプを必要とする出力先がある場合のみ、タイムスタンプを解決して整形する。 */
     if (needs_text_timestamp)
     {
         if (cplat_internal_trace_resolve_timestamp(timestamp, &resolved, &timestamp_fallback_used) != 0)
         {
             return CPLAT_ERR_UNKNOWN;
         }
+
         effective_timestamp = &resolved;
 
         if (cplat_internal_trace_format_local_timestamp(ts, sizeof(ts), effective_timestamp) != 0)
@@ -1387,6 +1468,7 @@ static int write_dual(cplat_tracer *handle, const cplat_trace_level level, const
         }
     }
 
+    /* 各出力先 (OS バックエンド、ファイル、stderr、フック) へ順に出力する。 */
     os_result = write_os_backends(handle, level, effective_timestamp, msg);
 
     if (handle->file_handle != NULL && should_output(level, handle->file_level))
@@ -1433,10 +1515,12 @@ int cplat_tracer_write_at(cplat_tracer *handle, const cplat_trace_level level, c
     {
         return CPLAT_OK;
     }
+
     if (tracer_enter_shared_running(handle) != 0)
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     if (has_output_target(handle, level) == 0 && timestamp == NULL)
     {
         config_unlock_shared(handle);
@@ -1445,6 +1529,8 @@ int cplat_tracer_write_at(cplat_tracer *handle, const cplat_trace_level level, c
 
     msg = message;
     len = strlen(message);
+
+    /* メッセージ長が上限を超える場合は、UTF-8 の文字境界で切り詰める。 */
     if (len > MAX_BODY)
     {
         size_t safe_len = utf8_safe_truncate(message, MAX_BODY);
@@ -1455,6 +1541,7 @@ int cplat_tracer_write_at(cplat_tracer *handle, const cplat_trace_level level, c
 
     ret = write_dual(handle, level, timestamp, msg);
     config_unlock_shared(handle);
+
     return ret;
 }
 
@@ -1470,10 +1557,12 @@ int cplat_tracer_vwritef_at(cplat_tracer *handle, const cplat_trace_level level,
     {
         return CPLAT_OK;
     }
+
     if (tracer_enter_shared_running(handle) != 0)
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     if (has_output_target(handle, level) == 0 && timestamp == NULL)
     {
         config_unlock_shared(handle);
@@ -1484,6 +1573,7 @@ int cplat_tracer_vwritef_at(cplat_tracer *handle, const cplat_trace_level level,
 
     ret = write_dual(handle, level, timestamp, buf);
     config_unlock_shared(handle);
+
     return ret;
 }
 
@@ -1510,6 +1600,7 @@ const char *cplat_tracer_hex_sep(const char *message)
     {
         return " ";
     }
+
     return "";
 }
 
@@ -1521,6 +1612,7 @@ const char *cplat_tracer_hex_msg(const char *message)
     {
         return message;
     }
+
     return "";
 }
 
@@ -1568,12 +1660,14 @@ static int hex_write_impl(cplat_tracer *handle, const cplat_trace_level level, c
         return CPLAT_OK;
     }
 
+    /* ラベルが指定されている場合は、バッファー先頭に付加する。ラベルだけで上限を超える場合は即座に出力する。 */
     if (label != NULL && label[0] != '\0')
     {
         size_t lbl_len = strlen(label);
         if (lbl_len + 2 >= MAX_BODY)
         {
             size_t copy_len;
+
             if (lbl_len < MAX_BODY)
             {
                 copy_len = lbl_len;
@@ -1582,28 +1676,34 @@ static int hex_write_impl(cplat_tracer *handle, const cplat_trace_level level, c
             {
                 copy_len = MAX_BODY;
             }
+
             memcpy(buf, label, copy_len);
             buf[copy_len] = '\0';
             return write_dual(handle, level, timestamp, buf);
         }
+
         memcpy(buf, label, lbl_len);
         buf[lbl_len] = ':';
         buf[lbl_len + 1] = ' ';
         pos = lbl_len + 2;
     }
 
-    /* 以降の書き込みは、終端を含めて buf[MAX_BODY] までに収める。
-     * 1 バイトは区切りの空白を含めて 3 文字で、先頭の 1 バイトだけ空白を付けない。 */
+    /*
+     * 以降の書き込みは、終端を含めて buf[MAX_BODY] までに収める。
+     * 1 [byte] は区切りの空白を含めて 3 文字で、先頭の 1 [byte] だけ空白を付けない。
+     */
     max_data_bytes = (MAX_BODY - pos + 1) / 3;
 
     if (effective_size > max_data_bytes)
     {
         truncated = 1;
+
         if (pos + ELLIPSIS_LEN > MAX_BODY)
         {
             buf[pos] = '\0';
             return write_dual(handle, level, timestamp, buf);
         }
+
         /* 本体 (3 * max_data_bytes - 1 文字) と末尾の " ..." (4 文字) の合計を MAX_BODY - pos 以下に収める。 */
         max_data_bytes = (MAX_BODY - pos - ELLIPSIS_LEN) / 3;
         if (max_data_bytes == 0)
@@ -1613,15 +1713,18 @@ static int hex_write_impl(cplat_tracer *handle, const cplat_trace_level level, c
             buf[pos] = '\0';
             return write_dual(handle, level, timestamp, buf);
         }
+
         effective_size = max_data_bytes;
     }
 
+    /* 各バイトを 16 進数文字列へ変換して空白区切りで格納する。 */
     for (i = 0; i < effective_size; i++)
     {
         if (i > 0)
         {
             buf[pos++] = ' ';
         }
+
         buf[pos++] = s_hex_chars[(bytes[i] >> 4) & 0x0F];
         buf[pos++] = s_hex_chars[bytes[i] & 0x0F];
     }
@@ -1633,6 +1736,7 @@ static int hex_write_impl(cplat_tracer *handle, const cplat_trace_level level, c
         buf[pos++] = '.';
         buf[pos++] = '.';
     }
+
     buf[pos] = '\0';
 
     return write_dual(handle, level, timestamp, buf);
@@ -1649,10 +1753,12 @@ int cplat_tracer_write_hex_at(cplat_tracer *handle, const cplat_trace_level leve
     {
         return CPLAT_OK;
     }
+
     if (tracer_enter_shared_running(handle) != 0)
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     if (has_output_target(handle, level) == 0 && timestamp == NULL)
     {
         config_unlock_shared(handle);
@@ -1661,6 +1767,7 @@ int cplat_tracer_write_hex_at(cplat_tracer *handle, const cplat_trace_level leve
 
     ret = hex_write_impl(handle, level, timestamp, data, size, message);
     config_unlock_shared(handle);
+
     return ret;
 }
 
@@ -1676,10 +1783,12 @@ int cplat_tracer_vwrite_hexf_at(cplat_tracer *handle, const cplat_trace_level le
     {
         return CPLAT_OK;
     }
+
     if (tracer_enter_shared_running(handle) != 0)
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     if (has_output_target(handle, level) == 0 && timestamp == NULL)
     {
         config_unlock_shared(handle);
@@ -1697,6 +1806,7 @@ int cplat_tracer_vwrite_hexf_at(cplat_tracer *handle, const cplat_trace_level le
     }
 
     config_unlock_shared(handle);
+
     return ret;
 }
 
@@ -1725,6 +1835,7 @@ int cplat_tracer_set_name(cplat_tracer *handle, const char *name, const int64_t 
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (tracer_enter_exclusive_stopped(handle) != 0)
     {
         return CPLAT_ERR_UNKNOWN;
@@ -1748,6 +1859,7 @@ int cplat_tracer_set_name(cplat_tracer *handle, const char *name, const int64_t 
             config_unlock_exclusive(handle);
             return CPLAT_ERR_UNKNOWN;
         }
+
         cplat_free(handle->effective_name);
         handle->effective_name = effective;
         handle->identifier = identifier;
@@ -1763,6 +1875,7 @@ int cplat_tracer_set_name(cplat_tracer *handle, const char *name, const int64_t 
             config_unlock_exclusive(handle);
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
+
         cplat_free(handle->eventlog_instance_name);
         cplat_free(handle->service_name);
         handle->eventlog_instance_name = eventlog_name;
@@ -1784,10 +1897,12 @@ int cplat_tracer_get_name(cplat_tracer *handle, char *name_out, const size_t nam
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (tracer_enter_shared(handle) != 0)
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     ret = cplat_snprintf(name_out, name_size, "%s", tracer_effective_name(handle));
     config_unlock_shared(handle);
 
@@ -1795,6 +1910,7 @@ int cplat_tracer_get_name(cplat_tracer *handle, char *name_out, const size_t nam
     {
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
+
     return CPLAT_OK;
 }
 
@@ -1808,8 +1924,10 @@ int64_t cplat_tracer_get_identifier(cplat_tracer *handle)
     {
         return -1;
     }
+
     identifier = handle->identifier;
     config_unlock_shared(handle);
+
     return identifier;
 }
 
@@ -1823,12 +1941,13 @@ int cplat_tracer_set_file_name(cplat_tracer *handle, const char *name, const int
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     if (identifier < 0)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    /* 失敗時に設定を変更しないよう、名前の複製をロック取得前に確保する */
+    /* 失敗時に設定を変更しないよう、名前の複製をロック取得前に確保する。 */
     if (name != NULL)
     {
         name_copy = cplat_strdup(name);
@@ -1848,6 +1967,7 @@ int cplat_tracer_set_file_name(cplat_tracer *handle, const char *name, const int
     handle->file_name = name_copy;
     handle->file_identifier = identifier;
     config_unlock_exclusive(handle);
+
     return CPLAT_OK;
 }
 
@@ -1861,12 +1981,15 @@ int cplat_tracer_get_file_name(cplat_tracer *handle, char *file_name_out, const 
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
     if (tracer_enter_shared(handle) != 0)
     {
         return CPLAT_ERR_UNKNOWN;
     }
+
     ret = resolve_file_name(handle, file_name_out, file_name_size);
     config_unlock_shared(handle);
+
     return ret;
 }
 
@@ -1880,8 +2003,10 @@ int64_t cplat_tracer_get_file_identifier(cplat_tracer *handle)
     {
         return -1;
     }
+
     identifier = handle->file_identifier;
     config_unlock_shared(handle);
+
     return identifier;
 }
 
@@ -1895,8 +2020,10 @@ cplat_trace_level cplat_tracer_get_os_level(cplat_tracer *handle)
     {
         return CPLAT_TRACE_LEVEL_NONE;
     }
+
     lv = handle->os_level;
     config_unlock_shared(handle);
+
     return lv;
 }
 
@@ -1916,6 +2043,7 @@ int cplat_tracer_set_os_level(cplat_tracer *handle, const cplat_trace_level leve
 
     handle->os_level = level;
     config_unlock_exclusive(handle);
+
     return CPLAT_OK;
 }
 
@@ -1930,6 +2058,7 @@ cplat_trace_level cplat_tracer_get_etw_level(cplat_tracer *handle)
     {
         return CPLAT_TRACE_LEVEL_NONE;
     }
+
     lv = handle->etw_level;
     config_unlock_shared(handle);
     return lv;
@@ -1962,6 +2091,7 @@ int cplat_tracer_set_etw_level(cplat_tracer *handle, const cplat_trace_level lev
     /* Linux では ETW が存在しないため何もしない。 */
     (void)handle;
     (void)level;
+
     return CPLAT_OK;
 #endif /* PLATFORM_ */
 }
@@ -1976,8 +2106,10 @@ cplat_trace_level cplat_tracer_get_file_level(cplat_tracer *handle)
     {
         return CPLAT_TRACE_LEVEL_NONE;
     }
+
     lv = handle->file_level;
     config_unlock_shared(handle);
+
     return lv;
 }
 
@@ -1993,7 +2125,7 @@ int cplat_tracer_set_file_level(cplat_tracer *handle, const char *path, const cp
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    /* 失敗時に設定を変更しないよう、パスの複製をロック取得前に確保する */
+    /* 失敗時に設定を変更しないよう、パスの複製をロック取得前に確保する。 */
     if (path != NULL)
     {
         path_copy = cplat_strdup(path);
@@ -2011,8 +2143,10 @@ int cplat_tracer_set_file_level(cplat_tracer *handle, const char *path, const cp
 
     if (handle->running)
     {
-        /* started 中はレベルを即時反映する。排他ロック下で原子的に切り替えるため、
-         * 旧閾値と新閾値の両方で出力対象となるトレースを取りこぼさない。 */
+        /*
+         * started 中はレベルを即時反映する。排他ロック下で原子的に切り替えるため、
+         * 旧閾値と新閾値の両方で出力対象となるトレースを取りこぼさない。
+         */
 
         /* ケース 1: ファイル出力を無効化する。 */
         if (level == CPLAT_TRACE_LEVEL_NONE)
@@ -2022,6 +2156,7 @@ int cplat_tracer_set_file_level(cplat_tracer *handle, const char *path, const cp
                 cplat_trace_file_sink_dispose(handle->file_handle);
                 handle->file_handle = NULL;
             }
+
             cplat_free(handle->file_path);
             handle->file_path = path_copy;
             handle->file_level = CPLAT_TRACE_LEVEL_NONE;
@@ -2032,8 +2167,10 @@ int cplat_tracer_set_file_level(cplat_tracer *handle, const char *path, const cp
             return CPLAT_OK;
         }
 
-        /* ケース 2: 構造パラメーターが一致し、すでにファイルが開いている場合はしきい値のみ変更する。
-         * 再オープンを伴わないため、同一パスの一時的なオープン失敗で稼働中の出力を失わない。 */
+        /*
+         * ケース 2: 構造パラメーターが一致し、すでにファイルが開いている場合はしきい値のみ変更する。
+         * 再オープンを伴わないため、同一パスの一時的なオープン失敗で稼働中の出力を失わない。
+         */
         if (handle->file_handle != NULL &&
             ((path == NULL && handle->file_path == NULL) ||
              (path != NULL && handle->file_path != NULL && strcmp(path, handle->file_path) == 0)) &&
@@ -2046,8 +2183,10 @@ int cplat_tracer_set_file_level(cplat_tracer *handle, const char *path, const cp
             return CPLAT_OK;
         }
 
-        /* ケース 3: 新パラメーターでファイルを開き直す。先に新 sink を開き、成功時のみ差し替える。
-         * オープン失敗時は旧ハンドルと旧設定を保持して CPLAT_ERR_UNKNOWN を返す。 */
+        /*
+         * ケース 3: 新パラメーターでファイルを開き直す。先に新 sink を開き、成功時のみ差し替える。
+         * オープン失敗時は旧ハンドルと旧設定を保持して CPLAT_ERR_UNKNOWN を返す。
+         */
         {
             cplat_trace_file_sink *new_sink = open_file_sink_with(handle, path, max_bytes, generations, flags);
             if (new_sink == NULL)
@@ -2056,10 +2195,12 @@ int cplat_tracer_set_file_level(cplat_tracer *handle, const char *path, const cp
                 cplat_free(path_copy);
                 return CPLAT_ERR_UNKNOWN;
             }
+
             if (handle->file_handle != NULL)
             {
                 cplat_trace_file_sink_dispose(handle->file_handle);
             }
+
             handle->file_handle = new_sink;
             cplat_free(handle->file_path);
             handle->file_path = path_copy;
@@ -2087,6 +2228,7 @@ int cplat_tracer_set_file_level(cplat_tracer *handle, const char *path, const cp
     handle->file_flags = flags;
 
     config_unlock_exclusive(handle);
+
     return CPLAT_OK;
 }
 
@@ -2100,8 +2242,10 @@ cplat_trace_level cplat_tracer_get_stderr_level(cplat_tracer *handle)
     {
         return CPLAT_TRACE_LEVEL_NONE;
     }
+
     lv = handle->stderr_level;
     config_unlock_shared(handle);
+
     return lv;
 }
 
@@ -2121,6 +2265,7 @@ int cplat_tracer_set_stderr_level(cplat_tracer *handle, const cplat_trace_level 
 
     handle->stderr_level = level;
     config_unlock_exclusive(handle);
+
     return CPLAT_OK;
 }
 
@@ -2134,22 +2279,26 @@ void cplat_tracer_dispose(cplat_tracer **handle)
     {
         return;
     }
+
     target = *handle;
     if (begin_dispose(target) != 0)
     {
         return;
     }
 
+    /* 停止またはレジストリからの削除に失敗した場合は、状態を元に戻して処理を中断する。 */
     if (stop_handle_for_cleanup(target) != CPLAT_OK)
     {
         target->lifecycle_state = TRACE_HANDLE_ACTIVE;
         return;
     }
+
     if (registry_unregister_handle(target) != 0)
     {
         target->lifecycle_state = TRACE_HANDLE_ACTIVE;
         return;
     }
+
     trace_handle_release_normal(target);
     *handle = NULL;
 }
@@ -2173,6 +2322,7 @@ void cplat_internal_trace_registry_dispose_all_on_shutdown(const cplat_shutdown_
         return;
     }
 
+    /* レジストリから管理リストを切り離し、ロックを解放してから各ハンドルを解放する。 */
     s_trace_registry.shutdown_started = 1;
     items = s_trace_registry.items;
     count = s_trace_registry.count;
@@ -2202,15 +2352,18 @@ void cplat_internal_trace_registry_dispose_all_on_shutdown(const cplat_shutdown_
         cplat_internal_etw_provider_dispose_on_shutdown(s_etw_handle, event);
         s_etw_handle = NULL;
     }
+
     if (s_eventlog_handle != NULL)
     {
         cplat_internal_eventlog_sink_dispose_on_shutdown(s_eventlog_handle, event);
         s_eventlog_handle = NULL;
     }
+
     s_trace_ref = 0;
 #endif /* PLATFORM_WINDOWS */
 
     cplat_free(items);
+
     if (s_registry_lock != NULL)
     {
         cplat_local_lock_dispose(s_registry_lock);
@@ -2248,6 +2401,7 @@ cplat_tracer_hook_entry *cplat_tracer_set_hook(cplat_tracer *handle, cplat_trace
     handle->hook_head = entry;
 
     config_unlock_exclusive(handle);
+
     return entry;
 }
 
@@ -2261,11 +2415,13 @@ void cplat_tracer_remove_hook(cplat_tracer *handle, cplat_tracer_hook_entry *hoo
     {
         return;
     }
+
     if (tracer_enter_exclusive_stopped(handle) != 0)
     {
         return;
     }
 
+    /* フック リストを走査し、指定されたエントリをリストから切り離して解放する。 */
     for (pp = &handle->hook_head; *pp != NULL; pp = &(*pp)->next)
     {
         if (*pp == hook_entry)
@@ -2288,5 +2444,6 @@ void cplat_tracer_call_next_hook(cplat_tracer_hook_entry *prev, cplat_tracer *ha
     {
         return;
     }
+
     prev->fn(prev->next, handle, level, timestamp, message, prev->context);
 }

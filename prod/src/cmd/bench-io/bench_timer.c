@@ -16,17 +16,17 @@
 
 #include "bench_timer.h"
 
-/** @brief 1 秒あたりのナノ秒数です。 */
+/** @brief 1 [s] あたりのナノ秒数です。 */
 #define BENCH_NS_PER_SEC 1000000000LL
 
-/** @brief 1 ミリ秒あたりのナノ秒数です。 */
+/** @brief 1 [ms] あたりのナノ秒数です。 */
 #define BENCH_NS_PER_MS 1000000LL
 
 /**
  *  @brief          2 点間の経過時間をナノ秒で求めます。
  *  @param[in]      start  開始時刻。NULL を渡してはなりません。
  *  @param[in]      end    終了時刻。NULL を渡してはなりません。
- *  @return         経過時間 (ナノ秒)。負値になる場合は 0 を返します。
+ *  @return         経過時間 [ns]。負値になる場合は 0 を返します。
  *
  *  `cplat_timespec_diff_ms()` はミリ秒単位のため、
  *  ナノ秒の分解能を保つ目的で `cplat_timespec_sub()` の結果から自前で算出します。
@@ -42,6 +42,7 @@ static uint64_t elapsed_ns(const cplat_timespec *start, const cplat_timespec *en
     {
         return 0U;
     }
+
     return (uint64_t)total;
 }
 
@@ -50,7 +51,7 @@ static uint64_t elapsed_ns(const cplat_timespec *start, const cplat_timespec *en
  *  @param[in]      fn          測定対象を 1 反復ぶん実行するコールバック。NULL を渡してはなりません。
  *  @param[in,out]  arg         @p fn へ渡すデータ。
  *  @param[in]      iterations  反復回数。1 以上を指定します。
- *  @param[out]     total_ns    区間の所要時間 (ナノ秒) の格納先。NULL を渡してはなりません。
+ *  @param[out]     total_ns    区間の所要時間 [ns] の格納先。NULL を渡してはなりません。
  *  @return         成功時は 0、@p fn の失敗時は -1 を返します。
  */
 static int run_block(bench_iteration_fn fn, void *arg, uint64_t iterations, uint64_t *total_ns)
@@ -60,6 +61,7 @@ static int run_block(bench_iteration_fn fn, void *arg, uint64_t iterations, uint
     uint64_t index;
 
     cplat_clock_get_monotonic(&start);
+
     for (index = 0U; index < iterations; index++)
     {
         if (fn(arg) != 0)
@@ -67,9 +69,11 @@ static int run_block(bench_iteration_fn fn, void *arg, uint64_t iterations, uint
             return -1;
         }
     }
+
     cplat_clock_get_monotonic(&end);
 
     *total_ns = elapsed_ns(&start, &end);
+
     return 0;
 }
 
@@ -94,6 +98,7 @@ static void sort_ascending(uint64_t *values, size_t count)
             values[position] = values[position - 1U];
             position--;
         }
+
         values[position] = target;
     }
 }
@@ -137,18 +142,22 @@ int bench_timer_measure(bench_iteration_fn fn, void *arg, uint64_t min_duration_
             {
                 return -1;
             }
+
             if (total_ns >= threshold_ns)
             {
                 break;
             }
+
             if (iterations >= (uint64_t)BENCH_TIMER_MAX_ITERATIONS)
             {
                 break;
             }
+
             iterations = iterations * 2U;
         }
     }
 
+    /* 確定した反復回数で試行し、1 反復あたりの所要時間を試料にする。 */
     for (trial = 0U; trial < trial_count; trial++)
     {
         uint64_t total_ns = 0U;
@@ -157,6 +166,7 @@ int bench_timer_measure(bench_iteration_fn fn, void *arg, uint64_t min_duration_
         {
             return -1;
         }
+
         samples[trial] = total_ns / iterations;
     }
 
@@ -166,6 +176,7 @@ int bench_timer_measure(bench_iteration_fn fn, void *arg, uint64_t min_duration_
     timing->min_ns = samples[0];
     timing->max_ns = samples[trial_count - 1U];
     timing->median_ns = samples[trial_count / 2U];
+
     return 0;
 }
 
@@ -191,10 +202,12 @@ int bench_timer_measure_cold(bench_iteration_fn fn, void *arg, bench_iteration_f
         {
             return -1;
         }
+
         if (run_block(fn, arg, 1U, &total_ns) != 0)
         {
             return -1;
         }
+
         samples[trial] = total_ns;
     }
 
@@ -204,5 +217,6 @@ int bench_timer_measure_cold(bench_iteration_fn fn, void *arg, bench_iteration_f
     timing->min_ns = samples[0];
     timing->max_ns = samples[trial_count - 1U];
     timing->median_ns = samples[trial_count / 2U];
+
     return 0;
 }

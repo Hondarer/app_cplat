@@ -24,8 +24,10 @@
  *******************************************************************************
  */
 
-/* NOTE: このヘッダーは多数のソース ファイルから参照されるため、            */
-/*       @hideincludedbygraph によって "Included by" グラフを無効にします。 */
+/*
+ * このヘッダーは多数のソース ファイルから参照されるため、
+ * @hideincludedbygraph によって "Included by" グラフを無効にする。
+ */
 
 #ifndef SHARED_LIB_LIFECYCLE_H
 #define SHARED_LIB_LIFECYCLE_H
@@ -96,19 +98,21 @@ static void dllmain_syslog_send(const char *msg)
         return;
     }
 
-    /* priority 14 = facility LOG_USER(1<<3) | severity LOG_INFO(6) */
+    /* priority 14 は facility LOG_USER(1<<3) | severity LOG_INFO(6) である。 */
     n = snprintf(buf, sizeof(buf), "<14>cplat[%d]: %s", (int)getpid(), msg);
     if (n <= 0)
     {
         return;
     }
+
     if ((size_t)n >= sizeof(buf))
     {
         n = (int)(sizeof(buf) - 1);
     }
 
-    /* SYSLOG_TEST_FD が設定されていればテスト用 FD に送信し、/dev/log へは送信しない */
     buf[n] = '\n';
+
+    /* SYSLOG_TEST_FD が設定されていればテスト用 FD に送信し、/dev/log へは送信しない。 */
     if (syslog_test_fd_write(buf, (size_t)(n + 1)))
     {
         return;
@@ -122,17 +126,22 @@ static void dllmain_syslog_send(const char *msg)
 
     memset(&sa, 0, sizeof(sa));
     sa.sun_family = AF_UNIX;
+
     if (cplat_strcpy(sa.sun_path, sizeof(sa.sun_path), "/dev/log") != 0)
     {
         close(fd);
         return;
     }
 
+    /* 送信失敗時はメッセージを破棄するため、戻り値を無視する。 */
     (void)sendto(fd, buf, (size_t)n, MSG_DONTWAIT, (struct sockaddr *)&sa, (socklen_t)sizeof(sa));
     close(fd);
 }
         #define CPLAT_DLLMAIN_INFO_MSG(msg) dllmain_syslog_send(msg)
     #elif defined(PLATFORM_WINDOWS)
+/*
+ * UTF-8 の診断メッセージをワイド文字列へ変換し、OutputDebugStringW() で出力する。
+ */
 static void dllmain_output_debug_msg(const char *msg)
 {
     wchar_t buf[1024];
@@ -147,22 +156,27 @@ static void dllmain_output_debug_msg(const char *msg)
     len = MultiByteToWideChar(CP_UTF8, 0, msg, -1, NULL, 0);
     if (len <= 0)
         return;
+
     if (len <= 1024)
     {
-        /* バッファーに収まる: そのまま変換 */
+        /* バッファーに収まる場合はそのまま変換する。 */
         MultiByteToWideChar(CP_UTF8, 0, msg, -1, buf, 1024);
     }
     else
     {
-        /* 切り捨て: UTF-8 バイト列を走査して 1019 wchar 分のバイト数を求める */
-        /* (残り 4 wchar + null で " ..." を付与するため)              */
+        /*
+         * バッファーを超える場合は、UTF-8 バイト列を走査して wchar_t 1019 個に収まるバイト数を求める。
+         * 残りの wchar_t 4 個と NUL 終端で " ..." を付与する。
+         */
         int byte_pos = 0;
         int wc_count = 0;
         int written;
+
         while (msg[byte_pos] != '\0')
         {
             unsigned char c = (unsigned char)msg[byte_pos];
             int cb;
+
             if (c < 0x80u)
             {
                 cb = 1;
@@ -179,7 +193,9 @@ static void dllmain_output_debug_msg(const char *msg)
             {
                 cb = 4;
             }
-            int cw; /* U+10000 以上はサロゲート ペアで 2 wchar */
+
+            int cw; /* U+10000 以上はサロゲート ペアで wchar_t 2 個 */
+
             if (cb == 4)
             {
                 cw = 2;
@@ -188,11 +204,13 @@ static void dllmain_output_debug_msg(const char *msg)
             {
                 cw = 1;
             }
+
             if (wc_count + cw > 1019)
                 break;
             wc_count += cw;
             byte_pos += cb;
         }
+
         written = MultiByteToWideChar(CP_UTF8, 0, msg, byte_pos, buf, 1019);
         if (written <= 0)
             return;
@@ -202,6 +220,7 @@ static void dllmain_output_debug_msg(const char *msg)
         buf[written + 3] = L'.';
         buf[written + 4] = L'\0';
     }
+
     OutputDebugStringW(buf);
 }
         #define CPLAT_DLLMAIN_INFO_MSG(msg) dllmain_output_debug_msg(msg)
@@ -278,6 +297,7 @@ __attribute__((destructor)) static void dllmain_on_unload(void)
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     (void)hinstDLL;
+
     switch (fdwReason)
     {
     case DLL_PROCESS_ATTACH:
@@ -289,6 +309,12 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         CPLAT_DLLMAIN_INFO_MSG("shared_lib_lifecycle: onUnload enter");
         {
             int process_terminating;
+
+            /*
+             * lpvReserved が非 NULL の場合はプロセス終了に伴うアンロードであり、
+             * NULL の場合は FreeLibrary() による明示的なアンロードである。
+             * see: https://learn.microsoft.com/en-us/windows/win32/dlls/dllmain
+             */
             if (lpvReserved != NULL)
             {
                 process_terminating = 1;
@@ -297,13 +323,16 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
             {
                 process_terminating = 0;
             }
+
             onUnload(process_terminating);
         }
+
         CPLAT_DLLMAIN_INFO_MSG("shared_lib_lifecycle: onUnload leave");
         break;
     default:
         break;
     }
+
     return TRUE;
 }
 
