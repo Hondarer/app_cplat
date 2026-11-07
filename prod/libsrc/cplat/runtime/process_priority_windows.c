@@ -245,8 +245,8 @@ int cplat_process_priority_windows_set_class(uint32_t process_id, cplat_process_
         return cplat_internal_error_report_errno(detail_out, EINVAL);
     }
 
-    result = open_process(process_id, PROCESS_SET_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION, &process,
-                          detail_out);
+    result =
+        open_process(process_id, PROCESS_SET_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION, &process, detail_out);
     if (result != CPLAT_OK)
     {
         return result;
@@ -489,8 +489,8 @@ int cplat_process_priority_windows_set_power_throttling(
         return cplat_internal_error_report_errno(detail_out, EINVAL);
     }
 
-    result = open_process(process_id, PROCESS_SET_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION, &process,
-                          detail_out);
+    result =
+        open_process(process_id, PROCESS_SET_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION, &process, detail_out);
     if (result != CPLAT_OK)
     {
         return result;
@@ -542,8 +542,7 @@ int cplat_process_priority_windows_set_power_throttling(
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_process_priority_windows_get_power_throttling(
-    uint32_t process_id, cplat_process_priority_windows_power_throttling *power_throttling_out,
-    cplat_error *detail_out)
+    uint32_t process_id, cplat_process_priority_windows_power_throttling *power_throttling_out, cplat_error *detail_out)
 {
     HANDLE process;
     PROCESS_POWER_THROTTLING_STATE state;

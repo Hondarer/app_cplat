@@ -1,5 +1,5 @@
 #ifndef _GNU_SOURCE
-    #define _GNU_SOURCE
+#define _GNU_SOURCE
 #endif /* _GNU_SOURCE */
 
 /**
@@ -23,63 +23,63 @@
 
 #if defined(PLATFORM_LINUX)
 
-    #include <errno.h>
-    #include <stdint.h>
-    #include <string.h>
-    #include <sched.h>
-    #include <sys/resource.h>
-    #include <sys/syscall.h>
-    #include <unistd.h>
+#include <errno.h>
+#include <stdint.h>
+#include <string.h>
+#include <sched.h>
+#include <sys/resource.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
-    #include <cplat/base/error_internal.h>
-    #include <cplat/runtime/process_priority_linux.h>
+#include <cplat/base/error_internal.h>
+#include <cplat/runtime/process_priority_linux.h>
 
-    /* see: https://man7.org/linux/man-pages/man7/sched.7.html */
-    #ifndef SCHED_BATCH
-        #define SCHED_BATCH 3
-    #endif
-    #ifndef SCHED_IDLE
-        #define SCHED_IDLE 5
-    #endif
-    #ifndef SCHED_DEADLINE
-        #define SCHED_DEADLINE 6
-    #endif
-    #ifndef SCHED_RESET_ON_FORK
-        #define SCHED_RESET_ON_FORK 0x40000000
-    #endif
+/* see: https://man7.org/linux/man-pages/man7/sched.7.html */
+#ifndef SCHED_BATCH
+    #define SCHED_BATCH 3
+#endif
+#ifndef SCHED_IDLE
+    #define SCHED_IDLE 5
+#endif
+#ifndef SCHED_DEADLINE
+    #define SCHED_DEADLINE 6
+#endif
+#ifndef SCHED_RESET_ON_FORK
+    #define SCHED_RESET_ON_FORK 0x40000000
+#endif
 
-    /*
+/*
      * sched_attr.sched_flags の値
      * see: https://man7.org/linux/man-pages/man2/sched_setattr.2.html
      */
-    #define PROCESS_PRIORITY_SCHED_FLAG_RESET_ON_FORK  0x01ULL
-    #define PROCESS_PRIORITY_SCHED_FLAG_KEEP_POLICY    0x08ULL
-    #define PROCESS_PRIORITY_SCHED_FLAG_KEEP_PARAMS    0x10ULL
-    #define PROCESS_PRIORITY_SCHED_FLAG_UTIL_CLAMP_MIN 0x20ULL
-    #define PROCESS_PRIORITY_SCHED_FLAG_UTIL_CLAMP_MAX 0x40ULL
+#define PROCESS_PRIORITY_SCHED_FLAG_RESET_ON_FORK  0x01ULL
+#define PROCESS_PRIORITY_SCHED_FLAG_KEEP_POLICY    0x08ULL
+#define PROCESS_PRIORITY_SCHED_FLAG_KEEP_PARAMS    0x10ULL
+#define PROCESS_PRIORITY_SCHED_FLAG_UTIL_CLAMP_MIN 0x20ULL
+#define PROCESS_PRIORITY_SCHED_FLAG_UTIL_CLAMP_MAX 0x40ULL
 
-    /*
+/*
      * sched_attr の版ごとの大きさ [byte] である。最初の版はデッド ラインまで、
      * 2 番目の版 (Linux 5.3 以降) は CPU 使用率クランプまでを持つ。
      */
-    #define PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION0 48U /* [byte] */
-    #define PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION1 56U /* [byte] */
+#define PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION0 48U /* [byte] */
+#define PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION1 56U /* [byte] */
 
-    /* CPU 使用率クランプの上限値 (SCHED_CAPACITY_SCALE) */
-    #define PROCESS_PRIORITY_UTILIZATION_SCALE 1024U
+/* CPU 使用率クランプの上限値 (SCHED_CAPACITY_SCALE) */
+#define PROCESS_PRIORITY_UTILIZATION_SCALE 1024U
 
-    /* see: https://man7.org/linux/man-pages/man2/ioprio_set.2.html */
-    #define PROCESS_PRIORITY_IOPRIO_WHO_PROCESS 1
-    #define PROCESS_PRIORITY_IOPRIO_CLASS_SHIFT 13
-    #define PROCESS_PRIORITY_IOPRIO_LEVEL_MASK  0x7
-    #define PROCESS_PRIORITY_IOPRIO_LEVEL_MAX   7
+/* see: https://man7.org/linux/man-pages/man2/ioprio_set.2.html */
+#define PROCESS_PRIORITY_IOPRIO_WHO_PROCESS 1
+#define PROCESS_PRIORITY_IOPRIO_CLASS_SHIFT 13
+#define PROCESS_PRIORITY_IOPRIO_LEVEL_MASK  0x7
+#define PROCESS_PRIORITY_IOPRIO_LEVEL_MAX   7
 
-    /*
+/*
      * CPU 使用率クランプ (CONFIG_UCLAMP_TASK) が有効なカーネルにだけ存在する sysctl パスである。
      * 無効なカーネルでも sched_getattr() は成功して 0 と 0 を返すため、この有無で判定する。
      * see: https://docs.kernel.org/admin-guide/sysctl/kernel.html#sched-util-clamp-min
      */
-    #define PROCESS_PRIORITY_UTILIZATION_CLAMP_SYSCTL "/proc/sys/kernel/sched_util_clamp_min"
+#define PROCESS_PRIORITY_UTILIZATION_CLAMP_SYSCTL "/proc/sys/kernel/sched_util_clamp_min"
 
 /* カーネルの struct sched_attr (2 番目の版) と同じ配置である。 */
 typedef struct process_priority_sched_attr
@@ -195,15 +195,15 @@ static int is_valid_static_priority(cplat_process_priority_linux_policy policy, 
  */
 static long sched_setattr_call(pid_t os_thread_id, process_priority_sched_attr *attr)
 {
-    #if defined(SYS_sched_setattr)
+#if defined(SYS_sched_setattr)
     return syscall(SYS_sched_setattr, os_thread_id, attr, 0U);
-    #else
+#else
     (void)os_thread_id;
     (void)attr;
     errno = ENOSYS;
 
     return -1;
-    #endif
+#endif
 }
 
 /*
@@ -211,16 +211,16 @@ static long sched_setattr_call(pid_t os_thread_id, process_priority_sched_attr *
  */
 static long sched_getattr_call(pid_t os_thread_id, process_priority_sched_attr *attr, unsigned int size)
 {
-    #if defined(SYS_sched_getattr)
+#if defined(SYS_sched_getattr)
     return syscall(SYS_sched_getattr, os_thread_id, attr, size, 0U);
-    #else
+#else
     (void)os_thread_id;
     (void)attr;
     (void)size;
     errno = ENOSYS;
 
     return -1;
-    #endif
+#endif
 }
 
 /*
@@ -267,8 +267,7 @@ int cplat_process_priority_linux_set_policy(uint32_t thread_id, cplat_process_pr
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_process_priority_linux_get_policy(uint32_t thread_id, cplat_process_priority_linux_policy *policy_out,
-                                            int *static_priority_out, int *reset_on_fork_out,
-                                            cplat_error *detail_out)
+                                            int *static_priority_out, int *reset_on_fork_out, cplat_error *detail_out)
 {
     pid_t os_thread_id;
     int os_policy;
@@ -308,8 +307,7 @@ int cplat_process_priority_linux_get_policy(uint32_t thread_id, cplat_process_pr
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_priority_linux_set_deadline(uint32_t thread_id,
-                                              const cplat_process_priority_linux_deadline *deadline,
+int cplat_process_priority_linux_set_deadline(uint32_t thread_id, const cplat_process_priority_linux_deadline *deadline,
                                               int reset_on_fork, cplat_error *detail_out)
 {
     pid_t os_thread_id;
@@ -449,15 +447,15 @@ int cplat_process_priority_linux_set_io_priority(uint32_t thread_id, cplat_proce
 
     /* 列挙子の値は IOPRIO_CLASS_* と一致させている。 */
     ioprio = ((int)io_class << PROCESS_PRIORITY_IOPRIO_CLASS_SHIFT) | level;
-    #if defined(SYS_ioprio_set)
+#if defined(SYS_ioprio_set)
     if (syscall(SYS_ioprio_set, PROCESS_PRIORITY_IOPRIO_WHO_PROCESS, os_thread_id, ioprio) != 0)
     {
         return cplat_internal_error_report_errno(detail_out, errno);
     }
-    #else
+#else
     (void)ioprio;
     return cplat_internal_error_report_errno(detail_out, ENOSYS);
-    #endif
+#endif
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -476,15 +474,15 @@ int cplat_process_priority_linux_get_io_priority(uint32_t thread_id,
         return cplat_internal_error_report_errno(detail_out, EINVAL);
     }
 
-    #if defined(SYS_ioprio_get)
+#if defined(SYS_ioprio_get)
     ioprio = syscall(SYS_ioprio_get, PROCESS_PRIORITY_IOPRIO_WHO_PROCESS, os_thread_id);
     if (ioprio == -1)
     {
         return cplat_internal_error_report_errno(detail_out, errno);
     }
-    #else
+#else
     return cplat_internal_error_report_errno(detail_out, ENOSYS);
-    #endif
+#endif
 
     os_class = ioprio >> PROCESS_PRIORITY_IOPRIO_CLASS_SHIFT;
     if ((os_class < (long)CPLAT_PROCESS_PRIORITY_LINUX_IO_CLASS_NONE) ||
@@ -544,8 +542,8 @@ int cplat_process_priority_linux_set_utilization_clamp(uint32_t thread_id, uint3
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_priority_linux_get_utilization_clamp(uint32_t thread_id, uint32_t *minimum_out,
-                                                       uint32_t *maximum_out, cplat_error *detail_out)
+int cplat_process_priority_linux_get_utilization_clamp(uint32_t thread_id, uint32_t *minimum_out, uint32_t *maximum_out,
+                                                       cplat_error *detail_out)
 {
     pid_t os_thread_id;
     process_priority_sched_attr attr;

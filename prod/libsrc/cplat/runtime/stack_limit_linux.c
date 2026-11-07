@@ -53,8 +53,7 @@ static uint64_t to_limit_bytes(rlim_t os_limit)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_stack_limit_linux_get(uint64_t *soft_limit_bytes_out, uint64_t *hard_limit_bytes_out,
-                                cplat_error *detail_out)
+int cplat_stack_limit_linux_get(uint64_t *soft_limit_bytes_out, uint64_t *hard_limit_bytes_out, cplat_error *detail_out)
 {
     struct rlimit os_limit;
 

@@ -105,13 +105,13 @@ extern "C"
      */
     typedef enum cplat_process_priority_windows_thread_priority
     {
-        CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_IDLE = 0,          /**< `THREAD_PRIORITY_IDLE`。 */
-        CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_LOWEST = 1,        /**< `THREAD_PRIORITY_LOWEST`。 */
-        CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_BELOW_NORMAL = 2,  /**< `THREAD_PRIORITY_BELOW_NORMAL`。 */
-        CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_NORMAL = 3,        /**< `THREAD_PRIORITY_NORMAL`。 */
-        CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_ABOVE_NORMAL = 4,  /**< `THREAD_PRIORITY_ABOVE_NORMAL`。 */
-        CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_HIGHEST = 5,       /**< `THREAD_PRIORITY_HIGHEST`。 */
-        CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_TIME_CRITICAL = 6  /**< `THREAD_PRIORITY_TIME_CRITICAL`。 */
+        CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_IDLE = 0,         /**< `THREAD_PRIORITY_IDLE`。 */
+        CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_LOWEST = 1,       /**< `THREAD_PRIORITY_LOWEST`。 */
+        CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_BELOW_NORMAL = 2, /**< `THREAD_PRIORITY_BELOW_NORMAL`。 */
+        CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_NORMAL = 3,       /**< `THREAD_PRIORITY_NORMAL`。 */
+        CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_ABOVE_NORMAL = 4, /**< `THREAD_PRIORITY_ABOVE_NORMAL`。 */
+        CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_HIGHEST = 5,      /**< `THREAD_PRIORITY_HIGHEST`。 */
+        CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_TIME_CRITICAL = 6 /**< `THREAD_PRIORITY_TIME_CRITICAL`。 */
     } cplat_process_priority_windows_thread_priority;
 
     /**
@@ -240,8 +240,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_process_priority_windows_set_power_throttling(
-        uint32_t process_id, cplat_process_priority_windows_power_throttling power_throttling,
-        cplat_error *detail_out);
+        uint32_t process_id, cplat_process_priority_windows_power_throttling power_throttling, cplat_error *detail_out);
 
     /**
      *  @brief          プロセスの電力スロットリング (実行速度の抑制) を取得します。
@@ -292,8 +291,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_process_priority_windows_get_priority_boost(uint32_t process_id,
-                                                                                 int *enabled_out,
+    CPLAT_EXPORT int CPLAT_API cplat_process_priority_windows_get_priority_boost(uint32_t process_id, int *enabled_out,
                                                                                  cplat_error *detail_out);
 
     /**

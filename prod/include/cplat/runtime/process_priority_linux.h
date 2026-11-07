@@ -177,9 +177,9 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_process_priority_linux_set_deadline(
-        uint32_t thread_id, const cplat_process_priority_linux_deadline *deadline, int reset_on_fork,
-        cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API
+    cplat_process_priority_linux_set_deadline(uint32_t thread_id, const cplat_process_priority_linux_deadline *deadline,
+                                              int reset_on_fork, cplat_error *detail_out);
 
     /**
      *  @brief          デッド ライン スケジューリングのパラメーターを取得します。
@@ -298,8 +298,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_process_priority_linux_set_utilization_clamp(uint32_t thread_id,
-                                                                                  uint32_t minimum,
+    CPLAT_EXPORT int CPLAT_API cplat_process_priority_linux_set_utilization_clamp(uint32_t thread_id, uint32_t minimum,
                                                                                   uint32_t maximum,
                                                                                   cplat_error *detail_out);
 

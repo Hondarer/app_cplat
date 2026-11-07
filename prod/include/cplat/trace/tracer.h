@@ -1138,8 +1138,8 @@ extern "C"
  * 正本は app/general/docs/coding-guideline.md の「引数と本体の括弧」節と「処理系拡張」節である。
  */
 #define cplat_tracer_writef(handle, level, timestamp, fmt, ...) \
-    cplat_tracer_writef_at((handle), (level), (timestamp), "[%s:%d] " fmt, cplat_path_basename(__FILE__), \
-                           __LINE__, ##__VA_ARGS__)
+    cplat_tracer_writef_at((handle), (level), (timestamp), "[%s:%d] " fmt, cplat_path_basename(__FILE__), __LINE__, \
+                           ##__VA_ARGS__)
 
 /**
  *  @brief          ソース ファイル名と行番号を自動付与する cplat_tracer_write_hex マクロです。
