@@ -279,6 +279,9 @@ int cplat_internal_errno_message(char *buf, const size_t buf_size, const int err
 
         return CPLAT_OK;
     }
+#else
+    (void)errno_value;
+    return CPLAT_ERR_UNSUPPORTED;
 #endif /* PLATFORM_ */
 }
 

@@ -1,27 +1,27 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-void delegate_real_cplat_clock_get_realtime_deadline_ms(uint64_t timeout_ms, struct timespec *abs_timeout)
+int delegate_real_cplat_clock_get_realtime_deadline_ms(uint64_t timeout_ms, struct timespec *deadline_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_clock_get_realtime_deadline_ms)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_clock_get_realtime_deadline_ms"));
-
-    real_fn(timeout_ms, abs_timeout);
+    return real_fn(timeout_ms, deadline_out);
 }
 
-MOCK_WEAK_IMPL(void, cplat_clock_get_realtime_deadline_ms, uint64_t timeout_ms, struct timespec *abs_timeout)
+MOCK_WEAK_IMPL(int, cplat_clock_get_realtime_deadline_ms, uint64_t timeout_ms, struct timespec *deadline_out)
 {
+    int mock_ret;
     if (_mock_cplat != nullptr)
     {
-        _mock_cplat->cplat_clock_get_realtime_deadline_ms(timeout_ms, abs_timeout);
+        mock_ret = _mock_cplat->cplat_clock_get_realtime_deadline_ms(timeout_ms, deadline_out);
     }
     else
     {
-        delegate_real_cplat_clock_get_realtime_deadline_ms(timeout_ms, abs_timeout);
+        mock_ret = delegate_real_cplat_clock_get_realtime_deadline_ms(timeout_ms, deadline_out);
     }
-
     if (getTraceLevel() > TRACE_NONE)
     {
-        printf("  > %s %llu\n", __func__, (unsigned long long)timeout_ms);
+        printf("  > %s\n", __func__);
     }
+    return mock_ret;
 }

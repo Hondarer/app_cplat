@@ -44,6 +44,7 @@
 #define TIMESPEC_H
 
 #include <cplat/base/platform.h>
+#include <cplat/base/result.h>
 #include <cplat/cplat_export.h>
 #include <stdint.h>
 #include <time.h>
@@ -80,46 +81,51 @@ extern "C"
 
     /**
      *  @brief          時刻値を正規化します。
-     *  @param[in,out]  ts  正規化対象。NULL の場合は無処理で戻ります。
+     *  @param[in,out]  ts                正規化する時刻値。NULL は許可しません。
+     *  @retval         CPLAT_OK                   計算に成功しました。
+     *  @retval         CPLAT_ERR_INVALID_ARGUMENT 必須ポインターが NULL です。
+     *  @retval         CPLAT_ERR_OUT_OF_RANGE     結果を表現できません。
      *
-     *  `tv_nsec` が 0 以上 999,999,999 以下に収まるよう、秒部との繰り上げ・繰り下げを行います。\n
-     *  `tv_nsec` が負の場合も正の値へ正規化します (例: {1, -1} は {0, 999999999} になります)。
+     *  ナノ秒部を 0 以上 999,999,999 以下へ正規化します。秒部の範囲を超える場合は変更しません。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT void CPLAT_API cplat_timespec_normalize(cplat_timespec *ts);
+    CPLAT_EXPORT int CPLAT_API cplat_timespec_normalize(cplat_timespec *ts);
 
     /**
-     *  @brief          2 つの時刻値の和を求めます (result = a + b)。
-     *  @param[in]      a       加算元。NULL の場合は無処理で戻ります。
-     *  @param[in]      b       加算値。NULL の場合は無処理で戻ります。
-     *  @param[out]     result  正規化済みの和の格納先。NULL の場合は無処理で戻ります。@p a / @p b と同一でも構いません。
+     *  @brief          2 つの時刻値の和を求めます。
+     *  @param[in]      a                 加算元。NULL は許可しません。
+     *  @param[in]      b                 加算値。NULL は許可しません。
+     *  @param[out]     sum_out           正規化した和。a または b と同一でも構いません。NULL は許可しません。
+     *  @retval         CPLAT_OK                   計算に成功しました。
+     *  @retval         CPLAT_ERR_INVALID_ARGUMENT 必須ポインターが NULL です。
+     *  @retval         CPLAT_ERR_OUT_OF_RANGE     結果を表現できません。
      *
-     *  絶対時刻に相対時間を加算して deadline を作る用途などに使用します。\n
-     *  結果は正規化済み (`tv_nsec` が 0 以上 999,999,999 以下) です。
+     *  秒・ナノ秒を合成し、数学的な和を正規化して格納します。失敗時は出力を変更しません。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT void CPLAT_API cplat_timespec_add(const cplat_timespec *a, const cplat_timespec *b,
-                                                   cplat_timespec *result);
+    CPLAT_EXPORT int CPLAT_API cplat_timespec_add(const cplat_timespec *a, const cplat_timespec *b,
+                                                  cplat_timespec *sum_out);
 
     /**
-     *  @brief          2 つの時刻値の差を求めます (result = a - b)。
-     *  @param[in]      a       被減算値。NULL の場合は無処理で戻ります。
-     *  @param[in]      b       減算値。NULL の場合は無処理で戻ります。
-     *  @param[out]     result  正規化済みの差の格納先。NULL の場合は無処理で戻ります。@p a / @p b と同一でも構いません。
+     *  @brief          2 つの時刻値の差を求めます。
+     *  @param[in]      a                 被減算値。NULL は許可しません。
+     *  @param[in]      b                 減算値。NULL は許可しません。
+     *  @param[out]     difference_out    正規化した差。a または b と同一でも構いません。NULL は許可しません。
+     *  @retval         CPLAT_OK                   計算に成功しました。
+     *  @retval         CPLAT_ERR_INVALID_ARGUMENT 必須ポインターが NULL です。
+     *  @retval         CPLAT_ERR_OUT_OF_RANGE     結果を表現できません。
      *
-     *  経過時間の算出などに使用します。\n
-     *  結果は正規化済みであり、@p a が @p b より過去の場合は `tv_sec` が負になります
-     *  (`tv_nsec` は常に 0 以上 999,999,999 以下です)。
+     *  a から b を引いた差を正規化して格納します。失敗時は出力を変更しません。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT void CPLAT_API cplat_timespec_sub(const cplat_timespec *a, const cplat_timespec *b,
-                                                   cplat_timespec *result);
+    CPLAT_EXPORT int CPLAT_API cplat_timespec_sub(const cplat_timespec *a, const cplat_timespec *b,
+                                                  cplat_timespec *difference_out);
 
     /**
      *  @brief          2 つの時刻値を比較します。
@@ -137,33 +143,38 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_timespec_cmp(const cplat_timespec *a, const cplat_timespec *b);
 
     /**
-     *  @brief          時刻値へミリ秒を加算します (result = ts + timeout_ms)。
-     *  @param[in]      ts          加算元。NULL の場合は無処理で戻ります。
-     *  @param[in]      timeout_ms  加算するミリ秒値。
-     *  @param[out]     result      正規化済みの和の格納先。NULL の場合は無処理で戻ります。@p ts と同一でも構いません。
+     *  @brief          時刻値へミリ秒を加算します。
+     *  @param[in]      ts                加算元。NULL は許可しません。
+     *  @param[in]      timeout_ms        加算する時間 [ms]。
+     *  @param[out]     sum_out           正規化した和。ts と同一でも構いません。NULL は許可しません。
+     *  @retval         CPLAT_OK                   計算に成功しました。
+     *  @retval         CPLAT_ERR_INVALID_ARGUMENT 必須ポインターが NULL です。
+     *  @retval         CPLAT_ERR_OUT_OF_RANGE     結果を表現できません。
      *
-     *  タイムアウトの absolute deadline を生成する用途などに使用します。
+     *  失敗時は出力を変更しません。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT void CPLAT_API cplat_timespec_add_ms(const cplat_timespec *ts, uint64_t timeout_ms,
-                                                      cplat_timespec *result);
+    CPLAT_EXPORT int CPLAT_API cplat_timespec_add_ms(const cplat_timespec *ts, uint64_t timeout_ms,
+                                                     cplat_timespec *sum_out);
 
     /**
-     *  @brief          2 つの時刻値の差をミリ秒で求めます (end - start)。
-     *  @param[in]      end    終点の時刻値。NULL を指定できます。
-     *  @param[in]      start  起点の時刻値。NULL を指定できます。
-     *  @return         経過ミリ秒 (ミリ秒未満は切り捨て)。@p end が @p start より過去の場合は負値。
+     *  @brief          2 つの時刻値の差をミリ秒で求めます。
+     *  @param[in]      end               終点。NULL は許可しません。
+     *  @param[in]      start             起点。NULL は許可しません。
+     *  @param[out]     milliseconds_out  end - start の差 [ms]。NULL は許可しません。
+     *  @retval         CPLAT_OK                   計算に成功しました。
+     *  @retval         CPLAT_ERR_INVALID_ARGUMENT 必須ポインターが NULL です。
+     *  @retval         CPLAT_ERR_OUT_OF_RANGE     結果を表現できません。
      *
-     *  経過時間の測定やタイムアウト判定に使用します。\n
-     *  ミリ秒未満の端数は数直線上の負方向へ切り捨てます (床関数)。\n
-     *  @p end または @p start が NULL の場合は 0 を返します。
+     *  ミリ秒未満は負方向へ切り捨てます。正常な差 0 と失敗は戻り値で区別します。失敗時は出力を変更しません。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int64_t CPLAT_API cplat_timespec_diff_ms(const cplat_timespec *end, const cplat_timespec *start);
+    CPLAT_EXPORT int CPLAT_API cplat_timespec_diff_ms(const cplat_timespec *end, const cplat_timespec *start,
+                                                      int64_t *milliseconds_out);
 
     /**
      *  @brief          cplat_timespec をネイティブの `struct timespec` へ変換します。

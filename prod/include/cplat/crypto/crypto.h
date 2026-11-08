@@ -74,7 +74,10 @@ extern "C"
      *  @param[in]      nonce    ノンス (CPLAT_CRYPTO_NONCE_SIZE バイト)。
      *  @param[in]      aad      追加認証データへのポインター。NULL の場合は AAD なし。
      *  @param[in]      aad_len  AAD のバイト数。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_RANGE 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *
+     *  @note           本文と非 NULL の AAD は INT_MAX [byte] 以下です。
+     *                  NULL の AAD では長さを無視します。範囲外は CPLAT_ERR_OUT_OF_RANGE を返し、出力を変更しません。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -95,7 +98,11 @@ extern "C"
      *  @param[in]      nonce    ノンス (CPLAT_CRYPTO_NONCE_SIZE バイト)。
      *  @param[in]      aad      追加認証データへのポインター。NULL の場合は AAD なし。
      *  @param[in]      aad_len  AAD のバイト数。
-     *  @return         @ref CPLAT_OK (認証タグ検証 OK)、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN (認証タグ不一致含む) のいずれかを返します。
+     *  @return         @ref CPLAT_OK (認証タグ検証 OK)、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_RANGE 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_AUTHENTICATION_FAILED (認証タグ不一致)、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *
+     *  @note           認証に失敗した出力は平文として使用できません。成功時だけ dst_len を更新します。
+     *                  タグを除いた本文と非 NULL の AAD は INT_MAX [byte] 以下です。
+     *                  NULL の AAD では長さを無視します。範囲外は CPLAT_ERR_OUT_OF_RANGE を返し、出力を変更しません。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -113,7 +120,10 @@ extern "C"
      *  @param[out]     key             出力鍵バッファー (CPLAT_CRYPTO_KEY_SIZE = 32 [byte])。
      *  @param[in]      passphrase      パスフレーズへのポインター (任意のバイト列)。
      *  @param[in]      passphrase_len  パスフレーズの長さ [byte]。0 の場合も有効。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_RANGE 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *
+     *  @note           パスフレーズは UINT32_MAX [byte] 以下です。超過は CPLAT_ERR_OUT_OF_RANGE を返します。
+     *                  NULL と長さ 0 の組み合わせを許可します。範囲外では出力を変更しません。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。

@@ -26,24 +26,34 @@
  *  @brief          2 点間の経過時間をナノ秒で求めます。
  *  @param[in]      start  開始時刻。NULL を渡してはなりません。
  *  @param[in]      end    終了時刻。NULL を渡してはなりません。
- *  @return         経過時間 [ns]。負値になる場合は 0 を返します。
+ *  @param[out]     nanoseconds_out 経過時間 [ns]。負の差は 0 を格納します。
+ *  @return         成功時は 0、時刻差または変換の範囲外は -1 を返します。
  *
  *  `cplat_timespec_diff_ms()` はミリ秒単位のため、
  *  ナノ秒の分解能を保つ目的で `cplat_timespec_sub()` の結果から自前で算出します。
  */
-static uint64_t elapsed_ns(const cplat_timespec *start, const cplat_timespec *end)
+static int elapsed_ns(const cplat_timespec *start, const cplat_timespec *end, uint64_t *nanoseconds_out)
 {
-    cplat_timespec diff;
-    int64_t total;
-
-    cplat_timespec_sub(end, start, &diff);
-    total = ((int64_t)diff.tv_sec * BENCH_NS_PER_SEC) + diff.tv_nsec;
-    if (total < 0)
+    cplat_timespec difference;
+    uint64_t seconds;
+    uint64_t nanoseconds;
+    if (cplat_timespec_sub(end, start, &difference) != CPLAT_OK)
     {
-        return 0U;
+        return -1;
     }
-
-    return (uint64_t)total;
+    if (difference.tv_sec < 0)
+    {
+        *nanoseconds_out = 0U;
+        return 0;
+    }
+    seconds = (uint64_t)difference.tv_sec;
+    nanoseconds = (uint64_t)difference.tv_nsec;
+    if (seconds > (UINT64_MAX - nanoseconds) / (uint64_t)BENCH_NS_PER_SEC)
+    {
+        return -1;
+    }
+    *nanoseconds_out = seconds * (uint64_t)BENCH_NS_PER_SEC + nanoseconds;
+    return 0;
 }
 
 /**
@@ -72,9 +82,7 @@ static int run_block(bench_iteration_fn fn, void *arg, uint64_t iterations, uint
 
     cplat_clock_get_monotonic(&end);
 
-    *total_ns = elapsed_ns(&start, &end);
-
-    return 0;
+    return elapsed_ns(&start, &end, total_ns);
 }
 
 /**

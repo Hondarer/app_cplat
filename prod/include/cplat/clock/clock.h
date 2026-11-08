@@ -145,7 +145,7 @@ extern "C"
         // ... 計測対象の処理 ...
         cplat_clock_get_monotonic(&end);
 
-        elapsed_ms = cplat_timespec_diff_ms(&end, &start);
+        if (cplat_timespec_diff_ms(&end, &start, &elapsed_ms) != CPLAT_OK) { return; }
         @endcode
      */
     CPLAT_EXPORT void CPLAT_API cplat_clock_get_monotonic(cplat_timespec *ts);
@@ -274,30 +274,19 @@ extern "C"
     CPLAT_EXPORT void CPLAT_API cplat_clock_get_realtime_utc(struct tm *utc_tm, int32_t *tv_nsec);
 
     /**
-     *  @brief          現在時刻から指定ミリ秒後の absolute deadline を返します。
-     *  @param[in]      timeout_ms  現在時刻へ加算するタイムアウト値 [ms]。
-     *  @param[out]     abs_timeout absolute deadline を受け取る `struct timespec`。
+     *  @brief          実時刻から指定ミリ秒後の期限を作ります。
+     *  @param[in]      timeout_ms      加算する時間 [ms]。
+     *  @param[out]     deadline_out    ネイティブ形式の期限。NULL は許可しません。
+     *  @retval         CPLAT_OK                   期限を作成しました。
+     *  @retval         CPLAT_ERR_INVALID_ARGUMENT 出力先が NULL です。
+     *  @retval         CPLAT_ERR_OUT_OF_RANGE     期限を表現できません。
      *
-     *  現在の実時刻を取得し、指定ミリ秒を加算した absolute deadline を返します。\n
-     *  sync 実装や OS 変換層のように absolute deadline を要求する API の
-     *  入力生成に使用します。
+     *  失敗時は出力を変更しません。絶対期限を要求する同期 API に使用します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
-     *
-     *  @warning        返す値は実時刻ベースです。\n
-     *                  NTP 補正や管理者による時刻変更の影響を受けるため、
-     *                  差分計算には使用しないでください。
-     *
-     *  使用例:
-        @code{.c}
-     *  struct timespec deadline;
-     *
-     *  cplat_clock_get_realtime_deadline_ms(100, &deadline);
-     *  // absolute deadline を要求する同期 API へ渡す
-        @endcode
      */
-    CPLAT_EXPORT void CPLAT_API cplat_clock_get_realtime_deadline_ms(uint64_t timeout_ms, struct timespec *abs_timeout);
+    CPLAT_EXPORT int CPLAT_API cplat_clock_get_realtime_deadline_ms(uint64_t timeout_ms, struct timespec *deadline_out);
 
 #ifdef __cplusplus
 }

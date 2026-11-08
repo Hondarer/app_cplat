@@ -247,7 +247,7 @@ TEST_F(clockTest, realtime_utc_uses_platform_conversion_result)
     // Assert
     // [サブ手順参照 名前=clockTest.expect_tm_equal]
     expect_tm_equal(&actual_tm,
-                    &expected_tm);         // UTC 分解結果が cplat_gmtime() の設定値と一致すること。
+                    &expected_tm); // UTC 分解結果が cplat_gmtime() の設定値と一致すること。
     EXPECT_EQ(
         expected_nsec,
         actual_nsec); // [確認_正常系] - actual_nsec が expected_nsec と一致すること。(取得したナノ秒部がそのまま返ることの確認)
@@ -897,11 +897,12 @@ TEST_F(clockTest, realtime_deadline_ms_adds_timeout_without_nsec_carry)
 #endif
 
     // Act
-    cplat_clock_get_realtime_deadline_ms(
+    int actual_ret = cplat_clock_get_realtime_deadline_ms(
         timeout_ms,
         &abs_timeout); // [手順] - タイムアウト timeout_ms と出力先 abs_timeout を指定して cplat_clock_get_realtime_deadline_ms() を呼び出す。
 
     // Assert
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 期限の計算に成功すること。
     EXPECT_EQ(
         expected_sec,
         abs_timeout
@@ -946,11 +947,12 @@ TEST_F(clockTest, realtime_deadline_ms_carries_nsec_overflow)
 #endif
 
     // Act
-    cplat_clock_get_realtime_deadline_ms(
+    int actual_ret = cplat_clock_get_realtime_deadline_ms(
         timeout_ms,
         &abs_timeout); // [手順] - タイムアウト timeout_ms と出力先 abs_timeout を指定して cplat_clock_get_realtime_deadline_ms() を呼び出す。
 
     // Assert
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 期限の計算に成功すること。
     EXPECT_EQ(
         expected_sec,
         abs_timeout
@@ -959,4 +961,27 @@ TEST_F(clockTest, realtime_deadline_ms_carries_nsec_overflow)
         expected_nsec,
         abs_timeout
             .tv_nsec); // [確認_正常系] - abs_timeout.tv_nsec が expected_nsec と一致すること。(ナノ秒部が 50000000 に正規化されることの確認)
+}
+
+// 期限の加算失敗を伝播し、ネイティブ出力を保持することの確認
+TEST_F(clockTest, deadline_preserves_output_when_arithmetic_fails)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock;
+    struct timespec output = {42, 43}; // [状態] - 未変更を検出する値を用意する。
+
+    // Pre-Assert
+    EXPECT_CALL(mock, cplat_timespec_add_ms(_, _, _)).WillOnce(Return(CPLAT_ERR_OUT_OF_RANGE));
+    // [Pre-Assert確認_異常系] - 期限の加算を 1 回試みること。
+    // [Pre-Assert手順] - 表現範囲外を返す。
+
+    // Act
+    int actual = cplat_clock_get_realtime_deadline_ms(1, &output); // [手順] - 計算失敗を処理する。
+    int null_ret = cplat_clock_get_realtime_deadline_ms(1, nullptr);
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_RANGE, actual); // [確認_異常系] - 演算エラーを伝播すること。
+    EXPECT_EQ(42, output.tv_sec);
+    EXPECT_EQ(43, output.tv_nsec); // [確認_異常系] - 出力を保持すること。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, null_ret);
 }

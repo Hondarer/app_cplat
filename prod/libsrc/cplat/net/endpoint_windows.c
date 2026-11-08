@@ -25,15 +25,17 @@
 int cplat_ipv4_parse(const char *text, uint32_t *address_out)
 {
     struct in_addr parsed;
+    int startup_result;
 
     if ((text == NULL) || (address_out == NULL))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    if (cplat_internal_socket_startup(NULL) != CPLAT_OK)
+    startup_result = cplat_internal_socket_startup(NULL);
+    if (startup_result != CPLAT_OK)
     {
-        return CPLAT_ERR_INVALID_ARGUMENT;
+        return startup_result;
     }
 
     /*

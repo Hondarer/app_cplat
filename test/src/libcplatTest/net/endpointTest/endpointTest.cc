@@ -254,8 +254,7 @@ TEST_F(endpointTest, resolve_rejects_null_arguments)
         actual_ret_null_output); // [確認_異常系] - address_out が nullptr の cplat_ipv4_resolve() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     // 詳細エラーに errno ドメインと EINVAL が記録されること。
     // [サブ手順参照 名前=endpointTest.expect_detail]
-    expect_detail(detail, CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_INVALID_ARGUMENT,
-                  static_cast<unsigned long>(EINVAL));
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_INVALID_ARGUMENT, static_cast<unsigned long>(EINVAL));
     // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 }
 // [サブ手順参照 名前=endpointTest.TearDown]
@@ -635,8 +634,7 @@ TEST_F(endpointTest, resolve_propagates_startup_failure)
         actual_ret); // [確認_異常系] - 初期化に失敗した cplat_ipv4_resolve() の戻り値が CPLAT_ERR_UNKNOWN であること。
     // 詳細エラーに Winsock ドメインと OS のエラー値が記録されること。
     // [サブ手順参照 名前=endpointTest.expect_detail]
-    expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_UNKNOWN,
-                  static_cast<unsigned long>(WSASYSNOTREADY));
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_UNKNOWN, static_cast<unsigned long>(WSASYSNOTREADY));
     // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 }
 // [サブ手順参照 名前=endpointTest.TearDown]
@@ -691,8 +689,7 @@ TEST_F(endpointTest, to_string_rejects_small_buffer)
         actual_ret); // [確認_異常系] - 小さいバッファーを指定した cplat_ipv4_to_string() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
     // 詳細エラーに errno ドメインと ERANGE が記録されること。
     // [サブ手順参照 名前=endpointTest.expect_detail]
-    expect_detail(detail, CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_BUFFER_TOO_SMALL,
-                  static_cast<unsigned long>(ERANGE));
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_BUFFER_TOO_SMALL, static_cast<unsigned long>(ERANGE));
     // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 }
 // [サブ手順参照 名前=endpointTest.TearDown]
@@ -808,9 +805,31 @@ TEST_F(endpointTest, to_string_propagates_startup_failure)
         actual_ret); // [確認_異常系] - 初期化に失敗した cplat_ipv4_to_string() の戻り値が CPLAT_ERR_UNKNOWN であること。
     // 詳細エラーに Winsock ドメインと OS のエラー値が記録されること。
     // [サブ手順参照 名前=endpointTest.expect_detail]
-    expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_UNKNOWN,
-                  static_cast<unsigned long>(WSASYSNOTREADY));
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_UNKNOWN, static_cast<unsigned long>(WSASYSNOTREADY));
     // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 }
 // [サブ手順参照 名前=endpointTest.TearDown]
 #endif /* PLATFORM_WINDOWS */
+
+#if defined(PLATFORM_WINDOWS)
+// 解析開始前のソケット初期化失敗を引数不正と区別することの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
+TEST_F(endpointTest, parse_propagates_startup_failure_without_updating_address)
+{
+    // Arrange
+    uint32_t address = 42; // [状態] - 未更新を確認する値を用意する。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_socket_internal_, startup(_)).WillOnce(Return(CPLAT_ERR_OUT_OF_MEMORY));
+    // [Pre-Assert確認_異常系] - ソケット初期化を 1 回試すこと。
+    // [Pre-Assert手順] - 初期化のメモリ不足を返す。
+
+    // Act
+    int actual = cplat_ipv4_parse("127.0.0.1", &address); // [手順] - 形式が正しい IPv4 を解析する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY, actual); // [確認_異常系] - 初期化の結果を保持すること。
+    EXPECT_EQ(42U, address);                    // [確認_異常系] - 出力を保持すること。
+}
+// [サブ手順参照 名前=endpointTest.TearDown]
+#endif

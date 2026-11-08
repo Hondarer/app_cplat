@@ -161,43 +161,71 @@ int cplat_decompress(uint8_t *dst, size_t *dst_len, const uint8_t *src, const si
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
 
-    /* raw DEFLATE (windowBits = -15) を展開する。 */
-    z.next_in = (Bytef *)(uintptr_t)(src + CPLAT_COMPRESS_HEADER_SIZE); /* -Wcast-qual を避ける */
-    z.avail_in = (uInt)(src_len - CPLAT_COMPRESS_HEADER_SIZE);
-    z.next_out = (Bytef *)dst;
-    z.avail_out = (uInt)*dst_len;
-
-    ret = inflateInit2(&z, -15);
-    if (ret == Z_MEM_ERROR)
-    {
-        return CPLAT_ERR_OUT_OF_MEMORY;
-    }
-
-    if (ret != Z_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    ret = inflate(&z, Z_FINISH);
-
-    /*
-     * inflateInit2 が成功した後は inflateEnd で内部状態を解放する。
-     * inflateEnd の戻り値はストリーム状態の整合であり、展開結果は inflate の戻り値で判定する。
+    /* avail_in/avail_out の幅に依存せず、宣言された長さを越えて dst に書かない。
+     * 宣言長へ到達した後は scratch で終端と過剰な出力を区別する。
      * see: https://zlib.net/manual.html
      */
-    inflateEnd(&z);
-
-    if (ret == Z_MEM_ERROR)
     {
-        return CPLAT_ERR_OUT_OF_MEMORY;
+        size_t input_remaining = src_len - CPLAT_COMPRESS_HEADER_SIZE;
+        size_t output_remaining = (size_t)orig_len;
+        uint8_t scratch;
+        int result = CPLAT_ERR_CORRUPT_DATA;
+
+        z.next_in = (Bytef *)(uintptr_t)(src + CPLAT_COMPRESS_HEADER_SIZE);
+        z.next_out = dst;
+        ret = inflateInit2(&z, -15);
+        if (ret != Z_OK)
+        {
+            return ret == Z_MEM_ERROR ? CPLAT_ERR_OUT_OF_MEMORY : CPLAT_ERR_UNKNOWN;
+        }
+
+        for (;;)
+        {
+            uInt input_count = zlib_avail(input_remaining);
+            uInt output_count = output_remaining == 0U ? 1U : zlib_avail(output_remaining);
+            size_t consumed;
+            size_t produced;
+
+            z.avail_in = input_count;
+            z.avail_out = output_count;
+            if (output_remaining == 0U)
+            {
+                z.next_out = &scratch;
+            }
+            ret = inflate(&z, Z_NO_FLUSH);
+            consumed = (size_t)(input_count - z.avail_in);
+            produced = (size_t)(output_count - z.avail_out);
+            input_remaining -= consumed;
+            if (produced > output_remaining)
+            {
+                break;
+            }
+            output_remaining -= produced;
+            if (ret == Z_STREAM_END)
+            {
+                result = output_remaining == 0U ? CPLAT_OK : CPLAT_ERR_CORRUPT_DATA;
+                break;
+            }
+            if (ret == Z_MEM_ERROR)
+            {
+                result = CPLAT_ERR_OUT_OF_MEMORY;
+                break;
+            }
+            if (ret != Z_OK || (consumed == 0U && produced == 0U))
+            {
+                if (ret != Z_OK && ret != Z_BUF_ERROR && ret != Z_DATA_ERROR && ret != Z_NEED_DICT)
+                {
+                    result = CPLAT_ERR_UNKNOWN;
+                }
+                break;
+            }
+        }
+        inflateEnd(&z);
+        if (result != CPLAT_OK)
+        {
+            return result;
+        }
     }
-
-    if (ret != Z_STREAM_END)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    *dst_len = (size_t)z.total_out;
-
+    *dst_len = (size_t)orig_len;
     return CPLAT_OK;
 }

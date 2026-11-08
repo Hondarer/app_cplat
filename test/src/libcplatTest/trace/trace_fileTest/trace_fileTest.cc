@@ -75,7 +75,12 @@ class trace_fileTest : public Test
     void SetUp() override
     {
         ON_CALL(mock_cplat, cplat_clock_get_realtime_deadline_ms(_, _))
-            .WillByDefault([](uint64_t, struct timespec *abs_timeout) { set_valid_deadline(abs_timeout); });
+            .WillByDefault(
+                [](uint64_t, struct timespec *abs_timeout)
+                {
+                    set_valid_deadline(abs_timeout);
+                    return CPLAT_OK;
+                });
         // [状態] - cplat_clock_get_realtime_deadline_ms() から、有効な期限を設定して戻るように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_get_realtime(_))
             .WillByDefault([](cplat_timespec *ts) { set_fixed_realtime(ts); });

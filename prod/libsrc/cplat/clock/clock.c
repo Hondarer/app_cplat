@@ -293,12 +293,21 @@ int cplat_clock_format_realtime_iso8601_utc(char *buf, const size_t buf_size, co
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-void cplat_clock_get_realtime_deadline_ms(const uint64_t timeout_ms, struct timespec *abs_timeout)
+int cplat_clock_get_realtime_deadline_ms(const uint64_t timeout_ms, struct timespec *deadline_out)
 {
     cplat_timespec now;
     cplat_timespec deadline;
-
+    int ret;
+    if (deadline_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
     cplat_clock_get_realtime(&now);
-    cplat_timespec_add_ms(&now, timeout_ms, &deadline);
-    cplat_timespec_to_native(&deadline, abs_timeout);
+    ret = cplat_timespec_add_ms(&now, timeout_ms, &deadline);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+    cplat_timespec_to_native(&deadline, deadline_out);
+    return CPLAT_OK;
 }

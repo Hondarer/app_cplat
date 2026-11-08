@@ -53,7 +53,7 @@ typedef int (*bench_iteration_fn)(void *arg);
  *  @param[in]      trial_count      試行回数。1 以上 @ref BENCH_TIMER_MAX_TRIALS 以下を指定します。
  *  @param[in]      fixed_iterations 反復回数を固定する場合はその値、自動調整する場合は 0 を指定します。
  *  @param[out]     timing           測定結果の格納先。NULL を渡してはなりません。
- *  @return         成功時は 0、引数不正または @p fn の失敗時は -1 を返します。
+ *  @return         成功時は 0、引数不正、@p fn の失敗、または計測時間を表現できない場合は -1 を返します。
  *
  *  最初にウォーム アップとして @p fn を 1 回実行します (この結果は測定に含めません)。\n
  *  続いて、測定区間が @p min_duration_ms 以上になるまで反復回数を 1 から倍増させ、
@@ -71,7 +71,7 @@ int bench_timer_measure(bench_iteration_fn fn, void *arg, uint64_t min_duration_
  *  @param[in,out]  prepare_arg  @p prepare へ渡すデータ。
  *  @param[in]      trial_count  試行回数。1 以上 @ref BENCH_TIMER_MAX_TRIALS 以下を指定します。
  *  @param[out]     timing       測定結果の格納先。NULL を渡してはなりません。
- *  @return         成功時は 0、引数不正または各コールバックの失敗時は -1 を返します。
+ *  @return         成功時は 0、引数不正、各コールバックの失敗、または計測時間を表現できない場合は -1 を返します。
  *
  *  ページ キャッシュを破棄した状態 (cold) の測定に使用します。\n
  *  反復の繰り返しもウォーム アップも行わないため、1 反復の所要時間がクロック分解能に対して

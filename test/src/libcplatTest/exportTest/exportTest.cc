@@ -297,17 +297,18 @@
                  int(CPLAT_API *)(char *buf, size_t buf_size, const cplat_timespec *timestamp)) \
     EXPORT_ENTRY(cplat_clock_get_realtime_utc, void(CPLAT_API *)(struct tm * utc_tm, int32_t *tv_nsec)) \
     EXPORT_ENTRY(cplat_clock_get_realtime_deadline_ms, \
-                 void(CPLAT_API *)(uint64_t timeout_ms, struct timespec *abs_timeout)) \
+                 int(CPLAT_API *)(uint64_t timeout_ms, struct timespec *deadline_out)) \
     /* cplat/clock/timespec.h */ \
-    EXPORT_ENTRY(cplat_timespec_normalize, void(CPLAT_API *)(cplat_timespec * ts)) \
+    EXPORT_ENTRY(cplat_timespec_normalize, int(CPLAT_API *)(cplat_timespec * ts)) \
     EXPORT_ENTRY(cplat_timespec_add, \
-                 void(CPLAT_API *)(const cplat_timespec *a, const cplat_timespec *b, cplat_timespec *result)) \
+                 int(CPLAT_API *)(const cplat_timespec *a, const cplat_timespec *b, cplat_timespec *sum_out)) \
     EXPORT_ENTRY(cplat_timespec_sub, \
-                 void(CPLAT_API *)(const cplat_timespec *a, const cplat_timespec *b, cplat_timespec *result)) \
+                 int(CPLAT_API *)(const cplat_timespec *a, const cplat_timespec *b, cplat_timespec *difference_out)) \
     EXPORT_ENTRY(cplat_timespec_cmp, int(CPLAT_API *)(const cplat_timespec *a, const cplat_timespec *b)) \
     EXPORT_ENTRY(cplat_timespec_add_ms, \
-                 void(CPLAT_API *)(const cplat_timespec *ts, uint64_t timeout_ms, cplat_timespec *result)) \
-    EXPORT_ENTRY(cplat_timespec_diff_ms, int64_t(CPLAT_API *)(const cplat_timespec *end, const cplat_timespec *start)) \
+                 int(CPLAT_API *)(const cplat_timespec *ts, uint64_t timeout_ms, cplat_timespec *sum_out)) \
+    EXPORT_ENTRY(cplat_timespec_diff_ms, \
+                 int(CPLAT_API *)(const cplat_timespec *end, const cplat_timespec *start, int64_t *milliseconds_out)) \
     EXPORT_ENTRY(cplat_timespec_to_native, void(CPLAT_API *)(const cplat_timespec *ts, struct timespec *native)) \
     EXPORT_ENTRY(cplat_timespec_from_native, void(CPLAT_API *)(const struct timespec *native, cplat_timespec *ts)) \
     /* cplat/compress/compress.h */ \
@@ -919,18 +920,42 @@
         EXPORT_ENTRY(cplat_error_capture_current_windows_error, void(CPLAT_API *)(cplat_error * error)) \
         EXPORT_ENTRY(cplat_error_get_windows_error, unsigned long(CPLAT_API *)(const cplat_error *error)) \
         /* cplat/runtime/process_priority_windows.h */ \
-        EXPORT_ENTRY(cplat_process_priority_windows_set_class, int(CPLAT_API *)(uint32_t process_id, cplat_process_priority_windows_class priority_class, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_windows_get_class, int(CPLAT_API *)(uint32_t process_id, cplat_process_priority_windows_class *priority_class_out, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_windows_begin_background_mode, int(CPLAT_API *)(cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_windows_end_background_mode, int(CPLAT_API *)(cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_windows_set_memory_priority, int(CPLAT_API *)(uint32_t process_id, cplat_process_priority_windows_memory_priority memory_priority, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_windows_get_memory_priority, int(CPLAT_API *)(uint32_t process_id, cplat_process_priority_windows_memory_priority *memory_priority_out, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_windows_set_power_throttling, int(CPLAT_API *)(uint32_t process_id, cplat_process_priority_windows_power_throttling power_throttling, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_windows_get_power_throttling, int(CPLAT_API *)(uint32_t process_id, cplat_process_priority_windows_power_throttling *power_throttling_out, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_windows_set_priority_boost, int(CPLAT_API *)(uint32_t process_id, int enabled, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_windows_get_priority_boost, int(CPLAT_API *)(uint32_t process_id, int *enabled_out, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_windows_set_thread_priority, int(CPLAT_API *)(uint32_t thread_id, cplat_process_priority_windows_thread_priority thread_priority, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_windows_get_thread_priority, int(CPLAT_API *)(uint32_t thread_id, cplat_process_priority_windows_thread_priority *thread_priority_out, cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_windows_set_class, \
+                     int(CPLAT_API *)(uint32_t process_id, cplat_process_priority_windows_class priority_class, \
+                                      cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_windows_get_class, \
+                     int(CPLAT_API *)(uint32_t process_id, cplat_process_priority_windows_class *priority_class_out, \
+                                      cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_windows_begin_background_mode, int(CPLAT_API *)(cplat_error * detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_windows_end_background_mode, int(CPLAT_API *)(cplat_error * detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_windows_set_memory_priority, \
+                     int(CPLAT_API *)(uint32_t process_id, \
+                                      cplat_process_priority_windows_memory_priority memory_priority, \
+                                      cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_windows_get_memory_priority, \
+                     int(CPLAT_API *)(uint32_t process_id, \
+                                      cplat_process_priority_windows_memory_priority *memory_priority_out, \
+                                      cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_windows_set_power_throttling, \
+                     int(CPLAT_API *)(uint32_t process_id, \
+                                      cplat_process_priority_windows_power_throttling power_throttling, \
+                                      cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_windows_get_power_throttling, \
+                     int(CPLAT_API *)(uint32_t process_id, \
+                                      cplat_process_priority_windows_power_throttling *power_throttling_out, \
+                                      cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_windows_set_priority_boost, \
+                     int(CPLAT_API *)(uint32_t process_id, int enabled, cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_windows_get_priority_boost, \
+                     int(CPLAT_API *)(uint32_t process_id, int *enabled_out, cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_windows_set_thread_priority, \
+                     int(CPLAT_API *)(uint32_t thread_id, \
+                                      cplat_process_priority_windows_thread_priority thread_priority, \
+                                      cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_windows_get_thread_priority, \
+                     int(CPLAT_API *)(uint32_t thread_id, \
+                                      cplat_process_priority_windows_thread_priority *thread_priority_out, \
+                                      cplat_error *detail_out)) \
         /* cplat/trace/etw.h */ \
         EXPORT_ENTRY(cplat_etw_provider_create, \
                      cplat_etw_provider *(CPLAT_API *)(cplat_etw_provider_ref_t provider_ref)) \
@@ -995,19 +1020,40 @@
 #elif defined(PLATFORM_LINUX)
     #define CPLAT_EXPORT_TABLE_PLATFORM(EXPORT_ENTRY) \
         /* cplat/runtime/process_priority_linux.h */ \
-        EXPORT_ENTRY(cplat_process_priority_linux_set_policy, int(CPLAT_API *)(uint32_t thread_id, cplat_process_priority_linux_policy policy, int static_priority, int reset_on_fork, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_linux_get_policy, int(CPLAT_API *)(uint32_t thread_id, cplat_process_priority_linux_policy *policy_out, int *static_priority_out, int *reset_on_fork_out, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_linux_set_deadline, int(CPLAT_API *)(uint32_t thread_id, const cplat_process_priority_linux_deadline *deadline, int reset_on_fork, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_linux_get_deadline, int(CPLAT_API *)(uint32_t thread_id, cplat_process_priority_linux_deadline *deadline_out, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_linux_set_nice, int(CPLAT_API *)(uint32_t thread_id, int nice_value, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_linux_get_nice, int(CPLAT_API *)(uint32_t thread_id, int *nice_value_out, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_linux_set_io_priority, int(CPLAT_API *)(uint32_t thread_id, cplat_process_priority_linux_io_class io_class, int level, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_linux_get_io_priority, int(CPLAT_API *)(uint32_t thread_id, cplat_process_priority_linux_io_class *io_class_out, int *level_out, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_linux_set_utilization_clamp, int(CPLAT_API *)(uint32_t thread_id, uint32_t minimum, uint32_t maximum, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_process_priority_linux_get_utilization_clamp, int(CPLAT_API *)(uint32_t thread_id, uint32_t *minimum_out, uint32_t *maximum_out, cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_linux_set_policy, \
+                     int(CPLAT_API *)(uint32_t thread_id, cplat_process_priority_linux_policy policy, \
+                                      int static_priority, int reset_on_fork, cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_linux_get_policy, \
+                     int(CPLAT_API *)(uint32_t thread_id, cplat_process_priority_linux_policy *policy_out, \
+                                      int *static_priority_out, int *reset_on_fork_out, cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_linux_set_deadline, \
+                     int(CPLAT_API *)(uint32_t thread_id, const cplat_process_priority_linux_deadline *deadline, \
+                                      int reset_on_fork, cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_linux_get_deadline, \
+                     int(CPLAT_API *)(uint32_t thread_id, cplat_process_priority_linux_deadline *deadline_out, \
+                                      cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_linux_set_nice, \
+                     int(CPLAT_API *)(uint32_t thread_id, int nice_value, cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_linux_get_nice, \
+                     int(CPLAT_API *)(uint32_t thread_id, int *nice_value_out, cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_linux_set_io_priority, \
+                     int(CPLAT_API *)(uint32_t thread_id, cplat_process_priority_linux_io_class io_class, int level, \
+                                      cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_linux_get_io_priority, \
+                     int(CPLAT_API *)(uint32_t thread_id, cplat_process_priority_linux_io_class *io_class_out, \
+                                      int *level_out, cplat_error *detail_out)) \
+        EXPORT_ENTRY( \
+            cplat_process_priority_linux_set_utilization_clamp, \
+            int(CPLAT_API *)(uint32_t thread_id, uint32_t minimum, uint32_t maximum, cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_process_priority_linux_get_utilization_clamp, \
+                     int(CPLAT_API *)(uint32_t thread_id, uint32_t *minimum_out, uint32_t *maximum_out, \
+                                      cplat_error *detail_out)) \
         /* cplat/runtime/stack_limit_linux.h */ \
-        EXPORT_ENTRY(cplat_stack_limit_linux_get, int(CPLAT_API *)(uint64_t *soft_limit_bytes_out, uint64_t *hard_limit_bytes_out, cplat_error *detail_out)) \
-        EXPORT_ENTRY(cplat_stack_limit_linux_raise_to_hard_limit, int(CPLAT_API *)(uint64_t *soft_limit_bytes_out, cplat_error *detail_out)) \
+        EXPORT_ENTRY( \
+            cplat_stack_limit_linux_get, \
+            int(CPLAT_API *)(uint64_t *soft_limit_bytes_out, uint64_t *hard_limit_bytes_out, cplat_error *detail_out)) \
+        EXPORT_ENTRY(cplat_stack_limit_linux_raise_to_hard_limit, \
+                     int(CPLAT_API *)(uint64_t *soft_limit_bytes_out, cplat_error *detail_out)) \
         /* cplat/trace/syslog.h */ \
         EXPORT_ENTRY(cplat_syslog_sink_create, cplat_syslog_sink *(CPLAT_API *)(const char *ident, int facility)) \
         EXPORT_ENTRY(cplat_syslog_sink_write, int(CPLAT_API *)(cplat_syslog_sink * handle, int level, \

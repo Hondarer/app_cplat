@@ -146,8 +146,8 @@ TEST_F(cryptoTest, decrypt_rejects_tampered_cipher_text)
 
     // Assert
     EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - 改ざんした暗号文に対する cplat_crypto_decrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        CPLAT_ERR_AUTHENTICATION_FAILED,
+        actual_ret); // [確認_異常系] - 改ざんした暗号文に対する cplat_crypto_decrypt() の戻り値が CPLAT_ERR_AUTHENTICATION_FAILED であること。
 }
 
 // 異なる鍵での復号が認証に失敗することの確認
@@ -177,8 +177,8 @@ TEST_F(cryptoTest, decrypt_rejects_wrong_key)
 
     // Assert
     EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - 異なる鍵を指定した cplat_crypto_decrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        CPLAT_ERR_AUTHENTICATION_FAILED,
+        actual_ret); // [確認_異常系] - 異なる鍵を指定した cplat_crypto_decrypt() の戻り値が CPLAT_ERR_AUTHENTICATION_FAILED であること。
 }
 
 // 空の平文が暗号化・復号できることの確認
@@ -406,4 +406,61 @@ TEST_F(cryptoTest, passphrase_to_key_rejects_invalid_arguments)
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_null_passphrase); // [確認_異常系] - passphrase が nullptr かつ長さが 0 より大きい cplat_passphrase_to_key() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+}
+
+// バックエンドの整数幅を超える入力を参照前に拒否することの確認
+TEST_F(cryptoTest, rejects_unrepresentable_lengths_without_touching_output)
+{
+    // Arrange
+    uint8_t dst[32] = {42};
+    uint8_t src[32] = {};
+    uint8_t key[CPLAT_CRYPTO_KEY_SIZE] = {};
+    uint8_t nonce[CPLAT_CRYPTO_NONCE_SIZE] = {};
+    size_t length = 123;
+    const size_t too_long = static_cast<size_t>(INT32_MAX) + 1U; // [状態] - int に収まらない長さを指定する。
+
+    // Pre-Assert
+
+    // Act
+    int encrypt_ret = cplat_crypto_encrypt(dst, &length, src, too_long, key, nonce, nullptr, 0);
+    int decrypt_ret = cplat_crypto_decrypt(dst, &length, src, too_long + CPLAT_CRYPTO_TAG_SIZE, key, nonce, nullptr, 0);
+    int aad_ret = cplat_crypto_encrypt(dst, &length, src, 1, key, nonce, src, too_long);
+    int phrase_ret =
+        cplat_passphrase_to_key(dst, src, static_cast<size_t>(UINT32_MAX) + 1U); // [手順] - 各上限超過を試す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_RANGE, encrypt_ret); // [確認_異常系] - 範囲外を検出すること。
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_RANGE, decrypt_ret);
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_RANGE, aad_ret);
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_RANGE, phrase_ret);
+    EXPECT_EQ(123U, length); // [確認_異常系] - 出力長を保持すること。
+    EXPECT_EQ(42, dst[0]);   // [確認_異常系] - 出力を参照しないこと。
+}
+
+// 大きな出力容量と NULL AAD の長さがバックエンドへ切り詰められないことの確認
+TEST_F(cryptoTest, accepts_large_capacity_and_ignores_length_of_null_aad)
+{
+    // Arrange
+    uint8_t output[32] = {};
+    uint8_t restored[32] = {};
+    uint8_t input[1] = {42};
+    uint8_t key[CPLAT_CRYPTO_KEY_SIZE] = {};
+    uint8_t nonce[CPLAT_CRYPTO_NONCE_SIZE] = {};
+    size_t encrypted_length = SIZE_MAX;
+    size_t restored_length = SIZE_MAX; // [状態] - バックエンドの整数幅を超える容量を指定する。
+
+    // Pre-Assert
+
+    // Act
+    int encrypt_ret =
+        cplat_crypto_encrypt(output, &encrypted_length, input, sizeof(input), key, nonce, nullptr, SIZE_MAX);
+    int decrypt_ret = cplat_crypto_decrypt(restored, &restored_length, output, encrypted_length, key, nonce, nullptr,
+                                           SIZE_MAX); // [手順] - 実際に必要な出力長だけを使用する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, encrypt_ret); // [確認_正常系] - 容量そのものに上限を課さないこと。
+    EXPECT_EQ(CPLAT_OK, decrypt_ret);
+    EXPECT_EQ(sizeof(input) + CPLAT_CRYPTO_TAG_SIZE, encrypted_length);
+    EXPECT_EQ(sizeof(input), restored_length);
+    EXPECT_EQ(42, restored[0]); // [確認_正常系] - NULL AAD の大きな長さを無視すること。
 }

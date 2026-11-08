@@ -220,7 +220,7 @@
 #define CPLAT_ERR_INVALID_ENCODING     (-30) /**< 文字列が UTF-8 として不正です。 */
 #define CPLAT_ERR_MALFORMED_DEFINITION (-31) /**< 与えられた定義の内容が構文または整合の点で不正です。 */
 
-/* 制御: -40 〜 */
+/* 制御: -40 〜 -49 */
 #define CPLAT_ERR_EOF      (-40) /**< 入力が EOF に達しました。 */
 #define CPLAT_ERR_CANCELED (-41) /**< ユーザー操作 (Ctrl+C など) により中断しました。 */
 
@@ -236,6 +236,9 @@
  *                  (`net/socket_linux.c`、`net/socket_windows.c`)
  */
 #define CPLAT_ERR_IN_PROGRESS (-42)
+/* データの検証: -50 〜 */
+#define CPLAT_ERR_AUTHENTICATION_FAILED (-50) /**< 認証タグの検証に失敗しました。 */
+#define CPLAT_ERR_CORRUPT_DATA          (-51) /**< データが破損しているか、宣言された形式と一致しません。 */
 /** @} */
 
 #endif /* CPLAT_RESULT_H */

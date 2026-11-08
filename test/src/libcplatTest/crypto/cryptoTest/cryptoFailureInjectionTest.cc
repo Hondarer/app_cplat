@@ -469,8 +469,8 @@ TEST_F(cryptoFailureInjectionTest, decrypt_returns_unknown_when_final_fails)
 
     // Assert
     EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - 認証終端処理失敗時の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        CPLAT_ERR_AUTHENTICATION_FAILED,
+        actual_ret); // [確認_異常系] - 認証終端処理失敗時の cplat_crypto_decrypt() の戻り値が CPLAT_ERR_AUTHENTICATION_FAILED であること。
 }
 
 // ダイジェスト コンテキストの確保に失敗した場合にメモリ不足が返ることの確認

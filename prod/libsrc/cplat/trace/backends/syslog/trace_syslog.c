@@ -269,8 +269,8 @@ cplat_syslog_sink *cplat_syslog_sink_create(const char *ident, const int facilit
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cplat_timespec *timestamp,
-                            const char *message)
+static int write_locked(cplat_syslog_sink *handle, const int level, const cplat_timespec *timestamp,
+                        const char *message)
 {
     char buf[SYSLOG_BUF_SIZE];
     char debug_buf[SYSLOG_DEBUG_BUF_SIZE];
@@ -356,8 +356,6 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
         }
     }
 
-    cplat_local_lock_lock(handle->reconnect_lock, CPLAT_SYNC_WAIT_FOREVER);
-
     /* ソケットが無ければ低頻度で再接続を試みる。 */
     if (handle->fd < 0)
     {
@@ -365,7 +363,6 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
 
         if (handle->fd < 0)
         {
-            cplat_local_lock_unlock(handle->reconnect_lock);
 
             if (fallback_used)
             {
@@ -391,7 +388,6 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
         if (errno == EAGAIN)
         {
             /* 送信バッファー満杯: drop のみ、再接続不要。 */
-            cplat_local_lock_unlock(handle->reconnect_lock);
 
             if (fallback_used)
             {
@@ -405,7 +401,6 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
 
         /* その他エラー (ENOENT, ECONNREFUSED 等): ソケットを閉じてバックオフ。 */
         close_and_backoff_locked(handle);
-        cplat_local_lock_unlock(handle->reconnect_lock);
 
         if (fallback_used)
         {
@@ -420,8 +415,6 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
     /* 送信成功: バックオフをリセット。 */
     handle->backoff_sec = BACKOFF_INIT_SEC;
 
-    cplat_local_lock_unlock(handle->reconnect_lock);
-
     if (fallback_used)
     {
         return CPLAT_ERR_UNKNOWN;
@@ -430,6 +423,27 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
     {
         return CPLAT_OK;
     }
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cplat_timespec *timestamp,
+                            const char *message)
+{
+    int ret;
+    int unlock_ret;
+    if (handle == NULL || message == NULL)
+    {
+        return CPLAT_OK;
+    }
+    ret = cplat_local_lock_lock(handle->reconnect_lock, CPLAT_SYNC_WAIT_FOREVER);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+    /* rename と同じロックで ident の参照から送信まで保護する。 */
+    ret = write_locked(handle, level, timestamp, message);
+    unlock_ret = cplat_local_lock_unlock(handle->reconnect_lock);
+    return ret != CPLAT_OK ? ret : unlock_ret;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
