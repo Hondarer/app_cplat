@@ -52,7 +52,7 @@ struct cplat_local_rwlock
     unsigned int active_readers;
     unsigned int waiting_writers;
     int writer_active; /* 排他ロックの保持中は 1 */
-    int _pad_struct_end;
+    int pad;           /* 明示的アラインメント */
 };
 
 struct cplat_thread
