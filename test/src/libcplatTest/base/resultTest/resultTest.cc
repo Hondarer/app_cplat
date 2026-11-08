@@ -17,22 +17,18 @@ static_assert(CPLAT_SKIPPED == 1, "cplat: CPLAT_SKIPPED の ABI 値が一致し�
 static_assert(CPLAT_ERR_UNKNOWN == -1, "cplat: CPLAT_ERR_UNKNOWN の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_INVALID_ARGUMENT == -2, "cplat: CPLAT_ERR_INVALID_ARGUMENT の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_UNSUPPORTED == -3, "cplat: CPLAT_ERR_UNSUPPORTED の ABI 値が一致しません。");
-static_assert(CPLAT_ERR_PERMISSION_DENIED == -4,
-              "cplat: CPLAT_ERR_PERMISSION_DENIED の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_PERMISSION_DENIED == -4, "cplat: CPLAT_ERR_PERMISSION_DENIED の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_NOT_FOUND == -6, "cplat: CPLAT_ERR_NOT_FOUND の ABI 値が一致しません。");
-static_assert(CPLAT_ERR_DUPLICATE_DEFINITION == -5,
-              "cplat: CPLAT_ERR_DUPLICATE_DEFINITION の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_DUPLICATE_DEFINITION == -5, "cplat: CPLAT_ERR_DUPLICATE_DEFINITION の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_DUPLICATE_KEY == -7, "cplat: CPLAT_ERR_DUPLICATE_KEY の ABI 値が一致しません。");
-static_assert(CPLAT_ERR_IDENTITY_MISMATCH == -8,
-              "cplat: CPLAT_ERR_IDENTITY_MISMATCH の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_IDENTITY_MISMATCH == -8, "cplat: CPLAT_ERR_IDENTITY_MISMATCH の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_VERSION_MISMATCH == -9, "cplat: CPLAT_ERR_VERSION_MISMATCH の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_OUT_OF_MEMORY == -10, "cplat: CPLAT_ERR_OUT_OF_MEMORY の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_BUSY == -11, "cplat: CPLAT_ERR_BUSY の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_TIMEOUT == -12, "cplat: CPLAT_ERR_TIMEOUT の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_LIMIT_EXCEEDED == -13, "cplat: CPLAT_ERR_LIMIT_EXCEEDED の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_BUFFER_TOO_SMALL == -14, "cplat: CPLAT_ERR_BUFFER_TOO_SMALL の ABI 値が一致しません。");
-static_assert(CPLAT_ERR_CORRUPT_DESCRIPTOR == -15,
-              "cplat: CPLAT_ERR_CORRUPT_DESCRIPTOR の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_CORRUPT_DESCRIPTOR == -15, "cplat: CPLAT_ERR_CORRUPT_DESCRIPTOR の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_STORAGE_FULL == -16, "cplat: CPLAT_ERR_STORAGE_FULL の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_UNKNOWN_OPTION == -20, "cplat: CPLAT_ERR_UNKNOWN_OPTION の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_MISSING_VALUE == -21, "cplat: CPLAT_ERR_MISSING_VALUE の ABI 値が一致しません。");
@@ -41,15 +37,17 @@ static_assert(CPLAT_ERR_INVALID_INTEGER == -23, "cplat: CPLAT_ERR_INVALID_INTEGE
 static_assert(CPLAT_ERR_OUT_OF_RANGE == -24, "cplat: CPLAT_ERR_OUT_OF_RANGE の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_MISSING_REQUIRED == -25, "cplat: CPLAT_ERR_MISSING_REQUIRED の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_DUPLICATE_OPTION == -26, "cplat: CPLAT_ERR_DUPLICATE_OPTION の ABI 値が一致しません。");
-static_assert(CPLAT_ERR_TOO_MANY_ARGUMENTS == -27,
-              "cplat: CPLAT_ERR_TOO_MANY_ARGUMENTS の ABI 値が一致しません。");
-static_assert(CPLAT_ERR_TOO_MANY_OCCURRENCES == -28,
-              "cplat: CPLAT_ERR_TOO_MANY_OCCURRENCES の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_TOO_MANY_ARGUMENTS == -27, "cplat: CPLAT_ERR_TOO_MANY_ARGUMENTS の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_TOO_MANY_OCCURRENCES == -28, "cplat: CPLAT_ERR_TOO_MANY_OCCURRENCES の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_INVALID_PATTERN == -29, "cplat: CPLAT_ERR_INVALID_PATTERN の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_INVALID_ENCODING == -30, "cplat: CPLAT_ERR_INVALID_ENCODING の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_EOF == -40, "cplat: CPLAT_ERR_EOF の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_CANCELED == -41, "cplat: CPLAT_ERR_CANCELED の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_IN_PROGRESS == -42, "cplat: CPLAT_ERR_IN_PROGRESS の ABI 値が一致しません。");
+
+static_assert(CPLAT_ERR_MALFORMED_DEFINITION == -31, "cplat: malformed definition code ABI");
+static_assert(CPLAT_ERR_AUTHENTICATION_FAILED == -50, "cplat: authentication code ABI");
+static_assert(CPLAT_ERR_CORRUPT_DATA == -51, "cplat: corrupt data code ABI");
 
 /* result.h が定義するエラー コードの一覧 (CPLAT_OK を除く)。 */
 static std::vector<int> all_error_codes()
@@ -80,9 +78,12 @@ static std::vector<int> all_error_codes()
                             CPLAT_ERR_TOO_MANY_OCCURRENCES,
                             CPLAT_ERR_INVALID_PATTERN,
                             CPLAT_ERR_INVALID_ENCODING,
+                            CPLAT_ERR_MALFORMED_DEFINITION,
                             CPLAT_ERR_EOF,
                             CPLAT_ERR_CANCELED,
-                            CPLAT_ERR_IN_PROGRESS};
+                            CPLAT_ERR_IN_PROGRESS,
+                            CPLAT_ERR_AUTHENTICATION_FAILED,
+                            CPLAT_ERR_CORRUPT_DATA};
 }
 
 class resultTest : public Test
@@ -226,5 +227,21 @@ TEST_F(resultTest, windows_unsupported_errors_map_to_unsupported)
     EXPECT_EQ(
         CPLAT_ERR_UNSUPPORTED,
         not_implemented_result); // [確認_正常系] - ERROR_CALL_NOT_IMPLEMENTED に対する cplat_internal_result_from_windows_error() の戻り値が CPLAT_ERR_UNSUPPORTED であること。
+}
+// 容量不足と名前長超過を別の errno として通知することの確認
+TEST_F(resultTest, windows_buffer_errors_keep_their_distinct_meanings)
+{
+    // Arrange
+
+    // Pre-Assert
+
+    // Act
+    int capacity_error = cplat_internal_errno_from_windows_error(ERROR_INSUFFICIENT_BUFFER);
+    int name_error =
+        cplat_internal_errno_from_windows_error(ERROR_BUFFER_OVERFLOW); // [手順] - 二つのエラーを変換する。
+
+    // Assert
+    EXPECT_EQ(ERANGE, capacity_error);   // [確認_正常系] - 容量不足を範囲エラーへ変換すること。
+    EXPECT_EQ(ENAMETOOLONG, name_error); // [確認_正常系] - 名前長超過の分類を保持すること。
 }
 #endif /* PLATFORM_WINDOWS */

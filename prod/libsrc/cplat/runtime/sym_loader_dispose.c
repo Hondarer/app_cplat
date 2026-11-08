@@ -15,33 +15,50 @@
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-void cplat_sym_loader_dispose(cplat_sym_loader_entry *const *fobj_array, const size_t fobj_length)
+int cplat_sym_loader_dispose(cplat_sym_loader_entry *const *fobj_array, const size_t fobj_length)
 {
-    size_t fobj_index;
-
-    /*
-     * DllMain / destructor コンテキストから呼ばれるため、
-     * ローダー ロック保持中にミューテックスを取得すると
-     * デッドロックを引き起こす恐れがある。
-     * このコンテキストではシングルスレッド動作が保証されるため、
-     * ロックなしで解放する。
-     */
-    for (fobj_index = 0; fobj_index < fobj_length; fobj_index++)
+    size_t i;
+    int result = CPLAT_OK;
+    if (fobj_length > 0U && fobj_array == NULL)
     {
-        cplat_sym_loader_entry *cache = fobj_array[fobj_index];
-
-        if (cache->handle == NULL)
-        {
-            continue;
-        }
-
-#if defined(PLATFORM_LINUX)
-        dlclose(cache->handle);
-#elif defined(PLATFORM_WINDOWS)
-        FreeLibrary(cache->handle);
-#endif /* PLATFORM_ */
-
-        cache->handle = NULL;
-        cplat_atomic_store_ptr(&cache->func_ptr, NULL, CPLAT_MEMORY_ORDER_RELAXED);
+        return CPLAT_ERR_INVALID_ARGUMENT;
     }
+    for (i = 0; i < fobj_length; ++i)
+    {
+        if (fobj_array[i] == NULL)
+        {
+            return CPLAT_ERR_INVALID_ARGUMENT;
+        }
+    }
+    /* loader lock 内でも mutex を取得しない。呼び出し側が単独実行を保証する。 */
+    for (i = 0; i < fobj_length; ++i)
+    {
+        cplat_sym_loader_entry *cache = fobj_array[i];
+        if (cache->handle != NULL)
+        {
+#if defined(PLATFORM_LINUX)
+            int failed = dlclose(cache->handle) != 0;
+#elif defined(PLATFORM_WINDOWS)
+            int failed = !FreeLibrary(cache->handle);
+#endif
+            if (failed)
+            {
+                if (result == CPLAT_OK)
+                {
+                    result = CPLAT_ERR_UNKNOWN;
+                }
+                continue;
+            }
+            cache->handle = NULL;
+        }
+        if (cache->lock != NULL)
+        {
+            cplat_local_lock_dispose(cache->lock);
+            cache->lock = NULL;
+        }
+        cplat_atomic_store_ptr(&cache->func_ptr, NULL, CPLAT_MEMORY_ORDER_RELAXED);
+        cplat_atomic_store_i32(&cache->resolved, 0, CPLAT_MEMORY_ORDER_RELEASE);
+        cplat_atomic_store_i32(&cache->lock_state, 0, CPLAT_MEMORY_ORDER_RELEASE);
+    }
+    return result;
 }

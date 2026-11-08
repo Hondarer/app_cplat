@@ -24,7 +24,8 @@ extern "C"
      *  @param[out]     buf         メッセージの格納先。
      *  @param[in]      buf_size    @p buf のバイト数。
      *  @param[in]      errno_value errno の値。
-     *  @return         CPLAT_OK、CPLAT_ERR_INVALID_ARGUMENT、CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         CPLAT_OK、CPLAT_ERR_INVALID_ARGUMENT、CPLAT_ERR_UNKNOWN、CPLAT_ERR_UNSUPPORTED のいずれかを返します。
+     *  @note           対応していない OS では CPLAT_ERR_UNSUPPORTED を返します。
      */
     int cplat_internal_errno_message(char *buf, size_t buf_size, int errno_value);
 

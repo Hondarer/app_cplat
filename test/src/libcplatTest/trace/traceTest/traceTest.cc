@@ -69,7 +69,12 @@ class traceTest : public Test
         ON_CALL(mock_cplat, cplat_shutdown_register(_, _)).WillByDefault(Return(CPLAT_OK));
         // [状態] - cplat_shutdown_register() から CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_get_realtime_deadline_ms(_, _))
-            .WillByDefault([](uint64_t, struct timespec *abs_timeout) { set_valid_deadline(abs_timeout); });
+            .WillByDefault(
+                [](uint64_t, struct timespec *abs_timeout)
+                {
+                    set_valid_deadline(abs_timeout);
+                    return CPLAT_OK;
+                });
         // [状態] - cplat_clock_get_realtime_deadline_ms() から、有効な期限を設定して戻るように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_get_realtime(_))
             .WillByDefault([](cplat_timespec *ts) { set_fixed_realtime(ts); });
@@ -1995,7 +2000,7 @@ TEST_F(traceTest, start_without_level_settings_creates_no_output)
 #if defined(PLATFORM_WINDOWS)
     cplat_trace_level etw_level = cplat_tracer_get_etw_level(
         handle); // [手順] - create 直後の tracer を指定して cplat_tracer_get_etw_level() を呼び出す。
-#endif                                                                /* PLATFORM_WINDOWS */
+#endif           /* PLATFORM_WINDOWS */
     int actual_ret_tracer_start =
         cplat_tracer_start(handle); // [手順] - レベルを未設定のまま cplat_tracer_start() を呼び出す。
     ASSERT_EQ(
@@ -2021,7 +2026,7 @@ TEST_F(traceTest, start_without_level_settings_creates_no_output)
     EXPECT_EQ(
         CPLAT_TRACE_LEVEL_NONE,
         etw_level); // [確認_正常系] - create 直後の cplat_tracer_get_etw_level() の戻り値が CPLAT_TRACE_LEVEL_NONE であること。
-#endif                                            /* PLATFORM_WINDOWS */
+#endif              /* PLATFORM_WINDOWS */
     EXPECT_EQ(CPLAT_OK,
               result); // [確認_正常系] - 出力先がない状態の cplat_tracer_write_at() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(

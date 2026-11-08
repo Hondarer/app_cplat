@@ -114,7 +114,12 @@ class traceHookTest : public Test
         ON_CALL(mock_cplat, cplat_shutdown_register(_, _)).WillByDefault(Return(CPLAT_OK));
         // [状態] - cplat_shutdown_register() から CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_get_realtime_deadline_ms(_, _))
-            .WillByDefault([](uint64_t, struct timespec *abs_timeout) { set_valid_deadline(abs_timeout); });
+            .WillByDefault(
+                [](uint64_t, struct timespec *abs_timeout)
+                {
+                    set_valid_deadline(abs_timeout);
+                    return CPLAT_OK;
+                });
         // [状態] - cplat_clock_get_realtime_deadline_ms() から、有効な期限を設定して戻るように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_get_realtime(_))
             .WillByDefault([](cplat_timespec *ts) { set_fixed_realtime(ts); });
@@ -260,10 +265,10 @@ TEST_F(traceHookTest, test_hook_is_called_on_write)
     cplat_tracer *tracer = create_tracer();
     cplat_tracer_hook_entry *entry = cplat_tracer_set_hook(
         tracer, recording_hook,
-        reinterpret_cast<void *>(0xABCD));             // [状態] - context 0xABCD 付きで記録用フックを登録する。
+        reinterpret_cast<void *>(0xABCD)); // [状態] - context 0xABCD 付きで記録用フックを登録する。
     ASSERT_NE(nullptr,
-              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
-    cplat_tracer_start(tracer);                        // [状態] - tracer を started 状態とする。
+              entry);           // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
+    cplat_tracer_start(tracer); // [状態] - tracer を started 状態とする。
 
     cplat_timespec ts = make_fixed_timestamp(); // [状態] - 固定タイムスタンプを用意する。
 
@@ -316,8 +321,8 @@ TEST_F(traceHookTest, test_hook_is_called_for_none_level)
     cplat_tracer_hook_entry *entry =
         cplat_tracer_set_hook(tracer, recording_hook, nullptr); // [状態] - 記録用フックを登録する。
     ASSERT_NE(nullptr,
-              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
-    cplat_tracer_start(tracer);                                 // [状態] - tracer を started 状態とする。
+              entry);           // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
+    cplat_tracer_start(tracer); // [状態] - tracer を started 状態とする。
 
     cplat_timespec ts = make_fixed_timestamp();
 
@@ -509,8 +514,8 @@ TEST_F(traceHookTest, test_hook_called_via_writef)
     cplat_tracer_hook_entry *entry =
         cplat_tracer_set_hook(tracer, recording_hook, nullptr); // [状態] - 記録用フックを登録する。
     ASSERT_NE(nullptr,
-              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
-    cplat_tracer_start(tracer);                                 // [状態] - tracer を started 状態とする。
+              entry);           // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
+    cplat_tracer_start(tracer); // [状態] - tracer を started 状態とする。
 
     cplat_timespec ts = make_fixed_timestamp();
 
@@ -551,8 +556,8 @@ TEST_F(traceHookTest, test_hook_receives_resolved_timestamp)
     cplat_tracer_hook_entry *entry =
         cplat_tracer_set_hook(tracer, recording_hook, nullptr); // [状態] - 記録用フックを登録する。
     ASSERT_NE(nullptr,
-              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
-    cplat_tracer_start(tracer);                                 // [状態] - tracer を started 状態とする。
+              entry);           // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
+    cplat_tracer_start(tracer); // [状態] - tracer を started 状態とする。
 
     // Pre-Assert
     // [Pre-Assert手順] - cplat_clock_get_realtime() から、固定値 {1714100645, 678000000} を設定して戻る。
@@ -590,8 +595,8 @@ TEST_F(traceHookTest, test_remove_hook_while_started_does_nothing)
     cplat_tracer_hook_entry *entry =
         cplat_tracer_set_hook(tracer, recording_hook, nullptr); // [状態] - 記録用フックを登録する。
     ASSERT_NE(nullptr,
-              entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
-    cplat_tracer_start(tracer);                                 // [状態] - tracer を started 状態とする。
+              entry);           // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
+    cplat_tracer_start(tracer); // [状態] - tracer を started 状態とする。
 
     // Pre-Assert
 

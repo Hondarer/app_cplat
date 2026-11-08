@@ -2,99 +2,59 @@
 #include <mock_cplat.h>
 #include <cplat/runtime/sym_loader.h>
 
-using testing::_;
-using testing::NiceMock;
-
 class symLoaderIsDefaultTest : public Test
 {
-  protected:
-    cplat_sym_loader_entry entry_ = CPLAT_SYM_LOADER_ENTRY_INIT("test_key", void (*)(void));
 };
 
-// 未解決のエントリが解決されたうえで明示的既定値と判定されることの確認
-TEST_F(symLoaderIsDefaultTest, resolves_and_reports_explicit_default)
+// 明示的既定値と未設定の違いを確認
+TEST_F(symLoaderIsDefaultTest, distinguishes_default_from_missing)
 {
     // Arrange
-    NiceMock<Mock_cplat> mock_cplat;
-    cplat_atomic_store_i32(&entry_.resolved, 0, CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 未解決のエントリを用意する。
+    cplat_sym_loader_entry entry = CPLAT_SYM_LOADER_ENTRY_INIT("key", void (*)(void));
+    int value = 123;
+    int missing_value = 123;
+    cplat_sym_loader_entry missing = CPLAT_SYM_LOADER_ENTRY_INIT("missing", void (*)(void));
+    cplat_strcpy(entry.lib_name, sizeof(entry.lib_name), "default");
+    cplat_strcpy(entry.func_name, sizeof(entry.func_name), "default"); // [状態] - 明示的既定値を設定する。
+    cplat_sym_loader_entry *entries[] = {&entry, &missing};
 
     // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_sym_loader_resolve(&entry_))
-        .WillOnce(
-            [](cplat_sym_loader_entry *entry)
-            {
-                cplat_atomic_store_i32(&entry->resolved, 2, CPLAT_MEMORY_ORDER_RELAXED);
-                return nullptr;
-            }); // [Pre-Assert確認_正常系] - cplat_sym_loader_resolve() が &entry_ を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_sym_loader_resolve() から、resolved を明示的既定値の 2 に設定して nullptr を返す。
 
     // Act
-    int actual_ret = cplat_sym_loader_is_default(&entry_); // [手順] - cplat_sym_loader_is_default() を呼び出す。
+    int default_ret = cplat_sym_loader_is_default(&entry, &value);
+    int missing_ret = cplat_sym_loader_is_default(&missing, &missing_value); // [手順] - 異なる設定を判定する。
+    int null_ret = cplat_sym_loader_is_default(nullptr, &value);
+    int dispose_ret = cplat_sym_loader_dispose(entries, 2);
 
     // Assert
-    EXPECT_EQ(
-        1,
-        actual_ret); // [確認_正常系] - cplat_sym_loader_is_default() の戻り値が 1 であること。(明示的既定値と判定されることの確認)
-    EXPECT_EQ(
-        2,
-        cplat_atomic_load_i32(
-            &entry_.resolved,
-            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 2 であること。(呼び出しの中で明示的既定値へ解決されることの確認)
+    EXPECT_EQ(CPLAT_OK, default_ret); // [確認_正常系] - 既定値の取得に成功すること。
+    EXPECT_EQ(1, value);
+    EXPECT_EQ(CPLAT_ERR_NOT_FOUND, missing_ret); // [確認_異常系] - 未設定を通知し出力を保持すること。
+    EXPECT_EQ(123, missing_value);
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, null_ret);
+    EXPECT_EQ(CPLAT_OK, dispose_ret);
 }
 
-// 解決済みのエントリが明示的既定値でないと判定されることの確認
-TEST_F(symLoaderIsDefaultTest, reports_not_default_for_resolved_symbol)
+// 解決済み関数は明示的既定値ではないことの確認
+TEST_F(symLoaderIsDefaultTest, resolved_function_is_not_default)
 {
     // Arrange
-    NiceMock<Mock_cplat> mock_cplat;
-    cplat_atomic_store_i32(&entry_.resolved, 1,
-                           CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 解決済み (resolved が 1) のエントリを用意する。
+    cplat_sym_loader_entry entry = CPLAT_SYM_LOADER_ENTRY_INIT("key", void (*)(void));
+    cplat_strcpy(entry.lib_name, sizeof(entry.lib_name), "libcplat");
+    cplat_strcpy(entry.func_name, sizeof(entry.func_name), "cplat_path_basename");
+    int value = 123;
+    cplat_sym_loader_entry *entries[] = {&entry}; // [状態] - 解決可能な関数を設定する。
 
     // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_sym_loader_resolve(_))
-        .Times(0); // [Pre-Assert確認_正常系] - cplat_sym_loader_resolve() が呼び出されないこと。
 
     // Act
-    int actual_ret = cplat_sym_loader_is_default(&entry_); // [手順] - cplat_sym_loader_is_default() を呼び出す。
+    int actual = cplat_sym_loader_is_default(&entry, &value);
+    int null_output = cplat_sym_loader_is_default(&entry, nullptr); // [手順] - 判定と出力引数の検査を行う。
+    int dispose_ret = cplat_sym_loader_dispose(entries, 1);
 
     // Assert
-    EXPECT_EQ(
-        0,
-        actual_ret); // [確認_正常系] - cplat_sym_loader_is_default() の戻り値が 0 であること。(明示的既定値でないと判定されることの確認)
-    EXPECT_EQ(
-        1,
-        cplat_atomic_load_i32(
-            &entry_.resolved,
-            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 1 であること。(解決状態が変化しないことの確認)
-}
-
-// 解決に失敗したエントリが明示的既定値でないと判定されることの確認
-TEST_F(symLoaderIsDefaultTest, reports_not_default_for_unresolved_entry)
-{
-    // Arrange
-    NiceMock<Mock_cplat> mock_cplat;
-    cplat_atomic_store_i32(&entry_.resolved, 0, CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 未解決のエントリを用意する。
-
-    // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_sym_loader_resolve(&entry_))
-        .WillOnce(
-            [](cplat_sym_loader_entry *entry)
-            {
-                cplat_atomic_store_i32(&entry->resolved, -1, CPLAT_MEMORY_ORDER_RELAXED);
-                return nullptr;
-            }); // [Pre-Assert確認_異常系] - cplat_sym_loader_resolve() が &entry_ を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_sym_loader_resolve() から、resolved を定義なしの -1 に設定して nullptr を返す。
-
-    // Act
-    int actual_ret = cplat_sym_loader_is_default(&entry_); // [手順] - cplat_sym_loader_is_default() を呼び出す。
-
-    // Assert
-    EXPECT_EQ(
-        0,
-        actual_ret); // [確認_異常系] - cplat_sym_loader_is_default() の戻り値が 0 であること。(明示的既定値でないと判定されることの確認)
-    EXPECT_EQ(
-        -1,
-        cplat_atomic_load_i32(
-            &entry_.resolved,
-            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が -1 であること。(定義なしの解決状態になることの確認)
+    EXPECT_EQ(CPLAT_OK, actual); // [確認_正常系] - 判定に成功すること。
+    EXPECT_EQ(0, value);         // [確認_正常系] - 取得した関数は既定値ではないこと。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, null_output);
+    EXPECT_EQ(CPLAT_OK, dispose_ret);
 }

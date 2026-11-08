@@ -1,27 +1,27 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-void delegate_real_cplat_timespec_add(const cplat_timespec *a, const cplat_timespec *b, cplat_timespec *result)
+int delegate_real_cplat_timespec_add(const cplat_timespec *a, const cplat_timespec *b, cplat_timespec *sum_out)
 {
     static auto real_fn =
         reinterpret_cast<decltype(&cplat_timespec_add)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_timespec_add"));
-
-    real_fn(a, b, result);
+    return real_fn(a, b, sum_out);
 }
 
-MOCK_WEAK_IMPL(void, cplat_timespec_add, const cplat_timespec *a, const cplat_timespec *b, cplat_timespec *result)
+MOCK_WEAK_IMPL(int, cplat_timespec_add, const cplat_timespec *a, const cplat_timespec *b, cplat_timespec *sum_out)
 {
+    int mock_ret;
     if (_mock_cplat != nullptr)
     {
-        _mock_cplat->cplat_timespec_add(a, b, result);
+        mock_ret = _mock_cplat->cplat_timespec_add(a, b, sum_out);
     }
     else
     {
-        delegate_real_cplat_timespec_add(a, b, result);
+        mock_ret = delegate_real_cplat_timespec_add(a, b, sum_out);
     }
-
     if (getTraceLevel() > TRACE_NONE)
     {
         printf("  > %s\n", __func__);
     }
+    return mock_ret;
 }

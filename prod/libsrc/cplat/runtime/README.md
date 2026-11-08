@@ -15,7 +15,7 @@ short-title: "runtime"
 - 現在のホストの DNS ホスト名を UTF-8 で取得できます。
 - 関数アドレスから所属モジュールのパスや basename を取得できます。
 - 設定ファイルに基づいて関数シンボルを動的に解決できます。
-- 解決結果をキャッシュし、同じ関数を繰り返し高速に呼べる
+- 解決結果をキャッシュし、同じ関数を繰り返し高速に呼び出せます。
 - Linux と Windows のローダー API 差異を吸収できます。
 
 ## 構成
@@ -110,12 +110,12 @@ stdout と stderr は別のパイプで受け取るため、両者の間の出�
 `sym_loader` は、設定ファイルで指定した `lib_name` / `func_name` を使って関数ポインターを解決する機構です。  
 オーバーライド可能な関数や、実行環境によって差し替える関数の呼び出しに向いています。
 
-- `CPLAT_SYM_LOADER_ENTRY_INIT`: 静的エントリ初期化
-- `cplat_sym_loader_init`: 設定ファイル読み込み
-- `cplat_sym_loader_resolve_as`: 型付きで関数ポインター取得
-- `cplat_sym_loader_is_default`: 明示的既定値設定か確認
-- `cplat_sym_loader_info`: 現在状態のダンプ
-- `cplat_sym_loader_dispose`: 後始末
+- `CPLAT_SYM_LOADER_ENTRY_INIT`: 静的エントリの初期化
+- `cplat_sym_loader_init`: 設定ファイルの読み込み
+- `cplat_sym_loader_resolve`: 関数シンボルの解決と、結果コードおよび `void *` アドレスの分離取得
+- `cplat_sym_loader_is_default`: 明示的な既定実装指定かどうかの結果コードと判定値の分離取得
+- `cplat_sym_loader_info`: 現在の解決状態の標準出力への表示
+- `cplat_sym_loader_dispose`: 配列の事前検証と、ロード済みモジュールおよびロックの解放
 
 ## 設計の要点
 
@@ -163,19 +163,35 @@ cplat_sym_loader_entry *const fobj_array[] = {
 cplat_sym_loader_init(fobj_array, fobj_length, configpath);
 ```
 
-### 呼び出し時に型付きで解決する
+### 呼び出し時に解決して関数ポインターへ変換する
+
+`cplat_sym_loader_resolve` は解決の成否を結果コードで返し、解決したアドレスを `void *` の出力引数へ格納します。  
+関数ポインター変数のアドレスを `void **` へキャストして直接渡さず、`void *` の一時変数で受け取って結果コードを確認してから関数ポインター型へ変換します。
+
+- 関数を解決できた場合は `CPLAT_OK` を返し、`function` に非 NULL の関数アドレスを格納します。
+- 設定で明示的に `default` が指定されている場合は `CPLAT_OK` を返し、`function` に `NULL` を格納します (`cplat_sym_loader_is_default` では `1` を出力します)。
+- 未設定またはシンボル未検出は `CPLAT_ERR_NOT_FOUND`、名前長超過や未終端は `CPLAT_ERR_OUT_OF_RANGE`、ライブラリのロード失敗は `CPLAT_ERR_UNKNOWN`、必須引数の NULL は `CPLAT_ERR_INVALID_ARGUMENT` を返し、失敗時は出力引数を変更しません。
 
 ```c
-sample_func_t fp = cplat_sym_loader_resolve_as(&sfo_sample_func, sample_func_t);
-if (fp != NULL) {
+void *function = NULL;
+int ret = cplat_sym_loader_resolve(&sfo_sample_func, &function);
+if (ret == CPLAT_OK && function != NULL) {
+    sample_func_t fp = (sample_func_t)function;
     return fp(a, b, result);
 }
 ```
 
 ### アンロード時に解放する
 
+`cplat_sym_loader_dispose` は、正の要素数で配列または要素に NULL が含まれる場合は一部だけを解放せず `CPLAT_ERR_INVALID_ARGUMENT` を返します。  
+検証に通った場合は各エントリのモジュールとロックを解放し、解放に成功したエントリを未解決状態へ戻します。  
+モジュールの解放に失敗した要素がある場合は、その資源を保持したまま残りの要素の解放を継続し、`CPLAT_ERR_UNKNOWN` を返します。
+
 ```c
-cplat_sym_loader_dispose(fobj_array, fobj_length);
+int dispose_ret = cplat_sym_loader_dispose(fobj_array, fobj_length);
+if (dispose_ret != CPLAT_OK) {
+    /* 解放できなかった資源を保持しているため、呼び出し側で通知する。 */
+}
 ```
 
 ## 設定ファイル形式
@@ -232,8 +248,10 @@ static cplat_sym_loader_entry sfo_sample_func =
 
 int sample_func(int a, int b, int *result)
 {
-    sample_func_t fp = cplat_sym_loader_resolve_as(&sfo_sample_func, sample_func_t);
-    if (fp != NULL) {
+    void *function = NULL;
+    int ret = cplat_sym_loader_resolve(&sfo_sample_func, &function);
+    if (ret == CPLAT_OK && function != NULL) {
+        sample_func_t fp = (sample_func_t)function;
         return fp(a, b, result);
     }
 
@@ -260,11 +278,11 @@ int sample_func(int a, int b, int *result)
 
 ## 注意点
 
-- `cplat_sym_loader_init` と `cplat_sym_loader_dispose` は constructor / destructor や `DllMain` から呼ぶ前提です
-- `cplat_sym_loader_dispose` はその前提に合わせてロックを取らずに解放します
-- `sym_loader` はライブラリ名に拡張子を含めず設定します
-- 解決失敗時は `cplat_sym_loader_resolve_as` が `NULL` を返すため、呼び出し側で既定処理を持つ設計が基本です
-- オーバーライド実装側から元の関数を再帰的に呼ぶ構成は避けてください
+- `cplat_sym_loader_init` と `cplat_sym_loader_dispose` は constructor / destructor や `DllMain` のシングルスレッド フェーズから呼び出す前提です。
+- `cplat_sym_loader_dispose` は解決済み関数の実行が終了した状態で呼び出し、ローダー ロック下で別のミューテックスを取得せずにモジュールとロックを解放します。
+- `sym_loader` はライブラリ名に拡張子を含めず設定します。
+- `cplat_sym_loader_resolve` の呼び出しでは、先に結果コードと `void *` の出力値を確認してから関数ポインターへ変換し、呼び出し側の契約に従って既定処理への切り替えやエラー通知を行います。
+- オーバーライド実装側から元の関数を再帰的に呼び出す構成は避けてください。
 
 ## 関連ヘッダー
 

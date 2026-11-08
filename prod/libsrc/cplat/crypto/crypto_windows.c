@@ -25,9 +25,26 @@
     #include <bcrypt.h>
     #pragma comment(lib, "bcrypt.lib")
     #include <string.h>
+    #include <limits.h>
 
     #include <cplat/base/result.h>
     #include <cplat/crypto/crypto.h>
+
+/* BCrypt の NTSTATUS を公開結果コードへ変換する。
+ * see: https://learn.microsoft.com/windows/win32/api/bcrypt/nf-bcrypt-bcryptdecrypt
+ */
+static int bcrypt_result(const NTSTATUS status)
+{
+    if (status == (NTSTATUS)0xC000A002L) /* STATUS_AUTH_TAG_MISMATCH */
+    {
+        return CPLAT_ERR_AUTHENTICATION_FAILED;
+    }
+    if (status == (NTSTATUS)0xC0000017L || status == (NTSTATUS)0xC000009AL) /* NO_MEMORY / INSUFFICIENT_RESOURCES */
+    {
+        return CPLAT_ERR_OUT_OF_MEMORY;
+    }
+    return CPLAT_ERR_UNKNOWN;
+}
 
 /*
  * BCrypt で AES-256-GCM の暗号化または復号を行う。
@@ -35,7 +52,8 @@
  * src と src_len は、暗号化では平文、復号ではタグを除いた暗号文である。
  * tag は、暗号化では出力バッファー、復号では検証する入力バッファーである。
  * 成功したときは CPLAT_OK を返し、dst_len に書き込んだバイト数を格納する。
- * アルゴリズムのオープン、モード設定、鍵生成、暗号化または復号が失敗したときは CPLAT_ERR_UNKNOWN を返す。
+ * 認証不一致は CPLAT_ERR_AUTHENTICATION_FAILED、識別できるメモリ不足は CPLAT_ERR_OUT_OF_MEMORY を返す。
+ * これらに分類できないバックエンドの失敗は CPLAT_ERR_UNKNOWN を返す。
  * これらの失敗時は dst_len を更新しない。
  */
 static int bcrypt_aes_gcm(const BOOL is_encrypt, uint8_t *dst, size_t *dst_len, const uint8_t *src,
@@ -51,7 +69,7 @@ static int bcrypt_aes_gcm(const BOOL is_encrypt, uint8_t *dst, size_t *dst_len, 
     status = BCryptOpenAlgorithmProvider(&h_alg, BCRYPT_AES_ALGORITHM, NULL, 0);
     if (!BCRYPT_SUCCESS(status))
     {
-        return CPLAT_ERR_UNKNOWN;
+        return bcrypt_result(status);
     }
 
     status =
@@ -59,14 +77,14 @@ static int bcrypt_aes_gcm(const BOOL is_encrypt, uint8_t *dst, size_t *dst_len, 
     if (!BCRYPT_SUCCESS(status))
     {
         BCryptCloseAlgorithmProvider(h_alg, 0);
-        return CPLAT_ERR_UNKNOWN;
+        return bcrypt_result(status);
     }
 
     status = BCryptGenerateSymmetricKey(h_alg, &h_key, NULL, 0, (PUCHAR)key, (ULONG)CPLAT_CRYPTO_KEY_SIZE, 0);
     if (!BCRYPT_SUCCESS(status))
     {
         BCryptCloseAlgorithmProvider(h_alg, 0);
-        return CPLAT_ERR_UNKNOWN;
+        return bcrypt_result(status);
     }
 
     /*
@@ -101,12 +119,12 @@ static int bcrypt_aes_gcm(const BOOL is_encrypt, uint8_t *dst, size_t *dst_len, 
      */
     if (is_encrypt)
     {
-        status = BCryptEncrypt(h_key, (PUCHAR)src, (ULONG)src_len, &auth_info, NULL, 0, (PUCHAR)dst, (ULONG)*dst_len,
+        status = BCryptEncrypt(h_key, (PUCHAR)src, (ULONG)src_len, &auth_info, NULL, 0, (PUCHAR)dst, (ULONG)src_len,
                                &len, 0);
     }
     else
     {
-        status = BCryptDecrypt(h_key, (PUCHAR)src, (ULONG)src_len, &auth_info, NULL, 0, (PUCHAR)dst, (ULONG)*dst_len,
+        status = BCryptDecrypt(h_key, (PUCHAR)src, (ULONG)src_len, &auth_info, NULL, 0, (PUCHAR)dst, (ULONG)src_len,
                                &len, 0);
     }
 
@@ -115,7 +133,7 @@ static int bcrypt_aes_gcm(const BOOL is_encrypt, uint8_t *dst, size_t *dst_len, 
 
     if (!BCRYPT_SUCCESS(status))
     {
-        return CPLAT_ERR_UNKNOWN;
+        return bcrypt_result(status);
     }
 
     *dst_len = (size_t)len;
@@ -134,6 +152,12 @@ int cplat_crypto_encrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
     if (dst == NULL || dst_len == NULL || (src == NULL && src_len > 0) || key == NULL || nonce == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (src_len > (size_t)INT_MAX || (aad != NULL && aad_len > (size_t)INT_MAX) ||
+        src_len > SIZE_MAX - CPLAT_CRYPTO_TAG_SIZE)
+    {
+        return CPLAT_ERR_OUT_OF_RANGE;
     }
 
     if (*dst_len < src_len + CPLAT_CRYPTO_TAG_SIZE)
@@ -191,6 +215,10 @@ int cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
     }
 
     plain_len = src_len - CPLAT_CRYPTO_TAG_SIZE;
+    if (plain_len > (size_t)INT_MAX || (aad != NULL && aad_len > (size_t)INT_MAX))
+    {
+        return CPLAT_ERR_OUT_OF_RANGE;
+    }
 
     if (plain_len > 0 && *dst_len < plain_len)
     {
@@ -199,7 +227,7 @@ int cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
 
     /*
      * タグは暗号文の末尾 CPLAT_CRYPTO_TAG_SIZE [byte] である。BCryptDecrypt() がタグを検証する。
-     * STATUS_AUTH_TAG_MISMATCH のときは bcrypt_aes_gcm() が CPLAT_ERR_UNKNOWN を返す。
+     * STATUS_AUTH_TAG_MISMATCH のときは CPLAT_ERR_AUTHENTICATION_FAILED を返す。
      */
     return bcrypt_aes_gcm(FALSE, dst, dst_len, src, plain_len, key, nonce, aad, aad_len, (uint8_t *)(src + plain_len),
                           (ULONG)CPLAT_CRYPTO_TAG_SIZE);
@@ -222,6 +250,11 @@ int cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, const size_
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
+    if (passphrase_len > (size_t)UINT32_MAX)
+    {
+        return CPLAT_ERR_OUT_OF_RANGE;
+    }
+
     if (passphrase != NULL)
     {
         data = passphrase;
@@ -236,14 +269,14 @@ int cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, const size_
     status = BCryptOpenAlgorithmProvider(&h_alg, BCRYPT_SHA256_ALGORITHM, NULL, 0);
     if (!BCRYPT_SUCCESS(status))
     {
-        return CPLAT_ERR_UNKNOWN;
+        return bcrypt_result(status);
     }
 
     status = BCryptCreateHash(h_alg, &h_hash, NULL, 0, NULL, 0, 0);
     if (!BCRYPT_SUCCESS(status))
     {
         BCryptCloseAlgorithmProvider(h_alg, 0);
-        return CPLAT_ERR_UNKNOWN;
+        return bcrypt_result(status);
     }
 
     status = BCryptHashData(h_hash, (PUCHAR)data, data_len, 0);
@@ -251,7 +284,7 @@ int cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, const size_
     {
         BCryptDestroyHash(h_hash);
         BCryptCloseAlgorithmProvider(h_alg, 0);
-        return CPLAT_ERR_UNKNOWN;
+        return bcrypt_result(status);
     }
 
     status = BCryptFinishHash(h_hash, (PUCHAR)key, (ULONG)CPLAT_CRYPTO_KEY_SIZE, 0);
@@ -265,7 +298,7 @@ int cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, const size_
     }
     else
     {
-        return CPLAT_ERR_UNKNOWN;
+        return bcrypt_result(status);
     }
 }
 

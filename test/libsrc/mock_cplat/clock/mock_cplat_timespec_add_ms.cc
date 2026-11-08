@@ -1,27 +1,27 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-void delegate_real_cplat_timespec_add_ms(const cplat_timespec *ts, uint64_t timeout_ms, cplat_timespec *result)
+int delegate_real_cplat_timespec_add_ms(const cplat_timespec *ts, uint64_t timeout_ms, cplat_timespec *sum_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_timespec_add_ms)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_timespec_add_ms"));
-
-    real_fn(ts, timeout_ms, result);
+    return real_fn(ts, timeout_ms, sum_out);
 }
 
-MOCK_WEAK_IMPL(void, cplat_timespec_add_ms, const cplat_timespec *ts, uint64_t timeout_ms, cplat_timespec *result)
+MOCK_WEAK_IMPL(int, cplat_timespec_add_ms, const cplat_timespec *ts, uint64_t timeout_ms, cplat_timespec *sum_out)
 {
+    int mock_ret;
     if (_mock_cplat != nullptr)
     {
-        _mock_cplat->cplat_timespec_add_ms(ts, timeout_ms, result);
+        mock_ret = _mock_cplat->cplat_timespec_add_ms(ts, timeout_ms, sum_out);
     }
     else
     {
-        delegate_real_cplat_timespec_add_ms(ts, timeout_ms, result);
+        mock_ret = delegate_real_cplat_timespec_add_ms(ts, timeout_ms, sum_out);
     }
-
     if (getTraceLevel() > TRACE_NONE)
     {
-        printf("  > %s %llu\n", __func__, (unsigned long long)timeout_ms);
+        printf("  > %s\n", __func__);
     }
+    return mock_ret;
 }

@@ -906,15 +906,17 @@ extern int delegate_real_cplat_clock_format_realtime_iso8601_local(char *buf, si
 extern int delegate_real_cplat_clock_format_realtime_iso8601_utc(char *buf, size_t buf_size,
                                                                  const cplat_timespec *timestamp);
 extern void delegate_real_cplat_clock_get_realtime_utc(struct tm *utc_tm, int32_t *tv_nsec);
-extern void delegate_real_cplat_clock_get_realtime_deadline_ms(uint64_t timeout_ms, struct timespec *abs_timeout);
+extern int delegate_real_cplat_clock_get_realtime_deadline_ms(uint64_t timeout_ms, struct timespec *deadline_out);
 
 // cplat/clock/timespec.h
-extern void delegate_real_cplat_timespec_normalize(cplat_timespec *ts);
-extern void delegate_real_cplat_timespec_add(const cplat_timespec *a, const cplat_timespec *b, cplat_timespec *result);
-extern void delegate_real_cplat_timespec_sub(const cplat_timespec *a, const cplat_timespec *b, cplat_timespec *result);
+extern int delegate_real_cplat_timespec_normalize(cplat_timespec *ts);
+extern int delegate_real_cplat_timespec_add(const cplat_timespec *a, const cplat_timespec *b, cplat_timespec *sum_out);
+extern int delegate_real_cplat_timespec_sub(const cplat_timespec *a, const cplat_timespec *b,
+                                            cplat_timespec *difference_out);
 extern int delegate_real_cplat_timespec_cmp(const cplat_timespec *a, const cplat_timespec *b);
-extern void delegate_real_cplat_timespec_add_ms(const cplat_timespec *ts, uint64_t timeout_ms, cplat_timespec *result);
-extern int64_t delegate_real_cplat_timespec_diff_ms(const cplat_timespec *end, const cplat_timespec *start);
+extern int delegate_real_cplat_timespec_add_ms(const cplat_timespec *ts, uint64_t timeout_ms, cplat_timespec *sum_out);
+extern int delegate_real_cplat_timespec_diff_ms(const cplat_timespec *end, const cplat_timespec *start,
+                                                int64_t *milliseconds_out);
 extern void delegate_real_cplat_timespec_to_native(const cplat_timespec *ts, struct timespec *native);
 extern void delegate_real_cplat_timespec_from_native(const struct timespec *native, cplat_timespec *ts);
 
@@ -1290,11 +1292,11 @@ extern int delegate_real_cplat_shutdown_request_invoke_for_test(const cplat_shut
 extern void delegate_real_cplat_shutdown_reset_for_test(void);
 
 // cplat/runtime/sym_loader.h
-extern void *delegate_real_cplat_sym_loader_resolve(cplat_sym_loader_entry *fobj);
-extern int delegate_real_cplat_sym_loader_is_default(cplat_sym_loader_entry *fobj);
+extern int delegate_real_cplat_sym_loader_resolve(cplat_sym_loader_entry *fobj, void **function_out);
+extern int delegate_real_cplat_sym_loader_is_default(cplat_sym_loader_entry *fobj, int *is_default_out);
 extern void delegate_real_cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length,
                                                 const char *configpath);
-extern void delegate_real_cplat_sym_loader_dispose(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length);
+extern int delegate_real_cplat_sym_loader_dispose(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length);
 extern int delegate_real_cplat_sym_loader_info(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length);
 
 // cplat/string_catalog/string_catalog.h
@@ -1499,18 +1501,30 @@ extern void delegate_real_cplat_error_capture_current_windows_error(cplat_error 
 extern unsigned long delegate_real_cplat_error_get_windows_error(const cplat_error *error);
 
 // cplat/runtime/process_priority_windows.h
-extern int delegate_real_cplat_process_priority_windows_set_class(uint32_t process_id, cplat_process_priority_windows_class priority_class, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_windows_get_class(uint32_t process_id, cplat_process_priority_windows_class *priority_class_out, cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_windows_set_class(uint32_t process_id,
+                                                                  cplat_process_priority_windows_class priority_class,
+                                                                  cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_windows_get_class(
+    uint32_t process_id, cplat_process_priority_windows_class *priority_class_out, cplat_error *detail_out);
 extern int delegate_real_cplat_process_priority_windows_begin_background_mode(cplat_error *detail_out);
 extern int delegate_real_cplat_process_priority_windows_end_background_mode(cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_windows_set_memory_priority(uint32_t process_id, cplat_process_priority_windows_memory_priority memory_priority, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_windows_get_memory_priority(uint32_t process_id, cplat_process_priority_windows_memory_priority *memory_priority_out, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_windows_set_power_throttling(uint32_t process_id, cplat_process_priority_windows_power_throttling power_throttling, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_windows_get_power_throttling(uint32_t process_id, cplat_process_priority_windows_power_throttling *power_throttling_out, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_windows_set_priority_boost(uint32_t process_id, int enabled, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_windows_get_priority_boost(uint32_t process_id, int *enabled_out, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_windows_set_thread_priority(uint32_t thread_id, cplat_process_priority_windows_thread_priority thread_priority, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_windows_get_thread_priority(uint32_t thread_id, cplat_process_priority_windows_thread_priority *thread_priority_out, cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_windows_set_memory_priority(
+    uint32_t process_id, cplat_process_priority_windows_memory_priority memory_priority, cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_windows_get_memory_priority(
+    uint32_t process_id, cplat_process_priority_windows_memory_priority *memory_priority_out, cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_windows_set_power_throttling(
+    uint32_t process_id, cplat_process_priority_windows_power_throttling power_throttling, cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_windows_get_power_throttling(
+    uint32_t process_id, cplat_process_priority_windows_power_throttling *power_throttling_out,
+    cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_windows_set_priority_boost(uint32_t process_id, int enabled,
+                                                                           cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_windows_get_priority_boost(uint32_t process_id, int *enabled_out,
+                                                                           cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_windows_set_thread_priority(
+    uint32_t thread_id, cplat_process_priority_windows_thread_priority thread_priority, cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_windows_get_thread_priority(
+    uint32_t thread_id, cplat_process_priority_windows_thread_priority *thread_priority_out, cplat_error *detail_out);
 
 // cplat/trace/etw.h
 extern cplat_etw_provider *delegate_real_cplat_etw_provider_create(cplat_etw_provider_ref_t provider_ref);
@@ -1572,20 +1586,41 @@ extern BOOL delegate_real_StartServiceCtrlDispatcherU(const cplat_service_entry_
 #if defined(PLATFORM_LINUX)
 
 // cplat/runtime/process_priority_linux.h
-extern int delegate_real_cplat_process_priority_linux_set_policy(uint32_t thread_id, cplat_process_priority_linux_policy policy, int static_priority, int reset_on_fork, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_linux_get_policy(uint32_t thread_id, cplat_process_priority_linux_policy *policy_out, int *static_priority_out, int *reset_on_fork_out, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_linux_set_deadline(uint32_t thread_id, const cplat_process_priority_linux_deadline *deadline, int reset_on_fork, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_linux_get_deadline(uint32_t thread_id, cplat_process_priority_linux_deadline *deadline_out, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_linux_set_nice(uint32_t thread_id, int nice_value, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_linux_get_nice(uint32_t thread_id, int *nice_value_out, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_linux_set_io_priority(uint32_t thread_id, cplat_process_priority_linux_io_class io_class, int level, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_linux_get_io_priority(uint32_t thread_id, cplat_process_priority_linux_io_class *io_class_out, int *level_out, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_linux_set_utilization_clamp(uint32_t thread_id, uint32_t minimum, uint32_t maximum, cplat_error *detail_out);
-extern int delegate_real_cplat_process_priority_linux_get_utilization_clamp(uint32_t thread_id, uint32_t *minimum_out, uint32_t *maximum_out, cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_linux_set_policy(uint32_t thread_id,
+                                                                 cplat_process_priority_linux_policy policy,
+                                                                 int static_priority, int reset_on_fork,
+                                                                 cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_linux_get_policy(uint32_t thread_id,
+                                                                 cplat_process_priority_linux_policy *policy_out,
+                                                                 int *static_priority_out, int *reset_on_fork_out,
+                                                                 cplat_error *detail_out);
+extern int
+delegate_real_cplat_process_priority_linux_set_deadline(uint32_t thread_id,
+                                                        const cplat_process_priority_linux_deadline *deadline,
+                                                        int reset_on_fork, cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_linux_get_deadline(uint32_t thread_id,
+                                                                   cplat_process_priority_linux_deadline *deadline_out,
+                                                                   cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_linux_set_nice(uint32_t thread_id, int nice_value,
+                                                               cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_linux_get_nice(uint32_t thread_id, int *nice_value_out,
+                                                               cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_linux_set_io_priority(uint32_t thread_id,
+                                                                      cplat_process_priority_linux_io_class io_class,
+                                                                      int level, cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_linux_get_io_priority(
+    uint32_t thread_id, cplat_process_priority_linux_io_class *io_class_out, int *level_out, cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_linux_set_utilization_clamp(uint32_t thread_id, uint32_t minimum,
+                                                                            uint32_t maximum, cplat_error *detail_out);
+extern int delegate_real_cplat_process_priority_linux_get_utilization_clamp(uint32_t thread_id, uint32_t *minimum_out,
+                                                                            uint32_t *maximum_out,
+                                                                            cplat_error *detail_out);
 
 // cplat/runtime/stack_limit_linux.h
-extern int delegate_real_cplat_stack_limit_linux_get(uint64_t *soft_limit_bytes_out, uint64_t *hard_limit_bytes_out, cplat_error *detail_out);
-extern int delegate_real_cplat_stack_limit_linux_raise_to_hard_limit(uint64_t *soft_limit_bytes_out, cplat_error *detail_out);
+extern int delegate_real_cplat_stack_limit_linux_get(uint64_t *soft_limit_bytes_out, uint64_t *hard_limit_bytes_out,
+                                                     cplat_error *detail_out);
+extern int delegate_real_cplat_stack_limit_linux_raise_to_hard_limit(uint64_t *soft_limit_bytes_out,
+                                                                     cplat_error *detail_out);
 
 // cplat/trace/syslog.h
 extern cplat_syslog_sink *delegate_real_cplat_syslog_sink_create(const char *ident, int facility);
@@ -1754,15 +1789,15 @@ class Mock_cplat
     MOCK_METHOD(int, cplat_clock_format_realtime_iso8601_local, (char *, size_t, const cplat_timespec *));
     MOCK_METHOD(int, cplat_clock_format_realtime_iso8601_utc, (char *, size_t, const cplat_timespec *));
     MOCK_METHOD(void, cplat_clock_get_realtime_utc, (struct tm *, int32_t *));
-    MOCK_METHOD(void, cplat_clock_get_realtime_deadline_ms, (uint64_t, struct timespec *));
+    MOCK_METHOD(int, cplat_clock_get_realtime_deadline_ms, (uint64_t, struct timespec *));
 
     // cplat/clock/timespec.h
-    MOCK_METHOD(void, cplat_timespec_normalize, (cplat_timespec *));
-    MOCK_METHOD(void, cplat_timespec_add, (const cplat_timespec *, const cplat_timespec *, cplat_timespec *));
-    MOCK_METHOD(void, cplat_timespec_sub, (const cplat_timespec *, const cplat_timespec *, cplat_timespec *));
+    MOCK_METHOD(int, cplat_timespec_normalize, (cplat_timespec *));
+    MOCK_METHOD(int, cplat_timespec_add, (const cplat_timespec *, const cplat_timespec *, cplat_timespec *));
+    MOCK_METHOD(int, cplat_timespec_sub, (const cplat_timespec *, const cplat_timespec *, cplat_timespec *));
     MOCK_METHOD(int, cplat_timespec_cmp, (const cplat_timespec *, const cplat_timespec *));
-    MOCK_METHOD(void, cplat_timespec_add_ms, (const cplat_timespec *, uint64_t, cplat_timespec *));
-    MOCK_METHOD(int64_t, cplat_timespec_diff_ms, (const cplat_timespec *, const cplat_timespec *));
+    MOCK_METHOD(int, cplat_timespec_add_ms, (const cplat_timespec *, uint64_t, cplat_timespec *));
+    MOCK_METHOD(int, cplat_timespec_diff_ms, (const cplat_timespec *, const cplat_timespec *, int64_t *));
     MOCK_METHOD(void, cplat_timespec_to_native, (const cplat_timespec *, struct timespec *));
     MOCK_METHOD(void, cplat_timespec_from_native, (const struct timespec *, cplat_timespec *));
 
@@ -2091,10 +2126,10 @@ class Mock_cplat
     MOCK_METHOD(void, cplat_shutdown_reset_for_test, ());
 
     // cplat/runtime/sym_loader.h
-    MOCK_METHOD(void *, cplat_sym_loader_resolve, (cplat_sym_loader_entry *));
-    MOCK_METHOD(int, cplat_sym_loader_is_default, (cplat_sym_loader_entry *));
+    MOCK_METHOD(int, cplat_sym_loader_resolve, (cplat_sym_loader_entry *, void **));
+    MOCK_METHOD(int, cplat_sym_loader_is_default, (cplat_sym_loader_entry *, int *));
     MOCK_METHOD(void, cplat_sym_loader_init, (cplat_sym_loader_entry *const *, size_t, const char *));
-    MOCK_METHOD(void, cplat_sym_loader_dispose, (cplat_sym_loader_entry *const *, size_t));
+    MOCK_METHOD(int, cplat_sym_loader_dispose, (cplat_sym_loader_entry *const *, size_t));
     MOCK_METHOD(int, cplat_sym_loader_info, (cplat_sym_loader_entry *const *, size_t));
 
     // cplat/string_catalog/string_catalog.h
@@ -2263,18 +2298,26 @@ class Mock_cplat
     MOCK_METHOD(unsigned long, cplat_error_get_windows_error, (const cplat_error *));
 
     // cplat/runtime/process_priority_windows.h
-    MOCK_METHOD(int, cplat_process_priority_windows_set_class, (uint32_t, cplat_process_priority_windows_class, cplat_error *));
-    MOCK_METHOD(int, cplat_process_priority_windows_get_class, (uint32_t, cplat_process_priority_windows_class *, cplat_error *));
+    MOCK_METHOD(int, cplat_process_priority_windows_set_class,
+                (uint32_t, cplat_process_priority_windows_class, cplat_error *));
+    MOCK_METHOD(int, cplat_process_priority_windows_get_class,
+                (uint32_t, cplat_process_priority_windows_class *, cplat_error *));
     MOCK_METHOD(int, cplat_process_priority_windows_begin_background_mode, (cplat_error *));
     MOCK_METHOD(int, cplat_process_priority_windows_end_background_mode, (cplat_error *));
-    MOCK_METHOD(int, cplat_process_priority_windows_set_memory_priority, (uint32_t, cplat_process_priority_windows_memory_priority, cplat_error *));
-    MOCK_METHOD(int, cplat_process_priority_windows_get_memory_priority, (uint32_t, cplat_process_priority_windows_memory_priority *, cplat_error *));
-    MOCK_METHOD(int, cplat_process_priority_windows_set_power_throttling, (uint32_t, cplat_process_priority_windows_power_throttling, cplat_error *));
-    MOCK_METHOD(int, cplat_process_priority_windows_get_power_throttling, (uint32_t, cplat_process_priority_windows_power_throttling *, cplat_error *));
+    MOCK_METHOD(int, cplat_process_priority_windows_set_memory_priority,
+                (uint32_t, cplat_process_priority_windows_memory_priority, cplat_error *));
+    MOCK_METHOD(int, cplat_process_priority_windows_get_memory_priority,
+                (uint32_t, cplat_process_priority_windows_memory_priority *, cplat_error *));
+    MOCK_METHOD(int, cplat_process_priority_windows_set_power_throttling,
+                (uint32_t, cplat_process_priority_windows_power_throttling, cplat_error *));
+    MOCK_METHOD(int, cplat_process_priority_windows_get_power_throttling,
+                (uint32_t, cplat_process_priority_windows_power_throttling *, cplat_error *));
     MOCK_METHOD(int, cplat_process_priority_windows_set_priority_boost, (uint32_t, int, cplat_error *));
     MOCK_METHOD(int, cplat_process_priority_windows_get_priority_boost, (uint32_t, int *, cplat_error *));
-    MOCK_METHOD(int, cplat_process_priority_windows_set_thread_priority, (uint32_t, cplat_process_priority_windows_thread_priority, cplat_error *));
-    MOCK_METHOD(int, cplat_process_priority_windows_get_thread_priority, (uint32_t, cplat_process_priority_windows_thread_priority *, cplat_error *));
+    MOCK_METHOD(int, cplat_process_priority_windows_set_thread_priority,
+                (uint32_t, cplat_process_priority_windows_thread_priority, cplat_error *));
+    MOCK_METHOD(int, cplat_process_priority_windows_get_thread_priority,
+                (uint32_t, cplat_process_priority_windows_thread_priority *, cplat_error *));
 
     // cplat/trace/etw.h
     MOCK_METHOD(cplat_etw_provider *, cplat_etw_provider_create, (cplat_etw_provider_ref_t));
@@ -2318,16 +2361,23 @@ class Mock_cplat
 #if defined(PLATFORM_LINUX)
 
     // cplat/runtime/process_priority_linux.h
-    MOCK_METHOD(int, cplat_process_priority_linux_set_policy, (uint32_t, cplat_process_priority_linux_policy, int, int, cplat_error *));
-    MOCK_METHOD(int, cplat_process_priority_linux_get_policy, (uint32_t, cplat_process_priority_linux_policy *, int *, int *, cplat_error *));
-    MOCK_METHOD(int, cplat_process_priority_linux_set_deadline, (uint32_t, const cplat_process_priority_linux_deadline *, int, cplat_error *));
-    MOCK_METHOD(int, cplat_process_priority_linux_get_deadline, (uint32_t, cplat_process_priority_linux_deadline *, cplat_error *));
+    MOCK_METHOD(int, cplat_process_priority_linux_set_policy,
+                (uint32_t, cplat_process_priority_linux_policy, int, int, cplat_error *));
+    MOCK_METHOD(int, cplat_process_priority_linux_get_policy,
+                (uint32_t, cplat_process_priority_linux_policy *, int *, int *, cplat_error *));
+    MOCK_METHOD(int, cplat_process_priority_linux_set_deadline,
+                (uint32_t, const cplat_process_priority_linux_deadline *, int, cplat_error *));
+    MOCK_METHOD(int, cplat_process_priority_linux_get_deadline,
+                (uint32_t, cplat_process_priority_linux_deadline *, cplat_error *));
     MOCK_METHOD(int, cplat_process_priority_linux_set_nice, (uint32_t, int, cplat_error *));
     MOCK_METHOD(int, cplat_process_priority_linux_get_nice, (uint32_t, int *, cplat_error *));
-    MOCK_METHOD(int, cplat_process_priority_linux_set_io_priority, (uint32_t, cplat_process_priority_linux_io_class, int, cplat_error *));
-    MOCK_METHOD(int, cplat_process_priority_linux_get_io_priority, (uint32_t, cplat_process_priority_linux_io_class *, int *, cplat_error *));
+    MOCK_METHOD(int, cplat_process_priority_linux_set_io_priority,
+                (uint32_t, cplat_process_priority_linux_io_class, int, cplat_error *));
+    MOCK_METHOD(int, cplat_process_priority_linux_get_io_priority,
+                (uint32_t, cplat_process_priority_linux_io_class *, int *, cplat_error *));
     MOCK_METHOD(int, cplat_process_priority_linux_set_utilization_clamp, (uint32_t, uint32_t, uint32_t, cplat_error *));
-    MOCK_METHOD(int, cplat_process_priority_linux_get_utilization_clamp, (uint32_t, uint32_t *, uint32_t *, cplat_error *));
+    MOCK_METHOD(int, cplat_process_priority_linux_get_utilization_clamp,
+                (uint32_t, uint32_t *, uint32_t *, cplat_error *));
 
     // cplat/runtime/stack_limit_linux.h
     MOCK_METHOD(int, cplat_stack_limit_linux_get, (uint64_t *, uint64_t *, cplat_error *));

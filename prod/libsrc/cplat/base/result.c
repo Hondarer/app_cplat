@@ -202,7 +202,11 @@ int cplat_internal_errno_from_windows_error(const unsigned long error_code)
     {
         errno_value = ENOMEM;
     }
-    else if ((error_code == ERROR_INSUFFICIENT_BUFFER) || (error_code == ERROR_BUFFER_OVERFLOW))
+    else if (error_code == ERROR_INSUFFICIENT_BUFFER)
+    {
+        errno_value = ERANGE;
+    }
+    else if (error_code == ERROR_BUFFER_OVERFLOW)
     {
         errno_value = ENAMETOOLONG;
     }

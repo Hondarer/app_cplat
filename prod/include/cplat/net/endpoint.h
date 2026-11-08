@@ -76,7 +76,7 @@ extern "C"
      *  @brief          ドット区切りの IPv4 アドレス文字列を数値へ変換します。
      *  @param[in]      text        変換元の文字列 (例: "192.168.0.1")。
      *  @param[out]     address_out 変換後のアドレス (ネットワーク バイト オーダー) の格納先。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、または Windows ソケット初期化の結果コードを返します。
      *
      *  名前解決は行いません。ホスト名を解決する場合は @ref cplat_ipv4_resolve を使用します。
      *

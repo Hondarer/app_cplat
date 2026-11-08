@@ -12,7 +12,7 @@
  *  使用方法:
  *  1. cplat_sym_loader_entry を CPLAT_SYM_LOADER_ENTRY_INIT マクロで静的初期化します。
  *  2. cplat_sym_loader_init() で JSONC 設定ファイルを読み込みます (DllMain / constructor から呼び出します)。
- *  3. cplat_sym_loader_resolve_as() で関数ポインターを取得して呼び出します。
+ *  3. cplat_sym_loader_resolve() の成功後に取得したアドレスを関数ポインターへ変換します。
  *  4. cplat_sym_loader_dispose() でリソースを解放します (DllMain / destructor から呼び出します)。
  *
  *  @copyright      Copyright (C) Tetsuo Honda. 2026. All rights reserved.
@@ -91,8 +91,8 @@ extern "C"
 
         /* 次の 3 つは、ロックを取らない高速経路から読むため、アトミック型で保持する。 */
         cplat_atomic_ptr func_ptr;   /**< キャッシュ済み関数ポインター (NULL = 未取得)。 */
-        cplat_atomic_i32 resolved;   /**< 解決済フラグ (0 = 未解決)。 */
-        cplat_atomic_i32 lock_state; /**< ロック初期化状態 (0=未初期化,1=初期化中,2=初期化済み)。 */
+        cplat_atomic_i32 resolved;   /**< 解決状態 (0=未解決、1=関数、2=明示的既定値、負値=結果コード)。 */
+        cplat_atomic_i32 lock_state; /**< ロック初期化状態 (0=未初期化、1=初期化中、2=初期化済み、負値=結果コード)。 */
         cplat_local_lock *lock;      /**< ロード処理を保護するミューテックス。 */
     } cplat_sym_loader_entry;
 
@@ -106,38 +106,29 @@ extern "C"
     {(key), {0}, {0}, NULL, CPLAT_ATOMIC_INIT(NULL), CPLAT_ATOMIC_INIT(0), CPLAT_ATOMIC_INIT(0), NULL}
 
     /**
-     *  @brief          拡張関数ポインターを返します (内部用)。
-     *
-     *  @param[in]      fobj cplat_sym_loader_entry へのポインター。
-     *  @return         成功時 void * (関数ポインター)、失敗時 NULL。
-     *
-     *  @par            スレッド セーフ
-     *  本関数はスレッド セーフです。
+     *  @brief          拡張関数を解決します。
+     *  @param[in,out]  fobj キャッシュ エントリ。
+     *  @param[out]     function_out 関数アドレス。明示的既定値の場合は NULL。
+     *  @retval         CPLAT_OK 解決成功、または明示的既定値です。
+     *  @retval         CPLAT_ERR_INVALID_ARGUMENT 必須引数が NULL です。
+     *  @retval         CPLAT_ERR_NOT_FOUND 設定またはシンボルがありません。
+     *  @retval         CPLAT_ERR_OUT_OF_RANGE 名前が長すぎるか終端されていません。
+     *  @retval         CPLAT_ERR_UNKNOWN ライブラリのロードに失敗しました。
+     *  @return         ロック操作の失敗時は、その結果コードを返します。
+     *  @note           失敗時は出力を変更しません。スレッド セーフです。
      */
-    CPLAT_EXPORT void *CPLAT_API cplat_sym_loader_resolve(cplat_sym_loader_entry *fobj);
-
-/**
- *  @brief          拡張関数ポインターを返します。
- *
- *  @param[in]      fobj cplat_sym_loader_entry へのポインター。
- *  @param[in]      type CPLAT_SYM_LOADER_ENTRY_INIT で指定したものと同じ関数ポインター型。
- *  @return         成功時指定された型の関数ポインター、失敗時 NULL。
- *
- *  @par            スレッド セーフ
- *  本マクロはスレッド セーフです。
- */
-#define cplat_sym_loader_resolve_as(fobj, type) ((type)cplat_sym_loader_resolve(fobj))
+    CPLAT_EXPORT int CPLAT_API cplat_sym_loader_resolve(cplat_sym_loader_entry *fobj, void **function_out);
 
     /**
-     *  @brief          cplat_sym_loader_entry が明示的既定値かどうかを返します。
-     *
-     *  @param[in]      fobj cplat_sym_loader_entry へのポインター。
-     *  @return         明示的既定値の場合は 1、それ以外は 0。
-     *
-     *  @par            スレッド セーフ
-     *  本関数はスレッド セーフです。
+     *  @brief          明示的既定値かどうかを取得します。
+     *  @param[in,out]  fobj キャッシュ エントリ。
+     *  @param[out]     is_default_out 明示的既定値なら 1、解決済み関数なら 0。
+     *  @retval         CPLAT_OK 取得に成功しました。
+     *  @retval         CPLAT_ERR_INVALID_ARGUMENT 必須引数が NULL です。
+     *  @return         解決に失敗した場合は cplat_sym_loader_resolve() の結果コードです。
+     *  @note           失敗時は出力を変更しません。スレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_sym_loader_is_default(cplat_sym_loader_entry *fobj);
+    CPLAT_EXPORT int CPLAT_API cplat_sym_loader_is_default(cplat_sym_loader_entry *fobj, int *is_default_out);
 
     /**
      *  @brief          cplat_sym_loader_entry ポインター配列を初期化します。
@@ -154,7 +145,12 @@ extern "C"
                                                       const size_t fobj_length, const char *configpath);
 
     /**
-     *  @brief          cplat_sym_loader_entry ポインター配列を解放します。
+     *  @brief          cplat_sym_loader_entry ポインター配列のモジュールとロックを解放します。
+     *  @retval         CPLAT_OK 全要素の解放に成功しました。要素数 0 は NULL 配列も許可します。
+     *  @retval         CPLAT_ERR_INVALID_ARGUMENT 配列または要素が NULL です。解放は行いません。
+     *  @retval         CPLAT_ERR_UNKNOWN モジュールの解放に失敗しました。
+     *  @note           失敗した要素のリソースを保持し、残りの要素の解放を続けます。
+     *                  成功した要素のキャッシュは未解決状態へ戻します。解決済み関数の実行中には呼べません。
      *
      *  @param[in]      fobj_array  cplat_sym_loader_entry ポインター配列。
      *  @param[in]      fobj_length 配列の要素数。
@@ -163,8 +159,8 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  DllMain / destructor コンテキストのシングルスレッド フェーズで呼び出してください。他スレッドが resolve を実行中の場合、解放と競合します。
      */
-    CPLAT_EXPORT void CPLAT_API cplat_sym_loader_dispose(cplat_sym_loader_entry *const *fobj_array,
-                                                         const size_t fobj_length);
+    CPLAT_EXPORT int CPLAT_API cplat_sym_loader_dispose(cplat_sym_loader_entry *const *fobj_array,
+                                                        const size_t fobj_length);
 
     /**
      *  @brief          cplat_sym_loader_entry ポインター配列の内容を標準出力に表示します。

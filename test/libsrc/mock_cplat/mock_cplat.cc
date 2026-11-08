@@ -214,7 +214,7 @@ Mock_cplat::Mock_cplat()
     ON_CALL(*this, cplat_timespec_sub(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_timespec_sub));
     ON_CALL(*this, cplat_timespec_cmp(_, _)).WillByDefault(Invoke(delegate_real_cplat_timespec_cmp));
     ON_CALL(*this, cplat_timespec_add_ms(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_timespec_add_ms));
-    ON_CALL(*this, cplat_timespec_diff_ms(_, _)).WillByDefault(Invoke(delegate_real_cplat_timespec_diff_ms));
+    ON_CALL(*this, cplat_timespec_diff_ms(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_timespec_diff_ms));
     ON_CALL(*this, cplat_timespec_to_native(_, _)).WillByDefault(Invoke(delegate_real_cplat_timespec_to_native));
     ON_CALL(*this, cplat_timespec_from_native(_, _)).WillByDefault(Invoke(delegate_real_cplat_timespec_from_native));
 
@@ -565,8 +565,8 @@ Mock_cplat::Mock_cplat()
     ON_CALL(*this, cplat_shutdown_reset_for_test()).WillByDefault(Invoke(delegate_real_cplat_shutdown_reset_for_test));
 
     // cplat/runtime/sym_loader.h
-    ON_CALL(*this, cplat_sym_loader_resolve(_)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_resolve));
-    ON_CALL(*this, cplat_sym_loader_is_default(_)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_is_default));
+    ON_CALL(*this, cplat_sym_loader_resolve(_, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_resolve));
+    ON_CALL(*this, cplat_sym_loader_is_default(_, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_is_default));
     ON_CALL(*this, cplat_sym_loader_init(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_init));
     ON_CALL(*this, cplat_sym_loader_dispose(_, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_dispose));
     ON_CALL(*this, cplat_sym_loader_info(_, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_info));
@@ -770,18 +770,30 @@ Mock_cplat::Mock_cplat()
     ON_CALL(*this, cplat_error_get_windows_error(_)).WillByDefault(Invoke(delegate_real_cplat_error_get_windows_error));
 
     // cplat/runtime/process_priority_windows.h
-    ON_CALL(*this, cplat_process_priority_windows_set_class(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_set_class));
-    ON_CALL(*this, cplat_process_priority_windows_get_class(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_get_class));
-    ON_CALL(*this, cplat_process_priority_windows_begin_background_mode(_)).WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_begin_background_mode));
-    ON_CALL(*this, cplat_process_priority_windows_end_background_mode(_)).WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_end_background_mode));
-    ON_CALL(*this, cplat_process_priority_windows_set_memory_priority(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_set_memory_priority));
-    ON_CALL(*this, cplat_process_priority_windows_get_memory_priority(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_get_memory_priority));
-    ON_CALL(*this, cplat_process_priority_windows_set_power_throttling(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_set_power_throttling));
-    ON_CALL(*this, cplat_process_priority_windows_get_power_throttling(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_get_power_throttling));
-    ON_CALL(*this, cplat_process_priority_windows_set_priority_boost(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_set_priority_boost));
-    ON_CALL(*this, cplat_process_priority_windows_get_priority_boost(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_get_priority_boost));
-    ON_CALL(*this, cplat_process_priority_windows_set_thread_priority(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_set_thread_priority));
-    ON_CALL(*this, cplat_process_priority_windows_get_thread_priority(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_get_thread_priority));
+    ON_CALL(*this, cplat_process_priority_windows_set_class(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_set_class));
+    ON_CALL(*this, cplat_process_priority_windows_get_class(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_get_class));
+    ON_CALL(*this, cplat_process_priority_windows_begin_background_mode(_))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_begin_background_mode));
+    ON_CALL(*this, cplat_process_priority_windows_end_background_mode(_))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_end_background_mode));
+    ON_CALL(*this, cplat_process_priority_windows_set_memory_priority(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_set_memory_priority));
+    ON_CALL(*this, cplat_process_priority_windows_get_memory_priority(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_get_memory_priority));
+    ON_CALL(*this, cplat_process_priority_windows_set_power_throttling(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_set_power_throttling));
+    ON_CALL(*this, cplat_process_priority_windows_get_power_throttling(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_get_power_throttling));
+    ON_CALL(*this, cplat_process_priority_windows_set_priority_boost(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_set_priority_boost));
+    ON_CALL(*this, cplat_process_priority_windows_get_priority_boost(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_get_priority_boost));
+    ON_CALL(*this, cplat_process_priority_windows_set_thread_priority(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_set_thread_priority));
+    ON_CALL(*this, cplat_process_priority_windows_get_thread_priority(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_windows_get_thread_priority));
 
     // cplat/trace/etw.h
     ON_CALL(*this, cplat_etw_provider_create(_)).WillByDefault(Invoke(delegate_real_cplat_etw_provider_create));
@@ -825,20 +837,32 @@ Mock_cplat::Mock_cplat()
 #if defined(PLATFORM_LINUX)
 
     // cplat/runtime/process_priority_linux.h
-    ON_CALL(*this, cplat_process_priority_linux_set_policy(_, _, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_set_policy));
-    ON_CALL(*this, cplat_process_priority_linux_get_policy(_, _, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_get_policy));
-    ON_CALL(*this, cplat_process_priority_linux_set_deadline(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_set_deadline));
-    ON_CALL(*this, cplat_process_priority_linux_get_deadline(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_get_deadline));
-    ON_CALL(*this, cplat_process_priority_linux_set_nice(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_set_nice));
-    ON_CALL(*this, cplat_process_priority_linux_get_nice(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_get_nice));
-    ON_CALL(*this, cplat_process_priority_linux_set_io_priority(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_set_io_priority));
-    ON_CALL(*this, cplat_process_priority_linux_get_io_priority(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_get_io_priority));
-    ON_CALL(*this, cplat_process_priority_linux_set_utilization_clamp(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_set_utilization_clamp));
-    ON_CALL(*this, cplat_process_priority_linux_get_utilization_clamp(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_get_utilization_clamp));
+    ON_CALL(*this, cplat_process_priority_linux_set_policy(_, _, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_set_policy));
+    ON_CALL(*this, cplat_process_priority_linux_get_policy(_, _, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_get_policy));
+    ON_CALL(*this, cplat_process_priority_linux_set_deadline(_, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_set_deadline));
+    ON_CALL(*this, cplat_process_priority_linux_get_deadline(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_get_deadline));
+    ON_CALL(*this, cplat_process_priority_linux_set_nice(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_set_nice));
+    ON_CALL(*this, cplat_process_priority_linux_get_nice(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_get_nice));
+    ON_CALL(*this, cplat_process_priority_linux_set_io_priority(_, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_set_io_priority));
+    ON_CALL(*this, cplat_process_priority_linux_get_io_priority(_, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_get_io_priority));
+    ON_CALL(*this, cplat_process_priority_linux_set_utilization_clamp(_, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_set_utilization_clamp));
+    ON_CALL(*this, cplat_process_priority_linux_get_utilization_clamp(_, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_priority_linux_get_utilization_clamp));
 
     // cplat/runtime/stack_limit_linux.h
-    ON_CALL(*this, cplat_stack_limit_linux_get(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_stack_limit_linux_get));
-    ON_CALL(*this, cplat_stack_limit_linux_raise_to_hard_limit(_, _)).WillByDefault(Invoke(delegate_real_cplat_stack_limit_linux_raise_to_hard_limit));
+    ON_CALL(*this, cplat_stack_limit_linux_get(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_stack_limit_linux_get));
+    ON_CALL(*this, cplat_stack_limit_linux_raise_to_hard_limit(_, _))
+        .WillByDefault(Invoke(delegate_real_cplat_stack_limit_linux_raise_to_hard_limit));
 
     // cplat/trace/syslog.h
     ON_CALL(*this, cplat_syslog_sink_create(_, _)).WillByDefault(Invoke(delegate_real_cplat_syslog_sink_create));

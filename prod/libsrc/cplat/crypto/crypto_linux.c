@@ -21,6 +21,7 @@
 #if defined(PLATFORM_LINUX)
 
     #include <string.h>
+    #include <limits.h>
 
     #include <openssl/evp.h>
 
@@ -39,6 +40,12 @@ int cplat_crypto_encrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
     if (dst == NULL || dst_len == NULL || (src == NULL && src_len > 0) || key == NULL || nonce == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (src_len > (size_t)INT_MAX || (aad != NULL && aad_len > (size_t)INT_MAX) ||
+        src_len > SIZE_MAX - CPLAT_CRYPTO_TAG_SIZE)
+    {
+        return CPLAT_ERR_OUT_OF_RANGE;
     }
 
     if (*dst_len < src_len + CPLAT_CRYPTO_TAG_SIZE)
@@ -149,6 +156,10 @@ int cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
     }
 
     plain_len = src_len - CPLAT_CRYPTO_TAG_SIZE;
+    if (plain_len > (size_t)INT_MAX || (aad != NULL && aad_len > (size_t)INT_MAX))
+    {
+        return CPLAT_ERR_OUT_OF_RANGE;
+    }
 
     if (plain_len > 0 && *dst_len < plain_len)
     {
@@ -231,11 +242,11 @@ int cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
         }
     }
 
-    /* EVP_DecryptFinal_ex() で認証タグを検証する。失敗時は CPLAT_ERR_UNKNOWN を返す (認証タグ不一致)。 */
+    /* EVP_DecryptFinal_ex() で認証タグを検証する。失敗時は CPLAT_ERR_AUTHENTICATION_FAILED を返す。 */
     if (EVP_DecryptFinal_ex(ctx, dst + outl, &final_len) != 1)
     {
         EVP_CIPHER_CTX_free(ctx);
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_AUTHENTICATION_FAILED;
     }
 
     *dst_len = plain_len;
@@ -261,6 +272,11 @@ int cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, const size_
     if (key == NULL || (passphrase == NULL && passphrase_len > 0))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (passphrase_len > (size_t)UINT32_MAX)
+    {
+        return CPLAT_ERR_OUT_OF_RANGE;
     }
 
     ctx = EVP_MD_CTX_new();

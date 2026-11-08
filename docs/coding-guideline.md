@@ -65,8 +65,12 @@ cplat の公開 API が戻り値として使用する共通結果コードの運
 | | `CPLAT_ERR_TOO_MANY_OCCURRENCES` | -28 | 同一項目の出現回数超過 |
 | | `CPLAT_ERR_INVALID_PATTERN` | -29 | 正規表現パターンの構文不正 |
 | | `CPLAT_ERR_INVALID_ENCODING` | -30 | 不正な UTF-8 エンコーディング |
-| 制御<br> (-40 〜) | `CPLAT_ERR_EOF` | -40 | 入力の EOF 到達 |
+| | `CPLAT_ERR_MALFORMED_DEFINITION` | -31 | 与えられた定義の内容が構文または整合の点で不正 |
+| 制御<br> (-40 〜 -49) | `CPLAT_ERR_EOF` | -40 | 入力の EOF 到達 |
 | | `CPLAT_ERR_CANCELED` | -41 | ユーザー操作 (Ctrl+C など) による中断 |
+| | `CPLAT_ERR_IN_PROGRESS` | -42 | 非同期処理が開始済みで完了待ちが必要 |
+| データの検証<br> (-50 〜) | `CPLAT_ERR_AUTHENTICATION_FAILED` | -50 | 認証タグの検証に失敗 |
+| | `CPLAT_ERR_CORRUPT_DATA` | -51 | データが破損しているか、宣言された形式と不一致 |
 
 Table: cplat 結果コードの分類・数値・意味一覧
 
@@ -1145,6 +1149,7 @@ cplat が **関数側で検査を内包する** 範囲は次のとおりです�
 |---|---|---|
 | 外部文字列から整数への変換 | `cplat_parse_int` / `cplat_parse_int64` / `cplat_parse_uint64` / `cplat_parse_double` | 文字列の完全消費、目的型の範囲、符号なし系での先頭負号の拒否 |
 | 要素数とサイズの乗算を伴う確保 | `cplat_calloc` / `cplat_realloc` / `cplat_realloc_zerofill` | 長さ 0、`count * size` の乗算オーバーフロー |
+| 時刻と期限の計算 | `cplat_timespec_normalize` / `cplat_timespec_add` / `cplat_timespec_sub` / `cplat_timespec_add_ms` / `cplat_timespec_diff_ms` / `cplat_clock_get_realtime_deadline_ms` | ナノ秒正規化時の秒加減算、ミリ秒換算、および期限加算における表現可能範囲の超過 |
 
 Table: 関数側で整数検査を内包する API と検査内容
 
@@ -1152,7 +1157,7 @@ Table: 関数側で整数検査を内包する API と検査内容
 呼び出し側は上位規範の事前検査の慣用句に従います。  
 検査付きの共通 API が必要になった時点で、本節へ追加を検討します。
 
-詳細は [数値変換](#数値変換) と [メモリ確保の代替](#メモリ確保の代替) を参照してください。
+詳細は [数値変換](#数値変換)、[メモリ確保の代替](#メモリ確保の代替)、および [標準時刻型 (cplat_timespec)](#標準時刻型-cplat_timespec) を参照してください。
 
 > [!NOTE]
 > 一般則を上位規範へ置き、関数を伴う部分だけを本書へ置くのは、cplat が optional であることと整合するためです。  
@@ -1169,7 +1174,7 @@ Table: 関数側で整数検査を内包する API と検査内容
 |---|---|
 | 型定義 | `time_t tv_sec; int64_t tv_nsec;` (16 バイト)。Linux x86-64 の `struct timespec` とレイアウト互換 |
 | native 変換 | OS API 境界における `cplat_timespec_to_native()` / `from_native()` への変換集約 (キャスト・混用の禁止) |
-| 演算 | 専用演算関数 (`normalize`, `add`, `sub`, `cmp`, `add_ms`, `diff_ms`) の使用 |
+| 演算 | 専用演算関数 (`normalize`, `add`, `sub`, `cmp`, `add_ms`, `diff_ms`) の使用。`cmp` 以外は共通結果コード (`CPLAT_OK`、`CPLAT_ERR_INVALID_ARGUMENT`、`CPLAT_ERR_OUT_OF_RANGE`) を返し、失敗時は出力引数を変更しない |
 
 Table: cplat_timespec の型定義と仕様
 

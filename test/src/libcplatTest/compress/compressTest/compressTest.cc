@@ -255,8 +255,8 @@ TEST_F(compressTest, decompress_returns_unknown_for_corrupt_stream)
 
     // Assert
     EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - cplat_decompress() の戻り値が CPLAT_ERR_UNKNOWN であること。(inflate() が完了しないことの確認)
+        CPLAT_ERR_CORRUPT_DATA,
+        actual_ret); // [確認_異常系] - cplat_decompress() の戻り値が CPLAT_ERR_CORRUPT_DATA であること。(inflate() が完了しないことの確認)
 }
 
 // ヘッダーの展開後長さが 4 GiB 以上の場合に上限超過を通知することの確認
@@ -477,7 +477,7 @@ TEST_F(compressTest, decompress_returns_out_of_memory_when_inflate_processing_fa
 
     // Pre-Assert
     InSequence sequence;
-    EXPECT_CALL(mock_zlib, inflate(_, Z_FINISH))
+    EXPECT_CALL(mock_zlib, inflate(_, Z_NO_FLUSH))
         .WillOnce(Return(
             Z_MEM_ERROR)); // [Pre-Assert確認_異常系] - inflate() が Z_FINISH を指定して 1 回呼び出されること。(初期化に成功した後の処理であることの確認)
                            // [Pre-Assert手順] - inflate() から Z_MEM_ERROR を返す。
@@ -506,7 +506,7 @@ TEST_F(compressTest, decompress_returns_unknown_when_inflate_processing_fails)
 
     // Pre-Assert
     InSequence sequence;
-    EXPECT_CALL(mock_zlib, inflate(_, Z_FINISH))
+    EXPECT_CALL(mock_zlib, inflate(_, Z_NO_FLUSH))
         .WillOnce(Return(
             Z_STREAM_ERROR)); // [Pre-Assert確認_異常系] - inflate() が Z_FINISH を指定して 1 回呼び出されること。(初期化に成功した後の処理であることの確認)
                               // [Pre-Assert手順] - inflate() から Z_STREAM_ERROR を返す。
@@ -559,4 +559,44 @@ TEST_F(compressTest, decompress_restores_legacy_linux_payload)
         memcmp(
             expected, restored,
             restored_len)); // [確認_正常系] - memcmp() の戻り値が 0 であること。(バイナリを含む元データと一致することの確認)
+}
+
+// 宣言長と実際の展開長が違う場合に境界を越えて書き込まないことの確認
+TEST_F(compressTest, rejects_length_mismatch_and_truncated_stream)
+{
+    // Arrange
+    const uint8_t input[] = {'a', 'b', 'c'};
+    uint8_t compressed[64] = {};
+    size_t compressed_length = sizeof(compressed);
+    ASSERT_EQ(CPLAT_OK, cplat_compress(compressed, &compressed_length, input,
+                                       sizeof(input))); // [状態確認] - 実際の圧縮データを作成する。
+    uint8_t shorter[64];
+    uint8_t longer[64];
+    memcpy(shorter, compressed, compressed_length);
+    memcpy(longer, compressed, compressed_length);
+    shorter[7] = 2;
+    longer[7] = 4; // [状態] - ネットワーク バイト オーダーの宣言長を前後へ変更する。
+    uint8_t output[8] = {0, 0, 42, 43, 44, 45, 46, 47};
+    uint8_t other[8] = {};
+    size_t short_length = sizeof(output);
+    size_t long_length = sizeof(other);
+    size_t truncated_length = sizeof(other);
+
+    // Pre-Assert
+
+    // Act
+    int short_ret = cplat_decompress(output, &short_length, shorter, compressed_length);
+    int long_ret = cplat_decompress(other, &long_length, longer, compressed_length);
+    int truncated_ret = cplat_decompress(other, &truncated_length, compressed,
+                                         compressed_length - 1); // [手順] - 不一致と途中切れを展開する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_CORRUPT_DATA, short_ret); // [確認_異常系] - 宣言より長い展開を拒否すること。
+    EXPECT_EQ(CPLAT_ERR_CORRUPT_DATA, long_ret);
+    EXPECT_EQ(CPLAT_ERR_CORRUPT_DATA, truncated_ret);
+    EXPECT_EQ(42, output[2]); // [確認_異常系] - 宣言長を超えた書き込みがないこと。
+    EXPECT_EQ(43, output[3]);
+    EXPECT_EQ(sizeof(output), short_length); // [確認_異常系] - 出力長を保持すること。
+    EXPECT_EQ(sizeof(other), long_length);
+    EXPECT_EQ(sizeof(other), truncated_length);
 }

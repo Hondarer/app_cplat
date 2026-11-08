@@ -7,6 +7,8 @@
     #include <cstdio>
     #include <ctime>
     #include <string>
+    #include <thread>
+    #include <atomic>
     #include <unistd.h>
     #include <syslog.h>
     #include <testfw.h>
@@ -175,9 +177,9 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_prefixes_timestamp)
     cplat_timespec timestamp = {
         1412916640LL, 0}; // [状態] - 明示タイムスタンプを 2014-10-10T13:50:40+09:00 相当の {1412916640, 0} とする。
 
-    ASSERT_EQ(0, pipe(pipe_fds));                          // [状態] - パイプを生成する。
-                                                           // [状態確認] - pipe() の戻り値が 0 であること。
-    ASSERT_EQ(0, setenv("TZ", "Asia/Tokyo", 1));           // [状態] - TZ を Asia/Tokyo とする。
+    ASSERT_EQ(0, pipe(pipe_fds));                // [状態] - パイプを生成する。
+                                                 // [状態確認] - pipe() の戻り値が 0 であること。
+    ASSERT_EQ(0, setenv("TZ", "Asia/Tokyo", 1)); // [状態] - TZ を Asia/Tokyo とする。
     // [状態確認] - TZ に対する setenv() の戻り値が 0 であること。
     tzset();                                               // [状態] - タイム ゾーンを Asia/Tokyo とする。
     snprintf(fd_text, sizeof(fd_text), "%d", pipe_fds[1]); // [状態] - テスト用 FD をパイプの書き込み側とする。
@@ -260,9 +262,9 @@ TEST_F(trace_syslogTest, test_write_to_test_fd_falls_back_from_invalid_explicit_
     cplat_timespec invalid_timestamp = {1714100645LL,
                                         1000000000}; // [状態] - nsec が 10 億の不正な明示タイムスタンプを用意する。
 
-    ASSERT_EQ(0, pipe(pipe_fds));                          // [状態] - パイプを生成する。
-                                                           // [状態確認] - pipe() の戻り値が 0 であること。
-    ASSERT_EQ(0, setenv("TZ", "Asia/Tokyo", 1));           // [状態] - TZ を Asia/Tokyo とする。
+    ASSERT_EQ(0, pipe(pipe_fds));                // [状態] - パイプを生成する。
+                                                 // [状態確認] - pipe() の戻り値が 0 であること。
+    ASSERT_EQ(0, setenv("TZ", "Asia/Tokyo", 1)); // [状態] - TZ を Asia/Tokyo とする。
     // [状態確認] - TZ に対する setenv() の戻り値が 0 であること。
     tzset();                                               // [状態] - タイム ゾーンを Asia/Tokyo とする。
     snprintf(fd_text, sizeof(fd_text), "%d", pipe_fds[1]); // [状態] - テスト用 FD をパイプの書き込み側とする。
@@ -471,6 +473,70 @@ TEST_F(trace_syslogTest, test_fd_invalid_value_is_ignored)
     {
         unsetenv("SYSLOG_TEST_FD");
     }
+}
+
+// 名前変更と送信を同時に行っても識別子が壊れないことの確認
+TEST_F(trace_syslogTest, concurrent_rename_and_write_preserve_complete_identifiers)
+{
+    // Arrange
+    FILE *stream = tmpfile();
+    ASSERT_NE(nullptr, stream); // [状態確認] - 一時出力先を作成できること。
+    const char *previous = getenv("SYSLOG_TEST_FD");
+    const bool had_previous = previous != nullptr;
+    const std::string saved = had_previous ? previous : "";
+    char fd_text[32];
+    snprintf(fd_text, sizeof(fd_text), "%d", fileno(stream));
+    setenv("SYSLOG_TEST_FD", fd_text, 1);
+    cplat_syslog_sink *sink = cplat_syslog_sink_create("before", LOG_USER);
+    ASSERT_NE(nullptr, sink);   // [状態確認] - 出力先を設定できること。
+    std::atomic<int> errors{0}; // [状態] - 各スレッドの結果を集約する。
+
+    // Pre-Assert
+
+    // Act
+    std::thread writer(
+        [&]
+        {
+            for (int i = 0; i < 1000; ++i)
+            {
+                if (cplat_syslog_sink_write(sink, LOG_INFO, nullptr, "message") != CPLAT_OK)
+                    ++errors;
+            }
+        });
+    std::thread renamer(
+        [&]
+        {
+            for (int i = 0; i < 1000; ++i)
+            {
+                if (cplat_syslog_sink_rename(sink, i % 2 == 0 ? "after" : "before") != CPLAT_OK)
+                    ++errors;
+            }
+        }); // [手順] - 送信と名前変更を並行して繰り返す。
+    writer.join();
+    renamer.join();
+    rewind(stream);
+    int lines = 0;
+    int invalid_lines = 0;
+    char line[256];
+    while (fgets(line, sizeof(line), stream) != nullptr)
+    {
+        ++lines;
+        if (strstr(line, "before[") == nullptr && strstr(line, "after[") == nullptr)
+            ++invalid_lines;
+    }
+
+    // Assert
+    EXPECT_EQ(0, errors.load()); // [確認_正常系] - 並行操作に成功すること。
+    EXPECT_EQ(1000, lines);
+    EXPECT_EQ(0, invalid_lines); // [確認_正常系] - 変更前または変更後の完全な識別子が出力されること。
+
+    // Cleanup
+    cplat_syslog_sink_dispose(sink);
+    fclose(stream);
+    if (had_previous)
+        setenv("SYSLOG_TEST_FD", saved.c_str(), 1);
+    else
+        unsetenv("SYSLOG_TEST_FD");
 }
 
 #endif /* PLATFORM_ */

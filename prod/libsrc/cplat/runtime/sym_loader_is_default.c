@@ -15,19 +15,19 @@
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_sym_loader_is_default(cplat_sym_loader_entry *fobj)
+int cplat_sym_loader_is_default(cplat_sym_loader_entry *fobj, int *is_default_out)
 {
-    /* 未解決の場合はシンボルの解決を試みる。 */
-    if (cplat_atomic_load_i32(&fobj->resolved, CPLAT_MEMORY_ORDER_ACQUIRE) == 0)
+    void *function;
+    int ret;
+    if (fobj == NULL || is_default_out == NULL)
     {
-        (void)cplat_sym_loader_resolve(fobj);
+        return CPLAT_ERR_INVALID_ARGUMENT;
     }
-
-    /* resolved が 2 の場合は、設定ファイルで明示的に default と指定された既定値を示す。 */
-    if (cplat_atomic_load_i32(&fobj->resolved, CPLAT_MEMORY_ORDER_ACQUIRE) == 2)
+    ret = cplat_sym_loader_resolve(fobj, &function);
+    if (ret != CPLAT_OK)
     {
-        return 1;
+        return ret;
     }
-
-    return 0;
+    *is_default_out = cplat_atomic_load_i32(&fobj->resolved, CPLAT_MEMORY_ORDER_ACQUIRE) == 2;
+    return CPLAT_OK;
 }

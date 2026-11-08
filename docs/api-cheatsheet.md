@@ -250,7 +250,7 @@ Table: Win32 生 API と cplat UTF-8 ラッパー API の対応
 | 生 API | cplat 代替 | 差異の要点 |
 |---|---|---|
 | `clock_gettime(CLOCK_MONOTONIC, ...)` (Linux) / `GetTickCount64()` (Windows) | `cplat_clock_get_monotonic_ms()` / `cplat_clock_get_monotonic()` | 単調クロックをミリ秒/ナノ秒精度で返す。Windows の分解能差 (既定 ~15ms 刻み) を吸収 |
-| `clock_gettime(CLOCK_REALTIME, ...)` (Linux) / `GetSystemTimeAsFileTime()` (Windows) | `cplat_clock_get_realtime()` | Windows の 1601 年基準 (FILETIME) から Unix epoch 基準への変換を吸収 |
+| `clock_gettime(CLOCK_REALTIME, ...)` (Linux) / `GetSystemTimeAsFileTime()` (Windows) | `cplat_clock_get_realtime()` / `cplat_clock_get_realtime_deadline_ms()` | Windows の 1601 年基準 (FILETIME) から Unix epoch 基準への変換を吸収。期限生成と `cplat_timespec` の加減算・ミリ秒換算は範囲超過時に `CPLAT_ERR_OUT_OF_RANGE` を返し、失敗時は出力先を変更しない |
 
 Table: クロック取得 API と cplat 代替ラッパーの差異
 
@@ -457,8 +457,8 @@ Table: 暗号論的乱数生成 API と cplat 代替ラッパーの差異
 
 | 生 API | cplat 代替 | 差異の要点 |
 |---|---|---|
-| `EVP_EncryptInit_ex` +`EVP_EncryptUpdate` +`EVP_EncryptFinal_ex` (OpenSSL) / `BCryptEncrypt` (CNG) | `cplat_crypto_encrypt(...)` | AES-256-GCM 固定のワンショット API に集約し、暗号文+タグ連結フォーマットを標準化 |
-| `EVP_DecryptInit_ex` +`EVP_DecryptUpdate` +`EVP_DecryptFinal_ex` (OpenSSL) / `BCryptDecrypt` (CNG) | `cplat_crypto_decrypt(...)` | 同上。タグ検証を内包 |
+| `EVP_EncryptInit_ex` +`EVP_EncryptUpdate` +`EVP_EncryptFinal_ex` (OpenSSL) / `BCryptEncrypt` (CNG) | `cplat_crypto_encrypt(...)` | AES-256-GCM 固定のワンショット API に集約し、暗号文+タグ連結フォーマットを標準化。平文長と非 NULL の AAD 長は `INT_MAX` バイト、鍵導出のパスフレーズ長は `UINT32_MAX` バイトを上限とし、超過時は `CPLAT_ERR_OUT_OF_RANGE` を返す |
+| `EVP_DecryptInit_ex` +`EVP_DecryptUpdate` +`EVP_DecryptFinal_ex` (OpenSSL) / `BCryptDecrypt` (CNG) | `cplat_crypto_decrypt(...)` | 同上。タグ検証を内包し、認証タグ不一致時は `CPLAT_ERR_AUTHENTICATION_FAILED` を返す (失敗時の出力バッファー内容は使用不可) |
 
 Table: 暗号化・復号 API と cplat 代替ラッパーの差異
 
@@ -500,7 +500,7 @@ Table: Windows コンソール制御 API と cplat 代替ラッパーの差異
 | 生 API | cplat 代替 | 差異の要点 |
 |---|---|---|
 | `deflateInit2` +`deflate` +`deflateEnd` (両 OS 共通の app/zlib) | `cplat_compress(...)` | ワンショット API に集約。先頭 8 バイトへ元サイズ (ネットワーク バイト オーダー) を付加する独自フォーマットで統一 |
-| `inflateInit2` +`inflate` +`inflateEnd` (両 OS 共通の app/zlib) | `cplat_decompress(...)` | 同上 |
+| `inflateInit2` +`inflate` +`inflateEnd` (両 OS 共通の app/zlib) | `cplat_decompress(...)` | 同上。`CPLAT_COMPRESS_MAX_UNCOMPRESSED_SIZE` までチャンク分割で展開し、ストリーム破損・途中打ち切り・宣言長との不一致は `CPLAT_ERR_CORRUPT_DATA` を返す |
 
 Table: 圧縮・展開 API と cplat 代替ラッパーの差異
 
@@ -897,9 +897,9 @@ JSONC 設定ファイルからのライブラリ名解決、関数ポインタ�
 
 | 用途 | cplat API |
 |---|---|
-| 関数を動的に解決します。 | `cplat_sym_loader_resolve` (型安全なラッパー マクロ `cplat_sym_loader_resolve_as`) |
-| ローダーを初期化/破棄します。 | `cplat_sym_loader_init` / `cplat_sym_loader_dispose` |
-| 既定ローダーかどうか確認します。 | `cplat_sym_loader_is_default` |
+| 関数を動的に解決します。 | `cplat_sym_loader_resolve` (結果コードと解決済みシンボル ポインターを分離して取得) |
+| ローダーを初期化/破棄します。 | `cplat_sym_loader_init` / `cplat_sym_loader_dispose` (破棄は事前検証とアンロード成否を結果コードで返却) |
+| 既定ローダーかどうか確認します。 | `cplat_sym_loader_is_default` (結果コードと判定値を分離して取得) |
 | 解決状況の情報を取得します。 | `cplat_sym_loader_info` |
 
 Table: 動的シンボル解決における用途別 cplat API

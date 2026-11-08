@@ -77,9 +77,14 @@ extern "C"
      *                           出力: 書き込んだバイト数。
      *  @param[in]      src      圧縮後データへのポインター (先頭 8 [byte] は元サイズ)。
      *  @param[in]      src_len  圧縮後データのバイト数 (ヘッダーを含む)。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_LIMIT_EXCEEDED 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_LIMIT_EXCEEDED 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_CORRUPT_DATA 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  zlib の初期化または処理中のメモリ不足は @ref CPLAT_ERR_OUT_OF_MEMORY を返します。
+     *
+     *  @note           不正または途中で切れたストリーム、宣言長と実際の展開長の不一致は
+     *                  CPLAT_ERR_CORRUPT_DATA を返します。宣言長を超えて dst へ書き込みません。
+     *                  成功時だけ dst_len を更新します。失敗時の出力内容は使用できません。
+     *                  ストリーム終端後の付加バイトは許可します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。

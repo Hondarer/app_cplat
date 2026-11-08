@@ -66,7 +66,8 @@ extern "C"
      *                             不正な明示タイムスタンプが渡された場合は現在時刻へ代替し、
      *                             出力は継続しつつ戻り値は @ref CPLAT_ERR_UNKNOWN を返します。
      *  @param[in]      message  null 終端 UTF-8 文字列。NULL は無視。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_UNKNOWN 、または内部ロック API の共通結果コードを返します。
+     *  @note           名前の参照から送信完了まで、識別子の変更と同じロックで保護します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
