@@ -17,21 +17,6 @@
 
 #include "sym_loader_internal.h"
 
-/* 開いたモジュールを 1 回閉じます。ハンドルが NULL のときは何もしません。 */
-static void close_module_handle(CPLAT_MODULE_HANDLE handle)
-{
-    if (handle == NULL)
-    {
-        return;
-    }
-
-#if defined(PLATFORM_LINUX)
-    dlclose(handle);
-#elif defined(PLATFORM_WINDOWS)
-    FreeLibrary(handle);
-#endif /* PLATFORM_ */
-}
-
 static void free_name_pairs(cplat_sym_loader_name_pair *list, size_t count)
 {
     size_t index;
@@ -79,8 +64,6 @@ static void free_usable_items(cplat_sym_loader_usable *list, size_t count)
 
     for (index = 0; index < count; index++)
     {
-        close_module_handle(list[index].handle);
-        list[index].handle = NULL;
         cplat_free(list[index].lib_name);
         cplat_free(list[index].func_name);
     }
@@ -105,24 +88,62 @@ static void free_entry_impl(cplat_sym_loader_entry_impl *impl)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-void cplat_sym_loader_dispose(cplat_sym_loader_entry *const *fobj_array, const size_t fobj_length)
+int cplat_sym_loader_dispose(cplat_sym_loader_entry *const *fobj_array, const size_t fobj_length)
 {
     size_t fobj_index;
+    int failed = 0;
 
-    /*
-     * DllMain / destructor コンテキストから呼ばれるため、
-     * ローダー ロック保持中にミューテックスを取得すると
-     * デッドロックを引き起こす恐れがある。
-     * このコンテキストではシングルスレッド動作が保証されるため、
-     * ロックなしで解放する。ロック自体は破棄しない。
-     */
+    if ((fobj_length > 0u) && (fobj_array == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    for (fobj_index = 0; fobj_index < fobj_length; fobj_index++)
+    {
+        if (fobj_array[fobj_index] == NULL)
+        {
+            return CPLAT_ERR_INVALID_ARGUMENT;
+        }
+    }
+
     for (fobj_index = 0; fobj_index < fobj_length; fobj_index++)
     {
         cplat_sym_loader_entry *cache = fobj_array[fobj_index];
+        size_t previous;
+
+        for (previous = 0; previous < fobj_index; previous++)
+        {
+            if (fobj_array[previous] == cache)
+            {
+                break;
+            }
+        }
+        if (previous != fobj_index)
+        {
+            continue;
+        }
+
+        if ((cache->impl != NULL) &&
+            (cplat_sym_loader_close_usable(cache->impl->usable, cache->impl->usable_count, 1) != 0))
+        {
+            cache->impl->release_pending = 1;
+            cplat_atomic_store_i32(&cache->resolved, 0, CPLAT_MEMORY_ORDER_RELEASE);
+            cplat_atomic_store_i32(&cache->failed, 1, CPLAT_MEMORY_ORDER_RELEASE);
+            failed = 1;
+            continue;
+        }
 
         free_entry_impl(cache->impl);
         cache->impl = NULL;
+        if (cache->lock != NULL)
+        {
+            cplat_local_lock_dispose(cache->lock);
+            cache->lock = NULL;
+        }
+        cplat_atomic_store_i32(&cache->lock_state, 0, CPLAT_MEMORY_ORDER_RELAXED);
         cplat_atomic_store_i32(&cache->resolved, 0, CPLAT_MEMORY_ORDER_RELAXED);
         cplat_atomic_store_i32(&cache->failed, 0, CPLAT_MEMORY_ORDER_RELAXED);
     }
+
+    return (failed != 0) ? CPLAT_ERR_UNKNOWN : CPLAT_OK;
 }

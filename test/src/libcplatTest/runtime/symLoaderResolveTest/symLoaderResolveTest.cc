@@ -10,6 +10,10 @@
 #include "sym_loader_internal.h"
 #include "sym_loader_resolve.inject.h"
 
+#if defined(PLATFORM_LINUX)
+    #include <mock_dlfcn.h>
+#endif /* PLATFORM_LINUX */
+
 using testing::_;
 using testing::DoDefault;
 using testing::Invoke;
@@ -18,6 +22,51 @@ using testing::Return;
 
 namespace
 {
+// [サブ手順 名前=symLoaderResolveTest.count]
+size_t test_sym_loader_count(cplat_sym_loader_entry *entry, int expected = CPLAT_OK)
+{
+    size_t value = 0u;
+    EXPECT_EQ(expected, cplat_sym_loader_count(entry, &value)); // [確認_正常系] - 件数取得の結果コードが expected と一致すること。
+    return value;
+}
+// [サブ手順終了]
+
+// [サブ手順 名前=symLoaderResolveTest.reject_count]
+size_t test_sym_loader_reject_count(cplat_sym_loader_entry *entry)
+{
+    size_t value = 0u;
+    EXPECT_EQ(CPLAT_OK, cplat_sym_loader_reject_count(entry, &value)); // [確認_正常系] - 診断件数の取得に成功すること。
+    return value;
+}
+// [サブ手順終了]
+
+// [サブ手順 名前=symLoaderResolveTest.get]
+void *test_sym_loader_get(cplat_sym_loader_entry *entry, size_t index, int expected = CPLAT_OK)
+{
+    void *value = nullptr;
+    EXPECT_EQ(expected, cplat_sym_loader_get(entry, index, &value)); // [確認_正常系] - アドレス取得の結果コードが expected と一致すること。
+    return value;
+}
+// [サブ手順終了]
+
+// [サブ手順 名前=symLoaderResolveTest.is_default]
+int test_sym_loader_is_default(cplat_sym_loader_entry *entry)
+{
+    int value = 0;
+    EXPECT_EQ(CPLAT_OK, cplat_sym_loader_is_default(entry, &value)); // [確認_正常系] - 明示的既定値の取得に成功すること。
+    return value;
+}
+// [サブ手順終了]
+
+// [サブ手順 名前=symLoaderResolveTest.is_failed]
+int test_sym_loader_is_failed(cplat_sym_loader_entry *entry)
+{
+    int value = 0;
+    EXPECT_EQ(CPLAT_OK, cplat_sym_loader_is_failed(entry, &value)); // [確認_正常系] - 失敗状態の取得に成功すること。
+    return value;
+}
+// [サブ手順終了]
+
 void complete_entry_lock_initialization(cplat_sym_loader_entry *entry)
 {
     cplat_atomic_store_i32(&entry->lock_state, 2, CPLAT_MEMORY_ORDER_RELAXED);
@@ -71,6 +120,82 @@ class symLoaderResolveTest : public Test
     // [サブ手順終了]
 };
 
+// 不正な入力と範囲外添字を拒否して出力を維持することの確認
+TEST_F(symLoaderResolveTest, rejects_invalid_arguments_without_changing_outputs)
+{
+    size_t count = 42u;
+    int value = 42;
+    int reason = 42;
+    void *address = reinterpret_cast<void *>(1);
+    const char *lib_name = "kept";
+    const char *func_name = "kept";
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_sym_loader_count(nullptr, &count)); // [確認_異常系] - NULL エントリを拒否する。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_sym_loader_count(&entry_, nullptr)); // [確認_異常系] - NULL 件数出力を拒否する。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_sym_loader_get(nullptr, 0u, &address)); // [確認_異常系] - NULL エントリを拒否する。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_sym_loader_get(&entry_, 0u, nullptr)); // [確認_異常系] - NULL アドレス出力を拒否する。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_sym_loader_reject_count(nullptr, &count)); // [確認_異常系] - NULL エントリを拒否する。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_sym_loader_reject_count(&entry_, nullptr)); // [確認_異常系] - NULL 件数出力を拒否する。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_sym_loader_is_default(nullptr, &value)); // [確認_異常系] - NULL エントリを拒否する。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_sym_loader_is_default(&entry_, nullptr)); // [確認_異常系] - NULL 状態出力を拒否する。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_sym_loader_is_failed(nullptr, &value)); // [確認_異常系] - NULL エントリを拒否する。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_sym_loader_is_failed(&entry_, nullptr)); // [確認_異常系] - NULL 状態出力を拒否する。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
+              cplat_sym_loader_reject_get(nullptr, 0u, &lib_name, &func_name, &reason)); // [確認_異常系] - NULL エントリを拒否する。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
+              cplat_sym_loader_reject_get(&entry_, 0u, nullptr, &func_name, &reason)); // [確認_異常系] - NULL ライブラリ名出力を拒否する。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
+              cplat_sym_loader_reject_get(&entry_, 0u, &lib_name, nullptr, &reason)); // [確認_異常系] - NULL 関数名出力を拒否する。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
+              cplat_sym_loader_reject_get(&entry_, 0u, &lib_name, &func_name, nullptr)); // [確認_異常系] - NULL 診断理由出力を拒否する。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_sym_loader_get(&entry_, 0u, &address)); // [確認_異常系] - 範囲外を拒否する。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
+              cplat_sym_loader_reject_get(&entry_, 0u, &lib_name, &func_name, &reason)); // [確認_異常系] - 診断の範囲外を拒否する。
+    EXPECT_EQ(42u, count); // [確認_異常系] - 件数を変更しない。
+    EXPECT_EQ(42, value); // [確認_異常系] - 状態値を変更しない。
+    EXPECT_EQ(42, reason); // [確認_異常系] - 診断理由を変更しない。
+    EXPECT_EQ(reinterpret_cast<void *>(1), address); // [確認_異常系] - アドレスを変更しない。
+    EXPECT_STREQ("kept", lib_name); // [確認_異常系] - ライブラリ名を変更しない。
+    EXPECT_STREQ("kept", func_name); // [確認_異常系] - 関数名を変更しない。
+}
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
+
+// 解放待ちの間は取得を拒否し、失敗状態を維持することの確認
+TEST_F(symLoaderResolveTest, refuses_access_while_release_is_pending)
+{
+    // Arrange
+    // [サブ手順参照 名前=symLoaderResolveTest.set_names]
+    set_names("default", "default");
+    ASSERT_NE(nullptr, entry_.impl);
+    entry_.impl->release_pending = 1;
+    cplat_atomic_store_i32(&entry_.failed, 1, CPLAT_MEMORY_ORDER_RELAXED);
+    size_t count = 42u;
+    int value = 42;
+    int reason = 42;
+    void *address = reinterpret_cast<void *>(1);
+    const char *lib_name = "kept";
+    const char *func_name = "kept";
+    cplat_sym_loader_entry *entries[] = {&entry_};
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, cplat_sym_loader_count(&entry_, &count)); // [確認_異常系] - 件数の取得を拒否する。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, cplat_sym_loader_get(&entry_, 0u, &address)); // [確認_異常系] - アドレスの取得を拒否する。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, cplat_sym_loader_reject_count(&entry_, &count)); // [確認_異常系] - 診断件数の取得を拒否する。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, cplat_sym_loader_reject_get(&entry_, 0u, &lib_name, &func_name, &reason)); // [確認_異常系] - 診断の取得を拒否する。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, cplat_sym_loader_is_default(&entry_, &value)); // [確認_異常系] - 既定値の取得を拒否する。
+    EXPECT_EQ(CPLAT_ERR_BUSY, cplat_sym_loader_init(entries, 1u, nullptr)); // [確認_異常系] - 設定の再適用を拒否する。
+    EXPECT_EQ(42u, count); // [確認_異常系] - 件数を変更しない。
+    EXPECT_EQ(reinterpret_cast<void *>(1), address); // [確認_異常系] - アドレスを変更しない。
+    EXPECT_EQ(42, value); // [確認_異常系] - 状態値を変更しない。
+    EXPECT_EQ(42, reason); // [確認_異常系] - 診断理由を変更しない。
+    EXPECT_STREQ("kept", lib_name); // [確認_異常系] - ライブラリ名を変更しない。
+    EXPECT_STREQ("kept", func_name); // [確認_異常系] - 関数名を変更しない。
+    EXPECT_EQ(CPLAT_OK, cplat_sym_loader_is_failed(&entry_, &value)); // [確認_正常系] - 失敗状態を取得する。
+    EXPECT_EQ(1, value); // [確認_正常系] - 失敗状態は 1 であること。
+}
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
+
 // 実在するライブラリとシンボルが解決されることの確認
 TEST_F(symLoaderResolveTest, resolves_existing_symbol)
 {
@@ -82,19 +207,23 @@ TEST_F(symLoaderResolveTest, resolves_existing_symbol)
     // Pre-Assert
 
     // Act
-    size_t count = cplat_sym_loader_count(&entry_); // [手順] - cplat_sym_loader_count() を呼び出す。
-    void *func_ptr = cplat_sym_loader_get(&entry_, 0u); // [手順] - 添字 0 を指定して cplat_sym_loader_get() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.count]
+    size_t count = test_sym_loader_count(&entry_); // [手順] - test_sym_loader_count() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.get]
+    void *func_ptr = test_sym_loader_get(&entry_, 0u); // [手順] - 添字 0 を指定して test_sym_loader_get() を呼び出す。
 
     // Assert
-    EXPECT_EQ(1u, count); // [確認_正常系] - cplat_sym_loader_count() の戻り値が 1u であること。
-    EXPECT_NE(nullptr, func_ptr); // [確認_正常系] - cplat_sym_loader_get() の戻り値が nullptr 以外であること。
+    EXPECT_EQ(1u, count); // [確認_正常系] - test_sym_loader_count() の戻り値が 1u であること。
+    EXPECT_NE(nullptr, func_ptr); // [確認_正常系] - test_sym_loader_get() の戻り値が nullptr 以外であること。
     EXPECT_EQ(
         1,
         cplat_atomic_load_i32(
             &entry_.resolved,
             CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 1 であること。(解決済みになることの確認)
-    EXPECT_EQ(0, cplat_sym_loader_is_default(&entry_)); // [確認_正常系] - cplat_sym_loader_is_default() の戻り値が 0 であること。
-    EXPECT_EQ(0, cplat_sym_loader_is_failed(&entry_)); // [確認_正常系] - cplat_sym_loader_is_failed() の戻り値が 0 であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.is_default]
+    EXPECT_EQ(0, test_sym_loader_is_default(&entry_)); // [確認_正常系] - test_sym_loader_is_default() の戻り値が 0 であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.is_failed]
+    EXPECT_EQ(0, test_sym_loader_is_failed(&entry_)); // [確認_正常系] - test_sym_loader_is_failed() の戻り値が 0 であること。
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -104,18 +233,20 @@ TEST_F(symLoaderResolveTest, second_call_returns_cached_result)
     // Arrange
     // [サブ手順参照 名前=symLoaderResolveTest.set_names]
     set_names("libcplat", "cplat_path_basename");
-    void *first = cplat_sym_loader_get(&entry_, 0u); // [状態] - 1 回目の解決を済ませておく。
+    // [サブ手順参照 名前=symLoaderResolveTest.get]
+    void *first = test_sym_loader_get(&entry_, 0u); // [状態] - 1 回目の解決を済ませておく。
 
     // Pre-Assert
 
     // Act
-    void *second = cplat_sym_loader_get(
-        &entry_, 0u); // [手順] - 2 回目として同じエントリの添字 0 を指定して cplat_sym_loader_get() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.get]
+    void *second = test_sym_loader_get(
+        &entry_, 0u); // [手順] - 2 回目として同じエントリの添字 0 を指定して test_sym_loader_get() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         first,
-        second); // [確認_正常系] - 2 回目の cplat_sym_loader_get() の戻り値が 1 回目の cplat_sym_loader_get() の戻り値と一致すること。
+        second); // [確認_正常系] - 2 回目の test_sym_loader_get() の戻り値が 1 回目の test_sym_loader_get() の戻り値と一致すること。
     EXPECT_EQ(
         1,
         cplat_atomic_load_i32(
@@ -134,14 +265,18 @@ TEST_F(symLoaderResolveTest, marks_explicit_default_when_both_names_are_default)
     // Pre-Assert
 
     // Act
-    size_t count = cplat_sym_loader_count(&entry_); // [手順] - cplat_sym_loader_count() を呼び出す。
-    void *func_ptr = cplat_sym_loader_get(&entry_, 0u); // [手順] - 添字 0 を指定して cplat_sym_loader_get() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.count]
+    size_t count = test_sym_loader_count(&entry_); // [手順] - test_sym_loader_count() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.get]
+    void *func_ptr = test_sym_loader_get(&entry_, 0u, CPLAT_ERR_INVALID_ARGUMENT); // [手順] - 添字 0 を指定する。
 
     // Assert
-    EXPECT_EQ(0u, count); // [確認_正常系] - cplat_sym_loader_count() の戻り値が 0u であること。
-    EXPECT_EQ(nullptr, func_ptr); // [確認_正常系] - cplat_sym_loader_get() の戻り値が nullptr であること。
-    EXPECT_EQ(1, cplat_sym_loader_is_default(&entry_)); // [確認_正常系] - cplat_sym_loader_is_default() の戻り値が 1 であること。
-    EXPECT_EQ(0u, cplat_sym_loader_reject_count(&entry_)); // [確認_正常系] - cplat_sym_loader_reject_count() の戻り値が 0u であること。
+    EXPECT_EQ(0u, count); // [確認_正常系] - test_sym_loader_count() の戻り値が 0u であること。
+    EXPECT_EQ(nullptr, func_ptr); // [確認_正常系] - test_sym_loader_get() の戻り値が nullptr であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.is_default]
+    EXPECT_EQ(1, test_sym_loader_is_default(&entry_)); // [確認_正常系] - test_sym_loader_is_default() の戻り値が 1 であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.reject_count]
+    EXPECT_EQ(0u, test_sym_loader_reject_count(&entry_)); // [確認_正常系] - test_sym_loader_reject_count() の戻り値が 0u であること。
     EXPECT_EQ(
         1,
         cplat_atomic_load_i32(
@@ -164,12 +299,13 @@ TEST_F(symLoaderResolveTest, marks_undefined_when_lib_name_is_empty)
     // Pre-Assert
 
     // Act
-    size_t count = cplat_sym_loader_count(&entry_); // [手順] - cplat_sym_loader_count() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.count]
+    size_t count = test_sym_loader_count(&entry_); // [手順] - test_sym_loader_count() を呼び出す。
     int reject_result = cplat_sym_loader_reject_get(&entry_, 0u, &lib_name, &func_name,
                                                     &reason); // [手順] - 添字 0 を指定して cplat_sym_loader_reject_get() を呼び出す。
 
     // Assert
-    EXPECT_EQ(0u, count); // [確認_異常系] - cplat_sym_loader_count() の戻り値が 0u であること。
+    EXPECT_EQ(0u, count); // [確認_異常系] - test_sym_loader_count() の戻り値が 0u であること。
     EXPECT_EQ(CPLAT_OK, reject_result); // [確認_異常系] - cplat_sym_loader_reject_get() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_SYM_LOADER_REJECT_EMPTY_NAME, reason); // [確認_異常系] - reason が CPLAT_SYM_LOADER_REJECT_EMPTY_NAME であること。
     EXPECT_STREQ("", lib_name); // [確認_異常系] - lib_name が "" であること。
@@ -178,7 +314,8 @@ TEST_F(symLoaderResolveTest, marks_undefined_when_lib_name_is_empty)
         cplat_atomic_load_i32(
             &entry_.resolved,
             CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 1 であること。(解決済みになることの確認)
-    EXPECT_EQ(0, cplat_sym_loader_is_default(&entry_)); // [確認_異常系] - cplat_sym_loader_is_default() の戻り値が 0 であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.is_default]
+    EXPECT_EQ(0, test_sym_loader_is_default(&entry_)); // [確認_異常系] - test_sym_loader_is_default() の戻り値が 0 であること。
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -203,7 +340,8 @@ TEST_F(symLoaderResolveTest, marks_undefined_when_func_name_is_empty)
     EXPECT_EQ(CPLAT_OK, reject_result); // [確認_異常系] - cplat_sym_loader_reject_get() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_SYM_LOADER_REJECT_EMPTY_NAME, reason); // [確認_異常系] - reason が CPLAT_SYM_LOADER_REJECT_EMPTY_NAME であること。
     EXPECT_STREQ("", func_name); // [確認_異常系] - func_name が "" であること。
-    EXPECT_EQ(0u, cplat_sym_loader_count(&entry_)); // [確認_異常系] - cplat_sym_loader_count() の戻り値が 0u であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.count]
+    EXPECT_EQ(0u, test_sym_loader_count(&entry_)); // [確認_異常系] - test_sym_loader_count() の戻り値が 0u であること。
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -230,7 +368,8 @@ TEST_F(symLoaderResolveTest, rejects_open_when_configured_name_is_255_bytes)
     EXPECT_EQ(CPLAT_OK, reject_result); // [確認_異常系] - cplat_sym_loader_reject_get() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_SYM_LOADER_REJECT_OPEN_FAILED, reason); // [確認_異常系] - reason が CPLAT_SYM_LOADER_REJECT_OPEN_FAILED であること。
     EXPECT_STREQ(long_name.c_str(), lib_name); // [確認_異常系] - lib_name が設定した 255 バイトの名前と一致すること。
-    EXPECT_EQ(0u, cplat_sym_loader_count(&entry_)); // [確認_異常系] - cplat_sym_loader_count() の戻り値が 0u であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.count]
+    EXPECT_EQ(0u, test_sym_loader_count(&entry_)); // [確認_異常系] - test_sym_loader_count() の戻り値が 0u であること。
     EXPECT_EQ(
         1,
         cplat_atomic_load_i32(
@@ -261,7 +400,8 @@ TEST_F(symLoaderResolveTest, rejects_name_longer_than_255_bytes)
     EXPECT_EQ(CPLAT_OK, reject_result); // [確認_異常系] - cplat_sym_loader_reject_get() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_SYM_LOADER_REJECT_NAME_TOO_LONG, reason); // [確認_異常系] - reason が CPLAT_SYM_LOADER_REJECT_NAME_TOO_LONG であること。
     EXPECT_STREQ(long_name.c_str(), lib_name); // [確認_異常系] - lib_name が切り詰められていない 256 バイトの名前と一致すること。
-    EXPECT_EQ(0u, cplat_sym_loader_count(&entry_)); // [確認_異常系] - cplat_sym_loader_count() の戻り値が 0u であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.count]
+    EXPECT_EQ(0u, test_sym_loader_count(&entry_)); // [確認_異常系] - test_sym_loader_count() の戻り値が 0u であること。
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -286,8 +426,10 @@ TEST_F(symLoaderResolveTest, marks_open_error_when_library_is_missing)
     // Assert
     EXPECT_EQ(CPLAT_OK, reject_result); // [確認_異常系] - cplat_sym_loader_reject_get() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_SYM_LOADER_REJECT_OPEN_FAILED, reason); // [確認_異常系] - reason が CPLAT_SYM_LOADER_REJECT_OPEN_FAILED であること。
-    EXPECT_EQ(0u, cplat_sym_loader_count(&entry_)); // [確認_異常系] - cplat_sym_loader_count() の戻り値が 0u であること。
-    EXPECT_EQ(nullptr, cplat_sym_loader_get(&entry_, 0u)); // [確認_異常系] - cplat_sym_loader_get() の戻り値が nullptr であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.count]
+    EXPECT_EQ(0u, test_sym_loader_count(&entry_)); // [確認_異常系] - test_sym_loader_count() の戻り値が 0u であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.get]
+    EXPECT_EQ(nullptr, test_sym_loader_get(&entry_, 0u, CPLAT_ERR_INVALID_ARGUMENT)); // [確認_異常系] - 範囲外を拒否する。
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -312,7 +454,8 @@ TEST_F(symLoaderResolveTest, releases_handle_when_symbol_is_missing)
     // Assert
     EXPECT_EQ(CPLAT_OK, reject_result); // [確認_異常系] - cplat_sym_loader_reject_get() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_SYM_LOADER_REJECT_SYMBOL_NOT_FOUND, reason); // [確認_異常系] - reason が CPLAT_SYM_LOADER_REJECT_SYMBOL_NOT_FOUND であること。
-    EXPECT_EQ(0u, cplat_sym_loader_count(&entry_)); // [確認_異常系] - cplat_sym_loader_count() の戻り値が 0u であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.count]
+    EXPECT_EQ(0u, test_sym_loader_count(&entry_)); // [確認_異常系] - test_sym_loader_count() の戻り値が 0u であること。
     EXPECT_EQ(
         1,
         cplat_atomic_load_i32(
@@ -337,18 +480,22 @@ TEST_F(symLoaderResolveTest, rejects_partial_default_and_keeps_usable_target)
     // Pre-Assert
 
     // Act
-    size_t count = cplat_sym_loader_count(&entry_); // [手順] - cplat_sym_loader_count() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.count]
+    size_t count = test_sym_loader_count(&entry_); // [手順] - test_sym_loader_count() を呼び出す。
     int reject_result = cplat_sym_loader_reject_get(&entry_, 0u, &lib_name, &func_name,
                                                     &reason); // [手順] - 添字 0 を指定して cplat_sym_loader_reject_get() を呼び出す。
-    void *func_ptr = cplat_sym_loader_get(&entry_, 0u); // [手順] - 添字 0 を指定して cplat_sym_loader_get() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.get]
+    void *func_ptr = test_sym_loader_get(&entry_, 0u); // [手順] - 添字 0 を指定して test_sym_loader_get() を呼び出す。
 
     // Assert
-    EXPECT_EQ(1u, count); // [確認_正常系] - cplat_sym_loader_count() の戻り値が 1u であること。
-    EXPECT_NE(nullptr, func_ptr); // [確認_正常系] - cplat_sym_loader_get() の戻り値が nullptr 以外であること。
-    EXPECT_EQ(0, cplat_sym_loader_is_default(&entry_)); // [確認_正常系] - cplat_sym_loader_is_default() の戻り値が 0 であること。
+    EXPECT_EQ(1u, count); // [確認_正常系] - test_sym_loader_count() の戻り値が 1u であること。
+    EXPECT_NE(nullptr, func_ptr); // [確認_正常系] - test_sym_loader_get() の戻り値が nullptr 以外であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.is_default]
+    EXPECT_EQ(0, test_sym_loader_is_default(&entry_)); // [確認_正常系] - test_sym_loader_is_default() の戻り値が 0 であること。
     EXPECT_EQ(CPLAT_OK, reject_result); // [確認_異常系] - cplat_sym_loader_reject_get() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_SYM_LOADER_REJECT_PARTIAL_DEFAULT, reason); // [確認_異常系] - reason が CPLAT_SYM_LOADER_REJECT_PARTIAL_DEFAULT であること。
-    EXPECT_EQ(1u, cplat_sym_loader_reject_count(&entry_)); // [確認_異常系] - cplat_sym_loader_reject_count() の戻り値が 1u であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.reject_count]
+    EXPECT_EQ(1u, test_sym_loader_reject_count(&entry_)); // [確認_異常系] - test_sym_loader_reject_count() の戻り値が 1u であること。
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -371,15 +518,17 @@ TEST_F(symLoaderResolveTest, rejects_mixed_default_for_every_adopted_target)
     // Pre-Assert
 
     // Act
-    size_t count = cplat_sym_loader_count(&entry_); // [手順] - cplat_sym_loader_count() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.count]
+    size_t count = test_sym_loader_count(&entry_); // [手順] - test_sym_loader_count() を呼び出す。
     int first_result = cplat_sym_loader_reject_get(&entry_, 0u, &first_lib, &first_func,
                                                    &first_reason); // [手順] - 添字 0 を指定して cplat_sym_loader_reject_get() を呼び出す。
     int second_result = cplat_sym_loader_reject_get(&entry_, 1u, &second_lib, &second_func,
                                                     &second_reason); // [手順] - 添字 1 を指定して cplat_sym_loader_reject_get() を呼び出す。
 
     // Assert
-    EXPECT_EQ(0u, count); // [確認_異常系] - cplat_sym_loader_count() の戻り値が 0u であること。
-    EXPECT_EQ(0, cplat_sym_loader_is_default(&entry_)); // [確認_異常系] - cplat_sym_loader_is_default() の戻り値が 0 であること。
+    EXPECT_EQ(0u, count); // [確認_異常系] - test_sym_loader_count() の戻り値が 0u であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.is_default]
+    EXPECT_EQ(0, test_sym_loader_is_default(&entry_)); // [確認_異常系] - test_sym_loader_is_default() の戻り値が 0 であること。
     EXPECT_EQ(CPLAT_OK, first_result); // [確認_異常系] - 添字 0 の cplat_sym_loader_reject_get() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK, second_result); // [確認_異常系] - 添字 1 の cplat_sym_loader_reject_get() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_SYM_LOADER_REJECT_MIXED_DEFAULT, first_reason); // [確認_異常系] - 1 件目の reason が CPLAT_SYM_LOADER_REJECT_MIXED_DEFAULT であること。
@@ -423,7 +572,8 @@ TEST_F(symLoaderResolveTest, places_duplicate_key_rejects_before_adopted_rejects
                                                     &second_reason); // [手順] - 添字 1 を指定して cplat_sym_loader_reject_get() を呼び出す。
 
     // Assert
-    EXPECT_EQ(2u, cplat_sym_loader_reject_count(&entry_)); // [確認_異常系] - cplat_sym_loader_reject_count() の戻り値が 2u であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.reject_count]
+    EXPECT_EQ(2u, test_sym_loader_reject_count(&entry_)); // [確認_異常系] - test_sym_loader_reject_count() の戻り値が 2u であること。
     EXPECT_EQ(CPLAT_OK, first_result); // [確認_異常系] - 添字 0 の cplat_sym_loader_reject_get() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK, second_result); // [確認_異常系] - 添字 1 の cplat_sym_loader_reject_get() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_SYM_LOADER_REJECT_DUPLICATE_KEY, first_reason); // [確認_異常系] - 1 件目の reason が CPLAT_SYM_LOADER_REJECT_DUPLICATE_KEY であること。
@@ -478,12 +628,14 @@ TEST_F(symLoaderResolveTest, retries_after_resolve_memory_failure)
     // [Pre-Assert手順] - cplat_strdup() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
-    size_t failed_count = cplat_sym_loader_count(&entry_); // [手順] - 複製が失敗する状態で cplat_sym_loader_count() を呼び出す。
-    int failed = cplat_sym_loader_is_failed(&entry_); // [手順] - cplat_sym_loader_is_failed() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.count]
+    size_t failed_count = test_sym_loader_count(&entry_, CPLAT_ERR_UNKNOWN); // [手順] - 複製失敗を通知する。
+    // [サブ手順参照 名前=symLoaderResolveTest.is_failed]
+    int failed = test_sym_loader_is_failed(&entry_); // [手順] - test_sym_loader_is_failed() を呼び出す。
 
     // Assert
-    EXPECT_EQ(0u, failed_count); // [確認_異常系] - 失敗中の cplat_sym_loader_count() の戻り値が 0u であること。
-    EXPECT_EQ(1, failed); // [確認_異常系] - cplat_sym_loader_is_failed() の戻り値が 1 であること。
+    EXPECT_EQ(0u, failed_count); // [確認_異常系] - 失敗中の test_sym_loader_count() の戻り値が 0u であること。
+    EXPECT_EQ(1, failed); // [確認_異常系] - test_sym_loader_is_failed() の戻り値が 1 であること。
     EXPECT_EQ(
         1,
         cplat_atomic_load_i32(
@@ -496,19 +648,94 @@ TEST_F(symLoaderResolveTest, retries_after_resolve_memory_failure)
             CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 0 であること。
 
     // Act_2
-    int is_default = cplat_sym_loader_is_default(&entry_); // [手順] - 再試行として cplat_sym_loader_is_default() を呼び出す。
-    size_t retried_count = cplat_sym_loader_count(&entry_); // [手順] - 再試行のあと cplat_sym_loader_count() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.is_default]
+    int is_default = test_sym_loader_is_default(&entry_); // [手順] - 再試行として test_sym_loader_is_default() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.count]
+    size_t retried_count = test_sym_loader_count(&entry_); // [手順] - 再試行のあと test_sym_loader_count() を呼び出す。
 
     // Assert_2
-    EXPECT_EQ(0, is_default); // [確認_正常系] - 再試行後の cplat_sym_loader_is_default() の戻り値が 0 であること。
-    EXPECT_EQ(0u, cplat_sym_loader_reject_count(&entry_)); // [確認_正常系] - 再試行後の cplat_sym_loader_reject_count() の戻り値が 0u であること。
-    EXPECT_EQ(1u, retried_count); // [確認_正常系] - 再試行後の cplat_sym_loader_count() の戻り値が 1u であること。
-    EXPECT_NE(nullptr, cplat_sym_loader_get(&entry_, 0u)); // [確認_正常系] - 再試行後の cplat_sym_loader_get() の戻り値が nullptr 以外であること。
-    EXPECT_EQ(0, cplat_sym_loader_is_failed(&entry_)); // [確認_正常系] - 再試行後の cplat_sym_loader_is_failed() の戻り値が 0 であること。
+    EXPECT_EQ(0, is_default); // [確認_正常系] - 再試行後の test_sym_loader_is_default() の戻り値が 0 であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.reject_count]
+    EXPECT_EQ(0u, test_sym_loader_reject_count(&entry_)); // [確認_正常系] - 再試行後の test_sym_loader_reject_count() の戻り値が 0u であること。
+    EXPECT_EQ(1u, retried_count); // [確認_正常系] - 再試行後の test_sym_loader_count() の戻り値が 1u であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.get]
+    EXPECT_NE(nullptr, test_sym_loader_get(&entry_, 0u)); // [確認_正常系] - 再試行後の test_sym_loader_get() の戻り値が nullptr 以外であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.is_failed]
+    EXPECT_EQ(0, test_sym_loader_is_failed(&entry_)); // [確認_正常系] - 再試行後の test_sym_loader_is_failed() の戻り値が 0 であること。
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 #if defined(PLATFORM_LINUX)
+
+// 確保失敗後の解放にも失敗した場合、ハンドルを保持することの確認
+TEST_F(symLoaderResolveTest, retains_handle_when_allocation_and_close_fail)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    NiceMock<Mock_dlfcn> mock_dlfcn;
+    void *handle = reinterpret_cast<void *>(static_cast<uintptr_t>(0x51));
+    void *symbol = reinterpret_cast<void *>(static_cast<uintptr_t>(0x52));
+    size_t count = 42u;
+
+    // [サブ手順参照 名前=symLoaderResolveTest.set_names]
+    set_names("test_module", "test_symbol");
+    // Pre-Assert
+    EXPECT_CALL(mock_dlfcn, dlopen(_, _, _, _, _)).WillOnce(Return(handle));
+    // [Pre-Assert確認_正常系] - モジュールを 1 回開こうとすること。
+    // [Pre-Assert手順] - テスト用ハンドルを返す。
+    EXPECT_CALL(mock_dlfcn, dlsym(_, _, _, handle, _)).WillOnce(Return(symbol));
+    // [Pre-Assert確認_正常系] - ハンドルからシンボルを 1 回取得すること。
+    // [Pre-Assert手順] - テスト用シンボルを返す。
+    EXPECT_CALL(mock_cplat, cplat_strdup(_)).WillOnce(Return(nullptr));
+    // [Pre-Assert確認_正常系] - 名前を 1 回複製しようとすること。
+    // [Pre-Assert手順] - 名前の確保を失敗させる。
+    EXPECT_CALL(mock_dlfcn, dlclose(_, _, _, handle)).WillOnce(Return(-1)).WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - ハンドルの解放を 2 回試みること。
+    // [Pre-Assert手順] - 最初の解放は失敗し、再試行は成功する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, cplat_sym_loader_count(&entry_, &count)); // [確認_異常系] - 解決失敗を通知する。
+    EXPECT_EQ(42u, count); // [確認_異常系] - 件数を変更しない。
+    ASSERT_NE(nullptr, entry_.impl); // [確認_異常系] - 管理構造体が残ること。
+    ASSERT_NE(nullptr, entry_.impl->usable); // [確認_異常系] - ハンドルの管理領域が残ること。
+    EXPECT_EQ(handle, entry_.impl->usable[0].handle); // [確認_異常系] - 開いたハンドルを保持する。
+    EXPECT_EQ(1, entry_.impl->release_pending); // [確認_異常系] - 解放待ちになる。
+    cplat_sym_loader_entry *entries[] = {&entry_};
+    EXPECT_EQ(CPLAT_OK, cplat_sym_loader_dispose(entries, 1u)); // [確認_正常系] - 解放を再試行できる。
+    EXPECT_EQ(nullptr, entry_.impl); // [確認_正常系] - 再試行後に管理構造体が解放される。
+}
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
+
+// シンボル不在時の解放失敗を保持し、後続の解放で再試行することの確認
+TEST_F(symLoaderResolveTest, retains_handle_when_missing_symbol_close_fails)
+{
+    NiceMock<Mock_dlfcn> mock_dlfcn;
+    void *handle = reinterpret_cast<void *>(static_cast<uintptr_t>(0x51));
+    size_t count = 42u;
+    cplat_sym_loader_entry *entries[] = {&entry_};
+
+    // [サブ手順参照 名前=symLoaderResolveTest.set_names]
+    set_names("test_module", "missing_symbol");
+    EXPECT_CALL(mock_dlfcn, dlopen(_, _, _, _, _)).WillOnce(Return(handle));
+    // [Pre-Assert確認_正常系] - モジュールを 1 回開こうとすること。
+    // [Pre-Assert手順] - テスト用ハンドルを返す。
+    EXPECT_CALL(mock_dlfcn, dlsym(_, _, _, handle, _)).WillOnce(Return(nullptr));
+    // [Pre-Assert確認_正常系] - シンボルを 1 回取得しようとすること。
+    // [Pre-Assert手順] - シンボルが存在しないことを返す。
+    EXPECT_CALL(mock_dlfcn, dlclose(_, _, _, handle)).WillOnce(Return(-1)).WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - ハンドルの解放を 2 回試みること。
+    // [Pre-Assert手順] - 最初の解放は失敗し、再試行は成功する。
+
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, cplat_sym_loader_count(&entry_, &count)); // [確認_異常系] - 解放失敗を通知すること。
+    EXPECT_EQ(42u, count); // [確認_異常系] - 件数を変更しないこと。
+    ASSERT_NE(nullptr, entry_.impl); // [確認_異常系] - 管理構造体が残ること。
+    ASSERT_NE(nullptr, entry_.impl->usable); // [確認_異常系] - ハンドルの保持領域が残ること。
+    EXPECT_EQ(handle, entry_.impl->usable[0].handle); // [確認_異常系] - ハンドルを保持すること。
+    EXPECT_EQ(1, entry_.impl->release_pending); // [確認_異常系] - 解放待ちになること。
+    EXPECT_EQ(CPLAT_OK, cplat_sym_loader_dispose(entries, 1u)); // [確認_正常系] - 後続の解放で再試行すること。
+    EXPECT_EQ(nullptr, entry_.impl); // [確認_正常系] - 再試行後に管理構造体を解放すること。
+}
+// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
 // ロックの生成に失敗したあと、次の取得で再試行して解決できることの確認
 TEST_F(symLoaderResolveTest, returns_null_when_lock_creation_fails)
@@ -527,11 +754,13 @@ TEST_F(symLoaderResolveTest, returns_null_when_lock_creation_fails)
     // [Pre-Assert手順] - cplat_local_lock_create() から 1 回目は CPLAT_ERR_UNKNOWN を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
-    size_t count = cplat_sym_loader_count(&entry_); // [手順] - cplat_sym_loader_count() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.count]
+    size_t count = test_sym_loader_count(&entry_, CPLAT_ERR_UNKNOWN); // [手順] - ロック生成失敗を通知する。
 
     // Assert
-    EXPECT_EQ(0u, count); // [確認_異常系] - cplat_sym_loader_count() の戻り値が 0u であること。
-    EXPECT_EQ(1, cplat_sym_loader_is_failed(&entry_)); // [確認_異常系] - cplat_sym_loader_is_failed() の戻り値が 1 であること。
+    EXPECT_EQ(0u, count); // [確認_異常系] - test_sym_loader_count() の戻り値が 0u であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.is_failed]
+    EXPECT_EQ(1, test_sym_loader_is_failed(&entry_)); // [確認_異常系] - test_sym_loader_is_failed() の戻り値が 1 であること。
     EXPECT_EQ(
         0,
         cplat_atomic_load_i32(
@@ -549,11 +778,13 @@ TEST_F(symLoaderResolveTest, returns_null_when_lock_creation_fails)
             CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - entry_.lock_state を読み込んだ cplat_atomic_load_i32() の戻り値が 0 であること。(ロック生成の失敗後に再試行できることの確認)
 
     // Act_2
-    size_t retried_count = cplat_sym_loader_count(&entry_); // [手順] - 再試行として cplat_sym_loader_count() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.count]
+    size_t retried_count = test_sym_loader_count(&entry_); // [手順] - 再試行として test_sym_loader_count() を呼び出す。
 
     // Assert_2
-    EXPECT_EQ(1u, retried_count); // [確認_正常系] - 再試行後の cplat_sym_loader_count() の戻り値が 1u であること。
-    EXPECT_EQ(0, cplat_sym_loader_is_failed(&entry_)); // [確認_正常系] - 再試行後の cplat_sym_loader_is_failed() の戻り値が 0 であること。
+    EXPECT_EQ(1u, retried_count); // [確認_正常系] - 再試行後の test_sym_loader_count() の戻り値が 1u であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.is_failed]
+    EXPECT_EQ(0, test_sym_loader_is_failed(&entry_)); // [確認_正常系] - 再試行後の test_sym_loader_is_failed() の戻り値が 0 であること。
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -573,22 +804,25 @@ TEST_F(symLoaderResolveTest, returns_null_when_lock_acquisition_fails)
     // [Pre-Assert手順] - cplat_local_lock_lock() から 1 回目は CPLAT_ERR_UNKNOWN を返し、以降は製品 (prod) の処理へ委譲する。
 
     // Act
-    size_t count = cplat_sym_loader_count(&entry_); // [手順] - cplat_sym_loader_count() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.count]
+    size_t count = test_sym_loader_count(&entry_, CPLAT_ERR_UNKNOWN); // [手順] - ロック取得失敗を通知する。
 
     // Assert
-    EXPECT_EQ(0u, count); // [確認_異常系] - cplat_sym_loader_count() の戻り値が 0u であること。
+    EXPECT_EQ(0u, count); // [確認_異常系] - test_sym_loader_count() の戻り値が 0u であること。
     EXPECT_EQ(
         0,
         cplat_atomic_load_i32(
             &entry_.resolved,
             CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 0 であること。
-    EXPECT_EQ(1, cplat_sym_loader_is_failed(&entry_)); // [確認_異常系] - cplat_sym_loader_is_failed() の戻り値が 1 であること。
+    // [サブ手順参照 名前=symLoaderResolveTest.is_failed]
+    EXPECT_EQ(1, test_sym_loader_is_failed(&entry_)); // [確認_異常系] - test_sym_loader_is_failed() の戻り値が 1 であること。
 
     // Act_2
-    size_t retried_count = cplat_sym_loader_count(&entry_); // [手順] - 再試行として cplat_sym_loader_count() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.count]
+    size_t retried_count = test_sym_loader_count(&entry_); // [手順] - 再試行として test_sym_loader_count() を呼び出す。
 
     // Assert_2
-    EXPECT_EQ(1u, retried_count); // [確認_正常系] - 再試行後の cplat_sym_loader_count() の戻り値が 1u であること。
+    EXPECT_EQ(1u, retried_count); // [確認_正常系] - 再試行後の test_sym_loader_count() の戻り値が 1u であること。
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
@@ -670,13 +904,14 @@ TEST_F(symLoaderResolveTest, returns_result_resolved_while_waiting_for_lock)
                  // [Pre-Assert手順] - cplat_local_lock_lock() から、解決済みの関数ポインターを公開して CPLAT_OK を返す。
 
     // Act
-    void *result = cplat_sym_loader_get(
-        &entry_, 0u); // [手順] - ロック取得中に解決済みとなるエントリを指定して cplat_sym_loader_get() を呼び出す。
+    // [サブ手順参照 名前=symLoaderResolveTest.get]
+    void *result = test_sym_loader_get(
+        &entry_, 0u); // [手順] - ロック取得中に解決済みとなるエントリを指定して test_sym_loader_get() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         reinterpret_cast<void *>(1),
-        result); // [確認_正常系] - cplat_sym_loader_get() の戻り値が reinterpret_cast<void *>(1) と一致すること。(別スレッドの解決結果を再利用することの確認)
+        result); // [確認_正常系] - test_sym_loader_get() の戻り値が reinterpret_cast<void *>(1) と一致すること。(別スレッドの解決結果を再利用することの確認)
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 

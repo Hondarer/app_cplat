@@ -8,6 +8,27 @@
 
 using testing::NiceMock;
 
+namespace
+{
+// [サブ手順 名前=symLoaderIsDefaultTest.is_default]
+int test_sym_loader_is_default(cplat_sym_loader_entry *entry, int expected = CPLAT_OK)
+{
+    int value = 0;
+    EXPECT_EQ(expected, cplat_sym_loader_is_default(entry, &value)); // [確認_正常系] - 結果コードが expected と一致すること。
+    return value;
+}
+// [サブ手順終了]
+
+// [サブ手順 名前=symLoaderIsDefaultTest.is_failed]
+int test_sym_loader_is_failed(cplat_sym_loader_entry *entry)
+{
+    int value = 0;
+    EXPECT_EQ(CPLAT_OK, cplat_sym_loader_is_failed(entry, &value)); // [確認_正常系] - 失敗状態の取得に成功すること。
+    return value;
+}
+// [サブ手順終了]
+} // namespace
+
 class symLoaderIsDefaultTest : public Test
 {
   protected:
@@ -55,18 +76,20 @@ TEST_F(symLoaderIsDefaultTest, resolves_and_reports_explicit_default)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_sym_loader_is_default(&entry_); // [手順] - cplat_sym_loader_is_default() を呼び出す。
+    // [サブ手順参照 名前=symLoaderIsDefaultTest.is_default]
+    int actual_ret = test_sym_loader_is_default(&entry_); // [手順] - test_sym_loader_is_default() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         1,
-        actual_ret); // [確認_正常系] - cplat_sym_loader_is_default() の戻り値が 1 であること。(明示的既定値と判定されることの確認)
+        actual_ret); // [確認_正常系] - test_sym_loader_is_default() の戻り値が 1 であること。(明示的既定値と判定されることの確認)
     EXPECT_EQ(
         1,
         cplat_atomic_load_i32(
             &entry_.resolved,
             CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 1 であること。(呼び出しの中で解決済みになることの確認)
-    EXPECT_EQ(0, cplat_sym_loader_is_failed(&entry_)); // [確認_正常系] - cplat_sym_loader_is_failed() の戻り値が 0 であること。
+    // [サブ手順参照 名前=symLoaderIsDefaultTest.is_failed]
+    EXPECT_EQ(0, test_sym_loader_is_failed(&entry_)); // [確認_正常系] - test_sym_loader_is_failed() の戻り値が 0 であること。
 }
 // [サブ手順参照 名前=symLoaderIsDefaultTest.TearDown]
 
@@ -83,12 +106,13 @@ TEST_F(symLoaderIsDefaultTest, reports_not_default_for_resolved_symbol)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_sym_loader_is_default(&entry_); // [手順] - cplat_sym_loader_is_default() を呼び出す。
+    // [サブ手順参照 名前=symLoaderIsDefaultTest.is_default]
+    int actual_ret = test_sym_loader_is_default(&entry_); // [手順] - test_sym_loader_is_default() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         0,
-        actual_ret); // [確認_正常系] - cplat_sym_loader_is_default() の戻り値が 0 であること。(明示的既定値でないと判定されることの確認)
+        actual_ret); // [確認_正常系] - test_sym_loader_is_default() の戻り値が 0 であること。(明示的既定値でないと判定されることの確認)
     EXPECT_EQ(
         1,
         cplat_atomic_load_i32(
@@ -108,14 +132,16 @@ TEST_F(symLoaderIsDefaultTest, reports_not_default_for_unresolved_entry)
     // Pre-Assert
 
     // Act
-    int actual_ret = cplat_sym_loader_is_default(&entry_); // [手順] - cplat_sym_loader_is_default() を呼び出す。
-    int failed = cplat_sym_loader_is_failed(&entry_); // [手順] - cplat_sym_loader_is_failed() を呼び出す。
+    // [サブ手順参照 名前=symLoaderIsDefaultTest.is_default]
+    int actual_ret = test_sym_loader_is_default(&entry_, CPLAT_ERR_UNKNOWN); // [手順] - 内部失敗を通知する。
+    // [サブ手順参照 名前=symLoaderIsDefaultTest.is_failed]
+    int failed = test_sym_loader_is_failed(&entry_); // [手順] - test_sym_loader_is_failed() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         0,
-        actual_ret); // [確認_異常系] - cplat_sym_loader_is_default() の戻り値が 0 であること。(明示的既定値でないと判定されることの確認)
-    EXPECT_EQ(1, failed); // [確認_異常系] - cplat_sym_loader_is_failed() の戻り値が 1 であること。
+        actual_ret); // [確認_異常系] - test_sym_loader_is_default() の戻り値が 0 であること。(明示的既定値でないと判定されることの確認)
+    EXPECT_EQ(1, failed); // [確認_異常系] - test_sym_loader_is_failed() の戻り値が 1 であること。
     EXPECT_EQ(
         0,
         cplat_atomic_load_i32(

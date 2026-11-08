@@ -12,8 +12,11 @@
  *  使用方法:
  *  1. cplat_sym_loader_entry を CPLAT_SYM_LOADER_ENTRY_INIT マクロで静的初期化します。
  *  2. cplat_sym_loader_init() で JSONC 設定ファイルを読み込みます (DllMain / constructor から呼び出します)。
- *  3. cplat_sym_loader_count() と cplat_sym_loader_get_as() で関数ポインターを取得して呼び出します。
- *  4. cplat_sym_loader_dispose() でリソースを解放します (DllMain / destructor から呼び出します)。
+ *  3. cplat_sym_loader_count() と cplat_sym_loader_get() の成否を確認して関数ポインターを使用します。
+ *  4. 通常の呼び出しコンテキストで cplat_sym_loader_dispose() を呼び出し、失敗時は再試行します。
+ *
+ *  Windows の DllMain 内ではモジュールのロードや解放を伴う取得、診断、情報表示、再初期化、解放を行いません。\n
+ *  init と dispose は同一エントリの取得・診断・情報表示および取得済み関数ポインターの利用と並行できません。
  *
  *  @copyright      Copyright (C) Tetsuo Honda. 2026. All rights reserved.
  *
@@ -137,47 +140,55 @@ extern "C"
      *  @brief          cplat_sym_loader_entry ポインター配列へ JSONC 設定を読み込みます。
      *
      *  値がオブジェクトなら移譲先は 1 件、配列なら要素ごとに 1 件です。\n
-     *  設定ファイルが無い、読めない、解析できない場合は、エントリを失敗にしません。
+     *  ファイルが存在しない場合は設定を変更しません。解放待ちのエントリは受け付けません。\n
+     *  本関数の開始後は、以前取得した関数ポインターと診断文字列を使わないでください。
      *
-     *  @param[in]      fobj_array   cplat_sym_loader_entry ポインター配列。
+     *  @param[in]      fobj_array   cplat_sym_loader_entry ポインター配列。要素数 0 の場合は NULL 可。
      *  @param[in]      fobj_length  配列の要素数。
-     *  @param[in]      configpath   JSONC 定義ファイルのパス。
+     *  @param[in]      configpath   JSONC 定義ファイルのパス。NULL または空は設定を省略します。
+     *  @return         CPLAT_OK、CPLAT_SKIPPED、CPLAT_ERR_INVALID_ARGUMENT、CPLAT_ERR_BUSY、
+     *                  その他の読み込み・解析・適用エラーの結果コード。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
-     *  DLL ロード直後のシングルスレッド フェーズで呼び出してください。複数スレッドから同時に @p fobj_array の同一エントリへ書き込むと競合が発生します。
+     *  同一エントリの取得・診断・情報表示と、取得済み関数ポインターの利用に並行して呼び出さないでください。\n
+     *  Windows の DllMain 内では、モジュール解放を伴う再初期化を行わないでください。
      */
-    CPLAT_EXPORT void CPLAT_API cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array,
-                                                      const size_t fobj_length, const char *configpath);
+    CPLAT_EXPORT int CPLAT_API cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array,
+                                                     const size_t fobj_length, const char *configpath);
 
     /**
      *  @brief          cplat_sym_loader_entry ポインター配列の移譲先を解放します。
      *
-     *  開いたモジュールは、開いた回数だけ閉じます。ロックは破棄しません。
+     *  開いたモジュールは、開いた回数だけ閉じます。解放に失敗したハンドルは保持し、次回再試行します。\n
+     *  本関数の開始後は、以前取得した関数ポインターと診断文字列を使わないでください。
      *
-     *  @param[in]      fobj_array   cplat_sym_loader_entry ポインター配列。
+     *  @param[in]      fobj_array   cplat_sym_loader_entry ポインター配列。要素数 0 の場合は NULL 可。
      *  @param[in]      fobj_length  配列の要素数。
+     *  @return         CPLAT_OK、CPLAT_ERR_INVALID_ARGUMENT、CPLAT_ERR_UNKNOWN のいずれか。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
-     *  DllMain / destructor コンテキストのシングルスレッド フェーズで呼び出してください。他スレッドが count または get を実行中の場合、解放と競合します。
+     *  同一エントリの取得・診断・情報表示と、取得済み関数ポインターの利用に並行して呼び出さないでください。\n
+     *  Windows の DllMain 内では呼び出さないでください。
      */
-    CPLAT_EXPORT void CPLAT_API cplat_sym_loader_dispose(cplat_sym_loader_entry *const *fobj_array,
-                                                         const size_t fobj_length);
+    CPLAT_EXPORT int CPLAT_API cplat_sym_loader_dispose(cplat_sym_loader_entry *const *fobj_array,
+                                                        const size_t fobj_length);
 
     /**
      *  @brief          cplat_sym_loader_entry が明示的既定値かどうかを返します。
      *
      *  移譲先が 1 件で、lib と func がどちらも default のときだけ 1 です。\n
-     *  未解決なら、返す前に解決します。内部失敗が有効なあいだは 0 です。
+     *  未解決なら、返す前に解決します。失敗時は出力を変更しません。
      *
      *  @param[in]      fobj  cplat_sym_loader_entry へのポインター。
-     *  @return         明示的既定値の場合は 1、それ以外は 0。
+     *  @param[out]     value_out 明示的既定値の場合は 1、それ以外は 0 の受け取り先。
+     *  @return         CPLAT_OK、CPLAT_ERR_INVALID_ARGUMENT、CPLAT_ERR_UNKNOWN のいずれか。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_sym_loader_is_default(cplat_sym_loader_entry *fobj);
+    CPLAT_EXPORT int CPLAT_API cplat_sym_loader_is_default(cplat_sym_loader_entry *fobj, int *value_out);
 
     /**
      *  @brief          cplat_sym_loader_entry の内部失敗が有効かを返します。
@@ -186,24 +197,26 @@ extern "C"
      *  未解決で失敗でもないときは、返す前に解決を試みます。
      *
      *  @param[in]      fobj  cplat_sym_loader_entry へのポインター。
-     *  @return         内部失敗が有効なあいだは 1、それ以外は 0。
+     *  @param[out]     value_out 内部失敗が有効なときは 1、それ以外は 0 の受け取り先。
+     *  @return         CPLAT_OK または CPLAT_ERR_INVALID_ARGUMENT。失敗時は出力を変更しません。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_sym_loader_is_failed(cplat_sym_loader_entry *fobj);
+    CPLAT_EXPORT int CPLAT_API cplat_sym_loader_is_failed(cplat_sym_loader_entry *fobj, int *value_out);
 
     /**
      *  @brief          cplat_sym_loader_entry の利用側の列を標準出力へ表示します。
      *
      *  表示するのは、キー、明示的既定値、利用側の件数、残った先のライブラリ名、関数名、関数ポインターです。\n
      *  診断へ外した先と、内部失敗の値は表示しません。外したことだけでは失敗にしません。\n
-     *  未解決なら、表示する前に解決を試みます。内部失敗が残っていても、引数が正しければ CPLAT_OK です。
+     *  未解決なら、表示する前に解決を試みます。内部失敗時は表示済みの内容を取り消しません。
      *
      *  @param[in]      fobj_array   cplat_sym_loader_entry ポインター配列。要素数が 0 の場合は NULL 可。
      *  @param[in]      fobj_length  配列の要素数。
      *  @retval         CPLAT_OK                   引数が正しい。
      *  @retval         CPLAT_ERR_INVALID_ARGUMENT 配列または配列要素が NULL です。
+     *  @retval         CPLAT_ERR_UNKNOWN          解決または解放に失敗しています。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -214,60 +227,53 @@ extern "C"
     /**
      *  @brief          利用側へ渡す移譲先の件数を返します。
      *
-     *  0 は移譲先なしです。未解決なら、返す前に解決します。\n
-     *  内部失敗が有効なあいだは 0 です。
+     *  0 は移譲先なしです。未解決なら、返す前に解決します。失敗時は出力を変更しません。
      *
      *  @param[in]      fobj  cplat_sym_loader_entry へのポインター。
-     *  @return         利用側の列の件数。
+     *  @param[out]     count_out 利用側の列の件数の受け取り先。
+     *  @return         CPLAT_OK、CPLAT_ERR_INVALID_ARGUMENT、CPLAT_ERR_UNKNOWN のいずれか。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT size_t CPLAT_API cplat_sym_loader_count(cplat_sym_loader_entry *fobj);
+    CPLAT_EXPORT int CPLAT_API cplat_sym_loader_count(cplat_sym_loader_entry *fobj, size_t *count_out);
 
     /**
      *  @brief          利用側の列から、指定した添字の関数ポインターを返します。
      *
-     *  先頭は添字 0 です。範囲外、または内部失敗のあいだは NULL です。\n
-     *  返したポインターは dispose するまで有効です。呼び出し側は解放しません。
+     *  先頭は添字 0 です。失敗時は出力を変更しません。\n
+     *  返したポインターは対象エントリを含む init または dispose の開始前まで有効です。呼び出し側は解放しません。
      *
      *  @param[in]      fobj   cplat_sym_loader_entry へのポインター。
      *  @param[in]      index  利用側の列の添字。
-     *  @return         関数ポインター。範囲外のときは NULL。
+     *  @param[out]     address_out 関数ポインターの受け取り先。
+     *  @return         CPLAT_OK、CPLAT_ERR_INVALID_ARGUMENT、CPLAT_ERR_UNKNOWN のいずれか。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT void *CPLAT_API cplat_sym_loader_get(cplat_sym_loader_entry *fobj, size_t index);
-
-/**
- *  @brief          指定した添字の関数ポインターを、指定した型で返します。
- *
- *  @param          fobj   cplat_sym_loader_entry へのポインター。
- *  @param          index  利用側の列の添字。先頭は 0。
- *  @param          type   関数ポインター型。
- */
-#define cplat_sym_loader_get_as(fobj, index, type) ((type)cplat_sym_loader_get((fobj), (index)))
+    CPLAT_EXPORT int CPLAT_API cplat_sym_loader_get(cplat_sym_loader_entry *fobj, size_t index, void **address_out);
 
     /**
      *  @brief          診断の列の件数を返します。
      *
-     *  未解決なら、返す前に解決します。内部失敗が有効なあいだは 0 です。
+     *  未解決なら、返す前に解決します。失敗時は出力を変更しません。
      *
      *  @param[in]      fobj  cplat_sym_loader_entry へのポインター。
-     *  @return         診断の列の件数。
+     *  @param[out]     count_out 診断の列の件数の受け取り先。
+     *  @return         CPLAT_OK、CPLAT_ERR_INVALID_ARGUMENT、CPLAT_ERR_UNKNOWN のいずれか。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT size_t CPLAT_API cplat_sym_loader_reject_count(cplat_sym_loader_entry *fobj);
+    CPLAT_EXPORT int CPLAT_API cplat_sym_loader_reject_count(cplat_sym_loader_entry *fobj, size_t *count_out);
 
     /**
      *  @brief          診断の列から、ライブラリ名、関数名、理由を取得します。
      *
      *  成功時は 3 つの出力引数へ書き、CPLAT_OK を返します。\n
      *  範囲外の添字、または出力引数のいずれかが NULL のときは CPLAT_ERR_INVALID_ARGUMENT を返し、出力引数へは書きません。\n
-     *  返した文字列は dispose するまで有効です。呼び出し側は解放しません。理由の値は、本関数の戻り値ではありません。
+     *  返した文字列は対象エントリを含む init または dispose の開始前まで有効です。呼び出し側は解放しません。理由の値は、本関数の戻り値ではありません。
      *
      *  @param[in]      fobj       cplat_sym_loader_entry へのポインター。
      *  @param[in]      index      診断の列の添字。
@@ -276,6 +282,7 @@ extern "C"
      *  @param[out]     reason     診断理由の受け取り先。NULL を渡してはなりません。
      *  @retval         CPLAT_OK                   名前と理由を書き込んだ。
      *  @retval         CPLAT_ERR_INVALID_ARGUMENT 添字が範囲外、または出力引数が NULL。
+     *  @retval         CPLAT_ERR_UNKNOWN          解決または解放に失敗しています。出力は変更しません。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。

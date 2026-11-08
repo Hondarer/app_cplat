@@ -1,8 +1,9 @@
 # テスト対象のソース ファイル
 TEST_SRCS := \
-	$(MYAPP_DIR)/prod/libsrc/cplat/runtime/sym_loader_resolve.c
+	$(MYAPP_DIR)/prod/libsrc/cplat/runtime/sym_loader_resolve.c \
+	$(MYAPP_DIR)/prod/libsrc/cplat/runtime/sym_loader_dispose.c
 
-# ensure が参照する設定適用と、失敗・明示的既定値の確認。カバレッジ対象は resolve のみ。
+# ensure が参照する設定適用と、失敗・明示的既定値の確認。
 ADD_SRCS := \
 	$(MYAPP_DIR)/prod/libsrc/cplat/runtime/sym_loader_init.c \
 	$(MYAPP_DIR)/prod/libsrc/cplat/runtime/sym_loader_is_default.c \

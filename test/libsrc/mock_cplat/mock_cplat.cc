@@ -568,12 +568,12 @@ Mock_cplat::Mock_cplat()
 
     ON_CALL(*this, cplat_sym_loader_init(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_init));
     ON_CALL(*this, cplat_sym_loader_dispose(_, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_dispose));
-    ON_CALL(*this, cplat_sym_loader_is_default(_)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_is_default));
-    ON_CALL(*this, cplat_sym_loader_is_failed(_)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_is_failed));
+    ON_CALL(*this, cplat_sym_loader_is_default(_, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_is_default));
+    ON_CALL(*this, cplat_sym_loader_is_failed(_, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_is_failed));
     ON_CALL(*this, cplat_sym_loader_info(_, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_info));
-    ON_CALL(*this, cplat_sym_loader_count(_)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_count));
-    ON_CALL(*this, cplat_sym_loader_get(_, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_get));
-    ON_CALL(*this, cplat_sym_loader_reject_count(_)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_reject_count));
+    ON_CALL(*this, cplat_sym_loader_count(_, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_count));
+    ON_CALL(*this, cplat_sym_loader_get(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_get));
+    ON_CALL(*this, cplat_sym_loader_reject_count(_, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_reject_count));
     ON_CALL(*this, cplat_sym_loader_reject_get(_, _, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_sym_loader_reject_get));
 

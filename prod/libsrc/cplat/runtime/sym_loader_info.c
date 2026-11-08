@@ -44,10 +44,12 @@ int cplat_sym_loader_info(cplat_sym_loader_entry *const *fobj_array, const size_
         int is_default = 0;
         size_t count = 0;
         size_t target_index;
-        int ensured;
 
-        ensured = cplat_sym_loader_ensure(fobj);
-        if ((ensured == 0) && (fobj->impl != NULL))
+        if (cplat_sym_loader_ensure(fobj) != 0)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
+        if (fobj->impl != NULL)
         {
             is_default = fobj->impl->is_default;
             count = fobj->impl->usable_count;
@@ -57,7 +59,7 @@ int cplat_sym_loader_info(cplat_sym_loader_entry *const *fobj_array, const size_
         printf("    - is_default : %d\n", is_default);
         printf("    - count : %zu\n", count);
 
-        if ((ensured != 0) || (fobj->impl == NULL))
+        if (fobj->impl == NULL)
         {
             continue;
         }

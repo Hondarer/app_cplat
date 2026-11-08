@@ -17,17 +17,18 @@
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_sym_loader_is_default(cplat_sym_loader_entry *fobj)
+int cplat_sym_loader_is_default(cplat_sym_loader_entry *fobj, int *value_out)
 {
+    if ((fobj == NULL) || (value_out == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
     if (cplat_sym_loader_ensure(fobj) != 0)
     {
-        return 0;
+        return CPLAT_ERR_UNKNOWN;
     }
 
-    if (fobj->impl == NULL)
-    {
-        return 0;
-    }
-
-    return fobj->impl->is_default;
+    *value_out = (fobj->impl == NULL) ? 0 : fobj->impl->is_default;
+    return CPLAT_OK;
 }

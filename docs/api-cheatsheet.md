@@ -898,11 +898,11 @@ JSONC 設定ファイルから、1 つの機能に対する複数の移譲先を
 | 用途 | cplat API |
 |---|---|
 | 使えた移譲先の件数を取得します。 | `cplat_sym_loader_count` |
-| 添字で移譲先の関数ポインターを取得します。型付きの取得は `cplat_sym_loader_get_as` です。 | `cplat_sym_loader_get` |
+| 添字で移譲先のアドレスを取得し、成功時に関数ポインター型へ変換します。 | `cplat_sym_loader_get` |
 | ローダーを初期化/破棄します。 | `cplat_sym_loader_init` / `cplat_sym_loader_dispose` |
 | 明示的既定値かどうかを確認します。 | `cplat_sym_loader_is_default` |
 | 内部失敗が有効かを確認します。有効な失敗は、この取得では解消しません。 | `cplat_sym_loader_is_failed` |
-| 利用側の列を表示します。除外した項目があっても、引数が正しければ成功です。 | `cplat_sym_loader_info` |
+| 利用側の列を表示します。内部失敗や解放待ちはエラーです。 | `cplat_sym_loader_info` |
 | 診断の件数を取得します。 | `cplat_sym_loader_reject_count` |
 | 診断のライブラリ名、関数名、理由を取得します。 | `cplat_sym_loader_reject_get` |
 

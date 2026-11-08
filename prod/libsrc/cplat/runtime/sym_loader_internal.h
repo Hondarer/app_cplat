@@ -39,6 +39,7 @@ typedef struct cplat_sym_loader_usable
     char *func_name;            /**< 設定された関数名。 */
     CPLAT_MODULE_HANDLE handle; /**< 開いたモジュール。NULL のときは未オープン。 */
     void *func_ptr;             /**< 解決した関数ポインター。 */
+    size_t close_failed;        /**< 現在の解放処理で閉じられなかったとき 1。 */
 } cplat_sym_loader_usable;
 
 /**
@@ -69,7 +70,50 @@ struct cplat_sym_loader_entry_impl
     int needs_reload;                        /**< 1 のとき、次の取得で設定ファイルを読み直します。 */
     int adopted_in_apply;                    /**< この適用で、すでに値を採用したとき 1。 */
     int failed_this_apply;                   /**< この適用で確保に失敗したとき 1。以降のキーは採用しません。 */
+    int release_pending;                     /**< モジュールの解放を再試行する必要があるとき 1。 */
 };
+
+static inline int cplat_sym_loader_close_usable(cplat_sym_loader_usable *list, size_t count, int retry_failed)
+{
+    size_t index;
+    int failed = 0;
+
+    for (index = 0; index < count; index++)
+    {
+        cplat_sym_loader_usable *item = &list[index];
+        int closed;
+
+        if (item->handle == NULL)
+        {
+            continue;
+        }
+
+        if ((item->close_failed != 0) && (retry_failed == 0))
+        {
+            failed = 1;
+            continue;
+        }
+
+#if defined(PLATFORM_LINUX)
+        closed = (dlclose(item->handle) == 0);
+#elif defined(PLATFORM_WINDOWS)
+        closed = (FreeLibrary(item->handle) != 0);
+#endif /* PLATFORM_ */
+        if (closed != 0)
+        {
+            item->handle = NULL;
+            item->func_ptr = NULL;
+            item->close_failed = 0;
+        }
+        else
+        {
+            item->close_failed = 1;
+            failed = 1;
+        }
+    }
+
+    return (failed != 0) ? -1 : 0;
+}
 
 /**
  *  @brief          エントリを解決し、公開済みなら 0 を返します。
@@ -84,13 +128,12 @@ int cplat_sym_loader_ensure(cplat_sym_loader_entry *fobj);
 /**
  *  @brief          JSONC 設定ファイルを、指定したエントリへ適用します。
  *
- *  ファイルを適用できたときは 0 です。エントリごとの確保失敗は、そのエントリへ記録済みです。\n
- *  ファイルが無い、読めない、解析できないときは 1 で、エントリは変えません。
+ *  エントリごとの失敗を記録し、残りのエントリの適用を続けます。
  *
  *  @param[in,out]  fobj_array   対象のエントリ配列。
  *  @param[in]      fobj_length  配列の要素数。
  *  @param[in]      configpath   JSONC 定義ファイルのパス。
- *  @return         適用できたとき 0、ファイルを使わなかったとき 1。
+ *  @return         共通の結果コード。
  */
 int cplat_sym_loader_apply_config(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length,
                                   const char *configpath);

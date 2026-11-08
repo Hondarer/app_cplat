@@ -11,18 +11,24 @@ using testing::NiceMock;
 
 namespace
 {
+// [サブ手順 名前=symLoaderInfoTest.plant_both_default]
 void plant_both_default(cplat_sym_loader_entry *entry)
 {
     entry->impl = static_cast<cplat_sym_loader_entry_impl *>(cplat_calloc(1u, sizeof(*entry->impl)));
     ASSERT_NE(nullptr, entry->impl);
+    // [状態確認] - 管理構造体を確保できること。
     entry->impl->pending = static_cast<cplat_sym_loader_name_pair *>(cplat_calloc(1u, sizeof(*entry->impl->pending)));
     ASSERT_NE(nullptr, entry->impl->pending);
+    // [状態確認] - 設定の保持領域を確保できること。
     entry->impl->pending[0].lib_name = cplat_strdup("default");
     entry->impl->pending[0].func_name = cplat_strdup("default");
     ASSERT_NE(nullptr, entry->impl->pending[0].lib_name);
+    // [状態確認] - ライブラリ名を確保できること。
     ASSERT_NE(nullptr, entry->impl->pending[0].func_name);
+    // [状態確認] - 関数名を確保できること。
     entry->impl->pending_count = 1u;
 }
+// [サブ手順終了]
 } // namespace
 
 // シンボル情報 API が空の配列を受け付けることの確認
@@ -64,7 +70,7 @@ TEST(symLoaderInfoTest, sym_loader_info_rejects_invalid_arrays)
         null_entry_result); // [確認_異常系] - 配列要素が nullptr の cplat_sym_loader_info() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
-// シンボル情報 API が解決済みと内部失敗のどちらでも成功を返すことの確認
+// シンボル情報 API が解決済みと内部失敗を区別することの確認
 TEST(symLoaderInfoTest, sym_loader_info_reports_resolution_state)
 {
     // Arrange
@@ -92,13 +98,17 @@ TEST(symLoaderInfoTest, sym_loader_info_reports_resolution_state)
         CPLAT_OK,
         resolved_result); // [確認_正常系] - 解決済みエントリに対する cplat_sym_loader_info() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
-        CPLAT_OK,
-        failed_result); // [確認_正常系] - 内部失敗中のエントリに対する cplat_sym_loader_info() の戻り値が CPLAT_OK であること。
+        CPLAT_ERR_UNKNOWN,
+        failed_result); // [確認_異常系] - 内部失敗中は CPLAT_ERR_UNKNOWN を返すこと。
     EXPECT_EQ(
         1,
         cplat_atomic_load_i32(
             &failed.failed,
             CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - failed.failed を読み込んだ cplat_atomic_load_i32() の戻り値が 1 であること。(情報表示が失敗を成功へ変えないことの確認)
+
+    // Cleanup
+    cplat_sym_loader_dispose(resolved_entries, 1u);
+    cplat_sym_loader_dispose(failed_entries, 1u);
 }
 
 // 未解決エントリを情報表示時に解決してから状態を表示することの確認
@@ -108,6 +118,7 @@ TEST(symLoaderInfoTest, sym_loader_info_resolves_unresolved_entry)
     NiceMock<Mock_cplat> mock_cplat;
     cplat_sym_loader_entry entry = CPLAT_SYM_LOADER_ENTRY_INIT("default_entry");
     cplat_sym_loader_entry *entries[] = {&entry};
+    // [サブ手順参照 名前=symLoaderInfoTest.plant_both_default]
     plant_both_default(&entry); // [状態] - 明示的既定値として解決できるエントリを用意する。
 
     // Pre-Assert
