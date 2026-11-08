@@ -195,7 +195,7 @@ static int map_wait_rc(int rc)
         return CPLAT_ERR_TIMEOUT;
     }
 
-    if (rc == EBUSY || rc == EAGAIN || rc == EACCES)
+    if (rc == EBUSY || rc == EAGAIN)
     {
         return CPLAT_ERR_BUSY;
     }

@@ -50,8 +50,8 @@ TEST(syncBoundaryTest, map_wait_rc_translates_supported_results)
     // [確認_正常系] - EBUSY に対する test_sync_map_wait_rc() の戻り値が CPLAT_ERR_BUSY であること。
     EXPECT_EQ(CPLAT_ERR_BUSY, again_result);
     // [確認_正常系] - EAGAIN に対する test_sync_map_wait_rc() の戻り値が CPLAT_ERR_BUSY であること。
-    EXPECT_EQ(CPLAT_ERR_BUSY, access_result);
-    // [確認_正常系] - EACCES に対する test_sync_map_wait_rc() の戻り値が CPLAT_ERR_BUSY であること。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, access_result);
+    // [確認_異常系] - EACCES に対する test_sync_map_wait_rc() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, unknown_result);
     // [確認_異常系] - 未知のコード EINVAL に対する test_sync_map_wait_rc() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }

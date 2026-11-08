@@ -263,8 +263,8 @@ TEST_F(syncFailureInjectionTest, local_lock_maps_pthread_failure_results)
         CPLAT_ERR_BUSY,
         lock_result); // [確認_異常系] - EBUSY に対する cplat_local_lock_lock() の戻り値が CPLAT_ERR_BUSY であること。
     EXPECT_EQ(
-        CPLAT_ERR_BUSY,
-        try_result); // [確認_異常系] - EACCES に対する cplat_local_lock_try_lock() の戻り値が CPLAT_ERR_BUSY であること。
+        CPLAT_ERR_UNKNOWN,
+        try_result); // [確認_異常系] - EACCES に対する cplat_local_lock_try_lock() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         unlock_result); // [確認_異常系] - EINVAL に対する cplat_local_lock_unlock() の戻り値が CPLAT_ERR_UNKNOWN であること。
