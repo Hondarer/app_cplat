@@ -1,13 +1,12 @@
 /**
  *******************************************************************************
  *  @file           sym_loader_info.c
- *  @brief          cplat_sym_loader_entry ポインター配列の内容を標準出力に表示します。
+ *  @brief          cplat_sym_loader_entry の利用側の列を標準出力へ表示します。
  *  @author         c-modenization-kit sample team
  *  @date           2026/02/23
  *  @version        1.0.0
  *
- *  各エントリを表示し、未解決のエントリがあれば解決を試みます。\n
- *  1 つでも解決失敗した場合は @ref CPLAT_ERR_UNKNOWN を返します。\n
+ *  各エントリの利用側の列を表示します。診断へ外した先は表示しません。\n
  *
  *  @copyright      Copyright (C) Tetsuo Honda. 2026. All rights reserved.
  *
@@ -17,11 +16,12 @@
 #include <cplat/runtime/sym_loader.h>
 #include <stdio.h>
 
+#include "sym_loader_internal.h"
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_sym_loader_info(cplat_sym_loader_entry *const *fobj_array, const size_t fobj_length)
 {
-    int result = CPLAT_OK;
     size_t fobj_index;
 
     if (fobj_length > 0 && fobj_array == NULL)
@@ -38,31 +38,38 @@ int cplat_sym_loader_info(cplat_sym_loader_entry *const *fobj_array, const size_
         }
     }
 
-    /* 各エントリの情報を標準出力へ出力し、未解決のエントリがあれば解決を試みる。 */
     for (fobj_index = 0; fobj_index < fobj_length; fobj_index++)
     {
         cplat_sym_loader_entry *fobj = fobj_array[fobj_index];
-        int32_t resolved;
+        int is_default = 0;
+        size_t count = 0;
+        size_t target_index;
+        int ensured;
 
-        if (cplat_atomic_load_i32(&fobj->resolved, CPLAT_MEMORY_ORDER_ACQUIRE) == 0)
+        ensured = cplat_sym_loader_ensure(fobj);
+        if ((ensured == 0) && (fobj->impl != NULL))
         {
-            (void)cplat_sym_loader_resolve(fobj);
+            is_default = fobj->impl->is_default;
+            count = fobj->impl->usable_count;
         }
 
-        resolved = cplat_atomic_load_i32(&fobj->resolved, CPLAT_MEMORY_ORDER_ACQUIRE);
         printf("- [%zu] %s\n", fobj_index, fobj->func_key);
-        printf("    - resolved : %d\n", (int)resolved);
-        printf("    - lib_name : %s\n", fobj->lib_name);
-        printf("    - func_name: %s\n", fobj->func_name);
-        printf("    - handle   : %p\n", (void *)fobj->handle);
-        printf("    - func_ptr : %p\n", cplat_atomic_load_ptr(&fobj->func_ptr, CPLAT_MEMORY_ORDER_RELAXED));
+        printf("    - is_default : %d\n", is_default);
+        printf("    - count : %zu\n", count);
 
-        /* 1 つでも解決に失敗したエントリがある場合は、最終結果をエラーとする。 */
-        if (resolved < 0)
+        if ((ensured != 0) || (fobj->impl == NULL))
         {
-            result = CPLAT_ERR_UNKNOWN;
+            continue;
+        }
+
+        for (target_index = 0; target_index < fobj->impl->usable_count; target_index++)
+        {
+            const cplat_sym_loader_usable *target = &fobj->impl->usable[target_index];
+
+            printf("    - [%zu] lib=%s func=%s ptr=%p\n", target_index, target->lib_name, target->func_name,
+                   target->func_ptr);
         }
     }
 
-    return result;
+    return CPLAT_OK;
 }

@@ -1,1 +1,4 @@
+/sym_loader_init.c
 /sym_loader_is_default.c
+/sym_loader_is_failed.c
+/sym_loader_resolve.c

@@ -692,14 +692,20 @@
                  int(CPLAT_API *)(const cplat_shutdown_event *event, int *invoked_out)) \
     EXPORT_ENTRY(cplat_shutdown_reset_for_test, void(CPLAT_API *)(void)) \
     /* cplat/runtime/sym_loader.h */ \
-    EXPORT_ENTRY(cplat_sym_loader_resolve, void *(CPLAT_API *)(cplat_sym_loader_entry * fobj)) \
-    EXPORT_ENTRY(cplat_sym_loader_is_default, int(CPLAT_API *)(cplat_sym_loader_entry * fobj)) \
     EXPORT_ENTRY(cplat_sym_loader_init, void(CPLAT_API *)(cplat_sym_loader_entry *const *fobj_array, \
                                                           size_t fobj_length, const char *configpath)) \
     EXPORT_ENTRY(cplat_sym_loader_dispose, \
                  void(CPLAT_API *)(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length)) \
+    EXPORT_ENTRY(cplat_sym_loader_is_default, int(CPLAT_API *)(cplat_sym_loader_entry * fobj)) \
+    EXPORT_ENTRY(cplat_sym_loader_is_failed, int(CPLAT_API *)(cplat_sym_loader_entry * fobj)) \
     EXPORT_ENTRY(cplat_sym_loader_info, \
                  int(CPLAT_API *)(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length)) \
+    EXPORT_ENTRY(cplat_sym_loader_count, size_t(CPLAT_API *)(cplat_sym_loader_entry * fobj)) \
+    EXPORT_ENTRY(cplat_sym_loader_get, void *(CPLAT_API *)(cplat_sym_loader_entry * fobj, size_t index)) \
+    EXPORT_ENTRY(cplat_sym_loader_reject_count, size_t(CPLAT_API *)(cplat_sym_loader_entry * fobj)) \
+    EXPORT_ENTRY(cplat_sym_loader_reject_get, \
+                 int(CPLAT_API *)(cplat_sym_loader_entry * fobj, size_t index, const char **lib_name, \
+                                  const char **func_name, int *reason)) \
     /* cplat/string_catalog/string_catalog.h */ \
     EXPORT_ENTRY(cplat_string_catalog_set_language, int(CPLAT_API *)(cplat_string_catalog_language language)) \
     EXPORT_ENTRY(cplat_string_catalog_get_language, cplat_string_catalog_language(CPLAT_API *)(void)) \

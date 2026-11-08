@@ -446,11 +446,15 @@ MOCK_CPLAT_LINK_IMPL(cplat_shutdown_request_invoke_for_test)
 MOCK_CPLAT_LINK_IMPL(cplat_shutdown_reset_for_test)
 
 // cplat/runtime/sym_loader.h
-MOCK_CPLAT_LINK_IMPL(cplat_sym_loader_resolve)
-MOCK_CPLAT_LINK_IMPL(cplat_sym_loader_is_default)
 MOCK_CPLAT_LINK_IMPL(cplat_sym_loader_init)
 MOCK_CPLAT_LINK_IMPL(cplat_sym_loader_dispose)
+MOCK_CPLAT_LINK_IMPL(cplat_sym_loader_is_default)
+MOCK_CPLAT_LINK_IMPL(cplat_sym_loader_is_failed)
 MOCK_CPLAT_LINK_IMPL(cplat_sym_loader_info)
+MOCK_CPLAT_LINK_IMPL(cplat_sym_loader_count)
+MOCK_CPLAT_LINK_IMPL(cplat_sym_loader_get)
+MOCK_CPLAT_LINK_IMPL(cplat_sym_loader_reject_count)
+MOCK_CPLAT_LINK_IMPL(cplat_sym_loader_reject_get)
 
 // cplat/string_catalog/string_catalog.h
 MOCK_CPLAT_LINK_IMPL(cplat_string_catalog_set_language)
@@ -1290,12 +1294,17 @@ extern int delegate_real_cplat_shutdown_request_invoke_for_test(const cplat_shut
 extern void delegate_real_cplat_shutdown_reset_for_test(void);
 
 // cplat/runtime/sym_loader.h
-extern void *delegate_real_cplat_sym_loader_resolve(cplat_sym_loader_entry *fobj);
-extern int delegate_real_cplat_sym_loader_is_default(cplat_sym_loader_entry *fobj);
 extern void delegate_real_cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length,
                                                 const char *configpath);
 extern void delegate_real_cplat_sym_loader_dispose(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length);
+extern int delegate_real_cplat_sym_loader_is_default(cplat_sym_loader_entry *fobj);
+extern int delegate_real_cplat_sym_loader_is_failed(cplat_sym_loader_entry *fobj);
 extern int delegate_real_cplat_sym_loader_info(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length);
+extern size_t delegate_real_cplat_sym_loader_count(cplat_sym_loader_entry *fobj);
+extern void *delegate_real_cplat_sym_loader_get(cplat_sym_loader_entry *fobj, size_t index);
+extern size_t delegate_real_cplat_sym_loader_reject_count(cplat_sym_loader_entry *fobj);
+extern int delegate_real_cplat_sym_loader_reject_get(cplat_sym_loader_entry *fobj, size_t index, const char **lib_name,
+                                                     const char **func_name, int *reason);
 
 // cplat/string_catalog/string_catalog.h
 extern int delegate_real_cplat_string_catalog_set_language(cplat_string_catalog_language language);
@@ -2091,11 +2100,16 @@ class Mock_cplat
     MOCK_METHOD(void, cplat_shutdown_reset_for_test, ());
 
     // cplat/runtime/sym_loader.h
-    MOCK_METHOD(void *, cplat_sym_loader_resolve, (cplat_sym_loader_entry *));
-    MOCK_METHOD(int, cplat_sym_loader_is_default, (cplat_sym_loader_entry *));
     MOCK_METHOD(void, cplat_sym_loader_init, (cplat_sym_loader_entry *const *, size_t, const char *));
     MOCK_METHOD(void, cplat_sym_loader_dispose, (cplat_sym_loader_entry *const *, size_t));
+    MOCK_METHOD(int, cplat_sym_loader_is_default, (cplat_sym_loader_entry *));
+    MOCK_METHOD(int, cplat_sym_loader_is_failed, (cplat_sym_loader_entry *));
     MOCK_METHOD(int, cplat_sym_loader_info, (cplat_sym_loader_entry *const *, size_t));
+    MOCK_METHOD(size_t, cplat_sym_loader_count, (cplat_sym_loader_entry *));
+    MOCK_METHOD(void *, cplat_sym_loader_get, (cplat_sym_loader_entry *, size_t));
+    MOCK_METHOD(size_t, cplat_sym_loader_reject_count, (cplat_sym_loader_entry *));
+    MOCK_METHOD(int, cplat_sym_loader_reject_get,
+                (cplat_sym_loader_entry *, size_t, const char **, const char **, int *));
 
     // cplat/string_catalog/string_catalog.h
     MOCK_METHOD(int, cplat_string_catalog_set_language, (cplat_string_catalog_language));

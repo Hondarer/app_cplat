@@ -892,15 +892,19 @@ Table: 継続が危険な状態での異常終了における用途別 cplat API
 
 対象ヘッダー: `cplat/runtime/sym_loader.h`
 
-`dlopen` +`dlsym` (POSIX) / `LoadLibrary` +`GetProcAddress` (Win32) を直接呼ぶ代わりに使用します。  
-JSONC 設定ファイルからのライブラリ名解決、関数ポインターのキャッシュ、スレッド セーフな初期化を内包します。
+`dlopen` + `dlsym` (POSIX) / `LoadLibraryU` + `GetProcAddress` (Win32) を直接呼ぶ代わりに使用します。  
+JSONC 設定ファイルから、1 つの機能に対する複数の移譲先を読み、使えた先だけを書いた順で保持します。
 
 | 用途 | cplat API |
 |---|---|
-| 関数を動的に解決します。 | `cplat_sym_loader_resolve` (型安全なラッパー マクロ `cplat_sym_loader_resolve_as`) |
+| 使えた移譲先の件数を取得します。 | `cplat_sym_loader_count` |
+| 添字で移譲先の関数ポインターを取得します。型付きの取得は `cplat_sym_loader_get_as` です。 | `cplat_sym_loader_get` |
 | ローダーを初期化/破棄します。 | `cplat_sym_loader_init` / `cplat_sym_loader_dispose` |
-| 既定ローダーかどうか確認します。 | `cplat_sym_loader_is_default` |
-| 解決状況の情報を取得します。 | `cplat_sym_loader_info` |
+| 明示的既定値かどうかを確認します。 | `cplat_sym_loader_is_default` |
+| 内部失敗が有効かを確認します。有効な失敗は、この取得では解消しません。 | `cplat_sym_loader_is_failed` |
+| 利用側の列を表示します。除外した項目があっても、引数が正しければ成功です。 | `cplat_sym_loader_info` |
+| 診断の件数を取得します。 | `cplat_sym_loader_reject_count` |
+| 診断のライブラリ名、関数名、理由を取得します。 | `cplat_sym_loader_reject_get` |
 
 Table: 動的シンボル解決における用途別 cplat API
 

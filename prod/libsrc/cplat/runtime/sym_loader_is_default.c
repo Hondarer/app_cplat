@@ -13,21 +13,21 @@
 
 #include <cplat/runtime/sym_loader.h>
 
+#include "sym_loader_internal.h"
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_sym_loader_is_default(cplat_sym_loader_entry *fobj)
 {
-    /* 未解決の場合はシンボルの解決を試みる。 */
-    if (cplat_atomic_load_i32(&fobj->resolved, CPLAT_MEMORY_ORDER_ACQUIRE) == 0)
+    if (cplat_sym_loader_ensure(fobj) != 0)
     {
-        (void)cplat_sym_loader_resolve(fobj);
+        return 0;
     }
 
-    /* resolved が 2 の場合は、設定ファイルで明示的に default と指定された既定値を示す。 */
-    if (cplat_atomic_load_i32(&fobj->resolved, CPLAT_MEMORY_ORDER_ACQUIRE) == 2)
+    if (fobj->impl == NULL)
     {
-        return 1;
+        return 0;
     }
 
-    return 0;
+    return fobj->impl->is_default;
 }

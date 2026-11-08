@@ -1,1 +1,3 @@
 /sym_loader_info.c
+/sym_loader_init.c
+/sym_loader_resolve.c

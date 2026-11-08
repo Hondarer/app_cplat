@@ -107,14 +107,17 @@ stdout と stderr は別のパイプで受け取るため、両者の間の出�
 
 ### sym_loader
 
-`sym_loader` は、設定ファイルで指定した `lib_name` / `func_name` を使って関数ポインターを解決する機構です。  
-オーバーライド可能な関数や、実行環境によって差し替える関数の呼び出しに向いています。
+`sym_loader` は、設定ファイルで指定したライブラリ名と関数名から、使えた移譲先の関数ポインターを書いた順に返す機構です。  
+オーバーライド可能な関数や、実行環境によって差し替える関数の呼び出しに向いています。すべてを呼ぶか、添字 0 だけを呼ぶかは利用側が決めます。
 
-- `CPLAT_SYM_LOADER_ENTRY_INIT`: 静的エントリ初期化
+- `CPLAT_SYM_LOADER_ENTRY_INIT`: キーだけを受け取る静的エントリ初期化
 - `cplat_sym_loader_init`: 設定ファイル読み込み
-- `cplat_sym_loader_resolve_as`: 型付きで関数ポインター取得
-- `cplat_sym_loader_is_default`: 明示的既定値設定か確認
-- `cplat_sym_loader_info`: 現在状態のダンプ
+- `cplat_sym_loader_count`: 使えた移譲先の件数
+- `cplat_sym_loader_get` / `cplat_sym_loader_get_as`: 添字で関数ポインターを取得。`get_as` は型付きのマクロです
+- `cplat_sym_loader_is_default`: 明示的既定値か確認
+- `cplat_sym_loader_is_failed`: 内部失敗が有効か確認。有効な失敗はこの関数では解消しません
+- `cplat_sym_loader_reject_count` / `cplat_sym_loader_reject_get`: 除外した先と理由の取得
+- `cplat_sym_loader_info`: 利用側の列の表示。除外があっても引数が正しければ成功です
 - `cplat_sym_loader_dispose`: 後始末
 
 ## 設計の要点
@@ -135,7 +138,7 @@ stdout と stderr は別のパイプで受け取るため、両者の間の出�
 初回解決時にライブラリ ロードとシンボル探索を行い、その結果をキャッシュします。
 
 - Linux では `dlopen` / `dlsym` を使用します。
-- Windows では `LoadLibrary` / `GetProcAddress` を使用します。
+- Windows では `LoadLibraryU` / `GetProcAddress` を使用します。
 - 解決処理は内部ロックで保護されます。
 - 1 度解決した結果はエントリ内へ保持されます。
 - 設定ファイルの JSONC 解析には cjson の拡張 API を利用します。
@@ -145,8 +148,7 @@ stdout と stderr は別のパイプで受け取るため、両者の間の出�
 ### エントリを静的定義する
 
 ```c
-static cplat_sym_loader_entry sfo_sample_func =
-    CPLAT_SYM_LOADER_ENTRY_INIT("sample_func", sample_func_t);
+static cplat_sym_loader_entry sfo_sample_func = CPLAT_SYM_LOADER_ENTRY_INIT("sample_func");
 ```
 
 ### エントリ配列を用意する
@@ -166,10 +168,14 @@ cplat_sym_loader_init(fobj_array, fobj_length, configpath);
 ### 呼び出し時に型付きで解決する
 
 ```c
-sample_func_t fp = cplat_sym_loader_resolve_as(&sfo_sample_func, sample_func_t);
-if (fp != NULL) {
-    return fp(a, b, result);
+size_t count = cplat_sym_loader_count(&sfo_sample_func);
+if (count == 0u) {
+    *result = a + b;
+    return 0;
 }
+
+sample_func_t fp = cplat_sym_loader_get_as(&sfo_sample_func, 0u, sample_func_t);
+return fp(a, b, result);
 ```
 
 ### アンロード時に解放する
@@ -195,13 +201,18 @@ cplat_sym_loader_dispose(fobj_array, fobj_length);
 
 - ルートは JSONC object です。
 - 各プロパティ名が `func_key` に対応します。
-- 値は object で、文字列フィールド `lib` と `func` を持ちます。
+- 値は、移譲先 1 件の object、または書いた順の配列です。各要素は文字列フィールド `lib` と `func` を持ちます。
 - `//` 行コメントおよび C 形式のブロック コメントを利用できます。
 - オブジェクトと配列の末尾カンマを利用できます。
-- 必須フィールド欠落、型不正、未知の `func_key`、名称長超過のエントリは無視します。
-- ファイル未存在、読取失敗、JSONC 解析失敗は無視します (エントリは未設定のまま)。
+- オブジェクトでも配列でもない値、文字列でない `lib` または `func`、未知の `func_key` は採用せず、診断の列にも入れません。
+- 設定された名前は、両 OS とも終端を除く 255 バイトまで解決できます。256 バイト以上は診断理由 -2 です。`CPLAT_SYM_LOADER_NAME_MAX` は終端を含む 256 バイトのバッファー幅であり、設定名の上限ではありません。診断が返す名前は切り詰めません。
+- 空の名前、長すぎる名前、モジュールを開けない名前、見つからないシンボル、片方だけが `default` の組は、その組だけを外します。使えた組は残ります。
+- 同じキーが複数回あるときは、後の object または配列が前の組を置き換えます。捨てた組は診断理由 -7 です。後から来た数値などの値は置き換えません。
+- ファイル未存在、読取失敗、JSONC 解析失敗は、エントリを変えません。
+- 除外した項目があっても、`cplat_sym_loader_info` は引数が正しければ成功を返します。
+- ロックやメモリの確保に失敗したときは、移譲先が無い成功と区別できる内部失敗として残り、次の件数、取得、診断、明示的既定値、情報表示でやり直します。
 
-`lib` と `func` の両方に `default` を指定した場合は、明示的に既定実装を使う設定として扱われます。
+`lib` と `func` の両方が `default` で、そのキーの組が 1 件だけのときは、明示的既定値です。件数は 0 で、モジュールは開きません。2 件以上の中にその組があると、そのキーは全体を適用せず、保持した組はすべて診断理由 -5 です。片方だけが `default` の組は診断理由 -6 で、こちらより先に -5 を判定します。
 
 ## 使い方
 
@@ -227,18 +238,20 @@ if (cplat_module_get_basename(basename, sizeof(basename), (const void *)onLoad) 
 
 typedef int (*sample_func_t)(int a, int b, int *result);
 
-static cplat_sym_loader_entry sfo_sample_func =
-    CPLAT_SYM_LOADER_ENTRY_INIT("sample_func", sample_func_t);
+static cplat_sym_loader_entry sfo_sample_func = CPLAT_SYM_LOADER_ENTRY_INIT("sample_func");
 
 int sample_func(int a, int b, int *result)
 {
-    sample_func_t fp = cplat_sym_loader_resolve_as(&sfo_sample_func, sample_func_t);
-    if (fp != NULL) {
-        return fp(a, b, result);
+    size_t count = cplat_sym_loader_count(&sfo_sample_func);
+    sample_func_t fp;
+
+    if (count == 0u) {
+        *result = a + b;
+        return 0;
     }
 
-    *result = a + b;
-    return 0;
+    fp = cplat_sym_loader_get_as(&sfo_sample_func, 0u, sample_func_t);
+    return fp(a, b, result);
 }
 ```
 
@@ -263,7 +276,7 @@ int sample_func(int a, int b, int *result)
 - `cplat_sym_loader_init` と `cplat_sym_loader_dispose` は constructor / destructor や `DllMain` から呼ぶ前提です
 - `cplat_sym_loader_dispose` はその前提に合わせてロックを取らずに解放します
 - `sym_loader` はライブラリ名に拡張子を含めず設定します
-- 解決失敗時は `cplat_sym_loader_resolve_as` が `NULL` を返すため、呼び出し側で既定処理を持つ設計が基本です
+- 件数が 0 のときは移譲先が無いので、呼び出し側で既定処理を持つ設計が基本です。内部失敗のあいだも件数は 0 で、`cplat_sym_loader_is_failed` が 1 です
 - オーバーライド実装側から元の関数を再帰的に呼ぶ構成は避けてください
 
 ## 関連ヘッダー
