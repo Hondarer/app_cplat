@@ -125,6 +125,7 @@ extern "C"
         cplat_atomic_i32 resolved;            /**< 解決済みフラグ (0 = 未解決、1 = 公開済み)。 */
         cplat_atomic_i32 failed;              /**< 内部失敗フラグ (0 = 失敗ではない、1 = 失敗中)。 */
         cplat_atomic_i32 lock_state;          /**< ロック初期化状態 (0=未初期化,1=初期化中,2=初期化済み)。 */
+        unsigned int pad;                     /**< 明示的アラインメント。 */
         cplat_local_lock *lock;               /**< ロード処理を保護するミューテックス。 */
     } cplat_sym_loader_entry;
 
@@ -134,7 +135,7 @@ extern "C"
  *  @param[in]      key     この関数インスタンスの識別キー (文字列リテラル)。
  */
 #define CPLAT_SYM_LOADER_ENTRY_INIT(key) \
-    {(key), NULL, CPLAT_ATOMIC_INIT(0), CPLAT_ATOMIC_INIT(0), CPLAT_ATOMIC_INIT(0), NULL}
+    {(key), NULL, CPLAT_ATOMIC_INIT(0), CPLAT_ATOMIC_INIT(0), CPLAT_ATOMIC_INIT(0), 0, NULL}
 
     /**
      *  @brief          cplat_sym_loader_entry ポインター配列へ JSONC 設定を読み込みます。

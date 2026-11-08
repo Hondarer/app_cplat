@@ -47,9 +47,10 @@ typedef struct cplat_sym_loader_usable
  */
 typedef struct cplat_sym_loader_reject_item
 {
-    char *lib_name;  /**< 設定されたライブラリ名。 */
-    char *func_name; /**< 設定された関数名。 */
-    int reason;      /**< CPLAT_SYM_LOADER_REJECT_* の診断理由。 */
+    char *lib_name;   /**< 設定されたライブラリ名。 */
+    char *func_name;  /**< 設定された関数名。 */
+    int reason;       /**< CPLAT_SYM_LOADER_REJECT_* の診断理由。 */
+    unsigned int pad; /**< 明示的アラインメント。 */
 } cplat_sym_loader_reject_item;
 
 /**
@@ -66,6 +67,7 @@ struct cplat_sym_loader_entry_impl
     cplat_sym_loader_reject_item *rejects;   /**< 公開済みの診断の列。 */
     size_t reject_count;                     /**< rejects の件数。 */
     int is_default;                          /**< 明示的既定値のとき 1。 */
+    unsigned int pad;                        /**< 明示的アラインメント。 */
     char *config_path;                       /**< 再読込に使う設定ファイルのパス。 */
     int needs_reload;                        /**< 1 のとき、次の取得で設定ファイルを読み直します。 */
     int adopted_in_apply;                    /**< この適用で、すでに値を採用したとき 1。 */
