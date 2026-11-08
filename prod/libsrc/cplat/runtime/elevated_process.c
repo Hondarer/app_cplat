@@ -973,7 +973,7 @@ int cplat_elevated_process_extract_result_target(int *argc, char **argv, int *de
         value_len = strlen(argv[i] + prefix_len);
         if (value_len >= sizeof(s_result_target_path))
         {
-            value_len = sizeof(s_result_target_path) - 1;
+            return CPLAT_ERR_BUFFER_TOO_SMALL;
         }
 
         memcpy(s_result_target_path, argv[i] + prefix_len, value_len);

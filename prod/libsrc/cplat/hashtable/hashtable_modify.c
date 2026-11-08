@@ -63,30 +63,28 @@ static uint64_t scan_next_empty(cplat_hashtable *ht, size_t start_idx)
  *  @brief          スロットへ現在の実時刻を刻みます。
  *  @param[in]      ht   対象。NULL を渡してはなりません。
  *  @param[in]      rec  0 相対のスロット インデックス。
+ *  @param[in]      now  更新前に取得した実時刻。
  */
-static void stamp_record(cplat_hashtable *ht, size_t rec)
+static void stamp_record(cplat_hashtable *ht, size_t rec, const cplat_timespec *now)
 {
-    cplat_timespec now;
-
-    cplat_clock_get_realtime(&now);
 
     /* 実時刻は時計の巻き戻しで逆行しうるため、順序判定は世代カウンターで行う。 */
     ht->hdr->table_generation++;
 
     if (hashtable_has_record_timestamp(ht) != 0)
     {
-        *hashtable_entry_timestamp(ht, rec) = now;
+        *hashtable_entry_timestamp(ht, rec) = *now;
         *hashtable_entry_generation(ht, rec) = ht->hdr->table_generation;
     }
 
-    ht->hdr->table_timestamp = now;
+    ht->hdr->table_timestamp = *now;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-void hashtable_stamp_table(cplat_hashtable *ht)
+void hashtable_stamp_table(cplat_hashtable *ht, const cplat_timespec *now)
 {
-    cplat_clock_get_realtime(&ht->hdr->table_timestamp);
+    ht->hdr->table_timestamp = *now;
     ht->hdr->table_generation++;
 }
 
@@ -259,6 +257,13 @@ int hashtable_put(cplat_hashtable *ht, const void *key, size_t key_length, const
         return CPLAT_ERR_OUT_OF_RANGE;
     }
 
+    cplat_timespec operation_time;
+    int clock_ret = cplat_clock_get_realtime(&operation_time);
+    if (clock_ret != CPLAT_OK)
+    {
+        return clock_ret;
+    }
+
     idx = hashtable_hash_key(ht, key, key_length);
     bucket_head = hashtable_bucket_head(ht);
     cur = bucket_head[idx];
@@ -290,7 +295,7 @@ int hashtable_put(cplat_hashtable *ht, const void *key, size_t key_length, const
 
                 hashtable_release_value(ht, rec);
                 hashtable_value_store(ht, rec, value, value_storage_offset);
-                stamp_record(ht, rec);
+                stamp_record(ht, rec, &operation_time);
                 store_inserted(inserted_out, 0);
                 return CPLAT_OK;
             }
@@ -317,7 +322,7 @@ int hashtable_put(cplat_hashtable *ht, const void *key, size_t key_length, const
 
             /* REVIVE はスロットに残っている削除前の値をそのまま使う。 */
             *hashtable_entry_status(ht, rec) = REC_IN_USE;
-            stamp_record(ht, rec);
+            stamp_record(ht, rec, &operation_time);
             ht->hdr->deleted_count--;
             ht->hdr->in_use_count++;
             store_inserted(inserted_out, 1);
@@ -405,7 +410,7 @@ int hashtable_put(cplat_hashtable *ht, const void *key, size_t key_length, const
     hashtable_value_store(ht, rec, value, value_storage_offset);
     *hashtable_entry_status(ht, rec) = REC_IN_USE;
     hashtable_key_store(ht, rec, key, key_length, key_storage_offset);
-    stamp_record(ht, rec);
+    stamp_record(ht, rec, &operation_time);
 
     /* 新しいレコードをチェーン先頭へ挿す。 */
     *hashtable_entry_next(ht, rec) = bucket_head[idx];
@@ -654,6 +659,13 @@ int hashtable_update(cplat_hashtable *ht, const void *key, size_t key_length, co
         return CPLAT_ERR_OUT_OF_RANGE;
     }
 
+    cplat_timespec operation_time;
+    int clock_ret = cplat_clock_get_realtime(&operation_time);
+    if (clock_ret != CPLAT_OK)
+    {
+        return clock_ret;
+    }
+
     idx = hashtable_hash_key(ht, key, key_length);
     bucket_head = hashtable_bucket_head(ht);
     cur = bucket_head[idx];
@@ -683,7 +695,7 @@ int hashtable_update(cplat_hashtable *ht, const void *key, size_t key_length, co
 
             hashtable_release_value(ht, rec);
             hashtable_value_store(ht, rec, value, value_storage_offset);
-            stamp_record(ht, rec);
+            stamp_record(ht, rec, &operation_time);
             return CPLAT_OK;
         }
 
@@ -751,6 +763,13 @@ int hashtable_update_rec(cplat_hashtable *ht, uint64_t record, const void *value
         return CPLAT_ERR_NOT_FOUND;
     }
 
+    cplat_timespec operation_time;
+    int clock_ret = cplat_clock_get_realtime(&operation_time);
+    if (clock_ret != CPLAT_OK)
+    {
+        return clock_ret;
+    }
+
     if (hashtable_value_storage_find_free(ht, rec, 1, value, &value_storage_offset) == 0)
     {
         if (growth_out != NULL)
@@ -765,7 +784,7 @@ int hashtable_update_rec(cplat_hashtable *ht, uint64_t record, const void *value
 
     hashtable_release_value(ht, rec);
     hashtable_value_store(ht, rec, value, value_storage_offset);
-    stamp_record(ht, rec);
+    stamp_record(ht, rec, &operation_time);
 
     return CPLAT_OK;
 }
@@ -834,6 +853,13 @@ int hashtable_delete(cplat_hashtable *ht, const void *key, size_t key_length)
         return CPLAT_ERR_OUT_OF_RANGE;
     }
 
+    cplat_timespec operation_time;
+    int clock_ret = cplat_clock_get_realtime(&operation_time);
+    if (clock_ret != CPLAT_OK)
+    {
+        return clock_ret;
+    }
+
     idx = hashtable_hash_key(ht, key, key_length);
     link = &hashtable_bucket_head(ht)[idx];
     while (*link != 0)
@@ -848,7 +874,7 @@ int hashtable_delete(cplat_hashtable *ht, const void *key, size_t key_length)
             }
 
             *hashtable_entry_status(ht, rec) = REC_DELETED;
-            stamp_record(ht, rec);
+            stamp_record(ht, rec, &operation_time);
             ht->hdr->in_use_count--;
 
             /* lifetime が REC_DELETED 以下のときは、削除済みのまま置けないので直ちに空へ戻す。 */

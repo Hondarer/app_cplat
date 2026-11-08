@@ -47,7 +47,9 @@ class traceFileCoverageTest : public Test
                 {
                     timestamp->tv_sec = 1714100645LL;
                     timestamp->tv_nsec = 678000000;
+                    return CPLAT_OK;
                 });
+
         // [状態] - cplat_clock_get_realtime() から、固定の現在時刻を設定して戻るように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_format_realtime_iso8601_local(_, _, _))
             .WillByDefault(
@@ -214,7 +216,7 @@ TEST_F(traceFileCoverageTest, shared_write_reopens_when_file_identity_is_unavail
     // Arrange
     cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
         "identity-unavailable.log", 0, 0,
-        CPLAT_TRACE_FILE_SINK_SHARED);                // [状態] - ファイル同一性を保持しない共有 sink を用意する。
+        CPLAT_TRACE_FILE_SINK_SHARED); // [状態] - ファイル同一性を保持しない共有 sink を用意する。
     ASSERT_NE(nullptr,
               handle); // [状態確認] - cplat_trace_file_sink_create() の戻り値が nullptr 以外であること。
 
@@ -316,7 +318,7 @@ TEST_F(traceFileCoverageTest, rotation_stops_after_rename_failure)
 {
     // Arrange
     cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
-        "rename-error.log", 1, 2, 0);                 // [状態] - ローテーション設定付きの file sink を用意する。
+        "rename-error.log", 1, 2, 0); // [状態] - ローテーション設定付きの file sink を用意する。
     ASSERT_NE(nullptr,
               handle); // [状態確認] - cplat_trace_file_sink_create() の戻り値が nullptr 以外であること。
 
@@ -448,13 +450,16 @@ TEST_F(traceFileCoverageTest, write_handles_invalid_arguments_and_dependency_fai
             {
                 timestamp->tv_sec = 1;
                 timestamp->tv_nsec = -1;
+                return CPLAT_OK;
             })
         .WillOnce(
             [](cplat_timespec *timestamp)
             {
                 timestamp->tv_sec = 1;
                 timestamp->tv_nsec = 0;
+                return CPLAT_OK;
             }); // [Pre-Assert確認_異常系] - cplat_clock_get_realtime() が 2 回呼び出されること。(不正値と正常値の順で時刻を解決することの確認)
+
     // [Pre-Assert手順] - cplat_clock_get_realtime() から 1 回目は不正なナノ秒を設定して戻り、2 回目は正常な時刻を設定して戻る。
     EXPECT_CALL(mock_cplat, cplat_clock_format_realtime_iso8601_local(_, _, _))
         .WillOnce(Return(
@@ -567,7 +572,7 @@ TEST_F(traceFileCoverageTest, write_avoids_current_size_overflow)
     // Arrange
     cplat_trace_file_sink *handle =
         cplat_trace_file_sink_create("size-overflow.log", (std::numeric_limits<size_t>::max)(), 1,
-                                     0);              // [状態] - current_bytes が SIZE_MAX の sink を用意する。
+                                     0); // [状態] - current_bytes が SIZE_MAX の sink を用意する。
     ASSERT_NE(nullptr,
               handle); // [状態確認] - cplat_trace_file_sink_create() の戻り値が nullptr 以外であること。
 
@@ -651,4 +656,30 @@ TEST_F(traceFileCoverageTest, create_shared_returns_null_when_lock_path_allocati
     // Assert
     EXPECT_EQ(nullptr,
               handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が nullptr であること。
+}
+
+// レジストリの初回ロック生成が失敗した場合に再試行や NULL ロック操作をしないことの確認
+TEST(traceFileResidualTest, registry_initialization_failure_is_retained)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock;
+
+    // Pre-Assert
+    EXPECT_CALL(mock, cplat_local_lock_create(_)).WillOnce(Return(CPLAT_ERR_OUT_OF_MEMORY));
+
+    // [Pre-Assert確認_異常系] - レジストリのロック生成が 1 回呼び出されること。
+    // [Pre-Assert手順] - ロックを設定せず確保失敗を返す。
+    EXPECT_CALL(mock, cplat_local_lock_lock(_, _)).Times(0);
+
+    // [Pre-Assert確認_異常系] - NULL のレジストリ ロックを取得しないこと。
+
+    // Act
+    cplat_trace_file_sink *first =
+        cplat_trace_file_sink_create("registry-failure.log", 0, 0, 0); // [手順] - 初回生成を失敗させる。
+    cplat_trace_file_sink *second =
+        cplat_trace_file_sink_create("registry-failure.log", 0, 0, 0); // [手順] - 初回失敗後に再度生成する。
+
+    // Assert
+    EXPECT_EQ(nullptr, first);  // [確認_異常系] - 初回生成が失敗すること。
+    EXPECT_EQ(nullptr, second); // [確認_異常系] - 再度の生成も安全に失敗すること。
 }

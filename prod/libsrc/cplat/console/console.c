@@ -661,7 +661,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
     /*
      * CRT レベルの標準ストリームを親コンソールへ再接続する (fgets 等の入力で参照する)。
      * printf/fprintf (FILE* 経由) は再接続後に書き込みを拒否することがあるため
-     * (README.md 参照)、再接続後の出力には本ファイル末尾の cplat_console_write()
+     * 再接続後の出力には本ファイル末尾の cplat_console_write()
      * (Win32 の WriteConsoleU を呼ぶ) を使うこと。本関数による fd の再接続は、
      * fgets 等の入力経路向けに維持している。
      * CONOUT$ / CONIN$ は GENERIC_READ | GENERIC_WRITE で開いているため _O_RDWR を渡す。

@@ -69,7 +69,8 @@ extern "C"
 
     /**
      *  @brief          単調増加クロックの現在値をミリ秒単位で返します。
-     *  @return         単調増加クロックのミリ秒値。
+     *  @param[out]     milliseconds_out ミリ秒値の格納先。NULL を渡してはなりません。
+     *  @return         成功時は CPLAT_OK、失敗時は共通結果コードを返します。失敗時は出力を変更しません。
      *
      *  OS の単調増加クロック (CLOCK_MONOTONIC 相当) を読み取り、ミリ秒に変換して返します。\n
      *  タイムアウト判定・差分計算など ms 精度で十分な用途に使用します。\n
@@ -97,18 +98,30 @@ extern "C"
      *
      *  使用例:
         @code{.c}
-        uint64_t deadline = cplat_clock_get_monotonic_ms() + 500; // 500 [ms] タイムアウト
-        while (cplat_clock_get_monotonic_ms() < deadline)
+        uint64_t now;
+        if (cplat_clock_get_monotonic_ms(&now) != CPLAT_OK)
+        {
+            return -1;
+        }
+        uint64_t deadline = now + 500;
+        while (now < deadline)
         {
             // 処理
+            if (cplat_clock_get_monotonic_ms(&now) != CPLAT_OK)
+            {
+                return -1;
+            }
         }
         @endcode
      */
-    CPLAT_EXPORT uint64_t CPLAT_API cplat_clock_get_monotonic_ms(void);
+    CPLAT_EXPORT int CPLAT_API cplat_clock_get_monotonic_ms(uint64_t *milliseconds_out);
 
     /**
      *  @brief          単調増加クロックの現在値を cplat_timespec で返します。
-     *  @param[out]     ts  単調増加クロックの現在値 (秒部・ナノ秒部) の格納先。
+     *  @param[out]     timestamp_out  単調増加クロックの現在値 (秒部・ナノ秒部) の格納先。
+     *  @return         成功時は CPLAT_OK、NULL 出力先は CPLAT_ERR_INVALID_ARGUMENT、
+     *                  未対応 OS は CPLAT_ERR_UNSUPPORTED、取得・変換失敗は共通結果コードを返します。
+     *                  出力先は必須です。失敗時はすべての出力を変更しません。
      *
      *  OS の単調増加クロック (CLOCK_MONOTONIC 相当) をナノ秒精度で返します。\n
      *  受信タイムスタンプ・高精度な経過時間測定など μs 以下の精度が必要な用途に使用します。
@@ -141,18 +154,27 @@ extern "C"
         cplat_timespec end;
         int64_t elapsed_ms;
 
-        cplat_clock_get_monotonic(&start);
+        if (cplat_clock_get_monotonic(&start) != CPLAT_OK)
+        {
+            return -1;
+        }
         // ... 計測対象の処理 ...
-        cplat_clock_get_monotonic(&end);
+        if (cplat_clock_get_monotonic(&end) != CPLAT_OK)
+        {
+            return -1;
+        }
 
         if (cplat_timespec_diff_ms(&end, &start, &elapsed_ms) != CPLAT_OK) { return; }
         @endcode
      */
-    CPLAT_EXPORT void CPLAT_API cplat_clock_get_monotonic(cplat_timespec *ts);
+    CPLAT_EXPORT int CPLAT_API cplat_clock_get_monotonic(cplat_timespec *timestamp_out);
 
     /**
      *  @brief          現在時刻を cplat_timespec で返します。
-     *  @param[out]     ts  Unix epoch (1970-01-01T00:00:00Z) 基準の現在時刻の格納先。
+     *  @param[out]     timestamp_out  Unix epoch (1970-01-01T00:00:00Z) 基準の現在時刻の格納先。
+     *  @return         成功時は CPLAT_OK、NULL 出力先は CPLAT_ERR_INVALID_ARGUMENT、
+     *                  未対応 OS は CPLAT_ERR_UNSUPPORTED、取得・変換失敗は共通結果コードを返します。
+     *                  出力先は必須です。失敗時はすべての出力を変更しません。
      *
      *  OS の実時刻クロック (CLOCK_REALTIME 相当) を読み取り、
      *  Unix epoch (1970-01-01T00:00:00Z) からの経過時間として返します。\n
@@ -187,11 +209,14 @@ extern "C"
         @code{.c}
         cplat_timespec session_ts;
 
-        cplat_clock_get_realtime(&session_ts);
+        if (cplat_clock_get_realtime(&session_ts) != CPLAT_OK)
+        {
+            return -1;
+        }
         // session_ts を構造体に保存して識別子として使用する
         @endcode
      */
-    CPLAT_EXPORT void CPLAT_API cplat_clock_get_realtime(cplat_timespec *ts);
+    CPLAT_EXPORT int CPLAT_API cplat_clock_get_realtime(cplat_timespec *timestamp_out);
 
     /**
      *  @brief          cplat_clock_format_realtime_iso8601_local() が返す時刻文字列の長さです。
@@ -251,8 +276,11 @@ extern "C"
 
     /**
      *  @brief          現在時刻を UTC の分解済み時刻とナノ秒で返します。
-     *  @param[out]     utc_tm  UTC の年月日時分秒を受け取る `struct tm`。
-     *  @param[out]     tv_nsec ナノ秒部 (0 以上 999,999,999 以下)。
+     *  @param[out]     utc_tm_out  UTC の年月日時分秒を受け取る `struct tm`。
+     *  @param[out]     nanoseconds_out ナノ秒部 (0 以上 999,999,999 以下)。
+     *  @return         成功時は CPLAT_OK、NULL 出力先は CPLAT_ERR_INVALID_ARGUMENT、
+     *                  未対応 OS は CPLAT_ERR_UNSUPPORTED、取得・変換失敗は共通結果コードを返します。
+     *                  出力先は必須です。失敗時はすべての出力を変更しません。
      *
      *  現在の実時刻を取得し、UTC の分解済み時刻へ変換して返します。\n
      *  ログのタイムスタンプ生成など、カレンダー時刻を文字列化する用途を想定します。
@@ -267,11 +295,14 @@ extern "C"
         struct tm utc_tm;
         int32_t   nsec;
 
-        cplat_clock_get_realtime_utc(&utc_tm, &nsec);
+        if (cplat_clock_get_realtime_utc(&utc_tm, &nsec) != CPLAT_OK)
+        {
+            return -1;
+        }
         // utc_tm と nsec を使って "YYYY-MM-DD HH:MM:SS.mmm" を組み立てる
         @endcode
      */
-    CPLAT_EXPORT void CPLAT_API cplat_clock_get_realtime_utc(struct tm *utc_tm, int32_t *tv_nsec);
+    CPLAT_EXPORT int CPLAT_API cplat_clock_get_realtime_utc(struct tm *utc_tm_out, int32_t *nanoseconds_out);
 
     /**
      *  @brief          実時刻から指定ミリ秒後の期限を作ります。

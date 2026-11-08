@@ -54,7 +54,10 @@ int cplat_internal_trace_resolve_timestamp(const cplat_timespec *timestamp, cpla
     }
 
     /* タイムスタンプが未指定または無効値の場合、現在時刻を取得して解決する。 */
-    cplat_clock_get_realtime(resolved);
+    if (cplat_clock_get_realtime(resolved) != CPLAT_OK)
+    {
+        return -1;
+    }
 
     if (trace_timestamp_is_valid(resolved))
     {

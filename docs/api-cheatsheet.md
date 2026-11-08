@@ -955,3 +955,19 @@ grep -rnE '\b(fopen|freopen|fclose|fflush|fread|fwrite|remove|rename|fprintf|vfp
 
 cplat 自身のラッパー実装 (`prod/libsrc/cplat/crt/`) は、元関数へ委譲するため検出されます。  
 [coding-guideline.md の「ラッパーがある関数の使用」](coding-guideline.md#ラッパーがある関数の使用) の例外に当たるため、対象外として扱います。
+
+## 時刻取得とソース位置付き出力の更新
+
+`cplat_clock_get_monotonic_ms(uint64_t *milliseconds_out)`、`cplat_clock_get_monotonic(cplat_timespec *timestamp_out)`、`cplat_clock_get_realtime(cplat_timespec *timestamp_out)`、`cplat_clock_get_realtime_utc(struct tm *utc_tm_out, int32_t *nanoseconds_out)` は、成否を `int` の共通結果コードで返します。  
+出力先は必須で、失敗時はすべての出力を変更しません。  
+利用側は取得成功を確認してから値を使います。
+
+`cplat_ipv4_addr_loopback()` は、127.0.0.1 のネットワーク バイト オーダー値を返します。  
+`cplat_tracer_write_hex_with_source()` は、ファイル名と行番号を指定して 16 進ダンプを出力します。  
+通常は `cplat_tracer_write_hex()` を使い、メッセージ引数は 1 回だけ評価されます。
+
+Linux 用の `cplat_syslog_test_fd_write()` は、`SYSLOG_TEST_FD` が設定されていればその FD へ出力して 1、未設定なら 0 を返します。  
+`shared_lib_lifecycle.h` がこの通常関数を利用します。
+
+Windows の EventLog は任意です。  
+共通バックエンドで EventLog を生成できない場合はその出力だけを省略し、ほかの出力先を継続します。

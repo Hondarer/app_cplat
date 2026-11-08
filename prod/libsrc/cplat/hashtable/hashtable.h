@@ -947,10 +947,11 @@ int hashtable_validate_config(const cplat_hashtable_config *config);
 /* ---- 追加・更新・削除 (hashtable_modify.c) ---- */
 
 /**
- *  @brief          テーブル横断の変更時刻へ現在の実時刻を刻みます。
+ *  @brief          テーブル横断の変更時刻へ取得済みの実時刻を刻みます。
+ *  @param[in]      now  取得済みの実時刻。NULL を渡してはなりません。
  *  @param[in]      ht  対象。NULL を渡してはなりません。
  */
-void hashtable_stamp_table(cplat_hashtable *ht);
+void hashtable_stamp_table(cplat_hashtable *ht, const cplat_timespec *now);
 
 /**
  *  @brief          reuse_deleted 用に、再利用する削除中レコードを選びます。

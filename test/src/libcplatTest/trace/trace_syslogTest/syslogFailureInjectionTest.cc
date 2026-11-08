@@ -120,6 +120,7 @@ TEST_F(syslogFailureInjectionTest, write_reconnects_after_backoff_elapsed)
                 }
                 timestamp->tv_nsec = 0;
                 ++realtime_call;
+                return CPLAT_OK;
             })); // [状態] - cplat_clock_get_realtime() から、初回は 0 秒、以降は 10 秒を設定して戻るように既定動作を設定する。
 
     // Pre-Assert
@@ -253,6 +254,7 @@ TEST_F(syslogFailureInjectionTest, write_returns_unknown_when_fallback_timestamp
             {
                 timestamp->tv_sec = 1;
                 timestamp->tv_nsec = 1000000000L;
+                return CPLAT_OK;
             })); // [状態] - cplat_clock_get_realtime() から、不正なナノ秒値 1000000000 を設定して戻るように既定動作を設定する。
 
     // Pre-Assert
@@ -857,6 +859,7 @@ TEST_F(syslogFailureInjectionTest, socket_failure_caps_backoff_interval)
                 }
                 timestamp->tv_nsec = 0;
                 ++realtime_call;
+                return CPLAT_OK;
             })); // [状態] - cplat_clock_get_realtime() から、0 秒、10 秒、20 秒、40 秒を順に設定して戻るように既定動作を設定する。
 
     // Pre-Assert
@@ -898,6 +901,26 @@ TEST_F(syslogFailureInjectionTest, socket_failure_caps_backoff_interval)
 
     // Cleanup
     cplat_syslog_sink_dispose(handle);
+}
+
+// 時計が取得できない場合にゼロ時刻で接続を開始しないことの確認
+TEST_F(syslogFailureInjectionTest, create_rejects_clock_failure)
+{
+    // Arrange
+    NiceMock<Mock_sys_socket> mock_socket;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_clock_get_realtime(_)).WillOnce(Return(CPLAT_ERR_UNKNOWN));
+    // [Pre-Assert確認_異常系] - 接続判定用の時計を 1 回取得すること。
+    // [Pre-Assert手順] - 時計取得失敗を返す。
+    EXPECT_CALL(mock_socket, socket(_, _, _, _, _, _)).Times(0);
+    // [Pre-Assert確認_異常系] - 無効な時刻でソケットを生成しないこと。
+
+    // Act
+    auto *sink = cplat_syslog_sink_create("clock_failure", LOG_USER); // [手順] - 接続時の時計取得を失敗させる。
+
+    // Assert
+    EXPECT_EQ(nullptr, sink); // [確認_異常系] - 生成失敗を返すこと。
 }
 
 #endif /* PLATFORM_LINUX */

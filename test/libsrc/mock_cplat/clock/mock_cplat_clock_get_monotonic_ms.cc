@@ -1,38 +1,29 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-uint64_t delegate_real_cplat_clock_get_monotonic_ms(void)
+int delegate_real_cplat_clock_get_monotonic_ms(uint64_t *milliseconds_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_clock_get_monotonic_ms)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_clock_get_monotonic_ms"));
-
-    return real_fn();
+    return real_fn(milliseconds_out);
 }
 
-MOCK_WEAK_IMPL(uint64_t, cplat_clock_get_monotonic_ms, void)
+MOCK_WEAK_IMPL(int, cplat_clock_get_monotonic_ms, uint64_t *milliseconds_out)
 {
-    uint64_t mock_ret = 0;
+    int mock_ret;
 
     if (_mock_cplat != nullptr)
     {
-        mock_ret = _mock_cplat->cplat_clock_get_monotonic_ms();
+        mock_ret = _mock_cplat->cplat_clock_get_monotonic_ms(milliseconds_out);
     }
     else
     {
-        mock_ret = delegate_real_cplat_clock_get_monotonic_ms();
+        mock_ret = delegate_real_cplat_clock_get_monotonic_ms(milliseconds_out);
     }
 
     if (getTraceLevel() > TRACE_NONE)
     {
-        printf("  > %s", __func__);
-        if (getTraceLevel() >= TRACE_DETAIL)
-        {
-            printf(" -> %llu\n", (unsigned long long)mock_ret);
-        }
-        else
-        {
-            printf("\n");
-        }
+        printf("  > %s -> %d\n", __func__, mock_ret);
     }
 
     return mock_ret;

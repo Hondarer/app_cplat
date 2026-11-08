@@ -12,6 +12,8 @@
  */
 
 #include <cplat/base/platform.h>
+#include <cplat/base/error_internal.h>
+#include <errno.h>
 #include <cplat/base/result.h>
 #include <cplat/clock/clock.h>
 #include <cplat/clock/filetime_conv.h>
@@ -180,62 +182,115 @@ static int clock_format_iso8601_local_from_tm(char *buf, const size_t buf_size, 
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-uint64_t cplat_clock_get_monotonic_ms(void)
+int cplat_clock_get_monotonic_ms(uint64_t *milliseconds_out)
 {
-#if defined(PLATFORM_LINUX)
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint64_t)ts.tv_sec * MSEC_PER_SEC + (uint64_t)ts.tv_nsec / NSEC_PER_MSEC;
-#elif defined(PLATFORM_WINDOWS)
-    return (uint64_t)GetTickCount64();
-#endif /* PLATFORM_ */
+    cplat_timespec timestamp;
+
+    if (milliseconds_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    int ret = cplat_clock_get_monotonic(&timestamp);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    *milliseconds_out = (uint64_t)timestamp.tv_sec * MSEC_PER_SEC + (uint64_t)timestamp.tv_nsec / NSEC_PER_MSEC;
+
+    return CPLAT_OK;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-void cplat_clock_get_monotonic(cplat_timespec *ts)
+int cplat_clock_get_monotonic(cplat_timespec *timestamp_out)
 {
+    if (timestamp_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
 #if defined(PLATFORM_LINUX)
     struct timespec native;
-    clock_gettime(CLOCK_MONOTONIC, &native);
-    cplat_timespec_from_native(&native, ts);
+
+    if (clock_gettime(CLOCK_MONOTONIC, &native) != 0)
+    {
+        return cplat_internal_error_report_errno(NULL, errno);
+    }
+
+    cplat_timespec_from_native(&native, timestamp_out);
 #elif defined(PLATFORM_WINDOWS)
     ULONGLONG ms = GetTickCount64();
-    ts->tv_sec = (time_t)(ms / MSEC_PER_SEC);
-    ts->tv_nsec = (int64_t)((ms % MSEC_PER_SEC) * NSEC_PER_MSEC);
+    timestamp_out->tv_sec = (time_t)(ms / MSEC_PER_SEC);
+    timestamp_out->tv_nsec = (int64_t)((ms % MSEC_PER_SEC) * NSEC_PER_MSEC);
+#else
+    return CPLAT_ERR_UNSUPPORTED;
 #endif /* PLATFORM_ */
+    return CPLAT_OK;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-void cplat_clock_get_realtime(cplat_timespec *ts)
+int cplat_clock_get_realtime(cplat_timespec *timestamp_out)
 {
+    if (timestamp_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
 #if defined(PLATFORM_LINUX)
     struct timespec native;
-    clock_gettime(CLOCK_REALTIME, &native);
-    cplat_timespec_from_native(&native, ts);
+
+    if (clock_gettime(CLOCK_REALTIME, &native) != 0)
+    {
+        return cplat_internal_error_report_errno(NULL, errno);
+    }
+
+    cplat_timespec_from_native(&native, timestamp_out);
 #elif defined(PLATFORM_WINDOWS)
     FILETIME ft;
     GetSystemTimeAsFileTime(&ft);
-    cplat_internal_filetime_to_timespec(&ft, ts);
+    cplat_internal_filetime_to_timespec(&ft, timestamp_out);
+#else
+    return CPLAT_ERR_UNSUPPORTED;
 #endif /* PLATFORM_ */
+    return CPLAT_OK;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-void cplat_clock_get_realtime_utc(struct tm *utc_tm, int32_t *tv_nsec)
+int cplat_clock_get_realtime_utc(struct tm *utc_tm_out, int32_t *nanoseconds_out)
 {
     cplat_timespec realtime_ts;
+    struct tm utc_tm;
 
-    cplat_clock_get_realtime(&realtime_ts);
-
-    *tv_nsec = (int32_t)realtime_ts.tv_nsec; /* 正規化済みの 0 以上 999,999,999 以下は int32_t に収まる */
-
-    /* cplat_gmtime が失敗したときは、未初期化の struct tm を残さないよう零埋めする。 */
-    if (cplat_gmtime(utc_tm, &realtime_ts.tv_sec) != 0)
+    if ((utc_tm_out == NULL) || (nanoseconds_out == NULL))
     {
-        memset(utc_tm, 0, sizeof(*utc_tm));
+        return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
+    int ret = cplat_clock_get_realtime(&realtime_ts);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    errno = 0;
+
+    if (cplat_gmtime(&utc_tm, &realtime_ts.tv_sec) != 0)
+    {
+        int errno_value = errno;
+        if (errno_value == 0)
+        {
+            errno_value = EINVAL;
+        }
+
+        return cplat_internal_error_report_errno(NULL, errno_value);
+    }
+
+    *utc_tm_out = utc_tm;
+    *nanoseconds_out = (int32_t)realtime_ts.tv_nsec;
+
+    return CPLAT_OK;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -302,7 +357,13 @@ int cplat_clock_get_realtime_deadline_ms(const uint64_t timeout_ms, struct times
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
-    cplat_clock_get_realtime(&now);
+
+    ret = cplat_clock_get_realtime(&now);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
     ret = cplat_timespec_add_ms(&now, timeout_ms, &deadline);
     if (ret != CPLAT_OK)
     {

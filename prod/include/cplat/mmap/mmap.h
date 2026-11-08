@@ -72,12 +72,12 @@ extern "C"
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
-     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *                  @ref CPLAT_ERR_NOT_FOUND など、ファイル操作または対応付けの失敗に応じた共通結果コードを返します。
      *
      *  @p access が @ref CPLAT_MMAP_ACCESS_READ_ONLY のとき、@p path が存在しない場合は
-     *  新規作成せず @ref CPLAT_ERR_UNKNOWN を返します。\n
+     *  新規作成せず @ref CPLAT_ERR_NOT_FOUND を返します。\n
      *  マップ結果のサイズが 0 になる場合 (空の既存ファイルを開いた場合など) は、
-     *  `mmap`/`MapViewOfFile` がサイズ 0 を扱えないため @ref CPLAT_ERR_UNKNOWN を返します。\n
+     *  `mmap`/`MapViewOfFile` がサイズ 0 を扱えないため @ref CPLAT_ERR_INVALID_ARGUMENT を返します。\n
      *  @warning        @p path はローカル ファイル システム上のファイルを指定してください。
      *                  ネットワーク ファイル システム上のファイルを指定した場合、
      *                  プロセス間の一貫性は保証されません (本ファイル冒頭の @warning を参照)。

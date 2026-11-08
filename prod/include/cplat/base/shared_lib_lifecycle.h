@@ -113,7 +113,7 @@ static void dllmain_syslog_send(const char *msg)
     buf[n] = '\n';
 
     /* SYSLOG_TEST_FD が設定されていればテスト用 FD に送信し、/dev/log へは送信しない。 */
-    if (syslog_test_fd_write(buf, (size_t)(n + 1)))
+    if (cplat_syslog_test_fd_write(buf, (size_t)(n + 1)))
     {
         return;
     }

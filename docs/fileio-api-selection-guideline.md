@@ -7,6 +7,10 @@ cplat が公開する API 全体の一覧は [cplat API チート シート](api
 測定方法は [ベンチマークの測定方法](https://github.com/Hondarer/app_cplat/blob/main/prod/src/cmd/bench-io/benchmark-method.md) を参照してください。  
 本書の表は `bench-io` の出力から転記したものです。CSV そのものは実行環境ごとに値が変わるため、リポジトリでは管理していません。
 
+`bench-io` の stdio 測定は、cplat ラッパーの引数検査と失敗処理を含みます。  
+CRT を直接呼び出していた過去の数値は、現在の測定と同じ条件ではありません。  
+過去の比較値を現在の実装の性能保証として扱わず、判断が必要な環境で同じ条件を指定して測定します。
+
 ## 測定条件
 
 | 項目 | Linux | Windows |

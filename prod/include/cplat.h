@@ -19,7 +19,7 @@
  *    `__attribute__((constructor))` / `DllMain` を定義し、
  *    利用側に `onLoad()` / `onUnload()` の実装を要求します。
  *  - `<cplat/test/syslog_test.h>` :
- *    Linux 限定で `static` 関数 `syslog_test_fd_write()` を定義します。
+ *    Linux 限定で テスト補助関数 `cplat_syslog_test_fd_write()` を宣言します。
  *
  *  また、以下のヘッダーは特定プラットフォーム専用の API のみを宣言するため、
  *  このアンブレラ ヘッダーには含まれていません。

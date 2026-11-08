@@ -120,9 +120,16 @@ class traceHookTest : public Test
                     set_valid_deadline(abs_timeout);
                     return CPLAT_OK;
                 });
+
         // [状態] - cplat_clock_get_realtime_deadline_ms() から、有効な期限を設定して戻るように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_get_realtime(_))
-            .WillByDefault([](cplat_timespec *ts) { set_fixed_realtime(ts); });
+            .WillByDefault(
+                [](cplat_timespec *ts)
+                {
+                    set_fixed_realtime(ts);
+                    return CPLAT_OK;
+                });
+
         // [状態] - cplat_clock_get_realtime() から、固定の現在時刻を設定して戻るように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_format_realtime_iso8601_local(_, _, _))
             .WillByDefault(

@@ -85,8 +85,10 @@ class hashtableTimestampTest : public Test
                 {
                     set_timestamp(ts, next_sec_, 0);
                     next_sec_ += 10;
+                    return CPLAT_OK;
                 }); // [状態] - cplat_clock_get_realtime() が呼び出された際に 10 秒ずつ進む時刻を返すようにモックを設定する。
     }
+
     // [サブ手順終了]
 };
 
@@ -762,6 +764,66 @@ TEST_F(hashtableTimestampTest, scope_table_insert_direct_and_table_timestamp)
     EXPECT_EQ(
         1030,
         table.tv_sec); // [確認_正常系] - table.tv_sec が 1030 であること。(clear でテーブル時刻が進んだことの確認)
+
+    // Cleanup
+    cplat_hashtable_dispose(ht);
+}
+
+// 時刻取得失敗による変更操作が管理領域とデータ領域を更新しないことの確認
+// [サブ手順参照 名前=hashtableTimestampTest.SetUp]
+TEST_F(hashtableTimestampTest, clock_failure_keeps_table_image_unchanged)
+{
+    // Arrange
+    cplat_hashtable_config config = {};
+    cplat_hashtable *ht = nullptr;
+    fill_config(&config, 4, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);
+    const unsigned char value[8] = {1};
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht)); // [状態] - テーブルを生成する。
+
+    // [状態確認] - cplat_hashtable_create() が CPLAT_OK を返すこと。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_hashtable_add(ht, "a", value,
+                                  CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE)); // [状態] - 初期レコードを登録する。
+
+    // [状態確認] - cplat_hashtable_add() が CPLAT_OK を返すこと。
+    const void *management = nullptr;
+    const void *data = nullptr;
+    size_t management_size = 0;
+    size_t data_size = 0;
+    ASSERT_EQ(CPLAT_OK,
+              cplat_hashtable_buffer_size(ht, &management_size, &data_size)); // [状態] - 領域サイズを取得する。
+
+    // [状態確認] - cplat_hashtable_buffer_size() が CPLAT_OK を返すこと。
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_buffer_ref(ht, &management, &data)); // [状態] - 領域への参照を取得する。
+
+    // [状態確認] - cplat_hashtable_buffer_ref() が CPLAT_OK を返すこと。
+    const auto *management_bytes = static_cast<const unsigned char *>(management);
+    const auto *data_bytes = static_cast<const unsigned char *>(data);
+    const std::vector<unsigned char> before_management(management_bytes, management_bytes + management_size);
+    const std::vector<unsigned char> before_data(data_bytes, data_bytes + data_size);
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_clock_get_realtime(_)).Times(4).WillRepeatedly(Return(CPLAT_ERR_UNKNOWN));
+
+    // [Pre-Assert確認_異常系] - 実時刻の取得が 4 回呼び出されること。
+    // [Pre-Assert手順] - 出力せず CPLAT_ERR_UNKNOWN を返す。
+
+    // Act
+    int add_ret = cplat_hashtable_add(ht, "b", value,
+                                      CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [手順] - 追加前の時刻取得を失敗させる。
+    int update_ret = cplat_hashtable_update(ht, "a", value);                  // [手順] - 更新前の時刻取得を失敗させる。
+    int delete_ret = cplat_hashtable_delete(ht, "a");                         // [手順] - 削除前の時刻取得を失敗させる。
+    int clear_ret = cplat_hashtable_clear(ht); // [手順] - 全件消去前の時刻取得を失敗させる。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, add_ret);    // [確認_異常系] - 追加を失敗として返すこと。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, update_ret); // [確認_異常系] - 更新を失敗として返すこと。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, delete_ret); // [確認_異常系] - 削除を失敗として返すこと。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, clear_ret);  // [確認_異常系] - 全件消去を失敗として返すこと。
+    EXPECT_EQ(0, std::memcmp(before_management.data(), management,
+                             management_size)); // [確認_異常系] - 管理領域が更新前と一致すること。
+    EXPECT_EQ(0,
+              std::memcmp(before_data.data(), data, data_size)); // [確認_異常系] - データ領域が更新前と一致すること。
 
     // Cleanup
     cplat_hashtable_dispose(ht);

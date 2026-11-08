@@ -141,8 +141,9 @@ int bench_mmap_iterate(bench_context *ctx, const bench_case *item);
  *  @brief          メモリ マップド ファイル API 系のケースで確保した資源を解放します。
  *  @param[in,out]  ctx   共有状態。NULL を渡してはなりません。
  *  @param[in]      item  測定条件。NULL を渡してはなりません。
+ *  @return         成功時は 0、解放失敗時は -1 を返します。
  */
-void bench_mmap_teardown(bench_context *ctx, const bench_case *item);
+int bench_mmap_teardown(bench_context *ctx, const bench_case *item);
 
 /**
  *  @brief          API 形態の表示名を返します。

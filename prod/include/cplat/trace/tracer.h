@@ -1118,6 +1118,25 @@ extern "C"
                                                               const cplat_timespec *timestamp, const char *file,
                                                               int line, const char *message);
 
+    /**
+     *  @brief          ソース位置を付けて 16 進ダンプを出力します。
+     *  @param[in,out]  handle 対象。NULL の場合は出力しません。
+     *  @param[in]      level 詳細度。
+     *  @param[in]      timestamp 時刻。NULL の場合は現在時刻を取得します。
+     *  @param[in]      data ダンプするデータ。NULL の場合は出力しません。
+     *  @param[in]      size データのバイト数。
+     *  @param[in]      file 呼び出し元のファイル名。NULL を渡してはなりません。
+     *  @param[in]      line 呼び出し元の行番号。
+     *  @param[in]      message メッセージ。NULL を渡せます。
+     *  @return         成功時は CPLAT_OK、失敗時は共通結果コードを返します。
+     *  @par            スレッド セーフ
+     *  本関数の同期条件は cplat_tracer_write_hex_at() と同じです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_tracer_write_hex_with_source(cplat_tracer *handle, cplat_trace_level level,
+                                                                  const cplat_timespec *timestamp, const void *data,
+                                                                  size_t size, const char *file, int line,
+                                                                  const char *message);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -1145,9 +1164,8 @@ extern "C"
  *  @brief          ソース ファイル名と行番号を自動付与する cplat_tracer_write_hex マクロです。
  */
 #define cplat_tracer_write_hex(handle, level, timestamp, data, size, message) \
-    cplat_tracer_write_hexf_at((handle), (level), (timestamp), (data), (size), "[%s:%d]%s%s", \
-                               cplat_path_basename(__FILE__), __LINE__, cplat_tracer_hex_sep(message), \
-                               cplat_tracer_hex_msg(message))
+    cplat_tracer_write_hex_with_source((handle), (level), (timestamp), (data), (size), cplat_path_basename(__FILE__), \
+                                       __LINE__, (message))
 
 /**
  *  @brief          ソース ファイル名と行番号を自動付与する cplat_tracer_write_hexf マクロです。

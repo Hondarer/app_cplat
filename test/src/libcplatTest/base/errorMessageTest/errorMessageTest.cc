@@ -365,3 +365,20 @@ TEST_F(errorMessageTest, errno_message_treats_erange_as_success)
 }
 
 #endif /* PLATFORM_LINUX */
+
+// errno の説明を小さいバッファーへ切り詰めて成功を返すことの確認
+TEST_F(errorMessageTest, errno_message_truncation_is_success)
+{
+    // Arrange
+    char buffer[2] = {'X', 'X'};
+    const cplat_error error = {CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_PERMISSION_DENIED, EACCES};
+
+    // Pre-Assert
+
+    // Act
+    int result = cplat_error_message(buffer, sizeof(buffer), &error); // [手順] - errno の説明を 2 バイトへ格納する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - 切り詰めを成功として返すこと。
+    EXPECT_EQ('\0', buffer[1]);  // [確認_正常系] - 終端文字を格納すること。
+}

@@ -19,6 +19,7 @@
 #include <cplat/argparser/argparser.h>
 #include <cplat/base/result.h>
 #include <cplat/console/console.h>
+#include <cplat/crt/stdio.h>
 #include <cplat/crt/stdlib.h>
 #include <cplat/crt/string.h>
 #include <cplat/crt/unistd.h>
@@ -1009,7 +1010,7 @@ int main(int argc, char *argv[])
 
     if (cplat_argparser_get_register_error_count() > 0)
     {
-        cplat_argparser_print_register_error_messages(stderr);
+        (void)cplat_argparser_print_register_error_messages(stderr); /* 登録失敗の終了値を優先する */
         return EXIT_FAILURE;
     }
 
@@ -1017,14 +1018,18 @@ int main(int argc, char *argv[])
 
     if (need_help != 0)
     {
-        cplat_argparser_print_usage(stdout);
+        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || cplat_fflush(stdout, NULL) != 0)
+        {
+            return EXIT_FAILURE;
+        }
+
         return EXIT_SUCCESS;
     }
 
     if (parse_result != CPLAT_OK)
     {
-        cplat_argparser_print_error_messages(stderr);
-        cplat_argparser_print_usage(stderr);
+        (void)cplat_argparser_print_error_messages(stderr); /* 解析失敗の終了値を優先する */
+        (void)cplat_argparser_print_usage(stderr);          /* 解析失敗の終了値を優先する */
         return EXIT_FAILURE;
     }
 

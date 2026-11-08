@@ -145,7 +145,8 @@ extern "C"
      *  @param[in,out]  argv          引数配列。NULL 可。
      *  @param[out]     detected_out  報告先フラグを検出した場合は 1、そうでない場合は 0 の格納先。
      *                                NULL 可。戻り値が @ref CPLAT_OK の場合のみ有効です。
-     *  @return         常に @ref CPLAT_OK を返します。
+     *  @return         成功時は @ref CPLAT_OK 、報告先が長すぎる場合は @ref CPLAT_ERR_BUFFER_TOO_SMALL を返します。
+     *                  失敗時は引数配列と保持済み報告先を変更せず、detected_out は 0 にします。
      *
      *  cplat_elevated_process_run_with_result() が付与したフラグを検出し、後続の
      *  cplat_elevated_process_report_result() のために報告先を保持します。検出した

@@ -1,6 +1,7 @@
 # テスト対象のソース ファイル
 # プラットフォーム別実装のため 2 本を指定する。実際にコンパイルされるのは実行環境側だけ
 TEST_SRCS := \
+	$(MYAPP_DIR)/prod/libsrc/cplat/net/endpoint.c \
 	$(MYAPP_DIR)/prod/libsrc/cplat/net/endpoint_linux.c \
 	$(MYAPP_DIR)/prod/libsrc/cplat/net/endpoint_windows.c
 

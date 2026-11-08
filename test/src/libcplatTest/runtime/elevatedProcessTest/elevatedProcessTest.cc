@@ -340,7 +340,7 @@ TEST(elevatedProcessTest, linux_helpers_accept_optional_output_and_report_unavai
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         report_result); // [確認_異常系] - Linux の cplat_elevated_process_report_result() の戻り値が CPLAT_ERR_UNKNOWN であること。
-#endif                        /* PLATFORM_LINUX */
+#endif                  /* PLATFORM_LINUX */
 }
 
 #if defined(PLATFORM_LINUX)
@@ -449,3 +449,30 @@ TEST(elevatedProcessTest, run_apis_reject_linux_non_root)
     EXPECT_EQ(EXIT_FAILURE, exit_code); // [確認_異常系] - exit_code が EXIT_FAILURE であること。
 }
 #endif /* PLATFORM_LINUX */
+
+#if defined(PLATFORM_WINDOWS)
+// 長すぎる報告先を拒否したときに引数配列を変更しないことの確認
+TEST(elevatedProcessTest, long_result_target_preserves_arguments)
+{
+    // Arrange
+    std::string argument = "--cplat-result-file=" + std::string(32768, 'x');
+    char program[] = "program";
+    char *argv[] = {program, &argument[0], nullptr};
+    char *original = argv[1];
+    int argc = 2;
+    int detected = 1;
+
+    // Pre-Assert
+
+    // Act
+    int result = cplat_elevated_process_extract_result_target(&argc, argv, &detected);
+
+    // [手順] - 保持先へ収まらない長さの結果報告先を指定する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, result); // [確認_異常系] - 容量不足を返すこと。
+    EXPECT_EQ(0, detected);                        // [確認_異常系] - 未検出の状態を返すこと。
+    EXPECT_EQ(2, argc);                            // [確認_異常系] - 引数の数を変更しないこと。
+    EXPECT_EQ(original, argv[1]);                  // [確認_異常系] - 引数配列を変更しないこと。
+}
+#endif

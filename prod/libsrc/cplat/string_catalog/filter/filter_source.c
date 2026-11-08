@@ -276,6 +276,17 @@ int cplat_string_catalog_filter_source_publish(void *source, const size_t source
         return ret;
     }
 
+    ret = cplat_clock_get_realtime(&realtime);
+    if (ret != CPLAT_OK)
+    {
+        if (lock != NULL)
+        {
+            lock->unlock(lock->context);
+        }
+
+        return ret;
+    }
+
     /* 書き込みの途中で中断した領域では版番号が奇数のまま残るため、偶数へ戻して基準にする。 */
     base = cplat_atomic_load_u64(&header->published_revision, CPLAT_MEMORY_ORDER_RELAXED) & ~REVISION_WRITING_BIT;
 
@@ -283,7 +294,6 @@ int cplat_string_catalog_filter_source_publish(void *source, const size_t source
     cplat_atomic_store_u64(&header->published_revision, base | REVISION_WRITING_BIT, CPLAT_MEMORY_ORDER_RELAXED);
     cplat_atomic_thread_fence(CPLAT_MEMORY_ORDER_RELEASE);
 
-    cplat_clock_get_realtime(&realtime);
     header->signature = STRING_CATALOG_FILTER_SOURCE_SIGNATURE;
     header->format_version = (uint16_t)STRING_CATALOG_FILTER_SOURCE_FORMAT_VERSION;
     header->header_size = (uint16_t)CPLAT_STRING_CATALOG_FILTER_SOURCE_HEADER_SIZE;

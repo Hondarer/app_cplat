@@ -47,8 +47,10 @@ TEST(traceCommonTest, resolves_current_time_for_null_timestamp)
             {
                 timestamp->tv_sec = 789;
                 timestamp->tv_nsec = 123;
+                return CPLAT_OK;
             }); // [Pre-Assert確認_正常系] - cplat_clock_get_realtime() が &resolved を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_clock_get_realtime() から、現在時刻として 789 秒 123 ナノ秒を設定して戻る。
+
+    // [Pre-Assert手順] - cplat_clock_get_realtime() から、現在時刻として 789 秒 123 ナノ秒を設定して戻る。
 
     // Act
     int actual_ret = cplat_internal_trace_resolve_timestamp(
@@ -80,8 +82,10 @@ TEST(traceCommonTest, falls_back_from_invalid_explicit_timestamp)
             {
                 current->tv_sec = 456;
                 current->tv_nsec = 789;
+                return CPLAT_OK;
             }); // [Pre-Assert確認_正常系] - cplat_clock_get_realtime() が &resolved を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_clock_get_realtime() から、現在時刻として 456 秒 789 ナノ秒を設定して戻る。
+
+    // [Pre-Assert手順] - cplat_clock_get_realtime() から、現在時刻として 456 秒 789 ナノ秒を設定して戻る。
 
     // Act
     int actual_ret = cplat_internal_trace_resolve_timestamp(
@@ -110,8 +114,10 @@ TEST(traceCommonTest, rejects_invalid_current_time)
             {
                 timestamp->tv_sec = 0;
                 timestamp->tv_nsec = -1;
+                return CPLAT_OK;
             }); // [Pre-Assert確認_異常系] - cplat_clock_get_realtime() が &resolved を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_clock_get_realtime() から、無効なナノ秒値 -1 を設定して戻る。
+
+    // [Pre-Assert手順] - cplat_clock_get_realtime() から、無効なナノ秒値 -1 を設定して戻る。
 
     // Act
     int actual_ret = cplat_internal_trace_resolve_timestamp(
@@ -163,8 +169,10 @@ TEST(traceCommonTest, allows_null_fallback_used)
             {
                 current->tv_sec = 456;
                 current->tv_nsec = 789;
+                return CPLAT_OK;
             }); // [Pre-Assert確認_正常系] - cplat_clock_get_realtime() が &resolved を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_clock_get_realtime() から、有効な現在時刻を設定して戻る。
+
+    // [Pre-Assert手順] - cplat_clock_get_realtime() から、有効な現在時刻を設定して戻る。
 
     // Act
     int actual_ret = cplat_internal_trace_resolve_timestamp(
@@ -333,4 +341,28 @@ TEST(traceCommonTest, maps_all_trace_levels)
             expected, actual,
             sizeof(
                 expected))); // [確認_正常系] - memcmp() の戻り値が 0 であること。(全トレース レベルと範囲外の値が期待する文字へ変換されたことの確認)
+}
+
+// 時計失敗を正常なトレース時刻として使用しないことの確認
+TEST(traceCommonTest, clock_failure_preserves_timestamp)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    cplat_timespec resolved = {123, 456};
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_clock_get_realtime(&resolved)).WillOnce(Return(CPLAT_ERR_UNKNOWN));
+
+    // [Pre-Assert確認_異常系] - 現在時刻を 1 回取得すること。
+    // [Pre-Assert手順] - 時計取得失敗を返す。
+
+    // Act
+    int result = cplat_internal_trace_resolve_timestamp(nullptr, &resolved, nullptr);
+
+    // [手順] - 明示時刻を省略し時計取得を失敗させる。
+
+    // Assert
+    EXPECT_EQ(-1, result);           // [確認_異常系] - 時刻解決失敗を返すこと。
+    EXPECT_EQ(123, resolved.tv_sec); // [確認_異常系] - 取得失敗前の時刻を保持すること。
+    EXPECT_EQ(456, resolved.tv_nsec);
 }

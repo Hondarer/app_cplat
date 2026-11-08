@@ -196,7 +196,7 @@ Mock_cplat::Mock_cplat()
     ON_CALL(*this, cplat_hashtable_dispose(_)).WillByDefault(Invoke(delegate_real_cplat_hashtable_dispose));
 
     // cplat/clock/clock.h
-    ON_CALL(*this, cplat_clock_get_monotonic_ms()).WillByDefault(Invoke(delegate_real_cplat_clock_get_monotonic_ms));
+    ON_CALL(*this, cplat_clock_get_monotonic_ms(_)).WillByDefault(Invoke(delegate_real_cplat_clock_get_monotonic_ms));
     ON_CALL(*this, cplat_clock_get_monotonic(_)).WillByDefault(Invoke(delegate_real_cplat_clock_get_monotonic));
     ON_CALL(*this, cplat_clock_get_realtime(_)).WillByDefault(Invoke(delegate_real_cplat_clock_get_realtime));
     ON_CALL(*this, cplat_clock_format_realtime_iso8601_local(_, _, _))
@@ -417,6 +417,12 @@ Mock_cplat::Mock_cplat()
     ON_CALL(*this, cplat_ntoh64(_)).WillByDefault(Invoke(delegate_real_cplat_ntoh64));
 
     // cplat/net/endpoint.h
+    ON_CALL(*this, cplat_ipv4_addr_loopback()).WillByDefault(Invoke(delegate_real_cplat_ipv4_addr_loopback));
+    ON_CALL(*this, cplat_tracer_write_hex_with_source(_, _, _, _, _, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_tracer_write_hex_with_source));
+#if defined(PLATFORM_LINUX)
+    ON_CALL(*this, cplat_syslog_test_fd_write(_, _)).WillByDefault(Invoke(delegate_real_cplat_syslog_test_fd_write));
+#endif
     ON_CALL(*this, cplat_ipv4_parse(_, _)).WillByDefault(Invoke(delegate_real_cplat_ipv4_parse));
     ON_CALL(*this, cplat_ipv4_resolve(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_ipv4_resolve));
     ON_CALL(*this, cplat_ipv4_to_string(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_ipv4_to_string));
@@ -573,7 +579,8 @@ Mock_cplat::Mock_cplat()
     ON_CALL(*this, cplat_sym_loader_info(_, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_info));
     ON_CALL(*this, cplat_sym_loader_count(_, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_count));
     ON_CALL(*this, cplat_sym_loader_get(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_get));
-    ON_CALL(*this, cplat_sym_loader_reject_count(_, _)).WillByDefault(Invoke(delegate_real_cplat_sym_loader_reject_count));
+    ON_CALL(*this, cplat_sym_loader_reject_count(_, _))
+        .WillByDefault(Invoke(delegate_real_cplat_sym_loader_reject_count));
     ON_CALL(*this, cplat_sym_loader_reject_get(_, _, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_sym_loader_reject_get));
 

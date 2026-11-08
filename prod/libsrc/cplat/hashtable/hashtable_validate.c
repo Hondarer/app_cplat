@@ -245,7 +245,7 @@ static int hashtable_validate_impl(const cplat_hashtable *ht, unsigned char *vis
 
             if (visited[i] == 0)
             {
-                /* 実装中または削除済みなのに、どのバケットからも辿れない。 */
+                /* 使用中または削除済みなのに、どのバケットからも辿れない。 */
                 return -1;
             }
 

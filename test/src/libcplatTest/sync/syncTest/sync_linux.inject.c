@@ -16,9 +16,14 @@ int test_sync_map_wait_rc(const int rc)
     return map_wait_rc(rc);
 }
 
-void test_sync_monotonic_deadline(struct timespec *abs_ts, const int timeout_ms)
+int test_sync_monotonic_ms(uint64_t *milliseconds_out)
 {
-    monotonic_deadline(abs_ts, timeout_ms);
+    return monotonic_ms(milliseconds_out);
+}
+
+int test_sync_monotonic_deadline(struct timespec *abs_ts, const int timeout_ms)
+{
+    return monotonic_deadline(abs_ts, timeout_ms);
 }
 
 void test_sync_set_local_rwlock_state(cplat_local_rwlock *rwlock, const int writer_active,

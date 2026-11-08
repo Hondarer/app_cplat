@@ -45,9 +45,6 @@
 /** 任意のアドレスを表す IPv4 アドレス (0.0.0.0)。ネットワーク バイト オーダー。 */
 #define CPLAT_IPV4_ADDR_ANY ((uint32_t)0U)
 
-/** ループバック アドレス (127.0.0.1)。ネットワーク バイト オーダー。 */
-#define CPLAT_IPV4_ADDR_LOOPBACK (cplat_hton32((uint32_t)0x7F000001U))
-
 /**
  *  @ingroup        CPLAT_NET
  *  @{
@@ -57,6 +54,14 @@
 extern "C"
 {
 #endif /* __cplusplus */
+
+    /**
+     *  @brief          ループバック アドレスを取得します。
+     *  @return         127.0.0.1 のネットワーク バイト オーダー値を返します。
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT uint32_t CPLAT_API cplat_ipv4_addr_loopback(void);
 
     /**
      *  @brief          IPv4 の通信エンドポイント (アドレスとポート) を表します。

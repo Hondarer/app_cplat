@@ -206,6 +206,7 @@ TEST_F(hashtableGenerationTest, generation_advances_while_realtime_goes_backward
                 ts->tv_sec = next_sec;
                 ts->tv_nsec = 0;
                 next_sec -= 10;
+                return CPLAT_OK;
             }); // [状態] - cplat_clock_get_realtime() が呼び出されるたびに 10 秒ずつ戻る時刻を返すようにモックを設定する。
 
     // Act

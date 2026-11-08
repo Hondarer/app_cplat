@@ -139,7 +139,7 @@ static void collect_cpu_model(bench_environment *env)
         }
     }
 
-    (void)fclose(stream);
+    (void)fclose(stream); /* 取得済みの CPU 情報を維持するため、補助的な読み取りのクローズ結果は使わない */
 #elif defined(PLATFORM_WINDOWS)
     int exists = 0;
 

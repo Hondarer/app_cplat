@@ -188,29 +188,39 @@ int bench_mmap_iterate(bench_context *ctx, const bench_case *item)
 
     result = access_mapped(ctx, item, map);
 
-    (void)cplat_mmap_detach(map, NULL);
+    if (cplat_mmap_detach(map, NULL) != CPLAT_OK)
+    {
+        return -1;
+    }
 
     return result;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-void bench_mmap_teardown(bench_context *ctx, const bench_case *item)
+int bench_mmap_teardown(bench_context *ctx, const bench_case *item)
 {
     mmap_state *state;
 
     if (ctx == NULL || item == NULL)
     {
-        return;
+        return 0;
     }
 
     state = (mmap_state *)ctx->state;
     if (state == NULL)
     {
-        return;
+        return 0;
     }
 
-    (void)cplat_mmap_detach(state->map, NULL);
+    int ret = cplat_mmap_detach(state->map, NULL);
     cplat_free(state);
     ctx->state = NULL;
+
+    if (ret != CPLAT_OK)
+    {
+        return -1;
+    }
+
+    return 0;
 }

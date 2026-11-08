@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <cplat/base/error.h>
+#include <cplat/test/syslog_test.h>
 #include <cplat/base/platform.h>
 #include <cplat/argparser/argparser.h>
 #include <cplat/clock/clock.h>
@@ -288,14 +289,14 @@
     EXPORT_ENTRY(cplat_hashtable_clear, int(CPLAT_API *)(cplat_hashtable * ht)) \
     EXPORT_ENTRY(cplat_hashtable_dispose, void(CPLAT_API *)(cplat_hashtable * ht)) \
     /* cplat/clock/clock.h */ \
-    EXPORT_ENTRY(cplat_clock_get_monotonic_ms, uint64_t(CPLAT_API *)(void)) \
-    EXPORT_ENTRY(cplat_clock_get_monotonic, void(CPLAT_API *)(cplat_timespec * ts)) \
-    EXPORT_ENTRY(cplat_clock_get_realtime, void(CPLAT_API *)(cplat_timespec * ts)) \
+    EXPORT_ENTRY(cplat_clock_get_monotonic_ms, int(CPLAT_API *)(uint64_t *)) \
+    EXPORT_ENTRY(cplat_clock_get_monotonic, int(CPLAT_API *)(cplat_timespec * ts)) \
+    EXPORT_ENTRY(cplat_clock_get_realtime, int(CPLAT_API *)(cplat_timespec * ts)) \
     EXPORT_ENTRY(cplat_clock_format_realtime_iso8601_local, \
                  int(CPLAT_API *)(char *buf, size_t buf_size, const cplat_timespec *timestamp)) \
     EXPORT_ENTRY(cplat_clock_format_realtime_iso8601_utc, \
                  int(CPLAT_API *)(char *buf, size_t buf_size, const cplat_timespec *timestamp)) \
-    EXPORT_ENTRY(cplat_clock_get_realtime_utc, void(CPLAT_API *)(struct tm * utc_tm, int32_t *tv_nsec)) \
+    EXPORT_ENTRY(cplat_clock_get_realtime_utc, int(CPLAT_API *)(struct tm * utc_tm, int32_t *tv_nsec)) \
     EXPORT_ENTRY(cplat_clock_get_realtime_deadline_ms, \
                  int(CPLAT_API *)(uint64_t timeout_ms, struct timespec *deadline_out)) \
     /* cplat/clock/timespec.h */ \
@@ -518,6 +519,10 @@
     EXPORT_ENTRY(cplat_hton64, uint64_t(CPLAT_API *)(uint64_t value)) \
     EXPORT_ENTRY(cplat_ntoh64, uint64_t(CPLAT_API *)(uint64_t value)) \
     /* cplat/net/endpoint.h */ \
+    EXPORT_ENTRY(cplat_ipv4_addr_loopback, uint32_t(CPLAT_API *)(void)) \
+    EXPORT_ENTRY(cplat_tracer_write_hex_with_source, \
+                 int(CPLAT_API *)(cplat_tracer *, cplat_trace_level, const cplat_timespec *, const void *, size_t, \
+                                  const char *, int, const char *)) \
     EXPORT_ENTRY(cplat_ipv4_parse, int(CPLAT_API *)(const char *text, uint32_t *address_out)) \
     EXPORT_ENTRY(cplat_ipv4_resolve, \
                  int(CPLAT_API *)(const char *text, uint32_t *address_out, cplat_error *detail_out)) \
@@ -694,7 +699,7 @@
     EXPORT_ENTRY(cplat_shutdown_reset_for_test, void(CPLAT_API *)(void)) \
     /* cplat/runtime/sym_loader.h */ \
     EXPORT_ENTRY(cplat_sym_loader_init, int(CPLAT_API *)(cplat_sym_loader_entry *const *fobj_array, \
-                                                          size_t fobj_length, const char *configpath)) \
+                                                         size_t fobj_length, const char *configpath)) \
     EXPORT_ENTRY(cplat_sym_loader_dispose, \
                  int(CPLAT_API *)(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length)) \
     EXPORT_ENTRY(cplat_sym_loader_is_default, int(CPLAT_API *)(cplat_sym_loader_entry * fobj, int *value_out)) \
@@ -702,7 +707,8 @@
     EXPORT_ENTRY(cplat_sym_loader_info, \
                  int(CPLAT_API *)(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length)) \
     EXPORT_ENTRY(cplat_sym_loader_count, int(CPLAT_API *)(cplat_sym_loader_entry * fobj, size_t *count_out)) \
-    EXPORT_ENTRY(cplat_sym_loader_get, int(CPLAT_API *)(cplat_sym_loader_entry * fobj, size_t index, void **address_out)) \
+    EXPORT_ENTRY(cplat_sym_loader_get, \
+                 int(CPLAT_API *)(cplat_sym_loader_entry * fobj, size_t index, void **address_out)) \
     EXPORT_ENTRY(cplat_sym_loader_reject_count, int(CPLAT_API *)(cplat_sym_loader_entry * fobj, size_t *count_out)) \
     EXPORT_ENTRY(cplat_sym_loader_reject_get, \
                  int(CPLAT_API *)(cplat_sym_loader_entry * fobj, size_t index, const char **lib_name, \
@@ -1055,6 +1061,7 @@
         EXPORT_ENTRY(cplat_stack_limit_linux_raise_to_hard_limit, \
                      int(CPLAT_API *)(uint64_t *soft_limit_bytes_out, cplat_error *detail_out)) \
         /* cplat/trace/syslog.h */ \
+        EXPORT_ENTRY(cplat_syslog_test_fd_write, int(CPLAT_API *)(const char *, size_t)) \
         EXPORT_ENTRY(cplat_syslog_sink_create, cplat_syslog_sink *(CPLAT_API *)(const char *ident, int facility)) \
         EXPORT_ENTRY(cplat_syslog_sink_write, int(CPLAT_API *)(cplat_syslog_sink * handle, int level, \
                                                                const cplat_timespec *timestamp, const char *message)) \

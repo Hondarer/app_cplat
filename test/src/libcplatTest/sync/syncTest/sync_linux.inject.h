@@ -18,7 +18,8 @@ extern "C"
     #endif /* __cplusplus */
 
     extern int test_sync_map_wait_rc(int rc);
-    extern void test_sync_monotonic_deadline(struct timespec *abs_ts, int timeout_ms);
+    extern int test_sync_monotonic_ms(uint64_t *milliseconds_out);
+    extern int test_sync_monotonic_deadline(struct timespec *abs_ts, int timeout_ms);
     extern void test_sync_set_local_rwlock_state(cplat_local_rwlock *rwlock, int writer_active,
                                                  unsigned int active_readers, unsigned int waiting_writers);
 

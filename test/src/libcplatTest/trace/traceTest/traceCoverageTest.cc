@@ -435,8 +435,9 @@ TEST_F(traceCoverageTest, setters_cover_invalid_and_allocation_failures)
         .WillOnce(Return(-1))
         .WillRepeatedly(
             Return(CPLAT_OK)); // [Pre-Assert確認_異常系] - cplat_syslog_sink_rename() が 2 回以上呼び出されること。
+
     // [Pre-Assert手順] - cplat_syslog_sink_rename() から 1 回目は CPLAT_OK、2 回目は -1、以降は CPLAT_OK を返す。
-#endif                                     /* PLATFORM_LINUX */
+#endif /* PLATFORM_LINUX */
 
     // Act
     negative_name = cplat_tracer_set_name(
@@ -457,7 +458,7 @@ TEST_F(traceCoverageTest, setters_cover_invalid_and_allocation_failures)
     rename_failure = cplat_tracer_set_name(
         handle, "renamed",
         0); // [手順] - cplat_syslog_sink_rename() が失敗する状態で cplat_tracer_set_name() を呼び出す。
-#endif                                                            /* PLATFORM_LINUX */
+#endif      /* PLATFORM_LINUX */
     test_tracer_set_lifecycle_state(handle, kLifecycleDisposed);
     stderr_inactive = cplat_tracer_set_stderr_level(
         handle,
@@ -489,7 +490,7 @@ TEST_F(traceCoverageTest, setters_cover_invalid_and_allocation_failures)
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         rename_failure); // [確認_異常系] - syslog rename 失敗時の cplat_tracer_set_name() の戻り値が CPLAT_ERR_UNKNOWN であること。
-#endif                                            /* PLATFORM_LINUX */
+#endif                   /* PLATFORM_LINUX */
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         stderr_inactive); // [確認_異常系] - 非アクティブ ハンドルでの cplat_tracer_set_stderr_level() の戻り値が CPLAT_ERR_UNKNOWN であること。
@@ -717,9 +718,11 @@ TEST_F(traceCoverageTest, write_fails_when_timestamp_resolution_fails)
             {
                 resolved->tv_sec = -1;
                 resolved->tv_nsec = -1;
+                return CPLAT_OK;
             })
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_clock_get_realtime() が 1 回以上呼び出されること。
+
     // [Pre-Assert手順] - cplat_clock_get_realtime() から 1 回目は、不正な時刻を設定して戻り、以降は既定動作へ委譲する。
     EXPECT_CALL(mock_cplat, cplat_clock_format_realtime_iso8601_local(_, _, _))
         .WillOnce(Return(CPLAT_ERR_UNKNOWN))
@@ -799,7 +802,7 @@ TEST_F(traceCoverageTest, remaining_compound_conditions)
         sizeof(
             default_path)); // [手順] - 実行ファイル名だけのパスになる状態で test_tracer_build_default_file_path() を呼び出す。
     int actual_ret_start = cplat_tracer_start(handle); // [手順] - cplat_tracer_start() を呼び出す。
-    ASSERT_EQ(CPLAT_OK, actual_ret_start);   // [確認_正常系] - cplat_tracer_start() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, actual_ret_start); // [確認_正常系] - cplat_tracer_start() の戻り値が CPLAT_OK であること。
     start_none =
         cplat_tracer_start(handle); // [手順] - すでに running のハンドルを指定して cplat_tracer_start() を呼び出す。
     writef_null_fmt =
@@ -1000,7 +1003,7 @@ TEST_F(traceCoverageTest, register_during_shutdown_and_stale_file_handle)
     EXPECT_EQ(
         nullptr,
         rejected); // [確認_異常系] - 登録直前のシャットダウンでの cplat_tracer_create() の戻り値が nullptr であること。
-#endif                                         /* PLATFORM_LINUX */
+#endif             /* PLATFORM_LINUX */
     EXPECT_EQ(
         CPLAT_OK,
         file_level_result); // [確認_正常系] - 停止中に残存 file ハンドルを閉じた cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。

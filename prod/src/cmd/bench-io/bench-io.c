@@ -206,7 +206,10 @@ static int drop_page_cache(void *arg)
         return -1;
     }
 
-    (void)fclose(stream);
+    if (fclose(stream) != 0)
+    {
+        return -1;
+    }
 
     return 0;
 #else
@@ -551,7 +554,10 @@ static int execute_case(const bench_case *job, bench_context *ctx, const bench_e
     /* 測定の成否にかかわらず、準備で確保した資源を解放する。 */
     if (is_mmap_api(job->api) != 0)
     {
-        bench_mmap_teardown(ctx, job);
+        if (bench_mmap_teardown(ctx, job) != 0)
+        {
+            measure_result = -1;
+        }
     }
     else
     {
@@ -594,7 +600,11 @@ static int run_size(const char *dir, size_t size, const char *api_list, const ch
     int api_index;
     int failures = 0;
 
-    (void)cplat_snprintf(path, sizeof(path), "%s/bench_%llu.bin", dir, (unsigned long long)size);
+    if (cplat_snprintf(path, sizeof(path), "%s/bench_%llu.bin", dir, (unsigned long long)size) != CPLAT_OK)
+    {
+        (void)cplat_fprintf(stderr, "error: measurement path is too long\n");
+        return -1;
+    }
 
     if (create_data_file(path, size) != 0)
     {
@@ -661,7 +671,11 @@ static int run_size(const char *dir, size_t size, const char *api_list, const ch
 
     if (keep == 0)
     {
-        (void)cplat_remove(path, NULL);
+        if (cplat_remove(path, NULL) != CPLAT_OK)
+        {
+            (void)cplat_fprintf(stderr, "error: failed to remove %s\n", path);
+            failures++;
+        }
     }
 
     if (failures > 0)
@@ -831,7 +845,10 @@ int main(int argc, char *argv[])
 
     if (csv != NULL)
     {
-        (void)fclose(csv);
+        if (fclose(csv) != 0)
+        {
+            failures++;
+        }
     }
 
     if (failures > 0)

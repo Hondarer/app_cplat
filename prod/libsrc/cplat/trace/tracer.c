@@ -242,6 +242,7 @@ static int windows_backend_acquire_locked(void)
             return -1;
         }
 
+        /* EventLog は任意であり、生成失敗時はその出力だけを省略する。 */
         s_eventlog_handle = cplat_eventlog_sink_create(CPLAT_TRACER_DEFAULT_PROVIDER_NAME);
     }
 
@@ -2446,4 +2447,13 @@ void cplat_tracer_call_next_hook(cplat_tracer_hook_entry *prev, cplat_tracer *ha
     }
 
     prev->fn(prev->next, handle, level, timestamp, message, prev->context);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_tracer_write_hex_with_source(cplat_tracer *handle, cplat_trace_level level, const cplat_timespec *timestamp,
+                                       const void *data, size_t size, const char *file, int line, const char *message)
+{
+    return cplat_tracer_write_hexf_at(handle, level, timestamp, data, size, "[%s:%d]%s%s", file, line,
+                                      cplat_tracer_hex_sep(message), cplat_tracer_hex_msg(message));
 }

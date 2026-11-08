@@ -336,6 +336,8 @@ MOCK_CPLAT_LINK_IMPL(cplat_hton64)
 MOCK_CPLAT_LINK_IMPL(cplat_ntoh64)
 
 // cplat/net/endpoint.h
+MOCK_CPLAT_LINK_IMPL(cplat_ipv4_addr_loopback)
+MOCK_CPLAT_LINK_IMPL(cplat_tracer_write_hex_with_source)
 MOCK_CPLAT_LINK_IMPL(cplat_ipv4_parse)
 MOCK_CPLAT_LINK_IMPL(cplat_ipv4_resolve)
 MOCK_CPLAT_LINK_IMPL(cplat_ipv4_to_string)
@@ -674,6 +676,7 @@ MOCK_CPLAT_LINK_IMPL(StartServiceCtrlDispatcherU)
 #include <cplat/sync/sync.h>
 #include <cplat/trace/trace_file.h>
 #include <cplat/trace/tracer.h>
+#include <cplat/test/syslog_test.h>
 #include <cplat/prompt/prompt.h>
 #include <cplat/prompt/pinned_prompt.h>
 #if defined(PLATFORM_WINDOWS)
@@ -902,14 +905,14 @@ extern int delegate_real_cplat_hashtable_clear(cplat_hashtable *ht);
 extern void delegate_real_cplat_hashtable_dispose(cplat_hashtable *ht);
 
 // cplat/clock/clock.h
-extern uint64_t delegate_real_cplat_clock_get_monotonic_ms(void);
-extern void delegate_real_cplat_clock_get_monotonic(cplat_timespec *ts);
-extern void delegate_real_cplat_clock_get_realtime(cplat_timespec *ts);
+extern int delegate_real_cplat_clock_get_monotonic_ms(uint64_t *milliseconds_out);
+extern int delegate_real_cplat_clock_get_monotonic(cplat_timespec *ts);
+extern int delegate_real_cplat_clock_get_realtime(cplat_timespec *ts);
 extern int delegate_real_cplat_clock_format_realtime_iso8601_local(char *buf, size_t buf_size,
                                                                    const cplat_timespec *timestamp);
 extern int delegate_real_cplat_clock_format_realtime_iso8601_utc(char *buf, size_t buf_size,
                                                                  const cplat_timespec *timestamp);
-extern void delegate_real_cplat_clock_get_realtime_utc(struct tm *utc_tm, int32_t *tv_nsec);
+extern int delegate_real_cplat_clock_get_realtime_utc(struct tm *utc_tm, int32_t *tv_nsec);
 extern int delegate_real_cplat_clock_get_realtime_deadline_ms(uint64_t timeout_ms, struct timespec *deadline_out);
 
 // cplat/clock/timespec.h
@@ -1136,6 +1139,11 @@ extern uint64_t delegate_real_cplat_hton64(uint64_t value);
 extern uint64_t delegate_real_cplat_ntoh64(uint64_t value);
 
 // cplat/net/endpoint.h
+extern uint32_t delegate_real_cplat_ipv4_addr_loopback(void);
+extern int delegate_real_cplat_tracer_write_hex_with_source(cplat_tracer *handle, cplat_trace_level level,
+                                                            const cplat_timespec *timestamp, const void *data,
+                                                            size_t size, const char *file, int line,
+                                                            const char *message);
 extern int delegate_real_cplat_ipv4_parse(const char *text, uint32_t *address_out);
 extern int delegate_real_cplat_ipv4_resolve(const char *text, uint32_t *address_out, cplat_error *detail_out);
 extern int delegate_real_cplat_ipv4_to_string(uint32_t address, char *buffer, size_t buffer_size,
@@ -1297,7 +1305,7 @@ extern void delegate_real_cplat_shutdown_reset_for_test(void);
 
 // cplat/runtime/sym_loader.h
 extern int delegate_real_cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length,
-                                                const char *configpath);
+                                               const char *configpath);
 extern int delegate_real_cplat_sym_loader_dispose(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length);
 extern int delegate_real_cplat_sym_loader_is_default(cplat_sym_loader_entry *fobj, int *value_out);
 extern int delegate_real_cplat_sym_loader_is_failed(cplat_sym_loader_entry *fobj, int *value_out);
@@ -1593,6 +1601,9 @@ extern BOOL delegate_real_StartServiceCtrlDispatcherU(const cplat_service_entry_
 #endif /* PLATFORM_WINDOWS */
 
 #if defined(PLATFORM_LINUX)
+extern int delegate_real_cplat_syslog_test_fd_write(const char *buf, size_t nbytes);
+#endif
+#if defined(PLATFORM_LINUX)
 
 // cplat/runtime/process_priority_linux.h
 extern int delegate_real_cplat_process_priority_linux_set_policy(uint32_t thread_id,
@@ -1792,12 +1803,12 @@ class Mock_cplat
     MOCK_METHOD(void, cplat_hashtable_dispose, (cplat_hashtable *));
 
     // cplat/clock/clock.h
-    MOCK_METHOD(uint64_t, cplat_clock_get_monotonic_ms, ());
-    MOCK_METHOD(void, cplat_clock_get_monotonic, (cplat_timespec *));
-    MOCK_METHOD(void, cplat_clock_get_realtime, (cplat_timespec *));
+    MOCK_METHOD(int, cplat_clock_get_monotonic_ms, (uint64_t *));
+    MOCK_METHOD(int, cplat_clock_get_monotonic, (cplat_timespec *));
+    MOCK_METHOD(int, cplat_clock_get_realtime, (cplat_timespec *));
     MOCK_METHOD(int, cplat_clock_format_realtime_iso8601_local, (char *, size_t, const cplat_timespec *));
     MOCK_METHOD(int, cplat_clock_format_realtime_iso8601_utc, (char *, size_t, const cplat_timespec *));
-    MOCK_METHOD(void, cplat_clock_get_realtime_utc, (struct tm *, int32_t *));
+    MOCK_METHOD(int, cplat_clock_get_realtime_utc, (struct tm *, int32_t *));
     MOCK_METHOD(int, cplat_clock_get_realtime_deadline_ms, (uint64_t, struct timespec *));
 
     // cplat/clock/timespec.h
@@ -2003,6 +2014,13 @@ class Mock_cplat
     MOCK_METHOD(uint64_t, cplat_ntoh64, (uint64_t));
 
     // cplat/net/endpoint.h
+    MOCK_METHOD(uint32_t, cplat_ipv4_addr_loopback, ());
+    MOCK_METHOD(int, cplat_tracer_write_hex_with_source,
+                (cplat_tracer *, cplat_trace_level, const cplat_timespec *, const void *, size_t, const char *, int,
+                 const char *));
+#if defined(PLATFORM_LINUX)
+    MOCK_METHOD(int, cplat_syslog_test_fd_write, (const char *, size_t));
+#endif
     MOCK_METHOD(int, cplat_ipv4_parse, (const char *, uint32_t *));
     MOCK_METHOD(int, cplat_ipv4_resolve, (const char *, uint32_t *, cplat_error *));
     MOCK_METHOD(int, cplat_ipv4_to_string, (uint32_t, char *, size_t, cplat_error *));

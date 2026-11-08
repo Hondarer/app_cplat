@@ -700,3 +700,20 @@ TEST_F(errorTest, report_errno_as_keeps_domain_when_result_is_not_success)
     EXPECT_EQ(CPLAT_ERROR_DOMAIN_ERRNO,
               error.domain); // [確認_正常系] - error.domain が CPLAT_ERROR_DOMAIN_ERRNO であること。
 }
+
+// 未定義のエラー ドメインから格納済みの結果を返さないことの確認
+TEST(errorResidualTest, invalid_domain_is_rejected)
+{
+    // Arrange
+    cplat_error error = {};
+    error.domain = static_cast<cplat_error_domain>(6);
+    error.result = CPLAT_OK;
+
+    // Pre-Assert
+
+    // Act
+    int result = cplat_error_to_result(&error); // [手順] - 未定義のドメインを変換する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, result); // [確認_異常系] - 不正なドメインを引数エラーとして返すこと。
+}

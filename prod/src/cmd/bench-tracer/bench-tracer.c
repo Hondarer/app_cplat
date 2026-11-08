@@ -31,15 +31,22 @@
 
 /**
  *  @brief          単調増加時計をナノ秒で取得します。
- *  @return         ナノ秒単位の時刻です。
+ *  @param[out]     nanoseconds_out ナノ秒時刻の格納先。
+ *  @return         成功時は CPLAT_OK、失敗時は共通結果コードを返します。
  */
-static uint64_t monotonic_ns(void)
+static int monotonic_ns(uint64_t *nanoseconds_out)
 {
     cplat_timespec value;
 
-    cplat_clock_get_monotonic(&value);
+    int ret = cplat_clock_get_monotonic(&value);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
 
-    return ((uint64_t)value.tv_sec * 1000000000U) + (uint64_t)value.tv_nsec;
+    *nanoseconds_out = ((uint64_t)value.tv_sec * 1000000000U) + (uint64_t)value.tv_nsec;
+
+    return CPLAT_OK;
 }
 
 /**
@@ -103,7 +110,11 @@ static int measure_filtered(int messages)
         return 1;
     }
 
-    begin = monotonic_ns();
+    if (monotonic_ns(&begin) != CPLAT_OK)
+    {
+        cplat_tracer_dispose(&tracer);
+        return 1;
+    }
 
     /* 出力先が無効な tracer に対してメッセージを発行し、破棄処理の負荷を測定する。 */
     for (index = 0; index < messages; index++)
@@ -111,7 +122,13 @@ static int measure_filtered(int messages)
         (void)cplat_tracer_writef(tracer, CPLAT_TRACE_LEVEL_INFO, NULL, "filtered=%d", index);
     }
 
-    elapsed = monotonic_ns() - begin;
+    if (monotonic_ns(&elapsed) != CPLAT_OK)
+    {
+        cplat_tracer_dispose(&tracer);
+        return 1;
+    }
+
+    elapsed -= begin;
     printf("filtered,processes=1,messages=%d,total_ns=%llu,ns_per_message=%llu\n", messages,
            (unsigned long long)elapsed, (unsigned long long)(elapsed / (uint64_t)messages));
     cplat_tracer_dispose(&tracer);
@@ -146,7 +163,12 @@ static int measure_files(char *executable, char *path, int processes, int messag
 
     (void)snprintf(messages_text, sizeof(messages_text), "%d", messages);
     (void)snprintf(buffered_text, sizeof(buffered_text), "%d", buffered);
-    begin = monotonic_ns();
+
+    if (monotonic_ns(&begin) != CPLAT_OK)
+    {
+        free(children);
+        return 1;
+    }
 
     /* worker プロセスを並行して起動する。 */
     for (index = 0; index < processes; index++)
@@ -182,7 +204,13 @@ static int measure_files(char *executable, char *path, int processes, int messag
         cplat_process_dispose(children[index]);
     }
 
-    elapsed = monotonic_ns() - begin;
+    if (monotonic_ns(&elapsed) != CPLAT_OK)
+    {
+        free(children);
+        return 1;
+    }
+
+    elapsed -= begin;
     const char *mode;
 
     if (buffered != 0)

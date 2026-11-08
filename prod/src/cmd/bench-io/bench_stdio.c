@@ -62,16 +62,19 @@ static int seq_read_by_record(bench_context *ctx)
     {
         bench_record record;
 
-        if (fread(&record, sizeof(record), 1U, stream) != 1U)
+        if (cplat_fread(&record, sizeof(record), 1U, stream, NULL) != 1U)
         {
-            (void)fclose(stream);
+            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
             return -1;
         }
 
         ctx->checksum += accumulate(&record);
     }
 
-    (void)fclose(stream);
+    if (cplat_fclose(stream, NULL) != CPLAT_OK)
+    {
+        return -1;
+    }
 
     return 0;
 }
@@ -102,9 +105,9 @@ static int seq_read_by_block(bench_context *ctx, bench_record *block)
             chunk = remaining;
         }
 
-        if (fread(block, sizeof(*block), chunk, stream) != chunk)
+        if (cplat_fread(block, sizeof(*block), chunk, stream, NULL) != chunk)
         {
-            (void)fclose(stream);
+            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
             return -1;
         }
 
@@ -116,7 +119,10 @@ static int seq_read_by_block(bench_context *ctx, bench_record *block)
         remaining -= chunk;
     }
 
-    (void)fclose(stream);
+    if (cplat_fclose(stream, NULL) != CPLAT_OK)
+    {
+        return -1;
+    }
 
     return 0;
 }
@@ -143,9 +149,9 @@ static int seq_write_by_record(bench_context *ctx, int durable)
 
         bench_fill_record(index, &record);
 
-        if (fwrite(&record, sizeof(record), 1U, stream) != 1U)
+        if (cplat_fwrite(&record, sizeof(record), 1U, stream, NULL) != 1U)
         {
-            (void)fclose(stream);
+            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
             return -1;
         }
     }
@@ -154,13 +160,16 @@ static int seq_write_by_record(bench_context *ctx, int durable)
      * fsync 相当は行わない。cplat にそのラッパーがない。
      * 正本は app/cplat/docs/fileio-api-selection-guideline.md の「耐久性を要求した場合」節である。
      */
-    if (durable != 0 && fflush(stream) != 0)
+    if (durable != 0 && cplat_fflush(stream, NULL) != 0)
     {
-        (void)fclose(stream);
+        (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
         return -1;
     }
 
-    (void)fclose(stream);
+    if (cplat_fclose(stream, NULL) != CPLAT_OK)
+    {
+        return -1;
+    }
 
     return 0;
 }
@@ -197,9 +206,9 @@ static int seq_write_by_block(bench_context *ctx, bench_record *block, int durab
             bench_fill_record(written + index, &block[index]);
         }
 
-        if (fwrite(block, sizeof(*block), chunk, stream) != chunk)
+        if (cplat_fwrite(block, sizeof(*block), chunk, stream, NULL) != chunk)
         {
-            (void)fclose(stream);
+            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
             return -1;
         }
 
@@ -210,13 +219,16 @@ static int seq_write_by_block(bench_context *ctx, bench_record *block, int durab
      * fsync 相当は行わない。cplat にそのラッパーがない。
      * 正本は app/cplat/docs/fileio-api-selection-guideline.md の「耐久性を要求した場合」節である。
      */
-    if (durable != 0 && fflush(stream) != 0)
+    if (durable != 0 && cplat_fflush(stream, NULL) != 0)
     {
-        (void)fclose(stream);
+        (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
         return -1;
     }
 
-    (void)fclose(stream);
+    if (cplat_fclose(stream, NULL) != CPLAT_OK)
+    {
+        return -1;
+    }
 
     return 0;
 }
@@ -243,20 +255,23 @@ static int rand_read(bench_context *ctx)
 
         if (cplat_fseek(stream, offset, SEEK_SET) != 0)
         {
-            (void)fclose(stream);
+            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
             return -1;
         }
 
-        if (fread(&record, sizeof(record), 1U, stream) != 1U)
+        if (cplat_fread(&record, sizeof(record), 1U, stream, NULL) != 1U)
         {
-            (void)fclose(stream);
+            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
             return -1;
         }
 
         ctx->checksum += accumulate(&record);
     }
 
-    (void)fclose(stream);
+    if (cplat_fclose(stream, NULL) != CPLAT_OK)
+    {
+        return -1;
+    }
 
     return 0;
 }
@@ -284,13 +299,13 @@ static int rand_update(bench_context *ctx, int durable)
 
         if (cplat_fseek(stream, offset, SEEK_SET) != 0)
         {
-            (void)fclose(stream);
+            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
             return -1;
         }
 
-        if (fread(&record, sizeof(record), 1U, stream) != 1U)
+        if (cplat_fread(&record, sizeof(record), 1U, stream, NULL) != 1U)
         {
-            (void)fclose(stream);
+            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
             return -1;
         }
 
@@ -299,13 +314,13 @@ static int rand_update(bench_context *ctx, int durable)
 
         if (cplat_fseek(stream, offset, SEEK_SET) != 0)
         {
-            (void)fclose(stream);
+            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
             return -1;
         }
 
-        if (fwrite(&record, sizeof(record), 1U, stream) != 1U)
+        if (cplat_fwrite(&record, sizeof(record), 1U, stream, NULL) != 1U)
         {
-            (void)fclose(stream);
+            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
             return -1;
         }
     }
@@ -314,13 +329,16 @@ static int rand_update(bench_context *ctx, int durable)
      * fsync 相当は行わない。cplat にそのラッパーがない。
      * 正本は app/cplat/docs/fileio-api-selection-guideline.md の「耐久性を要求した場合」節である。
      */
-    if (durable != 0 && fflush(stream) != 0)
+    if (durable != 0 && cplat_fflush(stream, NULL) != 0)
     {
-        (void)fclose(stream);
+        (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
         return -1;
     }
 
-    (void)fclose(stream);
+    if (cplat_fclose(stream, NULL) != CPLAT_OK)
+    {
+        return -1;
+    }
 
     return 0;
 }
@@ -343,18 +361,22 @@ static int point_lookup(bench_context *ctx)
 
     if (cplat_fseek(stream, offset, SEEK_SET) != 0)
     {
-        (void)fclose(stream);
+        (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
         return -1;
     }
 
-    if (fread(&record, sizeof(record), 1U, stream) != 1U)
+    if (cplat_fread(&record, sizeof(record), 1U, stream, NULL) != 1U)
     {
-        (void)fclose(stream);
+        (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
         return -1;
     }
 
     ctx->checksum += accumulate(&record);
-    (void)fclose(stream);
+
+    if (cplat_fclose(stream, NULL) != CPLAT_OK)
+    {
+        return -1;
+    }
 
     return 0;
 }
@@ -374,7 +396,11 @@ static int open_close(bench_context *ctx)
     }
 
     ctx->checksum++; /* 読み取るレコードがなく、最適化による除去を防ぐ */
-    (void)fclose(stream);
+
+    if (cplat_fclose(stream, NULL) != CPLAT_OK)
+    {
+        return -1;
+    }
 
     return 0;
 }

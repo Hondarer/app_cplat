@@ -93,7 +93,15 @@ static int poll_with_deadline(struct pollfd *fds, nfds_t count, int timeout_ms)
 
     if (timeout_ms > 0)
     {
-        deadline = cplat_clock_get_monotonic_ms() + (uint64_t)timeout_ms;
+        uint64_t now;
+
+        if (cplat_clock_get_monotonic_ms(&now) != CPLAT_OK)
+        {
+            errno = EIO;
+            return -1;
+        }
+
+        deadline = now + (uint64_t)timeout_ms;
     }
 
     for (;;)
@@ -112,7 +120,13 @@ static int poll_with_deadline(struct pollfd *fds, nfds_t count, int timeout_ms)
 
         if (timeout_ms > 0)
         {
-            const uint64_t now = cplat_clock_get_monotonic_ms();
+            uint64_t now;
+
+            if (cplat_clock_get_monotonic_ms(&now) != CPLAT_OK)
+            {
+                errno = EIO;
+                return -1;
+            }
 
             if (now >= deadline)
             {

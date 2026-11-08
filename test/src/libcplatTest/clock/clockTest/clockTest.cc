@@ -87,10 +87,12 @@ TEST_F(clockTest, monotonic_ms_converts_platform_value)
 #endif
 
     // Act
-    uint64_t actual_ms = cplat_clock_get_monotonic_ms(); // [手順] - cplat_clock_get_monotonic_ms() を呼び出す。
+    uint64_t actual_ms = 0;
+    int actual_ret = cplat_clock_get_monotonic_ms(&actual_ms); // [手順] - cplat_clock_get_monotonic_ms() を呼び出す。
 
     // Assert
-    EXPECT_EQ(12345U, actual_ms); // [確認_正常系] - cplat_clock_get_monotonic_ms() の戻り値が 12345U であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - ミリ秒取得が CPLAT_OK を返すこと。
+    EXPECT_EQ(12345U, actual_ms);    // [確認_正常系] - cplat_clock_get_monotonic_ms() の出力値が 12345U であること。
 }
 
 // 単調増加クロックの秒部とナノ秒部がプラットフォーム値から正しく分解されることの確認
@@ -253,14 +255,14 @@ TEST_F(clockTest, realtime_utc_uses_platform_conversion_result)
         actual_nsec); // [確認_正常系] - actual_nsec が expected_nsec と一致すること。(取得したナノ秒部がそのまま返ることの確認)
 }
 
-// UTC 変換が失敗した場合に struct tm が 0 初期化されることの確認
-TEST_F(clockTest, realtime_utc_zeroes_tm_when_cplat_gmtime_fails)
+// UTC 変換が失敗した場合にすべての出力が保持されることの確認
+TEST_F(clockTest, realtime_utc_preserves_outputs_when_cplat_gmtime_fails)
 {
     // Arrange
     const int64_t expected_sec = 1712345678LL; // [状態] - 実時刻の秒部期待値を 1712345678 とする。
     const int32_t expected_nsec = 246800000;   // [状態] - 実時刻ナノ秒部として 246800000 を返す前提とする。
     struct tm actual_tm = {};                  // [状態] - 実際の UTC 変換結果を受け取る構造体を初期化する。
-    struct tm expected_tm = {};                // [状態] - 失敗時に 0 初期化される期待値を用意する。
+    struct tm expected_tm = {};                // [状態] - 失敗時に 更新前の期待値を用意する。
     int32_t actual_nsec = -1;                  // [状態] - ナノ秒部の出力先を未更新値 -1 で初期化する。
     Mock_cplat mock_cplat;
 
@@ -270,6 +272,8 @@ TEST_F(clockTest, realtime_utc_zeroes_tm_when_cplat_gmtime_fails)
     actual_tm.tm_hour = 4; // [状態] - 失敗時に上書きされたことが分かるよう、hour を 4 に設定する。
     actual_tm.tm_min = 5;  // [状態] - 失敗時に上書きされたことが分かるよう、min を 5 に設定する。
     actual_tm.tm_sec = 6;  // [状態] - 失敗時に上書きされたことが分かるよう、sec を 6 に設定する。
+
+    expected_tm = actual_tm; // [状態] - 更新前の出力を期待値として保存する。
 
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
@@ -303,22 +307,25 @@ TEST_F(clockTest, realtime_utc_zeroes_tm_when_cplat_gmtime_fails)
             {
                 EXPECT_EQ((time_t)expected_sec, *timep);
                 // [Pre-Assert確認_正常系] - *timep が expected_sec と一致すること。
-                EXPECT_EQ(&actual_tm, utc_tm);
-                // [Pre-Assert確認_正常系] - utc_tm が &actual_tm と一致すること。
+                EXPECT_NE(&actual_tm, utc_tm);
+                // [Pre-Assert確認_正常系] - utc_tm が呼び出し元の出力先とは異なる一時領域であること。
                 return -1;
             }); // [Pre-Assert確認_異常系] - cplat_gmtime() が 1 回呼び出されること。
-                // [Pre-Assert手順] - cplat_gmtime() から、clock.c 側の 0 初期化処理へ進ませるために -1 を返す。
+
+    // [Pre-Assert手順] - cplat_gmtime() から、変換失敗を通知するために -1 を返す。
 
     // Act
-    cplat_clock_get_realtime_utc(
+    int actual_ret = cplat_clock_get_realtime_utc(
         &actual_tm,
         &actual_nsec); // [手順] - 出力先 actual_tm と actual_nsec を指定して cplat_clock_get_realtime_utc() を呼び出す。
 
     // Assert
+    EXPECT_NE(CPLAT_OK, actual_ret); // [確認_異常系] - UTC 変換の失敗を成功に置き換えないこと。
+
     // [サブ手順参照 名前=clockTest.expect_tm_equal 区分=異常系]
-    expect_tm_equal(&actual_tm, &expected_tm); // UTC 分解結果がすべて 0 に初期化されること。
+    expect_tm_equal(&actual_tm, &expected_tm); // UTC 分解結果が更新前の値と一致すること。
     EXPECT_EQ(
-        expected_nsec,
+        -1,
         actual_nsec); // [確認_異常系] - actual_nsec が expected_nsec と一致すること。(取得済みのナノ秒部を保持することの確認)
 }
 

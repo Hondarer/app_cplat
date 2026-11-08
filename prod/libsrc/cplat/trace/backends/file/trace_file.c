@@ -135,20 +135,27 @@ struct sink_registry
 
 static struct sink_registry s_sink_registry = {0};
 static cplat_local_lock *s_sink_registry_lock;
+static int s_sink_registry_lock_result = CPLAT_ERR_UNKNOWN;
 static cplat_once_flag s_sink_registry_lock_once = {0};
 
 static void init_sink_registry_lock(void)
 {
-    (void)cplat_local_lock_create(&s_sink_registry_lock);
+    s_sink_registry_lock_result = cplat_local_lock_create(&s_sink_registry_lock);
 }
 
 /**
  *  @brief  sink レジストリの排他ロックを取得します。
  */
-static void sink_registry_lock(void)
+static int sink_registry_lock(void)
 {
     cplat_call_once(&s_sink_registry_lock_once, init_sink_registry_lock);
-    cplat_local_lock_lock(s_sink_registry_lock, CPLAT_SYNC_WAIT_FOREVER);
+
+    if (s_sink_registry_lock_result != CPLAT_OK)
+    {
+        return s_sink_registry_lock_result;
+    }
+
+    return cplat_local_lock_lock(s_sink_registry_lock, CPLAT_SYNC_WAIT_FOREVER);
 }
 
 /**
@@ -322,8 +329,7 @@ static int base_open_flags(void)
  *  @param[in,out]  p  ファイル sink。
  *  @return 成功 0 / 失敗 -1。
  *
- *  親ディレクトリが存在しない場合は cplat_makedirs で自動生成する (best-effort)。\n
- *  生成に失敗しても後続の cplat_file_open の結果で最終判定する。\n
+ *  親ディレクトリの生成は、初回に呼び出し元が行います。\n
  *  共有モードではオープンしたファイルの同一性を self_id にキャッシュする
  *  (取得失敗時は self_id_valid = 0 とし、次回書き込み時に開き直す)。
  */
@@ -750,7 +756,11 @@ cplat_trace_file_sink *cplat_trace_file_sink_create(const char *path, const size
      * プロセス内で同一パスの sink を共有する (占有モードのプロセス内調停)。
      * 生成自体もロック内で行い、同一パスの並行生成を直列化する。
      */
-    sink_registry_lock();
+    if (sink_registry_lock() != CPLAT_OK)
+    {
+        cplat_free(key);
+        return NULL;
+    }
 
     entry = sink_registry_find_by_key_locked(key);
     if (entry != NULL)
@@ -849,7 +859,7 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
         }
     }
 
-    /* ファイルへ書き込む。FILE_FLAG_WRITE_THROUGH / O_DSYNC により自動フラッシュする。 */
+    /* OS バッファーを利用しない場合は、オープン時に指定した永続化設定で書き込む。 */
     ret = cplat_file_write(&handle->file, buf, (size_t)len, NULL);
 
     /* 書き込み成功時は、サイズを追跡しローテーションしきい値を確認する。 */
@@ -933,7 +943,11 @@ void cplat_trace_file_sink_dispose(cplat_trace_file_sink *handle)
         return;
     }
 
-    sink_registry_lock();
+    if (sink_registry_lock() != CPLAT_OK)
+    {
+        return;
+    }
+
     entry = sink_registry_find_by_sink_locked(handle);
     if (entry != NULL)
     {

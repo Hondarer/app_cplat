@@ -144,10 +144,11 @@ TEST_F(compressTest, compress_returns_buffer_too_small_for_header_only_buffer)
 }
 
 // 圧縮結果が収まらない出力バッファーで圧縮が失敗することの確認
-TEST_F(compressTest, compress_returns_unknown_when_output_does_not_fit)
+TEST_F(compressTest, compress_returns_buffer_too_small_when_output_does_not_fit)
 {
     // Arrange
     std::string plain(4096u, 'x');
+
     // ヘッダーの最低容量を満たし、圧縮結果が収まらない容量を選ぶ。
     uint8_t dst[CPLAT_COMPRESS_HEADER_SIZE + 3u];
     size_t dst_len = sizeof(dst); // [状態] - 圧縮結果が収まらない出力バッファーを用意する。
@@ -161,8 +162,8 @@ TEST_F(compressTest, compress_returns_unknown_when_output_does_not_fit)
 
     // Assert
     EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - cplat_compress() の戻り値が CPLAT_ERR_UNKNOWN であること。(deflate() が完了しないことの確認)
+        CPLAT_ERR_BUFFER_TOO_SMALL,
+        actual_ret); // [確認_異常系] - cplat_compress() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。(deflate() が完了しないことの確認)
 }
 
 // cplat_decompress が不正な引数を拒否することの確認

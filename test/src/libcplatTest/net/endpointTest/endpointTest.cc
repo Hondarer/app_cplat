@@ -163,7 +163,7 @@ TEST_F(endpointTest, parse_converts_valid_text)
 {
     // Arrange
     uint32_t address = 0U;
-    const uint32_t expected = CPLAT_IPV4_ADDR_LOOPBACK;
+    const uint32_t expected = cplat_ipv4_addr_loopback();
 
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
@@ -432,7 +432,7 @@ TEST_F(endpointTest, resolve_returns_first_ipv4_address)
     // Arrange
     uint32_t address = 0U;
     cplat_error detail = {};
-    const uint32_t expected = CPLAT_IPV4_ADDR_LOOPBACK;
+    const uint32_t expected = cplat_ipv4_addr_loopback();
 
 #if defined(PLATFORM_LINUX)
     struct sockaddr_in native = {};
@@ -516,7 +516,7 @@ TEST_F(endpointTest, resolve_retries_after_interrupt)
     // Arrange
     uint32_t address = 0U;
     cplat_error detail = {};
-    const uint32_t expected = CPLAT_IPV4_ADDR_LOOPBACK;
+    const uint32_t expected = cplat_ipv4_addr_loopback();
     struct sockaddr_in native = {};
     struct addrinfo resolved = {};
     native.sin_addr.s_addr = expected;
@@ -652,10 +652,10 @@ TEST_F(endpointTest, to_string_rejects_null_or_zero_sized_buffer)
 
     // Act
     int actual_ret_null_buffer =
-        cplat_ipv4_to_string(CPLAT_IPV4_ADDR_LOOPBACK, nullptr, sizeof(buffer),
+        cplat_ipv4_to_string(cplat_ipv4_addr_loopback(), nullptr, sizeof(buffer),
                              &detail); // [手順] - buffer に nullptr を指定して cplat_ipv4_to_string() を呼び出す。
     int actual_ret_zero_size =
-        cplat_ipv4_to_string(CPLAT_IPV4_ADDR_LOOPBACK, buffer, 0U,
+        cplat_ipv4_to_string(cplat_ipv4_addr_loopback(), buffer, 0U,
                              &detail); // [手順] - buffer_size に 0 を指定して cplat_ipv4_to_string() を呼び出す。
 
     // Assert
@@ -680,7 +680,7 @@ TEST_F(endpointTest, to_string_rejects_small_buffer)
 
     // Act
     int actual_ret =
-        cplat_ipv4_to_string(CPLAT_IPV4_ADDR_LOOPBACK, buffer, CPLAT_IPV4_ADDR_STRLEN - 1U,
+        cplat_ipv4_to_string(cplat_ipv4_addr_loopback(), buffer, CPLAT_IPV4_ADDR_STRLEN - 1U,
                              &detail); // [手順] - 必要長未満のバッファーを指定して cplat_ipv4_to_string() を呼び出す。
 
     // Assert
@@ -719,7 +719,7 @@ TEST_F(endpointTest, to_string_reports_conversion_failure)
 #endif /* PLATFORM_ */
 
     // Act
-    int actual_ret = cplat_ipv4_to_string(CPLAT_IPV4_ADDR_LOOPBACK, buffer, sizeof(buffer),
+    int actual_ret = cplat_ipv4_to_string(cplat_ipv4_addr_loopback(), buffer, sizeof(buffer),
                                           &detail); // [手順] - 変換が失敗する状態で cplat_ipv4_to_string() を呼び出す。
 
     // Assert
@@ -762,7 +762,7 @@ TEST_F(endpointTest, to_string_converts_address)
 
     // Act
     int actual_ret =
-        cplat_ipv4_to_string(CPLAT_IPV4_ADDR_LOOPBACK, buffer, sizeof(buffer),
+        cplat_ipv4_to_string(cplat_ipv4_addr_loopback(), buffer, sizeof(buffer),
                              &detail); // [手順] - IPv4 アドレスを指定して cplat_ipv4_to_string() を呼び出す。
 
     // Assert
@@ -796,7 +796,7 @@ TEST_F(endpointTest, to_string_propagates_startup_failure)
 
     // Act
     int actual_ret =
-        cplat_ipv4_to_string(CPLAT_IPV4_ADDR_LOOPBACK, buffer, sizeof(buffer),
+        cplat_ipv4_to_string(cplat_ipv4_addr_loopback(), buffer, sizeof(buffer),
                              &detail); // [手順] - 初期化が失敗する状態で cplat_ipv4_to_string() を呼び出す。
 
     // Assert
@@ -833,3 +833,18 @@ TEST_F(endpointTest, parse_propagates_startup_failure_without_updating_address)
 }
 // [サブ手順参照 名前=endpointTest.TearDown]
 #endif
+
+// ループバック関数がネットワーク順の 127.0.0.1 を返すことの確認
+TEST(endpointResidualTest, loopback_has_network_byte_order)
+{
+    // Arrange
+
+    // Pre-Assert
+
+    // Act
+    uint32_t address = cplat_ipv4_addr_loopback(); // [手順] - ループバック値を取得する。
+    uint32_t host_address = cplat_ntoh32(address); // [手順] - 確認用にホスト順へ変換する。
+
+    // Assert
+    EXPECT_EQ(UINT32_C(0x7f000001), host_address); // [確認_正常系] - 127.0.0.1 の整数値と一致すること。
+}

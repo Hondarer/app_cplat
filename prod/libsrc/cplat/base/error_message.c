@@ -271,9 +271,12 @@ int cplat_internal_errno_message(char *buf, const size_t buf_size, const int err
          * strerror_s はバッファーが不足する場合も切り詰めて NUL 終端する。
          * see: https://learn.microsoft.com/cpp/c-runtime-library/reference/strerror-s-strerror-s-wcserror-s-wcserror-s
          */
-        if (strerror_s(buf, buf_size, errno_value) != 0)
+        int crt_ret = strerror_s(buf, buf_size, errno_value);
+        buf[buf_size - 1U] = '\0';
+
+        /* 切り詰めても利用可能なメッセージが得られた場合は、公開契約に従い保持する。 */
+        if ((crt_ret != 0) && (buf[0] == '\0') && (buf_size > 1U))
         {
-            buf[0] = '\0';
             return CPLAT_ERR_UNKNOWN;
         }
 

@@ -682,7 +682,9 @@ int cplat_error_to_result(const cplat_error *error)
         {
             result = CPLAT_OK;
         }
-        else
+        else if ((error->domain == CPLAT_ERROR_DOMAIN_ERRNO) || (error->domain == CPLAT_ERROR_DOMAIN_WINDOWS) ||
+                 (error->domain == CPLAT_ERROR_DOMAIN_SOCKET_ERRNO) || (error->domain == CPLAT_ERROR_DOMAIN_WINSOCK) ||
+                 (error->domain == CPLAT_ERROR_DOMAIN_GAI))
         {
             result = error->result;
         }

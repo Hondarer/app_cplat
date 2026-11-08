@@ -41,9 +41,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/** 無効なソケットを表す値。 */
-#define CPLAT_INVALID_SOCKET ((cplat_socket) - 1)
-
 /** タイムアウトなしで待機することを表すタイムアウト値。 */
 #define CPLAT_SOCKET_WAIT_FOREVER (-1)
 
@@ -77,6 +74,9 @@ extern "C"
      *  無効値の判定には @ref CPLAT_INVALID_SOCKET を使用し、数値リテラルと比較しません。
      */
     typedef intptr_t cplat_socket;
+
+/** 無効なソケットを表す値。 */
+#define CPLAT_INVALID_SOCKET ((cplat_socket) - 1)
 
     /**
      *  @brief          生成するソケットの種別を表します。

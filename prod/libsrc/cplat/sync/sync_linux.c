@@ -80,29 +80,44 @@ struct cplat_thread_start_ctx
     void *arg;
 };
 
-static uint64_t monotonic_ms(void)
+static int monotonic_ms(uint64_t *milliseconds_out)
 {
     struct timespec ts;
 
-    clock_gettime(CLOCK_MONOTONIC, &ts);
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
 
-    return ((uint64_t)ts.tv_sec * 1000U) + ((uint64_t)ts.tv_nsec / 1000000U);
+    *milliseconds_out = ((uint64_t)ts.tv_sec * 1000U) + ((uint64_t)ts.tv_nsec / 1000000U);
+
+    return CPLAT_OK;
 }
 
-static void monotonic_deadline(struct timespec *abs_ts, int timeout_ms)
+static int monotonic_deadline(struct timespec *abs_ts, int timeout_ms)
 {
+    struct timespec now;
+
     /* 呼び出し元で負値チェック済みのため、unsigned int として演算する。 */
     unsigned int ms = (unsigned int)timeout_ms;
 
     /* pthread_cond_timedwait() に渡す絶対時刻を、cond_init_monotonic() と同じ CLOCK_MONOTONIC で算出する。 */
-    clock_gettime(CLOCK_MONOTONIC, abs_ts);
-    abs_ts->tv_sec += (time_t)(ms / 1000U);
-    abs_ts->tv_nsec += (long)((ms % 1000U) * 1000000UL);
-    if (abs_ts->tv_nsec >= 1000000000L)
+    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0)
     {
-        abs_ts->tv_sec++;
-        abs_ts->tv_nsec -= 1000000000L;
+        return CPLAT_ERR_UNKNOWN;
     }
+
+    now.tv_sec += (time_t)(ms / 1000U);
+    now.tv_nsec += (long)((ms % 1000U) * 1000000UL);
+    if (now.tv_nsec >= 1000000000L)
+    {
+        now.tv_sec++;
+        now.tv_nsec -= 1000000000L;
+    }
+
+    *abs_ts = now;
+
+    return CPLAT_OK;
 }
 
 /*
@@ -204,9 +219,29 @@ static void *thread_start_proc(void *opaque)
     return NULL;
 }
 
+static int open_lock_file(const char *identity, int *fd_out, char **identity_out)
+{
+    int fd = open(identity, O_RDWR | O_CREAT | O_CLOEXEC, 0666);
+    if (fd < 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    char *identity_copy = cplat_strdup(identity);
+    if (identity_copy == NULL)
+    {
+        close(fd);
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    *fd_out = fd;
+    *identity_out = identity_copy;
+
+    return CPLAT_OK;
+}
+
 static int app_lock_open_identity(const char *identity, cplat_interprocess_rwlock **lock)
 {
-    cplat_interprocess_rwlock *new_lock;
     int fd;
     char *identity_copy;
 
@@ -215,20 +250,13 @@ static int app_lock_open_identity(const char *identity, cplat_interprocess_rwloc
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    fd = open(identity, O_RDWR | O_CREAT | O_CLOEXEC, 0666); /* exec 先のプログラムにロックを引き継がない */
-    if (fd < 0)
+    int ret = open_lock_file(identity, &fd, &identity_copy);
+    if (ret != CPLAT_OK)
     {
-        return CPLAT_ERR_UNKNOWN;
+        return ret;
     }
 
-    identity_copy = cplat_strdup(identity);
-    if (identity_copy == NULL)
-    {
-        close(fd);
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    new_lock = (cplat_interprocess_rwlock *)cplat_calloc(1, sizeof(*new_lock));
+    cplat_interprocess_rwlock *new_lock = (cplat_interprocess_rwlock *)cplat_calloc(1, sizeof(*new_lock));
     if (new_lock == NULL)
     {
         cplat_free(identity_copy);
@@ -245,7 +273,6 @@ static int app_lock_open_identity(const char *identity, cplat_interprocess_rwloc
 
 static int interprocess_lock_open_identity(const char *identity, cplat_interprocess_lock **lock)
 {
-    cplat_interprocess_lock *new_lock;
     int fd;
     char *identity_copy;
 
@@ -254,20 +281,13 @@ static int interprocess_lock_open_identity(const char *identity, cplat_interproc
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    fd = open(identity, O_RDWR | O_CREAT | O_CLOEXEC, 0666); /* exec 先のプログラムにロックを引き継がない */
-    if (fd < 0)
+    int ret = open_lock_file(identity, &fd, &identity_copy);
+    if (ret != CPLAT_OK)
     {
-        return CPLAT_ERR_UNKNOWN;
+        return ret;
     }
 
-    identity_copy = cplat_strdup(identity);
-    if (identity_copy == NULL)
-    {
-        close(fd);
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    new_lock = (cplat_interprocess_lock *)cplat_calloc(1, sizeof(*new_lock));
+    cplat_interprocess_lock *new_lock = (cplat_interprocess_lock *)cplat_calloc(1, sizeof(*new_lock));
     if (new_lock == NULL)
     {
         cplat_free(identity_copy);
@@ -282,14 +302,10 @@ static int interprocess_lock_open_identity(const char *identity, cplat_interproc
     return CPLAT_OK;
 }
 
-static int app_lock_take(cplat_interprocess_rwlock *lock, int operation, int timeout_ms)
+static int take_lock_file(int fd, int operation, int timeout_ms)
 {
     uint64_t deadline;
-
-    if (lock == NULL || lock->locked)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
+    uint64_t now;
 
     /*
      * flock() は待機中にシグナルを受けると EINTR で失敗するため、取得できるまで呼び直す。
@@ -297,7 +313,7 @@ static int app_lock_take(cplat_interprocess_rwlock *lock, int operation, int tim
      */
     if (timeout_ms == CPLAT_SYNC_WAIT_FOREVER)
     {
-        while (flock(lock->fd, operation) != 0)
+        while (flock(fd, operation) != 0)
         {
             if (errno != EINTR)
             {
@@ -305,7 +321,6 @@ static int app_lock_take(cplat_interprocess_rwlock *lock, int operation, int tim
             }
         }
 
-        lock->locked = 1;
         return CPLAT_OK;
     }
 
@@ -314,13 +329,17 @@ static int app_lock_take(cplat_interprocess_rwlock *lock, int operation, int tim
      * 呼び出し元で timeout_ms < 0 を拒否済みのため、ここでの timeout_ms は 0 以上の有限値である。
      * see: https://man7.org/linux/man-pages/man2/flock.2.html
      */
-    deadline = monotonic_ms() + (uint64_t)timeout_ms;
+    if (monotonic_ms(&now) != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    deadline = now + (uint64_t)timeout_ms;
 
     do
     {
-        if (flock(lock->fd, operation | LOCK_NB) == 0)
+        if (flock(fd, operation | LOCK_NB) == 0)
         {
-            lock->locked = 1;
             return CPLAT_OK;
         }
 
@@ -338,63 +357,46 @@ static int app_lock_take(cplat_interprocess_rwlock *lock, int operation, int tim
             struct timespec sleep_ts = {0, 1000000L}; /* 1 [ms] */
             nanosleep(&sleep_ts, NULL);
         }
-    } while (monotonic_ms() < deadline);
+
+        if (monotonic_ms(&now) != CPLAT_OK)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
+    } while (now < deadline);
 
     return CPLAT_ERR_TIMEOUT;
 }
 
-/* 取得の方式は app_lock_take() と同じであり、操作を LOCK_EX に固定する。 */
-static int interprocess_lock_take(cplat_interprocess_lock *lock, int timeout_ms)
+static int app_lock_take(cplat_interprocess_rwlock *lock, int operation, int timeout_ms)
 {
-    uint64_t deadline;
-
     if (lock == NULL || lock->locked)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    if (timeout_ms == CPLAT_SYNC_WAIT_FOREVER)
+    int ret = take_lock_file(lock->fd, operation, timeout_ms);
+    if (ret == CPLAT_OK)
     {
-        while (flock(lock->fd, LOCK_EX) != 0)
-        {
-            if (errno != EINTR)
-            {
-                return CPLAT_ERR_UNKNOWN;
-            }
-        }
-
         lock->locked = 1;
-        return CPLAT_OK;
     }
 
-    /* 呼び出し元で timeout_ms < 0 を拒否済みのため、ここでの timeout_ms は 0 以上の有限値である。 */
-    deadline = monotonic_ms() + (uint64_t)timeout_ms;
+    return ret;
+}
 
-    do
+static int interprocess_lock_take(cplat_interprocess_lock *lock, int timeout_ms)
+{
+    if (lock == NULL || lock->locked)
     {
-        if (flock(lock->fd, LOCK_EX | LOCK_NB) == 0)
-        {
-            lock->locked = 1;
-            return CPLAT_OK;
-        }
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
 
-        if (errno != EWOULDBLOCK && errno != EINTR)
-        {
-            return CPLAT_ERR_UNKNOWN;
-        }
+    int ret = take_lock_file(lock->fd, LOCK_EX, timeout_ms);
+    if (ret == CPLAT_OK)
+    {
+        lock->locked = 1;
+    }
 
-        if (timeout_ms == CPLAT_SYNC_NO_WAIT)
-        {
-            return CPLAT_ERR_BUSY;
-        }
-
-        {
-            struct timespec sleep_ts = {0, 1000000L}; /* 1 [ms] */
-            nanosleep(&sleep_ts, NULL);
-        }
-    } while (monotonic_ms() < deadline);
-
-    return CPLAT_ERR_TIMEOUT;
+    return ret;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -430,6 +432,7 @@ int cplat_local_lock_create(cplat_local_lock **mtx)
 int cplat_local_lock_lock(cplat_local_lock *mtx, int timeout_ms)
 {
     uint64_t deadline;
+    uint64_t now;
 
     if (mtx == NULL)
     {
@@ -457,7 +460,12 @@ int cplat_local_lock_lock(cplat_local_lock *mtx, int timeout_ms)
      * 上で timeout_ms < 0 を拒否済みのため、ここでの timeout_ms は 0 以上の有限値である。
      * see: https://man7.org/linux/man-pages/man3/pthread_mutex_timedlock.3p.html
      */
-    deadline = monotonic_ms() + (uint64_t)timeout_ms;
+    if (monotonic_ms(&now) != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    deadline = now + (uint64_t)timeout_ms;
 
     do
     {
@@ -476,7 +484,12 @@ int cplat_local_lock_lock(cplat_local_lock *mtx, int timeout_ms)
             struct timespec sleep_ts = {0, 1000000L}; /* 1 [ms] */
             nanosleep(&sleep_ts, NULL);
         }
-    } while (monotonic_ms() < deadline);
+
+        if (monotonic_ms(&now) != CPLAT_OK)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
+    } while (now < deadline);
 
     return CPLAT_ERR_TIMEOUT;
 }
@@ -555,7 +568,10 @@ int cplat_condvar_wait(cplat_condvar *cv, cplat_local_lock *mtx, int timeout_ms)
         return map_wait_rc(pthread_cond_wait(&cv->native, &mtx->native));
     }
 
-    monotonic_deadline(&abs_ts, timeout_ms);
+    if (monotonic_deadline(&abs_ts, timeout_ms) != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
 
     return map_wait_rc(pthread_cond_timedwait(&cv->native, &mtx->native, &abs_ts));
 }
@@ -639,12 +655,15 @@ int cplat_local_rwlock_lock_shared(cplat_local_rwlock *rwlock, int timeout_ms)
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    rwlock_state_lock(rwlock);
-
     if (timeout_ms != CPLAT_SYNC_WAIT_FOREVER)
     {
-        monotonic_deadline(&abs_ts, timeout_ms);
+        if (monotonic_deadline(&abs_ts, timeout_ms) != CPLAT_OK)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
     }
+
+    rwlock_state_lock(rwlock);
 
     /*
      * 書き込み中に加え、書き込み待ちがいる間も新しい読み取りを待たせることで、
@@ -705,6 +724,14 @@ int cplat_local_rwlock_lock_exclusive(cplat_local_rwlock *rwlock, int timeout_ms
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
+    if (timeout_ms != CPLAT_SYNC_WAIT_FOREVER)
+    {
+        if (monotonic_deadline(&abs_ts, timeout_ms) != CPLAT_OK)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
+    }
+
     rwlock_state_lock(rwlock);
 
     /*
@@ -712,11 +739,6 @@ int cplat_local_rwlock_lock_exclusive(cplat_local_rwlock *rwlock, int timeout_ms
      * 待機を抜けるすべての経路で waiting_writers を減算する。
      */
     rwlock->waiting_writers++;
-
-    if (timeout_ms != CPLAT_SYNC_WAIT_FOREVER)
-    {
-        monotonic_deadline(&abs_ts, timeout_ms);
-    }
 
     while (rwlock->writer_active || rwlock->active_readers > 0)
     {
@@ -906,7 +928,14 @@ int cplat_thread_join(cplat_thread *thread, int timeout_ms)
          * 上で timeout_ms < 0 を拒否済みのため、ここでの timeout_ms は 0 以上の有限値である。
          * see: https://man7.org/linux/man-pages/man3/pthread_tryjoin_np.3.html
          */
-        uint64_t deadline = monotonic_ms() + (uint64_t)timeout_ms;
+        uint64_t now;
+
+        if (monotonic_ms(&now) != CPLAT_OK)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        uint64_t deadline = now + (uint64_t)timeout_ms;
 
         do
         {
@@ -929,7 +958,12 @@ int cplat_thread_join(cplat_thread *thread, int timeout_ms)
             abs_ts.tv_sec = 0;
             abs_ts.tv_nsec = 1000000L; /* 1 [ms] */
             nanosleep(&abs_ts, NULL);
-        } while (monotonic_ms() < deadline);
+
+            if (monotonic_ms(&now) != CPLAT_OK)
+            {
+                return CPLAT_ERR_UNKNOWN;
+            }
+        } while (now < deadline);
 
         /*
          * 期限までに終了しなかった場合に加え、CPLAT_SYNC_NO_WAIT 指定時に未終了だった場合もタイムアウトとして返す。

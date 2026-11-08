@@ -119,6 +119,11 @@ int cplat_compress(uint8_t *dst, size_t *dst_len, const uint8_t *src, const size
         return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
+    if ((ret == Z_BUF_ERROR) && (out_remaining == 0))
+    {
+        return CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+
     if (ret != Z_STREAM_END)
     {
         return CPLAT_ERR_UNKNOWN;

@@ -37,7 +37,7 @@ namespace
 
 const cplat_socket kSocket = (cplat_socket)7;
 
-const cplat_ipv4_endpoint kEndpoint = {CPLAT_IPV4_ADDR_LOOPBACK, cplat_hton16((uint16_t)12345U), 0U};
+const cplat_ipv4_endpoint kEndpoint = {cplat_ipv4_addr_loopback(), cplat_hton16((uint16_t)12345U), 0U};
 
 // [サブ手順 名前=socketTest.expect_detail]
 void expect_detail(const cplat_error &detail, const cplat_error_domain domain, const int result,
@@ -266,10 +266,11 @@ TEST_F(socketTest, open_propagates_startup_failure)
         actual_ret); // [確認_異常系] - 初期化失敗時の cplat_socket_open() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(CPLAT_INVALID_SOCKET,
               socket); // [確認_異常系] - 初期化失敗時の socket が CPLAT_INVALID_SOCKET であること。
+
     // 詳細エラーに Winsock ドメインと OS のエラー値が記録されること。
     // [サブ手順参照 名前=socketTest.expect_detail]
-    expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_UNKNOWN,
-                  static_cast<unsigned long>(WSASYSNOTREADY));
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_UNKNOWN, static_cast<unsigned long>(WSASYSNOTREADY));
+
     // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 }
 // [サブ手順参照 名前=socketTest.TearDown]
@@ -675,26 +676,28 @@ TEST_F(socketTest, accept_returns_peer_and_socket)
             [](const char *, const int, const char *, int, struct sockaddr *address, socklen_t *length)
             {
                 struct sockaddr_in *native = reinterpret_cast<struct sockaddr_in *>(address);
-                native->sin_addr.s_addr = CPLAT_IPV4_ADDR_LOOPBACK;
+                native->sin_addr.s_addr = cplat_ipv4_addr_loopback();
                 native->sin_port = cplat_hton16((uint16_t)54321U);
                 *length = (socklen_t)sizeof(*native);
                 return 8;
             });
+
     // [Pre-Assert確認_正常系] - accept() が kSocket を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - accept() から、address の IPv4 アドレスに CPLAT_IPV4_ADDR_LOOPBACK、ポートに cplat_hton16() で変換した 54321U、*length に sizeof(*native) を設定して 8 を返す。
+    // [Pre-Assert手順] - accept() から、address の IPv4 アドレスに cplat_ipv4_addr_loopback()、ポートに cplat_hton16() で変換した 54321U、*length に sizeof(*native) を設定して 8 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, accept(_, _, _, (SOCKET)kSocket, _, _))
         .WillRepeatedly(
             [](const char *, const int, const char *, SOCKET, struct sockaddr *address, int *length)
             {
                 SOCKADDR_IN *native = reinterpret_cast<SOCKADDR_IN *>(address);
-                native->sin_addr.S_un.S_addr = CPLAT_IPV4_ADDR_LOOPBACK;
+                native->sin_addr.S_un.S_addr = cplat_ipv4_addr_loopback();
                 native->sin_port = cplat_hton16((uint16_t)54321U);
                 *length = (int)sizeof(*native);
                 return (SOCKET)8;
             });
+
     // [Pre-Assert確認_正常系] - accept() が kSocket を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - accept() から、address の IPv4 アドレスに CPLAT_IPV4_ADDR_LOOPBACK、ポートに cplat_hton16() で変換した 54321U、*length に sizeof(*native) を設定して 8 を返す。
+    // [Pre-Assert手順] - accept() から、address の IPv4 アドレスに cplat_ipv4_addr_loopback()、ポートに cplat_hton16() で変換した 54321U、*length に sizeof(*native) を設定して 8 を返す。
 #endif /* PLATFORM_ */
     // [Pre-Assert手順] - accept() から、接続元のエンドポイントを出力引数に設定して新しいソケットのハンドル 8 を返す。
 
@@ -714,8 +717,8 @@ TEST_F(socketTest, accept_returns_peer_and_socket)
     EXPECT_EQ((cplat_socket)8,
               accepted); // [確認_正常系] - accepted が 8 であること。(受け付けたソケットのハンドルであることの確認)
     EXPECT_EQ(
-        CPLAT_IPV4_ADDR_LOOPBACK,
-        peer.address); // [確認_正常系] - peer.address が CPLAT_IPV4_ADDR_LOOPBACK であること。(接続元アドレスであることの確認)
+        cplat_ipv4_addr_loopback(),
+        peer.address); // [確認_正常系] - peer.address が cplat_ipv4_addr_loopback() であること。(接続元アドレスであることの確認)
     EXPECT_EQ(
         cplat_hton16((uint16_t)54321U),
         peer.port); // [確認_正常系] - peer.port が 54321U を変換した cplat_hton16() の戻り値と一致すること。(接続元ポートであることの確認)
@@ -1001,13 +1004,13 @@ TEST_F(socketTest, socket_options_succeed)
     int actual_ret_broadcast_enabled = cplat_socket_set_broadcast(
         kSocket, 1, &detail); // [手順] - ブロードキャストの有効化を指定して cplat_socket_set_broadcast() を呼び出す。
     int actual_ret_interface = cplat_socket_set_multicast_interface(
-        kSocket, CPLAT_IPV4_ADDR_LOOPBACK,
+        kSocket, cplat_ipv4_addr_loopback(),
         &detail); // [手順] - マルチキャスト インターフェイスを指定して cplat_socket_set_multicast_interface() を呼び出す。
     int actual_ret_join = cplat_socket_join_multicast_group(
-        kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
+        kSocket, cplat_ipv4_addr_loopback(), CPLAT_IPV4_ADDR_ANY,
         &detail); // [手順] - 参加するマルチキャスト グループを指定して cplat_socket_join_multicast_group() を呼び出す。
     int actual_ret_leave = cplat_socket_leave_multicast_group(
-        kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
+        kSocket, cplat_ipv4_addr_loopback(), CPLAT_IPV4_ADDR_ANY,
         &detail); // [手順] - 離脱するマルチキャスト グループを指定して cplat_socket_leave_multicast_group() を呼び出す。
 
     // Assert
@@ -1096,21 +1099,21 @@ TEST_F(socketTest, socket_options_report_invalid_and_os_failure)
         CPLAT_INVALID_SOCKET, CPLAT_IPV4_ADDR_ANY,
         &detail); // [手順] - 無効なソケットとマルチキャスト インターフェイスを指定して cplat_socket_set_multicast_interface() を呼び出す。
     int actual_ret_join_invalid = cplat_socket_join_multicast_group(
-        CPLAT_INVALID_SOCKET, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
+        CPLAT_INVALID_SOCKET, cplat_ipv4_addr_loopback(), CPLAT_IPV4_ADDR_ANY,
         &detail); // [手順] - 無効なソケットと参加するマルチキャスト グループを指定して cplat_socket_join_multicast_group() を呼び出す。
     int actual_ret_leave_invalid = cplat_socket_leave_multicast_group(
-        CPLAT_INVALID_SOCKET, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
+        CPLAT_INVALID_SOCKET, cplat_ipv4_addr_loopback(), CPLAT_IPV4_ADDR_ANY,
         &detail); // [手順] - 無効なソケットと離脱するマルチキャスト グループを指定して cplat_socket_leave_multicast_group() を呼び出す。
     int actual_ret_failure = cplat_socket_set_reuse_address(
         kSocket, 1, &detail); // [手順] - オプション設定が失敗する状態で cplat_socket_set_reuse_address() を呼び出す。
     int actual_ret_interface_failure = cplat_socket_set_multicast_interface(
-        kSocket, CPLAT_IPV4_ADDR_LOOPBACK,
+        kSocket, cplat_ipv4_addr_loopback(),
         &detail); // [手順] - インターフェイス設定が失敗する状態で cplat_socket_set_multicast_interface() を呼び出す。
     int actual_ret_join_failure = cplat_socket_join_multicast_group(
-        kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
+        kSocket, cplat_ipv4_addr_loopback(), CPLAT_IPV4_ADDR_ANY,
         &detail); // [手順] - グループ参加が失敗する状態で cplat_socket_join_multicast_group() を呼び出す。
     int actual_ret_leave_failure = cplat_socket_leave_multicast_group(
-        kSocket, CPLAT_IPV4_ADDR_LOOPBACK, CPLAT_IPV4_ADDR_ANY,
+        kSocket, cplat_ipv4_addr_loopback(), CPLAT_IPV4_ADDR_ANY,
         &detail); // [手順] - グループ離脱が失敗する状態で cplat_socket_leave_multicast_group() を呼び出す。
 
     // Assert
@@ -1281,14 +1284,16 @@ TEST_F(socketTest, datagram_operations_succeed)
             [](const char *, const int, const char *, int, void *, size_t, int, struct sockaddr *address, socklen_t *)
             {
                 struct sockaddr_in *native = reinterpret_cast<struct sockaddr_in *>(address);
-                native->sin_addr.s_addr = CPLAT_IPV4_ADDR_LOOPBACK;
+                native->sin_addr.s_addr = cplat_ipv4_addr_loopback();
                 native->sin_port = kEndpoint.port;
                 return (ssize_t)2;
             });
+
     // [Pre-Assert確認_正常系] - recvfrom() が kSocket、4U、0 を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - recvfrom() から、address の IPv4 アドレスに CPLAT_IPV4_ADDR_LOOPBACK、ポートに kEndpoint.port を設定して 2 を返す。
+    // [Pre-Assert手順] - recvfrom() から、address の IPv4 アドレスに cplat_ipv4_addr_loopback()、ポートに kEndpoint.port を設定して 2 を返す。
 #elif defined(PLATFORM_WINDOWS)
     EXPECT_CALL(mock_winsock_, sendto(_, _, _, (SOCKET)kSocket, _, 4, 0, _, _)).WillOnce(Return(4));
+
     // [Pre-Assert確認_正常系] - sendto() が kSocket、4、0 を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - sendto() から 4 を返す。
     EXPECT_CALL(mock_winsock_, recvfrom(_, _, _, (SOCKET)kSocket, _, 4, 0, _, _))
@@ -1296,12 +1301,13 @@ TEST_F(socketTest, datagram_operations_succeed)
             [](const char *, const int, const char *, SOCKET, char *, int, int, struct sockaddr *address, int *)
             {
                 SOCKADDR_IN *native = reinterpret_cast<SOCKADDR_IN *>(address);
-                native->sin_addr.S_un.S_addr = CPLAT_IPV4_ADDR_LOOPBACK;
+                native->sin_addr.S_un.S_addr = cplat_ipv4_addr_loopback();
                 native->sin_port = kEndpoint.port;
                 return 2;
             });
+
     // [Pre-Assert確認_正常系] - recvfrom() が kSocket、4、0 を指定して任意の回数呼び出されること。
-    // [Pre-Assert手順] - recvfrom() から、address の IPv4 アドレスに CPLAT_IPV4_ADDR_LOOPBACK、ポートに kEndpoint.port を設定して 2 を返す。
+    // [Pre-Assert手順] - recvfrom() から、address の IPv4 アドレスに cplat_ipv4_addr_loopback()、ポートに kEndpoint.port を設定して 2 を返す。
 #endif /* PLATFORM_ */
     // [Pre-Assert手順] - sendto() から送信バイト数 4 を返し、recvfrom() から、送信元のエンドポイントを出力引数に設定して受信バイト数 2 を返す。
 
@@ -2033,7 +2039,8 @@ TEST_F(socketTest, wait_single_retries_without_deadline_after_interrupt)
 
     // Pre-Assert
     // 無期限待機では単調時刻が取得されないこと。
-    EXPECT_CALL(mock_cplat_, cplat_clock_get_monotonic_ms()).Times(0);
+    EXPECT_CALL(mock_cplat_, cplat_clock_get_monotonic_ms(_)).Times(0);
+
     // [Pre-Assert確認_正常系] - cplat_clock_get_monotonic_ms() が呼び出されないこと。
     EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, CPLAT_SOCKET_WAIT_FOREVER))
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)))
@@ -2068,12 +2075,14 @@ TEST_F(socketTest, wait_single_recomputes_remaining_after_interrupt)
 
     // Pre-Assert
     // 単調時刻が待機の開始時と中断時の 2 回取得されること。
-    EXPECT_CALL(mock_cplat_, cplat_clock_get_monotonic_ms())
-        .WillOnce(Return((uint64_t)1000U))
-        .WillOnce(Return((uint64_t)1040U));
+    EXPECT_CALL(mock_cplat_, cplat_clock_get_monotonic_ms(_))
+        .WillOnce(DoAll(SetArgPointee<0>(uint64_t{1000U}), Return(CPLAT_OK)))
+        .WillOnce(DoAll(SetArgPointee<0>(uint64_t{1040U}), Return(CPLAT_OK)));
+
     // [Pre-Assert確認_正常系] - cplat_clock_get_monotonic_ms() が 2 回呼び出されること。
     // [Pre-Assert手順] - cplat_clock_get_monotonic_ms() から開始時に 1000 ms、中断時に 1040 ms を返す。
     EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, 100)).WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)));
+
     // [Pre-Assert確認_正常系] - poll() が 1、100 を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - poll() から、errno に EINTR を設定して -1 を返す。
     EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, 60))
@@ -2109,12 +2118,14 @@ TEST_F(socketTest, wait_single_reports_not_ready_when_deadline_expires_after_int
 
     // Pre-Assert
     // 単調時刻が待機の開始時と中断時の 2 回取得されること。
-    EXPECT_CALL(mock_cplat_, cplat_clock_get_monotonic_ms())
-        .WillOnce(Return((uint64_t)1000U))
-        .WillOnce(Return((uint64_t)1100U));
+    EXPECT_CALL(mock_cplat_, cplat_clock_get_monotonic_ms(_))
+        .WillOnce(DoAll(SetArgPointee<0>(uint64_t{1000U}), Return(CPLAT_OK)))
+        .WillOnce(DoAll(SetArgPointee<0>(uint64_t{1100U}), Return(CPLAT_OK)));
+
     // [Pre-Assert確認_正常系] - cplat_clock_get_monotonic_ms() が 2 回呼び出されること。
     // [Pre-Assert手順] - cplat_clock_get_monotonic_ms() から開始時に 1000 ms、中断時に期限を過ぎた 1100 ms を返す。
     EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, 50)).WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)));
+
     // [Pre-Assert確認_正常系] - poll() が 1、50 を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - poll() から、errno に EINTR を設定して -1 を返す。
 
@@ -2525,3 +2536,30 @@ TEST_F(socketTest, shutdown_receive_reports_results)
 #endif                 /* PLATFORM_WINDOWS */
 }
 // [サブ手順参照 名前=socketTest.TearDown]
+
+#if defined(PLATFORM_LINUX)
+// 時計失敗時に期限付き待機を開始しないことの確認
+TEST_F(socketTest, clock_failure_does_not_poll)
+{
+    // Arrange
+    int ready = 9;
+    cplat_error detail = {};
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_clock_get_monotonic_ms(_)).WillOnce(Return(CPLAT_ERR_UNKNOWN));
+
+    // [Pre-Assert確認_異常系] - 開始時刻を 1 回取得すること。
+    // [Pre-Assert手順] - 時計取得失敗を返す。
+    EXPECT_CALL(mock_poll_, poll(_, _, _, _, _, _)).Times(0);
+
+    // [Pre-Assert確認_異常系] - 不正な期限で poll() を呼び出さないこと。
+
+    // Act
+    int result = cplat_socket_wait_readable(kSocket, 100, &ready, &detail);
+
+    // [手順] - 時計が取得できない状態で期限付き待機を要求する。
+
+    // Assert
+    EXPECT_NE(CPLAT_OK, result); // [確認_異常系] - 待機失敗を返すこと。
+}
+#endif

@@ -75,9 +75,16 @@ class traceTest : public Test
                     set_valid_deadline(abs_timeout);
                     return CPLAT_OK;
                 });
+
         // [状態] - cplat_clock_get_realtime_deadline_ms() から、有効な期限を設定して戻るように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_get_realtime(_))
-            .WillByDefault([](cplat_timespec *ts) { set_fixed_realtime(ts); });
+            .WillByDefault(
+                [](cplat_timespec *ts)
+                {
+                    set_fixed_realtime(ts);
+                    return CPLAT_OK;
+                });
+
         // [状態] - cplat_clock_get_realtime() から、固定の現在時刻を設定して戻るように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_clock_format_realtime_iso8601_local(_, _, _))
             .WillByDefault(
@@ -2663,4 +2670,27 @@ TEST_F(traceTest, set_level_rejects_out_of_range_threshold)
 
     // Cleanup
     cplat_tracer_dispose(&handle);
+}
+
+// 16 進トレースのマクロが副作用のあるメッセージ引数を 1 回だけ評価することの確認
+TEST(traceResidualTest, hex_macro_evaluates_message_once)
+{
+    // Arrange
+    int evaluations = 0;
+    const unsigned char data = 1;
+    auto message = [&]()
+    {
+        ++evaluations;
+        return "message";
+    };
+
+    // Pre-Assert
+
+    // Act
+    int result = cplat_tracer_write_hex(nullptr, CPLAT_TRACE_LEVEL_INFO, nullptr, &data, sizeof(data),
+                                        message()); // [手順] - 副作用のあるメッセージを渡す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - NULL tracer の出力省略が成功すること。
+    EXPECT_EQ(1, evaluations);   // [確認_正常系] - メッセージ式の評価が 1 回であること。
 }

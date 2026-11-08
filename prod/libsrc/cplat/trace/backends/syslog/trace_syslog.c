@@ -127,31 +127,41 @@ static void advance_backoff(cplat_syslog_sink *h)
 /**
  *  @brief  fd を閉じてバックオフを進めます。ロック保持中に呼び出してください。
  */
-static void close_and_backoff_locked(cplat_syslog_sink *h)
+static int close_and_backoff_locked(cplat_syslog_sink *h)
 {
     cplat_timespec now;
 
     close(h->fd);
     h->fd = -1;
-    cplat_clock_get_realtime(&now);
+
+    if (cplat_clock_get_realtime(&now) != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
     h->next_connect = now.tv_sec + h->backoff_sec;
     advance_backoff(h);
+
+    return CPLAT_OK;
 }
 
 /**
  *  @brief  バックオフ期間を経過していればソケットを開く試みを行います。
  *          ロック保持中に呼び出すこと。
  */
-static void try_open_socket_locked(cplat_syslog_sink *h)
+static int try_open_socket_locked(cplat_syslog_sink *h)
 {
     cplat_timespec now;
     int fd;
 
-    cplat_clock_get_realtime(&now);
+    if (cplat_clock_get_realtime(&now) != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
 
     if (now.tv_sec < h->next_connect)
     {
-        return; /* バックオフ期間中 */
+        return CPLAT_OK; /* バックオフ期間中 */
     }
 
     fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
@@ -159,12 +169,13 @@ static void try_open_socket_locked(cplat_syslog_sink *h)
     {
         h->next_connect = now.tv_sec + h->backoff_sec;
         advance_backoff(h);
-        return;
+        return CPLAT_OK;
     }
 
     h->fd = fd;
 
     /* バックオフは送信成功時にリセットする。 */
+    return CPLAT_OK;
 }
 
 /**
@@ -261,8 +272,14 @@ cplat_syslog_sink *cplat_syslog_sink_create(const char *ident, const int facilit
 
     /* 初回接続を試みる (失敗しても構わない)。 */
     cplat_local_lock_lock(handle->reconnect_lock, CPLAT_SYNC_WAIT_FOREVER);
-    try_open_socket_locked(handle);
+    int clock_ret = try_open_socket_locked(handle);
     cplat_local_lock_unlock(handle->reconnect_lock);
+
+    if (clock_ret != CPLAT_OK)
+    {
+        cplat_syslog_sink_dispose(handle);
+        return NULL;
+    }
 
     return handle;
 }
@@ -359,7 +376,10 @@ static int write_locked(cplat_syslog_sink *handle, const int level, const cplat_
     /* ソケットが無ければ低頻度で再接続を試みる。 */
     if (handle->fd < 0)
     {
-        try_open_socket_locked(handle);
+        if (try_open_socket_locked(handle) != CPLAT_OK)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
 
         if (handle->fd < 0)
         {
@@ -400,7 +420,10 @@ static int write_locked(cplat_syslog_sink *handle, const int level, const cplat_
         }
 
         /* その他エラー (ENOENT, ECONNREFUSED 等): ソケットを閉じてバックオフ。 */
-        close_and_backoff_locked(handle);
+        if (close_and_backoff_locked(handle) != CPLAT_OK)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
 
         if (fallback_used)
         {

@@ -15,6 +15,7 @@
  */
 
 #include "hashtable.h"
+#include <cplat/clock/clock.h>
 
 #include <cplat/crt/stdlib.h>
 #include <string.h>
@@ -641,6 +642,13 @@ int cplat_hashtable_clear(cplat_hashtable *ht)
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
+    cplat_timespec operation_time;
+    int clock_ret = cplat_clock_get_realtime(&operation_time);
+    if (clock_ret != CPLAT_OK)
+    {
+        return clock_ret;
+    }
+
     (void)hashtable_mgmt_layout(&ht->hdr->config, &off_bucket_head, NULL, &mgmt_size);
     (void)hashtable_data_region_size(&ht->hdr->config, &data_size);
 
@@ -655,7 +663,7 @@ int cplat_hashtable_clear(cplat_hashtable *ht)
     ht->hdr->key_storage_used = 0;
     ht->hdr->value_storage_used = 0;
     hashtable_reset_arenas(ht);
-    hashtable_stamp_table(ht);
+    hashtable_stamp_table(ht, &operation_time);
 
     return CPLAT_OK;
 }
