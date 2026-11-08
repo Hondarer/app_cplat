@@ -1120,7 +1120,7 @@ extern "C"
 
     /**
      *  @brief          ソース位置を付けて 16 進ダンプを出力します。
-     *  @param[in,out]  handle 対象。NULL の場合は出力しません。
+     *  @param[in]      handle 対象。NULL の場合は出力しません。
      *  @param[in]      level 詳細度。
      *  @param[in]      timestamp 時刻。NULL の場合は現在時刻を取得します。
      *  @param[in]      data ダンプするデータ。NULL の場合は出力しません。

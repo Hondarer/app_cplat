@@ -302,7 +302,7 @@ static int interprocess_lock_open_identity(const char *identity, cplat_interproc
     return CPLAT_OK;
 }
 
-static int take_lock_file(int fd, int operation, int timeout_ms)
+static int take_lock_file(const int fd, const int operation, const int timeout_ms)
 {
     uint64_t deadline;
     uint64_t now;

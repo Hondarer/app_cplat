@@ -2451,8 +2451,9 @@ void cplat_tracer_call_next_hook(cplat_tracer_hook_entry *prev, cplat_tracer *ha
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_tracer_write_hex_with_source(cplat_tracer *handle, cplat_trace_level level, const cplat_timespec *timestamp,
-                                       const void *data, size_t size, const char *file, int line, const char *message)
+int cplat_tracer_write_hex_with_source(cplat_tracer *handle, const cplat_trace_level level,
+                                       const cplat_timespec *timestamp, const void *data, const size_t size,
+                                       const char *file, const int line, const char *message)
 {
     return cplat_tracer_write_hexf_at(handle, level, timestamp, data, size, "[%s:%d]%s%s", file, line,
                                       cplat_tracer_hex_sep(message), cplat_tracer_hex_msg(message));
