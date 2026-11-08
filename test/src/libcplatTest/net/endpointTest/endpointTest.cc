@@ -203,9 +203,9 @@ TEST_F(endpointTest, parse_converts_valid_text)
 // [サブ手順参照 名前=endpointTest.TearDown]
 
 #if defined(PLATFORM_WINDOWS)
-// Winsock の初期化に失敗した場合、IPv4 解析が不正引数として終了することの確認
+// Winsock が利用できない場合、IPv4 解析が初期化失敗の結果コードを返すことの確認
 // [サブ手順参照 名前=endpointTest.SetUp]
-TEST_F(endpointTest, parse_returns_invalid_when_startup_fails)
+TEST_F(endpointTest, parse_returns_unknown_when_winsock_is_not_ready)
 {
     // Arrange
     uint32_t address = 0U;
@@ -223,8 +223,8 @@ TEST_F(endpointTest, parse_returns_invalid_when_startup_fails)
 
     // Assert
     EXPECT_EQ(
-        CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret); // [確認_異常系] - 初期化に失敗した cplat_ipv4_parse() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        CPLAT_ERR_UNKNOWN,
+        actual_ret); // [確認_異常系] - 初期化に失敗した cplat_ipv4_parse() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 // [サブ手順参照 名前=endpointTest.TearDown]
 #endif /* PLATFORM_WINDOWS */
