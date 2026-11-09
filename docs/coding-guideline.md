@@ -519,7 +519,7 @@ libc 関数のモックは `framework/testfw/libsrc/mock_libc/` が提供する�
 
 境界検査を持たない、または終端の保証がない標準関数とマクロは、`app/` 配下の管理対象コードで直接使用しません。  
 代替は cplat がすべて提供します。標準関数を代替として指定することはありません。  
-外部 OSS 由来のコード (`app/lua`、`app/sqlite`、`app/cjson`、`app/zlib`) は本規則の対象外です。
+外部 OSS 由来のコード (`app/lua`、`app/sqlite`、`app/cjson`、`app/zlib`、`app/openssl`) は本規則の対象外です。
 
 | 使用しない関数・マクロ | 問題 | 代替 |
 |---|---|---|

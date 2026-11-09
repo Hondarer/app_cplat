@@ -16,7 +16,7 @@
 - **プラットフォーム抽象ラッパー**: 危険ではないものの、Linux / Windows の挙動差 (共有モード、UTF-8 パス、64bit オフセットなど) を吸収するために cplat 側で提供しているラッパーです。
 - **独自機能 API**: 単一の生 API とは 1 対 1 で対応しない cplat 独自の機能です。「生の構文」列には、対応する生の関数がある場合はその名前を、ない場合は用途を記載します。
 
-外部 OSS 由来のコード (`app/lua`、`app/sqlite`、`app/cjson`、`app/zlib`) はいずれの表も対象外です。
+外部 OSS 由来のコード (`app/lua`、`app/sqlite`、`app/cjson`、`app/zlib`、`app/openssl`) はいずれの表も対象外です。
 
 > [!NOTE]
 > `memcpy` / `memmove` / `memset` / `strcmp` / `strncmp` / `memcmp` / 単純な `malloc` 呼出 / `printf` など、両プラットフォームで挙動が同じで境界検査の欠落もない関数には、cplat はラッパーを作りません。

@@ -32,6 +32,14 @@ Windows の利用側で `CPLAT_STATIC` を定義しないでください。
 
 実行時は `libcplat`、`libcjson`、`libzlib` のすべてを解決できるようにします。
 
+Linux の暗号処理と乱数生成は、ワークスペースの `app/openssl` で生成した libcrypto の静的ライブラリ (`libcrypto.a`) を使います。  
+`libcplat.so` へ静的にリンクするため、OS の OpenSSL には依存せず、配布物へ OpenSSL の共有ライブラリを同梱する必要もありません。  
+OpenSSL の関数は `exports.map` の `local: *` により `libcplat.so` からエクスポートしません。  
+同じプロセスで別の OpenSSL を使うプログラムや、OpenSSL を静的にリンクする別のライブラリと、記号が衝突しないようにするためです。  
+Windows の暗号処理と乱数生成は CNG を使い、OpenSSL をリンクしません。  
+ただし、ビルド順序をそろえるため、両 OS で `app/openssl` に依存します (`appdeps.mk`)。  
+OpenSSL の配布条件は `app/openssl/README.md` を参照してください。
+
 ## 実行ファイルへの同梱
 
 単体配布する CLI や OS のサービスとして起動する実行ファイルには、`libcplat`、`libcjson`、`libzlib` を同じディレクトリへ同梱します。
@@ -90,6 +98,14 @@ env -u LD_LIBRARY_PATH ldd <利用側>/prod/cbin/<実行ファイル> | grep -E 
 ```
 
 `libcplat.so`、`libcjson.so`、`libzlib.so` の解決先が、実行ファイルと同じ `prod/cbin` になることを確認します。
+
+OpenSSL を静的にリンクしていることと、その関数をエクスポートしていないことは、次のコマンドで確認できます。  
+1 行目は `libcrypto` を表示せず、2 行目は 0 を表示します。
+
+```bash
+readelf -d prod/lib/libcplat.so | grep -E 'NEEDED.*(libcrypto|libssl)'
+nm -D --defined-only prod/lib/libcplat.so | grep -cE ' (EVP|RAND|OPENSSL|CRYPTO)_'
+```
 
 Windows では `dumpbin /dependents` を使い、実行ファイルが `libcplat.dll` を参照することを確認します。
 
