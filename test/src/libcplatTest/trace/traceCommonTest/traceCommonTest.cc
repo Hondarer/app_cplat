@@ -24,7 +24,8 @@ TEST(traceCommonTest, resolves_valid_explicit_timestamp)
         &fallback_used); // [手順] - 有効な明示タイムスタンプを指定して cplat_internal_trace_resolve_timestamp() を呼び出す。
 
     // Assert
-    EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp() の戻り値が 0 であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(timestamp.tv_sec,
               resolved.tv_sec); // [確認_正常系] - resolved.tv_sec が timestamp.tv_sec と一致すること。
     EXPECT_EQ(timestamp.tv_nsec,
@@ -58,7 +59,8 @@ TEST(traceCommonTest, resolves_current_time_for_null_timestamp)
         &fallback_used); // [手順] - timestamp に nullptr を指定して cplat_internal_trace_resolve_timestamp() を呼び出す。
 
     // Assert
-    EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp() の戻り値が 0 であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(789, resolved.tv_sec);  // [確認_正常系] - resolved.tv_sec が 789 であること。
     EXPECT_EQ(123, resolved.tv_nsec); // [確認_正常系] - resolved.tv_nsec が 123 であること。
     EXPECT_EQ(
@@ -93,7 +95,8 @@ TEST(traceCommonTest, falls_back_from_invalid_explicit_timestamp)
         &fallback_used); // [手順] - 無効な明示タイムスタンプを指定して cplat_internal_trace_resolve_timestamp() を呼び出す。
 
     // Assert
-    EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp() の戻り値が 0 であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(456, resolved.tv_sec);  // [確認_正常系] - resolved.tv_sec が 456 であること。
     EXPECT_EQ(789, resolved.tv_nsec); // [確認_正常系] - resolved.tv_nsec が 789 であること。
     EXPECT_EQ(1, fallback_used);      // [確認_正常系] - fallback_used が 1 であること。
@@ -125,7 +128,9 @@ TEST(traceCommonTest, rejects_invalid_current_time)
         &fallback_used); // [手順] - 取得時刻が無効になる条件で cplat_internal_trace_resolve_timestamp() を呼び出す。
 
     // Assert
-    EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_internal_trace_resolve_timestamp() の戻り値が -1 であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret); // [確認_異常系] - cplat_internal_trace_resolve_timestamp() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(
         0,
         fallback_used); // [確認_異常系] - fallback_used が 0 であること。(nullptr 指定は代替と見なさないことの確認)
@@ -149,7 +154,9 @@ TEST(traceCommonTest, rejects_null_resolved)
         &fallback_used); // [手順] - resolved に nullptr を指定して cplat_internal_trace_resolve_timestamp() を呼び出す。
 
     // Assert
-    EXPECT_EQ(-1, actual_ret); // [確認_異常系] - cplat_internal_trace_resolve_timestamp() の戻り値が -1 であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - cplat_internal_trace_resolve_timestamp() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         77, fallback_used); // [確認_異常系] - fallback_used が 77 であること。(fallback_used が変更されないことの確認)
 }
@@ -180,7 +187,8 @@ TEST(traceCommonTest, allows_null_fallback_used)
         nullptr); // [手順] - fallback_used に nullptr を指定して cplat_internal_trace_resolve_timestamp() を呼び出す。
 
     // Assert
-    EXPECT_EQ(0, actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp() の戻り値が 0 であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret); // [確認_正常系] - cplat_internal_trace_resolve_timestamp() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(456, resolved.tv_sec);  // [確認_正常系] - resolved.tv_sec が 456 であること。
     EXPECT_EQ(789, resolved.tv_nsec); // [確認_正常系] - resolved.tv_nsec が 789 であること。
 }
@@ -233,8 +241,9 @@ TEST(traceCommonTest, rejects_invalid_timestamp_for_formatting)
         &timestamp); // [手順] - 無効なタイムスタンプを指定して cplat_internal_trace_format_local_timestamp() を呼び出す。
 
     // Assert
-    EXPECT_EQ(-1,
-              actual_ret); // [確認_異常系] - cplat_internal_trace_format_local_timestamp() の戻り値が -1 であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - cplat_internal_trace_format_local_timestamp() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // NULL タイムスタンプを書式化せず拒否することの確認
@@ -254,8 +263,9 @@ TEST(traceCommonTest, rejects_null_timestamp_for_formatting)
         nullptr); // [手順] - timestamp に nullptr を指定して cplat_internal_trace_format_local_timestamp() を呼び出す。
 
     // Assert
-    EXPECT_EQ(-1,
-              actual_ret); // [確認_異常系] - cplat_internal_trace_format_local_timestamp() の戻り値が -1 であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret); // [確認_異常系] - cplat_internal_trace_format_local_timestamp() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
 // buf が NULL の場合に書式化関数の結果を伝搬することの確認
@@ -351,7 +361,7 @@ TEST(traceCommonTest, clock_failure_preserves_timestamp)
     cplat_timespec resolved = {123, 456};
 
     // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_clock_get_realtime(&resolved)).WillOnce(Return(CPLAT_ERR_UNKNOWN));
+    EXPECT_CALL(mock_cplat, cplat_clock_get_realtime(&resolved)).WillOnce(Return(CPLAT_ERR_UNSUPPORTED));
 
     // [Pre-Assert確認_異常系] - 現在時刻を 1 回取得すること。
     // [Pre-Assert手順] - 時計取得失敗を返す。
@@ -362,7 +372,7 @@ TEST(traceCommonTest, clock_failure_preserves_timestamp)
     // [手順] - 明示時刻を省略し時計取得を失敗させる。
 
     // Assert
-    EXPECT_EQ(-1, result);           // [確認_異常系] - 時刻解決失敗を返すこと。
-    EXPECT_EQ(123, resolved.tv_sec); // [確認_異常系] - 取得失敗前の時刻を保持すること。
+    EXPECT_EQ(CPLAT_ERR_UNSUPPORTED, result); // [確認_異常系] - 時刻解決失敗を返すこと。
+    EXPECT_EQ(123, resolved.tv_sec);          // [確認_異常系] - 取得失敗前の時刻を保持すること。
     EXPECT_EQ(456, resolved.tv_nsec);
 }

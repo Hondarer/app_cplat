@@ -34,7 +34,7 @@
 #define TRACE_CLI_LINE_MAX 4096 /* 入力行バッファーの最大長 [byte] */
 
 /* トレース レベル値に対応する表示名の一覧。 */
-static const char *const g_trace_level_names[] = {
+static const char *const s_trace_level_names[] = {
     "CRITICAL", "ERROR", "WARNING", "INFO", "VERBOSE", "DEBUG", "NONE",
 };
 
@@ -222,9 +222,9 @@ static char *rest_argument(char **cursor)
 /* トレース レベルに対応する名前文字列を返す。範囲外の値の場合は "UNKNOWN" を返す。 */
 static const char *level_to_name(cplat_trace_level level)
 {
-    if ((int)level >= 0 && (size_t)level < sizeof(g_trace_level_names) / sizeof(g_trace_level_names[0]))
+    if ((int)level >= 0 && (size_t)level < sizeof(s_trace_level_names) / sizeof(s_trace_level_names[0]))
     {
-        return g_trace_level_names[(size_t)level];
+        return s_trace_level_names[(size_t)level];
     }
 
     return "UNKNOWN";
@@ -243,9 +243,9 @@ static int parse_trace_level(const char *token, cplat_trace_level *level)
         return 0;
     }
 
-    for (i = 0U; i < sizeof(g_trace_level_names) / sizeof(g_trace_level_names[0]); i++)
+    for (i = 0U; i < sizeof(s_trace_level_names) / sizeof(s_trace_level_names[0]); i++)
     {
-        if (str_case_equal(token, g_trace_level_names[i]))
+        if (str_case_equal(token, s_trace_level_names[i]))
         {
             *level = (cplat_trace_level)i;
             return 1;
@@ -478,7 +478,7 @@ static void print_rc_result(int ret)
 /**
  *  @brief  CLI コマンド 1 個の定義 (名前・usage・ハンドラー) です。
  *
- *  コマンドの追加は g_commands へのエントリ追加で完結します
+ *  コマンドの追加は s_commands へのエントリ追加で完結します
  *  (help のコマンド一覧と usage 表示はテーブルから生成されます)。
  */
 struct trace_cli_command
@@ -903,7 +903,7 @@ static int cmd_write_hex(trace_cli_session *session, const struct trace_cli_comm
 }
 
 /** コマンド テーブル (help のコマンド一覧はこの順で表示される)。 */
-static const struct trace_cli_command g_commands[] = {
+static const struct trace_cli_command s_commands[] = {
     {"help", "", 1, 0, cmd_help},
     {"exit", "", 1, 0, cmd_exit},
     {"quit", "", 1, 0, cmd_exit},
@@ -929,11 +929,11 @@ static const struct trace_cli_command *find_command(const char *name)
 {
     size_t i;
 
-    for (i = 0U; i < sizeof(g_commands) / sizeof(g_commands[0]); i++)
+    for (i = 0U; i < sizeof(s_commands) / sizeof(s_commands[0]); i++)
     {
-        if (strcmp(name, g_commands[i].name) == 0)
+        if (strcmp(name, s_commands[i].name) == 0)
         {
-            return &g_commands[i];
+            return &s_commands[i];
         }
     }
 
@@ -948,9 +948,9 @@ void trace_cli_print_help(void)
     printf("使用可能な level: CRITICAL ERROR WARNING INFO VERBOSE DEBUG NONE\n");
     printf("コマンド:\n");
 
-    for (i = 0U; i < sizeof(g_commands) / sizeof(g_commands[0]); i++)
+    for (i = 0U; i < sizeof(s_commands) / sizeof(s_commands[0]); i++)
     {
-        printf("  %s%s\n", g_commands[i].name, g_commands[i].usage_args);
+        printf("  %s%s\n", s_commands[i].name, s_commands[i].usage_args);
     }
 
     printf("hex は 01ABFF または \"01 AB FF\" の形式で指定できます。\n");
@@ -1000,10 +1000,10 @@ int main(int argc, char *argv[])
     trace_cli_session session;
     char line[TRACE_CLI_LINE_MAX];
     cplat_prompt *prompt;
+    int need_help = 0;
+    int parse_result;
 
     cplat_console_init();
-
-    int need_help = 0;
 
     cplat_argparser_init(argc, argv, "tracer API を対話的に確認します。");
     cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &need_help);
@@ -1014,7 +1014,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    int parse_result = cplat_argparser_parse();
+    parse_result = cplat_argparser_parse();
 
     if (need_help != 0)
     {

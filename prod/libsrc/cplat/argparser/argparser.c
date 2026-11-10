@@ -329,7 +329,7 @@ static void argparser_record_register_result(cplat_argparser *parser, int result
         }
 
         argparser_register_error *new_errors =
-            cplat_realloc(parser->register_errors, new_capacity, sizeof(argparser_register_error));
+            cplat_realloc(parser->register_errors, new_capacity, sizeof(*new_errors));
         if (new_errors == NULL)
         {
             return;
@@ -389,7 +389,7 @@ static int argparser_prepare_spec_slot(cplat_argparser *parser, const char *shor
             new_capacity = ARGPARSER_INITIAL_CAPACITY;
         }
 
-        argparser_spec *new_specs = cplat_realloc(parser->specs, new_capacity, sizeof(argparser_spec));
+        argparser_spec *new_specs = cplat_realloc(parser->specs, new_capacity, sizeof(*new_specs));
         if (new_specs == NULL)
         {
             return CPLAT_ERR_OUT_OF_MEMORY;
@@ -1197,7 +1197,7 @@ static void argparser_apply_args(cplat_argparser *parser, int argc, char *const 
 cplat_argparser *cplat_argparser_handle_create(const int argc, char *const *argv,
                                                const cplat_argparser_options *options)
 {
-    cplat_argparser *parser = cplat_calloc(1, sizeof(cplat_argparser));
+    cplat_argparser *parser = cplat_calloc(1, sizeof(*parser));
     if (parser == NULL)
     {
         return NULL;
@@ -1450,9 +1450,9 @@ int cplat_argparser_register_option_string(const char *short_name, const char *l
 int cplat_argparser_handle_register_option_int_array(cplat_argparser *parser, const char *short_name,
                                                      const char *long_name, const char *value_name,
                                                      const char *description, const unsigned int flags, int *storage,
-                                                     const size_t capacity, size_t *count)
+                                                     const size_t capacity, size_t *count_out)
 {
-    if (storage == NULL || capacity == 0 || count == NULL)
+    if (storage == NULL || capacity == 0 || count_out == NULL)
     {
         argparser_record_register_result(parser, CPLAT_ERR_INVALID_ARGUMENT, short_name, long_name);
         return CPLAT_ERR_INVALID_ARGUMENT;
@@ -1468,7 +1468,7 @@ int cplat_argparser_handle_register_option_int_array(cplat_argparser *parser, co
 
     spec->int_storage = storage;
     spec->capacity = capacity;
-    spec->count = count;
+    spec->count = count_out;
 
     return CPLAT_OK;
 }
@@ -1477,11 +1477,11 @@ int cplat_argparser_handle_register_option_int_array(cplat_argparser *parser, co
 
 int cplat_argparser_register_option_int_array(const char *short_name, const char *long_name, const char *value_name,
                                               const char *description, const unsigned int flags, int *storage,
-                                              const size_t capacity, size_t *count)
+                                              const size_t capacity, size_t *count_out)
 {
     return cplat_argparser_handle_register_option_int_array(argparser_default_acquire(0, NULL, NULL, 0), short_name,
                                                             long_name, value_name, description, flags, storage,
-                                                            capacity, count);
+                                                            capacity, count_out);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -1489,9 +1489,9 @@ int cplat_argparser_register_option_int_array(const char *short_name, const char
 int cplat_argparser_handle_register_option_string_array(cplat_argparser *parser, const char *short_name,
                                                         const char *long_name, const char *value_name,
                                                         const char *description, const unsigned int flags,
-                                                        const char **storage, const size_t capacity, size_t *count)
+                                                        const char **storage, const size_t capacity, size_t *count_out)
 {
-    if (storage == NULL || capacity == 0 || count == NULL)
+    if (storage == NULL || capacity == 0 || count_out == NULL)
     {
         argparser_record_register_result(parser, CPLAT_ERR_INVALID_ARGUMENT, short_name, long_name);
         return CPLAT_ERR_INVALID_ARGUMENT;
@@ -1507,7 +1507,7 @@ int cplat_argparser_handle_register_option_string_array(cplat_argparser *parser,
 
     spec->string_storage = storage;
     spec->capacity = capacity;
-    spec->count = count;
+    spec->count = count_out;
 
     return CPLAT_OK;
 }
@@ -1516,11 +1516,11 @@ int cplat_argparser_handle_register_option_string_array(cplat_argparser *parser,
 
 int cplat_argparser_register_option_string_array(const char *short_name, const char *long_name, const char *value_name,
                                                  const char *description, const unsigned int flags,
-                                                 const char **storage, const size_t capacity, size_t *count)
+                                                 const char **storage, const size_t capacity, size_t *count_out)
 {
     return cplat_argparser_handle_register_option_string_array(argparser_default_acquire(0, NULL, NULL, 0), short_name,
                                                                long_name, value_name, description, flags, storage,
-                                                               capacity, count);
+                                                               capacity, count_out);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -1594,9 +1594,9 @@ int cplat_argparser_register_positional_string(const char *name, const char *des
 
 int cplat_argparser_handle_register_positional_int_array(cplat_argparser *parser, const char *name,
                                                          const char *description, const unsigned int flags,
-                                                         int *storage, const size_t capacity, size_t *count)
+                                                         int *storage, const size_t capacity, size_t *count_out)
 {
-    if (storage == NULL || capacity == 0 || count == NULL)
+    if (storage == NULL || capacity == 0 || count_out == NULL)
     {
         argparser_record_register_result(parser, CPLAT_ERR_INVALID_ARGUMENT, name, NULL);
         return CPLAT_ERR_INVALID_ARGUMENT;
@@ -1612,7 +1612,7 @@ int cplat_argparser_handle_register_positional_int_array(cplat_argparser *parser
 
     spec->int_storage = storage;
     spec->capacity = capacity;
-    spec->count = count;
+    spec->count = count_out;
 
     return CPLAT_OK;
 }
@@ -1620,19 +1620,20 @@ int cplat_argparser_handle_register_positional_int_array(cplat_argparser *parser
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_register_positional_int_array(const char *name, const char *description, const unsigned int flags,
-                                                  int *storage, const size_t capacity, size_t *count)
+                                                  int *storage, const size_t capacity, size_t *count_out)
 {
     return cplat_argparser_handle_register_positional_int_array(argparser_default_acquire(0, NULL, NULL, 0), name,
-                                                                description, flags, storage, capacity, count);
+                                                                description, flags, storage, capacity, count_out);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_handle_register_positional_string_array(cplat_argparser *parser, const char *name,
                                                             const char *description, const unsigned int flags,
-                                                            const char **storage, const size_t capacity, size_t *count)
+                                                            const char **storage, const size_t capacity,
+                                                            size_t *count_out)
 {
-    if (storage == NULL || capacity == 0 || count == NULL)
+    if (storage == NULL || capacity == 0 || count_out == NULL)
     {
         argparser_record_register_result(parser, CPLAT_ERR_INVALID_ARGUMENT, name, NULL);
         return CPLAT_ERR_INVALID_ARGUMENT;
@@ -1648,7 +1649,7 @@ int cplat_argparser_handle_register_positional_string_array(cplat_argparser *par
 
     spec->string_storage = storage;
     spec->capacity = capacity;
-    spec->count = count;
+    spec->count = count_out;
 
     return CPLAT_OK;
 }
@@ -1657,10 +1658,10 @@ int cplat_argparser_handle_register_positional_string_array(cplat_argparser *par
 
 int cplat_argparser_register_positional_string_array(const char *name, const char *description,
                                                      const unsigned int flags, const char **storage,
-                                                     const size_t capacity, size_t *count)
+                                                     const size_t capacity, size_t *count_out)
 {
     return cplat_argparser_handle_register_positional_string_array(argparser_default_acquire(0, NULL, NULL, 0), name,
-                                                                   description, flags, storage, capacity, count);
+                                                                   description, flags, storage, capacity, count_out);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -2079,14 +2080,14 @@ const char *cplat_argparser_get_program_name(void)
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_argparser_handle_get_usage(const cplat_argparser *parser, char *buffer, const size_t buffer_size,
-                                     size_t *required_size)
+                                     size_t *required_size_out)
 {
     if (parser == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    if (buffer == NULL && required_size == NULL)
+    if (buffer == NULL && required_size_out == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
@@ -2103,9 +2104,9 @@ int cplat_argparser_handle_get_usage(const cplat_argparser *parser, char *buffer
 
     argparser_usage_build(parser, &writer);
 
-    if (required_size != NULL)
+    if (required_size_out != NULL)
     {
-        *required_size = writer.needed + 1;
+        *required_size_out = writer.needed + 1;
     }
 
     if (buffer != NULL)
@@ -2129,10 +2130,10 @@ int cplat_argparser_handle_get_usage(const cplat_argparser *parser, char *buffer
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_argparser_get_usage(char *buffer, const size_t buffer_size, size_t *required_size)
+int cplat_argparser_get_usage(char *buffer, const size_t buffer_size, size_t *required_size_out)
 {
     return cplat_argparser_handle_get_usage(argparser_default_acquire(0, NULL, NULL, 0), buffer, buffer_size,
-                                            required_size);
+                                            required_size_out);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */

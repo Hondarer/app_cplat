@@ -155,7 +155,9 @@ static void dllmain_output_debug_msg(const char *msg)
 
     len = MultiByteToWideChar(CP_UTF8, 0, msg, -1, NULL, 0);
     if (len <= 0)
+    {
         return;
+    }
 
     if (len <= 1024)
     {
@@ -205,15 +207,21 @@ static void dllmain_output_debug_msg(const char *msg)
                 cw = 1;
             }
 
-            if (wc_count + cw > 1019)
+            if ((wc_count + cw) > 1019)
+            {
                 break;
+            }
+
             wc_count += cw;
             byte_pos += cb;
         }
 
         written = MultiByteToWideChar(CP_UTF8, 0, msg, byte_pos, buf, 1019);
         if (written <= 0)
+        {
             return;
+        }
+
         buf[written] = L' ';
         buf[written + 1] = L'.';
         buf[written + 2] = L'.';

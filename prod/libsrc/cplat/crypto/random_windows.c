@@ -29,22 +29,22 @@
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_random_bytes(void *buf, const size_t size)
+int cplat_random_bytes(void *dest, const size_t dest_size)
 {
     NTSTATUS status;
 
-    if (size == 0U)
+    if (dest_size == 0U)
     {
         return CPLAT_OK;
     }
 
-    if (buf == NULL)
+    if (dest == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
     /* クロスプラットフォームの最大値を超える要求は、OS API へ渡す前に引数不正として扱う。 */
-    if (size > CPLAT_CRYPTO_RANDOM_MAX_BYTES)
+    if (dest_size > CPLAT_CRYPTO_RANDOM_MAX_BYTES)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
@@ -54,7 +54,7 @@ int cplat_random_bytes(void *buf, const size_t size)
      * ハンドルを開かずに、システム既定の乱数源を使用できる。
      * see: https://learn.microsoft.com/windows/win32/api/bcrypt/nf-bcrypt-bcryptgenrandom
      */
-    status = BCryptGenRandom(NULL, (PUCHAR)buf, (ULONG)size, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+    status = BCryptGenRandom(NULL, (PUCHAR)dest, (ULONG)dest_size, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
     if (!BCRYPT_SUCCESS(status))
     {
         return CPLAT_ERR_UNKNOWN;

@@ -24,12 +24,12 @@
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-HMODULE LoadLibraryU(const char *utf8_file_name)
+HMODULE LoadLibraryU(const char *lpLibFileName)
 {
     HMODULE result;
     wchar_t *wfile_name;
 
-    wfile_name = cplat_utf8_to_wstr_alloc(utf8_file_name);
+    wfile_name = cplat_utf8_to_wstr_alloc(lpLibFileName);
     if (wfile_name == NULL)
     {
         SetLastError(ERROR_INVALID_PARAMETER);

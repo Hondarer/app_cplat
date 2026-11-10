@@ -94,7 +94,7 @@ Table: cplat 結果コードの分類・数値・意味一覧
 ```c
 int ret;
 
-ret = cplat_mmap_attach(path, access, create_size, &map);
+ret = cplat_mmap_attach(path, access, create_size, &map_out);
 if (ret != CPLAT_OK)
 {
     return ret;
@@ -266,7 +266,7 @@ TLS 変数はソース ファイル内のファイル スコープ `static` に�
 | CRT ラッパー (`cplat_fopen`、`cplat_fclose`、`cplat_fread`、`cplat_open`、`cplat_read`、`cplat_fseek`、`cplat_ftell` など) | `FILE *`/NULL、0/EOF、要素数、fd/-1 など元 API と同一 | 標準 C / POSIX の感覚で使えることが設計意図 |
 | `cplat_strcpy` 系、`cplat_getenv` | 成功 0 / バッファー不足 `ERANGE` | CRT の `strcpy_s` 系規約に準拠 |
 | `cplat_sscanf`、`cplat_utf8_to_wpath` など | 変換項目数 / 変換文字数 | 元 API の意味を保存 |
-| `win32/win32.h` の UTF-8 ラッパー (`CreateFileU` など) | `HANDLE`、`BOOL` など Windows ネイティブ規約 | 元 API の差し替えとして使えることが設計意図 |
+| `win32/win32.h` の UTF-8 ラッパー (`CreateFileU` など) | `HANDLE`、`BOOL` など Windows ネイティブ規約 | 元 API の差し替えとして使えることが設計意図。引数の規則は「Win32 UTF-8 ラッパーの引数と構造体」を参照 |
 | `cplat_strtok_r` | トークンへのポインター / 終了時 NULL | 元 API (`strtok_r` / `strtok_s`) の差し替えとして使えることが設計意図 |
 | ハンドル生成系 (`*_create` など) | 成功時ポインター / 失敗時 NULL | ポインター返却 API の慣用 |
 | 値をそのまま返す関数 (getter、`cplat_timespec_cmp`、`cplat_strcasecmp`、`cplat_strncasecmp` など) | 値そのもの | 結果コードの概念が適用されない |
@@ -299,6 +299,22 @@ make -C app/cplat test
 ```
 
 ## ラッパーの設計方針
+
+### Win32 UTF-8 ラッパーの引数と構造体
+
+`win32/win32.h` の UTF-8 ラッパーは、引数名と文字列以外の型の表記を、対応する W 版の API と同じにします。  
+共通コーディング規範の「出力引数」と snake_case の命名規則は、これらの引数名には適用しません。  
+文字列の引数には、UTF-8 の `const char *` と `char *` を使用します。
+
+W 版が文字列を含む構造体を受け取る場合は、U 版の契約で文字列の扱いを定めます。  
+`ChangeServiceConfig2U` は `LPVOID lpInfo` で `SERVICE_DESCRIPTIONA` を受け取り、`lpDescription` を UTF-8 として扱います。  
+`StartServiceCtrlDispatcherU` は、専用の構造体 `SERVICE_TABLE_ENTRYU` を使用します。  
+その `lpServiceName` は UTF-8 とし、`lpServiceProc` は `LPSERVICE_MAIN_FUNCTIONW` のままにします。  
+`CreateProcessU` の `lpCommandLine` は `const char *`、`lpStartupInfo` は `LPSTARTUPINFOW` のままとし、構造体内の文字列は UTF-16 とします。
+
+> [!NOTE]
+> W 版と U 版の違いを文字列の型だけにし、元の API の差し替えとして使えるようにするためです。
+> 文字数とバイト数、対応する情報レベルなど、U 版に固有の差異は公開ヘッダーの Doxygen に記載します。
 
 ### ラッパーを作る条件
 
@@ -1069,7 +1085,7 @@ cplat_snprintf(dest, dest_size, format, ...);
 cplat_parse_int64(value_out, text, base);
 cplat_path_dirname(path_out, path_size, detail_out, path);
 cplat_gmtime(utc_tm, timep);
-cplat_stat(buf, detail_out, path);
+cplat_stat(stat_out, detail_out, path);
 ```
 
 `detail_out` を提供する場合は、出力引数と、その出力サイズがある場合は出力サイズの直後に置き、後続の入力引数より前に置きます。
@@ -1085,7 +1101,7 @@ cplat_stat(buf, detail_out, path);
 ```c
 cplat_file_get_size(file, size_out, detail_out);
 cplat_path_equal(lhs, rhs, equal_out, detail_out);
-cplat_elevated_process_run_with_result(arguments, exit_code, handled, result_message, result_message_size);
+cplat_elevated_process_run_with_result(arguments, exit_code_out, handled_out, result_message, result_message_size);
 ```
 
 ### 適用対象外 API と _fmt 系

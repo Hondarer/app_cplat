@@ -59,14 +59,14 @@ DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_register_option_string,
                         cplat_argparser *parser, const char *short_name, const char *long_name, const char *value_name,
                         const char *description, unsigned int flags, const char **storage)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_register_option_int_array,
-                        (parser, short_name, long_name, value_name, description, flags, storage, capacity, count),
+                        (parser, short_name, long_name, value_name, description, flags, storage, capacity, count_out),
                         cplat_argparser *parser, const char *short_name, const char *long_name, const char *value_name,
-                        const char *description, unsigned int flags, int *storage, size_t capacity, size_t *count)
+                        const char *description, unsigned int flags, int *storage, size_t capacity, size_t *count_out)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_register_option_string_array,
-                        (parser, short_name, long_name, value_name, description, flags, storage, capacity, count),
+                        (parser, short_name, long_name, value_name, description, flags, storage, capacity, count_out),
                         cplat_argparser *parser, const char *short_name, const char *long_name, const char *value_name,
                         const char *description, unsigned int flags, const char **storage, size_t capacity,
-                        size_t *count)
+                        size_t *count_out)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_register_positional_int, (parser, name, description, flags, storage),
                         cplat_argparser *parser, const char *name, const char *description, unsigned int flags,
                         int *storage)
@@ -74,18 +74,18 @@ DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_register_positional_string, (pars
                         cplat_argparser *parser, const char *name, const char *description, unsigned int flags,
                         const char **storage)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_register_positional_int_array,
-                        (parser, name, description, flags, storage, capacity, count), cplat_argparser *parser,
+                        (parser, name, description, flags, storage, capacity, count_out), cplat_argparser *parser,
                         const char *name, const char *description, unsigned int flags, int *storage, size_t capacity,
-                        size_t *count)
+                        size_t *count_out)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_register_positional_string_array,
-                        (parser, name, description, flags, storage, capacity, count), cplat_argparser *parser,
+                        (parser, name, description, flags, storage, capacity, count_out), cplat_argparser *parser,
                         const char *name, const char *description, unsigned int flags, const char **storage,
-                        size_t capacity, size_t *count)
+                        size_t capacity, size_t *count_out)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_parse, (parser), cplat_argparser *parser)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_get_error_message, (parser, buffer, buffer_size),
                         const cplat_argparser *parser, char *buffer, size_t buffer_size)
-DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_get_usage, (parser, buffer, buffer_size, required_size),
-                        const cplat_argparser *parser, char *buffer, size_t buffer_size, size_t *required_size)
+DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_get_usage, (parser, buffer, buffer_size, required_size_out),
+                        const cplat_argparser *parser, char *buffer, size_t buffer_size, size_t *required_size_out)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_print_usage, (parser, stream), const cplat_argparser *parser,
                         FILE *stream)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_print_error_messages, (parser, stream), const cplat_argparser *parser,
@@ -346,26 +346,27 @@ DEFINE_ARGPARSER_RESULT(cplat_argparser_register_option_string,
                         const char *long_name, const char *value_name, const char *description, unsigned int flags,
                         const char **storage)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_register_option_int_array,
-                        (short_name, long_name, value_name, description, flags, storage, capacity, count),
+                        (short_name, long_name, value_name, description, flags, storage, capacity, count_out),
                         const char *short_name, const char *long_name, const char *value_name, const char *description,
-                        unsigned int flags, int *storage, size_t capacity, size_t *count)
+                        unsigned int flags, int *storage, size_t capacity, size_t *count_out)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_register_option_string_array,
-                        (short_name, long_name, value_name, description, flags, storage, capacity, count),
+                        (short_name, long_name, value_name, description, flags, storage, capacity, count_out),
                         const char *short_name, const char *long_name, const char *value_name, const char *description,
-                        unsigned int flags, const char **storage, size_t capacity, size_t *count)
+                        unsigned int flags, const char **storage, size_t capacity, size_t *count_out)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_register_positional_int, (name, description, flags, storage), const char *name,
                         const char *description, unsigned int flags, int *storage)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_register_positional_string, (name, description, flags, storage),
                         const char *name, const char *description, unsigned int flags, const char **storage)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_register_positional_int_array,
-                        (name, description, flags, storage, capacity, count), const char *name, const char *description,
-                        unsigned int flags, int *storage, size_t capacity, size_t *count)
+                        (name, description, flags, storage, capacity, count_out), const char *name,
+                        const char *description, unsigned int flags, int *storage, size_t capacity, size_t *count_out)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_register_positional_string_array,
-                        (name, description, flags, storage, capacity, count), const char *name, const char *description,
-                        unsigned int flags, const char **storage, size_t capacity, size_t *count)
+                        (name, description, flags, storage, capacity, count_out), const char *name,
+                        const char *description, unsigned int flags, const char **storage, size_t capacity,
+                        size_t *count_out)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_get_error_message, (buffer, buffer_size), char *buffer, size_t buffer_size)
-DEFINE_ARGPARSER_RESULT(cplat_argparser_get_usage, (buffer, buffer_size, required_size), char *buffer,
-                        size_t buffer_size, size_t *required_size)
+DEFINE_ARGPARSER_RESULT(cplat_argparser_get_usage, (buffer, buffer_size, required_size_out), char *buffer,
+                        size_t buffer_size, size_t *required_size_out)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_print_usage, (stream), FILE *stream)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_print_error_messages, (stream), FILE *stream)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_get_register_error, (index), size_t index)

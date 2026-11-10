@@ -1150,10 +1150,6 @@ resolve_category_predicates(const cplat_string_catalog_filter_slot *slot, const 
 }
 
 /**
- *  @brief          1 行の名前を解決し、項目ごとの判定結果を事前計算します。
- *  @return         解決できた場合は CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE、それ以外は無効にする原因。
- */
-/**
  *  @brief          行の正規表現のパターンをコンパイルし、面へ保持します。
  *  @return         すべてコンパイルできた場合は @ref CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE 。
  *                  できないパターンがある場合は @ref CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_INVALID_PATTERN 。
@@ -1209,9 +1205,12 @@ static cplat_string_catalog_filter_line_error compile_line_patterns(const cplat_
     return CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE;
 }
 
-/*
- * 1 行の名前を解決し、項目ごとの判定結果を事前計算する。
- * 解決できた場合は CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE を返し、それ以外は無効にする原因を返す。
+/**
+ *  @brief          1 行の名前を解決し、項目ごとの判定結果を事前計算します。
+ *  @param[in]      slot       フィルター スロット。
+ *  @param[in,out]  plane      名前解決と事前計算の格納先の面。
+ *  @param[in]      line_index 対象行のインデックス。
+ *  @return         解決できた場合は CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE、それ以外は無効にする原因。
  */
 static cplat_string_catalog_filter_line_error resolve_line(const cplat_string_catalog_filter_slot *slot,
                                                            filter_plane *plane, const uint32_t line_index)
@@ -1616,7 +1615,11 @@ const cplat_string_catalog *cplat_string_catalog_filter_slot_get_catalog(const c
 }
 
 /**
- *  @brief          未使用の面へ複製したフィルター オブジェクトを検証し、行数の上限と行幅がスロットと一致することを確かめます。
+ *  @brief          未使用の面へ複製したフィルター オブジェクトを検証します。
+ *  @param[in]      slot   フィルター スロット。
+ *  @param[in]      target 複製先の面。
+ *
+ *  行数の上限と行幅がスロットと一致することを確かめます。
  *  @return         `CPLAT_OK`、形式版が異なる場合は `CPLAT_ERR_VERSION_MISMATCH`、それ以外は `CPLAT_ERR_CORRUPT_DESCRIPTOR`。
  */
 static int validate_copied_image(const cplat_string_catalog_filter_slot *slot, const filter_plane *target)
@@ -2350,7 +2353,6 @@ int cplat_string_catalog_filter_slot_describe_line(cplat_string_catalog_filter_s
     return ret;
 }
 
-/** 参照中の面で、1 項目の一致を判定します。共有モードのロックの下で呼び出します。 */
 /** 引数の値に依存する 1 行を、引数の値で評価します。 */
 static bool is_line_matched(const cplat_string_catalog_filter_slot *slot, filter_plane *plane, const size_t entry_index,
                             const uint32_t line_index, const argument_value *values)
@@ -2375,7 +2377,16 @@ static bool is_line_matched(const cplat_string_catalog_filter_slot *slot, filter
     return evaluate_line(&context, true) == TRUTH_VALUE_TRUE;
 }
 
-/* 参照中の面で 1 項目の一致を判定する。共有モードのロックの下で呼び出す。 */
+/**
+ *  @brief          参照中の面で 1 項目の一致を判定します。
+ *  @param[in]      slot        フィルター スロット。
+ *  @param[in]      plane       参照中の面。
+ *  @param[in]      entry_index 対象項目のインデックス。
+ *  @param[in]      shared      判定に使う引数の値。
+ *  @return         一致する場合は true、それ以外は false を返します。
+ *
+ *  共有モードのロックの下で呼び出します。
+ */
 static bool is_matched(const cplat_string_catalog_filter_slot *slot, filter_plane *plane, const size_t entry_index,
                        const cplat_internal_string_catalog_argument_value *shared)
 {

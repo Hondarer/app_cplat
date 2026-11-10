@@ -3,33 +3,36 @@
 
 #if defined(PLATFORM_WINDOWS)
 
-BOOL delegate_real_WriteConsoleU(HANDLE console, const char *utf8_text, DWORD utf8_length, DWORD *written_length,
-                                 void *reserved)
+BOOL delegate_real_WriteConsoleU(HANDLE hConsoleOutput, const char *lpBuffer, DWORD nNumberOfCharsToWrite,
+                                 LPDWORD lpNumberOfCharsWritten, LPVOID lpReserved)
 {
     static auto real_fn =
         reinterpret_cast<decltype(&WriteConsoleU)>(resolveSharedSymbolOrExit(kLibCplatName, "WriteConsoleU"));
 
-    return real_fn(console, utf8_text, utf8_length, written_length, reserved);
+    return real_fn(hConsoleOutput, lpBuffer, nNumberOfCharsToWrite, lpNumberOfCharsWritten, lpReserved);
 }
 
-MOCK_WEAK_IMPL(BOOL, WriteConsoleU, HANDLE console, const char *utf8_text, DWORD utf8_length, DWORD *written_length,
-               void *reserved)
+MOCK_WEAK_IMPL(BOOL, WriteConsoleU, HANDLE hConsoleOutput, const char *lpBuffer, DWORD nNumberOfCharsToWrite,
+               LPDWORD lpNumberOfCharsWritten, LPVOID lpReserved)
 {
     BOOL mock_ret;
 
     if (_mock_cplat != nullptr)
     {
-        mock_ret = _mock_cplat->WriteConsoleU(console, utf8_text, utf8_length, written_length, reserved);
+        mock_ret = _mock_cplat->WriteConsoleU(hConsoleOutput, lpBuffer, nNumberOfCharsToWrite, lpNumberOfCharsWritten,
+                                              lpReserved);
     }
     else
     {
-        mock_ret = delegate_real_WriteConsoleU(console, utf8_text, utf8_length, written_length, reserved);
+        mock_ret = delegate_real_WriteConsoleU(hConsoleOutput, lpBuffer, nNumberOfCharsToWrite, lpNumberOfCharsWritten,
+                                               lpReserved);
     }
 
     if (getTraceLevel() > TRACE_NONE)
     {
-        printf("  > %s 0x%p, %s, %lu, 0x%p, 0x%p", __func__, (void *)console,
-               (utf8_text != nullptr) ? utf8_text : "(null)", utf8_length, (void *)written_length, reserved);
+        printf("  > %s 0x%p, %s, %lu, 0x%p, 0x%p", __func__, (void *)hConsoleOutput,
+               (lpBuffer != nullptr) ? lpBuffer : "(null)", nNumberOfCharsToWrite, (void *)lpNumberOfCharsWritten,
+               lpReserved);
         if (getTraceLevel() >= TRACE_DETAIL)
         {
             printf(" -> %d\n", mock_ret);

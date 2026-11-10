@@ -100,7 +100,7 @@ typedef struct process_priority_sched_attr
  * スレッド ID を OS のスレッド ID (pid_t) へ変換する。
  * thread_id が INT32_MAX を超えて pid_t で表現できない場合は 0 を返し、正常に変換できた場合は 1 を返す。
  */
-static int to_os_thread_id(uint32_t thread_id, pid_t *os_thread_id)
+static int to_os_thread_id(const uint32_t thread_id, pid_t *os_thread_id)
 {
     if (thread_id > (uint32_t)INT32_MAX)
     {
@@ -116,7 +116,7 @@ static int to_os_thread_id(uint32_t thread_id, pid_t *os_thread_id)
  * ライブラリのポリシー列挙値を Linux のスケジューリング ポリシー値へ変換する。
  * 変換できた場合は 1 を返し、SCHED_DEADLINE や未知のポリシー値など変換できない場合は 0 を返す。
  */
-static int to_os_policy(cplat_process_priority_linux_policy policy, int *os_policy)
+static int to_os_policy(const cplat_process_priority_linux_policy policy, int *os_policy)
 {
     switch (policy)
     {
@@ -147,7 +147,7 @@ static int to_os_policy(cplat_process_priority_linux_policy policy, int *os_poli
  * Linux のスケジューリング ポリシー値をライブラリのポリシー列挙値へ変換する。
  * 変換できた場合は 1 を返し、未知のポリシー値など対応する列挙値がない場合は 0 を返す。
  */
-static int from_os_policy(int os_policy, cplat_process_priority_linux_policy *policy)
+static int from_os_policy(const int os_policy, cplat_process_priority_linux_policy *policy)
 {
     switch (os_policy)
     {
@@ -179,7 +179,7 @@ static int from_os_policy(int os_policy, cplat_process_priority_linux_policy *po
  * リアルタイム ポリシー (FIFO または RR) の場合は 1 から 99 の範囲、
  * それ以外は 0 であれば 1 を返し、それ以外は 0 を返す。
  */
-static int is_valid_static_priority(cplat_process_priority_linux_policy policy, int static_priority)
+static int is_valid_static_priority(const cplat_process_priority_linux_policy policy, const int static_priority)
 {
     if ((policy == CPLAT_PROCESS_PRIORITY_LINUX_POLICY_FIFO) ||
         (policy == CPLAT_PROCESS_PRIORITY_LINUX_POLICY_ROUND_ROBIN))
@@ -193,7 +193,7 @@ static int is_valid_static_priority(cplat_process_priority_linux_policy policy, 
 /*
  * システム コール経由で sched_setattr() を呼び出す。
  */
-static long sched_setattr_call(pid_t os_thread_id, process_priority_sched_attr *attr)
+static long sched_setattr_call(const pid_t os_thread_id, process_priority_sched_attr *attr)
 {
 #if defined(SYS_sched_setattr)
     return syscall(SYS_sched_setattr, os_thread_id, attr, 0U);
@@ -209,7 +209,7 @@ static long sched_setattr_call(pid_t os_thread_id, process_priority_sched_attr *
 /*
  * システム コール経由で sched_getattr() を呼び出す。
  */
-static long sched_getattr_call(pid_t os_thread_id, process_priority_sched_attr *attr, unsigned int size)
+static long sched_getattr_call(const pid_t os_thread_id, process_priority_sched_attr *attr, const unsigned int size)
 {
 #if defined(SYS_sched_getattr)
     return syscall(SYS_sched_getattr, os_thread_id, attr, size, 0U);
@@ -234,8 +234,8 @@ static int is_utilization_clamp_available(void)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_priority_linux_set_policy(uint32_t thread_id, cplat_process_priority_linux_policy policy,
-                                            int static_priority, int reset_on_fork, cplat_error *detail_out)
+int cplat_process_priority_linux_set_policy(const uint32_t thread_id, const cplat_process_priority_linux_policy policy,
+                                            const int static_priority, const int reset_on_fork, cplat_error *detail_out)
 {
     pid_t os_thread_id;
     int os_policy;
@@ -266,7 +266,7 @@ int cplat_process_priority_linux_set_policy(uint32_t thread_id, cplat_process_pr
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_priority_linux_get_policy(uint32_t thread_id, cplat_process_priority_linux_policy *policy_out,
+int cplat_process_priority_linux_get_policy(const uint32_t thread_id, cplat_process_priority_linux_policy *policy_out,
                                             int *static_priority_out, int *reset_on_fork_out, cplat_error *detail_out)
 {
     pid_t os_thread_id;
@@ -307,8 +307,9 @@ int cplat_process_priority_linux_get_policy(uint32_t thread_id, cplat_process_pr
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_priority_linux_set_deadline(uint32_t thread_id, const cplat_process_priority_linux_deadline *deadline,
-                                              int reset_on_fork, cplat_error *detail_out)
+int cplat_process_priority_linux_set_deadline(const uint32_t thread_id,
+                                              const cplat_process_priority_linux_deadline *deadline,
+                                              const int reset_on_fork, cplat_error *detail_out)
 {
     pid_t os_thread_id;
     process_priority_sched_attr attr;
@@ -338,7 +339,8 @@ int cplat_process_priority_linux_set_deadline(uint32_t thread_id, const cplat_pr
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_priority_linux_get_deadline(uint32_t thread_id, cplat_process_priority_linux_deadline *deadline_out,
+int cplat_process_priority_linux_get_deadline(const uint32_t thread_id,
+                                              cplat_process_priority_linux_deadline *deadline_out,
                                               cplat_error *detail_out)
 {
     pid_t os_thread_id;
@@ -366,7 +368,7 @@ int cplat_process_priority_linux_get_deadline(uint32_t thread_id, cplat_process_
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_priority_linux_set_nice(uint32_t thread_id, int nice_value, cplat_error *detail_out)
+int cplat_process_priority_linux_set_nice(const uint32_t thread_id, const int nice_value, cplat_error *detail_out)
 {
     pid_t os_thread_id;
 
@@ -389,7 +391,7 @@ int cplat_process_priority_linux_set_nice(uint32_t thread_id, int nice_value, cp
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_priority_linux_get_nice(uint32_t thread_id, int *nice_value_out, cplat_error *detail_out)
+int cplat_process_priority_linux_get_nice(const uint32_t thread_id, int *nice_value_out, cplat_error *detail_out)
 {
     pid_t os_thread_id;
     int nice_value;
@@ -418,8 +420,9 @@ int cplat_process_priority_linux_get_nice(uint32_t thread_id, int *nice_value_ou
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_priority_linux_set_io_priority(uint32_t thread_id, cplat_process_priority_linux_io_class io_class,
-                                                 int level, cplat_error *detail_out)
+int cplat_process_priority_linux_set_io_priority(const uint32_t thread_id,
+                                                 const cplat_process_priority_linux_io_class io_class, const int level,
+                                                 cplat_error *detail_out)
 {
     pid_t os_thread_id;
     int valid_level;
@@ -461,7 +464,7 @@ int cplat_process_priority_linux_set_io_priority(uint32_t thread_id, cplat_proce
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_priority_linux_get_io_priority(uint32_t thread_id,
+int cplat_process_priority_linux_get_io_priority(const uint32_t thread_id,
                                                  cplat_process_priority_linux_io_class *io_class_out, int *level_out,
                                                  cplat_error *detail_out)
 {
@@ -500,8 +503,8 @@ int cplat_process_priority_linux_get_io_priority(uint32_t thread_id,
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_priority_linux_set_utilization_clamp(uint32_t thread_id, uint32_t minimum, uint32_t maximum,
-                                                       cplat_error *detail_out)
+int cplat_process_priority_linux_set_utilization_clamp(const uint32_t thread_id, const uint32_t minimum,
+                                                       const uint32_t maximum, cplat_error *detail_out)
 {
     pid_t os_thread_id;
     process_priority_sched_attr attr;
@@ -542,8 +545,8 @@ int cplat_process_priority_linux_set_utilization_clamp(uint32_t thread_id, uint3
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_priority_linux_get_utilization_clamp(uint32_t thread_id, uint32_t *minimum_out, uint32_t *maximum_out,
-                                                       cplat_error *detail_out)
+int cplat_process_priority_linux_get_utilization_clamp(const uint32_t thread_id, uint32_t *minimum_out,
+                                                       uint32_t *maximum_out, cplat_error *detail_out)
 {
     pid_t os_thread_id;
     process_priority_sched_attr attr;

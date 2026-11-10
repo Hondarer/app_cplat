@@ -3,43 +3,43 @@
 
 #if defined(PLATFORM_WINDOWS)
 
-int delegate_real_cplat_utf8_to_wpath(wchar_t *wbuf, size_t wbuf_count, const char *utf8_path)
+int delegate_real_cplat_utf8_to_wpath(wchar_t *dest, size_t dest_size, const char *utf8_path)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_utf8_to_wpath)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_utf8_to_wpath"));
 
-    return real_fn(wbuf, wbuf_count, utf8_path);
+    return real_fn(dest, dest_size, utf8_path);
 }
 
-MOCK_WEAK_IMPL(int, cplat_utf8_to_wpath, wchar_t *wbuf, size_t wbuf_count, const char *utf8_path)
+MOCK_WEAK_IMPL(int, cplat_utf8_to_wpath, wchar_t *dest, size_t dest_size, const char *utf8_path)
 {
     if (_mock_cplat != nullptr)
     {
-        return _mock_cplat->cplat_utf8_to_wpath(wbuf, wbuf_count, utf8_path);
+        return _mock_cplat->cplat_utf8_to_wpath(dest, dest_size, utf8_path);
     }
     else
     {
-        return delegate_real_cplat_utf8_to_wpath(wbuf, wbuf_count, utf8_path);
+        return delegate_real_cplat_utf8_to_wpath(dest, dest_size, utf8_path);
     }
 }
 
-int delegate_real_cplat_utf8_to_wstr(wchar_t *wbuf, size_t wbuf_count, const char *utf8_text)
+int delegate_real_cplat_utf8_to_wstr(wchar_t *dest, size_t dest_size, const char *utf8_text)
 {
     static auto real_fn =
         reinterpret_cast<decltype(&cplat_utf8_to_wstr)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_utf8_to_wstr"));
 
-    return real_fn(wbuf, wbuf_count, utf8_text);
+    return real_fn(dest, dest_size, utf8_text);
 }
 
-MOCK_WEAK_IMPL(int, cplat_utf8_to_wstr, wchar_t *wbuf, size_t wbuf_count, const char *utf8_text)
+MOCK_WEAK_IMPL(int, cplat_utf8_to_wstr, wchar_t *dest, size_t dest_size, const char *utf8_text)
 {
     if (_mock_cplat != nullptr)
     {
-        return _mock_cplat->cplat_utf8_to_wstr(wbuf, wbuf_count, utf8_text);
+        return _mock_cplat->cplat_utf8_to_wstr(dest, dest_size, utf8_text);
     }
     else
     {
-        return delegate_real_cplat_utf8_to_wstr(wbuf, wbuf_count, utf8_text);
+        return delegate_real_cplat_utf8_to_wstr(dest, dest_size, utf8_text);
     }
 }
 

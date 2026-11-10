@@ -252,18 +252,18 @@ int cplat_makedirs(const char *path, cplat_error *detail_out)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_stat(cplat_file_stat_t *buf, cplat_error *detail_out, const char *path)
+int cplat_stat(cplat_file_stat_t *stat_out, cplat_error *detail_out, const char *path)
 {
     int result;
 
-    if (buf == NULL || path == NULL)
+    if (stat_out == NULL || path == NULL)
     {
         return cplat_internal_error_report_errno(detail_out, EINVAL);
     }
 
     errno = 0;
 #if defined(PLATFORM_LINUX)
-    result = stat(path, buf);
+    result = stat(path, stat_out);
 #elif defined(PLATFORM_WINDOWS)
     {
         wchar_t wpath[PLATFORM_PATH_MAX];
@@ -273,10 +273,10 @@ int cplat_stat(cplat_file_stat_t *buf, cplat_error *detail_out, const char *path
             return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
         }
 
-        result = _wstat64(wpath, buf);
+        result = _wstat64(wpath, stat_out);
         if (result == 0)
         {
-            overlay_utc_file_times(wpath, buf);
+            overlay_utc_file_times(wpath, stat_out);
         }
     }
 #endif /* PLATFORM_ */

@@ -1,4 +1,5 @@
 #include <cplat/test/syslog_test.h>
+#include <cplat/crt/stdlib.h>
 
 #if defined(PLATFORM_LINUX)
 
@@ -14,8 +15,7 @@ int cplat_syslog_test_fd_write(const char *buf, const size_t nbytes)
         return 0;
     }
 
-    test_fd = atoi(fd_str);
-    if (test_fd >= 0)
+    if (cplat_parse_int(&test_fd, fd_str, 10) == CPLAT_OK && test_fd >= 0)
     {
         (void)write(test_fd, buf, nbytes);
     }

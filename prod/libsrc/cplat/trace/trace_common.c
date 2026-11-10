@@ -22,17 +22,17 @@ static int trace_timestamp_is_valid(const cplat_timespec *timestamp)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_internal_trace_resolve_timestamp(const cplat_timespec *timestamp, cplat_timespec *resolved,
-                                           int *fallback_used)
+int cplat_internal_trace_resolve_timestamp(const cplat_timespec *timestamp, cplat_timespec *resolved_out,
+                                           int *fallback_used_out)
 {
-    if (resolved == NULL)
+    if (resolved_out == NULL)
     {
-        return -1;
+        return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    if (fallback_used != NULL)
+    if (fallback_used_out != NULL)
     {
-        *fallback_used = 0;
+        *fallback_used_out = 0;
     }
 
     /*
@@ -43,40 +43,41 @@ int cplat_internal_trace_resolve_timestamp(const cplat_timespec *timestamp, cpla
     {
         if (trace_timestamp_is_valid(timestamp))
         {
-            *resolved = *timestamp;
-            return 0;
+            *resolved_out = *timestamp;
+            return CPLAT_OK;
         }
 
-        if (fallback_used != NULL)
+        if (fallback_used_out != NULL)
         {
-            *fallback_used = 1;
+            *fallback_used_out = 1;
         }
     }
 
     /* タイムスタンプが未指定または無効値の場合、現在時刻を取得して解決する。 */
-    if (cplat_clock_get_realtime(resolved) != CPLAT_OK)
+    int ret = cplat_clock_get_realtime(resolved_out);
+    if (ret != CPLAT_OK)
     {
-        return -1;
+        return ret;
     }
 
-    if (trace_timestamp_is_valid(resolved))
+    if (trace_timestamp_is_valid(resolved_out))
     {
-        return 0;
+        return CPLAT_OK;
     }
 
-    return -1;
+    return CPLAT_ERR_UNKNOWN;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_internal_trace_format_local_timestamp(char *buf, const size_t buf_size, const cplat_timespec *timestamp)
+int cplat_internal_trace_format_local_timestamp(char *dest, const size_t dest_size, const cplat_timespec *timestamp)
 {
     if (!trace_timestamp_is_valid(timestamp))
     {
-        return -1;
+        return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    return cplat_clock_format_realtime_iso8601_local(buf, buf_size, timestamp);
+    return cplat_clock_format_realtime_iso8601_local(dest, dest_size, timestamp);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */

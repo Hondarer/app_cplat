@@ -769,7 +769,7 @@ static int prefault_stack(size_t stack_prefault_bytes)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_memory_lock_range(const void *address, size_t size)
+int cplat_memory_lock_range(const void *address, const size_t size)
 {
     int result = CPLAT_OK;
 
@@ -801,7 +801,7 @@ int cplat_memory_lock_range(const void *address, size_t size)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_memory_unlock_range(const void *address, size_t size)
+int cplat_memory_unlock_range(const void *address, const size_t size)
 {
     int result = CPLAT_OK;
 
@@ -833,18 +833,18 @@ int cplat_memory_unlock_range(const void *address, size_t size)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_memory_lock_self(const cplat_memory_lock_self_options *options, cplat_memory_lock_scope **scope)
+int cplat_memory_lock_self(const cplat_memory_lock_self_options *options, cplat_memory_lock_scope **scope_out)
 {
     int result = CPLAT_OK;
 
-    if ((options == NULL) || (scope == NULL) || (options->flags == 0) ||
+    if ((options == NULL) || (scope_out == NULL) || (options->flags == 0) ||
         ((options->flags & ~CPLAT_MEMORY_LOCK_KNOWN_FLAGS) != 0))
     {
         result = CPLAT_ERR_INVALID_ARGUMENT;
     }
     else
     {
-        *scope = NULL;
+        *scope_out = NULL;
 
         result = prefault_stack(options->stack_prefault_bytes);
 
@@ -878,7 +878,7 @@ int cplat_memory_lock_self(const cplat_memory_lock_self_options *options, cplat_
                         s_linux_self_lock_scope_count++;
                         new_scope->locked_all = 1;
                         new_scope->flags = options->flags;
-                        *scope = new_scope;
+                        *scope_out = new_scope;
                     }
 
                     memory_lock_unlock();
@@ -947,7 +947,7 @@ int cplat_memory_lock_self(const cplat_memory_lock_self_options *options, cplat_
 
                     if (result == CPLAT_OK)
                     {
-                        *scope = new_scope;
+                        *scope_out = new_scope;
                     }
 
                     memory_lock_unlock();
@@ -1027,7 +1027,7 @@ int cplat_memory_lock_scope_release(cplat_memory_lock_scope *scope)
 
 void cplat_secure_zero(void *buf, const size_t size)
 {
-    if (buf == NULL || size == 0U)
+    if ((buf == NULL) || (size == 0U))
     {
         return;
     }

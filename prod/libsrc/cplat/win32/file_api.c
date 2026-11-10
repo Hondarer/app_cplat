@@ -27,22 +27,22 @@
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-HANDLE CreateFileU(const char *utf8_path, DWORD desired_access, DWORD share_mode,
-                   LPSECURITY_ATTRIBUTES security_attributes, DWORD creation_disposition, DWORD flags_and_attributes,
-                   HANDLE template_file)
+HANDLE CreateFileU(const char *lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
+                   LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes,
+                   HANDLE hTemplateFile)
 {
     HANDLE result;
     wchar_t *wpath;
 
-    wpath = cplat_utf8_to_wstr_alloc(utf8_path);
+    wpath = cplat_utf8_to_wstr_alloc(lpFileName);
     if (wpath == NULL)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return INVALID_HANDLE_VALUE;
     }
 
-    result = CreateFileW(wpath, desired_access, share_mode, security_attributes, creation_disposition,
-                         flags_and_attributes, template_file);
+    result = CreateFileW(wpath, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition,
+                         dwFlagsAndAttributes, hTemplateFile);
     cplat_free(wpath);
 
     return result;
@@ -50,22 +50,22 @@ HANDLE CreateFileU(const char *utf8_path, DWORD desired_access, DWORD share_mode
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-HANDLE CreateNamedPipeU(const char *utf8_name, DWORD open_mode, DWORD pipe_mode, DWORD max_instances,
-                        DWORD out_buffer_size, DWORD in_buffer_size, DWORD default_timeout,
-                        LPSECURITY_ATTRIBUTES security_attributes)
+HANDLE CreateNamedPipeU(const char *lpName, DWORD dwOpenMode, DWORD dwPipeMode, DWORD nMaxInstances,
+                        DWORD nOutBufferSize, DWORD nInBufferSize, DWORD nDefaultTimeOut,
+                        LPSECURITY_ATTRIBUTES lpSecurityAttributes)
 {
     HANDLE result;
     wchar_t *wname;
 
-    wname = cplat_utf8_to_wstr_alloc(utf8_name);
+    wname = cplat_utf8_to_wstr_alloc(lpName);
     if (wname == NULL)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return INVALID_HANDLE_VALUE;
     }
 
-    result = CreateNamedPipeW(wname, open_mode, pipe_mode, max_instances, out_buffer_size, in_buffer_size,
-                              default_timeout, security_attributes);
+    result = CreateNamedPipeW(wname, dwOpenMode, dwPipeMode, nMaxInstances, nOutBufferSize, nInBufferSize,
+                              nDefaultTimeOut, lpSecurityAttributes);
     cplat_free(wname);
 
     return result;
@@ -73,7 +73,7 @@ HANDLE CreateNamedPipeU(const char *utf8_name, DWORD open_mode, DWORD pipe_mode,
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-DWORD GetModuleFileNameU(HMODULE module, char *utf8_buf, DWORD size)
+DWORD GetModuleFileNameU(HMODULE hModule, char *lpFilename, DWORD nSize)
 {
     wchar_t wbuf[32768]; /* 拡張パスの最大長に合わせた固定バッファー */
     DWORD wlen;
@@ -81,13 +81,13 @@ DWORD GetModuleFileNameU(HMODULE module, char *utf8_buf, DWORD size)
     size_t utf8_len;
     DWORD written;
 
-    if (utf8_buf == NULL || size == 0)
+    if (lpFilename == NULL || nSize == 0)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return 0;
     }
 
-    wlen = GetModuleFileNameW(module, wbuf, (DWORD)(sizeof(wbuf) / sizeof(wbuf[0])));
+    wlen = GetModuleFileNameW(hModule, wbuf, (DWORD)(sizeof(wbuf) / sizeof(wbuf[0])));
     if (wlen == 0)
     {
         return 0;
@@ -102,17 +102,17 @@ DWORD GetModuleFileNameU(HMODULE module, char *utf8_buf, DWORD size)
     }
 
     utf8_len = strlen(utf8);
-    if (utf8_len >= (size_t)size)
+    if (utf8_len >= (size_t)nSize)
     {
         /* バッファー不足: 切り詰めて NUL 終端する。 */
-        memcpy(utf8_buf, utf8, (size_t)(size - 1U));
-        utf8_buf[size - 1U] = '\0';
+        memcpy(lpFilename, utf8, (size_t)(nSize - 1U));
+        lpFilename[nSize - 1U] = '\0';
         cplat_free(utf8);
         SetLastError(ERROR_INSUFFICIENT_BUFFER);
-        return size - 1U;
+        return nSize - 1U;
     }
 
-    memcpy(utf8_buf, utf8, utf8_len + 1U);
+    memcpy(lpFilename, utf8, utf8_len + 1U);
     written = (DWORD)utf8_len;
     cplat_free(utf8);
 
@@ -121,34 +121,35 @@ DWORD GetModuleFileNameU(HMODULE module, char *utf8_buf, DWORD size)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-BOOL WriteConsoleU(HANDLE console, const char *utf8_text, DWORD utf8_length, DWORD *written_length, void *reserved)
+BOOL WriteConsoleU(HANDLE hConsoleOutput, const char *lpBuffer, DWORD nNumberOfCharsToWrite,
+                   LPDWORD lpNumberOfCharsWritten, LPVOID lpReserved)
 {
     BOOL result;
     char *utf8_copy;
     wchar_t *wtext;
     DWORD wwritten = 0;
 
-    if (written_length != NULL)
+    if (lpNumberOfCharsWritten != NULL)
     {
-        *written_length = 0;
+        *lpNumberOfCharsWritten = 0;
     }
 
-    if (utf8_text == NULL)
+    if (lpBuffer == NULL)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
 
-    /* utf8_length [byte] だけを対象とするため、NUL 終端した複製を作ってから変換する。 */
-    utf8_copy = (char *)cplat_malloc((size_t)utf8_length + 1u);
+    /* nNumberOfCharsToWrite [byte] だけを対象とするため、NUL 終端した複製を作ってから変換する。 */
+    utf8_copy = (char *)cplat_malloc((size_t)nNumberOfCharsToWrite + 1u);
     if (utf8_copy == NULL)
     {
         SetLastError(ERROR_NOT_ENOUGH_MEMORY);
         return FALSE;
     }
 
-    memcpy(utf8_copy, utf8_text, (size_t)utf8_length);
-    utf8_copy[utf8_length] = '\0';
+    memcpy(utf8_copy, lpBuffer, (size_t)nNumberOfCharsToWrite);
+    utf8_copy[nNumberOfCharsToWrite] = '\0';
 
     wtext = cplat_utf8_to_wstr_alloc(utf8_copy);
     cplat_free(utf8_copy);
@@ -159,10 +160,10 @@ BOOL WriteConsoleU(HANDLE console, const char *utf8_text, DWORD utf8_length, DWO
         return FALSE;
     }
 
-    result = WriteConsoleW(console, wtext, (DWORD)wcslen(wtext), &wwritten, reserved);
-    if (result && written_length != NULL && wwritten == (DWORD)wcslen(wtext))
+    result = WriteConsoleW(hConsoleOutput, wtext, (DWORD)wcslen(wtext), &wwritten, lpReserved);
+    if (result && lpNumberOfCharsWritten != NULL && wwritten == (DWORD)wcslen(wtext))
     {
-        *written_length = utf8_length;
+        *lpNumberOfCharsWritten = nNumberOfCharsToWrite;
     }
 
     cplat_free(wtext);
@@ -208,12 +209,12 @@ static BOOL copy_wstr_as_utf8(char *utf8_buf, DWORD size, const wchar_t *wtext)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-BOOL GetVolumePathNameU(const char *utf8_path, char *utf8_volume_root, DWORD size)
+BOOL GetVolumePathNameU(const char *lpszFileName, char *lpszVolumePathName, DWORD cchBufferLength)
 {
     wchar_t *wpath;
     wchar_t wroot[PLATFORM_PATH_MAX];
 
-    wpath = cplat_utf8_to_wstr_alloc(utf8_path);
+    wpath = cplat_utf8_to_wstr_alloc(lpszFileName);
     if (wpath == NULL)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
@@ -228,22 +229,22 @@ BOOL GetVolumePathNameU(const char *utf8_path, char *utf8_volume_root, DWORD siz
 
     cplat_free(wpath);
 
-    return copy_wstr_as_utf8(utf8_volume_root, size, wroot);
+    return copy_wstr_as_utf8(lpszVolumePathName, cchBufferLength, wroot);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-BOOL GetVolumeInformationU(const char *utf8_root_path, char *utf8_volume_name, DWORD volume_name_size,
-                           DWORD *serial_number, DWORD *max_component_length, DWORD *file_system_flags,
-                           char *utf8_file_system_name, DWORD file_system_name_size)
+BOOL GetVolumeInformationU(const char *lpRootPathName, char *lpVolumeNameBuffer, DWORD nVolumeNameSize,
+                           LPDWORD lpVolumeSerialNumber, LPDWORD lpMaximumComponentLength, LPDWORD lpFileSystemFlags,
+                           char *lpFileSystemNameBuffer, DWORD nFileSystemNameSize)
 {
     wchar_t *wroot = NULL;
     wchar_t wvolume[MAX_PATH + 1];
     wchar_t wfs[MAX_PATH + 1];
 
-    if (utf8_root_path != NULL)
+    if (lpRootPathName != NULL)
     {
-        wroot = cplat_utf8_to_wstr_alloc(utf8_root_path);
+        wroot = cplat_utf8_to_wstr_alloc(lpRootPathName);
         if (wroot == NULL)
         {
             SetLastError(ERROR_INVALID_PARAMETER);
@@ -254,8 +255,8 @@ BOOL GetVolumeInformationU(const char *utf8_root_path, char *utf8_volume_name, D
     wvolume[0] = L'\0';
     wfs[0] = L'\0';
 
-    if (!GetVolumeInformationW(wroot, wvolume, (DWORD)(sizeof(wvolume) / sizeof(wvolume[0])), serial_number,
-                               max_component_length, file_system_flags, wfs, (DWORD)(sizeof(wfs) / sizeof(wfs[0]))))
+    if (!GetVolumeInformationW(wroot, wvolume, (DWORD)(sizeof(wvolume) / sizeof(wvolume[0])), lpVolumeSerialNumber,
+                               lpMaximumComponentLength, lpFileSystemFlags, wfs, (DWORD)(sizeof(wfs) / sizeof(wfs[0]))))
     {
         cplat_free(wroot);
         return FALSE;
@@ -263,12 +264,12 @@ BOOL GetVolumeInformationU(const char *utf8_root_path, char *utf8_volume_name, D
 
     cplat_free(wroot);
 
-    if (!copy_wstr_as_utf8(utf8_volume_name, volume_name_size, wvolume))
+    if (!copy_wstr_as_utf8(lpVolumeNameBuffer, nVolumeNameSize, wvolume))
     {
         return FALSE;
     }
 
-    return copy_wstr_as_utf8(utf8_file_system_name, file_system_name_size, wfs);
+    return copy_wstr_as_utf8(lpFileSystemNameBuffer, nFileSystemNameSize, wfs);
 }
 
 #endif /* PLATFORM_WINDOWS */

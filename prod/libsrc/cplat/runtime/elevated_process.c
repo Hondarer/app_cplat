@@ -357,19 +357,19 @@ static int extract_output_pipes_arg(int *argc, char **argv, DWORD *parent_pid, u
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_elevated_process_is_elevated(int *elevated)
+int cplat_elevated_process_is_elevated(int *elevated_out)
 {
-    if (elevated == NULL)
+    if (elevated_out == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    *elevated = 0;
+    *elevated_out = 0;
 
 #if defined(PLATFORM_LINUX)
     if (geteuid() == 0)
     {
-        *elevated = 1;
+        *elevated_out = 1;
     }
 
     return CPLAT_OK;
@@ -389,7 +389,7 @@ int cplat_elevated_process_is_elevated(int *elevated)
             {
                 if (elevation.TokenIsElevated != 0)
                 {
-                    *elevated = 1;
+                    *elevated_out = 1;
                 }
 
                 rc = CPLAT_OK;
@@ -407,15 +407,15 @@ int cplat_elevated_process_is_elevated(int *elevated)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, int *handled)
+int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code_out, int *handled_out)
 {
-    if (exit_code == NULL || handled == NULL)
+    if (exit_code_out == NULL || handled_out == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    *exit_code = 0;
-    *handled = 0;
+    *exit_code_out = 0;
+    *handled_out = 0;
 
 #if defined(PLATFORM_WINDOWS)
     {
@@ -433,7 +433,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
 
         if (cplat_elevated_process_is_elevated(&elevated) != CPLAT_OK)
         {
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -448,13 +448,13 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
          */
         if (is_current_session_interactive() == 0)
         {
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
         if (cplat_process_get_executable_path(exe_path, sizeof(exe_path)) != CPLAT_OK)
         {
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -513,7 +513,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
             combined_arguments = (char *)cplat_malloc(buf_sz);
             if (combined_arguments == NULL)
             {
-                *exit_code = EXIT_FAILURE;
+                *exit_code_out = EXIT_FAILURE;
                 return CPLAT_ERR_OUT_OF_MEMORY;
             }
 
@@ -523,7 +523,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
                 if (ret != CPLAT_OK)
                 {
                     cplat_free(combined_arguments);
-                    *exit_code = EXIT_FAILURE;
+                    *exit_code_out = EXIT_FAILURE;
                     return CPLAT_ERR_UNKNOWN;
                 }
             }
@@ -547,7 +547,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
                 if (ret != CPLAT_OK)
                 {
                     cplat_free(combined_arguments);
-                    *exit_code = EXIT_FAILURE;
+                    *exit_code_out = EXIT_FAILURE;
                     return CPLAT_ERR_UNKNOWN;
                 }
 
@@ -555,7 +555,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
                 if (ret != CPLAT_OK)
                 {
                     cplat_free(combined_arguments);
-                    *exit_code = EXIT_FAILURE;
+                    *exit_code_out = EXIT_FAILURE;
                     return CPLAT_ERR_UNKNOWN;
                 }
             }
@@ -576,7 +576,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
                 if (ret != CPLAT_OK)
                 {
                     cplat_free(combined_arguments);
-                    *exit_code = EXIT_FAILURE;
+                    *exit_code_out = EXIT_FAILURE;
                     return CPLAT_ERR_UNKNOWN;
                 }
 
@@ -584,7 +584,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
                 if (ret != CPLAT_OK)
                 {
                     cplat_free(combined_arguments);
-                    *exit_code = EXIT_FAILURE;
+                    *exit_code_out = EXIT_FAILURE;
                     return CPLAT_ERR_UNKNOWN;
                 }
             }
@@ -596,7 +596,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
         if (wide_exe_path == NULL)
         {
             cplat_free(combined_arguments);
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
 
@@ -607,7 +607,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
             {
                 cplat_free(combined_arguments);
                 cplat_free(wide_exe_path);
-                *exit_code = EXIT_FAILURE;
+                *exit_code_out = EXIT_FAILURE;
                 return CPLAT_ERR_OUT_OF_MEMORY;
             }
         }
@@ -636,13 +636,13 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
             exec_info.nShow = SW_SHOWNORMAL;
         }
 
-        *handled = 1;
+        *handled_out = 1;
 
         if (!ShellExecuteExW(&exec_info))
         {
             cplat_free(wide_arguments);
             cplat_free(wide_exe_path);
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -653,7 +653,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
         if (child_process == NULL)
         {
             CloseHandle(exec_info.hProcess);
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -661,13 +661,13 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
             cplat_process_get_exit_code(child_process, &child_exit_code) != CPLAT_OK)
         {
             cplat_process_dispose(child_process);
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
         cplat_process_dispose(child_process);
 
-        *exit_code = child_exit_code;
+        *exit_code_out = child_exit_code;
         return CPLAT_OK;
     }
 #elif defined(PLATFORM_LINUX)
@@ -682,7 +682,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
 
         if (elevated == 0)
         {
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -690,7 +690,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
     }
 #else
     (void)arguments;
-    *exit_code = EXIT_FAILURE;
+    *exit_code_out = EXIT_FAILURE;
 
     return CPLAT_ERR_UNSUPPORTED;
 #endif /* PLATFORM_ */
@@ -698,16 +698,16 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, 
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code, int *handled, char *result_message,
-                                           size_t result_message_size)
+int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code_out, int *handled_out,
+                                           char *result_message, size_t result_message_size)
 {
-    if (exit_code == NULL || handled == NULL)
+    if (exit_code_out == NULL || handled_out == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    *exit_code = 0;
-    *handled = 0;
+    *exit_code_out = 0;
+    *handled_out = 0;
 
     if (result_message != NULL && result_message_size > 0)
     {
@@ -733,7 +733,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
 
         if (cplat_elevated_process_is_elevated(&elevated) != CPLAT_OK)
         {
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -748,13 +748,13 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
          */
         if (is_current_session_interactive() == 0)
         {
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
         if (cplat_process_get_executable_path(exe_path, sizeof(exe_path)) != CPLAT_OK)
         {
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -767,20 +767,20 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         temp_len = GetTempPathW((DWORD)(sizeof(wide_temp_dir) / sizeof(wide_temp_dir[0])), wide_temp_dir);
         if (temp_len == 0 || temp_len >= sizeof(wide_temp_dir) / sizeof(wide_temp_dir[0]))
         {
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
         if (GetTempFileNameW(wide_temp_dir, L"cur", 0, wide_result_path) == 0)
         {
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
         if (cplat_wpath_to_utf8(result_path, sizeof(result_path), wide_result_path) < 0)
         {
             DeleteFileW(wide_result_path);
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -796,7 +796,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         combined_arguments = (char *)cplat_malloc(buf_sz);
         if (combined_arguments == NULL)
         {
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
 
@@ -823,7 +823,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         {
             cplat_free(combined_arguments);
             DeleteFileW(wide_result_path);
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
 
@@ -834,7 +834,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         {
             cplat_free(wide_exe_path);
             DeleteFileW(wide_result_path);
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
 
@@ -849,14 +849,14 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         /* コンソールを一切引き継がないため、昇格プロセスは常に非表示で起動する。 */
         exec_info.nShow = SW_HIDE;
 
-        *handled = 1;
+        *handled_out = 1;
 
         if (!ShellExecuteExW(&exec_info))
         {
             cplat_free(wide_arguments);
             cplat_free(wide_exe_path);
             DeleteFileW(wide_result_path);
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -868,7 +868,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         {
             CloseHandle(exec_info.hProcess);
             DeleteFileW(wide_result_path);
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -877,7 +877,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         {
             cplat_process_dispose(child_process);
             DeleteFileW(wide_result_path);
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -905,7 +905,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
 
         DeleteFileW(wide_result_path);
 
-        *exit_code = child_exit_code;
+        *exit_code_out = child_exit_code;
         return CPLAT_OK;
     }
 #elif defined(PLATFORM_LINUX)
@@ -922,7 +922,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
 
         if (elevated == 0)
         {
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -932,7 +932,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
     (void)arguments;
     (void)result_message;
     (void)result_message_size;
-    *exit_code = EXIT_FAILURE;
+    *exit_code_out = EXIT_FAILURE;
 
     return CPLAT_ERR_UNSUPPORTED;
 #endif /* PLATFORM_ */
@@ -1056,15 +1056,15 @@ int cplat_elevated_process_report_result(const char *message)
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_process_output_fn output_fn, void *context,
-                                     int *exit_code, int *handled)
+                                     int *exit_code_out, int *handled_out)
 {
-    if (exit_code == NULL || handled == NULL)
+    if (exit_code_out == NULL || handled_out == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    *exit_code = 0;
-    *handled = 0;
+    *exit_code_out = 0;
+    *handled_out = 0;
 
 #if defined(PLATFORM_WINDOWS)
     {
@@ -1085,7 +1085,7 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
 
         if (cplat_elevated_process_is_elevated(&elevated) != CPLAT_OK)
         {
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -1100,7 +1100,7 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
          */
         if (is_current_session_interactive() == 0)
         {
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -1119,7 +1119,7 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
          */
         if (!CreatePipe(&stdout_read, &stdout_write, NULL, 0))
         {
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -1127,7 +1127,7 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
         {
             CloseHandle(stdout_read);
             CloseHandle(stdout_write);
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -1149,7 +1149,7 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
             CloseHandle(stdout_write);
             CloseHandle(stderr_read);
             CloseHandle(stderr_write);
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
 
@@ -1160,7 +1160,7 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
 
         if (rc == CPLAT_OK)
         {
-            *handled = 1;
+            *handled_out = 1;
             rc = start_elevated_self(combined_arguments, &child_process);
         }
 
@@ -1172,7 +1172,7 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
             CloseHandle(stdout_write);
             CloseHandle(stderr_read);
             CloseHandle(stderr_write);
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
 
             if (rc == CPLAT_ERR_OUT_OF_MEMORY)
             {
@@ -1207,13 +1207,13 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
         if (wait_result != CPLAT_OK || cplat_process_get_exit_code(child_process, &child_exit_code) != CPLAT_OK)
         {
             cplat_process_dispose(child_process);
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
         cplat_process_dispose(child_process);
 
-        *exit_code = child_exit_code;
+        *exit_code_out = child_exit_code;
         return CPLAT_OK;
     }
 #elif defined(PLATFORM_LINUX)
@@ -1230,7 +1230,7 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
 
         if (elevated == 0)
         {
-            *exit_code = EXIT_FAILURE;
+            *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -1240,7 +1240,7 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
     (void)arguments;
     (void)output_fn;
     (void)context;
-    *exit_code = EXIT_FAILURE;
+    *exit_code_out = EXIT_FAILURE;
 
     return CPLAT_ERR_UNSUPPORTED;
 #endif /* PLATFORM_ */

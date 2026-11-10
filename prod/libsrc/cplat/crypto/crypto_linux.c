@@ -258,7 +258,7 @@ int cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, const size_t passphrase_len)
+int cplat_passphrase_to_key(uint8_t *key_out, const uint8_t *passphrase, const size_t passphrase_len)
 {
     EVP_MD_CTX *ctx;
 
@@ -269,7 +269,7 @@ int cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, const size_
      */
     unsigned int len = CPLAT_CRYPTO_KEY_SIZE;
 
-    if (key == NULL || (passphrase == NULL && passphrase_len > 0))
+    if (key_out == NULL || (passphrase == NULL && passphrase_len > 0))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
@@ -298,7 +298,7 @@ int cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, const size_
         }
 
         if (EVP_DigestInit_ex(ctx, EVP_sha256(), NULL) != 1 || EVP_DigestUpdate(ctx, pass_data, passphrase_len) != 1 ||
-            EVP_DigestFinal_ex(ctx, key, &len) != 1)
+            EVP_DigestFinal_ex(ctx, key_out, &len) != 1)
         {
             EVP_MD_CTX_free(ctx);
             return CPLAT_ERR_UNKNOWN;

@@ -1,25 +1,25 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, size_t passphrase_len)
+int delegate_real_cplat_passphrase_to_key(uint8_t *key_out, const uint8_t *passphrase, size_t passphrase_len)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_passphrase_to_key)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_passphrase_to_key"));
 
-    return real_fn(key, passphrase, passphrase_len);
+    return real_fn(key_out, passphrase, passphrase_len);
 }
 
-MOCK_WEAK_IMPL(int, cplat_passphrase_to_key, uint8_t *key, const uint8_t *passphrase, size_t passphrase_len)
+MOCK_WEAK_IMPL(int, cplat_passphrase_to_key, uint8_t *key_out, const uint8_t *passphrase, size_t passphrase_len)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 
     if (_mock_cplat != nullptr)
     {
-        mock_ret = _mock_cplat->cplat_passphrase_to_key(key, passphrase, passphrase_len);
+        mock_ret = _mock_cplat->cplat_passphrase_to_key(key_out, passphrase, passphrase_len);
     }
     else
     {
-        mock_ret = delegate_real_cplat_passphrase_to_key(key, passphrase, passphrase_len);
+        mock_ret = delegate_real_cplat_passphrase_to_key(key_out, passphrase, passphrase_len);
     }
 
     if (getTraceLevel() > TRACE_NONE)

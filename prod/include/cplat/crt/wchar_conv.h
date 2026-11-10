@@ -37,9 +37,9 @@ extern "C"
 
     /**
      *  @brief          UTF-8 文字列をワイド文字列に変換します。
-     *  @param[out]     wbuf        変換結果の書き込み先バッファー。NULL を渡してはなりません。
-     *  @param[in]      wbuf_count  @p wbuf の要素数。0 および `INT_MAX` を超える値を渡してはなりません。
-     *  @param[in]      utf8_text   変換元の UTF-8 文字列。NULL を渡してはなりません。
+     *  @param[out]     dest       変換結果の書き込み先バッファー。NULL を渡してはなりません。
+     *  @param[in]      dest_size  @p dest の要素数。0 および `INT_MAX` を超える値を渡してはなりません。
+     *  @param[in]      utf8_text  変換元の UTF-8 文字列。NULL を渡してはなりません。
      *  @return         変換後の文字数 (null 終端含む)。失敗時は -1 を返します。
      *
      *  パスの区切り文字は正規化しません。
@@ -47,7 +47,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_utf8_to_wstr(wchar_t *wbuf, size_t wbuf_count, const char *utf8_text);
+    CPLAT_EXPORT int CPLAT_API cplat_utf8_to_wstr(wchar_t *dest, size_t dest_size, const char *utf8_text);
 
     /**
      *  @brief          ワイド文字列を UTF-8 に変換します。
@@ -65,15 +65,15 @@ extern "C"
 
     /**
      *  @brief          UTF-8 パス文字列をワイド文字列に変換します。
-     *  @param[out]     wbuf        変換結果の書き込み先バッファー。NULL を渡してはなりません。
-     *  @param[in]      wbuf_count  @p wbuf の要素数。0 および `INT_MAX` を超える値を渡してはなりません。
-     *  @param[in]      utf8_path   変換元の UTF-8 パス文字列。NULL を渡してはなりません。
+     *  @param[out]     dest       変換結果の書き込み先バッファー。NULL を渡してはなりません。
+     *  @param[in]      dest_size  @p dest の要素数。0 および `INT_MAX` を超える値を渡してはなりません。
+     *  @param[in]      utf8_path  変換元の UTF-8 パス文字列。NULL を渡してはなりません。
      *  @return         変換後の文字数 (null 終端含む)。失敗時は -1 を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_utf8_to_wpath(wchar_t *wbuf, size_t wbuf_count, const char *utf8_path);
+    CPLAT_EXPORT int CPLAT_API cplat_utf8_to_wpath(wchar_t *dest, size_t dest_size, const char *utf8_path);
 
     /**
      *  @brief          ワイド文字列パスを UTF-8 に変換します。

@@ -436,8 +436,6 @@ int cplat_socket_accept(const cplat_socket sock, cplat_ipv4_endpoint *peer_out, 
     return cplat_internal_error_report_success(detail_out);
 }
 
-/* Doxygen コメントは、ヘッダーに記載 */
-
 /**
  *  @brief          中断された接続確立の完了を待機します。
  *  @param[in]      sock       対象のソケット。

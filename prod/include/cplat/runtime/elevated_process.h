@@ -67,7 +67,7 @@ extern "C"
 
     /**
      *  @brief          現在のプロセスが管理者/root 権限で動作しているかを確認します。
-     *  @param[out]     elevated  昇格済みなら 1、そうでなければ 0 の格納先。NULL を渡してはなりません。
+     *  @param[out]     elevated_out  昇格済みなら 1、そうでなければ 0 の格納先。NULL を渡してはなりません。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNSUPPORTED 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  Windows ではプロセス トークンの昇格状態 (TokenElevation) を確認します。\n
@@ -76,13 +76,13 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_elevated_process_is_elevated(int *elevated);
+    CPLAT_EXPORT int CPLAT_API cplat_elevated_process_is_elevated(int *elevated_out);
 
     /**
      *  @brief          管理者/root 権限が必要な処理のため、必要に応じて昇格実行します。
-     *  @param[in]      arguments  昇格実行時に現在の実行ファイルへ渡す引数文字列。NULL 可。
-     *  @param[out]     exit_code  昇格プロセスの終了コード、または 0 の格納先。
-     *  @param[out]     handled    昇格プロセスで処理した場合は 0 以外、現プロセスで継続する場合は 0 の格納先。
+     *  @param[in]      arguments      昇格実行時に現在の実行ファイルへ渡す引数文字列。NULL 可。
+     *  @param[out]     exit_code_out  昇格プロセスの終了コード、または 0 の格納先。
+     *  @param[out]     handled_out    昇格プロセスで処理した場合は 0 以外、現プロセスで継続する場合は 0 の格納先。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNSUPPORTED 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  Windows では、未昇格の場合に UAC を要求して現在の実行ファイルを @p arguments 付きで
@@ -103,15 +103,15 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code,
-                                                                    int *handled);
+    CPLAT_EXPORT int CPLAT_API cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code_out,
+                                                                    int *handled_out);
 
     /**
      *  @brief          管理者/root 権限が必要な処理のため、必要に応じて昇格実行し、
      *                  昇格プロセスが報告した結果メッセージを取得します。
      *  @param[in]      arguments            昇格実行時に現在の実行ファイルへ渡す引数文字列。NULL 可。
-     *  @param[out]     exit_code            昇格プロセスの終了コード、または 0 の格納先。
-     *  @param[out]     handled              昇格プロセスで処理した場合は 0 以外、現プロセスで継続する場合は 0 の格納先。
+     *  @param[out]     exit_code_out        昇格プロセスの終了コード、または 0 の格納先。
+     *  @param[out]     handled_out          昇格プロセスで処理した場合は 0 以外、現プロセスで継続する場合は 0 の格納先。
      *  @param[out]     result_message       昇格プロセスが報告したメッセージ (UTF-8) の格納先。NULL 可。
      *  @param[in]      result_message_size  @p result_message のバイト数。
      *                                       通常は @ref CPLAT_ELEVATED_PROCESS_RESULT_MESSAGE_SIZE を指定します。
@@ -135,8 +135,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_elevated_process_run_with_result(const char *arguments, int *exit_code,
-                                                                      int *handled, char *result_message,
+    CPLAT_EXPORT int CPLAT_API cplat_elevated_process_run_with_result(const char *arguments, int *exit_code_out,
+                                                                      int *handled_out, char *result_message,
                                                                       size_t result_message_size);
 
     /**
@@ -182,12 +182,12 @@ extern "C"
     /**
      *  @brief          管理者/root 権限が必要な処理のため、必要に応じて昇格実行し、
      *                  昇格プロセスの標準出力と標準エラー出力を呼び出し元で受け取ります。
-     *  @param[in]      arguments  昇格実行時に現在の実行ファイルへ渡す引数文字列。NULL 可。
-     *  @param[in]      output_fn  昇格プロセスの出力を受け取るコールバック。NULL 可。
+     *  @param[in]      arguments      昇格実行時に現在の実行ファイルへ渡す引数文字列。NULL 可。
+     *  @param[in]      output_fn      昇格プロセスの出力を受け取るコールバック。NULL 可。
      *                             NULL の場合は、呼び出し元の標準出力と標準エラー出力へそのまま書き込みます。
-     *  @param[in]      context    @p output_fn へ渡す任意のコンテキスト。NULL 可。
-     *  @param[out]     exit_code  昇格プロセスの終了コード、または 0 の格納先。
-     *  @param[out]     handled    昇格プロセスで処理した場合は 0 以外、現プロセスで継続する場合は 0 の格納先。
+     *  @param[in]      context        @p output_fn へ渡す任意のコンテキスト。NULL 可。
+     *  @param[out]     exit_code_out  昇格プロセスの終了コード、または 0 の格納先。
+     *  @param[out]     handled_out    昇格プロセスで処理した場合は 0 以外、現プロセスで継続する場合は 0 の格納先。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNSUPPORTED 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  Windows では、未昇格の場合に標準出力用と標準エラー出力用の無名パイプを作成し、
@@ -212,7 +212,7 @@ extern "C"
      */
     CPLAT_EXPORT int CPLAT_API cplat_elevated_process_run_piped(const char *arguments,
                                                                 cplat_elevated_process_output_fn output_fn,
-                                                                void *context, int *exit_code, int *handled);
+                                                                void *context, int *exit_code_out, int *handled_out);
 
     /**
      *  @brief          昇格プロセスの標準出力と標準エラー出力を、呼び出し元プロセスのパイプへ接続します。

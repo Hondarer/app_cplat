@@ -206,6 +206,8 @@ int cplat_fclose(FILE *stream, cplat_error *detail_out)
     {
         int errno_value = errno;
 
+        /* 詳細エラーの共通処理は errno が 0 の場合に成功として扱うため、
+         * 失敗を検出した後も errno が 0 なら EIO に補完してから渡す。 */
         if (errno_value == 0)
         {
             errno_value = EIO;
@@ -232,6 +234,8 @@ int cplat_fflush(FILE *stream, cplat_error *detail_out)
     {
         int errno_value = errno;
 
+        /* 詳細エラーの共通処理は errno が 0 の場合に成功として扱うため、
+         * 失敗を検出した後も errno が 0 なら EIO に補完してから渡す。 */
         if (errno_value == 0)
         {
             errno_value = EIO;
@@ -329,6 +333,8 @@ size_t cplat_fwrite(const void *buffer, const size_t size, const size_t count, F
     {
         int errno_value = errno;
 
+        /* 詳細エラーの共通処理は errno が 0 の場合に成功として扱うため、
+         * 失敗を検出した後も errno が 0 なら EIO に補完してから渡す。 */
         if (errno_value == 0)
         {
             errno_value = EIO;

@@ -911,12 +911,12 @@ int cplat_trace_file_sink_write(cplat_trace_file_sink *handle, const int level, 
         return CPLAT_OK;
     }
 
-    if (cplat_internal_trace_resolve_timestamp(timestamp, &resolved, &fallback_used) != 0)
+    if (cplat_internal_trace_resolve_timestamp(timestamp, &resolved, &fallback_used) != CPLAT_OK)
     {
         return CPLAT_ERR_UNKNOWN;
     }
 
-    if (cplat_internal_trace_format_local_timestamp(timestamp_text, sizeof(timestamp_text), &resolved) != 0)
+    if (cplat_internal_trace_format_local_timestamp(timestamp_text, sizeof(timestamp_text), &resolved) != CPLAT_OK)
     {
         return CPLAT_ERR_UNKNOWN;
     }

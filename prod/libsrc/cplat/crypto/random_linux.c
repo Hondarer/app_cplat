@@ -25,20 +25,20 @@
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_random_bytes(void *buf, const size_t size)
+int cplat_random_bytes(void *dest, const size_t dest_size)
 {
-    if (size == 0U)
+    if (dest_size == 0U)
     {
         return CPLAT_OK;
     }
 
-    if (buf == NULL)
+    if (dest == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
     /* クロスプラットフォームの最大値を超える要求は、OS API へ渡す前に引数不正として扱う。 */
-    if (size > CPLAT_CRYPTO_RANDOM_MAX_BYTES)
+    if (dest_size > CPLAT_CRYPTO_RANDOM_MAX_BYTES)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
@@ -47,7 +47,7 @@ int cplat_random_bytes(void *buf, const size_t size)
      * RAND_bytes() は成功時に 1 を返す。0 と -1 は、いずれも乱数を得られなかったことを表す。
      * see: https://docs.openssl.org/master/man3/RAND_bytes/
      */
-    if (RAND_bytes((unsigned char *)buf, (int)size) != 1)
+    if (RAND_bytes((unsigned char *)dest, (int)dest_size) != 1)
     {
         return CPLAT_ERR_UNKNOWN;
     }

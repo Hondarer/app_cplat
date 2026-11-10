@@ -59,7 +59,7 @@ int prompt_platform_os_get_size(int *cols_out, int *rows_out)
 int prompt_platform_os_enter_raw(prompt_platform_context *context)
 {
     struct termios raw;
-    struct sigaction sa;
+    struct sigaction sa = {0};
 
     /* すでに raw モードまたはシグナル ハンドラーが有効な場合は重複移行を防ぐ。 */
     if (context->raw_active || s_sigwinch_installed)
@@ -94,7 +94,6 @@ int prompt_platform_os_enter_raw(prompt_platform_context *context)
 
     context->raw_active = 1;
 
-    memset(&sa, 0, sizeof(sa));
     sa.sa_handler = prompt_sigwinch_handler;
 
     /* SIGWINCH ハンドラーを登録し、変更前のハンドラーを退避する。 */

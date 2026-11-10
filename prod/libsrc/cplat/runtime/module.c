@@ -110,7 +110,9 @@ static int get_self_path_posix(char *path_out, size_t path_size, const void *fun
     }
 
     if (p[0] == '\0')
+    {
         return CPLAT_ERR_UNKNOWN;
+    }
 
     if (cplat_path_get_full(path_out, path_size, &err, p) == CPLAT_OK)
     {
@@ -144,7 +146,9 @@ static int get_self_path_w(wchar_t *wpath_out, size_t wpath_size, const void *fu
     DWORD n;
 
     if (wpath_out == NULL || wpath_size == 0 || func_addr == NULL)
+    {
         return CPLAT_ERR_INVALID_ARGUMENT;
+    }
 
     if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                             (LPCWSTR)func_addr, &hm))
@@ -160,8 +164,11 @@ static int get_self_path_w(wchar_t *wpath_out, size_t wpath_size, const void *fu
     }
 
     buf[n] = L'\0';
-    if (wcslen(buf) + 1 > wpath_size)
+    if ((wcslen(buf) + 1) > wpath_size)
+    {
         return CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+
     (void)cplat_wcscpy(wpath_out, wpath_size, buf);
 
     return CPLAT_OK;
@@ -192,7 +199,7 @@ static int get_basename_from_path(char *basename_out, size_t basename_size, cons
     {
         size_t len = (size_t)(shared_lib_cut - fname);
 
-        if (len + 1u > basename_size)
+        if ((len + 1u) > basename_size)
         {
             basename_out[0] = '\0';
             return CPLAT_ERR_BUFFER_TOO_SMALL;
@@ -239,22 +246,30 @@ int cplat_module_get_path(char *path_out, const size_t path_size, const void *fu
     int st = get_self_path_w(wpath, (size_t)(sizeof(wpath) / sizeof(wpath[0])), func_addr);
     if (st != CPLAT_OK)
     {
-        if (path_out && path_size)
+        if ((path_out != NULL) && (path_size != 0U))
+        {
             path_out[0] = '\0';
+        }
+
         return st;
     }
 
     if (cplat_wpath_to_utf8(utf8_path, sizeof(utf8_path), wpath) < 0)
     {
-        if (path_out && path_size)
+        if ((path_out != NULL) && (path_size != 0U))
+        {
             path_out[0] = '\0';
+        }
+
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
 
     if (cplat_path_get_full(path_out, path_size, &err, utf8_path) != CPLAT_OK)
     {
-        if (path_out && path_size)
+        if ((path_out != NULL) && (path_size != 0U))
+        {
             path_out[0] = '\0';
+        }
 
         if (cplat_error_is(&err, CPLAT_CAUSE_NAME_TOO_LONG))
         {
@@ -278,7 +293,9 @@ int cplat_module_get_basename(char *basename_out, const size_t basename_size, co
     char path_buf[4096];
 
     if (basename_out == NULL || basename_size == 0)
+    {
         return CPLAT_ERR_INVALID_ARGUMENT;
+    }
 
     st = cplat_module_get_path(path_buf, sizeof(path_buf), func_addr);
     if (st != CPLAT_OK)

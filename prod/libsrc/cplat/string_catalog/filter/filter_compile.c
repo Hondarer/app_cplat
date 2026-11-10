@@ -230,7 +230,7 @@ static int read_quoted_byte(compiler *state)
  * 文字列リテラルを解析して内部バッファーへ復号する。
  * 成功時は true、終端欠落や不正なエスケープ文字の検出時は false を返す。
  */
-static bool lex_string(compiler *state, token *result)
+static bool lex_string(compiler *state, token *token_out)
 {
     uint32_t length = 0U;
 
@@ -243,7 +243,7 @@ static bool lex_string(compiler *state, token *result)
 
         if (state->position >= state->text_length)
         {
-            return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, result->column);
+            return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, token_out->column);
         }
 
         if (state->text[state->position] == '"')
@@ -262,8 +262,8 @@ static bool lex_string(compiler *state, token *result)
     }
 
     state->string_buffer[length] = '\0';
-    result->kind = TOKEN_KIND_STRING;
-    result->text_length = length;
+    token_out->kind = TOKEN_KIND_STRING;
+    token_out->text_length = length;
 
     return true;
 }
@@ -272,7 +272,7 @@ static bool lex_string(compiler *state, token *result)
  * 文字リテラルを解析する。
  * 成功時は true、終端欠落や不正なエスケープ文字の検出時は false を返す。
  */
-static bool lex_character(compiler *state, token *result)
+static bool lex_character(compiler *state, token *token_out)
 {
     int byte;
     int value;
@@ -281,29 +281,29 @@ static bool lex_character(compiler *state, token *result)
 
     if ((state->position >= state->text_length) || (state->text[state->position] == '\''))
     {
-        return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, result->column);
+        return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, token_out->column);
     }
 
     byte = read_quoted_byte(state);
     if ((byte < 0) || (peek_at(state, state->position) != '\''))
     {
-        return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, result->column);
+        return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, token_out->column);
     }
 
     state->position++;
 
     /* CHAR 型の引数と同じく、char へ変換した値を比較に使用する。 */
     value = (int)(char)byte;
-    result->kind = TOKEN_KIND_CHARACTER;
+    token_out->kind = TOKEN_KIND_CHARACTER;
 
     if (value < 0)
     {
-        result->flags = STRING_CATALOG_FILTER_CONSTANT_FLAG_NEGATIVE;
-        result->magnitude = (uint64_t)(-value);
+        token_out->flags = STRING_CATALOG_FILTER_CONSTANT_FLAG_NEGATIVE;
+        token_out->magnitude = (uint64_t)(-value);
     }
     else
     {
-        result->magnitude = (uint64_t)value;
+        token_out->magnitude = (uint64_t)value;
     }
 
     return true;
@@ -313,7 +313,7 @@ static bool lex_character(compiler *state, token *result)
  * 数値リテラル (16 進数、10 進整数、浮動小数点数) を解析する。
  * 成功時は true、範囲外や不正な書式の場合は false を返す。
  */
-static bool lex_number(compiler *state, token *result)
+static bool lex_number(compiler *state, token *token_out)
 {
     const size_t start = state->position;
     const bool is_negative = (peek_at(state, start) == '-');
@@ -354,8 +354,8 @@ static bool lex_number(compiler *state, token *result)
             return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, start);
         }
 
-        result->kind = TOKEN_KIND_INTEGER;
-        result->flags = STRING_CATALOG_FILTER_CONSTANT_FLAG_HEXADECIMAL;
+        token_out->kind = TOKEN_KIND_INTEGER;
+        token_out->flags = STRING_CATALOG_FILTER_CONSTANT_FLAG_HEXADECIMAL;
     }
     else
     {
@@ -407,13 +407,13 @@ static bool lex_number(compiler *state, token *result)
 
             memcpy(state->string_buffer, state->text + start, length);
             state->string_buffer[length] = '\0';
-            result->real = strtod(state->string_buffer, &end);
-            if ((end != (state->string_buffer + length)) || !isfinite(result->real))
+            token_out->real = strtod(state->string_buffer, &end);
+            if ((end != (state->string_buffer + length)) || !isfinite(token_out->real))
             {
                 return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, start);
             }
 
-            result->kind = TOKEN_KIND_FLOAT;
+            token_out->kind = TOKEN_KIND_FLOAT;
         }
         else
         {
@@ -442,11 +442,11 @@ static bool lex_number(compiler *state, token *result)
                 return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, start);
             }
 
-            result->kind = TOKEN_KIND_INTEGER;
+            token_out->kind = TOKEN_KIND_INTEGER;
 
             if (is_negative && (magnitude != 0U))
             {
-                result->flags = STRING_CATALOG_FILTER_CONSTANT_FLAG_NEGATIVE;
+                token_out->flags = STRING_CATALOG_FILTER_CONSTANT_FLAG_NEGATIVE;
             }
         }
     }
@@ -457,7 +457,7 @@ static bool lex_number(compiler *state, token *result)
         return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, start);
     }
 
-    result->magnitude = magnitude;
+    token_out->magnitude = magnitude;
     state->position = position;
 
     return true;

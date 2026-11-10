@@ -235,7 +235,7 @@ int cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, const size_t passphrase_len)
+int cplat_passphrase_to_key(uint8_t *key_out, const uint8_t *passphrase, const size_t passphrase_len)
 {
     BCRYPT_ALG_HANDLE h_alg = NULL;
     BCRYPT_HASH_HANDLE h_hash = NULL;
@@ -245,7 +245,7 @@ int cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, const size_
     ULONG data_len;
 
     /* 引数検証は Linux 実装 (crypto_linux.c) と同じく、関数の先頭で行う。 */
-    if (key == NULL || (passphrase == NULL && passphrase_len > 0))
+    if (key_out == NULL || (passphrase == NULL && passphrase_len > 0))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
@@ -287,7 +287,7 @@ int cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, const size_
         return bcrypt_result(status);
     }
 
-    status = BCryptFinishHash(h_hash, (PUCHAR)key, (ULONG)CPLAT_CRYPTO_KEY_SIZE, 0);
+    status = BCryptFinishHash(h_hash, (PUCHAR)key_out, (ULONG)CPLAT_CRYPTO_KEY_SIZE, 0);
 
     BCryptDestroyHash(h_hash);
     BCryptCloseAlgorithmProvider(h_alg, 0);

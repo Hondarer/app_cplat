@@ -31,7 +31,7 @@
 /* 変換定数 */
 #define MSEC_PER_SEC  (1000ULL)
 #define NSEC_PER_SEC  (1000000000LL)
-#define NSEC_PER_MSEC (1000000ULL)
+#define NSEC_PER_MSEC (1000000LL)
 #define SEC_PER_DAY   (86400LL)
 
 static const char s_iso8601_local_fallback[] = "0000-00-00T00:00:00.000+00:00";
@@ -133,7 +133,7 @@ static int clock_format_iso8601_utc_from_tm(char *buf, const size_t buf_size, co
     /* ミリ秒未満のナノ秒は切り捨て、ミリ秒を 3 桁で出力する。 */
     if (cplat_snprintf(buf, buf_size, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", utc_tm->tm_year + 1900, utc_tm->tm_mon + 1,
                        utc_tm->tm_mday, utc_tm->tm_hour, utc_tm->tm_min, utc_tm->tm_sec,
-                       (int)(tv_nsec / 1000000)) != CPLAT_OK)
+                       (int)(tv_nsec / NSEC_PER_MSEC)) != CPLAT_OK)
     {
         return -1;
     }
@@ -172,7 +172,7 @@ static int clock_format_iso8601_local_from_tm(char *buf, const size_t buf_size, 
     /* ミリ秒未満のナノ秒は切り捨て、ミリ秒を 3 桁で出力する。 */
     if (cplat_snprintf(buf, buf_size, "%04d-%02d-%02dT%02d:%02d:%02d.%03d%c%02d:%02d", local_tm->tm_year + 1900,
                        local_tm->tm_mon + 1, local_tm->tm_mday, local_tm->tm_hour, local_tm->tm_min, local_tm->tm_sec,
-                       (int)(tv_nsec / 1000000), offset_sign, offset_hours, offset_mins) != CPLAT_OK)
+                       (int)(tv_nsec / NSEC_PER_MSEC), offset_sign, offset_hours, offset_mins) != CPLAT_OK)
     {
         return -1;
     }
@@ -197,7 +197,8 @@ int cplat_clock_get_monotonic_ms(uint64_t *milliseconds_out)
         return ret;
     }
 
-    *milliseconds_out = (uint64_t)timestamp.tv_sec * MSEC_PER_SEC + (uint64_t)timestamp.tv_nsec / NSEC_PER_MSEC;
+    *milliseconds_out =
+        (uint64_t)timestamp.tv_sec * MSEC_PER_SEC + (uint64_t)timestamp.tv_nsec / (uint64_t)NSEC_PER_MSEC;
 
     return CPLAT_OK;
 }
@@ -222,7 +223,7 @@ int cplat_clock_get_monotonic(cplat_timespec *timestamp_out)
 #elif defined(PLATFORM_WINDOWS)
     ULONGLONG ms = GetTickCount64();
     timestamp_out->tv_sec = (time_t)(ms / MSEC_PER_SEC);
-    timestamp_out->tv_nsec = (int64_t)((ms % MSEC_PER_SEC) * NSEC_PER_MSEC);
+    timestamp_out->tv_nsec = (int64_t)((ms % MSEC_PER_SEC) * (uint64_t)NSEC_PER_MSEC);
 #else
     return CPLAT_ERR_UNSUPPORTED;
 #endif /* PLATFORM_ */

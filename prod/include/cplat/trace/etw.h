@@ -81,7 +81,7 @@ typedef void (*cplat_etw_event_fn)(const cplat_etw_event *event, void *context);
  *
  *  TraceLoggingHProvider (TraceLoggingProvider.h が定義する型) と同等です。
  *  OS / SDK の `_tlgProvider_t` に対応する alias であるため、_t サフィックスを残す。
- *  see: コーディング規範「予約識別子の回避」の例外
+ *  コーディング規範の「予約識別子の回避」の例外を参照してください。
  */
 struct _tlgProvider_t;
 typedef struct _tlgProvider_t const *cplat_etw_provider_ref_t;

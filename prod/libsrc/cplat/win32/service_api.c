@@ -25,23 +25,23 @@
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-SC_HANDLE OpenSCManagerU(const char *utf8_machine_name, const char *utf8_database_name, DWORD desired_access)
+SC_HANDLE OpenSCManagerU(const char *lpMachineName, const char *lpDatabaseName, DWORD dwDesiredAccess)
 {
     SC_HANDLE result;
     wchar_t *wmachine = NULL;
     wchar_t *wdatabase = NULL;
 
-    if (utf8_machine_name != NULL)
+    if (lpMachineName != NULL)
     {
-        wmachine = cplat_utf8_to_wstr_alloc(utf8_machine_name);
+        wmachine = cplat_utf8_to_wstr_alloc(lpMachineName);
     }
 
-    if (utf8_database_name != NULL)
+    if (lpDatabaseName != NULL)
     {
-        wdatabase = cplat_utf8_to_wstr_alloc(utf8_database_name);
+        wdatabase = cplat_utf8_to_wstr_alloc(lpDatabaseName);
     }
 
-    if ((utf8_machine_name != NULL && wmachine == NULL) || (utf8_database_name != NULL && wdatabase == NULL))
+    if ((lpMachineName != NULL && wmachine == NULL) || (lpDatabaseName != NULL && wdatabase == NULL))
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         cplat_free(wmachine);
@@ -49,7 +49,7 @@ SC_HANDLE OpenSCManagerU(const char *utf8_machine_name, const char *utf8_databas
         return NULL;
     }
 
-    result = OpenSCManagerW(wmachine, wdatabase, desired_access);
+    result = OpenSCManagerW(wmachine, wdatabase, dwDesiredAccess);
     cplat_free(wmachine);
     cplat_free(wdatabase);
 
@@ -58,10 +58,10 @@ SC_HANDLE OpenSCManagerU(const char *utf8_machine_name, const char *utf8_databas
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-SC_HANDLE CreateServiceU(SC_HANDLE scm, const char *utf8_service_name, const char *utf8_display_name,
-                         DWORD desired_access, DWORD service_type, DWORD start_type, DWORD error_control,
-                         const char *utf8_binary_path_name, const char *utf8_load_order_group, LPDWORD tag_id,
-                         const char *utf8_dependencies, const char *utf8_service_start_name, const char *utf8_password)
+SC_HANDLE CreateServiceU(SC_HANDLE hSCManager, const char *lpServiceName, const char *lpDisplayName,
+                         DWORD dwDesiredAccess, DWORD dwServiceType, DWORD dwStartType, DWORD dwErrorControl,
+                         const char *lpBinaryPathName, const char *lpLoadOrderGroup, LPDWORD lpdwTagId,
+                         const char *lpDependencies, const char *lpServiceStartName, const char *lpPassword)
 {
     SC_HANDLE result;
     wchar_t *wservice_name = NULL;
@@ -72,47 +72,45 @@ SC_HANDLE CreateServiceU(SC_HANDLE scm, const char *utf8_service_name, const cha
     wchar_t *wservice_start_name = NULL;
     wchar_t *wpassword = NULL;
 
-    if (utf8_service_name != NULL)
+    if (lpServiceName != NULL)
     {
-        wservice_name = cplat_utf8_to_wstr_alloc(utf8_service_name);
+        wservice_name = cplat_utf8_to_wstr_alloc(lpServiceName);
     }
 
-    if (utf8_display_name != NULL)
+    if (lpDisplayName != NULL)
     {
-        wdisplay_name = cplat_utf8_to_wstr_alloc(utf8_display_name);
+        wdisplay_name = cplat_utf8_to_wstr_alloc(lpDisplayName);
     }
 
-    if (utf8_binary_path_name != NULL)
+    if (lpBinaryPathName != NULL)
     {
-        wbinary_path_name = cplat_utf8_to_wstr_alloc(utf8_binary_path_name);
+        wbinary_path_name = cplat_utf8_to_wstr_alloc(lpBinaryPathName);
     }
 
-    if (utf8_load_order_group != NULL)
+    if (lpLoadOrderGroup != NULL)
     {
-        wload_order_group = cplat_utf8_to_wstr_alloc(utf8_load_order_group);
+        wload_order_group = cplat_utf8_to_wstr_alloc(lpLoadOrderGroup);
     }
 
-    if (utf8_dependencies != NULL)
+    if (lpDependencies != NULL)
     {
-        wdependencies = cplat_utf8_to_wstr_alloc(utf8_dependencies);
+        wdependencies = cplat_utf8_to_wstr_alloc(lpDependencies);
     }
 
-    if (utf8_service_start_name != NULL)
+    if (lpServiceStartName != NULL)
     {
-        wservice_start_name = cplat_utf8_to_wstr_alloc(utf8_service_start_name);
+        wservice_start_name = cplat_utf8_to_wstr_alloc(lpServiceStartName);
     }
 
-    if (utf8_password != NULL)
+    if (lpPassword != NULL)
     {
-        wpassword = cplat_utf8_to_wstr_alloc(utf8_password);
+        wpassword = cplat_utf8_to_wstr_alloc(lpPassword);
     }
 
-    if ((utf8_service_name != NULL && wservice_name == NULL) || (utf8_display_name != NULL && wdisplay_name == NULL) ||
-        (utf8_binary_path_name != NULL && wbinary_path_name == NULL) ||
-        (utf8_load_order_group != NULL && wload_order_group == NULL) ||
-        (utf8_dependencies != NULL && wdependencies == NULL) ||
-        (utf8_service_start_name != NULL && wservice_start_name == NULL) ||
-        (utf8_password != NULL && wpassword == NULL))
+    if ((lpServiceName != NULL && wservice_name == NULL) || (lpDisplayName != NULL && wdisplay_name == NULL) ||
+        (lpBinaryPathName != NULL && wbinary_path_name == NULL) ||
+        (lpLoadOrderGroup != NULL && wload_order_group == NULL) || (lpDependencies != NULL && wdependencies == NULL) ||
+        (lpServiceStartName != NULL && wservice_start_name == NULL) || (lpPassword != NULL && wpassword == NULL))
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         cplat_free(wservice_name);
@@ -125,9 +123,9 @@ SC_HANDLE CreateServiceU(SC_HANDLE scm, const char *utf8_service_name, const cha
         return NULL;
     }
 
-    result =
-        CreateServiceW(scm, wservice_name, wdisplay_name, desired_access, service_type, start_type, error_control,
-                       wbinary_path_name, wload_order_group, tag_id, wdependencies, wservice_start_name, wpassword);
+    result = CreateServiceW(hSCManager, wservice_name, wdisplay_name, dwDesiredAccess, dwServiceType, dwStartType,
+                            dwErrorControl, wbinary_path_name, wload_order_group, lpdwTagId, wdependencies,
+                            wservice_start_name, wpassword);
     cplat_free(wservice_name);
     cplat_free(wdisplay_name);
     cplat_free(wbinary_path_name);
@@ -141,19 +139,19 @@ SC_HANDLE CreateServiceU(SC_HANDLE scm, const char *utf8_service_name, const cha
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-SC_HANDLE OpenServiceU(SC_HANDLE scm, const char *utf8_service_name, DWORD desired_access)
+SC_HANDLE OpenServiceU(SC_HANDLE hSCManager, const char *lpServiceName, DWORD dwDesiredAccess)
 {
     SC_HANDLE result;
     wchar_t *wservice_name;
 
-    wservice_name = cplat_utf8_to_wstr_alloc(utf8_service_name);
+    wservice_name = cplat_utf8_to_wstr_alloc(lpServiceName);
     if (wservice_name == NULL)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return NULL;
     }
 
-    result = OpenServiceW(scm, wservice_name, desired_access);
+    result = OpenServiceW(hSCManager, wservice_name, dwDesiredAccess);
     cplat_free(wservice_name);
 
     return result;
@@ -161,21 +159,24 @@ SC_HANDLE OpenServiceU(SC_HANDLE scm, const char *utf8_service_name, DWORD desir
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-BOOL ChangeServiceConfig2U(SC_HANDLE service, DWORD info_level, const char *utf8_text)
+BOOL ChangeServiceConfig2U(SC_HANDLE hService, DWORD dwInfoLevel, LPVOID lpInfo)
 {
     BOOL result;
     wchar_t *wtext;
+    const SERVICE_DESCRIPTIONA *desc;
     SERVICE_DESCRIPTIONW desc_w;
 
-    if (info_level != SERVICE_CONFIG_DESCRIPTION)
+    if (dwInfoLevel != SERVICE_CONFIG_DESCRIPTION || lpInfo == NULL)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
 
-    if (utf8_text != NULL)
+    desc = (const SERVICE_DESCRIPTIONA *)lpInfo;
+
+    if (desc->lpDescription != NULL)
     {
-        wtext = cplat_utf8_to_wstr_alloc(utf8_text);
+        wtext = cplat_utf8_to_wstr_alloc(desc->lpDescription);
         if (wtext == NULL)
         {
             SetLastError(ERROR_INVALID_PARAMETER);
@@ -188,7 +189,7 @@ BOOL ChangeServiceConfig2U(SC_HANDLE service, DWORD info_level, const char *utf8
     }
 
     desc_w.lpDescription = wtext;
-    result = ChangeServiceConfig2W(service, SERVICE_CONFIG_DESCRIPTION, &desc_w);
+    result = ChangeServiceConfig2W(hService, SERVICE_CONFIG_DESCRIPTION, &desc_w);
     cplat_free(wtext);
 
     return result;
@@ -196,20 +197,20 @@ BOOL ChangeServiceConfig2U(SC_HANDLE service, DWORD info_level, const char *utf8
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-SERVICE_STATUS_HANDLE RegisterServiceCtrlHandlerExU(const char *utf8_service_name, LPHANDLER_FUNCTION_EX handler_proc,
-                                                    LPVOID context)
+SERVICE_STATUS_HANDLE RegisterServiceCtrlHandlerExU(const char *lpServiceName, LPHANDLER_FUNCTION_EX lpHandlerProc,
+                                                    LPVOID lpContext)
 {
     SERVICE_STATUS_HANDLE result;
     wchar_t *wservice_name;
 
-    wservice_name = cplat_utf8_to_wstr_alloc(utf8_service_name);
+    wservice_name = cplat_utf8_to_wstr_alloc(lpServiceName);
     if (wservice_name == NULL)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return NULL;
     }
 
-    result = RegisterServiceCtrlHandlerExW(wservice_name, handler_proc, context);
+    result = RegisterServiceCtrlHandlerExW(wservice_name, lpHandlerProc, lpContext);
     cplat_free(wservice_name);
 
     return result;
@@ -217,7 +218,7 @@ SERVICE_STATUS_HANDLE RegisterServiceCtrlHandlerExU(const char *utf8_service_nam
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-BOOL StartServiceCtrlDispatcherU(const cplat_service_entry_u *service_table)
+BOOL StartServiceCtrlDispatcherU(const SERVICE_TABLE_ENTRYU *lpServiceStartTable)
 {
     size_t count;
     SERVICE_TABLE_ENTRYW *w_table;
@@ -225,15 +226,15 @@ BOOL StartServiceCtrlDispatcherU(const cplat_service_entry_u *service_table)
     BOOL ok;
     BOOL result;
 
-    if (service_table == NULL)
+    if (lpServiceStartTable == NULL)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
 
-    /* テーブルのエントリ数を数える (終端: service_name == NULL)。 */
+    /* テーブルのエントリ数を数える (終端: lpServiceName == NULL)。 */
     count = 0;
-    while (service_table[count].service_name != NULL)
+    while (lpServiceStartTable[count].lpServiceName != NULL)
     {
         count++;
     }
@@ -249,8 +250,8 @@ BOOL StartServiceCtrlDispatcherU(const cplat_service_entry_u *service_table)
     /* 各エントリのサービス名を wide 化する (calloc() で lpServiceName は全 NULL 初期化済み)。 */
     for (i = 0; i < count; i++)
     {
-        w_table[i].lpServiceName = cplat_utf8_to_wstr_alloc(service_table[i].service_name);
-        w_table[i].lpServiceProc = service_table[i].service_proc;
+        w_table[i].lpServiceName = cplat_utf8_to_wstr_alloc(lpServiceStartTable[i].lpServiceName);
+        w_table[i].lpServiceProc = lpServiceStartTable[i].lpServiceProc;
     }
 
     /* 終端要素は calloc() で 0 初期化済み。 */

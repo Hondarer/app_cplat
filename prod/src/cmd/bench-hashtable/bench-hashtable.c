@@ -122,39 +122,39 @@ static size_t bench_scenario_units(bench_scenario scenario, size_t capacity)
 /**
  *  @brief          測定用のキーを組み立てます。
  *  @param[in]      index  レコード番号。
- *  @param[out]     text   組み立て先。NULL を渡してはなりません。
+ *  @param[out]     dest   組み立て先。NULL を渡してはなりません。
  */
-static void bench_make_key(size_t index, char *text)
+static void bench_make_key(size_t index, char *dest)
 {
-    (void)snprintf(text, BENCH_TEXT_SIZE, "k%08zu", index);
+    (void)snprintf(dest, BENCH_TEXT_SIZE, "k%08zu", index);
 }
 
 /**
  *  @brief          測定用の値を組み立てます。
  *  @param[in]      index  レコード番号。
- *  @param[out]     text   組み立て先。NULL を渡してはなりません。
+ *  @param[out]     dest   組み立て先。NULL を渡してはなりません。
  *
  *  長さを一定にし、更新で確保量が変わらないようにします。
  */
-static void bench_make_value(size_t index, char *text)
+static void bench_make_value(size_t index, char *dest)
 {
-    (void)snprintf(text, BENCH_TEXT_SIZE, "value-%010zu", index);
+    (void)snprintf(dest, BENCH_TEXT_SIZE, "value-%010zu", index);
 }
 
 /**
  *  @brief          可変長キーと可変長値を持つ設定を組み立てます。
- *  @param[in]      capacity  スロット数。
- *  @param[out]     config    組み立て先。NULL を渡してはなりません。
+ *  @param[in]      capacity    スロット数。
+ *  @param[out]     config_out  組み立て先。NULL を渡してはなりません。
  */
-static void bench_make_config(size_t capacity, cplat_hashtable_config *config)
+static void bench_make_config(size_t capacity, cplat_hashtable_config *config_out)
 {
-    memset(config, 0, sizeof(*config));
-    config->capacity = capacity;
-    config->key_type = CPLAT_HASHTABLE_FIELD_VARIABLE_STRING;
-    config->value_type = CPLAT_HASHTABLE_FIELD_VARIABLE_STRING;
-    config->key_storage_size = capacity * (size_t)BENCH_KEY_BYTES;
-    config->value_storage_size = capacity * (size_t)BENCH_VALUE_BYTES;
-    config->lifetime = 5;
+    memset(config_out, 0, sizeof(*config_out));
+    config_out->capacity = capacity;
+    config_out->key_type = CPLAT_HASHTABLE_FIELD_VARIABLE_STRING;
+    config_out->value_type = CPLAT_HASHTABLE_FIELD_VARIABLE_STRING;
+    config_out->key_storage_size = capacity * (size_t)BENCH_KEY_BYTES;
+    config_out->value_storage_size = capacity * (size_t)BENCH_VALUE_BYTES;
+    config_out->lifetime = 5;
 }
 
 /**
@@ -212,10 +212,8 @@ static int bench_fragment_storage(cplat_hashtable *ht, size_t capacity)
     {
         return 0;
     }
-    else
-    {
-        return -1;
-    }
+
+    return -1;
 }
 
 /**
@@ -258,6 +256,7 @@ static int bench_prepare(void *arg)
             state->failed = 1;
             return -1;
         }
+
         if (bench_fragment_storage(state->ht, state->capacity) != 0)
         {
             state->failed = 1;
@@ -303,6 +302,7 @@ static int bench_iterate(void *arg)
                 return -1;
             }
         }
+
         return 0;
     case BENCH_SCENARIO_CHURN:
         /* 回収済みのレコード番号を、同じ長さのキーと値で埋め直す。 */
@@ -312,20 +312,16 @@ static int bench_iterate(void *arg)
         {
             return 0;
         }
-        else
-        {
-            return -1;
-        }
+
+        return -1;
     case BENCH_SCENARIO_RESIZE:
         bench_make_config(state->capacity * 2u, &config);
         if (cplat_hashtable_resize(state->ht, &config) == CPLAT_OK)
         {
             return 0;
         }
-        else
-        {
-            return -1;
-        }
+
+        return -1;
     case BENCH_SCENARIO_COUNT:
     default:
         return -1;
@@ -394,7 +390,7 @@ typedef struct bench_hashtable_options
 
 /**
  *  @brief          コマンド ライン オプションを登録します。
- *  @param[in,out]  options  格納先。NULL を渡してはなりません。
+ *  @param[in,out]  options  解析結果の格納先として各メンバーのアドレスを登録するオプションです。
  *  @return         成功時は 0、失敗時は -1 を返します。
  */
 static int register_options(bench_hashtable_options *options)
@@ -505,8 +501,6 @@ int main(int argc, char **argv)
     {
         return EXIT_SUCCESS;
     }
-    else
-    {
-        return EXIT_FAILURE;
-    }
+
+    return EXIT_FAILURE;
 }

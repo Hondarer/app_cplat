@@ -222,7 +222,7 @@ static int hashtable_free_list_region_size(const cplat_hashtable_config *config,
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int hashtable_mgmt_layout(const cplat_hashtable_config *config, size_t *off_bucket_head, size_t *off_entries,
+int hashtable_mgmt_layout(const cplat_hashtable_config *config, size_t *off_bucket_head_out, size_t *off_entries_out,
                           size_t *mgmt_size_out)
 {
     size_t offset = sizeof(struct hashtable_persist_header);
@@ -236,14 +236,14 @@ int hashtable_mgmt_layout(const cplat_hashtable_config *config, size_t *off_buck
      * 呼び出し側の大半は戻り値を捨てるため、この関数の契約として out パラメーターは
      * 常に定義済みの値を持つ必要がある。
      */
-    if (off_bucket_head != NULL)
+    if (off_bucket_head_out != NULL)
     {
-        *off_bucket_head = offset;
+        *off_bucket_head_out = offset;
     }
 
-    if (off_entries != NULL)
+    if (off_entries_out != NULL)
     {
-        *off_entries = offset;
+        *off_entries_out = offset;
     }
 
     if (mgmt_size_out != NULL)
@@ -268,9 +268,9 @@ int hashtable_mgmt_layout(const cplat_hashtable_config *config, size_t *off_buck
 
     /* 直前の offset は uint64_t 境界の倍数同士の和のため、すでに境界上にある。整列不要。 */
 
-    if (off_entries != NULL)
+    if (off_entries_out != NULL)
     {
-        *off_entries = offset;
+        *off_entries_out = offset;
     }
 
     if (mul_checked(config->capacity, entry_stride, &region_size) != 0)

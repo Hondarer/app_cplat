@@ -689,10 +689,10 @@ size_t hashtable_data_region_align(const cplat_hashtable_config *config);
 
 /**
  *  @brief          管理領域内の領域オフセットと総バイト数を求めます。
- *  @param[in]      config           設定。NULL を渡してはなりません。
- *  @param[out]     off_bucket_head  バケット先頭のオフセット。不要なら NULL を渡せます。
- *  @param[out]     off_entries      エントリ配列のオフセット。不要なら NULL を渡せます。
- *  @param[out]     mgmt_size_out    管理領域の総バイト数。不要なら NULL を渡せます。
+ *  @param[in]      config               設定。NULL を渡してはなりません。
+ *  @param[out]     off_bucket_head_out  バケット先頭のオフセット。不要なら NULL を渡せます。
+ *  @param[out]     off_entries_out      エントリ配列のオフセット。不要なら NULL を渡せます。
+ *  @param[out]     mgmt_size_out        管理領域の総バイト数。不要なら NULL を渡せます。
  *  @return         成功なら 0、あふれなら -1 です。
  *
  *  管理領域は識別子・ヘッダー・バケット配列・エントリ配列からなり、
@@ -701,7 +701,7 @@ size_t hashtable_data_region_align(const cplat_hashtable_config *config);
  *  @p key_type は、可変長のとき空きリストを置くために使います。\n
  *  構築済みテーブルではあふれません。呼び出し側は戻り値を捨てて構いません。
  */
-int hashtable_mgmt_layout(const cplat_hashtable_config *config, size_t *off_bucket_head, size_t *off_entries,
+int hashtable_mgmt_layout(const cplat_hashtable_config *config, size_t *off_bucket_head_out, size_t *off_entries_out,
                           size_t *mgmt_size_out);
 
 /**

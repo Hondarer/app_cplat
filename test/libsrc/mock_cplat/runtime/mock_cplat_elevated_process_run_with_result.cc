@@ -1,29 +1,29 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_elevated_process_run_with_result(const char *arguments, int *exit_code, int *handled,
+int delegate_real_cplat_elevated_process_run_with_result(const char *arguments, int *exit_code_out, int *handled_out,
                                                          char *result_message, size_t result_message_size)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_elevated_process_run_with_result)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_elevated_process_run_with_result"));
 
-    return real_fn(arguments, exit_code, handled, result_message, result_message_size);
+    return real_fn(arguments, exit_code_out, handled_out, result_message, result_message_size);
 }
 
-MOCK_WEAK_IMPL(int, cplat_elevated_process_run_with_result, const char *arguments, int *exit_code, int *handled,
+MOCK_WEAK_IMPL(int, cplat_elevated_process_run_with_result, const char *arguments, int *exit_code_out, int *handled_out,
                char *result_message, size_t result_message_size)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 
     if (_mock_cplat != nullptr)
     {
-        mock_ret = _mock_cplat->cplat_elevated_process_run_with_result(arguments, exit_code, handled, result_message,
-                                                                       result_message_size);
+        mock_ret = _mock_cplat->cplat_elevated_process_run_with_result(arguments, exit_code_out, handled_out,
+                                                                       result_message, result_message_size);
     }
     else
     {
-        mock_ret = delegate_real_cplat_elevated_process_run_with_result(arguments, exit_code, handled, result_message,
-                                                                        result_message_size);
+        mock_ret = delegate_real_cplat_elevated_process_run_with_result(arguments, exit_code_out, handled_out,
+                                                                        result_message, result_message_size);
     }
 
     if (getTraceLevel() > TRACE_NONE)

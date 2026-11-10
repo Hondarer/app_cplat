@@ -108,8 +108,8 @@ extern "C"
 
     /**
      *  @brief          自プロセスのメモリをまとめてロックします。
-     *  @param[in]      options  ロック オプション。NULL を渡してはなりません。
-     *  @param[out]     scope    解除情報の格納先。NULL を渡してはなりません。
+     *  @param[in]      options    ロック オプション。NULL を渡してはなりません。
+     *  @param[out]     scope_out  解除情報の格納先。NULL を渡してはなりません。
      *  @return         結果コードを返します。
      *
      *  @p options の stack_prefault_bytes が 0 より大きい場合、ロック前に呼び出しスレッドのスタックへ
@@ -120,12 +120,12 @@ extern "C"
      *  committed region を列挙して VirtualLock() を適用します。\n
      *  Windows で @ref CPLAT_MEMORY_LOCK_FUTURE または @ref CPLAT_MEMORY_LOCK_ONFAULT を指定した場合は
      *  @ref CPLAT_ERR_UNSUPPORTED を返します。\n
-     *  返された @p scope は cplat_memory_lock_scope_release() で破棄してください。
+     *  返された @p scope_out は cplat_memory_lock_scope_release() で破棄してください。
      *
      *  @par            呼び出しタイミング
      *  ロック対象のスタックを先に committed page にしたい場合は、@p options の stack_prefault_bytes を指定して
      *  本関数を呼び出します。\n
-     *  関数が成功して @p scope が返った後、ページ フォルトを避けたい処理を実行します。
+     *  関数が成功して @p scope_out が返った後、ページ フォルトを避けたい処理を実行します。
      *
     @startuml cplat_memory_lock_self のロック取得
         caption cplat_memory_lock_self のロック取得
@@ -134,7 +134,7 @@ extern "C"
         participant "内部 lock" as Lock
         participant "OS" as OS
 
-        Caller -> API : options, &scope
+        Caller -> API : options, &scope_out
         API -> API : 引数と flag を検証
         opt stack_prefault_bytes > 0
             API -> API : 呼び出しスレッドのスタックへアクセス
@@ -149,14 +149,14 @@ extern "C"
             API -> API : 登録済み範囲の ref-count を加算
         end
         API -> Lock : 解放
-        API --> Caller : CPLAT_OK, scope
+        API --> Caller : CPLAT_OK, scope_out
     @enduml
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_memory_lock_self(const cplat_memory_lock_self_options *options,
-                                                      cplat_memory_lock_scope **scope);
+                                                      cplat_memory_lock_scope **scope_out);
 
     /**
      *  @brief          自プロセス全体ロックの解除情報を破棄し、ロックを解除します。

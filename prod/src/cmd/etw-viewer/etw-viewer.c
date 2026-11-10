@@ -28,6 +28,7 @@
 #include <cplat/clock/clock.h>
 #include <cplat/console/console.h>
 #include <cplat/crt/stdio.h>
+#include <cplat/crt/stdlib.h>
 #include <cplat/crt/string.h>
 #include <cplat/runtime/shutdown.h>
 #include <cplat/sync/sync.h>
@@ -60,19 +61,15 @@ static void etw_viewer_shutdown_request_callback(const cplat_shutdown_event *eve
 
 static int parse_process_id_arg(const char *text, uint32_t *process_id_out)
 {
-    char *endptr;
-    unsigned long value;
+    uint64_t value;
 
     if (text == NULL || process_id_out == NULL || text[0] == '\0')
     {
         return -1;
     }
 
-    errno = 0;
-    value = strtoul(text, &endptr, 10);
-
     /* プロセス ID は Windows DWORD のため、コーディング規範の例外として UINT32_MAX 上限を維持する。 */
-    if (errno != 0 || endptr == text || *endptr != '\0' || value > UINT32_MAX)
+    if (cplat_parse_uint64(&value, text, 10) != CPLAT_OK || value > UINT32_MAX)
     {
         return -1;
     }

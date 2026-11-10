@@ -723,22 +723,20 @@ extern int delegate_real_cplat_argparser_handle_register_option_string(cplat_arg
 extern int delegate_real_cplat_argparser_register_option_string(const char *short_name, const char *long_name,
                                                                 const char *value_name, const char *description,
                                                                 unsigned int flags, const char **storage);
-extern int delegate_real_cplat_argparser_handle_register_option_int_array(cplat_argparser *parser,
-                                                                          const char *short_name, const char *long_name,
-                                                                          const char *value_name,
-                                                                          const char *description, unsigned int flags,
-                                                                          int *storage, size_t capacity, size_t *count);
+extern int delegate_real_cplat_argparser_handle_register_option_int_array(
+    cplat_argparser *parser, const char *short_name, const char *long_name, const char *value_name,
+    const char *description, unsigned int flags, int *storage, size_t capacity, size_t *count_out);
 extern int delegate_real_cplat_argparser_register_option_int_array(const char *short_name, const char *long_name,
                                                                    const char *value_name, const char *description,
                                                                    unsigned int flags, int *storage, size_t capacity,
-                                                                   size_t *count);
+                                                                   size_t *count_out);
 extern int delegate_real_cplat_argparser_handle_register_option_string_array(
     cplat_argparser *parser, const char *short_name, const char *long_name, const char *value_name,
-    const char *description, unsigned int flags, const char **storage, size_t capacity, size_t *count);
+    const char *description, unsigned int flags, const char **storage, size_t capacity, size_t *count_out);
 extern int delegate_real_cplat_argparser_register_option_string_array(const char *short_name, const char *long_name,
                                                                       const char *value_name, const char *description,
                                                                       unsigned int flags, const char **storage,
-                                                                      size_t capacity, size_t *count);
+                                                                      size_t capacity, size_t *count_out);
 extern int delegate_real_cplat_argparser_handle_register_positional_int(cplat_argparser *parser, const char *name,
                                                                         const char *description, unsigned int flags,
                                                                         int *storage);
@@ -752,16 +750,16 @@ extern int delegate_real_cplat_argparser_register_positional_string(const char *
 extern int delegate_real_cplat_argparser_handle_register_positional_int_array(cplat_argparser *parser, const char *name,
                                                                               const char *description,
                                                                               unsigned int flags, int *storage,
-                                                                              size_t capacity, size_t *count);
+                                                                              size_t capacity, size_t *count_out);
 extern int delegate_real_cplat_argparser_register_positional_int_array(const char *name, const char *description,
                                                                        unsigned int flags, int *storage,
-                                                                       size_t capacity, size_t *count);
+                                                                       size_t capacity, size_t *count_out);
 extern int delegate_real_cplat_argparser_handle_register_positional_string_array(
     cplat_argparser *parser, const char *name, const char *description, unsigned int flags, const char **storage,
-    size_t capacity, size_t *count);
+    size_t capacity, size_t *count_out);
 extern int delegate_real_cplat_argparser_register_positional_string_array(const char *name, const char *description,
                                                                           unsigned int flags, const char **storage,
-                                                                          size_t capacity, size_t *count);
+                                                                          size_t capacity, size_t *count_out);
 extern int delegate_real_cplat_argparser_handle_parse(cplat_argparser *parser);
 extern int delegate_real_cplat_argparser_parse(void);
 extern int delegate_real_cplat_argparser_handle_get_error(const cplat_argparser *parser);
@@ -776,8 +774,8 @@ extern int delegate_real_cplat_argparser_get_error_message(char *buffer, size_t 
 extern const char *delegate_real_cplat_argparser_handle_get_program_name(const cplat_argparser *parser);
 extern const char *delegate_real_cplat_argparser_get_program_name(void);
 extern int delegate_real_cplat_argparser_handle_get_usage(const cplat_argparser *parser, char *buffer,
-                                                          size_t buffer_size, size_t *required_size);
-extern int delegate_real_cplat_argparser_get_usage(char *buffer, size_t buffer_size, size_t *required_size);
+                                                          size_t buffer_size, size_t *required_size_out);
+extern int delegate_real_cplat_argparser_get_usage(char *buffer, size_t buffer_size, size_t *required_size_out);
 extern int delegate_real_cplat_argparser_handle_print_usage(const cplat_argparser *parser, FILE *stream);
 extern int delegate_real_cplat_argparser_print_usage(FILE *stream);
 extern int delegate_real_cplat_argparser_handle_print_error_messages(const cplat_argparser *parser, FILE *stream);
@@ -1061,7 +1059,7 @@ extern int delegate_real_cplat_sscanf(const char *buffer, const char *format, va
 extern int delegate_real_cplat_vsscanf(const char *buffer, const char *format, va_list args);
 
 // cplat/crt/sys/stat.h
-extern int delegate_real_cplat_stat(cplat_file_stat_t *buf, cplat_error *detail_out, const char *path);
+extern int delegate_real_cplat_stat(cplat_file_stat_t *stat_out, cplat_error *detail_out, const char *path);
 extern int delegate_real_cplat_mkdir(const char *path, cplat_error *detail_out);
 extern int delegate_real_cplat_makedirs(const char *path, cplat_error *detail_out);
 extern int delegate_real_cplat_rmdir(const char *path, cplat_error *detail_out);
@@ -1096,7 +1094,7 @@ extern int delegate_real_cplat_crypto_encrypt(uint8_t *dst, size_t *dst_len, con
 extern int delegate_real_cplat_crypto_decrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, size_t src_len,
                                               const uint8_t *key, const uint8_t *nonce, const uint8_t *aad,
                                               size_t aad_len);
-extern int delegate_real_cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, size_t passphrase_len);
+extern int delegate_real_cplat_passphrase_to_key(uint8_t *key_out, const uint8_t *passphrase, size_t passphrase_len);
 
 // cplat/base/error.h
 extern void delegate_real_cplat_error_clear(cplat_error *error);
@@ -1117,14 +1115,14 @@ extern const char *delegate_real_cplat_result_to_string(int result);
 extern int delegate_real_cplat_error_message(char *buf, size_t buf_size, const cplat_error *error);
 
 // cplat/crypto/random.h
-extern int delegate_real_cplat_random_bytes(void *buf, size_t size);
+extern int delegate_real_cplat_random_bytes(void *dest, size_t dest_size);
 
 // cplat/locale/ui_language.h
 extern int delegate_real_cplat_ui_language_get_tag(char *tag_out, size_t tag_size);
 
 // cplat/mmap/mmap.h
 extern int delegate_real_cplat_mmap_attach(const char *path, cplat_mmap_access access, size_t create_size,
-                                           cplat_mmap **map, cplat_error *detail_out);
+                                           cplat_mmap **map_out, cplat_error *detail_out);
 extern void *delegate_real_cplat_mmap_get_address(const cplat_mmap *map);
 extern size_t delegate_real_cplat_mmap_get_size(const cplat_mmap *map);
 extern int delegate_real_cplat_mmap_flush(cplat_mmap *map, void *address, size_t length, cplat_error *detail_out);
@@ -1233,15 +1231,17 @@ extern void delegate_real_cplat_abort_at(cplat_abort_kind kind, const char *mess
                                          const char *function);
 
 // cplat/runtime/elevated_process.h
-extern int delegate_real_cplat_elevated_process_is_elevated(int *elevated);
-extern int delegate_real_cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, int *handled);
-extern int delegate_real_cplat_elevated_process_run_with_result(const char *arguments, int *exit_code, int *handled,
-                                                                char *result_message, size_t result_message_size);
+extern int delegate_real_cplat_elevated_process_is_elevated(int *elevated_out);
+extern int delegate_real_cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code_out,
+                                                              int *handled_out);
+extern int delegate_real_cplat_elevated_process_run_with_result(const char *arguments, int *exit_code_out,
+                                                                int *handled_out, char *result_message,
+                                                                size_t result_message_size);
 extern int delegate_real_cplat_elevated_process_extract_result_target(int *argc, char **argv, int *detected_out);
 extern int delegate_real_cplat_elevated_process_report_result(const char *message);
 extern int delegate_real_cplat_elevated_process_run_piped(const char *arguments,
                                                           cplat_elevated_process_output_fn output_fn, void *context,
-                                                          int *exit_code, int *handled);
+                                                          int *exit_code_out, int *handled_out);
 extern int delegate_real_cplat_elevated_process_attach_output_pipes(int *argc, char **argv, int *attached_out);
 
 // cplat/regex/regex.h
@@ -1273,7 +1273,7 @@ extern int delegate_real_cplat_regex_split(const cplat_regex *regex, const char 
 extern int delegate_real_cplat_memory_lock_range(const void *address, size_t size);
 extern int delegate_real_cplat_memory_unlock_range(const void *address, size_t size);
 extern int delegate_real_cplat_memory_lock_self(const cplat_memory_lock_self_options *options,
-                                                cplat_memory_lock_scope **scope);
+                                                cplat_memory_lock_scope **scope_out);
 extern int delegate_real_cplat_memory_lock_scope_release(cplat_memory_lock_scope *scope);
 extern void delegate_real_cplat_secure_zero(void *buf, size_t size);
 
@@ -1288,12 +1288,13 @@ extern int delegate_real_cplat_module_get_basename(char *basename_out, size_t ba
 extern int delegate_real_cplat_process_get_executable_path(char *path_out, size_t path_size);
 extern uint32_t delegate_real_cplat_process_get_pid(void);
 extern uint32_t delegate_real_cplat_process_get_tid(void);
-extern int delegate_real_cplat_process_start(const cplat_process_options *options, cplat_process **process);
+extern int delegate_real_cplat_process_start(const cplat_process_options *options, cplat_process **process_out);
 extern int delegate_real_cplat_process_wait(cplat_process *process, int timeout_ms);
-extern int delegate_real_cplat_process_get_exit_code(cplat_process *process, int *exit_code);
+extern int delegate_real_cplat_process_get_exit_code(cplat_process *process, int *exit_code_out);
 extern int delegate_real_cplat_process_terminate(cplat_process *process);
 extern void delegate_real_cplat_process_dispose(cplat_process *process);
-extern int delegate_real_cplat_process_run_sync(const cplat_process_options *options, int timeout_ms, int *exit_code);
+extern int delegate_real_cplat_process_run_sync(const cplat_process_options *options, int timeout_ms,
+                                                int *exit_code_out);
 
 // cplat/runtime/shutdown.h
 extern int delegate_real_cplat_shutdown_register(cplat_shutdown_fn callback, void *context);
@@ -1505,8 +1506,8 @@ extern void delegate_real_cplat_tracer_call_next_hook(cplat_tracer_hook_entry *p
 #if defined(PLATFORM_WINDOWS)
 
 // cplat/crt/wchar_conv.h
-extern int delegate_real_cplat_utf8_to_wpath(wchar_t *wbuf, size_t wbuf_count, const char *utf8_path);
-extern int delegate_real_cplat_utf8_to_wstr(wchar_t *wbuf, size_t wbuf_count, const char *utf8_text);
+extern int delegate_real_cplat_utf8_to_wpath(wchar_t *dest, size_t dest_size, const char *utf8_path);
+extern int delegate_real_cplat_utf8_to_wstr(wchar_t *dest, size_t dest_size, const char *utf8_text);
 extern int delegate_real_cplat_wpath_to_utf8(char *dest, size_t dest_size, const wchar_t *wpath);
 extern int delegate_real_cplat_wstr_to_utf8(char *dest, size_t dest_size, const wchar_t *wtext);
 extern wchar_t *delegate_real_cplat_utf8_to_wstr_alloc(const char *utf8_text);
@@ -1564,40 +1565,40 @@ extern int delegate_real_cplat_eventlog_register_source(const char *source_name,
 extern int delegate_real_cplat_eventlog_unregister_source(const char *source_name);
 
 // cplat/win32/win32.h
-extern HANDLE delegate_real_CreateFileU(const char *utf8_path, DWORD desired_access, DWORD share_mode,
-                                        LPSECURITY_ATTRIBUTES security_attributes, DWORD creation_disposition,
-                                        DWORD flags_and_attributes, HANDLE template_file);
-extern HANDLE delegate_real_CreateNamedPipeU(const char *utf8_name, DWORD open_mode, DWORD pipe_mode,
-                                             DWORD max_instances, DWORD out_buffer_size, DWORD in_buffer_size,
-                                             DWORD default_timeout, LPSECURITY_ATTRIBUTES security_attributes);
-extern DWORD delegate_real_GetModuleFileNameU(HMODULE module, char *utf8_buf, DWORD size);
-extern BOOL delegate_real_WriteConsoleU(HANDLE console, const char *utf8_text, DWORD utf8_length, DWORD *written_length,
-                                        void *reserved);
-extern BOOL delegate_real_GetVolumePathNameU(const char *utf8_path, char *utf8_volume_root, DWORD size);
-extern BOOL delegate_real_GetVolumeInformationU(const char *utf8_root_path, char *utf8_volume_name,
-                                                DWORD volume_name_size, DWORD *serial_number,
-                                                DWORD *max_component_length, DWORD *file_system_flags,
-                                                char *utf8_file_system_name, DWORD file_system_name_size);
-extern HMODULE delegate_real_LoadLibraryU(const char *utf8_file_name);
-extern BOOL delegate_real_CreateProcessU(const char *utf8_application_name, const char *utf8_command_line,
-                                         LPSECURITY_ATTRIBUTES process_attributes,
-                                         LPSECURITY_ATTRIBUTES thread_attributes, BOOL inherit_handles,
-                                         DWORD creation_flags, LPVOID environment, const char *utf8_current_directory,
-                                         LPSTARTUPINFOW startup_info, LPPROCESS_INFORMATION process_information);
-extern SC_HANDLE delegate_real_OpenSCManagerU(const char *utf8_machine_name, const char *utf8_database_name,
-                                              DWORD desired_access);
-extern SC_HANDLE delegate_real_CreateServiceU(SC_HANDLE scm, const char *utf8_service_name,
-                                              const char *utf8_display_name, DWORD desired_access, DWORD service_type,
-                                              DWORD start_type, DWORD error_control, const char *utf8_binary_path_name,
-                                              const char *utf8_load_order_group, LPDWORD tag_id,
-                                              const char *utf8_dependencies, const char *utf8_service_start_name,
-                                              const char *utf8_password);
-extern SC_HANDLE delegate_real_OpenServiceU(SC_HANDLE scm, const char *utf8_service_name, DWORD desired_access);
-extern BOOL delegate_real_ChangeServiceConfig2U(SC_HANDLE service, DWORD info_level, const char *utf8_text);
-extern SERVICE_STATUS_HANDLE delegate_real_RegisterServiceCtrlHandlerExU(const char *utf8_service_name,
-                                                                         LPHANDLER_FUNCTION_EX handler_proc,
-                                                                         LPVOID context);
-extern BOOL delegate_real_StartServiceCtrlDispatcherU(const cplat_service_entry_u *service_table);
+extern HANDLE delegate_real_CreateFileU(const char *lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
+                                        LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition,
+                                        DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
+extern HANDLE delegate_real_CreateNamedPipeU(const char *lpName, DWORD dwOpenMode, DWORD dwPipeMode,
+                                             DWORD nMaxInstances, DWORD nOutBufferSize, DWORD nInBufferSize,
+                                             DWORD nDefaultTimeOut, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
+extern DWORD delegate_real_GetModuleFileNameU(HMODULE hModule, char *lpFilename, DWORD nSize);
+extern BOOL delegate_real_WriteConsoleU(HANDLE hConsoleOutput, const char *lpBuffer, DWORD nNumberOfCharsToWrite,
+                                        LPDWORD lpNumberOfCharsWritten, LPVOID lpReserved);
+extern BOOL delegate_real_GetVolumePathNameU(const char *lpszFileName, char *lpszVolumePathName, DWORD cchBufferLength);
+extern BOOL delegate_real_GetVolumeInformationU(const char *lpRootPathName, char *lpVolumeNameBuffer,
+                                                DWORD nVolumeNameSize, LPDWORD lpVolumeSerialNumber,
+                                                LPDWORD lpMaximumComponentLength, LPDWORD lpFileSystemFlags,
+                                                char *lpFileSystemNameBuffer, DWORD nFileSystemNameSize);
+extern HMODULE delegate_real_LoadLibraryU(const char *lpLibFileName);
+extern BOOL delegate_real_CreateProcessU(const char *lpApplicationName, const char *lpCommandLine,
+                                         LPSECURITY_ATTRIBUTES lpProcessAttributes,
+                                         LPSECURITY_ATTRIBUTES lpThreadAttributes, BOOL bInheritHandles,
+                                         DWORD dwCreationFlags, LPVOID lpEnvironment, const char *lpCurrentDirectory,
+                                         LPSTARTUPINFOW lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation);
+extern SC_HANDLE delegate_real_OpenSCManagerU(const char *lpMachineName, const char *lpDatabaseName,
+                                              DWORD dwDesiredAccess);
+extern SC_HANDLE delegate_real_CreateServiceU(SC_HANDLE hSCManager, const char *lpServiceName,
+                                              const char *lpDisplayName, DWORD dwDesiredAccess, DWORD dwServiceType,
+                                              DWORD dwStartType, DWORD dwErrorControl, const char *lpBinaryPathName,
+                                              const char *lpLoadOrderGroup, LPDWORD lpdwTagId,
+                                              const char *lpDependencies, const char *lpServiceStartName,
+                                              const char *lpPassword);
+extern SC_HANDLE delegate_real_OpenServiceU(SC_HANDLE hSCManager, const char *lpServiceName, DWORD dwDesiredAccess);
+extern BOOL delegate_real_ChangeServiceConfig2U(SC_HANDLE hService, DWORD dwInfoLevel, LPVOID lpInfo);
+extern SERVICE_STATUS_HANDLE delegate_real_RegisterServiceCtrlHandlerExU(const char *lpServiceName,
+                                                                         LPHANDLER_FUNCTION_EX lpHandlerProc,
+                                                                         LPVOID lpContext);
+extern BOOL delegate_real_StartServiceCtrlDispatcherU(const SERVICE_TABLE_ENTRYU *lpServiceStartTable);
 #endif /* PLATFORM_WINDOWS */
 
 #if defined(PLATFORM_LINUX)
@@ -2373,9 +2374,9 @@ class Mock_cplat
     MOCK_METHOD(HANDLE, CreateNamedPipeU,
                 (const char *, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, LPSECURITY_ATTRIBUTES));
     MOCK_METHOD(DWORD, GetModuleFileNameU, (HMODULE, char *, DWORD));
-    MOCK_METHOD(BOOL, WriteConsoleU, (HANDLE, const char *, DWORD, DWORD *, void *));
+    MOCK_METHOD(BOOL, WriteConsoleU, (HANDLE, const char *, DWORD, LPDWORD, LPVOID));
     MOCK_METHOD(BOOL, GetVolumePathNameU, (const char *, char *, DWORD));
-    MOCK_METHOD(BOOL, GetVolumeInformationU, (const char *, char *, DWORD, DWORD *, DWORD *, DWORD *, char *, DWORD));
+    MOCK_METHOD(BOOL, GetVolumeInformationU, (const char *, char *, DWORD, LPDWORD, LPDWORD, LPDWORD, char *, DWORD));
     MOCK_METHOD(HMODULE, LoadLibraryU, (const char *));
     MOCK_METHOD(BOOL, CreateProcessU,
                 (const char *, const char *, LPSECURITY_ATTRIBUTES, LPSECURITY_ATTRIBUTES, BOOL, DWORD, LPVOID,
@@ -2385,9 +2386,9 @@ class Mock_cplat
                 (SC_HANDLE, const char *, const char *, DWORD, DWORD, DWORD, DWORD, const char *, const char *, LPDWORD,
                  const char *, const char *, const char *));
     MOCK_METHOD(SC_HANDLE, OpenServiceU, (SC_HANDLE, const char *, DWORD));
-    MOCK_METHOD(BOOL, ChangeServiceConfig2U, (SC_HANDLE, DWORD, const char *));
+    MOCK_METHOD(BOOL, ChangeServiceConfig2U, (SC_HANDLE, DWORD, LPVOID));
     MOCK_METHOD(SERVICE_STATUS_HANDLE, RegisterServiceCtrlHandlerExU, (const char *, LPHANDLER_FUNCTION_EX, LPVOID));
-    MOCK_METHOD(BOOL, StartServiceCtrlDispatcherU, (const cplat_service_entry_u *));
+    MOCK_METHOD(BOOL, StartServiceCtrlDispatcherU, (const SERVICE_TABLE_ENTRYU *));
 #endif /* PLATFORM_WINDOWS */
 
 #if defined(PLATFORM_LINUX)

@@ -117,7 +117,7 @@ extern "C"
      *  入力バイト列の SHA-256 ダイジェストをそのまま鍵として使用します。\n
      *  送受信の双方で同一のパスフレーズを指定すれば、同一の鍵が導出されます。
      *
-     *  @param[out]     key             出力鍵バッファー (CPLAT_CRYPTO_KEY_SIZE = 32 [byte])。
+     *  @param[out]     key_out         出力鍵バッファー (CPLAT_CRYPTO_KEY_SIZE = 32 [byte])。
      *  @param[in]      passphrase      パスフレーズへのポインター (任意のバイト列)。
      *  @param[in]      passphrase_len  パスフレーズの長さ [byte]。0 の場合も有効。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_RANGE 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
@@ -128,7 +128,8 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_passphrase_to_key(uint8_t *key, const uint8_t *passphrase, size_t passphrase_len);
+    CPLAT_EXPORT int CPLAT_API cplat_passphrase_to_key(uint8_t *key_out, const uint8_t *passphrase,
+                                                       size_t passphrase_len);
 
 #ifdef __cplusplus
 }

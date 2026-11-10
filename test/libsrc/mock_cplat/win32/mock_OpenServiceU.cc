@@ -3,31 +3,31 @@
 
 #if defined(PLATFORM_WINDOWS)
 
-SC_HANDLE delegate_real_OpenServiceU(SC_HANDLE scm, const char *utf8_service_name, DWORD desired_access)
+SC_HANDLE delegate_real_OpenServiceU(SC_HANDLE hSCManager, const char *lpServiceName, DWORD dwDesiredAccess)
 {
     static auto real_fn =
         reinterpret_cast<decltype(&OpenServiceU)>(resolveSharedSymbolOrExit(kLibCplatName, "OpenServiceU"));
 
-    return real_fn(scm, utf8_service_name, desired_access);
+    return real_fn(hSCManager, lpServiceName, dwDesiredAccess);
 }
 
-MOCK_WEAK_IMPL(SC_HANDLE, OpenServiceU, SC_HANDLE scm, const char *utf8_service_name, DWORD desired_access)
+MOCK_WEAK_IMPL(SC_HANDLE, OpenServiceU, SC_HANDLE hSCManager, const char *lpServiceName, DWORD dwDesiredAccess)
 {
     SC_HANDLE mock_ret;
 
     if (_mock_cplat != nullptr)
     {
-        mock_ret = _mock_cplat->OpenServiceU(scm, utf8_service_name, desired_access);
+        mock_ret = _mock_cplat->OpenServiceU(hSCManager, lpServiceName, dwDesiredAccess);
     }
     else
     {
-        mock_ret = delegate_real_OpenServiceU(scm, utf8_service_name, desired_access);
+        mock_ret = delegate_real_OpenServiceU(hSCManager, lpServiceName, dwDesiredAccess);
     }
 
     if (getTraceLevel() > TRACE_NONE)
     {
-        printf("  > %s 0x%p, %s, %lu", __func__, (void *)scm,
-               (utf8_service_name != nullptr) ? utf8_service_name : "(null)", desired_access);
+        printf("  > %s 0x%p, %s, %lu", __func__, (void *)hSCManager,
+               (lpServiceName != nullptr) ? lpServiceName : "(null)", dwDesiredAccess);
         if (getTraceLevel() >= TRACE_DETAIL)
         {
             printf(" -> 0x%p\n", (void *)mock_ret);

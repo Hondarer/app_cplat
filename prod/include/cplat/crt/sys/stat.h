@@ -59,11 +59,11 @@ extern "C"
 
     /**
      *  @brief          UTF-8 パスのファイル情報を取得します (`stat` / `_wstat64` ラッパー)。
-     *  @param[out]     buf   ファイル情報の格納先。NULL を渡してはなりません。
+     *  @param[out]     stat_out    ファイル情報の格納先。NULL を渡してはなりません。
      *  @param[out]     detail_out  エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
-     *  @param[in]      path  対象ファイルのパス (UTF-8)。NULL を渡してはなりません。
+     *  @param[in]      path        対象ファイルのパス (UTF-8)。NULL を渡してはなりません。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  Linux では `stat`、Windows では `_wstat64` を使用します。\n
@@ -76,7 +76,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_stat(cplat_file_stat_t *buf, cplat_error *detail_out, const char *path);
+    CPLAT_EXPORT int CPLAT_API cplat_stat(cplat_file_stat_t *stat_out, cplat_error *detail_out, const char *path);
 
     /**
      *  @brief          UTF-8 パスのディレクトリを作成します (`mkdir` / `_wmkdir` ラッパー)。

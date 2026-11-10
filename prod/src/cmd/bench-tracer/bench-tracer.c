@@ -12,6 +12,8 @@
  */
 
 #include <cplat/base/result.h>
+#include <cplat/crt/stdlib.h>
+#include <cplat/crt/stdio.h>
 #include <cplat/console/console.h>
 #include <cplat/clock/clock.h>
 #include <cplat/runtime/process.h>
@@ -155,18 +157,22 @@ static int measure_files(char *executable, char *path, int processes, int messag
     int index;
     int failed = 0;
 
-    children = (cplat_process **)calloc((size_t)processes, sizeof(*children));
+    children = (cplat_process **)cplat_calloc((size_t)processes, sizeof(*children));
     if (children == NULL)
     {
         return 1;
     }
 
-    (void)snprintf(messages_text, sizeof(messages_text), "%d", messages);
-    (void)snprintf(buffered_text, sizeof(buffered_text), "%d", buffered);
+    if (cplat_snprintf(messages_text, sizeof(messages_text), "%d", messages) != CPLAT_OK ||
+        cplat_snprintf(buffered_text, sizeof(buffered_text), "%d", buffered) != CPLAT_OK)
+    {
+        cplat_free(children);
+        return 1;
+    }
 
     if (monotonic_ns(&begin) != CPLAT_OK)
     {
-        free(children);
+        cplat_free(children);
         return 1;
     }
 
@@ -206,7 +212,7 @@ static int measure_files(char *executable, char *path, int processes, int messag
 
     if (monotonic_ns(&elapsed) != CPLAT_OK)
     {
-        free(children);
+        cplat_free(children);
         return 1;
     }
 
@@ -225,7 +231,7 @@ static int measure_files(char *executable, char *path, int processes, int messag
     printf("file_%s,processes=%d,messages=%d,total_ns=%llu,ns_per_message=%llu\n", mode, processes,
            processes * messages, (unsigned long long)elapsed,
            (unsigned long long)(elapsed / ((uint64_t)processes * (uint64_t)messages)));
-    free(children);
+    cplat_free(children);
 
     return failed;
 }
@@ -247,7 +253,14 @@ int main(int argc, char **argv)
     /* worker モードで起動された場合は worker 処理を実行して終了する。 */
     if (argc == 5 && strcmp(argv[1], "--worker") == 0)
     {
-        return run_worker(argv[2], atoi(argv[3]), atoi(argv[4]));
+        int buffered;
+
+        if (cplat_parse_int(&messages, argv[3], 10) != CPLAT_OK || cplat_parse_int(&buffered, argv[4], 10) != CPLAT_OK)
+        {
+            return 1;
+        }
+
+        return run_worker(argv[2], messages, buffered);
     }
 
     if (argc > 1)
@@ -257,12 +270,18 @@ int main(int argc, char **argv)
 
     if (argc > 2)
     {
-        processes = atoi(argv[2]);
+        if (cplat_parse_int(&processes, argv[2], 10) != CPLAT_OK)
+        {
+            return 1;
+        }
     }
 
     if (argc > 3)
     {
-        messages = atoi(argv[3]);
+        if (cplat_parse_int(&messages, argv[3], 10) != CPLAT_OK)
+        {
+            return 1;
+        }
     }
 
     if (processes <= 0 || messages <= 0)

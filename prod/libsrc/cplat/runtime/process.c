@@ -988,14 +988,14 @@ static HANDLE open_windows_null_device(const DWORD access)
                        FILE_ATTRIBUTE_NORMAL, NULL);
 }
 
-static int duplicate_inheritable_handle(HANDLE source, HANDLE *duplicated)
+static int duplicate_inheritable_handle(const HANDLE source, HANDLE *duplicated_out)
 {
     HANDLE current;
 
     current = GetCurrentProcess();
 
     /* 子プロセスへ継承可能なハンドルとして複製する。 */
-    if (!DuplicateHandle(current, source, current, duplicated, 0, TRUE, DUPLICATE_SAME_ACCESS))
+    if (!DuplicateHandle(current, source, current, duplicated_out, 0, TRUE, DUPLICATE_SAME_ACCESS))
     {
         return -1;
     }
@@ -1004,11 +1004,11 @@ static int duplicate_inheritable_handle(HANDLE source, HANDLE *duplicated)
 }
 
 static int prepare_stdio_handle(const cplat_process_stdio *spec, const DWORD std_id, const DWORD null_access,
-                                HANDLE *prepared)
+                                HANDLE *prepared_out)
 {
     HANDLE source;
 
-    *prepared = NULL;
+    *prepared_out = NULL;
 
     if (spec->mode == CPLAT_PROCESS_STDIO_INHERIT)
     {
@@ -1021,11 +1021,11 @@ static int prepare_stdio_handle(const cplat_process_stdio *spec, const DWORD std
                 return -1;
             }
 
-            *prepared = source;
+            *prepared_out = source;
             return 0;
         }
 
-        return duplicate_inheritable_handle(source, prepared);
+        return duplicate_inheritable_handle(source, prepared_out);
     }
 
     if (spec->mode == CPLAT_PROCESS_STDIO_NULL_DEVICE)
@@ -1036,7 +1036,7 @@ static int prepare_stdio_handle(const cplat_process_stdio *spec, const DWORD std
             return -1;
         }
 
-        *prepared = source;
+        *prepared_out = source;
         return 0;
     }
 
@@ -1048,7 +1048,7 @@ static int prepare_stdio_handle(const cplat_process_stdio *spec, const DWORD std
             return -1;
         }
 
-        return duplicate_inheritable_handle(source, prepared);
+        return duplicate_inheritable_handle(source, prepared_out);
     }
 
     return -1;
@@ -1214,11 +1214,11 @@ uint32_t cplat_process_get_tid(void)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_start(const cplat_process_options *options, cplat_process **process)
+int cplat_process_start(const cplat_process_options *options, cplat_process **process_out)
 {
     cplat_process *new_process;
 
-    if (options == NULL || process == NULL)
+    if (options == NULL || process_out == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
@@ -1228,7 +1228,7 @@ int cplat_process_start(const cplat_process_options *options, cplat_process **pr
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    *process = NULL;
+    *process_out = NULL;
 
 #if defined(PLATFORM_LINUX)
     {
@@ -1266,7 +1266,7 @@ int cplat_process_start(const cplat_process_options *options, cplat_process **pr
 
         free_envp(envp);
         new_process->pid = pid;
-        *process = new_process;
+        *process_out = new_process;
         return CPLAT_OK;
     }
 #elif defined(PLATFORM_WINDOWS)
@@ -1374,7 +1374,7 @@ int cplat_process_start(const cplat_process_options *options, cplat_process **pr
         }
 
         new_process->process = process_info.hProcess;
-        *process = new_process;
+        *process_out = new_process;
         return CPLAT_OK;
     }
 #else
@@ -1510,9 +1510,9 @@ int cplat_process_wait(cplat_process *process, const int timeout_ms)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_get_exit_code(cplat_process *process, int *exit_code)
+int cplat_process_get_exit_code(cplat_process *process, int *exit_code_out)
 {
-    if (process == NULL || exit_code == NULL)
+    if (process == NULL || exit_code_out == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
@@ -1522,7 +1522,7 @@ int cplat_process_get_exit_code(cplat_process *process, int *exit_code)
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    *exit_code = process->exit_code;
+    *exit_code_out = process->exit_code;
 
     return CPLAT_OK;
 }
@@ -1603,17 +1603,17 @@ cplat_process *cplat_internal_process_adopt_native(const intptr_t native_handle)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_run_sync(const cplat_process_options *options, const int timeout_ms, int *exit_code)
+int cplat_process_run_sync(const cplat_process_options *options, const int timeout_ms, int *exit_code_out)
 {
     cplat_process *process;
     int result;
 
-    if (exit_code == NULL)
+    if (exit_code_out == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    *exit_code = EXIT_FAILURE;
+    *exit_code_out = EXIT_FAILURE;
 
     process = NULL;
     result = cplat_process_start(options, &process);
@@ -1625,7 +1625,7 @@ int cplat_process_run_sync(const cplat_process_options *options, const int timeo
     result = cplat_process_wait(process, timeout_ms);
     if (result == CPLAT_OK)
     {
-        result = cplat_process_get_exit_code(process, exit_code);
+        result = cplat_process_get_exit_code(process, exit_code_out);
     }
 
     cplat_process_dispose(process);

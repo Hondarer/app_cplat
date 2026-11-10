@@ -1,25 +1,25 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code, int *handled)
+int delegate_real_cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code_out, int *handled_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_elevated_process_run_if_needed)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_elevated_process_run_if_needed"));
 
-    return real_fn(arguments, exit_code, handled);
+    return real_fn(arguments, exit_code_out, handled_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_elevated_process_run_if_needed, const char *arguments, int *exit_code, int *handled)
+MOCK_WEAK_IMPL(int, cplat_elevated_process_run_if_needed, const char *arguments, int *exit_code_out, int *handled_out)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 
     if (_mock_cplat != nullptr)
     {
-        mock_ret = _mock_cplat->cplat_elevated_process_run_if_needed(arguments, exit_code, handled);
+        mock_ret = _mock_cplat->cplat_elevated_process_run_if_needed(arguments, exit_code_out, handled_out);
     }
     else
     {
-        mock_ret = delegate_real_cplat_elevated_process_run_if_needed(arguments, exit_code, handled);
+        mock_ret = delegate_real_cplat_elevated_process_run_if_needed(arguments, exit_code_out, handled_out);
     }
 
     if (getTraceLevel() > TRACE_NONE)

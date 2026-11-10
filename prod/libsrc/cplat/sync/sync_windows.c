@@ -1025,12 +1025,12 @@ void cplat_interprocess_rwlock_dispose(cplat_interprocess_rwlock *lock)
 
 void cplat_call_once(cplat_once_flag *flag, void (*func)(void))
 {
+    int32_t expected = 0;
+
     if (flag == NULL || func == NULL)
     {
         return;
     }
-
-    int32_t expected = 0;
 
     /* 未実行状態 (0) から実行中 (1) への遷移に成功したスレッドのみが初期化関数を実行する。 */
     if (cplat_atomic_compare_exchange_i32(&flag->state, &expected, 1, CPLAT_MEMORY_ORDER_ACQ_REL))

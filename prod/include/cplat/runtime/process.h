@@ -125,8 +125,8 @@ extern "C"
 
     /**
      *  @brief          子プロセスを起動します。
-     *  @param[in]      options  起動オプション。NULL を渡してはなりません。
-     *  @param[out]     process  起動したプロセス ハンドルの格納先。NULL を渡してはなりません。
+     *  @param[in]      options      起動オプション。NULL を渡してはなりません。
+     *  @param[out]     process_out  起動したプロセス ハンドルの格納先。NULL を渡してはなりません。
      *  @return         結果コードを返します。
      *
      *  @par            スレッド セーフ
@@ -135,7 +135,7 @@ extern "C"
      *  他スレッドが環境変数を同時に変更しない場合は、同時に実行できます。\n
      *  他スレッドが同時に環境変数を変更する場合は、呼び出し側で同期してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_process_start(const cplat_process_options *options, cplat_process **process);
+    CPLAT_EXPORT int CPLAT_API cplat_process_start(const cplat_process_options *options, cplat_process **process_out);
 
     /**
      *  @brief          子プロセスの終了を待機します。
@@ -153,8 +153,8 @@ extern "C"
 
     /**
      *  @brief          子プロセスの終了コードを取得します。
-     *  @param[in]      process    対象のプロセス ハンドル。NULL を渡してはなりません。
-     *  @param[out]     exit_code  終了コードの格納先。NULL を渡してはなりません。
+     *  @param[in]      process        対象のプロセス ハンドル。NULL を渡してはなりません。
+     *  @param[out]     exit_code_out  終了コードの格納先。NULL を渡してはなりません。
      *  @return         結果コードを返します。
      *
      *  @par            スレッド セーフ
@@ -162,7 +162,7 @@ extern "C"
      *  異なる @p process に対する操作は同時に実行できます。\n
      *  同一 @p process に対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_process_get_exit_code(cplat_process *process, int *exit_code);
+    CPLAT_EXPORT int CPLAT_API cplat_process_get_exit_code(cplat_process *process, int *exit_code_out);
 
     /**
      *  @brief          子プロセスを強制終了します。
@@ -192,9 +192,9 @@ extern "C"
 
     /**
      *  @brief          子プロセスを起動し、終了まで同期的に待機します。
-     *  @param[in]      options     起動オプション。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms  タイムアウト [ms]。
-     *  @param[out]     exit_code   終了コードの格納先。NULL を渡してはなりません。
+     *  @param[in]      options        起動オプション。NULL を渡してはなりません。
+     *  @param[in]      timeout_ms     タイムアウト [ms]。
+     *  @param[out]     exit_code_out  終了コードの格納先。NULL を渡してはなりません。
      *  @return         結果コードを返します。
      *
      *  @par            スレッド セーフ
@@ -204,7 +204,7 @@ extern "C"
      *  他スレッドが同時に環境変数を変更する場合は、呼び出し側で同期してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_process_run_sync(const cplat_process_options *options, int timeout_ms,
-                                                      int *exit_code);
+                                                      int *exit_code_out);
 
 #ifdef __cplusplus
 }

@@ -38,7 +38,7 @@ struct cplat_mmap
 static int open_backing_file(const char *path, cplat_mmap_access access, size_t create_size, cplat_file *file,
                              size_t *size_out, cplat_error *detail_out)
 {
-    int open_result;
+    int ret;
 
     /*
      * cplat_file_open() は開く前に既存のハンドルを閉じる。
@@ -48,27 +48,27 @@ static int open_backing_file(const char *path, cplat_mmap_access access, size_t 
 
     if (access == CPLAT_MMAP_ACCESS_READ_ONLY)
     {
-        open_result = cplat_file_open(file, path, CPLAT_FILE_OPEN_READ, detail_out);
-        if (open_result != CPLAT_OK)
+        ret = cplat_file_open(file, path, CPLAT_FILE_OPEN_READ, detail_out);
+        if (ret != CPLAT_OK)
         {
-            return open_result;
+            return ret;
         }
 
-        open_result = cplat_file_get_size(file, size_out, detail_out);
-        if (open_result != CPLAT_OK)
+        ret = cplat_file_get_size(file, size_out, detail_out);
+        if (ret != CPLAT_OK)
         {
             (void)cplat_file_close(file, NULL); /* サイズ取得の失敗を返すため、クローズの結果は使わない */
-            return open_result;
+            return ret;
         }
 
         return cplat_internal_error_report_success(detail_out);
     }
 
     /* 新規作成のみ許可するオープンをまず試みる。成功すれば新規作成と判定できる。 */
-    open_result = cplat_file_open(
+    ret = cplat_file_open(
         file, path, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE | CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_CREATE_NEW,
         detail_out);
-    if (open_result == 0)
+    if (ret == CPLAT_OK)
     {
         if (create_size == 0)
         {
@@ -78,13 +78,13 @@ static int open_backing_file(const char *path, cplat_mmap_access access, size_t 
             return cplat_internal_error_report_errno(detail_out, EINVAL);
         }
 
-        open_result = cplat_file_set_size(file, create_size, detail_out);
-        if (open_result != CPLAT_OK)
+        ret = cplat_file_set_size(file, create_size, detail_out);
+        if (ret != CPLAT_OK)
         {
             /* 閉じる処理と削除の戻り値は、サイズ設定の失敗を返すため使わない。 */
             (void)cplat_file_close(file, NULL);
             (void)cplat_remove(path, NULL);
-            return open_result;
+            return ret;
         }
 
         *size_out = create_size;
@@ -92,17 +92,17 @@ static int open_backing_file(const char *path, cplat_mmap_access access, size_t 
     }
 
     /* 新規作成に失敗した場合は既存ファイルとみなし、CREATE_NEW を外して再オープンする。 */
-    open_result = cplat_file_open(file, path, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, detail_out);
-    if (open_result != CPLAT_OK)
+    ret = cplat_file_open(file, path, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, detail_out);
+    if (ret != CPLAT_OK)
     {
-        return open_result;
+        return ret;
     }
 
-    open_result = cplat_file_get_size(file, size_out, detail_out);
-    if (open_result != CPLAT_OK)
+    ret = cplat_file_get_size(file, size_out, detail_out);
+    if (ret != CPLAT_OK)
     {
         (void)cplat_file_close(file, NULL); /* サイズ取得の失敗を返すため、クローズの結果は使わない */
-        return open_result;
+        return ret;
     }
 
     return cplat_internal_error_report_success(detail_out);
@@ -110,7 +110,7 @@ static int open_backing_file(const char *path, cplat_mmap_access access, size_t 
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_mmap_attach(const char *path, cplat_mmap_access access, size_t create_size, cplat_mmap **map,
+int cplat_mmap_attach(const char *path, cplat_mmap_access access, size_t create_size, cplat_mmap **map_out,
                       cplat_error *detail_out)
 {
     cplat_mmap *new_map;
@@ -121,7 +121,7 @@ int cplat_mmap_attach(const char *path, cplat_mmap_access access, size_t create_
     LARGE_INTEGER size_li;
     void *address;
 
-    if (path == NULL || path[0] == '\0' || map == NULL ||
+    if (path == NULL || path[0] == '\0' || map_out == NULL ||
         (access != CPLAT_MMAP_ACCESS_READ_ONLY && access != CPLAT_MMAP_ACCESS_READ_WRITE))
     {
         return cplat_internal_error_report_errno(detail_out, EINVAL);
@@ -204,7 +204,7 @@ int cplat_mmap_attach(const char *path, cplat_mmap_access access, size_t create_
 
     new_map->address = address;
     new_map->size = size;
-    *map = new_map;
+    *map_out = new_map;
 
     return cplat_internal_error_report_success(detail_out);
 }

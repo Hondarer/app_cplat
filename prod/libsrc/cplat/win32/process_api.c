@@ -24,33 +24,33 @@
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-BOOL CreateProcessU(const char *utf8_application_name, const char *utf8_command_line,
-                    LPSECURITY_ATTRIBUTES process_attributes, LPSECURITY_ATTRIBUTES thread_attributes,
-                    BOOL inherit_handles, DWORD creation_flags, LPVOID environment, const char *utf8_current_directory,
-                    LPSTARTUPINFOW startup_info, LPPROCESS_INFORMATION process_information)
+BOOL CreateProcessU(const char *lpApplicationName, const char *lpCommandLine, LPSECURITY_ATTRIBUTES lpProcessAttributes,
+                    LPSECURITY_ATTRIBUTES lpThreadAttributes, BOOL bInheritHandles, DWORD dwCreationFlags,
+                    LPVOID lpEnvironment, const char *lpCurrentDirectory, LPSTARTUPINFOW lpStartupInfo,
+                    LPPROCESS_INFORMATION lpProcessInformation)
 {
     BOOL result;
     wchar_t *wapp = NULL;
     wchar_t *wcmdline = NULL; /* CreateProcessW() が書き換え可能なバッファーを要求するため確保する */
     wchar_t *wcurdir = NULL;
 
-    if (utf8_application_name != NULL)
+    if (lpApplicationName != NULL)
     {
-        wapp = cplat_utf8_to_wstr_alloc(utf8_application_name);
+        wapp = cplat_utf8_to_wstr_alloc(lpApplicationName);
     }
 
-    if (utf8_command_line != NULL)
+    if (lpCommandLine != NULL)
     {
-        wcmdline = cplat_utf8_to_wstr_alloc(utf8_command_line);
+        wcmdline = cplat_utf8_to_wstr_alloc(lpCommandLine);
     }
 
-    if (utf8_current_directory != NULL)
+    if (lpCurrentDirectory != NULL)
     {
-        wcurdir = cplat_utf8_to_wstr_alloc(utf8_current_directory);
+        wcurdir = cplat_utf8_to_wstr_alloc(lpCurrentDirectory);
     }
 
-    if ((utf8_application_name != NULL && wapp == NULL) || (utf8_command_line != NULL && wcmdline == NULL) ||
-        (utf8_current_directory != NULL && wcurdir == NULL))
+    if ((lpApplicationName != NULL && wapp == NULL) || (lpCommandLine != NULL && wcmdline == NULL) ||
+        (lpCurrentDirectory != NULL && wcurdir == NULL))
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         cplat_free(wapp);
@@ -59,8 +59,8 @@ BOOL CreateProcessU(const char *utf8_application_name, const char *utf8_command_
         return FALSE;
     }
 
-    result = CreateProcessW(wapp, wcmdline, process_attributes, thread_attributes, inherit_handles, creation_flags,
-                            environment, wcurdir, startup_info, process_information);
+    result = CreateProcessW(wapp, wcmdline, lpProcessAttributes, lpThreadAttributes, bInheritHandles, dwCreationFlags,
+                            lpEnvironment, wcurdir, lpStartupInfo, lpProcessInformation);
     cplat_free(wapp);
     cplat_free(wcmdline);
     cplat_free(wcurdir);

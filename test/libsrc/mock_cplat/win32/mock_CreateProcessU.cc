@@ -3,47 +3,47 @@
 
 #if defined(PLATFORM_WINDOWS)
 
-BOOL delegate_real_CreateProcessU(const char *utf8_application_name, const char *utf8_command_line,
-                                  LPSECURITY_ATTRIBUTES process_attributes, LPSECURITY_ATTRIBUTES thread_attributes,
-                                  BOOL inherit_handles, DWORD creation_flags, LPVOID environment,
-                                  const char *utf8_current_directory, LPSTARTUPINFOW startup_info,
-                                  LPPROCESS_INFORMATION process_information)
+BOOL delegate_real_CreateProcessU(const char *lpApplicationName, const char *lpCommandLine,
+                                  LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes,
+                                  BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment,
+                                  const char *lpCurrentDirectory, LPSTARTUPINFOW lpStartupInfo,
+                                  LPPROCESS_INFORMATION lpProcessInformation)
 {
     static auto real_fn =
         reinterpret_cast<decltype(&CreateProcessU)>(resolveSharedSymbolOrExit(kLibCplatName, "CreateProcessU"));
 
-    return real_fn(utf8_application_name, utf8_command_line, process_attributes, thread_attributes, inherit_handles,
-                   creation_flags, environment, utf8_current_directory, startup_info, process_information);
+    return real_fn(lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes, bInheritHandles,
+                   dwCreationFlags, lpEnvironment, lpCurrentDirectory, lpStartupInfo, lpProcessInformation);
 }
 
-MOCK_WEAK_IMPL(BOOL, CreateProcessU, const char *utf8_application_name, const char *utf8_command_line,
-               LPSECURITY_ATTRIBUTES process_attributes, LPSECURITY_ATTRIBUTES thread_attributes, BOOL inherit_handles,
-               DWORD creation_flags, LPVOID environment, const char *utf8_current_directory,
-               LPSTARTUPINFOW startup_info, LPPROCESS_INFORMATION process_information)
+MOCK_WEAK_IMPL(BOOL, CreateProcessU, const char *lpApplicationName, const char *lpCommandLine,
+               LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes,
+               BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, const char *lpCurrentDirectory,
+               LPSTARTUPINFOW lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation)
 {
     BOOL mock_ret;
 
     if (_mock_cplat != nullptr)
     {
-        mock_ret = _mock_cplat->CreateProcessU(utf8_application_name, utf8_command_line, process_attributes,
-                                               thread_attributes, inherit_handles, creation_flags, environment,
-                                               utf8_current_directory, startup_info, process_information);
+        mock_ret = _mock_cplat->CreateProcessU(lpApplicationName, lpCommandLine, lpProcessAttributes,
+                                               lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment,
+                                               lpCurrentDirectory, lpStartupInfo, lpProcessInformation);
     }
     else
     {
-        mock_ret = delegate_real_CreateProcessU(utf8_application_name, utf8_command_line, process_attributes,
-                                                thread_attributes, inherit_handles, creation_flags, environment,
-                                                utf8_current_directory, startup_info, process_information);
+        mock_ret = delegate_real_CreateProcessU(lpApplicationName, lpCommandLine, lpProcessAttributes,
+                                                lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment,
+                                                lpCurrentDirectory, lpStartupInfo, lpProcessInformation);
     }
 
     if (getTraceLevel() > TRACE_NONE)
     {
         printf("  > %s %s, %s, 0x%p, 0x%p, %d, %lu, 0x%p, %s, 0x%p, 0x%p", __func__,
-               (utf8_application_name != nullptr) ? utf8_application_name : "(null)",
-               (utf8_command_line != nullptr) ? utf8_command_line : "(null)", (void *)process_attributes,
-               (void *)thread_attributes, inherit_handles, creation_flags, (void *)environment,
-               (utf8_current_directory != nullptr) ? utf8_current_directory : "(null)", (void *)startup_info,
-               (void *)process_information);
+               (lpApplicationName != nullptr) ? lpApplicationName : "(null)",
+               (lpCommandLine != nullptr) ? lpCommandLine : "(null)", (void *)lpProcessAttributes,
+               (void *)lpThreadAttributes, bInheritHandles, dwCreationFlags, (void *)lpEnvironment,
+               (lpCurrentDirectory != nullptr) ? lpCurrentDirectory : "(null)", (void *)lpStartupInfo,
+               (void *)lpProcessInformation);
         if (getTraceLevel() >= TRACE_DETAIL)
         {
             printf(" -> %d\n", mock_ret);

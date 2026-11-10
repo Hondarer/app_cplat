@@ -87,7 +87,7 @@ int cplat_internal_interprocess_sync_descriptor_import(const void *descriptor, c
 
     /* リトル エンディアンのバイト列から identity 長を復元し、ディスクリプター長との整合性を確認する。 */
     identity_len = (uint32_t)in[8] | ((uint32_t)in[9] << 8) | ((uint32_t)in[10] << 16) | ((uint32_t)in[11] << 24);
-    if (identity_len == 0 || descriptor_size != CPLAT_INTERPROCESS_SYNC_DESCRIPTOR_HEADER_SIZE + (size_t)identity_len)
+    if (identity_len == 0 || descriptor_size != (CPLAT_INTERPROCESS_SYNC_DESCRIPTOR_HEADER_SIZE + (size_t)identity_len))
     {
         return CPLAT_ERR_CORRUPT_DESCRIPTOR;
     }

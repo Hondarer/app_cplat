@@ -308,7 +308,7 @@ static int write_locked(cplat_syslog_sink *handle, const int level, const cplat_
     /* timestamp が NULL の場合はタイムスタンプなしで送信するため、解決は行わない。 */
     if (timestamp != NULL)
     {
-        if (cplat_internal_trace_resolve_timestamp(timestamp, &resolved, &fallback_used) != 0)
+        if (cplat_internal_trace_resolve_timestamp(timestamp, &resolved, &fallback_used) != CPLAT_OK)
         {
             return CPLAT_ERR_UNKNOWN;
         }
@@ -469,9 +469,7 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
     return ret != CPLAT_OK ? ret : unlock_ret;
 }
 
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_syslog_sink_dispose(cplat_syslog_sink *handle)
+static void dispose_sink(cplat_syslog_sink *handle)
 {
     if (handle == NULL)
     {
@@ -486,6 +484,13 @@ void cplat_syslog_sink_dispose(cplat_syslog_sink *handle)
     cplat_local_lock_dispose(handle->reconnect_lock);
     cplat_free(handle->ident);
     cplat_free(handle);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_syslog_sink_dispose(cplat_syslog_sink *handle)
+{
+    dispose_sink(handle);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -528,19 +533,7 @@ int cplat_syslog_sink_rename(cplat_syslog_sink *handle, const char *new_ident)
 
 void cplat_internal_syslog_sink_dispose_on_shutdown(cplat_syslog_sink *handle)
 {
-    if (handle == NULL)
-    {
-        return;
-    }
-
-    if (handle->fd >= 0)
-    {
-        close(handle->fd);
-    }
-
-    cplat_local_lock_dispose(handle->reconnect_lock);
-    cplat_free(handle->ident);
-    cplat_free(handle);
+    dispose_sink(handle);
 }
 
 #elif defined(PLATFORM_WINDOWS) && defined(COMPILER_MSVC)

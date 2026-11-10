@@ -134,7 +134,7 @@ int cplat_file_open(cplat_file *file, const char *path, int flags, cplat_error *
             open_flags |= O_DSYNC;
     #elif defined(O_SYNC)
             open_flags |= O_SYNC;
-    #endif /* sync flag */
+    #endif /* O_DSYNC / O_SYNC */
         }
 
         file->handle = open(path, open_flags, 0644);

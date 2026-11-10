@@ -984,45 +984,46 @@
         EXPORT_ENTRY(cplat_eventlog_unregister_source, int(CPLAT_API *)(const char *source_name)) \
         /* cplat/win32/win32.h */ \
         EXPORT_ENTRY(CreateFileU, \
-                     HANDLE(CPLAT_API *)(const char *utf8_path, DWORD desired_access, DWORD share_mode, \
-                                         LPSECURITY_ATTRIBUTES security_attributes, DWORD creation_disposition, \
-                                         DWORD flags_and_attributes, HANDLE template_file)) \
+                     HANDLE(CPLAT_API *)(const char *lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, \
+                                         LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, \
+                                         DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)) \
         EXPORT_ENTRY(CreateNamedPipeU, \
-                     HANDLE(CPLAT_API *)(const char *utf8_name, DWORD open_mode, DWORD pipe_mode, DWORD max_instances, \
-                                         DWORD out_buffer_size, DWORD in_buffer_size, DWORD default_timeout, \
-                                         LPSECURITY_ATTRIBUTES security_attributes)) \
-        EXPORT_ENTRY(GetModuleFileNameU, DWORD(CPLAT_API *)(HMODULE module, char *utf8_buf, DWORD size)) \
-        EXPORT_ENTRY(WriteConsoleU, BOOL(CPLAT_API *)(HANDLE console, const char *utf8_text, DWORD utf8_length, \
-                                                      DWORD *written_length, void *reserved)) \
-        EXPORT_ENTRY(GetVolumePathNameU, BOOL(CPLAT_API *)(const char *utf8_path, char *utf8_volume_root, DWORD size)) \
+                     HANDLE(CPLAT_API *)(const char *lpName, DWORD dwOpenMode, DWORD dwPipeMode, DWORD nMaxInstances, \
+                                         DWORD nOutBufferSize, DWORD nInBufferSize, DWORD nDefaultTimeOut, \
+                                         LPSECURITY_ATTRIBUTES lpSecurityAttributes)) \
+        EXPORT_ENTRY(GetModuleFileNameU, DWORD(CPLAT_API *)(HMODULE hModule, char *lpFilename, DWORD nSize)) \
+        EXPORT_ENTRY(WriteConsoleU, \
+                     BOOL(CPLAT_API *)(HANDLE hConsoleOutput, const char *lpBuffer, DWORD nNumberOfCharsToWrite, \
+                                       LPDWORD lpNumberOfCharsWritten, LPVOID lpReserved)) \
+        EXPORT_ENTRY(GetVolumePathNameU, \
+                     BOOL(CPLAT_API *)(const char *lpszFileName, char *lpszVolumePathName, DWORD cchBufferLength)) \
         EXPORT_ENTRY(GetVolumeInformationU, \
-                     BOOL(CPLAT_API *)(const char *utf8_root_path, char *utf8_volume_name, DWORD volume_name_size, \
-                                       DWORD *serial_number, DWORD *max_component_length, DWORD *file_system_flags, \
-                                       char *utf8_file_system_name, DWORD file_system_name_size)) \
-        EXPORT_ENTRY(LoadLibraryU, HMODULE(CPLAT_API *)(const char *utf8_file_name)) \
+                     BOOL(CPLAT_API *)(const char *lpRootPathName, char *lpVolumeNameBuffer, DWORD nVolumeNameSize, \
+                                       LPDWORD lpVolumeSerialNumber, LPDWORD lpMaximumComponentLength, \
+                                       LPDWORD lpFileSystemFlags, char *lpFileSystemNameBuffer, \
+                                       DWORD nFileSystemNameSize)) \
+        EXPORT_ENTRY(LoadLibraryU, HMODULE(CPLAT_API *)(const char *lpLibFileName)) \
         EXPORT_ENTRY(CreateProcessU, \
-                     BOOL(CPLAT_API *)(const char *utf8_application_name, const char *utf8_command_line, \
-                                       LPSECURITY_ATTRIBUTES process_attributes, \
-                                       LPSECURITY_ATTRIBUTES thread_attributes, BOOL inherit_handles, \
-                                       DWORD creation_flags, LPVOID environment, const char *utf8_current_directory, \
-                                       LPSTARTUPINFOW startup_info, LPPROCESS_INFORMATION process_information)) \
-        EXPORT_ENTRY(OpenSCManagerU, SC_HANDLE(CPLAT_API *)(const char *utf8_machine_name, \
-                                                            const char *utf8_database_name, DWORD desired_access)) \
+                     BOOL(CPLAT_API *)(const char *lpApplicationName, const char *lpCommandLine, \
+                                       LPSECURITY_ATTRIBUTES lpProcessAttributes, \
+                                       LPSECURITY_ATTRIBUTES lpThreadAttributes, BOOL bInheritHandles, \
+                                       DWORD dwCreationFlags, LPVOID lpEnvironment, const char *lpCurrentDirectory, \
+                                       LPSTARTUPINFOW lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation)) \
+        EXPORT_ENTRY(OpenSCManagerU, SC_HANDLE(CPLAT_API *)(const char *lpMachineName, const char *lpDatabaseName, \
+                                                            DWORD dwDesiredAccess)) \
         EXPORT_ENTRY(CreateServiceU, \
-                     SC_HANDLE(CPLAT_API *)(SC_HANDLE scm, const char *utf8_service_name, \
-                                            const char *utf8_display_name, DWORD desired_access, DWORD service_type, \
-                                            DWORD start_type, DWORD error_control, const char *utf8_binary_path_name, \
-                                            const char *utf8_load_order_group, LPDWORD tag_id, \
-                                            const char *utf8_dependencies, const char *utf8_service_start_name, \
-                                            const char *utf8_password)) \
+                     SC_HANDLE(CPLAT_API *)( \
+                         SC_HANDLE hSCManager, const char *lpServiceName, const char *lpDisplayName, \
+                         DWORD dwDesiredAccess, DWORD dwServiceType, DWORD dwStartType, DWORD dwErrorControl, \
+                         const char *lpBinaryPathName, const char *lpLoadOrderGroup, LPDWORD lpdwTagId, \
+                         const char *lpDependencies, const char *lpServiceStartName, const char *lpPassword)) \
         EXPORT_ENTRY(OpenServiceU, \
-                     SC_HANDLE(CPLAT_API *)(SC_HANDLE scm, const char *utf8_service_name, DWORD desired_access)) \
-        EXPORT_ENTRY(ChangeServiceConfig2U, \
-                     BOOL(CPLAT_API *)(SC_HANDLE service, DWORD info_level, const char *utf8_text)) \
+                     SC_HANDLE(CPLAT_API *)(SC_HANDLE hSCManager, const char *lpServiceName, DWORD dwDesiredAccess)) \
+        EXPORT_ENTRY(ChangeServiceConfig2U, BOOL(CPLAT_API *)(SC_HANDLE hService, DWORD dwInfoLevel, LPVOID lpInfo)) \
         EXPORT_ENTRY(RegisterServiceCtrlHandlerExU, \
-                     SERVICE_STATUS_HANDLE(CPLAT_API *)(const char *utf8_service_name, \
-                                                        LPHANDLER_FUNCTION_EX handler_proc, LPVOID context)) \
-        EXPORT_ENTRY(StartServiceCtrlDispatcherU, BOOL(CPLAT_API *)(const cplat_service_entry_u *service_table))
+                     SERVICE_STATUS_HANDLE(CPLAT_API *)(const char *lpServiceName, \
+                                                        LPHANDLER_FUNCTION_EX lpHandlerProc, LPVOID lpContext)) \
+        EXPORT_ENTRY(StartServiceCtrlDispatcherU, BOOL(CPLAT_API *)(const SERVICE_TABLE_ENTRYU *lpServiceStartTable))
 #elif defined(PLATFORM_LINUX)
     #define CPLAT_EXPORT_TABLE_PLATFORM(EXPORT_ENTRY) \
         /* cplat/runtime/process_priority_linux.h */ \

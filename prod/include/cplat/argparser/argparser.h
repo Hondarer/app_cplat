@@ -359,7 +359,7 @@ extern "C"
      *  @param[in]      capacity     @p storage の要素数です。1 以上を指定してください。\n
      *                               出現数が @p capacity を超えた場合は解析エラー
      *                               (@ref CPLAT_ERR_TOO_MANY_OCCURRENCES) になります。
-     *  @param[out]     count        出現数の格納先です。NULL を渡してはなりません。\n
+     *  @param[out]     count_out    出現数の格納先です。NULL を渡してはなりません。\n
      *                               cplat_argparser_handle_parse() の開始時に 0 へ初期化します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_DUPLICATE_DEFINITION 、
@@ -372,7 +372,7 @@ extern "C"
      */
     CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_register_option_int_array(
         cplat_argparser *parser, const char *short_name, const char *long_name, const char *value_name,
-        const char *description, unsigned int flags, int *storage, size_t capacity, size_t *count);
+        const char *description, unsigned int flags, int *storage, size_t capacity, size_t *count_out);
 
     /**
      *  @brief          複数回指定できる int 値オプションを、プロセス共有の既定パーサーへ登録します。
@@ -391,7 +391,8 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_argparser_register_option_int_array(const char *short_name, const char *long_name,
                                                                          const char *value_name,
                                                                          const char *description, unsigned int flags,
-                                                                         int *storage, size_t capacity, size_t *count);
+                                                                         int *storage, size_t capacity,
+                                                                         size_t *count_out);
 
     /**
      *  @brief          複数回指定できる文字列値オプションを登録します。
@@ -408,7 +409,7 @@ extern "C"
      *  @param[in]      capacity     @p storage の要素数です。1 以上を指定してください。\n
      *                               出現数が @p capacity を超えた場合は解析エラー
      *                               (@ref CPLAT_ERR_TOO_MANY_OCCURRENCES) になります。
-     *  @param[out]     count        出現数の格納先です。NULL を渡してはなりません。\n
+     *  @param[out]     count_out    出現数の格納先です。NULL を渡してはなりません。\n
      *                               cplat_argparser_handle_parse() の開始時に 0 へ初期化します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_DUPLICATE_DEFINITION 、
@@ -421,7 +422,7 @@ extern "C"
      */
     CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_register_option_string_array(
         cplat_argparser *parser, const char *short_name, const char *long_name, const char *value_name,
-        const char *description, unsigned int flags, const char **storage, size_t capacity, size_t *count);
+        const char *description, unsigned int flags, const char **storage, size_t capacity, size_t *count_out);
 
     /**
      *  @brief          複数回指定できる文字列値オプションを、プロセス共有の既定パーサーへ登録します。
@@ -439,7 +440,7 @@ extern "C"
      */
     CPLAT_EXPORT int CPLAT_API cplat_argparser_register_option_string_array(
         const char *short_name, const char *long_name, const char *value_name, const char *description,
-        unsigned int flags, const char **storage, size_t capacity, size_t *count);
+        unsigned int flags, const char **storage, size_t capacity, size_t *count_out);
 
     /**
      *  @brief          int 値の位置引数を登録します。
@@ -537,7 +538,7 @@ extern "C"
      *  @param[in]      capacity     @p storage の要素数です。1 以上を指定してください。
      *                               出現数が @p capacity を超えた場合は解析エラー
      *                               (@ref CPLAT_ERR_TOO_MANY_ARGUMENTS) になります。
-     *  @param[out]     count        出現数の格納先です。NULL を渡してはなりません。
+     *  @param[out]     count_out    出現数の格納先です。NULL を渡してはなりません。
      *                               cplat_argparser_handle_parse() の開始時に 0 へ初期化します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_OUT_OF_MEMORY のいずれかを返します。
@@ -554,7 +555,7 @@ extern "C"
                                                                                     const char *name,
                                                                                     const char *description,
                                                                                     unsigned int flags, int *storage,
-                                                                                    size_t capacity, size_t *count);
+                                                                                    size_t capacity, size_t *count_out);
 
     /**
      *  @brief          可変長の int 値位置引数を、プロセス共有の既定パーサーへ登録します。
@@ -572,7 +573,7 @@ extern "C"
      */
     CPLAT_EXPORT int CPLAT_API cplat_argparser_register_positional_int_array(const char *name, const char *description,
                                                                              unsigned int flags, int *storage,
-                                                                             size_t capacity, size_t *count);
+                                                                             size_t capacity, size_t *count_out);
 
     /**
      *  @brief          可変長の文字列値位置引数を登録します。
@@ -587,7 +588,7 @@ extern "C"
      *  @param[in]      capacity     @p storage の要素数です。1 以上を指定してください。
      *                               出現数が @p capacity を超えた場合は解析エラー
      *                               (@ref CPLAT_ERR_TOO_MANY_ARGUMENTS) になります。
-     *  @param[out]     count        出現数の格納先です。NULL を渡してはなりません。
+     *  @param[out]     count_out    出現数の格納先です。NULL を渡してはなりません。
      *                               cplat_argparser_handle_parse() の開始時に 0 へ初期化します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_OUT_OF_MEMORY のいずれかを返します。
@@ -602,7 +603,7 @@ extern "C"
      */
     CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_register_positional_string_array(
         cplat_argparser *parser, const char *name, const char *description, unsigned int flags, const char **storage,
-        size_t capacity, size_t *count);
+        size_t capacity, size_t *count_out);
 
     /**
      *  @brief          可変長の文字列値位置引数を、プロセス共有の既定パーサーへ登録します。
@@ -622,7 +623,7 @@ extern "C"
                                                                                 const char *description,
                                                                                 unsigned int flags,
                                                                                 const char **storage, size_t capacity,
-                                                                                size_t *count);
+                                                                                size_t *count_out);
 
     /**
      *  @brief          コマンド ラインを解析し、登録済みの格納先に結果を書き込みます。
@@ -837,17 +838,17 @@ extern "C"
 
     /**
      *  @brief          登録内容から usage 文字列を組み立てます。
-     *  @param[in]      parser         引数パーサー ハンドルです。NULL を渡してはなりません。
-     *  @param[out]     buffer         usage 文字列の格納先バッファーです。\n
-     *                                 NULL の場合は @p required_size への必要サイズの出力のみを行います
-     *                                 (このとき @p required_size に NULL を渡してはなりません)。\n
+     *  @param[in]      parser             引数パーサー ハンドルです。NULL を渡してはなりません。
+     *  @param[out]     buffer             usage 文字列の格納先バッファーです。\n
+     *                                 NULL の場合は @p required_size_out への必要サイズの出力のみを行います
+     *                                 (このとき @p required_size_out に NULL を渡してはなりません)。\n
      *                                 NULL でない場合は常に NUL 終端します。
-     *  @param[in]      buffer_size    @p buffer のバイト数です。@p buffer が NULL の場合は無視します。
-     *  @param[out]     required_size  NUL 終端を含む必要バイト数の格納先です。不要な場合は NULL も指定できます。
+     *  @param[in]      buffer_size        @p buffer のバイト数です。@p buffer が NULL の場合は無視します。
+     *  @param[out]     required_size_out  NUL 終端を含む必要バイト数の格納先です。不要な場合は NULL も指定できます。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL のいずれかを返します。\n
      *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL の場合、@p buffer には
-     *                  切り詰めた usage を格納し、@p required_size (NULL でない場合) に必要サイズを出力します。
+     *                  切り詰めた usage を格納し、@p required_size_out (NULL でない場合) に必要サイズを出力します。
      *
      *  本 API は組み立てた文字列を返すだけで、表示は行いません。\n
      *  解析の成否とは独立に、登録完了後であればいつでも呼び出せます。
@@ -864,7 +865,7 @@ extern "C"
      *  同一 @p parser に対する操作は、呼び出し側で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_get_usage(const cplat_argparser *parser, char *buffer,
-                                                                size_t buffer_size, size_t *required_size);
+                                                                size_t buffer_size, size_t *required_size_out);
 
     /**
      *  @brief          プロセス共有の既定パーサーの登録内容から usage 文字列を組み立てます。
@@ -877,7 +878,7 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  プロセス共有のパーサーに対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_argparser_get_usage(char *buffer, size_t buffer_size, size_t *required_size);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_get_usage(char *buffer, size_t buffer_size, size_t *required_size_out);
 
     /**
      *  @brief          登録内容から組み立てた usage を指定ストリームへ出力します。

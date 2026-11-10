@@ -165,7 +165,7 @@ Table: 低レベル ファイル記述子操作 API と cplat 代替ラッパー
 
 | 生 API | cplat 代替 | 差異の要点 |
 |---|---|---|
-| `stat` / `_wstat64` | `cplat_stat(buf, detail_out, path)` | パスは UTF-8。`buf` の型は `cplat_file_stat_t` (Linux: `struct stat`、Windows: `struct _stat64`)。Windows の `st_atime` / `st_mtime` / `st_ctime` は UTC の Unix 秒 |
+| `stat` / `_wstat64` | `cplat_stat(stat_out, detail_out, path)` | パスは UTF-8。`stat_out` の型は `cplat_file_stat_t` (Linux: `struct stat`、Windows: `struct _stat64`)。Windows の `st_atime` / `st_mtime` / `st_ctime` は UTC の Unix 秒 |
 | `mkdir` / `_wmkdir` | `cplat_mkdir(path, detail_out)` | パスは UTF-8 |
 | (`mkdir -p` 相当) | `cplat_makedirs(path, detail_out)` | 中間ディレクトリを再帰的に作成。既存ディレクトリはべき等に成功扱い |
 | `rmdir` / `_wrmdir` | `cplat_rmdir(path, detail_out)` | パスは UTF-8。中間ディレクトリの再帰削除はしません。 |
@@ -235,11 +235,16 @@ Win32 API はネイティブでは ANSI (現在のコード ページ) または
 | `OpenSCManagerA` / `OpenSCManagerW` | `OpenSCManagerU` |
 | `CreateServiceA` / `CreateServiceW` | `CreateServiceU` |
 | `OpenServiceA` / `OpenServiceW` | `OpenServiceU` |
-| `ChangeServiceConfig2A` / `ChangeServiceConfig2W` | `ChangeServiceConfig2U` |
+| `ChangeServiceConfig2A` / `ChangeServiceConfig2W` | `ChangeServiceConfig2U` (`lpInfo` は `SERVICE_DESCRIPTIONA *`、`lpDescription` は UTF-8) |
 | `RegisterServiceCtrlHandlerExA` / `RegisterServiceCtrlHandlerExW` | `RegisterServiceCtrlHandlerExU` |
-| `StartServiceCtrlDispatcherA` / `StartServiceCtrlDispatcherW` | `StartServiceCtrlDispatcherU` (サービス エントリは `cplat_service_entry_u` を使用) |
+| `StartServiceCtrlDispatcherA` / `StartServiceCtrlDispatcherW` | `StartServiceCtrlDispatcherU` (サービス エントリは `SERVICE_TABLE_ENTRYU` を使用) |
 
 Table: Win32 生 API と cplat UTF-8 ラッパー API の対応
+
+引数名と文字列以外の型の表記は W 版と同じです。  
+文字列は UTF-8 の `const char *` または `char *` とし、文字列バッファーの容量と書き込み数はバイト数で扱います。  
+`CreateProcessU` の `lpCommandLine` は読み取り専用で、`lpStartupInfo` 内の文字列は UTF-16 のままです。  
+`SERVICE_TABLE_ENTRYU` のメンバーは `lpServiceName` と `lpServiceProc` で、サービス メイン関数は `LPSERVICE_MAIN_FUNCTIONW` のままです。
 
 適用範囲は `CreateFileU` などのファイル ハンドル系に限らず、`app/cplat/docs/coding-guideline.md` の該当節を参照してください。
 
@@ -447,7 +452,7 @@ ID 0 は自プロセスまたは呼び出しスレッドです。それ以外の
 
 | 生 API | cplat 代替 | 差異の要点 |
 |---|---|---|
-| `RAND_bytes()` (OpenSSL, Linux) / `BCryptGenRandom()` (CNG, Windows) | `cplat_random_bytes(...)` | 全バイト充足を保証 (部分成功なし)。`rand()` のような予測可能な擬似乱数の使用は明示的に禁止 |
+| `RAND_bytes()` (OpenSSL, Linux) / `BCryptGenRandom()` (CNG, Windows) | `cplat_random_bytes(dest, dest_size)` | 全バイト充足を保証 (部分成功なし)。`rand()` のような予測可能な擬似乱数の使用は明示的に禁止 |
 
 Table: 暗号論的乱数生成 API と cplat 代替ラッパーの差異
 

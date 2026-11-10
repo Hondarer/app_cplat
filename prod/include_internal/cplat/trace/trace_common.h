@@ -23,27 +23,29 @@ extern "C"
 
     /**
      *  @brief          トレース出力に使用するタイムスタンプを解決します。
-     *  @param[in]      timestamp      呼び出し側が渡した明示タイムスタンプ。NULL 可。
-     *  @param[out]     resolved       解決後のタイムスタンプ格納先。
-     *  @param[out]     fallback_used  不正タイムスタンプから現在時刻へ代替した場合 1。NULL 可。
-     *  @return         成功時 0、解決失敗時 -1。
+     *  @param[in]      timestamp          呼び出し側が渡した明示タイムスタンプ。NULL 可。
+     *  @param[out]     resolved_out       解決後のタイムスタンプ格納先。
+     *  @param[out]     fallback_used_out  不正タイムスタンプから現在時刻へ代替した場合 1。NULL 可。
+     *  @return         成功時は CPLAT_OK、出力先が NULL の場合は CPLAT_ERR_INVALID_ARGUMENT、
+     *                  取得した時刻が不正な場合は CPLAT_ERR_UNKNOWN、
+     *                  時刻取得の失敗時は取得関数の結果コードを返します。
      *
      *  timestamp が有効な場合はそれを、NULL または不正な場合は現在時刻を
-     *  resolved へ格納します。不正な値からの代替時のみ fallback_used に 1 を
+     *  resolved_out へ格納します。不正な値からの代替時のみ fallback_used_out に 1 を
      *  設定します (NULL は代替と見なさない)。
      */
-    int cplat_internal_trace_resolve_timestamp(const cplat_timespec *timestamp, cplat_timespec *resolved,
-                                               int *fallback_used);
+    int cplat_internal_trace_resolve_timestamp(const cplat_timespec *timestamp, cplat_timespec *resolved_out,
+                                               int *fallback_used_out);
 
     /**
      *  @brief          実時刻を ISO 8601 ローカル時刻文字列としてバッファーへ書き込みます。
-     *  @param[out]     buf        書き込み先バッファー。
-     *  @param[in]      buf_size   バッファーのバイト数 (CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1 以上を推奨)。
+     *  @param[out]     dest       書き込み先バッファー。
+     *  @param[in]      dest_size  バッファーのバイト数 (CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1 以上を推奨)。
      *  @param[in]      timestamp  使用する実時刻。
-     *  @return         タイムスタンプ不正時は -1 を返します。それ以外の場合は
+     *  @return         タイムスタンプ不正時は CPLAT_ERR_INVALID_ARGUMENT を返します。それ以外の場合は
      *                  cplat_clock_format_realtime_iso8601_local() の戻り値を返します。
      */
-    int cplat_internal_trace_format_local_timestamp(char *buf, size_t buf_size, const cplat_timespec *timestamp);
+    int cplat_internal_trace_format_local_timestamp(char *dest, size_t dest_size, const cplat_timespec *timestamp);
 
     /**
      *  @brief          トレース レベルをレベル文字に変換します。

@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define PINNED_PROMPT_ROW_UNSET 9999
+
 #define PINNED_PROMPT_INPUT_INITIAL_DEFAULT 256U
 
 typedef enum pinned_prompt_key
@@ -1093,7 +1095,7 @@ cplat_pinned_prompt *cplat_pinned_prompt_create(const cplat_pinned_prompt_option
     screen->status_bottom_right[0] = '\0';
     screen->status_bottom_right_cap = 1U;
     screen->status_dirty = 1;
-    screen->prev_main_bottom_row = 9999;
+    screen->prev_main_bottom_row = PINNED_PROMPT_ROW_UNSET;
 
     return screen;
 }

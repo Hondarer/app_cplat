@@ -235,7 +235,9 @@ size_t cplat_internal_prompt_edit_char_display_width(const char *buf, size_t len
     unsigned int code_point;
 
     if (pos >= len)
+    {
         return 0U;
+    }
 
     first_byte = (unsigned char)buf[pos];
 
@@ -248,7 +250,10 @@ size_t cplat_internal_prompt_edit_char_display_width(const char *buf, size_t len
     {
         code_point = ((unsigned int)(first_byte & 0x1FU) << 6U) | (unsigned int)((unsigned char)buf[pos + 1U] & 0x3FU);
         if (code_point >= 0x0300U && code_point <= 0x036FU)
+        {
             return 0U;
+        }
+
         return 1U;
     }
 
@@ -259,13 +264,25 @@ size_t cplat_internal_prompt_edit_char_display_width(const char *buf, size_t len
                      (unsigned int)((unsigned char)buf[pos + 2U] & 0x3FU);
 
         if (code_point >= 0x4E00U && code_point <= 0x9FFFU)
+        {
             return 2U;
+        }
+
         if (code_point >= 0x3040U && code_point <= 0x309FU)
+        {
             return 2U;
+        }
+
         if (code_point >= 0x30A0U && code_point <= 0x30FFU)
+        {
             return 2U;
+        }
+
         if (code_point >= 0x3400U && code_point <= 0x4DBFU)
+        {
             return 2U;
+        }
+
         return 1U;
     }
 
@@ -305,7 +322,10 @@ size_t cplat_internal_prompt_edit_char_display_width(const char *buf, size_t len
         }
 
         if (code_point >= 0x20000U && code_point <= 0x2FFFFU)
+        {
             return 2U;
+        }
+
         return 1U;
     }
 
@@ -376,8 +396,11 @@ size_t cplat_internal_prompt_edit_visible_bytes_from(const char *buf, size_t len
         }
 
         char_width = cplat_internal_prompt_edit_char_display_width(buf, len, pos);
-        if (cols + char_width > max_cols)
+        if ((cols + char_width) > max_cols)
+        {
             break;
+        }
+
         cols += char_width;
         pos = cplat_internal_prompt_edit_utf8_next_boundary(buf, len, pos);
     }
@@ -394,7 +417,9 @@ size_t cplat_internal_prompt_edit_display_width_between(const char *buf, size_t 
     size_t sgr_len;
 
     if (end > len)
+    {
         end = len;
+    }
 
     pos = start;
     width = 0U;

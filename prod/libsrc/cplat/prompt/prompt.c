@@ -460,7 +460,7 @@ static prompt_history_context *find_or_create_ctx(cplat_prompt *p, const char *f
         size_t new_cap;
         prompt_history_context *new_contexts;
 
-        if (p->ctx_cap)
+        if (p->ctx_cap != 0U)
         {
             new_cap = p->ctx_cap * 2;
         }

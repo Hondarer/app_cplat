@@ -67,7 +67,7 @@ extern "C"
      *                               0 を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。\n
      *                               既存ファイルを開く場合は無視され、現在のファイル サイズが
      *                               マップ サイズになります。
-     *  @param[out]     map          生成したハンドルの格納先。NULL を渡してはなりません。
+     *  @param[out]     map_out      生成したハンドルの格納先。NULL を渡してはなりません。
      *  @param[out]     detail_out   エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
@@ -86,7 +86,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT int CPLAT_API cplat_mmap_attach(const char *path, cplat_mmap_access access, size_t create_size,
-                                                 cplat_mmap **map, cplat_error *detail_out);
+                                                 cplat_mmap **map_out, cplat_error *detail_out);
 
     /**
      *  @brief          マップ済みアドレスを取得します。

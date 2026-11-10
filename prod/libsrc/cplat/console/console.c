@@ -255,7 +255,9 @@ void cplat_console_init(void)
         int32_t expected = 0;
 
         if (!cplat_atomic_compare_exchange_i32(&s_initialized, &expected, 1, CPLAT_MEMORY_ORDER_SEQ_CST))
+        {
             return;
+        }
     }
 
     /*
@@ -339,7 +341,9 @@ void cplat_console_dispose(void)
         int32_t expected = 1;
 
         if (!cplat_atomic_compare_exchange_i32(&s_initialized, &expected, 0, CPLAT_MEMORY_ORDER_SEQ_CST))
+        {
             return;
+        }
     }
 
     /* コンソール モードを元に戻す。 */
@@ -702,7 +706,9 @@ void cplat_internal_console_dispose_on_shutdown(const cplat_shutdown_event *even
 {
     (void)context;
     if (event == NULL || event->reason != CPLAT_SHUTDOWN_REASON_NORMAL_EXIT)
+    {
         return;
+    }
 
     /* stdout / stderr をフラッシュしてからコンソール状態を元に戻す。 */
     fflush(stdout);

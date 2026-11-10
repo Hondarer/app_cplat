@@ -143,6 +143,34 @@ TEST_F(etw_viewerTest, main_rejects_invalid_pid)
     EXPECT_NE(EXIT_SUCCESS, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_SUCCESS 以外であること。
 }
 
+// 負値とプロセス ID の範囲を超える値が拒否されることの確認
+// [サブ手順参照 名前=etw_viewerTest.SetUp]
+TEST_F(etw_viewerTest, main_rejects_out_of_range_pid)
+{
+    // Arrange
+    const char *invalid[] = {"-1", "4294967296", "18446744073709551616", "123x"};
+    int results[4] = {0};
+    size_t index = 0;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_etw_session_start(_, _, _, _, _)).Times(0);
+    // [Pre-Assert確認_異常系] - 不正な PID でセッションを開始しないこと。
+
+    // Act
+    for (const char *text : invalid)
+    {
+        const char *args[] = {"etw-viewer", "--pid", text};
+        results[index++] = __real_main(3, const_cast<char **>(args));
+        // [手順] - 負値、32 ビット超過、64 ビット超過、数値に続く不正文字を PID として指定する。
+    }
+
+    // Assert
+    for (int result : results)
+    {
+        EXPECT_NE(EXIT_SUCCESS, result); // [確認_異常系 回数=4] - 不正な PID が拒否されること。
+    }
+}
+
 // 既定 session 名に process id が埋め込まれることの確認
 // [サブ手順参照 名前=etw_viewerTest.SetUp]
 TEST_F(etw_viewerTest, build_default_session_name_formats_process_id)

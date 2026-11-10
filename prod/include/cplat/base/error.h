@@ -558,7 +558,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT void CPLAT_API cplat_error_capture_current_windows_error(cplat_error *error);
-#endif
+#endif /* PLATFORM_WINDOWS */
 
     /**
      *  @brief          現在のスレッドで直前に記録された詳細エラーを取得します。
@@ -642,7 +642,7 @@ extern "C"
      *  本関数はスレッド セーフです。
      */
     CPLAT_EXPORT unsigned long CPLAT_API cplat_error_get_windows_error(const cplat_error *error);
-#endif
+#endif /* PLATFORM_WINDOWS */
 
     /**
      *  @brief          詳細エラーに対応する共通結果コードを返します。

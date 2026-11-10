@@ -39,7 +39,7 @@ typedef struct argparser_sample_options
 
 /**
  *  @brief          オプションをパーサーへ登録します。
- *  @param[out]     options  解析結果の格納先。
+ *  @param[in,out]     options  解析結果の格納先として各メンバーのアドレスを登録するオプションです。
  *  @return         成功時は 0、登録に失敗した場合は -1 を返します。
  */
 static int register_argparser(argparser_sample_options *options)

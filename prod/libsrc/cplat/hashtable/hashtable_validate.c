@@ -29,7 +29,7 @@
  */
 static int validate_binary_key(const cplat_hashtable *ht, size_t rec)
 {
-    const unsigned char *stored_key = (const unsigned char *)hashtable_entry_key(ht, rec);
+    const unsigned char *stored_key;
     size_t key_length;
     size_t i;
 
@@ -38,6 +38,7 @@ static int validate_binary_key(const cplat_hashtable *ht, size_t rec)
         return 0;
     }
 
+    stored_key = (const unsigned char *)hashtable_entry_key(ht, rec);
     key_length = hashtable_stored_key_length(ht, rec);
     if (key_length > ht->hdr->config.key_size)
     {
@@ -345,7 +346,7 @@ int cplat_hashtable_validate(const cplat_hashtable *ht)
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    visited = (unsigned char *)cplat_calloc(ht->hdr->config.capacity, 1);
+    visited = (unsigned char *)cplat_calloc(ht->hdr->config.capacity, sizeof(*visited));
     if (visited == NULL)
     {
         return CPLAT_ERR_OUT_OF_MEMORY;
@@ -358,8 +359,6 @@ int cplat_hashtable_validate(const cplat_hashtable *ht)
     {
         return CPLAT_OK;
     }
-    else
-    {
-        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
-    }
+
+    return CPLAT_ERR_CORRUPT_DESCRIPTOR;
 }

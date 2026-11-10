@@ -22,7 +22,7 @@
     #include <stdio.h>
     #include <stdlib.h>
     #include <unistd.h>
-#endif
+#endif /* PLATFORM_LINUX */
 
 /*
  * パス文字列を出力バッファーへコピーする。
@@ -71,7 +71,7 @@ static int compare_normalized_paths(const char *lhs, const char *rhs)
     {
         return 0;
     }
-#else
+#else  /* !PLATFORM_WINDOWS */
     if (strcmp(lhs, rhs) == 0)
     {
         return 1;
@@ -80,7 +80,7 @@ static int compare_normalized_paths(const char *lhs, const char *rhs)
     {
         return 0;
     }
-#endif
+#endif /* PLATFORM_WINDOWS */
 }
 
 #if defined(PLATFORM_LINUX)

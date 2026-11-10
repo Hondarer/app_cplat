@@ -1424,7 +1424,7 @@ static int is_valid_threshold(const cplat_trace_level level)
  */
 static void write_stderr_entry(const cplat_trace_level level, const char *timestamp_text, const char *msg)
 {
-    fprintf(stderr, "%s %c %s\n", timestamp_text, cplat_internal_trace_level_char(level), msg);
+    cplat_fprintf(stderr, "%s %c %s\n", timestamp_text, cplat_internal_trace_level_char(level), msg);
 }
 
 /**
@@ -1456,14 +1456,14 @@ static int write_dual(cplat_tracer *handle, const cplat_trace_level level, const
     /* 文字列形式のタイムスタンプを必要とする出力先がある場合のみ、タイムスタンプを解決して整形する。 */
     if (needs_text_timestamp)
     {
-        if (cplat_internal_trace_resolve_timestamp(timestamp, &resolved, &timestamp_fallback_used) != 0)
+        if (cplat_internal_trace_resolve_timestamp(timestamp, &resolved, &timestamp_fallback_used) != CPLAT_OK)
         {
             return CPLAT_ERR_UNKNOWN;
         }
 
         effective_timestamp = &resolved;
 
-        if (cplat_internal_trace_format_local_timestamp(ts, sizeof(ts), effective_timestamp) != 0)
+        if (cplat_internal_trace_format_local_timestamp(ts, sizeof(ts), effective_timestamp) != CPLAT_OK)
         {
             return CPLAT_ERR_UNKNOWN;
         }
