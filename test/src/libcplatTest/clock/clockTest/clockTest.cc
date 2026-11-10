@@ -196,7 +196,7 @@ TEST_F(clockTest, realtime_utc_uses_platform_conversion_result)
     struct tm expected_tm = {};                // [状態] - UTC 変換後の期待値を格納する構造体を 0 初期化する。
     struct tm actual_tm = {};                  // [状態] - 実際の UTC 変換結果を受け取る構造体を 0 初期化する。
     int32_t actual_nsec = -1;                  // [状態] - ナノ秒部の出力先を未更新値 -1 で初期化する。
-    Mock_cplat mock_cplat;
+    NiceMock<Mock_cplat> mock_cplat;
 
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
@@ -264,7 +264,7 @@ TEST_F(clockTest, realtime_utc_preserves_outputs_when_cplat_gmtime_fails)
     struct tm actual_tm = {};                  // [状態] - 実際の UTC 変換結果を受け取る構造体を初期化する。
     struct tm expected_tm = {};                // [状態] - 失敗時に 更新前の期待値を用意する。
     int32_t actual_nsec = -1;                  // [状態] - ナノ秒部の出力先を未更新値 -1 で初期化する。
-    Mock_cplat mock_cplat;
+    NiceMock<Mock_cplat> mock_cplat;
 
     actual_tm.tm_year = 1; // [状態] - 失敗時に上書きされたことが分かるよう、year を 1 に設定する。
     actual_tm.tm_mon = 2;  // [状態] - 失敗時に上書きされたことが分かるよう、mon を 2 に設定する。
@@ -338,7 +338,7 @@ TEST_F(clockTest, format_realtime_iso8601_local_outputs_offset_and_milliseconds)
     char actual[CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1];
     struct tm local_tm;
     struct tm utc_tm;
-    Mock_cplat mock_cplat;
+    NiceMock<Mock_cplat> mock_cplat;
 
     set_tm(&local_tm, 2024, 4, 5, 15, 7, 8); // [状態] - ローカル時刻を 2024-04-05 15:07:08 とする。
     set_tm(&utc_tm, 2024, 4, 5, 6, 7, 8);    // [状態] - UTC を 2024-04-05 06:07:08 (オフセット +09:00 相当) とする。
@@ -387,7 +387,7 @@ TEST_F(clockTest, format_realtime_iso8601_local_supports_negative_offset)
     char actual[CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1];
     struct tm local_tm;
     struct tm utc_tm;
-    Mock_cplat mock_cplat;
+    NiceMock<Mock_cplat> mock_cplat;
 
     set_tm(&local_tm, 2024, 4, 5, 0, 37, 8); // [状態] - ローカル時刻を 2024-04-05 00:37:08 とする。
     set_tm(&utc_tm, 2024, 4, 5, 6, 7, 8);    // [状態] - UTC を 2024-04-05 06:07:08 (オフセット -05:30 相当) とする。
@@ -432,7 +432,7 @@ TEST_F(clockTest, format_realtime_iso8601_utc_outputs_z_suffix)
                                       987000000LL}; // [状態] - 変換対象を {1712297228, 987000000} とする。
     char actual[CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN + 1];
     struct tm utc_tm;
-    Mock_cplat mock_cplat;
+    NiceMock<Mock_cplat> mock_cplat;
 
     set_tm(&utc_tm, 2024, 4, 5, 6, 7, 8); // [状態] - UTC を 2024-04-05 06:07:08 とする。
 
@@ -584,7 +584,7 @@ TEST_F(clockTest, format_realtime_iso8601_local_falls_back_when_localtime_fails)
     // Arrange
     const cplat_timespec timestamp = {1712297228LL, 123000000LL};
     char actual[CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1];
-    Mock_cplat mock_cplat;
+    NiceMock<Mock_cplat> mock_cplat;
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_localtime(_, _))
@@ -611,7 +611,7 @@ TEST_F(clockTest, format_realtime_iso8601_local_falls_back_when_gmtime_fails)
     const cplat_timespec timestamp = {1712297228LL, 123000000LL};
     char actual[CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1];
     struct tm local_tm;
-    Mock_cplat mock_cplat;
+    NiceMock<Mock_cplat> mock_cplat;
 
     set_tm(&local_tm, 2024, 4, 5, 15, 7, 8); // [状態] - localtime が返す分解時刻を用意する。
 
@@ -648,7 +648,7 @@ TEST_F(clockTest, format_realtime_iso8601_utc_falls_back_when_gmtime_fails)
     const cplat_timespec timestamp = {1712297228LL,
                                       123000000LL}; // [状態] - 変換対象を {1712297228, 123000000} とする。
     char actual[CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN + 1];
-    Mock_cplat mock_cplat;
+    NiceMock<Mock_cplat> mock_cplat;
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_gmtime(_, _))
@@ -684,7 +684,7 @@ TEST_F(clockTest, format_realtime_iso8601_local_rejects_small_buffer)
     char actual[1] = {'x'};
     struct tm local_tm;
     struct tm utc_tm;
-    Mock_cplat mock_cplat;
+    NiceMock<Mock_cplat> mock_cplat;
     set_tm(&local_tm, 2024, 4, 5, 15, 7, 8);
     set_tm(&utc_tm, 2024, 4, 5, 6, 7, 8);
 
@@ -728,7 +728,7 @@ TEST_F(clockTest, format_realtime_iso8601_utc_rejects_small_buffer)
     const cplat_timespec timestamp = {1712297228LL, 123000000LL};
     char actual[1] = {'x'};
     struct tm utc_tm;
-    Mock_cplat mock_cplat;
+    NiceMock<Mock_cplat> mock_cplat;
     set_tm(&utc_tm, 2024, 4, 5, 6, 7, 8);
 
     // Pre-Assert
@@ -763,7 +763,7 @@ TEST_F(clockTest, format_realtime_iso8601_local_rejects_null_buffer)
     const cplat_timespec timestamp = {1712297228LL, 123000000LL};
     struct tm local_tm;
     struct tm utc_tm;
-    Mock_cplat mock_cplat;
+    NiceMock<Mock_cplat> mock_cplat;
 
     set_tm(&local_tm, 2024, 4, 5, 15, 7, 8); // [状態] - localtime が返す分解時刻を用意する。
     set_tm(&utc_tm, 2024, 4, 5, 6, 7, 8);    // [状態] - gmtime が返す分解時刻を用意する。
@@ -803,7 +803,7 @@ TEST_F(clockTest, format_realtime_iso8601_utc_rejects_null_buffer)
     // Arrange
     const cplat_timespec timestamp = {1712297228LL, 123000000LL};
     struct tm utc_tm;
-    Mock_cplat mock_cplat;
+    NiceMock<Mock_cplat> mock_cplat;
 
     set_tm(&utc_tm, 2024, 4, 5, 6, 7, 8); // [状態] - gmtime が返す分解時刻を用意する。
 
@@ -836,7 +836,7 @@ TEST_F(clockTest, format_realtime_iso8601_local_supports_early_date)
     char actual[CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1];
     struct tm local_tm;
     struct tm utc_tm;
-    Mock_cplat mock_cplat;
+    NiceMock<Mock_cplat> mock_cplat;
     set_tm(&local_tm, -1, 1, 1, 0, 0, 0);
     set_tm(&utc_tm, -1, 1, 1, 0, 0, 0);
 
