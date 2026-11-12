@@ -30,26 +30,27 @@ Windows の利用側で `CPLAT_STATIC` を定義しないでください。
 `libcplat` は、両 OS で cJSON と zlib を動的に利用します。  
 ワークスペースの `app/cjson` と `app/zlib` で生成したライブラリを使用します。
 
-実行時は `libcplat`、`libcjson`、`libzlib` のすべてを解決できるようにします。
+実行時は `libcplat`、`libcjson_app`、`libzlib_app` に加え、Linux では `libcrypto_app.so.3` も解決できるようにします。
 
-Linux の暗号処理と乱数生成は、ワークスペースの `app/openssl` で生成した libcrypto の静的ライブラリ (`libcrypto.a`) を使います。  
-`libcplat.so` へ静的にリンクするため、OS の OpenSSL には依存せず、配布物へ OpenSSL の共有ライブラリを同梱する必要もありません。  
-OpenSSL の関数は `exports.map` の `local: *` により `libcplat.so` からエクスポートしません。  
-同じプロセスで別の OpenSSL を使うプログラムや、OpenSSL を静的にリンクする別のライブラリと、記号が衝突しないようにするためです。  
+Linux の暗号処理と乱数生成は、ワークスペースの `app/openssl` で生成した共有ライブラリ `libcrypto_app.so.3` を使います。  
+リンク指定は `LIBS += crypto_app` とし、配布時は `libcplat.so` と同じディレクトリへ同梱します。  
+OpenSSL の `shlib_variant` に `_app` を指定し、共有ライブラリ名とシンボル バージョン (`OPENSSL_APP_*`) を OS の OpenSSL と区別します。  
 Windows の暗号処理と乱数生成は CNG を使い、OpenSSL をリンクしません。  
 ただし、ビルド順序をそろえるため、両 OS で `app/openssl` に依存します (`appdeps.mk`)。  
 OpenSSL の配布条件は `app/openssl/README.md` を参照してください。
 
 ## 実行ファイルへの同梱
 
-単体配布する CLI や OS のサービスとして起動する実行ファイルには、`libcplat`、`libcjson`、`libzlib` を同じディレクトリへ同梱します。
+単体配布する CLI や OS のサービスとして起動する実行ファイルには、`libcplat`、`libcjson_app`、`libzlib_app` を同じディレクトリへ同梱します。
+
+Linux では、OpenSSL の `libcrypto_app.so.3` も同梱します。
 
 このリポジトリでは、対象 app の製品ビルドが次の成果物を `prod/cbin` へコピーします。
 
 | プラットフォーム | 同梱するファイル |
 |---|---|
-| Linux | `libcplat.so` / `libcjson.so` / `libzlib.so` |
-| Windows | `libcplat.dll` / `libcjson.dll` / `libzlib.dll` |
+| Linux | `libcplat.so` / `libcjson_app.so` / `libzlib_app.so` / `libcrypto_app.so.3` |
+| Windows | `libcplat.dll` / `libcjson_app.dll` / `libzlib_app.dll` |
 
 Table: 実行ファイル同梱対象の共有ライブラリ一覧
 
@@ -59,9 +60,9 @@ Windows は実行ファイルと同じディレクトリの DLL を標準の探�
 
 この配置により、systemd や Windows SCM から起動する `service-sample` も、開発者の `LD_LIBRARY_PATH` や `PATH` に依存しません。
 
-`libzlib` の配布条件は `app/zlib/README.md` を参照してください。
+`libzlib_app` の配布条件は `app/zlib/README.md` を参照してください。
 
-`libcjson` を配布物に含める場合は、`app/cjson/README.md` に記載された MIT License の条件に従います。
+`libcjson_app` を配布物に含める場合は、`app/cjson/README.md` に記載された MIT License の条件に従います。
 
 ## 内部 API はエクスポートしない
 
@@ -94,17 +95,18 @@ Linux では `readelf` と `ldd` を使い、動的リンクと実行時の解�
 
 ```bash
 readelf -d <利用側>/prod/cbin/<実行ファイル> | grep -E 'NEEDED|RPATH|RUNPATH'
-env -u LD_LIBRARY_PATH ldd <利用側>/prod/cbin/<実行ファイル> | grep -E 'cplat|cjson|zlib'
+env -u LD_LIBRARY_PATH ldd <利用側>/prod/cbin/<実行ファイル> | grep -E 'cplat|cjson|zlib|crypto'
 ```
 
-`libcplat.so`、`libcjson.so`、`libzlib.so` の解決先が、実行ファイルと同じ `prod/cbin` になることを確認します。
+`libcplat.so`、`libcjson_app.so`、`libzlib_app.so`、`libcrypto_app.so.3` の解決先が、実行ファイルと同じ `prod/cbin` になることを確認します。
 
-OpenSSL を静的にリンクしていることと、その関数をエクスポートしていないことは、次のコマンドで確認できます。  
-1 行目は `libcrypto` を表示せず、2 行目は 0 を表示します。
+OpenSSL の共有ライブラリへの依存と、OpenSSL の関数をエクスポートしていないことは、次のコマンドで確認できます。  
+1 行目は `libcrypto_app.so.3`、2 行目は 0、3 行目は `OPENSSL_APP_` 付きの参照を表示します。
 
 ```bash
 readelf -d prod/lib/libcplat.so | grep -E 'NEEDED.*(libcrypto|libssl)'
 nm -D --defined-only prod/lib/libcplat.so | grep -cE ' (EVP|RAND|OPENSSL|CRYPTO)_'
+nm -D -u prod/lib/libcplat.so | grep 'OPENSSL_APP_'
 ```
 
 Windows では `dumpbin /dependents` を使い、実行ファイルが `libcplat.dll` を参照することを確認します。

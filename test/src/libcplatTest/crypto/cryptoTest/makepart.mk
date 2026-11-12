@@ -12,6 +12,6 @@ ADD_SRCS := \
 LIBS += mock_libc
 ifdef PLATFORM_LINUX
     # OpenSSL の失敗注入に、app/openssl が提供する mock_openssl を使う。
-    # crypto は app/openssl の libcrypto.a を静的にリンクする。
-    LIBS += mock_openssl crypto
+    # 実関数へは mock_openssl が共有ライブラリ経由で委譲する。
+    LIBS += mock_openssl
 endif
