@@ -126,7 +126,7 @@ sequenceDiagram
     API-->>Caller: CPLAT_OK, scope
 ```
 
-CodeBlock: cplat_memory_lock_self のロック取得
+Figure: cplat_memory_lock_self のロック取得
 
 `cplat_memory_lock_scope_release()` は内部 lock の下で scope に対応するロック状態を解放します。  
 Linux では最後の self scope が解放された時点で `munlockall()` を呼び出し、Windows では ref-count が 0 になった範囲だけ `VirtualUnlock()` を呼び出します。
@@ -163,7 +163,7 @@ sequenceDiagram
     end
 ```
 
-CodeBlock: cplat_memory_lock_scope_release のロック解放
+Figure: cplat_memory_lock_scope_release のロック解放
 
 ## Linux の実装
 
