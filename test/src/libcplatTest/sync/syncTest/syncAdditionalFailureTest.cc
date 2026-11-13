@@ -647,8 +647,10 @@ TEST(syncAdditionalFailureTest, thread_join_finite_wait_retries_then_succeeds)
                               // [Pre-Assert手順] - pthread_tryjoin_np() から 1 回目は EBUSY、2 回目は 0 を返す。
 
     // Act
+    // 再試行の 1 [ms] の待機が CI の負荷で延び、2 回目の呼び出しの前に期限を過ぎないよう、期限を十分に長くする。
+    // mock は 2 回目で 0 を返すため、期限を長くしてもテストの所要時間は延びない。
     int result = cplat_thread_join(
-        thread, 5); // [手順] - 有限時間内に thread の終了待機を再試行するため、cplat_thread_join() を呼び出す。
+        thread, 1000); // [手順] - 有限時間内に thread の終了待機を再試行するため、cplat_thread_join() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
