@@ -97,9 +97,8 @@ TEST(symLoaderInfoTest, sym_loader_info_reports_resolution_state)
     EXPECT_EQ(
         CPLAT_OK,
         resolved_result); // [確認_正常系] - 解決済みエントリに対する cplat_sym_loader_info() の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        failed_result); // [確認_異常系] - 内部失敗中は CPLAT_ERR_UNKNOWN を返すこと。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              failed_result); // [確認_異常系] - 内部失敗中は CPLAT_ERR_UNKNOWN を返すこと。
     EXPECT_EQ(
         1,
         cplat_atomic_load_i32(
@@ -135,8 +134,10 @@ TEST(symLoaderInfoTest, sym_loader_info_resolves_unresolved_entry)
         cplat_atomic_load_i32(
             &entry.resolved,
             CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - entry.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 1 であること。(情報表示前に解決済みになることの確認)
-    ASSERT_NE(nullptr, entry.impl); // [確認_正常系] - entry.impl が nullptr 以外であること。
-    EXPECT_EQ(1, entry.impl->is_default); // [確認_正常系] - entry.impl->is_default が 1 であること。(明示的既定値になることの確認)
+    ASSERT_NE(nullptr, entry.impl);       // [確認_正常系] - entry.impl が nullptr 以外であること。
+    EXPECT_EQ(
+        1, entry.impl
+               ->is_default); // [確認_正常系] - entry.impl->is_default が 1 であること。(明示的既定値になることの確認)
 
     // Cleanup
     cplat_sym_loader_dispose(entries, 1u);

@@ -22,8 +22,8 @@ void print_id_callback(const cplat_abort_event *, void *context)
 
 void print_event_callback(const cplat_abort_event *event, void *)
 {
-    fprintf(stderr, "[event message=%s line=%d function=%s kind=%d]", event->message, event->line,
-            event->function, static_cast<int>(event->kind));
+    fprintf(stderr, "[event message=%s line=%d function=%s kind=%d]", event->message, event->line, event->function,
+            static_cast<int>(event->kind));
 }
 
 void recursive_assert_callback(const cplat_abort_event *, void *)

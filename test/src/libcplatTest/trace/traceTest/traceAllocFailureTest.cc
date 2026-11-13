@@ -58,7 +58,7 @@ TEST_F(traceAllocFailureTest, create_returns_null_when_handle_allocation_fails)
     EXPECT_CALL(mock_cplat, cplat_syslog_sink_dispose(os_handle_))
         .Times(
             1); // [Pre-Assert確認_異常系] - cplat_syslog_sink_dispose() が os_handle_ を指定して 1 回呼び出されること。
-#endif             /* PLATFORM_LINUX */
+#endif          /* PLATFORM_LINUX */
 
     // Act
     cplat_tracer *handle = cplat_tracer_create(

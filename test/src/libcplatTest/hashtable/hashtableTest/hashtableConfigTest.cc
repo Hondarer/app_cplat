@@ -105,7 +105,7 @@ TEST_F(hashtableConfigTest, buffer_size_rejects_null_arguments)
     size_t mgmt_size = 0;
     size_t data_size = 0;
 
-    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - 妥当な設定を用意する。
+    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - 妥当な設定を用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
@@ -140,7 +140,7 @@ TEST_F(hashtableConfigTest, buffer_size_allows_partial_query_and_succeeds)
     size_t full_mgmt_size = 0;
     size_t full_data_size = 0;
 
-    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - 妥当な設定を用意する。
+    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - 妥当な設定を用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
@@ -183,7 +183,7 @@ TEST_F(hashtableConfigTest, buffer_ref_rejects_null_arguments)
     const void *mgmt = nullptr;
     const void *data = nullptr;
 
-    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - 妥当な設定を用意する。
+    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - 妥当な設定を用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
@@ -215,7 +215,7 @@ TEST_F(hashtableConfigTest, buffer_ref_allows_partial_query)
     const void *mgmt = nullptr;
     const void *data = nullptr;
 
-    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - 妥当な設定を用意する。
+    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - 妥当な設定を用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert

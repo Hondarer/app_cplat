@@ -278,8 +278,9 @@ TEST_F(promptWindowsTest, read_char_returns_minus1_at_eof)
     EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, dummy_handle, _, 1U, _, _))
         .WillOnce(DoAll(
             SetArgPointee<6>(0UL),
-            Return(TRUE))); // [Pre-Assert確認_異常系] - ReadConsoleW() が dummy_handle、1 を指定して 1 回呼び出されること。
-                            // [Pre-Assert手順] - ReadConsoleW() から、読み取りバイト数に 0 を設定して TRUE を返す。
+            Return(
+                TRUE))); // [Pre-Assert確認_異常系] - ReadConsoleW() が dummy_handle、1 を指定して 1 回呼び出されること。
+                         // [Pre-Assert手順] - ReadConsoleW() から、読み取りバイト数に 0 を設定して TRUE を返す。
 
     // Act
     int actual_ret = prompt_platform_read_char(&handle_); // [手順] - prompt_platform_read_char() を呼び出す。

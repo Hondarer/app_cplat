@@ -40,7 +40,7 @@ TEST_F(syncFailureInjectionTest, local_lock_create_fails_when_mutex_init_fails)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - cplat_local_lock_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
+              actual_ret);    // [確認_異常系] - cplat_local_lock_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(nullptr, lock); // [確認_異常系] - lock が nullptr であること。
 }
 
@@ -63,7 +63,7 @@ TEST_F(syncFailureInjectionTest, local_lock_create_fails_when_allocation_fails)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - cplat_local_lock_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
+              actual_ret);    // [確認_異常系] - cplat_local_lock_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(nullptr, lock); // [確認_異常系] - lock が nullptr であること。
 }
 
@@ -225,7 +225,7 @@ TEST_F(syncFailureInjectionTest, thread_create_fails_when_pthread_create_fails)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - cplat_thread_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
+              actual_ret);      // [確認_異常系] - cplat_thread_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(nullptr, thread); // [確認_異常系] - thread が nullptr であること。
 }
 

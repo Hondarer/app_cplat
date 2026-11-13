@@ -368,7 +368,7 @@ TEST_F(fileTimestampTest, null_arguments_are_rejected)
     cplat_file file;
     cplat_file open_file;
 
-    cplat_file_init(&file);    // [状態] - 無効なハンドルを用意する。
+    cplat_file_init(&file); // [状態] - 無効なハンドルを用意する。
     // [サブ手順参照 名前=fileTimestampTest.open_writable]
     open_writable(&open_file); // [状態] - 有効なハンドルを用意する。
 

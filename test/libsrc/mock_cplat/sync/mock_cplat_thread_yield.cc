@@ -3,8 +3,8 @@
 
 void delegate_real_cplat_thread_yield(void)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_thread_yield)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_thread_yield"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_thread_yield)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_thread_yield"));
 
     real_fn();
 }

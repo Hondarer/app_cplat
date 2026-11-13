@@ -127,7 +127,7 @@ TEST_F(argparserTest, default_shutdown_callback_keeps_process_lifetime_lock)
     std::thread threads[kThreadCount];
     cplat_argparser *parser = test_argparser_default_acquire(
         0, nullptr, nullptr, 0); // [状態] - 終了コールバックを登録した default ハンドルを用意する。
-    ASSERT_NE(nullptr, parser); // [状態確認] - test_argparser_default_acquire() の戻り値が nullptr 以外であること。
+    ASSERT_NE(nullptr, parser);  // [状態確認] - test_argparser_default_acquire() の戻り値が nullptr 以外であること。
     ASSERT_NE(nullptr,
               g_default_shutdown_callback); // [状態確認] - g_default_shutdown_callback が nullptr 以外であること。
     cplat_shutdown_event event = {};
@@ -186,7 +186,7 @@ TEST_F(argparserTest, default_options_applied_only_on_first_call)
     // Arrange
     cplat_argparser *first = test_argparser_default_acquire(
         0, nullptr, nullptr, 0); // [状態] - 初回呼び出し済みの default ハンドルを用意する。
-    ASSERT_NE(nullptr, first); // [状態確認] - test_argparser_default_acquire() の戻り値が nullptr 以外であること。
+    ASSERT_NE(nullptr, first);   // [状態確認] - test_argparser_default_acquire() の戻り値が nullptr 以外であること。
 
     char before[256];
     ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_get_usage(first, before, sizeof(before),
@@ -925,7 +925,7 @@ TEST_F(argparserTest, register_grows_beyond_initial_capacity)
     cplat_argparser *parser =
         cplat_argparser_handle_create(argc, argv, nullptr); // [状態] - 生成済みの parser を用意する。
     ASSERT_NE(nullptr, parser); // [状態確認] - cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
-    const int spec_count = 20;                           // [状態] - 初期容量 8 を超える 20 個の登録数とする。
+    const int spec_count = 20;  // [状態] - 初期容量 8 を超える 20 個の登録数とする。
     int storages[spec_count] = {};
 
     // Pre-Assert
@@ -2345,7 +2345,7 @@ TEST_F(argparserTest, multiple_handles_are_independent)
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN_OPTION,
         actual_ret_argparser_parse_2); // [確認_異常系] - "-a" 未登録の parser2 でも同じ引数を解析した cplat_argparser_handle_parse() の戻り値が CPLAT_ERR_UNKNOWN_OPTION であること。
-    EXPECT_EQ(1, flag1); // [確認_正常系] - flag1 が 1 であること。
+    EXPECT_EQ(1, flag1);               // [確認_正常系] - flag1 が 1 であること。
     EXPECT_EQ(0, flag2); // [確認_正常系] - flag2 が 0 であること。(parser2 側のフラグが変化しないことの確認)
     EXPECT_EQ(
         CPLAT_OK,

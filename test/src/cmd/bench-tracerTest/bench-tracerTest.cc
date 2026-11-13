@@ -38,3 +38,24 @@ TEST(bench_tracerTest, rejects_invalid_numeric_arguments)
         EXPECT_EQ(1, result); // [確認_異常系 回数=12] - すべての変換失敗が終了値 1 へ反映されること。
     }
 }
+
+// プロセス数とメッセージ数の積が int に収まらないとき、測定へ進まないことの確認
+TEST(bench_tracerTest, rejects_product_that_does_not_fit_in_int)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_tracer_create(_)).Times(0);
+    // [Pre-Assert確認_異常系] - 測定用 tracer の生成が呼び出されないこと。
+    EXPECT_CALL(mock_cplat, cplat_trace_file_sink_create(_, _, _, _)).Times(0);
+    // [Pre-Assert確認_異常系] - worker のファイル シンク生成が呼び出されないこと。
+
+    // Act
+    const char *args[] = {"bench-tracer", "unused.log", "65536", "65536"};
+    int result = __real_main(4, const_cast<char **>(args));
+    // [手順] - 各引数は int に収まり、積だけが int の最大値を超える組を実行する。
+
+    // Assert
+    EXPECT_EQ(1, result); // [確認_異常系] - 積が int に収まらない入力の終了値が 1 であること。
+}

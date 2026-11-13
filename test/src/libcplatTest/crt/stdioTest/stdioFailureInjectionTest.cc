@@ -498,7 +498,7 @@ TEST(stdioFailureInjectionTest, remove_and_rename_classify_file_operations)
         cplat_remove(new_path, &detail); // [手順] - rename() 後のファイルを指定して cplat_remove() を呼び出す。
     int missing_result =
         cplat_remove(new_path, &detail); // [手順] - 存在しないファイルを指定して cplat_remove() を呼び出す。
-#endif                                                              /* PLATFORM_LINUX */
+#endif                                   /* PLATFORM_LINUX */
     int null_rename_result =
         cplat_rename(nullptr, new_path, &detail); // [手順] - oldpath に nullptr を指定して cplat_rename() を呼び出す。
     int null_newpath_result =
@@ -512,7 +512,7 @@ TEST(stdioFailureInjectionTest, remove_and_rename_classify_file_operations)
     EXPECT_EQ(0, remove_result); // [確認_正常系] - cplat_remove() の戻り値が 0 であること。
     EXPECT_NE(
         0, missing_result); // [確認_異常系] - 存在しないファイルを指定した cplat_remove() の戻り値が 0 以外であること。
-#endif                                  /* PLATFORM_LINUX */
+#endif                      /* PLATFORM_LINUX */
     EXPECT_EQ(
         -1,
         null_rename_result); // [確認_異常系] - oldpath に nullptr を指定した cplat_rename() の戻り値が -1 であること。
@@ -591,7 +591,7 @@ TEST(stdioFailureInjectionTest, formatted_output_and_file_position_wrappers_work
 #if defined(PLATFORM_LINUX)
     int print_result = cplat_fprintf(
         stream, "%s", "abc"); // [手順] - センチネル ストリームと文字列を指定して cplat_fprintf() を呼び出す。
-#endif                                                     /* PLATFORM_LINUX */
+#endif                        /* PLATFORM_LINUX */
     int seek_result =
         cplat_fseek(stream, 0, SEEK_SET);   // [手順] - 先頭 (SEEK_SET) を指定して cplat_fseek() を呼び出す。
     int64_t position = cplat_ftell(stream); // [手順] - cplat_ftell() を呼び出す。
@@ -600,8 +600,8 @@ TEST(stdioFailureInjectionTest, formatted_output_and_file_position_wrappers_work
 #if defined(PLATFORM_LINUX)
     EXPECT_EQ(
         3, print_result); // [確認_正常系] - cplat_fprintf() の戻り値が 3 であること。(出力文字数が 3 であることの確認)
-#endif                          /* PLATFORM_LINUX */
-    EXPECT_EQ(0, seek_result);  // [確認_正常系] - cplat_fseek() の戻り値が 0 であること。
+#endif                    /* PLATFORM_LINUX */
+    EXPECT_EQ(0, seek_result); // [確認_正常系] - cplat_fseek() の戻り値が 0 であること。
     EXPECT_EQ(
         0, position); // [確認_正常系] - cplat_ftell() の戻り値が 0 であること。(先頭へ移動した後の位置であることの確認)
 }

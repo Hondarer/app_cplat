@@ -14,7 +14,8 @@ namespace
 int test_sym_loader_is_default(cplat_sym_loader_entry *entry, int expected = CPLAT_OK)
 {
     int value = 0;
-    EXPECT_EQ(expected, cplat_sym_loader_is_default(entry, &value)); // [確認_正常系] - 結果コードが expected と一致すること。
+    EXPECT_EQ(expected,
+              cplat_sym_loader_is_default(entry, &value)); // [確認_正常系] - 結果コードが expected と一致すること。
     return value;
 }
 // [サブ手順終了]
@@ -89,7 +90,8 @@ TEST_F(symLoaderIsDefaultTest, resolves_and_reports_explicit_default)
             &entry_.resolved,
             CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 1 であること。(呼び出しの中で解決済みになることの確認)
     // [サブ手順参照 名前=symLoaderIsDefaultTest.is_failed]
-    EXPECT_EQ(0, test_sym_loader_is_failed(&entry_)); // [確認_正常系] - test_sym_loader_is_failed() の戻り値が 0 であること。
+    EXPECT_EQ(
+        0, test_sym_loader_is_failed(&entry_)); // [確認_正常系] - test_sym_loader_is_failed() の戻り値が 0 であること。
 }
 // [サブ手順参照 名前=symLoaderIsDefaultTest.TearDown]
 
@@ -98,7 +100,8 @@ TEST_F(symLoaderIsDefaultTest, reports_not_default_for_resolved_symbol)
 {
     // Arrange
     entry_.impl = static_cast<cplat_sym_loader_entry_impl *>(cplat_calloc(1u, sizeof(*entry_.impl)));
-    ASSERT_NE(nullptr, entry_.impl); // [状態確認] - 管理構造体を確保する cplat_calloc() の戻り値が nullptr 以外であること。
+    ASSERT_NE(nullptr,
+              entry_.impl); // [状態確認] - 管理構造体を確保する cplat_calloc() の戻り値が nullptr 以外であること。
     entry_.impl->is_default = 0;
     cplat_atomic_store_i32(&entry_.resolved, 1,
                            CPLAT_MEMORY_ORDER_RELAXED); // [状態] - 解決済みで明示的既定値でないエントリを用意する。

@@ -413,8 +413,8 @@ static int append_array_targets(const cJSON *array, cplat_sym_loader_name_pair *
     return 0;
 }
 
-static int mark_key_storage_failure(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length,
-                                    const char *func_key, const char *configpath)
+static int mark_key_storage_failure(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length, const char *func_key,
+                                    const char *configpath)
 {
     cplat_sym_loader_entry *entry = find_entry(fobj_array, fobj_length, func_key);
 
@@ -531,8 +531,7 @@ static int finish_absent_keys(cplat_sym_loader_entry *const *fobj_array, size_t 
     return failed;
 }
 
-int cplat_sym_loader_apply_config(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length,
-                                  const char *configpath)
+int cplat_sym_loader_apply_config(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length, const char *configpath)
 {
     FILE *fp;
     char *buffer;

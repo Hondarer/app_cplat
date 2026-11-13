@@ -488,8 +488,8 @@ TEST_F(hashtableVariableStringTest, fixed_strings_accept_literals_and_zero_fill_
 // キーおよび値の全フィールド型組み合わせ (固定長バイナリ・固定長文字列・可変長文字列) が正常に動作することの確認
 TEST_F(hashtableVariableStringTest, supports_all_key_and_value_field_type_combinations)
 {
-    const cplat_hashtable_field_type field_types[] = {
-        CPLAT_HASHTABLE_FIELD_BINARY, CPLAT_HASHTABLE_FIELD_FIXED_STRING, CPLAT_HASHTABLE_FIELD_VARIABLE_STRING};
+    const cplat_hashtable_field_type field_types[] = {CPLAT_HASHTABLE_FIELD_BINARY, CPLAT_HASHTABLE_FIELD_FIXED_STRING,
+                                                      CPLAT_HASHTABLE_FIELD_VARIABLE_STRING};
     const unsigned char binary_key[] = {'k', 'e', 'y', 0};
     const unsigned char binary_value[] = {'v', 'a', 'l', 0};
 
@@ -503,10 +503,9 @@ TEST_F(hashtableVariableStringTest, supports_all_key_and_value_field_type_combin
             unsigned char copied[16] = {};
             size_t required_size = 0;
             const void *key = key_type == CPLAT_HASHTABLE_FIELD_BINARY ? static_cast<const void *>(binary_key)
-                                                                             : static_cast<const void *>("key");
-            const void *value = value_type == CPLAT_HASHTABLE_FIELD_BINARY
-                                    ? static_cast<const void *>(binary_value)
-                                    : static_cast<const void *>("val");
+                                                                       : static_cast<const void *>("key");
+            const void *value = value_type == CPLAT_HASHTABLE_FIELD_BINARY ? static_cast<const void *>(binary_value)
+                                                                           : static_cast<const void *>("val");
 
             config.capacity = 2;
             config.key_type = key_type;

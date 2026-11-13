@@ -11,7 +11,7 @@ TEST(syncLocalLockTest, try_lock_reports_busy_when_already_locked)
     // Arrange
 #if defined(PLATFORM_LINUX)
     testing::NiceMock<Mock_pthread> mock_pthread;
-#endif                             /* PLATFORM_LINUX */
+#endif                                /* PLATFORM_LINUX */
     cplat_local_lock *lock = nullptr; // [状態] - 新規 local lock ハンドルの格納先を用意する。
 
     // Pre-Assert

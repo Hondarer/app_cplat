@@ -109,7 +109,7 @@ TEST_F(fileTest, file_id_invalid_arguments_fail)
             Return(
                 -1))); // [Pre-Assert確認_異常系] - stat() が "missing.dat" と等しい文字列を指定して 1 回呼び出されること。
                        // [Pre-Assert手順] - stat() から、errno に ENOENT を設定して -1 を返す。
-#endif                                /* PLATFORM_LINUX */
+#endif                 /* PLATFORM_LINUX */
 
     // Act
     int actual_ret_get_id_closed = cplat_file_get_id(&file, &id, nullptr);

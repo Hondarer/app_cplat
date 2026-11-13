@@ -374,5 +374,8 @@ TEST(traceCommonTest, clock_failure_preserves_timestamp)
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNSUPPORTED, result); // [確認_異常系] - 時刻解決失敗を返すこと。
     EXPECT_EQ(123, resolved.tv_sec);          // [確認_異常系] - 取得失敗前の時刻を保持すること。
-    EXPECT_EQ(456, resolved.tv_nsec);
+    EXPECT_EQ(
+        456,
+        resolved
+            .tv_nsec); // [確認_異常系] - resolved.tv_nsec が 456 であること。(取得失敗前のナノ秒を保持することの確認)
 }

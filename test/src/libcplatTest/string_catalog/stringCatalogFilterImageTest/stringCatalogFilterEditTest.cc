@@ -148,7 +148,7 @@ TEST_F(stringCatalogFilterEditTest, malformed_compile_line_leaves_image_unchange
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == 1", image)); // [状態] - 1 行の条件式をコンパイルする。
     // [状態確認] - compile_single_line() の戻り値が CPLAT_OK であること。
-    std::memcpy(snapshot, image, kImageSize);                    // [状態] - 変更前のバイト列を保存する。
+    std::memcpy(snapshot, image, kImageSize); // [状態] - 変更前のバイト列を保存する。
 
     // Pre-Assert
 
@@ -183,7 +183,7 @@ TEST_F(stringCatalogFilterEditTest, malformed_insert_line_leaves_image_unchanged
 
     ASSERT_EQ(CPLAT_OK, compile_single_line("key == 1", image)); // [状態] - 1 行の条件式をコンパイルする。
     // [状態確認] - compile_single_line() の戻り値が CPLAT_OK であること。
-    std::memcpy(snapshot, image, kImageSize);                    // [状態] - 変更前のバイト列を保存する。
+    std::memcpy(snapshot, image, kImageSize); // [状態] - 変更前のバイト列を保存する。
 
     // Pre-Assert
 

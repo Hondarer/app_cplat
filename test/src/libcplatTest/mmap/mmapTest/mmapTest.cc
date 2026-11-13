@@ -180,7 +180,7 @@ TEST_F(mmapTest, attach_read_only_maps_existing_file)
     EXPECT_CALL(mock_windows_, CreateFileMappingA(_, _, _, kFakeFileHandle, _, PAGE_READONLY, _, _, _))
         .WillOnce(Return(
             kFakeMappingHandle)); // [Pre-Assert確認_正常系] - CreateFileMappingA() が kFakeFileHandle、PAGE_READONLY を指定して 1 回呼び出されること。
-                                  // [Pre-Assert手順] - CreateFileMappingA() から kFakeMappingHandle を返す。
+    // [Pre-Assert手順] - CreateFileMappingA() から kFakeMappingHandle を返す。
     EXPECT_CALL(mock_windows_, MapViewOfFile(_, _, _, kFakeMappingHandle, FILE_MAP_READ, 0u, 0u, kMapSize))
         .WillOnce(Return(
             mapped_buf_)); // [Pre-Assert確認_正常系] - MapViewOfFile() が kFakeMappingHandle、FILE_MAP_READ、0u、0u、kMapSize を指定して 1 回呼び出されること。
@@ -193,7 +193,7 @@ TEST_F(mmapTest, attach_read_only_maps_existing_file)
 
     // Assert
     ASSERT_EQ(CPLAT_OK,
-              actual_ret); // [確認_正常系] - 読み取り専用の cplat_mmap_attach() の戻り値が CPLAT_OK であること。
+              actual_ret);   // [確認_正常系] - 読み取り専用の cplat_mmap_attach() の戻り値が CPLAT_OK であること。
     ASSERT_NE(nullptr, map); // [確認_正常系] - map が nullptr 以外であること。
     EXPECT_EQ(
         kMapSize,

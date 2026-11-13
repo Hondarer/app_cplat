@@ -500,7 +500,9 @@ TEST_F(trace_syslogTest, concurrent_rename_and_write_preserve_complete_identifie
             for (int i = 0; i < 1000; ++i)
             {
                 if (cplat_syslog_sink_write(sink, LOG_INFO, nullptr, "message") != CPLAT_OK)
+                {
                     ++errors;
+                }
             }
         });
     std::thread renamer(
@@ -509,7 +511,9 @@ TEST_F(trace_syslogTest, concurrent_rename_and_write_preserve_complete_identifie
             for (int i = 0; i < 1000; ++i)
             {
                 if (cplat_syslog_sink_rename(sink, i % 2 == 0 ? "after" : "before") != CPLAT_OK)
+                {
                     ++errors;
+                }
             }
         }); // [手順] - 送信と名前変更を並行して繰り返す。
     writer.join();
@@ -522,7 +526,9 @@ TEST_F(trace_syslogTest, concurrent_rename_and_write_preserve_complete_identifie
     {
         ++lines;
         if (strstr(line, "before[") == nullptr && strstr(line, "after[") == nullptr)
+        {
             ++invalid_lines;
+        }
     }
 
     // Assert
@@ -534,9 +540,13 @@ TEST_F(trace_syslogTest, concurrent_rename_and_write_preserve_complete_identifie
     cplat_syslog_sink_dispose(sink);
     fclose(stream);
     if (had_previous)
+    {
         setenv("SYSLOG_TEST_FD", saved.c_str(), 1);
+    }
     else
+    {
         unsetenv("SYSLOG_TEST_FD");
+    }
 }
 
 #endif /* PLATFORM_ */

@@ -120,15 +120,18 @@ TEST_F(stackLimitTest, get_rejects_null_outputs)
 
     // Act
     int actual_ret_soft = cplat_stack_limit_linux_get(
-        nullptr, &limit_bytes, &detail); // [手順] - soft_limit_bytes_out に nullptr を指定して cplat_stack_limit_linux_get() を呼び出す。
+        nullptr, &limit_bytes,
+        &detail); // [手順] - soft_limit_bytes_out に nullptr を指定して cplat_stack_limit_linux_get() を呼び出す。
     int actual_ret_hard = cplat_stack_limit_linux_get(
-        &limit_bytes, nullptr, nullptr); // [手順] - hard_limit_bytes_out に nullptr を指定して cplat_stack_limit_linux_get() を呼び出す。
+        &limit_bytes, nullptr,
+        nullptr); // [手順] - hard_limit_bytes_out に nullptr を指定して cplat_stack_limit_linux_get() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_soft); // [確認_異常系] - nullptr の soft_limit_bytes_out に対する cplat_stack_limit_linux_get() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(EINVAL, cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EINVAL であること。
+    EXPECT_EQ(EINVAL,
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EINVAL であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         actual_ret_hard); // [確認_異常系] - nullptr の hard_limit_bytes_out に対する cplat_stack_limit_linux_get() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -149,7 +152,7 @@ TEST_F(stackLimitTest, get_converts_infinity_to_unlimited)
         .WillOnce(Invoke(fill_limit(
             kSoftLimitBytes,
             RLIM_INFINITY))); // [Pre-Assert確認_正常系] - getrlimit() が RLIMIT_STACK を指定して 1 回呼び出されること。
-                              // [Pre-Assert手順] - getrlimit() からソフト リミット 8 MiB、ハード リミット RLIM_INFINITY を返す。
+    // [Pre-Assert手順] - getrlimit() からソフト リミット 8 MiB、ハード リミット RLIM_INFINITY を返す。
 
     // Act
     int actual_ret = cplat_stack_limit_linux_get(&soft_limit_bytes, &hard_limit_bytes,
@@ -160,7 +163,10 @@ TEST_F(stackLimitTest, get_converts_infinity_to_unlimited)
     EXPECT_EQ((uint64_t)kSoftLimitBytes, soft_limit_bytes); // [確認_正常系] - soft_limit_bytes が 8 MiB であること。
     EXPECT_EQ(CPLAT_STACK_LIMIT_LINUX_UNLIMITED,
               hard_limit_bytes); // [確認_正常系] - hard_limit_bytes が CPLAT_STACK_LIMIT_LINUX_UNLIMITED であること。
-    EXPECT_EQ(0, cplat_error_is_set(&detail)); // [確認_正常系] - cplat_error_is_set() の戻り値が 0 であること。(成功時に詳細エラーがクリアされたことの確認)
+    EXPECT_EQ(
+        0,
+        cplat_error_is_set(
+            &detail)); // [確認_正常系] - cplat_error_is_set() の戻り値が 0 であること。(成功時に詳細エラーがクリアされたことの確認)
 }
 
 // getrlimit() の失敗が詳細エラーで通知され、出力引数が変更されないことの確認
@@ -174,19 +180,22 @@ TEST_F(stackLimitTest, get_reports_os_failure_without_changing_outputs)
 
     // Pre-Assert
     EXPECT_CALL(mock_sys_resource, getrlimit(_, _, _, RLIMIT_STACK, _))
-        .WillOnce(DoAll(testing::Assign(&errno, EFAULT),
-                        Return(-1))); // [Pre-Assert確認_異常系] - getrlimit() が RLIMIT_STACK を指定して 1 回呼び出されること。
-                                      // [Pre-Assert手順] - getrlimit() から errno に EFAULT を設定して -1 を返す。
+        .WillOnce(DoAll(
+            testing::Assign(&errno, EFAULT),
+            Return(-1))); // [Pre-Assert確認_異常系] - getrlimit() が RLIMIT_STACK を指定して 1 回呼び出されること。
+                          // [Pre-Assert手順] - getrlimit() から errno に EFAULT を設定して -1 を返す。
 
     // Act
     int actual_ret = cplat_stack_limit_linux_get(&soft_limit_bytes, &hard_limit_bytes,
                                                  &detail); // [手順] - cplat_stack_limit_linux_get() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret); // [確認_異常系] - cplat_stack_limit_linux_get() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(EFAULT, cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EFAULT であること。
-    EXPECT_EQ(1U, soft_limit_bytes); // [確認_異常系] - soft_limit_bytes が 1 のままであること。
-    EXPECT_EQ(2U, hard_limit_bytes); // [確認_異常系] - hard_limit_bytes が 2 のままであること。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              actual_ret); // [確認_異常系] - cplat_stack_limit_linux_get() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(EFAULT,
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EFAULT であること。
+    EXPECT_EQ(1U, soft_limit_bytes);           // [確認_異常系] - soft_limit_bytes が 1 のままであること。
+    EXPECT_EQ(2U, hard_limit_bytes);           // [確認_異常系] - hard_limit_bytes が 2 のままであること。
 }
 
 // ソフト リミットがハード リミットと同じ値で setrlimit() へ渡されることの確認
@@ -195,9 +204,9 @@ TEST_F(stackLimitTest, raise_sets_soft_limit_to_hard_limit)
 {
     // Arrange
     NiceMock<Mock_sys_resource> mock_sys_resource;
-    uint64_t soft_limit_bytes = 0U;      // [状態] - 出力引数の格納先を用意する。
-    uint64_t unlimited_soft_bytes = 0U;  // [状態] - 上限なしの場合の出力引数の格納先を用意する。
-    cplat_error detail;                  // [状態] - 詳細エラーの格納先を用意する。
+    uint64_t soft_limit_bytes = 0U;     // [状態] - 出力引数の格納先を用意する。
+    uint64_t unlimited_soft_bytes = 0U; // [状態] - 上限なしの場合の出力引数の格納先を用意する。
+    cplat_error detail;                 // [状態] - 詳細エラーの格納先を用意する。
 
     // Pre-Assert
     EXPECT_CALL(mock_sys_resource, getrlimit(_, _, _, RLIMIT_STACK, _))
@@ -205,39 +214,53 @@ TEST_F(stackLimitTest, raise_sets_soft_limit_to_hard_limit)
         .WillOnce(Invoke(fill_limit(
             kSoftLimitBytes,
             RLIM_INFINITY))); // [Pre-Assert確認_正常系] - getrlimit() が RLIMIT_STACK を指定して 2 回呼び出されること。
-                              // [Pre-Assert手順] - getrlimit() から 1 回目はハード リミット 64 MiB、2 回目は RLIM_INFINITY を返す。ソフト リミットはいずれも 8 MiB とする。
+    // [Pre-Assert手順] - getrlimit() から 1 回目はハード リミット 64 MiB、2 回目は RLIM_INFINITY を返す。ソフト リミットはいずれも 8 MiB とする。
     EXPECT_CALL(mock_sys_resource, setrlimit(_, _, _, RLIMIT_STACK, _))
         .WillOnce(Invoke(
             [](const char *, const int, const char *, int, const struct rlimit *rlim)
             {
-                EXPECT_EQ(kHardLimitBytes, rlim->rlim_cur); // [Pre-Assert確認_正常系] - 1 回目の rlim->rlim_cur が 64 MiB であること。
-                EXPECT_EQ(kHardLimitBytes, rlim->rlim_max); // [Pre-Assert確認_正常系] - 1 回目の rlim->rlim_max が 64 MiB であること。
+                EXPECT_EQ(kHardLimitBytes,
+                          rlim->rlim_cur); // [Pre-Assert確認_正常系] - 1 回目の rlim->rlim_cur が 64 MiB であること。
+                EXPECT_EQ(kHardLimitBytes,
+                          rlim->rlim_max); // [Pre-Assert確認_正常系] - 1 回目の rlim->rlim_max が 64 MiB であること。
                 return 0;
             }))
         .WillOnce(Invoke(
             [](const char *, const int, const char *, int, const struct rlimit *rlim)
             {
-                EXPECT_EQ(RLIM_INFINITY, rlim->rlim_cur); // [Pre-Assert確認_正常系] - 2 回目の rlim->rlim_cur が RLIM_INFINITY であること。
-                EXPECT_EQ(RLIM_INFINITY, rlim->rlim_max); // [Pre-Assert確認_正常系] - 2 回目の rlim->rlim_max が RLIM_INFINITY であること。
+                EXPECT_EQ(
+                    RLIM_INFINITY,
+                    rlim->rlim_cur); // [Pre-Assert確認_正常系] - 2 回目の rlim->rlim_cur が RLIM_INFINITY であること。
+                EXPECT_EQ(
+                    RLIM_INFINITY,
+                    rlim->rlim_max); // [Pre-Assert確認_正常系] - 2 回目の rlim->rlim_max が RLIM_INFINITY であること。
                 return 0;
             })); // [Pre-Assert確認_正常系] - setrlimit() が RLIMIT_STACK を指定して 2 回呼び出されること。
                  // [Pre-Assert手順] - setrlimit() から 0 を返す。
 
     // Act
     int actual_ret = cplat_stack_limit_linux_raise_to_hard_limit(
-        &soft_limit_bytes, &detail); // [手順] - ハード リミット 64 MiB の状態で cplat_stack_limit_linux_raise_to_hard_limit() を呼び出す。
+        &soft_limit_bytes,
+        &detail); // [手順] - ハード リミット 64 MiB の状態で cplat_stack_limit_linux_raise_to_hard_limit() を呼び出す。
     int actual_ret_unlimited = cplat_stack_limit_linux_raise_to_hard_limit(
-        &unlimited_soft_bytes, nullptr); // [手順] - ハード リミット RLIM_INFINITY の状態で cplat_stack_limit_linux_raise_to_hard_limit() を呼び出す。
+        &unlimited_soft_bytes,
+        nullptr); // [手順] - ハード リミット RLIM_INFINITY の状態で cplat_stack_limit_linux_raise_to_hard_limit() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 64 MiB に対する cplat_stack_limit_linux_raise_to_hard_limit() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret); // [確認_正常系] - 64 MiB に対する cplat_stack_limit_linux_raise_to_hard_limit() の戻り値が CPLAT_OK であること。
     EXPECT_EQ((uint64_t)kHardLimitBytes, soft_limit_bytes); // [確認_正常系] - soft_limit_bytes が 64 MiB であること。
-    EXPECT_EQ(0, cplat_error_is_set(&detail)); // [確認_正常系] - cplat_error_is_set() の戻り値が 0 であること。(成功時に詳細エラーがクリアされたことの確認)
+    EXPECT_EQ(
+        0,
+        cplat_error_is_set(
+            &detail)); // [確認_正常系] - cplat_error_is_set() の戻り値が 0 であること。(成功時に詳細エラーがクリアされたことの確認)
     EXPECT_EQ(
         CPLAT_OK,
         actual_ret_unlimited); // [確認_正常系] - RLIM_INFINITY に対する cplat_stack_limit_linux_raise_to_hard_limit() の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(CPLAT_STACK_LIMIT_LINUX_UNLIMITED,
-              unlimited_soft_bytes); // [確認_正常系] - unlimited_soft_bytes が CPLAT_STACK_LIMIT_LINUX_UNLIMITED であること。
+    EXPECT_EQ(
+        CPLAT_STACK_LIMIT_LINUX_UNLIMITED,
+        unlimited_soft_bytes); // [確認_正常系] - unlimited_soft_bytes が CPLAT_STACK_LIMIT_LINUX_UNLIMITED であること。
 }
 
 // ソフト リミットがすでにハード リミットと等しい場合に、setrlimit() を呼び出さずに省略されることの確認
@@ -246,8 +269,8 @@ TEST_F(stackLimitTest, raise_skips_when_soft_limit_equals_hard_limit)
 {
     // Arrange
     NiceMock<Mock_sys_resource> mock_sys_resource;
-    uint64_t soft_limit_bytes = 0U; // [状態] - 出力引数の格納先を用意する。
-    cplat_error detail;             // [状態] - 詳細エラーの格納先を用意する。
+    uint64_t soft_limit_bytes = 0U;            // [状態] - 出力引数の格納先を用意する。
+    cplat_error detail;                        // [状態] - 詳細エラーの格納先を用意する。
     cplat_error_capture_errno(&detail, EPERM); // [状態] - 詳細エラーに EPERM を設定しておく。
 
     // Pre-Assert
@@ -264,9 +287,14 @@ TEST_F(stackLimitTest, raise_skips_when_soft_limit_equals_hard_limit)
         &soft_limit_bytes, &detail); // [手順] - cplat_stack_limit_linux_raise_to_hard_limit() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_SKIPPED, actual_ret); // [確認_正常系] - cplat_stack_limit_linux_raise_to_hard_limit() の戻り値が CPLAT_SKIPPED であること。
+    EXPECT_EQ(
+        CPLAT_SKIPPED,
+        actual_ret); // [確認_正常系] - cplat_stack_limit_linux_raise_to_hard_limit() の戻り値が CPLAT_SKIPPED であること。
     EXPECT_EQ((uint64_t)kHardLimitBytes, soft_limit_bytes); // [確認_正常系] - soft_limit_bytes が 64 MiB であること。
-    EXPECT_EQ(0, cplat_error_is_set(&detail)); // [確認_正常系] - cplat_error_is_set() の戻り値が 0 であること。(省略時に詳細エラーがクリアされたことの確認)
+    EXPECT_EQ(
+        0,
+        cplat_error_is_set(
+            &detail)); // [確認_正常系] - cplat_error_is_set() の戻り値が 0 であること。(省略時に詳細エラーがクリアされたことの確認)
 }
 
 // setrlimit() の権限不足が結果コードと詳細エラーで通知され、出力引数が変更されないことの確認
@@ -283,11 +311,12 @@ TEST_F(stackLimitTest, raise_reports_permission_denied)
         .WillOnce(Invoke(fill_limit(
             kSoftLimitBytes,
             kHardLimitBytes))); // [Pre-Assert確認_異常系] - getrlimit() が RLIMIT_STACK を指定して 1 回呼び出されること。
-                                // [Pre-Assert手順] - getrlimit() からソフト リミット 8 MiB、ハード リミット 64 MiB を返す。
+    // [Pre-Assert手順] - getrlimit() からソフト リミット 8 MiB、ハード リミット 64 MiB を返す。
     EXPECT_CALL(mock_sys_resource, setrlimit(_, _, _, RLIMIT_STACK, _))
-        .WillOnce(DoAll(testing::Assign(&errno, EPERM),
-                        Return(-1))); // [Pre-Assert確認_異常系] - setrlimit() が RLIMIT_STACK を指定して 1 回呼び出されること。
-                                      // [Pre-Assert手順] - setrlimit() から errno に EPERM を設定して -1 を返す。
+        .WillOnce(DoAll(
+            testing::Assign(&errno, EPERM),
+            Return(-1))); // [Pre-Assert確認_異常系] - setrlimit() が RLIMIT_STACK を指定して 1 回呼び出されること。
+                          // [Pre-Assert手順] - setrlimit() から errno に EPERM を設定して -1 を返す。
 
     // Act
     int actual_ret = cplat_stack_limit_linux_raise_to_hard_limit(
@@ -298,10 +327,13 @@ TEST_F(stackLimitTest, raise_reports_permission_denied)
     EXPECT_EQ(
         CPLAT_ERR_PERMISSION_DENIED,
         actual_ret); // [確認_異常系] - cplat_stack_limit_linux_raise_to_hard_limit() の戻り値が CPLAT_ERR_PERMISSION_DENIED であること。
-    EXPECT_EQ(EPERM, cplat_error_get_errno(&detail)); // [確認_異常系] - detail に対する cplat_error_get_errno() の戻り値が EPERM であること。
+    EXPECT_EQ(EPERM,
+              cplat_error_get_errno(
+                  &detail)); // [確認_異常系] - detail に対する cplat_error_get_errno() の戻り値が EPERM であること。
     EXPECT_EQ(
         EPERM,
-        cplat_error_get_errno(&last)); // [確認_異常系] - last に対する cplat_error_get_errno() の戻り値が EPERM であること。(スレッド ローカルの直前値にも記録されたことの確認)
+        cplat_error_get_errno(
+            &last)); // [確認_異常系] - last に対する cplat_error_get_errno() の戻り値が EPERM であること。(スレッド ローカルの直前値にも記録されたことの確認)
     EXPECT_EQ(1U, soft_limit_bytes); // [確認_異常系] - soft_limit_bytes が 1 のままであること。
 }
 
@@ -314,19 +346,24 @@ TEST_F(stackLimitTest, raise_reports_get_failure_without_setting)
 
     // Pre-Assert
     EXPECT_CALL(mock_sys_resource, getrlimit(_, _, _, RLIMIT_STACK, _))
-        .WillOnce(DoAll(testing::Assign(&errno, EFAULT),
-                        Return(-1))); // [Pre-Assert確認_異常系] - getrlimit() が RLIMIT_STACK を指定して 1 回呼び出されること。
-                                      // [Pre-Assert手順] - getrlimit() から errno に EFAULT を設定して -1 を返す。
+        .WillOnce(DoAll(
+            testing::Assign(&errno, EFAULT),
+            Return(-1))); // [Pre-Assert確認_異常系] - getrlimit() が RLIMIT_STACK を指定して 1 回呼び出されること。
+                          // [Pre-Assert手順] - getrlimit() から errno に EFAULT を設定して -1 を返す。
     EXPECT_CALL(mock_sys_resource, setrlimit(_, _, _, _, _))
         .Times(0); // [Pre-Assert確認_異常系] - setrlimit() が呼び出されないこと。
 
     // Act
     int actual_ret = cplat_stack_limit_linux_raise_to_hard_limit(
-        nullptr, &detail); // [手順] - soft_limit_bytes_out に nullptr を指定して cplat_stack_limit_linux_raise_to_hard_limit() を呼び出す。
+        nullptr,
+        &detail); // [手順] - soft_limit_bytes_out に nullptr を指定して cplat_stack_limit_linux_raise_to_hard_limit() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret); // [確認_異常系] - cplat_stack_limit_linux_raise_to_hard_limit() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(EFAULT, cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EFAULT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret); // [確認_異常系] - cplat_stack_limit_linux_raise_to_hard_limit() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(EFAULT,
+              cplat_error_get_errno(&detail)); // [確認_異常系] - cplat_error_get_errno() の戻り値が EFAULT であること。
 }
 
 // 引き下げたソフト リミットを超えるスタック消費が、引き上げ前は強制終了し、引き上げ後は成功することの確認

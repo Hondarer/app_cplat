@@ -58,21 +58,21 @@ typedef struct cplat_sym_loader_reject_item
  */
 struct cplat_sym_loader_entry_impl
 {
-    cplat_sym_loader_name_pair *pending;     /**< 未解決の設定。解決が成功すると解放します。 */
-    size_t pending_count;                    /**< pending の件数。 */
+    cplat_sym_loader_name_pair *pending;      /**< 未解決の設定。解決が成功すると解放します。 */
+    size_t pending_count;                     /**< pending の件数。 */
     cplat_sym_loader_reject_item *duplicates; /**< 同じ適用の中で -7 として保留した先。 */
-    size_t duplicate_count;                  /**< duplicates の件数。 */
-    cplat_sym_loader_usable *usable;         /**< 公開済みの利用側の列。 */
-    size_t usable_count;                     /**< usable の件数。 */
-    cplat_sym_loader_reject_item *rejects;   /**< 公開済みの診断の列。 */
-    size_t reject_count;                     /**< rejects の件数。 */
-    int is_default;                          /**< 明示的既定値のとき 1。 */
-    unsigned int pad;                        /**< 明示的アラインメント。 */
-    char *config_path;                       /**< 再読込に使う設定ファイルのパス。 */
-    int needs_reload;                        /**< 1 のとき、次の取得で設定ファイルを読み直します。 */
-    int adopted_in_apply;                    /**< この適用で、すでに値を採用したとき 1。 */
-    int failed_this_apply;                   /**< この適用で確保に失敗したとき 1。以降のキーは採用しません。 */
-    int release_pending;                     /**< モジュールの解放を再試行する必要があるとき 1。 */
+    size_t duplicate_count;                   /**< duplicates の件数。 */
+    cplat_sym_loader_usable *usable;          /**< 公開済みの利用側の列。 */
+    size_t usable_count;                      /**< usable の件数。 */
+    cplat_sym_loader_reject_item *rejects;    /**< 公開済みの診断の列。 */
+    size_t reject_count;                      /**< rejects の件数。 */
+    int is_default;                           /**< 明示的既定値のとき 1。 */
+    unsigned int pad;                         /**< 明示的アラインメント。 */
+    char *config_path;                        /**< 再読込に使う設定ファイルのパス。 */
+    int needs_reload;                         /**< 1 のとき、次の取得で設定ファイルを読み直します。 */
+    int adopted_in_apply;                     /**< この適用で、すでに値を採用したとき 1。 */
+    int failed_this_apply;                    /**< この適用で確保に失敗したとき 1。以降のキーは採用しません。 */
+    int release_pending;                      /**< モジュールの解放を再試行する必要があるとき 1。 */
 };
 
 static inline int cplat_sym_loader_close_usable(cplat_sym_loader_usable *list, size_t count, int retry_failed)

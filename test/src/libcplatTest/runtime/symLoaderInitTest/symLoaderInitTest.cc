@@ -38,7 +38,6 @@ const char *pending_func(const cplat_sym_loader_entry &entry)
 }
 } // namespace
 
-
 using testing::_;
 using testing::DoDefault;
 using testing::NiceMock;
@@ -91,11 +90,12 @@ class symLoaderInitTest : public Test
     {
         // 指定パスの fopen を失敗させる。
         EXPECT_CALL(mock_cplat_, cplat_fopen(StrEq(path), StrEq("rb"), _))
-            .WillOnce([](const char *, const char *, cplat_error *detail)
-                      {
-                          cplat_error_capture_errno(detail, ENOENT);
-                          return nullptr;
-                      });
+            .WillOnce(
+                [](const char *, const char *, cplat_error *detail)
+                {
+                    cplat_error_capture_errno(detail, ENOENT);
+                    return nullptr;
+                });
         // [Pre-Assert手順] - cplat_fopen() から nullptr (設定ファイルを開けない) を返す。
         // [Pre-Assert確認_正常系] - cplat_fopen() が path と "rb" を指定して 1 回呼び出されること。
     }
@@ -113,10 +113,13 @@ TEST_F(symLoaderInitTest, validates_array_before_reading)
     EXPECT_CALL(mock_cplat_, cplat_fopen(_, _, _)).Times(0);
     // [Pre-Assert確認_正常系] - 設定ファイルを開かないこと。
     // Act / Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_sym_loader_init(nullptr, 1u, "config.json")); // [確認_異常系] - NULL 配列を拒否すること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_sym_loader_init(entries, 2u, "config.json")); // [確認_異常系] - NULL 要素を拒否すること。
-    EXPECT_EQ(CPLAT_SKIPPED, cplat_sym_loader_init(nullptr, 0u, nullptr)); // [確認_正常系] - 0 件と NULL パスでは設定を省略すること。
-    EXPECT_EQ(nullptr, entry.impl); // [確認_異常系] - エントリを変更しないこと。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
+              cplat_sym_loader_init(nullptr, 1u, "config.json")); // [確認_異常系] - NULL 配列を拒否すること。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
+              cplat_sym_loader_init(entries, 2u, "config.json")); // [確認_異常系] - NULL 要素を拒否すること。
+    EXPECT_EQ(CPLAT_SKIPPED,
+              cplat_sym_loader_init(nullptr, 0u, nullptr)); // [確認_正常系] - 0 件と NULL パスでは設定を省略すること。
+    EXPECT_EQ(nullptr, entry.impl);                         // [確認_異常系] - エントリを変更しないこと。
 }
 
 // 存在しない設定と詳細不明の読込失敗を区別することの確認
@@ -130,9 +133,11 @@ TEST_F(symLoaderInitTest, distinguishes_missing_file_from_unknown_open_failure)
     EXPECT_CALL(mock_cplat_, cplat_fopen(StrEq("unknown.json"), StrEq("rb"), _)).WillOnce(Return(nullptr));
     // [Pre-Assert確認_正常系] - 詳細不明のファイルを開こうとすること。
     // [Pre-Assert手順] - cplat_fopen() は詳細を設定せず nullptr を返す。
-    EXPECT_EQ(CPLAT_SKIPPED, cplat_sym_loader_init(entries, 1u, "missing.json")); // [確認_正常系] - 存在しない設定を省略すること。
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, cplat_sym_loader_init(entries, 1u, "unknown.json")); // [確認_異常系] - 詳細不明の失敗を通知すること。
-    EXPECT_EQ(nullptr, entry.impl); // [確認_異常系] - エントリを変更しないこと。
+    EXPECT_EQ(CPLAT_SKIPPED,
+              cplat_sym_loader_init(entries, 1u, "missing.json")); // [確認_正常系] - 存在しない設定を省略すること。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              cplat_sym_loader_init(entries, 1u, "unknown.json")); // [確認_異常系] - 詳細不明の失敗を通知すること。
+    EXPECT_EQ(nullptr, entry.impl);                                // [確認_異常系] - エントリを変更しないこと。
 }
 
 // 一部の設定適用に失敗しても他のエントリを適用することの確認
@@ -150,10 +155,13 @@ TEST_F(symLoaderInitTest, continues_after_entry_allocation_failure)
     EXPECT_CALL(mock_cplat_, cplat_strdup(StrEq("bad_lib"))).WillOnce(Return(nullptr));
     // [Pre-Assert確認_正常系] - 失敗対象の名前を複製しようとすること。
     // [Pre-Assert手順] - 名前の確保を失敗させる。
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, cplat_sym_loader_init(entries, 2u, "partial.json")); // [確認_異常系] - 一部の失敗を通知すること。
-    EXPECT_EQ(1, cplat_atomic_load_i32(&bad.failed, CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - 失敗したエントリが失敗状態になること。
-    EXPECT_STREQ("good_lib", pending_lib(good)); // [確認_正常系] - 他のライブラリ名を適用すること。
-    EXPECT_STREQ("g", pending_func(good)); // [確認_正常系] - 他の関数名を適用すること。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              cplat_sym_loader_init(entries, 2u, "partial.json")); // [確認_異常系] - 一部の失敗を通知すること。
+    EXPECT_EQ(
+        1, cplat_atomic_load_i32(&bad.failed,
+                                 CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - 失敗したエントリが失敗状態になること。
+    EXPECT_STREQ("good_lib", pending_lib(good));               // [確認_正常系] - 他のライブラリ名を適用すること。
+    EXPECT_STREQ("g", pending_func(good));                     // [確認_正常系] - 他の関数名を適用すること。
     EXPECT_EQ(CPLAT_OK, cplat_sym_loader_dispose(entries, 2u)); // [確認_正常系] - 解放に成功すること。
 }
 
@@ -176,11 +184,12 @@ TEST_F(symLoaderInitTest, does_not_reload_old_path_after_path_allocation_failure
         .WillRepeatedly(Return(nullptr));
     // [Pre-Assert確認_正常系] - 新しい設定パスの複製を試みること。
     // [Pre-Assert手順] - 新しいパスの確保を失敗させる。
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, cplat_sym_loader_init(entries, 1u, "changed.json")); // [確認_異常系] - パスの確保失敗を通知すること。
-    ASSERT_NE(nullptr, entry.impl); // [確認_異常系] - 管理構造体が残ること。
-    EXPECT_EQ(nullptr, entry.impl->config_path); // [確認_異常系] - 古いパスを保持しないこと。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              cplat_sym_loader_init(entries, 1u, "changed.json")); // [確認_異常系] - パスの確保失敗を通知すること。
+    ASSERT_NE(nullptr, entry.impl);                                // [確認_異常系] - 管理構造体が残ること。
+    EXPECT_EQ(nullptr, entry.impl->config_path);                   // [確認_異常系] - 古いパスを保持しないこと。
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, cplat_sym_loader_count(&entry, &count)); // [確認_異常系] - 古い設定を公開しないこと。
-    EXPECT_EQ(42u, count); // [確認_異常系] - 失敗時に出力を変更しないこと。
+    EXPECT_EQ(42u, count);                                      // [確認_異常系] - 失敗時に出力を変更しないこと。
     EXPECT_EQ(CPLAT_OK, cplat_sym_loader_dispose(entries, 1u)); // [確認_正常系] - エントリを解放すること。
 }
 
@@ -209,11 +218,14 @@ TEST_F(symLoaderInitTest, retains_handle_when_replacing_configuration_fails)
     EXPECT_CALL(mock_dlfcn, dlclose(_, _, _, handle)).WillOnce(Return(-1)).WillOnce(Return(0));
     // [Pre-Assert確認_正常系] - 同じハンドルの解放を 2 回試みること。
     // [Pre-Assert手順] - 最初の解放は失敗し、再試行は成功する。
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, cplat_sym_loader_init(entries, 2u, "replace.json")); // [確認_異常系] - 入れ替え時の解放失敗を通知すること。
-    EXPECT_EQ(handle, bad.impl->usable[0].handle); // [確認_異常系] - 失敗したハンドルを保持すること。
-    EXPECT_EQ(1, bad.impl->release_pending); // [確認_異常系] - 解放待ちになること。
-    EXPECT_STREQ("good_lib", pending_lib(good)); // [確認_正常系] - 他の設定を適用すること。
-    EXPECT_EQ(CPLAT_ERR_BUSY, cplat_sym_loader_init(entries, 2u, nullptr)); // [確認_異常系] - 解放待ちの間は初期化を拒否すること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        cplat_sym_loader_init(entries, 2u, "replace.json")); // [確認_異常系] - 入れ替え時の解放失敗を通知すること。
+    EXPECT_EQ(handle, bad.impl->usable[0].handle);           // [確認_異常系] - 失敗したハンドルを保持すること。
+    EXPECT_EQ(1, bad.impl->release_pending);                 // [確認_異常系] - 解放待ちになること。
+    EXPECT_STREQ("good_lib", pending_lib(good));             // [確認_正常系] - 他の設定を適用すること。
+    EXPECT_EQ(CPLAT_ERR_BUSY,
+              cplat_sym_loader_init(entries, 2u, nullptr));     // [確認_異常系] - 解放待ちの間は初期化を拒否すること。
     EXPECT_EQ(CPLAT_OK, cplat_sym_loader_dispose(entries, 2u)); // [確認_正常系] - 再試行に成功すること。
 }
 #endif /* PLATFORM_LINUX */
@@ -246,8 +258,9 @@ TEST_F(symLoaderInitTest, applies_json_with_comments)
         "with_comments.json"); // [手順] - コメントと末尾カンマを含む JSONC 設定を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
-    EXPECT_STREQ("liboverride", pending_lib(entry));    // [確認_正常系] - entry.lib_name が "liboverride" であること。
-    EXPECT_STREQ("override_func", pending_func(entry)); // [確認_正常系] - entry.func_name が "override_func" であること。
+    EXPECT_STREQ("liboverride", pending_lib(entry)); // [確認_正常系] - entry.lib_name が "liboverride" であること。
+    EXPECT_STREQ("override_func",
+                 pending_func(entry)); // [確認_正常系] - entry.func_name が "override_func" であること。
 }
 
 // JSON 設定の lib / func が一致エントリへ反映されることの確認
@@ -269,8 +282,9 @@ TEST_F(symLoaderInitTest, applies_matching_func_key)
                           "apply_matching.json"); // [手順] - JSON 設定を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
-    EXPECT_STREQ("liboverride", pending_lib(entry));    // [確認_正常系] - entry.lib_name が "liboverride" であること。
-    EXPECT_STREQ("override_func", pending_func(entry)); // [確認_正常系] - entry.func_name が "override_func" であること。
+    EXPECT_STREQ("liboverride", pending_lib(entry)); // [確認_正常系] - entry.lib_name が "liboverride" であること。
+    EXPECT_STREQ("override_func",
+                 pending_func(entry)); // [確認_正常系] - entry.func_name が "override_func" であること。
 }
 
 // 明示的既定値 (lib/func がともに default) が反映されることの確認
@@ -314,8 +328,9 @@ TEST_F(symLoaderInitTest, ignores_missing_file)
                           "missing.json"); // [手順] - 存在しないパスを指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
-    EXPECT_STREQ("", pending_lib(entry));  // [確認_正常系] - entry.lib_name が "" であること。(空のままであることの確認)
-    EXPECT_STREQ("", pending_func(entry)); // [確認_正常系] - entry.func_name が "" であること。(空のままであることの確認)
+    EXPECT_STREQ("", pending_lib(entry)); // [確認_正常系] - entry.lib_name が "" であること。(空のままであることの確認)
+    EXPECT_STREQ("",
+                 pending_func(entry)); // [確認_正常系] - entry.func_name が "" であること。(空のままであることの確認)
 }
 
 // 不正な JSON を無視してエントリが未設定のままであることの確認
@@ -336,8 +351,9 @@ TEST_F(symLoaderInitTest, ignores_invalid_json)
                           "invalid.json"); // [手順] - 不正 JSON を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
-    EXPECT_STREQ("", pending_lib(entry));  // [確認_正常系] - entry.lib_name が "" であること。(空のままであることの確認)
-    EXPECT_STREQ("", pending_func(entry)); // [確認_正常系] - entry.func_name が "" であること。(空のままであることの確認)
+    EXPECT_STREQ("", pending_lib(entry)); // [確認_正常系] - entry.lib_name が "" であること。(空のままであることの確認)
+    EXPECT_STREQ("",
+                 pending_func(entry)); // [確認_正常系] - entry.func_name が "" であること。(空のままであることの確認)
 }
 
 // ルートが object でない場合にエントリが未設定のままであることの確認
@@ -358,8 +374,9 @@ TEST_F(symLoaderInitTest, ignores_non_object_root)
         entries, 1u, "array_root.json"); // [手順] - 配列ルートの JSON を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
-    EXPECT_STREQ("", pending_lib(entry));  // [確認_正常系] - entry.lib_name が "" であること。(空のままであることの確認)
-    EXPECT_STREQ("", pending_func(entry)); // [確認_正常系] - entry.func_name が "" であること。(空のままであることの確認)
+    EXPECT_STREQ("", pending_lib(entry)); // [確認_正常系] - entry.lib_name が "" であること。(空のままであることの確認)
+    EXPECT_STREQ("",
+                 pending_func(entry)); // [確認_正常系] - entry.func_name が "" であること。(空のままであることの確認)
 }
 
 // 必須フィールド欠落のエントリを無視することの確認
@@ -382,8 +399,9 @@ TEST_F(symLoaderInitTest, ignores_missing_required_fields)
         "missing_fields.json"); // [手順] - 必須フィールド欠落の JSON を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
-    EXPECT_STREQ("", pending_lib(entry));  // [確認_正常系] - entry.lib_name が "" であること。(空のままであることの確認)
-    EXPECT_STREQ("", pending_func(entry)); // [確認_正常系] - entry.func_name が "" であること。(空のままであることの確認)
+    EXPECT_STREQ("", pending_lib(entry)); // [確認_正常系] - entry.lib_name が "" であること。(空のままであることの確認)
+    EXPECT_STREQ("",
+                 pending_func(entry)); // [確認_正常系] - entry.func_name が "" であること。(空のままであることの確認)
 }
 
 // 未知の func_key を無視し、一致キーだけ適用することの確認
@@ -405,8 +423,9 @@ TEST_F(symLoaderInitTest, ignores_unknown_func_key_and_applies_known)
                           "partial.json"); // [手順] - 複数キーの JSON を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
-    EXPECT_STREQ("liboverride", pending_lib(entry));    // [確認_正常系] - entry.lib_name が "liboverride" であること。
-    EXPECT_STREQ("override_func", pending_func(entry)); // [確認_正常系] - entry.func_name が "override_func" であること。
+    EXPECT_STREQ("liboverride", pending_lib(entry)); // [確認_正常系] - entry.lib_name が "liboverride" であること。
+    EXPECT_STREQ("override_func",
+                 pending_func(entry)); // [確認_正常系] - entry.func_name が "override_func" であること。
 }
 
 // 分類上限を超える名前も、切り詰めずに保持することの確認
@@ -430,9 +449,11 @@ TEST_F(symLoaderInitTest, stores_name_longer_than_configured_limit)
         "name_too_long.json"); // [手順] - 名称長超過の JSON を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
-    EXPECT_STREQ(long_name.c_str(), pending_lib(entry)); // [確認_正常系] - pending の lib が上限を超えた設定文字列と一致すること。
-    EXPECT_STREQ("override_func", pending_func(entry)); // [確認_正常系] - pending の func が "override_func" であること。
-    ASSERT_NE(nullptr, entry.impl); // [確認_正常系] - entry.impl が nullptr 以外であること。
+    EXPECT_STREQ(long_name.c_str(),
+                 pending_lib(entry)); // [確認_正常系] - pending の lib が上限を超えた設定文字列と一致すること。
+    EXPECT_STREQ("override_func",
+                 pending_func(entry));        // [確認_正常系] - pending の func が "override_func" であること。
+    ASSERT_NE(nullptr, entry.impl);           // [確認_正常系] - entry.impl が nullptr 以外であること。
     EXPECT_EQ(1u, entry.impl->pending_count); // [確認_正常系] - entry.impl->pending_count が 1u であること。
 }
 
@@ -490,8 +511,9 @@ TEST_F(symLoaderInitTest, ignores_document_when_cjson_parse_fails)
         "injected_parse_failure.json"); // [手順] - cJSON_ParseJSONCWithLength() が失敗する状態で cplat_sym_loader_init() を呼び出す。
 
     // Assert
-    EXPECT_STREQ("", pending_lib(entry));  // [確認_異常系] - entry.lib_name が "" であること。(空のままであることの確認)
-    EXPECT_STREQ("", pending_func(entry)); // [確認_異常系] - entry.func_name が "" であること。(空のままであることの確認)
+    EXPECT_STREQ("", pending_lib(entry)); // [確認_異常系] - entry.lib_name が "" であること。(空のままであることの確認)
+    EXPECT_STREQ("",
+                 pending_func(entry)); // [確認_異常系] - entry.func_name が "" であること。(空のままであることの確認)
 }
 
 // cJSON の文字列取得が NULL を返した場合に設定を反映しないことの確認
@@ -521,10 +543,12 @@ TEST_F(symLoaderInitTest, ignores_entry_when_cjson_string_value_is_null)
     // Assert
     EXPECT_STREQ(
         "",
-        pending_lib(entry)); // [確認_異常系] - entry.lib_name が "" であること。(文字列取得失敗時に空のままであることの確認)
+        pending_lib(
+            entry)); // [確認_異常系] - entry.lib_name が "" であること。(文字列取得失敗時に空のままであることの確認)
     EXPECT_STREQ(
         "",
-        pending_func(entry)); // [確認_異常系] - entry.func_name が "" であること。(文字列取得失敗時に空のままであることの確認)
+        pending_func(
+            entry)); // [確認_異常系] - entry.func_name が "" であること。(文字列取得失敗時に空のままであることの確認)
 }
 
 // 設定パスが NULL または空文字列の場合に何も行わないことの確認
@@ -545,10 +569,12 @@ TEST_F(symLoaderInitTest, ignores_null_or_empty_config_path)
     // Assert
     EXPECT_STREQ(
         "",
-        pending_lib(entry)); // [確認_正常系] - entry.lib_name が "" であること。(nullptr または空文字列の設定パスで未設定のままであることの確認)
+        pending_lib(
+            entry)); // [確認_正常系] - entry.lib_name が "" であること。(nullptr または空文字列の設定パスで未設定のままであることの確認)
     EXPECT_STREQ(
         "",
-        pending_func(entry)); // [確認_正常系] - entry.func_name が "" であること。(nullptr または空文字列の設定パスで未設定のままであることの確認)
+        pending_func(
+            entry)); // [確認_正常系] - entry.func_name が "" であること。(nullptr または空文字列の設定パスで未設定のままであることの確認)
 }
 
 // ファイル操作の各失敗時にファイルを閉じて終了することの確認
@@ -581,7 +607,8 @@ TEST_F(symLoaderInitTest, closes_file_when_seek_or_size_operation_fails)
     // Assert
     EXPECT_STREQ(
         "",
-        pending_lib(entry)); // [確認_異常系] - entry.lib_name が "" であること。(seek 失敗時に未設定のままであることの確認)
+        pending_lib(
+            entry)); // [確認_異常系] - entry.lib_name が "" であること。(seek 失敗時に未設定のままであることの確認)
 
     // Cleanup
     Mock::VerifyAndClearExpectations(&mock_cplat_);
@@ -612,7 +639,8 @@ TEST_F(symLoaderInitTest, closes_file_when_seek_or_size_operation_fails)
     // Assert_2
     EXPECT_STREQ(
         "",
-        pending_func(entry)); // [確認_異常系] - entry.func_name が "" であること。(サイズ不正時に未設定のままであることの確認)
+        pending_func(
+            entry)); // [確認_異常系] - entry.func_name が "" であること。(サイズ不正時に未設定のままであることの確認)
 }
 
 // 読み込み前の seek、メモリ確保、読み込みの失敗時に後処理することの確認
@@ -652,7 +680,8 @@ TEST_F(symLoaderInitTest, releases_resources_when_read_setup_fails)
     // Assert
     EXPECT_STREQ(
         "",
-        pending_lib(entry)); // [確認_異常系] - entry.lib_name が "" であること。(読み込み開始位置の seek 失敗時に未設定のままであることの確認)
+        pending_lib(
+            entry)); // [確認_異常系] - entry.lib_name が "" であること。(読み込み開始位置の seek 失敗時に未設定のままであることの確認)
 
     // Cleanup
     Mock::VerifyAndClearExpectations(&mock_cplat_);
@@ -693,7 +722,8 @@ TEST_F(symLoaderInitTest, releases_resources_when_read_setup_fails)
     // Assert_2
     EXPECT_STREQ(
         "",
-        pending_func(entry)); // [確認_異常系] - entry.func_name が "" であること。(確保失敗時に未設定のままであることの確認)
+        pending_func(
+            entry)); // [確認_異常系] - entry.func_name が "" であること。(確保失敗時に未設定のままであることの確認)
 
     // Cleanup
     Mock::VerifyAndClearExpectations(&mock_cplat_);
@@ -735,7 +765,8 @@ TEST_F(symLoaderInitTest, releases_resources_when_read_setup_fails)
     // Assert_3
     EXPECT_STREQ(
         "",
-        pending_lib(entry)); // [確認_異常系] - entry.lib_name が "" であること。(読み込み不足時に未設定のままであることの確認)
+        pending_lib(
+            entry)); // [確認_異常系] - entry.lib_name が "" であること。(読み込み不足時に未設定のままであることの確認)
 }
 
 // JSON エントリの型、キー、値の境界条件を無視することの確認
@@ -762,10 +793,12 @@ TEST_F(symLoaderInitTest, ignores_invalid_json_entries)
     // Assert
     EXPECT_STREQ(
         "",
-        pending_lib(entry)); // [確認_異常系] - entry.lib_name が "" であること。(不正な JSON エントリが反映されないことの確認)
+        pending_lib(
+            entry)); // [確認_異常系] - entry.lib_name が "" であること。(不正な JSON エントリが反映されないことの確認)
     EXPECT_STREQ(
         "",
-        pending_func(entry)); // [確認_異常系] - entry.func_name が "" であること。(不正な JSON エントリが反映されないことの確認)
+        pending_func(
+            entry)); // [確認_異常系] - entry.func_name が "" であること。(不正な JSON エントリが反映されないことの確認)
 }
 
 // 配列が NULL の場合に一致設定を読み飛ばすことの確認
@@ -810,9 +843,8 @@ TEST_F(symLoaderInitTest, skips_entry_with_null_key)
         "null_cache_entries.json"); // [手順] - キーが nullptr のエントリを指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
-    EXPECT_STREQ(
-        "",
-        pending_lib(entry)); // [確認_正常系] - キーが nullptr のエントリへ設定が反映されないこと。
+    EXPECT_STREQ("",
+                 pending_lib(entry)); // [確認_正常系] - キーが nullptr のエントリへ設定が反映されないこと。
 }
 
 // 上限超過の設定ファイルを読み込まないことの確認
@@ -849,7 +881,8 @@ TEST_F(symLoaderInitTest, ignores_config_file_larger_than_limit)
     // Assert
     EXPECT_STREQ(
         "",
-        pending_lib(entry)); // [確認_異常系] - entry.lib_name が "" であること。(上限超過の設定が反映されないことの確認)
+        pending_lib(
+            entry)); // [確認_異常系] - entry.lib_name が "" であること。(上限超過の設定が反映されないことの確認)
 }
 
 // func の NULL、空文字列、上限超過をそれぞれ無視することの確認
@@ -886,7 +919,8 @@ TEST_F(symLoaderInitTest, ignores_invalid_function_values)
     // Assert
     EXPECT_STREQ(
         "",
-        pending_func(null_entry)); // [確認_異常系] - null_entry.func_name が "" であること。(nullptr の func が反映されないことの確認)
+        pending_func(
+            null_entry)); // [確認_異常系] - null_entry.func_name が "" であること。(nullptr の func が反映されないことの確認)
 
     // Cleanup
     Mock::VerifyAndClearExpectations(&mock_cjson);
@@ -896,9 +930,8 @@ TEST_F(symLoaderInitTest, ignores_invalid_function_values)
 
     // Pre-Assert_2
     // [サブ手順参照 名前=symLoaderInitTest.expect_config_read 区分=異常系]
-    expect_config_read(
-        "invalid_func_values.json",
-        boundary_json.c_str()); // 空または上限超過 func の JSON 読取が呼び出されること。
+    expect_config_read("invalid_func_values.json",
+                       boundary_json.c_str()); // 空または上限超過 func の JSON 読取が呼び出されること。
     // [Pre-Assert手順] - cplat_fread() から、境界値 JSON 本文をコピーして読取バイト数を返す。
 
     // Act_2
@@ -908,9 +941,13 @@ TEST_F(symLoaderInitTest, ignores_invalid_function_values)
 
     // Assert_2
     ASSERT_NE(nullptr, empty_entry.impl); // [確認_正常系] - empty_entry.impl が nullptr 以外であること。
-    EXPECT_EQ(1u, empty_entry.impl->pending_count); // [確認_正常系] - empty_entry.impl->pending_count が 1u であること。
-    EXPECT_STREQ("", pending_func(empty_entry)); // [確認_正常系] - pending の func が "" であること。(空の func を保持することの確認)
-    EXPECT_STREQ(long_func.c_str(), pending_func(long_entry)); // [確認_正常系] - pending の func が上限を超えた設定文字列と一致すること。
+    EXPECT_EQ(1u,
+              empty_entry.impl->pending_count); // [確認_正常系] - empty_entry.impl->pending_count が 1u であること。
+    EXPECT_STREQ(
+        "", pending_func(
+                empty_entry)); // [確認_正常系] - pending の func が "" であること。(空の func を保持することの確認)
+    EXPECT_STREQ(long_func.c_str(),
+                 pending_func(long_entry)); // [確認_正常系] - pending の func が上限を超えた設定文字列と一致すること。
 }
 
 // 配列に書いた順で先を保持し、オブジェクトでない要素は飛ばすことの確認
@@ -931,12 +968,12 @@ TEST_F(symLoaderInitTest, stores_array_targets_in_write_order)
                           "array_targets.json"); // [手順] - 配列の設定を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
-    ASSERT_NE(nullptr, entry.impl); // [確認_正常系] - entry.impl が nullptr 以外であること。
+    ASSERT_NE(nullptr, entry.impl);           // [確認_正常系] - entry.impl が nullptr 以外であること。
     EXPECT_EQ(2u, entry.impl->pending_count); // [確認_正常系] - entry.impl->pending_count が 2u であること。
     EXPECT_STREQ("liba", entry.impl->pending[0].lib_name); // [確認_正常系] - 1 件目の lib が "liba" であること。
-    EXPECT_STREQ("fa", entry.impl->pending[0].func_name); // [確認_正常系] - 1 件目の func が "fa" であること。
+    EXPECT_STREQ("fa", entry.impl->pending[0].func_name);  // [確認_正常系] - 1 件目の func が "fa" であること。
     EXPECT_STREQ("libb", entry.impl->pending[1].lib_name); // [確認_正常系] - 2 件目の lib が "libb" であること。
-    EXPECT_STREQ("fb", entry.impl->pending[1].func_name); // [確認_正常系] - 2 件目の func が "fb" であること。
+    EXPECT_STREQ("fb", entry.impl->pending[1].func_name);  // [確認_正常系] - 2 件目の func が "fb" であること。
 }
 
 // 同じキーの後の値で置き換え、前の先を診断理由 -7 で保持することの確認
@@ -955,20 +992,29 @@ TEST_F(symLoaderInitTest, stores_duplicate_keys_before_resolve)
     // [Pre-Assert手順] - cplat_fread() から、重複キー JSON 本文をコピーして読取バイト数を返す。
 
     // Act
-    cplat_sym_loader_init(entries, 1u,
-                          "duplicate_keys.json"); // [手順] - 重複キーの JSON を指定して cplat_sym_loader_init() を呼び出す。
+    cplat_sym_loader_init(
+        entries, 1u,
+        "duplicate_keys.json"); // [手順] - 重複キーの JSON を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
-    ASSERT_NE(nullptr, entry.impl); // [確認_正常系] - entry.impl が nullptr 以外であること。
-    EXPECT_EQ(1u, entry.impl->pending_count); // [確認_正常系] - entry.impl->pending_count が 1u であること。
-    EXPECT_STREQ("libthird", pending_lib(entry)); // [確認_正常系] - pending の lib が "libthird" であること。
+    ASSERT_NE(nullptr, entry.impl);                  // [確認_正常系] - entry.impl が nullptr 以外であること。
+    EXPECT_EQ(1u, entry.impl->pending_count);        // [確認_正常系] - entry.impl->pending_count が 1u であること。
+    EXPECT_STREQ("libthird", pending_lib(entry));    // [確認_正常系] - pending の lib が "libthird" であること。
     EXPECT_STREQ("third_calc", pending_func(entry)); // [確認_正常系] - pending の func が "third_calc" であること。
-    EXPECT_EQ(2u, entry.impl->duplicate_count); // [確認_正常系] - entry.impl->duplicate_count が 2u であること。
-    EXPECT_STREQ("libfirst", entry.impl->duplicates[0].lib_name); // [確認_正常系] - 1 件目の捨てた lib が "libfirst" であること。
-    EXPECT_STREQ("first_calc", entry.impl->duplicates[0].func_name); // [確認_正常系] - 1 件目の捨てた func が "first_calc" であること。
-    EXPECT_EQ(CPLAT_SYM_LOADER_REJECT_DUPLICATE_KEY, entry.impl->duplicates[0].reason); // [確認_正常系] - 1 件目の reason が CPLAT_SYM_LOADER_REJECT_DUPLICATE_KEY であること。
-    EXPECT_STREQ("libsecond", entry.impl->duplicates[1].lib_name); // [確認_正常系] - 2 件目の捨てた lib が "libsecond" であること。
-    EXPECT_EQ(CPLAT_SYM_LOADER_REJECT_DUPLICATE_KEY, entry.impl->duplicates[1].reason); // [確認_正常系] - 2 件目の reason が CPLAT_SYM_LOADER_REJECT_DUPLICATE_KEY であること。
+    EXPECT_EQ(2u, entry.impl->duplicate_count);      // [確認_正常系] - entry.impl->duplicate_count が 2u であること。
+    EXPECT_STREQ("libfirst",
+                 entry.impl->duplicates[0].lib_name); // [確認_正常系] - 1 件目の捨てた lib が "libfirst" であること。
+    EXPECT_STREQ(
+        "first_calc",
+        entry.impl->duplicates[0].func_name); // [確認_正常系] - 1 件目の捨てた func が "first_calc" であること。
+    EXPECT_EQ(CPLAT_SYM_LOADER_REJECT_DUPLICATE_KEY,
+              entry.impl->duplicates[0]
+                  .reason); // [確認_正常系] - 1 件目の reason が CPLAT_SYM_LOADER_REJECT_DUPLICATE_KEY であること。
+    EXPECT_STREQ("libsecond",
+                 entry.impl->duplicates[1].lib_name); // [確認_正常系] - 2 件目の捨てた lib が "libsecond" であること。
+    EXPECT_EQ(CPLAT_SYM_LOADER_REJECT_DUPLICATE_KEY,
+              entry.impl->duplicates[1]
+                  .reason); // [確認_正常系] - 2 件目の reason が CPLAT_SYM_LOADER_REJECT_DUPLICATE_KEY であること。
 }
 
 // 後から来たオブジェクトでも配列でもない値が、採用済みの先を置き換えないことの確認
@@ -990,8 +1036,8 @@ TEST_F(symLoaderInitTest, keeps_adopted_targets_when_later_duplicate_is_not_obje
         "duplicate_number.json"); // [手順] - 数値の重複キーを含む JSON を指定して cplat_sym_loader_init() を呼び出す。
 
     // Assert
-    EXPECT_STREQ("liba", pending_lib(entry)); // [確認_正常系] - pending の lib が "liba" であること。
-    EXPECT_STREQ("fa", pending_func(entry)); // [確認_正常系] - pending の func が "fa" であること。
-    ASSERT_NE(nullptr, entry.impl); // [確認_正常系] - entry.impl が nullptr 以外であること。
+    EXPECT_STREQ("liba", pending_lib(entry));   // [確認_正常系] - pending の lib が "liba" であること。
+    EXPECT_STREQ("fa", pending_func(entry));    // [確認_正常系] - pending の func が "fa" であること。
+    ASSERT_NE(nullptr, entry.impl);             // [確認_正常系] - entry.impl が nullptr 以外であること。
     EXPECT_EQ(0u, entry.impl->duplicate_count); // [確認_正常系] - entry.impl->duplicate_count が 0u であること。
 }

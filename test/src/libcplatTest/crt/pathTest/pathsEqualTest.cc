@@ -166,7 +166,7 @@ TEST_F(pathsEqualTest, normalizes_dotdot_and_backslash_segments_before_comparing
     assert_path_get_full_success(base, sizeof(base), ".");
     // [サブ手順参照 名前=pathsEqualTest.build_three_part_path]
     build_three_part_path(lhs, sizeof(lhs), base, "alpha\\..",
-                          "beta.txt");              // [状態] - 左辺を "alpha\\.." を挟んだ表記ゆれパスとする。
+                          "beta.txt"); // [状態] - 左辺を "alpha\\.." を挟んだ表記ゆれパスとする。
     // [サブ手順参照 名前=pathsEqualTest.build_path]
     build_path(rhs, sizeof(rhs), base, "beta.txt"); // [状態] - 右辺を正規化済みの同一実体パスとする。
 
@@ -196,7 +196,7 @@ TEST_F(pathsEqualTest, returns_zero_for_different_paths)
     // [サブ手順参照 名前=pathsEqualTest.build_path]
     build_path(lhs, sizeof(lhs), base, "alpha.bin"); // [状態] - 左辺を "alpha.bin" とする。
     // [サブ手順参照 名前=pathsEqualTest.build_path]
-    build_path(rhs, sizeof(rhs), base, "beta.bin");  // [状態] - 右辺を "beta.bin" とする。
+    build_path(rhs, sizeof(rhs), base, "beta.bin"); // [状態] - 右辺を "beta.bin" とする。
 
     // Pre-Assert
 

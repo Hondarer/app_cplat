@@ -3,14 +3,18 @@
 
 #if defined(PLATFORM_LINUX)
 
-int delegate_real_cplat_process_priority_linux_set_io_priority(uint32_t thread_id, cplat_process_priority_linux_io_class io_class, int level, cplat_error *detail_out)
+int delegate_real_cplat_process_priority_linux_set_io_priority(uint32_t thread_id,
+                                                               cplat_process_priority_linux_io_class io_class,
+                                                               int level, cplat_error *detail_out)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_process_priority_linux_set_io_priority)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_process_priority_linux_set_io_priority"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_process_priority_linux_set_io_priority)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_process_priority_linux_set_io_priority"));
 
     return real_fn(thread_id, io_class, level, detail_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_process_priority_linux_set_io_priority, uint32_t thread_id, cplat_process_priority_linux_io_class io_class, int level, cplat_error *detail_out)
+MOCK_WEAK_IMPL(int, cplat_process_priority_linux_set_io_priority, uint32_t thread_id,
+               cplat_process_priority_linux_io_class io_class, int level, cplat_error *detail_out)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

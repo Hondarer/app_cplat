@@ -241,7 +241,7 @@ TEST_F(errorContractTest, real_api_records_failure_and_clears_it_on_success)
         cplat_error_is(
             &failure_error,
             CPLAT_CAUSE_NOT_FOUND)); // [確認_異常系] - CPLAT_CAUSE_NOT_FOUND に対する失敗直後の cplat_error_is() の戻り値が 1 であること。
-    ASSERT_NE(nullptr, existing);    // [確認_正常系] - cplat_fopen_temp() の戻り値が nullptr 以外であること。
+    ASSERT_NE(nullptr, existing); // [確認_正常系] - cplat_fopen_temp() の戻り値が nullptr 以外であること。
     EXPECT_EQ(
         0,
         cplat_error_is_set(
@@ -292,7 +292,7 @@ TEST_F(errorContractTest, last_error_is_isolated_between_threads)
 
     (void)cplat_remove("cplat_error_tls_missing_file",
                        nullptr); // [状態] - NOT_FOUND 用のファイルが存在しない状態にする。
-    cplat_error_clear_last(); // [状態] - メイン スレッドの TLS 詳細エラーを空にする。
+    cplat_error_clear_last();    // [状態] - メイン スレッドの TLS 詳細エラーを空にする。
 
     // Pre-Assert
 

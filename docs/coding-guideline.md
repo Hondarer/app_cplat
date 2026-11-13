@@ -94,7 +94,7 @@ Table: cplat 結果コードの分類・数値・意味一覧
 ```c
 int ret;
 
-ret = cplat_mmap_attach(path, access, create_size, &map_out);
+ret = cplat_mmap_attach(path, access, create_size, &map_out, NULL);
 if (ret != CPLAT_OK)
 {
     return ret;

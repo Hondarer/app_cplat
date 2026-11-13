@@ -67,7 +67,7 @@ TEST_F(hashtableGuardTest, add_rejects_null_arguments)
     cplat_hashtable *ht = nullptr;
     std::vector<unsigned char> value(8, 0);
 
-    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - 妥当な設定を用意する。
+    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - 妥当な設定を用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
@@ -172,7 +172,7 @@ TEST_F(hashtableGuardTest, update_rec_rejects_invalid_arguments)
     cplat_hashtable *ht = nullptr;
     std::vector<unsigned char> value(8, 0);
 
-    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
+    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - capacity 2 の設定を用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
@@ -219,8 +219,8 @@ TEST_F(hashtableGuardTest, find_value_ref_rejects_invalid_arguments)
     const void *found = nullptr;
     char too_long[9];
 
-    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - 妥当な設定を用意する。
-    std::memset(too_long, 'x', sizeof(too_long));                 // [状態] - NUL が無いキーを用意する。
+    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - 妥当な設定を用意する。
+    std::memset(too_long, 'x', sizeof(too_long));                       // [状態] - NUL が無いキーを用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
@@ -263,8 +263,8 @@ TEST_F(hashtableGuardTest, find_value_copy_rejects_invalid_arguments_and_succeed
     std::vector<unsigned char> copied(8, 0);
     size_t required_size = 0;
 
-    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - 妥当な設定を用意する。
-    std::memcpy(value.data(), "v", 2);                            // [状態] - 検索する値を用意する。
+    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - 妥当な設定を用意する。
+    std::memcpy(value.data(), "v", 2);                                  // [状態] - 検索する値を用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
     (void)cplat_hashtable_add(ht, "a", value.data(),
                               CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE); // [状態] - キーを追加しておく。
@@ -318,9 +318,9 @@ TEST_F(hashtableGuardTest, find_recno_rejects_invalid_arguments_and_walks_chain)
     uint64_t rec = 0;
     const char *peer = nullptr;
 
-    fill_config(&config, 4, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 4 の設定を用意する。
-    std::memset(too_long, 'x', sizeof(too_long));                 // [状態] - NUL が無いキーを用意する。
-    peer = find_colliding_key("a", 4);                            // [状態] - "a" と同じバケットの別キーを探す。
+    fill_config(&config, 4, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - capacity 4 の設定を用意する。
+    std::memset(too_long, 'x', sizeof(too_long));                       // [状態] - NUL が無いキーを用意する。
+    peer = find_colliding_key("a", 4);                                  // [状態] - "a" と同じバケットの別キーを探す。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     ASSERT_NE(nullptr, peer); // [状態確認] - find_colliding_key() の戻り値が nullptr 以外であること。
@@ -381,7 +381,7 @@ TEST_F(hashtableGuardTest, get_key_ref_rejects_invalid_arguments)
     cplat_hashtable *ht = nullptr;
     const void *key_out = nullptr;
 
-    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
+    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - capacity 2 の設定を用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
@@ -424,7 +424,7 @@ TEST_F(hashtableGuardTest, get_key_copy_rejects_invalid_arguments)
     std::vector<unsigned char> key(8, 0);
     size_t required_size = 0;
 
-    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
+    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - capacity 2 の設定を用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
@@ -457,7 +457,7 @@ TEST_F(hashtableGuardTest, get_value_ref_rejects_invalid_arguments)
     cplat_hashtable *ht = nullptr;
     const void *value_out = nullptr;
 
-    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
+    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - capacity 2 の設定を用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
@@ -504,7 +504,7 @@ TEST_F(hashtableGuardTest, get_value_copy_rejects_invalid_arguments)
     std::vector<unsigned char> value(8, 0);
     size_t required_size = 0;
 
-    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
+    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - capacity 2 の設定を用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
@@ -537,7 +537,7 @@ TEST_F(hashtableGuardTest, get_status_rejects_invalid_arguments)
     cplat_hashtable *ht = nullptr;
     int status = -1;
 
-    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
+    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - capacity 2 の設定を用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
@@ -597,7 +597,7 @@ TEST_F(hashtableGuardTest, count_wrappers_reject_invalid_arguments)
     cplat_hashtable *ht = nullptr;
     size_t count = 0;
 
-    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - 妥当な設定を用意する。
+    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - 妥当な設定を用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
@@ -649,8 +649,8 @@ TEST_F(hashtableGuardTest, delete_rejects_invalid_arguments_and_already_deleted)
     std::vector<unsigned char> value(8, 0);
     char too_long[9];
 
-    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - lifetime 5 の設定を用意する。
-    std::memset(too_long, 'x', sizeof(too_long));                 // [状態] - NUL が無いキーを用意する。
+    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - lifetime 5 の設定を用意する。
+    std::memset(too_long, 'x', sizeof(too_long));                       // [状態] - NUL が無いキーを用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert
@@ -695,7 +695,7 @@ TEST_F(hashtableGuardTest, delete_rec_rejects_invalid_arguments)
     cplat_hashtable_config config = {};
     cplat_hashtable *ht = nullptr;
 
-    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING); // [状態] - capacity 2 の設定を用意する。
+    fill_config(&config, 2, 8, 8, 5, CPLAT_HASHTABLE_KEY_STRING);       // [状態] - capacity 2 の設定を用意する。
     (void)cplat_hashtable_create(&config, nullptr, 0, nullptr, 0, &ht); // [状態] - テーブルを構築しておく。
 
     // Pre-Assert

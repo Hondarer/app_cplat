@@ -143,7 +143,7 @@ TEST(syncAdditionalFailureTest, condvar_create_reports_clock_attribute_failure)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              result); // [確認_異常系] - cplat_condvar_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
+              result);      // [確認_異常系] - cplat_condvar_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(nullptr, cv); // [確認_異常系] - 生成失敗時の cv が nullptr であること。
 }
 
@@ -763,7 +763,7 @@ TEST(syncAdditionalFailureTest, thread_create_reports_context_allocation_failure
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              result); // [確認_異常系] - cplat_thread_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
+              result);          // [確認_異常系] - cplat_thread_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(nullptr, thread); // [確認_異常系] - 生成失敗時の thread が nullptr であること。
 }
 

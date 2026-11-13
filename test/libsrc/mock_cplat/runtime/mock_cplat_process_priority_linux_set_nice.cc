@@ -5,7 +5,8 @@
 
 int delegate_real_cplat_process_priority_linux_set_nice(uint32_t thread_id, int nice_value, cplat_error *detail_out)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_process_priority_linux_set_nice)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_process_priority_linux_set_nice"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_process_priority_linux_set_nice)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_process_priority_linux_set_nice"));
 
     return real_fn(thread_id, nice_value, detail_out);
 }

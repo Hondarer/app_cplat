@@ -88,7 +88,7 @@ TEST_F(hashtableResizeTest, grow_preserves_record_numbers_and_stamps)
     (void)cplat_hashtable_get_table_generation(ht, &generation_before);
     (void)cplat_hashtable_get_table_timestamp_val(ht, &timestamp_before);
     grown = config;
-    grown.capacity = 16;                                        // [状態] - レコード数を 4 から 16 へ増やす。
+    grown.capacity = 16; // [状態] - レコード数を 4 から 16 へ増やす。
     int actual_ret_resize =
         cplat_hashtable_resize(ht, &grown); // [手順] - 拡大した設定を指定して cplat_hashtable_resize() を呼び出す。
     int actual_ret_find = cplat_hashtable_find_recno(ht, "a", &rec_a_after);
@@ -158,7 +158,7 @@ TEST_F(hashtableResizeTest, shrink_renumbers_records_and_keeps_values)
         4); // [手順] - 縮小後の範囲外になるレコード 7 を指定して cplat_hashtable_insert_direct() を呼び出す。
     (void)cplat_hashtable_find_recno(ht, "a", &rec_before);
     shrunk = config;
-    shrunk.capacity = 2;                                         // [状態] - レコード数を 8 から 2 へ減らす。
+    shrunk.capacity = 2; // [状態] - レコード数を 8 から 2 へ減らす。
     int actual_ret_resize =
         cplat_hashtable_resize(ht, &shrunk); // [手順] - 縮小した設定を指定して cplat_hashtable_resize() を呼び出す。
     int actual_ret_find = cplat_hashtable_find_recno(ht, "a", &rec_after);

@@ -1982,7 +1982,8 @@ TEST(pinnedPromptTest, platform_read_char_handles_timeout_and_eof_on_windows)
     // [Pre-Assert手順] - WaitForSingleObject() から WAIT_TIMEOUT、WAIT_FAILED、WAIT_OBJECT_0、WAIT_OBJECT_0 の順に返す。
     EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, in_handle, _, 1U, _, _))
         .WillOnce(
-            [](const char *, const int, const char *, HANDLE, LPVOID buffer, DWORD, LPDWORD bytes_read, PCONSOLE_READCONSOLE_CONTROL)
+            [](const char *, const int, const char *, HANDLE, LPVOID buffer, DWORD, LPDWORD bytes_read,
+               PCONSOLE_READCONSOLE_CONTROL)
             {
                 *static_cast<WCHAR *>(buffer) = 'B';
                 *bytes_read = 1U;
@@ -2053,7 +2054,8 @@ TEST(pinnedPromptTest, platform_read_char_nb_handles_wait_timeout_on_windows)
     // [Pre-Assert手順] - WaitForSingleObject() から WAIT_OBJECT_0 を返す。
     EXPECT_CALL(mock_windows, ReadConsoleW(_, _, _, in_handle, _, 1U, _, _))
         .WillOnce(
-            [](const char *, const int, const char *, HANDLE, LPVOID buffer, DWORD, LPDWORD bytes_read, PCONSOLE_READCONSOLE_CONTROL)
+            [](const char *, const int, const char *, HANDLE, LPVOID buffer, DWORD, LPDWORD bytes_read,
+               PCONSOLE_READCONSOLE_CONTROL)
             {
                 *static_cast<WCHAR *>(buffer) = 'C';
                 *bytes_read = 1U;

@@ -1146,9 +1146,13 @@ TEST_P(promptUtf16Test, decodes_units_without_losing_following_input)
         while (true)
         {
             while (input.offset < input.length)
+            {
                 actual.push_back(static_cast<char>(input.bytes[input.offset++]));
+            }
             if (input.has_pending_unit == 0U)
+            {
                 break;
+            }
             unit = input.pending_unit;
             input.has_pending_unit = 0U;
             cplat_internal_prompt_edit_utf16_feed(&input, unit); // [手順] - 不正なペアの後続を再処理する。

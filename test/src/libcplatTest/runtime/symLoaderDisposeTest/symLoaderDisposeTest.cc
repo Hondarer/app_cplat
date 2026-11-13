@@ -66,13 +66,16 @@ TEST_F(symLoaderDisposeTest, validates_array_before_disposing)
     cplat_local_lock *lock = entry.lock;
 
     // Act / Assert
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_sym_loader_dispose(nullptr, 1u)); // [確認_異常系] - NULL 配列を拒否すること。
-    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_sym_loader_dispose(entries, 2u)); // [確認_異常系] - NULL 要素を拒否すること。
-    EXPECT_EQ(lock, entry.lock); // [確認_異常系] - 不正な配列ではロックを保持すること。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
+              cplat_sym_loader_dispose(nullptr, 1u)); // [確認_異常系] - NULL 配列を拒否すること。
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
+              cplat_sym_loader_dispose(entries, 2u));           // [確認_異常系] - NULL 要素を拒否すること。
+    EXPECT_EQ(lock, entry.lock);                                // [確認_異常系] - 不正な配列ではロックを保持すること。
     EXPECT_EQ(CPLAT_OK, cplat_sym_loader_dispose(nullptr, 0u)); // [確認_正常系] - 0 件の NULL 配列を受け付けること。
     EXPECT_EQ(CPLAT_OK, cplat_sym_loader_dispose(entries, 1u)); // [確認_正常系] - 正しい配列を解放すること。
-    EXPECT_EQ(nullptr, entry.lock); // [確認_正常系] - ロックが解放されること。
-    EXPECT_EQ(0, cplat_atomic_load_i32(&entry.lock_state, CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - ロック状態が初期値に戻ること。
+    EXPECT_EQ(nullptr, entry.lock);                             // [確認_正常系] - ロックが解放されること。
+    EXPECT_EQ(0, cplat_atomic_load_i32(&entry.lock_state,
+                                       CPLAT_MEMORY_ORDER_RELAXED)); // [確認_正常系] - ロック状態が初期値に戻ること。
 }
 
 // 解決済みエントリのモジュールが 1 回閉じられ、管理構造体が解放されることの確認
@@ -237,11 +240,12 @@ TEST_F(symLoaderDisposeTest, retries_only_failed_handles)
 
     // Act / Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN, cplat_sym_loader_dispose(entries, 3u)); // [確認_異常系] - 解放失敗を返すこと。
-    ASSERT_NE(nullptr, first.impl); // [確認_異常系] - 解放失敗した管理構造体が残ること。
+    ASSERT_NE(nullptr, first.impl);                       // [確認_異常系] - 解放失敗した管理構造体が残ること。
     EXPECT_EQ(kFakeHandle, first.impl->usable[0].handle); // [確認_異常系] - 失敗したハンドルが残ること。
-    EXPECT_EQ(1, first.impl->release_pending); // [確認_異常系] - 解放待ちになること。
-    EXPECT_EQ(nullptr, second.impl); // [確認_正常系] - 他のエントリが解放されること。
-    EXPECT_EQ(1, cplat_atomic_load_i32(&first.failed, CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - 失敗状態になること。
+    EXPECT_EQ(1, first.impl->release_pending);            // [確認_異常系] - 解放待ちになること。
+    EXPECT_EQ(nullptr, second.impl);                      // [確認_正常系] - 他のエントリが解放されること。
+    EXPECT_EQ(1,
+              cplat_atomic_load_i32(&first.failed, CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - 失敗状態になること。
     EXPECT_EQ(CPLAT_OK, cplat_sym_loader_dispose(entries, 3u)); // [確認_正常系] - 再試行に成功すること。
     EXPECT_EQ(nullptr, first.impl); // [確認_正常系] - 再試行後に管理構造体が解放されること。
 }

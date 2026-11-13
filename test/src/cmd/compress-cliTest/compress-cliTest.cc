@@ -297,7 +297,7 @@ TEST_F(compress_cliTest, main_compresses_input_and_writes_output)
                             kCompressedPayload))); // [Pre-Assert確認_正常系] - std::memcmp() の戻り値が 0 であること。(出力ファイルへ圧縮済みデータが書き込まれることの確認)
                 return count;
             }); // [Pre-Assert確認_正常系] - fwrite() が 1u、sizeof(kCompressedPayload)、output_file を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - fwrite() から、圧縮済みデータの書き込みで要求された件数 (count) を返す。
+    // [Pre-Assert手順] - fwrite() から、圧縮済みデータの書き込みで要求された件数 (count) を返す。
     EXPECT_CALL(mock_stdio_, fclose(_, _, _, output_file))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - fclose() が output_file を指定して 1 回呼び出されること。
                               // [Pre-Assert手順] - fclose() から、出力ファイルに対して 0 を返す。
@@ -736,7 +736,7 @@ TEST_F(compress_cliTest, main_decompresses_one_byte_input)
                             decompressed_output))); // [Pre-Assert確認_正常系] - std::memcmp() の戻り値が 0 であること。(展開済みデータ 1 byte が出力されることの確認)
                 return count;
             }); // [Pre-Assert確認_正常系] - fwrite() が 1u、sizeof(decompressed_output)、output_file を指定して 1 回呼び出されること。
-                // [Pre-Assert手順] - fwrite() から、展開済みデータの書き込みで要求された件数 (count) を返す。
+    // [Pre-Assert手順] - fwrite() から、展開済みデータの書き込みで要求された件数 (count) を返す。
     EXPECT_CALL(mock_stdio_, fclose(_, _, _, output_file))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - fclose() が output_file を指定して 1 回呼び出されること。
                               // [Pre-Assert手順] - fclose() から、出力ファイルに対して 0 を返す。
@@ -830,7 +830,7 @@ TEST_F(compress_cliTest, main_rejects_decompress_output_when_size_mismatches_hea
     EXPECT_CALL(mock_stdio_, fprintf(_, _, _, _, HasSubstr("展開後サイズがヘッダー値と一致")))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_異常系] - fprintf() が "展開後サイズがヘッダー値と一致" を含む文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - fprintf() から 0 を返す。
+    // [Pre-Assert手順] - fprintf() から 0 を返す。
 
     // Act
     int rc = __real_main(

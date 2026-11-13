@@ -5,12 +5,14 @@
 
 int delegate_real_cplat_stack_limit_linux_raise_to_hard_limit(uint64_t *soft_limit_bytes_out, cplat_error *detail_out)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_stack_limit_linux_raise_to_hard_limit)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_stack_limit_linux_raise_to_hard_limit"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_stack_limit_linux_raise_to_hard_limit)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_stack_limit_linux_raise_to_hard_limit"));
 
     return real_fn(soft_limit_bytes_out, detail_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_stack_limit_linux_raise_to_hard_limit, uint64_t *soft_limit_bytes_out, cplat_error *detail_out)
+MOCK_WEAK_IMPL(int, cplat_stack_limit_linux_raise_to_hard_limit, uint64_t *soft_limit_bytes_out,
+               cplat_error *detail_out)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 

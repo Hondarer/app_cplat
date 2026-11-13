@@ -28,8 +28,6 @@ using testing::Return;
 using testing::ReturnArg;
 using testing::SetArrayArgument;
 
-
-
 #if defined(PLATFORM_LINUX)
 
 // Linux 端末判定、サイズ取得、シグナル状態の短絡条件を網羅することの確認
@@ -77,7 +75,7 @@ TEST(pinnedPromptCoverageTest, platform_helpers_cover_short_circuits_and_install
         &cols, &rows); // [手順] - 行数が 0 の端末サイズの状態で test_pinned_prompt_get_size() を呼び出す。
     screen = cplat_pinned_prompt_create(
         nullptr); // [手順] - シグナル登録済み状態で、raw モード試験用のハンドルを作るために cplat_pinned_prompt_create() を呼び出す。
-    ASSERT_NE(nullptr, screen);                // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_set_sigwinch_installed(1);
     test_pinned_prompt_enter_raw(
@@ -118,7 +116,7 @@ TEST(pinnedPromptCoverageTest, internal_state_handles_inactive_mutex_and_prompt_
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_cplat> mock_cplat;
     int null_prompt_result = 0;
     int allocation_result = 0;
@@ -156,7 +154,7 @@ TEST(pinnedPromptCoverageTest, layout_and_view_cover_narrow_and_status_boundarie
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     int prompt_row = 0;
     int separator_row = 0;
     int main_bottom_row = 0;
@@ -215,7 +213,7 @@ TEST(pinnedPromptCoverageTest, drawing_helpers_cover_hidden_narrow_and_clear_ran
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_ioctl> mock_ioctl;
     struct winsize narrow_size = {};
     narrow_size.ws_col = 1U;
@@ -266,7 +264,7 @@ TEST(pinnedPromptCoverageTest, history_helpers_cover_capacity_and_null_entries)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
 
     // Pre-Assert
 
@@ -308,7 +306,7 @@ TEST(pinnedPromptCoverageTest, history_context_reports_allocation_failures)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_cplat> mock_cplat;
     int realloc_failure = 0;
     int calloc_failure = 0;
@@ -398,7 +396,7 @@ TEST(pinnedPromptCoverageTest, format_helper_handles_allocation_and_format_failu
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_cplat> mock_cplat;
     NiceMock<Mock_stdio> mock_stdio;
     const char long_text[300] = {};
@@ -519,7 +517,7 @@ TEST(pinnedPromptCoverageTest, readline_reports_setup_failures)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_termios> mock_termios;
     NiceMock<Mock_cplat> mock_cplat;
     char input[] = "fallback";
@@ -610,7 +608,7 @@ TEST(pinnedPromptCoverageTest, readline_covers_remaining_key_actions)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     NiceMock<Mock_ioctl> mock_ioctl;
     NiceMock<Mock_termios> mock_termios;
@@ -706,7 +704,7 @@ TEST(pinnedPromptCoverageTest, tty_write_and_printf_cover_empty_short_and_failur
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 1);
     NiceMock<Mock_stdio> mock_stdio;
     NiceMock<Mock_cplat> mock_cplat;
@@ -774,7 +772,7 @@ TEST(pinnedPromptCoverageTest, status_apis_cover_toggle_and_allocation_failure)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_cplat> mock_cplat;
 
     // Pre-Assert
@@ -821,7 +819,7 @@ TEST(pinnedPromptCoverageTest, read_key_classifies_unknown_csi_default)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_sys_select> mock_select;
     const unsigned char input[] = {0x1BU, '[', '2', 0x1BU, '[', '4', 'x'};
@@ -871,7 +869,7 @@ TEST(pinnedPromptCoverageTest, read_key_and_status_cover_remaining_conditions)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_sys_select> mock_select;
     NiceMock<Mock_ioctl> mock_ioctl;
@@ -944,7 +942,7 @@ TEST(pinnedPromptCoverageTest, remaining_conditions_cover_null_status_history_an
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     size_t written = 99U;
     int write_null_out = CPLAT_OK;
     int write_with_out = CPLAT_OK;
@@ -1011,7 +1009,7 @@ TEST(pinnedPromptCoverageTest, remaining_five_branches)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
 
     // Pre-Assert
 
@@ -1065,7 +1063,7 @@ TEST(pinnedPromptCoverageTest, format_helper_grows_buffer_when_realloc_succeeds)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_cplat> mock_cplat;
     NiceMock<Mock_stdio> mock_stdio;
     char long_text[300];
@@ -1106,7 +1104,7 @@ TEST(pinnedPromptCoverageTest, readline_fmt_uses_empty_prompt_when_format_alloca
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_cplat> mock_cplat;
     char input[] = "ok";
@@ -1145,7 +1143,7 @@ TEST(pinnedPromptCoverageTest, render_and_prepare_output_cover_hidden_bottom_sta
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_ioctl> mock_ioctl;
     struct winsize two_rows = {};
     struct winsize one_row = {};
@@ -1261,7 +1259,7 @@ TEST(pinnedPromptCoverageTest, render_and_prepare_output_cover_hidden_bottom_sta
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_windows> mock_windows;
     HANDLE out_handle = (HANDLE)0x1234;
 
@@ -1308,7 +1306,7 @@ TEST(pinnedPromptCoverageTest, drawing_helpers_cover_hidden_narrow_and_clear_ran
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
-    ASSERT_NE(nullptr, screen);                                     // [状態確認] - screen が nullptr 以外であること。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_windows> mock_windows;
     HANDLE out_handle = (HANDLE)0x1234;
 

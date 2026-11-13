@@ -188,7 +188,7 @@ TEST_F(regexCoverageTest, replace_encode_failure_and_iter_position_past_end)
     int encode_throw_result = cplat_regex_replace(
         regex, "a", 1U, "x", CPLAT_REGEX_DEFAULT, buffer, sizeof(buffer), nullptr,
         nullptr); // [手順] - cplat_internal_regex_utf8_encode() が bad_alloc を送出する状態で cplat_regex_replace() を呼び出す。
-#endif                             /* !CPLAT_REGEX_NO_EXCEPTIONS */
+#endif            /* !CPLAT_REGEX_NO_EXCEPTIONS */
     test_regex_utf8_set_encode_mode(REGEX_UTF8_FAKE_REAL);
     test_regex_iter_set_position(iter, 99U); // [状態] - 列挙位置を入力長より後ろへ進める。
     int next_result =

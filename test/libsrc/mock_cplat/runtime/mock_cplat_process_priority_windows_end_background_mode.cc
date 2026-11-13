@@ -5,7 +5,8 @@
 
 int delegate_real_cplat_process_priority_windows_end_background_mode(cplat_error *detail_out)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_process_priority_windows_end_background_mode)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_process_priority_windows_end_background_mode"));
+    static auto real_fn = reinterpret_cast<decltype(&cplat_process_priority_windows_end_background_mode)>(
+        resolveSharedSymbolOrExit(kLibCplatName, "cplat_process_priority_windows_end_background_mode"));
 
     return real_fn(detail_out);
 }

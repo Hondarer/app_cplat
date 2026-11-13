@@ -168,7 +168,7 @@ TEST_F(sysStatFormatTest, mkdir_fmt_passes_formatted_path)
     EXPECT_CALL(mock_cplat, cplat_mkdir(StrEq("temporary_42"), &detail))
         .WillOnce(Return(
             CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_mkdir() が "temporary_42" と等しい文字列、&detail を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - cplat_mkdir() から CPLAT_OK を返す。
+    // [Pre-Assert手順] - cplat_mkdir() から CPLAT_OK を返す。
 
     // Act
     const int result =

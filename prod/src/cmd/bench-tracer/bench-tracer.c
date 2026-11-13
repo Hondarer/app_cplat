@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 /** @brief 既定のプロセス数です。 */
 #define DEFAULT_PROCESSES 16
@@ -287,6 +288,13 @@ int main(int argc, char **argv)
     if (processes <= 0 || messages <= 0)
     {
         fprintf(stderr, "usage: bench-tracer [path [processes [messages]]]\n");
+        return 1;
+    }
+
+    if (messages > INT_MAX / processes)
+    {
+        fprintf(stderr, "bench-tracer: product of processes and messages does not fit in int\n"
+                        "usage: bench-tracer [path [processes [messages]]]\n");
         return 1;
     }
 

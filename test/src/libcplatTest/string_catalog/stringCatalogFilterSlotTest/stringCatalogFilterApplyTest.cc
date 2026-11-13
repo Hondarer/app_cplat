@@ -324,7 +324,7 @@ TEST_F(stringCatalogFilterApplyTest, apply_with_corrupt_image_keeps_previous_sta
                                   valid_image)); // [状態] - JOB_RECEIVED (key=2) に一致する条件式をコンパイルする。
     // [状態確認] - JOB_RECEIVED (key=2) に一致する条件式をコンパイルした compile_single_line() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK,
-              compile_single_line("key == 1", corrupt_image));    // [状態] - 別の内容をコンパイルしたうえで破損させる。
+              compile_single_line("key == 1", corrupt_image)); // [状態] - 別の内容をコンパイルしたうえで破損させる。
     // [状態確認] - 別の内容をコンパイルした compile_single_line() の戻り値が CPLAT_OK であること。
     corrupt_image[0] = (unsigned char)(corrupt_image[0] ^ 0xFFU); // [状態] - 署名を破損させる。
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_apply(slot_, valid_image, kImageSize, nullptr, 0U,

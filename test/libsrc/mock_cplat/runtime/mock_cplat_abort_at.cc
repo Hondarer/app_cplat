@@ -3,17 +3,17 @@
 
 #include <cstdlib>
 
-void delegate_real_cplat_abort_at(cplat_abort_kind kind, const char *message, const char *file,
-                                  int line, const char *function)
+void delegate_real_cplat_abort_at(cplat_abort_kind kind, const char *message, const char *file, int line,
+                                  const char *function)
 {
-    static auto real_fn = reinterpret_cast<decltype(&cplat_abort_at)>(
-        resolveSharedSymbolOrExit(kLibCplatName, "cplat_abort_at"));
+    static auto real_fn =
+        reinterpret_cast<decltype(&cplat_abort_at)>(resolveSharedSymbolOrExit(kLibCplatName, "cplat_abort_at"));
 
     real_fn(kind, message, file, line, function);
 }
 
-MOCK_WEAK_IMPL(void, cplat_abort_at, cplat_abort_kind kind, const char *message, const char *file,
-               int line, const char *function)
+MOCK_WEAK_IMPL(void, cplat_abort_at, cplat_abort_kind kind, const char *message, const char *file, int line,
+               const char *function)
 {
     if (getTraceLevel() > TRACE_NONE)
     {

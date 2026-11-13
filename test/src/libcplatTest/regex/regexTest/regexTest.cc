@@ -39,8 +39,8 @@ TEST_F(regexTest, create_reports_group_count)
         nullptr); // [手順] - 捕捉グループを 3 個持つパターンを指定して cplat_regex_create() を呼び出す。
 
     // Assert
-    ASSERT_EQ(CPLAT_OK, result);           // [確認_正常系] - cplat_regex_create() の戻り値が CPLAT_OK であること。
-    ASSERT_NE(nullptr, regex);             // [確認_正常系] - regex が nullptr 以外であること。
+    ASSERT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_regex_create() の戻り値が CPLAT_OK であること。
+    ASSERT_NE(nullptr, regex);   // [確認_正常系] - regex が nullptr 以外であること。
     EXPECT_EQ(
         (size_t)4,
         cplat_regex_get_group_count(

@@ -241,7 +241,7 @@ TEST_F(trace_cliTest, process_line_dispose_releases_handle)
     EXPECT_CALL(mock_cplat_, cplat_tracer_dispose(Pointee(handle_)))
         .WillOnce(
             Return()); // [Pre-Assert確認_正常系] - cplat_tracer_dispose() が指す先が handle_ であるポインターを指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - cplat_tracer_dispose() から戻る。
+    // [Pre-Assert手順] - cplat_tracer_dispose() から戻る。
     EXPECT_CALL(mock_stdio_, printf(_, _, _, StrEq("handle=disposed\n")))
         .WillOnce(Return(
             0)); // [Pre-Assert確認_正常系] - dispose 結果として printf() が "handle=disposed\n" と等しい文字列を指定して 1 回呼び出されること。

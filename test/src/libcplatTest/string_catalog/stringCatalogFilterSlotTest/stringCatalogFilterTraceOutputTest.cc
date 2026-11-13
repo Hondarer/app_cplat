@@ -281,7 +281,7 @@ TEST_F(stringCatalogFilterTraceOutputTest, attached_source_is_taken_on_write)
     ASSERT_EQ(CPLAT_OK, cplat_string_catalog_filter_slot_attach_source(slot_, source, sizeof(source),
                                                                        nullptr)); // [状態] - ソース領域を結び付ける。
     // [状態確認] - cplat_string_catalog_filter_slot_attach_source() の戻り値が CPLAT_OK であること。
-    ASSERT_EQ(CPLAT_OK, filter_test_trace_set_filter(slot_));                     // [状態] - 出力へ接続する。
+    ASSERT_EQ(CPLAT_OK, filter_test_trace_set_filter(slot_)); // [状態] - 出力へ接続する。
     // [状態確認] - filter_test_trace_set_filter() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, compile_single_line("category <= 2", image_));
     // [状態確認] - compile_single_line() の戻り値が CPLAT_OK であること。

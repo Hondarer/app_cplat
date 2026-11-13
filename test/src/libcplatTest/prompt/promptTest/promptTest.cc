@@ -1418,7 +1418,9 @@ TEST_F(promptTest, renders_complete_utf8_characters)
             [&rendered](const char *, int, const char *, const void *data, size_t size, size_t count, FILE *)
             {
                 if (count > 0U)
+                {
                     rendered.emplace_back(static_cast<const char *>(data), size * count);
+                }
                 return count;
             });
     // [状態] - 入力行として出力したバイト列を記録する。
