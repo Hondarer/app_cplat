@@ -368,15 +368,15 @@ static int append_object_value(const cJSON *object, cplat_sym_loader_name_pair *
     const char *lib_name;
     const char *func_name;
 
-    lib_item = cJSON_GetObjectItemCaseSensitive(object, "lib");
-    func_item = cJSON_GetObjectItemCaseSensitive(object, "func");
-    if ((cJSON_IsString(lib_item) == 0) || (cJSON_IsString(func_item) == 0))
+    lib_item = cjson_app_cJSON_GetObjectItemCaseSensitive(object, "lib");
+    func_item = cjson_app_cJSON_GetObjectItemCaseSensitive(object, "func");
+    if ((cjson_app_cJSON_IsString(lib_item) == 0) || (cjson_app_cJSON_IsString(func_item) == 0))
     {
         return 0;
     }
 
-    lib_name = cJSON_GetStringValue(lib_item);
-    func_name = cJSON_GetStringValue(func_item);
+    lib_name = cjson_app_cJSON_GetStringValue(lib_item);
+    func_name = cjson_app_cJSON_GetStringValue(func_item);
     if ((lib_name == NULL) || (func_name == NULL))
     {
         return 0;
@@ -398,7 +398,7 @@ static int append_array_targets(const cJSON *array, cplat_sym_loader_name_pair *
     {
         int appended;
 
-        if (cJSON_IsObject(element) == 0)
+        if (cjson_app_cJSON_IsObject(element) == 0)
         {
             continue;
         }
@@ -446,7 +446,7 @@ static int handle_property(const cJSON *item, cplat_sym_loader_entry *const *fob
     }
 
     /* オブジェクトを先に判定し、配列の既定戻り値 0 がオブジェクトの走査を止めないようにする。 */
-    if (cJSON_IsObject(item) != 0)
+    if (cjson_app_cJSON_IsObject(item) != 0)
     {
         if (append_object_value(item, &list, &count) < 0)
         {
@@ -457,7 +457,7 @@ static int handle_property(const cJSON *item, cplat_sym_loader_entry *const *fob
         return install_targets(fobj_array, fobj_length, func_key, list, count, configpath);
     }
 
-    if (cJSON_IsArray(item) != 0)
+    if (cjson_app_cJSON_IsArray(item) != 0)
     {
         if (append_array_targets(item, &list, &count) != 0)
         {
@@ -611,12 +611,12 @@ int cplat_sym_loader_apply_config(cplat_sym_loader_entry *const *fobj_array, siz
 
     buffer[file_size] = '\0';
 
-    root = cJSON_ParseJSONCWithLength(buffer, file_size);
+    root = cjson_app_cJSON_ParseJSONCWithLength(buffer, file_size);
     if (root == NULL)
     {
         goto out_free_json;
     }
-    if (cJSON_IsObject(root) == 0)
+    if (cjson_app_cJSON_IsObject(root) == 0)
     {
         applied = CPLAT_ERR_CORRUPT_DATA;
         goto out_free_json;
@@ -638,7 +638,7 @@ int cplat_sym_loader_apply_config(cplat_sym_loader_entry *const *fobj_array, siz
     }
 
 out_free_json:
-    cJSON_Delete(root);
+    cjson_app_cJSON_Delete(root);
     root = NULL;
 out_free_buffer:
     cplat_free(buffer);

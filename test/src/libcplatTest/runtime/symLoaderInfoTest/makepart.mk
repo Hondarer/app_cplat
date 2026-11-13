@@ -11,3 +11,4 @@ INCDIR += $(MYAPP_DIR)/prod/libsrc/cplat/runtime
 
 # ライブラリの指定
 LIBS += mock_libc mock_cplat mock_cjson
+DEFINES += MOCK_CJSON_ENABLE_CALLER

@@ -1,12 +1,12 @@
 /**
  *******************************************************************************
- *  @file           compress.c
+ *  @file           zlib_app_compress.c
  *  @brief          zlib を使用してデータを圧縮および展開する共通機能を実装します。
  *  @author         Tetsuo Honda
  *  @date           2026/03/05
  *  @version        1.0.0
  *
- *  zlib の deflate/inflate を raw DEFLATE (windowBits = -15) モードで使用します。\n
+ *  zlib の zlib_app_deflate/zlib_app_inflate を raw DEFLATE (windowBits = -15) モードで使用します。\n
  *  Linux と Windows で app/zlib の同じ実装を使用します。
  *
  *  @copyright      Copyright (C) Tetsuo Honda. 2026. All rights reserved.
@@ -82,7 +82,7 @@ int cplat_compress(uint8_t *dst, size_t *dst_len, const uint8_t *src, const size
      * 第 5 引数の 8 は memLevel であり、zlib の既定値である。
      * see: https://zlib.net/manual.html
      */
-    ret = deflateInit2(&z, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
+    ret = zlib_app_deflateInit2(&z, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
     if (ret == Z_MEM_ERROR)
     {
         return CPLAT_ERR_OUT_OF_MEMORY;
@@ -94,7 +94,7 @@ int cplat_compress(uint8_t *dst, size_t *dst_len, const uint8_t *src, const size
     }
 
     /*
-     * avail_out は uInt までである。Z_FINISH が Z_OK の間は、出力の残りを渡して deflate を繰り返す。
+     * avail_out は uInt までである。Z_FINISH が Z_OK の間は、出力の残りを渡して zlib_app_deflate を繰り返す。
      * see: https://zlib.net/manual.html
      */
     do
@@ -103,16 +103,16 @@ int cplat_compress(uint8_t *dst, size_t *dst_len, const uint8_t *src, const size
 
         avail_out = zlib_avail(out_remaining);
         z.avail_out = avail_out;
-        ret = deflate(&z, Z_FINISH);
+        ret = zlib_app_deflate(&z, Z_FINISH);
         out_remaining -= (size_t)(avail_out - z.avail_out);
     } while (ret == Z_OK);
 
     /*
-     * deflateInit2 が成功した後は deflateEnd で内部状態を解放する。
-     * 未完了のとき deflateEnd は Z_DATA_ERROR を返すため、その戻り値は使わず deflate の結果で判定する。
+     * zlib_app_deflateInit2 が成功した後は zlib_app_deflateEnd で内部状態を解放する。
+     * 未完了のとき zlib_app_deflateEnd は Z_DATA_ERROR を返すため、その戻り値は使わず zlib_app_deflate の結果で判定する。
      * see: https://zlib.net/manual.html
      */
-    deflateEnd(&z);
+    zlib_app_deflateEnd(&z);
 
     if (ret == Z_MEM_ERROR)
     {
@@ -178,7 +178,7 @@ int cplat_decompress(uint8_t *dst, size_t *dst_len, const uint8_t *src, const si
 
         z.next_in = (Bytef *)(uintptr_t)(src + CPLAT_COMPRESS_HEADER_SIZE);
         z.next_out = dst;
-        ret = inflateInit2(&z, -15);
+        ret = zlib_app_inflateInit2(&z, -15);
         if (ret != Z_OK)
         {
             return ret == Z_MEM_ERROR ? CPLAT_ERR_OUT_OF_MEMORY : CPLAT_ERR_UNKNOWN;
@@ -197,7 +197,7 @@ int cplat_decompress(uint8_t *dst, size_t *dst_len, const uint8_t *src, const si
             {
                 z.next_out = &scratch;
             }
-            ret = inflate(&z, Z_NO_FLUSH);
+            ret = zlib_app_inflate(&z, Z_NO_FLUSH);
             consumed = (size_t)(input_count - z.avail_in);
             produced = (size_t)(output_count - z.avail_out);
             input_remaining -= consumed;
@@ -225,7 +225,7 @@ int cplat_decompress(uint8_t *dst, size_t *dst_len, const uint8_t *src, const si
                 break;
             }
         }
-        inflateEnd(&z);
+        zlib_app_inflateEnd(&z);
         if (result != CPLAT_OK)
         {
             return result;

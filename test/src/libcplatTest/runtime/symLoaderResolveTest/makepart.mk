@@ -15,3 +15,4 @@ INCDIR += $(MYAPP_DIR)/prod/libsrc/cplat/runtime
 # ロック生成と文字列連結は mock_cplat 経由で実実装へ委譲する。
 # 設定の再読込が参照する JSON 解析は mock_cjson へ委譲する。
 LIBS += mock_libc mock_cplat mock_cjson
+DEFINES += MOCK_CJSON_ENABLE_CALLER

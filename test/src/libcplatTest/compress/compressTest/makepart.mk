@@ -6,3 +6,4 @@ ADD_SRCS := $(MYAPP_DIR)/prod/libsrc/cplat/net/byteorder.c
 
 # zlib の実体へは mock_zlib が動的に委譲する。
 LIBS += mock_libc mock_zlib
+DEFINES += MOCK_ZLIB_ENABLE_CALLER

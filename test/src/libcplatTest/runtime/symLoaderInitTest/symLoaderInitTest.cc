@@ -497,18 +497,18 @@ TEST_F(symLoaderInitTest, ignores_document_when_cjson_parse_fails)
     expect_config_read("injected_parse_failure.json",
                        json); // 正常な JSON の読取が呼び出されること。
                               // [Pre-Assert手順] - cplat_fread() から、正常な JSON 本文をコピーして読取バイト数を返す。
-    EXPECT_CALL(mock_cjson, cJSON_ParseJSONCWithLength(StrEq(json), std::strlen(json)))
+    EXPECT_CALL(mock_cjson, cjson_app_cJSON_ParseJSONCWithLength(_, _, _, StrEq(json), std::strlen(json)))
         .WillOnce(Return(
-            nullptr)); // [Pre-Assert確認_異常系] - cJSON_ParseJSONCWithLength() が json と等しい文字列、std::strlen() の戻り値を指定して 1 回呼び出されること。
-                       // [Pre-Assert手順] - cJSON_ParseJSONCWithLength() から nullptr を返す。
+            nullptr)); // [Pre-Assert確認_異常系] - cjson_app_cJSON_ParseJSONCWithLength() が json と等しい文字列、std::strlen() の戻り値を指定して 1 回呼び出されること。
+                       // [Pre-Assert手順] - cjson_app_cJSON_ParseJSONCWithLength() から nullptr を返す。
     EXPECT_CALL(
         mock_cjson,
-        cJSON_Delete(nullptr)); // [Pre-Assert確認_異常系] - cJSON_Delete() が nullptr を指定して 1 回呼び出されること。
+        cjson_app_cJSON_Delete(_, _, _, nullptr)); // [Pre-Assert確認_異常系] - cjson_app_cJSON_Delete() が nullptr を指定して 1 回呼び出されること。
 
     // Act
     cplat_sym_loader_init(
         entries, 1u,
-        "injected_parse_failure.json"); // [手順] - cJSON_ParseJSONCWithLength() が失敗する状態で cplat_sym_loader_init() を呼び出す。
+        "injected_parse_failure.json"); // [手順] - cjson_app_cJSON_ParseJSONCWithLength() が失敗する状態で cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ("", pending_lib(entry)); // [確認_異常系] - entry.lib_name が "" であること。(空のままであることの確認)
@@ -530,15 +530,15 @@ TEST_F(symLoaderInitTest, ignores_entry_when_cjson_string_value_is_null)
     expect_config_read("injected_string_failure.json",
                        json); // 正常な JSON の読取が呼び出されること。
                               // [Pre-Assert手順] - cplat_fread() から、正常な JSON 本文をコピーして読取バイト数を返す。
-    EXPECT_CALL(mock_cjson, cJSON_GetStringValue(_))
+    EXPECT_CALL(mock_cjson, cjson_app_cJSON_GetStringValue(_, _, _, _))
         .WillOnce(Return(nullptr))
-        .WillOnce(DoDefault()); // [Pre-Assert確認_異常系] - cJSON_GetStringValue() が 2 回呼び出されること。
-    // [Pre-Assert手順] - cJSON_GetStringValue() から 1 回目は nullptr (lib の文字列値の取得失敗) を返し、以降は cJSON の処理へ委譲する。
+        .WillOnce(DoDefault()); // [Pre-Assert確認_異常系] - cjson_app_cJSON_GetStringValue() が 2 回呼び出されること。
+    // [Pre-Assert手順] - cjson_app_cJSON_GetStringValue() から 1 回目は nullptr (lib の文字列値の取得失敗) を返し、以降は cJSON の処理へ委譲する。
 
     // Act
     cplat_sym_loader_init(
         entries, 1u,
-        "injected_string_failure.json"); // [手順] - cJSON_GetStringValue() が lib の文字列値の取得に失敗する状態で cplat_sym_loader_init() を呼び出す。
+        "injected_string_failure.json"); // [手順] - cjson_app_cJSON_GetStringValue() が lib の文字列値の取得に失敗する状態で cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ(
@@ -905,16 +905,16 @@ TEST_F(symLoaderInitTest, ignores_invalid_function_values)
     expect_config_read("null_func.json",
                        valid_json); // func 取得失敗用 JSON の読取が呼び出されること。
     // [Pre-Assert手順] - cplat_fread() から、正常な JSON 本文をコピーして読取バイト数を返す。
-    EXPECT_CALL(mock_cjson, cJSON_GetStringValue(_))
+    EXPECT_CALL(mock_cjson, cjson_app_cJSON_GetStringValue(_, _, _, _))
         .WillOnce(DoDefault())
         .WillOnce(Return(nullptr))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cJSON_GetStringValue() が 2 回以上呼び出されること。
-    // [Pre-Assert手順] - cJSON_GetStringValue() から 1 回目は cJSON の処理へ委譲し、2 回目は nullptr (func の文字列取得失敗) を返し、以降は cJSON の処理へ委譲する。
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cjson_app_cJSON_GetStringValue() が 2 回以上呼び出されること。
+    // [Pre-Assert手順] - cjson_app_cJSON_GetStringValue() から 1 回目は cJSON の処理へ委譲し、2 回目は nullptr (func の文字列取得失敗) を返し、以降は cJSON の処理へ委譲する。
 
     // Act
     cplat_sym_loader_init(
         null_entries, 1u,
-        "null_func.json"); // [手順] - cJSON_GetStringValue() が func の文字列取得に失敗する状態で cplat_sym_loader_init() を呼び出す。
+        "null_func.json"); // [手順] - cjson_app_cJSON_GetStringValue() が func の文字列取得に失敗する状態で cplat_sym_loader_init() を呼び出す。
 
     // Assert
     EXPECT_STREQ(
