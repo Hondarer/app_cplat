@@ -269,34 +269,30 @@ int cplat_session_process_start(const cplat_session_process_options *options, cp
 
 Windows での `cplat_session_process_start()` の処理順序は次のとおりです。
 
-```plantuml
-@startuml セッション上でプロセスを起動する処理の流れ (試案)
-    caption セッション上でプロセスを起動する処理の流れ (試案)
-    start
-    :対象セッションの状態を確認;
-    if (ログオン前のセッション?) then (yes)
-        :エラーを返す (Q-022);
-        stop
-    endif
-    switch (run_as)
-    case (SESSION_USER)
-        :WTSQueryUserToken;
-    case (TOKEN)
-        :DuplicateTokenEx;
-        :TokenSessionId を対象セッションへ設定;
-    endswitch
-    if (別ユーザーかつ GRANT_DESKTOP_ACCESS?) then (yes)
-        :winsta0 / desktop の ACL に\nログオン SID を追加 (参照カウント);
-    endif
-    if (LOAD_PROFILE?) then (yes)
-        :LoadUserProfileW;
-    endif
-    :CreateEnvironmentBlock;
-    :CreateProcessAsUserW\n(lpDesktop を指定);
-    :プロセス ハンドルに\nACL・プロファイルの後始末を関連付け;
-    stop
-@enduml
+```mermaid
+flowchart TD
+    startNode((開始)) --> step1["対象セッションの状態を確認"]
+    step1 --> cond1{"ログオン前のセッション?"}
+    cond1 -- yes --> err1["エラーを返す (Q-022)"] --> endNode((終了))
+    cond1 -- no --> sw1{"run_as"}
+
+    sw1 -- SESSION_USER --> act_user["WTSQueryUserToken"]
+    sw1 -- TOKEN --> act_token1["DuplicateTokenEx"] --> act_token2["TokenSessionId を対象セッションへ設定"]
+
+    act_user --> cond2{"別ユーザーかつ GRANT_DESKTOP_ACCESS?"}
+    act_token2 --> cond2
+
+    cond2 -- yes --> act_acl["winsta0 / desktop の ACL に<br>ログオン SID を追加 (参照カウント)"] --> cond3{"LOAD_PROFILE?"}
+    cond2 -- no --> cond3
+
+    cond3 -- yes --> act_prof["LoadUserProfileW"] --> step_env["CreateEnvironmentBlock"]
+    cond3 -- no --> step_env
+
+    step_env --> step_proc["CreateProcessAsUserW<br>(lpDesktop を指定)"]
+    step_proc --> step_cleanup["プロセス ハンドルに<br>ACL・プロファイルの後始末を関連付け"] --> endNode
 ```
+
+CodeBlock: セッション上でプロセスを起動する処理の流れ (試案)
 
 ### 通知 (試案)
 
@@ -979,7 +975,7 @@ Linux のセッション列挙と通知で、systemd-logind への依存をど�
 
 **Context**
 
-logind の情報は、libsystemd の sd-login / sd-bus 経由で取得するのが標準的です。cplat は動的ライブラリだけを生成し、Linux のリンク先は cjson、zlib、crypto、dl、stdc++ です (`docs/link-policy.md`)。コンテナ環境など systemd がない環境もあります。
+logind の情報は、libsystemd の sd-login / sd-bus 経由で取得するのが標準的です。cplat は動的ライブラリだけを生成し、Linux のリンク先は cjson、zlib、crypto、dl、stdc++ です (`docs/link-policy.md`)。コンテナー環境など systemd がない環境もあります。
 
 ```text
 案 A: libsystemd を実行時に dlopen() で読み込む。ない環境では CPLAT_ERR_UNSUPPORTED を返す。
@@ -1138,7 +1134,7 @@ Linux で、画面のロックと解除 (`LOCK` / `UNLOCK`) の通知をどう�
 
 **Context**
 
-Linux では logind の `LockedHint` プロパティーの変化で検知します。この値はデスクトップ環境が設定するもので、環境によっては変化しません (V-005)。Windows では `WTS_SESSION_LOCK` / `WTS_SESSION_UNLOCK` として確実に届きます。
+Linux では logind の `LockedHint` プロパティの変化で検知します。この値はデスクトップ環境が設定するもので、環境によっては変化しません (V-005)。Windows では `WTS_SESSION_LOCK` / `WTS_SESSION_UNLOCK` として確実に届きます。
 
 **Answer**
 
@@ -1284,4 +1280,3 @@ V-001、V-002、V-003、V-004
 ## 反映と検証の記録
 
 未着手。作業後の対応箇所、検証結果、未完了項目を記録します。
-

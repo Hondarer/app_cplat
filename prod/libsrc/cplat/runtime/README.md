@@ -69,21 +69,20 @@ Linux では `gethostname`、Windows では `GetComputerNameExW(ComputerNameDnsH
 
 呼び出し元は昇格プロセスの終了を待つ間もパイプを読み続け、読み取った内容をコールバックへ渡します。コールバックに NULL を指定した場合は、自分の stdout / stderr へそのまま書き込みます。この方式では、昇格プロセスがコンソールへ一切書き込まないため、前述の `ERROR_INVALID_HANDLE` の影響を受けません。また、呼び出し元の出力がリダイレクトされている場合も、昇格プロセスの出力はそのリダイレクト先へ届きます。
 
-```plantuml
-@startuml 無名パイプによる昇格プロセスの出力の受け渡し
-caption 無名パイプによる昇格プロセスの出力の受け渡し
-participant "呼び出し元 (未昇格)" as P
-participant "昇格プロセス" as C
-P -> P : CreatePipe (stdout 用、stderr 用)
-P -> C : runas + SW_HIDE + 親 PID と書き込み側ハンドル値のフラグ
-C -> P : OpenProcess(PROCESS_DUP_HANDLE)
-C -> C : DuplicateHandle で書き込み側を複製し、stdout / stderr を付け替え
-loop 昇格プロセスの終了まで
-    C -> P : パイプへ出力
-    P -> P : PeekNamedPipe / ReadFile で読み取り、コールバックへ渡す
-end
-P -> P : 残りを読み切り、終了コードを取得
-@enduml
+```mermaid
+sequenceDiagram
+    autonumber off
+    participant P as 呼び出し元 (未昇格)
+    participant C as 昇格プロセス
+    P->>P: CreatePipe (stdout 用、stderr 用)
+    P->>C: runas + SW_HIDE + 親 PID と書き込み側ハンドル値のフラグ
+    C->>P: OpenProcess(PROCESS_DUP_HANDLE)
+    C->>C: DuplicateHandle で書き込み側を複製し、stdout / stderr を付け替え
+    loop 昇格プロセスの終了まで
+        C->>P: パイプへ出力
+        P->>P: PeekNamedPipe / ReadFile で読み取り、コールバックへ渡す
+    end
+    P->>P: 残りを読み切り、終了コードを取得
 ```
 
 CodeBlock: 無名パイプによる昇格プロセスの出力の受け渡し

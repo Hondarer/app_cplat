@@ -100,68 +100,70 @@ Linux でも同じ指定を受け付けます。
 `cplat_memory_lock_self()` は、必要に応じて呼び出しスレッドのスタックへあらかじめアクセスしてから、内部 lock を取得して OS のロック API を呼び出します。  
 成功した場合は `scope` が返り、呼び出し側はページ フォルトを避けたい処理が終わった後に `cplat_memory_lock_scope_release()` を呼び出します。
 
-```plantuml
-@startuml cplat_memory_lock_self のロック取得
-caption cplat_memory_lock_self のロック取得
-participant "呼び出し側" as Caller
-participant "cplat_memory_lock_self" as API
-participant "内部 lock" as Lock
-participant "OS" as OS
+```mermaid
+sequenceDiagram
+    autonumber off
+    participant Caller as 呼び出し側
+    participant API as cplat_memory_lock_self
+    participant Lock as 内部 lock
+    participant OS as OS
 
-Caller -> API : options, &scope
-API -> API : 引数と flag を検証
-opt stack_prefault_bytes > 0
-    API -> API : 呼び出しスレッドのスタックへアクセス
-end
-API -> Lock : 取得
-alt Linux
-    API -> OS : mlockall(flags)
-    API -> API : self scope 数を加算
-else Windows
-    API -> OS : VirtualQuery で committed region を列挙
-    API -> OS : 未登録範囲へ VirtualLock
-    API -> API : 登録済み範囲の ref-count を加算
-end
-API -> Lock : 解放
-API --> Caller : CPLAT_OK, scope
-@enduml
+    Caller->>API: options, &scope
+    API->>API: 引数と flag を検証
+    opt stack_prefault_bytes > 0
+        API->>API: 呼び出しスレッドのスタックへアクセス
+    end
+    API->>Lock: 取得
+    alt Linux
+        API->>OS: mlockall(flags)
+        API->>API: self scope 数を加算
+    else Windows
+        API->>OS: VirtualQuery で committed region を列挙
+        API->>OS: 未登録範囲へ VirtualLock
+        API->>API: 登録済み範囲の ref-count を加算
+    end
+    API->>Lock: 解放
+    API-->>Caller: CPLAT_OK, scope
 ```
+
+CodeBlock: cplat_memory_lock_self のロック取得
 
 `cplat_memory_lock_scope_release()` は内部 lock の下で scope に対応するロック状態を解放します。  
 Linux では最後の self scope が解放された時点で `munlockall()` を呼び出し、Windows では ref-count が 0 になった範囲だけ `VirtualUnlock()` を呼び出します。
 
-```plantuml
-@startuml cplat_memory_lock_scope_release のロック解放
-caption cplat_memory_lock_scope_release のロック解放
-participant "呼び出し側" as Caller
-participant "cplat_memory_lock_scope_release" as API
-participant "内部 lock" as Lock
-participant "OS" as OS
+```mermaid
+sequenceDiagram
+    autonumber off
+    participant Caller as 呼び出し側
+    participant API as cplat_memory_lock_scope_release
+    participant Lock as 内部 lock
+    participant OS as OS
 
-Caller -> API : scope
-alt scope == NULL
-    API --> Caller : CPLAT_OK
-else scope != NULL
-    API -> Lock : 取得
-    alt Linux
-        API -> API : self scope 数を減算
-        opt self scope 数 == 0
-            API -> OS : munlockall()
-        end
-    else Windows
-        loop scope の各範囲
-            API -> API : registry の ref-count を減算
-            opt ref-count == 0
-                API -> OS : VirtualUnlock()
+    Caller->>API: scope
+    alt scope == NULL
+        API-->>Caller: CPLAT_OK
+    else scope != NULL
+        API->>Lock: 取得
+        alt Linux
+            API->>API: self scope 数を減算
+            opt self scope 数 == 0
+                API->>OS: munlockall()
+            end
+        else Windows
+            loop scope の各範囲
+                API->>API: registry の ref-count を減算
+                opt ref-count == 0
+                    API->>OS: VirtualUnlock()
+                end
             end
         end
+        API->>Lock: 解放
+        API->>API: scope を破棄
+        API-->>Caller: 結果コード
     end
-    API -> Lock : 解放
-    API -> API : scope を破棄
-    API --> Caller : 結果コード
-end
-@enduml
 ```
+
+CodeBlock: cplat_memory_lock_scope_release のロック解放
 
 ## Linux の実装
 

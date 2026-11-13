@@ -61,17 +61,16 @@ Windows 10 1903 以降では、`activeCodePage=UTF-8` マニフェストによ�
 
 この関数は次の仕組みで昇格プロセスの出力を元のコンソールに表示します。UAC 昇格 (`ShellExecuteExW` の `runas` 動詞) では昇格プロセスを別セキュリティ コンテキストで生成するため、親のハンドルを継承できません。そこで親プロセス ID と親コンソールの window ハンドルをコマンド ラインで渡し、昇格プロセス側が親コンソールへ接続し直します。親側は昇格プロセスの一時コンソールを隠して起動するため、別ウインドウは表示されません。
 
-```plantuml
-@startuml cplat_console_attach_parent のコンソール引き継ぎ
-caption cplat_console_attach_parent のコンソール引き継ぎ
-participant "親プロセス (未昇格)" as P
-participant "昇格プロセス" as C
-P -> C : runas + SW_HIDE + 親 PID / 親 HWND フラグ
-C -> C : FreeConsole / AttachConsole(親 PID)
-C -> C : GetConsoleWindow() が親 HWND に一致するまで待機
-C -> C : CONOUT$ / CONIN$ を std へ再接続
-C --> P : 同一コンソールへ出力
-@enduml
+```mermaid
+sequenceDiagram
+    autonumber off
+    participant P as 親プロセス (未昇格)
+    participant C as 昇格プロセス
+    P->>C: runas + SW_HIDE + 親 PID / 親 HWND フラグ
+    C->>C: FreeConsole / AttachConsole(親 PID)
+    C->>C: GetConsoleWindow() が親 HWND に一致するまで待機
+    C->>C: CONOUT$ / CONIN$ を std へ再接続
+    C-->>P: 同一コンソールへ出力
 ```
 
 CodeBlock: 昇格時のコンソール引き継ぎ
