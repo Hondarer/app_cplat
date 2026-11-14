@@ -84,6 +84,10 @@ static size_t s_windows_locked_range_capacity;                 /**< registry の
  */
 static void init_memory_lock_lock(void)
 {
+    /*
+     * cplat_call_once() のコールバックは戻り値を返せないため、失敗時は s_memory_lock_lock を
+     * NULL のまま残し、呼び出し元の memory_lock_lock() で NULL 検査して CPLAT_ERR_UNKNOWN を返す。
+     */
     (void)cplat_local_lock_create(&s_memory_lock_lock);
 }
 
@@ -136,6 +140,11 @@ static NO_INLINE void prefault_stack_recursive(size_t remaining)
         prefault_stack_recursive(remaining - sizeof(stack_page));
     }
 
+    /*
+     * 再帰呼び出しの後に書き込みを残し、-foptimize-sibling-calls による末尾呼び出し最適化を抑止する。
+     * 末尾呼び出しになるとスタック フレームが再利用され、スタック ページへ触れる目的を果たせない。
+     * see: https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html#index-foptimize-sibling-calls
+     */
     stack_page[0] = (unsigned char)remaining;
 }
 
@@ -234,6 +243,10 @@ static int prefault_stack(size_t stack_prefault_bytes)
         else
         {
             int stack_result = pthread_attr_getstack(&attr, &stack_addr, &stack_size);
+            /*
+             * Linux では pthread_attr_destroy() は常に成功し、必要な値は直前で取得済みのため破棄する。
+             * see: https://man7.org/linux/man-pages/man3/pthread_attr_init.3.html
+             */
             (void)pthread_attr_destroy(&attr);
 
             if (stack_result != 0)
@@ -855,7 +868,10 @@ int cplat_memory_lock_self(const cplat_memory_lock_self_options *options, cplat_
 
 #if defined(PLATFORM_LINUX)
         int native_flags = 0;
-        (void)convert_flags_to_mlockall_flags(options->flags, &native_flags);
+        if (convert_flags_to_mlockall_flags(options->flags, &native_flags) != 0)
+        {
+            return CPLAT_ERR_UNSUPPORTED;
+        }
 
         {
             cplat_memory_lock_scope *new_scope =

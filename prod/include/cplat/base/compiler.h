@@ -86,6 +86,10 @@
         #define COMPILER_MSVC
         #define COMPILER_NAME    "MSVC"
         #define COMPILER_VERSION _MSC_VER
+    /*
+     * Clang は GCC 互換のため __GNUC__ を定義する。除外しないと Clang を GCC と誤認する。
+     * see: https://clang.llvm.org/docs/UsersManual.html#cmdoption-fgnuc-version
+     */
     #elif defined(__GNUC__) && !defined(__clang__)
         #define COMPILER_GCC
         #define COMPILER_NAME    "GCC"

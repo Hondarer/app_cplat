@@ -71,7 +71,7 @@
 /* size_t は cplat_tracer_write_hex() と cplat_tracer_write_hexf() で使用する。 */
 #include <stddef.h>
 /* int64_t は cplat_tracer_set_name() で使用する。 */
-#include <inttypes.h>
+#include <stdint.h>
 #include <cplat/base/platform.h>
 #include <cplat/base/result.h>
 #include <cplat/clock/clock.h>

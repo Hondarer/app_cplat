@@ -4,7 +4,7 @@
 #include <cplat/base/platform.h>
 #include <cplat/base/result.h>
 #include <cplat/cplat_export.h>
-#include <inttypes.h>
+#include <stdint.h>
 
 /**
  *  @ingroup        CPLAT_TRACE

@@ -169,6 +169,7 @@ static int get_self_path_w(wchar_t *wpath_out, size_t wpath_size, const void *fu
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
 
+    /* 直前の検査で出力先バッファーの容量不足を除外済みのため、複写は失敗しない。 */
     (void)cplat_wcscpy(wpath_out, wpath_size, buf);
 
     return CPLAT_OK;

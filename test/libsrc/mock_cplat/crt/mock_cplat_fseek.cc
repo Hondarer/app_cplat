@@ -1,4 +1,4 @@
-#include <stdint.h>
+#include <inttypes.h>
 #include <testfw.h>
 #include <mock_cplat.h>
 

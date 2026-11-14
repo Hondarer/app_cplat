@@ -102,6 +102,8 @@ static int64_t clock_days_from_civil(const int year, const unsigned month, const
 /*
  * 同一瞬間のローカル時刻と UTC から、ローカルの時差を分で求めて offset_minutes へ書く。
  * 日付をまたぐため、通算日の差と当日秒の差を秒へ直してから 60 で割る。
+ * tm_gmtoff は POSIX.1-2024 の拡張で MSVC にないため、共通メンバーだけで算出する。
+ * see: https://man7.org/linux/man-pages/man3/tm.3type.html
  */
 static void clock_utc_offset_minutes(const struct tm *local_tm, const struct tm *utc_tm, int *offset_minutes)
 {
