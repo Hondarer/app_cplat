@@ -292,7 +292,7 @@ flowchart TD
     step_proc --> step_cleanup["プロセス ハンドルに<br>ACL・プロファイルの後始末を関連付け"] --> endNode
 ```
 
-CodeBlock: セッション上でプロセスを起動する処理の流れ (試案)
+Figure: セッション上でプロセスを起動する処理の流れ (試案)
 
 ### 通知 (試案)
 
