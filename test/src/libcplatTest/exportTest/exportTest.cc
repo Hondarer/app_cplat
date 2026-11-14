@@ -290,6 +290,7 @@
     EXPORT_ENTRY(cplat_hashtable_dispose, void(CPLAT_API *)(cplat_hashtable * ht)) \
     /* cplat/clock/clock.h */ \
     EXPORT_ENTRY(cplat_clock_get_monotonic_ms, int(CPLAT_API *)(uint64_t *)) \
+    EXPORT_ENTRY(cplat_clock_get_monotonic_high_resolution_ns, int(CPLAT_API *)(uint64_t *)) \
     EXPORT_ENTRY(cplat_clock_get_monotonic, int(CPLAT_API *)(cplat_timespec * ts)) \
     EXPORT_ENTRY(cplat_clock_get_realtime, int(CPLAT_API *)(cplat_timespec * ts)) \
     EXPORT_ENTRY(cplat_clock_format_realtime_iso8601_local, \

@@ -130,6 +130,7 @@ MOCK_CPLAT_LINK_IMPL(cplat_hashtable_dispose)
 
 // cplat/clock/clock.h
 MOCK_CPLAT_LINK_IMPL(cplat_clock_get_monotonic_ms)
+MOCK_CPLAT_LINK_IMPL(cplat_clock_get_monotonic_high_resolution_ns)
 MOCK_CPLAT_LINK_IMPL(cplat_clock_get_monotonic)
 MOCK_CPLAT_LINK_IMPL(cplat_clock_get_realtime)
 MOCK_CPLAT_LINK_IMPL(cplat_clock_format_realtime_iso8601_local)
@@ -904,6 +905,7 @@ extern void delegate_real_cplat_hashtable_dispose(cplat_hashtable *ht);
 
 // cplat/clock/clock.h
 extern int delegate_real_cplat_clock_get_monotonic_ms(uint64_t *milliseconds_out);
+extern int delegate_real_cplat_clock_get_monotonic_high_resolution_ns(uint64_t *nanoseconds_out);
 extern int delegate_real_cplat_clock_get_monotonic(cplat_timespec *ts);
 extern int delegate_real_cplat_clock_get_realtime(cplat_timespec *ts);
 extern int delegate_real_cplat_clock_format_realtime_iso8601_local(char *buf, size_t buf_size,
@@ -1805,6 +1807,7 @@ class Mock_cplat
 
     // cplat/clock/clock.h
     MOCK_METHOD(int, cplat_clock_get_monotonic_ms, (uint64_t *));
+    MOCK_METHOD(int, cplat_clock_get_monotonic_high_resolution_ns, (uint64_t *));
     MOCK_METHOD(int, cplat_clock_get_monotonic, (cplat_timespec *));
     MOCK_METHOD(int, cplat_clock_get_realtime, (cplat_timespec *));
     MOCK_METHOD(int, cplat_clock_format_realtime_iso8601_local, (char *, size_t, const cplat_timespec *));

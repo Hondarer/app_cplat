@@ -205,6 +205,57 @@ int cplat_clock_get_monotonic_ms(uint64_t *milliseconds_out)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
+int cplat_clock_get_monotonic_high_resolution_ns(uint64_t *nanoseconds_out)
+{
+    if (nanoseconds_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+#if defined(PLATFORM_LINUX)
+    struct timespec native;
+
+    /* CLOCK_MONOTONIC はサスペンド中の時間を含まない。
+     * see: https://man7.org/linux/man-pages/man3/clock_gettime.3.html
+     */
+    if (clock_gettime(CLOCK_MONOTONIC, &native) != 0)
+    {
+        return cplat_internal_error_report_errno(NULL, errno);
+    }
+
+    *nanoseconds_out = (uint64_t)native.tv_sec * (uint64_t)NSEC_PER_SEC + (uint64_t)native.tv_nsec;
+#elif defined(PLATFORM_WINDOWS)
+    LARGE_INTEGER frequency;
+    LARGE_INTEGER counter;
+    uint64_t ticks;
+    uint64_t ticks_per_sec;
+
+    /* QPC はスリープと休止中の時間を含む。周波数は呼び出しごとに取得する。
+     * see: https://learn.microsoft.com/en-us/windows/win32/sysinfo/acquiring-high-resolution-time-stamps
+     */
+    if (QueryPerformanceFrequency(&frequency) == 0 || frequency.QuadPart <= 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    if (QueryPerformanceCounter(&counter) == 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    ticks = (uint64_t)counter.QuadPart;
+    ticks_per_sec = (uint64_t)frequency.QuadPart;
+
+    /* カウンター全体への乗算を避け、秒部と秒未満の部分を分けて換算する。 */
+    *nanoseconds_out = (ticks / ticks_per_sec) * (uint64_t)NSEC_PER_SEC
+        + (ticks % ticks_per_sec) * (uint64_t)NSEC_PER_SEC / ticks_per_sec;
+#else
+    return CPLAT_ERR_UNSUPPORTED;
+#endif /* PLATFORM_ */
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int cplat_clock_get_monotonic(cplat_timespec *timestamp_out)
 {
     if (timestamp_out == NULL)

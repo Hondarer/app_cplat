@@ -255,6 +255,7 @@ Table: Win32 生 API と cplat UTF-8 ラッパー API の対応
 | 生 API | cplat 代替 | 差異の要点 |
 |---|---|---|
 | `clock_gettime(CLOCK_MONOTONIC, ...)` (Linux) / `GetTickCount64()` (Windows) | `cplat_clock_get_monotonic_ms()` / `cplat_clock_get_monotonic()` | 単調クロックをミリ秒/ナノ秒精度で返す。Windows の分解能差 (既定 ~15ms 刻み) を吸収 |
+| `clock_gettime(CLOCK_MONOTONIC, ...)` (Linux) / `QueryPerformanceCounter()`・`QueryPerformanceFrequency()` (Windows) | `cplat_clock_get_monotonic_high_resolution_ns()` | 高分解能の単調増加時刻をナノ秒単位で返す。実分解能は OS とハードウェアに依存し、サスペンド中は Linux では停止、Windows では進む |
 | `clock_gettime(CLOCK_REALTIME, ...)` (Linux) / `GetSystemTimeAsFileTime()` (Windows) | `cplat_clock_get_realtime()` / `cplat_clock_get_realtime_deadline_ms()` | Windows の 1601 年基準 (FILETIME) から Unix epoch 基準への変換を吸収。期限生成と `cplat_timespec` の加減算・ミリ秒換算は範囲超過時に `CPLAT_ERR_OUT_OF_RANGE` を返し、失敗時は出力先を変更しない |
 
 Table: クロック取得 API と cplat 代替ラッパーの差異
@@ -963,7 +964,7 @@ cplat 自身のラッパー実装 (`prod/libsrc/cplat/crt/`) は、元関数へ�
 
 ## 時刻取得とソース位置付き出力の更新
 
-`cplat_clock_get_monotonic_ms(uint64_t *milliseconds_out)`、`cplat_clock_get_monotonic(cplat_timespec *timestamp_out)`、`cplat_clock_get_realtime(cplat_timespec *timestamp_out)`、`cplat_clock_get_realtime_utc(struct tm *utc_tm_out, int32_t *nanoseconds_out)` は、成否を `int` の共通結果コードで返します。  
+`cplat_clock_get_monotonic_ms(uint64_t *milliseconds_out)`、`cplat_clock_get_monotonic_high_resolution_ns(uint64_t *nanoseconds_out)`、`cplat_clock_get_monotonic(cplat_timespec *timestamp_out)`、`cplat_clock_get_realtime(cplat_timespec *timestamp_out)`、`cplat_clock_get_realtime_utc(struct tm *utc_tm_out, int32_t *nanoseconds_out)` は、成否を `int` の共通結果コードで返します。  
 出力先は必須で、失敗時はすべての出力を変更しません。  
 利用側は取得成功を確認してから値を使います。
 
