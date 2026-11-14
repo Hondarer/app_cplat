@@ -71,6 +71,7 @@ class shutdownTest : public Test
     void SetUp() override
     {
         cplat_shutdown_reset_for_test();
+        test_shutdown_reset_hook_once();
         reset_records();
         // atexit は成功を返す。
         ON_CALL(mock_stdlib_, atexit(_, _, _, _)).WillByDefault(Return(0));
@@ -82,6 +83,7 @@ class shutdownTest : public Test
     void TearDown() override
     {
         cplat_shutdown_reset_for_test();
+        test_shutdown_reset_hook_once();
     }
     // [サブ手順終了]
 };

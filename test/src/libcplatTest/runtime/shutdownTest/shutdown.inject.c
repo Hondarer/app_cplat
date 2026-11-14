@@ -9,6 +9,12 @@
 
 #include "shutdown.inject.h"
 
+void test_shutdown_reset_hook_once(void)
+{
+    const cplat_once_flag initial_once = {0};
+    s_shutdown_hook_once = initial_once;
+}
+
 #if defined(PLATFORM_LINUX)
 void test_shutdown_signal_handler(const int signal_number)
 {
