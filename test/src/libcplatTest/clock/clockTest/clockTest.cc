@@ -81,9 +81,22 @@ TEST_F(clockTest, monotonic_ms_converts_platform_value)
 #elif defined(PLATFORM_WINDOWS)
     Mock_windows mock_windows;
 
-    EXPECT_CALL(mock_windows, GetTickCount64(_, _, _)).WillOnce(Return(12345ULL));
-    // [Pre-Assert確認_正常系] - GetTickCount64() が 1 回呼び出されること。
-    // [Pre-Assert手順] - GetTickCount64() から 12345 ミリ秒相当の 12345ULL を返す。
+    EXPECT_CALL(mock_windows, QueryPerformanceFrequency(_, _, _, _))
+        .WillOnce(
+            [](const char *, const int, const char *, LARGE_INTEGER *frequency)
+            {
+                frequency->QuadPart = 10000000;
+                return TRUE;
+            });
+    EXPECT_CALL(mock_windows, QueryPerformanceCounter(_, _, _, _))
+        .WillOnce(
+            [](const char *, const int, const char *, LARGE_INTEGER *counter)
+            {
+                counter->QuadPart = 123450000;
+                return TRUE;
+            });
+    // [Pre-Assert確認_正常系] - QPF と QPC がそれぞれ 1 回呼び出されること。
+    // [Pre-Assert手順] - 10000000 Hz の周波数と 123450000 カウントを返す。
 #endif
 
     // Act
@@ -120,9 +133,22 @@ TEST_F(clockTest, monotonic_returns_split_platform_value)
 #elif defined(PLATFORM_WINDOWS)
     Mock_windows mock_windows;
 
-    EXPECT_CALL(mock_windows, GetTickCount64(_, _, _)).WillOnce(Return(12345ULL));
-    // [Pre-Assert確認_正常系] - GetTickCount64() が 1 回呼び出されること。
-    // [Pre-Assert手順] - GetTickCount64() から 12 秒相当の 12345ULL を返す。
+    EXPECT_CALL(mock_windows, QueryPerformanceFrequency(_, _, _, _))
+        .WillOnce(
+            [](const char *, const int, const char *, LARGE_INTEGER *frequency)
+            {
+                frequency->QuadPart = 10000000;
+                return TRUE;
+            });
+    EXPECT_CALL(mock_windows, QueryPerformanceCounter(_, _, _, _))
+        .WillOnce(
+            [](const char *, const int, const char *, LARGE_INTEGER *counter)
+            {
+                counter->QuadPart = 123456789;
+                return TRUE;
+            });
+    // [Pre-Assert確認_正常系] - QPF と QPC がそれぞれ 1 回呼び出されること。
+    // [Pre-Assert手順] - 10000000 Hz の周波数と 123456789 カウントを返す。
 #endif
 
     // Act
@@ -136,8 +162,8 @@ TEST_F(clockTest, monotonic_returns_split_platform_value)
     EXPECT_EQ(345678901, actual_ts.tv_nsec);
     // [確認_正常系] - actual_ts.tv_nsec が 345678901 であること。
 #elif defined(PLATFORM_WINDOWS)
-    EXPECT_EQ(345000000, actual_ts.tv_nsec);
-    // [確認_正常系] - actual_ts.tv_nsec が 345000000 であること。
+    EXPECT_EQ(345678900, actual_ts.tv_nsec);
+    // [確認_正常系] - actual_ts.tv_nsec が 345678900 であること。
 #endif
 }
 

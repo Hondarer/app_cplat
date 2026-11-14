@@ -64,7 +64,7 @@ Table: I/O ベンチマークのアクセス パターン一覧
 
 ## 計測の仕組み
 
-Windows の単調増加クロック `cplat_clock_get_monotonic()` は内部で `GetTickCount64()` を使用しており、分解能はハードウェア依存でおおむね 15 ms です。  
+Windows の単調増加クロック `cplat_clock_get_monotonic()` は `QueryPerformanceFrequency()` と `QueryPerformanceCounter()` を使用します。返却値の `tv_nsec` はナノ秒単位ですが、実分解能は OS とハードウェアに依存します。  
 1 回の操作を直接測ると分解能に埋もれるため、次の手順で反復回数を自動調整します。
 
 1. ウォーム アップとして測定対象を 1 回実行する (この結果は測定に含めない)
@@ -75,7 +75,7 @@ Windows の単調増加クロック `cplat_clock_get_monotonic()` は内部で `
 経過時間は `cplat_timespec_sub()` の結果からナノ秒で算出します。  
 `cplat_timespec_diff_ms()` はミリ秒単位のため使用しません。
 
-この方式により、Windows でも中央値の相対誤差はおおむね 15 ms / 500 ms = 3% 以内に収まります。
+この方式により、測定区間を既定の 500 ms 以上にして、タイマーの粒度による相対誤差を抑えます。実際の誤差は OS とハードウェアに依存します。
 
 ## ページ キャッシュの温冷
 

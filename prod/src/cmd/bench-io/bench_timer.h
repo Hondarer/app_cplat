@@ -6,7 +6,8 @@
  *  @date           2026/07/29
  *  @version        1.0.0
  *
- *  Windows の単調増加クロックは `GetTickCount64()` に基づき分解能が約 15 [ms] であるため、
+ *  Windows の単調増加クロックは `QueryPerformanceFrequency()` と `QueryPerformanceCounter()` を使用します。
+ *  返却値はナノ秒単位ですが、実分解能は OS とハードウェアに依存するため、
  *  1 回の測定区間が指定時間以上になるまで反復回数を倍増させ、
  *  クロック分解能の影響を相対的に小さくします。
  *

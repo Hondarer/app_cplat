@@ -13,12 +13,12 @@
  *
  *  | 項目                  | 単調増加クロック               | 実時刻クロック                        |
  *  | --------------------- | ------------------------------ | ------------------------------------- |
- *  | 対応関数              | cplat_clock_get_monotonic_ms()\n cplat_clock_get_monotonic()\n cplat_clock_get_monotonic_high_resolution_ns() | cplat_clock_get_realtime() |
- *  | 基準点                | 起動時 (不定)                  | Unix epoch (1970-01-01T00:00:00Z)     |
+ *  | 対応関数              | cplat_clock_get_monotonic_ms()\n cplat_clock_get_monotonic() | cplat_clock_get_realtime() |
+ *  | 基準点                | 未規定                         | Unix epoch (1970-01-01T00:00:00Z)     |
  *  | NTP 補正の影響        | 受けない                       | 受ける (時刻が前後する可能性あり)     |
  *  | 値の単調増加          | 保証される                     | 保証されない                          |
  *  | 精度 (Linux)          | ナノ秒                         | ナノ秒                                |
- *  | 精度 (Windows)        | 通常: 約 15 [ms]、高分解能: カウンター周波数に依存 | 100 [ns] (FILETIME)                   |
+ *  | 精度 (Windows)        | カウンター周波数に依存 | 100 [ns] (FILETIME)                   |
  *  | 主な用途              | 経過時間測定・タイムアウト判定 | 実時刻の刻印 (ログ・セッション ID 等) |
  *
  *  Table: 単調増加クロックと実時刻クロックの比較
@@ -27,8 +27,8 @@
  *
  *  - **経過時間を測る・タイムアウトを判定する** → cplat_clock_get_monotonic_ms() または cplat_clock_get_monotonic() を使用する。\n
  *    実時刻クロックは NTP 補正でジャンプするため、差分計算が正しく行えない場合がある。
- *  - **短い経過時間を高分解能で測る** → cplat_clock_get_monotonic_high_resolution_ns() を使用します。\n
- *    返却単位はナノ秒であり、実際の分解能は OS とハードウェアに依存します。
+ *  - **短い経過時間を測る** → cplat_clock_get_monotonic() を使用します。\n
+ *    秒部とナノ秒部を返しますが、ナノ秒単位の分解能を保証するものではありません。
  *  - **実時刻を記録・外部と共有する** → cplat_clock_get_realtime() を使用する。\n
  *    セッション開始時刻、ログのタイムスタンプなど、カレンダー時刻として意味を持つ場合に限定します。
  *  - **現在の UTC を分解済みで扱う** → cplat_clock_get_realtime_utc() を使用する。\n
@@ -72,19 +72,22 @@ extern "C"
     /**
      *  @brief          単調増加クロックの現在値をミリ秒単位で返します。
      *  @param[out]     milliseconds_out ミリ秒値の格納先。NULL を渡してはなりません。
-     *  @return         成功時は CPLAT_OK、失敗時は共通結果コードを返します。失敗時は出力を変更しません。
+     *  @return         成功時は CPLAT_OK、NULL 出力先は CPLAT_ERR_INVALID_ARGUMENT、
+     *                  未対応 OS は CPLAT_ERR_UNSUPPORTED、Linux の取得失敗は共通結果コード、
+     *                  Windows の周波数またはカウンター取得失敗は CPLAT_ERR_UNKNOWN を返します。
+     *                  失敗時は出力を変更しません。
      *
      *  OS の単調増加クロック (CLOCK_MONOTONIC 相当) を読み取り、ミリ秒に変換して返します。\n
      *  タイムアウト判定・差分計算など ms 精度で十分な用途に使用します。\n
-     *  より高い分解能が必要な場合は cplat_clock_get_monotonic_high_resolution_ns() を使用してください。
+     *  cplat_clock_get_monotonic() が返す値をミリ秒へ切り捨てます。
      *
      *  返す値の特性:
      *
      *  | 項目                  | Linux                            | Windows                          |
      *  | --------------------- | -------------------------------- | -------------------------------- |
-     *  | 基準点                | 起動時 (不定)                    | 起動時 (不定)                    |
-     *  | 内部 API              | `clock_gettime(CLOCK_MONOTONIC)` | `GetTickCount64()`               |
-     *  | 精度                  | ナノ秒 (ms に切り捨て)           | ～15 [ms] (ハードウェア依存)     |
+     *  | 基準点                | 未規定                           | 未規定                           |
+     *  | 内部 API              | `clock_gettime(CLOCK_MONOTONIC)` | `QueryPerformanceCounter()` / `QueryPerformanceFrequency()` |
+     *  | 精度                  | ナノ秒 (ms に切り捨て)           | カウンター周波数に依存 (ms に切り捨て) |
      *  | オーバーフロー        | 実質なし (uint64_t)              | 実質なし (uint64_t, ～5.8 億年)  |
      *
      *  Table: cplat_clock_get_monotonic_ms の返す値の特性
@@ -94,9 +97,10 @@ extern "C"
      *
      *  @note           返す値の絶対値に意味はありません。必ず 2 点間の差分として使用してください。
      *
-     *  @remark         Windows では GetTickCount64() の分解能がハードウェアに依存し、
-     *                  通常 15 [ms] 程度です。1 [ms] 未満の精度が必要な場合は
-     *                  cplat_clock_get_monotonic_high_resolution_ns() を使用してください。
+     *  @note           値の周回は、利用側で原則として考慮する必要はありません。
+     *                  周回するまでの期間は、cplat_clock_get_monotonic() の注記を参照してください。
+     *
+     *  @remark         Windows では QPC の周波数を呼び出しごとに取得し、QPC の値をミリ秒へ切り捨てます。
      *
      *  使用例:
         @code{.c}
@@ -119,56 +123,25 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_clock_get_monotonic_ms(uint64_t *milliseconds_out);
 
     /**
-     *  @brief          高分解能の単調増加クロックの現在値をナノ秒単位で返します。
-     *  @param[out]     nanoseconds_out ナノ秒値の格納先。NULL を渡してはなりません。
-     *  @return         成功時は CPLAT_OK、NULL 出力先は CPLAT_ERR_INVALID_ARGUMENT、
-     *                  未対応 OS は CPLAT_ERR_UNSUPPORTED、Linux の取得失敗は共通結果コード、
-     *                  Windows の取得失敗または周波数が 0 以下の場合は CPLAT_ERR_UNKNOWN を返します。
-     *                  失敗時は出力を変更しません。
-     *
-     *  起点は未規定であり、同一プロセス内で本関数から取得した二つの値の差だけが有効です。\n
-     *  返却単位はナノ秒ですが、ナノ秒の分解能を保証するものではありません。\n
-     *  連続する取得値は同じ値になる場合があります。
-     *
-     *  返す値の特性:
-     *
-     *  | 項目 | Linux | Windows |
-     *  | --- | --- | --- |
-     *  | 基準点 | 未規定 | 未規定 |
-     *  | 内部 API | `clock_gettime(CLOCK_MONOTONIC)` | `QueryPerformanceCounter()` / `QueryPerformanceFrequency()` |
-     *  | 返却単位 | ナノ秒 | ナノ秒 (ナノ秒未満を切り捨て) |
-     *  | 分解能 | 実装に依存 (`clock_getres()` で確認可能) | カウンター周波数と取得に要する時間に依存 |
-     *  | 実時刻の変更 | 不連続な変更の影響なし。NTP 等の漸進的な補正の影響あり | 実時刻や外部時刻源から独立 |
-     *  | サスペンド中 | 進まない | 進む (スリープ・休止を含む) |
-     *
-     *  Table: cplat_clock_get_monotonic_high_resolution_ns の返す値の特性
-     *
-     *  @par            スレッド セーフ
-     *  本関数はスレッド セーフです。
-     *
-     *  @see            https://man7.org/linux/man-pages/man3/clock_gettime.3.html
-     *  @see            https://learn.microsoft.com/en-us/windows/win32/sysinfo/acquiring-high-resolution-time-stamps
-     */
-    CPLAT_EXPORT int CPLAT_API cplat_clock_get_monotonic_high_resolution_ns(uint64_t *nanoseconds_out);
-
-    /**
      *  @brief          単調増加クロックの現在値を cplat_timespec で返します。
      *  @param[out]     timestamp_out  単調増加クロックの現在値 (秒部・ナノ秒部) の格納先。
      *  @return         成功時は CPLAT_OK、NULL 出力先は CPLAT_ERR_INVALID_ARGUMENT、
-     *                  未対応 OS は CPLAT_ERR_UNSUPPORTED、取得・変換失敗は共通結果コードを返します。
+     *                  未対応 OS は CPLAT_ERR_UNSUPPORTED、Linux の取得失敗は共通結果コード、
+     *                  Windows の周波数またはカウンター取得失敗は CPLAT_ERR_UNKNOWN を返します。
      *                  出力先は必須です。失敗時はすべての出力を変更しません。
      *
-     *  OS の単調増加クロック (CLOCK_MONOTONIC 相当) をナノ秒精度で返します。\n
-     *  受信タイムスタンプ・高精度な経過時間測定など μs 以下の精度が必要な用途に使用します。
+     *  OS の単調増加クロック (CLOCK_MONOTONIC 相当) を秒部とナノ秒部で返します。\n
+     *  tv_nsec はナノ秒単位ですが、ナノ秒単位の分解能を保証するものではありません。
      *
      *  返す値の特性:
      *
      *  | 項目                  | Linux                            | Windows                           |
      *  | --------------------- | -------------------------------- | --------------------------------- |
-     *  | 基準点                | 起動時 (不定)                    | 起動時 (不定)                     |
-     *  | 内部 API              | `clock_gettime(CLOCK_MONOTONIC)` | `GetTickCount64()`                |
-     *  | tv_sec の精度         | ナノ秒                           | ミリ秒 (tv_nsec は ms 単位で格納) |
-     *  | tv_nsec の範囲        | 0 ～ 999,999,999                 | 0 ～ 999,000,000 (1 [ms] 刻み)    |
+     *  | 基準点                | 未規定                           | 未規定                            |
+     *  | 内部 API              | `clock_gettime(CLOCK_MONOTONIC)` | `QueryPerformanceCounter()` / `QueryPerformanceFrequency()` |
+     *  | tv_nsec の範囲        | 0 ～ 999,999,999                 | 0 ～ 999,999,999 (カウンター周波数に依存) |
+     *  | 時刻同期の補正        | 不連続な変更の影響なし。漸進的な補正の影響あり | 実時刻の変更や時刻同期から独立 |
+     *  | サスペンド中          | 進まない                         | 進む (スリープ・休止を含む)       |
      *
      *  Table: cplat_clock_get_monotonic の返す値の特性
      *
@@ -176,10 +149,21 @@ extern "C"
      *  本関数はスレッド セーフです。
      *
      *  @note           返す値の絶対値に意味はありません。必ず 2 点間の差分として使用してください。
+     *                  連続する取得値が同じ値になる場合があります。
      *
-     *  @note           Windows では内部で GetTickCount64() を使用するため、
-     *                  tv_nsec の有効桁は ms 単位 (1,000,000 [ns] 刻み) になります。
-     *                  ms 以上の精度が必要な場合は QueryPerformanceCounter() の利用を検討してください。
+     *  @note           値が上限を超えて小さい値へ戻る周回は、利用側で原則として考慮する必要はありません。
+     *                  OS の単調増加クロックが周回するまでの期間は、Windows の QPC では直近の起動から 100 年以上です。
+     *                  Linux では、カーネルが時刻を符号付き 64 ビットのナノ秒で保持するため、起動から約 292 年です。
+     *                  cplat_timespec の tv_sec は、これらの期間を超える値を表現できます。
+     *                  see: https://learn.microsoft.com/en-us/windows/win32/sysinfo/acquiring-high-resolution-time-stamps
+     *                  see: https://github.com/torvalds/linux/blob/master/include/linux/ktime.h
+     *
+     *  @note           Windows では QPC の周波数を呼び出しごとに取得し、カウンター値を秒部とナノ秒部に換算します。
+     *                  この方式は GetTickCount64() より取得コストが高くなる場合があります。
+     *                  性能上の課題が発生した場合は、GetTickCount64() のみを利用する高速版を別関数として用意することを検討します。
+     *
+     *  @see            https://man7.org/linux/man-pages/man3/clock_gettime.3.html
+     *  @see            https://learn.microsoft.com/en-us/windows/win32/sysinfo/acquiring-high-resolution-time-stamps
      *
      *  @remark         ms 精度で十分な場合は cplat_clock_get_monotonic_ms() の使用を推奨します。
      *
