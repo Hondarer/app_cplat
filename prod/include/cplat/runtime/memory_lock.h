@@ -127,30 +127,30 @@ extern "C"
      *  本関数を呼び出します。\n
      *  関数が成功して @p scope_out が返った後、ページ フォルトを避けたい処理を実行します。
      *
-    @startuml cplat_memory_lock_self のロック取得
-        caption cplat_memory_lock_self のロック取得
-        participant "呼び出し側" as Caller
-        participant "cplat_memory_lock_self" as API
-        participant "内部 lock" as Lock
-        participant "OS" as OS
+        @mermaid "cplat_memory_lock_self のロック取得"
+            sequenceDiagram
+                participant Caller as 呼び出し側
+                participant API as cplat_memory_lock_self
+                participant Lock as 内部 lock
+                participant OS as OS
 
-        Caller -> API : options, &scope_out
-        API -> API : 引数と flag を検証
-        opt stack_prefault_bytes > 0
-            API -> API : 呼び出しスレッドのスタックへアクセス
-        end
-        API -> Lock : 取得
-        alt Linux
-            API -> OS : mlockall(flags)
-            API -> API : self scope 数を加算
-        else Windows
-            API -> OS : VirtualQuery で committed region を列挙
-            API -> OS : 未登録範囲へ VirtualLock
-            API -> API : 登録済み範囲の ref-count を加算
-        end
-        API -> Lock : 解放
-        API --> Caller : CPLAT_OK, scope_out
-    @enduml
+                Caller->>API: options, &scope_out
+                API->>API: 引数と flag を検証
+                opt stack_prefault_bytes > 0
+                    API->>API: 呼び出しスレッドのスタックへアクセス
+                end
+                API->>Lock: 取得
+                alt Linux
+                    API->>OS: mlockall(flags)
+                    API->>API: self scope 数を加算
+                else Windows
+                    API->>OS: VirtualQuery で committed region を列挙
+                    API->>OS: 未登録範囲へ VirtualLock
+                    API->>API: 登録済み範囲の ref-count を加算
+                end
+                API->>Lock: 解放
+                API-->>Caller: CPLAT_OK, scope_out
+        @endmermaid
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -172,36 +172,36 @@ extern "C"
      *  Windows では @p scope が保持する各範囲の ref-count を下げ、最後の参照がなくなった範囲だけ
      *  `VirtualUnlock()` を呼び出します。
      *
-    @startuml cplat_memory_lock_scope_release のロック解放
-        caption cplat_memory_lock_scope_release のロック解放
-        participant "呼び出し側" as Caller
-        participant "cplat_memory_lock_scope_release" as API
-        participant "内部 lock" as Lock
-        participant "OS" as OS
+        @mermaid "cplat_memory_lock_scope_release のロック解放"
+            sequenceDiagram
+                participant Caller as 呼び出し側
+                participant API as cplat_memory_lock_scope_release
+                participant Lock as 内部 lock
+                participant OS as OS
 
-        Caller -> API : scope
-        alt scope == NULL
-            API --> Caller : CPLAT_OK
-        else scope != NULL
-            API -> Lock : 取得
-            alt Linux
-                API -> API : self scope 数を減算
-                opt self scope 数 == 0
-                    API -> OS : munlockall()
-                end
-            else Windows
-                loop scope の各範囲
-                    API -> API : registry の ref-count を減算
-                    opt ref-count == 0
-                        API -> OS : VirtualUnlock()
+                Caller->>API: scope
+                alt scope == NULL
+                    API-->>Caller: CPLAT_OK
+                else scope != NULL
+                    API->>Lock: 取得
+                    alt Linux
+                        API->>API: self scope 数を減算
+                        opt self scope 数 == 0
+                            API->>OS: munlockall()
+                        end
+                    else Windows
+                        loop scope の各範囲
+                            API->>API: registry の ref-count を減算
+                            opt ref-count == 0
+                                API->>OS: VirtualUnlock()
+                            end
+                        end
                     end
+                    API->>Lock: 解放
+                    API->>API: scope を破棄
+                    API-->>Caller: 結果コード
                 end
-            end
-            API -> Lock : 解放
-            API -> API : scope を破棄
-            API --> Caller : 結果コード
-        end
-    @enduml
+        @endmermaid
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
