@@ -1,3 +1,5 @@
+#include "traceFileRegistryTest.h"
+
 #include <testfw.h>
 #include <mock_cplat.h>
 #include <cplat/trace/trace_file.h>
@@ -10,14 +12,14 @@ using testing::DoDefault;
 using testing::NiceMock;
 using testing::Return;
 
-class traceFileAllocFailureTest : public Test
+class traceFileAllocFailureTest : public traceFileRegistryTest
 {
   protected:
-    NiceMock<Mock_cplat> mock_cplat;
-
     // [サブ手順 名前=traceFileAllocFailureTest.SetUp]
     void SetUp() override
     {
+        traceFileRegistryTest::SetUp(); // [サブ手順参照 名前=traceFileRegistryTest.SetUp]
+
         ON_CALL(mock_cplat, cplat_file_open(_, _, _, _)).WillByDefault(Return(CPLAT_OK));
         // [状態] - cplat_file_open() から CPLAT_OK を返すように既定動作を設定する。
         ON_CALL(mock_cplat, cplat_file_get_size(_, _, _))
@@ -54,6 +56,7 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_registry_key_allocati
     EXPECT_EQ(nullptr,
               handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が nullptr であること。
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // ハンドルの確保に失敗した場合に生成が失敗することの確認
 // [サブ手順参照 名前=traceFileAllocFailureTest.SetUp]
@@ -77,6 +80,7 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_handle_allocation_fai
     EXPECT_EQ(nullptr,
               handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が nullptr であること。
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // パス文字列の複製に失敗した場合に生成が失敗することの確認
 // [サブ手順参照 名前=traceFileAllocFailureTest.SetUp]
@@ -101,6 +105,7 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_path_duplication_fail
     EXPECT_EQ(nullptr,
               handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が nullptr であること。
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // レジストリ配列の拡張に失敗した場合に生成が失敗することの確認
 // [サブ手順参照 名前=traceFileAllocFailureTest.SetUp]
@@ -122,3 +127,4 @@ TEST_F(traceFileAllocFailureTest, create_returns_null_when_registry_expansion_fa
     EXPECT_EQ(nullptr,
               handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が nullptr であること。
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]

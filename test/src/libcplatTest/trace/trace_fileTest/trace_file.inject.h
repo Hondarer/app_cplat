@@ -14,6 +14,8 @@ extern "C"
 {
 #endif /* __cplusplus */
 
+    extern void test_trace_file_reset_registry(void);
+
     extern cplat_trace_file_sink *test_trace_file_sink_create_unregistered(const char *path, size_t max_bytes,
                                                                            int generations, int flags);
 

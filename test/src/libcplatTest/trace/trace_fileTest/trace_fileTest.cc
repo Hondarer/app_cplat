@@ -1,3 +1,5 @@
+#include "traceFileRegistryTest.h"
+
 #include <testfw.h>
 #include <mock_cplat.h>
 #include <cplat/trace/trace_file.h>
@@ -66,14 +68,14 @@ static void set_file_id(cplat_file_id *id_out, uint64_t index)
 
 } // namespace
 
-class trace_fileTest : public Test
+class trace_fileTest : public traceFileRegistryTest
 {
   protected:
-    NiceMock<Mock_cplat> mock_cplat;
-
     // [サブ手順 名前=trace_fileTest.SetUp]
     void SetUp() override
     {
+        traceFileRegistryTest::SetUp(); // [サブ手順参照 名前=traceFileRegistryTest.SetUp]
+
         ON_CALL(mock_cplat, cplat_clock_get_realtime_deadline_ms(_, _))
             .WillByDefault(
                 [](uint64_t, struct timespec *abs_timeout)
@@ -173,6 +175,7 @@ TEST_F(trace_fileTest, test_create_returns_null_for_null_path)
     EXPECT_EQ(nullptr,
               handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が nullptr であること。
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // create が既定 open flags でファイルを開くことの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -208,6 +211,7 @@ TEST_F(trace_fileTest, test_create_opens_file_with_default_flags)
     // [Pre-Assert確認_正常系] - cplat_file_close() が 1 回以上呼び出されること。
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // OS バッファー指定時に write-through を付けずにファイルを開くことの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -233,6 +237,7 @@ TEST_F(trace_fileTest, test_create_opens_buffered_file_without_write_through)
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // create のファイル オープンが初回失敗後にリトライされることの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -276,6 +281,7 @@ TEST_F(trace_fileTest, test_create_retries_file_open_after_initial_failure)
     // [Pre-Assert確認_異常系] - cplat_file_close() が 1 回以上呼び出されること。
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // create のファイル オープンがリトライ上限まで失敗した場合に NULL を返すことの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -326,6 +332,7 @@ TEST_F(trace_fileTest, test_create_returns_null_after_file_open_retry_exhausted)
     EXPECT_EQ(nullptr,
               handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が nullptr であること。
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // INFO 行が固定タイムスタンプと I marker で書き込まれることの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -361,6 +368,7 @@ TEST_F(trace_fileTest, test_write_formats_info_line)
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // DEBUG 行が D marker で書き込まれることの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -396,6 +404,7 @@ TEST_F(trace_fileTest, test_write_formats_debug_marker)
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 明示タイムスタンプ指定時に内部の現在時刻取得を行わずに書き込むことの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -436,6 +445,7 @@ TEST_F(trace_fileTest, test_write_uses_explicit_timestamp_without_internal_clock
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // ファイル書き込み失敗時に -1 が返ることの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -464,6 +474,7 @@ TEST_F(trace_fileTest, test_write_returns_minus_one_on_file_error)
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 不正な明示タイムスタンプ指定時に現在時刻へ代替して書き込みつつ -1 を返すことの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -504,6 +515,7 @@ TEST_F(trace_fileTest, test_write_falls_back_from_invalid_explicit_timestamp)
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // サイズ上限超過時にローテーションが実行されることの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -572,6 +584,7 @@ TEST_F(trace_fileTest, test_write_rotates_when_size_limit_is_reached)
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 単一プロセス モードのローテーション後にファイル オープンが失敗しても再試行しないことの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -648,6 +661,7 @@ TEST_F(trace_fileTest, test_write_does_not_retry_open_after_rotation)
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // dispose が NULL ハンドルでも安全であることの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -664,6 +678,7 @@ TEST_F(trace_fileTest, test_dispose_with_null_handle_is_safe)
     // Assert
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(nullptr を渡した cplat_trace_file_sink_dispose() がクラッシュしないことの確認)
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // パスに区切り文字が含まれる場合に makedirs が親ディレクトリ パスで呼ばれることの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -695,6 +710,7 @@ TEST_F(trace_fileTest, test_create_calls_makedirs_for_path_with_separator)
     // [Pre-Assert確認_正常系] - cplat_file_close() が 1 回以上呼び出されること。
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 #if defined(PLATFORM_WINDOWS)
 // Windows スタイル区切りのパスでも makedirs が親ディレクトリ パスで呼ばれることの確認
@@ -725,6 +741,7 @@ TEST_F(trace_fileTest, test_create_normalizes_windows_separator_for_parent_direc
     // [Pre-Assert確認_正常系] - cplat_file_close() が 1 回以上呼び出されること。
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 #endif /* PLATFORM_WINDOWS */
 
 // 単一プロセス モード (flags 0) ではプロセス間ロックも同一性チェックも使わないことの確認
@@ -759,6 +776,7 @@ TEST_F(trace_fileTest, test_single_mode_does_not_use_interprocess_lock_or_identi
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 共有モードの create がロック ファイルを開くことの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -791,6 +809,7 @@ TEST_F(trace_fileTest, test_create_shared_opens_lock_file)
     // [Pre-Assert確認_正常系] - cplat_interprocess_lock_dispose() が 1 回呼び出されること。
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 共有モードでプロセス間ロックのオープンに失敗した場合に create が NULL を返すことの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -816,6 +835,7 @@ TEST_F(trace_fileTest, test_create_shared_returns_null_when_lock_open_fails)
     EXPECT_EQ(nullptr,
               handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が nullptr であること。
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 負の flags では create が NULL を返すことの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -833,6 +853,7 @@ TEST_F(trace_fileTest, test_create_returns_null_for_negative_flags)
     EXPECT_EQ(nullptr,
               handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が nullptr であること。
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 他プロセスのローテーションで path の実体が変わった場合に書き込み前に開き直すことの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -878,6 +899,7 @@ TEST_F(trace_fileTest, test_shared_write_reopens_after_external_rotation)
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 共有モードの開き直しでファイル オープンに失敗した場合に再試行しないことの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -927,6 +949,7 @@ TEST_F(trace_fileTest, test_shared_write_reopen_does_not_retry_after_external_ro
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 共有モードで実サイズがしきい値以上のときプロセス間ロック下でローテーションすることの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -1042,6 +1065,7 @@ TEST_F(trace_fileTest, test_shared_write_rotates_under_interprocess_lock)
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // ロック下の再確認で他プロセスのローテーション済みを検知した場合に開き直すだけになることの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -1119,6 +1143,7 @@ TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_other_process_already
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // プロセス間ロックがビジー状態の場合にローテーションを見送ることの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -1161,6 +1186,7 @@ TEST_F(trace_fileTest, test_shared_write_skips_rotate_when_lock_is_busy)
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 同一プロセス内で同一パスの create が同一ハンドルを共有することの確認 (プロセス内調停)
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -1193,6 +1219,7 @@ TEST_F(trace_fileTest, test_create_same_path_shares_handle_in_single_process)
     cplat_trace_file_sink_dispose(second);
     cplat_trace_file_sink_dispose(first);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 参照カウントにより最後の dispose までハンドルが有効であることの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -1235,6 +1262,7 @@ TEST_F(trace_fileTest, test_shared_handle_survives_until_last_dispose)
     // Cleanup
     cplat_trace_file_sink_dispose(second);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 共有モード設定が一致しない同一パスの create が失敗することの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -1261,6 +1289,7 @@ TEST_F(trace_fileTest, test_create_same_path_with_mismatched_shared_flag_returns
     // Cleanup
     cplat_trace_file_sink_dispose(first);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 異なるパスの create は独立したハンドルを生成することの確認
 // [サブ手順参照 名前=trace_fileTest.SetUp]
@@ -1299,3 +1328,4 @@ TEST_F(trace_fileTest, test_create_different_paths_returns_distinct_handles)
     cplat_trace_file_sink_dispose(first);
     cplat_trace_file_sink_dispose(second);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]

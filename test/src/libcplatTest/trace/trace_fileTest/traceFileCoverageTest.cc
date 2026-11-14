@@ -1,3 +1,5 @@
+#include "traceFileRegistryTest.h"
+
 #include <testfw.h>
 
 #include <mock_cplat.h>
@@ -33,14 +35,14 @@ static void set_file_id(cplat_file_id *id_out, const uint64_t volume, const uint
 
 } // namespace
 
-class traceFileCoverageTest : public Test
+class traceFileCoverageTest : public traceFileRegistryTest
 {
   protected:
-    NiceMock<Mock_cplat> mock_cplat;
-
     // [サブ手順 名前=traceFileCoverageTest.SetUp]
     void SetUp() override
     {
+        traceFileRegistryTest::SetUp(); // [サブ手順参照 名前=traceFileRegistryTest.SetUp]
+
         ON_CALL(mock_cplat, cplat_clock_get_realtime(_))
             .WillByDefault(
                 [](cplat_timespec *timestamp)
@@ -140,6 +142,7 @@ TEST_F(traceFileCoverageTest, create_uses_original_path_when_full_path_resolutio
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // レジストリの後方検索と容量再拡張を行うことの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
@@ -175,6 +178,7 @@ TEST_F(traceFileCoverageTest, registry_expands_and_finds_later_sink)
         cplat_trace_file_sink_dispose(handle);
     }
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 親ディレクトリ解決と初期サイズ取得に失敗しても sink を生成することの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
@@ -199,6 +203,7 @@ TEST_F(traceFileCoverageTest, create_accepts_empty_path_and_size_query_failure)
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 共有ファイルの同一性を取得できない場合に書き込み前に開き直すことの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
@@ -241,6 +246,7 @@ TEST_F(traceFileCoverageTest, shared_write_reopens_when_file_identity_is_unavail
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 共有ファイルのパス同一性取得に失敗した場合に開き直すことの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
@@ -274,6 +280,7 @@ TEST_F(traceFileCoverageTest, shared_write_reopens_when_path_identity_query_fail
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // volume が異なるファイルを別実体と判定することの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
@@ -311,6 +318,7 @@ TEST_F(traceFileCoverageTest, shared_write_reopens_when_file_volume_changes)
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // ローテーション中の rename 失敗時にカスケードを中止することの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
@@ -341,6 +349,7 @@ TEST_F(traceFileCoverageTest, rotation_stops_after_rename_failure)
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 共有ローテーションのサイズ取得失敗とロック後の再確認を扱うことの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
@@ -401,6 +410,7 @@ TEST_F(traceFileCoverageTest, shared_rotation_handles_size_query_outcomes)
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // create のロック生成失敗とパス長上限を拒否することの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
@@ -432,6 +442,7 @@ TEST_F(traceFileCoverageTest, create_rejects_lock_failure_and_long_path)
         nullptr,
         too_long); // [確認_異常系] - 長すぎるパス指定時の cplat_trace_file_sink_create() の戻り値が nullptr であること。
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // write が不正引数と依存処理の失敗を返すことの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
@@ -498,6 +509,7 @@ TEST_F(traceFileCoverageTest, write_handles_invalid_arguments_and_dependency_fai
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // write の書式化失敗、切り詰め、ロック失敗を扱うことの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
@@ -552,6 +564,7 @@ TEST_F(traceFileCoverageTest, write_handles_format_truncation_and_lock_failure)
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // サイズ加算がオーバーフローする場合に加算しないことの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
@@ -594,6 +607,7 @@ TEST_F(traceFileCoverageTest, write_avoids_current_size_overflow)
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 登録済みと未登録の sink を通常と shutdown 経路で破棄できることの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
@@ -631,6 +645,7 @@ TEST_F(traceFileCoverageTest, dispose_handles_registered_and_unregistered_sinks)
         CPLAT_OK,
         write_result); // [確認_正常系] - 参照カウントが残る sink への cplat_trace_file_sink_write() の戻り値が CPLAT_OK であること。
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
 // 共有 sink の lock-path 確保に失敗した場合に生成を中止することの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
@@ -657,12 +672,18 @@ TEST_F(traceFileCoverageTest, create_shared_returns_null_when_lock_path_allocati
     EXPECT_EQ(nullptr,
               handle); // [確認_異常系] - cplat_trace_file_sink_create() の戻り値が nullptr であること。
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
+
+using traceFileResidualTest = traceFileRegistryTest;
 
 // レジストリの初回ロック生成が失敗した場合に再試行や NULL ロック操作をしないことの確認
-TEST(traceFileResidualTest, registry_initialization_failure_is_retained)
+// [サブ手順参照 名前=traceFileRegistryTest.SetUp]
+TEST_F(traceFileResidualTest, registry_initialization_failure_is_retained)
 {
     // Arrange
-    NiceMock<Mock_cplat> mock;
+    auto &mock = mock_cplat;
+    ASSERT_TRUE(CreateTemporaryDirectory()); // [状態確認] - 一時ディレクトリを作成できること。
+    const std::string path = (temporary_directory / "registry-failure.log").string();
 
     // Pre-Assert
     EXPECT_CALL(mock, cplat_local_lock_create(_)).WillOnce(Return(CPLAT_ERR_OUT_OF_MEMORY));
@@ -675,11 +696,13 @@ TEST(traceFileResidualTest, registry_initialization_failure_is_retained)
 
     // Act
     cplat_trace_file_sink *first =
-        cplat_trace_file_sink_create("registry-failure.log", 0, 0, 0); // [手順] - 初回生成を失敗させる。
+        cplat_trace_file_sink_create(path.c_str(), 0, 0, 0); // [手順] - 初回生成を失敗させる。
     cplat_trace_file_sink *second =
-        cplat_trace_file_sink_create("registry-failure.log", 0, 0, 0); // [手順] - 初回失敗後に再度生成する。
+        cplat_trace_file_sink_create(path.c_str(), 0, 0, 0); // [手順] - 初回失敗後に再度生成する。
 
     // Assert
     EXPECT_EQ(nullptr, first);  // [確認_異常系] - 初回生成が失敗すること。
     EXPECT_EQ(nullptr, second); // [確認_異常系] - 再度の生成も安全に失敗すること。
+    EXPECT_FALSE(std::filesystem::exists(path)); // [確認_異常系] - 初期化失敗時にログ ファイルが存在しないこと。
 }
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
