@@ -181,9 +181,8 @@ static int measure_files(char *executable, char *path, int processes, int messag
     for (index = 0; index < processes; index++)
     {
         char *args[] = {executable, "--worker", path, messages_text, buffered_text, NULL};
-        cplat_process_options options;
+        cplat_process_options options = {0};
 
-        memset(&options, 0, sizeof(options));
         options.argv = args;
         options.stdin_spec.mode = CPLAT_PROCESS_STDIO_NULL_DEVICE;
         options.stdout_spec.mode = CPLAT_PROCESS_STDIO_NULL_DEVICE;

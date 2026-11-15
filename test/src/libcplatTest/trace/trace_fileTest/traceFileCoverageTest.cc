@@ -412,6 +412,62 @@ TEST_F(traceFileCoverageTest, shared_rotation_handles_size_query_outcomes)
 }
 // [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
+// 共有ローテーション後のプロセス間ロック解放失敗を返すことの確認
+// [サブ手順参照 名前=traceFileCoverageTest.SetUp]
+TEST_F(traceFileCoverageTest, shared_rotation_reports_interprocess_unlock_failure)
+{
+    // Arrange
+    cplat_trace_file_sink *handle =
+        cplat_trace_file_sink_create("shared-unlock-failure.log", 10, 2,
+                                     CPLAT_TRACE_FILE_SINK_SHARED); // [状態] - 共有モードの file sink を用意する。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_trace_file_sink_create() の戻り値が nullptr 以外であること。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_file_get_size(_, _, _))
+        .WillOnce(
+            [](const cplat_file *, size_t *size_out, cplat_error *)
+            {
+                *size_out = 10;
+                return CPLAT_OK;
+            })
+        .WillOnce(
+            [](const cplat_file *, size_t *size_out, cplat_error *)
+            {
+                *size_out = 10;
+                return CPLAT_OK;
+            })
+        .WillOnce(
+            [](const cplat_file *, size_t *size_out, cplat_error *)
+            {
+                *size_out = 0;
+                return CPLAT_OK;
+            }); // [Pre-Assert確認_正常系] - cplat_file_get_size() が 3 回呼び出されること。(ロック前後に上限以上、再オープン後に 0 のサイズを取得することの確認)
+    // [Pre-Assert手順] - cplat_file_get_size() から上限サイズを 2 回、その後 0 のサイズを返す。
+    EXPECT_CALL(mock_cplat, cplat_interprocess_lock_unlock(_))
+        .WillOnce(Return(
+            CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_interprocess_lock_unlock() が 1 回呼び出されること。
+                                 // [Pre-Assert手順] - cplat_interprocess_lock_unlock() から CPLAT_ERR_UNKNOWN を返す。
+    EXPECT_CALL(mock_cplat, cplat_local_lock_unlock(_)).WillOnce(DoDefault());
+    // [Pre-Assert確認_正常系] - プロセス間ロック解放失敗後にローカル ロックを 1 回解放すること。
+    // [Pre-Assert手順] - cplat_local_lock_unlock() を通常の実装へ委譲する。
+
+    // Act
+    int actual_ret = cplat_trace_file_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "message"); // [手順] - 上限に達した共有 sink でプロセス間ロック解放を失敗させて書き込む。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              actual_ret); // [確認_異常系] - cplat_trace_file_sink_write() が共有ロック解放失敗を返すこと。
+    EXPECT_TRUE(testing::Mock::VerifyAndClearExpectations(&mock_cplat));
+    // [確認_正常系] - プロセス間ロック解放失敗後に、書き込みのローカル ロックを 1 回解放すること。
+
+    // Cleanup
+    cplat_trace_file_sink_dispose(handle);
+}
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
+
 // create のロック生成失敗とパス長上限を拒否することの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, create_rejects_lock_failure_and_long_path)

@@ -400,7 +400,7 @@ int cplat_process_priority_windows_set_memory_priority(uint32_t process_id,
                                                        cplat_error *detail_out)
 {
     HANDLE process;
-    MEMORY_PRIORITY_INFORMATION information;
+    MEMORY_PRIORITY_INFORMATION information = {0};
     int result;
 
     /* 列挙子の値は MEMORY_PRIORITY_* と一致させている。 */
@@ -416,7 +416,6 @@ int cplat_process_priority_windows_set_memory_priority(uint32_t process_id,
         return result;
     }
 
-    memset(&information, 0, sizeof(information));
     information.MemoryPriority = (ULONG)memory_priority;
 
     if (!SetProcessInformation(process, ProcessMemoryPriority, &information, (DWORD)sizeof(information)))
@@ -437,7 +436,7 @@ int cplat_process_priority_windows_get_memory_priority(
     uint32_t process_id, cplat_process_priority_windows_memory_priority *memory_priority_out, cplat_error *detail_out)
 {
     HANDLE process;
-    MEMORY_PRIORITY_INFORMATION information;
+    MEMORY_PRIORITY_INFORMATION information = {0};
     int result;
 
     if (memory_priority_out == NULL)
@@ -450,8 +449,6 @@ int cplat_process_priority_windows_get_memory_priority(
     {
         return result;
     }
-
-    memset(&information, 0, sizeof(information));
 
     if (!GetProcessInformation(process, ProcessMemoryPriority, &information, (DWORD)sizeof(information)))
     {
@@ -479,7 +476,7 @@ int cplat_process_priority_windows_set_power_throttling(
     uint32_t process_id, cplat_process_priority_windows_power_throttling power_throttling, cplat_error *detail_out)
 {
     HANDLE process;
-    PROCESS_POWER_THROTTLING_STATE state;
+    PROCESS_POWER_THROTTLING_STATE state = {0};
     int result;
 
     if ((power_throttling != CPLAT_PROCESS_PRIORITY_WINDOWS_POWER_THROTTLING_SYSTEM_MANAGED) &&
@@ -501,7 +498,6 @@ int cplat_process_priority_windows_set_power_throttling(
      * 実行速度の制御ビットだけを変更し、他の制御 (タイマー分解能など) を保つ。
      * see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setprocessinformation
      */
-    memset(&state, 0, sizeof(state));
     state.Version = PROCESS_POWER_THROTTLING_CURRENT_VERSION;
 
     if (!GetProcessInformation(process, ProcessPowerThrottling, &state, (DWORD)sizeof(state)))
@@ -545,7 +541,7 @@ int cplat_process_priority_windows_get_power_throttling(
     uint32_t process_id, cplat_process_priority_windows_power_throttling *power_throttling_out, cplat_error *detail_out)
 {
     HANDLE process;
-    PROCESS_POWER_THROTTLING_STATE state;
+    PROCESS_POWER_THROTTLING_STATE state = {0};
     int result;
 
     if (power_throttling_out == NULL)
@@ -559,7 +555,6 @@ int cplat_process_priority_windows_get_power_throttling(
         return result;
     }
 
-    memset(&state, 0, sizeof(state));
     state.Version = PROCESS_POWER_THROTTLING_CURRENT_VERSION;
 
     if (!GetProcessInformation(process, ProcessPowerThrottling, &state, (DWORD)sizeof(state)))

@@ -529,7 +529,10 @@ static void rotate_file(cplat_trace_file_sink *p)
 }
 
 /**
- *  @brief  共有モードのローテーション判定と実行を行います。
+ *  @brief          共有モードのローテーション判定と実行を行います。
+ *  @param[in,out]  p   ローテーション対象の出力先。
+ *  @return         プロセス間ロックの解放に成功した場合は @ref CPLAT_OK 、
+ *                  解放に失敗した場合は @ref CPLAT_ERR_UNKNOWN を返します。
  *
  *  ローカル mutex 保持中、書き込み成功直後に呼び出される。\n
  *  全プロセス合計の実サイズ (ハンドル基準) が max_bytes 未満なら何もしない。\n
@@ -539,24 +542,24 @@ static void rotate_file(cplat_trace_file_sink *p)
  *  プロセス間ロックの取得に失敗した場合はローテーションを見送る
  *  (次回書き込み時に再試行するため、肥大化は一時的に留まる)。
  */
-static void check_rotate_shared(cplat_trace_file_sink *p)
+static int check_rotate_shared(cplat_trace_file_sink *p)
 {
     size_t real_bytes;
 
     /* インメモリ集計ではなく実サイズで判定する。複数 writer の合計を反映する。 */
     if (cplat_file_get_size(&p->file, &real_bytes, NULL) != CPLAT_OK)
     {
-        return;
+        return CPLAT_OK;
     }
 
     if (real_bytes < p->max_bytes)
     {
-        return;
+        return CPLAT_OK;
     }
 
     if (cplat_interprocess_lock_try_lock(p->rotate_lock) != CPLAT_OK)
     {
-        return;
+        return CPLAT_OK;
     }
 
     if (sink_points_to_current_file(p) == 0)
@@ -574,7 +577,12 @@ static void check_rotate_shared(cplat_trace_file_sink *p)
         }
     }
 
-    cplat_interprocess_lock_unlock(p->rotate_lock);
+    if (cplat_interprocess_lock_unlock(p->rotate_lock) != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    return CPLAT_OK;
 }
 
 /**
@@ -810,6 +818,8 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
     char buf[TRACE_FILE_LINE_BUF];
     int len;
     int ret;
+    int rotate_ret;
+    int unlock_ret;
 
     (void)timestamp;
 
@@ -861,13 +871,14 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
 
     /* OS バッファーを利用しない場合は、オープン時に指定した永続化設定で書き込む。 */
     ret = cplat_file_write(&handle->file, buf, (size_t)len, NULL);
+    rotate_ret = CPLAT_OK;
 
     /* 書き込み成功時は、サイズを追跡しローテーションしきい値を確認する。 */
     if (ret == 0)
     {
         if (handle->shared != 0)
         {
-            check_rotate_shared(handle);
+            rotate_ret = check_rotate_shared(handle);
         }
         else
         {
@@ -884,9 +895,9 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
         }
     }
 
-    cplat_local_lock_unlock(handle->mutex);
+    unlock_ret = cplat_local_lock_unlock(handle->mutex);
 
-    if (ret != 0)
+    if (ret != 0 || rotate_ret != CPLAT_OK || unlock_ret != CPLAT_OK)
     {
         return CPLAT_ERR_UNKNOWN;
     }

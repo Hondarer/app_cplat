@@ -239,7 +239,7 @@ int cplat_process_priority_linux_set_policy(const uint32_t thread_id, const cpla
 {
     pid_t os_thread_id;
     int os_policy;
-    struct sched_param param;
+    struct sched_param param = {0};
 
     if (!to_os_thread_id(thread_id, &os_thread_id) || !to_os_policy(policy, &os_policy) ||
         !is_valid_static_priority(policy, static_priority) || ((reset_on_fork != 0) && (reset_on_fork != 1)))
@@ -253,7 +253,6 @@ int cplat_process_priority_linux_set_policy(const uint32_t thread_id, const cpla
         os_policy |= SCHED_RESET_ON_FORK;
     }
 
-    memset(&param, 0, sizeof(param));
     param.sched_priority = static_priority;
 
     if (sched_setscheduler(os_thread_id, os_policy, &param) != 0)
@@ -271,7 +270,7 @@ int cplat_process_priority_linux_get_policy(const uint32_t thread_id, cplat_proc
 {
     pid_t os_thread_id;
     int os_policy;
-    struct sched_param param;
+    struct sched_param param = {0};
     cplat_process_priority_linux_policy policy;
 
     if (!to_os_thread_id(thread_id, &os_thread_id) || (policy_out == NULL) || (static_priority_out == NULL) ||
@@ -285,8 +284,6 @@ int cplat_process_priority_linux_get_policy(const uint32_t thread_id, cplat_proc
     {
         return cplat_internal_error_report_errno(detail_out, errno);
     }
-
-    memset(&param, 0, sizeof(param));
 
     if (sched_getparam(os_thread_id, &param) != 0)
     {
@@ -312,7 +309,7 @@ int cplat_process_priority_linux_set_deadline(const uint32_t thread_id,
                                               const int reset_on_fork, cplat_error *detail_out)
 {
     pid_t os_thread_id;
-    process_priority_sched_attr attr;
+    process_priority_sched_attr attr = {0};
 
     if (!to_os_thread_id(thread_id, &os_thread_id) || (deadline == NULL) ||
         ((reset_on_fork != 0) && (reset_on_fork != 1)))
@@ -321,7 +318,6 @@ int cplat_process_priority_linux_set_deadline(const uint32_t thread_id,
     }
 
     /* デッドライン スケジューリング用の最初の版の構造体サイズを設定する。 */
-    memset(&attr, 0, sizeof(attr));
     attr.size = PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION0;
     attr.sched_policy = SCHED_DEADLINE;
     attr.sched_flags = (reset_on_fork != 0) ? PROCESS_PRIORITY_SCHED_FLAG_RESET_ON_FORK : 0U;
@@ -344,14 +340,12 @@ int cplat_process_priority_linux_get_deadline(const uint32_t thread_id,
                                               cplat_error *detail_out)
 {
     pid_t os_thread_id;
-    process_priority_sched_attr attr;
+    process_priority_sched_attr attr = {0};
 
     if (!to_os_thread_id(thread_id, &os_thread_id) || (deadline_out == NULL))
     {
         return cplat_internal_error_report_errno(detail_out, EINVAL);
     }
-
-    memset(&attr, 0, sizeof(attr));
 
     if (sched_getattr_call(os_thread_id, &attr, PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION0) != 0)
     {
@@ -507,7 +501,7 @@ int cplat_process_priority_linux_set_utilization_clamp(const uint32_t thread_id,
                                                        const uint32_t maximum, cplat_error *detail_out)
 {
     pid_t os_thread_id;
-    process_priority_sched_attr attr;
+    process_priority_sched_attr attr = {0};
 
     if (!to_os_thread_id(thread_id, &os_thread_id) || (maximum > PROCESS_PRIORITY_UTILIZATION_SCALE) ||
         (minimum > maximum))
@@ -516,7 +510,6 @@ int cplat_process_priority_linux_set_utilization_clamp(const uint32_t thread_id,
     }
 
     /* KEEP_POLICY と KEEP_PARAMS で、ポリシーと優先度を変えずにクランプだけを変更する。 */
-    memset(&attr, 0, sizeof(attr));
     attr.size = PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION1;
     attr.sched_flags = PROCESS_PRIORITY_SCHED_FLAG_KEEP_POLICY | PROCESS_PRIORITY_SCHED_FLAG_KEEP_PARAMS |
                        PROCESS_PRIORITY_SCHED_FLAG_UTIL_CLAMP_MIN | PROCESS_PRIORITY_SCHED_FLAG_UTIL_CLAMP_MAX;
@@ -549,7 +542,7 @@ int cplat_process_priority_linux_get_utilization_clamp(const uint32_t thread_id,
                                                        uint32_t *maximum_out, cplat_error *detail_out)
 {
     pid_t os_thread_id;
-    process_priority_sched_attr attr;
+    process_priority_sched_attr attr = {0};
 
     if (!to_os_thread_id(thread_id, &os_thread_id) || (minimum_out == NULL) || (maximum_out == NULL))
     {
@@ -560,8 +553,6 @@ int cplat_process_priority_linux_get_utilization_clamp(const uint32_t thread_id,
     {
         return cplat_internal_error_report_errno(detail_out, EOPNOTSUPP);
     }
-
-    memset(&attr, 0, sizeof(attr));
 
     if (sched_getattr_call(os_thread_id, &attr, PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION1) != 0)
     {

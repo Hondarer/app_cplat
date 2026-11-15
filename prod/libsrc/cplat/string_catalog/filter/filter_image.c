@@ -1229,9 +1229,7 @@ uint16_t string_catalog_filter_build_tree(const unsigned char *record, uint16_t 
 int string_catalog_filter_format_constant(const string_catalog_filter_constant *constant, char *dest,
                                           const size_t dest_size)
 {
-    text_writer writer;
-
-    memset(&writer, 0, sizeof(writer));
+    text_writer writer = {0};
     writer.dest = dest;
     writer.size = dest_size;
     dest[0] = '\0';

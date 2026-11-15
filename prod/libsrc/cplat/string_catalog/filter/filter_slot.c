@@ -254,9 +254,7 @@ static bool normalize_arguments(const cplat_string_catalog_entry *entry,
 
 static number number_from_signed(const int64_t value)
 {
-    number result;
-
-    memset(&result, 0, sizeof(result));
+    number result = {0};
 
     if (value < 0)
     {
@@ -275,9 +273,7 @@ static number number_from_signed(const int64_t value)
 
 static number number_from_unsigned(const uint64_t value)
 {
-    number result;
-
-    memset(&result, 0, sizeof(result));
+    number result = {0};
     result.magnitude = value;
 
     return result;
@@ -285,9 +281,7 @@ static number number_from_unsigned(const uint64_t value)
 
 static number number_from_real(const double value)
 {
-    number result;
-
-    memset(&result, 0, sizeof(result));
+    number result = {0};
     result.is_real = true;
     result.real = value;
 
@@ -1301,9 +1295,7 @@ static cplat_string_catalog_filter_line_error resolve_line(const cplat_string_ca
     /* 引数の値を使わずに、項目ごとの判定結果を事前計算する。 */
     for (size_t entry_index = 0; entry_index < slot->entry_count; entry_index++)
     {
-        evaluation_context context;
-
-        memset(&context, 0, sizeof(context));
+        evaluation_context context = {0};
         context.entry = &slot->catalog->entries[entry_index];
         context.record = record;
         context.constants = constants;
@@ -1793,7 +1785,7 @@ static void collect_line_warnings(const cplat_string_catalog_filter_slot *slot, 
     string_catalog_filter_record_header header;
     string_catalog_filter_instruction instruction;
     string_catalog_filter_constant constant;
-    cplat_string_catalog_filter_warning warning;
+    cplat_string_catalog_filter_warning warning = {0};
 
     string_catalog_filter_read_record_header(record, &header);
 
@@ -1818,7 +1810,6 @@ static void collect_line_warnings(const cplat_string_catalog_filter_slot *slot, 
             continue;
         }
 
-        memset(&warning, 0, sizeof(warning));
         warning.line_index = line_index;
         warning.predicate_index = predicate_index - 1U;
 
@@ -2288,7 +2279,7 @@ int cplat_string_catalog_filter_slot_test(cplat_string_catalog_filter_slot *slot
 int cplat_string_catalog_filter_slot_describe_line(cplat_string_catalog_filter_slot *slot, const size_t line_index,
                                                    char *dest, const size_t dest_size)
 {
-    string_catalog_filter_describe_source source;
+    string_catalog_filter_describe_source source = {0};
     filter_plane *plane;
     const uint8_t *states;
     size_t candidate_count = 0U;
@@ -2319,7 +2310,6 @@ int cplat_string_catalog_filter_slot_describe_line(cplat_string_catalog_filter_s
     }
     else
     {
-        memset(&source, 0, sizeof(source));
         source.catalog = slot->catalog;
         source.record =
             string_catalog_filter_record_address_const(plane->image, slot->record_size, (uint32_t)line_index);
@@ -2360,10 +2350,9 @@ static bool is_line_matched(const cplat_string_catalog_filter_slot *slot, filter
     const unsigned char *record =
         string_catalog_filter_record_address_const(plane->image, slot->record_size, line_index);
     string_catalog_filter_record_header header;
-    evaluation_context context;
 
     string_catalog_filter_read_record_header(record, &header);
-    memset(&context, 0, sizeof(context));
+    evaluation_context context = {0};
     context.entry = &slot->catalog->entries[entry_index];
     context.record = record;
     context.constants = string_catalog_filter_record_constants(record, slot->line_width);

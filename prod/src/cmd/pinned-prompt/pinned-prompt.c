@@ -12,6 +12,7 @@
 #include <cplat/console/console.h>
 #include <cplat/crt/string.h>
 #include <cplat/prompt/pinned_prompt.h>
+#include <cplat/runtime/abort.h>
 #include <cplat/sync/sync.h>
 
 #include <stdint.h>
@@ -235,7 +236,10 @@ static void worker_thread_proc(void *arg)
     int stop;
 
     worker = (pinned_prompt_cli_worker *)arg;
-    (void)cplat_local_lock_lock(worker->mutex, CPLAT_SYNC_WAIT_FOREVER);
+    if (cplat_local_lock_lock(worker->mutex, CPLAT_SYNC_WAIT_FOREVER) != CPLAT_OK)
+    {
+        CPLAT_ABORT("pinned-prompt ワーカーの内部ロックを取得できません");
+    }
 
     /* 停止要求があるまで PINNED_PROMPT_CLI_TICK_MS の間隔で待機し、定期的に tick を出力する。 */
     for (;;)
@@ -254,7 +258,10 @@ static void worker_thread_proc(void *arg)
 
         worker->tick_count++;
         stop = worker->stop_requested;
-        (void)cplat_local_lock_unlock(worker->mutex);
+        if (cplat_local_lock_unlock(worker->mutex) != CPLAT_OK)
+        {
+            CPLAT_ABORT("pinned-prompt ワーカーの内部ロックを解放できません");
+        }
 
         if (!stop)
         {
@@ -262,11 +269,17 @@ static void worker_thread_proc(void *arg)
                                        (unsigned long long)worker->tick_count);
         }
 
-        (void)cplat_local_lock_lock(worker->mutex, CPLAT_SYNC_WAIT_FOREVER);
+        if (cplat_local_lock_lock(worker->mutex, CPLAT_SYNC_WAIT_FOREVER) != CPLAT_OK)
+        {
+            CPLAT_ABORT("pinned-prompt ワーカーの内部ロックを取得できません");
+        }
     }
 
     worker->thread_running = 0;
-    (void)cplat_local_lock_unlock(worker->mutex);
+    if (cplat_local_lock_unlock(worker->mutex) != CPLAT_OK)
+    {
+        CPLAT_ABORT("pinned-prompt ワーカーの内部ロックを解放できません");
+    }
 }
 
 static void worker_start(pinned_prompt_cli_worker *worker)
@@ -284,7 +297,11 @@ static void worker_start(pinned_prompt_cli_worker *worker)
 
     started = 0;
     failed = 0;
-    (void)cplat_local_lock_lock(worker->mutex, CPLAT_SYNC_WAIT_FOREVER);
+    if (cplat_local_lock_lock(worker->mutex, CPLAT_SYNC_WAIT_FOREVER) != CPLAT_OK)
+    {
+        CPLAT_ABORT("pinned-prompt ワーカーの内部ロックを取得できません");
+    }
+
     running = worker->thread_running;
     if (!running)
     {
@@ -302,7 +319,10 @@ static void worker_start(pinned_prompt_cli_worker *worker)
         }
     }
 
-    (void)cplat_local_lock_unlock(worker->mutex);
+    if (cplat_local_lock_unlock(worker->mutex) != CPLAT_OK)
+    {
+        CPLAT_ABORT("pinned-prompt ワーカーの内部ロックを解放できません");
+    }
 
     if (running)
     {
@@ -336,7 +356,11 @@ static void worker_stop(pinned_prompt_cli_worker *worker, int announce)
         return;
     }
 
-    (void)cplat_local_lock_lock(worker->mutex, CPLAT_SYNC_WAIT_FOREVER);
+    if (cplat_local_lock_lock(worker->mutex, CPLAT_SYNC_WAIT_FOREVER) != CPLAT_OK)
+    {
+        CPLAT_ABORT("pinned-prompt ワーカーの内部ロックを取得できません");
+    }
+
     running = worker->thread_running;
     if (running)
     {
@@ -344,7 +368,10 @@ static void worker_stop(pinned_prompt_cli_worker *worker, int announce)
         (void)cplat_condvar_signal(worker->condvar);
     }
 
-    (void)cplat_local_lock_unlock(worker->mutex);
+    if (cplat_local_lock_unlock(worker->mutex) != CPLAT_OK)
+    {
+        CPLAT_ABORT("pinned-prompt ワーカーの内部ロックを解放できません");
+    }
 
     if (running)
     {

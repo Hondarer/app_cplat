@@ -336,13 +336,12 @@ static int bench_iterate(void *arg)
  */
 static int bench_run_case(FILE *csv, const bench_hashtable_case *item)
 {
-    bench_state state;
+    bench_state state = {0};
     bench_timing timing;
     size_t units = bench_scenario_units(item->scenario, item->capacity);
     double per_unit_ns;
     int ret;
 
-    memset(&state, 0, sizeof(state));
     state.capacity = item->capacity;
     state.scenario = item->scenario;
 

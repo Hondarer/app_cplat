@@ -56,6 +56,7 @@ extern "C"
      *  @param[in,out]  user_data 補完関数へ渡す値です。所有権は移りません。
      *  @retval         CPLAT_OK 登録または解除しました。
      *  @retval         CPLAT_ERR_INVALID_ARGUMENT ハンドルが NULL です。
+     *  @retval         CPLAT_ERR_UNKNOWN 内部ロックの取得または解放に失敗しました。
      *  @par            スレッド セーフ
      *  mutex を取得して登録を変更します。別スレッドの入力待ち中でも呼べます。
      *  補完関数は mutex の保持中に呼ばれるため、補完関数から pinned_prompt の API を呼ばないでください。
@@ -135,6 +136,7 @@ extern "C"
      *  残っている場合は、最善努力で再度復元を試みてから資源を解放します。\n
      *  本関数の戻り値は void であり、OS が復元を拒み続けた場合の復元成功は保証せず、
      *  失敗も通知できません。
+     *  内部ロックの取得または解放に失敗した場合は、状態破損を防ぐためプロセスを異常終了します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
@@ -372,8 +374,9 @@ extern "C"
      *  @param[in]      data         書き込むデータです。@p size が 0 の場合に限り NULL も指定できます。
      *  @param[in]      size         @p data から書き込むバイト数です。
      *  @param[out]     written_out  対象ストリームへ書き込んだバイト数を格納します。NULL も指定できます。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT のいずれかを返します。\n
-     *                  書き込みが @p size バイトに満たない場合は @ref CPLAT_ERR_UNKNOWN を返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。\n
+     *                  書き込みが @p size バイトに満たない場合、または内部ロックの取得・解放に失敗した場合は
+     *                  @ref CPLAT_ERR_UNKNOWN を返します。
      *
      *  指定されたデータだけを書き込み、改行は付加しません。
      *  ANSI CSI SGR エスケープ シーケンスは、色指定としてそのまま出力します。
@@ -392,7 +395,7 @@ extern "C"
      *  @param[in]      fmt      printf 形式の書式文字列です。NULL の場合は空文字列として扱います。
      *  @param[in]      ...      @p fmt に対応する書式引数です。
      *  @return         成功時は対象ストリームへ書き込んだバイト数を返します。引数不正、書式処理失敗、
-     *                  またはメモリ確保失敗の場合は -1 を返します。
+     *                  メモリ確保失敗、書き込み失敗、または内部ロックの取得・解放失敗の場合は -1 を返します。
      *  @note           ANSI CSI SGR エスケープ シーケンスは、色指定としてそのまま出力します。
      *
      *  @par            スレッド セーフ
@@ -412,6 +415,7 @@ extern "C"
      *  @param[in]      enable    0 以外の場合は有効にし、0 の場合は無効にします。
      *  @retval         CPLAT_OK                    ステータス領域の有効状態を変更しました。
      *  @retval         CPLAT_ERR_INVALID_ARGUMENT  @p screen が NULL、または @p position が不正です。
+     *  @retval         CPLAT_ERR_UNKNOWN           内部ロックの取得または解放に失敗しました。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -429,6 +433,7 @@ extern "C"
      *  @retval         CPLAT_OK                    表示内容を設定しました。
      *  @retval         CPLAT_ERR_INVALID_ARGUMENT  @p screen が NULL、または位置や配置の指定が不正です。
      *  @retval         CPLAT_ERR_OUT_OF_MEMORY     表示内容を保持するメモリを確保できません。
+     *  @retval         CPLAT_ERR_UNKNOWN           内部ロックの取得または解放に失敗しました。
      *  @note           ANSI CSI SGR エスケープ シーケンスは色指定としてそのまま出力し、表示幅を
      *                  0 として配置を計算します。
      *

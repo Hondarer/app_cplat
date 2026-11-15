@@ -665,9 +665,7 @@ static bool emit_instruction(compiler *state, const string_catalog_filter_instru
 /* 論理演算の命令を行レコードへ書き込む。 */
 static bool emit_logical(compiler *state, const string_catalog_filter_opcode opcode)
 {
-    string_catalog_filter_instruction instruction;
-
-    memset(&instruction, 0, sizeof(instruction));
+    string_catalog_filter_instruction instruction = {0};
     instruction.opcode = (uint8_t)opcode;
 
     return emit_instruction(state, &instruction, NULL);
@@ -728,12 +726,10 @@ static bool emit_constant(compiler *state, const string_catalog_filter_constant_
  */
 static bool parse_literal(compiler *state, uint8_t *kind_out)
 {
-    string_catalog_filter_constant_header header;
+    string_catalog_filter_constant_header header = {0};
     const token *current = &state->current;
     uint32_t offset;
     bool is_emitted;
-
-    memset(&header, 0, sizeof(header));
 
     switch (current->kind)
     {
@@ -834,7 +830,7 @@ static bool parse_argument_reference(compiler *state, string_catalog_filter_inst
 
     if (state->current.kind == TOKEN_KIND_DOT)
     {
-        string_catalog_filter_constant_header header;
+        string_catalog_filter_constant_header header = {0};
         const unsigned char *constants;
         const char *name;
         uint32_t name_length;
@@ -878,7 +874,6 @@ static bool parse_argument_reference(compiler *state, string_catalog_filter_inst
             }
         }
 
-        memset(&header, 0, sizeof(header));
         header.kind = (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_ARGUMENT_NAME;
         header.slot = (uint16_t)slot;
         header.length = name_length;
@@ -1074,12 +1069,11 @@ static bool is_same_class(const uint8_t first_kind, const uint8_t kind)
 /* 判定要素 (has、key、id、category、arg) を解析して命令を生成する。 */
 static bool parse_predicate(compiler *state)
 {
-    string_catalog_filter_instruction instruction;
+    string_catalog_filter_instruction instruction = {0};
     uint32_t literal_offset;
     uint8_t first_kind = 0U;
     uint8_t kind = 0U;
 
-    memset(&instruction, 0, sizeof(instruction));
     instruction.opcode = (uint8_t)STRING_CATALOG_FILTER_OPCODE_PREDICATE;
 
     state->predicate_count++;
@@ -1301,10 +1295,9 @@ static bool parse_binary(compiler *state, const token_kind operator_token,
      */
     while (state->current.kind == operator_token)
     {
-        string_catalog_filter_instruction jump;
+        string_catalog_filter_instruction jump = {0};
         uint32_t jump_index;
 
-        memset(&jump, 0, sizeof(jump));
         jump.opcode = (uint8_t)jump_opcode;
 
         if (!emit_instruction(state, &jump, &jump_index) || !advance(state) || !parse_operand(state) ||
@@ -1341,7 +1334,7 @@ int string_catalog_filter_compile_record(const char *text, const size_t text_len
                                          unsigned char *record, cplat_string_catalog_filter_line_error *error_out,
                                          uint32_t *column_out)
 {
-    string_catalog_filter_record_header header;
+    string_catalog_filter_record_header header = {0};
     compiler state = {0};
 
     memset(record, 0, CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(line_width));
@@ -1377,7 +1370,6 @@ int string_catalog_filter_compile_record(const char *text, const size_t text_len
     }
 
     /* コンパイル結果を行レコードの見出しへ反映し、行ハッシュを算出する。 */
-    memset(&header, 0, sizeof(header));
     header.instruction_count = (uint16_t)state.instruction_count;
     header.constant_size = (uint16_t)state.constant_size;
     header.stack_depth = (uint8_t)state.max_depth;
@@ -1448,7 +1440,7 @@ int cplat_string_catalog_filter_compile(const char *lines, const size_t line_cou
                                         cplat_string_catalog_filter_diagnostic *diagnostics,
                                         const size_t diagnostic_capacity, size_t *invalid_count_out)
 {
-    string_catalog_filter_image_header header;
+    string_catalog_filter_image_header header = {0};
     size_t invalid_count = 0U;
 
     if ((image_out == NULL) || ((lines == NULL) && (line_count > 0U)) ||
@@ -1465,7 +1457,6 @@ int cplat_string_catalog_filter_compile(const char *lines, const size_t line_cou
     }
 
     memset(image_out, 0, CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(line_capacity, line_width));
-    memset(&header, 0, sizeof(header));
     header.signature = STRING_CATALOG_FILTER_SIGNATURE;
     header.format_version = STRING_CATALOG_FILTER_FORMAT_VERSION;
     header.byte_order_mark = STRING_CATALOG_FILTER_BYTE_ORDER_MARK;
