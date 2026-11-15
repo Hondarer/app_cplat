@@ -170,7 +170,12 @@ static int wait_single(cplat_socket sock, short events, int timeout_ms, int *rea
         return cplat_internal_error_report_socket_errno(detail_out, errno);
     }
 
-    if ((poll_result > 0) && ((poll_fd.revents & events) != 0))
+    /*
+     * poll は要求イベントに加えて POLLERR・POLLHUP・POLLNVAL を revents へ設定する。
+     * これらでも待機を解除し、呼び出し側の送受信で EOF またはエラーを検知させる。
+     * see: https://man7.org/linux/man-pages/man2/poll.2.html
+     */
+    if ((poll_result > 0) && ((poll_fd.revents & (events | POLLERR | POLLHUP | POLLNVAL)) != 0))
     {
         *ready_out = 1;
     }

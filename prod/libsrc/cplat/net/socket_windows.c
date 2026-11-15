@@ -192,7 +192,12 @@ static int wait_single(cplat_socket sock, short events, int timeout_ms, int *rea
         return report_last_winsock_error(detail_out);
     }
 
-    if ((poll_result > 0) && ((poll_fd.revents & events) != 0))
+    /*
+     * WSAPoll は相手端の正常切断でも POLLRDNORM ではなく POLLHUP のみを返す場合がある。
+     * エラーや無効状態も含めて待機を解除し、呼び出し側の送受信で EOF またはエラーを検知させる。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsapoll
+     */
+    if ((poll_result > 0) && ((poll_fd.revents & (events | POLLERR | POLLHUP | POLLNVAL)) != 0))
     {
         *ready_out = 1;
     }

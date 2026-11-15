@@ -2563,3 +2563,83 @@ TEST_F(socketTest, clock_failure_does_not_poll)
     EXPECT_NE(CPLAT_OK, result); // [確認_異常系] - 待機失敗を返すこと。
 }
 #endif
+
+// 単一ソケット待機が POLLHUP のみで準備完了を返すことの確認
+TEST_F(socketTest, wait_readable_returns_ready_on_pollhup)
+{
+    // Arrange
+    int ready = 0;
+    cplat_error detail = {};
+
+    // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, 0))
+        .WillOnce(
+            [](const char *, const int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLHUP;
+                return 1;
+            });
+    // [Pre-Assert確認_正常系] - poll() が 1、0 を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - poll() から fds[0].revents に POLLHUP のみを設定して 1 を返す。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_winsock_, WSAPoll(_, _, _, _, 1, 0))
+        .WillOnce(
+            [](const char *, const int, const char *, LPWSAPOLLFD fds, ULONG, INT)
+            {
+                fds[0].revents = POLLHUP;
+                return 1;
+            });
+    // [Pre-Assert確認_正常系] - WSAPoll() が 1、0 を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - WSAPoll() から fds[0].revents に POLLHUP のみを設定して 1 を返す。
+#endif /* PLATFORM_ */
+
+    // Act
+    int actual_ret = cplat_socket_wait_readable(
+        kSocket, 0, &ready, &detail); // [手順] - POLLHUP のみが返る状態で cplat_socket_wait_readable() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, ready);             // [確認_正常系] - POLLHUP のみでも ready が 1 であること。
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+
+// 単一ソケット待機が POLLERR のみで準備完了を返すことの確認
+TEST_F(socketTest, wait_readable_returns_ready_on_pollerr)
+{
+    // Arrange
+    int ready = 0;
+    cplat_error detail = {};
+
+    // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, 0))
+        .WillOnce(
+            [](const char *, const int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLERR;
+                return 1;
+            });
+    // [Pre-Assert確認_正常系] - poll() が 1、0 を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - poll() から fds[0].revents に POLLERR のみを設定して 1 を返す。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_winsock_, WSAPoll(_, _, _, _, 1, 0))
+        .WillOnce(
+            [](const char *, const int, const char *, LPWSAPOLLFD fds, ULONG, INT)
+            {
+                fds[0].revents = POLLERR;
+                return 1;
+            });
+    // [Pre-Assert確認_正常系] - WSAPoll() が 1、0 を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - WSAPoll() から fds[0].revents に POLLERR のみを設定して 1 を返す。
+#endif /* PLATFORM_ */
+
+    // Act
+    int actual_ret = cplat_socket_wait_readable(
+        kSocket, 0, &ready, &detail); // [手順] - POLLERR のみが返る状態で cplat_socket_wait_readable() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, ready);             // [確認_正常系] - POLLERR のみでも ready が 1 であること。
+}
+// [サブ手順参照 名前=socketTest.TearDown]
