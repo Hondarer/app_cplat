@@ -3191,52 +3191,6 @@ TEST_F(argparserTest, default_returns_null_when_shutdown_registration_fails)
         parser); // [確認_異常系] - shutdown 登録失敗時の test_argparser_default_acquire() の戻り値が nullptr であること。
 }
 
-// default shutdown callback がロック取得失敗時に処理を中断することの確認
-TEST_F(argparserTest, default_shutdown_callback_returns_when_locking_fails)
-{
-    // Arrange
-    cplat_argparser *parser =
-        test_argparser_default_acquire(0, nullptr, nullptr, 0); // [状態] - default ハンドルを用意する。
-    ASSERT_NE(nullptr, parser); // [状態確認] - test_argparser_default_acquire() の戻り値が nullptr 以外であること。
-    cplat_shutdown_event event = {};
-    event.reason = CPLAT_SHUTDOWN_REASON_NORMAL_EXIT;
-
-    // Pre-Assert
-    EXPECT_CALL(mock_cplat_, cplat_local_lock_lock(_, _))
-        .WillOnce(
-            Return(CPLAT_ERR_BUSY)); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_local_lock_lock() から、shutdown callback のロック取得に対して CPLAT_ERR_BUSY を返す。
-
-    // Act
-    test_argparser_default_dispose_on_shutdown(
-        &event,
-        nullptr); // [手順] - ロック取得が失敗する状態で test_argparser_default_dispose_on_shutdown() を呼び出す。
-
-    // Assert
-    SUCCEED(); // [確認_異常系] - SUCCEED() に到達すること。(ロック取得失敗時も test_argparser_default_dispose_on_shutdown() がクラッシュせず終了することの確認)
-}
-
-// default parser のロック取得失敗時に NULL が返ることの確認
-TEST_F(argparserTest, default_returns_null_when_locking_fails)
-{
-    // Arrange
-
-    // Pre-Assert
-    EXPECT_CALL(mock_cplat_, cplat_local_lock_lock(_, _))
-        .WillOnce(
-            Return(CPLAT_ERR_BUSY)); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_local_lock_lock() から、default parser のロック取得に対して CPLAT_ERR_BUSY を返す。
-
-    // Act
-    cplat_argparser *parser = test_argparser_default_acquire(
-        0, nullptr, nullptr, 0); // [手順] - ロック取得が失敗する状態で test_argparser_default_acquire() を呼び出す。
-
-    // Assert
-    EXPECT_EQ(
-        nullptr,
-        parser); // [確認_異常系] - ロック取得失敗時の test_argparser_default_acquire() の戻り値が nullptr であること。
-}
-
 // 各登録 API の引数検証と登録結果伝播が動作することの確認
 TEST_F(argparserTest, register_wrappers_reject_invalid_storage_and_registration)
 {

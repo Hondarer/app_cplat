@@ -454,12 +454,18 @@ Mock_cplat::Mock_cplat()
     ON_CALL(*this, cplat_socket_recvfrom(_, _, _, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_socket_recvfrom));
     ON_CALL(*this, cplat_socket_send_all(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_socket_send_all));
     ON_CALL(*this, cplat_socket_recv_all(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_socket_recv_all));
-    ON_CALL(*this, cplat_socket_wait_readable(_, _, _, _))
+    ON_CALL(*this, cplat_socket_wait_readable(_, _))
         .WillByDefault(Invoke(delegate_real_cplat_socket_wait_readable));
-    ON_CALL(*this, cplat_socket_wait_writable(_, _, _, _))
+    ON_CALL(*this, cplat_socket_timed_wait_readable(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_timed_wait_readable));
+    ON_CALL(*this, cplat_socket_wait_writable(_, _))
         .WillByDefault(Invoke(delegate_real_cplat_socket_wait_writable));
-    ON_CALL(*this, cplat_socket_wait_readable_multi(_, _, _, _, _))
+    ON_CALL(*this, cplat_socket_timed_wait_writable(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_timed_wait_writable));
+    ON_CALL(*this, cplat_socket_wait_readable_multi(_, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_socket_wait_readable_multi));
+    ON_CALL(*this, cplat_socket_timed_wait_readable_multi(_, _, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_timed_wait_readable_multi));
     ON_CALL(*this, cplat_socket_shutdown_receive(_, _))
         .WillByDefault(Invoke(delegate_real_cplat_socket_shutdown_receive));
 
@@ -553,11 +559,14 @@ Mock_cplat::Mock_cplat()
     ON_CALL(*this, cplat_process_get_pid()).WillByDefault(Invoke(delegate_real_cplat_process_get_pid));
     ON_CALL(*this, cplat_process_get_tid()).WillByDefault(Invoke(delegate_real_cplat_process_get_tid));
     ON_CALL(*this, cplat_process_start(_, _)).WillByDefault(Invoke(delegate_real_cplat_process_start));
-    ON_CALL(*this, cplat_process_wait(_, _)).WillByDefault(Invoke(delegate_real_cplat_process_wait));
+    ON_CALL(*this, cplat_process_wait(_)).WillByDefault(Invoke(delegate_real_cplat_process_wait));
+    ON_CALL(*this, cplat_process_timed_wait(_, _)).WillByDefault(Invoke(delegate_real_cplat_process_timed_wait));
     ON_CALL(*this, cplat_process_get_exit_code(_, _)).WillByDefault(Invoke(delegate_real_cplat_process_get_exit_code));
     ON_CALL(*this, cplat_process_terminate(_)).WillByDefault(Invoke(delegate_real_cplat_process_terminate));
     ON_CALL(*this, cplat_process_dispose(_)).WillByDefault(Invoke(delegate_real_cplat_process_dispose));
-    ON_CALL(*this, cplat_process_run_sync(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_process_run_sync));
+    ON_CALL(*this, cplat_process_run_sync(_, _)).WillByDefault(Invoke(delegate_real_cplat_process_run_sync));
+    ON_CALL(*this, cplat_process_timed_run_sync(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_process_timed_run_sync));
 
     // cplat/runtime/shutdown.h
     ON_CALL(*this, cplat_shutdown_register(_, _)).WillByDefault(Invoke(delegate_real_cplat_shutdown_register));
@@ -655,22 +664,28 @@ Mock_cplat::Mock_cplat()
 
     // cplat/sync/sync.h
     ON_CALL(*this, cplat_local_lock_create(_)).WillByDefault(Invoke(delegate_real_cplat_local_lock_create));
-    ON_CALL(*this, cplat_local_lock_lock(_, _)).WillByDefault(Invoke(delegate_real_cplat_local_lock_lock));
+    ON_CALL(*this, cplat_local_lock_lock(_)).WillByDefault(Invoke(delegate_real_cplat_local_lock_lock));
+    ON_CALL(*this, cplat_local_lock_timed_lock(_, _)).WillByDefault(Invoke(delegate_real_cplat_local_lock_timed_lock));
     ON_CALL(*this, cplat_local_lock_try_lock(_)).WillByDefault(Invoke(delegate_real_cplat_local_lock_try_lock));
     ON_CALL(*this, cplat_local_lock_unlock(_)).WillByDefault(Invoke(delegate_real_cplat_local_lock_unlock));
     ON_CALL(*this, cplat_local_lock_dispose(_)).WillByDefault(Invoke(delegate_real_cplat_local_lock_dispose));
     ON_CALL(*this, cplat_condvar_create(_)).WillByDefault(Invoke(delegate_real_cplat_condvar_create));
-    ON_CALL(*this, cplat_condvar_wait(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_condvar_wait));
+    ON_CALL(*this, cplat_condvar_wait(_, _)).WillByDefault(Invoke(delegate_real_cplat_condvar_wait));
+    ON_CALL(*this, cplat_condvar_timed_wait(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_condvar_timed_wait));
     ON_CALL(*this, cplat_condvar_signal(_)).WillByDefault(Invoke(delegate_real_cplat_condvar_signal));
     ON_CALL(*this, cplat_condvar_broadcast(_)).WillByDefault(Invoke(delegate_real_cplat_condvar_broadcast));
     ON_CALL(*this, cplat_condvar_dispose(_)).WillByDefault(Invoke(delegate_real_cplat_condvar_dispose));
     ON_CALL(*this, cplat_local_rwlock_create(_)).WillByDefault(Invoke(delegate_real_cplat_local_rwlock_create));
-    ON_CALL(*this, cplat_local_rwlock_lock_shared(_, _))
+    ON_CALL(*this, cplat_local_rwlock_lock_shared(_))
         .WillByDefault(Invoke(delegate_real_cplat_local_rwlock_lock_shared));
+    ON_CALL(*this, cplat_local_rwlock_timed_lock_shared(_, _))
+        .WillByDefault(Invoke(delegate_real_cplat_local_rwlock_timed_lock_shared));
     ON_CALL(*this, cplat_local_rwlock_try_lock_shared(_))
         .WillByDefault(Invoke(delegate_real_cplat_local_rwlock_try_lock_shared));
-    ON_CALL(*this, cplat_local_rwlock_lock_exclusive(_, _))
+    ON_CALL(*this, cplat_local_rwlock_lock_exclusive(_))
         .WillByDefault(Invoke(delegate_real_cplat_local_rwlock_lock_exclusive));
+    ON_CALL(*this, cplat_local_rwlock_timed_lock_exclusive(_, _))
+        .WillByDefault(Invoke(delegate_real_cplat_local_rwlock_timed_lock_exclusive));
     ON_CALL(*this, cplat_local_rwlock_try_lock_exclusive(_))
         .WillByDefault(Invoke(delegate_real_cplat_local_rwlock_try_lock_exclusive));
     ON_CALL(*this, cplat_local_rwlock_unlock_shared(_))
@@ -679,7 +694,8 @@ Mock_cplat::Mock_cplat()
         .WillByDefault(Invoke(delegate_real_cplat_local_rwlock_unlock_exclusive));
     ON_CALL(*this, cplat_local_rwlock_dispose(_)).WillByDefault(Invoke(delegate_real_cplat_local_rwlock_dispose));
     ON_CALL(*this, cplat_thread_create(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_thread_create));
-    ON_CALL(*this, cplat_thread_join(_, _)).WillByDefault(Invoke(delegate_real_cplat_thread_join));
+    ON_CALL(*this, cplat_thread_join(_)).WillByDefault(Invoke(delegate_real_cplat_thread_join));
+    ON_CALL(*this, cplat_thread_timed_join(_, _)).WillByDefault(Invoke(delegate_real_cplat_thread_timed_join));
     ON_CALL(*this, cplat_thread_detach(_)).WillByDefault(Invoke(delegate_real_cplat_thread_detach));
     ON_CALL(*this, cplat_interprocess_lock_open(_, _))
         .WillByDefault(Invoke(delegate_real_cplat_interprocess_lock_open));
@@ -687,8 +703,9 @@ Mock_cplat::Mock_cplat()
         .WillByDefault(Invoke(delegate_real_cplat_interprocess_lock_import_descriptor));
     ON_CALL(*this, cplat_interprocess_lock_export_descriptor(_, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_interprocess_lock_export_descriptor));
-    ON_CALL(*this, cplat_interprocess_lock_lock(_, _))
-        .WillByDefault(Invoke(delegate_real_cplat_interprocess_lock_lock));
+    ON_CALL(*this, cplat_interprocess_lock_lock(_)).WillByDefault(Invoke(delegate_real_cplat_interprocess_lock_lock));
+    ON_CALL(*this, cplat_interprocess_lock_timed_lock(_, _))
+        .WillByDefault(Invoke(delegate_real_cplat_interprocess_lock_timed_lock));
     ON_CALL(*this, cplat_interprocess_lock_try_lock(_))
         .WillByDefault(Invoke(delegate_real_cplat_interprocess_lock_try_lock));
     ON_CALL(*this, cplat_interprocess_lock_unlock(_))
@@ -701,12 +718,16 @@ Mock_cplat::Mock_cplat()
         .WillByDefault(Invoke(delegate_real_cplat_interprocess_rwlock_import_descriptor));
     ON_CALL(*this, cplat_interprocess_rwlock_export_descriptor(_, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_interprocess_rwlock_export_descriptor));
-    ON_CALL(*this, cplat_interprocess_rwlock_lock_shared(_, _))
+    ON_CALL(*this, cplat_interprocess_rwlock_lock_shared(_))
         .WillByDefault(Invoke(delegate_real_cplat_interprocess_rwlock_lock_shared));
+    ON_CALL(*this, cplat_interprocess_rwlock_timed_lock_shared(_, _))
+        .WillByDefault(Invoke(delegate_real_cplat_interprocess_rwlock_timed_lock_shared));
     ON_CALL(*this, cplat_interprocess_rwlock_try_lock_shared(_))
         .WillByDefault(Invoke(delegate_real_cplat_interprocess_rwlock_try_lock_shared));
-    ON_CALL(*this, cplat_interprocess_rwlock_lock_exclusive(_, _))
+    ON_CALL(*this, cplat_interprocess_rwlock_lock_exclusive(_))
         .WillByDefault(Invoke(delegate_real_cplat_interprocess_rwlock_lock_exclusive));
+    ON_CALL(*this, cplat_interprocess_rwlock_timed_lock_exclusive(_, _))
+        .WillByDefault(Invoke(delegate_real_cplat_interprocess_rwlock_timed_lock_exclusive));
     ON_CALL(*this, cplat_interprocess_rwlock_try_lock_exclusive(_))
         .WillByDefault(Invoke(delegate_real_cplat_interprocess_rwlock_try_lock_exclusive));
     ON_CALL(*this, cplat_interprocess_rwlock_unlock(_))

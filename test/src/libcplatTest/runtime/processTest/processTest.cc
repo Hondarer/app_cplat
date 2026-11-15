@@ -1,6 +1,7 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 #include <mock_fcntl.h>
+#include <mock_poll.h>
 #include <mock_time.h>
 #include <mock_unistd.h>
 #include <sys/mock_wait.h>
@@ -30,7 +31,11 @@ using testing::StrEq;
 #if defined(PLATFORM_LINUX)
     #include <fcntl.h>
     #include <signal.h>
+    #include <sys/syscall.h>
     #include <unistd.h>
+    #ifndef SYS_pidfd_open
+        #define SYS_pidfd_open 434L
+    #endif
 static void set_invalid_stdio_mode(cplat_process_stdio *spec)
 {
     int invalid_mode = 99;
@@ -133,15 +138,22 @@ TEST(processTest, RunSyncReturnsChildExitCode)
     EXPECT_CALL(mock_unistd, fork(_, _, _))
         .WillOnce(Return(static_cast<pid_t>(4242))); // [Pre-Assert確認_正常系] - fork() が 1 回呼び出されること。
                                                      // [Pre-Assert手順] - fork() から子プロセスの pid 4242 を返す。
-    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 4242, _, _))
+    EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 4242, 0, _, _, _))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, long, intptr_t, intptr_t, intptr_t, intptr_t, intptr_t)
+            {
+                errno = ENOSYS;
+                return -1L;
+            })); // [Pre-Assert確認_正常系] - pidfd_open の syscall() が 4242 を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - syscall() から ENOSYS を設定して -1 を返す。
+    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 4242, _, WNOHANG))
         .WillOnce(DoAll(SetArgPointee<4>(status), Return(static_cast<pid_t>(4242))));
-    // [Pre-Assert確認_正常系] - waitpid() が 4242 を指定して 1 回呼び出されること。
+    // [Pre-Assert確認_正常系] - waitpid() が 4242、WNOHANG を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - waitpid() から、終了ステータス 7 を設定して 4242 を返す。
 
     // Act
-    int result =
-        cplat_process_run_sync(&options, CPLAT_PROCESS_WAIT_FOREVER,
-                               &exit_code); // [手順] - 無期限待機を指定して cplat_process_run_sync() を呼び出す。
+    int result = cplat_process_run_sync(
+        &options, &exit_code); // [手順] - cplat_process_run_sync() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
@@ -171,15 +183,22 @@ TEST(processTest, EnvironmentOverridesAreAcceptedByRunSync)
     EXPECT_CALL(mock_unistd, fork(_, _, _))
         .WillOnce(Return(static_cast<pid_t>(4243))); // [Pre-Assert確認_正常系] - fork() が 1 回呼び出されること。
                                                      // [Pre-Assert手順] - fork() から子プロセスの pid 4243 を返す。
-    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 4243, _, _))
+    EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 4243, 0, _, _, _))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, long, intptr_t, intptr_t, intptr_t, intptr_t, intptr_t)
+            {
+                errno = ENOSYS;
+                return -1L;
+            })); // [Pre-Assert確認_正常系] - pidfd_open の syscall() が 4243 を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - syscall() から ENOSYS を設定して -1 を返す。
+    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 4243, _, WNOHANG))
         .WillOnce(DoAll(SetArgPointee<4>(status), Return(static_cast<pid_t>(4243))));
-    // [Pre-Assert確認_正常系] - waitpid() が 4243 を指定して 1 回呼び出されること。
+    // [Pre-Assert確認_正常系] - waitpid() が 4243、WNOHANG を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - waitpid() から、終了ステータス 0 を設定して 4243 を返す。
 
     // Act
     int result = cplat_process_run_sync(
-        &options, CPLAT_PROCESS_WAIT_FOREVER,
-        &exit_code); // [手順] - 環境変数上書きと無期限待機を指定して cplat_process_run_sync() を呼び出す。
+        &options, &exit_code); // [手順] - 環境変数上書きを指定して cplat_process_run_sync() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_process_run_sync() の戻り値が CPLAT_OK であること。
@@ -205,17 +224,22 @@ TEST(processTest, WaitNoWaitReportsTimeoutForRunningProcess)
     EXPECT_CALL(mock_unistd, fork(_, _, _))
         .WillOnce(Return(static_cast<pid_t>(4244))); // [Pre-Assert確認_正常系] - fork() が 1 回呼び出されること。
                                                      // [Pre-Assert手順] - fork() から子プロセスの pid 4244 を返す。
-    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 4244, _, WNOHANG))
-        .WillOnce(Return(static_cast<pid_t>(
-            0))); // [Pre-Assert確認_正常系] - waitpid() が 4244、WNOHANG を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - waitpid() から未終了を示す 0 を返す。
-    EXPECT_CALL(mock_unistd, kill(_, _, _, 4244, SIGTERM))
-        .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - kill() が 4244、SIGTERM を指定して 1 回呼び出されること。
+    EXPECT_CALL(mock_unistd, kill(_, _, _, 4244, SIGKILL))
+        .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - kill() が 4244、SIGKILL を指定して 1 回呼び出されること。
                               // [Pre-Assert手順] - kill() から 0 を返す。
-    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 4244, _, 0))
+    EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 4244, 0, _, _, _))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, long, intptr_t, intptr_t, intptr_t, intptr_t, intptr_t)
+            {
+                errno = ENOSYS;
+                return -1L;
+            })); // [Pre-Assert確認_正常系] - pidfd_open の syscall() が 4244 を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - syscall() から ENOSYS を設定して -1 を返す。
+    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 4244, _, WNOHANG))
+        .WillOnce(Return(static_cast<pid_t>(0)))
         .WillOnce(DoAll(SetArgPointee<4>(status), Return(static_cast<pid_t>(4244))));
-    // [Pre-Assert確認_正常系] - waitpid() が 4244、0 を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - waitpid() から、終了ステータス 0 を設定して 4244 を返す。
+    // [Pre-Assert確認_正常系] - waitpid() が 4244、WNOHANG を指定して 2 回呼び出されること。
+    // [Pre-Assert手順] - waitpid() から 1 回目は未終了を示す 0、2 回目は終了ステータス 0 を設定して 4244 を返す。
 
     // Act
     int start_result =
@@ -225,22 +249,22 @@ TEST(processTest, WaitNoWaitReportsTimeoutForRunningProcess)
     ASSERT_NE(nullptr, process);
     // [確認_正常系] - process が nullptr 以外であること。
 
-    int wait_result = cplat_process_wait(
-        process, CPLAT_PROCESS_NO_WAIT); // [手順] - NO_WAIT を指定して cplat_process_wait() を呼び出す。
+    int wait_result = cplat_process_timed_wait(
+        process, CPLAT_NO_WAIT); // [手順] - CPLAT_NO_WAIT を指定して cplat_process_timed_wait() を呼び出す。
     int terminate_result = cplat_process_terminate(
         process); // [手順] - 起動済みの子プロセスを指定して cplat_process_terminate() を呼び出す。
     int final_wait = cplat_process_wait(
-        process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 無期限待機を指定して cplat_process_wait() を呼び出す。
+        process); // [手順] - cplat_process_wait() を呼び出す。
     int exit_result = cplat_process_get_exit_code(
         process, &exit_code); // [手順] - 終了コードの出力先を指定して cplat_process_get_exit_code() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_TIMEOUT,
-        wait_result); // [確認_正常系] - CPLAT_PROCESS_NO_WAIT の cplat_process_wait() の戻り値が CPLAT_ERR_TIMEOUT であること。
+        wait_result); // [確認_正常系] - CPLAT_NO_WAIT の cplat_process_timed_wait() の戻り値が CPLAT_ERR_TIMEOUT であること。
     EXPECT_EQ(CPLAT_OK, terminate_result); // [確認_正常系] - cplat_process_terminate() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK,
-              final_wait); // [確認_正常系] - 無期限待機の cplat_process_wait() の戻り値が CPLAT_OK であること。
+              final_wait); // [確認_正常系] - cplat_process_wait() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK,
               exit_result); // [確認_正常系] - cplat_process_get_exit_code() の戻り値が CPLAT_OK であること。
 
@@ -275,7 +299,7 @@ TEST(processTest, WaitReturnsChildExitCode)
 
     // Act
     int wait_result = cplat_process_wait(
-        process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 無期限待機を指定して cplat_process_wait() を呼び出す。
+        process); // [手順] - cplat_process_wait() を呼び出す。
     int exit_result = cplat_process_get_exit_code(
         process, &exit_code); // [手順] - 終了コードの出力先を指定して cplat_process_get_exit_code() を呼び出す。
 
@@ -323,22 +347,22 @@ TEST(processTest, WaitNoWaitReportsTimeoutForAdoptedProcess)
     // [Pre-Assert手順] - CloseHandle() から TRUE を返す。
 
     // Act
-    int wait_result = cplat_process_wait(
-        process, CPLAT_PROCESS_NO_WAIT); // [手順] - NO_WAIT を指定して cplat_process_wait() を呼び出す。
+    int wait_result = cplat_process_timed_wait(
+        process, CPLAT_NO_WAIT); // [手順] - CPLAT_NO_WAIT を指定して cplat_process_timed_wait() を呼び出す。
     int terminate_result = cplat_process_terminate(
         process); // [手順] - 起動済みの子プロセスを指定して cplat_process_terminate() を呼び出す。
     int final_wait = cplat_process_wait(
-        process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 無期限待機を指定して cplat_process_wait() を呼び出す。
+        process); // [手順] - cplat_process_wait() を呼び出す。
     int exit_result = cplat_process_get_exit_code(
         process, &exit_code); // [手順] - 終了コードの出力先を指定して cplat_process_get_exit_code() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_TIMEOUT,
-        wait_result); // [確認_正常系] - CPLAT_PROCESS_NO_WAIT の cplat_process_wait() の戻り値が CPLAT_ERR_TIMEOUT であること。
+        wait_result); // [確認_正常系] - CPLAT_NO_WAIT の cplat_process_timed_wait() の戻り値が CPLAT_ERR_TIMEOUT であること。
     EXPECT_EQ(CPLAT_OK, terminate_result); // [確認_正常系] - cplat_process_terminate() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK,
-              final_wait); // [確認_正常系] - 無期限待機の cplat_process_wait() の戻り値が CPLAT_OK であること。
+              final_wait); // [確認_正常系] - cplat_process_wait() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK,
               exit_result); // [確認_正常系] - cplat_process_get_exit_code() の戻り値が CPLAT_OK であること。
 
@@ -1200,6 +1224,7 @@ TEST(processTest, StartReportsForkFailure)
 TEST(processTest, WaitMapsExitStatesAndRetriesEintr)
 {
     // Arrange
+    NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_sys_wait> mock_sys_wait;
     cplat_process *normal_process =
         cplat_internal_process_adopt_native(123); // [状態] - pid 123 の process を用意する。
@@ -1218,28 +1243,48 @@ TEST(processTest, WaitMapsExitStatesAndRetriesEintr)
     errno = EINTR;         // [状態] - 1 回目の waitpid() が EINTR を返す状態とする。
 
     // Pre-Assert
-    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 123, _, _))
-        .WillOnce(DoAll(SetArgPointee<4>(normal_status), Return(static_cast<pid_t>(-1))))
+    EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 123, 0, _, _, _))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, long, intptr_t, intptr_t, intptr_t, intptr_t, intptr_t)
+            {
+                errno = ENOSYS;
+                return -1L;
+            })); // [Pre-Assert確認_正常系] - pidfd_open の syscall() が 123 を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - syscall() から ENOSYS を設定して -1 を返す。
+    EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 124, 0, _, _, _))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, long, intptr_t, intptr_t, intptr_t, intptr_t, intptr_t)
+            {
+                errno = ENOSYS;
+                return -1L;
+            })); // [Pre-Assert確認_正常系] - pidfd_open の syscall() が 124 を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - syscall() から ENOSYS を設定して -1 を返す。
+    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 123, _, WNOHANG))
+        .WillOnce(Invoke(
+            [normal_status](const char *, const int, const char *, pid_t, int *st, int)
+            {
+                *st = normal_status;
+                errno = EINTR;
+                return static_cast<pid_t>(-1);
+            }))
         .WillOnce(DoAll(SetArgPointee<4>(normal_status),
                         Return(static_cast<pid_t>(
-                            123)))); // [Pre-Assert確認_正常系] - waitpid() が 123 を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - waitpid() から 1 回目は -1、2 回目は終了ステータス 7 を設定して 123 を返す。
-    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 124, _, _))
+                            123)))); // [Pre-Assert確認_正常系] - waitpid() が 123、WNOHANG を指定して 2 回呼び出されること。
+    // [Pre-Assert手順] - waitpid() から 1 回目は EINTR を設定して -1、2 回目は終了ステータス 7 を設定して 123 を返す。
+    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 124, _, WNOHANG))
         .WillOnce(DoAll(SetArgPointee<4>(signaled_status),
                         Return(static_cast<pid_t>(
-                            124)))); // [Pre-Assert確認_正常系] - waitpid() が 124 を指定して 1 回呼び出されること。
+                            124)))); // [Pre-Assert確認_正常系] - waitpid() が 124、WNOHANG を指定して 1 回呼び出されること。
                                      // [Pre-Assert手順] - waitpid() から、SIGTERM 終了ステータスを設定して 124 を返す。
 
     // Act
     int normal_wait = cplat_process_wait(
-        normal_process,
-        CPLAT_PROCESS_WAIT_FOREVER); // [手順] - EINTR 後に正常終了する process を指定して cplat_process_wait() を呼び出す。
+        normal_process); // [手順] - EINTR 後に正常終了する process を指定して cplat_process_wait() を呼び出す。
     int normal_get = cplat_process_get_exit_code(
         normal_process,
-        &normal_exit_code); // [手順] - 正常終了した process を指定して cplat_process_get_exit_code() を呼び出す。
+        &normal_exit_code); // [手順] - 正常終了した process の終了コードを確認するため、process を指定して cplat_process_get_exit_code() を呼び出す。
     int signaled_wait = cplat_process_wait(
-        signaled_process,
-        CPLAT_PROCESS_WAIT_FOREVER); // [手順] - シグナル終了する process を指定して cplat_process_wait() を呼び出す。
+        signaled_process); // [手順] - シグナル終了する process を指定して cplat_process_wait() を呼び出す。
     int signaled_get = cplat_process_get_exit_code(
         signaled_process,
         &signaled_exit_code); // [手順] - シグナル終了した process を指定して cplat_process_get_exit_code() を呼び出す。
@@ -1272,21 +1317,33 @@ TEST(processTest, WaitMapsExitStatesAndRetriesEintr)
 TEST(processTest, WaitReportsWaitpidFailure)
 {
     // Arrange
+    NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_sys_wait> mock_sys_wait;
     cplat_process *process = cplat_internal_process_adopt_native(125); // [状態] - pid 125 の process を用意する。
     ASSERT_NE(nullptr,
               process); // [状態確認] - cplat_internal_process_adopt_native() の戻り値が nullptr 以外であること。
-    errno = ECHILD;     // [状態] - waitpid() が子プロセスなしで失敗する状態とする。
 
     // Pre-Assert
-    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 125, _, _))
-        .WillOnce(Return(
-            static_cast<pid_t>(-1))); // [Pre-Assert確認_異常系] - waitpid() が 125 を指定して 1 回呼び出されること。
-                                      // [Pre-Assert手順] - waitpid() から -1 を返す。
+    EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 125, 0, _, _, _))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, long, intptr_t, intptr_t, intptr_t, intptr_t, intptr_t)
+            {
+                errno = ENOSYS;
+                return -1L;
+            })); // [Pre-Assert確認_正常系] - pidfd_open の syscall() が 125 を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - syscall() から ENOSYS を設定して -1 を返す。
+    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 125, _, WNOHANG))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, pid_t, int *, int)
+            {
+                errno = EFAULT;
+                return static_cast<pid_t>(-1);
+            })); // [Pre-Assert確認_異常系] - waitpid() が 125、WNOHANG を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - waitpid() から EFAULT を設定して -1 を返す。
 
     // Act
     int result = cplat_process_wait(
-        process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - waitpid() が失敗する状態で cplat_process_wait() を呼び出す。
+        process); // [手順] - waitpid() が失敗する状態で cplat_process_wait() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
@@ -1307,8 +1364,8 @@ TEST(processTest, TerminateReportsKillFailure)
     errno = ESRCH;      // [状態] - terminate 対象が存在せず kill() が失敗する状態とする。
 
     // Pre-Assert
-    EXPECT_CALL(mock_unistd, kill(_, _, _, 126, SIGTERM))
-        .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - kill() が 126、SIGTERM を指定して 1 回呼び出されること。
+    EXPECT_CALL(mock_unistd, kill(_, _, _, 126, SIGKILL))
+        .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - kill() が 126、SIGKILL を指定して 1 回呼び出されること。
                                // [Pre-Assert手順] - kill() から -1 を返す。
 
     // Act
@@ -1335,10 +1392,12 @@ TEST(processTest, RejectsInvalidWaitAndExitArguments)
     // Pre-Assert
 
     // Act
-    int null_wait = cplat_process_wait(
-        nullptr, CPLAT_PROCESS_NO_WAIT); // [手順] - process に nullptr を指定して cplat_process_wait() を呼び出す。
+    int null_indefinite_wait = cplat_process_wait(
+        nullptr); // [手順] - process に nullptr を指定して cplat_process_wait() を呼び出す。
+    int null_wait = cplat_process_timed_wait(
+        nullptr, CPLAT_NO_WAIT); // [手順] - process に nullptr を指定して cplat_process_timed_wait() を呼び出す。
     int negative_wait =
-        cplat_process_wait(process, -1); // [手順] - 負の timeout を指定して cplat_process_wait() を呼び出す。
+        cplat_process_timed_wait(process, -1); // [手順] - 負の timeout を指定して cplat_process_timed_wait() を呼び出す。
     int null_exit_process = cplat_process_get_exit_code(
         nullptr, &exit_code); // [手順] - process に nullptr を指定して cplat_process_get_exit_code() を呼び出す。
     int null_exit_output = cplat_process_get_exit_code(
@@ -1351,10 +1410,13 @@ TEST(processTest, RejectsInvalidWaitAndExitArguments)
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        null_wait); // [確認_異常系] - nullptr process の cplat_process_wait() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_indefinite_wait); // [確認_異常系] - nullptr process の cplat_process_wait() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        negative_wait); // [確認_異常系] - 負の timeout の cplat_process_wait() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        null_wait); // [確認_異常系] - nullptr process の cplat_process_timed_wait() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        negative_wait); // [確認_異常系] - 負の timeout の cplat_process_timed_wait() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         null_exit_process); // [確認_異常系] - nullptr process の cplat_process_get_exit_code() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -1640,6 +1702,14 @@ TEST(processTest, wait_reports_timeout_at_finite_deadline)
     second.tv_sec = 2;
 
     // Pre-Assert
+    EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 128, 0, _, _, _))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, long, intptr_t, intptr_t, intptr_t, intptr_t, intptr_t)
+            {
+                errno = ENOSYS;
+                return -1L;
+            })); // [Pre-Assert確認_正常系] - pidfd_open の syscall() が 128 を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - syscall() から ENOSYS を設定して -1 を返す。
     EXPECT_CALL(mock_time, clock_gettime(_, _, _, CLOCK_MONOTONIC, _))
         .Times(2)
         .WillRepeatedly(Invoke(
@@ -1655,12 +1725,12 @@ TEST(processTest, wait_reports_timeout_at_finite_deadline)
                   // [Pre-Assert手順] - waitpid() から未終了を示す 0 を返す。
 
     // Act
-    int result = cplat_process_wait(
-        process, 500); // [手順] - 終了しないプロセスと有限の待機時間を指定して cplat_process_wait() を呼び出す。
+    int result = cplat_process_timed_wait(
+        process, 500); // [手順] - 終了しないプロセスと有限の待機時間を指定して cplat_process_timed_wait() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_TIMEOUT,
-              result); // [確認_正常系] - cplat_process_wait() の戻り値が CPLAT_ERR_TIMEOUT であること。
+              result); // [確認_正常系] - cplat_process_timed_wait() の戻り値が CPLAT_ERR_TIMEOUT であること。
 
     // Cleanup
     cplat_process_dispose(process);
@@ -1682,6 +1752,14 @@ TEST(processTest, wait_sleeps_before_finite_deadline_and_detects_exit)
     now.tv_sec = 1;
 
     // Pre-Assert
+    EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 131, 0, _, _, _))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, long, intptr_t, intptr_t, intptr_t, intptr_t, intptr_t)
+            {
+                errno = ENOSYS;
+                return -1L;
+            })); // [Pre-Assert確認_正常系] - pidfd_open の syscall() が 131 を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - syscall() から ENOSYS を設定して -1 を返す。
     EXPECT_CALL(mock_time, clock_gettime(_, _, _, CLOCK_MONOTONIC, _))
         .Times(2)
         .WillRepeatedly(DoAll(
@@ -1701,13 +1779,13 @@ TEST(processTest, wait_sleeps_before_finite_deadline_and_detects_exit)
                               // [Pre-Assert手順] - usleep() から 0 を返す。
 
     // Act
-    int wait_result = cplat_process_wait(
-        process, 500); // [手順] - 期限前のプロセスと有限の待機時間を指定して cplat_process_wait() を呼び出す。
+    int wait_result = cplat_process_timed_wait(
+        process, 500); // [手順] - 期限前のプロセスと有限の待機時間を指定して cplat_process_timed_wait() を呼び出す。
     int exit_result = cplat_process_get_exit_code(
         process, &exit_code); // [手順] - 終了コードの出力先を指定して cplat_process_get_exit_code() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, wait_result); // [確認_正常系] - cplat_process_wait() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, wait_result); // [確認_正常系] - cplat_process_timed_wait() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK, exit_result); // [確認_正常系] - cplat_process_get_exit_code() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(4, exit_code); // [確認_正常系] - exit_code が 4 であること。(子プロセスの終了コードが 4 であることの確認)
 
@@ -1768,6 +1846,7 @@ TEST(processTest, environment_helpers_report_invalid_and_allocation_failures)
 TEST(processTest, completed_process_wait_and_terminate_are_idempotent)
 {
     // Arrange
+    NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_sys_wait> mock_sys_wait;
     cplat_process *process = cplat_internal_process_adopt_native(129); // [状態] - pid 129 の process を用意する。
     int status = 3 << 8;
@@ -1775,17 +1854,27 @@ TEST(processTest, completed_process_wait_and_terminate_are_idempotent)
               process); // [状態確認] - cplat_internal_process_adopt_native() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
-    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 129, _, _))
+    EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 129, 0, _, _, _))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, long, intptr_t, intptr_t, intptr_t, intptr_t, intptr_t)
+            {
+                errno = ENOSYS;
+                return -1L;
+            })); // [Pre-Assert確認_正常系] - pidfd_open の syscall() が 129 を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - syscall() から ENOSYS を設定して -1 を返す。
+    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 129, _, WNOHANG))
         .WillOnce(DoAll(SetArgPointee<4>(status),
                         Return(static_cast<pid_t>(
-                            129)))); // [Pre-Assert確認_正常系] - waitpid() が 129 を指定して 1 回呼び出されること。
+                            129)))); // [Pre-Assert確認_正常系] - waitpid() が 129、WNOHANG を指定して 1 回呼び出されること。
                                      // [Pre-Assert手順] - waitpid() から、終了ステータス 3 を設定して 129 を返す。
 
     // Act
     int first_wait = cplat_process_wait(
-        process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 実行中のプロセスを指定して cplat_process_wait() を呼び出す。
+        process); // [手順] - 実行中のプロセスを指定して cplat_process_wait() を呼び出す。
     int second_wait = cplat_process_wait(
-        process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 終了済みのプロセスを指定して cplat_process_wait() を呼び出す。
+        process); // [手順] - 終了済みのプロセスを指定して cplat_process_wait() を呼び出す。
+    int third_wait = cplat_process_timed_wait(
+        process, 100); // [手順] - 終了済みのプロセスを指定して cplat_process_timed_wait() を呼び出す。
     int terminate_result = cplat_process_terminate(
         process); // [手順] - 終了済みのプロセスを指定して cplat_process_terminate() を呼び出す。
 
@@ -1794,6 +1883,9 @@ TEST(processTest, completed_process_wait_and_terminate_are_idempotent)
     EXPECT_EQ(
         CPLAT_OK,
         second_wait); // [確認_正常系] - 終了済みプロセスに対する 2 回目の cplat_process_wait() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        third_wait); // [確認_正常系] - 終了済みプロセスに対する cplat_process_timed_wait() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_OK,
         terminate_result); // [確認_正常系] - 終了済みプロセスの cplat_process_terminate() の戻り値が CPLAT_OK であること。
@@ -1838,17 +1930,23 @@ TEST(processTest, run_sync_rejects_invalid_output_and_start_failure)
 
     // Act
     int null_output = cplat_process_run_sync(
-        &options, CPLAT_PROCESS_WAIT_FOREVER,
+        &options,
         nullptr); // [手順] - 終了コード出力先に nullptr を指定して cplat_process_run_sync() を呼び出す。
+    int negative_timeout = cplat_process_timed_run_sync(
+        &options, -1,
+        &exit_code); // [手順] - 負の timeout を指定して cplat_process_timed_run_sync() を呼び出す。
     options.argv = nullptr;
-    int start_failure =
-        cplat_process_run_sync(&options, CPLAT_PROCESS_WAIT_FOREVER,
-                               &exit_code); // [手順] - 不正な options を指定して cplat_process_run_sync() を呼び出す。
+    int start_failure = cplat_process_run_sync(
+        &options,
+        &exit_code); // [手順] - 不正な options を指定して cplat_process_run_sync() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         null_output); // [確認_異常系] - 終了コード出力先が nullptr の cplat_process_run_sync() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        negative_timeout); // [確認_異常系] - 負の timeout の cplat_process_timed_run_sync() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
         start_failure); // [確認_異常系] - 不正な options の cplat_process_run_sync() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
@@ -2022,11 +2120,19 @@ TEST(processTest, wait_forever_retries_unexpected_nonblocking_result)
               process); // [状態確認] - cplat_internal_process_adopt_native() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
-    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 132, _, 0))
+    EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 132, 0, _, _, _))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, long, intptr_t, intptr_t, intptr_t, intptr_t, intptr_t)
+            {
+                errno = ENOSYS;
+                return -1L;
+            })); // [Pre-Assert確認_正常系] - pidfd_open の syscall() が 132 を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - syscall() から ENOSYS を設定して -1 を返す。
+    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 132, _, WNOHANG))
         .WillOnce(Return(static_cast<pid_t>(0)))
         .WillOnce(DoAll(SetArgPointee<4>(status),
                         Return(static_cast<pid_t>(
-                            132)))); // [Pre-Assert確認_正常系] - waitpid() が 132、0 を指定して 2 回呼び出されること。
+                            132)))); // [Pre-Assert確認_正常系] - waitpid() が 132、WNOHANG を指定して 2 回呼び出されること。
     // [Pre-Assert手順] - waitpid() から 1 回目は未終了を示す 0、2 回目は終了ステータス 0 を設定して 132 を返す。
     EXPECT_CALL(mock_unistd, usleep(_, _, _, 1000U))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - usleep() が 1000U を指定して 1 回呼び出されること。
@@ -2034,7 +2140,7 @@ TEST(processTest, wait_forever_retries_unexpected_nonblocking_result)
 
     // Act
     int result = cplat_process_wait(
-        process, CPLAT_PROCESS_WAIT_FOREVER); // [手順] - 無期限待機を指定して cplat_process_wait() を呼び出す。
+        process); // [手順] - cplat_process_wait() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - 再試行後の cplat_process_wait() の戻り値が CPLAT_OK であること。
@@ -2043,7 +2149,7 @@ TEST(processTest, wait_forever_retries_unexpected_nonblocking_result)
     cplat_process_dispose(process);
 }
 
-// Linux の同期実行が wait timeout を呼び出し元へ返すことの確認
+// Linux の期限付き同期実行が時間切れ時に子プロセスを強制終了して CPLAT_ERR_TIMEOUT を返すことの確認
 TEST(processTest, run_sync_returns_wait_failure)
 {
     // Arrange
@@ -2053,28 +2159,397 @@ TEST(processTest, run_sync_returns_wait_failure)
     char arg0[] = "/bin/true";
     char *argv[] = {arg0, nullptr};
     int exit_code = 0;
+    int kill_status = SIGKILL;
     options.argv = argv;
 
     // Pre-Assert
     EXPECT_CALL(mock_unistd, fork(_, _, _))
         .WillOnce(Return(static_cast<pid_t>(133))); // [Pre-Assert確認_正常系] - fork() が 1 回呼び出されること。
                                                     // [Pre-Assert手順] - fork() から子プロセスの pid 133 を返す。
+    EXPECT_CALL(mock_unistd, kill(_, _, _, 133, SIGKILL))
+        .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - kill() が 133、SIGKILL を指定して 1 回呼び出されること。
+                              // [Pre-Assert手順] - kill() から 0 を返す。
+    EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 133, 0, _, _, _))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, long, intptr_t, intptr_t, intptr_t, intptr_t, intptr_t)
+            {
+                errno = ENOSYS;
+                return -1L;
+            })); // [Pre-Assert確認_正常系] - pidfd_open の syscall() が 133 を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - syscall() から ENOSYS を設定して -1 を返す。
     EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 133, _, WNOHANG))
-        .WillOnce(Return(static_cast<pid_t>(
-            0))); // [Pre-Assert確認_正常系] - waitpid() が 133、WNOHANG を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - waitpid() から未終了を示す 0 を返す。
+        .WillOnce(Return(static_cast<pid_t>(0)))
+        .WillOnce(DoAll(SetArgPointee<4>(kill_status),
+                        Return(static_cast<pid_t>(133))));
+    // [Pre-Assert確認_正常系] - waitpid() が 133、WNOHANG を指定して 2 回呼び出されること。
+    // [Pre-Assert手順] - waitpid() から 1 回目は未終了の 0、2 回目は SIGKILL 終了を設定して 133 を返す。
 
     // Act
-    int result =
-        cplat_process_run_sync(&options, CPLAT_PROCESS_NO_WAIT,
-                               &exit_code); // [手順] - 即時 timeout を指定して cplat_process_run_sync() を呼び出す。
+    int result = cplat_process_timed_run_sync(
+        &options, CPLAT_NO_WAIT,
+        &exit_code); // [手順] - 即時 timeout を指定して cplat_process_timed_run_sync() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_TIMEOUT,
-              result); // [確認_正常系] - cplat_process_run_sync() の戻り値が CPLAT_ERR_TIMEOUT であること。
+              result); // [確認_正常系] - cplat_process_timed_run_sync() の戻り値が CPLAT_ERR_TIMEOUT であること。
     EXPECT_EQ(
         EXIT_FAILURE,
         exit_code); // [確認_正常系] - exit_code が EXIT_FAILURE であること。(wait timeout 時の終了コードが EXIT_FAILURE のままであることの確認)
+}
+
+// Linux の pidfd_open() と poll() による無期限待機および期限付き待機の各分岐の確認
+TEST(processTest, pidfd_wait_uses_poll_and_handles_timeout_and_errors)
+{
+    // Arrange
+    NiceMock<Mock_unistd> mock_unistd;
+    NiceMock<Mock_poll> mock_poll;
+    NiceMock<Mock_sys_wait> mock_sys_wait;
+    NiceMock<Mock_time> mock_time;
+    cplat_process *ok_process = cplat_internal_process_adopt_native(140); // [状態] - pid 140 の process を用意する。
+    cplat_process *timeout_process = cplat_internal_process_adopt_native(141); // [状態] - pid 141 の process を用意する。
+    cplat_process *err_process = cplat_internal_process_adopt_native(142); // [状態] - pid 142 の process を用意する。
+    cplat_process *busy_process = cplat_internal_process_adopt_native(143); // [状態] - pid 143 の process を用意する。
+    cplat_process *expired_process = cplat_internal_process_adopt_native(144); // [状態] - pid 144 の process を用意する。
+    struct timespec clock_start = {};
+    struct timespec clock_expired = {};
+    int status = 9 << 8;
+    int exit_code = 0;
+    ASSERT_NE(nullptr, ok_process);      // [状態確認] - ok_process が nullptr 以外であること。
+    ASSERT_NE(nullptr, timeout_process); // [状態確認] - timeout_process が nullptr 以外であること。
+    ASSERT_NE(nullptr, err_process);     // [状態確認] - err_process が nullptr 以外であること。
+    ASSERT_NE(nullptr, busy_process);    // [状態確認] - busy_process が nullptr 以外であること。
+    ASSERT_NE(nullptr, expired_process); // [状態確認] - expired_process が nullptr 以外であること。
+    clock_start.tv_sec = 1;
+    clock_expired.tv_sec = 3;
+
+    // Pre-Assert
+    {
+        testing::InSequence seq;
+        EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 140, 0, _, _, _))
+            .WillOnce(Return(90L)); // [Pre-Assert確認_正常系] - pidfd_open が pid 140 に対して 1 回呼び出され、fd 90 を返すこと。
+        EXPECT_CALL(mock_poll, poll(_, _, _, _, 1, -1))
+            .WillOnce(Invoke(
+                [](const char *, const int, const char *, struct pollfd *fds, nfds_t, int)
+                {
+                    EXPECT_EQ(90, fds[0].fd);
+                    EXPECT_EQ(POLLIN, fds[0].events);
+                    fds[0].revents = POLLIN;
+                    return 1;
+                })); // [Pre-Assert確認_正常系] - 無期限待機時に poll() が timeout = -1 で呼び出され、1 を返すこと。
+        EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 140, _, WNOHANG))
+            .WillOnce(DoAll(SetArgPointee<4>(status), Return(static_cast<pid_t>(140))));
+        EXPECT_CALL(mock_unistd, close(_, _, _, 90)).WillOnce(Return(0));
+
+        EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 141, 0, _, _, _)).WillOnce(Return(91L));
+        EXPECT_CALL(mock_time, clock_gettime(_, _, _, CLOCK_MONOTONIC, _))
+            .WillOnce(DoAll(SetArgPointee<4>(clock_start), Return(0)));
+        EXPECT_CALL(mock_time, clock_gettime(_, _, _, CLOCK_MONOTONIC, _))
+            .WillOnce(DoAll(SetArgPointee<4>(clock_start), Return(0)));
+        EXPECT_CALL(mock_poll, poll(_, _, _, _, 1, 500)).WillOnce(Return(0));
+        EXPECT_CALL(mock_unistd, close(_, _, _, 91)).WillOnce(Return(0));
+
+        EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 142, 0, _, _, _)).WillOnce(Return(92L));
+        EXPECT_CALL(mock_poll, poll(_, _, _, _, 1, -1))
+            .WillOnce(Invoke(
+                [](const char *, const int, const char *, struct pollfd *, nfds_t, int)
+                {
+                    errno = EIO;
+                    return -1;
+                }));
+        EXPECT_CALL(mock_unistd, close(_, _, _, 92)).WillOnce(Return(0));
+
+        EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 143, 0, _, _, _)).WillOnce(Return(93L));
+        EXPECT_CALL(mock_poll, poll(_, _, _, _, 1, -1)).WillOnce(Return(1));
+        EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 143, _, WNOHANG)).WillOnce(Return(static_cast<pid_t>(0)));
+        EXPECT_CALL(mock_unistd, close(_, _, _, 93)).WillOnce(Return(0));
+
+        EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 144, 0, _, _, _)).WillOnce(Return(94L));
+        EXPECT_CALL(mock_time, clock_gettime(_, _, _, CLOCK_MONOTONIC, _))
+            .WillOnce(DoAll(SetArgPointee<4>(clock_start), Return(0)));
+        EXPECT_CALL(mock_time, clock_gettime(_, _, _, CLOCK_MONOTONIC, _))
+            .WillOnce(DoAll(SetArgPointee<4>(clock_expired), Return(0)));
+        EXPECT_CALL(mock_unistd, close(_, _, _, 94)).WillOnce(Return(0));
+    }
+
+    // Act
+    int ok_wait = cplat_process_wait(ok_process); // [手順] - pidfd_open() と poll() で終了する無期限待機を行う。
+    int ok_get = cplat_process_get_exit_code(ok_process, &exit_code); // [手順] - 終了コードを取得する。
+    int timeout_wait = cplat_process_timed_wait(timeout_process, 500); // [手順] - poll() が 0 を返す期限付き待機を行う。
+    int err_wait = cplat_process_wait(err_process); // [手順] - poll() が EIO を返す待機を行う。
+    int busy_wait = cplat_process_wait(busy_process); // [手順] - poll() > 0 でも waitpid() が 0 の場合を確認する。
+    int expired_wait = cplat_process_timed_wait(expired_process, 500); // [手順] - poll() 前に期限切れとなる場合を確認する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, ok_wait); // [確認_正常系] - cplat_process_wait() が CPLAT_OK を返すこと。
+    EXPECT_EQ(CPLAT_OK, ok_get); // [確認_正常系] - cplat_process_get_exit_code() が CPLAT_OK を返すこと。
+    EXPECT_EQ(9, exit_code); // [確認_正常系] - exit_code が 9 であること。
+    EXPECT_EQ(CPLAT_ERR_TIMEOUT, timeout_wait); // [確認_正常系] - poll() タイムアウト時に CPLAT_ERR_TIMEOUT が返ること。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, err_wait); // [確認_異常系] - poll() の EIO 失敗時に CPLAT_ERR_UNKNOWN が返ること。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, busy_wait); // [確認_異常系] - waitpid() が CPLAT_ERR_BUSY のときに CPLAT_ERR_UNKNOWN が返ること。
+    EXPECT_EQ(CPLAT_ERR_TIMEOUT, expired_wait); // [確認_正常系] - poll() 前の期限超過で CPLAT_ERR_TIMEOUT が返ること。
+
+    // Cleanup
+    cplat_process_dispose(ok_process);
+    cplat_process_dispose(timeout_process);
+    cplat_process_dispose(err_process);
+    cplat_process_dispose(busy_process);
+    cplat_process_dispose(expired_process);
+}
+
+// Linux の poll() が EINTR で中断された場合に残余時間を再計算して再開することの確認
+TEST(processTest, pidfd_wait_retries_eintr_with_remaining_timeout)
+{
+    // Arrange
+    NiceMock<Mock_unistd> mock_unistd;
+    NiceMock<Mock_poll> mock_poll;
+    NiceMock<Mock_sys_wait> mock_sys_wait;
+    NiceMock<Mock_time> mock_time;
+    cplat_process *process = cplat_internal_process_adopt_native(145); // [状態] - pid 145 の process を用意する。
+    struct timespec t0 = {};
+    struct timespec t1 = {};
+    int clock_calls = 0;
+    int status = 5 << 8;
+    int exit_code = 0;
+    ASSERT_NE(nullptr, process); // [状態確認] - cplat_internal_process_adopt_native() の戻り値が nullptr 以外であること。
+    t0.tv_sec = 10;
+    t1.tv_sec = 10;
+    t1.tv_nsec = 200L * 1000L * 1000L;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 145, 0, _, _, _)).WillOnce(Return(95L));
+    EXPECT_CALL(mock_time, clock_gettime(_, _, _, CLOCK_MONOTONIC, _))
+        .Times(3)
+        .WillRepeatedly(Invoke(
+            [&clock_calls, t0, t1](const char *, const int, const char *, clockid_t, struct timespec *ts)
+            {
+                *ts = (clock_calls++ < 2) ? t0 : t1;
+                return 0;
+            })); // [Pre-Assert確認_正常系] - 開始時、1 回目 poll 前、EINTR 後 poll 前の 3 回時刻を取得すること。
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, 1, 500))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, struct pollfd *, nfds_t, int)
+            {
+                errno = EINTR;
+                return -1;
+            })); // [Pre-Assert確認_正常系] - 1 回目の poll() が timeout = 500 で EINTR を返すこと。
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, 1, 300))
+        .WillOnce(Return(1)); // [Pre-Assert確認_正常系] - 2 回目の poll() が残余時間 300 ms で呼び出されること。
+    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 145, _, WNOHANG))
+        .WillOnce(DoAll(SetArgPointee<4>(status), Return(static_cast<pid_t>(145))));
+    EXPECT_CALL(mock_unistd, close(_, _, _, 95)).WillOnce(Return(0));
+
+    // Act
+    int wait_result = cplat_process_timed_wait(
+        process, 500); // [手順] - poll() の EINTR 再開を経て終了を待機する。
+    int get_result = cplat_process_get_exit_code(process, &exit_code);
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, wait_result); // [確認_正常系] - EINTR 再開後の cplat_process_timed_wait() が CPLAT_OK を返すこと。
+    EXPECT_EQ(CPLAT_OK, get_result); // [確認_正常系] - cplat_process_get_exit_code() が CPLAT_OK を返すこと。
+    EXPECT_EQ(5, exit_code); // [確認_正常系] - exit_code が 5 であること。
+
+    // Cleanup
+    cplat_process_dispose(process);
+}
+
+// Linux の waitpid() が ECHILD を返した場合に CPLAT_OK と CPLAT_ERR_NOT_FOUND になることの確認
+TEST(processTest, wait_maps_echild_to_ok_and_exit_code_not_found)
+{
+    // Arrange
+    NiceMock<Mock_unistd> mock_unistd;
+    NiceMock<Mock_sys_wait> mock_sys_wait;
+    cplat_process *process = cplat_internal_process_adopt_native(146); // [状態] - pid 146 の process を用意する。
+    int exit_code = 123;
+    ASSERT_NE(nullptr, process); // [状態確認] - cplat_internal_process_adopt_native() の戻り値が nullptr 以外であること。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 146, 0, _, _, _))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, long, intptr_t, intptr_t, intptr_t, intptr_t, intptr_t)
+            {
+                errno = ENOSYS;
+                return -1L;
+            }));
+    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 146, _, WNOHANG))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, pid_t, int *, int)
+            {
+                errno = ECHILD;
+                return static_cast<pid_t>(-1);
+            }));
+
+    // Act
+    int wait_result = cplat_process_wait(process); // [手順] - ECHILD を返す状態で cplat_process_wait() を呼び出す。
+    int get_result = cplat_process_get_exit_code(
+        process, &exit_code); // [手順] - ECHILD 後の cplat_process_get_exit_code() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, wait_result); // [確認_正常系] - ECHILD の場合に cplat_process_wait() が CPLAT_OK を返すこと。
+    EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
+              get_result); // [確認_正常系] - 終了コード未取得のため cplat_process_get_exit_code() が CPLAT_ERR_NOT_FOUND を返すこと。
+    EXPECT_EQ(123, exit_code); // [確認_正常系] - *exit_code_out が書き換えられないこと。
+
+    // Cleanup
+    cplat_process_dispose(process);
+}
+
+// SIGCHLD を SIG_IGN にした状態で別の子プロセスが動いていても対象プロセスの終了で戻ることの確認
+TEST(processTest, wait_succeeds_with_sigchld_ignored_and_other_child_running)
+{
+    // Arrange
+    struct sigaction old_action = {};
+    struct SigchldGuard
+    {
+        struct sigaction *old_ptr;
+        ~SigchldGuard()
+        {
+            if (old_ptr != nullptr)
+            {
+                sigaction(SIGCHLD, old_ptr, nullptr);
+            }
+        }
+    } guard = {nullptr};
+
+    struct sigaction ign_action = {};
+    ign_action.sa_handler = SIG_IGN;
+    sigemptyset(&ign_action.sa_mask);
+    ASSERT_EQ(0, sigaction(SIGCHLD, &ign_action, &old_action)); // [状態] - SIGCHLD を SIG_IGN に設定する。
+    guard.old_ptr = &old_action;
+
+    cplat_process *other_child = nullptr;
+    cplat_process *target_child = nullptr;
+    char sleep_cmd[] = "/bin/sleep";
+    char sleep_arg[] = "5";
+    char *sleep_argv[] = {sleep_cmd, sleep_arg, nullptr};
+    char sh_cmd[] = "/bin/sh";
+    char sh_flag[] = "-c";
+    char sh_script[] = "exit 0";
+    char *sh_argv[] = {sh_cmd, sh_flag, sh_script, nullptr};
+    cplat_process_options other_options = {};
+    cplat_process_options target_options = {};
+    int exit_code = 77;
+    other_options.argv = sleep_argv;
+    target_options.argv = sh_argv;
+
+    // Pre-Assert
+
+    // Act
+    ASSERT_EQ(CPLAT_OK, cplat_process_start(&other_options, &other_child)); // [手順] - 長時間動作する別の子プロセスを起動する。
+    ASSERT_EQ(CPLAT_OK, cplat_process_start(&target_options, &target_child)); // [手順] - すぐ終了する対象の子プロセスを起動する。
+    int wait_result = cplat_process_timed_wait(
+        target_child, 2000); // [手順] - 別の子プロセスが動作中に cplat_process_timed_wait() で対象を待機する。
+    int get_result = cplat_process_get_exit_code(
+        target_child, &exit_code); // [手順] - SIG_IGN 環境下で終了コード取得を試みる。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, wait_result); // [確認_正常系] - 別の子プロセス終了を待たずに対象の終了で CPLAT_OK が返ること。
+    EXPECT_EQ(CPLAT_ERR_NOT_FOUND,
+              get_result); // [確認_正常系] - SIG_IGN による自動回収時は CPLAT_ERR_NOT_FOUND が返ること。
+    EXPECT_EQ(77, exit_code); // [確認_正常系] - *exit_code_out が変更されないこと。
+
+    // Cleanup
+    (void)cplat_process_terminate(other_child);
+    (void)cplat_process_timed_wait(other_child, 1000);
+    cplat_process_dispose(target_child);
+    cplat_process_dispose(other_child);
+}
+
+// cplat_process_terminate() が SIGTERM を無視する子プロセスも SIGKILL で終了させることの確認
+TEST(processTest, terminate_kills_child_ignoring_sigterm)
+{
+    // Arrange
+    cplat_process *process = nullptr;
+    char sh_cmd[] = "/bin/sh";
+    char sh_flag[] = "-c";
+    char sh_script[] = "trap '' TERM; while true; do /bin/sleep 1; done";
+    char *argv[] = {sh_cmd, sh_flag, sh_script, nullptr};
+    cplat_process_options options = {};
+    int exit_code = 0;
+    options.argv = argv;
+
+    // Pre-Assert
+
+    // Act
+    ASSERT_EQ(CPLAT_OK, cplat_process_start(&options, &process)); // [手順] - SIGTERM を無視する子プロセスを起動する。
+    int before_kill = cplat_process_timed_wait(process, 50); // [手順] - 自発終了しないことを確認するため 50 ms 待機する。
+    int term_result = cplat_process_terminate(process); // [手順] - cplat_process_terminate() を呼び出す。
+    int wait_result = cplat_process_wait(process); // [手順] - cplat_process_wait() で終了を待機する。
+    int get_result = cplat_process_get_exit_code(process, &exit_code); // [手順] - 終了コードを取得する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_TIMEOUT, before_kill); // [確認_正常系] - SIGKILL 前は時間切れとなること。
+    EXPECT_EQ(CPLAT_OK, term_result); // [確認_正常系] - cplat_process_terminate() が CPLAT_OK を返すこと。
+    EXPECT_EQ(CPLAT_OK, wait_result); // [確認_正常系] - cplat_process_wait() が CPLAT_OK を返すこと。
+    EXPECT_EQ(CPLAT_OK, get_result); // [確認_正常系] - cplat_process_get_exit_code() が CPLAT_OK を返すこと。
+    EXPECT_EQ(-1, exit_code); // [確認_正常系] - シグナル終了のため exit_code が -1 であること。
+
+    // Cleanup
+    cplat_process_dispose(process);
+}
+
+// Linux の cplat_process_timed_run_sync() の実プロセス期限切れ、強制終了失敗、強制終了後タイムアウト経路の確認
+TEST(processTest, timed_run_sync_handles_terminate_failure_and_post_terminate_timeout)
+{
+    // Arrange
+    cplat_process_options real_options = {};
+    char sleep_cmd[] = "/bin/sleep";
+    char sleep_arg[] = "5";
+    char *sleep_argv[] = {sleep_cmd, sleep_arg, nullptr};
+    int real_exit_code = 99;
+    real_options.argv = sleep_argv;
+
+    // Pre-Assert
+
+    // Act
+    int real_timeout_rc = cplat_process_timed_run_sync(
+        &real_options, 20, &real_exit_code); // [手順] - 実行時間が上限を超える実プロセスへ cplat_process_timed_run_sync() を実行する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_TIMEOUT,
+              real_timeout_rc); // [確認_正常系] - 期限切れ時に子プロセスを終了し CPLAT_ERR_TIMEOUT が返ること。
+    EXPECT_EQ(EXIT_FAILURE, real_exit_code); // [確認_正常系] - exit_code が EXIT_FAILURE であること。
+
+    // Arrange
+    NiceMock<Mock_unistd> mock_unistd;
+    NiceMock<Mock_poll> mock_poll;
+    NiceMock<Mock_sys_wait> mock_sys_wait;
+    cplat_process_options options = {};
+    char arg0[] = "/bin/true";
+    char *argv[] = {arg0, nullptr};
+    int exit_code = 99;
+    options.argv = argv;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_unistd, fork(_, _, _))
+        .WillOnce(Return(static_cast<pid_t>(147)))
+        .WillOnce(Return(static_cast<pid_t>(148)));
+    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 147, _, WNOHANG)).WillOnce(Return(static_cast<pid_t>(0)));
+    EXPECT_CALL(mock_unistd, kill(_, _, _, 147, SIGKILL))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, pid_t, int)
+            {
+                errno = EPERM;
+                return -1;
+            }));
+
+    EXPECT_CALL(mock_sys_wait, waitpid(_, _, _, 148, _, WNOHANG)).WillOnce(Return(static_cast<pid_t>(0)));
+    EXPECT_CALL(mock_unistd, kill(_, _, _, 148, SIGKILL)).WillOnce(Return(0));
+    EXPECT_CALL(mock_unistd, syscall(_, _, _, SYS_pidfd_open, 148, 0, _, _, _)).WillOnce(Return(98L));
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, 1, CPLAT_PROCESS_TERMINATE_WAIT_MS)).WillOnce(Return(0));
+    EXPECT_CALL(mock_unistd, close(_, _, _, 98)).WillOnce(Return(0));
+
+    // Act
+    int term_fail_rc = cplat_process_timed_run_sync(
+        &options, CPLAT_NO_WAIT, &exit_code); // [手順] - タイムアウト後の cplat_process_terminate() が失敗する経路を実行する。
+    int post_timeout_rc = cplat_process_timed_run_sync(
+        &options, CPLAT_NO_WAIT, &exit_code); // [手順] - 強制終了後の上限待機も時間切れになる経路を実行する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              term_fail_rc); // [確認_異常系] - cplat_process_terminate() の失敗結果 CPLAT_ERR_UNKNOWN がそのまま返ること。
+    EXPECT_EQ(CPLAT_ERR_TIMEOUT,
+              post_timeout_rc); // [確認_正常系] - 強制終了後待機が期限切れでも CPLAT_ERR_TIMEOUT が返ること。
+    EXPECT_EQ(EXIT_FAILURE, exit_code); // [確認_異常系] - exit_code が EXIT_FAILURE のままであること。
 }
 
     #endif /* PLATFORM_LINUX */

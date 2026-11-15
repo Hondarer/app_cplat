@@ -287,8 +287,6 @@ TEST_F(errorContractTest, last_error_is_isolated_between_threads)
     cplat_thread *not_found_thread = nullptr;
     cplat_thread *invalid_thread = nullptr;
     cplat_error main_error;
-    int join_not_found_result = CPLAT_ERR_UNKNOWN;
-    int join_invalid_result = CPLAT_ERR_UNKNOWN;
 
     (void)cplat_remove("cplat_error_tls_missing_file",
                        nullptr); // [状態] - NOT_FOUND 用のファイルが存在しない状態にする。
@@ -305,15 +303,11 @@ TEST_F(errorContractTest, last_error_is_isolated_between_threads)
         &invalid_case); // [手順] - INVALID_ARGUMENT を記録する関数を指定して cplat_thread_create() を呼び出す。
     if (create_not_found_result == CPLAT_OK)
     {
-        join_not_found_result = cplat_thread_join(
-            not_found_thread,
-            CPLAT_SYNC_WAIT_FOREVER); // [手順] - NOT_FOUND スレッドを指定して cplat_thread_join() を呼び出す。
+        cplat_thread_join(not_found_thread); // [手順] - NOT_FOUND スレッドを指定して cplat_thread_join() を呼び出す。
     }
     if (create_invalid_result == CPLAT_OK)
     {
-        join_invalid_result = cplat_thread_join(
-            invalid_thread,
-            CPLAT_SYNC_WAIT_FOREVER); // [手順] - INVALID_ARGUMENT スレッドを指定して cplat_thread_join() を呼び出す。
+        cplat_thread_join(invalid_thread); // [手順] - INVALID_ARGUMENT スレッドを指定して cplat_thread_join() を呼び出す。
     }
     cplat_error_get_last(&main_error); // [手順] - 子スレッド終了後の状態で cplat_error_get_last() を呼び出す。
 
@@ -324,12 +318,6 @@ TEST_F(errorContractTest, last_error_is_isolated_between_threads)
     EXPECT_EQ(
         CPLAT_OK,
         create_invalid_result); // [確認_正常系] - INVALID_ARGUMENT スレッドを起動した cplat_thread_create() の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(
-        CPLAT_OK,
-        join_not_found_result); // [確認_正常系] - NOT_FOUND スレッドを待機した cplat_thread_join() の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(
-        CPLAT_OK,
-        join_invalid_result); // [確認_正常系] - INVALID_ARGUMENT スレッドを待機した cplat_thread_join() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         1,
         not_found_case

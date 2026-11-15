@@ -326,7 +326,7 @@ TEST_F(stringCatalogFilterSourceTest, busy_lock_skips_take_without_waiting)
                                 _)) // [Pre-Assert確認_正常系] - cplat_local_lock_try_lock() が 1 回呼び出されること。
         .WillOnce(Return(
             CPLAT_ERR_BUSY)); // [Pre-Assert手順] - cplat_local_lock_try_lock() から、取り込みのロックの取得結果として CPLAT_ERR_BUSY を返す。
-    EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, _))
+    EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_))
         .Times(
             0); // [Pre-Assert確認_正常系] - cplat_local_lock_lock() が呼び出されないこと。(取り込みを待たないことの確認)
 

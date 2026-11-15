@@ -166,27 +166,27 @@ static int set_int_option(cplat_socket sock, int level, int optname, int value, 
  *  @param[in]      sock       対象のソケット。
  *  @param[in]      events     待機するイベント。
  *  @param[in]      timeout_ms タイムアウト時間 [ms]。
- *  @param[out]     ready_out  条件が成立した場合に 1、タイムアウトした場合に 0 を格納します。
  *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
  *  @return         共通結果コードを返します。
  */
-static int wait_single(cplat_socket sock, short events, int timeout_ms, int *ready_out, cplat_error *detail_out)
+static int wait_single(cplat_socket sock, short events, int timeout_ms, cplat_error *detail_out)
 {
     WSAPOLLFD poll_fd;
+    int native_timeout;
     int poll_result;
 
-    if ((sock == CPLAT_INVALID_SOCKET) || (ready_out == NULL))
+    if ((sock == CPLAT_INVALID_SOCKET) || (timeout_ms < 0))
     {
         return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
     }
 
-    *ready_out = 0;
+    native_timeout = (timeout_ms == CPLAT_WAIT_FOREVER) ? -1 : timeout_ms;
 
     poll_fd.fd = (SOCKET)sock;
     poll_fd.events = events;
     poll_fd.revents = 0;
 
-    poll_result = WSAPoll(&poll_fd, (ULONG)1, timeout_ms);
+    poll_result = WSAPoll(&poll_fd, (ULONG)1, native_timeout);
     if (poll_result == SOCKET_ERROR)
     {
         return report_last_winsock_error(detail_out);
@@ -199,10 +199,10 @@ static int wait_single(cplat_socket sock, short events, int timeout_ms, int *rea
      */
     if ((poll_result > 0) && ((poll_fd.revents & (events | POLLERR | POLLHUP | POLLNVAL)) != 0))
     {
-        *ready_out = 1;
+        return cplat_internal_error_report_success(detail_out);
     }
 
-    return cplat_internal_error_report_success(detail_out);
+    return cplat_internal_error_report_winsock_error_as(detail_out, (unsigned long)WSAETIMEDOUT, CPLAT_ERR_TIMEOUT);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -744,29 +744,52 @@ int cplat_socket_recv_all(const cplat_socket sock, void *buf, const size_t len, 
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_socket_wait_readable(const cplat_socket sock, const int timeout_ms, int *ready_out, cplat_error *detail_out)
+int cplat_socket_wait_readable(const cplat_socket sock, cplat_error *detail_out)
 {
-    return wait_single(sock, (short)POLLRDNORM, timeout_ms, ready_out, detail_out);
+    return wait_single(sock, (short)POLLRDNORM, CPLAT_WAIT_FOREVER, detail_out);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_socket_wait_writable(const cplat_socket sock, const int timeout_ms, int *ready_out, cplat_error *detail_out)
+int cplat_socket_timed_wait_readable(const cplat_socket sock, const int timeout_ms, cplat_error *detail_out)
 {
-    return wait_single(sock, (short)POLLWRNORM, timeout_ms, ready_out, detail_out);
+    return wait_single(sock, (short)POLLRDNORM, timeout_ms, detail_out);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_socket_wait_readable_multi(const cplat_socket *socks, const size_t count, const int timeout_ms,
-                                     unsigned char *ready_out, cplat_error *detail_out)
+int cplat_socket_wait_writable(const cplat_socket sock, cplat_error *detail_out)
+{
+    return wait_single(sock, (short)POLLWRNORM, CPLAT_WAIT_FOREVER, detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_timed_wait_writable(const cplat_socket sock, const int timeout_ms, cplat_error *detail_out)
+{
+    return wait_single(sock, (short)POLLWRNORM, timeout_ms, detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_wait_readable_multi(const cplat_socket *socks, const size_t count, unsigned char *ready_out,
+                                     cplat_error *detail_out)
+{
+    return cplat_socket_timed_wait_readable_multi(socks, count, CPLAT_WAIT_FOREVER, ready_out, detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_timed_wait_readable_multi(const cplat_socket *socks, const size_t count, const int timeout_ms,
+                                           unsigned char *ready_out, cplat_error *detail_out)
 {
     WSAPOLLFD poll_fds[CPLAT_SOCKET_WAIT_MAX];
     size_t valid_count = 0U;
     size_t index;
+    int native_timeout;
     int poll_result;
 
-    if ((socks == NULL) || (ready_out == NULL) || (count == 0U) || (count > CPLAT_SOCKET_WAIT_MAX))
+    if ((socks == NULL) || (ready_out == NULL) || (count == 0U) || (count > CPLAT_SOCKET_WAIT_MAX) || (timeout_ms < 0))
     {
         return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
     }
@@ -787,6 +810,11 @@ int cplat_socket_wait_readable_multi(const cplat_socket *socks, const size_t cou
 
     if (valid_count == 0U)
     {
+        if (timeout_ms == CPLAT_WAIT_FOREVER)
+        {
+            return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+        }
+
         /*
          * 有効なソケットがない場合も timeout_ms だけ待つ。即座に返すと呼び出し側の
          * ポーリング ループが待機なしで回り続けるためである。
@@ -796,13 +824,20 @@ int cplat_socket_wait_readable_multi(const cplat_socket *socks, const size_t cou
             cplat_sleep_ms(timeout_ms);
         }
 
-        return cplat_internal_error_report_success(detail_out);
+        return cplat_internal_error_report_winsock_error_as(detail_out, (unsigned long)WSAETIMEDOUT, CPLAT_ERR_TIMEOUT);
     }
 
-    poll_result = WSAPoll(poll_fds, (ULONG)valid_count, timeout_ms);
+    native_timeout = (timeout_ms == CPLAT_WAIT_FOREVER) ? -1 : timeout_ms;
+
+    poll_result = WSAPoll(poll_fds, (ULONG)valid_count, native_timeout);
     if (poll_result == SOCKET_ERROR)
     {
         return report_last_winsock_error(detail_out);
+    }
+
+    if (poll_result == 0)
+    {
+        return cplat_internal_error_report_winsock_error_as(detail_out, (unsigned long)WSAETIMEDOUT, CPLAT_ERR_TIMEOUT);
     }
 
     valid_count = 0U;

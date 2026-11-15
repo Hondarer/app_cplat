@@ -132,38 +132,6 @@ TEST_F(stringCatalogFilterSlotTest, create_returns_lock_create_result)
 }
 // [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]
 
-// 判定のための読み書きロックを取得できない場合、結果コードを返し、文字列を組み立てないことの確認
-// [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
-TEST_F(stringCatalogFilterSlotTest, vformat_returns_lock_result_without_formatting)
-{
-    // Arrange
-    int actual_ret;
-    int actual_matched = 1;
-    ASSERT_EQ(CPLAT_OK,
-              cplat_string_catalog_filter_slot_create(filter_test_catalog(), nullptr, 0U, nullptr, kLineCapacity,
-                                                      kLineWidth, &slot)); // [状態] - スロットを作成する。
-    // [状態確認] - cplat_string_catalog_filter_slot_create() の戻り値が CPLAT_OK であること。
-    ASSERT_EQ(CPLAT_OK, cplat_strcpy(dest, sizeof(dest), "previous")); // [状態] - 格納先へ以前の内容を書き込む。
-    // [状態確認] - cplat_strcpy() の戻り値が CPLAT_OK であること。
-
-    // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_, _))
-        .WillOnce(Return(
-            CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_正常系] - cplat_local_rwlock_lock_shared() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_local_rwlock_lock_shared() から、共有ロックの取得結果として CPLAT_ERR_UNKNOWN を返す。
-
-    // Act
-    actual_ret = call_slot_vformat(slot, dest, sizeof(dest), &actual_matched, FILTER_TEST_CATALOG_KEY_NUMBER,
-                                   (int32_t)7); // [手順] - call_slot_vformat() を呼び出す。
-
-    // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret);        // [確認_異常系] - call_slot_vformat() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(0, actual_matched); // [確認_異常系] - actual_matched が 0 であること。
-    EXPECT_STREQ("", dest);       // [確認_異常系] - dest が "" であること。
-}
-// [サブ手順参照 名前=stringCatalogFilterSlotTest.TearDown]
-
 // 判定のための読み書きロックを取得できた場合、文字列を組み立てることの確認
 // [サブ手順参照 名前=stringCatalogFilterSlotTest.SetUp]
 TEST_F(stringCatalogFilterSlotTest, vformat_formats_when_lock_succeeds)
@@ -177,7 +145,7 @@ TEST_F(stringCatalogFilterSlotTest, vformat_formats_when_lock_succeeds)
     // [状態確認] - cplat_string_catalog_filter_slot_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_, _))
+    EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_))
         .Times(1); // [Pre-Assert確認_正常系] - cplat_local_rwlock_lock_shared() が 1 回呼び出されること。
 
     // Act
@@ -207,7 +175,7 @@ TEST_F(stringCatalogFilterSlotTest, vformat_skips_lock_for_missing_key)
     // [状態確認] - cplat_string_catalog_filter_slot_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_, _))
+    EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_))
         .Times(0); // [Pre-Assert確認_異常系] - cplat_local_rwlock_lock_shared() が呼び出されないこと。
 
     // Act
@@ -426,7 +394,7 @@ TEST_F(stringCatalogFilterSlotTest, vformat_rejects_null_dest)
     // [状態確認] - cplat_string_catalog_filter_slot_create() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_, _))
+    EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_))
         .Times(0); // [Pre-Assert確認_異常系] - cplat_local_rwlock_lock_shared() が呼び出されないこと。
 
     // Act

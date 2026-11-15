@@ -16,7 +16,8 @@
  *  Table: プラットフォーム別のソケット API
  *
  *  Winsock の初期化と終了は本モジュールの内部で行うため、利用側は初期化順序を
- *  意識せずに任意のタイミングで API を呼び出せます。
+ *  意識せずに任意のタイミングで API を呼び出せます。\n
+ *  待機を伴う API の設計原則は @ref sync.h を参照してください。
  *
  *  @copyright      Copyright (C) Tetsuo Honda. 2026. All rights reserved.
  *
@@ -35,22 +36,17 @@
 
 #include <cplat/base/error.h>
 #include <cplat/base/result.h>
+#include <cplat/base/wait.h>
 #include <cplat/cplat_export.h>
 #include <cplat/net/endpoint.h>
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 
-/** タイムアウトなしで待機することを表すタイムアウト値。 */
-#define CPLAT_SOCKET_WAIT_FOREVER (-1)
-
-/** 即時リターンすることを表すタイムアウト値。 */
-#define CPLAT_SOCKET_NO_WAIT 0
-
 /** @ref cplat_socket_listen へ既定の待ち受けキュー長を指定する値。 */
 #define CPLAT_SOCKET_BACKLOG_DEFAULT 0
 
-/** @ref cplat_socket_wait_readable_multi へ一度に指定できるソケットの最大数。 */
+/** @ref cplat_socket_wait_readable_multi および @ref cplat_socket_timed_wait_readable_multi へ一度に指定できるソケットの最大数。 */
 #define CPLAT_SOCKET_WAIT_MAX 16U
 
 /** 1 回の送受信で扱えるバイト数の上限。 */
@@ -188,7 +184,7 @@ extern "C"
      *  @ref CPLAT_ERR_IN_PROGRESS になります。@p detail_out にはプラットフォームの
      *  詳細エラーを保持しますが、要因は Linux の `EINPROGRESS` と Windows の
      *  `WSAEWOULDBLOCK`、`WSAEINPROGRESS`、`WSAEALREADY` で異なる場合があります。\n
-     *  この場合は @ref cplat_socket_wait_writable で完了を待ち、
+     *  この場合は @ref cplat_socket_wait_writable または @ref cplat_socket_timed_wait_writable で完了を待ち、
      *  @ref cplat_socket_get_pending_error で結果を確認します。
      *
      *  ブロッキング モードの接続がシグナルで中断された場合は、本関数が完了を待って
@@ -427,15 +423,29 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_socket_recv_all(cplat_socket sock, void *buf, size_t len, cplat_error *detail_out);
 
     /**
-     *  @brief          ソケットが受信可能になるまで待機します。
+     *  @brief          ソケットが受信可能になるまで無期限に待機します。
+     *  @param[in]      sock       対象のソケット。
+     *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
+     *  @return         受信可能になった場合は @ref CPLAT_OK 、
+     *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *
+     *  待機がシグナルで中断された場合は、待機を継続します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_socket_wait_readable(cplat_socket sock, cplat_error *detail_out);
+
+    /**
+     *  @brief          ソケットが受信可能になるまで指定期限内で待機します。
      *  @param[in]      sock       対象のソケット。
      *  @param[in]      timeout_ms タイムアウト時間 [ms]。
-     *                             @ref CPLAT_SOCKET_WAIT_FOREVER または
-     *                             @ref CPLAT_SOCKET_NO_WAIT も指定できます。
-     *  @param[out]     ready_out  受信可能な場合に 1、タイムアウトした場合に 0 を格納します。
+     *                             @ref CPLAT_WAIT_FOREVER または @ref CPLAT_NO_WAIT も指定できます。
+     *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
-     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         受信可能になった場合は @ref CPLAT_OK 、タイムアウトした場合は @ref CPLAT_ERR_TIMEOUT
+     *                  (@p detail_out には Linux では @c ETIMEDOUT 、Windows では @c WSAETIMEDOUT を格納) 、
+     *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  待機がシグナルで中断された場合は、残り時間を再計算して待機を継続します。\n
      *  @p timeout_ms より早く復帰しないため、シグナルの配信によってタイムアウトの
@@ -444,19 +454,33 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_wait_readable(cplat_socket sock, int timeout_ms, int *ready_out,
-                                                          cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_timed_wait_readable(cplat_socket sock, int timeout_ms,
+                                                                cplat_error *detail_out);
 
     /**
-     *  @brief          ソケットが送信可能になるまで待機します。
+     *  @brief          ソケットが送信可能になるまで無期限に待機します。
+     *  @param[in]      sock       対象のソケット。
+     *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
+     *  @return         送信可能になった場合は @ref CPLAT_OK 、
+     *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *
+     *  待機がシグナルで中断された場合は、待機を継続します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_socket_wait_writable(cplat_socket sock, cplat_error *detail_out);
+
+    /**
+     *  @brief          ソケットが送信可能になるまで指定期限内で待機します。
      *  @param[in]      sock       対象のソケット。
      *  @param[in]      timeout_ms タイムアウト時間 [ms]。
-     *                             @ref CPLAT_SOCKET_WAIT_FOREVER または
-     *                             @ref CPLAT_SOCKET_NO_WAIT も指定できます。
-     *  @param[out]     ready_out  送信可能な場合に 1、タイムアウトした場合に 0 を格納します。
+     *                             @ref CPLAT_WAIT_FOREVER または @ref CPLAT_NO_WAIT も指定できます。
+     *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
-     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         送信可能になった場合は @ref CPLAT_OK 、タイムアウトした場合は @ref CPLAT_ERR_TIMEOUT
+     *                  (@p detail_out には Linux では @c ETIMEDOUT 、Windows では @c WSAETIMEDOUT を格納) 、
+     *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  待機がシグナルで中断された場合は、残り時間を再計算して待機を継続します。\n
      *  @p timeout_ms より早く復帰しないため、シグナルの配信によってタイムアウトの
@@ -465,32 +489,56 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_wait_writable(cplat_socket sock, int timeout_ms, int *ready_out,
-                                                          cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_timed_wait_writable(cplat_socket sock, int timeout_ms,
+                                                                cplat_error *detail_out);
 
     /**
-     *  @brief          複数のソケットのいずれかが受信可能になるまで待機します。
-     *  @param[in]      socks      対象のソケットの配列。@ref CPLAT_INVALID_SOCKET を含めても構いません。
+     *  @brief          複数のソケットのいずれかが受信可能になるまで無期限に待機します。
+     *  @param[in]      socks      対象のソケットの配列。@ref CPLAT_INVALID_SOCKET を含めても構いませんが、
+     *                             有効なソケットが 1 つもない場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @param[in]      count      @p socks の要素数。1 以上 @ref CPLAT_SOCKET_WAIT_MAX 以下を指定します。
-     *  @param[in]      timeout_ms タイムアウト時間 [ms]。
-     *                             @ref CPLAT_SOCKET_WAIT_FOREVER または
-     *                             @ref CPLAT_SOCKET_NO_WAIT も指定できます。
      *  @param[out]     ready_out  各ソケットが受信可能かどうかを格納する配列。
      *                             @p count 以上の要素数が必要です。
      *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
-     *  @p socks の全要素が @ref CPLAT_INVALID_SOCKET の場合、@p timeout_ms だけ待機してから
-     *  @ref CPLAT_OK を返します。呼び出し側のポーリング ループが待機なしで回り続けることを
-     *  避けるためです。\n
+     *  待機がシグナルで中断された場合は、待機を継続します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_socket_wait_readable_multi(const cplat_socket *socks, size_t count,
+                                                                unsigned char *ready_out, cplat_error *detail_out);
+
+    /**
+     *  @brief          複数のソケットのいずれかが受信可能になるまで指定期限内で待機します。
+     *  @param[in]      socks      対象のソケットの配列。@ref CPLAT_INVALID_SOCKET を含めても構いません。
+     *  @param[in]      count      @p socks の要素数。1 以上 @ref CPLAT_SOCKET_WAIT_MAX 以下を指定します。
+     *  @param[in]      timeout_ms タイムアウト時間 [ms]。
+     *                             @ref CPLAT_WAIT_FOREVER または @ref CPLAT_NO_WAIT も指定できます。
+     *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @param[out]     ready_out  各ソケットが受信可能かどうかを格納する配列。
+     *                             @p count 以上の要素数が必要です。
+     *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *
+     *  @p socks の全要素が @ref CPLAT_INVALID_SOCKET の場合、@p timeout_ms が @ref CPLAT_WAIT_FOREVER
+     *  であれば @ref CPLAT_ERR_INVALID_ARGUMENT を返し、有限の待ち時間であれば @p timeout_ms だけ
+     *  待機してから @ref CPLAT_ERR_TIMEOUT を返します (@p ready_out はすべて 0、@p detail_out には
+     *  Linux では @c ETIMEDOUT 、Windows では @c WSAETIMEDOUT を格納)。
+     *  呼び出し側のポーリング ループが待機なしで回り続けることを避けるためです。\n
+     *  期限内にいずれも受信可能にならなかった場合も、@p ready_out をすべて 0 にして
+     *  @ref CPLAT_ERR_TIMEOUT を返します。\n
      *  待機がシグナルで中断された場合は、残り時間を再計算して待機を継続します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_wait_readable_multi(const cplat_socket *socks, size_t count, int timeout_ms,
-                                                                unsigned char *ready_out, cplat_error *detail_out);
+    CPLAT_EXPORT int CPLAT_API cplat_socket_timed_wait_readable_multi(const cplat_socket *socks, size_t count,
+                                                                      int timeout_ms, unsigned char *ready_out,
+                                                                      cplat_error *detail_out);
 
     /**
      *  @brief          ソケットの受信方向を停止します。

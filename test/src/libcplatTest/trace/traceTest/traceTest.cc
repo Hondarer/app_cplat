@@ -180,9 +180,11 @@ TEST_F(traceTest, caller_managed_mode_does_not_use_handle_rwlock)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_create(_)).Times(0);
     // [Pre-Assert確認_正常系] - cplat_local_rwlock_create() が呼び出されないこと。
-    EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_, _)).Times(0);
+    EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_)).Times(0);
     // [Pre-Assert確認_正常系] - cplat_local_rwlock_lock_shared() が呼び出されないこと。
-    EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_exclusive(_, _)).Times(0);
+    EXPECT_CALL(mock_cplat, cplat_local_rwlock_timed_lock_shared(_, _)).Times(0);
+    // [Pre-Assert確認_正常系] - cplat_local_rwlock_timed_lock_shared() が呼び出されないこと。
+    EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_exclusive(_)).Times(0);
     // [Pre-Assert確認_正常系] - cplat_local_rwlock_lock_exclusive() が呼び出されないこと。
     EXPECT_CALL(mock_cplat, cplat_local_rwlock_unlock_shared(_)).Times(0);
     // [Pre-Assert確認_正常系] - cplat_local_rwlock_unlock_shared() が呼び出されないこと。

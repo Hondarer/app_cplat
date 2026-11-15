@@ -170,10 +170,7 @@ static int registry_lock(void)
         return -1;
     }
 
-    if (cplat_local_lock_lock(s_registry_lock, CPLAT_SYNC_WAIT_FOREVER) != CPLAT_OK)
-    {
-        return -1;
-    }
+    cplat_local_lock_lock(s_registry_lock);
 
     return 0;
 }
@@ -183,8 +180,7 @@ static int registry_lock(void)
  */
 static void registry_unlock(void)
 {
-    /* 呼び出し元は registry_lock() の成功後にだけ本関数を呼ぶため、保持中のロックの解放は失敗しない。 */
-    (void)cplat_local_lock_unlock(s_registry_lock);
+    cplat_local_lock_unlock(s_registry_lock);
 }
 
 /**
@@ -521,14 +517,14 @@ static const char *get_process_basename(char *buf, const size_t buf_size)
  *  @brief          設定の排他ロック (書き込みロック) を取得します。
  *  @param[in]      handle  ロック対象のトレース プロバイダー ハンドル。
  */
-static int config_lock_exclusive(cplat_tracer *handle)
+static void config_lock_exclusive(cplat_tracer *handle)
 {
     if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED)
     {
-        return CPLAT_OK;
+        return;
     }
 
-    return cplat_local_rwlock_lock_exclusive(handle->config_rwlock, CPLAT_SYNC_WAIT_FOREVER);
+    cplat_local_rwlock_lock_exclusive(handle->config_rwlock);
 }
 
 /**
@@ -539,11 +535,7 @@ static void config_unlock_exclusive(cplat_tracer *handle)
 {
     if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
     {
-        /*
-         * 呼び出し元は設定の排他ロックの取得に成功した後にだけ本関数を呼ぶため、
-         * 保持中のロックの解放は失敗しない。
-         */
-        (void)cplat_local_rwlock_unlock_exclusive(handle->config_rwlock);
+        cplat_local_rwlock_unlock_exclusive(handle->config_rwlock);
     }
 }
 
@@ -561,7 +553,7 @@ static int config_lock_shared_timed(cplat_tracer *handle)
         return 0;
     }
 
-    if (cplat_local_rwlock_lock_shared(handle->config_rwlock, LOCK_TIMEOUT_MS) == CPLAT_OK)
+    if (cplat_local_rwlock_timed_lock_shared(handle->config_rwlock, LOCK_TIMEOUT_MS) == CPLAT_OK)
     {
         return 0;
     }
@@ -579,11 +571,7 @@ static void config_unlock_shared(cplat_tracer *handle)
 {
     if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
     {
-        /*
-         * 呼び出し元は設定の共有ロックの取得に成功した後にだけ本関数を呼ぶため、
-         * 保持中のロックの解放は失敗しない。
-         */
-        (void)cplat_local_rwlock_unlock_shared(handle->config_rwlock);
+        cplat_local_rwlock_unlock_shared(handle->config_rwlock);
     }
 }
 
@@ -659,10 +647,7 @@ static int tracer_enter_exclusive(cplat_tracer *handle)
         return -1;
     }
 
-    if (config_lock_exclusive(handle) != CPLAT_OK)
-    {
-        return -1;
-    }
+    config_lock_exclusive(handle);
 
     if (handle->lifecycle_state != TRACE_HANDLE_ACTIVE)
     {
@@ -949,10 +934,7 @@ static cplat_trace_file_sink *open_file_sink_with(const cplat_tracer *handle, co
  */
 static int stop_handle_for_cleanup(cplat_tracer *handle)
 {
-    if (config_lock_exclusive(handle) != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
+    config_lock_exclusive(handle);
 
     if (!handle->running)
     {

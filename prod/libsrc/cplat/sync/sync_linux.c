@@ -311,7 +311,7 @@ static int take_lock_file(const int fd, const int operation, const int timeout_m
      * flock() は待機中にシグナルを受けると EINTR で失敗するため、取得できるまで呼び直す。
      * see: https://man7.org/linux/man-pages/man2/flock.2.html
      */
-    if (timeout_ms == CPLAT_SYNC_WAIT_FOREVER)
+    if (timeout_ms == CPLAT_WAIT_FOREVER)
     {
         while (flock(fd, operation) != 0)
         {
@@ -348,7 +348,7 @@ static int take_lock_file(const int fd, const int operation, const int timeout_m
             return CPLAT_ERR_UNKNOWN;
         }
 
-        if (timeout_ms == CPLAT_SYNC_NO_WAIT)
+        if (timeout_ms == CPLAT_NO_WAIT)
         {
             return CPLAT_ERR_BUSY;
         }
@@ -429,27 +429,42 @@ int cplat_local_lock_create(cplat_local_lock **mtx)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_local_lock_lock(cplat_local_lock *mtx, int timeout_ms)
+void cplat_local_lock_lock(cplat_local_lock *mtx)
+{
+    if (mtx == NULL)
+    {
+        return;
+    }
+
+    /*
+     * pthread_mutex_lock() は取得できるまで戻り値 0 以外を返さないため、
+     * 失敗は呼び出し規約違反または内部状態の破損を表す。
+     * see: https://man7.org/linux/man-pages/man3/pthread_mutex_lock.3p.html
+     */
+    if (pthread_mutex_lock(&mtx->native) != 0)
+    {
+        CPLAT_ABORT("local lock を取得できません");
+    }
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_local_lock_timed_lock(cplat_local_lock *mtx, int timeout_ms)
 {
     uint64_t deadline;
     uint64_t now;
 
-    if (mtx == NULL)
+    if (mtx == NULL || timeout_ms < 0)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    if (timeout_ms < 0)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (timeout_ms == CPLAT_SYNC_WAIT_FOREVER)
+    if (timeout_ms == CPLAT_WAIT_FOREVER)
     {
         return map_wait_rc(pthread_mutex_lock(&mtx->native));
     }
 
-    if (timeout_ms == CPLAT_SYNC_NO_WAIT)
+    if (timeout_ms == CPLAT_NO_WAIT)
     {
         return map_wait_rc(pthread_mutex_trylock(&mtx->native));
     }
@@ -498,23 +513,26 @@ int cplat_local_lock_lock(cplat_local_lock *mtx, int timeout_ms)
 
 int cplat_local_lock_try_lock(cplat_local_lock *mtx)
 {
-    return cplat_local_lock_lock(mtx, CPLAT_SYNC_NO_WAIT);
+    return cplat_local_lock_timed_lock(mtx, CPLAT_NO_WAIT);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_local_lock_unlock(cplat_local_lock *mtx)
+void cplat_local_lock_unlock(cplat_local_lock *mtx)
 {
     if (mtx == NULL)
     {
-        return CPLAT_ERR_INVALID_ARGUMENT;
+        return;
     }
 
     /*
      * POSIX は、呼び出しスレッドが所有する mutex の解放にエラーを定義していない。
      * see: https://man7.org/linux/man-pages/man3/pthread_mutex_lock.3p.html
      */
-    return map_wait_rc(pthread_mutex_unlock(&mtx->native));
+    if (pthread_mutex_unlock(&mtx->native) != 0)
+    {
+        CPLAT_ABORT("local lock を解放できません");
+    }
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -558,7 +576,26 @@ int cplat_condvar_create(cplat_condvar **cv)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_condvar_wait(cplat_condvar *cv, cplat_local_lock *mtx, int timeout_ms)
+void cplat_condvar_wait(cplat_condvar *cv, cplat_local_lock *mtx)
+{
+    if (cv == NULL || mtx == NULL)
+    {
+        return;
+    }
+
+    /*
+     * 呼び出し元の mutex が保持されていないなど、待機条件を満たせない場合のみエラーになる。
+     * see: https://man7.org/linux/man-pages/man3/pthread_cond_wait.3p.html
+     */
+    if (pthread_cond_wait(&cv->native, &mtx->native) != 0)
+    {
+        CPLAT_ABORT("条件変数を待機できません");
+    }
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_condvar_timed_wait(cplat_condvar *cv, cplat_local_lock *mtx, int timeout_ms)
 {
     struct timespec abs_ts;
 
@@ -567,7 +604,7 @@ int cplat_condvar_wait(cplat_condvar *cv, cplat_local_lock *mtx, int timeout_ms)
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    if (timeout_ms == CPLAT_SYNC_WAIT_FOREVER)
+    if (timeout_ms == CPLAT_WAIT_FOREVER)
     {
         return map_wait_rc(pthread_cond_wait(&cv->native, &mtx->native));
     }
@@ -582,26 +619,32 @@ int cplat_condvar_wait(cplat_condvar *cv, cplat_local_lock *mtx, int timeout_ms)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_condvar_signal(cplat_condvar *cv)
+void cplat_condvar_signal(cplat_condvar *cv)
 {
     if (cv == NULL)
     {
-        return CPLAT_ERR_INVALID_ARGUMENT;
+        return;
     }
 
-    return map_wait_rc(pthread_cond_signal(&cv->native));
+    if (pthread_cond_signal(&cv->native) != 0)
+    {
+        CPLAT_ABORT("条件変数を通知できません");
+    }
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_condvar_broadcast(cplat_condvar *cv)
+void cplat_condvar_broadcast(cplat_condvar *cv)
 {
     if (cv == NULL)
     {
-        return CPLAT_ERR_INVALID_ARGUMENT;
+        return;
     }
 
-    return map_wait_rc(pthread_cond_broadcast(&cv->native));
+    if (pthread_cond_broadcast(&cv->native) != 0)
+    {
+        CPLAT_ABORT("条件変数を一斉通知できません");
+    }
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -649,7 +692,7 @@ int cplat_local_rwlock_create(cplat_local_rwlock **rwlock)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_local_rwlock_lock_shared(cplat_local_rwlock *rwlock, int timeout_ms)
+static int local_rwlock_take_shared(cplat_local_rwlock *rwlock, int timeout_ms)
 {
     struct timespec abs_ts;
     int rc = 0;
@@ -659,7 +702,7 @@ int cplat_local_rwlock_lock_shared(cplat_local_rwlock *rwlock, int timeout_ms)
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    if (timeout_ms != CPLAT_SYNC_WAIT_FOREVER)
+    if (timeout_ms != CPLAT_WAIT_FOREVER)
     {
         if (monotonic_deadline(&abs_ts, timeout_ms) != CPLAT_OK)
         {
@@ -675,13 +718,13 @@ int cplat_local_rwlock_lock_shared(cplat_local_rwlock *rwlock, int timeout_ms)
      */
     while (rwlock->writer_active || rwlock->waiting_writers > 0)
     {
-        if (timeout_ms == CPLAT_SYNC_NO_WAIT)
+        if (timeout_ms == CPLAT_NO_WAIT)
         {
             rwlock_state_unlock(rwlock);
             return CPLAT_ERR_BUSY;
         }
 
-        if (timeout_ms == CPLAT_SYNC_WAIT_FOREVER)
+        if (timeout_ms == CPLAT_WAIT_FOREVER)
         {
             rc = pthread_cond_wait(&rwlock->readers_cv, &rwlock->mutex);
         }
@@ -709,16 +752,7 @@ int cplat_local_rwlock_lock_shared(cplat_local_rwlock *rwlock, int timeout_ms)
     return CPLAT_OK;
 }
 
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_local_rwlock_try_lock_shared(cplat_local_rwlock *rwlock)
-{
-    return cplat_local_rwlock_lock_shared(rwlock, CPLAT_SYNC_NO_WAIT);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_local_rwlock_lock_exclusive(cplat_local_rwlock *rwlock, int timeout_ms)
+static int local_rwlock_take_exclusive(cplat_local_rwlock *rwlock, int timeout_ms)
 {
     struct timespec abs_ts;
     int rc = 0;
@@ -728,7 +762,7 @@ int cplat_local_rwlock_lock_exclusive(cplat_local_rwlock *rwlock, int timeout_ms
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    if (timeout_ms != CPLAT_SYNC_WAIT_FOREVER)
+    if (timeout_ms != CPLAT_WAIT_FOREVER)
     {
         if (monotonic_deadline(&abs_ts, timeout_ms) != CPLAT_OK)
         {
@@ -746,14 +780,14 @@ int cplat_local_rwlock_lock_exclusive(cplat_local_rwlock *rwlock, int timeout_ms
 
     while (rwlock->writer_active || rwlock->active_readers > 0)
     {
-        if (timeout_ms == CPLAT_SYNC_NO_WAIT)
+        if (timeout_ms == CPLAT_NO_WAIT)
         {
             rwlock->waiting_writers--;
             rwlock_state_unlock(rwlock);
             return CPLAT_ERR_BUSY;
         }
 
-        if (timeout_ms == CPLAT_SYNC_WAIT_FOREVER)
+        if (timeout_ms == CPLAT_WAIT_FOREVER)
         {
             rc = pthread_cond_wait(&rwlock->writers_cv, &rwlock->mutex);
         }
@@ -786,18 +820,69 @@ int cplat_local_rwlock_lock_exclusive(cplat_local_rwlock *rwlock, int timeout_ms
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_local_rwlock_try_lock_exclusive(cplat_local_rwlock *rwlock)
+void cplat_local_rwlock_lock_shared(cplat_local_rwlock *rwlock)
 {
-    return cplat_local_rwlock_lock_exclusive(rwlock, CPLAT_SYNC_NO_WAIT);
+    if (rwlock == NULL)
+    {
+        return;
+    }
+
+    if (local_rwlock_take_shared(rwlock, CPLAT_WAIT_FOREVER) != CPLAT_OK)
+    {
+        CPLAT_ABORT("local rwlock の共有ロックを取得できません");
+    }
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_local_rwlock_unlock_shared(cplat_local_rwlock *rwlock)
+int cplat_local_rwlock_timed_lock_shared(cplat_local_rwlock *rwlock, int timeout_ms)
+{
+    return local_rwlock_take_shared(rwlock, timeout_ms);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_local_rwlock_try_lock_shared(cplat_local_rwlock *rwlock)
+{
+    return cplat_local_rwlock_timed_lock_shared(rwlock, CPLAT_NO_WAIT);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_local_rwlock_lock_exclusive(cplat_local_rwlock *rwlock)
 {
     if (rwlock == NULL)
     {
-        return CPLAT_ERR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (local_rwlock_take_exclusive(rwlock, CPLAT_WAIT_FOREVER) != CPLAT_OK)
+    {
+        CPLAT_ABORT("local rwlock の排他ロックを取得できません");
+    }
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_local_rwlock_timed_lock_exclusive(cplat_local_rwlock *rwlock, int timeout_ms)
+{
+    return local_rwlock_take_exclusive(rwlock, timeout_ms);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_local_rwlock_try_lock_exclusive(cplat_local_rwlock *rwlock)
+{
+    return cplat_local_rwlock_timed_lock_exclusive(rwlock, CPLAT_NO_WAIT);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_local_rwlock_unlock_shared(cplat_local_rwlock *rwlock)
+{
+    if (rwlock == NULL)
+    {
+        return;
     }
 
     rwlock_state_lock(rwlock);
@@ -805,7 +890,7 @@ int cplat_local_rwlock_unlock_shared(cplat_local_rwlock *rwlock)
     if (rwlock->active_readers == 0)
     {
         rwlock_state_unlock(rwlock);
-        return CPLAT_ERR_INVALID_ARGUMENT;
+        CPLAT_ABORT("保持していない共有ロックを解放できません");
     }
 
     rwlock->active_readers--;
@@ -817,17 +902,15 @@ int cplat_local_rwlock_unlock_shared(cplat_local_rwlock *rwlock)
     }
 
     rwlock_state_unlock(rwlock);
-
-    return CPLAT_OK;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_local_rwlock_unlock_exclusive(cplat_local_rwlock *rwlock)
+void cplat_local_rwlock_unlock_exclusive(cplat_local_rwlock *rwlock)
 {
     if (rwlock == NULL)
     {
-        return CPLAT_ERR_INVALID_ARGUMENT;
+        return;
     }
 
     rwlock_state_lock(rwlock);
@@ -835,7 +918,7 @@ int cplat_local_rwlock_unlock_exclusive(cplat_local_rwlock *rwlock)
     if (!rwlock->writer_active)
     {
         rwlock_state_unlock(rwlock);
-        return CPLAT_ERR_INVALID_ARGUMENT;
+        CPLAT_ABORT("保持していない排他ロックを解放できません");
     }
 
     rwlock->writer_active = 0;
@@ -854,8 +937,6 @@ int cplat_local_rwlock_unlock_exclusive(cplat_local_rwlock *rwlock)
     }
 
     rwlock_state_unlock(rwlock);
-
-    return CPLAT_OK;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -910,7 +991,27 @@ int cplat_thread_create(cplat_thread **thread, cplat_thread_fn func, void *arg)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_thread_join(cplat_thread *thread, int timeout_ms)
+void cplat_thread_join(cplat_thread *thread)
+{
+    if (thread == NULL)
+    {
+        return;
+    }
+
+    /*
+     * see: https://man7.org/linux/man-pages/man3/pthread_join.3.html
+     */
+    if (pthread_join(thread->native, NULL) != 0)
+    {
+        CPLAT_ABORT("スレッドの終了を待機できません");
+    }
+
+    cplat_free(thread);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_thread_timed_join(cplat_thread *thread, int timeout_ms)
 {
     struct timespec abs_ts;
     int rc;
@@ -920,7 +1021,7 @@ int cplat_thread_join(cplat_thread *thread, int timeout_ms)
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    if (timeout_ms == CPLAT_SYNC_WAIT_FOREVER)
+    if (timeout_ms == CPLAT_WAIT_FOREVER)
     {
         rc = pthread_join(thread->native, NULL);
     }
@@ -954,7 +1055,7 @@ int cplat_thread_join(cplat_thread *thread, int timeout_ms)
                 break;
             }
 
-            if (timeout_ms == CPLAT_SYNC_NO_WAIT)
+            if (timeout_ms == CPLAT_NO_WAIT)
             {
                 break;
             }
@@ -970,7 +1071,7 @@ int cplat_thread_join(cplat_thread *thread, int timeout_ms)
         } while (now < deadline);
 
         /*
-         * 期限までに終了しなかった場合に加え、CPLAT_SYNC_NO_WAIT 指定時に未終了だった場合もタイムアウトとして返す。
+         * 期限までに終了しなかった場合に加え、CPLAT_NO_WAIT 指定時に未終了だった場合もタイムアウトとして返す。
          * ロック系の API と異なり、ヘッダーの契約には CPLAT_ERR_BUSY がない。
          */
         if (rc == EBUSY)
@@ -1056,7 +1157,14 @@ int cplat_interprocess_lock_import_descriptor(const void *descriptor, size_t des
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_interprocess_lock_lock(cplat_interprocess_lock *lock, int timeout_ms)
+int cplat_interprocess_lock_lock(cplat_interprocess_lock *lock)
+{
+    return interprocess_lock_take(lock, CPLAT_WAIT_FOREVER);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_interprocess_lock_timed_lock(cplat_interprocess_lock *lock, int timeout_ms)
 {
     if (timeout_ms < 0)
     {
@@ -1070,7 +1178,7 @@ int cplat_interprocess_lock_lock(cplat_interprocess_lock *lock, int timeout_ms)
 
 int cplat_interprocess_lock_try_lock(cplat_interprocess_lock *lock)
 {
-    return cplat_interprocess_lock_lock(lock, CPLAT_SYNC_NO_WAIT);
+    return cplat_interprocess_lock_timed_lock(lock, CPLAT_NO_WAIT);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -1160,7 +1268,14 @@ int cplat_interprocess_rwlock_import_descriptor(const void *descriptor, size_t d
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_interprocess_rwlock_lock_shared(cplat_interprocess_rwlock *lock, int timeout_ms)
+int cplat_interprocess_rwlock_lock_shared(cplat_interprocess_rwlock *lock)
+{
+    return app_lock_take(lock, LOCK_SH, CPLAT_WAIT_FOREVER);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_interprocess_rwlock_timed_lock_shared(cplat_interprocess_rwlock *lock, int timeout_ms)
 {
     if (timeout_ms < 0)
     {
@@ -1174,12 +1289,19 @@ int cplat_interprocess_rwlock_lock_shared(cplat_interprocess_rwlock *lock, int t
 
 int cplat_interprocess_rwlock_try_lock_shared(cplat_interprocess_rwlock *lock)
 {
-    return cplat_interprocess_rwlock_lock_shared(lock, CPLAT_SYNC_NO_WAIT);
+    return cplat_interprocess_rwlock_timed_lock_shared(lock, CPLAT_NO_WAIT);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_interprocess_rwlock_lock_exclusive(cplat_interprocess_rwlock *lock, int timeout_ms)
+int cplat_interprocess_rwlock_lock_exclusive(cplat_interprocess_rwlock *lock)
+{
+    return app_lock_take(lock, LOCK_EX, CPLAT_WAIT_FOREVER);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_interprocess_rwlock_timed_lock_exclusive(cplat_interprocess_rwlock *lock, int timeout_ms)
 {
     if (timeout_ms < 0)
     {
@@ -1193,7 +1315,7 @@ int cplat_interprocess_rwlock_lock_exclusive(cplat_interprocess_rwlock *lock, in
 
 int cplat_interprocess_rwlock_try_lock_exclusive(cplat_interprocess_rwlock *lock)
 {
-    return cplat_interprocess_rwlock_lock_exclusive(lock, CPLAT_SYNC_NO_WAIT);
+    return cplat_interprocess_rwlock_timed_lock_exclusive(lock, CPLAT_NO_WAIT);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */

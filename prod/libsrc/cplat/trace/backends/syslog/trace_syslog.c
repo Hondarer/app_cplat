@@ -271,7 +271,7 @@ cplat_syslog_sink *cplat_syslog_sink_create(const char *ident, const int facilit
     }
 
     /* 初回接続を試みる (失敗しても構わない)。 */
-    cplat_local_lock_lock(handle->reconnect_lock, CPLAT_SYNC_WAIT_FOREVER);
+    cplat_local_lock_lock(handle->reconnect_lock);
     int clock_ret = try_open_socket_locked(handle);
     cplat_local_lock_unlock(handle->reconnect_lock);
 
@@ -453,20 +453,15 @@ int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cp
                             const char *message)
 {
     int ret;
-    int unlock_ret;
     if (handle == NULL || message == NULL)
     {
         return CPLAT_OK;
     }
-    ret = cplat_local_lock_lock(handle->reconnect_lock, CPLAT_SYNC_WAIT_FOREVER);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
+    cplat_local_lock_lock(handle->reconnect_lock);
     /* rename と同じロックで ident の参照から送信まで保護する。 */
     ret = write_locked(handle, level, timestamp, message);
-    unlock_ret = cplat_local_lock_unlock(handle->reconnect_lock);
-    return ret != CPLAT_OK ? ret : unlock_ret;
+    cplat_local_lock_unlock(handle->reconnect_lock);
+    return ret;
 }
 
 static void dispose_sink(cplat_syslog_sink *handle)
@@ -499,7 +494,6 @@ int cplat_syslog_sink_rename(cplat_syslog_sink *handle, const char *new_ident)
 {
     char *dup;
     size_t len;
-    int result;
 
     if (handle == NULL || new_ident == NULL)
     {
@@ -515,18 +509,13 @@ int cplat_syslog_sink_rename(cplat_syslog_sink *handle, const char *new_ident)
 
     memcpy(dup, new_ident, len);
 
-    result = cplat_local_lock_lock(handle->reconnect_lock, CPLAT_SYNC_WAIT_FOREVER);
-    if (result != CPLAT_OK)
-    {
-        cplat_free(dup);
-        return result;
-    }
+    cplat_local_lock_lock(handle->reconnect_lock);
 
     cplat_free(handle->ident);
     handle->ident = dup;
-    result = cplat_local_lock_unlock(handle->reconnect_lock);
+    cplat_local_lock_unlock(handle->reconnect_lock);
 
-    return result;
+    return CPLAT_OK;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */

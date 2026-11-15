@@ -871,45 +871,6 @@ TEST_F(symLoaderResolveTest, returns_null_when_lock_creation_fails)
 }
 // [サブ手順参照 名前=symLoaderResolveTest.TearDown]
 
-// ロックの取得に失敗したあと、次の取得で再試行して解決できることの確認
-TEST_F(symLoaderResolveTest, returns_null_when_lock_acquisition_fails)
-{
-    // Arrange
-    NiceMock<Mock_cplat> mock_cplat;
-
-    // [サブ手順参照 名前=symLoaderResolveTest.set_names]
-    set_names("libcplat", "cplat_path_basename"); // [状態] - 実在するライブラリ名と関数名を設定する。
-
-    // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, _))
-        .WillOnce(Return(CPLAT_ERR_UNKNOWN))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が 1 回以上呼び出されること。
-    // [Pre-Assert手順] - cplat_local_lock_lock() から 1 回目は CPLAT_ERR_UNKNOWN を返し、以降は製品 (prod) の処理へ委譲する。
-
-    // Act
-    // [サブ手順参照 名前=symLoaderResolveTest.count]
-    size_t count = test_sym_loader_count(&entry_, CPLAT_ERR_UNKNOWN); // [手順] - ロック取得失敗を通知する。
-
-    // Assert
-    EXPECT_EQ(0u, count); // [確認_異常系] - test_sym_loader_count() の戻り値が 0u であること。
-    EXPECT_EQ(
-        0,
-        cplat_atomic_load_i32(
-            &entry_.resolved,
-            CPLAT_MEMORY_ORDER_RELAXED)); // [確認_異常系] - entry_.resolved を読み込んだ cplat_atomic_load_i32() の戻り値が 0 であること。
-    // [サブ手順参照 名前=symLoaderResolveTest.is_failed]
-    EXPECT_EQ(
-        1, test_sym_loader_is_failed(&entry_)); // [確認_異常系] - test_sym_loader_is_failed() の戻り値が 1 であること。
-
-    // Act_2
-    // [サブ手順参照 名前=symLoaderResolveTest.count]
-    size_t retried_count = test_sym_loader_count(&entry_); // [手順] - 再試行として test_sym_loader_count() を呼び出す。
-
-    // Assert_2
-    EXPECT_EQ(1u, retried_count); // [確認_正常系] - 再試行後の test_sym_loader_count() の戻り値が 1u であること。
-}
-// [サブ手順参照 名前=symLoaderResolveTest.TearDown]
-
 // ほかのスレッドがロック初期化を完了した状態を再利用することの確認
 TEST_F(symLoaderResolveTest, reuses_lock_initialized_by_another_thread)
 {
@@ -978,14 +939,13 @@ TEST_F(symLoaderResolveTest, returns_result_resolved_while_waiting_for_lock)
     NiceMock<Mock_cplat> mock_cplat;
 
     // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, _))
+    EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_))
         .WillOnce(Invoke(
-            [this](cplat_local_lock *, int)
+            [this](cplat_local_lock *)
             {
                 EXPECT_EQ(0, test_sym_loader_publish_resolved_pointer(&entry_, reinterpret_cast<void *>(1)));
-                return CPLAT_OK;
             })); // [Pre-Assert確認_正常系] - cplat_local_lock_lock() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_local_lock_lock() から、解決済みの関数ポインターを公開して CPLAT_OK を返す。
+    // [Pre-Assert手順] - cplat_local_lock_lock() から、解決済みの関数ポインターを公開して戻る。
 
     // Act
     // [サブ手順参照 名前=symLoaderResolveTest.get]

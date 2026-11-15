@@ -1708,12 +1708,9 @@ static int apply_image_locked(cplat_string_catalog_filter_slot *slot, const void
         build_plane(slot, target, current, diagnostics, diagnostic_capacity, &invalid_count);
 
         /* 判定の途中で面が変わらないよう、切り替えは排他モードで行う。 */
-        ret = cplat_local_rwlock_lock_exclusive(slot->plane_lock, CPLAT_SYNC_WAIT_FOREVER);
-        if (ret == CPLAT_OK)
-        {
-            slot->active_plane = target_plane;
-            (void)cplat_local_rwlock_unlock_exclusive(slot->plane_lock); /* 取得に成功したロックの解放は失敗しない */
-        }
+        cplat_local_rwlock_lock_exclusive(slot->plane_lock);
+        slot->active_plane = target_plane;
+        cplat_local_rwlock_unlock_exclusive(slot->plane_lock);
     }
 
     if ((ret == CPLAT_OK) && (invalid_count_out != NULL))
@@ -1738,15 +1735,11 @@ int cplat_string_catalog_filter_slot_apply(cplat_string_catalog_filter_slot *slo
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    ret = cplat_local_lock_lock(slot->apply_lock, CPLAT_SYNC_WAIT_FOREVER);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
+    cplat_local_lock_lock(slot->apply_lock);
 
     ret = apply_image_locked(slot, image, image_size, diagnostics, diagnostic_capacity, invalid_count_out, NULL, 0U,
                              NULL, &torn);
-    (void)cplat_local_lock_unlock(slot->apply_lock); /* 取得に成功したロックの解放は失敗しない */
+    cplat_local_lock_unlock(slot->apply_lock);
 
     return ret;
 }
@@ -1911,11 +1904,7 @@ int cplat_string_catalog_filter_slot_check(cplat_string_catalog_filter_slot *slo
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    ret = cplat_local_lock_lock(slot->apply_lock, CPLAT_SYNC_WAIT_FOREVER);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
+    cplat_local_lock_lock(slot->apply_lock);
 
     /* 未使用の面へ構築し、切り替えない。未使用の面は適用のたびに作り直すため、残った内容は判定に影響しない。 */
     target = &slot->planes[1 - slot->active_plane];
@@ -1942,7 +1931,7 @@ int cplat_string_catalog_filter_slot_check(cplat_string_catalog_filter_slot *slo
         }
     }
 
-    (void)cplat_local_lock_unlock(slot->apply_lock); /* 取得に成功したロックの解放は失敗しない */
+    cplat_local_lock_unlock(slot->apply_lock);
 
     if (ret == CPLAT_OK)
     {
@@ -2015,7 +2004,7 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
         {
             /* 取り込みを試みていないため取り込み済みとはせず、次の判定で改めて試みる。 */
             slot->source_last_result = ret;
-            (void)cplat_local_lock_unlock(slot->apply_lock); /* 取得に成功したロックの解放は失敗しない */
+            cplat_local_lock_unlock(slot->apply_lock);
             return;
         }
 
@@ -2036,7 +2025,7 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
             writer_lock->unlock(writer_lock->context);
         }
 
-        (void)cplat_local_lock_unlock(slot->apply_lock); /* 取得に成功したロックの解放は失敗しない */
+        cplat_local_lock_unlock(slot->apply_lock);
         return;
     }
 
@@ -2071,7 +2060,7 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
             cplat_atomic_store_u64(&slot->taken_revision, revision, CPLAT_MEMORY_ORDER_RELAXED);
         }
 
-        (void)cplat_local_lock_unlock(slot->apply_lock); /* 取得に成功したロックの解放は失敗しない */
+        cplat_local_lock_unlock(slot->apply_lock);
         return;
     }
 
@@ -2097,7 +2086,7 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
         cplat_atomic_store_u64(&slot->taken_revision, revision, CPLAT_MEMORY_ORDER_RELAXED);
     }
 
-    (void)cplat_local_lock_unlock(slot->apply_lock); /* 取得に成功したロックの解放は失敗しない */
+    cplat_local_lock_unlock(slot->apply_lock);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -2153,19 +2142,13 @@ int cplat_string_catalog_filter_slot_attach_source(cplat_string_catalog_filter_s
 int cplat_string_catalog_filter_slot_get_source_status(cplat_string_catalog_filter_slot *slot,
                                                        cplat_string_catalog_filter_source_status *status_out)
 {
-    int ret;
-
     if ((slot == NULL) || (status_out == NULL))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
     /* 結果コードと無効にした行の数は、同じ取り込みの値をそろえて返す。 */
-    ret = cplat_local_lock_lock(slot->apply_lock, CPLAT_SYNC_WAIT_FOREVER);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
+    cplat_local_lock_lock(slot->apply_lock);
 
     memset(status_out, 0, sizeof(*status_out));
 
@@ -2173,7 +2156,7 @@ int cplat_string_catalog_filter_slot_get_source_status(cplat_string_catalog_filt
     status_out->taken_revision = cplat_atomic_load_u64(&slot->taken_revision, CPLAT_MEMORY_ORDER_RELAXED);
     status_out->last_result = slot->source_last_result;
     status_out->last_invalid_count = slot->source_last_invalid_count;
-    (void)cplat_local_lock_unlock(slot->apply_lock); /* 取得に成功したロックの解放は失敗しない */
+    cplat_local_lock_unlock(slot->apply_lock);
 
     return CPLAT_OK;
 }
@@ -2184,7 +2167,6 @@ int cplat_string_catalog_filter_slot_snapshot(cplat_string_catalog_filter_slot *
                                               const size_t image_size)
 {
     const filter_plane *plane;
-    int ret;
 
     if ((slot == NULL) || (image_out == NULL))
     {
@@ -2196,16 +2178,12 @@ int cplat_string_catalog_filter_slot_snapshot(cplat_string_catalog_filter_slot *
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
 
-    ret = cplat_local_rwlock_lock_shared(slot->plane_lock, CPLAT_SYNC_WAIT_FOREVER);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
+    cplat_local_rwlock_lock_shared(slot->plane_lock);
 
     plane = &slot->planes[slot->active_plane];
     memcpy(image_out, plane->image, slot->image_size);
 
-    (void)cplat_local_rwlock_unlock_shared(slot->plane_lock); /* 取得に成功したロックの解放は失敗しない */
+    cplat_local_rwlock_unlock_shared(slot->plane_lock);
 
     return CPLAT_OK;
 }
@@ -2216,18 +2194,14 @@ int cplat_string_catalog_filter_slot_get_line_error(cplat_string_catalog_filter_
                                                     cplat_string_catalog_filter_line_error *error_out)
 {
     const filter_plane *plane;
-    int ret;
+    int ret = CPLAT_OK;
 
     if ((slot == NULL) || (error_out == NULL))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    ret = cplat_local_rwlock_lock_shared(slot->plane_lock, CPLAT_SYNC_WAIT_FOREVER);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
+    cplat_local_rwlock_lock_shared(slot->plane_lock);
 
     plane = &slot->planes[slot->active_plane];
     if (line_index >= plane->line_count)
@@ -2239,7 +2213,7 @@ int cplat_string_catalog_filter_slot_get_line_error(cplat_string_catalog_filter_
         *error_out = plane->line_errors[line_index];
     }
 
-    (void)cplat_local_rwlock_unlock_shared(slot->plane_lock); /* 取得に成功したロックの解放は失敗しない */
+    cplat_local_rwlock_unlock_shared(slot->plane_lock);
 
     return ret;
 }
@@ -2250,7 +2224,6 @@ int cplat_string_catalog_filter_slot_test(cplat_string_catalog_filter_slot *slot
                                           cplat_string_catalog_filter_state *state_out)
 {
     size_t entry_index;
-    int ret;
 
     if ((slot == NULL) || (state_out == NULL))
     {
@@ -2262,14 +2235,10 @@ int cplat_string_catalog_filter_slot_test(cplat_string_catalog_filter_slot *slot
         return CPLAT_ERR_NOT_FOUND;
     }
 
-    ret = cplat_local_rwlock_lock_shared(slot->plane_lock, CPLAT_SYNC_WAIT_FOREVER);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
+    cplat_local_rwlock_lock_shared(slot->plane_lock);
 
     *state_out = (cplat_string_catalog_filter_state)slot->planes[slot->active_plane].entry_states[entry_index];
-    (void)cplat_local_rwlock_unlock_shared(slot->plane_lock); /* 取得に成功したロックの解放は失敗しない */
+    cplat_local_rwlock_unlock_shared(slot->plane_lock);
 
     return CPLAT_OK;
 }
@@ -2292,11 +2261,7 @@ int cplat_string_catalog_filter_slot_describe_line(cplat_string_catalog_filter_s
 
     dest[0] = '\0';
 
-    ret = cplat_local_rwlock_lock_shared(slot->plane_lock, CPLAT_SYNC_WAIT_FOREVER);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
+    cplat_local_rwlock_lock_shared(slot->plane_lock);
 
     plane = &slot->planes[slot->active_plane];
     if (line_index >= plane->line_count)
@@ -2338,7 +2303,7 @@ int cplat_string_catalog_filter_slot_describe_line(cplat_string_catalog_filter_s
         ret = string_catalog_filter_describe_record(&source, dest, dest_size);
     }
 
-    (void)cplat_local_rwlock_unlock_shared(slot->plane_lock); /* 取得に成功したロックの解放は失敗しない */
+    cplat_local_rwlock_unlock_shared(slot->plane_lock);
 
     return ret;
 }
@@ -2450,15 +2415,11 @@ int cplat_string_catalog_filter_slot_vformat(cplat_string_catalog_filter_slot *s
     }
 
     /* 判定できない場合は不一致と区別するため、文字列を組み立てずに結果コードを返す。 */
-    ret = cplat_local_rwlock_lock_shared(slot->plane_lock, CPLAT_SYNC_WAIT_FOREVER);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
+    cplat_local_rwlock_lock_shared(slot->plane_lock);
 
     *matched_out =
         is_matched(slot, &slot->planes[slot->active_plane], (size_t)(entry - slot->catalog->entries), values);
-    (void)cplat_local_rwlock_unlock_shared(slot->plane_lock); /* 取得に成功したロックの解放は失敗しない */
+    cplat_local_rwlock_unlock_shared(slot->plane_lock);
 
     /* 書式展開はロックの外で行う。判定の結果によらず文字列を組み立てる。 */
     return cplat_internal_string_catalog_render_text(dest, dest_size, text, values, entry->argument_count);

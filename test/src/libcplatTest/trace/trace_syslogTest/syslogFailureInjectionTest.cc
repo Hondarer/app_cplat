@@ -513,34 +513,6 @@ TEST_F(syslogFailureInjectionTest, rename_reports_out_of_memory_when_duplication
     cplat_syslog_sink_dispose(handle);
 }
 
-// 識別子変更時のロック失敗を呼び出し元へ返すことの確認
-TEST_F(syslogFailureInjectionTest, rename_reports_lock_failure)
-{
-    // Arrange
-    cplat_syslog_sink *handle =
-        cplat_syslog_sink_create("syslogFailureInjectionTest", LOG_USER); // [状態] - syslog sink を生成する。
-    ASSERT_NE(nullptr,
-              handle); // [状態確認] - cplat_syslog_sink_create() の戻り値が nullptr 以外であること。
-
-    // Pre-Assert
-    EXPECT_CALL(mock_cplat_, cplat_local_lock_lock(_, CPLAT_SYNC_WAIT_FOREVER))
-        .WillOnce(Return(
-            CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が CPLAT_SYNC_WAIT_FOREVER を指定して 1 回呼び出されること。(識別子変更前のロック取得を失敗させることの確認)
-    // [Pre-Assert手順] - cplat_local_lock_lock() から CPLAT_ERR_UNKNOWN を返す。
-
-    // Act
-    int result = cplat_syslog_sink_rename(
-        handle, "renamed"); // [手順] - cplat_local_lock_lock() が失敗する状態で cplat_syslog_sink_rename() を呼び出す。
-
-    // Assert
-    EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        result); // [確認_異常系] - ロック失敗時の cplat_syslog_sink_rename() の戻り値が CPLAT_ERR_UNKNOWN であること。
-
-    // Cleanup
-    cplat_syslog_sink_dispose(handle);
-}
-
 // shutdown 用破棄が NULL と有効なハンドルを処理することの確認
 TEST_F(syslogFailureInjectionTest, dispose_on_shutdown_handles_null_and_active_sink)
 {

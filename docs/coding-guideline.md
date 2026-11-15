@@ -456,7 +456,7 @@ Windows へ移植できず、プラットフォームで動作が変わるため
 
 停止要求には次の形を使用します。
 
-- ソケットは `cplat_socket_set_nonblocking()` で非ブロッキングに設定し、`cplat_socket_wait_readable()` などへ短いタイムアウトを与えたループの中で停止フラグを判定します。
+- ソケットは `cplat_socket_set_nonblocking()` で非ブロッキングに設定し、`cplat_socket_timed_wait_readable()` などへ短いタイムアウトを与えたループの中で停止フラグを判定します。
 - スレッド間の停止通知は `cplat_condvar` で行います。
 
 #### CPLAT_CAUSE_INTERRUPTED の位置付け
@@ -478,7 +478,7 @@ cplat がシグナルによる中断を理由にこの要因を返すことは�
 
 受信タイムアウト (`SO_RCVTIMEO`) と送信タイムアウト (`SO_SNDTIMEO`) を設定する API は公開しません。  
 これらを設定したソケットの送受信は `SA_RESTART` の有無にかかわらず中断され、再試行によって指定した時間を超過するためです。  
-待機時間を制限する場合は `cplat_socket_wait_readable()` などの期限付き待機を使用します。
+待機時間を制限する場合は `cplat_socket_timed_wait_readable()` などの期限付き待機を使用します。
 
 #### 検証 (シグナル割り込み)
 

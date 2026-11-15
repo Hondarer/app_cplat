@@ -331,7 +331,7 @@ IPv4 ソケットの生成、接続、送受信、待機は cplat のソケッ�
 | `recv()` | `cplat_socket_recv(...)` |
 | `sendto()` | `cplat_socket_sendto(...)` |
 | `recvfrom()` | `cplat_socket_recvfrom(...)` |
-| `poll()` (Linux) / `WSAPoll()` (Winsock) | `cplat_socket_wait_readable(...)` / `cplat_socket_wait_writable(...)` / `cplat_socket_wait_readable_multi(...)` |
+| `poll()` (Linux) / `WSAPoll()` (Winsock) | `cplat_socket_wait_readable(...)` / `cplat_socket_wait_writable(...)` / `cplat_socket_wait_readable_multi(...)` / `cplat_socket_timed_wait_readable(...)` / `cplat_socket_timed_wait_writable(...)` / `cplat_socket_timed_wait_readable_multi(...)` |
 
 Table: ソケット操作 API と cplat 代替関数
 
@@ -390,13 +390,13 @@ Table: 表示言語取得 API と cplat 代替ラッパーの差異
 | `getpid()` (POSIX) / `GetCurrentProcessId()` (Win32) | `cplat_process_get_pid()` | - |
 | `gettid()` (Linux) / `GetCurrentThreadId()` (Win32) | `cplat_process_get_tid()` | 同時に存在するスレッドの間で一意な識別子です。glibc 2.28 でも動作するよう、Linux では `syscall(SYS_gettid)` を使用します |
 | `fork()` +`execve()` (POSIX) / `CreateProcess()` (Win32) | `cplat_process_start(...)` | stdio リダイレクト、環境変数上書き、作業ディレクトリ指定を共通オプション構造体 `cplat_process_options` に集約 |
-| `waitpid()` (POSIX) / `WaitForSingleObject()` (Win32) | `cplat_process_wait(...)` | - |
+| `waitpid()` (POSIX) / `WaitForSingleObject()` (Win32) | `cplat_process_wait(...)` / `cplat_process_timed_wait(...)` | 無期限待機と期限付き待機 (`timeout_ms`、`CPLAT_WAIT_FOREVER` / `CPLAT_NO_WAIT`) を分離 |
 | `WEXITSTATUS(status)` (POSIX) / `GetExitCodeProcess()` (Win32) | `cplat_process_get_exit_code(...)` | - |
 | `kill(SIGKILL)` (POSIX) / `TerminateProcess()` (Win32) | `cplat_process_terminate(...)` | - |
 
 Table: モジュール・プロセス情報取得 API と cplat 代替ラッパーの差異
 
-`cplat_process_dispose`/`cplat_process_run_sync` はハンドル破棄、`start` +`wait` +`get_exit_code` の合成 API です。
+`cplat_process_dispose`/`cplat_process_run_sync`/`cplat_process_timed_run_sync` はハンドル破棄、`start` +`wait` +`get_exit_code` の合成 API です。`cplat_process_timed_run_sync` は期限切れ時に子プロセスを強制終了して `CPLAT_ERR_TIMEOUT` を返します。
 
 ### 実行優先度 (Linux 専用)
 
@@ -765,12 +765,12 @@ Table: 文字列カタログの条件式フィルターにおける用途別 cpl
 
 | 生の構文 | cplat API | 補足 |
 |---|---|---|
-| `pthread_mutex_t` (POSIX) / `CRITICAL_SECTION` (Win32) | `cplat_local_lock_create` / `cplat_local_lock_lock` / `cplat_local_lock_try_lock` / `cplat_local_lock_unlock` / `cplat_local_lock_dispose` | プロセス内ミューテックス。`lock` はタイムアウト付き |
-| `pthread_cond_t` (POSIX) / `CONDITION_VARIABLE` (Win32) | `cplat_condvar_create` / `cplat_condvar_wait` / `cplat_condvar_signal` / `cplat_condvar_broadcast` / `cplat_condvar_dispose` | プロセス内条件変数 |
-| `pthread_rwlock_t` (POSIX) / `SRWLOCK` (Win32) | `cplat_local_rwlock_create` / `cplat_local_rwlock_lock_shared` / `cplat_local_rwlock_lock_exclusive` / `cplat_local_rwlock_try_lock_shared` / `cplat_local_rwlock_try_lock_exclusive` / `cplat_local_rwlock_unlock_shared` / `cplat_local_rwlock_unlock_exclusive` / `cplat_local_rwlock_dispose` | プロセス内読み書きロック |
-| `pthread_create` +`pthread_join` +`pthread_detach` (POSIX) / `CreateThread` +`WaitForSingleObject` +`CloseHandle` (Win32) | `cplat_thread_create` / `cplat_thread_join` / `cplat_thread_detach` | スレッド生成・待機・切り離し |
-| 名前付き `flock`/セマフォ (POSIX) / 名前付き `Mutex` (Win32) | `cplat_interprocess_lock_open` / `cplat_interprocess_lock_lock` / `cplat_interprocess_lock_try_lock` / `cplat_interprocess_lock_unlock` / `cplat_interprocess_lock_dispose` | プロセス横断ミューテックス。プロセス間受け渡しには `_export_descriptor` / `_import_descriptor` を使用 |
-| プロセス横断読み書きロックを取得したい (POSIX/Win32 に単一の生 API なし) | `cplat_interprocess_rwlock_open` / `_lock_shared` / `_lock_exclusive` / `_try_lock_shared` / `_try_lock_exclusive` / `_unlock` / `_destroy` | ロック ファイル バックエンドで実装 |
+| `pthread_mutex_t` (POSIX) / `CRITICAL_SECTION` (Win32) | `cplat_local_lock_create` / `cplat_local_lock_lock` / `cplat_local_lock_timed_lock` / `cplat_local_lock_try_lock` / `cplat_local_lock_unlock` / `cplat_local_lock_dispose` | プロセス内ミューテックス。無期限待機 (`lock`、`void` 戻り値) と期限付き待機 (`timed_lock`、`timeout_ms`) を分離 |
+| `pthread_cond_t` (POSIX) / `CONDITION_VARIABLE` (Win32) | `cplat_condvar_create` / `cplat_condvar_wait` / `cplat_condvar_timed_wait` / `cplat_condvar_signal` / `cplat_condvar_broadcast` / `cplat_condvar_dispose` | プロセス内条件変数。無期限待機 (`wait`) と期限付き待機 (`timed_wait`) を分離 |
+| `pthread_rwlock_t` (POSIX) / `SRWLOCK` (Win32) | `cplat_local_rwlock_create` / `cplat_local_rwlock_lock_shared` / `cplat_local_rwlock_lock_exclusive` / `cplat_local_rwlock_timed_lock_shared` / `cplat_local_rwlock_timed_lock_exclusive` / `cplat_local_rwlock_try_lock_shared` / `cplat_local_rwlock_try_lock_exclusive` / `cplat_local_rwlock_unlock_shared` / `cplat_local_rwlock_unlock_exclusive` / `cplat_local_rwlock_dispose` | プロセス内読み書きロック。無期限待機と期限付き待機 (`timed_lock_*`) を分離 |
+| `pthread_create` +`pthread_join` +`pthread_detach` (POSIX) / `CreateThread` +`WaitForSingleObject` +`CloseHandle` (Win32) | `cplat_thread_create` / `cplat_thread_join` / `cplat_thread_timed_join` / `cplat_thread_detach` | スレッド生成・待機 (無期限 `join` / 期限付き `timed_join`)・切り離し |
+| 名前付き `flock`/セマフォ (POSIX) / 名前付き `Mutex` (Win32) | `cplat_interprocess_lock_open` / `cplat_interprocess_lock_lock` / `cplat_interprocess_lock_timed_lock` / `cplat_interprocess_lock_try_lock` / `cplat_interprocess_lock_unlock` / `cplat_interprocess_lock_dispose` | プロセス横断ミューテックス。無期限・期限付き・即時試行を分離。プロセス間受け渡しには `_export_descriptor` / `_import_descriptor` を使用 |
+| プロセス横断読み書きロックを取得したい (POSIX/Win32 に単一の生 API なし) | `cplat_interprocess_rwlock_open` / `_lock_shared` / `_lock_exclusive` / `_timed_lock_shared` / `_timed_lock_exclusive` / `_try_lock_shared` / `_try_lock_exclusive` / `_unlock` / `_dispose` | ロック ファイル バックエンドで実装。無期限・期限付き・即時試行を分離 |
 | `pthread_once` (POSIX) / `InitOnceExecuteOnce` (Win32) | `cplat_call_once(flag, func)` | - |
 | `sleep`/`usleep`/`nanosleep` (POSIX) / `Sleep` (Win32) | `cplat_sleep_ms(ms)` | Linux はシグナル割り込み時に残り時間を再計算し継続待機します。 |
 | `sched_yield` (POSIX) / `SwitchToThread` (Win32) | `cplat_thread_yield()` | 実行可能な他のスレッドへ CPU を譲ります。他のスレッドがない場合は即時に戻ります。Windows の譲渡先は現在のプロセッサで実行可能なスレッドに限ります。完了待ちには条件変数または `cplat_sleep_ms` を使用してください。 |
@@ -939,7 +939,7 @@ Table: 動的シンボル解決における用途別 cplat API
 - ホスト: `cplat_host_get_name`
 - 表示言語: `cplat_ui_language_get_tag`
 - モジュール: `cplat_module_get_basename`
-- プロセス間ロック: `cplat_interprocess_lock_export_descriptor`、`cplat_interprocess_lock_import_descriptor`、`cplat_interprocess_rwlock_export_descriptor`、`cplat_interprocess_rwlock_import_descriptor`、`cplat_interprocess_rwlock_lock_shared`、`cplat_interprocess_rwlock_try_lock_shared`、`cplat_interprocess_rwlock_lock_exclusive`、`cplat_interprocess_rwlock_try_lock_exclusive`、`cplat_interprocess_rwlock_unlock`、`cplat_interprocess_rwlock_dispose`
+- プロセス間ロック: `cplat_interprocess_lock_export_descriptor`、`cplat_interprocess_lock_import_descriptor`、`cplat_interprocess_rwlock_export_descriptor`、`cplat_interprocess_rwlock_import_descriptor`、`cplat_interprocess_rwlock_lock_shared`、`cplat_interprocess_rwlock_timed_lock_shared`、`cplat_interprocess_rwlock_try_lock_shared`、`cplat_interprocess_rwlock_lock_exclusive`、`cplat_interprocess_rwlock_timed_lock_exclusive`、`cplat_interprocess_rwlock_try_lock_exclusive`、`cplat_interprocess_rwlock_unlock`、`cplat_interprocess_rwlock_dispose`
 - トレース: `cplat_tracer_get_name`、`cplat_tracer_get_identifier`、`cplat_tracer_set_file_name`、`cplat_tracer_get_file_name`、`cplat_tracer_get_file_identifier`、`cplat_tracer_get_os_level`、`cplat_tracer_set_os_level`、`cplat_tracer_get_etw_level`、`cplat_tracer_set_etw_level`、`cplat_tracer_get_file_level`、`cplat_tracer_set_file_level`、`cplat_tracer_get_stderr_level`
 - Windows 文字列変換: `cplat_utf8_to_wpath`、`cplat_utf8_to_wstr`、`cplat_wpath_to_utf8`、`cplat_wstr_to_utf8`、`cplat_utf8_to_wstr_alloc`、`cplat_wstr_to_utf8_alloc`
 - Windows エラー: `cplat_error_capture_windows_error`、`cplat_error_capture_current_windows_error`、`cplat_error_get_windows_error`

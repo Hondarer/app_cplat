@@ -201,7 +201,7 @@ static int measure_files(char *executable, char *path, int processes, int messag
         int exit_code = 1;
 
         if (children[index] != NULL &&
-            (cplat_process_wait(children[index], CPLAT_PROCESS_WAIT_FOREVER) != CPLAT_OK ||
+            (cplat_process_wait(children[index]) != CPLAT_OK ||
              cplat_process_get_exit_code(children[index], &exit_code) != CPLAT_OK || exit_code != 0))
         {
             failed = 1;

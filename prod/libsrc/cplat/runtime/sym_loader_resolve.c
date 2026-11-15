@@ -474,11 +474,7 @@ int cplat_sym_loader_ensure(cplat_sym_loader_entry *fobj)
         return -1;
     }
 
-    if (cplat_local_lock_lock(fobj->lock, CPLAT_SYNC_WAIT_FOREVER) != CPLAT_OK)
-    {
-        fail_locked(fobj);
-        return -1;
-    }
+    cplat_local_lock_lock(fobj->lock);
 
     if (cplat_atomic_load_i32(&fobj->resolved, CPLAT_MEMORY_ORDER_RELAXED) == 1)
     {

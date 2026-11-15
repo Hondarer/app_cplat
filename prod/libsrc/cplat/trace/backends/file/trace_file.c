@@ -155,7 +155,9 @@ static int sink_registry_lock(void)
         return s_sink_registry_lock_result;
     }
 
-    return cplat_local_lock_lock(s_sink_registry_lock, CPLAT_SYNC_WAIT_FOREVER);
+    cplat_local_lock_lock(s_sink_registry_lock);
+
+    return CPLAT_OK;
 }
 
 /**
@@ -819,7 +821,6 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
     int len;
     int ret;
     int rotate_ret;
-    int unlock_ret;
 
     (void)timestamp;
 
@@ -849,7 +850,7 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
         buf[len - 1] = '\n';
     }
 
-    if (cplat_local_lock_lock(handle->mutex, FILE_LOCK_TIMEOUT_MS) != CPLAT_OK)
+    if (cplat_local_lock_timed_lock(handle->mutex, FILE_LOCK_TIMEOUT_MS) != CPLAT_OK)
     {
         return CPLAT_ERR_UNKNOWN;
     }
@@ -895,9 +896,9 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
         }
     }
 
-    unlock_ret = cplat_local_lock_unlock(handle->mutex);
+    cplat_local_lock_unlock(handle->mutex);
 
-    if (ret != 0 || rotate_ret != CPLAT_OK || unlock_ret != CPLAT_OK)
+    if (ret != 0 || rotate_ret != CPLAT_OK)
     {
         return CPLAT_ERR_UNKNOWN;
     }

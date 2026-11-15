@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <cplat/base/error.h>
+#include <cplat/base/wait.h>
 #include <cplat/test/syslog_test.h>
 #include <cplat/base/platform.h>
 #include <cplat/argparser/argparser.h>
@@ -568,11 +569,16 @@
                  int(CPLAT_API *)(cplat_socket sock, const void *buf, size_t len, cplat_error *detail_out)) \
     EXPORT_ENTRY(cplat_socket_recv_all, \
                  int(CPLAT_API *)(cplat_socket sock, void *buf, size_t len, cplat_error *detail_out)) \
-    EXPORT_ENTRY(cplat_socket_wait_readable, \
-                 int(CPLAT_API *)(cplat_socket sock, int timeout_ms, int *ready_out, cplat_error *detail_out)) \
-    EXPORT_ENTRY(cplat_socket_wait_writable, \
-                 int(CPLAT_API *)(cplat_socket sock, int timeout_ms, int *ready_out, cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_wait_readable, int(CPLAT_API *)(cplat_socket sock, cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_timed_wait_readable, \
+                 int(CPLAT_API *)(cplat_socket sock, int timeout_ms, cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_wait_writable, int(CPLAT_API *)(cplat_socket sock, cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_timed_wait_writable, \
+                 int(CPLAT_API *)(cplat_socket sock, int timeout_ms, cplat_error *detail_out)) \
     EXPORT_ENTRY(cplat_socket_wait_readable_multi, \
+                 int(CPLAT_API *)(const cplat_socket *socks, size_t count, unsigned char *ready_out, \
+                                  cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_timed_wait_readable_multi, \
                  int(CPLAT_API *)(const cplat_socket *socks, size_t count, int timeout_ms, unsigned char *ready_out, \
                                   cplat_error *detail_out)) \
     EXPORT_ENTRY(cplat_socket_shutdown_receive, int(CPLAT_API *)(cplat_socket * sock_inout, cplat_error * detail_out)) \
@@ -682,11 +688,13 @@
     EXPORT_ENTRY(cplat_process_get_pid, uint32_t(CPLAT_API *)(void)) \
     EXPORT_ENTRY(cplat_process_get_tid, uint32_t(CPLAT_API *)(void)) \
     EXPORT_ENTRY(cplat_process_start, int(CPLAT_API *)(const cplat_process_options *options, cplat_process **process)) \
-    EXPORT_ENTRY(cplat_process_wait, int(CPLAT_API *)(cplat_process * process, int timeout_ms)) \
+    EXPORT_ENTRY(cplat_process_wait, int(CPLAT_API *)(cplat_process * process)) \
+    EXPORT_ENTRY(cplat_process_timed_wait, int(CPLAT_API *)(cplat_process * process, int timeout_ms)) \
     EXPORT_ENTRY(cplat_process_get_exit_code, int(CPLAT_API *)(cplat_process * process, int *exit_code)) \
     EXPORT_ENTRY(cplat_process_terminate, int(CPLAT_API *)(cplat_process * process)) \
     EXPORT_ENTRY(cplat_process_dispose, void(CPLAT_API *)(cplat_process * process)) \
-    EXPORT_ENTRY(cplat_process_run_sync, \
+    EXPORT_ENTRY(cplat_process_run_sync, int(CPLAT_API *)(const cplat_process_options *options, int *exit_code)) \
+    EXPORT_ENTRY(cplat_process_timed_run_sync, \
                  int(CPLAT_API *)(const cplat_process_options *options, int timeout_ms, int *exit_code)) \
     /* cplat/runtime/shutdown.h */ \
     EXPORT_ENTRY(cplat_shutdown_register, int(CPLAT_API *)(cplat_shutdown_fn callback, void *context)) \
@@ -805,32 +813,41 @@
                                   int *matched_out, int string_key, ...)) \
     /* cplat/sync/sync.h */ \
     EXPORT_ENTRY(cplat_local_lock_create, int(CPLAT_API *)(cplat_local_lock * *mtx)) \
-    EXPORT_ENTRY(cplat_local_lock_lock, int(CPLAT_API *)(cplat_local_lock * mtx, int timeout_ms)) \
+    EXPORT_ENTRY(cplat_local_lock_lock, void(CPLAT_API *)(cplat_local_lock * mtx)) \
+    EXPORT_ENTRY(cplat_local_lock_timed_lock, int(CPLAT_API *)(cplat_local_lock * mtx, int timeout_ms)) \
     EXPORT_ENTRY(cplat_local_lock_try_lock, int(CPLAT_API *)(cplat_local_lock * mtx)) \
-    EXPORT_ENTRY(cplat_local_lock_unlock, int(CPLAT_API *)(cplat_local_lock * mtx)) \
+    EXPORT_ENTRY(cplat_local_lock_unlock, void(CPLAT_API *)(cplat_local_lock * mtx)) \
     EXPORT_ENTRY(cplat_local_lock_dispose, void(CPLAT_API *)(cplat_local_lock * mtx)) \
     EXPORT_ENTRY(cplat_condvar_create, int(CPLAT_API *)(cplat_condvar * *cv)) \
-    EXPORT_ENTRY(cplat_condvar_wait, int(CPLAT_API *)(cplat_condvar * cv, cplat_local_lock * mtx, int timeout_ms)) \
-    EXPORT_ENTRY(cplat_condvar_signal, int(CPLAT_API *)(cplat_condvar * cv)) \
-    EXPORT_ENTRY(cplat_condvar_broadcast, int(CPLAT_API *)(cplat_condvar * cv)) \
+    EXPORT_ENTRY(cplat_condvar_wait, void(CPLAT_API *)(cplat_condvar * cv, cplat_local_lock * mtx)) \
+    EXPORT_ENTRY(cplat_condvar_timed_wait, \
+                 int(CPLAT_API *)(cplat_condvar * cv, cplat_local_lock * mtx, int timeout_ms)) \
+    EXPORT_ENTRY(cplat_condvar_signal, void(CPLAT_API *)(cplat_condvar * cv)) \
+    EXPORT_ENTRY(cplat_condvar_broadcast, void(CPLAT_API *)(cplat_condvar * cv)) \
     EXPORT_ENTRY(cplat_condvar_dispose, void(CPLAT_API *)(cplat_condvar * cv)) \
     EXPORT_ENTRY(cplat_local_rwlock_create, int(CPLAT_API *)(cplat_local_rwlock * *rwlock)) \
-    EXPORT_ENTRY(cplat_local_rwlock_lock_shared, int(CPLAT_API *)(cplat_local_rwlock * rwlock, int timeout_ms)) \
+    EXPORT_ENTRY(cplat_local_rwlock_lock_shared, void(CPLAT_API *)(cplat_local_rwlock * rwlock)) \
+    EXPORT_ENTRY(cplat_local_rwlock_timed_lock_shared, \
+                 int(CPLAT_API *)(cplat_local_rwlock * rwlock, int timeout_ms)) \
     EXPORT_ENTRY(cplat_local_rwlock_try_lock_shared, int(CPLAT_API *)(cplat_local_rwlock * rwlock)) \
-    EXPORT_ENTRY(cplat_local_rwlock_lock_exclusive, int(CPLAT_API *)(cplat_local_rwlock * rwlock, int timeout_ms)) \
+    EXPORT_ENTRY(cplat_local_rwlock_lock_exclusive, void(CPLAT_API *)(cplat_local_rwlock * rwlock)) \
+    EXPORT_ENTRY(cplat_local_rwlock_timed_lock_exclusive, \
+                 int(CPLAT_API *)(cplat_local_rwlock * rwlock, int timeout_ms)) \
     EXPORT_ENTRY(cplat_local_rwlock_try_lock_exclusive, int(CPLAT_API *)(cplat_local_rwlock * rwlock)) \
-    EXPORT_ENTRY(cplat_local_rwlock_unlock_shared, int(CPLAT_API *)(cplat_local_rwlock * rwlock)) \
-    EXPORT_ENTRY(cplat_local_rwlock_unlock_exclusive, int(CPLAT_API *)(cplat_local_rwlock * rwlock)) \
+    EXPORT_ENTRY(cplat_local_rwlock_unlock_shared, void(CPLAT_API *)(cplat_local_rwlock * rwlock)) \
+    EXPORT_ENTRY(cplat_local_rwlock_unlock_exclusive, void(CPLAT_API *)(cplat_local_rwlock * rwlock)) \
     EXPORT_ENTRY(cplat_local_rwlock_dispose, void(CPLAT_API *)(cplat_local_rwlock * rwlock)) \
     EXPORT_ENTRY(cplat_thread_create, int(CPLAT_API *)(cplat_thread * *thread, cplat_thread_fn func, void *arg)) \
-    EXPORT_ENTRY(cplat_thread_join, int(CPLAT_API *)(cplat_thread * thread, int timeout_ms)) \
+    EXPORT_ENTRY(cplat_thread_join, void(CPLAT_API *)(cplat_thread * thread)) \
+    EXPORT_ENTRY(cplat_thread_timed_join, int(CPLAT_API *)(cplat_thread * thread, int timeout_ms)) \
     EXPORT_ENTRY(cplat_thread_detach, void(CPLAT_API *)(cplat_thread * thread)) \
     EXPORT_ENTRY(cplat_interprocess_lock_open, int(CPLAT_API *)(const char *identity, cplat_interprocess_lock **lock)) \
     EXPORT_ENTRY(cplat_interprocess_lock_import_descriptor, \
                  int(CPLAT_API *)(const void *descriptor, size_t descriptor_size, cplat_interprocess_lock **lock)) \
     EXPORT_ENTRY(cplat_interprocess_lock_export_descriptor, \
                  int(CPLAT_API *)(const cplat_interprocess_lock *lock, void *descriptor, size_t *descriptor_size)) \
-    EXPORT_ENTRY(cplat_interprocess_lock_lock, int(CPLAT_API *)(cplat_interprocess_lock * lock, int timeout_ms)) \
+    EXPORT_ENTRY(cplat_interprocess_lock_lock, int(CPLAT_API *)(cplat_interprocess_lock * lock)) \
+    EXPORT_ENTRY(cplat_interprocess_lock_timed_lock, int(CPLAT_API *)(cplat_interprocess_lock * lock, int timeout_ms)) \
     EXPORT_ENTRY(cplat_interprocess_lock_try_lock, int(CPLAT_API *)(cplat_interprocess_lock * lock)) \
     EXPORT_ENTRY(cplat_interprocess_lock_unlock, int(CPLAT_API *)(cplat_interprocess_lock * lock)) \
     EXPORT_ENTRY(cplat_interprocess_lock_dispose, void(CPLAT_API *)(cplat_interprocess_lock * lock)) \
@@ -840,10 +857,12 @@
                  int(CPLAT_API *)(const void *descriptor, size_t descriptor_size, cplat_interprocess_rwlock **lock)) \
     EXPORT_ENTRY(cplat_interprocess_rwlock_export_descriptor, \
                  int(CPLAT_API *)(const cplat_interprocess_rwlock *lock, void *descriptor, size_t *descriptor_size)) \
-    EXPORT_ENTRY(cplat_interprocess_rwlock_lock_shared, \
+    EXPORT_ENTRY(cplat_interprocess_rwlock_lock_shared, int(CPLAT_API *)(cplat_interprocess_rwlock * lock)) \
+    EXPORT_ENTRY(cplat_interprocess_rwlock_timed_lock_shared, \
                  int(CPLAT_API *)(cplat_interprocess_rwlock * lock, int timeout_ms)) \
     EXPORT_ENTRY(cplat_interprocess_rwlock_try_lock_shared, int(CPLAT_API *)(cplat_interprocess_rwlock * lock)) \
-    EXPORT_ENTRY(cplat_interprocess_rwlock_lock_exclusive, \
+    EXPORT_ENTRY(cplat_interprocess_rwlock_lock_exclusive, int(CPLAT_API *)(cplat_interprocess_rwlock * lock)) \
+    EXPORT_ENTRY(cplat_interprocess_rwlock_timed_lock_exclusive, \
                  int(CPLAT_API *)(cplat_interprocess_rwlock * lock, int timeout_ms)) \
     EXPORT_ENTRY(cplat_interprocess_rwlock_try_lock_exclusive, int(CPLAT_API *)(cplat_interprocess_rwlock * lock)) \
     EXPORT_ENTRY(cplat_interprocess_rwlock_unlock, int(CPLAT_API *)(cplat_interprocess_rwlock * lock)) \

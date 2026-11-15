@@ -1755,9 +1755,9 @@ TEST_F(socketTest, send_all_and_recv_all_reject_transfer_exceeding_remaining)
 TEST_F(socketTest, wait_single_reports_results)
 {
     // Arrange
-    int ready = 9;
-    int ready_after_not_ready = 9;
     cplat_error detail = {};
+    cplat_error timeout_detail = {};
+    cplat_error not_ready_detail = {};
 
     // Pre-Assert
     // 下位の待機 API が 1 個のソケットとタイムアウト 0 を指定して呼び出されること。
@@ -1791,12 +1791,12 @@ TEST_F(socketTest, wait_single_reports_results)
         .WillOnce(
             [](const char *, const int, const char *, LPWSAPOLLFD fds, ULONG, INT)
             {
-                fds->revents = POLLRDNORM;
+                fds->revents = POLLWRNORM;
                 return 1;
             })
         .WillOnce(Return(SOCKET_ERROR));
     // [Pre-Assert確認_正常系] - WSAPoll() が 1、0 を指定して 4 回呼び出されること。
-    // [Pre-Assert手順] - WSAPoll() から、1 回目は 0、2 回目は fds->revents に 0 を設定して 1、3 回目は fds->revents に POLLRDNORM を設定して 1、4 回目は SOCKET_ERROR を返す。
+    // [Pre-Assert手順] - WSAPoll() から、1 回目は 0、2 回目は fds->revents に 0 を設定して 1、3 回目は fds->revents に POLLWRNORM を設定して 1、4 回目は SOCKET_ERROR を返す。
     EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAEBADF));
     // [Pre-Assert確認_正常系] - WSAGetLastError() が 1 回呼び出されること。
     // [Pre-Assert手順] - WSAGetLastError() から WSAEBADF を返す。
@@ -1804,47 +1804,56 @@ TEST_F(socketTest, wait_single_reports_results)
     // [Pre-Assert手順] - poll() から 1 回目はタイムアウトの 0、2 回目と 3 回目は条件成立の 1、4 回目は失敗の -1 を返し、Windows では WSAPoll() から 0、1、1、SOCKET_ERROR の順に返す。
 
     // Act
-    int actual_ret_invalid_socket = cplat_socket_wait_readable(
-        CPLAT_INVALID_SOCKET, 0, &ready,
-        &detail); // [手順] - 無効なソケットを指定して cplat_socket_wait_readable() を呼び出す。
-    int actual_ret_invalid_output = cplat_socket_wait_readable(
-        kSocket, 0, nullptr,
-        &detail); // [手順] - 待機結果の出力先に nullptr を指定して cplat_socket_wait_readable() を呼び出す。
-    int actual_ret_timeout = cplat_socket_wait_readable(
-        kSocket, 0, &ready, &detail); // [手順] - 待機がタイムアウトする状態で cplat_socket_wait_readable() を呼び出す。
-    int actual_ret_not_ready = cplat_socket_wait_readable(
-        kSocket, 0, &ready,
-        &detail); // [手順] - 待機イベントが一致しない状態で cplat_socket_wait_readable() を呼び出す。
-    ready_after_not_ready = ready;
-    int actual_ret_ready = cplat_socket_wait_writable(
-        kSocket, 0, &ready, &detail); // [手順] - 書き込み可能な状態で cplat_socket_wait_writable() を呼び出す。
-    int actual_ret_failure = cplat_socket_wait_readable(
-        kSocket, 0, &ready, &detail); // [手順] - 待機 API が失敗する状態で cplat_socket_wait_readable() を呼び出す。
+    int actual_ret_invalid_socket = cplat_socket_timed_wait_readable(
+        CPLAT_INVALID_SOCKET, 0,
+        &detail); // [手順] - 無効なソケットを指定して cplat_socket_timed_wait_readable() を呼び出す。
+    int actual_ret_negative_timeout = cplat_socket_timed_wait_readable(
+        kSocket, -1,
+        &detail); // [手順] - 負の待ち時間を指定して cplat_socket_timed_wait_readable() を呼び出す。
+    int actual_ret_timeout = cplat_socket_timed_wait_readable(
+        kSocket, 0, &timeout_detail); // [手順] - 待機がタイムアウトする状態で cplat_socket_timed_wait_readable() を呼び出す。
+    int actual_ret_not_ready = cplat_socket_timed_wait_readable(
+        kSocket, 0,
+        &not_ready_detail); // [手順] - 待機イベントが一致しない状態で cplat_socket_timed_wait_readable() を呼び出す。
+    int actual_ret_ready = cplat_socket_timed_wait_writable(
+        kSocket, 0, &detail); // [手順] - 書き込み可能な状態で cplat_socket_timed_wait_writable() を呼び出す。
+    int actual_ret_failure = cplat_socket_timed_wait_readable(
+        kSocket, 0, &detail); // [手順] - 待機 API が失敗する状態で cplat_socket_timed_wait_readable() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_invalid_socket); // [確認_異常系] - 無効なソケットを指定した cplat_socket_wait_readable() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_invalid_socket); // [確認_異常系] - 無効なソケットを指定した cplat_socket_timed_wait_readable() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_invalid_output); // [確認_異常系] - nullptr の出力先を指定した cplat_socket_wait_readable() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_negative_timeout); // [確認_異常系] - 負の待ち時間を指定した cplat_socket_timed_wait_readable() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_TIMEOUT,
+        actual_ret_timeout); // [確認_正常系] - タイムアウト時の cplat_socket_timed_wait_readable() の戻り値が CPLAT_ERR_TIMEOUT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_TIMEOUT,
+        actual_ret_not_ready); // [確認_正常系] - イベント不一致時の cplat_socket_timed_wait_readable() の戻り値が CPLAT_ERR_TIMEOUT であること。
+#if defined(PLATFORM_LINUX)
+    // [サブ手順参照 名前=socketTest.expect_detail]
+    expect_detail(timeout_detail, CPLAT_ERROR_DOMAIN_SOCKET_ERRNO, CPLAT_ERR_TIMEOUT,
+                  static_cast<unsigned long>(ETIMEDOUT));
+    // [サブ手順参照 名前=socketTest.expect_detail]
+    expect_detail(not_ready_detail, CPLAT_ERROR_DOMAIN_SOCKET_ERRNO, CPLAT_ERR_TIMEOUT,
+                  static_cast<unsigned long>(ETIMEDOUT));
+#elif defined(PLATFORM_WINDOWS)
+    // [サブ手順参照 名前=socketTest.expect_detail]
+    expect_detail(timeout_detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_TIMEOUT,
+                  static_cast<unsigned long>(WSAETIMEDOUT));
+    // [サブ手順参照 名前=socketTest.expect_detail]
+    expect_detail(not_ready_detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_TIMEOUT,
+                  static_cast<unsigned long>(WSAETIMEDOUT));
+#endif
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret_timeout); // [確認_正常系] - タイムアウト時の cplat_socket_wait_readable() の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(
-        CPLAT_OK,
-        actual_ret_not_ready); // [確認_正常系] - イベント不一致時の cplat_socket_wait_readable() の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(
-        0,
-        ready_after_not_ready); // [確認_正常系] - ready_after_not_ready が 0 であること。(イベント不一致時は準備完了にならないことの確認)
-    EXPECT_EQ(
-        CPLAT_OK,
-        actual_ret_ready); // [確認_正常系] - 準備完了時の cplat_socket_wait_writable() の戻り値が CPLAT_OK であること。
+        actual_ret_ready); // [確認_正常系] - 準備完了時の cplat_socket_timed_wait_writable() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        actual_ret_failure); // [確認_異常系] - 待機 API 失敗時の cplat_socket_wait_readable() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(0,
-              ready); // [確認_正常系] - ready が 0 であること。(最後の待機失敗で準備完了にならないことの確認)
+        actual_ret_failure); // [確認_異常系] - 待機 API 失敗時の cplat_socket_timed_wait_readable() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 // [サブ手順参照 名前=socketTest.TearDown]
 
@@ -1855,6 +1864,7 @@ TEST_F(socketTest, wait_multi_rejects_invalid_and_waits_without_valid_socket)
     const cplat_socket socks[1] = {CPLAT_INVALID_SOCKET};
     unsigned char ready[1] = {9U};
     cplat_error detail = {};
+    cplat_error wait_detail = {};
 
     // Pre-Assert
     // 有効なソケットがない場合に cplat_sleep_ms がタイムアウト時間を引数として 1 回呼び出されること。
@@ -1862,43 +1872,65 @@ TEST_F(socketTest, wait_multi_rejects_invalid_and_waits_without_valid_socket)
     // [Pre-Assert確認_異常系] - cplat_sleep_ms() が 5 を指定して 1 回呼び出されること。
 
     // Act
-    int actual_ret_null_socks = cplat_socket_wait_readable_multi(
+    int actual_ret_null_socks = cplat_socket_timed_wait_readable_multi(
         nullptr, 1U, 0, ready,
-        &detail); // [手順] - ソケット配列に nullptr を指定して cplat_socket_wait_readable_multi() を呼び出す。
-    int actual_ret_zero_count = cplat_socket_wait_readable_multi(
-        socks, 0U, 0, ready, &detail); // [手順] - 要素数に 0 を指定して cplat_socket_wait_readable_multi() を呼び出す。
-    int actual_ret_large_count = cplat_socket_wait_readable_multi(
+        &detail); // [手順] - ソケット配列に nullptr を指定して cplat_socket_timed_wait_readable_multi() を呼び出す。
+    int actual_ret_zero_count = cplat_socket_timed_wait_readable_multi(
+        socks, 0U, 0, ready,
+        &detail); // [手順] - 要素数に 0 を指定して cplat_socket_timed_wait_readable_multi() を呼び出す。
+    int actual_ret_large_count = cplat_socket_timed_wait_readable_multi(
         socks, CPLAT_SOCKET_WAIT_MAX + 1U, 0, ready,
-        &detail); // [手順] - 最大数を超える要素数を指定して cplat_socket_wait_readable_multi() を呼び出す。
-    int actual_ret_null_ready = cplat_socket_wait_readable_multi(
+        &detail); // [手順] - 最大数を超える要素数を指定して cplat_socket_timed_wait_readable_multi() を呼び出す。
+    int actual_ret_null_ready = cplat_socket_timed_wait_readable_multi(
         socks, 1U, 0, nullptr,
-        &detail); // [手順] - 結果配列に nullptr を指定して cplat_socket_wait_readable_multi() を呼び出す。
-    int actual_ret_wait = cplat_socket_wait_readable_multi(
+        &detail); // [手順] - 結果配列に nullptr を指定して cplat_socket_timed_wait_readable_multi() を呼び出す。
+    int actual_ret_negative_timeout = cplat_socket_timed_wait_readable_multi(
+        socks, 1U, -1, ready,
+        &detail); // [手順] - 負の待ち時間を指定して cplat_socket_timed_wait_readable_multi() を呼び出す。
+    int actual_ret_indefinite_no_valid = cplat_socket_wait_readable_multi(
+        socks, 1U, ready,
+        &detail); // [手順] - すべてのソケットが無効な状態で無期限の cplat_socket_wait_readable_multi() を呼び出す。
+    int actual_ret_wait = cplat_socket_timed_wait_readable_multi(
         socks, 1U, 5, ready,
-        &detail); // [手順] - すべてのソケットが無効な状態で cplat_socket_wait_readable_multi() を呼び出す。
-    int actual_ret_wait_without_timeout = cplat_socket_wait_readable_multi(
+        &wait_detail); // [手順] - すべてのソケットが無効な状態で有限の待ち時間を指定して cplat_socket_timed_wait_readable_multi() を呼び出す。
+    int actual_ret_wait_without_timeout = cplat_socket_timed_wait_readable_multi(
         socks, 1U, 0, ready,
-        &detail); // [手順] - すべてのソケットが無効な状態で待機時間に 0 を指定して cplat_socket_wait_readable_multi() を呼び出す。
+        &detail); // [手順] - すべてのソケットが無効な状態で待機時間に 0 を指定して cplat_socket_timed_wait_readable_multi() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_socks); // [確認_異常系] - nullptr のソケット配列を指定した cplat_socket_wait_readable_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_socks); // [確認_異常系] - nullptr のソケット配列を指定した cplat_socket_timed_wait_readable_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_zero_count); // [確認_異常系] - 要素数 0 を指定した cplat_socket_wait_readable_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_zero_count); // [確認_異常系] - 要素数 0 を指定した cplat_socket_timed_wait_readable_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_large_count); // [確認_異常系] - 最大数を超える要素数を指定した cplat_socket_wait_readable_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_large_count); // [確認_異常系] - 最大数を超える要素数を指定した cplat_socket_timed_wait_readable_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
         CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null_ready); // [確認_異常系] - nullptr の結果配列を指定した cplat_socket_wait_readable_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+        actual_ret_null_ready); // [確認_異常系] - nullptr の結果配列を指定した cplat_socket_timed_wait_readable_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
-        CPLAT_OK,
-        actual_ret_wait); // [確認_正常系] - 全無効ソケットを指定した cplat_socket_wait_readable_multi() の戻り値が CPLAT_OK であること。
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_negative_timeout); // [確認_異常系] - 負の待ち時間を指定した cplat_socket_timed_wait_readable_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
     EXPECT_EQ(
-        CPLAT_OK,
-        actual_ret_wait_without_timeout); // [確認_正常系] - 全無効ソケットで待機時間 0 を指定した cplat_socket_wait_readable_multi() の戻り値が CPLAT_OK であること。
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_indefinite_no_valid); // [確認_異常系] - 全無効ソケットを指定した無期限の cplat_socket_wait_readable_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_TIMEOUT,
+        actual_ret_wait); // [確認_正常系] - 全無効ソケットへ有限の待ち時間を指定した cplat_socket_timed_wait_readable_multi() の戻り値が CPLAT_ERR_TIMEOUT であること。
+#if defined(PLATFORM_LINUX)
+    // [サブ手順参照 名前=socketTest.expect_detail]
+    expect_detail(wait_detail, CPLAT_ERROR_DOMAIN_SOCKET_ERRNO, CPLAT_ERR_TIMEOUT,
+                  static_cast<unsigned long>(ETIMEDOUT));
+#elif defined(PLATFORM_WINDOWS)
+    // [サブ手順参照 名前=socketTest.expect_detail]
+    expect_detail(wait_detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_TIMEOUT,
+                  static_cast<unsigned long>(WSAETIMEDOUT));
+#endif
+    EXPECT_EQ(
+        CPLAT_ERR_TIMEOUT,
+        actual_ret_wait_without_timeout); // [確認_正常系] - 全無効ソケットで待機時間 0 を指定した cplat_socket_timed_wait_readable_multi() の戻り値が CPLAT_ERR_TIMEOUT であること。
     EXPECT_EQ(0U,
               ready[0]); // [確認_正常系] - ready[0] が 0U であること。(無効ソケットは準備完了にならないことの確認)
 }
@@ -1960,23 +1992,24 @@ TEST_F(socketTest, wait_multi_reports_results)
     // [Pre-Assert手順] - poll() から、一部のソケットの受信可能または非受信を出力引数に設定して 1 回目は 0、2 回目は 2、3 回目は -1 を返し、Windows では WSAPoll() から同様に設定して 0、2、SOCKET_ERROR を返す。
 
     // Act
-    int actual_ret_timeout = cplat_socket_wait_readable_multi(
+    int actual_ret_timeout = cplat_socket_timed_wait_readable_multi(
         socks, 3U, 0, ready,
-        &detail); // [手順] - 待機がタイムアウトする状態で cplat_socket_wait_readable_multi() を呼び出す。
-    int actual_ret_ready = cplat_socket_wait_readable_multi(
+        &detail); // [手順] - 待機がタイムアウトする状態で cplat_socket_timed_wait_readable_multi() を呼び出す。
+    int actual_ret_ready = cplat_socket_timed_wait_readable_multi(
         socks, 3U, 0, ready,
-        &detail); // [手順] - 複数ソケットが準備完了になる状態で cplat_socket_wait_readable_multi() を呼び出す。
+        &detail); // [手順] - 複数ソケットが準備完了になる状態で cplat_socket_timed_wait_readable_multi() を呼び出す。
     std::memcpy(ready_after_ready, ready, sizeof(ready_after_ready));
-    int actual_ret_failure = cplat_socket_wait_readable_multi(
-        socks, 3U, 0, ready, &detail); // [手順] - 待機が失敗する状態で cplat_socket_wait_readable_multi() を呼び出す。
+    int actual_ret_failure = cplat_socket_timed_wait_readable_multi(
+        socks, 3U, 0, ready,
+        &detail); // [手順] - 待機が失敗する状態で cplat_socket_timed_wait_readable_multi() を呼び出す。
 
     // Assert
     EXPECT_EQ(
-        CPLAT_OK,
-        actual_ret_timeout); // [確認_正常系] - タイムアウト時の cplat_socket_wait_readable_multi() の戻り値が CPLAT_OK であること。
+        CPLAT_ERR_TIMEOUT,
+        actual_ret_timeout); // [確認_正常系] - タイムアウト時の cplat_socket_timed_wait_readable_multi() の戻り値が CPLAT_ERR_TIMEOUT であること。
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret_ready); // [確認_正常系] - 準備完了時の cplat_socket_wait_readable_multi() の戻り値が CPLAT_OK であること。
+        actual_ret_ready); // [確認_正常系] - 準備完了時の cplat_socket_timed_wait_readable_multi() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         1U,
         ready_after_ready
@@ -1991,7 +2024,7 @@ TEST_F(socketTest, wait_multi_reports_results)
             [2]); // [確認_正常系] - ready_after_ready[2] が 1U であること。(3 番目のソケットが準備完了になることの確認)
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        actual_ret_failure); // [確認_異常系] - 待機失敗時の cplat_socket_wait_readable_multi() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        actual_ret_failure); // [確認_異常系] - 待機失敗時の cplat_socket_timed_wait_readable_multi() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 // [サブ手順参照 名前=socketTest.TearDown]
 
@@ -2001,7 +2034,6 @@ TEST_F(socketTest, wait_multi_reports_results)
 TEST_F(socketTest, wait_single_retries_after_interrupt)
 {
     // Arrange
-    int ready = 9;
     cplat_error detail = {};
 
     // Pre-Assert
@@ -2018,15 +2050,13 @@ TEST_F(socketTest, wait_single_retries_after_interrupt)
     // [Pre-Assert手順] - poll() から、1 回目は errno に EINTR を設定して -1、2 回目は fds->revents に fds->events を設定して条件成立の 1 を返す。
 
     // Act
-    int actual_ret = cplat_socket_wait_readable(
-        kSocket, 0, &ready,
-        &detail); // [手順] - 受信可能になるまでの待機のタイムアウトに 0 を指定して cplat_socket_wait_readable() を呼び出す。
+    int actual_ret = cplat_socket_timed_wait_readable(
+        kSocket, 0,
+        &detail); // [手順] - 受信可能になるまでの待機のタイムアウトに 0 を指定して cplat_socket_timed_wait_readable() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              actual_ret); // [確認_正常系] - cplat_socket_wait_readable() の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1,
-              ready); // [確認_正常系] - ready が 1 であること。(再待機で条件が成立することの確認)
+              actual_ret); // [確認_正常系] - cplat_socket_timed_wait_readable() の戻り値が CPLAT_OK であること。
 }
 // [サブ手順参照 名前=socketTest.TearDown]
 
@@ -2034,7 +2064,6 @@ TEST_F(socketTest, wait_single_retries_after_interrupt)
 TEST_F(socketTest, wait_single_retries_without_deadline_after_interrupt)
 {
     // Arrange
-    int ready = 9;
     cplat_error detail = {};
 
     // Pre-Assert
@@ -2042,7 +2071,7 @@ TEST_F(socketTest, wait_single_retries_without_deadline_after_interrupt)
     EXPECT_CALL(mock_cplat_, cplat_clock_get_monotonic_ms(_)).Times(0);
 
     // [Pre-Assert確認_正常系] - cplat_clock_get_monotonic_ms() が呼び出されないこと。
-    EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, CPLAT_SOCKET_WAIT_FOREVER))
+    EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, -1))
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)))
         .WillOnce(
             [](const char *, const int, const char *, struct pollfd *fds, nfds_t, int)
@@ -2050,19 +2079,17 @@ TEST_F(socketTest, wait_single_retries_without_deadline_after_interrupt)
                 fds->revents = fds->events;
                 return 1;
             });
-    // [Pre-Assert確認_正常系] - poll() が 1、CPLAT_SOCKET_WAIT_FOREVER を指定して 2 回呼び出されること。
+    // [Pre-Assert確認_正常系] - poll() が 1、-1 を指定して 2 回呼び出されること。
     // [Pre-Assert手順] - poll() から、1 回目は errno に EINTR を設定して -1、2 回目は fds->revents に fds->events を設定して条件成立の 1 を返す。
 
     // Act
     int actual_ret = cplat_socket_wait_readable(
-        kSocket, CPLAT_SOCKET_WAIT_FOREVER, &ready,
-        &detail); // [手順] - 受信可能になるまでの待機時間に無期限を指定して cplat_socket_wait_readable() を呼び出す。
+        kSocket,
+        &detail); // [手順] - 無期限の受信待機として cplat_socket_wait_readable() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              actual_ret); // [確認_正常系] - 無期限指定の cplat_socket_wait_readable() の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1,
-              ready); // [確認_正常系] - ready が 1 であること。(再待機で条件が成立することの確認)
+              actual_ret); // [確認_正常系] - 無期限の cplat_socket_wait_readable() の戻り値が CPLAT_OK であること。
 }
 // [サブ手順参照 名前=socketTest.TearDown]
 
@@ -2070,7 +2097,6 @@ TEST_F(socketTest, wait_single_retries_without_deadline_after_interrupt)
 TEST_F(socketTest, wait_single_recomputes_remaining_after_interrupt)
 {
     // Arrange
-    int ready = 9;
     cplat_error detail = {};
 
     // Pre-Assert
@@ -2096,24 +2122,20 @@ TEST_F(socketTest, wait_single_recomputes_remaining_after_interrupt)
     // [Pre-Assert手順] - poll() から、fds->revents に fds->events を設定して条件成立の 1 を返す。
 
     // Act
-    int actual_ret = cplat_socket_wait_readable(
-        kSocket, 100, &ready,
-        &detail); // [手順] - タイムアウトに 100 ms を指定して cplat_socket_wait_readable() を呼び出す。
+    int actual_ret = cplat_socket_timed_wait_readable(
+        kSocket, 100, &detail); // [手順] - タイムアウトに 100 ms を指定して cplat_socket_timed_wait_readable() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_OK,
-        actual_ret); // [確認_正常系] - タイムアウト 100 ms の cplat_socket_wait_readable() の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1,
-              ready); // [確認_正常系] - ready が 1 であること。(残り時間での再待機で条件が成立することの確認)
+        actual_ret); // [確認_正常系] - タイムアウト 100 ms の cplat_socket_timed_wait_readable() の戻り値が CPLAT_OK であること。
 }
 // [サブ手順参照 名前=socketTest.TearDown]
 
-// 期限付きの単一ソケット待機がシグナル中断で期限を過ぎた場合に条件不成立となることの確認
+// 期限付きの単一ソケット待機がシグナル中断で期限を過ぎた場合にタイムアウトとなることの確認
 TEST_F(socketTest, wait_single_reports_not_ready_when_deadline_expires_after_interrupt)
 {
     // Arrange
-    int ready = 9;
     cplat_error detail = {};
 
     // Pre-Assert
@@ -2130,15 +2152,13 @@ TEST_F(socketTest, wait_single_reports_not_ready_when_deadline_expires_after_int
     // [Pre-Assert手順] - poll() から、errno に EINTR を設定して -1 を返す。
 
     // Act
-    int actual_ret = cplat_socket_wait_readable(
-        kSocket, 50, &ready,
-        &detail); // [手順] - タイムアウトに 50 ms を指定して cplat_socket_wait_readable() を呼び出す。
+    int actual_ret = cplat_socket_timed_wait_readable(
+        kSocket, 50, &detail); // [手順] - タイムアウトに 50 ms を指定して cplat_socket_timed_wait_readable() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK,
-              actual_ret); // [確認_正常系] - 期限超過後の cplat_socket_wait_readable() の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(0,
-              ready); // [確認_正常系] - ready が 0 であること。(期限を過ぎたため準備完了にならないことの確認)
+    EXPECT_EQ(
+        CPLAT_ERR_TIMEOUT,
+        actual_ret); // [確認_正常系] - 期限超過後の cplat_socket_timed_wait_readable() の戻り値が CPLAT_ERR_TIMEOUT であること。
 }
 // [サブ手順参照 名前=socketTest.TearDown]
 
@@ -2165,13 +2185,13 @@ TEST_F(socketTest, wait_multi_retries_after_interrupt)
     // [Pre-Assert手順] - poll() から、1 回目は errno に EINTR を設定して -1、2 回目は fds[0].revents に POLLIN、fds[1].revents に 0 を設定して 1 番目のソケットの受信可能を表す 1 を返す。
 
     // Act
-    int actual_ret = cplat_socket_wait_readable_multi(
+    int actual_ret = cplat_socket_timed_wait_readable_multi(
         socks, 2U, 0, ready,
-        &detail); // [手順] - 受信可能になるまで待機するソケットを 2 個指定して cplat_socket_wait_readable_multi() を呼び出す。
+        &detail); // [手順] - 受信可能になるまで待機するソケットを 2 個指定して cplat_socket_timed_wait_readable_multi() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_OK,
-              actual_ret); // [確認_正常系] - cplat_socket_wait_readable_multi() の戻り値が CPLAT_OK であること。
+              actual_ret); // [確認_正常系] - cplat_socket_timed_wait_readable_multi() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         1U,
         ready[0]); // [確認_正常系] - ready[0] が 1U であること。(再待機で 1 番目のソケットが準備完了になることの確認)
@@ -2340,14 +2360,14 @@ TEST_F(socketTest, connect_completes_after_interrupt)
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)));
     // [Pre-Assert確認_正常系] - connect() が kSocket を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - connect() から、errno に EINTR を設定して -1 を返す。
-    EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, CPLAT_SOCKET_WAIT_FOREVER))
+    EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, -1))
         .WillOnce(
             [](const char *, const int, const char *, struct pollfd *fds, nfds_t, int)
             {
                 fds->revents = fds->events;
                 return 1;
             });
-    // [Pre-Assert確認_正常系] - poll() が 1、CPLAT_SOCKET_WAIT_FOREVER を指定して 1 回呼び出されること。
+    // [Pre-Assert確認_正常系] - poll() が 1、-1 を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - poll() から、fds->revents に fds->events を設定して書き込み可能を表す 1 を返す。
     EXPECT_CALL(mock_sys_socket_, getsockopt(_, _, _, (int)kSocket, SOL_SOCKET, SO_ERROR, _, _))
         .WillOnce(
@@ -2381,14 +2401,14 @@ TEST_F(socketTest, connect_reports_pending_error_after_interrupt)
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)));
     // [Pre-Assert確認_異常系] - connect() が kSocket を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - connect() から、errno に EINTR を設定して -1 を返す。
-    EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, CPLAT_SOCKET_WAIT_FOREVER))
+    EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, -1))
         .WillOnce(
             [](const char *, const int, const char *, struct pollfd *fds, nfds_t, int)
             {
                 fds->revents = fds->events;
                 return 1;
             });
-    // [Pre-Assert確認_異常系] - poll() が 1、CPLAT_SOCKET_WAIT_FOREVER を指定して 1 回呼び出されること。
+    // [Pre-Assert確認_異常系] - poll() が 1、-1 を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - poll() から、fds->revents に fds->events を設定して書き込み可能を表す 1 を返す。
     EXPECT_CALL(mock_sys_socket_, getsockopt(_, _, _, (int)kSocket, SOL_SOCKET, SO_ERROR, _, _))
         .WillOnce(
@@ -2426,9 +2446,8 @@ TEST_F(socketTest, connect_reports_wait_failure_after_interrupt)
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)));
     // [Pre-Assert確認_異常系] - connect() が kSocket を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - connect() から、errno に EINTR を設定して -1 を返す。
-    EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, CPLAT_SOCKET_WAIT_FOREVER))
-        .WillOnce(DoAll(Assign(&errno, EBADF), Return(-1)));
-    // [Pre-Assert確認_異常系] - poll() が 1、CPLAT_SOCKET_WAIT_FOREVER を指定して 1 回呼び出されること。
+    EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, -1)).WillOnce(DoAll(Assign(&errno, EBADF), Return(-1)));
+    // [Pre-Assert確認_異常系] - poll() が 1、-1 を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - poll() から、errno に EBADF を設定して -1 を返す。
     EXPECT_CALL(mock_sys_socket_, getsockopt(_, _, _, _, _, _, _, _)).Times(0);
     // [Pre-Assert確認_異常系] - getsockopt() が呼び出されないこと。
@@ -2459,8 +2478,8 @@ TEST_F(socketTest, connect_reports_timeout_when_not_writable_after_interrupt)
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)));
     // [Pre-Assert確認_異常系] - connect() が kSocket を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - connect() から、errno に EINTR を設定して -1 を返す。
-    EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, CPLAT_SOCKET_WAIT_FOREVER)).WillOnce(Return(0));
-    // [Pre-Assert確認_異常系] - poll() が 1、CPLAT_SOCKET_WAIT_FOREVER を指定して 1 回呼び出されること。
+    EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, -1)).WillOnce(Return(0));
+    // [Pre-Assert確認_異常系] - poll() が 1、-1 を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - poll() から条件不成立を表す 0 を返す。
     EXPECT_CALL(mock_sys_socket_, getsockopt(_, _, _, _, _, _, _, _)).Times(0);
     // [Pre-Assert確認_正常系] - getsockopt() が呼び出されないこと。
@@ -2542,7 +2561,6 @@ TEST_F(socketTest, shutdown_receive_reports_results)
 TEST_F(socketTest, clock_failure_does_not_poll)
 {
     // Arrange
-    int ready = 9;
     cplat_error detail = {};
 
     // Pre-Assert
@@ -2555,7 +2573,7 @@ TEST_F(socketTest, clock_failure_does_not_poll)
     // [Pre-Assert確認_異常系] - 不正な期限で poll() を呼び出さないこと。
 
     // Act
-    int result = cplat_socket_wait_readable(kSocket, 100, &ready, &detail);
+    int result = cplat_socket_timed_wait_readable(kSocket, 100, &detail);
 
     // [手順] - 時計が取得できない状態で期限付き待機を要求する。
 
@@ -2568,7 +2586,6 @@ TEST_F(socketTest, clock_failure_does_not_poll)
 TEST_F(socketTest, wait_readable_returns_ready_on_pollhup)
 {
     // Arrange
-    int ready = 0;
     cplat_error detail = {};
 
     // Pre-Assert
@@ -2595,12 +2612,11 @@ TEST_F(socketTest, wait_readable_returns_ready_on_pollhup)
 #endif /* PLATFORM_ */
 
     // Act
-    int actual_ret = cplat_socket_wait_readable(
-        kSocket, 0, &ready, &detail); // [手順] - POLLHUP のみが返る状態で cplat_socket_wait_readable() を呼び出す。
+    int actual_ret = cplat_socket_timed_wait_readable(
+        kSocket, 0, &detail); // [手順] - POLLHUP のみが返る状態で cplat_socket_timed_wait_readable() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1, ready);             // [確認_正常系] - POLLHUP のみでも ready が 1 であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - POLLHUP のみでも戻り値が CPLAT_OK であること。
 }
 // [サブ手順参照 名前=socketTest.TearDown]
 
@@ -2608,7 +2624,6 @@ TEST_F(socketTest, wait_readable_returns_ready_on_pollhup)
 TEST_F(socketTest, wait_readable_returns_ready_on_pollerr)
 {
     // Arrange
-    int ready = 0;
     cplat_error detail = {};
 
     // Pre-Assert
@@ -2635,11 +2650,89 @@ TEST_F(socketTest, wait_readable_returns_ready_on_pollerr)
 #endif /* PLATFORM_ */
 
     // Act
-    int actual_ret = cplat_socket_wait_readable(
-        kSocket, 0, &ready, &detail); // [手順] - POLLERR のみが返る状態で cplat_socket_wait_readable() を呼び出す。
+    int actual_ret = cplat_socket_timed_wait_readable(
+        kSocket, 0, &detail); // [手順] - POLLERR のみが返る状態で cplat_socket_timed_wait_readable() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - 戻り値が CPLAT_OK であること。
-    EXPECT_EQ(1, ready);             // [確認_正常系] - POLLERR のみでも ready が 1 であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - POLLERR のみでも戻り値が CPLAT_OK であること。
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+
+// 無期限待機および CPLAT_WAIT_FOREVER が下位の待機 API へ -1 を渡すことの確認
+TEST_F(socketTest, indefinite_and_wait_forever_pass_negative_one_to_native_poll)
+{
+    // Arrange
+    const cplat_socket socks[2] = {kSocket, (cplat_socket)8};
+    unsigned char ready[2] = {0U, 0U};
+    cplat_error detail = {};
+
+    // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_poll_, poll(_, _, _, _, 1, -1))
+        .Times(2)
+        .WillRepeatedly(
+            [](const char *, const int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = fds[0].events;
+                return 1;
+            });
+    // [Pre-Assert確認_正常系] - 単一ソケットの無期限待機で poll() が 1、-1 を指定して 2 回呼び出されること。
+    // [Pre-Assert手順] - poll() から fds[0].revents に fds[0].events を設定して 1 を返す。
+    EXPECT_CALL(mock_poll_, poll(_, _, _, _, 2, -1))
+        .Times(2)
+        .WillRepeatedly(
+            [](const char *, const int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                fds[1].revents = 0;
+                return 1;
+            });
+    // [Pre-Assert確認_正常系] - 複数ソケットの無期限待機で poll() が 2、-1 を指定して 2 回呼び出されること。
+    // [Pre-Assert手順] - poll() から fds[0].revents に POLLIN、fds[1].revents に 0 を設定して 1 を返す。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_winsock_, WSAPoll(_, _, _, _, 1, -1))
+        .Times(2)
+        .WillRepeatedly(
+            [](const char *, const int, const char *, LPWSAPOLLFD fds, ULONG, INT)
+            {
+                fds[0].revents = fds[0].events;
+                return 1;
+            });
+    // [Pre-Assert確認_正常系] - 単一ソケットの無期限待機で WSAPoll() が 1、-1 を指定して 2 回呼び出されること。
+    // [Pre-Assert手順] - WSAPoll() から fds[0].revents に fds[0].events を設定して 1 を返す。
+    EXPECT_CALL(mock_winsock_, WSAPoll(_, _, _, _, 2, -1))
+        .Times(2)
+        .WillRepeatedly(
+            [](const char *, const int, const char *, LPWSAPOLLFD fds, ULONG, INT)
+            {
+                fds[0].revents = POLLRDNORM;
+                fds[1].revents = 0;
+                return 1;
+            });
+    // [Pre-Assert確認_正常系] - 複数ソケットの無期限待機で WSAPoll() が 2、-1 を指定して 2 回呼び出されること。
+    // [Pre-Assert手順] - WSAPoll() から fds[0].revents に POLLRDNORM、fds[1].revents に 0 を設定して 1 を返す。
+#endif /* PLATFORM_ */
+
+    // Act
+    int actual_ret_writable =
+        cplat_socket_wait_writable(kSocket, &detail); // [手順] - 無期限の書き込み待機を呼び出す。
+    int actual_ret_timed_forever = cplat_socket_timed_wait_readable(
+        kSocket, CPLAT_WAIT_FOREVER, &detail); // [手順] - CPLAT_WAIT_FOREVER の受信待機を呼び出す。
+    int actual_ret_multi = cplat_socket_wait_readable_multi(
+        socks, 2U, ready, &detail); // [手順] - 無期限の複数ソケット受信待機を呼び出す。
+    int actual_ret_multi_forever = cplat_socket_timed_wait_readable_multi(
+        socks, 2U, CPLAT_WAIT_FOREVER, ready, &detail); // [手順] - CPLAT_WAIT_FOREVER の複数ソケット受信待機を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_writable); // [確認_正常系] - cplat_socket_wait_writable() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_timed_forever); // [確認_正常系] - CPLAT_WAIT_FOREVER の受信待機が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_multi); // [確認_正常系] - cplat_socket_wait_readable_multi() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_multi_forever); // [確認_正常系] - CPLAT_WAIT_FOREVER の複数待機が CPLAT_OK であること。
+    EXPECT_EQ(1U, ready[0]);             // [確認_正常系] - ready[0] が 1U であること。
+    EXPECT_EQ(0U, ready[1]);             // [確認_正常系] - ready[1] が 0U であること。
 }
 // [サブ手順参照 名前=socketTest.TearDown]

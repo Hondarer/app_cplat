@@ -93,10 +93,7 @@ TEST(atomicConcurrencyTest, concurrent_relaxed_fetch_add_u64_sums_without_loss_a
     }
     for (index = 0; index < kThreadCount; index++)
     {
-        int actual_ret_join = cplat_thread_join(
-            threads[index],
-            CPLAT_SYNC_WAIT_FOREVER); // [手順] - 終了を待つ各スレッドを指定して cplat_thread_join() を呼び出す。
-        ASSERT_EQ(CPLAT_OK, actual_ret_join); // [状態確認] - cplat_thread_join() の戻り値が CPLAT_OK であること。
+        cplat_thread_join(threads[index]); // [手順] - 終了を待つ各スレッドを指定して cplat_thread_join() を呼び出す。
     }
     const uint64_t total = cplat_atomic_load_u64(
         &counter,
@@ -134,10 +131,7 @@ TEST(atomicConcurrencyTest, compare_exchange_protected_spinlock_counts_correctly
     }
     for (index = 0; index < kThreadCount; index++)
     {
-        int actual_ret_join = cplat_thread_join(
-            threads[index],
-            CPLAT_SYNC_WAIT_FOREVER); // [手順] - 終了を待つ各スレッドを指定して cplat_thread_join() を呼び出す。
-        ASSERT_EQ(CPLAT_OK, actual_ret_join); // [状態確認] - cplat_thread_join() の戻り値が CPLAT_OK であること。
+        cplat_thread_join(threads[index]); // [手順] - 終了を待つ各スレッドを指定して cplat_thread_join() を呼び出す。
     }
 
     // Assert

@@ -8,7 +8,6 @@
 #include <cplat/base/result.h>
 #include <cplat/crt/stdlib.h>
 #include <cplat/prompt/pinned_prompt.h>
-#include <cplat/runtime/abort.h>
 
 #include "prompt_platform.h"
 #include <cplat/console/console.h>
@@ -148,25 +147,21 @@ static FILE *pinned_prompt_channel_file(cplat_pinned_prompt_channel channel)
 }
 
 /* 排他制御が有効な場合に、固定プロンプト画面のミューテックスを無期限待機で取得する。 */
-static int pinned_prompt_lock(cplat_pinned_prompt *screen)
+static void pinned_prompt_lock(cplat_pinned_prompt *screen)
 {
     if (screen->mutex_active)
     {
-        return cplat_local_lock_lock(screen->mutex, CPLAT_SYNC_WAIT_FOREVER);
+        cplat_local_lock_lock(screen->mutex);
     }
-
-    return CPLAT_OK;
 }
 
 /* 排他制御が有効な場合に、固定プロンプト画面のミューテックスを解放する。 */
-static int pinned_prompt_unlock(cplat_pinned_prompt *screen)
+static void pinned_prompt_unlock(cplat_pinned_prompt *screen)
 {
     if (screen->mutex_active)
     {
-        return cplat_local_lock_unlock(screen->mutex);
+        cplat_local_lock_unlock(screen->mutex);
     }
-
-    return CPLAT_OK;
 }
 
 /* 端末の列数と行数を取得して更新し、前回から変更があればステータス行を再描画対象にする。 */
@@ -1117,19 +1112,13 @@ void cplat_pinned_prompt_dispose(cplat_pinned_prompt *screen)
         return;
     }
 
-    if (pinned_prompt_lock(screen) != CPLAT_OK)
-    {
-        CPLAT_ABORT("固定プロンプトの破棄中に内部ロックを取得できません");
-    }
+    pinned_prompt_lock(screen);
 
     pinned_prompt_cleanup_terminal_locked(screen);
 
     /* 解放処理を継続するため、端末状態の復帰成否は判定せず後続の資源解放を進める。 */
     (void)prompt_platform_leave_raw(&screen->platform);
-    if (pinned_prompt_unlock(screen) != CPLAT_OK)
-    {
-        CPLAT_ABORT("固定プロンプトの破棄中に内部ロックを解放できません");
-    }
+    pinned_prompt_unlock(screen);
 
     if (screen->history_contexts != NULL)
     {
@@ -1197,7 +1186,6 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
 {
     int done;
     int result;
-    int ret;
     pinned_prompt_history_ctx *history_ctx;
 
     buf[0] = '\0';
@@ -1223,36 +1211,21 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
         return pinned_prompt_readline_fallback(buf, buf_size, prompt_str);
     }
 
-    ret = pinned_prompt_lock(screen);
-    if (ret != CPLAT_OK)
-    {
-        (void)prompt_platform_leave_raw(&screen->platform);
-        return CPLAT_ERR_UNKNOWN;
-    }
+    pinned_prompt_lock(screen);
 
     history_ctx = pinned_prompt_find_or_create_history_ctx(screen, file, line);
     if (history_ctx == NULL)
     {
-        ret = pinned_prompt_unlock(screen);
+        pinned_prompt_unlock(screen);
         (void)prompt_platform_leave_raw(&screen->platform);
-
-        if (ret != CPLAT_OK)
-        {
-            return CPLAT_ERR_UNKNOWN;
-        }
 
         return CPLAT_ERR_UNKNOWN;
     }
 
     if (pinned_prompt_set_prompt(screen, prompt_str) != 0)
     {
-        ret = pinned_prompt_unlock(screen);
+        pinned_prompt_unlock(screen);
         (void)prompt_platform_leave_raw(&screen->platform);
-
-        if (ret != CPLAT_OK)
-        {
-            return CPLAT_ERR_UNKNOWN;
-        }
 
         return CPLAT_ERR_UNKNOWN;
     }
@@ -1270,12 +1243,7 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
         if (cplat_internal_prompt_edit_ensure_capacity(&screen->edit_buf, &screen->edit_cap, screen->input_max_bytes,
                                                        initial_length + 1U) != 0)
         {
-            ret = pinned_prompt_unlock(screen);
-            if (ret != CPLAT_OK)
-            {
-                (void)prompt_platform_leave_raw(&screen->platform);
-                return CPLAT_ERR_UNKNOWN;
-            }
+            pinned_prompt_unlock(screen);
 
             if (prompt_platform_leave_raw(&screen->platform) != 0)
             {
@@ -1291,12 +1259,7 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
 
     screen->prompt_visible = 1;
     pinned_prompt_render_locked(screen);
-    ret = pinned_prompt_unlock(screen);
-    if (ret != CPLAT_OK)
-    {
-        (void)prompt_platform_leave_raw(&screen->platform);
-        return CPLAT_ERR_UNKNOWN;
-    }
+    pinned_prompt_unlock(screen);
 
     done = 0;
     result = CPLAT_ERR_UNKNOWN;
@@ -1310,12 +1273,7 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
         ch = 0;
         key = pinned_prompt_read_key(screen, &ch);
 
-        ret = pinned_prompt_lock(screen);
-        if (ret != CPLAT_OK)
-        {
-            (void)prompt_platform_leave_raw(&screen->platform);
-            return CPLAT_ERR_UNKNOWN;
-        }
+        pinned_prompt_lock(screen);
 
         if (key == PINNED_PROMPT_KEY_RIGHT && screen->cursor == screen->edit_len)
         {
@@ -1440,12 +1398,7 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
             break;
         }
 
-        ret = pinned_prompt_unlock(screen);
-        if (ret != CPLAT_OK)
-        {
-            (void)prompt_platform_leave_raw(&screen->platform);
-            return CPLAT_ERR_UNKNOWN;
-        }
+        pinned_prompt_unlock(screen);
     }
 
     if (prompt_platform_leave_raw(&screen->platform) != 0)
@@ -1527,7 +1480,6 @@ int cplat_pinned_prompt_write(cplat_pinned_prompt *screen, cplat_pinned_prompt_c
 {
     FILE *out;
     size_t written;
-    int ret;
 
     if (written_out != NULL)
     {
@@ -1567,11 +1519,7 @@ int cplat_pinned_prompt_write(cplat_pinned_prompt *screen, cplat_pinned_prompt_c
         return CPLAT_OK;
     }
 
-    ret = pinned_prompt_lock(screen);
-    if (ret != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
+    pinned_prompt_lock(screen);
 
     /* 通常出力領域へスクロール範囲を制限してデータを出力し、制限解除後に固定プロンプトを再描画する。 */
     pinned_prompt_prepare_output_locked(screen);
@@ -1588,14 +1536,14 @@ int cplat_pinned_prompt_write(cplat_pinned_prompt *screen, cplat_pinned_prompt_c
     (void)fflush(out);
     (void)printf("\033[r");
     pinned_prompt_render_locked(screen);
-    ret = pinned_prompt_unlock(screen);
+    pinned_prompt_unlock(screen);
 
     if (written_out != NULL)
     {
         *written_out = written;
     }
 
-    if (ret != CPLAT_OK || written != size)
+    if (written != size)
     {
         return CPLAT_ERR_UNKNOWN;
     }
@@ -1673,18 +1621,12 @@ int cplat_pinned_prompt_printf(cplat_pinned_prompt *screen, cplat_pinned_prompt_
 int cplat_pinned_prompt_status_enable(cplat_pinned_prompt *screen, cplat_pinned_prompt_status_position position,
                                       int enable)
 {
-    int ret;
-
     if (screen == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    ret = pinned_prompt_lock(screen);
-    if (ret != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
+    pinned_prompt_lock(screen);
 
     if (position == CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP)
     {
@@ -1710,22 +1652,13 @@ int cplat_pinned_prompt_status_enable(cplat_pinned_prompt *screen, cplat_pinned_
     }
     else
     {
-        ret = pinned_prompt_unlock(screen);
-        if (ret != CPLAT_OK)
-        {
-            return CPLAT_ERR_UNKNOWN;
-        }
-
+        pinned_prompt_unlock(screen);
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
     screen->status_dirty = 1;
     pinned_prompt_render_locked(screen);
-    ret = pinned_prompt_unlock(screen);
-    if (ret != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
+    pinned_prompt_unlock(screen);
 
     return CPLAT_OK;
 }
@@ -1776,11 +1709,7 @@ int cplat_pinned_prompt_status_set(cplat_pinned_prompt *screen, cplat_pinned_pro
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    ret = pinned_prompt_lock(screen);
-    if (ret != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
+    pinned_prompt_lock(screen);
 
     if (position == CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP)
     {
@@ -1794,11 +1723,7 @@ int cplat_pinned_prompt_status_set(cplat_pinned_prompt *screen, cplat_pinned_pro
         }
         else
         {
-            if (pinned_prompt_unlock(screen) != CPLAT_OK)
-            {
-                return CPLAT_ERR_UNKNOWN;
-            }
-
+            pinned_prompt_unlock(screen);
             return CPLAT_ERR_INVALID_ARGUMENT;
         }
     }
@@ -1816,21 +1741,13 @@ int cplat_pinned_prompt_status_set(cplat_pinned_prompt *screen, cplat_pinned_pro
         }
         else
         {
-            if (pinned_prompt_unlock(screen) != CPLAT_OK)
-            {
-                return CPLAT_ERR_UNKNOWN;
-            }
-
+            pinned_prompt_unlock(screen);
             return CPLAT_ERR_INVALID_ARGUMENT;
         }
     }
     else
     {
-        if (pinned_prompt_unlock(screen) != CPLAT_OK)
-        {
-            return CPLAT_ERR_UNKNOWN;
-        }
-
+        pinned_prompt_unlock(screen);
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
@@ -1840,10 +1757,7 @@ int cplat_pinned_prompt_status_set(cplat_pinned_prompt *screen, cplat_pinned_pro
         pinned_prompt_render_locked(screen);
     }
 
-    if (pinned_prompt_unlock(screen) != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
+    pinned_prompt_unlock(screen);
 
     return ret;
 }
@@ -1852,28 +1766,18 @@ int cplat_pinned_prompt_status_set(cplat_pinned_prompt *screen, cplat_pinned_pro
 
 int cplat_pinned_prompt_completion_set(cplat_pinned_prompt *screen, cplat_prompt_completion_fn fn, void *user_data)
 {
-    int ret;
-
     if (screen == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    ret = pinned_prompt_lock(screen);
-    if (ret != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
+    pinned_prompt_lock(screen);
 
     screen->completion_fn = fn;
     screen->completion_user_data = user_data;
     screen->completions.count = 0U;
     pinned_prompt_render_locked(screen);
-    ret = pinned_prompt_unlock(screen);
-    if (ret != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
+    pinned_prompt_unlock(screen);
 
     return CPLAT_OK;
 }

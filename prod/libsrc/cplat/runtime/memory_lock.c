@@ -105,9 +105,9 @@ static int memory_lock_lock(void)
     {
         result = CPLAT_ERR_UNKNOWN;
     }
-    else if (cplat_local_lock_lock(s_memory_lock_lock, CPLAT_SYNC_WAIT_FOREVER) != CPLAT_OK)
+    else
     {
-        result = CPLAT_ERR_UNKNOWN;
+        cplat_local_lock_lock(s_memory_lock_lock);
     }
 
     return result;
@@ -118,11 +118,7 @@ static int memory_lock_lock(void)
  */
 static void memory_lock_unlock(void)
 {
-    if (s_memory_lock_lock != NULL)
-    {
-        /* 呼び出し元は memory_lock_lock() の成功後にだけ本関数を呼ぶため、保持中のロックの解放は失敗しない。 */
-        (void)cplat_local_lock_unlock(s_memory_lock_lock);
-    }
+    cplat_local_lock_unlock(s_memory_lock_lock);
 }
 
 /**

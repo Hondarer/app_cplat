@@ -27,8 +27,8 @@ inline void set_trace_sync_mock_defaults(Mock_cplat &mock_cplat)
                 *lock = reinterpret_cast<cplat_local_lock *>(static_cast<uintptr_t>(0x3100));
                 return CPLAT_OK;
             });
-    ON_CALL(mock_cplat, cplat_local_lock_lock(_, _)).WillByDefault(Return(CPLAT_OK));
-    ON_CALL(mock_cplat, cplat_local_lock_unlock(_)).WillByDefault(Return(CPLAT_OK));
+    ON_CALL(mock_cplat, cplat_local_lock_lock(_)).WillByDefault(Return());
+    ON_CALL(mock_cplat, cplat_local_lock_unlock(_)).WillByDefault(Return());
     ON_CALL(mock_cplat, cplat_local_lock_dispose(_)).WillByDefault(Return());
     ON_CALL(mock_cplat, cplat_local_rwlock_create(_))
         .WillByDefault(
@@ -37,10 +37,11 @@ inline void set_trace_sync_mock_defaults(Mock_cplat &mock_cplat)
                 *lock = reinterpret_cast<cplat_local_rwlock *>(static_cast<uintptr_t>(0x3200));
                 return CPLAT_OK;
             });
-    ON_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_, _)).WillByDefault(Return(CPLAT_OK));
-    ON_CALL(mock_cplat, cplat_local_rwlock_lock_exclusive(_, _)).WillByDefault(Return(CPLAT_OK));
-    ON_CALL(mock_cplat, cplat_local_rwlock_unlock_shared(_)).WillByDefault(Return(CPLAT_OK));
-    ON_CALL(mock_cplat, cplat_local_rwlock_unlock_exclusive(_)).WillByDefault(Return(CPLAT_OK));
+    ON_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_)).WillByDefault(Return());
+    ON_CALL(mock_cplat, cplat_local_rwlock_timed_lock_shared(_, _)).WillByDefault(Return(CPLAT_OK));
+    ON_CALL(mock_cplat, cplat_local_rwlock_lock_exclusive(_)).WillByDefault(Return());
+    ON_CALL(mock_cplat, cplat_local_rwlock_unlock_shared(_)).WillByDefault(Return());
+    ON_CALL(mock_cplat, cplat_local_rwlock_unlock_exclusive(_)).WillByDefault(Return());
     ON_CALL(mock_cplat, cplat_local_rwlock_dispose(_)).WillByDefault(Return());
 }
 

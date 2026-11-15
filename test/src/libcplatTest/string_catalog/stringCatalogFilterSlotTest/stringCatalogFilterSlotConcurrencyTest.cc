@@ -121,10 +121,7 @@ TEST_F(stringCatalogFilterSlotConcurrencyTest, concurrent_apply_does_not_break_c
     stop_flag = 1; // [手順] - ワーカー スレッドへ終了を通知する。
     for (std::size_t index = 0; index < 4U; index++)
     {
-        int actual_ret_join = cplat_thread_join(
-            threads[index],
-            CPLAT_SYNC_WAIT_FOREVER); // [手順] - 各スレッドの終了を待機するために cplat_thread_join() を呼び出す。
-        ASSERT_EQ(CPLAT_OK, actual_ret_join); // [状態確認] - cplat_thread_join() の戻り値が CPLAT_OK であること。
+        cplat_thread_join(threads[index]); // [手順] - 各スレッドの終了を待機するために cplat_thread_join() を呼び出す。
     }
 
     // Assert

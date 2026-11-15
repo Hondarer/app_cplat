@@ -177,6 +177,7 @@
 #include <cplat/base/error.h>
 #include <cplat/base/error_message.h>
 #include <cplat/base/result.h>
+#include <cplat/base/wait.h>
 #include <cplat/base/windows_sdk.h>
 
 #include <cplat/argparser/argparser.h>

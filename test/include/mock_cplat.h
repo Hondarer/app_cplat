@@ -364,8 +364,11 @@ MOCK_CPLAT_LINK_IMPL(cplat_socket_recvfrom)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_send_all)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_recv_all)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_wait_readable)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_timed_wait_readable)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_wait_writable)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_timed_wait_writable)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_wait_readable_multi)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_timed_wait_readable_multi)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_shutdown_receive)
 
 // cplat/prompt/pinned_prompt.h
@@ -434,10 +437,12 @@ MOCK_CPLAT_LINK_IMPL(cplat_process_get_pid)
 MOCK_CPLAT_LINK_IMPL(cplat_process_get_tid)
 MOCK_CPLAT_LINK_IMPL(cplat_process_start)
 MOCK_CPLAT_LINK_IMPL(cplat_process_wait)
+MOCK_CPLAT_LINK_IMPL(cplat_process_timed_wait)
 MOCK_CPLAT_LINK_IMPL(cplat_process_get_exit_code)
 MOCK_CPLAT_LINK_IMPL(cplat_process_terminate)
 MOCK_CPLAT_LINK_IMPL(cplat_process_dispose)
 MOCK_CPLAT_LINK_IMPL(cplat_process_run_sync)
+MOCK_CPLAT_LINK_IMPL(cplat_process_timed_run_sync)
 
 // cplat/runtime/shutdown.h
 MOCK_CPLAT_LINK_IMPL(cplat_shutdown_register)
@@ -498,29 +503,35 @@ MOCK_CPLAT_LINK_IMPL(cplat_string_catalog_filter_slot_format)
 // cplat/sync/sync.h
 MOCK_CPLAT_LINK_IMPL(cplat_local_lock_create)
 MOCK_CPLAT_LINK_IMPL(cplat_local_lock_lock)
+MOCK_CPLAT_LINK_IMPL(cplat_local_lock_timed_lock)
 MOCK_CPLAT_LINK_IMPL(cplat_local_lock_try_lock)
 MOCK_CPLAT_LINK_IMPL(cplat_local_lock_unlock)
 MOCK_CPLAT_LINK_IMPL(cplat_local_lock_dispose)
 MOCK_CPLAT_LINK_IMPL(cplat_condvar_create)
 MOCK_CPLAT_LINK_IMPL(cplat_condvar_wait)
+MOCK_CPLAT_LINK_IMPL(cplat_condvar_timed_wait)
 MOCK_CPLAT_LINK_IMPL(cplat_condvar_signal)
 MOCK_CPLAT_LINK_IMPL(cplat_condvar_broadcast)
 MOCK_CPLAT_LINK_IMPL(cplat_condvar_dispose)
 MOCK_CPLAT_LINK_IMPL(cplat_local_rwlock_create)
 MOCK_CPLAT_LINK_IMPL(cplat_local_rwlock_lock_shared)
+MOCK_CPLAT_LINK_IMPL(cplat_local_rwlock_timed_lock_shared)
 MOCK_CPLAT_LINK_IMPL(cplat_local_rwlock_try_lock_shared)
 MOCK_CPLAT_LINK_IMPL(cplat_local_rwlock_lock_exclusive)
+MOCK_CPLAT_LINK_IMPL(cplat_local_rwlock_timed_lock_exclusive)
 MOCK_CPLAT_LINK_IMPL(cplat_local_rwlock_try_lock_exclusive)
 MOCK_CPLAT_LINK_IMPL(cplat_local_rwlock_unlock_shared)
 MOCK_CPLAT_LINK_IMPL(cplat_local_rwlock_unlock_exclusive)
 MOCK_CPLAT_LINK_IMPL(cplat_local_rwlock_dispose)
 MOCK_CPLAT_LINK_IMPL(cplat_thread_create)
 MOCK_CPLAT_LINK_IMPL(cplat_thread_join)
+MOCK_CPLAT_LINK_IMPL(cplat_thread_timed_join)
 MOCK_CPLAT_LINK_IMPL(cplat_thread_detach)
 MOCK_CPLAT_LINK_IMPL(cplat_interprocess_lock_open)
 MOCK_CPLAT_LINK_IMPL(cplat_interprocess_lock_import_descriptor)
 MOCK_CPLAT_LINK_IMPL(cplat_interprocess_lock_export_descriptor)
 MOCK_CPLAT_LINK_IMPL(cplat_interprocess_lock_lock)
+MOCK_CPLAT_LINK_IMPL(cplat_interprocess_lock_timed_lock)
 MOCK_CPLAT_LINK_IMPL(cplat_interprocess_lock_try_lock)
 MOCK_CPLAT_LINK_IMPL(cplat_interprocess_lock_unlock)
 MOCK_CPLAT_LINK_IMPL(cplat_interprocess_lock_dispose)
@@ -528,8 +539,10 @@ MOCK_CPLAT_LINK_IMPL(cplat_interprocess_rwlock_open)
 MOCK_CPLAT_LINK_IMPL(cplat_interprocess_rwlock_import_descriptor)
 MOCK_CPLAT_LINK_IMPL(cplat_interprocess_rwlock_export_descriptor)
 MOCK_CPLAT_LINK_IMPL(cplat_interprocess_rwlock_lock_shared)
+MOCK_CPLAT_LINK_IMPL(cplat_interprocess_rwlock_timed_lock_shared)
 MOCK_CPLAT_LINK_IMPL(cplat_interprocess_rwlock_try_lock_shared)
 MOCK_CPLAT_LINK_IMPL(cplat_interprocess_rwlock_lock_exclusive)
+MOCK_CPLAT_LINK_IMPL(cplat_interprocess_rwlock_timed_lock_exclusive)
 MOCK_CPLAT_LINK_IMPL(cplat_interprocess_rwlock_try_lock_exclusive)
 MOCK_CPLAT_LINK_IMPL(cplat_interprocess_rwlock_unlock)
 MOCK_CPLAT_LINK_IMPL(cplat_interprocess_rwlock_dispose)
@@ -1179,12 +1192,14 @@ extern int delegate_real_cplat_socket_recvfrom(cplat_socket sock, void *buf, siz
                                                size_t *received_out, cplat_error *detail_out);
 extern int delegate_real_cplat_socket_send_all(cplat_socket sock, const void *buf, size_t len, cplat_error *detail_out);
 extern int delegate_real_cplat_socket_recv_all(cplat_socket sock, void *buf, size_t len, cplat_error *detail_out);
-extern int delegate_real_cplat_socket_wait_readable(cplat_socket sock, int timeout_ms, int *ready_out,
-                                                    cplat_error *detail_out);
-extern int delegate_real_cplat_socket_wait_writable(cplat_socket sock, int timeout_ms, int *ready_out,
-                                                    cplat_error *detail_out);
-extern int delegate_real_cplat_socket_wait_readable_multi(const cplat_socket *socks, size_t count, int timeout_ms,
+extern int delegate_real_cplat_socket_wait_readable(cplat_socket sock, cplat_error *detail_out);
+extern int delegate_real_cplat_socket_timed_wait_readable(cplat_socket sock, int timeout_ms, cplat_error *detail_out);
+extern int delegate_real_cplat_socket_wait_writable(cplat_socket sock, cplat_error *detail_out);
+extern int delegate_real_cplat_socket_timed_wait_writable(cplat_socket sock, int timeout_ms, cplat_error *detail_out);
+extern int delegate_real_cplat_socket_wait_readable_multi(const cplat_socket *socks, size_t count,
                                                           unsigned char *ready_out, cplat_error *detail_out);
+extern int delegate_real_cplat_socket_timed_wait_readable_multi(const cplat_socket *socks, size_t count, int timeout_ms,
+                                                                unsigned char *ready_out, cplat_error *detail_out);
 extern int delegate_real_cplat_socket_shutdown_receive(cplat_socket *sock_inout, cplat_error *detail_out);
 
 // cplat/prompt/pinned_prompt.h
@@ -1289,12 +1304,14 @@ extern int delegate_real_cplat_process_get_executable_path(char *path_out, size_
 extern uint32_t delegate_real_cplat_process_get_pid(void);
 extern uint32_t delegate_real_cplat_process_get_tid(void);
 extern int delegate_real_cplat_process_start(const cplat_process_options *options, cplat_process **process_out);
-extern int delegate_real_cplat_process_wait(cplat_process *process, int timeout_ms);
+extern int delegate_real_cplat_process_wait(cplat_process *process);
+extern int delegate_real_cplat_process_timed_wait(cplat_process *process, int timeout_ms);
 extern int delegate_real_cplat_process_get_exit_code(cplat_process *process, int *exit_code_out);
 extern int delegate_real_cplat_process_terminate(cplat_process *process);
 extern void delegate_real_cplat_process_dispose(cplat_process *process);
-extern int delegate_real_cplat_process_run_sync(const cplat_process_options *options, int timeout_ms,
-                                                int *exit_code_out);
+extern int delegate_real_cplat_process_run_sync(const cplat_process_options *options, int *exit_code_out);
+extern int delegate_real_cplat_process_timed_run_sync(const cplat_process_options *options, int timeout_ms,
+                                                      int *exit_code_out);
 
 // cplat/runtime/shutdown.h
 extern int delegate_real_cplat_shutdown_register(cplat_shutdown_fn callback, void *context);
@@ -1404,32 +1421,38 @@ extern int delegate_real_cplat_string_catalog_filter_slot_format(cplat_string_ca
 
 // cplat/sync/sync.h
 extern int delegate_real_cplat_local_lock_create(cplat_local_lock **mtx);
-extern int delegate_real_cplat_local_lock_lock(cplat_local_lock *mtx, int timeout_ms);
+extern void delegate_real_cplat_local_lock_lock(cplat_local_lock *mtx);
+extern int delegate_real_cplat_local_lock_timed_lock(cplat_local_lock *mtx, int timeout_ms);
 extern int delegate_real_cplat_local_lock_try_lock(cplat_local_lock *mtx);
-extern int delegate_real_cplat_local_lock_unlock(cplat_local_lock *mtx);
+extern void delegate_real_cplat_local_lock_unlock(cplat_local_lock *mtx);
 extern void delegate_real_cplat_local_lock_dispose(cplat_local_lock *mtx);
 extern int delegate_real_cplat_condvar_create(cplat_condvar **cv);
-extern int delegate_real_cplat_condvar_wait(cplat_condvar *cv, cplat_local_lock *mtx, int timeout_ms);
-extern int delegate_real_cplat_condvar_signal(cplat_condvar *cv);
-extern int delegate_real_cplat_condvar_broadcast(cplat_condvar *cv);
+extern void delegate_real_cplat_condvar_wait(cplat_condvar *cv, cplat_local_lock *mtx);
+extern int delegate_real_cplat_condvar_timed_wait(cplat_condvar *cv, cplat_local_lock *mtx, int timeout_ms);
+extern void delegate_real_cplat_condvar_signal(cplat_condvar *cv);
+extern void delegate_real_cplat_condvar_broadcast(cplat_condvar *cv);
 extern void delegate_real_cplat_condvar_dispose(cplat_condvar *cv);
 extern int delegate_real_cplat_local_rwlock_create(cplat_local_rwlock **rwlock);
-extern int delegate_real_cplat_local_rwlock_lock_shared(cplat_local_rwlock *rwlock, int timeout_ms);
+extern void delegate_real_cplat_local_rwlock_lock_shared(cplat_local_rwlock *rwlock);
+extern int delegate_real_cplat_local_rwlock_timed_lock_shared(cplat_local_rwlock *rwlock, int timeout_ms);
 extern int delegate_real_cplat_local_rwlock_try_lock_shared(cplat_local_rwlock *rwlock);
-extern int delegate_real_cplat_local_rwlock_lock_exclusive(cplat_local_rwlock *rwlock, int timeout_ms);
+extern void delegate_real_cplat_local_rwlock_lock_exclusive(cplat_local_rwlock *rwlock);
+extern int delegate_real_cplat_local_rwlock_timed_lock_exclusive(cplat_local_rwlock *rwlock, int timeout_ms);
 extern int delegate_real_cplat_local_rwlock_try_lock_exclusive(cplat_local_rwlock *rwlock);
-extern int delegate_real_cplat_local_rwlock_unlock_shared(cplat_local_rwlock *rwlock);
-extern int delegate_real_cplat_local_rwlock_unlock_exclusive(cplat_local_rwlock *rwlock);
+extern void delegate_real_cplat_local_rwlock_unlock_shared(cplat_local_rwlock *rwlock);
+extern void delegate_real_cplat_local_rwlock_unlock_exclusive(cplat_local_rwlock *rwlock);
 extern void delegate_real_cplat_local_rwlock_dispose(cplat_local_rwlock *rwlock);
 extern int delegate_real_cplat_thread_create(cplat_thread **thread, cplat_thread_fn func, void *arg);
-extern int delegate_real_cplat_thread_join(cplat_thread *thread, int timeout_ms);
+extern void delegate_real_cplat_thread_join(cplat_thread *thread);
+extern int delegate_real_cplat_thread_timed_join(cplat_thread *thread, int timeout_ms);
 extern void delegate_real_cplat_thread_detach(cplat_thread *thread);
 extern int delegate_real_cplat_interprocess_lock_open(const char *identity, cplat_interprocess_lock **lock);
 extern int delegate_real_cplat_interprocess_lock_import_descriptor(const void *descriptor, size_t descriptor_size,
                                                                    cplat_interprocess_lock **lock);
 extern int delegate_real_cplat_interprocess_lock_export_descriptor(const cplat_interprocess_lock *lock,
                                                                    void *descriptor, size_t *descriptor_size);
-extern int delegate_real_cplat_interprocess_lock_lock(cplat_interprocess_lock *lock, int timeout_ms);
+extern int delegate_real_cplat_interprocess_lock_lock(cplat_interprocess_lock *lock);
+extern int delegate_real_cplat_interprocess_lock_timed_lock(cplat_interprocess_lock *lock, int timeout_ms);
 extern int delegate_real_cplat_interprocess_lock_try_lock(cplat_interprocess_lock *lock);
 extern int delegate_real_cplat_interprocess_lock_unlock(cplat_interprocess_lock *lock);
 extern void delegate_real_cplat_interprocess_lock_dispose(cplat_interprocess_lock *lock);
@@ -1438,9 +1461,11 @@ extern int delegate_real_cplat_interprocess_rwlock_import_descriptor(const void 
                                                                      cplat_interprocess_rwlock **lock);
 extern int delegate_real_cplat_interprocess_rwlock_export_descriptor(const cplat_interprocess_rwlock *lock,
                                                                      void *descriptor, size_t *descriptor_size);
-extern int delegate_real_cplat_interprocess_rwlock_lock_shared(cplat_interprocess_rwlock *lock, int timeout_ms);
+extern int delegate_real_cplat_interprocess_rwlock_lock_shared(cplat_interprocess_rwlock *lock);
+extern int delegate_real_cplat_interprocess_rwlock_timed_lock_shared(cplat_interprocess_rwlock *lock, int timeout_ms);
 extern int delegate_real_cplat_interprocess_rwlock_try_lock_shared(cplat_interprocess_rwlock *lock);
-extern int delegate_real_cplat_interprocess_rwlock_lock_exclusive(cplat_interprocess_rwlock *lock, int timeout_ms);
+extern int delegate_real_cplat_interprocess_rwlock_lock_exclusive(cplat_interprocess_rwlock *lock);
+extern int delegate_real_cplat_interprocess_rwlock_timed_lock_exclusive(cplat_interprocess_rwlock *lock, int timeout_ms);
 extern int delegate_real_cplat_interprocess_rwlock_try_lock_exclusive(cplat_interprocess_rwlock *lock);
 extern int delegate_real_cplat_interprocess_rwlock_unlock(cplat_interprocess_rwlock *lock);
 extern void delegate_real_cplat_interprocess_rwlock_dispose(cplat_interprocess_rwlock *lock);
@@ -2049,9 +2074,13 @@ class Mock_cplat
                 (cplat_socket, void *, size_t, cplat_ipv4_endpoint *, size_t *, cplat_error *));
     MOCK_METHOD(int, cplat_socket_send_all, (cplat_socket, const void *, size_t, cplat_error *));
     MOCK_METHOD(int, cplat_socket_recv_all, (cplat_socket, void *, size_t, cplat_error *));
-    MOCK_METHOD(int, cplat_socket_wait_readable, (cplat_socket, int, int *, cplat_error *));
-    MOCK_METHOD(int, cplat_socket_wait_writable, (cplat_socket, int, int *, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_wait_readable, (cplat_socket, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_timed_wait_readable, (cplat_socket, int, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_wait_writable, (cplat_socket, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_timed_wait_writable, (cplat_socket, int, cplat_error *));
     MOCK_METHOD(int, cplat_socket_wait_readable_multi,
+                (const cplat_socket *, size_t, unsigned char *, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_timed_wait_readable_multi,
                 (const cplat_socket *, size_t, int, unsigned char *, cplat_error *));
     MOCK_METHOD(int, cplat_socket_shutdown_receive, (cplat_socket *, cplat_error *));
 
@@ -2139,11 +2168,13 @@ class Mock_cplat
     MOCK_METHOD(uint32_t, cplat_process_get_pid, ());
     MOCK_METHOD(uint32_t, cplat_process_get_tid, ());
     MOCK_METHOD(int, cplat_process_start, (const cplat_process_options *, cplat_process **));
-    MOCK_METHOD(int, cplat_process_wait, (cplat_process *, int));
+    MOCK_METHOD(int, cplat_process_wait, (cplat_process *));
+    MOCK_METHOD(int, cplat_process_timed_wait, (cplat_process *, int));
     MOCK_METHOD(int, cplat_process_get_exit_code, (cplat_process *, int *));
     MOCK_METHOD(int, cplat_process_terminate, (cplat_process *));
     MOCK_METHOD(void, cplat_process_dispose, (cplat_process *));
-    MOCK_METHOD(int, cplat_process_run_sync, (const cplat_process_options *, int, int *));
+    MOCK_METHOD(int, cplat_process_run_sync, (const cplat_process_options *, int *));
+    MOCK_METHOD(int, cplat_process_timed_run_sync, (const cplat_process_options *, int, int *));
 
     // cplat/runtime/shutdown.h
     MOCK_METHOD(int, cplat_shutdown_register, (cplat_shutdown_fn, void *));
@@ -2229,30 +2260,36 @@ class Mock_cplat
 
     // cplat/sync/sync.h
     MOCK_METHOD(int, cplat_local_lock_create, (cplat_local_lock **));
-    MOCK_METHOD(int, cplat_local_lock_lock, (cplat_local_lock *, int));
+    MOCK_METHOD(void, cplat_local_lock_lock, (cplat_local_lock *));
+    MOCK_METHOD(int, cplat_local_lock_timed_lock, (cplat_local_lock *, int));
     MOCK_METHOD(int, cplat_local_lock_try_lock, (cplat_local_lock *));
-    MOCK_METHOD(int, cplat_local_lock_unlock, (cplat_local_lock *));
+    MOCK_METHOD(void, cplat_local_lock_unlock, (cplat_local_lock *));
     MOCK_METHOD(void, cplat_local_lock_dispose, (cplat_local_lock *));
     MOCK_METHOD(int, cplat_condvar_create, (cplat_condvar **));
-    MOCK_METHOD(int, cplat_condvar_wait, (cplat_condvar *, cplat_local_lock *, int));
-    MOCK_METHOD(int, cplat_condvar_signal, (cplat_condvar *));
-    MOCK_METHOD(int, cplat_condvar_broadcast, (cplat_condvar *));
+    MOCK_METHOD(void, cplat_condvar_wait, (cplat_condvar *, cplat_local_lock *));
+    MOCK_METHOD(int, cplat_condvar_timed_wait, (cplat_condvar *, cplat_local_lock *, int));
+    MOCK_METHOD(void, cplat_condvar_signal, (cplat_condvar *));
+    MOCK_METHOD(void, cplat_condvar_broadcast, (cplat_condvar *));
     MOCK_METHOD(void, cplat_condvar_dispose, (cplat_condvar *));
     MOCK_METHOD(int, cplat_local_rwlock_create, (cplat_local_rwlock **));
-    MOCK_METHOD(int, cplat_local_rwlock_lock_shared, (cplat_local_rwlock *, int));
+    MOCK_METHOD(void, cplat_local_rwlock_lock_shared, (cplat_local_rwlock *));
+    MOCK_METHOD(int, cplat_local_rwlock_timed_lock_shared, (cplat_local_rwlock *, int));
     MOCK_METHOD(int, cplat_local_rwlock_try_lock_shared, (cplat_local_rwlock *));
-    MOCK_METHOD(int, cplat_local_rwlock_lock_exclusive, (cplat_local_rwlock *, int));
+    MOCK_METHOD(void, cplat_local_rwlock_lock_exclusive, (cplat_local_rwlock *));
+    MOCK_METHOD(int, cplat_local_rwlock_timed_lock_exclusive, (cplat_local_rwlock *, int));
     MOCK_METHOD(int, cplat_local_rwlock_try_lock_exclusive, (cplat_local_rwlock *));
-    MOCK_METHOD(int, cplat_local_rwlock_unlock_shared, (cplat_local_rwlock *));
-    MOCK_METHOD(int, cplat_local_rwlock_unlock_exclusive, (cplat_local_rwlock *));
+    MOCK_METHOD(void, cplat_local_rwlock_unlock_shared, (cplat_local_rwlock *));
+    MOCK_METHOD(void, cplat_local_rwlock_unlock_exclusive, (cplat_local_rwlock *));
     MOCK_METHOD(void, cplat_local_rwlock_dispose, (cplat_local_rwlock *));
     MOCK_METHOD(int, cplat_thread_create, (cplat_thread **, cplat_thread_fn, void *));
-    MOCK_METHOD(int, cplat_thread_join, (cplat_thread *, int));
+    MOCK_METHOD(void, cplat_thread_join, (cplat_thread *));
+    MOCK_METHOD(int, cplat_thread_timed_join, (cplat_thread *, int));
     MOCK_METHOD(void, cplat_thread_detach, (cplat_thread *));
     MOCK_METHOD(int, cplat_interprocess_lock_open, (const char *, cplat_interprocess_lock **));
     MOCK_METHOD(int, cplat_interprocess_lock_import_descriptor, (const void *, size_t, cplat_interprocess_lock **));
     MOCK_METHOD(int, cplat_interprocess_lock_export_descriptor, (const cplat_interprocess_lock *, void *, size_t *));
-    MOCK_METHOD(int, cplat_interprocess_lock_lock, (cplat_interprocess_lock *, int));
+    MOCK_METHOD(int, cplat_interprocess_lock_lock, (cplat_interprocess_lock *));
+    MOCK_METHOD(int, cplat_interprocess_lock_timed_lock, (cplat_interprocess_lock *, int));
     MOCK_METHOD(int, cplat_interprocess_lock_try_lock, (cplat_interprocess_lock *));
     MOCK_METHOD(int, cplat_interprocess_lock_unlock, (cplat_interprocess_lock *));
     MOCK_METHOD(void, cplat_interprocess_lock_dispose, (cplat_interprocess_lock *));
@@ -2260,9 +2297,11 @@ class Mock_cplat
     MOCK_METHOD(int, cplat_interprocess_rwlock_import_descriptor, (const void *, size_t, cplat_interprocess_rwlock **));
     MOCK_METHOD(int, cplat_interprocess_rwlock_export_descriptor,
                 (const cplat_interprocess_rwlock *, void *, size_t *));
-    MOCK_METHOD(int, cplat_interprocess_rwlock_lock_shared, (cplat_interprocess_rwlock *, int));
+    MOCK_METHOD(int, cplat_interprocess_rwlock_lock_shared, (cplat_interprocess_rwlock *));
+    MOCK_METHOD(int, cplat_interprocess_rwlock_timed_lock_shared, (cplat_interprocess_rwlock *, int));
     MOCK_METHOD(int, cplat_interprocess_rwlock_try_lock_shared, (cplat_interprocess_rwlock *));
-    MOCK_METHOD(int, cplat_interprocess_rwlock_lock_exclusive, (cplat_interprocess_rwlock *, int));
+    MOCK_METHOD(int, cplat_interprocess_rwlock_lock_exclusive, (cplat_interprocess_rwlock *));
+    MOCK_METHOD(int, cplat_interprocess_rwlock_timed_lock_exclusive, (cplat_interprocess_rwlock *, int));
     MOCK_METHOD(int, cplat_interprocess_rwlock_try_lock_exclusive, (cplat_interprocess_rwlock *));
     MOCK_METHOD(int, cplat_interprocess_rwlock_unlock, (cplat_interprocess_rwlock *));
     MOCK_METHOD(void, cplat_interprocess_rwlock_dispose, (cplat_interprocess_rwlock *));

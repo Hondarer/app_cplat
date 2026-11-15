@@ -657,7 +657,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code_o
             return CPLAT_ERR_UNKNOWN;
         }
 
-        if (cplat_process_wait(child_process, CPLAT_PROCESS_WAIT_FOREVER) != CPLAT_OK ||
+        if (cplat_process_wait(child_process) != CPLAT_OK ||
             cplat_process_get_exit_code(child_process, &child_exit_code) != CPLAT_OK)
         {
             cplat_process_dispose(child_process);
@@ -872,7 +872,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
             return CPLAT_ERR_UNKNOWN;
         }
 
-        if (cplat_process_wait(child_process, CPLAT_PROCESS_WAIT_FOREVER) != CPLAT_OK ||
+        if (cplat_process_wait(child_process) != CPLAT_OK ||
             cplat_process_get_exit_code(child_process, &child_exit_code) != CPLAT_OK)
         {
             cplat_process_dispose(child_process);
@@ -1188,7 +1188,7 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
          */
         do
         {
-            wait_result = cplat_process_wait(child_process, CPLAT_PROCESS_OUTPUT_POLL_INTERVAL_MS);
+            wait_result = cplat_process_timed_wait(child_process, CPLAT_PROCESS_OUTPUT_POLL_INTERVAL_MS);
             pump_output_pipe(stdout_read, CPLAT_ELEVATED_PROCESS_STREAM_STDOUT, effective_output_fn, context);
             pump_output_pipe(stderr_read, CPLAT_ELEVATED_PROCESS_STREAM_STDERR, effective_output_fn, context);
         } while (wait_result == CPLAT_ERR_TIMEOUT);

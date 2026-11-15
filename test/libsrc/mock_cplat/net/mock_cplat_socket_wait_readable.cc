@@ -1,26 +1,25 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
-int delegate_real_cplat_socket_wait_readable(cplat_socket sock, int timeout_ms, int *ready_out, cplat_error *detail_out)
+int delegate_real_cplat_socket_wait_readable(cplat_socket sock, cplat_error *detail_out)
 {
     static auto real_fn = reinterpret_cast<decltype(&cplat_socket_wait_readable)>(
         resolveSharedSymbolOrExit(kLibCplatName, "cplat_socket_wait_readable"));
 
-    return real_fn(sock, timeout_ms, ready_out, detail_out);
+    return real_fn(sock, detail_out);
 }
 
-MOCK_WEAK_IMPL(int, cplat_socket_wait_readable, cplat_socket sock, int timeout_ms, int *ready_out,
-               cplat_error *detail_out)
+MOCK_WEAK_IMPL(int, cplat_socket_wait_readable, cplat_socket sock, cplat_error *detail_out)
 {
     int mock_ret = CPLAT_ERR_UNKNOWN;
 
     if (_mock_cplat != nullptr)
     {
-        mock_ret = _mock_cplat->cplat_socket_wait_readable(sock, timeout_ms, ready_out, detail_out);
+        mock_ret = _mock_cplat->cplat_socket_wait_readable(sock, detail_out);
     }
     else
     {
-        mock_ret = delegate_real_cplat_socket_wait_readable(sock, timeout_ms, ready_out, detail_out);
+        mock_ret = delegate_real_cplat_socket_wait_readable(sock, detail_out);
     }
 
     if (getTraceLevel() > TRACE_NONE)

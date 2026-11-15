@@ -30,12 +30,22 @@
 
 #if defined(PLATFORM_LINUX)
     #include <fcntl.h>
+    #include <poll.h>
     #include <signal.h>
     #include <sys/syscall.h>
     #include <sys/types.h>
     #include <sys/wait.h>
     #include <time.h>
     #include <unistd.h>
+
+    /*
+     * glibc 2.28 などの古いヘッダーには __NR_pidfd_open / SYS_pidfd_open が未定義なため補う。
+     * Linux 5.3 未満のカーネルでは ENOSYS で失敗し、呼び出し元の WNOHANG ポーリングへ切り替わる。
+     * see: https://man7.org/linux/man-pages/man2/pidfd_open.2.html
+     */
+    #ifndef SYS_pidfd_open
+        #define SYS_pidfd_open 434L
+    #endif
 
 extern char **environ;
 #elif defined(PLATFORM_WINDOWS)
@@ -55,6 +65,7 @@ struct cplat_process
     HANDLE process;
 #endif /* PLATFORM_ */
     int exited;
+    int exit_code_available;
     int exit_code;
 };
 
@@ -81,10 +92,17 @@ static int has_valid_argv(char *const *argv)
 static void process_set_exit_code(cplat_process *process, const int exit_code)
 {
     process->exited = 1;
+    process->exit_code_available = 1;
     process->exit_code = exit_code;
 }
 
 #if defined(PLATFORM_LINUX)
+static void process_set_exited_without_code(cplat_process *process)
+{
+    process->exited = 1;
+    process->exit_code_available = 0;
+}
+
 static uint64_t monotonic_ms(void)
 {
     struct timespec ts;
@@ -1384,7 +1402,174 @@ int cplat_process_start(const cplat_process_options *options, cplat_process **pr
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_wait(cplat_process *process, const int timeout_ms)
+#if defined(PLATFORM_LINUX)
+/*
+ * WNOHANG で対象子プロセスの終了状態を回収する。
+ * 回収できた場合および ECHILD (SIGCHLD = SIG_IGN などで自動回収済み) の場合は CPLAT_OK、
+ * まだ実行中の場合は CPLAT_ERR_BUSY、その他の失敗時は CPLAT_ERR_UNKNOWN を返す。
+ * WNOHANG を付けない waitpid() は SIGCHLD = SIG_IGN の場合に他の子プロセス終了まで戻らないため使わない。
+ * see: https://man7.org/linux/man-pages/man2/waitpid.2.html
+ */
+static int reap_child_nowait(cplat_process *process)
+{
+    int status;
+    pid_t rc;
+
+    do
+    {
+        rc = waitpid(process->pid, &status, WNOHANG);
+    } while (rc < 0 && errno == EINTR);
+
+    if (rc == process->pid)
+    {
+        if (WIFEXITED(status))
+        {
+            process_set_exit_code(process, WEXITSTATUS(status));
+        }
+        else
+        {
+            process_set_exit_code(process, -1);
+        }
+
+        return CPLAT_OK;
+    }
+
+    if (rc < 0)
+    {
+        if (errno == ECHILD)
+        {
+            process_set_exited_without_code(process);
+            return CPLAT_OK;
+        }
+
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    return CPLAT_ERR_BUSY;
+}
+
+static int process_wait_with_pidfd(cplat_process *process, const int pidfd, const int timeout_ms)
+{
+    uint64_t deadline = 0;
+
+    if (timeout_ms != CPLAT_WAIT_FOREVER)
+    {
+        deadline = monotonic_ms() + (uint64_t)timeout_ms;
+    }
+
+    while (1)
+    {
+        struct pollfd pfd;
+        int poll_timeout;
+        int poll_rc;
+
+        pfd.fd = pidfd;
+        pfd.events = POLLIN;
+        pfd.revents = 0;
+
+        if (timeout_ms == CPLAT_WAIT_FOREVER)
+        {
+            poll_timeout = -1;
+        }
+        else
+        {
+            const uint64_t now = monotonic_ms();
+            if (now >= deadline)
+            {
+                close(pidfd);
+                return CPLAT_ERR_TIMEOUT;
+            }
+
+            poll_timeout = (int)(deadline - now);
+        }
+
+        poll_rc = poll(&pfd, 1, poll_timeout);
+        if (poll_rc > 0)
+        {
+            const int reap_rc = reap_child_nowait(process);
+            close(pidfd);
+            return (reap_rc == CPLAT_ERR_BUSY) ? CPLAT_ERR_UNKNOWN : reap_rc;
+        }
+
+        if (poll_rc == 0)
+        {
+            close(pidfd);
+            return CPLAT_ERR_TIMEOUT;
+        }
+
+        if (errno == EINTR)
+        {
+            continue;
+        }
+
+        close(pidfd);
+        return CPLAT_ERR_UNKNOWN;
+    }
+}
+
+static int process_wait_polling(cplat_process *process, const int timeout_ms)
+{
+    uint64_t deadline = 0;
+
+    if (timeout_ms != CPLAT_WAIT_FOREVER)
+    {
+        deadline = monotonic_ms() + (uint64_t)timeout_ms;
+    }
+
+    while (1)
+    {
+        const int reap_rc = reap_child_nowait(process);
+        if (reap_rc != CPLAT_ERR_BUSY)
+        {
+            return reap_rc;
+        }
+
+        if (timeout_ms != CPLAT_WAIT_FOREVER && monotonic_ms() >= deadline)
+        {
+            return CPLAT_ERR_TIMEOUT;
+        }
+
+        usleep(1000); /* 1 [ms] */
+    }
+}
+#elif defined(PLATFORM_WINDOWS)
+static int wait_and_read_windows_exit_code(cplat_process *process, const DWORD wait_ms)
+{
+    DWORD wait_result;
+    DWORD child_exit_code;
+
+    wait_result = WaitForSingleObject(process->process, wait_ms);
+    if (wait_result == WAIT_TIMEOUT)
+    {
+        return CPLAT_ERR_TIMEOUT;
+    }
+
+    if (wait_result != WAIT_OBJECT_0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    child_exit_code = EXIT_FAILURE;
+    if (!GetExitCodeProcess(process->process, &child_exit_code))
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    /* GetExitCodeProcess() の終了コードが INT_MAX を超える場合は EXIT_FAILURE へ丸める。 */
+    if (child_exit_code > INT_MAX)
+    {
+        process_set_exit_code(process, EXIT_FAILURE);
+    }
+    else
+    {
+        process_set_exit_code(process, (int)child_exit_code);
+    }
+
+    return CPLAT_OK;
+}
+#endif /* PLATFORM_ */
+
+static int process_wait_internal(cplat_process *process, const int timeout_ms)
 {
     if (process == NULL || timeout_ms < 0)
     {
@@ -1397,111 +1582,31 @@ int cplat_process_wait(cplat_process *process, const int timeout_ms)
     }
 
 #if defined(PLATFORM_LINUX)
+    if (timeout_ms == CPLAT_NO_WAIT)
     {
-        int status;
-        int wait_options;
-        uint64_t deadline;
+        const int reap_rc = reap_child_nowait(process);
+        return (reap_rc == CPLAT_ERR_BUSY) ? CPLAT_ERR_TIMEOUT : reap_rc;
+    }
 
-        wait_options = 0;
-
-        if (timeout_ms != CPLAT_PROCESS_WAIT_FOREVER)
+    /*
+     * glibc 2.28 には pidfd_open() ラッパーがないため syscall() で呼び出し、
+     * 取得した fd を poll() で待機する。ENOSYS や EMFILE などで失敗した場合は
+     * WNOHANG の waitpid() ポーリングへ切り替えて待機を継続する。
+     * see: https://man7.org/linux/man-pages/man2/pidfd_open.2.html
+     */
+    {
+        const int pidfd = (int)syscall(SYS_pidfd_open, process->pid, 0);
+        if (pidfd >= 0)
         {
-            wait_options = WNOHANG;
-            deadline = monotonic_ms() + (uint64_t)timeout_ms;
-        }
-        else
-        {
-            deadline = 0;
+            return process_wait_with_pidfd(process, pidfd, timeout_ms);
         }
 
-        /*
-         * WNOHANG で子プロセスの状態をポーリングし、終了していなければ 1 [ms] 待機して期限まで繰り返す。
-         */
-        while (1)
-        {
-            pid_t rc;
-
-            rc = waitpid(process->pid, &status, wait_options);
-            if (rc == process->pid)
-            {
-                if (WIFEXITED(status))
-                {
-                    process_set_exit_code(process, WEXITSTATUS(status));
-                }
-                else
-                {
-                    process_set_exit_code(process, -1);
-                }
-
-                return CPLAT_OK;
-            }
-
-            if (rc < 0)
-            {
-                if (errno == EINTR)
-                {
-                    continue;
-                }
-
-                return CPLAT_ERR_UNKNOWN;
-            }
-
-            if (timeout_ms == CPLAT_PROCESS_NO_WAIT)
-            {
-                return CPLAT_ERR_TIMEOUT;
-            }
-
-            if (timeout_ms != CPLAT_PROCESS_WAIT_FOREVER && monotonic_ms() >= deadline)
-            {
-                return CPLAT_ERR_TIMEOUT;
-            }
-
-            usleep(1000); /* 1 [ms] */
-        }
+        return process_wait_polling(process, timeout_ms);
     }
 #elif defined(PLATFORM_WINDOWS)
     {
-        DWORD wait_ms;
-        DWORD wait_result;
-        DWORD child_exit_code;
-
-        if (timeout_ms == CPLAT_PROCESS_WAIT_FOREVER)
-        {
-            wait_ms = INFINITE;
-        }
-        else
-        {
-            wait_ms = (DWORD)timeout_ms;
-        }
-
-        wait_result = WaitForSingleObject(process->process, wait_ms);
-        if (wait_result == WAIT_TIMEOUT)
-        {
-            return CPLAT_ERR_TIMEOUT;
-        }
-
-        if (wait_result != WAIT_OBJECT_0)
-        {
-            return CPLAT_ERR_UNKNOWN;
-        }
-
-        child_exit_code = EXIT_FAILURE;
-        if (!GetExitCodeProcess(process->process, &child_exit_code))
-        {
-            return CPLAT_ERR_UNKNOWN;
-        }
-
-        /* GetExitCodeProcess() の終了コードが INT_MAX を超える場合は EXIT_FAILURE へ丸める。 */
-        if (child_exit_code > INT_MAX)
-        {
-            process_set_exit_code(process, EXIT_FAILURE);
-        }
-        else
-        {
-            process_set_exit_code(process, (int)child_exit_code);
-        }
-
-        return CPLAT_OK;
+        const DWORD wait_ms = (timeout_ms == CPLAT_WAIT_FOREVER) ? INFINITE : (DWORD)timeout_ms;
+        return wait_and_read_windows_exit_code(process, wait_ms);
     }
 #else
     return CPLAT_ERR_UNSUPPORTED;
@@ -1510,16 +1615,30 @@ int cplat_process_wait(cplat_process *process, const int timeout_ms)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
+int cplat_process_wait(cplat_process *process)
+{
+    return process_wait_internal(process, CPLAT_WAIT_FOREVER);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_process_timed_wait(cplat_process *process, const int timeout_ms)
+{
+    return process_wait_internal(process, timeout_ms);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int cplat_process_get_exit_code(cplat_process *process, int *exit_code_out)
 {
-    if (process == NULL || exit_code_out == NULL)
+    if (process == NULL || exit_code_out == NULL || process->exited == 0)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    if (process->exited == 0)
+    if (process->exit_code_available == 0)
     {
-        return CPLAT_ERR_INVALID_ARGUMENT;
+        return CPLAT_ERR_NOT_FOUND;
     }
 
     *exit_code_out = process->exit_code;
@@ -1542,7 +1661,11 @@ int cplat_process_terminate(cplat_process *process)
     }
 
 #if defined(PLATFORM_LINUX)
-    if (kill(process->pid, SIGTERM) != 0)
+    /*
+     * SIGKILL は捕捉も無視もできないため、呼び出し時点で生存している子プロセスを確実に終了させる。
+     * see: https://man7.org/linux/man-pages/man7/signal.7.html
+     */
+    if (kill(process->pid, SIGKILL) != 0)
     {
         return CPLAT_ERR_UNKNOWN;
     }
@@ -1603,7 +1726,14 @@ cplat_process *cplat_internal_process_adopt_native(const intptr_t native_handle)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int cplat_process_run_sync(const cplat_process_options *options, const int timeout_ms, int *exit_code_out)
+int cplat_process_run_sync(const cplat_process_options *options, int *exit_code_out)
+{
+    return cplat_process_timed_run_sync(options, CPLAT_WAIT_FOREVER, exit_code_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_process_timed_run_sync(const cplat_process_options *options, const int timeout_ms, int *exit_code_out)
 {
     cplat_process *process;
     int result;
@@ -1615,6 +1745,11 @@ int cplat_process_run_sync(const cplat_process_options *options, const int timeo
 
     *exit_code_out = EXIT_FAILURE;
 
+    if (timeout_ms < 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
     process = NULL;
     result = cplat_process_start(options, &process);
     if (result != CPLAT_OK)
@@ -1622,7 +1757,28 @@ int cplat_process_run_sync(const cplat_process_options *options, const int timeo
         return result;
     }
 
-    result = cplat_process_wait(process, timeout_ms);
+    result = cplat_process_timed_wait(process, timeout_ms);
+    if (result == CPLAT_ERR_TIMEOUT)
+    {
+        result = cplat_process_terminate(process);
+        if (result != CPLAT_OK)
+        {
+            cplat_process_dispose(process);
+            return result;
+        }
+
+        /*
+         * 強制終了後の回収を試みるが、Linux の割り込み不可の待ち (D 状態) や Windows で
+         * 実行中の I/O が完了・取り消しされるまでは終了しないことがあるため上限付きで待ち、
+         * この待ちの結果は捨てて呼び出し元にはタイムアウトを返す。
+         * see: https://lwn.net/Articles/288056/
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess
+         */
+        (void)cplat_process_timed_wait(process, CPLAT_PROCESS_TERMINATE_WAIT_MS);
+        cplat_process_dispose(process);
+        return CPLAT_ERR_TIMEOUT;
+    }
+
     if (result == CPLAT_OK)
     {
         result = cplat_process_get_exit_code(process, exit_code_out);

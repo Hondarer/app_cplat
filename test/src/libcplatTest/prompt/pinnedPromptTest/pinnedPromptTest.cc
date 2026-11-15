@@ -54,68 +54,6 @@ TEST(pinnedPromptTest, status_apis_reject_null_screen)
         set_result); // [確認_異常系] - cplat_pinned_prompt_status_set() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
-// 固定プロンプトのステータス API がロック取得失敗を返すことの確認
-TEST(pinnedPromptTest, status_enable_reports_lock_acquisition_failure)
-{
-    // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr);
-    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
-    int actual_ret = CPLAT_OK;
-
-    // Pre-Assert
-    {
-        NiceMock<Mock_cplat> mock_cplat;
-        EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, _))
-            .WillOnce(Return(
-                CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が 1 回呼び出されること。
-                                     // [Pre-Assert手順] - cplat_local_lock_lock() から CPLAT_ERR_UNKNOWN を返す。
-        EXPECT_CALL(mock_cplat, cplat_local_lock_unlock(_))
-            .Times(0); // [Pre-Assert確認_異常系] - ロック取得失敗後に cplat_local_lock_unlock() が呼び出されないこと。
-
-        // Act
-        actual_ret = cplat_pinned_prompt_status_enable(
-            screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
-            1); // [手順] - ロック取得を失敗させて cplat_pinned_prompt_status_enable() を呼び出す。
-    }
-
-    // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - cplat_pinned_prompt_status_enable() がロック取得失敗を返すこと。
-
-    // Cleanup
-    cplat_pinned_prompt_dispose(screen);
-}
-
-// 固定プロンプトのステータス API がロック解放失敗を返すことの確認
-TEST(pinnedPromptTest, status_enable_reports_lock_release_failure)
-{
-    // Arrange
-    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr);
-    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
-    int actual_ret = CPLAT_OK;
-
-    // Pre-Assert
-    {
-        NiceMock<Mock_cplat> mock_cplat;
-        EXPECT_CALL(mock_cplat, cplat_local_lock_unlock(_))
-            .WillOnce(DoAll(Invoke(delegate_real_cplat_local_lock_unlock), Return(CPLAT_ERR_UNKNOWN)));
-        // [Pre-Assert確認_異常系] - cplat_local_lock_unlock() が 1 回呼び出されること。
-        // [Pre-Assert手順] - 実ロックを解放した後に CPLAT_ERR_UNKNOWN を返す。
-
-        // Act
-        actual_ret = cplat_pinned_prompt_status_enable(
-            screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
-            1); // [手順] - ロック解放を失敗させて cplat_pinned_prompt_status_enable() を呼び出す。
-    }
-
-    // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - cplat_pinned_prompt_status_enable() がロック解放失敗を返すこと。
-
-    // Cleanup
-    cplat_pinned_prompt_dispose(screen);
-}
-
 // 非 TTY の readline が cplat_fgets の入力を返すことの確認
 TEST(pinnedPromptTest, fallback_readline_strips_newline)
 {

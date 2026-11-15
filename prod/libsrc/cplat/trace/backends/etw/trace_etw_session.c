@@ -649,7 +649,7 @@ void cplat_etw_session_stop(cplat_etw_session *session)
 
     if (session->thread_handle != NULL)
     {
-        cplat_thread_join(session->thread_handle, CPLAT_SYNC_WAIT_FOREVER);
+        cplat_thread_join(session->thread_handle);
     }
 
     if (session->trace_handle != INVALID_PROCESSTRACE_HANDLE)

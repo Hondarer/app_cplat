@@ -9,6 +9,18 @@
  *  OS ごとの差異を隠蔽し、プロセス内同期とプロセス横断可能な
  *  アプリケーション排他を共通の結果コードで提供します。
  *
+ *  @details
+ *  待機を伴う API (本ヘッダー、@ref process.h 、@ref socket.h ) は、次の設計原則に従います。
+ *  - 待ち方の分け方: 無期限に待つ関数と期限付きで待つ関数 (@c *_timed_* ) を分けます。
+ *    期限付きの関数は @ref CPLAT_WAIT_FOREVER 、@ref CPLAT_NO_WAIT 、または 0 以上の有限の待ち時間 [ms] を受け付け、
+ *    負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+ *  - 戻り値の決め方: ローカル同期の無期限待機および状態通知・解放のうち、
+ *    正常系で失敗を返す契約を持たない操作は @c void を返します。
+ *    期限付き待機、およびプロセスやソケットなど外部資源を扱う待機は @c int の結果コードを返します。
+ *  - @c void の関数の異常時: @c NULL を渡した場合は何もせずに戻ります。
+ *    OS がエラーを返した場合、または保持していない読み書きロックの解放など
+ *    呼び出し側の不具合で排他状態を保てない場合は、続行せずプロセスを異常終了させます。
+ *
  *  @copyright      Copyright (C) Tetsuo Honda. 2026. All rights reserved.
  *
  *  @hideincludedbygraph
@@ -24,11 +36,11 @@
 #ifndef CPLAT_SYNC_H
 #define CPLAT_SYNC_H
 
-#include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include <cplat/base/result.h>
+#include <cplat/base/wait.h>
 #include <cplat/cplat_export.h>
 #include <cplat/sync/atomic.h>
 
@@ -41,9 +53,6 @@
 extern "C"
 {
 #endif /* __cplusplus */
-
-#define CPLAT_SYNC_WAIT_FOREVER INT_MAX /**< タイムアウトなしで待機する (INT_MAX)。 */
-#define CPLAT_SYNC_NO_WAIT      0       /**< 即時リターン (タイムアウト 0 [ms])。 */
 
     /** @brief プロセス横断同期のバックエンド種別。 */
     typedef enum cplat_interprocess_sync_backend
@@ -81,19 +90,32 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_local_lock_create(cplat_local_lock **mtx);
 
     /**
-     *  @brief          ミューテックスをロックします。
+     *  @brief          ミューテックスを取得できるまで無期限に待機します。
+     *  @param[in]      mtx  対象のミューテックス。NULL を渡した場合は何もしません。
+     *
+     *  @attention      OS がロック取得に失敗した場合は、排他状態を保てないため
+     *                  プロセスを異常終了させます。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT void CPLAT_API cplat_local_lock_lock(cplat_local_lock *mtx);
+
+    /**
+     *  @brief          ミューテックスを指定期限内でロックします。
      *  @param[in]      mtx        対象のミューテックス。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_SYNC_WAIT_FOREVER または
-     *                             @ref CPLAT_SYNC_NO_WAIT も指定可能です。
+     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_WAIT_FOREVER または
+     *                             @ref CPLAT_NO_WAIT も指定可能です。
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、
+     *                  @ref CPLAT_ERR_BUSY (@p timeout_ms が @ref CPLAT_NO_WAIT の場合) 、
      *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_local_lock_lock(cplat_local_lock *mtx, int timeout_ms);
+    CPLAT_EXPORT int CPLAT_API cplat_local_lock_timed_lock(cplat_local_lock *mtx, int timeout_ms);
 
     /**
      *  @brief          ミューテックスを非ブロッキングでロック試行します。
@@ -107,15 +129,15 @@ extern "C"
 
     /**
      *  @brief          ミューテックスをロック解除します。
-     *  @param[in]      mtx  対象のミューテックス。NULL を渡してはなりません。
-     *  @return         呼び出しスレッドが保持しているミューテックスに対しては、@ref CPLAT_OK を返します。
-     *                  @p mtx が NULL の場合は @ref CPLAT_ERR_INVALID_ARGUMENT を、
-     *                  OS のロック解除が失敗した場合は @ref CPLAT_ERR_UNKNOWN を返します。
+     *  @param[in]      mtx  対象のミューテックス。NULL を渡した場合は何もしません。
+     *
+     *  @attention      OS がロック解除に失敗した場合は、排他状態を保てないため
+     *                  プロセスを異常終了させます。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_local_lock_unlock(cplat_local_lock *mtx);
+    CPLAT_EXPORT void CPLAT_API cplat_local_lock_unlock(cplat_local_lock *mtx);
 
     /**
      *  @brief          ミューテックスを破棄します。
@@ -139,11 +161,24 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_condvar_create(cplat_condvar **cv);
 
     /**
-     *  @brief          条件変数を待機します (@p mtx を atomically ロック解除後に待機し、シグナル受信後に再ロック)。
+     *  @brief          条件変数を無期限に待機します (@p mtx を atomically ロック解除後に待機し、通知後に再ロック)。
+     *  @param[in]      cv   対象の条件変数。NULL を渡した場合は何もしません。
+     *  @param[in]      mtx  待機中にロック解除するミューテックス。NULL を渡した場合は何もしません。
+     *
+     *  @attention      OS が待機に失敗した場合は、同期状態を保てないため
+     *                  プロセスを異常終了させます。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT void CPLAT_API cplat_condvar_wait(cplat_condvar *cv, cplat_local_lock *mtx);
+
+    /**
+     *  @brief          条件変数を指定期限内で待機します (@p mtx を atomically ロック解除後に待機し、通知後に再ロック)。
      *  @param[in]      cv         対象の条件変数。NULL を渡してはなりません。
      *  @param[in]      mtx        待機中にロック解除するミューテックス。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_SYNC_WAIT_FOREVER または
-     *                             @ref CPLAT_SYNC_NO_WAIT も指定可能です。
+     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_WAIT_FOREVER または
+     *                             @ref CPLAT_NO_WAIT も指定可能です。
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、
      *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、
@@ -152,27 +187,31 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_condvar_wait(cplat_condvar *cv, cplat_local_lock *mtx, int timeout_ms);
+    CPLAT_EXPORT int CPLAT_API cplat_condvar_timed_wait(cplat_condvar *cv, cplat_local_lock *mtx, int timeout_ms);
 
     /**
      *  @brief          待機中のスレッドを 1 つ起床させます。
-     *  @param[in]      cv  対象の条件変数。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+     *  @param[in]      cv  対象の条件変数。NULL を渡した場合は何もしません。
+     *
+     *  @attention      OS が通知に失敗した場合は、同期状態を保てないため
+     *                  プロセスを異常終了させます。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_condvar_signal(cplat_condvar *cv);
+    CPLAT_EXPORT void CPLAT_API cplat_condvar_signal(cplat_condvar *cv);
 
     /**
      *  @brief          待機中のすべてのスレッドを起床させます。
-     *  @param[in]      cv  対象の条件変数。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+     *  @param[in]      cv  対象の条件変数。NULL を渡した場合は何もしません。
+     *
+     *  @attention      OS が通知に失敗した場合は、同期状態を保てないため
+     *                  プロセスを異常終了させます。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_condvar_broadcast(cplat_condvar *cv);
+    CPLAT_EXPORT void CPLAT_API cplat_condvar_broadcast(cplat_condvar *cv);
 
     /**
      *  @brief          条件変数を破棄します。
@@ -196,12 +235,25 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_local_rwlock_create(cplat_local_rwlock **rwlock);
 
     /**
-     *  @brief          共有 (読み取り) ロックを取得します。
+     *  @brief          共有 (読み取り) ロックを取得できるまで無期限に待機します。
+     *  @param[in]      rwlock  対象の読み書きロック。NULL を渡した場合は何もしません。
+     *
+     *  @attention      読み書きロックの状態を守る内部の同期に失敗した場合は、
+     *                  排他を保てないため、プロセスを異常終了させます。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT void CPLAT_API cplat_local_rwlock_lock_shared(cplat_local_rwlock *rwlock);
+
+    /**
+     *  @brief          共有 (読み取り) ロックを指定期限内で取得します。
      *  @param[in]      rwlock     対象の読み書きロック。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_SYNC_WAIT_FOREVER または
-     *                             @ref CPLAT_SYNC_NO_WAIT も指定可能です。
+     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_WAIT_FOREVER または
+     *                             @ref CPLAT_NO_WAIT も指定可能です。
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、
+     *                  @ref CPLAT_ERR_BUSY (@p timeout_ms が @ref CPLAT_NO_WAIT の場合) 、
      *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
@@ -211,7 +263,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_local_rwlock_lock_shared(cplat_local_rwlock *rwlock, int timeout_ms);
+    CPLAT_EXPORT int CPLAT_API cplat_local_rwlock_timed_lock_shared(cplat_local_rwlock *rwlock, int timeout_ms);
 
     /**
      *  @brief          共有 (読み取り) ロックを非ブロッキングで取得試行します。
@@ -227,12 +279,25 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_local_rwlock_try_lock_shared(cplat_local_rwlock *rwlock);
 
     /**
-     *  @brief          排他 (書き込み) ロックを取得します。
+     *  @brief          排他 (書き込み) ロックを取得できるまで無期限に待機します。
+     *  @param[in]      rwlock  対象の読み書きロック。NULL を渡した場合は何もしません。
+     *
+     *  @attention      読み書きロックの状態を守る内部の同期に失敗した場合は、
+     *                  排他を保てないため、プロセスを異常終了させます。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT void CPLAT_API cplat_local_rwlock_lock_exclusive(cplat_local_rwlock *rwlock);
+
+    /**
+     *  @brief          排他 (書き込み) ロックを指定期限内で取得します。
      *  @param[in]      rwlock     対象の読み書きロック。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_SYNC_WAIT_FOREVER または
-     *                             @ref CPLAT_SYNC_NO_WAIT も指定可能です。
+     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_WAIT_FOREVER または
+     *                             @ref CPLAT_NO_WAIT も指定可能です。
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、
+     *                  @ref CPLAT_ERR_BUSY (@p timeout_ms が @ref CPLAT_NO_WAIT の場合) 、
      *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
@@ -242,7 +307,7 @@ extern "C"
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_local_rwlock_lock_exclusive(cplat_local_rwlock *rwlock, int timeout_ms);
+    CPLAT_EXPORT int CPLAT_API cplat_local_rwlock_timed_lock_exclusive(cplat_local_rwlock *rwlock, int timeout_ms);
 
     /**
      *  @brief          排他 (書き込み) ロックを非ブロッキングで取得試行します。
@@ -259,33 +324,27 @@ extern "C"
 
     /**
      *  @brief          共有 (読み取り) ロックを解放します。
-     *  @param[in]      rwlock  対象の読み書きロック。NULL を渡してはなりません。
-     *  @return         共有ロックを保持している状態で呼び出した場合は、@ref CPLAT_OK を返します。
-     *                  @p rwlock が NULL の場合、または共有ロックが保持されていない場合は、
-     *                  @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @param[in]      rwlock  対象の読み書きロック。NULL を渡した場合は何もしません。
      *
-     *  @attention      読み書きロックの状態を守る内部の同期に失敗した場合は、
+     *  @attention      共有ロックを保持していない状態で呼び出した場合、または内部の同期に失敗した場合は、
      *                  排他を保てないため、プロセスを異常終了させます。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_local_rwlock_unlock_shared(cplat_local_rwlock *rwlock);
+    CPLAT_EXPORT void CPLAT_API cplat_local_rwlock_unlock_shared(cplat_local_rwlock *rwlock);
 
     /**
      *  @brief          排他 (書き込み) ロックを解放します。
-     *  @param[in]      rwlock  対象の読み書きロック。NULL を渡してはなりません。
-     *  @return         排他ロックを保持している状態で呼び出した場合は、@ref CPLAT_OK を返します。
-     *                  @p rwlock が NULL の場合、または排他ロックが保持されていない場合は、
-     *                  @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @param[in]      rwlock  対象の読み書きロック。NULL を渡した場合は何もしません。
      *
-     *  @attention      読み書きロックの状態を守る内部の同期に失敗した場合は、
+     *  @attention      排他ロックを保持していない状態で呼び出した場合、または内部の同期に失敗した場合は、
      *                  排他を保てないため、プロセスを異常終了させます。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_local_rwlock_unlock_exclusive(cplat_local_rwlock *rwlock);
+    CPLAT_EXPORT void CPLAT_API cplat_local_rwlock_unlock_exclusive(cplat_local_rwlock *rwlock);
 
     /**
      *  @brief          読み書きロックを破棄します。
@@ -311,13 +370,28 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_thread_create(cplat_thread **thread, cplat_thread_fn func, void *arg);
 
     /**
-     *  @brief          スレッドの終了を待機します。
+     *  @brief          スレッドの終了を無期限に待機し、ハンドルを解放します。
+     *  @param[in]      thread  対象のスレッド ハンドル。NULL を渡した場合は何もしません。
+     *
+     *  @attention      OS が待機に失敗した場合は、スレッドの終了状態を保てないため
+     *                  プロセスを異常終了させます。
+     *
+     *  @par            スレッド セーフ
+     *  本関数は条件付きスレッド セーフです。\n
+     *  異なる @p thread に対する操作は同時に実行できます。\n
+     *  同一 @p thread に対する操作は、呼び出し側で直列化してください。
+     */
+    CPLAT_EXPORT void CPLAT_API cplat_thread_join(cplat_thread *thread);
+
+    /**
+     *  @brief          スレッドの終了を指定期限内で待機します。
      *  @param[in]      thread     対象のスレッド ハンドル。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_SYNC_WAIT_FOREVER または
-     *                             @ref CPLAT_SYNC_NO_WAIT も指定可能です。
+     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_WAIT_FOREVER または
+     *                             @ref CPLAT_NO_WAIT も指定可能です。
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、
-     *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *  @return         終了した場合はハンドルを解放し、@ref CPLAT_OK を返します。
+     *                  タイムアウトした場合はハンドルを有効なまま維持し、@ref CPLAT_ERR_TIMEOUT を返します。
+     *                  その他、@ref CPLAT_ERR_INVALID_ARGUMENT または
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ
@@ -325,7 +399,7 @@ extern "C"
      *  異なる @p thread に対する操作は同時に実行できます。\n
      *  同一 @p thread に対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_thread_join(cplat_thread *thread, int timeout_ms);
+    CPLAT_EXPORT int CPLAT_API cplat_thread_timed_join(cplat_thread *thread, int timeout_ms);
 
     /**
      *  @brief          スレッドを切り離します。切り離し後はリソースを自動解放します。
@@ -396,19 +470,31 @@ extern "C"
                                                                          void *descriptor, size_t *descriptor_size);
 
     /**
-     *  @brief          プロセス横断ミューテックスをロックします。
+     *  @brief          プロセス横断ミューテックスを取得できるまで無期限に待機します。
+     *  @param[in]      lock  対象のロック。NULL を渡してはなりません。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_interprocess_lock_lock(cplat_interprocess_lock *lock);
+
+    /**
+     *  @brief          プロセス横断ミューテックスを指定期限内でロックします。
      *  @param[in]      lock       対象のロック。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_SYNC_WAIT_FOREVER または
-     *                             @ref CPLAT_SYNC_NO_WAIT も指定可能です。
+     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_WAIT_FOREVER または
+     *                             @ref CPLAT_NO_WAIT も指定可能です。
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、
+     *                  @ref CPLAT_ERR_BUSY (@p timeout_ms が @ref CPLAT_NO_WAIT の場合) 、
      *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_interprocess_lock_lock(cplat_interprocess_lock *lock, int timeout_ms);
+    CPLAT_EXPORT int CPLAT_API cplat_interprocess_lock_timed_lock(cplat_interprocess_lock *lock, int timeout_ms);
 
     /**
      *  @brief          プロセス横断ミューテックスを非ブロッキングでロック試行します。
@@ -482,19 +568,32 @@ extern "C"
                                                                            void *descriptor, size_t *descriptor_size);
 
     /**
-     *  @brief          プロセス横断共有 (読み取り) ロックを取得します。
+     *  @brief          プロセス横断共有 (読み取り) ロックを取得できるまで無期限に待機します。
+     *  @param[in]      lock  対象のロック。NULL を渡してはなりません。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_lock_shared(cplat_interprocess_rwlock *lock);
+
+    /**
+     *  @brief          プロセス横断共有 (読み取り) ロックを指定期限内で取得します。
      *  @param[in]      lock       対象のロック。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_SYNC_WAIT_FOREVER または
-     *                             @ref CPLAT_SYNC_NO_WAIT も指定可能です。
+     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_WAIT_FOREVER または
+     *                             @ref CPLAT_NO_WAIT も指定可能です。
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、
+     *                  @ref CPLAT_ERR_BUSY (@p timeout_ms が @ref CPLAT_NO_WAIT の場合) 、
      *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_lock_shared(cplat_interprocess_rwlock *lock, int timeout_ms);
+    CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_timed_lock_shared(cplat_interprocess_rwlock *lock,
+                                                                          int timeout_ms);
 
     /**
      *  @brief          プロセス横断共有 (読み取り) ロックを非ブロッキングで取得試行します。
@@ -507,20 +606,32 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_try_lock_shared(cplat_interprocess_rwlock *lock);
 
     /**
-     *  @brief          プロセス横断排他 (書き込み) ロックを取得します。
+     *  @brief          プロセス横断排他 (書き込み) ロックを取得できるまで無期限に待機します。
+     *  @param[in]      lock  対象のロック。NULL を渡してはなりません。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_lock_exclusive(cplat_interprocess_rwlock *lock);
+
+    /**
+     *  @brief          プロセス横断排他 (書き込み) ロックを指定期限内で取得します。
      *  @param[in]      lock       対象のロック。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_SYNC_WAIT_FOREVER または
-     *                             @ref CPLAT_SYNC_NO_WAIT も指定可能です。
+     *  @param[in]      timeout_ms タイムアウト [ms]。@ref CPLAT_WAIT_FOREVER または
+     *                             @ref CPLAT_NO_WAIT も指定可能です。
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_TIMEOUT 、
+     *                  @ref CPLAT_ERR_BUSY (@p timeout_ms が @ref CPLAT_NO_WAIT の場合) 、
      *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_lock_exclusive(cplat_interprocess_rwlock *lock,
-                                                                        int timeout_ms);
+    CPLAT_EXPORT int CPLAT_API cplat_interprocess_rwlock_timed_lock_exclusive(cplat_interprocess_rwlock *lock,
+                                                                             int timeout_ms);
 
     /**
      *  @brief          プロセス横断排他 (書き込み) ロックを非ブロッキングで取得試行します。

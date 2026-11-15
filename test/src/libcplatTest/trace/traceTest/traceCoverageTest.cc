@@ -347,7 +347,7 @@ TEST_F(traceCoverageTest, enter_shared_fails_on_timeout_and_lifecycle_change)
     int write_result = CPLAT_OK;
 
     // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_, _))
+    EXPECT_CALL(mock_cplat, cplat_local_rwlock_timed_lock_shared(_, _))
         .WillOnce(Return(CPLAT_ERR_TIMEOUT))
         .WillOnce(Invoke(
             [handle](cplat_local_rwlock *, int)
@@ -357,8 +357,8 @@ TEST_F(traceCoverageTest, enter_shared_fails_on_timeout_and_lifecycle_change)
             }))
         .WillOnce(Return(CPLAT_ERR_TIMEOUT))
         .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_rwlock_lock_shared() が 3 回以上呼び出されること。
-    // [Pre-Assert手順] - cplat_local_rwlock_lock_shared() から 1 回目と 3 回目は CPLAT_ERR_TIMEOUT を返し、2 回目は、ライフサイクルを DISPOSING へ変更して CPLAT_OK を返し、以降は既定動作へ委譲する。
+            DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_rwlock_timed_lock_shared() が 3 回以上呼び出されること。
+    // [Pre-Assert手順] - cplat_local_rwlock_timed_lock_shared() から 1 回目と 3 回目は CPLAT_ERR_TIMEOUT を返し、2 回目は、ライフサイクルを DISPOSING へ変更して CPLAT_OK を返し、以降は既定動作へ委譲する。
 
     // Act
     file_level = cplat_tracer_get_file_level(
@@ -1031,16 +1031,15 @@ TEST_F(traceCoverageTest, exclusive_lock_lifecycle_and_set_file_level_enter_fail
     int file_level_result = CPLAT_OK;
 
     // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_exclusive(_, _))
+    EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_exclusive(_))
         .WillOnce(Invoke(
-            [handle](cplat_local_rwlock *, int)
+            [handle](cplat_local_rwlock *)
             {
                 test_tracer_set_lifecycle_state(handle, kLifecycleDisposing);
-                return CPLAT_OK;
             }))
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_rwlock_lock_exclusive() が 1 回以上呼び出されること。
-    // [Pre-Assert手順] - cplat_local_rwlock_lock_exclusive() から 1 回目は、ライフサイクルを DISPOSING へ変更して CPLAT_OK を返し、以降は既定動作へ委譲する。
+    // [Pre-Assert手順] - cplat_local_rwlock_lock_exclusive() から 1 回目は、ライフサイクルを DISPOSING へ変更して戻り、以降は既定動作へ委譲する。
 
     // Act
     start_result =
@@ -1414,12 +1413,12 @@ TEST_F(traceCoverageTest, remaining_gcov_branches)
         handle); // [手順] - fn が nullptr の prev を指定して test_tracer_call_next_null_fn() を呼び出す。
 
     // Pre-Assert_2
-    EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_shared(_, _))
+    EXPECT_CALL(mock_cplat, cplat_local_rwlock_timed_lock_shared(_, _))
         .WillOnce(Return(CPLAT_ERR_TIMEOUT))
         .WillOnce(Return(CPLAT_ERR_TIMEOUT))
         .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_rwlock_lock_shared() が 2 回以上呼び出されること。
-    // [Pre-Assert手順] - cplat_local_rwlock_lock_shared() から 1 回目と 2 回目は CPLAT_ERR_TIMEOUT を返し、以降は既定動作へ委譲する。
+            DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_rwlock_timed_lock_shared() が 2 回以上呼び出されること。
+    // [Pre-Assert手順] - cplat_local_rwlock_timed_lock_shared() から 1 回目と 2 回目は CPLAT_ERR_TIMEOUT を返し、以降は既定動作へ委譲する。
 
     // Act_2
     (void)cplat_tracer_get_file_name(
@@ -1507,25 +1506,12 @@ TEST_F(traceCoverageTest, remaining_lock_overflow_and_caller_managed_paths)
     cplat_shutdown_event event = {};
     cplat_shutdown_event lock_clear_event = {};
     size_t capacity_on_lock_fail = 99U;
-    int exclusive_fail = CPLAT_OK;
     int caller_start = CPLAT_OK;
     int caller_write = CPLAT_OK;
-    int dispose_lock_fail = 0;
 
     // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, _))
-        .WillOnce(Return(CPLAT_ERR_UNKNOWN))
-        .WillOnce(Return(CPLAT_ERR_UNKNOWN))
-        .WillOnce(Return(CPLAT_ERR_UNKNOWN))
-        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が 3 回以上呼び出されること。
-    // [Pre-Assert手順] - cplat_local_lock_lock() から 1 回目から 3 回目は CPLAT_ERR_UNKNOWN を返し、以降は既定動作へ委譲する。
 
     // Act
-    capacity_on_lock_fail =
-        cplat_internal_trace_registry_capacity(); // [手順] - lock が失敗する状態で cplat_internal_trace_registry_capacity() を呼び出す。
-    test_tracer_unregister(managed); // [手順] - lock が失敗する状態で test_tracer_unregister() を呼び出す。
-    register_fail = cplat_tracer_create(
-        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - lock が失敗する状態で、tracer-managed を指定して cplat_tracer_create() を呼び出す。
     test_trace_registry_set_counts((~(size_t)0) / 2U + 1U, (~(size_t)0) / 2U + 1U);
     overflow_max = cplat_tracer_create(
         CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - 容量が SIZE_MAX/2 を超える状態で cplat_tracer_create() を呼び出す。
@@ -1538,31 +1524,27 @@ TEST_F(traceCoverageTest, remaining_lock_overflow_and_caller_managed_paths)
     caller_write = cplat_tracer_write(
         caller, CPLAT_TRACE_LEVEL_INFO, nullptr,
         "caller"); // [手順] - caller-managed ハンドルと INFO レベルと "caller" を指定して cplat_tracer_write() を呼び出す。
-
-    // Pre-Assert_2
-    EXPECT_CALL(mock_cplat, cplat_local_rwlock_lock_exclusive(_, _))
-        .WillOnce(Return(CPLAT_ERR_UNKNOWN))
-        .WillOnce(Return(CPLAT_ERR_UNKNOWN))
-        .WillRepeatedly(
-            DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_rwlock_lock_exclusive() が 2 回以上呼び出されること。
-    // [Pre-Assert手順] - cplat_local_rwlock_lock_exclusive() から 1 回目と 2 回目は CPLAT_ERR_UNKNOWN を返し、以降は既定動作へ委譲する。
-
-    // Act_2
-    exclusive_fail = cplat_tracer_set_stderr_level(
-        managed,
-        CPLAT_TRACE_LEVEL_DEBUG); // [手順] - 排他ロックが失敗する状態で、DEBUG レベルを指定して cplat_tracer_set_stderr_level() を呼び出す。
-    cplat_tracer_dispose(&managed); // [手順] - 排他ロックが失敗する状態で cplat_tracer_dispose() を呼び出す。
-    if (managed != nullptr)
-    {
-        dispose_lock_fail = 1;
-        cplat_tracer_dispose(&managed);
-    }
+    cplat_tracer_dispose(&managed);
     (void)cplat_tracer_stop(caller);
     (void)cplat_tracer_set_hook(
         caller, coverage_hook,
         nullptr); // [手順] - shutdown 解放用の hook を指定して cplat_tracer_set_hook() を呼び出す。
     cplat_internal_trace_registry_dispose_all_on_shutdown(
         &first_event); // [手順] - hook 付き caller-managed を持つ状態で cplat_internal_trace_registry_dispose_all_on_shutdown() を呼び出す。
+
+    // Pre-Assert_2
+    EXPECT_CALL(mock_cplat, cplat_local_lock_create(_))
+        .WillOnce(Return(CPLAT_ERR_UNKNOWN))
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - cplat_local_lock_create() が 2 回以上呼び出されること。
+    // [Pre-Assert手順] - cplat_local_lock_create() から 1 回目は CPLAT_ERR_UNKNOWN を返し、以降は既定動作へ委譲する。
+
+    // Act_2
+    test_trace_registry_reinit_lock();
+    capacity_on_lock_fail =
+        cplat_internal_trace_registry_capacity(); // [手順] - レジストリ lock 初期化が失敗する状態で cplat_internal_trace_registry_capacity() を呼び出す。
+    test_tracer_unregister(caller); // [手順] - lock 初期化失敗状態のレジストリで test_tracer_unregister() を呼び出す。
+    register_fail = cplat_tracer_create(
+        CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED); // [手順] - lock 初期化失敗状態のレジストリで、tracer-managed を指定して cplat_tracer_create() を呼び出す。
     test_trace_registry_reinit_lock();
     (void)cplat_internal_trace_registry_capacity();
     cplat_internal_trace_registry_dispose_all_on_shutdown(
@@ -1621,12 +1603,6 @@ TEST_F(traceCoverageTest, remaining_lock_overflow_and_caller_managed_paths)
               caller_start); // [確認_正常系] - caller-managed の cplat_tracer_start() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(CPLAT_OK,
               caller_write); // [確認_正常系] - caller-managed の cplat_tracer_write() の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        exclusive_fail); // [確認_異常系] - 排他ロック失敗時の cplat_tracer_set_stderr_level() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(
-        1,
-        dispose_lock_fail); // [確認_異常系] - dispose_lock_fail が 1 であること。(排他ロック失敗の dispose がハンドルを残したことの確認)
     EXPECT_EQ(
         nullptr,
         shutdown_fail); // [確認_異常系] - shutdown 登録失敗時の cplat_tracer_create() の戻り値が nullptr であること。

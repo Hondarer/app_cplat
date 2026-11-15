@@ -44,8 +44,8 @@ Linux では `gethostname`、Windows では `GetComputerNameExW(ComputerNameDnsH
 `process_info` は、現在のプロセスの実行ファイル本体の情報取得と、Linux/Windows での子プロセス起動を担う機能です。管理者権限確認や昇格起動の責務は持たず、コンソール コンポーネントにも依存しません。
 
 - `cplat_process_get_executable_path`: プロセスの実行ファイル絶対パスを取得します。
-- `cplat_process_start` / `cplat_process_wait` / `cplat_process_get_exit_code` / `cplat_process_terminate` / `cplat_process_dispose`: 子プロセスの起動・待機・終了コード取得・強制終了・破棄
-- `cplat_process_run_sync`: 子プロセスを起動し、終了まで同期的に待機します。
+- `cplat_process_start` / `cplat_process_wait` / `cplat_process_timed_wait` / `cplat_process_get_exit_code` / `cplat_process_terminate` / `cplat_process_dispose`: 子プロセスの起動・待機 (無期限 / 期限付き)・終了コード取得・強制終了・破棄
+- `cplat_process_run_sync` / `cplat_process_timed_run_sync`: 子プロセスを起動し、終了まで同期的に待機します (無期限 / 期限付き)。
 
 `cplat_module_get_path()` は関数アドレスが属するモジュールを返すため、Windows では DLL を指す場合があります。`cplat_process_get_executable_path()` は常にプロセス本体 (`.exe`) のパスを返します。  
 典型的には、サービス登録時の `ExecStart` や SCM の `binPath` 設定に使います。

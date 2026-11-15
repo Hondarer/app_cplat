@@ -1254,14 +1254,11 @@ static void argparser_default_dispose_on_shutdown(const cplat_shutdown_event *ev
         return;
     }
 
-    if (cplat_local_lock_lock(lock, CPLAT_SYNC_WAIT_FOREVER) != CPLAT_OK)
-    {
-        return;
-    }
+    cplat_local_lock_lock(lock);
 
     cplat_argparser *parser = s_default_parser;
     s_default_parser = NULL;
-    (void)cplat_local_lock_unlock(lock); /* 取得に成功したロックの解放は失敗しない */
+    cplat_local_lock_unlock(lock);
 
     if (parser != NULL)
     {
@@ -1309,10 +1306,7 @@ static cplat_argparser *argparser_default_acquire(const int argc, char *const *a
         return NULL;
     }
 
-    if (cplat_local_lock_lock(lock, CPLAT_SYNC_WAIT_FOREVER) != CPLAT_OK)
-    {
-        return NULL;
-    }
+    cplat_local_lock_lock(lock);
 
     if (s_default_parser == NULL)
     {
@@ -1330,7 +1324,7 @@ static cplat_argparser *argparser_default_acquire(const int argc, char *const *a
     }
 
     cplat_argparser *parser = s_default_parser;
-    (void)cplat_local_lock_unlock(lock); /* 取得に成功したロックの解放は失敗しない */
+    cplat_local_lock_unlock(lock);
 
     return parser;
 }

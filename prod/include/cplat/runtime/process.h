@@ -5,6 +5,10 @@
  *  @author         Tetsuo Honda
  *  @date           2026/06/07
  *
+ *  現在のプロセスの情報取得、および子プロセスの起動・待機・強制終了を提供するヘッダー。
+ *
+ *  待機を伴う API の設計原則は @ref sync.h を参照してください。
+ *
  *  @copyright      Copyright (C) Tetsuo Honda. 2026. All rights reserved.
  *
  *  @hideincludedbygraph
@@ -20,11 +24,11 @@
 #ifndef CPLAT_PROCESS_H
 #define CPLAT_PROCESS_H
 
-#include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <cplat/base/platform.h>
 #include <cplat/base/result.h>
+#include <cplat/base/wait.h>
 #include <cplat/cplat_export.h>
 
 /**
@@ -86,8 +90,8 @@ extern "C"
      */
     CPLAT_EXPORT uint32_t CPLAT_API cplat_process_get_tid(void);
 
-#define CPLAT_PROCESS_WAIT_FOREVER INT_MAX /**< タイムアウトなしで待機する (INT_MAX)。 */
-#define CPLAT_PROCESS_NO_WAIT      0       /**< 即時リターン (タイムアウト 0 [ms])。 */
+/** @brief cplat_process_timed_run_sync() が期限切れによる強制終了の後に終了を待つ上限 [ms]。 */
+#define CPLAT_PROCESS_TERMINATE_WAIT_MS 3000
 
     /** @brief 子プロセスの標準入出力ハンドルの扱い。 */
     typedef enum cplat_process_stdio_mode
@@ -138,24 +142,55 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_process_start(const cplat_process_options *options, cplat_process **process_out);
 
     /**
-     *  @brief          子プロセスの終了を待機します。
-     *  @param[in]      process     対象のプロセス ハンドル。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms  タイムアウト [ms]。@ref CPLAT_PROCESS_WAIT_FOREVER または
-     *                              @ref CPLAT_PROCESS_NO_WAIT も指定可能です。
-     *  @return         結果コードを返します。
+     *  @brief          子プロセスの終了を無期限に待機します。
+     *  @param[in]      process  対象のプロセス ハンドル。NULL を渡してはなりません。
+     *  @return         終了を検出した場合 (終了した子プロセスがすでに回収されていた場合を含む) は
+     *                  @ref CPLAT_OK を返します。
+     *                  @p process が NULL の場合は @ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  その他の失敗時は @ref CPLAT_ERR_UNKNOWN を返します。
+     *
+     *  @details        Linux で @c SIGCHLD が @c SIG_IGN に設定されている場合は、
+     *                  カーネルによる自動回収により終了待機は @ref CPLAT_OK を返しますが、
+     *                  終了コードを取得できないことがあります (@ref cplat_process_get_exit_code() 参照)。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
      *  異なる @p process に対する操作は同時に実行できます。\n
      *  同一 @p process に対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_process_wait(cplat_process *process, int timeout_ms);
+    CPLAT_EXPORT int CPLAT_API cplat_process_wait(cplat_process *process);
+
+    /**
+     *  @brief          子プロセスの終了を指定期限内で待機します。
+     *  @param[in]      process     対象のプロセス ハンドル。NULL を渡してはなりません。
+     *  @param[in]      timeout_ms  タイムアウト [ms]。@ref CPLAT_WAIT_FOREVER または
+     *                              @ref CPLAT_NO_WAIT も指定可能です。
+     *                              負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @return         終了を検出した場合 (終了した子プロセスがすでに回収されていた場合を含む) は
+     *                  @ref CPLAT_OK 、期限切れ時は @ref CPLAT_ERR_TIMEOUT 、
+     *                  引数不正時は @ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  その他の失敗時は @ref CPLAT_ERR_UNKNOWN を返します。
+     *
+     *  @details        Linux で @c SIGCHLD が @c SIG_IGN に設定されている場合は、
+     *                  カーネルによる自動回収により終了待機は @ref CPLAT_OK を返しますが、
+     *                  終了コードを取得できないことがあります (@ref cplat_process_get_exit_code() 参照)。
+     *
+     *  @par            スレッド セーフ
+     *  本関数は条件付きスレッド セーフです。\n
+     *  異なる @p process に対する操作は同時に実行できます。\n
+     *  同一 @p process に対する操作は、呼び出し側で直列化してください。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_process_timed_wait(cplat_process *process, int timeout_ms);
 
     /**
      *  @brief          子プロセスの終了コードを取得します。
      *  @param[in]      process        対象のプロセス ハンドル。NULL を渡してはなりません。
      *  @param[out]     exit_code_out  終了コードの格納先。NULL を渡してはなりません。
-     *  @return         結果コードを返します。
+     *  @return         終了コードを格納した場合は @ref CPLAT_OK を返します。
+     *                  終了した子プロセスがすでに回収されていて終了コードを取得できなかった場合
+     *                  (Linux で @c SIGCHLD が @c SIG_IGN に設定されている場合など) は
+     *                  @ref CPLAT_ERR_NOT_FOUND を返し、@p exit_code_out を変更しません。
+     *                  未終了または引数不正の場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
@@ -168,6 +203,9 @@ extern "C"
      *  @brief          子プロセスを強制終了します。
      *  @param[in]      process  対象のプロセス ハンドル。NULL を渡してはなりません。
      *  @return         結果コードを返します。
+     *
+     *  @details        Linux では捕捉・無視できない @c SIGKILL を送信し、Windows では
+     *                  @c TerminateProcess() を呼び出します。いずれも終了の完了は待機しません。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
@@ -191,11 +229,13 @@ extern "C"
     CPLAT_EXPORT void CPLAT_API cplat_process_dispose(cplat_process *process);
 
     /**
-     *  @brief          子プロセスを起動し、終了まで同期的に待機します。
+     *  @brief          子プロセスを起動し、終了まで無期限に待機して終了コードを取得します。
      *  @param[in]      options        起動オプション。NULL を渡してはなりません。
-     *  @param[in]      timeout_ms     タイムアウト [ms]。
      *  @param[out]     exit_code_out  終了コードの格納先。NULL を渡してはなりません。
      *  @return         結果コードを返します。
+     *
+     *  @details        @ref cplat_process_timed_run_sync() に @ref CPLAT_WAIT_FOREVER を渡した場合と
+     *                  同じ動作です。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
@@ -203,8 +243,35 @@ extern "C"
      *  他スレッドが環境変数を同時に変更しない場合は、同時に実行できます。\n
      *  他スレッドが同時に環境変数を変更する場合は、呼び出し側で同期してください。
      */
-    CPLAT_EXPORT int CPLAT_API cplat_process_run_sync(const cplat_process_options *options, int timeout_ms,
-                                                      int *exit_code_out);
+    CPLAT_EXPORT int CPLAT_API cplat_process_run_sync(const cplat_process_options *options, int *exit_code_out);
+
+    /**
+     *  @brief          子プロセスを起動し、指定期限内で終了を待機して終了コードを取得します。
+     *  @param[in]      options        起動オプション。NULL を渡してはなりません。
+     *  @param[in]      timeout_ms     タイムアウト [ms]。@ref CPLAT_WAIT_FOREVER または
+     *                                 @ref CPLAT_NO_WAIT も指定可能です。
+     *                                 負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  @param[out]     exit_code_out  終了コードの格納先。NULL を渡してはなりません。
+     *  @return         正常終了時は終了コードを格納して @ref CPLAT_OK 、
+     *                  期限切れ時は @ref CPLAT_ERR_TIMEOUT を返します。
+     *
+     *  @details        待機が期限切れとなった場合は @ref cplat_process_terminate() で強制終了し、
+     *                  @ref CPLAT_PROCESS_TERMINATE_WAIT_MS を上限として終了を待ってから
+     *                  @ref CPLAT_ERR_TIMEOUT を返します (@p exit_code_out は @c EXIT_FAILURE のまま)。\n
+     *                  Linux の割り込み不可の待ち (@c ps の @c D 状態) にあるプロセスや、
+     *                  Windows で実行中の I/O が完了または取り消されていないプロセスは、
+     *                  強制終了を行っても上限内に終了しない場合があります。\n
+     *                  上限内に終了しなかった場合、Linux では子プロセスが終了した後、
+     *                  親プロセスが終わるまでゾンビ プロセスとして残ります。
+     *
+     *  @par            スレッド セーフ
+     *  本関数は条件付きスレッド セーフです。\n
+     *  Linux 環境では、子プロセスへ引き継ぐため、自プロセスの環境変数を読み取ります。\n
+     *  他スレッドが環境変数を同時に変更しない場合は、同時に実行できます。\n
+     *  他スレッドが同時に環境変数を変更する場合は、呼び出し側で同期してください。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_process_timed_run_sync(const cplat_process_options *options, int timeout_ms,
+                                                            int *exit_code_out);
 
 #ifdef __cplusplus
 }

@@ -53,7 +53,7 @@ static void init_shutdown_lock(void)
 static void shutdown_lock(void)
 {
     cplat_call_once(&s_shutdown_lock_once, init_shutdown_lock);
-    cplat_local_lock_lock(s_shutdown_lock, CPLAT_SYNC_WAIT_FOREVER);
+    cplat_local_lock_lock(s_shutdown_lock);
 }
 
 static void shutdown_unlock(void)

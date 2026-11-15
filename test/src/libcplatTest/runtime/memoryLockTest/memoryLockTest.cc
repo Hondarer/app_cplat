@@ -179,13 +179,12 @@ TEST_F(memoryLockTest, test_lock_self_reports_mlockall_failure)
         .WillOnce(testing::Invoke(
             delegate_real_cplat_local_lock_create)); // [Pre-Assert確認_異常系] - cplat_local_lock_create() が 1 回呼び出されること。
     // [Pre-Assert手順] - cplat_local_lock_create() から製品 (prod) の処理へ委譲する。
-    EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, CPLAT_SYNC_WAIT_FOREVER))
-        .WillOnce(Return(
-            CPLAT_OK)); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が CPLAT_SYNC_WAIT_FOREVER を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - cplat_local_lock_lock() から CPLAT_OK を返す。
+    EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_))
+        .WillOnce(Return()); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が 1 回呼び出されること。
+                             // [Pre-Assert手順] - cplat_local_lock_lock() から何もせず戻る。
     EXPECT_CALL(mock_cplat, cplat_local_lock_unlock(_))
-        .WillOnce(Return(CPLAT_OK)); // [Pre-Assert確認_異常系] - cplat_local_lock_unlock() が 1 回呼び出されること。
-                                     // [Pre-Assert手順] - cplat_local_lock_unlock() から CPLAT_OK を返す。
+        .WillOnce(Return()); // [Pre-Assert確認_異常系] - cplat_local_lock_unlock() が 1 回呼び出されること。
+                             // [Pre-Assert手順] - cplat_local_lock_unlock() から何もせず戻る。
 
     // Act
     int result = cplat_memory_lock_self(
@@ -379,36 +378,25 @@ TEST_F(memoryLockTest, test_convert_flags_covers_each_flag_combination)
         null_output_result); // [確認_正常系] - 出力先に nullptr を指定した test_memory_lock_convert_flags() の戻り値が 0 であること。(出力先を省略した変換が成功することの確認)
 }
 
-// 内部 local lock の生成失敗と取得失敗を通知することの確認
-TEST_F(memoryLockTest, test_internal_lock_classifies_initialization_and_lock_failures)
+// 内部 local lock 未初期化時のロック要求を拒否することの確認
+TEST_F(memoryLockTest, test_internal_lock_classifies_initialization_failure)
 {
     // Arrange
-    NiceMock<Mock_cplat> mock_cplat;
     cplat_local_lock *saved_lock = test_memory_lock_get_internal_lock();
     int saved_state = test_memory_lock_get_once_state();
     test_memory_lock_set_internal_lock(nullptr, 2);
 
     // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, CPLAT_SYNC_WAIT_FOREVER))
-        .WillOnce(Return(
-            CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が CPLAT_SYNC_WAIT_FOREVER を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_local_lock_lock() から CPLAT_ERR_UNKNOWN を返す。
 
     // Act
     int missing_result =
         test_memory_lock_internal_lock(); // [手順] - 内部 local lock が存在しない状態で test_memory_lock_internal_lock() を呼び出す。
     test_memory_lock_internal_unlock(); // [手順] - 内部 local lock が存在しない状態で test_memory_lock_internal_unlock() を呼び出す。
-    test_memory_lock_set_internal_lock(reinterpret_cast<cplat_local_lock *>(1), 2);
-    int lock_failure_result =
-        test_memory_lock_internal_lock(); // [手順] - 内部 local lock の取得が失敗する状態で test_memory_lock_internal_lock() を呼び出す。
 
     // Assert
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         missing_result); // [確認_異常系] - 内部 local lock が存在しないときの test_memory_lock_internal_lock() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        lock_failure_result); // [確認_異常系] - 内部 local lock の取得失敗時の test_memory_lock_internal_lock() の戻り値が CPLAT_ERR_UNKNOWN であること。
 
     // Cleanup
     test_memory_lock_set_internal_lock(saved_lock, saved_state);
@@ -430,7 +418,7 @@ TEST_F(memoryLockTest, test_scope_release_classifies_internal_states)
     cplat_memory_lock_scope *shared_scope =
         test_memory_lock_create_scope(1); // [状態] - 複数参照確認用の mlockall() の scope を用意する。
     cplat_memory_lock_scope *lock_failure_scope =
-        test_memory_lock_create_scope(1); // [状態] - 内部 lock 失敗確認用の scope を用意する。
+        test_memory_lock_create_scope(1); // [状態] - 内部 lock 未初期化確認用の scope を用意する。
     cplat_memory_lock_scope *last_scope =
         test_memory_lock_create_scope(1); // [状態] - 最後の参照確認用の mlockall() の scope を用意する。
     ASSERT_NE(
@@ -444,24 +432,20 @@ TEST_F(memoryLockTest, test_scope_release_classifies_internal_states)
         shared_scope); // [状態確認] - 複数参照確認用の test_memory_lock_create_scope() の戻り値が nullptr 以外であること。
     ASSERT_NE(
         nullptr,
-        lock_failure_scope); // [状態確認] - 内部 lock 失敗確認用の test_memory_lock_create_scope() の戻り値が nullptr 以外であること。
+        lock_failure_scope); // [状態確認] - 内部 lock 未初期化確認用の test_memory_lock_create_scope() の戻り値が nullptr 以外であること。
     ASSERT_NE(
         nullptr,
         last_scope); // [状態確認] - 最後の参照確認用の test_memory_lock_create_scope() の戻り値が nullptr 以外であること。
 
     // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, CPLAT_SYNC_WAIT_FOREVER))
-        .WillOnce(Return(CPLAT_OK))
-        .WillOnce(Return(CPLAT_OK))
-        .WillOnce(Return(CPLAT_OK))
-        .WillOnce(Return(
-            CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が CPLAT_SYNC_WAIT_FOREVER を指定して 4 回呼び出されること。
-    // [Pre-Assert手順] - cplat_local_lock_lock() から 1 回目から 3 回目は CPLAT_OK、4 回目は CPLAT_ERR_UNKNOWN を返す。
+    EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_))
+        .Times(3)
+        .WillRepeatedly(Return()); // [Pre-Assert確認_正常系] - cplat_local_lock_lock() が 3 回呼び出されること。
+                                   // [Pre-Assert手順] - cplat_local_lock_lock() から何もせず戻る。
     EXPECT_CALL(mock_cplat, cplat_local_lock_unlock(_))
         .Times(3)
-        .WillRepeatedly(
-            Return(CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_local_lock_unlock() が 3 回呼び出されること。
-                               // [Pre-Assert手順] - cplat_local_lock_unlock() から CPLAT_OK を返す。
+        .WillRepeatedly(Return()); // [Pre-Assert確認_正常系] - cplat_local_lock_unlock() が 3 回呼び出されること。
+                                   // [Pre-Assert手順] - cplat_local_lock_unlock() から何もせず戻る。
     EXPECT_CALL(mock_mman, munlockall(_, _, _))
         .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - munlockall() が 1 回呼び出されること。
                               // [Pre-Assert手順] - munlockall() から 0 を返す。
@@ -478,8 +462,9 @@ TEST_F(memoryLockTest, test_scope_release_classifies_internal_states)
     test_memory_lock_set_scope_count(1U);
     int last_result = cplat_memory_lock_scope_release(
         last_scope); // [手順] - 最後の参照である mlockall() の scope を指定して cplat_memory_lock_scope_release() を呼び出す。
+    test_memory_lock_set_internal_lock(nullptr, 2);
     int lock_failure_result = cplat_memory_lock_scope_release(
-        lock_failure_scope); // [手順] - 内部 local lock の取得が失敗する状態で scope を指定して cplat_memory_lock_scope_release() を呼び出す。
+        lock_failure_scope); // [手順] - 内部 local lock が未初期化の状態で scope を指定して cplat_memory_lock_scope_release() を呼び出す。
 
     // Assert
     EXPECT_EQ(
@@ -496,41 +481,43 @@ TEST_F(memoryLockTest, test_scope_release_classifies_internal_states)
         last_result); // [確認_正常系] - 最後の scope に対する cplat_memory_lock_scope_release() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
-        lock_failure_result); // [確認_異常系] - 内部 local lock の取得失敗中の cplat_memory_lock_scope_release() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        lock_failure_result); // [確認_異常系] - 内部 local lock 未初期化中の cplat_memory_lock_scope_release() の戻り値が CPLAT_ERR_UNKNOWN であること。
 
     // Cleanup
     test_memory_lock_set_scope_count(0U);
     test_memory_lock_set_internal_lock(saved_lock, saved_state);
 }
 
-// self lock の内部 local lock 取得失敗を通知することの確認
+// self lock の内部 local lock 生成失敗を通知することの確認
 TEST_F(memoryLockTest, test_lock_self_reports_internal_lock_failure)
 {
     // Arrange
     NiceMock<Mock_cplat> mock_cplat;
     NiceMock<Mock_sys_mman> mock_mman;
+    cplat_local_lock *saved_lock = test_memory_lock_get_internal_lock();
+    int saved_state = test_memory_lock_get_once_state();
+    test_memory_lock_set_internal_lock(nullptr, 2);
     cplat_memory_lock_self_options options = {};
     cplat_memory_lock_scope *scope = nullptr;
     options.flags = CPLAT_MEMORY_LOCK_CURRENT;
 
     // Pre-Assert
-    EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, CPLAT_SYNC_WAIT_FOREVER))
-        .WillOnce(Return(
-            CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が CPLAT_SYNC_WAIT_FOREVER を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_local_lock_lock() から、内部 lock の取得失敗として CPLAT_ERR_UNKNOWN を返す。
     EXPECT_CALL(mock_mman, mlockall(_, _, _, _))
         .Times(0); // [Pre-Assert確認_異常系] - mlockall() が呼び出されないこと。
 
     // Act
     int result = cplat_memory_lock_self(
-        &options, &scope); // [手順] - 内部 local lock の取得が失敗する状態で cplat_memory_lock_self() を呼び出す。
+        &options, &scope); // [手順] - 内部 local lock が未初期化の状態で cplat_memory_lock_self() を呼び出す。
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
               result); // [確認_異常系] - cplat_memory_lock_self() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(
         nullptr,
-        scope); // [確認_異常系] - scope が nullptr であること。(内部 lock 取得失敗時に scope が nullptr のままであることの確認)
+        scope); // [確認_異常系] - scope が nullptr であること。(内部 lock 未初期化時に scope が nullptr のままであることの確認)
+
+    // Cleanup
+    test_memory_lock_set_internal_lock(saved_lock, saved_state);
 }
 
 // self lock scope の確保失敗を通知することの確認

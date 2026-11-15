@@ -585,14 +585,13 @@ TEST_F(traceFileCoverageTest, write_handles_format_truncation_and_lock_failure)
         .WillRepeatedly(
             DoDefault()); // [Pre-Assert確認_異常系] - snprintf() が 1 回以上呼び出されること。(トレース行の書式化を行うことの確認)
                           // [Pre-Assert手順] - snprintf() から 1 回目は -1 を返し、以降は libc の処理へ委譲する。
-    EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, CPLAT_SYNC_WAIT_FOREVER))
-        .Times(
-            1); // [Pre-Assert確認_正常系] - cplat_local_lock_lock() が CPLAT_SYNC_WAIT_FOREVER を指定して 1 回呼び出されること。(書式化失敗時にレジストリ ロックを取得することの確認)
-    EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_, 100))
+    EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_))
+        .Times(1); // [Pre-Assert確認_正常系] - cplat_local_lock_lock() が 1 回呼び出されること。(書式化失敗時にレジストリ ロックを取得することの確認)
+    EXPECT_CALL(mock_cplat, cplat_local_lock_timed_lock(_, 100))
         .WillOnce(Return(CPLAT_OK))
         .WillOnce(Return(
-            CPLAT_ERR_TIMEOUT)); // [Pre-Assert確認_異常系] - cplat_local_lock_lock() が 100 を指定して 2 回呼び出されること。(書式化成功後の書き込みロックを取得することの確認)
-    // [Pre-Assert手順] - cplat_local_lock_lock() から 1 回目は CPLAT_OK、2 回目は CPLAT_ERR_TIMEOUT を返す。
+            CPLAT_ERR_TIMEOUT)); // [Pre-Assert確認_異常系] - cplat_local_lock_timed_lock() が 100 を指定して 2 回呼び出されること。(書式化成功後の書き込みロックを取得することの確認)
+    // [Pre-Assert手順] - cplat_local_lock_timed_lock() から 1 回目は CPLAT_OK、2 回目は CPLAT_ERR_TIMEOUT を返す。
 
     // Act
     int snprintf_error = cplat_trace_file_sink_write(
@@ -746,7 +745,7 @@ TEST_F(traceFileResidualTest, registry_initialization_failure_is_retained)
 
     // [Pre-Assert確認_異常系] - レジストリのロック生成が 1 回呼び出されること。
     // [Pre-Assert手順] - ロックを設定せず確保失敗を返す。
-    EXPECT_CALL(mock, cplat_local_lock_lock(_, _)).Times(0);
+    EXPECT_CALL(mock, cplat_local_lock_lock(_)).Times(0);
 
     // [Pre-Assert確認_異常系] - NULL のレジストリ ロックを取得しないこと。
 

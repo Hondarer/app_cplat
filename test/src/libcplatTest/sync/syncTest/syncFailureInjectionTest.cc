@@ -179,8 +179,8 @@ TEST_F(syncFailureInjectionTest, interprocess_lock_unlock_reports_flock_failure)
     ASSERT_EQ(CPLAT_OK,
               cplat_interprocess_lock_open(kLockIdentity, &lock)); // [状態] - interprocess lock を開いた状態とする。
     // [状態確認] - cplat_interprocess_lock_open() の戻り値が CPLAT_OK であること。
-    ASSERT_EQ(CPLAT_OK, cplat_interprocess_lock_lock(lock, CPLAT_SYNC_NO_WAIT)); // [状態] - ロックを取得済みにする。
-    // [状態確認] - cplat_interprocess_lock_lock() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, cplat_interprocess_lock_timed_lock(lock, CPLAT_NO_WAIT)); // [状態] - ロックを取得済みにする。
+    // [状態確認] - cplat_interprocess_lock_timed_lock() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
     EXPECT_CALL(os_.sys_file, flock(_, _, _, _, LOCK_UN))
@@ -229,7 +229,7 @@ TEST_F(syncFailureInjectionTest, thread_create_fails_when_pthread_create_fails)
     EXPECT_EQ(nullptr, thread); // [確認_異常系] - thread が nullptr であること。
 }
 
-// pthread の戻り値を共通結果へ変換することの確認
+// try_lock の pthread エラーを共通結果へ変換することの確認
 TEST_F(syncFailureInjectionTest, local_lock_maps_pthread_failure_results)
 {
     // Arrange
@@ -239,35 +239,51 @@ TEST_F(syncFailureInjectionTest, local_lock_maps_pthread_failure_results)
     NiceMock<Mock_pthread> mock_pthread;
 
     // Pre-Assert
-    EXPECT_CALL(mock_pthread, pthread_mutex_lock(_, _, _, _))
-        .WillOnce(Return(EBUSY)); // [Pre-Assert確認_異常系] - pthread_mutex_lock() が 1 回呼び出されること。
-                                  // [Pre-Assert手順] - pthread_mutex_lock() から EBUSY を返す。
     EXPECT_CALL(mock_pthread, pthread_mutex_trylock(_, _, _, _))
         .WillOnce(Return(EACCES)); // [Pre-Assert確認_異常系] - pthread_mutex_trylock() が 1 回呼び出されること。
                                    // [Pre-Assert手順] - pthread_mutex_trylock() から EACCES を返す。
-    EXPECT_CALL(mock_pthread, pthread_mutex_unlock(_, _, _, _))
-        .WillOnce(Return(EINVAL)); // [Pre-Assert確認_異常系] - pthread_mutex_unlock() が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - pthread_mutex_unlock() から EINVAL を返す。
 
     // Act
-    int lock_result = cplat_local_lock_lock(
-        lock,
-        CPLAT_SYNC_WAIT_FOREVER); // [手順] - pthread_mutex_lock() が EBUSY を返す状態で cplat_local_lock_lock() を呼び出す。
     int try_result = cplat_local_lock_try_lock(
         lock); // [手順] - pthread_mutex_trylock() が EACCES を返す状態で cplat_local_lock_try_lock() を呼び出す。
-    int unlock_result = cplat_local_lock_unlock(
-        lock); // [手順] - pthread_mutex_unlock() が EINVAL を返す状態で cplat_local_lock_unlock() を呼び出す。
 
     // Assert
     EXPECT_EQ(
-        CPLAT_ERR_BUSY,
-        lock_result); // [確認_異常系] - EBUSY に対する cplat_local_lock_lock() の戻り値が CPLAT_ERR_BUSY であること。
-    EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         try_result); // [確認_異常系] - EACCES に対する cplat_local_lock_try_lock() の戻り値が CPLAT_ERR_UNKNOWN であること。
-    EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        unlock_result); // [確認_異常系] - EINVAL に対する cplat_local_lock_unlock() の戻り値が CPLAT_ERR_UNKNOWN であること。
+
+    // Cleanup
+    cplat_local_lock_dispose(lock);
+}
+
+// void のロック取得・解放で pthread エラー発生時に異常終了することの確認
+TEST_F(syncFailureInjectionTest, local_lock_void_ops_abort_on_pthread_failure)
+{
+    // Arrange
+    cplat_local_lock *lock = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_local_lock_create(&lock)); // [状態] - local lock を生成する。
+    // [状態確認] - cplat_local_lock_create() の戻り値が CPLAT_OK であること。
+
+    // Pre-Assert
+
+    // Act
+    // [手順] - pthread_mutex_lock() / pthread_mutex_unlock() が失敗する状態で cplat_local_lock_lock() と cplat_local_lock_unlock() を呼び出す。
+
+    // Assert
+    EXPECT_DEATH(
+        {
+            NiceMock<Mock_pthread> mock_pthread;
+            ON_CALL(mock_pthread, pthread_mutex_lock(_, _, _, _)).WillByDefault(Return(EBUSY));
+            cplat_local_lock_lock(lock);
+        },
+        "local lock を取得できません"); // [確認_異常系] - pthread_mutex_lock() 失敗時の cplat_local_lock_lock() でプロセスが異常終了すること。
+    EXPECT_DEATH(
+        {
+            NiceMock<Mock_pthread> mock_pthread;
+            ON_CALL(mock_pthread, pthread_mutex_unlock(_, _, _, _)).WillByDefault(Return(EINVAL));
+            cplat_local_lock_unlock(lock);
+        },
+        "local lock を解放できません"); // [確認_異常系] - pthread_mutex_unlock() 失敗時の cplat_local_lock_unlock() でプロセスが異常終了すること。
 
     // Cleanup
     cplat_local_lock_dispose(lock);
