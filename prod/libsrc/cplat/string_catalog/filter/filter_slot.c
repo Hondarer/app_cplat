@@ -1720,7 +1720,7 @@ static int apply_image_locked(cplat_string_catalog_filter_slot *slot, const void
         if (ret == CPLAT_OK)
         {
             slot->active_plane = target_plane;
-            (void)cplat_local_rwlock_unlock_exclusive(slot->plane_lock);
+            (void)cplat_local_rwlock_unlock_exclusive(slot->plane_lock); /* 取得に成功したロックの解放は失敗しない */
         }
     }
 
@@ -1754,7 +1754,7 @@ int cplat_string_catalog_filter_slot_apply(cplat_string_catalog_filter_slot *slo
 
     ret = apply_image_locked(slot, image, image_size, diagnostics, diagnostic_capacity, invalid_count_out, NULL, 0U,
                              NULL, &torn);
-    (void)cplat_local_lock_unlock(slot->apply_lock);
+    (void)cplat_local_lock_unlock(slot->apply_lock); /* 取得に成功したロックの解放は失敗しない */
 
     return ret;
 }
@@ -1951,7 +1951,7 @@ int cplat_string_catalog_filter_slot_check(cplat_string_catalog_filter_slot *slo
         }
     }
 
-    (void)cplat_local_lock_unlock(slot->apply_lock);
+    (void)cplat_local_lock_unlock(slot->apply_lock); /* 取得に成功したロックの解放は失敗しない */
 
     if (ret == CPLAT_OK)
     {
@@ -2024,7 +2024,7 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
         {
             /* 取り込みを試みていないため取り込み済みとはせず、次の判定で改めて試みる。 */
             slot->source_last_result = ret;
-            (void)cplat_local_lock_unlock(slot->apply_lock);
+            (void)cplat_local_lock_unlock(slot->apply_lock); /* 取得に成功したロックの解放は失敗しない */
             return;
         }
 
@@ -2045,7 +2045,7 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
             writer_lock->unlock(writer_lock->context);
         }
 
-        (void)cplat_local_lock_unlock(slot->apply_lock);
+        (void)cplat_local_lock_unlock(slot->apply_lock); /* 取得に成功したロックの解放は失敗しない */
         return;
     }
 
@@ -2080,7 +2080,7 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
             cplat_atomic_store_u64(&slot->taken_revision, revision, CPLAT_MEMORY_ORDER_RELAXED);
         }
 
-        (void)cplat_local_lock_unlock(slot->apply_lock);
+        (void)cplat_local_lock_unlock(slot->apply_lock); /* 取得に成功したロックの解放は失敗しない */
         return;
     }
 
@@ -2106,7 +2106,7 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
         cplat_atomic_store_u64(&slot->taken_revision, revision, CPLAT_MEMORY_ORDER_RELAXED);
     }
 
-    (void)cplat_local_lock_unlock(slot->apply_lock);
+    (void)cplat_local_lock_unlock(slot->apply_lock); /* 取得に成功したロックの解放は失敗しない */
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -2182,7 +2182,7 @@ int cplat_string_catalog_filter_slot_get_source_status(cplat_string_catalog_filt
     status_out->taken_revision = cplat_atomic_load_u64(&slot->taken_revision, CPLAT_MEMORY_ORDER_RELAXED);
     status_out->last_result = slot->source_last_result;
     status_out->last_invalid_count = slot->source_last_invalid_count;
-    (void)cplat_local_lock_unlock(slot->apply_lock);
+    (void)cplat_local_lock_unlock(slot->apply_lock); /* 取得に成功したロックの解放は失敗しない */
 
     return CPLAT_OK;
 }
@@ -2214,7 +2214,7 @@ int cplat_string_catalog_filter_slot_snapshot(cplat_string_catalog_filter_slot *
     plane = &slot->planes[slot->active_plane];
     memcpy(image_out, plane->image, slot->image_size);
 
-    (void)cplat_local_rwlock_unlock_shared(slot->plane_lock);
+    (void)cplat_local_rwlock_unlock_shared(slot->plane_lock); /* 取得に成功したロックの解放は失敗しない */
 
     return CPLAT_OK;
 }
@@ -2248,7 +2248,7 @@ int cplat_string_catalog_filter_slot_get_line_error(cplat_string_catalog_filter_
         *error_out = plane->line_errors[line_index];
     }
 
-    (void)cplat_local_rwlock_unlock_shared(slot->plane_lock);
+    (void)cplat_local_rwlock_unlock_shared(slot->plane_lock); /* 取得に成功したロックの解放は失敗しない */
 
     return ret;
 }
@@ -2278,7 +2278,7 @@ int cplat_string_catalog_filter_slot_test(cplat_string_catalog_filter_slot *slot
     }
 
     *state_out = (cplat_string_catalog_filter_state)slot->planes[slot->active_plane].entry_states[entry_index];
-    (void)cplat_local_rwlock_unlock_shared(slot->plane_lock);
+    (void)cplat_local_rwlock_unlock_shared(slot->plane_lock); /* 取得に成功したロックの解放は失敗しない */
 
     return CPLAT_OK;
 }
@@ -2348,7 +2348,7 @@ int cplat_string_catalog_filter_slot_describe_line(cplat_string_catalog_filter_s
         ret = string_catalog_filter_describe_record(&source, dest, dest_size);
     }
 
-    (void)cplat_local_rwlock_unlock_shared(slot->plane_lock);
+    (void)cplat_local_rwlock_unlock_shared(slot->plane_lock); /* 取得に成功したロックの解放は失敗しない */
 
     return ret;
 }
@@ -2469,7 +2469,7 @@ int cplat_string_catalog_filter_slot_vformat(cplat_string_catalog_filter_slot *s
 
     *matched_out =
         is_matched(slot, &slot->planes[slot->active_plane], (size_t)(entry - slot->catalog->entries), values);
-    (void)cplat_local_rwlock_unlock_shared(slot->plane_lock);
+    (void)cplat_local_rwlock_unlock_shared(slot->plane_lock); /* 取得に成功したロックの解放は失敗しない */
 
     /* 書式展開はロックの外で行う。判定の結果によらず文字列を組み立てる。 */
     return cplat_internal_string_catalog_render_text(dest, dest_size, text, values, entry->argument_count);

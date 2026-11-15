@@ -1261,7 +1261,7 @@ static void argparser_default_dispose_on_shutdown(const cplat_shutdown_event *ev
 
     cplat_argparser *parser = s_default_parser;
     s_default_parser = NULL;
-    (void)cplat_local_lock_unlock(lock);
+    (void)cplat_local_lock_unlock(lock); /* 取得に成功したロックの解放は失敗しない */
 
     if (parser != NULL)
     {
@@ -1330,7 +1330,7 @@ static cplat_argparser *argparser_default_acquire(const int argc, char *const *a
     }
 
     cplat_argparser *parser = s_default_parser;
-    (void)cplat_local_lock_unlock(lock);
+    (void)cplat_local_lock_unlock(lock); /* 取得に成功したロックの解放は失敗しない */
 
     return parser;
 }

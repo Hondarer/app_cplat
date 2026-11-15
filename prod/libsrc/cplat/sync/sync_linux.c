@@ -510,6 +510,10 @@ int cplat_local_lock_unlock(cplat_local_lock *mtx)
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
+    /*
+     * POSIX は、呼び出しスレッドが所有する mutex の解放にエラーを定義していない。
+     * see: https://man7.org/linux/man-pages/man3/pthread_mutex_lock.3p.html
+     */
     return map_wait_rc(pthread_mutex_unlock(&mtx->native));
 }
 

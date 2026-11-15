@@ -120,6 +120,7 @@ static void memory_lock_unlock(void)
 {
     if (s_memory_lock_lock != NULL)
     {
+        /* 呼び出し元は memory_lock_lock() の成功後にだけ本関数を呼ぶため、保持中のロックの解放は失敗しない。 */
         (void)cplat_local_lock_unlock(s_memory_lock_lock);
     }
 }

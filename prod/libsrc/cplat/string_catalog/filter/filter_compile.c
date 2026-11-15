@@ -946,11 +946,12 @@ static bool parse_operator(compiler *state, string_catalog_filter_instruction *i
         {TOKEN_KIND_GREATER, STRING_CATALOG_FILTER_OPERATOR_GREATER},
         {TOKEN_KIND_GREATER_EQUAL, STRING_CATALOG_FILTER_OPERATOR_GREATER_EQUAL},
     };
+    /* 各要素の pad は、-Wmissing-field-initializers の警告を避けるために 0U を明示する。 */
     static const struct operator_word
     {
         const char *word;
         string_catalog_filter_operator operator_kind;
-        unsigned int pad;
+        unsigned int pad; /* 明示的アラインメントのためのパディング */
     } words[] = {
         {"in", STRING_CATALOG_FILTER_OPERATOR_IN, 0U},
         {"between", STRING_CATALOG_FILTER_OPERATOR_BETWEEN, 0U},
@@ -1341,51 +1342,48 @@ int string_catalog_filter_compile_record(const char *text, const size_t text_len
                                          uint32_t *column_out)
 {
     string_catalog_filter_record_header header;
-    compiler *state;
-    compiler state_storage;
+    compiler state = {0};
 
-    state = &state_storage;
-    memset(state, 0, sizeof(*state));
     memset(record, 0, CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(line_width));
 
-    state->text = text;
-    state->text_length = text_length;
-    state->record = record;
-    state->line_width = line_width;
-    state->instruction_capacity = string_catalog_filter_instruction_capacity(line_width);
-    state->constant_capacity = string_catalog_filter_constant_capacity(line_width);
+    state.text = text;
+    state.text_length = text_length;
+    state.record = record;
+    state.line_width = line_width;
+    state.instruction_capacity = string_catalog_filter_instruction_capacity(line_width);
+    state.constant_capacity = string_catalog_filter_constant_capacity(line_width);
 
     /* 条件式の長さ上限を確認し、論理和から順に構文解析を行う。 */
     if (text_length > line_width)
     {
-        (void)fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED, line_width);
+        (void)fail(&state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED, line_width);
     }
-    else if (advance(state) && parse_or(state) && (state->current.kind != TOKEN_KIND_END))
+    else if (advance(&state) && parse_or(&state) && (state.current.kind != TOKEN_KIND_END))
     {
-        (void)fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, state->current.column);
+        (void)fail(&state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, state.current.column);
     }
 
-    if ((state->error == CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE) && (state->instruction_count == 0U))
+    if ((state.error == CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE) && (state.instruction_count == 0U))
     {
-        (void)fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, 0U);
+        (void)fail(&state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, 0U);
     }
 
-    if (state->error != CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE)
+    if (state.error != CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE)
     {
         memset(record, 0, CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(line_width));
-        *error_out = state->error;
-        *column_out = state->error_column;
+        *error_out = state.error;
+        *column_out = state.error_column;
         return CPLAT_ERR_MALFORMED_DEFINITION;
     }
 
     /* コンパイル結果を行レコードの見出しへ反映し、行ハッシュを算出する。 */
     memset(&header, 0, sizeof(header));
-    header.instruction_count = (uint16_t)state->instruction_count;
-    header.constant_size = (uint16_t)state->constant_size;
-    header.stack_depth = (uint8_t)state->max_depth;
-    header.argument_reference_count = (uint8_t)state->argument_reference_count;
-    header.identifier_count = (uint8_t)state->identifier_count;
-    header.pattern_count = (uint8_t)state->pattern_count;
+    header.instruction_count = (uint16_t)state.instruction_count;
+    header.constant_size = (uint16_t)state.constant_size;
+    header.stack_depth = (uint8_t)state.max_depth;
+    header.argument_reference_count = (uint8_t)state.argument_reference_count;
+    header.identifier_count = (uint8_t)state.identifier_count;
+    header.pattern_count = (uint8_t)state.pattern_count;
     string_catalog_filter_write_record_header(record, &header);
 
     header.line_hash = string_catalog_filter_compute_line_hash(record, line_width);

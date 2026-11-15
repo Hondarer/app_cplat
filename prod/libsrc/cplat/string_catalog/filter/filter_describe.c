@@ -427,6 +427,7 @@ static void append_argument(describe_context *context, const string_catalog_filt
 
     if (instruction->field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME)
     {
+        /* 定数は検証済みであり、読み取りは失敗しない。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, instruction->operand,
                                                   &constant);
         name = constant.text;
@@ -512,7 +513,10 @@ static uint32_t append_subject(describe_context *context, const string_catalog_f
     case STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME:
         append_argument(context, instruction);
 
-        /* 比較対象は引数名の定数の直後から並ぶ。 */
+        /*
+         * 比較対象は引数名の定数の直後から並ぶ。
+         * 定数は検証済みであり、読み取りは失敗しない。
+         */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, instruction->operand,
                                                   &constant);
         return constant.next_offset;
@@ -537,6 +541,7 @@ static void append_constants(describe_context *context, const string_catalog_fil
             append_text(&context->writer, context->phrases->list_separator);
         }
 
+        /* 定数は検証済みであり、読み取りは失敗しない。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
         offset = constant.next_offset;
 
@@ -608,8 +613,10 @@ static bool is_category_matched(const describe_context *context, const string_ca
     {
         double lower;
 
+        /* 定数は検証済みであり、読み取りは失敗しない。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
         lower = real_of_constant(context, &constant);
+        /* 定数は検証済みであり、読み取りは失敗しない。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, constant.next_offset,
                                                   &constant);
         return (lower <= value) && (value <= real_of_constant(context, &constant));
@@ -619,6 +626,7 @@ static bool is_category_matched(const describe_context *context, const string_ca
     {
         double literal;
 
+        /* 定数は検証済みであり、読み取りは失敗しない。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
         offset = constant.next_offset;
         literal = real_of_constant(context, &constant);
@@ -780,9 +788,11 @@ static void append_predicate(describe_context *context, const string_catalog_fil
     if (instruction->operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_BETWEEN)
     {
         append_before(context, phrases->between_before);
+        /* 定数は検証済みであり、読み取りは失敗しない。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
         append_constant(context, &constant);
         append_text(&context->writer, phrases->between_middle);
+        /* 定数は検証済みであり、読み取りは失敗しない。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, constant.next_offset,
                                                   &constant);
         append_constant(context, &constant);
@@ -968,6 +978,7 @@ static void append_mixed_notes(describe_context *context)
             continue;
         }
 
+        /* 定数は検証済みであり、読み取りは失敗しない。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, instruction.operand,
                                                   &constant);
 
@@ -999,36 +1010,33 @@ static void append_mixed_notes(describe_context *context)
 int string_catalog_filter_describe_record(const string_catalog_filter_describe_source *source, char *dest,
                                           const size_t dest_size)
 {
-    describe_context *context;
-    describe_context context_storage;
+    describe_context context = {0};
     string_catalog_filter_record_header header;
     uint16_t root;
 
-    context = &context_storage;
-    memset(context, 0, sizeof(*context));
-    context->source = source;
+    context.source = source;
 
     if (source->is_japanese != 0)
     {
-        context->phrases = &s_japanese;
+        context.phrases = &s_japanese;
     }
     else
     {
-        context->phrases = &s_neutral;
+        context.phrases = &s_neutral;
     }
 
     string_catalog_filter_read_record_header(source->record, &header);
-    context->constants = string_catalog_filter_record_constants(source->record, source->line_width);
-    context->constant_size = header.constant_size;
-    context->writer.dest = dest;
-    context->writer.size = dest_size;
+    context.constants = string_catalog_filter_record_constants(source->record, source->line_width);
+    context.constant_size = header.constant_size;
+    context.writer.dest = dest;
+    context.writer.size = dest_size;
     dest[0] = '\0';
 
-    root = string_catalog_filter_build_tree(source->record, context->left, context->right);
-    append_node(context, root, 0);
-    append_mixed_notes(context);
+    root = string_catalog_filter_build_tree(source->record, context.left, context.right);
+    append_node(&context, root, 0);
+    append_mixed_notes(&context);
 
-    if (context->writer.is_truncated)
+    if (context.writer.is_truncated)
     {
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }

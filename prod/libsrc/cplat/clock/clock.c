@@ -123,13 +123,13 @@ static void clock_utc_offset_minutes(const struct tm *local_tm, const struct tm 
     *offset_minutes = (int)(delta_seconds / 60);
 }
 
-/* 成功で 0、バッファー不足または書式化の失敗で -1 を返す。 */
+/* 成功で CPLAT_OK、バッファー不足または書式化の失敗で CPLAT_ERR_UNKNOWN を返す。 */
 static int clock_format_iso8601_utc_from_tm(char *buf, const size_t buf_size, const struct tm *utc_tm,
                                             const int64_t tv_nsec)
 {
     if (buf == NULL || buf_size < (size_t)(CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN + 1))
     {
-        return -1;
+        return CPLAT_ERR_UNKNOWN;
     }
 
     /* ミリ秒未満のナノ秒は切り捨て、ミリ秒を 3 桁で出力する。 */
@@ -137,13 +137,13 @@ static int clock_format_iso8601_utc_from_tm(char *buf, const size_t buf_size, co
                        utc_tm->tm_mday, utc_tm->tm_hour, utc_tm->tm_min, utc_tm->tm_sec,
                        (int)(tv_nsec / NSEC_PER_MSEC)) != CPLAT_OK)
     {
-        return -1;
+        return CPLAT_ERR_UNKNOWN;
     }
 
-    return 0;
+    return CPLAT_OK;
 }
 
-/* 成功で 0、バッファー不足または書式化の失敗で -1 を返す。 */
+/* 成功で CPLAT_OK、バッファー不足または書式化の失敗で CPLAT_ERR_UNKNOWN を返す。 */
 static int clock_format_iso8601_local_from_tm(char *buf, const size_t buf_size, const struct tm *local_tm,
                                               const int64_t tv_nsec, const int offset_minutes)
 {
@@ -154,7 +154,7 @@ static int clock_format_iso8601_local_from_tm(char *buf, const size_t buf_size, 
 
     if (buf == NULL || buf_size < (size_t)(CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1))
     {
-        return -1;
+        return CPLAT_ERR_UNKNOWN;
     }
 
     if (offset_minutes < 0)
@@ -176,10 +176,10 @@ static int clock_format_iso8601_local_from_tm(char *buf, const size_t buf_size, 
                        local_tm->tm_mon + 1, local_tm->tm_mday, local_tm->tm_hour, local_tm->tm_min, local_tm->tm_sec,
                        (int)(tv_nsec / NSEC_PER_MSEC), offset_sign, offset_hours, offset_mins) != CPLAT_OK)
     {
-        return -1;
+        return CPLAT_ERR_UNKNOWN;
     }
 
-    return 0;
+    return CPLAT_OK;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -343,7 +343,7 @@ int cplat_clock_format_realtime_iso8601_local(char *buf, const size_t buf_size, 
 
     clock_utc_offset_minutes(&local_tm, &utc_tm, &offset_minutes);
 
-    if (clock_format_iso8601_local_from_tm(buf, buf_size, &local_tm, timestamp->tv_nsec, offset_minutes) != 0)
+    if (clock_format_iso8601_local_from_tm(buf, buf_size, &local_tm, timestamp->tv_nsec, offset_minutes) != CPLAT_OK)
     {
         clock_write_fallback(buf, buf_size, s_iso8601_local_fallback);
         return CPLAT_ERR_UNKNOWN;
@@ -365,7 +365,7 @@ int cplat_clock_format_realtime_iso8601_utc(char *buf, const size_t buf_size, co
     }
 
     if (cplat_gmtime(&utc_tm, &timestamp->tv_sec) != 0 ||
-        clock_format_iso8601_utc_from_tm(buf, buf_size, &utc_tm, timestamp->tv_nsec) != 0)
+        clock_format_iso8601_utc_from_tm(buf, buf_size, &utc_tm, timestamp->tv_nsec) != CPLAT_OK)
     {
         clock_write_fallback(buf, buf_size, s_iso8601_utc_fallback);
         return CPLAT_ERR_UNKNOWN;

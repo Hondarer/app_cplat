@@ -183,6 +183,7 @@ static int registry_lock(void)
  */
 static void registry_unlock(void)
 {
+    /* 呼び出し元は registry_lock() の成功後にだけ本関数を呼ぶため、保持中のロックの解放は失敗しない。 */
     (void)cplat_local_lock_unlock(s_registry_lock);
 }
 
@@ -538,6 +539,10 @@ static void config_unlock_exclusive(cplat_tracer *handle)
 {
     if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
     {
+        /*
+         * 呼び出し元は設定の排他ロックの取得に成功した後にだけ本関数を呼ぶため、
+         * 保持中のロックの解放は失敗しない。
+         */
         (void)cplat_local_rwlock_unlock_exclusive(handle->config_rwlock);
     }
 }
@@ -574,6 +579,10 @@ static void config_unlock_shared(cplat_tracer *handle)
 {
     if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
     {
+        /*
+         * 呼び出し元は設定の共有ロックの取得に成功した後にだけ本関数を呼ぶため、
+         * 保持中のロックの解放は失敗しない。
+         */
         (void)cplat_local_rwlock_unlock_shared(handle->config_rwlock);
     }
 }
@@ -2323,7 +2332,13 @@ void cplat_internal_trace_registry_dispose_all_on_shutdown(const cplat_shutdown_
         return;
     }
 
-    /* レジストリから管理リストを切り離し、ロックを解放してから各ハンドルを解放する。 */
+    /*
+     * レジストリから管理リストを切り離し、ロックを解放してから各ハンドルを解放する。
+     * 切り離した後は、ほかのスレッドがレジストリ経由でこのリストへ到達できないため、
+     * 各ハンドルの解放中にロックを保持する必要がない。
+     * また、本関数の末尾で s_registry_lock 自体を破棄するため、ロックを保持したままにできない。
+     * see: https://man7.org/linux/man-pages/man3/pthread_mutex_destroy.3p.html
+     */
     s_trace_registry.shutdown_started = 1;
     items = s_trace_registry.items;
     count = s_trace_registry.count;

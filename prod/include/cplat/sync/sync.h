@@ -108,7 +108,9 @@ extern "C"
     /**
      *  @brief          ミューテックスをロック解除します。
      *  @param[in]      mtx  対象のミューテックス。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+     *  @return         呼び出しスレッドが保持しているミューテックスに対しては、@ref CPLAT_OK を返します。
+     *                  @p mtx が NULL の場合は @ref CPLAT_ERR_INVALID_ARGUMENT を、
+     *                  OS のロック解除が失敗した場合は @ref CPLAT_ERR_UNKNOWN を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -258,7 +260,9 @@ extern "C"
     /**
      *  @brief          共有 (読み取り) ロックを解放します。
      *  @param[in]      rwlock  対象の読み書きロック。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+     *  @return         共有ロックを保持している状態で呼び出した場合は、@ref CPLAT_OK を返します。
+     *                  @p rwlock が NULL の場合、または共有ロックが保持されていない場合は、
+     *                  @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *
      *  @attention      読み書きロックの状態を守る内部の同期に失敗した場合は、
      *                  排他を保てないため、プロセスを異常終了させます。
@@ -271,7 +275,9 @@ extern "C"
     /**
      *  @brief          排他 (書き込み) ロックを解放します。
      *  @param[in]      rwlock  対象の読み書きロック。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+     *  @return         排他ロックを保持している状態で呼び出した場合は、@ref CPLAT_OK を返します。
+     *                  @p rwlock が NULL の場合、または排他ロックが保持されていない場合は、
+     *                  @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *
      *  @attention      読み書きロックの状態を守る内部の同期に失敗した場合は、
      *                  排他を保てないため、プロセスを異常終了させます。

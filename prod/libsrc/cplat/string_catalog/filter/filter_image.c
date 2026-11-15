@@ -1050,6 +1050,7 @@ static void write_predicate(decompile_context *context, const string_catalog_fil
         writer_append_text(&context->writer, "category");
         break;
     case STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME:
+        /* 定数は検証済みであり、読み取りは失敗しない。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
         writer_append_text(&context->writer, "arg.");
         write_constant(&context->writer, &constant);
@@ -1092,6 +1093,7 @@ static void write_predicate(decompile_context *context, const string_catalog_fil
             }
         }
 
+        /* 定数は検証済みであり、読み取りは失敗しない。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
         write_constant(&context->writer, &constant);
         offset = constant.next_offset;
@@ -1250,7 +1252,7 @@ int cplat_string_catalog_filter_decompile_line(const void *image, const size_t i
 {
     string_catalog_filter_image_header header;
     string_catalog_filter_record_header record_header;
-    decompile_context context;
+    decompile_context context = {0};
     int ret;
 
     if ((image == NULL) || (dest == NULL) || (dest_size == 0U))
@@ -1271,7 +1273,6 @@ int cplat_string_catalog_filter_decompile_line(const void *image, const size_t i
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    memset(&context, 0, sizeof(context));
     context.record = string_catalog_filter_record_address_const(image, header.record_size, (uint32_t)line_index);
     if (string_catalog_filter_check_record(context.record, header.line_width) != CPLAT_OK)
     {
