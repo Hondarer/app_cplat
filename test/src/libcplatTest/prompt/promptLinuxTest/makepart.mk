@@ -1,3 +1,6 @@
+# Windows では Linux 専用 API を使うテストをビルドしない
+SKIP_BUILD = WINDOWS
+
 # テスト対象のソース ファイル
 # Linux 専用実装のため、Windows では中身が空になる
 TEST_SRCS := \
