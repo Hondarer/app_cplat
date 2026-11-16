@@ -547,6 +547,7 @@
     EXPORT_ENTRY(cplat_socket_set_reuse_address, \
                  int(CPLAT_API *)(cplat_socket sock, int enable, cplat_error *detail_out)) \
     EXPORT_ENTRY(cplat_socket_set_broadcast, int(CPLAT_API *)(cplat_socket sock, int enable, cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_set_nodelay, int(CPLAT_API *)(cplat_socket sock, int enable, cplat_error *detail_out)) \
     EXPORT_ENTRY(cplat_socket_set_multicast_interface, \
                  int(CPLAT_API *)(cplat_socket sock, uint32_t interface_address, cplat_error *detail_out)) \
     EXPORT_ENTRY(cplat_socket_join_multicast_group, \

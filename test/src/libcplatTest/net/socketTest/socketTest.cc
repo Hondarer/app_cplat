@@ -14,6 +14,7 @@
     #include <errno.h>
     #include <fcntl.h>
     #include <netinet/in.h>
+    #include <netinet/tcp.h>
     #include <poll.h>
     #include <sys/socket.h>
 #elif defined(PLATFORM_WINDOWS)
@@ -38,6 +39,29 @@ namespace
 const cplat_socket kSocket = (cplat_socket)7;
 
 const cplat_ipv4_endpoint kEndpoint = {cplat_ipv4_addr_loopback(), cplat_hton16((uint16_t)12345U), 0U};
+
+/* TCP_NODELAY の値は int で、長さは sizeof(int) です。
+ * Linux の setsockopt() は const void * と socklen_t、Windows は const char * と int です。
+ */
+MATCHER_P(TcpNodelayValue, expected, "")
+{
+    int actual = 0;
+
+    if (arg == nullptr)
+    {
+        *result_listener << "nullptr";
+        return false;
+    }
+
+    std::memcpy(&actual, arg, sizeof(actual));
+    if (actual != expected)
+    {
+        *result_listener << actual;
+        return false;
+    }
+
+    return true;
+}
 
 // [サブ手順 名前=socketTest.expect_detail]
 void expect_detail(const cplat_error &detail, const cplat_error_domain domain, const int result,
@@ -1144,6 +1168,86 @@ TEST_F(socketTest, socket_options_report_invalid_and_os_failure)
     EXPECT_EQ(
         CPLAT_ERR_UNKNOWN,
         actual_ret_leave_failure); // [確認_異常系] - グループ離脱失敗時の cplat_socket_leave_multicast_group() の戻り値が CPLAT_ERR_UNKNOWN であること。
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+
+// TCP_NODELAY の有効化、0 以外の 1 への正規化、無効化、detail_out の nullptr、引数不正、OS 失敗が処理されることの確認
+TEST_F(socketTest, socket_set_nodelay_reports_enable_disable_and_failure)
+{
+    // Arrange
+    cplat_error detail = {};
+
+    // Pre-Assert
+    /* 値 1 の成功 2 回の後に値 0、その後に値 1 の失敗が来る。後勝ちだと失敗期待が先の成功を取る。 */
+    testing::InSequence sequence;
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_sys_socket_,
+                setsockopt(_, _, _, (int)kSocket, IPPROTO_TCP, TCP_NODELAY, TcpNodelayValue(1), (socklen_t)sizeof(int)))
+        .WillOnce(Return(0))
+        .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - setsockopt() が kSocket、IPPROTO_TCP、TCP_NODELAY、指す先が 1 であるポインター、sizeof(int) と等しい長さを指定して 2 回呼び出されること。(enable の 1 と -7 が TCP_NODELAY の 1 になることの確認)
+    // [Pre-Assert手順] - setsockopt() から、1 回目は 0、2 回目は 0 を返す。
+    EXPECT_CALL(mock_sys_socket_,
+                setsockopt(_, _, _, (int)kSocket, IPPROTO_TCP, TCP_NODELAY, TcpNodelayValue(0), (socklen_t)sizeof(int)))
+        .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - setsockopt() が kSocket、IPPROTO_TCP、TCP_NODELAY、指す先が 0 であるポインター、sizeof(int) と等しい長さを指定して 1 回呼び出されること。(enable の 0 が TCP_NODELAY の 0 になることの確認)
+    // [Pre-Assert手順] - setsockopt() から 0 を返す。
+    EXPECT_CALL(mock_sys_socket_,
+                setsockopt(_, _, _, (int)kSocket, IPPROTO_TCP, TCP_NODELAY, TcpNodelayValue(1), (socklen_t)sizeof(int)))
+        .WillOnce(DoAll(Assign(&errno, ENOPROTOOPT), Return(-1)));
+    // [Pre-Assert確認_異常系] - setsockopt() が kSocket、IPPROTO_TCP、TCP_NODELAY、指す先が 1 であるポインター、sizeof(int) と等しい長さを指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - setsockopt() から、errno に ENOPROTOOPT を設定して -1 を返す。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_winsock_,
+                setsockopt(_, _, _, (SOCKET)kSocket, IPPROTO_TCP, TCP_NODELAY, TcpNodelayValue(1), (int)sizeof(int)))
+        .WillOnce(Return(0))
+        .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - setsockopt() が kSocket、IPPROTO_TCP、TCP_NODELAY、指す先が 1 であるポインター、sizeof(int) と等しい長さを指定して 2 回呼び出されること。(enable の 1 と -7 が TCP_NODELAY の 1 になることの確認)
+    // [Pre-Assert手順] - setsockopt() から、1 回目は 0、2 回目は 0 を返す。
+    EXPECT_CALL(mock_winsock_,
+                setsockopt(_, _, _, (SOCKET)kSocket, IPPROTO_TCP, TCP_NODELAY, TcpNodelayValue(0), (int)sizeof(int)))
+        .WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - setsockopt() が kSocket、IPPROTO_TCP、TCP_NODELAY、指す先が 0 であるポインター、sizeof(int) と等しい長さを指定して 1 回呼び出されること。(enable の 0 が TCP_NODELAY の 0 になることの確認)
+    // [Pre-Assert手順] - setsockopt() から 0 を返す。
+    EXPECT_CALL(mock_winsock_,
+                setsockopt(_, _, _, (SOCKET)kSocket, IPPROTO_TCP, TCP_NODELAY, TcpNodelayValue(1), (int)sizeof(int)))
+        .WillOnce(Return(SOCKET_ERROR));
+    // [Pre-Assert確認_異常系] - setsockopt() が kSocket、IPPROTO_TCP、TCP_NODELAY、指す先が 1 であるポインター、sizeof(int) と等しい長さを指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - setsockopt() から SOCKET_ERROR を返す。
+    EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAENOPROTOOPT));
+    // [Pre-Assert確認_異常系] - WSAGetLastError() が 1 回呼び出されること。
+    // [Pre-Assert手順] - WSAGetLastError() から WSAENOPROTOOPT を返す。
+#endif /* PLATFORM_ */
+    // [Pre-Assert手順] - 有効化の setsockopt() は成功を表す 0 を返す。失敗時は Linux では errno に ENOPROTOOPT を設定して -1、Windows では SOCKET_ERROR を返し、WSAGetLastError() から WSAENOPROTOOPT を返す。
+
+    // Act
+    int actual_ret_invalid = cplat_socket_set_nodelay(
+        CPLAT_INVALID_SOCKET, 1,
+        &detail); // [手順] - 無効なソケットと TCP_NODELAY の有効化を指定して cplat_socket_set_nodelay() を呼び出す。
+    int actual_ret_enable = cplat_socket_set_nodelay(
+        kSocket, 1, &detail); // [手順] - enable に 1 を指定して cplat_socket_set_nodelay() を呼び出す。
+    int actual_ret_nonzero = cplat_socket_set_nodelay(
+        kSocket, -7,
+        nullptr); // [手順] - enable に -7、detail_out に nullptr を指定して cplat_socket_set_nodelay() を呼び出す。
+    int actual_ret_disable = cplat_socket_set_nodelay(
+        kSocket, 0, &detail); // [手順] - enable に 0 を指定して cplat_socket_set_nodelay() を呼び出す。
+    int actual_ret_failure = cplat_socket_set_nodelay(
+        kSocket, 1, &detail); // [手順] - TCP_NODELAY の設定が失敗する状態で cplat_socket_set_nodelay() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_invalid); // [確認_異常系] - 無効なソケットを指定した cplat_socket_set_nodelay() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_enable); // [確認_正常系] - enable に 1 を指定した cplat_socket_set_nodelay() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_nonzero); // [確認_正常系] - enable に -7、detail_out に nullptr を指定した cplat_socket_set_nodelay() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_disable); // [確認_正常系] - enable に 0 を指定した cplat_socket_set_nodelay() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret_failure); // [確認_異常系] - TCP_NODELAY の設定失敗時の cplat_socket_set_nodelay() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 // [サブ手順参照 名前=socketTest.TearDown]
 

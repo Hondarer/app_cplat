@@ -14,6 +14,7 @@
     #include <errno.h>
     #include <fcntl.h>
     #include <netinet/in.h>
+    #include <netinet/tcp.h>
     #include <poll.h>
     #include <string.h>
     #include <sys/socket.h>
@@ -582,6 +583,20 @@ int cplat_socket_set_broadcast(const cplat_socket sock, const int enable, cplat_
     }
 
     return set_int_option(sock, SOL_SOCKET, SO_BROADCAST, value, detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_set_nodelay(const cplat_socket sock, const int enable, cplat_error *detail_out)
+{
+    int value = 0;
+
+    if (enable != 0)
+    {
+        value = 1;
+    }
+
+    return set_int_option(sock, IPPROTO_TCP, TCP_NODELAY, value, detail_out);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */

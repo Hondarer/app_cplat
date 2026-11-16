@@ -250,6 +250,26 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_socket_set_broadcast(cplat_socket sock, int enable, cplat_error *detail_out);
 
     /**
+     *  @brief          TCP の Nagle アルゴリズムを抑止するかどうかを設定します。
+     *  @param[in]      sock       対象のソケット。
+     *  @param[in]      enable     抑止する場合は 0 以外、抑止しない場合は 0。
+     *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
+     *  @return         成功時は @ref CPLAT_OK 、無効な引数のときは
+     *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、その他の OS
+     *                  エラーのときは、そのエラーに対応する共通結果コードを返します。
+     *
+     *  0 以外を指定すると `TCP_NODELAY` に 1 を設定し、Nagle アルゴリズムを抑止します。\n
+     *  0 を指定すると `TCP_NODELAY` に 0 を設定し、Nagle アルゴリズムを有効にします。\n
+     *  この関数は指定したソケットだけを変更し、ソケット生成時の既定は変えません。\n
+     *  設定に失敗した OS エラーは、共通結果コードへ変換して返します。
+     *  変換先を一つに決められないエラーの例は @ref CPLAT_ERR_UNKNOWN です。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_socket_set_nodelay(cplat_socket sock, int enable, cplat_error *detail_out);
+
+    /**
      *  @brief          マルチキャスト送信に使用するローカル インターフェイスを設定します。
      *  @param[in]      sock       対象のソケット。
      *  @param[in]      interface_address ローカル インターフェイスのアドレス

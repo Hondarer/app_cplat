@@ -461,6 +461,20 @@ int cplat_socket_set_broadcast(const cplat_socket sock, const int enable, cplat_
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
+int cplat_socket_set_nodelay(const cplat_socket sock, const int enable, cplat_error *detail_out)
+{
+    int value = 0;
+
+    if (enable != 0)
+    {
+        value = 1;
+    }
+
+    return set_int_option(sock, IPPROTO_TCP, TCP_NODELAY, value, detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int cplat_socket_set_multicast_interface(const cplat_socket sock, const uint32_t interface_address,
                                          cplat_error *detail_out)
 {

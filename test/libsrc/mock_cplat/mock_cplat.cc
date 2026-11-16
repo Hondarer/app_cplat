@@ -442,6 +442,7 @@ Mock_cplat::Mock_cplat()
     ON_CALL(*this, cplat_socket_set_reuse_address(_, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_socket_set_reuse_address));
     ON_CALL(*this, cplat_socket_set_broadcast(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_socket_set_broadcast));
+    ON_CALL(*this, cplat_socket_set_nodelay(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_socket_set_nodelay));
     ON_CALL(*this, cplat_socket_set_multicast_interface(_, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_socket_set_multicast_interface));
     ON_CALL(*this, cplat_socket_join_multicast_group(_, _, _, _))

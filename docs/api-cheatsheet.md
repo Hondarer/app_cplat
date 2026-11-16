@@ -325,6 +325,7 @@ IPv4 ソケットの生成、接続、送受信、待機は cplat のソケッ�
 | `fcntl(O_NONBLOCK)` (POSIX) / `ioctlsocket(FIONBIO)` (Winsock) | `cplat_socket_set_nonblocking(...)` |
 | `setsockopt(SO_REUSEADDR)` | `cplat_socket_set_reuse_address(...)` |
 | `setsockopt(SO_BROADCAST)` | `cplat_socket_set_broadcast(...)` |
+| `setsockopt(IPPROTO_TCP, TCP_NODELAY)` | `cplat_socket_set_nodelay(...)` |
 | `setsockopt(IP_MULTICAST_IF)` | `cplat_socket_set_multicast_interface(...)` |
 | `setsockopt(IP_ADD_MEMBERSHIP)` / `IP_DROP_MEMBERSHIP` | `cplat_socket_join_multicast_group(...)` / `cplat_socket_leave_multicast_group(...)` |
 | `send()` | `cplat_socket_send(...)` |
