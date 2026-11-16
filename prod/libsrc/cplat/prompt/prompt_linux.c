@@ -5,16 +5,22 @@
  *******************************************************************************
  */
 
+#if defined(__linux__) && !defined(_GNU_SOURCE)
+    #define _GNU_SOURCE
+#endif
+
 #include "prompt_platform.h"
 
 #if defined(PLATFORM_LINUX)
 
     #include <sys/ioctl.h>
     #include <errno.h>
+    #include <fcntl.h>
+    #include <poll.h>
     #include <signal.h>
     #include <string.h>
     #include <unistd.h>
-    #include <cplat/crt/select.h>
+    #include <cplat/base/result.h>
 
 /* SIGWINCH 受信による端末リサイズ通知の保留フラグ。 */
 static volatile sig_atomic_t s_resize_pending = 0;
@@ -150,43 +156,258 @@ int prompt_platform_os_leave_raw(prompt_platform_context *context)
     return result;
 }
 
+/* テスト差し替えにも対応する pipe2() 呼び出し関数型と既定実装。 */
+typedef int (*prompt_linux_pipe2_fn)(int fds[2], int flags);
+
+static int prompt_linux_default_pipe2(int fds[2], const int flags)
+{
+    return pipe2(fds, flags);
+}
+
+static prompt_linux_pipe2_fn s_pipe2_fn = prompt_linux_default_pipe2;
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
-int prompt_platform_read_char(prompt_platform_context *context)
+int prompt_platform_init_cancelable(prompt_platform_context *context)
 {
-    unsigned char c;
-    ssize_t n;
-    (void)context;
+    int fds[2];
 
-    /* 1 [byte] 読み取るか、リサイズ通知・EOF・エラーが発生するまで繰り返す。 */
+    if (context == NULL)
+    {
+        return -1;
+    }
+
+    context->cancel_pipe[0] = -1;
+    context->cancel_pipe[1] = -1;
+    context->cancel_pipe_active = 0;
+    cplat_atomic_store_i32(&context->cancel_requested, 0, CPLAT_MEMORY_ORDER_RELAXED);
+
+    /*
+     * 他スレッドの fork()/exec() へ FD を漏らさないよう、O_NONBLOCK と O_CLOEXEC を
+     * 付けて自己通知パイプを原子的に生成する。
+     * see: https://man7.org/linux/man-pages/man2/pipe.2.html
+     */
+    if (s_pipe2_fn(fds, O_NONBLOCK | O_CLOEXEC) != 0)
+    {
+        return -1;
+    }
+
+    context->cancel_pipe[0] = fds[0];
+    context->cancel_pipe[1] = fds[1];
+    context->cancel_pipe_active = 1;
+
+    return 0;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void prompt_platform_dispose(prompt_platform_context *context)
+{
+    if (context == NULL || !context->cancel_pipe_active)
+    {
+        return;
+    }
+
+    /* 解放対象は入力中止通知専用の自己パイプだけに限定し、標準入力 FD は閉じない。 */
+    (void)close(context->cancel_pipe[0]);
+    (void)close(context->cancel_pipe[1]);
+    context->cancel_pipe[0] = -1;
+    context->cancel_pipe[1] = -1;
+    context->cancel_pipe_active = 0;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int prompt_platform_is_input_canceled(const prompt_platform_context *context)
+{
+    if (context == NULL)
+    {
+        return 0;
+    }
+
+    return cplat_atomic_load_i32(&context->cancel_requested, CPLAT_MEMORY_ORDER_ACQUIRE) != 0 ? 1 : 0;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int prompt_platform_stop_input(prompt_platform_context *context)
+{
+    if (context == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    /*
+     * 待機スレッドが入出力境界で観測できるよう、パイプ書き込みより先に中止状態を原子的に保持する。
+     * see: https://man7.org/linux/man-pages/man2/poll.2.html
+     */
+    cplat_atomic_store_i32(&context->cancel_requested, 1, CPLAT_MEMORY_ORDER_RELEASE);
+
+    if (!context->cancel_pipe_active)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
     for (;;)
     {
-        /* 保留中のリサイズ通知があれば優先して返す。 */
-        if (s_resize_pending)
+        unsigned char wake = 1U;
+        ssize_t written = write(context->cancel_pipe[1], &wake, 1U);
+
+        if (written == 1)
+        {
+            return CPLAT_OK;
+        }
+
+        if (written < 0 && errno == EINTR)
+        {
+            continue;
+        }
+
+        /* パイプが既に満たされている場合は、読み取り側を起こす通知が存在するため受付済みとする。 */
+        if (written < 0 && (errno == EAGAIN
+    #if defined(EWOULDBLOCK) && (EWOULDBLOCK != EAGAIN)
+                            || errno == EWOULDBLOCK
+    #endif
+                            ))
+        {
+            return CPLAT_OK;
+        }
+
+        return CPLAT_ERR_UNKNOWN;
+    }
+}
+
+/* 標準入力と中止通知パイプを poll で同時に待機し、1 バイトまたは制御通知を返す。 */
+static int prompt_linux_read_byte(prompt_platform_context *context, const int timeout_ms, const int report_resize)
+{
+    for (;;)
+    {
+        struct pollfd fds[2];
+        nfds_t nfds = 1U;
+        int ready;
+        unsigned char c;
+        ssize_t n;
+
+        if (prompt_platform_is_input_canceled(context))
+        {
+            return PROMPT_PLATFORM_CANCELED;
+        }
+
+        if (report_resize && s_resize_pending)
         {
             s_resize_pending = 0;
             return PROMPT_PLATFORM_RESIZE;
         }
 
-        n = read(STDIN_FILENO, &c, 1);
-        if (n == 1)
+        /* fd_set の FD 上限へ依存しないよう、追加の中止通知パイプを含めて poll() で待機する。 */
+        fds[0].fd = STDIN_FILENO;
+        fds[0].events = POLLIN;
+        fds[0].revents = 0;
+
+        if (context->cancel_pipe_active)
         {
-            return (int)c;
+            fds[1].fd = context->cancel_pipe[0];
+            fds[1].events = POLLIN;
+            fds[1].revents = 0;
+            nfds = 2U;
         }
 
-        /* シグナル割り込み時は、リサイズ保留があれば通知し、それ以外は読み取りを再試行する。 */
-        if (n < 0 && errno == EINTR)
+        ready = poll(fds, nfds, timeout_ms);
+        if (ready < 0)
         {
-            if (s_resize_pending)
+            if (errno == EINTR)
             {
-                s_resize_pending = 0;
-                return PROMPT_PLATFORM_RESIZE; /* リサイズ通知 */
+                if (prompt_platform_is_input_canceled(context))
+                {
+                    return PROMPT_PLATFORM_CANCELED;
+                }
+
+                if (report_resize && s_resize_pending)
+                {
+                    s_resize_pending = 0;
+                    return PROMPT_PLATFORM_RESIZE;
+                }
+
+                continue;
             }
 
-            continue;
+            return PROMPT_PLATFORM_ERROR;
         }
 
-        if (n == 0)
+        if (prompt_platform_is_input_canceled(context))
+        {
+            return PROMPT_PLATFORM_CANCELED;
+        }
+
+        if (ready == 0)
+        {
+            if (report_resize && s_resize_pending)
+            {
+                s_resize_pending = 0;
+                return PROMPT_PLATFORM_RESIZE;
+            }
+
+            return PROMPT_PLATFORM_TIMEOUT;
+        }
+
+        if (nfds == 2U && (fds[1].revents & (POLLERR | POLLNVAL)) != 0)
+        {
+            return PROMPT_PLATFORM_ERROR;
+        }
+
+        if (nfds == 2U && (fds[1].revents & POLLIN) != 0)
+        {
+            return PROMPT_PLATFORM_CANCELED;
+        }
+
+        if ((fds[0].revents & POLLNVAL) != 0)
+        {
+            return PROMPT_PLATFORM_ERROR;
+        }
+
+        /*
+         * パイプの送信側が閉じても未読データが残る間は POLLIN と POLLHUP が同時に立つため、
+         * POLLIN を先に確認して残存データを読み切ってから EOF とする。
+         */
+        if ((fds[0].revents & POLLIN) != 0)
+        {
+            n = read(STDIN_FILENO, &c, 1);
+
+            if (prompt_platform_is_input_canceled(context))
+            {
+                return PROMPT_PLATFORM_CANCELED;
+            }
+
+            if (n == 1)
+            {
+                return (int)c;
+            }
+
+            if (n < 0 && errno == EINTR)
+            {
+                if (report_resize && s_resize_pending)
+                {
+                    s_resize_pending = 0;
+                    return PROMPT_PLATFORM_RESIZE;
+                }
+
+                continue;
+            }
+
+            if (n == 0)
+            {
+                return PROMPT_PLATFORM_EOF;
+            }
+
+            return PROMPT_PLATFORM_ERROR;
+        }
+
+        if ((fds[0].revents & POLLERR) != 0)
+        {
+            return PROMPT_PLATFORM_ERROR;
+        }
+
+        if ((fds[0].revents & POLLHUP) != 0)
         {
             return PROMPT_PLATFORM_EOF;
         }
@@ -197,48 +418,102 @@ int prompt_platform_read_char(prompt_platform_context *context)
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
+int prompt_platform_read_char(prompt_platform_context *context)
+{
+    return prompt_linux_read_byte(context, -1, 1);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int prompt_platform_read_char_nb(prompt_platform_context *context)
 {
-    fd_set fds;
-    struct timeval tv;
-    (void)context;
+    return prompt_linux_read_byte(context, PROMPT_PLATFORM_SHORT_WAIT_MS, 1);
+}
 
-    /* タイムアウト付きで入力を監視する。 */
-    for (;;)
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int prompt_platform_read_line(prompt_platform_context *context, char *buf, const size_t buf_size)
+{
+    size_t len = 0U;
+    int saw_newline = 0;
+    int saw_eof = 0;
+
+    if (context == NULL || buf == NULL || buf_size == 0U)
     {
-        int ready;
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
 
-        if (s_resize_pending)
+    buf[0] = '\0';
+
+    if (prompt_platform_is_input_canceled(context))
+    {
+        return CPLAT_ERR_CANCELED;
+    }
+
+    if (buf_size == 1U)
+    {
+        return CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+
+    /* 部分行や残余データも待機可能な共通の 1 バイト経路で読み取る。 */
+    while (len + 1U < buf_size)
+    {
+        int ch = prompt_linux_read_byte(context, -1, 0);
+
+        if (ch == PROMPT_PLATFORM_CANCELED)
         {
-            s_resize_pending = 0;
-            return PROMPT_PLATFORM_RESIZE;
+            buf[0] = '\0';
+            return CPLAT_ERR_CANCELED;
         }
 
-        FD_ZERO(&fds);
-
-        /*
-         * STDIN_FILENO は定数 0 なので、FD 範囲検査の偽の 2 分岐には到達しない。
-         * see: https://gcovr.com/en/8.6/guide/exclusion-markers.html
-         */
-        CPLAT_FD_SET(STDIN_FILENO, &fds); /* GCOVR_EXCL_BR_WITHOUT_HIT: 2/4 */
-        tv.tv_sec = 0;
-        tv.tv_usec = 50000; /* 50 [ms] */
-        ready = select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv);
-        if (ready > 0)
+        if (ch == PROMPT_PLATFORM_ERROR || ch == PROMPT_PLATFORM_TIMEOUT || ch == PROMPT_PLATFORM_RESIZE)
         {
-            return prompt_platform_read_char(context);
+            buf[0] = '\0';
+            return CPLAT_ERR_UNKNOWN;
         }
 
-        if (ready == 0)
+        if (ch == PROMPT_PLATFORM_EOF)
         {
-            return PROMPT_PLATFORM_TIMEOUT;
+            if (len == 0U)
+            {
+                buf[0] = '\0';
+                return CPLAT_ERR_EOF;
+            }
+
+            saw_eof = 1;
+            break;
         }
 
-        if (errno != EINTR)
+        buf[len++] = (char)(unsigned char)ch;
+
+        if (ch == '\n')
         {
-            return PROMPT_PLATFORM_ERROR;
+            saw_newline = 1;
+            break;
         }
     }
+
+    if (!saw_newline && !saw_eof)
+    {
+        buf[0] = '\0';
+        return CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+
+    if (len > 0U && buf[len - 1U] == '\n')
+    {
+        len--;
+        buf[len] = '\0';
+    }
+
+    if (len > 0U && buf[len - 1U] == '\r')
+    {
+        len--;
+        buf[len] = '\0';
+    }
+
+    buf[len] = '\0';
+
+    return CPLAT_OK;
 }
 
 #endif /* PLATFORM_LINUX */

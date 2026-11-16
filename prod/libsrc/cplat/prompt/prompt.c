@@ -186,6 +186,11 @@ static void prompt_complete(cplat_prompt *p)
 static prompt_key read_key(cplat_prompt *p, int *ch_out)
 {
     int c = prompt_platform_read_char(&p->platform);
+    if (c == PROMPT_PLATFORM_CANCELED)
+    {
+        return KEY_CTRL_C;
+    }
+
     if (c == PROMPT_PLATFORM_ERROR)
     {
         return KEY_ERROR;
@@ -599,12 +604,13 @@ void cplat_prompt_dispose(cplat_prompt *prompt)
 
 /**
  *  @brief          非 TTY または初期化失敗時に 1 行を読み取ります。
+ *  @param[in,out]  p           プロンプト操作の状態です。
  *  @param[out]     buf         入力の格納先です。
  *  @param[in]      buf_size    @p buf のサイズです。
  *  @param[in]      prompt_str  表示するプロンプトです。NULL のときは表示しません。
- *  @return         @ref cplat_fgets の結果コードです。
+ *  @return         共通の行入力の結果コードです。
  */
-static int prompt_readline_fallback(char *buf, const size_t buf_size, const char *prompt_str)
+static int prompt_readline_fallback(cplat_prompt *p, char *buf, const size_t buf_size, const char *prompt_str)
 {
     if (prompt_str != NULL)
     {
@@ -612,7 +618,7 @@ static int prompt_readline_fallback(char *buf, const size_t buf_size, const char
         (void)fflush(stdout);
     }
 
-    return cplat_fgets(buf, buf_size, stdin, NULL);
+    return prompt_platform_read_line(&p->platform, buf, buf_size);
 }
 
 /**
@@ -636,7 +642,7 @@ static int prompt_readline_core(cplat_prompt *p, char *buf, const size_t buf_siz
 
     buf[0] = '\0';
 
-    /* TTY でなければ画面制御を行わず cplat_fgets() へフォールバックする。 */
+    /* TTY でなければ画面制御を行わず共通の行入力へフォールバックする。 */
     if (!p->is_tty)
     {
         if (prompt_platform_leave_raw(&p->platform) != 0)
@@ -644,20 +650,20 @@ static int prompt_readline_core(cplat_prompt *p, char *buf, const size_t buf_siz
             return CPLAT_ERR_UNKNOWN;
         }
 
-        return prompt_readline_fallback(buf, buf_size, prompt_str);
+        return prompt_readline_fallback(p, buf, buf_size, prompt_str);
     }
 
     /* 呼び出し元に対応する履歴コンテキストを取得する。 */
     ctx = find_or_create_ctx(p, file, line);
     if (ctx == NULL)
     {
-        /* コンテキスト取得失敗時は cplat_fgets() へフォールバックする。 */
+        /* コンテキスト取得失敗時は共通の行入力へフォールバックする。 */
         if (prompt_platform_leave_raw(&p->platform) != 0)
         {
             return CPLAT_ERR_UNKNOWN;
         }
 
-        return prompt_readline_fallback(buf, buf_size, prompt_str);
+        return prompt_readline_fallback(p, buf, buf_size, prompt_str);
     }
 
     /* 文字単位入力のため raw モードへ移行する。 */
@@ -669,7 +675,7 @@ static int prompt_readline_core(cplat_prompt *p, char *buf, const size_t buf_siz
 
     if (enter_result > 0)
     {
-        return prompt_readline_fallback(buf, buf_size, prompt_str);
+        return prompt_readline_fallback(p, buf, buf_size, prompt_str);
     }
 
     /* 編集バッファーを初期化する。初期値があれば入力欄へ格納し、カーソルを末尾に配置する。 */

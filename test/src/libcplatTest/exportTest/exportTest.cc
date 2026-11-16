@@ -607,6 +607,7 @@
     EXPORT_ENTRY(cplat_pinned_prompt_status_set, \
                  int(CPLAT_API *)(cplat_pinned_prompt * screen, cplat_pinned_prompt_status_position position, \
                                   cplat_pinned_prompt_status_align align, const char *content)) \
+    EXPORT_ENTRY(cplat_pinned_prompt_stop_input, int(CPLAT_API *)(cplat_pinned_prompt * screen)) \
     /* cplat/prompt/prompt.h */ \
     EXPORT_ENTRY(cplat_prompt_completions_add, \
                  int(CPLAT_API *)(cplat_prompt_completions * completions, size_t start, const char *candidate)) \

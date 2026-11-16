@@ -485,6 +485,8 @@ Mock_cplat::Mock_cplat()
         .WillByDefault(Invoke(delegate_real_cplat_pinned_prompt_status_enable));
     ON_CALL(*this, cplat_pinned_prompt_status_set(_, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_pinned_prompt_status_set));
+    ON_CALL(*this, cplat_pinned_prompt_stop_input(_))
+        .WillByDefault(Invoke(delegate_real_cplat_pinned_prompt_stop_input));
 
     // cplat/prompt/prompt.h
     ON_CALL(*this, cplat_prompt_completions_add(_, _, _))

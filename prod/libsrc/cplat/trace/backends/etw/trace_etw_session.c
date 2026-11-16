@@ -223,6 +223,10 @@ static int read_uint32_field(const unsigned char *cursor, const USHORT remaining
         return -1;
     }
 
+    /*
+     * 直前の ANSI 文字列プロパティは任意長であり、後続 uint32 の整列境界は保証されない。
+     * uint32_t * へのキャストを避け、リトル エンディアンとしてバイト単位で読み取る。
+     */
     *value_out =
         (uint32_t)cursor[0] | ((uint32_t)cursor[1] << 8) | ((uint32_t)cursor[2] << 16) | ((uint32_t)cursor[3] << 24);
     *consumed_out = 4U;
@@ -399,6 +403,7 @@ static VOID WINAPI event_record_callback(PEVENT_RECORD pEvent)
 
     event.level = pEvent->EventHeader.EventDescriptor.Level;
 
+    /* extract_event_fields は未取得と 0 値の双方で payload PID を 0 として返すため、0 の場合はイベント ヘッダーの値を使う。 */
     if (payload_process_id != 0U)
     {
         event.process_id = payload_process_id;
@@ -640,7 +645,9 @@ void cplat_etw_session_stop(cplat_etw_session *session)
     }
 
     /*
-     * セッションを停止する。バッファーをフラッシュすると ProcessTrace() が残イベントを処理して戻る。
+     * リアルタイム セッションの停止により ProcessTrace() が残イベント処理後に戻るため、
+     * 先に EVENT_TRACE_CONTROL_STOP でセッションを停止してからスレッドを join する。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/nf-evntrace-processtrace
      */
     if (session->session_handle != 0 && session->properties != NULL)
     {

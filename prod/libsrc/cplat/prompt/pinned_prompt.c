@@ -44,7 +44,8 @@ typedef enum pinned_prompt_key
     PINNED_PROMPT_KEY_RESIZE,
     PINNED_PROMPT_KEY_UNKNOWN,
     PINNED_PROMPT_KEY_ERROR,
-    PINNED_PROMPT_KEY_EOF
+    PINNED_PROMPT_KEY_EOF,
+    PINNED_PROMPT_KEY_CANCELED
 } pinned_prompt_key;
 
 typedef struct pinned_prompt_layout
@@ -240,6 +241,12 @@ static void pinned_prompt_render_separator(cplat_pinned_prompt *screen, int row)
     int separator_width;
 
     (void)printf("\033[%d;1H\033[2K", row);
+
+    /*
+     * 仮想端末では行末の最終桁へ装飾文字を書き込むと自動折り返し保留状態に入り、
+     * 続く出力や制御シーケンスで行送り・スクロールを起こすため 1 桁手前で止める。
+     * see: https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
+     */
     separator_width = screen->cols - 1;
     for (i = 0; i < separator_width; i++)
     {
@@ -267,6 +274,10 @@ static void pinned_prompt_render_status_line(cplat_pinned_prompt *screen, int ro
 
     (void)printf("\033[%d;1H\033[2K", row);
 
+    /*
+     * 最終桁への装飾・空白出力による自動折り返しと意図しない行送りを避けるため 1 桁手前で止める。
+     * see: https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
+     */
     line_width = screen->cols - 1;
 
     if (left_content != NULL && left_len > 0U)
@@ -573,6 +584,11 @@ static pinned_prompt_key pinned_prompt_read_key(cplat_pinned_prompt *screen, int
     int c4;
 
     c = prompt_platform_read_char(&screen->platform);
+    if (c == PROMPT_PLATFORM_CANCELED)
+    {
+        return PINNED_PROMPT_KEY_CANCELED;
+    }
+
     if (c == PROMPT_PLATFORM_ERROR)
     {
         return PINNED_PROMPT_KEY_ERROR;
@@ -611,6 +627,11 @@ static pinned_prompt_key pinned_prompt_read_key(cplat_pinned_prompt *screen, int
     if (c == 0x1B)
     {
         c2 = prompt_platform_read_char_nb(&screen->platform);
+        if (c2 == PROMPT_PLATFORM_CANCELED)
+        {
+            return PINNED_PROMPT_KEY_CANCELED;
+        }
+
         if (c2 == PROMPT_PLATFORM_ERROR)
         {
             return PINNED_PROMPT_KEY_ERROR;
@@ -624,6 +645,11 @@ static pinned_prompt_key pinned_prompt_read_key(cplat_pinned_prompt *screen, int
         if (c2 == '[')
         {
             c3 = prompt_platform_read_char_nb(&screen->platform);
+            if (c3 == PROMPT_PLATFORM_CANCELED)
+            {
+                return PINNED_PROMPT_KEY_CANCELED;
+            }
+
             if (c3 == PROMPT_PLATFORM_ERROR)
             {
                 return PINNED_PROMPT_KEY_ERROR;
@@ -645,6 +671,11 @@ static pinned_prompt_key pinned_prompt_read_key(cplat_pinned_prompt *screen, int
                 return PINNED_PROMPT_KEY_END;
             case '1':
                 c4 = prompt_platform_read_char_nb(&screen->platform);
+                if (c4 == PROMPT_PLATFORM_CANCELED)
+                {
+                    return PINNED_PROMPT_KEY_CANCELED;
+                }
+
                 if (c4 == PROMPT_PLATFORM_ERROR)
                 {
                     return PINNED_PROMPT_KEY_ERROR;
@@ -658,6 +689,11 @@ static pinned_prompt_key pinned_prompt_read_key(cplat_pinned_prompt *screen, int
                 return PINNED_PROMPT_KEY_UNKNOWN;
             case '3':
                 c4 = prompt_platform_read_char_nb(&screen->platform);
+                if (c4 == PROMPT_PLATFORM_CANCELED)
+                {
+                    return PINNED_PROMPT_KEY_CANCELED;
+                }
+
                 if (c4 == PROMPT_PLATFORM_ERROR)
                 {
                     return PINNED_PROMPT_KEY_ERROR;
@@ -671,6 +707,11 @@ static pinned_prompt_key pinned_prompt_read_key(cplat_pinned_prompt *screen, int
                 return PINNED_PROMPT_KEY_UNKNOWN;
             case '4':
                 c4 = prompt_platform_read_char_nb(&screen->platform);
+                if (c4 == PROMPT_PLATFORM_CANCELED)
+                {
+                    return PINNED_PROMPT_KEY_CANCELED;
+                }
+
                 if (c4 == PROMPT_PLATFORM_ERROR)
                 {
                     return PINNED_PROMPT_KEY_ERROR;
@@ -1010,21 +1051,28 @@ static int pinned_prompt_format_prompt(cplat_pinned_prompt *screen, const char *
 }
 
 /**
- *  @brief          非 TTY または raw 移行失敗時に 1 行を読み取ります。
+ *  @brief          非 TTY または raw 移行失敗時に共通の行入力で 1 行を読み取ります。
+ *  @param[in,out]  screen      固定プロンプト ハンドルです。
  *  @param[out]     buf         入力の格納先です。
  *  @param[in]      buf_size    @p buf のサイズです。
  *  @param[in]      prompt_str  表示するプロンプトです。NULL のときは表示しません。
- *  @return         @ref cplat_fgets の結果コードです。
+ *  @return         共通の行入力の結果コードです。
  */
-static int pinned_prompt_readline_fallback(char *buf, const size_t buf_size, const char *prompt_str)
+static int pinned_prompt_readline_fallback(cplat_pinned_prompt *screen, char *buf, const size_t buf_size,
+                                           const char *prompt_str)
 {
+    if (prompt_platform_is_input_canceled(&screen->platform))
+    {
+        return CPLAT_ERR_CANCELED;
+    }
+
     if (prompt_str != NULL)
     {
         (void)fputs(prompt_str, stdout);
         (void)fflush(stdout);
     }
 
-    return cplat_fgets(buf, buf_size, stdin, NULL);
+    return prompt_platform_read_line(&screen->platform, buf, buf_size);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -1069,6 +1117,12 @@ cplat_pinned_prompt *cplat_pinned_prompt_create(const cplat_pinned_prompt_option
     }
 
     screen->mutex_active = 1;
+
+    if (prompt_platform_init_cancelable(&screen->platform) != 0)
+    {
+        cplat_pinned_prompt_dispose(screen);
+        return NULL;
+    }
 
     screen->edit_buf = (char *)cplat_malloc(screen->edit_cap);
     screen->prompt_buf = (char *)cplat_malloc(1U);
@@ -1155,6 +1209,7 @@ void cplat_pinned_prompt_dispose(cplat_pinned_prompt *screen)
         (void)cplat_local_lock_dispose(screen->mutex);
     }
 
+    prompt_platform_dispose(&screen->platform);
     cplat_free(screen);
 }
 
@@ -1190,6 +1245,16 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
 
     buf[0] = '\0';
 
+    if (prompt_platform_is_input_canceled(&screen->platform))
+    {
+        if (prompt_platform_leave_raw(&screen->platform) != 0)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        return CPLAT_ERR_CANCELED;
+    }
+
     if (!screen->is_tty)
     {
         if (prompt_platform_leave_raw(&screen->platform) != 0)
@@ -1197,7 +1262,7 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
             return CPLAT_ERR_UNKNOWN;
         }
 
-        return pinned_prompt_readline_fallback(buf, buf_size, prompt_str);
+        return pinned_prompt_readline_fallback(screen, buf, buf_size, prompt_str);
     }
 
     int enter_result = prompt_platform_enter_raw(&screen->platform);
@@ -1208,7 +1273,7 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
 
     if (enter_result > 0)
     {
-        return pinned_prompt_readline_fallback(buf, buf_size, prompt_str);
+        return pinned_prompt_readline_fallback(screen, buf, buf_size, prompt_str);
     }
 
     pinned_prompt_lock(screen);
@@ -1340,6 +1405,7 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
             done = 1;
             break;
         case PINNED_PROMPT_KEY_CTRL_C:
+        case PINNED_PROMPT_KEY_CANCELED:
             buf[0] = '\0';
             pinned_prompt_cleanup_terminal_locked(screen);
             result = CPLAT_ERR_CANCELED;
@@ -1780,4 +1846,16 @@ int cplat_pinned_prompt_completion_set(cplat_pinned_prompt *screen, cplat_prompt
     pinned_prompt_unlock(screen);
 
     return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_pinned_prompt_stop_input(cplat_pinned_prompt *screen)
+{
+    if (screen == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    return prompt_platform_stop_input(&screen->platform);
 }

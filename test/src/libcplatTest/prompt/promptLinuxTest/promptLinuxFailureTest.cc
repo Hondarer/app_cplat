@@ -5,8 +5,10 @@
     #include <mock_termios.h>
     #include <mock_signal.h>
     #include <mock_unistd.h>
-    #include <sys/mock_select.h>
+    #include <mock_poll.h>
     #include <errno.h>
+    #include <fcntl.h>
+    #include <poll.h>
     #include "prompt_linux.inject.h"
 
 // シグナル登録失敗とロールバック失敗を区別することの確認
@@ -66,20 +68,27 @@ TEST(promptLinuxFailureTest, both_restore_items_are_retried_without_overwriting_
 }
 
 // OS 入力失敗と短時間待ちの中断・タイムアウトを区別することの確認
-TEST(promptLinuxFailureTest, read_and_select_errors_are_distinct_from_timeout)
+TEST(promptLinuxFailureTest, read_and_poll_errors_are_distinct_from_timeout)
 {
     // Arrange
     NiceMock<Mock_unistd> unistd_mock;
-    NiceMock<Mock_sys_select> select_mock;
+    NiceMock<Mock_poll> poll_mock;
     prompt_platform_context context = {};
     test_prompt_set_resize_pending(0);
     // Pre-Assert
+    EXPECT_CALL(poll_mock, poll(_, _, _, _, 1U, -1))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
     EXPECT_CALL(unistd_mock, read(_, _, _, _, _, _)).WillOnce(DoAll(Assign(&errno, EIO), Return(-1)));
-    EXPECT_CALL(select_mock, select(_, _, _, _, _, _, _, _))
+    EXPECT_CALL(poll_mock, poll(_, _, _, _, 1U, PROMPT_PLATFORM_SHORT_WAIT_MS))
         .WillOnce(DoAll(Assign(&errno, EIO), Return(-1)))
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)))
         .WillOnce(Return(0));
-    // [Pre-Assert確認_異常系] - read 1 回と select の失敗・中断・タイムアウトの 3 回を確認する。
+    // [Pre-Assert確認_異常系] - read 1 回と poll の入力あり・失敗・中断・タイムアウトを確認する。
     // Act
     int read_error = prompt_platform_read_char(&context);    // [手順] - 読み取り失敗を取得する。
     int wait_error = prompt_platform_read_char_nb(&context); // [手順] - 待機失敗を取得する。
@@ -115,11 +124,11 @@ TEST(promptLinuxFailureTest, pending_resize_does_not_block_on_input)
 {
     // Arrange
     NiceMock<Mock_unistd> unistd_mock;
-    NiceMock<Mock_sys_select> select_mock;
+    NiceMock<Mock_poll> poll_mock;
     prompt_platform_context context = {};
     // Pre-Assert
     EXPECT_CALL(unistd_mock, read(_, _, _, _, _, _)).Times(0);
-    EXPECT_CALL(select_mock, select(_, _, _, _, _, _, _, _)).Times(0);
+    EXPECT_CALL(poll_mock, poll(_, _, _, _, _, _)).Times(0);
     // [Pre-Assert確認_正常系] - 保留通知がある場合は入力待ちを呼ばないこと。
     // Act
     test_prompt_set_resize_pending(1);
@@ -130,5 +139,128 @@ TEST(promptLinuxFailureTest, pending_resize_does_not_block_on_input)
     EXPECT_EQ(PROMPT_PLATFORM_RESIZE, blocking);   // [確認_正常系] - 待機入力も通知を先に返すこと。
     EXPECT_EQ(PROMPT_PLATFORM_RESIZE, short_wait); // [確認_正常系] - 短時間待機も通知を先に返すこと。
     EXPECT_EQ(0, test_prompt_resize_pending());    // [確認_正常系] - 消費済み通知を残さないこと。
+}
+
+namespace
+{
+
+int g_pipe2_flags = 0;
+int g_pipe2_return = 0;
+
+int fake_pipe2_capture_or_fail(int fds[2], int flags)
+{
+    g_pipe2_flags = flags;
+    if (g_pipe2_return != 0)
+    {
+        return -1;
+    }
+
+    fds[0] = 10;
+    fds[1] = 11;
+    return 0;
+}
+
+} // namespace
+
+// 中止用パイプの原子的生成失敗時に状態を汚染しないことの確認
+TEST(promptLinuxFailureTest, init_cancelable_handles_pipe_and_fcntl_failures)
+{
+    // Arrange
+    prompt_platform_context context = {};
+    g_pipe2_flags = 0;
+    g_pipe2_return = -1;
+    test_prompt_set_pipe2_fn(fake_pipe2_capture_or_fail);
+
+    // Act / Assert: pipe2 失敗
+    EXPECT_EQ(-1, prompt_platform_init_cancelable(&context));
+    EXPECT_EQ(O_NONBLOCK | O_CLOEXEC, g_pipe2_flags);
+    EXPECT_EQ(0, context.cancel_pipe_active);
+    EXPECT_EQ(-1, prompt_platform_init_cancelable(NULL));
+
+    // Cleanup
+    test_prompt_set_pipe2_fn(NULL);
+}
+
+// stop_input の引数異常・未初期化・書き込み失敗・EAGAIN 許容を確認する
+TEST(promptLinuxFailureTest, stop_input_handles_errors_and_eagain)
+{
+    // Arrange
+    NiceMock<Mock_unistd> unistd_mock;
+    prompt_platform_context uninit = {};
+    prompt_platform_context ctx = {};
+    ctx.cancel_pipe[0] = 20;
+    ctx.cancel_pipe[1] = 21;
+    ctx.cancel_pipe_active = 1;
+
+    // Pre-Assert
+    EXPECT_CALL(unistd_mock, write(_, _, _, 21, _, 1U))
+        .WillOnce(DoAll(Assign(&errno, EAGAIN), Return(-1)))
+        .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)))
+        .WillOnce(DoAll(Assign(&errno, EIO), Return(-1)));
+
+    // Act / Assert
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, prompt_platform_stop_input(NULL));
+    EXPECT_EQ(0, prompt_platform_is_input_canceled(NULL));
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, prompt_platform_stop_input(&uninit));
+    EXPECT_EQ(1, prompt_platform_is_input_canceled(&uninit));
+    EXPECT_EQ(CPLAT_OK, prompt_platform_stop_input(&ctx));
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, prompt_platform_stop_input(&ctx));
+}
+
+// 非 TTY の行入力におけるエラー・中止・バッファー不足の境界を確認する
+TEST(promptLinuxFailureTest, read_line_handles_cancel_errors_and_small_buffer)
+{
+    // Arrange
+    NiceMock<Mock_poll> poll_mock;
+    NiceMock<Mock_unistd> unistd_mock;
+    prompt_platform_context ctx = {};
+    ctx.cancel_pipe[0] = 30;
+    ctx.cancel_pipe[1] = 31;
+    ctx.cancel_pipe_active = 1;
+    char buf[4] = "old";
+
+    // Act / Assert: 引数異常と buf_size == 1
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, prompt_platform_read_line(NULL, buf, sizeof(buf)));
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, prompt_platform_read_line(&ctx, NULL, sizeof(buf)));
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, prompt_platform_read_line(&ctx, buf, 0U));
+    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, prompt_platform_read_line(&ctx, buf, 1U));
+
+    // Pre-Assert: 2 バイト読んで部分行のままパイプ中止される
+    EXPECT_CALL(poll_mock, poll(_, _, _, _, 2U, -1))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[1].revents = POLLIN;
+                return 1;
+            }));
+    EXPECT_CALL(unistd_mock, read(_, _, _, STDIN_FILENO, _, 1U))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, int, void *out, size_t) -> ssize_t
+            {
+                *static_cast<unsigned char *>(out) = 'a';
+                return 1;
+            }))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, int, void *out, size_t) -> ssize_t
+            {
+                *static_cast<unsigned char *>(out) = 'b';
+                return 1;
+            }));
+
+    // Act / Assert: 部分行でも中止なら空文字と CPLAT_ERR_CANCELED
+    EXPECT_EQ(CPLAT_ERR_CANCELED, prompt_platform_read_line(&ctx, buf, sizeof(buf)));
+    EXPECT_STREQ("", buf);
 }
 #endif

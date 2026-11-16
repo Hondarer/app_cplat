@@ -146,3 +146,29 @@ TEST(promptFailureTest, restoration_failure_overrides_initial_buffer_allocation_
     cplat_prompt_dispose(prompt);
     promptFakeReset();
 }
+
+// 中止通知で TTY 入力と非 TTY 共通行入力の双方が CPLAT_ERR_CANCELED と空出力を返すことの確認
+TEST(promptFailureTest, canceled_input_returns_err_canceled_for_tty_and_fallback)
+{
+    // Arrange
+    promptFakeReset();
+    cplat_prompt *prompt = cplat_prompt_create(nullptr);
+    ASSERT_NE(nullptr, prompt);
+    char output[16] = "stale";
+
+    // Act / Assert: TTY 入力の中止
+    prompt->is_tty = 1;
+    promptFakeSetResults({'a', PROMPT_PLATFORM_CANCELED});
+    EXPECT_EQ(CPLAT_ERR_CANCELED, cplat_prompt_readline(prompt, output, sizeof(output), nullptr));
+
+    // Act / Assert: 非 TTY 行入力の中止
+    promptFakeReset();
+    prompt->is_tty = 0;
+    promptFakeSetLineCanceled(1);
+    EXPECT_EQ(CPLAT_ERR_CANCELED, cplat_prompt_readline(prompt, output, sizeof(output), nullptr));
+    EXPECT_STREQ("", output);
+
+    // Cleanup
+    cplat_prompt_dispose(prompt);
+    promptFakeReset();
+}

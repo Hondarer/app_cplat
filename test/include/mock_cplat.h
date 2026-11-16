@@ -381,6 +381,7 @@ MOCK_CPLAT_LINK_IMPL(cplat_pinned_prompt_write)
 MOCK_CPLAT_LINK_IMPL(cplat_pinned_prompt_printf)
 MOCK_CPLAT_LINK_IMPL(cplat_pinned_prompt_status_enable)
 MOCK_CPLAT_LINK_IMPL(cplat_pinned_prompt_status_set)
+MOCK_CPLAT_LINK_IMPL(cplat_pinned_prompt_stop_input)
 
 // cplat/prompt/prompt.h
 MOCK_CPLAT_LINK_IMPL(cplat_prompt_completions_add)
@@ -1222,6 +1223,7 @@ extern int delegate_real_cplat_pinned_prompt_status_enable(cplat_pinned_prompt *
 extern int delegate_real_cplat_pinned_prompt_status_set(cplat_pinned_prompt *screen,
                                                         cplat_pinned_prompt_status_position position,
                                                         cplat_pinned_prompt_status_align align, const char *content);
+extern int delegate_real_cplat_pinned_prompt_stop_input(cplat_pinned_prompt *screen);
 
 // cplat/prompt/prompt.h
 extern int delegate_real_cplat_prompt_completions_add(cplat_prompt_completions *completions, size_t start,
@@ -2101,6 +2103,7 @@ class Mock_cplat
     MOCK_METHOD(int, cplat_pinned_prompt_status_set,
                 (cplat_pinned_prompt *, cplat_pinned_prompt_status_position, cplat_pinned_prompt_status_align,
                  const char *));
+    MOCK_METHOD(int, cplat_pinned_prompt_stop_input, (cplat_pinned_prompt *));
 
     // cplat/prompt/prompt.h
     MOCK_METHOD(int, cplat_prompt_completions_add, (cplat_prompt_completions *, size_t, const char *));

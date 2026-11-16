@@ -4,7 +4,10 @@
 
 #if defined(PLATFORM_WINDOWS)
 
+    #include <atomic>
+    #include <thread>
     #include <mock_windows.h>
+    #include "prompt_windows.inject.h"
 
 static size_t platform_columns(void)
 {
@@ -567,5 +570,206 @@ TEST_F(promptWindowsTest, drains_deferred_unit_before_waiting)
     // Assert
     EXPECT_EQ('A', actual);                                // [確認_正常系] - 後続文字を失わないこと。
     EXPECT_EQ(0U, handle_.windows_input.has_pending_unit); // [確認_正常系] - 保留状態を解除すること。
+}
+
+namespace
+{
+
+std::atomic<int> g_cancel_attempts{0};
+std::atomic<int> g_not_found_returns{0};
+std::atomic<int> g_cancel_true_returns{0};
+std::atomic<HANDLE> g_cancel_target{nullptr};
+
+template <typename Predicate> bool wait_until_ms(Predicate pred, const int timeout_ms)
+{
+    const int step_ms = 5;
+    int elapsed_ms = 0;
+
+    while (!pred() && elapsed_ms < timeout_ms)
+    {
+        Sleep(step_ms);
+        elapsed_ms += step_ms;
+    }
+
+    return pred();
+}
+
+BOOL WINAPI fake_cancel_success_then_end(HANDLE thread_handle)
+{
+    g_cancel_target.store(thread_handle);
+    g_cancel_attempts.fetch_add(1);
+    g_cancel_true_returns.fetch_add(1);
+
+    return TRUE;
+}
+
+BOOL WINAPI fake_cancel_not_found_then_succeeds(HANDLE thread_handle)
+{
+    g_cancel_target.store(thread_handle);
+
+    if (g_cancel_attempts.fetch_add(1) == 0)
+    {
+        g_not_found_returns.fetch_add(1);
+        SetLastError(ERROR_NOT_FOUND);
+
+        return FALSE;
+    }
+
+    g_cancel_true_returns.fetch_add(1);
+
+    return TRUE;
+}
+
+} // namespace
+
+// CancelSynchronousIo による対象スレッド中止、ERROR_NOT_FOUND 再試行、完了通知待機と非アクティブ時の非呼び出しの確認
+TEST_F(promptWindowsTest, stop_input_cancels_active_thread_waits_for_completion_and_retries_not_found)
+{
+    // Arrange
+    ASSERT_EQ(0, prompt_platform_init_cancelable(&handle_));
+    g_cancel_attempts.store(0);
+    g_not_found_returns.store(0);
+    g_cancel_true_returns.store(0);
+    g_cancel_target.store(nullptr);
+    test_prompt_windows_set_cancel_sync_io_fn(fake_cancel_not_found_then_succeeds);
+
+    // 入力区間に入る前は CancelSynchronousIo を呼ばずに完了すること (他の出力 I/O を誤って止めない)
+    EXPECT_EQ(CPLAT_OK, prompt_platform_stop_input(&handle_));
+    EXPECT_EQ(0, g_cancel_attempts.load());
+    EXPECT_EQ(1, prompt_platform_is_input_canceled(&handle_));
+
+    // 新規ハンドルで入力区間在籍中の ERROR_NOT_FOUND 再試行 -> TRUE -> end_sync_input で完了通知
+    prompt_platform_context active_ctx = {};
+    ASSERT_EQ(0, prompt_platform_init_cancelable(&active_ctx));
+    NiceMock<Mock_windows> mock_windows;
+    HANDLE dup_handle = reinterpret_cast<HANDLE>(static_cast<uintptr_t>(0x4444U));
+    EXPECT_CALL(mock_windows, DuplicateHandle(_, _, _, _, _, _, _, THREAD_TERMINATE, FALSE, 0U))
+        .WillOnce(DoAll(SetArgPointee<6>(dup_handle), Return(TRUE)));
+    EXPECT_CALL(mock_windows, CloseHandle(_, _, _, dup_handle)).WillOnce(Return(TRUE));
+
+    ASSERT_EQ(0, test_prompt_windows_begin_sync_input(&active_ctx));
+    std::atomic<int> stop_ret{CPLAT_ERR_UNKNOWN};
+    std::atomic<bool> stop_done{false};
+    std::thread stopper(
+        [&]()
+        {
+            stop_ret.store(prompt_platform_stop_input(&active_ctx));
+            stop_done.store(true);
+        });
+
+    // CancelSynchronousIo の初回の ERROR_NOT_FOUND (50 ms 再試行) と 2 回目の TRUE 到達を上限付きで待ってから終了通知する
+    const bool reached = wait_until_ms([&]() { return g_cancel_true_returns.load() > 0 || stop_done.load(); }, 3000);
+
+    // タイムアウト時も入力区間を必ず終了し、stopper スレッドを解放してから join する
+    const int end_canceled = test_prompt_windows_end_sync_input(&active_ctx);
+    stopper.join();
+    test_prompt_windows_reset_cancel_sync_io_fn();
+
+    EXPECT_TRUE(reached);
+    EXPECT_EQ(1, end_canceled);
+    EXPECT_EQ(CPLAT_OK, stop_ret.load());
+    EXPECT_EQ(dup_handle, g_cancel_target.load());
+    EXPECT_EQ(1, g_not_found_returns.load());
+    EXPECT_GE(g_cancel_true_returns.load(), 1);
+    EXPECT_GE(g_cancel_attempts.load(), 2);
+
+    prompt_platform_dispose(&active_ctx);
+    prompt_platform_dispose(&handle_);
+}
+
+// CancelSynchronousIo が TRUE 後も input_active が継続する場合に 50 ms 待機後に再試行して終了することの確認
+TEST_F(promptWindowsTest, stop_input_retries_cancel_when_input_stays_active_after_true)
+{
+    prompt_platform_context retry_ctx = {};
+    ASSERT_EQ(0, prompt_platform_init_cancelable(&retry_ctx));
+    g_cancel_attempts.store(0);
+    g_not_found_returns.store(0);
+    g_cancel_true_returns.store(0);
+    g_cancel_target.store(nullptr);
+    test_prompt_windows_set_cancel_sync_io_fn(fake_cancel_success_then_end);
+
+    NiceMock<Mock_windows> mock_windows;
+    HANDLE dup_handle = reinterpret_cast<HANDLE>(static_cast<uintptr_t>(0x4445U));
+    EXPECT_CALL(mock_windows, DuplicateHandle(_, _, _, _, _, _, _, THREAD_TERMINATE, FALSE, 0U))
+        .WillOnce(DoAll(SetArgPointee<6>(dup_handle), Return(TRUE)));
+    EXPECT_CALL(mock_windows, CloseHandle(_, _, _, dup_handle)).WillOnce(Return(TRUE));
+
+    ASSERT_EQ(0, test_prompt_windows_begin_sync_input(&retry_ctx));
+    std::atomic<int> stop_ret{CPLAT_ERR_UNKNOWN};
+    std::atomic<bool> stop_done{false};
+    std::thread stopper(
+        [&]()
+        {
+            stop_ret.store(prompt_platform_stop_input(&retry_ctx));
+            stop_done.store(true);
+        });
+
+    // 1 回目の CancelSynchronousIo TRUE 後、input_active が残る間は 50 ms 待機後に 2 回目を再送すること
+    const bool reached = wait_until_ms([&]() { return g_cancel_true_returns.load() >= 2 || stop_done.load(); }, 3000);
+
+    // タイムアウト時も入力区間を必ず終了し、stopper スレッドを解放してから join する
+    const int end_canceled = test_prompt_windows_end_sync_input(&retry_ctx);
+    stopper.join();
+    test_prompt_windows_reset_cancel_sync_io_fn();
+
+    EXPECT_TRUE(reached);
+    EXPECT_EQ(1, end_canceled);
+    EXPECT_EQ(CPLAT_OK, stop_ret.load());
+    EXPECT_EQ(dup_handle, g_cancel_target.load());
+    EXPECT_GE(g_cancel_true_returns.load(), 2);
+
+    prompt_platform_dispose(&retry_ctx);
+}
+
+// 非 TTY の行入力でも別スレッドの stop_input 後に通常読取結果を上書きして CPLAT_ERR_CANCELED を返すことの確認
+TEST_F(promptWindowsTest, read_line_prioritizes_cancel_over_normal_fgets_completion)
+{
+    NiceMock<Mock_cplat> mock_cplat;
+    NiceMock<Mock_windows> mock_windows;
+    ASSERT_EQ(0, prompt_platform_init_cancelable(&handle_));
+    g_cancel_attempts.store(0);
+    g_cancel_true_returns.store(0);
+    g_cancel_target.store(nullptr);
+    test_prompt_windows_set_cancel_sync_io_fn(fake_cancel_success_then_end);
+
+    HANDLE dup_handle = reinterpret_cast<HANDLE>(static_cast<uintptr_t>(0x4446U));
+    EXPECT_CALL(mock_windows, DuplicateHandle(_, _, _, _, _, _, _, THREAD_TERMINATE, FALSE, 0U))
+        .WillOnce(DoAll(SetArgPointee<6>(dup_handle), Return(TRUE)));
+    EXPECT_CALL(mock_windows, CloseHandle(_, _, _, dup_handle)).WillOnce(Return(TRUE));
+
+    std::atomic<bool> in_fgets{false};
+    std::atomic<int> stop_ret{CPLAT_ERR_UNKNOWN};
+    std::thread stopper(
+        [&]()
+        {
+            (void)wait_until_ms([&]() { return in_fgets.load(); }, 2000);
+            stop_ret.store(prompt_platform_stop_input(&handle_));
+        });
+
+    bool saw_canceled = false;
+    char buf[32] = "stale";
+    EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
+        .WillOnce(Invoke(
+            [this, &in_fgets, &saw_canceled](char *dst, size_t, FILE *, cplat_error *) -> int
+            {
+                in_fgets.store(true);
+                saw_canceled =
+                    wait_until_ms([this]() { return prompt_platform_is_input_canceled(&handle_) != 0; }, 2000);
+                dst[0] = 'o';
+                dst[1] = 'k';
+                dst[2] = '\0';
+                return CPLAT_OK;
+            }));
+
+    const int read_ret = prompt_platform_read_line(&handle_, buf, sizeof(buf));
+    stopper.join();
+    test_prompt_windows_reset_cancel_sync_io_fn();
+
+    EXPECT_TRUE(saw_canceled);
+    EXPECT_EQ(CPLAT_OK, stop_ret.load());
+    EXPECT_EQ(CPLAT_ERR_CANCELED, read_ret);
+    EXPECT_STREQ("", buf);
+
+    prompt_platform_dispose(&handle_);
 }
 #endif

@@ -2,10 +2,15 @@
 #include <cplat/base/platform.h>
 #if defined(PLATFORM_LINUX)
     #include <mock_ioctl.h>
+    #include <mock_poll.h>
     #include <mock_signal.h>
     #include <mock_termios.h>
     #include <mock_unistd.h>
-    #include <sys/mock_select.h>
+    #include <errno.h>
+    #include <fcntl.h>
+    #include <poll.h>
+    #include <sys/ioctl.h>
+    #include <unistd.h>
 #elif defined(PLATFORM_WINDOWS)
     #include <mock_windows.h>
 #endif
@@ -15,9 +20,12 @@
 #include <cplat/prompt/pinned_prompt.h>
 
 #include "pinned_prompt.inject.h"
+#include "prompt_platform.h"
 
+#include <chrono>
 #include <memory>
 #include <string>
+#include <thread>
 #include <tuple>
 
 using testing::_;
@@ -54,22 +62,45 @@ TEST(pinnedPromptTest, status_apis_reject_null_screen)
         set_result); // [確認_異常系] - cplat_pinned_prompt_status_set() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
 
-// 非 TTY の readline が cplat_fgets の入力を返すことの確認
+// 非 TTY の readline が共通行入力の入力を返すことの確認
 TEST(pinnedPromptTest, fallback_readline_strips_newline)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
-    NiceMock<Mock_cplat> mock_cplat;
-    char input[] = "answer";
     char output[32] = {};
 
     // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    NiceMock<Mock_poll> mock_poll;
+    NiceMock<Mock_unistd> mock_unistd;
+    static const char kInput[] = "answer\n";
+    size_t pos = 0U;
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, -1))
+        .WillRepeatedly(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
+    EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, 1U))
+        .WillRepeatedly(Invoke(
+            [&pos](const char *, int, const char *, int, void *arg, size_t) -> ssize_t
+            {
+                if (pos >= sizeof(kInput) - 1U)
+                {
+                    return 0;
+                }
+                *static_cast<unsigned char *>(arg) = static_cast<unsigned char>(kInput[pos++]);
+                return 1;
+            }));
+#else
+    NiceMock<Mock_cplat> mock_cplat;
+    char input[] = "answer";
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
         .WillOnce(DoAll(SetArrayArgument<0>(input, input + sizeof(input)), Return(CPLAT_OK)));
-    // [Pre-Assert確認_正常系] - cplat_fgets() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets() から、"answer" を設定して CPLAT_OK を返す。
+#endif
 
     // Act
     int result =
@@ -92,13 +123,24 @@ TEST(pinnedPromptTest, fallback_readline_reports_eof)
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
-    NiceMock<Mock_cplat> mock_cplat;
     char output[8] = "stale";
 
     // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    NiceMock<Mock_poll> mock_poll;
+    NiceMock<Mock_unistd> mock_unistd;
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, -1))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLHUP;
+                return 1;
+            }));
+    EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _)).Times(0);
+#else
+    NiceMock<Mock_cplat> mock_cplat;
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _)).WillOnce(Return(CPLAT_ERR_EOF));
-    // [Pre-Assert確認_異常系] - cplat_fgets() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets() から CPLAT_ERR_EOF を返す。
+#endif
 
     // Act
     int result = cplat_pinned_prompt_readline(
@@ -120,15 +162,34 @@ TEST(pinnedPromptTest, fallback_readline_reports_buffer_too_small)
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
-    NiceMock<Mock_cplat> mock_cplat;
-    char empty[] = "";
     char output[8] = "stale";
 
     // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    NiceMock<Mock_poll> mock_poll;
+    NiceMock<Mock_unistd> mock_unistd;
+    static const char kLong[] = "12345678\n";
+    size_t pos = 0U;
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, -1))
+        .WillRepeatedly(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
+    EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, 1U))
+        .WillRepeatedly(Invoke(
+            [&pos](const char *, int, const char *, int, void *arg, size_t) -> ssize_t
+            {
+                *static_cast<unsigned char *>(arg) = static_cast<unsigned char>(kLong[pos++]);
+                return 1;
+            }));
+#else
+    NiceMock<Mock_cplat> mock_cplat;
+    char empty[] = "";
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
         .WillOnce(DoAll(SetArrayArgument<0>(empty, empty + sizeof(empty)), Return(CPLAT_ERR_BUFFER_TOO_SMALL)));
-    // [Pre-Assert確認_異常系] - cplat_fgets() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets() から、空文字列を設定して CPLAT_ERR_BUFFER_TOO_SMALL を返す。
+#endif
 
     // Act
     int actual_ret = cplat_pinned_prompt_readline(
@@ -198,22 +259,41 @@ TEST(pinnedPromptTest, status_apis_accept_valid_positions_and_alignments)
     cplat_pinned_prompt_dispose(screen);
 }
 
-// 非 TTY の初期値付き readline が、初期値を使わずに cplat_fgets の入力を返すことの確認
+// 非 TTY の初期値付き readline が、初期値を使わずに共通行入力の入力を返すことの確認
 TEST(pinnedPromptTest, fallback_readline_with_initial_ignores_initial_text)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
-    NiceMock<Mock_cplat> mock_cplat;
-    char input[] = "piped";
     char output[32] = {};
 
     // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    NiceMock<Mock_poll> mock_poll;
+    NiceMock<Mock_unistd> mock_unistd;
+    static const char kInput[] = "piped\n";
+    size_t pos = 0U;
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, -1))
+        .WillRepeatedly(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
+    EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, 1U))
+        .WillRepeatedly(Invoke(
+            [&pos](const char *, int, const char *, int, void *arg, size_t) -> ssize_t
+            {
+                *static_cast<unsigned char *>(arg) = static_cast<unsigned char>(kInput[pos++]);
+                return 1;
+            }));
+#else
+    NiceMock<Mock_cplat> mock_cplat;
+    char input[] = "piped";
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
         .WillOnce(DoAll(SetArrayArgument<0>(input, input + sizeof(input)), Return(CPLAT_OK)));
-    // [Pre-Assert確認_正常系] - cplat_fgets() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets() から、"piped" を設定して CPLAT_OK を返す。
+#endif
 
     // Act
     int result = cplat_pinned_prompt_readline_with_initial(
@@ -238,12 +318,17 @@ TEST(pinnedPromptTest, readline_with_initial_rejects_invalid_initial_text_and_ar
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
-    NiceMock<Mock_cplat> mock_cplat;
     char output[32] = "stale";
 
     // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    NiceMock<Mock_poll> mock_poll;
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, _)).Times(0);
+#else
+    NiceMock<Mock_cplat> mock_cplat;
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _)).Times(0);
-    // [Pre-Assert確認_異常系] - cplat_fgets() が呼び出されないこと。
+#endif
+    // [Pre-Assert確認_異常系] - 行入力が呼び出されないこと。
 
     // Act
     int actual_ret_control = cplat_pinned_prompt_readline_with_initial(
@@ -402,14 +487,28 @@ TEST(pinnedPromptTest, platform_read_char_handles_resize_and_eof)
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_unistd> mock_unistd;
     unsigned char character = 'B';
-    test_pinned_prompt_set_resize_pending(1);
-    errno = EINTR;
+    test_pinned_prompt_set_resize_pending(0);
 
     // Pre-Assert
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, -1))
+        .Times(3)
+        .WillRepeatedly(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
-        .WillOnce(Return(static_cast<ssize_t>(-1)))
+        .WillOnce(Invoke(
+            [](const char *, const int, const char *, const int, void *, const size_t)
+            {
+                test_pinned_prompt_set_resize_pending(1);
+                errno = EINTR;
+                return static_cast<ssize_t>(-1);
+            }))
         .WillOnce(DoAll(Invoke([character](const char *, const int, const char *, const int, void *arg, const size_t)
                                { *static_cast<unsigned char *>(arg) = character; }),
                         Return(static_cast<ssize_t>(1))))
@@ -443,20 +542,27 @@ TEST(pinnedPromptTest, platform_read_char_handles_resize_and_eof)
     cplat_pinned_prompt_dispose(screen);
 }
 
-// Linux の non-blocking 入力読み取りが select 結果を処理することの確認
+// Linux の non-blocking 入力読み取りが poll 結果を処理することの確認
 TEST(pinnedPromptTest, platform_read_char_nb_handles_select_timeout)
 {
     // Arrange
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
-    NiceMock<Mock_sys_select> mock_select;
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_unistd> mock_unistd;
     unsigned char character = 'C';
 
     // Pre-Assert
-    EXPECT_CALL(mock_select, select(_, _, _, _, _, _, _, _)).WillOnce(Return(0)).WillOnce(Return(1));
-    // [Pre-Assert確認_正常系] - select() が 2 回呼び出されること。
-    // [Pre-Assert手順] - select() から 1 回目はタイムアウト (0)、2 回目は入力可 (1) を返す。
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, PROMPT_PLATFORM_SHORT_WAIT_MS))
+        .WillOnce(Return(0))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
+    // [Pre-Assert確認_正常系] - poll() が 2 回呼び出されること。
+    // [Pre-Assert手順] - poll() から 1 回目はタイムアウト (0)、2 回目は入力可 (1) を返す。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
         .WillOnce(DoAll(Invoke([character](const char *, const int, const char *, const int, void *arg, const size_t)
                                { *static_cast<unsigned char *>(arg) = character; }),
@@ -493,6 +599,7 @@ TEST(pinnedPromptTest, tty_readline_accepts_character_and_enter)
     NiceMock<Mock_ioctl> mock_ioctl;
     NiceMock<Mock_signal> mock_signal;
     NiceMock<Mock_termios> mock_termios;
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_unistd> mock_unistd;
     struct termios original = {};
     struct winsize size = {};
@@ -503,6 +610,13 @@ TEST(pinnedPromptTest, tty_readline_accepts_character_and_enter)
     size.ws_row = 24;
 
     // Pre-Assert
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, _))
+        .WillRepeatedly(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
     EXPECT_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
         .WillOnce(DoAll(SetArgPointee<4>(original), Return(0)));
     // [Pre-Assert確認_正常系] - tcgetattr() が STDIN_FILENO を指定して 1 回呼び出されること。
@@ -558,6 +672,7 @@ TEST(pinnedPromptTest, tty_readline_reports_canceled_on_ctrl_c)
     NiceMock<Mock_ioctl> mock_ioctl;
     NiceMock<Mock_signal> mock_signal;
     NiceMock<Mock_termios> mock_termios;
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_unistd> mock_unistd;
     struct termios original = {};
     struct winsize size = {};
@@ -567,6 +682,13 @@ TEST(pinnedPromptTest, tty_readline_reports_canceled_on_ctrl_c)
     size.ws_row = 24;
 
     // Pre-Assert
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, _))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
     EXPECT_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
         .WillOnce(DoAll(SetArgPointee<4>(original), Return(0)));
     // [Pre-Assert確認_異常系] - tcgetattr() が STDIN_FILENO を指定して 1 回呼び出されること。
@@ -615,7 +737,8 @@ TEST(pinnedPromptTest, read_key_classifies_control_and_escape_sequences)
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_unistd> mock_unistd;
-    NiceMock<Mock_sys_select> mock_select;
+    NiceMock<Mock_poll> mock_poll;
+    int nb_count = 0;
     const unsigned char input[] = {'A', '\n', 0x7FU, 0x01U, 0x80U, 0x1BU, 0x1BU, 'x', 0x1BU, '[', 'A',   0x1BU,
                                    '[', 'B',  0x1BU, '[',   'C',   0x1BU, '[',   'D', 0x1BU, '[', 'H',   0x1BU,
                                    '[', 'F',  0x1BU, '[',   '1',   '~',   0x1BU, '[', '3',   '~', 0x1BU, '[',
@@ -639,9 +762,19 @@ TEST(pinnedPromptTest, read_key_classifies_control_and_escape_sequences)
             }));
     // [Pre-Assert確認_正常系] - read() が STDIN_FILENO を指定して任意の回数呼び出されること。
     // [Pre-Assert手順] - read() から、用意したキー列を 1 バイトずつ設定して 1 を順に返し、消費後は EINTR と EOF を返す。
-    EXPECT_CALL(mock_select, select(_, _, _, _, _, _, _, _)).WillOnce(Return(0)).WillRepeatedly(Return(1));
-    // [Pre-Assert確認_正常系] - select() が 1 回以上呼び出されること。
-    // [Pre-Assert手順] - select() から 1 回目はタイムアウト (0)、以降は入力可 (1) を返す。
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, _))
+        .WillRepeatedly(Invoke(
+            [&nb_count](const char *, const int, const char *, struct pollfd *fds, nfds_t, int timeout_ms)
+            {
+                if (timeout_ms >= 0 && nb_count++ == 0)
+                {
+                    return 0;
+                }
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
+    // [Pre-Assert確認_正常系] - poll() が 1 回以上呼び出されること。
+    // [Pre-Assert手順] - poll() から初回の短時間待機はタイムアウト (0)、以降は入力可 (1) を返す。
 
     // Act
     int char_key = test_pinned_prompt_read_key(
@@ -858,7 +991,7 @@ TEST(pinnedPromptTest, tty_readline_handles_editing_and_history)
     NiceMock<Mock_signal> mock_signal;
     NiceMock<Mock_termios> mock_termios;
     NiceMock<Mock_unistd> mock_unistd;
-    NiceMock<Mock_sys_select> mock_select;
+    NiceMock<Mock_poll> mock_poll;
     struct termios original = {};
     struct winsize size = {};
     const unsigned char input[] = {'a',   'b', 0x1BU, '[',   'D', 0x7FU, 'c',   0x1BU, '[', '3',   '~', '\n', 'd', '\n',
@@ -904,9 +1037,15 @@ TEST(pinnedPromptTest, tty_readline_handles_editing_and_history)
             }));
     // [Pre-Assert確認_正常系] - read() が STDIN_FILENO を指定して任意の回数呼び出されること。
     // [Pre-Assert手順] - read() から、用意したキー列を 1 バイトずつ設定して 1 を順に返す。
-    EXPECT_CALL(mock_select, select(_, _, _, _, _, _, _, _)).WillRepeatedly(Return(1));
-    // [Pre-Assert確認_正常系] - select() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - select() から入力可 (1) を返す。
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, _))
+        .WillRepeatedly(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
+    // [Pre-Assert確認_正常系] - poll() が任意の回数呼び出されること。
+    // [Pre-Assert手順] - poll() から入力可 (1) を返す。
 
     // Act
     int first_result = cplat_pinned_prompt_readline_at(
@@ -951,6 +1090,7 @@ TEST(pinnedPromptTest, tty_readline_continues_after_resize)
     NiceMock<Mock_ioctl> mock_ioctl;
     NiceMock<Mock_signal> mock_signal;
     NiceMock<Mock_termios> mock_termios;
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_unistd> mock_unistd;
     struct termios original = {};
     struct winsize size = {};
@@ -961,6 +1101,13 @@ TEST(pinnedPromptTest, tty_readline_continues_after_resize)
     test_pinned_prompt_set_resize_pending(0);
 
     // Pre-Assert
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, _))
+        .WillRepeatedly(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
     EXPECT_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
         .WillOnce(DoAll(SetArgPointee<4>(original), Return(0)));
     // [Pre-Assert確認_正常系] - tcgetattr() が STDIN_FILENO を指定して 1 回呼び出されること。
@@ -1108,7 +1255,7 @@ TEST(pinnedPromptTest, platform_read_helpers_handle_interrupt_and_select_results
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_unistd> mock_unistd;
-    NiceMock<Mock_sys_select> mock_select;
+    NiceMock<Mock_poll> mock_poll;
     int read_count = 0;
 
     // Pre-Assert
@@ -1134,9 +1281,23 @@ TEST(pinnedPromptTest, platform_read_helpers_handle_interrupt_and_select_results
             }));
     // [Pre-Assert確認_異常系] - read() が STDIN_FILENO を指定して 3 回呼び出されること。
     // [Pre-Assert手順] - read() から 1 回目は EINTR、2 回目は EAGAIN、3 回目は文字 Q を返す。
-    EXPECT_CALL(mock_select, select(_, _, _, _, _, _, _, _)).WillOnce(Return(0)).WillOnce(Return(1));
-    // [Pre-Assert確認_異常系] - select() が 2 回呼び出されること。
-    // [Pre-Assert手順] - select() から 1 回目はタイムアウト (0)、2 回目は入力可 (1) を返す。
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, -1))
+        .Times(2)
+        .WillRepeatedly(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, PROMPT_PLATFORM_SHORT_WAIT_MS))
+        .WillOnce(Return(0))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
+    // [Pre-Assert確認_異常系] - poll() がタイムアウトと入力可を返すこと。
 
     // Act
     int non_eintr_result = test_pinned_prompt_read_char(
@@ -1283,18 +1444,37 @@ TEST(pinnedPromptTest, readline_fmt_formats_and_accepts_null_format)
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
-    NiceMock<Mock_cplat> mock_cplat;
-    char first_input[] = "first";
-    char second_input[] = "second";
     char first_output[16] = {};
     char second_output[16] = {};
 
     // Pre-Assert
+    #if defined(PLATFORM_LINUX)
+    NiceMock<Mock_poll> mock_poll;
+    NiceMock<Mock_unistd> mock_unistd;
+    static const char kInput[] = "first\nsecond\n";
+    size_t pos = 0U;
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, -1))
+        .WillRepeatedly(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
+    EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, 1U))
+        .WillRepeatedly(Invoke(
+            [&pos](const char *, int, const char *, int, void *arg, size_t) -> ssize_t
+            {
+                *static_cast<unsigned char *>(arg) = static_cast<unsigned char>(kInput[pos++]);
+                return 1;
+            }));
+    #else
+    NiceMock<Mock_cplat> mock_cplat;
+    char first_input[] = "first";
+    char second_input[] = "second";
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
         .WillOnce(DoAll(SetArrayArgument<0>(first_input, first_input + sizeof(first_input)), Return(CPLAT_OK)))
         .WillOnce(DoAll(SetArrayArgument<0>(second_input, second_input + sizeof(second_input)), Return(CPLAT_OK)));
-    // [Pre-Assert確認_正常系] - cplat_fgets() が 2 回呼び出されること。
-    // [Pre-Assert手順] - cplat_fgets() から 1 回目は "first"、2 回目は "second" を設定して CPLAT_OK を返す。
+    #endif
 
     // Act
     int formatted_result =
@@ -1383,7 +1563,8 @@ TEST(pinnedPromptTest, status_apis_reject_invalid_position_and_alignment)
  */
 // [サブ手順 名前=pinnedPromptTest.expect_tty_input]
 static void expect_tty_input(Mock_ioctl &mock_ioctl, Mock_signal &mock_signal, Mock_termios &mock_termios,
-                             Mock_unistd &mock_unistd, const std::string &bytes, unsigned short columns = 80U)
+                             Mock_poll &mock_poll, Mock_unistd &mock_unistd, const std::string &bytes,
+                             unsigned short columns = 80U)
 {
     struct termios original = {};
     struct winsize size = {};
@@ -1410,6 +1591,13 @@ static void expect_tty_input(Mock_ioctl &mock_ioctl, Mock_signal &mock_signal, M
                               Return(0)));
     // [Pre-Assert確認_正常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して任意の回数呼び出されること。
     // [Pre-Assert手順] - ioctl() から、指定した列数・行数 24 の端末サイズを設定して 0 を返す。
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, _))
+        .WillRepeatedly(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
         .WillRepeatedly(Invoke(
             [bytes, position](const char *, const int, const char *, const int, void *arg, const size_t) -> ssize_t
@@ -1438,12 +1626,13 @@ TEST(pinnedPromptTest, tty_readline_with_initial_returns_initial_text_on_enter)
     NiceMock<Mock_ioctl> mock_ioctl;
     NiceMock<Mock_signal> mock_signal;
     NiceMock<Mock_termios> mock_termios;
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_unistd> mock_unistd;
     char output[32] = {};
 
     // Pre-Assert
     // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
-    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "\n");
+    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_poll, mock_unistd, "\n");
     // 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
     // [Pre-Assert手順] - read() から、入力として改行だけを返し、端末操作も成功させる。
 
@@ -1473,12 +1662,13 @@ TEST(pinnedPromptTest, tty_readline_with_initial_allows_editing_from_end)
     NiceMock<Mock_ioctl> mock_ioctl;
     NiceMock<Mock_signal> mock_signal;
     NiceMock<Mock_termios> mock_termios;
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_unistd> mock_unistd;
     char output[32] = {};
 
     // Pre-Assert
     // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
-    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "\x7F-3\n");
+    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_poll, mock_unistd, "\x7F-3\n");
     // 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
     // [Pre-Assert手順] - read() から、Backspace、"-3"、改行を順に返し、端末操作も成功させる。
 
@@ -1513,10 +1703,11 @@ TEST(pinnedPromptTest, tty_readline_with_initial_restores_initial_text_after_his
         NiceMock<Mock_ioctl> mock_ioctl;
         NiceMock<Mock_signal> mock_signal;
         NiceMock<Mock_termios> mock_termios;
+        NiceMock<Mock_poll> mock_poll;
         NiceMock<Mock_unistd> mock_unistd;
 
         // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
-        expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "first\n");
+        expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_poll, mock_unistd, "first\n");
         // 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
         ASSERT_EQ(CPLAT_OK, cplat_pinned_prompt_readline_at(screen, first_output, sizeof(first_output), "", "history.c",
                                                             1)); // [状態] - "first" を履歴へ登録する。
@@ -1526,16 +1717,13 @@ TEST(pinnedPromptTest, tty_readline_with_initial_restores_initial_text_after_his
     NiceMock<Mock_signal> mock_signal;
     NiceMock<Mock_termios> mock_termios;
     NiceMock<Mock_unistd> mock_unistd;
-    NiceMock<Mock_sys_select> mock_select;
+    NiceMock<Mock_poll> mock_poll;
 
     // Pre-Assert
     // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
-    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "\x1B[A\x1B[B\n");
+    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_poll, mock_unistd, "\x1B[A\x1B[B\n");
     // 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
     // [Pre-Assert手順] - read() から、上矢印、下矢印、改行を順に返し、端末操作も成功させる。
-    EXPECT_CALL(mock_select, select(_, _, _, _, _, _, _, _)).WillRepeatedly(Return(1));
-    // [Pre-Assert確認_正常系] - select() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - select() から入力可 (1) を返し、ESC の後続を同じキー入力として読ませる。
 
     // Act
     int result = cplat_pinned_prompt_readline_with_initial_at(
@@ -1570,10 +1758,11 @@ TEST(pinnedPromptTest, tty_readline_with_initial_reports_out_of_memory_when_edit
         NiceMock<Mock_ioctl> mock_ioctl;
         NiceMock<Mock_signal> mock_signal;
         NiceMock<Mock_termios> mock_termios;
+        NiceMock<Mock_poll> mock_poll;
         NiceMock<Mock_unistd> mock_unistd;
 
         // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
-        expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "x\n");
+        expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_poll, mock_unistd, "x\n");
         // 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
         ASSERT_EQ(CPLAT_OK,
                   cplat_pinned_prompt_readline_at(screen, first_output, sizeof(first_output), "", "alloc.c",
@@ -1583,12 +1772,13 @@ TEST(pinnedPromptTest, tty_readline_with_initial_reports_out_of_memory_when_edit
     NiceMock<Mock_ioctl> mock_ioctl;
     NiceMock<Mock_signal> mock_signal;
     NiceMock<Mock_termios> mock_termios;
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_cplat> mock_cplat;
 
     // Pre-Assert
     // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
-    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "\n");
+    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_poll, mock_unistd, "\n");
     // 端末設定、シグナル、端末サイズ、入力の 6 つの呼び出し期待を満たすこと。
     // [Pre-Assert手順] - read() から、入力として改行だけを返し、端末操作も成功させる。
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _)).WillOnce(Return(nullptr));
@@ -1642,12 +1832,13 @@ TEST_P(pinnedPromptCompletionKeysTest, keys_and_trigger_conditions)
     NiceMock<Mock_ioctl> mock_ioctl;
     NiceMock<Mock_signal> mock_signal;
     NiceMock<Mock_termios> mock_termios;
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_unistd> mock_unistd;
     int calls = 0;
     char output[64] = {};
     cplat_pinned_prompt_completion_set(screen, pinned_completion, &calls);
     // Pre-Assert
-    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, std::get<0>(GetParam()));
+    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_poll, mock_unistd, std::get<0>(GetParam()));
     // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
     // Act
     int result = cplat_pinned_prompt_readline(screen, output, sizeof(output), "\033[32m\xE3\x81\x82> \033[0m");
@@ -1679,12 +1870,13 @@ TEST(pinnedPromptTest, completion_set_rejects_null_and_unregisters)
     NiceMock<Mock_ioctl> mock_ioctl;
     NiceMock<Mock_signal> mock_signal;
     NiceMock<Mock_termios> mock_termios;
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_unistd> mock_unistd;
     int calls = 0;
     char output[16] = {};
     cplat_pinned_prompt_completion_set(screen, pinned_completion, &calls);
     // Pre-Assert
-    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "s\t\r");
+    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_poll, mock_unistd, "s\t\r");
     // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
     // Act
     int invalid = cplat_pinned_prompt_completion_set(nullptr, nullptr, nullptr);   // [手順] - NULL ハンドルへ登録する。
@@ -1715,6 +1907,7 @@ TEST_P(pinnedPromptCompletionWidthTest, clips_at_right_edge)
     NiceMock<Mock_ioctl> mock_ioctl;
     NiceMock<Mock_signal> mock_signal;
     NiceMock<Mock_termios> mock_termios;
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_unistd> mock_unistd;
     NiceMock<Mock_stdio> mock_stdio;
     int calls = 0;
@@ -1722,7 +1915,7 @@ TEST_P(pinnedPromptCompletionWidthTest, clips_at_right_edge)
     std::string written;
     cplat_pinned_prompt_completion_set(screen, pinned_completion, &calls);
     // Pre-Assert
-    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_unistd, "s\r", GetParam());
+    expect_tty_input(mock_ioctl, mock_signal, mock_termios, mock_poll, mock_unistd, "s\r", GetParam());
     // [サブ手順参照 名前=pinnedPromptTest.expect_tty_input]
     EXPECT_CALL(mock_stdio, fwrite(_, _, _, _, _, _, _))
         .WillRepeatedly(Invoke(
@@ -2445,5 +2638,288 @@ TEST(pinnedPromptTest, preserves_deferred_character_on_windows)
     // Cleanup
     test_pinned_prompt_set_tty(screen, 0);
     cplat_pinned_prompt_dispose(screen);
+}
+#endif
+
+#if defined(PLATFORM_LINUX)
+static int fail_pipe2_with_enomem(int fds[2], const int flags)
+{
+    (void)fds;
+    EXPECT_EQ(O_NONBLOCK | O_CLOEXEC, flags);
+    errno = ENOMEM;
+
+    return -1;
+}
+
+static bool wait_for_stdin_pipe_drained(const int timeout_ms)
+{
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
+
+    for (;;)
+    {
+        int pending = -1;
+
+        if ((ioctl)(STDIN_FILENO, FIONREAD, &pending) == 0 && pending == 0)
+        {
+            return true;
+        }
+
+        if (std::chrono::steady_clock::now() >= deadline)
+        {
+            return false;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+}
+#endif
+
+// 中止 API の NULL 検証と中止用状態初期化の失敗時にハンドル生成が失敗することの確認
+TEST(pinnedPromptTest, stop_input_rejects_null_and_create_cleans_up_on_init_failure)
+{
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_pinned_prompt_stop_input(nullptr));
+
+#if defined(PLATFORM_LINUX)
+    test_pinned_prompt_set_pipe2_fn(fail_pipe2_with_enomem);
+    EXPECT_EQ(nullptr, cplat_pinned_prompt_create(nullptr));
+    test_pinned_prompt_set_pipe2_fn(nullptr);
+#endif
+}
+
+// ESC 追加入力待ちを含む入力中止で空出力・履歴非登録・キー分類を保つことの確認
+TEST(pinnedPromptTest, stop_input_cancels_escape_waits_without_registering_history)
+{
+    // Arrange
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr);
+    ASSERT_NE(nullptr, screen);
+    test_pinned_prompt_set_tty(screen, 1);
+    test_pinned_prompt_failures(2, 0);
+
+    // 1 回目: 正常入力を履歴へ登録する
+    const int saved_input[] = {'s', 'a', 'v', 'e', 'd', '\n'};
+    char output[32] = "stale";
+    test_pinned_prompt_input_results(saved_input, sizeof(saved_input) / sizeof(saved_input[0]));
+    ASSERT_EQ(CPLAT_OK, cplat_pinned_prompt_readline_at(screen, output, sizeof(output), "", "stop-history.c", 1));
+    ASSERT_STREQ("saved", output);
+    const int initial_history = test_pinned_prompt_history_count(screen);
+    EXPECT_EQ(1, initial_history);
+
+    // 2 回目: 編集途中かつ ESC シーケンス待機中の中止で空文字になり、履歴を増やさないこと
+    const int canceled_escape[] = {'x', 0x1B, '[', PROMPT_PLATFORM_CANCELED};
+    test_pinned_prompt_input_results(canceled_escape, sizeof(canceled_escape) / sizeof(canceled_escape[0]));
+    EXPECT_EQ(CPLAT_ERR_CANCELED,
+              cplat_pinned_prompt_readline_at(screen, output, sizeof(output), "", "stop-history.c", 1));
+    EXPECT_STREQ("", output);
+    EXPECT_EQ(initial_history, test_pinned_prompt_history_count(screen));
+
+    // read_key 単体でもすべての待機段階の中止を KEY_CANCELED へ分類すること
+    const int key_cases[] = {PROMPT_PLATFORM_CANCELED,
+                             0x1B,
+                             PROMPT_PLATFORM_CANCELED,
+                             0x1B,
+                             '[',
+                             PROMPT_PLATFORM_CANCELED,
+                             0x1B,
+                             '[',
+                             '1',
+                             PROMPT_PLATFORM_CANCELED,
+                             0x1B,
+                             '[',
+                             '3',
+                             PROMPT_PLATFORM_CANCELED,
+                             0x1B,
+                             '[',
+                             '4',
+                             PROMPT_PLATFORM_CANCELED};
+    test_pinned_prompt_input_results(key_cases, sizeof(key_cases) / sizeof(key_cases[0]));
+
+    for (int i = 0; i < 6; ++i)
+    {
+        int ch = 0;
+        EXPECT_EQ(TEST_PINNED_PROMPT_KEY_CANCELED, test_pinned_prompt_read_key(screen, &ch));
+    }
+
+    // Cleanup
+    cplat_pinned_prompt_dispose(screen);
+    test_pinned_prompt_failures(0, 0);
+    test_pinned_prompt_input_results(nullptr, 0);
+}
+
+#if defined(PLATFORM_LINUX)
+// 別スレッドからの停止要求が描画ミューテックス非依存で非 TTY 部分行を解除し stdin を閉じないことの確認
+TEST(pinnedPromptTest, stop_input_unblocks_cross_thread_partial_line_without_closing_stdin_or_deadlocking)
+{
+    int saved_stdin = dup(STDIN_FILENO);
+    ASSERT_NE(-1, saved_stdin);
+    int stdin_pipe[2] = {-1, -1};
+    ASSERT_EQ(0, pipe(stdin_pipe));
+
+    if (dup2(stdin_pipe[0], STDIN_FILENO) < 0)
+    {
+        close(stdin_pipe[0]);
+        close(stdin_pipe[1]);
+        close(saved_stdin);
+        FAIL() << "dup2 failed";
+    }
+
+    // 描画ミューテックス保持中でも別スレッドの stop_input がデッドロックしないこと
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr);
+    ASSERT_NE(nullptr, screen);
+    test_pinned_prompt_set_tty(screen, 0);
+    test_pinned_prompt_lock(screen);
+    int stop_first = CPLAT_ERR_UNKNOWN;
+    int stop_second = CPLAT_ERR_UNKNOWN;
+    std::thread stopper(
+        [&]()
+        {
+            stop_first = cplat_pinned_prompt_stop_input(screen);
+            stop_second = cplat_pinned_prompt_stop_input(screen);
+        });
+    stopper.join();
+    test_pinned_prompt_unlock(screen);
+    EXPECT_EQ(CPLAT_OK, stop_first);
+    EXPECT_EQ(CPLAT_OK, stop_second);
+
+    // 入力前に中止済みのハンドルは待機せず永続中止を返すこと
+    char out[32] = "stale";
+    EXPECT_EQ(CPLAT_ERR_CANCELED, cplat_pinned_prompt_readline(screen, out, sizeof(out), nullptr));
+    EXPECT_STREQ("", out);
+    EXPECT_EQ(CPLAT_ERR_CANCELED, cplat_pinned_prompt_readline(screen, out, sizeof(out), nullptr));
+    cplat_pinned_prompt_dispose(screen);
+
+    // 部分行 ("partial") 消費後、poll 待機中の非 TTY 入力を別スレッドから解除すること
+    cplat_pinned_prompt *live_screen = cplat_pinned_prompt_create(nullptr);
+    ASSERT_NE(nullptr, live_screen);
+    test_pinned_prompt_set_tty(live_screen, 0);
+    static const char kPartial[] = "partial";
+    ASSERT_EQ(static_cast<ssize_t>(sizeof(kPartial) - 1U), write(stdin_pipe[1], kPartial, sizeof(kPartial) - 1U));
+
+    bool drained = false;
+    int live_stop_ret = CPLAT_ERR_UNKNOWN;
+    std::thread partial_stopper(
+        [&]()
+        {
+            drained = wait_for_stdin_pipe_drained(2000);
+            live_stop_ret = cplat_pinned_prompt_stop_input(live_screen);
+        });
+    char live_out[32] = "dirty";
+    int live_result = cplat_pinned_prompt_readline(live_screen, live_out, sizeof(live_out), nullptr);
+    partial_stopper.join();
+    EXPECT_TRUE(drained);
+    EXPECT_EQ(CPLAT_OK, live_stop_ret);
+    EXPECT_EQ(CPLAT_ERR_CANCELED, live_result);
+    EXPECT_STREQ("", live_out);
+
+    cplat_pinned_prompt_dispose(live_screen);
+
+    // dispose 後も標準入力 FD は閉じられていないこと
+    unsigned char marker = 'Z';
+    ASSERT_EQ(static_cast<ssize_t>(1), write(stdin_pipe[1], &marker, 1U));
+    unsigned char read_back = 0;
+    EXPECT_EQ(static_cast<ssize_t>(1), read(STDIN_FILENO, &read_back, 1U));
+    EXPECT_EQ('Z', static_cast<char>(read_back));
+
+    close(stdin_pipe[0]);
+    close(stdin_pipe[1]);
+    (void)dup2(saved_stdin, STDIN_FILENO);
+    close(saved_stdin);
+}
+
+// 実入力 FD を使った TTY 編集・ESC 待機の中止と端末復元失敗優先を検証する
+TEST(pinnedPromptTest, stop_input_unblocks_real_fd_tty_escape_wait_and_prioritizes_restore_failure)
+{
+    int saved_stdin = dup(STDIN_FILENO);
+    ASSERT_NE(-1, saved_stdin);
+    int stdin_pipe[2] = {-1, -1};
+    ASSERT_EQ(0, pipe(stdin_pipe));
+
+    if (dup2(stdin_pipe[0], STDIN_FILENO) < 0)
+    {
+        close(stdin_pipe[0]);
+        close(stdin_pipe[1]);
+        close(saved_stdin);
+        FAIL() << "dup2 failed";
+    }
+
+    test_pinned_prompt_reset_platform_state();
+    NiceMock<Mock_ioctl> mock_ioctl;
+    NiceMock<Mock_signal> mock_signal;
+    NiceMock<Mock_termios> mock_termios;
+    struct termios original = {};
+    struct winsize size = {};
+    size.ws_col = 80;
+    size.ws_row = 24;
+
+    ON_CALL(mock_ioctl, ioctl(_, _, _, STDOUT_FILENO, TIOCGWINSZ, _))
+        .WillByDefault(DoAll(Invoke([size](const char *, const int, const char *, const int, const unsigned long,
+                                           void *arg) { *static_cast<struct winsize *>(arg) = size; }),
+                             Return(0)));
+    ON_CALL(mock_termios, tcgetattr(_, _, _, STDIN_FILENO, _))
+        .WillByDefault(DoAll(SetArgPointee<4>(original), Return(0)));
+    ON_CALL(mock_signal, sigemptyset(_, _, _, _)).WillByDefault(Return(0));
+    ON_CALL(mock_signal, sigaction(_, _, _, SIGWINCH, _, _)).WillByDefault(Return(0));
+
+    // 1 回目: TTY モードで実 FD から "a\x1b" 消費後の追加入力待ち中に stop_input し、CANCELED・空出力・履歴非登録を確認
+    EXPECT_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _)).Times(2).WillRepeatedly(Return(0));
+    cplat_pinned_prompt *esc_screen = cplat_pinned_prompt_create(nullptr);
+    ASSERT_NE(nullptr, esc_screen);
+    test_pinned_prompt_set_tty(esc_screen, 1);
+
+    static const unsigned char kEscPrefix[] = {'a', 0x1BU};
+    ASSERT_EQ(static_cast<ssize_t>(sizeof(kEscPrefix)), write(stdin_pipe[1], kEscPrefix, sizeof(kEscPrefix)));
+
+    bool esc_drained = false;
+    int esc_stop_ret = CPLAT_ERR_UNKNOWN;
+    std::thread esc_stopper(
+        [&]()
+        {
+            esc_drained = wait_for_stdin_pipe_drained(2000);
+            esc_stop_ret = cplat_pinned_prompt_stop_input(esc_screen);
+        });
+    char esc_out[32] = "stale";
+    int esc_ret = cplat_pinned_prompt_readline_at(esc_screen, esc_out, sizeof(esc_out), "", "real-fd-tty.c", 1);
+    esc_stopper.join();
+
+    EXPECT_TRUE(esc_drained);
+    EXPECT_EQ(CPLAT_OK, esc_stop_ret);
+    EXPECT_EQ(CPLAT_ERR_CANCELED, esc_ret);
+    EXPECT_STREQ("", esc_out);
+    EXPECT_EQ(0, test_pinned_prompt_history_entry_count(esc_screen));
+    cplat_pinned_prompt_dispose(esc_screen);
+
+    // 2 回目: TTY モードで実 FD 入力中に stop_input されても、raw 復元失敗時は CPLAT_ERR_UNKNOWN を優先すること
+    EXPECT_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _))
+        .WillOnce(Return(0))
+        .WillOnce(Return(-1))
+        .WillOnce(Return(0));
+    cplat_pinned_prompt *restore_screen = cplat_pinned_prompt_create(nullptr);
+    ASSERT_NE(nullptr, restore_screen);
+    test_pinned_prompt_set_tty(restore_screen, 1);
+
+    const unsigned char key_b = 'b';
+    ASSERT_EQ(static_cast<ssize_t>(1), write(stdin_pipe[1], &key_b, 1U));
+
+    bool restore_drained = false;
+    int restore_stop_ret = CPLAT_ERR_UNKNOWN;
+    std::thread restore_stopper(
+        [&]()
+        {
+            restore_drained = wait_for_stdin_pipe_drained(2000);
+            restore_stop_ret = cplat_pinned_prompt_stop_input(restore_screen);
+        });
+    char restore_out[32] = "stale";
+    int restore_ret = cplat_pinned_prompt_readline(restore_screen, restore_out, sizeof(restore_out), "");
+    restore_stopper.join();
+
+    EXPECT_TRUE(restore_drained);
+    EXPECT_EQ(CPLAT_OK, restore_stop_ret);
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, restore_ret);
+    EXPECT_STREQ("", restore_out);
+    cplat_pinned_prompt_dispose(restore_screen);
+
+    close(stdin_pipe[0]);
+    close(stdin_pipe[1]);
+    (void)dup2(saved_stdin, STDIN_FILENO);
+    close(saved_stdin);
 }
 #endif

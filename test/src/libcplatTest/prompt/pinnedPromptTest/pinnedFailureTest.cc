@@ -2,6 +2,12 @@
 #include <string>
 #include <vector>
 #include "prompt_platform.h"
+#if defined(PLATFORM_LINUX)
+    #include <mock_poll.h>
+    #include <mock_unistd.h>
+    #include <poll.h>
+    #include <unistd.h>
+#endif
 #include <mock_cplat.h>
 #include <cplat/prompt/pinned_prompt.h>
 #include "pinned_prompt.inject.h"
@@ -35,14 +41,27 @@ TEST(pinnedFailureTest, escape_sequence_errors_reach_caller)
 TEST(pinnedFailureTest, acquisition_failure_requires_restoration_before_fallback)
 {
     // Arrange
-    NiceMock<Mock_cplat> mock;
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr);
     ASSERT_NE(nullptr, screen); // [状態確認] - ハンドルを確保できたこと。
     test_pinned_prompt_set_tty(screen, 1);
     test_pinned_prompt_failures(1, 0);
     char output[16] = {};
     // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    NiceMock<Mock_poll> poll_mock;
+    NiceMock<Mock_unistd> unistd_mock;
+    EXPECT_CALL(poll_mock, poll(_, _, _, _, _, -1))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLHUP;
+                return 1;
+            }));
+    EXPECT_CALL(unistd_mock, read(_, _, _, STDIN_FILENO, _, _)).Times(0);
+#else
+    NiceMock<Mock_cplat> mock;
     EXPECT_CALL(mock, cplat_fgets(_, _, _, _)).WillOnce(Return(CPLAT_ERR_EOF));
+#endif
     // [Pre-Assert確認_正常系] - 復元済みの移行失敗だけ行入力を 1 回呼ぶこと。
     // Act
     int fallback = cplat_pinned_prompt_readline(screen, output, sizeof(output),
@@ -100,7 +119,12 @@ TEST(pinnedFailureTest, restoration_failure_overrides_allocation_and_fallback)
     test_pinned_prompt_failures(2, -1);
     // Pre-Assert
     EXPECT_CALL(mock, cplat_realloc(_, _, _)).WillOnce(Return(nullptr));
+#if defined(PLATFORM_LINUX)
+    NiceMock<Mock_poll> poll_mock;
+    EXPECT_CALL(poll_mock, poll(_, _, _, _, _, _)).Times(0);
+#else
     EXPECT_CALL(mock, cplat_fgets(_, _, _, _)).Times(0);
+#endif
     // [Pre-Assert確認_異常系] - 初期値の拡張を 1 回失敗させ、復元未完では行入力を呼ばないこと。
     // Act
     int allocation = cplat_pinned_prompt_readline_with_initial_at(screen, output, sizeof(output), nullptr,
@@ -139,6 +163,35 @@ TEST(pinnedFailureTest, eof_after_escape_and_resize_are_not_input_errors)
         EXPECT_EQ(expected[i], result); // [確認_正常系] - EOF は入力終端、リサイズ後は入力成功を返すこと。2 件。
         cplat_pinned_prompt_dispose(screen);
     }
+    test_pinned_prompt_failures(0, 0);
+    test_pinned_prompt_input_results(nullptr, 0);
+}
+
+// 入力中止要求後も端末復元失敗を最優先し、正常時は永続中止と空出力を保つことの確認
+TEST(pinnedFailureTest, stop_input_prioritizes_restoration_failure_and_persists_canceled_state)
+{
+    // Arrange
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, cplat_pinned_prompt_stop_input(nullptr));
+
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr);
+    ASSERT_NE(nullptr, screen);
+    test_pinned_prompt_set_tty(screen, 1);
+    test_pinned_prompt_failures(2, -1);
+    const int inputs[] = {'a', PROMPT_PLATFORM_CANCELED};
+    test_pinned_prompt_input_results(inputs, 2);
+    char output[16] = "stale";
+
+    // Act / Assert: 中止要求が成立していても、raw 復元失敗時は CPLAT_ERR_UNKNOWN を優先する
+    EXPECT_EQ(CPLAT_OK, cplat_pinned_prompt_stop_input(screen));
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, cplat_pinned_prompt_readline(screen, output, sizeof(output), nullptr));
+
+    // Act / Assert: 復元が成功しても永続中止状態が残り、以降は入力待ちせず CPLAT_ERR_CANCELED と空文字を返す
+    test_pinned_prompt_failures(2, 0);
+    EXPECT_EQ(CPLAT_ERR_CANCELED, cplat_pinned_prompt_readline(screen, output, sizeof(output), nullptr));
+    EXPECT_STREQ("", output);
+
+    // Cleanup
+    cplat_pinned_prompt_dispose(screen);
     test_pinned_prompt_failures(0, 0);
     test_pinned_prompt_input_results(nullptr, 0);
 }

@@ -1,14 +1,18 @@
 /* 描画の回帰試験では実共通処理へ委譲し、境界試験では失敗を注入します。
  * OS の分岐網羅は promptLinuxTest / promptWindowsTest が担当します。 */
+#if defined(__linux__) && !defined(_GNU_SOURCE)
+    #define _GNU_SOURCE
+#endif
 #include "prompt_platform.h"
 #include "pinned_prompt.inject.h"
 #include <cplat/crt/unistd.h>
 #include <string.h>
 #if defined(PLATFORM_LINUX)
+    #include <fcntl.h>
+    #include <poll.h>
     #include <signal.h>
     #include <unistd.h>
     #include <sys/ioctl.h>
-    #include <sys/select.h>
     #define _IN_OVERRIDE_HEADER_TERMIOS_H
     #include <mock_termios.h>
     #define _IN_OVERRIDE_HEADER_UNISTD_H
@@ -17,8 +21,8 @@
     #include <mock_signal.h>
     #define _IN_OVERRIDE_HEADER_SYS_IOCTL_H
     #include <mock_ioctl.h>
-    #define _IN_OVERRIDE_HEADER_SYS_SELECT_H
-    #include <sys/mock_select.h>
+    #define _IN_OVERRIDE_HEADER_POLL_H
+    #include <mock_poll.h>
 #elif defined(PLATFORM_WINDOWS)
     #define _IN_OVERRIDE_HEADER_WINDOWS_H
     #include <mock_windows.h>
@@ -58,6 +62,10 @@ void test_pinned_prompt_set_sigwinch_installed(int value)
 void test_pinned_prompt_raise_resize_handler(void)
 {
     prompt_sigwinch_handler(SIGWINCH);
+}
+void test_pinned_prompt_set_pipe2_fn(test_pinned_prompt_pipe2_fn fn)
+{
+    s_pipe2_fn = (fn != NULL) ? fn : prompt_linux_default_pipe2;
 }
 #elif defined(PLATFORM_WINDOWS)
     #include "../../../../../prod/libsrc/cplat/prompt/prompt_windows.c"

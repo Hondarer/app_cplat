@@ -31,4 +31,9 @@ void test_prompt_set_sigwinch_installed(int value)
     s_sigwinch_installed = value;
 }
 
+void test_prompt_set_pipe2_fn(test_prompt_pipe2_fn fn)
+{
+    s_pipe2_fn = (fn != NULL) ? (prompt_linux_pipe2_fn)fn : prompt_linux_default_pipe2;
+}
+
 #endif /* PLATFORM_LINUX */

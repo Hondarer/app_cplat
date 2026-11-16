@@ -9,18 +9,24 @@
 
 #include <cplat/base/platform.h>
 #include <cplat/prompt/prompt_edit.h>
+#include <cplat/sync/atomic.h>
 #if defined(PLATFORM_LINUX)
     #include <termios.h>
 #elif defined(PLATFORM_WINDOWS)
     #include <cplat/base/windows_sdk.h>
+    #include <cplat/sync/sync.h>
 #endif
+
+/** @brief 追加入力待ちと Windows 同期 I/O キャンセル再試行で共用する短い待機時間 [ms] です。 */
+#define PROMPT_PLATFORM_SHORT_WAIT_MS 50
 
 typedef enum prompt_platform_input
 {
     PROMPT_PLATFORM_EOF = -1,
     PROMPT_PLATFORM_RESIZE = -2,
     PROMPT_PLATFORM_ERROR = -3,
-    PROMPT_PLATFORM_TIMEOUT = -4
+    PROMPT_PLATFORM_TIMEOUT = -4,
+    PROMPT_PLATFORM_CANCELED = -5
 } prompt_platform_input;
 
 /** 元の設定は復元成功まで保持します。同一プロセスで有効な入力は一つです。 */
@@ -30,12 +36,20 @@ typedef struct prompt_platform_context
     struct termios orig_term;
     int raw_active;
     int signal_active;
+    int cancel_pipe[2];
+    int cancel_pipe_active;
+    cplat_atomic_i32 cancel_requested;
     char padding[4];
 #elif defined(PLATFORM_WINDOWS)
-    cplat_internal_prompt_utf16_input windows_input;
     HANDLE stdin_handle;
+    HANDLE input_thread;
+    cplat_local_lock *input_lock;
+    cplat_condvar *input_done_cv;
+    cplat_internal_prompt_utf16_input windows_input;
+    cplat_atomic_i32 cancel_requested;
     DWORD orig_in_mode;
     int raw_active;
+    int input_active;
 #else
     int raw_active;
 #endif
@@ -84,6 +98,43 @@ extern "C"
      *  @return         入力結果または PROMPT_PLATFORM_TIMEOUT です。OS エラーをタイムアウトと区別します。
      */
     int prompt_platform_read_char_nb(prompt_platform_context *context);
+
+    /**
+     *  @brief          入力待機の中止に対応したプラットフォーム状態を初期化します。
+     *  @param[in,out]  context ゼロ初期化済みの状態です。NULL は指定できません。
+     *  @return         成功は 0、失敗は -1 です。失敗時は確保した資源を解放します。
+     */
+    int prompt_platform_init_cancelable(prompt_platform_context *context);
+
+    /**
+     *  @brief          プラットフォーム固有の入力中止用資源を解放します。
+     *  @param[in,out]  context 保存状態です。NULL も指定できます。
+     */
+    void prompt_platform_dispose(prompt_platform_context *context);
+
+    /**
+     *  @brief          進行中または後続の入力待機を中止し、破棄まで中止状態を維持します。
+     *  @param[in,out]  context 入力状態です。
+     *  @return         CPLAT_OK、CPLAT_ERR_INVALID_ARGUMENT、または CPLAT_ERR_UNKNOWN を返します。
+     */
+    int prompt_platform_stop_input(prompt_platform_context *context);
+
+    /**
+     *  @brief          入力中止状態が設定されているかを返します。
+     *  @param[in]      context 入力状態です。
+     *  @return         中止済みなら 1、それ以外は 0 を返します。
+     */
+    int prompt_platform_is_input_canceled(const prompt_platform_context *context);
+
+    /**
+     *  @brief          非 TTY 向けの共通 1 行入力を読み取ります。
+     *  @param[in,out]  context  入力状態です。NULL は指定できません。
+     *  @param[out]     buf      格納先バッファーです。NULL は指定できません。
+     *  @param[in]      buf_size @p buf のバイト数です。
+     *  @return         CPLAT_OK、CPLAT_ERR_EOF、CPLAT_ERR_CANCELED、CPLAT_ERR_BUFFER_TOO_SMALL、
+     *                  CPLAT_ERR_INVALID_ARGUMENT、または CPLAT_ERR_UNKNOWN を返します。
+     */
+    int prompt_platform_read_line(prompt_platform_context *context, char *buf, size_t buf_size);
 
     /**
      *  @brief          OS の端末サイズを取得します。

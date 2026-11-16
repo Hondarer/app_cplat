@@ -146,6 +146,16 @@ void test_pinned_prompt_lock_and_unlock(cplat_pinned_prompt *screen)
     pinned_prompt_unlock(screen);
 }
 
+void test_pinned_prompt_lock(cplat_pinned_prompt *screen)
+{
+    pinned_prompt_lock(screen);
+}
+
+void test_pinned_prompt_unlock(cplat_pinned_prompt *screen)
+{
+    pinned_prompt_unlock(screen);
+}
+
 int test_pinned_prompt_set_prompt(cplat_pinned_prompt *screen, const char *prompt_string)
 {
     return pinned_prompt_set_prompt(screen, prompt_string);
@@ -249,6 +259,19 @@ int test_pinned_prompt_history_fill(cplat_pinned_prompt *screen, size_t count)
 int test_pinned_prompt_history_count(const cplat_pinned_prompt *screen)
 {
     return (int)screen->history_ctx_count;
+}
+
+int test_pinned_prompt_history_entry_count(const cplat_pinned_prompt *screen)
+{
+    size_t i;
+    size_t total = 0U;
+
+    for (i = 0U; i < screen->history_ctx_count; i++)
+    {
+        total += screen->history_contexts[i].count;
+    }
+
+    return (int)total;
 }
 
 int test_pinned_prompt_history_failure_state(cplat_pinned_prompt *screen, const char *file, int line)

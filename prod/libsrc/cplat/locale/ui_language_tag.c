@@ -163,6 +163,7 @@ int cplat_internal_ui_language_normalize(const char *const value, char *const ta
 
     if ((value == NULL) || (tag_out == NULL) || (tag_size == 0U))
     {
+        /* 引数不正時も正規化途中の失敗と同様に、以前の成功値を出力へ残さないため空にする。 */
         if ((tag_out != NULL) && (tag_size > 0U))
         {
             tag_out[0] = '\0';

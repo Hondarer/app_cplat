@@ -260,6 +260,7 @@ static int reopen_std_stream(FILE *stream, HANDLE handle, int open_flags, DWORD 
     {
         if (_dup2(new_fd, expected_fd) != 0)
         {
+            /* _dup2 失敗後の後始末であり、すでに -1 を返す経路のため _close 失敗で結果は変わらない。 */
             (void)_close(new_fd);
             return -1;
         }

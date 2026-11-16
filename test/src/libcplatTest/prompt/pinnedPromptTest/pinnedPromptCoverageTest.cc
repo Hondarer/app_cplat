@@ -12,7 +12,9 @@
     #include <mock_signal.h>
     #include <mock_termios.h>
     #include <mock_unistd.h>
-    #include <sys/mock_select.h>
+    #include <mock_poll.h>
+    #include <poll.h>
+    #include <unistd.h>
 #elif defined(PLATFORM_WINDOWS)
     #include <mock_windows.h>
 #endif /* PLATFORM_ */
@@ -520,7 +522,14 @@ TEST(pinnedPromptCoverageTest, readline_reports_setup_failures)
     ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_termios> mock_termios;
     NiceMock<Mock_cplat> mock_cplat;
+    #if defined(PLATFORM_LINUX)
+    NiceMock<Mock_poll> mock_poll;
+    NiceMock<Mock_unistd> mock_unistd;
+    static const char kFallback[] = "fallback\n";
+    size_t fallback_pos = 0U;
+    #else
     char input[] = "fallback";
+    #endif
     char output[16] = {};
     int invalid_screen = 0;
     int invalid_buffer = 0;
@@ -536,8 +545,29 @@ TEST(pinnedPromptCoverageTest, readline_reports_setup_failures)
     EXPECT_CALL(mock_termios, tcsetattr(_, _, _, STDIN_FILENO, _, _)).Times(2).WillRepeatedly(Return(0));
     // [Pre-Assert確認_異常系] - tcsetattr() が STDIN_FILENO を指定して 2 回呼び出されること。
     // [Pre-Assert手順] - tcsetattr() から 0 を返す。
+    #if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, -1))
+        .WillRepeatedly(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
+    EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, 1U))
+        .WillRepeatedly(Invoke(
+            [&fallback_pos](const char *, int, const char *, int, void *arg, size_t) -> ssize_t
+            {
+                if (fallback_pos >= sizeof(kFallback) - 1U)
+                {
+                    return 0;
+                }
+                *static_cast<unsigned char *>(arg) = static_cast<unsigned char>(kFallback[fallback_pos++]);
+                return 1;
+            }));
+    #else
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
         .WillOnce(DoAll(SetArrayArgument<0>(input, input + sizeof(input)), Return(CPLAT_OK)));
+    #endif
     // [Pre-Assert確認_異常系] - cplat_fgets() が 1 回呼び出されること。
     // [Pre-Assert手順] - cplat_fgets() から、入力 "fallback" を設定して CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _))
@@ -613,12 +643,12 @@ TEST(pinnedPromptCoverageTest, readline_covers_remaining_key_actions)
     NiceMock<Mock_ioctl> mock_ioctl;
     NiceMock<Mock_termios> mock_termios;
     NiceMock<Mock_unistd> mock_unistd;
-    NiceMock<Mock_sys_select> mock_select;
+    NiceMock<Mock_poll> mock_poll;
     struct winsize size = {};
     const unsigned char input[] = {'a',   'b', 0x1BU, '[', 'C',   0x1BU, '[',  'H', 0x1BU, '[', 'F', 0x7FU,
                                    0x1BU, '[', '3',   'x', 0x1BU, 0x01U, '\n', 'a', 'b',   'c', '\n'};
     size_t input_pos = 0U;
-    int select_count = 0;
+    int nb_poll_count = 0;
     char first_output[8] = {};
     char short_output[2] = {};
     char eof_output[2] = {};
@@ -648,15 +678,23 @@ TEST(pinnedPromptCoverageTest, readline_covers_remaining_key_actions)
             }));
     // [Pre-Assert確認_正常系] - read() が STDIN_FILENO を指定して任意の回数呼び出されること。
     // [Pre-Assert手順] - read() から、用意したキー列を 1 バイトずつ設定して 1 を順に返し、消費後は 0 を返す。
-    EXPECT_CALL(mock_select, select(_, _, _, _, _, _, _, _))
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, _))
         .WillRepeatedly(Invoke(
-            [&select_count](const char *, const int, const char *, int, fd_set *, fd_set *, fd_set *, struct timeval *)
+            [&nb_poll_count](const char *, const int, const char *, struct pollfd *fds, nfds_t, int timeout_ms)
             {
-                select_count++;
-                return (select_count == 10) ? 0 : 1;
+                if (timeout_ms >= 0)
+                {
+                    nb_poll_count++;
+                    if (nb_poll_count == 10)
+                    {
+                        return 0;
+                    }
+                }
+                fds[0].revents = POLLIN;
+                return 1;
             }));
-    // [Pre-Assert確認_正常系] - select() が任意の回数呼び出されること。
-    // [Pre-Assert手順] - select() から 10 回目はタイムアウト (0)、それ以外は入力可 (1) を返す。
+    // [Pre-Assert確認_正常系] - poll() が任意の回数呼び出されること。
+    // [Pre-Assert手順] - poll() から 10 回目の非待機待ちだけタイムアウト (0)、それ以外は POLLIN (1) を返す。
 
     // Act
     test_pinned_prompt_failures(2, 0);
@@ -821,7 +859,7 @@ TEST(pinnedPromptCoverageTest, read_key_classifies_unknown_csi_default)
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_unistd> mock_unistd;
-    NiceMock<Mock_sys_select> mock_select;
+    NiceMock<Mock_poll> mock_poll;
     const unsigned char input[] = {0x1BU, '[', '2', 0x1BU, '[', '4', 'x'};
     size_t input_pos = 0U;
     int ch = -1;
@@ -829,7 +867,13 @@ TEST(pinnedPromptCoverageTest, read_key_classifies_unknown_csi_default)
     int four_key = TEST_PINNED_PROMPT_KEY_CHAR;
 
     // Pre-Assert
-    EXPECT_CALL(mock_select, select(_, _, _, _, _, _, _, _)).WillRepeatedly(Return(1));
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, _))
+        .WillRepeatedly(Invoke(
+            [](const char *, const int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
     // [Pre-Assert確認_異常系] - select() が任意の回数呼び出されること。
     // [Pre-Assert手順] - select() から入力可 (1) を返す。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
@@ -871,7 +915,7 @@ TEST(pinnedPromptCoverageTest, read_key_and_status_cover_remaining_conditions)
     cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
     ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     NiceMock<Mock_unistd> mock_unistd;
-    NiceMock<Mock_sys_select> mock_select;
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_ioctl> mock_ioctl;
     const unsigned char input[] = {'\r', 0x08U, 0x1BU, '[', '3', 'x'};
     size_t input_pos = 0U;
@@ -891,8 +935,14 @@ TEST(pinnedPromptCoverageTest, read_key_and_status_cover_remaining_conditions)
                   Return(0)));
     // [Pre-Assert確認_正常系] - ioctl() が STDOUT_FILENO、TIOCGWINSZ を指定して任意の回数呼び出されること。
     // [Pre-Assert手順] - ioctl() から、列数 80・行数 24 の端末サイズを設定して 0 を返す。
-    EXPECT_CALL(mock_select, select(_, _, _, _, _, _, _, _)).WillRepeatedly(Return(1));
-    // [Pre-Assert確認_異常系] - select() が任意の回数呼び出されること。
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, _))
+        .WillRepeatedly(Invoke(
+            [](const char *, const int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
+    // [Pre-Assert確認_異常系] - poll() が任意の回数呼び出されること。
     // [Pre-Assert手順] - select() から入力可 (1) を返す。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, _))
         .WillRepeatedly(Invoke(
@@ -1107,7 +1157,14 @@ TEST(pinnedPromptCoverageTest, readline_fmt_uses_empty_prompt_when_format_alloca
     ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
     test_pinned_prompt_set_tty(screen, 0);
     NiceMock<Mock_cplat> mock_cplat;
+#if defined(PLATFORM_LINUX)
+    NiceMock<Mock_poll> mock_poll;
+    NiceMock<Mock_unistd> mock_unistd;
+    static const char kInput[] = "ok\n";
+    size_t input_pos = 0U;
+#else
     char input[] = "ok";
+#endif
     char output[16] = {};
     int readline_result = CPLAT_ERR_UNKNOWN;
 
@@ -1115,8 +1172,29 @@ TEST(pinnedPromptCoverageTest, readline_fmt_uses_empty_prompt_when_format_alloca
     EXPECT_CALL(mock_cplat, cplat_malloc(_)).WillOnce(Return(nullptr));
     // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回呼び出されること。
     // [Pre-Assert手順] - cplat_malloc() から nullptr を返す。
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, _, -1))
+        .WillRepeatedly(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
+    EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, 1U))
+        .WillRepeatedly(Invoke(
+            [&input_pos](const char *, int, const char *, int, void *arg, size_t) -> ssize_t
+            {
+                if (input_pos >= sizeof(kInput) - 1U)
+                {
+                    return 0;
+                }
+                *static_cast<unsigned char *>(arg) = static_cast<unsigned char>(kInput[input_pos++]);
+                return 1;
+            }));
+#else
     EXPECT_CALL(mock_cplat, cplat_fgets(_, _, _, _))
         .WillOnce(DoAll(SetArrayArgument<0>(input, input + sizeof(input)), Return(CPLAT_OK)));
+#endif
     // [Pre-Assert確認_異常系] - cplat_fgets() が 1 回呼び出されること。
     // [Pre-Assert手順] - cplat_fgets() から、入力 "ok" を設定して CPLAT_OK を返す。
 

@@ -475,12 +475,18 @@ static void append_argument(describe_context *context, const string_catalog_filt
     }
     else if ((common != NULL) && is_name_common)
     {
+        /*
+         * argument は uint8_t (最大 255) のため "{255} " と終端 NUL でも 7 [byte] であり、
+         * 32 [byte] 配列に収まる。符号なし整数だけの固定書式のため変換失敗は起きない。
+         * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/snprintf-snprintf-snprintf-l-snwprintf-snwprintf-l
+         */
         (void)snprintf(text, sizeof(text), "{%u} ", (unsigned int)instruction->argument);
         append_text(&context->writer, text);
         append_text(&context->writer, common->name);
     }
     else
     {
+        /* "{255}" と終端 NUL でも最大 6 [byte] であり、32 [byte] 配列に収まる。 */
         (void)snprintf(text, sizeof(text), "{%u}", (unsigned int)instruction->argument);
         append_text(&context->writer, text);
     }
@@ -778,6 +784,7 @@ static void append_predicate(describe_context *context, const string_catalog_fil
     if (instruction->operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_HAS)
     {
         append_text(&context->writer, phrases->has_prefix);
+        /* HAS は filter_image.c の検証で operand_count が 0 に限定され、比較値を持たないためオフセットは不要である。 */
         (void)append_subject(context, instruction);
         append_text(&context->writer, phrases->has_suffix);
         return;

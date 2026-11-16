@@ -2,9 +2,11 @@
 #include "../../../../../prod/libsrc/cplat/prompt/prompt_state.h"
 #include <mock_termios.h>
 #include <mock_unistd.h>
-#include <sys/mock_select.h>
+#include <mock_poll.h>
 
 #include <errno.h>
+#include <fcntl.h>
+#include <poll.h>
 #include <mock_ioctl.h>
 #include <mock_signal.h>
 #include <mock_cplat.h>
@@ -268,16 +270,24 @@ TEST_F(promptLinuxTest, sigwinch_handler_records_pending_resize)
 TEST_F(promptLinuxTest, read_char_returns_next_byte)
 {
     // Arrange
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_unistd> mock_unistd;
 
     // Pre-Assert
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, 1U, -1))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, 1u))
         .WillOnce(
             [](const char *, int, const char *, int, void *buf, size_t) -> ssize_t
             {
                 *static_cast<unsigned char *>(buf) = static_cast<unsigned char>('A');
                 return 1;
-            }); // [Pre-Assert確認_正常系] - read() が STDIN_FILENO、1 を指定して 1 回呼び出されること。
+            }); // [Pre-Assert確認_正常系] - poll() 後に read() が STDIN_FILENO、1 を指定して 1 回呼び出されること。
                 // [Pre-Assert手順] - read() から、'A' を書き込んで 1 を返す。
 
     // Act
@@ -293,9 +303,17 @@ TEST_F(promptLinuxTest, read_char_returns_next_byte)
 TEST_F(promptLinuxTest, read_char_returns_minus1_at_eof)
 {
     // Arrange
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_unistd> mock_unistd;
 
     // Pre-Assert
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, 1U, -1))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, 1u))
         .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - read() が STDIN_FILENO、1 を指定して 1 回呼び出されること。
                               // [Pre-Assert手順] - read() から、EOF を示す 0 を返す。
@@ -314,11 +332,19 @@ TEST_F(promptLinuxTest, read_char_returns_minus1_at_eof)
 TEST_F(promptLinuxTest, read_char_reports_resize_on_interrupted_read)
 {
     // Arrange
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_unistd> mock_unistd;
 
     test_prompt_set_resize_pending(0); // [状態] - SIGWINCH 受信済みの状態にする。
 
     // Pre-Assert
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, 1U, -1))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, 1u))
         .WillOnce(Invoke(
             [](const char *, int, const char *, int, void *, size_t)
@@ -346,11 +372,20 @@ TEST_F(promptLinuxTest, read_char_reports_resize_on_interrupted_read)
 TEST_F(promptLinuxTest, read_char_retries_after_interrupt_without_resize)
 {
     // Arrange
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_unistd> mock_unistd;
 
     test_prompt_set_resize_pending(0); // [状態] - SIGWINCH を受信していない状態にする。
 
     // Pre-Assert
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, 1U, -1))
+        .Times(2)
+        .WillRepeatedly(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, 1u))
         .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)))
         .WillOnce(
@@ -375,14 +410,17 @@ TEST_F(promptLinuxTest, read_char_retries_after_interrupt_without_resize)
 TEST_F(promptLinuxTest, read_char_nb_returns_next_byte_when_available)
 {
     // Arrange
-    NiceMock<Mock_sys_select> mock_select;
+    NiceMock<Mock_poll> mock_poll;
     NiceMock<Mock_unistd> mock_unistd;
 
     // Pre-Assert
-    EXPECT_CALL(mock_select, select(_, _, _, STDIN_FILENO + 1, _, _, _, _))
-        .WillOnce(
-            Return(1)); // [Pre-Assert確認_正常系] - select() が STDIN_FILENO + 1 を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - select() から、入力ありを示す 1 を返す。
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, 1U, PROMPT_PLATFORM_SHORT_WAIT_MS))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            })); // [Pre-Assert確認_正常系] - poll() が STDIN_FILENO、1 件、50ms を指定して 1 回呼び出されること。
     EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, 1u))
         .WillOnce(
             [](const char *, int, const char *, int, void *buf, size_t) -> ssize_t
@@ -405,13 +443,11 @@ TEST_F(promptLinuxTest, read_char_nb_returns_next_byte_when_available)
 TEST_F(promptLinuxTest, read_char_nb_reports_timeout)
 {
     // Arrange
-    NiceMock<Mock_sys_select> mock_select;
+    NiceMock<Mock_poll> mock_poll;
 
     // Pre-Assert
-    EXPECT_CALL(mock_select, select(_, _, _, STDIN_FILENO + 1, _, _, _, _))
-        .WillOnce(
-            Return(0)); // [Pre-Assert確認_異常系] - select() が STDIN_FILENO + 1 を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - select() から、タイムアウトを示す 0 を返す。
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, 1U, PROMPT_PLATFORM_SHORT_WAIT_MS))
+        .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - poll() がタイムアウトを示す 0 を返す。
 
     // Act
     int actual_ret = prompt_platform_read_char_nb(&handle_); // [手順] - prompt_platform_read_char_nb() を呼び出す。
@@ -448,6 +484,151 @@ TEST_F(promptLinuxTest, columns_use_winsize_and_fallback)
     EXPECT_EQ(100U, columns); // [確認_正常系] - 100 桁を取得すること。
     EXPECT_EQ(80U, fallback); // [確認_異常系] - 失敗時は 80 桁であること。
     EXPECT_EQ(80U, zero);     // [確認_異常系] - 幅 0 では 80 桁であること。
+}
+
+namespace
+{
+
+int g_linux_test_pipe2_flags = 0;
+
+int fake_linux_test_pipe2(int fds[2], const int flags)
+{
+    g_linux_test_pipe2_flags = flags;
+    fds[0] = 40;
+    fds[1] = 41;
+    return 0;
+}
+
+} // namespace
+
+// 中止用パイプの原子的生成・書き込み・解放で stdin を閉じないことの確認
+TEST_F(promptLinuxTest, cancel_pipe_init_stop_and_dispose_never_closes_stdin)
+{
+    // Arrange
+    NiceMock<Mock_unistd> mock_unistd;
+    g_linux_test_pipe2_flags = 0;
+    test_prompt_set_pipe2_fn(fake_linux_test_pipe2);
+
+    // Pre-Assert: pipe2(O_NONBLOCK|O_CLOEXEC)、stop で 1 回 write、dispose で 2 FD のみ close
+    EXPECT_CALL(mock_unistd, write(_, _, _, 41, _, 1U)).WillOnce(Return(1));
+    EXPECT_CALL(mock_unistd, close(_, _, _, STDIN_FILENO)).Times(0);
+    EXPECT_CALL(mock_unistd, close(_, _, _, 40)).WillOnce(Return(0));
+    EXPECT_CALL(mock_unistd, close(_, _, _, 41)).WillOnce(Return(0));
+
+    // Act
+    int init_ret = prompt_platform_init_cancelable(&handle_);
+    int before_stop = prompt_platform_is_input_canceled(&handle_);
+    int stop_ret = prompt_platform_stop_input(&handle_);
+    int after_stop = prompt_platform_is_input_canceled(&handle_);
+    prompt_platform_dispose(&handle_);
+    prompt_platform_dispose(&handle_);
+    prompt_platform_dispose(NULL);
+    test_prompt_set_pipe2_fn(NULL);
+
+    // Assert
+    EXPECT_EQ(0, init_ret);
+    EXPECT_EQ(O_NONBLOCK | O_CLOEXEC, g_linux_test_pipe2_flags);
+    EXPECT_EQ(0, before_stop);
+    EXPECT_EQ(CPLAT_OK, stop_ret);
+    EXPECT_EQ(1, after_stop);
+    EXPECT_EQ(0, handle_.cancel_pipe_active);
+}
+
+// POLLHUP / POLLERR / POLLNVAL / cancel パイプ / 中止要求の poll 境界を確認する
+TEST_F(promptLinuxTest, poll_distinguishes_cancel_pipe_hup_and_errors)
+{
+    // Arrange
+    NiceMock<Mock_poll> mock_poll;
+    NiceMock<Mock_unistd> mock_unistd;
+    handle_.cancel_pipe[0] = 50;
+    handle_.cancel_pipe[1] = 51;
+    handle_.cancel_pipe_active = 1;
+
+    // Pre-Assert: POLLIN|POLLHUP -> 残存バイト読取後、POLLHUP 単体で EOF、その後パイプ通知で CANCELED
+    EXPECT_CALL(mock_poll, poll(_, _, _, _, 2U, -1))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN | POLLHUP;
+                return 1;
+            }))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLHUP;
+                return 1;
+            }))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[1].revents = POLLIN;
+                return 1;
+            }));
+    EXPECT_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, 1U))
+        .WillOnce(
+            [](const char *, int, const char *, int, void *buf, size_t) -> ssize_t
+            {
+                *static_cast<unsigned char *>(buf) = 'Z';
+                return 1;
+            });
+
+    // Act / Assert
+    EXPECT_EQ('Z', prompt_platform_read_char(&handle_));
+    EXPECT_EQ(PROMPT_PLATFORM_EOF, prompt_platform_read_char(&handle_));
+    EXPECT_EQ(PROMPT_PLATFORM_CANCELED, prompt_platform_read_char(&handle_));
+}
+
+// 非 TTY の共通行入力が CRLF 除去、空行、EOF 前部分行、超過後の残余読取を処理できることの確認
+TEST_F(promptLinuxTest, read_line_matches_crlf_empty_eof_and_truncation_remainder)
+{
+    // Arrange
+    NiceMock<Mock_poll> mock_poll;
+    NiceMock<Mock_unistd> mock_unistd;
+    handle_.cancel_pipe[0] = 60;
+    handle_.cancel_pipe[1] = 61;
+    handle_.cancel_pipe_active = 1;
+
+    static const char kStream[] = "ab\r\n\ncdefg\nxy";
+    size_t pos = 0U;
+
+    ON_CALL(mock_poll, poll(_, _, _, _, 2U, -1))
+        .WillByDefault(Invoke(
+            [](const char *, int, const char *, struct pollfd *fds, nfds_t, int)
+            {
+                fds[0].revents = POLLIN;
+                return 1;
+            }));
+    ON_CALL(mock_unistd, read(_, _, _, STDIN_FILENO, _, 1U))
+        .WillByDefault(Invoke(
+            [&pos](const char *, int, const char *, int, void *out, size_t) -> ssize_t
+            {
+                if (pos >= sizeof(kStream) - 1U)
+                {
+                    return 0;
+                }
+                *static_cast<unsigned char *>(out) = static_cast<unsigned char>(kStream[pos++]);
+                return 1;
+            }));
+
+    char buf[5] = {};
+
+    // Act / Assert
+    EXPECT_EQ(CPLAT_OK, prompt_platform_read_line(&handle_, buf, sizeof(buf)));
+    EXPECT_STREQ("ab", buf);
+
+    EXPECT_EQ(CPLAT_OK, prompt_platform_read_line(&handle_, buf, sizeof(buf)));
+    EXPECT_STREQ("", buf);
+
+    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, prompt_platform_read_line(&handle_, buf, sizeof(buf)));
+    EXPECT_STREQ("", buf);
+
+    EXPECT_EQ(CPLAT_OK, prompt_platform_read_line(&handle_, buf, sizeof(buf)));
+    EXPECT_STREQ("g", buf);
+
+    EXPECT_EQ(CPLAT_OK, prompt_platform_read_line(&handle_, buf, sizeof(buf)));
+    EXPECT_STREQ("xy", buf);
+
+    EXPECT_EQ(CPLAT_ERR_EOF, prompt_platform_read_line(&handle_, buf, sizeof(buf)));
 }
 
 #endif /* PLATFORM_LINUX */

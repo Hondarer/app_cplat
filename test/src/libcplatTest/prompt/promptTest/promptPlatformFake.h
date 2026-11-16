@@ -26,4 +26,7 @@ void promptFakeSetColumns(size_t columns);
 
 void promptFakeSetFailures(int enter_result, int leave_result);
 
+/* 非 TTY 行入力を中止結果で返すかを設定する。 */
+void promptFakeSetLineCanceled(int canceled);
+
 #endif /* PROMPT_PLATFORM_FAKE_H */

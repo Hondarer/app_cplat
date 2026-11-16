@@ -40,7 +40,9 @@ short-title: "prompt"
 - `cplat_prompt_options` と `cplat_pinned_prompt_options.input` は、履歴数、入力バッファー初期容量、入力バッファー最大容量を指定します。
 - `history_max == 0` は `CPLAT_PROMPT_HISTORY_DEFAULT` を使います。
 - `input_max_bytes == 0` は `CPLAT_PROMPT_INPUT_BYTES_DEFAULT` を使います。
-- `cplat_pinned_prompt_readline()` は Enter で `CPLAT_OK`、EOF で `CPLAT_ERR_EOF`、Ctrl+C で `CPLAT_ERR_CANCELED` を返します。
+- `cplat_pinned_prompt_readline()` は Enter で `CPLAT_OK`、EOF で `CPLAT_ERR_EOF`、Ctrl+C または `cplat_pinned_prompt_stop_input()` による中止で `CPLAT_ERR_CANCELED` を返します (端末復元に失敗した場合は `CPLAT_ERR_UNKNOWN` を優先します)。
+- `cplat_pinned_prompt_stop_input()` は標準入力を閉じずに入力待機を終了させ、ハンドル破棄まで入力中止状態を保持します。描画用 mutex を取得しないため別スレッドの出力中も相互に待機せず、Ctrl+C と異なりハンドル再利用はできません。非同期シグナル セーフではないため、シグナル ハンドラーから直接呼び出さず、`cplat_pinned_prompt_dispose()` とは並行実行しないでください。
+- 標準入力はプロンプト API が専有します。`scanf`・`fgets`・`read` などを同じ標準入力へ混用せず、`cplat_prompt` と `cplat_pinned_prompt` の入力関数呼び出しはプロセス全体で直列化してください。
 - フォールバック時に入力行が呼び出し側バッファーに収まらない場合は `CPLAT_ERR_BUFFER_TOO_SMALL` を返し、バッファーは空文字列になります。行の残りは次の呼び出しで取得できます。
 - 履歴リングは `cplat_pinned_prompt_readline()` / `cplat_pinned_prompt_readline_fmt()` の呼び出し元ごとに分かれます。
 - `cplat_pinned_prompt_write()` と `cplat_pinned_prompt_printf()` は、入力中でも呼び出せます。
@@ -48,7 +50,7 @@ short-title: "prompt"
 - API から出力する文字列では ANSI CSI SGR (`ESC [ ... m`) による着色を利用できます。
 - ステータス行の配置計算では ANSI CSI SGR を表示幅 0 として扱います。
 - 描画操作は pinned prompt ハンドル内の mutex で直列化します。
-- 非 TTY では固定描画を行わず、入力は `cplat_fgets`、出力は `fwrite` 相当に戻ります。
+- 非 TTY では固定描画を行わず、入力は共通の行入力 (Linux では待機・1 バイト読み取りを共有し CRT 先読みバッファーを使わず、Windows では CRT 行入力)、出力は `fwrite` 相当に戻ります。
 - Windows では利用側が `activeCodePage=UTF-8` マニフェストを設定し、`cplat_console_init()` を呼ぶ前提です。ただし、呼び忘れても問題が起きにくいように create 時にも防御的に呼び出します。
 - この API は試験的 API です。機能仕様の見直しに合わせて関数、型、挙動を変更する可能性があります。
 

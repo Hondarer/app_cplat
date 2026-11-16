@@ -387,7 +387,7 @@ static int create_data_file(const char *path, size_t size)
  *  @param[in,out]  state  乱数の状態。0 以外であること。
  *  @return         進めた後の状態を返します。
  *
- *  シフト量 13 / 7 / 17 は Marsaglia の原典の 64 ビット版に従います。\n
+ *  シフト量 13 / 7 / 17 は Marsaglia の原典 (Xorshift RNGs、印刷ページ 4 の xor64) に従います。\n
  *  see: https://www.jstatsoft.org/article/view/v008i14
  */
 static uint64_t xorshift64_next(uint64_t *state)
@@ -615,6 +615,7 @@ static int run_size(const char *dir, size_t size, const char *api_list, const ch
     order = create_random_order(record_count, (size_t)BENCH_RANDOM_TOUCH_MAX);
     if (order == NULL)
     {
+        /* すでに -1 を返す失敗経路の後始末であり、削除失敗によって正常測定扱いにはならない。 */
         (void)cplat_remove(path, NULL);
         return -1;
     }

@@ -1513,6 +1513,7 @@ int cplat_tracer_write_at(cplat_tracer *handle, const cplat_trace_level level, c
         return CPLAT_ERR_UNKNOWN;
     }
 
+    /* tracer.h の契約により不正な明示 timestamp は CPLAT_ERR_UNKNOWN を返すため、出力先なしでも write_dual() 側の検証へ進める。 */
     if (has_output_target(handle, level) == 0 && timestamp == NULL)
     {
         config_unlock_shared(handle);
@@ -1555,6 +1556,7 @@ int cplat_tracer_vwritef_at(cplat_tracer *handle, const cplat_trace_level level,
         return CPLAT_ERR_UNKNOWN;
     }
 
+    /* tracer.h の契約により不正な明示 timestamp は CPLAT_ERR_UNKNOWN を返すため、出力先なしでも write_dual() 側の検証へ進める。 */
     if (has_output_target(handle, level) == 0 && timestamp == NULL)
     {
         config_unlock_shared(handle);
@@ -1751,6 +1753,7 @@ int cplat_tracer_write_hex_at(cplat_tracer *handle, const cplat_trace_level leve
         return CPLAT_ERR_UNKNOWN;
     }
 
+    /* tracer.h の契約により不正な明示 timestamp は CPLAT_ERR_UNKNOWN を返すため、出力先なしでも hex_write_impl() 経由の検証へ進める。 */
     if (has_output_target(handle, level) == 0 && timestamp == NULL)
     {
         config_unlock_shared(handle);
@@ -1781,6 +1784,7 @@ int cplat_tracer_vwrite_hexf_at(cplat_tracer *handle, const cplat_trace_level le
         return CPLAT_ERR_UNKNOWN;
     }
 
+    /* tracer.h の契約により不正な明示 timestamp は CPLAT_ERR_UNKNOWN を返すため、出力先なしでも hex_write_impl() 経由の検証へ進める。 */
     if (has_output_target(handle, level) == 0 && timestamp == NULL)
     {
         config_unlock_shared(handle);

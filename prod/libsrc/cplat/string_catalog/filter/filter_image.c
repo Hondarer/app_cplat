@@ -897,11 +897,16 @@ static void writer_append_escaped_byte(text_writer *writer, const unsigned char 
     }
     else if ((byte < 0x20U) || (byte == 0x7FU))
     {
+        /* 0x20 未満または 0x7F は "\\xHH" と終端 NUL で固定 5 [byte] となり、8 [byte] 配列に収まる。 */
         (void)snprintf(buffer, sizeof(buffer), "\\x%02X", (unsigned int)byte);
         writer_append(writer, buffer, 4U);
     }
     else
     {
+        /*
+         * read_quoted_byte は 0x80 以上の高位バイトもそのまま読み取る。
+         * 引用符と制御文字だけを構文上エスケープし、UTF-8 のバイト列は可読表記のまま書き出す。
+         */
         buffer[0] = (char)byte;
         writer_append(writer, buffer, 1U);
     }
@@ -914,6 +919,12 @@ static void write_constant(text_writer *writer, const string_catalog_filter_cons
     switch (constant->header.kind)
     {
     case STRING_CATALOG_FILTER_CONSTANT_KIND_INTEGER:
+        /*
+         * 整数のみの固定書式であり、16 進は "0x" + 最大 16 桁 + NUL で 19 [byte]、
+         * 符号付き 10 進は "-" + 最大 20 桁 + NUL で 22 [byte]、符号なし 10 進は最大 21 [byte] のため、
+         * 64 [byte] 配列に収まり、文字列・ワイド文字変換の失敗も起きない。
+         * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/snprintf-snprintf-snprintf-l-snwprintf-snwprintf-l
+         */
         if ((constant->header.flags & STRING_CATALOG_FILTER_CONSTANT_FLAG_HEXADECIMAL) != 0U)
         {
             (void)snprintf(buffer, sizeof(buffer), "0x%" PRIX64, constant->magnitude);
@@ -1057,6 +1068,11 @@ static void write_predicate(decompile_context *context, const string_catalog_fil
         offset = constant.next_offset;
         break;
     case STRING_CATALOG_FILTER_FIELD_ARGUMENT_INDEX:
+        /*
+         * argument は uint8_t (最大 255、検証上限は CPLAT_STRING_CATALOG_ARGUMENT_MAX 未満) のため
+         * "arg[255]" と終端 NUL でも 9 [byte] であり、32 [byte] 配列に収まる。
+         * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/snprintf-snprintf-snprintf-l-snwprintf-snwprintf-l
+         */
         (void)snprintf(buffer, sizeof(buffer), "arg[%u]", (unsigned int)instruction->argument);
         writer_append_text(&context->writer, buffer);
         break;

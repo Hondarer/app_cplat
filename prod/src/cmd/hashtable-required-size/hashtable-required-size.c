@@ -162,7 +162,7 @@ int main(int argc, char **argv)
         config.timestamp_scope = CPLAT_HASHTABLE_TIMESTAMP_SCOPE_TABLE;
     }
 
-    /* 構成検証を通過する有効な最小寿命 (2) を設定する。 */
+    /* lifetime は削除済みエントリの寿命値であり管理領域・データ領域のサイズ計算には使われないため、構成検査を通す最小の有効値 (2) を設定する。 */
     config.lifetime = 2;
 
     /* 管理領域とデータ領域の必要バイト数を計算する。 */

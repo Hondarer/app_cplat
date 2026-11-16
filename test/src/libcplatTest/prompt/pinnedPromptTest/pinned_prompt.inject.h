@@ -39,7 +39,8 @@ extern "C"
         TEST_PINNED_PROMPT_KEY_RESIZE,
         TEST_PINNED_PROMPT_KEY_UNKNOWN,
         TEST_PINNED_PROMPT_KEY_ERROR,
-        TEST_PINNED_PROMPT_KEY_EOF
+        TEST_PINNED_PROMPT_KEY_EOF,
+        TEST_PINNED_PROMPT_KEY_CANCELED
     };
 
     /* 端末入力のキー分類へ直接アクセスする。 */
@@ -76,6 +77,8 @@ extern "C"
     extern void test_pinned_prompt_set_input_limits(cplat_pinned_prompt *screen, size_t history_max,
                                                     size_t input_max_bytes);
     extern void test_pinned_prompt_lock_and_unlock(cplat_pinned_prompt *screen);
+    extern void test_pinned_prompt_lock(cplat_pinned_prompt *screen);
+    extern void test_pinned_prompt_unlock(cplat_pinned_prompt *screen);
     extern int test_pinned_prompt_set_prompt(cplat_pinned_prompt *screen, const char *prompt_string);
     extern void test_pinned_prompt_adjust_view(cplat_pinned_prompt *screen);
     extern void test_pinned_prompt_layout(cplat_pinned_prompt *screen, int *prompt_row, int *prompt_separator_row,
@@ -127,6 +130,9 @@ extern "C"
     /* 標準入出力の TTY 判定へ直接アクセスする。 */
     extern int test_pinned_prompt_platform_is_tty(void);
 
+    /* 全履歴コンテキストに登録された履歴項目の総数を取得する。 */
+    extern int test_pinned_prompt_history_entry_count(const cplat_pinned_prompt *screen);
+
 #if defined(PLATFORM_LINUX)
     /* Linux プラットフォーム層の static 状態をテスト開始状態へ戻す。 */
     extern void test_pinned_prompt_reset_platform_state(void);
@@ -140,6 +146,10 @@ extern "C"
     /* Linux プラットフォーム分岐の状態を個別に設定、呼び出す。 */
     extern void test_pinned_prompt_set_sigwinch_installed(int installed);
     extern void test_pinned_prompt_raise_resize_handler(void);
+
+    /* テスト用に pipe2 呼び出しを差し替える。NULL を渡すと既定の pipe2 へ戻る。 */
+    typedef int (*test_pinned_prompt_pipe2_fn)(int fds[2], int flags);
+    extern void test_pinned_prompt_set_pipe2_fn(test_pinned_prompt_pipe2_fn fn);
 #endif /* PLATFORM_LINUX */
 
 #ifdef __cplusplus

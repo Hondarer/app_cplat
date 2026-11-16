@@ -9,7 +9,11 @@
  *  端末の最下部に 1 行の入力プロンプトを固定し、アプリケーションの出力をその上へ表示します。
  *  本 API は実験段階であり、コマンド ライン操作モデルの改良に伴って変更される場合があります。
  *  TTY でない場合、または raw モードへの移行に失敗し変更済みの端末設定とシグナル ハンドラーを
- *  復元できた場合は @ref cplat_fgets にフォールバックします。
+ *  復元できた場合は、画面制御を行わない共通の行入力へフォールバックします。\n
+ *  標準入力の端末設定・Linux の SIGWINCH ハンドラー・標準入力からの読み取りはプロセス全体で共有し、
+ *  プロンプト API が標準入力を専有します。`scanf`、`fgets`、`read` などを同じ標準入力へ混用せず、
+ *  通常プロンプトと固定プロンプトの入力関数をプロセス全体で直列化してください。\n
+ *  入力待ちの中止は、標準入力を閉じずに cplat_pinned_prompt_stop_input() から要求できます。
  *
  *  @copyright      Copyright (C) Tetsuo Honda. 2026. All rights reserved.
  *
@@ -115,8 +119,8 @@ extern "C"
     /**
      *  @brief          固定プロンプト ハンドルを生成します。
      *  @param[in]      options  生成オプションです。NULL の場合は既定値を使用します。
-     *  @return         成功時は生成したハンドルを返します。メモリまたは同期オブジェクトを確保できない場合は
-     *                  NULL を返します。
+     *  @return         成功時は生成したハンドルを返します。メモリ、同期オブジェクト、または入力中止通知資源を
+     *                  確保できない場合は NULL を返します。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
@@ -139,7 +143,8 @@ extern "C"
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
-     *  解放対象の @p screen を他スレッドが使用していないことを呼び出し側で保証してください。
+     *  解放対象の @p screen に対する読み取りと cplat_pinned_prompt_stop_input() を含むすべての操作が
+     *  完了した後に呼び出し、他スレッドが同時に使用していないことを呼び出し側で保証してください。
      */
     CPLAT_EXPORT void CPLAT_API cplat_pinned_prompt_dispose(cplat_pinned_prompt *screen);
 
@@ -156,20 +161,25 @@ extern "C"
  *  端末サイズの取得に成功した場合は幅と高さを独立に判定し、0 以下の幅は 80 列、
  *  0 以下の高さは 24 行を既定値とします。サイズ取得自体に失敗した場合は 80 列・24 行とします。\n
  *  非 TTY の場合、または raw モードへの移行に失敗し変更済みの端末設定と Linux の SIGWINCH
- *  ハンドラーを復元できた場合は、@ref cplat_fgets の行入力へフォールバックします。\n
+ *  ハンドラーを復元できた場合は、画面制御を行わない共通の行入力へフォールバックします。\n
+ *  Linux では非 TTY の行入力も端末待機と同じ入力経路で 1 バイトずつ読み取るため、CRT の先読みバッファーと競合しません。\n
  *  フォールバック時に入力行が @p buf に収まらない場合は @ref CPLAT_ERR_BUFFER_TOO_SMALL を返し、
  *  @p buf は空文字列になります。行の残りは次の呼び出しで取得できます。\n
  *  OS の入力エラーは @ref CPLAT_ERR_EOF と区別して @ref CPLAT_ERR_UNKNOWN を返します。\n
  *  端末設定または SIGWINCH ハンドラーの復元に失敗した場合は、行入力へフォールバックせず、
  *  入力結果より優先して @ref CPLAT_ERR_UNKNOWN を返します。\n
- *  復元できなかった項目は保持し、次回の入力開始前または cplat_pinned_prompt_dispose() 時に再試行します。
+ *  復元できなかった項目は保持し、次回の入力開始前または cplat_pinned_prompt_dispose() 時に再試行します。\n
+ *  cplat_pinned_prompt_stop_input() により入力が中止されている場合は、呼び出し元の @p buf を空文字列にし、
+ *  編集内容を履歴へ登録せずに @ref CPLAT_ERR_CANCELED を返します (端末復元失敗時は @ref CPLAT_ERR_UNKNOWN を優先)。
  *
  *  @par            スレッド セーフ
  *  本マクロはスレッド セーフではありません。\n
- *  標準入力の端末設定と、Linux の SIGWINCH のハンドラーは、プロセス全体で共有します。\n
+ *  標準入力はプロンプト API が専有します。端末設定・Linux の SIGWINCH のハンドラー・標準入力の読み取りは
+ *  プロセス全体で共有するため、同じ標準入力へ `scanf`・`fgets`・`read` などを混用しないでください。\n
  *  同一プロセス内で通常プロンプトと固定プロンプトは同時に有効になりません。\n
  *  そのため、異なるハンドルへの呼び出しも含め、入力を受け付ける関数 (cplat_prompt の入力関数を含む) の呼び出しを、
- *  プロセス全体で直列化してください。
+ *  プロセス全体で直列化してください。\n
+ *  ただし同じ @p screen への cplat_pinned_prompt_stop_input() は、入力中の別スレッドから呼び出せます。
  */
 #define cplat_pinned_prompt_readline(screen, buf, buf_size, prompt_str) \
     cplat_pinned_prompt_readline_at((screen), (buf), (buf_size), (prompt_str), __FILE__, __LINE__)
@@ -188,20 +198,25 @@ extern "C"
  *  端末サイズの取得に成功した場合は幅と高さを独立に判定し、0 以下の幅は 80 列、
  *  0 以下の高さは 24 行を既定値とします。サイズ取得自体に失敗した場合は 80 列・24 行とします。\n
  *  非 TTY の場合、または raw モードへの移行に失敗し変更済みの端末設定と Linux の SIGWINCH
- *  ハンドラーを復元できた場合は、@ref cplat_fgets の行入力へフォールバックします。\n
+ *  ハンドラーを復元できた場合は、画面制御を行わない共通の行入力へフォールバックします。\n
+ *  Linux では非 TTY の行入力も端末待機と同じ入力経路で 1 バイトずつ読み取るため、CRT の先読みバッファーと競合しません。\n
  *  フォールバック時に入力行が @p buf に収まらない場合は @ref CPLAT_ERR_BUFFER_TOO_SMALL を返し、
  *  @p buf は空文字列になります。行の残りは次の呼び出しで取得できます。\n
  *  OS の入力エラーは @ref CPLAT_ERR_EOF と区別して @ref CPLAT_ERR_UNKNOWN を返します。\n
  *  端末設定または SIGWINCH ハンドラーの復元に失敗した場合は、行入力へフォールバックせず、
  *  入力結果より優先して @ref CPLAT_ERR_UNKNOWN を返します。\n
- *  復元できなかった項目は保持し、次回の入力開始前または cplat_pinned_prompt_dispose() 時に再試行します。
+ *  復元できなかった項目は保持し、次回の入力開始前または cplat_pinned_prompt_dispose() 時に再試行します。\n
+ *  cplat_pinned_prompt_stop_input() により入力が中止されている場合は、呼び出し元の @p buf を空文字列にし、
+ *  編集内容を履歴へ登録せずに @ref CPLAT_ERR_CANCELED を返します (端末復元失敗時は @ref CPLAT_ERR_UNKNOWN を優先)。
  *
  *  @par            スレッド セーフ
  *  本マクロはスレッド セーフではありません。\n
- *  標準入力の端末設定と、Linux の SIGWINCH のハンドラーは、プロセス全体で共有します。\n
+ *  標準入力はプロンプト API が専有します。端末設定・Linux の SIGWINCH のハンドラー・標準入力の読み取りは
+ *  プロセス全体で共有するため、同じ標準入力へ `scanf`・`fgets`・`read` などを混用しないでください。\n
  *  同一プロセス内で通常プロンプトと固定プロンプトは同時に有効になりません。\n
  *  そのため、異なるハンドルへの呼び出しも含め、入力を受け付ける関数 (cplat_prompt の入力関数を含む) の呼び出しを、
- *  プロセス全体で直列化してください。
+ *  プロセス全体で直列化してください。\n
+ *  ただし同じ @p screen への cplat_pinned_prompt_stop_input() は、入力中の別スレッドから呼び出せます。
  */
 #define cplat_pinned_prompt_readline_fmt(screen, buf, buf_size, fmt, ...) \
     cplat_pinned_prompt_readline_fmt_at((screen), (buf), (buf_size), __FILE__, __LINE__, (fmt), ##__VA_ARGS__)
@@ -219,7 +234,7 @@ extern "C"
  *                  初期値のためのメモリを確保できない場合は @ref CPLAT_ERR_OUT_OF_MEMORY を返します。
  *
  *  非 TTY の場合、または raw モードへの移行に失敗し変更済みの端末設定と Linux の SIGWINCH
- *  ハンドラーを復元できた場合は、初期値を適用せず @ref cplat_fgets の行入力へフォールバックします。\n
+ *  ハンドラーを復元できた場合は、初期値を適用せず画面制御を行わない共通の行入力へフォールバックします。\n
  *  OS の入力エラーは @ref CPLAT_ERR_EOF と区別して @ref CPLAT_ERR_UNKNOWN を返します。\n
  *  端末設定または SIGWINCH ハンドラーの復元に失敗した場合は、行入力へフォールバックせず、
  *  入力結果より優先して @ref CPLAT_ERR_UNKNOWN を返します。\n
@@ -228,10 +243,12 @@ extern "C"
  *
  *  @par            スレッド セーフ
  *  本マクロはスレッド セーフではありません。\n
- *  標準入力の端末設定と、Linux の SIGWINCH のハンドラーは、プロセス全体で共有します。\n
+ *  標準入力はプロンプト API が専有します。端末設定・Linux の SIGWINCH のハンドラー・標準入力の読み取りは
+ *  プロセス全体で共有するため、同じ標準入力へ `scanf`・`fgets`・`read` などを混用しないでください。\n
  *  同一プロセス内で通常プロンプトと固定プロンプトは同時に有効になりません。\n
  *  そのため、異なるハンドルへの呼び出しも含め、入力を受け付ける関数 (cplat_prompt の入力関数を含む) の呼び出しを、
- *  プロセス全体で直列化してください。
+ *  プロセス全体で直列化してください。\n
+ *  ただし同じ @p screen への cplat_pinned_prompt_stop_input() は、入力中の別スレッドから呼び出せます。
  */
 #define cplat_pinned_prompt_readline_with_initial(screen, buf, buf_size, prompt_str, initial_text) \
     cplat_pinned_prompt_readline_with_initial_at((screen), (buf), (buf_size), (prompt_str), (initial_text), __FILE__, \
@@ -255,20 +272,25 @@ extern "C"
      *  端末サイズの取得に成功した場合は幅と高さを独立に判定し、0 以下の幅は 80 列、
      *  0 以下の高さは 24 行を既定値とします。サイズ取得自体に失敗した場合は 80 列・24 行とします。\n
      *  非 TTY の場合、または raw モードへの移行に失敗し変更済みの端末設定と Linux の SIGWINCH
-     *  ハンドラーを復元できた場合は、@ref cplat_fgets の行入力へフォールバックします。\n
+     *  ハンドラーを復元できた場合は、画面制御を行わない共通の行入力へフォールバックします。\n
+     *  Linux では非 TTY の行入力も端末待機と同じ入力経路で 1 バイトずつ読み取るため、CRT の先読みバッファーと競合しません。\n
      *  フォールバック時に入力行が @p buf に収まらない場合は @ref CPLAT_ERR_BUFFER_TOO_SMALL を返し、
      *  @p buf は空文字列になります。行の残りは次の呼び出しで取得できます。\n
      *  OS の入力エラーは @ref CPLAT_ERR_EOF と区別して @ref CPLAT_ERR_UNKNOWN を返します。\n
      *  端末設定または SIGWINCH ハンドラーの復元に失敗した場合は、行入力へフォールバックせず、
      *  入力結果より優先して @ref CPLAT_ERR_UNKNOWN を返します。\n
-     *  復元できなかった項目は保持し、次回の入力開始前または cplat_pinned_prompt_dispose() 時に再試行します。
+     *  復元できなかった項目は保持し、次回の入力開始前または cplat_pinned_prompt_dispose() 時に再試行します。\n
+     *  cplat_pinned_prompt_stop_input() により入力が中止されている場合は、呼び出し元の @p buf を空文字列にし、
+     *  編集内容を履歴へ登録せずに @ref CPLAT_ERR_CANCELED を返します (端末復元失敗時は @ref CPLAT_ERR_UNKNOWN を優先)。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
-     *  標準入力の端末設定と、Linux の SIGWINCH のハンドラーは、プロセス全体で共有します。\n
+     *  標準入力はプロンプト API が専有します。端末設定・Linux の SIGWINCH のハンドラー・標準入力の読み取りは
+     *  プロセス全体で共有するため、同じ標準入力へ `scanf`・`fgets`・`read` などを混用しないでください。\n
      *  同一プロセス内で通常プロンプトと固定プロンプトは同時に有効になりません。\n
      *  そのため、異なるハンドルへの呼び出しも含め、
-     *  入力を受け付ける関数 (cplat_prompt の入力関数を含む) の呼び出しを、プロセス全体で直列化してください。
+     *  入力を受け付ける関数 (cplat_prompt の入力関数を含む) の呼び出しを、プロセス全体で直列化してください。\n
+     *  ただし同じ @p screen への cplat_pinned_prompt_stop_input() は、入力中の別スレッドから呼び出せます。
      */
     CPLAT_EXPORT int CPLAT_API cplat_pinned_prompt_readline_at(cplat_pinned_prompt *screen, char *buf, size_t buf_size,
                                                                const char *prompt_str, const char *file, int line);
@@ -303,7 +325,7 @@ extern "C"
      *  端末サイズの取得に成功した場合は幅と高さを独立に判定し、0 以下の幅は 80 列、
      *  0 以下の高さは 24 行を既定値とします。サイズ取得自体に失敗した場合は 80 列・24 行とします。\n
      *  非 TTY の場合、または raw モードへの移行に失敗し変更済みの端末設定と Linux の SIGWINCH
-     *  ハンドラーを復元できた場合は、cplat_pinned_prompt_readline_at() と同じく @ref cplat_fgets へ
+     *  ハンドラーを復元できた場合は、cplat_pinned_prompt_readline_at() と同じく共通の行入力へ
      *  フォールバックし、初期値を使用しません。入力側が行全体を与えるためです。\n
      *  フォールバック時に入力行が @p buf に収まらない場合は @ref CPLAT_ERR_BUFFER_TOO_SMALL を返し、
      *  @p buf は空文字列になります。行の残りは次の呼び出しで取得できます。\n
@@ -314,10 +336,12 @@ extern "C"
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
-     *  標準入力の端末設定と、Linux の SIGWINCH のハンドラーは、プロセス全体で共有します。\n
+     *  標準入力はプロンプト API が専有します。端末設定・Linux の SIGWINCH のハンドラー・標準入力の読み取りは
+     *  プロセス全体で共有するため、同じ標準入力へ `scanf`・`fgets`・`read` などを混用しないでください。\n
      *  同一プロセス内で通常プロンプトと固定プロンプトは同時に有効になりません。\n
      *  そのため、異なるハンドルへの呼び出しも含め、
-     *  入力を受け付ける関数 (cplat_prompt の入力関数を含む) の呼び出しを、プロセス全体で直列化してください。
+     *  入力を受け付ける関数 (cplat_prompt の入力関数を含む) の呼び出しを、プロセス全体で直列化してください。\n
+     *  ただし同じ @p screen への cplat_pinned_prompt_stop_input() は、入力中の別スレッドから呼び出せます。
      */
     CPLAT_EXPORT int CPLAT_API cplat_pinned_prompt_readline_with_initial_at(cplat_pinned_prompt *screen, char *buf,
                                                                             size_t buf_size, const char *prompt_str,
@@ -343,20 +367,25 @@ extern "C"
      *  端末サイズの取得に成功した場合は幅と高さを独立に判定し、0 以下の幅は 80 列、
      *  0 以下の高さは 24 行を既定値とします。サイズ取得自体に失敗した場合は 80 列・24 行とします。\n
      *  非 TTY の場合、または raw モードへの移行に失敗し変更済みの端末設定と Linux の SIGWINCH
-     *  ハンドラーを復元できた場合は、@ref cplat_fgets の行入力へフォールバックします。\n
+     *  ハンドラーを復元できた場合は、画面制御を行わない共通の行入力へフォールバックします。\n
+     *  Linux では非 TTY の行入力も端末待機と同じ入力経路で 1 バイトずつ読み取るため、CRT の先読みバッファーと競合しません。\n
      *  フォールバック時に入力行が @p buf に収まらない場合は @ref CPLAT_ERR_BUFFER_TOO_SMALL を返し、
      *  @p buf は空文字列になります。行の残りは次の呼び出しで取得できます。\n
      *  OS の入力エラーは @ref CPLAT_ERR_EOF と区別して @ref CPLAT_ERR_UNKNOWN を返します。\n
      *  端末設定または SIGWINCH ハンドラーの復元に失敗した場合は、行入力へフォールバックせず、
      *  入力結果より優先して @ref CPLAT_ERR_UNKNOWN を返します。\n
-     *  復元できなかった項目は保持し、次回の入力開始前または cplat_pinned_prompt_dispose() 時に再試行します。
+     *  復元できなかった項目は保持し、次回の入力開始前または cplat_pinned_prompt_dispose() 時に再試行します。\n
+     *  cplat_pinned_prompt_stop_input() により入力が中止されている場合は、呼び出し元の @p buf を空文字列にし、
+     *  編集内容を履歴へ登録せずに @ref CPLAT_ERR_CANCELED を返します (端末復元失敗時は @ref CPLAT_ERR_UNKNOWN を優先)。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフではありません。\n
-     *  標準入力の端末設定と、Linux の SIGWINCH のハンドラーは、プロセス全体で共有します。\n
+     *  標準入力はプロンプト API が専有します。端末設定・Linux の SIGWINCH のハンドラー・標準入力の読み取りは
+     *  プロセス全体で共有するため、同じ標準入力へ `scanf`・`fgets`・`read` などを混用しないでください。\n
      *  同一プロセス内で通常プロンプトと固定プロンプトは同時に有効になりません。\n
      *  そのため、異なるハンドルへの呼び出しも含め、
-     *  入力を受け付ける関数 (cplat_prompt の入力関数を含む) の呼び出しを、プロセス全体で直列化してください。
+     *  入力を受け付ける関数 (cplat_prompt の入力関数を含む) の呼び出しを、プロセス全体で直列化してください。\n
+     *  ただし同じ @p screen への cplat_pinned_prompt_stop_input() は、入力中の別スレッドから呼び出せます。
      */
     CPLAT_EXPORT int CPLAT_API cplat_pinned_prompt_readline_fmt_at(cplat_pinned_prompt *screen, char *buf,
                                                                    size_t buf_size, const char *file, int line,
@@ -440,6 +469,29 @@ extern "C"
                                                               cplat_pinned_prompt_status_position position,
                                                               cplat_pinned_prompt_status_align align,
                                                               const char *content);
+
+    /**
+     *  @brief          固定プロンプトの入力待機を中止し、ハンドル破棄まで入力中止状態を維持します。
+     *  @param[in,out]  screen  固定プロンプト ハンドルです。
+     *  @retval         CPLAT_OK                    中止要求を受け付けました。すでに中止済みの場合も返します。
+     *  @retval         CPLAT_ERR_INVALID_ARGUMENT  @p screen が NULL です。
+     *  @retval         CPLAT_ERR_UNKNOWN           OS の中止通知操作に失敗しました。
+     *
+     *  標準入力のファイル記述子やハンドルを閉じずに入力待機を終了させます。\n
+     *  入力中止状態は cplat_pinned_prompt_dispose() でハンドルを破棄するまで持続し、最初の読み取り前に
+     *  呼び出された場合や、繰り返し呼び出された場合、さらに後続の有効な引数の読み取り呼び出しに対しても
+     *  同じ中止状態を維持して @ref CPLAT_ERR_CANCELED を返します。\n
+     *  その回の入力だけを中断してハンドルを再利用できる利用者の Ctrl+C 操作とは異なり、再び入力を
+     *  受け付けるには新しいハンドルを作成する必要があります。
+     *
+     *  @par            スレッド セーフ
+     *  本関数は cplat_pinned_prompt_readline() 等の入力関数を実行中の別スレッドから呼び出せます。\n
+     *  内部で描画用ミューテックスを取得しないため、cplat_pinned_prompt_write() 等の出力操作や再描画中でも
+     *  出力側とデッドロックしません。\n
+     *  非同期シグナル セーフではないため、シグナル ハンドラーから直接呼び出さないでください。\n
+     *  cplat_pinned_prompt_dispose() との同時呼び出しには対応しません。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_pinned_prompt_stop_input(cplat_pinned_prompt *screen);
 
 #ifdef __cplusplus
 }

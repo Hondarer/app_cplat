@@ -200,6 +200,12 @@ static void init_executable_path_cache(void)
         return;
     }
 
+    /*
+     * イベント表示側 (Event Viewer 等) は登録されたパスを LoadLibraryEx() で読み込む。
+     * LoadLibraryExW() はパス区切りとして '\' の使用を想定するため、cplat 内部共通の '/' を '\' へ戻す。
+     * see: https://learn.microsoft.com/en-us/windows/win32/eventlog/message-files
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw
+     */
     for (p = path; *p != '\0'; p++)
     {
         if (*p == '/')
@@ -545,8 +551,10 @@ int cplat_eventlog_register_source(const char *source_name, const char *message_
             wchar_t *p;
 
             /*
-             * Event Log サービスは LoadLibraryEx でメッセージ ファイルを読み込むため、
-             * パス セパレーターを Windows 慣例の '\\' に変換する。
+             * イベント表示側 (Event Viewer 等) が LoadLibraryEx() でメッセージ ファイルを読み込む。
+             * LoadLibraryExW() のパス仕様に合わせ、区切り文字の '/' を '\' へ変換する。
+             * see: https://learn.microsoft.com/en-us/windows/win32/eventlog/message-files
+             * see: https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw
              */
             for (p = wpath; *p != L'\0'; p++)
             {

@@ -38,8 +38,9 @@ int cplat_host_get_name(char *name_out, const size_t name_size)
         char tmp[CPLAT_HOST_NAME_MAX];
 
         /*
-         * gethostname はバッファー不足時に NUL 終端しない場合があり、POSIX.1-2008 では
-         * ENAMETOOLONG で失敗する。内部バッファーへ取得してから呼び出し側へ写す。
+         * gethostname() はバッファー不足時の振る舞いが実装で分かれる。
+         * POSIX.1 は切り詰め時の NUL 終端を未規定とし、glibc 実装は ENAMETOOLONG で失敗する場合がある。
+         * 内部バッファーへ取得して末尾を NUL 終端してから呼び出し側へ写す。
          * see: https://man7.org/linux/man-pages/man2/gethostname.2.html
          */
         if (gethostname(tmp, sizeof(tmp)) != 0)
@@ -59,8 +60,9 @@ int cplat_host_get_name(char *name_out, const size_t name_size)
         DWORD wname_count = (DWORD)(sizeof(wname) / sizeof(wname[0]));
 
         /*
-         * Winsock の gethostname は WSAStartup が必要で、NetBIOS 名の 15 文字制限にも
-         * 当たり得る。DNS ホスト名を UTF-16 で取り、UTF-8 へ変換する。
+         * Winsock の gethostname() は WSAStartup() が必要であり、名前空間プロバイダーが応答しない場合は
+         * NetBIOS 名へ代替される。DNS ホスト名を直接 UTF-16 で取得して UTF-8 へ変換する。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-gethostname
          * see: https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getcomputernameexw
          */
         if (GetComputerNameExW(ComputerNameDnsHostname, wname, &wname_count) == 0)

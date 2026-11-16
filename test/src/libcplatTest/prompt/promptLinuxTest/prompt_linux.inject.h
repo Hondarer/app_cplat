@@ -24,6 +24,11 @@ extern "C"
     /* prompt_linux.c のファイル内 static 変数 s_sigwinch_installed を設定する。 */
     extern void test_prompt_set_sigwinch_installed(int value);
 
+    typedef int (*test_prompt_pipe2_fn)(int fds[2], int flags);
+
+    /* prompt_linux.c の pipe2 呼び出しを差し替える。NULL 指定で既定実装へ戻す。 */
+    extern void test_prompt_set_pipe2_fn(test_prompt_pipe2_fn fn);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
