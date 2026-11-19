@@ -9,7 +9,8 @@ ADD_SRCS := \
 	$(MYAPP_DIR)/prod/libsrc/cplat/base/result.c
 
 # ライブラリの指定
-LIBS += mock_libc
+# Windows の実装が解放失敗時に展開する cplat_abort_at() は、mock_cplat から実 libcplat へ委譲する
+LIBS += mock_libc mock_cplat
 ifdef PLATFORM_LINUX
     # OpenSSL の失敗注入に、app/openssl が提供する mock_openssl を使う。
     # 実関数へは mock_openssl が共有ライブラリ経由で委譲する。

@@ -246,7 +246,18 @@ static int reopen_std_stream(FILE *stream, HANDLE handle, int open_flags, DWORD 
         return -1;
     }
 
+    /*
+     * プログラムの開始直後に呼ぶ契約のため、未出力のデータはない。
+     * 付け替え前の出力先 (非表示のコンソール) は捨てる対象であり、失敗しても結果は変わらない。
+     */
     (void)fflush(stream);
+
+    /*
+     * _close の失敗は fd がすでに無効な場合 (EBADF) だけである。
+     * 閉じられずに残った場合も、後続の _dup2 が複製先を閉じてから複製する。
+     * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/close
+     * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/dup-dup2
+     */
     (void)_close(expected_fd);
 
     new_fd = _open_osfhandle((intptr_t)handle, open_flags);
@@ -265,11 +276,14 @@ static int reopen_std_stream(FILE *stream, HANDLE handle, int open_flags, DWORD 
             return -1;
         }
 
-        (void)_close(new_fd);
+        (void)_close(new_fd); /* 付け替え先の fd は成立済みで、失敗しても余分な fd が 1 つ残るだけ */
     }
 
     clearerr(stream);
-    (void)SetStdHandle(std_handle_id, (HANDLE)_get_osfhandle(expected_fd));
+    if (!SetStdHandle(std_handle_id, (HANDLE)_get_osfhandle(expected_fd)))
+    {
+        return -1;
+    }
 
     return 0;
 }
@@ -1347,7 +1361,10 @@ int cplat_elevated_process_attach_output_pipes(int *argc, char **argv, int *atta
         }
 
         /* 呼び出し元での表示が昇格プロセスの終了まで遅れないよう、stdout をバッファーなしにする。 */
-        (void)setvbuf(stdout, NULL, _IONBF, 0);
+        if (setvbuf(stdout, NULL, _IONBF, 0) != 0)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
 
         if (attached_out != NULL)
         {

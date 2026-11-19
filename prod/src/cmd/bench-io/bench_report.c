@@ -243,6 +243,7 @@ void bench_report_begin_csv(FILE *csv, const bench_environment *env)
         return;
     }
 
+    /* 書き込みの失敗はストリームのエラー指示子に残り、main が CSV を閉じる前に ferror で検査する。 */
     (void)cplat_fprintf(csv, "# os=%s\n", env->os_name);
     (void)cplat_fprintf(csv, "# cpu_model=%s\n", env->cpu_model);
     (void)cplat_fprintf(csv, "# fs_type=%s\n", env->fs_type);
@@ -307,6 +308,7 @@ void bench_report_row(FILE *csv, const bench_environment *env, const bench_case 
         return;
     }
 
+    /* 書き込みの失敗はストリームのエラー指示子に残り、main が CSV を閉じる前に ferror で検査する。 */
     (void)cplat_fprintf(csv, "%s,\"%s\",%s,%s,%s,%s,%llu,%d,%llu,%llu,%llu,%llu,%llu,%.3f,%.3f\n", env->os_name,
                         env->cpu_model, env->fs_type, env->cache_state, api_name, pattern_name,
                         (unsigned long long)ctx->file_size, BENCH_RECORD_SIZE, (unsigned long long)ctx->touch_count,

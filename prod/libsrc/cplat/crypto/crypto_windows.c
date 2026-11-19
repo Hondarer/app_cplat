@@ -29,6 +29,7 @@
 
     #include <cplat/base/result.h>
     #include <cplat/crypto/crypto.h>
+    #include <cplat/runtime/abort.h>
 
 /* BCrypt の NTSTATUS を公開結果コードへ変換する。
  * see: https://learn.microsoft.com/windows/win32/api/bcrypt/nf-bcrypt-bcryptdecrypt
@@ -44,6 +45,41 @@ static int bcrypt_result(const NTSTATUS status)
         return CPLAT_ERR_OUT_OF_MEMORY;
     }
     return CPLAT_ERR_UNKNOWN;
+}
+
+/*
+ * BCrypt の解放関数が失敗した場合は、プロセスを異常終了させる。
+ * 文書が挙げる失敗は、ハンドルが無効な場合 (STATUS_INVALID_HANDLE) だけである。
+ * ハンドルは直前まで正常に使えていたため、失敗は内部状態の破壊を示す。
+ * 続行すると、鍵のデータが解放されないままプロセスのメモリに残る可能性がある。
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptdestroykey
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptdestroyhash
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptclosealgorithmprovider
+ */
+static void destroy_key_or_abort(const BCRYPT_KEY_HANDLE h_key)
+{
+    if (!BCRYPT_SUCCESS(BCryptDestroyKey(h_key)))
+    {
+        CPLAT_ABORT("BCrypt の鍵を破棄できません");
+    }
+}
+
+/* 失敗時の扱いと根拠は destroy_key_or_abort() と同じである。 */
+static void destroy_hash_or_abort(const BCRYPT_HASH_HANDLE h_hash)
+{
+    if (!BCRYPT_SUCCESS(BCryptDestroyHash(h_hash)))
+    {
+        CPLAT_ABORT("BCrypt のハッシュを破棄できません");
+    }
+}
+
+/* 失敗時の扱いと根拠は destroy_key_or_abort() と同じである。 */
+static void close_algorithm_or_abort(const BCRYPT_ALG_HANDLE h_alg)
+{
+    if (!BCRYPT_SUCCESS(BCryptCloseAlgorithmProvider(h_alg, 0)))
+    {
+        CPLAT_ABORT("BCrypt のアルゴリズム プロバイダーを閉じられません");
+    }
 }
 
 /*
@@ -76,14 +112,14 @@ static int bcrypt_aes_gcm(const BOOL is_encrypt, uint8_t *dst, size_t *dst_len, 
         BCryptSetProperty(h_alg, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_GCM, sizeof(BCRYPT_CHAIN_MODE_GCM), 0);
     if (!BCRYPT_SUCCESS(status))
     {
-        BCryptCloseAlgorithmProvider(h_alg, 0);
+        close_algorithm_or_abort(h_alg);
         return bcrypt_result(status);
     }
 
     status = BCryptGenerateSymmetricKey(h_alg, &h_key, NULL, 0, (PUCHAR)key, (ULONG)CPLAT_CRYPTO_KEY_SIZE, 0);
     if (!BCRYPT_SUCCESS(status))
     {
-        BCryptCloseAlgorithmProvider(h_alg, 0);
+        close_algorithm_or_abort(h_alg);
         return bcrypt_result(status);
     }
 
@@ -128,8 +164,8 @@ static int bcrypt_aes_gcm(const BOOL is_encrypt, uint8_t *dst, size_t *dst_len, 
                                &len, 0);
     }
 
-    BCryptDestroyKey(h_key);
-    BCryptCloseAlgorithmProvider(h_alg, 0);
+    destroy_key_or_abort(h_key);
+    close_algorithm_or_abort(h_alg);
 
     if (!BCRYPT_SUCCESS(status))
     {
@@ -275,22 +311,22 @@ int cplat_passphrase_to_key(uint8_t *key_out, const uint8_t *passphrase, const s
     status = BCryptCreateHash(h_alg, &h_hash, NULL, 0, NULL, 0, 0);
     if (!BCRYPT_SUCCESS(status))
     {
-        BCryptCloseAlgorithmProvider(h_alg, 0);
+        close_algorithm_or_abort(h_alg);
         return bcrypt_result(status);
     }
 
     status = BCryptHashData(h_hash, (PUCHAR)data, data_len, 0);
     if (!BCRYPT_SUCCESS(status))
     {
-        BCryptDestroyHash(h_hash);
-        BCryptCloseAlgorithmProvider(h_alg, 0);
+        destroy_hash_or_abort(h_hash);
+        close_algorithm_or_abort(h_alg);
         return bcrypt_result(status);
     }
 
     status = BCryptFinishHash(h_hash, (PUCHAR)key_out, (ULONG)CPLAT_CRYPTO_KEY_SIZE, 0);
 
-    BCryptDestroyHash(h_hash);
-    BCryptCloseAlgorithmProvider(h_alg, 0);
+    destroy_hash_or_abort(h_hash);
+    close_algorithm_or_abort(h_alg);
 
     if (BCRYPT_SUCCESS(status))
     {

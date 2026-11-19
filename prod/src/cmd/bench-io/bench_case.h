@@ -185,6 +185,9 @@ void bench_report_collect_environment(const char *dir, bench_environment *env);
  *  @brief          CSV のヘッダーと環境情報のコメント行を出力します。
  *  @param[in,out]  csv  出力先。NULL の場合は何もしません。
  *  @param[in]      env  測定環境の情報。NULL を渡してはなりません。
+ *
+ *  書き込みの失敗は通知しません。失敗はストリームのエラー指示子に残るため、
+ *  呼び出し元が CSV を閉じる前に ferror() で検査してください。
  */
 void bench_report_begin_csv(FILE *csv, const bench_environment *env);
 
@@ -201,6 +204,9 @@ void bench_report_begin_table(const bench_environment *env);
  *  @param[in]      item    測定条件。NULL を渡してはなりません。
  *  @param[in]      ctx     共有状態。NULL を渡してはなりません。
  *  @param[in]      timing  測定結果。NULL を渡してはなりません。
+ *
+ *  CSV への書き込みの失敗は通知しません。失敗はストリームのエラー指示子に残るため、
+ *  呼び出し元が CSV を閉じる前に ferror() で検査してください。
  */
 void bench_report_row(FILE *csv, const bench_environment *env, const bench_case *item, const bench_context *ctx,
                       const bench_timing *timing);

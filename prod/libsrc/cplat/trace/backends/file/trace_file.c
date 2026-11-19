@@ -449,10 +449,19 @@ static int sink_points_to_current_file(const cplat_trace_file_sink *p)
 
 /**
  *  @brief  開いているファイルを閉じます。未開の場合は何もしません (べき等です)。
+ *  @return 閉じる処理が失敗した場合は @ref CPLAT_ERR_UNKNOWN 、それ以外の場合は @ref CPLAT_OK を返します。
+ *
+ *  cplat_file_close() は閉じる前にハンドルを無効な値へ書き換えるため、失敗した後も続けて開き直せます。\n
+ *  失敗した場合は、成功を返した過去の行が保存されていない可能性があります。
  */
-static void close_file(cplat_trace_file_sink *p)
+static int close_file(cplat_trace_file_sink *p)
 {
-    (void)cplat_file_close(&p->file, NULL);
+    if (cplat_file_close(&p->file, NULL) != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    return CPLAT_OK;
 }
 
 /**
@@ -460,16 +469,20 @@ static void close_file(cplat_trace_file_sink *p)
  *
  *  ローカル mutex 保持中から呼び出される。ファイルの再オープンは 1 回だけ試行する。\n
  *  リネームに失敗した場合はその世代でカスケードを打ち切り、
- *  呼び出し元をブロックせずに続行する (ベスト エフォート)。
+ *  呼び出し元をブロックせずに続行する (ベスト エフォート)。\n
+ *  閉じる処理が失敗しても、世代の移動と新しいファイルを開く処理は続ける。
+ *
+ *  @return 閉じる処理の結果 (close_file() の戻り値) を返します。
  */
-static void rotate_file(cplat_trace_file_sink *p)
+static int rotate_file(cplat_trace_file_sink *p)
 {
     char old_path[PLATFORM_PATH_MAX];
     char new_path[PLATFORM_PATH_MAX];
     int gen;
     cplat_error detail;
+    int close_ret;
 
-    close_file(p);
+    close_ret = close_file(p);
 
     /* 最老世代のファイルを削除する。失敗は無視する。 */
     if (cplat_snprintf(new_path, sizeof(new_path), "%s.%d", p->path, p->generations) == CPLAT_OK)
@@ -528,13 +541,15 @@ static void rotate_file(cplat_trace_file_sink *p)
     {
         open_file_truncate(p);
     }
+
+    return close_ret;
 }
 
 /**
  *  @brief          共有モードのローテーション判定と実行を行います。
  *  @param[in,out]  p   ローテーション対象の出力先。
- *  @return         プロセス間ロックの解放に成功した場合は @ref CPLAT_OK 、
- *                  解放に失敗した場合は @ref CPLAT_ERR_UNKNOWN を返します。
+ *  @return         ファイルを閉じる処理とプロセス間ロックの解放のいずれかが失敗した場合は
+ *                  @ref CPLAT_ERR_UNKNOWN 、それ以外の場合は @ref CPLAT_OK を返します。
  *
  *  ローカル mutex 保持中、書き込み成功直後に呼び出される。\n
  *  全プロセス合計の実サイズ (ハンドル基準) が max_bytes 未満なら何もしない。\n
@@ -547,6 +562,7 @@ static void rotate_file(cplat_trace_file_sink *p)
 static int check_rotate_shared(cplat_trace_file_sink *p)
 {
     size_t real_bytes;
+    int ret = CPLAT_OK;
 
     /* インメモリ集計ではなく実サイズで判定する。複数 writer の合計を反映する。 */
     if (cplat_file_get_size(&p->file, &real_bytes, NULL) != CPLAT_OK)
@@ -567,7 +583,7 @@ static int check_rotate_shared(cplat_trace_file_sink *p)
     if (sink_points_to_current_file(p) == 0)
     {
         /* 他プロセスが先にローテーションしているため、開き直すだけにする。 */
-        close_file(p);
+        ret = close_file(p);
         open_file(p);
     }
     else
@@ -575,16 +591,16 @@ static int check_rotate_shared(cplat_trace_file_sink *p)
         /* ロック下で実サイズを再確認してからローテーションする。 */
         if (cplat_file_get_size(&p->file, &real_bytes, NULL) == CPLAT_OK && real_bytes >= p->max_bytes)
         {
-            rotate_file(p);
+            ret = rotate_file(p);
         }
     }
 
     if (cplat_interprocess_lock_unlock(p->rotate_lock) != CPLAT_OK)
     {
-        return CPLAT_ERR_UNKNOWN;
+        ret = CPLAT_ERR_UNKNOWN;
     }
 
-    return CPLAT_OK;
+    return ret;
 }
 
 /**
@@ -595,7 +611,7 @@ static int check_rotate_shared(cplat_trace_file_sink *p)
  */
 static void free_sink(cplat_trace_file_sink *p)
 {
-    close_file(p);
+    (void)close_file(p); /* 破棄の後に失敗を受けても、呼び出し元が取れる行動がない */
 
     if (p->rotate_lock != NULL)
     {
@@ -821,6 +837,7 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
     int len;
     int ret;
     int rotate_ret;
+    int reopen_ret;
 
     (void)timestamp;
 
@@ -855,12 +872,16 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
         return CPLAT_ERR_UNKNOWN;
     }
 
-    /* 共有モードでは、他プロセスのローテーションで path の実体が入れ替わっていたら開き直す。 */
+    /*
+     * 共有モードでは、他プロセスのローテーションで path の実体が入れ替わっていたら開き直す。
+     * 閉じる処理が失敗しても開き直して書き込み、最後に失敗を返す。
+     */
+    reopen_ret = CPLAT_OK;
     if (handle->shared != 0)
     {
         if (sink_points_to_current_file(handle) == 0)
         {
-            close_file(handle);
+            reopen_ret = close_file(handle);
 
             if (open_file(handle) != 0)
             {
@@ -891,14 +912,14 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
 
             if (handle->current_bytes >= handle->max_bytes)
             {
-                rotate_file(handle);
+                rotate_ret = rotate_file(handle);
             }
         }
     }
 
     cplat_local_lock_unlock(handle->mutex);
 
-    if (ret != 0 || rotate_ret != CPLAT_OK)
+    if (ret != 0 || rotate_ret != CPLAT_OK || reopen_ret != CPLAT_OK)
     {
         return CPLAT_ERR_UNKNOWN;
     }

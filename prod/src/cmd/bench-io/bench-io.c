@@ -846,6 +846,13 @@ int main(int argc, char *argv[])
 
     if (csv != NULL)
     {
+        /* bench_report_*() は CSV への書き込みの失敗を通知しないため、閉じる前にまとめて検査する。 */
+        if (ferror(csv) != 0)
+        {
+            (void)cplat_fprintf(stderr, "error: failed to write %s\n", csv_path); /* 診断の出力先がほかにない */
+            failures++;
+        }
+
         if (fclose(csv) != 0)
         {
             failures++;

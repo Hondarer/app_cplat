@@ -468,6 +468,9 @@ Table: 暗号論的乱数生成 API と cplat 代替ラッパーの差異
 
 Table: 暗号化・復号 API と cplat 代替ラッパーの差異
 
+Windows の実装は、CNG のハンドルの解放に失敗した場合にプロセスを異常終了します (`cplat_passphrase_to_key` を含む)。  
+解放の失敗は内部状態の破壊を示すためです。Linux の実装は、OpenSSL の解放関数が失敗を返さないため、異常終了しません。
+
 ### 正規表現
 
 対象ヘッダー: `cplat/regex/regex.h`
@@ -855,6 +858,9 @@ Table: トレース機能における用途別 cplat API
 | 昇格プロセスの標準出力と標準エラー出力を、呼び出し元へ逐次受け渡します。 | `cplat_elevated_process_run_piped` / `cplat_elevated_process_attach_output_pipes` |
 
 Table: 管理者権限の確認と昇格における用途別 cplat API
+
+`cplat_elevated_process_attach_output_pipes` が失敗を返した場合、標準ストリームと Win32 の標準ハンドルの状態は不定です。  
+呼び出し元は、標準出力と標準エラー出力に頼らずにプロセスを終了します。
 
 ### プロセス終了時の共通フック
 

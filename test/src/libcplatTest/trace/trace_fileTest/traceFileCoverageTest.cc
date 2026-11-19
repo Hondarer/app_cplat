@@ -351,6 +351,47 @@ TEST_F(traceFileCoverageTest, rotation_stops_after_rename_failure)
 }
 // [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
+// ローテーションでファイルを閉じる処理が失敗した場合に失敗を返し、次の書き込みを続けられることの確認
+// [サブ手順参照 名前=traceFileCoverageTest.SetUp]
+TEST_F(traceFileCoverageTest, rotation_reports_close_failure_and_continues)
+{
+    // Arrange
+    cplat_trace_file_sink *handle = cplat_trace_file_sink_create(
+        "close-error.log", 1, 2, 0); // [状態] - ローテーション設定付きの file sink を用意する。
+    ASSERT_NE(nullptr,
+              handle); // [状態確認] - cplat_trace_file_sink_create() の戻り値が nullptr 以外であること。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_file_close(_, _))
+        .WillOnce(Return(CPLAT_ERR_UNKNOWN))
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - cplat_file_close() が 1 回以上呼び出されること。(最初のローテーションで閉じる処理を失敗させることの確認)
+    // [Pre-Assert手順] - cplat_file_close() から 1 回目は CPLAT_ERR_UNKNOWN を返し、2 回目以降は既定動作へ委譲する。
+    EXPECT_CALL(mock_cplat, cplat_file_write(_, _, _, _))
+        .Times(
+            2); // [Pre-Assert確認_正常系] - cplat_file_write() が 2 回呼び出されること。(閉じる処理の失敗後も次の書き込みを行うことの確認)
+
+    // Act
+    int first = cplat_trace_file_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "first"); // [手順] - ローテーションで閉じる処理が失敗する状態で、"first" を指定して cplat_trace_file_sink_write() を呼び出す。
+    int second = cplat_trace_file_sink_write(
+        handle, CPLAT_TRACE_LEVEL_INFO, nullptr,
+        "second"); // [手順] - 閉じる処理が成功する状態で、"second" を指定して cplat_trace_file_sink_write() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        first); // [確認_異常系] - 1 回目の cplat_trace_file_sink_write() の戻り値が CPLAT_ERR_UNKNOWN であること。(閉じる処理の失敗を伝達することの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        second); // [確認_正常系] - 2 回目の cplat_trace_file_sink_write() の戻り値が CPLAT_OK であること。(失敗の後も書き込みを続けられることの確認)
+
+    // Cleanup
+    cplat_trace_file_sink_dispose(handle);
+}
+// [サブ手順参照 名前=traceFileRegistryTest.TearDown]
+
 // 共有ローテーションのサイズ取得失敗とロック後の再確認を扱うことの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, shared_rotation_handles_size_query_outcomes)

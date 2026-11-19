@@ -1,4 +1,5 @@
 #include <testfw.h>
+#include <mock_cplat.h>
 #include <cplat/base/result.h>
 #include <cplat/crypto/crypto.h>
 
