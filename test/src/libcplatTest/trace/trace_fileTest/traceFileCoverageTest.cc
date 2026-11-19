@@ -629,10 +629,11 @@ TEST_F(traceFileCoverageTest, write_handles_format_truncation_and_lock_failure)
     EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_))
         .Times(1); // [Pre-Assert確認_正常系] - cplat_local_lock_lock() が 1 回呼び出されること。(書式化失敗時にレジストリ ロックを取得することの確認)
     EXPECT_CALL(mock_cplat, cplat_local_lock_timed_lock(_, 100))
-        .WillOnce(Return(CPLAT_OK))
+        .WillOnce(DoDefault())
         .WillOnce(Return(
             CPLAT_ERR_TIMEOUT)); // [Pre-Assert確認_異常系] - cplat_local_lock_timed_lock() が 100 を指定して 2 回呼び出されること。(書式化成功後の書き込みロックを取得することの確認)
-    // [Pre-Assert手順] - cplat_local_lock_timed_lock() から 1 回目は CPLAT_OK、2 回目は CPLAT_ERR_TIMEOUT を返す。
+    // [Pre-Assert手順] - cplat_local_lock_timed_lock() の 1 回目は本物の処理へ委譲してロックを取得し、2 回目は CPLAT_ERR_TIMEOUT を返す。
+    // 1 回目を取得せずに成功とすると、続く解放で mutex の状態が崩れ、破棄が失敗するため、本物の処理へ委譲する。
 
     // Act
     int snprintf_error = cplat_trace_file_sink_write(

@@ -941,11 +941,13 @@ TEST_F(symLoaderResolveTest, returns_result_resolved_while_waiting_for_lock)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_local_lock_lock(_))
         .WillOnce(Invoke(
-            [this](cplat_local_lock *)
+            [this](cplat_local_lock *lock)
             {
                 EXPECT_EQ(0, test_sym_loader_publish_resolved_pointer(&entry_, reinterpret_cast<void *>(1)));
+                delegate_real_cplat_local_lock_lock(lock);
             })); // [Pre-Assert確認_正常系] - cplat_local_lock_lock() が 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_local_lock_lock() から、解決済みの関数ポインターを公開して戻る。
+    // [Pre-Assert手順] - cplat_local_lock_lock() から、解決済みの関数ポインターを公開し、本物の処理でロックを取得して戻る。
+    // ロックを取得せずに戻ると、続く解放で mutex の状態が崩れ、破棄が失敗するため、本物の処理へ委譲する。
 
     // Act
     // [サブ手順参照 名前=symLoaderResolveTest.get]

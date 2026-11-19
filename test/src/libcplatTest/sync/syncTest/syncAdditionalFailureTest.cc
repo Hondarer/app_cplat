@@ -1031,10 +1031,11 @@ TEST(syncAdditionalFailureTest, local_lock_finite_wait_classifies_results)
 
     // Pre-Assert
     EXPECT_CALL(mock_pthread, pthread_mutex_trylock(_, _, _, _))
-        .WillOnce(Return(0))
+        .WillOnce(DoDefault())
         .WillOnce(Return(EINVAL))
         .WillOnce(Return(EBUSY)); // [Pre-Assert確認_正常系] - pthread_mutex_trylock() が 3 回呼び出されること。
-    // [Pre-Assert手順] - pthread_mutex_trylock() から 1 回目は 0、2 回目は EINVAL、3 回目は EBUSY を返す。
+    // [Pre-Assert手順] - pthread_mutex_trylock() の 1 回目は libc の処理へ委譲して mutex を取得し、2 回目は EINVAL、3 回目は EBUSY を返す。
+    // 1 回目を取得せずに成功とすると、続く解放で mutex の状態が崩れ、破棄が失敗するため、本物の処理へ委譲する。
     EXPECT_CALL(mock_time, clock_gettime(_, _, _, CLOCK_MONOTONIC, _))
         .Times(4)
         .WillRepeatedly(Invoke(
