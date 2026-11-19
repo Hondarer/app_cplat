@@ -407,6 +407,10 @@ TEST_F(argparserAllocFailureTest, create_continues_when_program_name_duplication
 TEST_F(argparserAllocFailureTest, default_reinit_discards_parser_when_description_duplication_fails)
 {
     // Arrange
+    // argparser.c の単体テストでは shutdown.c の登録を使わない (argparserTest と同じ)。本物へ登録すると、
+    // 後続のテストが残した既定のパーサーを、プロセス終了時にこのテストの登録が破棄して異常終了するため。
+    ON_CALL(mock_cplat_, cplat_shutdown_register(_, _))
+        .WillByDefault(Return(CPLAT_OK)); // [状態] - cplat_shutdown_register() から CPLAT_OK を返すように既定動作を設定する。
     test_argparser_reset_default(); // [状態] - 既定のパーサーを初期化前の状態にする。
     cplat_argparser *created = test_argparser_default_acquire(0, nullptr, nullptr, 0); // [状態] - 既定のパーサーを作る。
     ASSERT_NE(nullptr, created); // [状態確認] - 既定のパーサーが作られたこと。
