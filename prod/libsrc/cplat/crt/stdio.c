@@ -38,7 +38,7 @@ FILE *cplat_fopen(const char *path, const char *modes, cplat_error *detail_out)
 {
     if (path == NULL || modes == NULL)
     {
-        (void)cplat_internal_error_report_errno(detail_out, EINVAL);
+        cplat_internal_error_record_errno(detail_out, EINVAL);
         return NULL;
     }
 
@@ -51,11 +51,11 @@ FILE *cplat_fopen(const char *path, const char *modes, cplat_error *detail_out)
         {
             const int errno_value = errno;
 
-            (void)cplat_internal_error_report_errno(detail_out, errno_value);
+            cplat_internal_error_record_errno(detail_out, errno_value);
         }
         else
         {
-            (void)cplat_internal_error_report_success(detail_out);
+            cplat_internal_error_record_success(detail_out);
         }
 
         return fp;
@@ -70,14 +70,14 @@ FILE *cplat_fopen(const char *path, const char *modes, cplat_error *detail_out)
 
         if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), path) < 0)
         {
-            (void)cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
+            cplat_internal_error_record_errno(detail_out, ENAMETOOLONG);
             return NULL;
         }
 
         err = mbstowcs_s(&converted, wmodes, sizeof(wmodes) / sizeof(wmodes[0]), modes, _TRUNCATE);
         if (err != 0)
         {
-            (void)cplat_internal_error_report_errno(detail_out, EINVAL);
+            cplat_internal_error_record_errno(detail_out, EINVAL);
             return NULL;
         }
 
@@ -92,11 +92,11 @@ FILE *cplat_fopen(const char *path, const char *modes, cplat_error *detail_out)
         {
             const int errno_value = errno;
 
-            (void)cplat_internal_error_report_errno(detail_out, errno_value);
+            cplat_internal_error_record_errno(detail_out, errno_value);
             return NULL;
         }
 
-        (void)cplat_internal_error_report_success(detail_out);
+        cplat_internal_error_record_success(detail_out);
         return fp;
     }
 #endif /* PLATFORM_ */
@@ -108,7 +108,7 @@ FILE *cplat_freopen(const char *path, const char *modes, FILE *stream, cplat_err
 {
     if (path == NULL || modes == NULL || stream == NULL)
     {
-        (void)cplat_internal_error_report_errno(detail_out, EINVAL);
+        cplat_internal_error_record_errno(detail_out, EINVAL);
         return NULL;
     }
 
@@ -121,11 +121,11 @@ FILE *cplat_freopen(const char *path, const char *modes, FILE *stream, cplat_err
         {
             const int errno_value = errno;
 
-            (void)cplat_internal_error_report_errno(detail_out, errno_value);
+            cplat_internal_error_record_errno(detail_out, errno_value);
         }
         else
         {
-            (void)cplat_internal_error_report_success(detail_out);
+            cplat_internal_error_record_success(detail_out);
         }
 
         return fp;
@@ -142,14 +142,14 @@ FILE *cplat_freopen(const char *path, const char *modes, FILE *stream, cplat_err
 
         if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), path) < 0)
         {
-            (void)cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
+            cplat_internal_error_record_errno(detail_out, ENAMETOOLONG);
             return NULL;
         }
 
         err = mbstowcs_s(&converted, wmodes, sizeof(wmodes) / sizeof(wmodes[0]), modes, _TRUNCATE);
         if (err != 0)
         {
-            (void)cplat_internal_error_report_errno(detail_out, EINVAL);
+            cplat_internal_error_record_errno(detail_out, EINVAL);
             return NULL;
         }
 
@@ -165,24 +165,34 @@ FILE *cplat_freopen(const char *path, const char *modes, FILE *stream, cplat_err
         {
             const int errno_value = errno;
 
-            (void)cplat_internal_error_report_errno(detail_out, errno_value);
+            cplat_internal_error_record_errno(detail_out, errno_value);
             return NULL;
         }
 
+        /*
+         * Linux の分岐が使う freopen() は、POSIX でフラッシュの失敗を無視すると定められており、
+         * Windows の分岐もその動作にそろえるため、戻り値は明示的に破棄する。
+         * see: https://pubs.opengroup.org/onlinepubs/9799919799/functions/freopen.html
+         */
         (void)fflush(stream);
         new_fd = _fileno(new_fp);
         old_fd = _fileno(stream);
         if (_dup2(new_fd, old_fd) != 0)
         {
             int saved = errno;
-            (void)fclose(new_fp);
-            (void)cplat_internal_error_report_errno(detail_out, saved);
+            (void)fclose(new_fp); /* _dup2 の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
+            cplat_internal_error_record_errno(detail_out, saved);
             return NULL;
         }
 
-        (void)fclose(new_fp); /* new_fd を解放し、stream は old_fd を介して新ファイルを保持 */
+        /*
+         * new_fd を解放し、stream は old_fd を介して新ファイルを保持する。
+         * new_fp には何も書き込んでおらず、失敗しても余分な fd が残るだけで付け替えの結果は変わらないため、
+         * 戻り値は明示的に破棄する。
+         */
+        (void)fclose(new_fp);
         clearerr(stream);
-        (void)cplat_internal_error_report_success(detail_out);
+        cplat_internal_error_record_success(detail_out);
         return stream;
     }
 #endif /* PLATFORM_ */
@@ -196,7 +206,7 @@ int cplat_fclose(FILE *stream, cplat_error *detail_out)
 
     if (stream == NULL)
     {
-        (void)cplat_internal_error_report_errno(detail_out, EINVAL);
+        cplat_internal_error_record_errno(detail_out, EINVAL);
         return EOF;
     }
 
@@ -213,11 +223,11 @@ int cplat_fclose(FILE *stream, cplat_error *detail_out)
             errno_value = EIO;
         }
 
-        (void)cplat_internal_error_report_errno(detail_out, errno_value);
+        cplat_internal_error_record_errno(detail_out, errno_value);
         return result;
     }
 
-    (void)cplat_internal_error_report_success(detail_out);
+    cplat_internal_error_record_success(detail_out);
 
     return result;
 }
@@ -241,11 +251,11 @@ int cplat_fflush(FILE *stream, cplat_error *detail_out)
             errno_value = EIO;
         }
 
-        (void)cplat_internal_error_report_errno(detail_out, errno_value);
+        cplat_internal_error_record_errno(detail_out, errno_value);
         return result;
     }
 
-    (void)cplat_internal_error_report_success(detail_out);
+    cplat_internal_error_record_success(detail_out);
 
     return result;
 }
@@ -258,7 +268,7 @@ size_t cplat_fread(void *buffer, const size_t size, const size_t count, FILE *st
 
     if ((buffer == NULL && size > 0u && count > 0u) || stream == NULL)
     {
-        (void)cplat_internal_error_report_errno(detail_out, EINVAL);
+        cplat_internal_error_record_errno(detail_out, EINVAL);
         return 0u;
     }
 
@@ -270,7 +280,7 @@ size_t cplat_fread(void *buffer, const size_t size, const size_t count, FILE *st
          * NULL の buffer を fread() へ渡さないよう、fread() を呼ばずに同じ結果を返す。
          * see: https://en.cppreference.com/w/c/io/fread
          */
-        (void)cplat_internal_error_report_success(detail_out);
+        cplat_internal_error_record_success(detail_out);
         return 0u;
     }
 
@@ -293,11 +303,11 @@ size_t cplat_fread(void *buffer, const size_t size, const size_t count, FILE *st
             errno_value = EIO;
         }
 
-        (void)cplat_internal_error_report_errno(detail_out, errno_value);
+        cplat_internal_error_record_errno(detail_out, errno_value);
     }
     else
     {
-        (void)cplat_internal_error_report_success(detail_out);
+        cplat_internal_error_record_success(detail_out);
     }
 
     return read_count;
@@ -311,7 +321,7 @@ size_t cplat_fwrite(const void *buffer, const size_t size, const size_t count, F
 
     if ((buffer == NULL && size > 0u && count > 0u) || stream == NULL)
     {
-        (void)cplat_internal_error_report_errno(detail_out, EINVAL);
+        cplat_internal_error_record_errno(detail_out, EINVAL);
         return 0u;
     }
 
@@ -323,7 +333,7 @@ size_t cplat_fwrite(const void *buffer, const size_t size, const size_t count, F
          * NULL の buffer を fwrite() へ渡さないよう、fwrite() を呼ばずに同じ結果を返す。
          * see: https://en.cppreference.com/w/c/io/fwrite
          */
-        (void)cplat_internal_error_report_success(detail_out);
+        cplat_internal_error_record_success(detail_out);
         return 0u;
     }
 
@@ -340,11 +350,11 @@ size_t cplat_fwrite(const void *buffer, const size_t size, const size_t count, F
             errno_value = EIO;
         }
 
-        (void)cplat_internal_error_report_errno(detail_out, errno_value);
+        cplat_internal_error_record_errno(detail_out, errno_value);
     }
     else
     {
-        (void)cplat_internal_error_report_success(detail_out);
+        cplat_internal_error_record_success(detail_out);
     }
 
     return written_count;
@@ -358,7 +368,7 @@ int cplat_remove(const char *path, cplat_error *detail_out)
 
     if (path == NULL)
     {
-        (void)cplat_internal_error_report_errno(detail_out, EINVAL);
+        cplat_internal_error_record_errno(detail_out, EINVAL);
         return -1;
     }
 
@@ -371,7 +381,7 @@ int cplat_remove(const char *path, cplat_error *detail_out)
 
         if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), path) < 0)
         {
-            (void)cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
+            cplat_internal_error_record_errno(detail_out, ENAMETOOLONG);
             return -1;
         }
 
@@ -384,11 +394,11 @@ int cplat_remove(const char *path, cplat_error *detail_out)
     {
         const int errno_value = errno;
 
-        (void)cplat_internal_error_report_errno(detail_out, errno_value);
+        cplat_internal_error_record_errno(detail_out, errno_value);
         return result;
     }
 
-    (void)cplat_internal_error_report_success(detail_out);
+    cplat_internal_error_record_success(detail_out);
 
     return result;
 }
@@ -399,7 +409,7 @@ int cplat_rename(const char *oldpath, const char *newpath, cplat_error *detail_o
 {
     if (oldpath == NULL || newpath == NULL)
     {
-        (void)cplat_internal_error_report_errno(detail_out, EINVAL);
+        cplat_internal_error_record_errno(detail_out, EINVAL);
         return -1;
     }
 
@@ -413,11 +423,11 @@ int cplat_rename(const char *oldpath, const char *newpath, cplat_error *detail_o
         {
             const int errno_value = errno;
 
-            (void)cplat_internal_error_report_errno(detail_out, errno_value);
+            cplat_internal_error_record_errno(detail_out, errno_value);
             return result;
         }
 
-        (void)cplat_internal_error_report_success(detail_out);
+        cplat_internal_error_record_success(detail_out);
         return result;
     }
 #elif defined(PLATFORM_WINDOWS)
@@ -427,13 +437,13 @@ int cplat_rename(const char *oldpath, const char *newpath, cplat_error *detail_o
 
         if (cplat_utf8_to_wpath(woldpath, sizeof(woldpath) / sizeof(woldpath[0]), oldpath) < 0)
         {
-            (void)cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
+            cplat_internal_error_record_errno(detail_out, ENAMETOOLONG);
             return -1;
         }
 
         if (cplat_utf8_to_wpath(wnewpath, sizeof(wnewpath) / sizeof(wnewpath[0]), newpath) < 0)
         {
-            (void)cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
+            cplat_internal_error_record_errno(detail_out, ENAMETOOLONG);
             return -1;
         }
 
@@ -441,11 +451,11 @@ int cplat_rename(const char *oldpath, const char *newpath, cplat_error *detail_o
         {
             const DWORD error_code = GetLastError();
 
-            (void)cplat_internal_error_report_windows_error(detail_out, error_code);
+            cplat_internal_error_record_windows_error(detail_out, error_code);
             return -1;
         }
 
-        (void)cplat_internal_error_report_success(detail_out);
+        cplat_internal_error_record_success(detail_out);
         return 0;
     }
 #endif /* PLATFORM_ */
@@ -633,7 +643,7 @@ int cplat_fgets(char *dest, const size_t dest_size, FILE *stream, cplat_error *d
         }
 
         /* EOF は OS 呼び出し由来の詳細を持たないため、詳細をクリアして結果コードだけで表す。 */
-        (void)cplat_internal_error_report_success(detail_out);
+        cplat_internal_error_record_success(detail_out);
         return CPLAT_ERR_EOF;
     }
 
@@ -647,7 +657,7 @@ int cplat_fgets(char *dest, const size_t dest_size, FILE *stream, cplat_error *d
     if (len + 1 == dest_size && (len == 0 || dest[len - 1] != '\n') && feof(stream) == 0)
     {
         dest[0] = '\0';
-        (void)cplat_internal_error_report_success(detail_out);
+        cplat_internal_error_record_success(detail_out);
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
 

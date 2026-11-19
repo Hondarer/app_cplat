@@ -25,13 +25,13 @@ FILE *cplat_vfopen_fmt(const char *modes, cplat_error *detail_out, const char *f
 
     if (modes == NULL)
     {
-        (void)cplat_internal_error_report_errno(detail_out, EINVAL);
+        cplat_internal_error_record_errno(detail_out, EINVAL);
         return NULL;
     }
 
     if (cplat_internal_vformat_path(filename, sizeof(filename), format, args, &format_error) != 0)
     {
-        (void)cplat_internal_error_report_errno(detail_out, format_error);
+        cplat_internal_error_record_errno(detail_out, format_error);
         return NULL;
     }
 
@@ -61,7 +61,7 @@ int cplat_vremove_fmt(cplat_error *detail_out, const char *format, va_list args)
 
     if (cplat_internal_vformat_path(filename, sizeof(filename), format, args, &format_error) != 0)
     {
-        (void)cplat_internal_error_report_errno(detail_out, format_error);
+        cplat_internal_error_record_errno(detail_out, format_error);
         return -1;
     }
 

@@ -131,7 +131,8 @@ static int close_and_backoff_locked(cplat_syslog_sink *h)
 {
     cplat_timespec now;
 
-    close(h->fd);
+    /* 再接続のために閉じるソケットであり、次の接続で作り直すため、戻り値は明示的に破棄する。 */
+    (void)close(h->fd);
     h->fd = -1;
 
     if (cplat_clock_get_realtime(&now) != CPLAT_OK)
@@ -260,6 +261,10 @@ cplat_syslog_sink *cplat_syslog_sink_create(const char *ident, const int facilit
     read_test_fd(&handle->test_fd_exists, &handle->test_fd);
     memset(&handle->address, 0, sizeof(handle->address));
     handle->address.sun_family = AF_UNIX;
+    /*
+     * 宛先、大きさ、複写元はいずれも固定で有効であり、宣言の契約で失敗となる引数の不正に当たらないため、
+     * 戻り値は明示的に破棄する。
+     */
     (void)cplat_strncpy(handle->address.sun_path, sizeof(handle->address.sun_path), DEVLOG_PATH,
                         sizeof(handle->address.sun_path) - 1u);
 
@@ -473,7 +478,8 @@ static void dispose_sink(cplat_syslog_sink *handle)
 
     if (handle->fd >= 0)
     {
-        close(handle->fd);
+        /* 破棄の後に失敗を受けても、呼び出し元が取れる行動がないため、戻り値は明示的に破棄する。 */
+        (void)close(handle->fd);
     }
 
     cplat_local_lock_dispose(handle->reconnect_lock);

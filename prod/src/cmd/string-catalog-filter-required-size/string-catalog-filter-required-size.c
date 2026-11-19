@@ -36,6 +36,10 @@ typedef struct filter_required_size_options
  */
 static int register_options(filter_required_size_options *options)
 {
+    /*
+     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
+     * この関数の登録の関数の戻り値は明示的に破棄する。
+     */
     (void)cplat_argparser_register_flag("-h", "--help", "show this help", &options->need_help);
     (void)cplat_argparser_register_option_int("-l", "--line-capacity", "N",
                                               "maximum number of condition lines (1-1024)", CPLAT_ARGPARSER_REQUIRED,
@@ -45,6 +49,7 @@ static int register_options(filter_required_size_options *options)
 
     if (cplat_argparser_get_register_error_count() > 0)
     {
+        /* 登録の失敗は直後の -1 で伝え、診断の出力先もほかにないため、戻り値は明示的に破棄する。 */
         (void)cplat_argparser_print_register_error_messages(stderr);
         return -1;
     }
@@ -72,12 +77,18 @@ int main(int argc, char **argv)
 
     if (options.need_help != 0)
     {
-        (void)cplat_argparser_print_usage(stdout);
+        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
+        {
+            (void)fprintf(stderr, "failed to write stdout.\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+            return EXIT_FAILURE;
+        }
+
         return EXIT_SUCCESS;
     }
 
     if (ret != CPLAT_OK)
     {
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
         (void)cplat_argparser_print_error_messages(stderr);
         (void)cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
@@ -86,6 +97,7 @@ int main(int argc, char **argv)
     /* スロットの作成と同じ範囲に限る。範囲外の値で求めた大きさは、どのスロットにも結び付けられないためである。 */
     if ((options.line_capacity < 1) || (options.line_capacity > (int)CPLAT_STRING_CATALOG_FILTER_LINE_MAX))
     {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
         (void)fprintf(stderr, "line capacity must be between 1 and %u.\n", CPLAT_STRING_CATALOG_FILTER_LINE_MAX);
         return EXIT_FAILURE;
     }
@@ -93,6 +105,7 @@ int main(int argc, char **argv)
     if ((options.line_width < (int)CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MIN) ||
         (options.line_width > (int)CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX))
     {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
         (void)fprintf(stderr, "line width must be between %u and %u.\n", CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MIN,
                       CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX);
         return EXIT_FAILURE;

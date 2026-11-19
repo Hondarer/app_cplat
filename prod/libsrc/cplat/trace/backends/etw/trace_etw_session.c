@@ -70,14 +70,18 @@ static void dispose_session(cplat_etw_session *session)
 {
     if (session != NULL)
     {
+        /*
+         * 開始の失敗を返す経路の後始末であり、呼び出し元はすでに失敗を返すため、
+         * この関数の CloseTrace と ControlTraceW の戻り値は明示的に破棄する。
+         */
         if (session->trace_handle != INVALID_PROCESSTRACE_HANDLE)
         {
-            CloseTrace(session->trace_handle);
+            (void)CloseTrace(session->trace_handle);
         }
 
         if (session->session_handle != 0)
         {
-            ControlTraceW(session->session_handle, NULL, session->properties, EVENT_TRACE_CONTROL_STOP);
+            (void)ControlTraceW(session->session_handle, NULL, session->properties, EVENT_TRACE_CONTROL_STOP);
         }
 
         cplat_free(session->session_name_w);
@@ -429,7 +433,8 @@ static void trace_thread_proc(void *param)
 {
     cplat_etw_session *session = (cplat_etw_session *)param;
 
-    ProcessTrace(&session->trace_handle, 1, NULL, NULL);
+    /* 戻り値のないスレッドの関数であり、失敗を伝える先がないため、戻り値は明示的に破棄する。 */
+    (void)ProcessTrace(&session->trace_handle, 1, NULL, NULL);
 
     return;
 }
@@ -467,7 +472,8 @@ int cplat_etw_session_check_access(void)
 
     if (status == ERROR_SUCCESS)
     {
-        ControlTraceW(handle, NULL, props, EVENT_TRACE_CONTROL_STOP);
+        /* 権限の判定は開始の成否で確定しており、停止の失敗で判定の結果が変わらないため、戻り値は明示的に破棄する。 */
+        (void)ControlTraceW(handle, NULL, props, EVENT_TRACE_CONTROL_STOP);
         result = CPLAT_OK;
     }
     else if (status == ERROR_ACCESS_DENIED)
@@ -651,7 +657,8 @@ void cplat_etw_session_stop(cplat_etw_session *session)
      */
     if (session->session_handle != 0 && session->properties != NULL)
     {
-        ControlTraceW(session->session_handle, NULL, session->properties, EVENT_TRACE_CONTROL_STOP);
+        /* 停止の関数は失敗を通知せず、資源を解放する以外に取れる行動がないため、戻り値は明示的に破棄する。 */
+        (void)ControlTraceW(session->session_handle, NULL, session->properties, EVENT_TRACE_CONTROL_STOP);
     }
 
     if (session->thread_handle != NULL)
@@ -661,7 +668,8 @@ void cplat_etw_session_stop(cplat_etw_session *session)
 
     if (session->trace_handle != INVALID_PROCESSTRACE_HANDLE)
     {
-        CloseTrace(session->trace_handle);
+        /* 破棄の後に失敗を受けても、呼び出し元が取れる行動がないため、戻り値は明示的に破棄する。 */
+        (void)CloseTrace(session->trace_handle);
     }
 
     cplat_free(session->session_name_w);

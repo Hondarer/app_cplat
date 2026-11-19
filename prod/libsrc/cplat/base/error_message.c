@@ -327,7 +327,11 @@ int cplat_internal_win32_error_message(char *buf, const size_t buf_size, const u
     }
 
     utf8 = cplat_wstr_to_utf8_alloc(wmessage);
-    LocalFree(wmessage); /* ALLOCATE_BUFFER で確保したワイド文字列 */
+    /*
+     * ALLOCATE_BUFFER で確保したワイド文字列は UTF-8 へ複製済みで、解放の失敗で結果が変わらないため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)LocalFree(wmessage);
 
     if (utf8 == NULL)
     {

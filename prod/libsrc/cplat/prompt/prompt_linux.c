@@ -208,7 +208,10 @@ void prompt_platform_dispose(prompt_platform_context *context)
         return;
     }
 
-    /* 解放対象は入力中止通知専用の自己パイプだけに限定し、標準入力 FD は閉じない。 */
+    /*
+     * 解放対象は入力中止通知専用の自己パイプだけに限定し、標準入力 FD は閉じない。
+     * 解放の関数であり、閉じる処理の失敗を受けても取れる行動がないため、この 2 文の戻り値は明示的に破棄する。
+     */
     (void)close(context->cancel_pipe[0]);
     (void)close(context->cancel_pipe[1]);
     context->cancel_pipe[0] = -1;

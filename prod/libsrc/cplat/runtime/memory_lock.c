@@ -87,6 +87,7 @@ static void init_memory_lock_lock(void)
     /*
      * cplat_call_once() のコールバックは戻り値を返せないため、失敗時は s_memory_lock_lock を
      * NULL のまま残し、呼び出し元の memory_lock_lock() で NULL 検査して CPLAT_ERR_UNKNOWN を返す。
+     * 失敗は後続の NULL 検査が検出するため、戻り値は明示的に破棄する。
      */
     (void)cplat_local_lock_create(&s_memory_lock_lock);
 }
@@ -241,7 +242,8 @@ static int prefault_stack(size_t stack_prefault_bytes)
         {
             int stack_result = pthread_attr_getstack(&attr, &stack_addr, &stack_size);
             /*
-             * Linux では pthread_attr_destroy() は常に成功し、必要な値は直前で取得済みのため破棄する。
+             * Linux では pthread_attr_destroy() は常に成功し、必要な値は直前で取得済みのため、
+             * 戻り値は明示的に破棄する。
              * see: https://man7.org/linux/man-pages/man3/pthread_attr_init.3.html
              */
             (void)pthread_attr_destroy(&attr);
@@ -695,6 +697,7 @@ static int acquire_windows_range(cplat_memory_lock_scope *scope, uintptr_t base,
                 result = insert_windows_registry_range(insert_index, current, range_end, 1U);
                 if (result != CPLAT_OK)
                 {
+                    /* registry への登録の失敗を返す経路の後始末のため、戻り値は明示的に破棄する。 */
                     (void)VirtualUnlock(pointer_from_uintptr(current), range_size);
                 }
                 else
@@ -702,6 +705,7 @@ static int acquire_windows_range(cplat_memory_lock_scope *scope, uintptr_t base,
                     result = append_scope_range(scope, current, range_end);
                     if (result != CPLAT_OK)
                     {
+                        /* scope への記録の失敗を返す経路の後始末のため、戻り値は明示的に破棄する。 */
                         (void)VirtualUnlock(pointer_from_uintptr(current), range_size);
                         remove_windows_registry_range(insert_index);
                     }
@@ -714,7 +718,7 @@ static int acquire_windows_range(cplat_memory_lock_scope *scope, uintptr_t base,
 
     if (result != CPLAT_OK)
     {
-        (void)release_windows_scope_ranges(scope);
+        (void)release_windows_scope_ranges(scope); /* 元の取得の失敗を返す後始末のため、戻り値は明示的に破棄する */
     }
 
     return result;

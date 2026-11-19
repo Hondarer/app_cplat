@@ -989,7 +989,7 @@ static void trace_handle_release_normal(cplat_tracer *handle)
 
     if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
     {
-        (void)cplat_local_rwlock_dispose(handle->config_rwlock);
+        cplat_local_rwlock_dispose(handle->config_rwlock);
     }
 #elif defined(PLATFORM_WINDOWS)
     cplat_free(handle->eventlog_instance_name);
@@ -997,7 +997,7 @@ static void trace_handle_release_normal(cplat_tracer *handle)
 
     if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
     {
-        (void)cplat_local_rwlock_dispose(handle->config_rwlock);
+        cplat_local_rwlock_dispose(handle->config_rwlock);
     }
 #endif /* PLATFORM_ */
 
@@ -1043,7 +1043,7 @@ static void trace_handle_release_on_shutdown(cplat_tracer *handle)
 
     if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
     {
-        (void)cplat_local_rwlock_dispose(handle->config_rwlock);
+        cplat_local_rwlock_dispose(handle->config_rwlock);
     }
 
     handle->lifecycle_state = TRACE_HANDLE_DISPOSED;
@@ -1200,7 +1200,7 @@ cplat_tracer *cplat_tracer_create(const cplat_tracer_concurrency_mode concurrenc
 #endif /* PLATFORM_ */
         if (concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
         {
-            (void)cplat_local_rwlock_dispose(handle->config_rwlock);
+            cplat_local_rwlock_dispose(handle->config_rwlock);
         }
 
         cplat_free(handle);
@@ -1415,7 +1415,8 @@ static int is_valid_threshold(const cplat_trace_level level)
  */
 static void write_stderr_entry(const cplat_trace_level level, const char *timestamp_text, const char *msg)
 {
-    cplat_fprintf(stderr, "%s %c %s\n", timestamp_text, cplat_internal_trace_level_char(level), msg);
+    /* 標準エラー出力はトレースの出力先の 1 つであり、ほかに失敗を伝える先がないため、戻り値は明示的に破棄する。 */
+    (void)cplat_fprintf(stderr, "%s %c %s\n", timestamp_text, cplat_internal_trace_level_char(level), msg);
 }
 
 /**
@@ -1563,7 +1564,12 @@ int cplat_tracer_vwritef_at(cplat_tracer *handle, const cplat_trace_level level,
         return CPLAT_OK;
     }
 
-    vsnprintf(buf, sizeof(buf), format, args); /* 置換対象外: 意図的な切り詰め */
+    /* 書式の展開に失敗した場合は、内容が保証されないバッファーを出力しない。 */
+    if (vsnprintf(buf, sizeof(buf), format, args) < 0) /* 置換対象外: 意図的な切り詰め */
+    {
+        config_unlock_shared(handle);
+        return CPLAT_ERR_UNKNOWN;
+    }
 
     ret = write_dual(handle, level, timestamp, buf);
     config_unlock_shared(handle);
@@ -1793,7 +1799,13 @@ int cplat_tracer_vwrite_hexf_at(cplat_tracer *handle, const cplat_trace_level le
 
     if (format != NULL)
     {
-        vsnprintf(label, sizeof(label), format, args); /* 置換対象外: 意図的な切り詰め */
+        /* 書式の展開に失敗した場合は、内容が保証されないラベルを出力しない。 */
+        if (vsnprintf(label, sizeof(label), format, args) < 0) /* 置換対象外: 意図的な切り詰め */
+        {
+            config_unlock_shared(handle);
+            return CPLAT_ERR_UNKNOWN;
+        }
+
         ret = hex_write_impl(handle, level, timestamp, data, size, label);
     }
     else

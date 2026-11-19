@@ -130,6 +130,55 @@ extern "C"
      */
     int cplat_internal_error_report_success(cplat_error *detail_out);
 
+    /*
+     * 委譲先の戻り値は記録の成否ではなく記録した値に対応する結果コードであり、
+     * 記録専用の関数を使う呼び出し元は返す結果コードを別に決めるため、
+     * 次の 3 つの関数の cplat_internal_error_report_* の戻り値は明示的に破棄する。
+     */
+
+    /**
+     *  @brief          errno をエラーの詳細として記録します。結果コードは返しません。
+     *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
+     *                  エラー詳細を設定せず、返却しません。
+     *  @param[in]      errno_value errno の値。
+     *
+     *  エラーの詳細を記録するだけで、結果コードを返しません。
+     *  結果コードが要る場合は cplat_internal_error_report_errno() を使用します。
+     */
+    static inline void cplat_internal_error_record_errno(cplat_error *detail_out, int errno_value)
+    {
+        (void)cplat_internal_error_report_errno(detail_out, errno_value);
+    }
+
+    /**
+     *  @brief          成功を記録し、詳細エラーをクリアします。結果コードは返しません。
+     *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
+     *                  エラー詳細を設定せず、返却しません。
+     *
+     *  エラーの詳細を記録するだけで、結果コードを返しません。
+     *  結果コードが要る場合は cplat_internal_error_report_success() を使用します。
+     */
+    static inline void cplat_internal_error_record_success(cplat_error *detail_out)
+    {
+        (void)cplat_internal_error_report_success(detail_out);
+    }
+
+#if defined(PLATFORM_WINDOWS)
+    /**
+     *  @brief          Win32 エラーをエラーの詳細として記録します。結果コードは返しません。
+     *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
+     *                  エラー詳細を設定せず、返却しません。
+     *  @param[in]      error_code GetLastError() が返した値。
+     *
+     *  エラーの詳細を記録するだけで、結果コードを返しません。
+     *  結果コードが要る場合は cplat_internal_error_report_windows_error() を使用します。
+     */
+    static inline void cplat_internal_error_record_windows_error(cplat_error *detail_out, unsigned long error_code)
+    {
+        (void)cplat_internal_error_report_windows_error(detail_out, error_code);
+    }
+#endif
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

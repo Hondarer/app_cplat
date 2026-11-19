@@ -53,7 +53,11 @@ static const char k_module_ext[] = ".dll";
 static void wait_for_entry_lock_initialization(cplat_sym_loader_entry *fobj)
 {
     (void)fobj;
-    sched_yield();
+    /*
+     * Linux の sched_yield() は常に成功するため、戻り値は明示的に破棄する。
+     * see: https://man7.org/linux/man-pages/man2/sched_yield.2.html
+     */
+    (void)sched_yield();
 }
 
 static void (*s_entry_lock_wait_hook)(cplat_sym_loader_entry *fobj) = wait_for_entry_lock_initialization;
@@ -66,7 +70,7 @@ static void yield_while_entry_lock_initializing(cplat_sym_loader_entry *fobj)
     s_entry_lock_wait_hook(fobj);
 #elif defined(PLATFORM_WINDOWS)
     (void)fobj;
-    (void)SwitchToThread();
+    SwitchToThread();
 #endif /* PLATFORM_ */
 }
 

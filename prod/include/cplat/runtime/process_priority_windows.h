@@ -128,6 +128,7 @@ extern "C"
      *  特権がない場合、OS は失敗を返さずに HIGH を設定するため、本関数は設定後のクラスを確認します。
      *  REAL_TIME になっていなければ元のクラスへ戻し、@p detail_out に `ERROR_PRIVILEGE_NOT_HELD` を記録して
      *  @ref CPLAT_ERR_PERMISSION_DENIED を返します。
+     *  復元に失敗した場合は、優先度クラスが戻らないことがあります。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。

@@ -9,6 +9,7 @@
  */
 #include <testfw.h>
 #include <mock_cplat.h>
+#include <mock_stdio.h>
 #include <cplat/trace/tracer.h>
 #include "traceSyncMock.h"
 #include <string>
@@ -620,6 +621,88 @@ TEST_F(traceHookTest, test_remove_hook_while_started_does_nothing)
         1u,
         g_hook_records
             .size()); // [確認_正常系] - g_hook_records.size() の戻り値が 1u であること。(フックが解除されず 1 回呼ばれたことの確認)
+
+    // Cleanup
+    cplat_tracer_stop(tracer);
+    cplat_tracer_remove_hook(tracer, entry);
+    cplat_tracer_dispose(&tracer);
+}
+
+// 書式の展開に失敗した場合に何も出力せず CPLAT_ERR_UNKNOWN を返し、共有ロックを解除することの確認
+// [サブ手順参照 名前=traceHookTest.SetUp]
+TEST_F(traceHookTest, test_writef_reports_format_failure_without_output)
+{
+    // Arrange
+    // [サブ手順参照 名前=traceHookTest.create_tracer]
+    cplat_tracer *tracer = create_tracer();
+    cplat_tracer_hook_entry *entry =
+        cplat_tracer_set_hook(tracer, recording_hook, nullptr); // [状態] - 記録用フックを登録する。
+    ASSERT_NE(nullptr, entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
+    cplat_tracer_start(tracer); // [状態] - tracer を started 状態とする。
+    cplat_timespec ts = make_fixed_timestamp(); // [状態] - 固定タイムスタンプを用意する。
+    NiceMock<Mock_stdio> mock_stdio;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_stdio, vsnprintf(_, _, _, _, _, _))
+        .Times(AnyNumber()); // [Pre-Assert確認_異常系] - vsnprintf() が任意の回数呼び出されること。(ほかの書式の展開は libc の処理へ委譲する)
+    EXPECT_CALL(mock_stdio, vsnprintf(_, _, _, _, _, testing::StrEq("fail=1")))
+        .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - vsnprintf() が "fail=1" を展開する書式で 1 回呼び出されること。
+                               // [Pre-Assert手順] - vsnprintf() から -1 を返す。
+
+    // Act
+    int failed_rc = cplat_tracer_writef_at(tracer, CPLAT_TRACE_LEVEL_INFO, &ts, "fail=%d",
+                                           1); // [手順] - 書式の展開が失敗する状態で cplat_tracer_writef_at() を呼び出す。
+    size_t failed_count = g_hook_records.size();
+    int next_rc = cplat_tracer_writef_at(tracer, CPLAT_TRACE_LEVEL_INFO, &ts, "next=%d",
+                                         2); // [手順] - 続けて別の書式で cplat_tracer_writef_at() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, failed_rc); // [確認_異常系] - 1 回目の cplat_tracer_writef_at() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(0u, failed_count); // [確認_異常系] - 1 回目の呼び出しでフックが呼ばれないこと。(何も出力しないことの確認)
+    EXPECT_EQ(CPLAT_OK, next_rc); // [確認_異常系] - 2 回目の cplat_tracer_writef_at() の戻り値が CPLAT_OK であること。(共有ロックが解除されていることの確認)
+    ASSERT_EQ(1u, g_hook_records.size()); // [確認_異常系] - フックが合計 1 回呼ばれること。
+    EXPECT_EQ("next=2", g_hook_records[0].message); // [確認_異常系] - フックが受けたメッセージが "next=2" であること。
+
+    // Cleanup
+    cplat_tracer_stop(tracer);
+    cplat_tracer_remove_hook(tracer, entry);
+    cplat_tracer_dispose(&tracer);
+}
+
+// ラベルの書式の展開に失敗した場合に何も出力せず CPLAT_ERR_UNKNOWN を返し、共有ロックを解除することの確認
+// [サブ手順参照 名前=traceHookTest.SetUp]
+TEST_F(traceHookTest, test_write_hexf_reports_label_format_failure_without_output)
+{
+    // Arrange
+    // [サブ手順参照 名前=traceHookTest.create_tracer]
+    cplat_tracer *tracer = create_tracer();
+    cplat_tracer_hook_entry *entry =
+        cplat_tracer_set_hook(tracer, recording_hook, nullptr); // [状態] - 記録用フックを登録する。
+    ASSERT_NE(nullptr, entry); // [状態確認] - cplat_tracer_set_hook() の戻り値が nullptr 以外であること。
+    cplat_tracer_start(tracer); // [状態] - tracer を started 状態とする。
+    cplat_timespec ts = make_fixed_timestamp(); // [状態] - 固定タイムスタンプを用意する。
+    const unsigned char data[] = {0x01, 0xAB, 0xFF};
+    NiceMock<Mock_stdio> mock_stdio;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_stdio, vsnprintf(_, _, _, _, _, _))
+        .Times(AnyNumber()); // [Pre-Assert確認_異常系] - vsnprintf() が任意の回数呼び出されること。(ほかの書式の展開は libc の処理へ委譲する)
+    EXPECT_CALL(mock_stdio, vsnprintf(_, _, _, _, _, testing::StrEq("label=1")))
+        .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - vsnprintf() が "label=1" を展開する書式で 1 回呼び出されること。
+                               // [Pre-Assert手順] - vsnprintf() から -1 を返す。
+
+    // Act
+    int failed_rc = cplat_tracer_write_hexf_at(tracer, CPLAT_TRACE_LEVEL_INFO, &ts, data, sizeof(data), "label=%d",
+                                               1); // [手順] - ラベルの書式の展開が失敗する状態で cplat_tracer_write_hexf_at() を呼び出す。
+    size_t failed_count = g_hook_records.size();
+    int next_rc = cplat_tracer_writef_at(tracer, CPLAT_TRACE_LEVEL_INFO, &ts, "next=%d",
+                                         2); // [手順] - 続けて cplat_tracer_writef_at() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, failed_rc); // [確認_異常系] - cplat_tracer_write_hexf_at() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(0u, failed_count); // [確認_異常系] - cplat_tracer_write_hexf_at() の呼び出しでフックが呼ばれないこと。(何も出力しないことの確認)
+    EXPECT_EQ(CPLAT_OK, next_rc); // [確認_異常系] - 続く cplat_tracer_writef_at() の戻り値が CPLAT_OK であること。(共有ロックが解除されていることの確認)
+    EXPECT_EQ(1u, g_hook_records.size()); // [確認_異常系] - フックが合計 1 回呼ばれること。
 
     // Cleanup
     cplat_tracer_stop(tracer);

@@ -62,7 +62,8 @@ static int ensure_elevated(const char *command, int *handled)
     ret = cplat_elevated_process_run_piped(command, NULL, NULL, &exit_code, handled);
     if (ret != 0)
     {
-        fprintf(stderr, "管理者権限への昇格に失敗しました。\n");
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "管理者権限への昇格に失敗しました。\n");
         return -1;
     }
 
@@ -87,34 +88,39 @@ static int report_status(const int ret, const char *action, const char *message_
 {
     if (ret == CPLAT_OK)
     {
-        printf("イベント ソース '%s' を%sしました。\n", CPLAT_TRACER_DEFAULT_PROVIDER_NAME, action);
+        /*
+         * 結果の出力の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
+         * この 2 つの printf の戻り値は明示的に破棄する。
+         */
+        (void)printf("イベント ソース '%s' を%sしました。\n", CPLAT_TRACER_DEFAULT_PROVIDER_NAME, action);
 
         if (message_file_path != NULL)
         {
-            printf("メッセージ DLL: %s\n"
-                   "注: メッセージ DLL は、イベント ソースの登録が有効な期間を通じて必要です。\n",
-                   message_file_path);
+            (void)printf("メッセージ DLL: %s\n"
+                         "注: メッセージ DLL は、イベント ソースの登録が有効な期間を通じて必要です。\n",
+                         message_file_path);
         }
 
         return 0;
     }
 
+    /* 診断の出力先がほかにないため、この関数の fprintf の戻り値は明示的に破棄する。 */
     if (ret == CPLAT_ERR_PERMISSION_DENIED)
     {
-        fprintf(stderr, "アクセスが拒否されました。管理者として実行してください。\n");
+        (void)fprintf(stderr, "アクセスが拒否されました。管理者として実行してください。\n");
     }
     else if (ret == CPLAT_ERR_NOT_FOUND || ret == CPLAT_ERR_CORRUPT_DESCRIPTOR)
     {
-        fprintf(stderr, "メッセージ リソース DLL を確認できません。libcplat.dll と同じディレクトリに "
-                        "libcplat_eventlog_messages.dll を配置してください。\n");
+        (void)fprintf(stderr, "メッセージ リソース DLL を確認できません。libcplat.dll と同じディレクトリに "
+                              "libcplat_eventlog_messages.dll を配置してください。\n");
     }
     else if (ret == CPLAT_ERR_INVALID_ARGUMENT)
     {
-        fprintf(stderr, "パラメーターが不正です。\n");
+        (void)fprintf(stderr, "パラメーターが不正です。\n");
     }
     else
     {
-        fprintf(stderr, "システム エラーにより%sに失敗しました。\n", action);
+        (void)fprintf(stderr, "システム エラーにより%sに失敗しました。\n", action);
     }
 
     return -1;
@@ -188,7 +194,11 @@ static int do_install(void)
 
     /* mc.exe が生成するテーブルは ID 1、リソース種別は RT_MESSAGETABLE (11)。 */
     table = FindResourceW(resources, MAKEINTRESOURCEW(1), MAKEINTRESOURCEW(11));
-    FreeLibrary(resources);
+    /*
+     * 存在の確認だけにデータ ファイルとして読み込んだ DLL の解放であり、失敗しても登録の判定は変わらないため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)FreeLibrary(resources);
 
     if (table == NULL)
     {
@@ -252,7 +262,8 @@ int eventlog_register_run(const char *command)
 {
     (void)command;
 
-    fprintf(stderr, "eventlog-register は Windows 専用です。Linux ではイベント ログを使用しません。\n");
+    /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+    (void)fprintf(stderr, "eventlog-register は Windows 専用です。Linux ではイベント ログを使用しません。\n");
 
     return -1;
 }
@@ -284,13 +295,18 @@ int main(int argc, char *argv[])
     const char *command = NULL;
 
     cplat_argparser_init(argc, argv, "cplat 共通イベント ソースを登録または削除します。");
-    cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &need_help);
-    cplat_argparser_register_positional_string("command", "install または uninstall を指定します。",
-                                               CPLAT_ARGPARSER_REQUIRED, &command);
+    /*
+     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
+     * 登録の関数の戻り値は明示的に破棄する。
+     */
+    (void)cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &need_help);
+    (void)cplat_argparser_register_positional_string("command", "install または uninstall を指定します。",
+                                                     CPLAT_ARGPARSER_REQUIRED, &command);
 
     if (cplat_argparser_get_register_error_count() > 0)
     {
-        cplat_argparser_print_register_error_messages(stderr);
+        /* 終了コードはすでに失敗に決まっているため、戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_register_error_messages(stderr);
         return EXIT_FAILURE;
     }
 
@@ -298,21 +314,31 @@ int main(int argc, char *argv[])
 
     if (need_help != 0)
     {
-        cplat_argparser_print_usage(stdout);
+        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
+        {
+            (void)fprintf(stderr, "標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+            return EXIT_FAILURE;
+        }
+
         return EXIT_SUCCESS;
     }
 
     if (parse_result != CPLAT_OK)
     {
-        cplat_argparser_print_error_messages(stderr);
-        cplat_argparser_print_usage(stderr);
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_error_messages(stderr);
+        (void)cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
     }
 
     if (strcmp(command, "install") != 0 && strcmp(command, "uninstall") != 0)
     {
-        fprintf(stderr, "不明なコマンド '%s'\n\n", command);
-        cplat_argparser_print_usage(stderr);
+        /*
+         * 終了コードはすでに失敗に決まっており、診断の出力先もほかにないため、
+         * この fprintf と表示の関数の戻り値は明示的に破棄する。
+         */
+        (void)fprintf(stderr, "不明なコマンド '%s'\n\n", command);
+        (void)cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
     }
 
@@ -320,6 +346,12 @@ int main(int argc, char *argv[])
 
     if (run_result != 0)
     {
+        return EXIT_FAILURE;
+    }
+
+    if (fflush(stdout) != 0 || ferror(stdout) != 0)
+    {
+        (void)fprintf(stderr, "標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
         return EXIT_FAILURE;
     }
 

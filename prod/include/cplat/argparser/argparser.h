@@ -188,6 +188,9 @@ extern "C"
      *  この再初期化により登録の重複を避けられます。\n
      *  解析する引数を差し替える場合も、本関数を呼び出し直してオプションを登録し直してください。
      *
+     *  @p description などの複製に失敗した場合、既定のパーサーは初期化されていない状態になります。\n
+     *  この状態でプロセス共有のパーサーを操作すると、引数なしのパーサーが新しく作られます。
+     *
      *  @warning        パーサーを共有する複数の登録元がある場合、
      *                  あとから本関数を呼び出した側が、先に登録された内容を破棄します。\n
      *                  本関数はオプション登録より前に、単一のスレッドから呼び出してください。
@@ -889,7 +892,8 @@ extern "C"
      *
      *  内部で cplat_argparser_handle_get_usage() を用いて usage 文字列を組み立ててから
      *  @p stream へ書き出します。固定長バッファーによる切り詰めは発生しません。\n
-     *  解析の成否とは独立に、登録完了後であればいつでも呼び出せます。
+     *  解析の成否とは独立に、登録完了後であればいつでも呼び出せます。\n
+     *  @p stream への書き込みの失敗は戻り値で返しません。呼び出し元が @p stream を `ferror()` で検査してください。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
@@ -900,6 +904,8 @@ extern "C"
 
     /**
      *  @brief          プロセス共有の既定パーサーの usage を指定ストリームへ出力します。
+     *
+     *  @p stream への書き込みの失敗は戻り値で返しません。呼び出し元が @p stream を `ferror()` で検査してください。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_OUT_OF_MEMORY のいずれかを返します。
@@ -921,7 +927,8 @@ extern "C"
      *
      *  内部で cplat_argparser_handle_get_error_message() を用いてエラー メッセージを組み立ててから、
      *  "error: {メッセージ}\n" の形式で @p stream へ書き出し、続けて区切りの空行を出力します。\n
-     *  エラーがない場合や対象がない場合は何も出力しません。
+     *  エラーがない場合や対象がない場合は何も出力しません。\n
+     *  @p stream への書き込みの失敗は戻り値で返しません。呼び出し元が @p stream を `ferror()` で検査してください。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
@@ -932,6 +939,8 @@ extern "C"
 
     /**
      *  @brief          プロセス共有の既定パーサーの、直前の解析エラーのメッセージを出力します。
+     *
+     *  @p stream への書き込みの失敗は戻り値で返しません。呼び出し元が @p stream を `ferror()` で検査してください。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL のいずれかを返します。
@@ -1070,7 +1079,8 @@ extern "C"
      *  内部で cplat_argparser_handle_get_register_error_message() を用いてエラー メッセージを組み立ててから、
      *  発生順にすべて "error: {メッセージ}\n" の形式で @p stream へ書き出し、
      *  最後に区切りの空行を出力します。\n
-     *  エラーがない場合は何も出力しません。
+     *  エラーがない場合は何も出力しません。\n
+     *  @p stream への書き込みの失敗は戻り値で返しません。呼び出し元が @p stream を `ferror()` で検査してください。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
@@ -1082,6 +1092,8 @@ extern "C"
 
     /**
      *  @brief          プロセス共有の既定パーサーの、register 系エラーのメッセージを全件出力します。
+     *
+     *  @p stream への書き込みの失敗は戻り値で返しません。呼び出し元が @p stream を `ferror()` で検査してください。
      *
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL のいずれかを返します。

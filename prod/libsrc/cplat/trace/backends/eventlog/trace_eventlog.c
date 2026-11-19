@@ -257,7 +257,7 @@ static void init_user_sid_cache(void)
         s_user_sid = s_user_sid_buffer.token_user.User.Sid;
     }
 
-    CloseHandle(token);
+    (void)CloseHandle(token); /* SID の取得を終えた後の解放で結果が変わらないため、戻り値は明示的に破棄する */
 }
 
 /**
@@ -380,7 +380,7 @@ cplat_eventlog_sink *cplat_eventlog_sink_create(const char *source_name)
     handle = (cplat_eventlog_sink *)cplat_malloc(sizeof(cplat_eventlog_sink));
     if (handle == NULL)
     {
-        DeregisterEventSource(source);
+        (void)DeregisterEventSource(source); /* 確保の失敗で NULL を返す経路の後始末のため、戻り値は明示的に破棄する */
         return NULL;
     }
 
@@ -471,7 +471,8 @@ void cplat_eventlog_sink_dispose(cplat_eventlog_sink *handle)
 
     if (handle->source != NULL)
     {
-        DeregisterEventSource(handle->source);
+        /* 破棄の後に失敗を受けても、呼び出し元が取れる行動がないため、戻り値は明示的に破棄する。 */
+        (void)DeregisterEventSource(handle->source);
     }
 
     cplat_free(handle);
@@ -488,7 +489,8 @@ void cplat_internal_eventlog_sink_dispose_on_shutdown(cplat_eventlog_sink *handl
 
     if (handle->source != NULL && (event == NULL || event->reason == CPLAT_SHUTDOWN_REASON_NORMAL_EXIT))
     {
-        DeregisterEventSource(handle->source);
+        /* プロセスの終了時の破棄であり、失敗を受けて取れる行動がないため、戻り値は明示的に破棄する。 */
+        (void)DeregisterEventSource(handle->source);
     }
 
     cplat_free(handle);
@@ -575,7 +577,8 @@ int cplat_eventlog_register_source(const char *source_name, const char *message_
         }
     }
 
-    RegCloseKey(hkey);
+    /* 登録の成否は値の書き込みの結果 rc で確定しており、閉じる失敗で結果が変わらないため、戻り値は明示的に破棄する。 */
+    (void)RegCloseKey(hkey);
 
     return registry_status(rc);
 }

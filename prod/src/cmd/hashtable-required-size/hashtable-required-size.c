@@ -45,6 +45,10 @@ typedef struct hashtable_required_size_options
  */
 static int register_options(hashtable_required_size_options *options)
 {
+    /*
+     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
+     * この関数の登録の関数の戻り値は明示的に破棄する。
+     */
     (void)cplat_argparser_register_flag("-h", "--help", "show this help", &options->need_help);
     (void)cplat_argparser_register_option_int("-c", "--capacity", "N", "number of slots", CPLAT_ARGPARSER_REQUIRED,
                                               &options->capacity);
@@ -67,6 +71,7 @@ static int register_options(hashtable_required_size_options *options)
 
     if (cplat_argparser_get_register_error_count() > 0)
     {
+        /* 登録の失敗は直後の -1 で伝え、診断の出力先もほかにないため、戻り値は明示的に破棄する。 */
         (void)cplat_argparser_print_register_error_messages(stderr);
         return -1;
     }
@@ -97,12 +102,18 @@ int main(int argc, char **argv)
 
     if (options.need_help != 0)
     {
-        (void)cplat_argparser_print_usage(stdout);
+        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
+        {
+            (void)fprintf(stderr, "failed to write stdout.\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+            return EXIT_FAILURE;
+        }
+
         return EXIT_SUCCESS;
     }
 
     if (ret != CPLAT_OK)
     {
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
         (void)cplat_argparser_print_error_messages(stderr);
         (void)cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
@@ -110,6 +121,7 @@ int main(int argc, char **argv)
 
     if (options.value_align < 0)
     {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
         (void)fprintf(stderr, "value alignment must not be negative.\n");
         return EXIT_FAILURE;
     }
@@ -121,6 +133,7 @@ int main(int argc, char **argv)
         (((options.variable_value == 0) && (options.value_size <= 0)) ||
          ((options.variable_value != 0) && (options.value_storage_size <= 0))))
     {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
         (void)fprintf(stderr, "capacity and the selected field sizes must be positive.\n");
         return EXIT_FAILURE;
     }
@@ -169,6 +182,7 @@ int main(int argc, char **argv)
     ret = cplat_hashtable_required_size(&config, &mgmt_size, &data_size);
     if (ret != CPLAT_OK)
     {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
         (void)fprintf(stderr, "failed to compute required size: %d\n", ret);
         return EXIT_FAILURE;
     }

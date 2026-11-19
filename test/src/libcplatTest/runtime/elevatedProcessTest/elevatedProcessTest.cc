@@ -11,6 +11,8 @@ using testing::Return;
 #if defined(PLATFORM_WINDOWS)
     #include <cplat/base/windows_sdk.h>
     #include <cplat/runtime/process_internal.h>
+    #include <mock_stdio.h>
+    #include <mock_windows.h>
     #include <string>
 
 // このテストではネイティブ プロセスの取り込み経路を実行しないため、リンク用の fake を定義する。
@@ -266,6 +268,156 @@ TEST(elevatedProcessTest, attach_output_pipes_rejects_non_pipe_handles)
             STD_OUTPUT_HANDLE)); // [確認_異常系] - 標準出力に対する GetStdHandle() の戻り値が stdout_before と一致すること。(標準出力ハンドルが変更されないことの確認)
 
     CloseHandle(event_handle);
+}
+
+namespace
+{
+
+// 付け替えの検証で使う偽のハンドル。実際の OS のハンドルとして閉じないよう、CloseHandle() も差し替える。
+HANDLE const k_parent_process = reinterpret_cast<HANDLE>(static_cast<uintptr_t>(0x100U));
+HANDLE const k_stdout_pipe = reinterpret_cast<HANDLE>(static_cast<uintptr_t>(0x200U));
+HANDLE const k_stderr_pipe = reinterpret_cast<HANDLE>(static_cast<uintptr_t>(0x300U));
+HANDLE const k_stdin_null = reinterpret_cast<HANDLE>(static_cast<uintptr_t>(0x400U));
+
+// [サブ手順 名前=elevatedProcessTest.setup_attach_output_pipes_mocks]
+// 付け替えの最後 (setvbuf) まで到達するよう、途中の OS と C ランタイムの関数をすべて成功させる。
+void setup_attach_output_pipes_mocks(Mock_windows &mock_windows, Mock_stdio &mock_stdio, Mock_unistd &mock_unistd)
+{
+    ON_CALL(mock_windows, OpenProcess(_, _, _, _, _, _)).WillByDefault(Return(k_parent_process));
+    // [状態] - OpenProcess() から偽の親プロセス ハンドルを返すように既定動作を設定する。
+    ON_CALL(mock_windows, DuplicateHandle(_, _, _, _, reinterpret_cast<HANDLE>(static_cast<uintptr_t>(11U)), _, _, _,
+                                          _, _))
+        .WillByDefault(DoAll(SetArgPointee<6>(k_stdout_pipe), Return(TRUE)));
+    // [状態] - stdout の DuplicateHandle() から偽の stdout パイプを格納して TRUE を返すように既定動作を設定する。
+    ON_CALL(mock_windows, DuplicateHandle(_, _, _, _, reinterpret_cast<HANDLE>(static_cast<uintptr_t>(22U)), _, _, _,
+                                          _, _))
+        .WillByDefault(DoAll(SetArgPointee<6>(k_stderr_pipe), Return(TRUE)));
+    // [状態] - stderr の DuplicateHandle() から偽の stderr パイプを格納して TRUE を返すように既定動作を設定する。
+    ON_CALL(mock_windows, CloseHandle(_, _, _, _)).WillByDefault(Return(TRUE));
+    // [状態] - 偽のハンドルを閉じないよう、CloseHandle() から TRUE を返すように既定動作を設定する。
+    ON_CALL(mock_windows, GetFileType(_, _, _, _)).WillByDefault(Return(static_cast<DWORD>(FILE_TYPE_PIPE)));
+    // [状態] - GetFileType() から FILE_TYPE_PIPE を返すように既定動作を設定する。
+    ON_CALL(mock_windows, CreateFileW(_, _, _, _, _, _, _, _, _, _)).WillByDefault(Return(k_stdin_null));
+    // [状態] - CreateFileW() から偽の NUL デバイスのハンドルを返すように既定動作を設定する。
+    ON_CALL(mock_windows, SetStdHandle(_, _, _, _, _)).WillByDefault(Return(TRUE));
+    // [状態] - 実際の標準ハンドルを変えないよう、SetStdHandle() から TRUE を返すように既定動作を設定する。
+    ON_CALL(mock_stdio, _fileno(_, _, _, _)).WillByDefault(Return(7));
+    // [状態] - _fileno() から 7 を返すように既定動作を設定する。
+    ON_CALL(mock_stdio, fflush(_, _, _, _)).WillByDefault(Return(0));
+    // [状態] - fflush() から 0 を返すように既定動作を設定する。
+    ON_CALL(mock_stdio, setvbuf(_, _, _, _, _, _, _)).WillByDefault(Return(0));
+    // [状態] - 実際のバッファリングを変えないよう、setvbuf() から 0 を返すように既定動作を設定する。
+    ON_CALL(mock_unistd, _close(_, _, _, _)).WillByDefault(Return(0));
+    // [状態] - 実際の標準ストリームを閉じないよう、_close() から 0 を返すように既定動作を設定する。
+    ON_CALL(mock_unistd, _open_osfhandle(_, _, _, _, _)).WillByDefault(Return(7));
+    // [状態] - _open_osfhandle() から _fileno() と同じ 7 を返すように既定動作を設定する。
+    ON_CALL(mock_unistd, _get_osfhandle(_, _, _, _)).WillByDefault(Return(static_cast<intptr_t>(0x500U)));
+    // [状態] - _get_osfhandle() から偽のハンドル値を返すように既定動作を設定する。
+}
+// [サブ手順終了]
+
+} // namespace
+
+// 出力パイプへの付け替えがすべて成功した場合に attached_out が 1 になることの確認
+TEST(elevatedProcessTest, attach_output_pipes_succeeds_when_all_steps_succeed)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    NiceMock<Mock_stdio> mock_stdio;
+    NiceMock<Mock_unistd> mock_unistd;
+    // [サブ手順参照 名前=elevatedProcessTest.setup_attach_output_pipes_mocks]
+    setup_attach_output_pipes_mocks(mock_windows, mock_stdio, mock_unistd);
+    std::string flag_text = "--cplat-output-pipes=" + std::to_string(GetCurrentProcessId()) + ":11:22";
+    char program[] = "pipeTest";
+    char *argv[] = {program, &flag_text[0], nullptr};
+    int argc = 2;
+    int attached = -1;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, SetStdHandle(_, _, _, _, _))
+        .Times(3); // [Pre-Assert確認_正常系] - SetStdHandle() が 3 回呼び出されること。(stdout、stderr、stdin の付け替えの確認)
+    EXPECT_CALL(mock_stdio, setvbuf(_, _, _, stdout, nullptr, _IONBF, 0U))
+        .Times(1); // [Pre-Assert確認_正常系] - setvbuf() が stdout と _IONBF を指定して 1 回呼び出されること。
+
+    // Act
+    int result = cplat_elevated_process_attach_output_pipes(
+        &argc, argv, &attached); // [手順] - 付け替えがすべて成功する状態で cplat_elevated_process_attach_output_pipes() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK,
+              result); // [確認_正常系] - cplat_elevated_process_attach_output_pipes() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, attached); // [確認_正常系] - attached が 1 であること。
+    EXPECT_EQ(1, argc);     // [確認_正常系] - argc が 1 であること。(フラグが取り除かれることの確認)
+}
+
+// 標準ハンドルの付け替えに失敗した場合に CPLAT_ERR_UNKNOWN を返すことの確認
+TEST(elevatedProcessTest, attach_output_pipes_fails_when_set_std_handle_fails)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    NiceMock<Mock_stdio> mock_stdio;
+    NiceMock<Mock_unistd> mock_unistd;
+    // [サブ手順参照 名前=elevatedProcessTest.setup_attach_output_pipes_mocks]
+    setup_attach_output_pipes_mocks(mock_windows, mock_stdio, mock_unistd);
+    std::string flag_text = "--cplat-output-pipes=" + std::to_string(GetCurrentProcessId()) + ":11:22";
+    char program[] = "pipeTest";
+    char *argv[] = {program, &flag_text[0], nullptr};
+    int argc = 2;
+    int attached = -1;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, SetStdHandle(_, _, _, STD_OUTPUT_HANDLE, _))
+        .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - SetStdHandle() が STD_OUTPUT_HANDLE を指定して 1 回呼び出されること。
+                                  // [Pre-Assert手順] - SetStdHandle() から FALSE を返す。
+    EXPECT_CALL(mock_windows, CloseHandle(_, _, _, _))
+        .Times(AnyNumber()); // [Pre-Assert確認_異常系] - CloseHandle() が任意の回数呼び出されること。(親プロセス ハンドルを閉じる呼び出しを許す)
+    EXPECT_CALL(mock_windows, CloseHandle(_, _, _, k_stderr_pipe))
+        .Times(1); // [Pre-Assert確認_異常系] - 失敗の後始末で stderr パイプの CloseHandle() が 1 回呼び出されること。
+    EXPECT_CALL(mock_windows, CloseHandle(_, _, _, k_stdin_null))
+        .Times(1); // [Pre-Assert確認_異常系] - 失敗の後始末で NUL デバイスの CloseHandle() が 1 回呼び出されること。
+    EXPECT_CALL(mock_stdio, setvbuf(_, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - setvbuf() が呼び出されないこと。
+
+    // Act
+    int result = cplat_elevated_process_attach_output_pipes(
+        &argc, argv, &attached); // [手順] - SetStdHandle() が失敗する状態で cplat_elevated_process_attach_output_pipes() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        result); // [確認_異常系] - cplat_elevated_process_attach_output_pipes() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(0, attached); // [確認_異常系] - attached が 0 であること。
+}
+
+// stdout をバッファーなしにできない場合に CPLAT_ERR_UNKNOWN を返すことの確認
+TEST(elevatedProcessTest, attach_output_pipes_fails_when_setvbuf_fails)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    NiceMock<Mock_stdio> mock_stdio;
+    NiceMock<Mock_unistd> mock_unistd;
+    // [サブ手順参照 名前=elevatedProcessTest.setup_attach_output_pipes_mocks]
+    setup_attach_output_pipes_mocks(mock_windows, mock_stdio, mock_unistd);
+    std::string flag_text = "--cplat-output-pipes=" + std::to_string(GetCurrentProcessId()) + ":11:22";
+    char program[] = "pipeTest";
+    char *argv[] = {program, &flag_text[0], nullptr};
+    int argc = 2;
+    int attached = -1;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_stdio, setvbuf(_, _, _, stdout, nullptr, _IONBF, 0U))
+        .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - setvbuf() が stdout と _IONBF を指定して 1 回呼び出されること。
+                               // [Pre-Assert手順] - setvbuf() から -1 を返す。
+
+    // Act
+    int result = cplat_elevated_process_attach_output_pipes(
+        &argc, argv, &attached); // [手順] - setvbuf() が失敗する状態で cplat_elevated_process_attach_output_pipes() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        result); // [確認_異常系] - cplat_elevated_process_attach_output_pipes() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(0, attached); // [確認_異常系] - attached が 0 であること。
 }
 #endif /* PLATFORM_WINDOWS */
 

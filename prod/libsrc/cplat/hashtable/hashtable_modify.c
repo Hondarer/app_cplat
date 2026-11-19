@@ -32,6 +32,7 @@ static int input_points_into_table(const cplat_hashtable *ht, const void *input)
     size_t mgmt_size = 0;
     size_t data_size = 0;
 
+    /* 構築済みテーブルの設定値は作成時に検証済みで、算出があふれないため、次の 2 つの戻り値は明示的に破棄する。 */
     (void)hashtable_mgmt_layout(&ht->hdr->config, NULL, NULL, &mgmt_size);
     (void)hashtable_data_region_size(&ht->hdr->config, &data_size);
 

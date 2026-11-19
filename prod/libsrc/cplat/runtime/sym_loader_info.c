@@ -38,6 +38,7 @@ int cplat_sym_loader_info(cplat_sym_loader_entry *const *fobj_array, const size_
         }
     }
 
+    /* 診断用の状態の表示であり、表示の成否は戻り値の契約に含めないため、printf の戻り値は明示的に破棄する。 */
     for (fobj_index = 0; fobj_index < fobj_length; fobj_index++)
     {
         cplat_sym_loader_entry *fobj = fobj_array[fobj_index];
@@ -55,9 +56,9 @@ int cplat_sym_loader_info(cplat_sym_loader_entry *const *fobj_array, const size_
             count = fobj->impl->usable_count;
         }
 
-        printf("- [%zu] %s\n", fobj_index, fobj->func_key);
-        printf("    - is_default : %d\n", is_default);
-        printf("    - count : %zu\n", count);
+        (void)printf("- [%zu] %s\n", fobj_index, fobj->func_key);
+        (void)printf("    - is_default : %d\n", is_default);
+        (void)printf("    - count : %zu\n", count);
 
         if (fobj->impl == NULL)
         {
@@ -68,8 +69,8 @@ int cplat_sym_loader_info(cplat_sym_loader_entry *const *fobj_array, const size_
         {
             const cplat_sym_loader_usable *target = &fobj->impl->usable[target_index];
 
-            printf("    - [%zu] lib=%s func=%s ptr=%p\n", target_index, target->lib_name, target->func_name,
-                   target->func_ptr);
+            (void)printf("    - [%zu] lib=%s func=%s ptr=%p\n", target_index, target->lib_name, target->func_name,
+                         target->func_ptr);
         }
     }
 

@@ -202,7 +202,7 @@ static int drop_page_cache(void *arg)
 
     if (fwrite("3\n", 1U, 2U, stream) != 2U)
     {
-        (void)fclose(stream);
+        (void)fclose(stream); /* 先行する書き込みの失敗を返す経路のため、戻り値は明示的に破棄する */
         return -1;
     }
 
@@ -343,7 +343,7 @@ static int create_data_file(const char *path, size_t size)
     block = (bench_record *)cplat_calloc((size_t)BENCH_BLOCK_RECORDS, sizeof(bench_record));
     if (block == NULL)
     {
-        (void)fclose(stream);
+        (void)fclose(stream); /* 先行するメモリ確保の失敗を返す経路のため、戻り値は明示的に破棄する */
         return -1;
     }
 
@@ -365,7 +365,7 @@ static int create_data_file(const char *path, size_t size)
         if (fwrite(block, sizeof(*block), chunk, stream) != chunk)
         {
             cplat_free(block);
-            (void)fclose(stream);
+            (void)fclose(stream); /* 先行する書き込みの失敗を返す経路のため、戻り値は明示的に破棄する */
             return -1;
         }
 
@@ -536,6 +536,7 @@ static int execute_case(const bench_case *job, bench_context *ctx, const bench_e
 
     if (setup_result != 0)
     {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
         (void)cplat_fprintf(stderr, "error: setup failed for %s/%s\n", bench_api_name(job->api, job->durable),
                             bench_pattern_name(job->pattern));
         return -1;
@@ -566,6 +567,7 @@ static int execute_case(const bench_case *job, bench_context *ctx, const bench_e
 
     if (measure_result != 0)
     {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
         (void)cplat_fprintf(stderr, "error: measurement failed for %s/%s\n", bench_api_name(job->api, job->durable),
                             bench_pattern_name(job->pattern));
         return -1;
@@ -602,12 +604,14 @@ static int run_size(const char *dir, size_t size, const char *api_list, const ch
 
     if (cplat_snprintf(path, sizeof(path), "%s/bench_%llu.bin", dir, (unsigned long long)size) != CPLAT_OK)
     {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
         (void)cplat_fprintf(stderr, "error: measurement path is too long\n");
         return -1;
     }
 
     if (create_data_file(path, size) != 0)
     {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
         (void)cplat_fprintf(stderr, "error: failed to create %s\n", path);
         return -1;
     }
@@ -615,7 +619,10 @@ static int run_size(const char *dir, size_t size, const char *api_list, const ch
     order = create_random_order(record_count, (size_t)BENCH_RANDOM_TOUCH_MAX);
     if (order == NULL)
     {
-        /* すでに -1 を返す失敗経路の後始末であり、削除失敗によって正常測定扱いにはならない。 */
+        /*
+         * すでに -1 を返す失敗の経路の後始末であり、削除の失敗で正常な測定の扱いにはならないため、
+         * 戻り値は明示的に破棄する。
+         */
         (void)cplat_remove(path, NULL);
         return -1;
     }
@@ -674,6 +681,7 @@ static int run_size(const char *dir, size_t size, const char *api_list, const ch
     {
         if (cplat_remove(path, NULL) != CPLAT_OK)
         {
+            /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
             (void)cplat_fprintf(stderr, "error: failed to remove %s\n", path);
             failures++;
         }
@@ -715,23 +723,32 @@ int main(int argc, char *argv[])
     cplat_console_init();
 
     cplat_argparser_init(argc, argv, "固定レコード長バイナリ ファイルに対する stdio と mmap の性能を比較します。");
-    cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &need_help);
-    cplat_argparser_register_option_string(NULL, "--dir", "PATH", "測定用ファイルを置くディレクトリ。", 0U, &dir);
-    cplat_argparser_register_option_string(NULL, "--csv", "PATH", "CSV の出力先。", 0U, &csv_path);
-    cplat_argparser_register_option_string(NULL, "--sizes", "LIST", "測定するファイル サイズ (例: 4K,1M,256M)。", 0U,
-                                           &sizes);
-    cplat_argparser_register_option_string(NULL, "--apis", "LIST", "測定する API 形態を絞り込みます。", 0U, &api_list);
-    cplat_argparser_register_option_string(NULL, "--patterns", "LIST", "測定するアクセス パターンを絞り込みます。", 0U,
-                                           &pattern_list);
-    cplat_argparser_register_option_int(NULL, "--min-ms", "MS", "1 試行の測定区間の下限 (ミリ秒)。", 0U, &min_ms);
-    cplat_argparser_register_option_int(NULL, "--trials", "N", "1 条件あたりの試行回数。", 0U, &trials);
-    cplat_argparser_register_flag(NULL, "--huge", "1 GB のケースを追加します。", &huge);
-    cplat_argparser_register_flag(NULL, "--cold", "ページ キャッシュを破棄して測定します (Linux、要 root)。", &cold);
-    cplat_argparser_register_flag(NULL, "--keep", "測定用ファイルを削除せずに残します。", &keep);
+    /*
+     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
+     * 登録の関数の戻り値は明示的に破棄する。
+     */
+    (void)cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &need_help);
+    (void)cplat_argparser_register_option_string(NULL, "--dir", "PATH", "測定用ファイルを置くディレクトリ。", 0U,
+                                                 &dir);
+    (void)cplat_argparser_register_option_string(NULL, "--csv", "PATH", "CSV の出力先。", 0U, &csv_path);
+    (void)cplat_argparser_register_option_string(NULL, "--sizes", "LIST",
+                                                 "測定するファイル サイズ (例: 4K,1M,256M)。", 0U, &sizes);
+    (void)cplat_argparser_register_option_string(NULL, "--apis", "LIST", "測定する API 形態を絞り込みます。", 0U,
+                                                 &api_list);
+    (void)cplat_argparser_register_option_string(NULL, "--patterns", "LIST",
+                                                 "測定するアクセス パターンを絞り込みます。", 0U, &pattern_list);
+    (void)cplat_argparser_register_option_int(NULL, "--min-ms", "MS", "1 試行の測定区間の下限 (ミリ秒)。", 0U,
+                                              &min_ms);
+    (void)cplat_argparser_register_option_int(NULL, "--trials", "N", "1 条件あたりの試行回数。", 0U, &trials);
+    (void)cplat_argparser_register_flag(NULL, "--huge", "1 GB のケースを追加します。", &huge);
+    (void)cplat_argparser_register_flag(NULL, "--cold", "ページ キャッシュを破棄して測定します (Linux、要 root)。",
+                                        &cold);
+    (void)cplat_argparser_register_flag(NULL, "--keep", "測定用ファイルを削除せずに残します。", &keep);
 
     if (cplat_argparser_get_register_error_count() > 0U)
     {
-        cplat_argparser_print_register_error_messages(stderr);
+        /* 終了コードはすでに失敗に決まっているため、戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_register_error_messages(stderr);
         return EXIT_FAILURE;
     }
 
@@ -739,19 +756,26 @@ int main(int argc, char *argv[])
 
     if (need_help != 0)
     {
-        cplat_argparser_print_usage(stdout);
+        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
+        {
+            (void)cplat_fprintf(stderr, "error: failed to write stdout\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+            return EXIT_FAILURE;
+        }
+
         return EXIT_SUCCESS;
     }
 
     if (parse_result != CPLAT_OK)
     {
-        cplat_argparser_print_error_messages(stderr);
-        cplat_argparser_print_usage(stderr);
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_error_messages(stderr);
+        (void)cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
     }
 
     if (min_ms <= 0 || trials <= 0 || trials > BENCH_TIMER_MAX_TRIALS)
     {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
         (void)cplat_fprintf(stderr, "error: --min-ms は 1 以上、--trials は 1 以上 %d 以下を指定してください。\n",
                             BENCH_TIMER_MAX_TRIALS);
         return EXIT_FAILURE;
@@ -760,6 +784,7 @@ int main(int argc, char *argv[])
     /* ページ キャッシュを破棄できることを、測定を始める前に確認する。 */
     if (cold != 0 && drop_page_cache(NULL) != 0)
     {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
         (void)cplat_fprintf(stderr, "error: ページ キャッシュを破棄できません。"
                                     "--cold は Linux で root 権限が必要です。\n");
         return EXIT_FAILURE;
@@ -777,6 +802,7 @@ int main(int argc, char *argv[])
         csv = cplat_fopen(csv_path, "w", NULL);
         if (csv == NULL)
         {
+            /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
             (void)cplat_fprintf(stderr, "error: failed to open %s\n", csv_path);
             return EXIT_FAILURE;
         }
@@ -806,6 +832,7 @@ int main(int argc, char *argv[])
 
         if (length == 0U || length >= sizeof(token))
         {
+            /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
             (void)cplat_fprintf(stderr, "error: invalid size token\n");
             failures++;
             break;
@@ -816,6 +843,7 @@ int main(int argc, char *argv[])
 
         if (parse_size(token, &size) != 0)
         {
+            /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
             (void)cplat_fprintf(stderr, "error: invalid size '%s'\n", token);
             failures++;
             break;
@@ -849,7 +877,7 @@ int main(int argc, char *argv[])
         /* bench_report_*() は CSV への書き込みの失敗を通知しないため、閉じる前にまとめて検査する。 */
         if (ferror(csv) != 0)
         {
-            (void)cplat_fprintf(stderr, "error: failed to write %s\n", csv_path); /* 診断の出力先がほかにない */
+            (void)cplat_fprintf(stderr, "error: failed to write %s\n", csv_path); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
             failures++;
         }
 
@@ -857,6 +885,13 @@ int main(int argc, char *argv[])
         {
             failures++;
         }
+    }
+
+    /* 標準出力の表の書き込みの失敗はストリームに残るため、終了の直前にまとめて検査する。 */
+    if (fflush(stdout) != 0 || ferror(stdout) != 0)
+    {
+        (void)cplat_fprintf(stderr, "error: failed to write stdout\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+        failures++;
     }
 
     if (failures > 0)

@@ -35,6 +35,10 @@ static shutdown_callback_entry *s_shutdown_request_callbacks = NULL;
 static cplat_local_lock *s_shutdown_lock;
 static cplat_once_flag s_shutdown_lock_once = {0};
 static cplat_once_flag s_shutdown_hook_once = {0};
+/* 排他ロックの生成の結果。登録関数は、生成に失敗した場合に登録を拒否する。 */
+static int s_shutdown_lock_result = CPLAT_OK;
+/* 終了フック (atexit、シグナル、コンソール ハンドラー) の登録の結果。1 つでも失敗した場合は CPLAT_ERR_UNKNOWN。 */
+static int s_shutdown_hook_result = CPLAT_OK;
 static int s_shutdown_started = 0;
 static int s_shutdown_request_started = 0;
 
@@ -47,7 +51,7 @@ static cplat_atomic_i32 s_exit_code_valid = CPLAT_ATOMIC_INIT(0);
 
 static void init_shutdown_lock(void)
 {
-    (void)cplat_local_lock_create(&s_shutdown_lock);
+    s_shutdown_lock_result = cplat_local_lock_create(&s_shutdown_lock);
 }
 
 static void shutdown_lock(void)
@@ -185,6 +189,7 @@ static int invoke_shutdown_request_callbacks_once(const cplat_shutdown_event *ev
 static void shutdown_atexit_callback(void)
 {
     cplat_shutdown_event event = make_normal_exit_event();
+    /* 局所変数を渡すため -1 は返らず、1 は別の経路が先に実行したことを表すだけのため、戻り値は明示的に破棄する。 */
     (void)invoke_shutdown_callbacks_once(&event);
 }
 
@@ -210,11 +215,16 @@ static void shutdown_signal_handler(int signal_number)
         return;
     }
 
+    /* 局所変数を渡すため -1 は返らず、1 は別の経路が先に実行したことを表すだけのため、戻り値は明示的に破棄する。 */
     (void)invoke_shutdown_callbacks_once(&event);
 
-    /* 既定の動作に戻して同じシグナルを再送出し、シグナルによる終了として親プロセスへ伝える。 */
-    signal(signal_number, SIG_DFL);
-    raise(signal_number);
+    /*
+     * 既定の動作に戻して同じシグナルを再送出し、シグナルによる終了として親プロセスへ伝える。
+     * signal_number はこのハンドラーを登録した有効なシグナルであり、シグナル ハンドラーには失敗を伝える先がないため、
+     * signal と raise の戻り値は明示的に破棄する。
+     */
+    (void)signal(signal_number, SIG_DFL);
+    (void)raise(signal_number);
 }
 #elif defined(PLATFORM_WINDOWS)
 /*
@@ -252,22 +262,56 @@ static BOOL WINAPI shutdown_console_ctrl_handler(DWORD ctrl_type)
         return TRUE;
     }
 
+    /* 局所変数を渡すため -1 は返らず、1 は別の経路が先に実行したことを表すだけのため、戻り値は明示的に破棄する。 */
     (void)invoke_shutdown_callbacks_once(&event);
 
     return FALSE;
 }
 #endif
 
+/*
+ * 終了フックを設置する。1 つの設置が失敗しても残りの設置を続け、1 つでも失敗した場合は
+ * s_shutdown_hook_result を CPLAT_ERR_UNKNOWN にする。設置済みのフックは外せないため、そのまま残す。
+ */
 static void install_shutdown_hooks(void)
 {
-    (void)atexit(shutdown_atexit_callback);
+    if (atexit(shutdown_atexit_callback) != 0)
+    {
+        s_shutdown_hook_result = CPLAT_ERR_UNKNOWN;
+    }
 
 #if defined(PLATFORM_LINUX)
-    signal(SIGINT, shutdown_signal_handler);
-    signal(SIGTERM, shutdown_signal_handler);
+    if (signal(SIGINT, shutdown_signal_handler) == SIG_ERR)
+    {
+        s_shutdown_hook_result = CPLAT_ERR_UNKNOWN;
+    }
+    if (signal(SIGTERM, shutdown_signal_handler) == SIG_ERR)
+    {
+        s_shutdown_hook_result = CPLAT_ERR_UNKNOWN;
+    }
 #elif defined(PLATFORM_WINDOWS)
-    SetConsoleCtrlHandler(shutdown_console_ctrl_handler, TRUE);
+    if (!SetConsoleCtrlHandler(shutdown_console_ctrl_handler, TRUE))
+    {
+        s_shutdown_hook_result = CPLAT_ERR_UNKNOWN;
+    }
 #endif
+}
+
+/*
+ * 終了処理の準備 (終了フックの設置と排他ロックの生成) を一度だけ行い、結果を返す。
+ * どちらかが失敗した場合は CPLAT_ERR_UNKNOWN を返す。once のため、以後の呼び出しも同じ結果を返す。
+ */
+static int prepare_shutdown(void)
+{
+    cplat_call_once(&s_shutdown_hook_once, install_shutdown_hooks);
+    cplat_call_once(&s_shutdown_lock_once, init_shutdown_lock);
+
+    if (s_shutdown_hook_result != CPLAT_OK || s_shutdown_lock_result != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    return CPLAT_OK;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -282,7 +326,10 @@ int cplat_shutdown_register(cplat_shutdown_fn callback, void *context)
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    cplat_call_once(&s_shutdown_hook_once, install_shutdown_hooks);
+    if (prepare_shutdown() != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
 
     entry = (shutdown_callback_entry *)cplat_malloc(sizeof(*entry));
     if (entry == NULL)
@@ -343,7 +390,10 @@ int cplat_shutdown_request_register(cplat_shutdown_fn callback, void *context)
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    cplat_call_once(&s_shutdown_hook_once, install_shutdown_hooks);
+    if (prepare_shutdown() != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
 
     entry = (shutdown_callback_entry *)cplat_malloc(sizeof(*entry));
     if (entry == NULL)

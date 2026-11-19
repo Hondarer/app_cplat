@@ -454,25 +454,33 @@ static int parse_hex_bytes(const char *text, unsigned char **data, size_t *size)
 /* トレース レベルの名前と数値を標準出力へ表示する。 */
 static void print_level_result(cplat_trace_level level)
 {
-    printf("level=%s(%d)\n", level_to_name(level), (int)level);
+    /*
+     * 結果の出力の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)printf("level=%s(%d)\n", level_to_name(level), (int)level);
 }
 
 /* 結果コードを表示する。標準出力が端末の場合は、成功 (0) を緑、失敗 (非 0) を赤で色付けして表示する。 */
 static void print_rc_result(int ret)
 {
+    /*
+     * 結果の出力の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
+     * この関数の printf の戻り値は明示的に破棄する。
+     */
     if (!cplat_isatty(CPLAT_STREAM_STDOUT))
     {
-        printf("rc=%d\n", ret);
+        (void)printf("rc=%d\n", ret);
         return;
     }
 
     if (ret == 0)
     {
-        printf("\x1b[32mrc=%d\x1b[0m\n", ret);
+        (void)printf("\x1b[32mrc=%d\x1b[0m\n", ret);
         return;
     }
 
-    printf("\x1b[31mrc=%d\x1b[0m\n", ret);
+    (void)printf("\x1b[31mrc=%d\x1b[0m\n", ret);
 }
 
 /**
@@ -502,7 +510,8 @@ struct trace_cli_command
 /* コマンドの使用方法を標準エラー出力へ表示する。 */
 static void print_command_usage(const struct trace_cli_command *cmd)
 {
-    fprintf(stderr, "使用方法: %s%s\n", cmd->name, cmd->usage_args);
+    /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+    (void)fprintf(stderr, "使用方法: %s%s\n", cmd->name, cmd->usage_args);
 }
 
 void trace_cli_session_init(trace_cli_session *session)
@@ -532,7 +541,11 @@ void trace_cli_session_dispose(trace_cli_session *session)
 /* 対話セッション開始時の案内メッセージを表示する。 */
 static void print_interactive_hint(void)
 {
-    printf("help でコマンド一覧を表示します。exit で終了します。\n");
+    /*
+     * 案内の出力の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)printf("help でコマンド一覧を表示します。exit で終了します。\n");
 }
 
 /* help コマンドを処理する。正常終了として 0 を返す。 */
@@ -564,19 +577,25 @@ static int cmd_create(trace_cli_session *session, const struct trace_cli_command
 
     if (session->handle != NULL)
     {
-        fprintf(stderr, "エラー: 既存の handle を dispose してから create を実行してください。\n");
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "エラー: 既存の handle を dispose してから create を実行してください。\n");
         return -1;
     }
 
     session->handle = cplat_tracer_create(CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED);
+
+    /*
+     * 結果の出力の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
+     * この 2 つの printf の戻り値は明示的に破棄する。
+     */
     if (session->handle == NULL)
     {
         session->prompt_state = TRACE_CLI_PROMPT_STATE_UNCREATED;
-        printf("handle=NULL\n");
+        (void)printf("handle=NULL\n");
     }
     else
     {
-        printf("handle=created\n");
+        (void)printf("handle=created\n");
     }
 
     return 0;
@@ -590,7 +609,11 @@ static int cmd_dispose(trace_cli_session *session, const struct trace_cli_comman
     cplat_tracer_dispose(&session->handle);
     session->handle = NULL;
     session->prompt_state = TRACE_CLI_PROMPT_STATE_DISPOSED;
-    printf("handle=disposed\n");
+    /*
+     * 結果の出力の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)printf("handle=disposed\n");
 
     return 0;
 }
@@ -634,7 +657,8 @@ static int cmd_set_name(trace_cli_session *session, const struct trace_cli_comma
     identifier_token = next_token(cursor);
     if (identifier_token != NULL && !parse_int64_value(identifier_token, &identifier))
     {
-        fprintf(stderr, "エラー: identifier は整数で指定してください。\n");
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "エラー: identifier は整数で指定してください。\n");
         return -1;
     }
 
@@ -680,7 +704,8 @@ static int cmd_set_os_level(trace_cli_session *session, const struct trace_cli_c
 
     if (!parse_trace_level(level_token, &level))
     {
-        fprintf(stderr, "エラー: level が不正です。\n");
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "エラー: level が不正です。\n");
         return -1;
     }
 
@@ -722,21 +747,24 @@ static int cmd_set_file_level(trace_cli_session *session, const struct trace_cli
 
     if (!parse_trace_level(level_token, &level))
     {
-        fprintf(stderr, "エラー: level が不正です。\n");
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "エラー: level が不正です。\n");
         return -1;
     }
 
     max_bytes_token = next_token(cursor);
     if (max_bytes_token != NULL && !parse_size_value(max_bytes_token, &max_bytes))
     {
-        fprintf(stderr, "エラー: max-bytes は 0 以上の整数で指定してください。\n");
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "エラー: max-bytes は 0 以上の整数で指定してください。\n");
         return -1;
     }
 
     generations_token = next_token(cursor);
     if (generations_token != NULL && !parse_int_value(generations_token, &generations))
     {
-        fprintf(stderr, "エラー: generations は整数で指定してください。\n");
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "エラー: generations は整数で指定してください。\n");
         return -1;
     }
 
@@ -782,7 +810,8 @@ static int cmd_set_stderr_level(trace_cli_session *session, const struct trace_c
 
     if (!parse_trace_level(level_token, &level))
     {
-        fprintf(stderr, "エラー: level が不正です。\n");
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "エラー: level が不正です。\n");
         return -1;
     }
 
@@ -808,7 +837,8 @@ static int cmd_write(trace_cli_session *session, const struct trace_cli_command 
 
     if (!parse_trace_level(level_token, &level))
     {
-        fprintf(stderr, "エラー: level が不正です。\n");
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "エラー: level が不正です。\n");
         return -1;
     }
 
@@ -856,13 +886,15 @@ static int cmd_write_hex(trace_cli_session *session, const struct trace_cli_comm
 
     if (!parse_trace_level(level_token, &level))
     {
-        fprintf(stderr, "エラー: level が不正です。\n");
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "エラー: level が不正です。\n");
         return -1;
     }
 
     if (!parse_hex_bytes(hex_token, &data, &size))
     {
-        fprintf(stderr, "エラー: hex は 16 進文字列で指定してください。\n");
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "エラー: hex は 16 進文字列で指定してください。\n");
         return -1;
     }
 
@@ -944,16 +976,20 @@ void trace_cli_print_help(void)
 {
     size_t i;
 
-    printf("trace-cli: cplat.tracer interactive CLI\n");
-    printf("使用可能な level: CRITICAL ERROR WARNING INFO VERBOSE DEBUG NONE\n");
-    printf("コマンド:\n");
+    /*
+     * ヘルプの出力の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
+     * この関数の printf の戻り値は明示的に破棄する。
+     */
+    (void)printf("trace-cli: cplat.tracer interactive CLI\n");
+    (void)printf("使用可能な level: CRITICAL ERROR WARNING INFO VERBOSE DEBUG NONE\n");
+    (void)printf("コマンド:\n");
 
     for (i = 0U; i < sizeof(s_commands) / sizeof(s_commands[0]); i++)
     {
-        printf("  %s%s\n", s_commands[i].name, s_commands[i].usage_args);
+        (void)printf("  %s%s\n", s_commands[i].name, s_commands[i].usage_args);
     }
 
-    printf("hex は 01ABFF または \"01 AB FF\" の形式で指定できます。\n");
+    (void)printf("hex は 01ABFF または \"01 AB FF\" の形式で指定できます。\n");
 }
 
 int trace_cli_process_line(trace_cli_session *session, const char *line)
@@ -968,6 +1004,10 @@ int trace_cli_process_line(trace_cli_session *session, const char *line)
         return -1;
     }
 
+    /*
+     * 失敗は引数が不正な場合だけであり、line は直前で NULL でないことを検査済みで、
+     * buffer の大きさと文字数の上限は固定の値のため、戻り値は明示的に破棄する。
+     */
     (void)cplat_strncpy(buffer, sizeof(buffer), line, sizeof(buffer) - 1U);
     trim_right(buffer);
 
@@ -981,7 +1021,8 @@ int trace_cli_process_line(trace_cli_session *session, const char *line)
     cmd = find_command(command);
     if (cmd == NULL)
     {
-        fprintf(stderr, "エラー: 不明なコマンドです: %s\n", command);
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "エラー: 不明なコマンドです: %s\n", command);
         return -1;
     }
 
@@ -1006,11 +1047,16 @@ int main(int argc, char *argv[])
     cplat_console_init();
 
     cplat_argparser_init(argc, argv, "tracer API を対話的に確認します。");
-    cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &need_help);
+    /*
+     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() で検査するため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &need_help);
 
     if (cplat_argparser_get_register_error_count() > 0)
     {
-        (void)cplat_argparser_print_register_error_messages(stderr); /* 登録失敗の終了値を優先する */
+        /* 登録失敗の終了値を優先するため、戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_register_error_messages(stderr);
         return EXIT_FAILURE;
     }
 
@@ -1018,8 +1064,9 @@ int main(int argc, char *argv[])
 
     if (need_help != 0)
     {
-        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || cplat_fflush(stdout, NULL) != 0)
+        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
         {
+            (void)fprintf(stderr, "エラー: 標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
             return EXIT_FAILURE;
         }
 
@@ -1028,8 +1075,9 @@ int main(int argc, char *argv[])
 
     if (parse_result != CPLAT_OK)
     {
-        (void)cplat_argparser_print_error_messages(stderr); /* 解析失敗の終了値を優先する */
-        (void)cplat_argparser_print_usage(stderr);          /* 解析失敗の終了値を優先する */
+        /* 解析失敗の終了値を優先するため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_error_messages(stderr);
+        (void)cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
     }
 
@@ -1052,13 +1100,22 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        /* エラー時も対話ループを継続するため戻り値は処理しない */
-        trace_cli_process_line(&session, line);
+        /*
+         * エラーはコマンドの中で標準エラー出力へ診断済みであり、エラー時も対話ループを継続するため、
+         * 戻り値は明示的に破棄する。
+         */
+        (void)trace_cli_process_line(&session, line);
     }
 
     /* セッションとプロンプトの資源を解放する。 */
     trace_cli_session_dispose(&session);
     cplat_prompt_dispose(prompt);
+
+    if (fflush(stdout) != 0 || ferror(stdout) != 0)
+    {
+        (void)fprintf(stderr, "エラー: 標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+        return EXIT_FAILURE;
+    }
 
     return EXIT_SUCCESS;
 }

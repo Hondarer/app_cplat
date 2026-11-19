@@ -142,7 +142,8 @@ static int cond_init_monotonic(pthread_cond_t *cond)
         rc = pthread_cond_init(cond, &attr);
     }
 
-    pthread_condattr_destroy(&attr);
+    /* 初期化の結果は rc で確定しており、属性の破棄の失敗で変わらないため、戻り値は明示的に破棄する。 */
+    (void)pthread_condattr_destroy(&attr);
 
     return rc;
 }
@@ -230,7 +231,7 @@ static int open_lock_file(const char *identity, int *fd_out, char **identity_out
     char *identity_copy = cplat_strdup(identity);
     if (identity_copy == NULL)
     {
-        close(fd);
+        (void)close(fd); /* 複製の確保の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
         return CPLAT_ERR_UNKNOWN;
     }
 
@@ -260,7 +261,7 @@ static int app_lock_open_identity(const char *identity, cplat_interprocess_rwloc
     if (new_lock == NULL)
     {
         cplat_free(identity_copy);
-        close(fd);
+        (void)close(fd); /* ロックの確保の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
         return CPLAT_ERR_UNKNOWN;
     }
 
@@ -291,7 +292,7 @@ static int interprocess_lock_open_identity(const char *identity, cplat_interproc
     if (new_lock == NULL)
     {
         cplat_free(identity_copy);
-        close(fd);
+        (void)close(fd); /* ロックの確保の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
         return CPLAT_ERR_UNKNOWN;
     }
 
@@ -355,7 +356,8 @@ static int take_lock_file(const int fd, const int operation, const int timeout_m
 
         {
             struct timespec sleep_ts = {0, 1000000L}; /* 1 [ms] */
-            nanosleep(&sleep_ts, NULL);
+            /* 割り込みで待機が短くなっても、直後に期限を判定し直すため、戻り値は明示的に破棄する。 */
+            (void)nanosleep(&sleep_ts, NULL);
         }
 
         if (monotonic_ms(&now) != CPLAT_OK)
@@ -497,7 +499,8 @@ int cplat_local_lock_timed_lock(cplat_local_lock *mtx, int timeout_ms)
 
         {
             struct timespec sleep_ts = {0, 1000000L}; /* 1 [ms] */
-            nanosleep(&sleep_ts, NULL);
+            /* 割り込みで待機が短くなっても、直後に期限を判定し直すため、戻り値は明示的に破棄する。 */
+            (void)nanosleep(&sleep_ts, NULL);
         }
 
         if (monotonic_ms(&now) != CPLAT_OK)
@@ -541,7 +544,12 @@ void cplat_local_lock_dispose(cplat_local_lock *mtx)
 {
     if (mtx != NULL)
     {
-        pthread_mutex_destroy(&mtx->native);
+        /* 使用中のオブジェクトの領域を解放しないよう、破棄の失敗 (ロックしたままの破棄など) は異常終了とする。 */
+        if (pthread_mutex_destroy(&mtx->native) != 0)
+        {
+            CPLAT_ABORT("local lock を破棄できません");
+        }
+
         cplat_free(mtx);
     }
 }
@@ -653,7 +661,12 @@ void cplat_condvar_dispose(cplat_condvar *cv)
 {
     if (cv != NULL)
     {
-        pthread_cond_destroy(&cv->native);
+        /* 使用中のオブジェクトの領域を解放しないよう、破棄の失敗は異常終了とする。 */
+        if (pthread_cond_destroy(&cv->native) != 0)
+        {
+            CPLAT_ABORT("条件変数を破棄できません");
+        }
+
         cplat_free(cv);
     }
 }
@@ -675,12 +688,29 @@ int cplat_local_rwlock_create(cplat_local_rwlock **rwlock)
         return CPLAT_ERR_UNKNOWN;
     }
 
-    if (pthread_mutex_init(&new_lock->mutex, NULL) != 0 || cond_init_monotonic(&new_lock->readers_cv) != 0 ||
-        cond_init_monotonic(&new_lock->writers_cv) != 0)
+    /*
+     * 初期化していないオブジェクトの破棄は未定義の動作のため、初期化を 1 つずつ行い、初期化できたものだけを破棄する。
+     * 以下の破棄は初期化の失敗の後始末であり、直後に CPLAT_ERR_UNKNOWN を返して結果が変わらないため、
+     * この関数の pthread_mutex_destroy と pthread_cond_destroy の戻り値は明示的に破棄する。
+     * see: https://pubs.opengroup.org/onlinepubs/9799919799/functions/pthread_mutex_destroy.html
+     */
+    if (pthread_mutex_init(&new_lock->mutex, NULL) != 0)
     {
-        pthread_mutex_destroy(&new_lock->mutex);
-        pthread_cond_destroy(&new_lock->readers_cv);
-        pthread_cond_destroy(&new_lock->writers_cv);
+        cplat_free(new_lock);
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    if (cond_init_monotonic(&new_lock->readers_cv) != 0)
+    {
+        (void)pthread_mutex_destroy(&new_lock->mutex);
+        cplat_free(new_lock);
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    if (cond_init_monotonic(&new_lock->writers_cv) != 0)
+    {
+        (void)pthread_cond_destroy(&new_lock->readers_cv);
+        (void)pthread_mutex_destroy(&new_lock->mutex);
         cplat_free(new_lock);
         return CPLAT_ERR_UNKNOWN;
     }
@@ -945,9 +975,16 @@ void cplat_local_rwlock_dispose(cplat_local_rwlock *rwlock)
 {
     if (rwlock != NULL)
     {
-        pthread_mutex_destroy(&rwlock->mutex);
-        pthread_cond_destroy(&rwlock->readers_cv);
-        pthread_cond_destroy(&rwlock->writers_cv);
+        int mutex_rc = pthread_mutex_destroy(&rwlock->mutex);
+        int readers_rc = pthread_cond_destroy(&rwlock->readers_cv);
+        int writers_rc = pthread_cond_destroy(&rwlock->writers_cv);
+
+        /* 使用中のオブジェクトの領域を解放しないよう、破棄の失敗は異常終了とする。 */
+        if (mutex_rc != 0 || readers_rc != 0 || writers_rc != 0)
+        {
+            CPLAT_ABORT("読み書きロックを破棄できません");
+        }
+
         cplat_free(rwlock);
     }
 }
@@ -1062,7 +1099,8 @@ int cplat_thread_timed_join(cplat_thread *thread, int timeout_ms)
 
             abs_ts.tv_sec = 0;
             abs_ts.tv_nsec = 1000000L; /* 1 [ms] */
-            nanosleep(&abs_ts, NULL);
+            /* 割り込みで待機が短くなっても、直後に期限を判定し直すため、戻り値は明示的に破棄する。 */
+            (void)nanosleep(&abs_ts, NULL);
 
             if (monotonic_ms(&now) != CPLAT_OK)
             {
@@ -1101,7 +1139,11 @@ void cplat_thread_detach(cplat_thread *thread)
 {
     if (thread != NULL)
     {
-        pthread_detach(thread->native);
+        /*
+         * 失敗はすでに切り離しか join をしたハンドルに限られ、解放する以外に取れる行動がないため、
+         * 戻り値は明示的に破棄する。
+         */
+        (void)pthread_detach(thread->native);
         cplat_free(thread);
     }
 }
@@ -1208,10 +1250,16 @@ void cplat_interprocess_lock_dispose(cplat_interprocess_lock *lock)
     {
         if (lock->locked)
         {
+            /* 直後に記述子を閉じるとロックも解放され、解除の失敗で結果が変わらないため、戻り値は明示的に破棄する。 */
             (void)cplat_interprocess_lock_unlock(lock);
         }
 
-        close(lock->fd);
+        /*
+         * ロック用ファイルへは書き込まず、Linux の close() は失敗しても記述子を解放し、
+         * 破棄の呼び出し元が取れる行動もないため、戻り値は明示的に破棄する。
+         * see: https://man7.org/linux/man-pages/man2/close.2.html
+         */
+        (void)close(lock->fd);
         cplat_free(lock->identity);
         cplat_free(lock);
     }
@@ -1345,10 +1393,16 @@ void cplat_interprocess_rwlock_dispose(cplat_interprocess_rwlock *lock)
     {
         if (lock->locked)
         {
+            /* 直後に記述子を閉じるとロックも解放され、解除の失敗で結果が変わらないため、戻り値は明示的に破棄する。 */
             (void)cplat_interprocess_rwlock_unlock(lock);
         }
 
-        close(lock->fd);
+        /*
+         * ロック用ファイルへは書き込まず、Linux の close() は失敗しても記述子を解放し、
+         * 破棄の呼び出し元が取れる行動もないため、戻り値は明示的に破棄する。
+         * see: https://man7.org/linux/man-pages/man2/close.2.html
+         */
+        (void)close(lock->fd);
         cplat_free(lock->identity);
         cplat_free(lock);
     }
@@ -1378,7 +1432,11 @@ void cplat_call_once(cplat_once_flag *flag, void (*func)(void))
 
     while (cplat_atomic_load_i32(&flag->state, CPLAT_MEMORY_ORDER_ACQUIRE) != 2)
     {
-        sched_yield();
+        /*
+         * Linux の sched_yield() は常に成功し、待機は毎回 state を読み直すため、戻り値は明示的に破棄する。
+         * see: https://man7.org/linux/man-pages/man2/sched_yield.2.html
+         */
+        (void)sched_yield();
     }
 }
 
@@ -1386,6 +1444,10 @@ void cplat_call_once(cplat_once_flag *flag, void (*func)(void))
 
 void cplat_thread_yield(void)
 {
+    /*
+     * Linux の sched_yield() は常に成功するため、戻り値は明示的に破棄する。
+     * see: https://man7.org/linux/man-pages/man2/sched_yield.2.html
+     */
     (void)sched_yield();
 }
 

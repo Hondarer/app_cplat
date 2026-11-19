@@ -9,6 +9,7 @@
     #include <unistd.h>
 #endif
 #include <mock_cplat.h>
+#include <mock_stdio.h>
 #include <cplat/prompt/pinned_prompt.h>
 #include "pinned_prompt.inject.h"
 
@@ -194,4 +195,73 @@ TEST(pinnedFailureTest, stop_input_prioritizes_restoration_failure_and_persists_
     cplat_pinned_prompt_dispose(screen);
     test_pinned_prompt_failures(0, 0);
     test_pinned_prompt_input_results(nullptr, 0);
+}
+
+// 端末でない経路で、出力のフラッシュに失敗した場合に CPLAT_ERR_UNKNOWN を返すことの確認
+TEST(pinnedFailureTest, write_reports_flush_failure_without_tty)
+{
+    // Arrange
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr);
+    ASSERT_NE(nullptr, screen);             // [状態確認] - ハンドルを確保できたこと。
+    test_pinned_prompt_set_tty(screen, 0); // [状態] - 端末でない経路を選択する。
+    NiceMock<Mock_stdio> mock_stdio;
+    const char data[] = "abc";
+    size_t written = 0U;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_stdio, fwrite(_, _, _, _, 1U, 3U, stdout))
+        .WillOnce(Return(3U)); // [Pre-Assert確認_異常系] - fwrite() が stdout へ 3 バイトを指定して 1 回呼び出されること。
+                               // [Pre-Assert手順] - fwrite() から 3 を返す。
+    EXPECT_CALL(mock_stdio, fflush(_, _, _, stdout))
+        .WillOnce(Return(EOF)); // [Pre-Assert確認_異常系] - fflush() が stdout を指定して 1 回呼び出されること。
+                                // [Pre-Assert手順] - fflush() から EOF を返す。
+
+    // Act
+    int result = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, data, 3U,
+                                           &written); // [手順] - フラッシュが失敗する状態で cplat_pinned_prompt_write() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, result); // [確認_異常系] - cplat_pinned_prompt_write() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(3U, written); // [確認_異常系] - written が fwrite() の戻り値 3 と等しいこと。
+
+    // Cleanup
+    cplat_pinned_prompt_dispose(screen);
+}
+
+// 端末の経路で、出力のフラッシュに失敗した場合に CPLAT_ERR_UNKNOWN を返し、ロックを解除することの確認
+TEST(pinnedFailureTest, write_reports_flush_failure_with_tty)
+{
+    // Arrange
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr);
+    ASSERT_NE(nullptr, screen);             // [状態確認] - ハンドルを確保できたこと。
+    test_pinned_prompt_set_tty(screen, 1); // [状態] - 端末の経路を選択する。
+    NiceMock<Mock_stdio> mock_stdio;
+    ON_CALL(mock_stdio, printf(_, _, _, _)).WillByDefault(Return(0)); // [状態] - 端末制御の printf() から 0 を返す。
+    ON_CALL(mock_stdio, fwrite(_, _, _, _, _, _, _)).WillByDefault(ReturnArg<5>()); // [状態] - fwrite() から要素数を返す。
+    const char data[] = "abc";
+    size_t written = 0U;
+    size_t second_written = 0U;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_stdio, fwrite(_, _, _, static_cast<const void *>(data), 1U, 3U, stdout))
+        .WillOnce(Return(3U)); // [Pre-Assert確認_異常系] - fwrite() が stdout へ 3 バイトを指定して 1 回呼び出されること。
+                               // [Pre-Assert手順] - fwrite() から 3 を返す。
+    EXPECT_CALL(mock_stdio, fflush(_, _, _, _))
+        .WillRepeatedly(Return(EOF)); // [Pre-Assert確認_異常系] - fflush() が呼び出されること。
+                                      // [Pre-Assert手順] - fflush() から EOF を返す。
+
+    // Act
+    int result = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, data, 3U,
+                                           &written); // [手順] - フラッシュが失敗する状態で cplat_pinned_prompt_write() を呼び出す。
+    int second_result = cplat_pinned_prompt_write(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, nullptr, 0U,
+                                                  &second_written); // [手順] - 続けて 0 バイトの cplat_pinned_prompt_write() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, result); // [確認_異常系] - 1 回目の cplat_pinned_prompt_write() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(3U, written); // [確認_異常系] - written が fwrite() の戻り値 3 と等しいこと。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, second_result); // [確認_異常系] - 2 回目の cplat_pinned_prompt_write() が戻り、戻り値が CPLAT_ERR_UNKNOWN であること。(ロックが解除されていることの確認)
+    EXPECT_EQ(0U, second_written); // [確認_異常系] - second_written が 0 であること。
+
+    // Cleanup
+    cplat_pinned_prompt_dispose(screen);
 }

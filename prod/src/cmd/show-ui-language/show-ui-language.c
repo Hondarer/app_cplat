@@ -35,10 +35,15 @@ int main(int argc, char **argv)
     cplat_console_init();
 
     cplat_argparser_init(argc, argv, "Print the display language of the current environment as a language tag.");
+    /*
+     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() で検査するため、
+     * 戻り値は明示的に破棄する。
+     */
     (void)cplat_argparser_register_flag("-h", "--help", "show this help", &need_help);
 
     if (cplat_argparser_get_register_error_count() > 0)
     {
+        /* 終了コードはすでに失敗に決まっているため、戻り値は明示的に破棄する。 */
         (void)cplat_argparser_print_register_error_messages(stderr);
         return EXIT_FAILURE;
     }
@@ -47,12 +52,18 @@ int main(int argc, char **argv)
 
     if (need_help != 0)
     {
-        (void)cplat_argparser_print_usage(stdout);
+        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
+        {
+            (void)fprintf(stderr, "failed to write stdout.\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+            return EXIT_FAILURE;
+        }
+
         return EXIT_SUCCESS;
     }
 
     if (ret != CPLAT_OK)
     {
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
         (void)cplat_argparser_print_error_messages(stderr);
         (void)cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
@@ -61,12 +72,16 @@ int main(int argc, char **argv)
     ret = cplat_ui_language_get_tag(tag, sizeof(tag));
     if (ret != CPLAT_OK)
     {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
         (void)fprintf(stderr, "failed to get the display language. (%s)\n", cplat_result_to_string(ret));
         return EXIT_FAILURE;
     }
 
     /* ニュートラルは空文字列で表すため、この場合は空行を出力する。 */
-    (void)printf("%s\n", tag);
+    if (printf("%s\n", tag) < 0)
+    {
+        return EXIT_FAILURE;
+    }
 
     return EXIT_SUCCESS;
 }

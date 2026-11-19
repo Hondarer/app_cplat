@@ -397,13 +397,13 @@ int cplat_hashtable_buffer_size(const cplat_hashtable *ht, size_t *mgmt_size_out
 
     if (mgmt_size_out != NULL)
     {
-        /* 構築済みテーブルの設定値からはあふれないため、戻り値を無視する。 */
+        /* 構築済みテーブルの設定値は作成時に検証済みで、算出があふれないため、戻り値は明示的に破棄する。 */
         (void)hashtable_mgmt_layout(&ht->hdr->config, NULL, NULL, mgmt_size_out);
     }
 
     if (data_size_out != NULL)
     {
-        /* 構築済みテーブルの設定値からはあふれないため、戻り値を無視する。 */
+        /* 構築済みテーブルの設定値は作成時に検証済みで、算出があふれないため、戻り値は明示的に破棄する。 */
         (void)hashtable_data_region_size(&ht->hdr->config, data_size_out);
     }
 

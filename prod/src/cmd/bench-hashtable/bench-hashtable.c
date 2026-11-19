@@ -126,6 +126,10 @@ static size_t bench_scenario_units(bench_scenario scenario, size_t capacity)
  */
 static void bench_make_key(size_t index, char *dest)
 {
+    /*
+     * size_t の最大 20 桁でも 1 + 20 + 1 = 22 [byte] であり、BENCH_TEXT_SIZE (32) に収まって切り詰めが起きないため、
+     * 戻り値は明示的に破棄する。
+     */
     (void)snprintf(dest, BENCH_TEXT_SIZE, "k%08zu", index);
 }
 
@@ -138,6 +142,10 @@ static void bench_make_key(size_t index, char *dest)
  */
 static void bench_make_value(size_t index, char *dest)
 {
+    /*
+     * size_t の最大 20 桁でも 6 + 20 + 1 = 27 [byte] であり、BENCH_TEXT_SIZE (32) に収まって切り詰めが起きないため、
+     * 戻り値は明示的に破棄する。
+     */
     (void)snprintf(dest, BENCH_TEXT_SIZE, "value-%010zu", index);
 }
 
@@ -350,6 +358,7 @@ static int bench_run_case(FILE *csv, const bench_hashtable_case *item)
 
     if ((ret != 0) || (state.failed != 0))
     {
+        /* 測定の失敗は直後の -1 で伝え、診断の出力先もほかにないため、戻り値は明示的に破棄する。 */
         (void)fprintf(stderr, "measurement failed: capacity=%zu scenario=%s\n", item->capacity,
                       bench_scenario_name(item->scenario));
         return -1;
@@ -364,11 +373,19 @@ static int bench_run_case(FILE *csv, const bench_hashtable_case *item)
         per_unit_ns = 0.0;
     }
 
+    /*
+     * 表の出力の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
+     * 戻り値は明示的に破棄する。
+     */
     (void)printf("%10zu  %-8s  %14.3f  %12.1f\n", item->capacity, bench_scenario_name(item->scenario),
                  (double)timing.median_ns / 1000000.0, per_unit_ns);
 
     if (csv != NULL)
     {
+        /*
+         * CSV の出力の失敗はストリームに残り、main が CSV を閉じる直前にまとめて検査するため、
+         * 戻り値は明示的に破棄する。
+         */
         (void)fprintf(csv, "%zu,%s,%llu,%llu,%llu,%.1f\n", item->capacity, bench_scenario_name(item->scenario),
                       (unsigned long long)timing.median_ns, (unsigned long long)timing.min_ns,
                       (unsigned long long)timing.max_ns, per_unit_ns);
@@ -394,6 +411,10 @@ typedef struct bench_hashtable_options
  */
 static int register_options(bench_hashtable_options *options)
 {
+    /*
+     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
+     * この関数の登録の関数の戻り値は明示的に破棄する。
+     */
     (void)cplat_argparser_register_flag("-h", "--help", "show this help", &options->need_help);
     (void)cplat_argparser_register_option_int(
         NULL, "--max-capacity", "N", "largest number of slots to measure (default 16384)", 0, &options->max_capacity);
@@ -402,6 +423,7 @@ static int register_options(bench_hashtable_options *options)
 
     if (cplat_argparser_get_register_error_count() > 0)
     {
+        /* 登録の失敗は直後の -1 で伝え、診断の出力先もほかにないため、戻り値は明示的に破棄する。 */
         (void)cplat_argparser_print_register_error_messages(stderr);
         return -1;
     }
@@ -431,12 +453,18 @@ int main(int argc, char **argv)
 
     if (options.need_help != 0)
     {
-        (void)cplat_argparser_print_usage(stdout);
+        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
+        {
+            (void)fprintf(stderr, "failed to write stdout.\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+            return EXIT_FAILURE;
+        }
+
         return EXIT_SUCCESS;
     }
 
     if (ret != CPLAT_OK)
     {
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
         (void)cplat_argparser_print_error_messages(stderr);
         (void)cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
@@ -444,6 +472,7 @@ int main(int argc, char **argv)
 
     if (options.max_capacity < 0)
     {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
         (void)fprintf(stderr, "max capacity must not be negative.\n");
         return EXIT_FAILURE;
     }
@@ -462,13 +491,19 @@ int main(int argc, char **argv)
         csv = cplat_fopen(options.csv_path, "w", NULL);
         if (csv == NULL)
         {
+            /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
             (void)fprintf(stderr, "cannot open %s for writing.\n", options.csv_path);
             return EXIT_FAILURE;
         }
 
+        /* CSV の出力の失敗はストリームに残り、CSV を閉じる直前にまとめて検査するため、戻り値は明示的に破棄する。 */
         (void)fprintf(csv, "capacity,scenario,median_ns,min_ns,max_ns,ns_per_unit\n");
     }
 
+    /*
+     * 表の見出しの出力の失敗は標準出力のストリームに残り、終了の直前にまとめて検査するため、
+     * この 2 つの printf の戻り値は明示的に破棄する。
+     */
     (void)printf("%10s  %-8s  %14s  %12s\n", "capacity", "scenario", "median (ms)", "ns/unit");
     (void)printf("--------------------------------------------------------\n");
 
@@ -493,7 +528,24 @@ int main(int argc, char **argv)
 
     if (csv != NULL)
     {
-        (void)fclose(csv);
+        /* CSV への書き込みの失敗はストリームに残るため、閉じる前にまとめて検査する。 */
+        if (ferror(csv) != 0)
+        {
+            (void)fprintf(stderr, "failed to write %s.\n", options.csv_path); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+            failures++;
+        }
+
+        if (fclose(csv) != 0)
+        {
+            failures++;
+        }
+    }
+
+    /* 標準出力の表の書き込みの失敗はストリームに残るため、終了の直前にまとめて検査する。 */
+    if (fflush(stdout) != 0 || ferror(stdout) != 0)
+    {
+        (void)fprintf(stderr, "failed to write stdout.\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+        failures++;
     }
 
     if (failures == 0)

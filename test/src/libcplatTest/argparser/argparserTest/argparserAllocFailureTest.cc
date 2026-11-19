@@ -5,6 +5,8 @@
 
 #include <cstdio>
 
+#include "argparser.inject.h"
+
 using testing::_;
 using testing::DoDefault;
 using testing::NiceMock;
@@ -397,5 +399,41 @@ TEST_F(argparserAllocFailureTest, create_continues_when_program_name_duplication
 
     // Cleanup
     cplat_argparser_handle_dispose(parser);
+}
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
+
+// 既定のパーサーの再初期化で説明の複製に失敗した場合に、パーサーを返さず初期化前の状態に戻すことの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
+TEST_F(argparserAllocFailureTest, default_reinit_discards_parser_when_description_duplication_fails)
+{
+    // Arrange
+    test_argparser_reset_default(); // [状態] - 既定のパーサーを初期化前の状態にする。
+    cplat_argparser *created = test_argparser_default_acquire(0, nullptr, nullptr, 0); // [状態] - 既定のパーサーを作る。
+    ASSERT_NE(nullptr, created); // [状態確認] - 既定のパーサーが作られたこと。
+    cplat_argparser_options options = {};
+    options.program_description = "説明"; // [状態] - 説明を持つ生成オプションを用意する。
+    char program[] = "argparserAllocFailureTest";
+    char *argv[] = {program, nullptr};
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_malloc(_))
+        .WillOnce(Return(nullptr))
+        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - 説明の複製に対する cplat_malloc() が 1 回以上呼び出されること。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
+
+    // Act
+    cplat_argparser *reinitialized = test_argparser_default_acquire(
+        1, argv, &options, 1); // [手順] - 説明の複製が失敗する状態で、再初期化を指定して既定のパーサーを取得する。
+    cplat_argparser *recreated = test_argparser_default_acquire(
+        0, nullptr, nullptr, 0); // [手順] - 続けて、再初期化を指定せずに既定のパーサーを取得する。
+
+    // Assert
+    EXPECT_EQ(nullptr, reinitialized); // [確認_異常系] - 再初期化の取得が nullptr を返すこと。
+    ASSERT_NE(nullptr, recreated); // [確認_異常系] - 続く取得が nullptr 以外を返すこと。(新しいパーサーが作られることの確認)
+    char *description = test_argparser_replace_program_description(recreated, nullptr);
+    EXPECT_EQ(nullptr, description); // [確認_異常系] - 新しいパーサーに説明が設定されていないこと。
+
+    // Cleanup
+    test_argparser_reset_default();
 }
 // [サブ手順参照 名前=argparserAllocFailureTest.TearDown]

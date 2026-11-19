@@ -314,6 +314,7 @@ extern "C"
     case CPLAT_MEMORY_ORDER_ACQ_REL:
     case CPLAT_MEMORY_ORDER_SEQ_CST:
     default:
+        /* 戻り値は失敗ではなく交換前の値であり、格納では使わないため、戻り値は明示的に破棄する。 */
         (void)_InterlockedExchange8((volatile char *)&atomic->value, (char)desired);
         break;
     }
@@ -426,6 +427,7 @@ extern "C"
     case CPLAT_MEMORY_ORDER_ACQ_REL:
     case CPLAT_MEMORY_ORDER_SEQ_CST:
     default:
+        /* 戻り値は失敗ではなく交換前の値であり、格納では使わないため、戻り値は明示的に破棄する。 */
         (void)_InterlockedExchange((volatile long *)&atomic->value, (long)desired);
         break;
     }
@@ -671,6 +673,7 @@ extern "C"
     case CPLAT_MEMORY_ORDER_ACQ_REL:
     case CPLAT_MEMORY_ORDER_SEQ_CST:
     default:
+        /* 戻り値は失敗ではなく交換前の値であり、格納では使わないため、戻り値は明示的に破棄する。 */
         (void)_InterlockedExchange64((volatile __int64 *)&atomic->value, desired);
         break;
     }
@@ -978,7 +981,7 @@ extern "C"
         /* 書き込みとその後の読み取りの並べ替えを止めるため、完全なメモリ バリアを伴う操作を行う。 */
         long guard = 0;
 
-        (void)_InterlockedExchange(&guard, 0);
+        (void)_InterlockedExchange(&guard, 0); /* メモリ バリアだけが目的のため、戻り値は明示的に破棄する */
         break;
     }
     }

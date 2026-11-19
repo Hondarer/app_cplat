@@ -67,7 +67,7 @@ static int compress_cli_read_file_fail(FILE *file, uint8_t *data)
 {
     if (file != NULL)
     {
-        (void)fclose(file);
+        (void)fclose(file); /* 読み取り専用であり、すでに -1 を返す経路のため、戻り値は明示的に破棄する */
     }
 
     cplat_free(data);
@@ -93,31 +93,32 @@ static int compress_cli_read_file(const char *path, size_t max_size, uint8_t **d
     *data_out = NULL;
     *size_out = 0u;
 
+    /* 診断の出力先がほかにないため、この関数の fprintf の戻り値は明示的に破棄する。 */
     file = cplat_fopen(path, "rb", &open_error);
     if (file == NULL)
     {
-        fprintf(stderr, "入力ファイルを開けません: %s (%s)\n", path,
-                compress_cli_error_text(&open_error, message, sizeof(message)));
+        (void)fprintf(stderr, "入力ファイルを開けません: %s (%s)\n", path,
+                      compress_cli_error_text(&open_error, message, sizeof(message)));
         return -1;
     }
 
     /* ファイル末尾へ移動してサイズを取得し、上限以内であることを検証する。 */
     if (cplat_fseek(file, 0, SEEK_END) != 0)
     {
-        fprintf(stderr, "入力ファイルのサイズ取得に失敗しました: %s\n", path);
+        (void)fprintf(stderr, "入力ファイルのサイズ取得に失敗しました: %s\n", path);
         return compress_cli_read_file_fail(file, data);
     }
 
     file_size_i64 = cplat_ftell(file);
     if (file_size_i64 < 0)
     {
-        fprintf(stderr, "入力ファイルのサイズ取得に失敗しました: %s\n", path);
+        (void)fprintf(stderr, "入力ファイルのサイズ取得に失敗しました: %s\n", path);
         return compress_cli_read_file_fail(file, data);
     }
 
     if (file_size_i64 > (int64_t)max_size)
     {
-        fprintf(stderr, "入力ファイルが上限サイズを超えています: %s\n", path);
+        (void)fprintf(stderr, "入力ファイルが上限サイズを超えています: %s\n", path);
         return compress_cli_read_file_fail(file, data);
     }
 
@@ -125,7 +126,7 @@ static int compress_cli_read_file(const char *path, size_t max_size, uint8_t **d
 
     if (cplat_fseek(file, 0, SEEK_SET) != 0)
     {
-        fprintf(stderr, "入力ファイルの先頭へ戻せません: %s\n", path);
+        (void)fprintf(stderr, "入力ファイルの先頭へ戻せません: %s\n", path);
         return compress_cli_read_file_fail(file, data);
     }
 
@@ -135,14 +136,14 @@ static int compress_cli_read_file(const char *path, size_t max_size, uint8_t **d
         data = (uint8_t *)cplat_malloc(file_size);
         if (data == NULL)
         {
-            fprintf(stderr, "入力バッファの確保に失敗しました。\n");
+            (void)fprintf(stderr, "入力バッファの確保に失敗しました。\n");
             return compress_cli_read_file_fail(file, data);
         }
 
         read_count = fread(data, 1u, file_size, file);
         if (read_count != file_size)
         {
-            fprintf(stderr, "入力ファイルの読み込みに失敗しました: %s\n", path);
+            (void)fprintf(stderr, "入力ファイルの読み込みに失敗しました: %s\n", path);
             return compress_cli_read_file_fail(file, data);
         }
     }
@@ -150,7 +151,7 @@ static int compress_cli_read_file(const char *path, size_t max_size, uint8_t **d
     if (fclose(file) != 0)
     {
         file = NULL;
-        fprintf(stderr, "入力ファイルのクローズに失敗しました: %s\n", path);
+        (void)fprintf(stderr, "入力ファイルのクローズに失敗しました: %s\n", path);
         return compress_cli_read_file_fail(file, data);
     }
 
@@ -168,11 +169,12 @@ static int compress_cli_write_file(const char *path, const uint8_t *data, size_t
     size_t written = 0u;
     int close_rc = 0;
 
+    /* 診断の出力先がほかにないため、この関数の fprintf の戻り値は明示的に破棄する。 */
     file = cplat_fopen(path, "wb", &open_error);
     if (file == NULL)
     {
-        fprintf(stderr, "出力ファイルを開けません: %s (%s)\n", path,
-                compress_cli_error_text(&open_error, message, sizeof(message)));
+        (void)fprintf(stderr, "出力ファイルを開けません: %s (%s)\n", path,
+                      compress_cli_error_text(&open_error, message, sizeof(message)));
         return -1;
     }
 
@@ -181,14 +183,18 @@ static int compress_cli_write_file(const char *path, const uint8_t *data, size_t
         written = fwrite(data, 1u, size, file);
         if (written != size)
         {
-            fprintf(stderr, "出力ファイルの書き込みに失敗しました: %s\n", path);
+            (void)fprintf(stderr, "出力ファイルの書き込みに失敗しました: %s\n", path);
             close_rc = fclose(file);
             if (close_rc != 0)
             {
-                fprintf(stderr, "出力ファイルのクローズに失敗しました: %s\n", path);
+                (void)fprintf(stderr, "出力ファイルのクローズに失敗しました: %s\n", path);
             }
 
-            /* 不完全な出力ファイルを残さないため削除する。失敗時のエラーは無視する。 */
+            /*
+             * 不完全な出力ファイルを残さないため削除する。
+             * 書き込みの失敗をすでに診断して -1 を返す経路であり、削除に失敗しても結果は変わらないため、
+             * 戻り値は明示的に破棄する。
+             */
             (void)cplat_remove(path, NULL);
             return -1;
         }
@@ -196,9 +202,13 @@ static int compress_cli_write_file(const char *path, const uint8_t *data, size_t
 
     if (fclose(file) != 0)
     {
-        fprintf(stderr, "出力ファイルのクローズに失敗しました: %s\n", path);
+        (void)fprintf(stderr, "出力ファイルのクローズに失敗しました: %s\n", path);
 
-        /* クローズ失敗時は不完全な可能性があるため削除する。失敗時のエラーは無視する。 */
+        /*
+         * クローズ失敗時は不完全な可能性があるため削除する。
+         * クローズの失敗をすでに診断して -1 を返す経路であり、削除に失敗しても結果は変わらないため、
+         * 戻り値は明示的に破棄する。
+         */
         (void)cplat_remove(path, NULL);
         return -1;
     }
@@ -213,32 +223,34 @@ static int compress_cli_resolve_paths(const compress_cli_options *options, char 
     char message[COMPRESS_CLI_ERROR_MESSAGE_SIZE];
     int path_equal = 0;
 
+    /* 診断の出力先がほかにないため、この関数の fprintf の戻り値は明示的に破棄する。 */
+
     /* 入力パスと出力パスが同一ファイルを指していないか検証する。 */
     if (cplat_path_equal(options->input_path, options->output_path, &path_equal, &error) != CPLAT_OK)
     {
-        fprintf(stderr, "入力パスと出力パスの比較に失敗しました (%s)\n",
-                compress_cli_error_text(&error, message, sizeof(message)));
+        (void)fprintf(stderr, "入力パスと出力パスの比較に失敗しました (%s)\n",
+                      compress_cli_error_text(&error, message, sizeof(message)));
         return -1;
     }
 
     if (path_equal != 0)
     {
-        fprintf(stderr, "入力ファイルと出力ファイルに同じパスは指定できません。\n");
+        (void)fprintf(stderr, "入力ファイルと出力ファイルに同じパスは指定できません。\n");
         return -1;
     }
 
     /* 入力パスと出力パスを正規化する。 */
     if (cplat_path_get_full(input_full, input_full_size, &error, options->input_path) != CPLAT_OK)
     {
-        fprintf(stderr, "入力パスの正規化に失敗しました: %s (%s)\n", options->input_path,
-                compress_cli_error_text(&error, message, sizeof(message)));
+        (void)fprintf(stderr, "入力パスの正規化に失敗しました: %s (%s)\n", options->input_path,
+                      compress_cli_error_text(&error, message, sizeof(message)));
         return -1;
     }
 
     if (cplat_path_get_full(output_full, output_full_size, &error, options->output_path) != CPLAT_OK)
     {
-        fprintf(stderr, "出力パスの正規化に失敗しました: %s (%s)\n", options->output_path,
-                compress_cli_error_text(&error, message, sizeof(message)));
+        (void)fprintf(stderr, "出力パスの正規化に失敗しました: %s (%s)\n", options->output_path,
+                      compress_cli_error_text(&error, message, sizeof(message)));
         return -1;
     }
 
@@ -267,9 +279,10 @@ static int compress_cli_run_compress(const char *input_path, const char *output_
         return -1;
     }
 
+    /* 診断の出力先がほかにないため、この関数の fprintf の戻り値は明示的に破棄する。 */
     if (input_size == 0u)
     {
-        fprintf(stderr, "空ファイルは圧縮できません: %s\n", input_path);
+        (void)fprintf(stderr, "空ファイルは圧縮できません: %s\n", input_path);
         return compress_cli_run_compress_return(input_data, compressed_data, rc);
     }
 
@@ -283,14 +296,14 @@ static int compress_cli_run_compress(const char *input_path, const char *output_
     compressed_data = (uint8_t *)cplat_malloc(compressed_capacity);
     if (compressed_data == NULL)
     {
-        fprintf(stderr, "圧縮バッファの確保に失敗しました。\n");
+        (void)fprintf(stderr, "圧縮バッファの確保に失敗しました。\n");
         return compress_cli_run_compress_return(input_data, compressed_data, rc);
     }
 
     compressed_size = compressed_capacity;
     if (cplat_compress(compressed_data, &compressed_size, input_data, input_size) != CPLAT_OK)
     {
-        fprintf(stderr, "圧縮に失敗しました: %s\n", input_path);
+        (void)fprintf(stderr, "圧縮に失敗しました: %s\n", input_path);
         return compress_cli_run_compress_return(input_data, compressed_data, rc);
     }
 
@@ -324,10 +337,12 @@ static int compress_cli_run_decompress(const char *input_path, const char *outpu
         return -1;
     }
 
+    /* 診断の出力先がほかにないため、この関数の fprintf の戻り値は明示的に破棄する。 */
+
     /* ヘッダー長以下のデータは展開対象として不正なため除外する。 */
     if (input_size <= CPLAT_COMPRESS_HEADER_SIZE)
     {
-        fprintf(stderr, "展開入力が不正です。ヘッダーのみ、または空です: %s\n", input_path);
+        (void)fprintf(stderr, "展開入力が不正です。ヘッダーのみ、または空です: %s\n", input_path);
         return compress_cli_run_decompress_return(input_data, decompressed_data, rc);
     }
 
@@ -335,33 +350,33 @@ static int compress_cli_run_decompress(const char *input_path, const char *outpu
     expected_size = compress_cli_read_u64_be(input_data);
     if (expected_size == 0U)
     {
-        fprintf(stderr, "展開入力が不正です。ヘッダーの元サイズが小さすぎます: %s\n", input_path);
+        (void)fprintf(stderr, "展開入力が不正です。ヘッダーの元サイズが小さすぎます: %s\n", input_path);
         return compress_cli_run_decompress_return(input_data, decompressed_data, rc);
     }
 
     if (expected_size > (uint64_t)COMPRESS_CLI_MAX_UNCOMPRESSED_SIZE)
     {
-        fprintf(stderr, "展開入力が不正です。ヘッダーの元サイズが上限を超えています: %s\n", input_path);
+        (void)fprintf(stderr, "展開入力が不正です。ヘッダーの元サイズが上限を超えています: %s\n", input_path);
         return compress_cli_run_decompress_return(input_data, decompressed_data, rc);
     }
 
     decompressed_data = (uint8_t *)cplat_malloc((size_t)expected_size);
     if (decompressed_data == NULL)
     {
-        fprintf(stderr, "展開バッファの確保に失敗しました。\n");
+        (void)fprintf(stderr, "展開バッファの確保に失敗しました。\n");
         return compress_cli_run_decompress_return(input_data, decompressed_data, rc);
     }
 
     decompressed_size = (size_t)expected_size;
     if (cplat_decompress(decompressed_data, &decompressed_size, input_data, input_size) != CPLAT_OK)
     {
-        fprintf(stderr, "展開に失敗しました: %s\n", input_path);
+        (void)fprintf(stderr, "展開に失敗しました: %s\n", input_path);
         return compress_cli_run_decompress_return(input_data, decompressed_data, rc);
     }
 
     if (decompressed_size != (size_t)expected_size)
     {
-        fprintf(stderr, "展開後サイズがヘッダー値と一致しません: %s\n", input_path);
+        (void)fprintf(stderr, "展開後サイズがヘッダー値と一致しません: %s\n", input_path);
         return compress_cli_run_decompress_return(input_data, decompressed_data, rc);
     }
 
@@ -400,18 +415,23 @@ int main(int argc, char *argv[])
     int decompress_count = 0;
 
     cplat_argparser_init(argc, argv, "ファイルを圧縮または展開します。");
-    cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &options.need_help);
-    cplat_argparser_register_flag(NULL, "--compress", "入力ファイルを圧縮します。", &compress_count);
-    cplat_argparser_register_flag(NULL, "--decompress", "入力ファイルを展開します。", &decompress_count);
-    cplat_argparser_register_positional_string("input", "入力ファイル。", CPLAT_ARGPARSER_REQUIRED,
-                                               &options.input_path);
-    cplat_argparser_register_positional_string("output", "出力ファイル。", CPLAT_ARGPARSER_REQUIRED,
-                                               &options.output_path);
+    /*
+     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
+     * 登録の関数の戻り値は明示的に破棄する。
+     */
+    (void)cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &options.need_help);
+    (void)cplat_argparser_register_flag(NULL, "--compress", "入力ファイルを圧縮します。", &compress_count);
+    (void)cplat_argparser_register_flag(NULL, "--decompress", "入力ファイルを展開します。", &decompress_count);
+    (void)cplat_argparser_register_positional_string("input", "入力ファイル。", CPLAT_ARGPARSER_REQUIRED,
+                                                     &options.input_path);
+    (void)cplat_argparser_register_positional_string("output", "出力ファイル。", CPLAT_ARGPARSER_REQUIRED,
+                                                     &options.output_path);
 
     if (cplat_argparser_get_register_error_count() > 0)
     {
-        cplat_argparser_print_register_error_messages(stderr);
-        cplat_argparser_print_usage(stderr);
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_register_error_messages(stderr);
+        (void)cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
     }
 
@@ -420,22 +440,29 @@ int main(int argc, char *argv[])
     /* ヘルプ要求時は使用法を表示して終了する。 */
     if (options.need_help != 0)
     {
-        cplat_argparser_print_usage(stdout);
+        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
+        {
+            (void)fprintf(stderr, "標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+            return EXIT_FAILURE;
+        }
+
         return EXIT_SUCCESS;
     }
 
     if (parse_result != CPLAT_OK)
     {
-        cplat_argparser_print_error_messages(stderr);
-        cplat_argparser_print_usage(stderr);
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_error_messages(stderr);
+        (void)cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
     }
 
     /* 圧縮モードと展開モードのどちらか一方のみが指定されていることを検証する。 */
     if ((compress_count + decompress_count) != 1)
     {
-        cplat_argparser_print_error_messages(stderr);
-        cplat_argparser_print_usage(stderr);
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_error_messages(stderr);
+        (void)cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
     }
 
@@ -449,7 +476,8 @@ int main(int argc, char *argv[])
     }
     else
     {
-        cplat_argparser_print_usage(stderr);
+        /* 終了コードはすでに失敗に決まっているため、戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
     }
 

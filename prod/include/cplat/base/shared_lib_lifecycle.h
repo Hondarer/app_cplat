@@ -129,13 +129,13 @@ static void dllmain_syslog_send(const char *msg)
 
     if (cplat_strcpy(sa.sun_path, sizeof(sa.sun_path), "/dev/log") != 0)
     {
-        close(fd);
+        (void)close(fd); /* 送信を諦める経路の後始末であり、失敗を伝える先がないため、戻り値は明示的に破棄する */
         return;
     }
 
-    /* 送信失敗時はメッセージを破棄するため、戻り値を無視する。 */
+    /* 送信失敗時はメッセージを破棄するため、戻り値は明示的に破棄する。 */
     (void)sendto(fd, buf, (size_t)n, MSG_DONTWAIT, (struct sockaddr *)&sa, (socklen_t)sizeof(sa));
-    close(fd);
+    (void)close(fd); /* 送信後の後始末であり、失敗を伝える先がないため、戻り値は明示的に破棄する */
 }
         #define CPLAT_DLLMAIN_INFO_MSG(msg) dllmain_syslog_send(msg)
     #elif defined(PLATFORM_WINDOWS)
@@ -161,8 +161,11 @@ static void dllmain_output_debug_msg(const char *msg)
 
     if (len <= 1024)
     {
-        /* バッファーに収まる場合はそのまま変換する。 */
-        MultiByteToWideChar(CP_UTF8, 0, msg, -1, buf, 1024);
+        /* バッファーに収まる場合はそのまま変換する。変換に失敗した場合は、未初期化の buf を出力しない。 */
+        if (MultiByteToWideChar(CP_UTF8, 0, msg, -1, buf, 1024) <= 0)
+        {
+            return;
+        }
     }
     else
     {

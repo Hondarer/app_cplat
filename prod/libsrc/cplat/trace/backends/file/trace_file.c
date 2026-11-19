@@ -484,7 +484,11 @@ static int rotate_file(cplat_trace_file_sink *p)
 
     close_ret = close_file(p);
 
-    /* 最老世代のファイルを削除する。失敗は無視する。 */
+    /*
+     * 最老世代のファイルを削除する。
+     * ファイルがない場合の失敗は正常であり、ほかの失敗は続くリネームの失敗でカスケードを打ち切るため、
+     * cplat_remove の戻り値は明示的に破棄する。
+     */
     if (cplat_snprintf(new_path, sizeof(new_path), "%s.%d", p->path, p->generations) == CPLAT_OK)
     {
         (void)cplat_remove(new_path, NULL);
@@ -528,18 +532,22 @@ static int rotate_file(cplat_trace_file_sink *p)
         }
     }
 
-    /* 新規ファイルを作成して開く。失敗しても未オープンのまま続行する。 */
+    /*
+     * 新規ファイルを作成して開く。
+     * ローテーションを起こした書き込みは完了しており、開けない場合は未オープンのまま続けるため、
+     * この分岐の open_file と open_file_truncate の戻り値は明示的に破棄する。
+     */
     if (p->shared != 0)
     {
         /*
          * 共有モード: リネーム直後に他プロセスの writer が path を再作成して
          * 書き込んでいる場合があるため、切り詰めずに追記モードで開く。
          */
-        open_file(p);
+        (void)open_file(p);
     }
     else
     {
-        open_file_truncate(p);
+        (void)open_file_truncate(p);
     }
 
     return close_ret;
@@ -584,7 +592,7 @@ static int check_rotate_shared(cplat_trace_file_sink *p)
     {
         /* 他プロセスが先にローテーションしているため、開き直すだけにする。 */
         ret = close_file(p);
-        open_file(p);
+        (void)open_file(p); /* 開けない場合は次の書き込みで開き直すため、戻り値は明示的に破棄する */
     }
     else
     {
@@ -611,7 +619,7 @@ static int check_rotate_shared(cplat_trace_file_sink *p)
  */
 static void free_sink(cplat_trace_file_sink *p)
 {
-    (void)close_file(p); /* 破棄の後に失敗を受けても、呼び出し元が取れる行動がない */
+    (void)close_file(p); /* 破棄の後に失敗を受けても、呼び出し元が取れる行動がないため、戻り値は明示的に破棄する */
 
     if (p->rotate_lock != NULL)
     {
@@ -707,7 +715,7 @@ static cplat_trace_file_sink *create_new_sink(const char *path, const size_t pat
     /* 親ディレクトリの確認と生成は初回だけ行う。ローテーション後の再オープンでは繰り返さない。 */
     if (cplat_path_dirname(dir, sizeof(dir), NULL, handle->path) == CPLAT_OK && strcmp(dir, ".") != 0)
     {
-        (void)cplat_makedirs(dir, NULL); /* 失敗は直後のオープンで判定する */
+        (void)cplat_makedirs(dir, NULL); /* 失敗は直後のオープンで判定するため、戻り値は明示的に破棄する */
     }
 
     if (open_file_with_retry(handle) != 0)
@@ -726,7 +734,7 @@ static cplat_trace_file_sink *create_new_sink(const char *path, const size_t pat
             return NULL;
         }
 
-        /* 宛先長は path とサフィックスの和なので、切り詰めでは失敗しない。 */
+        /* 宛先長は path とサフィックスの和であり、切り詰めで失敗しないため、戻り値は明示的に破棄する。 */
         (void)cplat_snprintf(handle->lock_path, path_len + sizeof(TRACE_FILE_LOCK_SUFFIX), "%s%s", path,
                              TRACE_FILE_LOCK_SUFFIX);
 

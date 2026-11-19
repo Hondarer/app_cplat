@@ -310,6 +310,7 @@ static void append_constant(describe_context *context, const string_catalog_filt
         return;
     }
 
+    /* text は定数 1 個の表記の最大長 CONSTANT_TEXT_MAX を持ち、切り詰めが起きないため、戻り値は明示的に破棄する。 */
     (void)string_catalog_filter_format_constant(constant, text, sizeof(text));
     append_text(&context->writer, text);
 }
@@ -427,7 +428,7 @@ static void append_argument(describe_context *context, const string_catalog_filt
 
     if (instruction->field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME)
     {
-        /* 定数は検証済みであり、読み取りは失敗しない。 */
+        /* 定数は検証済みであり、読み取りが失敗しないため、戻り値は明示的に破棄する。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, instruction->operand,
                                                   &constant);
         name = constant.text;
@@ -477,7 +478,8 @@ static void append_argument(describe_context *context, const string_catalog_filt
     {
         /*
          * argument は uint8_t (最大 255) のため "{255} " と終端 NUL でも 7 [byte] であり、
-         * 32 [byte] 配列に収まる。符号なし整数だけの固定書式のため変換失敗は起きない。
+         * 32 [byte] 配列に収まる。符号なし整数だけの固定書式であり、変換の失敗が起きないため、
+         * 戻り値は明示的に破棄する。
          * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/snprintf-snprintf-snprintf-l-snwprintf-snwprintf-l
          */
         (void)snprintf(text, sizeof(text), "{%u} ", (unsigned int)instruction->argument);
@@ -486,7 +488,7 @@ static void append_argument(describe_context *context, const string_catalog_filt
     }
     else
     {
-        /* "{255}" と終端 NUL でも最大 6 [byte] であり、32 [byte] 配列に収まる。 */
+        /* "{255}" と終端 NUL でも最大 6 [byte] であり、32 [byte] 配列に収まるため、戻り値は明示的に破棄する。 */
         (void)snprintf(text, sizeof(text), "{%u}", (unsigned int)instruction->argument);
         append_text(&context->writer, text);
     }
@@ -521,7 +523,7 @@ static uint32_t append_subject(describe_context *context, const string_catalog_f
 
         /*
          * 比較対象は引数名の定数の直後から並ぶ。
-         * 定数は検証済みであり、読み取りは失敗しない。
+         * 定数は検証済みであり、読み取りが失敗しないため、戻り値は明示的に破棄する。
          */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, instruction->operand,
                                                   &constant);
@@ -547,7 +549,7 @@ static void append_constants(describe_context *context, const string_catalog_fil
             append_text(&context->writer, context->phrases->list_separator);
         }
 
-        /* 定数は検証済みであり、読み取りは失敗しない。 */
+        /* 定数は検証済みであり、読み取りが失敗しないため、戻り値は明示的に破棄する。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
         offset = constant.next_offset;
 
@@ -619,10 +621,10 @@ static bool is_category_matched(const describe_context *context, const string_ca
     {
         double lower;
 
-        /* 定数は検証済みであり、読み取りは失敗しない。 */
+        /* 定数は検証済みであり、読み取りが失敗しないため、戻り値は明示的に破棄する。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
         lower = real_of_constant(context, &constant);
-        /* 定数は検証済みであり、読み取りは失敗しない。 */
+        /* 定数は検証済みであり、読み取りが失敗しないため、戻り値は明示的に破棄する。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, constant.next_offset,
                                                   &constant);
         return (lower <= value) && (value <= real_of_constant(context, &constant));
@@ -632,7 +634,7 @@ static bool is_category_matched(const describe_context *context, const string_ca
     {
         double literal;
 
-        /* 定数は検証済みであり、読み取りは失敗しない。 */
+        /* 定数は検証済みであり、読み取りが失敗しないため、戻り値は明示的に破棄する。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
         offset = constant.next_offset;
         literal = real_of_constant(context, &constant);
@@ -784,8 +786,7 @@ static void append_predicate(describe_context *context, const string_catalog_fil
     if (instruction->operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_HAS)
     {
         append_text(&context->writer, phrases->has_prefix);
-        /* HAS は filter_image.c の検証で operand_count が 0 に限定され、比較値を持たないためオフセットは不要である。 */
-        (void)append_subject(context, instruction);
+        append_subject(context, instruction);
         append_text(&context->writer, phrases->has_suffix);
         return;
     }
@@ -795,11 +796,11 @@ static void append_predicate(describe_context *context, const string_catalog_fil
     if (instruction->operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_BETWEEN)
     {
         append_before(context, phrases->between_before);
-        /* 定数は検証済みであり、読み取りは失敗しない。 */
+        /* 定数は検証済みであり、読み取りが失敗しないため、戻り値は明示的に破棄する。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
         append_constant(context, &constant);
         append_text(&context->writer, phrases->between_middle);
-        /* 定数は検証済みであり、読み取りは失敗しない。 */
+        /* 定数は検証済みであり、読み取りが失敗しないため、戻り値は明示的に破棄する。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, constant.next_offset,
                                                   &constant);
         append_constant(context, &constant);
@@ -985,7 +986,7 @@ static void append_mixed_notes(describe_context *context)
             continue;
         }
 
-        /* 定数は検証済みであり、読み取りは失敗しない。 */
+        /* 定数は検証済みであり、読み取りが失敗しないため、戻り値は明示的に破棄する。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, instruction.operand,
                                                   &constant);
 

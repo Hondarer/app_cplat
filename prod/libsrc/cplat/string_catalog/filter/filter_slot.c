@@ -515,7 +515,7 @@ static truth_value evaluate_string(const evaluation_context *context,
 
     /*
      * 比較対象を順に評価し、1 つでも成立すれば真とする。
-     * 定数は検証済みであり、読み取りは失敗しない。
+     * 定数は検証済みであり、読み取りが失敗しないため、このループの読み取りの戻り値は明示的に破棄する。
      */
     for (uint16_t index = 0; index < instruction->operand_count; index++)
     {
@@ -569,7 +569,7 @@ static truth_value evaluate_number(const evaluation_context *context,
 
     /*
      * between は下限以上かつ上限以下である。順序が定まらない比較は不一致である。
-     * 定数は検証済みであり、読み取りは失敗しない。
+     * 定数は検証済みであり、読み取りが失敗しないため、この関数の読み取りの戻り値は明示的に破棄する。
      */
     if (instruction->operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_BETWEEN)
     {
@@ -594,7 +594,10 @@ static truth_value evaluate_number(const evaluation_context *context,
         return TRUTH_VALUE_FALSE;
     }
 
-    /* いずれかの定数が比較を満たせば真とする。定数は検証済みであり、読み取りは失敗しない。 */
+    /*
+     * いずれかの定数が比較を満たせば真とする。
+     * 定数は検証済みであり、読み取りが失敗しないため、このループの読み取りの戻り値は明示的に破棄する。
+     */
     for (uint16_t index = 0; index < instruction->operand_count; index++)
     {
         number literal;
@@ -661,7 +664,7 @@ static truth_value evaluate_predicate(const evaluation_context *context,
 
         /*
          * 比較対象は引数名の定数の直後から並ぶ。
-         * 定数は検証済みであり、読み取りは失敗しない。
+         * 定数は検証済みであり、読み取りが失敗しないため、戻り値は明示的に破棄する。
          */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
         offset = constant.next_offset;
@@ -698,7 +701,7 @@ static truth_value evaluate_predicate(const evaluation_context *context,
 
     kind_class = class_of_argument(entry->arguments[argument_index].kind);
 
-    /* 定数は検証済みであり、読み取りは失敗しない。 */
+    /* 定数は検証済みであり、読み取りが失敗しないため、戻り値は明示的に破棄する。 */
     (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
 
     if (!is_argument_comparable(kind_class, constant.header.kind))
@@ -1124,7 +1127,7 @@ resolve_category_predicates(const cplat_string_catalog_filter_slot *slot, const 
 
         offset = instruction.operand;
 
-        /* 定数は検証済みであり、読み取りは失敗しない。 */
+        /* 定数は検証済みであり、読み取りが失敗しないため、このループの読み取りの戻り値は明示的に破棄する。 */
         for (uint16_t operand = 0; operand < instruction.operand_count; operand++)
         {
             cplat_string_catalog_filter_line_error error;
@@ -1179,7 +1182,7 @@ static cplat_string_catalog_filter_line_error compile_line_patterns(const cplat_
 
         /*
          * 名前で指定した引数では、引数名の定数の直後にパターンが並ぶ。
-         * 定数は検証済みであり、読み取りは失敗しない。
+         * 定数は検証済みであり、読み取りが失敗しないため、この 2 つの読み取りの戻り値は明示的に破棄する。
          */
         offset = instruction.operand;
         (void)string_catalog_filter_read_constant(constants, header.constant_size, offset, &constant);
@@ -1237,7 +1240,10 @@ static cplat_string_catalog_filter_line_error resolve_line(const cplat_string_ca
         return error;
     }
 
-    /* 定数をたどり、文字列キーの名前と引数名を解決する。定数は検証済みであり、読み取りは失敗しない。 */
+    /*
+     * 定数をたどり、文字列キーの名前と引数名を解決する。
+     * 定数は検証済みであり、読み取りが失敗しないため、このループの読み取りの戻り値は明示的に破棄する。
+     */
     while (offset < header.constant_size)
     {
         (void)string_catalog_filter_read_constant(constants, header.constant_size, offset, &constant);
@@ -1534,7 +1540,7 @@ int cplat_string_catalog_filter_slot_create(const cplat_string_catalog *catalog,
     slot->image_size = CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(line_capacity, line_width);
     slot->line_word_count = (line_capacity + LINE_WORD_BITS - 1U) / LINE_WORD_BITS;
 
-    /* 作成時に拒否する引数と同じ条件では失敗しないため、戻り値を無視する。 */
+    /* 失敗の条件は作成時に拒否する引数と同じで、ここでは失敗しないため、戻り値は明示的に破棄する。 */
     (void)cplat_string_catalog_filter_get_catalog_id(catalog, &slot->catalog_id);
 
     if (!allocate_plane(slot, &slot->planes[0]) || !allocate_plane(slot, &slot->planes[1]))
@@ -1558,7 +1564,8 @@ int cplat_string_catalog_filter_slot_create(const cplat_string_catalog *catalog,
 
     /*
      * 行を持たないフィルター オブジェクトを適用した状態から始める。全項目が「常に不一致」となる。
-     * 行数、行幅、領域の大きさは作成時に検査済みであり、行数が 0 のコンパイルは失敗しない。
+     * 行数、行幅、領域の大きさは作成時に検査済みであり、行数が 0 のコンパイルは失敗しないため、
+     * 戻り値は明示的に破棄する。
      */
     (void)cplat_string_catalog_filter_compile(NULL, 0U, line_width, line_capacity, slot->planes[0].image,
                                               slot->image_size, NULL, 0U, NULL);
@@ -1808,7 +1815,7 @@ static void collect_line_warnings(const cplat_string_catalog_filter_slot *slot, 
 
         /*
          * 名前で指定した引数では、比較対象は引数名の定数の直後から並ぶ。
-         * 定数は検証済みであり、読み取りは失敗しない。
+         * 定数は検証済みであり、読み取りが失敗しないため、この 2 つの読み取りの戻り値は明示的に破棄する。
          */
         offset = instruction.operand;
 

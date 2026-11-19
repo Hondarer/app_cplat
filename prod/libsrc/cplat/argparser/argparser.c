@@ -1306,6 +1306,8 @@ static cplat_argparser *argparser_default_acquire(const int argc, char *const *a
         return NULL;
     }
 
+    cplat_argparser *failed_parser = NULL;
+
     cplat_local_lock_lock(lock);
 
     if (s_default_parser == NULL)
@@ -1319,12 +1321,28 @@ static cplat_argparser *argparser_default_acquire(const int argc, char *const *a
     else if (reset_existing != 0)
     {
         argparser_reset_core(s_default_parser);
-        (void)argparser_apply_options(s_default_parser, options);
-        argparser_apply_args(s_default_parser, argc, argv);
+        if (argparser_apply_options(s_default_parser, options) != 0)
+        {
+            /*
+             * 名前や説明の複製に失敗したパーサーは返さず、新しく作る経路の失敗の後と同じ状態に戻す。
+             * 次の取得では、引数なしのパーサーが作られる。
+             */
+            failed_parser = s_default_parser;
+            s_default_parser = NULL;
+        }
+        else
+        {
+            argparser_apply_args(s_default_parser, argc, argv);
+        }
     }
 
     cplat_argparser *parser = s_default_parser;
     cplat_local_lock_unlock(lock);
+
+    if (failed_parser != NULL)
+    {
+        argparser_dispose_core(failed_parser);
+    }
 
     return parser;
 }
@@ -1335,6 +1353,7 @@ void cplat_argparser_init(const int argc, char *const *argv, const char *descrip
 {
     cplat_argparser_options options = {0};
     options.program_description = description;
+    /* 失敗時は既定のパーサーを初期化しない状態に戻しており、呼び出し元へ伝える戻り値がないため、戻り値は明示的に破棄する。 */
     (void)argparser_default_acquire(argc, argv, &options, 1);
 }
 
@@ -2140,7 +2159,11 @@ int cplat_argparser_handle_print_usage(const cplat_argparser *parser, FILE *stre
     }
 
     size_t required_size = 0;
-    cplat_argparser_handle_get_usage(parser, NULL, 0, &required_size);
+    /*
+     * parser は検査済みで、buffer に NULL を渡す必要サイズの取得は CPLAT_OK だけを返すため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)cplat_argparser_handle_get_usage(parser, NULL, 0, &required_size);
 
     char *buffer = cplat_malloc(required_size);
     if (buffer == NULL)
@@ -2151,7 +2174,8 @@ int cplat_argparser_handle_print_usage(const cplat_argparser *parser, FILE *stre
     int result = cplat_argparser_handle_get_usage(parser, buffer, required_size, NULL);
     if (result == CPLAT_OK)
     {
-        fprintf(stream, "%s", buffer);
+        /* 書き込みの失敗はストリームに残り、呼び出し元が検査するため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stream, "%s", buffer);
     }
 
     cplat_free(buffer);
@@ -2180,14 +2204,15 @@ int cplat_argparser_handle_print_error_messages(const cplat_argparser *parser, F
         return CPLAT_OK;
     }
 
+    /* 書き込みの失敗はストリームに残り、呼び出し元が検査するため、この関数の fprintf の戻り値は明示的に破棄する。 */
     char message[ARGPARSER_ERROR_MESSAGE_BYTES];
     int result = cplat_argparser_handle_get_error_message(parser, message, sizeof(message));
     if (result == CPLAT_OK || result == CPLAT_ERR_BUFFER_TOO_SMALL)
     {
-        fprintf(stream, "error: %s\n", message);
+        (void)fprintf(stream, "error: %s\n", message);
     }
 
-    fprintf(stream, "\n");
+    (void)fprintf(stream, "\n");
 
     return result;
 }
@@ -2332,19 +2357,20 @@ int cplat_argparser_handle_print_register_error_messages(const cplat_argparser *
 
     int result = CPLAT_OK;
 
+    /* 書き込みの失敗はストリームに残り、呼び出し元が検査するため、この関数の fprintf の戻り値は明示的に破棄する。 */
     for (size_t i = 0; i < parser->register_error_count; i++)
     {
         char message[ARGPARSER_ERROR_MESSAGE_BYTES];
         result = cplat_argparser_handle_get_register_error_message(parser, i, message, sizeof(message));
         if (result == CPLAT_OK || result == CPLAT_ERR_BUFFER_TOO_SMALL)
         {
-            fprintf(stream, "error: %s\n", message);
+            (void)fprintf(stream, "error: %s\n", message);
         }
     }
 
     if (parser->register_error_count > 0)
     {
-        fprintf(stream, "\n");
+        (void)fprintf(stream, "\n");
     }
 
     return result;

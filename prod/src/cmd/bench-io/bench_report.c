@@ -139,7 +139,8 @@ static void collect_cpu_model(bench_environment *env)
         }
     }
 
-    (void)fclose(stream); /* 取得済みの CPU 情報を維持するため、補助的な読み取りのクローズ結果は使わない */
+    /* 補助的な読み取りのクローズであり、取得済みの CPU 情報を維持するため、戻り値は明示的に破棄する。 */
+    (void)fclose(stream);
 #elif defined(PLATFORM_WINDOWS)
     int exists = 0;
 
@@ -178,7 +179,8 @@ static void collect_fs_type(const char *dir, bench_environment *env)
      * statfs はファイル システム名を返さないため、magic 値をそのまま記録する。
      * 主要な値の対応は Linux の statfs(2) を参照する。
      * "magic=0x" (8 [byte]) と LP64 の unsigned long 最大 16 桁と終端 NUL で最大 25 [byte] であり、
-     * 128 [byte] (BENCH_ENV_TEXT_SIZE) の固定配列に収まるため cplat_snprintf() は失敗しない。
+     * 128 [byte] (BENCH_ENV_TEXT_SIZE) の固定配列に収まり、cplat_snprintf() は失敗しないため、
+     * 戻り値は明示的に破棄する。
      * see: https://man7.org/linux/man-pages/man2/statfs.2.html
      */
     (void)cplat_snprintf(text, sizeof(text), "magic=0x%lx", (unsigned long)info.f_type);
@@ -243,7 +245,10 @@ void bench_report_begin_csv(FILE *csv, const bench_environment *env)
         return;
     }
 
-    /* 書き込みの失敗はストリームのエラー指示子に残り、main が CSV を閉じる前に ferror で検査する。 */
+    /*
+     * 書き込みの失敗はストリームのエラー指示子に残り、main が CSV を閉じる前に ferror で検査するため、
+     * この関数の cplat_fprintf の戻り値は明示的に破棄する。
+     */
     (void)cplat_fprintf(csv, "# os=%s\n", env->os_name);
     (void)cplat_fprintf(csv, "# cpu_model=%s\n", env->cpu_model);
     (void)cplat_fprintf(csv, "# fs_type=%s\n", env->fs_type);
@@ -262,9 +267,13 @@ void bench_report_begin_table(const bench_environment *env)
         return;
     }
 
-    printf("os=%s  cpu=%s  fs=%s\n", env->os_name, env->cpu_model, env->fs_type);
-    printf("%-16s %-14s %12s %10s %14s %12s %12s\n", "api", "pattern", "file_size", "records", "median_ns", "ns/record",
-           "MiB/s");
+    /*
+     * 表の見出しの出力の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
+     * この関数の printf の戻り値は明示的に破棄する。
+     */
+    (void)printf("os=%s  cpu=%s  fs=%s\n", env->os_name, env->cpu_model, env->fs_type);
+    (void)printf("%-16s %-14s %12s %10s %14s %12s %12s\n", "api", "pattern", "file_size", "records", "median_ns",
+                 "ns/record", "MiB/s");
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -299,16 +308,23 @@ void bench_report_row(FILE *csv, const bench_environment *env, const bench_case 
         mib_per_sec = (bytes * 1000000000.0) / ((double)timing->median_ns * 1024.0 * 1024.0);
     }
 
-    printf("%-16s %-14s %12llu %10llu %14llu %12.1f %12.1f\n", api_name, pattern_name,
-           (unsigned long long)ctx->file_size, (unsigned long long)ctx->touch_count,
-           (unsigned long long)timing->median_ns, ns_per_record, mib_per_sec);
+    /*
+     * 表の行の出力の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)printf("%-16s %-14s %12llu %10llu %14llu %12.1f %12.1f\n", api_name, pattern_name,
+                 (unsigned long long)ctx->file_size, (unsigned long long)ctx->touch_count,
+                 (unsigned long long)timing->median_ns, ns_per_record, mib_per_sec);
 
     if (csv == NULL)
     {
         return;
     }
 
-    /* 書き込みの失敗はストリームのエラー指示子に残り、main が CSV を閉じる前に ferror で検査する。 */
+    /*
+     * 書き込みの失敗はストリームのエラー指示子に残り、main が CSV を閉じる前に ferror で検査するため、
+     * 戻り値は明示的に破棄する。
+     */
     (void)cplat_fprintf(csv, "%s,\"%s\",%s,%s,%s,%s,%llu,%d,%llu,%llu,%llu,%llu,%llu,%.3f,%.3f\n", env->os_name,
                         env->cpu_model, env->fs_type, env->cache_state, api_name, pattern_name,
                         (unsigned long long)ctx->file_size, BENCH_RECORD_SIZE, (unsigned long long)ctx->touch_count,

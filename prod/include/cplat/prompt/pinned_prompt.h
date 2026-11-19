@@ -401,9 +401,11 @@ extern "C"
      *  @param[in]      channel  書き込み先の標準ストリームです。
      *  @param[in]      data         書き込むデータです。@p size が 0 の場合に限り NULL も指定できます。
      *  @param[in]      size         @p data から書き込むバイト数です。
-     *  @param[out]     written_out  対象ストリームへ書き込んだバイト数を格納します。NULL も指定できます。
+     *  @param[out]     written_out  対象ストリームが受け付けたバイト数 (fwrite の戻り値) を格納します。
+     *                               出力先へ届いたバイト数は保証しません。NULL も指定できます。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。\n
-     *                  書き込みが @p size バイトに満たない場合は @ref CPLAT_ERR_UNKNOWN を返します。
+     *                  書き込みが @p size バイトに満たない場合は @ref CPLAT_ERR_UNKNOWN を返します。\n
+     *                  出力のフラッシュに失敗した場合も @ref CPLAT_ERR_UNKNOWN を返します。
      *
      *  指定されたデータだけを書き込み、改行は付加しません。
      *  ANSI CSI SGR エスケープ シーケンスは、色指定としてそのまま出力します。

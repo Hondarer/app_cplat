@@ -580,7 +580,9 @@ extern "C"
      *                             戻り値は @ref CPLAT_ERR_UNKNOWN を返します。
      *  @param[in]      format     printf 形式のフォーマット文字列。
      *  @param[in]      ...        フォーマット文字列に対応する可変長引数。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。\n
+     *                  書式の展開に失敗した場合は、何も出力せずに @ref CPLAT_ERR_UNKNOWN を返します。\n
+     *                  メッセージが最大長を超える場合は切り詰めて出力します。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
@@ -599,7 +601,9 @@ extern "C"
      *  @param[in]      timestamp  使用する実時刻。NULL の場合は API 内部で現在時刻を取得。
      *  @param[in]      format     printf 形式のフォーマット文字列。
      *  @param[in]      args       フォーマット文字列に対応する引数リスト。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。\n
+     *                  書式の展開に失敗した場合は、何も出力せずに @ref CPLAT_ERR_UNKNOWN を返します。\n
+     *                  メッセージが最大長を超える場合は切り詰めて出力します。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
@@ -646,7 +650,9 @@ extern "C"
      *  @param[in]      size       バイナリ データのバイト数。
      *  @param[in]      format     printf 形式のフォーマット文字列 (ラベル)。NULL 可。
      *  @param[in]      ...        フォーマット文字列に対応する可変長引数。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。\n
+     *                  ラベルの書式の展開に失敗した場合は、何も出力せずに @ref CPLAT_ERR_UNKNOWN を返します。\n
+     *                  ラベルが最大長を超える場合は切り詰めて出力します。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
@@ -668,7 +674,9 @@ extern "C"
      *  @param[in]      size       バイナリ データのバイト数。
      *  @param[in]      format     printf 形式のフォーマット文字列 (ラベル)。NULL 可。
      *  @param[in]      args       フォーマット文字列に対応する引数リスト。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。\n
+     *                  ラベルの書式の展開に失敗した場合は、何も出力せずに @ref CPLAT_ERR_UNKNOWN を返します。\n
+     *                  ラベルが最大長を超える場合は切り詰めて出力します。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n

@@ -365,8 +365,8 @@ void hashtable_refresh_layout(cplat_hashtable *ht)
     const cplat_hashtable_config *config = &ht->hdr->config;
 
     /*
-     * 構築済みテーブルの設定はあふれないため、算出は失敗しない。
      * 算出前に 0 で初期化し、万一の失敗時も未初期化値を残さない。
+     * 構築済みテーブルの設定はあふれず、算出は失敗しないため、次の 4 つの算出の戻り値は明示的に破棄する。
      */
     ht->off_bucket_head = 0;
     ht->off_entries = 0;

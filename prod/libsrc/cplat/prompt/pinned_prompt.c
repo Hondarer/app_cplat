@@ -203,6 +203,7 @@ static int pinned_prompt_set_prompt(cplat_pinned_prompt *screen, const char *pro
 
     if (prompt_str != NULL)
     {
+        /* 直前で宛先を len + 1 以上の大きさにしており、切り詰めと失敗は起きないため、戻り値は明示的に破棄する。 */
         (void)cplat_strcpy(screen->prompt_buf, screen->prompt_cap, prompt_str);
     }
     else
@@ -233,6 +234,12 @@ static void pinned_prompt_adjust_view(cplat_pinned_prompt *screen)
     screen->view_start = cplat_internal_prompt_edit_adjust_view_start(screen->edit_buf, screen->edit_len,
                                                                       screen->cursor, screen->view_start, input_cols);
 }
+
+/*
+ * pinned_prompt_render_separator() から pinned_prompt_prepare_output_locked() までの描画は、
+ * 利用者が画面で確認する端末の表示であり、失敗しても入力の状態は変わらないため、
+ * この節の printf、fputc、fputs、fwrite、fflush の戻り値は明示的に破棄する。
+ */
 
 /* 指定行に区切り線を描画する。 */
 static void pinned_prompt_render_separator(cplat_pinned_prompt *screen, int row)
@@ -842,6 +849,7 @@ static void pinned_prompt_history_add(cplat_pinned_prompt *screen, pinned_prompt
     ctx->entries[slot] = (char *)cplat_malloc(len);
     if (ctx->entries[slot] != NULL)
     {
+        /* 直前に strlen(line) + 1 の大きさで確保しており、切り詰めと失敗は起きないため、戻り値は明示的に破棄する。 */
         (void)cplat_strcpy(ctx->entries[slot], len, line);
     }
 }
@@ -897,6 +905,11 @@ static void pinned_prompt_history_prev(cplat_pinned_prompt *screen, pinned_promp
 
     if (ctx->browse_idx == -1)
     {
+        /*
+         * 宛先は input_max_bytes で確保され、渡す大きさ edit_cap は input_max_bytes 以下であり、
+         * edit_buf は常に edit_len + 1 <= edit_cap で NUL 終端されており、
+         * 切り詰めと失敗は起きないため、戻り値は明示的に破棄する。
+         */
         (void)cplat_strcpy(ctx->saved_line, screen->edit_cap, screen->edit_buf);
         ctx->browse_idx = (int)ctx->count - 1;
     }
@@ -1068,6 +1081,10 @@ static int pinned_prompt_readline_fallback(cplat_pinned_prompt *screen, char *bu
 
     if (prompt_str != NULL)
     {
+        /*
+         * プロンプトの表示は利用者が画面で確認する表示であり、続く行入力の結果は変わらないため、
+         * この 2 文の戻り値は明示的に破棄する。
+         */
         (void)fputs(prompt_str, stdout);
         (void)fflush(stdout);
     }
@@ -1170,7 +1187,7 @@ void cplat_pinned_prompt_dispose(cplat_pinned_prompt *screen)
 
     pinned_prompt_cleanup_terminal_locked(screen);
 
-    /* 解放処理を継続するため、端末状態の復帰成否は判定せず後続の資源解放を進める。 */
+    /* 解放処理を継続して後続の資源解放を進めるため、端末状態の復帰の戻り値は明示的に破棄する。 */
     (void)prompt_platform_leave_raw(&screen->platform);
     pinned_prompt_unlock(screen);
 
@@ -1206,7 +1223,7 @@ void cplat_pinned_prompt_dispose(cplat_pinned_prompt *screen)
 
     if (screen->mutex_active)
     {
-        (void)cplat_local_lock_dispose(screen->mutex);
+        cplat_local_lock_dispose(screen->mutex);
     }
 
     prompt_platform_dispose(&screen->platform);
@@ -1282,6 +1299,7 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
     if (history_ctx == NULL)
     {
         pinned_prompt_unlock(screen);
+        /* すでに CPLAT_ERR_UNKNOWN を返す経路であり、復元の成否で結果が変わらないため、戻り値は明示的に破棄する。 */
         (void)prompt_platform_leave_raw(&screen->platform);
 
         return CPLAT_ERR_UNKNOWN;
@@ -1290,6 +1308,7 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
     if (pinned_prompt_set_prompt(screen, prompt_str) != 0)
     {
         pinned_prompt_unlock(screen);
+        /* すでに CPLAT_ERR_UNKNOWN を返す経路であり、復元の成否で結果が変わらないため、戻り値は明示的に破棄する。 */
         (void)prompt_platform_leave_raw(&screen->platform);
 
         return CPLAT_ERR_UNKNOWN;
@@ -1546,6 +1565,7 @@ int cplat_pinned_prompt_write(cplat_pinned_prompt *screen, cplat_pinned_prompt_c
 {
     FILE *out;
     size_t written;
+    int flush_result;
 
     if (written_out != NULL)
     {
@@ -1570,14 +1590,14 @@ int cplat_pinned_prompt_write(cplat_pinned_prompt *screen, cplat_pinned_prompt_c
             written = 0U;
         }
 
-        (void)fflush(out);
+        flush_result = fflush(out);
 
         if (written_out != NULL)
         {
             *written_out = written;
         }
 
-        if (written != size)
+        if (written != size || flush_result != 0)
         {
             return CPLAT_ERR_UNKNOWN;
         }
@@ -1599,7 +1619,11 @@ int cplat_pinned_prompt_write(cplat_pinned_prompt *screen, cplat_pinned_prompt_c
         written = 0U;
     }
 
-    (void)fflush(out);
+    flush_result = fflush(out);
+    /*
+     * スクロール領域を戻す端末制御であり、失敗しても書き込んだデータの結果は変わらないため、
+     * 戻り値は明示的に破棄する。
+     */
     (void)printf("\033[r");
     pinned_prompt_render_locked(screen);
     pinned_prompt_unlock(screen);
@@ -1609,7 +1633,7 @@ int cplat_pinned_prompt_write(cplat_pinned_prompt *screen, cplat_pinned_prompt_c
         *written_out = written;
     }
 
-    if (written != size)
+    if (written != size || flush_result != 0)
     {
         return CPLAT_ERR_UNKNOWN;
     }
@@ -1662,6 +1686,10 @@ int cplat_pinned_prompt_printf(cplat_pinned_prompt *screen, cplat_pinned_prompt_
 
     if (fmt != NULL)
     {
+        /*
+         * 書式の展開の失敗は直前の必要長の照会で検出済みで、同じ書式と引数に必要長 + 1 の大きさを
+         * 確保しており、切り詰めも起きないため、戻り値は明示的に破棄する。
+         */
         (void)cplat_vsnprintf(buf, (size_t)needed + 1U, fmt, ap);
     }
     else
@@ -1753,6 +1781,7 @@ static int pinned_prompt_set_status_content(char **buf, size_t *cap, const char 
 
     if (content != NULL)
     {
+        /* 直前で宛先を len + 1 以上の大きさにしており、切り詰めと失敗は起きないため、戻り値は明示的に破棄する。 */
         (void)cplat_strcpy(*buf, *cap, content);
     }
     else

@@ -44,7 +44,10 @@ static void clock_write_fallback(char *buf, const size_t buf_size, const char *f
         return;
     }
 
-    /* 代替文字列の格納は試みるだけであり、失敗しても呼び出し元が返す結果コードは変えない。 */
+    /*
+     * 代替文字列の格納は試みるだけであり、失敗しても呼び出し元が返す結果コードは変わらないため、
+     * 戻り値は明示的に破棄する。
+     */
     (void)cplat_snprintf(buf, buf_size, "%s", fallback);
 }
 

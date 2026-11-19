@@ -144,7 +144,7 @@ static int app_lock_open_identity(const char *identity, cplat_interprocess_rwloc
     identity_copy = dup_string(identity);
     if (identity_copy == NULL)
     {
-        CloseHandle(handle);
+        (void)CloseHandle(handle); /* 複製の確保の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
         return CPLAT_ERR_UNKNOWN;
     }
 
@@ -152,7 +152,7 @@ static int app_lock_open_identity(const char *identity, cplat_interprocess_rwloc
     if (new_lock == NULL)
     {
         cplat_free(identity_copy);
-        CloseHandle(handle);
+        (void)CloseHandle(handle); /* ロックの確保の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
         return CPLAT_ERR_UNKNOWN;
     }
 
@@ -189,7 +189,7 @@ static int interprocess_lock_open_identity(const char *identity, cplat_interproc
     identity_copy = dup_string(identity);
     if (identity_copy == NULL)
     {
-        CloseHandle(handle);
+        (void)CloseHandle(handle); /* 複製の確保の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
         return CPLAT_ERR_UNKNOWN;
     }
 
@@ -197,7 +197,7 @@ static int interprocess_lock_open_identity(const char *identity, cplat_interproc
     if (new_lock == NULL)
     {
         cplat_free(identity_copy);
-        CloseHandle(handle);
+        (void)CloseHandle(handle); /* ロックの確保の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
         return CPLAT_ERR_UNKNOWN;
     }
 
@@ -821,7 +821,8 @@ void cplat_thread_join(cplat_thread *thread)
         CPLAT_ABORT("スレッドの終了を待機できません");
     }
 
-    CloseHandle(thread->native);
+    /* スレッドの終了を確認した後の解放であり、失敗を受けて取れる行動がないため、戻り値は明示的に破棄する。 */
+    (void)CloseHandle(thread->native);
     cplat_free(thread);
 }
 
@@ -849,7 +850,8 @@ int cplat_thread_timed_join(cplat_thread *thread, int timeout_ms)
     status = WaitForSingleObject(thread->native, wait_ms);
     if (status == WAIT_OBJECT_0)
     {
-        CloseHandle(thread->native);
+        /* スレッドの終了を確認した後の解放であり、終了済みとして返す結果が変わらないため、戻り値は明示的に破棄する。 */
+        (void)CloseHandle(thread->native);
         cplat_free(thread);
         return CPLAT_OK;
     }
@@ -863,7 +865,8 @@ void cplat_thread_detach(cplat_thread *thread)
 {
     if (thread != NULL)
     {
-        CloseHandle(thread->native);
+        /* ハンドルを閉じることが切り離しであり、失敗を受けて取れる行動がないため、戻り値は明示的に破棄する。 */
+        (void)CloseHandle(thread->native);
         cplat_free(thread);
     }
 }
@@ -972,10 +975,12 @@ void cplat_interprocess_lock_dispose(cplat_interprocess_lock *lock)
     {
         if (lock->locked)
         {
+            /* 直後にハンドルを閉じるとロックも解放され、解除の失敗で結果が変わらないため、戻り値は明示的に破棄する。 */
             (void)cplat_interprocess_lock_unlock(lock);
         }
 
-        CloseHandle(lock->handle);
+        /* 破棄の後に失敗を受けても、呼び出し元が取れる行動がないため、戻り値は明示的に破棄する。 */
+        (void)CloseHandle(lock->handle);
         cplat_free(lock->identity);
         cplat_free(lock);
     }
@@ -1111,10 +1116,12 @@ void cplat_interprocess_rwlock_dispose(cplat_interprocess_rwlock *lock)
     {
         if (lock->locked)
         {
+            /* 直後にハンドルを閉じるとロックも解放され、解除の失敗で結果が変わらないため、戻り値は明示的に破棄する。 */
             (void)cplat_interprocess_rwlock_unlock(lock);
         }
 
-        CloseHandle(lock->handle);
+        /* 破棄の後に失敗を受けても、呼び出し元が取れる行動がないため、戻り値は明示的に破棄する。 */
+        (void)CloseHandle(lock->handle);
         cplat_free(lock->identity);
         cplat_free(lock);
     }
@@ -1150,7 +1157,7 @@ void cplat_call_once(cplat_once_flag *flag, void (*func)(void))
 
 void cplat_thread_yield(void)
 {
-    (void)SwitchToThread();
+    SwitchToThread();
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */

@@ -107,7 +107,12 @@ static uint64_t monotonic_ms(void)
 {
     struct timespec ts;
 
-    clock_gettime(CLOCK_MONOTONIC, &ts);
+    /*
+     * 失敗の条件は未対応のクロック ID (EINVAL) と不正なポインター (EFAULT) であり、
+     * CLOCK_MONOTONIC と局所変数を渡すこの呼び出しは失敗しないため、戻り値は明示的に破棄する。
+     * see: https://man7.org/linux/man-pages/man2/clock_gettime.2.html
+     */
+    (void)clock_gettime(CLOCK_MONOTONIC, &ts);
 
     return (uint64_t)ts.tv_sec * 1000ULL + (uint64_t)ts.tv_nsec / 1000000ULL;
 }
@@ -351,7 +356,7 @@ static int setup_child_stdio_one(const cplat_process_stdio *spec, const int targ
     {
         if (spec->mode == CPLAT_PROCESS_STDIO_NULL_DEVICE)
         {
-            close(source_fd);
+            (void)close(source_fd); /* dup2 の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
         }
 
         return -1;
@@ -359,7 +364,8 @@ static int setup_child_stdio_one(const cplat_process_stdio *spec, const int targ
 
     if (spec->mode == CPLAT_PROCESS_STDIO_NULL_DEVICE)
     {
-        close(source_fd);
+        /* 複製は成立しており、失敗しても余分な fd が 1 つ残るだけのため、戻り値は明示的に破棄する。 */
+        (void)close(source_fd);
     }
 
     return 0;
@@ -395,7 +401,8 @@ static void exec_with_path(char *const *argv, char *const *envp)
     /* 実行ファイル名にパス区切り文字が含まれる場合は、PATH を走査せず直接実行する。 */
     if (strchr(argv[0], '/') != NULL)
     {
-        execve(argv[0], argv, envp);
+        /* execve は失敗した場合だけ戻り、errno を呼び出し元が報告するため、戻り値は明示的に破棄する。 */
+        (void)execve(argv[0], argv, envp);
         return;
     }
 
@@ -435,7 +442,8 @@ static void exec_with_path(char *const *argv, char *const *envp)
             memcpy(candidate, segment, dir_len);
             candidate[dir_len] = '/';
             memcpy(candidate + dir_len + 1, argv[0], name_len + 1);
-            execve(candidate, argv, envp);
+            /* 失敗した場合は次の候補を試し、最後の errno を呼び出し元が報告するため、戻り値は明示的に破棄する。 */
+            (void)execve(candidate, argv, envp);
         }
 
         if (*segment_end == '\0')
@@ -885,6 +893,10 @@ static wchar_t *build_environment_block(char *const *overrides)
         return NULL;
     }
 
+    /*
+     * 環境ブロックの解放は、内容を使い終えた後か NULL を返す経路で行い、失敗しても返す結果が変わらないため、
+     * この関数の FreeEnvironmentStringsW の戻り値は明示的に破棄する。
+     */
     current = GetEnvironmentStringsW();
     if (current == NULL)
     {
@@ -906,7 +918,7 @@ static wchar_t *build_environment_block(char *const *overrides)
     {
         if (strchr(overrides[override_count], '=') == NULL)
         {
-            FreeEnvironmentStringsW(current);
+            (void)FreeEnvironmentStringsW(current);
             return NULL;
         }
 
@@ -917,7 +929,7 @@ static wchar_t *build_environment_block(char *const *overrides)
     list = (wchar_t **)cplat_calloc(capacity, sizeof(*list));
     if (list == NULL)
     {
-        FreeEnvironmentStringsW(current);
+        (void)FreeEnvironmentStringsW(current);
         return NULL;
     }
 
@@ -930,7 +942,7 @@ static wchar_t *build_environment_block(char *const *overrides)
         if (list[i] == NULL)
         {
             free_wide_env_list(list);
-            FreeEnvironmentStringsW(current);
+            (void)FreeEnvironmentStringsW(current);
             return NULL;
         }
 
@@ -939,7 +951,7 @@ static wchar_t *build_environment_block(char *const *overrides)
     }
 
     list[i] = NULL;
-    FreeEnvironmentStringsW(current);
+    (void)FreeEnvironmentStringsW(current);
 
     /* 上書き指定のエントリを反映する。 */
     i = 0;
@@ -1081,7 +1093,7 @@ static void close_stdio_handles(HANDLE handles[3])
     {
         if (handles[i] != NULL && handles[i] != INVALID_HANDLE_VALUE)
         {
-            CloseHandle(handles[i]);
+            (void)CloseHandle(handles[i]); /* 後始末の関数であり、失敗を伝える先がないため、戻り値は明示的に破棄する */
         }
 
         i++;
@@ -1335,7 +1347,12 @@ int cplat_process_start(const cplat_process_options *options, cplat_process **pr
         startup.StartupInfo.hStdError = res.stdio_handles[2];
 
         attr_size = 0;
-        InitializeProcThreadAttributeList(NULL, 1, 0, &attr_size);
+        /*
+         * 必要サイズの取得のための呼び出しであり、仕様上 FALSE を返し、成否は後続の確保と初期化で検査するため、
+         * 戻り値は明示的に破棄する。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-initializeprocthreadattributelist
+         */
+        (void)InitializeProcThreadAttributeList(NULL, 1, 0, &attr_size);
         res.attribute_list = (LPPROC_THREAD_ATTRIBUTE_LIST)cplat_calloc(1, attr_size);
         if (res.attribute_list == NULL)
         {
@@ -1383,11 +1400,12 @@ int cplat_process_start(const cplat_process_options *options, cplat_process **pr
             return CPLAT_ERR_UNKNOWN;
         }
 
-        CloseHandle(process_info.hThread);
+        /* スレッド ハンドルは使わず、閉じられなくても起動は成立しているため、戻り値は明示的に破棄する。 */
+        (void)CloseHandle(process_info.hThread);
         new_process = (cplat_process *)cplat_calloc(1, sizeof(*new_process));
         if (new_process == NULL)
         {
-            CloseHandle(process_info.hProcess);
+            (void)CloseHandle(process_info.hProcess); /* 確保の失敗を返す後始末のため、戻り値は明示的に破棄する */
             return CPLAT_ERR_UNKNOWN;
         }
 
@@ -1457,6 +1475,10 @@ static int process_wait_with_pidfd(cplat_process *process, const int pidfd, cons
         deadline = monotonic_ms() + (uint64_t)timeout_ms;
     }
 
+    /*
+     * pidfd は待機の結果が確定した後に閉じ、失敗しても返す結果が変わらないため、
+     * この関数の close の戻り値は明示的に破棄する。
+     */
     while (1)
     {
         struct pollfd pfd;
@@ -1476,7 +1498,7 @@ static int process_wait_with_pidfd(cplat_process *process, const int pidfd, cons
             const uint64_t now = monotonic_ms();
             if (now >= deadline)
             {
-                close(pidfd);
+                (void)close(pidfd);
                 return CPLAT_ERR_TIMEOUT;
             }
 
@@ -1487,13 +1509,13 @@ static int process_wait_with_pidfd(cplat_process *process, const int pidfd, cons
         if (poll_rc > 0)
         {
             const int reap_rc = reap_child_nowait(process);
-            close(pidfd);
+            (void)close(pidfd);
             return (reap_rc == CPLAT_ERR_BUSY) ? CPLAT_ERR_UNKNOWN : reap_rc;
         }
 
         if (poll_rc == 0)
         {
-            close(pidfd);
+            (void)close(pidfd);
             return CPLAT_ERR_TIMEOUT;
         }
 
@@ -1502,7 +1524,7 @@ static int process_wait_with_pidfd(cplat_process *process, const int pidfd, cons
             continue;
         }
 
-        close(pidfd);
+        (void)close(pidfd);
         return CPLAT_ERR_UNKNOWN;
     }
 }
@@ -1529,7 +1551,8 @@ static int process_wait_polling(cplat_process *process, const int timeout_ms)
             return CPLAT_ERR_TIMEOUT;
         }
 
-        usleep(1000); /* 1 [ms] */
+        /* 1 [ms] 待つ。中断されても次の回収と期限の判定へ進むだけのため、戻り値は明示的に破棄する。 */
+        (void)usleep(1000);
     }
 }
 #elif defined(PLATFORM_WINDOWS)
@@ -1695,7 +1718,7 @@ void cplat_process_dispose(cplat_process *process)
 #if defined(PLATFORM_WINDOWS)
     if (process->process != NULL)
     {
-        CloseHandle(process->process);
+        (void)CloseHandle(process->process); /* 破棄の関数であり、失敗を伝える先がないため、戻り値は明示的に破棄する */
     }
 #endif /* PLATFORM_WINDOWS */
     cplat_free(process);
@@ -1770,7 +1793,7 @@ int cplat_process_timed_run_sync(const cplat_process_options *options, const int
         /*
          * 強制終了後の回収を試みるが、Linux の割り込み不可の待ち (D 状態) や Windows で
          * 実行中の I/O が完了・取り消しされるまでは終了しないことがあるため上限付きで待ち、
-         * この待ちの結果は捨てて呼び出し元にはタイムアウトを返す。
+         * 呼び出し元にはタイムアウトを返すため、この待ちの戻り値は明示的に破棄する。
          * see: https://lwn.net/Articles/288056/
          * see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess
          */

@@ -212,7 +212,10 @@ static int render_buffer_append_argument(render_buffer *buffer,
         return CPLAT_OK;
 
     case CPLAT_STRING_CATALOG_ARGUMENT_KIND_DOUBLE:
-        /* 有効桁数を保つ丸め処理は独自実装せず、標準ライブラリに委任する。 */
+        /*
+         * 有効桁数を保つ丸め処理は独自実装せず、標準ライブラリに委任する。
+         * %g の出力は VALUE_TEXT_MAX に収まり、切り詰めが起きないため、戻り値は明示的に破棄する。
+         */
         (void)cplat_snprintf(value_text, sizeof(value_text), "%g", value->value.double_value);
         render_buffer_append_string(buffer, value_text);
         return CPLAT_OK;

@@ -47,7 +47,13 @@ static void console_diag_logf(const char *fmt, ...);
 
 static void register_console_shutdown_callback(void)
 {
-    (void)cplat_shutdown_register(cplat_internal_console_dispose_on_shutdown, NULL);
+    int result = cplat_shutdown_register(cplat_internal_console_dispose_on_shutdown, NULL);
+
+    if (result != CPLAT_OK)
+    {
+        /* 終了時にコンソールの設定が戻らないことを診断ログへ残し、初期化は続ける。 */
+        console_diag_logf("console_init cplat_shutdown_register failed result=%d", result);
+    }
 }
 
 /**
@@ -89,7 +95,8 @@ static int reopen_crt_std_fd(HANDLE handle, FILE *stream, const char *name, int 
         return -1;
     }
 
-    _close(expected_fd);
+    /* 閉じられずに番号が変わった場合は直後の fd の比較で診断ログに残るため、戻り値は明示的に破棄する。 */
+    (void)_close(expected_fd);
 
     new_fd = _open_osfhandle((intptr_t)handle, open_flags);
     if (new_fd < 0)
@@ -234,8 +241,9 @@ static void console_diag_logf(const char *fmt, ...)
         return;
     }
 
+    /* 診断ログ自体の書き込みと後始末であり、失敗を出力する先がほかにないため、戻り値は明示的に破棄する。 */
     (void)WriteFile(handle, line, (DWORD)(prefix_len + message_len + 1), &written, NULL);
-    CloseHandle(handle);
+    (void)CloseHandle(handle);
 }
 
 /* ===== 公開 API ===== */
@@ -277,14 +285,22 @@ void cplat_console_init(void)
     if (current_cp != CP_UTF8)
     {
         s_orig_input_cp = current_cp;
-        SetConsoleCP(CP_UTF8);
+
+        if (!SetConsoleCP(CP_UTF8))
+        {
+            console_diag_logf("console_init SetConsoleCP failed error=%lu", (unsigned long)GetLastError());
+        }
     }
 
     current_cp = GetConsoleOutputCP();
     if (current_cp != CP_UTF8)
     {
         s_orig_output_cp = current_cp;
-        SetConsoleOutputCP(CP_UTF8);
+
+        if (!SetConsoleOutputCP(CP_UTF8))
+        {
+            console_diag_logf("console_init SetConsoleOutputCP failed error=%lu", (unsigned long)GetLastError());
+        }
     }
 
     /* stdout の Virtual Terminal Processing を有効化する (ANSI エスケープ シーケンス対応)。 */
@@ -346,31 +362,45 @@ void cplat_console_dispose(void)
         }
     }
 
-    /* コンソール モードを元に戻す。 */
+    /* コンソール モードを元に戻す。1 つの復元が失敗しても、診断ログへ残して残りの復元を続ける。 */
     if (s_orig_stdout_mode != 0)
     {
         h = GetStdHandle(STD_OUTPUT_HANDLE);
-        SetConsoleMode(h, s_orig_stdout_mode);
+        if (!SetConsoleMode(h, s_orig_stdout_mode))
+        {
+            console_diag_logf("console_dispose SetConsoleMode stdout failed handle=0x%p error=%lu", (void *)h,
+                              (unsigned long)GetLastError());
+        }
         s_orig_stdout_mode = 0;
     }
 
     if (s_orig_stderr_mode != 0)
     {
         h = GetStdHandle(STD_ERROR_HANDLE);
-        SetConsoleMode(h, s_orig_stderr_mode);
+        if (!SetConsoleMode(h, s_orig_stderr_mode))
+        {
+            console_diag_logf("console_dispose SetConsoleMode stderr failed handle=0x%p error=%lu", (void *)h,
+                              (unsigned long)GetLastError());
+        }
         s_orig_stderr_mode = 0;
     }
 
     /* コード ページを元に戻す。 */
     if (s_orig_input_cp != 0)
     {
-        SetConsoleCP(s_orig_input_cp);
+        if (!SetConsoleCP(s_orig_input_cp))
+        {
+            console_diag_logf("console_dispose SetConsoleCP failed error=%lu", (unsigned long)GetLastError());
+        }
         s_orig_input_cp = 0;
     }
 
     if (s_orig_output_cp != 0)
     {
-        SetConsoleOutputCP(s_orig_output_cp);
+        if (!SetConsoleOutputCP(s_orig_output_cp))
+        {
+            console_diag_logf("console_dispose SetConsoleOutputCP failed error=%lu", (unsigned long)GetLastError());
+        }
         s_orig_output_cp = 0;
     }
 }
@@ -528,6 +558,10 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
 
     if (extract_diag_arg(argc, argv) != 0)
     {
+        /*
+         * 診断ログを有効にする操作であり、失敗を記録する先がなく、接続の結果も変わらないため、
+         * 戻り値は明示的に破棄する。
+         */
         (void)SetEnvironmentVariableA(CPLAT_CONSOLE_ATTACH_DIAG_ENV, "1");
     }
 
@@ -565,7 +599,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
             DWORD free_error;
 
             SetLastError(ERROR_SUCCESS);
-            (void)FreeConsole();
+            (void)FreeConsole(); /* 失敗は直後の GetLastError() で診断ログへ記録するため、戻り値は明示的に破棄する */
             free_error = GetLastError();
             console_diag_logf("attempt=%d FreeConsole last_error=%lu", attempt, (unsigned long)free_error);
 
@@ -624,8 +658,15 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
                         OPEN_EXISTING, 0, NULL);
     if (h_out != INVALID_HANDLE_VALUE)
     {
-        SetStdHandle(STD_OUTPUT_HANDLE, h_out);
-        console_diag_logf("SetStdHandle stdout success handle=0x%p", (void *)h_out);
+        if (SetStdHandle(STD_OUTPUT_HANDLE, h_out))
+        {
+            console_diag_logf("SetStdHandle stdout success handle=0x%p", (void *)h_out);
+        }
+        else
+        {
+            console_diag_logf("SetStdHandle stdout failed handle=0x%p error=%lu", (void *)h_out,
+                              (unsigned long)GetLastError());
+        }
     }
     else
     {
@@ -638,8 +679,15 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
                         OPEN_EXISTING, 0, NULL);
     if (h_err != INVALID_HANDLE_VALUE)
     {
-        SetStdHandle(STD_ERROR_HANDLE, h_err);
-        console_diag_logf("SetStdHandle stderr success handle=0x%p", (void *)h_err);
+        if (SetStdHandle(STD_ERROR_HANDLE, h_err))
+        {
+            console_diag_logf("SetStdHandle stderr success handle=0x%p", (void *)h_err);
+        }
+        else
+        {
+            console_diag_logf("SetStdHandle stderr failed handle=0x%p error=%lu", (void *)h_err,
+                              (unsigned long)GetLastError());
+        }
     }
     else
     {
@@ -652,8 +700,15 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
                        0, NULL);
     if (h_in != INVALID_HANDLE_VALUE)
     {
-        SetStdHandle(STD_INPUT_HANDLE, h_in);
-        console_diag_logf("SetStdHandle stdin success handle=0x%p", (void *)h_in);
+        if (SetStdHandle(STD_INPUT_HANDLE, h_in))
+        {
+            console_diag_logf("SetStdHandle stdin success handle=0x%p", (void *)h_in);
+        }
+        else
+        {
+            console_diag_logf("SetStdHandle stdin failed handle=0x%p error=%lu", (void *)h_in,
+                              (unsigned long)GetLastError());
+        }
     }
     else
     {
@@ -672,17 +727,20 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
      */
     if (reopen_crt_std_fd(h_out, stdout, "stdout", _O_TEXT | _O_RDWR) == 0)
     {
-        /* 失敗しても Win32 ハンドルは付け替え済みのため処理を継続する。 */
+        /* 失敗しても Win32 ハンドルは付け替え済みで処理を継続できるため、戻り値は明示的に破棄する。 */
         (void)setvbuf(stdout, NULL, _IONBF, 0);
     }
 
     if (reopen_crt_std_fd(h_err, stderr, "stderr", _O_TEXT | _O_RDWR) == 0)
     {
-        /* 失敗しても Win32 ハンドルは付け替え済みのため処理を継続する。 */
+        /* 失敗しても Win32 ハンドルは付け替え済みで処理を継続できるため、戻り値は明示的に破棄する。 */
         (void)setvbuf(stderr, NULL, _IONBF, 0);
     }
 
-    /* 失敗しても Win32 ハンドルは付け替え済みのため処理を継続する。 */
+    /*
+     * 失敗は reopen_crt_std_fd が診断ログへ記録し、Win32 ハンドルは付け替え済みで処理を継続できるため、
+     * 戻り値は明示的に破棄する。
+     */
     (void)reopen_crt_std_fd(h_in, stdin, "stdin", _O_TEXT | _O_RDWR);
 
     /*
@@ -711,8 +769,14 @@ void cplat_internal_console_dispose_on_shutdown(const cplat_shutdown_event *even
     }
 
     /* stdout / stderr をフラッシュしてからコンソール状態を元に戻す。 */
-    fflush(stdout);
-    fflush(stderr);
+    if (fflush(stdout) != 0)
+    {
+        console_diag_logf("dispose_on_shutdown fflush stdout failed errno=%d", errno);
+    }
+    if (fflush(stderr) != 0)
+    {
+        console_diag_logf("dispose_on_shutdown fflush stderr failed errno=%d", errno);
+    }
     console_diag_logf("dispose_on_shutdown after fflush attached_parent=%ld",
                       (long)cplat_atomic_load_i32(&s_attached_parent, CPLAT_MEMORY_ORDER_SEQ_CST));
 
@@ -729,6 +793,10 @@ void cplat_internal_console_dispose_on_shutdown(const cplat_shutdown_event *even
         h_out = GetStdHandle(STD_OUTPUT_HANDLE);
         if (h_out != NULL && h_out != INVALID_HANDLE_VALUE)
         {
+            /*
+             * conhost の処理を待ち合わせるための呼び出しであり、取得した情報も成否も使わないため、
+             * 戻り値は明示的に破棄する。
+             */
             (void)GetConsoleScreenBufferInfo(h_out, &info);
             console_diag_logf("dispose_on_shutdown drain GetConsoleScreenBufferInfo handle=0x%p", (void *)h_out);
         }

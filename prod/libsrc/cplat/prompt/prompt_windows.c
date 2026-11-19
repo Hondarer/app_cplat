@@ -64,6 +64,7 @@ void prompt_platform_dispose(prompt_platform_context *context)
     /* stdin_handle は標準入力共有ハンドルのため閉じず、複製したスレッド ハンドル等だけを解放する。 */
     if (context->input_thread != NULL)
     {
+        /* 解放の関数であり、失敗を受けても取れる行動がないため、戻り値は明示的に破棄する。 */
         (void)CloseHandle(context->input_thread);
         context->input_thread = NULL;
     }
@@ -166,6 +167,10 @@ static int prompt_windows_end_sync_input(prompt_platform_context *context)
 
     if (thread_to_close != NULL)
     {
+        /*
+         * 入力の完了後にスレッド ハンドルを解放するだけで、失敗しても中止の判定結果は変わらないため、
+         * 戻り値は明示的に破棄する。
+         */
         (void)CloseHandle(thread_to_close);
     }
 

@@ -11,6 +11,7 @@ extern "C"
 #endif /* __cplusplus */
 
     extern void test_shutdown_reset_hook_once(void);
+    extern void test_shutdown_reset_prepare(void);
 
 #if defined(PLATFORM_LINUX)
     extern void test_shutdown_signal_handler(int signal_number);

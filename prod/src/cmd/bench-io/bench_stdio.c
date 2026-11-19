@@ -64,7 +64,7 @@ static int seq_read_by_record(bench_context *ctx)
 
         if (cplat_fread(&record, sizeof(record), 1U, stream, NULL) != 1U)
         {
-            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
+            (void)cplat_fclose(stream, NULL); /* 先行する測定の失敗を返す経路のため、戻り値は明示的に破棄する */
             return -1;
         }
 
@@ -107,7 +107,7 @@ static int seq_read_by_block(bench_context *ctx, bench_record *block)
 
         if (cplat_fread(block, sizeof(*block), chunk, stream, NULL) != chunk)
         {
-            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
+            (void)cplat_fclose(stream, NULL); /* 先行する測定の失敗を返す経路のため、戻り値は明示的に破棄する */
             return -1;
         }
 
@@ -151,7 +151,7 @@ static int seq_write_by_record(bench_context *ctx, int durable)
 
         if (cplat_fwrite(&record, sizeof(record), 1U, stream, NULL) != 1U)
         {
-            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
+            (void)cplat_fclose(stream, NULL); /* 先行する測定の失敗を返す経路のため、戻り値は明示的に破棄する */
             return -1;
         }
     }
@@ -162,7 +162,7 @@ static int seq_write_by_record(bench_context *ctx, int durable)
      */
     if (durable != 0 && cplat_fflush(stream, NULL) != 0)
     {
-        (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
+        (void)cplat_fclose(stream, NULL); /* 先行する測定の失敗を返す経路のため、戻り値は明示的に破棄する */
         return -1;
     }
 
@@ -208,7 +208,7 @@ static int seq_write_by_block(bench_context *ctx, bench_record *block, int durab
 
         if (cplat_fwrite(block, sizeof(*block), chunk, stream, NULL) != chunk)
         {
-            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
+            (void)cplat_fclose(stream, NULL); /* 先行する測定の失敗を返す経路のため、戻り値は明示的に破棄する */
             return -1;
         }
 
@@ -221,7 +221,7 @@ static int seq_write_by_block(bench_context *ctx, bench_record *block, int durab
      */
     if (durable != 0 && cplat_fflush(stream, NULL) != 0)
     {
-        (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
+        (void)cplat_fclose(stream, NULL); /* 先行する測定の失敗を返す経路のため、戻り値は明示的に破棄する */
         return -1;
     }
 
@@ -255,13 +255,13 @@ static int rand_read(bench_context *ctx)
 
         if (cplat_fseek(stream, offset, SEEK_SET) != 0)
         {
-            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
+            (void)cplat_fclose(stream, NULL); /* 先行する測定の失敗を返す経路のため、戻り値は明示的に破棄する */
             return -1;
         }
 
         if (cplat_fread(&record, sizeof(record), 1U, stream, NULL) != 1U)
         {
-            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
+            (void)cplat_fclose(stream, NULL); /* 先行する測定の失敗を返す経路のため、戻り値は明示的に破棄する */
             return -1;
         }
 
@@ -299,13 +299,13 @@ static int rand_update(bench_context *ctx, int durable)
 
         if (cplat_fseek(stream, offset, SEEK_SET) != 0)
         {
-            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
+            (void)cplat_fclose(stream, NULL); /* 先行する測定の失敗を返す経路のため、戻り値は明示的に破棄する */
             return -1;
         }
 
         if (cplat_fread(&record, sizeof(record), 1U, stream, NULL) != 1U)
         {
-            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
+            (void)cplat_fclose(stream, NULL); /* 先行する測定の失敗を返す経路のため、戻り値は明示的に破棄する */
             return -1;
         }
 
@@ -314,13 +314,13 @@ static int rand_update(bench_context *ctx, int durable)
 
         if (cplat_fseek(stream, offset, SEEK_SET) != 0)
         {
-            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
+            (void)cplat_fclose(stream, NULL); /* 先行する測定の失敗を返す経路のため、戻り値は明示的に破棄する */
             return -1;
         }
 
         if (cplat_fwrite(&record, sizeof(record), 1U, stream, NULL) != 1U)
         {
-            (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
+            (void)cplat_fclose(stream, NULL); /* 先行する測定の失敗を返す経路のため、戻り値は明示的に破棄する */
             return -1;
         }
     }
@@ -331,7 +331,7 @@ static int rand_update(bench_context *ctx, int durable)
      */
     if (durable != 0 && cplat_fflush(stream, NULL) != 0)
     {
-        (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
+        (void)cplat_fclose(stream, NULL); /* 先行する測定の失敗を返す経路のため、戻り値は明示的に破棄する */
         return -1;
     }
 
@@ -361,13 +361,13 @@ static int point_lookup(bench_context *ctx)
 
     if (cplat_fseek(stream, offset, SEEK_SET) != 0)
     {
-        (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
+        (void)cplat_fclose(stream, NULL); /* 先行する測定の失敗を返す経路のため、戻り値は明示的に破棄する */
         return -1;
     }
 
     if (cplat_fread(&record, sizeof(record), 1U, stream, NULL) != 1U)
     {
-        (void)cplat_fclose(stream, NULL); /* 先行する測定失敗を返すため、クローズの結果は使わない */
+        (void)cplat_fclose(stream, NULL); /* 先行する測定の失敗を返す経路のため、戻り値は明示的に破棄する */
         return -1;
     }
 

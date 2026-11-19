@@ -109,10 +109,11 @@ int cplat_compress(uint8_t *dst, size_t *dst_len, const uint8_t *src, const size
 
     /*
      * zlib_app_deflateInit2 が成功した後は zlib_app_deflateEnd で内部状態を解放する。
-     * 未完了のとき zlib_app_deflateEnd は Z_DATA_ERROR を返すため、その戻り値は使わず zlib_app_deflate の結果で判定する。
+     * 未完了のとき zlib_app_deflateEnd は Z_DATA_ERROR を返し、結果は zlib_app_deflate の戻り値で判定するため、
+     * 戻り値は明示的に破棄する。
      * see: https://zlib.net/manual.html
      */
-    zlib_app_deflateEnd(&z);
+    (void)zlib_app_deflateEnd(&z);
 
     if (ret == Z_MEM_ERROR)
     {
@@ -225,7 +226,8 @@ int cplat_decompress(uint8_t *dst, size_t *dst_len, const uint8_t *src, const si
                 break;
             }
         }
-        zlib_app_inflateEnd(&z);
+        /* 結果は zlib_app_inflate の戻り値から決めており、解放の失敗で変わらないため、戻り値は明示的に破棄する。 */
+        (void)zlib_app_inflateEnd(&z);
         if (result != CPLAT_OK)
         {
             return result;

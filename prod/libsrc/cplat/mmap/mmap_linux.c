@@ -56,7 +56,7 @@ static int open_backing_file(const char *path, cplat_mmap_access access, size_t 
         ret = cplat_file_get_size(file, size_out, detail_out);
         if (ret != CPLAT_OK)
         {
-            (void)cplat_file_close(file, NULL); /* サイズ取得の失敗を返すため、クローズの結果は使わない */
+            (void)cplat_file_close(file, NULL); /* サイズ取得の失敗を返す後始末のため、戻り値は明示的に破棄する */
             return ret;
         }
 
@@ -71,7 +71,7 @@ static int open_backing_file(const char *path, cplat_mmap_access access, size_t 
     {
         if (create_size == 0)
         {
-            /* 閉じる処理と削除の戻り値は、長さ 0 の失敗を返すため使わない。 */
+            /* 長さ 0 の失敗を返す経路の後始末のため、閉じる処理と削除の戻り値は明示的に破棄する。 */
             (void)cplat_file_close(file, NULL);
             (void)cplat_remove(path, NULL);
             return cplat_internal_error_report_errno(detail_out, EINVAL);
@@ -80,7 +80,7 @@ static int open_backing_file(const char *path, cplat_mmap_access access, size_t 
         ret = cplat_file_set_size(file, create_size, detail_out);
         if (ret != CPLAT_OK)
         {
-            /* 閉じる処理と削除の戻り値は、サイズ設定の失敗を返すため使わない。 */
+            /* サイズ設定の失敗を返す経路の後始末のため、閉じる処理と削除の戻り値は明示的に破棄する。 */
             (void)cplat_file_close(file, NULL);
             (void)cplat_remove(path, NULL);
             return ret;
@@ -100,7 +100,7 @@ static int open_backing_file(const char *path, cplat_mmap_access access, size_t 
     ret = cplat_file_get_size(file, size_out, detail_out);
     if (ret != CPLAT_OK)
     {
-        (void)cplat_file_close(file, NULL); /* サイズ取得の失敗を返すため、クローズの結果は使わない */
+        (void)cplat_file_close(file, NULL); /* サイズ取得の失敗を返す後始末のため、戻り値は明示的に破棄する */
         return ret;
     }
 
@@ -143,7 +143,7 @@ int cplat_mmap_attach(const char *path, cplat_mmap_access access, size_t create_
      */
     if (size == 0)
     {
-        (void)cplat_file_close(&new_map->file, NULL); /* 長さ 0 の失敗を返すため、クローズの結果は使わない */
+        (void)cplat_file_close(&new_map->file, NULL); /* 長さ 0 の失敗を返す後始末のため、戻り値は明示的に破棄する */
         cplat_free(new_map);
         return cplat_internal_error_report_errno(detail_out, EINVAL);
     }
@@ -166,7 +166,7 @@ int cplat_mmap_attach(const char *path, cplat_mmap_access access, size_t create_
     {
         /*
          * mmap() の errno は、後続のクローズが errno を変える前に保持する。
-         * クローズの戻り値は、mmap() の失敗を返すため使わない。
+         * mmap() の失敗を返す経路の後始末のため、クローズの戻り値は明示的に破棄する。
          * see: https://man7.org/linux/man-pages/man3/errno.3.html
          */
         const int errno_value = errno;

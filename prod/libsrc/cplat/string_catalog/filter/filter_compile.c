@@ -1349,16 +1349,16 @@ int string_catalog_filter_compile_record(const char *text, const size_t text_len
     /* 条件式の長さ上限を確認し、論理和から順に構文解析を行う。 */
     if (text_length > line_width)
     {
-        (void)fail(&state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED, line_width);
+        fail(&state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED, line_width);
     }
     else if (advance(&state) && parse_or(&state) && (state.current.kind != TOKEN_KIND_END))
     {
-        (void)fail(&state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, state.current.column);
+        fail(&state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, state.current.column);
     }
 
     if ((state.error == CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE) && (state.instruction_count == 0U))
     {
-        (void)fail(&state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, 0U);
+        fail(&state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, 0U);
     }
 
     if (state.error != CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE)

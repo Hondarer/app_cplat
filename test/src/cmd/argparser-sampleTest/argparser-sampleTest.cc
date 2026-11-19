@@ -3,6 +3,7 @@
 #include <mock_cplat.h>
 
 #include <cstdlib>
+#include <string>
 
 using testing::_;
 using testing::HasSubstr;
@@ -114,4 +115,116 @@ TEST_F(argparser_sampleTest, main_prints_usage_on_help)
 
     // Assert
     EXPECT_EQ(EXIT_SUCCESS, rc); // [確認_正常系] - __real_main() の戻り値が EXIT_SUCCESS であること。
+}
+
+// --help の使い方の表示の関数が失敗した場合に EXIT_FAILURE を返し、診断を出すことの確認
+TEST_F(argparser_sampleTest, main_returns_failure_when_help_usage_print_fails)
+{
+    // Arrange
+    const char *argv[] = {"argparser-sample", "--help"};
+    const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_argparser_print_usage(stdout))
+        .WillOnce(Return(CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_argparser_print_usage() が stdout を指定して 1 回呼び出されること。
+                                              // [Pre-Assert手順] - cplat_argparser_print_usage() から CPLAT_ERR_UNKNOWN を返す。
+
+    // Act
+    testing::internal::CaptureStderr();
+    int rc = __real_main(argc, (char **)&argv); // [手順] - 使い方の表示が失敗する状態で --help を指定して __real_main() を呼び出す。
+    std::string errors = testing::internal::GetCapturedStderr();
+
+    // Assert
+    EXPECT_EQ(EXIT_FAILURE, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_FAILURE であること。
+    EXPECT_THAT(errors, HasSubstr("error: failed to write stdout")); // [確認_異常系] - 標準エラー出力に書き込みの失敗の診断が出ること。
+}
+
+// --help の後の fflush(stdout) が失敗した場合に EXIT_FAILURE を返し、診断を出すことの確認
+TEST_F(argparser_sampleTest, main_returns_failure_when_help_flush_fails)
+{
+    // Arrange
+    const char *argv[] = {"argparser-sample", "--help"};
+    const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
+
+    // Pre-Assert
+    EXPECT_CALL(mock_stdio_, fflush(_, _, _, stdout))
+        .WillOnce(Return(EOF)); // [Pre-Assert確認_異常系] - fflush() が stdout を指定して 1 回呼び出されること。
+                                // [Pre-Assert手順] - fflush() から EOF を返す。
+
+    // Act
+    testing::internal::CaptureStderr();
+    int rc = __real_main(argc, (char **)&argv); // [手順] - フラッシュが失敗する状態で --help を指定して __real_main() を呼び出す。
+    std::string errors = testing::internal::GetCapturedStderr();
+
+    // Assert
+    EXPECT_EQ(EXIT_FAILURE, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_FAILURE であること。
+    EXPECT_THAT(errors, HasSubstr("error: failed to write stdout")); // [確認_異常系] - 標準エラー出力に書き込みの失敗の診断が出ること。
+}
+
+// --help の後の ferror(stdout) がエラーを示した場合に EXIT_FAILURE を返し、診断を出すことの確認
+TEST_F(argparser_sampleTest, main_returns_failure_when_help_stream_has_error)
+{
+    // Arrange
+    const char *argv[] = {"argparser-sample", "--help"};
+    const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
+
+    // Pre-Assert
+    EXPECT_CALL(mock_stdio_, ferror(_, _, _, stdout))
+        .WillOnce(Return(1)); // [Pre-Assert確認_異常系] - ferror() が stdout を指定して 1 回呼び出されること。
+                              // [Pre-Assert手順] - ferror() から 1 を返す。
+
+    // Act
+    testing::internal::CaptureStderr();
+    int rc = __real_main(argc, (char **)&argv); // [手順] - ストリームのエラーがある状態で --help を指定して __real_main() を呼び出す。
+    std::string errors = testing::internal::GetCapturedStderr();
+
+    // Assert
+    EXPECT_EQ(EXIT_FAILURE, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_FAILURE であること。
+    EXPECT_THAT(errors, HasSubstr("error: failed to write stdout")); // [確認_異常系] - 標準エラー出力に書き込みの失敗の診断が出ること。
+}
+
+// 解析結果の表示の後の fflush(stdout) が失敗した場合に EXIT_FAILURE を返し、診断を出すことの確認
+TEST_F(argparser_sampleTest, main_returns_failure_when_result_flush_fails)
+{
+    // Arrange
+    const char *argv[] = {"argparser-sample", "-v",     "-v",     "--count=3", "-n", "alice", "-i", "dir1",
+                          "--include=dir2",   "in.txt", "out.txt"};
+    const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
+
+    // Pre-Assert
+    EXPECT_CALL(mock_stdio_, fflush(_, _, _, stdout))
+        .WillOnce(Return(EOF)); // [Pre-Assert確認_異常系] - fflush() が stdout を指定して 1 回呼び出されること。
+                                // [Pre-Assert手順] - fflush() から EOF を返す。
+
+    // Act
+    testing::internal::CaptureStderr();
+    int rc = __real_main(argc, (char **)&argv); // [手順] - フラッシュが失敗する状態で全種別の引数を指定して __real_main() を呼び出す。
+    std::string errors = testing::internal::GetCapturedStderr();
+
+    // Assert
+    EXPECT_EQ(EXIT_FAILURE, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_FAILURE であること。
+    EXPECT_THAT(errors, HasSubstr("error: failed to write stdout")); // [確認_異常系] - 標準エラー出力に書き込みの失敗の診断が出ること。
+}
+
+// 解析結果の表示の後の ferror(stdout) がエラーを示した場合に EXIT_FAILURE を返し、診断を出すことの確認
+TEST_F(argparser_sampleTest, main_returns_failure_when_result_stream_has_error)
+{
+    // Arrange
+    const char *argv[] = {"argparser-sample", "-v",     "-v",     "--count=3", "-n", "alice", "-i", "dir1",
+                          "--include=dir2",   "in.txt", "out.txt"};
+    const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
+
+    // Pre-Assert
+    EXPECT_CALL(mock_stdio_, ferror(_, _, _, stdout))
+        .WillOnce(Return(1)); // [Pre-Assert確認_異常系] - ferror() が stdout を指定して 1 回呼び出されること。
+                              // [Pre-Assert手順] - ferror() から 1 を返す。
+
+    // Act
+    testing::internal::CaptureStderr();
+    int rc = __real_main(argc, (char **)&argv); // [手順] - ストリームのエラーがある状態で全種別の引数を指定して __real_main() を呼び出す。
+    std::string errors = testing::internal::GetCapturedStderr();
+
+    // Assert
+    EXPECT_EQ(EXIT_FAILURE, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_FAILURE であること。
+    EXPECT_THAT(errors, HasSubstr("error: failed to write stdout")); // [確認_異常系] - 標準エラー出力に書き込みの失敗の診断が出ること。
 }

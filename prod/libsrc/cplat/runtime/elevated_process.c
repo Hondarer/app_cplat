@@ -152,7 +152,7 @@ static int start_elevated_self(const char *arguments, cplat_process **child_out)
     *child_out = cplat_internal_process_adopt_native((intptr_t)exec_info.hProcess);
     if (*child_out == NULL)
     {
-        CloseHandle(exec_info.hProcess);
+        (void)CloseHandle(exec_info.hProcess); /* 引き取りの失敗を返す後始末のため、戻り値は明示的に破棄する */
         return CPLAT_ERR_UNKNOWN;
     }
 
@@ -178,7 +178,10 @@ static void write_to_own_std_stream(cplat_elevated_process_stream stream, const 
         fp = stderr;
     }
 
-    /* このコールバックは戻り値を持たないため、書き込みの失敗は返さない。 */
+    /*
+     * このコールバックは戻り値を持たず、書き込みの失敗を伝える先がないため、
+     * fwrite と fflush の戻り値は明示的に破棄する。
+     */
     (void)fwrite(data, 1, size, fp);
     (void)fflush(fp);
 }
@@ -242,19 +245,20 @@ static int reopen_std_stream(FILE *stream, HANDLE handle, int open_flags, DWORD 
     expected_fd = _fileno(stream);
     if (expected_fd < 0)
     {
-        CloseHandle(handle);
+        (void)CloseHandle(handle); /* すでに -1 を返す経路の後始末のため、戻り値は明示的に破棄する */
         return -1;
     }
 
     /*
      * プログラムの開始直後に呼ぶ契約のため、未出力のデータはない。
-     * 付け替え前の出力先 (非表示のコンソール) は捨てる対象であり、失敗しても結果は変わらない。
+     * 付け替え前の出力先 (非表示のコンソール) は捨てる対象であり、失敗しても結果は変わらないため、
+     * 戻り値は明示的に破棄する。
      */
     (void)fflush(stream);
 
     /*
      * _close の失敗は fd がすでに無効な場合 (EBADF) だけである。
-     * 閉じられずに残った場合も、後続の _dup2 が複製先を閉じてから複製する。
+     * 閉じられずに残った場合も、後続の _dup2 が複製先を閉じてから複製するため、戻り値は明示的に破棄する。
      * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/close
      * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/dup-dup2
      */
@@ -263,7 +267,7 @@ static int reopen_std_stream(FILE *stream, HANDLE handle, int open_flags, DWORD 
     new_fd = _open_osfhandle((intptr_t)handle, open_flags);
     if (new_fd < 0)
     {
-        CloseHandle(handle);
+        (void)CloseHandle(handle); /* すでに -1 を返す経路の後始末のため、戻り値は明示的に破棄する */
         return -1;
     }
 
@@ -271,12 +275,13 @@ static int reopen_std_stream(FILE *stream, HANDLE handle, int open_flags, DWORD 
     {
         if (_dup2(new_fd, expected_fd) != 0)
         {
-            /* _dup2 失敗後の後始末であり、すでに -1 を返す経路のため _close 失敗で結果は変わらない。 */
+            /* _dup2 の失敗の後始末であり、すでに -1 を返す経路のため、戻り値は明示的に破棄する。 */
             (void)_close(new_fd);
             return -1;
         }
 
-        (void)_close(new_fd); /* 付け替え先の fd は成立済みで、失敗しても余分な fd が 1 つ残るだけ */
+        /* 付け替え先の fd は成立済みで、失敗しても余分な fd が 1 つ残るだけのため、戻り値は明示的に破棄する。 */
+        (void)_close(new_fd);
     }
 
     clearerr(stream);
@@ -410,7 +415,7 @@ int cplat_elevated_process_is_elevated(int *elevated_out)
                 rc = CPLAT_OK;
             }
 
-            CloseHandle(token);
+            (void)CloseHandle(token); /* 昇格状態は rc に確定済みのため、戻り値は明示的に破棄する */
         }
 
         return rc;
@@ -667,7 +672,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code_o
         child_process = cplat_internal_process_adopt_native((intptr_t)exec_info.hProcess);
         if (child_process == NULL)
         {
-            CloseHandle(exec_info.hProcess);
+            (void)CloseHandle(exec_info.hProcess); /* 引き取りの失敗を返す後始末のため、戻り値は明示的に破棄する */
             *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
@@ -692,7 +697,11 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code_o
         /* Linux では別プロセスを起動しないため、引数は使わない。 */
         (void)arguments;
 
-        /* Linux では実効ユーザー ID の確認が失敗しない。 */
+        /*
+         * Linux の実装は常に成功する geteuid() の結果を局所変数へ格納するだけで、失敗しないため、
+         * 戻り値は明示的に破棄する。
+         * see: https://man7.org/linux/man-pages/man2/geteuid.2.html
+         */
         (void)cplat_elevated_process_is_elevated(&elevated);
 
         if (elevated == 0)
@@ -792,9 +801,13 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
             return CPLAT_ERR_UNKNOWN;
         }
 
+        /*
+         * 一時ファイルの削除は、結果を読み終えた後か失敗を返す経路の後始末であり、削除できなくても返す結果が
+         * 変わらないため、この関数の DeleteFileW の戻り値は明示的に破棄する。
+         */
         if (cplat_wpath_to_utf8(result_path, sizeof(result_path), wide_result_path) < 0)
         {
-            DeleteFileW(wide_result_path);
+            (void)DeleteFileW(wide_result_path);
             *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
@@ -822,6 +835,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
          * クォート区間内の空白はトークン区切りにならず、クォート文字自体は結果の argv から除去される。
          * see: https://learn.microsoft.com/en-us/cpp/c-language/parsing-c-command-line-arguments
          */
+        /* buf_sz は展開後の長さに合わせて計算しており、切り詰めが起きないため、次の戻り値は明示的に破棄する。 */
         if (arg_len > 0)
         {
             (void)cplat_snprintf(combined_arguments, buf_sz, "%s %s=\"%s\"", arguments,
@@ -837,7 +851,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         if (wide_exe_path == NULL)
         {
             cplat_free(combined_arguments);
-            DeleteFileW(wide_result_path);
+            (void)DeleteFileW(wide_result_path);
             *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
@@ -848,7 +862,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         if (wide_arguments == NULL)
         {
             cplat_free(wide_exe_path);
-            DeleteFileW(wide_result_path);
+            (void)DeleteFileW(wide_result_path);
             *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
@@ -870,7 +884,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         {
             cplat_free(wide_arguments);
             cplat_free(wide_exe_path);
-            DeleteFileW(wide_result_path);
+            (void)DeleteFileW(wide_result_path);
             *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
@@ -881,8 +895,8 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         child_process = cplat_internal_process_adopt_native((intptr_t)exec_info.hProcess);
         if (child_process == NULL)
         {
-            CloseHandle(exec_info.hProcess);
-            DeleteFileW(wide_result_path);
+            (void)CloseHandle(exec_info.hProcess); /* 引き取りの失敗を返す後始末のため、戻り値は明示的に破棄する */
+            (void)DeleteFileW(wide_result_path);
             *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
@@ -891,7 +905,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
             cplat_process_get_exit_code(child_process, &child_exit_code) != CPLAT_OK)
         {
             cplat_process_dispose(child_process);
-            DeleteFileW(wide_result_path);
+            (void)DeleteFileW(wide_result_path);
             *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
@@ -914,11 +928,11 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
                     result_message[bytes_read] = '\0';
                 }
 
-                CloseHandle(h);
+                (void)CloseHandle(h); /* 結果メッセージは読み取り済みのため、戻り値は明示的に破棄する */
             }
         }
 
-        DeleteFileW(wide_result_path);
+        (void)DeleteFileW(wide_result_path);
 
         *exit_code_out = child_exit_code;
         return CPLAT_OK;
@@ -932,7 +946,11 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         (void)result_message_size;
         (void)arguments;
 
-        /* Linux では実効ユーザー ID の確認が失敗しない。 */
+        /*
+         * Linux の実装は常に成功する geteuid() の結果を局所変数へ格納するだけで、失敗しないため、
+         * 戻り値は明示的に破棄する。
+         * see: https://man7.org/linux/man-pages/man2/geteuid.2.html
+         */
         (void)cplat_elevated_process_is_elevated(&elevated);
 
         if (elevated == 0)
@@ -1054,11 +1072,12 @@ int cplat_elevated_process_report_result(const char *message)
         len = strlen(message);
         if (!WriteFile(h, message, (DWORD)len, &written, NULL))
         {
-            CloseHandle(h);
+            (void)CloseHandle(h); /* 書き込みの失敗を返す後始末のため、戻り値は明示的に破棄する */
             return CPLAT_ERR_UNKNOWN;
         }
 
-        CloseHandle(h);
+        /* 書き込みは WriteFile で成功しており、解放の失敗で返す結果を変えないため、戻り値は明示的に破棄する。 */
+        (void)CloseHandle(h);
         return CPLAT_OK;
     }
 #else
@@ -1138,10 +1157,14 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
             return CPLAT_ERR_UNKNOWN;
         }
 
+        /*
+         * 失敗を返す経路のパイプの後始末は返す結果を変えないため、
+         * この関数の失敗の経路の CloseHandle の戻り値は明示的に破棄する。
+         */
         if (!CreatePipe(&stderr_read, &stderr_write, NULL, 0))
         {
-            CloseHandle(stdout_read);
-            CloseHandle(stdout_write);
+            (void)CloseHandle(stdout_read);
+            (void)CloseHandle(stdout_write);
             *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
@@ -1160,10 +1183,10 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
         combined_arguments = (char *)cplat_malloc(buf_sz);
         if (combined_arguments == NULL)
         {
-            CloseHandle(stdout_read);
-            CloseHandle(stdout_write);
-            CloseHandle(stderr_read);
-            CloseHandle(stderr_write);
+            (void)CloseHandle(stdout_read);
+            (void)CloseHandle(stdout_write);
+            (void)CloseHandle(stderr_read);
+            (void)CloseHandle(stderr_write);
             *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
@@ -1183,10 +1206,10 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
 
         if (rc != CPLAT_OK)
         {
-            CloseHandle(stdout_read);
-            CloseHandle(stdout_write);
-            CloseHandle(stderr_read);
-            CloseHandle(stderr_write);
+            (void)CloseHandle(stdout_read);
+            (void)CloseHandle(stdout_write);
+            (void)CloseHandle(stderr_read);
+            (void)CloseHandle(stderr_write);
             *exit_code_out = EXIT_FAILURE;
 
             if (rc == CPLAT_ERR_OUT_OF_MEMORY)
@@ -1211,13 +1234,15 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
         /*
          * 昇格プロセスの書き込みは終了時点でパイプへ格納済みのため、残りを読み切る。
          * 昇格プロセスが起動した孫プロセスが書き込み側を保持していても待機しない。
+         * 残りの読み取りは閉じる処理の成否に依存せず、結果は子の終了コードで決まるため、
+         * 次の 4 つの CloseHandle の戻り値は明示的に破棄する。
          */
-        CloseHandle(stdout_write);
-        CloseHandle(stderr_write);
+        (void)CloseHandle(stdout_write);
+        (void)CloseHandle(stderr_write);
         pump_output_pipe(stdout_read, CPLAT_ELEVATED_PROCESS_STREAM_STDOUT, effective_output_fn, context);
         pump_output_pipe(stderr_read, CPLAT_ELEVATED_PROCESS_STREAM_STDERR, effective_output_fn, context);
-        CloseHandle(stdout_read);
-        CloseHandle(stderr_read);
+        (void)CloseHandle(stdout_read);
+        (void)CloseHandle(stderr_read);
 
         if (wait_result != CPLAT_OK || cplat_process_get_exit_code(child_process, &child_exit_code) != CPLAT_OK)
         {
@@ -1240,7 +1265,11 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
         (void)output_fn;
         (void)context;
 
-        /* Linux では実効ユーザー ID の確認が失敗しない。 */
+        /*
+         * Linux の実装は常に成功する geteuid() の結果を局所変数へ格納するだけで、失敗しないため、
+         * 戻り値は明示的に破棄する。
+         * see: https://man7.org/linux/man-pages/man2/geteuid.2.html
+         */
         (void)cplat_elevated_process_is_elevated(&elevated);
 
         if (elevated == 0)
@@ -1309,20 +1338,24 @@ int cplat_elevated_process_attach_output_pipes(int *argc, char **argv, int *atta
                                             &stdout_handle, 0, FALSE, DUPLICATE_SAME_ACCESS);
         stderr_duplicated = DuplicateHandle(parent_process, (HANDLE)(uintptr_t)stderr_value, GetCurrentProcess(),
                                             &stderr_handle, 0, FALSE, DUPLICATE_SAME_ACCESS);
-        CloseHandle(parent_process);
+        (void)CloseHandle(parent_process); /* ハンドルの複製は終わっているため、戻り値は明示的に破棄する */
 
-        /* 引数で受け取ったハンドル値がパイプ以外を指す場合は付け替えない。 */
+        /*
+         * 引数で受け取ったハンドル値がパイプ以外を指す場合は付け替えない。
+         * 失敗を返す経路の後始末は返す結果を変えないため、
+         * この関数の失敗の経路の CloseHandle の戻り値は明示的に破棄する。
+         */
         if (!stdout_duplicated || !stderr_duplicated || GetFileType(stdout_handle) != FILE_TYPE_PIPE ||
             GetFileType(stderr_handle) != FILE_TYPE_PIPE)
         {
             if (stdout_duplicated)
             {
-                CloseHandle(stdout_handle);
+                (void)CloseHandle(stdout_handle);
             }
 
             if (stderr_duplicated)
             {
-                CloseHandle(stderr_handle);
+                (void)CloseHandle(stderr_handle);
             }
 
             return CPLAT_ERR_UNKNOWN;
@@ -1336,22 +1369,22 @@ int cplat_elevated_process_attach_output_pipes(int *argc, char **argv, int *atta
             CreateFileW(L"NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
         if (stdin_handle == INVALID_HANDLE_VALUE)
         {
-            CloseHandle(stdout_handle);
-            CloseHandle(stderr_handle);
+            (void)CloseHandle(stdout_handle);
+            (void)CloseHandle(stderr_handle);
             return CPLAT_ERR_UNKNOWN;
         }
 
         /* 改行コードは呼び出し元で変換するため、バイナリ モードで開く。 */
         if (reopen_std_stream(stdout, stdout_handle, _O_BINARY | _O_WRONLY, STD_OUTPUT_HANDLE) != 0)
         {
-            CloseHandle(stderr_handle);
-            CloseHandle(stdin_handle);
+            (void)CloseHandle(stderr_handle);
+            (void)CloseHandle(stdin_handle);
             return CPLAT_ERR_UNKNOWN;
         }
 
         if (reopen_std_stream(stderr, stderr_handle, _O_BINARY | _O_WRONLY, STD_ERROR_HANDLE) != 0)
         {
-            CloseHandle(stdin_handle);
+            (void)CloseHandle(stdin_handle);
             return CPLAT_ERR_UNKNOWN;
         }
 

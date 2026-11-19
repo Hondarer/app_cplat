@@ -247,7 +247,10 @@ int cplat_string_catalog_filter_source_publish(void *source, const size_t source
         return ret;
     }
 
-    /* 直前の cplat_string_catalog_filter_validate() で検証済みのため成功が確定している。 */
+    /*
+     * 直前の cplat_string_catalog_filter_validate() で検証済みであり、成功が確定しているため、
+     * 戻り値は明示的に破棄する。
+     */
     (void)cplat_string_catalog_filter_get_info(image, image_size, &info);
 
     if (!string_catalog_filter_source_is_region_valid(source, source_size, (size_t)info.image_size))

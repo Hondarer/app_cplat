@@ -91,7 +91,7 @@ int cplat_stack_limit_linux_raise_to_hard_limit(uint64_t *soft_limit_bytes_out, 
             *soft_limit_bytes_out = to_limit_bytes(os_limit.rlim_cur);
         }
 
-        (void)cplat_internal_error_report_success(detail_out);
+        cplat_internal_error_record_success(detail_out);
         return CPLAT_SKIPPED;
     }
 

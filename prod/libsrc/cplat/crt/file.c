@@ -256,7 +256,7 @@ int cplat_file_open(cplat_file *file, const char *path, int flags, cplat_error *
             {
                 const DWORD error_code = GetLastError();
 
-                (void)cplat_file_close(file, NULL);
+                (void)cplat_file_close(file, NULL); /* 末尾へのシークの失敗を返す経路のため、戻り値は明示的に破棄する */
                 return cplat_internal_error_report_windows_error(detail_out, error_code);
             }
         }
@@ -575,7 +575,7 @@ int cplat_file_get_path_id(const char *path, cplat_file_id *id_out, cplat_error 
         {
             const DWORD error_code = GetLastError();
 
-            (void)CloseHandle(handle);
+            (void)CloseHandle(handle); /* ファイル情報の取得の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
             return cplat_internal_error_report_windows_error(detail_out, error_code);
         }
 

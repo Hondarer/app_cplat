@@ -64,6 +64,10 @@ static void complete_command(const char *line, size_t cursor, cplat_prompt_compl
     {
         if (strncmp(commands[i], line, cursor) == 0)
         {
+            /*
+             * 受け付けられない候補は提示されないだけであり、補完の関数には失敗を伝える先がないため、
+             * 戻り値は明示的に破棄する。
+             */
             (void)cplat_prompt_completions_add(completions, 0U, commands[i]);
         }
     }
@@ -176,25 +180,26 @@ static void decode_cli_escapes(char *s)
 
 static void print_help(cplat_pinned_prompt *screen)
 {
-    cplat_pinned_prompt_printf(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                               "commands:\n"
-                               "  help          show this help\n"
-                               "  echo TEXT     write TEXT to stdout (\\e emits ESC)\n"
-                               "  read primary  read one line with primary history\n"
-                               "  read secondary read one line with secondary history\n"
-                               "  read formatted read one line with formatted prompt\n"
-                               "  start stdout  start stdout tick output\n"
-                               "  start stderr  start stderr tick output\n"
-                               "  stop stdout   stop stdout tick output\n"
-                               "  stop stderr   stop stderr tick output\n"
-                               "  stop all      stop all tick output\n"
-                               "  status show [top|bottom|all]    show status area(s)\n"
-                               "  status hide [top|bottom|all]    hide status area(s)\n"
-                               "  status set-top-left TEXT    set top-left status (\\e emits ESC)\n"
-                               "  status set-top-right TEXT   set top-right status (\\e emits ESC)\n"
-                               "  status set-bottom-left TEXT    set bottom-left status (\\e emits ESC)\n"
-                               "  status set-bottom-right TEXT   set bottom-right status (\\e emits ESC)\n"
-                               "  exit, quit    exit pinned-prompt\n");
+    /* 対話のヘルプは利用者が画面で確認する表示であるため、戻り値は明示的に破棄する。 */
+    (void)cplat_pinned_prompt_printf(screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
+                                     "commands:\n"
+                                     "  help          show this help\n"
+                                     "  echo TEXT     write TEXT to stdout (\\e emits ESC)\n"
+                                     "  read primary  read one line with primary history\n"
+                                     "  read secondary read one line with secondary history\n"
+                                     "  read formatted read one line with formatted prompt\n"
+                                     "  start stdout  start stdout tick output\n"
+                                     "  start stderr  start stderr tick output\n"
+                                     "  stop stdout   stop stdout tick output\n"
+                                     "  stop stderr   stop stderr tick output\n"
+                                     "  stop all      stop all tick output\n"
+                                     "  status show [top|bottom|all]    show status area(s)\n"
+                                     "  status hide [top|bottom|all]    hide status area(s)\n"
+                                     "  status set-top-left TEXT    set top-left status (\\e emits ESC)\n"
+                                     "  status set-top-right TEXT   set top-right status (\\e emits ESC)\n"
+                                     "  status set-bottom-left TEXT    set bottom-left status (\\e emits ESC)\n"
+                                     "  status set-bottom-right TEXT   set bottom-right status (\\e emits ESC)\n"
+                                     "  exit, quit    exit pinned-prompt\n");
 }
 
 static void worker_init(pinned_prompt_cli_worker *worker, cplat_pinned_prompt *screen,
@@ -220,7 +225,7 @@ static int worker_ensure_sync(pinned_prompt_cli_worker *worker)
 
     if (cplat_condvar_create(&worker->condvar) != CPLAT_OK)
     {
-        (void)cplat_local_lock_dispose(worker->mutex);
+        cplat_local_lock_dispose(worker->mutex);
         return -1;
     }
 
@@ -233,6 +238,8 @@ static void worker_thread_proc(void *arg)
 {
     pinned_prompt_cli_worker *worker;
     int stop;
+    int wait_result = CPLAT_OK;
+    int wait_failed = 0;
 
     worker = (pinned_prompt_cli_worker *)arg;
     cplat_local_lock_lock(worker->mutex);
@@ -245,7 +252,14 @@ static void worker_thread_proc(void *arg)
             break;
         }
 
-        (void)cplat_condvar_timed_wait(worker->condvar, worker->mutex, PINNED_PROMPT_CLI_TICK_MS);
+        wait_result = cplat_condvar_timed_wait(worker->condvar, worker->mutex, PINNED_PROMPT_CLI_TICK_MS);
+
+        /* 待機できない場合は、待たずに tick を出し続けないよう、周期の処理を止める。 */
+        if (wait_result != CPLAT_OK && wait_result != CPLAT_ERR_TIMEOUT)
+        {
+            wait_failed = 1;
+            break;
+        }
 
         if (worker->stop_requested)
         {
@@ -258,8 +272,9 @@ static void worker_thread_proc(void *arg)
 
         if (!stop)
         {
-            cplat_pinned_prompt_printf(worker->screen, worker->channel, "[%s tick %llu]\n", worker->name,
-                                       (unsigned long long)worker->tick_count);
+            /* tick は利用者が画面で確認する表示であるため、戻り値は明示的に破棄する。 */
+            (void)cplat_pinned_prompt_printf(worker->screen, worker->channel, "[%s tick %llu]\n", worker->name,
+                                             (unsigned long long)worker->tick_count);
         }
 
         cplat_local_lock_lock(worker->mutex);
@@ -267,6 +282,13 @@ static void worker_thread_proc(void *arg)
 
     worker->thread_running = 0;
     cplat_local_lock_unlock(worker->mutex);
+
+    if (wait_failed != 0)
+    {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
+                                         "%s worker stopped: wait failed: result=%d\n", worker->name, wait_result);
+    }
 }
 
 static void worker_start(pinned_prompt_cli_worker *worker)
@@ -277,8 +299,9 @@ static void worker_start(pinned_prompt_cli_worker *worker)
 
     if (worker_ensure_sync(worker) != 0)
     {
-        cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
-                                   "failed to initialize %s worker\n", worker->name);
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
+                                         "failed to initialize %s worker\n", worker->name);
         return;
     }
 
@@ -305,20 +328,24 @@ static void worker_start(pinned_prompt_cli_worker *worker)
 
     cplat_local_lock_unlock(worker->mutex);
 
+    /*
+     * 開始の結果は利用者が画面で確認する表示であり、開始の失敗の表示は診断の出力先がほかにないため、
+     * この 3 つの cplat_pinned_prompt_printf の戻り値は明示的に破棄する。
+     */
     if (running)
     {
-        cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s worker already running\n",
-                                   worker->name);
+        (void)cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
+                                         "%s worker already running\n", worker->name);
     }
     else if (started)
     {
-        cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s worker started\n",
-                                   worker->name);
+        (void)cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s worker started\n",
+                                         worker->name);
     }
     else if (failed)
     {
-        cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR, "failed to start %s worker\n",
-                                   worker->name);
+        (void)cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
+                                         "failed to start %s worker\n", worker->name);
     }
 }
 
@@ -326,12 +353,16 @@ static void worker_stop(pinned_prompt_cli_worker *worker, int announce)
 {
     int running;
 
+    /*
+     * 停止の結果は利用者が画面で確認する表示であるため、
+     * この関数の cplat_pinned_prompt_printf の戻り値は明示的に破棄する。
+     */
     if (!worker->sync_initialized)
     {
         if (announce)
         {
-            cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s worker not running\n",
-                                       worker->name);
+            (void)cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
+                                             "%s worker not running\n", worker->name);
         }
 
         return;
@@ -354,14 +385,14 @@ static void worker_stop(pinned_prompt_cli_worker *worker, int announce)
 
         if (announce)
         {
-            cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s worker stopped\n",
-                                       worker->name);
+            (void)cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s worker stopped\n",
+                                             worker->name);
         }
     }
     else if (announce)
     {
-        cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s worker not running\n",
-                                   worker->name);
+        (void)cplat_pinned_prompt_printf(worker->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s worker not running\n",
+                                         worker->name);
     }
 }
 
@@ -370,8 +401,8 @@ static void worker_dispose(pinned_prompt_cli_worker *worker)
     if (worker->sync_initialized)
     {
         worker_stop(worker, 0);
-        (void)cplat_condvar_dispose(worker->condvar);
-        (void)cplat_local_lock_dispose(worker->mutex);
+        cplat_condvar_dispose(worker->condvar);
+        cplat_local_lock_dispose(worker->mutex);
         worker->sync_initialized = 0;
     }
 }
@@ -403,7 +434,9 @@ static void process_start(pinned_prompt_cli_session *session, const char *arg)
     worker = find_worker(session, arg);
     if (worker == NULL)
     {
-        cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR, "usage: start stdout|stderr\n");
+        /* 使い方は利用者が画面で確認する対話の応答であるため、戻り値は明示的に破棄する。 */
+        (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
+                                         "usage: start stdout|stderr\n");
         return;
     }
 
@@ -425,8 +458,9 @@ static void process_stop(pinned_prompt_cli_session *session, const char *arg)
     worker = find_worker(session, arg);
     if (worker == NULL)
     {
-        cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
-                                   "usage: stop stdout|stderr|all\n");
+        /* 使い方は利用者が画面で確認する対話の応答であるため、戻り値は明示的に破棄する。 */
+        (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
+                                         "usage: stop stdout|stderr|all\n");
         return;
     }
 
@@ -438,17 +472,28 @@ static void process_status(pinned_prompt_cli_session *session, const char *arg)
     char *subcmd;
     char *subarg;
     char arg_copy[PINNED_PROMPT_CLI_LINE_MAX];
+    int set_result = CPLAT_OK;
 
+    /*
+     * 対話の応答、使い方、ステータスを設定できなかったことの表示は利用者が画面で確認する表示であるため、
+     * この関数の cplat_pinned_prompt_printf の戻り値は明示的に破棄する。
+     * 作成済みの screen と定数の位置を渡し、失敗の条件 (screen が NULL、位置が不正。pinned_prompt.h) に当たらないため、
+     * この関数の cplat_pinned_prompt_status_enable の戻り値は明示的に破棄する。
+     */
     if (arg == NULL)
     {
-        cplat_pinned_prompt_printf(
+        (void)cplat_pinned_prompt_printf(
             session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
             "usage: status show|hide|set-top-left|set-top-right|set-bottom-left|set-bottom-right\n");
         return;
     }
 
+    /*
+     * arg は main の入力行バッファー (PINNED_PROMPT_CLI_LINE_MAX) の一部であり、
+     * 同じ大きさの arg_copy に収まって切り詰めと失敗が起きないため、戻り値は明示的に破棄する。
+     */
     (void)cplat_strcpy(arg_copy, sizeof(arg_copy), arg);
-    (void)split_command(arg_copy, &subcmd, &subarg);
+    (void)split_command(arg_copy, &subcmd, &subarg); /* split_command は常に 0 を返すため、戻り値は明示的に破棄する */
 
     if (strcmp(subcmd, "show") == 0)
     {
@@ -456,24 +501,25 @@ static void process_status(pinned_prompt_cli_session *session, const char *arg)
         {
             (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP, 1);
             (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM, 1);
-            cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "status areas enabled\n");
+            (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
+                                             "status areas enabled\n");
         }
         else if (strcmp(subarg, "top") == 0)
         {
             (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP, 1);
-            cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                                       "top status area enabled\n");
+            (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
+                                             "top status area enabled\n");
         }
         else if (strcmp(subarg, "bottom") == 0)
         {
             (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM, 1);
-            cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                                       "bottom status area enabled\n");
+            (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
+                                             "bottom status area enabled\n");
         }
         else
         {
-            cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
-                                       "usage: status show [top|bottom|all]\n");
+            (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
+                                             "usage: status show [top|bottom|all]\n");
         }
     }
     else if (strcmp(subcmd, "hide") == 0)
@@ -482,50 +528,58 @@ static void process_status(pinned_prompt_cli_session *session, const char *arg)
         {
             (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP, 0);
             (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM, 0);
-            cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "status areas disabled\n");
+            (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
+                                             "status areas disabled\n");
         }
         else if (strcmp(subarg, "top") == 0)
         {
             (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP, 0);
-            cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                                       "top status area disabled\n");
+            (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
+                                             "top status area disabled\n");
         }
         else if (strcmp(subarg, "bottom") == 0)
         {
             (void)cplat_pinned_prompt_status_enable(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM, 0);
-            cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
-                                       "bottom status area disabled\n");
+            (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT,
+                                             "bottom status area disabled\n");
         }
         else
         {
-            cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
-                                       "usage: status hide [top|bottom|all]\n");
+            (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
+                                             "usage: status hide [top|bottom|all]\n");
         }
     }
     else if (strcmp(subcmd, "set-top-left") == 0)
     {
-        (void)cplat_pinned_prompt_status_set(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
-                                             CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT, subarg);
+        set_result = cplat_pinned_prompt_status_set(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
+                                                    CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT, subarg);
     }
     else if (strcmp(subcmd, "set-top-right") == 0)
     {
-        (void)cplat_pinned_prompt_status_set(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
-                                             CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT, subarg);
+        set_result = cplat_pinned_prompt_status_set(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP,
+                                                    CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT, subarg);
     }
     else if (strcmp(subcmd, "set-bottom-left") == 0)
     {
-        (void)cplat_pinned_prompt_status_set(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM,
-                                             CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT, subarg);
+        set_result = cplat_pinned_prompt_status_set(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM,
+                                                    CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT, subarg);
     }
     else if (strcmp(subcmd, "set-bottom-right") == 0)
     {
-        (void)cplat_pinned_prompt_status_set(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM,
-                                             CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT, subarg);
+        set_result = cplat_pinned_prompt_status_set(session->screen, CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM,
+                                                    CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT, subarg);
     }
     else
     {
-        cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
-                                   "unknown status subcommand: %s\n", subcmd);
+        (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
+                                         "unknown status subcommand: %s\n", subcmd);
+    }
+
+    /* ステータスを設定できなかった場合 (メモリ不足など) は、表示が変わらないことを伝えて対話を続ける。 */
+    if (set_result != CPLAT_OK)
+    {
+        (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
+                                         "status %s failed: result=%d\n", subcmd, set_result);
     }
 }
 
@@ -549,10 +603,14 @@ static void process_read(pinned_prompt_cli_session *session, const char *arg)
     char buf[PINNED_PROMPT_CLI_LINE_MAX];
     int ret;
 
+    /*
+     * 入力の結果と使い方は利用者が画面で確認する対話の応答であるため、
+     * この関数の cplat_pinned_prompt_printf の戻り値は明示的に破棄する。
+     */
     if (arg == NULL)
     {
-        cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
-                                   "usage: read primary|secondary|formatted\n");
+        (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
+                                         "usage: read primary|secondary|formatted\n");
         return;
     }
 
@@ -570,18 +628,20 @@ static void process_read(pinned_prompt_cli_session *session, const char *arg)
     }
     else
     {
-        cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
-                                   "usage: read primary|secondary|formatted\n");
+        (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR,
+                                         "usage: read primary|secondary|formatted\n");
         return;
     }
 
     if (ret == CPLAT_OK)
     {
-        cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "read %s: %s\n", arg, buf);
+        (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "read %s: %s\n", arg,
+                                         buf);
     }
     else
     {
-        cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "read %s cancelled\n", arg);
+        (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "read %s cancelled\n",
+                                         arg);
     }
 }
 
@@ -591,16 +651,24 @@ static void process_line(pinned_prompt_cli_session *session, char *line)
     char *command;
     char *arg;
 
+    /*
+     * line は main の入力行バッファー (PINNED_PROMPT_CLI_LINE_MAX) であり、
+     * 同じ大きさの original_line に収まって切り詰めと失敗が起きないため、戻り値は明示的に破棄する。
+     */
     (void)cplat_strcpy(original_line, sizeof(original_line), line);
 
-    (void)split_command(line, &command, &arg);
+    (void)split_command(line, &command, &arg); /* split_command は常に 0 を返すため、戻り値は明示的に破棄する */
 
     if (command == NULL)
     {
         return;
     }
 
-    cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "echo: %s\n", original_line);
+    /*
+     * 入力の表示とコマンドの応答は利用者が画面で確認する対話の応答であるため、
+     * この関数の cplat_pinned_prompt_printf の戻り値は明示的に破棄する。
+     */
+    (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "echo: %s\n", original_line);
 
     /* 入力されたコマンド名に応じて各処理を実行する。 */
     if (strcmp(command, "help") == 0)
@@ -623,7 +691,7 @@ static void process_line(pinned_prompt_cli_session *session, char *line)
                 echo_str = "";
             }
 
-            cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s\n", echo_str);
+            (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "%s\n", echo_str);
         }
     }
     else if (strcmp(command, "start") == 0)
@@ -649,8 +717,8 @@ static void process_line(pinned_prompt_cli_session *session, char *line)
     }
     else
     {
-        cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR, "unknown command: %s\n",
-                                   command);
+        (void)cplat_pinned_prompt_printf(session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDERR, "unknown command: %s\n",
+                                         command);
     }
 }
 
@@ -660,10 +728,12 @@ static int session_init(pinned_prompt_cli_session *session)
     session->screen = cplat_pinned_prompt_create(NULL);
     if (session->screen == NULL)
     {
-        fprintf(stderr, "pinned-prompt の作成に失敗しました。\n");
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "pinned-prompt の作成に失敗しました。\n");
         return -1;
     }
 
+    /* 失敗は screen が NULL の場合だけであり、直前で NULL でないことを検査済みのため、戻り値は明示的に破棄する。 */
     (void)cplat_pinned_prompt_completion_set(session->screen, complete_command, NULL);
 
     worker_init(&session->stdout_worker, session->screen, CPLAT_PINNED_PROMPT_CHANNEL_STDOUT, "stdout");
@@ -691,11 +761,16 @@ int main(int argc, char *argv[])
     int need_help = 0;
 
     cplat_argparser_init(argc, argv, "固定プロンプト API を対話的に確認します。");
-    cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &need_help);
+    /*
+     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() で検査するため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &need_help);
 
     if (cplat_argparser_get_register_error_count() > 0)
     {
-        cplat_argparser_print_register_error_messages(stderr);
+        /* 終了コードはすでに失敗に決まっているため、戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_register_error_messages(stderr);
         return EXIT_FAILURE;
     }
 
@@ -703,14 +778,20 @@ int main(int argc, char *argv[])
 
     if (need_help != 0)
     {
-        cplat_argparser_print_usage(stdout);
+        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
+        {
+            (void)fprintf(stderr, "標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+            return EXIT_FAILURE;
+        }
+
         return EXIT_SUCCESS;
     }
 
     if (parse_result != CPLAT_OK)
     {
-        cplat_argparser_print_error_messages(stderr);
-        cplat_argparser_print_usage(stderr);
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_error_messages(stderr);
+        (void)cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
     }
 

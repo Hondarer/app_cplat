@@ -221,34 +221,40 @@ void etw_viewer_handle_event(const cplat_etw_event *event, void *context)
         timestamp_value = timestamp_text;
     }
 
-    printf("%s <%c>%s[%" PRIu32 "]: %s\n", timestamp_value, etw_viewer_priority_letter(event->level), tag,
-           event->process_id, message);
-    fflush(stdout);
+    /*
+     * イベントの表示の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
+     * この関数の printf と fflush の戻り値は明示的に破棄する。
+     */
+    (void)printf("%s <%c>%s[%" PRIu32 "]: %s\n", timestamp_value, etw_viewer_priority_letter(event->level), tag,
+                 event->process_id, message);
+    (void)fflush(stdout);
 }
 
 static void print_access_error(void)
 {
-    fprintf(stderr, "ETW session の開始権限がありません。Administrators または "
-                    "\"Performance Log Users\" が必要です。\n"
-                    "対処方法: net localgroup \"Performance Log Users\" %%USERNAME%% /add\n"
-                    "          この操作後にサインアウト/サインインが必要です。\n");
-    fflush(stderr);
+    /* 診断の出力先がほかにないため、この関数の fprintf と fflush の戻り値は明示的に破棄する。 */
+    (void)fprintf(stderr, "ETW session の開始権限がありません。Administrators または "
+                          "\"Performance Log Users\" が必要です。\n"
+                          "対処方法: net localgroup \"Performance Log Users\" %%USERNAME%% /add\n"
+                          "          この操作後にサインアウト/サインインが必要です。\n");
+    (void)fflush(stderr);
 }
 
 static void print_start_error(int ret, const char *session_name)
 {
+    /* 診断の出力先がほかにないため、この関数の fprintf の戻り値は明示的に破棄する。 */
     if (ret == CPLAT_ERR_PERMISSION_DENIED)
     {
         print_access_error();
     }
     else if (ret == CPLAT_ERR_INVALID_ARGUMENT)
     {
-        fprintf(stderr, "ETW session の開始に失敗しました。内部パラメーターが不正です。\n");
+        (void)fprintf(stderr, "ETW session の開始に失敗しました。内部パラメーターが不正です。\n");
     }
     else
     {
-        fprintf(stderr, "ETW session の開始に失敗しました。session=\"%s\" provider=\"%s\"\n", session_name,
-                CPLAT_TRACER_DEFAULT_PROVIDER_GUID_STR);
+        (void)fprintf(stderr, "ETW session の開始に失敗しました。session=\"%s\" provider=\"%s\"\n", session_name,
+                      CPLAT_TRACER_DEFAULT_PROVIDER_GUID_STR);
     }
 }
 
@@ -267,13 +273,19 @@ int main(int argc, char *argv[])
     etw_viewer_options_init(&options);
 
     cplat_argparser_init(argc, argv, "ETW の cplat.tracer を表示します。");
-    cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &options.need_help);
-    cplat_argparser_register_option_string(NULL, "--pid", "process-id", "表示するプロセス ID。", 0, &pid_value);
+    /*
+     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
+     * 登録の関数の戻り値は明示的に破棄する。
+     */
+    (void)cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &options.need_help);
+    (void)cplat_argparser_register_option_string(NULL, "--pid", "process-id", "表示するプロセス ID。", 0,
+                                                 &pid_value);
 
     if (cplat_argparser_get_register_error_count() > 0)
     {
-        cplat_argparser_print_register_error_messages(stderr);
-        cplat_argparser_print_usage(stderr);
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_register_error_messages(stderr);
+        (void)cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
     }
 
@@ -281,14 +293,20 @@ int main(int argc, char *argv[])
 
     if (options.need_help != 0)
     {
-        cplat_argparser_print_usage(stdout);
+        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
+        {
+            (void)fprintf(stderr, "標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+            return EXIT_FAILURE;
+        }
+
         return EXIT_SUCCESS;
     }
 
     if (parse_result != CPLAT_OK)
     {
-        cplat_argparser_print_error_messages(stderr);
-        cplat_argparser_print_usage(stderr);
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_error_messages(stderr);
+        (void)cplat_argparser_print_usage(stderr);
         return EXIT_FAILURE;
     }
 
@@ -296,8 +314,9 @@ int main(int argc, char *argv[])
     {
         if (parse_process_id_arg(pid_value, &options.process_id_filter) != 0)
         {
-            cplat_argparser_print_error_messages(stderr);
-            cplat_argparser_print_usage(stderr);
+            /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+            (void)cplat_argparser_print_error_messages(stderr);
+            (void)cplat_argparser_print_usage(stderr);
             return EXIT_FAILURE;
         }
 
@@ -307,7 +326,8 @@ int main(int argc, char *argv[])
     if (etw_viewer_build_default_session_name((unsigned long)GetCurrentProcessId(), session_name,
                                               sizeof(session_name)) != 0)
     {
-        fprintf(stderr, "既定 session 名の生成に失敗しました。\n");
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "既定 session 名の生成に失敗しました。\n");
         return EXIT_FAILURE;
     }
 
@@ -324,14 +344,16 @@ int main(int argc, char *argv[])
 
     if (ret != CPLAT_OK)
     {
-        fprintf(stderr, "ETW session の権限確認に失敗しました。\n");
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "ETW session の権限確認に失敗しました。\n");
         return EXIT_FAILURE;
     }
 
     /* Ctrl+C などの終了要求を受け取るコールバックを登録する。 */
     if (cplat_shutdown_request_register(etw_viewer_shutdown_request_callback, NULL) != CPLAT_OK)
     {
-        fprintf(stderr, "終了要求 callback の登録に失敗しました。\n");
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "終了要求 callback の登録に失敗しました。\n");
         return EXIT_FAILURE;
     }
 
@@ -351,15 +373,19 @@ int main(int argc, char *argv[])
         return exit_code;
     }
 
-    printf("session=%s provider=%s\n", session_name, CPLAT_TRACER_DEFAULT_PROVIDER_GUID_STR);
+    /*
+     * 開始時の案内の出力の失敗は標準出力のストリームに残り、終了の直前にまとめて検査するため、
+     * この 3 つの printf と fflush の戻り値は明示的に破棄する。
+     */
+    (void)printf("session=%s provider=%s\n", session_name, CPLAT_TRACER_DEFAULT_PROVIDER_GUID_STR);
 
     if (options.has_process_id_filter)
     {
-        printf("filter.pid=%" PRIu32 "\n", options.process_id_filter);
+        (void)printf("filter.pid=%" PRIu32 "\n", options.process_id_filter);
     }
 
-    printf("Ctrl+C で終了します。\n");
-    fflush(stdout);
+    (void)printf("Ctrl+C で終了します。\n");
+    (void)fflush(stdout);
 
     /* 終了要求を受け取るまで待機ループを継続する。 */
     while (!g_stop_requested)
@@ -368,6 +394,12 @@ int main(int argc, char *argv[])
     }
 
     cplat_etw_session_stop(session);
+
+    if (fflush(stdout) != 0 || ferror(stdout) != 0)
+    {
+        (void)fprintf(stderr, "標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+        return EXIT_FAILURE;
+    }
 
     return EXIT_SUCCESS;
 }
@@ -381,7 +413,8 @@ int main(int argc, char *argv[])
 
     cplat_console_init();
 
-    fprintf(stderr, "ETW viewer is supported only on Windows.\n");
+    /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+    (void)fprintf(stderr, "ETW viewer is supported only on Windows.\n");
 
     return EXIT_FAILURE;
 }

@@ -346,6 +346,7 @@ void cplat_socket_close(const cplat_socket sock)
     /*
      * EINTR で復帰した場合も再試行しない。Linux では中断された時点で記述子が
      * 解放済みであり、呼び直すと別スレッドが再利用した記述子を閉じうる。
+     * 解放の関数であり、失敗を受けても呼び出し元が取れる行動がないため、戻り値は明示的に破棄する。
      * see: https://man7.org/linux/man-pages/man2/close.2.html
      */
     (void)cplat_close((int)sock, NULL);
@@ -361,7 +362,7 @@ void cplat_socket_shutdown(const cplat_socket sock)
         return;
     }
 
-    /* 失敗しても呼び出し側に取るべき手段がないため、結果は参照しない。 */
+    /* 失敗しても呼び出し側に取るべき手段がないため、戻り値は明示的に破棄する。 */
     (void)shutdown((int)sock, SHUT_RDWR);
 }
 

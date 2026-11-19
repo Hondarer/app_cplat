@@ -435,7 +435,7 @@ Table: Linux のスタック サイズの資源上限 API と cplat 代替ラッ
 
 | 生 API | cplat 代替 | 差異の要点 |
 |---|---|---|
-| `SetPriorityClass()` / `GetPriorityClass()` | `cplat_process_priority_windows_set_class(...)` / `cplat_process_priority_windows_get_class(...)` | `REALTIME` の黙った格下げを検出し、元のクラスへ戻して `CPLAT_ERR_PERMISSION_DENIED` を返します |
+| `SetPriorityClass()` / `GetPriorityClass()` | `cplat_process_priority_windows_set_class(...)` / `cplat_process_priority_windows_get_class(...)` | `REALTIME` の黙った格下げを検出し、元のクラスへ戻して `CPLAT_ERR_PERMISSION_DENIED` を返します。復元に失敗した場合は、元のクラスへ戻らないことがあります |
 | `SetPriorityClass(PROCESS_MODE_BACKGROUND_BEGIN / END)` | `cplat_process_priority_windows_begin_background_mode(...)` / `cplat_process_priority_windows_end_background_mode(...)` | 自プロセス専用です。二重の開始とモード外での終了は `CPLAT_SKIPPED` を返します |
 | `SetProcessInformation()` / `GetProcessInformation()` (`ProcessMemoryPriority`) | `cplat_process_priority_windows_set_memory_priority(...)` / `cplat_process_priority_windows_get_memory_priority(...)` | - |
 | `SetProcessInformation()` / `GetProcessInformation()` (`ProcessPowerThrottling`) | `cplat_process_priority_windows_set_power_throttling(...)` / `cplat_process_priority_windows_get_power_throttling(...)` | 実行速度の抑制 (EcoQoS) だけを扱い、他の制御を保ちます |

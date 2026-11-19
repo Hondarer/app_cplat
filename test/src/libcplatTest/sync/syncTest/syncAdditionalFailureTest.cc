@@ -230,13 +230,9 @@ TEST(syncAdditionalFailureTest, local_rwlock_create_reports_mutex_initialization
         .WillOnce(Return(ENOMEM)); // [Pre-Assert確認_異常系] - pthread_mutex_init() が 1 回呼び出されること。
                                    // [Pre-Assert手順] - pthread_mutex_init() から ENOMEM を返す。
     EXPECT_CALL(mock_pthread, pthread_mutex_destroy(_, _, _, _))
-        .WillOnce(
-            Return(0)); // [Pre-Assert確認_正常系] - 初期化失敗後に pthread_mutex_destroy() が 1 回呼び出されること。
-                        // [Pre-Assert手順] - pthread_mutex_destroy() から 0 を返す。
+        .Times(0); // [Pre-Assert確認_異常系] - 初期化していない mutex に pthread_mutex_destroy() が呼び出されないこと。
     EXPECT_CALL(mock_pthread, pthread_cond_destroy(_, _, _, _))
-        .WillRepeatedly(Return(
-            0)); // [Pre-Assert確認_正常系] - 初期化失敗後に pthread_cond_destroy() が任意の回数呼び出されること。
-                 // [Pre-Assert手順] - pthread_cond_destroy() から 0 を返す。
+        .Times(0); // [Pre-Assert確認_異常系] - 初期化していない条件変数に pthread_cond_destroy() が呼び出されないこと。
 
     // Act
     int result = cplat_local_rwlock_create(
@@ -248,6 +244,109 @@ TEST(syncAdditionalFailureTest, local_rwlock_create_reports_mutex_initialization
         result); // [確認_異常系] - mutex 初期化失敗時の cplat_local_rwlock_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(nullptr,
               rwlock); // [確認_異常系] - 生成失敗時の rwlock が nullptr であること。
+}
+
+// ローカル RW ロックの 1 つ目の条件変数の初期化失敗で、初期化済みの mutex だけを破棄することの確認
+TEST(syncAdditionalFailureTest, local_rwlock_create_destroys_only_mutex_when_first_condvar_fails)
+{
+    // Arrange
+    NiceMock<Mock_pthread> mock_pthread;
+    cplat_local_rwlock *rwlock = nullptr;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_pthread, pthread_cond_init(_, _, _, _, _))
+        .WillOnce(Return(ENOMEM)); // [Pre-Assert確認_異常系] - pthread_cond_init() が 1 回呼び出されること。
+                                   // [Pre-Assert手順] - pthread_cond_init() から ENOMEM を返す。
+    EXPECT_CALL(mock_pthread, pthread_mutex_destroy(_, _, _, _))
+        .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - 初期化済みの mutex に pthread_mutex_destroy() が 1 回呼び出されること。
+                              // [Pre-Assert手順] - pthread_mutex_destroy() から 0 を返す。
+    EXPECT_CALL(mock_pthread, pthread_cond_destroy(_, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - 初期化していない条件変数に pthread_cond_destroy() が呼び出されないこと。
+
+    // Act
+    int result = cplat_local_rwlock_create(
+        &rwlock); // [手順] - 1 つ目の条件変数の初期化が失敗する状態で cplat_local_rwlock_create() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              result); // [確認_異常系] - cplat_local_rwlock_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(nullptr, rwlock); // [確認_異常系] - 生成失敗時の rwlock が nullptr であること。
+}
+
+// ローカル RW ロックの 2 つ目の条件変数の初期化失敗で、初期化済みの mutex と条件変数だけを破棄することの確認
+TEST(syncAdditionalFailureTest, local_rwlock_create_destroys_initialized_objects_when_second_condvar_fails)
+{
+    // Arrange
+    NiceMock<Mock_pthread> mock_pthread;
+    cplat_local_rwlock *rwlock = nullptr;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_pthread, pthread_cond_init(_, _, _, _, _))
+        .WillOnce(DoDefault())
+        .WillOnce(Return(ENOMEM)); // [Pre-Assert確認_異常系] - pthread_cond_init() が 2 回呼び出されること。
+                                   // [Pre-Assert手順] - pthread_cond_init() から 1 回目は libc の処理へ委譲し、2 回目は ENOMEM を返す。
+    EXPECT_CALL(mock_pthread, pthread_mutex_destroy(_, _, _, _))
+        .WillOnce(DoDefault()); // [Pre-Assert確認_異常系] - 初期化済みの mutex に pthread_mutex_destroy() が 1 回呼び出されること。
+    EXPECT_CALL(mock_pthread, pthread_cond_destroy(_, _, _, _))
+        .WillOnce(DoDefault()); // [Pre-Assert確認_異常系] - 初期化済みの条件変数に pthread_cond_destroy() が 1 回呼び出されること。
+
+    // Act
+    int result = cplat_local_rwlock_create(
+        &rwlock); // [手順] - 2 つ目の条件変数の初期化が失敗する状態で cplat_local_rwlock_create() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              result); // [確認_異常系] - cplat_local_rwlock_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(nullptr, rwlock); // [確認_異常系] - 生成失敗時の rwlock が nullptr であること。
+}
+
+// OS が破棄に失敗した場合に、使用中の領域を解放せずに異常終了することの確認
+TEST(syncAdditionalFailureTest, dispose_aborts_when_native_destroy_fails)
+{
+    // Arrange
+    cplat_local_lock *lock = nullptr;
+    cplat_condvar *cv = nullptr;
+    cplat_local_rwlock *rwlock = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_local_lock_create(&lock)); // [状態] - local lock を生成する。
+    // [状態確認] - cplat_local_lock_create() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, cplat_condvar_create(&cv)); // [状態] - condvar を生成する。
+    // [状態確認] - cplat_condvar_create() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, cplat_local_rwlock_create(&rwlock)); // [状態] - local rwlock を生成する。
+    // [状態確認] - cplat_local_rwlock_create() の戻り値が CPLAT_OK であること。
+    NiceMock<Mock_pthread> mock_pthread;
+
+    // Pre-Assert
+
+    // Act / Assert
+    EXPECT_DEATH(
+        {
+            ON_CALL(mock_pthread, pthread_mutex_destroy(_, _, _, _)).WillByDefault(Return(EBUSY));
+            cplat_local_lock_dispose(lock);
+        },
+        "local lock を破棄できません"); // [確認_異常系] - pthread_mutex_destroy() 失敗時の cplat_local_lock_dispose() でプロセスが異常終了すること。
+    EXPECT_DEATH(
+        {
+            ON_CALL(mock_pthread, pthread_cond_destroy(_, _, _, _)).WillByDefault(Return(EBUSY));
+            cplat_condvar_dispose(cv);
+        },
+        "条件変数を破棄できません"); // [確認_異常系] - pthread_cond_destroy() 失敗時の cplat_condvar_dispose() でプロセスが異常終了すること。
+    EXPECT_DEATH(
+        {
+            ON_CALL(mock_pthread, pthread_mutex_destroy(_, _, _, _)).WillByDefault(Return(EBUSY));
+            cplat_local_rwlock_dispose(rwlock);
+        },
+        "読み書きロックを破棄できません"); // [確認_異常系] - pthread_mutex_destroy() 失敗時の cplat_local_rwlock_dispose() でプロセスが異常終了すること。
+    EXPECT_DEATH(
+        {
+            ON_CALL(mock_pthread, pthread_cond_destroy(_, _, _, _)).WillByDefault(Return(EBUSY));
+            cplat_local_rwlock_dispose(rwlock);
+        },
+        "読み書きロックを破棄できません"); // [確認_異常系] - pthread_cond_destroy() 失敗時の cplat_local_rwlock_dispose() でプロセスが異常終了すること。
+
+    // Cleanup
+    cplat_local_rwlock_dispose(rwlock);
+    cplat_condvar_dispose(cv);
+    cplat_local_lock_dispose(lock);
 }
 
 // rwlock の未取得状態での解放要求で異常終了することの確認

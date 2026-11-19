@@ -103,7 +103,10 @@ void cplat_abort_at(const cplat_abort_kind kind, const char *message, const char
     event.line = line;
     event.kind = kind;
 
-    /* 標準エラーへの書き出しに失敗しても、コールバックと異常終了へ進む。 */
+    /*
+     * 異常終了の診断であり、書き出しに失敗してもコールバックと異常終了へ進むため、
+     * fprintf と fflush の戻り値は明示的に破棄する。
+     */
     (void)fprintf(stderr, "%s: %s, file %s, line %d, function %s\n", kind_prefix(event.kind), event.message, event.file,
                   event.line, event.function);
     (void)fflush(stderr);

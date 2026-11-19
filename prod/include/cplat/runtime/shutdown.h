@@ -102,7 +102,9 @@ extern "C"
      *
      *  登録済みコールバックは、通常終了または補足可能な終了イベント時に LIFO 順で
      *  1 回だけ実行されます。\n
-     *  shutdown 開始後の登録は失敗します。
+     *  shutdown 開始後の登録は失敗します。\n
+     *  終了処理の準備 (排他ロックの生成、終了フックの登録) に失敗した場合は @ref CPLAT_ERR_UNKNOWN を返し、
+     *  以後の登録もすべて失敗します。
      *
      *  @param[in]      callback 実行するコールバック。
      *  @param[in]      context  コールバックへ渡す任意ポインター。NULL 可。
@@ -120,7 +122,9 @@ extern "C"
      *  LIFO 順に 1 回だけ実行されます。\n
      *  request callback の実行後も final shutdown callback は未実行のまま保持され、
      *  通常終了時に別途実行されます。\n
-     *  shutdown 開始後または終了要求通知後の登録は失敗します。
+     *  shutdown 開始後または終了要求通知後の登録は失敗します。\n
+     *  終了処理の準備 (排他ロックの生成、終了フックの登録) に失敗した場合は @ref CPLAT_ERR_UNKNOWN を返し、
+     *  以後の登録もすべて失敗します。
      *
      *  @param[in]      callback 実行するコールバック。
      *  @param[in]      context  コールバックへ渡す任意ポインター。NULL 可。

@@ -12,6 +12,7 @@
     #include <signal.h>
 #elif defined(PLATFORM_WINDOWS)
     #include <cplat/base/windows_sdk.h>
+    #include <mock_windows.h>
 #endif
 
 #include "shutdown.inject.h"
@@ -72,10 +73,12 @@ class shutdownTest : public Test
     {
         cplat_shutdown_reset_for_test();
         test_shutdown_reset_hook_once();
+        test_shutdown_reset_prepare();
         reset_records();
         // atexit は成功を返す。
         ON_CALL(mock_stdlib_, atexit(_, _, _, _)).WillByDefault(Return(0));
         // [状態] - atexit() から 0 を返すように既定動作を設定する。
+        // [状態] - 終了フックと排他ロックの once、および準備の結果を初期値へ戻す。
     }
     // [サブ手順終了]
 
@@ -84,6 +87,7 @@ class shutdownTest : public Test
     {
         cplat_shutdown_reset_for_test();
         test_shutdown_reset_hook_once();
+        test_shutdown_reset_prepare();
     }
     // [サブ手順終了]
 };
@@ -454,6 +458,130 @@ TEST_F(shutdownTest, test_explicit_invoke_prevents_atexit_double_execution)
         },
         ::testing::ExitedWithCode(0), "count=1");
     // [確認_正常系] - 子プロセスが終了コード 0 で終了し、標準エラー出力が "count=1" と一致すること。(callback の実行回数が 1 のまま二重実行されないことの確認)
+}
+// [サブ手順参照 名前=shutdownTest.TearDown]
+
+// 排他ロックを生成できない場合に 2 つの登録関数が失敗し、callback が実行されないことの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
+TEST_F(shutdownTest, test_register_fails_when_lock_creation_fails)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    int id = 1;
+    cplat_shutdown_event event = make_event(CPLAT_SHUTDOWN_REASON_NORMAL_EXIT, CPLAT_SHUTDOWN_CODE_KIND_NONE,
+                                            0); // [状態] - 通常終了イベントを用意する。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_local_lock_create(_))
+        .WillOnce(Return(CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_local_lock_create() が 1 回だけ呼び出されること。
+                                              // [Pre-Assert手順] - cplat_local_lock_create() から CPLAT_ERR_UNKNOWN を返す。
+    EXPECT_CALL(mock_cplat, cplat_malloc(_))
+        .Times(0); // [Pre-Assert確認_異常系] - cplat_malloc() が呼び出されないこと。(エントリを確保する前に失敗することの確認)
+
+    // Act
+    int register_result = cplat_shutdown_register(
+        record_callback, &id); // [手順] - ロックの生成が失敗する状態で cplat_shutdown_register() を呼び出す。
+    int request_register_result = cplat_shutdown_request_register(
+        record_callback, &id); // [手順] - 続けて cplat_shutdown_request_register() を呼び出す。
+    int invoked = 0;
+    int invoke_result = cplat_shutdown_invoke_for_test(
+        &event, &invoked); // [手順] - 通常終了イベントを指定して cplat_shutdown_invoke_for_test() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              register_result); // [確認_異常系] - cplat_shutdown_register() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        request_register_result); // [確認_異常系] - cplat_shutdown_request_register() の戻り値が CPLAT_ERR_UNKNOWN であること。(once のため以後の登録も失敗することの確認)
+    EXPECT_EQ(CPLAT_OK,
+              invoke_result); // [確認_異常系] - cplat_shutdown_invoke_for_test() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0, g_call_count); // [確認_異常系] - g_call_count が 0 であること。(登録に失敗した callback が実行されないことの確認)
+}
+// [サブ手順参照 名前=shutdownTest.TearDown]
+
+// atexit() に失敗した場合に 2 つの登録関数が失敗し、残りの終了フックの設置が続くことの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
+TEST_F(shutdownTest, test_register_fails_when_atexit_fails)
+{
+    // Arrange
+    int id = 1;
+#if defined(PLATFORM_LINUX)
+    NiceMock<Mock_signal> mock_signal;
+#elif defined(PLATFORM_WINDOWS)
+    NiceMock<Mock_windows> mock_windows;
+#endif
+
+    // Pre-Assert
+    EXPECT_CALL(mock_stdlib_, atexit(_, _, _, _))
+        .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - atexit() が 1 回呼び出されること。
+                               // [Pre-Assert手順] - atexit() から -1 を返す。
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_signal, signal(_, _, _, _, _))
+        .Times(2)
+        .WillRepeatedly(Return(SIG_DFL)); // [Pre-Assert確認_異常系] - signal() が 2 回呼び出されること。(atexit の失敗後も設置を続けることの確認)
+                                          // [Pre-Assert手順] - signal() から SIG_DFL を返す。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_windows, SetConsoleCtrlHandler(_, _, _, _, TRUE))
+        .WillOnce(Return(TRUE)); // [Pre-Assert確認_異常系] - SetConsoleCtrlHandler() が 1 回呼び出されること。(atexit の失敗後も設置を続けることの確認)
+                                 // [Pre-Assert手順] - SetConsoleCtrlHandler() から TRUE を返す。
+#endif
+
+    // Act
+    int register_result = cplat_shutdown_register(
+        record_callback, &id); // [手順] - atexit() が失敗する状態で cplat_shutdown_register() を呼び出す。
+    int request_register_result = cplat_shutdown_request_register(
+        record_callback, &id); // [手順] - 続けて cplat_shutdown_request_register() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              register_result); // [確認_異常系] - cplat_shutdown_register() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        request_register_result); // [確認_異常系] - cplat_shutdown_request_register() の戻り値が CPLAT_ERR_UNKNOWN であること。
+}
+// [サブ手順参照 名前=shutdownTest.TearDown]
+
+// 中断のハンドラーを設置できない場合に 2 つの登録関数が失敗し、残りの設置が続くことの確認
+// [サブ手順参照 名前=shutdownTest.SetUp]
+TEST_F(shutdownTest, test_register_fails_when_interrupt_handler_installation_fails)
+{
+    // Arrange
+    int id = 1;
+#if defined(PLATFORM_LINUX)
+    NiceMock<Mock_signal> mock_signal;
+#elif defined(PLATFORM_WINDOWS)
+    NiceMock<Mock_windows> mock_windows;
+#endif
+
+    // Pre-Assert
+    EXPECT_CALL(mock_stdlib_, atexit(_, _, _, _))
+        .WillOnce(Return(0)); // [Pre-Assert確認_異常系] - atexit() が 1 回呼び出されること。
+                              // [Pre-Assert手順] - atexit() から 0 を返す。
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_signal, signal(_, _, _, SIGINT, _))
+        .WillOnce(Return(SIG_ERR)); // [Pre-Assert確認_異常系] - signal() が SIGINT を指定して 1 回呼び出されること。
+                                    // [Pre-Assert手順] - signal() から SIG_ERR を返す。
+    EXPECT_CALL(mock_signal, signal(_, _, _, SIGTERM, _))
+        .WillOnce(Return(SIG_DFL)); // [Pre-Assert確認_異常系] - signal() が SIGTERM を指定して 1 回呼び出されること。(SIGINT の失敗後も設置を続けることの確認)
+                                    // [Pre-Assert手順] - signal() から SIG_DFL を返す。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_windows, SetConsoleCtrlHandler(_, _, _, _, TRUE))
+        .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - SetConsoleCtrlHandler() が 1 回呼び出されること。
+                                  // [Pre-Assert手順] - SetConsoleCtrlHandler() から FALSE を返す。
+#endif
+
+    // Act
+    int register_result = cplat_shutdown_register(
+        record_callback, &id); // [手順] - ハンドラーの設置が失敗する状態で cplat_shutdown_register() を呼び出す。
+    int request_register_result = cplat_shutdown_request_register(
+        record_callback, &id); // [手順] - 続けて cplat_shutdown_request_register() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              register_result); // [確認_異常系] - cplat_shutdown_register() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        request_register_result); // [確認_異常系] - cplat_shutdown_request_register() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 // [サブ手順参照 名前=shutdownTest.TearDown]
 

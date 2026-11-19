@@ -94,6 +94,7 @@ static void history_add(cplat_prompt *p, prompt_history_context *ctx, const char
     ctx->entries[slot] = (char *)cplat_malloc(line_size);
     if (ctx->entries[slot] != NULL)
     {
+        /* 直前に strlen(line) + 1 の大きさで確保しており、切り詰めと失敗は起きないため、戻り値は明示的に破棄する。 */
         (void)cplat_strcpy(ctx->entries[slot], line_size, line);
     }
 }
@@ -106,6 +107,8 @@ static void history_add(cplat_prompt *p, prompt_history_context *ctx, const char
 
 /*
  * プロンプト、入力中のテキスト、補完候補の続きを端末上に再描画する。
+ * 描画は利用者が画面で確認する端末の表示であり、入力文字列は別の経路で返すため、
+ * この関数の putchar、fputs、fwrite、printf、fflush の戻り値は明示的に破棄する。
  */
 static void redisplay(cplat_prompt *p, const char *prompt_str, const char *buf, size_t len, size_t cursor)
 {
@@ -135,33 +138,33 @@ static void redisplay(cplat_prompt *p, const char *prompt_str, const char *buf, 
     p->view_start = cplat_internal_prompt_edit_adjust_view_start(buf, len, cursor, p->view_start, input_cols);
     visible = cplat_internal_prompt_edit_visible_bytes_from(buf, len, p->view_start, input_cols);
     cursor_cols = cplat_internal_prompt_edit_display_width_between(buf, len, p->view_start, cursor);
-    putchar('\r');
+    (void)putchar('\r');
 
     if (prompt_str != NULL)
     {
-        fputs(prompt_str, stdout);
+        (void)fputs(prompt_str, stdout);
     }
 
-    fwrite(buf + p->view_start, 1U, visible, stdout);
+    (void)fwrite(buf + p->view_start, 1U, visible, stdout);
 
     /* 補完候補の続きが存在し、入力欄に表示余白がある場合は灰色で表示する。 */
     if (suffix != NULL && cursor_cols < input_cols)
     {
         size_t bytes =
             cplat_internal_prompt_edit_visible_bytes_from(suffix, strlen(suffix), 0U, input_cols - cursor_cols);
-        fputs("\033[90m", stdout);
-        fwrite(suffix, 1U, bytes, stdout);
-        fputs("\033[0m", stdout);
+        (void)fputs("\033[90m", stdout);
+        (void)fwrite(suffix, 1U, bytes, stdout);
+        (void)fputs("\033[0m", stdout);
     }
 
-    fputs("\033[0K\r", stdout);
+    (void)fputs("\033[0K\r", stdout);
 
     if (prompt_cols + cursor_cols > 0U)
     {
-        printf("\033[%zuC", prompt_cols + cursor_cols);
+        (void)printf("\033[%zuC", prompt_cols + cursor_cols);
     }
 
-    fflush(stdout);
+    (void)fflush(stdout);
 }
 
 /*
@@ -576,7 +579,7 @@ void cplat_prompt_dispose(cplat_prompt *prompt)
 
     /*
      * raw モード中であれば端末設定を復元する。
-     * 後処理時の復元は最善努力で行い、成否を通知する手段がないため戻り値は意図的に無視する。
+     * 後処理時の復元は最善努力で行い、成否を通知する手段がないため、戻り値は明示的に破棄する。
      */
     (void)prompt_platform_leave_raw(&prompt->platform);
 
@@ -614,6 +617,10 @@ static int prompt_readline_fallback(cplat_prompt *p, char *buf, const size_t buf
 {
     if (prompt_str != NULL)
     {
+        /*
+         * プロンプトの表示は利用者が画面で確認する表示であり、続く行入力の結果は変わらないため、
+         * この 2 文の戻り値は明示的に破棄する。
+         */
         (void)fputs(prompt_str, stdout);
         (void)fflush(stdout);
     }
@@ -746,8 +753,9 @@ static int prompt_readline_core(cplat_prompt *p, char *buf, const size_t buf_siz
             break;
 
         case KEY_ENTER:
-            putchar('\n');
-            fflush(stdout);
+            /* 入力欄を閉じる改行は画面で確認する表示であり、入力の結果は変わらないため、戻り値は明示的に破棄する。 */
+            (void)putchar('\n');
+            (void)fflush(stdout);
 
             {
                 size_t copy;
@@ -780,13 +788,17 @@ static int prompt_readline_core(cplat_prompt *p, char *buf, const size_t buf_siz
         case KEY_ERROR:
             buf[0] = '\0';
 
-            /* 読み取りエラー時は端末設定の復元成否にかかわらず CPLAT_ERR_UNKNOWN を返すため、戻り値を無視する。 */
+            /*
+             * 読み取りエラー時は端末設定の復元の成否にかかわらず CPLAT_ERR_UNKNOWN を返すため、
+             * 戻り値は明示的に破棄する。
+             */
             (void)prompt_platform_leave_raw(&p->platform);
             return CPLAT_ERR_UNKNOWN;
 
         case KEY_EOF:
-            putchar('\n');
-            fflush(stdout);
+            /* 入力欄を閉じる改行は画面で確認する表示であり、入力の結果は変わらないため、戻り値は明示的に破棄する。 */
+            (void)putchar('\n');
+            (void)fflush(stdout);
             buf[0] = '\0';
 
             if (prompt_platform_leave_raw(&p->platform) != 0)
@@ -797,8 +809,9 @@ static int prompt_readline_core(cplat_prompt *p, char *buf, const size_t buf_siz
             return CPLAT_ERR_EOF;
 
         case KEY_CTRL_C:
-            putchar('\n');
-            fflush(stdout);
+            /* 入力欄を閉じる改行は画面で確認する表示であり、入力の結果は変わらないため、戻り値は明示的に破棄する。 */
+            (void)putchar('\n');
+            (void)fflush(stdout);
             buf[0] = '\0';
 
             if (prompt_platform_leave_raw(&p->platform) != 0)

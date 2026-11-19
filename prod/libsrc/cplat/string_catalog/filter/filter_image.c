@@ -897,7 +897,10 @@ static void writer_append_escaped_byte(text_writer *writer, const unsigned char 
     }
     else if ((byte < 0x20U) || (byte == 0x7FU))
     {
-        /* 0x20 未満または 0x7F は "\\xHH" と終端 NUL で固定 5 [byte] となり、8 [byte] 配列に収まる。 */
+        /*
+         * 0x20 未満または 0x7F は "\\xHH" と終端 NUL で固定 5 [byte] となり、8 [byte] 配列に収まるため、
+         * 戻り値は明示的に破棄する。
+         */
         (void)snprintf(buffer, sizeof(buffer), "\\x%02X", (unsigned int)byte);
         writer_append(writer, buffer, 4U);
     }
@@ -922,7 +925,8 @@ static void write_constant(text_writer *writer, const string_catalog_filter_cons
         /*
          * 整数のみの固定書式であり、16 進は "0x" + 最大 16 桁 + NUL で 19 [byte]、
          * 符号付き 10 進は "-" + 最大 20 桁 + NUL で 22 [byte]、符号なし 10 進は最大 21 [byte] のため、
-         * 64 [byte] 配列に収まり、文字列・ワイド文字変換の失敗も起きない。
+         * 64 [byte] 配列に収まり、文字列・ワイド文字変換の失敗も起きないため、
+         * この分岐の snprintf の戻り値は明示的に破棄する。
          * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/snprintf-snprintf-snprintf-l-snwprintf-snwprintf-l
          */
         if ((constant->header.flags & STRING_CATALOG_FILTER_CONSTANT_FLAG_HEXADECIMAL) != 0U)
@@ -942,7 +946,11 @@ static void write_constant(text_writer *writer, const string_catalog_filter_cons
         break;
 
     case STRING_CATALOG_FILTER_CONSTANT_KIND_FLOAT:
-        /* 元の値へ戻せる最短の桁数で書き出す。17 桁あれば倍精度の値は必ず元へ戻る。 */
+        /*
+         * 元の値へ戻せる最短の桁数で書き出す。17 桁あれば倍精度の値は必ず元へ戻る。
+         * %.17g の出力は符号、仮数、指数と終端 NUL を含めても 25 [byte] 以内であり、
+         * 64 [byte] 配列に収まるため、snprintf の戻り値は明示的に破棄する。
+         */
         for (int precision = 15; precision <= 17; precision++)
         {
             (void)snprintf(buffer, sizeof(buffer), "%.*g", precision, constant->real);
@@ -1061,7 +1069,7 @@ static void write_predicate(decompile_context *context, const string_catalog_fil
         writer_append_text(&context->writer, "category");
         break;
     case STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME:
-        /* 定数は検証済みであり、読み取りは失敗しない。 */
+        /* 定数は検証済みであり、読み取りが失敗しないため、戻り値は明示的に破棄する。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
         writer_append_text(&context->writer, "arg.");
         write_constant(&context->writer, &constant);
@@ -1070,7 +1078,7 @@ static void write_predicate(decompile_context *context, const string_catalog_fil
     case STRING_CATALOG_FILTER_FIELD_ARGUMENT_INDEX:
         /*
          * argument は uint8_t (最大 255、検証上限は CPLAT_STRING_CATALOG_ARGUMENT_MAX 未満) のため
-         * "arg[255]" と終端 NUL でも 9 [byte] であり、32 [byte] 配列に収まる。
+         * "arg[255]" と終端 NUL でも 9 [byte] であり、32 [byte] 配列に収まるため、戻り値は明示的に破棄する。
          * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/snprintf-snprintf-snprintf-l-snwprintf-snwprintf-l
          */
         (void)snprintf(buffer, sizeof(buffer), "arg[%u]", (unsigned int)instruction->argument);
@@ -1109,7 +1117,7 @@ static void write_predicate(decompile_context *context, const string_catalog_fil
             }
         }
 
-        /* 定数は検証済みであり、読み取りは失敗しない。 */
+        /* 定数は検証済みであり、読み取りが失敗しないため、戻り値は明示的に破棄する。 */
         (void)string_catalog_filter_read_constant(context->constants, context->constant_size, offset, &constant);
         write_constant(&context->writer, &constant);
         offset = constant.next_offset;

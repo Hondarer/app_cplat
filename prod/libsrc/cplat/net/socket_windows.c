@@ -76,7 +76,7 @@ void cplat_internal_socket_cleanup(void)
         return;
     }
 
-    (void)WSACleanup();
+    (void)WSACleanup(); /* 終了時の後始末であり、失敗を受けても取れる行動がないため、戻り値は明示的に破棄する */
     s_startup_done = 0;
 }
 
@@ -263,6 +263,7 @@ void cplat_socket_close(const cplat_socket sock)
 
     /* 解放経路で呼び出しても呼び出し前の診断情報が失われないように保存と復元を行う。 */
     cplat_error_get_last(&saved);
+    /* 解放の関数であり、失敗を受けても呼び出し元が取れる行動がないため、戻り値は明示的に破棄する。 */
     (void)closesocket((SOCKET)sock);
     cplat_error_set_last(&saved);
 }
@@ -276,7 +277,7 @@ void cplat_socket_shutdown(const cplat_socket sock)
         return;
     }
 
-    /* 失敗しても呼び出し側に取るべき手段がないため、結果は参照しない。 */
+    /* 失敗しても呼び出し側に取るべき手段がないため、戻り値は明示的に破棄する。 */
     (void)shutdown((SOCKET)sock, SD_BOTH);
 }
 

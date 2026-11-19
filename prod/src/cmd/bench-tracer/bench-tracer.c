@@ -102,6 +102,7 @@ static int measure_filtered(int messages)
     uint64_t begin;
     uint64_t elapsed;
     int index;
+    int failed = 0;
 
     if (tracer == NULL || cplat_tracer_set_stderr_level(tracer, CPLAT_TRACE_LEVEL_NONE) != CPLAT_OK ||
         cplat_tracer_set_file_level(tracer, NULL, CPLAT_TRACE_LEVEL_NONE, 0, 0, 0) != CPLAT_OK ||
@@ -122,7 +123,10 @@ static int measure_filtered(int messages)
     /* 出力先が無効な tracer に対してメッセージを発行し、破棄処理の負荷を測定する。 */
     for (index = 0; index < messages; index++)
     {
-        (void)cplat_tracer_writef(tracer, CPLAT_TRACE_LEVEL_INFO, NULL, "filtered=%d", index);
+        if (cplat_tracer_writef(tracer, CPLAT_TRACE_LEVEL_INFO, NULL, "filtered=%d", index) != CPLAT_OK)
+        {
+            failed = 1;
+        }
     }
 
     if (monotonic_ns(&elapsed) != CPLAT_OK)
@@ -131,9 +135,20 @@ static int measure_filtered(int messages)
         return 1;
     }
 
+    /* 書き込みに失敗した測定値は、破棄の経路の負荷を表さないため出力しない。 */
+    if (failed != 0)
+    {
+        cplat_tracer_dispose(&tracer);
+        return 1;
+    }
+
     elapsed -= begin;
-    printf("filtered,processes=1,messages=%d,total_ns=%llu,ns_per_message=%llu\n", messages,
-           (unsigned long long)elapsed, (unsigned long long)(elapsed / (uint64_t)messages));
+    /*
+     * 測定結果の出力の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)printf("filtered,processes=1,messages=%d,total_ns=%llu,ns_per_message=%llu\n", messages,
+                 (unsigned long long)elapsed, (unsigned long long)(elapsed / (uint64_t)messages));
     cplat_tracer_dispose(&tracer);
 
     return 0;
@@ -228,9 +243,13 @@ static int measure_files(char *executable, char *path, int processes, int messag
         mode = "durable";
     }
 
-    printf("file_%s,processes=%d,messages=%d,total_ns=%llu,ns_per_message=%llu\n", mode, processes,
-           processes * messages, (unsigned long long)elapsed,
-           (unsigned long long)(elapsed / ((uint64_t)processes * (uint64_t)messages)));
+    /*
+     * 測定結果の出力の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)printf("file_%s,processes=%d,messages=%d,total_ns=%llu,ns_per_message=%llu\n", mode, processes,
+                 processes * messages, (unsigned long long)elapsed,
+                 (unsigned long long)(elapsed / ((uint64_t)processes * (uint64_t)messages)));
     cplat_free(children);
 
     return failed;
@@ -286,14 +305,16 @@ int main(int argc, char **argv)
 
     if (processes <= 0 || messages <= 0)
     {
-        fprintf(stderr, "usage: bench-tracer [path [processes [messages]]]\n");
+        /* 失敗の経路の使い方の表示であり、診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "usage: bench-tracer [path [processes [messages]]]\n");
         return 1;
     }
 
     if (messages > INT_MAX / processes)
     {
-        fprintf(stderr, "bench-tracer: product of processes and messages does not fit in int\n"
-                        "usage: bench-tracer [path [processes [messages]]]\n");
+        /* 失敗の経路の診断と使い方の表示であり、診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "bench-tracer: product of processes and messages does not fit in int\n"
+                              "usage: bench-tracer [path [processes [messages]]]\n");
         return 1;
     }
 
@@ -301,6 +322,12 @@ int main(int argc, char **argv)
     if (measure_filtered(messages * processes) != 0 || measure_files(argv[0], path, processes, messages, 0) != 0 ||
         measure_files(argv[0], path, processes, messages, 1) != 0)
     {
+        return 1;
+    }
+
+    if (fflush(stdout) != 0 || ferror(stdout) != 0)
+    {
+        (void)fprintf(stderr, "bench-tracer: failed to write stdout\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
         return 1;
     }
 

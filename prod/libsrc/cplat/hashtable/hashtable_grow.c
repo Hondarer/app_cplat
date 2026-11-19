@@ -649,6 +649,7 @@ int cplat_hashtable_clear(cplat_hashtable *ht)
         return clock_ret;
     }
 
+    /* 構築済みテーブルの設定値は作成時に検証済みで、算出があふれないため、次の 2 つの戻り値は明示的に破棄する。 */
     (void)hashtable_mgmt_layout(&ht->hdr->config, &off_bucket_head, NULL, &mgmt_size);
     (void)hashtable_data_region_size(&ht->hdr->config, &data_size);
 

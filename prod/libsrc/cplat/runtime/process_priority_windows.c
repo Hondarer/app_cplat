@@ -95,6 +95,7 @@ static void close_target(uint32_t id, HANDLE handle)
 {
     if (id != 0U)
     {
+        /* 優先度の設定と取得の結果は確定済みで、閉じる処理の失敗で結果が変わらないため、戻り値は明示的に破棄する。 */
         (void)CloseHandle(handle);
     }
 }
@@ -289,6 +290,10 @@ int cplat_process_priority_windows_set_class(uint32_t process_id, cplat_process_
 
         if (current_class != REALTIME_PRIORITY_CLASS)
         {
+            /*
+             * 格下げの失敗を返す経路の復元であり、復元に失敗しても返す ERROR_PRIVILEGE_NOT_HELD は変わらず、
+             * 復元できない場合があることはヘッダーに記載しているため、戻り値は明示的に破棄する。
+             */
             (void)SetPriorityClass(process, previous_class);
             close_target(process_id, process);
             return cplat_internal_error_report_windows_error(detail_out, ERROR_PRIVILEGE_NOT_HELD);
@@ -358,7 +363,7 @@ int cplat_process_priority_windows_begin_background_mode(cplat_error *detail_out
         error_code = GetLastError();
         if (error_code == ERROR_PROCESS_MODE_ALREADY_BACKGROUND)
         {
-            (void)cplat_internal_error_report_success(detail_out);
+            cplat_internal_error_record_success(detail_out);
             return CPLAT_SKIPPED;
         }
 
@@ -383,7 +388,7 @@ int cplat_process_priority_windows_end_background_mode(cplat_error *detail_out)
         error_code = GetLastError();
         if (error_code == ERROR_PROCESS_MODE_NOT_BACKGROUND)
         {
-            (void)cplat_internal_error_report_success(detail_out);
+            cplat_internal_error_record_success(detail_out);
             return CPLAT_SKIPPED;
         }
 

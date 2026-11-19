@@ -644,6 +644,7 @@ out_free_buffer:
     cplat_free(buffer);
     buffer = NULL;
 out_close:
+    /* 読み取り専用で開いたストリームであり、閉じる処理の失敗で適用の結果が変わらないため、戻り値は明示的に破棄する。 */
     (void)cplat_fclose(fp, NULL);
     return applied;
 }

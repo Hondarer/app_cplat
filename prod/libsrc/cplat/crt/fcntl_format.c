@@ -23,7 +23,7 @@ int cplat_vopen_fmt(const int flags, const int mode, cplat_error *detail_out, co
 
     if (cplat_internal_vformat_path(filename, sizeof(filename), format, args, &format_error) != 0)
     {
-        (void)cplat_internal_error_report_errno(detail_out, format_error);
+        cplat_internal_error_record_errno(detail_out, format_error);
         return -1;
     }
 

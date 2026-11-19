@@ -225,7 +225,7 @@ int cplat_file_get_path_modified_timestamp(const char *path, cplat_timespec *tim
         {
             const DWORD error_code = GetLastError();
 
-            (void)CloseHandle(handle);
+            (void)CloseHandle(handle); /* GetFileTime の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
             return cplat_internal_error_report_windows_error(detail_out, error_code);
         }
 
@@ -282,7 +282,7 @@ int cplat_file_set_path_modified_timestamp(const char *path, const cplat_timespe
         {
             const DWORD error_code = GetLastError();
 
-            (void)CloseHandle(handle);
+            (void)CloseHandle(handle); /* SetFileTime の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
             return cplat_internal_error_report_windows_error(detail_out, error_code);
         }
 
