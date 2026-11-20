@@ -1941,8 +1941,9 @@ TEST(syncAdditionalFailureTest, local_lock_finite_wait_retries_before_deadline)
     // Pre-Assert
     EXPECT_CALL(mock_pthread, pthread_mutex_trylock(_, _, _, _))
         .WillOnce(Return(EBUSY))
-        .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - pthread_mutex_trylock() が 2 回呼び出されること。
-                              // [Pre-Assert手順] - pthread_mutex_trylock() から 1 回目は EBUSY、2 回目は 0 を返す。
+        .WillOnce(DoDefault()); // [Pre-Assert確認_正常系] - pthread_mutex_trylock() が 2 回呼び出されること。
+    // [Pre-Assert手順] - pthread_mutex_trylock() から 1 回目は EBUSY を返し、2 回目は libc の処理へ委譲して mutex を取得する。
+    // 2 回目を取得済みに見せるだけにすると、後続の本物の unlock が mutex の状態を壊し、破棄が EBUSY で失敗する。
     EXPECT_CALL(mock_time, clock_gettime(_, _, _, CLOCK_MONOTONIC, _))
         .Times(2)
         .WillRepeatedly(Invoke(

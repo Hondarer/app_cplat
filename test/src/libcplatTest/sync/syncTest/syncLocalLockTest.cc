@@ -17,10 +17,11 @@ TEST(syncLocalLockTest, try_lock_reports_busy_when_already_locked)
     // Pre-Assert
 #if defined(PLATFORM_LINUX)
     EXPECT_CALL(mock_pthread, pthread_mutex_trylock(_, _, _, _))
-        .WillOnce(testing::Return(0))
+        .WillOnce(testing::DoDefault())
         .WillOnce(testing::Return(EBUSY));
     // [Pre-Assert確認_正常系] - pthread_mutex_trylock() が 2 回呼び出されること。
-    // [Pre-Assert手順] - pthread_mutex_trylock() から 1 回目は 0、2 回目は EBUSY を返す。
+    // [Pre-Assert手順] - pthread_mutex_trylock() の 1 回目は libc の処理へ委譲して mutex を取得し、2 回目は EBUSY を返す。
+    // 1 回目を取得済みに見せるだけにすると、後続の本物の unlock が mutex の状態を壊し、破棄が EBUSY で失敗する。
 #endif /* PLATFORM_LINUX */
 
     // Act
