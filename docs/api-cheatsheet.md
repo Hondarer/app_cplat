@@ -322,6 +322,7 @@ IPv4 ソケットの生成、接続、送受信、待機は cplat のソケッ�
 | `accept()` | `cplat_socket_accept(...)` |
 | `connect()` | `cplat_socket_connect(...)` (`EINPROGRESS`/`WSAEWOULDBLOCK` を `CPLAT_ERR_IN_PROGRESS` に統一) |
 | `getsockopt(SO_ERROR)` | `cplat_socket_get_pending_error(...)` |
+| `getsockopt(SO_RCVBUF)` | `cplat_socket_get_receive_buffer_size(...)` (Linux の取得値は設定値の 2 倍) |
 | `fcntl(O_NONBLOCK)` (POSIX) / `ioctlsocket(FIONBIO)` (Winsock) | `cplat_socket_set_nonblocking(...)` |
 | `setsockopt(SO_REUSEADDR)` | `cplat_socket_set_reuse_address(...)` |
 | `setsockopt(SO_BROADCAST)` | `cplat_socket_set_broadcast(...)` |

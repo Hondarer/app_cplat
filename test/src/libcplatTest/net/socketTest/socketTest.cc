@@ -858,6 +858,110 @@ TEST_F(socketTest, pending_error_reports_empty_pending_and_failure)
 }
 // [サブ手順参照 名前=socketTest.TearDown]
 
+// 受信用の領域の大きさの取得結果が分類されることの確認
+TEST_F(socketTest, receive_buffer_size_reports_value_zero_and_failure)
+{
+    // Arrange
+    cplat_error detail = {};
+    size_t size_valid = 0U;
+    size_t size_zero = 1U;
+    size_t size_negative = 1U;
+    size_t size_failure = 1U;
+
+    // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_sys_socket_, getsockopt(_, _, _, (int)kSocket, SOL_SOCKET, SO_RCVBUF, _, _))
+        .WillOnce(
+            [](const char *, const int, const char *, int, int, int, void *value, socklen_t *)
+            {
+                *static_cast<int *>(value) = 425984;
+                return 0;
+            })
+        .WillOnce(
+            [](const char *, const int, const char *, int, int, int, void *value, socklen_t *)
+            {
+                *static_cast<int *>(value) = 0;
+                return 0;
+            })
+        .WillOnce(
+            [](const char *, const int, const char *, int, int, int, void *value, socklen_t *)
+            {
+                *static_cast<int *>(value) = -1;
+                return 0;
+            })
+        .WillOnce(DoAll(Assign(&errno, EBADF), Return(-1)));
+    // [Pre-Assert確認_異常系] - getsockopt() が kSocket、SOL_SOCKET、SO_RCVBUF を指定して 4 回呼び出されること。
+    // [Pre-Assert手順] - getsockopt() から、1 回目は value が指す int に 425984、2 回目は 0、3 回目は -1 を設定して 0、4 回目は errno に EBADF を設定して -1 を返す。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_winsock_, getsockopt(_, _, _, (SOCKET)kSocket, SOL_SOCKET, SO_RCVBUF, _, _))
+        .WillOnce(
+            [](const char *, const int, const char *, SOCKET, int, int, char *value, int *)
+            {
+                *reinterpret_cast<int *>(value) = 425984;
+                return 0;
+            })
+        .WillOnce(
+            [](const char *, const int, const char *, SOCKET, int, int, char *value, int *)
+            {
+                *reinterpret_cast<int *>(value) = 0;
+                return 0;
+            })
+        .WillOnce(
+            [](const char *, const int, const char *, SOCKET, int, int, char *value, int *)
+            {
+                *reinterpret_cast<int *>(value) = -1;
+                return 0;
+            })
+        .WillOnce(Return(SOCKET_ERROR));
+    // [Pre-Assert確認_異常系] - getsockopt() が kSocket、SOL_SOCKET、SO_RCVBUF を指定して 4 回呼び出されること。
+    // [Pre-Assert手順] - getsockopt() から、1 回目は value が指す int に 425984、2 回目は 0、3 回目は -1 を設定して 0、4 回目は SOCKET_ERROR を返す。
+    EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAENOTSOCK));
+    // [Pre-Assert確認_異常系] - WSAGetLastError() が 1 回呼び出されること。
+    // [Pre-Assert手順] - WSAGetLastError() から WSAENOTSOCK を返す。
+#endif /* PLATFORM_ */
+
+    // Act
+    int actual_ret_invalid_socket = cplat_socket_get_receive_buffer_size(
+        CPLAT_INVALID_SOCKET, &size_valid,
+        &detail); // [手順] - 無効なソケットを指定して cplat_socket_get_receive_buffer_size() を呼び出す。
+    int actual_ret_null_output = cplat_socket_get_receive_buffer_size(
+        kSocket, nullptr, &detail); // [手順] - 格納先に nullptr を指定して cplat_socket_get_receive_buffer_size() を呼び出す。
+    int actual_ret_valid = cplat_socket_get_receive_buffer_size(
+        kSocket, &size_valid, &detail); // [手順] - 正の値を取得できる状態で cplat_socket_get_receive_buffer_size() を呼び出す。
+    int actual_ret_zero = cplat_socket_get_receive_buffer_size(
+        kSocket, &size_zero, &detail); // [手順] - 0 を取得できる状態で cplat_socket_get_receive_buffer_size() を呼び出す。
+    int actual_ret_negative = cplat_socket_get_receive_buffer_size(
+        kSocket, &size_negative, &detail); // [手順] - 負の値を取得できる状態で cplat_socket_get_receive_buffer_size() を呼び出す。
+    int actual_ret_failure = cplat_socket_get_receive_buffer_size(
+        kSocket, &size_failure, &detail); // [手順] - getsockopt() が失敗する状態で cplat_socket_get_receive_buffer_size() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_invalid_socket); // [確認_異常系] - 無効なソケットを指定した cplat_socket_get_receive_buffer_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_output); // [確認_異常系] - 格納先が nullptr の cplat_socket_get_receive_buffer_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_valid); // [確認_正常系] - 正の値を取得した cplat_socket_get_receive_buffer_size() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(425984U,
+              size_valid); // [確認_正常系] - 正の値を取得した場合の size_valid が取得値そのままの 425984 であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_zero); // [確認_正常系] - 0 を取得した cplat_socket_get_receive_buffer_size() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(0U, size_zero); // [確認_正常系] - 0 を取得した場合の size_zero が 0 であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret_negative); // [確認_異常系] - 負の値を取得した cplat_socket_get_receive_buffer_size() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(1U, size_negative); // [確認_異常系] - 負の値を取得した場合の size_negative が変更されないこと。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret_failure); // [確認_異常系] - getsockopt() 失敗時の cplat_socket_get_receive_buffer_size() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(1U, size_failure); // [確認_異常系] - getsockopt() 失敗時の size_failure が変更されないこと。
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+
 // 非ブロッキング設定の引数不正と OS 失敗が処理されることの確認
 TEST_F(socketTest, nonblocking_reports_invalid_and_os_failure)
 {

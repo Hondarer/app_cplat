@@ -406,6 +406,38 @@ int cplat_socket_get_pending_error(const cplat_socket sock, cplat_error *detail_
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
+int cplat_socket_get_receive_buffer_size(const cplat_socket sock, size_t *size_out, cplat_error *detail_out)
+{
+    int value = 0;
+    int value_len = (int)sizeof(value);
+
+    if ((sock == CPLAT_INVALID_SOCKET) || (size_out == NULL))
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+
+    /*
+     * SO_RCVBUF の取得値を、補正せずにそのまま返す。
+     * see: https://learn.microsoft.com/en-us/windows/win32/winsock/sol-socket-socket-options
+     */
+    if (getsockopt((SOCKET)sock, SOL_SOCKET, SO_RCVBUF, (char *)&value, &value_len) == SOCKET_ERROR)
+    {
+        return report_last_winsock_error(detail_out);
+    }
+
+    /* 負の値は大きさとして表せないため、異常として扱う。 */
+    if (value < 0)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EIO, CPLAT_ERR_UNKNOWN);
+    }
+
+    *size_out = (size_t)value;
+
+    return cplat_internal_error_report_success(detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int cplat_socket_set_nonblocking(const cplat_socket sock, const int enable, cplat_error *detail_out)
 {
     u_long mode = 0UL;

@@ -542,6 +542,8 @@
     EXPORT_ENTRY(cplat_socket_connect, \
                  int(CPLAT_API *)(cplat_socket sock, const cplat_ipv4_endpoint *endpoint, cplat_error *detail_out)) \
     EXPORT_ENTRY(cplat_socket_get_pending_error, int(CPLAT_API *)(cplat_socket sock, cplat_error * detail_out)) \
+    EXPORT_ENTRY(cplat_socket_get_receive_buffer_size, \
+                 int(CPLAT_API *)(cplat_socket sock, size_t *size_out, cplat_error *detail_out)) \
     EXPORT_ENTRY(cplat_socket_set_nonblocking, \
                  int(CPLAT_API *)(cplat_socket sock, int enable, cplat_error *detail_out)) \
     EXPORT_ENTRY(cplat_socket_set_reuse_address, \

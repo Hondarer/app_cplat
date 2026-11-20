@@ -211,6 +211,29 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_socket_get_pending_error(cplat_socket sock, cplat_error *detail_out);
 
     /**
+     *  @brief          ソケットの受信用に OS が保持できる領域の大きさを取得します。
+     *  @param[in]      sock       対象のソケット。
+     *  @param[out]     size_out   受信用の領域の大きさ [byte] の格納先。
+     *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *
+     *  OS の `SO_RCVBUF` の取得値をそのまま @p size_out へ格納します。
+     *  取得値が 0 の場合も、エラーとはせず 0 を格納して @ref CPLAT_OK を返します。
+     *  OS が負の値を返した場合は、大きさとして表せないため @ref CPLAT_ERR_UNKNOWN を返します。\n
+     *  失敗した場合、@p size_out は変更しません。
+     *
+     *  Linux の取得値は、設定した値の 2 倍になります (管理情報の分を含むため)。
+     *  Windows の取得値は、OS が保持する値です。\n
+     *  いずれのプラットフォームでも、アプリケーションが 1 回に受け取れるデータの大きさとは限りません。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_socket_get_receive_buffer_size(cplat_socket sock, size_t *size_out,
+                                                                    cplat_error *detail_out);
+
+    /**
      *  @brief          ソケットの非ブロッキング モードを設定します。
      *  @param[in]      sock       対象のソケット。
      *  @param[in]      enable     非ブロッキングにする場合は 0 以外、ブロッキングにする場合は 0。

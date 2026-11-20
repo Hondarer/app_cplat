@@ -351,6 +351,7 @@ MOCK_CPLAT_LINK_IMPL(cplat_socket_listen)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_accept)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_connect)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_get_pending_error)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_get_receive_buffer_size)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_set_nonblocking)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_set_reuse_address)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_set_broadcast)
@@ -1174,6 +1175,8 @@ extern int delegate_real_cplat_socket_accept(cplat_socket sock, cplat_ipv4_endpo
 extern int delegate_real_cplat_socket_connect(cplat_socket sock, const cplat_ipv4_endpoint *endpoint,
                                               cplat_error *detail_out);
 extern int delegate_real_cplat_socket_get_pending_error(cplat_socket sock, cplat_error *detail_out);
+extern int delegate_real_cplat_socket_get_receive_buffer_size(cplat_socket sock, size_t *size_out,
+                                                              cplat_error *detail_out);
 extern int delegate_real_cplat_socket_set_nonblocking(cplat_socket sock, int enable, cplat_error *detail_out);
 extern int delegate_real_cplat_socket_set_reuse_address(cplat_socket sock, int enable, cplat_error *detail_out);
 extern int delegate_real_cplat_socket_set_broadcast(cplat_socket sock, int enable, cplat_error *detail_out);
@@ -2064,6 +2067,7 @@ class Mock_cplat
     MOCK_METHOD(int, cplat_socket_accept, (cplat_socket, cplat_ipv4_endpoint *, cplat_socket *, cplat_error *));
     MOCK_METHOD(int, cplat_socket_connect, (cplat_socket, const cplat_ipv4_endpoint *, cplat_error *));
     MOCK_METHOD(int, cplat_socket_get_pending_error, (cplat_socket, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_get_receive_buffer_size, (cplat_socket, size_t *, cplat_error *));
     MOCK_METHOD(int, cplat_socket_set_nonblocking, (cplat_socket, int, cplat_error *));
     MOCK_METHOD(int, cplat_socket_set_reuse_address, (cplat_socket, int, cplat_error *));
     MOCK_METHOD(int, cplat_socket_set_broadcast, (cplat_socket, int, cplat_error *));

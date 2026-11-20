@@ -525,6 +525,39 @@ int cplat_socket_get_pending_error(const cplat_socket sock, cplat_error *detail_
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
+int cplat_socket_get_receive_buffer_size(const cplat_socket sock, size_t *size_out, cplat_error *detail_out)
+{
+    int value = 0;
+    socklen_t value_len = (socklen_t)sizeof(value);
+
+    if ((sock == CPLAT_INVALID_SOCKET) || (size_out == NULL))
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+
+    /*
+     * Linux の SO_RCVBUF の取得値は、設定値の 2 倍 (管理情報の分を含む) になる。
+     * 本関数は、補正せずに取得値をそのまま返す。
+     * see: https://man7.org/linux/man-pages/man7/socket.7.html
+     */
+    if (getsockopt((int)sock, SOL_SOCKET, SO_RCVBUF, &value, &value_len) != 0)
+    {
+        return cplat_internal_error_report_socket_errno(detail_out, errno);
+    }
+
+    /* 負の値は大きさとして表せないため、異常として扱う。 */
+    if (value < 0)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EIO, CPLAT_ERR_UNKNOWN);
+    }
+
+    *size_out = (size_t)value;
+
+    return cplat_internal_error_report_success(detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int cplat_socket_set_nonblocking(const cplat_socket sock, const int enable, cplat_error *detail_out)
 {
     int flags;
