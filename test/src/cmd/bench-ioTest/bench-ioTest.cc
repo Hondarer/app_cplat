@@ -194,6 +194,8 @@ TEST_F(bench_ioTest, main_reports_huge_skip_when_earlier_size_fails)
     const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
 
     // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_fopen(_, Not(StrEq("wb")), _))
+        .Times(AnyNumber()); // [Pre-Assert確認_正常系] - 書き込み用以外の cplat_fopen() が任意の回数呼び出されること。(Linux の環境情報の収集は実体へ委譲する)
     EXPECT_CALL(mock_cplat_, cplat_fopen(_, StrEq("wb"), _))
         .Times(1)
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - 書き込み用ファイルのオープンが 1 回だけ呼び出され、1 [GiB] のファイルを作らないこと。
@@ -219,6 +221,8 @@ TEST_F(bench_ioTest, main_does_not_report_huge_skip_without_huge_option)
     const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
 
     // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_fopen(_, Not(StrEq("wb")), _))
+        .Times(AnyNumber()); // [Pre-Assert確認_正常系] - 書き込み用以外の cplat_fopen() が任意の回数呼び出されること。(Linux の環境情報の収集は実体へ委譲する)
     EXPECT_CALL(mock_cplat_, cplat_fopen(_, StrEq("wb"), _))
         .Times(1)
         .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - 書き込み用ファイルのオープンが 1 回だけ呼び出されること。
