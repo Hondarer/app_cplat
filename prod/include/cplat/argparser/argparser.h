@@ -113,7 +113,7 @@ extern "C"
 /**
  *  @brief  登録フラグ: そのオプション/位置引数を必須とします。
  */
-#define CPLAT_ARGPARSER_REQUIRED (0x00000001u)
+#define CPLAT_ARGPARSER_REQUIRED (0x00000001U)
 
     /**
      *  @brief  引数パーサーを操作する不透明ハンドルです。

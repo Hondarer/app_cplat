@@ -28,6 +28,9 @@
 
 static_assert(PLATFORM_PATH_UTF8_MAX >= PLATFORM_PATH_MAX, "PLATFORM_PATH_UTF8_MAX must be at least PLATFORM_PATH_MAX");
 
+/* 親ディレクトリを示す ".." セグメントのバイト数 [byte]。 */
+#define PATH_PARENT_SEGMENT_LEN (2U)
+
 /*
  * パス文字列を出力バッファーへコピーする。
  * 成功時は CPLAT_OK を返し、バッファーに収まらない場合は ENAMETOOLONG に対応する結果コードを返す。
@@ -99,7 +102,7 @@ static int normalize_absolute_posix_path(char *path)
     size_t *restore_points;
     size_t restore_count = 0u;
 
-    restore_points = (size_t *)cplat_calloc(PLATFORM_PATH_MAX, sizeof(*restore_points));
+    restore_points = (size_t *)cplat_calloc((size_t)PLATFORM_PATH_MAX, sizeof(*restore_points));
     if (restore_points == NULL)
     {
         return CPLAT_ERR_OUT_OF_MEMORY;
@@ -137,7 +140,7 @@ static int normalize_absolute_posix_path(char *path)
             continue;
         }
 
-        if (seg_len == 2u && path[seg_start] == '.' && path[seg_start + 1u] == '.')
+        if (seg_len == PATH_PARENT_SEGMENT_LEN && path[seg_start] == '.' && path[seg_start + 1u] == '.')
         {
             if (restore_count > 0u)
             {

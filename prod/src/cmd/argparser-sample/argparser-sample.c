@@ -21,7 +21,7 @@
 #include <stdlib.h>
 
 /* 複数値オプション (--include) の最大出現数 */
-#define ARGPARSER_SAMPLE_INCLUDE_MAX (4)
+#define ARGPARSER_SAMPLE_INCLUDE_MAX 4U
 
 /* 解析結果の格納先 */
 typedef struct argparser_sample_options

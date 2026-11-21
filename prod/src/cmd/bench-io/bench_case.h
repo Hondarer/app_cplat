@@ -17,6 +17,7 @@
 #ifndef BENCH_CASE_PRIVATE_H
 #define BENCH_CASE_PRIVATE_H
 
+#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -24,10 +25,10 @@
 #include "bench_timer.h"
 
 /** @brief 1 レコードのサイズ [byte]。 */
-#define BENCH_RECORD_SIZE 64
+#define BENCH_RECORD_SIZE 64U
 
 /** @brief ブロック単位アクセスで 1 回に扱うレコード数 (64 KB 相当)。 */
-#define BENCH_BLOCK_RECORDS 1024
+#define BENCH_BLOCK_RECORDS 1024U
 
 /**
  *  @brief  固定レコード長バイナリ ファイルの 1 レコードです。
@@ -42,6 +43,8 @@ typedef struct bench_record
     int32_t value_b; /**< 集計対象の値 2。 */
     char name[40];   /**< 固定長の名前。 */
 } bench_record;
+
+static_assert(sizeof(bench_record) == BENCH_RECORD_SIZE, "bench_record は BENCH_RECORD_SIZE [byte] であること");
 
 /** @brief 測定対象の API 形態です。 */
 typedef enum
@@ -160,8 +163,8 @@ const char *bench_api_name(bench_api api, int durable);
  */
 const char *bench_pattern_name(bench_pattern pattern);
 
-/** @brief 環境情報の文字列長の上限です。 */
-#define BENCH_ENV_TEXT_SIZE 128
+/** @brief 環境情報の文字列を格納する配列の大きさ [byte] (終端 NUL を含む) です。 */
+#define BENCH_ENV_TEXT_SIZE 128U
 
 /**
  *  @brief  測定を実施した環境の情報です。

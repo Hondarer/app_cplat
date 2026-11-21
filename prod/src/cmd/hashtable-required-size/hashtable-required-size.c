@@ -25,6 +25,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/** 構成検査を通す最小の有限 lifetime 値です。 */
+#define HASHTABLE_REQUIRED_SIZE_LIFETIME 2U
+
 typedef struct hashtable_required_size_options
 {
     int capacity;
@@ -176,7 +179,7 @@ int main(int argc, char **argv)
     }
 
     /* lifetime は削除済みエントリの寿命値であり管理領域・データ領域のサイズ計算には使われないため、構成検査を通す最小の有効値 (2) を設定する。 */
-    config.lifetime = 2;
+    config.lifetime = HASHTABLE_REQUIRED_SIZE_LIFETIME;
 
     /* 管理領域とデータ領域の必要バイト数を計算する。 */
     ret = cplat_hashtable_required_size(&config, &mgmt_size, &data_size);

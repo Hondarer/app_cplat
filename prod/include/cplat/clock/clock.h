@@ -51,6 +51,7 @@
 #ifndef CLOCK_H
 #define CLOCK_H
 
+#include <assert.h>
 #include <cplat/base/platform.h>
 #include <cplat/base/result.h>
 #include <cplat/clock/timespec.h>
@@ -243,7 +244,10 @@ extern "C"
      *  書式は `YYYY-MM-DDTHH:MM:SS.sss+09:00` です。\n
      *  値は null 終端を含まない文字数です。
      */
-#define CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN 29
+#define CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN 29U
+
+    static_assert((sizeof("YYYY-MM-DDTHH:MM:SS.sss+09:00") - 1U) == CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN,
+                  "cplat: local ISO8601 len mismatch");
 
     /**
      *  @brief          cplat_clock_format_realtime_iso8601_utc() が返す時刻文字列の長さです。
@@ -251,7 +255,10 @@ extern "C"
      *  書式は `YYYY-MM-DDTHH:MM:SS.sssZ` です。\n
      *  値は null 終端を含まない文字数です。
      */
-#define CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN 24
+#define CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN 24U
+
+    static_assert((sizeof("YYYY-MM-DDTHH:MM:SS.sssZ") - 1U) == CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN,
+                  "cplat: UTC ISO8601 len mismatch");
 
     /**
      *  @brief          UTC 基準の実時刻をローカル時刻の ISO8601 文字列へ整形します。

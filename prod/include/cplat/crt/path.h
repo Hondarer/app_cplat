@@ -59,7 +59,7 @@
 
 #ifdef DOXYGEN
     /**
-     *  @brief          OS 固有のパス最大長です (終端 NUL を含む)。
+     *  @brief          OS 固有のパス最大長 (配列の要素数、終端 NUL を含む) です。char 配列では [byte]、wchar_t 配列では wchar_t の要素数を表します。
      *                  Linux では PATH_MAX [byte]、Windows では MAX_PATH (UTF-16 の文字数) です。
      *                  UTF-8 のパスを受け取るバッファーの大きさには @ref PLATFORM_PATH_UTF8_MAX を使用してください。
      */

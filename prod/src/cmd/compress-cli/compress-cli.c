@@ -29,6 +29,8 @@
 /* 圧縮 API の処理上限に合わせ、展開後長さの上限は 4 [GiB] - 1 [byte] とする。 */
 #define COMPRESS_CLI_MAX_UNCOMPRESSED_SIZE ((size_t)CPLAT_COMPRESS_MAX_UNCOMPRESSED_SIZE)
 
+static_assert(CPLAT_COMPRESS_MAX_UNCOMPRESSED_SIZE <= SIZE_MAX, "展開後長さの上限が size_t に収まること");
+
 /* エラー メッセージの格納に使用するバッファーのバイト数。 */
 #define COMPRESS_CLI_ERROR_MESSAGE_SIZE 256
 

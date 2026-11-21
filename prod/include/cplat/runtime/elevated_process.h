@@ -31,7 +31,7 @@
  */
 
 #define CPLAT_ELEVATED_PROCESS_RESULT_MESSAGE_SIZE \
-    4096 /**< 昇格プロセスの結果メッセージを受け渡すバッファーのバイト数 (終端 NUL を含む)。 */
+    4096U /**< 昇格プロセスの結果メッセージを受け渡すバッファーのバイト数 (終端 NUL を含む)。 */
 
 #ifdef __cplusplus
 extern "C"

@@ -21,15 +21,38 @@
 #include <cplat/crt/utf8.h>
 #include <cplat/runtime/shutdown.h>
 #include <cplat/sync/sync.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 /* 登録配列の初期容量 */
-#define ARGPARSER_INITIAL_CAPACITY (8)
+#define ARGPARSER_INITIAL_CAPACITY (8U)
+
+static_assert(ARGPARSER_INITIAL_CAPACITY > 0U, "cplat: initial capacity must be > 0");
+
+/* 登録配列とエラー配列の拡張倍率。制約: 2 以上とすること。変更時は再確保の増加率だけが変わる。 */
+#define ARGPARSER_CAPACITY_GROWTH_FACTOR (2U)
+
+static_assert(ARGPARSER_CAPACITY_GROWTH_FACTOR >= 2U, "cplat: growth factor must be at least 2");
 
 /* usage で説明文の表示を開始する列 (行頭から) */
-#define ARGPARSER_USAGE_DESC_COLUMN (28)
+#define ARGPARSER_USAGE_DESC_COLUMN (28U)
+
+/* usage で短いオプション名 ("-x, ") が占める表示幅 [文字]。 */
+#define ARGPARSER_USAGE_SHORT_NAME_WIDTH (4U)
+
+/* 短いオプション名 ("-x") の長さ [byte]。 */
+#define ARGPARSER_SHORT_NAME_LENGTH (2U)
+
+/* 長いオプション名の接頭辞。 */
+static const char s_long_option_prefix[] = "--";
+
+/* 長いオプション名の接頭辞の長さ [byte] (終端 NUL を除く)。 */
+#define ARGPARSER_LONG_PREFIX_LENGTH (sizeof(s_long_option_prefix) - 1U)
+
+/* 長いオプション名の最小長 [byte] (接頭辞 + 1 文字以上)。 */
+#define ARGPARSER_LONG_NAME_MIN_LENGTH (sizeof(s_long_option_prefix))
 
 /*
  * print_error_messages と print_register_error_messages が、エラー メッセージを組み立てるスタック上の
@@ -37,7 +60,7 @@
  * 超過分は切り詰めて出力する。解析エラーの出力は、切り詰めた場合に CPLAT_ERR_BUFFER_TOO_SMALL を返す。
  * 登録エラーの出力は、1 件でも失敗した場合に、最初に起きた失敗の結果コードを返す。
  */
-#define ARGPARSER_ERROR_MESSAGE_BYTES 512U
+#define ARGPARSER_ERROR_MESSAGE_BYTES (512U)
 
 /* value_name 未指定時の既定表示名 */
 static const char s_default_value_name[] = "VALUE";
@@ -149,7 +172,7 @@ static int argparser_is_valid_short_name(const char *name)
         return 0;
     }
 
-    if (strlen(name) != 2)
+    if (strlen(name) != ARGPARSER_SHORT_NAME_LENGTH)
     {
         return 0;
     }
@@ -179,12 +202,12 @@ static int argparser_is_valid_long_name(const char *name)
         return 0;
     }
 
-    if (strlen(name) < 3)
+    if (strlen(name) < ARGPARSER_LONG_NAME_MIN_LENGTH)
     {
         return 0;
     }
 
-    if (strncmp(name, "--", 2) != 0)
+    if (strncmp(name, s_long_option_prefix, ARGPARSER_LONG_PREFIX_LENGTH) != 0)
     {
         return 0;
     }
@@ -328,7 +351,7 @@ static void argparser_record_register_result(cplat_argparser *parser, int result
     /* 配列が満杯の場合は容量を 2 倍に拡張する。メモリ確保失敗時は記録を諦めて復帰する。 */
     if (parser->register_error_count == parser->register_error_capacity)
     {
-        size_t new_capacity = parser->register_error_capacity * 2;
+        size_t new_capacity = parser->register_error_capacity * ARGPARSER_CAPACITY_GROWTH_FACTOR;
         if (new_capacity == 0)
         {
             new_capacity = ARGPARSER_INITIAL_CAPACITY;
@@ -389,7 +412,7 @@ static int argparser_prepare_spec_slot(cplat_argparser *parser, const char *shor
     /* 配列が満杯の場合は容量を 2 倍に拡張する。 */
     if (parser->spec_count == parser->spec_capacity)
     {
-        size_t new_capacity = parser->spec_capacity * 2;
+        size_t new_capacity = parser->spec_capacity * ARGPARSER_CAPACITY_GROWTH_FACTOR;
         if (new_capacity == 0)
         {
             new_capacity = ARGPARSER_INITIAL_CAPACITY;
@@ -1062,7 +1085,7 @@ static void argparser_usage_build(const cplat_argparser *parser, argparser_usage
             else
             {
                 /* 短いオプション名の桁 ("-x, ") を空白で揃える。 */
-                argparser_usage_write_spaces(writer, 4);
+                argparser_usage_write_spaces(writer, ARGPARSER_USAGE_SHORT_NAME_WIDTH);
                 argparser_usage_write(writer, spec->long_name);
             }
 
@@ -1725,7 +1748,8 @@ int cplat_argparser_handle_parse(cplat_argparser *parser)
             return CPLAT_ERR_INVALID_ARGUMENT;
         }
 
-        if (strncmp(token, "--", 2) == 0 && token[2] != '\0')
+        if (strncmp(token, s_long_option_prefix, ARGPARSER_LONG_PREFIX_LENGTH) == 0 &&
+            token[ARGPARSER_LONG_PREFIX_LENGTH] != '\0')
         {
             /* 長いオプション ("--xxx" または "--xxx=value") を解析する。 */
             const char *equal = strchr(token, '=');
@@ -1806,7 +1830,7 @@ int cplat_argparser_handle_parse(cplat_argparser *parser)
 
             argparser_spec *spec = NULL;
 
-            if (name_len == 2)
+            if (name_len == ARGPARSER_SHORT_NAME_LENGTH)
             {
                 spec = argparser_find_short(parser, token, name_len);
             }

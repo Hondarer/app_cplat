@@ -35,11 +35,12 @@
 /** ディスクリプターのヘッダー バイト数。 */
 #define CPLAT_INTERPROCESS_SYNC_DESCRIPTOR_HEADER_SIZE 20U
 
-/** 種別: プロセス間ロック。 */
-#define CPLAT_INTERPROCESS_SYNC_KIND_LOCK 1U
-
-/** 種別: プロセス間リーダー ライター ロック。 */
-#define CPLAT_INTERPROCESS_SYNC_KIND_RWLOCK 2U
+/** プロセス間同期オブジェクトの種別です。 */
+typedef enum cplat_internal_interprocess_sync_kind
+{
+    CPLAT_INTERPROCESS_SYNC_KIND_LOCK = 1,  /**< プロセス間ロック。 */
+    CPLAT_INTERPROCESS_SYNC_KIND_RWLOCK = 2 /**< プロセス間リーダー ライター ロック。 */
+} cplat_internal_interprocess_sync_kind;
 
 #ifdef __cplusplus
 extern "C"

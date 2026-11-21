@@ -191,6 +191,7 @@
 
 #include <cplat/hashtable/hashtable.h>
 
+#include <assert.h>
 #include <cplat/clock/timespec.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -207,27 +208,31 @@ enum
     REC_DELETED = 2 /**< 削除直後の加齢開始値です。 */
 };
 
-enum
-{
-    ENTRY_TIMESTAMP_PAD = 7,      /**< status の直後から timespec を 8 境界へ置く詰め物です。 */
-    ENTRY_KEY_LENGTH_OFFSET = 12, /**< エントリ先頭からバイナリ キーの有効長までのオフセットです。 */
-    ENTRY_BINARY_KEY_OFFSET = 16  /**< SCOPE_TABLE でのバイナリ キーのオフセットです。 */
-};
+/** status の直後から timespec を 8 境界へ置く詰め物です。 */
+#define ENTRY_TIMESTAMP_PAD 7U
 
-_Static_assert((sizeof(uint64_t) + sizeof(unsigned char) <= (size_t)ENTRY_KEY_LENGTH_OFFSET) &&
-                   ((size_t)ENTRY_KEY_LENGTH_OFFSET + sizeof(uint32_t) <=
-                    sizeof(uint64_t) + sizeof(unsigned char) + (size_t)ENTRY_TIMESTAMP_PAD) &&
-                   (ENTRY_KEY_LENGTH_OFFSET % _Alignof(uint32_t) == 0),
-               "cplat: binary key length must fit in the padding after status");
+/** エントリ先頭からバイナリ キーの有効長までのオフセットです。 */
+#define ENTRY_KEY_LENGTH_OFFSET 12U
 
-_Static_assert((size_t)ENTRY_BINARY_KEY_OFFSET == (size_t)ENTRY_KEY_LENGTH_OFFSET + sizeof(uint32_t),
-               "cplat: binary key must follow its length");
+/** SCOPE_TABLE でのバイナリ キーのオフセットです。 */
+#define ENTRY_BINARY_KEY_OFFSET (ENTRY_KEY_LENGTH_OFFSET + sizeof(uint32_t))
 
-_Static_assert(((sizeof(uint64_t) + sizeof(unsigned char) + 7u) % _Alignof(cplat_timespec)) == 0,
-               "cplat: entry time offset must satisfy alignof(cplat_timespec)");
+static_assert((sizeof(uint64_t) + sizeof(unsigned char) <= (size_t)ENTRY_KEY_LENGTH_OFFSET) &&
+                  ((size_t)ENTRY_KEY_LENGTH_OFFSET + sizeof(uint32_t) <=
+                   sizeof(uint64_t) + sizeof(unsigned char) + (size_t)ENTRY_TIMESTAMP_PAD) &&
+                  (ENTRY_KEY_LENGTH_OFFSET % _Alignof(uint32_t) == 0),
+              "cplat: binary key length must fit in the padding after status");
 
-_Static_assert(((sizeof(uint64_t) + sizeof(unsigned char) + 7u + sizeof(cplat_timespec)) % _Alignof(uint64_t)) == 0,
-               "cplat: entry generation offset must satisfy alignof(uint64_t)");
+static_assert((size_t)ENTRY_BINARY_KEY_OFFSET == (size_t)ENTRY_KEY_LENGTH_OFFSET + sizeof(uint32_t),
+              "cplat: binary key must follow its length");
+
+static_assert(((sizeof(uint64_t) + sizeof(unsigned char) + (size_t)ENTRY_TIMESTAMP_PAD) % _Alignof(cplat_timespec)) ==
+                  0,
+              "cplat: entry time offset must satisfy alignof(cplat_timespec)");
+
+static_assert(((sizeof(uint64_t) + sizeof(unsigned char) + (size_t)ENTRY_TIMESTAMP_PAD + sizeof(cplat_timespec)) %
+               _Alignof(uint64_t)) == 0,
+              "cplat: entry generation offset must satisfy alignof(uint64_t)");
 
 #define CPLAT_HASHTABLE_MAGIC   0x48544142u /**< 管理領域先頭の識別子です。 */
 #define CPLAT_HASHTABLE_VERSION 5u          /**< 配置の版番号です。 */
@@ -276,8 +281,8 @@ struct hashtable_persist_header
 };
 
 /* ヘッダー サイズは hashtable_mgmt_layout の整列前提 (uint64_t 境界) を満たす。 */
-_Static_assert(sizeof(struct hashtable_persist_header) % _Alignof(uint64_t) == 0,
-               "cplat: hashtable_persist_header size must be a multiple of _Alignof(uint64_t)");
+static_assert(sizeof(struct hashtable_persist_header) % _Alignof(uint64_t) == 0,
+              "cplat: hashtable_persist_header size must be a multiple of _Alignof(uint64_t)");
 
 /**
  *  @brief          ハッシュ テーブルの内部管理データです。

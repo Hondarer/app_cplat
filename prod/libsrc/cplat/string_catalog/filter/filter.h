@@ -30,6 +30,7 @@
 #ifndef FILTER_PRIVATE_H
 #define FILTER_PRIVATE_H
 
+#include <assert.h>
 #include <cplat/regex/regex.h>
 #include <cplat/string_catalog/filter.h>
 #include <cplat/sync/atomic.h>
@@ -56,6 +57,28 @@
 /** 定数領域のアラインメントです。 */
 #define STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT 8U
 
+static_assert(sizeof(uint64_t) == STRING_CATALOG_FILTER_CONSTANT_NUMBER_SIZE &&
+                  sizeof(double) == STRING_CATALOG_FILTER_CONSTANT_NUMBER_SIZE,
+              "数値定数の大きさが uint64_t と double に一致すること");
+static_assert((STRING_CATALOG_FILTER_CONSTANT_HEADER_SIZE % STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT) == 0U &&
+                  (STRING_CATALOG_FILTER_CONSTANT_NUMBER_SIZE % STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT) == 0U,
+              "定数の見出しと数値がアラインメントの倍数であること");
+
+/** FNV-1a 64 bit の初期値です。 */
+#define STRING_CATALOG_FILTER_FNV1A_64_OFFSET_BASIS 14695981039346656037ULL
+
+/** FNV-1a 64 bit の乗数です。 */
+#define STRING_CATALOG_FILTER_FNV1A_64_PRIME 1099511628211ULL
+
+/** between 演算子のオペランド数です。 */
+#define STRING_CATALOG_FILTER_BETWEEN_OPERAND_COUNT 2U
+
+/** 二項演算子のオペランド数です。 */
+#define STRING_CATALOG_FILTER_BINARY_OPERAND_COUNT 2U
+
+/** 行幅 1 当たりの定数領域の大きさ [byte] です。 */
+#define STRING_CATALOG_FILTER_CONSTANT_BYTES_PER_WIDTH CPLAT_STRING_CATALOG_FILTER_CONSTANT_AREA_SCALE
+
 /** 定数の flags: 負の整数です。 */
 #define STRING_CATALOG_FILTER_CONSTANT_FLAG_NEGATIVE 0x01U
 
@@ -67,6 +90,15 @@
 
 /** ソース領域の形式版です。 */
 #define STRING_CATALOG_FILTER_SOURCE_FORMAT_VERSION 1U
+
+/** 演算子の優先順位です。値が大きいほど強く結合します。 */
+enum string_catalog_filter_precedence
+{
+    STRING_CATALOG_FILTER_PRECEDENCE_OR = 1,
+    STRING_CATALOG_FILTER_PRECEDENCE_AND = 2,
+    STRING_CATALOG_FILTER_PRECEDENCE_NOT = 3,
+    STRING_CATALOG_FILTER_PRECEDENCE_PREDICATE = 4
+};
 
 #ifdef __cplusplus
 extern "C"

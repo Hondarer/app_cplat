@@ -32,15 +32,19 @@
 #ifndef SHARED_LIB_LIFECYCLE_H
 #define SHARED_LIB_LIFECYCLE_H
 
+#include <assert.h>
+#include <string.h>
+
+#include <cplat/base/char_code.h>
 #include <cplat/base/platform.h>
 #include <cplat/crt/stdio.h>
 #include <cplat/crt/stdlib.h>
 
 #if defined(PLATFORM_LINUX)
     #include <stdio.h>
-    #include <string.h>
     #include <sys/socket.h>
     #include <sys/un.h>
+    #include <syslog.h>
     #include <unistd.h>
     #include <cplat/crt/string.h>
     #include <cplat/test/syslog_test.h>
@@ -78,6 +82,12 @@
     #define CPLAT_DLLMAIN_INFO_MSG(msg)
 #else /* !DOXYGEN */
     #if defined(PLATFORM_LINUX)
+        /* DllMain / destructor 向け syslog 送信バッファーの容量 [byte] (終端改行を含む)。制約: 1 以上とすること。変更時は切り詰め長だけが変わる。 */
+        #define CPLAT_DLLMAIN_SYSLOG_BUF_SIZE 512U
+
+        /* RFC 3164 の PRI 値 (LOG_USER | LOG_INFO)。 */
+        #define CPLAT_DLLMAIN_SYSLOG_PRI      (LOG_USER | LOG_INFO)
+
 /**
  *  @brief  /dev/log へ RFC 3164 形式の INFO メッセージを非ブロッキングで送信します。
  *
@@ -87,7 +97,7 @@
  */
 static void dllmain_syslog_send(const char *msg)
 {
-    char buf[512];
+    char buf[CPLAT_DLLMAIN_SYSLOG_BUF_SIZE];
     struct sockaddr_un sa;
     int fd;
     int n;
@@ -98,8 +108,8 @@ static void dllmain_syslog_send(const char *msg)
         return;
     }
 
-    /* priority 14 は facility LOG_USER(1<<3) | severity LOG_INFO(6) である。 */
-    n = snprintf(buf, sizeof(buf), "<14>cplat[%d]: %s", (int)getpid(), msg);
+    /* priority は facility LOG_USER | severity LOG_INFO である。 */
+    n = snprintf(buf, sizeof(buf), "<%d>cplat[%d]: %s", CPLAT_DLLMAIN_SYSLOG_PRI, (int)getpid(), msg);
     if (n <= 0)
     {
         return;
@@ -137,14 +147,35 @@ static void dllmain_syslog_send(const char *msg)
     (void)sendto(fd, buf, (size_t)n, MSG_DONTWAIT, (struct sockaddr *)&sa, (socklen_t)sizeof(sa));
     (void)close(fd); /* 送信後の後始末であり、失敗を伝える先がないため、戻り値は明示的に破棄する */
 }
-        #define CPLAT_DLLMAIN_INFO_MSG(msg) dllmain_syslog_send(msg)
+        #define CPLAT_DLLMAIN_INFO_MSG(msg)   dllmain_syslog_send(msg)
     #elif defined(PLATFORM_WINDOWS)
+        /*
+         * OutputDebugStringW へ渡す診断メッセージ バッファーの要素数 [wchar_t 要素数] (終端 NUL を含む)。
+         * 制約: 接尾辞長 + 2 以上とすること。変更時は出力の切り詰め上限だけが変わる。
+         */
+        #define CPLAT_DLLMAIN_DEBUG_BUF_LEN       1024U
+
+        /* バッファー超過時に末尾へ付与する省略記号。 */
+        #define CPLAT_DLLMAIN_TRUNCATE_SUFFIX     L" ..."
+
+        /* 省略記号の wchar_t 要素数 (終端 NUL を除く)。 */
+        #define CPLAT_DLLMAIN_TRUNCATE_SUFFIX_LEN ((sizeof(CPLAT_DLLMAIN_TRUNCATE_SUFFIX) / sizeof(wchar_t)) - 1U)
+
+        /* 切り詰め時に本文として変換する最大 wchar_t 要素数。 */
+        #define CPLAT_DLLMAIN_DEBUG_TRUNCATE_MAX  (CPLAT_DLLMAIN_DEBUG_BUF_LEN - CPLAT_DLLMAIN_TRUNCATE_SUFFIX_LEN - 1U)
+
+        /* 補助平面のコード ポイント 1 文字が占める UTF-16 の wchar_t 要素数。 */
+        #define CPLAT_DLLMAIN_SURROGATE_WCHAR_COUNT 2
+
+static_assert(CPLAT_DLLMAIN_DEBUG_BUF_LEN > (CPLAT_DLLMAIN_TRUNCATE_SUFFIX_LEN + 1U),
+              "cplat: debug buffer length must exceed truncate suffix");
+
 /*
  * UTF-8 の診断メッセージをワイド文字列へ変換し、OutputDebugStringW() で出力する。
  */
 static void dllmain_output_debug_msg(const char *msg)
 {
-    wchar_t buf[1024];
+    wchar_t buf[CPLAT_DLLMAIN_DEBUG_BUF_LEN];
     int len;
     int enabled = 0;
 
@@ -159,10 +190,10 @@ static void dllmain_output_debug_msg(const char *msg)
         return;
     }
 
-    if (len <= 1024)
+    if (len <= (int)CPLAT_DLLMAIN_DEBUG_BUF_LEN)
     {
         /* バッファーに収まる場合はそのまま変換する。変換に失敗した場合は、未初期化の buf を出力しない。 */
-        if (MultiByteToWideChar(CP_UTF8, 0, msg, -1, buf, 1024) <= 0)
+        if (MultiByteToWideChar(CP_UTF8, 0, msg, -1, buf, (int)CPLAT_DLLMAIN_DEBUG_BUF_LEN) <= 0)
         {
             return;
         }
@@ -182,35 +213,35 @@ static void dllmain_output_debug_msg(const char *msg)
             unsigned char c = (unsigned char)msg[byte_pos];
             int cb;
 
-            if (c < 0x80u)
+            if (c < CPLAT_ASCII_BOUND_U8)
             {
-                cb = 1;
+                cb = (int)CPLAT_UTF8_BYTES_1;
             }
-            else if (c < 0xE0u)
+            else if (c < CPLAT_UTF8_LEAD3_MIN)
             {
-                cb = 2;
+                cb = (int)CPLAT_UTF8_BYTES_2;
             }
-            else if (c < 0xF0u)
+            else if (c < CPLAT_UTF8_LEAD4_MIN)
             {
-                cb = 3;
+                cb = (int)CPLAT_UTF8_BYTES_3;
             }
             else
             {
-                cb = 4;
+                cb = (int)CPLAT_UTF8_BYTES_4;
             }
 
             int cw; /* U+10000 以上はサロゲート ペアで wchar_t 2 個 */
 
-            if (cb == 4)
+            if (cb == (int)CPLAT_UTF8_BYTES_4)
             {
-                cw = 2;
+                cw = CPLAT_DLLMAIN_SURROGATE_WCHAR_COUNT;
             }
             else
             {
                 cw = 1;
             }
 
-            if ((wc_count + cw) > 1019)
+            if ((wc_count + cw) > (int)CPLAT_DLLMAIN_DEBUG_TRUNCATE_MAX)
             {
                 break;
             }
@@ -219,22 +250,18 @@ static void dllmain_output_debug_msg(const char *msg)
             byte_pos += cb;
         }
 
-        written = MultiByteToWideChar(CP_UTF8, 0, msg, byte_pos, buf, 1019);
+        written = MultiByteToWideChar(CP_UTF8, 0, msg, byte_pos, buf, (int)CPLAT_DLLMAIN_DEBUG_TRUNCATE_MAX);
         if (written <= 0)
         {
             return;
         }
 
-        buf[written] = L' ';
-        buf[written + 1] = L'.';
-        buf[written + 2] = L'.';
-        buf[written + 3] = L'.';
-        buf[written + 4] = L'\0';
+        memcpy(&buf[written], CPLAT_DLLMAIN_TRUNCATE_SUFFIX, sizeof(CPLAT_DLLMAIN_TRUNCATE_SUFFIX));
     }
 
     OutputDebugStringW(buf);
 }
-        #define CPLAT_DLLMAIN_INFO_MSG(msg) dllmain_output_debug_msg(msg)
+        #define CPLAT_DLLMAIN_INFO_MSG(msg)         dllmain_output_debug_msg(msg)
     #endif /* PLATFORM_ */
 #endif     /* DOXYGEN */
 

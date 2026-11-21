@@ -17,7 +17,7 @@
 
 uint16_t cplat_hton16(const uint16_t value)
 {
-    uint8_t bytes[2];
+    uint8_t bytes[sizeof(value)];
     uint16_t result;
 
     bytes[0] = (uint8_t)(((uint32_t)value >> 8U) & UINT32_C(0xFF));
@@ -31,7 +31,7 @@ uint16_t cplat_hton16(const uint16_t value)
 
 uint16_t cplat_ntoh16(const uint16_t value)
 {
-    uint8_t bytes[2];
+    uint8_t bytes[sizeof(value)];
 
     memcpy(bytes, &value, sizeof(value));
 
@@ -42,7 +42,7 @@ uint16_t cplat_ntoh16(const uint16_t value)
 
 uint32_t cplat_hton32(const uint32_t value)
 {
-    uint8_t bytes[4];
+    uint8_t bytes[sizeof(value)];
     uint32_t result;
 
     bytes[0] = (uint8_t)((value >> 24) & 0xFFU);
@@ -58,7 +58,7 @@ uint32_t cplat_hton32(const uint32_t value)
 
 uint32_t cplat_ntoh32(const uint32_t value)
 {
-    uint8_t bytes[4];
+    uint8_t bytes[sizeof(value)];
 
     memcpy(bytes, &value, sizeof(value));
 
@@ -69,7 +69,7 @@ uint32_t cplat_ntoh32(const uint32_t value)
 
 uint64_t cplat_hton64(const uint64_t value)
 {
-    uint8_t bytes[8];
+    uint8_t bytes[sizeof(value)];
     uint64_t result;
 
     bytes[0] = (uint8_t)((value >> 56) & 0xFFU);
@@ -89,7 +89,7 @@ uint64_t cplat_hton64(const uint64_t value)
 
 uint64_t cplat_ntoh64(const uint64_t value)
 {
-    uint8_t bytes[8];
+    uint8_t bytes[sizeof(value)];
 
     memcpy(bytes, &value, sizeof(value));
 

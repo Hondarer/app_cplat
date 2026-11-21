@@ -23,9 +23,19 @@
 #if defined(PLATFORM_LINUX)
     #include <sys/stat.h>
     #include <unistd.h> /* rmdir */
+
+    /* ディレクトリ作成時の既定パーミッション。仕様は prod/include/cplat/crt/sys/stat.h (cplat_mkdir) および
+     * docs/api-cheatsheet.md を参照。 */
+    #define CRT_MKDIR_MODE (0755)
 #elif defined(PLATFORM_WINDOWS)
     #include <cplat/clock/filetime_conv.h>
     #include <direct.h>
+
+    /* Windows ドライブ文字ルート先頭 ("C:\\") の長さ [byte] */
+    #define DRIVE_ROOT_PREFIX_LEN (3U)
+
+    /* Windows UNC パス先頭 ("\\\\") の長さ [byte] */
+    #define UNC_PREFIX_LEN        (2U)
 #endif /* PLATFORM_ */
 
 /**
@@ -119,12 +129,12 @@ static size_t path_root_prefix_len(const char *path)
 #if defined(PLATFORM_WINDOWS)
     if (is_ascii_alpha(path[0]) && path[1] == ':' && path[2] == PLATFORM_PATH_SEP_CHR)
     {
-        return 3u;
+        return DRIVE_ROOT_PREFIX_LEN;
     }
 
     if (path[0] == PLATFORM_PATH_SEP_CHR && path[1] == PLATFORM_PATH_SEP_CHR)
     {
-        size_t i = 2u;
+        size_t i = UNC_PREFIX_LEN;
 
         /* サーバー名部分を走査する。 */
         while (path[i] != '\0' && path[i] != PLATFORM_PATH_SEP_CHR)
@@ -315,7 +325,7 @@ int cplat_mkdir(const char *path, cplat_error *detail_out)
 
     errno = 0;
 #if defined(PLATFORM_LINUX)
-    result = mkdir(path, 0755);
+    result = mkdir(path, CRT_MKDIR_MODE);
 #elif defined(PLATFORM_WINDOWS)
     {
         wchar_t wpath[PLATFORM_PATH_MAX];

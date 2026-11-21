@@ -20,13 +20,17 @@
 
 #if defined(PLATFORM_LINUX)
 
-    #include <string.h>
+    #include <assert.h>
     #include <limits.h>
+    #include <string.h>
 
     #include <openssl/evp.h>
+    #include <openssl/sha.h>
 
     #include <cplat/base/result.h>
     #include <cplat/crypto/crypto.h>
+
+static_assert(CPLAT_CRYPTO_KEY_SIZE == SHA256_DIGEST_LENGTH, "cplat: key size must match SHA-256");
 
 /* Doxygen コメントは、ヘッダーに記載 */
 

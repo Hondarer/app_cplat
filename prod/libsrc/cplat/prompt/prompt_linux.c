@@ -31,6 +31,9 @@ static struct sigaction s_prev_sigwinch;
 /* SIGWINCH ハンドラーの登録状態フラグ。 */
 static int s_sigwinch_installed = 0;
 
+    /* poll() で監視するファイル記述子数 (標準入力 + 中止通知パイプ) */
+    #define PROMPT_LINUX_POLL_FD_COUNT 2U
+
 /*
  * SIGWINCH シグナルを受信した際に、端末サイズ変更の保留フラグを立てる。
  */
@@ -285,7 +288,7 @@ static int prompt_linux_read_byte(prompt_platform_context *context, const int ti
 {
     for (;;)
     {
-        struct pollfd fds[2];
+        struct pollfd fds[PROMPT_LINUX_POLL_FD_COUNT];
         nfds_t nfds = 1U;
         int ready;
         unsigned char c;
@@ -312,7 +315,7 @@ static int prompt_linux_read_byte(prompt_platform_context *context, const int ti
             fds[1].fd = context->cancel_pipe[0];
             fds[1].events = POLLIN;
             fds[1].revents = 0;
-            nfds = 2U;
+            nfds = PROMPT_LINUX_POLL_FD_COUNT;
         }
 
         ready = poll(fds, nfds, timeout_ms);
@@ -353,12 +356,12 @@ static int prompt_linux_read_byte(prompt_platform_context *context, const int ti
             return PROMPT_PLATFORM_TIMEOUT;
         }
 
-        if (nfds == 2U && (fds[1].revents & (POLLERR | POLLNVAL)) != 0)
+        if (nfds == PROMPT_LINUX_POLL_FD_COUNT && (fds[1].revents & (POLLERR | POLLNVAL)) != 0)
         {
             return PROMPT_PLATFORM_ERROR;
         }
 
-        if (nfds == 2U && (fds[1].revents & POLLIN) != 0)
+        if (nfds == PROMPT_LINUX_POLL_FD_COUNT && (fds[1].revents & POLLIN) != 0)
         {
             return PROMPT_PLATFORM_CANCELED;
         }

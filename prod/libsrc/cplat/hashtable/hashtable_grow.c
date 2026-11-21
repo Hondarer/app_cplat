@@ -17,8 +17,13 @@
 #include "hashtable.h"
 #include <cplat/clock/clock.h>
 
+#include <assert.h>
 #include <cplat/crt/stdlib.h>
 #include <string.h>
+
+/* ハッシュ テーブル拡張時の容量拡大倍率 */
+#define HASHTABLE_GROWTH_FACTOR (2U)
+static_assert(HASHTABLE_GROWTH_FACTOR >= 2U, "cplat: growth factor must expand capacity");
 
 /**
  *  @brief          設定のうち、伸長・縮小で変えてよい項目以外が一致するかを判定します。
@@ -246,13 +251,13 @@ static int hashtable_growth_target(size_t current, size_t minimum, size_t maximu
         return 1;
     }
 
-    if (current > (SIZE_MAX / 2u))
+    if (current > (SIZE_MAX / HASHTABLE_GROWTH_FACTOR))
     {
         doubled = SIZE_MAX;
     }
     else
     {
-        doubled = current * 2u;
+        doubled = current * HASHTABLE_GROWTH_FACTOR;
     }
 
     if (doubled < minimum)

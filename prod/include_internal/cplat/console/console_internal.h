@@ -74,7 +74,7 @@
  *  CPLAT_CONSOLE_ATTACH_MAX_ATTEMPTS と合わせて最悪待ち時間を決めます。
  *  通常は 1 回目か 2 回目で接続できるため、待ち時間は無視できます。
  */
-#define CPLAT_CONSOLE_ATTACH_RETRY_INTERVAL_MS 10
+#define CPLAT_CONSOLE_ATTACH_RETRY_INTERVAL_MS 10U
 
 #ifdef __cplusplus
 extern "C"

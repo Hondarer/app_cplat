@@ -11,32 +11,44 @@
  *******************************************************************************
  */
 
+#include <assert.h>
 #include <cplat/base/platform.h>
 #include <cplat/clock/timespec.h>
+#include <limits.h>
 #include <stddef.h>
 
-/* 変換定数 */
-#define MSEC_PER_SEC  (1000LL)
-#define NSEC_PER_SEC  (1000000000LL)
-#define NSEC_PER_MSEC (1000000LL)
+#include "clock_internal.h"
 
-_Static_assert(sizeof(cplat_timespec) == 16, "cplat: cplat_timespec must be 16 bytes");
+static_assert(sizeof(cplat_timespec) == 16, "cplat: cplat_timespec must be 16 bytes");
 
 #if defined(PLATFORM_LINUX)
 /* Linux ではネイティブ struct timespec とのバイナリ レイアウト互換を担保する。 */
-_Static_assert(sizeof(cplat_timespec) == sizeof(struct timespec),
-               "cplat: cplat_timespec must have the same size as struct timespec");
-_Static_assert(offsetof(cplat_timespec, tv_sec) == offsetof(struct timespec, tv_sec),
-               "cplat: cplat_timespec::tv_sec must be at the same offset as struct timespec::tv_sec");
-_Static_assert(offsetof(cplat_timespec, tv_nsec) == offsetof(struct timespec, tv_nsec),
-               "cplat: cplat_timespec::tv_nsec must be at the same offset as struct timespec::tv_nsec");
+static_assert(sizeof(cplat_timespec) == sizeof(struct timespec),
+              "cplat: cplat_timespec must have the same size as struct timespec");
+static_assert(offsetof(cplat_timespec, tv_sec) == offsetof(struct timespec, tv_sec),
+              "cplat: cplat_timespec::tv_sec must be at the same offset as struct timespec::tv_sec");
+static_assert(offsetof(cplat_timespec, tv_nsec) == offsetof(struct timespec, tv_nsec),
+              "cplat: cplat_timespec::tv_nsec must be at the same offset as struct timespec::tv_nsec");
 #endif /* PLATFORM_LINUX */
 
 /* 秒部とナノ秒から生じる繰り上げを、最大 5 項で合成する。 */
 #define SECONDS_TERM_COUNT 5U
 
-_Static_assert(sizeof(time_t) == sizeof(int64_t), "cplat: time_t must be 64-bit");
-_Static_assert((time_t)-1 < (time_t)0, "cplat: time_t must be signed");
+/* normalize で sum_seconds へ渡す項の個数 (tv_sec と繰り上げ)。 */
+#define NORMALIZE_TERM_COUNT (2U)
+
+/* combine_timespec で terms 配列に並べる各項のインデックス。 */
+#define TERM_A_SEC          (0U)
+#define TERM_B_SEC          (1U)
+#define TERM_A_NSEC_CARRY   (2U)
+#define TERM_B_NSEC_CARRY   (3U)
+#define TERM_NSEC_SUM_CARRY (4U)
+
+static_assert(SECONDS_TERM_COUNT <= (sizeof(unsigned int) * CHAR_BIT), "cplat: seconds term count exceeds mask width");
+static_assert(SECONDS_TERM_COUNT == 5U, "cplat: combine_timespec fills 5 terms");
+
+static_assert(sizeof(time_t) == sizeof(int64_t), "cplat: time_t must be 64-bit");
+static_assert((time_t)-1 < (time_t)0, "cplat: time_t must be signed");
 
 /* INT64_MIN の絶対値も符号なし型で表す。 */
 static uint64_t magnitude_of(const int64_t value)
@@ -116,12 +128,12 @@ static int sum_seconds(const int64_t *values, const unsigned int subtract_mask, 
 /* 負の剰余は 1 秒借りて、0 以上のナノ秒へ変換する。 */
 static void split_nanoseconds(const int64_t value, int64_t *carry_out, int64_t *nanoseconds_out)
 {
-    int64_t carry = value / NSEC_PER_SEC;
-    int64_t nanoseconds = value % NSEC_PER_SEC;
+    int64_t carry = value / CLOCK_NSEC_PER_SEC;
+    int64_t nanoseconds = value % CLOCK_NSEC_PER_SEC;
     if (nanoseconds < 0)
     {
         carry -= 1;
-        nanoseconds += NSEC_PER_SEC;
+        nanoseconds += CLOCK_NSEC_PER_SEC;
     }
     *carry_out = carry;
     *nanoseconds_out = nanoseconds;
@@ -134,7 +146,7 @@ int cplat_timespec_normalize(cplat_timespec *ts)
     int64_t carry;
     int64_t nanoseconds;
     int64_t seconds;
-    int64_t terms[2];
+    int64_t terms[NORMALIZE_TERM_COUNT];
     int ret;
     if (ts == NULL)
     {
@@ -143,7 +155,7 @@ int cplat_timespec_normalize(cplat_timespec *ts)
     split_nanoseconds(ts->tv_nsec, &carry, &nanoseconds);
     terms[0] = (int64_t)ts->tv_sec;
     terms[1] = carry;
-    ret = sum_seconds(terms, 0U, 2U, &seconds);
+    ret = sum_seconds(terms, 0U, sizeof(terms) / sizeof(terms[0]), &seconds);
     if (ret != CPLAT_OK)
     {
         return ret;
@@ -166,20 +178,20 @@ static int combine_timespec(const cplat_timespec *a, const cplat_timespec *b, co
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
-    terms[0] = (int64_t)a->tv_sec;
-    terms[1] = (int64_t)b->tv_sec;
-    terms[2] = a->tv_nsec / NSEC_PER_SEC;
-    terms[3] = b->tv_nsec / NSEC_PER_SEC;
+    terms[TERM_A_SEC] = (int64_t)a->tv_sec;
+    terms[TERM_B_SEC] = (int64_t)b->tv_sec;
+    terms[TERM_A_NSEC_CARRY] = a->tv_nsec / CLOCK_NSEC_PER_SEC;
+    terms[TERM_B_NSEC_CARRY] = b->tv_nsec / CLOCK_NSEC_PER_SEC;
     if (subtract != 0)
     {
-        nanoseconds = (a->tv_nsec % NSEC_PER_SEC) - (b->tv_nsec % NSEC_PER_SEC);
-        subtract_mask = (1U << 1U) | (1U << 3U);
+        nanoseconds = (a->tv_nsec % CLOCK_NSEC_PER_SEC) - (b->tv_nsec % CLOCK_NSEC_PER_SEC);
+        subtract_mask = (1U << TERM_B_SEC) | (1U << TERM_B_NSEC_CARRY);
     }
     else
     {
-        nanoseconds = (a->tv_nsec % NSEC_PER_SEC) + (b->tv_nsec % NSEC_PER_SEC);
+        nanoseconds = (a->tv_nsec % CLOCK_NSEC_PER_SEC) + (b->tv_nsec % CLOCK_NSEC_PER_SEC);
     }
-    split_nanoseconds(nanoseconds, &terms[4], &nanoseconds);
+    split_nanoseconds(nanoseconds, &terms[TERM_NSEC_SUM_CARRY], &nanoseconds);
     ret = sum_seconds(terms, subtract_mask, SECONDS_TERM_COUNT, &seconds);
     if (ret != CPLAT_OK)
     {
@@ -242,8 +254,8 @@ int cplat_timespec_add_ms(const cplat_timespec *ts, const uint64_t timeout_ms, c
 {
     cplat_timespec interval;
     /* UINT64_MAX / 1000 は INT64_MAX 以下なので、秒への変換は表現範囲内である。 */
-    interval.tv_sec = (time_t)(timeout_ms / (uint64_t)MSEC_PER_SEC);
-    interval.tv_nsec = (int64_t)(timeout_ms % (uint64_t)MSEC_PER_SEC) * NSEC_PER_MSEC;
+    interval.tv_sec = (time_t)(timeout_ms / (uint64_t)CLOCK_MSEC_PER_SEC);
+    interval.tv_nsec = (int64_t)(timeout_ms % (uint64_t)CLOCK_MSEC_PER_SEC) * CLOCK_NSEC_PER_MSEC;
     return combine_timespec(ts, &interval, 0, sum_out);
 }
 
@@ -264,14 +276,14 @@ int cplat_timespec_diff_ms(const cplat_timespec *end, const cplat_timespec *star
     {
         return ret;
     }
-    fraction = difference.tv_nsec / NSEC_PER_MSEC;
+    fraction = difference.tv_nsec / CLOCK_NSEC_PER_MSEC;
     if (difference.tv_sec >= 0)
     {
-        if ((uint64_t)difference.tv_sec > (uint64_t)INT64_MAX / (uint64_t)MSEC_PER_SEC)
+        if ((uint64_t)difference.tv_sec > (uint64_t)INT64_MAX / (uint64_t)CLOCK_MSEC_PER_SEC)
         {
             return CPLAT_ERR_OUT_OF_RANGE;
         }
-        milliseconds = (int64_t)difference.tv_sec * MSEC_PER_SEC;
+        milliseconds = (int64_t)difference.tv_sec * CLOCK_MSEC_PER_SEC;
         if (milliseconds > INT64_MAX - fraction)
         {
             return CPLAT_ERR_OUT_OF_RANGE;
@@ -283,11 +295,11 @@ int cplat_timespec_diff_ms(const cplat_timespec *end, const cplat_timespec *star
         const uint64_t limit = (uint64_t)INT64_MAX + 1U;
         uint64_t magnitude = magnitude_of((int64_t)difference.tv_sec);
         /* 正規化した負の秒と正の端数を合わせ、INT64_MIN の境界も先に検査する。 */
-        if (magnitude > (limit + (uint64_t)MSEC_PER_SEC - 1U) / (uint64_t)MSEC_PER_SEC)
+        if (magnitude > (limit + (uint64_t)CLOCK_MSEC_PER_SEC - 1U) / (uint64_t)CLOCK_MSEC_PER_SEC)
         {
             return CPLAT_ERR_OUT_OF_RANGE;
         }
-        magnitude = magnitude * (uint64_t)MSEC_PER_SEC - (uint64_t)fraction;
+        magnitude = magnitude * (uint64_t)CLOCK_MSEC_PER_SEC - (uint64_t)fraction;
         if (magnitude > limit)
         {
             return CPLAT_ERR_OUT_OF_RANGE;

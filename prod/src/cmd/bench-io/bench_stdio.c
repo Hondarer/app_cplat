@@ -99,7 +99,7 @@ static int seq_read_by_block(bench_context *ctx, bench_record *block)
 
     while (remaining > 0U)
     {
-        size_t chunk = (size_t)BENCH_BLOCK_RECORDS;
+        size_t chunk = BENCH_BLOCK_RECORDS;
         size_t index;
 
         if (chunk > remaining)
@@ -198,9 +198,9 @@ static int seq_write_by_block(bench_context *ctx, bench_record *block, int durab
         size_t chunk = ctx->touch_count - written;
         size_t index;
 
-        if (chunk > (size_t)BENCH_BLOCK_RECORDS)
+        if (chunk > BENCH_BLOCK_RECORDS)
         {
-            chunk = (size_t)BENCH_BLOCK_RECORDS;
+            chunk = BENCH_BLOCK_RECORDS;
         }
 
         for (index = 0U; index < chunk; index++)
@@ -430,7 +430,7 @@ int bench_stdio_setup(bench_context *ctx, const bench_case *item)
         return -1;
     }
 
-    state->block = (bench_record *)cplat_calloc((size_t)BENCH_BLOCK_RECORDS, sizeof(bench_record));
+    state->block = (bench_record *)cplat_calloc(BENCH_BLOCK_RECORDS, sizeof(bench_record));
     if (state->block == NULL)
     {
         cplat_free(state);

@@ -20,6 +20,9 @@
     #include <fcntl.h>
     #include <sys/stat.h>
     #include <unistd.h>
+
+    /* 新規ファイル作成時のパーミッション 8 進モード (rw-r--r--)。変更時は作成ファイルの既定権限だけが変わる。 */
+    #define CRT_FILE_CREATE_MODE (0644)
 #elif defined(PLATFORM_WINDOWS)
     #include <cplat/win32/win32.h>
 
@@ -137,7 +140,7 @@ int cplat_file_open(cplat_file *file, const char *path, int flags, cplat_error *
     #endif /* O_DSYNC / O_SYNC */
         }
 
-        file->handle = open(path, open_flags, 0644);
+        file->handle = open(path, open_flags, CRT_FILE_CREATE_MODE);
 
         if (file_is_open(file))
         {

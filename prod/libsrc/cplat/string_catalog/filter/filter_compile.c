@@ -24,6 +24,7 @@
 
 #include "filter.h"
 
+#include <assert.h>
 #include <cplat/base/result.h>
 
 #include <math.h>
@@ -32,9 +33,21 @@
 #include <stdlib.h>
 #include <string.h>
 
+/** バックスラッシュと 1 文字のエスケープ長 [byte] です。 */
+#define ESCAPE_CHAR_LEN 2U
+
+/** `"\x"` の長さ [byte] です。 */
+#define HEX_ESCAPE_PREFIX_LEN 2U
+
+/** `"\xHH"` の長さ [byte] です。 */
+#define HEX_ESCAPE_LEN 4U
+
+/** 16 進数リテラルの接頭辞の長さ [byte] です。 */
+#define HEX_LITERAL_PREFIX_LEN (sizeof("0x") - 1U)
+
 /* 行レコードのバイト数はヘッダーへ 32 ビットで格納するため、行幅の上限で収まることを固定する。 */
-_Static_assert(CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX) <= UINT32_MAX,
-               "cplat: filter record size must fit in uint32_t");
+static_assert(CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX) <= UINT32_MAX,
+              "cplat: filter record size must fit in uint32_t");
 
 /** 字句の種類です。 */
 typedef enum token_kind
@@ -103,7 +116,7 @@ typedef struct compiler
     uint32_t pattern_count; /**< 正規表現のパターンの定数の数。 */
 
     /** 文字列の字句の復号結果。NUL の 1 [byte] を含め、8 [byte] 単位に切り上げた大きさです。 */
-    char string_buffer[CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX + 8U];
+    char string_buffer[CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX + STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT];
 } compiler;
 
 /* ===== 字句解析 ===== */
@@ -201,17 +214,17 @@ static int read_quoted_byte(compiler *state)
     case '"':
     case '\'':
     case '\\':
-        state->position += 2U;
+        state->position += ESCAPE_CHAR_LEN;
         return (unsigned char)state->text[state->position - 1U];
     case 'n':
-        state->position += 2U;
+        state->position += ESCAPE_CHAR_LEN;
         return '\n';
     case 't':
-        state->position += 2U;
+        state->position += ESCAPE_CHAR_LEN;
         return '\t';
     case 'x':
-        high = hex_value(peek_at(state, state->position + 2U));
-        low = hex_value(peek_at(state, state->position + 3U));
+        high = hex_value(peek_at(state, state->position + HEX_ESCAPE_PREFIX_LEN));
+        low = hex_value(peek_at(state, state->position + HEX_ESCAPE_PREFIX_LEN + 1U));
 
         /* NUL は文字列を途中で終わらせるため受け付けない。 */
         if ((high < 0) || (low < 0) || ((high == 0) && (low == 0)))
@@ -219,7 +232,7 @@ static int read_quoted_byte(compiler *state)
             return -1;
         }
 
-        state->position += 4U;
+        state->position += HEX_ESCAPE_LEN;
         return (high * 16) + low;
     default:
         return -1;
@@ -336,7 +349,7 @@ static bool lex_number(compiler *state, token *token_out)
             return fail(state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LEXICAL, start);
         }
 
-        position += 2U;
+        position += HEX_LITERAL_PREFIX_LEN;
         while (hex_value(peek_at(state, position)) >= 0)
         {
             if (magnitude > (UINT64_MAX >> 4))
@@ -1204,7 +1217,7 @@ static bool parse_predicate(compiler *state)
             return false;
         }
 
-        instruction.operand_count = 2U;
+        instruction.operand_count = STRING_CATALOG_FILTER_BETWEEN_OPERAND_COUNT;
         break;
 
     default:

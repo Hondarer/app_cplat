@@ -92,8 +92,14 @@
      */
     #elif defined(__GNUC__) && !defined(__clang__)
         #define COMPILER_GCC
-        #define COMPILER_NAME    "GCC"
-        #define COMPILER_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+        #define COMPILER_NAME                     "GCC"
+        /* GCC バージョン番号のマイナー部・パッチ部 1 桁あたり 2 桁分の基数。 */
+        #define COMPILER_GCC_VERSION_PART_BASE    100
+        /* GCC メジャー バージョン番号の重み。 */
+        #define COMPILER_GCC_VERSION_MAJOR_WEIGHT (COMPILER_GCC_VERSION_PART_BASE * COMPILER_GCC_VERSION_PART_BASE)
+        #define COMPILER_VERSION \
+            (__GNUC__ * COMPILER_GCC_VERSION_MAJOR_WEIGHT + __GNUC_MINOR__ * COMPILER_GCC_VERSION_PART_BASE + \
+             __GNUC_PATCHLEVEL__)
     #else
         #define COMPILER_UNKNOWN
         #define COMPILER_NAME    "Unknown"

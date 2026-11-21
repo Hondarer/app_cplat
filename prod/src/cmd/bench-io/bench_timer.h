@@ -46,7 +46,7 @@ typedef int (*bench_iteration_fn)(void *arg);
 #define BENCH_TIMER_MAX_ITERATIONS (1024U * 1024U * 64U)
 
 /** @brief 1 ケースあたりの試行回数の上限です。 */
-#define BENCH_TIMER_MAX_TRIALS 32
+#define BENCH_TIMER_MAX_TRIALS 32U
 
 /**
  *  @brief          測定対象を繰り返し実行し、1 反復あたりの所要時間を求めます。

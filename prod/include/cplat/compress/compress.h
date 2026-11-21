@@ -31,6 +31,7 @@
 #ifndef COMPRESS_H
 #define COMPRESS_H
 
+#include <assert.h>
 #include <cplat/base/result.h>
 #include <cplat/cplat_export.h>
 #include <stddef.h>
@@ -43,6 +44,8 @@
 
 /** 圧縮ペイロード先頭に付加する展開後長さフィールドのバイト数。 */
 #define CPLAT_COMPRESS_HEADER_SIZE 8U
+
+static_assert(sizeof(uint64_t) == CPLAT_COMPRESS_HEADER_SIZE, "cplat: header must hold a 64-bit length");
 
 /** 圧縮および展開が扱う展開後長さの上限 [byte]。4 [GiB] 未満です。 */
 #define CPLAT_COMPRESS_MAX_UNCOMPRESSED_SIZE UINT32_MAX

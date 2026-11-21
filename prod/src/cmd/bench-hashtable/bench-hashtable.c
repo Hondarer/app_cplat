@@ -32,16 +32,26 @@
 #include <string.h>
 
 /** @brief キー 1 件あたりのストレージ確保量 [byte] です。 */
-#define BENCH_KEY_BYTES 16
+#define BENCH_KEY_BYTES 16U
 
 /** @brief 値 1 件あたりのストレージ確保量 [byte] です。 */
-#define BENCH_VALUE_BYTES 24
+#define BENCH_VALUE_BYTES 24U
 
 /** @brief 1 ケースあたりの試行回数です。 */
-#define BENCH_TRIALS 5
+#define BENCH_TRIALS 5U
 
-/** @brief キーと値を組み立てる作業領域の大きさです。 */
-#define BENCH_TEXT_SIZE 32
+/** @brief キーと値を組み立てる作業領域の大きさ [byte] (終端 NUL を含む) です。 */
+#define BENCH_TEXT_SIZE 32U
+
+static_assert((BENCH_TRIALS >= 1U) && (BENCH_TRIALS <= (unsigned int)BENCH_TIMER_MAX_TRIALS),
+              "試行回数は 1 以上上限以下であること");
+static_assert(BENCH_TEXT_SIZE >= (6U + 20U + 1U), "\"value-\" と size_t 最大 20 桁と終端 NUL が収まること");
+
+/** CHURN で 1 件おきに削除・埋め直す間隔です。 */
+#define BENCH_CHURN_STRIDE 2U
+
+/** RESIZE で capacity を拡張する倍率です。 */
+#define BENCH_RESIZE_FACTOR 2U
 
 /**
  *  @brief  削除済みレコードの寿命です。加齢の処理を呼び出さないため、3 以上なら測定結果に影響しません。
@@ -154,7 +164,7 @@ static size_t bench_scenario_units(bench_scenario scenario, size_t capacity)
 {
     if (scenario == BENCH_SCENARIO_CHURN)
     {
-        return capacity / 2u;
+        return capacity / BENCH_CHURN_STRIDE;
     }
 
     return capacity;
@@ -201,8 +211,8 @@ static void bench_make_config(size_t capacity, cplat_hashtable_config *config_ou
     config_out->capacity = capacity;
     config_out->key_type = CPLAT_HASHTABLE_FIELD_VARIABLE_STRING;
     config_out->value_type = CPLAT_HASHTABLE_FIELD_VARIABLE_STRING;
-    config_out->key_storage_size = capacity * (size_t)BENCH_KEY_BYTES;
-    config_out->value_storage_size = capacity * (size_t)BENCH_VALUE_BYTES;
+    config_out->key_storage_size = capacity * BENCH_KEY_BYTES;
+    config_out->value_storage_size = capacity * BENCH_VALUE_BYTES;
     config_out->lifetime = (unsigned char)BENCH_LIFETIME;
 }
 
@@ -245,7 +255,7 @@ static int bench_fragment_storage(cplat_hashtable *ht, size_t capacity)
 {
     size_t i;
 
-    for (i = 0; i < capacity; i += 2u)
+    for (i = 0; i < capacity; i += BENCH_CHURN_STRIDE)
     {
         char key[BENCH_TEXT_SIZE];
 
@@ -355,7 +365,7 @@ static int bench_iterate(void *arg)
         return 0;
     case BENCH_SCENARIO_CHURN:
         /* 回収済みのレコード番号を、同じ長さのキーと値で埋め直す。 */
-        return bench_add_range(state->ht, 0, state->capacity / 2u, 2);
+        return bench_add_range(state->ht, 0, state->capacity / BENCH_CHURN_STRIDE, BENCH_CHURN_STRIDE);
     case BENCH_SCENARIO_COMPACT:
         if (cplat_hashtable_compact(state->ht) == CPLAT_OK)
         {
@@ -364,7 +374,7 @@ static int bench_iterate(void *arg)
 
         return -1;
     case BENCH_SCENARIO_RESIZE:
-        bench_make_config(state->capacity * 2u, &config);
+        bench_make_config(state->capacity * BENCH_RESIZE_FACTOR, &config);
         if (cplat_hashtable_resize(state->ht, &config) == CPLAT_OK)
         {
             return 0;
@@ -419,7 +429,7 @@ static int bench_run_case(FILE *csv, const bench_hashtable_case *item)
      * 戻り値は明示的に破棄する。
      */
     (void)printf("%10zu  %-8s  %14.3f  %12.1f\n", item->capacity, bench_scenario_name(item->scenario),
-                 (double)timing.median_ns / 1000000.0, per_unit_ns);
+                 (double)timing.median_ns / 1000000.0, per_unit_ns); /* [ns] から [ms] への換算 */
 
     if (csv != NULL)
     {

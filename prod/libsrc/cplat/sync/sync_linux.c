@@ -28,6 +28,13 @@
     #include <cplat/runtime/abort.h>
     #include <cplat/sync/sync.h>
     #include <cplat/sync/sync_descriptor.h>
+    #include <cplat/sync/sync_internal.h>
+
+    /** umask 適用前のロック ファイル作成権限です。 */
+    #define INTERPROCESS_LOCK_FILE_MODE 0666
+
+    /** 再試行の待機間隔 1 [ms] の [ns] 値です。 */
+    #define INTERPROCESS_POLL_INTERVAL_NS 1000000L
 
 struct cplat_local_lock
 {
@@ -222,7 +229,7 @@ static void *thread_start_proc(void *opaque)
 
 static int open_lock_file(const char *identity, int *fd_out, char **identity_out)
 {
-    int fd = open(identity, O_RDWR | O_CREAT | O_CLOEXEC, 0666);
+    int fd = open(identity, O_RDWR | O_CREAT | O_CLOEXEC, INTERPROCESS_LOCK_FILE_MODE);
     if (fd < 0)
     {
         return CPLAT_ERR_UNKNOWN;
@@ -355,7 +362,7 @@ static int take_lock_file(const int fd, const int operation, const int timeout_m
         }
 
         {
-            struct timespec sleep_ts = {0, 1000000L}; /* 1 [ms] */
+            struct timespec sleep_ts = {0, INTERPROCESS_POLL_INTERVAL_NS}; /* 1 [ms] */
             /* 割り込みで待機が短くなっても、直後に期限を判定し直すため、戻り値は明示的に破棄する。 */
             (void)nanosleep(&sleep_ts, NULL);
         }
@@ -498,7 +505,7 @@ int cplat_local_lock_timed_lock(cplat_local_lock *mtx, int timeout_ms)
         }
 
         {
-            struct timespec sleep_ts = {0, 1000000L}; /* 1 [ms] */
+            struct timespec sleep_ts = {0, INTERPROCESS_POLL_INTERVAL_NS}; /* 1 [ms] */
             /* 割り込みで待機が短くなっても、直後に期限を判定し直すため、戻り値は明示的に破棄する。 */
             (void)nanosleep(&sleep_ts, NULL);
         }
@@ -1098,7 +1105,7 @@ int cplat_thread_timed_join(cplat_thread *thread, int timeout_ms)
             }
 
             abs_ts.tv_sec = 0;
-            abs_ts.tv_nsec = 1000000L; /* 1 [ms] */
+            abs_ts.tv_nsec = INTERPROCESS_POLL_INTERVAL_NS; /* 1 [ms] */
             /* 割り込みで待機が短くなっても、直後に期限を判定し直すため、戻り値は明示的に破棄する。 */
             (void)nanosleep(&abs_ts, NULL);
 
@@ -1165,9 +1172,9 @@ int cplat_interprocess_lock_export_descriptor(const cplat_interprocess_lock *loc
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    return cplat_internal_interprocess_sync_descriptor_export(lock->identity, CPLAT_INTERPROCESS_SYNC_KIND_LOCK,
-                                                              (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE,
-                                                              descriptor, descriptor_size);
+    return cplat_internal_interprocess_sync_descriptor_export(
+        lock->identity, (uint8_t)CPLAT_INTERPROCESS_SYNC_KIND_LOCK, (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE,
+        descriptor, descriptor_size);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -1184,7 +1191,7 @@ int cplat_interprocess_lock_import_descriptor(const void *descriptor, size_t des
     }
 
     result = cplat_internal_interprocess_sync_descriptor_import(
-        descriptor, descriptor_size, CPLAT_INTERPROCESS_SYNC_KIND_LOCK,
+        descriptor, descriptor_size, (uint8_t)CPLAT_INTERPROCESS_SYNC_KIND_LOCK,
         (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE, &identity);
     if (result != CPLAT_OK)
     {
@@ -1282,9 +1289,9 @@ int cplat_interprocess_rwlock_export_descriptor(const cplat_interprocess_rwlock 
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    return cplat_internal_interprocess_sync_descriptor_export(lock->identity, CPLAT_INTERPROCESS_SYNC_KIND_RWLOCK,
-                                                              (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE,
-                                                              descriptor, descriptor_size);
+    return cplat_internal_interprocess_sync_descriptor_export(
+        lock->identity, (uint8_t)CPLAT_INTERPROCESS_SYNC_KIND_RWLOCK,
+        (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE, descriptor, descriptor_size);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -1301,7 +1308,7 @@ int cplat_interprocess_rwlock_import_descriptor(const void *descriptor, size_t d
     }
 
     result = cplat_internal_interprocess_sync_descriptor_import(
-        descriptor, descriptor_size, CPLAT_INTERPROCESS_SYNC_KIND_RWLOCK,
+        descriptor, descriptor_size, (uint8_t)CPLAT_INTERPROCESS_SYNC_KIND_RWLOCK,
         (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE, &identity);
     if (result != CPLAT_OK)
     {
@@ -1412,7 +1419,7 @@ void cplat_interprocess_rwlock_dispose(cplat_interprocess_rwlock *lock)
 
 void cplat_call_once(cplat_once_flag *flag, void (*func)(void))
 {
-    int32_t expected = 0;
+    int32_t expected = CPLAT_ONCE_STATE_UNINITIALIZED;
 
     if (flag == NULL || func == NULL)
     {
@@ -1423,14 +1430,15 @@ void cplat_call_once(cplat_once_flag *flag, void (*func)(void))
      * state を 0 (未実行) から 1 (実行中) へ遷移させた 1 スレッドだけが func() を実行し、完了後に 2 (実行済み) を書き込む。
      * 他のスレッドは func() の副作用が見えるよう、ACQUIRE 読み込みで 2 になるまで待機する。
      */
-    if (cplat_atomic_compare_exchange_i32(&flag->state, &expected, 1, CPLAT_MEMORY_ORDER_ACQ_REL))
+    if (cplat_atomic_compare_exchange_i32(&flag->state, &expected, CPLAT_ONCE_STATE_RUNNING,
+                                          CPLAT_MEMORY_ORDER_ACQ_REL))
     {
         func();
-        cplat_atomic_store_i32(&flag->state, 2, CPLAT_MEMORY_ORDER_RELEASE);
+        cplat_atomic_store_i32(&flag->state, CPLAT_ONCE_STATE_DONE, CPLAT_MEMORY_ORDER_RELEASE);
         return;
     }
 
-    while (cplat_atomic_load_i32(&flag->state, CPLAT_MEMORY_ORDER_ACQUIRE) != 2)
+    while (cplat_atomic_load_i32(&flag->state, CPLAT_MEMORY_ORDER_ACQUIRE) != CPLAT_ONCE_STATE_DONE)
     {
         /*
          * Linux の sched_yield() は常に成功し、待機は毎回 state を読み直すため、戻り値は明示的に破棄する。

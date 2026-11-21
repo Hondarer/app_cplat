@@ -47,13 +47,11 @@
 #ifndef PLATFORM_H
 #define PLATFORM_H
 
+#include <assert.h>
+
 #include "compiler.h"
 
-#if defined(__cplusplus)
 static_assert(sizeof(void *) == 8, "cplat: requires a 64-bit environment");
-#else
-_Static_assert(sizeof(void *) == 8, "cplat: requires a 64-bit environment");
-#endif /* __cplusplus */
 
 #if defined(COMPILER_MSVC) && !defined(_M_X64)
     #error "cplat: MSVC requires the x64 target"

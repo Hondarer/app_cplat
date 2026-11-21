@@ -45,6 +45,7 @@
 #include <cplat/cplat_export.h>
 #include <cplat/string_catalog/string_catalog.h>
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -63,11 +64,15 @@
  */
 #define CPLAT_STRING_CATALOG_FILTER_LINE_MAX 1024U
 
-/** 行幅の下限です。最も短い判定要素 `key<1` と NUL 終端を格納できる幅です。 */
+/** 行幅の下限 [byte] (終端 NUL を含む) です。最も短い判定要素 `key<1` と NUL 終端を格納できる幅です。 */
 #define CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MIN 8U
 
-/** 行幅の上限です。定数のオフセットを 16 ビットで表すためです。 */
+/** 行幅の上限 [byte] です。定数のオフセットを 16 ビットで表すためです。 */
 #define CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX 1024U
+
+static_assert((sizeof("key<1") <= CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MIN) &&
+                  (CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MIN <= CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX),
+              "cplat: minimum width invalid");
 
 /** 1 行に記述できる判定要素の上限です。 */
 #define CPLAT_STRING_CATALOG_FILTER_PREDICATE_MAX 32U
@@ -99,14 +104,26 @@
 /** 行レコードの見出しのバイト数です。 */
 #define CPLAT_STRING_CATALOG_FILTER_RECORD_HEADER_SIZE 16U
 
+/** 行幅 1 [byte] あたりの命令領域のサイズ [byte] です。 */
+#define CPLAT_STRING_CATALOG_FILTER_INSTRUCTION_SIZE 8U
+
+/** 行幅 1 [byte] あたりの定数領域のサイズ [byte] です。 */
+#define CPLAT_STRING_CATALOG_FILTER_CONSTANT_AREA_SCALE 8U
+
+static_assert((CPLAT_STRING_CATALOG_FILTER_CONSTANT_AREA_SCALE * CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX) <=
+                  UINT16_MAX,
+              "cplat: constant area fits in 16 bits");
+
 /**
  *  @brief          行幅から行レコードのバイト数を求めます。
  *  @param[in]      width 行幅。
  *
- *  命令領域と定数領域は、いずれも行幅 1 文字あたり 8 [byte] です。
+ *  命令領域と定数領域は、いずれも行幅 1 [byte] あたり 8 [byte] です。
  */
 #define CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(width) \
-    (CPLAT_STRING_CATALOG_FILTER_RECORD_HEADER_SIZE + (16U * (size_t)(width)))
+    (CPLAT_STRING_CATALOG_FILTER_RECORD_HEADER_SIZE + \
+     ((CPLAT_STRING_CATALOG_FILTER_INSTRUCTION_SIZE + CPLAT_STRING_CATALOG_FILTER_CONSTANT_AREA_SCALE) * \
+      (size_t)(width)))
 
 /**
  *  @brief          行数の上限と行幅から、フィルター オブジェクトのバイト数を求めます。
@@ -119,8 +136,12 @@
 /** ソース領域のヘッダーのバイト数です。フィルター オブジェクトはこの位置から始まります。 */
 #define CPLAT_STRING_CATALOG_FILTER_SOURCE_HEADER_SIZE 64U
 
-/** ソース領域の先頭アドレスに求めるアラインメントです。版番号をアトミックに読み書きするためです。 */
+/** ソース領域の先頭アドレスに求めるアラインメント [byte] です。版番号をアトミックに読み書きするためです。 */
 #define CPLAT_STRING_CATALOG_FILTER_SOURCE_ALIGNMENT 8U
+
+static_assert((CPLAT_STRING_CATALOG_FILTER_SOURCE_ALIGNMENT & (CPLAT_STRING_CATALOG_FILTER_SOURCE_ALIGNMENT - 1U)) ==
+                  0U,
+              "cplat: source alignment must be a power of two");
 
 /**
  *  @brief          行数の上限と行幅から、ソース領域のバイト数を求めます。

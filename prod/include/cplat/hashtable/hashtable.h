@@ -102,6 +102,8 @@
 #ifndef CPLAT_HASHTABLE_HASHTABLE_H
 #define CPLAT_HASHTABLE_HASHTABLE_H
 
+#include <assert.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -130,13 +132,20 @@ extern "C"
         CPLAT_HASHTABLE_FIELD_VARIABLE_STRING = 2 /**< 固定容量ストレージ上の可変長 NUL 終端文字列。 */
     } cplat_hashtable_field_type;
 
+/** @ref CPLAT_HASHTABLE_FIELD_FIXED_STRING の別名 (互換用のキー格納形式定数) です。 */
 #define CPLAT_HASHTABLE_KEY_STRING CPLAT_HASHTABLE_FIELD_FIXED_STRING
+/** @ref CPLAT_HASHTABLE_FIELD_BINARY の別名 (互換用のキー格納形式定数) です。 */
 #define CPLAT_HASHTABLE_KEY_BINARY CPLAT_HASHTABLE_FIELD_BINARY
     typedef cplat_hashtable_field_type cplat_hashtable_key_type;
 
 #define CPLAT_HASHTABLE_LIFETIME_INFINITE 255 /**< 削除済みを空へ戻さない寿命です。 */
 
-#define CPLAT_HASHTABLE_VALUE_ALIGN_MAX 16 /**< value_align に指定できる最大境界です。 */
+    static_assert(CPLAT_HASHTABLE_LIFETIME_INFINITE == UCHAR_MAX, "cplat: infinite lifetime must equal UCHAR_MAX");
+
+#define CPLAT_HASHTABLE_VALUE_ALIGN_MAX 16U /**< value_align に指定できる最大境界 [byte] です。 */
+
+    static_assert((CPLAT_HASHTABLE_VALUE_ALIGN_MAX & (CPLAT_HASHTABLE_VALUE_ALIGN_MAX - 1U)) == 0U,
+                  "cplat: value alignment must be power of 2");
 
     /**
      *  @brief          変更時刻をどの粒度で持つかです。
@@ -1038,9 +1047,9 @@ extern "C"
      *
      *  @ref cplat_hashtable_next_record の status_mask へ、和を取って渡します。
      */
-#define CPLAT_HASHTABLE_SCAN_IN_USE  0x1u /**< status が 1 のレコードを対象にします。 */
-#define CPLAT_HASHTABLE_SCAN_DELETED 0x2u /**< status が 2 以上のレコードを対象にします。 */
-#define CPLAT_HASHTABLE_SCAN_EMPTY   0x4u /**< status が 0 のレコードを対象にします。 */
+#define CPLAT_HASHTABLE_SCAN_IN_USE  0x1U /**< status が 1 のレコードを対象にします。 */
+#define CPLAT_HASHTABLE_SCAN_DELETED 0x2U /**< status が 2 以上のレコードを対象にします。 */
+#define CPLAT_HASHTABLE_SCAN_EMPTY   0x4U /**< status が 0 のレコードを対象にします。 */
 
     /**
      *  @brief          指定した使用状況の、次のレコード番号を返します。

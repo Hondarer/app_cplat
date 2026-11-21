@@ -20,6 +20,7 @@
  *******************************************************************************
  */
 
+#include <assert.h>
 #include <cplat/string_catalog/string_catalog.h>
 
 #include <cplat/base/result.h>
@@ -32,6 +33,15 @@
 
 /** 出力する言語が未決定であることを示す値です。言語の列挙値とは重なりません。 */
 #define LANGUAGE_UNDECIDED ((int32_t)-1)
+
+static_assert(CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL != LANGUAGE_UNDECIDED &&
+                  CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE != LANGUAGE_UNDECIDED &&
+                  CPLAT_STRING_CATALOG_LANGUAGE_ENGLISH != LANGUAGE_UNDECIDED &&
+                  CPLAT_STRING_CATALOG_LANGUAGE_COUNT != LANGUAGE_UNDECIDED,
+              "言語の列挙値と未決定値が重ならないこと");
+
+/** 英字 3 文字と NUL 終端を収める配列 [byte] です。 */
+#define LANGUAGE_TAG_LANG_SIZE 4U
 
 /**
  *  プロセスが文字列を出力する言語です。
@@ -49,7 +59,7 @@ static cplat_atomic_i32 s_language = CPLAT_ATOMIC_INIT(LANGUAGE_UNDECIDED);
  */
 static const struct
 {
-    char tag_language[4];                   /**< 言語タグの言語 (NUL 終端込み)。 */
+    char tag_language[LANGUAGE_TAG_LANG_SIZE]; /**< 言語タグの言語 (NUL 終端込み)。 */
     cplat_string_catalog_language language; /**< 対応する言語。 */
 } s_language_map[] = {
     {"ja", CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE},

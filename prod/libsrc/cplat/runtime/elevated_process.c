@@ -33,6 +33,35 @@
 #include <stdlib.h>
 #include <string.h>
 
+/** 追加引数の作業配列サイズ [byte] です。 */
+#define CPLAT_PROCESS_EXTRA_ARGUMENT_SIZE 80U
+
+/** PID の 10 進表記の最大桁数です。 */
+#define CPLAT_PROCESS_PID_DIGITS_MAX 10U
+
+/** ハンドルの 10 進表記の最大桁数です。 */
+#define CPLAT_PROCESS_HANDLE_DIGITS_MAX 20U
+
+/** 引数の区切り空白の長さ [byte] です。 */
+#define CPLAT_PROCESS_ARGUMENT_SPACE_BYTES 1U
+
+/** 引数内の '=' または ':' の長さ [byte] です。 */
+#define CPLAT_PROCESS_ARGUMENT_SEPARATOR_BYTES 1U
+
+/** 引数の終端 NUL の長さ [byte] です。 */
+#define CPLAT_PROCESS_ARGUMENT_NUL_BYTES 1U
+
+/** コンソール引き継ぎ引数の作業領域の余裕 [byte] です。 */
+#define CPLAT_PROCESS_HANDOVER_MARGIN_BYTES 15U
+
+/** コンソール引き継ぎ引数のフラグ以外の作業領域 [byte] です。 */
+#define CPLAT_PROCESS_HANDOVER_EXTRA_BYTES \
+    (CPLAT_PROCESS_ARGUMENT_SPACE_BYTES + CPLAT_PROCESS_ARGUMENT_SEPARATOR_BYTES + CPLAT_PROCESS_PID_DIGITS_MAX + \
+     CPLAT_PROCESS_ARGUMENT_SEPARATOR_BYTES + CPLAT_PROCESS_HANDLE_DIGITS_MAX + CPLAT_PROCESS_ARGUMENT_NUL_BYTES + \
+     CPLAT_PROCESS_HANDOVER_MARGIN_BYTES)
+
+static_assert(CPLAT_PROCESS_HANDOVER_EXTRA_BYTES == 49U, "コンソール引き継ぎ引数の余裕を維持すること");
+
 #if defined(PLATFORM_LINUX)
     #include <unistd.h>
 #elif defined(PLATFORM_WINDOWS)
@@ -971,7 +1000,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code_o
             unsigned long long parent_console_window;
             size_t arg_len;
             size_t buf_sz;
-            char extra[80];
+            char extra[CPLAT_PROCESS_EXTRA_ARGUMENT_SIZE];
             int ret;
 
             parent_pid = 0;
@@ -1000,7 +1029,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code_o
             {
                 parent_pid = GetCurrentProcessId();
                 parent_console_window = (unsigned long long)(uintptr_t)GetConsoleWindow();
-                buf_sz += strlen(CPLAT_CONSOLE_HANDOVER_FLAG) + 49;
+                buf_sz += strlen(CPLAT_CONSOLE_HANDOVER_FLAG) + CPLAT_PROCESS_HANDOVER_EXTRA_BYTES;
             }
 
             combined_arguments = (char *)cplat_malloc(buf_sz);

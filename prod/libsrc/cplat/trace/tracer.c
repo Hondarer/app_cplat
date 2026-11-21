@@ -13,6 +13,7 @@
  *
  *******************************************************************************
  */
+#include <cplat/base/char_code.h>
 #include <cplat/base/result.h>
 #include <cplat/crt/string.h>
 #include <cplat/crt/stdlib.h>
@@ -23,6 +24,7 @@
 #include <cplat/sync/sync.h>
 #include <cplat/trace/tracer.h>
 #include <cplat/trace/trace_file.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
@@ -38,6 +40,8 @@
 #elif defined(PLATFORM_WINDOWS)
     #include <cplat/trace/backends/etw/etw_internal.h>
     #include <cplat/trace/backends/eventlog/eventlog_internal.h>
+
+static_assert(CPLAT_EVENTLOG_LEVEL_COUNT == (unsigned int)CPLAT_TRACE_LEVEL_NONE, "cplat: eventlog level mismatch");
 #endif /* PLATFORM_ */
 
 /* ===== Windows: TraceLogging プロバイダー定義 ===== */
@@ -46,6 +50,7 @@
 
     #include <cplat/base/windows_sdk.h>
     #include <TraceLoggingProvider.h>
+    #include <evntrace.h>
 
 TRACELOGGING_DEFINE_PROVIDER(s_trace_provider_ref, CPLAT_TRACER_DEFAULT_PROVIDER_NAME,
                              CPLAT_TRACER_DEFAULT_PROVIDER_GUID);
@@ -70,7 +75,21 @@ static cplat_once_flag s_registry_lock_once = {0};
 #define FALLBACK_NAME "unknown"
 
 /** registry の初期容量。 */
-#define TRACE_REGISTRY_INITIAL_CAPACITY 8
+#define TRACE_REGISTRY_INITIAL_CAPACITY 8U
+
+static_assert(TRACE_REGISTRY_INITIAL_CAPACITY > 0U, "トレース レジストリの初期容量が正であること");
+
+/** トレース レジストリの容量を拡張する倍率です。 */
+#define TRACE_REGISTRY_GROWTH_FACTOR 2U
+
+/** プロセス名・ファイル名の作業配列 [byte] です。 */
+#define TRACER_PROCESS_NAME_BUF_SIZE 256U
+
+/** ベース名 255 + "_" + int64 最大 20 桁 + NUL を収める配列 [byte] です。 */
+#define TRACER_FILE_NAME_BUF_SIZE 280U
+
+/** TRACER_FILE_NAME_BUF_SIZE と ".log" を収める配列 [byte] です。 */
+#define TRACER_LOG_FILE_NAME_BUF_SIZE 288U
 
 enum trace_handle_state
 {
@@ -198,12 +217,12 @@ static int registry_expand_locked(void)
     }
     else
     {
-        if (s_trace_registry.capacity > SIZE_MAX / 2)
+        if (s_trace_registry.capacity > SIZE_MAX / TRACE_REGISTRY_GROWTH_FACTOR)
         {
             return -1;
         }
 
-        new_capacity = s_trace_registry.capacity * 2;
+        new_capacity = s_trace_registry.capacity * TRACE_REGISTRY_GROWTH_FACTOR;
     }
 
     if (new_capacity > SIZE_MAX / sizeof(cplat_tracer *))
@@ -467,28 +486,28 @@ static int to_etw_level(const cplat_trace_level lv)
     {
     case CPLAT_TRACE_LEVEL_FORCE_CRITICAL:
     case CPLAT_TRACE_LEVEL_CRITICAL:
-        return 1;
+        return TRACE_LEVEL_CRITICAL;
     case CPLAT_TRACE_LEVEL_FORCE_ERROR:
     case CPLAT_TRACE_LEVEL_ERROR:
-        return 2;
+        return TRACE_LEVEL_ERROR;
     case CPLAT_TRACE_LEVEL_FORCE_WARNING:
     case CPLAT_TRACE_LEVEL_WARNING:
-        return 3;
+        return TRACE_LEVEL_WARNING;
     case CPLAT_TRACE_LEVEL_INFO:
-        return 4;
+        return TRACE_LEVEL_INFORMATION;
 
     /* 強制出力は ETW セッション側の既定の設定で捨てられないよう、最下位から 1 段引き上げる。 */
     case CPLAT_TRACE_LEVEL_FORCE_INFO:
     case CPLAT_TRACE_LEVEL_FORCE_VERBOSE:
     case CPLAT_TRACE_LEVEL_FORCE_DEBUG:
     case CPLAT_TRACE_LEVEL_FORCE_NONE:
-        return 4;
+        return TRACE_LEVEL_INFORMATION;
     case CPLAT_TRACE_LEVEL_VERBOSE:
-        return 5;
+        return TRACE_LEVEL_VERBOSE;
     case CPLAT_TRACE_LEVEL_DEBUG:
-        return 5;
+        return TRACE_LEVEL_VERBOSE;
     default:
-        return 5;
+        return TRACE_LEVEL_VERBOSE;
     }
 }
 
@@ -572,6 +591,7 @@ static void config_unlock_exclusive(cplat_tracer *handle)
     }
 }
 
+/** 設定の共有ロック取得を待つタイムアウト時間 [ms] です。 */
 #define LOCK_TIMEOUT_MS 100
 
 /**
@@ -838,7 +858,7 @@ static void strip_exe_suffix(char *name)
  */
 static int resolve_file_name(const cplat_tracer *handle, char *file_name_out, const size_t file_name_size)
 {
-    char name_buf[256];
+    char name_buf[TRACER_PROCESS_NAME_BUF_SIZE];
     int ret;
 
     if (handle->file_name != NULL)
@@ -896,8 +916,8 @@ static int build_default_file_path(const cplat_tracer *handle, char *path_out, c
 {
     char exe_path[PLATFORM_PATH_UTF8_MAX];
     char exe_dir[PLATFORM_PATH_UTF8_MAX];
-    char name_buf[280];
-    char log_file_name[288];
+    char name_buf[TRACER_FILE_NAME_BUF_SIZE];
+    char log_file_name[TRACER_LOG_FILE_NAME_BUF_SIZE];
 
     if (resolve_file_name(handle, name_buf, sizeof(name_buf)) != 0)
     {
@@ -1317,7 +1337,8 @@ cplat_tracer_state cplat_tracer_get_state(cplat_tracer *handle)
     return state;
 }
 
-#define MAX_BODY (CPLAT_TRACER_MESSAGE_MAX_BYTES - 1)
+/** 終端 NUL を除く本文の最大バイト数 [byte] です。 */
+#define MAX_BODY ((size_t)CPLAT_TRACER_MESSAGE_MAX_BYTES - 1U)
 
 /**
  *  @brief          UTF-8 文字境界を考慮して文字列を切り詰める位置を返します。
@@ -1329,7 +1350,7 @@ static size_t utf8_safe_truncate(const char *s, const size_t pos)
 {
     size_t result = pos;
 
-    while (result > 0 && ((unsigned char)s[result] & 0xC0) == 0x80)
+    while (result > 0 && ((unsigned char)s[result] & CPLAT_UTF8_CONT_MASK) == CPLAT_UTF8_CONT_VALUE)
     {
         result--;
     }
@@ -1439,7 +1460,8 @@ static int is_valid_threshold(const cplat_trace_level level)
     return ((int)level >= (int)CPLAT_TRACE_LEVEL_CRITICAL) && ((int)level <= (int)CPLAT_TRACE_LEVEL_NONE);
 }
 
-#define STDERR_TS_BUF_SIZE (CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1)
+/** 時刻文字列と終端 NUL の作業配列 [byte] です。 */
+#define STDERR_TS_BUF_SIZE (CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1U)
 
 /**
  *  @brief          タイムスタンプとトレース レベルを付加して stderr にエントリを書き込みます。
@@ -1664,7 +1686,20 @@ int cplat_tracer_write_with_source(cplat_tracer *handle, const cplat_trace_level
 }
 
 static const char s_hex_chars[] = "0123456789ABCDEF";
-#define ELLIPSIS_LEN 3
+/** 16 進ダンプ切り詰め時の省略記号です。 */
+#define HEX_DUMP_ELLIPSIS "..."
+
+/** 16 進ダンプ切り詰め時の省略記号の長さ [byte] です。 */
+#define ELLIPSIS_LEN (sizeof(HEX_DUMP_ELLIPSIS) - 1U)
+
+/** 16 進ダンプのラベルと本文を区切る文字列です。 */
+#define HEX_DUMP_LABEL_SEP ": "
+
+/** 16 進ダンプのラベルと本文の区切りの長さ [byte] です。 */
+#define HEX_DUMP_LABEL_SEP_LEN (sizeof(HEX_DUMP_LABEL_SEP) - 1U)
+
+/** 1 [byte] 当たりの文字数 (16 進 2 桁と空白) です。 */
+#define HEX_DUMP_CHARS_PER_BYTE 3U
 
 /**
  *  @brief          16 進ダンプ メッセージを構築して出力先に書き込む内部実装です。
@@ -1698,7 +1733,7 @@ static int hex_write_impl(cplat_tracer *handle, const cplat_trace_level level, c
     if (label != NULL && label[0] != '\0')
     {
         size_t lbl_len = strlen(label);
-        if (lbl_len + 2 >= MAX_BODY)
+        if (lbl_len + HEX_DUMP_LABEL_SEP_LEN >= MAX_BODY)
         {
             size_t copy_len;
 
@@ -1717,16 +1752,15 @@ static int hex_write_impl(cplat_tracer *handle, const cplat_trace_level level, c
         }
 
         memcpy(buf, label, lbl_len);
-        buf[lbl_len] = ':';
-        buf[lbl_len + 1] = ' ';
-        pos = lbl_len + 2;
+        memcpy(buf + lbl_len, HEX_DUMP_LABEL_SEP, HEX_DUMP_LABEL_SEP_LEN);
+        pos = lbl_len + HEX_DUMP_LABEL_SEP_LEN;
     }
 
     /*
      * 以降の書き込みは、終端を含めて buf[MAX_BODY] までに収める。
      * 1 [byte] は区切りの空白を含めて 3 文字で、先頭の 1 [byte] だけ空白を付けない。
      */
-    max_data_bytes = (MAX_BODY - pos + 1) / 3;
+    max_data_bytes = (MAX_BODY - pos + 1) / HEX_DUMP_CHARS_PER_BYTE;
 
     if (effective_size > max_data_bytes)
     {
@@ -1739,10 +1773,10 @@ static int hex_write_impl(cplat_tracer *handle, const cplat_trace_level level, c
         }
 
         /* 本体 (3 * max_data_bytes - 1 文字) と末尾の " ..." (4 文字) の合計を MAX_BODY - pos 以下に収める。 */
-        max_data_bytes = (MAX_BODY - pos - ELLIPSIS_LEN) / 3;
+        max_data_bytes = (MAX_BODY - pos - ELLIPSIS_LEN) / HEX_DUMP_CHARS_PER_BYTE;
         if (max_data_bytes == 0)
         {
-            memcpy(buf + pos, "...", ELLIPSIS_LEN);
+            memcpy(buf + pos, HEX_DUMP_ELLIPSIS, ELLIPSIS_LEN);
             pos += ELLIPSIS_LEN;
             buf[pos] = '\0';
             return write_dual(handle, level, timestamp, buf);

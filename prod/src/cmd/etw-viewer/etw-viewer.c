@@ -42,13 +42,29 @@
 #if defined(PLATFORM_WINDOWS)
 
     #include <cplat/base/windows_sdk.h>
+    #include <evntrace.h>
     #include <cplat/trace/etw.h>
     #include <cplat/trace/tracer.h>
 
+/** @brief 終了要求を確認する待機間隔 [ms] です。 */
     #define ETW_VIEWER_WAIT_MS     200
     #define ETW_VIEWER_DEFAULT_TAG CPLAT_TRACER_DEFAULT_PROVIDER_NAME
 
+/** @brief ETW セッションの開始権限がない場合の終了コードです。 */
     #define EXIT_ACCESS_DENIED 2
+
+/** FILETIME の起点から Unix epoch までの 100 [ns] 単位数です。 */
+/* see: https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-filetime */
+    #define ETW_VIEWER_FILETIME_UNIX_EPOCH_100NS 116444736000000000LL
+
+    /** 1 [s] あたりの 100 [ns] 単位数です。 */
+    #define ETW_VIEWER_100NS_PER_SEC 10000000LL
+
+    /** 100 [ns] 単位から [ns] への換算係数です。 */
+    #define ETW_VIEWER_NS_PER_100NS 100LL
+
+    /** ISO 8601 時刻文字列を格納する配列の大きさ [byte] (終端を含む) です。 */
+    #define ETW_VIEWER_TIMESTAMP_TEXT_SIZE 64U
 
 static volatile sig_atomic_t g_stop_requested = 0;
 
@@ -110,15 +126,15 @@ const char *etw_viewer_level_name(int level)
 {
     switch (level)
     {
-    case 1:
+    case TRACE_LEVEL_CRITICAL:
         return "CRITICAL";
-    case 2:
+    case TRACE_LEVEL_ERROR:
         return "ERROR";
-    case 3:
+    case TRACE_LEVEL_WARNING:
         return "WARNING";
-    case 4:
+    case TRACE_LEVEL_INFORMATION:
         return "INFO";
-    case 5:
+    case TRACE_LEVEL_VERBOSE:
         return "VERBOSE";
     default:
         return "UNKNOWN";
@@ -132,15 +148,15 @@ static char etw_viewer_priority_letter(int level)
 {
     switch (level)
     {
-    case 1:
+    case TRACE_LEVEL_CRITICAL:
         return 'C';
-    case 2:
+    case TRACE_LEVEL_ERROR:
         return 'E';
-    case 3:
+    case TRACE_LEVEL_WARNING:
         return 'W';
-    case 4:
+    case TRACE_LEVEL_INFORMATION:
         return 'I';
-    case 5:
+    case TRACE_LEVEL_VERBOSE:
         return 'V';
     default:
         return 'U';
@@ -149,7 +165,6 @@ static char etw_viewer_priority_letter(int level)
 
 int etw_viewer_format_timestamp_utc(int64_t timestamp_100ns, char *buffer, size_t buffer_size)
 {
-    static const int64_t filetime_unix_epoch_100ns = 116444736000000000LL;
     int64_t unix_100ns;
     cplat_timespec ts;
 
@@ -158,21 +173,21 @@ int etw_viewer_format_timestamp_utc(int64_t timestamp_100ns, char *buffer, size_
         return -1;
     }
 
-    if (timestamp_100ns < filetime_unix_epoch_100ns)
+    if (timestamp_100ns < ETW_VIEWER_FILETIME_UNIX_EPOCH_100NS)
     {
         return -1;
     }
 
-    unix_100ns = timestamp_100ns - filetime_unix_epoch_100ns;
-    ts.tv_sec = (time_t)(unix_100ns / 10000000LL);
-    ts.tv_nsec = (unix_100ns % 10000000LL) * 100LL;
+    unix_100ns = timestamp_100ns - ETW_VIEWER_FILETIME_UNIX_EPOCH_100NS;
+    ts.tv_sec = (time_t)(unix_100ns / ETW_VIEWER_100NS_PER_SEC);
+    ts.tv_nsec = (unix_100ns % ETW_VIEWER_100NS_PER_SEC) * ETW_VIEWER_NS_PER_100NS;
 
     return cplat_clock_format_realtime_iso8601_local(buffer, buffer_size, &ts);
 }
 
 void etw_viewer_handle_event(const cplat_etw_event *event, void *context)
 {
-    char timestamp_text[64];
+    char timestamp_text[ETW_VIEWER_TIMESTAMP_TEXT_SIZE];
     const char *timestamp_value;
     const char *tag;
     const char *message;

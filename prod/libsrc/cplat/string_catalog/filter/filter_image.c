@@ -12,6 +12,10 @@
 
 #include "filter.h"
 
+#include <cplat/base/char_code.h>
+#include <float.h>
+#include <limits.h>
+#include <assert.h>
 #include <cplat/base/result.h>
 
 #include <inttypes.h>
@@ -21,25 +25,37 @@
 #include <stdlib.h>
 #include <string.h>
 
-_Static_assert(sizeof(string_catalog_filter_image_header) == CPLAT_STRING_CATALOG_FILTER_HEADER_SIZE,
-               "cplat: header size");
-_Static_assert(sizeof(string_catalog_filter_record_header) == CPLAT_STRING_CATALOG_FILTER_RECORD_HEADER_SIZE,
-               "cplat: record header size");
-_Static_assert(sizeof(string_catalog_filter_instruction) == 8U, "cplat: instruction size");
-_Static_assert(sizeof(string_catalog_filter_constant_header) == STRING_CATALOG_FILTER_CONSTANT_HEADER_SIZE,
-               "cplat: constant header size");
+static_assert(sizeof(string_catalog_filter_image_header) == CPLAT_STRING_CATALOG_FILTER_HEADER_SIZE,
+              "cplat: header size");
+static_assert(sizeof(string_catalog_filter_record_header) == CPLAT_STRING_CATALOG_FILTER_RECORD_HEADER_SIZE,
+              "cplat: record header size");
+static_assert(sizeof(string_catalog_filter_instruction) == 8U, "cplat: instruction size");
+static_assert(sizeof(string_catalog_filter_constant_header) == STRING_CATALOG_FILTER_CONSTANT_HEADER_SIZE,
+              "cplat: constant header size");
 
-/** FNV-1a 64 ビットの初期値です。 */
-#define FNV_OFFSET_BASIS 14695981039346656037ULL
+/** 1 バイト表記の最長 `"\xHH"` と NUL を収める作業配列 [byte] です。 */
+#define ESCAPED_BYTE_TEXT_SIZE 8U
 
-/** FNV-1a 64 ビットの乗数です。 */
-#define FNV_PRIME 1099511628211ULL
+/** バックスラッシュと 1 文字のエスケープ長 [byte] です。 */
+#define ESCAPED_CHAR_LEN 2U
 
-/** 演算子の優先順位です。値が大きいほど強く結合します。 */
-#define PRECEDENCE_OR        1
-#define PRECEDENCE_AND       2
-#define PRECEDENCE_NOT       3
-#define PRECEDENCE_PREDICATE 4
+/** 改行文字のエスケープ表記です。 */
+#define ESCAPED_NEWLINE "\\n"
+
+/** タブ文字のエスケープ表記です。 */
+#define ESCAPED_TAB "\\t"
+
+/** `"\xHH"` 表記の長さ [byte] です。 */
+#define HEX_ESCAPE_TEXT_LEN 4U
+
+/** 数値書式化の作業配列の大きさ [byte] (最長 25 [byte] 以上) です。 */
+#define CONSTANT_NUMBER_TEXT_SIZE 64U
+
+/** 整数と区別する浮動小数点数の接尾辞です。 */
+#define FLOAT_DECIMAL_SUFFIX ".0"
+
+/** "arg[255]" 書式化作業配列 [byte] です。 */
+#define DECOMPILE_ARGUMENT_TEXT_SIZE 32U
 
 /** デコンパイルの出力先です。 */
 typedef struct text_writer
@@ -72,7 +88,7 @@ uint32_t string_catalog_filter_instruction_capacity(const uint32_t line_width)
 
 uint32_t string_catalog_filter_constant_capacity(const uint32_t line_width)
 {
-    return 8U * line_width;
+    return STRING_CATALOG_FILTER_CONSTANT_BYTES_PER_WIDTH * line_width;
 }
 
 unsigned char *string_catalog_filter_record_address(void *image, const uint32_t record_size, const uint32_t line_index)
@@ -226,7 +242,7 @@ int string_catalog_filter_read_constant(const unsigned char *constants, const ui
 
         if ((header.kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_CHARACTER) &&
             (((header.flags & STRING_CATALOG_FILTER_CONSTANT_FLAG_HEXADECIMAL) != 0U) ||
-             (constant_out->magnitude > 255U)))
+             (constant_out->magnitude > (uint64_t)UCHAR_MAX)))
         {
             return CPLAT_ERR_CORRUPT_DESCRIPTOR;
         }
@@ -278,7 +294,7 @@ uint64_t string_catalog_filter_hash_bytes(uint64_t hash, const void *data, const
     for (size_t index = 0; index < size; index++)
     {
         hash ^= bytes[index];
-        hash *= FNV_PRIME;
+        hash *= STRING_CATALOG_FILTER_FNV1A_64_PRIME;
     }
 
     return hash;
@@ -287,7 +303,7 @@ uint64_t string_catalog_filter_hash_bytes(uint64_t hash, const void *data, const
 uint64_t string_catalog_filter_compute_line_hash(const unsigned char *record, const uint32_t line_width)
 {
     string_catalog_filter_record_header header;
-    uint64_t hash = FNV_OFFSET_BASIS;
+    uint64_t hash = STRING_CATALOG_FILTER_FNV1A_64_OFFSET_BASIS;
 
     string_catalog_filter_read_record_header(record, &header);
 
@@ -305,7 +321,7 @@ uint64_t string_catalog_filter_compute_line_hash(const unsigned char *record, co
 
 uint64_t string_catalog_filter_compute_content_hash(const void *image, const string_catalog_filter_image_header *header)
 {
-    uint64_t hash = FNV_OFFSET_BASIS;
+    uint64_t hash = STRING_CATALOG_FILTER_FNV1A_64_OFFSET_BASIS;
 
     hash = string_catalog_filter_hash_bytes(hash, &header->line_capacity, sizeof(header->line_capacity));
     hash = string_catalog_filter_hash_bytes(hash, &header->line_width, sizeof(header->line_width));
@@ -481,7 +497,7 @@ static bool is_operand_count_valid(const uint8_t operator_kind, const uint16_t o
     case STRING_CATALOG_FILTER_OPERATOR_HAS:
         return operand_count == 0U;
     case STRING_CATALOG_FILTER_OPERATOR_BETWEEN:
-        return operand_count == 2U;
+        return operand_count == STRING_CATALOG_FILTER_BETWEEN_OPERAND_COUNT;
     case STRING_CATALOG_FILTER_OPERATOR_IN:
         return operand_count >= 1U;
     default:
@@ -685,7 +701,7 @@ int string_catalog_filter_check_record(const unsigned char *record, const uint32
             if ((instruction.opcode == (uint8_t)STRING_CATALOG_FILTER_OPCODE_AND) ||
                 (instruction.opcode == (uint8_t)STRING_CATALOG_FILTER_OPCODE_OR))
             {
-                if (depth < 2)
+                if (depth < (int)STRING_CATALOG_FILTER_BINARY_OPERAND_COUNT)
                 {
                     return CPLAT_ERR_CORRUPT_DESCRIPTOR;
                 }
@@ -894,30 +910,30 @@ static void writer_append_text(text_writer *writer, const char *text)
 /** 1 [byte] を、引用符の内側の表記で書き出します。 */
 static void writer_append_escaped_byte(text_writer *writer, const unsigned char byte, const char quote)
 {
-    char buffer[8];
+    char buffer[ESCAPED_BYTE_TEXT_SIZE];
 
     if ((byte == (unsigned char)quote) || (byte == (unsigned char)'\\'))
     {
         buffer[0] = '\\';
         buffer[1] = (char)byte;
-        writer_append(writer, buffer, 2U);
+        writer_append(writer, buffer, ESCAPED_CHAR_LEN);
     }
     else if (byte == (unsigned char)'\n')
     {
-        writer_append(writer, "\\n", 2U);
+        writer_append(writer, ESCAPED_NEWLINE, sizeof(ESCAPED_NEWLINE) - 1U);
     }
     else if (byte == (unsigned char)'\t')
     {
-        writer_append(writer, "\\t", 2U);
+        writer_append(writer, ESCAPED_TAB, sizeof(ESCAPED_TAB) - 1U);
     }
-    else if ((byte < 0x20U) || (byte == 0x7FU))
+    else if ((byte < CPLAT_ASCII_PRINTABLE_MIN) || (byte == CPLAT_ASCII_DEL))
     {
         /*
          * 0x20 未満または 0x7F は "\\xHH" と終端 NUL で固定 5 [byte] となり、8 [byte] 配列に収まるため、
          * 戻り値は明示的に破棄する。
          */
         (void)snprintf(buffer, sizeof(buffer), "\\x%02X", (unsigned int)byte);
-        writer_append(writer, buffer, 4U);
+        writer_append(writer, buffer, HEX_ESCAPE_TEXT_LEN);
     }
     else
     {
@@ -932,7 +948,7 @@ static void writer_append_escaped_byte(text_writer *writer, const unsigned char 
 
 static void write_constant(text_writer *writer, const string_catalog_filter_constant *constant)
 {
-    char buffer[64];
+    char buffer[CONSTANT_NUMBER_TEXT_SIZE];
 
     switch (constant->header.kind)
     {
@@ -966,7 +982,7 @@ static void write_constant(text_writer *writer, const string_catalog_filter_cons
          * %.17g の出力は符号、仮数、指数と終端 NUL を含めても 25 [byte] 以内であり、
          * 64 [byte] 配列に収まるため、snprintf の戻り値は明示的に破棄する。
          */
-        for (int precision = 15; precision <= 17; precision++)
+        for (int precision = DBL_DIG; precision <= DBL_DECIMAL_DIG; precision++)
         {
             (void)snprintf(buffer, sizeof(buffer), "%.*g", precision, constant->real);
 
@@ -981,9 +997,7 @@ static void write_constant(text_writer *writer, const string_catalog_filter_cons
         {
             const size_t length = strlen(buffer);
 
-            buffer[length] = '.';
-            buffer[length + 1U] = '0';
-            buffer[length + 2U] = '\0';
+            memcpy(buffer + length, FLOAT_DECIMAL_SUFFIX, sizeof(FLOAT_DECIMAL_SUFFIX));
         }
 
         writer_append_text(writer, buffer);
@@ -1064,7 +1078,7 @@ static const char *operator_text(const uint8_t operator_kind)
 static void write_predicate(decompile_context *context, const string_catalog_filter_instruction *instruction)
 {
     string_catalog_filter_constant constant;
-    char buffer[32];
+    char buffer[DECOMPILE_ARGUMENT_TEXT_SIZE];
     uint32_t offset = instruction->operand;
 
     if (instruction->operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_HAS)
@@ -1149,13 +1163,13 @@ static int precedence_of(const uint8_t opcode)
     switch (opcode)
     {
     case STRING_CATALOG_FILTER_OPCODE_OR:
-        return PRECEDENCE_OR;
+        return STRING_CATALOG_FILTER_PRECEDENCE_OR;
     case STRING_CATALOG_FILTER_OPCODE_AND:
-        return PRECEDENCE_AND;
+        return STRING_CATALOG_FILTER_PRECEDENCE_AND;
     case STRING_CATALOG_FILTER_OPCODE_NOT:
-        return PRECEDENCE_NOT;
+        return STRING_CATALOG_FILTER_PRECEDENCE_NOT;
     default:
-        return PRECEDENCE_PREDICATE;
+        return STRING_CATALOG_FILTER_PRECEDENCE_PREDICATE;
     }
 }
 
@@ -1178,8 +1192,10 @@ static void write_node(decompile_context *context, const uint16_t node, const in
     string_catalog_filter_read_instruction(context->record, node, &instruction);
     precedence = precedence_of(instruction.opcode);
     needs_parenthesis = (precedence < parent_precedence) ||
-                        (is_right_operand && (precedence == parent_precedence) && (precedence <= PRECEDENCE_AND)) ||
-                        ((parent_precedence == PRECEDENCE_NOT) && (precedence == PRECEDENCE_PREDICATE));
+                        (is_right_operand && (precedence == parent_precedence) &&
+                         (precedence <= STRING_CATALOG_FILTER_PRECEDENCE_AND)) ||
+                        ((parent_precedence == STRING_CATALOG_FILTER_PRECEDENCE_NOT) &&
+                         (precedence == STRING_CATALOG_FILTER_PRECEDENCE_PREDICATE));
 
     if (needs_parenthesis)
     {
@@ -1250,7 +1266,7 @@ uint16_t string_catalog_filter_build_tree(const unsigned char *record, uint16_t 
         case STRING_CATALOG_FILTER_OPCODE_AND:
         case STRING_CATALOG_FILTER_OPCODE_OR:
             right[index] = stack[depth - 1U];
-            left[index] = stack[depth - 2U];
+            left[index] = stack[depth - STRING_CATALOG_FILTER_BINARY_OPERAND_COUNT];
             depth--;
             stack[depth - 1U] = index;
             break;

@@ -29,8 +29,17 @@
 #define DEFAULT_PROCESSES 16
 /** @brief 各プロセスが出力する既定の行数です。 */
 #define DEFAULT_MESSAGES 1000
-/** @brief 数値引数用の文字列領域です。 */
-#define NUMBER_TEXT_SIZE 32
+/** @brief 数値引数を文字列へ変換する配列の大きさ [byte] (終端 NUL を含む) です。 */
+#define NUMBER_TEXT_SIZE 32U
+
+/** ファイル出力先の 1 世代あたり最大サイズ [byte] です。 */
+#define BENCH_TRACER_SINK_MAX_BYTES 4096U
+
+/** ファイル出力先の保持世代数です。 */
+#define BENCH_TRACER_SINK_GENERATIONS 3
+
+/** --worker モード起動時の argc 期待値 (args[] の並びに対応) です。 */
+#define BENCH_TRACER_WORKER_ARGC 5
 
 /**
  *  @brief          単調増加時計をナノ秒で取得します。
@@ -70,7 +79,7 @@ static int run_worker(const char *path, int messages, int buffered)
         flags |= CPLAT_TRACE_FILE_SINK_OS_BUFFERED;
     }
 
-    sink = cplat_trace_file_sink_create(path, 4096U, 3, flags);
+    sink = cplat_trace_file_sink_create(path, BENCH_TRACER_SINK_MAX_BYTES, BENCH_TRACER_SINK_GENERATIONS, flags);
     if (sink == NULL)
     {
         return 1;
@@ -270,7 +279,7 @@ int main(int argc, char **argv)
     cplat_console_init();
 
     /* worker モードで起動された場合は worker 処理を実行して終了する。 */
-    if (argc == 5 && strcmp(argv[1], "--worker") == 0)
+    if (argc == BENCH_TRACER_WORKER_ARGC && strcmp(argv[1], "--worker") == 0)
     {
         int buffered;
 

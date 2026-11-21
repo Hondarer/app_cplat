@@ -83,12 +83,12 @@ extern "C"
 /**
  *  @brief  各コンテキストで保持する履歴エントリ数の既定値です。
  */
-#define CPLAT_PROMPT_HISTORY_DEFAULT 64
+#define CPLAT_PROMPT_HISTORY_DEFAULT 64U
 
 /**
  *  @brief  NUL 終端を含む入力バッファーの既定最大バイト数です。
  */
-#define CPLAT_PROMPT_INPUT_BYTES_DEFAULT 4096
+#define CPLAT_PROMPT_INPUT_BYTES_DEFAULT 4096U
 
     /**
      *  @brief  プロンプトを操作する不透明ハンドルです。

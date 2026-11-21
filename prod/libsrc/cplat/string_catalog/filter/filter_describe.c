@@ -20,6 +20,7 @@
 
 #include "filter.h"
 
+#include <cplat/base/char_code.h>
 #include <cplat/base/result.h>
 
 #include <inttypes.h>
@@ -27,23 +28,20 @@
 #include <stdio.h>
 #include <string.h>
 
-/** 演算子の優先順位です。値が大きいほど強く結合します。 */
-#define PRECEDENCE_OR        1
-#define PRECEDENCE_AND       2
-#define PRECEDENCE_NOT       3
-#define PRECEDENCE_PREDICATE 4
-
 /** 判定演算子の数 (インデックス 0 は未使用) です。 */
 #define OPERATOR_TABLE_SIZE ((size_t)STRING_CATALOG_FILTER_OPERATOR_MATCHES_I + 1U)
 
 /**
- *  定数 1 個の表記の最大バイト数です。
+ *  定数 1 個の表記の最大バイト数 [byte] です。
  *
  *  検証 (string_catalog_filter_check_record) は、長さが行幅を超える定数を拒否します。
- *  書き出しは 1 [byte] を最大 4 [byte] (`\xHH`) にするため、行幅の上限の 4 倍に、引用符 2 [byte] と
- *  終端 NUL を加えた大きさに収まります。
+ *  書き出しは 1 [byte] を最大 4 [byte] (`\xHH`) にするため、行幅の上限の 4 倍に、
+ *  引用符・NUL 等の余裕 16 [byte] を加えます。余裕は引用符 2 [byte] と終端 NUL の最小 3 [byte] 以上です。
  */
 #define CONSTANT_TEXT_MAX (CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX * 4U + 16U)
+
+/** 引数番号表記 "{255} " 用の作業配列 [byte] です。 */
+#define DESCRIBE_ARGUMENT_TEXT_SIZE 32U
 
 /** 判定演算子 1 個の文型です。主語、before、値、after の順に並べます。 */
 typedef struct operator_phrase
@@ -296,7 +294,8 @@ static void append_before(describe_context *context, const char *before)
     describe_writer *writer = &context->writer;
 
     if ((context->phrases->inserts_space_after_ascii != 0) && (writer->length > 0U) &&
-        ((unsigned char)writer->dest[writer->length - 1U] < 0x80U) && (writer->dest[writer->length - 1U] != ' '))
+        ((unsigned char)writer->dest[writer->length - 1U] < CPLAT_ASCII_BOUND_U8) &&
+        (writer->dest[writer->length - 1U] != ' '))
     {
         append_text(writer, " ");
     }
@@ -430,7 +429,7 @@ static void append_argument(describe_context *context, const string_catalog_filt
     string_catalog_filter_constant constant;
     bool is_name_common = true;
     bool is_description_common = true;
-    char text[32];
+    char text[DESCRIBE_ARGUMENT_TEXT_SIZE];
 
     if (instruction->field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME)
     {
@@ -837,13 +836,13 @@ static int precedence_of(const uint8_t opcode)
     switch (opcode)
     {
     case STRING_CATALOG_FILTER_OPCODE_OR:
-        return PRECEDENCE_OR;
+        return STRING_CATALOG_FILTER_PRECEDENCE_OR;
     case STRING_CATALOG_FILTER_OPCODE_AND:
-        return PRECEDENCE_AND;
+        return STRING_CATALOG_FILTER_PRECEDENCE_AND;
     case STRING_CATALOG_FILTER_OPCODE_NOT:
-        return PRECEDENCE_NOT;
+        return STRING_CATALOG_FILTER_PRECEDENCE_NOT;
     default:
-        return PRECEDENCE_PREDICATE;
+        return STRING_CATALOG_FILTER_PRECEDENCE_PREDICATE;
     }
 }
 
@@ -862,7 +861,7 @@ static void append_node(describe_context *context, const uint16_t node, const in
 
     string_catalog_filter_read_instruction(context->source->record, node, &instruction);
     precedence = precedence_of(instruction.opcode);
-    needs_parenthesis = (precedence < parent_precedence) && (parent_precedence != PRECEDENCE_NOT);
+    needs_parenthesis = (precedence < parent_precedence) && (parent_precedence != STRING_CATALOG_FILTER_PRECEDENCE_NOT);
 
     if (needs_parenthesis)
     {

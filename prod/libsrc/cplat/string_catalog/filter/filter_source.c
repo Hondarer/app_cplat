@@ -19,6 +19,7 @@
 
 #include "filter.h"
 
+#include <assert.h>
 #include <cplat/base/result.h>
 #include <cplat/clock/clock.h>
 #include <cplat/runtime/process.h>
@@ -26,14 +27,8 @@
 #include <stdint.h>
 #include <string.h>
 
-_Static_assert(sizeof(string_catalog_filter_source_header) == CPLAT_STRING_CATALOG_FILTER_SOURCE_HEADER_SIZE,
-               "cplat: source header size");
-
-/** FNV-1a 64 ビットの初期値です。カタログの識別値の計算に使います。 */
-#define CATALOG_ID_OFFSET_BASIS 14695981039346656037ULL
-
-/** FNV-1a 64 ビットの乗数です。 */
-#define CATALOG_ID_PRIME 1099511628211ULL
+static_assert(sizeof(string_catalog_filter_source_header) == CPLAT_STRING_CATALOG_FILTER_SOURCE_HEADER_SIZE,
+              "cplat: source header size");
 
 /** NULL の文字列を表す長さです。空の文字列と区別するために使います。 */
 #define CATALOG_ID_NULL_LENGTH 0xFFFFFFFFU
@@ -43,6 +38,12 @@ _Static_assert(sizeof(string_catalog_filter_source_header) == CPLAT_STRING_CATAL
 
 /** 版番号が上限を超えた場合に戻る値です。0 は未公開を表すため、0 でない最小の偶数とします。 */
 #define REVISION_WRAPPED 2ULL
+
+static_assert(REVISION_WRAPPED != 0ULL && (REVISION_WRAPPED & REVISION_WRITING_BIT) == 0ULL,
+              "周回後の版番号は未公開でも書き込み中でもないこと");
+
+/** 偶数で進める版番号の増分です。 */
+#define REVISION_STEP 2ULL
 
 /** ヘッダーが、0 で埋まった未公開の領域か、本ライブラリの形式の領域であるかを確かめます。 */
 static int check_known_header(const string_catalog_filter_source_header *header)
@@ -70,9 +71,9 @@ static int check_known_header(const string_catalog_filter_source_header *header)
  */
 static uint64_t next_revision(const uint64_t base)
 {
-    if (base <= (UINT64_MAX - 3U))
+    if (base <= (UINT64_MAX - (REVISION_STEP + REVISION_WRITING_BIT)))
     {
-        return base + 2U;
+        return base + REVISION_STEP;
     }
 
     return REVISION_WRAPPED;
@@ -107,7 +108,7 @@ static uint64_t hash_bytes(uint64_t hash, const unsigned char *bytes, const size
     for (size_t index = 0; index < length; index++)
     {
         hash ^= bytes[index];
-        hash *= CATALOG_ID_PRIME;
+        hash *= STRING_CATALOG_FILTER_FNV1A_64_PRIME;
     }
 
     return hash;
@@ -137,7 +138,7 @@ static uint64_t hash_text(const uint64_t hash, const char *text)
 
 int cplat_string_catalog_filter_get_catalog_id(const cplat_string_catalog *catalog, uint64_t *catalog_id_out)
 {
-    uint64_t hash = CATALOG_ID_OFFSET_BASIS;
+    uint64_t hash = STRING_CATALOG_FILTER_FNV1A_64_OFFSET_BASIS;
 
     if ((catalog == NULL) || (catalog_id_out == NULL) || (catalog->entry_count < 0) ||
         ((catalog->entry_count > 0) && (catalog->entries == NULL)))

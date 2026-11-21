@@ -17,11 +17,17 @@
 
 #include <string.h>
 
+/* djb2 ハッシュ関数の初期シード値 (Daniel J. Bernstein の古典的文字列ハッシュ) */
+#define HASHTABLE_DJB2_INITIAL UINT64_C(5381)
+
+/* djb2 ハッシュ関数の乗数 33 (= 2^5 + 1) を構成する左シフト量 [bit] */
+#define HASHTABLE_DJB2_SHIFT 5U
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 size_t hashtable_hash_key(const cplat_hashtable *ht, const void *key, size_t key_length)
 {
-    uint64_t hash = 5381;
+    uint64_t hash = HASHTABLE_DJB2_INITIAL;
     const unsigned char *p = (const unsigned char *)key;
 
     if (ht->hdr->config.key_type != CPLAT_HASHTABLE_FIELD_BINARY)
@@ -31,7 +37,7 @@ size_t hashtable_hash_key(const cplat_hashtable *ht, const void *key, size_t key
         /* 文字列は先頭の NUL までだけを混ぜ、残り 0 埋めはハッシュに入れない。 */
         while ((c = *p++) != 0)
         {
-            hash = ((hash << 5) + hash) + (uint64_t)c;
+            hash = ((hash << HASHTABLE_DJB2_SHIFT) + hash) + (uint64_t)c;
         }
     }
     else
@@ -41,7 +47,7 @@ size_t hashtable_hash_key(const cplat_hashtable *ht, const void *key, size_t key
         /* 有効長を超える 0 埋めはハッシュに入れない。 */
         for (i = 0; i < key_length; i++)
         {
-            hash = ((hash << 5) + hash) + p[i];
+            hash = ((hash << HASHTABLE_DJB2_SHIFT) + hash) + p[i];
         }
     }
 

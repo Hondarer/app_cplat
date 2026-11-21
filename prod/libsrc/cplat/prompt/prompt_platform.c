@@ -8,6 +8,12 @@
 #include <cplat/console/console.h>
 #include <cplat/crt/unistd.h>
 
+/* 端末サイズを取得できない場合の既定の端末列数 [桁] */
+#define PROMPT_PLATFORM_DEFAULT_COLS 80
+
+/* 端末サイズを取得できない場合の既定の端末行数 [行] */
+#define PROMPT_PLATFORM_DEFAULT_ROWS 24
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int prompt_platform_is_tty(void)
@@ -22,20 +28,20 @@ void prompt_platform_get_size(int *cols_out, int *rows_out)
     /* OS から端末サイズを取得できない場合は既定値 (80 列・24 行) を設定する。 */
     if (prompt_platform_os_get_size(cols_out, rows_out) != 0)
     {
-        *cols_out = 80;
-        *rows_out = 24;
+        *cols_out = PROMPT_PLATFORM_DEFAULT_COLS;
+        *rows_out = PROMPT_PLATFORM_DEFAULT_ROWS;
         return;
     }
 
     /* 幅または高さが 0 以下の場合は個別に既定値で補う。 */
     if (*cols_out <= 0)
     {
-        *cols_out = 80;
+        *cols_out = PROMPT_PLATFORM_DEFAULT_COLS;
     }
 
     if (*rows_out <= 0)
     {
-        *rows_out = 24;
+        *rows_out = PROMPT_PLATFORM_DEFAULT_ROWS;
     }
 }
 

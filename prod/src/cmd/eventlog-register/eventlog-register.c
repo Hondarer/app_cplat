@@ -39,6 +39,10 @@
     #include <cplat/runtime/module.h>
     #include <cplat/trace/eventlog.h>
 
+/** Win32 RT_MESSAGETABLE のリソース種別番号です。 */
+/* see: https://learn.microsoft.com/en-us/windows/win32/menurc/resource-types */
+    #define EVENTLOG_MESSAGETABLE_TYPE_ID 11
+
 /**
  *  @brief          管理者権限を保証します。必要なら UAC 昇格して再実行します。
  *  @param[in]      command  昇格再実行するサブコマンド ("install" / "uninstall")。
@@ -199,7 +203,7 @@ static int do_install(void)
     }
 
     /* mc.exe が生成するテーブルは ID 1、リソース種別は RT_MESSAGETABLE (11)。 */
-    table = FindResourceW(resources, MAKEINTRESOURCEW(1), MAKEINTRESOURCEW(11));
+    table = FindResourceW(resources, MAKEINTRESOURCEW(1), MAKEINTRESOURCEW(EVENTLOG_MESSAGETABLE_TYPE_ID));
     /*
      * 存在の確認だけにデータ ファイルとして読み込んだ DLL の解放であり、失敗しても登録の判定は変わらないため、
      * 戻り値は明示的に破棄する。

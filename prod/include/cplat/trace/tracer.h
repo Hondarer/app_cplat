@@ -69,6 +69,7 @@
 #define CPLAT_TRACER_H
 
 /* size_t は cplat_tracer_write_hex() と cplat_tracer_write_hexf() で使用する。 */
+#include <assert.h>
 #include <stddef.h>
 /* int64_t は cplat_tracer_set_name() で使用する。 */
 #include <stdint.h>
@@ -131,7 +132,7 @@
  *  安全な転送を保証します。\n
  *  本文の最大長は `CPLAT_TRACER_MESSAGE_MAX_BYTES` @c - @c 1 (= 1,023) バイトです。
  */
-#define CPLAT_TRACER_MESSAGE_MAX_BYTES 1024
+#define CPLAT_TRACER_MESSAGE_MAX_BYTES 1024U
 
 /**
  *  @brief          cplat_tracer_write_hex がラベルなしで HEX 出力できるバイナリ データの最大バイト数です。
@@ -142,7 +143,7 @@
  *  データがこの上限を超える場合は切り詰めが行われ、
  *  末尾に `"..."` が付与されます。
  */
-#define CPLAT_TRACER_HEX_MAX_DATA_BYTES 341
+#define CPLAT_TRACER_HEX_MAX_DATA_BYTES (CPLAT_TRACER_MESSAGE_MAX_BYTES / 3U)
 
 /* ===== 共通トレース レベル ===== */
 
@@ -229,6 +230,9 @@ typedef enum cplat_trace_level
  *  どの通常のスレッショルド レベルよりも小さい値になり、判定を通過します。
  */
 #define CPLAT_TRACE_LEVEL_FORCE_OFFSET 7
+
+static_assert(CPLAT_TRACE_LEVEL_FORCE_OFFSET == ((int)CPLAT_TRACE_LEVEL_NONE + 1),
+              "cplat: force offset must cover all normal levels");
 
 /**
  *  @brief          通常のトレース レベルを、強制出力のトレース レベルへ変換します。

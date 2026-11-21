@@ -26,6 +26,7 @@
 #if defined(PLATFORM_LINUX)
     #include <sys/types.h>
 #elif defined(PLATFORM_WINDOWS)
+    #include "crt.h"
     #include <io.h>
     #include <share.h>
     #include <stdlib.h>
@@ -63,7 +64,7 @@ FILE *cplat_fopen(const char *path, const char *modes, cplat_error *detail_out)
 #elif defined(PLATFORM_WINDOWS)
     {
         wchar_t wpath[PLATFORM_PATH_MAX];
-        wchar_t wmodes[64];
+        wchar_t wmodes[CRT_WMODES_CAPACITY];
         FILE *fp = NULL;
         errno_t err;
         size_t converted;
@@ -133,7 +134,7 @@ FILE *cplat_freopen(const char *path, const char *modes, FILE *stream, cplat_err
 #elif defined(PLATFORM_WINDOWS)
     {
         wchar_t wpath[PLATFORM_PATH_MAX];
-        wchar_t wmodes[64];
+        wchar_t wmodes[CRT_WMODES_CAPACITY];
         FILE *new_fp = NULL;
         errno_t err;
         size_t converted;

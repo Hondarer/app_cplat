@@ -83,28 +83,25 @@ extern "C"
  *  設定された名前の上限そのものではありません。\n
  *  設定名は終端を除く 255 バイトまで解決でき、この定数は終端を含む 256 です。
  */
-#define CPLAT_SYM_LOADER_NAME_MAX 256
+#define CPLAT_SYM_LOADER_NAME_MAX 256U
 
-/** 名前が空である診断理由です。 */
-#define CPLAT_SYM_LOADER_REJECT_EMPTY_NAME (-1)
-
-/** 名前が長すぎる診断理由です。 */
-#define CPLAT_SYM_LOADER_REJECT_NAME_TOO_LONG (-2)
-
-/** ライブラリを開けない診断理由です。 */
-#define CPLAT_SYM_LOADER_REJECT_OPEN_FAILED (-3)
-
-/** シンボルが見つからない診断理由です。 */
-#define CPLAT_SYM_LOADER_REJECT_SYMBOL_NOT_FOUND (-4)
-
-/** 複数の移譲先に明示的既定値が含まれるため、キー全体を未適用にした診断理由です。 */
-#define CPLAT_SYM_LOADER_REJECT_MIXED_DEFAULT (-5)
-
-/** lib と func の片方だけが default であるため、その先を開かなかった診断理由です。 */
-#define CPLAT_SYM_LOADER_REJECT_PARTIAL_DEFAULT (-6)
-
-/** 同じキーの後の値で置き換えたため、前の先を捨てた診断理由です。 */
-#define CPLAT_SYM_LOADER_REJECT_DUPLICATE_KEY (-7)
+    /**
+     *  @enum           cplat_sym_loader_reject_reason
+     *  @brief          移譲先が診断の列へ入れられた理由です。
+     */
+    typedef enum cplat_sym_loader_reject_reason
+    {
+        CPLAT_SYM_LOADER_REJECT_EMPTY_NAME = -1,       /**< 名前が空である診断理由です。 */
+        CPLAT_SYM_LOADER_REJECT_NAME_TOO_LONG = -2,    /**< 名前が長すぎる診断理由です。 */
+        CPLAT_SYM_LOADER_REJECT_OPEN_FAILED = -3,      /**< ライブラリを開けない診断理由です。 */
+        CPLAT_SYM_LOADER_REJECT_SYMBOL_NOT_FOUND = -4, /**< シンボルが見つからない診断理由です。 */
+        CPLAT_SYM_LOADER_REJECT_MIXED_DEFAULT =
+            -5, /**< 複数の移譲先に明示的既定値が含まれるため、キー全体を未適用にした診断理由です。 */
+        CPLAT_SYM_LOADER_REJECT_PARTIAL_DEFAULT =
+            -6, /**< lib と func の片方だけが default であるため、その先を開かなかった診断理由です。 */
+        CPLAT_SYM_LOADER_REJECT_DUPLICATE_KEY =
+            -7 /**< 同じキーの後の値で置き換えたため、前の先を捨てた診断理由です。 */
+    } cplat_sym_loader_reject_reason;
 
     /** 移譲先の列と診断の列を保持する非公開の管理構造体です。 */
     typedef struct cplat_sym_loader_entry_impl cplat_sym_loader_entry_impl;
