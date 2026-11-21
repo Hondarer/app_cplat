@@ -62,14 +62,15 @@ static void register_console_shutdown_callback(void)
  *  @param[in]      stream      対象ストリーム (stdout / stderr / stdin)。
  *  @param[in]      name        診断ログに記録するストリーム名。
  *  @param[in]      open_flags  `_open_osfhandle` へ渡すフラグ (`_O_TEXT` に加え `_O_RDWR` 等)。
- *  @return         成功時は 0、失敗時は -1。
+ *  @return         成功時は @ref CPLAT_OK 、引数が不正な場合は @ref CPLAT_ERR_INVALID_ARGUMENT 、
+ *                  fd の取得、開き直し、番号の一致のいずれかに失敗した場合は @ref CPLAT_ERR_UNKNOWN を返します。
  *
  *  `freopen` (内部で fd の閉じ直しを行う) や `_dup2` (別の一時 fd を経由する) は、
  *  いずれも実機調査で原因不明の失敗 (`EACCES` / 2 本目以降の `EBADF`) が再現した。
  *  本関数は `_close()` で対象 fd を解放した直後に、その場で `_open_osfhandle()` を
  *  呼ぶだけで `_dup2` を経由しない。fd 解放直後に呼ぶため、CRT の fd 割り当てが
  *  最小番号から再利用する前提で、解放した番号がそのまま戻ることを期待し、
- *  異なる番号が返った場合は診断ログに記録する。\n
+ *  異なる番号が返った場合は、診断ログに記録して失敗を返す。\n
  *  @p handle は `DuplicateHandle()` で複製せず、そのまま `_open_osfhandle()` に渡す
  *  (複製したハンドルでは書き込みが `EACCES` で拒否される事象が実機調査で再現したため)。
  *  そのため呼び出し後は fd がこのハンドルの所有権を持つことになり、@p handle を
@@ -85,35 +86,47 @@ static int reopen_crt_std_fd(HANDLE handle, FILE *stream, const char *name, int 
 
     if (handle == NULL || handle == INVALID_HANDLE_VALUE || stream == NULL || name == NULL)
     {
-        return -1;
+        return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
     expected_fd = _fileno(stream);
     if (expected_fd < 0)
     {
         console_diag_logf("reopen %s _fileno failed", name);
-        return -1;
+        return CPLAT_ERR_UNKNOWN;
     }
 
-    /* 閉じられずに番号が変わった場合は直後の fd の比較で診断ログに残るため、戻り値は明示的に破棄する。 */
+    /* 閉じられなかった場合は、直後の _open_osfhandle() が別の番号を返し、fd の比較で失敗として返るため、戻り値は明示的に破棄する。 */
     (void)_close(expected_fd);
 
     new_fd = _open_osfhandle((intptr_t)handle, open_flags);
     if (new_fd < 0)
     {
         console_diag_logf("reopen %s _open_osfhandle failed errno=%d expected_fd=%d", name, errno, expected_fd);
-        return -1;
+        return CPLAT_ERR_UNKNOWN;
     }
 
     if (new_fd != expected_fd)
     {
+        /*
+         * _open_osfhandle() は、空いている fd のうち最小の番号を返す。
+         * 根拠は Windows SDK の UCRT のソース (ucrt/lowio/osfinfo.cpp の _alloc_osfhnd()) で、
+         * Microsoft Learn の説明は、返す番号の規則を記載していない。
+         * 番号が expected_fd と異なるのは、expected_fd より小さい fd が空いていた場合と、
+         * _close() から _open_osfhandle() までの間に別のスレッドが fd を割り当てた場合である。
+         * このとき stream は閉じた expected_fd を指したままになるため、失敗として返す。
+         * new_fd は閉じない。_close() は fd に関連付けた Win32 ハンドルも閉じるため、
+         * 呼び出し元が SetStdHandle() へ渡したハンドルが無効になる。
+         * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/open-osfhandle
+         */
         console_diag_logf("reopen %s unexpected fd new_fd=%d expected_fd=%d", name, new_fd, expected_fd);
+        return CPLAT_ERR_UNKNOWN;
     }
 
     clearerr(stream);
     console_diag_logf("reopen %s success fd=%d", name, new_fd);
 
-    return 0;
+    return CPLAT_OK;
 }
 
 /*
@@ -547,6 +560,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
     int attached_once;
     int attempt;
     int argc_value;
+    int stream_failed;
 
     if (attached_out != NULL)
     {
@@ -640,10 +654,15 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
 
     if (attached == 0 && attached_once == 0)
     {
-        /* AttachConsole 自体が一度も成功しなかった場合のみ失敗とする。 */
+        /* AttachConsole 自体が一度も成功しなかった場合は未接続として失敗を返す。 */
         console_diag_logf("attach_parent failed attached=%d attached_once=%d final_hwnd=0x%p", attached, attached_once,
                           (void *)GetConsoleWindow());
         return CPLAT_ERR_UNKNOWN;
+    }
+
+    if (attached_out != NULL)
+    {
+        *attached_out = 1;
     }
 
     console_diag_logf("attach_parent proceed attached=%d attached_once=%d final_hwnd=0x%p", attached, attached_once,
@@ -653,6 +672,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
      * Win32 レベルの標準ハンドルを親コンソールへ付け替える
      * (GetStdHandle / WriteConsole 系や tracer の stderr sink が参照する)。
      */
+    stream_failed = 0;
     /* 次の 3 件はワイド文字列リテラルを渡すため、CreateFileU を使わない。 */
     h_out = CreateFileW(L"CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
                         OPEN_EXISTING, 0, NULL);
@@ -666,6 +686,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
         {
             console_diag_logf("SetStdHandle stdout failed handle=0x%p error=%lu", (void *)h_out,
                               (unsigned long)GetLastError());
+            stream_failed = 1;
         }
     }
     else
@@ -673,6 +694,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
         DWORD open_error = GetLastError();
 
         console_diag_logf("SetStdHandle stdout skipped CreateFileW failed error=%lu", (unsigned long)open_error);
+        stream_failed = 1;
     }
 
     h_err = CreateFileW(L"CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
@@ -687,6 +709,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
         {
             console_diag_logf("SetStdHandle stderr failed handle=0x%p error=%lu", (void *)h_err,
                               (unsigned long)GetLastError());
+            stream_failed = 1;
         }
     }
     else
@@ -694,6 +717,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
         DWORD open_error = GetLastError();
 
         console_diag_logf("SetStdHandle stderr skipped CreateFileW failed error=%lu", (unsigned long)open_error);
+        stream_failed = 1;
     }
 
     h_in = CreateFileW(L"CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
@@ -708,6 +732,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
         {
             console_diag_logf("SetStdHandle stdin failed handle=0x%p error=%lu", (void *)h_in,
                               (unsigned long)GetLastError());
+            stream_failed = 1;
         }
     }
     else
@@ -715,33 +740,44 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
         DWORD open_error = GetLastError();
 
         console_diag_logf("SetStdHandle stdin skipped CreateFileW failed error=%lu", (unsigned long)open_error);
+        stream_failed = 1;
     }
 
     /*
      * CRT レベルの標準ストリームを親コンソールへ再接続する (fgets 等の入力で参照する)。
-     * printf/fprintf (FILE* 経由) は再接続後に書き込みを拒否することがあるため
-     * 再接続後の出力には本ファイル末尾の cplat_console_write()
-     * (Win32 の WriteConsoleU を呼ぶ) を使うこと。本関数による fd の再接続は、
-     * fgets 等の入力経路向けに維持している。
+     * 再接続後の書き込みには次の 2 つの現象があり、いずれも実機で確認した。原因は特定できていない。
+     * - CRT のストリーム (printf、fprintf) を経由した書き込みが失敗する。cplat_console_write() は影響を受けない (CRT のストリームを経由しないため)。
+     * - 書き込みが ERROR_INVALID_HANDLE で間欠的に失敗し、一度失敗すると再試行しても同じエラーで失敗する。これは cplat_console_write() でも発生する。
+     * 再接続後の出力には本ファイル末尾の cplat_console_write() (WriteConsoleU を呼び、失敗時に WriteFile へ切り替える) を使うこと。
+     * 確実に表示する必要がある場合は、cplat_elevated_process_run_piped() または cplat_elevated_process_run_with_result() を使用する。
      * CONOUT$ / CONIN$ は GENERIC_READ | GENERIC_WRITE で開いているため _O_RDWR を渡す。
+     * stdout と stderr は、再接続の直後から表示するため無バッファーにする。stdin は変更しない。
+     * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/setvbuf
      */
-    if (reopen_crt_std_fd(h_out, stdout, "stdout", _O_TEXT | _O_RDWR) == 0)
+    if (reopen_crt_std_fd(h_out, stdout, "stdout", _O_TEXT | _O_RDWR) == CPLAT_OK)
     {
-        /* 失敗しても Win32 ハンドルは付け替え済みで処理を継続できるため、戻り値は明示的に破棄する。 */
+        /* バッファリングを変更できなくても、標準ストリームの接続の結果は変わらないため、戻り値は明示的に破棄する。 */
         (void)setvbuf(stdout, NULL, _IONBF, 0);
     }
-
-    if (reopen_crt_std_fd(h_err, stderr, "stderr", _O_TEXT | _O_RDWR) == 0)
+    else
     {
-        /* 失敗しても Win32 ハンドルは付け替え済みで処理を継続できるため、戻り値は明示的に破棄する。 */
-        (void)setvbuf(stderr, NULL, _IONBF, 0);
+        stream_failed = 1;
     }
 
-    /*
-     * 失敗は reopen_crt_std_fd が診断ログへ記録し、Win32 ハンドルは付け替え済みで処理を継続できるため、
-     * 戻り値は明示的に破棄する。
-     */
-    (void)reopen_crt_std_fd(h_in, stdin, "stdin", _O_TEXT | _O_RDWR);
+    if (reopen_crt_std_fd(h_err, stderr, "stderr", _O_TEXT | _O_RDWR) == CPLAT_OK)
+    {
+        /* バッファリングを変更できなくても、標準ストリームの接続の結果は変わらないため、戻り値は明示的に破棄する。 */
+        (void)setvbuf(stderr, NULL, _IONBF, 0);
+    }
+    else
+    {
+        stream_failed = 1;
+    }
+
+    if (reopen_crt_std_fd(h_in, stdin, "stdin", _O_TEXT | _O_RDWR) != CPLAT_OK)
+    {
+        stream_failed = 1;
+    }
 
     /*
      * 親コンソールへ再接続したことを記録する。終了時のフラッシュ後に conhost が
@@ -750,9 +786,9 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
     cplat_atomic_store_i32(&s_attached_parent, 1, CPLAT_MEMORY_ORDER_SEQ_CST);
     console_diag_logf("attach_parent end attached=%d attached_once=%d", attached, attached_once);
 
-    if (attached_out != NULL)
+    if (stream_failed != 0)
     {
-        *attached_out = 1;
+        return CPLAT_ERR_UNKNOWN;
     }
 
     return CPLAT_OK;

@@ -59,17 +59,26 @@
 
 #ifdef DOXYGEN
     /**
-     *  @brief          OS 固有のパス最大長です。
-     *                  Linux では PATH_MAX、Windows では MAX_PATH に対応する値を使用します。
+     *  @brief          OS 固有のパス最大長です (終端 NUL を含む)。
+     *                  Linux では PATH_MAX [byte]、Windows では MAX_PATH (UTF-16 の文字数) です。
+     *                  UTF-8 のパスを受け取るバッファーの大きさには @ref PLATFORM_PATH_UTF8_MAX を使用してください。
      */
     #define PLATFORM_PATH_MAX 4096
+
+    /**
+     *  @brief          PLATFORM_PATH_MAX の長さのパスを UTF-8 で格納できるバッファーの大きさ [byte] です (終端 NUL を含む)。
+     *                  Linux では PATH_MAX、Windows では MAX_PATH の 3 倍です。
+     */
+    #define PLATFORM_PATH_UTF8_MAX 4096U
 #else /* !DOXYGEN */
     #if defined(PLATFORM_LINUX)
         #include <limits.h>
-        #define PLATFORM_PATH_MAX PATH_MAX
+        #define PLATFORM_PATH_MAX      PATH_MAX
+        #define PLATFORM_PATH_UTF8_MAX (PATH_MAX * 1U)
     #elif defined(PLATFORM_WINDOWS)
         #include <cplat/base/windows_sdk.h>
-        #define PLATFORM_PATH_MAX MAX_PATH
+        #define PLATFORM_PATH_MAX      MAX_PATH
+        #define PLATFORM_PATH_UTF8_MAX (MAX_PATH * 3U)
     #endif /* PLATFORM_ */
 #endif     /* DOXYGEN */
 
@@ -113,9 +122,10 @@
  *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
  *                  エラー詳細を設定せず、返却しません。
  *                  NULL 以外を指定した場合、成功時は空の値を格納します。
- *  @param[in]      ...        連結する UTF-8 文字列断片。少なくとも 1 つ必要です。
+ *  @param[in]      ...        連結する UTF-8 文字列断片。1 個以上 16 個以下を指定してください。
  *
  *  断片は自動補正せず、そのまま連結されます。\n
+ *  断片が 16 個を超える場合は cplat_path_concat_n() (または cplat_path_join_n()) を使用してください。\n
  *  パス区切り文字が必要な場合は @ref PLATFORM_PATH_SEP を明示的に指定してください。
  *
  *  @par            スレッド セーフ
@@ -132,9 +142,10 @@
  *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
  *                  エラー詳細を設定せず、返却しません。
  *                  NULL 以外を指定した場合、成功時は空の値を格納します。
- *  @param[in]      ...        連結する UTF-8 文字列断片。少なくとも 1 つ必要です。
+ *  @param[in]      ...        連結する UTF-8 文字列断片。1 個以上 16 個以下を指定してください。
  *
  *  cplat_path_concat() と異なり、断片間に @ref PLATFORM_PATH_SEP を自動的に補完します。\n
+ *  断片が 16 個を超える場合は cplat_path_concat_n() (または cplat_path_join_n()) を使用してください。\n
  *  詳細は cplat_path_join_n() を参照してください。
  *
  *  @par            スレッド セーフ
@@ -179,7 +190,9 @@ extern "C"
      *  '.' / '..' を解消した絶対パス文字列を返します。\n
      *  正規化用メモリを確保できない場合、@p detail_out に errno ドメインの `ENOMEM` を格納します。\n
      *  Windows では GetFullPathNameW() により絶対化し、返却値は常に
-     *  @ref PLATFORM_PATH_SEP (`"/"`) 区切りへ正規化されます。
+     *  @ref PLATFORM_PATH_SEP (`"/"`) 区切りへ正規化されます。\n
+     *  Windows では、入力または結果が UTF-16 で @ref PLATFORM_PATH_MAX 文字 (終端を含む) を超える場合に
+     *  @ref CPLAT_ERR_BUFFER_TOO_SMALL を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -201,7 +214,9 @@ extern "C"
      *
      *  内部でそれぞれのパスに対して cplat_path_get_full() を呼び、絶対化と
      *  区切り文字正規化を行ったうえで比較します。\n
-     *  Windows ではファイル システムの慣習に合わせて大小文字を区別せず比較します。
+     *  Windows ではファイル システムの慣習に合わせて大小文字を区別せず比較します。\n
+     *  Windows では、入力または結果が UTF-16 で @ref PLATFORM_PATH_MAX 文字 (終端を含む) を超える場合に
+     *  @ref CPLAT_ERR_BUFFER_TOO_SMALL を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。

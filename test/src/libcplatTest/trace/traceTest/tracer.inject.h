@@ -29,7 +29,9 @@ extern "C"
     extern int test_tracer_begin_dispose(cplat_tracer *handle);
 #if defined(PLATFORM_LINUX)
     extern int test_tracer_to_syslog_level(cplat_trace_level level);
-#endif /* PLATFORM_LINUX */
+#elif defined(PLATFORM_WINDOWS)
+    extern int test_tracer_to_eventlog_level(cplat_trace_level level);
+#endif /* PLATFORM_ */
     extern size_t test_tracer_utf8_safe_truncate(const char *text, size_t position);
     extern int test_tracer_build_default_file_path(const cplat_tracer *handle, char *path_out, size_t path_size);
     extern int test_tracer_hex_write_impl(cplat_tracer *handle, cplat_trace_level level,

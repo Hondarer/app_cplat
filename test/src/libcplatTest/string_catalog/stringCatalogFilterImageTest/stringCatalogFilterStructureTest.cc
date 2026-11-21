@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <limits>
 
 using namespace filter_test;
 
@@ -494,4 +495,125 @@ TEST_F(stringCatalogFilterStructureTest, different_byte_order_is_rejected)
     EXPECT_EQ(
         CPLAT_ERR_CORRUPT_DESCRIPTOR,
         actual_ret); // [確認_異常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+}
+
+// 長さが行幅と同じ文字列定数は、構造の検査で許可することの確認
+TEST_F(stringCatalogFilterStructureTest, string_constant_as_long_as_line_width_is_accepted)
+{
+    // Arrange
+    string_catalog_filter_record_header record_header;
+    string_catalog_filter_constant_header constant_header;
+    unsigned char *constants;
+    int actual_ret;
+
+    // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
+    prepare("id == \"a\""); // [状態] - 文字列定数を 1 個持つ条件式をコンパイルする。
+
+    // Pre-Assert
+
+    // Act
+    constants = record + (string_catalog_filter_record_constants(record, (uint32_t)kLineWidth) - record);
+    std::memcpy(&constant_header, constants, sizeof(constant_header));
+    constant_header.length = (uint32_t)kLineWidth;
+    std::memcpy(constants, &constant_header, sizeof(constant_header));
+    std::memset(constants + STRING_CATALOG_FILTER_CONSTANT_HEADER_SIZE, 'a', kLineWidth);
+    constants[STRING_CATALOG_FILTER_CONSTANT_HEADER_SIZE + kLineWidth] = '\0';
+    record_header = read_record_header(record);
+    record_header.constant_size =
+        (uint16_t)(STRING_CATALOG_FILTER_CONSTANT_HEADER_SIZE +
+                   (((kLineWidth + STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT) / STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT) *
+                    STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT));
+    string_catalog_filter_write_record_header(
+        record,
+        &record_header); // [手順] - 文字列定数の長さを行幅 (160) にしてヘッダーと定数領域を書き換える。
+    rehash(image, record); // [手順] - 書き換えたレコードを指定して rehash() を呼び出す。
+    actual_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret); // [確認_正常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_OK であること。
+}
+
+// 長さが行幅を超える文字列定数は、構造の検査で拒否することの確認
+TEST_F(stringCatalogFilterStructureTest, string_constant_longer_than_line_width_is_rejected)
+{
+    // Arrange
+    string_catalog_filter_record_header record_header;
+    string_catalog_filter_constant_header constant_header;
+    unsigned char *constants;
+    const std::size_t too_long_length = kLineWidth + 1U;
+    int actual_ret;
+
+    // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
+    prepare("id == \"a\""); // [状態] - 文字列定数を 1 個持つ条件式をコンパイルする。
+
+    // Pre-Assert
+
+    // Act
+    constants = record + (string_catalog_filter_record_constants(record, (uint32_t)kLineWidth) - record);
+    std::memcpy(&constant_header, constants, sizeof(constant_header));
+    constant_header.length = (uint32_t)too_long_length;
+    std::memcpy(constants, &constant_header, sizeof(constant_header));
+    std::memset(constants + STRING_CATALOG_FILTER_CONSTANT_HEADER_SIZE, 'a', too_long_length);
+    constants[STRING_CATALOG_FILTER_CONSTANT_HEADER_SIZE + too_long_length] = '\0';
+    record_header = read_record_header(record);
+    record_header.constant_size = (uint16_t)(STRING_CATALOG_FILTER_CONSTANT_HEADER_SIZE +
+                                             (((too_long_length + STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT) /
+                                               STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT) *
+                                              STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT));
+    string_catalog_filter_write_record_header(
+        record,
+        &record_header); // [手順] - 文字列定数の長さを 161 にしてヘッダーと定数領域を書き換える。
+    rehash(image, record); // [手順] - 書き換えたレコードを指定して rehash() を呼び出す。
+    actual_ret = cplat_string_catalog_filter_validate(
+        image,
+        kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_ret); // [確認_異常系] - cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+}
+
+// 非有限値の浮動小数点数定数は、構造の検査で拒否することの確認
+TEST_F(stringCatalogFilterStructureTest, non_finite_float_constant_is_rejected)
+{
+    // Arrange
+    unsigned char *constants;
+    const double non_finite_values[] = {
+        std::numeric_limits<double>::quiet_NaN(),
+        std::numeric_limits<double>::infinity(),
+        -std::numeric_limits<double>::infinity(),
+    };
+    int actual_results[3] = {CPLAT_OK, CPLAT_OK, CPLAT_OK};
+
+    // [サブ手順参照 名前=stringCatalogFilterStructureTest.prepare]
+    prepare("arg[0] == 1.5"); // [状態] - 浮動小数点数の定数を 1 個持つ条件式をコンパイルする。
+
+    // Pre-Assert
+
+    // Act
+    constants = record + (string_catalog_filter_record_constants(record, (uint32_t)kLineWidth) - record);
+    for (std::size_t index = 0U; index < 3U; index++)
+    {
+        std::memcpy(constants + STRING_CATALOG_FILTER_CONSTANT_HEADER_SIZE, &non_finite_values[index],
+                    sizeof(non_finite_values[index])); // [手順] - 定数の値を非有限値へ書き換える。
+        rehash(image, record); // [手順] - 書き換えたレコードを指定して rehash() を呼び出す。
+        actual_results[index] = cplat_string_catalog_filter_validate(
+            image,
+            kImageSize); // [手順] - イメージとそのサイズを指定して cplat_string_catalog_filter_validate() を呼び出す。
+    }
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_results[0]); // [確認_異常系] - NaN を設定した場合の cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_results[1]); // [確認_異常系] - 正の無限大を設定した場合の cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CORRUPT_DESCRIPTOR,
+        actual_results[2]); // [確認_異常系] - 負の無限大を設定した場合の cplat_string_catalog_filter_validate() の戻り値が CPLAT_ERR_CORRUPT_DESCRIPTOR であること。
 }

@@ -30,14 +30,14 @@ Linux と Windows では、ファイル パス、セキュア関数、ワイド�
 - `cplat/crt/string.h`: 安全な文字列コピー/連結、再入可能な `strtok_r`、ASCII の大文字小文字を無視する比較、`sscanf` 抽象
 - `cplat/crt/stdlib.h`: 環境変数の取得と設定、完全消費を検査する文字列から数値への変換
 - `cplat/crt/time.h`: UTC / local 時刻変換
-- `cplat/crt/path.h`: `PLATFORM_PATH_MAX`
+- `cplat/crt/path.h`: `PLATFORM_PATH_MAX`、`PLATFORM_PATH_UTF8_MAX`
 
 ## 実装方針
 
 基礎 API とフォーマット付き API は別の実装ファイルに分けます。  
 これは、フォーマット付き API のテストで下位の `cplat_fopen` や `cplat_stat` をモックできるようにするためです。
 
-`*_fmt` API は、内部で `vsnprintf` によりパスを `PLATFORM_PATH_MAX` のバッファーへ展開し、対応する基礎 API を呼び出します。
+`*_fmt` API は、内部で `vsnprintf` によりパスを `PLATFORM_PATH_UTF8_MAX` のバッファーへ展開し、対応する基礎 API を呼び出します。
 
 ## 使用例
 

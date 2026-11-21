@@ -495,4 +495,35 @@ TEST_F(makedirsTest, windows_separator_path_creates_directory)
     // Cleanup
     (void)std::filesystem::remove_all(root, ec);
 }
+
+// 260 バイト超かつ UTF-16 で MAX_PATH 未満の非 ASCII ディレクトリを作成できることの確認 (Windows)
+TEST_F(makedirsTest, creates_non_ascii_directory_over_260_bytes_windows)
+{
+    // Arrange
+    char temp_dir[PLATFORM_PATH_UTF8_MAX] = {};
+    ASSERT_EQ(CPLAT_OK,
+              cplat_path_get_temp_dir(temp_dir, sizeof(temp_dir), nullptr)); // [状態] - 一時ディレクトリを取得する。
+    // [状態確認] - cplat_path_get_temp_dir() の戻り値が CPLAT_OK であること。
+    std::string dir_name;
+    for (int i = 0; i < 90; ++i)
+    {
+        dir_name += "\xE3\x81\x82";
+    }
+    std::string target =
+        std::string(temp_dir) + "/" + dir_name; // [状態] - 一時ディレクトリ配下に 270 バイトの非 ASCII パスを用意する。
+    (void)cplat_rmdir(target.c_str(), nullptr);
+
+    // Pre-Assert
+
+    // Act
+    int actual_ret = cplat_makedirs(
+        target.c_str(),
+        nullptr); // [手順] - 260 バイト超の非 ASCII ディレクトリパスを指定して cplat_makedirs() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_makedirs() の戻り値が CPLAT_OK であること。
+
+    // Cleanup
+    (void)cplat_rmdir(target.c_str(), nullptr);
+}
 #endif /* PLATFORM_WINDOWS */

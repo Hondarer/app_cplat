@@ -2,6 +2,8 @@
 #include <mock_cplat.h>
 #if defined(PLATFORM_LINUX)
     #include <mock_dlfcn.h>
+#elif defined(PLATFORM_WINDOWS)
+    #include <mock_windows.h>
 #endif
 #include <cplat/base/result.h>
 #include <cplat/crt/path.h>
@@ -155,6 +157,43 @@ TEST_F(moduleTest, get_path_returns_unknown_when_dladdr_has_empty_filename)
     EXPECT_EQ(CPLAT_ERR_UNKNOWN,
               actual_ret); // [確認_異常系] - cplat_module_get_path() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
+
+// 所属モジュールのパス正規化がメモリ不足で失敗した場合に OUT_OF_MEMORY を返すことの確認
+TEST_F(moduleTest, get_path_returns_out_of_memory_when_normalization_reports_out_of_memory)
+{
+    // Arrange
+    NiceMock<Mock_dlfcn> mock_dlfcn;
+    NiceMock<Mock_cplat> mock_cplat;
+    char path[PLATFORM_PATH_MAX] = {};
+
+    // Pre-Assert
+    EXPECT_CALL(mock_dlfcn, dladdr(_, _, _, _, _))
+        .WillOnce(
+            [](const char *, int, const char *, const void *, void *raw_info)
+            {
+                Dl_info *info = static_cast<Dl_info *>(raw_info);
+                info->dli_fname = "/opt/cplat/moduleTest";
+                return 1;
+            }); // [Pre-Assert確認_正常系] - dladdr() が 1 回呼び出されること。
+                // [Pre-Assert手順] - dladdr() から、所属モジュール パスを持つ情報を設定して 1 を返す。
+    EXPECT_CALL(mock_cplat, cplat_path_get_full(_, _, _, _))
+        .WillOnce(
+            [](char *, size_t, cplat_error *detail_out, const char *)
+            {
+                *detail_out = {CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_OUT_OF_MEMORY, ENOMEM};
+                return CPLAT_ERR_OUT_OF_MEMORY;
+            }); // [Pre-Assert確認_異常系] - cplat_path_get_full() が 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_path_get_full() から、詳細に ENOMEM を設定して CPLAT_ERR_OUT_OF_MEMORY を返す。
+
+    // Act
+    int actual_ret = cplat_module_get_path(
+        path, sizeof(path),
+        self_func_addr()); // [手順] - パス正規化がメモリ不足で失敗する状態で cplat_module_get_path() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
+              actual_ret); // [確認_異常系] - cplat_module_get_path() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+}
 #elif defined(PLATFORM_WINDOWS)
 // 関数アドレスから所属モジュールの絶対パスが取得できることの確認 (Windows)
 TEST_F(moduleTest, get_path_returns_absolute_path_of_owning_module_windows)
@@ -180,6 +219,178 @@ TEST_F(moduleTest, get_path_returns_absolute_path_of_owning_module_windows)
         std::strstr(
             path,
             "moduleTest")); // [確認_正常系] - "moduleTest" を探した std::strstr() の戻り値が nullptr 以外であること。(path にモジュール名が含まれることの確認)
+}
+
+// 260 バイト超の非 ASCII モジュール パスが取得できることの確認 (Windows)
+TEST_F(moduleTest, get_path_returns_non_ascii_path_over_260_bytes_windows)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    std::wstring wpath = L"C:\\";
+    std::string expected = "C:/";
+    for (int i = 0; i < 100; ++i)
+    {
+        wpath += L"\u3042";
+        expected += "\xE3\x81\x82";
+    }
+    wpath += L"\\mod.dll";
+    expected += "/mod.dll";
+    char path[PLATFORM_PATH_UTF8_MAX] = {}; // [状態] - 300 バイト超の非 ASCII パス用の出力バッファーを用意する。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetModuleFileNameW(_, _, _, _, _, _))
+        .WillOnce(
+            [wpath](const char *, int, const char *, HMODULE, LPWSTR filename, DWORD size) -> DWORD
+            {
+                (void)size;
+                std::memcpy(filename, wpath.c_str(), (wpath.size() + 1U) * sizeof(wchar_t));
+                return static_cast<DWORD>(wpath.size());
+            }); // [Pre-Assert確認_正常系] - GetModuleFileNameW() が 1 回呼び出されること。
+                // [Pre-Assert手順] - GetModuleFileNameW() から 260 バイト超の非 ASCII パスを返す。
+
+    // Act
+    int actual_ret = cplat_module_get_path(
+        path, sizeof(path),
+        self_func_addr()); // [手順] - 260 バイト超の非 ASCII パスが返る状態で cplat_module_get_path() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, actual_ret);      // [確認_正常系] - cplat_module_get_path() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(expected.c_str(), path); // [確認_正常系] - path が正規化済み非 ASCII パスと一致すること。
+}
+
+// MAX_PATH を超える長いモジュール パスが取得できることの確認 (Windows)
+TEST_F(moduleTest, get_path_returns_path_over_max_path_windows)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    std::wstring wpath = L"\\\\?\\C:\\" + std::wstring(300u, L'a') + L"\\mod.dll";
+    std::string expected = "//?/C:/" + std::string(300u, 'a') + "/mod.dll";
+    char path[1024] = {}; // [状態] - 300 文字超の長いパスを収容できる出力バッファーを用意する。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetModuleFileNameW(_, _, _, _, _, _))
+        .WillOnce(
+            [wpath](const char *, int, const char *, HMODULE, LPWSTR filename, DWORD size) -> DWORD
+            {
+                (void)size;
+                std::memcpy(filename, wpath.c_str(), (wpath.size() + 1U) * sizeof(wchar_t));
+                return static_cast<DWORD>(wpath.size());
+            }); // [Pre-Assert確認_正常系] - GetModuleFileNameW() が 1 回呼び出されること。
+                // [Pre-Assert手順] - GetModuleFileNameW() から MAX_PATH を超える長いパスを返す。
+
+    // Act
+    int actual_ret = cplat_module_get_path(
+        path, sizeof(path),
+        self_func_addr()); // [手順] - MAX_PATH を超えるパスが返る状態で cplat_module_get_path() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, actual_ret);      // [確認_正常系] - cplat_module_get_path() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(expected.c_str(), path); // [確認_正常系] - path が正規化済みの長いパスと一致すること。
+}
+
+// 呼び出し元の出力バッファー不足時に BUFFER_TOO_SMALL を返すことの確認 (Windows)
+TEST_F(moduleTest, get_path_returns_buffer_too_small_for_caller_buffer_windows)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    std::wstring wpath = L"\\\\?\\C:\\" + std::wstring(300u, L'a') + L"\\mod.dll";
+    char path[64] = {'x'}; // [状態] - 長いパスが収まらない 64 バイトの出力バッファーを用意する。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetModuleFileNameW(_, _, _, _, _, _))
+        .WillOnce(
+            [wpath](const char *, int, const char *, HMODULE, LPWSTR filename, DWORD size) -> DWORD
+            {
+                (void)size;
+                std::memcpy(filename, wpath.c_str(), (wpath.size() + 1U) * sizeof(wchar_t));
+                return static_cast<DWORD>(wpath.size());
+            }); // [Pre-Assert確認_異常系] - GetModuleFileNameW() が 1 回呼び出されること。
+                // [Pre-Assert手順] - GetModuleFileNameW() から 300 文字超の長いパスを返す。
+
+    // Act
+    int actual_ret = cplat_module_get_path(
+        path, sizeof(path),
+        self_func_addr()); // [手順] - 呼び出し元のバッファーが不足する状態で cplat_module_get_path() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
+              actual_ret); // [確認_異常系] - cplat_module_get_path() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_EQ('\0', path[0]); // [確認_異常系] - path[0] が '\0' であること。
+}
+
+// GetModuleFileNameW が失敗した場合に UNKNOWN を返すことの確認 (Windows)
+TEST_F(moduleTest, get_path_returns_unknown_when_module_file_name_fails_windows)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    char path[PLATFORM_PATH_UTF8_MAX] = {'x'};
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetModuleFileNameW(_, _, _, _, _, _))
+        .WillOnce(Return(0U)); // [Pre-Assert確認_異常系] - GetModuleFileNameW() が 1 回呼び出されること。
+                               // [Pre-Assert手順] - GetModuleFileNameW() から 0 を返す。
+
+    // Act
+    int actual_ret = cplat_module_get_path(
+        path, sizeof(path),
+        self_func_addr()); // [手順] - GetModuleFileNameW() が失敗する状態で cplat_module_get_path() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              actual_ret);    // [確認_異常系] - cplat_module_get_path() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ('\0', path[0]); // [確認_異常系] - path[0] が '\0' であること。
+}
+
+// 中間バッファー確保失敗時に OUT_OF_MEMORY を返すことの確認 (Windows)
+TEST_F(moduleTest, get_path_returns_out_of_memory_when_allocation_fails_windows)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    char path[PLATFORM_PATH_UTF8_MAX] = {'x'};
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_malloc(_))
+        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回呼び出されること。
+                                    // [Pre-Assert手順] - cplat_malloc() から nullptr を返す。
+
+    // Act
+    int actual_ret = cplat_module_get_path(
+        path, sizeof(path),
+        self_func_addr()); // [手順] - cplat_malloc() が失敗する状態で cplat_module_get_path() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
+              actual_ret);    // [確認_異常系] - cplat_module_get_path() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+    EXPECT_EQ('\0', path[0]); // [確認_異常系] - path[0] が '\0' であること。
+}
+
+// 内部初期バッファーを超える長いパスからベース名を取得できることの確認 (Windows)
+TEST_F(moduleTest, get_basename_handles_path_over_internal_buffer_windows)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    std::wstring wpath = L"\\\\?\\C:\\" + std::wstring(900u, L'a') + L"\\sample_mod.dll";
+    char basename[64] = {}; // [状態] - 900 文字超のパスとベース名出力バッファーを用意する。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetModuleFileNameW(_, _, _, _, _, _))
+        .WillRepeatedly(
+            [wpath](const char *, int, const char *, HMODULE, LPWSTR filename, DWORD size) -> DWORD
+            {
+                (void)size;
+                std::memcpy(filename, wpath.c_str(), (wpath.size() + 1U) * sizeof(wchar_t));
+                return static_cast<DWORD>(wpath.size());
+            }); // [Pre-Assert確認_正常系] - GetModuleFileNameW() が呼び出されること。
+                // [Pre-Assert手順] - GetModuleFileNameW() から 900 文字超の長いパスを返す。
+
+    // Act
+    int actual_ret = cplat_module_get_basename(
+        basename, sizeof(basename),
+        self_func_addr()); // [手順] - 初期バッファーを超える長いパスからベース名を取得するため cplat_module_get_basename() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_module_get_basename() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("sample_mod", basename); // [確認_正常系] - basename が "sample_mod" であること。
 }
 #endif /* PLATFORM_ */
 
@@ -253,6 +464,7 @@ TEST_F(moduleTest, get_path_returns_buffer_too_small)
               actual_ret); // [確認_異常系] - cplat_module_get_path() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
 }
 
+#if defined(PLATFORM_LINUX)
 // 所属モジュールのパス正規化が失敗した場合に UNKNOWN を返すことの確認
 TEST_F(moduleTest, get_path_returns_unknown_when_normalization_fails)
 {
@@ -306,6 +518,7 @@ TEST_F(moduleTest, get_path_returns_buffer_too_small_when_normalization_reports_
     EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
               result); // [確認_異常系] - cplat_module_get_path() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
 }
+#endif /* PLATFORM_LINUX */
 
 // 不正引数時に出力バッファーが空文字列へ初期化されることの確認
 TEST_F(moduleTest, get_path_clears_output_for_null_function_address)

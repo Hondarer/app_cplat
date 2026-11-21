@@ -121,7 +121,7 @@ static char *dup_string(const char *s)
 /*
  * 指定された識別文字列でプロセス間リーダー ライター ロック用のファイルを開き、管理構造体を生成する。
  * 成功時は CPLAT_OK、引数不正時は CPLAT_ERR_INVALID_ARGUMENT、
- * ファイル オープンまたはメモリ確保失敗時は CPLAT_ERR_UNKNOWN を返す。
+ * ファイルを開けない場合は CPLAT_ERR_UNKNOWN、メモリを確保できない場合は CPLAT_ERR_OUT_OF_MEMORY を返す。
  */
 static int app_lock_open_identity(const char *identity, cplat_interprocess_rwlock **lock)
 {
@@ -145,7 +145,7 @@ static int app_lock_open_identity(const char *identity, cplat_interprocess_rwloc
     if (identity_copy == NULL)
     {
         (void)CloseHandle(handle); /* 複製の確保の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     new_lock = (cplat_interprocess_rwlock *)cplat_calloc(1, sizeof(*new_lock));
@@ -153,7 +153,7 @@ static int app_lock_open_identity(const char *identity, cplat_interprocess_rwloc
     {
         cplat_free(identity_copy);
         (void)CloseHandle(handle); /* ロックの確保の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     new_lock->handle = handle;
@@ -166,7 +166,7 @@ static int app_lock_open_identity(const char *identity, cplat_interprocess_rwloc
 /*
  * 指定された識別文字列でプロセス間ロック用のファイルを開き、管理構造体を生成する。
  * 成功時は CPLAT_OK、引数不正時は CPLAT_ERR_INVALID_ARGUMENT、
- * ファイル オープンまたはメモリ確保失敗時は CPLAT_ERR_UNKNOWN を返す。
+ * ファイルを開けない場合は CPLAT_ERR_UNKNOWN、メモリを確保できない場合は CPLAT_ERR_OUT_OF_MEMORY を返す。
  */
 static int interprocess_lock_open_identity(const char *identity, cplat_interprocess_lock **lock)
 {
@@ -190,7 +190,7 @@ static int interprocess_lock_open_identity(const char *identity, cplat_interproc
     if (identity_copy == NULL)
     {
         (void)CloseHandle(handle); /* 複製の確保の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     new_lock = (cplat_interprocess_lock *)cplat_calloc(1, sizeof(*new_lock));
@@ -198,7 +198,7 @@ static int interprocess_lock_open_identity(const char *identity, cplat_interproc
     {
         cplat_free(identity_copy);
         (void)CloseHandle(handle); /* ロックの確保の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     new_lock->handle = handle;
@@ -316,7 +316,7 @@ int cplat_local_lock_create(cplat_local_lock **mtx)
     new_mtx = (cplat_local_lock *)cplat_calloc(1, sizeof(*new_mtx));
     if (new_mtx == NULL)
     {
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     InitializeSRWLock(&new_mtx->native);
@@ -419,7 +419,7 @@ int cplat_condvar_create(cplat_condvar **cv)
     new_cv = (cplat_condvar *)cplat_calloc(1, sizeof(*new_cv));
     if (new_cv == NULL)
     {
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     InitializeConditionVariable(&new_cv->native);
@@ -523,7 +523,7 @@ int cplat_local_rwlock_create(cplat_local_rwlock **rwlock)
     new_lock = (cplat_local_rwlock *)cplat_calloc(1, sizeof(*new_lock));
     if (new_lock == NULL)
     {
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     InitializeCriticalSection(&new_lock->mutex);
@@ -788,7 +788,7 @@ int cplat_thread_create(cplat_thread **thread, cplat_thread_fn func, void *arg)
     {
         cplat_free(new_thread);
         cplat_free(ctx);
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     ctx->func = func;

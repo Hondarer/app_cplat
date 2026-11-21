@@ -15,6 +15,7 @@
 #include <cplat/base/result.h>
 
 #include <inttypes.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -238,6 +239,11 @@ int string_catalog_filter_read_constant(const unsigned char *constants, const ui
             return CPLAT_ERR_CORRUPT_DESCRIPTOR;
         }
         memcpy(&constant_out->real, constants + payload_offset, sizeof(constant_out->real));
+        /* コンパイルは NaN と無限大を字句の誤りとして拒否するため、有限値だけを正規の形とする。 */
+        if (!isfinite(constant_out->real))
+        {
+            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        }
         break;
 
     case STRING_CATALOG_FILTER_CONSTANT_KIND_STRING:
@@ -615,6 +621,15 @@ int string_catalog_filter_check_record(const unsigned char *record, const uint32
     while (offset < header.constant_size)
     {
         if (string_catalog_filter_read_constant(constants, header.constant_size, offset, &constant) != CPLAT_OK)
+        {
+            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        }
+
+        /*
+         * コンパイルは行幅を超える条件式を拒否するため、条件式から生成した定数の長さは行幅を超えない。
+         * 説明文の作業配列 (filter_describe.c の CONSTANT_TEXT_MAX) は、この上限を前提とする。
+         */
+        if (constant.header.length > line_width)
         {
             return CPLAT_ERR_CORRUPT_DESCRIPTOR;
         }

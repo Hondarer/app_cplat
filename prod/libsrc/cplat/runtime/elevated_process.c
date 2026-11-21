@@ -23,9 +23,11 @@
 #include <cplat/runtime/process.h>
 #include <cplat/runtime/process_internal.h>
 #include <cplat/console/console_internal.h>
+#include <cplat/crypto/random.h>
 #include <cplat/crt/path.h>
 #include <cplat/crt/wchar_conv.h>
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,29 +51,65 @@
  *  `{FLAG}={一時ファイルの UTF-8 パス}` の形式で付与し、
  *  cplat_elevated_process_extract_result_target() がこれを検出して報告先を保持します。
  */
-    #define CPLAT_PROCESS_RESULT_TARGET_FLAG      "--cplat-result-file"
+    #define CPLAT_PROCESS_RESULT_TARGET_FLAG       "--cplat-result-file"
 
-static char s_result_target_path[PLATFORM_PATH_MAX] = {0};
+static char s_result_target_path[PLATFORM_PATH_UTF8_MAX] = {0};
 
 /**
- *  @brief          昇格プロセスへ出力パイプの複製元を引き継ぐ内部フラグです。
+ *  @brief          昇格プロセスへ出力パイプのトークンを引き継ぐ内部フラグです。
  *
  *  cplat_elevated_process_run_piped() が昇格プロセスのコマンド ラインへ
- *  `{FLAG}={親 PID}:{stdout パイプの書き込みハンドル値}:{stderr パイプの書き込みハンドル値}`
- *  の形式 (いずれも 10 進数) で付与し、cplat_elevated_process_attach_output_pipes() が
- *  これを検出してパイプを複製します。
+ *  `{FLAG}={トークン}` の形式で付与し、cplat_elevated_process_attach_output_pipes() が
+ *  これを検出して名前付きパイプを開きます。
  */
-    #define CPLAT_PROCESS_OUTPUT_PIPES_FLAG       "--cplat-output-pipes"
+    #define CPLAT_PROCESS_OUTPUT_PIPES_FLAG        "--cplat-output-pipes"
 
 /**
  *  @brief          昇格プロセスの終了を待つ間に出力パイプを確認する間隔 [ms] です。
  */
-    #define CPLAT_PROCESS_OUTPUT_POLL_INTERVAL_MS 10
+    #define CPLAT_PROCESS_OUTPUT_POLL_INTERVAL_MS  10
 
 /**
  *  @brief          出力パイプから 1 回に読み取る最大バイト数です。
  */
-    #define CPLAT_PROCESS_OUTPUT_CHUNK_SIZE       4096
+    #define CPLAT_PROCESS_OUTPUT_CHUNK_SIZE        4096
+
+/* パイプのトークンに付与する暗号論的乱数のバイト数 [byte] (16 進数で 32 桁)。 */
+    #define CPLAT_ELEVATED_PIPE_TOKEN_RANDOM_BYTES 16U
+
+/* Windows の DWORD (32 bit 符号なし整数) の 10 進表記の最大桁数。 */
+    #define CPLAT_ELEVATED_PIPE_PID_MAX_DIGITS     10U
+
+/* トークン文字列 ("{PID}-{乱数 32 桁}") の最大文字数。 */
+    #define CPLAT_ELEVATED_PIPE_TOKEN_MAX_LEN \
+        (CPLAT_ELEVATED_PIPE_PID_MAX_DIGITS + 1U + (CPLAT_ELEVATED_PIPE_TOKEN_RANDOM_BYTES * 2U))
+
+/* 名前付きパイプの作成時に指定する受信バッファーの助言サイズ [byte]。 */
+    #define CPLAT_ELEVATED_PIPE_IN_BUFFER_BYTES    65536U
+
+/* 名前付きパイプの作成時に指定する送信バッファーの助言サイズ [byte] (片方向受信のため 0)。 */
+    #define CPLAT_ELEVATED_PIPE_OUT_BUFFER_BYTES   0U
+
+/* 名前付きパイプの最大インスタンス数 (先取りの検出と後続の接続拒否のため 1 に固定)。 */
+    #define CPLAT_ELEVATED_PIPE_MAX_INSTANCES      1U
+
+/* 名前付きパイプの接頭辞と接尾辞 (ワイド文字列)。 */
+    #define CPLAT_ELEVATED_PIPE_NAME_PREFIX        L"\\\\.\\pipe\\cplat-elevated-"
+    #define CPLAT_ELEVATED_PIPE_STDOUT_SUFFIX      L"-out"
+    #define CPLAT_ELEVATED_PIPE_STDERR_SUFFIX      L"-err"
+
+/* CreateNamedPipeW が許すパイプ名全体の最大文字数 (終端 NUL を含む上限の目安)。 */
+    #define CPLAT_ELEVATED_PIPE_NAME_API_MAX_CHARS 256U
+
+/* パイプ名バッファーの要素数 [wchar_t] (接頭辞 + トークン + 接尾辞 + 終端 NUL)。 */
+    #define CPLAT_ELEVATED_PIPE_NAME_CAP \
+        ((sizeof(CPLAT_ELEVATED_PIPE_NAME_PREFIX) / sizeof(wchar_t) - 1U) + CPLAT_ELEVATED_PIPE_TOKEN_MAX_LEN + \
+         (sizeof(CPLAT_ELEVATED_PIPE_STDERR_SUFFIX) / sizeof(wchar_t)))
+
+static_assert(sizeof(CPLAT_ELEVATED_PIPE_STDOUT_SUFFIX) == sizeof(CPLAT_ELEVATED_PIPE_STDERR_SUFFIX),
+              "pipe suffix sizes must match");
+static_assert(CPLAT_ELEVATED_PIPE_NAME_CAP <= CPLAT_ELEVATED_PIPE_NAME_API_MAX_CHARS,
+              "pipe name must fit within CreateNamedPipeW limit");
 
 /**
  *  @brief          現在のプロセスが対話セッションで動作しているかを確認します。
@@ -99,19 +137,22 @@ static int is_current_session_interactive(void)
 
 /**
  *  @brief          UAC を要求して、現在の実行ファイルを非表示で起動します。
- *  @param[in]      arguments  実行ファイルへ渡す引数文字列 (UTF-8)。NULL を渡してはなりません。
- *  @param[out]     child_out  起動したプロセスの格納先。失敗時は NULL を格納します。
+ *  @param[in]      arguments      実行ファイルへ渡す引数文字列 (UTF-8)。NULL を渡してはなりません。
+ *  @param[out]     child_out      起動したプロセスの格納先。失敗時は NULL を格納します。
+ *  @param[out]     child_pid_out  起動したプロセスの ID の格納先。失敗時は 0 を格納します。
  *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
  */
-static int start_elevated_self(const char *arguments, cplat_process **child_out)
+static int start_elevated_self(const char *arguments, cplat_process **child_out, DWORD *child_pid_out)
 {
     SHELLEXECUTEINFOW exec_info;
-    char exe_path[PLATFORM_PATH_MAX];
+    char exe_path[PLATFORM_PATH_UTF8_MAX];
     wchar_t *wide_exe_path;
     wchar_t *wide_arguments;
+    DWORD child_pid;
     BOOL executed;
 
     *child_out = NULL;
+    *child_pid_out = 0;
 
     if (cplat_process_get_executable_path(exe_path, sizeof(exe_path)) != CPLAT_OK)
     {
@@ -149,6 +190,13 @@ static int start_elevated_self(const char *arguments, cplat_process **child_out)
         return CPLAT_ERR_UNKNOWN;
     }
 
+    child_pid = GetProcessId(exec_info.hProcess);
+    if (child_pid == 0)
+    {
+        (void)CloseHandle(exec_info.hProcess); /* PID 取得失敗の後始末のため、戻り値は明示的に破棄する */
+        return CPLAT_ERR_UNKNOWN;
+    }
+
     *child_out = cplat_internal_process_adopt_native((intptr_t)exec_info.hProcess);
     if (*child_out == NULL)
     {
@@ -156,6 +204,7 @@ static int start_elevated_self(const char *arguments, cplat_process **child_out)
         return CPLAT_ERR_UNKNOWN;
     }
 
+    *child_pid_out = child_pid;
     return CPLAT_OK;
 }
 
@@ -187,27 +236,391 @@ static void write_to_own_std_stream(cplat_elevated_process_stream stream, const 
 }
 
 /**
+ *  @brief          名前付きパイプへ設定するアクセス許可です。
+ */
+typedef struct elevated_pipe_security
+{
+    SECURITY_ATTRIBUTES attributes; /**< CreateNamedPipeW() へ渡す属性です。descriptor を指します。 */
+    SECURITY_DESCRIPTOR descriptor; /**< dacl を持つセキュリティ記述子です。 */
+    PACL dacl;                      /**< 確保した DACL です。未確保の場合は NULL です。 */
+} elevated_pipe_security;
+
+/**
+ *  @brief          昇格プロセスの出力を受け取る名前付きパイプ 1 本分の状態です。
+ */
+typedef struct elevated_pipe_channel
+{
+    HANDLE pipe;           /**< パイプのサーバー側のハンドルです。未作成の場合は INVALID_HANDLE_VALUE です。 */
+    HANDLE event;          /**< 重複 I/O の完了を受け取る手動リセットのイベントです。未作成の場合は NULL です。 */
+    OVERLAPPED overlapped; /**< ConnectNamedPipe() の重複 I/O の状態です。 */
+    int connected;         /**< クライアントの接続が完了している場合は 1 です。 */
+    int pending_connect;   /**< ConnectNamedPipe() の完了を待っている場合は 1 です。 */
+    int verified;          /**< クライアントのプロセス ID を照合済みの場合は 1 です。 */
+    int eof;               /**< クライアントがパイプを閉じ、終端まで読み取った場合は 1 です。 */
+    cplat_elevated_process_stream stream; /**< コールバックへ渡すストリームの種別です。 */
+} elevated_pipe_channel;
+
+/**
+ *  @brief          名前付きパイプのトークンが仕様の文字種と長さ上限を満たすかを検証します。
+ */
+static int is_valid_pipe_token(const char *token)
+{
+    size_t len = 0;
+
+    if (token == NULL || token[0] == '\0')
+    {
+        return 0;
+    }
+
+    while (token[len] != '\0')
+    {
+        const char ch = token[len];
+        const int is_digit = (ch >= '0' && ch <= '9');
+        const int is_lower_hex = (ch >= 'a' && ch <= 'f');
+        const int is_hyphen = (ch == '-');
+
+        if (!is_digit && !is_lower_hex && !is_hyphen)
+        {
+            return 0;
+        }
+
+        len++;
+        if (len > CPLAT_ELEVATED_PIPE_TOKEN_MAX_LEN)
+        {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+/**
+ *  @brief          呼び出し元 PID と暗号論的乱数からパイプ名のトークンを生成します。
+ */
+static int generate_pipe_token(char *token_out, const size_t token_out_size)
+{
+    static const char hex_digits[] = "0123456789abcdef";
+    uint8_t random_bytes[CPLAT_ELEVATED_PIPE_TOKEN_RANDOM_BYTES];
+    char random_hex[(CPLAT_ELEVATED_PIPE_TOKEN_RANDOM_BYTES * 2U) + 1U];
+    size_t i;
+
+    if (cplat_random_bytes(random_bytes, sizeof(random_bytes)) != CPLAT_OK)
+    {
+        return -1;
+    }
+
+    for (i = 0; i < sizeof(random_bytes); i++)
+    {
+        random_hex[i * 2U] = hex_digits[(random_bytes[i] >> 4U) & 0x0FU];
+        random_hex[(i * 2U) + 1U] = hex_digits[random_bytes[i] & 0x0FU];
+    }
+
+    random_hex[sizeof(random_hex) - 1U] = '\0';
+
+    if (cplat_snprintf(token_out, token_out_size, "%lu-%s", (unsigned long)GetCurrentProcessId(), random_hex) !=
+        CPLAT_OK)
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          トークンと接尾辞から名前付きパイプのワイド文字列パスを組み立てます。
+ */
+static int build_pipe_name(wchar_t *pipe_name_out, const size_t pipe_name_cap, const char *token, const wchar_t *suffix,
+                           const size_t suffix_chars_with_nul)
+{
+    const size_t prefix_chars = (sizeof(CPLAT_ELEVATED_PIPE_NAME_PREFIX) / sizeof(wchar_t)) - 1U;
+    size_t pos;
+    size_t i;
+
+    if (!is_valid_pipe_token(token))
+    {
+        return -1;
+    }
+
+    pos = prefix_chars;
+    for (i = 0; token[i] != '\0'; i++)
+    {
+        pos++;
+    }
+
+    if (pos + suffix_chars_with_nul > pipe_name_cap)
+    {
+        return -1;
+    }
+
+    memcpy(pipe_name_out, CPLAT_ELEVATED_PIPE_NAME_PREFIX, prefix_chars * sizeof(wchar_t));
+    pos = prefix_chars;
+
+    for (i = 0; token[i] != '\0'; i++)
+    {
+        pipe_name_out[pos] = (wchar_t)(unsigned char)token[i];
+        pos++;
+    }
+
+    memcpy(pipe_name_out + pos, suffix, suffix_chars_with_nul * sizeof(wchar_t));
+
+    return 0;
+}
+
+/**
+ *  @brief          名前付きパイプに設定する DACL と SECURITY_ATTRIBUTES を破棄します。
+ */
+static void dispose_pipe_security(elevated_pipe_security *sec)
+{
+    if (sec->dacl != NULL)
+    {
+        cplat_free(sec->dacl);
+        sec->dacl = NULL;
+    }
+}
+
+/**
+ *  @brief          LocalSystem、Administrators、呼び出し元ユーザーへ許可を与える DACL を構築します。
+ */
+static int init_pipe_security(elevated_pipe_security *sec)
+{
+    BYTE system_sid_buf[SECURITY_MAX_SID_SIZE];
+    BYTE admins_sid_buf[SECURITY_MAX_SID_SIZE];
+    DWORD system_sid_size = (DWORD)sizeof(system_sid_buf);
+    DWORD admins_sid_size = (DWORD)sizeof(admins_sid_buf);
+    HANDLE token = NULL;
+    DWORD user_info_size = 0;
+    TOKEN_USER *user_info = NULL;
+    PSID system_sid = (PSID)system_sid_buf;
+    PSID admins_sid = (PSID)admins_sid_buf;
+    PSID user_sid;
+    DWORD acl_size;
+    PACL dacl;
+
+    ZeroMemory(sec, sizeof(*sec));
+
+    if (!CreateWellKnownSid(WinLocalSystemSid, NULL, system_sid, &system_sid_size) ||
+        !CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, admins_sid, &admins_sid_size))
+    {
+        return -1;
+    }
+
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token))
+    {
+        return -1;
+    }
+
+    if (GetTokenInformation(token, TokenUser, NULL, 0, &user_info_size) ||
+        GetLastError() != ERROR_INSUFFICIENT_BUFFER || user_info_size == 0)
+    {
+        (void)CloseHandle(token); /* TokenUser サイズ取得の失敗の後始末のため、戻り値は明示的に破棄する */
+        return -1;
+    }
+
+    user_info = (TOKEN_USER *)cplat_malloc((size_t)user_info_size);
+    if (user_info == NULL)
+    {
+        (void)CloseHandle(token); /* メモリ確保失敗の後始末のため、戻り値は明示的に破棄する */
+        return -1;
+    }
+
+    if (!GetTokenInformation(token, TokenUser, user_info, user_info_size, &user_info_size))
+    {
+        cplat_free(user_info);
+        (void)CloseHandle(token); /* TokenUser 取得失敗の後始末のため、戻り値は明示的に破棄する */
+        return -1;
+    }
+
+    (void)CloseHandle(token); /* SID の取得を終えた後の解放で結果が変わらないため、戻り値は明示的に破棄する */
+
+    user_sid = user_info->User.Sid;
+    if (user_sid == NULL || !IsValidSid(user_sid))
+    {
+        cplat_free(user_info);
+        return -1;
+    }
+
+    acl_size = (DWORD)sizeof(ACL) + (3U * ((DWORD)sizeof(ACCESS_ALLOWED_ACE) - (DWORD)sizeof(DWORD))) +
+               GetLengthSid(system_sid) + GetLengthSid(admins_sid) + GetLengthSid(user_sid);
+    dacl = (PACL)cplat_malloc((size_t)acl_size);
+    if (dacl == NULL)
+    {
+        cplat_free(user_info);
+        return -1;
+    }
+
+    if (!InitializeAcl(dacl, acl_size, ACL_REVISION) ||
+        !AddAccessAllowedAce(dacl, ACL_REVISION, GENERIC_ALL, system_sid) ||
+        !AddAccessAllowedAce(dacl, ACL_REVISION, FILE_GENERIC_WRITE, admins_sid) ||
+        !AddAccessAllowedAce(dacl, ACL_REVISION, GENERIC_ALL, user_sid) ||
+        !InitializeSecurityDescriptor(&sec->descriptor, SECURITY_DESCRIPTOR_REVISION) ||
+        !SetSecurityDescriptorDacl(&sec->descriptor, TRUE, dacl, FALSE))
+    {
+        cplat_free(dacl);
+        cplat_free(user_info);
+        return -1;
+    }
+
+    cplat_free(user_info);
+    sec->dacl = dacl;
+    sec->attributes.nLength = (DWORD)sizeof(sec->attributes);
+    sec->attributes.lpSecurityDescriptor = &sec->descriptor;
+    sec->attributes.bInheritHandle = FALSE;
+
+    return 0;
+}
+
+/**
+ *  @brief          重複 I/O の取り消しと完了待機を行ってから、パイプとイベントを閉じます。
+ */
+static void cancel_and_close_pipe_channel(elevated_pipe_channel *ch)
+{
+    if (ch->pipe != INVALID_HANDLE_VALUE && ch->pending_connect != 0 && ch->connected == 0)
+    {
+        DWORD transferred = 0;
+
+        /*
+         * 重複 I/O を取り消した後、完了を待機してから OVERLAPPED とイベントを破棄する。
+         * 完了前に破棄するとカーネルが解放済みの構造体へ書き込むおそれがあるため。
+         * 後始末の経路であり返す結果を変えないため、戻り値は明示的に破棄する。
+         */
+        if (CancelIoEx(ch->pipe, &ch->overlapped) || GetLastError() != ERROR_NOT_FOUND)
+        {
+            (void)GetOverlappedResult(ch->pipe, &ch->overlapped, &transferred, TRUE);
+        }
+
+        ch->pending_connect = 0;
+    }
+
+    if (ch->pipe != INVALID_HANDLE_VALUE)
+    {
+        (void)CloseHandle(ch->pipe); /* パイプの後始末のため、戻り値は明示的に破棄する */
+        ch->pipe = INVALID_HANDLE_VALUE;
+    }
+
+    if (ch->event != NULL)
+    {
+        (void)CloseHandle(ch->event); /* イベントの後始末のため、戻り値は明示的に破棄する */
+        ch->event = NULL;
+    }
+}
+
+/**
+ *  @brief          名前付きパイプと重複 I/O 用イベントを作成し、非同期で接続待機を開始します。
+ */
+static int init_pipe_channel(elevated_pipe_channel *ch, const cplat_elevated_process_stream stream,
+                             const wchar_t *pipe_name, LPSECURITY_ATTRIBUTES sec_attr)
+{
+    ZeroMemory(ch, sizeof(*ch));
+    ch->pipe = INVALID_HANDLE_VALUE;
+    ch->stream = stream;
+
+    /* パイプ名はワイド文字列で組み立てるため CreateNamedPipeU を使わない。 */
+    ch->pipe = CreateNamedPipeW(pipe_name, PIPE_ACCESS_INBOUND | FILE_FLAG_FIRST_PIPE_INSTANCE | FILE_FLAG_OVERLAPPED,
+                                PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS,
+                                CPLAT_ELEVATED_PIPE_MAX_INSTANCES, CPLAT_ELEVATED_PIPE_OUT_BUFFER_BYTES,
+                                CPLAT_ELEVATED_PIPE_IN_BUFFER_BYTES, 0, sec_attr);
+    if (ch->pipe == INVALID_HANDLE_VALUE)
+    {
+        return -1;
+    }
+
+    ch->event = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (ch->event == NULL)
+    {
+        (void)CloseHandle(ch->pipe); /* イベント作成失敗の後始末のため、戻り値は明示的に破棄する */
+        ch->pipe = INVALID_HANDLE_VALUE;
+        return -1;
+    }
+
+    ch->overlapped.hEvent = ch->event;
+    if (ConnectNamedPipe(ch->pipe, &ch->overlapped))
+    {
+        ch->connected = 1;
+    }
+    else
+    {
+        DWORD err = GetLastError();
+
+        if (err == ERROR_IO_PENDING)
+        {
+            ch->pending_connect = 1;
+        }
+        else if (err == ERROR_PIPE_CONNECTED)
+        {
+            ch->connected = 1;
+        }
+        else
+        {
+            (void)CloseHandle(ch->event); /* ConnectNamedPipe 失敗の後始末のため、戻り値は明示的に破棄する */
+            ch->event = NULL;
+            (void)CloseHandle(ch->pipe); /* ConnectNamedPipe 失敗の後始末のため、戻り値は明示的に破棄する */
+            ch->pipe = INVALID_HANDLE_VALUE;
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          接続したパイプのクライアント PID が起動した昇格プロセスの PID と一致するか照合します。
+ */
+static int verify_pipe_client_pid(elevated_pipe_channel *ch, const DWORD child_pid)
+{
+    ULONG client_pid = 0;
+
+    if (ch->verified != 0)
+    {
+        return 0;
+    }
+
+    if (!GetNamedPipeClientProcessId(ch->pipe, &client_pid) || (DWORD)client_pid != child_pid)
+    {
+        return -1;
+    }
+
+    ch->verified = 1;
+    return 0;
+}
+
+/**
  *  @brief          出力パイプから、現時点で読み取れる内容をすべて読み取ってコールバックへ渡します。
  *
- *  読み取れる量を PeekNamedPipe で確認してから ReadFile を呼ぶため、パイプが空でも待機しません。
- *  PeekNamedPipe は無名パイプの読み取りハンドルにも使えます。
+ *  読み取れる量を PeekNamedPipe で確認してから OVERLAPPED を指定して ReadFile を呼ぶため、
+ *  パイプが空でも待機しません。PeekNamedPipe または ReadFile が ERROR_BROKEN_PIPE を返した
+ *  場合は終端として正常に終了します。それ以外のエラーは異常として -1 を返します。
  *  see: https://learn.microsoft.com/en-us/windows/win32/api/namedpipeapi/nf-namedpipeapi-peeknamedpipe
  */
-static void pump_output_pipe(HANDLE read_handle, cplat_elevated_process_stream stream,
-                             cplat_elevated_process_output_fn output_fn, void *context)
+static int pump_output_pipe(elevated_pipe_channel *ch, cplat_elevated_process_output_fn output_fn, void *context)
 {
     char buffer[CPLAT_PROCESS_OUTPUT_CHUNK_SIZE];
 
+    if (ch->eof != 0)
+    {
+        return 0;
+    }
+
     for (;;)
     {
-        DWORD available;
+        OVERLAPPED read_ov;
+        DWORD available = 0;
         DWORD to_read;
-        DWORD bytes_read;
+        DWORD bytes_read = 0;
 
-        available = 0;
-        if (!PeekNamedPipe(read_handle, NULL, 0, NULL, &available, NULL) || available == 0)
+        if (!PeekNamedPipe(ch->pipe, NULL, 0, NULL, &available, NULL))
         {
-            return;
+            if (GetLastError() == ERROR_BROKEN_PIPE)
+            {
+                ch->eof = 1;
+                return 0;
+            }
+
+            return -1;
+        }
+
+        if (available == 0)
+        {
+            return 0;
         }
 
         to_read = (DWORD)sizeof(buffer);
@@ -216,14 +629,82 @@ static void pump_output_pipe(HANDLE read_handle, cplat_elevated_process_stream s
             to_read = available;
         }
 
-        bytes_read = 0;
-        if (!ReadFile(read_handle, buffer, to_read, &bytes_read, NULL) || bytes_read == 0)
+        /* ReadFile の重複 I/O 完了通知に同じイベントを再利用するため、呼び出し前に非シグナルへ戻す。 */
+        if (!ResetEvent(ch->event))
         {
-            return;
+            return -1;
         }
 
-        output_fn(stream, buffer, (size_t)bytes_read, context);
+        ZeroMemory(&read_ov, sizeof(read_ov));
+        read_ov.hEvent = ch->event;
+
+        if (!ReadFile(ch->pipe, buffer, to_read, &bytes_read, &read_ov))
+        {
+            DWORD err = GetLastError();
+
+            if (err == ERROR_IO_PENDING)
+            {
+                if (!GetOverlappedResult(ch->pipe, &read_ov, &bytes_read, TRUE))
+                {
+                    if (GetLastError() == ERROR_BROKEN_PIPE)
+                    {
+                        ch->eof = 1;
+                        return 0;
+                    }
+
+                    return -1;
+                }
+            }
+            else if (err == ERROR_BROKEN_PIPE)
+            {
+                ch->eof = 1;
+                return 0;
+            }
+            else
+            {
+                return -1;
+            }
+        }
+
+        if (bytes_read == 0)
+        {
+            return 0;
+        }
+
+        output_fn(ch->stream, buffer, (size_t)bytes_read, context);
     }
+}
+
+/**
+ *  @brief          出力パイプの接続完了確認、クライアント PID 照合、読み取りを行います。
+ */
+static int process_pipe_channel(elevated_pipe_channel *ch, const DWORD child_pid,
+                                cplat_elevated_process_output_fn output_fn, void *context)
+{
+    if (ch->connected == 0)
+    {
+        DWORD dummy = 0;
+
+        if (!GetOverlappedResult(ch->pipe, &ch->overlapped, &dummy, FALSE))
+        {
+            if (GetLastError() == ERROR_IO_INCOMPLETE)
+            {
+                return 0;
+            }
+
+            return -1;
+        }
+
+        ch->pending_connect = 0;
+        ch->connected = 1;
+    }
+
+    if (verify_pipe_client_pid(ch, child_pid) != 0)
+    {
+        return -1;
+    }
+
+    return pump_output_pipe(ch, output_fn, context);
 }
 
 /**
@@ -294,27 +775,30 @@ static int reopen_std_stream(FILE *stream, HANDLE handle, int open_flags, DWORD 
 }
 
 /**
- *  @brief          argv から出力パイプ フラグを取り除き、その値を解析します。
- *  @param[in,out]  argc           引数の数へのポインター。
- *  @param[in,out]  argv           引数配列。
- *  @param[out]     parent_pid     親プロセス ID の格納先。
- *  @param[out]     stdout_handle  親プロセス内の stdout パイプ書き込みハンドル値の格納先。
- *  @param[out]     stderr_handle  親プロセス内の stderr パイプ書き込みハンドル値の格納先。
+ *  @brief          argv から出力パイプ フラグを取り除き、トークン文字列を検証して取り出します。
+ *  @param[in,out]  argc            引数の数へのポインター。
+ *  @param[in,out]  argv            引数配列。
+ *  @param[out]     token_out       検証済みトークン文字列の格納先。
+ *  @param[in]      token_out_size  @p token_out のバイト数。
  *  @return         フラグがない場合は 0、値が正しい場合は 1、値が不正な場合は -1 を返します。
  *
  *  値が不正な場合も、フラグは argv から取り除きます。
  */
-static int extract_output_pipes_arg(int *argc, char **argv, DWORD *parent_pid, unsigned long long *stdout_handle,
-                                    unsigned long long *stderr_handle)
+static int extract_output_pipes_arg(int *argc, char **argv, char *token_out, const size_t token_out_size)
 {
     const char *prefix = CPLAT_PROCESS_OUTPUT_PIPES_FLAG "=";
     const char *value;
-    char *endp;
     size_t prefix_len;
-    unsigned long pid;
     int n;
     int i;
     int j;
+
+    if (token_out == NULL || token_out_size == 0)
+    {
+        return -1;
+    }
+
+    token_out[0] = '\0';
 
     if (argc == NULL || argv == NULL)
     {
@@ -348,28 +832,16 @@ static int extract_output_pipes_arg(int *argc, char **argv, DWORD *parent_pid, u
         return 0;
     }
 
-    endp = NULL;
-    pid = strtoul(value, &endp, 10);
-    if (endp == value || *endp != ':' || pid == 0)
+    if (!is_valid_pipe_token(value))
     {
         return -1;
     }
 
-    value = endp + 1;
-    *stdout_handle = strtoull(value, &endp, 10);
-    if (endp == value || *endp != ':' || *stdout_handle == 0)
+    if (cplat_strcpy(token_out, token_out_size, value) != 0)
     {
+        token_out[0] = '\0';
         return -1;
     }
-
-    value = endp + 1;
-    *stderr_handle = strtoull(value, &endp, 10);
-    if (endp == value || *endp != '\0' || *stderr_handle == 0)
-    {
-        return -1;
-    }
-
-    *parent_pid = (DWORD)pid;
 
     return 1;
 }
@@ -440,7 +912,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code_o
 #if defined(PLATFORM_WINDOWS)
     {
         SHELLEXECUTEINFOW exec_info;
-        char exe_path[PLATFORM_PATH_MAX];
+        char exe_path[PLATFORM_PATH_UTF8_MAX];
         char *combined_arguments = NULL;
         const char *effective_arguments;
         wchar_t *wide_arguments = NULL;
@@ -741,8 +1213,8 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
 #if defined(PLATFORM_WINDOWS)
     {
         SHELLEXECUTEINFOW exec_info;
-        char exe_path[PLATFORM_PATH_MAX];
-        char result_path[PLATFORM_PATH_MAX];
+        char exe_path[PLATFORM_PATH_UTF8_MAX];
+        char result_path[PLATFORM_PATH_UTF8_MAX];
         wchar_t wide_temp_dir[PLATFORM_PATH_MAX];
         wchar_t wide_result_path[PLATFORM_PATH_MAX];
         char *combined_arguments;
@@ -1103,17 +1575,21 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
 #if defined(PLATFORM_WINDOWS)
     {
         cplat_elevated_process_output_fn effective_output_fn;
-        HANDLE stdout_read;
-        HANDLE stdout_write;
-        HANDLE stderr_read;
-        HANDLE stderr_write;
+        elevated_pipe_security pipe_security;
+        elevated_pipe_channel stdout_ch;
+        elevated_pipe_channel stderr_ch;
+        char token[CPLAT_ELEVATED_PIPE_TOKEN_MAX_LEN + 1U];
+        wchar_t stdout_pipe_name[CPLAT_ELEVATED_PIPE_NAME_CAP];
+        wchar_t stderr_pipe_name[CPLAT_ELEVATED_PIPE_NAME_CAP];
         char *combined_arguments;
         const char *base_arguments;
         const char *separator;
         cplat_process *child_process;
+        DWORD child_pid;
         int child_exit_code;
         int elevated;
         int wait_result;
+        int io_failed;
         int rc;
         size_t buf_sz;
 
@@ -1144,30 +1620,63 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
             effective_output_fn = write_to_own_std_stream;
         }
 
-        /*
-         * UAC 昇格 (ShellExecuteExW の runas) ではハンドルを継承できないため、継承不可の
-         * 無名パイプを作成し、昇格プロセス側が OpenProcess(PROCESS_DUP_HANDLE) と
-         * DuplicateHandle で書き込み側を自分へ複製する。高い整合性レベルのプロセスは、
-         * 同じユーザーの低い整合性レベルのプロセスをこの権限で開ける。
-         * see: https://learn.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-duplicatehandle
-         */
-        if (!CreatePipe(&stdout_read, &stdout_write, NULL, 0))
+        if (generate_pipe_token(token, sizeof(token)) != 0)
+        {
+            *exit_code_out = EXIT_FAILURE;
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        if (build_pipe_name(stdout_pipe_name, sizeof(stdout_pipe_name) / sizeof(stdout_pipe_name[0]), token,
+                            CPLAT_ELEVATED_PIPE_STDOUT_SUFFIX,
+                            sizeof(CPLAT_ELEVATED_PIPE_STDOUT_SUFFIX) / sizeof(wchar_t)) != 0 ||
+            build_pipe_name(stderr_pipe_name, sizeof(stderr_pipe_name) / sizeof(stderr_pipe_name[0]), token,
+                            CPLAT_ELEVATED_PIPE_STDERR_SUFFIX,
+                            sizeof(CPLAT_ELEVATED_PIPE_STDERR_SUFFIX) / sizeof(wchar_t)) != 0)
         {
             *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
 
         /*
-         * 失敗を返す経路のパイプの後始末は返す結果を変えないため、
-         * この関数の失敗の経路の CloseHandle の戻り値は明示的に破棄する。
+         * 昇格プロセスは、別の管理者アカウントで動く場合がある。パイプの既定の ACL に頼らず、
+         * Administrators グループへ書き込みを許可する。
+         * see: https://learn.microsoft.com/en-us/windows/win32/ipc/named-pipe-security-and-access-rights
          */
-        if (!CreatePipe(&stderr_read, &stderr_write, NULL, 0))
+        if (init_pipe_security(&pipe_security) != 0)
         {
-            (void)CloseHandle(stdout_read);
-            (void)CloseHandle(stdout_write);
             *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
+
+        /*
+         * ShellExecuteExW() へ渡す SHELLEXECUTEINFOW には、ハンドルの継承を指定するメンバーがない。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-shellexecuteinfow
+         * そのため、名前付きパイプを作成してトークンを内部フラグで渡し、昇格プロセス側が名前で開く。
+         * 整合性レベルが低い主体は、既定では、整合性レベルが高いオブジェクトへ書き込めない。
+         * パイプは未昇格の本プロセスが作成し、昇格プロセスが書き込むため、この制限を受けない。
+         * see: https://learn.microsoft.com/en-us/windows/win32/secauthz/mandatory-integrity-control
+         * 同じ名前のパイプが先に存在する場合は作成を失敗させ、インスタンスを 1 つに限り、
+         * リモートからの接続を拒否する。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/namedpipeapi/nf-namedpipeapi-createnamedpipew
+         */
+        if (init_pipe_channel(&stdout_ch, CPLAT_ELEVATED_PROCESS_STREAM_STDOUT, stdout_pipe_name,
+                              &pipe_security.attributes) != 0)
+        {
+            dispose_pipe_security(&pipe_security);
+            *exit_code_out = EXIT_FAILURE;
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        if (init_pipe_channel(&stderr_ch, CPLAT_ELEVATED_PROCESS_STREAM_STDERR, stderr_pipe_name,
+                              &pipe_security.attributes) != 0)
+        {
+            cancel_and_close_pipe_channel(&stdout_ch);
+            dispose_pipe_security(&pipe_security);
+            *exit_code_out = EXIT_FAILURE;
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        dispose_pipe_security(&pipe_security);
 
         base_arguments = "";
         separator = "";
@@ -1178,38 +1687,34 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
             separator = " ";
         }
 
-        /* 区切り空白 + フラグ + '=' + PID (最大 10 桁) + ':' と ハンドル値 (最大 20 桁) の 2 組 + 終端 */
-        buf_sz = strlen(base_arguments) + 1 + strlen(CPLAT_PROCESS_OUTPUT_PIPES_FLAG) + 1 + 10 + 2 * (1 + 20) + 1;
+        /* 区切り空白 + フラグ + '=' + トークン + 終端 */
+        buf_sz = strlen(base_arguments) + 1U + strlen(CPLAT_PROCESS_OUTPUT_PIPES_FLAG) + 1U + strlen(token) + 1U;
         combined_arguments = (char *)cplat_malloc(buf_sz);
         if (combined_arguments == NULL)
         {
-            (void)CloseHandle(stdout_read);
-            (void)CloseHandle(stdout_write);
-            (void)CloseHandle(stderr_read);
-            (void)CloseHandle(stderr_write);
+            cancel_and_close_pipe_channel(&stdout_ch);
+            cancel_and_close_pipe_channel(&stderr_ch);
             *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
 
-        rc = cplat_snprintf(combined_arguments, buf_sz, "%s%s%s=%lu:%llu:%llu", base_arguments, separator,
-                            CPLAT_PROCESS_OUTPUT_PIPES_FLAG, (unsigned long)GetCurrentProcessId(),
-                            (unsigned long long)(uintptr_t)stdout_write, (unsigned long long)(uintptr_t)stderr_write);
+        rc = cplat_snprintf(combined_arguments, buf_sz, "%s%s%s=%s", base_arguments, separator,
+                            CPLAT_PROCESS_OUTPUT_PIPES_FLAG, token);
         child_process = NULL;
+        child_pid = 0;
 
         if (rc == CPLAT_OK)
         {
             *handled_out = 1;
-            rc = start_elevated_self(combined_arguments, &child_process);
+            rc = start_elevated_self(combined_arguments, &child_process, &child_pid);
         }
 
         cplat_free(combined_arguments);
 
         if (rc != CPLAT_OK)
         {
-            (void)CloseHandle(stdout_read);
-            (void)CloseHandle(stdout_write);
-            (void)CloseHandle(stderr_read);
-            (void)CloseHandle(stderr_write);
+            cancel_and_close_pipe_channel(&stdout_ch);
+            cancel_and_close_pipe_channel(&stderr_ch);
             *exit_code_out = EXIT_FAILURE;
 
             if (rc == CPLAT_ERR_OUT_OF_MEMORY)
@@ -1220,31 +1725,45 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
             return CPLAT_ERR_UNKNOWN;
         }
 
+        io_failed = 0;
+
         /*
          * パイプの容量を超える出力で昇格プロセスが書き込み待ちにならないよう、
-         * 終了を待つ間も出力を読み取り続ける。
+         * 終了を待つ間も接続の確認と出力の読み取りを続ける。
          */
         do
         {
             wait_result = cplat_process_timed_wait(child_process, CPLAT_PROCESS_OUTPUT_POLL_INTERVAL_MS);
-            pump_output_pipe(stdout_read, CPLAT_ELEVATED_PROCESS_STREAM_STDOUT, effective_output_fn, context);
-            pump_output_pipe(stderr_read, CPLAT_ELEVATED_PROCESS_STREAM_STDERR, effective_output_fn, context);
+            if (process_pipe_channel(&stdout_ch, child_pid, effective_output_fn, context) != 0 ||
+                process_pipe_channel(&stderr_ch, child_pid, effective_output_fn, context) != 0)
+            {
+                io_failed = 1;
+                break;
+            }
         } while (wait_result == CPLAT_ERR_TIMEOUT);
 
         /*
-         * 昇格プロセスの書き込みは終了時点でパイプへ格納済みのため、残りを読み切る。
-         * 昇格プロセスが起動した孫プロセスが書き込み側を保持していても待機しない。
-         * 残りの読み取りは閉じる処理の成否に依存せず、結果は子の終了コードで決まるため、
-         * 次の 4 つの CloseHandle の戻り値は明示的に破棄する。
+         * 子プロセスの終了後に未接続のパイプがある場合は失敗とし、
+         * 接続済みのパイプは残りのデータを読み切ってから閉じる。
          */
-        (void)CloseHandle(stdout_write);
-        (void)CloseHandle(stderr_write);
-        pump_output_pipe(stdout_read, CPLAT_ELEVATED_PROCESS_STREAM_STDOUT, effective_output_fn, context);
-        pump_output_pipe(stderr_read, CPLAT_ELEVATED_PROCESS_STREAM_STDERR, effective_output_fn, context);
-        (void)CloseHandle(stdout_read);
-        (void)CloseHandle(stderr_read);
+        if (io_failed == 0)
+        {
+            if (stdout_ch.connected == 0 || stderr_ch.connected == 0)
+            {
+                io_failed = 1;
+            }
+            else if (pump_output_pipe(&stdout_ch, effective_output_fn, context) != 0 ||
+                     pump_output_pipe(&stderr_ch, effective_output_fn, context) != 0)
+            {
+                io_failed = 1;
+            }
+        }
 
-        if (wait_result != CPLAT_OK || cplat_process_get_exit_code(child_process, &child_exit_code) != CPLAT_OK)
+        cancel_and_close_pipe_channel(&stdout_ch);
+        cancel_and_close_pipe_channel(&stderr_ch);
+
+        if (io_failed != 0 || wait_result != CPLAT_OK ||
+            cplat_process_get_exit_code(child_process, &child_exit_code) != CPLAT_OK)
         {
             cplat_process_dispose(child_process);
             *exit_code_out = EXIT_FAILURE;
@@ -1301,21 +1820,15 @@ int cplat_elevated_process_attach_output_pipes(int *argc, char **argv, int *atta
 
 #if defined(PLATFORM_WINDOWS)
     {
-        HANDLE parent_process;
         HANDLE stdout_handle;
         HANDLE stderr_handle;
         HANDLE stdin_handle;
-        DWORD parent_pid;
-        unsigned long long stdout_value;
-        unsigned long long stderr_value;
-        BOOL stdout_duplicated;
-        BOOL stderr_duplicated;
+        char token[CPLAT_ELEVATED_PIPE_TOKEN_MAX_LEN + 1U];
+        wchar_t stdout_pipe_name[CPLAT_ELEVATED_PIPE_NAME_CAP];
+        wchar_t stderr_pipe_name[CPLAT_ELEVATED_PIPE_NAME_CAP];
         int found;
 
-        parent_pid = 0;
-        stdout_value = 0;
-        stderr_value = 0;
-        found = extract_output_pipes_arg(argc, argv, &parent_pid, &stdout_value, &stderr_value);
+        found = extract_output_pipes_arg(argc, argv, token, sizeof(token));
         if (found == 0)
         {
             return CPLAT_OK;
@@ -1326,38 +1839,47 @@ int cplat_elevated_process_attach_output_pipes(int *argc, char **argv, int *atta
             return CPLAT_ERR_UNKNOWN;
         }
 
-        parent_process = OpenProcess(PROCESS_DUP_HANDLE, FALSE, parent_pid);
-        if (parent_process == NULL)
+        if (build_pipe_name(stdout_pipe_name, sizeof(stdout_pipe_name) / sizeof(stdout_pipe_name[0]), token,
+                            CPLAT_ELEVATED_PIPE_STDOUT_SUFFIX,
+                            sizeof(CPLAT_ELEVATED_PIPE_STDOUT_SUFFIX) / sizeof(wchar_t)) != 0 ||
+            build_pipe_name(stderr_pipe_name, sizeof(stderr_pipe_name) / sizeof(stderr_pipe_name[0]), token,
+                            CPLAT_ELEVATED_PIPE_STDERR_SUFFIX,
+                            sizeof(CPLAT_ELEVATED_PIPE_STDERR_SUFFIX) / sizeof(wchar_t)) != 0)
         {
             return CPLAT_ERR_UNKNOWN;
         }
 
-        stdout_handle = NULL;
-        stderr_handle = NULL;
-        stdout_duplicated = DuplicateHandle(parent_process, (HANDLE)(uintptr_t)stdout_value, GetCurrentProcess(),
-                                            &stdout_handle, 0, FALSE, DUPLICATE_SAME_ACCESS);
-        stderr_duplicated = DuplicateHandle(parent_process, (HANDLE)(uintptr_t)stderr_value, GetCurrentProcess(),
-                                            &stderr_handle, 0, FALSE, DUPLICATE_SAME_ACCESS);
-        (void)CloseHandle(parent_process); /* ハンドルの複製は終わっているため、戻り値は明示的に破棄する */
+        /*
+         * パイプのサーバー (未昇格の呼び出し元) が本プロセスになりすませないよう、偽装レベルを指定して開く。
+         * 指定しない場合、サーバーは SecurityImpersonation のレベルで偽装できる。
+         * see: https://learn.microsoft.com/en-us/windows/win32/ipc/impersonating-a-named-pipe-client
+         * フラグの値は未昇格の側が決めるため、トークンの文字を検査し、パスは本関数で組み立てる。
+         * パイプ名はワイド文字列で組み立てるため CreateFileU を使わない。
+         */
+        stdout_handle = CreateFileW(stdout_pipe_name, GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
+                                    SECURITY_SQOS_PRESENT | SECURITY_ANONYMOUS, NULL);
+        if (stdout_handle == INVALID_HANDLE_VALUE)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        stderr_handle = CreateFileW(stderr_pipe_name, GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
+                                    SECURITY_SQOS_PRESENT | SECURITY_ANONYMOUS, NULL);
+        if (stderr_handle == INVALID_HANDLE_VALUE)
+        {
+            (void)CloseHandle(stdout_handle); /* stderr オープン失敗の後始末のため、戻り値は明示的に破棄する */
+            return CPLAT_ERR_UNKNOWN;
+        }
 
         /*
-         * 引数で受け取ったハンドル値がパイプ以外を指す場合は付け替えない。
+         * 開いたオブジェクトがパイプ以外を指す場合は付け替えない。
          * 失敗を返す経路の後始末は返す結果を変えないため、
          * この関数の失敗の経路の CloseHandle の戻り値は明示的に破棄する。
          */
-        if (!stdout_duplicated || !stderr_duplicated || GetFileType(stdout_handle) != FILE_TYPE_PIPE ||
-            GetFileType(stderr_handle) != FILE_TYPE_PIPE)
+        if (GetFileType(stdout_handle) != FILE_TYPE_PIPE || GetFileType(stderr_handle) != FILE_TYPE_PIPE)
         {
-            if (stdout_duplicated)
-            {
-                (void)CloseHandle(stdout_handle);
-            }
-
-            if (stderr_duplicated)
-            {
-                (void)CloseHandle(stderr_handle);
-            }
-
+            (void)CloseHandle(stdout_handle);
+            (void)CloseHandle(stderr_handle);
             return CPLAT_ERR_UNKNOWN;
         }
 

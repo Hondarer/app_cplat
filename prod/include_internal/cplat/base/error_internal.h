@@ -72,7 +72,9 @@ extern "C"
      *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *  @param[in]      error_code getaddrinfo が返した EAI_* の値。
-     *  @return         EAI_* に対応する共通結果コードを返します。
+     *  @return         0 は CPLAT_OK、要因が見つからない場合は CPLAT_ERR_NOT_FOUND、
+     *                  一時的な失敗の場合は CPLAT_ERR_BUSY、メモリ不足の場合は CPLAT_ERR_OUT_OF_MEMORY、
+     *                  それ以外は CPLAT_ERR_UNKNOWN を返します。
      */
     int cplat_internal_error_report_gai_error(cplat_error *detail_out, int error_code);
 

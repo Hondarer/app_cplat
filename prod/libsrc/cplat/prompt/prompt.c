@@ -12,10 +12,33 @@
 #include <cplat/crt/unistd.h>
 #include <cplat/prompt/prompt_edit.h>
 
+#include <assert.h>
 #include <stdarg.h>
 
 /* 入力バッファー初期容量の既定値 [byte] */
 #define PROMPT_INPUT_INITIAL_DEFAULT 256U
+
+/*
+ * 履歴コンテキスト配列の初期容量 [個]。
+ * 制約: 1 以上とすること。変更時は初回確保量と再確保の回数だけが変わる。
+ */
+#define PROMPT_HISTORY_CTX_INITIAL_CAPACITY 4U
+
+/*
+ * 履歴コンテキスト配列の拡張倍率。不足時は現在の容量にこの倍率を掛けて拡張する。
+ * 制約: 2 以上とすること。変更時は拡張時の容量増加率と再確保回数だけが変わる。
+ */
+#define PROMPT_HISTORY_CTX_GROWTH_FACTOR 2U
+
+/*
+ * プロンプトの書式化バッファーの初期容量 [byte]。書式化後が (PROMPT_FMT_INITIAL_CAPACITY - 1) [byte] 以下なら再確保しない。
+ * 制約: 1 以上とすること。変更時は初回の確保量と再確保のしきい値だけが変わる。
+ */
+#define PROMPT_FMT_INITIAL_CAPACITY 256U
+
+static_assert(PROMPT_HISTORY_CTX_INITIAL_CAPACITY >= 1U, "initial context capacity must be at least 1");
+static_assert(PROMPT_HISTORY_CTX_GROWTH_FACTOR >= 2U, "growth factor must be at least 2");
+static_assert(PROMPT_FMT_INITIAL_CAPACITY >= 1U, "initial format buffer capacity must be at least 1");
 
 /*
  * ================================================================
@@ -470,11 +493,11 @@ static prompt_history_context *find_or_create_ctx(cplat_prompt *p, const char *f
 
         if (p->ctx_cap != 0U)
         {
-            new_cap = p->ctx_cap * 2;
+            new_cap = p->ctx_cap * PROMPT_HISTORY_CTX_GROWTH_FACTOR;
         }
         else
         {
-            new_cap = 4;
+            new_cap = PROMPT_HISTORY_CTX_INITIAL_CAPACITY;
         }
 
         new_contexts = (prompt_history_context *)cplat_realloc(p->contexts, new_cap, sizeof(prompt_history_context));
@@ -969,7 +992,7 @@ int cplat_prompt_readline_fmt_at(cplat_prompt *p, char *buf, size_t buf_size, co
     /* 初回呼び出し時に書式付きプロンプト用のバッファーを確保する。 */
     if (p->prompt_fmt_buf == NULL)
     {
-        p->prompt_fmt_cap = 256U;
+        p->prompt_fmt_cap = PROMPT_FMT_INITIAL_CAPACITY;
         p->prompt_fmt_buf = (char *)cplat_malloc(p->prompt_fmt_cap);
         if (p->prompt_fmt_buf == NULL)
         {
@@ -994,7 +1017,7 @@ int cplat_prompt_readline_fmt_at(cplat_prompt *p, char *buf, size_t buf_size, co
 
         if (needed < 0)
         {
-            p->prompt_fmt_buf[0] = '\0'; /* エンコード エラー: 空にして続行 */
+            p->prompt_fmt_buf[0] = '\0'; /* 書式化の失敗: 空のプロンプトで続行 */
             break;
         }
 
@@ -1009,7 +1032,8 @@ int cplat_prompt_readline_fmt_at(cplat_prompt *p, char *buf, size_t buf_size, co
             char *new_buf = (char *)cplat_realloc(p->prompt_fmt_buf, new_cap, 1U);
             if (new_buf == NULL)
             {
-                p->prompt_fmt_buf[p->prompt_fmt_cap - 1U] = '\0'; /* 切り捨てて続行 */
+                /* 書式化後の全体を保持できない。切り詰めた文字列は UTF-8 の文字の途中で切れ得るため、空にして続行する。 */
+                p->prompt_fmt_buf[0] = '\0';
                 break;
             }
 

@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cplat/crt/stdlib.h>
 #include <cplat/sync/sync_descriptor.h>
 
 int cplat_internal_interprocess_sync_descriptor_export(const char *identity, const uint8_t kind, const uint8_t backend,
@@ -63,10 +64,10 @@ int cplat_internal_interprocess_sync_descriptor_import(const void *descriptor, c
     {
         return CPLAT_ERR_CORRUPT_DESCRIPTOR;
     }
-    identity = (char *)malloc(identity_len + 1U);
+    identity = (char *)cplat_malloc(identity_len + 1U);
     if (identity == NULL)
     {
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
     memcpy(identity, in + 3U, identity_len);
     identity[identity_len] = '\0';

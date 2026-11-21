@@ -492,6 +492,39 @@ static int to_etw_level(const cplat_trace_level lv)
     }
 }
 
+/**
+ *  @brief          トレース レベルを EventLog のレベルへ変換します。
+ *  @param[in]      lv  変換元のトレース レベル。
+ *  @return         対応する EventLog のレベル値 (0 から 5)。定義されていない値はそのまま返します。
+ */
+static int to_eventlog_level(const cplat_trace_level lv)
+{
+    switch (lv)
+    {
+    case CPLAT_TRACE_LEVEL_FORCE_CRITICAL:
+        return (int)CPLAT_TRACE_LEVEL_CRITICAL;
+    case CPLAT_TRACE_LEVEL_FORCE_ERROR:
+        return (int)CPLAT_TRACE_LEVEL_ERROR;
+    case CPLAT_TRACE_LEVEL_FORCE_WARNING:
+        return (int)CPLAT_TRACE_LEVEL_WARNING;
+    /* 強制出力の VERBOSE、DEBUG、NONE は EventLog 側の運用方針に合わせ、常時記録の INFO へ引き上げる。 */
+    case CPLAT_TRACE_LEVEL_FORCE_INFO:
+    case CPLAT_TRACE_LEVEL_FORCE_VERBOSE:
+    case CPLAT_TRACE_LEVEL_FORCE_DEBUG:
+    case CPLAT_TRACE_LEVEL_FORCE_NONE:
+        return (int)CPLAT_TRACE_LEVEL_INFO;
+    case CPLAT_TRACE_LEVEL_CRITICAL:
+    case CPLAT_TRACE_LEVEL_ERROR:
+    case CPLAT_TRACE_LEVEL_WARNING:
+    case CPLAT_TRACE_LEVEL_INFO:
+    case CPLAT_TRACE_LEVEL_VERBOSE:
+    case CPLAT_TRACE_LEVEL_DEBUG:
+    case CPLAT_TRACE_LEVEL_NONE:
+    default:
+        return (int)lv;
+    }
+}
+
 #endif /* PLATFORM_ */
 
 /**
@@ -692,7 +725,7 @@ static int tracer_enter_exclusive_stopped(cplat_tracer *handle)
  */
 static char *build_effective_name(const char *name, const int64_t identifier)
 {
-    char path_buf[256];
+    char path_buf[PLATFORM_PATH_UTF8_MAX];
     const char *base;
     char *result;
 
@@ -743,7 +776,7 @@ static char *build_effective_name(const char *name, const int64_t identifier)
  */
 static char *build_eventlog_instance_name(const char *name)
 {
-    char path_buf[256];
+    char path_buf[PLATFORM_PATH_UTF8_MAX];
     const char *base;
 
     if (name != NULL)
@@ -814,7 +847,7 @@ static int resolve_file_name(const cplat_tracer *handle, char *file_name_out, co
     }
     else
     {
-        char path_buf[256];
+        char path_buf[PLATFORM_PATH_UTF8_MAX];
 
         ret = cplat_snprintf(name_buf, sizeof(name_buf), "%s", get_process_basename(path_buf, sizeof(path_buf)));
 #if defined(PLATFORM_WINDOWS)
@@ -861,8 +894,8 @@ static int resolve_file_name(const cplat_tracer *handle, char *file_name_out, co
  */
 static int build_default_file_path(const cplat_tracer *handle, char *path_out, const size_t path_size)
 {
-    char exe_path[PLATFORM_PATH_MAX];
-    char exe_dir[PLATFORM_PATH_MAX];
+    char exe_path[PLATFORM_PATH_UTF8_MAX];
+    char exe_dir[PLATFORM_PATH_UTF8_MAX];
     char name_buf[280];
     char log_file_name[288];
 
@@ -906,7 +939,7 @@ static cplat_trace_file_sink *open_file_sink_with(const cplat_tracer *handle, co
                                                   const int generations, const int flags)
 {
     const char *eff_path = path;
-    char default_path[PLATFORM_PATH_MAX];
+    char default_path[PLATFORM_PATH_UTF8_MAX];
 
     if (eff_path == NULL)
     {
@@ -1055,7 +1088,7 @@ static void trace_handle_release_on_shutdown(cplat_tracer *handle)
 cplat_tracer *cplat_tracer_create(const cplat_tracer_concurrency_mode concurrency_mode)
 {
     cplat_tracer *handle;
-    char path_buf[256];
+    char path_buf[PLATFORM_PATH_UTF8_MAX];
     const char *effective_name;
 
     if (concurrency_mode != CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED &&
@@ -1363,8 +1396,9 @@ static int write_os_backends(cplat_tracer *handle, const cplat_trace_level level
 
     if (should_output(level, handle->os_level))
     {
-        eventlog_result = cplat_eventlog_sink_write(s_eventlog_handle, (int)level, handle->file_identifier,
-                                                    handle->eventlog_instance_name, handle->identifier, msg);
+        eventlog_result =
+            cplat_eventlog_sink_write(s_eventlog_handle, to_eventlog_level(level), handle->file_identifier,
+                                      handle->eventlog_instance_name, handle->identifier, msg);
     }
 
     if (etw_result != 0 || eventlog_result != 0)

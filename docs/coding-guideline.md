@@ -1152,10 +1152,13 @@ Table: 過去の規約逸脱 API とその解消内容一覧
 
 | ヘッダー | マクロ |
 |---|---|
-| `include/cplat/base/platform.h` と `include/cplat/crt/path.h` | `PLATFORM_WINDOWS`、`PLATFORM_LINUX`、`PLATFORM_UNKNOWN`、`PLATFORM_NAME`、`ARCH_NAME`、`PLATFORM_PATH_MAX`、`PLATFORM_PATH_SEP`、`PLATFORM_PATH_SEP_CHR`、`PLATFORM_NULL_DEVICE_PATH` |
+| `include/cplat/base/platform.h` と `include/cplat/crt/path.h` | `PLATFORM_WINDOWS`、`PLATFORM_LINUX`、`PLATFORM_UNKNOWN`、`PLATFORM_NAME`、`ARCH_NAME`、`PLATFORM_PATH_MAX`、`PLATFORM_PATH_UTF8_MAX`、`PLATFORM_PATH_SEP`、`PLATFORM_PATH_SEP_CHR`、`PLATFORM_NULL_DEVICE_PATH` |
 | `include/cplat/base/compiler.h` | `COMPILER_GCC`、`COMPILER_MSVC`、`COMPILER_UNKNOWN`、`COMPILER_NAME`、`COMPILER_VERSION`、`FORCE_INLINE`、`NO_INLINE`、`NO_RETURN`、`THREAD_LOCAL` |
 
 Table: 接頭辞 CPLAT_ を付けない汎用ヘルパー マクロ
+
+文字符号の規格が定める値 (UTF-8 のマスク、サロゲートの範囲、置換文字など) の名前付き定数は、公開ヘッダー `cplat/base/char_code.h` に定義します。  
+`app/cplat` の製品コードと、`app/cplat` を利用する app は、文字符号の値を直値で書かず、この定数を使用します。
 
 ## 整数演算の安全性
 

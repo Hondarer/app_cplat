@@ -22,6 +22,7 @@
 #include <cplat/crt/path.h>
 #include <cplat/crt/wchar_conv.h>
 
+#include <assert.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdint.h>
@@ -53,6 +54,11 @@ extern char **environ;
     #include <cplat/crt/wchar_conv.h>
     #include <cplat/win32/win32.h>
     #include <wchar.h>
+
+/* Windows の拡張パス最大長 (32767 文字と終端 NUL) に合わせた中間 wchar_t 配列の要素数 [wchar_t]。 */
+    #define CPLAT_PROCESS_LONG_PATH_WCHAR_CAP 32768U
+
+static_assert(CPLAT_PROCESS_LONG_PATH_WCHAR_CAP > PLATFORM_PATH_MAX, "long path buffer must exceed PLATFORM_PATH_MAX");
 #endif /* PLATFORM_ */
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -1172,23 +1178,33 @@ int cplat_process_get_executable_path(char *path_out, const size_t path_size)
     }
 #elif defined(PLATFORM_WINDOWS)
     {
-        wchar_t wbuf[PLATFORM_PATH_MAX];
+        wchar_t *wbuf;
         DWORD n;
         int result;
+
+        wbuf = (wchar_t *)cplat_malloc((size_t)CPLAT_PROCESS_LONG_PATH_WCHAR_CAP * sizeof(wchar_t));
+        if (wbuf == NULL)
+        {
+            path_out[0] = '\0';
+            return CPLAT_ERR_OUT_OF_MEMORY;
+        }
 
         /*
          * GetModuleFileNameU はパス区切り文字を正規化しない。
          * '\\' を '/' へ正規化する cplat_wpath_to_utf8 を使うため、ここでは W 版を直接使う。
          */
-        n = GetModuleFileNameW(NULL, wbuf, (DWORD)(sizeof(wbuf) / sizeof(wbuf[0])));
+        n = GetModuleFileNameW(NULL, wbuf, (DWORD)CPLAT_PROCESS_LONG_PATH_WCHAR_CAP);
         if (n == 0)
         {
+            DWORD err_code = GetLastError();
+            cplat_free(wbuf);
             path_out[0] = '\0';
-            return cplat_internal_result_from_windows_error(GetLastError());
+            return cplat_internal_result_from_windows_error(err_code);
         }
 
-        if (n >= (DWORD)(sizeof(wbuf) / sizeof(wbuf[0])))
+        if (n >= (DWORD)CPLAT_PROCESS_LONG_PATH_WCHAR_CAP)
         {
+            cplat_free(wbuf);
             path_out[0] = '\0';
             return CPLAT_ERR_BUFFER_TOO_SMALL;
         }
@@ -1198,10 +1214,12 @@ int cplat_process_get_executable_path(char *path_out, const size_t path_size)
         if (cplat_wpath_to_utf8(path_out, path_size, wbuf) < 0)
         {
             result = cplat_internal_result_from_windows_error(GetLastError());
+            cplat_free(wbuf);
             path_out[0] = '\0';
             return result;
         }
 
+        cplat_free(wbuf);
         return CPLAT_OK;
     }
 #else

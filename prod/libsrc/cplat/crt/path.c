@@ -14,6 +14,8 @@
 #include <cplat/crt/wchar_conv.h>
 #include <cplat/base/error_internal.h>
 #include <cplat/base/result.h>
+#include "crt.h"
+#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
@@ -23,6 +25,8 @@
     #include <stdlib.h>
     #include <unistd.h>
 #endif /* PLATFORM_LINUX */
+
+static_assert(PLATFORM_PATH_UTF8_MAX >= PLATFORM_PATH_MAX, "PLATFORM_PATH_UTF8_MAX must be at least PLATFORM_PATH_MAX");
 
 /*
  * パス文字列を出力バッファーへコピーする。
@@ -311,24 +315,31 @@ int cplat_path_get_full(char *path_out, const size_t path_size, cplat_error *det
     }
 #elif defined(PLATFORM_WINDOWS)
     {
-        char normalized_input[PLATFORM_PATH_MAX];
         wchar_t wpath[PLATFORM_PATH_MAX];
         wchar_t wfull[PLATFORM_PATH_MAX];
         DWORD needed;
+        int check_result;
 
-        int copy_result = copy_path_text(normalized_input, sizeof(normalized_input), detail_out, path);
-        if (copy_result != CPLAT_OK)
+        check_result = crt_check_wpath_length(path, detail_out);
+        if (check_result != CPLAT_OK)
         {
             path_out[0] = '\0';
-            return copy_result;
+            return check_result;
         }
 
-        cplat_path_normalize_sep(normalized_input);
-
-        if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), normalized_input) < 0)
+        if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), path) < 0)
         {
             path_out[0] = '\0';
             return cplat_internal_error_report_errno(detail_out, EINVAL);
+        }
+
+        /* 区切りを '/' へそろえてから絶対化する (\\?\ で始まる入力の動作を変えないため)。 */
+        for (wchar_t *wp = wpath; *wp != L'\0'; ++wp)
+        {
+            if (*wp == L'\\')
+            {
+                *wp = L'/';
+            }
         }
 
         needed = GetFullPathNameW(wpath, (DWORD)(sizeof(wfull) / sizeof(wfull[0])), wfull, NULL);
@@ -361,8 +372,8 @@ int cplat_path_get_full(char *path_out, const size_t path_size, cplat_error *det
 
 int cplat_path_equal(const char *lhs, const char *rhs, int *equal_out, cplat_error *detail_out)
 {
-    char lhs_full[PLATFORM_PATH_MAX];
-    char rhs_full[PLATFORM_PATH_MAX];
+    char lhs_full[PLATFORM_PATH_UTF8_MAX];
+    char rhs_full[PLATFORM_PATH_UTF8_MAX];
     int ret;
 
     if (equal_out == NULL)

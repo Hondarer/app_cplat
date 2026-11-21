@@ -58,14 +58,16 @@ Linux では `gethostname`、Windows では `GetComputerNameExW(ComputerNameDnsH
 - `cplat_elevated_process_run_if_needed`: 管理者/root 権限が必要な処理のため、必要に応じて昇格実行します。
 - `cplat_elevated_process_run_with_result`: 同様に昇格実行し、昇格プロセスが報告した結果メッセージを取得します。
 - `cplat_elevated_process_extract_result_target` / `cplat_elevated_process_report_result`: 昇格プロセス側で結果メッセージを報告します。
-- `cplat_elevated_process_run_piped`: 同様に昇格実行し、昇格プロセスの標準出力と標準エラー出力を無名パイプで受け取ります。
+- `cplat_elevated_process_run_piped`: 同様に昇格実行し、昇格プロセスの標準出力と標準エラー出力を名前付きパイプで受け取ります。
 - `cplat_elevated_process_attach_output_pipes`: 昇格プロセス側で、標準出力と標準エラー出力を呼び出し元のパイプへ接続します。
 
 `cplat_elevated_process_run_if_needed()` は、権限が必要な処理の入口で呼び出します。Windows では未昇格の場合に UAC を要求して現在の実行ファイルを再起動し、Linux では実効ユーザー ID が root でなければ失敗します。Windows で親にコンソールがある場合は、昇格プロセスのコマンド ラインへ親プロセス ID と親コンソールの window ハンドルを引き継ぎフラグとして付与します。昇格プロセス側は `cplat_console_attach_parent()` でこれを検出し、親コンソールへ確実に再接続したことを確認したうえで出力を元のコンソールへ戻します。
 
-ただし、UAC 昇格直後の親コンソール再割り当ては、実機調査の結果、`AttachConsole` 後の安定待ちを満たしてもなお間欠的に書き込み不能 (`ERROR_INVALID_HANDLE`) になることがあり、原因を特定できていません。確実に結果を表示したい場合は `cplat_elevated_process_run_with_result()` を使ってください。こちらは昇格プロセスのコンソールを一切引き継がず、結果メッセージを一時ファイル経由で受け渡します。昇格プロセス側は起動直後に `cplat_elevated_process_extract_result_target()` を呼び出し、処理結果を `cplat_elevated_process_report_result()` で報告します。呼び出し元プロセス (常に未昇格、かつ自分自身の正常なコンソールを保持している) が、そのメッセージを `printf`/`fprintf` で表示します。
+ただし、UAC 昇格直後の親コンソール再割り当ては、`AttachConsole` 後の安定待ちを満たしても、CRT のストリーム (`printf`、`fprintf`) を経由した書き込みが失敗する現象と、書き込みが `ERROR_INVALID_HANDLE` で間欠的に失敗する現象 (一度失敗すると再試行しても同じエラーで失敗) を実機で確認しており、いずれも原因を特定できていません。確実に結果を表示したい場合は `cplat_elevated_process_run_with_result()` を使ってください。こちらは昇格プロセスのコンソールを一切引き継がず、結果メッセージを一時ファイル経由で受け渡します。昇格プロセス側は起動直後に `cplat_elevated_process_extract_result_target()` を呼び出し、処理結果を `cplat_elevated_process_report_result()` で報告します。呼び出し元プロセス (常に未昇格、かつ自分自身の正常なコンソールを保持している) が、そのメッセージを `printf`/`fprintf` で表示します。
 
-昇格プロセスの出力を逐次、そのまま表示したい場合は `cplat_elevated_process_run_piped()` を使ってください。呼び出し元は stdout 用と stderr 用の無名パイプを作成し、自分の PID と、パイプの書き込み側のハンドル値を内部フラグとして昇格プロセスへ渡します。UAC 昇格 (`ShellExecuteExW` の `runas` 動詞) ではハンドルを継承できませんが、昇格プロセスは同じユーザーの未昇格プロセスを `PROCESS_DUP_HANDLE` で開けます。そこで昇格プロセス側は、起動直後に呼び出す `cplat_elevated_process_attach_output_pipes()` で、書き込み側を `DuplicateHandle` により自分へ複製します。そのうえで、Win32 の標準ハンドルと CRT の stdout / stderr を付け替えます。
+昇格プロセスの出力を逐次、そのまま表示したい場合は `cplat_elevated_process_run_piped()` を使ってください。`ShellExecuteExW()` へ渡す `SHELLEXECUTEINFOW` には、ハンドルの継承を指定するメンバーがありません。そこで呼び出し元は、stdout 用と stderr 用の名前付きパイプを作成し、パイプの名前を決めるトークン文字列を内部フラグとして昇格プロセスへ渡します。昇格プロセス側は、起動直後に呼び出す `cplat_elevated_process_attach_output_pipes()` で、パイプを名前で書き込み用に開きます。整合性レベルが低い主体は、既定では、整合性レベルが高いオブジェクトへ書き込めませんが、パイプは未昇格の呼び出し元が作成するため、昇格プロセスからの書き込みはこの制限を受けません。そのうえで、Win32 の標準ハンドルと CRT の stdout / stderr を付け替えます。
+
+パイプの名前は、呼び出し元のプロセス ID と乱数から作ります。同じ名前のパイプが先に存在する場合、呼び出し元は UAC を要求する前に失敗を返します。パイプには LocalSystem、Administrators、および呼び出し元のユーザーに対するアクセス許可を明示し、接続してきたクライアントのプロセス ID を起動したプロセス ID と照合します。昇格プロセスは、呼び出し元が昇格プロセスになりすませないよう、匿名の偽装レベルを指定してパイプを開きます。昇格プロセスがパイプを開けない場合、`cplat_elevated_process_attach_output_pipes()` は失敗を返します。昇格プロセスがパイプへ接続しないまま終了した場合、呼び出し元は `CPLAT_ERR_UNKNOWN` を返します。動作を確認しているのは、同じユーザーのまま昇格する場合だけです。別のアカウントの資格情報を入力して昇格する場合の動作は、実機で確認していません。
 
 呼び出し元は昇格プロセスの終了を待つ間もパイプを読み続け、読み取った内容をコールバックへ渡します。コールバックに NULL を指定した場合は、自分の stdout / stderr へそのまま書き込みます。この方式では、昇格プロセスがコンソールへ一切書き込まないため、前述の `ERROR_INVALID_HANDLE` の影響を受けません。また、呼び出し元の出力がリダイレクトされている場合も、昇格プロセスの出力はそのリダイレクト先へ届きます。
 
@@ -74,10 +76,11 @@ sequenceDiagram
     autonumber off
     participant P as 呼び出し元 (未昇格)
     participant C as 昇格プロセス
-    P->>P: CreatePipe (stdout 用、stderr 用)
-    P->>C: runas + SW_HIDE + 親 PID と書き込み側ハンドル値のフラグ
-    C->>P: OpenProcess(PROCESS_DUP_HANDLE)
-    C->>C: DuplicateHandle で書き込み側を複製し、stdout / stderr を付け替え
+    P->>P: CreateNamedPipeW (stdout 用、stderr 用) と ConnectNamedPipe の開始
+    P->>C: runas + SW_HIDE + パイプのトークンを決めるフラグ
+    C->>P: CreateFileW でパイプを書き込み用に開く
+    P->>P: GetNamedPipeClientProcessId でクライアントの PID を照合
+    C->>C: stdout / stderr を付け替え
     loop 昇格プロセスの終了まで
         C->>P: パイプへ出力
         P->>P: PeekNamedPipe / ReadFile で読み取り、コールバックへ渡す
@@ -85,7 +88,7 @@ sequenceDiagram
     P->>P: 残りを読み切り、終了コードを取得
 ```
 
-Figure: 無名パイプによる昇格プロセスの出力の受け渡し
+Figure: 名前付きパイプによる昇格プロセスの出力の受け渡し
 
 stdout と stderr は別のパイプで受け取るため、両者の間の出力順序は保証しません。昇格プロセスの標準入力は `NUL` デバイスへ付け替え、呼び出し元からは渡しません。未昇格のプロセスから、昇格プロセスを入力で操作できないようにするためです。
 

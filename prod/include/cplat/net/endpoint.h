@@ -95,12 +95,17 @@ extern "C"
      *  @param[in]      text        ホスト名または IPv4 アドレス文字列。
      *  @param[out]     address_out 解決後のアドレス (ネットワーク バイト オーダー) の格納先。
      *  @param[out]     detail_out  エラー詳細の格納先。NULL 可。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
-     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_NOT_FOUND 、
+     *                  @ref CPLAT_ERR_BUSY 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN 、
+     *                  または Windows ソケット初期化の結果コードを返します。
      *
      *  複数のアドレスが解決された場合は、先頭の IPv4 アドレスを採用します。\n
      *  解決に失敗した場合、@p detail_out には @ref CPLAT_ERROR_DOMAIN_GAI ドメインの
-     *  エラー コードを格納します。
+     *  エラー コードを格納します。\n
+     *  ホスト名が見つからない場合は `CPLAT_ERR_NOT_FOUND`、名前解決が一時的に失敗した場合は
+     *  `CPLAT_ERR_BUSY`、名前解決でメモリが不足した場合は `CPLAT_ERR_OUT_OF_MEMORY` を返します。\n
+     *  Windows でソケットの初期化に失敗した場合は、その失敗に対応する結果コードを返し、
+     *  @p detail_out には @ref CPLAT_ERROR_DOMAIN_WINSOCK ドメインのエラー コードを格納します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。

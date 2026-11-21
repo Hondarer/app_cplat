@@ -265,3 +265,67 @@ TEST(pinnedFailureTest, write_reports_flush_failure_with_tty)
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
 }
+
+// プロンプト文字列の確保失敗より端末復元失敗を優先することの確認
+TEST(pinnedFailureTest, restoration_failure_overrides_prompt_allocation_failure)
+{
+    // Arrange
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr);
+    ASSERT_NE(nullptr, screen); // [状態確認] - ハンドルを確保できたこと。
+    char output[16] = {};
+    test_pinned_prompt_set_tty(screen, 1);
+    test_pinned_prompt_failures(2, 0);
+    const int newline = '\n';
+    test_pinned_prompt_input_results(&newline, 1);
+    ASSERT_EQ(CPLAT_OK, cplat_pinned_prompt_readline_at(screen, output, sizeof(output), "p", "restore-prompt-oom", 1));
+    // [状態確認] - 同じ入力位置の履歴を確保したこと。
+    NiceMock<Mock_cplat> mock;
+    test_pinned_prompt_failures(2, -1);
+
+    // Pre-Assert
+    EXPECT_CALL(mock, cplat_realloc(_, _, _))
+        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - プロンプト文字列の拡張を 1 回失敗させること。
+                                    // [Pre-Assert手順] - cplat_realloc() から nullptr を返す。
+
+    // Act
+    int result = cplat_pinned_prompt_readline_at(
+        screen, output, sizeof(output), "long prompt", "restore-prompt-oom",
+        1); // [手順] - プロンプト文字列の確保と端末の設定の復元の両方を失敗させる。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, result); // [確認_異常系] - 端末復元失敗が優先されて CPLAT_ERR_UNKNOWN が返ること。
+
+    // Cleanup
+    cplat_pinned_prompt_dispose(screen);
+    test_pinned_prompt_failures(0, 0);
+    test_pinned_prompt_input_results(nullptr, 0);
+}
+
+// 入力履歴コンテキストの確保失敗より端末復元失敗を優先することの確認
+TEST(pinnedFailureTest, restoration_failure_overrides_history_context_allocation_failure)
+{
+    // Arrange
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr);
+    ASSERT_NE(nullptr, screen); // [状態確認] - ハンドルを確保できたこと。
+    char output[16] = {};
+    test_pinned_prompt_set_tty(screen, 1);
+    test_pinned_prompt_failures(2, -1);
+    NiceMock<Mock_cplat> mock;
+
+    // Pre-Assert
+    EXPECT_CALL(mock, cplat_realloc(_, _, _))
+        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - 履歴コンテキスト配列の確保を 1 回失敗させること。
+                                    // [Pre-Assert手順] - cplat_realloc() から nullptr を返す。
+
+    // Act
+    int result = cplat_pinned_prompt_readline_at(
+        screen, output, sizeof(output), nullptr, "restore-history-oom",
+        1); // [手順] - 新しい呼び出し位置で履歴コンテキストの確保と端末の設定の復元の両方を失敗させる。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, result); // [確認_異常系] - 端末復元失敗が優先されて CPLAT_ERR_UNKNOWN が返ること。
+
+    // Cleanup
+    cplat_pinned_prompt_dispose(screen);
+    test_pinned_prompt_failures(0, 0);
+}

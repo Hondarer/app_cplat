@@ -323,6 +323,57 @@ TEST_F(pathGetFullTest, normalizes_repeated_windows_separators)
             actual,
             "//")); // [確認_正常系] - "//" を探した std::strstr() の戻り値が nullptr であること。(連続したセパレーターが除去されたことの確認)
 }
+
+// 260 バイト超かつ UTF-16 で MAX_PATH 未満の非 ASCII パスが取得できることの確認 (Windows)
+TEST_F(pathGetFullTest, returns_full_path_for_non_ascii_path_over_260_bytes_windows)
+{
+    // Arrange
+    std::string input = "C:/";
+    for (int i = 0; i < 100; ++i)
+    {
+        input += "\xE3\x81\x82";
+    }
+    char actual[PLATFORM_PATH_UTF8_MAX] =
+        {}; // [状態] - 300 バイト超・UTF-16 103 文字の非 ASCII パスと出力バッファーを用意する。
+
+    // Pre-Assert
+
+    // Act
+    int actual_ret =
+        cplat_path_get_full(actual, sizeof(actual), nullptr,
+                            input.c_str()); // [手順] - 非 ASCII の長いパスを指定して cplat_path_get_full() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_get_full() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(input.c_str(),
+                 actual); // [確認_正常系] - actual が入力パスと一致すること。
+}
+
+// UTF-16 文字数が PLATFORM_PATH_MAX を超える場合に ENAMETOOLONG で失敗することの確認 (Windows)
+TEST_F(pathGetFullTest, returns_enametoolong_when_wide_length_exceeds_limit_windows)
+{
+    // Arrange
+    std::string input = "C:/" + std::string(300u, 'a'); // [状態] - ASCII 303 文字の絶対パスを用意する。
+    char actual[PLATFORM_PATH_UTF8_MAX] = {'x'};
+    cplat_error err; // [状態] - 詳細エラーの受け取り先を用意する。
+
+    // Pre-Assert
+
+    // Act
+    int actual_ret = cplat_path_get_full(
+        actual, sizeof(actual), &err,
+        input.c_str()); // [手順] - UTF-16 文字数が上限を超える絶対パスを指定して cplat_path_get_full() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
+              actual_ret); // [確認_異常系] - cplat_path_get_full() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is(
+            &err,
+            CPLAT_CAUSE_NAME_TOO_LONG)); // [確認_異常系] - cplat_error_is() の戻り値が 1 であること。(要因が CPLAT_CAUSE_NAME_TOO_LONG であることの確認)
+    EXPECT_EQ('\0', actual[0]); // [確認_異常系] - actual[0] が '\0' であること。
+}
 #endif /* PLATFORM_WINDOWS */
 
 // カレント ディレクトリとの連結結果が長過ぎる場合に失敗することの確認

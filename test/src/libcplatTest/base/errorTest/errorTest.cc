@@ -489,14 +489,14 @@ TEST_F(errorTest, report_gai_error_maps_standard_codes_and_unknown_code)
         CPLAT_CAUSE_NOT_FOUND,
         not_found_cause); // [確認_正常系] - EAI_NONAME に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_NOT_FOUND であること。
     EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        again_result); // [確認_正常系] - EAI_AGAIN に対する cplat_internal_error_report_gai_error() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        CPLAT_ERR_BUSY,
+        again_result); // [確認_正常系] - EAI_AGAIN に対する cplat_internal_error_report_gai_error() の戻り値が CPLAT_ERR_BUSY であること。
     EXPECT_EQ(
         CPLAT_CAUSE_BUSY,
         again_cause); // [確認_正常系] - EAI_AGAIN に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_BUSY であること。
     EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        memory_result); // [確認_正常系] - EAI_MEMORY に対する cplat_internal_error_report_gai_error() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        CPLAT_ERR_OUT_OF_MEMORY,
+        memory_result); // [確認_正常系] - EAI_MEMORY に対する cplat_internal_error_report_gai_error() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(
         CPLAT_CAUSE_OUT_OF_MEMORY,
         memory_cause); // [確認_正常系] - EAI_MEMORY に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_OUT_OF_MEMORY であること。
@@ -540,7 +540,13 @@ TEST_F(errorTest, report_gai_error_classifies_system_error_by_errno)
         &error); // [手順] - errno が ENOMEM の EAI_SYSTEM を記録した詳細エラーを指定して cplat_error_get_cause() を呼び出す。
     const unsigned long memory_code =
         (unsigned long)error.code; // [手順] - errno が ENOMEM の EAI_SYSTEM の生値を取得する。
-    errno = EINTR;                 // [手順] - errno に EINTR を設定する。
+    errno = EAGAIN;                // [手順] - errno に EAGAIN を設定する。
+    int busy_result = cplat_internal_error_report_gai_error(
+        &error,
+        EAI_SYSTEM); // [手順] - errno が EAGAIN の状態で EAI_SYSTEM を指定して cplat_internal_error_report_gai_error() を呼び出す。
+    const cplat_error_cause busy_cause = cplat_error_get_cause(
+        &error); // [手順] - errno が EAGAIN の EAI_SYSTEM を記録した詳細エラーを指定して cplat_error_get_cause() を呼び出す。
+    errno = EINTR; // [手順] - errno に EINTR を設定する。
     cplat_internal_error_report_gai_error(
         &error,
         EAI_SYSTEM); // [手順] - errno が EINTR の状態で EAI_SYSTEM を指定して cplat_internal_error_report_gai_error() を呼び出す。
@@ -549,13 +555,19 @@ TEST_F(errorTest, report_gai_error_classifies_system_error_by_errno)
 
     // Assert
     EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        memory_result); // [確認_異常系] - errno が ENOMEM の EAI_SYSTEM に対する cplat_internal_error_report_gai_error() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        CPLAT_ERR_OUT_OF_MEMORY,
+        memory_result); // [確認_異常系] - errno が ENOMEM の EAI_SYSTEM に対する cplat_internal_error_report_gai_error() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(
         CPLAT_CAUSE_OUT_OF_MEMORY,
         memory_cause); // [確認_異常系] - errno が ENOMEM の EAI_SYSTEM に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_OUT_OF_MEMORY であること。
     EXPECT_EQ(static_cast<unsigned long>(EAI_SYSTEM),
               memory_code); // [確認_異常系] - memory_code が static_cast<unsigned long>(EAI_SYSTEM) と一致すること。
+    EXPECT_EQ(
+        CPLAT_ERR_BUSY,
+        busy_result); // [確認_異常系] - errno が EAGAIN の EAI_SYSTEM に対する cplat_internal_error_report_gai_error() の戻り値が CPLAT_ERR_BUSY であること。
+    EXPECT_EQ(
+        CPLAT_CAUSE_BUSY,
+        busy_cause); // [確認_異常系] - errno が EAGAIN の EAI_SYSTEM に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_BUSY であること。
     EXPECT_EQ(
         CPLAT_CAUSE_INTERRUPTED,
         interrupted_cause); // [確認_異常系] - errno が EINTR の EAI_SYSTEM に対する cplat_error_get_cause() の戻り値が CPLAT_CAUSE_INTERRUPTED であること。

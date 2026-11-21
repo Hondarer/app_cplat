@@ -71,7 +71,7 @@ extern "C"
      *                  descriptor または identity_out が NULL の場合 CPLAT_ERR_INVALID_ARGUMENT。
      *                  形式版の不一致時 CPLAT_ERR_VERSION_MISMATCH。
      *                  それ以外のフォーマット不正時 CPLAT_ERR_CORRUPT_DESCRIPTOR。
-     *                  メモリ確保失敗時 CPLAT_ERR_UNKNOWN。
+     *                  メモリ確保失敗時 CPLAT_ERR_OUT_OF_MEMORY。
      */
     int cplat_internal_interprocess_sync_descriptor_import(const void *descriptor, size_t descriptor_size, uint8_t kind,
                                                            uint8_t backend, char **identity_out);

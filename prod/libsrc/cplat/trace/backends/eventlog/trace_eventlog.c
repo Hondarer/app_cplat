@@ -89,7 +89,11 @@ static PSID s_user_sid = NULL;
  *  @param[out]     event_id                 イベント ID (レベル・表示形式毎に分離)。
  *
  *  分析性を高めるため、同一ソースでもレベル毎にカテゴリとイベント ID を
- *  分けて割り当てます。
+ *  分けて割り当てます。\n
+ *  @p level が 0 から 5 の範囲にない場合は、イベント タイプを Information、カテゴリを 0、
+ *  イベント ID を 0 にします。\n
+ *  メッセージ定義 (eventlog_messages.mc) に、ID が 0 のカテゴリとイベントはありません。\n
+ *  強制出力のレベルは、呼び出し元の tracer.c が通常のレベルへ変換してから渡します。
  */
 static void map_level(const int level, const int has_file_identifier, const int has_instance_identifier, WORD *type,
                       WORD *category, DWORD *event_id)
@@ -189,7 +193,7 @@ static void copy_wstr(wchar_t *dst, const size_t dst_count, const wchar_t *src)
  */
 static void init_executable_path_cache(void)
 {
-    char path[PLATFORM_PATH_MAX];
+    char path[PLATFORM_PATH_UTF8_MAX];
     char *p;
     wchar_t *wpath;
 

@@ -111,13 +111,15 @@ CPLAT_EXPORT HANDLE CPLAT_API CreateNamedPipeU(const char *lpName, DWORD dwOpenM
  *  GetModuleFileNameW でワイド パスを取得し、UTF-8 に変換して lpFilename に
  *                  書き込みます。\n
  *                  パス区切り文字の正規化 (\\\\→/) は行いません。\n
- *                  lpFilename のサイズが不足する場合は切り詰め、SetLastError(ERROR_INSUFFICIENT_BUFFER)
- *                  を設定して実際に書き込んだバイト数 (NUL 終端を除く) を返します。\n
+ *                  lpFilename のサイズが不足する場合は、UTF-8 の文字の境界で切り詰め、
+ *                  SetLastError(ERROR_INSUFFICIENT_BUFFER) を設定して nSize を返します (W 版と同じ)。
+ *                  格納するバイト数は nSize - 1 以下です。\n
+ *                  メモリを確保できない場合は SetLastError(ERROR_OUTOFMEMORY) を設定して 0 を返します。\n
  *                  変換失敗時は 0 を返します。
  *  @param[in]      hModule                   モジュールのハンドル。NULL のとき呼び出し元プロセスの実行ファイル。
  *  @param[out]     lpFilename                パスの書き込み先バッファー (UTF-8)。
  *  @param[in]      nSize                     lpFilename のサイズ [byte]。W 版の UTF-16 単位数とは異なります。
- *  @return         書き込んだバイト数 (NUL 終端を除く)。失敗時は 0。
+ *  @return         書き込んだバイト数 (NUL 終端を除く)。切り詰めた場合は nSize。失敗時は 0。
  *  @see            GetModuleFileNameW
  *                  https://learn.microsoft.com/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulefilenamew
  *

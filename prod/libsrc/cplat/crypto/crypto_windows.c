@@ -208,7 +208,13 @@ int cplat_crypto_encrypt(uint8_t *dst, size_t *dst_len, const uint8_t *src, cons
     enc_len = src_len;
 
     {
-        /* BCrypt は src が NULL だと受け付けないため、空のバッファーを用意する。 */
+        /*
+         * Microsoft の資料は、pbInput と pbOutput の両方が NULL の場合の扱いだけを定めている
+         * (認証付きの暗号では、長さ 0 のデータの暗号化として扱う)。
+         * pbInput だけが NULL の場合の扱いは資料になく、bcrypt.h の注釈は pbInput を省略可能としている。
+         * 資料で確認できない動作に依存しないよう、src が NULL のときは、長さ 0 でも有効なポインターを渡す。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptencrypt
+         */
         static const uint8_t empty_src[1] = {0};
         const uint8_t *actual_src;
         int bcrypt_result;

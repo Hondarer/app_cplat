@@ -99,8 +99,8 @@ extern "C"
      *  @brief          昇格起動時に親プロセスのコンソールへ再接続します。
      *  @param[in,out]  argc          引数の数へのポインター。NULL 可。
      *  @param[in,out]  argv          引数配列。NULL 可。
-     *  @param[out]     attached_out  親コンソールへ再接続した場合は 1、何もしなかった場合は 0 の格納先。
-     *                                NULL 可。戻り値が @ref CPLAT_OK の場合のみ有効です。
+     *  @param[out]     attached_out  親コンソールへ接続した場合は 1、接続していない場合は 0 の格納先。
+     *                                NULL 可。戻り値によらず有効です。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  Windows 環境では、cplat_elevated_process_run_if_needed() が UAC 昇格で
@@ -108,6 +108,8 @@ extern "C"
      *  コンソールへ `AttachConsole` で再接続します。\n
      *  再接続後、stdin / stdout / stderr を親コンソール (CONIN$ / CONOUT$) へ
      *  再割り当てするため、昇格プロセスの出力が元のコンソールにそのまま表示されます。\n
+     *  標準入力、標準出力、標準エラー出力のいずれかを親コンソールへ接続できなかった場合は、
+     *  3 つとも接続を試みた上で @ref CPLAT_ERR_UNKNOWN を返します。このとき @p attached_out には 1 を格納します。\n
      *  検出した引き継ぎフラグは @p argv から取り除き、@p argc を 1 減らします。\n
      *  Linux 環境では何もせず @p attached_out に 0 を設定して @ref CPLAT_OK を返します。
      *
@@ -131,10 +133,13 @@ extern "C"
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  Windows 環境では、cplat_console_attach_parent() による昇格後の親コンソール
-     *  再接続直後に、stdout / stderr の CRT ストリーム (FILE*) 経由の printf / fprintf が
-     *  fd 自体は正常であるにもかかわらず書き込みを拒否する事象が実機調査で確認されています。\n
-     *  本関数は `GetStdHandle` で取得した Win32 ハンドルへ `WriteConsoleA` で直接書き込み、
-     *  この問題を回避します。\n
+     *  再接続後に、CRT のストリーム (`printf`、`fprintf`) を経由した書き込みが失敗する事象を実機で確認しています
+     *  (原因は特定できていません)。\n
+     *  本関数は `GetStdHandle` で取得した Win32 のハンドルへ直接書き込むため、CRT のストリームを経由する失敗の影響を受けません。
+     *  ただし、書き込みが `ERROR_INVALID_HANDLE` で間欠的に失敗し、一度失敗すると再試行しても同じエラーで失敗する現象も
+     *  実機で確認しており (原因は特定できていません)、本関数でも発生します。
+     *  確実に結果を表示する必要がある場合は、cplat_elevated_process_run_piped() または
+     *  cplat_elevated_process_run_with_result() を使用してください。\n
      *  Linux 環境では対象の fd へ直接書き込みます。
      *
      *  @par            スレッド セーフ

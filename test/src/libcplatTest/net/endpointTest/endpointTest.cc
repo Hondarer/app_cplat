@@ -298,17 +298,65 @@ TEST_F(endpointTest, resolve_reports_lookup_failure)
 
     // Assert
     EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - 名前解決に失敗した cplat_ipv4_resolve() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        CPLAT_ERR_BUSY,
+        actual_ret); // [確認_異常系] - 名前解決に失敗した cplat_ipv4_resolve() の戻り値が CPLAT_ERR_BUSY であること。
     // 詳細エラーに getaddrinfo ドメインとエラー コードが記録されること。
     // [サブ手順参照 名前=endpointTest.expect_detail]
-    expect_detail(detail, CPLAT_ERROR_DOMAIN_GAI, CPLAT_ERR_UNKNOWN,
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_GAI, CPLAT_ERR_BUSY,
 #if defined(PLATFORM_LINUX)
                   static_cast<unsigned long>(EAI_AGAIN));
     // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 #else
                   static_cast<unsigned long>(EAI_AGAIN));
 #endif /* PLATFORM_ */
+}
+// [サブ手順参照 名前=endpointTest.TearDown]
+
+// 名前解決のメモリ不足時に CPLAT_ERR_OUT_OF_MEMORY が返されることの確認
+// [サブ手順参照 名前=endpointTest.SetUp]
+TEST_F(endpointTest, resolve_reports_out_of_memory)
+{
+    // Arrange
+    uint32_t address = 0U;
+    cplat_error detail = {};
+
+    // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_netdb_, getaddrinfo(_, _, _, _, _, _, _))
+        .WillOnce(
+            [](const char *, const int, const char *, const char *, const char *, const struct addrinfo *,
+               struct addrinfo **result)
+            {
+                *result = nullptr;
+                return EAI_MEMORY;
+            });
+    // [Pre-Assert確認_異常系] - getaddrinfo() が 1 回呼び出されること。
+    // [Pre-Assert手順] - getaddrinfo() から、解決結果に nullptr を格納して EAI_MEMORY を返す。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_winsock_, getaddrinfo(_, _, _, _, _, _, _))
+        .WillOnce(
+            [](const char *, const int, const char *, PCSTR, PCSTR, const ADDRINFOA *, PADDRINFOA *result)
+            {
+                *result = nullptr;
+                return EAI_MEMORY;
+            });
+    // [Pre-Assert確認_異常系] - getaddrinfo() が 1 回呼び出されること。
+    // [Pre-Assert手順] - getaddrinfo() から、解決結果に nullptr を格納して EAI_MEMORY を返す。
+#endif /* PLATFORM_ */
+
+    // Act
+    int actual_ret = cplat_ipv4_resolve(
+        "example.invalid", &address,
+        &detail); // [手順] - 名前解決でメモリ不足が起きる状態で "example.invalid" を指定して cplat_ipv4_resolve() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_MEMORY,
+        actual_ret); // [確認_異常系] - メモリ不足で失敗した cplat_ipv4_resolve() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+    // 詳細エラーに getaddrinfo ドメインとエラー コードが記録されること。
+    // [サブ手順参照 名前=endpointTest.expect_detail]
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_GAI, CPLAT_ERR_OUT_OF_MEMORY, static_cast<unsigned long>(EAI_MEMORY));
+    // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 }
 // [サブ手順参照 名前=endpointTest.TearDown]
 
@@ -598,11 +646,11 @@ TEST_F(endpointTest, resolve_reports_system_error_without_retry)
 
     // Assert
     EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        actual_ret); // [確認_異常系] - EAI_SYSTEM を返した cplat_ipv4_resolve() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        CPLAT_ERR_OUT_OF_MEMORY,
+        actual_ret); // [確認_異常系] - EAI_SYSTEM を返した cplat_ipv4_resolve() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     // 詳細エラーに getaddrinfo ドメインと EAI_SYSTEM が記録されること。
     // [サブ手順参照 名前=endpointTest.expect_detail]
-    expect_detail(detail, CPLAT_ERROR_DOMAIN_GAI, CPLAT_ERR_UNKNOWN, static_cast<unsigned long>(EAI_SYSTEM));
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_GAI, CPLAT_ERR_OUT_OF_MEMORY, static_cast<unsigned long>(EAI_SYSTEM));
     // 詳細エラーのドメイン、結果コード、OS コードが期待値と一致すること。
 }
 // [サブ手順参照 名前=endpointTest.TearDown]

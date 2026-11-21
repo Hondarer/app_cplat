@@ -20,10 +20,18 @@
 #if defined(PLATFORM_WINDOWS)
 
     #include <cplat/crt/path.h>
+    #include <cplat/crt/utf8.h>
     #include <cplat/crt/wchar_conv.h>
+    #include <assert.h>
+    #include <limits.h>
     #include <stdlib.h>
     #include <string.h>
     #include <wchar.h>
+
+    /* Windows の拡張パス最大長 (32767 文字と終端 NUL) に合わせた中間 wchar_t 配列の要素数 [wchar_t]。 */
+    #define CPLAT_WIN32_LONG_PATH_WCHAR_CAP 32768U
+
+static_assert(CPLAT_WIN32_LONG_PATH_WCHAR_CAP > PLATFORM_PATH_MAX, "long path buffer must exceed PLATFORM_PATH_MAX");
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -75,7 +83,7 @@ HANDLE CreateNamedPipeU(const char *lpName, DWORD dwOpenMode, DWORD dwPipeMode, 
 
 DWORD GetModuleFileNameU(HMODULE hModule, char *lpFilename, DWORD nSize)
 {
-    wchar_t wbuf[32768]; /* 拡張パスの最大長に合わせた固定バッファー */
+    wchar_t *wbuf;
     DWORD wlen;
     char *utf8;
     size_t utf8_len;
@@ -87,14 +95,29 @@ DWORD GetModuleFileNameU(HMODULE hModule, char *lpFilename, DWORD nSize)
         return 0;
     }
 
-    wlen = GetModuleFileNameW(hModule, wbuf, (DWORD)(sizeof(wbuf) / sizeof(wbuf[0])));
-    if (wlen == 0)
+    wbuf = (wchar_t *)cplat_malloc((size_t)CPLAT_WIN32_LONG_PATH_WCHAR_CAP * sizeof(wchar_t));
+    if (wbuf == NULL)
     {
+        SetLastError(ERROR_OUTOFMEMORY);
         return 0;
     }
 
+    wlen = GetModuleFileNameW(hModule, wbuf, (DWORD)CPLAT_WIN32_LONG_PATH_WCHAR_CAP);
+    if (wlen == 0 || wlen >= (DWORD)CPLAT_WIN32_LONG_PATH_WCHAR_CAP)
+    {
+        /* 解放の処理が最終エラーを変えても、GetModuleFileNameW() の最終エラーを呼び出し元へ伝える。 */
+        DWORD err_code = GetLastError();
+
+        cplat_free(wbuf);
+        SetLastError(err_code);
+        return 0;
+    }
+
+    wbuf[wlen] = L'\0';
+
     /* パス区切り文字の正規化は行わない (cplat_wstr_to_utf8_alloc() を使用)。 */
     utf8 = cplat_wstr_to_utf8_alloc(wbuf);
+    cplat_free(wbuf);
     if (utf8 == NULL)
     {
         SetLastError(ERROR_OUTOFMEMORY);
@@ -104,12 +127,13 @@ DWORD GetModuleFileNameU(HMODULE hModule, char *lpFilename, DWORD nSize)
     utf8_len = strlen(utf8);
     if (utf8_len >= (size_t)nSize)
     {
-        /* バッファー不足: 切り詰めて NUL 終端する。 */
-        memcpy(lpFilename, utf8, (size_t)(nSize - 1U));
-        lpFilename[nSize - 1U] = '\0';
+        size_t keep = cplat_internal_utf8_trimmed_length(utf8, (size_t)nSize - 1U);
+
+        memcpy(lpFilename, utf8, keep);
+        lpFilename[keep] = '\0';
         cplat_free(utf8);
         SetLastError(ERROR_INSUFFICIENT_BUFFER);
-        return nSize - 1U;
+        return nSize;
     }
 
     memcpy(lpFilename, utf8, utf8_len + 1U);
@@ -125,7 +149,7 @@ BOOL WriteConsoleU(HANDLE hConsoleOutput, const char *lpBuffer, DWORD nNumberOfC
                    LPDWORD lpNumberOfCharsWritten, LPVOID lpReserved)
 {
     BOOL result;
-    char *utf8_copy;
+    int wcount;
     wchar_t *wtext;
     DWORD wwritten = 0;
 
@@ -140,28 +164,51 @@ BOOL WriteConsoleU(HANDLE hConsoleOutput, const char *lpBuffer, DWORD nNumberOfC
         return FALSE;
     }
 
-    /* nNumberOfCharsToWrite [byte] だけを対象とするため、NUL 終端した複製を作ってから変換する。 */
-    utf8_copy = (char *)cplat_malloc((size_t)nNumberOfCharsToWrite + 1u);
-    if (utf8_copy == NULL)
-    {
-        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
-        return FALSE;
-    }
-
-    memcpy(utf8_copy, lpBuffer, (size_t)nNumberOfCharsToWrite);
-    utf8_copy[nNumberOfCharsToWrite] = '\0';
-
-    wtext = cplat_utf8_to_wstr_alloc(utf8_copy);
-    cplat_free(utf8_copy);
-
-    if (wtext == NULL)
+    if (nNumberOfCharsToWrite > (DWORD)INT_MAX)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
 
-    result = WriteConsoleW(hConsoleOutput, wtext, (DWORD)wcslen(wtext), &wwritten, lpReserved);
-    if (result && lpNumberOfCharsWritten != NULL && wwritten == (DWORD)wcslen(wtext))
+    if (nNumberOfCharsToWrite == 0U)
+    {
+        result = WriteConsoleW(hConsoleOutput, L"", 0, &wwritten, lpReserved);
+        return result;
+    }
+
+    /*
+     * 入力は NUL 終端とは限らず、途中に NUL を含み得るため、バイト数を直接指定して変換する。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
+     */
+    wcount = MultiByteToWideChar(CP_UTF8, 0, lpBuffer, (int)nNumberOfCharsToWrite, NULL, 0);
+    if (wcount <= 0)
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+
+    wtext = (wchar_t *)cplat_malloc((size_t)wcount * sizeof(wchar_t));
+    if (wtext == NULL)
+    {
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+        return FALSE;
+    }
+
+    if (MultiByteToWideChar(CP_UTF8, 0, lpBuffer, (int)nNumberOfCharsToWrite, wtext, wcount) <= 0)
+    {
+        cplat_free(wtext);
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+
+    result = WriteConsoleW(hConsoleOutput, wtext, (DWORD)wcount, &wwritten, lpReserved);
+    /*
+     * WriteConsoleW() は、書き込んだ UTF-16 の単位数を返す。
+     * UTF-16 の単位数と UTF-8 のバイト数は比例しないため、書き込んだ単位数からバイト数を換算せず、
+     * 部分書き込みでは 0 を格納する。
+     * see: https://learn.microsoft.com/en-us/windows/console/writeconsole
+     */
+    if (result && lpNumberOfCharsWritten != NULL && wwritten == (DWORD)wcount)
     {
         *lpNumberOfCharsWritten = nNumberOfCharsToWrite;
     }

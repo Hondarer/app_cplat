@@ -777,7 +777,7 @@ extern "C"
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL のいずれかを返します。\n
      *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL の場合、@p buffer には
-     *                  切り詰めたメッセージを格納します。
+     *                  切り詰めたメッセージを格納します。UTF-8 の文字の途中では切りません。
      *
      *  本 API は組み立てた文字列を返すだけで、表示は行いません。表示は呼び出し側で行ってください。
      *
@@ -1042,7 +1042,7 @@ extern "C"
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
      *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL のいずれかを返します。\n
      *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL の場合、@p buffer には
-     *                  切り詰めたメッセージを格納します。
+     *                  切り詰めたメッセージを格納します。UTF-8 の文字の途中では切りません。
      *
      *  本 API は組み立てた文字列を返すだけで、表示は行いません。表示は呼び出し側で行ってください。
      *
@@ -1074,7 +1074,10 @@ extern "C"
      *  @param[in]      parser  引数パーサー ハンドルです。NULL を渡してはなりません。
      *  @param[in]      stream  出力先ストリームです (stdout / stderr など)。NULL を渡してはなりません。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
-     *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL のいずれかを返します。
+     *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL のいずれかを返します。\n
+     *                  @ref CPLAT_ERR_BUFFER_TOO_SMALL の場合、切り詰めたメッセージを出力した上で返します。
+     *                  複数のメッセージのうち 1 件でも切り詰めた場合、または組み立てに失敗した場合は、
+     *                  最初に起きた失敗の結果コードを返します。残りのメッセージの出力は続けます。
      *
      *  内部で cplat_argparser_handle_get_register_error_message() を用いてエラー メッセージを組み立ててから、
      *  発生順にすべて "error: {メッセージ}\n" の形式で @p stream へ書き出し、

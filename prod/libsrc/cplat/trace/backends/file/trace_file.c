@@ -177,7 +177,7 @@ static void sink_registry_unlock(void)
  */
 static char *build_registry_key(const char *path)
 {
-    char full[PLATFORM_PATH_MAX];
+    char full[PLATFORM_PATH_UTF8_MAX];
     const char *src = path;
     char *key;
     size_t len;
@@ -476,8 +476,8 @@ static int close_file(cplat_trace_file_sink *p)
  */
 static int rotate_file(cplat_trace_file_sink *p)
 {
-    char old_path[PLATFORM_PATH_MAX];
-    char new_path[PLATFORM_PATH_MAX];
+    char old_path[PLATFORM_PATH_UTF8_MAX];
+    char new_path[PLATFORM_PATH_UTF8_MAX];
     int gen;
     cplat_error detail;
     int close_ret;
@@ -651,7 +651,7 @@ static cplat_trace_file_sink *create_new_sink(const char *path, const size_t pat
                                               const int generations, const int flags)
 {
     cplat_trace_file_sink *handle;
-    char dir[PLATFORM_PATH_MAX];
+    char dir[PLATFORM_PATH_UTF8_MAX];
 
     handle = (cplat_trace_file_sink *)cplat_malloc(sizeof(cplat_trace_file_sink));
     if (handle == NULL)
@@ -770,7 +770,7 @@ cplat_trace_file_sink *cplat_trace_file_sink_create(const char *path, const size
     path_len = strlen(path);
 
     /* パスが長すぎてローテーションやロック ファイルのサフィックスを付加できない場合は拒否する。 */
-    if (path_len + TRACE_FILE_SUFFIX_MAX >= (size_t)PLATFORM_PATH_MAX)
+    if (path_len + TRACE_FILE_SUFFIX_MAX >= (size_t)PLATFORM_PATH_UTF8_MAX)
     {
         return NULL;
     }

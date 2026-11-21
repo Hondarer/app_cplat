@@ -82,7 +82,8 @@ extern "C"
     /**
      *  @brief          プロセス内ミューテックスを生成します。
      *  @param[out]     mtx  生成したミューテックスの格納先。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -156,7 +157,8 @@ extern "C"
     /**
      *  @brief          条件変数を生成します。
      *  @param[out]     cv  生成した条件変数の格納先。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -233,7 +235,8 @@ extern "C"
     /**
      *  @brief          プロセス内読み書きロックを生成します。
      *  @param[out]     rwlock  生成した読み書きロックの格納先。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -371,7 +374,8 @@ extern "C"
      *  @param[out]     thread  生成したスレッド ハンドルの格納先。NULL を渡してはなりません。
      *  @param[in]      func    スレッド関数。NULL を渡してはなりません。
      *  @param[in]      arg     @p func に渡す引数。NULL 可。
-     *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -441,9 +445,16 @@ extern "C"
 
     /**
      *  @brief          識別子でプロセス横断ミューテックスを開きます (存在しない場合は生成)。
-     *  @param[in]      identity  ロックを識別する名前文字列。NULL を渡してはなりません。
+     *  @param[in]      identity  ロックを識別する名前文字列。ロック ファイルのパスとして使用します。
+     *                            NULL および空文字列を渡してはなりません。
      *  @param[out]     lock      生成したロック ハンドルの格納先。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。\n
+     *                  @p identity が NULL または空文字列の場合、および @p lock が NULL の場合は
+     *                  @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *
+     *  `identity` はファイル パスになります。ファイルが存在しない場合は、その位置に作成します。
+     *  同じロックに参加するプロセスが開いている間は、このファイルを削除または名前変更しないでください。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -455,7 +466,8 @@ extern "C"
      *  @param[in]      descriptor       インポートするディスクリプタ データ。NULL を渡してはなりません。
      *  @param[in]      descriptor_size  @p descriptor のサイズ [byte]。
      *  @param[out]     lock             インポートしたロック ハンドルの格納先。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_CORRUPT_DESCRIPTOR 、@ref CPLAT_ERR_VERSION_MISMATCH 、
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_CORRUPT_DESCRIPTOR 、
+     *                  @ref CPLAT_ERR_VERSION_MISMATCH 、@ref CPLAT_ERR_OUT_OF_MEMORY 、
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ
@@ -538,9 +550,16 @@ extern "C"
 
     /**
      *  @brief          識別子でプロセス横断読み書きロックを開きます (存在しない場合は生成)。
-     *  @param[in]      identity  ロックを識別する名前文字列。NULL を渡してはなりません。
+     *  @param[in]      identity  ロックを識別する名前文字列。ロック ファイルのパスとして使用します。
+     *                            NULL および空文字列を渡してはなりません。
      *  @param[out]     lock      生成したロック ハンドルの格納先。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。\n
+     *                  @p identity が NULL または空文字列の場合、および @p lock が NULL の場合は
+     *                  @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *
+     *  `identity` はファイル パスになります。ファイルが存在しない場合は、その位置に作成します。
+     *  同じロックに参加するプロセスが開いている間は、このファイルを削除または名前変更しないでください。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -552,7 +571,8 @@ extern "C"
      *  @param[in]      descriptor       インポートするディスクリプタ データ。NULL を渡してはなりません。
      *  @param[in]      descriptor_size  @p descriptor のサイズ [byte]。
      *  @param[out]     lock             インポートしたロック ハンドルの格納先。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_CORRUPT_DESCRIPTOR 、@ref CPLAT_ERR_VERSION_MISMATCH 、
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_CORRUPT_DESCRIPTOR 、
+     *                  @ref CPLAT_ERR_VERSION_MISMATCH 、@ref CPLAT_ERR_OUT_OF_MEMORY 、
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ
