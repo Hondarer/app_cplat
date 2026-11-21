@@ -18,6 +18,7 @@
 #include <cplat/crt/stdio.h>
 #include <cplat/crt/stdlib.h>
 #include <cplat/crt/string.h>
+#include <cplat/crt/utf8.h>
 #include <cplat/runtime/shutdown.h>
 #include <cplat/sync/sync.h>
 #include <stdlib.h>
@@ -30,8 +31,13 @@
 /* usage で説明文の表示を開始する列 (行頭から) */
 #define ARGPARSER_USAGE_DESC_COLUMN (28)
 
-/* print_error_messages のエラー メッセージ組み立て用スタック バッファー サイズ [byte] */
-#define ARGPARSER_ERROR_MESSAGE_BYTES (512)
+/*
+ * print_error_messages と print_register_error_messages が、エラー メッセージを組み立てるスタック上の
+ * バッファーの大きさ [byte]。メッセージは長さに上限のない対象文字列を含むため、512 は上限の保証ではない。
+ * 超過分は切り詰めて出力する。解析エラーの出力は、切り詰めた場合に CPLAT_ERR_BUFFER_TOO_SMALL を返す。
+ * 登録エラーの出力は、1 件でも失敗した場合に、最初に起きた失敗の結果コードを返す。
+ */
+#define ARGPARSER_ERROR_MESSAGE_BYTES 512U
 
 /* value_name 未指定時の既定表示名 */
 static const char s_default_value_name[] = "VALUE";
@@ -2053,6 +2059,9 @@ int cplat_argparser_handle_get_error_message(const cplat_argparser *parser, char
 
     if ((size_t)written >= buffer_size)
     {
+        /* 切り詰め位置が UTF-8 の多バイト文字の途中の場合、不完全な末尾文字を除いて終端する。 */
+        size_t safe_len = cplat_internal_utf8_trimmed_length(buffer, buffer_size - 1U);
+        buffer[safe_len] = '\0';
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
 
@@ -2332,6 +2341,9 @@ int cplat_argparser_handle_get_register_error_message(const cplat_argparser *par
 
     if ((size_t)written >= buffer_size)
     {
+        /* 切り詰め位置が UTF-8 の多バイト文字の途中の場合、不完全な末尾文字を除いて終端する。 */
+        size_t safe_len = cplat_internal_utf8_trimmed_length(buffer, buffer_size - 1U);
+        buffer[safe_len] = '\0';
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
 
@@ -2355,13 +2367,17 @@ int cplat_argparser_handle_print_register_error_messages(const cplat_argparser *
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    int result = CPLAT_OK;
+    int first_failure = CPLAT_OK;
 
     /* 書き込みの失敗はストリームに残り、呼び出し元が検査するため、この関数の fprintf の戻り値は明示的に破棄する。 */
     for (size_t i = 0; i < parser->register_error_count; i++)
     {
         char message[ARGPARSER_ERROR_MESSAGE_BYTES];
-        result = cplat_argparser_handle_get_register_error_message(parser, i, message, sizeof(message));
+        int result = cplat_argparser_handle_get_register_error_message(parser, i, message, sizeof(message));
+        if (result != CPLAT_OK && first_failure == CPLAT_OK)
+        {
+            first_failure = result;
+        }
         if (result == CPLAT_OK || result == CPLAT_ERR_BUFFER_TOO_SMALL)
         {
             (void)fprintf(stream, "error: %s\n", message);
@@ -2373,7 +2389,7 @@ int cplat_argparser_handle_print_register_error_messages(const cplat_argparser *
         (void)fprintf(stream, "\n");
     }
 
-    return result;
+    return first_failure;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */

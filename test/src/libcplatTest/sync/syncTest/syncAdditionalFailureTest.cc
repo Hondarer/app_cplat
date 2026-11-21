@@ -187,8 +187,8 @@ TEST(syncAdditionalFailureTest, condvar_create_reports_allocation_failure)
 
     // Assert
     EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        result); // [確認_異常系] - ハンドル確保失敗時の cplat_condvar_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        CPLAT_ERR_OUT_OF_MEMORY,
+        result); // [確認_異常系] - ハンドル確保失敗時の cplat_condvar_create() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(nullptr,
               cv); // [確認_異常系] - ハンドル確保失敗時の cv が nullptr であること。
 }
@@ -212,7 +212,7 @@ TEST(syncAdditionalFailureTest, local_rwlock_create_reports_allocation_failure)
 
     // Assert
     EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
+        CPLAT_ERR_OUT_OF_MEMORY,
         result); // [確認_異常系] - ハンドル確保失敗時の cplat_local_rwlock_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(nullptr,
               rwlock); // [確認_異常系] - ハンドル確保失敗時の rwlock が nullptr であること。
@@ -847,8 +847,8 @@ TEST(syncAdditionalFailureTest, thread_create_reports_context_allocation_failure
         nullptr); // [手順] - thread ハンドルの cplat_calloc() が失敗する状態で cplat_thread_create() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              result);          // [確認_異常系] - cplat_thread_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
+              result);          // [確認_異常系] - cplat_thread_create() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(nullptr, thread); // [確認_異常系] - 生成失敗時の thread が nullptr であること。
 }
 
@@ -1302,8 +1302,8 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_open_reports_identity_duplic
 
     // Assert
     EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        result); // [確認_異常系] - 識別子複製失敗時の cplat_interprocess_rwlock_open() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        CPLAT_ERR_OUT_OF_MEMORY,
+        result); // [確認_異常系] - 識別子複製失敗時の cplat_interprocess_rwlock_open() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(nullptr,
               lock); // [確認_異常系] - 識別子複製失敗時の lock が nullptr であること。
 }
@@ -1329,8 +1329,8 @@ TEST(syncAdditionalFailureTest, interprocess_rwlock_open_reports_allocation_fail
 
     // Assert
     EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        result); // [確認_異常系] - ハンドル確保失敗時の cplat_interprocess_rwlock_open() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        CPLAT_ERR_OUT_OF_MEMORY,
+        result); // [確認_異常系] - ハンドル確保失敗時の cplat_interprocess_rwlock_open() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(nullptr,
               lock); // [確認_異常系] - ハンドル確保失敗時の lock が nullptr であること。
 }
@@ -1757,8 +1757,9 @@ TEST(syncAdditionalFailureTest, thread_apis_cover_context_failure_and_null_detac
     cplat_thread_detach(nullptr); // [手順] - thread に nullptr を指定して cplat_thread_detach() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              allocation_result); // [確認_異常系] - cplat_thread_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_MEMORY,
+        allocation_result); // [確認_異常系] - cplat_thread_create() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(nullptr thread に対する cplat_thread_detach() が処理を終えたことの確認)
 }
 

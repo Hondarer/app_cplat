@@ -171,6 +171,7 @@
  *  @brief          テストからの利用を想定した補助 API です。
  */
 
+#include <cplat/base/char_code.h>
 #include <cplat/base/compiler.h>
 #include <cplat/base/platform.h>
 #include <cplat/base/dll_exports.h>

@@ -201,6 +201,34 @@ TEST_F(stdioFormatTest, test_fopen_s_access_denied)
     // Assert
     EXPECT_EQ(nullptr, fp); // [確認_異常系] - cplat_fopen_fmt() の戻り値が nullptr であること。
 }
+
+// 260 バイト超かつ UTF-16 で 260 文字未満の非 ASCII パスが展開されることの確認 (Windows)
+TEST_F(stdioFormatTest, fopen_fmt_accepts_non_ascii_path_over_260_bytes_windows)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    std::string base = "C:/";
+    for (int i = 0; i < 100; ++i)
+    {
+        base += "\xE3\x81\x82";
+    }
+    std::string expected_path = base + ".txt"; // [状態] - 260 バイト超・UTF-16 260 文字未満の期待パスを用意する。
+    FILE *expected_fp = (FILE *)(uintptr_t)0x12345678;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_fopen(StrEq(expected_path.c_str()), StrEq("r"), _))
+        .WillOnce(Return(
+            expected_fp)); // [Pre-Assert確認_正常系] - cplat_fopen() が書式展開されたパスと "r" を指定して 1 回呼び出されること。
+                           // [Pre-Assert手順] - cplat_fopen() から expected_fp を返す。
+
+    // Act
+    FILE *actual_fp = cplat_fopen_fmt(
+        "r", nullptr, "%s.txt",
+        base.c_str()); // [手順] - 260 バイト超の非 ASCII パスを書式指定して cplat_fopen_fmt() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(expected_fp, actual_fp); // [確認_正常系] - cplat_fopen_fmt() の戻り値が expected_fp と一致すること。
+}
 #endif /* PLATFORM_WINDOWS */
 
 // cplat_fopen が失敗した場合にエラー コードが取得できることの確認

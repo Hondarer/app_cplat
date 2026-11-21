@@ -293,4 +293,31 @@ TEST_F(pathsEqualTest, ignores_case_differences_on_windows)
     ASSERT_EQ(CPLAT_OK, rc); // [確認_正常系] - cplat_path_equal() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(1, equal);     // [確認_正常系] - equal が 1 であること。(大小文字差を無視して一致であることの確認)
 }
+
+// 260 バイト超の同一非 ASCII パスが一致と判定されることの確認 (Windows)
+TEST_F(pathsEqualTest, compares_non_ascii_paths_over_260_bytes_windows)
+{
+    // Arrange
+    std::string suffix;
+    for (int i = 0; i < 100; ++i)
+    {
+        suffix += "\xE3\x81\x82";
+    }
+    std::string lhs = "C:/" + suffix;
+    std::string rhs =
+        "C:\\" + suffix; // [状態] - 260 バイト超の同一非 ASCII パスを '/' 区切りと '\\' 区切りで用意する。
+    cplat_error err;
+    int equal = 0;
+
+    // Pre-Assert
+
+    // Act
+    int actual_ret = cplat_path_equal(
+        lhs.c_str(), rhs.c_str(), &equal,
+        &err); // [手順] - '/' 区切りと '\\' 区切りの非 ASCII パスを指定して cplat_path_equal() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_path_equal() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, equal);             // [確認_正常系] - equal が 1 であること。
+}
 #endif

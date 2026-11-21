@@ -482,7 +482,7 @@ extern "C"
      *                               一時ファイルは常に新規作成のため "r"/"rb" は意味を持ちませんが、
      *                               API 層での制限は課しません。
      *  @param[out]     path_out     生成された一時ファイル絶対パス (UTF-8) の格納先。
-     *  @param[in]      path_size    @p path_out のサイズ [byte]。PLATFORM_PATH_MAX 以上を推奨します。
+     *  @param[in]      path_size    @p path_out のサイズ [byte]。PLATFORM_PATH_UTF8_MAX 以上を推奨します。
      *  @param[out]     detail_out   エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。

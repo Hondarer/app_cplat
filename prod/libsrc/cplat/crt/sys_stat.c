@@ -14,6 +14,7 @@
 #include <cplat/base/result.h>
 #include <cplat/base/error_internal.h>
 #include <cplat/crt/wchar_conv.h>
+#include "crt.h"
 
 #include <stddef.h>
 #include <errno.h>
@@ -202,7 +203,7 @@ int cplat_rmdir(const char *path, cplat_error *detail_out)
 
 int cplat_makedirs(const char *path, cplat_error *detail_out)
 {
-    char buf[PLATFORM_PATH_MAX];
+    char buf[PLATFORM_PATH_UTF8_MAX];
     size_t path_len;
     size_t root_len;
     size_t i;
@@ -212,8 +213,18 @@ int cplat_makedirs(const char *path, cplat_error *detail_out)
         return cplat_internal_error_report_errno(detail_out, EINVAL);
     }
 
+#if defined(PLATFORM_WINDOWS)
+    {
+        int check_result = crt_check_wpath_length(path, detail_out);
+        if (check_result != CPLAT_OK)
+        {
+            return check_result;
+        }
+    }
+#endif /* PLATFORM_WINDOWS */
+
     path_len = strlen(path);
-    if (path_len >= (size_t)PLATFORM_PATH_MAX)
+    if (path_len >= (size_t)PLATFORM_PATH_UTF8_MAX)
     {
         return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
     }

@@ -514,7 +514,7 @@ TEST_F(traceFileCoverageTest, shared_rotation_reports_interprocess_unlock_failur
 TEST_F(traceFileCoverageTest, create_rejects_lock_failure_and_long_path)
 {
     // Arrange
-    std::string long_path(PLATFORM_PATH_MAX, 'x');
+    std::string long_path(PLATFORM_PATH_UTF8_MAX, 'x');
 
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_local_lock_create(_))
@@ -529,7 +529,7 @@ TEST_F(traceFileCoverageTest, create_rejects_lock_failure_and_long_path)
         0); // [手順] - ロック生成が失敗する状態で、"lock-create-error.log" を指定して cplat_trace_file_sink_create() を呼び出す。
     cplat_trace_file_sink *too_long = cplat_trace_file_sink_create(
         long_path.c_str(), 0, 0,
-        0); // [手順] - PLATFORM_PATH_MAX バイトのパスを指定して cplat_trace_file_sink_create() を呼び出す。
+        0); // [手順] - PLATFORM_PATH_UTF8_MAX バイトのパスを指定して cplat_trace_file_sink_create() を呼び出す。
 
     // Assert
     EXPECT_EQ(

@@ -29,6 +29,7 @@ using testing::NiceMock;
 using testing::Return;
 using testing::ReturnArg;
 using testing::SetArrayArgument;
+using testing::StrEq;
 
 #if defined(PLATFORM_LINUX)
 
@@ -141,11 +142,11 @@ TEST(pinnedPromptCoverageTest, internal_state_handles_inactive_mutex_and_prompt_
 
     // Assert
     EXPECT_EQ(
-        0,
-        null_prompt_result); // [確認_正常系] - nullptr のプロンプトに対する test_pinned_prompt_set_prompt() の戻り値が 0 であること。
+        CPLAT_OK,
+        null_prompt_result); // [確認_正常系] - nullptr のプロンプトに対する test_pinned_prompt_set_prompt() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
-        -1,
-        allocation_result); // [確認_異常系] - 再確保に失敗する長いプロンプトに対する test_pinned_prompt_set_prompt() の戻り値が -1 であること。
+        CPLAT_ERR_OUT_OF_MEMORY,
+        allocation_result); // [確認_異常系] - 再確保に失敗する長いプロンプトに対する test_pinned_prompt_set_prompt() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
@@ -168,9 +169,9 @@ TEST(pinnedPromptCoverageTest, layout_and_view_cover_narrow_and_status_boundarie
     // Act
     int actual_ret_set_prompt = test_pinned_prompt_set_prompt(
         screen, "long-prompt"); // [手順] - 長いプロンプトを指定して test_pinned_prompt_set_prompt() を呼び出す。
-    ASSERT_EQ(0, actual_ret_set_prompt); // [状態確認] - test_pinned_prompt_set_prompt() の戻り値が 0 であること。
+    ASSERT_EQ(CPLAT_OK, actual_ret_set_prompt); // [状態確認] - test_pinned_prompt_set_prompt() の戻り値が CPLAT_OK であること。
     test_pinned_prompt_set_edit_line(screen, "abcdef");
-    test_pinned_prompt_set_internal_state(screen, 1, 0, 9999, 1, 1, 1, 6U, 4U);
+    test_pinned_prompt_set_internal_state(screen, 1, 0, test_pinned_prompt_row_unset(), 1, 1, 1, 6U, 4U);
     test_pinned_prompt_set_cursor(screen, 2U);
     test_pinned_prompt_adjust_view(
         screen); // [手順] - カーソルが表示開始位置より前にある狭幅表示の状態で test_pinned_prompt_adjust_view() を呼び出す。
@@ -185,7 +186,7 @@ TEST(pinnedPromptCoverageTest, layout_and_view_cover_narrow_and_status_boundarie
     int minimum_prompt_row = prompt_row;
     int minimum_separator_row = separator_row;
     int minimum_main_bottom_row = main_bottom_row;
-    test_pinned_prompt_set_internal_state(screen, 80, 6, 9999, 1, 1, 1, 6U, forward_view);
+    test_pinned_prompt_set_internal_state(screen, 80, 6, test_pinned_prompt_row_unset(), 1, 1, 1, 6U, forward_view);
     test_pinned_prompt_layout(
         screen, &prompt_row, &separator_row, &main_bottom_row, &show_top,
         &show_bottom); // [手順] - 上下ステータスを表示できる状態で test_pinned_prompt_layout() を呼び出す。
@@ -433,14 +434,14 @@ TEST(pinnedPromptCoverageTest, format_helper_handles_allocation_and_format_failu
 
     // Assert
     EXPECT_EQ(
-        -1,
-        malloc_failure); // [確認_異常系] - 書式バッファーの初回確保失敗時の test_pinned_prompt_format() の戻り値が -1 であること。
+        CPLAT_ERR_OUT_OF_MEMORY,
+        malloc_failure); // [確認_異常系] - 書式バッファーの初回確保失敗時の test_pinned_prompt_format() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(
-        0,
-        format_failure); // [確認_異常系] - 書式処理失敗時の test_pinned_prompt_format() の戻り値が 0 であること。(空文字列として処理されたことの確認)
+        CPLAT_ERR_UNKNOWN,
+        format_failure); // [確認_異常系] - 書式処理失敗時の test_pinned_prompt_format() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(
-        0,
-        realloc_failure); // [確認_異常系] - 書式バッファー再確保失敗時の test_pinned_prompt_format() の戻り値が 0 であること。(安全に処理されたことの確認)
+        CPLAT_ERR_OUT_OF_MEMORY,
+        realloc_failure); // [確認_異常系] - 書式バッファー再確保失敗時の test_pinned_prompt_format() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
@@ -622,11 +623,11 @@ TEST(pinnedPromptCoverageTest, readline_reports_setup_failures)
         CPLAT_OK,
         raw_failure); // [確認_異常系] - raw モード移行失敗時の cplat_pinned_prompt_readline_at() の戻り値が CPLAT_OK であること。(fallback 入力が成功したことの確認)
     EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        history_failure); // [確認_異常系] - 履歴コンテキスト確保失敗時の cplat_pinned_prompt_readline_at() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        CPLAT_ERR_OUT_OF_MEMORY,
+        history_failure); // [確認_異常系] - 履歴コンテキスト確保失敗時の cplat_pinned_prompt_readline_at() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        prompt_failure); // [確認_異常系] - プロンプト再確保失敗時の cplat_pinned_prompt_readline_at() の戻り値が CPLAT_ERR_UNKNOWN であること。
+        CPLAT_ERR_OUT_OF_MEMORY,
+        prompt_failure); // [確認_異常系] - プロンプト再確保失敗時の cplat_pinned_prompt_readline_at() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
@@ -1135,15 +1136,15 @@ TEST(pinnedPromptCoverageTest, format_helper_grows_buffer_when_realloc_succeeds)
 
     // Act
     int actual_ret_format = test_pinned_prompt_format(
-        screen, "%s", "x");          // [手順] - 短い書式を指定して test_pinned_prompt_format() を呼び出す。
-    ASSERT_EQ(0, actual_ret_format); // [確認_正常系] - 短い書式の test_pinned_prompt_format() の戻り値が 0 であること。
+        screen, "%s", "x");                  // [手順] - 短い書式を指定して test_pinned_prompt_format() を呼び出す。
+    ASSERT_EQ(CPLAT_OK, actual_ret_format);  // [確認_正常系] - 短い書式の test_pinned_prompt_format() の戻り値が CPLAT_OK であること。
     grow_result = test_pinned_prompt_format(
         screen, "%s", long_text); // [手順] - 長い書式結果になる書式を指定して test_pinned_prompt_format() を呼び出す。
 
     // Assert
     EXPECT_EQ(
-        0,
-        grow_result); // [確認_正常系] - 長い書式の test_pinned_prompt_format() の戻り値が 0 であること。(書式バッファーの再確保に成功したことの確認)
+        CPLAT_OK,
+        grow_result); // [確認_正常系] - 長い書式の test_pinned_prompt_format() の戻り値が CPLAT_OK であること。(書式バッファーの再確保に成功したことの確認)
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
@@ -1213,6 +1214,113 @@ TEST(pinnedPromptCoverageTest, readline_fmt_uses_empty_prompt_when_format_alloca
 
     // Cleanup
     cplat_pinned_prompt_dispose(screen);
+}
+
+// 前回行が未設定かつ 10002 行以上の端末で、現在の main_bottom_row を基準に制御領域を消去することの確認
+TEST(pinnedPromptCoverageTest, clear_control_area_uses_current_row_when_previous_row_is_unset)
+{
+    // Arrange
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
+    NiceMock<Mock_stdio> mock_stdio;
+    test_pinned_prompt_set_internal_state(screen, 80, 10002, test_pinned_prompt_row_unset(), 1, 0, 0, 0U, 0U);
+
+    // Pre-Assert
+    EXPECT_CALL(mock_stdio, printf(_, _, _, StrEq("\033[10001;1H\033[J")))
+        .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - 10001 行目から消去する制御シーケンスを指定して printf() が 1 回呼び出されること。
+                              // [Pre-Assert手順] - printf() から 0 を返す。
+
+    // Act
+    test_pinned_prompt_clear_control_area(
+        screen, 10000); // [手順] - main_bottom_row に 10000 を指定して test_pinned_prompt_clear_control_area() を呼び出す。
+
+    // Assert
+    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(未設定の前回行が 10000 より小さくならず、10001 行目から消去されたことの確認)
+
+    // Cleanup
+    cplat_pinned_prompt_dispose(screen);
+}
+
+// 書式バッファー再確保失敗時に空プロンプトで入力を続けることの確認
+TEST(pinnedPromptCoverageTest, readline_fmt_uses_empty_prompt_when_format_reallocation_fails)
+{
+    // Arrange
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
+    test_pinned_prompt_set_tty(screen, 1);
+    test_pinned_prompt_failures(2, 0);
+    const int inputs[] = {'a', '\n', 'b', '\n'};
+    test_pinned_prompt_input_results(inputs, 4U);
+    char first_output[16] = {};
+    char second_output[16] = {};
+    std::string long_prompt(300U, 'p');
+
+    ASSERT_EQ(CPLAT_OK, cplat_pinned_prompt_readline_fmt_at(screen, first_output, sizeof(first_output),
+                                                            "fmt-realloc.c", 1, "%s", "init"));
+    // [状態確認] - 1 回目の呼び出しで書式バッファーと履歴コンテキストを確保したこと。
+
+    NiceMock<Mock_cplat> mock_cplat;
+    NiceMock<Mock_stdio> mock_stdio;
+    ON_CALL(mock_stdio, printf(_, _, _, _)).WillByDefault(Return(0));
+    ON_CALL(mock_stdio, fwrite(_, _, _, _, _, _, _)).WillByDefault(ReturnArg<5>());
+    ON_CALL(mock_stdio, fflush(_, _, _, _)).WillByDefault(Return(0));
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_realloc(_, _, _))
+        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_realloc() が 1 回呼び出されること。
+                                    // [Pre-Assert手順] - cplat_realloc() から nullptr を返す。
+
+    // Act
+    int result = cplat_pinned_prompt_readline_fmt_at(
+        screen, second_output, sizeof(second_output), "fmt-realloc.c", 1, "%s",
+        long_prompt.c_str()); // [手順] - 300 文字の書式結果で再確保が失敗する状態で cplat_pinned_prompt_readline_fmt_at() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, result);                              // [確認_異常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("b", second_output);                         // [確認_異常系] - second_output が "b" であること。
+    EXPECT_STREQ("", test_pinned_prompt_prompt_text(screen)); // [確認_異常系] - 保持しているプロンプト文字列が空文字列 "" であること。
+
+    // Cleanup
+    cplat_pinned_prompt_dispose(screen);
+    test_pinned_prompt_failures(0, 0);
+    test_pinned_prompt_input_results(nullptr, 0U);
+}
+
+// 書式化失敗時に空プロンプトで入力を続けることの確認
+TEST(pinnedPromptCoverageTest, readline_fmt_uses_empty_prompt_when_formatting_fails)
+{
+    // Arrange
+    cplat_pinned_prompt *screen = cplat_pinned_prompt_create(nullptr); // [状態] - ハンドルを用意する。
+    ASSERT_NE(nullptr, screen); // [状態確認] - screen が nullptr 以外であること。
+    test_pinned_prompt_set_tty(screen, 1);
+    test_pinned_prompt_failures(2, 0);
+    const int inputs[] = {'o', 'k', '\n'};
+    test_pinned_prompt_input_results(inputs, 3U);
+    char output[16] = {};
+    NiceMock<Mock_stdio> mock_stdio;
+    ON_CALL(mock_stdio, printf(_, _, _, _)).WillByDefault(Return(0));
+    ON_CALL(mock_stdio, fwrite(_, _, _, _, _, _, _)).WillByDefault(ReturnArg<5>());
+    ON_CALL(mock_stdio, fflush(_, _, _, _)).WillByDefault(Return(0));
+
+    // Pre-Assert
+    EXPECT_CALL(mock_stdio, vsnprintf(_, _, _, _, _, _))
+        .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - vsnprintf() が 1 回呼び出されること。
+                               // [Pre-Assert手順] - vsnprintf() から -1 を返す。
+
+    // Act
+    int result = cplat_pinned_prompt_readline_fmt_at(
+        screen, output, sizeof(output), "fmt-error.c", 1, "%s",
+        "prompt"); // [手順] - vsnprintf() が -1 を返す状態で cplat_pinned_prompt_readline_fmt_at() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, result);                              // [確認_異常系] - 戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("ok", output);                               // [確認_異常系] - output が "ok" であること。
+    EXPECT_STREQ("", test_pinned_prompt_prompt_text(screen)); // [確認_異常系] - 保持しているプロンプト文字列が空文字列 "" であること。
+
+    // Cleanup
+    cplat_pinned_prompt_dispose(screen);
+    test_pinned_prompt_failures(0, 0);
+    test_pinned_prompt_input_results(nullptr, 0U);
 }
 
 #if defined(PLATFORM_LINUX)

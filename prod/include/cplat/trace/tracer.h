@@ -184,21 +184,21 @@
  *  強制出力のレベルは、出力行の表記では対応する通常のレベルと同じに見えます。\n
  *  強制であるかどうかは絞り込みの結果であり、記録の重大度ではないためです。
  *
- *  ETW と syslog へは、対応する通常のレベルと同じ重大度で渡します。\n
+ *  ETW、EventLog、および syslog へは、対応する通常のレベルと同じ重大度で渡します。\n
  *  ただし CPLAT_TRACE_LEVEL_FORCE_VERBOSE と CPLAT_TRACE_LEVEL_FORCE_DEBUG は、
- *  Informational (4) と LOG_INFO (6) へ引き上げます。
+ *  Informational (4)、INFO、および LOG_INFO (6) へ引き上げます。
  *  常時記録の対象となる範囲へ入れ、cplat の外側の設定で捨てられないようにするためです。
  *
- *  | cplat_trace_level                | ETW Level         | syslog severity |
- *  | -------------------------------- | ----------------- | --------------- |
- *  | CPLAT_TRACE_LEVEL_FORCE_CRITICAL | Critical (1)      | LOG_CRIT (2)    |
- *  | CPLAT_TRACE_LEVEL_FORCE_ERROR    | Error (2)         | LOG_ERR (3)     |
- *  | CPLAT_TRACE_LEVEL_FORCE_WARNING  | Warning (3)       | LOG_WARNING (4) |
- *  | CPLAT_TRACE_LEVEL_FORCE_INFO     | Informational (4) | LOG_INFO (6)    |
- *  | CPLAT_TRACE_LEVEL_FORCE_VERBOSE  | Informational (4) | LOG_INFO (6)    |
- *  | CPLAT_TRACE_LEVEL_FORCE_DEBUG    | Informational (4) | LOG_INFO (6)    |
+ *  | cplat_trace_level                | ETW Level         | EventLog | syslog severity |
+ *  | -------------------------------- | ----------------- | -------- | --------------- |
+ *  | CPLAT_TRACE_LEVEL_FORCE_CRITICAL | Critical (1)      | CRITICAL | LOG_CRIT (2)    |
+ *  | CPLAT_TRACE_LEVEL_FORCE_ERROR    | Error (2)         | ERROR    | LOG_ERR (3)     |
+ *  | CPLAT_TRACE_LEVEL_FORCE_WARNING  | Warning (3)       | WARNING  | LOG_WARNING (4) |
+ *  | CPLAT_TRACE_LEVEL_FORCE_INFO     | Informational (4) | INFO     | LOG_INFO (6)    |
+ *  | CPLAT_TRACE_LEVEL_FORCE_VERBOSE  | Informational (4) | INFO     | LOG_INFO (6)    |
+ *  | CPLAT_TRACE_LEVEL_FORCE_DEBUG    | Informational (4) | INFO     | LOG_INFO (6)    |
  *
- *  Table: 強制出力トレース レベルの ETW・syslog との対応
+ *  Table: 強制出力トレース レベルの ETW・EventLog・syslog との対応
  *
  *  強制出力のレベルは、スレッショルド レベルとして指定できません。\n
  *  指定するとスレッショルド レベルを設定する関数が引数の誤りを返します。

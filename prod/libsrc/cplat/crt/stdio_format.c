@@ -20,7 +20,7 @@
 
 FILE *cplat_vfopen_fmt(const char *modes, cplat_error *detail_out, const char *format, va_list args)
 {
-    char filename[PLATFORM_PATH_MAX] = {0};
+    char filename[PLATFORM_PATH_UTF8_MAX] = {0};
     int format_error;
 
     if (modes == NULL)
@@ -56,7 +56,7 @@ FILE *cplat_fopen_fmt(const char *modes, cplat_error *detail_out, const char *fo
 
 int cplat_vremove_fmt(cplat_error *detail_out, const char *format, va_list args)
 {
-    char filename[PLATFORM_PATH_MAX] = {0};
+    char filename[PLATFORM_PATH_UTF8_MAX] = {0};
     int format_error;
 
     if (cplat_internal_vformat_path(filename, sizeof(filename), format, args, &format_error) != 0)

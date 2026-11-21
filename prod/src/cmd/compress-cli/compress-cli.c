@@ -404,8 +404,8 @@ void compress_cli_options_init(compress_cli_options *options)
 int main(int argc, char *argv[])
 {
     compress_cli_options options;
-    char input_full[PLATFORM_PATH_MAX];
-    char output_full[PLATFORM_PATH_MAX];
+    char input_full[PLATFORM_PATH_UTF8_MAX];
+    char output_full[PLATFORM_PATH_UTF8_MAX];
 
     cplat_console_init();
 

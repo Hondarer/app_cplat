@@ -232,7 +232,7 @@ static int open_lock_file(const char *identity, int *fd_out, char **identity_out
     if (identity_copy == NULL)
     {
         (void)close(fd); /* 複製の確保の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     *fd_out = fd;
@@ -262,7 +262,7 @@ static int app_lock_open_identity(const char *identity, cplat_interprocess_rwloc
     {
         cplat_free(identity_copy);
         (void)close(fd); /* ロックの確保の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     new_lock->fd = fd;
@@ -293,7 +293,7 @@ static int interprocess_lock_open_identity(const char *identity, cplat_interproc
     {
         cplat_free(identity_copy);
         (void)close(fd); /* ロックの確保の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     new_lock->fd = fd;
@@ -415,7 +415,7 @@ int cplat_local_lock_create(cplat_local_lock **mtx)
     new_mtx = (cplat_local_lock *)cplat_calloc(1, sizeof(*new_mtx));
     if (new_mtx == NULL)
     {
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     if (pthread_mutex_init(&new_mtx->native, NULL) != 0)
@@ -568,7 +568,7 @@ int cplat_condvar_create(cplat_condvar **cv)
     new_cv = (cplat_condvar *)cplat_calloc(1, sizeof(*new_cv));
     if (new_cv == NULL)
     {
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     if (cond_init_monotonic(&new_cv->native) != 0)
@@ -685,7 +685,7 @@ int cplat_local_rwlock_create(cplat_local_rwlock **rwlock)
     new_lock = (cplat_local_rwlock *)cplat_calloc(1, sizeof(*new_lock));
     if (new_lock == NULL)
     {
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     /*
@@ -1008,7 +1008,7 @@ int cplat_thread_create(cplat_thread **thread, cplat_thread_fn func, void *arg)
     {
         cplat_free(new_thread);
         cplat_free(ctx);
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     ctx->func = func;

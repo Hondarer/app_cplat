@@ -122,6 +122,10 @@
                 CPLAT_DLL_IF(CPLAT_DLL_PP_CAT(prefix, _STATIC)) \
                 (, CPLAT_DLL_IF(CPLAT_DLL_PP_CAT(prefix, _EXPORTS))(__declspec(dllexport), __declspec(dllimport)))
         #else /* __INTELLISENSE__ */
+            /*
+             * IntelliSense の解析時は、公開修飾を空にする。
+             * see: https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=msvc-170
+             */
             #define CPLAT_DLL_EXPORT(prefix)
         #endif /* __INTELLISENSE__ */
         #define CPLAT_DLL_API(prefix) __stdcall

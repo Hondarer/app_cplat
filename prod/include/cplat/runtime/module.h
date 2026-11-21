@@ -47,7 +47,14 @@ extern "C"
      *  @param[out]     path_out      完全なパス (UTF-8) の格納先。NULL を渡してはなりません。
      *  @param[in]      path_size     @p path_out のサイズ [byte]。0 を渡してはなりません。
      *  @param[in]      func_addr     モジュールを特定するための関数アドレス。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *
+     *  メモリを確保できない場合は @ref CPLAT_ERR_OUT_OF_MEMORY を返します。\n
+     *  Windows では OS の拡張パス上限 (32767 文字) までの非 ASCII パスを取得できます。
+     *  `\\?\` 接頭辞を含むパスも区切り文字は `'/'` へ正規化されるため (`//?/C:/...`)、
+     *  そのまま Win32 のファイル API へ渡すことはできません。\n
+     *  @ref CPLAT_ERR_BUFFER_TOO_SMALL は、呼び出し元が渡した出力バッファーの容量が不足した場合に返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -59,7 +66,14 @@ extern "C"
      *  @param[out]     basename_out   ベース名 (UTF-8) の格納先。NULL を渡してはなりません。
      *  @param[in]      basename_size  @p basename_out のサイズ [byte]。0 を渡してはなりません。
      *  @param[in]      func_addr      モジュールを特定するための関数アドレス。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *
+     *  メモリを確保できない場合は @ref CPLAT_ERR_OUT_OF_MEMORY を返します。\n
+     *  Windows では OS の拡張パス上限 (32767 文字) までの非 ASCII パスを取得できます。
+     *  `\\?\` 接頭辞を含むパスも区切り文字は `'/'` へ正規化されるため (`//?/C:/...`)、
+     *  そのまま Win32 のファイル API へ渡すことはできません。\n
+     *  @ref CPLAT_ERR_BUFFER_TOO_SMALL は、呼び出し元が渡した出力バッファーの容量が不足した場合に返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。

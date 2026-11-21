@@ -238,3 +238,63 @@ TEST(syncInterprocessRwlockTest, second_handle_observes_exclusive_lock)
 }
 
 #endif /* PLATFORM_LINUX */
+
+#if defined(PLATFORM_WINDOWS)
+// 識別子複製の確保失敗時に OUT_OF_MEMORY を返すことの確認 (Windows)
+TEST(syncInterprocessRwlockTest, open_reports_out_of_memory_when_identity_duplication_fails_windows)
+{
+    // Arrange
+    testing::NiceMock<Mock_cplat> mock_cplat;
+    char path_buf[256];
+    make_test_interprocess_path(path_buf, sizeof(path_buf), "interprocess_rwlock_dup_oom");
+    cplat_interprocess_rwlock *lock = nullptr;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_malloc(_))
+        .WillOnce(Return(nullptr))
+        .WillRepeatedly(testing::DoDefault()); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回以上呼び出されること。
+    // [Pre-Assert手順] - dup_string() 内の cplat_malloc() から nullptr を返す。
+
+    // Act
+    int actual_ret = cplat_interprocess_rwlock_open(
+        path_buf, &lock); // [手順] - 識別子の複製が失敗する状態で cplat_interprocess_rwlock_open() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_MEMORY,
+        actual_ret); // [確認_異常系] - cplat_interprocess_rwlock_open() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+    EXPECT_EQ(nullptr, lock); // [確認_異常系] - lock が nullptr であること。
+
+    // Cleanup
+    TEST_INTERPROCESS_UNLINK(path_buf);
+}
+
+// ハンドルの確保失敗時に OUT_OF_MEMORY を返すことの確認 (Windows)
+TEST(syncInterprocessRwlockTest, open_reports_out_of_memory_when_allocation_fails_windows)
+{
+    // Arrange
+    testing::NiceMock<Mock_cplat> mock_cplat;
+    char path_buf[256];
+    make_test_interprocess_path(path_buf, sizeof(path_buf), "interprocess_rwlock_alloc_oom");
+    cplat_interprocess_rwlock *lock = nullptr;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
+        .WillOnce(Return(nullptr))
+        .WillRepeatedly(testing::DoDefault()); // [Pre-Assert確認_異常系] - cplat_calloc() が 1 回以上呼び出されること。
+                                               // [Pre-Assert手順] - cplat_calloc() から nullptr を返す。
+
+    // Act
+    int actual_ret = cplat_interprocess_rwlock_open(
+        path_buf, &lock); // [手順] - ハンドルの確保が失敗する状態で cplat_interprocess_rwlock_open() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_MEMORY,
+        actual_ret); // [確認_異常系] - cplat_interprocess_rwlock_open() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+    EXPECT_EQ(nullptr, lock); // [確認_異常系] - lock が nullptr であること。
+
+    // Cleanup
+    TEST_INTERPROCESS_UNLINK(path_buf);
+}
+#endif /* PLATFORM_WINDOWS */

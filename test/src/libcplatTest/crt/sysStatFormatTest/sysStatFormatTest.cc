@@ -178,3 +178,32 @@ TEST_F(sysStatFormatTest, mkdir_fmt_passes_formatted_path)
     EXPECT_EQ(CPLAT_OK,
               result); // [確認_正常系] - cplat_mkdir_fmt() の戻り値が CPLAT_OK であること。
 }
+
+#if defined(PLATFORM_WINDOWS)
+// 260 バイト超かつ UTF-16 で 260 文字未満の非 ASCII パスが展開されることの確認 (Windows)
+TEST_F(sysStatFormatTest, mkdir_fmt_accepts_non_ascii_path_over_260_bytes_windows)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    std::string base = "C:/";
+    for (int i = 0; i < 100; ++i)
+    {
+        base += "\xE3\x81\x82";
+    }
+    std::string expected_path = base + "_dir"; // [状態] - 260 バイト超・UTF-16 260 文字未満の期待パスを用意する。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_mkdir(StrEq(expected_path.c_str()), _))
+        .WillOnce(Return(
+            CPLAT_OK)); // [Pre-Assert確認_正常系] - cplat_mkdir() が書式展開されたパスを指定して 1 回呼び出されること。
+                        // [Pre-Assert手順] - cplat_mkdir() から CPLAT_OK を返す。
+
+    // Act
+    int actual_ret = cplat_mkdir_fmt(
+        nullptr, "%s_dir",
+        base.c_str()); // [手順] - 260 バイト超の非 ASCII パスを書式指定して cplat_mkdir_fmt() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_mkdir_fmt() の戻り値が CPLAT_OK であること。
+}
+#endif /* PLATFORM_WINDOWS */

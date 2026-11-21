@@ -46,10 +46,10 @@ typedef struct cplat_etw_event
     /** イベント名。取得できない場合は NULL。 */
     const char *event_name;
 
-    /** Service フィールド。存在しない場合は NULL。 */
+    /** Service フィールド。存在しない場合、または読み取れないプロパティ (構造体、配列、名前のないプロパティ、長さの属性を持つ文字列、カスタム スキーマ) かその後ろにある場合は NULL。 */
     const char *service;
 
-    /** Message フィールド。存在しない場合は NULL。 */
+    /** Message フィールド。存在しない場合、または読み取れないプロパティ (構造体、配列、名前のないプロパティ、長さの属性を持つ文字列、カスタム スキーマ) かその後ろにある場合は NULL。 */
     const char *message;
 
     /** ETW が付与したタイムスタンプ。EVENT_HEADER::TimeStamp の生値 (100 [ns] 単位)。 */

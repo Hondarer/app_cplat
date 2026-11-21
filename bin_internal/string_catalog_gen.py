@@ -77,6 +77,8 @@ CATALOG_KINDS = (CATALOG_KIND_MESSAGE, CATALOG_KIND_TRACE)
 TRACE_LEVELS = ("CRITICAL", "ERROR", "WARNING", "INFO", "VERBOSE", "DEBUG", "NONE")
 
 # コンテキスト引数を配置し始める位置指定。利用者が記載できる引数は、この番号の手前までとなる。
+# 同じ値を、app/string-catalog-sample/prod/src/cmd/string-catalog-filter-sample/string-catalog-filter-sample.c の
+# FILTER_SAMPLE_CONTEXT_ARGUMENT_FIRST が持つ。値を変える場合は、同じ変更で直す。
 CONTEXT_ARGUMENT_BASE = 40
 
 # トレース種別で、生成器が引数配列へ付け加えるコンテキスト引数。

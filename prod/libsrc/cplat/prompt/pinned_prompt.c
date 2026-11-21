@@ -17,14 +17,44 @@
 #include <cplat/prompt/prompt_edit.h>
 #include <cplat/sync/sync.h>
 
+#include <assert.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define PINNED_PROMPT_ROW_UNSET 9999
+/*
+ * prev_main_bottom_row が未設定であることを表す値。
+ * pinned_prompt_clear_control_area() が、今回の main_bottom_row と比べて小さいほうを採るためだけに参照する。
+ * INT_MAX はどの行番号よりも小さくならないため、未設定のときは今回の main_bottom_row が採られる。
+ */
+#define PINNED_PROMPT_ROW_UNSET INT_MAX
 
 #define PINNED_PROMPT_INPUT_INITIAL_DEFAULT 256U
+
+/*
+ * 履歴コンテキスト配列の初期容量 [個]。
+ * 制約: 1 以上とすること。変更時は初回確保量と再確保の回数だけが変わる。
+ */
+#define PINNED_PROMPT_HISTORY_CTX_INITIAL_CAPACITY 4U
+
+/*
+ * 履歴コンテキスト配列の拡張倍率。不足時は現在の容量にこの倍率を掛けて拡張する。
+ * 制約: 2 以上とすること。変更時は拡張時の容量増加率と再確保回数だけが変わる。
+ */
+#define PINNED_PROMPT_HISTORY_CTX_GROWTH_FACTOR 2U
+
+/*
+ * プロンプトの書式化バッファーの初期容量 [byte]。
+ * 書式化後が (PINNED_PROMPT_FMT_INITIAL_CAPACITY - 1) [byte] 以下なら再確保しない。
+ * 制約: 1 以上とすること。変更時は初回の確保量と再確保のしきい値だけが変わる。
+ */
+#define PINNED_PROMPT_FMT_INITIAL_CAPACITY 256U
+
+static_assert(PINNED_PROMPT_HISTORY_CTX_INITIAL_CAPACITY >= 1U, "initial context capacity must be at least 1");
+static_assert(PINNED_PROMPT_HISTORY_CTX_GROWTH_FACTOR >= 2U, "growth factor must be at least 2");
+static_assert(PINNED_PROMPT_FMT_INITIAL_CAPACITY >= 1U, "initial format buffer capacity must be at least 1");
 
 typedef enum pinned_prompt_key
 {
@@ -114,7 +144,7 @@ struct cplat_pinned_prompt
     int status_dirty;
     int cols;
     int rows;
-    int prev_main_bottom_row; /* 前回描画時の main_bottom_row (9999 = 未設定) */
+    int prev_main_bottom_row; /* 前回描画時の main_bottom_row (PINNED_PROMPT_ROW_UNSET = 未設定) */
     char padding[4];
     prompt_platform_context platform;
 };
@@ -181,7 +211,7 @@ static void pinned_prompt_update_size(cplat_pinned_prompt *screen)
 
 /*
  * プロンプト文字列を内部バッファーへ複製する。
- * 成功時は 0、メモリ不足時は -1 を返す。
+ * 成功時は CPLAT_OK、メモリ不足時は CPLAT_ERR_OUT_OF_MEMORY を返す。
  */
 static int pinned_prompt_set_prompt(cplat_pinned_prompt *screen, const char *prompt_str)
 {
@@ -194,7 +224,7 @@ static int pinned_prompt_set_prompt(cplat_pinned_prompt *screen, const char *pro
         new_buf = (char *)cplat_realloc(screen->prompt_buf, len + 1U, 1U);
         if (new_buf == NULL)
         {
-            return -1;
+            return CPLAT_ERR_OUT_OF_MEMORY;
         }
 
         screen->prompt_buf = new_buf;
@@ -211,7 +241,7 @@ static int pinned_prompt_set_prompt(cplat_pinned_prompt *screen, const char *pro
         screen->prompt_buf[0] = '\0';
     }
 
-    return 0;
+    return CPLAT_OK;
 }
 
 /* 端末幅とプロンプト表示幅から入力可能幅を求め、カーソルが表示範囲に収まるよう表示開始位置を調整する。 */
@@ -772,11 +802,11 @@ static pinned_prompt_history_ctx *pinned_prompt_find_or_create_history_ctx(cplat
 
         if (screen->history_ctx_cap != 0U)
         {
-            new_cap = screen->history_ctx_cap * 2U;
+            new_cap = screen->history_ctx_cap * PINNED_PROMPT_HISTORY_CTX_GROWTH_FACTOR;
         }
         else
         {
-            new_cap = 4U;
+            new_cap = PINNED_PROMPT_HISTORY_CTX_INITIAL_CAPACITY;
         }
 
         new_contexts =
@@ -1007,7 +1037,7 @@ static void pinned_prompt_delete(cplat_pinned_prompt *screen)
 
 /*
  * 可変長引数を展開してプロンプト文字列を内部バッファーへ生成する。
- * 成功時は 0、メモリ不足時は -1 を返す。
+ * 成功時は CPLAT_OK、メモリ不足時は CPLAT_ERR_OUT_OF_MEMORY、書式化の失敗時は CPLAT_ERR_UNKNOWN を返す。
  */
 static int pinned_prompt_format_prompt(cplat_pinned_prompt *screen, const char *fmt, va_list ap)
 {
@@ -1017,11 +1047,11 @@ static int pinned_prompt_format_prompt(cplat_pinned_prompt *screen, const char *
 
     if (screen->fmt_buf == NULL)
     {
-        screen->fmt_cap = 256U;
+        screen->fmt_cap = PINNED_PROMPT_FMT_INITIAL_CAPACITY;
         screen->fmt_buf = (char *)cplat_malloc(screen->fmt_cap);
         if (screen->fmt_buf == NULL)
         {
-            return -1;
+            return CPLAT_ERR_OUT_OF_MEMORY;
         }
     }
 
@@ -1042,20 +1072,22 @@ static int pinned_prompt_format_prompt(cplat_pinned_prompt *screen, const char *
 
         if (needed < 0)
         {
+            /* 書式化の失敗 (エンコード エラーなど)。途中まで書かれた内容は表示に使わない。 */
             screen->fmt_buf[0] = '\0';
-            return 0;
+            return CPLAT_ERR_UNKNOWN;
         }
 
         if ((size_t)needed < screen->fmt_cap)
         {
-            return 0;
+            return CPLAT_OK;
         }
 
         new_buf = (char *)cplat_realloc(screen->fmt_buf, (size_t)needed + 1U, 1U);
         if (new_buf == NULL)
         {
-            screen->fmt_buf[screen->fmt_cap - 1U] = '\0';
-            return 0;
+            /* 書式化後の全体を保持できない。切り詰めた文字列は UTF-8 の文字の途中で切れ得るため、表示に使わない。 */
+            screen->fmt_buf[0] = '\0';
+            return CPLAT_ERR_OUT_OF_MEMORY;
         }
 
         screen->fmt_buf = new_buf;
@@ -1299,19 +1331,23 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
     if (history_ctx == NULL)
     {
         pinned_prompt_unlock(screen);
-        /* すでに CPLAT_ERR_UNKNOWN を返す経路であり、復元の成否で結果が変わらないため、戻り値は明示的に破棄する。 */
-        (void)prompt_platform_leave_raw(&screen->platform);
+        if (prompt_platform_leave_raw(&screen->platform) != 0)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
 
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
-    if (pinned_prompt_set_prompt(screen, prompt_str) != 0)
+    if (pinned_prompt_set_prompt(screen, prompt_str) != CPLAT_OK)
     {
         pinned_prompt_unlock(screen);
-        /* すでに CPLAT_ERR_UNKNOWN を返す経路であり、復元の成否で結果が変わらないため、戻り値は明示的に破棄する。 */
-        (void)prompt_platform_leave_raw(&screen->platform);
+        if (prompt_platform_leave_raw(&screen->platform) != 0)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
 
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     screen->completions.count = 0U;
@@ -1550,7 +1586,7 @@ int cplat_pinned_prompt_readline_fmt_at(cplat_pinned_prompt *screen, char *buf, 
     rc = pinned_prompt_format_prompt(screen, fmt, ap);
     va_end(ap);
 
-    if (rc != 0)
+    if (rc != CPLAT_OK)
     {
         return cplat_pinned_prompt_readline_at(screen, buf, buf_size, "", file, line);
     }

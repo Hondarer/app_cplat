@@ -110,8 +110,8 @@ TEST(syncDescriptorTest, exports_and_imports_identity)
     cplat_free(identity);
 }
 
-// identity 確保失敗が UNKNOWN になることの確認
-TEST(syncDescriptorTest, reports_unknown_when_identity_allocation_fails)
+// identity 確保失敗が OUT_OF_MEMORY になることの確認
+TEST(syncDescriptorTest, reports_out_of_memory_when_identity_allocation_fails)
 {
     // Arrange
     NiceMock<Mock_cplat> mock_cplat;
@@ -135,8 +135,8 @@ TEST(syncDescriptorTest, reports_unknown_when_identity_allocation_fails)
         &identity); // [手順] - descriptor を指定して cplat_internal_interprocess_sync_descriptor_import() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, result);
-    // [確認_異常系] - cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY, result);
+    // [確認_異常系] - cplat_internal_interprocess_sync_descriptor_import() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(
         nullptr,
         identity); // [確認_異常系] - identity が nullptr であること。(確保失敗時に identity が設定されないことの確認)

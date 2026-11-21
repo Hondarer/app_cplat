@@ -178,6 +178,44 @@ Table: ファイル システム操作 API と cplat 代替ラッパーの差異
 
 書式指定パスを使う用途には `cplat_stat_fmt` / `cplat_vstat_fmt` / `cplat_mkdir_fmt` / `cplat_vmkdir_fmt` を使用します。
 
+### パスの操作
+
+対象ヘッダー: `cplat/crt/path.h`
+
+| 生 API | cplat 代替 | 差異の要点 |
+|---|---|---|
+| `PATH_MAX` (POSIX) / `MAX_PATH` (Win32) | `PLATFORM_PATH_MAX` | OS 固有のパス最大長 (終端を含む)。Linux は `PATH_MAX` [byte]、Windows は `MAX_PATH` (UTF-16 の文字数) |
+| (UTF-8 のバッファーの大きさ) | `PLATFORM_PATH_UTF8_MAX` | `PLATFORM_PATH_MAX` の長さのパスを UTF-8 で格納できる大きさ [byte] |
+| `"/"` / `"\\"` | `PLATFORM_PATH_SEP` / `PLATFORM_PATH_SEP_CHR` | 区切りの文字列 `"/"` と文字 `'/'`。全プラットフォームで同じ |
+| `"/dev/null"` (POSIX) / `"NUL"` (Win32) | `PLATFORM_NULL_DEVICE_PATH` | 標準入出力を破棄する null device のパス |
+| (区切りの置換) | `cplat_path_normalize_sep(path)` | `\` を `/` へその場で置き換え、`path` を返す。環境変数や設定ファイルから得たパスに使う |
+| `realpath` (POSIX) / `GetFullPathNameW` (Win32) | `cplat_path_get_full(path_out, path_size, detail_out, path)` | 絶対パスにし、区切りを `/` にする。Linux はシンボリック リンクを可能な範囲で解決し、できない場合は `.` と `..` を解消した文字列を返す |
+| (同じ実体を指すかの比較) | `cplat_path_equal(lhs, rhs, equal_out, detail_out)` | 両方を `cplat_path_get_full` で絶対パスにして比較する。Windows は大文字と小文字を区別しない |
+| `getenv("TMPDIR")` (POSIX) / `GetTempPathW` (Win32) | `cplat_path_get_temp_dir(path_out, path_size, detail_out)` | 一時ディレクトリの絶対パス。末尾の区切りは付かない。Linux は `TMPDIR` が未設定または空なら `/tmp` |
+| `basename` (GNU) | `cplat_path_basename(path)` | 最後の区切りの次を指すポインターを返す。入力を変更せず、複製もしない |
+| `dirname` (POSIX) | `cplat_path_dirname(path_out, path_size, detail_out, path)` | 親ディレクトリを `path_out` へ格納する。入力を変更しない。区切りがなければ `"."` |
+| (拡張子の取得) | `cplat_path_extension(path)` | ベース名の最後の `.` 以降を指すポインターを返す (`.` を含む)。先頭が `.` の名前のその `.` は、拡張子としない |
+| (拡張子の除去) | `cplat_path_strip_extension(path_out, path_size, detail_out, path)` | 拡張子を除いた文字列を `path_out` へ格納する |
+
+Table: パスの操作 API と cplat 代替ラッパーの差異
+
+出力するパスの区切りは、全プラットフォームで `/` です。入力は `/` を推奨し、Windows では `\` も受け付けます。  
+`cplat_path_basename`、`cplat_path_dirname`、`cplat_path_extension`、`cplat_path_strip_extension` は、Linux でも `\` を区切りとして扱います。`__FILE__` など Windows 由来のパスを解析できるようにするための例外です。  
+ポインターを返す `cplat_path_normalize_sep`、`cplat_path_basename`、`cplat_path_extension` は、共通結果コードの適用対象外です。
+
+パスの連結には、次の API を使用します。
+
+| 用途 | cplat API | 要点 |
+|---|---|---|
+| 断片をそのまま連結する | `cplat_path_concat(path_out, path_size, detail_out, ...)` | 可変長マクロ。断片は 1 個以上 16 個以下。区切りは補わない |
+| 区切りを補って連結する | `cplat_path_join(path_out, path_size, detail_out, ...)` | 可変長マクロ。断片は 1 個以上 16 個以下。断片の間の区切りを 1 つにする。断片の途中の `\` は正規化しない |
+| 断片が 17 個以上、または個数を実行時に決める | `cplat_path_concat_n` / `cplat_path_join_n` | 個数を引数で渡す |
+| `va_list` で渡す | `cplat_vpath_concat_n` / `cplat_vpath_join_n` | ラッパーを作る場合に使う |
+
+Table: パスの連結 API
+
+結果が `path_out` に収まらない場合は、`CPLAT_ERR_BUFFER_TOO_SMALL` を返します。
+
 ### 環境変数
 
 対象ヘッダー: `cplat/crt/stdlib.h`
@@ -244,7 +282,8 @@ Table: Win32 生 API と cplat UTF-8 ラッパー API の対応
 引数名と文字列以外の型の表記は W 版と同じです。  
 文字列は UTF-8 の `const char *` または `char *` とし、文字列バッファーの容量と書き込み数はバイト数で扱います。  
 `CreateProcessU` の `lpCommandLine` は読み取り専用で、`lpStartupInfo` 内の文字列は UTF-16 のままです。  
-`SERVICE_TABLE_ENTRYU` のメンバーは `lpServiceName` と `lpServiceProc` で、サービス メイン関数は `LPSERVICE_MAIN_FUNCTIONW` のままです。
+`SERVICE_TABLE_ENTRYU` のメンバーは `lpServiceName` と `lpServiceProc` で、サービス メイン関数は `LPSERVICE_MAIN_FUNCTIONW` のままです。  
+`GetModuleFileNameU` は、出力先が不足する場合に UTF-8 の文字の境界で切り詰め、W 版と同じく `nSize` を返します。
 
 適用範囲は `CreateFileU` などのファイル ハンドル系に限らず、`app/cplat/docs/coding-guideline.md` の該当節を参照してください。
 
@@ -303,6 +342,8 @@ Table: ネットワーク バイト オーダー変換 API と cplat 代替関�
 | `inet_ntop(AF_INET, ...)` | `cplat_ipv4_to_string(...)` |
 
 Table: IPv4 アドレス操作 API と cplat 代替関数
+
+`cplat_ipv4_resolve` は、名前解決の失敗時に `CPLAT_ERR_NOT_FOUND` (ホスト名が見つからない場合)、`CPLAT_ERR_BUSY` (一時的な失敗)、`CPLAT_ERR_OUT_OF_MEMORY` (メモリ不足)、または `CPLAT_ERR_UNKNOWN` (その他の失敗) を返し、Windows でソケットの初期化に失敗した場合は対応する結果コードを返します。
 
 `struct sockaddr_in` は公開面に出さず、独自型 `cplat_ipv4_endpoint` (ネットワーク バイト オーダーの address/port) で置換します。
 
@@ -387,8 +428,8 @@ Table: 表示言語取得 API と cplat 代替ラッパーの差異
 
 | 生 API | cplat 代替 | 差異の要点 |
 |---|---|---|
-| `dladdr()` (POSIX) / `GetModuleHandleEx` +`GetModuleFileName` (Win32) | `cplat_module_get_path(...)` | 関数アドレスから所属モジュールの完全なパスを取得 |
-| `readlink("/proc/self/exe")` (Linux) / `GetModuleFileName(NULL, ...)` (Win32) | `cplat_process_get_executable_path(...)` | - |
+| `dladdr()` (POSIX) / `GetModuleHandleEx` +`GetModuleFileName` (Win32) | `cplat_module_get_path(...)` | 関数アドレスから所属モジュールの完全なパスを取得。Windows は拡張パス上限 (32767 文字) まで取得でき、確保失敗時は `CPLAT_ERR_OUT_OF_MEMORY` を返す |
+| `readlink("/proc/self/exe")` (Linux) / `GetModuleFileName(NULL, ...)` (Win32) | `cplat_process_get_executable_path(...)` | Windows は拡張パス上限 (32767 文字) まで取得でき、確保失敗時は `CPLAT_ERR_OUT_OF_MEMORY` を返す |
 | `getpid()` (POSIX) / `GetCurrentProcessId()` (Win32) | `cplat_process_get_pid()` | - |
 | `gettid()` (Linux) / `GetCurrentThreadId()` (Win32) | `cplat_process_get_tid()` | 同時に存在するスレッドの間で一意な識別子です。glibc 2.28 でも動作するよう、Linux では `syscall(SYS_gettid)` を使用します |
 | `fork()` +`execve()` (POSIX) / `CreateProcess()` (Win32) | `cplat_process_start(...)` | stdio リダイレクト、環境変数上書き、作業ディレクトリ指定を共通オプション構造体 `cplat_process_options` に集約 |
@@ -496,8 +537,8 @@ Table: 正規表現操作 API と cplat 代替関数
 | 生 API | cplat 代替 | 差異の要点 |
 |---|---|---|
 | `SetConsoleOutputCP` +`SetConsoleCP` +`SetConsoleMode(ENABLE_VIRTUAL_TERMINAL_PROCESSING)` (Win32) | `cplat_console_init(...)` | Linux では無処理。UTF-8 出力と VT100 制御シーケンスを有効化する複数 API 呼び出しを集約 |
-| `AttachConsole()` (Win32) | `cplat_console_attach_parent(...)` | UAC 昇格後の親コンソール再接続に特化 |
-| `WriteConsoleA` (Win32) / `write(fd, ...)` (POSIX) | `cplat_console_write(...)` | CRT ストリーム経由の `printf`/`fprintf` が失敗する既知の問題を回避するための直接書き込み |
+| `AttachConsole()` (Win32) | `cplat_console_attach_parent(...)` | UAC 昇格後の親コンソール再接続に特化。`AttachConsole` の失敗に加え、標準入力・標準出力・標準エラー出力のいずれかを接続できなかった場合も失敗を返す (`attached_out` は戻り値によらず、親コンソールへ接続していれば 1、していなければ 0) |
+| `WriteConsoleU` + `WriteFile` (Win32) / `write(fd, ...)` (POSIX) | `cplat_console_write(...)` | 再接続後に CRT ストリーム (`printf`/`fprintf`) 経由の書き込みが失敗する現象 (実機で確認・原因未特定) を回避する直接書き込み。ただし、`ERROR_INVALID_HANDLE` による間欠的な書き込み失敗 (実機で確認・原因未特定) は発生する |
 
 Table: Windows コンソール制御 API と cplat 代替ラッパーの差異
 
@@ -774,8 +815,8 @@ Table: 文字列カタログの条件式フィルターにおける用途別 cpl
 | `pthread_cond_t` (POSIX) / `CONDITION_VARIABLE` (Win32) | `cplat_condvar_create` / `cplat_condvar_wait` / `cplat_condvar_timed_wait` / `cplat_condvar_signal` / `cplat_condvar_broadcast` / `cplat_condvar_dispose` | プロセス内条件変数。無期限待機 (`wait`) と期限付き待機 (`timed_wait`) を分離 |
 | `pthread_rwlock_t` (POSIX) / `SRWLOCK` (Win32) | `cplat_local_rwlock_create` / `cplat_local_rwlock_lock_shared` / `cplat_local_rwlock_lock_exclusive` / `cplat_local_rwlock_timed_lock_shared` / `cplat_local_rwlock_timed_lock_exclusive` / `cplat_local_rwlock_try_lock_shared` / `cplat_local_rwlock_try_lock_exclusive` / `cplat_local_rwlock_unlock_shared` / `cplat_local_rwlock_unlock_exclusive` / `cplat_local_rwlock_dispose` | プロセス内読み書きロック。無期限待機と期限付き待機 (`timed_lock_*`) を分離 |
 | `pthread_create` +`pthread_join` +`pthread_detach` (POSIX) / `CreateThread` +`WaitForSingleObject` +`CloseHandle` (Win32) | `cplat_thread_create` / `cplat_thread_join` / `cplat_thread_timed_join` / `cplat_thread_detach` | スレッド生成・待機 (無期限 `join` / 期限付き `timed_join`)・切り離し |
-| 名前付き `flock`/セマフォ (POSIX) / 名前付き `Mutex` (Win32) | `cplat_interprocess_lock_open` / `cplat_interprocess_lock_lock` / `cplat_interprocess_lock_timed_lock` / `cplat_interprocess_lock_try_lock` / `cplat_interprocess_lock_unlock` / `cplat_interprocess_lock_dispose` | プロセス横断ミューテックス。無期限・期限付き・即時試行を分離。プロセス間受け渡しには `_export_descriptor` / `_import_descriptor` を使用 |
-| プロセス横断読み書きロックを取得したい (POSIX/Win32 に単一の生 API なし) | `cplat_interprocess_rwlock_open` / `_lock_shared` / `_lock_exclusive` / `_timed_lock_shared` / `_timed_lock_exclusive` / `_try_lock_shared` / `_try_lock_exclusive` / `_unlock` / `_dispose` | ロック ファイル バックエンドで実装。無期限・期限付き・即時試行を分離 |
+| `open` + `flock` (POSIX) / `CreateFile` + `LockFileEx` (Win32) | `cplat_interprocess_lock_open` / `cplat_interprocess_lock_lock` / `cplat_interprocess_lock_timed_lock` / `cplat_interprocess_lock_try_lock` / `cplat_interprocess_lock_unlock` / `cplat_interprocess_lock_dispose` | ロック ファイル バックエンドで実装したプロセス横断ミューテックス。`identity` はファイル パス (無ければ作成、NULL と空文字列は `CPLAT_ERR_INVALID_ARGUMENT`、開いている間は削除・改名禁止)、確保失敗時は `CPLAT_ERR_OUT_OF_MEMORY`。無期限・期限付き・即時試行を分離。プロセス間受け渡しには `_export_descriptor` / `_import_descriptor` を使用 |
+| プロセス横断読み書きロックを取得したい (POSIX/Win32 に単一の生 API なし) | `cplat_interprocess_rwlock_open` / `_lock_shared` / `_lock_exclusive` / `_timed_lock_shared` / `_timed_lock_exclusive` / `_try_lock_shared` / `_try_lock_exclusive` / `_unlock` / `_dispose` | ロック ファイル バックエンドで実装。`identity` はファイル パス (無ければ作成、NULL と空文字列は `CPLAT_ERR_INVALID_ARGUMENT`、開いている間は削除・改名禁止)、確保失敗時は `CPLAT_ERR_OUT_OF_MEMORY`。無期限・期限付き・即時試行を分離 |
 | `pthread_once` (POSIX) / `InitOnceExecuteOnce` (Win32) | `cplat_call_once(flag, func)` | - |
 | `sleep`/`usleep`/`nanosleep` (POSIX) / `Sleep` (Win32) | `cplat_sleep_ms(ms)` | Linux はシグナル割り込み時に残り時間を再計算し継続待機します。 |
 | `sched_yield` (POSIX) / `SwitchToThread` (Win32) | `cplat_thread_yield()` | 実行可能な他のスレッドへ CPU を譲ります。他のスレッドがない場合は即時に戻ります。Windows の譲渡先は現在のプロセッサで実行可能なスレッドに限ります。完了待ちには条件変数または `cplat_sleep_ms` を使用してください。 |
@@ -861,7 +902,9 @@ Table: トレース機能における用途別 cplat API
 Table: 管理者権限の確認と昇格における用途別 cplat API
 
 `cplat_elevated_process_attach_output_pipes` が失敗を返した場合、標準ストリームと Win32 の標準ハンドルの状態は不定です。  
-呼び出し元は、標準出力と標準エラー出力に頼らずにプロセスを終了します。
+呼び出し元は、標準出力と標準エラー出力に頼らずにプロセスを終了します。  
+昇格プロセスは、呼び出し元が作成した名前付きパイプを名前で開きます。開けない場合、`cplat_elevated_process_attach_output_pipes` は失敗を返します。  
+動作を確認しているのは、同じユーザーのまま昇格する場合だけです。別のアカウントの資格情報を入力して昇格する場合の動作は、実機で確認していません。
 
 ### プロセス終了時の共通フック
 
@@ -929,6 +972,20 @@ Table: 動的シンボル解決における用途別 cplat API
 `__attribute__((constructor/destructor))` (Linux/GCC) と `DllMain` (Win32) という異なる仕組みを直接書く代わりに、共通のコールバック規約に統一します。  
 エクスポートされる関数はなく、呼び出し側が `onLoad`/`onUnload` を実装するヘッダー オンリーの仕組みです。
 
+### 文字符号の定数
+
+対象ヘッダー: `cplat/base/char_code.h`
+
+US-ASCII、RFC 3629 (UTF-8)、UTF-16 サロゲート ペア、および Unicode 置換文字に関する定数を定義します。
+
+| 用途 | 定数群 | 値の範囲・例 |
+|---|---|---|
+| ASCII 制御文字と印字可能範囲の境界 | `CPLAT_ASCII_ETX` / `CPLAT_ASCII_BS` / `CPLAT_ASCII_ESC` / `CPLAT_ASCII_PRINTABLE_MIN` / `CPLAT_ASCII_DEL` / `CPLAT_ASCII_BOUND_U8` | `0x03U`〜`0x80U` |
+| UTF-8 の符号長・バイト種別判定・先頭バイト有効範囲・符号化/復号 | `CPLAT_UTF8_MAX_BYTES` / `CPLAT_UTF8_MAX_CONT_BYTES` / `CPLAT_UTF8_CONT_MASK` / `CPLAT_UTF8_CONT_VALUE` / `CPLAT_UTF8_LEAD2_MASK` 等 | `4U`、`3U`、`0xC0U`、`0x80U` 他 |
+| UTF-16 サロゲート ペア範囲と Unicode 定数 | `CPLAT_UTF16_HIGH_SURROGATE_MIN` / `_MAX`、`CPLAT_UTF16_LOW_SURROGATE_MIN` / `_MAX`、`CPLAT_UTF16_SURROGATE_BASE` / `_SHIFT`、`CPLAT_UNICODE_CODE_POINT_MAX`、`CPLAT_UNICODE_REPLACEMENT_CHAR` | `0xD800U`〜`0xDFFFU`、`0x10000U`、`10U`、`0x10FFFFU`、`0xFFFDU` |
+
+Table: 文字符号定数の一覧
+
 ## 公開関数名の補助索引
 
 前節までの表や説明でまとめて扱った公開関数を、完全な関数名から検索できるように補足します。  
@@ -937,7 +994,7 @@ Table: 動的シンボル解決における用途別 cplat API
 - 引数解析: `cplat_argparser_register_option_int`、`cplat_argparser_register_option_string`、`cplat_argparser_register_option_int_array`、`cplat_argparser_register_option_string_array`、`cplat_argparser_register_positional_int`、`cplat_argparser_register_positional_int_array`、`cplat_argparser_register_positional_string_array`、`cplat_argparser_get_program_name`、`cplat_argparser_get_error_target`、`cplat_argparser_get_error_index`、`cplat_argparser_get_error_message`、`cplat_argparser_print_error_messages`、`cplat_argparser_get_register_error_count`、`cplat_argparser_get_register_error_target`、`cplat_argparser_get_register_error_message`、`cplat_argparser_print_register_error_messages`
 - 時刻: `cplat_clock_format_realtime_iso8601_local`、`cplat_clock_format_realtime_iso8601_utc`、`cplat_clock_get_realtime_utc`、`cplat_clock_get_realtime_deadline_ms`、`cplat_timespec_normalize`、`cplat_timespec_add`、`cplat_timespec_sub`、`cplat_timespec_cmp`、`cplat_timespec_add_ms`、`cplat_timespec_diff_ms`、`cplat_timespec_to_native`、`cplat_timespec_from_native`
 - ファイル: `cplat_file_init`、`cplat_file_open`、`cplat_file_write`、`cplat_file_read`、`cplat_file_get_size`、`cplat_file_set_size`、`cplat_file_get_id`、`cplat_file_get_path_id`、`cplat_file_get_modified_timestamp`、`cplat_file_set_modified_timestamp`、`cplat_file_get_path_modified_timestamp`、`cplat_file_set_path_modified_timestamp`、`cplat_file_flush`、`cplat_file_close`
-- パス: `cplat_path_normalize_sep`、`cplat_path_get_full`、`cplat_path_equal`、`cplat_path_get_temp_dir`、`cplat_path_concat_n`、`cplat_vpath_concat_n`、`cplat_path_basename`、`cplat_path_dirname`、`cplat_path_extension`、`cplat_path_strip_extension`、`cplat_path_join_n`、`cplat_vpath_join_n`
+- パス: `cplat_path_normalize_sep`、`cplat_path_get_full`、`cplat_path_equal`、`cplat_path_get_temp_dir`、`cplat_path_concat`、`cplat_path_concat_n`、`cplat_vpath_concat_n`、`cplat_path_basename`、`cplat_path_dirname`、`cplat_path_extension`、`cplat_path_strip_extension`、`cplat_path_join`、`cplat_path_join_n`、`cplat_vpath_join_n`
 - 文字列: `cplat_strcasecmp`、`cplat_strncasecmp`
 - 文字列カタログ: `cplat_string_catalog_set_language`、`cplat_string_catalog_get_language`、`cplat_string_catalog_language_from_tag`、`cplat_string_catalog_format`、`cplat_string_catalog_vformat`、`cplat_string_catalog_verify`、`cplat_string_catalog_get_entry`、`cplat_string_catalog_get_category`、`cplat_string_catalog_get_key`、`cplat_string_catalog_get_note`
 - 書式入力: `cplat_vscanf`、`cplat_vfscanf`、`cplat_vsscanf`

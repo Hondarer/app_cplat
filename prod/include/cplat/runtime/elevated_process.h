@@ -120,8 +120,9 @@ extern "C"
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNSUPPORTED 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  cplat_elevated_process_run_if_needed() はコンソールの再接続を昇格プロセス側に
-     *  要求しますが、UAC 昇格直後の親コンソール再割り当ては実機調査でも原因を特定できない
-     *  間欠的な書き込み不能 (`ERROR_INVALID_HANDLE`) を起こすことが分かっています。\n
+     *  要求しますが、UAC 昇格直後の親コンソール再割り当ては、実機で確認したものの原因を特定できていない
+     *  CRT のストリーム (`printf`、`fprintf`) 経由の書き込み失敗や、間欠的な書き込み不能 (`ERROR_INVALID_HANDLE`。一度失敗すると再試行しても同じエラーで失敗) を
+     *  起こすことが分かっています。\n
      *  本関数は昇格プロセスのコンソールを一切引き継がず、結果メッセージを一時ファイル経由で
      *  受け渡します。昇格プロセス側は cplat_elevated_process_extract_result_target() を起動直後に
      *  呼び出し、処理結果を cplat_elevated_process_report_result() で報告してください。\n
@@ -190,7 +191,7 @@ extern "C"
      *  @param[out]     handled_out    昇格プロセスで処理した場合は 0 以外、現プロセスで継続する場合は 0 の格納先。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNSUPPORTED 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
-     *  Windows では、未昇格の場合に標準出力用と標準エラー出力用の無名パイプを作成し、
+     *  Windows では、未昇格の場合に標準出力用と標準エラー出力用の名前付きパイプを作成し、
      *  UAC を要求して現在の実行ファイルを @p arguments 付きで再起動します。
      *  子プロセスの終了まで待機し、その間にパイプから読み取った出力を @p output_fn へ渡します。\n
      *  すでに昇格済みの場合は何もしません。\n
@@ -198,9 +199,16 @@ extern "C"
      *  発生する間欠的な書き込み不能 (`ERROR_INVALID_HANDLE`) の影響を受けません。
      *  また、呼び出し元の標準出力がリダイレクトされている場合も、昇格プロセスの出力はそのリダイレクト先へ届きます。\n
      *  昇格プロセス側は起動直後に cplat_elevated_process_attach_output_pipes() を呼び出してください。
-     *  呼び出さない場合、昇格プロセスの出力は呼び出し元へ届きません。\n
-     *  未昇格かつセッション 0 (非対話セッション) の場合は、昇格を試みず失敗を返します。\n
+     *  呼び出さない場合、本関数は失敗を返します。\n
+     *  未昇格かつセッション 0 (ユーザーが操作できるデスクトップがないセッション) の場合は、昇格を試みず失敗を返します。\n
      *  Linux では cplat_elevated_process_run_if_needed() と同じ判定を行い、@p output_fn は呼び出しません。
+     *
+     *  @attention      昇格プロセスは、呼び出し元プロセスが作成したパイプを名前で開きます。開けない場合、
+     *                  cplat_elevated_process_attach_output_pipes() は @ref CPLAT_ERR_UNKNOWN を返します。\n
+     *                  昇格プロセスがパイプへ接続しないまま終了した場合、および出力の読み取り中に接続以外の異常が起きた場合、
+     *                  本関数は @ref CPLAT_ERR_UNKNOWN を返し、@p exit_code_out へ `EXIT_FAILURE` を格納します。\n
+     *                  動作を確認しているのは、同じユーザーのまま昇格する場合だけです。
+     *                  別のアカウントの資格情報を入力して昇格する場合の動作は、実機で確認していません。
      *
      *  @note           標準出力と標準エラー出力は別のパイプで受け取るため、両者の間の出力順序は保証しません。\n
      *                  昇格プロセスへ標準入力は渡しません。未昇格のプロセスから昇格プロセスを操作できないようにするためです。\n
@@ -223,11 +231,11 @@ extern "C"
      *
      *  cplat_elevated_process_run_piped() が付与した内部フラグを検出し、@p argv から取り除いて
      *  @p argc を 1 減らします。フラグがない場合は何もせず @ref CPLAT_OK を返します。\n
-     *  フラグを検出した場合は、呼び出し元プロセスが作成したパイプを本プロセスへ複製し、
+     *  フラグを検出した場合は、呼び出し元プロセスが作成した名前付きパイプを開き、
      *  Win32 の標準ハンドルと CRT の stdout / stderr をそのパイプへ付け替えます。
      *  stdout はバッファーなしに設定し、改行コードを変換しないバイナリ モードで開きます。
      *  標準入力は `NUL` デバイスへ付け替え、読み取りは直ちにファイル終端となります。\n
-     *  フラグの値が不正な場合、またはパイプの複製と付け替えに失敗した場合は
+     *  フラグの値が不正な場合、またはパイプを開く処理と付け替えに失敗した場合は
      *  @ref CPLAT_ERR_UNKNOWN を返します。この場合も、フラグは @p argv から取り除きます。\n
      *  プログラム開始直後、引数解析および cplat_console_init() より前に 1 度だけ呼び出してください。\n
      *  Linux では何もせず @p attached_out に 0 を設定します。

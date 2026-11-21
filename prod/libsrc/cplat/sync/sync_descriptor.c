@@ -96,7 +96,7 @@ int cplat_internal_interprocess_sync_descriptor_import(const void *descriptor, c
     identity = (char *)cplat_malloc((size_t)identity_len + 1U);
     if (identity == NULL)
     {
-        return CPLAT_ERR_UNKNOWN;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     memcpy(identity, in + CPLAT_INTERPROCESS_SYNC_DESCRIPTOR_HEADER_SIZE, identity_len);

@@ -420,6 +420,16 @@ int test_pinned_prompt_read_char_nb(cplat_pinned_prompt *screen)
     return prompt_platform_read_char_nb(&screen->platform);
 }
 
+int test_pinned_prompt_row_unset(void)
+{
+    return PINNED_PROMPT_ROW_UNSET;
+}
+
+const char *test_pinned_prompt_prompt_text(const cplat_pinned_prompt *screen)
+{
+    return screen->prompt_buf;
+}
+
 int test_pinned_prompt_platform_is_tty(void)
 {
     return prompt_platform_is_tty();

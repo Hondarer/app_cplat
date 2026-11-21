@@ -17,6 +17,7 @@
 #include <string.h>
 
 #include <cplat/base/platform.h>
+#include <cplat/crt/path.h>
 #include <cplat/crt/stdlib.h>
 #include <cplat/crt/stdio.h>
 
@@ -187,7 +188,7 @@ static void collect_fs_type(const char *dir, bench_environment *env)
     copy_text(env->fs_type, sizeof(env->fs_type), text);
 #elif defined(PLATFORM_WINDOWS)
     char fs_name[MAX_PATH + 1];
-    char root[MAX_PATH + 1];
+    char root[PLATFORM_PATH_UTF8_MAX];
 
     /*
      * GetVolumeInformationU はボリュームのルート パスを要求するため、

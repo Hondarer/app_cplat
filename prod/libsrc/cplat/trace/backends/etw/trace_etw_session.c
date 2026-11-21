@@ -295,14 +295,23 @@ static void extract_event_fields(PEVENT_RECORD pEvent, const TRACE_EVENT_INFO *i
         USHORT consumed;
 
         prop = &info->EventPropertyInfoArray[i];
-        if ((prop->Flags & PropertyStruct) != 0)
+        /*
+         * 構造体、配列、名前なし、カスタム スキーマ、および長さの属性を持つプロパティは、
+         * UserData 上の大きさをこの関数では求められないため、読み取りを打ち切る。
+         * - 構造体は PropertyStruct が立ち、メンバーは StructStartIndex から NumOfStructMembers 個の要素で表される。
+         * - 配列は PropertyParamCount または PropertyParamFixedCount が立つか、count が 2 以上になる。
+         * - NameOffset が 0 の場合の仕様は定義されておらず、スキップに必要なサイズも確定できない。
+         * - PropertyHasCustomSchema が立つ場合、nonStructType ではなく customSchemaType が使用される。
+         * - PropertyParamLength や PropertyParamFixedLength が立つ文字列、または length != 0 の文字列は NUL 終端ではない。
+         * cplat_etw_provider_write() が書くイベントは、ANSI 文字列と uint32 だけを持つ。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/tdh/ns-tdh-event_property_info
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/tdh/ne-tdh-property_flags
+         */
+        if (((prop->Flags & (PropertyStruct | PropertyParamCount | PropertyParamFixedCount | PropertyParamLength |
+                             PropertyParamFixedLength | PropertyHasCustomSchema)) != 0) ||
+            (prop->count > 1U) || (prop->NameOffset == 0U))
         {
-            continue;
-        }
-
-        if (prop->NameOffset == 0)
-        {
-            continue;
+            break;
         }
 
         name = (const wchar_t *)((const unsigned char *)info + prop->NameOffset);
@@ -313,6 +322,11 @@ static void extract_event_fields(PEVENT_RECORD pEvent, const TRACE_EVENT_INFO *i
 
         if (prop->nonStructType.InType == TDH_INTYPE_ANSISTRING)
         {
+            if (prop->length != 0U)
+            {
+                break;
+            }
+
             if (read_ansi_string_field(cursor, remaining, &text, &consumed) != 0)
             {
                 break;

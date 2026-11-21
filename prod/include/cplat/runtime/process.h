@@ -48,12 +48,17 @@ extern "C"
      *  @retval         CPLAT_OK                    実行ファイルのパスを取得しました。
      *  @retval         CPLAT_ERR_INVALID_ARGUMENT  @p path_out が NULL、または @p path_size が 0 です。
      *  @retval         CPLAT_ERR_BUFFER_TOO_SMALL  @p path_out の容量が不足しています。
+     *  @retval         CPLAT_ERR_OUT_OF_MEMORY     中間バッファーのメモリ確保に失敗しました。
      *  @retval         CPLAT_ERR_UNSUPPORTED       現在のプラットフォームをサポートしていません。
      *  @return         上記以外の失敗時は、OS エラーを変換した共通結果コードを返します。
      *
      *  cplat_module_get_path() が関数アドレスの所属モジュールを返す (Windows では
      *  DLL を指しうる) のに対し、本関数は常にプロセス本体の実行ファイルのパスを返します。\n
-     *  返されるパスは UTF-8 文字列で、パス セパレーターは '/' に統一されます。
+     *  返されるパスは UTF-8 文字列で、パス セパレーターは '/' に統一されます。\n
+     *  メモリを確保できない場合は @ref CPLAT_ERR_OUT_OF_MEMORY を返します。\n
+     *  Windows では OS の拡張パス上限 (32767 文字) までの非 ASCII パスを取得できます。
+     *  `\\?\` 接頭辞を含むパスも区切り文字は `'/'` へ正規化されるため (`//?/C:/...`)、
+     *  そのまま Win32 のファイル API へ渡すことはできません。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。

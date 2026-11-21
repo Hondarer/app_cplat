@@ -156,7 +156,7 @@ extern "C"
  *  @param[in]      prompt_str  表示するプロンプト文字列です。NULL の場合は空文字列として扱います。
  *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_EOF 、@ref CPLAT_ERR_CANCELED 、
  *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
- *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+ *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
  *
  *  端末サイズの取得に成功した場合は幅と高さを独立に判定し、0 以下の幅は 80 列、
  *  0 以下の高さは 24 行を既定値とします。サイズ取得自体に失敗した場合は 80 列・24 行とします。\n
@@ -165,6 +165,7 @@ extern "C"
  *  Linux では非 TTY の行入力も端末待機と同じ入力経路で 1 バイトずつ読み取るため、CRT の先読みバッファーと競合しません。\n
  *  フォールバック時に入力行が @p buf に収まらない場合は @ref CPLAT_ERR_BUFFER_TOO_SMALL を返し、
  *  @p buf は空文字列になります。行の残りは次の呼び出しで取得できます。\n
+ *  プロンプト文字列または入力履歴を保持するメモリを確保できない場合は @ref CPLAT_ERR_OUT_OF_MEMORY を返します (端末復元失敗時は @ref CPLAT_ERR_UNKNOWN を優先)。\n
  *  OS の入力エラーは @ref CPLAT_ERR_EOF と区別して @ref CPLAT_ERR_UNKNOWN を返します。\n
  *  端末設定または SIGWINCH ハンドラーの復元に失敗した場合は、行入力へフォールバックせず、
  *  入力結果より優先して @ref CPLAT_ERR_UNKNOWN を返します。\n
@@ -193,7 +194,7 @@ extern "C"
  *  @param[in]      ...       @p fmt に対応する書式引数です。
  *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_EOF 、@ref CPLAT_ERR_CANCELED 、
  *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
- *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+ *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
  *
  *  端末サイズの取得に成功した場合は幅と高さを独立に判定し、0 以下の幅は 80 列、
  *  0 以下の高さは 24 行を既定値とします。サイズ取得自体に失敗した場合は 80 列・24 行とします。\n
@@ -202,6 +203,8 @@ extern "C"
  *  Linux では非 TTY の行入力も端末待機と同じ入力経路で 1 バイトずつ読み取るため、CRT の先読みバッファーと競合しません。\n
  *  フォールバック時に入力行が @p buf に収まらない場合は @ref CPLAT_ERR_BUFFER_TOO_SMALL を返し、
  *  @p buf は空文字列になります。行の残りは次の呼び出しで取得できます。\n
+ *  プロンプト文字列または入力履歴を保持するメモリを確保できない場合は @ref CPLAT_ERR_OUT_OF_MEMORY を返します (端末復元失敗時は @ref CPLAT_ERR_UNKNOWN を優先)。\n
+ *  書式化に失敗した場合、または書式化のためのメモリを確保できない場合は、空のプロンプトで入力を続けます。\n
  *  OS の入力エラーは @ref CPLAT_ERR_EOF と区別して @ref CPLAT_ERR_UNKNOWN を返します。\n
  *  端末設定または SIGWINCH ハンドラーの復元に失敗した場合は、行入力へフォールバックせず、
  *  入力結果より優先して @ref CPLAT_ERR_UNKNOWN を返します。\n
@@ -231,7 +234,7 @@ extern "C"
  *  @return         cplat_pinned_prompt_readline() と同じ結果コードに加え、
  *                  初期値が不正な場合は @ref CPLAT_ERR_INVALID_ARGUMENT 、
  *                  初期値が入力欄の上限を超える場合は @ref CPLAT_ERR_BUFFER_TOO_SMALL 、
- *                  初期値のためのメモリを確保できない場合は @ref CPLAT_ERR_OUT_OF_MEMORY を返します。
+ *                  プロンプト文字列、入力履歴、または初期値のためのメモリを確保できない場合は @ref CPLAT_ERR_OUT_OF_MEMORY を返します (端末復元失敗時は @ref CPLAT_ERR_UNKNOWN を優先)。
  *
  *  非 TTY の場合、または raw モードへの移行に失敗し変更済みの端末設定と Linux の SIGWINCH
  *  ハンドラーを復元できた場合は、初期値を適用せず画面制御を行わない共通の行入力へフォールバックします。\n
@@ -267,7 +270,7 @@ extern "C"
      *  @param[in]      line        履歴を識別する呼び出し元行番号です。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_EOF 、@ref CPLAT_ERR_CANCELED 、
      *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
-     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  端末サイズの取得に成功した場合は幅と高さを独立に判定し、0 以下の幅は 80 列、
      *  0 以下の高さは 24 行を既定値とします。サイズ取得自体に失敗した場合は 80 列・24 行とします。\n
@@ -276,6 +279,7 @@ extern "C"
      *  Linux では非 TTY の行入力も端末待機と同じ入力経路で 1 バイトずつ読み取るため、CRT の先読みバッファーと競合しません。\n
      *  フォールバック時に入力行が @p buf に収まらない場合は @ref CPLAT_ERR_BUFFER_TOO_SMALL を返し、
      *  @p buf は空文字列になります。行の残りは次の呼び出しで取得できます。\n
+     *  プロンプト文字列または入力履歴を保持するメモリを確保できない場合は @ref CPLAT_ERR_OUT_OF_MEMORY を返します (端末復元失敗時は @ref CPLAT_ERR_UNKNOWN を優先)。\n
      *  OS の入力エラーは @ref CPLAT_ERR_EOF と区別して @ref CPLAT_ERR_UNKNOWN を返します。\n
      *  端末設定または SIGWINCH ハンドラーの復元に失敗した場合は、行入力へフォールバックせず、
      *  入力結果より優先して @ref CPLAT_ERR_UNKNOWN を返します。\n
@@ -329,6 +333,7 @@ extern "C"
      *  フォールバックし、初期値を使用しません。入力側が行全体を与えるためです。\n
      *  フォールバック時に入力行が @p buf に収まらない場合は @ref CPLAT_ERR_BUFFER_TOO_SMALL を返し、
      *  @p buf は空文字列になります。行の残りは次の呼び出しで取得できます。\n
+     *  プロンプト文字列、入力履歴、または初期値のためのメモリを確保できない場合は @ref CPLAT_ERR_OUT_OF_MEMORY を返します (端末復元失敗時は @ref CPLAT_ERR_UNKNOWN を優先)。\n
      *  OS の入力エラーは @ref CPLAT_ERR_EOF と区別して @ref CPLAT_ERR_UNKNOWN を返します。\n
      *  端末設定または SIGWINCH ハンドラーの復元に失敗した場合は、行入力へフォールバックせず、
      *  入力結果より優先して @ref CPLAT_ERR_UNKNOWN を返します。\n
@@ -362,7 +367,7 @@ extern "C"
      *  @param[in]      ...       @p fmt に対応する書式引数です。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_EOF 、@ref CPLAT_ERR_CANCELED 、
      *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
-     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  端末サイズの取得に成功した場合は幅と高さを独立に判定し、0 以下の幅は 80 列、
      *  0 以下の高さは 24 行を既定値とします。サイズ取得自体に失敗した場合は 80 列・24 行とします。\n
@@ -371,6 +376,8 @@ extern "C"
      *  Linux では非 TTY の行入力も端末待機と同じ入力経路で 1 バイトずつ読み取るため、CRT の先読みバッファーと競合しません。\n
      *  フォールバック時に入力行が @p buf に収まらない場合は @ref CPLAT_ERR_BUFFER_TOO_SMALL を返し、
      *  @p buf は空文字列になります。行の残りは次の呼び出しで取得できます。\n
+     *  プロンプト文字列または入力履歴を保持するメモリを確保できない場合は @ref CPLAT_ERR_OUT_OF_MEMORY を返します (端末復元失敗時は @ref CPLAT_ERR_UNKNOWN を優先)。\n
+     *  書式化に失敗した場合、または書式化のためのメモリを確保できない場合は、空のプロンプトで入力を続けます。\n
      *  OS の入力エラーは @ref CPLAT_ERR_EOF と区別して @ref CPLAT_ERR_UNKNOWN を返します。\n
      *  端末設定または SIGWINCH ハンドラーの復元に失敗した場合は、行入力へフォールバックせず、
      *  入力結果より優先して @ref CPLAT_ERR_UNKNOWN を返します。\n

@@ -4205,6 +4205,211 @@ TEST_F(argparserTest, print_register_error_messages_skips_message_when_snprintf_
     cplat_argparser_handle_dispose(parser);
 }
 
+// 解析エラー メッセージの切り詰め時に UTF-8 の文字境界で終端されることの確認
+TEST_F(argparserTest, error_message_truncates_at_utf8_character_boundary)
+{
+    // Arrange
+    char arg0[] = "prog";
+    std::string long_opt = "--";
+    for (int i = 0; i < 20; ++i)
+    {
+        long_opt += "\xE3\x81\x82";
+    }
+    char *argv[] = {arg0, const_cast<char *>(long_opt.c_str()), nullptr};
+    cplat_argparser *parser = cplat_argparser_handle_create(
+        2, argv, nullptr);      // [状態] - "あ" を並べた未知のオプションを持つ parser を用意する。
+    ASSERT_NE(nullptr, parser); // [状態確認] - cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
+    ASSERT_EQ(CPLAT_ERR_UNKNOWN_OPTION,
+              cplat_argparser_handle_parse(parser)); // [状態] - 未知オプションの解析エラーを発生させる。
+    // [状態確認] - cplat_argparser_handle_parse() の戻り値が CPLAT_ERR_UNKNOWN_OPTION であること。
+    // "unknown option '--" (18 bytes) + "あ" * 1 (3 bytes) + 途中 2 bytes -> buffer_size = 24
+    char buffer[24] = {};
+
+    // Pre-Assert
+
+    // Act
+    int actual_ret = cplat_argparser_handle_get_error_message(
+        parser, buffer,
+        sizeof(
+            buffer)); // [手順] - 文字の 2 バイト目で切れるバッファーを渡して cplat_argparser_handle_get_error_message() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_BUFFER_TOO_SMALL,
+        actual_ret); // [確認_異常系] - cplat_argparser_handle_get_error_message() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_STREQ("unknown option '--\xE3\x81\x82",
+                 buffer); // [確認_異常系] - buffer が不完全な末尾文字を除いた完結した UTF-8 文字列であること。
+
+    // Cleanup
+    cplat_argparser_handle_dispose(parser);
+}
+
+// 登録エラー メッセージの切り詰め時に UTF-8 の文字境界で終端されることの確認
+TEST_F(argparserTest, register_error_message_truncates_at_utf8_character_boundary)
+{
+    // Arrange
+    cplat_argparser *parser =
+        cplat_argparser_handle_create(0, nullptr, nullptr); // [状態] - 生成済みの parser を用意する。
+    ASSERT_NE(nullptr, parser); // [状態確認] - cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
+    std::string long_opt = "--";
+    for (int i = 0; i < 20; ++i)
+    {
+        long_opt += "\xE3\x81\x82";
+    }
+    int storage = 0;
+    ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_register_flag(parser, "-a", long_opt.c_str(), nullptr,
+                                                             &storage)); // [状態] - 長い非 ASCII 名のフラグを登録する。
+    // [状態確認] - cplat_argparser_handle_register_flag() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_ERR_DUPLICATE_DEFINITION,
+              cplat_argparser_handle_register_flag(parser, "-b", long_opt.c_str(), nullptr,
+                                                   &storage)); // [状態] - 重複登録エラーを発生させる。
+    // [状態確認] - cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_DUPLICATE_DEFINITION であること。
+    // "failed to register '--" (22 bytes) + "あ" * 1 (3 bytes) + 途中 2 bytes -> buffer_size = 28
+    char buffer[28] = {};
+
+    // Pre-Assert
+
+    // Act
+    int actual_ret = cplat_argparser_handle_get_register_error_message(
+        parser, 0U, buffer,
+        sizeof(
+            buffer)); // [手順] - 文字の途中で切れるバッファーを渡して cplat_argparser_handle_get_register_error_message() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_BUFFER_TOO_SMALL,
+        actual_ret); // [確認_異常系] - cplat_argparser_handle_get_register_error_message() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_STREQ("failed to register '--\xE3\x81\x82",
+                 buffer); // [確認_異常系] - buffer が完結した UTF-8 文字で終わること。
+
+    // Cleanup
+    cplat_argparser_handle_dispose(parser);
+}
+
+// バッファー末尾にちょうど収まる UTF-8 文字は取り除かれないことの確認
+TEST_F(argparserTest, error_message_keeps_complete_character_at_buffer_end)
+{
+    // Arrange
+    char arg0[] = "prog";
+    std::string long_opt = "--";
+    for (int i = 0; i < 20; ++i)
+    {
+        long_opt += "\xE3\x81\x82";
+    }
+    char *argv[] = {arg0, const_cast<char *>(long_opt.c_str()), nullptr};
+    cplat_argparser *parser = cplat_argparser_handle_create(
+        2, argv, nullptr);      // [状態] - "あ" を並べた未知のオプションを持つ parser を用意する。
+    ASSERT_NE(nullptr, parser); // [状態確認] - cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
+    ASSERT_EQ(CPLAT_ERR_UNKNOWN_OPTION,
+              cplat_argparser_handle_parse(parser)); // [状態] - 未知オプションの解析エラーを発生させる。
+    // [状態確認] - cplat_argparser_handle_parse() の戻り値が CPLAT_ERR_UNKNOWN_OPTION であること。
+    // "unknown option '--" (18 bytes) + "あ" * 1 (3 bytes) + NUL (1 byte) = 22 bytes
+    char buffer[22] = {};
+
+    // Pre-Assert
+
+    // Act
+    int actual_ret = cplat_argparser_handle_get_error_message(
+        parser, buffer,
+        sizeof(
+            buffer)); // [手順] - 文字がちょうど収まる大きさのバッファーを渡して cplat_argparser_handle_get_error_message() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_BUFFER_TOO_SMALL,
+        actual_ret); // [確認_異常系] - cplat_argparser_handle_get_error_message() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_STREQ("unknown option '--\xE3\x81\x82",
+                 buffer); // [確認_異常系] - buffer 末尾の完結した UTF-8 文字が保持されること。
+
+    // Cleanup
+    cplat_argparser_handle_dispose(parser);
+}
+
+// 後続の登録エラーが収まっても、先の切り詰め結果を返して全件出力することの確認
+TEST_F(argparserTest, print_register_error_messages_returns_truncation_when_later_message_fits)
+{
+    // Arrange
+    NiceMock<Mock_stdio> mock_stdio;
+    cplat_argparser *parser =
+        cplat_argparser_handle_create(0, nullptr, nullptr); // [状態] - 生成済みの parser を用意する。
+    ASSERT_NE(nullptr, parser); // [状態確認] - cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
+    std::string long_name = "--" + std::string(600u, 'x');
+    int storage = 0;
+    ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_register_flag(parser, "-a", long_name.c_str(), nullptr, &storage));
+    ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_register_flag(parser, "-c", "--short", nullptr, &storage));
+    ASSERT_EQ(
+        CPLAT_ERR_DUPLICATE_DEFINITION,
+        cplat_argparser_handle_register_flag(parser, "-b", long_name.c_str(), nullptr,
+                                             &storage)); // [状態] - 1 件目に 600 文字の対象名で登録エラーを起こす。
+    // [状態確認] - 1 件目の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_DUPLICATE_DEFINITION であること。
+    ASSERT_EQ(CPLAT_ERR_DUPLICATE_DEFINITION,
+              cplat_argparser_handle_register_flag(parser, "-d", "--short", nullptr,
+                                                   &storage)); // [状態] - 2 件目に短い対象名で登録エラーを起こす。
+    // [状態確認] - 2 件目の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_DUPLICATE_DEFINITION であること。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_stdio, fprintf(_, _, _, stderr, _))
+        .Times(
+            3); // [Pre-Assert確認_異常系] - 2 件のメッセージと区切り改行のため fprintf() が stderr を指定して 3 回呼び出されること。
+
+    // Act
+    int actual_ret = cplat_argparser_handle_print_register_error_messages(
+        parser,
+        stderr); // [手順] - 1 件目が切り詰められ 2 件目が収まる状態で cplat_argparser_handle_print_register_error_messages() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_BUFFER_TOO_SMALL,
+        actual_ret); // [確認_異常系] - cplat_argparser_handle_print_register_error_messages() の戻り値が最初の失敗である CPLAT_ERR_BUFFER_TOO_SMALL であること。
+
+    // Cleanup
+    cplat_argparser_handle_dispose(parser);
+}
+
+// 複数の登録エラー出力で最初に起きた失敗の結果コードを保持することの確認
+TEST_F(argparserTest, print_register_error_messages_keeps_first_failure)
+{
+    // Arrange
+    NiceMock<Mock_stdio> mock_stdio;
+    cplat_argparser *parser =
+        cplat_argparser_handle_create(0, nullptr, nullptr); // [状態] - 生成済みの parser を用意する。
+    ASSERT_NE(nullptr, parser); // [状態確認] - cplat_argparser_handle_create() の戻り値が nullptr 以外であること。
+    std::string long_name = "--" + std::string(600u, 'x');
+    int storage = 0;
+    ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_register_flag(parser, "-a", long_name.c_str(), nullptr, &storage));
+    ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_register_flag(parser, "-c", "--short", nullptr, &storage));
+    ASSERT_EQ(CPLAT_ERR_DUPLICATE_DEFINITION,
+              cplat_argparser_handle_register_flag(parser, "-b", long_name.c_str(), nullptr,
+                                                   &storage)); // [状態] - 1 件目に切り詰められる登録エラーを起こす。
+    // [状態確認] - 1 件目の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_DUPLICATE_DEFINITION であること。
+    ASSERT_EQ(CPLAT_ERR_DUPLICATE_DEFINITION,
+              cplat_argparser_handle_register_flag(parser, "-d", "--short", nullptr,
+                                                   &storage)); // [状態] - 2 件目に短い対象名で登録エラーを起こす。
+    // [状態確認] - 2 件目の cplat_argparser_handle_register_flag() の戻り値が CPLAT_ERR_DUPLICATE_DEFINITION であること。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_stdio, snprintf(_, _, _, _, _, _))
+        .WillOnce(DoDefault())
+        .WillOnce(Return(-1)); // [Pre-Assert確認_異常系] - snprintf() が 2 回呼び出されること。
+    // [Pre-Assert手順] - snprintf() から 1 回目は既定処理 (切り詰め) を行い、2 回目は -1 を返す。
+    EXPECT_CALL(mock_stdio, fprintf(_, _, _, stderr, _))
+        .Times(
+            2); // [Pre-Assert確認_異常系] - 1 件目と区切り改行のため fprintf() が stderr を指定して 2 回呼び出されること。
+
+    // Act
+    int actual_ret = cplat_argparser_handle_print_register_error_messages(
+        parser,
+        stderr); // [手順] - 1 件目が切り詰め、2 件目で snprintf() が失敗する状態で cplat_argparser_handle_print_register_error_messages() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_BUFFER_TOO_SMALL,
+        actual_ret); // [確認_異常系] - cplat_argparser_handle_print_register_error_messages() の戻り値が最初に起きた CPLAT_ERR_BUFFER_TOO_SMALL であること。
+
+    // Cleanup
+    cplat_argparser_handle_dispose(parser);
+}
+
 // 短い名前の長さが照合長と一致しない登録項目を検索から除外することの確認
 TEST_F(argparserTest, parse_skips_short_name_when_length_differs)
 {

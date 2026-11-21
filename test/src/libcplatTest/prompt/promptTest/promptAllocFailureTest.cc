@@ -197,9 +197,9 @@ TEST_F(promptAllocFailureTest, readline_fmt_continues_with_empty_prompt_when_all
 }
 // [サブ手順参照 名前=promptAllocFailureTest.TearDown]
 
-// 書式バッファーの再確保に失敗した場合に切り捨てて継続することの確認
+// 書式バッファーの再確保に失敗した場合に空のプロンプトで継続することの確認
 // [サブ手順参照 名前=promptAllocFailureTest.SetUp]
-TEST_F(promptAllocFailureTest, readline_fmt_truncates_prompt_when_reallocation_fails)
+TEST_F(promptAllocFailureTest, readline_fmt_uses_empty_prompt_when_reallocation_fails)
 {
     // Arrange
     char buf[32];
@@ -230,6 +230,7 @@ TEST_F(promptAllocFailureTest, readline_fmt_truncates_prompt_when_reallocation_f
     // Assert
     EXPECT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_prompt_readline_fmt_at() の戻り値が CPLAT_OK であること。
     EXPECT_STREQ("abc", buf);        // [確認_正常系] - buf が "abc" であること。
+    EXPECT_STREQ("", prompt_->prompt_fmt_buf); // [確認_異常系] - prompt_->prompt_fmt_buf が空文字列 "" であること。
 }
 // [サブ手順参照 名前=promptAllocFailureTest.TearDown]
 

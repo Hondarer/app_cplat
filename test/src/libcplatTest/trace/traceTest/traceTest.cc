@@ -746,6 +746,78 @@ TEST_F(traceTest, write_routes_eventlog_identity_fields)
     // Cleanup
     cplat_tracer_dispose(&handle);
 }
+
+// 強制出力のレベルが、対応する通常のレベルとして EventLog へ渡されることの確認 (Windows)
+// [サブ手順参照 名前=traceTest.SetUp]
+TEST_F(traceTest, write_routes_force_levels_to_eventlog_as_normal_levels)
+{
+    // Arrange
+    // [サブ手順参照 名前=traceTest.create_logger]
+    cplat_tracer *handle = create_logger();
+    ASSERT_EQ(CPLAT_OK,
+              cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_INFO)); // [状態] - OS レベルを INFO とする。
+    // [状態確認] - cplat_tracer_set_os_level() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, cplat_tracer_start(handle)); // [状態] - tracer を started 状態とする。
+    // [状態確認] - cplat_tracer_start() の戻り値が CPLAT_OK であること。
+
+    // Pre-Assert
+    {
+        testing::InSequence sequence;
+        EXPECT_CALL(mock_cplat, cplat_eventlog_sink_write(eventlog_handle_, (int)CPLAT_TRACE_LEVEL_CRITICAL, 0,
+                                                          StrEq("myapp"), 0, StrEq("force critical")))
+            .WillOnce(Return(0));
+        // [Pre-Assert確認_正常系] - cplat_eventlog_sink_write() が CPLAT_TRACE_LEVEL_CRITICAL で 1 回呼び出されること。
+        // [Pre-Assert手順] - cplat_eventlog_sink_write() から 0 を返す。
+        EXPECT_CALL(mock_cplat, cplat_eventlog_sink_write(eventlog_handle_, (int)CPLAT_TRACE_LEVEL_ERROR, 0,
+                                                          StrEq("myapp"), 0, StrEq("force error")))
+            .WillOnce(Return(0));
+        // [Pre-Assert確認_正常系] - cplat_eventlog_sink_write() が CPLAT_TRACE_LEVEL_ERROR で 1 回呼び出されること。
+        // [Pre-Assert手順] - cplat_eventlog_sink_write() から 0 を返す。
+        EXPECT_CALL(mock_cplat, cplat_eventlog_sink_write(eventlog_handle_, (int)CPLAT_TRACE_LEVEL_WARNING, 0,
+                                                          StrEq("myapp"), 0, StrEq("force warning")))
+            .WillOnce(Return(0));
+        // [Pre-Assert確認_正常系] - cplat_eventlog_sink_write() が CPLAT_TRACE_LEVEL_WARNING で 1 回呼び出されること。
+        // [Pre-Assert手順] - cplat_eventlog_sink_write() から 0 を返す。
+        EXPECT_CALL(mock_cplat, cplat_eventlog_sink_write(eventlog_handle_, (int)CPLAT_TRACE_LEVEL_INFO, 0,
+                                                          StrEq("myapp"), 0, StrEq("force info")))
+            .WillOnce(Return(0));
+        // [Pre-Assert確認_正常系] - cplat_eventlog_sink_write() が CPLAT_TRACE_LEVEL_INFO で 1 回呼び出されること。
+        // [Pre-Assert手順] - cplat_eventlog_sink_write() から 0 を返す。
+        EXPECT_CALL(mock_cplat, cplat_eventlog_sink_write(eventlog_handle_, (int)CPLAT_TRACE_LEVEL_INFO, 0,
+                                                          StrEq("myapp"), 0, StrEq("force verbose")))
+            .WillOnce(Return(0));
+        // [Pre-Assert確認_正常系] - cplat_eventlog_sink_write() が CPLAT_TRACE_LEVEL_INFO で 1 回呼び出されること。
+        // [Pre-Assert手順] - cplat_eventlog_sink_write() から 0 を返す。
+        EXPECT_CALL(mock_cplat, cplat_eventlog_sink_write(eventlog_handle_, (int)CPLAT_TRACE_LEVEL_INFO, 0,
+                                                          StrEq("myapp"), 0, StrEq("force debug")))
+            .WillOnce(Return(0));
+        // [Pre-Assert確認_正常系] - cplat_eventlog_sink_write() が CPLAT_TRACE_LEVEL_INFO で 1 回呼び出されること。
+        // [Pre-Assert手順] - cplat_eventlog_sink_write() から 0 を返す。
+    }
+
+    // Act
+    // [手順] - 6 つの強制出力のレベルを指定して cplat_tracer_write_at() を順に呼び出す。
+    int actual_ret_critical = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_FORCE_CRITICAL, nullptr, "force critical");
+    int actual_ret_error = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_FORCE_ERROR, nullptr, "force error");
+    int actual_ret_warning = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_FORCE_WARNING, nullptr, "force warning");
+    int actual_ret_info = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_FORCE_INFO, nullptr, "force info");
+    int actual_ret_verbose = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_FORCE_VERBOSE, nullptr, "force verbose");
+    int actual_ret_debug = cplat_tracer_write_at(handle, CPLAT_TRACE_LEVEL_FORCE_DEBUG, nullptr, "force debug");
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_critical); // [確認_正常系] - FORCE_CRITICAL での戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_error); // [確認_正常系] - FORCE_ERROR での戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_warning); // [確認_正常系] - FORCE_WARNING での戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_info); // [確認_正常系] - FORCE_INFO での戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_verbose); // [確認_正常系] - FORCE_VERBOSE での戻り値が CPLAT_OK であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_debug); // [確認_正常系] - FORCE_DEBUG での戻り値が CPLAT_OK であること。
+
+    // Cleanup
+    cplat_tracer_dispose(&handle);
+}
 #endif /* PLATFORM_WINDOWS */
 
 // 明示タイムスタンプ付き INFO 出力が OS backend へ渡ることの確認
@@ -2393,6 +2465,47 @@ TEST_F(traceTest, default_file_path_strips_exe_suffix_on_windows)
     // Assert
     ASSERT_EQ(CPLAT_OK,
               actual_ret_tracer_start); // [確認_正常系] - cplat_tracer_start() の戻り値が CPLAT_OK であること。
+
+    // Cleanup
+    cplat_tracer_dispose(&handle);
+}
+
+// 300 バイトの実行ファイル パスでも log/ 相対へ切り替えず実行ファイルのディレクトリ配下を使うことの確認
+// [サブ手順参照 名前=traceTest.SetUp]
+TEST_F(traceTest, default_file_path_uses_executable_directory_for_long_path)
+{
+    // Arrange
+    std::string dir_part = "C:/" + std::string(287u, 'a');
+    std::string long_exe_path = dir_part + "/myapp.exe";
+    std::string expected_log_path = dir_part + "/log/myapp.log";
+    ON_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
+        .WillByDefault(
+            [long_exe_path](char *path_out, size_t path_size)
+            {
+                snprintf(path_out, path_size, "%s", long_exe_path.c_str());
+                return CPLAT_OK;
+            }); // [状態] - cplat_process_get_executable_path() から 300 バイトの実行ファイル パスを返すように既定動作を設定する。
+    // [サブ手順参照 名前=traceTest.create_logger]
+    cplat_tracer *handle = create_logger();
+    ASSERT_EQ(CPLAT_OK,
+              cplat_tracer_set_os_level(handle, CPLAT_TRACE_LEVEL_NONE)); // [状態] - OS レベルを NONE とする。
+    // [状態確認] - cplat_tracer_set_os_level() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK, cplat_tracer_set_file_level(handle, nullptr, CPLAT_TRACE_LEVEL_INFO, 0, 0,
+                                                    0)); // [状態] - パスを指定せずファイル レベルを INFO とする。
+    // [状態確認] - cplat_tracer_set_file_level() の戻り値が CPLAT_OK であること。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_trace_file_sink_create(StrEq(expected_log_path.c_str()), 0, 0, 0))
+        .WillOnce(Return(
+            file_handle_)); // [Pre-Assert確認_正常系] - cplat_trace_file_sink_create() が実行ファイルのディレクトリ配下の log/ パスを指定して 1 回呼び出されること。
+                            // [Pre-Assert手順] - cplat_trace_file_sink_create() から file_handle_ を返す。
+
+    // Act
+    int actual_ret = cplat_tracer_start(
+        handle); // [手順] - 長い実行ファイル パスから既定パスを解決させる状態で cplat_tracer_start() を呼び出す。
+
+    // Assert
+    ASSERT_EQ(CPLAT_OK, actual_ret); // [確認_正常系] - cplat_tracer_start() の戻り値が CPLAT_OK であること。
 
     // Cleanup
     cplat_tracer_dispose(&handle);

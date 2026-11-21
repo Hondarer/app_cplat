@@ -141,4 +141,57 @@ TEST_F(eventlog_registerTest, main_returns_failure_when_final_stream_has_error)
     EXPECT_EQ(EXIT_FAILURE, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_FAILURE であること。
     EXPECT_THAT(errors, HasSubstr("標準出力へ書き込めませんでした。")); // [確認_異常系] - 標準エラー出力に書き込みの失敗の診断が出ること。
 }
+
+// 昇格したプロセスが 0 以外で終了した場合に終了コードを表示して失敗することの確認
+TEST_F(eventlog_registerTest, main_reports_exit_code_when_elevated_process_fails)
+{
+    // Arrange
+    const char *argv[] = {"eventlog-register", "uninstall"};
+    const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_elevated_process_run_piped(_, _, _, _, _))
+        .WillOnce(DoAll(SetArgPointee<3>(3), SetArgPointee<4>(1), Return(CPLAT_OK)));
+    // [Pre-Assert確認_異常系] - cplat_elevated_process_run_piped() が 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_elevated_process_run_piped() から終了コード 3、handled 1、CPLAT_OK を返す。
+    EXPECT_CALL(mock_cplat_, cplat_eventlog_unregister_source(_))
+        .Times(0); // [Pre-Assert確認_異常系] - cplat_eventlog_unregister_source() が呼び出されないこと。
+
+    // Act
+    testing::internal::CaptureStderr();
+    int actual_ret = __real_main(
+        argc, (char **)&argv); // [手順] - 昇格プロセスが終了コード 3 で終了する状態で __real_main() を呼び出す。
+    std::string errors = testing::internal::GetCapturedStderr();
+
+    // Assert
+    EXPECT_EQ(EXIT_FAILURE, actual_ret); // [確認_異常系] - __real_main() の戻り値が EXIT_FAILURE であること。
+    EXPECT_THAT(errors, HasSubstr("昇格したプロセスが失敗しました (終了コード: 3)。"));
+    // [確認_異常系] - 標準エラー出力に終了コード 3 を示す診断が出ること。
+}
+
+// 昇格したプロセスが 0 で終了した場合に診断を出さず成功することの確認
+TEST_F(eventlog_registerTest, main_returns_success_without_diagnostic_when_elevated_process_succeeds)
+{
+    // Arrange
+    const char *argv[] = {"eventlog-register", "uninstall"};
+    const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_elevated_process_run_piped(_, _, _, _, _))
+        .WillOnce(DoAll(SetArgPointee<3>(0), SetArgPointee<4>(1), Return(CPLAT_OK)));
+    // [Pre-Assert確認_正常系] - cplat_elevated_process_run_piped() が 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_elevated_process_run_piped() から終了コード 0、handled 1、CPLAT_OK を返す。
+    EXPECT_CALL(mock_cplat_, cplat_eventlog_unregister_source(_))
+        .Times(0); // [Pre-Assert確認_正常系] - cplat_eventlog_unregister_source() が呼び出されないこと。
+
+    // Act
+    testing::internal::CaptureStderr();
+    int actual_ret = __real_main(
+        argc, (char **)&argv); // [手順] - 昇格プロセスが終了コード 0 で終了する状態で __real_main() を呼び出す。
+    std::string errors = testing::internal::GetCapturedStderr();
+
+    // Assert
+    EXPECT_EQ(EXIT_SUCCESS, actual_ret); // [確認_正常系] - __real_main() の戻り値が EXIT_SUCCESS であること。
+    EXPECT_EQ("", errors);               // [確認_正常系] - 標準エラー出力が空であること。
+}
 #endif /* PLATFORM_WINDOWS */

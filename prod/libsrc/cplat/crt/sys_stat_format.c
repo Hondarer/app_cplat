@@ -21,7 +21,7 @@
 
 int cplat_vstat_fmt(cplat_file_stat_t *buf, cplat_error *detail_out, const char *format, va_list args)
 {
-    char filename[PLATFORM_PATH_MAX] = {0};
+    char filename[PLATFORM_PATH_UTF8_MAX] = {0};
     int format_error;
 
     if (buf == NULL)
@@ -55,7 +55,7 @@ int cplat_stat_fmt(cplat_file_stat_t *buf, cplat_error *detail_out, const char *
 
 int cplat_vmkdir_fmt(cplat_error *detail_out, const char *format, va_list args)
 {
-    char filename[PLATFORM_PATH_MAX] = {0};
+    char filename[PLATFORM_PATH_UTF8_MAX] = {0};
     int format_error;
 
     if (cplat_internal_vformat_path(filename, sizeof(filename), format, args, &format_error) != 0)

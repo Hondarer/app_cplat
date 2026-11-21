@@ -83,11 +83,14 @@ Figure: 昇格時のコンソール引き継ぎ
 
 これらのリトライはいずれも有界であり、確認に失敗してもコンソールへ接続されていれば従来動作を下限として付け替えを続行します。
 
-### 既知の制限: 再接続後に書き込みが間欠的に拒否される
+### 既知の制限: 再接続後に書き込みが失敗する
 
-`AttachConsole` の成功と親 HWND の一致を確認した後でも、実機調査では `stdout` / `stderr` への書き込みが `ERROR_INVALID_HANDLE` で間欠的に失敗する事象を確認しています。原因は conhost 側にあると推測されますが特定できておらず、また書き込みの再試行でも解消しません (一度失敗すると再試行しても同一のエラーで失敗します)。`printf` / `fprintf` (FILE\* 経由) だけでなく `cplat_console_write()` (Win32 API を直接呼び出す) でも同様に発生します。
+`AttachConsole` の成功と親 HWND の一致を確認した後でも、実機調査では再接続後の書き込みについて次の 2 つの現象を確認しています (いずれも原因は特定できていません)。
 
-UAC 昇格後に確実に結果を表示したい場合は、`cplat_console_attach_parent()` によるコンソール再接続ではなく、`cplat_elevated_process_run_piped()` または `cplat_elevated_process_run_with_result()` (`app/cplat/prod/libsrc/cplat/runtime/README.md` 参照) を使用してください。どちらも昇格プロセスのコンソールに一切アクセスしません。前者は昇格プロセスの標準出力と標準エラー出力を無名パイプで、後者は結果メッセージを一時ファイル経由で、呼び出し元プロセス (常に未昇格で、自分自身の正常なコンソールを保持している) へ渡すため、この問題の影響を受けません。
+- CRT のストリーム (`printf`、`fprintf`) を経由した書き込みが失敗する。`cplat_console_write()` は CRT のストリームを経由しないため、この現象の影響を受けません。
+- 書き込みが `ERROR_INVALID_HANDLE` で間欠的に失敗し、一度失敗すると再試行しても同じエラーで失敗する。`printf` / `fprintf` (FILE\* 経由) だけでなく `cplat_console_write()` でも発生します。
+
+UAC 昇格後に確実に結果を表示したい場合は、`cplat_console_attach_parent()` によるコンソール再接続ではなく、`cplat_elevated_process_run_piped()` または `cplat_elevated_process_run_with_result()` (`app/cplat/prod/libsrc/cplat/runtime/README.md` 参照) を使用してください。どちらも昇格プロセスのコンソールに一切アクセスしません。前者は昇格プロセスの標準出力と標準エラー出力を名前付きパイプで、後者は結果メッセージを一時ファイル経由で、呼び出し元プロセス (常に未昇格で、自分自身の正常なコンソールを保持している) へ渡すため、この問題の影響を受けません。
 
 再現調査時は、環境変数 `CPLAT_CONSOLE_ATTACH_DIAG=1` を設定すると `%TEMP%/cplat_console_attach.log` へ再接続の診断ログを追記できます。  
 このログには `FreeConsole` / `AttachConsole` / `GetConsoleWindow` / `CONOUT$` オープン / `reopen` / 終了時ドレインの成否と `GetLastError()` を記録します。
@@ -96,7 +99,7 @@ UAC 昇格後に確実に結果を表示したい場合は、`cplat_console_atta
 
 `printf` / `fprintf` (FILE\* 経由) を使わず、`stdout` / `stderr` へ文字列を直接書き込みます。
 
-- Windows では `GetStdHandle` で取得した Win32 ハンドルへ `WriteConsoleA` (失敗時は `WriteFile` にフォールバック) で直接書き込む
+- Windows では `GetStdHandle` で取得した Win32 ハンドルへ `WriteConsoleU` を呼び、失敗時に `WriteFile` へ切り替えて直接書き込む
 - Linux では対象の fd へ `write()` で直接書き込む
 - `printf` / `fprintf` (FILE\* 経由) は再接続後に書き込みを拒否することがあるため、`cplat_console_attach_parent()` が `attached_out` に 1 を格納した場合の出力は、本関数を使用すること
 

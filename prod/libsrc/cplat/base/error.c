@@ -880,13 +880,25 @@ int cplat_internal_error_report_gai_error(cplat_error *detail_out, const int err
         domain = CPLAT_ERROR_DOMAIN_NONE;
         result = CPLAT_OK;
     }
-    else if (error_cause_from_gai_error(error_code) == CPLAT_CAUSE_NOT_FOUND)
-    {
-        result = CPLAT_ERR_NOT_FOUND;
-    }
     else
     {
-        result = CPLAT_ERR_UNKNOWN;
+        const cplat_error_cause cause = error_cause_from_gai_error(error_code);
+
+        switch (cause)
+        {
+        case CPLAT_CAUSE_NOT_FOUND:
+            result = CPLAT_ERR_NOT_FOUND;
+            break;
+        case CPLAT_CAUSE_BUSY:
+            result = CPLAT_ERR_BUSY;
+            break;
+        case CPLAT_CAUSE_OUT_OF_MEMORY:
+            result = CPLAT_ERR_OUT_OF_MEMORY;
+            break;
+        default:
+            result = CPLAT_ERR_UNKNOWN;
+            break;
+        }
     }
 
     error_store(detail_out, domain, result, (unsigned long)error_code);

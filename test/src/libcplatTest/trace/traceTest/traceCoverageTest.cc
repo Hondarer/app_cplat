@@ -281,7 +281,57 @@ TEST_F(traceCoverageTest, create_fails_when_syslog_or_rwlock_setup_fails)
 }
 // [サブ手順参照 名前=traceCoverageTest.TearDown]
 
-#endif /* PLATFORM_LINUX */
+#elif defined(PLATFORM_WINDOWS)
+
+// EventLog 用のレベル変換が 7 つの強制出力のレベルと未定義値を変換することの確認 (Windows)
+// [サブ手順参照 名前=traceCoverageTest.SetUp]
+TEST_F(traceCoverageTest, to_eventlog_level_maps_force_levels)
+{
+    // Arrange
+    const cplat_trace_level undefined_level = static_cast<cplat_trace_level>(-8);
+
+    // Pre-Assert
+
+    // Act
+    int critical_level = test_tracer_to_eventlog_level(
+        CPLAT_TRACE_LEVEL_FORCE_CRITICAL); // [手順] - FORCE_CRITICAL を指定して test_tracer_to_eventlog_level() を呼び出す。
+    int error_level = test_tracer_to_eventlog_level(
+        CPLAT_TRACE_LEVEL_FORCE_ERROR); // [手順] - FORCE_ERROR を指定して test_tracer_to_eventlog_level() を呼び出す。
+    int warning_level = test_tracer_to_eventlog_level(
+        CPLAT_TRACE_LEVEL_FORCE_WARNING); // [手順] - FORCE_WARNING を指定して test_tracer_to_eventlog_level() を呼び出す。
+    int info_level = test_tracer_to_eventlog_level(
+        CPLAT_TRACE_LEVEL_FORCE_INFO); // [手順] - FORCE_INFO を指定して test_tracer_to_eventlog_level() を呼び出す。
+    int verbose_level = test_tracer_to_eventlog_level(
+        CPLAT_TRACE_LEVEL_FORCE_VERBOSE); // [手順] - FORCE_VERBOSE を指定して test_tracer_to_eventlog_level() を呼び出す。
+    int debug_level = test_tracer_to_eventlog_level(
+        CPLAT_TRACE_LEVEL_FORCE_DEBUG); // [手順] - FORCE_DEBUG を指定して test_tracer_to_eventlog_level() を呼び出す。
+    int none_level = test_tracer_to_eventlog_level(
+        CPLAT_TRACE_LEVEL_FORCE_NONE); // [手順] - FORCE_NONE を指定して test_tracer_to_eventlog_level() を呼び出す。
+    int undefined_result = test_tracer_to_eventlog_level(
+        undefined_level); // [手順] - 未定義値 (-8) を指定して test_tracer_to_eventlog_level() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        (int)CPLAT_TRACE_LEVEL_CRITICAL,
+        critical_level); // [確認_正常系] - FORCE_CRITICAL を変換した戻り値が CPLAT_TRACE_LEVEL_CRITICAL であること。
+    EXPECT_EQ((int)CPLAT_TRACE_LEVEL_ERROR,
+              error_level); // [確認_正常系] - FORCE_ERROR を変換した戻り値が CPLAT_TRACE_LEVEL_ERROR であること。
+    EXPECT_EQ(
+        (int)CPLAT_TRACE_LEVEL_WARNING,
+        warning_level); // [確認_正常系] - FORCE_WARNING を変換した戻り値が CPLAT_TRACE_LEVEL_WARNING であること。
+    EXPECT_EQ((int)CPLAT_TRACE_LEVEL_INFO,
+              info_level); // [確認_正常系] - FORCE_INFO を変換した戻り値が CPLAT_TRACE_LEVEL_INFO であること。
+    EXPECT_EQ((int)CPLAT_TRACE_LEVEL_INFO,
+              verbose_level); // [確認_正常系] - FORCE_VERBOSE を変換した戻り値が CPLAT_TRACE_LEVEL_INFO であること。
+    EXPECT_EQ((int)CPLAT_TRACE_LEVEL_INFO,
+              debug_level); // [確認_正常系] - FORCE_DEBUG を変換した戻り値が CPLAT_TRACE_LEVEL_INFO であること。
+    EXPECT_EQ((int)CPLAT_TRACE_LEVEL_INFO,
+              none_level); // [確認_正常系] - FORCE_NONE を変換した戻り値が CPLAT_TRACE_LEVEL_INFO であること。
+    EXPECT_EQ(-8, undefined_result); // [確認_異常系] - 未定義値 (-8) を指定した戻り値が -8 のままであること。
+}
+// [サブ手順参照 名前=traceCoverageTest.TearDown]
+
+#endif /* PLATFORM_ */
 
 // シャットダウン中の生成拒否と非アクティブ dispose を処理することの確認
 // [サブ手順参照 名前=traceCoverageTest.SetUp]

@@ -62,8 +62,8 @@ TEST_F(syncFailureInjectionTest, local_lock_create_fails_when_allocation_fails)
         cplat_local_lock_create(&lock); // [手順] - ハンドルの格納先を指定して cplat_local_lock_create() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret);    // [確認_異常系] - cplat_local_lock_create() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
+              actual_ret); // [確認_異常系] - cplat_local_lock_create() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(nullptr, lock); // [確認_異常系] - lock が nullptr であること。
 }
 
@@ -137,8 +137,9 @@ TEST_F(syncFailureInjectionTest, interprocess_lock_open_fails_when_identity_dupl
         kLockIdentity, &lock); // [手順] - kLockIdentity を指定して cplat_interprocess_lock_open() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - cplat_interprocess_lock_open() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_MEMORY,
+        actual_ret); // [確認_異常系] - cplat_interprocess_lock_open() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(nullptr, lock); // [確認_異常系] - lock が nullptr であること。
 }
 
@@ -160,8 +161,9 @@ TEST_F(syncFailureInjectionTest, interprocess_lock_open_fails_when_allocation_fa
         kLockIdentity, &lock); // [手順] - kLockIdentity を指定して cplat_interprocess_lock_open() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              actual_ret); // [確認_異常系] - cplat_interprocess_lock_open() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_MEMORY,
+        actual_ret); // [確認_異常系] - cplat_interprocess_lock_open() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
     EXPECT_EQ(nullptr, lock); // [確認_異常系] - lock が nullptr であること。
 }
 

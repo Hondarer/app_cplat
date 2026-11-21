@@ -130,6 +130,12 @@ extern "C"
     /* 標準入出力の TTY 判定へ直接アクセスする。 */
     extern int test_pinned_prompt_platform_is_tty(void);
 
+    /* 未設定の行を表すセンチネル定数を返す。 */
+    extern int test_pinned_prompt_row_unset(void);
+
+    /* 保持しているプロンプト文字列を参照する。 */
+    extern const char *test_pinned_prompt_prompt_text(const cplat_pinned_prompt *screen);
+
     /* 全履歴コンテキストに登録された履歴項目の総数を取得する。 */
     extern int test_pinned_prompt_history_entry_count(const cplat_pinned_prompt *screen);
 

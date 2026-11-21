@@ -36,7 +36,13 @@
 /** 判定演算子の数 (インデックス 0 は未使用) です。 */
 #define OPERATOR_TABLE_SIZE ((size_t)STRING_CATALOG_FILTER_OPERATOR_MATCHES_I + 1U)
 
-/** 定数 1 個の表記の最大バイト数です。文字列の定数は行幅を超えません。 */
+/**
+ *  定数 1 個の表記の最大バイト数です。
+ *
+ *  検証 (string_catalog_filter_check_record) は、長さが行幅を超える定数を拒否します。
+ *  書き出しは 1 [byte] を最大 4 [byte] (`\xHH`) にするため、行幅の上限の 4 倍に、引用符 2 [byte] と
+ *  終端 NUL を加えた大きさに収まります。
+ */
 #define CONSTANT_TEXT_MAX (CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX * 4U + 16U)
 
 /** 判定演算子 1 個の文型です。主語、before、値、after の順に並べます。 */
@@ -310,7 +316,7 @@ static void append_constant(describe_context *context, const string_catalog_filt
         return;
     }
 
-    /* text は定数 1 個の表記の最大長 CONSTANT_TEXT_MAX を持ち、切り詰めが起きないため、戻り値は明示的に破棄する。 */
+    /* 検証済みのレコードの定数は表記が CONSTANT_TEXT_MAX に収まり、切り詰めが起きないため、戻り値は明示的に破棄する。 */
     (void)string_catalog_filter_format_constant(constant, text, sizeof(text));
     append_text(&context->writer, text);
 }

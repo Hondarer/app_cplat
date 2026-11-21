@@ -45,7 +45,7 @@
  *  @param[out]     handled  昇格プロセスで処理済みの場合は 0 以外を格納します。
  *  @return         継続可能な場合は 0、異常時は 0 以外を返します。
  *
- *  昇格プロセスの標準出力と標準エラー出力は無名パイプで受け取り、本プロセスの
+ *  昇格プロセスの標準出力と標準エラー出力は名前付きパイプで受け取り、本プロセスの
  *  標準出力と標準エラー出力へそのまま書き込みます。
  */
 static int ensure_elevated(const char *command, int *handled)
@@ -63,12 +63,18 @@ static int ensure_elevated(const char *command, int *handled)
     if (ret != 0)
     {
         /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
-        (void)fprintf(stderr, "管理者権限への昇格に失敗しました。\n");
+        (void)fprintf(stderr, "管理者権限での実行に失敗しました。\n");
         return -1;
     }
 
     if (*handled != 0 && exit_code != 0)
     {
+        /*
+         * 昇格プロセスの診断は、出力の接続に失敗すると届かない。
+         * 利用者に失敗が必ず見えるよう、終了コードを呼び出し元の側で表示する。
+         * 診断の出力先がほかにないため、戻り値は明示的に破棄する。
+         */
+        (void)fprintf(stderr, "昇格したプロセスが失敗しました (終了コード: %d)。\n", exit_code);
         return -1;
     }
 
@@ -135,9 +141,9 @@ static int do_install(void)
     int handled = 0;
     int rc;
     int ret;
-    char module_path[PLATFORM_PATH_MAX];
-    char directory[PLATFORM_PATH_MAX];
-    char message_file[PLATFORM_PATH_MAX];
+    char module_path[PLATFORM_PATH_UTF8_MAX];
+    char directory[PLATFORM_PATH_UTF8_MAX];
+    char message_file[PLATFORM_PATH_UTF8_MAX];
     wchar_t wpath[PLATFORM_PATH_MAX];
     HMODULE resources;
     HRSRC table;

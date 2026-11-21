@@ -334,6 +334,9 @@ TEST_F(promptCoverageTest, readline_fmt_handles_null_error_and_growth)
     // Act
     promptFakeSetInput("a\n");
     int actual_ret_error = cplat_prompt_readline_fmt_at(prompt_, buf, sizeof(buf), "format.c", 1, "%s", "x");
+    EXPECT_STREQ(
+        "",
+        prompt_->prompt_fmt_buf); // [状態確認] - 書式エラーの直後の prompt_->prompt_fmt_buf が空文字列 "" であること。
     promptFakeSetInput("b\n");
     int actual_ret_null = cplat_prompt_readline_fmt_at(prompt_, buf, sizeof(buf), "format.c", 2, nullptr);
     promptFakeSetInput("c\n");

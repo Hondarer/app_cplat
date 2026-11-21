@@ -76,7 +76,12 @@ int test_tracer_to_syslog_level(const cplat_trace_level level)
 {
     return to_syslog_level(level);
 }
-#endif /* PLATFORM_LINUX */
+#elif defined(PLATFORM_WINDOWS)
+int test_tracer_to_eventlog_level(const cplat_trace_level level)
+{
+    return to_eventlog_level(level);
+}
+#endif /* PLATFORM_ */
 
 size_t test_tracer_utf8_safe_truncate(const char *text, const size_t position)
 {

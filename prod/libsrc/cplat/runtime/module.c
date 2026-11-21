@@ -13,7 +13,8 @@
  *  @note           - 「絶対パス」は OS/ローダーの情報とファイル システム状態に依存します。
  *                    Linux でロード後にファイルが移動/削除される等により realpath()
  *                    が失敗する場合、可能な範囲で絶対化した文字列を返します。
- *                  - Windows は基本的に完全なパスが得られますが、古い環境では MAX_PATH 制約が残る場合があります。
+ *                  - Windows はヒープ領域を使用して OS の拡張パス上限 (32767 文字) までのパスを取得できます。
+ *                    パスに `\\?\` が含まれる場合も区切り文字は `'/'` へ正規化されます。
  *
  *  @copyright      Copyright (C) Tetsuo Honda. 2026. All rights reserved.
  *
@@ -24,18 +25,45 @@
 #include <cplat/runtime/module.h>
 #include <cplat/crt/wchar_conv.h>
 #include <cplat/crt/path.h>
+#include <cplat/crt/stdlib.h>
 #include <cplat/crt/string.h>
 #include <errno.h>
+#include <limits.h>
 #if defined(PLATFORM_LINUX)
     #include <dlfcn.h>
     #include <stddef.h>
     #include <stdint.h>
     #include <string.h>
 #elif defined(PLATFORM_WINDOWS)
+    #include <assert.h>
     #include <stddef.h>
     #include <stdint.h>
     #include <string.h>
+
+/*
+ * Windows の拡張パス (\\?\ 接頭辞) の最大長 32767 文字と終端 NUL を合わせた文字数 [wchar_t]。
+ * GetModuleFileNameW() の nSize 引数と同じ DWORD 型に合わせて符号なしとし、上限確認に使用する。
+ * see: https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
+ */
+    #define MODULE_WIN32_EXTENDED_PATH_CAP 32768U
+
+static_assert(MODULE_WIN32_EXTENDED_PATH_CAP == 32767U + 1U, "extended path capacity must include NUL");
+static_assert(MODULE_WIN32_EXTENDED_PATH_CAP <= (size_t)INT_MAX, "must fit in int for WideCharToMultiByte");
 #endif /* PLATFORM_ */
+
+/*
+ * cplat_module_get_basename() がモジュールのパス全体を受け取る作業領域の上限 [byte] (終端 NUL を含む)。
+ * Windows は、拡張パスの上限の文字数を UTF-8 へ変換した場合の最大とする。
+ * UTF-16 の 1 単位は、UTF-8 で最大 3 [byte] になる (サロゲート ペアは 2 単位で 4 [byte])。
+ * Linux の cplat_path_get_full() は PATH_MAX を超えるパスを扱わないため、作業領域を広げても結果は変わらない。
+ */
+#if defined(PLATFORM_LINUX)
+    #define MODULE_PATH_UTF8_CAP_MAX PLATFORM_PATH_UTF8_MAX
+#elif defined(PLATFORM_WINDOWS)
+    #define MODULE_PATH_UTF8_CAP_MAX (MODULE_WIN32_EXTENDED_PATH_CAP * 3U)
+#endif /* PLATFORM_ */
+
+static_assert(MODULE_PATH_UTF8_CAP_MAX >= PLATFORM_PATH_UTF8_MAX, "work area limit must cover the initial size");
 
 /**
  *  @brief          共有ライブラリ特有の拡張子 (Linux の .so 系) の切り出し位置を求めます。
@@ -87,7 +115,8 @@ static const char *find_shared_lib_extension_cut(const char *s)
  *  @param[out]     path_out    出力 (UTF-8、NULL 終端)。
  *  @param[in]      path_size   出力バッファーのサイズ [byte]。
  *  @param[in]      func_addr   所属モジュールを特定するための関数アドレス。
- *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、@ref CPLAT_ERR_UNKNOWN のいずれか。
+ *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
+ *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれか。
  */
 static int get_self_path_posix(char *path_out, size_t path_size, const void *func_addr)
 {
@@ -123,6 +152,10 @@ static int get_self_path_posix(char *path_out, size_t path_size, const void *fun
     {
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
+    else if (cplat_error_is(&err, CPLAT_CAUSE_OUT_OF_MEMORY))
+    {
+        return CPLAT_ERR_OUT_OF_MEMORY;
+    }
     else
     {
         return CPLAT_ERR_UNKNOWN;
@@ -132,23 +165,25 @@ static int get_self_path_posix(char *path_out, size_t path_size, const void *fun
 #elif defined(PLATFORM_WINDOWS)
 
 /**
- *  @brief          DLL 自身の絶対パス (ワイド文字列) を取得します。
+ *  @brief          DLL 自身のワイド文字列パスをヒープへ取得します。
  *
- *  @param[out]     wpath_out   出力 (UTF-16、NULL 終端)。
- *  @param[in]      wpath_size  出力バッファーのサイズ (wchar_t 個数)。
  *  @param[in]      func_addr   所属モジュールを特定するための関数アドレス。
- *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、@ref CPLAT_ERR_UNKNOWN のいずれか。
+ *  @param[out]     wpath_out   ヒープ確保した UTF-16 パスの格納先。呼び出し元が cplat_free() で解放すること。
+ *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、
+ *                  @ref CPLAT_ERR_UNKNOWN のいずれか。
  */
-static int get_self_path_w(wchar_t *wpath_out, size_t wpath_size, const void *func_addr)
+static int get_self_path_w_alloc(const void *func_addr, wchar_t **wpath_out)
 {
     HMODULE hm = NULL;
-    wchar_t buf[PLATFORM_PATH_MAX];
+    wchar_t *wbuf;
     DWORD n;
 
-    if (wpath_out == NULL || wpath_size == 0 || func_addr == NULL)
+    if (wpath_out == NULL || func_addr == NULL)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
+
+    *wpath_out = NULL;
 
     if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                             (LPCWSTR)func_addr, &hm))
@@ -156,21 +191,22 @@ static int get_self_path_w(wchar_t *wpath_out, size_t wpath_size, const void *fu
         return CPLAT_ERR_UNKNOWN;
     }
 
-    /* 本関数はワイド文字列を出力するため、UTF-8 を返す GetModuleFileNameU() は使えない。 */
-    n = GetModuleFileNameW(hm, buf, (DWORD)(sizeof(buf) / sizeof(buf[0])));
-    if (n == 0 || n >= (DWORD)(sizeof(buf) / sizeof(buf[0])))
+    wbuf = (wchar_t *)cplat_malloc((size_t)MODULE_WIN32_EXTENDED_PATH_CAP * sizeof(wchar_t));
+    if (wbuf == NULL)
     {
+        return CPLAT_ERR_OUT_OF_MEMORY;
+    }
+
+    /* 本関数はワイド文字列を出力するため、UTF-8 を返す GetModuleFileNameU() は使えない。 */
+    n = GetModuleFileNameW(hm, wbuf, (DWORD)MODULE_WIN32_EXTENDED_PATH_CAP);
+    if (n == 0U || n >= (DWORD)MODULE_WIN32_EXTENDED_PATH_CAP)
+    {
+        cplat_free(wbuf);
         return CPLAT_ERR_UNKNOWN;
     }
 
-    buf[n] = L'\0';
-    if ((wcslen(buf) + 1) > wpath_size)
-    {
-        return CPLAT_ERR_BUFFER_TOO_SMALL;
-    }
-
-    /* 直前の検査で出力先バッファーの容量不足を除外済みで、複写は失敗しないため、戻り値は明示的に破棄する。 */
-    (void)cplat_wcscpy(wpath_out, wpath_size, buf);
+    wbuf[n] = L'\0';
+    *wpath_out = wbuf;
 
     return CPLAT_OK;
 }
@@ -241,47 +277,74 @@ int cplat_module_get_path(char *path_out, const size_t path_size, const void *fu
 #if defined(PLATFORM_LINUX)
     return get_self_path_posix(path_out, path_size, func_addr);
 #elif defined(PLATFORM_WINDOWS)
-    wchar_t wpath[PLATFORM_PATH_MAX];
-    char utf8_path[PLATFORM_PATH_MAX];
-    cplat_error err;
-    int st = get_self_path_w(wpath, (size_t)(sizeof(wpath) / sizeof(wpath[0])), func_addr);
+    wchar_t *wpath = NULL;
+    wchar_t *wfull = NULL;
+    DWORD full_cap;
+    DWORD full_len;
+    int needed_utf8;
+    int st;
+
+    st = get_self_path_w_alloc(func_addr, &wpath);
     if (st != CPLAT_OK)
     {
-        if ((path_out != NULL) && (path_size != 0U))
-        {
-            path_out[0] = '\0';
-        }
-
+        path_out[0] = '\0';
         return st;
     }
 
-    if (cplat_wpath_to_utf8(utf8_path, sizeof(utf8_path), wpath) < 0)
+    /* 拡張パス長に対応するため、cplat_path_get_full() は経由せず GetFullPathNameW() で必要文字数を照会する。 */
+    full_cap = GetFullPathNameW(wpath, 0U, NULL, NULL);
+    if (full_cap == 0U)
     {
-        if ((path_out != NULL) && (path_size != 0U))
-        {
-            path_out[0] = '\0';
-        }
+        cplat_free(wpath);
+        path_out[0] = '\0';
+        return CPLAT_ERR_UNKNOWN;
+    }
 
+    wfull = (wchar_t *)cplat_malloc((size_t)full_cap * sizeof(wchar_t));
+    if (wfull == NULL)
+    {
+        cplat_free(wpath);
+        path_out[0] = '\0';
+        return CPLAT_ERR_OUT_OF_MEMORY;
+    }
+
+    full_len = GetFullPathNameW(wpath, full_cap, wfull, NULL);
+    cplat_free(wpath);
+    if (full_len == 0U || full_len >= full_cap)
+    {
+        cplat_free(wfull);
+        path_out[0] = '\0';
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    /*
+     * 出力先を NULL、サイズを 0 にして必要な UTF-8 バイト数 (終端 NUL 含む) を求め、
+     * 呼び出し元の出力バッファー不足だけを CPLAT_ERR_BUFFER_TOO_SMALL として区別する。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
+     */
+    needed_utf8 = WideCharToMultiByte(CP_UTF8, 0, wfull, -1, NULL, 0, NULL, NULL);
+    if (needed_utf8 <= 0)
+    {
+        cplat_free(wfull);
+        path_out[0] = '\0';
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    if ((size_t)needed_utf8 > path_size)
+    {
+        cplat_free(wfull);
+        path_out[0] = '\0';
         return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
 
-    if (cplat_path_get_full(path_out, path_size, &err, utf8_path) != CPLAT_OK)
+    if (cplat_wpath_to_utf8(path_out, path_size, wfull) < 0)
     {
-        if ((path_out != NULL) && (path_size != 0U))
-        {
-            path_out[0] = '\0';
-        }
-
-        if (cplat_error_is(&err, CPLAT_CAUSE_NAME_TOO_LONG))
-        {
-            return CPLAT_ERR_BUFFER_TOO_SMALL;
-        }
-        else
-        {
-            return CPLAT_ERR_UNKNOWN;
-        }
+        cplat_free(wfull);
+        path_out[0] = '\0';
+        return CPLAT_ERR_UNKNOWN;
     }
 
+    cplat_free(wfull);
     return CPLAT_OK;
 #endif /* PLATFORM_ */
 }
@@ -291,19 +354,52 @@ int cplat_module_get_path(char *path_out, const size_t path_size, const void *fu
 int cplat_module_get_basename(char *basename_out, const size_t basename_size, const void *func_addr)
 {
     int st;
-    char path_buf[4096];
+    size_t path_cap;
+    char *path_buf;
 
     if (basename_out == NULL || basename_size == 0)
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    st = cplat_module_get_path(path_buf, sizeof(path_buf), func_addr);
-    if (st != CPLAT_OK)
+    path_cap = (size_t)PLATFORM_PATH_UTF8_MAX;
+    for (;;)
     {
-        basename_out[0] = '\0';
+        path_buf = (char *)cplat_malloc(path_cap);
+        if (path_buf == NULL)
+        {
+            basename_out[0] = '\0';
+            return CPLAT_ERR_OUT_OF_MEMORY;
+        }
+
+        st = cplat_module_get_path(path_buf, path_cap, func_addr);
+        if (st == CPLAT_ERR_BUFFER_TOO_SMALL && path_cap < (size_t)MODULE_PATH_UTF8_CAP_MAX)
+        {
+            /*
+             * 作業領域が足りないため、広げて取得し直す。
+             * 上限に達した後の失敗は、広げても解消しないため、そのまま返す。
+             */
+            cplat_free(path_buf);
+            if (path_cap > (size_t)MODULE_PATH_UTF8_CAP_MAX / 2U)
+            {
+                path_cap = (size_t)MODULE_PATH_UTF8_CAP_MAX;
+            }
+            else
+            {
+                path_cap *= 2U;
+            }
+            continue;
+        }
+
+        if (st != CPLAT_OK)
+        {
+            cplat_free(path_buf);
+            basename_out[0] = '\0';
+            return st;
+        }
+
+        st = get_basename_from_path(basename_out, basename_size, path_buf);
+        cplat_free(path_buf);
         return st;
     }
-
-    return get_basename_from_path(basename_out, basename_size, path_buf);
 }

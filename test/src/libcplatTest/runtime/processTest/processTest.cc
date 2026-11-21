@@ -937,6 +937,131 @@ TEST(processTest, ExecutablePathReportsSmallBuffer)
         path[0]); // [確認_異常系] - path[0] が '\0' であること。(バッファー不足時に出力先が空文字列であることの確認)
 }
 
+#if defined(PLATFORM_WINDOWS)
+// 260 バイト超の非 ASCII 実行ファイル パスを取得できることの確認 (Windows)
+TEST(processTest, ExecutablePathReturnsNonAsciiPathOver260Bytes)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    std::wstring wpath = L"C:\\";
+    std::string expected = "C:/";
+    for (int i = 0; i < 100; ++i)
+    {
+        wpath += L"\u3042";
+        expected += "\xE3\x81\x82";
+    }
+    wpath += L".exe";
+    expected += ".exe";
+    char path[PLATFORM_PATH_UTF8_MAX] = {}; // [状態] - 300 バイト超の非 ASCII パスを収容するバッファーを用意する。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetModuleFileNameW(_, _, _, static_cast<HMODULE>(nullptr), _, _))
+        .WillOnce(
+            [wpath](const char *, int, const char *, HMODULE, LPWSTR filename, DWORD size) -> DWORD
+            {
+                (void)size;
+                memcpy(filename, wpath.c_str(), (wpath.size() + 1U) * sizeof(wchar_t));
+                return static_cast<DWORD>(wpath.size());
+            }); // [Pre-Assert確認_正常系] - GetModuleFileNameW() が nullptr を指定して 1 回呼び出されること。
+                // [Pre-Assert手順] - GetModuleFileNameW() から 260 バイト超の非 ASCII パスを返す。
+
+    // Act
+    int actual_ret = cplat_process_get_executable_path(
+        path,
+        sizeof(
+            path)); // [手順] - PLATFORM_PATH_UTF8_MAX の出力先を指定して cplat_process_get_executable_path() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret); // [確認_正常系] - cplat_process_get_executable_path() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(expected.c_str(), path); // [確認_正常系] - path が期待する UTF-8 パスと一致すること。
+}
+
+// MAX_PATH を超える長い実行ファイル パスを取得できることの確認 (Windows)
+TEST(processTest, ExecutablePathReturnsPathOverMaxPath)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    std::wstring wpath = L"\\\\?\\C:\\" + std::wstring(300u, L'a') + L".exe";
+    std::string expected = "//?/C:/" + std::string(300u, 'a') + ".exe";
+    char path[1024] = {}; // [状態] - 300 文字超の長いパスを収容する 1024 バイトの出力先を用意する。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetModuleFileNameW(_, _, _, static_cast<HMODULE>(nullptr), _, _))
+        .WillOnce(
+            [wpath](const char *, int, const char *, HMODULE, LPWSTR filename, DWORD size) -> DWORD
+            {
+                (void)size;
+                memcpy(filename, wpath.c_str(), (wpath.size() + 1U) * sizeof(wchar_t));
+                return static_cast<DWORD>(wpath.size());
+            }); // [Pre-Assert確認_正常系] - GetModuleFileNameW() が nullptr を指定して 1 回呼び出されること。
+                // [Pre-Assert手順] - GetModuleFileNameW() から \\?\ 付きの 300 文字超パスを返す。
+
+    // Act
+    int actual_ret = cplat_process_get_executable_path(
+        path, sizeof(path)); // [手順] - 1024 バイトの出力先を指定して cplat_process_get_executable_path() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret); // [確認_正常系] - cplat_process_get_executable_path() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(expected.c_str(), path); // [確認_正常系] - path が正規化済みパスと一致すること。
+}
+
+// 長いパスに対し呼び出し元の出力先が不足する場合に BUFFER_TOO_SMALL が返ることの確認 (Windows)
+TEST(processTest, ExecutablePathReturnsBufferTooSmallForCallerBufferWindows)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    std::wstring wpath = L"\\\\?\\C:\\" + std::wstring(300u, L'a') + L".exe";
+    char path[64] = {'x'}; // [状態] - 300 文字超のパスが収まらない 64 バイトの出力先を用意する。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetModuleFileNameW(_, _, _, static_cast<HMODULE>(nullptr), _, _))
+        .WillOnce(
+            [wpath](const char *, int, const char *, HMODULE, LPWSTR filename, DWORD size) -> DWORD
+            {
+                (void)size;
+                memcpy(filename, wpath.c_str(), (wpath.size() + 1U) * sizeof(wchar_t));
+                return static_cast<DWORD>(wpath.size());
+            }); // [Pre-Assert確認_異常系] - GetModuleFileNameW() が nullptr を指定して 1 回呼び出されること。
+                // [Pre-Assert手順] - GetModuleFileNameW() から 300 文字超のパスを返す。
+
+    // Act
+    int actual_ret = cplat_process_get_executable_path(
+        path, sizeof(path)); // [手順] - 容量不足の出力先を指定して cplat_process_get_executable_path() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_BUFFER_TOO_SMALL,
+        actual_ret); // [確認_異常系] - cplat_process_get_executable_path() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_EQ('\0', path[0]); // [確認_異常系] - path[0] が '\0' であること。
+}
+
+// 中間バッファーの確保失敗時に OUT_OF_MEMORY を返すことの確認 (Windows)
+TEST(processTest, ExecutablePathReportsOutOfMemory)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    char path[PLATFORM_PATH_UTF8_MAX] = {'x'};
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_malloc(_))
+        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_malloc() が 1 回呼び出されること。
+                                    // [Pre-Assert手順] - cplat_malloc() から nullptr を返す。
+
+    // Act
+    int actual_ret = cplat_process_get_executable_path(
+        path,
+        sizeof(path)); // [手順] - cplat_malloc() が失敗する状態で cplat_process_get_executable_path() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_OUT_OF_MEMORY,
+        actual_ret); // [確認_異常系] - cplat_process_get_executable_path() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+    EXPECT_EQ('\0', path[0]); // [確認_異常系] - path[0] が '\0' であること。
+}
+#endif /* PLATFORM_WINDOWS */
+
 #if defined(PLATFORM_LINUX)
 // mock 化した getpid() の戻り値が cplat_process_get_pid へそのまま伝播することの確認
 TEST(processTest, GetsPidPropagatesMockedGetpid)
