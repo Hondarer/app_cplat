@@ -884,20 +884,21 @@ int cplat_internal_error_report_gai_error(cplat_error *detail_out, const int err
     {
         const cplat_error_cause cause = error_cause_from_gai_error(error_code);
 
-        switch (cause)
+        if (cause == CPLAT_CAUSE_NOT_FOUND)
         {
-        case CPLAT_CAUSE_NOT_FOUND:
             result = CPLAT_ERR_NOT_FOUND;
-            break;
-        case CPLAT_CAUSE_BUSY:
+        }
+        else if (cause == CPLAT_CAUSE_BUSY)
+        {
             result = CPLAT_ERR_BUSY;
-            break;
-        case CPLAT_CAUSE_OUT_OF_MEMORY:
+        }
+        else if (cause == CPLAT_CAUSE_OUT_OF_MEMORY)
+        {
             result = CPLAT_ERR_OUT_OF_MEMORY;
-            break;
-        default:
+        }
+        else
+        {
             result = CPLAT_ERR_UNKNOWN;
-            break;
         }
     }
 

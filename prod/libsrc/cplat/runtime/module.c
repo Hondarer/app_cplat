@@ -27,6 +27,7 @@
 #include <cplat/crt/path.h>
 #include <cplat/crt/stdlib.h>
 #include <cplat/crt/string.h>
+#include <assert.h>
 #include <errno.h>
 #include <limits.h>
 #if defined(PLATFORM_LINUX)
@@ -35,7 +36,6 @@
     #include <stdint.h>
     #include <string.h>
 #elif defined(PLATFORM_WINDOWS)
-    #include <assert.h>
     #include <stddef.h>
     #include <stdint.h>
     #include <string.h>
