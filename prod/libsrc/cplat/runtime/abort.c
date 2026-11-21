@@ -16,8 +16,17 @@
 #include <cplat/sync/atomic.h>
 #include <cplat/sync/sync.h>
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+/*
+ * 別のスレッドが異常終了を処理中のときに、待機するスレッドが起床する間隔 [ms]。
+ * 制約: 1 以上かつ int の範囲とすること。変更時は待機中のスレッドの起床頻度だけが変わり、終了の時刻に影響しない。
+ */
+#define ABORT_WAIT_INTERVAL_MS 1000
+
+static_assert(ABORT_WAIT_INTERVAL_MS > 0, "abort wait interval must be positive");
 
 typedef struct abort_callback_entry
 {
@@ -121,10 +130,15 @@ void cplat_abort_at(const cplat_abort_kind kind, const char *message, const char
 
     if (cplat_atomic_exchange_i32(&s_abort_started, 1, CPLAT_MEMORY_ORDER_ACQ_REL) != 0)
     {
-        /* 別のスレッドが異常終了の処理中。そのスレッドの abort() でプロセスが終了するまで待つ。 */
+        /*
+         * 別のスレッドが異常終了の処理中。プロセスは、処理中のスレッドの abort() で終了する。
+         * ABORT_WAIT_INTERVAL_MS は待機するスレッドの起床の頻度だけを決め、終了の時刻に影響しない。
+         * see: https://man7.org/linux/man-pages/man3/abort.3.html
+         * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/abort
+         */
         for (;;)
         {
-            cplat_sleep_ms(1000);
+            cplat_sleep_ms(ABORT_WAIT_INTERVAL_MS);
         }
     }
 

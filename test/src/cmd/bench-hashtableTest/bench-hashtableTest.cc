@@ -119,7 +119,7 @@ TEST_F(bench_hashtableTest, main_returns_failure_when_help_stream_has_error)
 TEST_F(bench_hashtableTest, main_returns_failure_when_final_flush_fails)
 {
     // Arrange
-    const char *argv[] = {"bench-hashtable", "--max-capacity", "1"};
+    const char *argv[] = {"bench-hashtable", "--max-capacity", "256"};
     const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
 
     // Pre-Assert
@@ -141,7 +141,7 @@ TEST_F(bench_hashtableTest, main_returns_failure_when_final_flush_fails)
 TEST_F(bench_hashtableTest, main_returns_failure_when_final_stream_has_error)
 {
     // Arrange
-    const char *argv[] = {"bench-hashtable", "--max-capacity", "1"};
+    const char *argv[] = {"bench-hashtable", "--max-capacity", "256"};
     const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
 
     // Pre-Assert
@@ -164,7 +164,7 @@ TEST_F(bench_hashtableTest, main_returns_failure_when_csv_stream_has_error)
 {
     // Arrange
     std::string csv_path = temp_dir() + "/bench-hashtableTest.csv"; // [状態] - 一時ディレクトリに CSV の出力先を用意する。
-    const char *argv[] = {"bench-hashtable", "--max-capacity", "1", "--csv", csv_path.c_str()};
+    const char *argv[] = {"bench-hashtable", "--max-capacity", "256", "--csv", csv_path.c_str()};
     const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
 
     // Pre-Assert
@@ -192,7 +192,7 @@ TEST_F(bench_hashtableTest, main_returns_failure_when_csv_close_fails)
 {
     // Arrange
     std::string csv_path = temp_dir() + "/bench-hashtableTest.csv"; // [状態] - 一時ディレクトリに CSV の出力先を用意する。
-    const char *argv[] = {"bench-hashtable", "--max-capacity", "1", "--csv", csv_path.c_str()};
+    const char *argv[] = {"bench-hashtable", "--max-capacity", "256", "--csv", csv_path.c_str()};
     const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
 
     // Pre-Assert
@@ -208,4 +208,69 @@ TEST_F(bench_hashtableTest, main_returns_failure_when_csv_close_fails)
 
     // Cleanup
     (void)std::remove(csv_path.c_str());
+}
+
+// --max-capacity に 256 未満 (255) を指定した場合に EXIT_FAILURE を返し CSV を作らないことの確認
+TEST_F(bench_hashtableTest, main_returns_failure_when_max_capacity_is_below_minimum)
+{
+    // Arrange
+    std::string csv_path = temp_dir() + "/bench-hashtableTest-below-min.csv"; // [状態] - 作成されないことを確かめる CSV パスを用意する。
+    const char *argv[] = {"bench-hashtable", "--max-capacity", "255", "--csv", csv_path.c_str()};
+    const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
+    (void)std::remove(csv_path.c_str());
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_fopen(_, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - CSV ファイルを開くための cplat_fopen() が呼び出されないこと。
+
+    // Act
+    testing::internal::CaptureStderr();
+    int rc = __real_main(argc, (char **)&argv); // [手順] - --max-capacity 255 と --csv を指定して __real_main() を呼び出す。
+    std::string errors = testing::internal::GetCapturedStderr();
+
+    // Assert
+    EXPECT_EQ(EXIT_FAILURE, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_FAILURE であること。
+    EXPECT_THAT(errors, HasSubstr("max capacity must be at least 256.")); // [確認_異常系] - 標準エラー出力に最小値の診断が出ること。
+
+    // Cleanup
+    (void)std::remove(csv_path.c_str());
+}
+
+// --max-capacity に 0 を指定した場合に EXIT_FAILURE を返し診断を出すことの確認
+TEST_F(bench_hashtableTest, main_returns_failure_when_max_capacity_is_zero)
+{
+    // Arrange
+    const char *argv[] = {"bench-hashtable", "--max-capacity", "0"};
+    const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
+
+    // Pre-Assert
+
+    // Act
+    testing::internal::CaptureStderr();
+    int rc = __real_main(argc, (char **)&argv); // [手順] - --max-capacity 0 を指定して __real_main() を呼び出す。
+    std::string errors = testing::internal::GetCapturedStderr();
+
+    // Assert
+    EXPECT_EQ(EXIT_FAILURE, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_FAILURE であること。
+    EXPECT_THAT(errors, HasSubstr("max capacity must be at least 256.")); // [確認_異常系] - 標準エラー出力に最小値の診断が出ること。
+}
+
+// --help の出力に既定値 16384 と最小値 256 が含まれることの確認
+TEST_F(bench_hashtableTest, main_help_shows_default_and_minimum_capacity)
+{
+    // Arrange
+    const char *argv[] = {"bench-hashtable", "--help"};
+    const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
+
+    // Pre-Assert
+
+    // Act
+    testing::internal::CaptureStdout();
+    int rc = __real_main(argc, (char **)&argv); // [手順] - --help を指定して __real_main() を呼び出す。
+    std::string output = testing::internal::GetCapturedStdout();
+
+    // Assert
+    EXPECT_EQ(EXIT_SUCCESS, rc); // [確認_正常系] - __real_main() の戻り値が EXIT_SUCCESS であること。
+    EXPECT_THAT(output, HasSubstr("default 16384")); // [確認_正常系] - ヘルプ出力に "default 16384" が含まれること。
+    EXPECT_THAT(output, HasSubstr("minimum 256"));   // [確認_正常系] - ヘルプ出力に "minimum 256" が含まれること。
 }

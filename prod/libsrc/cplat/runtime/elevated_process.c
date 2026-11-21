@@ -117,7 +117,8 @@ static_assert(CPLAT_ELEVATED_PIPE_NAME_CAP <= CPLAT_ELEVATED_PIPE_NAME_API_MAX_C
  *  Windows のサービス プロセスはセッション 0 に隔離され、UAC (User Account Control)
  *  ダイアログを表示できる対話デスクトップを持ちません。セッション 0 で未昇格のまま
  *  `ShellExecuteExW` の `runas` verb を呼び出すと、対話デスクトップが無いために
- *  昇格が失敗または応答不能になるおそれがあるため、事前にセッション ID で判定します。
+ *  昇格が失敗または応答不能になるおそれがあるため、事前にセッション ID で判定します。\n
+ *  判定は、セッション ID が 0 かどうかだけで行います。
  *  see: https://learn.microsoft.com/windows/win32/services/interactive-services
  *
  *  @return         対話セッションの場合は非 0、非対話セッション (セッション 0) の場合は 0、
@@ -935,8 +936,8 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code_o
         }
 
         /*
-         * セッション 0 (非対話セッション) では UAC ダイアログを表示できないため、
-         * 昇格を試みず即座に失敗させる。
+         * セッション 0 にはユーザーが操作できるデスクトップがないため、
+         * 昇格を試みない。
          */
         if (is_current_session_interactive() == 0)
         {
@@ -1239,8 +1240,8 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         }
 
         /*
-         * セッション 0 (非対話セッション) では UAC ダイアログを表示できないため、
-         * 昇格を試みず即座に失敗させる。
+         * セッション 0 にはユーザーが操作できるデスクトップがないため、
+         * 昇格を試みない。
          */
         if (is_current_session_interactive() == 0)
         {
@@ -1605,8 +1606,8 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
         }
 
         /*
-         * セッション 0 (非対話セッション) では UAC ダイアログを表示できないため、
-         * 昇格を試みず即座に失敗させる。
+         * セッション 0 にはユーザーが操作できるデスクトップがないため、
+         * 昇格を試みない。
          */
         if (is_current_session_interactive() == 0)
         {

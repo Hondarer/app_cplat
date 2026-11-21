@@ -62,6 +62,11 @@ int cplat_ipv4_resolve(const char *text, uint32_t *address_out, cplat_error *det
     }
 
     hints.ai_family = AF_INET;
+    /*
+     * ソケット種別を 1 つに絞る。0 を指定すると、同じサービスが複数のソケット種別で提供される場合に、
+     * 種別ごとに結果が返る。
+     * see: https://man7.org/linux/man-pages/man3/getaddrinfo.3.html
+     */
     hints.ai_socktype = SOCK_DGRAM;
 
     /*

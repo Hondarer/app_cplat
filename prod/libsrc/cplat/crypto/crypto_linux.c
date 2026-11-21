@@ -294,6 +294,11 @@ int cplat_passphrase_to_key(uint8_t *key_out, const uint8_t *passphrase, const s
         }
         else
         {
+            /*
+             * OpenSSL の資料は、長さ 0 のときのポインターの扱いを定めていないため、
+             * EVP_DigestUpdate() へ NULL を渡さない。
+             * see: https://docs.openssl.org/master/man3/EVP_DigestInit/
+             */
             pass_data = (const uint8_t *)"";
         }
 

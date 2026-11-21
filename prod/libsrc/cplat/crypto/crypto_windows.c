@@ -304,6 +304,11 @@ int cplat_passphrase_to_key(uint8_t *key_out, const uint8_t *passphrase, const s
     }
     else
     {
+        /*
+         * Microsoft の資料と bcrypt.h の注釈は、BCryptHashData() の pbInput を省略可能としていないため、
+         * NULL を渡さない。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcrypthashdata
+         */
         data = empty;
         data_len = 0UL;
     }

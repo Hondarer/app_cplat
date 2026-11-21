@@ -36,7 +36,9 @@ typedef struct stdio_state
  *  @param[in]      record  対象のレコード。NULL を渡してはなりません。
  *  @return         集計値。
  *
- *  読み取った内容が最適化で除去されないよう、呼び出し側で加算して保持します。
+ *  読み取った内容が最適化で除去されないよう、呼び出し側で加算して保持します。\n
+ *  集計値は出力も比較もしません。\n
+ *  value_a と value_b は bench_fill_record() が設定する 0 から 65535 の値で、符号の扱いは結果に影響しません。
  */
 static uint64_t accumulate(const bench_record *record)
 {

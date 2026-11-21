@@ -27,6 +27,7 @@
     #include <cplat/runtime/process.h>
     #include <cplat/sync/sync.h>
     #include <cplat/trace/eventlog.h>
+    #include <assert.h>
     #include <inttypes.h>
     #include <stdio.h>
     #include <stdlib.h>
@@ -53,6 +54,15 @@
  *  EventLog に渡す置換文字列数。
  */
     #define EVENTLOG_STRING_COUNT 5
+
+/*
+ * int64_t の識別子を 10 進文字列へ書式化する作業配列の大きさ [byte] (終端 NUL を含む)。
+ * int64_t の 10 進表記は符号を含めて最大 20 文字であり、終端 NUL を含めて最小 21 [byte] を要する。
+ * 制約: 21 以上とすること。変更時は作業配列のスタック消費量だけが変わる。
+ */
+    #define EVENTLOG_IDENTIFIER_TEXT_SIZE 32U
+
+static_assert(EVENTLOG_IDENTIFIER_TEXT_SIZE >= 21U, "identifier text buffer must fit int64_t and NUL");
 
 /**
  *  @brief  EventLog シンク ハンドル構造体 (内部定義) です。
@@ -406,8 +416,8 @@ int cplat_eventlog_sink_write(cplat_eventlog_sink *handle, const int level, cons
     wchar_t *winstance;
     wchar_t *winstance_id;
     LPCWSTR strings[EVENTLOG_STRING_COUNT];
-    char file_id[32];
-    char instance_id[32];
+    char file_id[EVENTLOG_IDENTIFIER_TEXT_SIZE];
+    char instance_id[EVENTLOG_IDENTIFIER_TEXT_SIZE];
     int has_file_identifier;
     int has_instance_identifier;
     BOOL ok;

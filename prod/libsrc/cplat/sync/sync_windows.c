@@ -20,6 +20,12 @@
     #include <cplat/sync/sync_descriptor.h>
     #include <cplat/win32/win32.h>
 
+    /*
+     * ロックするバイト範囲の長さ (下位 32 bit と上位 32 bit)。全参加者が、先頭から 1 [byte] の同じ範囲を指定する。
+     * ロック ファイルは空のままで、終端を超える範囲のロックは許される。
+     * 長さ 0 の扱いは資料に記載がないため、1 [byte] とする。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-lockfileex
+     */
     #define INTERPROCESS_SYNC_RANGE_LOW  1U
     #define INTERPROCESS_SYNC_RANGE_HIGH 0U
 

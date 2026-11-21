@@ -132,7 +132,15 @@ static void collect_cpu_model(bench_environment *env)
 
             if (separator != NULL)
             {
-                copy_text(env->cpu_model, sizeof(env->cpu_model), separator + 1);
+                const char *model = separator + 1;
+
+                /* /proc/cpuinfo の行は "model name<TAB>: 値" の形であり、コロンと値の間の空白とタブを値に含めない。 */
+                while (*model == ' ' || *model == '\t')
+                {
+                    model++;
+                }
+
+                copy_text(env->cpu_model, sizeof(env->cpu_model), model);
                 trim_trailing(env->cpu_model);
             }
 

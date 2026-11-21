@@ -450,6 +450,65 @@ TEST_F(clockTest, format_realtime_iso8601_local_supports_negative_offset)
                  actual); // [確認_正常系] - actual が "2024-04-05T00:37:08.135-05:30" であること。
 }
 
+// UTC との差が分の倍数でない場合に分未満を 0 方向へ切り捨てることの確認
+TEST_F(clockTest, format_realtime_iso8601_local_truncates_sub_minute_offset_toward_zero)
+{
+    // Arrange
+    const cplat_timespec timestamp = {1712297228LL,
+                                      123000000LL}; // [状態] - 変換対象を {1712297228, 123000000} とする。
+    char actual_neg[CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1];
+    char actual_pos[CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1];
+    struct tm local_neg_tm;
+    struct tm local_pos_tm;
+    struct tm utc_tm;
+    NiceMock<Mock_cplat> mock_cplat;
+
+    set_tm(&utc_tm, 2024, 4, 5, 6, 7, 8);         // [状態] - UTC を 2024-04-05 06:07:08 とする。
+    set_tm(&local_neg_tm, 2024, 4, 5, 1, 39, 24); // [状態] - 負の時差 -04:27:44 のローカル時刻を用意する。
+    set_tm(&local_pos_tm, 2024, 4, 5, 6, 26, 40); // [状態] - 正の時差 +00:19:32 のローカル時刻を用意する。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_localtime(_, _))
+        .WillOnce(
+            [&](struct tm *tm_value, const time_t *)
+            {
+                *tm_value = local_neg_tm;
+                return 0;
+            })
+        .WillOnce(
+            [&](struct tm *tm_value, const time_t *)
+            {
+                *tm_value = local_pos_tm;
+                return 0;
+            }); // [Pre-Assert確認_正常系] - cplat_localtime() が 2 回呼び出されること。
+                // [Pre-Assert手順] - 負の差と正の差のローカル分解時刻を順に返す。
+    EXPECT_CALL(mock_cplat, cplat_gmtime(_, _))
+        .Times(2)
+        .WillRepeatedly(
+            [&](struct tm *tm_value, const time_t *)
+            {
+                *tm_value = utc_tm;
+                return 0;
+            }); // [Pre-Assert確認_正常系] - cplat_gmtime() が 2 回呼び出されること。
+                // [Pre-Assert手順] - UTC の分解時刻を返す。
+
+    // Act
+    int ret_neg = cplat_clock_format_realtime_iso8601_local(
+        actual_neg, sizeof(actual_neg),
+        &timestamp); // [手順] - 負の時差 (-04:27:44) で cplat_clock_format_realtime_iso8601_local() を呼び出す。
+    int ret_pos = cplat_clock_format_realtime_iso8601_local(
+        actual_pos, sizeof(actual_pos),
+        &timestamp); // [手順] - 正の時差 (+00:19:32) で cplat_clock_format_realtime_iso8601_local() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, ret_neg); // [確認_正常系] - 負の時差での戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("2024-04-05T01:39:24.123-04:27",
+                 actual_neg);     // [確認_正常系] - -04:27:44 が 0 方向へ切り捨てられ -04:27 になること。
+    EXPECT_EQ(CPLAT_OK, ret_pos); // [確認_正常系] - 正の時差での戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("2024-04-05T06:26:40.123+00:19",
+                 actual_pos); // [確認_正常系] - +00:19:32 が 0 方向へ切り捨てられ +00:19 になること。
+}
+
 // UTC の ISO 8601 文字列に "Z" サフィックスが出力されることの確認
 TEST_F(clockTest, format_realtime_iso8601_utc_outputs_z_suffix)
 {

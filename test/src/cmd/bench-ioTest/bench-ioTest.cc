@@ -183,3 +183,53 @@ TEST_F(bench_ioTest, main_returns_failure_when_csv_stream_has_error)
     // Cleanup
     (void)std::remove(csv_path.c_str());
 }
+
+// 通常サイズのファイル作成が失敗し --huge を指定した場合に --huge 省略の診断を標準エラー出力へ出すことの確認
+TEST_F(bench_ioTest, main_reports_huge_skip_when_earlier_size_fails)
+{
+    // Arrange
+    std::string dir = temp_dir(); // [状態] - 測定用ファイルを置く一時ディレクトリを用意する。
+    const char *argv[] = {"bench-io", "--sizes", "4K", "--trials", "1", "--min-ms", "1", "--apis", "stdio-rec",
+                          "--patterns", "seq-read", "--dir", dir.c_str(), "--huge"};
+    const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_fopen(_, StrEq("wb"), _))
+        .Times(1)
+        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - 書き込み用ファイルのオープンが 1 回だけ呼び出され、1 [GiB] のファイルを作らないこと。
+                                    // [Pre-Assert手順] - cplat_fopen() から nullptr を返す。
+
+    // Act
+    testing::internal::CaptureStderr();
+    int rc = __real_main(argc, (char **)&argv); // [手順] - 通常サイズのファイル作成を失敗させ、--huge を指定して __real_main() を呼び出す。
+    std::string errors = testing::internal::GetCapturedStderr();
+
+    // Assert
+    EXPECT_EQ(EXIT_FAILURE, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_FAILURE であること。
+    EXPECT_THAT(errors, HasSubstr("error: --huge skipped due to earlier failures")); // [確認_異常系] - 標準エラー出力に --huge 省略の通知が出ること。
+}
+
+// 通常サイズのファイル作成が失敗し --huge を指定しない場合に --huge 省略の診断を出さないことの確認
+TEST_F(bench_ioTest, main_does_not_report_huge_skip_without_huge_option)
+{
+    // Arrange
+    std::string dir = temp_dir(); // [状態] - 測定用ファイルを置く一時ディレクトリを用意する。
+    const char *argv[] = {"bench-io", "--sizes", "4K", "--trials", "1", "--min-ms", "1", "--apis", "stdio-rec",
+                          "--patterns", "seq-read", "--dir", dir.c_str()};
+    const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_fopen(_, StrEq("wb"), _))
+        .Times(1)
+        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - 書き込み用ファイルのオープンが 1 回だけ呼び出されること。
+                                    // [Pre-Assert手順] - cplat_fopen() から nullptr を返す。
+
+    // Act
+    testing::internal::CaptureStderr();
+    int rc = __real_main(argc, (char **)&argv); // [手順] - 通常サイズのファイル作成を失敗させ、--huge を指定せずに __real_main() を呼び出す。
+    std::string errors = testing::internal::GetCapturedStderr();
+
+    // Assert
+    EXPECT_EQ(EXIT_FAILURE, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_FAILURE であること。
+    EXPECT_THAT(errors, Not(HasSubstr("error: --huge skipped due to earlier failures"))); // [確認_異常系] - 標準エラー出力に --huge 省略の通知が出ないこと。
+}

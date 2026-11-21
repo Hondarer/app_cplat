@@ -86,6 +86,10 @@ extern "C"
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
+     *  Linux では `mkdir()` へ 0755 を指定し、プロセスの umask が適用されます。Windows では権限を指定しません。
+     *
+     *  @see            https://man7.org/linux/man-pages/man2/mkdir.2.html
+     *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
@@ -102,7 +106,9 @@ extern "C"
      *
      *  すでに存在するディレクトリは成功として扱います (べき等)。\n
      *  中間ディレクトリが存在しない場合はすべて作成します。\n
-     *  他プロセスによる競合生成は成功として扱います。
+     *  他プロセスによる競合生成は成功として扱います。\n
+     *  作成するディレクトリの権限は `cplat_mkdir()` と同じです。\n
+     *  Windows では、`\\?\` または `\\.\` で始まるパスの動作は保証しません。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -173,6 +179,8 @@ extern "C"
      *  @param[in]      ...     書式引数。
      *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
      *
+     *  作成するディレクトリの権限は `cplat_mkdir()` と同じです。
+     *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
@@ -190,6 +198,8 @@ extern "C"
      *  @param[in]      format  パスを構築する printf 形式の書式文字列。
      *  @param[in]      args    書式引数リスト。
      *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+     *
+     *  作成するディレクトリの権限は `cplat_mkdir()` と同じです。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。

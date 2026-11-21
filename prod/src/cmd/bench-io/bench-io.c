@@ -862,13 +862,26 @@ int main(int argc, char *argv[])
         cursor = separator + 1;
     }
 
-    if (huge != 0 && failures == 0)
+    /*
+     * それまでの処理に失敗が 1 件でもある場合は、--huge の測定を省略する。
+     * 指定したオプションが通知なく無視されないよう、省略したことを標準エラー出力へ通知する。
+     */
+    if (huge != 0)
     {
-        size_t size = 1024U * 1024U * 1024U;
-
-        if (run_size(dir, size, api_list, pattern_list, &env, csv, (uint64_t)min_ms, (size_t)trials, cold, keep) != 0)
+        if (failures == 0)
         {
-            failures++;
+            size_t size = 1024U * 1024U * 1024U;
+
+            if (run_size(dir, size, api_list, pattern_list, &env, csv, (uint64_t)min_ms, (size_t)trials, cold, keep) !=
+                0)
+            {
+                failures++;
+            }
+        }
+        else
+        {
+            /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+            (void)cplat_fprintf(stderr, "error: --huge skipped due to earlier failures\n");
         }
     }
 

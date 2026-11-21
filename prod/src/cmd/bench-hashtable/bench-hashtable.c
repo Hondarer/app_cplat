@@ -25,6 +25,8 @@
 
 #include "bench_timer.h"
 
+#include <assert.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +42,45 @@
 
 /** @brief キーと値を組み立てる作業領域の大きさです。 */
 #define BENCH_TEXT_SIZE 32
+
+/**
+ *  @brief  削除済みレコードの寿命です。加齢の処理を呼び出さないため、3 以上なら測定結果に影響しません。
+ *          制約: 2 以上かつ CPLAT_HASHTABLE_LIFETIME_INFINITE 未満であること。
+ *          変更時は削除済みレコードの保持期間が変わる。
+ */
+#define BENCH_LIFETIME 5U
+
+/**
+ *  @brief  測定を始める capacity です。--max-capacity には、この値以上を指定します。
+ *          制約: 1 以上かつ 2 のべき乗であること。変更時は最小測定点とヘルプの最小値表記が変わる。
+ */
+#define BENCH_MIN_CAPACITY 256U
+
+/**
+ *  @brief  capacity を増やす倍率です。
+ *          制約: 2 以上であること。変更時は測定点の間隔が変わる。
+ */
+#define BENCH_CAPACITY_GROWTH_FACTOR 4U
+
+/**
+ *  @brief  測定する capacity の上限の既定値です。
+ *          既定では 256、1024、4096、16384 の 4 点を測定します。
+ *          制約: BENCH_MIN_CAPACITY 以上かつ INT_MAX 以下 (options.max_capacity が int のため)。
+ *          変更時は省略時の最大測定点とヘルプの既定値表記が変わる。
+ */
+#define BENCH_DEFAULT_MAX_CAPACITY 16384U
+
+/** @brief --max-capacity のヘルプ説明文を組み立てる作業配列の大きさ [byte] です。 */
+#define BENCH_HELP_DESC_BYTES 128U
+
+static_assert(BENCH_LIFETIME >= 2U, "lifetime must be at least 2");
+static_assert(BENCH_LIFETIME < (unsigned int)CPLAT_HASHTABLE_LIFETIME_INFINITE,
+              "lifetime must be less than CPLAT_HASHTABLE_LIFETIME_INFINITE");
+static_assert(BENCH_MIN_CAPACITY >= 1U, "minimum capacity must be at least 1");
+static_assert((BENCH_MIN_CAPACITY & (BENCH_MIN_CAPACITY - 1U)) == 0U, "minimum capacity must be power of 2");
+static_assert(BENCH_CAPACITY_GROWTH_FACTOR >= 2U, "capacity growth factor must be at least 2");
+static_assert(BENCH_DEFAULT_MAX_CAPACITY >= BENCH_MIN_CAPACITY, "default max capacity must be >= min");
+static_assert(BENCH_DEFAULT_MAX_CAPACITY <= (size_t)INT_MAX, "default max capacity must fit in int");
 
 /**
  *  @brief  測定対象の操作です。
@@ -162,7 +203,7 @@ static void bench_make_config(size_t capacity, cplat_hashtable_config *config_ou
     config_out->value_type = CPLAT_HASHTABLE_FIELD_VARIABLE_STRING;
     config_out->key_storage_size = capacity * (size_t)BENCH_KEY_BYTES;
     config_out->value_storage_size = capacity * (size_t)BENCH_VALUE_BYTES;
-    config_out->lifetime = 5;
+    config_out->lifetime = (unsigned char)BENCH_LIFETIME;
 }
 
 /**
@@ -400,7 +441,7 @@ static int bench_run_case(FILE *csv, const bench_hashtable_case *item)
 typedef struct bench_hashtable_options
 {
     const char *csv_path; /**< CSV の出力先パス。指定がなければ NULL です。 */
-    int max_capacity;     /**< 測定する capacity の上限。0 なら既定値です。 */
+    int max_capacity;     /**< 測定する capacity の上限。既定値は `BENCH_DEFAULT_MAX_CAPACITY` です。 */
     int need_help;        /**< ヘルプ表示が指定された場合は 1 です。 */
 } bench_hashtable_options;
 
@@ -411,13 +452,21 @@ typedef struct bench_hashtable_options
  */
 static int register_options(bench_hashtable_options *options)
 {
+    char max_cap_desc[BENCH_HELP_DESC_BYTES];
+
+    /*
+     * 書式結果の最大長は固定文言 64 [byte] + uint 最大 10 桁 × 2 + NUL 1 = 85 [byte] であり、
+     * BENCH_HELP_DESC_BYTES (128) に収まって切り詰めが起きないため、戻り値は明示的に破棄する。
+     */
+    (void)snprintf(max_cap_desc, sizeof(max_cap_desc), "largest number of slots to measure (default %u, minimum %u)",
+                   BENCH_DEFAULT_MAX_CAPACITY, BENCH_MIN_CAPACITY);
+
     /*
      * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
      * この関数の登録の関数の戻り値は明示的に破棄する。
      */
     (void)cplat_argparser_register_flag("-h", "--help", "show this help", &options->need_help);
-    (void)cplat_argparser_register_option_int(
-        NULL, "--max-capacity", "N", "largest number of slots to measure (default 16384)", 0, &options->max_capacity);
+    (void)cplat_argparser_register_option_int(NULL, "--max-capacity", "N", max_cap_desc, 0, &options->max_capacity);
     (void)cplat_argparser_register_option_string(NULL, "--csv", "PATH", "also write results as CSV", 0,
                                                  &options->csv_path);
 
@@ -439,6 +488,8 @@ int main(int argc, char **argv)
     size_t capacity;
     int failures = 0;
     int ret;
+
+    options.max_capacity = (int)BENCH_DEFAULT_MAX_CAPACITY;
 
     cplat_console_init();
 
@@ -470,21 +521,14 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    if (options.max_capacity < 0)
+    if (options.max_capacity < (int)BENCH_MIN_CAPACITY)
     {
         /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
-        (void)fprintf(stderr, "max capacity must not be negative.\n");
+        (void)fprintf(stderr, "max capacity must be at least %u.\n", BENCH_MIN_CAPACITY);
         return EXIT_FAILURE;
     }
 
-    if (options.max_capacity > 0)
-    {
-        max_capacity = (size_t)options.max_capacity;
-    }
-    else
-    {
-        max_capacity = 16384u;
-    }
+    max_capacity = (size_t)options.max_capacity;
 
     if (options.csv_path != NULL)
     {
@@ -508,7 +552,7 @@ int main(int argc, char **argv)
     (void)printf("--------------------------------------------------------\n");
 
     /* capacity を 4 倍ずつ増やしながら、各シナリオの測定を実行する。 */
-    for (capacity = 256u; capacity <= max_capacity; capacity *= 4u)
+    for (capacity = BENCH_MIN_CAPACITY; capacity <= max_capacity; capacity *= BENCH_CAPACITY_GROWTH_FACTOR)
     {
         int scenario;
 

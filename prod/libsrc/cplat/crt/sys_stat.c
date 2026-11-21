@@ -111,6 +111,8 @@ static void overlay_utc_file_times(const wchar_t *wpath, cplat_file_stat_t *buf)
  * パスのルート接頭辞の長さを算出する。
  * ドライブ レター接頭辞、UNC サーバー・共有名接頭辞、またはルート セパレーターの長さ [byte] を返す。
  * ルート接頭辞を持たない相対パスの場合は 0 を返す。
+ * 区切りの正規化後に "//?/" または "//./" で始まるパスは解析の対象外で、'?' または '.' をサーバー名として扱う。
+ * see: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file
  */
 static size_t path_root_prefix_len(const char *path)
 {

@@ -24,6 +24,8 @@
 
 /**
  *  @brief  測定結果です。
+ *
+ *  試行が偶数件のときは、中央の 2 値のうち大きいほうを `median_ns` に格納します。
  */
 typedef struct bench_timing
 {

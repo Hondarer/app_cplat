@@ -262,6 +262,7 @@ extern "C"
      *
      *  cplat_clock_get_realtime() が返す UTC 基準の時刻値を、
      *  ローカル時刻の `YYYY-MM-DDTHH:MM:SS.sss+09:00` 形式へ変換します。\n
+     *  UTC との差が分の倍数でない場合、分未満を 0 方向へ切り捨てます。\n
      *  バッファーが十分な場合の必要サイズは
      *  CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1 です。
      *
