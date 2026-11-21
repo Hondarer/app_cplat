@@ -438,6 +438,22 @@ int cplat_socket_get_receive_buffer_size(const cplat_socket sock, size_t *size_o
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
+int cplat_socket_set_receive_buffer_size(const cplat_socket sock, const size_t size, cplat_error *detail_out)
+{
+    if ((sock == CPLAT_INVALID_SOCKET) || (size == 0U) || (size > (size_t)INT_MAX))
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+
+    /*
+     * SO_RCVBUF へ指定された大きさをそのまま OS へ要求する。
+     * see: https://learn.microsoft.com/en-us/windows/win32/winsock/sol-socket-socket-options
+     */
+    return set_int_option(sock, SOL_SOCKET, SO_RCVBUF, (int)size, detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
 int cplat_socket_set_nonblocking(const cplat_socket sock, const int enable, cplat_error *detail_out)
 {
     u_long mode = 0UL;

@@ -234,6 +234,29 @@ extern "C"
                                                                     cplat_error *detail_out);
 
     /**
+     *  @brief          ソケットの受信用に OS が保持する領域の大きさを要求します。
+     *  @param[in]      sock       対象のソケット。
+     *  @param[in]      size       要求する受信用の領域の大きさ [byte]。1 以上 `INT_MAX` 以下を指定します。
+     *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *
+     *  OS の `SO_RCVBUF` へ @p size をそのまま設定します。\n
+     *  @p size に 0 または `INT_MAX` を超える値を指定した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。\n
+     *  設定後に実際に確保された大きさは、@ref cplat_socket_get_receive_buffer_size で取得します。
+     *
+     *  Linux は、設定値を 2 倍にして保持し (管理情報の分を含むため)、上限 (`net.core.rmem_max`) で
+     *  切り詰めます (see: https://man7.org/linux/man-pages/man7/socket.7.html )。\n
+     *  Windows は、指定した大きさを `SO_RCVBUF` として要求します
+     *  (see: https://learn.microsoft.com/en-us/windows/win32/winsock/sol-socket-socket-options )。
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_socket_set_receive_buffer_size(cplat_socket sock, size_t size,
+                                                                    cplat_error *detail_out);
+
+    /**
      *  @brief          ソケットの非ブロッキング モードを設定します。
      *  @param[in]      sock       対象のソケット。
      *  @param[in]      enable     非ブロッキングにする場合は 0 以外、ブロッキングにする場合は 0。

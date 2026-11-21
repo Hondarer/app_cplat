@@ -962,6 +962,81 @@ TEST_F(socketTest, receive_buffer_size_reports_value_zero_and_failure)
 }
 // [サブ手順参照 名前=socketTest.TearDown]
 
+// 受信用の領域の大きさの設定の成功、引数不正、OS 失敗が処理されることの確認
+TEST_F(socketTest, set_receive_buffer_size_reports_success_invalid_and_failure)
+{
+    // Arrange
+    cplat_error detail = {};
+    constexpr size_t kRequestedSize = 4194304U;
+    constexpr size_t kOversized = static_cast<size_t>(INT_MAX) + 1U;
+
+    // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_sys_socket_, setsockopt(_, _, _, (int)kSocket, SOL_SOCKET, SO_RCVBUF, _, sizeof(int)))
+        .WillOnce(
+            [](const char *, const int, const char *, int, int, int, const void *value, socklen_t)
+            {
+                EXPECT_EQ(
+                    4194304,
+                    *static_cast<const int *>(value)); // [Pre-Assert確認_正常系] - *value が 4194304 であること。
+                return 0;
+            })
+        .WillOnce(DoAll(Assign(&errno, EBADF), Return(-1)));
+    // [Pre-Assert確認_異常系] - setsockopt() が kSocket、SOL_SOCKET、SO_RCVBUF、sizeof(int) を指定して 2 回呼び出されること。
+    // [Pre-Assert手順] - setsockopt() から、1 回目は *value が 4194304 であることを確認して 0、2 回目は errno に EBADF を設定して -1 を返す。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_winsock_, setsockopt(_, _, _, (SOCKET)kSocket, SOL_SOCKET, SO_RCVBUF, _, (int)sizeof(int)))
+        .WillOnce(
+            [](const char *, const int, const char *, SOCKET, int, int, const char *value, int)
+            {
+                EXPECT_EQ(
+                    4194304,
+                    *reinterpret_cast<const int *>(value)); // [Pre-Assert確認_正常系] - *value が 4194304 であること。
+                return 0;
+            })
+        .WillOnce(Return(SOCKET_ERROR));
+    // [Pre-Assert確認_異常系] - setsockopt() が kSocket、SOL_SOCKET、SO_RCVBUF、sizeof(int) を指定して 2 回呼び出されること。
+    // [Pre-Assert手順] - setsockopt() から、1 回目は *value が 4194304 であることを確認して 0、2 回目は SOCKET_ERROR を返す。
+    EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAENOTSOCK));
+    // [Pre-Assert確認_異常系] - WSAGetLastError() が 1 回呼び出されること。
+    // [Pre-Assert手順] - WSAGetLastError() から WSAENOTSOCK を返す。
+#endif /* PLATFORM_ */
+
+    // Act
+    int actual_ret_invalid_socket = cplat_socket_set_receive_buffer_size(
+        CPLAT_INVALID_SOCKET, kRequestedSize,
+        &detail); // [手順] - 無効なソケットを指定して cplat_socket_set_receive_buffer_size() を呼び出す。
+    int actual_ret_zero_size = cplat_socket_set_receive_buffer_size(
+        kSocket, 0U, &detail); // [手順] - 大きさに 0 を指定して cplat_socket_set_receive_buffer_size() を呼び出す。
+    int actual_ret_oversized = cplat_socket_set_receive_buffer_size(
+        kSocket, kOversized,
+        &detail); // [手順] - INT_MAX を超える大きさを指定して cplat_socket_set_receive_buffer_size() を呼び出す。
+    int actual_ret_valid = cplat_socket_set_receive_buffer_size(
+        kSocket, kRequestedSize,
+        &detail); // [手順] - 有効な大きさを指定して setsockopt() が成功する状態で cplat_socket_set_receive_buffer_size() を呼び出す。
+    int actual_ret_failure = cplat_socket_set_receive_buffer_size(
+        kSocket, kRequestedSize,
+        &detail); // [手順] - setsockopt() が失敗する状態で cplat_socket_set_receive_buffer_size() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_invalid_socket); // [確認_異常系] - 無効なソケットを指定した cplat_socket_set_receive_buffer_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_zero_size); // [確認_異常系] - 大きさに 0 を指定した cplat_socket_set_receive_buffer_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_oversized); // [確認_異常系] - INT_MAX を超える大きさを指定した cplat_socket_set_receive_buffer_size() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_valid); // [確認_正常系] - 有効な大きさを設定した cplat_socket_set_receive_buffer_size() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_UNKNOWN,
+        actual_ret_failure); // [確認_異常系] - setsockopt() 失敗時の cplat_socket_set_receive_buffer_size() の戻り値が CPLAT_ERR_UNKNOWN であること。
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+
 // 非ブロッキング設定の引数不正と OS 失敗が処理されることの確認
 TEST_F(socketTest, nonblocking_reports_invalid_and_os_failure)
 {

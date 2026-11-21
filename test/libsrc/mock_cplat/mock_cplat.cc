@@ -439,6 +439,8 @@ Mock_cplat::Mock_cplat()
         .WillByDefault(Invoke(delegate_real_cplat_socket_get_pending_error));
     ON_CALL(*this, cplat_socket_get_receive_buffer_size(_, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_socket_get_receive_buffer_size));
+    ON_CALL(*this, cplat_socket_set_receive_buffer_size(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_set_receive_buffer_size));
     ON_CALL(*this, cplat_socket_set_nonblocking(_, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_socket_set_nonblocking));
     ON_CALL(*this, cplat_socket_set_reuse_address(_, _, _))
