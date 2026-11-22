@@ -16,6 +16,7 @@
  *******************************************************************************
  */
 
+#include <cplat/crt/stdio.h>
 #include <cplat/argparser/argparser.h>
 #include <cplat/base/result.h>
 #include <cplat/console/console.h>
@@ -36,16 +37,27 @@ typedef struct filter_required_size_options
  */
 static int register_options(filter_required_size_options *options)
 {
+    char capacity_help[128];
+    char width_help[128];
+
+    if (cplat_snprintf(capacity_help, sizeof(capacity_help), "maximum number of condition lines (1-%u)",
+                       CPLAT_STRING_CATALOG_FILTER_LINE_MAX) != CPLAT_OK ||
+        cplat_snprintf(width_help, sizeof(width_help), "bytes per condition line (%u-%u)",
+                       CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MIN,
+                       CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX) != CPLAT_OK)
+    {
+        return -1;
+    }
+
     /*
      * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
      * この関数の登録の関数の戻り値は明示的に破棄する。
      */
     (void)cplat_argparser_register_flag("-h", "--help", "show this help", &options->need_help);
-    (void)cplat_argparser_register_option_int("-l", "--line-capacity", "N",
-                                              "maximum number of condition lines (1-1024)", CPLAT_ARGPARSER_REQUIRED,
+    (void)cplat_argparser_register_option_int("-l", "--line-capacity", "N", capacity_help, CPLAT_ARGPARSER_REQUIRED,
                                               &options->line_capacity);
-    (void)cplat_argparser_register_option_int("-w", "--line-width", "N", "bytes per condition line (8-1024)",
-                                              CPLAT_ARGPARSER_REQUIRED, &options->line_width);
+    (void)cplat_argparser_register_option_int("-w", "--line-width", "N", width_help, CPLAT_ARGPARSER_REQUIRED,
+                                              &options->line_width);
 
     if (cplat_argparser_get_register_error_count() > 0)
     {

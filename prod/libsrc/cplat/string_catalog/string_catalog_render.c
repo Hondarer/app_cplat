@@ -17,6 +17,8 @@
 
 #include "string_catalog.h"
 
+#include <cplat/base/char_code.h>
+#include <assert.h>
 #include <cplat/base/result.h>
 #include <cplat/crt/stdio.h>
 
@@ -28,6 +30,8 @@
 /** 1 個の値を文字列化する一時領域のバイト数です。最長はエラー コードの併記表現で 24 [byte] です。 */
 #define VALUE_TEXT_MAX 64
 
+static_assert(VALUE_TEXT_MAX >= 24U, "値の最長表記が一時領域に収まること");
+
 /** 10 進数へ変換した符号なし 64 bit 整数の最大桁数です。 */
 #define DECIMAL_DIGITS_MAX 20
 
@@ -37,11 +41,33 @@
 /** 位置指定のインデックスに指定可能な最大桁数です。@ref CPLAT_STRING_CATALOG_ARGUMENT_MAX の桁数と一致させます。 */
 #define INDEX_DIGITS_MAX 2
 
-/** 1 文字として出力する ASCII の下限です。 */
-#define CHAR_PRINTABLE_MIN 0x20U
+static_assert(CPLAT_STRING_CATALOG_ARGUMENT_MAX >= 10U && CPLAT_STRING_CATALOG_ARGUMENT_MAX <= 99U &&
+                  INDEX_DIGITS_MAX == 2,
+              "引数の上限とインデックスの桁数が一致すること");
 
-/** 1 文字として出力する ASCII の上限です。 */
-#define CHAR_PRINTABLE_MAX 0x7EU
+/** 16 進数表記の接頭辞です。 */
+#define HEX_PREFIX "0x"
+
+/** 16 進数表記の接頭辞の長さ [byte] です。 */
+#define HEX_PREFIX_LEN (sizeof(HEX_PREFIX) - 1U)
+
+/** 単引用符付き 1 文字 "'x'" の長さ [byte] です。 */
+#define CHAR_QUOTED_LEN 3U
+
+/** 文字コード併記の開始文字列です。 */
+#define CODE_PAREN_PREFIX " ("
+
+/** 文字コード併記の開始文字列の長さ [byte] です。 */
+#define CODE_PAREN_PREFIX_LEN (sizeof(CODE_PAREN_PREFIX) - 1U)
+
+/** 1 [byte] 当たりの 16 進桁数です。 */
+#define HEX_DIGITS_PER_BYTE 2U
+
+/** エスケープされた波括弧の長さ [byte] です。 */
+#define ESCAPED_BRACE_LEN (sizeof("{{") - 1U)
+
+/** 位置指定を囲む波括弧の長さ [byte] です。 */
+#define PLACEHOLDER_BRACES_LEN (sizeof("{}") - 1U)
 
 /**
  *  @brief          符号なし整数を 10 進数へ変換します。
@@ -107,17 +133,16 @@ static size_t hex_from_uint64(char *const out, const uint64_t value, const size_
     static const char table[] = "0123456789abcdef";
     size_t index;
 
-    out[0] = '0';
-    out[1] = 'x';
+    memcpy(out, HEX_PREFIX, HEX_PREFIX_LEN);
 
     for (index = 0U; index < digits; index++)
     {
         const size_t shift = (digits - 1U - index) * 4U;
 
-        out[2U + index] = table[(size_t)((value >> shift) & 0xFU)];
+        out[HEX_PREFIX_LEN + index] = table[(size_t)((value >> shift) & 0xFU)];
     }
 
-    return 2U + digits;
+    return HEX_PREFIX_LEN + digits;
 }
 
 /**
@@ -225,20 +250,20 @@ static int render_buffer_append_argument(render_buffer *buffer,
         /* isprint() はロケールに依存するため、ASCII の印字可能範囲を直接判定する。 */
         const unsigned int code = (unsigned int)(unsigned char)value->value.char_value;
 
-        if ((code >= CHAR_PRINTABLE_MIN) && (code <= CHAR_PRINTABLE_MAX))
+        if ((code >= CPLAT_ASCII_PRINTABLE_MIN) && (code < CPLAT_ASCII_DEL))
         {
             value_text[0] = '\'';
             value_text[1] = (char)code;
             value_text[2] = '\'';
-            text_length = 3U;
+            text_length = CHAR_QUOTED_LEN;
         }
         else
         {
             text_length = decimal_from_uint64(value_text, (uint64_t)code);
-            value_text[text_length] = ' ';
-            value_text[text_length + 1U] = '(';
-            text_length += 2U;
-            text_length += hex_from_uint64(&value_text[text_length], (uint64_t)code, 2U);
+            memcpy(value_text + text_length, CODE_PAREN_PREFIX, CODE_PAREN_PREFIX_LEN);
+            text_length += CODE_PAREN_PREFIX_LEN;
+            text_length +=
+                hex_from_uint64(&value_text[text_length], (uint64_t)code, sizeof(uint8_t) * HEX_DIGITS_PER_BYTE);
             value_text[text_length] = ')';
             text_length += 1U;
         }
@@ -279,19 +304,23 @@ static int render_buffer_append_argument(render_buffer *buffer,
         break;
 
     case CPLAT_STRING_CATALOG_ARGUMENT_KIND_HEX8:
-        text_length = hex_from_uint64(value_text, (uint64_t)value->value.uint8_value, 2U);
+        text_length = hex_from_uint64(value_text, (uint64_t)value->value.uint8_value,
+                                      sizeof(value->value.uint8_value) * HEX_DIGITS_PER_BYTE);
         break;
 
     case CPLAT_STRING_CATALOG_ARGUMENT_KIND_HEX16:
-        text_length = hex_from_uint64(value_text, (uint64_t)value->value.uint16_value, 4U);
+        text_length = hex_from_uint64(value_text, (uint64_t)value->value.uint16_value,
+                                      sizeof(value->value.uint16_value) * HEX_DIGITS_PER_BYTE);
         break;
 
     case CPLAT_STRING_CATALOG_ARGUMENT_KIND_HEX32:
-        text_length = hex_from_uint64(value_text, (uint64_t)value->value.uint32_value, 8U);
+        text_length = hex_from_uint64(value_text, (uint64_t)value->value.uint32_value,
+                                      sizeof(value->value.uint32_value) * HEX_DIGITS_PER_BYTE);
         break;
 
     case CPLAT_STRING_CATALOG_ARGUMENT_KIND_HEX64:
-        text_length = hex_from_uint64(value_text, value->value.uint64_value, 16U);
+        text_length = hex_from_uint64(value_text, value->value.uint64_value,
+                                      sizeof(value->value.uint64_value) * HEX_DIGITS_PER_BYTE);
         break;
 
     case CPLAT_STRING_CATALOG_ARGUMENT_KIND_SIZE:
@@ -304,15 +333,16 @@ static int render_buffer_append_argument(render_buffer *buffer,
 
     case CPLAT_STRING_CATALOG_ARGUMENT_KIND_POINTER:
         /* %p の表現はプラットフォームで異なるため、ポインター幅の 16 進表現へ揃える。 */
-        text_length = hex_from_uint64(value_text, (uint64_t)(uintptr_t)value->value.pointer_value, 16U);
+        text_length = hex_from_uint64(value_text, (uint64_t)(uintptr_t)value->value.pointer_value,
+                                      sizeof(uintptr_t) * HEX_DIGITS_PER_BYTE);
         break;
 
     case CPLAT_STRING_CATALOG_ARGUMENT_KIND_ERROR_CODE:
         text_length = decimal_from_int64(value_text, (int64_t)value->value.error_code_value);
-        value_text[text_length] = ' ';
-        value_text[text_length + 1U] = '(';
-        text_length += 2U;
-        text_length += hex_from_uint64(&value_text[text_length], (uint64_t)(uint32_t)value->value.error_code_value, 8U);
+        memcpy(value_text + text_length, CODE_PAREN_PREFIX, CODE_PAREN_PREFIX_LEN);
+        text_length += CODE_PAREN_PREFIX_LEN;
+        text_length += hex_from_uint64(&value_text[text_length], (uint64_t)(uint32_t)value->value.error_code_value,
+                                       sizeof(uint32_t) * HEX_DIGITS_PER_BYTE);
         value_text[text_length] = ')';
         text_length += 1U;
         break;
@@ -369,14 +399,14 @@ static int render_scan_text(render_buffer *buffer, const char *text,
             }
 
             render_buffer_append(buffer, "}", 1U);
-            position += 2U;
+            position += ESCAPED_BRACE_LEN;
             continue;
         }
 
         if (text[position + 1U] == '{')
         {
             render_buffer_append(buffer, "{", 1U);
-            position += 2U;
+            position += ESCAPED_BRACE_LEN;
             continue;
         }
 
@@ -424,7 +454,7 @@ static int render_scan_text(render_buffer *buffer, const char *text,
             }
         }
 
-        position += 2U + (size_t)digit_count;
+        position += PLACEHOLDER_BRACES_LEN + (size_t)digit_count;
     }
 
     return CPLAT_OK;

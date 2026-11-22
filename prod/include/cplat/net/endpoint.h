@@ -32,6 +32,7 @@
 #ifndef CPLAT_NET_ENDPOINT_H
 #define CPLAT_NET_ENDPOINT_H
 
+#include <assert.h>
 #include <cplat/base/error.h>
 #include <cplat/base/result.h>
 #include <cplat/cplat_export.h>
@@ -39,8 +40,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/** IPv4 アドレス文字列を格納するために必要なバッファー サイズ (終端を含む)。 */
+/** IPv4 アドレス文字列を格納するために必要なバッファー サイズ [byte] (終端 NUL を含む)。 */
 #define CPLAT_IPV4_ADDR_STRLEN 16U
+
+static_assert(sizeof("255.255.255.255") == CPLAT_IPV4_ADDR_STRLEN, "cplat: buffer must hold the longest IPv4 text");
 
 /** 任意のアドレスを表す IPv4 アドレス (0.0.0.0)。ネットワーク バイト オーダー。 */
 #define CPLAT_IPV4_ADDR_ANY ((uint32_t)0U)

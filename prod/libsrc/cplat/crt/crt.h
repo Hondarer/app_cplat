@@ -37,6 +37,9 @@ extern "C"
 
 #if defined(PLATFORM_WINDOWS)
 
+    /** Windows `_wfsopen()` 用のモード変換ワイド文字列バッファーの要素数 [wchar_t 要素数] (終端 NUL を含む) です。 */
+    #define CRT_WMODES_CAPACITY (64U)
+
     /**
      *  @brief          UTF-8 パスをワイド文字列にしたときに PLATFORM_PATH_MAX へ収まるかを検査します。
      *  @param[in]      utf8_path   検査する UTF-8 パス。NULL を渡してはなりません。

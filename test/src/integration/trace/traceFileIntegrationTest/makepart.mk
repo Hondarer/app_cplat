@@ -17,8 +17,9 @@ ADD_SRCS := \
     $(MYAPP_DIR)/prod/libsrc/cplat/base/result.c \
     $(MYAPP_DIR)/test/libsrc/mock_cplat/trace/mock_cplat_eventlog_sink_dispose_on_unload.cc
 
-# 引き込んだ crt/file.c のモジュール私有ヘッダーを参照する
+# 引き込んだ crt/file.c と clock/clock.c のモジュール私有ヘッダーを参照する
 INCDIR += \
+    $(MYAPP_DIR)/prod/libsrc/cplat/clock \
     $(MYAPP_DIR)/prod/libsrc/cplat/crt
 
 # ライブラリの指定

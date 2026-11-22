@@ -36,7 +36,7 @@
  *  Linux と Windows の DNS ホスト名が収まる想定です。\n
  *  Windows の `DNS_MAX_NAME_BUFFER_LENGTH` (256) に合わせています。
  */
-#define CPLAT_HOST_NAME_MAX 256
+#define CPLAT_HOST_NAME_MAX 256U
 
 #ifdef __cplusplus
 extern "C"

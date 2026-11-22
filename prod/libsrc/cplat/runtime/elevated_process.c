@@ -33,6 +33,35 @@
 #include <stdlib.h>
 #include <string.h>
 
+/** 追加引数の作業配列サイズ [byte] です。 */
+#define CPLAT_PROCESS_EXTRA_ARGUMENT_SIZE 80U
+
+/** PID の 10 進表記の最大桁数です。 */
+#define CPLAT_PROCESS_PID_DIGITS_MAX 10U
+
+/** ハンドルの 10 進表記の最大桁数です。 */
+#define CPLAT_PROCESS_HANDLE_DIGITS_MAX 20U
+
+/** 引数の区切り空白の長さ [byte] です。 */
+#define CPLAT_PROCESS_ARGUMENT_SPACE_BYTES 1U
+
+/** 引数内の '=' または ':' の長さ [byte] です。 */
+#define CPLAT_PROCESS_ARGUMENT_SEPARATOR_BYTES 1U
+
+/** 引数の終端 NUL の長さ [byte] です。 */
+#define CPLAT_PROCESS_ARGUMENT_NUL_BYTES 1U
+
+/** コンソール引き継ぎ引数の作業領域の余裕 [byte] です。 */
+#define CPLAT_PROCESS_HANDOVER_MARGIN_BYTES 15U
+
+/** コンソール引き継ぎ引数のフラグ以外の作業領域 [byte] です。 */
+#define CPLAT_PROCESS_HANDOVER_EXTRA_BYTES \
+    (CPLAT_PROCESS_ARGUMENT_SPACE_BYTES + CPLAT_PROCESS_ARGUMENT_SEPARATOR_BYTES + CPLAT_PROCESS_PID_DIGITS_MAX + \
+     CPLAT_PROCESS_ARGUMENT_SEPARATOR_BYTES + CPLAT_PROCESS_HANDLE_DIGITS_MAX + CPLAT_PROCESS_ARGUMENT_NUL_BYTES + \
+     CPLAT_PROCESS_HANDOVER_MARGIN_BYTES)
+
+static_assert(CPLAT_PROCESS_HANDOVER_EXTRA_BYTES == 49U, "コンソール引き継ぎ引数の余裕を維持すること");
+
 #if defined(PLATFORM_LINUX)
     #include <unistd.h>
 #elif defined(PLATFORM_WINDOWS)
@@ -117,7 +146,8 @@ static_assert(CPLAT_ELEVATED_PIPE_NAME_CAP <= CPLAT_ELEVATED_PIPE_NAME_API_MAX_C
  *  Windows のサービス プロセスはセッション 0 に隔離され、UAC (User Account Control)
  *  ダイアログを表示できる対話デスクトップを持ちません。セッション 0 で未昇格のまま
  *  `ShellExecuteExW` の `runas` verb を呼び出すと、対話デスクトップが無いために
- *  昇格が失敗または応答不能になるおそれがあるため、事前にセッション ID で判定します。
+ *  昇格が失敗または応答不能になるおそれがあるため、事前にセッション ID で判定します。\n
+ *  判定は、セッション ID が 0 かどうかだけで行います。
  *  see: https://learn.microsoft.com/windows/win32/services/interactive-services
  *
  *  @return         対話セッションの場合は非 0、非対話セッション (セッション 0) の場合は 0、
@@ -935,8 +965,8 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code_o
         }
 
         /*
-         * セッション 0 (非対話セッション) では UAC ダイアログを表示できないため、
-         * 昇格を試みず即座に失敗させる。
+         * セッション 0 にはユーザーが操作できるデスクトップがないため、
+         * 昇格を試みない。
          */
         if (is_current_session_interactive() == 0)
         {
@@ -970,7 +1000,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code_o
             unsigned long long parent_console_window;
             size_t arg_len;
             size_t buf_sz;
-            char extra[80];
+            char extra[CPLAT_PROCESS_EXTRA_ARGUMENT_SIZE];
             int ret;
 
             parent_pid = 0;
@@ -999,7 +1029,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code_o
             {
                 parent_pid = GetCurrentProcessId();
                 parent_console_window = (unsigned long long)(uintptr_t)GetConsoleWindow();
-                buf_sz += strlen(CPLAT_CONSOLE_HANDOVER_FLAG) + 49;
+                buf_sz += strlen(CPLAT_CONSOLE_HANDOVER_FLAG) + CPLAT_PROCESS_HANDOVER_EXTRA_BYTES;
             }
 
             combined_arguments = (char *)cplat_malloc(buf_sz);
@@ -1239,8 +1269,8 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         }
 
         /*
-         * セッション 0 (非対話セッション) では UAC ダイアログを表示できないため、
-         * 昇格を試みず即座に失敗させる。
+         * セッション 0 にはユーザーが操作できるデスクトップがないため、
+         * 昇格を試みない。
          */
         if (is_current_session_interactive() == 0)
         {
@@ -1605,8 +1635,8 @@ int cplat_elevated_process_run_piped(const char *arguments, cplat_elevated_proce
         }
 
         /*
-         * セッション 0 (非対話セッション) では UAC ダイアログを表示できないため、
-         * 昇格を試みず即座に失敗させる。
+         * セッション 0 にはユーザーが操作できるデスクトップがないため、
+         * 昇格を試みない。
          */
         if (is_current_session_interactive() == 0)
         {

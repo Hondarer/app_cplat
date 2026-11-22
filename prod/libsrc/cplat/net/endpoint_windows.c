@@ -74,6 +74,10 @@ int cplat_ipv4_resolve(const char *text, uint32_t *address_out, cplat_error *det
     }
 
     hints.ai_family = AF_INET;
+    /*
+     * ソケット種別を 1 つに絞る。0 を指定すると、どの種別の結果も返り得る。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-getaddrinfo
+     */
     hints.ai_socktype = SOCK_DGRAM;
 
     gai_result = getaddrinfo(text, NULL, &hints, &resolved);

@@ -137,11 +137,11 @@ extern "C"
 #endif /* __cplusplus */
 
 /**
- *  @brief          呼び出し側が用意するバッファーの推奨サイズです。
+ *  @brief          呼び出し側が用意するバッファーの推奨サイズ [byte] (終端 NUL を含む) です。
  *
  *  ライブラリ側の制限ではありません。呼び出し側が任意の容量を指定できます。
  */
-#define CPLAT_STRING_CATALOG_TEXT_MAX 512
+#define CPLAT_STRING_CATALOG_TEXT_MAX 512U
 
 /** @} */
 

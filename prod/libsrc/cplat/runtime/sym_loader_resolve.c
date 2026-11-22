@@ -40,6 +40,17 @@
 /** 設定名として解決できる終端を除く最大バイト数です。CPLAT_SYM_LOADER_NAME_MAX とは別です。 */
 #define CONFIGURED_NAME_LIMIT 255u
 
+/** キャッシュ エントリのロックの初期化状態です。 */
+enum sym_loader_lock_state
+{
+    SYM_LOADER_LOCK_UNINITIALIZED = 0,
+    SYM_LOADER_LOCK_INITIALIZING = 1,
+    SYM_LOADER_LOCK_INITIALIZED = 2
+};
+
+/** 既定混在とみなす最小移譲先数です。 */
+#define SYM_LOADER_MIXED_DEFAULT_MIN_COUNT 2U
+
 #if defined(PLATFORM_LINUX)
 static const char k_module_ext[] = ".so";
 #elif defined(PLATFORM_WINDOWS)
@@ -81,26 +92,28 @@ static void yield_while_entry_lock_initializing(cplat_sym_loader_entry *fobj)
  */
 static int ensure_entry_lock_initialized(cplat_sym_loader_entry *fobj)
 {
-    int32_t expected = 0;
+    int32_t expected = SYM_LOADER_LOCK_UNINITIALIZED;
 
-    if (cplat_atomic_compare_exchange_i32(&fobj->lock_state, &expected, 1, CPLAT_MEMORY_ORDER_ACQ_REL))
+    if (cplat_atomic_compare_exchange_i32(&fobj->lock_state, &expected, SYM_LOADER_LOCK_INITIALIZING,
+                                          CPLAT_MEMORY_ORDER_ACQ_REL))
     {
         if (cplat_local_lock_create(&fobj->lock) != CPLAT_OK)
         {
-            cplat_atomic_store_i32(&fobj->lock_state, 0, CPLAT_MEMORY_ORDER_RELEASE);
+            cplat_atomic_store_i32(&fobj->lock_state, SYM_LOADER_LOCK_UNINITIALIZED, CPLAT_MEMORY_ORDER_RELEASE);
             return -1;
         }
 
-        cplat_atomic_store_i32(&fobj->lock_state, 2, CPLAT_MEMORY_ORDER_RELEASE);
+        cplat_atomic_store_i32(&fobj->lock_state, SYM_LOADER_LOCK_INITIALIZED, CPLAT_MEMORY_ORDER_RELEASE);
         return 0;
     }
 
-    while ((expected = cplat_atomic_load_i32(&fobj->lock_state, CPLAT_MEMORY_ORDER_ACQUIRE)) == 1)
+    while ((expected = cplat_atomic_load_i32(&fobj->lock_state, CPLAT_MEMORY_ORDER_ACQUIRE)) ==
+           SYM_LOADER_LOCK_INITIALIZING)
     {
         yield_while_entry_lock_initializing(fobj);
     }
 
-    if (expected == 2)
+    if (expected == SYM_LOADER_LOCK_INITIALIZED)
     {
         return 0;
     }
@@ -385,7 +398,8 @@ static int classify_pending(cplat_sym_loader_entry *fobj)
         }
     }
 
-    if ((failed == 0) && (impl->pending_count >= 2u) && (pending_has_both_default(impl) != 0))
+    if ((failed == 0) && (impl->pending_count >= SYM_LOADER_MIXED_DEFAULT_MIN_COUNT) &&
+        (pending_has_both_default(impl) != 0))
     {
         for (index = 0; (failed == 0) && (index < impl->pending_count); index++)
         {

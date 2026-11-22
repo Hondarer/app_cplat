@@ -19,8 +19,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+/** @brief 入力行を格納する配列の大きさ [byte] (終端 NUL を含む) です。 */
 #define PINNED_PROMPT_CLI_LINE_MAX 1024U
-#define PINNED_PROMPT_CLI_TICK_MS  1000U
+/** @brief tick を出力する待機間隔 [ms] です。 */
+#define PINNED_PROMPT_CLI_TICK_MS 1000
 
 typedef struct pinned_prompt_cli_worker
 {

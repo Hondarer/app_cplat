@@ -16,8 +16,20 @@
 #ifndef CPLAT_PROMPT_EDIT_H
 #define CPLAT_PROMPT_EDIT_H
 
+#include <assert.h>
 #include <stddef.h>
+#include <cplat/base/char_code.h>
 #include <cplat/prompt/prompt.h>
+
+/** NUL 終端を含む入力編集バッファーの最小バイト数 [byte] です。 */
+#define CPLAT_PROMPT_EDIT_CAPACITY_MIN_BYTES 2U
+
+/** 入力編集バッファー初期容量の既定値 [byte] です。 */
+#define CPLAT_INTERNAL_PROMPT_INPUT_INITIAL_DEFAULT 256U
+
+static_assert((CPLAT_INTERNAL_PROMPT_INPUT_INITIAL_DEFAULT >= CPLAT_PROMPT_EDIT_CAPACITY_MIN_BYTES) &&
+                  (CPLAT_INTERNAL_PROMPT_INPUT_INITIAL_DEFAULT <= CPLAT_PROMPT_INPUT_BYTES_DEFAULT),
+              "cplat: prompt initial input capacity out of range");
 
 /** UTF-16 入力のサロゲートと、未取得の UTF-8 バイトを保持します。ゼロ初期化して使用します。 */
 typedef struct cplat_internal_prompt_utf16_input
@@ -27,7 +39,7 @@ typedef struct cplat_internal_prompt_utf16_input
     unsigned int has_pending_unit;
     unsigned int length;
     unsigned int offset;
-    unsigned char bytes[4];
+    unsigned char bytes[CPLAT_UTF8_MAX_BYTES];
 } cplat_internal_prompt_utf16_input;
 
 #ifdef __cplusplus

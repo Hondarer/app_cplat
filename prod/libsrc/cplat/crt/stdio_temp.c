@@ -17,6 +17,7 @@
 #include <cplat/crt/stdlib.h>
 #include <cplat/base/error_internal.h>
 
+#include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -26,6 +27,7 @@
     #include <stdlib.h>
     #include <unistd.h>
 #elif defined(PLATFORM_WINDOWS)
+    #include "crt.h"
     #include <share.h>
     #include <stdlib.h>
     #include <wchar.h>
@@ -33,6 +35,12 @@
 
 /* prefix の有効文字数上限 (Windows の GetTempFileNameW() の制約に準拠) */
 #define CPLAT_TEMP_PREFIX_MAX 3u
+static_assert(CPLAT_TEMP_PREFIX_MAX <= 3U, "cplat: GetTempFileNameW uses 3 chars");
+
+/* prefix 省略時に用いる既定の接頭辞 */
+static const char s_default_temp_prefix[] = "cu_";
+static_assert((sizeof(s_default_temp_prefix) - 1U) <= CPLAT_TEMP_PREFIX_MAX,
+              "cplat: default temp prefix exceeds CPLAT_TEMP_PREFIX_MAX");
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -69,7 +77,7 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
         }
         else
         {
-            pfx = "cu_";
+            pfx = s_default_temp_prefix;
         }
 
         /*
@@ -126,7 +134,7 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
         wchar_t wdir[MAX_PATH];
         wchar_t wfile[MAX_PATH];
         wchar_t wprefix[CPLAT_TEMP_PREFIX_MAX + 1u];
-        wchar_t wmodes[64];
+        wchar_t wmodes[CRT_WMODES_CAPACITY];
         FILE *fp = NULL;
         errno_t err;
         size_t converted;
@@ -161,7 +169,7 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
             }
             else
             {
-                pfx = "cu_";
+                pfx = s_default_temp_prefix;
             }
 
             err = mbstowcs_s(&converted, wprefix, sizeof(wprefix) / sizeof(wprefix[0]), pfx, _TRUNCATE);

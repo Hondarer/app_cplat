@@ -14,6 +14,7 @@
 #include <cplat/base/error_internal.h>
 #include <cplat/base/platform.h>
 
+#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
@@ -22,14 +23,13 @@
 #include <string.h>
 
 /* 基本整数型 API の委譲先と値域が一致することを保証する。 */
-_Static_assert(CHAR_BIT == 8 && CHAR_MIN == INT8_MIN && CHAR_MAX == INT8_MAX, "cplat: char must be signed 8-bit");
-_Static_assert(SCHAR_MIN == INT8_MIN && SCHAR_MAX == INT8_MAX && UCHAR_MAX == UINT8_MAX,
-               "cplat: signed/unsigned char must be 8-bit");
-_Static_assert(SHRT_MIN == INT16_MIN && SHRT_MAX == INT16_MAX && USHRT_MAX == UINT16_MAX,
-               "cplat: short must be 16-bit");
-_Static_assert(INT_MIN == INT32_MIN && INT_MAX == INT32_MAX && UINT_MAX == UINT32_MAX, "cplat: int must be 32-bit");
-_Static_assert(LLONG_MIN == INT64_MIN && LLONG_MAX == INT64_MAX && ULLONG_MAX == UINT64_MAX,
-               "cplat: long long must be 64-bit");
+static_assert(CHAR_BIT == 8 && CHAR_MIN == INT8_MIN && CHAR_MAX == INT8_MAX, "cplat: char must be signed 8-bit");
+static_assert(SCHAR_MIN == INT8_MIN && SCHAR_MAX == INT8_MAX && UCHAR_MAX == UINT8_MAX,
+              "cplat: signed/unsigned char must be 8-bit");
+static_assert(SHRT_MIN == INT16_MIN && SHRT_MAX == INT16_MAX && USHRT_MAX == UINT16_MAX, "cplat: short must be 16-bit");
+static_assert(INT_MIN == INT32_MIN && INT_MAX == INT32_MAX && UINT_MAX == UINT32_MAX, "cplat: int must be 32-bit");
+static_assert(LLONG_MIN == INT64_MIN && LLONG_MAX == INT64_MAX && ULLONG_MAX == UINT64_MAX,
+              "cplat: long long must be 64-bit");
 
 /* Doxygen コメントは、ヘッダーに記載 */
 

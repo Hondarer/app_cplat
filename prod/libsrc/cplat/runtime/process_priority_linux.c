@@ -19,6 +19,8 @@
  *******************************************************************************
  */
 
+#include <stddef.h>
+#include <assert.h>
 #include <cplat/base/platform.h>
 
 #if defined(PLATFORM_LINUX)
@@ -69,10 +71,21 @@
 #define PROCESS_PRIORITY_UTILIZATION_SCALE 1024U
 
 /* see: https://man7.org/linux/man-pages/man2/ioprio_set.2.html */
+/* I/O 優先度の対象種別 (プロセス)。 */
 #define PROCESS_PRIORITY_IOPRIO_WHO_PROCESS 1
+/* I/O 優先度のクラスのビット位置。 */
 #define PROCESS_PRIORITY_IOPRIO_CLASS_SHIFT 13
+/* I/O 優先度のレベルのマスク。 */
 #define PROCESS_PRIORITY_IOPRIO_LEVEL_MASK  0x7
+/* I/O 優先度のレベルの上限。 */
 #define PROCESS_PRIORITY_IOPRIO_LEVEL_MAX   7
+
+static_assert(PROCESS_PRIORITY_IOPRIO_LEVEL_MAX <= PROCESS_PRIORITY_IOPRIO_LEVEL_MASK,
+              "I/O 優先度のレベル上限がマスクに収まること");
+
+/* リアルタイム ポリシーの静的優先度の範囲。see: https://man7.org/linux/man-pages/man7/sched.7.html */
+#define PROCESS_PRIORITY_RT_PRIORITY_MIN 1
+#define PROCESS_PRIORITY_RT_PRIORITY_MAX 99
 
 /*
      * CPU 使用率クランプ (CONFIG_UCLAMP_TASK) が有効なカーネルにだけ存在する sysctl パスである。
@@ -95,6 +108,11 @@ typedef struct process_priority_sched_attr
     uint32_t sched_util_min;
     uint32_t sched_util_max;
 } process_priority_sched_attr;
+
+static_assert(offsetof(process_priority_sched_attr, sched_util_min) == PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION0,
+              "sched_attr の最初の版の配置が一致すること");
+static_assert(sizeof(process_priority_sched_attr) == PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION1,
+              "sched_attr の 2 番目の版の大きさが一致すること");
 
 /*
  * スレッド ID を OS のスレッド ID (pid_t) へ変換する。
@@ -184,7 +202,8 @@ static int is_valid_static_priority(const cplat_process_priority_linux_policy po
     if ((policy == CPLAT_PROCESS_PRIORITY_LINUX_POLICY_FIFO) ||
         (policy == CPLAT_PROCESS_PRIORITY_LINUX_POLICY_ROUND_ROBIN))
     {
-        return (static_priority >= 1) && (static_priority <= 99);
+        return (static_priority >= PROCESS_PRIORITY_RT_PRIORITY_MIN) &&
+               (static_priority <= PROCESS_PRIORITY_RT_PRIORITY_MAX);
     }
 
     return static_priority == 0;

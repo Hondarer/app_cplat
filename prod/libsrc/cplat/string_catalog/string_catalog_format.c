@@ -76,7 +76,7 @@ int cplat_internal_string_catalog_prepare_format(const cplat_string_catalog *con
         return CPLAT_ERR_NOT_FOUND;
     }
 
-    if ((entry->argument_count < 0) || (entry->argument_count > CPLAT_STRING_CATALOG_ARGUMENT_MAX) ||
+    if ((entry->argument_count < 0) || (entry->argument_count > (int)CPLAT_STRING_CATALOG_ARGUMENT_MAX) ||
         ((entry->argument_count > 0) && (entry->arguments == NULL)))
     {
         return CPLAT_ERR_MALFORMED_DEFINITION;
@@ -169,7 +169,7 @@ int cplat_string_catalog_verify(const cplat_string_catalog *const catalog, int *
          * ID と分類値はライブラリが解釈しないため、未設定、重複、範囲は確認しない。
          * 文字列キーの重複は、検索で先の項目へ到達することにより検出する。
          */
-        if ((entry->argument_count < 0) || (entry->argument_count > CPLAT_STRING_CATALOG_ARGUMENT_MAX) ||
+        if ((entry->argument_count < 0) || (entry->argument_count > (int)CPLAT_STRING_CATALOG_ARGUMENT_MAX) ||
             ((entry->argument_count > 0) && (entry->arguments == NULL)) || (entry->brief == NULL) ||
             (cplat_internal_string_catalog_find_entry(catalog, entry->key) != entry))
         {

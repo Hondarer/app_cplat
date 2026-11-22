@@ -27,6 +27,8 @@
     #include <cplat/runtime/process.h>
     #include <cplat/sync/sync.h>
     #include <cplat/trace/eventlog.h>
+    #include <cplat/trace/tracer.h>
+    #include <assert.h>
     #include <inttypes.h>
     #include <stdio.h>
     #include <stdlib.h>
@@ -43,16 +45,29 @@
  *  EventMessageFile と CategoryMessageFile が同一ファイル (libcplat_eventlog_messages.dll) を
  *  指すため、メッセージ テーブルの ID 空間は 1 つに統合されます。カテゴリは Windows 仕様上
  *  1..CategoryCount に固定配置するため、イベント ID は重複を避けて 0x1000 番台に配置します。
+ *  cplat_eventlog_messages/eventlog_messages.mc の MessageId (0x1001..0x1036) と一致させます。
  */
-    #define EVENTLOG_EVENT_ID_NO_IDENTIFIER       0x1001
-    #define EVENTLOG_EVENT_ID_FILE_IDENTIFIER     0x1011
-    #define EVENTLOG_EVENT_ID_INSTANCE_IDENTIFIER 0x1021
-    #define EVENTLOG_EVENT_ID_BOTH_IDENTIFIERS    0x1031
+    #define EVENTLOG_EVENT_ID_NO_IDENTIFIER       0x1001U
+    #define EVENTLOG_EVENT_ID_FILE_IDENTIFIER     0x1011U
+    #define EVENTLOG_EVENT_ID_INSTANCE_IDENTIFIER 0x1021U
+    #define EVENTLOG_EVENT_ID_BOTH_IDENTIFIERS    0x1031U
 
 /**
  *  EventLog に渡す置換文字列数。
  */
     #define EVENTLOG_STRING_COUNT 5
+
+/*
+ * int64_t の識別子を 10 進文字列へ書式化する作業配列の大きさ [byte] (終端 NUL を含む)。
+ * int64_t の 10 進表記は符号を含めて最大 20 文字であり、終端 NUL を含めて最小 21 [byte] を要する。
+ * 制約: 21 以上とすること。変更時は作業配列のスタック消費量だけが変わる。
+ */
+    #define EVENTLOG_IDENTIFIER_TEXT_SIZE 32U
+
+static_assert(EVENTLOG_IDENTIFIER_TEXT_SIZE >= 21U, "identifier text buffer must fit int64_t and NUL");
+
+    /** レジストリ キー パスの作業配列長 [UTF-16] です。 */
+    #define EVENTLOG_KEY_PATH_CHARS 512U
 
 /**
  *  @brief  EventLog シンク ハンドル構造体 (内部定義) です。
@@ -102,22 +117,22 @@ static void map_level(const int level, const int has_file_identifier, const int 
 
     switch (level)
     {
-    case 0: /* CRITICAL */
+    case CPLAT_TRACE_LEVEL_CRITICAL:
         *type = EVENTLOG_ERROR_TYPE;
         break;
-    case 1: /* ERROR */
+    case CPLAT_TRACE_LEVEL_ERROR:
         *type = EVENTLOG_ERROR_TYPE;
         break;
-    case 2: /* WARNING */
+    case CPLAT_TRACE_LEVEL_WARNING:
         *type = EVENTLOG_WARNING_TYPE;
         break;
-    case 3: /* INFO */
+    case CPLAT_TRACE_LEVEL_INFO:
         *type = EVENTLOG_INFORMATION_TYPE;
         break;
-    case 4: /* VERBOSE */
+    case CPLAT_TRACE_LEVEL_VERBOSE:
         *type = EVENTLOG_INFORMATION_TYPE;
         break;
-    case 5: /* DEBUG */
+    case CPLAT_TRACE_LEVEL_DEBUG:
         *type = EVENTLOG_INFORMATION_TYPE;
         break;
     default:
@@ -125,7 +140,7 @@ static void map_level(const int level, const int has_file_identifier, const int 
         break;
     }
 
-    if (level >= 0 && level < CPLAT_EVENTLOG_LEVEL_COUNT)
+    if (level >= 0 && level < (int)CPLAT_EVENTLOG_LEVEL_COUNT)
     {
         *category = (WORD)(level + 1);
 
@@ -146,7 +161,7 @@ static void map_level(const int level, const int has_file_identifier, const int 
             base_id = EVENTLOG_EVENT_ID_NO_IDENTIFIER;
         }
 
-        *event_id = (DWORD)(base_id + level);
+        *event_id = base_id + (DWORD)level;
     }
     else
     {
@@ -406,8 +421,8 @@ int cplat_eventlog_sink_write(cplat_eventlog_sink *handle, const int level, cons
     wchar_t *winstance;
     wchar_t *winstance_id;
     LPCWSTR strings[EVENTLOG_STRING_COUNT];
-    char file_id[32];
-    char instance_id[32];
+    char file_id[EVENTLOG_IDENTIFIER_TEXT_SIZE];
+    char instance_id[EVENTLOG_IDENTIFIER_TEXT_SIZE];
     int has_file_identifier;
     int has_instance_identifier;
     BOOL ok;
@@ -504,7 +519,7 @@ void cplat_internal_eventlog_sink_dispose_on_shutdown(cplat_eventlog_sink *handl
 
 int cplat_eventlog_register_source(const char *source_name, const char *message_file_path)
 {
-    wchar_t key_path[512];
+    wchar_t key_path[EVENTLOG_KEY_PATH_CHARS];
     HKEY hkey;
     LONG rc;
     DWORD disposition;
@@ -591,7 +606,7 @@ int cplat_eventlog_register_source(const char *source_name, const char *message_
 
 int cplat_eventlog_unregister_source(const char *source_name)
 {
-    wchar_t key_path[512];
+    wchar_t key_path[EVENTLOG_KEY_PATH_CHARS];
     LONG rc;
 
     if (source_name == NULL)

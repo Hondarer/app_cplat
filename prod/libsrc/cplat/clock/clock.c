@@ -11,6 +11,7 @@
  *******************************************************************************
  */
 
+#include <assert.h>
 #include <cplat/base/platform.h>
 #include <cplat/base/error_internal.h>
 #include <errno.h>
@@ -22,6 +23,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "clock_internal.h"
+
 #if defined(PLATFORM_LINUX)
     #include <time.h>
 #elif defined(PLATFORM_WINDOWS)
@@ -29,13 +32,13 @@
 #endif /* PLATFORM_ */
 
 /* 変換定数 */
-#define MSEC_PER_SEC  (1000ULL)
-#define NSEC_PER_SEC  (1000000000LL)
-#define NSEC_PER_MSEC (1000000LL)
-#define SEC_PER_DAY   (86400LL)
+#define SEC_PER_DAY (86400LL)
 
 static const char s_iso8601_local_fallback[] = "0000-00-00T00:00:00.000+00:00";
 static const char s_iso8601_utc_fallback[] = "0000-00-00T00:00:00.000Z";
+
+static_assert(sizeof(s_iso8601_local_fallback) - 1U == CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN, "cplat: local fallback len");
+static_assert(sizeof(s_iso8601_utc_fallback) - 1U == CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN, "cplat: utc fallback len");
 
 static void clock_write_fallback(char *buf, const size_t buf_size, const char *fallback)
 {
@@ -105,6 +108,7 @@ static int64_t clock_days_from_civil(const int year, const unsigned month, const
 /*
  * 同一瞬間のローカル時刻と UTC から、ローカルの時差を分で求めて offset_minutes へ書く。
  * 日付をまたぐため、通算日の差と当日秒の差を秒へ直してから 60 で割る。
+ * UTC との差が分の倍数でない場合、C の整数除算により、分未満を 0 方向へ切り捨てる。
  * tm_gmtoff は POSIX.1-2024 の拡張で MSVC にないため、共通メンバーだけで算出する。
  * see: https://man7.org/linux/man-pages/man3/tm.3type.html
  */
@@ -130,7 +134,7 @@ static void clock_utc_offset_minutes(const struct tm *local_tm, const struct tm 
 static int clock_format_iso8601_utc_from_tm(char *buf, const size_t buf_size, const struct tm *utc_tm,
                                             const int64_t tv_nsec)
 {
-    if (buf == NULL || buf_size < (size_t)(CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN + 1))
+    if (buf == NULL || buf_size < (size_t)(CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN + 1U))
     {
         return CPLAT_ERR_UNKNOWN;
     }
@@ -138,7 +142,7 @@ static int clock_format_iso8601_utc_from_tm(char *buf, const size_t buf_size, co
     /* ミリ秒未満のナノ秒は切り捨て、ミリ秒を 3 桁で出力する。 */
     if (cplat_snprintf(buf, buf_size, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", utc_tm->tm_year + 1900, utc_tm->tm_mon + 1,
                        utc_tm->tm_mday, utc_tm->tm_hour, utc_tm->tm_min, utc_tm->tm_sec,
-                       (int)(tv_nsec / NSEC_PER_MSEC)) != CPLAT_OK)
+                       (int)(tv_nsec / CLOCK_NSEC_PER_MSEC)) != CPLAT_OK)
     {
         return CPLAT_ERR_UNKNOWN;
     }
@@ -155,7 +159,7 @@ static int clock_format_iso8601_local_from_tm(char *buf, const size_t buf_size, 
     int offset_hours;
     int offset_mins;
 
-    if (buf == NULL || buf_size < (size_t)(CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1))
+    if (buf == NULL || buf_size < (size_t)(CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1U))
     {
         return CPLAT_ERR_UNKNOWN;
     }
@@ -177,7 +181,7 @@ static int clock_format_iso8601_local_from_tm(char *buf, const size_t buf_size, 
     /* ミリ秒未満のナノ秒は切り捨て、ミリ秒を 3 桁で出力する。 */
     if (cplat_snprintf(buf, buf_size, "%04d-%02d-%02dT%02d:%02d:%02d.%03d%c%02d:%02d", local_tm->tm_year + 1900,
                        local_tm->tm_mon + 1, local_tm->tm_mday, local_tm->tm_hour, local_tm->tm_min, local_tm->tm_sec,
-                       (int)(tv_nsec / NSEC_PER_MSEC), offset_sign, offset_hours, offset_mins) != CPLAT_OK)
+                       (int)(tv_nsec / CLOCK_NSEC_PER_MSEC), offset_sign, offset_hours, offset_mins) != CPLAT_OK)
     {
         return CPLAT_ERR_UNKNOWN;
     }
@@ -202,8 +206,8 @@ int cplat_clock_get_monotonic_ms(uint64_t *milliseconds_out)
         return ret;
     }
 
-    *milliseconds_out =
-        (uint64_t)timestamp.tv_sec * MSEC_PER_SEC + (uint64_t)timestamp.tv_nsec / (uint64_t)NSEC_PER_MSEC;
+    *milliseconds_out = (uint64_t)timestamp.tv_sec * (uint64_t)CLOCK_MSEC_PER_SEC +
+                        (uint64_t)timestamp.tv_nsec / (uint64_t)CLOCK_NSEC_PER_MSEC;
 
     return CPLAT_OK;
 }
@@ -250,7 +254,7 @@ int cplat_clock_get_monotonic(cplat_timespec *timestamp_out)
     ticks_per_sec = (uint64_t)frequency.QuadPart;
     seconds = (time_t)(ticks / ticks_per_sec);
     /* カウンター全体への乗算を避け、秒未満の部分だけを換算する。 */
-    nanoseconds = (int64_t)((ticks % ticks_per_sec) * (uint64_t)NSEC_PER_SEC / ticks_per_sec);
+    nanoseconds = (int64_t)((ticks % ticks_per_sec) * (uint64_t)CLOCK_NSEC_PER_SEC / ticks_per_sec);
 
     timestamp_out->tv_sec = seconds;
     timestamp_out->tv_nsec = nanoseconds;
@@ -332,7 +336,7 @@ int cplat_clock_format_realtime_iso8601_local(char *buf, const size_t buf_size, 
     struct tm utc_tm;
     int offset_minutes;
 
-    if (timestamp == NULL || timestamp->tv_nsec < 0 || timestamp->tv_nsec >= NSEC_PER_SEC)
+    if (timestamp == NULL || timestamp->tv_nsec < 0 || timestamp->tv_nsec >= CLOCK_NSEC_PER_SEC)
     {
         clock_write_fallback(buf, buf_size, s_iso8601_local_fallback);
         return CPLAT_ERR_INVALID_ARGUMENT;
@@ -361,7 +365,7 @@ int cplat_clock_format_realtime_iso8601_utc(char *buf, const size_t buf_size, co
 {
     struct tm utc_tm;
 
-    if (timestamp == NULL || timestamp->tv_nsec < 0 || timestamp->tv_nsec >= NSEC_PER_SEC)
+    if (timestamp == NULL || timestamp->tv_nsec < 0 || timestamp->tv_nsec >= CLOCK_NSEC_PER_SEC)
     {
         clock_write_fallback(buf, buf_size, s_iso8601_utc_fallback);
         return CPLAT_ERR_INVALID_ARGUMENT;

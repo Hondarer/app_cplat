@@ -10,6 +10,7 @@
 #include <cplat/prompt/pinned_prompt.h>
 
 #include "prompt_platform.h"
+#include <cplat/base/char_code.h>
 #include <cplat/console/console.h>
 #include <cplat/crt/stdio.h>
 #include <cplat/crt/string.h>
@@ -31,7 +32,14 @@
  */
 #define PINNED_PROMPT_ROW_UNSET INT_MAX
 
-#define PINNED_PROMPT_INPUT_INITIAL_DEFAULT 256U
+/* 下部ステータス領域が占める行数 (区切り行 + ステータス行) [行] */
+#define PINNED_PROMPT_BOTTOM_STATUS_ROWS 2
+
+/* 下部ステータス領域を表示するために必要な端末の最小行数 [行] */
+#define PINNED_PROMPT_BOTTOM_STATUS_MIN_ROWS (PINNED_PROMPT_BOTTOM_STATUS_ROWS + 1)
+
+/* 上部ステータス領域を表示するために必要なプロンプト行の最小位置 [行] */
+#define PINNED_PROMPT_TOP_STATUS_MIN_PROMPT_ROW 4
 
 /*
  * 履歴コンテキスト配列の初期容量 [個]。
@@ -352,10 +360,10 @@ static void pinned_prompt_calc_layout(cplat_pinned_prompt *screen, pinned_prompt
         rows = 1;
     }
 
-    layout->show_bottom_status = screen->status_bottom_enabled && rows >= 3;
+    layout->show_bottom_status = screen->status_bottom_enabled && rows >= PINNED_PROMPT_BOTTOM_STATUS_MIN_ROWS;
     if (layout->show_bottom_status)
     {
-        layout->prompt_row = rows - 2;
+        layout->prompt_row = rows - PINNED_PROMPT_BOTTOM_STATUS_ROWS;
     }
     else
     {
@@ -364,7 +372,8 @@ static void pinned_prompt_calc_layout(cplat_pinned_prompt *screen, pinned_prompt
 
     layout->prompt_sep_row = layout->prompt_row - 1;
 
-    layout->show_top_status = screen->status_top_enabled && layout->prompt_row >= 4;
+    layout->show_top_status =
+        screen->status_top_enabled && layout->prompt_row >= PINNED_PROMPT_TOP_STATUS_MIN_PROMPT_ROW;
     if (layout->show_top_status)
     {
         layout->top_status_row = layout->prompt_sep_row - 1;
@@ -381,7 +390,7 @@ static void pinned_prompt_calc_layout(cplat_pinned_prompt *screen, pinned_prompt
     if (layout->show_bottom_status)
     {
         layout->bottom_sep_row = layout->prompt_row + 1;
-        layout->bottom_status_row = layout->prompt_row + 2;
+        layout->bottom_status_row = layout->prompt_row + PINNED_PROMPT_BOTTOM_STATUS_ROWS;
     }
     else
     {
@@ -651,17 +660,17 @@ static pinned_prompt_key pinned_prompt_read_key(cplat_pinned_prompt *screen, int
         return PINNED_PROMPT_KEY_TAB;
     }
 
-    if (c == 0x03)
+    if (c == (int)CPLAT_ASCII_ETX)
     {
         return PINNED_PROMPT_KEY_CTRL_C;
     }
 
-    if (c == 0x7F || c == 0x08)
+    if (c == (int)CPLAT_ASCII_DEL || c == (int)CPLAT_ASCII_BS)
     {
         return PINNED_PROMPT_KEY_BACKSPACE;
     }
 
-    if (c == 0x1B)
+    if (c == (int)CPLAT_ASCII_ESC)
     {
         c2 = prompt_platform_read_char_nb(&screen->platform);
         if (c2 == PROMPT_PLATFORM_CANCELED)
@@ -768,7 +777,7 @@ static pinned_prompt_key pinned_prompt_read_key(cplat_pinned_prompt *screen, int
         return PINNED_PROMPT_KEY_UNKNOWN;
     }
 
-    if (c >= 0x20)
+    if (c >= (int)CPLAT_ASCII_PRINTABLE_MIN)
     {
         *ch_out = c;
         return PINNED_PROMPT_KEY_CHAR;
@@ -991,8 +1000,9 @@ static void pinned_prompt_history_next(cplat_pinned_prompt *screen, pinned_promp
 /* カーソル位置に 1 [byte] を挿入し、カーソル位置と編集長を 1 増やす。 */
 static void pinned_prompt_insert_byte(cplat_pinned_prompt *screen, int ch)
 {
+    /* 挿入 1 [byte] と終端 NUL 1 [byte] の余裕を確保する。 */
     if (cplat_internal_prompt_edit_ensure_capacity(&screen->edit_buf, &screen->edit_cap, screen->input_max_bytes,
-                                                   screen->edit_len + 2U) != 0)
+                                                   screen->edit_len + 1U + 1U) != 0)
     {
         return;
     }
@@ -1143,14 +1153,14 @@ cplat_pinned_prompt *cplat_pinned_prompt_create(const cplat_pinned_prompt_option
 
     if (options != NULL)
     {
-        cplat_internal_prompt_edit_resolve_options(options->input.history_max, options->input.input_initial_capacity,
-                                                   options->input.input_max_bytes, PINNED_PROMPT_INPUT_INITIAL_DEFAULT,
-                                                   &history_max, &input_initial_capacity, &input_max_bytes);
+        cplat_internal_prompt_edit_resolve_options(
+            options->input.history_max, options->input.input_initial_capacity, options->input.input_max_bytes,
+            CPLAT_INTERNAL_PROMPT_INPUT_INITIAL_DEFAULT, &history_max, &input_initial_capacity, &input_max_bytes);
     }
     else
     {
-        cplat_internal_prompt_edit_resolve_options(0U, 0U, 0U, PINNED_PROMPT_INPUT_INITIAL_DEFAULT, &history_max,
-                                                   &input_initial_capacity, &input_max_bytes);
+        cplat_internal_prompt_edit_resolve_options(0U, 0U, 0U, CPLAT_INTERNAL_PROMPT_INPUT_INITIAL_DEFAULT,
+                                                   &history_max, &input_initial_capacity, &input_max_bytes);
     }
 
     screen->history_max = history_max;

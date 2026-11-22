@@ -22,6 +22,9 @@ static BOOL WINAPI prompt_windows_default_cancel_sync_io(HANDLE thread_handle)
 
 static prompt_windows_cancel_sync_io_fn s_cancel_sync_io_fn = prompt_windows_default_cancel_sync_io;
 
+    /* リサイズ確認契機を作る入力待機タイムアウト時間 [ms] */
+    #define PROMPT_WINDOWS_RESIZE_POLL_INTERVAL_MS 100U
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int prompt_platform_init_cancelable(prompt_platform_context *context)
@@ -349,7 +352,7 @@ int prompt_platform_read_char(prompt_platform_context *context)
             }
 
             /* 入力を 100 [ms] 待機し、タイムアウト時はリサイズ確認契機とする。 */
-            DWORD result = WaitForSingleObject(context->stdin_handle, 100U);
+            DWORD result = WaitForSingleObject(context->stdin_handle, PROMPT_WINDOWS_RESIZE_POLL_INTERVAL_MS);
 
             if (prompt_platform_is_input_canceled(context))
             {

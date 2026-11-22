@@ -205,11 +205,12 @@ static void arena_take(struct hashtable_arena *arena, size_t offset, size_t leng
         }
         else
         {
-            memmove(&arena->free_list[i + 2u], &arena->free_list[i + 1u],
+            const size_t next_idx = i + 1u;
+            memmove(&arena->free_list[next_idx + 1u], &arena->free_list[next_idx],
                     (size_t)(count - i - 1u) * sizeof(struct hashtable_free_block));
             arena->free_list[i].length = start - arena->free_list[i].offset;
-            arena->free_list[i + 1u].offset = end;
-            arena->free_list[i + 1u].length = free_end - end;
+            arena->free_list[next_idx].offset = end;
+            arena->free_list[next_idx].length = free_end - end;
             *arena->free_count = count + 1u;
         }
 

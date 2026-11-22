@@ -15,6 +15,7 @@
  *******************************************************************************
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,8 +35,25 @@
 /** @brief 乱数列の生成に使う固定シードです。 */
 #define BENCH_RANDOM_SEED 88172645463325252ULL
 
-/** @brief 測定対象ファイルのパスの上限長です。 */
-#define BENCH_PATH_SIZE 512
+/** @brief 測定対象ファイルのパスを格納する配列の大きさ [byte] (終端 NUL を含む) です。 */
+#define BENCH_PATH_SIZE 512U
+
+/** --min-ms の既定値 [ms] (1 以上) です。 */
+#define BENCH_DEFAULT_MIN_MS 500
+
+/** --trials の既定値です。 */
+#define BENCH_DEFAULT_TRIALS 5
+
+/** --sizes の 1 要素を受ける配列の大きさ [byte] (終端を含む) です。 */
+#define BENCH_SIZE_TOKEN_SIZE 32U
+
+/** --huge で追加するファイルの大きさ [GiB] です。 */
+#define BENCH_HUGE_FILE_GIB 1U
+
+/** --huge で追加するファイルの大きさ [byte] です。 */
+#define BENCH_HUGE_FILE_SIZE ((size_t)BENCH_HUGE_FILE_GIB * 1024U * 1024U * 1024U)
+
+static_assert((BENCH_DEFAULT_TRIALS >= 1) && ((unsigned int)BENCH_DEFAULT_TRIALS <= BENCH_TIMER_MAX_TRIALS), "範囲内");
 
 /**
  *  @brief  測定ループへ渡す引数です。
@@ -200,7 +218,10 @@ static int drop_page_cache(void *arg)
         return -1;
     }
 
-    if (fwrite("3\n", 1U, 2U, stream) != 2U)
+    static const char drop_caches_val[] = "3\n";
+    const size_t val_len = sizeof(drop_caches_val) - 1U;
+
+    if (fwrite(drop_caches_val, 1U, val_len, stream) != val_len)
     {
         (void)fclose(stream); /* 先行する書き込みの失敗を返す経路のため、戻り値は明示的に破棄する */
         return -1;
@@ -242,17 +263,17 @@ static int parse_size(const char *text, size_t *size)
 
     if (text[index] == 'K' || text[index] == 'k')
     {
-        multiplier = 1024ULL;
+        multiplier = 1024ULL; /* [KiB] への換算係数 */
         index++;
     }
     else if (text[index] == 'M' || text[index] == 'm')
     {
-        multiplier = 1024ULL * 1024ULL;
+        multiplier = 1024ULL * 1024ULL; /* [MiB] への換算係数 */
         index++;
     }
     else if (text[index] == 'G' || text[index] == 'g')
     {
-        multiplier = 1024ULL * 1024ULL * 1024ULL;
+        multiplier = 1024ULL * 1024ULL * 1024ULL; /* [GiB] への換算係数 */
         index++;
     }
     else
@@ -333,14 +354,14 @@ static int create_data_file(const char *path, size_t size)
     FILE *stream = cplat_fopen(path, "wb", NULL);
     bench_record *block;
     size_t written = 0U;
-    size_t total = size / (size_t)BENCH_RECORD_SIZE;
+    size_t total = size / BENCH_RECORD_SIZE;
 
     if (stream == NULL)
     {
         return -1;
     }
 
-    block = (bench_record *)cplat_calloc((size_t)BENCH_BLOCK_RECORDS, sizeof(bench_record));
+    block = (bench_record *)cplat_calloc(BENCH_BLOCK_RECORDS, sizeof(bench_record));
     if (block == NULL)
     {
         (void)fclose(stream); /* 先行するメモリ確保の失敗を返す経路のため、戻り値は明示的に破棄する */
@@ -352,9 +373,9 @@ static int create_data_file(const char *path, size_t size)
         size_t chunk = total - written;
         size_t index;
 
-        if (chunk > (size_t)BENCH_BLOCK_RECORDS)
+        if (chunk > BENCH_BLOCK_RECORDS)
         {
-            chunk = (size_t)BENCH_BLOCK_RECORDS;
+            chunk = BENCH_BLOCK_RECORDS;
         }
 
         for (index = 0U; index < chunk; index++)
@@ -598,7 +619,7 @@ static int run_size(const char *dir, size_t size, const char *api_list, const ch
     char path[BENCH_PATH_SIZE];
     bench_context ctx = {0};
     size_t *order;
-    size_t record_count = size / (size_t)BENCH_RECORD_SIZE;
+    size_t record_count = size / BENCH_RECORD_SIZE;
     int api_index;
     int failures = 0;
 
@@ -712,8 +733,9 @@ int main(int argc, char *argv[])
     int huge = 0;
     int cold = 0;
     int keep = 0;
-    int min_ms = 500;
-    int trials = 5;
+    int min_ms = BENCH_DEFAULT_MIN_MS;
+    int trials = BENCH_DEFAULT_TRIALS;
+    char huge_help[64];
     int parse_result;
     FILE *csv = NULL;
     bench_environment env;
@@ -740,7 +762,11 @@ int main(int argc, char *argv[])
     (void)cplat_argparser_register_option_int(NULL, "--min-ms", "MS", "1 試行の測定区間の下限 (ミリ秒)。", 0U,
                                               &min_ms);
     (void)cplat_argparser_register_option_int(NULL, "--trials", "N", "1 条件あたりの試行回数。", 0U, &trials);
-    (void)cplat_argparser_register_flag(NULL, "--huge", "1 GB のケースを追加します。", &huge);
+    if (cplat_snprintf(huge_help, sizeof(huge_help), "%u GB のケースを追加します。", BENCH_HUGE_FILE_GIB) != CPLAT_OK)
+    {
+        return EXIT_FAILURE;
+    }
+    (void)cplat_argparser_register_flag(NULL, "--huge", huge_help, &huge);
     (void)cplat_argparser_register_flag(NULL, "--cold", "ページ キャッシュを破棄して測定します (Linux、要 root)。",
                                         &cold);
     (void)cplat_argparser_register_flag(NULL, "--keep", "測定用ファイルを削除せずに残します。", &keep);
@@ -773,10 +799,10 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    if (min_ms <= 0 || trials <= 0 || trials > BENCH_TIMER_MAX_TRIALS)
+    if (min_ms <= 0 || trials <= 0 || (unsigned int)trials > BENCH_TIMER_MAX_TRIALS)
     {
         /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
-        (void)cplat_fprintf(stderr, "error: --min-ms は 1 以上、--trials は 1 以上 %d 以下を指定してください。\n",
+        (void)cplat_fprintf(stderr, "error: --min-ms は 1 以上、--trials は 1 以上 %u 以下を指定してください。\n",
                             BENCH_TIMER_MAX_TRIALS);
         return EXIT_FAILURE;
     }
@@ -794,7 +820,7 @@ int main(int argc, char *argv[])
 
     if (cold != 0)
     {
-        memcpy(env.cache_state, "cold", 5U); /* 終端 NUL を含む */
+        memcpy(env.cache_state, "cold", sizeof("cold")); /* 終端 NUL を含む */
     }
 
     if (csv_path != NULL)
@@ -816,7 +842,7 @@ int main(int argc, char *argv[])
     cursor = sizes;
     while (*cursor != '\0')
     {
-        char token[32];
+        char token[BENCH_SIZE_TOKEN_SIZE];
         const char *separator = strchr(cursor, ',');
         size_t length;
         size_t size = 0U;
@@ -862,13 +888,26 @@ int main(int argc, char *argv[])
         cursor = separator + 1;
     }
 
-    if (huge != 0 && failures == 0)
+    /*
+     * それまでの処理に失敗が 1 件でもある場合は、--huge の測定を省略する。
+     * 指定したオプションが通知なく無視されないよう、省略したことを標準エラー出力へ通知する。
+     */
+    if (huge != 0)
     {
-        size_t size = 1024U * 1024U * 1024U;
-
-        if (run_size(dir, size, api_list, pattern_list, &env, csv, (uint64_t)min_ms, (size_t)trials, cold, keep) != 0)
+        if (failures == 0)
         {
-            failures++;
+            size_t size = BENCH_HUGE_FILE_SIZE;
+
+            if (run_size(dir, size, api_list, pattern_list, &env, csv, (uint64_t)min_ms, (size_t)trials, cold, keep) !=
+                0)
+            {
+                failures++;
+            }
+        }
+        else
+        {
+            /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+            (void)cplat_fprintf(stderr, "error: --huge skipped due to earlier failures\n");
         }
     }
 

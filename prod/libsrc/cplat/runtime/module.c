@@ -65,6 +65,12 @@ static_assert(MODULE_WIN32_EXTENDED_PATH_CAP <= (size_t)INT_MAX, "must fit in in
 
 static_assert(MODULE_PATH_UTF8_CAP_MAX >= PLATFORM_PATH_UTF8_MAX, "work area limit must cover the initial size");
 
+/** Linux の共有ライブラリの拡張子です。 */
+#define MODULE_SO_EXT ".so"
+
+/** macOS の共有ライブラリの拡張子です。 */
+#define MODULE_DYLIB_EXT ".dylib"
+
 /**
  *  @brief          共有ライブラリ特有の拡張子 (Linux の .so 系) の切り出し位置を求めます。
  *
@@ -88,14 +94,15 @@ static const char *find_shared_lib_extension_cut(const char *s)
     }
 
     len = strlen(s);
-    if (len >= 3 && strcmp(s + (len - 3), ".so") == 0)
+    if (len >= sizeof(MODULE_SO_EXT) - 1U && strcmp(s + (len - (sizeof(MODULE_SO_EXT) - 1U)), MODULE_SO_EXT) == 0)
     {
-        return s + (len - 3);
+        return s + (len - (sizeof(MODULE_SO_EXT) - 1U));
     }
 
-    if (len >= 6 && strcmp(s + (len - 6), ".dylib") == 0)
+    if (len >= sizeof(MODULE_DYLIB_EXT) - 1U &&
+        strcmp(s + (len - (sizeof(MODULE_DYLIB_EXT) - 1U)), MODULE_DYLIB_EXT) == 0)
     {
-        return s + (len - 6);
+        return s + (len - (sizeof(MODULE_DYLIB_EXT) - 1U));
     }
 #else
     (void)s;

@@ -14,6 +14,7 @@
 #include <cplat/base/result_internal.h>
 #include <cplat/crt/string.h>
 
+#include <assert.h>
 #include <errno.h>
 #include <limits.h>
 
@@ -22,7 +23,12 @@
 #elif defined(PLATFORM_WINDOWS)
     #include <cplat/base/windows_sdk.h>
     #include <cplat/crt/wchar_conv.h>
+    #include <windns.h>
+
+static_assert(CPLAT_HOST_NAME_MAX >= DNS_MAX_NAME_BUFFER_LENGTH, "cplat: host name limit");
 #endif /* PLATFORM_ */
+
+static_assert(CPLAT_HOST_NAME_MAX <= (unsigned int)INT_MAX, "cplat: host name limit must fit in int");
 
 /* Doxygen コメントは、ヘッダーに記載 */
 

@@ -19,6 +19,8 @@
 
 #include "filter.h"
 
+#include <assert.h>
+#include <limits.h>
 #include <cplat/base/result.h>
 #include <cplat/runtime/abort.h>
 #include <cplat/string_catalog/format_internal.h>
@@ -40,6 +42,11 @@ typedef enum truth_value
 
 /** 行の集合を表す 1 語のビット数です。 */
 #define LINE_WORD_BITS 64U
+
+static_assert(LINE_WORD_BITS == sizeof(uint64_t) * CHAR_BIT, "行ビット集合の幅が uint64_t に一致すること");
+
+/** 二重化面の数です。1 - active_plane による切り替えは 2 面を前提とします。 */
+#define FILTER_PLANE_COUNT 2
 
 /** 数値の比較結果のうち、NaN を含むため順序が定まらないことを表す値です。 */
 #define ORDER_UNORDERED 2
@@ -76,7 +83,7 @@ struct cplat_string_catalog_filter_slot
         *category_names; /**< 自然文での表現に使う分類値の名前。未設定は NULL。 */
     cplat_local_rwlock *plane_lock;
     cplat_local_lock *apply_lock;
-    filter_plane planes[2];
+    filter_plane planes[FILTER_PLANE_COUNT];
     const void *source; /**< 結び付けたソース領域。未設定は NULL。 */
     size_t source_size; /**< @ref cplat_string_catalog_filter_slot::source のバイト数。 */
     cplat_string_catalog_filter_source_lock source_lock; /**< 書き込み側の排他。未設定は lock が NULL。 */
@@ -841,11 +848,13 @@ static truth_value evaluate_line(const evaluation_context *context, const bool h
             stack[depth - 1U] = (uint8_t)truth_not((truth_value)stack[depth - 1U]);
             break;
         case STRING_CATALOG_FILTER_OPCODE_AND:
-            stack[depth - 2U] = (uint8_t)truth_and((truth_value)stack[depth - 2U], (truth_value)stack[depth - 1U]);
+            stack[depth - STRING_CATALOG_FILTER_BINARY_OPERAND_COUNT] = (uint8_t)truth_and(
+                (truth_value)stack[depth - STRING_CATALOG_FILTER_BINARY_OPERAND_COUNT], (truth_value)stack[depth - 1U]);
             depth--;
             break;
         case STRING_CATALOG_FILTER_OPCODE_OR:
-            stack[depth - 2U] = (uint8_t)truth_or((truth_value)stack[depth - 2U], (truth_value)stack[depth - 1U]);
+            stack[depth - STRING_CATALOG_FILTER_BINARY_OPERAND_COUNT] = (uint8_t)truth_or(
+                (truth_value)stack[depth - STRING_CATALOG_FILTER_BINARY_OPERAND_COUNT], (truth_value)stack[depth - 1U]);
             depth--;
             break;
         case STRING_CATALOG_FILTER_OPCODE_JUMP_IF_FALSE:

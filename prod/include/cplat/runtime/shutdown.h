@@ -26,6 +26,7 @@
 #ifndef CPLAT_RUNTIME_SHUTDOWN_H
 #define CPLAT_RUNTIME_SHUTDOWN_H
 
+#include <assert.h>
 #include <cplat/base/platform.h>
 #include <cplat/base/result.h>
 #include <cplat/cplat_export.h>
@@ -96,6 +97,9 @@ extern "C"
  *  この値自体はアプリケーション固有の終了コードとして使用しないでください。
  */
 #define CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE 125
+
+    static_assert((CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE >= 1) && (CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE <= 255),
+                  "cplat: reserved exit code must fit in 8 bits");
 
     /**
      *  @brief          終了コールバックを登録します。

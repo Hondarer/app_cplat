@@ -5,7 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define ETW_VIEWER_SESSION_NAME_MAX 128
+/** @brief ETW セッション名を格納する配列の大きさ [byte] (終端 NUL を含む) です。 */
+#define ETW_VIEWER_SESSION_NAME_MAX 128U
 
 typedef struct etw_viewer_options
 {

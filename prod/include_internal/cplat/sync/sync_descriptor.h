@@ -17,6 +17,8 @@
  *  - offset 8-11: identity 長 (uint32)
  *  - offset 12-19: 予約 (0)
  *  - offset 20-: identity (NUL 終端なし)
+ *
+ *  予約領域 (offset 7、offset 12-19) の用途は未定です。書き出しは 0 を格納し、読み込みは検査しません。
  *******************************************************************************
  */
 #ifndef CPLAT_SYNC_DESCRIPTOR_H
@@ -33,11 +35,12 @@
 /** ディスクリプターのヘッダー バイト数。 */
 #define CPLAT_INTERPROCESS_SYNC_DESCRIPTOR_HEADER_SIZE 20U
 
-/** 種別: プロセス間ロック。 */
-#define CPLAT_INTERPROCESS_SYNC_KIND_LOCK 1U
-
-/** 種別: プロセス間リーダー ライター ロック。 */
-#define CPLAT_INTERPROCESS_SYNC_KIND_RWLOCK 2U
+/** プロセス間同期オブジェクトの種別です。 */
+typedef enum cplat_internal_interprocess_sync_kind
+{
+    CPLAT_INTERPROCESS_SYNC_KIND_LOCK = 1,  /**< プロセス間ロック。 */
+    CPLAT_INTERPROCESS_SYNC_KIND_RWLOCK = 2 /**< プロセス間リーダー ライター ロック。 */
+} cplat_internal_interprocess_sync_kind;
 
 #ifdef __cplusplus
 extern "C"

@@ -17,6 +17,7 @@
  *******************************************************************************
  */
 
+#include <assert.h>
 #include <cplat/runtime/memory_lock.h>
 #include <cplat/crt/stdlib.h>
 #include <cplat/base/result_internal.h>
@@ -36,10 +37,20 @@
 
 /** cplat_memory_lock_self_options::flags で受け付ける bit の集合。 */
 #define CPLAT_MEMORY_LOCK_KNOWN_FLAGS (CPLAT_MEMORY_LOCK_CURRENT | CPLAT_MEMORY_LOCK_FUTURE | CPLAT_MEMORY_LOCK_ONFAULT)
-/** stack prefault で 1 回にアクセスするスタック サイズ。 */
+/** stack prefault で 1 回にアクセスするスタック サイズ [byte] です。 */
 #define CPLAT_MEMORY_LOCK_STACK_PREFAULT_CHUNK 4096U
-/** stack overflow を避けるために残すスタック サイズ。 */
+/** stack overflow を避けるために残すスタック サイズ [byte] です。 */
 #define CPLAT_MEMORY_LOCK_STACK_SAFETY_MARGIN (64U * 1024U)
+
+static_assert(CPLAT_MEMORY_LOCK_STACK_PREFAULT_CHUNK > 0U &&
+                  CPLAT_MEMORY_LOCK_STACK_PREFAULT_CHUNK < CPLAT_MEMORY_LOCK_STACK_SAFETY_MARGIN,
+              "stack prefault の単位は正で安全余裕未満であること");
+
+/** ロック範囲の配列の初期要素数です。 */
+#define CPLAT_MEMORY_LOCK_RANGE_INITIAL_CAPACITY 16U
+
+/** ロック範囲の配列の容量を拡張する倍率です。 */
+#define CPLAT_MEMORY_LOCK_CAPACITY_GROWTH_FACTOR 2U
 
 #if defined(PLATFORM_WINDOWS)
 /**
@@ -336,11 +347,11 @@ static int append_scope_range(cplat_memory_lock_scope *scope, uintptr_t base, ui
 
     if (scope->count == scope->capacity)
     {
-        size_t new_capacity = 16U;
+        size_t new_capacity = CPLAT_MEMORY_LOCK_RANGE_INITIAL_CAPACITY;
 
         if (scope->capacity > 0U)
         {
-            new_capacity = scope->capacity * 2U;
+            new_capacity = scope->capacity * CPLAT_MEMORY_LOCK_CAPACITY_GROWTH_FACTOR;
         }
 
         cplat_memory_lock_range_entry *new_entries =
@@ -378,7 +389,7 @@ static int ensure_windows_registry_capacity(size_t required_capacity)
 
     if (required_capacity > s_windows_locked_range_capacity)
     {
-        size_t new_capacity = 16U;
+        size_t new_capacity = CPLAT_MEMORY_LOCK_RANGE_INITIAL_CAPACITY;
 
         if (s_windows_locked_range_capacity > 0U)
         {
@@ -386,13 +397,13 @@ static int ensure_windows_registry_capacity(size_t required_capacity)
         }
         while ((result == CPLAT_OK) && (new_capacity < required_capacity))
         {
-            if (new_capacity > ((size_t)-1) / 2U)
+            if (new_capacity > ((size_t)-1) / CPLAT_MEMORY_LOCK_CAPACITY_GROWTH_FACTOR)
             {
                 result = CPLAT_ERR_LIMIT_EXCEEDED;
             }
             else
             {
-                new_capacity *= 2U;
+                new_capacity *= CPLAT_MEMORY_LOCK_CAPACITY_GROWTH_FACTOR;
             }
         }
 

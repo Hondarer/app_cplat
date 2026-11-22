@@ -18,8 +18,15 @@
     #include <cplat/runtime/abort.h>
     #include <cplat/sync/sync.h>
     #include <cplat/sync/sync_descriptor.h>
+    #include <cplat/sync/sync_internal.h>
     #include <cplat/win32/win32.h>
 
+    /*
+     * ロックするバイト範囲の長さ (下位 32 bit と上位 32 bit)。全参加者が、先頭から 1 [byte] の同じ範囲を指定する。
+     * ロック ファイルは空のままで、終端を超える範囲のロックは許される。
+     * 長さ 0 の扱いは資料に記載がないため、1 [byte] とする。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-lockfileex
+     */
     #define INTERPROCESS_SYNC_RANGE_LOW  1U
     #define INTERPROCESS_SYNC_RANGE_HIGH 0U
 
@@ -888,9 +895,9 @@ int cplat_interprocess_lock_export_descriptor(const cplat_interprocess_lock *loc
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    return cplat_internal_interprocess_sync_descriptor_export(lock->identity, CPLAT_INTERPROCESS_SYNC_KIND_LOCK,
-                                                              (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE,
-                                                              descriptor, descriptor_size);
+    return cplat_internal_interprocess_sync_descriptor_export(
+        lock->identity, (uint8_t)CPLAT_INTERPROCESS_SYNC_KIND_LOCK, (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE,
+        descriptor, descriptor_size);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -907,7 +914,7 @@ int cplat_interprocess_lock_import_descriptor(const void *descriptor, size_t des
     }
 
     result = cplat_internal_interprocess_sync_descriptor_import(
-        descriptor, descriptor_size, CPLAT_INTERPROCESS_SYNC_KIND_LOCK,
+        descriptor, descriptor_size, (uint8_t)CPLAT_INTERPROCESS_SYNC_KIND_LOCK,
         (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE, &identity);
     if (result != CPLAT_OK)
     {
@@ -1003,9 +1010,9 @@ int cplat_interprocess_rwlock_export_descriptor(const cplat_interprocess_rwlock 
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
-    return cplat_internal_interprocess_sync_descriptor_export(lock->identity, CPLAT_INTERPROCESS_SYNC_KIND_RWLOCK,
-                                                              (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE,
-                                                              descriptor, descriptor_size);
+    return cplat_internal_interprocess_sync_descriptor_export(
+        lock->identity, (uint8_t)CPLAT_INTERPROCESS_SYNC_KIND_RWLOCK,
+        (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE, descriptor, descriptor_size);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -1022,7 +1029,7 @@ int cplat_interprocess_rwlock_import_descriptor(const void *descriptor, size_t d
     }
 
     result = cplat_internal_interprocess_sync_descriptor_import(
-        descriptor, descriptor_size, CPLAT_INTERPROCESS_SYNC_KIND_RWLOCK,
+        descriptor, descriptor_size, (uint8_t)CPLAT_INTERPROCESS_SYNC_KIND_RWLOCK,
         (uint8_t)CPLAT_INTERPROCESS_SYNC_BACKEND_LOCK_FILE, &identity);
     if (result != CPLAT_OK)
     {
@@ -1131,7 +1138,7 @@ void cplat_interprocess_rwlock_dispose(cplat_interprocess_rwlock *lock)
 
 void cplat_call_once(cplat_once_flag *flag, void (*func)(void))
 {
-    int32_t expected = 0;
+    int32_t expected = CPLAT_ONCE_STATE_UNINITIALIZED;
 
     if (flag == NULL || func == NULL)
     {
@@ -1139,15 +1146,16 @@ void cplat_call_once(cplat_once_flag *flag, void (*func)(void))
     }
 
     /* 未実行状態 (0) から実行中 (1) への遷移に成功したスレッドのみが初期化関数を実行する。 */
-    if (cplat_atomic_compare_exchange_i32(&flag->state, &expected, 1, CPLAT_MEMORY_ORDER_ACQ_REL))
+    if (cplat_atomic_compare_exchange_i32(&flag->state, &expected, CPLAT_ONCE_STATE_RUNNING,
+                                          CPLAT_MEMORY_ORDER_ACQ_REL))
     {
         func();
-        cplat_atomic_store_i32(&flag->state, 2, CPLAT_MEMORY_ORDER_RELEASE);
+        cplat_atomic_store_i32(&flag->state, CPLAT_ONCE_STATE_DONE, CPLAT_MEMORY_ORDER_RELEASE);
         return;
     }
 
     /* 他スレッドが初期化を完了 (2) するまでスレッド スイッチで待機する。 */
-    while (cplat_atomic_load_i32(&flag->state, CPLAT_MEMORY_ORDER_ACQUIRE) != 2)
+    while (cplat_atomic_load_i32(&flag->state, CPLAT_MEMORY_ORDER_ACQUIRE) != CPLAT_ONCE_STATE_DONE)
     {
         SwitchToThread();
     }

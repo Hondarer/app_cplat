@@ -20,6 +20,7 @@
 
 #if defined(PLATFORM_WINDOWS)
 
+    #include <assert.h>
     #include <cplat/base/windows_sdk.h>
     #include <cplat/sync/sync.h>
     #include <cplat/win32/win32.h>
@@ -31,6 +32,21 @@
     #include <stdio.h>  /* stdout, stderr */
     #include <stdlib.h> /* strtoul, strtoull */
     #include <string.h> /* strncmp, strlen */
+
+/* 診断ログ有効化環境変数の読み取りバッファー長 [byte] (終端 NUL を含む)。 */
+    #define CONSOLE_DIAG_ENV_VALUE_BYTES (8U)
+
+/* 診断ログ 1 行分の組み立てバッファー長 [byte] (改行と終端 NUL を含む)。 */
+    #define CONSOLE_DIAG_LINE_BYTES (1024U)
+
+/* 診断ログ本文のフォーマットバッファー長 [byte]。line より小さくして切り詰め計算を安全にする。 */
+    #define CONSOLE_DIAG_MESSAGE_BYTES (896U)
+
+/* 診断ログ行末に付加する改行と終端 NUL の合計バイト数 [byte]。 */
+    #define CONSOLE_DIAG_LINE_SUFFIX_BYTES (2)
+
+static_assert(CONSOLE_DIAG_MESSAGE_BYTES < CONSOLE_DIAG_LINE_BYTES,
+              "cplat: diag message buffer must be smaller than line buffer");
 
 /* 初期化前のコンソール状態を保存する。 */
 static UINT s_orig_output_cp = 0;
@@ -135,7 +151,7 @@ static int reopen_crt_std_fd(HANDLE handle, FILE *stream, const char *name, int 
  */
 static int console_diag_enabled(void)
 {
-    char value[8];
+    char value[CONSOLE_DIAG_ENV_VALUE_BYTES];
     DWORD len;
 
     len = GetEnvironmentVariableA(CPLAT_CONSOLE_ATTACH_DIAG_ENV, value, (DWORD)sizeof(value));
@@ -193,8 +209,8 @@ static int build_console_diag_log_path(wchar_t *path_out, size_t path_len)
 static void console_diag_logf(const char *fmt, ...)
 {
     wchar_t path[PLATFORM_PATH_MAX];
-    char line[1024];
-    char message[896];
+    char line[CONSOLE_DIAG_LINE_BYTES];
+    char message[CONSOLE_DIAG_MESSAGE_BYTES];
     SYSTEMTIME now;
     HANDLE handle;
     DWORD written;
@@ -233,9 +249,9 @@ static void console_diag_logf(const char *fmt, ...)
         return;
     }
 
-    if (prefix_len + message_len + 2 >= (int)sizeof(line))
+    if (prefix_len + message_len + CONSOLE_DIAG_LINE_SUFFIX_BYTES >= (int)sizeof(line))
     {
-        message_len = (int)sizeof(line) - prefix_len - 2;
+        message_len = (int)sizeof(line) - prefix_len - CONSOLE_DIAG_LINE_SUFFIX_BYTES;
         if (message_len < 0)
         {
             return;

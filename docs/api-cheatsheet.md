@@ -166,8 +166,8 @@ Table: 低レベル ファイル記述子操作 API と cplat 代替ラッパー
 | 生 API | cplat 代替 | 差異の要点 |
 |---|---|---|
 | `stat` / `_wstat64` | `cplat_stat(stat_out, detail_out, path)` | パスは UTF-8。`stat_out` の型は `cplat_file_stat_t` (Linux: `struct stat`、Windows: `struct _stat64`)。Windows の `st_atime` / `st_mtime` / `st_ctime` は UTC の Unix 秒 |
-| `mkdir` / `_wmkdir` | `cplat_mkdir(path, detail_out)` | パスは UTF-8 |
-| (`mkdir -p` 相当) | `cplat_makedirs(path, detail_out)` | 中間ディレクトリを再帰的に作成。既存ディレクトリはべき等に成功扱い |
+| `mkdir` / `_wmkdir` | `cplat_mkdir(path, detail_out)` | パスは UTF-8。Linux は 0755 を指定し、umask が適用される。Windows は権限を指定しない |
+| (`mkdir -p` 相当) | `cplat_makedirs(path, detail_out)` | 中間ディレクトリを再帰的に作成。既存ディレクトリはべき等に成功扱い。作成するディレクトリの権限は `cplat_mkdir()` と同じ。Windows では、`\\?\` と `\\.\` で始まるパスの動作は保証しない |
 | `rmdir` / `_wrmdir` | `cplat_rmdir(path, detail_out)` | パスは UTF-8。中間ディレクトリの再帰削除はしません。 |
 | `S_ISREG(st.st_mode)` / `(st.st_mode & _S_IFMT) == _S_IFREG` | `cplat_file_stat_is_regular(file_stat)` | 通常ファイルなら 1、それ以外と NULL は 0。値だけを参照するため共通結果コードの適用対象外 |
 

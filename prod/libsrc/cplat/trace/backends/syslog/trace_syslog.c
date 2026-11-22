@@ -26,6 +26,7 @@
  *******************************************************************************
  */
 
+#include <assert.h>
 #include <cplat/base/platform.h>
 
 #if defined(PLATFORM_LINUX)
@@ -59,11 +60,27 @@
     /** バックオフ最大間隔 [s]。 */
     #define BACKOFF_MAX_SEC 60
 
-    /** メッセージ バッファー サイズ (RFC 3164 推奨最大長)。 */
+static_assert(BACKOFF_INIT_SEC > 0 && BACKOFF_INIT_SEC <= BACKOFF_MAX_SEC,
+              "初回バックオフ間隔は正で最大間隔以下であること");
+
+    /**
+     * メッセージの作業配列の大きさ [byte] です。
+     * RFC 3164 の上限は 1024 [byte] です。RFC 5424 の 6.1 節は受信側に 2048 [byte] までの受信を推奨します。
+     * 本配列の大きさは RFC の上限を表す値ではなく、従来の 2048 [byte] を維持します。
+     */
     #define SYSLOG_BUF_SIZE 2048
 
-    /** SYSLOG_TEST_FD 向けバッファー サイズ。timestamp と改行を加味する。 */
+    /**
+     * SYSLOG_TEST_FD 向けの作業配列の大きさ [byte] です。
+     * timestamp に加え、空白・改行・終端の最小 +2 に、余裕 2 [byte] を足した +4 を確保します。
+     */
     #define SYSLOG_DEBUG_BUF_SIZE (SYSLOG_BUF_SIZE + CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 4)
+
+    /** 再接続失敗時の待機時間倍率です。 */
+    #define BACKOFF_MULTIPLIER 2
+
+    /** SYSLOG_TEST_FD 読み取り配列の大きさ [byte] です。 */
+    #define SYSLOG_TEST_FD_TEXT_SIZE 32U
 
 /**
  *  @brief  syslog プロバイダー ハンドル構造体 (内部定義) です。
@@ -112,7 +129,7 @@ struct cplat_syslog_sink
  */
 static void advance_backoff(cplat_syslog_sink *h)
 {
-    int next = h->backoff_sec * 2;
+    int next = h->backoff_sec * BACKOFF_MULTIPLIER;
 
     if (next > BACKOFF_MAX_SEC)
     {
@@ -186,7 +203,7 @@ static int try_open_socket_locked(cplat_syslog_sink *h)
  */
 static void read_test_fd(int *exists_out, int *fd_out)
 {
-    char value[32];
+    char value[SYSLOG_TEST_FD_TEXT_SIZE];
     int fd;
 
     *exists_out = 0;

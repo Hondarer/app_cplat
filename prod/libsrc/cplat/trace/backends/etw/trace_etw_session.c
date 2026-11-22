@@ -26,9 +26,13 @@
     #include <stdio.h>
     #include <stdlib.h>
 
+/* Windows SDK にない場合の補完。see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/nf-evntrace-opentracew */
     #ifndef INVALID_PROCESSTRACE_HANDLE
         #define INVALID_PROCESSTRACE_HANDLE ((TRACEHANDLE)INVALID_HANDLE_VALUE)
     #endif /* INVALID_PROCESSTRACE_HANDLE */
+
+    /** GUID 書式の 16 進項目数です。 */
+    #define GUID_FIELD_COUNT 11
 
 /**
  *  @brief  ETW セッション構造体 (内部定義) です。
@@ -96,7 +100,7 @@ static void dispose_session(cplat_etw_session *session)
  */
 static int parse_guid(const char *str, GUID *guid)
 {
-    unsigned int d[11];
+    unsigned int d[GUID_FIELD_COUNT];
     int n;
 
     if (str == NULL || guid == NULL)
@@ -107,7 +111,7 @@ static int parse_guid(const char *str, GUID *guid)
     n = cplat_sscanf(str, "%8x-%4x-%4x-%2x%2x-%2x%2x%2x%2x%2x%2x", &d[0], &d[1], &d[2], &d[3], &d[4], &d[5], &d[6],
                      &d[7], &d[8], &d[9], &d[10]);
 
-    if (n != 11)
+    if (n != GUID_FIELD_COUNT)
     {
         return -1;
     }
@@ -222,7 +226,7 @@ static int read_ansi_string_field(const unsigned char *cursor, const USHORT rema
 static int read_uint32_field(const unsigned char *cursor, const USHORT remaining, uint32_t *value_out,
                              USHORT *consumed_out)
 {
-    if (cursor == NULL || value_out == NULL || consumed_out == NULL || remaining < 4U)
+    if (cursor == NULL || value_out == NULL || consumed_out == NULL || remaining < sizeof(uint32_t))
     {
         return -1;
     }
@@ -233,7 +237,7 @@ static int read_uint32_field(const unsigned char *cursor, const USHORT remaining
      */
     *value_out =
         (uint32_t)cursor[0] | ((uint32_t)cursor[1] << 8) | ((uint32_t)cursor[2] << 16) | ((uint32_t)cursor[3] << 24);
-    *consumed_out = 4U;
+    *consumed_out = (USHORT)sizeof(uint32_t);
 
     return 0;
 }
@@ -615,8 +619,8 @@ int cplat_etw_session_start(const char *session_name, const char *provider_guid_
      * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/nf-evntrace-enabletraceex2
      */
     etp.Version = ENABLE_TRACE_PARAMETERS_VERSION_2;
-    status = EnableTraceEx2(session->session_handle, &provider_guid, EVENT_CONTROL_CODE_ENABLE_PROVIDER, 5,
-                            0xFFFFFFFFFFFFFFFF, 0, 0, &etp);
+    status = EnableTraceEx2(session->session_handle, &provider_guid, EVENT_CONTROL_CODE_ENABLE_PROVIDER,
+                            TRACE_LEVEL_VERBOSE, 0xFFFFFFFFFFFFFFFF, 0, 0, &etp);
     if (status != ERROR_SUCCESS)
     {
         dispose_session(session);

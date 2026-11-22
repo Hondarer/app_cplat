@@ -49,6 +49,10 @@
         #define CPLAT_ACCESS_FMT_R_OK R_OK
         #define CPLAT_ACCESS_FMT_W_OK W_OK
     #elif defined(PLATFORM_WINDOWS)
+        /*
+         * _access() の mode 定数 (存在・読取・書込)。
+         * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/access-waccess
+         */
         #define CPLAT_ACCESS_FMT_F_OK 0
         #define CPLAT_ACCESS_FMT_R_OK 4
         #define CPLAT_ACCESS_FMT_W_OK 2

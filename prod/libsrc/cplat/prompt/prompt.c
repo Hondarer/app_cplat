@@ -7,6 +7,7 @@
 #include <cplat/crt/stdlib.h>
 #include "prompt_state.h"
 
+#include <cplat/base/char_code.h>
 #include <cplat/crt/stdio.h>
 #include <cplat/crt/string.h>
 #include <cplat/crt/unistd.h>
@@ -14,9 +15,6 @@
 
 #include <assert.h>
 #include <stdarg.h>
-
-/* 入力バッファー初期容量の既定値 [byte] */
-#define PROMPT_INPUT_INITIAL_DEFAULT 256U
 
 /*
  * 履歴コンテキスト配列の初期容量 [個]。
@@ -242,17 +240,17 @@ static prompt_key read_key(cplat_prompt *p, int *ch_out)
         return KEY_TAB;
     }
 
-    if (c == 0x03)
+    if (c == (int)CPLAT_ASCII_ETX)
     {
         return KEY_CTRL_C;
     }
 
-    if (c == 0x7F || c == 0x08)
+    if (c == (int)CPLAT_ASCII_DEL || c == (int)CPLAT_ASCII_BS)
     {
         return KEY_BACKSPACE;
     }
 
-    if (c == 0x1B)
+    if (c == (int)CPLAT_ASCII_ESC)
     {
         /* ESC シーケンスを解析する。 */
         int c2 = prompt_platform_read_char_nb(&p->platform);
@@ -350,7 +348,7 @@ static prompt_key read_key(cplat_prompt *p, int *ch_out)
     }
 
     /* 通常文字 (ASCII 印字可能文字および UTF-8 マルチバイト文字の構成バイト)。 */
-    if (c >= 0x20)
+    if (c >= (int)CPLAT_ASCII_PRINTABLE_MIN)
     {
         *ch_out = c;
         return KEY_CHAR;
@@ -570,8 +568,8 @@ cplat_prompt *cplat_prompt_create(const cplat_prompt_options *options)
     }
 
     cplat_internal_prompt_edit_resolve_options(opt_history_max, opt_input_initial_capacity, opt_input_max_bytes,
-                                               PROMPT_INPUT_INITIAL_DEFAULT, &history_max, &input_initial_capacity,
-                                               &input_max_bytes);
+                                               CPLAT_INTERNAL_PROMPT_INPUT_INITIAL_DEFAULT, &history_max,
+                                               &input_initial_capacity, &input_max_bytes);
 
     p->history_max = history_max;
     p->input_max_bytes = input_max_bytes;
@@ -914,8 +912,9 @@ static int prompt_readline_core(cplat_prompt *p, char *buf, const size_t buf_siz
             break;
 
         case KEY_CHAR:
+            /* 挿入する 1 [byte] と終端 NUL の 1 [byte] を確保する。 */
             if (cplat_internal_prompt_edit_ensure_capacity(&p->edit_buf, &p->edit_cap, p->input_max_bytes,
-                                                           p->edit_len + 2U) == 0)
+                                                           p->edit_len + 1U + 1U) == 0)
             {
                 memmove(p->edit_buf + p->cursor + 1, p->edit_buf + p->cursor, p->edit_len - p->cursor + 1);
                 p->edit_buf[p->cursor] = (char)ch;

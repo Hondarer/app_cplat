@@ -40,7 +40,7 @@
  *  レベル毎にイベント ID とカテゴリを割り当てるため、登録時の
  *  CategoryCount に使用します。
  */
-#define CPLAT_EVENTLOG_LEVEL_COUNT 6
+#define CPLAT_EVENTLOG_LEVEL_COUNT 6U
 
 #if defined(PLATFORM_WINDOWS)
 

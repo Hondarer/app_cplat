@@ -5,13 +5,60 @@
 
 #include <cplat/prompt/prompt_edit.h>
 
+#include <cplat/base/char_code.h>
 #include <cplat/base/result.h>
 
 #include <cplat/prompt/prompt.h>
 #include <cplat/crt/stdlib.h>
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+
+/* 編集バッファー拡張時の容量倍率 */
+#define PROMPT_EDIT_CAPACITY_GROWTH_FACTOR 2U
+static_assert(PROMPT_EDIT_CAPACITY_GROWTH_FACTOR >= 2U, "cplat: growth factor must expand capacity");
+
+/* 全角文字の表示幅 [桁] */
+#define PROMPT_EDIT_WIDE_CHAR_COLUMNS 2U
+
+/* 複数補完候補があることを示す飽和カウント値 [個] */
+#define PROMPT_EDIT_COMPLETIONS_MULTIPLE 2U
+
+/* Unicode Blocks.txt の結合ダイアクリティカル記号範囲 (表示幅 0 [桁]) */
+#define PROMPT_EDIT_COMBINING_MARK_MIN 0x0300U
+#define PROMPT_EDIT_COMBINING_MARK_MAX 0x036FU
+
+/* Unicode Blocks.txt の平仮名範囲 */
+#define PROMPT_EDIT_HIRAGANA_MIN 0x3040U
+#define PROMPT_EDIT_HIRAGANA_MAX 0x309FU
+
+/* Unicode Blocks.txt の片仮名範囲 */
+#define PROMPT_EDIT_KATAKANA_MIN 0x30A0U
+#define PROMPT_EDIT_KATAKANA_MAX 0x30FFU
+
+/* Unicode Blocks.txt の CJK 統合漢字拡張 A 範囲 */
+#define PROMPT_EDIT_CJK_EXT_A_MIN 0x3400U
+#define PROMPT_EDIT_CJK_EXT_A_MAX 0x4DBFU
+
+/* Unicode Blocks.txt の CJK 統合漢字基本面範囲 */
+#define PROMPT_EDIT_CJK_UNIFIED_MIN 0x4E00U
+#define PROMPT_EDIT_CJK_UNIFIED_MAX 0x9FFFU
+
+/* Unicode EastAsianWidth.txt の第 2 漢字面 (SIP) 全角範囲 */
+#define PROMPT_EDIT_SIP_MIN 0x20000U
+#define PROMPT_EDIT_SIP_MAX 0x2FFFFU
+
+/* ECMA-48 CSI シーケンス接頭辞 (ESC + '[') の長さ [byte] */
+#define PROMPT_EDIT_CSI_PREFIX_LEN 2U
+
+/* ECMA-48 CSI シーケンスのパラメーター バイト範囲 (0x30..0x3F) */
+#define PROMPT_EDIT_CSI_PARAM_MIN 0x30U
+#define PROMPT_EDIT_CSI_PARAM_MAX 0x3FU
+
+/* ECMA-48 CSI シーケンスの中間バイト範囲 (0x20..0x2F) */
+#define PROMPT_EDIT_CSI_INTER_MIN 0x20U
+#define PROMPT_EDIT_CSI_INTER_MAX 0x2FU
 
 /*
  * UTF-8 の後続バイト (0x80〜0xBF) であるかを判定する。
@@ -19,7 +66,7 @@
  */
 static int utf8_is_continuation(unsigned char c)
 {
-    return (c & 0xC0U) == 0x80U;
+    return (c & CPLAT_UTF8_CONT_MASK) == CPLAT_UTF8_CONT_VALUE;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -105,7 +152,7 @@ int cplat_internal_prompt_edit_ensure_capacity(char **buf, size_t *cap, size_t m
     /* 要求容量を満たすまで容量を倍増させ、最大容量を超える場合は最大容量に合わせる。 */
     while (new_cap < required)
     {
-        size_t next_cap = new_cap * 2U;
+        size_t next_cap = new_cap * PROMPT_EDIT_CAPACITY_GROWTH_FACTOR;
         if (next_cap <= new_cap || next_cap > max_bytes)
         {
             next_cap = max_bytes;
@@ -148,9 +195,9 @@ void cplat_internal_prompt_edit_resolve_options(size_t requested_history_max, si
         resolved_max_bytes = CPLAT_PROMPT_INPUT_BYTES_DEFAULT;
     }
 
-    if (resolved_max_bytes < 2U)
+    if (resolved_max_bytes < CPLAT_PROMPT_EDIT_CAPACITY_MIN_BYTES)
     {
-        resolved_max_bytes = 2U;
+        resolved_max_bytes = CPLAT_PROMPT_EDIT_CAPACITY_MIN_BYTES;
     }
 
     /* 初期容量が未指定の場合は既定値を補い、最小 2 [byte] から最大容量の範囲に収める。 */
@@ -159,9 +206,9 @@ void cplat_internal_prompt_edit_resolve_options(size_t requested_history_max, si
         resolved_initial_capacity = initial_capacity_default;
     }
 
-    if (resolved_initial_capacity < 2U)
+    if (resolved_initial_capacity < CPLAT_PROMPT_EDIT_CAPACITY_MIN_BYTES)
     {
-        resolved_initial_capacity = 2U;
+        resolved_initial_capacity = CPLAT_PROMPT_EDIT_CAPACITY_MIN_BYTES;
     }
 
     if (resolved_initial_capacity > resolved_max_bytes)
@@ -208,7 +255,7 @@ int cplat_internal_prompt_edit_validate_initial_text(const char *initial_text, s
     {
         const unsigned char byte = (unsigned char)initial_text[length];
 
-        if ((byte < 0x20U) || (byte == 0x7FU))
+        if ((byte < CPLAT_ASCII_PRINTABLE_MIN) || (byte == CPLAT_ASCII_DEL))
         {
             return CPLAT_ERR_INVALID_ARGUMENT;
         }
@@ -241,15 +288,16 @@ size_t cplat_internal_prompt_edit_char_display_width(const char *buf, size_t len
 
     first_byte = (unsigned char)buf[pos];
 
-    if ((first_byte & 0x80U) == 0U)
+    if ((first_byte & CPLAT_UTF8_ASCII_MASK) == 0U)
     {
         return 1U;
     }
 
-    if ((first_byte & 0xE0U) == 0xC0U && pos + 1U < len)
+    if ((first_byte & CPLAT_UTF8_LEAD2_MASK) == CPLAT_UTF8_LEAD2_VALUE && pos + 1U < len)
     {
-        code_point = ((unsigned int)(first_byte & 0x1FU) << 6U) | (unsigned int)((unsigned char)buf[pos + 1U] & 0x3FU);
-        if (code_point >= 0x0300U && code_point <= 0x036FU)
+        code_point = ((unsigned int)(first_byte & CPLAT_UTF8_LEAD2_DATA_MASK) << CPLAT_UTF8_CONT_SHIFT) |
+                     (unsigned int)((unsigned char)buf[pos + 1U] & CPLAT_UTF8_CONT_DATA_MASK);
+        if (code_point >= PROMPT_EDIT_COMBINING_MARK_MIN && code_point <= PROMPT_EDIT_COMBINING_MARK_MAX)
         {
             return 0U;
         }
@@ -257,41 +305,43 @@ size_t cplat_internal_prompt_edit_char_display_width(const char *buf, size_t len
         return 1U;
     }
 
-    if ((first_byte & 0xF0U) == 0xE0U && pos + 2U < len)
+    if ((first_byte & CPLAT_UTF8_LEAD3_MASK) == CPLAT_UTF8_LEAD3_VALUE && pos + 2U < len)
     {
-        code_point = ((unsigned int)(first_byte & 0x0FU) << 12U) |
-                     ((unsigned int)((unsigned char)buf[pos + 1U] & 0x3FU) << 6U) |
-                     (unsigned int)((unsigned char)buf[pos + 2U] & 0x3FU);
+        code_point =
+            ((unsigned int)(first_byte & CPLAT_UTF8_LEAD3_DATA_MASK) << CPLAT_UTF8_LEAD3_SHIFT) |
+            ((unsigned int)((unsigned char)buf[pos + 1U] & CPLAT_UTF8_CONT_DATA_MASK) << CPLAT_UTF8_CONT_SHIFT) |
+            (unsigned int)((unsigned char)buf[pos + 2U] & CPLAT_UTF8_CONT_DATA_MASK);
 
-        if (code_point >= 0x4E00U && code_point <= 0x9FFFU)
+        if (code_point >= PROMPT_EDIT_CJK_UNIFIED_MIN && code_point <= PROMPT_EDIT_CJK_UNIFIED_MAX)
         {
-            return 2U;
+            return PROMPT_EDIT_WIDE_CHAR_COLUMNS;
         }
 
-        if (code_point >= 0x3040U && code_point <= 0x309FU)
+        if (code_point >= PROMPT_EDIT_HIRAGANA_MIN && code_point <= PROMPT_EDIT_HIRAGANA_MAX)
         {
-            return 2U;
+            return PROMPT_EDIT_WIDE_CHAR_COLUMNS;
         }
 
-        if (code_point >= 0x30A0U && code_point <= 0x30FFU)
+        if (code_point >= PROMPT_EDIT_KATAKANA_MIN && code_point <= PROMPT_EDIT_KATAKANA_MAX)
         {
-            return 2U;
+            return PROMPT_EDIT_WIDE_CHAR_COLUMNS;
         }
 
-        if (code_point >= 0x3400U && code_point <= 0x4DBFU)
+        if (code_point >= PROMPT_EDIT_CJK_EXT_A_MIN && code_point <= PROMPT_EDIT_CJK_EXT_A_MAX)
         {
-            return 2U;
+            return PROMPT_EDIT_WIDE_CHAR_COLUMNS;
         }
 
         return 1U;
     }
 
-    if ((first_byte & 0xF8U) == 0xF0U && pos + 3U < len)
+    if ((first_byte & CPLAT_UTF8_LEAD4_MASK) == CPLAT_UTF8_LEAD4_VALUE && pos + 3U < len)
     {
-        code_point = ((unsigned int)(first_byte & 0x07U) << 18U) |
-                     ((unsigned int)((unsigned char)buf[pos + 1U] & 0x3FU) << 12U) |
-                     ((unsigned int)((unsigned char)buf[pos + 2U] & 0x3FU) << 6U) |
-                     (unsigned int)((unsigned char)buf[pos + 3U] & 0x3FU);
+        code_point =
+            ((unsigned int)(first_byte & CPLAT_UTF8_LEAD4_DATA_MASK) << CPLAT_UTF8_LEAD4_SHIFT) |
+            ((unsigned int)((unsigned char)buf[pos + 1U] & CPLAT_UTF8_CONT_DATA_MASK) << CPLAT_UTF8_LEAD3_SHIFT) |
+            ((unsigned int)((unsigned char)buf[pos + 2U] & CPLAT_UTF8_CONT_DATA_MASK) << CPLAT_UTF8_CONT_SHIFT) |
+            (unsigned int)((unsigned char)buf[pos + 3U] & CPLAT_UTF8_CONT_DATA_MASK);
 
         /*
          * Unicode 17.0 の East_Asian_Width=W に含まれる補助平面の絵文字を 2 桁として扱う。
@@ -317,13 +367,13 @@ size_t cplat_internal_prompt_edit_char_display_width(const char *buf, size_t len
         {
             if (code_point >= wide_symbols[i][0] && code_point <= wide_symbols[i][1])
             {
-                return 2U;
+                return PROMPT_EDIT_WIDE_CHAR_COLUMNS;
             }
         }
 
-        if (code_point >= 0x20000U && code_point <= 0x2FFFFU)
+        if (code_point >= PROMPT_EDIT_SIP_MIN && code_point <= PROMPT_EDIT_SIP_MAX)
         {
-            return 2U;
+            return PROMPT_EDIT_WIDE_CHAR_COLUMNS;
         }
 
         return 1U;
@@ -338,12 +388,12 @@ size_t cplat_internal_prompt_edit_sgr_sequence_len(const char *buf, size_t len, 
 {
     size_t i;
 
-    if (pos + 2U >= len || (unsigned char)buf[pos] != 0x1BU || buf[pos + 1U] != '[')
+    if (pos + PROMPT_EDIT_CSI_PREFIX_LEN >= len || (unsigned char)buf[pos] != CPLAT_ASCII_ESC || buf[pos + 1U] != '[')
     {
         return 0U;
     }
 
-    i = pos + 2U;
+    i = pos + PROMPT_EDIT_CSI_PREFIX_LEN;
 
     /* エスケープ シーケンスの終端文字 'm' を検索し、SGR シーケンス全体の長さを算出する。 */
     while (i < len)
@@ -356,7 +406,8 @@ size_t cplat_internal_prompt_edit_sgr_sequence_len(const char *buf, size_t len, 
             return i - pos + 1U;
         }
 
-        if ((ch >= 0x30U && ch <= 0x3FU) || (ch >= 0x20U && ch <= 0x2FU))
+        if ((ch >= PROMPT_EDIT_CSI_PARAM_MIN && ch <= PROMPT_EDIT_CSI_PARAM_MAX) ||
+            (ch >= PROMPT_EDIT_CSI_INTER_MIN && ch <= PROMPT_EDIT_CSI_INTER_MAX))
         {
             i++;
             continue;
@@ -494,21 +545,21 @@ int cplat_internal_prompt_edit_utf8_complete(const char *buf, size_t len)
     first = (unsigned char)buf[pos];
 
     /* 先頭バイトの値から UTF-8 文字に必要なバイト数を判定し、末尾の文字が完成しているか検証する。 */
-    if (first < 0x80U)
+    if (first < CPLAT_ASCII_BOUND_U8)
     {
-        required = 1U;
+        required = CPLAT_UTF8_BYTES_1;
     }
-    else if (first >= 0xC2U && first <= 0xDFU)
+    else if (first >= CPLAT_UTF8_LEAD2_MIN && first <= CPLAT_UTF8_LEAD2_MAX)
     {
-        required = 2U;
+        required = CPLAT_UTF8_BYTES_2;
     }
-    else if (first >= 0xE0U && first <= 0xEFU)
+    else if (first >= CPLAT_UTF8_LEAD3_MIN && first <= CPLAT_UTF8_LEAD3_MAX)
     {
-        required = 3U;
+        required = CPLAT_UTF8_BYTES_3;
     }
-    else if (first >= 0xF0U && first <= 0xF4U)
+    else if (first >= CPLAT_UTF8_LEAD4_MIN && first <= CPLAT_UTF8_LEAD4_MAX)
     {
-        required = 4U;
+        required = CPLAT_UTF8_BYTES_4;
     }
     else
     {
@@ -611,7 +662,7 @@ int cplat_prompt_completions_add(cplat_prompt_completions *completions, size_t s
     else if (completions->start != start || strcmp(completions->candidate, candidate) != 0)
     {
         /* 2 件以上かどうかだけを保持し、候補数のオーバーフローを避ける。 */
-        completions->count = 2U;
+        completions->count = PROMPT_EDIT_COMPLETIONS_MULTIPLE;
     }
 
     return CPLAT_OK;
@@ -672,54 +723,59 @@ void cplat_internal_prompt_edit_utf16_feed(cplat_internal_prompt_utf16_input *in
         unsigned int high = input->high_surrogate;
         input->high_surrogate = 0U;
 
-        if (unit >= 0xDC00U && unit <= 0xDFFFU)
+        if (unit >= CPLAT_UTF16_LOW_SURROGATE_MIN && unit <= CPLAT_UTF16_LOW_SURROGATE_MAX)
         {
-            code_point = 0x10000U + ((high - 0xD800U) << 10U) + (unit - 0xDC00U);
+            code_point = CPLAT_UTF16_SURROGATE_BASE +
+                         ((high - CPLAT_UTF16_HIGH_SURROGATE_MIN) << CPLAT_UTF16_SURROGATE_SHIFT) +
+                         (unit - CPLAT_UTF16_LOW_SURROGATE_MIN);
         }
         else
         {
             input->pending_unit = unit;
             input->has_pending_unit = 1U;
-            code_point = 0xFFFDU;
+            code_point = CPLAT_UNICODE_REPLACEMENT_CHAR;
         }
     }
-    else if (unit >= 0xD800U && unit <= 0xDBFFU)
+    else if (unit >= CPLAT_UTF16_HIGH_SURROGATE_MIN && unit <= CPLAT_UTF16_HIGH_SURROGATE_MAX)
     {
         input->high_surrogate = unit;
         return;
     }
-    else if (unit >= 0xDC00U && unit <= 0xDFFFU)
+    else if (unit >= CPLAT_UTF16_LOW_SURROGATE_MIN && unit <= CPLAT_UTF16_LOW_SURROGATE_MAX)
     {
-        code_point = 0xFFFDU;
+        code_point = CPLAT_UNICODE_REPLACEMENT_CHAR;
     }
 
     input->offset = 0U;
 
     /* コード ポイントの範囲に応じて UTF-8 バイト列へエンコードする。 */
-    if (code_point <= 0x7FU)
+    if (code_point <= CPLAT_UTF8_1BYTE_CP_MAX)
     {
-        input->length = 1U;
+        input->length = CPLAT_UTF8_BYTES_1;
         input->bytes[0] = (unsigned char)code_point;
     }
-    else if (code_point <= 0x7FFU)
+    else if (code_point <= CPLAT_UTF8_2BYTE_CP_MAX)
     {
-        input->length = 2U;
-        input->bytes[0] = (unsigned char)(0xC0U | (code_point >> 6U));
-        input->bytes[1] = (unsigned char)(0x80U | (code_point & 0x3FU));
+        input->length = CPLAT_UTF8_BYTES_2;
+        input->bytes[0] = (unsigned char)(CPLAT_UTF8_LEAD2_VALUE | (code_point >> CPLAT_UTF8_CONT_SHIFT));
+        input->bytes[1] = (unsigned char)(CPLAT_UTF8_CONT_VALUE | (code_point & CPLAT_UTF8_CONT_DATA_MASK));
     }
-    else if (code_point <= 0xFFFFU)
+    else if (code_point <= CPLAT_UTF8_3BYTE_CP_MAX)
     {
-        input->length = 3U;
-        input->bytes[0] = (unsigned char)(0xE0U | (code_point >> 12U));
-        input->bytes[1] = (unsigned char)(0x80U | ((code_point >> 6U) & 0x3FU));
-        input->bytes[2] = (unsigned char)(0x80U | (code_point & 0x3FU));
+        input->length = CPLAT_UTF8_BYTES_3;
+        input->bytes[0] = (unsigned char)(CPLAT_UTF8_LEAD3_VALUE | (code_point >> CPLAT_UTF8_LEAD3_SHIFT));
+        input->bytes[1] = (unsigned char)(CPLAT_UTF8_CONT_VALUE |
+                                          ((code_point >> CPLAT_UTF8_CONT_SHIFT) & CPLAT_UTF8_CONT_DATA_MASK));
+        input->bytes[2] = (unsigned char)(CPLAT_UTF8_CONT_VALUE | (code_point & CPLAT_UTF8_CONT_DATA_MASK));
     }
     else
     {
-        input->length = 4U;
-        input->bytes[0] = (unsigned char)(0xF0U | (code_point >> 18U));
-        input->bytes[1] = (unsigned char)(0x80U | ((code_point >> 12U) & 0x3FU));
-        input->bytes[2] = (unsigned char)(0x80U | ((code_point >> 6U) & 0x3FU));
-        input->bytes[3] = (unsigned char)(0x80U | (code_point & 0x3FU));
+        input->length = CPLAT_UTF8_BYTES_4;
+        input->bytes[0] = (unsigned char)(CPLAT_UTF8_LEAD4_VALUE | (code_point >> CPLAT_UTF8_LEAD4_SHIFT));
+        input->bytes[1] = (unsigned char)(CPLAT_UTF8_CONT_VALUE |
+                                          ((code_point >> CPLAT_UTF8_LEAD3_SHIFT) & CPLAT_UTF8_CONT_DATA_MASK));
+        input->bytes[2] = (unsigned char)(CPLAT_UTF8_CONT_VALUE |
+                                          ((code_point >> CPLAT_UTF8_CONT_SHIFT) & CPLAT_UTF8_CONT_DATA_MASK));
+        input->bytes[3] = (unsigned char)(CPLAT_UTF8_CONT_VALUE | (code_point & CPLAT_UTF8_CONT_DATA_MASK));
     }
 }

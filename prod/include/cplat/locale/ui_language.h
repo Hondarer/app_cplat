@@ -39,7 +39,7 @@
  *  Linux と Windows が示す表示言語の言語タグが収まる想定です。\n
  *  Windows の `LOCALE_NAME_MAX_LENGTH` (85) に合わせています。
  */
-#define CPLAT_UI_LANGUAGE_TAG_MAX 85
+#define CPLAT_UI_LANGUAGE_TAG_MAX 85U
 
 #ifdef __cplusplus
 extern "C"

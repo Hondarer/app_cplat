@@ -16,6 +16,7 @@
 #include <cplat/crt/string.h>
 #include <cplat/locale/ui_language.h>
 
+#include <assert.h>
 #include <ctype.h>
 #include <string.h>
 
@@ -24,6 +25,7 @@
 
 /** 言語の区別として受け付ける最大の文字数です。 */
 #define LANGUAGE_LENGTH_MAX 3U
+static_assert(LANGUAGE_LENGTH_MIN <= LANGUAGE_LENGTH_MAX, "cplat: language length min > max");
 
 /** 表記体系の区別の文字数です。 */
 #define SCRIPT_LENGTH 4U
@@ -33,6 +35,10 @@
 
 /** 数字で表す地域の区別の文字数です。 */
 #define REGION_DIGIT_LENGTH 3U
+
+/* 言語・表記体系・地域 (最大長) と 2 個の区切りハイフンおよび終端 NUL が領域上限内に収まることを保証する。 */
+static_assert(LANGUAGE_LENGTH_MAX + SCRIPT_LENGTH + REGION_DIGIT_LENGTH + 3U <= (size_t)CPLAT_UI_LANGUAGE_TAG_MAX,
+              "cplat: tag max");
 
 /**
  *  @brief          指定された範囲がすべて英字かどうかを判定します。

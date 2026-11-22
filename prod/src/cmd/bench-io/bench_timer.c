@@ -17,10 +17,13 @@
 #include "bench_timer.h"
 
 /** @brief 1 [s] あたりのナノ秒数です。 */
-#define BENCH_NS_PER_SEC 1000000000LL
+#define BENCH_NS_PER_SEC 1000000000ULL
 
 /** @brief 1 [ms] あたりのナノ秒数です。 */
-#define BENCH_NS_PER_MS 1000000LL
+#define BENCH_NS_PER_MS 1000000ULL
+
+/** 計測区間の不足時に反復回数を増やす倍率です。 */
+#define BENCH_TIMER_ITERATION_GROWTH 2U
 
 /**
  *  @brief          2 点間の経過時間をナノ秒で求めます。
@@ -48,11 +51,11 @@ static int elapsed_ns(const cplat_timespec *start, const cplat_timespec *end, ui
     }
     seconds = (uint64_t)difference.tv_sec;
     nanoseconds = (uint64_t)difference.tv_nsec;
-    if (seconds > (UINT64_MAX - nanoseconds) / (uint64_t)BENCH_NS_PER_SEC)
+    if (seconds > (UINT64_MAX - nanoseconds) / BENCH_NS_PER_SEC)
     {
         return -1;
     }
-    *nanoseconds_out = seconds * (uint64_t)BENCH_NS_PER_SEC + nanoseconds;
+    *nanoseconds_out = seconds * BENCH_NS_PER_SEC + nanoseconds;
     return 0;
 }
 
@@ -128,12 +131,12 @@ int bench_timer_measure(bench_iteration_fn fn, void *arg, uint64_t min_duration_
     size_t trial;
 
     if (fn == NULL || timing == NULL || min_duration_ms == 0U || trial_count == 0U ||
-        trial_count > (size_t)BENCH_TIMER_MAX_TRIALS)
+        trial_count > BENCH_TIMER_MAX_TRIALS)
     {
         return -1;
     }
 
-    threshold_ns = min_duration_ms * (uint64_t)BENCH_NS_PER_MS;
+    threshold_ns = min_duration_ms * BENCH_NS_PER_MS;
 
     /* ウォーム アップ。初回のページ フォールトやメタデータ読み込みを測定から除く。 */
     if (fn(arg) != 0)
@@ -167,7 +170,7 @@ int bench_timer_measure(bench_iteration_fn fn, void *arg, uint64_t min_duration_
                 break;
             }
 
-            iterations = iterations * 2U;
+            iterations = iterations * BENCH_TIMER_ITERATION_GROWTH;
         }
     }
 
@@ -202,8 +205,7 @@ int bench_timer_measure_cold(bench_iteration_fn fn, void *arg, bench_iteration_f
     uint64_t samples[BENCH_TIMER_MAX_TRIALS];
     size_t trial;
 
-    if (fn == NULL || prepare == NULL || timing == NULL || trial_count == 0U ||
-        trial_count > (size_t)BENCH_TIMER_MAX_TRIALS)
+    if (fn == NULL || prepare == NULL || timing == NULL || trial_count == 0U || trial_count > BENCH_TIMER_MAX_TRIALS)
     {
         return -1;
     }

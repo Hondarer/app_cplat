@@ -13,6 +13,7 @@
  *******************************************************************************
  */
 
+#include <assert.h>
 #include <cplat/base/result.h>
 #include <cplat/crt/string.h>
 #include <cplat/crt/stdlib.h>
@@ -32,7 +33,7 @@
 
 /* ===== 内部定数 ===== */
 
-/** 1 行分のスタック バッファー サイズ。 */
+/** 1 行分のスタック バッファー サイズ [byte] です。 */
 #define TRACE_FILE_LINE_BUF 1100
 
 /** ファイル書き込みロック取得のタイムアウト [ms]。 */
@@ -45,7 +46,7 @@
 #define TRACE_FILE_LOCK_SUFFIX ".lock"
 
 /** パスに付加するサフィックスの最大長 (".lock\0" = 6 文字 >= ".999\0" = 5 文字)。 */
-#define TRACE_FILE_SUFFIX_MAX 6
+#define TRACE_FILE_SUFFIX_MAX sizeof(TRACE_FILE_LOCK_SUFFIX)
 
 /** ファイル オープン失敗時のリトライ回数。 */
 #define TRACE_FILE_OPEN_RETRY_COUNT 3
@@ -54,7 +55,15 @@
 #define TRACE_FILE_OPEN_RETRY_INTERVAL_MS 3000
 
 /** プロセス内 sink レジストリの初期容量。 */
-#define SINK_REGISTRY_INITIAL_CAPACITY 4
+#define SINK_REGISTRY_INITIAL_CAPACITY 4U
+
+static_assert(TRACE_FILE_LINE_BUF >= TRACE_FILE_TS_LEN + CPLAT_TRACER_MESSAGE_MAX_BYTES + 4U,
+              "時刻と本文と区切りが 1 行の作業配列に収まること");
+static_assert(TRACE_FILE_SUFFIX_MAX >= sizeof(".999"), "世代サフィックスがロック用サフィックスの領域に収まること");
+static_assert(SINK_REGISTRY_INITIAL_CAPACITY > 0U, "出力先レジストリの初期容量が正であること");
+
+/** 出力先レジストリの容量を拡張する倍率です。 */
+#define SINK_REGISTRY_GROWTH_FACTOR 2U
 
 /* ===== 内部構造体 ===== */
 
@@ -275,7 +284,7 @@ static int sink_registry_register_locked(char *key, cplat_trace_file_sink *sink)
         }
         else
         {
-            new_capacity = s_sink_registry.capacity * 2;
+            new_capacity = s_sink_registry.capacity * SINK_REGISTRY_GROWTH_FACTOR;
         }
 
         new_items = (struct sink_registry_entry *)cplat_realloc(s_sink_registry.items, new_capacity,

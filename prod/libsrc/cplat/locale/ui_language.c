@@ -18,8 +18,12 @@
 #include <cplat/locale/ui_language_internal.h>
 
 #if defined(PLATFORM_WINDOWS)
+    #include <assert.h>
+
     #include <cplat/base/windows_sdk.h>
     #include <cplat/crt/wchar_conv.h>
+
+static_assert(CPLAT_UI_LANGUAGE_TAG_MAX >= LOCALE_NAME_MAX_LENGTH, "cplat: tag buffer too small");
 #endif /* PLATFORM_WINDOWS */
 
 /**

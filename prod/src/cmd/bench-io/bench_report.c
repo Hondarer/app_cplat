@@ -13,6 +13,7 @@
  *******************************************************************************
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -29,6 +30,9 @@
 #endif /* PLATFORM_ */
 
 #include "bench_case.h"
+
+/** /proc/cpuinfo の 1 行を読む配列の大きさ [byte] (終端を含む) です。 */
+#define BENCH_CPUINFO_LINE_SIZE 256U
 
 /**
  *  @brief          文字列に含まれるカンマを空白へ置き換えます。
@@ -115,7 +119,7 @@ static void collect_cpu_model(bench_environment *env)
 {
 #if defined(PLATFORM_LINUX)
     FILE *stream = cplat_fopen("/proc/cpuinfo", "r", NULL);
-    char line[256];
+    char line[BENCH_CPUINFO_LINE_SIZE];
 
     copy_text(env->cpu_model, sizeof(env->cpu_model), NULL);
 
@@ -126,13 +130,21 @@ static void collect_cpu_model(bench_environment *env)
 
     while (fgets(line, (int)sizeof(line), stream) != NULL)
     {
-        if (strncmp(line, "model name", 10) == 0)
+        if (strncmp(line, "model name", sizeof("model name") - 1U) == 0)
         {
             const char *separator = strchr(line, ':');
 
             if (separator != NULL)
             {
-                copy_text(env->cpu_model, sizeof(env->cpu_model), separator + 1);
+                const char *model = separator + 1;
+
+                /* /proc/cpuinfo の行は "model name<TAB>: 値" の形であり、コロンと値の間の空白とタブを値に含めない。 */
+                while (*model == ' ' || *model == '\t')
+                {
+                    model++;
+                }
+
+                copy_text(env->cpu_model, sizeof(env->cpu_model), model);
                 trim_trailing(env->cpu_model);
             }
 
@@ -184,6 +196,8 @@ static void collect_fs_type(const char *dir, bench_environment *env)
      * 戻り値は明示的に破棄する。
      * see: https://man7.org/linux/man-pages/man2/statfs.2.html
      */
+    static_assert(BENCH_ENV_TEXT_SIZE >= (8U + 16U + 1U), "\"magic=0x\" と 16 桁と終端 NUL が収まること");
+
     (void)cplat_snprintf(text, sizeof(text), "magic=0x%lx", (unsigned long)info.f_type);
     copy_text(env->fs_type, sizeof(env->fs_type), text);
 #elif defined(PLATFORM_WINDOWS)
@@ -253,7 +267,7 @@ void bench_report_begin_csv(FILE *csv, const bench_environment *env)
     (void)cplat_fprintf(csv, "# os=%s\n", env->os_name);
     (void)cplat_fprintf(csv, "# cpu_model=%s\n", env->cpu_model);
     (void)cplat_fprintf(csv, "# fs_type=%s\n", env->fs_type);
-    (void)cplat_fprintf(csv, "# record_bytes=%d\n", BENCH_RECORD_SIZE);
+    (void)cplat_fprintf(csv, "# record_bytes=%u\n", BENCH_RECORD_SIZE);
     (void)cplat_fprintf(csv, "os,cpu_model,fs_type,cache_state,api,pattern,file_size_bytes,record_bytes,"
                              "records_touched,iterations,trial_median_ns,trial_min_ns,trial_max_ns,"
                              "ns_per_record,mib_per_sec\n");
@@ -326,7 +340,7 @@ void bench_report_row(FILE *csv, const bench_environment *env, const bench_case 
      * 書き込みの失敗はストリームのエラー指示子に残り、main が CSV を閉じる前に ferror で検査するため、
      * 戻り値は明示的に破棄する。
      */
-    (void)cplat_fprintf(csv, "%s,\"%s\",%s,%s,%s,%s,%llu,%d,%llu,%llu,%llu,%llu,%llu,%.3f,%.3f\n", env->os_name,
+    (void)cplat_fprintf(csv, "%s,\"%s\",%s,%s,%s,%s,%llu,%u,%llu,%llu,%llu,%llu,%llu,%.3f,%.3f\n", env->os_name,
                         env->cpu_model, env->fs_type, env->cache_state, api_name, pattern_name,
                         (unsigned long long)ctx->file_size, BENCH_RECORD_SIZE, (unsigned long long)ctx->touch_count,
                         (unsigned long long)timing->iterations, (unsigned long long)timing->median_ns,

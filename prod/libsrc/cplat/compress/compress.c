@@ -14,6 +14,7 @@
  *******************************************************************************
  */
 
+#include <assert.h>
 #include <cplat/base/platform.h>
 
 #include <string.h>
@@ -23,6 +24,15 @@
 #include <cplat/base/result.h>
 #include <cplat/compress/compress.h>
 #include <cplat/net/byteorder.h>
+
+static_assert(CPLAT_COMPRESS_HEADER_SIZE == sizeof(uint64_t), "cplat: header size must match uint64_t");
+static_assert(CPLAT_COMPRESS_MAX_UNCOMPRESSED_SIZE <= (size_t)((uInt)-1), "cplat: max size must fit in uInt");
+
+/*
+ * raw DEFLATE (zlib ヘッダーとフッターなし) を選択する windowBits の指定値。
+ * see: https://zlib.net/manual.html
+ */
+#define COMPRESS_RAW_DEFLATE_WINDOW_BITS (-15)
 
 /*
  * zlib の avail_in と avail_out は uInt のため、1 回に渡せる長さは 4 [GiB] 未満である。
@@ -82,7 +92,8 @@ int cplat_compress(uint8_t *dst, size_t *dst_len, const uint8_t *src, const size
      * 第 5 引数の 8 は memLevel であり、zlib の既定値である。
      * see: https://zlib.net/manual.html
      */
-    ret = zlib_app_deflateInit2(&z, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
+    ret = zlib_app_deflateInit2(&z, Z_DEFAULT_COMPRESSION, Z_DEFLATED, COMPRESS_RAW_DEFLATE_WINDOW_BITS, 8,
+                                Z_DEFAULT_STRATEGY);
     if (ret == Z_MEM_ERROR)
     {
         return CPLAT_ERR_OUT_OF_MEMORY;
@@ -179,7 +190,7 @@ int cplat_decompress(uint8_t *dst, size_t *dst_len, const uint8_t *src, const si
 
         z.next_in = (Bytef *)(uintptr_t)(src + CPLAT_COMPRESS_HEADER_SIZE);
         z.next_out = dst;
-        ret = zlib_app_inflateInit2(&z, -15);
+        ret = zlib_app_inflateInit2(&z, COMPRESS_RAW_DEFLATE_WINDOW_BITS);
         if (ret != Z_OK)
         {
             return ret == Z_MEM_ERROR ? CPLAT_ERR_OUT_OF_MEMORY : CPLAT_ERR_UNKNOWN;

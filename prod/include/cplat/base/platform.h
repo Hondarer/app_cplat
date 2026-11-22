@@ -49,6 +49,13 @@
 
 #include "compiler.h"
 
+/*
+ * 本ヘッダーは、ほとんどの翻訳単位が最初に取り込むため、C 標準ライブラリのヘッダーを取り込まない。
+ * glibc は最初の標準ヘッダーで機能検査マクロ (_GNU_SOURCE など) を確定するため、ここで <assert.h> を取り込むと、
+ * 後で _GNU_SOURCE を定義するヘッダー (cplat/runtime/module.h など) の宣言が見えなくなる。
+ * そのため、C では <assert.h> を必要としない _Static_assert を使う。
+ * see: https://man7.org/linux/man-pages/man7/feature_test_macros.7.html
+ */
 #if defined(__cplusplus)
 static_assert(sizeof(void *) == 8, "cplat: requires a 64-bit environment");
 #else

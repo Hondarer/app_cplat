@@ -38,6 +38,7 @@
 #ifndef CPLAT_REGEX_REGEX_H
 #define CPLAT_REGEX_REGEX_H
 
+#include <assert.h>
 #include <stddef.h>
 
 #include <cplat/base/error.h>
@@ -90,6 +91,11 @@
 #define CPLAT_REGEX_REPLACE_NO_COPY    0x0200U /**< 一致しなかった部分を出力しない。 */
 #define CPLAT_REGEX_REPLACE_SED        0x0400U /**< 置換文字列を sed の書式で解釈する。 */
 /** @} */
+
+static_assert(((CPLAT_REGEX_MATCH_DEFAULT | CPLAT_REGEX_MATCH_NOTBOL | CPLAT_REGEX_MATCH_NOTEOL |
+                CPLAT_REGEX_MATCH_NOTEMPTY | CPLAT_REGEX_MATCH_ANCHORED) &
+               (CPLAT_REGEX_REPLACE_FIRST_ONLY | CPLAT_REGEX_REPLACE_NO_COPY | CPLAT_REGEX_REPLACE_SED)) == 0U,
+              "cplat: replace flags must not overlap match flags");
 
 #ifdef __cplusplus
 extern "C"

@@ -61,6 +61,35 @@ extern char **environ;
 static_assert(CPLAT_PROCESS_LONG_PATH_WCHAR_CAP > PLATFORM_PATH_MAX, "long path buffer must exceed PLATFORM_PATH_MAX");
 #endif /* PLATFORM_ */
 
+/** unsigned int 最大 10 桁を収める作業配列 [byte] です。 */
+#define CHILD_UINT_TEXT_SIZE 16U
+
+/** exec 失敗通知文の作業配列 [byte] です。 */
+#define CHILD_EXEC_FAILURE_MESSAGE_SIZE 512U
+
+/** exec 失敗時の終了コード (shutdown.h も参照) です。 */
+#define CHILD_EXIT_CODE_EXEC_FAILED 127
+
+/** ワイド文字バッファーの初期要素数です。 */
+#define WIDE_BUFFER_INITIAL_CAPACITY 64U
+
+/** ワイド文字バッファーの容量を拡張する倍率です。 */
+#define WIDE_BUFFER_GROWTH_FACTOR 2U
+
+/** 標準入力・出力・エラーの数です。 */
+#define PROCESS_STDIO_COUNT 3U
+
+/** 回収待機の間隔 [us] です。 */
+#define PROCESS_WAIT_POLL_INTERVAL_US 1000U
+
+/** 標準入出力ハンドルの添字です。 */
+enum process_stdio_index
+{
+    PROCESS_STDIO_INDEX_STDIN = 0,
+    PROCESS_STDIO_INDEX_STDOUT = 1,
+    PROCESS_STDIO_INDEX_STDERR = 2
+};
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 struct cplat_process
@@ -483,7 +512,7 @@ static size_t child_append_text(char *buf, const size_t buf_size, size_t len, co
 
 static size_t child_append_uint(char *buf, const size_t buf_size, size_t len, unsigned int magnitude)
 {
-    char digits[16];
+    char digits[CHILD_UINT_TEXT_SIZE];
     size_t count = 0;
 
     do
@@ -504,7 +533,7 @@ static size_t child_append_uint(char *buf, const size_t buf_size, size_t len, un
 
 static void child_report_exec_failure(const char *program, const int error_number)
 {
-    char message[512];
+    char message[CHILD_EXEC_FAILURE_MESSAGE_SIZE];
     size_t len = 0;
     ssize_t written;
 
@@ -527,13 +556,13 @@ static int run_child_process(const cplat_process_options *options, char *const *
     {
         if (chdir(options->working_directory) != 0)
         {
-            return 127;
+            return CHILD_EXIT_CODE_EXEC_FAILED;
         }
     }
 
     if (setup_child_stdio(options) != 0)
     {
-        return 127;
+        return CHILD_EXIT_CODE_EXEC_FAILED;
     }
 
     exec_with_path(options->argv, envp);
@@ -543,7 +572,7 @@ static int run_child_process(const cplat_process_options *options, char *const *
      * execve() が成功した場合は復帰しない。
      * ここへ到達した場合は起動に失敗しているため、シェルの慣例に従い終了コード 127 を返す。
      */
-    return 127;
+    return CHILD_EXIT_CODE_EXEC_FAILED;
 }
 
 #elif defined(PLATFORM_WINDOWS)
@@ -567,11 +596,11 @@ static int wide_buffer_reserve(wide_buffer *buf, const size_t need)
     new_cap = buf->cap;
     if (new_cap == 0)
     {
-        new_cap = 64;
+        new_cap = WIDE_BUFFER_INITIAL_CAPACITY;
     }
     while (new_cap < need)
     {
-        new_cap *= 2;
+        new_cap *= WIDE_BUFFER_GROWTH_FACTOR;
     }
 
     new_data = (wchar_t *)cplat_realloc(buf->data, new_cap, sizeof(*new_data));
@@ -588,7 +617,7 @@ static int wide_buffer_reserve(wide_buffer *buf, const size_t need)
 
 static int wide_buffer_append_char(wide_buffer *buf, const wchar_t ch)
 {
-    if (wide_buffer_reserve(buf, buf->len + 2) != 0)
+    if (wide_buffer_reserve(buf, buf->len + 1U + 1U) != 0)
     {
         return -1;
     }
@@ -1090,12 +1119,12 @@ static int prepare_stdio_handle(const cplat_process_stdio *spec, const DWORD std
     return -1;
 }
 
-static void close_stdio_handles(HANDLE handles[3])
+static void close_stdio_handles(HANDLE handles[PROCESS_STDIO_COUNT])
 {
     size_t i;
 
     i = 0;
-    while (i < 3)
+    while (i < PROCESS_STDIO_COUNT)
     {
         if (handles[i] != NULL && handles[i] != INVALID_HANDLE_VALUE)
         {
@@ -1117,7 +1146,7 @@ struct process_start_resources
     wchar_t *command_line;
     wchar_t *environment_block;
     wchar_t *working_directory;
-    HANDLE stdio_handles[3];
+    HANDLE stdio_handles[PROCESS_STDIO_COUNT];
     LPPROC_THREAD_ATTRIBUTE_LIST attribute_list;
     int attribute_list_initialized;
 };
@@ -1322,7 +1351,7 @@ int cplat_process_start(const cplat_process_options *options, cplat_process **pr
         STARTUPINFOEXW startup = {0};
         PROCESS_INFORMATION process_info = {0};
         SIZE_T attr_size;
-        HANDLE inherit_handles[3] = {0};
+        HANDLE inherit_handles[PROCESS_STDIO_COUNT] = {0};
         struct process_start_resources res = {0};
         DWORD create_flags;
         BOOL created;
@@ -1350,9 +1379,12 @@ int cplat_process_start(const cplat_process_options *options, cplat_process **pr
             }
         }
 
-        if (prepare_stdio_handle(&options->stdin_spec, STD_INPUT_HANDLE, GENERIC_READ, &res.stdio_handles[0]) != 0 ||
-            prepare_stdio_handle(&options->stdout_spec, STD_OUTPUT_HANDLE, GENERIC_WRITE, &res.stdio_handles[1]) != 0 ||
-            prepare_stdio_handle(&options->stderr_spec, STD_ERROR_HANDLE, GENERIC_WRITE, &res.stdio_handles[2]) != 0)
+        if (prepare_stdio_handle(&options->stdin_spec, STD_INPUT_HANDLE, GENERIC_READ,
+                                 &res.stdio_handles[PROCESS_STDIO_INDEX_STDIN]) != 0 ||
+            prepare_stdio_handle(&options->stdout_spec, STD_OUTPUT_HANDLE, GENERIC_WRITE,
+                                 &res.stdio_handles[PROCESS_STDIO_INDEX_STDOUT]) != 0 ||
+            prepare_stdio_handle(&options->stderr_spec, STD_ERROR_HANDLE, GENERIC_WRITE,
+                                 &res.stdio_handles[PROCESS_STDIO_INDEX_STDERR]) != 0)
         {
             release_process_start_resources(&res);
             return CPLAT_ERR_UNKNOWN;
@@ -1360,9 +1392,9 @@ int cplat_process_start(const cplat_process_options *options, cplat_process **pr
 
         startup.StartupInfo.cb = sizeof(startup);
         startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
-        startup.StartupInfo.hStdInput = res.stdio_handles[0];
-        startup.StartupInfo.hStdOutput = res.stdio_handles[1];
-        startup.StartupInfo.hStdError = res.stdio_handles[2];
+        startup.StartupInfo.hStdInput = res.stdio_handles[PROCESS_STDIO_INDEX_STDIN];
+        startup.StartupInfo.hStdOutput = res.stdio_handles[PROCESS_STDIO_INDEX_STDOUT];
+        startup.StartupInfo.hStdError = res.stdio_handles[PROCESS_STDIO_INDEX_STDERR];
 
         attr_size = 0;
         /*
@@ -1387,9 +1419,9 @@ int cplat_process_start(const cplat_process_options *options, cplat_process **pr
         res.attribute_list_initialized = 1;
         startup.lpAttributeList = res.attribute_list;
 
-        inherit_handles[0] = res.stdio_handles[0];
-        inherit_handles[1] = res.stdio_handles[1];
-        inherit_handles[2] = res.stdio_handles[2];
+        inherit_handles[PROCESS_STDIO_INDEX_STDIN] = res.stdio_handles[PROCESS_STDIO_INDEX_STDIN];
+        inherit_handles[PROCESS_STDIO_INDEX_STDOUT] = res.stdio_handles[PROCESS_STDIO_INDEX_STDOUT];
+        inherit_handles[PROCESS_STDIO_INDEX_STDERR] = res.stdio_handles[PROCESS_STDIO_INDEX_STDERR];
 
         /*
          * 指定した標準入出力ハンドルだけを子プロセスへ明示的に継承させるため、
@@ -1570,7 +1602,7 @@ static int process_wait_polling(cplat_process *process, const int timeout_ms)
         }
 
         /* 1 [ms] 待つ。中断されても次の回収と期限の判定へ進むだけのため、戻り値は明示的に破棄する。 */
-        (void)usleep(1000);
+        (void)usleep(PROCESS_WAIT_POLL_INTERVAL_US);
     }
 }
 #elif defined(PLATFORM_WINDOWS)

@@ -33,6 +33,9 @@
     #include <fcntl.h>
     #include <sys/stat.h>
     #include <time.h>
+
+    /* POSIX utimensat() に渡すアクセス・更新時刻の配列要素数 (POSIX.1-2008) */
+    #define UTIMENS_TIMES_COUNT (2U)
 #elif defined(PLATFORM_WINDOWS)
     #include <cplat/clock/filetime_conv.h>
     #include <cplat/win32/win32.h>
@@ -159,7 +162,7 @@ int cplat_file_set_modified_timestamp(cplat_file *file, const cplat_timespec *ti
 
 #if defined(PLATFORM_LINUX)
     {
-        struct timespec times[2];
+        struct timespec times[UTIMENS_TIMES_COUNT];
 
         build_times(timestamp, times);
 
@@ -251,7 +254,7 @@ int cplat_file_set_path_modified_timestamp(const char *path, const cplat_timespe
 
 #if defined(PLATFORM_LINUX)
     {
-        struct timespec times[2];
+        struct timespec times[UTIMENS_TIMES_COUNT];
 
         build_times(timestamp, times);
 

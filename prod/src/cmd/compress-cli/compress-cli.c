@@ -20,6 +20,7 @@
 #include <cplat/crt/stdio.h>
 #include <cplat/crt/stdlib.h>
 #include <cplat/net/byteorder.h>
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,8 +29,25 @@
 /* 圧縮 API の処理上限に合わせ、展開後長さの上限は 4 [GiB] - 1 [byte] とする。 */
 #define COMPRESS_CLI_MAX_UNCOMPRESSED_SIZE ((size_t)CPLAT_COMPRESS_MAX_UNCOMPRESSED_SIZE)
 
+static_assert(CPLAT_COMPRESS_MAX_UNCOMPRESSED_SIZE <= SIZE_MAX, "展開後長さの上限が size_t に収まること");
+
 /* エラー メッセージの格納に使用するバッファーのバイト数。 */
 #define COMPRESS_CLI_ERROR_MESSAGE_SIZE 256
+
+/*
+ * 非圧縮時の膨張を見込む出力容量の倍率。
+ * 制約: 2 以上とすること (deflateBound() の上界以上を保証するため)。変更時は確保容量だけが変わる。
+ */
+#define COMPRESS_CLI_CAPACITY_FACTOR 2U
+
+/*
+ * 小さい入力に対する圧縮用バッファーの最小容量 [byte]。
+ * 制約: 256 以上とすること。変更時は小入力の確保容量だけが変わる。
+ */
+#define COMPRESS_CLI_MIN_CAPACITY 256U
+
+static_assert(COMPRESS_CLI_CAPACITY_FACTOR >= 2U, "capacity factor must be at least 2");
+static_assert(COMPRESS_CLI_MIN_CAPACITY >= 256U, "minimum capacity must be at least 256");
 
 /**
  *  @brief          詳細エラーを人間可読の文字列へ変換します。
@@ -286,11 +304,19 @@ static int compress_cli_run_compress(const char *input_path, const char *output_
         return compress_cli_run_compress_return(input_data, compressed_data, rc);
     }
 
-    /* 圧縮による膨張とヘッダー領域を見込み、作業バッファーを確保する。 */
-    compressed_capacity = input_size * 2u + CPLAT_COMPRESS_HEADER_SIZE;
-    if (compressed_capacity < 256u)
+    /*
+     * 出力の容量は、入力長の COMPRESS_CLI_CAPACITY_FACTOR 倍とヘッダー長の和とし、
+     * COMPRESS_CLI_MIN_CAPACITY [byte] を下限とする。
+     * cplat_compress() と同じ設定 (raw DEFLATE、windowBits 15、memLevel 8) での deflateBound() の上界は、
+     * 入力長 n に対して n + (n >> 12) + (n >> 14) + (n >> 25) + 7 [byte] である。
+     * ヘッダーを除いた容量は、n が 7 以上では 2n 以上でこの上界以上になり、
+     * n が 6 以下では 248 [byte] で上界 (最大 13 [byte]) 以上になる。
+     * see: https://zlib.net/manual.html
+     */
+    compressed_capacity = input_size * COMPRESS_CLI_CAPACITY_FACTOR + CPLAT_COMPRESS_HEADER_SIZE;
+    if (compressed_capacity < COMPRESS_CLI_MIN_CAPACITY)
     {
-        compressed_capacity = 256u;
+        compressed_capacity = COMPRESS_CLI_MIN_CAPACITY;
     }
 
     compressed_data = (uint8_t *)cplat_malloc(compressed_capacity);

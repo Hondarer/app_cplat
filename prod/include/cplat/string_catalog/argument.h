@@ -29,6 +29,8 @@
 #ifndef CPLAT_STRING_CATALOG_ARGUMENT_H
 #define CPLAT_STRING_CATALOG_ARGUMENT_H
 
+#include <assert.h>
+
 /**
  *  @ingroup        CPLAT_STRING_CATALOG
  *  @{
@@ -133,7 +135,9 @@ extern "C"
  *  @ref cplat_string_catalog_entry は実際の引数個数分の定義配列を参照し、文字列組み立て処理では値の配列をスタック上に確保します。\n
  *  値の配列は実際の引数の個数ではなく、この上限値に比例します。
  */
-#define CPLAT_STRING_CATALOG_ARGUMENT_MAX 50
+#define CPLAT_STRING_CATALOG_ARGUMENT_MAX 50U
+
+static_assert(CPLAT_STRING_CATALOG_ARGUMENT_MAX <= 100U, "cplat: argument index must fit in 2 digits");
 
 /** @} */
 

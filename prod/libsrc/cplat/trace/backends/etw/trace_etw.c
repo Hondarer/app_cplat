@@ -21,6 +21,7 @@
     #include <cplat/base/result.h>
     #include <cplat/base/windows_sdk.h>
     #include <TraceLoggingProvider.h>
+    #include <evntrace.h>
     #include <cplat/trace/etw.h>
     #include <stdlib.h>
 
@@ -90,25 +91,30 @@ static void write_trace_event(cplat_etw_provider_ref_t ref, const int level, con
     {
         switch (level)
         {
-        case 1:
-            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(1), TraceLoggingString(service, "Service"),
-                              TraceLoggingString(message, "Message"), TraceLoggingUInt32(process_id, "ProcessId"));
+        case TRACE_LEVEL_CRITICAL:
+            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(TRACE_LEVEL_CRITICAL),
+                              TraceLoggingString(service, "Service"), TraceLoggingString(message, "Message"),
+                              TraceLoggingUInt32(process_id, "ProcessId"));
             break;
-        case 2:
-            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(2), TraceLoggingString(service, "Service"),
-                              TraceLoggingString(message, "Message"), TraceLoggingUInt32(process_id, "ProcessId"));
+        case TRACE_LEVEL_ERROR:
+            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(TRACE_LEVEL_ERROR),
+                              TraceLoggingString(service, "Service"), TraceLoggingString(message, "Message"),
+                              TraceLoggingUInt32(process_id, "ProcessId"));
             break;
-        case 3:
-            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(3), TraceLoggingString(service, "Service"),
-                              TraceLoggingString(message, "Message"), TraceLoggingUInt32(process_id, "ProcessId"));
+        case TRACE_LEVEL_WARNING:
+            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(TRACE_LEVEL_WARNING),
+                              TraceLoggingString(service, "Service"), TraceLoggingString(message, "Message"),
+                              TraceLoggingUInt32(process_id, "ProcessId"));
             break;
-        case 4:
-            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(4), TraceLoggingString(service, "Service"),
-                              TraceLoggingString(message, "Message"), TraceLoggingUInt32(process_id, "ProcessId"));
+        case TRACE_LEVEL_INFORMATION:
+            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(TRACE_LEVEL_INFORMATION),
+                              TraceLoggingString(service, "Service"), TraceLoggingString(message, "Message"),
+                              TraceLoggingUInt32(process_id, "ProcessId"));
             break;
         default:
-            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(5), TraceLoggingString(service, "Service"),
-                              TraceLoggingString(message, "Message"), TraceLoggingUInt32(process_id, "ProcessId"));
+            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
+                              TraceLoggingString(service, "Service"), TraceLoggingString(message, "Message"),
+                              TraceLoggingUInt32(process_id, "ProcessId"));
             break;
         }
     }
@@ -116,25 +122,25 @@ static void write_trace_event(cplat_etw_provider_ref_t ref, const int level, con
     {
         switch (level)
         {
-        case 1:
-            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(1), TraceLoggingString(message, "Message"),
-                              TraceLoggingUInt32(process_id, "ProcessId"));
+        case TRACE_LEVEL_CRITICAL:
+            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(TRACE_LEVEL_CRITICAL),
+                              TraceLoggingString(message, "Message"), TraceLoggingUInt32(process_id, "ProcessId"));
             break;
-        case 2:
-            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(2), TraceLoggingString(message, "Message"),
-                              TraceLoggingUInt32(process_id, "ProcessId"));
+        case TRACE_LEVEL_ERROR:
+            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(TRACE_LEVEL_ERROR),
+                              TraceLoggingString(message, "Message"), TraceLoggingUInt32(process_id, "ProcessId"));
             break;
-        case 3:
-            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(3), TraceLoggingString(message, "Message"),
-                              TraceLoggingUInt32(process_id, "ProcessId"));
+        case TRACE_LEVEL_WARNING:
+            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(TRACE_LEVEL_WARNING),
+                              TraceLoggingString(message, "Message"), TraceLoggingUInt32(process_id, "ProcessId"));
             break;
-        case 4:
-            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(4), TraceLoggingString(message, "Message"),
-                              TraceLoggingUInt32(process_id, "ProcessId"));
+        case TRACE_LEVEL_INFORMATION:
+            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(TRACE_LEVEL_INFORMATION),
+                              TraceLoggingString(message, "Message"), TraceLoggingUInt32(process_id, "ProcessId"));
             break;
         default:
-            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(5), TraceLoggingString(message, "Message"),
-                              TraceLoggingUInt32(process_id, "ProcessId"));
+            TraceLoggingWrite(ref, "Trace", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
+                              TraceLoggingString(message, "Message"), TraceLoggingUInt32(process_id, "ProcessId"));
             break;
         }
     }

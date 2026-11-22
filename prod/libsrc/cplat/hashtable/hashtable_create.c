@@ -78,7 +78,7 @@ int hashtable_validate_config(const cplat_hashtable_config *config)
     }
 
     /* REC_DELETED が 2 なので、寿命は削除直後に空へ戻す 2 以上が必要である。 */
-    if (config->lifetime < 2)
+    if (config->lifetime < REC_DELETED)
     {
         return -1;
     }

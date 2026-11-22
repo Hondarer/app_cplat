@@ -31,7 +31,7 @@ int cplat_internal_string_catalog_collect_arguments(const cplat_string_catalog_e
     int index;
 
     if ((entry == NULL) || (values == NULL) || (entry->argument_count < 0) ||
-        (entry->argument_count > CPLAT_STRING_CATALOG_ARGUMENT_MAX) ||
+        (entry->argument_count > (int)CPLAT_STRING_CATALOG_ARGUMENT_MAX) ||
         ((entry->argument_count > 0) && (entry->arguments == NULL)))
     {
         return CPLAT_ERR_INVALID_ARGUMENT;
