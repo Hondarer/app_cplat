@@ -619,7 +619,7 @@ TEST_F(stringCatalogRenderTest, two_digit_placeholder)
     int actual_ret_last;
 
     memset(wide_dest, 0, sizeof(wide_dest));
-    for (index = 0; index < CPLAT_STRING_CATALOG_ARGUMENT_MAX; index++)
+    for (index = 0; index < (int)CPLAT_STRING_CATALOG_ARGUMENT_MAX; index++)
     {
         set_int32(index, index);
     }
@@ -663,7 +663,7 @@ TEST_F(stringCatalogRenderTest, invalid_two_digit_placeholder)
     int actual_ret_over_count;
     int actual_ret_leading_zero;
 
-    for (index = 0; index < CPLAT_STRING_CATALOG_ARGUMENT_MAX; index++)
+    for (index = 0; index < (int)CPLAT_STRING_CATALOG_ARGUMENT_MAX; index++)
     {
         set_int32(index, index);
     }
