@@ -1,6 +1,8 @@
 #include <testfw.h>
 #include <mock_cplat.h>
 
+#if defined(PLATFORM_WINDOWS)
+
 int delegate_real_cplat_utf8_to_wstr(wchar_t *dest, size_t dest_size, size_t *count_out, const char *utf8_text)
 {
     static auto real_fn =
@@ -78,3 +80,5 @@ MOCK_WEAK_IMPL(int, cplat_wstr_to_utf8_alloc, char **utf8_text_out, const wchar_
     return _mock_cplat != nullptr ? _mock_cplat->cplat_wstr_to_utf8_alloc(utf8_text_out, wtext)
                                   : delegate_real_cplat_wstr_to_utf8_alloc(utf8_text_out, wtext);
 }
+
+#endif /* PLATFORM_WINDOWS */
