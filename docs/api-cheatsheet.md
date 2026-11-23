@@ -120,14 +120,14 @@ Linux は FD の値が `0` 以上 `FD_SETSIZE` 未満であること、Windows �
 
 | 生 API | cplat 代替 | 差異の要点 |
 |---|---|---|
-| `fopen` | `cplat_fopen(path, modes, detail_out)` | パスは UTF-8 を受け取り、Windows 内部で `_wfsopen` を `_SH_DENYNO` 指定で呼び出し Linux と同じ共有可の既定にします。 |
-| `freopen` | `cplat_freopen(path, modes, stream, detail_out)` | `fopen` と同じ共有モード吸収。テキスト/バイナリ モード フラグは元の `stream` を引き継ぐ |
+| `fopen` | `cplat_fopen(path, modes, detail_out)` | パスは UTF-8 を受け取り、Windows 内部で `_wfsopen` を `_SH_DENYNO` 指定で呼び出し Linux と同じ共有可の既定にします。不正な UTF-8 は置換せず、結果コード `CPLAT_ERR_INVALID_ENCODING` と詳細 `EILSEQ` で通知します。 |
+| `freopen` | `cplat_freopen(path, modes, stream, detail_out)` | `fopen` と同じ共有モード吸収。テキスト/バイナリ モード フラグは元の `stream` を引き継ぐ。不正な UTF-8 は置換せず、結果コード `CPLAT_ERR_INVALID_ENCODING` と詳細 `EILSEQ` で通知します。 |
 | `fclose` | `cplat_fclose(stream, detail_out)` | OS エラー詳細を `detail_out` へ格納する以外は元の戻り値規約 (0/EOF) を保持 |
 | `fflush` | `cplat_fflush(stream, detail_out)` | 同上 |
 | `fread` | `cplat_fread(buffer, size, count, stream, detail_out)` | 同上 |
 | `fwrite` | `cplat_fwrite(buffer, size, count, stream, detail_out)` | 同上 |
-| `remove` / `_wremove` | `cplat_remove(path, detail_out)` | パスは UTF-8 |
-| `rename` / `_wrename` | `cplat_rename(oldpath, newpath, detail_out)` | 同上 |
+| `remove` / `_wremove` | `cplat_remove(path, detail_out)` | パスは UTF-8。不正な UTF-8 は置換せず、結果コード `CPLAT_ERR_INVALID_ENCODING` と詳細 `EILSEQ` で通知します。 |
+| `rename` / `_wrename` | `cplat_rename(oldpath, newpath, detail_out)` | どちらかのパスに不正な UTF-8 がある場合、置換せず結果コード `CPLAT_ERR_INVALID_ENCODING` と詳細 `EILSEQ` で通知します。 |
 | `fprintf` | `cplat_fprintf(stream, format, ...)` | 素通しに近いが `detail_out` 系 API との整合のため統一 |
 | `vfprintf` | `cplat_vfprintf(stream, format, args)` | 同上 |
 | `fseek` | `cplat_fseek(stream, offset, whence)` | `offset` が 64bit (`int64_t`) 対応 |
@@ -137,6 +137,7 @@ Table: 標準 I/O・ファイル操作 API と cplat 代替ラッパーの差異
 
 書式指定パスでファイルを開く/削除する用途には `cplat_fopen_fmt` / `cplat_vfopen_fmt` / `cplat_remove_fmt` / `cplat_vremove_fmt` を使用します。  
 一意な一時ファイルの作成には `cplat_fopen_temp(prefix, modes, path_out, path_size, detail_out)` を使用します。  
+Windows では、これらのパス変換を厳密に行い、不正な UTF-8 を置換しません。  
 `stdio` ラッパーとメモリ マップド ファイル (後述) のどちらを使うべきかの選定基準は [fileio-api-selection-guideline.md](fileio-api-selection-guideline.md) を参照してください。
 
 ### 低レベル fd 操作
@@ -145,19 +146,20 @@ Table: 標準 I/O・ファイル操作 API と cplat 代替ラッパーの差異
 
 | 生 API | cplat 代替 | 差異の要点 |
 |---|---|---|
-| `open` / `_wopen` | `cplat_open(path, flags, mode, detail_out)` | パスは UTF-8。Windows は `_wsopen_s` を `_SH_DENYNO` 指定で呼び出し Linux と同じ既定にします。 |
+| `open` / `_wopen` | `cplat_open(path, flags, mode, detail_out)` | パスは UTF-8。Windows は `_wsopen_s` を `_SH_DENYNO` 指定で呼び出し Linux と同じ既定にします。不正な UTF-8 は置換せず、結果コード `CPLAT_ERR_INVALID_ENCODING` と詳細 `EILSEQ` で通知します。 |
 | `lseek` / `_lseeki64` | `cplat_lseek(fd, offset, whence, detail_out)` | `offset` が 64bit 対応。`fd` が負の場合は OS API を呼ばず -1 を返す |
 | `close` / `_close` | `cplat_close(fd, detail_out)` | `fd` が負の場合は OS API を呼ばず -1 を返す |
 | `dup` / `_dup` | `cplat_dup(fd, detail_out)` | 同上 |
 | `dup2` / `_dup2` | `cplat_dup2(oldfd, newfd, detail_out)` | 成功時の戻り値を Windows の `_dup2` に合わせて常に 0 とする (POSIX `dup2` は `newfd` を返す) |
 | `read` / `_read` | `cplat_read(fd, buf, count, detail_out)` | Windows では 1 回の呼び出しで読み取れる上限が `INT_MAX` バイトであり、超過分は切り詰められる |
 | `write` / `_write` | `cplat_write(fd, buf, count, detail_out)` | 同上 (書き込み上限) |
-| `access` / `_waccess` | `cplat_access(path, mode, detail_out)` | パスは UTF-8 |
+| `access` / `_waccess` | `cplat_access(path, mode, detail_out)` | パスは UTF-8。不正な UTF-8 は置換せず、結果コード `CPLAT_ERR_INVALID_ENCODING` と詳細 `EILSEQ` で通知します。 |
 | `isatty` | `cplat_isatty(stream)` | 引数がファイル記述子ではなく `cplat_stream` 列挙型。Windows は `GetFileType`/`GetConsoleMode` の組み合わせで判定 |
 
 Table: 低レベル ファイル記述子操作 API と cplat 代替ラッパーの差異
 
-書式指定パスで開く/アクセス確認する用途には `cplat_open_fmt` / `cplat_vopen_fmt` / `cplat_access_fmt` / `cplat_vaccess_fmt` を使用します。
+書式指定パスで開く/アクセス確認する用途には `cplat_open_fmt` / `cplat_vopen_fmt` / `cplat_access_fmt` / `cplat_vaccess_fmt` を使用します。  
+Windows では、これらのパス変換を厳密に行い、不正な UTF-8 を置換しません。
 
 ### ファイル システム
 
@@ -165,10 +167,10 @@ Table: 低レベル ファイル記述子操作 API と cplat 代替ラッパー
 
 | 生 API | cplat 代替 | 差異の要点 |
 |---|---|---|
-| `stat` / `_wstat64` | `cplat_stat(stat_out, detail_out, path)` | パスは UTF-8。`stat_out` の型は `cplat_file_stat_t` (Linux: `struct stat`、Windows: `struct _stat64`)。Windows の `st_atime` / `st_mtime` / `st_ctime` は UTC の Unix 秒 |
-| `mkdir` / `_wmkdir` | `cplat_mkdir(path, detail_out)` | パスは UTF-8。Linux は 0755 を指定し、umask が適用される。Windows は権限を指定しない |
-| (`mkdir -p` 相当) | `cplat_makedirs(path, detail_out)` | 中間ディレクトリを再帰的に作成。既存ディレクトリはべき等に成功扱い。作成するディレクトリの権限は `cplat_mkdir()` と同じ。Windows では、`\\?\` と `\\.\` で始まるパスの動作は保証しない |
-| `rmdir` / `_wrmdir` | `cplat_rmdir(path, detail_out)` | パスは UTF-8。中間ディレクトリの再帰削除はしません。 |
+| `stat` / `_wstat64` | `cplat_stat(stat_out, detail_out, path)` | パスは UTF-8。不正な UTF-8 は結果コード `CPLAT_ERR_INVALID_ENCODING` と詳細 `EILSEQ` で通知し、OS API を呼びません。`stat_out` の型は `cplat_file_stat_t` (Linux: `struct stat`、Windows: `struct _stat64`)。Windows の `st_atime` / `st_mtime` / `st_ctime` は UTC の Unix 秒 |
+| `mkdir` / `_wmkdir` | `cplat_mkdir(path, detail_out)` | パスは UTF-8。不正な UTF-8 は結果コード `CPLAT_ERR_INVALID_ENCODING` と詳細 `EILSEQ` で通知し、OS API を呼びません。Linux は 0755 を指定し、umask が適用される。Windows は権限を指定しない |
+| (`mkdir -p` 相当) | `cplat_makedirs(path, detail_out)` | 中間ディレクトリを再帰的に作成。既存ディレクトリはべき等に成功扱い。不正な UTF-8 は結果コード `CPLAT_ERR_INVALID_ENCODING` と詳細 `EILSEQ` で通知します。作成するディレクトリの権限は `cplat_mkdir()` と同じ。Windows では、`\\?\` と `\\.\` で始まるパスの動作は保証しない |
+| `rmdir` / `_wrmdir` | `cplat_rmdir(path, detail_out)` | パスは UTF-8。不正な UTF-8 は結果コード `CPLAT_ERR_INVALID_ENCODING` と詳細 `EILSEQ` で通知し、OS API を呼びません。中間ディレクトリの再帰削除はしません。 |
 | `S_ISREG(st.st_mode)` / `(st.st_mode & _S_IFMT) == _S_IFREG` | `cplat_file_stat_is_regular(file_stat)` | 通常ファイルなら 1、それ以外と NULL は 0。値だけを参照するため共通結果コードの適用対象外 |
 
 Table: ファイル システム操作 API と cplat 代替ラッパーの差異
@@ -176,7 +178,8 @@ Table: ファイル システム操作 API と cplat 代替ラッパーの差異
 最終更新日時の取得と設定は `cplat/crt/file.h` の `cplat_file_get_modified_timestamp` / `cplat_file_set_modified_timestamp` (ハンドル版) と `cplat_file_get_path_modified_timestamp` / `cplat_file_set_path_modified_timestamp` (パス版) を使用します。  
 `cplat_stat` の `st_mtime` が秒精度であるのに対し、これらは `cplat_timespec` でサブ秒も扱います。秒部は同じ Unix epoch UTC です。
 
-書式指定パスを使う用途には `cplat_stat_fmt` / `cplat_vstat_fmt` / `cplat_mkdir_fmt` / `cplat_vmkdir_fmt` を使用します。
+書式指定パスを使う用途には `cplat_stat_fmt` / `cplat_vstat_fmt` / `cplat_mkdir_fmt` / `cplat_vmkdir_fmt` を使用します。  
+これら 8 関数 (`cplat_stat`、`cplat_stat_fmt`、`cplat_vstat_fmt`、`cplat_mkdir`、`cplat_mkdir_fmt`、`cplat_vmkdir_fmt`、`cplat_makedirs`、`cplat_rmdir`) は、不正な UTF-8 のパスを受け取ると `CPLAT_ERR_INVALID_ENCODING` と詳細 `EILSEQ` を返し、後続の OS 呼び出しを行いません。
 
 ### パスの操作
 
@@ -284,6 +287,9 @@ Table: Win32 生 API と cplat UTF-8 ラッパー API の対応
 `CreateProcessU` の `lpCommandLine` は読み取り専用で、`lpStartupInfo` 内の文字列は UTF-16 のままです。  
 `SERVICE_TABLE_ENTRYU` のメンバーは `lpServiceName` と `lpServiceProc` で、サービス メイン関数は `LPSERVICE_MAIN_FUNCTIONW` のままです。  
 `GetModuleFileNameU` は、出力先が不足する場合に UTF-8 の文字の境界で切り詰め、W 版と同じく `nSize` を返します。
+
+UTF-8 と UTF-16 の境界変換には `cplat/crt/wchar_conv.h` の 6 関数を使用します。不正な UTF-8 と対になっていない UTF-16 サロゲートは置換せず、`CPLAT_ERR_INVALID_ENCODING` で通知します。引数の誤り、メモリ確保の失敗、バッファー不足、不正な文字列はそれぞれ異なる結果コードで判定できます。バッファー版は `count_out` に NUL 終端を含む書き込み数を返し、失敗時は 0 を格納します。  
+結果コードから Win32 の最終エラーへの対応は、引数不正が `ERROR_INVALID_PARAMETER`、確保失敗が `ERROR_OUTOFMEMORY`、容量不足が `ERROR_INSUFFICIENT_BUFFER`、不正な文字列が `ERROR_NO_UNICODE_TRANSLATION` です。
 
 適用範囲は `CreateFileU` などのファイル ハンドル系に限らず、`app/cplat/docs/coding-guideline.md` の該当節を参照してください。
 
@@ -405,7 +411,7 @@ scope API の設計や結果コードの詳細は [memory-lock.md](memory-lock.m
 
 | 生 API | cplat 代替 | 差異の要点 |
 |---|---|---|
-| `gethostname()` (POSIX) / `GetComputerNameExW(ComputerNameDnsHostname)` (Win32) | `cplat_host_get_name(name_out, name_size)` | 返る値は UTF-8 です。Windows は Winsock を使わず DNS ホスト名を取得します。FQDN であることは保証しません。推奨配列サイズは `CPLAT_HOST_NAME_MAX` |
+| `gethostname()` (POSIX) / `GetComputerNameExW(ComputerNameDnsHostname)` (Win32) | `cplat_host_get_name(name_out, name_size)` | 返る値は UTF-8 です。Windows は Winsock を使わず DNS ホスト名を取得します。不正な UTF-16 は置換せず `CPLAT_ERR_INVALID_ENCODING` を返します。FQDN であることは保証しません。推奨配列サイズは `CPLAT_HOST_NAME_MAX` |
 
 Table: ホスト情報取得 API と cplat 代替ラッパーの差異
 
@@ -429,11 +435,11 @@ Table: 表示言語取得 API と cplat 代替ラッパーの差異
 
 | 生 API | cplat 代替 | 差異の要点 |
 |---|---|---|
-| `dladdr()` (POSIX) / `GetModuleHandleEx` +`GetModuleFileName` (Win32) | `cplat_module_get_path(...)` | 関数アドレスから所属モジュールの完全なパスを取得。Windows は拡張パス上限 (32767 文字) まで取得でき、確保失敗時は `CPLAT_ERR_OUT_OF_MEMORY` を返す |
-| `readlink("/proc/self/exe")` (Linux) / `GetModuleFileName(NULL, ...)` (Win32) | `cplat_process_get_executable_path(...)` | Windows は拡張パス上限 (32767 文字) まで取得でき、確保失敗時は `CPLAT_ERR_OUT_OF_MEMORY` を返す |
+| `dladdr()` (POSIX) / `GetModuleHandleEx` +`GetModuleFileName` (Win32) | `cplat_module_get_path(...)` | 関数アドレスから所属モジュールの完全なパスを取得。Windows は拡張パス上限 (32767 文字) まで取得でき、確保失敗時は `CPLAT_ERR_OUT_OF_MEMORY`、不正な UTF-16 は `CPLAT_ERR_INVALID_ENCODING` を返す |
+| `readlink("/proc/self/exe")` (Linux) / `GetModuleFileName(NULL, ...)` (Win32) | `cplat_process_get_executable_path(...)` | Windows は拡張パス上限 (32767 文字) まで取得でき、確保失敗時は `CPLAT_ERR_OUT_OF_MEMORY`、不正な UTF-16 は `CPLAT_ERR_INVALID_ENCODING` を返す |
 | `getpid()` (POSIX) / `GetCurrentProcessId()` (Win32) | `cplat_process_get_pid()` | - |
 | `gettid()` (Linux) / `GetCurrentThreadId()` (Win32) | `cplat_process_get_tid()` | 同時に存在するスレッドの間で一意な識別子です。glibc 2.28 でも動作するよう、Linux では `syscall(SYS_gettid)` を使用します |
-| `fork()` +`execve()` (POSIX) / `CreateProcess()` (Win32) | `cplat_process_start(...)` | stdio リダイレクト、環境変数上書き、作業ディレクトリ指定を共通オプション構造体 `cplat_process_options` に集約 |
+| `fork()` +`execve()` (POSIX) / `CreateProcess()` (Win32) | `cplat_process_start(...)` | stdio リダイレクト、環境変数上書き、作業ディレクトリ指定を共通オプション構造体 `cplat_process_options` に集約。Windows では UTF-8 入力を厳密に変換し、不正な UTF-8 は `CPLAT_ERR_INVALID_ENCODING` を返す |
 | `waitpid()` (POSIX) / `WaitForSingleObject()` (Win32) | `cplat_process_wait(...)` / `cplat_process_timed_wait(...)` | 無期限待機と期限付き待機 (`timeout_ms`、`CPLAT_WAIT_FOREVER` / `CPLAT_NO_WAIT`) を分離 |
 | `WEXITSTATUS(status)` (POSIX) / `GetExitCodeProcess()` (Win32) | `cplat_process_get_exit_code(...)` | - |
 | `kill(SIGKILL)` (POSIX) / `TerminateProcess()` (Win32) | `cplat_process_terminate(...)` | - |

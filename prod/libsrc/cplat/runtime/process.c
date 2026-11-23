@@ -755,10 +755,16 @@ static int append_windows_quoted_arg(wide_buffer *buf, const wchar_t *arg)
     return wide_buffer_append_char(buf, L'"');
 }
 
-static wchar_t *build_command_line(char *const *argv)
+static int build_command_line(wchar_t **command_line_out, char *const *argv)
 {
     wide_buffer buf = {0};
     size_t i;
+
+    if (command_line_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    *command_line_out = NULL;
 
     i = 0;
     while (argv[i] != NULL)
@@ -766,11 +772,11 @@ static wchar_t *build_command_line(char *const *argv)
         wchar_t *wide_arg;
         int rc;
 
-        wide_arg = cplat_utf8_to_wstr_alloc(argv[i]);
-        if (wide_arg == NULL)
+        rc = cplat_utf8_to_wstr_alloc(&wide_arg, argv[i]);
+        if (rc != CPLAT_OK)
         {
             cplat_free(buf.data);
-            return NULL;
+            return rc;
         }
 
         if (i > 0)
@@ -779,7 +785,7 @@ static wchar_t *build_command_line(char *const *argv)
             {
                 cplat_free(wide_arg);
                 cplat_free(buf.data);
-                return NULL;
+                return CPLAT_ERR_OUT_OF_MEMORY;
             }
         }
 
@@ -789,13 +795,14 @@ static wchar_t *build_command_line(char *const *argv)
         if (rc != 0)
         {
             cplat_free(buf.data);
-            return NULL;
+            return CPLAT_ERR_OUT_OF_MEMORY;
         }
 
         i++;
     }
 
-    return buf.data;
+    *command_line_out = buf.data;
+    return CPLAT_OK;
 }
 
 static size_t wide_env_key_len(const wchar_t *entry)
@@ -876,13 +883,13 @@ static int set_wide_env_entry(wchar_t **list, const size_t capacity, const wchar
     key_len = wide_env_key_len(entry);
     if (key_len == 0)
     {
-        return -1;
+        return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
     copy = wide_string_duplicate(entry);
     if (copy == NULL)
     {
-        return -1;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     i = 0;
@@ -901,16 +908,16 @@ static int set_wide_env_entry(wchar_t **list, const size_t capacity, const wchar
     if (i + 1 >= capacity)
     {
         cplat_free(copy);
-        return -1;
+        return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
     list[i] = copy;
     list[i + 1] = NULL;
 
-    return 0;
+    return CPLAT_OK;
 }
 
-static wchar_t *build_environment_block(char *const *overrides)
+static int build_environment_block(wchar_t **block_out, char *const *overrides)
 {
     LPWCH current;
     LPWCH cursor;
@@ -922,11 +929,13 @@ static wchar_t *build_environment_block(char *const *overrides)
     size_t block_len;
     wchar_t *block;
     wchar_t *out;
+    int rc;
 
-    if (overrides == NULL)
+    if (block_out == NULL || overrides == NULL)
     {
-        return NULL;
+        return CPLAT_ERR_INVALID_ARGUMENT;
     }
+    *block_out = NULL;
 
     /*
      * 環境ブロックの解放は、内容を使い終えた後か NULL を返す経路で行い、失敗しても返す結果が変わらないため、
@@ -935,7 +944,7 @@ static wchar_t *build_environment_block(char *const *overrides)
     current = GetEnvironmentStringsW();
     if (current == NULL)
     {
-        return NULL;
+        return cplat_internal_result_from_windows_error(GetLastError());
     }
 
     /* 現在の環境変数ブロックからエントリ数を計測する。 */
@@ -954,7 +963,7 @@ static wchar_t *build_environment_block(char *const *overrides)
         if (strchr(overrides[override_count], '=') == NULL)
         {
             (void)FreeEnvironmentStringsW(current);
-            return NULL;
+            return CPLAT_ERR_INVALID_ARGUMENT;
         }
 
         override_count++;
@@ -965,7 +974,7 @@ static wchar_t *build_environment_block(char *const *overrides)
     if (list == NULL)
     {
         (void)FreeEnvironmentStringsW(current);
-        return NULL;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     /* 現在の環境変数エントリを複製して配列へ格納する。 */
@@ -978,7 +987,7 @@ static wchar_t *build_environment_block(char *const *overrides)
         {
             free_wide_env_list(list);
             (void)FreeEnvironmentStringsW(current);
-            return NULL;
+            return CPLAT_ERR_OUT_OF_MEMORY;
         }
 
         i++;
@@ -994,18 +1003,19 @@ static wchar_t *build_environment_block(char *const *overrides)
     {
         wchar_t *wide_entry;
 
-        wide_entry = cplat_utf8_to_wstr_alloc(overrides[i]);
-        if (wide_entry == NULL)
+        rc = cplat_utf8_to_wstr_alloc(&wide_entry, overrides[i]);
+        if (rc != CPLAT_OK)
         {
             free_wide_env_list(list);
-            return NULL;
+            return rc;
         }
 
-        if (set_wide_env_entry(list, capacity, wide_entry) != 0)
+        rc = set_wide_env_entry(list, capacity, wide_entry);
+        if (rc != CPLAT_OK)
         {
             cplat_free(wide_entry);
             free_wide_env_list(list);
-            return NULL;
+            return rc;
         }
 
         cplat_free(wide_entry);
@@ -1025,7 +1035,7 @@ static wchar_t *build_environment_block(char *const *overrides)
     if (block == NULL)
     {
         free_wide_env_list(list);
-        return NULL;
+        return CPLAT_ERR_OUT_OF_MEMORY;
     }
 
     /* 各環境変数文字列を単一のブロックへ連続して複写する。 */
@@ -1044,7 +1054,8 @@ static wchar_t *build_environment_block(char *const *overrides)
     *out = L'\0';
     free_wide_env_list(list);
 
-    return block;
+    *block_out = block;
+    return CPLAT_OK;
 }
 
 static HANDLE open_windows_null_device(const DWORD access)
@@ -1240,9 +1251,9 @@ int cplat_process_get_executable_path(char *path_out, const size_t path_size)
 
         wbuf[n] = L'\0';
 
-        if (cplat_wpath_to_utf8(path_out, path_size, wbuf) < 0)
+        result = cplat_wpath_to_utf8(path_out, path_size, NULL, wbuf);
+        if (result != CPLAT_OK)
         {
-            result = cplat_internal_result_from_windows_error(GetLastError());
             cplat_free(wbuf);
             path_out[0] = '\0';
             return result;
@@ -1355,27 +1366,31 @@ int cplat_process_start(const cplat_process_options *options, cplat_process **pr
         struct process_start_resources res = {0};
         DWORD create_flags;
         BOOL created;
+        int ret;
 
-        res.command_line = build_command_line(options->argv);
-        if (res.command_line == NULL)
+        ret = build_command_line(&res.command_line, options->argv);
+        if (ret != CPLAT_OK)
         {
-            return CPLAT_ERR_UNKNOWN;
+            return ret;
         }
 
-        res.environment_block = build_environment_block(options->env_overrides);
-        if (options->env_overrides != NULL && res.environment_block == NULL)
+        if (options->env_overrides != NULL)
         {
-            release_process_start_resources(&res);
-            return CPLAT_ERR_INVALID_ARGUMENT;
+            ret = build_environment_block(&res.environment_block, options->env_overrides);
+            if (ret != CPLAT_OK)
+            {
+                release_process_start_resources(&res);
+                return ret;
+            }
         }
 
         if (options->working_directory != NULL)
         {
-            res.working_directory = cplat_utf8_to_wstr_alloc(options->working_directory);
-            if (res.working_directory == NULL)
+            ret = cplat_utf8_to_wstr_alloc(&res.working_directory, options->working_directory);
+            if (ret != CPLAT_OK)
             {
                 release_process_start_resources(&res);
-                return CPLAT_ERR_UNKNOWN;
+                return ret;
             }
         }
 

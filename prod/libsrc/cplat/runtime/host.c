@@ -91,23 +91,7 @@ int cplat_host_get_name(char *name_out, const size_t name_size)
             return cplat_internal_result_from_windows_error(error_code);
         }
 
-        {
-            const int converted = cplat_wstr_to_utf8(name_out, name_size, wname);
-
-            /*
-             * 変換に失敗したときは、WideCharToMultiByte が残したエラーを結果コードへ変える。
-             * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
-             */
-            if (converted <= 0)
-            {
-                const int ret = cplat_internal_result_from_windows_error(GetLastError());
-
-                name_out[0] = '\0';
-                return ret;
-            }
-        }
-
-        return CPLAT_OK;
+        return cplat_wstr_to_utf8(name_out, name_size, NULL, wname);
     }
 #else
     name_out[0] = '\0';

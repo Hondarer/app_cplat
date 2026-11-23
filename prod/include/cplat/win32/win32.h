@@ -13,6 +13,13 @@
  *  文字列を扱わない API (CloseHandle / ReadFile / SetEvent 等) はラップしません。\n
  *  Linux では本ヘッダーは何も宣言しません。
  *
+ *  @par            U 版の変換エラーと最終エラー
+ *  UTF-8 と UTF-16 の変換に失敗した場合は、引数の誤りを ERROR_INVALID_PARAMETER、メモリ確保の失敗を
+ *  ERROR_OUTOFMEMORY、出力容量の不足を ERROR_INSUFFICIENT_BUFFER、不正な文字列を
+ *  ERROR_NO_UNICODE_TRANSLATION として通知します。その他の変換失敗では変換関数の最終エラーを保持します。\n
+ *  W 版の呼び出しが失敗した場合は、後始末をまたいでも W 版の最終エラーを保持します。
+ *  see: https://learn.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror
+ *
  *  @copyright      Copyright (C) Tetsuo Honda. 2026. All rights reserved.
  *
  *******************************************************************************
@@ -58,8 +65,7 @@ typedef struct SERVICE_TABLE_ENTRYU
  *  @brief          ファイルまたは I/O デバイスを作成または開きます (UTF-8 パス版)。
  *
  *  lpFileName を UTF-16 に変換して CreateFileW を呼び出します。\n
- *                  変換失敗時は SetLastError(ERROR_INVALID_PARAMETER) を設定して
- *                  INVALID_HANDLE_VALUE を返します。\n
+ *                  変換エラーと最終エラーの規則は、冒頭の U 版共通規則に従います。\n
  *                  それ以外の挙動は CreateFileW と同一です。
  *  @param[in]      lpFileName                ファイルまたはデバイスの名前 (UTF-8)。
  *  @param[in]      dwDesiredAccess           アクセスの要求 (GENERIC_READ / GENERIC_WRITE 等)。
@@ -83,8 +89,7 @@ CPLAT_EXPORT HANDLE CPLAT_API CreateFileU(const char *lpFileName, DWORD dwDesire
  *  @brief          名前付きパイプのインスタンスを作成します (UTF-8 名前版)。
  *
  *  lpName を UTF-16 に変換して CreateNamedPipeW を呼び出します。\n
- *                  変換失敗時は SetLastError(ERROR_INVALID_PARAMETER) を設定して
- *                  INVALID_HANDLE_VALUE を返します。\n
+ *                  変換エラーと最終エラーの規則は、冒頭の U 版共通規則に従います。\n
  *                  それ以外の挙動は CreateNamedPipeW と同一です。
  *  @param[in]      lpName                    パイプ名 (UTF-8) です。"\\\\.\\pipe\\{name}" 形式です。
  *  @param[in]      dwOpenMode                パイプのアクセス モード。
@@ -114,8 +119,7 @@ CPLAT_EXPORT HANDLE CPLAT_API CreateNamedPipeU(const char *lpName, DWORD dwOpenM
  *                  lpFilename のサイズが不足する場合は、UTF-8 の文字の境界で切り詰め、
  *                  SetLastError(ERROR_INSUFFICIENT_BUFFER) を設定して nSize を返します (W 版と同じ)。
  *                  格納するバイト数は nSize - 1 以下です。\n
- *                  メモリを確保できない場合は SetLastError(ERROR_OUTOFMEMORY) を設定して 0 を返します。\n
- *                  変換失敗時は 0 を返します。
+ *                  変換エラーの分類と最終エラーの保持は、冒頭の U 版共通規則に従います。
  *  @param[in]      hModule                   モジュールのハンドル。NULL のとき呼び出し元プロセスの実行ファイル。
  *  @param[out]     lpFilename                パスの書き込み先バッファー (UTF-8)。
  *  @param[in]      nSize                     lpFilename のサイズ [byte]。W 版の UTF-16 単位数とは異なります。
@@ -134,7 +138,8 @@ CPLAT_EXPORT DWORD CPLAT_API GetModuleFileNameU(HMODULE hModule, char *lpFilenam
  *  lpBuffer を UTF-16 に変換して WriteConsoleW を呼び出します。\n
  *                  WriteConsoleA はコンソールのコード ページ (日本語環境では cp932) で
  *                  解釈するため、UTF-8 文字列を渡すと文字化けします。\n
- *                  変換失敗時は SetLastError(ERROR_INVALID_PARAMETER) を設定して FALSE を返します。\n
+ *                  不正な UTF-8 は ERROR_NO_UNICODE_TRANSLATION で失敗し、WriteFile へ切り替えません。\n
+ *                  その他の変換エラーは、冒頭の U 版共通規則に従います。
  *                  ハンドルがコンソールでない場合 (リダイレクト時) は WriteConsoleW と同様に失敗します。
  *  @param[in]      hConsoleOutput            コンソール スクリーン バッファーのハンドル。
  *  @param[in]      lpBuffer                  書き込む文字列 (UTF-8)。指定したバイト数を読み取れる必要があります。
@@ -164,7 +169,7 @@ CPLAT_EXPORT BOOL CPLAT_API WriteConsoleU(HANDLE hConsoleOutput, const char *lpB
  *                  変換して lpszVolumePathName へ書き込みます。\n
  *                  A 版はコンソールのコード ページで解釈するため、非 ASCII の
  *                  マウント パスを扱えません。\n
- *                  変換失敗またはバッファー不足時は SetLastError を設定して FALSE を返します。
+ *                  変換エラーの分類と最終エラーの保持は、冒頭の U 版共通規則に従います。
  *  @param[in]      lpszFileName              対象のパス (UTF-8)。
  *  @param[out]     lpszVolumePathName        マウント ポイントの書き込み先 (UTF-8)。
  *  @param[in]      cchBufferLength           lpszVolumePathName のサイズ [byte]。W 版の UTF-16 単位数とは異なります。
@@ -185,7 +190,7 @@ CPLAT_EXPORT BOOL CPLAT_API GetVolumePathNameU(const char *lpszFileName, char *l
  *                  文字列の出力を UTF-8 に変換して書き込みます。\n
  *                  A 版はコンソールのコード ページで解釈するため、非 ASCII の
  *                  ボリューム名やマウント パスを扱えません。\n
- *                  変換失敗またはバッファー不足時は SetLastError を設定して FALSE を返します。
+ *                  変換エラーの分類と最終エラーの保持は、冒頭の U 版共通規則に従います。
  *  @param[in]      lpRootPathName            ボリュームのルート パス (UTF-8)。NULL のとき現在のディレクトリのボリューム。
  *  @param[out]     lpVolumeNameBuffer        ボリューム名の書き込み先 (UTF-8)。NULL 可。
  *  @param[in]      nVolumeNameSize           lpVolumeNameBuffer のサイズ [byte]。W 版の UTF-16 単位数とは異なります。
@@ -210,7 +215,7 @@ CPLAT_EXPORT BOOL CPLAT_API GetVolumeInformationU(const char *lpRootPathName, ch
  *  @brief          指定したモジュールをプロセスのアドレス空間にロードします (UTF-8 名前版)。
  *
  *  lpLibFileName を UTF-16 に変換して LoadLibraryW を呼び出します。\n
- *                  変換失敗時は SetLastError(ERROR_INVALID_PARAMETER) を設定して NULL を返します。\n
+ *                  変換エラーと最終エラーの規則は、冒頭の U 版共通規則に従います。\n
  *                  それ以外の挙動は LoadLibraryW と同一です。
  *  @param[in]      lpLibFileName             モジュール ファイルの名前 (UTF-8)。
  *  @return         成功時はモジュールのハンドル。失敗時は NULL。
@@ -236,7 +241,7 @@ CPLAT_EXPORT HMODULE CPLAT_API LoadLibraryU(const char *lpLibFileName);
  *                  確保した可変バッファーを渡します。U 版は const char * を受け取り、入力を変更しません。\n
  *                  lpEnvironment が NULL 以外の場合は、CREATE_UNICODE_ENVIRONMENT フラグを
  *                  設定した UTF-16 環境ブロックを渡してください (本関数では変換しません)。\n
- *                  変換失敗時は SetLastError(ERROR_INVALID_PARAMETER) を設定して FALSE を返します。\n
+ *                  変換エラーと最終エラーの規則は、冒頭の U 版共通規則に従います。\n
  *                  それ以外の挙動は CreateProcessW と同一です。
  *  @param[in]      lpApplicationName         実行するモジュール名 (UTF-8)。NULL 可。
  *  @param[in]      lpCommandLine             コマンド ライン (UTF-8)。NULL 可。
@@ -270,7 +275,7 @@ CPLAT_EXPORT BOOL CPLAT_API CreateProcessU(const char *lpApplicationName, const 
  *
  *  lpMachineName / lpDatabaseName を UTF-16 に変換して
  *                  OpenSCManagerW を呼び出します。NULL 引数は変換せずそのまま渡します。\n
- *                  変換失敗時は SetLastError(ERROR_INVALID_PARAMETER) を設定して NULL を返します。\n
+ *                  変換エラーと最終エラーの規則は、冒頭の U 版共通規則に従います。\n
  *                  それ以外の挙動は OpenSCManagerW と同一です。
  *  @param[in]      lpMachineName             コンピューター名 (UTF-8)。NULL でローカル コンピューター。
  *  @param[in]      lpDatabaseName            SCM データベース名 (UTF-8)。NULL で既定のデータベース。
@@ -292,7 +297,7 @@ CPLAT_EXPORT SC_HANDLE CPLAT_API OpenSCManagerU(const char *lpMachineName, const
  *                  NULL の引数は変換せずそのまま渡します。\n
  *                  lpDependencies は NULL または単一の依存サービス名のみ対応します。
  *                  二重 NULL 終端のマルチ文字列には対応していません。\n
- *                  変換失敗時は SetLastError(ERROR_INVALID_PARAMETER) を設定して NULL を返します。\n
+ *                  変換エラーと最終エラーの規則は、冒頭の U 版共通規則に従います。\n
  *                  それ以外の挙動は CreateServiceW と同一です。
  *  @param[in]      hSCManager                SCM ハンドル (OpenSCManagerU の戻り値)。
  *  @param[in]      lpServiceName             サービス名 (UTF-8)。
@@ -325,7 +330,7 @@ CPLAT_EXPORT SC_HANDLE CPLAT_API CreateServiceU(SC_HANDLE hSCManager, const char
  *  @brief          既存のサービスのハンドルを開きます (UTF-8 名前版)。
  *
  *  lpServiceName を UTF-16 に変換して OpenServiceW を呼び出します。\n
- *                  変換失敗時は SetLastError(ERROR_INVALID_PARAMETER) を設定して NULL を返します。\n
+ *                  変換エラーと最終エラーの規則は、冒頭の U 版共通規則に従います。\n
  *                  それ以外の挙動は OpenServiceW と同一です。
  *  @param[in]      hSCManager                SCM ハンドル (OpenSCManagerU の戻り値)。
  *  @param[in]      lpServiceName             サービス名 (UTF-8)。
@@ -348,7 +353,7 @@ CPLAT_EXPORT SC_HANDLE CPLAT_API OpenServiceU(SC_HANDLE hSCManager, const char *
  *                  lpDescription が NULL の場合は、SERVICE_DESCRIPTIONW.lpDescription に NULL を渡します。\n
  *                  dwInfoLevel が SERVICE_CONFIG_DESCRIPTION 以外、または lpInfo が NULL の場合は
  *                  SetLastError(ERROR_INVALID_PARAMETER) を設定して FALSE を返します。\n
- *                  変換失敗時も SetLastError(ERROR_INVALID_PARAMETER) を設定して FALSE を返します。
+ *                  変換エラーと最終エラーの規則は、冒頭の U 版共通規則に従います。
  *  @param[in]      hService                  サービス ハンドル (OpenServiceU / CreateServiceU の戻り値)。
  *  @param[in]      dwInfoLevel               変更する構成情報の種類。SERVICE_CONFIG_DESCRIPTION のみ対応。
  *  @param[in]      lpInfo                    SERVICE_DESCRIPTIONA へのポインター。lpDescription は UTF-8。NULL は指定できません。
@@ -366,7 +371,7 @@ CPLAT_EXPORT BOOL CPLAT_API ChangeServiceConfig2U(SC_HANDLE hService, DWORD dwIn
  *
  *  lpServiceName を UTF-16 に変換して RegisterServiceCtrlHandlerExW を
  *                  呼び出します。\n
- *                  変換失敗時は SetLastError(ERROR_INVALID_PARAMETER) を設定して NULL を返します。\n
+ *                  変換エラーと最終エラーの規則は、冒頭の U 版共通規則に従います。\n
  *                  それ以外の挙動は RegisterServiceCtrlHandlerExW と同一です。
  *  @param[in]      lpServiceName             サービス名 (UTF-8)。
  *  @param[in]      lpHandlerProc             拡張ハンドラー関数へのポインター。
@@ -388,7 +393,7 @@ CPLAT_EXPORT SERVICE_STATUS_HANDLE CPLAT_API RegisterServiceCtrlHandlerExU(const
  *  SERVICE_TABLE_ENTRYU テーブルの各 lpServiceName を UTF-16 に変換して
  *                  SERVICE_TABLE_ENTRYW 配列を組み立て、StartServiceCtrlDispatcherW を
  *                  呼び出します。テーブルの終端要素は lpServiceName を NULL にしてください。\n
- *                  変換失敗時は SetLastError(ERROR_OUTOFMEMORY) を設定して FALSE を返します。\n
+ *                  変換エラーと最終エラーの規則は、冒頭の U 版共通規則に従います。\n
  *                  それ以外の挙動は StartServiceCtrlDispatcherW と同一です。
  *  @param[in]      lpServiceStartTable       サービス エントリの配列。終端の両メンバーは NULL。
  *  @return         成功時は TRUE。失敗時は FALSE。

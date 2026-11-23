@@ -1540,12 +1540,14 @@ extern void delegate_real_cplat_tracer_call_next_hook(cplat_tracer_hook_entry *p
 #if defined(PLATFORM_WINDOWS)
 
 // cplat/crt/wchar_conv.h
-extern int delegate_real_cplat_utf8_to_wpath(wchar_t *dest, size_t dest_size, const char *utf8_path);
-extern int delegate_real_cplat_utf8_to_wstr(wchar_t *dest, size_t dest_size, const char *utf8_text);
-extern int delegate_real_cplat_wpath_to_utf8(char *dest, size_t dest_size, const wchar_t *wpath);
-extern int delegate_real_cplat_wstr_to_utf8(char *dest, size_t dest_size, const wchar_t *wtext);
-extern wchar_t *delegate_real_cplat_utf8_to_wstr_alloc(const char *utf8_text);
-extern char *delegate_real_cplat_wstr_to_utf8_alloc(const wchar_t *wtext);
+extern int delegate_real_cplat_utf8_to_wpath(wchar_t *dest, size_t dest_size, size_t *count_out,
+                                              const char *utf8_path);
+extern int delegate_real_cplat_utf8_to_wstr(wchar_t *dest, size_t dest_size, size_t *count_out,
+                                             const char *utf8_text);
+extern int delegate_real_cplat_wpath_to_utf8(char *dest, size_t dest_size, size_t *count_out, const wchar_t *wpath);
+extern int delegate_real_cplat_wstr_to_utf8(char *dest, size_t dest_size, size_t *count_out, const wchar_t *wtext);
+extern int delegate_real_cplat_utf8_to_wstr_alloc(wchar_t **wtext_out, const char *utf8_text);
+extern int delegate_real_cplat_wstr_to_utf8_alloc(char **utf8_text_out, const wchar_t *wtext);
 
 // cplat/base/error.h
 extern void delegate_real_cplat_error_capture_windows_error(cplat_error *error, unsigned long error_code);
@@ -2370,12 +2372,12 @@ class Mock_cplat
 #if defined(PLATFORM_WINDOWS)
 
     // cplat/crt/wchar_conv.h
-    MOCK_METHOD(int, cplat_utf8_to_wpath, (wchar_t *, size_t, const char *));
-    MOCK_METHOD(int, cplat_utf8_to_wstr, (wchar_t *, size_t, const char *));
-    MOCK_METHOD(int, cplat_wpath_to_utf8, (char *, size_t, const wchar_t *));
-    MOCK_METHOD(int, cplat_wstr_to_utf8, (char *, size_t, const wchar_t *));
-    MOCK_METHOD(wchar_t *, cplat_utf8_to_wstr_alloc, (const char *));
-    MOCK_METHOD(char *, cplat_wstr_to_utf8_alloc, (const wchar_t *));
+    MOCK_METHOD(int, cplat_utf8_to_wpath, (wchar_t *, size_t, size_t *, const char *));
+    MOCK_METHOD(int, cplat_utf8_to_wstr, (wchar_t *, size_t, size_t *, const char *));
+    MOCK_METHOD(int, cplat_wpath_to_utf8, (char *, size_t, size_t *, const wchar_t *));
+    MOCK_METHOD(int, cplat_wstr_to_utf8, (char *, size_t, size_t *, const wchar_t *));
+    MOCK_METHOD(int, cplat_utf8_to_wstr_alloc, (wchar_t **, const char *));
+    MOCK_METHOD(int, cplat_wstr_to_utf8_alloc, (char **, const wchar_t *));
 
     // cplat/base/error.h
     MOCK_METHOD(void, cplat_error_capture_windows_error, (cplat_error *, unsigned long));

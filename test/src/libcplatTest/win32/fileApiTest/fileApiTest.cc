@@ -18,6 +18,7 @@ extern "C"
 
 using testing::_;
 using testing::DoAll;
+using testing::Invoke;
 using testing::NiceMock;
 using testing::Return;
 using testing::SetArgPointee;
@@ -177,6 +178,143 @@ TEST_F(fileApiTest, write_console_rejects_null_buffer)
     EXPECT_FALSE(actual_ret);                // [確認_異常系] - WriteConsoleU() の戻り値が FALSE であること。
     EXPECT_EQ(ERROR_INVALID_PARAMETER, err); // [確認_異常系] - GetLastError() が ERROR_INVALID_PARAMETER であること。
     EXPECT_EQ(0U, written);                  // [確認_異常系] - written が 0 に初期化されること。
+}
+
+TEST_F(fileApiTest, write_console_reports_out_of_memory_when_conversion_allocation_fails)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    NiceMock<Mock_windows> mock_windows;
+    DWORD written = 99U;
+    HANDLE console_handle = reinterpret_cast<HANDLE>(1);
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
+        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が 1 回呼び出されること。
+                                    // [Pre-Assert手順] - nullptr を返す。
+    EXPECT_CALL(mock_windows, WriteConsoleW(_, _, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - WriteConsoleW() が呼び出されないこと。
+
+    // Act
+    BOOL actual_ret = WriteConsoleU(console_handle, "text", 4U, &written,
+                                    nullptr); // [手順] - 変換用メモリ確保に失敗する状態で WriteConsoleU() を呼び出す。
+    DWORD error = GetLastError();
+
+    // Assert
+    EXPECT_FALSE(actual_ret);                  // [確認_異常系] - WriteConsoleU() の戻り値が FALSE であること。
+    EXPECT_EQ(0U, written);                    // [確認_異常系] - written が 0 に初期化されること。
+    EXPECT_EQ(ERROR_OUTOFMEMORY, error);       // [確認_異常系] - GetLastError() が ERROR_OUTOFMEMORY であること。
+}
+
+TEST_F(fileApiTest, write_console_rejects_invalid_utf8)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    const char invalid_utf8[] = "\x80";
+    HANDLE console_handle = reinterpret_cast<HANDLE>(1);
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, WriteConsoleW(_, _, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - 不正な UTF-8 のとき WriteConsoleW() が呼び出されないこと。
+
+    // Act
+    BOOL actual_ret = WriteConsoleU(console_handle, invalid_utf8, 1U, nullptr,
+                                    nullptr); // [手順] - 不正な UTF-8 を指定して WriteConsoleU() を呼び出す。
+    DWORD error = GetLastError();
+
+    // Assert
+    EXPECT_FALSE(actual_ret);                           // [確認_異常系] - WriteConsoleU() の戻り値が FALSE であること。
+    EXPECT_EQ(ERROR_NO_UNICODE_TRANSLATION, error);     // [確認_異常系] - GetLastError() が ERROR_NO_UNICODE_TRANSLATION であること。
+}
+
+TEST_F(fileApiTest, create_file_rejects_null_path_without_calling_native_api)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, CreateFileW(_, _, _, _, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - path に nullptr を指定した CreateFileW() の呼び出しがないこと。
+
+    // Act
+    HANDLE actual = CreateFileU(nullptr, GENERIC_READ, 0U, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
+                                nullptr); // [手順] - path に nullptr を指定して CreateFileU() を呼び出す。
+    DWORD error = GetLastError();
+
+    // Assert
+    EXPECT_EQ(INVALID_HANDLE_VALUE, actual);    // [確認_異常系] - 戻り値が INVALID_HANDLE_VALUE であること。
+    EXPECT_EQ(ERROR_INVALID_PARAMETER, error);  // [確認_異常系] - GetLastError() が ERROR_INVALID_PARAMETER であること。
+}
+
+TEST_F(fileApiTest, create_file_rejects_invalid_utf8_without_calling_native_api)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, CreateFileW(_, _, _, _, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - 不正な UTF-8 のとき CreateFileW() が呼び出されないこと。
+
+    // Act
+    HANDLE actual = CreateFileU("\x80", GENERIC_READ, 0U, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
+                                nullptr); // [手順] - 不正な UTF-8 を指定して CreateFileU() を呼び出す。
+    DWORD error = GetLastError();
+
+    // Assert
+    EXPECT_EQ(INVALID_HANDLE_VALUE, actual);            // [確認_異常系] - 戻り値が INVALID_HANDLE_VALUE であること。
+    EXPECT_EQ(ERROR_NO_UNICODE_TRANSLATION, error);      // [確認_異常系] - GetLastError() が ERROR_NO_UNICODE_TRANSLATION であること。
+}
+
+TEST_F(fileApiTest, create_file_reports_out_of_memory_without_calling_native_api)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    NiceMock<Mock_windows> mock_windows;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_calloc(_, _))
+        .WillOnce(Return(nullptr)); // [Pre-Assert確認_異常系] - cplat_calloc() が 1 回呼び出されること。
+                                    // [Pre-Assert手順] - nullptr を返す。
+    EXPECT_CALL(mock_windows, CreateFileW(_, _, _, _, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - 変換用メモリ確保に失敗したとき CreateFileW() が呼び出されないこと。
+
+    // Act
+    HANDLE actual = CreateFileU("valid", GENERIC_READ, 0U, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
+                                nullptr); // [手順] - 変換用メモリ確保に失敗する状態で CreateFileU() を呼び出す。
+    DWORD error = GetLastError();
+
+    // Assert
+    EXPECT_EQ(INVALID_HANDLE_VALUE, actual);       // [確認_異常系] - 戻り値が INVALID_HANDLE_VALUE であること。
+    EXPECT_EQ(ERROR_OUTOFMEMORY, error);           // [確認_異常系] - GetLastError() が ERROR_OUTOFMEMORY であること。
+}
+
+TEST_F(fileApiTest, create_file_preserves_native_failure_after_free)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    NiceMock<Mock_windows> mock_windows;
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, CreateFileW(_, _, _, _, _, _, _, _, _, _))
+        .WillOnce(Invoke([](const char *, int, const char *, LPCWSTR, DWORD, DWORD, LPSECURITY_ATTRIBUTES, DWORD,
+                            DWORD, HANDLE)
+                         {
+                             SetLastError(ERROR_FILE_NOT_FOUND);
+                             return INVALID_HANDLE_VALUE;
+                         })); // [Pre-Assert確認_異常系] - CreateFileW() が 1 回呼び出されること。
+                               // [Pre-Assert手順] - ERROR_FILE_NOT_FOUND を設定して失敗を返す。
+    EXPECT_CALL(mock_cplat, cplat_free(_))
+        .WillOnce(Invoke([](void *ptr)
+                         {
+                             delegate_real_cplat_free(ptr);
+                             SetLastError(ERROR_INVALID_HANDLE);
+                         })); // [Pre-Assert確認_異常系] - cplat_free() が 1 回呼び出されること。
+                               // [Pre-Assert手順] - メモリを解放した後に ERROR_INVALID_HANDLE を設定する。
+
+    // Act
+    HANDLE actual = CreateFileU("valid", GENERIC_READ, 0U, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
+                                nullptr); // [手順] - CreateFileW() が失敗し、解放時に別のエラーを設定する状態で CreateFileU() を呼び出す。
+    DWORD error = GetLastError();
+
+    // Assert
+    EXPECT_EQ(INVALID_HANDLE_VALUE, actual);       // [確認_異常系] - 戻り値が INVALID_HANDLE_VALUE であること。
+    EXPECT_EQ(ERROR_FILE_NOT_FOUND, error);        // [確認_異常系] - 最終エラーが ERROR_FILE_NOT_FOUND であること。
 }
 
 // バッファー不足時に UTF-8 の文字境界で切り詰め、nSize を返すことの確認

@@ -288,7 +288,7 @@ int cplat_module_get_path(char *path_out, const size_t path_size, const void *fu
     wchar_t *wfull = NULL;
     DWORD full_cap;
     DWORD full_len;
-    int needed_utf8;
+    int rc;
     int st;
 
     st = get_self_path_w_alloc(func_addr, &wpath);
@@ -324,31 +324,12 @@ int cplat_module_get_path(char *path_out, const size_t path_size, const void *fu
         return CPLAT_ERR_UNKNOWN;
     }
 
-    /*
-     * 出力先を NULL、サイズを 0 にして必要な UTF-8 バイト数 (終端 NUL 含む) を求め、
-     * 呼び出し元の出力バッファー不足だけを CPLAT_ERR_BUFFER_TOO_SMALL として区別する。
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
-     */
-    needed_utf8 = WideCharToMultiByte(CP_UTF8, 0, wfull, -1, NULL, 0, NULL, NULL);
-    if (needed_utf8 <= 0)
+    rc = cplat_wpath_to_utf8(path_out, path_size, NULL, wfull);
+    if (rc != CPLAT_OK)
     {
         cplat_free(wfull);
         path_out[0] = '\0';
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    if ((size_t)needed_utf8 > path_size)
-    {
-        cplat_free(wfull);
-        path_out[0] = '\0';
-        return CPLAT_ERR_BUFFER_TOO_SMALL;
-    }
-
-    if (cplat_wpath_to_utf8(path_out, path_size, wfull) < 0)
-    {
-        cplat_free(wfull);
-        path_out[0] = '\0';
-        return CPLAT_ERR_UNKNOWN;
+        return rc;
     }
 
     cplat_free(wfull);

@@ -20,24 +20,25 @@
 #if defined(PLATFORM_WINDOWS)
 
     #include <cplat/crt/wchar_conv.h>
-    #include <stdlib.h>
+    #include <cplat/win32/wchar_conv_internal.h>
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
 HMODULE LoadLibraryU(const char *lpLibFileName)
 {
     HMODULE result;
-    wchar_t *wfile_name;
+    wchar_t *wfile_name = NULL;
+    int rc;
 
-    wfile_name = cplat_utf8_to_wstr_alloc(lpLibFileName);
-    if (wfile_name == NULL)
+    rc = cplat_utf8_to_wstr_alloc(&wfile_name, lpLibFileName);
+    if (rc != CPLAT_OK)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        cplat_internal_win32_set_last_error_from_result(rc);
         return NULL;
     }
 
     result = LoadLibraryW(wfile_name);
-    cplat_free(wfile_name);
+    cplat_internal_win32_free_keep_last_error(wfile_name);
 
     return result;
 }

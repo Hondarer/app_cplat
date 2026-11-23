@@ -1,3 +1,5 @@
 /error.c
+/path_format.c
 /result.c
 /sys_stat.c
+/sys_stat_format.c

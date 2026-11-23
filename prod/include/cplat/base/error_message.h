@@ -66,11 +66,12 @@ extern "C"
      *  @param[in]      buf_size @p buf のバイト数。1 以上を指定してください。
      *  @param[in]      error    文字列化する詳細エラー。NULL を渡してはなりません。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
-     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。\n
+     *                  @ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。\n
      *                  メッセージが収まらない場合も切り詰めて格納し @ref CPLAT_OK を返します。
      *
      *  errno ドメインはスレッド セーフな CRT API、Win32 ドメインは
      *  `FormatMessageW` を使用して UTF-8 のメッセージへ変換します。\n
+     *  Windows のメッセージが不正な UTF-16 の場合は、置換せず @ref CPLAT_ERR_INVALID_ENCODING を返します。\n
      *  ドメインが @ref CPLAT_ERROR_DOMAIN_NONE の場合は "no error" を格納します。\n
      *  Linux で Win32 ドメインを指定した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *

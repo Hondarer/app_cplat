@@ -50,12 +50,14 @@ extern "C"
      *  @retval         CPLAT_OK                    ホスト名を取得しました。
      *  @retval         CPLAT_ERR_INVALID_ARGUMENT  @p name_out が NULL、@p name_size が 0、または `INT_MAX` を超えます。
      *  @retval         CPLAT_ERR_BUFFER_TOO_SMALL  @p name_out の容量が不足しています。
+     *  @retval         CPLAT_ERR_INVALID_ENCODING  Windows のホスト名が不正な UTF-16 です。
      *  @retval         CPLAT_ERR_UNSUPPORTED       現在のプラットフォームをサポートしていません。
      *  @return         上記以外の失敗時は、OS エラーを変換した共通結果コードを返します。
      *
      *  Linux では `gethostname`、Windows では `GetComputerNameExW(ComputerNameDnsHostname)` を使用します。\n
      *  返る値は OS が保持する DNS ホスト名であり、FQDN であることは保証しません。\n
-     *  Windows では Winsock の `gethostname` を使わず、UTF-16 から UTF-8 へ変換します。
+     *  Windows では Winsock の `gethostname` を使わず、UTF-16 から UTF-8 へ厳密に変換します。
+     *  不正な UTF-16 は置換せず @ref CPLAT_ERR_INVALID_ENCODING を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。

@@ -12,6 +12,7 @@
 #include <cplat/crt/stdio.h>
 #include <cplat/crt/stdlib.h>
 #include <cplat/crt/wchar_conv.h>
+#include <cplat/win32/wchar_conv_internal.h>
 #include <cplat/base/error_internal.h>
 #include <cplat/base/result.h>
 #include "crt.h"
@@ -322,6 +323,7 @@ int cplat_path_get_full(char *path_out, const size_t path_size, cplat_error *det
         wchar_t wfull[PLATFORM_PATH_MAX];
         DWORD needed;
         int check_result;
+        int rc;
 
         check_result = crt_check_wpath_length(path, detail_out);
         if (check_result != CPLAT_OK)
@@ -330,10 +332,11 @@ int cplat_path_get_full(char *path_out, const size_t path_size, cplat_error *det
             return check_result;
         }
 
-        if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), path) < 0)
+        rc = cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), NULL, path);
+        if (rc != CPLAT_OK)
         {
             path_out[0] = '\0';
-            return cplat_internal_error_report_errno(detail_out, EINVAL);
+            return cplat_internal_error_report_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
         }
 
         /* 区切りを '/' へそろえてから絶対化する (\\?\ で始まる入力の動作を変えないため)。 */
@@ -360,10 +363,11 @@ int cplat_path_get_full(char *path_out, const size_t path_size, cplat_error *det
             return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
         }
 
-        if (cplat_wpath_to_utf8(path_out, path_size, wfull) < 0)
+        rc = cplat_wpath_to_utf8(path_out, path_size, NULL, wfull);
+        if (rc != CPLAT_OK)
         {
             path_out[0] = '\0';
-            return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
+            return cplat_internal_error_report_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
         }
     }
 
@@ -453,6 +457,7 @@ int cplat_path_get_temp_dir(char *path_out, const size_t path_size, cplat_error 
         wchar_t wdir[PLATFORM_PATH_MAX];
         DWORD dwret;
         size_t len;
+        int rc;
 
         /*
          * 取得結果は直後に cplat_wpath_to_utf8 で変換するため、
@@ -471,9 +476,10 @@ int cplat_path_get_temp_dir(char *path_out, const size_t path_size, cplat_error 
             return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
         }
 
-        if (cplat_wpath_to_utf8(path_out, path_size, wdir) < 0)
+        rc = cplat_wpath_to_utf8(path_out, path_size, NULL, wdir);
+        if (rc != CPLAT_OK)
         {
-            return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
+            return cplat_internal_error_report_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
         }
 
         /* GetTempPathW は末尾 '\' を付けて返す。変換後は '/' になるので除去する。 */

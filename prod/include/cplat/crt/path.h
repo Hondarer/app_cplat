@@ -183,7 +183,7 @@ extern "C"
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @param[in]      path        入力パス (UTF-8)。NULL および空文字は渡してはなりません。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
-     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  相対パスはカレント ディレクトリ基準で絶対化します。\n
      *  Linux では realpath() による symlink 解決を可能な範囲で試み、失敗した場合は
@@ -193,6 +193,7 @@ extern "C"
      *  @ref PLATFORM_PATH_SEP (`"/"`) 区切りへ正規化されます。\n
      *  Windows では、入力または結果が UTF-16 で @ref PLATFORM_PATH_MAX 文字 (終端を含む) を超える場合に
      *  @ref CPLAT_ERR_BUFFER_TOO_SMALL を返します。
+     *  入力が不正な UTF-8 の場合は置換せず、@ref CPLAT_ERR_INVALID_ENCODING と詳細 EILSEQ を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -210,13 +211,14 @@ extern "C"
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
-     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  内部でそれぞれのパスに対して cplat_path_get_full() を呼び、絶対化と
      *  区切り文字正規化を行ったうえで比較します。\n
      *  Windows ではファイル システムの慣習に合わせて大小文字を区別せず比較します。\n
      *  Windows では、入力または結果が UTF-16 で @ref PLATFORM_PATH_MAX 文字 (終端を含む) を超える場合に
      *  @ref CPLAT_ERR_BUFFER_TOO_SMALL を返します。
+     *  どちらかの入力が不正な UTF-8 の場合は置換せず、@ref CPLAT_ERR_INVALID_ENCODING と詳細 EILSEQ を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -233,10 +235,12 @@ extern "C"
      *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
+     *                  @ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  Linux 環境では環境変数 `TMPDIR` を参照し、未設定または空の場合は `"/tmp"` を使用します。\n
      *  Windows 環境では `GetTempPathW()` で取得したパスを UTF-8 に変換して使用します。\n
+     *  不正な UTF-8 または UTF-16 が変換境界で検出された場合は、置換せず @ref CPLAT_ERR_INVALID_ENCODING を返します。\n
      *  出力パスは常に @ref PLATFORM_PATH_SEP (`"/"`) 区切りで正規化されており、末尾の区切り文字は含まれません。\n
      *  ファイル パスを構築する際は @ref PLATFORM_PATH_SEP を挟んでください。
      *

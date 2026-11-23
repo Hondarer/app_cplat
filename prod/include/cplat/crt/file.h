@@ -115,7 +115,8 @@ extern "C"
      *  @param[out]     detail_out  エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
-     *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            ファイル共有と排他制御
      *  @ref CPLAT_FILE_OPEN_READ と @ref CPLAT_FILE_OPEN_WRITE は、本関数が作成するハンドルの
@@ -238,7 +239,8 @@ extern "C"
      *  @param[out]     detail_out  エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
-     *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します (パスが存在しない場合を含む)。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します (パスが存在しない場合を含む)。
      *
      *  `cplat_file_get_id()` の結果と比較することで、開いているファイルが
      *  そのパスの最新の実体を指しているかを判定できます。\n
@@ -314,7 +316,7 @@ extern "C"
      *  @param[out]     detail_out  エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
      *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します
      *                  (パスが存在しない場合を含みます)。
      *
@@ -334,7 +336,7 @@ extern "C"
      *  @param[out]     detail_out  エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
      *                  @ref CPLAT_ERR_PERMISSION_DENIED 、@ref CPLAT_ERR_UNKNOWN の
      *                  いずれかを返します (パスが存在しない場合を含みます)。
      *

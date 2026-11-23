@@ -180,6 +180,7 @@ static int start_elevated_self(const char *arguments, cplat_process **child_out,
     wchar_t *wide_arguments;
     DWORD child_pid;
     BOOL executed;
+    int rc;
 
     *child_out = NULL;
     *child_pid_out = 0;
@@ -189,17 +190,17 @@ static int start_elevated_self(const char *arguments, cplat_process **child_out,
         return CPLAT_ERR_UNKNOWN;
     }
 
-    wide_exe_path = cplat_utf8_to_wstr_alloc(exe_path);
-    if (wide_exe_path == NULL)
+    rc = cplat_utf8_to_wstr_alloc(&wide_exe_path, exe_path);
+    if (rc != CPLAT_OK)
     {
-        return CPLAT_ERR_OUT_OF_MEMORY;
+        return rc;
     }
 
-    wide_arguments = cplat_utf8_to_wstr_alloc(arguments);
-    if (wide_arguments == NULL)
+    rc = cplat_utf8_to_wstr_alloc(&wide_arguments, arguments);
+    if (rc != CPLAT_OK)
     {
         cplat_free(wide_exe_path);
-        return CPLAT_ERR_OUT_OF_MEMORY;
+        return rc;
     }
 
     ZeroMemory(&exec_info, sizeof(exec_info));
@@ -952,6 +953,7 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code_o
         int elevated;
         int inherit_console;
         int diag_enabled;
+        int conversion_result;
 
         if (cplat_elevated_process_is_elevated(&elevated) != CPLAT_OK)
         {
@@ -1114,23 +1116,23 @@ int cplat_elevated_process_run_if_needed(const char *arguments, int *exit_code_o
             effective_arguments = combined_arguments;
         }
 
-        wide_exe_path = cplat_utf8_to_wstr_alloc(exe_path);
-        if (wide_exe_path == NULL)
+        conversion_result = cplat_utf8_to_wstr_alloc(&wide_exe_path, exe_path);
+        if (conversion_result != CPLAT_OK)
         {
             cplat_free(combined_arguments);
             *exit_code_out = EXIT_FAILURE;
-            return CPLAT_ERR_OUT_OF_MEMORY;
+            return conversion_result;
         }
 
         if (effective_arguments != NULL)
         {
-            wide_arguments = cplat_utf8_to_wstr_alloc(effective_arguments);
-            if (wide_arguments == NULL)
+            conversion_result = cplat_utf8_to_wstr_alloc(&wide_arguments, effective_arguments);
+            if (conversion_result != CPLAT_OK)
             {
                 cplat_free(combined_arguments);
                 cplat_free(wide_exe_path);
                 *exit_code_out = EXIT_FAILURE;
-                return CPLAT_ERR_OUT_OF_MEMORY;
+                return conversion_result;
             }
         }
 
@@ -1256,6 +1258,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         size_t arg_len;
         size_t buf_sz;
         DWORD temp_len;
+        int conversion_result;
 
         if (cplat_elevated_process_is_elevated(&elevated) != CPLAT_OK)
         {
@@ -1307,11 +1310,12 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
          * 一時ファイルの削除は、結果を読み終えた後か失敗を返す経路の後始末であり、削除できなくても返す結果が
          * 変わらないため、この関数の DeleteFileW の戻り値は明示的に破棄する。
          */
-        if (cplat_wpath_to_utf8(result_path, sizeof(result_path), wide_result_path) < 0)
+        conversion_result = cplat_wpath_to_utf8(result_path, sizeof(result_path), NULL, wide_result_path);
+        if (conversion_result != CPLAT_OK)
         {
             (void)DeleteFileW(wide_result_path);
             *exit_code_out = EXIT_FAILURE;
-            return CPLAT_ERR_UNKNOWN;
+            return conversion_result;
         }
 
         arg_len = 0;
@@ -1349,24 +1353,24 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
                                  result_path);
         }
 
-        wide_exe_path = cplat_utf8_to_wstr_alloc(exe_path);
-        if (wide_exe_path == NULL)
+        conversion_result = cplat_utf8_to_wstr_alloc(&wide_exe_path, exe_path);
+        if (conversion_result != CPLAT_OK)
         {
             cplat_free(combined_arguments);
             (void)DeleteFileW(wide_result_path);
             *exit_code_out = EXIT_FAILURE;
-            return CPLAT_ERR_OUT_OF_MEMORY;
+            return conversion_result;
         }
 
-        wide_arguments = cplat_utf8_to_wstr_alloc(combined_arguments);
+        conversion_result = cplat_utf8_to_wstr_alloc(&wide_arguments, combined_arguments);
         cplat_free(combined_arguments);
 
-        if (wide_arguments == NULL)
+        if (conversion_result != CPLAT_OK)
         {
             cplat_free(wide_exe_path);
             (void)DeleteFileW(wide_result_path);
             *exit_code_out = EXIT_FAILURE;
-            return CPLAT_ERR_OUT_OF_MEMORY;
+            return conversion_result;
         }
 
         ZeroMemory(&exec_info, sizeof(exec_info));

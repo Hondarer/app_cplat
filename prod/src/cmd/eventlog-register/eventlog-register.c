@@ -128,6 +128,14 @@ static int report_status(const int ret, const char *action, const char *message_
     {
         (void)fprintf(stderr, "パラメーターが不正です。\n");
     }
+    else if (ret == CPLAT_ERR_INVALID_ENCODING)
+    {
+        (void)fprintf(stderr, "メッセージ DLL のパスが UTF-8 として不正です。\n");
+    }
+    else if (ret == CPLAT_ERR_BUFFER_TOO_SMALL)
+    {
+        (void)fprintf(stderr, "メッセージ DLL のパスが長すぎます。\n");
+    }
     else
     {
         (void)fprintf(stderr, "システム エラーにより%sに失敗しました。\n", action);
@@ -178,9 +186,10 @@ static int do_install(void)
         return report_status(ret, "登録", NULL);
     }
 
-    if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), message_file) < 0)
+    ret = cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), NULL, message_file);
+    if (ret != CPLAT_OK)
     {
-        return report_status(CPLAT_ERR_UNKNOWN, "登録", NULL);
+        return report_status(ret, "登録", NULL);
     }
 
     /*

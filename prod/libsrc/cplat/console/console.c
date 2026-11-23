@@ -764,7 +764,7 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
      * 再接続後の書き込みには次の 2 つの現象があり、いずれも実機で確認した。原因は特定できていない。
      * - CRT のストリーム (printf、fprintf) を経由した書き込みが失敗する。cplat_console_write() は影響を受けない (CRT のストリームを経由しないため)。
      * - 書き込みが ERROR_INVALID_HANDLE で間欠的に失敗し、一度失敗すると再試行しても同じエラーで失敗する。これは cplat_console_write() でも発生する。
-     * 再接続後の出力には本ファイル末尾の cplat_console_write() (WriteConsoleU を呼び、失敗時に WriteFile へ切り替える) を使うこと。
+     * 再接続後の出力には本ファイル末尾の cplat_console_write() (WriteConsoleU を呼び、コンソール以外では WriteFile へ切り替える) を使うこと。
      * 確実に表示する必要がある場合は、cplat_elevated_process_run_piped() または cplat_elevated_process_run_with_result() を使用する。
      * CONOUT$ / CONIN$ は GENERIC_READ | GENERIC_WRITE で開いているため _O_RDWR を渡す。
      * stdout と stderr は、再接続の直後から表示するため無バッファーにする。stdin は変更しない。
@@ -897,9 +897,13 @@ int cplat_console_write(cplat_stream stream, const char *text)
         return CPLAT_OK;
     }
 
-    /*
-     * リダイレクト先がコンソールでない場合 WriteConsoleU は失敗するため WriteFile にフォールバックする。
-     * リダイレクト先はコード ページ変換を行わないため、UTF-8 のまま書き込む。
+    if (GetLastError() == ERROR_NO_UNICODE_TRANSLATION)
+    {
+        return CPLAT_ERR_INVALID_ENCODING;
+    }
+
+    /* 不正な UTF-8 は書き換えずに返します。WriteFile へ切り替えるのは、それ以外の失敗だけです。
+     * リダイレクト先はコード ページ変換を行わないため、UTF-8 のまま書き込みます。
      */
     if (WriteFile(h, text, len, &written, NULL))
     {

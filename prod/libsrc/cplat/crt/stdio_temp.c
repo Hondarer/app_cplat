@@ -14,6 +14,7 @@
 #include <cplat/crt/path.h>
 
 #include <cplat/crt/wchar_conv.h>
+#include <cplat/win32/wchar_conv_internal.h>
 #include <cplat/crt/stdlib.h>
 #include <cplat/base/error_internal.h>
 
@@ -140,6 +141,7 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
         size_t converted;
         DWORD dwret;
         UINT uret;
+        int rc;
 
         /*
          * 以降の GetTempFileNameW() と DeleteFileW() へワイドのまま渡すため、
@@ -191,10 +193,11 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
             return NULL;
         }
 
-        if (cplat_wpath_to_utf8(path_out, path_size, wfile) < 0)
+        rc = cplat_wpath_to_utf8(path_out, path_size, NULL, wfile);
+        if (rc != CPLAT_OK)
         {
             (void)DeleteFileW(wfile); /* 失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
-            cplat_internal_error_record_errno(detail_out, ENAMETOOLONG);
+            cplat_internal_error_record_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
             return NULL;
         }
 

@@ -208,20 +208,24 @@ TEST_F(hostTest, CopiesMockedComputerName)
                 return TRUE;
             })); // [Pre-Assert確認_正常系] - GetComputerNameExW() が ComputerNameDnsHostname を指定して 1 回呼び出されること。
                  // [Pre-Assert手順] - GetComputerNameExW() から、L"testhost" を書き込んで TRUE を返す。
-    EXPECT_CALL(mock_cplat, cplat_wstr_to_utf8(_, sizeof(name), StrEq(L"testhost")))
+    EXPECT_CALL(mock_cplat, cplat_wstr_to_utf8(_, sizeof(name), _, StrEq(L"testhost")))
         .WillOnce(Invoke(
-            [](char *dest, size_t dest_size, const wchar_t *)
+            [](char *dest, size_t dest_size, size_t *count_out, const wchar_t *)
             {
                 const char kName[] = "testhost";
 
                 if (dest_size < sizeof(kName))
                 {
-                    return 0;
+                    return CPLAT_ERR_BUFFER_TOO_SMALL;
                 }
                 memcpy(dest, kName, sizeof(kName));
-                return (int)sizeof(kName);
+                if (count_out != nullptr)
+                {
+                    *count_out = sizeof(kName);
+                }
+                return CPLAT_OK;
             })); // [Pre-Assert確認_正常系] - cplat_wstr_to_utf8() が sizeof(name)、L"testhost" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_wstr_to_utf8() から、"testhost" を出力して変換後のバイト数を返す。
+                 // [Pre-Assert手順] - cplat_wstr_to_utf8() から、"testhost" を出力して CPLAT_OK を返す。
 
     // Act
     int actual_ret = cplat_host_get_name(
@@ -253,14 +257,16 @@ TEST_F(hostTest, ReportsWstrToUtf8OsError)
                 return TRUE;
             })); // [Pre-Assert確認_異常系] - GetComputerNameExW() が ComputerNameDnsHostname を指定して 1 回呼び出されること。
                  // [Pre-Assert手順] - GetComputerNameExW() から、L"testhost" を書き込んで TRUE を返す。
-    EXPECT_CALL(mock_cplat, cplat_wstr_to_utf8(_, sizeof(name), StrEq(L"testhost")))
-        .WillOnce(Return(
-            0)); // [Pre-Assert確認_異常系] - cplat_wstr_to_utf8() が sizeof(name)、L"testhost" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - cplat_wstr_to_utf8() から 0 を返す。
-    EXPECT_CALL(mock_windows, GetLastError(_, _, _))
-        .WillOnce(Return(
-            ERROR_ACCESS_DENIED)); // [Pre-Assert確認_異常系] - 変換失敗時に GetLastError() が 1 回呼び出されること。
-                                   // [Pre-Assert手順] - GetLastError() から ERROR_ACCESS_DENIED を返す。
+    EXPECT_CALL(mock_cplat, cplat_wstr_to_utf8(_, sizeof(name), _, StrEq(L"testhost")))
+        .WillOnce(Invoke([](char *dest, size_t dest_size, size_t *, const wchar_t *)
+                         {
+                             if (dest != nullptr && dest_size > 0U)
+                             {
+                                 dest[0] = '\0';
+                             }
+                             return CPLAT_ERR_PERMISSION_DENIED;
+                         })); // [Pre-Assert手順] - 変換関数が出力先を空にして CPLAT_ERR_PERMISSION_DENIED を返す。
+    // [Pre-Assert確認_異常系] - cplat_wstr_to_utf8() が CPLAT_ERR_PERMISSION_DENIED を返すこと。
 
     // Act
     int actual_ret = cplat_host_get_name(
@@ -268,7 +274,7 @@ TEST_F(hostTest, ReportsWstrToUtf8OsError)
 
     // Assert
     EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED,
-              actual_ret); // [確認_異常系] - cplat_host_get_name() の戻り値が CPLAT_ERR_PERMISSION_DENIED であること。
+              actual_ret); // [確認_異常系] - cplat_host_get_name() が変換関数の結果コードを返すこと。
     EXPECT_EQ(
         '\0',
         name[0]); // [確認_異常系] - name[0] が '\0' であること。(UTF-8 変換失敗時に出力先が空文字列であることの確認)

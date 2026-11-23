@@ -175,6 +175,7 @@ TEST_F(resultTest, errno_values_map_to_expected_results)
         {EBUSY, CPLAT_ERR_BUSY},
         {EAGAIN, CPLAT_ERR_BUSY},
         {ENOMEM, CPLAT_ERR_OUT_OF_MEMORY},
+        {EILSEQ, CPLAT_ERR_INVALID_ENCODING},
         {ENOENT, CPLAT_ERR_NOT_FOUND},
         {ESRCH, CPLAT_ERR_NOT_FOUND},
         {ENAMETOOLONG, CPLAT_ERR_BUFFER_TOO_SMALL},
@@ -202,11 +203,26 @@ TEST_F(resultTest, errno_values_map_to_expected_results)
         EXPECT_EQ(
             cases[index].second,
             actual
-                [index]); // [確認_正常系 回数=15] - cases[index].first に対する cplat_internal_result_from_errno() の戻り値が cases[index].second と一致すること。
+                [index]); // [確認_正常系 回数=16] - cases[index].first に対する cplat_internal_result_from_errno() の戻り値が cases[index].second と一致すること。
     }
 }
 
 #if defined(PLATFORM_WINDOWS)
+TEST_F(resultTest, windows_invalid_encoding_error_maps_to_invalid_encoding)
+{
+    // Arrange
+
+    // Pre-Assert
+
+    // Act
+    int actual_result = cplat_internal_result_from_windows_error(
+        ERROR_NO_UNICODE_TRANSLATION); // [手順] - ERROR_NO_UNICODE_TRANSLATION を指定して変換する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_INVALID_ENCODING,
+              actual_result); // [確認_正常系] - CPLAT_ERR_INVALID_ENCODING が返ること。
+}
+
 // 未サポートを表す Win32 エラーが CPLAT_ERR_UNSUPPORTED へ変換されることの確認
 TEST_F(resultTest, windows_unsupported_errors_map_to_unsupported)
 {

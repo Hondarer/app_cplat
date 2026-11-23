@@ -124,7 +124,7 @@ static int decide_from_windows(char *const tag_out, const size_t tag_size, int *
                 (language_count > 0U))
             {
                 /* 一覧の先頭要素は NUL 終端されているため、そのまま 1 つの文字列として扱える。 */
-                if (cplat_wstr_to_utf8(value, sizeof(value), names) > 0)
+                if (cplat_wstr_to_utf8(value, sizeof(value), NULL, names) == CPLAT_OK)
                 {
                     converted = 1;
                 }
@@ -144,7 +144,7 @@ static int decide_from_windows(char *const tag_out, const size_t tag_size, int *
 
         if (GetUserDefaultLocaleName(name, (int)(sizeof(name) / sizeof(name[0]))) > 0)
         {
-            if (cplat_wstr_to_utf8(value, sizeof(value), name) > 0)
+            if (cplat_wstr_to_utf8(value, sizeof(value), NULL, name) == CPLAT_OK)
             {
                 converted = 1;
             }

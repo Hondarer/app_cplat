@@ -49,6 +49,7 @@ extern "C"
      *  @retval         CPLAT_ERR_INVALID_ARGUMENT  @p path_out が NULL、または @p path_size が 0 です。
      *  @retval         CPLAT_ERR_BUFFER_TOO_SMALL  @p path_out の容量が不足しています。
      *  @retval         CPLAT_ERR_OUT_OF_MEMORY     中間バッファーのメモリ確保に失敗しました。
+     *  @retval         CPLAT_ERR_INVALID_ENCODING  Windows の実行ファイル パスが不正な UTF-16 です。
      *  @retval         CPLAT_ERR_UNSUPPORTED       現在のプラットフォームをサポートしていません。
      *  @return         上記以外の失敗時は、OS エラーを変換した共通結果コードを返します。
      *
@@ -59,6 +60,7 @@ extern "C"
      *  Windows では OS の拡張パス上限 (32767 文字) までの非 ASCII パスを取得できます。
      *  `\\?\` 接頭辞を含むパスも区切り文字は `'/'` へ正規化されるため (`//?/C:/...`)、
      *  そのまま Win32 のファイル API へ渡すことはできません。
+     *  不正な UTF-16 は置換せず @ref CPLAT_ERR_INVALID_ENCODING を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -137,6 +139,9 @@ extern "C"
      *  @param[in]      options      起動オプション。NULL を渡してはなりません。
      *  @param[out]     process_out  起動したプロセス ハンドルの格納先。NULL を渡してはなりません。
      *  @return         結果コードを返します。
+     *
+     *  Windows では @p options 内の引数、環境変数上書き、作業ディレクトリを UTF-16 へ厳密に変換します。
+     *  UTF-8 として不正な入力は置換せず @ref CPLAT_ERR_INVALID_ENCODING を返します。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
@@ -241,6 +246,8 @@ extern "C"
      *
      *  @details        @ref cplat_process_timed_run_sync() に @ref CPLAT_WAIT_FOREVER を渡した場合と
      *                  同じ動作です。
+     *                  Windows では起動オプションの UTF-8 文字列を厳密に変換し、不正な入力は
+     *                  @ref CPLAT_ERR_INVALID_ENCODING を返します。
      *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
@@ -259,6 +266,8 @@ extern "C"
      *  @param[out]     exit_code_out  終了コードの格納先。NULL を渡してはなりません。
      *  @return         正常終了時は終了コードを格納して @ref CPLAT_OK 、
      *                  期限切れ時は @ref CPLAT_ERR_TIMEOUT を返します。
+     *                  Windows では起動オプションの UTF-8 文字列が不正な場合、
+     *                  @ref CPLAT_ERR_INVALID_ENCODING を返します。
      *
      *  @details        待機が期限切れとなった場合は @ref cplat_process_terminate() で強制終了し、
      *                  @ref CPLAT_PROCESS_TERMINATE_WAIT_MS を上限として終了を待ってから

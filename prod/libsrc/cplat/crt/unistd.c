@@ -15,6 +15,7 @@
 #include <stdio.h>
 
 #include <cplat/crt/wchar_conv.h>
+#include <cplat/win32/wchar_conv_internal.h>
 #include <cplat/base/error_internal.h>
 
 #include <errno.h>
@@ -352,10 +353,12 @@ int cplat_access(const char *path, const int mode, cplat_error *detail_out)
 #elif defined(PLATFORM_WINDOWS)
     {
         wchar_t wpath[PLATFORM_PATH_MAX];
+        int rc;
 
-        if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), path) < 0)
+        rc = cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), NULL, path);
+        if (rc != CPLAT_OK)
         {
-            cplat_internal_error_record_errno(detail_out, ENAMETOOLONG);
+            cplat_internal_error_record_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
             return -1;
         }
 

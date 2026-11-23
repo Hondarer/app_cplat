@@ -43,7 +43,7 @@ typedef struct cplat_etw_event
     /** イベント発行元のプロセス ID (Windows DWORD 互換のためコーディング規範の例外として uint32_t を維持)。 */
     uint32_t process_id;
 
-    /** イベント名。取得できない場合は NULL。 */
+    /** イベント名。取得できない場合、または不正な UTF-16 から UTF-8 へ変換できない場合は NULL。 */
     const char *event_name;
 
     /** Service フィールド。存在しない場合、または読み取れないプロパティ (構造体、配列、名前のないプロパティ、長さの属性を持つ文字列、カスタム スキーマ) かその後ろにある場合は NULL。 */
@@ -176,7 +176,10 @@ extern "C"
      *  @param[out]     session_out        開始したセッションのハンドルの格納先。NULL を渡してはなりません。\n
      *                  失敗時は NULL を格納します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
-     *                  @ref CPLAT_ERR_PERMISSION_DENIED 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *                  @ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_PERMISSION_DENIED 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *
+     *  @p session_name が不正な UTF-8 の場合は置換せず @ref CPLAT_ERR_INVALID_ENCODING を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。

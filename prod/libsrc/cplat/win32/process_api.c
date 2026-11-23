@@ -20,6 +20,7 @@
 #if defined(PLATFORM_WINDOWS)
 
     #include <cplat/crt/wchar_conv.h>
+    #include <cplat/win32/wchar_conv_internal.h>
     #include <stdlib.h>
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -33,37 +34,37 @@ BOOL CreateProcessU(const char *lpApplicationName, const char *lpCommandLine, LP
     wchar_t *wapp = NULL;
     wchar_t *wcmdline = NULL; /* CreateProcessW() が書き換え可能なバッファーを要求するため確保する */
     wchar_t *wcurdir = NULL;
+    int rc = CPLAT_OK;
 
     if (lpApplicationName != NULL)
     {
-        wapp = cplat_utf8_to_wstr_alloc(lpApplicationName);
+        rc = cplat_utf8_to_wstr_alloc(&wapp, lpApplicationName);
     }
 
-    if (lpCommandLine != NULL)
+    if (rc == CPLAT_OK && lpCommandLine != NULL)
     {
-        wcmdline = cplat_utf8_to_wstr_alloc(lpCommandLine);
+        rc = cplat_utf8_to_wstr_alloc(&wcmdline, lpCommandLine);
     }
 
-    if (lpCurrentDirectory != NULL)
+    if (rc == CPLAT_OK && lpCurrentDirectory != NULL)
     {
-        wcurdir = cplat_utf8_to_wstr_alloc(lpCurrentDirectory);
+        rc = cplat_utf8_to_wstr_alloc(&wcurdir, lpCurrentDirectory);
     }
 
-    if ((lpApplicationName != NULL && wapp == NULL) || (lpCommandLine != NULL && wcmdline == NULL) ||
-        (lpCurrentDirectory != NULL && wcurdir == NULL))
+    if (rc != CPLAT_OK)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
-        cplat_free(wapp);
-        cplat_free(wcmdline);
-        cplat_free(wcurdir);
+        cplat_internal_win32_free_keep_last_error(wapp);
+        cplat_internal_win32_free_keep_last_error(wcmdline);
+        cplat_internal_win32_free_keep_last_error(wcurdir);
+        cplat_internal_win32_set_last_error_from_result(rc);
         return FALSE;
     }
 
     result = CreateProcessW(wapp, wcmdline, lpProcessAttributes, lpThreadAttributes, bInheritHandles, dwCreationFlags,
                             lpEnvironment, wcurdir, lpStartupInfo, lpProcessInformation);
-    cplat_free(wapp);
-    cplat_free(wcmdline);
-    cplat_free(wcurdir);
+    cplat_internal_win32_free_keep_last_error(wapp);
+    cplat_internal_win32_free_keep_last_error(wcmdline);
+    cplat_internal_win32_free_keep_last_error(wcurdir);
 
     return result;
 }

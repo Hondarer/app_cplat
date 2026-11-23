@@ -28,6 +28,8 @@
 
 #if defined(PLATFORM_WINDOWS)
     #include <cplat/base/windows_sdk.h>
+    #include <cplat/crt/wchar_conv.h>
+    #include <cplat/win32/wchar_conv_internal.h>
 #endif /* PLATFORM_WINDOWS */
 
 #ifdef __cplusplus
@@ -45,25 +47,22 @@ extern "C"
      *  @param[in]      utf8_path   検査する UTF-8 パス。NULL を渡してはなりません。
      *  @param[out]     detail_out  エラー詳細の格納先。NULL の場合は設定しません。
      *  @return         収まる場合は CPLAT_OK を返し、@p detail_out は変更しません。\n
-     *                  収まらない場合は ENAMETOOLONG に対応する結果コードを返します。
+     *                  変換の失敗は対応する結果コードを返し、容量不足は ENAMETOOLONG として記録します。
      *
      *  PLATFORM_PATH_MAX (MAX_PATH) を超える通常形式のパスは、長いパスを宣言していない
      *  プロセスでは CreateFileW が ERROR_PATH_NOT_FOUND で失敗し、原因を区別できません。\n
-     *  そのため、Win32 API へ渡す前に本関数で長さを検査し、ENAMETOOLONG として報告します。\n
-     *  判定はワイド文字数 (null 終端含む) で行い、@ref cplat_utf8_to_wpath に
-     *  PLATFORM_PATH_MAX 要素のバッファーを渡した場合と同じ結果になります。
+     *  そのため、Win32 API へ渡す前に厳密な UTF-8 変換で長さを検査し、不正な文字コードは EILSEQ、
+     *  容量不足は ENAMETOOLONG として報告します。判定はワイド文字数 (NUL 終端を含む) で行います。
      */
     static inline int crt_check_wpath_length(const char *utf8_path, cplat_error *detail_out)
     {
-        /*
-         * 出力先を NULL、サイズを 0 にすると、必要なワイド文字数 (null 終端含む) を返す。
-         * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
-         */
-        const int needed = MultiByteToWideChar(CP_UTF8, 0, utf8_path, -1, NULL, 0);
+        wchar_t wpath[PLATFORM_PATH_MAX];
+        const int result =
+            cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), NULL, utf8_path);
 
-        if (needed <= 0 || needed > PLATFORM_PATH_MAX)
+        if (result != CPLAT_OK)
         {
-            return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
+            return cplat_internal_error_report_errno(detail_out, cplat_internal_errno_from_conv_result(result, 1));
         }
 
         return CPLAT_OK;

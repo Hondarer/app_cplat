@@ -46,6 +46,9 @@ extern "C"
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @return         成功時はファイル記述子、失敗時は -1 を返します。
      *
+     *  Windows でパスに不正な UTF-8 が含まれる場合、@p detail_out に EILSEQ を記録し、結果コードは
+     *  @ref CPLAT_ERR_INVALID_ENCODING になります。
+     *
      *  @par            共有モード
      *  Linux の `open` は共有拒否モードを持たないため、他プロセスの読み書きを拒否しません。\n
      *  Windows では `_wsopen_s` を `_SH_DENYNO` 指定で呼び出し、Linux と同じ既定動作にします。
@@ -68,6 +71,9 @@ extern "C"
      *  @param[in]      ...     書式引数。
      *  @return         成功時はファイル記述子、失敗時は -1 を返します。
      *
+     *  展開後のパスに不正な UTF-8 が含まれる場合、@p detail_out に EILSEQ を記録し、結果コードは
+     *  @ref CPLAT_ERR_INVALID_ENCODING になります。
+     *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
@@ -87,6 +93,9 @@ extern "C"
      *  @param[in]      format  パスを構築する printf 形式の書式文字列。
      *  @param[in]      args    書式引数リスト。
      *  @return         成功時はファイル記述子、失敗時は -1 を返します。
+     *
+     *  展開後のパスに不正な UTF-8 が含まれる場合、@p detail_out に EILSEQ を記録し、結果コードは
+     *  @ref CPLAT_ERR_INVALID_ENCODING になります。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。

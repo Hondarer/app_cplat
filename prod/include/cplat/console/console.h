@@ -130,7 +130,8 @@ extern "C"
      *  @param[in]      stream  書き込み先 (@ref CPLAT_STREAM_STDOUT または
      *                  @ref CPLAT_STREAM_STDERR)。それ以外は失敗します。
      *  @param[in]      text    書き込む文字列 (UTF-8)。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  Windows 環境では、cplat_console_attach_parent() による昇格後の親コンソール
      *  再接続後に、CRT のストリーム (`printf`、`fprintf`) を経由した書き込みが失敗する事象を実機で確認しています

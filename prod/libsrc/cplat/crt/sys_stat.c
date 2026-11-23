@@ -14,6 +14,7 @@
 #include <cplat/base/result.h>
 #include <cplat/base/error_internal.h>
 #include <cplat/crt/wchar_conv.h>
+#include <cplat/win32/wchar_conv_internal.h>
 #include "crt.h"
 
 #include <stddef.h>
@@ -48,26 +49,48 @@
  *  cplat_mkdir が競合生成で @ref CPLAT_ERR_UNKNOWN を返す場合も cplat_stat で再確認して
  *  ディレクトリが存在すれば成功とみなします。
  */
+static int is_path_conversion_error(const int result)
+{
+    return result == CPLAT_ERR_INVALID_ARGUMENT || result == CPLAT_ERR_OUT_OF_MEMORY ||
+           result == CPLAT_ERR_BUFFER_TOO_SMALL || result == CPLAT_ERR_INVALID_ENCODING;
+}
+
 static int ensure_one_dir(const char *dir, cplat_error *detail_out)
 {
     cplat_file_stat_t st;
+    int result;
 
     /* すでに存在する場合は成功。 */
-    if (cplat_stat(&st, detail_out, dir) == CPLAT_OK)
+    result = cplat_stat(&st, detail_out, dir);
+    if (result == CPLAT_OK)
     {
         return CPLAT_OK;
+    }
+    if (is_path_conversion_error(result))
+    {
+        return result;
     }
 
     /* 存在しないので生成する。 */
-    if (cplat_mkdir(dir, detail_out) == CPLAT_OK)
+    result = cplat_mkdir(dir, detail_out);
+    if (result == CPLAT_OK)
     {
         return CPLAT_OK;
     }
+    if (is_path_conversion_error(result))
+    {
+        return result;
+    }
 
     /* mkdir 失敗: 競合生成の可能性があるため再確認する。 */
-    if (cplat_stat(&st, detail_out, dir) == CPLAT_OK)
+    result = cplat_stat(&st, detail_out, dir);
+    if (result == CPLAT_OK)
     {
         return CPLAT_OK;
+    }
+    if (is_path_conversion_error(result))
+    {
+        return result;
     }
 
     return CPLAT_ERR_UNKNOWN;
@@ -193,10 +216,12 @@ int cplat_rmdir(const char *path, cplat_error *detail_out)
 #elif defined(PLATFORM_WINDOWS)
     {
         wchar_t wpath[PLATFORM_PATH_MAX];
+        int rc;
 
-        if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), path) < 0)
+        rc = cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), NULL, path);
+        if (rc != CPLAT_OK)
         {
-            return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
+            return cplat_internal_error_report_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
         }
 
         result = _wrmdir(wpath);
@@ -219,6 +244,7 @@ int cplat_makedirs(const char *path, cplat_error *detail_out)
     size_t path_len;
     size_t root_len;
     size_t i;
+    int result;
 
     if (path == NULL || path[0] == '\0')
     {
@@ -259,9 +285,10 @@ int cplat_makedirs(const char *path, cplat_error *detail_out)
                 /* 中間ディレクトリを一時終端して生成する。 */
                 buf[i] = '\0';
 
-                if (ensure_one_dir(buf, detail_out) != CPLAT_OK)
+                result = ensure_one_dir(buf, detail_out);
+                if (result != CPLAT_OK)
                 {
-                    return CPLAT_ERR_UNKNOWN;
+                    return result;
                 }
 
                 buf[i] = PLATFORM_PATH_SEP_CHR;
@@ -290,10 +317,12 @@ int cplat_stat(cplat_file_stat_t *stat_out, cplat_error *detail_out, const char 
 #elif defined(PLATFORM_WINDOWS)
     {
         wchar_t wpath[PLATFORM_PATH_MAX];
+        int rc;
 
-        if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), path) < 0)
+        rc = cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), NULL, path);
+        if (rc != CPLAT_OK)
         {
-            return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
+            return cplat_internal_error_report_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
         }
 
         result = _wstat64(wpath, stat_out);
@@ -329,10 +358,12 @@ int cplat_mkdir(const char *path, cplat_error *detail_out)
 #elif defined(PLATFORM_WINDOWS)
     {
         wchar_t wpath[PLATFORM_PATH_MAX];
+        int rc;
 
-        if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), path) < 0)
+        rc = cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), NULL, path);
+        if (rc != CPLAT_OK)
         {
-            return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
+            return cplat_internal_error_report_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
         }
 
         result = _wmkdir(wpath);

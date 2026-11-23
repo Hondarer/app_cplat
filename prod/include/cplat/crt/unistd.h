@@ -211,6 +211,9 @@ extern "C"
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @return         アクセス可能時は 0、不可時は -1 を返します。
      *
+     *  Windows でパスに不正な UTF-8 が含まれる場合、@p detail_out に EILSEQ を記録し、結果コードは
+     *  @ref CPLAT_ERR_INVALID_ENCODING になります。
+     *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
@@ -225,6 +228,9 @@ extern "C"
      *  @param[in]      format  パスを構築する printf 形式の書式文字列。
      *  @param[in]      ...     書式引数。
      *  @return         アクセス可能時は 0、不可時は -1 を返します。
+     *
+     *  展開後のパスに不正な UTF-8 が含まれる場合、@p detail_out に EILSEQ を記録し、結果コードは
+     *  @ref CPLAT_ERR_INVALID_ENCODING になります。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -244,6 +250,9 @@ extern "C"
      *  @param[in]      format  パスを構築する printf 形式の書式文字列。
      *  @param[in]      args    書式引数リスト。
      *  @return         アクセス可能時は 0、不可時は -1 を返します。
+     *
+     *  展開後のパスに不正な UTF-8 が含まれる場合、@p detail_out に EILSEQ を記録し、結果コードは
+     *  @ref CPLAT_ERR_INVALID_ENCODING になります。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。

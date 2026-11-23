@@ -24,6 +24,7 @@
     #include <cplat/crt/path.h>
     #include <cplat/crt/stdio.h>
     #include <cplat/crt/wchar_conv.h>
+    #include <cplat/win32/wchar_conv_internal.h>
     #include <cplat/runtime/process.h>
     #include <cplat/sync/sync.h>
     #include <cplat/trace/eventlog.h>
@@ -233,8 +234,7 @@ static void init_executable_path_cache(void)
         }
     }
 
-    wpath = cplat_utf8_to_wstr_alloc(path);
-    if (wpath == NULL)
+    if (cplat_utf8_to_wstr_alloc(&wpath, path) != CPLAT_OK)
     {
         return;
     }
@@ -332,8 +332,7 @@ static int build_source_key_path(const char *source_name, wchar_t *key_path, con
     wchar_t *wsource;
     int written;
 
-    wsource = cplat_utf8_to_wstr_alloc(source_name);
-    if (wsource == NULL)
+    if (cplat_utf8_to_wstr_alloc(&wsource, source_name) != CPLAT_OK)
     {
         return -1;
     }
@@ -382,8 +381,7 @@ cplat_eventlog_sink *cplat_eventlog_sink_create(const char *source_name)
         return NULL;
     }
 
-    wsource = cplat_utf8_to_wstr_alloc(source_name);
-    if (wsource == NULL)
+    if (cplat_utf8_to_wstr_alloc(&wsource, source_name) != CPLAT_OK)
     {
         return NULL;
     }
@@ -416,16 +414,17 @@ int cplat_eventlog_sink_write(cplat_eventlog_sink *handle, const int level, cons
     WORD type;
     WORD category;
     DWORD event_id;
-    wchar_t *wmsg;
-    wchar_t *wfile_id;
-    wchar_t *winstance;
-    wchar_t *winstance_id;
+    wchar_t *wmsg = NULL;
+    wchar_t *wfile_id = NULL;
+    wchar_t *winstance = NULL;
+    wchar_t *winstance_id = NULL;
     LPCWSTR strings[EVENTLOG_STRING_COUNT];
     char file_id[EVENTLOG_IDENTIFIER_TEXT_SIZE];
     char instance_id[EVENTLOG_IDENTIFIER_TEXT_SIZE];
     int has_file_identifier;
     int has_instance_identifier;
     BOOL ok;
+    int conversion_result;
 
     if (handle == NULL || handle->source == NULL || message == NULL)
     {
@@ -436,27 +435,33 @@ int cplat_eventlog_sink_write(cplat_eventlog_sink *handle, const int level, cons
     has_instance_identifier = format_identifier_string(instance_identifier, instance_id, sizeof(instance_id));
     map_level(level, has_file_identifier, has_instance_identifier, &type, &category, &event_id);
 
-    wmsg = cplat_utf8_to_wstr_alloc(message);
-    wfile_id = cplat_utf8_to_wstr_alloc(file_id);
-
-    if (instance_name != NULL)
+    conversion_result = cplat_utf8_to_wstr_alloc(&wmsg, message);
+    if (conversion_result == CPLAT_OK)
     {
-        winstance = cplat_utf8_to_wstr_alloc(instance_name);
-    }
-    else
-    {
-        winstance = cplat_utf8_to_wstr_alloc("");
+        conversion_result = cplat_utf8_to_wstr_alloc(&wfile_id, file_id);
     }
 
-    winstance_id = cplat_utf8_to_wstr_alloc(instance_id);
+    if (conversion_result == CPLAT_OK && instance_name != NULL)
+    {
+        conversion_result = cplat_utf8_to_wstr_alloc(&winstance, instance_name);
+    }
+    else if (conversion_result == CPLAT_OK)
+    {
+        conversion_result = cplat_utf8_to_wstr_alloc(&winstance, "");
+    }
 
-    if (wmsg == NULL || wfile_id == NULL || winstance == NULL || winstance_id == NULL)
+    if (conversion_result == CPLAT_OK)
+    {
+        conversion_result = cplat_utf8_to_wstr_alloc(&winstance_id, instance_id);
+    }
+
+    if (conversion_result != CPLAT_OK)
     {
         cplat_free(wmsg);
         cplat_free(wfile_id);
         cplat_free(winstance);
         cplat_free(winstance_id);
-        return CPLAT_ERR_OUT_OF_MEMORY;
+        return conversion_result;
     }
 
     strings[0] = wmsg;
@@ -560,11 +565,13 @@ int cplat_eventlog_register_source(const char *source_name, const char *message_
     if (rc == ERROR_SUCCESS && message_file_path != NULL)
     {
         wchar_t *wpath;
+        int conversion_result;
 
-        wpath = cplat_utf8_to_wstr_alloc(message_file_path);
-        if (wpath == NULL)
+        conversion_result = cplat_utf8_to_wstr_alloc(&wpath, message_file_path);
+        if (conversion_result != CPLAT_OK)
         {
-            rc = ERROR_NOT_ENOUGH_MEMORY;
+            cplat_internal_win32_set_last_error_from_result(conversion_result);
+            rc = (LONG)GetLastError();
         }
         else
         {

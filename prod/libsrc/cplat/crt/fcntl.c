@@ -12,6 +12,7 @@
 #include <cplat/crt/path.h>
 
 #include <cplat/crt/wchar_conv.h>
+#include <cplat/win32/wchar_conv_internal.h>
 #include <cplat/base/error_internal.h>
 
 #include <errno.h>
@@ -46,12 +47,14 @@ int cplat_open(const char *path, const int flags, const int mode, cplat_error *d
     {
         wchar_t wpath[PLATFORM_PATH_MAX];
         errno_t err;
+        int rc;
 
         fd = -1;
 
-        if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), path) < 0)
+        rc = cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), NULL, path);
+        if (rc != CPLAT_OK)
         {
-            cplat_internal_error_record_errno(detail_out, ENAMETOOLONG);
+            cplat_internal_error_record_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
             return -1;
         }
 

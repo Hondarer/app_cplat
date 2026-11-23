@@ -64,7 +64,8 @@ extern "C"
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @param[in]      path        対象ファイルのパス (UTF-8)。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  Linux では `stat`、Windows では `_wstat64` を使用します。\n
      *  Windows の `_wstat64` は時刻欄を現地時刻経由で `time_t` へ変換するため、
@@ -84,7 +85,8 @@ extern "C"
      *  @param[out]     detail_out  エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  Linux では `mkdir()` へ 0755 を指定し、プロセスの umask が適用されます。Windows では権限を指定しません。
      *
@@ -102,7 +104,8 @@ extern "C"
      *  @param[out]     detail_out  エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  すでに存在するディレクトリは成功として扱います (べき等)。\n
      *  中間ディレクトリが存在しない場合はすべて作成します。\n
@@ -121,7 +124,8 @@ extern "C"
      *  @param[out]     detail_out  エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  ディレクトリが空でない場合、存在しない場合はいずれも失敗します。\n
      *  cplat_makedirs() のように中間ディレクトリを再帰的に削除することはありません。
@@ -139,7 +143,8 @@ extern "C"
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @param[in]      format  パスを構築する printf 形式の書式文字列。
      *  @param[in]      ...     書式引数。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -158,7 +163,8 @@ extern "C"
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @param[in]      format  パスを構築する printf 形式の書式文字列。
      *  @param[in]      args    書式引数リスト。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -177,7 +183,7 @@ extern "C"
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @param[in]      format  パスを構築する printf 形式の書式文字列。
      *  @param[in]      ...     書式引数。
-     *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  作成するディレクトリの権限は `cplat_mkdir()` と同じです。
      *
@@ -197,7 +203,7 @@ extern "C"
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @param[in]      format  パスを構築する printf 形式の書式文字列。
      *  @param[in]      args    書式引数リスト。
-     *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  作成するディレクトリの権限は `cplat_mkdir()` と同じです。
      *

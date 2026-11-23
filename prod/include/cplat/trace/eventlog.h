@@ -63,6 +63,7 @@ extern "C"
      *  @return         成功時はハンドル、失敗時は NULL を返します。
      *
      *  内部で `RegisterEventSourceW` を呼び出します。\n
+     *  Windows で @p source_name が不正な UTF-8 の場合は、置換せず NULL を返します。\n
      *  ソースが未登録でも呼び出しは成功しますが、その場合 Event Viewer 上での
      *  表示はソース名の解決が行われません。事前に
      *  cplat_eventlog_register_source() で登録してください。
@@ -82,7 +83,8 @@ extern "C"
      *  @param[in]      instance_name        インスタンス名 (UTF-8)。NULL の場合は空文字列。
      *  @param[in]      instance_identifier  インスタンス識別番号。0 の場合は Event Viewer 表示では省略。
      *  @param[in]      message              null 終端 UTF-8 文字列。NULL は無視。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_INVALID_ENCODING 、
+     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  level をイベント タイプ (Error / Warning / Information) とイベント ID に
      *  写像して `ReportEventW` を呼び出します。\n
@@ -91,6 +93,8 @@ extern "C"
      *  Event Viewer の「全般」では、実行体ファイル パス、インスタンス名、メッセージ文字列の
      *  3 行を表示します。識別子が 0 以外の場合は各行に `_識別子` を付与します。\n
      *  実行ファイル絶対パスはプロセス内で初回だけ解決され、以後はキャッシュを使用します。
+     *  Windows ではメッセージ、インスタンス名、または実行ファイル パスが不正な文字コードの場合、
+     *  置換せず @ref CPLAT_ERR_INVALID_ENCODING を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -129,6 +133,8 @@ extern "C"
      *  @p message_file_path が NULL の場合はメッセージ ファイルを設定しません (補完文が付きます)。\n
      *  HKLM への書き込みには管理者権限が必要です。権限不足の場合は
      *  CPLAT_ERR_PERMISSION_DENIED を返します。
+     *  Windows で @p source_name または @p message_file_path が不正な UTF-8 の場合は、置換せず
+     *  CPLAT_ERR_UNKNOWN を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -147,6 +153,7 @@ extern "C"
      *  対応するレジストリ キーを削除します。\n
      *  すでに存在しない場合も CPLAT_OK を返します (べき等)。\n
      *  HKLM への書き込みには管理者権限が必要です。
+     *  Windows で @p source_name が不正な UTF-8 の場合は、置換せず CPLAT_ERR_UNKNOWN を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。

@@ -1,2 +1,4 @@
 /file_api.c
+/result.c
 /utf8.c
+/wchar_conv.c

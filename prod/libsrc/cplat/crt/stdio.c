@@ -17,6 +17,7 @@
 #include <cplat/crt/path.h>
 
 #include <cplat/crt/wchar_conv.h>
+#include <cplat/win32/wchar_conv_internal.h>
 #include <cplat/base/error_internal.h>
 
 #include <errno.h>
@@ -68,10 +69,12 @@ FILE *cplat_fopen(const char *path, const char *modes, cplat_error *detail_out)
         FILE *fp = NULL;
         errno_t err;
         size_t converted;
+        int rc;
 
-        if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), path) < 0)
+        rc = cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), NULL, path);
+        if (rc != CPLAT_OK)
         {
-            cplat_internal_error_record_errno(detail_out, ENAMETOOLONG);
+            cplat_internal_error_record_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
             return NULL;
         }
 
@@ -140,10 +143,12 @@ FILE *cplat_freopen(const char *path, const char *modes, FILE *stream, cplat_err
         size_t converted;
         int new_fd;
         int old_fd;
+        int rc;
 
-        if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), path) < 0)
+        rc = cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), NULL, path);
+        if (rc != CPLAT_OK)
         {
-            cplat_internal_error_record_errno(detail_out, ENAMETOOLONG);
+            cplat_internal_error_record_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
             return NULL;
         }
 
@@ -379,10 +384,12 @@ int cplat_remove(const char *path, cplat_error *detail_out)
 #elif defined(PLATFORM_WINDOWS)
     {
         wchar_t wpath[PLATFORM_PATH_MAX];
+        int rc;
 
-        if (cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), path) < 0)
+        rc = cplat_utf8_to_wpath(wpath, sizeof(wpath) / sizeof(wpath[0]), NULL, path);
+        if (rc != CPLAT_OK)
         {
-            cplat_internal_error_record_errno(detail_out, ENAMETOOLONG);
+            cplat_internal_error_record_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
             return -1;
         }
 
@@ -435,16 +442,19 @@ int cplat_rename(const char *oldpath, const char *newpath, cplat_error *detail_o
     {
         wchar_t woldpath[PLATFORM_PATH_MAX];
         wchar_t wnewpath[PLATFORM_PATH_MAX];
+        int rc;
 
-        if (cplat_utf8_to_wpath(woldpath, sizeof(woldpath) / sizeof(woldpath[0]), oldpath) < 0)
+        rc = cplat_utf8_to_wpath(woldpath, sizeof(woldpath) / sizeof(woldpath[0]), NULL, oldpath);
+        if (rc != CPLAT_OK)
         {
-            cplat_internal_error_record_errno(detail_out, ENAMETOOLONG);
+            cplat_internal_error_record_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
             return -1;
         }
 
-        if (cplat_utf8_to_wpath(wnewpath, sizeof(wnewpath) / sizeof(wnewpath[0]), newpath) < 0)
+        rc = cplat_utf8_to_wpath(wnewpath, sizeof(wnewpath) / sizeof(wnewpath[0]), NULL, newpath);
+        if (rc != CPLAT_OK)
         {
-            cplat_internal_error_record_errno(detail_out, ENAMETOOLONG);
+            cplat_internal_error_record_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
             return -1;
         }
 

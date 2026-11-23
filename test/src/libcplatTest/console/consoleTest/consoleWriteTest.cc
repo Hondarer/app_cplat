@@ -1,7 +1,12 @@
 #include <testfw.h>
 #include <cplat/base/result.h>
 #include <cplat/console/console.h>
+#include <mock_cplat.h>
 #include <mock_unistd.h>
+
+#if defined(PLATFORM_WINDOWS)
+    #include <mock_windows.h>
+#endif
 
 #include <errno.h>
 #if defined(PLATFORM_LINUX)
@@ -121,6 +126,41 @@ TEST_F(consoleWriteTest, returns_invalid_argument_for_unknown_stream)
     EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
               actual_ret); // [確認_異常系] - cplat_console_write() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
 }
+
+#if defined(PLATFORM_WINDOWS)
+
+// 不正な UTF-8 を WriteFile へ切り替えずに失敗することの確認
+TEST_F(consoleWriteTest, rejects_invalid_utf8_without_write_file_fallback)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    NiceMock<Mock_windows> mock_windows;
+    const char invalid_utf8[] = "\x80";
+    HANDLE output_handle = reinterpret_cast<HANDLE>(1);
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_OUTPUT_HANDLE)).WillOnce(Return(output_handle));
+    // [Pre-Assert確認_正常系] - GetStdHandle() が標準出力を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - GetStdHandle() から有効なダミー ハンドルを返す。
+    EXPECT_CALL(mock_cplat, WriteConsoleU(output_handle, invalid_utf8, 1U, _, nullptr)).WillOnce(Return(FALSE));
+    // [Pre-Assert確認_異常系] - WriteConsoleU() が不正な UTF-8 を受け取り 1 回失敗すること。
+    // [Pre-Assert手順] - WriteConsoleU() から FALSE を返す。
+    EXPECT_CALL(mock_windows, GetLastError(_, _, _)).WillOnce(Return(ERROR_NO_UNICODE_TRANSLATION));
+    // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
+    // [Pre-Assert手順] - GetLastError() から ERROR_NO_UNICODE_TRANSLATION を返す。
+    EXPECT_CALL(mock_windows, WriteFile(_, _, _, _, _, _, _, _)).Times(0);
+    // [Pre-Assert確認_異常系] - 不正な UTF-8 のため WriteFile() へ切り替わらないこと。
+
+    // Act
+    int actual_ret = cplat_console_write(CPLAT_STREAM_STDOUT, invalid_utf8);
+    // [手順] - 不正な UTF-8 を指定して cplat_console_write() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_INVALID_ENCODING, actual_ret);
+    // [確認_異常系] - cplat_console_write() が CPLAT_ERR_INVALID_ENCODING を返すこと。
+}
+
+#endif /* PLATFORM_WINDOWS */
 
 #if defined(PLATFORM_LINUX)
 

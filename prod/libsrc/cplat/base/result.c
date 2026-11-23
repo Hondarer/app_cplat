@@ -29,6 +29,10 @@ int cplat_internal_result_from_errno(const int errno_value)
     {
         result = CPLAT_ERR_INVALID_ARGUMENT;
     }
+    else if (errno_value == EILSEQ)
+    {
+        result = CPLAT_ERR_INVALID_ENCODING;
+    }
     else if ((errno_value == ENOENT) || (errno_value == ESRCH))
     {
         result = CPLAT_ERR_NOT_FOUND;
@@ -163,6 +167,10 @@ int cplat_internal_result_from_windows_error(const unsigned long error_code)
     else if (error_code == ERROR_INSUFFICIENT_BUFFER)
     {
         result = CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+    else if (error_code == ERROR_NO_UNICODE_TRANSLATION)
+    {
+        result = CPLAT_ERR_INVALID_ENCODING;
     }
     else if ((error_code == ERROR_NOT_SUPPORTED) || (error_code == ERROR_CALL_NOT_IMPLEMENTED))
     {

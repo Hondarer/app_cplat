@@ -83,7 +83,8 @@ extern "C"
      *  @param[in]      arguments      昇格実行時に現在の実行ファイルへ渡す引数文字列。NULL 可。
      *  @param[out]     exit_code_out  昇格プロセスの終了コード、または 0 の格納先。
      *  @param[out]     handled_out    昇格プロセスで処理した場合は 0 以外、現プロセスで継続する場合は 0 の格納先。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNSUPPORTED 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、
+     *                  @ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNSUPPORTED 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  Windows では、未昇格の場合に UAC を要求して現在の実行ファイルを @p arguments 付きで
      *  再起動し、子プロセスの終了まで待機します。すでに昇格済みの場合は何もしません。\n
@@ -91,6 +92,8 @@ extern "C"
      *  デスクトップがないセッション) の場合は、昇格を試みず失敗を返します。\n
      *  Linux では、実効ユーザー ID が root であることを確認します。root でない場合は失敗します。\n
      *  本関数は権限保証のための API であり、Linux で `sudo` などの外部昇格コマンドは実行しません。
+     *  Windows では、実行ファイル パスまたは @p arguments が不正な UTF-8 の場合、置換せず
+     *  @ref CPLAT_ERR_INVALID_ENCODING を返します。
      *
      *  @note           Windows で呼び出し元にコンソールがある場合、昇格プロセスへ親コンソールを
      *                  引き継ぐため、昇格プロセスは別ウインドウを表示せず親コンソールへ出力します。\n
@@ -117,7 +120,8 @@ extern "C"
      *                                       通常は @ref CPLAT_ELEVATED_PROCESS_RESULT_MESSAGE_SIZE を指定します。
      *                                       報告されたメッセージが @p result_message_size - 1 [byte] を
      *                                       超える場合、超えた部分は切り捨てます。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNSUPPORTED 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、
+     *                  @ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNSUPPORTED 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  cplat_elevated_process_run_if_needed() はコンソールの再接続を昇格プロセス側に
      *  要求しますが、UAC 昇格直後の親コンソール再割り当ては、実機で確認したものの原因を特定できていない
@@ -130,6 +134,8 @@ extern "C"
      *  セッション) の場合は、昇格を試みず失敗を返します。\n
      *  Linux では cplat_elevated_process_run_if_needed() と同じ判定を行い、
      *  @p result_message は変更しません (別プロセスを起動しないため報告の余地がない)。
+     *  Windows では、実行ファイル パスまたは @p arguments が不正な UTF-8 の場合、置換せず
+     *  @ref CPLAT_ERR_INVALID_ENCODING を返します。
      *
      *  @note           Windows で UAC を表示するため、通常はメイン スレッドまたはユーザー操作に応答するスレッドから呼び出してください。
      *
@@ -189,7 +195,8 @@ extern "C"
      *  @param[in]      context        @p output_fn へ渡す任意のコンテキスト。NULL 可。
      *  @param[out]     exit_code_out  昇格プロセスの終了コード、または 0 の格納先。
      *  @param[out]     handled_out    昇格プロセスで処理した場合は 0 以外、現プロセスで継続する場合は 0 の格納先。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNSUPPORTED 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY 、
+     *                  @ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNSUPPORTED 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  Windows では、未昇格の場合に標準出力用と標準エラー出力用の名前付きパイプを作成し、
      *  UAC を要求して現在の実行ファイルを @p arguments 付きで再起動します。
@@ -202,6 +209,8 @@ extern "C"
      *  呼び出さない場合、本関数は失敗を返します。\n
      *  未昇格かつセッション 0 (ユーザーが操作できるデスクトップがないセッション) の場合は、昇格を試みず失敗を返します。\n
      *  Linux では cplat_elevated_process_run_if_needed() と同じ判定を行い、@p output_fn は呼び出しません。
+     *  Windows では、実行ファイル パスまたは @p arguments が不正な UTF-8 の場合、置換せず
+     *  @ref CPLAT_ERR_INVALID_ENCODING を返します。
      *
      *  @attention      昇格プロセスは、呼び出し元プロセスが作成したパイプを名前で開きます。開けない場合、
      *                  cplat_elevated_process_attach_output_pipes() は @ref CPLAT_ERR_UNKNOWN を返します。\n

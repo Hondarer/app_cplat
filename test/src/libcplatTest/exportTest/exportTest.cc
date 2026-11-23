@@ -939,12 +939,12 @@
 #if defined(PLATFORM_WINDOWS)
     #define CPLAT_EXPORT_TABLE_PLATFORM(EXPORT_ENTRY) \
         /* cplat/crt/wchar_conv.h */ \
-        EXPORT_ENTRY(cplat_utf8_to_wpath, int(CPLAT_API *)(wchar_t * wbuf, size_t wbuf_count, const char *utf8_path)) \
-        EXPORT_ENTRY(cplat_utf8_to_wstr, int(CPLAT_API *)(wchar_t * wbuf, size_t wbuf_count, const char *utf8_text)) \
-        EXPORT_ENTRY(cplat_wpath_to_utf8, int(CPLAT_API *)(char *dest, size_t dest_size, const wchar_t *wpath)) \
-        EXPORT_ENTRY(cplat_wstr_to_utf8, int(CPLAT_API *)(char *dest, size_t dest_size, const wchar_t *wtext)) \
-        EXPORT_ENTRY(cplat_utf8_to_wstr_alloc, wchar_t *(CPLAT_API *)(const char *utf8_text)) \
-        EXPORT_ENTRY(cplat_wstr_to_utf8_alloc, char *(CPLAT_API *)(const wchar_t *wtext)) \
+        EXPORT_ENTRY(cplat_utf8_to_wpath, int(CPLAT_API *)(wchar_t *dest, size_t dest_size, size_t *count_out, const char *utf8_path)) \
+        EXPORT_ENTRY(cplat_utf8_to_wstr, int(CPLAT_API *)(wchar_t *dest, size_t dest_size, size_t *count_out, const char *utf8_text)) \
+        EXPORT_ENTRY(cplat_wpath_to_utf8, int(CPLAT_API *)(char *dest, size_t dest_size, size_t *count_out, const wchar_t *wpath)) \
+        EXPORT_ENTRY(cplat_wstr_to_utf8, int(CPLAT_API *)(char *dest, size_t dest_size, size_t *count_out, const wchar_t *wtext)) \
+        EXPORT_ENTRY(cplat_utf8_to_wstr_alloc, int(CPLAT_API *)(wchar_t **wtext_out, const char *utf8_text)) \
+        EXPORT_ENTRY(cplat_wstr_to_utf8_alloc, int(CPLAT_API *)(char **utf8_text_out, const wchar_t *wtext)) \
         /* cplat/base/error.h */ \
         EXPORT_ENTRY(cplat_error_capture_windows_error, \
                      void(CPLAT_API *)(cplat_error * error, unsigned long error_code)) \

@@ -298,6 +298,7 @@ int cplat_internal_win32_error_message(char *buf, const size_t buf_size, const u
     DWORD wlen;
     char *utf8 = NULL;
     size_t len;
+    int rc;
 
     if (buf == NULL || buf_size == 0U)
     {
@@ -326,16 +327,16 @@ int cplat_internal_win32_error_message(char *buf, const size_t buf_size, const u
         wlen--;
     }
 
-    utf8 = cplat_wstr_to_utf8_alloc(wmessage);
+    rc = cplat_wstr_to_utf8_alloc(&utf8, wmessage);
     /*
      * ALLOCATE_BUFFER で確保したワイド文字列は UTF-8 へ複製済みで、解放の失敗で結果が変わらないため、
      * 戻り値は明示的に破棄する。
      */
     (void)LocalFree(wmessage);
 
-    if (utf8 == NULL)
+    if (rc != CPLAT_OK)
     {
-        return CPLAT_ERR_UNKNOWN;
+        return rc;
     }
 
     len = strlen(utf8);

@@ -1,5 +1,6 @@
 #include <testfw.h>
 #include <mock_cplat.h>
+#include <mock_windows.h>
 #include <cplat/win32/win32.h>
 #include <cstddef>
 #include <string>
@@ -143,19 +144,16 @@ TEST_F(serviceApiTest, RejectsUnsupportedLevel)
 TEST_F(serviceApiTest, RejectsConversionFailure)
 {
     // Arrange
-    testing::NiceMock<Mock_cplat> mock_cplat;
-    char text[] = "description";
+    char text[] = "\x80";
     SERVICE_DESCRIPTIONA description = {text};
-    ON_CALL(mock_cplat, cplat_utf8_to_wstr_alloc(testing::_))
-        .WillByDefault(testing::Return(nullptr)); // [状態] - UTF-16 への変換を失敗させる。
     // Pre-Assert
     // Act
-    BOOL actual_ret = ChangeServiceConfig2U(nullptr, SERVICE_CONFIG_DESCRIPTION,
+    BOOL actual_ret = ChangeServiceConfig2U(reinterpret_cast<SC_HANDLE>(1), SERVICE_CONFIG_DESCRIPTION,
                                             &description); // [手順] - 変換が失敗する説明文を指定する。
     DWORD error = GetLastError();
     // Assert
     EXPECT_FALSE(actual_ret);                  // [確認_異常系] - 戻り値が FALSE であること。
-    EXPECT_EQ(ERROR_INVALID_PARAMETER, error); // [確認_異常系] - 不正な引数のエラーが設定されること。
+    EXPECT_EQ(ERROR_NO_UNICODE_TRANSLATION, error); // [確認_異常系] - 不正な文字列のエラーが設定されること。
     EXPECT_EQ(0, s_config_calls);              // [確認_異常系] - W 版が呼び出されないこと。
 }
 

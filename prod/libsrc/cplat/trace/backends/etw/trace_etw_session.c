@@ -415,7 +415,15 @@ static VOID WINAPI event_record_callback(PEVENT_RECORD pEvent)
         return;
     }
 
-    event_name_utf8 = cplat_wstr_to_utf8_alloc(event_name_w);
+    {
+        int conversion_result = cplat_wstr_to_utf8_alloc(&event_name_utf8, event_name_w);
+
+        /* 変換できないイベント名は既存の契約どおり NULL としてコールバックへ渡します。 */
+        if (conversion_result != CPLAT_OK)
+        {
+            event_name_utf8 = NULL;
+        }
+    }
 
     service = NULL;
     message = NULL;
@@ -553,7 +561,14 @@ int cplat_etw_session_start(const char *session_name, const char *provider_guid_
     session->session_name_w = NULL;
     session->provider_guid = provider_guid;
 
-    session->session_name_w = cplat_utf8_to_wstr_alloc(session_name);
+    {
+        int result = cplat_utf8_to_wstr_alloc(&session->session_name_w, session_name);
+        if (result != CPLAT_OK)
+        {
+            dispose_session(session);
+            return result;
+        }
+    }
     if (session->session_name_w == NULL)
     {
         dispose_session(session);

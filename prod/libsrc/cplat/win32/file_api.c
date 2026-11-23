@@ -22,9 +22,8 @@
     #include <cplat/crt/path.h>
     #include <cplat/crt/utf8.h>
     #include <cplat/crt/wchar_conv.h>
-    #include <assert.h>
+    #include <cplat/win32/wchar_conv_internal.h>
     #include <limits.h>
-    #include <stdlib.h>
     #include <string.h>
     #include <wchar.h>
 
@@ -40,18 +39,19 @@ HANDLE CreateFileU(const char *lpFileName, DWORD dwDesiredAccess, DWORD dwShareM
                    HANDLE hTemplateFile)
 {
     HANDLE result;
-    wchar_t *wpath;
+    wchar_t *wpath = NULL;
+    int rc;
 
-    wpath = cplat_utf8_to_wstr_alloc(lpFileName);
-    if (wpath == NULL)
+    rc = cplat_utf8_to_wstr_alloc(&wpath, lpFileName);
+    if (rc != CPLAT_OK)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        cplat_internal_win32_set_last_error_from_result(rc);
         return INVALID_HANDLE_VALUE;
     }
 
     result = CreateFileW(wpath, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition,
                          dwFlagsAndAttributes, hTemplateFile);
-    cplat_free(wpath);
+    cplat_internal_win32_free_keep_last_error(wpath);
 
     return result;
 }
@@ -63,18 +63,19 @@ HANDLE CreateNamedPipeU(const char *lpName, DWORD dwOpenMode, DWORD dwPipeMode, 
                         LPSECURITY_ATTRIBUTES lpSecurityAttributes)
 {
     HANDLE result;
-    wchar_t *wname;
+    wchar_t *wname = NULL;
+    int rc;
 
-    wname = cplat_utf8_to_wstr_alloc(lpName);
-    if (wname == NULL)
+    rc = cplat_utf8_to_wstr_alloc(&wname, lpName);
+    if (rc != CPLAT_OK)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        cplat_internal_win32_set_last_error_from_result(rc);
         return INVALID_HANDLE_VALUE;
     }
 
     result = CreateNamedPipeW(wname, dwOpenMode, dwPipeMode, nMaxInstances, nOutBufferSize, nInBufferSize,
                               nDefaultTimeOut, lpSecurityAttributes);
-    cplat_free(wname);
+    cplat_internal_win32_free_keep_last_error(wname);
 
     return result;
 }
@@ -85,43 +86,41 @@ DWORD GetModuleFileNameU(HMODULE hModule, char *lpFilename, DWORD nSize)
 {
     wchar_t *wbuf;
     DWORD wlen;
-    char *utf8;
+    char *utf8 = NULL;
     size_t utf8_len;
     DWORD written;
+    int rc;
 
-    if (lpFilename == NULL || nSize == 0)
+    if (lpFilename == NULL || nSize == 0U)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
-        return 0;
+        cplat_internal_win32_set_last_error_from_result(CPLAT_ERR_INVALID_ARGUMENT);
+        return 0U;
     }
 
     wbuf = (wchar_t *)cplat_malloc((size_t)CPLAT_WIN32_LONG_PATH_WCHAR_CAP * sizeof(wchar_t));
     if (wbuf == NULL)
     {
-        SetLastError(ERROR_OUTOFMEMORY);
-        return 0;
+        cplat_internal_win32_set_last_error_from_result(CPLAT_ERR_OUT_OF_MEMORY);
+        return 0U;
     }
 
     wlen = GetModuleFileNameW(hModule, wbuf, (DWORD)CPLAT_WIN32_LONG_PATH_WCHAR_CAP);
-    if (wlen == 0 || wlen >= (DWORD)CPLAT_WIN32_LONG_PATH_WCHAR_CAP)
+    if (wlen == 0U || wlen >= (DWORD)CPLAT_WIN32_LONG_PATH_WCHAR_CAP)
     {
-        /* 解放の処理が最終エラーを変えても、GetModuleFileNameW() の最終エラーを呼び出し元へ伝える。 */
-        DWORD err_code = GetLastError();
-
-        cplat_free(wbuf);
-        SetLastError(err_code);
-        return 0;
+        /* 解放が最終エラーを変えても、GetModuleFileNameW() の最終エラーを呼び出し元へ伝えます。 */
+        cplat_internal_win32_free_keep_last_error(wbuf);
+        return 0U;
     }
 
     wbuf[wlen] = L'\0';
 
-    /* パス区切り文字の正規化は行わない (cplat_wstr_to_utf8_alloc() を使用)。 */
-    utf8 = cplat_wstr_to_utf8_alloc(wbuf);
-    cplat_free(wbuf);
-    if (utf8 == NULL)
+    /* パス区切り文字は正規化せず、UTF-16 の最終エラーを厳密に分類します。 */
+    rc = cplat_wstr_to_utf8_alloc(&utf8, wbuf);
+    cplat_internal_win32_free_keep_last_error(wbuf);
+    if (rc != CPLAT_OK)
     {
-        SetLastError(ERROR_OUTOFMEMORY);
-        return 0;
+        cplat_internal_win32_set_last_error_from_result(rc);
+        return 0U;
     }
 
     utf8_len = strlen(utf8);
@@ -131,14 +130,14 @@ DWORD GetModuleFileNameU(HMODULE hModule, char *lpFilename, DWORD nSize)
 
         memcpy(lpFilename, utf8, keep);
         lpFilename[keep] = '\0';
-        cplat_free(utf8);
+        cplat_internal_win32_free_keep_last_error(utf8);
         SetLastError(ERROR_INSUFFICIENT_BUFFER);
         return nSize;
     }
 
     memcpy(lpFilename, utf8, utf8_len + 1U);
     written = (DWORD)utf8_len;
-    cplat_free(utf8);
+    cplat_internal_win32_free_keep_last_error(utf8);
 
     return written;
 }
@@ -149,55 +148,35 @@ BOOL WriteConsoleU(HANDLE hConsoleOutput, const char *lpBuffer, DWORD nNumberOfC
                    LPDWORD lpNumberOfCharsWritten, LPVOID lpReserved)
 {
     BOOL result;
-    int wcount;
-    wchar_t *wtext;
-    DWORD wwritten = 0;
+    int wcount = 0;
+    wchar_t *wtext = NULL;
+    DWORD wwritten = 0U;
+    int rc;
 
     if (lpNumberOfCharsWritten != NULL)
     {
-        *lpNumberOfCharsWritten = 0;
+        *lpNumberOfCharsWritten = 0U;
     }
 
-    if (lpBuffer == NULL)
+    if (lpBuffer == NULL || nNumberOfCharsToWrite > (DWORD)INT_MAX)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-
-    if (nNumberOfCharsToWrite > (DWORD)INT_MAX)
-    {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        cplat_internal_win32_set_last_error_from_result(CPLAT_ERR_INVALID_ARGUMENT);
         return FALSE;
     }
 
     if (nNumberOfCharsToWrite == 0U)
     {
-        result = WriteConsoleW(hConsoleOutput, L"", 0, &wwritten, lpReserved);
-        return result;
+        return WriteConsoleW(hConsoleOutput, L"", 0U, &wwritten, lpReserved);
     }
 
     /*
      * 入力は NUL 終端とは限らず、途中に NUL を含み得るため、バイト数を直接指定して変換する。
      * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
      */
-    wcount = MultiByteToWideChar(CP_UTF8, 0, lpBuffer, (int)nNumberOfCharsToWrite, NULL, 0);
-    if (wcount <= 0)
+    rc = cplat_internal_utf8_to_wide_n(&wtext, &wcount, lpBuffer, (int)nNumberOfCharsToWrite);
+    if (rc != CPLAT_OK)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-
-    wtext = (wchar_t *)cplat_malloc((size_t)wcount * sizeof(wchar_t));
-    if (wtext == NULL)
-    {
-        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
-        return FALSE;
-    }
-
-    if (MultiByteToWideChar(CP_UTF8, 0, lpBuffer, (int)nNumberOfCharsToWrite, wtext, wcount) <= 0)
-    {
-        cplat_free(wtext);
-        SetLastError(ERROR_INVALID_PARAMETER);
+        cplat_internal_win32_set_last_error_from_result(rc);
         return FALSE;
     }
 
@@ -213,70 +192,77 @@ BOOL WriteConsoleU(HANDLE hConsoleOutput, const char *lpBuffer, DWORD nNumberOfC
         *lpNumberOfCharsWritten = nNumberOfCharsToWrite;
     }
 
-    cplat_free(wtext);
+    cplat_internal_win32_free_keep_last_error(wtext);
 
     return result;
 }
 
 /*
- * UTF-16 文字列を UTF-8 へ変換して固定長バッファーへ書き込む。
- * 成功時、または utf8_buf が NULL か size が 0 のときは TRUE を返す。
- * 変換失敗時は ERROR_INVALID_PARAMETER、収まらない場合は ERROR_INSUFFICIENT_BUFFER を設定して FALSE を返す。
+ * UTF-16 文字列を UTF-8 へ変換して固定長バッファーへ書き込みます。
+ * utf8_buf が NULL、または size が 0 のときは CPLAT_OK を返します。
+ * 変換に失敗したときは対応する結果コードを返し、収まらないときは CPLAT_ERR_BUFFER_TOO_SMALL を返します。
  */
-static BOOL copy_wstr_as_utf8(char *utf8_buf, DWORD size, const wchar_t *wtext)
+static int copy_wstr_as_utf8(char *utf8_buf, const DWORD size, const wchar_t *wtext)
 {
-    char *utf8;
+    char *utf8 = NULL;
     size_t utf8_len;
+    int rc;
 
-    if (utf8_buf == NULL || size == 0u)
+    if (utf8_buf == NULL || size == 0U)
     {
-        return TRUE;
+        return CPLAT_OK;
     }
 
-    utf8 = cplat_wstr_to_utf8_alloc(wtext);
-    if (utf8 == NULL)
+    rc = cplat_wstr_to_utf8_alloc(&utf8, wtext);
+    if (rc != CPLAT_OK)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
-        return FALSE;
+        return rc;
     }
 
     utf8_len = strlen(utf8);
-    if (utf8_len + 1u > (size_t)size)
+    if (utf8_len + 1U > (size_t)size)
     {
-        cplat_free(utf8);
-        SetLastError(ERROR_INSUFFICIENT_BUFFER);
-        return FALSE;
+        cplat_internal_win32_free_keep_last_error(utf8);
+        return CPLAT_ERR_BUFFER_TOO_SMALL;
     }
 
-    memcpy(utf8_buf, utf8, utf8_len + 1u);
-    cplat_free(utf8);
+    memcpy(utf8_buf, utf8, utf8_len + 1U);
+    cplat_internal_win32_free_keep_last_error(utf8);
 
-    return TRUE;
+    return CPLAT_OK;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
 BOOL GetVolumePathNameU(const char *lpszFileName, char *lpszVolumePathName, DWORD cchBufferLength)
 {
-    wchar_t *wpath;
+    wchar_t *wpath = NULL;
     wchar_t wroot[PLATFORM_PATH_MAX];
+    int rc;
 
-    wpath = cplat_utf8_to_wstr_alloc(lpszFileName);
-    if (wpath == NULL)
+    rc = cplat_utf8_to_wstr_alloc(&wpath, lpszFileName);
+    if (rc != CPLAT_OK)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        cplat_internal_win32_set_last_error_from_result(rc);
         return FALSE;
     }
 
     if (!GetVolumePathNameW(wpath, wroot, (DWORD)(sizeof(wroot) / sizeof(wroot[0]))))
     {
-        cplat_free(wpath);
+        cplat_internal_win32_free_keep_last_error(wpath);
         return FALSE;
     }
 
-    cplat_free(wpath);
+    cplat_internal_win32_free_keep_last_error(wpath);
 
-    return copy_wstr_as_utf8(lpszVolumePathName, cchBufferLength, wroot);
+    rc = copy_wstr_as_utf8(lpszVolumePathName, cchBufferLength, wroot);
+    if (rc != CPLAT_OK)
+    {
+        cplat_internal_win32_set_last_error_from_result(rc);
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -288,13 +274,14 @@ BOOL GetVolumeInformationU(const char *lpRootPathName, char *lpVolumeNameBuffer,
     wchar_t *wroot = NULL;
     wchar_t wvolume[MAX_PATH + 1];
     wchar_t wfs[MAX_PATH + 1];
+    int rc = CPLAT_OK;
 
     if (lpRootPathName != NULL)
     {
-        wroot = cplat_utf8_to_wstr_alloc(lpRootPathName);
-        if (wroot == NULL)
+        rc = cplat_utf8_to_wstr_alloc(&wroot, lpRootPathName);
+        if (rc != CPLAT_OK)
         {
-            SetLastError(ERROR_INVALID_PARAMETER);
+            cplat_internal_win32_set_last_error_from_result(rc);
             return FALSE;
         }
     }
@@ -305,18 +292,27 @@ BOOL GetVolumeInformationU(const char *lpRootPathName, char *lpVolumeNameBuffer,
     if (!GetVolumeInformationW(wroot, wvolume, (DWORD)(sizeof(wvolume) / sizeof(wvolume[0])), lpVolumeSerialNumber,
                                lpMaximumComponentLength, lpFileSystemFlags, wfs, (DWORD)(sizeof(wfs) / sizeof(wfs[0]))))
     {
-        cplat_free(wroot);
+        cplat_internal_win32_free_keep_last_error(wroot);
         return FALSE;
     }
 
-    cplat_free(wroot);
+    cplat_internal_win32_free_keep_last_error(wroot);
 
-    if (!copy_wstr_as_utf8(lpVolumeNameBuffer, nVolumeNameSize, wvolume))
+    rc = copy_wstr_as_utf8(lpVolumeNameBuffer, nVolumeNameSize, wvolume);
+    if (rc != CPLAT_OK)
     {
+        cplat_internal_win32_set_last_error_from_result(rc);
         return FALSE;
     }
 
-    return copy_wstr_as_utf8(lpFileSystemNameBuffer, nFileSystemNameSize, wfs);
+    rc = copy_wstr_as_utf8(lpFileSystemNameBuffer, nFileSystemNameSize, wfs);
+    if (rc != CPLAT_OK)
+    {
+        cplat_internal_win32_set_last_error_from_result(rc);
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 #endif /* PLATFORM_WINDOWS */

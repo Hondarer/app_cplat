@@ -205,6 +205,9 @@ extern "C"
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @return         成功時は FILE*、失敗時は NULL を返します。
      *
+     *  Windows でパスに不正な UTF-8 が含まれる場合、@p detail_out に EILSEQ を記録し、結果コードは
+     *  @ref CPLAT_ERR_INVALID_ENCODING になります。
+     *
      *  @par            共有モード
      *  Linux では `fopen` は強制ロックを持たず常に共有可です。\n
      *  Windows では内部で `_wfsopen` を `_SH_DENYNO` 指定で呼び出し、他プロセス/スレッドからの
@@ -224,6 +227,9 @@ extern "C"
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @return         成功時は FILE*、失敗時は NULL を返します。
+     *
+     *  Windows でパスに不正な UTF-8 が含まれる場合、@p detail_out に EILSEQ を記録し、結果コードは
+     *  @ref CPLAT_ERR_INVALID_ENCODING になります。
      *
      *  @par            共有モード
      *  Linux では `freopen` は強制ロックを持たず常に共有可です。\n
@@ -316,6 +322,9 @@ extern "C"
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @return         成功時は 0、失敗時は -1 を返します。
      *
+     *  Windows でパスに不正な UTF-8 が含まれる場合、@p detail_out に EILSEQ を記録し、結果コードは
+     *  @ref CPLAT_ERR_INVALID_ENCODING になります。
+     *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
      */
@@ -329,6 +338,9 @@ extern "C"
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @return         成功時は 0、失敗時は -1 を返します。
+     *
+     *  Windows でいずれかのパスに不正な UTF-8 が含まれる場合、@p detail_out に EILSEQ を記録し、結果コードは
+     *  @ref CPLAT_ERR_INVALID_ENCODING になります。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -487,6 +499,9 @@ extern "C"
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @return         成功時はオープンされた FILE*、失敗時は NULL を返します。
+     *
+     *  Windows でパスの UTF-8/UTF-16 変換に失敗した場合は置換せず、@p detail_out に詳細を記録します。
+     *  不正な文字コードの場合、結果コードは @ref CPLAT_ERR_INVALID_ENCODING です。
      *
      *  Linux 環境では TMPDIR (未設定なら "/tmp") に "{prefix}XXXXXX" のテンプレートで
      *  mkostemp() によりファイルを atomic に作成し、その fd を fdopen(@p modes) で FILE* に
