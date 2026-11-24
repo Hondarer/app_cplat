@@ -40,6 +40,18 @@
 #endif /* PLATFORM_ */
 
 /**
+ *  @brief          結果コードが、パスの変換の失敗によるものかを判定します。
+ *  @param[in]      result 判定する結果コード。
+ *  @return         引数の誤り、メモリ不足、容量の不足、不正な文字コードのいずれかであれば 0 以外、
+ *                  それ以外であれば 0 を返します。
+ */
+static int is_path_conversion_error(const int result)
+{
+    return result == CPLAT_ERR_INVALID_ARGUMENT || result == CPLAT_ERR_OUT_OF_MEMORY ||
+           result == CPLAT_ERR_BUFFER_TOO_SMALL || result == CPLAT_ERR_INVALID_ENCODING;
+}
+
+/**
  *  @brief          指定されたディレクトリが存在することを確認し、なければ生成します。
  *  @param[in]      dir 対象ディレクトリのパス (UTF-8)。
  *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
@@ -49,12 +61,6 @@
  *  cplat_mkdir が競合生成で @ref CPLAT_ERR_UNKNOWN を返す場合も cplat_stat で再確認して
  *  ディレクトリが存在すれば成功とみなします。
  */
-static int is_path_conversion_error(const int result)
-{
-    return result == CPLAT_ERR_INVALID_ARGUMENT || result == CPLAT_ERR_OUT_OF_MEMORY ||
-           result == CPLAT_ERR_BUFFER_TOO_SMALL || result == CPLAT_ERR_INVALID_ENCODING;
-}
-
 static int ensure_one_dir(const char *dir, cplat_error *detail_out)
 {
     cplat_file_stat_t st;

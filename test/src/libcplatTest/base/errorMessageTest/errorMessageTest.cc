@@ -47,6 +47,7 @@ static std::vector<int> all_error_codes()
                             CPLAT_ERR_EOF,
                             CPLAT_ERR_CANCELED,
                             CPLAT_ERR_IN_PROGRESS,
+                            CPLAT_ERR_WOULD_BLOCK,
                             CPLAT_ERR_IDENTITY_MISMATCH,
                             CPLAT_ERR_VERSION_MISMATCH};
 }
@@ -96,6 +97,22 @@ TEST_F(errorMessageTest, unknown_code_maps_to_default_text)
     // Assert
     EXPECT_STREQ("unknown result code",
                  text); // [確認_異常系] - cplat_result_to_string() の戻り値が "unknown result code" であること。
+}
+
+// 非ブロッキングのソケット結果に固有の説明を返すことの確認
+TEST_F(errorMessageTest, would_block_has_specific_text)
+{
+    // Arrange
+
+    // Pre-Assert
+
+    // Act
+    const char *text = cplat_result_to_string(
+        CPLAT_ERR_WOULD_BLOCK); // [手順] - CPLAT_ERR_WOULD_BLOCK を指定して cplat_result_to_string() を呼び出す。
+
+    // Assert
+    EXPECT_STREQ("operation would block",
+                 text); // [確認_正常系] - CPLAT_ERR_WOULD_BLOCK に対する説明が "operation would block" であること。
 }
 
 // errno がメッセージへ変換されることの確認

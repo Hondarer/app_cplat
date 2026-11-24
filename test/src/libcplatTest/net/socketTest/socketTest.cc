@@ -3,13 +3,16 @@
 #include <mock_cplat.h>
 
 #include <cplat/base/platform.h>
+#include <cplat/base/error.h>
 #include <cplat/base/result.h>
 #include <cplat/net/socket.h>
 
 #if defined(PLATFORM_LINUX)
     #include <mock_fcntl.h>
     #include <mock_poll.h>
+    #include <mock_unistd.h>
     #include <sys/mock_socket.h>
+    #include <sys/mock_eventfd.h>
 
     #include <errno.h>
     #include <fcntl.h>
@@ -17,6 +20,7 @@
     #include <netinet/tcp.h>
     #include <poll.h>
     #include <sys/socket.h>
+    #include <unistd.h>
 #elif defined(PLATFORM_WINDOWS)
     #include <cplat/net/socket_internal.h>
     #include <mock_winsock.h>
@@ -25,6 +29,11 @@
 #endif /* PLATFORM_ */
 
 #include <cstring>
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <limits.h>
+#include <thread>
 
 using testing::_;
 using testing::Assign;
@@ -78,6 +87,41 @@ void expect_detail(const cplat_error &detail, const cplat_error_domain domain, c
 
 } // namespace
 
+// IP_MULTICAST_TTL の読み戻しには実ソケットを使用します。
+#if defined(PLATFORM_WINDOWS)
+namespace
+{
+
+class RealWinsockSession
+{
+  public:
+    RealWinsockSession()
+    {
+        WSADATA data = {};
+        started_ = delegate_real_WSAStartup(__FILE__, __LINE__, __func__, MAKEWORD(2, 2), &data) == 0;
+    }
+
+    ~RealWinsockSession()
+    {
+        if (started_)
+        {
+            /* このスコープで開始した Winsock の参照を解放します。 */
+            (void)delegate_real_WSACleanup(__FILE__, __LINE__, __func__);
+        }
+    }
+
+    bool started() const
+    {
+        return started_;
+    }
+
+  private:
+    bool started_ = false;
+};
+
+} // namespace
+#endif /* PLATFORM_WINDOWS */
+
 class socketTest : public Test
 {
   protected:
@@ -87,6 +131,8 @@ class socketTest : public Test
     NiceMock<Mock_sys_socket> mock_sys_socket_;
     NiceMock<Mock_fcntl> mock_fcntl_;
     NiceMock<Mock_poll> mock_poll_;
+    NiceMock<Mock_unistd> mock_unistd_;
+    NiceMock<Mock_eventfd> mock_eventfd_;
 #elif defined(PLATFORM_WINDOWS)
     NiceMock<Mock_winsock> mock_winsock_;
 #endif /* PLATFORM_ */
@@ -95,7 +141,8 @@ class socketTest : public Test
     bool verifyExpectations()
     {
 #if defined(PLATFORM_LINUX)
-        return Mock::VerifyAndClearExpectations(&mock_cplat_) && Mock::VerifyAndClearExpectations(&mock_sys_socket_);
+        return Mock::VerifyAndClearExpectations(&mock_cplat_) && Mock::VerifyAndClearExpectations(&mock_sys_socket_) &&
+               Mock::VerifyAndClearExpectations(&mock_unistd_) && Mock::VerifyAndClearExpectations(&mock_eventfd_);
 #elif defined(PLATFORM_WINDOWS)
         return Mock::VerifyAndClearExpectations(&mock_cplat_) && Mock::VerifyAndClearExpectations(&mock_winsock_);
 #endif /* PLATFORM_ */
@@ -129,16 +176,17 @@ class socketTest : public Test
     }
     // [サブ手順終了]
 
-#if defined(PLATFORM_WINDOWS)
     void SetUp() override
     {
+#if defined(PLATFORM_WINDOWS)
         ON_CALL(mock_cplat_, cplat_call_once)
             .WillByDefault([](cplat_once_flag *, cplat_once_fn function) { function(); });
         ON_CALL(mock_winsock_, WSAStartup).WillByDefault(Return(0));
         ON_CALL(mock_winsock_, WSACleanup).WillByDefault(Return(0));
-        ON_CALL(mock_winsock_, WSAGetLastError).WillByDefault(Return(0));
+#endif /* PLATFORM_WINDOWS */
     }
 
+#if defined(PLATFORM_WINDOWS)
     // [サブ手順 名前=socketTest.TearDown]
     void TearDown() override
     {
@@ -719,6 +767,25 @@ TEST_F(socketTest, accept_returns_peer_and_socket)
                 *length = (int)sizeof(*native);
                 return (SOCKET)8;
             });
+    EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)8, (WSAEVENT)nullptr, 0))
+        .Times(2)
+        .WillRepeatedly(Return(0));
+    // [Pre-Assert確認_正常系] - 受け付けたソケットのイベント登録解除が 2 回成功すること。
+    // [Pre-Assert手順] - WSAEventSelect() から 0 を返す。
+    EXPECT_CALL(mock_winsock_, ioctlsocket(_, _, _, (SOCKET)8, FIONBIO, _))
+        .Times(2)
+        .WillRepeatedly([](const char *, const int, const char *, SOCKET, const long command, u_long *nonblocking) {
+            EXPECT_EQ(FIONBIO, command);
+            EXPECT_NE(nullptr, nonblocking);
+            if (nonblocking == nullptr)
+            {
+                return SOCKET_ERROR;
+            }
+            EXPECT_EQ(0UL, *nonblocking);
+            return 0;
+        });
+    // [Pre-Assert確認_正常系] - 受け付けたソケットのブロッキング化が 2 回成功すること。
+    // [Pre-Assert手順] - ioctlsocket() から 0 を返す。
 
     // [Pre-Assert確認_正常系] - accept() が kSocket を指定して任意の回数呼び出されること。
     // [Pre-Assert手順] - accept() から、address の IPv4 アドレスに cplat_ipv4_addr_loopback()、ポートに cplat_hton16() で変換した 54321U、*length に sizeof(*native) を設定して 8 を返す。
@@ -1349,6 +1416,1382 @@ TEST_F(socketTest, socket_options_report_invalid_and_os_failure)
         actual_ret_leave_failure); // [確認_異常系] - グループ離脱失敗時の cplat_socket_leave_multicast_group() の戻り値が CPLAT_ERR_UNKNOWN であること。
 }
 // [サブ手順参照 名前=socketTest.TearDown]
+
+// IP_MULTICAST_TTL が UDP ソケットに指定した値を保持することの確認
+TEST_F(socketTest, multicast_ttl_round_trips_on_real_udp_socket)
+{
+    // Arrange
+#if defined(PLATFORM_WINDOWS)
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started());
+    const cplat_socket sock = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)sock);
+#else
+    const cplat_socket sock = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, 0);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, sock);
+#endif
+    const unsigned int values[] = {0U, 1U, 32U, CPLAT_SOCKET_MULTICAST_TTL_MAX};
+
+    // Act / Assert
+    for (const unsigned int ttl : values)
+    {
+        cplat_error detail = {};
+        const int actual_ret = cplat_socket_set_multicast_ttl(sock, ttl, &detail);
+        ASSERT_EQ(CPLAT_OK, actual_ret);
+
+#if defined(PLATFORM_WINDOWS)
+        DWORD actual_ttl = 0U;
+        int actual_len = (int)sizeof(actual_ttl);
+        ASSERT_EQ(0, ::getsockopt((SOCKET)sock, IPPROTO_IP, IP_MULTICAST_TTL, (char *)&actual_ttl, &actual_len));
+        EXPECT_EQ((DWORD)ttl, actual_ttl);
+        EXPECT_EQ((int)sizeof(actual_ttl), actual_len);
+#else
+        int actual_ttl = -1;
+        socklen_t actual_len = (socklen_t)sizeof(actual_ttl);
+        ASSERT_EQ(0, ::getsockopt((int)sock, IPPROTO_IP, IP_MULTICAST_TTL, &actual_ttl, &actual_len));
+        EXPECT_EQ((int)ttl, actual_ttl);
+        EXPECT_EQ((socklen_t)sizeof(actual_ttl), actual_len);
+#endif
+    }
+
+#if defined(PLATFORM_WINDOWS)
+    EXPECT_EQ(0, ::closesocket((SOCKET)sock));
+#else
+    EXPECT_EQ(0, ::close((int)sock));
+#endif
+// [確認_正常系] - 実 UDP ソケットへ 0、1、32、255 を設定し、getsockopt() で同じ値を取得できること。
+}
+
+// IP_MULTICAST_TTL の範囲外と無効なソケットが OS 呼び出し前に拒否されることの確認
+TEST_F(socketTest, multicast_ttl_rejects_out_of_range_and_invalid_socket)
+{
+    // Arrange
+    cplat_error detail = {};
+
+    // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_sys_socket_, setsockopt(_, _, _, (int)kSocket, IPPROTO_IP, IP_MULTICAST_TTL, _, _)).Times(0);
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_winsock_, setsockopt(_, _, _, (SOCKET)kSocket, IPPROTO_IP, IP_MULTICAST_TTL, _, _)).Times(0);
+#endif /* PLATFORM_ */
+    // [Pre-Assert確認_正常系] - 範囲外または無効なソケットでは setsockopt() が呼び出されないこと。
+
+    // Act
+    const int actual_ret_256 = cplat_socket_set_multicast_ttl(kSocket, 256U, &detail);
+    const int actual_ret_max = cplat_socket_set_multicast_ttl(kSocket, UINT_MAX, &detail);
+    const int actual_ret_invalid_socket = cplat_socket_set_multicast_ttl(CPLAT_INVALID_SOCKET, 0U, &detail);
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_256);
+    EXPECT_EQ(CPLAT_ERROR_DOMAIN_ERRNO, detail.domain);
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, detail.result);
+    EXPECT_EQ((unsigned long)EINVAL, detail.code);
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_max);
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, actual_ret_invalid_socket);
+// [確認_異常系] - 256、UINT_MAX、無効なソケットの結果が CPLAT_ERR_INVALID_ARGUMENT で、setsockopt() が呼ばれないこと。
+}
+
+// IP_MULTICAST_TTL の OS 失敗が結果コードと詳細エラーへ記録されることの確認
+TEST_F(socketTest, multicast_ttl_reports_setsockopt_failure)
+{
+    // Arrange
+    cplat_error detail = {};
+
+    // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_sys_socket_, setsockopt(_, _, _, (int)kSocket, IPPROTO_IP, IP_MULTICAST_TTL, _, _))
+        .WillOnce(DoAll(Assign(&errno, ENOPROTOOPT), Return(-1)));
+    // [Pre-Assert確認_異常系] - setsockopt() が失敗し、errno に ENOPROTOOPT を設定すること。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_winsock_, setsockopt(_, _, _, (SOCKET)kSocket, IPPROTO_IP, IP_MULTICAST_TTL, _, _))
+        .WillOnce(Return(SOCKET_ERROR));
+    EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAENOPROTOOPT));
+    // [Pre-Assert確認_異常系] - setsockopt() が SOCKET_ERROR を返し、WSAGetLastError() が WSAENOPROTOOPT を返すこと。
+#endif /* PLATFORM_ */
+
+    // Act
+    const int actual_ret = cplat_socket_set_multicast_ttl(kSocket, 32U, &detail);
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret);
+#if defined(PLATFORM_LINUX)
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_SOCKET_ERRNO, CPLAT_ERR_UNKNOWN, (unsigned long)ENOPROTOOPT);
+#elif defined(PLATFORM_WINDOWS)
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_UNKNOWN, (unsigned long)WSAENOPROTOOPT);
+#endif /* PLATFORM_ */
+// [確認_異常系] - setsockopt() の失敗に対応する結果コードと詳細エラーが返ること。
+}
+
+// 解除の事前通知、リセット、待機中の通知、期限まで待つ動作の確認
+TEST_F(socketTest, watch_cancel_is_persistent_resettable_and_interrupts_waiters)
+{
+    // Arrange
+#if defined(PLATFORM_WINDOWS)
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started());
+    const cplat_socket sock = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)sock);
+#else
+    const cplat_socket sock = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, 0);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, sock);
+#endif
+    cplat_socket_watch *watch = nullptr;
+    cplat_socket_wait_cancel *cancel = nullptr;
+    cplat_error detail = {};
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(sock, &watch, &detail));
+    ASSERT_NE(nullptr, watch);
+    ASSERT_EQ(CPLAT_OK, cplat_socket_wait_cancel_create(&cancel, &detail));
+    ASSERT_NE(nullptr, cancel);
+    cplat_socket_watch *watches[] = {watch};
+    unsigned char ready[] = {1U};
+
+    // Act / Assert: 待機より前の通知は保持され、解除を優先して結果配列を 0 にします。
+    ASSERT_EQ(CPLAT_OK, cplat_socket_wait_cancel_signal(cancel, &detail));
+    EXPECT_EQ(CPLAT_ERR_CANCELED,
+              cplat_socket_watch_wait_readable_multi(watches, 1U, cancel, CPLAT_WAIT_FOREVER, ready, &detail));
+    EXPECT_EQ(0U, ready[0]);
+
+    // リセット後は通知が解除され、指定した期限より早く戻りません。
+    ASSERT_EQ(CPLAT_OK, cplat_socket_wait_cancel_reset(cancel, &detail));
+    const auto timeout_started = std::chrono::steady_clock::now();
+    EXPECT_EQ(CPLAT_ERR_TIMEOUT,
+              cplat_socket_watch_wait_readable_multi(watches, 1U, cancel, 120, ready, &detail));
+    const auto timeout_elapsed = std::chrono::steady_clock::now() - timeout_started;
+    EXPECT_GE(std::chrono::duration_cast<std::chrono::milliseconds>(timeout_elapsed).count(), 110);
+
+    // 別スレッドの通知は、30 秒の待機を 1 秒以内に解除します。
+    std::atomic<int> wait_result{CPLAT_ERR_UNKNOWN};
+    std::atomic<bool> wait_started{false};
+    std::thread waiter([&]() {
+        unsigned char thread_ready[] = {1U};
+        wait_started.store(true, std::memory_order_release);
+        wait_result.store(cplat_socket_watch_wait_readable_multi(watches, 1U, cancel, 30000, thread_ready, nullptr),
+                          std::memory_order_release);
+    });
+    while (!wait_started.load(std::memory_order_acquire))
+    {
+        std::this_thread::yield();
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(40));
+    const auto signal_started = std::chrono::steady_clock::now();
+    const int signal_result = cplat_socket_wait_cancel_signal(cancel, &detail);
+    waiter.join();
+    const auto signal_elapsed = std::chrono::steady_clock::now() - signal_started;
+    EXPECT_EQ(CPLAT_OK, signal_result);
+    EXPECT_EQ(CPLAT_ERR_CANCELED, wait_result.load(std::memory_order_acquire));
+    EXPECT_LT(std::chrono::duration_cast<std::chrono::milliseconds>(signal_elapsed).count(), 1000);
+
+    // 後片付け
+    cplat_socket_wait_cancel_dispose(cancel);
+    cplat_socket_watch_detach(watch);
+#if defined(PLATFORM_WINDOWS)
+    EXPECT_EQ(0, ::closesocket((SOCKET)sock));
+#else
+    EXPECT_EQ(0, ::close((int)sock));
+#endif
+// [確認_正常系] - 待機前の解除、解除状態の保持、リセット後の期限待ち、別スレッドからの解除を確認する。
+}
+
+// 登録前からあるデータと複数登録の選択が受信待機で検出されることの確認
+TEST_F(socketTest, watch_readable_multi_detects_queued_data_for_matching_watch)
+{
+    // Arrange
+#if defined(PLATFORM_WINDOWS)
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started());
+    const cplat_socket receiver_a = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    const cplat_socket receiver_b = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    const cplat_socket sender = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)receiver_a);
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)receiver_b);
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)sender);
+#else
+    const cplat_socket receiver_a = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, 0);
+    const cplat_socket receiver_b = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, 0);
+    const cplat_socket sender = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, 0);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, receiver_a);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, receiver_b);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, sender);
+#endif
+    sockaddr_in address_a = {};
+    sockaddr_in address_b = {};
+    address_a.sin_family = AF_INET;
+    address_a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    address_a.sin_port = 0;
+    address_b.sin_family = AF_INET;
+    address_b.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    address_b.sin_port = 0;
+#if defined(PLATFORM_WINDOWS)
+    ASSERT_EQ(0, ::bind((SOCKET)receiver_a, (const sockaddr *)&address_a, (int)sizeof(address_a)));
+    ASSERT_EQ(0, ::bind((SOCKET)receiver_b, (const sockaddr *)&address_b, (int)sizeof(address_b)));
+    int address_len = (int)sizeof(address_a);
+#else
+    ASSERT_EQ(0, ::bind((int)receiver_a, (const sockaddr *)&address_a, (socklen_t)sizeof(address_a)));
+    ASSERT_EQ(0, ::bind((int)receiver_b, (const sockaddr *)&address_b, (socklen_t)sizeof(address_b)));
+    socklen_t address_len = (socklen_t)sizeof(address_a);
+#endif
+#if defined(PLATFORM_WINDOWS)
+    ASSERT_EQ(0, ::getsockname((SOCKET)receiver_a, (sockaddr *)&address_a, &address_len));
+    address_len = (int)sizeof(address_b);
+#else
+    ASSERT_EQ(0, ::getsockname((int)receiver_a, (sockaddr *)&address_a, &address_len));
+    address_len = (socklen_t)sizeof(address_b);
+#endif
+#if defined(PLATFORM_WINDOWS)
+    ASSERT_EQ(0, ::getsockname((SOCKET)receiver_b, (sockaddr *)&address_b, &address_len));
+#else
+    ASSERT_EQ(0, ::getsockname((int)receiver_b, (sockaddr *)&address_b, &address_len));
+#endif
+
+    const char first_data = 'A';
+#if defined(PLATFORM_WINDOWS)
+    ASSERT_EQ(1, ::sendto((SOCKET)sender, &first_data, 1, 0, (const sockaddr *)&address_a,
+                          (int)sizeof(address_a)));
+#else
+    ASSERT_EQ(1, ::sendto((int)sender, &first_data, 1, 0, (const sockaddr *)&address_a,
+                          (socklen_t)sizeof(address_a)));
+#endif
+    cplat_socket_watch *watch_a = nullptr;
+    cplat_socket_watch *watch_b = nullptr;
+    cplat_error detail = {};
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(receiver_a, &watch_a, &detail));
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(receiver_b, &watch_b, &detail));
+    cplat_socket_watch *watches[] = {watch_a, watch_b};
+    unsigned char ready[] = {0U, 0U};
+
+    // Act / Assert: 登録前に到着したデータは最初の待機で検出され、対応する要素だけが 1 になります。
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_wait_readable_multi(watches, 2U, nullptr, 1000, ready, &detail));
+    EXPECT_EQ(1U, ready[0]);
+    EXPECT_EQ(0U, ready[1]);
+    char received = 0;
+    size_t received_len = 0U;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_recv(receiver_a, &received, sizeof(received), &received_len, &detail));
+    EXPECT_EQ(first_data, received);
+    EXPECT_EQ(1U, received_len);
+    received_len = 9U;
+    const int would_block_result = cplat_socket_recv(receiver_a, &received, sizeof(received), &received_len, &detail);
+    EXPECT_EQ(CPLAT_ERR_WOULD_BLOCK, would_block_result);
+    EXPECT_EQ(CPLAT_CAUSE_WOULD_BLOCK, cplat_error_get_cause(&detail));
+    EXPECT_EQ(0U, received_len);
+
+    // 2 つ目の登録にだけデータを送ると、その登録だけが受信可能になります。
+    const char second_data = 'B';
+#if defined(PLATFORM_WINDOWS)
+    ASSERT_EQ(1, ::sendto((SOCKET)sender, &second_data, 1, 0, (const sockaddr *)&address_b,
+                          (int)sizeof(address_b)));
+#else
+    ASSERT_EQ(1, ::sendto((int)sender, &second_data, 1, 0, (const sockaddr *)&address_b,
+                          (socklen_t)sizeof(address_b)));
+#endif
+    ready[0] = 1U;
+    ready[1] = 0U;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_wait_readable_multi(watches, 2U, nullptr, 1000, ready, &detail));
+    EXPECT_EQ(0U, ready[0]);
+    EXPECT_EQ(1U, ready[1]);
+
+    cplat_socket_watch_detach(watch_b);
+    cplat_socket_watch_detach(watch_a);
+#if defined(PLATFORM_WINDOWS)
+    EXPECT_EQ(0, ::closesocket((SOCKET)sender));
+    EXPECT_EQ(0, ::closesocket((SOCKET)receiver_b));
+    EXPECT_EQ(0, ::closesocket((SOCKET)receiver_a));
+#else
+    EXPECT_EQ(0, ::close((int)sender));
+    EXPECT_EQ(0, ::close((int)receiver_b));
+    EXPECT_EQ(0, ::close((int)receiver_a));
+#endif
+// [確認_正常系] - 登録前のデータと登録後のデータを、それぞれ該当する登録だけが受信可能として通知されること。
+}
+
+// 全量受信と全量送信が途中解除を返し、処理済みバイト数を保つことの確認
+TEST_F(socketTest, watch_transfer_all_preserves_partial_counts_on_cancel)
+{
+    // Arrange
+#if defined(PLATFORM_WINDOWS)
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started());
+    const cplat_socket listener = (cplat_socket)::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    const cplat_socket client = (cplat_socket)::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)listener);
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)client);
+#else
+    const cplat_socket listener = (cplat_socket)::socket(AF_INET, SOCK_STREAM, 0);
+    const cplat_socket client = (cplat_socket)::socket(AF_INET, SOCK_STREAM, 0);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, listener);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, client);
+#endif
+    sockaddr_in address = {};
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    address.sin_port = 0;
+#if defined(PLATFORM_WINDOWS)
+    ASSERT_EQ(0, ::bind((SOCKET)listener, (const sockaddr *)&address, (int)sizeof(address)));
+    ASSERT_EQ(0, ::listen((SOCKET)listener, 1));
+    int address_len = (int)sizeof(address);
+    ASSERT_EQ(0, ::getsockname((SOCKET)listener, (sockaddr *)&address, &address_len));
+    ASSERT_EQ(0, ::connect((SOCKET)client, (const sockaddr *)&address, (int)sizeof(address)));
+    const cplat_socket accepted = (cplat_socket)::accept((SOCKET)listener, nullptr, nullptr);
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)accepted);
+#else
+    ASSERT_EQ(0, ::bind((int)listener, (const sockaddr *)&address, (socklen_t)sizeof(address)));
+    ASSERT_EQ(0, ::listen((int)listener, 1));
+    socklen_t address_len = (socklen_t)sizeof(address);
+    ASSERT_EQ(0, ::getsockname((int)listener, (sockaddr *)&address, &address_len));
+    ASSERT_EQ(0, ::connect((int)client, (const sockaddr *)&address, (socklen_t)sizeof(address)));
+    const cplat_socket accepted = (cplat_socket)::accept((int)listener, nullptr, nullptr);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, accepted);
+#endif
+
+    cplat_socket_watch *client_watch = nullptr;
+    cplat_socket_watch *accepted_watch = nullptr;
+    cplat_socket_wait_cancel *cancel = nullptr;
+    cplat_error detail = {};
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(client, &client_watch, &detail));
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(accepted, &accepted_watch, &detail));
+    ASSERT_EQ(CPLAT_OK, cplat_socket_wait_cancel_create(&cancel, &detail));
+
+    const char prefix[] = "ab";
+    size_t sent_prefix = 0U;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_send_all(client_watch, prefix, sizeof(prefix) - 1U, nullptr, 1000,
+                                                   &sent_prefix, &detail));
+    ASSERT_EQ(sizeof(prefix) - 1U, sent_prefix);
+    char received_frame[4] = {};
+    std::atomic<bool> receive_started{false};
+    std::atomic<int> receive_result{CPLAT_ERR_UNKNOWN};
+    std::atomic<size_t> received_count{0U};
+    cplat_error receive_detail = {};
+    std::thread receiver([&]() {
+        size_t count = 0U;
+        receive_started.store(true, std::memory_order_release);
+        const int result = cplat_socket_watch_recv_all(accepted_watch, received_frame, sizeof(received_frame), cancel,
+                                                       30000, &count, &receive_detail);
+        received_count.store(count, std::memory_order_release);
+        receive_result.store(result, std::memory_order_release);
+    });
+    while (!receive_started.load(std::memory_order_acquire))
+    {
+        std::this_thread::yield();
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    const auto receive_signal_started = std::chrono::steady_clock::now();
+    EXPECT_EQ(CPLAT_OK, cplat_socket_wait_cancel_signal(cancel, &detail));
+    receiver.join();
+    const auto receive_signal_elapsed = std::chrono::steady_clock::now() - receive_signal_started;
+
+    // Assert: フレーム先頭を受けた後の解除で部分長を返します。
+    EXPECT_EQ(CPLAT_ERR_CANCELED, receive_result.load(std::memory_order_acquire));
+    EXPECT_EQ(2U, received_count.load(std::memory_order_acquire));
+    EXPECT_EQ('a', received_frame[0]);
+    EXPECT_EQ('b', received_frame[1]);
+    EXPECT_LT(std::chrono::duration_cast<std::chrono::milliseconds>(receive_signal_elapsed).count(), 1000);
+#if defined(PLATFORM_LINUX)
+    expect_detail(receive_detail, CPLAT_ERROR_DOMAIN_SOCKET_ERRNO, CPLAT_ERR_CANCELED, (unsigned long)ECANCELED);
+#else
+    expect_detail(receive_detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_CANCELED, (unsigned long)WSA_E_CANCELLED);
+#endif
+
+    ASSERT_EQ(CPLAT_OK, cplat_socket_wait_cancel_reset(cancel, &detail));
+    const char suffix[] = "cd";
+    size_t sent_suffix = 0U;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_send_all(client_watch, suffix, sizeof(suffix) - 1U, nullptr, 1000,
+                                                   &sent_suffix, &detail));
+    EXPECT_EQ(sizeof(suffix) - 1U, sent_suffix);
+    size_t resumed_count = 0U;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_recv_all(accepted_watch, received_frame + 2, 2U, nullptr, 1000,
+                                                   &resumed_count, &detail));
+    EXPECT_EQ(2U, resumed_count);
+    EXPECT_EQ('c', received_frame[2]);
+    EXPECT_EQ('d', received_frame[3]);
+
+    // Arrange / Act: 送信を一部だけ成功させて待機へ進め、解除までの送信済み量を記録します。
+    const char send_payload[] = "abcdef";
+    cplat_socket_watch *send_watch = client_watch;
+#if defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)kSocket, _, _)).WillOnce(Return(0));
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(kSocket, &send_watch, &detail));
+    const cplat_socket send_sock = kSocket;
+#else
+    const cplat_socket send_sock = client;
+#endif
+    std::atomic<int> send_calls{0};
+#if defined(PLATFORM_LINUX)
+    std::atomic<bool> poll_wait_started{false};
+#endif
+    std::atomic<bool> cancel_requested{false};
+    const size_t expected_partial_count = 2U;
+#if defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)send_sock, _, (int)(sizeof(send_payload) - 1U), 0))
+        .WillOnce([&](const char *, const int, const char *, SOCKET, const char *, int, int) {
+            send_calls.fetch_add(1, std::memory_order_release);
+            return 2;
+        });
+    EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)send_sock, _, (int)(sizeof(send_payload) - 3U), 0))
+        .WillOnce([&](const char *, const int, const char *, SOCKET, const char *, int, int) {
+            send_calls.fetch_add(1, std::memory_order_release);
+            return SOCKET_ERROR;
+        });
+    EXPECT_CALL(mock_winsock_, WSAGetLastError(_, _, _)).WillOnce(Return(WSAEWOULDBLOCK));
+#else
+    EXPECT_CALL(mock_sys_socket_, send(_, _, _, (int)send_sock, _, sizeof(send_payload) - 1U, MSG_NOSIGNAL))
+        .WillOnce([&](const char *, const int, const char *, int, const void *, size_t, int) {
+            send_calls.fetch_add(1, std::memory_order_release);
+            return (ssize_t)2;
+        });
+    EXPECT_CALL(mock_sys_socket_, send(_, _, _, (int)send_sock, _, sizeof(send_payload) - 3U, MSG_NOSIGNAL))
+        .WillOnce([&](const char *, const int, const char *, int, const void *, size_t, int) {
+            errno = EAGAIN;
+            send_calls.fetch_add(1, std::memory_order_release);
+            return (ssize_t)-1;
+        });
+    EXPECT_CALL(mock_poll_, poll(_, _, _, _, 2, 50))
+        .WillOnce([&](const char *, const int, const char *, struct pollfd *fds, nfds_t count, int) {
+            EXPECT_EQ(2U, count);
+            EXPECT_EQ(POLLIN, fds[0].events);
+            EXPECT_EQ(POLLOUT, fds[1].events);
+            poll_wait_started.store(true, std::memory_order_release);
+            while (!cancel_requested.load(std::memory_order_acquire))
+            {
+                std::this_thread::yield();
+            }
+            fds[0].revents = POLLIN;
+            return 1;
+        });
+#endif
+    std::atomic<bool> send_started{false};
+    std::atomic<int> send_result{CPLAT_ERR_UNKNOWN};
+    std::atomic<size_t> sent_count{0U};
+    cplat_error send_detail = {};
+    std::thread sender([&]() {
+        size_t count = 0U;
+        send_started.store(true, std::memory_order_release);
+        const int result = cplat_socket_watch_send_all(send_watch, send_payload, sizeof(send_payload) - 1U, cancel,
+                                                       CPLAT_WAIT_FOREVER, &count, &send_detail);
+        sent_count.store(count, std::memory_order_release);
+        send_result.store(result, std::memory_order_release);
+    });
+    while (!send_started.load(std::memory_order_acquire) || send_calls.load(std::memory_order_acquire) < 2)
+    {
+        std::this_thread::yield();
+    }
+#if defined(PLATFORM_LINUX)
+    while (!poll_wait_started.load(std::memory_order_acquire))
+    {
+        std::this_thread::yield();
+    }
+#endif
+    const auto send_signal_started = std::chrono::steady_clock::now();
+    EXPECT_EQ(CPLAT_OK, cplat_socket_wait_cancel_signal(cancel, &detail));
+    cancel_requested.store(true, std::memory_order_release);
+    sender.join();
+    const auto send_signal_elapsed = std::chrono::steady_clock::now() - send_signal_started;
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_CANCELED, send_result.load(std::memory_order_acquire));
+    EXPECT_EQ(expected_partial_count, sent_count.load(std::memory_order_acquire));
+    EXPECT_LT(std::chrono::duration_cast<std::chrono::milliseconds>(send_signal_elapsed).count(), 1000);
+#if defined(PLATFORM_LINUX)
+    expect_detail(send_detail, CPLAT_ERROR_DOMAIN_SOCKET_ERRNO, CPLAT_ERR_CANCELED, (unsigned long)ECANCELED);
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_sys_socket_));
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_poll_));
+#else
+    expect_detail(send_detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_CANCELED, (unsigned long)WSA_E_CANCELLED);
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_winsock_));
+    EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)kSocket, (WSAEVENT)nullptr, 0)).WillOnce(Return(0));
+    cplat_socket_watch_detach(send_watch);
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_winsock_));
+#endif
+
+    cplat_socket_wait_cancel_dispose(cancel);
+    cplat_socket_watch_detach(accepted_watch);
+    cplat_socket_watch_detach(client_watch);
+#if defined(PLATFORM_WINDOWS)
+    EXPECT_EQ(0, ::closesocket((SOCKET)accepted));
+    EXPECT_EQ(0, ::closesocket((SOCKET)client));
+    EXPECT_EQ(0, ::closesocket((SOCKET)listener));
+#else
+    EXPECT_EQ(0, ::close((int)accepted));
+    EXPECT_EQ(0, ::close((int)client));
+    EXPECT_EQ(0, ::close((int)listener));
+#endif
+// [確認_正常系] - 解除された全量受信と送信が、受けた量と送った量を保ち、受信は続きから再開できること。
+}
+
+#if defined(PLATFORM_LINUX)
+// eventfd の生成失敗が出力を無効のままにして返ることの確認
+TEST_F(socketTest, watch_cancel_reports_eventfd_creation_failure)
+{
+    // Arrange
+    cplat_socket_wait_cancel *cancel = (cplat_socket_wait_cancel *)1;
+    cplat_error detail = {};
+
+    // Pre-Assert
+    EXPECT_CALL(mock_eventfd_, eventfd(_, _, _, 0U, EFD_NONBLOCK | EFD_CLOEXEC))
+        .WillOnce(DoAll(Assign(&errno, EMFILE), Return(-1)));
+    // [Pre-Assert確認_異常系] - eventfd() が指定された flags で呼び出され、EMFILE を設定して失敗すること。
+
+    // Act
+    const int actual_ret = cplat_socket_wait_cancel_create(&cancel, &detail);
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, actual_ret);
+    EXPECT_EQ(nullptr, cancel);
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_SOCKET_ERRNO, CPLAT_ERR_UNKNOWN, (unsigned long)EMFILE);
+// [確認_異常系] - eventfd() の生成失敗で cancel_out が NULL、結果が CPLAT_ERR_UNKNOWN になること。
+}
+
+// eventfd への通知失敗後も原子的な通知状態で待機を解除することの確認
+TEST_F(socketTest, watch_cancel_signal_failure_is_detected_by_finite_poll)
+{
+    // Arrange
+    const cplat_socket sock = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, 0);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, sock);
+    cplat_socket_watch *watch = nullptr;
+    cplat_socket_wait_cancel *cancel = nullptr;
+    cplat_error detail = {};
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(sock, &watch, &detail));
+    ASSERT_EQ(CPLAT_OK, cplat_socket_wait_cancel_create(&cancel, &detail));
+    cplat_socket_watch *watches[] = {watch};
+    std::atomic<int> wait_result{CPLAT_ERR_UNKNOWN};
+    std::atomic<bool> wait_started{false};
+
+    // Pre-Assert
+    EXPECT_CALL(mock_unistd_, write(_, _, _, _, _, sizeof(uint64_t)))
+        .WillOnce(DoAll(Assign(&errno, EAGAIN), Return((ssize_t)-1)))
+        .WillOnce(DoAll(Assign(&errno, EINTR), Return((ssize_t)-1)))
+        .WillOnce(DoAll(Assign(&errno, EIO), Return((ssize_t)-1)));
+    // [Pre-Assert確認_異常系] - eventfd への write() が EAGAIN、EINTR、EIO で失敗すること。
+
+    // Act
+    std::thread waiter([&]() {
+        unsigned char ready[] = {1U};
+        wait_started.store(true, std::memory_order_release);
+        wait_result.store(cplat_socket_watch_wait_readable_multi(watches, 1U, cancel, CPLAT_WAIT_FOREVER, ready,
+                                                                 nullptr),
+                          std::memory_order_release);
+    });
+    while (!wait_started.load(std::memory_order_acquire))
+    {
+        std::this_thread::yield();
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(40));
+    const int signal_result_eagain = cplat_socket_wait_cancel_signal(cancel, &detail);
+    const int signal_result_eintr = cplat_socket_wait_cancel_signal(cancel, &detail);
+    const int signal_result_eio = cplat_socket_wait_cancel_signal(cancel, &detail);
+    waiter.join();
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, signal_result_eagain);
+    EXPECT_EQ(CPLAT_OK, signal_result_eintr);
+    EXPECT_EQ(CPLAT_OK, signal_result_eio);
+    EXPECT_EQ(CPLAT_ERR_CANCELED, wait_result.load(std::memory_order_acquire));
+    EXPECT_EQ(CPLAT_OK, cplat_socket_wait_cancel_reset(cancel, &detail));
+    cplat_socket_wait_cancel_dispose(cancel);
+    cplat_socket_watch_detach(watch);
+    EXPECT_EQ(0, ::close((int)sock));
+// [確認_正常系] - write() の失敗時も、50 ms の状態確認で無期限待機が解除されること。
+}
+
+// fcntl による既存モードの取得または非ブロッキング化が失敗した場合に登録を返さないことの確認
+TEST_F(socketTest, watch_attach_reports_fcntl_failures)
+{
+    // Arrange
+    cplat_socket_watch *watch = (cplat_socket_watch *)1;
+    cplat_error detail = {};
+
+    // Pre-Assert: F_GETFL の失敗
+    EXPECT_CALL(mock_fcntl_, fcntl(_, _, _, (int)kSocket, F_GETFL, 0))
+        .WillOnce(DoAll(Assign(&errno, EIO), Return(-1)));
+    // [Pre-Assert確認_異常系] - F_GETFL が EIO を設定して失敗すること。
+    EXPECT_CALL(mock_fcntl_, fcntl(_, _, _, (int)kSocket, F_SETFL, _)).Times(0);
+    // [Pre-Assert確認_異常系] - F_GETFL の失敗後に F_SETFL を呼び出さないこと。
+
+    // Act
+    const int get_flags_result = cplat_socket_watch_attach(kSocket, &watch, &detail);
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, get_flags_result);
+    EXPECT_EQ(nullptr, watch);
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_SOCKET_ERRNO, CPLAT_ERR_UNKNOWN, (unsigned long)EIO);
+
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_fcntl_));
+    watch = (cplat_socket_watch *)1;
+    detail = {};
+    EXPECT_CALL(mock_fcntl_, fcntl(_, _, _, (int)kSocket, F_GETFL, 0)).WillOnce(Return(O_RDONLY));
+    EXPECT_CALL(mock_fcntl_, fcntl(_, _, _, (int)kSocket, F_SETFL, O_RDONLY | O_NONBLOCK))
+        .WillOnce(DoAll(Assign(&errno, EACCES), Return(-1)));
+
+    const int set_flags_result = cplat_socket_watch_attach(kSocket, &watch, &detail);
+    EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED, set_flags_result);
+    EXPECT_EQ(nullptr, watch);
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_SOCKET_ERRNO, CPLAT_ERR_PERMISSION_DENIED, (unsigned long)EACCES);
+// [確認_異常系] - F_GETFL または F_SETFL の失敗で登録を返さず、OS エラーを保持すること。
+}
+#endif /* PLATFORM_LINUX */
+
+#if defined(PLATFORM_WINDOWS)
+// 待機の解除オブジェクトのイベント生成失敗が返ることの確認
+TEST_F(socketTest, watch_cancel_reports_event_creation_failure)
+{
+    // Arrange
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started());
+    cplat_socket_wait_cancel *cancel = (cplat_socket_wait_cancel *)1;
+    cplat_error detail = {};
+
+    // Pre-Assert
+    EXPECT_CALL(mock_winsock_, WSACreateEvent(_, _, _)).WillOnce(Return(WSA_INVALID_EVENT));
+    EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAENOBUFS));
+    // [Pre-Assert確認_異常系] - WSACreateEvent() が失敗し、WSAGetLastError() が WSAENOBUFS を返すこと。
+
+    // Act
+    const int actual_ret = cplat_socket_wait_cancel_create(&cancel, &detail);
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY, actual_ret);
+    EXPECT_EQ(nullptr, cancel);
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_OUT_OF_MEMORY, (unsigned long)WSAENOBUFS);
+// [確認_異常系] - イベント生成失敗で cancel_out が NULL、結果と詳細に WSAENOBUFS が記録されること。
+}
+
+// WSASetEvent の失敗後も原子的な通知状態で待機を解除することの確認
+TEST_F(socketTest, watch_cancel_signal_failure_is_detected_by_finite_wait)
+{
+    // Arrange
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started());
+    const cplat_socket sock = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)sock);
+    cplat_socket_watch *watch = nullptr;
+    cplat_socket_wait_cancel *cancel = nullptr;
+    cplat_error detail = {};
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(sock, &watch, &detail));
+    ASSERT_EQ(CPLAT_OK, cplat_socket_wait_cancel_create(&cancel, &detail));
+    cplat_socket_watch *watches[] = {watch};
+    std::atomic<int> wait_result{CPLAT_ERR_UNKNOWN};
+    std::atomic<bool> wait_started{false};
+
+    // Pre-Assert
+    EXPECT_CALL(mock_winsock_, WSASetEvent(_, _, _, _)).WillOnce(Return(FALSE));
+    EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAEINVAL));
+    // [Pre-Assert確認_異常系] - WSASetEvent() が失敗し、WSAGetLastError() が WSAEINVAL を返すこと。
+
+    // Act
+    std::thread waiter([&]() {
+        unsigned char ready[] = {1U};
+        wait_started.store(true, std::memory_order_release);
+        wait_result.store(cplat_socket_watch_wait_readable_multi(watches, 1U, cancel, CPLAT_WAIT_FOREVER, ready,
+                                                                 nullptr),
+                          std::memory_order_release);
+    });
+    while (!wait_started.load(std::memory_order_acquire))
+    {
+        std::this_thread::yield();
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(40));
+    const int signal_result = cplat_socket_wait_cancel_signal(cancel, &detail);
+    waiter.join();
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, signal_result);
+    EXPECT_EQ(CPLAT_ERR_CANCELED, wait_result.load(std::memory_order_acquire));
+    EXPECT_EQ(CPLAT_OK, cplat_socket_wait_cancel_reset(cancel, &detail));
+    cplat_socket_wait_cancel_dispose(cancel);
+    cplat_socket_watch_detach(watch);
+    EXPECT_EQ(0, ::closesocket((SOCKET)sock));
+// [確認_正常系] - WSASetEvent() の失敗時も有限の状態確認で無期限待機が解除されること。
+}
+
+// watch 登録の各イベント生成段階で失敗すると準備済みのイベントを回収することの確認
+TEST_F(socketTest, watch_attach_cleans_up_each_event_creation_failure)
+{
+    // Arrange
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started());
+    const cplat_socket sock = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)sock);
+
+    // Act / Assert
+    for (int failed_stage = 1; failed_stage <= 3; ++failed_stage)
+    {
+        ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_winsock_));
+        cplat_socket_watch *watch = (cplat_socket_watch *)1;
+        cplat_error detail = {};
+        int create_calls = 0;
+        EXPECT_CALL(mock_winsock_, WSACreateEvent(_, _, _))
+            .Times(failed_stage)
+            .WillRepeatedly([&](const char *file, const int line, const char *func) {
+                ++create_calls;
+                if (create_calls == failed_stage)
+                {
+                    return (WSAEVENT)WSA_INVALID_EVENT;
+                }
+                return delegate_real_WSACreateEvent(file, line, func);
+            });
+        EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAENOBUFS));
+        if (failed_stage > 1)
+        {
+            EXPECT_CALL(mock_winsock_, WSACloseEvent(_, _, _, _))
+                .Times(failed_stage - 1)
+                .WillRepeatedly([](const char *file, const int line, const char *func, WSAEVENT event) {
+                    return delegate_real_WSACloseEvent(file, line, func, event);
+                });
+        }
+        EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)sock, _, _)).Times(0);
+
+        const int actual_ret = cplat_socket_watch_attach(sock, &watch, &detail);
+        EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY, actual_ret);
+        EXPECT_EQ(nullptr, watch);
+        EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY, detail.result);
+        EXPECT_EQ((unsigned long)WSAENOBUFS, detail.code);
+        EXPECT_EQ(failed_stage, create_calls);
+    }
+
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_winsock_));
+    cplat_socket_watch *watch = (cplat_socket_watch *)1;
+    cplat_error detail = {};
+    EXPECT_CALL(mock_winsock_, WSACreateEvent(_, _, _))
+        .Times(3)
+        .WillRepeatedly([](const char *file, const int line, const char *func) {
+            return delegate_real_WSACreateEvent(file, line, func);
+        });
+    EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)sock, _,
+                                               FD_READ | FD_ACCEPT | FD_CLOSE | FD_WRITE | FD_CONNECT))
+        .WillOnce(Return(SOCKET_ERROR));
+    EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAEINVAL));
+    EXPECT_CALL(mock_winsock_, WSACloseEvent(_, _, _, _))
+        .Times(3)
+        .WillRepeatedly([](const char *file, const int line, const char *func, WSAEVENT event) {
+            return delegate_real_WSACloseEvent(file, line, func, event);
+        });
+    const int registration_result = cplat_socket_watch_attach(sock, &watch, &detail);
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, registration_result);
+    EXPECT_EQ(nullptr, watch);
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, detail.result);
+    EXPECT_EQ((unsigned long)WSAEINVAL, detail.code);
+
+    EXPECT_EQ(0, ::closesocket((SOCKET)sock));
+// [確認_異常系] - E_s、E_r、E_w の各生成失敗で未公開イベントをすべて解放し、ソケット登録を行わないこと。
+}
+
+// 待機 API の失敗と WSAEnumNetworkEvents() の失敗が両方向へ保持されることの確認
+TEST_F(socketTest, watch_wait_propagates_wait_and_enumeration_failures)
+{
+    // Arrange
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started());
+    cplat_socket_watch *watch = nullptr;
+    cplat_error detail = {};
+    EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)kSocket, _, _)).WillOnce(Return(0));
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(kSocket, &watch, &detail));
+    cplat_socket_watch *watches[] = {watch};
+    unsigned char ready[] = {1U};
+
+    // Pre-Assert: WSAWaitForMultipleEvents() の失敗
+    EXPECT_CALL(mock_winsock_, WSAWaitForMultipleEvents(_, _, _, 1U, _, FALSE, 0U, FALSE))
+        .WillOnce(Return(WSA_WAIT_FAILED));
+    EXPECT_CALL(mock_winsock_, WSAGetLastError(_, _, _)).WillOnce(Return(WSAENETDOWN));
+
+    // Act
+    const int wait_failure = cplat_socket_watch_wait_readable_multi(watches, 1U, nullptr, 1000, ready, &detail);
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, wait_failure);
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_UNKNOWN, (unsigned long)WSAENETDOWN);
+
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_winsock_));
+    detail = {};
+
+    // Pre-Assert: 列挙失敗を保存し、後続の送信待機では再列挙しない。
+    EXPECT_CALL(mock_winsock_, WSAWaitForMultipleEvents(_, _, _, 1U, _, FALSE, 0U, FALSE))
+        .Times(2)
+        .WillOnce(Return(WSA_WAIT_EVENT_0))
+        .WillOnce(Return(WSA_WAIT_TIMEOUT));
+    EXPECT_CALL(mock_winsock_, WSAEnumNetworkEvents(_, _, _, (SOCKET)kSocket, _, _)).WillOnce(Return(SOCKET_ERROR));
+    EXPECT_CALL(mock_winsock_, WSAGetLastError(_, _, _)).WillOnce(Return(WSAENETDOWN));
+    EXPECT_CALL(mock_winsock_, WSASetEvent(_, _, _, _)).Times(2).WillRepeatedly(Return(TRUE));
+
+    // Act / Assert: 受信側に保存した列挙エラーを返します。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              cplat_socket_watch_wait_readable_multi(watches, 1U, nullptr, 1000, ready, &detail));
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_UNKNOWN, (unsigned long)WSAENETDOWN);
+
+    // Act / Assert: 送信側も同じエラーを受け、列挙を繰り返しません。
+    detail = {};
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, cplat_socket_watch_wait_writable(watch, nullptr, 1000, &detail));
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_UNKNOWN, (unsigned long)WSAENETDOWN);
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_winsock_));
+
+    EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)kSocket, (WSAEVENT)nullptr, 0)).WillOnce(Return(0));
+    cplat_socket_watch_detach(watch);
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_winsock_));
+// [確認_異常系] - 待機失敗を返し、列挙失敗を一度だけ保存して受信と送信の両方へ伝えること。
+}
+
+// FD_WRITE だけの通知で受信待機が起床しないことの確認
+TEST_F(socketTest, watch_read_wait_ignores_write_only_notification)
+{
+    // Arrange
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started());
+    const WSAEVENT shared_event = reinterpret_cast<WSAEVENT>(static_cast<uintptr_t>(0x101U));
+    const WSAEVENT read_event = reinterpret_cast<WSAEVENT>(static_cast<uintptr_t>(0x102U));
+    const WSAEVENT write_event = reinterpret_cast<WSAEVENT>(static_cast<uintptr_t>(0x103U));
+    int zero_timeout_calls = 0;
+    cplat_socket_watch *watch = nullptr;
+    cplat_error detail = {};
+    EXPECT_CALL(mock_winsock_, WSACreateEvent(_, _, _))
+        .Times(3)
+        .WillOnce(Return(shared_event))
+        .WillOnce(Return(read_event))
+        .WillOnce(Return(write_event));
+    EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)kSocket, shared_event, _)).WillOnce(Return(0));
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(kSocket, &watch, &detail));
+
+    // Pre-Assert
+    EXPECT_CALL(mock_winsock_, WSAWaitForMultipleEvents(_, _, _, _, _, FALSE, _, FALSE))
+        .Times(AnyNumber())
+        .WillRepeatedly([&](const char *, const int, const char *, const DWORD count, const WSAEVENT *events,
+                            const BOOL wait_all, const DWORD timeout_ms, const BOOL alertable) -> DWORD {
+            EXPECT_EQ(FALSE, wait_all);
+            EXPECT_EQ(FALSE, alertable);
+            if (count == 1U)
+            {
+                EXPECT_EQ(shared_event, events[0]);
+                EXPECT_EQ(0U, timeout_ms);
+                ++zero_timeout_calls;
+                if (zero_timeout_calls == 1)
+                {
+                    return WSA_WAIT_EVENT_0;
+                }
+                return WSA_WAIT_TIMEOUT;
+            }
+            EXPECT_EQ(2U, count);
+            EXPECT_GT(timeout_ms, 0U);
+            EXPECT_EQ(read_event, events[0]);
+            EXPECT_EQ(shared_event, events[1]);
+            EXPECT_NE(write_event, events[0]);
+            EXPECT_NE(write_event, events[1]);
+            std::this_thread::sleep_for(std::chrono::milliseconds(timeout_ms));
+            return WSA_WAIT_TIMEOUT;
+        });
+    EXPECT_CALL(mock_winsock_, WSAEnumNetworkEvents(_, _, _, (SOCKET)kSocket, shared_event, _))
+        .WillOnce([](const char *, const int, const char *, SOCKET, WSAEVENT, LPWSANETWORKEVENTS events) {
+            events->lNetworkEvents = FD_WRITE;
+            return 0;
+        });
+    EXPECT_CALL(mock_winsock_, WSASetEvent(_, _, _, write_event)).WillOnce(Return(TRUE));
+    EXPECT_CALL(mock_winsock_, WSAResetEvent(_, _, _, read_event))
+        .Times(testing::AtLeast(1))
+        .WillRepeatedly(Return(TRUE));
+
+    // Act
+    cplat_socket_watch *watches[] = {watch};
+    unsigned char ready[] = {1U};
+    const auto started = std::chrono::steady_clock::now();
+    const int actual_ret = cplat_socket_watch_wait_readable_multi(watches, 1U, nullptr, 80, ready, &detail);
+    const auto elapsed = std::chrono::steady_clock::now() - started;
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_TIMEOUT, actual_ret);
+    EXPECT_EQ(0U, ready[0]);
+    EXPECT_GT(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count(), 0);
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_winsock_));
+
+    EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)kSocket, (WSAEVENT)nullptr, 0)).WillOnce(Return(0));
+    EXPECT_CALL(mock_winsock_, WSACloseEvent(_, _, _, _)).Times(3).WillRepeatedly(Return(TRUE));
+    cplat_socket_watch_detach(watch);
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_winsock_));
+// [確認_正常系] - FD_WRITE だけが通知された場合に受信の待機イベントを待ち続け、期限で戻ること。
+}
+
+// 最大登録数の受信待機と方向別待機が上限内のイベント数を使うことの確認
+TEST_F(socketTest, watch_wait_uses_bounded_event_arrays)
+{
+    // Arrange
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started());
+    cplat_socket_watch *watches[CPLAT_SOCKET_WATCH_WAIT_MAX] = {};
+    unsigned char ready[CPLAT_SOCKET_WATCH_WAIT_MAX] = {};
+    cplat_socket_wait_cancel *cancel = nullptr;
+    cplat_error detail = {};
+    uintptr_t next_event_id = 0x1000U;
+    int cancel_read_count = 0;
+    int no_cancel_read_count = 0;
+    int writable_cancel_count = 0;
+
+    EXPECT_CALL(mock_winsock_, WSACreateEvent(_, _, _))
+        .Times(3 * CPLAT_SOCKET_WATCH_WAIT_MAX + 1)
+        .WillRepeatedly([&](const char *, const int, const char *) {
+            return reinterpret_cast<WSAEVENT>(next_event_id++);
+        });
+    EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, _, _, _))
+        .Times(2 * CPLAT_SOCKET_WATCH_WAIT_MAX)
+        .WillRepeatedly(Return(0));
+    EXPECT_CALL(mock_winsock_, WSAResetEvent(_, _, _, _)).Times(AnyNumber()).WillRepeatedly(Return(TRUE));
+    EXPECT_CALL(mock_winsock_, WSACloseEvent(_, _, _, _))
+        .Times(3 * CPLAT_SOCKET_WATCH_WAIT_MAX + 1)
+        .WillRepeatedly(Return(TRUE));
+    EXPECT_CALL(mock_winsock_, WSAWaitForMultipleEvents(_, _, _, _, _, FALSE, _, FALSE))
+        .Times(AnyNumber())
+        .WillRepeatedly([&](const char *, const int, const char *, const DWORD count, const WSAEVENT *, const BOOL,
+                            const DWORD timeout_ms, const BOOL) -> DWORD {
+            if (count == 1U)
+            {
+                return WSA_WAIT_TIMEOUT;
+            }
+            if (count == 2U * CPLAT_SOCKET_WATCH_WAIT_MAX + 1U)
+            {
+                ++cancel_read_count;
+            }
+            else if (count == 2U * CPLAT_SOCKET_WATCH_WAIT_MAX)
+            {
+                ++no_cancel_read_count;
+            }
+            else if (count == 3U)
+            {
+                ++writable_cancel_count;
+            }
+            else
+            {
+                ADD_FAILURE() << "unexpected WSAWaitForMultipleEvents count=" << count;
+                return WSA_WAIT_FAILED;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(timeout_ms));
+            return WSA_WAIT_TIMEOUT;
+        });
+    EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)0x400U, _, 1, 0)).WillOnce(Return(SOCKET_ERROR));
+    EXPECT_CALL(mock_winsock_, WSAGetLastError(_, _, _)).WillOnce(Return(WSAEWOULDBLOCK));
+    const char send_buffer[] = "x";
+
+    for (size_t index = 0U; index < CPLAT_SOCKET_WATCH_WAIT_MAX; ++index)
+    {
+        const cplat_socket sock = (cplat_socket)(0x400U + index);
+        ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(sock, &watches[index], &detail));
+    }
+    ASSERT_EQ(CPLAT_OK, cplat_socket_wait_cancel_create(&cancel, &detail));
+    size_t sent = 0U;
+    ASSERT_EQ(CPLAT_ERR_WOULD_BLOCK, cplat_socket_watch_send(watches[0], send_buffer, 1U, &sent, &detail));
+    EXPECT_EQ(0U, sent);
+
+    // Act
+    const int read_with_cancel = cplat_socket_watch_wait_readable_multi(
+        watches, CPLAT_SOCKET_WATCH_WAIT_MAX, cancel, 60, ready, &detail);
+    const int read_without_cancel = cplat_socket_watch_wait_readable_multi(
+        watches, CPLAT_SOCKET_WATCH_WAIT_MAX, nullptr, 60, ready, &detail);
+    const int write_with_cancel = cplat_socket_watch_wait_writable(watches[0], cancel, 60, &detail);
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_TIMEOUT, read_with_cancel);
+    EXPECT_EQ(CPLAT_ERR_TIMEOUT, read_without_cancel);
+    EXPECT_EQ(CPLAT_ERR_TIMEOUT, write_with_cancel);
+    EXPECT_GT(cancel_read_count, 0);
+    EXPECT_GT(no_cancel_read_count, 0);
+    EXPECT_GT(writable_cancel_count, 0);
+
+    cplat_socket_wait_cancel_dispose(cancel);
+    for (size_t index = 0U; index < CPLAT_SOCKET_WATCH_WAIT_MAX; ++index)
+    {
+        cplat_socket_watch_detach(watches[index]);
+    }
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_winsock_));
+// [確認_正常系] - 受信待機の対象数が解除ありで 33、解除なしで 32、送信待機の解除ありで 3 となること。
+}
+#endif /* PLATFORM_WINDOWS */
+
+// 登録済み UDP ソケットの送信待ちを結果コードで区別することの確認
+TEST_F(socketTest, watch_sendto_returns_would_block)
+{
+    // Arrange
+    cplat_socket_watch *watch = nullptr;
+    cplat_error detail = {};
+    const char payload[] = "x";
+    size_t sent = 1U;
+
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_fcntl_, fcntl(_, _, _, (int)kSocket, F_GETFL, (intptr_t)0)).WillOnce(Return(0));
+    EXPECT_CALL(mock_fcntl_, fcntl(_, _, _, (int)kSocket, F_SETFL, (intptr_t)O_NONBLOCK)).WillOnce(Return(0));
+    EXPECT_CALL(mock_sys_socket_, sendto(_, _, _, (int)kSocket, _, 1U, MSG_NOSIGNAL, _, _))
+        .WillOnce(DoAll(Assign(&errno, EAGAIN), Return((ssize_t)-1)));
+#elif defined(PLATFORM_WINDOWS)
+    uintptr_t next_event_id = 0x2000U;
+    EXPECT_CALL(mock_winsock_, WSACreateEvent(_, _, _))
+        .Times(3)
+        .WillRepeatedly([&](const char *, const int, const char *) {
+            return reinterpret_cast<WSAEVENT>(next_event_id++);
+        });
+    EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)kSocket, _, _)).WillOnce(Return(0));
+    EXPECT_CALL(mock_winsock_, sendto(_, _, _, (SOCKET)kSocket, _, 1, 0, _, _)).WillOnce(Return(SOCKET_ERROR));
+    EXPECT_CALL(mock_winsock_, WSAGetLastError(_, _, _)).WillOnce(Return(WSAEWOULDBLOCK));
+    EXPECT_CALL(mock_winsock_, WSAResetEvent(_, _, _, _)).WillOnce(Return(TRUE));
+#endif /* PLATFORM_ */
+
+    // Act
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(kSocket, &watch, &detail));
+    const int result = cplat_socket_watch_sendto(watch, payload, 1U, &kEndpoint, &sent, &detail);
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_WOULD_BLOCK, result);
+    EXPECT_EQ(0U, sent);
+    EXPECT_EQ(CPLAT_CAUSE_WOULD_BLOCK, cplat_error_get_cause(&detail));
+#if defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)kSocket, (WSAEVENT)nullptr, 0)).WillOnce(Return(0));
+    EXPECT_CALL(mock_winsock_, WSACloseEvent(_, _, _, _)).Times(3).WillRepeatedly(Return(TRUE));
+#endif /* PLATFORM_WINDOWS */
+    cplat_socket_watch_detach(watch);
+#if defined(PLATFORM_LINUX)
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_fcntl_));
+#endif /* PLATFORM_LINUX */
+    ASSERT_TRUE(verifyExpectations());
+// [確認_正常系] - 送信キュー満杯の OS エラーが CPLAT_ERR_WOULD_BLOCK と要因 CPLAT_CAUSE_WOULD_BLOCK になること。
+}
+
+// 受け付けたソケットがブロッキングかつ未登録であることの確認
+TEST_F(socketTest, accept_from_watched_listener_returns_blocking_unregistered_socket)
+{
+    // Arrange
+#if defined(PLATFORM_WINDOWS)
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started());
+    const cplat_socket listener = (cplat_socket)::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    const cplat_socket client = (cplat_socket)::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)listener);
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)client);
+#else
+    const cplat_socket listener = (cplat_socket)::socket(AF_INET, SOCK_STREAM, 0);
+    const cplat_socket client = (cplat_socket)::socket(AF_INET, SOCK_STREAM, 0);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, listener);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, client);
+#endif
+    sockaddr_in address = {};
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    address.sin_port = 0;
+#if defined(PLATFORM_WINDOWS)
+    ASSERT_EQ(0, ::bind((SOCKET)listener, (const sockaddr *)&address, (int)sizeof(address)));
+#else
+    ASSERT_EQ(0, ::bind((int)listener, (const sockaddr *)&address, (socklen_t)sizeof(address)));
+#endif
+#if defined(PLATFORM_WINDOWS)
+    ASSERT_EQ(0, ::listen((SOCKET)listener, 1));
+#else
+    ASSERT_EQ(0, ::listen((int)listener, 1));
+#endif
+#if defined(PLATFORM_WINDOWS)
+    int address_len = (int)sizeof(address);
+    ASSERT_EQ(0, ::getsockname((SOCKET)listener, (sockaddr *)&address, &address_len));
+#else
+    socklen_t address_len = (socklen_t)sizeof(address);
+    ASSERT_EQ(0, ::getsockname((int)listener, (sockaddr *)&address, &address_len));
+#endif
+    cplat_socket_watch *listener_watch = nullptr;
+    cplat_socket_watch *accepted_watch = nullptr;
+    cplat_error detail = {};
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(listener, &listener_watch, &detail));
+    cplat_socket no_connection = (cplat_socket)7;
+    const int no_connection_result = cplat_socket_accept(listener, nullptr, &no_connection, &detail);
+    EXPECT_EQ(CPLAT_ERR_WOULD_BLOCK, no_connection_result);
+    EXPECT_EQ(CPLAT_INVALID_SOCKET, no_connection);
+    EXPECT_EQ(CPLAT_CAUSE_WOULD_BLOCK, cplat_error_get_cause(&detail));
+#if defined(PLATFORM_WINDOWS)
+    ASSERT_EQ(0, ::connect((SOCKET)client, (const sockaddr *)&address, (int)sizeof(address)));
+#else
+    ASSERT_EQ(0, ::connect((int)client, (const sockaddr *)&address, (socklen_t)sizeof(address)));
+#endif
+    cplat_socket_watch *watches[] = {listener_watch};
+    unsigned char ready[] = {0U};
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_wait_readable_multi(watches, 1U, nullptr, 1000, ready, &detail));
+    ASSERT_EQ(1U, ready[0]);
+
+#if defined(PLATFORM_WINDOWS)
+    {
+        testing::InSequence accept_normalization_sequence;
+        EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, _, (WSAEVENT)nullptr, 0))
+            .WillOnce([](const char *file, const int line, const char *func, SOCKET accepted, WSAEVENT event,
+                         const long network_events) {
+                EXPECT_EQ(nullptr, event);
+                EXPECT_EQ(0L, network_events);
+                return delegate_real_WSAEventSelect(file, line, func, accepted, event, network_events);
+            });
+        EXPECT_CALL(mock_winsock_, ioctlsocket(_, _, _, _, FIONBIO, _))
+            .WillOnce([](const char *file, const int line, const char *func, SOCKET accepted, const long command,
+                         u_long *nonblocking) {
+                EXPECT_EQ(FIONBIO, command);
+                EXPECT_NE(nullptr, nonblocking);
+                if (nonblocking == nullptr)
+                {
+                    return SOCKET_ERROR;
+                }
+                EXPECT_EQ(0UL, *nonblocking);
+                return delegate_real_ioctlsocket(file, line, func, accepted, command, nonblocking);
+            });
+    }
+#endif
+
+    // Act: 受け付けに成功し、受信データが来るまで cplat_socket_recv() が戻らないことを確認します。
+    cplat_socket accepted = CPLAT_INVALID_SOCKET;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_accept(listener, nullptr, &accepted, &detail));
+    ASSERT_NE(CPLAT_INVALID_SOCKET, accepted);
+#if defined(PLATFORM_WINDOWS)
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_winsock_));
+#endif
+#if defined(PLATFORM_LINUX)
+    const int accepted_flags = ::fcntl((int)accepted, F_GETFL);
+    ASSERT_GE(accepted_flags, 0);
+    EXPECT_EQ(0, accepted_flags & O_NONBLOCK);
+#endif
+    std::atomic<bool> receive_finished{false};
+    std::atomic<int> receive_result{CPLAT_ERR_UNKNOWN};
+    std::atomic<size_t> receive_count{0U};
+    char receive_buffer = 0;
+    std::thread receiver([&]() {
+        size_t count = 0U;
+        receive_result.store(cplat_socket_recv(accepted, &receive_buffer, sizeof(receive_buffer), &count, nullptr),
+                             std::memory_order_release);
+        receive_count.store(count, std::memory_order_release);
+        receive_finished.store(true, std::memory_order_release);
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(120));
+    EXPECT_FALSE(receive_finished.load(std::memory_order_acquire));
+    const char payload = 'W';
+    bool client_is_open = true;
+#if defined(PLATFORM_WINDOWS)
+    const int sent_count = ::send((SOCKET)client, &payload, 1, 0);
+#else
+    const ssize_t sent_count = ::send((int)client, &payload, 1, 0);
+#endif
+    if (sent_count != 1)
+    {
+        /* 送信失敗でも相手のソケットを閉じて、ブロッキング受信スレッドを戻します。 */
+#if defined(PLATFORM_WINDOWS)
+        (void)::closesocket((SOCKET)client);
+#else
+        (void)::close((int)client);
+#endif
+        client_is_open = false;
+    }
+    receiver.join();
+
+    // Assert
+    EXPECT_EQ(1, sent_count);
+    EXPECT_TRUE(receive_finished.load(std::memory_order_acquire));
+    EXPECT_EQ(CPLAT_OK, receive_result.load(std::memory_order_acquire));
+    EXPECT_EQ(1U, receive_count.load(std::memory_order_acquire));
+    EXPECT_EQ(payload, receive_buffer);
+    EXPECT_EQ(CPLAT_OK, cplat_socket_watch_attach(accepted, &accepted_watch, &detail));
+    cplat_socket_watch *client_watch = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(client, &client_watch, &detail));
+    const char frame[] = "frame";
+    char received_frame[sizeof(frame) - 1U] = {};
+    size_t sent_frame_len = 0U;
+    size_t received_frame_len = 0U;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_send_all(client_watch, frame, sizeof(frame) - 1U, nullptr, 1000,
+                                                   &sent_frame_len, &detail));
+    EXPECT_EQ(sizeof(frame) - 1U, sent_frame_len);
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_recv_all(accepted_watch, received_frame, sizeof(received_frame), nullptr,
+                                                   1000, &received_frame_len, &detail));
+    EXPECT_EQ(sizeof(received_frame), received_frame_len);
+    EXPECT_EQ(0, std::memcmp(frame, received_frame, sizeof(received_frame)));
+    cplat_socket_watch_detach(client_watch);
+    cplat_socket_watch_detach(accepted_watch);
+    cplat_socket_watch_detach(listener_watch);
+#if defined(PLATFORM_WINDOWS)
+    EXPECT_EQ(0, ::closesocket((SOCKET)accepted));
+    if (client_is_open)
+    {
+        EXPECT_EQ(0, ::closesocket((SOCKET)client));
+    }
+    EXPECT_EQ(0, ::closesocket((SOCKET)listener));
+#else
+    EXPECT_EQ(0, ::close((int)accepted));
+    if (client_is_open)
+    {
+        EXPECT_EQ(0, ::close((int)client));
+    }
+    EXPECT_EQ(0, ::close((int)listener));
+#endif
+// [確認_正常系] - listener の watch 登録中に受け付けたソケットがブロッキングで、別の watch に登録できること。
+}
+
+#if defined(PLATFORM_WINDOWS)
+// 受け付けたソケットの正規化失敗時に破棄して失敗を返すことの確認
+TEST_F(socketTest, accept_closes_socket_when_normalization_fails)
+{
+    // Arrange
+    cplat_socket accepted = (cplat_socket)7;
+    cplat_error detail = {};
+
+    // Pre-Assert / Act: WSAEventSelect による登録解除が失敗した場合
+    {
+        testing::InSequence sequence;
+        EXPECT_CALL(mock_winsock_, accept(_, _, _, (SOCKET)kSocket, _, _)).WillOnce(Return((SOCKET)41));
+        EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)41, (WSAEVENT)nullptr, 0))
+            .WillOnce(Return(SOCKET_ERROR));
+        EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAEINVAL));
+        EXPECT_CALL(mock_winsock_, closesocket(_, _, _, (SOCKET)41)).WillOnce(Return(0));
+    }
+    const int event_select_result = cplat_socket_accept(kSocket, nullptr, &accepted, &detail);
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT, event_select_result);
+    EXPECT_EQ(CPLAT_INVALID_SOCKET, accepted);
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_INVALID_ARGUMENT, (unsigned long)WSAEINVAL);
+
+    // Pre-Assert / Act: FIONBIO によるブロッキング化が失敗した場合
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_winsock_));
+    accepted = (cplat_socket)7;
+    {
+        testing::InSequence sequence;
+        EXPECT_CALL(mock_winsock_, accept(_, _, _, (SOCKET)kSocket, _, _)).WillOnce(Return((SOCKET)42));
+        EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)42, (WSAEVENT)nullptr, 0))
+            .WillOnce(Return(0));
+        EXPECT_CALL(mock_winsock_, ioctlsocket(_, _, _, (SOCKET)42, FIONBIO, _))
+            .WillOnce([](const char *, const int, const char *, SOCKET, const long command, u_long *nonblocking) {
+                EXPECT_EQ(FIONBIO, command);
+                EXPECT_NE(nullptr, nonblocking);
+                if (nonblocking == nullptr)
+                {
+                    return SOCKET_ERROR;
+                }
+                EXPECT_EQ(0UL, *nonblocking);
+                return SOCKET_ERROR;
+            });
+        EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAEACCES));
+        EXPECT_CALL(mock_winsock_, closesocket(_, _, _, (SOCKET)42)).WillOnce(Return(0));
+    }
+    const int ioctl_result = cplat_socket_accept(kSocket, nullptr, &accepted, &detail);
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED, ioctl_result);
+    EXPECT_EQ(CPLAT_INVALID_SOCKET, accepted);
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_PERMISSION_DENIED, (unsigned long)WSAEACCES);
+// [確認_異常系] - 登録解除またはブロッキング化の失敗で accepted を閉じ、出力を無効値にすること。
+}
+#endif /* PLATFORM_WINDOWS */
+
+// 登録済みのソケットで非ブロッキング接続の完了と拒否理由を取得することの確認
+TEST_F(socketTest, watch_connect_reports_success_and_connection_refused)
+{
+    // Arrange
+#if defined(PLATFORM_WINDOWS)
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started());
+    const cplat_socket listener = (cplat_socket)::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)listener);
+#else
+    const cplat_socket listener = (cplat_socket)::socket(AF_INET, SOCK_STREAM, 0);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, listener);
+#endif
+    sockaddr_in listening_address = {};
+    listening_address.sin_family = AF_INET;
+    listening_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    listening_address.sin_port = 0;
+#if defined(PLATFORM_WINDOWS)
+    ASSERT_EQ(0, ::bind((SOCKET)listener, (const sockaddr *)&listening_address, (int)sizeof(listening_address)));
+    ASSERT_EQ(0, ::listen((SOCKET)listener, 1));
+    int address_len = (int)sizeof(listening_address);
+    ASSERT_EQ(0, ::getsockname((SOCKET)listener, (sockaddr *)&listening_address, &address_len));
+#else
+    ASSERT_EQ(0, ::bind((int)listener, (const sockaddr *)&listening_address, (socklen_t)sizeof(listening_address)));
+    ASSERT_EQ(0, ::listen((int)listener, 1));
+    socklen_t address_len = (socklen_t)sizeof(listening_address);
+    ASSERT_EQ(0, ::getsockname((int)listener, (sockaddr *)&listening_address, &address_len));
+#endif
+    cplat_ipv4_endpoint listening_endpoint = {cplat_ipv4_addr_loopback(), listening_address.sin_port, 0U};
+#if defined(PLATFORM_WINDOWS)
+    const cplat_socket client = (cplat_socket)::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)client);
+#else
+    const cplat_socket client = (cplat_socket)::socket(AF_INET, SOCK_STREAM, 0);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, client);
+#endif
+    cplat_socket_watch *client_watch = nullptr;
+    cplat_error detail = {};
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(client, &client_watch, &detail));
+
+    // Act / Assert: 待ち受け中のローカル ポートへの非ブロッキング接続が成功します。
+    EXPECT_EQ(CPLAT_OK, cplat_socket_watch_connect(client_watch, &listening_endpoint, nullptr, 1000, &detail));
+#if defined(PLATFORM_WINDOWS)
+    const cplat_socket accepted = (cplat_socket)::accept((SOCKET)listener, nullptr, nullptr);
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)accepted);
+#else
+    const cplat_socket accepted = (cplat_socket)::accept((int)listener, nullptr, nullptr);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, accepted);
+#endif
+
+#if defined(PLATFORM_WINDOWS)
+    // Windows の接続拒否は、FD_CONNECT の OS エラーを mock で決定的に注入します。
+    cplat_socket_watch *refused_watch = nullptr;
+    EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)kSocket, _, _)).WillOnce(Return(0));
+    // [Pre-Assert確認_正常系] - WSAEventSelect() が kSocket を登録すること。
+    // [Pre-Assert手順] - WSAEventSelect() から 0 を返す。
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(kSocket, &refused_watch, &detail));
+
+    {
+        testing::InSequence sequence;
+        EXPECT_CALL(mock_winsock_, connect(_, _, _, (SOCKET)kSocket, _, _)).WillOnce(Return(SOCKET_ERROR));
+        // [Pre-Assert確認_異常系] - connect() が kSocket で失敗すること。
+        // [Pre-Assert手順] - connect() から SOCKET_ERROR を返す。
+        EXPECT_CALL(mock_winsock_, WSAGetLastError(_, _, _)).WillOnce(Return(WSAEWOULDBLOCK));
+        // [Pre-Assert確認_正常系] - WSAGetLastError() が 1 回呼び出されること。
+        // [Pre-Assert手順] - WSAGetLastError() から WSAEWOULDBLOCK を返す。
+        EXPECT_CALL(mock_winsock_, WSAWaitForMultipleEvents(_, _, _, 1U, _, FALSE, 0U, FALSE))
+            .WillOnce(Return(WSA_WAIT_EVENT_0));
+        // [Pre-Assert確認_正常系] - 接続イベント 1 件を 0 ms で待機すること。
+        // [Pre-Assert手順] - WSAWaitForMultipleEvents() から WSA_WAIT_EVENT_0 を返す。
+        EXPECT_CALL(mock_winsock_, WSAEnumNetworkEvents(_, _, _, (SOCKET)kSocket, _, _))
+            .WillOnce([](const char *, const int, const char *, SOCKET, WSAEVENT, LPWSANETWORKEVENTS events) {
+                events->lNetworkEvents = FD_CONNECT;
+                events->iErrorCode[FD_CONNECT_BIT] = WSAECONNREFUSED;
+                return 0;
+            });
+        // [Pre-Assert確認_正常系] - WSAEnumNetworkEvents() が FD_CONNECT と WSAECONNREFUSED を渡すこと。
+        // [Pre-Assert手順] - WSAEnumNetworkEvents() から FD_CONNECT と WSAECONNREFUSED を返す。
+    }
+
+    const int refused_result = cplat_socket_watch_connect(refused_watch, &kEndpoint, nullptr, 1000, &detail);
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, refused_result);
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_UNKNOWN, (unsigned long)WSAECONNREFUSED);
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_winsock_));
+
+    EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)kSocket, (WSAEVENT)nullptr, 0)).WillOnce(Return(0));
+    cplat_socket_watch_detach(refused_watch);
+    ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_winsock_));
+#else
+    // Linux は閉じたローカル ポートへの接続で拒否理由を実ソケットから取得します。
+    const cplat_socket reservation = (cplat_socket)::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, reservation);
+    sockaddr_in refused_address = {};
+    refused_address.sin_family = AF_INET;
+    refused_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    refused_address.sin_port = 0;
+    ASSERT_EQ(0, ::bind((int)reservation, (const sockaddr *)&refused_address, (socklen_t)sizeof(refused_address)));
+    address_len = (socklen_t)sizeof(refused_address);
+    ASSERT_EQ(0, ::getsockname((int)reservation, (sockaddr *)&refused_address, &address_len));
+    EXPECT_EQ(0, ::close((int)reservation));
+    const cplat_socket refused_client = (cplat_socket)::socket(AF_INET, SOCK_STREAM, 0);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, refused_client);
+    cplat_ipv4_endpoint refused_endpoint = {cplat_ipv4_addr_loopback(), refused_address.sin_port, 0U};
+    cplat_socket_watch *refused_watch = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(refused_client, &refused_watch, &detail));
+    const int refused_result = cplat_socket_watch_connect(refused_watch, &refused_endpoint, nullptr, 1000, &detail);
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, refused_result);
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_SOCKET_ERRNO, CPLAT_ERR_UNKNOWN, (unsigned long)ECONNREFUSED);
+
+    cplat_socket_watch_detach(refused_watch);
+#endif
+    cplat_socket_watch_detach(client_watch);
+#if defined(PLATFORM_WINDOWS)
+    EXPECT_EQ(0, ::closesocket((SOCKET)accepted));
+    EXPECT_EQ(0, ::closesocket((SOCKET)client));
+    EXPECT_EQ(0, ::closesocket((SOCKET)listener));
+#else
+    EXPECT_EQ(0, ::close((int)refused_client));
+    EXPECT_EQ(0, ::close((int)accepted));
+    EXPECT_EQ(0, ::close((int)client));
+    EXPECT_EQ(0, ::close((int)listener));
+#endif
+// [確認_正常系] - 登録ソケットの接続成功と拒否時の OS 詳細エラーを確認する。
+}
 
 // TCP_NODELAY の有効化、0 以外の 1 への正規化、無効化、detail_out の nullptr、引数不正、OS 失敗が処理されることの確認
 TEST_F(socketTest, socket_set_nodelay_reports_enable_disable_and_failure)

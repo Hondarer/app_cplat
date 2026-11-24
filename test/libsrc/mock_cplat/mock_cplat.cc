@@ -449,6 +449,8 @@ Mock_cplat::Mock_cplat()
     ON_CALL(*this, cplat_socket_set_nodelay(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_socket_set_nodelay));
     ON_CALL(*this, cplat_socket_set_multicast_interface(_, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_socket_set_multicast_interface));
+    ON_CALL(*this, cplat_socket_set_multicast_ttl(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_set_multicast_ttl));
     ON_CALL(*this, cplat_socket_join_multicast_group(_, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_socket_join_multicast_group));
     ON_CALL(*this, cplat_socket_leave_multicast_group(_, _, _, _))
@@ -471,6 +473,32 @@ Mock_cplat::Mock_cplat()
         .WillByDefault(Invoke(delegate_real_cplat_socket_wait_readable_multi));
     ON_CALL(*this, cplat_socket_timed_wait_readable_multi(_, _, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_socket_timed_wait_readable_multi));
+    ON_CALL(*this, cplat_socket_wait_cancel_create(_, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_wait_cancel_create));
+    ON_CALL(*this, cplat_socket_wait_cancel_signal(_, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_wait_cancel_signal));
+    ON_CALL(*this, cplat_socket_wait_cancel_reset(_, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_wait_cancel_reset));
+    ON_CALL(*this, cplat_socket_wait_cancel_dispose(_))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_wait_cancel_dispose));
+    ON_CALL(*this, cplat_socket_watch_attach(_, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_watch_attach));
+    ON_CALL(*this, cplat_socket_watch_detach(_))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_watch_detach));
+    ON_CALL(*this, cplat_socket_watch_wait_readable_multi(_, _, _, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_watch_wait_readable_multi));
+    ON_CALL(*this, cplat_socket_watch_wait_writable(_, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_watch_wait_writable));
+    ON_CALL(*this, cplat_socket_watch_send(_, _, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_watch_send));
+    ON_CALL(*this, cplat_socket_watch_sendto(_, _, _, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_watch_sendto));
+    ON_CALL(*this, cplat_socket_watch_send_all(_, _, _, _, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_watch_send_all));
+    ON_CALL(*this, cplat_socket_watch_recv_all(_, _, _, _, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_watch_recv_all));
+    ON_CALL(*this, cplat_socket_watch_connect(_, _, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_watch_connect));
     ON_CALL(*this, cplat_socket_shutdown_receive(_, _))
         .WillByDefault(Invoke(delegate_real_cplat_socket_shutdown_receive));
 

@@ -107,7 +107,7 @@ int cplat_internal_result_from_winsock_error(const unsigned long error_code)
     }
     else if (error_code == (unsigned long)WSAEWOULDBLOCK)
     {
-        result = CPLAT_ERR_BUSY;
+        result = CPLAT_ERR_WOULD_BLOCK;
     }
     else if (error_code == (unsigned long)WSAENOBUFS)
     {

@@ -376,17 +376,21 @@ IPv4 ソケットの生成、接続、送受信、待機は cplat のソケッ�
 | `setsockopt(SO_BROADCAST)` | `cplat_socket_set_broadcast(...)` |
 | `setsockopt(IPPROTO_TCP, TCP_NODELAY)` | `cplat_socket_set_nodelay(...)` |
 | `setsockopt(IP_MULTICAST_IF)` | `cplat_socket_set_multicast_interface(...)` |
+| `setsockopt(IP_MULTICAST_TTL)` | `cplat_socket_set_multicast_ttl(...)` (0〜255) |
 | `setsockopt(IP_ADD_MEMBERSHIP)` / `IP_DROP_MEMBERSHIP` | `cplat_socket_join_multicast_group(...)` / `cplat_socket_leave_multicast_group(...)` |
 | `send()` | `cplat_socket_send(...)` |
 | `recv()` | `cplat_socket_recv(...)` |
 | `sendto()` | `cplat_socket_sendto(...)` |
 | `recvfrom()` | `cplat_socket_recvfrom(...)` |
 | `poll()` (Linux) / `WSAPoll()` (Winsock) | `cplat_socket_wait_readable(...)` / `cplat_socket_wait_writable(...)` / `cplat_socket_wait_readable_multi(...)` / `cplat_socket_timed_wait_readable(...)` / `cplat_socket_timed_wait_writable(...)` / `cplat_socket_timed_wait_readable_multi(...)` |
+| 解除できる受信・送信待機 | `cplat_socket_wait_cancel_create/signal/reset/dispose(...)`、`cplat_socket_watch_attach/detach(...)`、`cplat_socket_watch_wait_readable_multi(...)` / `cplat_socket_watch_wait_writable(...)` | 登録中は非ブロッキング。解除通知は待機前にも有効で、OS 通知が失敗しても最大 50 [ms] の状態確認で検出します |
+| 登録中の送受信と接続 | `cplat_socket_watch_send/sendto/send_all/recv_all/connect(...)` | 1 回の送受信は `CPLAT_ERR_WOULD_BLOCK` を返します。全量処理は解除、完了、全体期限の順で確認します |
 
 Table: ソケット操作 API と cplat 代替関数
 
 `cplat_socket_send_all`/`cplat_socket_recv_all` は複数回の `send`/`recv` をループさせる合成 API です。  
 Linux の `cplat_socket_send`/`cplat_socket_send_all` は、切断済みの接続への送信による SIGPIPE を送信単位で抑制し、送信エラーは結果コードと `cplat_error` で通知します。  
+`cplat_socket_set_multicast_ttl` は送るマルチキャスト パケットにだけ `IP_MULTICAST_TTL` を適用し、ユニキャストとブロードキャストには影響しません。  
 `cplat_socket_shutdown_receive` は Linux (`shutdown(SHUT_RD)`) と Windows (実質 close 相当) で意味論が異なる差異を吸収した複合 API です。
 
 ### プロセス内メモリ ロック

@@ -1,4 +1,6 @@
 /error.c
 /result.c
 /socket_linux.c
+/socket_watch_linux.c
+/socket_watch_windows.c
 /socket_windows.c

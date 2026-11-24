@@ -554,6 +554,8 @@
     EXPORT_ENTRY(cplat_socket_set_nodelay, int(CPLAT_API *)(cplat_socket sock, int enable, cplat_error *detail_out)) \
     EXPORT_ENTRY(cplat_socket_set_multicast_interface, \
                  int(CPLAT_API *)(cplat_socket sock, uint32_t interface_address, cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_set_multicast_ttl, \
+                 int(CPLAT_API *)(cplat_socket sock, unsigned int ttl, cplat_error *detail_out)) \
     EXPORT_ENTRY(cplat_socket_join_multicast_group, \
                  int(CPLAT_API *)(cplat_socket sock, uint32_t group_address, uint32_t interface_address, \
                                   cplat_error *detail_out)) \
@@ -586,6 +588,40 @@
     EXPORT_ENTRY(cplat_socket_timed_wait_readable_multi, \
                  int(CPLAT_API *)(const cplat_socket *socks, size_t count, int timeout_ms, unsigned char *ready_out, \
                                   cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_wait_cancel_create, \
+                 int(CPLAT_API *)(cplat_socket_wait_cancel **cancel_out, cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_wait_cancel_signal, \
+                 int(CPLAT_API *)(cplat_socket_wait_cancel *cancel, cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_wait_cancel_reset, \
+                 int(CPLAT_API *)(cplat_socket_wait_cancel *cancel, cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_wait_cancel_dispose, void(CPLAT_API *)(cplat_socket_wait_cancel *cancel)) \
+    EXPORT_ENTRY(cplat_socket_watch_attach, \
+                 int(CPLAT_API *)(cplat_socket sock, cplat_socket_watch **watch_out, cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_watch_detach, void(CPLAT_API *)(cplat_socket_watch *watch)) \
+    EXPORT_ENTRY(cplat_socket_watch_wait_readable_multi, \
+                 int(CPLAT_API *)(cplat_socket_watch *const *watches, size_t count, \
+                                  cplat_socket_wait_cancel *cancel, int timeout_ms, unsigned char *ready_out, \
+                                  cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_watch_wait_writable, \
+                 int(CPLAT_API *)(cplat_socket_watch *watch, cplat_socket_wait_cancel *cancel, int timeout_ms, \
+                                  cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_watch_send, \
+                 int(CPLAT_API *)(cplat_socket_watch *watch, const void *buf, size_t len, size_t *sent_out, \
+                                  cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_watch_sendto, \
+                 int(CPLAT_API *)(cplat_socket_watch *watch, const void *buf, size_t len, \
+                                  const cplat_ipv4_endpoint *endpoint, size_t *sent_out, cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_watch_send_all, \
+                 int(CPLAT_API *)(cplat_socket_watch *watch, const void *buf, size_t len, \
+                                  cplat_socket_wait_cancel *cancel, int timeout_ms, size_t *sent_out, \
+                                  cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_watch_recv_all, \
+                 int(CPLAT_API *)(cplat_socket_watch *watch, void *buf, size_t len, \
+                                  cplat_socket_wait_cancel *cancel, int timeout_ms, size_t *received_out, \
+                                  cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_watch_connect, \
+                 int(CPLAT_API *)(cplat_socket_watch *watch, const cplat_ipv4_endpoint *endpoint, \
+                                  cplat_socket_wait_cancel *cancel, int timeout_ms, cplat_error *detail_out)) \
     EXPORT_ENTRY(cplat_socket_shutdown_receive, int(CPLAT_API *)(cplat_socket * sock_inout, cplat_error * detail_out)) \
     /* cplat/prompt/pinned_prompt.h */ \
     EXPORT_ENTRY(cplat_pinned_prompt_create, \

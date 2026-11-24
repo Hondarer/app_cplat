@@ -131,6 +131,9 @@ const char *cplat_result_to_string(const int result)
     case CPLAT_ERR_IN_PROGRESS:
         text = "in progress";
         break;
+    case CPLAT_ERR_WOULD_BLOCK:
+        text = "operation would block";
+        break;
     default:
         text = "unknown result code";
         break;

@@ -175,11 +175,10 @@
  *
  *  - errno: `EBUSY` / `EAGAIN`
  *  - Win32: `ERROR_BUSY`
- *  - Winsock: `WSAEWOULDBLOCK`
+ *  - Winsock: なし
  *
  *  @note           ソケットの非ブロッキング操作を再試行させたい場合は、
- *                  この結果コードではなく `CPLAT_ERR_IN_PROGRESS` や、
- *                  要因レベルの `CPLAT_CAUSE_WOULD_BLOCK` を使用します。
+ *                  @ref CPLAT_ERR_WOULD_BLOCK を使用します。
  */
 #define CPLAT_ERR_BUSY (-11)
 
@@ -228,7 +227,7 @@
 
 /* 制御: -40 〜 -49 */
 #define CPLAT_ERR_EOF      (-40) /**< 入力が EOF に達しました。 */
-#define CPLAT_ERR_CANCELED (-41) /**< ユーザー操作 (Ctrl+C など) により中断しました。 */
+#define CPLAT_ERR_CANCELED (-41) /**< ユーザー操作 (Ctrl+C など) または待機の解除の通知により中断しました。 */
 
 /**
  *  @brief          非同期処理が開始済みで、完了を待つ必要があります。
@@ -242,6 +241,20 @@
  *                  (`net/socket_linux.c`、`net/socket_windows.c`)
  */
 #define CPLAT_ERR_IN_PROGRESS (-42)
+
+/**
+ *  @brief          非ブロッキングの操作が、待たずには完了できないため、何もせずに戻りました。
+ *
+ *  - errno: `EAGAIN` / `EWOULDBLOCK` (ソケットの操作に限ります)
+ *  - Winsock: `WSAEWOULDBLOCK`
+ *
+ *  @note           汎用の errno の変換 (`cplat_internal_result_from_errno()`) では、`EAGAIN` は
+ *                  資源の上限を表す場合があるため、引き続き @ref CPLAT_ERR_BUSY に変換します。
+ *                  ソケットの操作の変換 (`cplat_internal_error_report_socket_errno()`、
+ *                  `cplat_internal_result_from_winsock_error()`) だけが本コードを返します。
+ *                  非ブロッキングの接続の開始は、従来どおり @ref CPLAT_ERR_IN_PROGRESS を返します。
+ */
+#define CPLAT_ERR_WOULD_BLOCK (-43)
 /* データの検証: -50 〜 */
 #define CPLAT_ERR_AUTHENTICATION_FAILED (-50) /**< 認証タグの検証に失敗しました。 */
 #define CPLAT_ERR_CORRUPT_DATA          (-51) /**< データが破損しているか、宣言された形式と一致しません。 */

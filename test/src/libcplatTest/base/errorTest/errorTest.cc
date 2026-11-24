@@ -7,6 +7,8 @@
 
 #if defined(PLATFORM_LINUX)
     #include <netdb.h>
+#elif defined(PLATFORM_WINDOWS)
+    #include <cplat/base/windows_sdk.h>
 #endif
 
 #include <cstring>
@@ -402,8 +404,8 @@ TEST_F(errorTest, report_socket_errno_uses_socket_domain_and_would_block_cause)
 
     // Assert
     EXPECT_EQ(
-        CPLAT_ERR_BUSY,
-        blocked_result); // [確認_正常系] - EAGAIN に対する cplat_internal_error_report_socket_errno() の戻り値が CPLAT_ERR_BUSY であること。
+        CPLAT_ERR_WOULD_BLOCK,
+        blocked_result); // [確認_正常系] - EAGAIN に対する cplat_internal_error_report_socket_errno() の戻り値が CPLAT_ERR_WOULD_BLOCK であること。
     EXPECT_EQ(
         CPLAT_ERROR_DOMAIN_SOCKET_ERRNO,
         blocked_domain); // [確認_正常系] - ソケット EAGAIN に対する cplat_error_get_domain() の戻り値が CPLAT_ERROR_DOMAIN_SOCKET_ERRNO であること。
@@ -416,6 +418,48 @@ TEST_F(errorTest, report_socket_errno_uses_socket_domain_and_would_block_cause)
     EXPECT_EQ(CPLAT_ERROR_DOMAIN_NONE,
               last_error.domain); // [確認_正常系] - last_error.domain が CPLAT_ERROR_DOMAIN_NONE であること。
 }
+
+#if defined(PLATFORM_LINUX) && defined(EWOULDBLOCK) && (EWOULDBLOCK != EAGAIN)
+// EWOULDBLOCK が EAGAIN と異なる errno 値でも待つ必要がある結果へ変換されることの確認
+TEST_F(errorTest, report_socket_ewouldblock_maps_to_would_block)
+{
+    // Arrange
+    cplat_error error = {};
+
+    // Pre-Assert
+
+    // Act
+    const int actual_result = cplat_internal_error_report_socket_errno(
+        &error, EWOULDBLOCK); // [手順] - EWOULDBLOCK を指定して変換する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_WOULD_BLOCK,
+              actual_result); // [確認_正常系] - EWOULDBLOCK が CPLAT_ERR_WOULD_BLOCK へ変換されること。
+    EXPECT_EQ(CPLAT_CAUSE_WOULD_BLOCK,
+              cplat_error_get_cause(&error)); // [確認_正常系] - 詳細エラーの要因が CPLAT_CAUSE_WOULD_BLOCK であること。
+}
+#endif /* PLATFORM_LINUX */
+
+#if defined(PLATFORM_WINDOWS)
+// Winsock の待つ必要がある結果が専用コードと要因へ変換されることの確認
+TEST_F(errorTest, report_winsock_would_block_maps_to_result_and_cause)
+{
+    // Arrange
+    cplat_error error = {};
+
+    // Pre-Assert
+
+    // Act
+    const int actual_result = cplat_internal_error_report_winsock_error(
+        &error, WSAEWOULDBLOCK); // [手順] - WSAEWOULDBLOCK を指定して変換する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_WOULD_BLOCK,
+              actual_result); // [確認_正常系] - WSAEWOULDBLOCK が CPLAT_ERR_WOULD_BLOCK へ変換されること。
+    EXPECT_EQ(CPLAT_CAUSE_WOULD_BLOCK,
+              cplat_error_get_cause(&error)); // [確認_正常系] - 詳細エラーの要因が CPLAT_CAUSE_WOULD_BLOCK であること。
+}
+#endif /* PLATFORM_WINDOWS */
 
 // errno 0 と非成功結果をソケット エラーとして記録するとドメインが保持されることの確認
 TEST_F(errorTest, report_socket_errno_as_keeps_domain_when_result_is_not_success)

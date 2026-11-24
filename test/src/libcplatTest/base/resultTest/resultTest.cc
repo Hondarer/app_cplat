@@ -44,6 +44,7 @@ static_assert(CPLAT_ERR_INVALID_ENCODING == -30, "cplat: CPLAT_ERR_INVALID_ENCOD
 static_assert(CPLAT_ERR_EOF == -40, "cplat: CPLAT_ERR_EOF の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_CANCELED == -41, "cplat: CPLAT_ERR_CANCELED の ABI 値が一致しません。");
 static_assert(CPLAT_ERR_IN_PROGRESS == -42, "cplat: CPLAT_ERR_IN_PROGRESS の ABI 値が一致しません。");
+static_assert(CPLAT_ERR_WOULD_BLOCK == -43, "cplat: CPLAT_ERR_WOULD_BLOCK の ABI 値が一致しません。");
 
 static_assert(CPLAT_ERR_MALFORMED_DEFINITION == -31, "cplat: malformed definition code ABI");
 static_assert(CPLAT_ERR_AUTHENTICATION_FAILED == -50, "cplat: authentication code ABI");
@@ -82,6 +83,7 @@ static std::vector<int> all_error_codes()
                             CPLAT_ERR_EOF,
                             CPLAT_ERR_CANCELED,
                             CPLAT_ERR_IN_PROGRESS,
+                            CPLAT_ERR_WOULD_BLOCK,
                             CPLAT_ERR_AUTHENTICATION_FAILED,
                             CPLAT_ERR_CORRUPT_DATA};
 }
@@ -221,6 +223,22 @@ TEST_F(resultTest, windows_invalid_encoding_error_maps_to_invalid_encoding)
     // Assert
     EXPECT_EQ(CPLAT_ERR_INVALID_ENCODING,
               actual_result); // [確認_正常系] - CPLAT_ERR_INVALID_ENCODING が返ること。
+}
+
+// Winsock の待つ必要がある結果が専用コードへ変換されることの確認
+TEST_F(resultTest, windows_would_block_maps_to_would_block)
+{
+    // Arrange
+
+    // Pre-Assert
+
+    // Act
+    const int actual_result = cplat_internal_result_from_winsock_error(
+        WSAEWOULDBLOCK); // [手順] - WSAEWOULDBLOCK を指定して変換する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_WOULD_BLOCK,
+              actual_result); // [確認_正常系] - WSAEWOULDBLOCK が CPLAT_ERR_WOULD_BLOCK へ変換されること。
 }
 
 // 未サポートを表す Win32 エラーが CPLAT_ERR_UNSUPPORTED へ変換されることの確認

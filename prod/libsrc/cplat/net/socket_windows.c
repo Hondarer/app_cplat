@@ -334,6 +334,7 @@ int cplat_socket_accept(const cplat_socket sock, cplat_ipv4_endpoint *peer_out, 
     struct sockaddr_in native = {0};
     int native_len = (int)sizeof(native);
     SOCKET accepted;
+    u_long blocking_mode = 0UL;
 
     if ((sock == CPLAT_INVALID_SOCKET) || (sock_out == NULL))
     {
@@ -346,6 +347,26 @@ int cplat_socket_accept(const cplat_socket sock, cplat_ipv4_endpoint *peer_out, 
     if (accepted == INVALID_SOCKET)
     {
         return report_last_winsock_error(detail_out);
+    }
+
+    /* accept はリスナーの WSAEventSelect 登録を引き継ぐため、新しいソケットから解除します。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaeventselect
+     */
+    if (WSAEventSelect(accepted, NULL, 0) == SOCKET_ERROR)
+    {
+        const int saved_error = WSAGetLastError();
+        /* 正規化に失敗したソケットは公開せず破棄します。 */
+        (void)closesocket(accepted);
+        return cplat_internal_error_report_winsock_error(detail_out, (unsigned long)saved_error);
+    }
+
+    /* WSAEventSelect の解除後、返すソケットをブロッキングへ戻します。 */
+    if (ioctlsocket(accepted, FIONBIO, &blocking_mode) == SOCKET_ERROR)
+    {
+        const int saved_error = WSAGetLastError();
+        /* 正規化に失敗したソケットは公開せず破棄します。 */
+        (void)closesocket(accepted);
+        return cplat_internal_error_report_winsock_error(detail_out, (unsigned long)saved_error);
     }
 
     if (peer_out != NULL)
@@ -537,6 +558,31 @@ int cplat_socket_set_multicast_interface(const cplat_socket sock, const uint32_t
     memcpy(&value.S_un.S_addr, &interface_address, sizeof(value.S_un.S_addr));
 
     if (setsockopt((SOCKET)sock, IPPROTO_IP, IP_MULTICAST_IF, (const char *)&value, (int)sizeof(value)) == SOCKET_ERROR)
+    {
+        return report_last_winsock_error(detail_out);
+    }
+
+    return cplat_internal_error_report_success(detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_set_multicast_ttl(const cplat_socket sock, const unsigned int ttl, cplat_error *detail_out)
+{
+    DWORD value;
+
+    if (ttl > CPLAT_SOCKET_MULTICAST_TTL_MAX)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+    if (sock == CPLAT_INVALID_SOCKET)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+
+    value = (DWORD)ttl;
+    if (setsockopt((SOCKET)sock, IPPROTO_IP, IP_MULTICAST_TTL, (const char *)&value, (int)sizeof(value)) ==
+        SOCKET_ERROR)
     {
         return report_last_winsock_error(detail_out);
     }

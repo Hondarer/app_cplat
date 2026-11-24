@@ -772,7 +772,18 @@ int cplat_internal_error_report_errno(cplat_error *detail_out, const int errno_v
     }
     else
     {
-        result = cplat_internal_result_from_errno(errno_value);
+        if ((errno_value == EAGAIN)
+#if defined(EWOULDBLOCK) && (EWOULDBLOCK != EAGAIN)
+            || (errno_value == EWOULDBLOCK)
+#endif
+        )
+        {
+            result = CPLAT_ERR_WOULD_BLOCK;
+        }
+        else
+        {
+            result = cplat_internal_result_from_errno(errno_value);
+        }
     }
 
     return cplat_internal_error_report_errno_as(detail_out, errno_value, result);
@@ -845,7 +856,14 @@ int cplat_internal_error_report_socket_errno(cplat_error *detail_out, const int 
     }
     else
     {
-        result = cplat_internal_result_from_errno(errno_value);
+        if (error_cause_from_socket_errno(errno_value) == CPLAT_CAUSE_WOULD_BLOCK)
+        {
+            result = CPLAT_ERR_WOULD_BLOCK;
+        }
+        else
+        {
+            result = cplat_internal_result_from_errno(errno_value);
+        }
     }
 
     return cplat_internal_error_report_socket_errno_as(detail_out, errno_value, result);

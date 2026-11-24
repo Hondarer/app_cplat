@@ -427,6 +427,9 @@ int cplat_socket_accept(const cplat_socket sock, cplat_ipv4_endpoint *peer_out, 
 
     *sock_out = CPLAT_INVALID_SOCKET;
 
+    /* Linux の accept はリスナーの O_NONBLOCK を受け付けたソケットへ引き継ぎません。
+     * see: https://man7.org/linux/man-pages/man2/accept.2.html
+     */
     accepted = retry_accept((int)sock, (struct sockaddr *)&native, &native_len);
     if (accepted < 0)
     {
@@ -670,6 +673,18 @@ int cplat_socket_set_multicast_interface(const cplat_socket sock, const uint32_t
     }
 
     return cplat_internal_error_report_success(detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_set_multicast_ttl(const cplat_socket sock, const unsigned int ttl, cplat_error *detail_out)
+{
+    if (ttl > CPLAT_SOCKET_MULTICAST_TTL_MAX)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+
+    return set_int_option(sock, IPPROTO_IP, IP_MULTICAST_TTL, (int)ttl, detail_out);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */

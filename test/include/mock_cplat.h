@@ -358,6 +358,7 @@ MOCK_CPLAT_LINK_IMPL(cplat_socket_set_reuse_address)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_set_broadcast)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_set_nodelay)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_set_multicast_interface)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_set_multicast_ttl)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_join_multicast_group)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_leave_multicast_group)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_send)
@@ -372,6 +373,19 @@ MOCK_CPLAT_LINK_IMPL(cplat_socket_wait_writable)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_timed_wait_writable)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_wait_readable_multi)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_timed_wait_readable_multi)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_wait_cancel_create)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_wait_cancel_signal)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_wait_cancel_reset)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_wait_cancel_dispose)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_attach)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_detach)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_wait_readable_multi)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_wait_writable)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_send)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_sendto)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_send_all)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_recv_all)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_connect)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_shutdown_receive)
 
 // cplat/prompt/pinned_prompt.h
@@ -1185,6 +1199,8 @@ extern int delegate_real_cplat_socket_set_broadcast(cplat_socket sock, int enabl
 extern int delegate_real_cplat_socket_set_nodelay(cplat_socket sock, int enable, cplat_error *detail_out);
 extern int delegate_real_cplat_socket_set_multicast_interface(cplat_socket sock, uint32_t interface_address,
                                                               cplat_error *detail_out);
+extern int delegate_real_cplat_socket_set_multicast_ttl(cplat_socket sock, unsigned int ttl,
+                                                        cplat_error *detail_out);
 extern int delegate_real_cplat_socket_join_multicast_group(cplat_socket sock, uint32_t group_address,
                                                            uint32_t interface_address, cplat_error *detail_out);
 extern int delegate_real_cplat_socket_leave_multicast_group(cplat_socket sock, uint32_t group_address,
@@ -1208,6 +1224,37 @@ extern int delegate_real_cplat_socket_wait_readable_multi(const cplat_socket *so
                                                           unsigned char *ready_out, cplat_error *detail_out);
 extern int delegate_real_cplat_socket_timed_wait_readable_multi(const cplat_socket *socks, size_t count, int timeout_ms,
                                                                 unsigned char *ready_out, cplat_error *detail_out);
+extern int delegate_real_cplat_socket_wait_cancel_create(cplat_socket_wait_cancel **cancel_out,
+                                                         cplat_error *detail_out);
+extern int delegate_real_cplat_socket_wait_cancel_signal(cplat_socket_wait_cancel *cancel,
+                                                         cplat_error *detail_out);
+extern int delegate_real_cplat_socket_wait_cancel_reset(cplat_socket_wait_cancel *cancel,
+                                                        cplat_error *detail_out);
+extern void delegate_real_cplat_socket_wait_cancel_dispose(cplat_socket_wait_cancel *cancel);
+extern int delegate_real_cplat_socket_watch_attach(cplat_socket sock, cplat_socket_watch **watch_out,
+                                                   cplat_error *detail_out);
+extern void delegate_real_cplat_socket_watch_detach(cplat_socket_watch *watch);
+extern int delegate_real_cplat_socket_watch_wait_readable_multi(cplat_socket_watch *const *watches, size_t count,
+                                                                cplat_socket_wait_cancel *cancel, int timeout_ms,
+                                                                unsigned char *ready_out, cplat_error *detail_out);
+extern int delegate_real_cplat_socket_watch_wait_writable(cplat_socket_watch *watch,
+                                                          cplat_socket_wait_cancel *cancel, int timeout_ms,
+                                                          cplat_error *detail_out);
+extern int delegate_real_cplat_socket_watch_send(cplat_socket_watch *watch, const void *buf, size_t len,
+                                                 size_t *sent_out, cplat_error *detail_out);
+extern int delegate_real_cplat_socket_watch_sendto(cplat_socket_watch *watch, const void *buf, size_t len,
+                                                   const cplat_ipv4_endpoint *endpoint, size_t *sent_out,
+                                                   cplat_error *detail_out);
+extern int delegate_real_cplat_socket_watch_send_all(cplat_socket_watch *watch, const void *buf, size_t len,
+                                                     cplat_socket_wait_cancel *cancel, int timeout_ms,
+                                                     size_t *sent_out, cplat_error *detail_out);
+extern int delegate_real_cplat_socket_watch_recv_all(cplat_socket_watch *watch, void *buf, size_t len,
+                                                     cplat_socket_wait_cancel *cancel, int timeout_ms,
+                                                     size_t *received_out, cplat_error *detail_out);
+extern int delegate_real_cplat_socket_watch_connect(cplat_socket_watch *watch,
+                                                    const cplat_ipv4_endpoint *endpoint,
+                                                    cplat_socket_wait_cancel *cancel, int timeout_ms,
+                                                    cplat_error *detail_out);
 extern int delegate_real_cplat_socket_shutdown_receive(cplat_socket *sock_inout, cplat_error *detail_out);
 
 // cplat/prompt/pinned_prompt.h
@@ -2078,6 +2125,7 @@ class Mock_cplat
     MOCK_METHOD(int, cplat_socket_set_broadcast, (cplat_socket, int, cplat_error *));
     MOCK_METHOD(int, cplat_socket_set_nodelay, (cplat_socket, int, cplat_error *));
     MOCK_METHOD(int, cplat_socket_set_multicast_interface, (cplat_socket, uint32_t, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_set_multicast_ttl, (cplat_socket, unsigned int, cplat_error *));
     MOCK_METHOD(int, cplat_socket_join_multicast_group, (cplat_socket, uint32_t, uint32_t, cplat_error *));
     MOCK_METHOD(int, cplat_socket_leave_multicast_group, (cplat_socket, uint32_t, uint32_t, cplat_error *));
     MOCK_METHOD(int, cplat_socket_send, (cplat_socket, const void *, size_t, size_t *, cplat_error *));
@@ -2096,6 +2144,25 @@ class Mock_cplat
                 (const cplat_socket *, size_t, unsigned char *, cplat_error *));
     MOCK_METHOD(int, cplat_socket_timed_wait_readable_multi,
                 (const cplat_socket *, size_t, int, unsigned char *, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_wait_cancel_create, (cplat_socket_wait_cancel **, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_wait_cancel_signal, (cplat_socket_wait_cancel *, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_wait_cancel_reset, (cplat_socket_wait_cancel *, cplat_error *));
+    MOCK_METHOD(void, cplat_socket_wait_cancel_dispose, (cplat_socket_wait_cancel *));
+    MOCK_METHOD(int, cplat_socket_watch_attach, (cplat_socket, cplat_socket_watch **, cplat_error *));
+    MOCK_METHOD(void, cplat_socket_watch_detach, (cplat_socket_watch *));
+    MOCK_METHOD(int, cplat_socket_watch_wait_readable_multi,
+                (cplat_socket_watch *const *, size_t, cplat_socket_wait_cancel *, int, unsigned char *, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_watch_wait_writable,
+                (cplat_socket_watch *, cplat_socket_wait_cancel *, int, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_watch_send, (cplat_socket_watch *, const void *, size_t, size_t *, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_watch_sendto,
+                (cplat_socket_watch *, const void *, size_t, const cplat_ipv4_endpoint *, size_t *, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_watch_send_all,
+                (cplat_socket_watch *, const void *, size_t, cplat_socket_wait_cancel *, int, size_t *, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_watch_recv_all,
+                (cplat_socket_watch *, void *, size_t, cplat_socket_wait_cancel *, int, size_t *, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_watch_connect,
+                (cplat_socket_watch *, const cplat_ipv4_endpoint *, cplat_socket_wait_cancel *, int, cplat_error *));
     MOCK_METHOD(int, cplat_socket_shutdown_receive, (cplat_socket *, cplat_error *));
 
     // cplat/prompt/pinned_prompt.h

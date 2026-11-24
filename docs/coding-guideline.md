@@ -67,8 +67,9 @@ cplat の公開 API が戻り値として使用する共通結果コードの運
 | | `CPLAT_ERR_INVALID_ENCODING` | -30 | 不正な UTF-8 エンコーディング |
 | | `CPLAT_ERR_MALFORMED_DEFINITION` | -31 | 与えられた定義の内容が構文または整合の点で不正 |
 | 制御<br> (-40 〜 -49) | `CPLAT_ERR_EOF` | -40 | 入力の EOF 到達 |
-| | `CPLAT_ERR_CANCELED` | -41 | ユーザー操作 (Ctrl+C など) による中断 |
+| | `CPLAT_ERR_CANCELED` | -41 | ユーザー操作 (Ctrl+C など) または待機の解除の通知による中断 |
 | | `CPLAT_ERR_IN_PROGRESS` | -42 | 非同期処理が開始済みで完了待ちが必要 |
+| | `CPLAT_ERR_WOULD_BLOCK` | -43 | ソケットの非ブロッキング操作が待たずに完了できない状態 |
 | データの検証<br> (-50 〜) | `CPLAT_ERR_AUTHENTICATION_FAILED` | -50 | 認証タグの検証に失敗 |
 | | `CPLAT_ERR_CORRUPT_DATA` | -51 | データが破損しているか、宣言された形式と不一致 |
 
