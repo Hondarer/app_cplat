@@ -1425,8 +1425,10 @@ TEST(elevatedProcessTest, run_with_result_propagates_internal_temp_dir_failure)
     cplat_error last_err;
     cplat_internal_temp_dir_set_resolver_for_test(elevated_temp_resolver_failing);
 
-    ON_CALL(mock_cplat, cplat_elevated_process_is_elevated(_))
-        .WillByDefault(testing::DoAll(testing::SetArgPointee<0>(0), Return(CPLAT_OK)));
+    // テスト対象は、同じ翻訳単位の昇格の判定を直接呼ぶため、mock_cplat では差し替えられない。
+    // 昇格済みのプロセスや、対話のセッションではないプロセス (CI のランナーなど) でも未昇格の経路を通るよう、
+    // Windows の API の側で、未昇格と対話のセッションを返す。
+    setup_run_piped_base_mocks(mock_cplat, mock_windows);
     ON_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
         .WillByDefault(
             [](char *path_out, size_t path_size) -> int
@@ -1465,8 +1467,10 @@ TEST(elevatedProcessTest, run_with_result_reports_get_temp_file_namew_buffer_ove
     cplat_error last_err;
     cplat_internal_temp_dir_set_resolver_for_test(elevated_temp_resolver_custom_system_temp);
 
-    ON_CALL(mock_cplat, cplat_elevated_process_is_elevated(_))
-        .WillByDefault(testing::DoAll(testing::SetArgPointee<0>(0), Return(CPLAT_OK)));
+    // テスト対象は、同じ翻訳単位の昇格の判定を直接呼ぶため、mock_cplat では差し替えられない。
+    // 昇格済みのプロセスや、対話のセッションではないプロセス (CI のランナーなど) でも未昇格の経路を通るよう、
+    // Windows の API の側で、未昇格と対話のセッションを返す。
+    setup_run_piped_base_mocks(mock_cplat, mock_windows);
     ON_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
         .WillByDefault(
             [](char *path_out, size_t path_size) -> int
@@ -1507,8 +1511,10 @@ TEST(elevatedProcessTest, run_with_result_passes_default_system_temp_unmodified)
     int handled = 1;
     cplat_internal_temp_dir_set_resolver_for_test(elevated_temp_resolver_default_system_temp);
 
-    ON_CALL(mock_cplat, cplat_elevated_process_is_elevated(_))
-        .WillByDefault(testing::DoAll(testing::SetArgPointee<0>(0), Return(CPLAT_OK)));
+    // テスト対象は、同じ翻訳単位の昇格の判定を直接呼ぶため、mock_cplat では差し替えられない。
+    // 昇格済みのプロセスや、対話のセッションではないプロセス (CI のランナーなど) でも未昇格の経路を通るよう、
+    // Windows の API の側で、未昇格と対話のセッションを返す。
+    setup_run_piped_base_mocks(mock_cplat, mock_windows);
     ON_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
         .WillByDefault(
             [](char *path_out, size_t path_size) -> int
