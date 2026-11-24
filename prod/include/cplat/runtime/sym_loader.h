@@ -38,12 +38,6 @@
 #include <cplat/sync/sync.h>
 #include <cplat/cplat_export.h>
 
-#if defined(PLATFORM_LINUX)
-    #ifndef _GNU_SOURCE
-        #define _GNU_SOURCE
-    #endif /* _GNU_SOURCE */
-#endif     /* PLATFORM_LINUX */
-
 #include <stddef.h>
 
 #if defined(PLATFORM_LINUX)

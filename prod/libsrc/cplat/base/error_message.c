@@ -213,6 +213,47 @@ int cplat_error_message(char *buf, const size_t buf_size, const cplat_error *err
     return result;
 }
 
+#if defined(PLATFORM_LINUX)
+/* GNU 版の strerror_r (char * を返す) の結果を、buf へ収める。message が buf と異なる場合は複製する。 */
+static int errno_message_from_gnu(const char *message, char *buf, const size_t buf_size)
+{
+    if (message == NULL)
+    {
+        buf[0] = '\0';
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    if (message != buf)
+    {
+        size_t len = strlen(message);
+
+        if (len >= buf_size)
+        {
+            len = buf_size - 1U;
+        }
+
+        memcpy(buf, message, len);
+        buf[len] = '\0';
+    }
+
+    return CPLAT_OK;
+}
+
+/* XSI 版の strerror_r (int を返す) の結果を、結果コードへ変換する。ERANGE は切り詰めを表すため成功として扱う。 */
+static int errno_message_from_xsi(const int xsi_result, char *buf, const size_t buf_size)
+{
+    (void)buf_size; /* XSI 版は buf への書き込みを strerror_r 側で完了しているため */
+
+    if (xsi_result != 0 && xsi_result != ERANGE)
+    {
+        buf[0] = '\0';
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    return CPLAT_OK;
+}
+#endif /* PLATFORM_LINUX */
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_internal_errno_message(char *buf, const size_t buf_size, const int errno_value)
@@ -226,48 +267,14 @@ int cplat_internal_errno_message(char *buf, const size_t buf_size, const int err
     buf[0] = '\0';
 
 #if defined(PLATFORM_LINUX)
-    {
     /*
-     * strerror_r には 2 系統がある。XSI 準拠版は int を返して buf へ書き込み、
-     * GNU 拡張版は char * を返す (buf を使わず静的文字列を返すことがある)。
-     * glibc は _GNU_SOURCE 定義時のみ GNU 版を提供する。
+     * strerror_r には 2 系統がある。どちらが宣言されるかは、機能検査マクロと、テストの mock (int を返す) の有無で
+     * 決まるため、戻り値の型で選ぶ。_Generic の制御式は評価されず、呼び出しは引数の 1 回だけ評価される。
      * see: https://man7.org/linux/man-pages/man3/strerror_r.3.html
      */
-    #if defined(__GLIBC__) && defined(_GNU_SOURCE)
-        const char *message = strerror_r(errno_value, buf, buf_size);
-
-        if (message == NULL)
-        {
-            return CPLAT_ERR_UNKNOWN;
-        }
-
-        if (message != buf)
-        {
-            size_t len = strlen(message);
-
-            if (len >= buf_size)
-            {
-                len = buf_size - 1U;
-            }
-
-            memcpy(buf, message, len);
-            buf[len] = '\0';
-        }
-
-        return CPLAT_OK;
-    #else
-        /* XSI 版は成功で 0 を返す。ERANGE は切り詰めを表すため成功として扱う。 */
-        int xsi_result = strerror_r(errno_value, buf, buf_size);
-
-        if (xsi_result != 0 && xsi_result != ERANGE)
-        {
-            buf[0] = '\0';
-            return CPLAT_ERR_UNKNOWN;
-        }
-
-        return CPLAT_OK;
-    #endif /* __GLIBC__ && _GNU_SOURCE */
-    }
+    return _Generic(strerror_r(errno_value, buf, buf_size),
+                    char *: errno_message_from_gnu,
+                    default: errno_message_from_xsi)(strerror_r(errno_value, buf, buf_size), buf, buf_size);
 #elif defined(PLATFORM_WINDOWS)
     {
         /*

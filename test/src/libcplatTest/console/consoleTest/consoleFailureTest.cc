@@ -626,4 +626,106 @@ TEST_F(consoleFailureTest, diag_log_path_uses_system_temp_and_default_unmodified
     cplat_internal_temp_dir_set_resolver_for_test(nullptr);
 }
 
+// 再接続試行時の FreeConsole の戻り値と直後の GetLastError、および再接続後の GetStdHandle 読み戻し一致が記録されることの確認
+// [サブ手順参照 名前=consoleFailureTest.SetUp]
+// [サブ手順参照 名前=consoleFailureTest.TearDown]
+TEST_F(consoleFailureTest, attach_parent_logs_free_console_result_and_std_handle_readback)
+{
+    // Arrange
+    NiceMock<Mock_stdio> mock_stdio;
+    NiceMock<Mock_unistd> mock_unistd;
+    HANDLE fake_console = reinterpret_cast<HANDLE>(static_cast<uintptr_t>(0x1234U));
+    HANDLE mismatched_handle = reinterpret_cast<HANDLE>(static_cast<uintptr_t>(0x5678U));
+    char program[] = "consoleFailureTest";
+    char handover[] = CPLAT_CONSOLE_HANDOVER_FLAG "=4242";
+    char *argv[] = {program, handover, nullptr};
+    int argc = 2;
+    int attached = 0;
+
+    ON_CALL(mock_windows, CreateFileW(_, _, _, Truly(is_console_device_name), _, _, _, _, _, _))
+        .WillByDefault(Return(fake_console)); // [状態] - CONOUT$ と CONIN$ を開く CreateFileW() から偽のハンドルを返す。
+    ON_CALL(mock_windows, SetStdHandle(_, _, _, _, fake_console))
+        .WillByDefault(Return(TRUE)); // [状態] - SetStdHandle() から TRUE を返す。
+    ON_CALL(mock_stdio, _fileno(_, _, _, _)).WillByDefault(Return(100)); // [状態] - _fileno() から 100 を返す。
+    ON_CALL(mock_unistd, _close(_, _, _, _)).WillByDefault(Return(0)); // [状態] - _close() から 0 を返す。
+    ON_CALL(mock_unistd, _open_osfhandle(_, _, _, _, _))
+        .WillByDefault(Return(100)); // [状態] - _open_osfhandle() から 100 を返す。
+    ON_CALL(mock_stdio, setvbuf(_, _, _, _, _, _, _))
+        .WillByDefault(Return(0)); // [状態] - setvbuf() から 0 を返す。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, FreeConsole(_, _, _))
+        .WillOnce(
+            [](const char *, int, const char *)
+            {
+                ::SetLastError(ERROR_ACCESS_DENIED);
+                return FALSE;
+            })
+        .WillOnce(Return(TRUE)); // [Pre-Assert確認_異常系] - FreeConsole() が 2 回呼び出されること。(1 回目は ERROR_ACCESS_DENIED で FALSE、2 回目は TRUE を返すことの確認)
+    EXPECT_CALL(mock_windows, AttachConsole(_, _, _, 4242UL))
+        .WillOnce(Return(FALSE))
+        .WillOnce(Return(TRUE)); // [Pre-Assert確認_異常系] - AttachConsole() が 1 回目失敗・2 回目成功で呼び出されること。
+    EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_OUTPUT_HANDLE))
+        .WillOnce(Return(fake_console)); // [Pre-Assert確認_正常系] - stdout の読み戻しが fake_console と一致すること。
+    EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_ERROR_HANDLE))
+        .WillOnce(Return(fake_console)); // [Pre-Assert確認_正常系] - stderr の読み戻しが fake_console と一致すること。
+    EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_INPUT_HANDLE))
+        .WillOnce(Return(mismatched_handle)); // [Pre-Assert確認_異常系] - stdin の読み戻しが不一致となる値を返すこと。
+
+    // Act
+    int result = cplat_console_attach_parent(
+        &argc, argv, &attached); // [手順] - FreeConsole() の失敗と成功を経て cplat_console_attach_parent() を呼び出す。
+
+    // Assert
+    std::string log = diag_log_since(log_offset);
+    EXPECT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_console_attach_parent() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1, attached);      // [確認_正常系] - attached が 1 であること。
+    EXPECT_THAT(log, HasSubstr("attempt=0 FreeConsole result=0 last_error=5")); // [確認_異常系] - FreeConsole() の FALSE と last_error=5 が記録されること。
+    EXPECT_THAT(log, HasSubstr("attempt=1 FreeConsole result=1")); // [確認_正常系] - FreeConsole() の TRUE が result=1 として記録されること。
+    EXPECT_THAT(log, HasSubstr("attach_parent GetStdHandle readback stdout=")); // [確認_正常系] - stdout の読み戻し行が記録されること。
+    EXPECT_THAT(log, HasSubstr("match=1")); // [確認_正常系] - 一致した stdout / stderr の match=1 が記録されること。
+    EXPECT_THAT(log, HasSubstr("match=0")); // [確認_異常系] - 不一致となった stdin の match=0 が記録されること。
+}
+
+// 終了時のドレインで GetStdHandle の無効値と GetConsoleScreenBufferInfo の失敗が記録されることの確認
+// [サブ手順参照 名前=consoleFailureTest.SetUp]
+// [サブ手順参照 名前=consoleFailureTest.TearDown]
+TEST_F(consoleFailureTest, dispose_on_shutdown_logs_drain_handle_and_screen_buffer_info_result)
+{
+    // Arrange
+    NiceMock<Mock_stdio> mock_stdio;
+    HANDLE fake_out = reinterpret_cast<HANDLE>(static_cast<uintptr_t>(0x2468U));
+    cplat_shutdown_event event = {CPLAT_SHUTDOWN_REASON_NORMAL_EXIT, CPLAT_SHUTDOWN_CODE_KIND_NONE, 0};
+
+    test_console_set_attached_parent(1); // [状態] - 親コンソールへ再接続済みの状態にする。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetLastError(_, _, _))
+        .Times(AnyNumber()); // [Pre-Assert確認_正常系] - 診断ログ用の GetLastError() を許容する。
+    {
+        InSequence seq;
+        EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_OUTPUT_HANDLE))
+            .WillOnce(Return(INVALID_HANDLE_VALUE)); // [Pre-Assert確認_異常系] - 1 回目は無効ハンドルを返すこと。
+        EXPECT_CALL(mock_windows, GetStdHandle(_, _, _, STD_OUTPUT_HANDLE))
+            .WillOnce(Return(fake_out)); // [Pre-Assert確認_異常系] - 2 回目は有効ハンドルを返すこと。
+        EXPECT_CALL(mock_windows, GetConsoleScreenBufferInfo(_, _, _, fake_out, _))
+            .WillOnce(Return(FALSE)); // [Pre-Assert確認_異常系] - GetConsoleScreenBufferInfo() が失敗を返すこと。
+        EXPECT_CALL(mock_windows, GetLastError(_, _, _))
+            .WillOnce(Return(ERROR_INVALID_HANDLE))
+            .RetiresOnSaturation(); // [Pre-Assert確認_異常系] - GetConsoleScreenBufferInfo() 失敗直後に ERROR_INVALID_HANDLE (6) を取り込むこと。
+    }
+
+    // Act
+    cplat_internal_console_dispose_on_shutdown(
+        &event, nullptr); // [手順] - GetStdHandle() が INVALID_HANDLE_VALUE を返す状態で終了時ドレインを呼ぶ。
+    cplat_internal_console_dispose_on_shutdown(
+        &event, nullptr); // [手順] - GetConsoleScreenBufferInfo() が失敗する状態で終了時ドレインを呼ぶ。
+
+    // Assert
+    std::string log = diag_log_since(log_offset);
+    EXPECT_THAT(log, HasSubstr("dispose_on_shutdown drain skipped GetStdHandle=0x")); // [確認_異常系] - 無効ハンドル時にスキップ行が記録されること。
+    EXPECT_THAT(log, HasSubstr("dispose_on_shutdown drain GetConsoleScreenBufferInfo handle=0x")); // [確認_異常系] - GetConsoleScreenBufferInfo() の行が記録されること。
+    EXPECT_THAT(log, HasSubstr("result=0 error=6")); // [確認_異常系] - 失敗結果と error=6 が記録されること。
+}
+
 #endif /* PLATFORM_WINDOWS */

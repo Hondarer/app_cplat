@@ -10,6 +10,7 @@
 
 #if defined(PLATFORM_WINDOWS)
 
+    #include <assert.h>
     #include <cplat/base/windows_sdk.h>
     #include <errno.h>
     #include <stdint.h>
@@ -26,8 +27,8 @@
 #define SOCKET_WATCH_CANCEL_CHECK_MS 50U
 #define SOCKET_WATCH_NETWORK_EVENTS (FD_READ | FD_ACCEPT | FD_CLOSE | FD_WRITE | FD_CONNECT)
 
-_Static_assert((2U * CPLAT_SOCKET_WATCH_WAIT_MAX + 1U) <= WSA_MAXIMUM_WAIT_EVENTS,
-               "cplat: Windows のソケット待機イベント数が上限を超えています。");
+static_assert((2U * CPLAT_SOCKET_WATCH_WAIT_MAX + 1U) <= WSA_MAXIMUM_WAIT_EVENTS,
+              "cplat: Windows のソケット待機イベント数が上限を超えています。");
 
 struct cplat_socket_wait_cancel
 {

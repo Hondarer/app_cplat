@@ -41,7 +41,14 @@
 /**
  *  @brief          コンソール再接続診断ログの有効化環境変数名です。
  *
- *  値が空文字または "0" 以外のとき、`%TEMP%` 配下へ診断ログを追記します。
+ *  値が空文字または "0" 以外のとき、`%TEMP%` 配下へ診断ログを追記します。\n
+ *  再接続の経路では `FreeConsole` の戻り値と直後の `GetLastError()`、`AttachConsole`、
+ *  `GetConsoleWindow`、`CONOUT$` / `CONIN$` オープン、`SetStdHandle`、再接続直後の
+ *  `GetStdHandle` 読み戻しとの一致、`reopen`、終了時ドレイン (`GetStdHandle` と
+ *  `GetConsoleScreenBufferInfo` の戻り値および失敗時の `GetLastError()`) を記録します。\n
+ *  `cplat_console_write` の経路では `GetStdHandle` の値 (無効値時は `GetLastError()`)、
+ *  `WriteConsoleU` とフォールバックの `WriteFile` の戻り値・要求/書き込みバイト数・失敗時の
+ *  `GetLastError()`、および最終的な失敗確定を記録します。
  */
 #define CPLAT_CONSOLE_ATTACH_DIAG_ENV "CPLAT_CONSOLE_ATTACH_DIAG"
 

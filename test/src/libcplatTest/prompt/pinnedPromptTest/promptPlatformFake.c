@@ -1,8 +1,5 @@
 /* 描画の回帰試験では実共通処理へ委譲し、境界試験では失敗を注入します。
  * OS の分岐網羅は promptLinuxTest / promptWindowsTest が担当します。 */
-#if defined(__linux__) && !defined(_GNU_SOURCE)
-    #define _GNU_SOURCE
-#endif
 #include "prompt_platform.h"
 #include "pinned_prompt.inject.h"
 #include <cplat/crt/unistd.h>

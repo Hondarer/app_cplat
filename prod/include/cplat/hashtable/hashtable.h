@@ -24,6 +24,8 @@
  *  衝突はチェーン法で扱い、削除は寿命付きの加齢により空きへ戻します。\n
  *  lifetime が @ref CPLAT_HASHTABLE_LIFETIME_INFINITE のとき、
  *  削除済みは加齢の末に 255 で止まり、push では空へ戻りません。\n
+ *  自動拡張テーブルでレコード容量が増え続ける条件と避ける方法は、
+ *  @ref cplat_hashtable_create_growable の説明を参照してください。\n
  *  呼び出し側が用意した領域へ構築する、または構築済み領域を再接続できます。
  *
  *  レコード番号は 1 相対で、内部スロットと 1 対 1 です。\n
@@ -285,6 +287,31 @@ extern "C"
      *  自動再構築または要求された書き込みに失敗した場合、テーブルは変更しません。\n
      *  最大レコード数へ到達した場合は @ref CPLAT_ERR_LIMIT_EXCEEDED 、ストレージ上限へ
      *  到達した場合は @ref CPLAT_ERR_STORAGE_FULL を、対象の書き込み API が返します。\n
+     *  自動拡張は、レコード容量が不足した場合、または可変長キー・値のストレージ容量が不足した場合に起きます。
+     *  レコード用の空きスロットがあっても、追加・更新するキーや値を格納できる連続領域が不足すると、同容量での詰め直し、または容量の拡張が必要です。総空き容量が足りていて連続領域だけが不足する場合は、容量を増やさず同容量へ詰め直します。\n
+     *  レコード用の削除済みスロットが空へ戻る条件は、次のとおりです。
+     *  - lifetime が 2 の場合は、削除の時点で直ちに空へ戻ります。
+     *  - lifetime が 3 から 254 の場合は、削除から (lifetime - 2) 回の cplat_hashtable_push_deleted() の呼び出しの後に空へ戻ります。
+     *    cplat_hashtable_push_deleted() を呼ばなければ空へ戻りません。
+     *  - lifetime が @ref CPLAT_HASHTABLE_LIFETIME_INFINITE の場合は、cplat_hashtable_push_deleted() では
+     *    空へ戻りません。cplat_hashtable_purge_deleted() または cplat_hashtable_clear() だけが空へ戻します。
+     *
+     *  reuse_deleted が 0 のとき、cplat_hashtable_add() と cplat_hashtable_upsert() は、削除済みのスロットを
+     *  再利用せず、自動拡張を選びます。自動拡張の移行も、削除済みのレコードを残します。
+     *  このため、異なるキーの追加と削除を繰り返すと、lifetime が 3 以上で
+     *  cplat_hashtable_push_deleted() が追加に追いつかない場合、または lifetime が無限の場合は、
+     *  max_capacity に達する (@ref CPLAT_ERR_LIMIT_EXCEEDED) か、メモリを確保できなくなる
+     *  (@ref CPLAT_ERR_OUT_OF_MEMORY) まで、容量が増え続けます。max_capacity が 0 の場合は上限がありません。
+     *  同じキーを削除後に再び追加した場合は、削除済みのレコードが復活するため、容量は増えません。\n
+     *  容量が増え続けることを避けるには、次のいずれかを選びます。
+     *  - lifetime を 2 にします。削除のたびに直ちに空へ戻るため、削除済みのレコードが残りません。
+     *    削除済みのレコードを参照する用途がなければ、この設定を使います。
+     *  - reuse_deleted を 0 以外にします。空きがないとき、最古の削除済みのレコードを再利用します。
+     *    削除済みの履歴が失われることを許容できる場合に使います。
+     *  - lifetime が 3 以上の有限の値のとき、追加の頻度に見合う頻度で cplat_hashtable_push_deleted() を呼びます。
+     *  - 定期的に cplat_hashtable_purge_deleted() を呼びます。
+     *  - growth_config の max_capacity を指定して、上限を設けます。
+     *
      *  本関数で生成した領域を永続化して @ref cplat_hashtable_attach で再接続した場合、
      *  自動拡張の上限設定は復元されず、固定長テーブルとして動作します。
      *

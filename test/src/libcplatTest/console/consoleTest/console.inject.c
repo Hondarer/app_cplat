@@ -44,4 +44,9 @@ int test_console_build_diag_log_path(wchar_t *path_out, size_t path_len)
     return build_console_diag_log_path(path_out, path_len);
 }
 
+void test_console_set_attached_parent(const int value)
+{
+    cplat_atomic_store_i32(&s_attached_parent, (int32_t)value, CPLAT_MEMORY_ORDER_SEQ_CST);
+}
+
 #endif /* PLATFORM_WINDOWS */

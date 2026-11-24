@@ -118,10 +118,15 @@ OS 判定とコンパイラ判定の両方が関係する可能性があるコ�
 - `__cplusplus`
 - `DOXYGEN`
 - `__INTELLISENSE__`
-- `_GNU_SOURCE`
 - `WIN32_LEAN_AND_MEAN`
 
 これらは OS / コンパイラ判定の代替として使うのではなく、本来の目的に限定して使います。
+
+### 機能検査マクロ (_GNU_SOURCE)
+
+`_GNU_SOURCE` はビルドの定義 (`app/cplat/makepart.mk` の `DEFINES`) で与え、ソースとヘッダーの中では定義しません。  
+glibc は最初に取り込んだ標準ヘッダーの時点で機能検査マクロを確定するため、ヘッダーやソースの中での `#define _GNU_SOURCE` は、先に標準ヘッダーを取り込んだ翻訳単位で効かないためです。  
+see: https://man7.org/linux/man-pages/man7/feature_test_macros.7.html
 
 ## 分岐の置き方
 

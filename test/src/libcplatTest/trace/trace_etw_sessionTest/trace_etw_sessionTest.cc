@@ -3,11 +3,16 @@
 #if defined(PLATFORM_WINDOWS)
 
     #include <cplat/base/windows_sdk.h>
+    #include <cplat/trace/etw.h>
     #include <testfw.h>
     #include <mock_cplat.h>
+    #include <mock_windows.h>
 
+    #include <chrono>
+    #include <condition_variable>
     #include <cstdint>
     #include <cstring>
+    #include <mutex>
     #include <vector>
 
     #include "trace_etw_session.inject.h"
@@ -316,6 +321,267 @@ TEST_F(trace_etw_sessionTest, extract_stops_at_fixed_length_string)
 
     // Assert
     EXPECT_EQ(nullptr, service); // [確認_正常系] - service が nullptr であること。
+}
+
+namespace
+{
+
+struct etw_stop_sync
+{
+    std::mutex mtx;
+    std::condition_variable cv;
+    bool close_called = false;
+    bool stop_succeeded = false;
+    bool process_timed_out = false;
+};
+
+} // namespace
+
+// ControlTraceW が失敗した場合、join より前に CloseTrace を 1 回だけ呼び、ERROR_CTX_CLOSE_PENDING でも join が完了することの確認
+TEST_F(trace_etw_sessionTest, stop_calls_close_trace_before_join_when_control_trace_fails)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    NiceMock<Mock_windows> mock_windows;
+    etw_stop_sync sync;
+    cplat_etw_session *session = nullptr;
+    const PROCESSTRACE_HANDLE expected_trace_handle = static_cast<PROCESSTRACE_HANDLE>(22U);
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, StartTraceW(_, _, _, _, _, _))
+        .WillOnce(
+            [](const char *, const int, const char *, CONTROLTRACE_ID *trace_id, LPCWSTR, PEVENT_TRACE_PROPERTIES)
+            {
+                *trace_id = 11U;
+                return static_cast<ULONG>(ERROR_SUCCESS);
+            }); // [Pre-Assert確認_正常系] - StartTraceW() が呼ばれセッション ハンドルを返すこと。
+    EXPECT_CALL(mock_windows, EnableTraceEx2(_, _, _, 11U, _, _, _, _, _, _, _))
+        .WillOnce(Return(static_cast<ULONG>(ERROR_SUCCESS))); // [Pre-Assert確認_正常系] - EnableTraceEx2() が成功すること。
+    EXPECT_CALL(mock_windows, OpenTraceW(_, _, _, _))
+        .WillOnce(Return(expected_trace_handle)); // [Pre-Assert確認_正常系] - OpenTraceW() が有効なトレース ハンドルを返すこと。
+    EXPECT_CALL(mock_windows, ProcessTrace(_, _, _, _, 1UL, nullptr, nullptr))
+        .WillOnce(
+            [&sync](const char *, const int, const char *, PROCESSTRACE_HANDLE *, ULONG, LPFILETIME, LPFILETIME)
+            {
+                std::unique_lock<std::mutex> lock(sync.mtx);
+                const bool signaled =
+                    sync.cv.wait_for(lock, std::chrono::seconds(5), [&sync]() { return sync.close_called; });
+                sync.process_timed_out = !signaled;
+                return static_cast<ULONG>(ERROR_SUCCESS);
+            }); // [Pre-Assert確認_正常系] - ProcessTrace() が CloseTrace() の呼び出しまで待機して終了すること。
+
+    {
+        InSequence seq;
+        EXPECT_CALL(mock_windows, ControlTraceW(_, _, _, 11U, nullptr, _, EVENT_TRACE_CONTROL_STOP))
+            .WillOnce(Return(static_cast<ULONG>(ERROR_ACCESS_DENIED))); // [Pre-Assert確認_異常系] - ControlTraceW() が ERROR_ACCESS_DENIED を返すこと。
+        EXPECT_CALL(mock_windows, CloseTrace(_, _, _, expected_trace_handle))
+            .WillOnce(
+                [&sync](const char *, const int, const char *, PROCESSTRACE_HANDLE)
+                {
+                    std::lock_guard<std::mutex> lock(sync.mtx);
+                    sync.close_called = true;
+                    sync.cv.notify_all();
+                    return static_cast<ULONG>(ERROR_CTX_CLOSE_PENDING);
+                }); // [Pre-Assert確認_異常系] - join より前に CloseTrace() が 1 回だけ呼ばれ ERROR_CTX_CLOSE_PENDING を返すこと。
+        EXPECT_CALL(mock_cplat, cplat_thread_join(_))
+            .WillOnce(DoDefault()); // [Pre-Assert確認_正常系] - CloseTrace() の後に cplat_thread_join() が呼ばれること。
+    }
+
+    // Act
+    int start_ret = cplat_etw_session_start(
+        "UnitTestEtwStopFail", "0dfe6031-5678-4688-aee8-611340997caa",
+        [](const cplat_etw_event *, void *) {}, nullptr, &session); // [手順] - ETW セッションを開始する。
+    ASSERT_EQ(CPLAT_OK, start_ret); // [状態確認] - cplat_etw_session_start() が CPLAT_OK を返すこと。
+    ASSERT_NE(nullptr, session);    // [状態確認] - session が nullptr 以外であること。
+
+    cplat_etw_session_stop(session); // [手順] - ControlTraceW() が失敗する状態で cplat_etw_session_stop() を呼び出す。
+
+    // Assert
+    EXPECT_FALSE(sync.process_timed_out); // [確認_正常系] - ProcessTrace() がタイムアウトせず CloseTrace() の通知で終了したこと。
+}
+
+// ControlTraceW が成功した場合、join の後に CloseTrace を 1 回だけ呼ぶことの確認
+TEST_F(trace_etw_sessionTest, stop_calls_close_trace_after_join_when_control_trace_succeeds)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    NiceMock<Mock_windows> mock_windows;
+    etw_stop_sync sync;
+    cplat_etw_session *session = nullptr;
+    const PROCESSTRACE_HANDLE expected_trace_handle = static_cast<PROCESSTRACE_HANDLE>(33U);
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, StartTraceW(_, _, _, _, _, _))
+        .WillOnce(
+            [](const char *, const int, const char *, CONTROLTRACE_ID *trace_id, LPCWSTR, PEVENT_TRACE_PROPERTIES)
+            {
+                *trace_id = 12U;
+                return static_cast<ULONG>(ERROR_SUCCESS);
+            }); // [Pre-Assert確認_正常系] - StartTraceW() が呼ばれセッション ハンドルを返すこと。
+    EXPECT_CALL(mock_windows, EnableTraceEx2(_, _, _, 12U, _, _, _, _, _, _, _))
+        .WillOnce(Return(static_cast<ULONG>(ERROR_SUCCESS))); // [Pre-Assert確認_正常系] - EnableTraceEx2() が成功すること。
+    EXPECT_CALL(mock_windows, OpenTraceW(_, _, _, _))
+        .WillOnce(Return(expected_trace_handle)); // [Pre-Assert確認_正常系] - OpenTraceW() が有効なトレース ハンドルを返すこと。
+    EXPECT_CALL(mock_windows, ProcessTrace(_, _, _, _, 1UL, nullptr, nullptr))
+        .WillOnce(
+            [&sync](const char *, const int, const char *, PROCESSTRACE_HANDLE *, ULONG, LPFILETIME, LPFILETIME)
+            {
+                std::unique_lock<std::mutex> lock(sync.mtx);
+                const bool signaled =
+                    sync.cv.wait_for(lock, std::chrono::seconds(5), [&sync]() { return sync.stop_succeeded; });
+                sync.process_timed_out = !signaled;
+                return static_cast<ULONG>(ERROR_SUCCESS);
+            }); // [Pre-Assert確認_正常系] - ProcessTrace() が ControlTraceW() の成功まで待機して終了すること。
+
+    {
+        InSequence seq;
+        EXPECT_CALL(mock_windows, ControlTraceW(_, _, _, 12U, nullptr, _, EVENT_TRACE_CONTROL_STOP))
+            .WillOnce(
+                [&sync](const char *, const int, const char *, CONTROLTRACE_ID, LPCWSTR, PEVENT_TRACE_PROPERTIES,
+                        ULONG)
+                {
+                    std::lock_guard<std::mutex> lock(sync.mtx);
+                    sync.stop_succeeded = true;
+                    sync.cv.notify_all();
+                    return static_cast<ULONG>(ERROR_SUCCESS);
+                }); // [Pre-Assert確認_正常系] - ControlTraceW() が成功すること。
+        EXPECT_CALL(mock_cplat, cplat_thread_join(_))
+            .WillOnce(DoDefault()); // [Pre-Assert確認_正常系] - ControlTraceW() の後に cplat_thread_join() が呼ばれること。
+        EXPECT_CALL(mock_windows, CloseTrace(_, _, _, expected_trace_handle))
+            .WillOnce(Return(static_cast<ULONG>(ERROR_SUCCESS))); // [Pre-Assert確認_正常系] - join の後に CloseTrace() が 1 回だけ呼ばれること。
+    }
+
+    // Act
+    int start_ret = cplat_etw_session_start(
+        "UnitTestEtwStopOk", "0dfe6031-5678-4688-aee8-611340997caa",
+        [](const cplat_etw_event *, void *) {}, nullptr, &session); // [手順] - ETW セッションを開始する。
+    ASSERT_EQ(CPLAT_OK, start_ret); // [状態確認] - cplat_etw_session_start() が CPLAT_OK を返すこと。
+    ASSERT_NE(nullptr, session);    // [状態確認] - session が nullptr 以外であること。
+
+    cplat_etw_session_stop(session); // [手順] - ControlTraceW() が成功する状態で cplat_etw_session_stop() を呼び出す。
+
+    // Assert
+    EXPECT_FALSE(sync.process_timed_out); // [確認_正常系] - ProcessTrace() がタイムアウトせず ControlTraceW() の成功で終了したこと。
+}
+
+// CloseTrace が ERROR_SUCCESS と ERROR_CTX_CLOSE_PENDING のどちらを返しても同じ停止動作になることの確認
+TEST_F(trace_etw_sessionTest, stop_handles_close_trace_success_and_pending_equivalently)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    NiceMock<Mock_windows> mock_windows;
+    etw_stop_sync sync_fail_path;
+    etw_stop_sync sync_ok_path;
+    cplat_etw_session *session_fail_path = nullptr;
+    cplat_etw_session *session_ok_path = nullptr;
+    const PROCESSTRACE_HANDLE handle_one = static_cast<PROCESSTRACE_HANDLE>(44U);
+    const PROCESSTRACE_HANDLE handle_two = static_cast<PROCESSTRACE_HANDLE>(55U);
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, StartTraceW(_, _, _, _, _, _))
+        .WillOnce(
+            [](const char *, const int, const char *, CONTROLTRACE_ID *trace_id, LPCWSTR, PEVENT_TRACE_PROPERTIES)
+            {
+                *trace_id = 13U;
+                return static_cast<ULONG>(ERROR_SUCCESS);
+            })
+        .WillOnce(
+            [](const char *, const int, const char *, CONTROLTRACE_ID *trace_id, LPCWSTR, PEVENT_TRACE_PROPERTIES)
+            {
+                *trace_id = 14U;
+                return static_cast<ULONG>(ERROR_SUCCESS);
+            }); // [Pre-Assert確認_正常系] - 2 回の StartTraceW() がそれぞれセッション ハンドルを返すこと。
+    EXPECT_CALL(mock_windows, EnableTraceEx2(_, _, _, _, _, _, _, _, _, _, _))
+        .Times(2)
+        .WillRepeatedly(Return(static_cast<ULONG>(ERROR_SUCCESS))); // [Pre-Assert確認_正常系] - EnableTraceEx2() が 2 回成功すること。
+    EXPECT_CALL(mock_windows, OpenTraceW(_, _, _, _))
+        .WillOnce(Return(handle_one))
+        .WillOnce(Return(handle_two)); // [Pre-Assert確認_正常系] - 2 回の OpenTraceW() がそれぞれのハンドルを返すこと。
+    EXPECT_CALL(mock_windows, ProcessTrace(_, _, _, _, 1UL, nullptr, nullptr))
+        .WillOnce(
+            [&sync_fail_path](const char *, const int, const char *, PROCESSTRACE_HANDLE *, ULONG, LPFILETIME,
+                              LPFILETIME)
+            {
+                std::unique_lock<std::mutex> lock(sync_fail_path.mtx);
+                const bool signaled = sync_fail_path.cv.wait_for(
+                    lock, std::chrono::seconds(5), [&sync_fail_path]() { return sync_fail_path.close_called; });
+                sync_fail_path.process_timed_out = !signaled;
+                return static_cast<ULONG>(ERROR_SUCCESS);
+            })
+        .WillOnce(
+            [&sync_ok_path](const char *, const int, const char *, PROCESSTRACE_HANDLE *, ULONG, LPFILETIME, LPFILETIME)
+            {
+                std::unique_lock<std::mutex> lock(sync_ok_path.mtx);
+                const bool signaled = sync_ok_path.cv.wait_for(
+                    lock, std::chrono::seconds(5), [&sync_ok_path]() { return sync_ok_path.stop_succeeded; });
+                sync_ok_path.process_timed_out = !signaled;
+                return static_cast<ULONG>(ERROR_SUCCESS);
+            }); // [Pre-Assert確認_正常系] - 2 つの ProcessTrace() がそれぞれの停止条件まで待機して終了すること。
+
+    {
+        InSequence seq_fail;
+        EXPECT_CALL(mock_windows, ControlTraceW(_, _, _, 13U, nullptr, _, EVENT_TRACE_CONTROL_STOP))
+            .WillOnce(Return(static_cast<ULONG>(ERROR_ACCESS_DENIED))); // [Pre-Assert確認_異常系] - 1 つ目の停止要求が失敗すること。
+        EXPECT_CALL(mock_windows, CloseTrace(_, _, _, handle_one))
+            .WillOnce(
+                [&sync_fail_path](const char *, const int, const char *, PROCESSTRACE_HANDLE)
+                {
+                    std::lock_guard<std::mutex> lock(sync_fail_path.mtx);
+                    sync_fail_path.close_called = true;
+                    sync_fail_path.cv.notify_all();
+                    return static_cast<ULONG>(ERROR_SUCCESS);
+                }); // [Pre-Assert確認_正常系] - 1 つ目の CloseTrace() が join より前に ERROR_SUCCESS を返すこと。
+        EXPECT_CALL(mock_cplat, cplat_thread_join(_))
+            .WillOnce(DoDefault()); // [Pre-Assert確認_正常系] - 1 つ目の join が実行されること。
+        EXPECT_CALL(mock_windows, ControlTraceW(_, _, _, 14U, nullptr, _, EVENT_TRACE_CONTROL_STOP))
+            .WillOnce(
+                [&sync_ok_path](const char *, const int, const char *, CONTROLTRACE_ID, LPCWSTR,
+                                PEVENT_TRACE_PROPERTIES, ULONG)
+                {
+                    std::lock_guard<std::mutex> lock(sync_ok_path.mtx);
+                    sync_ok_path.stop_succeeded = true;
+                    sync_ok_path.cv.notify_all();
+                    return static_cast<ULONG>(ERROR_SUCCESS);
+                }); // [Pre-Assert確認_正常系] - 2 つ目の停止要求が成功すること。
+        EXPECT_CALL(mock_cplat, cplat_thread_join(_))
+            .WillOnce(DoDefault()); // [Pre-Assert確認_正常系] - 2 つ目の join が実行されること。
+        EXPECT_CALL(mock_windows, CloseTrace(_, _, _, handle_two))
+            .WillOnce(Return(static_cast<ULONG>(ERROR_CTX_CLOSE_PENDING))); // [Pre-Assert確認_正常系] - 2 つ目の CloseTrace() が join 後に ERROR_CTX_CLOSE_PENDING を返すこと。
+    }
+
+    // Act
+    ASSERT_EQ(CPLAT_OK, cplat_etw_session_start(
+                            "UnitTestEtwCloseSuccess", "0dfe6031-5678-4688-aee8-611340997caa",
+                            [](const cplat_etw_event *, void *) {}, nullptr, &session_fail_path));
+    ASSERT_EQ(CPLAT_OK, cplat_etw_session_start(
+                            "UnitTestEtwClosePending", "0dfe6031-5678-4688-aee8-611340997caa",
+                            [](const cplat_etw_event *, void *) {}, nullptr, &session_ok_path));
+
+    cplat_etw_session_stop(session_fail_path); // [手順] - 停止失敗かつ CloseTrace() が ERROR_SUCCESS を返す経路を実行する。
+    cplat_etw_session_stop(session_ok_path); // [手順] - 停止成功かつ CloseTrace() が ERROR_CTX_CLOSE_PENDING を返す経路を実行する。
+
+    // Assert
+    EXPECT_FALSE(sync_fail_path.process_timed_out); // [確認_正常系] - ERROR_SUCCESS 側のワーカー スレッドが正常終了したこと。
+    EXPECT_FALSE(sync_ok_path.process_timed_out); // [確認_正常系] - ERROR_CTX_CLOSE_PENDING 側のワーカー スレッドが正常終了したこと。
+}
+
+// NULL セッションを渡した cplat_etw_session_stop が何もしないことの確認
+TEST_F(trace_etw_sessionTest, stop_with_null_session_does_nothing)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, ControlTraceW(_, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_正常系] - NULL 指定時は ControlTraceW() を呼ばないこと。
+    EXPECT_CALL(mock_windows, CloseTrace(_, _, _, _))
+        .Times(0); // [Pre-Assert確認_正常系] - NULL 指定時は CloseTrace() を呼ばないこと。
+
+    // Act
+    cplat_etw_session_stop(nullptr); // [手順] - nullptr を指定して cplat_etw_session_stop() を呼び出す。
+
+    // Assert
+    SUCCEED(); // [確認_正常系] - クラッシュせず制御が戻ること。
 }
 
 #endif /* PLATFORM_WINDOWS */

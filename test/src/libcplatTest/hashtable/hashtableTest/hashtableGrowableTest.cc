@@ -389,3 +389,247 @@ TEST_F(hashtableGrowableTest, create_rejects_invalid_growth_config)
     EXPECT_EQ(nullptr,
               ht); // [確認_異常系] - ht が nullptr であること。(失敗時に出力ハンドルが nullptr になったことの確認)
 }
+
+// 有限の寿命 (3) で reuse_deleted が 0 の場合、push_deleted を呼ばなければ拡張し、1 回呼べば拡張しないことの確認
+TEST_F(hashtableGrowableTest, finite_lifetime_three_grows_without_push_and_reuses_after_push)
+{
+    // Arrange
+    cplat_hashtable_config config = fixed_config(2);
+    cplat_hashtable_growth_config growth = {};
+    cplat_hashtable_config current_no_push = {};
+    cplat_hashtable_config current_with_push = {};
+    cplat_hashtable *ht_no_push = nullptr;
+    cplat_hashtable *ht_with_push = nullptr;
+    size_t deleted_before_push = 0;
+    size_t deleted_after_push = 0;
+    size_t empty_after_push = 0;
+
+    config.lifetime = 3;
+    config.reuse_deleted = 0;
+
+    // Pre-Assert
+
+    // Act
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_create_growable(&config, &growth, &ht_no_push));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht_no_push, "k1", "v1", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht_no_push, "k2", "v2", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_delete(ht_no_push, "k1"));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_delete(ht_no_push, "k2"));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht_no_push, "k3", "v3", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE)); // [手順] - push_deleted なしで別キーを追加する。
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_get_config_val(ht_no_push, &current_no_push));
+
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_create_growable(&config, &growth, &ht_with_push));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht_with_push, "k1", "v1", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht_with_push, "k2", "v2", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_delete(ht_with_push, "k1"));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_delete(ht_with_push, "k2"));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_deleted_count(ht_with_push, &deleted_before_push));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_push_deleted(ht_with_push)); // [手順] - lifetime=3 のため 1 回目の push_deleted で削除済みを空へ戻す。
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_deleted_count(ht_with_push, &deleted_after_push));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_empty_count(ht_with_push, &empty_after_push));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht_with_push, "k3", "v3", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE)); // [手順] - 空へ戻った後に別キーを追加する。
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_get_config_val(ht_with_push, &current_with_push));
+
+    // Assert
+    EXPECT_GT(current_no_push.capacity, 2U); // [確認_正常系] - push_deleted なしでは容量が増えること。
+    EXPECT_EQ(2U, deleted_before_push); // [確認_正常系] - push_deleted 前の削除済み件数が 2 であること。
+    EXPECT_EQ(0U, deleted_after_push);  // [確認_正常系] - push_deleted 1 回で削除済みが 0 になること。
+    EXPECT_EQ(2U, empty_after_push);    // [確認_正常系] - 空きスロット数が 2 に戻ること。
+    EXPECT_EQ(2U, current_with_push.capacity); // [確認_正常系] - push_deleted 1 回後は容量が増えないこと。
+
+    // Cleanup
+    cplat_hashtable_dispose(ht_with_push);
+    cplat_hashtable_dispose(ht_no_push);
+}
+
+// 寿命が無限の場合、push_deleted を複数回呼んでも拡張し、purge_deleted を呼べば拡張しないことの確認
+TEST_F(hashtableGrowableTest, infinite_lifetime_grows_even_with_push_and_does_not_grow_after_purge)
+{
+    // Arrange
+    cplat_hashtable_config config = fixed_config(2);
+    cplat_hashtable_growth_config growth = {};
+    cplat_hashtable_config current_push = {};
+    cplat_hashtable_config current_purge = {};
+    cplat_hashtable *ht_push = nullptr;
+    cplat_hashtable *ht_purge = nullptr;
+    size_t deleted_after_push = 0;
+    size_t empty_after_purge = 0;
+
+    config.lifetime = CPLAT_HASHTABLE_LIFETIME_INFINITE;
+    config.reuse_deleted = 0;
+
+    // Pre-Assert
+
+    // Act
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_create_growable(&config, &growth, &ht_push));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht_push, "k1", "v1", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht_push, "k2", "v2", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_delete(ht_push, "k1"));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_delete(ht_push, "k2"));
+    for (int i = 0; i < 5; i++)
+    {
+        ASSERT_EQ(CPLAT_OK, cplat_hashtable_push_deleted(ht_push)); // [手順] - 寿命無限で push_deleted を繰り返す。
+    }
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_deleted_count(ht_push, &deleted_after_push));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht_push, "k3", "v3", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_get_config_val(ht_push, &current_push));
+
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_create_growable(&config, &growth, &ht_purge));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht_purge, "k1", "v1", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht_purge, "k2", "v2", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_delete(ht_purge, "k1"));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_delete(ht_purge, "k2"));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_purge_deleted(ht_purge)); // [手順] - purge_deleted で削除済みを空へ戻す。
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_empty_count(ht_purge, &empty_after_purge));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht_purge, "k3", "v3", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_get_config_val(ht_purge, &current_purge));
+
+    // Assert
+    EXPECT_EQ(2U, deleted_after_push); // [確認_正常系] - push_deleted を繰り返しても削除済み件数が 2 のままであること。
+    EXPECT_GT(current_push.capacity, 2U); // [確認_正常系] - 別キーの追加で容量が増えること。
+    EXPECT_EQ(2U, empty_after_purge); // [確認_正常系] - purge_deleted 後の空きスロット数が 2 であること。
+    EXPECT_EQ(2U, current_purge.capacity); // [確認_正常系] - purge_deleted 後は容量が増えないこと。
+
+    // Cleanup
+    cplat_hashtable_dispose(ht_purge);
+    cplat_hashtable_dispose(ht_push);
+}
+
+// 寿命が 2 の場合、異なるキーの削除と追加を繰り返しても容量が増えないことの確認
+TEST_F(hashtableGrowableTest, lifetime_two_does_not_grow_on_repeated_add_delete)
+{
+    // Arrange
+    cplat_hashtable_config config = fixed_config(2);
+    cplat_hashtable_growth_config growth = {};
+    cplat_hashtable_config current = {};
+    cplat_hashtable *ht = nullptr;
+    size_t deleted_count = 0;
+
+    config.lifetime = 2;
+    config.reuse_deleted = 0;
+
+    // Pre-Assert
+
+    // Act
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_create_growable(&config, &growth, &ht));
+    for (int i = 0; i < 6; i++)
+    {
+        char key[8] = {};
+        (void)snprintf(key, sizeof(key), "k%d", i);
+        ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht, key, "v", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE));
+        ASSERT_EQ(CPLAT_OK, cplat_hashtable_delete(ht, key));
+    } // [手順] - lifetime=2 で異なるキーの追加と削除を 6 回繰り返す。
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_get_config_val(ht, &current));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_deleted_count(ht, &deleted_count));
+
+    // Assert
+    EXPECT_EQ(2U, current.capacity); // [確認_正常系] - 容量が初期値 2 のままであること。
+    EXPECT_EQ(0U, deleted_count);    // [確認_正常系] - 削除済みが残らないこと。
+
+    // Cleanup
+    cplat_hashtable_dispose(ht);
+}
+
+// reuse_deleted が非 0 の場合、寿命が無限でも容量が増えないことの確認
+TEST_F(hashtableGrowableTest, reuse_deleted_prevents_growth_even_with_infinite_lifetime)
+{
+    // Arrange
+    cplat_hashtable_config config = fixed_config(2);
+    cplat_hashtable_growth_config growth = {};
+    cplat_hashtable_config current = {};
+    cplat_hashtable *ht = nullptr;
+    size_t deleted_count = 0;
+
+    config.lifetime = CPLAT_HASHTABLE_LIFETIME_INFINITE;
+    config.reuse_deleted = 1;
+
+    // Pre-Assert
+
+    // Act
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_create_growable(&config, &growth, &ht));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht, "k1", "v1", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht, "k2", "v2", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_delete(ht, "k1"));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_delete(ht, "k2"));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht, "k3", "v3", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht, "k4", "v4", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE)); // [手順] - 削除済みスロットを再利用して別キーを追加する。
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_get_config_val(ht, &current));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_deleted_count(ht, &deleted_count));
+
+    // Assert
+    EXPECT_EQ(2U, current.capacity); // [確認_正常系] - 容量が 2 のまま増えないこと。
+    EXPECT_EQ(0U, deleted_count);    // [確認_正常系] - 削除済みスロットが再利用されたこと。
+
+    // Cleanup
+    cplat_hashtable_dispose(ht);
+}
+
+// 同じキーの削除と再追加では削除済みが復活し容量が増えないことの確認
+TEST_F(hashtableGrowableTest, deleting_and_readding_same_key_does_not_grow_capacity)
+{
+    // Arrange
+    cplat_hashtable_config config = fixed_config(2);
+    cplat_hashtable_growth_config growth = {};
+    cplat_hashtable_config current = {};
+    cplat_hashtable *ht = nullptr;
+    size_t deleted_count = 0;
+
+    config.lifetime = CPLAT_HASHTABLE_LIFETIME_INFINITE;
+    config.reuse_deleted = 0;
+
+    // Pre-Assert
+
+    // Act
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_create_growable(&config, &growth, &ht));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht, "k1", "v1", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht, "k2", "v2", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_delete(ht, "k1"));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht, "k1", "v1_new", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE)); // [手順] - 削除済みとなった同一キーを再び追加する。
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_get_config_val(ht, &current));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_deleted_count(ht, &deleted_count));
+
+    // Assert
+    EXPECT_EQ(2U, current.capacity); // [確認_正常系] - 容量が 2 のまま増えないこと。
+    EXPECT_EQ(0U, deleted_count);    // [確認_正常系] - 削除済みレコードが復活し削除済み数が 0 になること。
+
+    // Cleanup
+    cplat_hashtable_dispose(ht);
+}
+
+// レコード用スロットに空きがあっても可変長キー ストレージが不足する追加で自動拡張されることの確認
+TEST_F(hashtableGrowableTest, add_grows_key_storage_even_when_record_slots_are_empty)
+{
+    // Arrange
+    cplat_hashtable_config config = fixed_config(4);
+    cplat_hashtable_growth_config growth = {};
+    cplat_hashtable_config current = {};
+    cplat_hashtable *ht = nullptr;
+    size_t empty_count = 0;
+    const void *val_a = nullptr;
+    const void *val_b = nullptr;
+
+    config.key_type = CPLAT_HASHTABLE_FIELD_VARIABLE_STRING;
+    config.key_size = 0;
+    config.key_storage_size = 10;
+
+    // Pre-Assert
+
+    // Act
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_create_growable(&config, &growth, &ht));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht, "aaaa", "v1", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE)); // 5 byte 消費
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_empty_count(ht, &empty_count));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_add(ht, "bbbbbb", "v2", CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE)); // [手順] - 空きスロットが残る状態で可変長キー領域を超える 7 byte のキーを追加する。
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_get_config_val(ht, &current));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_find_value_ref(ht, "aaaa", &val_a));
+    ASSERT_EQ(CPLAT_OK, cplat_hashtable_find_value_ref(ht, "bbbbbb", &val_b));
+
+    // Assert
+    EXPECT_EQ(3U, empty_count); // [確認_正常系] - 追加前の空きスロットが 3 件存在すること。
+    EXPECT_EQ(4U, current.capacity); // [確認_正常系] - レコード容量 4 は増えないこと。
+    EXPECT_GT(current.key_storage_size, 10U); // [確認_正常系] - key_storage_size が 10 より大きく拡張されること。
+    EXPECT_STREQ("v1", static_cast<const char *>(val_a)); // [確認_正常系] - 既存キーの値が保たれること。
+    EXPECT_STREQ("v2", static_cast<const char *>(val_b)); // [確認_正常系] - 追加キーの値が読めること。
+
+    // Cleanup
+    cplat_hashtable_dispose(ht);
+}

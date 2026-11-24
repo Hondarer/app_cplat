@@ -93,6 +93,8 @@ extern "C"
     /**
      *  @brief          syslog プロバイダーを終了します。
      *
+     *  記述子を閉じる処理が失敗しても、失敗は通知しません。呼び出し側に、失敗を受けて取れる手段がないためです。
+     *
      *  @param[in]      handle   cplat_syslog_sink_create の戻り値。NULL は無視。
      *
      *  @par            スレッド セーフ

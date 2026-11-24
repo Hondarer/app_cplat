@@ -22,12 +22,6 @@
 
 #include <cplat/base/platform.h>
 
-#if defined(PLATFORM_LINUX)
-    #ifndef _GNU_SOURCE
-        #define _GNU_SOURCE
-    #endif /* _GNU_SOURCE */
-#endif     /* PLATFORM_LINUX */
-
 #include <stddef.h>
 #include <cplat/base/result.h>
 #include <cplat/cplat_export.h>

@@ -111,8 +111,8 @@ struct cplat_trace_file_sink
     /** self_id が有効かどうかのフラグ。 */
     int self_id_valid;
 
-    /** 64 bit アーキテクチャーで構造体末尾の暗黙パディングを防ぐ。 */
-    int pad;
+    /** ファイルを開いている場合 1、未オープンの場合 0。 */
+    int file_open;
 };
 
 /* ===== プロセス内 sink レジストリ ===== */
@@ -357,9 +357,12 @@ static int open_file(cplat_trace_file_sink *p)
 
     if (cplat_file_open(&p->file, p->path, flags, NULL) != CPLAT_OK)
     {
+        p->file_open = 0;
         p->current_bytes = 0;
         return -1;
     }
+
+    p->file_open = 1;
 
     if (cplat_file_get_size(&p->file, &p->current_bytes, NULL) != CPLAT_OK)
     {
@@ -424,7 +427,15 @@ static int open_file_truncate(cplat_trace_file_sink *p)
 
     p->current_bytes = 0;
 
-    return cplat_file_open(&p->file, p->path, flags, NULL);
+    if (cplat_file_open(&p->file, p->path, flags, NULL) != CPLAT_OK)
+    {
+        p->file_open = 0;
+        return -1;
+    }
+
+    p->file_open = 1;
+
+    return 0;
 }
 
 /**
@@ -465,23 +476,32 @@ static int sink_points_to_current_file(const cplat_trace_file_sink *p)
  */
 static int close_file(cplat_trace_file_sink *p)
 {
+    int result = CPLAT_OK;
+
     if (cplat_file_close(&p->file, NULL) != CPLAT_OK)
     {
-        return CPLAT_ERR_UNKNOWN;
+        result = CPLAT_ERR_UNKNOWN;
     }
 
-    return CPLAT_OK;
+    p->file_open = 0;
+
+    return result;
 }
 
 /**
  *  @brief  トレース ファイルをローテーションします。
  *
  *  ローカル mutex 保持中から呼び出される。ファイルの再オープンは 1 回だけ試行する。\n
- *  リネームに失敗した場合はその世代でカスケードを打ち切り、
- *  呼び出し元をブロックせずに続行する (ベスト エフォート)。\n
- *  閉じる処理が失敗しても、世代の移動と新しいファイルを開く処理は続ける。
+ *  世代パス生成、最古世代の削除 (`CPLAT_ERR_NOT_FOUND` 以外)、または名前変更 (`CPLAT_ERR_NOT_FOUND` 以外) が
+ *  失敗した場合は、後続の世代移動と新しいファイルの open を行わず、sink を未オープンのままにして
+ *  @ref CPLAT_ERR_UNKNOWN を返す (単一プロセス モードでは旧 path を切り詰めない)。\n
+ *  `CPLAT_ERR_NOT_FOUND` は削除対象または移動元がない正常な状態として続行する。\n
+ *  閉じる処理が失敗しても世代の移動と新しいファイルを開く処理は続け、最後に閉じる処理の失敗を返す。\n
+ *  全世代の処理が成功した後に新しい現在ファイルを開き、その open だけが単独で失敗した場合は、
+ *  未オープンのまま次の書き込みで開き直すため結果を破棄する。
  *
- *  @return 閉じる処理の結果 (close_file() の戻り値) を返します。
+ *  @return 閉じる処理、世代パス生成、削除、名前変更のいずれかが失敗した場合は @ref CPLAT_ERR_UNKNOWN 、
+ *          それ以外の場合は @ref CPLAT_OK を返します。
  */
 static int rotate_file(cplat_trace_file_sink *p)
 {
@@ -493,14 +513,16 @@ static int rotate_file(cplat_trace_file_sink *p)
 
     close_ret = close_file(p);
 
-    /*
-     * 最老世代のファイルを削除する。
-     * ファイルがない場合の失敗は正常であり、ほかの失敗は続くリネームの失敗でカスケードを打ち切るため、
-     * cplat_remove の戻り値は明示的に破棄する。
-     */
-    if (cplat_snprintf(new_path, sizeof(new_path), "%s.%d", p->path, p->generations) == CPLAT_OK)
+    /* 最老世代のファイルを削除する。削除対象がない (CPLAT_ERR_NOT_FOUND) 場合は正常な不在として続行する。 */
+    if (cplat_snprintf(new_path, sizeof(new_path), "%s.%d", p->path, p->generations) != CPLAT_OK)
     {
-        (void)cplat_remove(new_path, NULL);
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    cplat_error_clear(&detail);
+    if (cplat_remove(new_path, &detail) != 0 && detail.result != CPLAT_ERR_NOT_FOUND)
+    {
+        return CPLAT_ERR_UNKNOWN;
     }
 
     /* path.(gen-1) を path.gen へ順にリネームする。 */
@@ -508,7 +530,7 @@ static int rotate_file(cplat_trace_file_sink *p)
     {
         if (cplat_snprintf(new_path, sizeof(new_path), "%s.%d", p->path, gen) != CPLAT_OK)
         {
-            break;
+            return CPLAT_ERR_UNKNOWN;
         }
 
         /* gen が 1 の移動元は、世代番号を付けない path そのものである。 */
@@ -516,14 +538,14 @@ static int rotate_file(cplat_trace_file_sink *p)
         {
             if (cplat_snprintf(old_path, sizeof(old_path), "%s", p->path) != CPLAT_OK)
             {
-                break;
+                return CPLAT_ERR_UNKNOWN;
             }
         }
         else
         {
             if (cplat_snprintf(old_path, sizeof(old_path), "%s.%d", p->path, gen - 1) != CPLAT_OK)
             {
-                break;
+                return CPLAT_ERR_UNKNOWN;
             }
         }
 
@@ -536,14 +558,15 @@ static int rotate_file(cplat_trace_file_sink *p)
                 continue;
             }
 
-            /* リネームに失敗したため、カスケードをここで打ち切る。 */
-            break;
+            /* 名前変更に失敗したため、後続の世代移動と新規ファイルの open を行わず失敗を返す。 */
+            return CPLAT_ERR_UNKNOWN;
         }
     }
 
     /*
-     * 新規ファイルを作成して開く。
-     * ローテーションを起こした書き込みは完了しており、開けない場合は未オープンのまま続けるため、
+     * 全世代の移動後に新規ファイルを作成して開く。
+     * ローテーションを起こした書き込みは完了しており、新しい現在ファイルを開けないことだけが
+     * 単独の失敗である場合は未オープンのまま次の書き込みで開き直すため、
      * この分岐の open_file と open_file_truncate の戻り値は明示的に破棄する。
      */
     if (p->shared != 0)
@@ -565,26 +588,30 @@ static int rotate_file(cplat_trace_file_sink *p)
 /**
  *  @brief          共有モードのローテーション判定と実行を行います。
  *  @param[in,out]  p   ローテーション対象の出力先。
- *  @return         ファイルを閉じる処理とプロセス間ロックの解放のいずれかが失敗した場合は
- *                  @ref CPLAT_ERR_UNKNOWN 、それ以外の場合は @ref CPLAT_OK を返します。
+ *  @return         ファイル サイズの取得、非ブロッキングのロック取得 (@ref CPLAT_ERR_BUSY 以外)、
+ *                  ファイルを閉じる処理、世代パス生成、削除/名前変更、プロセス間ロック解放のいずれかが
+ *                  失敗した場合は @ref CPLAT_ERR_UNKNOWN 、それ以外の場合は @ref CPLAT_OK を返します。
  *
  *  ローカル mutex 保持中、書き込み成功直後に呼び出される。\n
  *  全プロセス合計の実サイズ (ハンドル基準) が max_bytes 未満なら何もしない。\n
  *  しきい値以上の場合はプロセス間ロックの取得を非ブロッキングで試行し、ロック下で同一性と実サイズを
  *  再確認してからローテーションする。他プロセスがローテーション済みの場合は
  *  再度開くだけにとどめる。\n
- *  プロセス間ロックの取得に失敗した場合はローテーションを見送る
- *  (次回書き込み時に再試行するため、肥大化は一時的に留まる)。
+ *  プロセス間ロックの取得が @ref CPLAT_ERR_BUSY で失敗した場合はローテーションを見送る
+ *  (次回書き込み時に再試行するため、肥大化は一時的に留まる)。\n
+ *  プロセス間ロックの解放に失敗した場合は、新しい現在ファイルの open 失敗より優先して
+ *  @ref CPLAT_ERR_UNKNOWN を返す。
  */
 static int check_rotate_shared(cplat_trace_file_sink *p)
 {
     size_t real_bytes;
+    int lock_ret;
     int ret = CPLAT_OK;
 
     /* インメモリ集計ではなく実サイズで判定する。複数 writer の合計を反映する。 */
     if (cplat_file_get_size(&p->file, &real_bytes, NULL) != CPLAT_OK)
     {
-        return CPLAT_OK;
+        return CPLAT_ERR_UNKNOWN;
     }
 
     if (real_bytes < p->max_bytes)
@@ -592,9 +619,15 @@ static int check_rotate_shared(cplat_trace_file_sink *p)
         return CPLAT_OK;
     }
 
-    if (cplat_interprocess_lock_try_lock(p->rotate_lock) != CPLAT_OK)
+    lock_ret = cplat_interprocess_lock_try_lock(p->rotate_lock);
+    if (lock_ret != CPLAT_OK)
     {
-        return CPLAT_OK;
+        if (lock_ret == CPLAT_ERR_BUSY)
+        {
+            return CPLAT_OK;
+        }
+
+        return CPLAT_ERR_UNKNOWN;
     }
 
     if (sink_points_to_current_file(p) == 0)
@@ -606,7 +639,11 @@ static int check_rotate_shared(cplat_trace_file_sink *p)
     else
     {
         /* ロック下で実サイズを再確認してからローテーションする。 */
-        if (cplat_file_get_size(&p->file, &real_bytes, NULL) == CPLAT_OK && real_bytes >= p->max_bytes)
+        if (cplat_file_get_size(&p->file, &real_bytes, NULL) != CPLAT_OK)
+        {
+            ret = CPLAT_ERR_UNKNOWN;
+        }
+        else if (real_bytes >= p->max_bytes)
         {
             ret = rotate_file(p);
         }
@@ -675,6 +712,7 @@ static cplat_trace_file_sink *create_new_sink(const char *path, const size_t pat
     handle->rotate_lock = NULL;
     handle->mutex_initialized = 0;
     handle->self_id_valid = 0;
+    handle->file_open = 0;
     handle->current_bytes = 0;
     handle->flags = flags;
     cplat_file_init(&handle->file);
@@ -889,22 +927,16 @@ int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, con
         return CPLAT_ERR_UNKNOWN;
     }
 
-    /*
-     * 共有モードでは、他プロセスのローテーションで path の実体が入れ替わっていたら開き直す。
-     * 閉じる処理が失敗しても開き直して書き込み、最後に失敗を返す。
-     */
+    /* 未オープンなら開き直す。共有モードは、他プロセスのローテーションで実体が入れ替わった場合も開き直す。 */
     reopen_ret = CPLAT_OK;
-    if (handle->shared != 0)
+    if (handle->file_open == 0 || (handle->shared != 0 && sink_points_to_current_file(handle) == 0))
     {
-        if (sink_points_to_current_file(handle) == 0)
-        {
-            reopen_ret = close_file(handle);
+        reopen_ret = close_file(handle);
 
-            if (open_file(handle) != 0)
-            {
-                cplat_local_lock_unlock(handle->mutex);
-                return CPLAT_ERR_UNKNOWN;
-            }
+        if (open_file(handle) != 0)
+        {
+            cplat_local_lock_unlock(handle->mutex);
+            return CPLAT_ERR_UNKNOWN;
         }
     }
 

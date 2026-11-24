@@ -23,6 +23,9 @@ extern "C"
 
     /* 診断ログ パスの組み立て結果を確認するためのアクセサー。 */
     extern int test_console_build_diag_log_path(wchar_t *path_out, size_t path_len);
+
+    /* 親コンソール再接続済みフラグを設定するためのアクセサー。 */
+    extern void test_console_set_attached_parent(int value);
 #endif /* PLATFORM_WINDOWS */
 
 #ifdef __cplusplus

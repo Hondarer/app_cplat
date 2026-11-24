@@ -62,6 +62,12 @@ struct cplat_etw_session
 
     /** プロバイダー GUID (イベント フィルタリング用)。 */
     GUID provider_guid;
+
+    /** トレース ハンドルを CloseTrace 済みなら 1、未クローズなら 0。 */
+    int trace_closed;
+
+    /** 64 bit アーキテクチャーで構造体末尾の暗黙パディングを防ぐ。 */
+    int pad;
 };
 
 /**
@@ -674,10 +680,42 @@ int cplat_etw_session_start(const char *session_name, const char *provider_guid_
     return CPLAT_OK;
 }
 
+/**
+ *  @brief  トレース ハンドルを一度だけ閉じます。
+ *  @return 成功またはすでに閉じ済みの場合は @ref CPLAT_OK 、失敗時は @ref CPLAT_ERR_UNKNOWN 。
+ *
+ *  別スレッドで ProcessTrace() が &session->trace_handle を参照しているため、
+ *  session->trace_handle 自体は書き換えず、trace_closed フラグで二重クローズを防ぎます。\n
+ *  リアルタイム トレースの実行中に呼んだ場合、CloseTrace() は ERROR_CTX_CLOSE_PENDING を返しますが、
+ *  これは成功を表します。
+ *  see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/nf-evntrace-closetrace
+ */
+static int close_trace_handle(cplat_etw_session *session)
+{
+    ULONG close_status;
+
+    if (session == NULL || session->trace_handle == INVALID_PROCESSTRACE_HANDLE || session->trace_closed != 0)
+    {
+        return CPLAT_OK;
+    }
+
+    close_status = CloseTrace(session->trace_handle);
+    session->trace_closed = 1;
+
+    if (close_status == ERROR_SUCCESS || close_status == ERROR_CTX_CLOSE_PENDING)
+    {
+        return CPLAT_OK;
+    }
+
+    return CPLAT_ERR_UNKNOWN;
+}
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 void cplat_etw_session_stop(cplat_etw_session *session)
 {
+    ULONG stop_status = ERROR_SUCCESS;
+
     if (session == NULL)
     {
         return;
@@ -690,8 +728,18 @@ void cplat_etw_session_stop(cplat_etw_session *session)
      */
     if (session->session_handle != 0 && session->properties != NULL)
     {
-        /* 停止の関数は失敗を通知せず、資源を解放する以外に取れる行動がないため、戻り値は明示的に破棄する。 */
-        (void)ControlTraceW(session->session_handle, NULL, session->properties, EVENT_TRACE_CONTROL_STOP);
+        stop_status = ControlTraceW(session->session_handle, NULL, session->properties, EVENT_TRACE_CONTROL_STOP);
+    }
+
+    /*
+     * 停止の要求が失敗すると、ProcessTrace() が戻らず、続く join が終わらない。
+     * リアルタイムのトレースは、ProcessTrace() が戻る前でも CloseTrace() で閉じられるため、先に閉じて戻らせる。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/nf-evntrace-closetrace
+     */
+    if (stop_status != ERROR_SUCCESS && session->trace_closed == 0)
+    {
+        /* 停止の関数は失敗を通知せず、閉じる処理の失敗を受けても取れる行動がないため、戻り値は明示的に破棄する。 */
+        (void)close_trace_handle(session);
     }
 
     if (session->thread_handle != NULL)
@@ -699,11 +747,11 @@ void cplat_etw_session_stop(cplat_etw_session *session)
         cplat_thread_join(session->thread_handle);
     }
 
-    if (session->trace_handle != INVALID_PROCESSTRACE_HANDLE)
-    {
-        /* 破棄の後に失敗を受けても、呼び出し元が取れる行動がないため、戻り値は明示的に破棄する。 */
-        (void)CloseTrace(session->trace_handle);
-    }
+    /*
+     * 停止の要求が成功した場合は、join 後にトレースを閉じる。すでに閉じていれば何もしない。
+     * 停止の関数は失敗を通知せず、破棄の後に失敗を受けても取れる行動がないため、戻り値は明示的に破棄する。
+     */
+    (void)close_trace_handle(session);
 
     cplat_free(session->session_name_w);
     cplat_free(session->properties);

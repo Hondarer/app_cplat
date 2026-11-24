@@ -320,7 +320,7 @@ TEST_F(traceFileCoverageTest, shared_write_reopens_when_file_volume_changes)
 }
 // [サブ手順参照 名前=traceFileRegistryTest.TearDown]
 
-// ローテーション中の rename 失敗時にカスケードを中止することの確認
+// ローテーション中の rename 失敗時に後続の移動と再オープンを行わず CPLAT_ERR_UNKNOWN を返すことの確認
 // [サブ手順参照 名前=traceFileCoverageTest.SetUp]
 TEST_F(traceFileCoverageTest, rotation_stops_after_rename_failure)
 {
@@ -333,8 +333,10 @@ TEST_F(traceFileCoverageTest, rotation_stops_after_rename_failure)
     // Pre-Assert
     EXPECT_CALL(mock_cplat, cplat_rename(_, _, _))
         .WillOnce(Return(
-            CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_rename() が 1 回呼び出されること。(最初の rename を失敗させることの確認)
+            CPLAT_ERR_UNKNOWN)); // [Pre-Assert確認_異常系] - cplat_rename() が 1 回だけ呼び出されること。(最初の rename 失敗で後続の rename を止めることの確認)
                                  // [Pre-Assert手順] - cplat_rename() から CPLAT_ERR_UNKNOWN を返す。
+    EXPECT_CALL(mock_cplat, cplat_file_open(_, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - rename 失敗後に新しいファイルを開かないこと。
 
     // Act
     int result = cplat_trace_file_sink_write(
@@ -343,8 +345,8 @@ TEST_F(traceFileCoverageTest, rotation_stops_after_rename_failure)
 
     // Assert
     EXPECT_EQ(
-        CPLAT_OK,
-        result); // [確認_正常系] - cplat_trace_file_sink_write() の戻り値が CPLAT_OK であること。(rename 失敗をベスト エフォートで扱うことの確認)
+        CPLAT_ERR_UNKNOWN,
+        result); // [確認_異常系] - cplat_trace_file_sink_write() の戻り値が CPLAT_ERR_UNKNOWN であること。(rename 失敗を呼び出し元へ通知することの確認)
 
     // Cleanup
     cplat_trace_file_sink_dispose(handle);
@@ -439,11 +441,11 @@ TEST_F(traceFileCoverageTest, shared_rotation_handles_size_query_outcomes)
 
     // Assert
     EXPECT_EQ(
-        CPLAT_OK,
-        initial_query_error); // [確認_異常系] - 初回サイズ取得失敗時の cplat_trace_file_sink_write() の戻り値が CPLAT_OK であること。(書き込みが成功扱いになることの確認)
+        CPLAT_ERR_UNKNOWN,
+        initial_query_error); // [確認_異常系] - 初回サイズ取得失敗時の cplat_trace_file_sink_write() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(
-        CPLAT_OK,
-        locked_query_error); // [確認_異常系] - ロック後のサイズ取得失敗時の cplat_trace_file_sink_write() の戻り値が CPLAT_OK であること。(書き込みが成功扱いになることの確認)
+        CPLAT_ERR_UNKNOWN,
+        locked_query_error); // [確認_異常系] - ロック後のサイズ取得失敗時の cplat_trace_file_sink_write() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(
         CPLAT_OK,
         below_limit); // [確認_正常系] - ロック後のサイズが上限未満のときの cplat_trace_file_sink_write() の戻り値が CPLAT_OK であること。(ローテーションを見送ったことの確認)

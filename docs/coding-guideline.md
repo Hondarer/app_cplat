@@ -15,6 +15,12 @@ cplat 固有の規則、制限、遵守事項は、今後もすべて本書に�
 cplat は 64 ビット環境専用です。  
 ポインターの幅および主要データ型のサイズは 64 ビット環境を前提とし、32 ビット環境向けの条件分岐、互換処理、回避策は一切追加しません。
 
+### 機能検査マクロ
+
+機能検査マクロ (`_GNU_SOURCE` など) は、`app/cplat/makepart.mk` の `DEFINES` で与え、ソースとヘッダーの中では定義しません。  
+glibc は最初に取り込んだ標準ヘッダーの時点で機能検査マクロを確定するため、ヘッダーやソースの中での定義は、先に標準ヘッダーを取り込んだ翻訳単位で効きません。  
+see: https://man7.org/linux/man-pages/man7/feature_test_macros.7.html
+
 ### 関連ドキュメント
 
 - [`api-cheatsheet.md`](api-cheatsheet.md) - cplat API チート シート (公開 API 全体の一覧、入り口)

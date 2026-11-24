@@ -391,6 +391,7 @@ Table: ソケット操作 API と cplat 代替関数
 `cplat_socket_send_all`/`cplat_socket_recv_all` は複数回の `send`/`recv` をループさせる合成 API です。  
 Linux の `cplat_socket_send`/`cplat_socket_send_all` は、切断済みの接続への送信による SIGPIPE を送信単位で抑制し、送信エラーは結果コードと `cplat_error` で通知します。  
 `cplat_socket_set_multicast_ttl` は送るマルチキャスト パケットにだけ `IP_MULTICAST_TTL` を適用し、ユニキャストとブロードキャストには影響しません。  
+`cplat_socket_close` は閉じる処理が失敗しても通知しません (直前エラーの保存と復元は行います)。  
 `cplat_socket_shutdown_receive` は Linux (`shutdown(SHUT_RD)`) と Windows (実質 close 相当) で意味論が異なる差異を吸収した複合 API です。
 
 ### プロセス内メモリ ロック
@@ -450,7 +451,7 @@ Table: 表示言語取得 API と cplat 代替ラッパーの差異
 
 Table: モジュール・プロセス情報取得 API と cplat 代替ラッパーの差異
 
-`cplat_process_dispose`/`cplat_process_run_sync`/`cplat_process_timed_run_sync` はハンドル破棄、`start` +`wait` +`get_exit_code` の合成 API です。`cplat_process_timed_run_sync` は期限切れ時に子プロセスを強制終了して `CPLAT_ERR_TIMEOUT` を返します。
+`cplat_process_dispose`/`cplat_process_run_sync`/`cplat_process_timed_run_sync` はハンドル破棄、`start` +`wait` +`get_exit_code` の合成 API です。`cplat_process_dispose` はハンドルを閉じる処理の失敗を通知しません。`cplat_process_timed_run_sync` は期限切れ時に子プロセスを強制終了して `CPLAT_ERR_TIMEOUT` を返します。
 
 ### 実行優先度 (Linux 専用)
 
@@ -547,13 +548,13 @@ Table: 正規表現操作 API と cplat 代替関数
 
 | 生 API | cplat 代替 | 差異の要点 |
 |---|---|---|
-| `SetConsoleOutputCP` +`SetConsoleCP` +`SetConsoleMode(ENABLE_VIRTUAL_TERMINAL_PROCESSING)` (Win32) | `cplat_console_init(...)` | Linux では無処理。UTF-8 出力と VT100 制御シーケンスを有効化する複数 API 呼び出しを集約 |
+| `SetConsoleOutputCP` +`SetConsoleCP` +`SetConsoleMode(ENABLE_VIRTUAL_TERMINAL_PROCESSING)` (Win32) | `cplat_console_init(...)` | Linux では無処理。UTF-8 出力と VT100 制御シーケンスを有効化する複数 API 呼び出しを集約。設定に失敗しても通知せず、診断が有効な場合に限り診断ログへ記録 |
 | `AttachConsole()` (Win32) | `cplat_console_attach_parent(...)` | UAC 昇格後の親コンソール再接続に特化。`AttachConsole` の失敗に加え、標準入力・標準出力・標準エラー出力のいずれかを接続できなかった場合も失敗を返す (`attached_out` は戻り値によらず、親コンソールへ接続していれば 1、していなければ 0) |
 | `WriteConsoleU` + `WriteFile` (Win32) / `write(fd, ...)` (POSIX) | `cplat_console_write(...)` | 再接続後に CRT ストリーム (`printf`/`fprintf`) 経由の書き込みが失敗する現象 (実機で確認・原因未特定) を回避する直接書き込み。ただし、`ERROR_INVALID_HANDLE` による間欠的な書き込み失敗 (実機で確認・原因未特定) は発生する |
 
 Table: Windows コンソール制御 API と cplat 代替ラッパーの差異
 
-`cplat_console_dispose()` は `cplat_console_init` が変更したコード ページ/モードを元に戻す後始末です。
+`cplat_console_dispose()` は `cplat_console_init` が変更したコード ページ/モードを元に戻す後始末です。復元に失敗しても通知せず、診断が有効な場合に限り診断ログへ記録します。
 
 ### 圧縮・展開
 
@@ -705,7 +706,7 @@ Table: Windows SDK ヘッダー取り込み構文と cplat ヘッダーの差異
 | 追加 / 更新 / 削除 | `cplat_hashtable_add` / `cplat_hashtable_update` / `cplat_hashtable_update_rec` / `cplat_hashtable_delete` / `cplat_hashtable_delete_rec` |
 | 無ければ追加、あれば更新 | `cplat_hashtable_upsert`。新規追加か既存更新かは `inserted_out` で返る。重複も未登録もエラーにしない |
 | 削除済み同一キーの追加方針 | `CPLAT_HASHTABLE_ADD_DELETED_OVERWRITE` は新しい値で復活 / `CPLAT_HASHTABLE_ADD_DELETED_REVIVE` は削除前の値で復活 |
-| 空きがない場合に削除済みを再利用 | 設定 `reuse_deleted` を非 0 にする。既定値は 0 |
+| 空きがない場合に削除済みを再利用 | 設定 `reuse_deleted` を非 0 にする。既定値は 0 (0 のままでは自動拡張テーブルも削除済みを再利用せず拡張を選ぶ) |
 | レコード番号を指定して直接書き込む | `cplat_hashtable_insert_direct` |
 | バイナリ キーを有効長を指定して扱う | `cplat_hashtable_add_with_key_length` / `cplat_hashtable_upsert_with_key_length` / `cplat_hashtable_insert_direct_with_key_length` / `cplat_hashtable_update_with_key_length` / `cplat_hashtable_find_value_ref_with_key_length` / `cplat_hashtable_find_value_copy_with_key_length` / `cplat_hashtable_find_recno_with_key_length` / `cplat_hashtable_find_timestamp_ref_with_key_length` / `cplat_hashtable_find_timestamp_val_with_key_length` / `cplat_hashtable_find_generation_with_key_length` / `cplat_hashtable_delete_with_key_length` |
 | 検索 | `cplat_hashtable_find_value_ref` / `cplat_hashtable_find_value_copy` / `cplat_hashtable_find_recno` / `cplat_hashtable_find_timestamp_ref` / `cplat_hashtable_find_timestamp_val` |
@@ -736,6 +737,10 @@ Table: ハッシュ テーブル操作における用途別 cplat API
 `reuse_deleted` が非 0 のときだけ、`cplat_hashtable_add` の追い出しと同じ規則で削除済みを古い順に空へ戻します。  
 可変長ストレージは移行時に詰め直し、詰めた後の使用量が新しい容量を超える場合は `CPLAT_ERR_STORAGE_FULL` です。  
 `cplat_hashtable_resize` は内部確保のテーブル専用で、外部領域のテーブルには `CPLAT_ERR_UNSUPPORTED` を返します。
+
+`cplat_hashtable_create_growable` では、レコード容量または可変長キー・値ストレージの不足時に自動拡張 (連続領域だけが不足し総空き容量が足りる場合は同容量へ詰め直し) が起きます。  
+`lifetime` が 3 以上で `cplat_hashtable_push_deleted` が追いつかない場合 (または無限)、かつ `reuse_deleted` が 0 のときに異なるキーの追加と削除を繰り返すと、削除済みスロットが再利用されず `max_capacity` または確保限界までレコード容量が増え続けます。  
+避ける方法 (寿命 2・`reuse_deleted` 非 0・定期回収・上限設定) と詳細は、`cplat/hashtable/hashtable.h` の `cplat_hashtable_create_growable` の説明を参照してください。
 
 ### 文字列カタログ
 
@@ -825,9 +830,9 @@ Table: 文字列カタログの条件式フィルターにおける用途別 cpl
 | `pthread_mutex_t` (POSIX) / `CRITICAL_SECTION` (Win32) | `cplat_local_lock_create` / `cplat_local_lock_lock` / `cplat_local_lock_timed_lock` / `cplat_local_lock_try_lock` / `cplat_local_lock_unlock` / `cplat_local_lock_dispose` | プロセス内ミューテックス。無期限待機 (`lock`、`void` 戻り値) と期限付き待機 (`timed_lock`、`timeout_ms`) を分離 |
 | `pthread_cond_t` (POSIX) / `CONDITION_VARIABLE` (Win32) | `cplat_condvar_create` / `cplat_condvar_wait` / `cplat_condvar_timed_wait` / `cplat_condvar_signal` / `cplat_condvar_broadcast` / `cplat_condvar_dispose` | プロセス内条件変数。無期限待機 (`wait`) と期限付き待機 (`timed_wait`) を分離 |
 | `pthread_rwlock_t` (POSIX) / `SRWLOCK` (Win32) | `cplat_local_rwlock_create` / `cplat_local_rwlock_lock_shared` / `cplat_local_rwlock_lock_exclusive` / `cplat_local_rwlock_timed_lock_shared` / `cplat_local_rwlock_timed_lock_exclusive` / `cplat_local_rwlock_try_lock_shared` / `cplat_local_rwlock_try_lock_exclusive` / `cplat_local_rwlock_unlock_shared` / `cplat_local_rwlock_unlock_exclusive` / `cplat_local_rwlock_dispose` | プロセス内読み書きロック。無期限待機と期限付き待機 (`timed_lock_*`) を分離 |
-| `pthread_create` +`pthread_join` +`pthread_detach` (POSIX) / `CreateThread` +`WaitForSingleObject` +`CloseHandle` (Win32) | `cplat_thread_create` / `cplat_thread_join` / `cplat_thread_timed_join` / `cplat_thread_detach` | スレッド生成・待機 (無期限 `join` / 期限付き `timed_join`)・切り離し |
-| `open` + `flock` (POSIX) / `CreateFile` + `LockFileEx` (Win32) | `cplat_interprocess_lock_open` / `cplat_interprocess_lock_lock` / `cplat_interprocess_lock_timed_lock` / `cplat_interprocess_lock_try_lock` / `cplat_interprocess_lock_unlock` / `cplat_interprocess_lock_dispose` | ロック ファイル バックエンドで実装したプロセス横断ミューテックス。`identity` はファイル パス (無ければ作成、NULL と空文字列は `CPLAT_ERR_INVALID_ARGUMENT`、開いている間は削除・改名禁止)、確保失敗時は `CPLAT_ERR_OUT_OF_MEMORY`。無期限・期限付き・即時試行を分離。プロセス間受け渡しには `_export_descriptor` / `_import_descriptor` を使用 |
-| プロセス横断読み書きロックを取得したい (POSIX/Win32 に単一の生 API なし) | `cplat_interprocess_rwlock_open` / `_lock_shared` / `_lock_exclusive` / `_timed_lock_shared` / `_timed_lock_exclusive` / `_try_lock_shared` / `_try_lock_exclusive` / `_unlock` / `_dispose` | ロック ファイル バックエンドで実装。`identity` はファイル パス (無ければ作成、NULL と空文字列は `CPLAT_ERR_INVALID_ARGUMENT`、開いている間は削除・改名禁止)、確保失敗時は `CPLAT_ERR_OUT_OF_MEMORY`。無期限・期限付き・即時試行を分離 |
+| `pthread_create` +`pthread_join` +`pthread_detach` (POSIX) / `CreateThread` +`WaitForSingleObject` +`CloseHandle` (Win32) | `cplat_thread_create` / `cplat_thread_join` / `cplat_thread_timed_join` / `cplat_thread_detach` | スレッド生成・待機 (無期限 `join` / 期限付き `timed_join`)・切り離し (`cplat_thread_detach` は切り離しの失敗を通知しない) |
+| `open` + `flock` (POSIX) / `CreateFile` + `LockFileEx` (Win32) | `cplat_interprocess_lock_open` / `cplat_interprocess_lock_lock` / `cplat_interprocess_lock_timed_lock` / `cplat_interprocess_lock_try_lock` / `cplat_interprocess_lock_unlock` / `cplat_interprocess_lock_dispose` | ロック ファイル バックエンドで実装したプロセス横断ミューテックス。`identity` はファイル パス (無ければ作成、NULL と空文字列は `CPLAT_ERR_INVALID_ARGUMENT`、開いている間は削除・改名禁止)、確保失敗時は `CPLAT_ERR_OUT_OF_MEMORY`。無期限・期限付き・即時試行を分離。プロセス間受け渡しには `_export_descriptor` / `_import_descriptor` を使用。`cplat_interprocess_lock_dispose` は破棄の途中の失敗を通知しない |
+| プロセス横断読み書きロックを取得したい (POSIX/Win32 に単一の生 API なし) | `cplat_interprocess_rwlock_open` / `_lock_shared` / `_lock_exclusive` / `_timed_lock_shared` / `_timed_lock_exclusive` / `_try_lock_shared` / `_try_lock_exclusive` / `_unlock` / `_dispose` | ロック ファイル バックエンドで実装。`identity` はファイル パス (無ければ作成、NULL と空文字列は `CPLAT_ERR_INVALID_ARGUMENT`、開いている間は削除・改名禁止)、確保失敗時は `CPLAT_ERR_OUT_OF_MEMORY`。無期限・期限付き・即時試行を分離。`cplat_interprocess_rwlock_dispose` は破棄の途中の失敗を通知しない |
 | `pthread_once` (POSIX) / `InitOnceExecuteOnce` (Win32) | `cplat_call_once(flag, func)` | - |
 | `sleep`/`usleep`/`nanosleep` (POSIX) / `Sleep` (Win32) | `cplat_sleep_ms(ms)` | Linux はシグナル割り込み時に残り時間を再計算し継続待機します。 |
 | `sched_yield` (POSIX) / `SwitchToThread` (Win32) | `cplat_thread_yield()` | 実行可能な他のスレッドへ CPU を譲ります。他のスレッドがない場合は即時に戻ります。Windows の譲渡先は現在のプロセッサで実行可能なスレッドに限ります。完了待ちには条件変数または `cplat_sleep_ms` を使用してください。 |
@@ -843,7 +848,7 @@ Table: スレッドおよび同期プリミティブと cplat API の対応
 
 | 用途 | cplat API |
 |---|---|
-| パーサーを argc/argv とともに生成/初期化します。 | `cplat_argparser_handle_create` / `cplat_argparser_init` / `cplat_argparser_handle_dispose` |
+| パーサーを argc/argv とともに生成/初期化します (`cplat_argparser_init` は確保や複製の失敗を通知しない)。 | `cplat_argparser_handle_create` / `cplat_argparser_init` / `cplat_argparser_handle_dispose` |
 | フラグ/オプション/位置引数を登録します。 | `cplat_argparser_register_flag` / `_register_option_int` / `_register_option_int_array` / `_register_option_string` / `_register_option_string_array` / `_register_positional_int` / `_register_positional_int_array` / `_register_positional_string` / `_register_positional_string_array` |
 | 登録エラーを確認します。 | `cplat_argparser_get_register_error` / `_get_register_error_count` / `_get_register_error_target` / `_get_register_error_message` / `_print_register_error_messages` |
 | 初期化時に受け取ったコマンド ラインを解析します。 | `cplat_argparser_parse` |
@@ -882,18 +887,18 @@ Linux syslog、Windows イベント ログ、ETW を個別に呼び出す代わ�
 
 | 用途 | cplat API |
 |---|---|
-| トレーサーを生成しレベル別に出力を開始/停止します。 | `cplat_tracer_create` / `cplat_tracer_start` / `cplat_tracer_stop` / `cplat_tracer_dispose` |
+| トレーサーを生成しレベル別に出力を開始/停止します (`cplat_tracer_dispose` は登録簿からの削除などの失敗を通知せず、解放が完了したときだけ `*handle` を NULL にする)。 | `cplat_tracer_create` / `cplat_tracer_start` / `cplat_tracer_stop` / `cplat_tracer_dispose` |
 | 出力先ごとのレベルを設定/取得する (標準エラー、ファイル、OS ログ、ETW) | `cplat_tracer_set_stderr_level` / `_get_stderr_level` / `_set_file_level` / `_get_file_level` / `_set_os_level` / `_get_os_level` / `_set_etw_level` / `_get_etw_level` |
 | トレーサーの名前/識別子/ファイル名を設定/取得します。 | `cplat_tracer_set_name` / `_get_name` / `_get_identifier` / `_set_file_name` / `_get_file_name` / `_get_file_identifier` |
 | メッセージを出力する (ソース ファイル名/行番号を自動付与するマクロ) | `cplat_tracer_write` / `cplat_tracer_writef` |
 | バイナリ データを 16 進数で出力する (同上) | `cplat_tracer_write_hex` / `cplat_tracer_write_hexf` |
 | `va_list` 版や、ソース位置を自前で制御したい場合の低レベル関数 | `cplat_tracer_writef_at` / `cplat_tracer_vwritef_at` / `cplat_tracer_write_hexf_at` / `cplat_tracer_vwrite_hexf_at` |
-| 出力フックを追加/削除します。 | `cplat_tracer_set_hook` / `cplat_tracer_call_next_hook` / `cplat_tracer_remove_hook` |
+| 出力フックを追加/削除します (`cplat_tracer_remove_hook` は停止中でない場合やエントリ不在時は何もせず通知しない)。 | `cplat_tracer_set_hook` / `cplat_tracer_call_next_hook` / `cplat_tracer_remove_hook` |
 | トレーサーの状態を取得します。 | `cplat_tracer_get_state` |
-| syslog (RFC5424 系、Linux 専用) の書き込みシンクを扱います。 | `cplat_syslog_sink_create` / `cplat_syslog_sink_write` / `cplat_syslog_sink_rename` / `cplat_syslog_sink_dispose` |
-| Windows イベント ログの書き込みシンクを扱います。 | `cplat_eventlog_register_source` / `cplat_eventlog_sink_create` / `cplat_eventlog_sink_write` / `cplat_eventlog_sink_dispose` / `cplat_eventlog_unregister_source` |
-| ETW (TraceLogging) の書き込みシンクを扱います。 | `cplat_etw_provider_create` / `cplat_etw_provider_write` / `cplat_etw_provider_dispose` / `cplat_etw_session_start` / `cplat_etw_session_stop` / `cplat_etw_session_check_access` |
-| ローテーション付きファイルへ同期書き込みするシンクを扱います。OS バッファーへ委ねる場合は `CPLAT_TRACE_FILE_SINK_OS_BUFFERED` を指定します。 | `cplat_trace_file_sink_create` / `cplat_trace_file_sink_write` / `cplat_trace_file_sink_dispose` |
+| syslog (RFC5424 系、Linux 専用) の書き込みシンクを扱います (`cplat_syslog_sink_dispose` は記述子を閉じる処理の失敗を通知しない)。 | `cplat_syslog_sink_create` / `cplat_syslog_sink_write` / `cplat_syslog_sink_rename` / `cplat_syslog_sink_dispose` |
+| Windows イベント ログの書き込みシンクを扱います (`cplat_eventlog_sink_dispose` は登録の解除の失敗を通知しない)。 | `cplat_eventlog_register_source` / `cplat_eventlog_sink_create` / `cplat_eventlog_sink_write` / `cplat_eventlog_sink_dispose` / `cplat_eventlog_unregister_source` |
+| ETW (TraceLogging) の書き込みシンクを扱います (`cplat_etw_session_stop` は停止の要求が失敗しても通知せず、先にトレースを閉じてから処理スレッドを待つ)。 | `cplat_etw_provider_create` / `cplat_etw_provider_write` / `cplat_etw_provider_dispose` / `cplat_etw_session_start` / `cplat_etw_session_stop` / `cplat_etw_session_check_access` |
+| ローテーション付きファイルへ同期書き込みするシンクを扱います。OS バッファーへ委ねる場合は `CPLAT_TRACE_FILE_SINK_OS_BUFFERED` を指定します。ローテーション後の新しい現在ファイルの open 失敗だけは `CPLAT_OK` とし、後続の `cplat_trace_file_sink_write` で追記で開き直します (ほかの世代更新・close・共有ロック解放などの失敗は `CPLAT_ERR_UNKNOWN`)。`cplat_trace_file_sink_dispose` はファイルを閉じる処理の失敗を通知しません。 | `cplat_trace_file_sink_create` / `cplat_trace_file_sink_write` / `cplat_trace_file_sink_dispose` |
 
 Table: トレース機能における用途別 cplat API
 

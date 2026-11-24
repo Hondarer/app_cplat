@@ -5,10 +5,6 @@
  *******************************************************************************
  */
 
-#ifndef _GNU_SOURCE
-    #define _GNU_SOURCE
-#endif /* _GNU_SOURCE */
-
 #include <cplat/base/platform.h>
 #include <cplat/crt/string.h>
 #include <cplat/crt/stdlib.h>

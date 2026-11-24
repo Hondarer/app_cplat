@@ -8,8 +8,6 @@
  *******************************************************************************
  */
 
-#define _GNU_SOURCE
-
 #include <cplat/crt/stdio.h>
 #include <cplat/crt/path.h>
 

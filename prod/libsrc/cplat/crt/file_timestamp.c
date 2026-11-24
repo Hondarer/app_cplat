@@ -2,12 +2,9 @@
  * glibc は struct stat の st_mtim と、utimensat および AT_FDCWD を __USE_XOPEN2K8 の
  * 内側に置く。makefw の既定である -std=c17 (厳密 ISO) では __STRICT_ANSI__ が定義され、
  * _DEFAULT_SOURCE が自動定義されないため、これらが宣言されない。
- * サブ秒の最終更新日時を扱うために本ファイルでのみ機能テスト マクロを定義する。
- * 同種の定義は prod/libsrc/cplat/runtime/memory_lock.c にある。
+ * 機能検査マクロ (_GNU_SOURCE) は app/cplat/makepart.mk の DEFINES で定義し、
+ * 最初の標準ヘッダーより前から有効にする。
  */
-#ifndef _GNU_SOURCE
-    #define _GNU_SOURCE
-#endif /* _GNU_SOURCE */
 
 /**
  *******************************************************************************

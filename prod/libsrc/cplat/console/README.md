@@ -93,7 +93,8 @@ Figure: 昇格時のコンソール引き継ぎ
 UAC 昇格後に確実に結果を表示したい場合は、`cplat_console_attach_parent()` によるコンソール再接続ではなく、`cplat_elevated_process_run_piped()` または `cplat_elevated_process_run_with_result()` (`app/cplat/prod/libsrc/cplat/runtime/README.md` 参照) を使用してください。どちらも昇格プロセスのコンソールに一切アクセスしません。前者は昇格プロセスの標準出力と標準エラー出力を名前付きパイプで、後者は結果メッセージを一時ファイル経由で、呼び出し元プロセス (常に未昇格で、自分自身の正常なコンソールを保持している) へ渡すため、この問題の影響を受けません。
 
 再現調査時は、環境変数 `CPLAT_CONSOLE_ATTACH_DIAG=1` を設定すると `%TEMP%/cplat_console_attach.log` へ再接続の診断ログを追記できます。  
-このログには `FreeConsole` / `AttachConsole` / `GetConsoleWindow` / `CONOUT$` オープン / `reopen` / 終了時ドレインの成否と `GetLastError()` を記録します。
+このログには `FreeConsole` (戻り値と直後の `GetLastError()`) / `AttachConsole` / `GetConsoleWindow` / `CONOUT$` オープン / `SetStdHandle` / 再接続直後の `GetStdHandle` 読み戻しとの一致 / `reopen` / 終了時ドレイン (`GetStdHandle` と `GetConsoleScreenBufferInfo` の戻り値および失敗時の `GetLastError()`)、および `cplat_console_write()` における `GetStdHandle`・`WriteConsoleU`・`WriteFile` の結果と失敗時の `GetLastError()` を記録します。  
+ログの `WriteConsoleU` と `WriteFile` の行から、どちらの呼び出しが `ERROR_INVALID_HANDLE` で失敗したかを区別できます。
 
 ### cplat_console_write
 

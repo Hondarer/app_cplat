@@ -106,6 +106,8 @@ extern "C"
     /**
      *  @brief          イベント ログ書き込みハンドルを解放します。
      *
+     *  登録の解除が失敗しても、失敗は通知しません。呼び出し側に、失敗を受けて取れる手段がないためです。
+     *
      *  @param[in]      handle   cplat_eventlog_sink_create の戻り値。NULL は無視。
      *
      *  @par            スレッド セーフ

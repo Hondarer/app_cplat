@@ -62,6 +62,7 @@ static cplat_atomic_i32 s_attached_parent = CPLAT_ATOMIC_INIT(0);
 static cplat_once_flag s_console_shutdown_once = {0};
 
 static void console_diag_logf(const char *fmt, ...);
+static void console_diag_logf_enabled(int enabled, const char *fmt, ...);
 
 static void register_console_shutdown_callback(void)
 {
@@ -205,12 +206,11 @@ static int build_console_diag_log_path(wchar_t *path_out, size_t path_len)
 }
 
 /**
- *  @brief          `%TEMP%` 配下の診断ログへ 1 行追記します。
- *  @param[in]      fmt `printf` 互換の書式文字列です。
- *
- *  `CPLAT_CONSOLE_ATTACH_DIAG` が未設定、空文字、または `"0"` の場合は何もしません。
+ *  @brief          `%TEMP%` 配下の診断ログへ書式化した 1 行を追記します。
+ *  @param[in]      fmt   `printf` 互換の書式文字列です。
+ *  @param[in]      args  書式引数です。
  */
-static void console_diag_logf(const char *fmt, ...)
+static void console_diag_write_v(const char *fmt, va_list args)
 {
     wchar_t path[PLATFORM_PATH_MAX];
     char line[CONSOLE_DIAG_LINE_BYTES];
@@ -220,12 +220,6 @@ static void console_diag_logf(const char *fmt, ...)
     DWORD written;
     int prefix_len;
     int message_len;
-    va_list args;
-
-    if (!console_diag_enabled() || fmt == NULL)
-    {
-        return;
-    }
 
     if (build_console_diag_log_path(path, sizeof(path) / sizeof(path[0])) != 0)
     {
@@ -244,9 +238,7 @@ static void console_diag_logf(const char *fmt, ...)
 
     prefix_len = (int)strlen(line);
 
-    va_start(args, fmt);
     message_len = vsnprintf(message, sizeof(message), fmt, args); /* 置換対象外: 意図的な切り詰め */
-    va_end(args);
 
     if (message_len < 0)
     {
@@ -277,6 +269,71 @@ static void console_diag_logf(const char *fmt, ...)
     /* 診断ログ自体の書き込みと後始末であり、失敗を出力する先がほかにないため、戻り値は明示的に破棄する。 */
     (void)WriteFile(handle, line, (DWORD)(prefix_len + message_len + 1), &written, NULL);
     (void)CloseHandle(handle);
+}
+
+/**
+ *  @brief          呼び出し元が判定済みの有効状態に基づき、診断ログへ 1 行追記します。
+ *  @param[in]      enabled  診断ログが有効な場合は非 0、無効な場合は 0 です。
+ *  @param[in]      fmt      `printf` 互換の書式文字列です。
+ *
+ *  環境変数を再照会せず、@p enabled が 0 の場合は直ちに戻ります。\n
+ *  診断出力の内部で呼ぶ Win32 API によって呼び出し元から見える `GetLastError()` の値が変わらないよう、
+ *  出力前の `GetLastError()` を保存し、出力後に `SetLastError()` で復元します。
+ */
+static void console_diag_logf_enabled(int enabled, const char *fmt, ...)
+{
+    DWORD saved_error;
+    va_list args;
+
+    if (!enabled || fmt == NULL)
+    {
+        return;
+    }
+
+    /*
+     * 診断ログの出力は CreateFileW / WriteFile / CloseHandle を呼び出すため、
+     * 診断の有無で呼び出し元から見える GetLastError() が変わらないよう保存して復元する。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror
+     */
+    saved_error = GetLastError();
+
+    va_start(args, fmt);
+    console_diag_write_v(fmt, args);
+    va_end(args);
+
+    SetLastError(saved_error);
+}
+
+/**
+ *  @brief          `%TEMP%` 配下の診断ログへ 1 行追記します。
+ *  @param[in]      fmt `printf` 互換の書式文字列です。
+ *
+ *  `CPLAT_CONSOLE_ATTACH_DIAG` が未設定、空文字、または `"0"` の場合は何もしません。\n
+ *  診断出力の内部で呼ぶ Win32 API によって呼び出し元から見える `GetLastError()` の値が変わらないよう、
+ *  出力前の `GetLastError()` を保存し、出力後に `SetLastError()` で復元します。
+ */
+static void console_diag_logf(const char *fmt, ...)
+{
+    DWORD saved_error;
+    va_list args;
+
+    if (!console_diag_enabled() || fmt == NULL)
+    {
+        return;
+    }
+
+    /*
+     * 診断ログの出力は CreateFileW / WriteFile / CloseHandle を呼び出すため、
+     * 診断の有無で呼び出し元から見える GetLastError() が変わらないよう保存して復元する。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror
+     */
+    saved_error = GetLastError();
+
+    va_start(args, fmt);
+    console_diag_write_v(fmt, args);
+    va_end(args);
+
+    SetLastError(saved_error);
 }
 
 /* ===== 公開 API ===== */
@@ -631,11 +688,17 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
         if (attached_once == 0)
         {
             DWORD free_error;
+            BOOL free_result;
 
             SetLastError(ERROR_SUCCESS);
-            (void)FreeConsole(); /* 失敗は直後の GetLastError() で診断ログへ記録するため、戻り値は明示的に破棄する */
+            free_result = FreeConsole();
+            /*
+             * 失敗した API の直後に、ほかの API を呼ぶ前に GetLastError() を取り込む。
+             * see: https://learn.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror
+             */
             free_error = GetLastError();
-            console_diag_logf("attempt=%d FreeConsole last_error=%lu", attempt, (unsigned long)free_error);
+            console_diag_logf("attempt=%d FreeConsole result=%d last_error=%lu", attempt, (int)free_result,
+                              (unsigned long)free_error);
 
             if (AttachConsole(parent_pid))
             {
@@ -763,6 +826,19 @@ int cplat_console_attach_parent(int *argc, char **argv, int *attached_out)
         stream_failed = 1;
     }
 
+    {
+        HANDLE readback_out = GetStdHandle(STD_OUTPUT_HANDLE);
+        HANDLE readback_err = GetStdHandle(STD_ERROR_HANDLE);
+        HANDLE readback_in = GetStdHandle(STD_INPUT_HANDLE);
+
+        console_diag_logf("attach_parent GetStdHandle readback stdout=0x%p expected=0x%p match=%d",
+                          (void *)readback_out, (void *)h_out, (readback_out == h_out) ? 1 : 0);
+        console_diag_logf("attach_parent GetStdHandle readback stderr=0x%p expected=0x%p match=%d",
+                          (void *)readback_err, (void *)h_err, (readback_err == h_err) ? 1 : 0);
+        console_diag_logf("attach_parent GetStdHandle readback stdin=0x%p expected=0x%p match=%d",
+                          (void *)readback_in, (void *)h_in, (readback_in == h_in) ? 1 : 0);
+    }
+
     /*
      * CRT レベルの標準ストリームを親コンソールへ再接続する (fgets 等の入力で参照する)。
      * 再接続後の書き込みには次の 2 つの現象があり、いずれも実機で確認した。原因は特定できていない。
@@ -849,12 +925,30 @@ void cplat_internal_console_dispose_on_shutdown(const cplat_shutdown_event *even
         h_out = GetStdHandle(STD_OUTPUT_HANDLE);
         if (h_out != NULL && h_out != INVALID_HANDLE_VALUE)
         {
+            BOOL info_result;
+            DWORD info_error;
+
+            SetLastError(ERROR_SUCCESS);
+            info_result = GetConsoleScreenBufferInfo(h_out, &info);
             /*
-             * conhost の処理を待ち合わせるための呼び出しであり、取得した情報も成否も使わないため、
-             * 戻り値は明示的に破棄する。
+             * 失敗した API の直後に、ほかの API を呼ぶ前に GetLastError() を取り込む。
+             * see: https://learn.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror
              */
-            (void)GetConsoleScreenBufferInfo(h_out, &info);
-            console_diag_logf("dispose_on_shutdown drain GetConsoleScreenBufferInfo handle=0x%p", (void *)h_out);
+            info_error = GetLastError();
+            if (info_result)
+            {
+                console_diag_logf("dispose_on_shutdown drain GetConsoleScreenBufferInfo handle=0x%p result=1",
+                                  (void *)h_out);
+            }
+            else
+            {
+                console_diag_logf("dispose_on_shutdown drain GetConsoleScreenBufferInfo handle=0x%p result=0 error=%lu",
+                                  (void *)h_out, (unsigned long)info_error);
+            }
+        }
+        else
+        {
+            console_diag_logf("dispose_on_shutdown drain skipped GetStdHandle=0x%p", (void *)h_out);
         }
     }
 
@@ -870,6 +964,11 @@ int cplat_console_write(cplat_stream stream, const char *text)
     HANDLE h;
     DWORD len;
     DWORD written;
+    int diag_enabled;
+    BOOL write_console_result;
+    DWORD write_console_error;
+    BOOL write_file_result;
+    DWORD write_file_error;
 
     if (text == NULL)
     {
@@ -889,19 +988,43 @@ int cplat_console_write(cplat_stream stream, const char *text)
         return CPLAT_ERR_INVALID_ARGUMENT;
     }
 
+    diag_enabled = console_diag_enabled();
+
     h = GetStdHandle(std_handle);
     if (h == NULL || h == INVALID_HANDLE_VALUE)
     {
+        /*
+         * 失敗した API の直後に、ほかの API を呼ぶ前に GetLastError() を取り込む。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror
+         */
+        DWORD handle_error = GetLastError();
+
+        console_diag_logf_enabled(diag_enabled, "console_write stream=%d GetStdHandle=0x%p error=%lu", (int)stream,
+                                  (void *)h, (unsigned long)handle_error);
         return CPLAT_ERR_UNKNOWN;
     }
 
+    console_diag_logf_enabled(diag_enabled, "console_write stream=%d GetStdHandle=0x%p", (int)stream, (void *)h);
+
     len = (DWORD)strlen(text);
-    if (WriteConsoleU(h, text, len, &written, NULL))
+    written = 0;
+    write_console_result = WriteConsoleU(h, text, len, &written, NULL);
+    if (write_console_result)
     {
+        console_diag_logf_enabled(diag_enabled, "console_write WriteConsoleU result=1 len=%lu written=%lu",
+                                  (unsigned long)len, (unsigned long)written);
         return CPLAT_OK;
     }
 
-    if (GetLastError() == ERROR_NO_UNICODE_TRANSLATION)
+    /*
+     * 失敗した API の直後に、ほかの API を呼ぶ前に GetLastError() を取り込む。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror
+     */
+    write_console_error = GetLastError();
+    console_diag_logf_enabled(diag_enabled, "console_write WriteConsoleU result=0 len=%lu written=%lu error=%lu",
+                              (unsigned long)len, (unsigned long)written, (unsigned long)write_console_error);
+
+    if (write_console_error == ERROR_NO_UNICODE_TRANSLATION)
     {
         return CPLAT_ERR_INVALID_ENCODING;
     }
@@ -909,12 +1032,23 @@ int cplat_console_write(cplat_stream stream, const char *text)
     /* 不正な UTF-8 は書き換えずに返します。WriteFile へ切り替えるのは、それ以外の失敗だけです。
      * リダイレクト先はコード ページ変換を行わないため、UTF-8 のまま書き込みます。
      */
-    if (WriteFile(h, text, len, &written, NULL))
+    written = 0;
+    write_file_result = WriteFile(h, text, len, &written, NULL);
+    if (write_file_result)
     {
+        console_diag_logf_enabled(diag_enabled, "console_write WriteFile result=1 len=%lu written=%lu",
+                                  (unsigned long)len, (unsigned long)written);
         return CPLAT_OK;
     }
 
-    console_diag_logf("console_write failed error=%lu", (unsigned long)GetLastError());
+    /*
+     * 失敗した API の直後に、ほかの API を呼ぶ前に GetLastError() を取り込む。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror
+     */
+    write_file_error = GetLastError();
+    console_diag_logf_enabled(diag_enabled, "console_write WriteFile result=0 len=%lu written=%lu error=%lu",
+                              (unsigned long)len, (unsigned long)written, (unsigned long)write_file_error);
+    console_diag_logf_enabled(diag_enabled, "console_write failed error=%lu", (unsigned long)write_file_error);
 
     return CPLAT_ERR_UNKNOWN;
 }
