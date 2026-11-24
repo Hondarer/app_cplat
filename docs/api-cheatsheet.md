@@ -392,7 +392,7 @@ Table: ソケット操作 API と cplat 代替関数
 Linux の `cplat_socket_send`/`cplat_socket_send_all` は、切断済みの接続への送信による SIGPIPE を送信単位で抑制し、送信エラーは結果コードと `cplat_error` で通知します。  
 `cplat_socket_set_multicast_ttl` は送るマルチキャスト パケットにだけ `IP_MULTICAST_TTL` を適用し、ユニキャストとブロードキャストには影響しません。  
 `cplat_socket_close` は閉じる処理が失敗しても通知しません (直前エラーの保存と復元は行います)。  
-`cplat_socket_shutdown_receive` は Linux (`shutdown(SHUT_RD)`) と Windows (実質 close 相当) で意味論が異なる差異を吸収した複合 API です。
+解除できる待機を伴うソケットを停止する場合は、`cplat_socket_wait_cancel_signal` で待機を解除し、登録を使うすべての呼び出しが戻った後に、`cplat_socket_watch_detach` で登録を解き、`cplat_socket_close` でソケットを閉じてから `cplat_socket_wait_cancel_dispose` で解除オブジェクトを破棄します。
 
 ### プロセス内メモリ ロック
 

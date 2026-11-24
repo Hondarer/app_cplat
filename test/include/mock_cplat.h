@@ -388,7 +388,6 @@ MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_sendto)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_send_all)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_recv_all)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_connect)
-MOCK_CPLAT_LINK_IMPL(cplat_socket_shutdown_receive)
 
 // cplat/prompt/pinned_prompt.h
 MOCK_CPLAT_LINK_IMPL(cplat_pinned_prompt_create)
@@ -1260,7 +1259,6 @@ extern int delegate_real_cplat_socket_watch_connect(cplat_socket_watch *watch,
                                                     const cplat_ipv4_endpoint *endpoint,
                                                     cplat_socket_wait_cancel *cancel, int timeout_ms,
                                                     cplat_error *detail_out);
-extern int delegate_real_cplat_socket_shutdown_receive(cplat_socket *sock_inout, cplat_error *detail_out);
 
 // cplat/prompt/pinned_prompt.h
 extern cplat_pinned_prompt *delegate_real_cplat_pinned_prompt_create(const cplat_pinned_prompt_options *options);
@@ -2171,7 +2169,6 @@ class Mock_cplat
                 (cplat_socket_watch *, void *, size_t, cplat_socket_wait_cancel *, int, size_t *, cplat_error *));
     MOCK_METHOD(int, cplat_socket_watch_connect,
                 (cplat_socket_watch *, const cplat_ipv4_endpoint *, cplat_socket_wait_cancel *, int, cplat_error *));
-    MOCK_METHOD(int, cplat_socket_shutdown_receive, (cplat_socket *, cplat_error *));
 
     // cplat/prompt/pinned_prompt.h
     MOCK_METHOD(cplat_pinned_prompt *, cplat_pinned_prompt_create, (const cplat_pinned_prompt_options *));

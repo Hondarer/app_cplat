@@ -4223,65 +4223,6 @@ TEST_F(socketTest, connect_reports_timeout_when_not_writable_after_interrupt)
 
 #endif /* PLATFORM_LINUX */
 
-// 受信停止の引数不正、成功、失敗が処理されることの確認
-TEST_F(socketTest, shutdown_receive_reports_results)
-{
-    // Arrange
-    cplat_socket socket = kSocket;
-    cplat_socket failure_socket = kSocket;
-    cplat_socket invalid_socket = CPLAT_INVALID_SOCKET;
-    cplat_error detail = {};
-
-    // Pre-Assert
-    // 下位の受信停止 API が対象のソケットを引数として 2 回呼び出されること。
-#if defined(PLATFORM_LINUX)
-    EXPECT_CALL(mock_sys_socket_, shutdown(_, _, _, (int)kSocket, SHUT_RD))
-        .WillOnce(Return(0))
-        .WillOnce(DoAll(Assign(&errno, EBADF), Return(-1)));
-    // [Pre-Assert確認_正常系] - shutdown() が kSocket、SHUT_RD を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - shutdown() から、1 回目は 0、2 回目は errno に EBADF を設定して -1 を返す。
-#elif defined(PLATFORM_WINDOWS)
-    EXPECT_CALL(mock_winsock_, closesocket(_, _, _, (SOCKET)kSocket))
-        .WillOnce(Return(0))
-        .WillOnce(Return(SOCKET_ERROR));
-    // [Pre-Assert確認_正常系] - closesocket() が kSocket を指定して 2 回呼び出されること。
-    // [Pre-Assert手順] - closesocket() から 1 回目は 0、2 回目は SOCKET_ERROR を返す。
-    EXPECT_CALL(mock_winsock_, WSAGetLastError).WillOnce(Return(WSAEBADF));
-    // [Pre-Assert確認_正常系] - WSAGetLastError() が 1 回呼び出されること。
-    // [Pre-Assert手順] - WSAGetLastError() から WSAEBADF を返す。
-#endif /* PLATFORM_ */
-    // [Pre-Assert手順] - shutdown() から 1 回目は 0、2 回目は errno に EBADF を設定して -1 を返し、Windows では closesocket() から 1 回目は 0、2 回目は SOCKET_ERROR を返して WSAGetLastError() から失敗要因を返す。
-
-    // Act
-    int actual_ret_null = cplat_socket_shutdown_receive(
-        nullptr, &detail); // [手順] - ソケット出力先に nullptr を指定して cplat_socket_shutdown_receive() を呼び出す。
-    int actual_ret_invalid = cplat_socket_shutdown_receive(
-        &invalid_socket, &detail); // [手順] - 無効なソケットを指定して cplat_socket_shutdown_receive() を呼び出す。
-    int actual_ret_success = cplat_socket_shutdown_receive(
-        &socket, &detail); // [手順] - 受信停止が成功する状態で cplat_socket_shutdown_receive() を呼び出す。
-    int actual_ret_failure = cplat_socket_shutdown_receive(
-        &failure_socket, &detail); // [手順] - 受信停止が失敗する状態で cplat_socket_shutdown_receive() を呼び出す。
-
-    // Assert
-    EXPECT_EQ(
-        CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_null); // [確認_異常系] - nullptr の出力先を指定した cplat_socket_shutdown_receive() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(
-        CPLAT_ERR_INVALID_ARGUMENT,
-        actual_ret_invalid); // [確認_異常系] - 無効なソケットを指定した cplat_socket_shutdown_receive() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
-    EXPECT_EQ(
-        CPLAT_OK,
-        actual_ret_success); // [確認_正常系] - 受信停止成功時の cplat_socket_shutdown_receive() の戻り値が CPLAT_OK であること。
-    EXPECT_EQ(
-        CPLAT_ERR_UNKNOWN,
-        actual_ret_failure); // [確認_異常系] - 受信停止失敗時の cplat_socket_shutdown_receive() の戻り値が CPLAT_ERR_UNKNOWN であること。
-#if defined(PLATFORM_WINDOWS)
-    EXPECT_EQ(CPLAT_INVALID_SOCKET,
-              socket); // [確認_正常系] - Windows の受信停止成功時の socket が CPLAT_INVALID_SOCKET であること。
-#endif                 /* PLATFORM_WINDOWS */
-}
-// [サブ手順参照 名前=socketTest.TearDown]
-
 #if defined(PLATFORM_LINUX)
 // 時計失敗時に期限付き待機を開始しないことの確認
 TEST_F(socketTest, clock_failure_does_not_poll)

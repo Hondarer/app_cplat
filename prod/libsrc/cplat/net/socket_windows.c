@@ -970,27 +970,4 @@ int cplat_socket_timed_wait_readable_multi(const cplat_socket *socks, const size
     return cplat_internal_error_report_success(detail_out);
 }
 
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_shutdown_receive(cplat_socket *sock_inout, cplat_error *detail_out)
-{
-    if ((sock_inout == NULL) || (*sock_inout == CPLAT_INVALID_SOCKET))
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-
-    /*
-     * Windows は受信方向の半クローズでは待機中の recv が解除されないため、
-     * ソケットを閉じて呼び出し側へ無効値を書き戻す。
-     */
-    if (closesocket((SOCKET)*sock_inout) == SOCKET_ERROR)
-    {
-        return report_last_winsock_error(detail_out);
-    }
-
-    *sock_inout = CPLAT_INVALID_SOCKET;
-
-    return cplat_internal_error_report_success(detail_out);
-}
-
 #endif /* PLATFORM_WINDOWS */

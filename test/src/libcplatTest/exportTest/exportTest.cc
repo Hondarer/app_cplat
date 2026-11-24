@@ -626,7 +626,6 @@
     EXPORT_ENTRY(cplat_socket_watch_connect, \
                  int(CPLAT_API *)(cplat_socket_watch *watch, const cplat_ipv4_endpoint *endpoint, \
                                   cplat_socket_wait_cancel *cancel, int timeout_ms, cplat_error *detail_out)) \
-    EXPORT_ENTRY(cplat_socket_shutdown_receive, int(CPLAT_API *)(cplat_socket * sock_inout, cplat_error * detail_out)) \
     /* cplat/prompt/pinned_prompt.h */ \
     EXPORT_ENTRY(cplat_pinned_prompt_create, \
                  cplat_pinned_prompt *(CPLAT_API *)(const cplat_pinned_prompt_options *options)) \

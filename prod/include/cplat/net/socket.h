@@ -957,30 +957,6 @@ extern "C"
                                                           cplat_socket_wait_cancel *cancel, int timeout_ms,
                                                           cplat_error *detail_out);
 
-    /**
-     *  @brief          ソケットの受信方向を停止します。
-     *  @param[in,out]  sock_inout 対象のソケット。Windows ではソケットを閉じ、
-     *                             @ref CPLAT_INVALID_SOCKET を書き戻します。
-     *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
-     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
-     *
-     *  受信で待機しているスレッドを解除する目的で使用します。
-     *
-     *  @warning        本関数はプラットフォームで意味論が異なります。\n
-     *                  Linux は受信方向のみを停止してソケットを保持しますが、
-     *                  Windows は受信の半クローズで待機を解除できないためソケットを閉じます。\n
-     *                  呼び出し側がこの差を意識しなくて済むように、呼び出し後は
-     *                  @p sock_inout の値を必ず参照し、@ref CPLAT_INVALID_SOCKET
-     *                  でなくなっているかどうかで以後の利用可否を判断してください。
-     *
-     *  @par            スレッド セーフ
-     *  本関数は条件付きスレッド セーフです。\n
-     *  異なるソケットに対する呼び出しは同時に実行できます。\n
-     *  同一 @p sock_inout に対する並行操作は、呼び出し側で同期してください。
-     */
-    CPLAT_EXPORT int CPLAT_API cplat_socket_shutdown_receive(cplat_socket *sock_inout, cplat_error *detail_out);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -503,8 +503,6 @@ Mock_cplat::Mock_cplat()
         .WillByDefault(Invoke(delegate_real_cplat_socket_watch_recv_all));
     ON_CALL(*this, cplat_socket_watch_connect(_, _, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_socket_watch_connect));
-    ON_CALL(*this, cplat_socket_shutdown_receive(_, _))
-        .WillByDefault(Invoke(delegate_real_cplat_socket_shutdown_receive));
 
     // cplat/prompt/pinned_prompt.h
     ON_CALL(*this, cplat_pinned_prompt_create(_)).WillByDefault(Invoke(delegate_real_cplat_pinned_prompt_create));

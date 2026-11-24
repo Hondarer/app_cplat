@@ -47,7 +47,7 @@ extern "C"
      *
      *  メモリを確保できない場合は @ref CPLAT_ERR_OUT_OF_MEMORY を返します。\n
      *  Windows では OS の拡張パス上限 (32767 文字) までの非 ASCII パスを取得できます。
-     *  `\\?\` 接頭辞を含むパスも区切り文字は `'/'` へ正規化されるため (`//?/C:/...`)、
+     *  `\\?\C:\...` のような拡張パス接頭辞を含むパスも区切り文字は `'/'` へ正規化されるため (`//?/C:/...`)、
      *  そのまま Win32 のファイル API へ渡すことはできません。\n
      *  @ref CPLAT_ERR_BUFFER_TOO_SMALL は、呼び出し元が渡した出力バッファーの容量が不足した場合に返します。
      *  Windows で取得したパスが不正な UTF-16 の場合は、置換せず @ref CPLAT_ERR_INVALID_ENCODING を返します。
@@ -57,6 +57,11 @@ extern "C"
      */
     CPLAT_EXPORT int CPLAT_API cplat_module_get_path(char *path_out, size_t path_size, const void *func_addr);
 
+    /*
+     * 末尾が奇数個のバックスラッシュのコード スパンは Doxygen が直後へ入れる \endiskip と結合して
+     * XML に endiskip が漏れるため、文字を続ける例で記述する。
+     * see: https://doxygen.github.io/doxygen-docs/d6/d57/pg_cmds_int.html
+     */
     /**
      *  @brief          関数アドレスが属するモジュールのベース名を取得します。
      *  @param[out]     basename_out   ベース名 (UTF-8) の格納先。NULL を渡してはなりません。
@@ -68,7 +73,7 @@ extern "C"
      *
      *  メモリを確保できない場合は @ref CPLAT_ERR_OUT_OF_MEMORY を返します。\n
      *  Windows では OS の拡張パス上限 (32767 文字) までの非 ASCII パスを取得できます。
-     *  `\\?\` 接頭辞を含むパスも区切り文字は `'/'` へ正規化されるため (`//?/C:/...`)、
+     *  `\\?\C:\...` のような拡張パス接頭辞を含むパスも区切り文字は `'/'` へ正規化されるため (`//?/C:/...`)、
      *  そのまま Win32 のファイル API へ渡すことはできません。\n
      *  @ref CPLAT_ERR_BUFFER_TOO_SMALL は、呼び出し元が渡した出力バッファーの容量が不足した場合に返します。
      *  Windows で取得したパスが不正な UTF-16 の場合は、置換せず @ref CPLAT_ERR_INVALID_ENCODING を返します。

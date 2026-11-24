@@ -41,6 +41,11 @@ extern "C"
 {
 #endif /* __cplusplus */
 
+    /*
+     * 末尾が奇数個のバックスラッシュのコード スパンは Doxygen が直後へ入れる \endiskip と結合して
+     * XML に endiskip が漏れるため、文字を続ける例で記述する。
+     * see: https://doxygen.github.io/doxygen-docs/d6/d57/pg_cmds_int.html
+     */
     /**
      *  @brief          現在のプロセスの実行ファイル本体の絶対パスを取得します。
      *  @param[out]     path_out      絶対パス (UTF-8) の格納先。NULL を渡してはなりません。
@@ -58,7 +63,7 @@ extern "C"
      *  返されるパスは UTF-8 文字列で、パス セパレーターは '/' に統一されます。\n
      *  メモリを確保できない場合は @ref CPLAT_ERR_OUT_OF_MEMORY を返します。\n
      *  Windows では OS の拡張パス上限 (32767 文字) までの非 ASCII パスを取得できます。
-     *  `\\?\` 接頭辞を含むパスも区切り文字は `'/'` へ正規化されるため (`//?/C:/...`)、
+     *  `\\?\C:\...` のような拡張パス接頭辞を含むパスも区切り文字は `'/'` へ正規化されるため (`//?/C:/...`)、
      *  そのまま Win32 のファイル API へ渡すことはできません。
      *  不正な UTF-16 は置換せず @ref CPLAT_ERR_INVALID_ENCODING を返します。
      *

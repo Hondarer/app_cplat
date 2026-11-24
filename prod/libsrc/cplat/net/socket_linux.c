@@ -1064,24 +1064,6 @@ int cplat_socket_timed_wait_readable_multi(const cplat_socket *socks, const size
     return cplat_internal_error_report_success(detail_out);
 }
 
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_shutdown_receive(cplat_socket *sock_inout, cplat_error *detail_out)
-{
-    if ((sock_inout == NULL) || (*sock_inout == CPLAT_INVALID_SOCKET))
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-
-    /* Linux は受信方向の停止で待機が解除されるため、ハンドルを保持したままにする。 */
-    if (shutdown((int)*sock_inout, SHUT_RD) != 0)
-    {
-        return cplat_internal_error_report_socket_errno(detail_out, errno);
-    }
-
-    return cplat_internal_error_report_success(detail_out);
-}
-
 #elif defined(PLATFORM_WINDOWS) && defined(COMPILER_MSVC)
     #pragma warning(disable : 4206)
 #endif /* PLATFORM_ */

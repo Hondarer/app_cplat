@@ -105,6 +105,11 @@ extern "C"
      */
     CPLAT_EXPORT int CPLAT_API cplat_mkdir(const char *path, cplat_error *detail_out);
 
+    /*
+     * 末尾が奇数個のバックスラッシュのコード スパンは Doxygen が直後へ入れる \endiskip と結合して
+     * XML に endiskip が漏れるため、文字を続ける例で記述する。
+     * see: https://doxygen.github.io/doxygen-docs/d6/d57/pg_cmds_int.html
+     */
     /**
      *  @brief          UTF-8 パスのディレクトリを、存在しない中間ディレクトリも
      *                  含めて再帰的に作成します (`mkdir -p` 相当)。
@@ -126,7 +131,7 @@ extern "C"
      *  作成するディレクトリの権限は `cplat_mkdir()` と同じです。\n
      *  Windows で入力パスが不正な UTF-8 の場合は置換せず、@ref CPLAT_ERR_INVALID_ENCODING
      *  (詳細 @c EILSEQ ) を返します。\n
-     *  Windows では、`\\?\` または `\\.\` で始まるパスの動作は保証しません。
+     *  Windows では、`\\?\C:\...` または `\\.\...` で始まるパスの動作は保証しません。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
