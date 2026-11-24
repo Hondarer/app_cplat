@@ -1204,48 +1204,67 @@ TEST(processTest, ExecutablePathReportsReadlinkLengthOverflow)
 {
     // Arrange
     NiceMock<Mock_unistd> mock_unistd;
-    char path[8] = {'x'};
+    char truncated_path[8] = {'x'};
+    char fit_path[8] = {'x'};
+    char zero_path[8] = {'x'};
     char one_byte[1] = {'x'};
 
     // Pre-Assert
-    EXPECT_CALL(mock_unistd, readlink(_, _, _, StrEq("/proc/self/exe"), path, sizeof(path)))
+    EXPECT_CALL(mock_unistd, readlink(_, _, _, StrEq("/proc/self/exe"), truncated_path, sizeof(truncated_path)))
         .WillOnce(Invoke(
             [](const char *, int, const char *, const char *, char *buf, size_t bufsiz) -> ssize_t
             {
-                EXPECT_EQ(8U, bufsiz);
+                EXPECT_EQ(8U, bufsiz); // [Pre-Assert確認_異常系] - bufsiz が 8U であること。
                 std::memcpy(buf, "/usr/bin", 8U);
                 return 8;
-            }))
+            })); // [Pre-Assert確認_異常系] - truncated_path に対して readlink() が "/proc/self/exe" と等しい文字列を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - readlink() から、8 バイトを書き込んで 8 を返す。
+    EXPECT_CALL(mock_unistd, readlink(_, _, _, StrEq("/proc/self/exe"), fit_path, sizeof(fit_path)))
         .WillOnce(Invoke(
             [](const char *, int, const char *, const char *, char *buf, size_t bufsiz) -> ssize_t
             {
-                EXPECT_EQ(8U, bufsiz);
+                EXPECT_EQ(8U, bufsiz); // [Pre-Assert確認_正常系] - bufsiz が 8U であること。
                 std::memcpy(buf, "/a/tool", 7U);
                 return 7;
-            }))
-        .WillOnce(Return(static_cast<ssize_t>(0)));
+            })); // [Pre-Assert確認_正常系] - fit_path に対して readlink() が "/proc/self/exe" と等しい文字列を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - readlink() から、"/a/tool" の 7 バイトを書き込んで 7 を返す。
+    EXPECT_CALL(mock_unistd, readlink(_, _, _, StrEq("/proc/self/exe"), zero_path, sizeof(zero_path)))
+        .WillOnce(Return(static_cast<ssize_t>(0))); // [Pre-Assert確認_異常系] - zero_path に対して readlink() が "/proc/self/exe" と等しい文字列を指定して 1 回呼び出されること。
+                                                    // [Pre-Assert手順] - readlink() から 0 を返す。
     EXPECT_CALL(mock_unistd, readlink(_, _, _, StrEq("/proc/self/exe"), one_byte, sizeof(one_byte)))
         .WillOnce(Invoke(
             [](const char *, int, const char *, const char *, char *buf, size_t bufsiz) -> ssize_t
             {
-                EXPECT_EQ(1U, bufsiz);
+                EXPECT_EQ(1U, bufsiz); // [Pre-Assert確認_異常系] - bufsiz が 1U であること。
                 buf[0] = '/';
                 return 1;
-            }));
+            })); // [Pre-Assert確認_異常系] - one_byte に対して readlink() が "/proc/self/exe" と等しい文字列を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - readlink() から、1 バイトを書き込んで 1 を返す。
 
     // Act
-    int rc_truncated = cplat_process_get_executable_path(path, sizeof(path));
-    int rc_fit = cplat_process_get_executable_path(path, sizeof(path));
-    int rc_zero = cplat_process_get_executable_path(path, sizeof(path));
-    int rc_one = cplat_process_get_executable_path(one_byte, sizeof(one_byte));
+    int rc_truncated = cplat_process_get_executable_path(
+        truncated_path,
+        sizeof(truncated_path)); // [手順] - 容量 8 で切り詰めが起きる状態の cplat_process_get_executable_path() を呼び出す。
+    int rc_fit = cplat_process_get_executable_path(
+        fit_path, sizeof(fit_path)); // [手順] - 容量 8 で 7 文字が収まる状態の cplat_process_get_executable_path() を呼び出す。
+    int rc_zero = cplat_process_get_executable_path(
+        zero_path, sizeof(zero_path)); // [手順] - readlink() が 0 を返す状態の cplat_process_get_executable_path() を呼び出す。
+    int rc_one = cplat_process_get_executable_path(
+        one_byte, sizeof(one_byte)); // [手順] - 容量 1 の出力先を指定して cplat_process_get_executable_path() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, rc_truncated); // [確認_異常系] - 容量 8 で 8 返却時は不足となること。
-    EXPECT_EQ(CPLAT_OK, rc_fit); // [確認_正常系] - 容量 8 で 7 文字書込み時は CPLAT_OK となること。
-    EXPECT_STREQ("/a/tool", path); // [確認_正常系] - NUL 終端された 7 文字のパスが返ること。
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN, rc_zero); // [確認_異常系] - readlink が 0 を返した場合は CPLAT_ERR_UNKNOWN となること。
-    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, rc_one); // [確認_異常系] - 容量 1 で 1 返却時は不足となること。
-    EXPECT_EQ('\0', one_byte[0]); // [確認_異常系] - 容量 1 の失敗時に先頭が NUL であること。
+    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
+              rc_truncated); // [確認_異常系] - 容量 8 で 8 返却時の cplat_process_get_executable_path() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_EQ('\0', truncated_path[0]); // [確認_異常系] - truncated_path[0] が '\0' であること。(切り詰め失敗時に先頭が NUL であることの確認)
+    EXPECT_EQ(CPLAT_OK,
+              rc_fit); // [確認_正常系] - 容量 8 で 7 文字書込み時の cplat_process_get_executable_path() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ("/a/tool", fit_path); // [確認_正常系] - fit_path が "/a/tool" であること。(NUL 終端された 7 文字のパスが返ることの確認)
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
+              rc_zero); // [確認_異常系] - readlink() が 0 を返す時の cplat_process_get_executable_path() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ('\0', zero_path[0]); // [確認_異常系] - zero_path[0] が '\0' であること。(0 返却失敗時に先頭が NUL であることの確認)
+    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL,
+              rc_one); // [確認_異常系] - 容量 1 で 1 返却時の cplat_process_get_executable_path() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
+    EXPECT_EQ('\0', one_byte[0]); // [確認_異常系] - one_byte[0] が '\0' であること。(容量 1 の失敗時に先頭が NUL であることの確認)
 }
 
 // argv の NULL、空文字列を process_start が拒否することの確認
@@ -1776,11 +1795,20 @@ TEST(processTest, exec_path_helper_handles_empty_segments_and_errno_rules)
 {
     // Arrange
     NiceMock<Mock_unistd> mock_unistd;
-    std::vector<std::string> called_paths;
+    std::vector<std::string> trail_paths;
+    std::vector<std::string> lead_paths;
+    std::vector<std::string> mid_paths;
+    std::vector<std::string> empty_path_calls;
+    std::vector<std::string> unset_path_calls;
+    std::vector<std::string> slash_paths;
     char tool_arg[] = "tool";
     char empty_arg[] = "";
     char slash_arg[] = "/custom/tool";
     char too_long_name[NAME_MAX + 2] = {};
+    char path_trail[] = "PATH=/a:";
+    char path_lead[] = "PATH=:/a";
+    char path_mid[] = "PATH=/a::/b";
+    char empty_path[] = "PATH=";
     std::memset(too_long_name, 'x', sizeof(too_long_name) - 1U);
     too_long_name[sizeof(too_long_name) - 1U] = '\0';
 
@@ -1788,90 +1816,178 @@ TEST(processTest, exec_path_helper_handles_empty_segments_and_errno_rules)
     char *empty_argv[] = {empty_arg, nullptr};
     char *slash_argv[] = {slash_arg, nullptr};
     char *long_name_argv[] = {too_long_name, nullptr};
+    char *env_trail[] = {path_trail, nullptr};
+    char *env_lead[] = {path_lead, nullptr};
+    char *env_mid[] = {path_mid, nullptr};
+    char *env_empty[] = {empty_path, nullptr};
+    char *env_unset[] = {nullptr};
+
+    int empty_errno = 0;
+    int long_name_errno = 0;
+    int slash_errno = 0;
 
     // Pre-Assert
-    ON_CALL(mock_unistd, execve(_, _, _, _, _, _))
-        .WillByDefault(Invoke(
-            [&called_paths](const char *, int, const char *, const char *path, char *const *, char *const *) -> int
-            {
-                called_paths.push_back(path);
-                errno = ENOENT;
-                return -1;
-            }));
-
-    // Act & Assert: argv[0] が空文字
-    called_paths.clear();
-    errno = 0;
-    test_process_exec_with_path(empty_argv, nullptr);
-    EXPECT_TRUE(called_paths.empty());
-    EXPECT_EQ(ENOENT, errno);
-
-    // Act & Assert: argv[0] が NAME_MAX 超
-    called_paths.clear();
-    errno = 0;
-    test_process_exec_with_path(long_name_argv, nullptr);
-    EXPECT_TRUE(called_paths.empty());
-    EXPECT_EQ(ENAMETOOLONG, errno);
-
-    // Act & Assert: '/' を含む名前は 1 回だけ試行してその errno を維持する
-    called_paths.clear();
-    EXPECT_CALL(mock_unistd, execve(_, _, _, StrEq("/custom/tool"), _, _))
-        .WillOnce(Invoke(
-            [&called_paths](const char *, int, const char *, const char *path, char *const *, char *const *) -> int
-            {
-                called_paths.push_back(path);
-                errno = ENOEXEC;
-                return -1;
-            }));
-    test_process_exec_with_path(slash_argv, nullptr);
-    EXPECT_EQ(1U, called_paths.size());
-    EXPECT_EQ(ENOEXEC, errno);
-
-    // Act & Assert: PATH=/a: (末尾の空区間)、PATH=:/a (先頭の空区間)、PATH=/a::/b (途中の空区間)
     {
-        char path_trail[] = "PATH=/a:";
-        char *env_trail[] = {path_trail, nullptr};
-        called_paths.clear();
-        test_process_exec_with_path(tool_argv, env_trail);
-        ASSERT_EQ(2U, called_paths.size());
-        EXPECT_EQ("/a/tool", called_paths[0]);
-        EXPECT_EQ("./tool", called_paths[1]);
+        testing::InSequence seq;
+        EXPECT_CALL(mock_unistd, execve(_, _, _, StrEq("/custom/tool"), _, _))
+            .WillOnce(Invoke(
+                [&slash_paths](const char *, int, const char *, const char *path, char *const *, char *const *) -> int
+                {
+                    slash_paths.push_back(path);
+                    errno = ENOEXEC;
+                    return -1;
+                })); // [Pre-Assert確認_異常系] - execve() が "/custom/tool" と等しい文字列を指定して 1 回呼び出されること。
+                     // [Pre-Assert手順] - execve() から、errno に ENOEXEC を設定して -1 を返す。
 
-        char path_lead[] = "PATH=:/a";
-        char *env_lead[] = {path_lead, nullptr};
-        called_paths.clear();
-        test_process_exec_with_path(tool_argv, env_lead);
-        ASSERT_EQ(2U, called_paths.size());
-        EXPECT_EQ("./tool", called_paths[0]);
-        EXPECT_EQ("/a/tool", called_paths[1]);
+        EXPECT_CALL(mock_unistd, execve(_, _, _, StrEq("/a/tool"), _, _))
+            .WillOnce(Invoke(
+                [&trail_paths](const char *, int, const char *, const char *path, char *const *, char *const *) -> int
+                {
+                    trail_paths.push_back(path);
+                    errno = ENOENT;
+                    return -1;
+                })); // [Pre-Assert確認_異常系] - 末尾の空区間の 1 件目として execve() が "/a/tool" と等しい文字列を指定して 1 回呼び出されること。
+                     // [Pre-Assert手順] - execve() から、errno に ENOENT を設定して -1 を返す。
+        EXPECT_CALL(mock_unistd, execve(_, _, _, StrEq("./tool"), _, _))
+            .WillOnce(Invoke(
+                [&trail_paths](const char *, int, const char *, const char *path, char *const *, char *const *) -> int
+                {
+                    trail_paths.push_back(path);
+                    errno = ENOENT;
+                    return -1;
+                })); // [Pre-Assert確認_異常系] - 末尾の空区間の 2 件目として execve() が "./tool" と等しい文字列を指定して 1 回呼び出されること。
+                     // [Pre-Assert手順] - execve() から、errno に ENOENT を設定して -1 を返す。
 
-        char path_mid[] = "PATH=/a::/b";
-        char *env_mid[] = {path_mid, nullptr};
-        called_paths.clear();
-        test_process_exec_with_path(tool_argv, env_mid);
-        ASSERT_EQ(3U, called_paths.size());
-        EXPECT_EQ("/a/tool", called_paths[0]);
-        EXPECT_EQ("./tool", called_paths[1]);
-        EXPECT_EQ("/b/tool", called_paths[2]);
+        EXPECT_CALL(mock_unistd, execve(_, _, _, StrEq("./tool"), _, _))
+            .WillOnce(Invoke(
+                [&lead_paths](const char *, int, const char *, const char *path, char *const *, char *const *) -> int
+                {
+                    lead_paths.push_back(path);
+                    errno = ENOENT;
+                    return -1;
+                })); // [Pre-Assert確認_異常系] - 先頭の空区間の 1 件目として execve() が "./tool" と等しい文字列を指定して 1 回呼び出されること。
+                     // [Pre-Assert手順] - execve() から、errno に ENOENT を設定して -1 を返す。
+        EXPECT_CALL(mock_unistd, execve(_, _, _, StrEq("/a/tool"), _, _))
+            .WillOnce(Invoke(
+                [&lead_paths](const char *, int, const char *, const char *path, char *const *, char *const *) -> int
+                {
+                    lead_paths.push_back(path);
+                    errno = ENOENT;
+                    return -1;
+                })); // [Pre-Assert確認_異常系] - 先頭の空区間の 2 件目として execve() が "/a/tool" と等しい文字列を指定して 1 回呼び出されること。
+                     // [Pre-Assert手順] - execve() から、errno に ENOENT を設定して -1 を返す。
+
+        EXPECT_CALL(mock_unistd, execve(_, _, _, StrEq("/a/tool"), _, _))
+            .WillOnce(Invoke(
+                [&mid_paths](const char *, int, const char *, const char *path, char *const *, char *const *) -> int
+                {
+                    mid_paths.push_back(path);
+                    errno = ENOENT;
+                    return -1;
+                })); // [Pre-Assert確認_異常系] - 途中の空区間の 1 件目として execve() が "/a/tool" と等しい文字列を指定して 1 回呼び出されること。
+                     // [Pre-Assert手順] - execve() から、errno に ENOENT を設定して -1 を返す。
+        EXPECT_CALL(mock_unistd, execve(_, _, _, StrEq("./tool"), _, _))
+            .WillOnce(Invoke(
+                [&mid_paths](const char *, int, const char *, const char *path, char *const *, char *const *) -> int
+                {
+                    mid_paths.push_back(path);
+                    errno = ENOENT;
+                    return -1;
+                })); // [Pre-Assert確認_異常系] - 途中の空区間の 2 件目として execve() が "./tool" と等しい文字列を指定して 1 回呼び出されること。
+                     // [Pre-Assert手順] - execve() から、errno に ENOENT を設定して -1 を返す。
+        EXPECT_CALL(mock_unistd, execve(_, _, _, StrEq("/b/tool"), _, _))
+            .WillOnce(Invoke(
+                [&mid_paths](const char *, int, const char *, const char *path, char *const *, char *const *) -> int
+                {
+                    mid_paths.push_back(path);
+                    errno = ENOENT;
+                    return -1;
+                })); // [Pre-Assert確認_異常系] - 途中の空区間の 3 件目として execve() が "/b/tool" と等しい文字列を指定して 1 回呼び出されること。
+                     // [Pre-Assert手順] - execve() から、errno に ENOENT を設定して -1 を返す。
+
+        EXPECT_CALL(mock_unistd, execve(_, _, _, StrEq("/bin/tool"), _, _))
+            .WillOnce(Invoke(
+                [&empty_path_calls](const char *, int, const char *, const char *path, char *const *,
+                                    char *const *) -> int
+                {
+                    empty_path_calls.push_back(path);
+                    errno = ENOENT;
+                    return -1;
+                })); // [Pre-Assert確認_異常系] - 空の PATH の 1 件目として execve() が "/bin/tool" と等しい文字列を指定して 1 回呼び出されること。
+                     // [Pre-Assert手順] - execve() から、errno に ENOENT を設定して -1 を返す。
+        EXPECT_CALL(mock_unistd, execve(_, _, _, StrEq("/usr/bin/tool"), _, _))
+            .WillOnce(Invoke(
+                [&empty_path_calls](const char *, int, const char *, const char *path, char *const *,
+                                    char *const *) -> int
+                {
+                    empty_path_calls.push_back(path);
+                    errno = ENOENT;
+                    return -1;
+                })); // [Pre-Assert確認_異常系] - 空の PATH の 2 件目として execve() が "/usr/bin/tool" と等しい文字列を指定して 1 回呼び出されること。
+                     // [Pre-Assert手順] - execve() から、errno に ENOENT を設定して -1 を返す。
+
+        EXPECT_CALL(mock_unistd, execve(_, _, _, StrEq("/bin/tool"), _, _))
+            .WillOnce(Invoke(
+                [&unset_path_calls](const char *, int, const char *, const char *path, char *const *,
+                                    char *const *) -> int
+                {
+                    unset_path_calls.push_back(path);
+                    errno = ENOENT;
+                    return -1;
+                })); // [Pre-Assert確認_異常系] - PATH 未設定の 1 件目として execve() が "/bin/tool" と等しい文字列を指定して 1 回呼び出されること。
+                     // [Pre-Assert手順] - execve() から、errno に ENOENT を設定して -1 を返す。
+        EXPECT_CALL(mock_unistd, execve(_, _, _, StrEq("/usr/bin/tool"), _, _))
+            .WillOnce(Invoke(
+                [&unset_path_calls](const char *, int, const char *, const char *path, char *const *,
+                                    char *const *) -> int
+                {
+                    unset_path_calls.push_back(path);
+                    errno = ENOENT;
+                    return -1;
+                })); // [Pre-Assert確認_異常系] - PATH 未設定の 2 件目として execve() が "/usr/bin/tool" と等しい文字列を指定して 1 回呼び出されること。
+                     // [Pre-Assert手順] - execve() から、errno に ENOENT を設定して -1 を返す。
     }
 
-    // Act & Assert: PATH= (空文字列) と PATH 未設定では既定パスのみ探索し ./tool を試さない
-    {
-        char empty_path[] = "PATH=";
-        char *env_empty[] = {empty_path, nullptr};
-        char *env_unset[] = {nullptr};
-        called_paths.clear();
-        test_process_exec_with_path(tool_argv, env_empty);
-        ASSERT_EQ(2U, called_paths.size());
-        EXPECT_EQ("/bin/tool", called_paths[0]);
-        EXPECT_EQ("/usr/bin/tool", called_paths[1]);
+    // Act
+    errno = 0;
+    test_process_exec_with_path(empty_argv, nullptr); // [手順] - 空文字列の argv[0] を指定して test_process_exec_with_path() を呼び出す。
+    empty_errno = errno;
 
-        called_paths.clear();
-        test_process_exec_with_path(tool_argv, env_unset);
-        ASSERT_EQ(2U, called_paths.size());
-        EXPECT_EQ("/bin/tool", called_paths[0]);
-        EXPECT_EQ("/usr/bin/tool", called_paths[1]);
-    }
+    errno = 0;
+    test_process_exec_with_path(long_name_argv, nullptr); // [手順] - NAME_MAX 超の argv[0] を指定して test_process_exec_with_path() を呼び出す。
+    long_name_errno = errno;
+
+    errno = 0;
+    test_process_exec_with_path(slash_argv, nullptr); // [手順] - '/' を含む argv[0] を指定して test_process_exec_with_path() を呼び出す。
+    slash_errno = errno;
+
+    test_process_exec_with_path(tool_argv, env_trail); // [手順] - 末尾が空区間の PATH を指定して test_process_exec_with_path() を呼び出す。
+    test_process_exec_with_path(tool_argv, env_lead);  // [手順] - 先頭が空区間の PATH を指定して test_process_exec_with_path() を呼び出す。
+    test_process_exec_with_path(tool_argv, env_mid);   // [手順] - 途中が空区間の PATH を指定して test_process_exec_with_path() を呼び出す。
+    test_process_exec_with_path(tool_argv, env_empty); // [手順] - 空文字列の PATH を指定して test_process_exec_with_path() を呼び出す。
+    test_process_exec_with_path(tool_argv, env_unset); // [手順] - PATH 未設定の環境を指定して test_process_exec_with_path() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(ENOENT, empty_errno); // [確認_異常系] - empty_errno が ENOENT であること。(空文字列の argv[0] で ENOENT になることの確認)
+    EXPECT_EQ(ENAMETOOLONG, long_name_errno); // [確認_異常系] - long_name_errno が ENAMETOOLONG であること。(NAME_MAX 超の argv[0] で ENAMETOOLONG になることの確認)
+    EXPECT_EQ(1U, slash_paths.size()); // [確認_正常系] - slash_paths.size() の戻り値が 1U であること。(直接指定で 1 回だけ試行されることの確認)
+    EXPECT_EQ(ENOEXEC, slash_errno); // [確認_異常系] - slash_errno が ENOEXEC であること。(直接指定時の errno が維持されることの確認)
+    ASSERT_EQ(2U, trail_paths.size()); // [確認_正常系] - trail_paths.size() の戻り値が 2U であること。(末尾の空区間で 2 候補試行されることの確認)
+    EXPECT_EQ("/a/tool", trail_paths[0]); // [確認_正常系] - trail_paths[0] が "/a/tool" であること。
+    EXPECT_EQ("./tool", trail_paths[1]);  // [確認_正常系] - trail_paths[1] が "./tool" であること。
+    ASSERT_EQ(2U, lead_paths.size()); // [確認_正常系] - lead_paths.size() の戻り値が 2U であること。(先頭の空区間で 2 候補試行されることの確認)
+    EXPECT_EQ("./tool", lead_paths[0]); // [確認_正常系] - lead_paths[0] が "./tool" であること。
+    EXPECT_EQ("/a/tool", lead_paths[1]); // [確認_正常系] - lead_paths[1] が "/a/tool" であること。
+    ASSERT_EQ(3U, mid_paths.size()); // [確認_正常系] - mid_paths.size() の戻り値が 3U であること。(途中の空区間で 3 候補試行されることの確認)
+    EXPECT_EQ("/a/tool", mid_paths[0]); // [確認_正常系] - mid_paths[0] が "/a/tool" であること。
+    EXPECT_EQ("./tool", mid_paths[1]);  // [確認_正常系] - mid_paths[1] が "./tool" であること。
+    EXPECT_EQ("/b/tool", mid_paths[2]); // [確認_正常系] - mid_paths[2] が "/b/tool" であること。
+    ASSERT_EQ(2U, empty_path_calls.size()); // [確認_正常系] - empty_path_calls.size() の戻り値が 2U であること。(空の PATH で既定パス 2 候補が試行されることの確認)
+    EXPECT_EQ("/bin/tool", empty_path_calls[0]); // [確認_正常系] - empty_path_calls[0] が "/bin/tool" であること。
+    EXPECT_EQ("/usr/bin/tool", empty_path_calls[1]); // [確認_正常系] - empty_path_calls[1] が "/usr/bin/tool" であること。
+    ASSERT_EQ(2U, unset_path_calls.size()); // [確認_正常系] - unset_path_calls.size() の戻り値が 2U であること。(PATH 未設定で既定パス 2 候補が試行されることの確認)
+    EXPECT_EQ("/bin/tool", unset_path_calls[0]); // [確認_正常系] - unset_path_calls[0] が "/bin/tool" であること。
+    EXPECT_EQ("/usr/bin/tool", unset_path_calls[1]); // [確認_正常系] - unset_path_calls[1] が "/usr/bin/tool" であること。
 }
 
 // Linux の PATH 探索で EACCES 保持、継続可能な errno、即座に打ち切る errno、全区間超過を確認するテスト

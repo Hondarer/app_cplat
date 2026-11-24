@@ -213,8 +213,13 @@ TEST_F(makedirsTest, single_level_creates_directory)
                 return -1;
             })
         .WillOnce(
-            Return(0)); // [Pre-Assert確認_正常系] - stat() が "dir1" と等しい文字列を指定して 2 回呼び出されること。
-                        // [Pre-Assert手順] - stat() から 1 回目は errno に ENOENT を設定して -1、2 回目は 0 を返す。
+            [](const char *, int, const char *, const char *, struct stat *st)
+            {
+                *st = {};
+                st->st_mode = S_IFDIR | 0755;
+                return 0;
+            }); // [Pre-Assert確認_正常系] - stat() が "dir1" と等しい文字列を指定して 2 回呼び出されること。
+                 // [Pre-Assert手順] - stat() から 1 回目は errno に ENOENT を設定して -1、2 回目はディレクトリを示す情報を設定して 0 を返す。
     EXPECT_CALL(mock_sys_stat_, mkdir(_, _, _, StrEq("dir1"), _))
         .WillOnce(
             Return(0)); // [Pre-Assert確認_正常系] - mkdir() が "dir1" と等しい文字列を指定して 1 回呼び出されること。
@@ -407,9 +412,14 @@ TEST_F(makedirsTest, returns_success_when_target_appears_after_mkdir_failure)
             }); // [Pre-Assert確認_正常系] - 1 回目の stat() の後の mkdir() が "target" と等しい文字列を指定して 1 回呼び出されること。
     // [Pre-Assert手順] - mkdir() から、errno に EEXIST を設定して -1 を返す。
     EXPECT_CALL(mock_sys_stat_, stat(_, _, _, StrEq("target"), _))
-        .WillOnce(Return(
-            0)); // [Pre-Assert確認_正常系] - mkdir() の後の stat() が "target" と等しい文字列を指定して 1 回呼び出されること。
-                 // [Pre-Assert手順] - stat() から、mkdir() の後の呼び出しに対して 0 を返す。
+        .WillOnce(
+            [](const char *, int, const char *, const char *, struct stat *st)
+            {
+                *st = {};
+                st->st_mode = S_IFDIR | 0755;
+                return 0;
+            }); // [Pre-Assert確認_正常系] - mkdir() の後の stat() が "target" と等しい文字列を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - stat() から、mkdir() の後の呼び出しに対して、ディレクトリを示す情報を設定して 0 を返す。
 
     // Act
     int result = cplat_makedirs(
