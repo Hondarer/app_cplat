@@ -1,7 +1,6 @@
 #include <testfw.h>
 #include <cplat/base/platform.h>
-
-extern "C" int platform_feature_probe_has_gnu_dlfcn(void);
+#include "platformFeatureProbe.h"
 
 class platformFeatureTest : public Test
 {

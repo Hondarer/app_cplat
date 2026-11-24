@@ -1,4 +1,5 @@
 #include <cplat/base/platform.h>
+#include "platformFeatureProbe.h"
 
 #if defined(PLATFORM_LINUX)
     #ifndef _GNU_SOURCE
