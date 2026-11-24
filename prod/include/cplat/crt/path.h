@@ -202,7 +202,7 @@ extern "C"
                                                    const char *path);
 
     /**
-     *  @brief          2 つのパスが同じ実体を指すか比較します。
+     *  @brief          2 つのパスを、絶対パスにしてから文字列として比べます。
      *  @param[in]      lhs        比較対象の 1 つ目のパス (UTF-8)。NULL および空文字は渡してはなりません。
      *  @param[in]      rhs        比較対象の 2 つ目のパス (UTF-8)。NULL および空文字は渡してはなりません。
      *  @param[out]     equal_out  一致時は 1、不一致時は 0 の格納先。NULL を渡してはなりません。
@@ -211,14 +211,23 @@ extern "C"
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
-     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN の
+     *                  いずれかを返します。
      *
      *  内部でそれぞれのパスに対して cplat_path_get_full() を呼び、絶対化と
-     *  区切り文字正規化を行ったうえで比較します。\n
-     *  Windows ではファイル システムの慣習に合わせて大小文字を区別せず比較します。\n
+     *  区切り文字の正規化を行ったうえで比較します。\n
+     *  Windows では、UTF-16 へ変換し、OS の大文字の表で大文字と小文字を区別せずに比べます
+     *  (CompareStringOrdinal。言語の規則による同一視は行いません)。\n
+     *  Linux では、絶対化と正規化の後、realpath() が成功した場合はリンクを解決したパス、
+     *  失敗した場合は正規化済みの絶対パスを、バイト列の完全一致で比べます。\n
+     *  Windows ではシンボリック リンクを解決しません。両方の OS でハード リンクによる同一性は
+     *  判定しません。Windows のディレクトリごとの大文字と小文字の区別の設定と、
+     *  ファイル システムが持つ大文字の表との違いは考慮しません。\n
      *  Windows では、入力または結果が UTF-16 で @ref PLATFORM_PATH_MAX 文字 (終端を含む) を超える場合に
      *  @ref CPLAT_ERR_BUFFER_TOO_SMALL を返します。
-     *  どちらかの入力が不正な UTF-8 の場合は置換せず、@ref CPLAT_ERR_INVALID_ENCODING と詳細 EILSEQ を返します。
+     *  どちらかの入力が不正な UTF-8 の場合は置換せず、@ref CPLAT_ERR_INVALID_ENCODING と詳細 EILSEQ を返します。\n
+     *  失敗した場合、@p equal_out は変更しません。
+     *  see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-comparestringordinal
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -236,10 +245,15 @@ extern "C"
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
-     *                  @ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  Linux 環境では環境変数 `TMPDIR` を参照し、未設定または空の場合は `"/tmp"` を使用します。\n
-     *  Windows 環境では `GetTempPathW()` で取得したパスを UTF-8 に変換して使用します。\n
+     *  Windows 環境では `GetTempPath2W()` が利用できる場合は `GetTempPath2W()`、利用できない場合は
+     *  `GetTempPathW()` で取得したパスを UTF-8 に変換して使用します。\n
+     *  `GetTempPath2W()` がある Windows で SYSTEM アカウントのプロセスとして実行する場合、
+     *  一時ディレクトリは環境変数 `SystemTemp` の値、未設定時は既定のシステム用一時ディレクトリ
+     *  (`C:\\Windows\\SystemTemp`) になります。SYSTEM 以外のアカウント (管理者へ昇格した通常の利用者の
+     *  プロセスを含む) は `GetTempPathW()` と同じ規則に従います。\n
      *  不正な UTF-8 または UTF-16 が変換境界で検出された場合は、置換せず @ref CPLAT_ERR_INVALID_ENCODING を返します。\n
      *  出力パスは常に @ref PLATFORM_PATH_SEP (`"/"`) 区切りで正規化されており、末尾の区切り文字は含まれません。\n
      *  ファイル パスを構築する際は @ref PLATFORM_PATH_SEP を挟んでください。

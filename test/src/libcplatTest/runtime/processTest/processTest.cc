@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <cstring>
 #include <thread>
 
 using testing::_;
@@ -1198,31 +1199,53 @@ TEST(processTest, ExecutablePathReportsReadlinkFailure)
         path[0]); // [確認_異常系] - path[0] が '\0' であること。(readlink() 失敗時に出力先が空文字列であることの確認)
 }
 
-// readlink が出力バッファーを超える長さを返した場合に不足を報告することの確認
+// readlink が容量と等しい長さを返した場合に不足を検出し、容量未満では成功することの確認
 TEST(processTest, ExecutablePathReportsReadlinkLengthOverflow)
 {
     // Arrange
     NiceMock<Mock_unistd> mock_unistd;
     char path[8] = {'x'};
+    char one_byte[1] = {'x'};
 
     // Pre-Assert
-    EXPECT_CALL(mock_unistd, readlink(_, _, _, StrEq("/proc/self/exe"), _, _))
-        .WillOnce(Return(static_cast<ssize_t>(
-            8))); // [Pre-Assert確認_異常系] - readlink() が "/proc/self/exe" と等しい文字列を指定して 1 回呼び出されること。
-                  // [Pre-Assert手順] - readlink() から出力先容量と同じ 8 を返す。
+    EXPECT_CALL(mock_unistd, readlink(_, _, _, StrEq("/proc/self/exe"), path, sizeof(path)))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, const char *, char *buf, size_t bufsiz) -> ssize_t
+            {
+                EXPECT_EQ(8U, bufsiz);
+                std::memcpy(buf, "/usr/bin", 8U);
+                return 8;
+            }))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, const char *, char *buf, size_t bufsiz) -> ssize_t
+            {
+                EXPECT_EQ(8U, bufsiz);
+                std::memcpy(buf, "/a/tool", 7U);
+                return 7;
+            }))
+        .WillOnce(Return(static_cast<ssize_t>(0)));
+    EXPECT_CALL(mock_unistd, readlink(_, _, _, StrEq("/proc/self/exe"), one_byte, sizeof(one_byte)))
+        .WillOnce(Invoke(
+            [](const char *, int, const char *, const char *, char *buf, size_t bufsiz) -> ssize_t
+            {
+                EXPECT_EQ(1U, bufsiz);
+                buf[0] = '/';
+                return 1;
+            }));
 
     // Act
-    int result = cplat_process_get_executable_path(
-        path,
-        sizeof(
-            path)); // [手順] - readlink() が出力先容量以上の長さを返す状態で cplat_process_get_executable_path() を呼び出す。
+    int rc_truncated = cplat_process_get_executable_path(path, sizeof(path));
+    int rc_fit = cplat_process_get_executable_path(path, sizeof(path));
+    int rc_zero = cplat_process_get_executable_path(path, sizeof(path));
+    int rc_one = cplat_process_get_executable_path(one_byte, sizeof(one_byte));
 
     // Assert
-    EXPECT_EQ(
-        CPLAT_ERR_BUFFER_TOO_SMALL,
-        result); // [確認_異常系] - cplat_process_get_executable_path() の戻り値が CPLAT_ERR_BUFFER_TOO_SMALL であること。
-    EXPECT_EQ('\0',
-              path[0]); // [確認_異常系] - path[0] が '\0' であること。(長さ超過時に出力先が空文字列であることの確認)
+    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, rc_truncated); // [確認_異常系] - 容量 8 で 8 返却時は不足となること。
+    EXPECT_EQ(CPLAT_OK, rc_fit); // [確認_正常系] - 容量 8 で 7 文字書込み時は CPLAT_OK となること。
+    EXPECT_STREQ("/a/tool", path); // [確認_正常系] - NUL 終端された 7 文字のパスが返ること。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, rc_zero); // [確認_異常系] - readlink が 0 を返した場合は CPLAT_ERR_UNKNOWN となること。
+    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, rc_one); // [確認_異常系] - 容量 1 で 1 返却時は不足となること。
+    EXPECT_EQ('\0', one_byte[0]); // [確認_異常系] - 容量 1 の失敗時に先頭が NUL であること。
 }
 
 // argv の NULL、空文字列を process_start が拒否することの確認
@@ -1748,40 +1771,314 @@ TEST(processTest, child_stdio_helpers_handle_modes_and_errors)
         all_inherit_result); // [確認_正常系] - all_inherit_result が 0 であること。(全ストリーム継承が成功することの確認)
 }
 
-// Linux の PATH 探索が絶対パス、空要素、既定値、候補長を処理することの確認
-TEST(processTest, exec_path_helper_searches_path_segments)
+// Linux の PATH 探索の errno 優先度、空区間、打ち切り、候補長、実 OS の権限不足の確認
+TEST(processTest, exec_path_helper_handles_empty_segments_and_errno_rules)
 {
     // Arrange
     NiceMock<Mock_unistd> mock_unistd;
-    char absolute_arg[] = "/bin/tool";
-    char relative_arg[] = "tool";
-    char long_arg[PLATFORM_PATH_MAX] = {};
-    char path_value[] = "PATH=/one::/two";
-    char *absolute_argv[] = {absolute_arg, nullptr};
-    char *relative_argv[] = {relative_arg, nullptr};
-    char *long_argv[] = {long_arg, nullptr};
-    char *envp[] = {path_value, nullptr};
-    memset(long_arg, 'x', sizeof(long_arg) - 1U);
-    long_arg[sizeof(long_arg) - 1U] = '\0';
+    std::vector<std::string> called_paths;
+    char tool_arg[] = "tool";
+    char empty_arg[] = "";
+    char slash_arg[] = "/custom/tool";
+    char too_long_name[NAME_MAX + 2] = {};
+    std::memset(too_long_name, 'x', sizeof(too_long_name) - 1U);
+    too_long_name[sizeof(too_long_name) - 1U] = '\0';
+
+    char *tool_argv[] = {tool_arg, nullptr};
+    char *empty_argv[] = {empty_arg, nullptr};
+    char *slash_argv[] = {slash_arg, nullptr};
+    char *long_name_argv[] = {too_long_name, nullptr};
 
     // Pre-Assert
-    EXPECT_CALL(mock_unistd, execve(_, _, _, _, _, _))
-        .WillRepeatedly(Return(-1)); // [Pre-Assert確認_正常系] - execve() が任意の回数呼び出されること。
-                                     // [Pre-Assert手順] - execve() から、PATH 探索中に -1 を返す。
+    ON_CALL(mock_unistd, execve(_, _, _, _, _, _))
+        .WillByDefault(Invoke(
+            [&called_paths](const char *, int, const char *, const char *path, char *const *, char *const *) -> int
+            {
+                called_paths.push_back(path);
+                errno = ENOENT;
+                return -1;
+            }));
+
+    // Act & Assert: argv[0] が空文字
+    called_paths.clear();
+    errno = 0;
+    test_process_exec_with_path(empty_argv, nullptr);
+    EXPECT_TRUE(called_paths.empty());
+    EXPECT_EQ(ENOENT, errno);
+
+    // Act & Assert: argv[0] が NAME_MAX 超
+    called_paths.clear();
+    errno = 0;
+    test_process_exec_with_path(long_name_argv, nullptr);
+    EXPECT_TRUE(called_paths.empty());
+    EXPECT_EQ(ENAMETOOLONG, errno);
+
+    // Act & Assert: '/' を含む名前は 1 回だけ試行してその errno を維持する
+    called_paths.clear();
+    EXPECT_CALL(mock_unistd, execve(_, _, _, StrEq("/custom/tool"), _, _))
+        .WillOnce(Invoke(
+            [&called_paths](const char *, int, const char *, const char *path, char *const *, char *const *) -> int
+            {
+                called_paths.push_back(path);
+                errno = ENOEXEC;
+                return -1;
+            }));
+    test_process_exec_with_path(slash_argv, nullptr);
+    EXPECT_EQ(1U, called_paths.size());
+    EXPECT_EQ(ENOEXEC, errno);
+
+    // Act & Assert: PATH=/a: (末尾の空区間)、PATH=:/a (先頭の空区間)、PATH=/a::/b (途中の空区間)
+    {
+        char path_trail[] = "PATH=/a:";
+        char *env_trail[] = {path_trail, nullptr};
+        called_paths.clear();
+        test_process_exec_with_path(tool_argv, env_trail);
+        ASSERT_EQ(2U, called_paths.size());
+        EXPECT_EQ("/a/tool", called_paths[0]);
+        EXPECT_EQ("./tool", called_paths[1]);
+
+        char path_lead[] = "PATH=:/a";
+        char *env_lead[] = {path_lead, nullptr};
+        called_paths.clear();
+        test_process_exec_with_path(tool_argv, env_lead);
+        ASSERT_EQ(2U, called_paths.size());
+        EXPECT_EQ("./tool", called_paths[0]);
+        EXPECT_EQ("/a/tool", called_paths[1]);
+
+        char path_mid[] = "PATH=/a::/b";
+        char *env_mid[] = {path_mid, nullptr};
+        called_paths.clear();
+        test_process_exec_with_path(tool_argv, env_mid);
+        ASSERT_EQ(3U, called_paths.size());
+        EXPECT_EQ("/a/tool", called_paths[0]);
+        EXPECT_EQ("./tool", called_paths[1]);
+        EXPECT_EQ("/b/tool", called_paths[2]);
+    }
+
+    // Act & Assert: PATH= (空文字列) と PATH 未設定では既定パスのみ探索し ./tool を試さない
+    {
+        char empty_path[] = "PATH=";
+        char *env_empty[] = {empty_path, nullptr};
+        char *env_unset[] = {nullptr};
+        called_paths.clear();
+        test_process_exec_with_path(tool_argv, env_empty);
+        ASSERT_EQ(2U, called_paths.size());
+        EXPECT_EQ("/bin/tool", called_paths[0]);
+        EXPECT_EQ("/usr/bin/tool", called_paths[1]);
+
+        called_paths.clear();
+        test_process_exec_with_path(tool_argv, env_unset);
+        ASSERT_EQ(2U, called_paths.size());
+        EXPECT_EQ("/bin/tool", called_paths[0]);
+        EXPECT_EQ("/usr/bin/tool", called_paths[1]);
+    }
+}
+
+// Linux の PATH 探索で EACCES 保持、継続可能な errno、即座に打ち切る errno、全区間超過を確認するテスト
+TEST(processTest, exec_path_helper_reports_eacces_and_immediate_errors)
+{
+    // Arrange
+    NiceMock<Mock_unistd> mock_unistd;
+    std::vector<std::string> called_paths;
+    char tool_arg[] = "tool";
+    char *tool_argv[] = {tool_arg, nullptr};
+    char path_ab[] = "PATH=/a:/b";
+    char *env_ab[] = {path_ab, nullptr};
+
+    // Pre-Assert & Act: EACCES の後に ENOENT でも EACCES
+    {
+        called_paths.clear();
+        EXPECT_CALL(mock_unistd, execve(_, _, _, _, _, _))
+            .WillOnce(Invoke(
+                [&called_paths](const char *, int, const char *, const char *p, char *const *, char *const *) -> int
+                {
+                    called_paths.push_back(p);
+                    errno = EACCES;
+                    return -1;
+                }))
+            .WillOnce(Invoke(
+                [&called_paths](const char *, int, const char *, const char *p, char *const *, char *const *) -> int
+                {
+                    called_paths.push_back(p);
+                    errno = ENOENT;
+                    return -1;
+                }));
+        test_process_exec_with_path(tool_argv, env_ab);
+        EXPECT_EQ(2U, called_paths.size());
+        EXPECT_EQ(EACCES, errno);
+    }
+
+    // Pre-Assert & Act: ENOENT の後に EACCES でも EACCES
+    {
+        called_paths.clear();
+        EXPECT_CALL(mock_unistd, execve(_, _, _, _, _, _))
+            .WillOnce(Invoke(
+                [&called_paths](const char *, int, const char *, const char *p, char *const *, char *const *) -> int
+                {
+                    called_paths.push_back(p);
+                    errno = ENOENT;
+                    return -1;
+                }))
+            .WillOnce(Invoke(
+                [&called_paths](const char *, int, const char *, const char *p, char *const *, char *const *) -> int
+                {
+                    called_paths.push_back(p);
+                    errno = EACCES;
+                    return -1;
+                }));
+        test_process_exec_with_path(tool_argv, env_ab);
+        EXPECT_EQ(2U, called_paths.size());
+        EXPECT_EQ(EACCES, errno);
+    }
+
+    // Pre-Assert & Act: ENOEXEC と ETXTBSY は探索を打ち切り /bin/sh を起動しない
+    for (int stop_errno : {ENOEXEC, ETXTBSY})
+    {
+        called_paths.clear();
+        EXPECT_CALL(mock_unistd, execve(_, _, _, _, _, _))
+            .WillOnce(Invoke(
+                [&called_paths, &stop_errno](const char *, int, const char *, const char *p, char *const *,
+                                            char *const *) -> int
+                {
+                    called_paths.push_back(p);
+                    errno = stop_errno;
+                    return -1;
+                }));
+        test_process_exec_with_path(tool_argv, env_ab);
+        ASSERT_EQ(1U, called_paths.size());
+        EXPECT_EQ("/a/tool", called_paths[0]);
+        EXPECT_EQ(stop_errno, errno);
+    }
+
+    // Pre-Assert & Act: ENOTDIR / ESTALE / ENODEV / ETIMEDOUT は次候補へ継続する
+    {
+        char path_five[] = "PATH=/a:/b:/c:/d:/e";
+        char *env_five[] = {path_five, nullptr};
+        called_paths.clear();
+        EXPECT_CALL(mock_unistd, execve(_, _, _, _, _, _))
+            .WillOnce(Invoke(
+                [&called_paths](const char *, int, const char *, const char *p, char *const *, char *const *) -> int
+                {
+                    called_paths.push_back(p);
+                    errno = ENOTDIR;
+                    return -1;
+                }))
+            .WillOnce(Invoke(
+                [&called_paths](const char *, int, const char *, const char *p, char *const *, char *const *) -> int
+                {
+                    called_paths.push_back(p);
+                    errno = ESTALE;
+                    return -1;
+                }))
+            .WillOnce(Invoke(
+                [&called_paths](const char *, int, const char *, const char *p, char *const *, char *const *) -> int
+                {
+                    called_paths.push_back(p);
+                    errno = ENODEV;
+                    return -1;
+                }))
+            .WillOnce(Invoke(
+                [&called_paths](const char *, int, const char *, const char *p, char *const *, char *const *) -> int
+                {
+                    called_paths.push_back(p);
+                    errno = ETIMEDOUT;
+                    return -1;
+                }))
+            .WillOnce(Invoke(
+                [&called_paths](const char *, int, const char *, const char *p, char *const *, char *const *) -> int
+                {
+                    called_paths.push_back(p);
+                    errno = ENOENT;
+                    return -1;
+                }));
+        test_process_exec_with_path(tool_argv, env_five);
+        EXPECT_EQ(5U, called_paths.size());
+        EXPECT_EQ(ENOENT, errno);
+    }
+
+    // Pre-Assert & Act: 全区間超過は ENAMETOOLONG、一部超過は残りの候補の結果
+    {
+        std::string huge_dir(PLATFORM_PATH_MAX + 16U, 'd');
+        std::string all_huge = "PATH=" + huge_dir + ":" + huge_dir;
+        char *env_all_huge[] = {const_cast<char *>(all_huge.c_str()), nullptr};
+        called_paths.clear();
+        EXPECT_CALL(mock_unistd, execve(_, _, _, _, _, _)).Times(0);
+        test_process_exec_with_path(tool_argv, env_all_huge);
+        EXPECT_EQ(ENAMETOOLONG, errno);
+
+        std::string mixed = "PATH=" + huge_dir + ":/b";
+        char *env_mixed[] = {const_cast<char *>(mixed.c_str()), nullptr};
+        called_paths.clear();
+        EXPECT_CALL(mock_unistd, execve(_, _, _, StrEq("/b/tool"), _, _))
+            .WillOnce(Invoke(
+                [&called_paths](const char *, int, const char *, const char *p, char *const *, char *const *) -> int
+                {
+                    called_paths.push_back(p);
+                    errno = ENOENT;
+                    return -1;
+                }));
+        test_process_exec_with_path(tool_argv, env_mixed);
+        EXPECT_EQ(1U, called_paths.size());
+        EXPECT_EQ(ENOENT, errno);
+    }
+}
+
+// 実 OS 上で PATH 先頭に実行権限のないファイルがある場合に errno=13 (EACCES) と終了コード 127 が出ることの確認 (Linux 非 root)
+TEST(processTest, real_process_start_reports_eacces_when_candidate_lacks_exec_permission)
+{
+    // Arrange
+    if (::geteuid() == 0)
+    {
+        GTEST_SKIP() << "root では実行権限の不足を再現できないため省略します。";
+    }
+
+    char tmp_dir[] = "/tmp/cplat_exec_perm_XXXXXX";
+    ASSERT_NE(nullptr, ::mkdtemp(tmp_dir));
+    std::string dir_str(tmp_dir);
+    std::string script_path = dir_str + "/noexec_tool";
+    {
+        int fd = ::open(script_path.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);
+        ASSERT_GE(fd, 0);
+        (void)::close(fd);
+    }
+
+    int err_pipe[2] = {-1, -1};
+    ASSERT_EQ(0, ::pipe(err_pipe));
+
+    std::string path_env = "PATH=" + dir_str + ":/nonexistent_bin";
+    char cmd_name[] = "noexec_tool";
+    char *argv[] = {cmd_name, nullptr};
+    char *env_overrides[] = {const_cast<char *>(path_env.c_str()), nullptr};
+
+    cplat_process_options options = {};
+    options.argv = argv;
+    options.env_overrides = env_overrides;
+    options.stdin_spec.mode = CPLAT_PROCESS_STDIO_NULL_DEVICE;
+    options.stdout_spec.mode = CPLAT_PROCESS_STDIO_NULL_DEVICE;
+    options.stderr_spec.mode = CPLAT_PROCESS_STDIO_NATIVE_HANDLE;
+    options.stderr_spec.native_handle = err_pipe[1];
+
+    // Pre-Assert
 
     // Act
-    test_process_exec_with_path(absolute_argv,
-                                envp); // [手順] - 絶対パスの argv を指定して test_process_exec_with_path() を呼び出す。
-    test_process_exec_with_path(relative_argv,
-                                envp); // [手順] - 相対パスの argv を指定して test_process_exec_with_path() を呼び出す。
-    char *empty_path_env[] = {nullptr};
-    test_process_exec_with_path(
-        relative_argv, empty_path_env); // [手順] - PATH がない環境を指定して test_process_exec_with_path() を呼び出す。
-    test_process_exec_with_path(
-        long_argv, envp); // [手順] - 長すぎる候補となる argv を指定して test_process_exec_with_path() を呼び出す。
+    int exit_code = 0;
+    int run_rc = cplat_process_timed_run_sync(&options, 5000, &exit_code);
+    (void)::close(err_pipe[1]);
+    std::string stderr_output;
+    char buf[256];
+    ssize_t n = 0;
+    while ((n = ::read(err_pipe[0], buf, sizeof(buf))) > 0)
+    {
+        stderr_output.append(buf, static_cast<size_t>(n));
+    }
+    (void)::close(err_pipe[0]);
+    (void)::unlink(script_path.c_str());
+    (void)::rmdir(tmp_dir);
 
     // Assert
-    SUCCEED(); // [確認_正常系] - SUCCEED() に到達すること。(exec 失敗後も PATH 探索ヘルパーが戻ることの確認)
+    EXPECT_EQ(CPLAT_OK, run_rc);
+    EXPECT_EQ(127, exit_code);
+    EXPECT_NE(std::string::npos, stderr_output.find("errno=13"));
 }
 
 // Linux の単調時間取得が timespec をミリ秒へ変換することの確認

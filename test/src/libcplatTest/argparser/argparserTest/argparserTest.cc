@@ -4501,3 +4501,98 @@ TEST_F(argparserTest, default_init_resets_previous_registrations)
     EXPECT_EQ(0,
               first_flag); // [確認_正常系] - first_flag が 0 であること。(破棄した登録の格納先が更新されないことの確認)
 }
+
+// 独自の検証エラーの取得・既定文生成・出力形式・置き換え・再解析での消去・UTF-8 境界切り詰めの確認
+TEST_F(argparserTest, set_validation_error_records_retrieves_prints_and_clears)
+{
+    // Arrange
+    int count = 0;
+    ARGV(cstr("tool"), cstr("--count"), cstr("0"));
+    cplat_argparser *parser = cplat_argparser_handle_create(argc, argv, nullptr);
+    ASSERT_NE(nullptr, parser);
+    ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_register_option_int(parser, "-c", "--count", "N", "回数", 0u, &count));
+    ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_parse(parser));
+
+    char msg_buf[256] = {};
+
+    // Act & Assert 1: カスタム文付きで登録・取得・出力
+    EXPECT_EQ(CPLAT_OK,
+              cplat_argparser_handle_set_validation_error(parser, CPLAT_ERR_OUT_OF_RANGE, "--count", "count must be >= 1"));
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_RANGE, cplat_argparser_handle_get_error(parser));
+    EXPECT_STREQ("--count", cplat_argparser_handle_get_error_target(parser));
+    EXPECT_EQ(-1, cplat_argparser_handle_get_error_index(parser));
+    EXPECT_EQ(CPLAT_OK, cplat_argparser_handle_get_error_message(parser, msg_buf, sizeof(msg_buf)));
+    EXPECT_STREQ("count must be >= 1", msg_buf);
+
+    testing::internal::CaptureStderr();
+    EXPECT_EQ(CPLAT_OK, cplat_argparser_handle_print_error_messages(parser, stderr));
+    std::string printed = testing::internal::GetCapturedStderr();
+    EXPECT_STREQ("error: count must be >= 1\n\n", printed.c_str());
+
+    // Act & Assert 2: message == NULL で既定文生成
+    EXPECT_EQ(CPLAT_OK, cplat_argparser_handle_set_validation_error(parser, CPLAT_ERR_OUT_OF_RANGE, "--count", nullptr));
+    EXPECT_EQ(CPLAT_OK, cplat_argparser_handle_get_error_message(parser, msg_buf, sizeof(msg_buf)));
+    EXPECT_STREQ("value of '--count' is out of range", msg_buf);
+
+    // Act & Assert 3: 無効値・NULL ハンドルを拒否し状態を変えないこと
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
+              cplat_argparser_handle_set_validation_error(nullptr, CPLAT_ERR_OUT_OF_RANGE, "--x", "x"));
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
+              cplat_argparser_handle_set_validation_error(parser, CPLAT_OK, "--x", "x"));
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
+              cplat_argparser_handle_set_validation_error(parser, CPLAT_ERR_UNKNOWN, "--x", "x"));
+    EXPECT_EQ(CPLAT_ERR_INVALID_ARGUMENT,
+              cplat_argparser_handle_set_validation_error(parser, CPLAT_ERR_INVALID_ARGUMENT, "--x", "x"));
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_RANGE, cplat_argparser_handle_get_error(parser));
+    EXPECT_STREQ("--count", cplat_argparser_handle_get_error_target(parser));
+
+    // Act & Assert 4: UTF-8 多バイト文字の境界で切り詰められること
+    const char utf8_msg[] = "\xE3\x81\x82\xE3\x81\x84\xE3\x81\x86"; // "あいう" (9 バイト)
+    EXPECT_EQ(CPLAT_OK,
+              cplat_argparser_handle_set_validation_error(parser, CPLAT_ERR_MISSING_REQUIRED, "--text", utf8_msg));
+    char small_buf[6] = {};
+    EXPECT_EQ(CPLAT_ERR_BUFFER_TOO_SMALL, cplat_argparser_handle_get_error_message(parser, small_buf, sizeof(small_buf)));
+    EXPECT_STREQ("\xE3\x81\x82", small_buf);
+
+    // Act & Assert 5: 次の解析開始で消えること
+    ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_parse(parser));
+    EXPECT_EQ(CPLAT_OK, cplat_argparser_handle_get_error(parser));
+    EXPECT_EQ(nullptr, cplat_argparser_handle_get_error_target(parser));
+
+    cplat_argparser_handle_dispose(parser);
+}
+
+// 解析エラー後の置き換えと既定パーサー版への委譲の確認
+TEST_F(argparserTest, set_validation_error_replaces_parse_error_and_supports_default_parser)
+{
+    // Arrange
+    int count = 0;
+    ARGV(cstr("tool"), cstr("--unknown"));
+    cplat_argparser *parser = cplat_argparser_handle_create(argc, argv, nullptr);
+    ASSERT_NE(nullptr, parser);
+    ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_register_option_int(parser, "-c", "--count", "N", "回数", 0u, &count));
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN_OPTION, cplat_argparser_handle_parse(parser));
+    EXPECT_EQ(1, cplat_argparser_handle_get_error_index(parser));
+
+    // Act 1: 解析エラーの後に独自エラーを記録すると置き換わる
+    EXPECT_EQ(CPLAT_OK,
+              cplat_argparser_handle_set_validation_error(parser, CPLAT_ERR_DUPLICATE_OPTION, "--mode", "dup mode"));
+    EXPECT_EQ(CPLAT_ERR_DUPLICATE_OPTION, cplat_argparser_handle_get_error(parser));
+    EXPECT_STREQ("--mode", cplat_argparser_handle_get_error_target(parser));
+    EXPECT_EQ(-1, cplat_argparser_handle_get_error_index(parser));
+
+    char buf[128] = {};
+    EXPECT_EQ(CPLAT_OK, cplat_argparser_handle_get_error_message(parser, buf, sizeof(buf)));
+    EXPECT_STREQ("dup mode", buf);
+    cplat_argparser_handle_dispose(parser);
+
+    // Act 2: 既定パーサー版が既定ハンドルへ記録する
+    char *default_argv[] = {cstr("tool")};
+    cplat_argparser_init(1, default_argv, nullptr);
+    EXPECT_EQ(CPLAT_OK, cplat_argparser_set_validation_error(CPLAT_ERR_MISSING_REQUIRED, "--input", nullptr));
+    EXPECT_EQ(CPLAT_ERR_MISSING_REQUIRED, cplat_argparser_get_error());
+    EXPECT_STREQ("--input", cplat_argparser_get_error_target());
+    EXPECT_EQ(-1, cplat_argparser_get_error_index());
+    EXPECT_EQ(CPLAT_OK, cplat_argparser_get_error_message(buf, sizeof(buf)));
+    EXPECT_STREQ("'--input' is required", buf);
+}

@@ -4,6 +4,7 @@
 #include <cplat/console/console_internal.h>
 
 #if defined(PLATFORM_WINDOWS)
+    #include <cplat/crt/temp_dir_internal.h>
     #include <mock_stdio.h>
     #include <mock_unistd.h>
     #include <mock_windows.h>
@@ -539,5 +540,90 @@ TEST_F(consoleFailureTest, init_logs_shutdown_register_failure)
     EXPECT_THAT(log, HasSubstr("console_init isatty=0 skip")); // [確認_異常系] - 診断ログに初期化の続きの行が追記されること。(登録の失敗後も初期化を続けることの確認)
 }
 // [サブ手順参照 名前=consoleFailureTest.TearDown]
+
+namespace
+{
+
+DWORD WINAPI console_temp_resolver_failing(DWORD, LPWSTR)
+{
+    SetLastError(ERROR_ACCESS_DENIED);
+    return 0U;
+}
+
+DWORD WINAPI console_temp_resolver_custom_system_temp(DWORD buffer_length, LPWSTR buffer)
+{
+    static const wchar_t kPath[] = L"C:\\CustomSystemTemp\\";
+    const DWORD len = (DWORD)(sizeof(kPath) / sizeof(kPath[0]) - 1U);
+    if (buffer != nullptr && buffer_length > len)
+    {
+        std::memcpy(buffer, kPath, sizeof(kPath));
+    }
+    return len;
+}
+
+DWORD WINAPI console_temp_resolver_default_system_temp(DWORD buffer_length, LPWSTR buffer)
+{
+    static const wchar_t kPath[] = L"C:\\Windows\\SystemTemp\\";
+    const DWORD len = (DWORD)(sizeof(kPath) / sizeof(kPath[0]) - 1U);
+    if (buffer != nullptr && buffer_length > len)
+    {
+        std::memcpy(buffer, kPath, sizeof(kPath));
+    }
+    return len;
+}
+
+} // namespace
+
+// 一時ディレクトリの取得に失敗した場合に診断ログのパス構築が -1 を返し CreateFileW を呼ばないことの確認
+// [サブ手順参照 名前=consoleFailureTest.SetUp]
+// [サブ手順参照 名前=consoleFailureTest.TearDown]
+TEST_F(consoleFailureTest, diag_log_skips_create_file_when_internal_temp_dir_fails)
+{
+    // Arrange
+    wchar_t path_out[MAX_PATH] = {};
+    ON_CALL(mock_cplat, cplat_isatty(_)).WillByDefault(Return(0));
+    cplat_internal_temp_dir_set_resolver_for_test(console_temp_resolver_failing);
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, CreateFileW(_, _, _, _, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - 一時ディレクトリ取得失敗時は CreateFileW() が呼ばれないこと。
+
+    // Act
+    int path_rc = test_console_build_diag_log_path(path_out, sizeof(path_out) / sizeof(path_out[0]));
+    cplat_console_init(); // [手順] - 内部一時ディレクトリ取得失敗時に診断ログ出力付きの初期化を呼ぶ。
+
+    // Assert
+    EXPECT_EQ(-1, path_rc); // [確認_異常系] - build_console_diag_log_path() が -1 を返すこと。
+
+    // Cleanup
+    cplat_internal_temp_dir_set_resolver_for_test(nullptr);
+}
+
+// 診断ログのパス構築が SystemTemp 指定と既定 C:\Windows\SystemTemp を上書きせず使用することの確認
+// [サブ手順参照 名前=consoleFailureTest.SetUp]
+// [サブ手順参照 名前=consoleFailureTest.TearDown]
+TEST_F(consoleFailureTest, diag_log_path_uses_system_temp_and_default_unmodified)
+{
+    // Arrange
+    wchar_t custom_path[MAX_PATH] = {};
+    wchar_t default_path[MAX_PATH] = {};
+
+    // Pre-Assert
+
+    // Act
+    cplat_internal_temp_dir_set_resolver_for_test(console_temp_resolver_custom_system_temp);
+    int rc_custom = test_console_build_diag_log_path(custom_path, sizeof(custom_path) / sizeof(custom_path[0]));
+    cplat_internal_temp_dir_set_resolver_for_test(console_temp_resolver_default_system_temp);
+    int rc_default = test_console_build_diag_log_path(default_path, sizeof(default_path) / sizeof(default_path[0]));
+
+    // Assert
+    EXPECT_EQ(0, rc_custom); // [確認_正常系] - custom 側が成功すること。
+    EXPECT_STREQ(L"C:\\CustomSystemTemp\\cplat_console_attach.log", custom_path); // [確認_正常系] - SystemTemp パスが使われること。
+    EXPECT_EQ(0, rc_default); // [確認_正常系] - default 側が成功すること。
+    EXPECT_STREQ(L"C:\\Windows\\SystemTemp\\cplat_console_attach.log", default_path); // [確認_正常系] - 既定 SystemTemp パスが使われること。
+
+    // Cleanup
+    cplat_internal_temp_dir_set_resolver_for_test(nullptr);
+}
 
 #endif /* PLATFORM_WINDOWS */

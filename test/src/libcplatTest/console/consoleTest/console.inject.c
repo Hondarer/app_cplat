@@ -39,4 +39,9 @@ int test_console_get_initialized(void)
     return (int)cplat_atomic_load_i32(&s_initialized, CPLAT_MEMORY_ORDER_SEQ_CST);
 }
 
+int test_console_build_diag_log_path(wchar_t *path_out, size_t path_len)
+{
+    return build_console_diag_log_path(path_out, path_len);
+}
+
 #endif /* PLATFORM_WINDOWS */

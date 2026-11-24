@@ -547,4 +547,32 @@ TEST_F(etw_viewerTest, main_returns_failure_when_final_stream_has_error)
     EXPECT_THAT(errors, HasSubstr("標準出力へ書き込めませんでした。")); // [確認_異常系] - 標準エラー出力に書き込みの失敗の診断が出ること。
 }
 
+// --pid abc と --pid 4294967296 で ETW セッション開始前に error: の検証メッセージが出力されることの確認
+TEST_F(etw_viewerTest, main_prints_validation_error_messages_for_invalid_and_out_of_range_pid)
+{
+    // Arrange
+    const char *abc_argv[] = {"etw-viewer", "--pid", "abc"};
+    const char *range_argv[] = {"etw-viewer", "--pid", "4294967296"};
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_console_init()).Times(2);
+    EXPECT_CALL(mock_cplat_, cplat_etw_session_start(_, _, _, _, _)).Times(0);
+
+    // Act & Assert 1: --pid abc
+    testing::internal::CaptureStderr();
+    int rc_abc = __real_main(3, const_cast<char **>(abc_argv));
+    std::string err_abc = testing::internal::GetCapturedStderr();
+    EXPECT_NE(EXIT_SUCCESS, rc_abc);
+    EXPECT_THAT(err_abc, HasSubstr("error: "));
+    EXPECT_THAT(err_abc, HasSubstr("must be an integer"));
+
+    // Act & Assert 2: --pid 4294967296
+    testing::internal::CaptureStderr();
+    int rc_range = __real_main(3, const_cast<char **>(range_argv));
+    std::string err_range = testing::internal::GetCapturedStderr();
+    EXPECT_NE(EXIT_SUCCESS, rc_range);
+    EXPECT_THAT(err_range, HasSubstr("error: "));
+    EXPECT_THAT(err_range, HasSubstr("is out of range"));
+}
+
 #endif

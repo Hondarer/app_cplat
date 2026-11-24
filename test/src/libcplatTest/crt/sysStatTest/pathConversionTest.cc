@@ -104,4 +104,40 @@ TEST(pathConversionTest, sys_stat_path_apis_report_invalid_encoding_and_eilseq)
     }
 }
 
+// cplat_makedirs の中間階層に不正な UTF-8 を含む場合も OS API を呼ばず CPLAT_ERR_INVALID_ENCODING を返すことの確認
+TEST(pathConversionTest, makedirs_intermediate_invalid_encoding_skips_os_calls)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    NiceMock<Mock_direct> mock_direct;
+    NiceMock<Mock_sys_stat> mock_sys_stat;
+    const char invalid_nested[] = "valid/\x80/leaf";
+    cplat_error detail;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_utf8_to_wpath(_, _, _, StrEq(invalid_nested)))
+        .WillOnce(Invoke([](wchar_t *dest, size_t dest_size, size_t *count_out, const char *)
+                         {
+                             if (dest != nullptr && dest_size > 0U)
+                             {
+                                 dest[0] = L'\0';
+                             }
+                             if (count_out != nullptr)
+                             {
+                                 *count_out = 0U;
+                             }
+                             return CPLAT_ERR_INVALID_ENCODING;
+                         }));
+    EXPECT_CALL(mock_sys_stat, wstat64(_, _, _, _, _)).Times(0);
+    EXPECT_CALL(mock_direct, wmkdir(_, _, _, _)).Times(0);
+
+    // Act
+    int rc = cplat_makedirs(invalid_nested, &detail);
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_INVALID_ENCODING, rc);
+    EXPECT_EQ(EILSEQ, cplat_error_get_errno(&detail));
+    EXPECT_EQ(CPLAT_CAUSE_OTHER, cplat_error_get_cause(&detail));
+}
+
 #endif /* PLATFORM_WINDOWS */

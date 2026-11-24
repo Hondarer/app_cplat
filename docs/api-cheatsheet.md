@@ -169,7 +169,7 @@ Windows では、これらのパス変換を厳密に行い、不正な UTF-8 �
 |---|---|---|
 | `stat` / `_wstat64` | `cplat_stat(stat_out, detail_out, path)` | パスは UTF-8。不正な UTF-8 は結果コード `CPLAT_ERR_INVALID_ENCODING` と詳細 `EILSEQ` で通知し、OS API を呼びません。`stat_out` の型は `cplat_file_stat_t` (Linux: `struct stat`、Windows: `struct _stat64`)。Windows の `st_atime` / `st_mtime` / `st_ctime` は UTC の Unix 秒 |
 | `mkdir` / `_wmkdir` | `cplat_mkdir(path, detail_out)` | パスは UTF-8。不正な UTF-8 は結果コード `CPLAT_ERR_INVALID_ENCODING` と詳細 `EILSEQ` で通知し、OS API を呼びません。Linux は 0755 を指定し、umask が適用される。Windows は権限を指定しない |
-| (`mkdir -p` 相当) | `cplat_makedirs(path, detail_out)` | 中間ディレクトリを再帰的に作成。既存ディレクトリはべき等に成功扱い。不正な UTF-8 は結果コード `CPLAT_ERR_INVALID_ENCODING` と詳細 `EILSEQ` で通知します。作成するディレクトリの権限は `cplat_mkdir()` と同じ。Windows では、`\\?\` と `\\.\` で始まるパスの動作は保証しない |
+| (`mkdir -p` 相当) | `cplat_makedirs(path, detail_out)` | 中間ディレクトリを再帰的に作成。既存および競合生成のディレクトリはべき等に成功扱い。中間または末尾に非ディレクトリがある場合は `CPLAT_ERR_UNKNOWN` (要因 `CPLAT_CAUSE_NOT_A_DIRECTORY`) を返し、作成失敗時は途中まで作成したディレクトリを削除せずその失敗の結果コードと詳細を返す。不正な UTF-8 は `CPLAT_ERR_INVALID_ENCODING` と詳細 `EILSEQ` で通知する。作成するディレクトリの権限は `cplat_mkdir()` と同じ。Windows では、`\\?\` と `\\.\` で始まるパスの動作は保証しない |
 | `rmdir` / `_wrmdir` | `cplat_rmdir(path, detail_out)` | パスは UTF-8。不正な UTF-8 は結果コード `CPLAT_ERR_INVALID_ENCODING` と詳細 `EILSEQ` で通知し、OS API を呼びません。中間ディレクトリの再帰削除はしません。 |
 | `S_ISREG(st.st_mode)` / `(st.st_mode & _S_IFMT) == _S_IFREG` | `cplat_file_stat_is_regular(file_stat)` | 通常ファイルなら 1、それ以外と NULL は 0。値だけを参照するため共通結果コードの適用対象外 |
 
@@ -193,8 +193,8 @@ Table: ファイル システム操作 API と cplat 代替ラッパーの差異
 | `"/dev/null"` (POSIX) / `"NUL"` (Win32) | `PLATFORM_NULL_DEVICE_PATH` | 標準入出力を破棄する null device のパス |
 | (区切りの置換) | `cplat_path_normalize_sep(path)` | `\` を `/` へその場で置き換え、`path` を返す。環境変数や設定ファイルから得たパスに使う |
 | `realpath` (POSIX) / `GetFullPathNameW` (Win32) | `cplat_path_get_full(path_out, path_size, detail_out, path)` | 絶対パスにし、区切りを `/` にする。Linux はシンボリック リンクを可能な範囲で解決し、できない場合は `.` と `..` を解消した文字列を返す |
-| (同じ実体を指すかの比較) | `cplat_path_equal(lhs, rhs, equal_out, detail_out)` | 両方を `cplat_path_get_full` で絶対パスにして比較する。Windows は大文字と小文字を区別しない |
-| `getenv("TMPDIR")` (POSIX) / `GetTempPathW` (Win32) | `cplat_path_get_temp_dir(path_out, path_size, detail_out)` | 一時ディレクトリの絶対パス。末尾の区切りは付かない。Linux は `TMPDIR` が未設定または空なら `/tmp` |
+| (絶対パスにしてからの文字列の比較) | `cplat_path_equal(lhs, rhs, equal_out, detail_out)` | 両方を `cplat_path_get_full` で絶対パスにして文字列として比較する。Windows は UTF-16 へ変換し OS の大文字の表で Unicode の大文字と小文字を区別せず、シンボリック リンクを解決しない。Linux は `realpath()` が成功した場合にリンクを解決した文字列を、失敗した場合は正規化済みの絶対パスをバイト列で比較する。両 OS ともハード リンクによる同一性は判定しない |
+| `getenv("TMPDIR")` (POSIX) / `GetTempPath2W`・`GetTempPathW` (Win32) | `cplat_path_get_temp_dir(path_out, path_size, detail_out)` | 一時ディレクトリの絶対パス。末尾の区切りは付かない。Linux は `TMPDIR` が未設定または空なら `/tmp`。Windows は `GetTempPath2W` を優先し、SYSTEM は `SystemTemp`、未設定なら既定の場所 (`C:\\Windows\\SystemTemp`)、機能がない場合と SYSTEM 以外は `GetTempPathW` の規則を使う |
 | `basename` (GNU) | `cplat_path_basename(path)` | 最後の区切りの次を指すポインターを返す。入力を変更せず、複製もしない |
 | `dirname` (POSIX) | `cplat_path_dirname(path_out, path_size, detail_out, path)` | 親ディレクトリを `path_out` へ格納する。入力を変更しない。区切りがなければ `"."` |
 | (拡張子の取得) | `cplat_path_extension(path)` | ベース名の最後の `.` 以降を指すポインターを返す (`.` を含む)。先頭が `.` の名前のその `.` は、拡張子としない |
@@ -443,7 +443,7 @@ Table: 表示言語取得 API と cplat 代替ラッパーの差異
 | `readlink("/proc/self/exe")` (Linux) / `GetModuleFileName(NULL, ...)` (Win32) | `cplat_process_get_executable_path(...)` | Windows は拡張パス上限 (32767 文字) まで取得でき、確保失敗時は `CPLAT_ERR_OUT_OF_MEMORY`、不正な UTF-16 は `CPLAT_ERR_INVALID_ENCODING` を返す |
 | `getpid()` (POSIX) / `GetCurrentProcessId()` (Win32) | `cplat_process_get_pid()` | - |
 | `gettid()` (Linux) / `GetCurrentThreadId()` (Win32) | `cplat_process_get_tid()` | 同時に存在するスレッドの間で一意な識別子です。glibc 2.28 でも動作するよう、Linux では `syscall(SYS_gettid)` を使用します |
-| `fork()` +`execve()` (POSIX) / `CreateProcess()` (Win32) | `cplat_process_start(...)` | stdio リダイレクト、環境変数上書き、作業ディレクトリ指定を共通オプション構造体 `cplat_process_options` に集約。Windows では UTF-8 入力を厳密に変換し、不正な UTF-8 は `CPLAT_ERR_INVALID_ENCODING` を返す |
+| `fork()` +`execve()` (POSIX) / `CreateProcess()` (Win32) | `cplat_process_start(...)` | stdio リダイレクト、環境変数上書き、作業ディレクトリ指定を共通オプション構造体 `cplat_process_options` に集約。Linux では子プロセスの PATH を glibc `execvp` に準じた規則 (空文字列の PATH は既定値 `"/bin:/usr/bin"`、`ENOEXEC` で `/bin/sh` を起動しない) で探索する。Windows では UTF-8 入力を厳密に変換し、不正な UTF-8 は `CPLAT_ERR_INVALID_ENCODING` を返す |
 | `waitpid()` (POSIX) / `WaitForSingleObject()` (Win32) | `cplat_process_wait(...)` / `cplat_process_timed_wait(...)` | 無期限待機と期限付き待機 (`timeout_ms`、`CPLAT_WAIT_FOREVER` / `CPLAT_NO_WAIT`) を分離 |
 | `WEXITSTATUS(status)` (POSIX) / `GetExitCodeProcess()` (Win32) | `cplat_process_get_exit_code(...)` | - |
 | `kill(SIGKILL)` (POSIX) / `TerminateProcess()` (Win32) | `cplat_process_terminate(...)` | - |
@@ -848,6 +848,7 @@ Table: スレッドおよび同期プリミティブと cplat API の対応
 | 登録エラーを確認します。 | `cplat_argparser_get_register_error` / `_get_register_error_count` / `_get_register_error_target` / `_get_register_error_message` / `_print_register_error_messages` |
 | 初期化時に受け取ったコマンド ラインを解析します。 | `cplat_argparser_parse` |
 | 解析エラーを確認します。 | `cplat_argparser_get_error` / `_get_error_index` / `_get_error_target` / `_get_error_message` / `_print_error_messages` |
+| 独自の検証の誤りを記録します。 | `cplat_argparser_handle_set_validation_error` / `cplat_argparser_set_validation_error` (置き換え、次の解析開始、再初期化、破棄で消去。位置は `-1`。複製の一部に失敗しても記録して `CPLAT_ERR_OUT_OF_MEMORY` を返し、対象名欠落は `?`、文欠落は既定文で表示) |
 | プログラム名を取得します。 | `cplat_argparser_get_program_name` |
 | 使用方法を表示します。 | `cplat_argparser_get_usage` / `cplat_argparser_print_usage` |
 
@@ -1002,7 +1003,7 @@ Table: 文字符号定数の一覧
 前節までの表や説明でまとめて扱った公開関数を、完全な関数名から検索できるように補足します。  
 シグネチャを確認する場合は、関数名に対応する [`prod/include/`](../prod/include/) 配下のヘッダーを参照してください。
 
-- 引数解析: `cplat_argparser_register_option_int`、`cplat_argparser_register_option_string`、`cplat_argparser_register_option_int_array`、`cplat_argparser_register_option_string_array`、`cplat_argparser_register_positional_int`、`cplat_argparser_register_positional_int_array`、`cplat_argparser_register_positional_string_array`、`cplat_argparser_get_program_name`、`cplat_argparser_get_error_target`、`cplat_argparser_get_error_index`、`cplat_argparser_get_error_message`、`cplat_argparser_print_error_messages`、`cplat_argparser_get_register_error_count`、`cplat_argparser_get_register_error_target`、`cplat_argparser_get_register_error_message`、`cplat_argparser_print_register_error_messages`
+- 引数解析: `cplat_argparser_register_option_int`、`cplat_argparser_register_option_string`、`cplat_argparser_register_option_int_array`、`cplat_argparser_register_option_string_array`、`cplat_argparser_register_positional_int`、`cplat_argparser_register_positional_int_array`、`cplat_argparser_register_positional_string_array`、`cplat_argparser_get_program_name`、`cplat_argparser_get_error_target`、`cplat_argparser_get_error_index`、`cplat_argparser_get_error_message`、`cplat_argparser_set_validation_error`、`cplat_argparser_print_error_messages`、`cplat_argparser_get_register_error_count`、`cplat_argparser_get_register_error_target`、`cplat_argparser_get_register_error_message`、`cplat_argparser_print_register_error_messages`
 - 時刻: `cplat_clock_format_realtime_iso8601_local`、`cplat_clock_format_realtime_iso8601_utc`、`cplat_clock_get_realtime_utc`、`cplat_clock_get_realtime_deadline_ms`、`cplat_timespec_normalize`、`cplat_timespec_add`、`cplat_timespec_sub`、`cplat_timespec_cmp`、`cplat_timespec_add_ms`、`cplat_timespec_diff_ms`、`cplat_timespec_to_native`、`cplat_timespec_from_native`
 - ファイル: `cplat_file_init`、`cplat_file_open`、`cplat_file_write`、`cplat_file_read`、`cplat_file_get_size`、`cplat_file_set_size`、`cplat_file_get_id`、`cplat_file_get_path_id`、`cplat_file_get_modified_timestamp`、`cplat_file_set_modified_timestamp`、`cplat_file_get_path_modified_timestamp`、`cplat_file_set_path_modified_timestamp`、`cplat_file_flush`、`cplat_file_close`
 - パス: `cplat_path_normalize_sep`、`cplat_path_get_full`、`cplat_path_equal`、`cplat_path_get_temp_dir`、`cplat_path_concat`、`cplat_path_concat_n`、`cplat_vpath_concat_n`、`cplat_path_basename`、`cplat_path_dirname`、`cplat_path_extension`、`cplat_path_strip_extension`、`cplat_path_join`、`cplat_path_join_n`、`cplat_vpath_join_n`

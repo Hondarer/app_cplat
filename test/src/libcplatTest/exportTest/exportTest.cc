@@ -144,6 +144,10 @@
     EXPORT_ENTRY(cplat_argparser_handle_get_error_message, \
                  int(CPLAT_API *)(const cplat_argparser *parser, char *buffer, size_t buffer_size)) \
     EXPORT_ENTRY(cplat_argparser_get_error_message, int(CPLAT_API *)(char *buffer, size_t buffer_size)) \
+    EXPORT_ENTRY(cplat_argparser_handle_set_validation_error, \
+                 int(CPLAT_API *)(cplat_argparser * parser, int error, const char *target, const char *message)) \
+    EXPORT_ENTRY(cplat_argparser_set_validation_error, \
+                 int(CPLAT_API *)(int error, const char *target, const char *message)) \
     EXPORT_ENTRY(cplat_argparser_handle_get_program_name, const char *(CPLAT_API *)(const cplat_argparser *parser)) \
     EXPORT_ENTRY(cplat_argparser_get_program_name, const char *(CPLAT_API *)(void)) \
     EXPORT_ENTRY(cplat_argparser_handle_get_usage, int(CPLAT_API *)(const cplat_argparser *parser, char *buffer, \

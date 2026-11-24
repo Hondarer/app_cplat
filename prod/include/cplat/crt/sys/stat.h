@@ -64,10 +64,14 @@ extern "C"
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @param[in]      path        対象ファイルのパス (UTF-8)。NULL を渡してはなりません。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
-     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_NOT_FOUND 、
+     *                  @ref CPLAT_ERR_PERMISSION_DENIED 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN の
+     *                  いずれかを返します。
      *
      *  Linux では `stat`、Windows では `_wstat64` を使用します。\n
+     *  Windows で入力パスが不正な UTF-8 の場合は置換せず、@ref CPLAT_ERR_INVALID_ENCODING
+     *  (詳細 @c EILSEQ ) を返します。\n
      *  Windows の `_wstat64` は時刻欄を現地時刻経由で `time_t` へ変換するため、
      *  タイム ゾーン設定によっては Unix epoch UTC と秒部に差異が生じます。
      *  本関数は `GetFileAttributesExW` が返す UTC の `FILETIME` から秒部を取り直し、
@@ -85,10 +89,14 @@ extern "C"
      *  @param[out]     detail_out  エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
-     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_NOT_FOUND 、
+     *                  @ref CPLAT_ERR_PERMISSION_DENIED 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN の
+     *                  いずれかを返します。
      *
-     *  Linux では `mkdir()` へ 0755 を指定し、プロセスの umask が適用されます。Windows では権限を指定しません。
+     *  Linux では `mkdir()` へ 0755 を指定し、プロセスの umask が適用されます。Windows では権限を指定しません。\n
+     *  Windows で入力パスが不正な UTF-8 の場合は置換せず、@ref CPLAT_ERR_INVALID_ENCODING
+     *  (詳細 @c EILSEQ ) を返します。
      *
      *  @see            https://man7.org/linux/man-pages/man2/mkdir.2.html
      *
@@ -104,13 +112,20 @@ extern "C"
      *  @param[out]     detail_out  エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
-     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_NOT_FOUND 、
+     *                  @ref CPLAT_ERR_PERMISSION_DENIED 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN の
+     *                  いずれかを返します。
      *
      *  すでに存在するディレクトリは成功として扱います (べき等)。\n
-     *  中間ディレクトリが存在しない場合はすべて作成します。\n
+     *  パスのいずれかの階層に、ディレクトリではないもの (通常ファイルなど) がある場合は、
+     *  @ref CPLAT_ERR_UNKNOWN を返し、@p detail_out の要因を @ref CPLAT_CAUSE_NOT_A_DIRECTORY にします。\n
+     *  ディレクトリの作成に失敗した場合は、その失敗の結果コードと詳細を返します。\n
      *  他プロセスによる競合生成は成功として扱います。\n
+     *  失敗した場合も、それまでに作成した中間ディレクトリは削除しません。\n
      *  作成するディレクトリの権限は `cplat_mkdir()` と同じです。\n
+     *  Windows で入力パスが不正な UTF-8 の場合は置換せず、@ref CPLAT_ERR_INVALID_ENCODING
+     *  (詳細 @c EILSEQ ) を返します。\n
      *  Windows では、`\\?\` または `\\.\` で始まるパスの動作は保証しません。
      *
      *  @par            スレッド セーフ
@@ -124,11 +139,15 @@ extern "C"
      *  @param[out]     detail_out  エラー詳細の格納先。NULL を指定した場合、本引数へは
      *                  エラー詳細を設定せず、返却しません。
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
-     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_NOT_FOUND 、
+     *                  @ref CPLAT_ERR_PERMISSION_DENIED 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN の
+     *                  いずれかを返します。
      *
      *  ディレクトリが空でない場合、存在しない場合はいずれも失敗します。\n
-     *  cplat_makedirs() のように中間ディレクトリを再帰的に削除することはありません。
+     *  cplat_makedirs() のように中間ディレクトリを再帰的に削除することはありません。\n
+     *  Windows で入力パスが不正な UTF-8 の場合は置換せず、@ref CPLAT_ERR_INVALID_ENCODING
+     *  (詳細 @c EILSEQ ) を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -143,8 +162,14 @@ extern "C"
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @param[in]      format  パスを構築する printf 形式の書式文字列。
      *  @param[in]      ...     書式引数。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
-     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_NOT_FOUND 、
+     *                  @ref CPLAT_ERR_PERMISSION_DENIED 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN の
+     *                  いずれかを返します。
+     *
+     *  書式展開後のパスを `cplat_stat()` へ渡します。\n
+     *  Windows で不正な UTF-8 のパスが生成された場合は置換せず、@ref CPLAT_ERR_INVALID_ENCODING
+     *  (詳細 @c EILSEQ ) を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -163,8 +188,14 @@ extern "C"
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @param[in]      format  パスを構築する printf 形式の書式文字列。
      *  @param[in]      args    書式引数リスト。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_INVALID_ENCODING 、
-     *                  @ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_NOT_FOUND 、
+     *                  @ref CPLAT_ERR_PERMISSION_DENIED 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN の
+     *                  いずれかを返します。
+     *
+     *  書式展開後のパスを `cplat_stat()` へ渡します。\n
+     *  Windows で不正な UTF-8 のパスが生成された場合は置換せず、@ref CPLAT_ERR_INVALID_ENCODING
+     *  (詳細 @c EILSEQ ) を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -183,9 +214,14 @@ extern "C"
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @param[in]      format  パスを構築する printf 形式の書式文字列。
      *  @param[in]      ...     書式引数。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_NOT_FOUND 、
+     *                  @ref CPLAT_ERR_PERMISSION_DENIED 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN の
+     *                  いずれかを返します。
      *
-     *  作成するディレクトリの権限は `cplat_mkdir()` と同じです。
+     *  作成するディレクトリの権限は `cplat_mkdir()` と同じです。\n
+     *  Windows で不正な UTF-8 のパスが生成された場合は置換せず、@ref CPLAT_ERR_INVALID_ENCODING
+     *  (詳細 @c EILSEQ ) を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -203,9 +239,14 @@ extern "C"
      *                  NULL 以外を指定した場合、成功時は空の値を格納します。
      *  @param[in]      format  パスを構築する printf 形式の書式文字列。
      *  @param[in]      args    書式引数リスト。
-     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_NOT_FOUND 、
+     *                  @ref CPLAT_ERR_PERMISSION_DENIED 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_INVALID_ENCODING 、@ref CPLAT_ERR_UNKNOWN の
+     *                  いずれかを返します。
      *
-     *  作成するディレクトリの権限は `cplat_mkdir()` と同じです。
+     *  作成するディレクトリの権限は `cplat_mkdir()` と同じです。\n
+     *  Windows で不正な UTF-8 のパスが生成された場合は置換せず、@ref CPLAT_ERR_INVALID_ENCODING
+     *  (詳細 @c EILSEQ ) を返します。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。

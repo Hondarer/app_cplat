@@ -51,6 +51,8 @@ MOCK_CPLAT_LINK_IMPL(cplat_argparser_handle_get_error_index)
 MOCK_CPLAT_LINK_IMPL(cplat_argparser_get_error_index)
 MOCK_CPLAT_LINK_IMPL(cplat_argparser_handle_get_error_message)
 MOCK_CPLAT_LINK_IMPL(cplat_argparser_get_error_message)
+MOCK_CPLAT_LINK_IMPL(cplat_argparser_handle_set_validation_error)
+MOCK_CPLAT_LINK_IMPL(cplat_argparser_set_validation_error)
 MOCK_CPLAT_LINK_IMPL(cplat_argparser_handle_get_program_name)
 MOCK_CPLAT_LINK_IMPL(cplat_argparser_get_program_name)
 MOCK_CPLAT_LINK_IMPL(cplat_argparser_handle_get_usage)
@@ -802,6 +804,9 @@ extern int delegate_real_cplat_argparser_get_error_index(void);
 extern int delegate_real_cplat_argparser_handle_get_error_message(const cplat_argparser *parser, char *buffer,
                                                                   size_t buffer_size);
 extern int delegate_real_cplat_argparser_get_error_message(char *buffer, size_t buffer_size);
+extern int delegate_real_cplat_argparser_handle_set_validation_error(cplat_argparser *parser, int error,
+                                                                     const char *target, const char *message);
+extern int delegate_real_cplat_argparser_set_validation_error(int error, const char *target, const char *message);
 extern const char *delegate_real_cplat_argparser_handle_get_program_name(const cplat_argparser *parser);
 extern const char *delegate_real_cplat_argparser_get_program_name(void);
 extern int delegate_real_cplat_argparser_handle_get_usage(const cplat_argparser *parser, char *buffer,
@@ -1790,6 +1795,9 @@ class Mock_cplat
     MOCK_METHOD(int, cplat_argparser_get_error_index, ());
     MOCK_METHOD(int, cplat_argparser_handle_get_error_message, (const cplat_argparser *, char *, size_t));
     MOCK_METHOD(int, cplat_argparser_get_error_message, (char *, size_t));
+    MOCK_METHOD(int, cplat_argparser_handle_set_validation_error,
+                (cplat_argparser *, int, const char *, const char *));
+    MOCK_METHOD(int, cplat_argparser_set_validation_error, (int, const char *, const char *));
     MOCK_METHOD(const char *, cplat_argparser_handle_get_program_name, (const cplat_argparser *));
     MOCK_METHOD(const char *, cplat_argparser_get_program_name, ());
     MOCK_METHOD(int, cplat_argparser_handle_get_usage, (const cplat_argparser *, char *, size_t, size_t *));

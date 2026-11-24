@@ -508,9 +508,13 @@ extern "C"
      *  変換します。\n
      *  @p modes に "w"/"w+" を指定しても fdopen() の仕様上ファイルの切り詰めは発生しません。
      *  mkostemp() が新規作成したファイルは常に空のため、実用上の影響はありません。\n
-     *  Windows 環境では GetTempPathW + GetTempFileNameW でユニーク名を生成し、
-     *  _wfsopen() で `_SH_DENYNO` を指定して開きます。@p path_out は wchar→UTF-8 変換した結果が
-     *  格納されます。\n
+     *  Windows 環境では `GetTempPath2W()` (利用できる場合) または `GetTempPathW()` で一時ディレクトリを取得し、
+     *  `GetTempFileNameW()` で一意なファイル名を生成して `_wfsopen()` により `_SH_DENYNO` 指定で開きます。\n
+     *  `GetTempPath2W()` がある Windows で SYSTEM アカウントのプロセスとして実行する場合、一時ディレクトリは
+     *  環境変数 `SystemTemp` の値、未設定時は既定のシステム用一時ディレクトリ (`C:\\Windows\\SystemTemp`) に
+     *  なります。SYSTEM 以外のアカウント (管理者へ昇格した通常の利用者のプロセスを含む) は `GetTempPathW()` と
+     *  同じ規則に従います。`GetTempFileNameW()` の制約上、ディレクトリ部が `MAX_PATH - 14` 文字を超える場合は
+     *  失敗します。@p path_out には wchar から UTF-8 へ変換した結果が格納されます。\n
      *  呼び出し元は不要になったら fclose() でクローズし、
      *  必要なら cplat_remove() でファイルを削除する責任があります。
      *

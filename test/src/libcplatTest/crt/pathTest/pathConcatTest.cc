@@ -1,7 +1,12 @@
 #include <testfw.h>
 #include <mock_cplat.h>
+#include <cplat/base/platform.h>
 #include <cplat/base/result.h>
 #include <cplat/crt/path.h>
+#if defined(PLATFORM_WINDOWS)
+    #include <mock_windows.h>
+    #include <cplat/crt/temp_dir_internal.h>
+#endif /* PLATFORM_WINDOWS */
 #include <cerrno>
 #include <cstring>
 
@@ -252,6 +257,120 @@ TEST_F(pathConcatTest, get_temp_dir_returns_normalized_windows_path)
         output
             [std::strlen(output) -
              1u]); // [確認_正常系] - output[std::strlen(output) - 1u] が PLATFORM_PATH_SEP_CHR 以外であること。(末尾の区切り文字が除去されることの確認)
+}
+
+namespace
+{
+
+DWORD WINAPI path_test_resolver_failing(DWORD, LPWSTR)
+{
+    SetLastError(ERROR_ACCESS_DENIED);
+    return 0U;
+}
+
+DWORD WINAPI path_test_resolver_custom_system_temp(DWORD buffer_length, LPWSTR buffer)
+{
+    static const wchar_t kPath[] = L"C:\\CustomSystemTemp\\";
+    const DWORD len = (DWORD)(sizeof(kPath) / sizeof(kPath[0]) - 1U);
+    if (buffer != nullptr && buffer_length > len)
+    {
+        std::memcpy(buffer, kPath, sizeof(kPath));
+    }
+    return len;
+}
+
+DWORD WINAPI path_test_resolver_default_system_temp(DWORD buffer_length, LPWSTR buffer)
+{
+    static const wchar_t kPath[] = L"C:\\Windows\\SystemTemp\\";
+    const DWORD len = (DWORD)(sizeof(kPath) / sizeof(kPath[0]) - 1U);
+    if (buffer != nullptr && buffer_length > len)
+    {
+        std::memcpy(buffer, kPath, sizeof(kPath));
+    }
+    return len;
+}
+
+} // namespace
+
+// Windows の一時ディレクトリ取得が実 GetTempPathW() と一致することの確認
+TEST_F(pathConcatTest, get_temp_dir_matches_direct_get_temp_pathw_on_windows)
+{
+    // Arrange
+    char output[PLATFORM_PATH_MAX] = {};
+    wchar_t wdirect[MAX_PATH + 2] = {};
+    char expected[PLATFORM_PATH_UTF8_MAX] = {};
+    cplat_error err;
+    cplat_internal_temp_dir_set_resolver_for_test(nullptr);
+
+    DWORD wlen = GetTempPathW((DWORD)(sizeof(wdirect) / sizeof(wdirect[0])), wdirect);
+    ASSERT_GT(wlen, 0U);
+    ASSERT_LT(wlen, (DWORD)(sizeof(wdirect) / sizeof(wdirect[0])));
+    ASSERT_EQ(CPLAT_OK, cplat_wpath_to_utf8(expected, sizeof(expected), nullptr, wdirect));
+    size_t expected_len = std::strlen(expected);
+    while (expected_len > 1U && expected[expected_len - 1U] == PLATFORM_PATH_SEP_CHR)
+    {
+        expected[--expected_len] = '\0';
+    }
+
+    // Pre-Assert
+
+    // Act
+    int result = cplat_path_get_temp_dir(output, sizeof(output), &err); // [手順] - Windows で cplat_path_get_temp_dir() を呼び出す。
+
+    // Assert
+    ASSERT_EQ(CPLAT_OK, result); // [確認_正常系] - cplat_path_get_temp_dir() の戻り値が CPLAT_OK であること。
+    EXPECT_STREQ(expected, output); // [確認_正常系] - 直接の GetTempPathW() の結果を正規化した値と一致すること。
+}
+
+// 内部の一時ディレクトリ取得の失敗がそのまま返り、UTF-8 変換を呼ばないことの確認
+TEST_F(pathConcatTest, get_temp_dir_propagates_internal_failure_without_conversion)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    char output[PLATFORM_PATH_MAX] = {};
+    cplat_error detail;
+    cplat_internal_temp_dir_set_resolver_for_test(path_test_resolver_failing);
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat, cplat_wpath_to_utf8(_, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - 内部の失敗時は cplat_wpath_to_utf8() が呼び出されないこと。
+
+    // Act
+    int result = cplat_path_get_temp_dir(output, sizeof(output), &detail); // [手順] - 内部取得が失敗する状態で呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED, result); // [確認_異常系] - 内部関数の結果コードが返ること。
+    EXPECT_EQ(CPLAT_ERROR_DOMAIN_WINDOWS, cplat_error_get_domain(&detail)); // [確認_異常系] - Win32 ドメインであること。
+    EXPECT_EQ((unsigned long)ERROR_ACCESS_DENIED, cplat_error_get_windows_error(&detail)); // [確認_異常系] - 詳細エラーが保持されること。
+
+    // Cleanup
+    cplat_internal_temp_dir_set_resolver_for_test(nullptr);
+}
+
+// SystemTemp 指定および既定の C:\Windows\SystemTemp を上書きせず返すことの確認
+TEST_F(pathConcatTest, get_temp_dir_preserves_system_temp_and_default_paths)
+{
+    // Arrange
+    char custom_out[PLATFORM_PATH_MAX] = {};
+    char default_out[PLATFORM_PATH_MAX] = {};
+    cplat_error detail;
+
+    // Pre-Assert
+
+    // Act
+    cplat_internal_temp_dir_set_resolver_for_test(path_test_resolver_custom_system_temp);
+    int rc_custom = cplat_path_get_temp_dir(custom_out, sizeof(custom_out), &detail); // [手順] - SystemTemp 指定時。
+    cplat_internal_temp_dir_set_resolver_for_test(path_test_resolver_default_system_temp);
+    int rc_default = cplat_path_get_temp_dir(default_out, sizeof(default_out), &detail); // [手順] - 既定 SystemTemp 時。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, rc_custom); // [確認_正常系] - custom 側が CPLAT_OK であること。
+    EXPECT_STREQ("C:/CustomSystemTemp", custom_out); // [確認_正常系] - SystemTemp のパスが正規化されて返ること。
+    EXPECT_EQ(CPLAT_OK, rc_default); // [確認_正常系] - default 側が CPLAT_OK であること。
+    EXPECT_STREQ("C:/Windows/SystemTemp", default_out); // [確認_正常系] - 既定の SystemTemp がそのまま返ること。
+
+    // Cleanup
+    cplat_internal_temp_dir_set_resolver_for_test(nullptr);
 }
 #endif /* PLATFORM_WINDOWS */
 

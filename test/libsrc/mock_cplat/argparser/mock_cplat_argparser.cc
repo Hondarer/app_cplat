@@ -84,6 +84,8 @@ DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_register_positional_string_array,
 DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_parse, (parser), cplat_argparser *parser)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_get_error_message, (parser, buffer, buffer_size),
                         const cplat_argparser *parser, char *buffer, size_t buffer_size)
+DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_set_validation_error, (parser, error, target, message),
+                        cplat_argparser *parser, int error, const char *target, const char *message)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_get_usage, (parser, buffer, buffer_size, required_size_out),
                         const cplat_argparser *parser, char *buffer, size_t buffer_size, size_t *required_size_out)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_handle_print_usage, (parser, stream), const cplat_argparser *parser,
@@ -365,6 +367,8 @@ DEFINE_ARGPARSER_RESULT(cplat_argparser_register_positional_string_array,
                         const char *description, unsigned int flags, const char **storage, size_t capacity,
                         size_t *count_out)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_get_error_message, (buffer, buffer_size), char *buffer, size_t buffer_size)
+DEFINE_ARGPARSER_RESULT(cplat_argparser_set_validation_error, (error, target, message), int error, const char *target,
+                        const char *message)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_get_usage, (buffer, buffer_size, required_size_out), char *buffer,
                         size_t buffer_size, size_t *required_size_out)
 DEFINE_ARGPARSER_RESULT(cplat_argparser_print_usage, (stream), FILE *stream)

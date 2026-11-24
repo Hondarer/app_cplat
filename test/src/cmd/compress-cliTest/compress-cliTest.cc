@@ -1050,3 +1050,48 @@ TEST_F(compress_cliTest, main_returns_failure_when_help_stream_has_error)
     EXPECT_EQ(EXIT_FAILURE, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_FAILURE であること。
     EXPECT_THAT(errors, HasSubstr("標準出力へ書き込めませんでした。")); // [確認_異常系] - 標準エラー出力に書き込みの失敗の診断が出ること。
 }
+
+// 圧縮・展開モードの未指定、両方指定、重ねて指定で、error: の行の後に使い方が標準エラー出力へ出ることの確認
+TEST_F(compress_cliTest, main_prints_validation_error_before_usage_on_invalid_mode_combinations)
+{
+    // Arrange
+    const char *missing_argv[] = {"compress-cli", "input.bin", "output.bin"};
+    const char *both_argv[] = {"compress-cli", "--compress", "--decompress", "input.bin", "output.bin"};
+    const char *dup_argv[] = {"compress-cli", "--compress", "--compress", "input.bin", "output.bin"};
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_console_init()).Times(3);
+
+    // Act & Assert 1: どちらも未指定
+    testing::internal::CaptureStderr();
+    int rc_missing = __real_main(3, const_cast<char **>(missing_argv));
+    std::string err_missing = testing::internal::GetCapturedStderr();
+    EXPECT_NE(EXIT_SUCCESS, rc_missing);
+    size_t pos_err_missing = err_missing.find("error: either --compress or --decompress is required");
+    size_t pos_usage_missing = err_missing.find("Usage:");
+    EXPECT_NE(std::string::npos, pos_err_missing);
+    EXPECT_NE(std::string::npos, pos_usage_missing);
+    EXPECT_LT(pos_err_missing, pos_usage_missing);
+
+    // Act & Assert 2: 両方指定
+    testing::internal::CaptureStderr();
+    int rc_both = __real_main(5, const_cast<char **>(both_argv));
+    std::string err_both = testing::internal::GetCapturedStderr();
+    EXPECT_NE(EXIT_SUCCESS, rc_both);
+    size_t pos_err_both = err_both.find("error: specify only one of --compress and --decompress");
+    size_t pos_usage_both = err_both.find("Usage:");
+    EXPECT_NE(std::string::npos, pos_err_both);
+    EXPECT_NE(std::string::npos, pos_usage_both);
+    EXPECT_LT(pos_err_both, pos_usage_both);
+
+    // Act & Assert 3: 同じモードを重ねて指定
+    testing::internal::CaptureStderr();
+    int rc_dup = __real_main(5, const_cast<char **>(dup_argv));
+    std::string err_dup = testing::internal::GetCapturedStderr();
+    EXPECT_NE(EXIT_SUCCESS, rc_dup);
+    size_t pos_err_dup = err_dup.find("error: specify only one of --compress and --decompress");
+    size_t pos_usage_dup = err_dup.find("Usage:");
+    EXPECT_NE(std::string::npos, pos_err_dup);
+    EXPECT_NE(std::string::npos, pos_usage_dup);
+    EXPECT_LT(pos_err_dup, pos_usage_dup);
+}

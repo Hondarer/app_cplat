@@ -11,13 +11,13 @@
 #include <cplat/crt/path.h>
 #include <cplat/crt/stdio.h>
 #include <cplat/crt/stdlib.h>
+#include <cplat/crt/temp_dir_internal.h>
 #include <cplat/crt/wchar_conv.h>
 #include <cplat/win32/wchar_conv_internal.h>
 #include <cplat/base/error_internal.h>
 #include <cplat/base/result.h>
 #include "crt.h"
 #include <assert.h>
-#include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <string.h>
@@ -54,40 +54,55 @@ static int copy_path_text(char *path_out, const size_t path_size, cplat_error *d
 
 /*
  * 正規化された 2 つのパス文字列を比較する。
- * Windows では大文字・小文字を区別せず比較し、Linux では完全一致で比較する。
- * 一致する場合は 1、一致しない場合は 0 を返す。
+ * Windows では UTF-16 へ変換し、OS の大文字の表で大小文字を区別せずに比べる
+ * (CompareStringOrdinal。言語の規則による同一視は行わない)。
+ * バイトごとの tolower() は ASCII の外の文字を区別し、C ロケールに従うため使わない。
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-comparestringordinal
+ * Linux では完全一致で比較する。
+ * 成功時は *equal_out に 1 (一致) または 0 (不一致) を格納して CPLAT_OK を返し、
+ * 失敗時は *equal_out を変更せずにエラー結果コードを返す。
  */
-static int compare_normalized_paths(const char *lhs, const char *rhs)
+static int compare_normalized_paths(const char *lhs, const char *rhs, int *equal_out, cplat_error *detail_out)
 {
 #if defined(PLATFORM_WINDOWS)
-    while (*lhs != '\0' && *rhs != '\0')
-    {
-        if (tolower((unsigned char)*lhs) != tolower((unsigned char)*rhs))
-        {
-            return 0;
-        }
+    wchar_t lhs_w[PLATFORM_PATH_MAX];
+    wchar_t rhs_w[PLATFORM_PATH_MAX];
+    int cmp;
+    int rc;
 
-        lhs++;
-        rhs++;
+    rc = cplat_utf8_to_wpath(lhs_w, sizeof(lhs_w) / sizeof(lhs_w[0]), NULL, lhs);
+    if (rc != CPLAT_OK)
+    {
+        return cplat_internal_error_report_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
     }
 
-    if (*lhs == '\0' && *rhs == '\0')
+    rc = cplat_utf8_to_wpath(rhs_w, sizeof(rhs_w) / sizeof(rhs_w[0]), NULL, rhs);
+    if (rc != CPLAT_OK)
     {
-        return 1;
+        return cplat_internal_error_report_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
     }
-    else
+
+    cmp = CompareStringOrdinal(lhs_w, -1, rhs_w, -1, TRUE);
+    if (cmp == 0)
     {
-        return 0;
+        const DWORD error_code = GetLastError();
+
+        return cplat_internal_error_report_windows_error(detail_out, error_code);
     }
+
+    *equal_out = (cmp == CSTR_EQUAL) ? 1 : 0;
+    return cplat_internal_error_report_success(detail_out);
 #else  /* !PLATFORM_WINDOWS */
     if (strcmp(lhs, rhs) == 0)
     {
-        return 1;
+        *equal_out = 1;
     }
     else
     {
-        return 0;
+        *equal_out = 0;
     }
+
+    return cplat_internal_error_report_success(detail_out);
 #endif /* PLATFORM_WINDOWS */
 }
 
@@ -310,6 +325,11 @@ int cplat_path_get_full(char *path_out, const size_t path_size, cplat_error *det
             }
         }
 
+        /*
+         * realpath() に成功した場合はシンボリック リンクを解決したパスを返し、
+         * 失敗した場合 (存在しないパスなど) はリンク未解決の正規化済み絶対パスを返す。
+         * see: https://man7.org/linux/man-pages/man3/realpath.3.html
+         */
         if (realpath(candidate, resolved) != NULL)
         {
             return copy_path_text(path_out, path_size, detail_out, resolved);
@@ -400,9 +420,7 @@ int cplat_path_equal(const char *lhs, const char *rhs, int *equal_out, cplat_err
         return ret;
     }
 
-    *equal_out = compare_normalized_paths(lhs_full, rhs_full);
-
-    return cplat_internal_error_report_success(detail_out);
+    return compare_normalized_paths(lhs_full, rhs_full, equal_out, detail_out);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -454,35 +472,28 @@ int cplat_path_get_temp_dir(char *path_out, const size_t path_size, cplat_error 
     }
 #elif defined(PLATFORM_WINDOWS)
     {
-        wchar_t wdir[PLATFORM_PATH_MAX];
-        DWORD dwret;
+        wchar_t *wdir = NULL;
         size_t len;
         int rc;
 
         /*
-         * 取得結果は直後に cplat_wpath_to_utf8 で変換するため、
-         * GetTempPathU を新設せず W 版と既存の変換関数を組み合わせる。
+         * GetTempPath2W / GetTempPathW の実行時選択と十分な領域の確保を内部の共通関数へ集約し、
+         * 取得したワイド文字列を直後に cplat_wpath_to_utf8 で変換するため、*U ラッパーは使わない。
          */
-        dwret = GetTempPathW((DWORD)(sizeof(wdir) / sizeof(wdir[0])), wdir);
-        if (dwret == 0u)
+        rc = cplat_internal_get_temp_dir_w(&wdir, NULL, detail_out);
+        if (rc != CPLAT_OK)
         {
-            const DWORD error_code = GetLastError();
-
-            return cplat_internal_error_report_windows_error(detail_out, error_code);
-        }
-
-        if (dwret >= (DWORD)(sizeof(wdir) / sizeof(wdir[0])))
-        {
-            return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
+            return rc;
         }
 
         rc = cplat_wpath_to_utf8(path_out, path_size, NULL, wdir);
+        cplat_free(wdir);
         if (rc != CPLAT_OK)
         {
             return cplat_internal_error_report_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
         }
 
-        /* GetTempPathW は末尾 '\' を付けて返す。変換後は '/' になるので除去する。 */
+        /* 取得したパスは末尾 '\' を含み得る。変換後は '/' になるので除去する。 */
         len = strlen(path_out);
         while (len > 1u && path_out[len - 1u] == PLATFORM_PATH_SEP_CHR)
         {

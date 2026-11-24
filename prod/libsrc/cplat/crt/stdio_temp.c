@@ -29,6 +29,7 @@
     #include <unistd.h>
 #elif defined(PLATFORM_WINDOWS)
     #include "crt.h"
+    #include <cplat/crt/temp_dir_internal.h>
     #include <share.h>
     #include <stdlib.h>
     #include <wchar.h>
@@ -132,33 +133,25 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
     }
 #elif defined(PLATFORM_WINDOWS)
     {
-        wchar_t wdir[MAX_PATH];
+        wchar_t *wdir = NULL;
         wchar_t wfile[MAX_PATH];
         wchar_t wprefix[CPLAT_TEMP_PREFIX_MAX + 1u];
         wchar_t wmodes[CRT_WMODES_CAPACITY];
         FILE *fp = NULL;
         errno_t err;
         size_t converted;
-        DWORD dwret;
         UINT uret;
         int rc;
 
         /*
-         * 以降の GetTempFileNameW() と DeleteFileW() へワイドのまま渡すため、
-         * *U ラッパーを経由しない (UTF-8 への往復変換が増えるだけになる)。
+         * GetTempPath2W / GetTempPathW の実行時選択と十分な領域の確保を内部の共通関数へ集約し、
+         * 以降の GetTempFileNameW() へワイドのまま渡すため、*U ラッパーを経由しない。
+         * GetTempFileNameW はディレクトリ部が MAX_PATH - 14 を超えると失敗し、
+         * 出力先は終端 NUL を含めて MAX_PATH 文字を要する。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettempfilenamew
          */
-        dwret = GetTempPathW((DWORD)(sizeof(wdir) / sizeof(wdir[0])), wdir);
-        if (dwret == 0u)
+        if (cplat_internal_get_temp_dir_w(&wdir, NULL, detail_out) != CPLAT_OK)
         {
-            const DWORD error_code = GetLastError();
-
-            cplat_internal_error_record_windows_error(detail_out, error_code);
-            return NULL;
-        }
-
-        if (dwret > (DWORD)(sizeof(wdir) / sizeof(wdir[0])))
-        {
-            cplat_internal_error_record_errno(detail_out, ENAMETOOLONG);
             return NULL;
         }
 
@@ -179,6 +172,7 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
             /* STRUNCATE は 4 文字以上の prefix が CPLAT_TEMP_PREFIX_MAX に切り詰められた場合であり、正常として扱う。 */
             if (err != 0 && err != STRUNCATE)
             {
+                cplat_free(wdir);
                 cplat_internal_error_record_errno(detail_out, EINVAL);
                 return NULL;
             }
@@ -189,9 +183,11 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
         {
             const DWORD error_code = GetLastError();
 
+            cplat_free(wdir);
             cplat_internal_error_record_windows_error(detail_out, error_code);
             return NULL;
         }
+        cplat_free(wdir);
 
         rc = cplat_wpath_to_utf8(path_out, path_size, NULL, wfile);
         if (rc != CPLAT_OK)

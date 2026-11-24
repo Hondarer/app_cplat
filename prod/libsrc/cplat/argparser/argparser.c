@@ -118,6 +118,7 @@ struct cplat_argparser
     char *program_description;   /* 生成オプション指定の説明文 (NULL 可) */
     char *resolved_program_name; /* 初期化時に argv[0] から求めたベース名 (NULL 可) */
     char *last_error_target;
+    char *last_error_message;
     char *const *argv; /* 初期化時に受け取ったコマンド ライン引数 (複製しない、NULL 可) */
     int argc;          /* argv の要素数 (未設定は 0) */
     int last_error;
@@ -307,7 +308,33 @@ static void argparser_clear_error(cplat_argparser *parser)
     parser->last_error = CPLAT_OK;
     cplat_free(parser->last_error_target);
     parser->last_error_target = NULL;
+    cplat_free(parser->last_error_message);
+    parser->last_error_message = NULL;
     parser->last_error_index = -1;
+}
+
+/**
+ *  @brief          独自の検証エラーとして記録できる誤りの種別かを判定します。
+ *  @param[in]      error  判定する結果コード。
+ *  @return         記録可能な種別であれば 1、それ以外は 0 を返します。
+ */
+static int argparser_is_valid_validation_error(const int error)
+{
+    switch (error)
+    {
+    case CPLAT_ERR_UNKNOWN_OPTION:
+    case CPLAT_ERR_MISSING_VALUE:
+    case CPLAT_ERR_UNEXPECTED_VALUE:
+    case CPLAT_ERR_INVALID_INTEGER:
+    case CPLAT_ERR_OUT_OF_RANGE:
+    case CPLAT_ERR_MISSING_REQUIRED:
+    case CPLAT_ERR_DUPLICATE_OPTION:
+    case CPLAT_ERR_TOO_MANY_ARGUMENTS:
+    case CPLAT_ERR_TOO_MANY_OCCURRENCES:
+        return 1;
+    default:
+        return 0;
+    }
 }
 
 /**
@@ -1125,7 +1152,8 @@ static void argparser_release_members(cplat_argparser *parser)
     cplat_free(parser->program_name);
     cplat_free(parser->program_description);
     cplat_free(parser->resolved_program_name);
-    cplat_free(parser->last_error_target);
+    /* 通常の破棄・再初期化・既定パーサー再初期化のすべての終了経路で、共通のエラー状態解放処理を使用する。 */
+    argparser_clear_error(parser);
 
     for (size_t i = 0; i < parser->register_error_count; i++)
     {
@@ -2034,45 +2062,53 @@ int cplat_argparser_handle_get_error_message(const cplat_argparser *parser, char
      */
     int written = 0;
 
-    switch (parser->last_error)
+    if (parser->last_error != CPLAT_OK && parser->last_error_message != NULL)
     {
-    case CPLAT_ERR_UNKNOWN_OPTION:
-        written = snprintf(buffer, buffer_size, "unknown option '%s'", target); /* 置換対象外: 意図的な切り詰め */
-        break;
-    case CPLAT_ERR_MISSING_VALUE:
-        written =
-            snprintf(buffer, buffer_size, "option '%s' requires a value", target); /* 置換対象外: 意図的な切り詰め */
-        break;
-    case CPLAT_ERR_INVALID_INTEGER:
-        written = snprintf(buffer, buffer_size, "value of '%s' must be an integer",
-                           target); /* 置換対象外: 意図的な切り詰め */
-        break;
-    case CPLAT_ERR_OUT_OF_RANGE:
-        written =
-            snprintf(buffer, buffer_size, "value of '%s' is out of range", target); /* 置換対象外: 意図的な切り詰め */
-        break;
-    case CPLAT_ERR_MISSING_REQUIRED:
-        written = snprintf(buffer, buffer_size, "'%s' is required", target); /* 置換対象外: 意図的な切り詰め */
-        break;
-    case CPLAT_ERR_DUPLICATE_OPTION:
-        written = snprintf(buffer, buffer_size, "option '%s' is specified more than once",
-                           target); /* 置換対象外: 意図的な切り詰め */
-        break;
-    case CPLAT_ERR_TOO_MANY_ARGUMENTS:
-        written = snprintf(buffer, buffer_size, "too many arguments: '%s'", target); /* 置換対象外: 意図的な切り詰め */
-        break;
-    case CPLAT_ERR_TOO_MANY_OCCURRENCES:
-        written = snprintf(buffer, buffer_size, "option '%s' is specified too many times",
-                           target); /* 置換対象外: 意図的な切り詰め */
-        break;
-    case CPLAT_ERR_UNEXPECTED_VALUE:
-        written = snprintf(buffer, buffer_size, "option '%s' does not take a value",
-                           target); /* 置換対象外: 意図的な切り詰め */
-        break;
-    case CPLAT_OK:
-    default:
-        written = snprintf(buffer, buffer_size, "no error"); /* 置換対象外: 意図的な切り詰め */
-        break;
+        written = snprintf(buffer, buffer_size, "%s", parser->last_error_message); /* 置換対象外: 意図的な切り詰め */
+    }
+    else
+    {
+        switch (parser->last_error)
+        {
+        case CPLAT_ERR_UNKNOWN_OPTION:
+            written = snprintf(buffer, buffer_size, "unknown option '%s'", target); /* 置換対象外: 意図的な切り詰め */
+            break;
+        case CPLAT_ERR_MISSING_VALUE:
+            written =
+                snprintf(buffer, buffer_size, "option '%s' requires a value", target); /* 置換対象外: 意図的な切り詰め */
+            break;
+        case CPLAT_ERR_INVALID_INTEGER:
+            written = snprintf(buffer, buffer_size, "value of '%s' must be an integer",
+                               target); /* 置換対象外: 意図的な切り詰め */
+            break;
+        case CPLAT_ERR_OUT_OF_RANGE:
+            written =
+                snprintf(buffer, buffer_size, "value of '%s' is out of range", target); /* 置換対象外: 意図的な切り詰め */
+            break;
+        case CPLAT_ERR_MISSING_REQUIRED:
+            written = snprintf(buffer, buffer_size, "'%s' is required", target); /* 置換対象外: 意図的な切り詰め */
+            break;
+        case CPLAT_ERR_DUPLICATE_OPTION:
+            written = snprintf(buffer, buffer_size, "option '%s' is specified more than once",
+                               target); /* 置換対象外: 意図的な切り詰め */
+            break;
+        case CPLAT_ERR_TOO_MANY_ARGUMENTS:
+            written =
+                snprintf(buffer, buffer_size, "too many arguments: '%s'", target); /* 置換対象外: 意図的な切り詰め */
+            break;
+        case CPLAT_ERR_TOO_MANY_OCCURRENCES:
+            written = snprintf(buffer, buffer_size, "option '%s' is specified too many times",
+                               target); /* 置換対象外: 意図的な切り詰め */
+            break;
+        case CPLAT_ERR_UNEXPECTED_VALUE:
+            written = snprintf(buffer, buffer_size, "option '%s' does not take a value",
+                               target); /* 置換対象外: 意図的な切り詰め */
+            break;
+        case CPLAT_OK:
+        default:
+            written = snprintf(buffer, buffer_size, "no error"); /* 置換対象外: 意図的な切り詰め */
+            break;
+        }
     }
 
     if (written < 0)
@@ -2097,6 +2133,64 @@ int cplat_argparser_handle_get_error_message(const cplat_argparser *parser, char
 int cplat_argparser_get_error_message(char *buffer, const size_t buffer_size)
 {
     return cplat_argparser_handle_get_error_message(argparser_default_acquire(0, NULL, NULL, 0), buffer, buffer_size);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_argparser_handle_set_validation_error(cplat_argparser *parser, const int error, const char *target,
+                                                const char *message)
+{
+    char *new_target = NULL;
+    char *new_message = NULL;
+    int copy_failed = 0;
+
+    if (parser == NULL || argparser_is_valid_validation_error(error) == 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    /*
+     * 既定取得関数から渡された既存の対象名や置き換え前の文字列を解放前に読み取るため、
+     * 旧状態の解放 (argparser_clear_error) より先に新しい文字列を複製する。
+     */
+    if (target != NULL)
+    {
+        new_target = argparser_strdup(target);
+        if (new_target == NULL)
+        {
+            copy_failed = 1;
+        }
+    }
+
+    if (message != NULL)
+    {
+        new_message = argparser_strdup(message);
+        if (new_message == NULL)
+        {
+            copy_failed = 1;
+        }
+    }
+
+    argparser_clear_error(parser);
+    parser->last_error = error;
+    parser->last_error_target = new_target;
+    parser->last_error_message = new_message;
+    parser->last_error_index = -1;
+
+    if (copy_failed != 0)
+    {
+        return CPLAT_ERR_OUT_OF_MEMORY;
+    }
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_argparser_set_validation_error(const int error, const char *target, const char *message)
+{
+    return cplat_argparser_handle_set_validation_error(argparser_default_acquire(0, NULL, NULL, 0), error, target,
+                                                     message);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */

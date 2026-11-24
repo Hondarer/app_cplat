@@ -22,6 +22,8 @@
 
     #include <assert.h>
     #include <cplat/base/windows_sdk.h>
+    #include <cplat/crt/stdlib.h>
+    #include <cplat/crt/temp_dir_internal.h>
     #include <cplat/sync/sync.h>
     #include <cplat/win32/win32.h>
     #include <errno.h>
@@ -175,8 +177,7 @@ static int console_diag_enabled(void)
 static int build_console_diag_log_path(wchar_t *path_out, size_t path_len)
 {
     static const wchar_t file_name[] = L"cplat_console_attach.log";
-    wchar_t temp_path[PLATFORM_PATH_MAX];
-    DWORD temp_len;
+    wchar_t *temp_path = NULL;
     errno_t err;
 
     if (path_out == NULL || path_len == 0)
@@ -184,14 +185,17 @@ static int build_console_diag_log_path(wchar_t *path_out, size_t path_len)
         return -1;
     }
 
-    /* 取得したパスは以降 CreateFileW へワイドのまま渡すため、*U ラッパーを経由しない。 */
-    temp_len = GetTempPathW((DWORD)(sizeof(temp_path) / sizeof(temp_path[0])), temp_path);
-    if (temp_len == 0 || temp_len >= sizeof(temp_path) / sizeof(temp_path[0]))
+    /*
+     * Windows の一時ディレクトリの取得 (GetTempPath2W / GetTempPathW の選択と十分な領域の確保) を
+     * 内部の共通関数へ集約し、以降の CreateFileW へワイドのまま渡すため、*U ラッパーを経由しない。
+     */
+    if (cplat_internal_get_temp_dir_w(&temp_path, NULL, NULL) != CPLAT_OK)
     {
         return -1;
     }
 
     err = _snwprintf_s(path_out, path_len, _TRUNCATE, L"%ls%ls", temp_path, file_name);
+    cplat_free(temp_path);
     if (err < 0)
     {
         return -1;
@@ -262,7 +266,7 @@ static void console_diag_logf(const char *fmt, ...)
     line[prefix_len + message_len] = '\n';
     line[prefix_len + message_len + 1] = '\0';
 
-    /* path は GetTempPathW 由来のワイド文字列であり、UTF-8 が関与しないため CreateFileU を使わない。 */
+    /* path は内部の一時ディレクトリ取得関数由来のワイド文字列であり、UTF-8 が関与しないため CreateFileU を使わない。 */
     handle = CreateFileW(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS,
                          FILE_ATTRIBUTE_NORMAL, NULL);
     if (handle == INVALID_HANDLE_VALUE)

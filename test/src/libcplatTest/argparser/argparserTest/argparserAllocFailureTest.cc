@@ -3,7 +3,9 @@
 #include <cplat/argparser/argparser.h>
 #include <cplat/base/result.h>
 
+#include <algorithm>
 #include <cstdio>
+#include <vector>
 
 #include "argparser.inject.h"
 
@@ -441,3 +443,161 @@ TEST_F(argparserAllocFailureTest, default_reinit_discards_parser_when_descriptio
     test_argparser_reset_default();
 }
 // [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
+
+// 独自の検証エラーの破棄・再初期化・既定パーサー再初期化・置き換えで対象名と文が 1 回ずつ解放されることの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
+TEST_F(argparserAllocFailureTest, validation_error_frees_strings_once_across_all_lifecycle_paths)
+{
+    // Arrange
+    ON_CALL(mock_cplat_, cplat_shutdown_register(_, _)).WillByDefault(Return(CPLAT_OK));
+    std::vector<void *> custom_ptrs;
+    std::vector<void *> freed_ptrs;
+
+    // 1) 登録して解析せず破棄
+    {
+        cplat_argparser *handle = cplat_argparser_handle_create(0, nullptr, nullptr);
+        ASSERT_NE(nullptr, handle);
+        custom_ptrs.clear();
+        freed_ptrs.clear();
+        EXPECT_CALL(mock_cplat_, cplat_malloc(_))
+            .WillRepeatedly(testing::Invoke(
+                [&custom_ptrs](size_t size) -> void *
+                {
+                    void *ptr = delegate_real_cplat_malloc(size);
+                    custom_ptrs.push_back(ptr);
+                    return ptr;
+                }));
+        EXPECT_CALL(mock_cplat_, cplat_free(_))
+            .WillRepeatedly(testing::Invoke(
+                [&freed_ptrs](void *ptr)
+                {
+                    if (ptr != nullptr)
+                    {
+                        freed_ptrs.push_back(ptr);
+                    }
+                    delegate_real_cplat_free(ptr);
+                }));
+
+        ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_set_validation_error(handle, CPLAT_ERR_OUT_OF_RANGE, "--id", "bad id"));
+        ASSERT_EQ(2U, custom_ptrs.size());
+        cplat_argparser_handle_dispose(handle);
+        testing::Mock::VerifyAndClearExpectations(&mock_cplat_);
+        ON_CALL(mock_cplat_, cplat_shutdown_register(_, _)).WillByDefault(Return(CPLAT_OK));
+
+        EXPECT_EQ(1, std::count(freed_ptrs.begin(), freed_ptrs.end(), custom_ptrs[0]));
+        EXPECT_EQ(1, std::count(freed_ptrs.begin(), freed_ptrs.end(), custom_ptrs[1]));
+    }
+
+    // 2) ハンドル再初期化、別文置き換え、自己ターゲット再登録
+    {
+        cplat_argparser *handle = cplat_argparser_handle_create(0, nullptr, nullptr);
+        ASSERT_NE(nullptr, handle);
+        custom_ptrs.clear();
+        freed_ptrs.clear();
+        EXPECT_CALL(mock_cplat_, cplat_malloc(_))
+            .WillRepeatedly(testing::Invoke(
+                [&custom_ptrs](size_t size) -> void *
+                {
+                    void *ptr = delegate_real_cplat_malloc(size);
+                    custom_ptrs.push_back(ptr);
+                    return ptr;
+                }));
+        EXPECT_CALL(mock_cplat_, cplat_free(_))
+            .WillRepeatedly(testing::Invoke(
+                [&freed_ptrs](void *ptr)
+                {
+                    if (ptr != nullptr)
+                    {
+                        freed_ptrs.push_back(ptr);
+                    }
+                    delegate_real_cplat_free(ptr);
+                }));
+
+        ASSERT_EQ(CPLAT_OK, cplat_argparser_handle_set_validation_error(handle, CPLAT_ERR_OUT_OF_RANGE, "--a", "msg-a"));
+        const char *old_target_ptr = cplat_argparser_handle_get_error_target(handle);
+        ASSERT_EQ(CPLAT_OK,
+                  cplat_argparser_handle_set_validation_error(handle, CPLAT_ERR_INVALID_INTEGER, old_target_ptr, "msg-b"));
+        EXPECT_STREQ("--a", cplat_argparser_handle_get_error_target(handle));
+        EXPECT_EQ(1, std::count(freed_ptrs.begin(), freed_ptrs.end(), custom_ptrs[0]));
+        EXPECT_EQ(1, std::count(freed_ptrs.begin(), freed_ptrs.end(), custom_ptrs[1]));
+
+        cplat_argparser_handle_dispose(handle);
+        EXPECT_EQ(1, std::count(freed_ptrs.begin(), freed_ptrs.end(), custom_ptrs[2]));
+        EXPECT_EQ(1, std::count(freed_ptrs.begin(), freed_ptrs.end(), custom_ptrs[3]));
+
+        testing::Mock::VerifyAndClearExpectations(&mock_cplat_);
+        ON_CALL(mock_cplat_, cplat_shutdown_register(_, _)).WillByDefault(Return(CPLAT_OK));
+    }
+
+    // 3) 既定パーサーの再初期化で解放されること
+    {
+        test_argparser_reset_default();
+        cplat_argparser_init(0, nullptr, nullptr);
+        custom_ptrs.clear();
+        freed_ptrs.clear();
+        EXPECT_CALL(mock_cplat_, cplat_malloc(_))
+            .WillRepeatedly(testing::Invoke(
+                [&custom_ptrs](size_t size) -> void *
+                {
+                    void *ptr = delegate_real_cplat_malloc(size);
+                    custom_ptrs.push_back(ptr);
+                    return ptr;
+                }));
+        EXPECT_CALL(mock_cplat_, cplat_free(_))
+            .WillRepeatedly(testing::Invoke(
+                [&freed_ptrs](void *ptr)
+                {
+                    if (ptr != nullptr)
+                    {
+                        freed_ptrs.push_back(ptr);
+                    }
+                    delegate_real_cplat_free(ptr);
+                }));
+        ASSERT_EQ(CPLAT_OK, cplat_argparser_set_validation_error(CPLAT_ERR_MISSING_REQUIRED, "--def", "def msg"));
+        ASSERT_EQ(2U, custom_ptrs.size());
+        cplat_argparser_init(0, nullptr, nullptr);
+        testing::Mock::VerifyAndClearExpectations(&mock_cplat_);
+
+        EXPECT_EQ(1, std::count(freed_ptrs.begin(), freed_ptrs.end(), custom_ptrs[0]));
+        EXPECT_EQ(1, std::count(freed_ptrs.begin(), freed_ptrs.end(), custom_ptrs[1]));
+        test_argparser_reset_default();
+    }
+}
+
+// 対象名または説明文の一部の複製失敗時に、保持分と既定表示・解放が契約どおりに動くことの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
+TEST_F(argparserAllocFailureTest, validation_error_handles_partial_and_total_strdup_failures)
+{
+    // Arrange
+    char msg_buf[256] = {};
+
+    // 1) target 複製失敗 + message 複製成功
+    EXPECT_CALL(mock_cplat_, cplat_malloc(_)).WillOnce(Return(nullptr)).WillOnce(DoDefault());
+    int rc_target_fail = cplat_argparser_handle_set_validation_error(parser_, CPLAT_ERR_OUT_OF_RANGE, "--x", "custom");
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY, rc_target_fail);
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_RANGE, cplat_argparser_handle_get_error(parser_));
+    EXPECT_EQ(nullptr, cplat_argparser_handle_get_error_target(parser_));
+    EXPECT_EQ(CPLAT_OK, cplat_argparser_handle_get_error_message(parser_, msg_buf, sizeof(msg_buf)));
+    EXPECT_STREQ("custom", msg_buf);
+    testing::Mock::VerifyAndClearExpectations(&mock_cplat_);
+
+    // 2) target 複製成功 + message 複製失敗 -> 既定文が target を使って組み立てられる
+    EXPECT_CALL(mock_cplat_, cplat_malloc(_)).WillOnce(DoDefault()).WillOnce(Return(nullptr));
+    int rc_msg_fail = cplat_argparser_handle_set_validation_error(parser_, CPLAT_ERR_OUT_OF_RANGE, "--y", "custom2");
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY, rc_msg_fail);
+    EXPECT_STREQ("--y", cplat_argparser_handle_get_error_target(parser_));
+    EXPECT_EQ(CPLAT_OK, cplat_argparser_handle_get_error_message(parser_, msg_buf, sizeof(msg_buf)));
+    EXPECT_STREQ("value of '--y' is out of range", msg_buf);
+    testing::Mock::VerifyAndClearExpectations(&mock_cplat_);
+
+    // 3) 両方の複製失敗 -> target は ?、message は既定文
+    EXPECT_CALL(mock_cplat_, cplat_malloc(_)).WillOnce(Return(nullptr)).WillOnce(Return(nullptr));
+    int rc_both_fail =
+        cplat_argparser_handle_set_validation_error(parser_, CPLAT_ERR_INVALID_INTEGER, "--z", "custom3");
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY, rc_both_fail);
+    EXPECT_EQ(nullptr, cplat_argparser_handle_get_error_target(parser_));
+    EXPECT_EQ(CPLAT_OK, cplat_argparser_handle_get_error_message(parser_, msg_buf, sizeof(msg_buf)));
+    EXPECT_STREQ("value of '?' must be an integer", msg_buf);
+}

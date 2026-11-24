@@ -1,2 +1,4 @@
 /console.c
+/error.c
 /result.c
+/temp_dir_windows.c

@@ -73,6 +73,14 @@
             return EXIT_FAILURE;
         }
 
+        if (count < 1)
+        {
+            (void)cplat_argparser_set_validation_error(CPLAT_ERR_OUT_OF_RANGE, "--count", NULL);
+            cplat_argparser_print_error_messages(stderr);
+            cplat_argparser_print_usage(stderr);
+            return EXIT_FAILURE;
+        }
+
         printf("count=%d input=%s\n", count, input);
 
         return EXIT_SUCCESS;
@@ -801,6 +809,48 @@ extern "C"
      *  プロセス共有のパーサーに対する操作は、呼び出し側で直列化してください。
      */
     CPLAT_EXPORT int CPLAT_API cplat_argparser_get_error_message(char *buffer, size_t buffer_size);
+
+    /**
+     *  @brief          コマンドが独自に行った検証の誤りを、解析の誤りとして記録します。
+     *  @param[in,out]  parser   対象のハンドル。NULL を渡してはなりません。
+     *  @param[in]      error    誤りの種類。@ref CPLAT_ERR_UNKNOWN_OPTION 、@ref CPLAT_ERR_MISSING_VALUE 、
+     *                           @ref CPLAT_ERR_UNEXPECTED_VALUE 、@ref CPLAT_ERR_INVALID_INTEGER 、
+     *                           @ref CPLAT_ERR_OUT_OF_RANGE 、@ref CPLAT_ERR_MISSING_REQUIRED 、
+     *                           @ref CPLAT_ERR_DUPLICATE_OPTION 、@ref CPLAT_ERR_TOO_MANY_ARGUMENTS 、
+     *                           @ref CPLAT_ERR_TOO_MANY_OCCURRENCES のいずれか。
+     *  @param[in]      target   誤りのある項目の名前 (例: "--pid")。NULL 可。
+     *  @param[in]      message  表示する説明の文 (UTF-8)。NULL の場合は @p error と @p target から既定の文を作ります。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY のいずれかを返します。
+     *
+     *  記録した誤りは、解析の誤りと同じく、@ref cplat_argparser_handle_get_error 、
+     *  @ref cplat_argparser_handle_get_error_target 、@ref cplat_argparser_handle_get_error_message で参照でき、
+     *  @ref cplat_argparser_handle_print_error_messages が同じ書式 (`error: <説明>` と空行) で表示します。
+     *  誤りの位置 (@ref cplat_argparser_handle_get_error_index) は -1 です。\n
+     *  既に記録された誤り (解析の誤りを含む) は、この誤りで置き換えます。次の解析の開始、再初期化、ハンドルの破棄で消えます。\n
+     *  @p target と @p message は複製して保持します。複製に失敗した場合も @p error は記録し
+     *  (対象名がない場合は `?`、説明の文がない場合は既定の文で表示します)、@ref CPLAT_ERR_OUT_OF_MEMORY を返します。\n
+     *  @p parser が NULL、または @p error が上の値のいずれでもない場合は、何も記録せず
+     *  @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *
+     *  @par            スレッド セーフ
+     *  同じハンドルへの同時の呼び出しはできません。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_handle_set_validation_error(cplat_argparser *parser, int error,
+                                                                           const char *target, const char *message);
+
+    /**
+     *  @brief          既定のパーサーへ、コマンドが独自に行った検証の誤りを記録します。
+     *  @param[in]      error    誤りの種類。@ref cplat_argparser_handle_set_validation_error と同じ値のいずれか。
+     *  @param[in]      target   誤りのある項目の名前 (例: "--pid")。NULL 可。
+     *  @param[in]      message  表示する説明の文 (UTF-8)。NULL の場合は既定の文を作ります。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_OUT_OF_MEMORY のいずれかを返します。
+     *  @see            cplat_argparser_handle_set_validation_error
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフではありません。\n
+     *  プロセス共有のパーサーに対する操作は、呼び出し側で直列化してください。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_set_validation_error(int error, const char *target, const char *message);
 
     /**
      *  @brief          プログラム名を取得します。

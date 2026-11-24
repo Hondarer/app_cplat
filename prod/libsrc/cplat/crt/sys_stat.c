@@ -51,55 +51,86 @@ static int is_path_conversion_error(const int result)
            result == CPLAT_ERR_BUFFER_TOO_SMALL || result == CPLAT_ERR_INVALID_ENCODING;
 }
 
+/*
+ * cplat_stat() が返したファイル情報がディレクトリを表すかを判定する。
+ */
+static int is_directory_stat(const cplat_file_stat_t *st)
+{
+#if defined(PLATFORM_LINUX)
+    return (S_ISDIR(st->st_mode) != 0) ? 1 : 0;
+#elif defined(PLATFORM_WINDOWS)
+    return ((st->st_mode & _S_IFMT) == _S_IFDIR) ? 1 : 0;
+#endif /* PLATFORM_ */
+}
+
 /**
  *  @brief          指定されたディレクトリが存在することを確認し、なければ生成します。
  *  @param[in]      dir 対象ディレクトリのパス (UTF-8)。
  *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
  *                  エラー詳細を設定せず、返却しません。
- *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_UNKNOWN を返します。
+ *  @return         ディレクトリが存在または作成できた場合は @ref CPLAT_OK 、
+ *                  ディレクトリ以外が存在する場合は @ref CPLAT_ERR_UNKNOWN (詳細 @c ENOTDIR )、
+ *                  それ以外の失敗時は @c cplat_stat() または @c cplat_mkdir() の結果コードを返します。
  *
- *  cplat_mkdir が競合生成で @ref CPLAT_ERR_UNKNOWN を返す場合も cplat_stat で再確認して
- *  ディレクトリが存在すれば成功とみなします。
+ *  まず cplat_stat() で存在を確認し、ディレクトリであれば成功、ディレクトリ以外であれば
+ *  ENOTDIR (要因 @ref CPLAT_CAUSE_NOT_A_DIRECTORY ) で失敗します。\n
+ *  cplat_stat() が失敗した場合は cplat_mkdir() を試行します。
+ *  cplat_mkdir() が競合生成等で失敗した場合は他プロセスによる生成を確認するため局所変数へ
+ *  cplat_stat() を呼び直します。再確認が失敗しても作成の失敗理由 (権限不足など) が詳細エラーから
+ *  失われないよう、再確認で詳細エラー (detail_out および TLS) を上書きせず、
+ *  cplat_mkdir() の結果コードと詳細エラーをそのまま返します。
  */
 static int ensure_one_dir(const char *dir, cplat_error *detail_out)
 {
     cplat_file_stat_t st;
+    cplat_error recheck_detail;
+    int mkdir_result;
+    int recheck_result;
     int result;
 
-    /* すでに存在する場合は成功。 */
+    /* 1. すでに存在する場合はディレクトリであることを確かめる。 */
     result = cplat_stat(&st, detail_out, dir);
     if (result == CPLAT_OK)
     {
-        return CPLAT_OK;
+        if (is_directory_stat(&st))
+        {
+            return CPLAT_OK;
+        }
+
+        return cplat_internal_error_report_errno(detail_out, ENOTDIR);
     }
     if (is_path_conversion_error(result))
     {
         return result;
     }
 
-    /* 存在しないので生成する。 */
-    result = cplat_mkdir(dir, detail_out);
-    if (result == CPLAT_OK)
+    /* 2. 存在しない (または stat 失敗) ため生成する。 */
+    mkdir_result = cplat_mkdir(dir, detail_out);
+    if (mkdir_result == CPLAT_OK)
     {
         return CPLAT_OK;
     }
-    if (is_path_conversion_error(result))
+    if (is_path_conversion_error(mkdir_result))
     {
-        return result;
+        return mkdir_result;
     }
 
-    /* mkdir 失敗: 競合生成の可能性があるため再確認する。 */
-    result = cplat_stat(&st, detail_out, dir);
-    if (result == CPLAT_OK)
+    /*
+     * 3. mkdir 失敗: 別プロセスによる競合生成の可能性があるため再確認する。
+     * 再確認の失敗で作成の失敗理由 (権限不足など) を上書きしないよう、詳細エラーは局所変数へ受ける。
+     */
+    recheck_result = cplat_stat(&st, &recheck_detail, dir);
+    if (recheck_result == CPLAT_OK)
     {
-        return CPLAT_OK;
-    }
-    if (is_path_conversion_error(result))
-    {
-        return result;
+        if (is_directory_stat(&st))
+        {
+            return cplat_internal_error_report_success(detail_out);
+        }
+
+        return cplat_internal_error_report_errno(detail_out, ENOTDIR);
     }
 
-    return CPLAT_ERR_UNKNOWN;
+    return mkdir_result;
 }
 
 #if defined(PLATFORM_WINDOWS)

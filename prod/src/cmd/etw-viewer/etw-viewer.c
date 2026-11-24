@@ -78,21 +78,33 @@ static void etw_viewer_shutdown_request_callback(const cplat_shutdown_event *eve
 static int parse_process_id_arg(const char *text, uint32_t *process_id_out)
 {
     uint64_t value;
+    int parse_result;
 
-    if (text == NULL || process_id_out == NULL || text[0] == '\0')
+    if (text == NULL || process_id_out == NULL)
     {
-        return -1;
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (text[0] == '\0')
+    {
+        return CPLAT_ERR_INVALID_INTEGER;
     }
 
     /* プロセス ID は Windows DWORD のため、コーディング規範の例外として UINT32_MAX 上限を維持する。 */
-    if (cplat_parse_uint64(&value, text, 10) != CPLAT_OK || value > UINT32_MAX)
+    parse_result = cplat_parse_uint64(&value, text, 10);
+    if (parse_result != CPLAT_OK)
     {
-        return -1;
+        return parse_result;
+    }
+
+    if (value > UINT32_MAX)
+    {
+        return CPLAT_ERR_OUT_OF_RANGE;
     }
 
     *process_id_out = (uint32_t)value;
 
-    return 0;
+    return CPLAT_OK;
 }
 
 void etw_viewer_options_init(etw_viewer_options *options)
@@ -327,8 +339,14 @@ int main(int argc, char *argv[])
 
     if (pid_value != NULL)
     {
-        if (parse_process_id_arg(pid_value, &options.process_id_filter) != 0)
+        int pid_result = parse_process_id_arg(pid_value, &options.process_id_filter);
+        if (pid_result != CPLAT_OK)
         {
+            if (cplat_argparser_set_validation_error(pid_result, "--pid", NULL) == CPLAT_ERR_INVALID_ARGUMENT)
+            {
+                /* 記録失敗時も終了コードはすでに失敗に決まっており、エラー表示を続けるため戻り値は明示的に破棄する。 */
+                (void)cplat_argparser_set_validation_error(CPLAT_ERR_INVALID_INTEGER, "--pid", NULL);
+            }
             /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
             (void)cplat_argparser_print_error_messages(stderr);
             (void)cplat_argparser_print_usage(stderr);

@@ -9,7 +9,10 @@
     #include <fcntl.h>
     #include <mock_stdio.h>
     #include <mock_unistd.h>
-#endif /* PLATFORM_LINUX */
+#elif defined(PLATFORM_WINDOWS)
+    #include <cplat/crt/temp_dir_internal.h>
+    #include <mock_windows.h>
+#endif /* PLATFORM_ */
 
 using testing::_;
 using testing::NiceMock;
@@ -502,4 +505,114 @@ TEST_F(stdioTempTest, path_formatting_failure_returns_enametoolong)
             &err,
             CPLAT_CAUSE_NAME_TOO_LONG)); // [確認_異常系] - CPLAT_CAUSE_NAME_TOO_LONG に対する cplat_error_is() の戻り値が 1 であること。
 }
-#endif /* PLATFORM_LINUX */
+#elif defined(PLATFORM_WINDOWS)
+
+namespace
+{
+
+DWORD WINAPI stdio_temp_resolver_failing(DWORD, LPWSTR)
+{
+    SetLastError(ERROR_ACCESS_DENIED);
+    return 0U;
+}
+
+DWORD WINAPI stdio_temp_resolver_custom_system_temp(DWORD buffer_length, LPWSTR buffer)
+{
+    static const wchar_t kPath[] = L"C:\\CustomSystemTemp\\";
+    const DWORD len = (DWORD)(sizeof(kPath) / sizeof(kPath[0]) - 1U);
+    if (buffer != nullptr && buffer_length > len)
+    {
+        std::memcpy(buffer, kPath, sizeof(kPath));
+    }
+    return len;
+}
+
+DWORD WINAPI stdio_temp_resolver_default_system_temp(DWORD buffer_length, LPWSTR buffer)
+{
+    static const wchar_t kPath[] = L"C:\\Windows\\SystemTemp\\";
+    const DWORD len = (DWORD)(sizeof(kPath) / sizeof(kPath[0]) - 1U);
+    if (buffer != nullptr && buffer_length > len)
+    {
+        std::memcpy(buffer, kPath, sizeof(kPath));
+    }
+    return len;
+}
+
+} // namespace
+
+// 内部の一時ディレクトリ取得が失敗した場合に NULL を返し GetTempFileNameW を呼ばないことの確認
+TEST_F(stdioTempTest, internal_temp_dir_failure_skips_get_temp_file_namew)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    char path[PLATFORM_PATH_UTF8_MAX] = {};
+    cplat_error detail;
+    cplat_internal_temp_dir_set_resolver_for_test(stdio_temp_resolver_failing);
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetTempFileNameW(_, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - 内部関数失敗時は GetTempFileNameW() が呼び出されないこと。
+
+    // Act
+    FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path), &detail); // [手順] - 内部関数失敗時。
+
+    // Assert
+    EXPECT_EQ(nullptr, fp); // [確認_異常系] - NULL を返すこと。
+    EXPECT_EQ(CPLAT_ERROR_DOMAIN_WINDOWS, cplat_error_get_domain(&detail)); // [確認_異常系] - Win32 ドメインであること。
+    EXPECT_EQ((unsigned long)ERROR_ACCESS_DENIED, cplat_error_get_windows_error(&detail)); // [確認_異常系] - 詳細エラーが保持されること。
+
+    // Cleanup
+    cplat_internal_temp_dir_set_resolver_for_test(nullptr);
+}
+
+// GetTempFileNameW が ERROR_BUFFER_OVERFLOW で失敗した場合に詳細エラーを返すことの確認
+TEST_F(stdioTempTest, get_temp_file_namew_buffer_overflow_reports_windows_error)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    char path[PLATFORM_PATH_UTF8_MAX] = {};
+    cplat_error detail;
+    cplat_internal_temp_dir_set_resolver_for_test(stdio_temp_resolver_custom_system_temp);
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetTempFileNameW(_, _, _, testing::StrEq(L"C:\\CustomSystemTemp\\"), _, 0U, _))
+        .WillOnce(Return(0U)); // [Pre-Assert確認_異常系] - SystemTemp パスで GetTempFileNameW() が 1 回呼び出されること。
+    EXPECT_CALL(mock_windows, GetLastError(_, _, _))
+        .WillOnce(Return(ERROR_BUFFER_OVERFLOW)); // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
+
+    // Act
+    FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path), &detail); // [手順] - GetTempFileNameW が ERROR_BUFFER_OVERFLOW で失敗する場合。
+
+    // Assert
+    EXPECT_EQ(nullptr, fp); // [確認_異常系] - NULL を返すこと。
+    EXPECT_EQ(CPLAT_ERROR_DOMAIN_WINDOWS, cplat_error_get_domain(&detail)); // [確認_異常系] - Win32 ドメインであること。
+    EXPECT_EQ((unsigned long)ERROR_BUFFER_OVERFLOW, cplat_error_get_windows_error(&detail)); // [確認_異常系] - ERROR_BUFFER_OVERFLOW が記録されること。
+
+    // Cleanup
+    cplat_internal_temp_dir_set_resolver_for_test(nullptr);
+}
+
+// SystemTemp の既定値 C:\Windows\SystemTemp をそのまま GetTempFileNameW へ渡すことの確認
+TEST_F(stdioTempTest, passes_default_system_temp_unmodified_to_get_temp_file_namew)
+{
+    // Arrange
+    NiceMock<Mock_windows> mock_windows;
+    char path[PLATFORM_PATH_UTF8_MAX] = {};
+    cplat_error detail;
+    cplat_internal_temp_dir_set_resolver_for_test(stdio_temp_resolver_default_system_temp);
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetTempFileNameW(_, _, _, testing::StrEq(L"C:\\Windows\\SystemTemp\\"), _, 0U, _))
+        .WillOnce(Return(0U)); // [Pre-Assert確認_異常系] - C:\Windows\SystemTemp\ がそのまま渡されること。
+    EXPECT_CALL(mock_windows, GetLastError(_, _, _)).WillOnce(Return(ERROR_PATH_NOT_FOUND));
+
+    // Act
+    FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path), &detail); // [手順] - 既定 SystemTemp 時。
+
+    // Assert
+    EXPECT_EQ(nullptr, fp); // [確認_異常系] - Mock の失敗により NULL を返すこと。
+
+    // Cleanup
+    cplat_internal_temp_dir_set_resolver_for_test(nullptr);
+}
+#endif /* PLATFORM_ */

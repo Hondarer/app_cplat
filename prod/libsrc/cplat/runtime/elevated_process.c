@@ -15,6 +15,7 @@
  *******************************************************************************
  */
 
+#include <cplat/base/error_internal.h>
 #include <cplat/base/result.h>
 #include <cplat/crt/stdlib.h>
 #include <cplat/crt/stdio.h>
@@ -25,6 +26,7 @@
 #include <cplat/console/console_internal.h>
 #include <cplat/crypto/random.h>
 #include <cplat/crt/path.h>
+#include <cplat/crt/temp_dir_internal.h>
 #include <cplat/crt/wchar_conv.h>
 
 #include <assert.h>
@@ -1247,7 +1249,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         SHELLEXECUTEINFOW exec_info;
         char exe_path[PLATFORM_PATH_UTF8_MAX];
         char result_path[PLATFORM_PATH_UTF8_MAX];
-        wchar_t wide_temp_dir[PLATFORM_PATH_MAX];
+        wchar_t *wide_temp_dir = NULL;
         wchar_t wide_result_path[PLATFORM_PATH_MAX];
         char *combined_arguments;
         wchar_t *wide_arguments;
@@ -1257,7 +1259,6 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         int elevated;
         size_t arg_len;
         size_t buf_sz;
-        DWORD temp_len;
         int conversion_result;
 
         if (cplat_elevated_process_is_elevated(&elevated) != CPLAT_OK)
@@ -1290,21 +1291,29 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         /*
          * 昇格プロセスが結果メッセージを書き込む一時ファイルを確保する。GetTempFileNameW は
          * 一意な空ファイルを作成するため、並行する別プロセスとの衝突を避けられる。
+         * GetTempFileNameW はディレクトリ部が MAX_PATH - 14 を超えると失敗する。
          * see: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettempfilenamew
          */
-        /* 本関数内の一時ファイル操作はワイドのまま完結するため、*U ラッパーを経由しない。 */
-        temp_len = GetTempPathW((DWORD)(sizeof(wide_temp_dir) / sizeof(wide_temp_dir[0])), wide_temp_dir);
-        if (temp_len == 0 || temp_len >= sizeof(wide_temp_dir) / sizeof(wide_temp_dir[0]))
+        /*
+         * GetTempPath2W / GetTempPathW の実行時選択と十分な領域の確保を内部の共通関数へ集約し、
+         * 以降の GetTempFileNameW へワイドのまま渡すため、*U ラッパーを経由しない。
+         */
+        conversion_result = cplat_internal_get_temp_dir_w(&wide_temp_dir, NULL, NULL);
+        if (conversion_result != CPLAT_OK)
         {
             *exit_code_out = EXIT_FAILURE;
-            return CPLAT_ERR_UNKNOWN;
+            return conversion_result;
         }
 
         if (GetTempFileNameW(wide_temp_dir, L"cur", 0, wide_result_path) == 0)
         {
+            const DWORD error_code = GetLastError();
+
+            cplat_free(wide_temp_dir);
             *exit_code_out = EXIT_FAILURE;
-            return CPLAT_ERR_UNKNOWN;
+            return cplat_internal_error_report_windows_error(NULL, error_code);
         }
+        cplat_free(wide_temp_dir);
 
         /*
          * 一時ファイルの削除は、結果を読み終えた後か失敗を返す経路の後始末であり、削除できなくても返す結果が

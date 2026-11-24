@@ -17,6 +17,7 @@ using testing::NiceMock;
 using testing::Return;
 
 #if defined(PLATFORM_WINDOWS)
+    #include <cplat/crt/temp_dir_internal.h>
     #include <cplat/runtime/process_internal.h>
     #include <mock_shellapi.h>
     #include <mock_stdio.h>
@@ -1378,5 +1379,158 @@ TEST(elevatedProcessTest, run_piped_rejects_client_other_than_launched_process)
         actual_ret); // [確認_異常系] - cplat_elevated_process_run_piped() の戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(EXIT_FAILURE, exit_code); // [確認_異常系] - exit_code が EXIT_FAILURE であること。
     EXPECT_EQ(0, outputs.call_count);   // [確認_異常系] - コールバックが 1 回も呼ばれないこと。
+}
+
+namespace
+{
+
+DWORD WINAPI elevated_temp_resolver_failing(DWORD, LPWSTR)
+{
+    SetLastError(ERROR_ACCESS_DENIED);
+    return 0U;
+}
+
+DWORD WINAPI elevated_temp_resolver_custom_system_temp(DWORD buffer_length, LPWSTR buffer)
+{
+    static const wchar_t kPath[] = L"C:\\CustomSystemTemp\\";
+    const DWORD len = (DWORD)(sizeof(kPath) / sizeof(kPath[0]) - 1U);
+    if (buffer != nullptr && buffer_length > len)
+    {
+        std::memcpy(buffer, kPath, sizeof(kPath));
+    }
+    return len;
+}
+
+DWORD WINAPI elevated_temp_resolver_default_system_temp(DWORD buffer_length, LPWSTR buffer)
+{
+    static const wchar_t kPath[] = L"C:\\Windows\\SystemTemp\\";
+    const DWORD len = (DWORD)(sizeof(kPath) / sizeof(kPath[0]) - 1U);
+    if (buffer != nullptr && buffer_length > len)
+    {
+        std::memcpy(buffer, kPath, sizeof(kPath));
+    }
+    return len;
+}
+
+} // namespace
+
+// 内部一時ディレクトリ取得の失敗時に GetTempFileNameW を呼ばず内部の結果コードを返すことの確認
+TEST(elevatedProcessTest, run_with_result_propagates_internal_temp_dir_failure)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    NiceMock<Mock_windows> mock_windows;
+    int exit_code = 0;
+    int handled = 1;
+    cplat_error last_err;
+    cplat_internal_temp_dir_set_resolver_for_test(elevated_temp_resolver_failing);
+
+    ON_CALL(mock_cplat, cplat_elevated_process_is_elevated(_))
+        .WillByDefault(testing::DoAll(testing::SetArgPointee<0>(0), Return(CPLAT_OK)));
+    ON_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
+        .WillByDefault(
+            [](char *path_out, size_t path_size) -> int
+            {
+                std::snprintf(path_out, path_size, "C:/app/tool.exe");
+                return CPLAT_OK;
+            });
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetTempFileNameW(_, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - 一時ディレクトリ取得失敗時は GetTempFileNameW() を呼ばないこと。
+
+    // Act
+    int rc = cplat_elevated_process_run_with_result(nullptr, &exit_code, &handled, nullptr, 0U);
+    cplat_error_get_last(&last_err);
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED, rc); // [確認_異常系] - 内部関数の結果コードが返ること。
+    EXPECT_EQ(EXIT_FAILURE, exit_code); // [確認_異常系] - exit_code が EXIT_FAILURE であること。
+    EXPECT_EQ(CPLAT_ERROR_DOMAIN_WINDOWS, cplat_error_get_domain(&last_err)); // [確認_異常系] - Win32 ドメインであること。
+    EXPECT_EQ((unsigned long)ERROR_ACCESS_DENIED, cplat_error_get_windows_error(&last_err)); // [確認_異常系] - 詳細エラーが保持されること。
+
+    // Cleanup
+    cplat_internal_temp_dir_set_resolver_for_test(nullptr);
+}
+
+// GetTempFileNameW が ERROR_BUFFER_OVERFLOW で失敗した場合に詳細エラーを返すことの確認
+TEST(elevatedProcessTest, run_with_result_reports_get_temp_file_namew_buffer_overflow)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    NiceMock<Mock_windows> mock_windows;
+    NiceMock<Mock_shellapi> mock_shellapi;
+    int exit_code = 0;
+    int handled = 1;
+    cplat_error last_err;
+    cplat_internal_temp_dir_set_resolver_for_test(elevated_temp_resolver_custom_system_temp);
+
+    ON_CALL(mock_cplat, cplat_elevated_process_is_elevated(_))
+        .WillByDefault(testing::DoAll(testing::SetArgPointee<0>(0), Return(CPLAT_OK)));
+    ON_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
+        .WillByDefault(
+            [](char *path_out, size_t path_size) -> int
+            {
+                std::snprintf(path_out, path_size, "C:/app/tool.exe");
+                return CPLAT_OK;
+            });
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetTempFileNameW(_, _, _, testing::StrEq(L"C:\\CustomSystemTemp\\"), _, 0U, _))
+        .WillOnce(Return(0U)); // [Pre-Assert確認_異常系] - SystemTemp パスで GetTempFileNameW() が 1 回呼ばれること。
+    EXPECT_CALL(mock_windows, GetLastError(_, _, _))
+        .WillOnce(Return(ERROR_BUFFER_OVERFLOW)); // [Pre-Assert確認_異常系] - ERROR_BUFFER_OVERFLOW を返すこと。
+    EXPECT_CALL(mock_shellapi, ShellExecuteExW(_, _, _, _)).Times(0);
+
+    // Act
+    int rc = cplat_elevated_process_run_with_result(nullptr, &exit_code, &handled, nullptr, 0U);
+    cplat_error_get_last(&last_err);
+
+    // Assert
+    EXPECT_NE(CPLAT_OK, rc); // [確認_異常系] - 失敗の結果コードが返ること。
+    EXPECT_EQ(EXIT_FAILURE, exit_code); // [確認_異常系] - exit_code が EXIT_FAILURE であること。
+    EXPECT_EQ(CPLAT_ERROR_DOMAIN_WINDOWS, cplat_error_get_domain(&last_err)); // [確認_異常系] - Win32 ドメインであること。
+    EXPECT_EQ((unsigned long)ERROR_BUFFER_OVERFLOW, cplat_error_get_windows_error(&last_err)); // [確認_異常系] - ERROR_BUFFER_OVERFLOW が記録されること。
+
+    // Cleanup
+    cplat_internal_temp_dir_set_resolver_for_test(nullptr);
+}
+
+// 既定の C:\Windows\SystemTemp を上書きせず GetTempFileNameW へ渡すことの確認
+TEST(elevatedProcessTest, run_with_result_passes_default_system_temp_unmodified)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    NiceMock<Mock_windows> mock_windows;
+    NiceMock<Mock_shellapi> mock_shellapi;
+    int exit_code = 0;
+    int handled = 1;
+    cplat_internal_temp_dir_set_resolver_for_test(elevated_temp_resolver_default_system_temp);
+
+    ON_CALL(mock_cplat, cplat_elevated_process_is_elevated(_))
+        .WillByDefault(testing::DoAll(testing::SetArgPointee<0>(0), Return(CPLAT_OK)));
+    ON_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
+        .WillByDefault(
+            [](char *path_out, size_t path_size) -> int
+            {
+                std::snprintf(path_out, path_size, "C:/app/tool.exe");
+                return CPLAT_OK;
+            });
+
+    // Pre-Assert
+    EXPECT_CALL(mock_windows, GetTempFileNameW(_, _, _, testing::StrEq(L"C:\\Windows\\SystemTemp\\"), _, 0U, _))
+        .WillOnce(Return(0U)); // [Pre-Assert確認_正常系] - 既定 SystemTemp パスがそのまま渡されること。
+    EXPECT_CALL(mock_windows, GetLastError(_, _, _)).WillOnce(Return(ERROR_PATH_NOT_FOUND));
+    EXPECT_CALL(mock_shellapi, ShellExecuteExW(_, _, _, _)).Times(0);
+
+    // Act
+    int rc = cplat_elevated_process_run_with_result(nullptr, &exit_code, &handled, nullptr, 0U);
+
+    // Assert
+    EXPECT_NE(CPLAT_OK, rc); // [確認_異常系] - Mock の失敗に応じたエラーが返ること。
+    EXPECT_EQ(EXIT_FAILURE, exit_code); // [確認_異常系] - exit_code が EXIT_FAILURE であること。
+
+    // Cleanup
+    cplat_internal_temp_dir_set_resolver_for_test(nullptr);
 }
 #endif

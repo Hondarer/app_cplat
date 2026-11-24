@@ -486,6 +486,18 @@ int main(int argc, char *argv[])
     /* 圧縮モードと展開モードのどちらか一方のみが指定されていることを検証する。 */
     if ((compress_count + decompress_count) != 1)
     {
+        if ((compress_count + decompress_count) == 0)
+        {
+            /* 終了コードはすでに失敗に決まっており、記録失敗時は既定表示へ切り替わるだけのため、戻り値は明示的に破棄する。 */
+            (void)cplat_argparser_set_validation_error(CPLAT_ERR_MISSING_REQUIRED, "--compress | --decompress",
+                                                       "either --compress or --decompress is required");
+        }
+        else
+        {
+            /* 終了コードはすでに失敗に決まっており、記録失敗時は既定表示へ切り替わるだけのため、戻り値は明示的に破棄する。 */
+            (void)cplat_argparser_set_validation_error(CPLAT_ERR_DUPLICATE_OPTION, "--compress | --decompress",
+                                                       "specify only one of --compress and --decompress");
+        }
         /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
         (void)cplat_argparser_print_error_messages(stderr);
         (void)cplat_argparser_print_usage(stderr);

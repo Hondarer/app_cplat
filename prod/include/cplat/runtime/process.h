@@ -143,6 +143,19 @@ extern "C"
      *  Windows では @p options 内の引数、環境変数上書き、作業ディレクトリを UTF-16 へ厳密に変換します。
      *  UTF-8 として不正な入力は置換せず @ref CPLAT_ERR_INVALID_ENCODING を返します。
      *
+     *  @par            Linux のコマンドの探索
+     *  `argv[0]` に '/' を含まない場合は、子プロセスの環境 (@p env_overrides を適用した後) の PATH を、
+     *  glibc の `execvp` と同じ規則で先頭から探索します。先頭、途中、末尾の空の区間はカレント ディレクトリ
+     *  (@p working_directory を指定した場合はそのディレクトリ) です。\n
+     *  `execvp` と次の点が異なります。
+     *  - PATH は、呼び出し元のプロセスの環境ではなく、子プロセスの環境から取ります。
+     *  - PATH がない場合に加え、PATH の値が空文字列の場合も `/bin:/usr/bin` を使います
+     *    (`execvp` はカレント ディレクトリを探索します)。
+     *  - 実行の形式が不正 (`ENOEXEC`) の場合に、`/bin/sh` で実行し直さず、失敗として報告します。\n
+     *  起動に失敗した子プロセスは、errno を含む診断を標準エラー出力へ書き、終了コード 127 で終了します。
+     *  権限のない候補があった場合は、ほかの候補が見つからなくても `EACCES` を報告します。
+     *  see: https://man7.org/linux/man-pages/man3/exec.3.html
+     *
      *  @par            スレッド セーフ
      *  本関数は条件付きスレッド セーフです。\n
      *  Linux 環境では、子プロセスへ引き継ぐため、自プロセスの環境変数を読み取ります。\n
@@ -245,7 +258,7 @@ extern "C"
      *  @return         結果コードを返します。
      *
      *  @details        @ref cplat_process_timed_run_sync() に @ref CPLAT_WAIT_FOREVER を渡した場合と
-     *                  同じ動作です。
+     *                  同じ動作です。Linux での PATH 探索規則は @ref cplat_process_start() に準じます。
      *                  Windows では起動オプションの UTF-8 文字列を厳密に変換し、不正な入力は
      *                  @ref CPLAT_ERR_INVALID_ENCODING を返します。
      *
@@ -272,6 +285,7 @@ extern "C"
      *  @details        待機が期限切れとなった場合は @ref cplat_process_terminate() で強制終了し、
      *                  @ref CPLAT_PROCESS_TERMINATE_WAIT_MS を上限として終了を待ってから
      *                  @ref CPLAT_ERR_TIMEOUT を返します (@p exit_code_out は @c EXIT_FAILURE のまま)。\n
+     *                  Linux での PATH 探索規則は @ref cplat_process_start() に準じます。\n
      *                  Linux の割り込み不可の待ち (@c ps の @c D 状態) にあるプロセスや、
      *                  Windows で実行中の I/O が完了または取り消されていないプロセスは、
      *                  強制終了を行っても上限内に終了しない場合があります。\n

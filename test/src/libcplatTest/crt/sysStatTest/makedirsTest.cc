@@ -11,7 +11,13 @@
 #if defined(PLATFORM_LINUX)
     #include <sys/mock_stat.h>
     #include <sys/stat.h>
-#endif /* PLATFORM_LINUX */
+    #include <unistd.h>
+#elif defined(PLATFORM_WINDOWS)
+    #include <mock_direct.h>
+    #include <sys/mock_stat.h>
+#endif /* PLATFORM_ */
+#include <filesystem>
+#include <fstream>
 
 using testing::_;
 using testing::InSequence;
@@ -453,8 +459,146 @@ TEST_F(makedirsTest, returns_unknown_when_intermediate_directory_cannot_be_creat
         nullptr); // [手順] - 中間ディレクトリの stat()、mkdir()、再 stat() が失敗する状態で cplat_makedirs() を呼び出す。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_UNKNOWN,
-              result); // [確認_異常系] - cplat_makedirs() の戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED,
+              result); // [確認_異常系] - cplat_makedirs() の戻り値が CPLAT_ERR_PERMISSION_DENIED であること。
+}
+
+// 競合で既存ディレクトリができた場合は成功し、通常ファイルがある場合は ENOTDIR で失敗することの確認 (Linux)
+TEST_F(makedirsTest, handles_race_and_non_directory_via_mocks_on_linux)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    cplat_error detail;
+    (void)mock_cplat;
+
+    // Pre-Assert
+    {
+        InSequence seq;
+        EXPECT_CALL(mock_sys_stat_, stat(_, _, _, StrEq("race_dir"), _))
+            .WillOnce(
+                [](const char *, int, const char *, const char *, struct stat *)
+                {
+                    errno = ENOENT;
+                    return -1;
+                });
+        EXPECT_CALL(mock_sys_stat_, mkdir(_, _, _, StrEq("race_dir"), _))
+            .WillOnce(
+                [](const char *, int, const char *, const char *, mode_t)
+                {
+                    errno = EEXIST;
+                    return -1;
+                });
+        EXPECT_CALL(mock_sys_stat_, stat(_, _, _, StrEq("race_dir"), _))
+            .WillOnce(
+                [](const char *, int, const char *, const char *, struct stat *st)
+                {
+                    st->st_mode = S_IFDIR | 0755;
+                    return 0;
+                });
+
+        EXPECT_CALL(mock_sys_stat_, stat(_, _, _, StrEq("race_file"), _))
+            .WillOnce(
+                [](const char *, int, const char *, const char *, struct stat *)
+                {
+                    errno = ENOENT;
+                    return -1;
+                });
+        EXPECT_CALL(mock_sys_stat_, mkdir(_, _, _, StrEq("race_file"), _))
+            .WillOnce(
+                [](const char *, int, const char *, const char *, mode_t)
+                {
+                    errno = EEXIST;
+                    return -1;
+                });
+        EXPECT_CALL(mock_sys_stat_, stat(_, _, _, StrEq("race_file"), _))
+            .WillOnce(
+                [](const char *, int, const char *, const char *, struct stat *st)
+                {
+                    st->st_mode = S_IFREG | 0644;
+                    return 0;
+                });
+    }
+
+    // Act
+    int rc_dir = cplat_makedirs("race_dir", &detail);
+    cplat_error file_detail;
+    int rc_file = cplat_makedirs("race_file", &file_detail);
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK, rc_dir);
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, rc_file);
+    EXPECT_EQ(1, cplat_error_is(&file_detail, CPLAT_CAUSE_NOT_A_DIRECTORY));
+    EXPECT_EQ(ENOTDIR, cplat_error_get_errno(&file_detail));
+}
+
+// mkdir が EACCES で失敗し再 stat が ENOENT で失敗した場合に、中間と末尾の両方で EACCES を保持することの確認 (Linux)
+TEST_F(makedirsTest, preserves_mkdir_eacces_at_intermediate_and_leaf_on_linux)
+{
+    // Arrange
+    cplat_error detail;
+
+    // Pre-Assert
+    {
+        InSequence seq;
+        EXPECT_CALL(mock_sys_stat_, stat(_, _, _, StrEq("perm_dir"), _))
+            .WillOnce(
+                [](const char *, int, const char *, const char *, struct stat *)
+                {
+                    errno = ENOENT;
+                    return -1;
+                });
+        EXPECT_CALL(mock_sys_stat_, mkdir(_, _, _, StrEq("perm_dir"), _))
+            .WillOnce(
+                [](const char *, int, const char *, const char *, mode_t)
+                {
+                    errno = EACCES;
+                    return -1;
+                });
+        EXPECT_CALL(mock_sys_stat_, stat(_, _, _, StrEq("perm_dir"), _))
+            .WillOnce(
+                [](const char *, int, const char *, const char *, struct stat *)
+                {
+                    errno = ENOENT;
+                    return -1;
+                });
+    }
+
+    // Act
+    int rc = cplat_makedirs("perm_dir/leaf", &detail);
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED, rc);
+    EXPECT_EQ(EACCES, cplat_error_get_errno(&detail));
+}
+
+// 実ファイル システム上で書き込み権限のない親ディレクトリ配下への作成が権限不足になることの確認 (Linux 非 root)
+TEST_F(makedirsTest, linux_non_root_reports_permission_denied_under_read_only_parent)
+{
+    // Arrange
+    if (::geteuid() == 0)
+    {
+        GTEST_SKIP() << "root では権限不足を再現できないため省略します。";
+    }
+    std::string root = "/tmp/cplat_makedirs_perm_test";
+    std::string nested = root + "/sub";
+    std::error_code ec;
+    (void)std::filesystem::remove_all(root, ec);
+    ASSERT_EQ(CPLAT_OK, cplat_mkdir(root.c_str(), nullptr));
+    ASSERT_EQ(0, ::chmod(root.c_str(), 0555));
+    cplat_error detail;
+
+    // Pre-Assert
+
+    // Act
+    int rc = cplat_makedirs(nested.c_str(), &detail);
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED, rc);
+    EXPECT_EQ(EACCES, cplat_error_get_errno(&detail));
+
+    // Cleanup
+    (void)::chmod(root.c_str(), 0755);
+    (void)std::filesystem::remove_all(root, ec);
 }
 #endif /* PLATFORM_LINUX */
 
@@ -525,5 +669,149 @@ TEST_F(makedirsTest, creates_non_ascii_directory_over_260_bytes_windows)
 
     // Cleanup
     (void)cplat_rmdir(target.c_str(), nullptr);
+}
+
+// 中間および末尾に通常ファイルがある場合に失敗し、既存ディレクトリがべき等に成功することの確認 (Windows)
+TEST_F(makedirsTest, rejects_non_directory_and_keeps_idempotency_windows)
+{
+    // Arrange
+    char temp_dir[PLATFORM_PATH_UTF8_MAX] = {};
+    ASSERT_EQ(CPLAT_OK, cplat_path_get_temp_dir(temp_dir, sizeof(temp_dir), nullptr));
+    std::string base = std::string(temp_dir) + "/cplat_makedirs_nondir_win";
+    std::error_code ec;
+    (void)std::filesystem::remove_all(base, ec);
+    ASSERT_EQ(CPLAT_OK, cplat_makedirs(base.c_str(), nullptr));
+
+    std::string regular_file = base + "/existing_file.txt";
+    {
+        std::ofstream ofs(regular_file, std::ios::binary);
+        ofs << "data";
+        ASSERT_TRUE(ofs.good());
+    }
+    std::string under_file = regular_file + "/child";
+    std::string existing_dir = base + "/existing_dir";
+    ASSERT_EQ(CPLAT_OK, cplat_makedirs(existing_dir.c_str(), nullptr));
+
+    cplat_error leaf_detail;
+    cplat_error mid_detail;
+    cplat_file_stat_t st = {};
+
+    // Pre-Assert
+
+    // Act
+    int rc_leaf = cplat_makedirs(regular_file.c_str(), &leaf_detail);
+    int rc_mid = cplat_makedirs(under_file.c_str(), &mid_detail);
+    int rc_idempotent = cplat_makedirs(existing_dir.c_str(), nullptr);
+    int rc_child_stat = cplat_stat(&st, nullptr, under_file.c_str());
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, rc_leaf);
+    EXPECT_EQ(1, cplat_error_is(&leaf_detail, CPLAT_CAUSE_NOT_A_DIRECTORY));
+    EXPECT_EQ(ENOTDIR, cplat_error_get_errno(&leaf_detail));
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, rc_mid);
+    EXPECT_EQ(1, cplat_error_is(&mid_detail, CPLAT_CAUSE_NOT_A_DIRECTORY));
+    EXPECT_EQ(ENOTDIR, cplat_error_get_errno(&mid_detail));
+    EXPECT_EQ(CPLAT_OK, rc_idempotent);
+    EXPECT_NE(CPLAT_OK, rc_child_stat);
+
+    // Cleanup
+    (void)std::filesystem::remove_all(base, ec);
+}
+
+// 競合生成・EACCES 保持・再確認非ディレクトリを Windows のモックで確認するテスト
+TEST_F(makedirsTest, handles_race_and_eacces_preservation_via_mocks_windows)
+{
+    // Arrange
+    NiceMock<Mock_sys_stat> mock_sys_stat;
+    NiceMock<Mock_direct> mock_direct;
+    cplat_error eacces_detail;
+    cplat_error race_dir_detail;
+    cplat_error race_file_detail;
+
+    // Pre-Assert
+    {
+        InSequence seq;
+        // 1) 中間階層の wmkdir が EACCES で失敗し、再確認 _wstat64 が ENOENT で失敗 -> EACCES を保持
+        EXPECT_CALL(mock_sys_stat, wstat64(_, _, _, testing::StrEq(L"C:/perm_mid"), _))
+            .WillOnce(
+                [](const char *, int, const char *, const wchar_t *, struct _stat64 *)
+                {
+                    errno = ENOENT;
+                    return -1;
+                });
+        EXPECT_CALL(mock_direct, wmkdir(_, _, _, testing::StrEq(L"C:/perm_mid")))
+            .WillOnce(
+                [](const char *, int, const char *, const wchar_t *)
+                {
+                    errno = EACCES;
+                    return -1;
+                });
+        EXPECT_CALL(mock_sys_stat, wstat64(_, _, _, testing::StrEq(L"C:/perm_mid"), _))
+            .WillOnce(
+                [](const char *, int, const char *, const wchar_t *, struct _stat64 *)
+                {
+                    errno = ENOENT;
+                    return -1;
+                });
+
+        // 2) wmkdir が EEXIST で失敗し、再確認 _wstat64 がディレクトリ -> CPLAT_OK
+        EXPECT_CALL(mock_sys_stat, wstat64(_, _, _, testing::StrEq(L"C:/race_dir"), _))
+            .WillOnce(
+                [](const char *, int, const char *, const wchar_t *, struct _stat64 *)
+                {
+                    errno = ENOENT;
+                    return -1;
+                });
+        EXPECT_CALL(mock_direct, wmkdir(_, _, _, testing::StrEq(L"C:/race_dir")))
+            .WillOnce(
+                [](const char *, int, const char *, const wchar_t *)
+                {
+                    errno = EEXIST;
+                    return -1;
+                });
+        EXPECT_CALL(mock_sys_stat, wstat64(_, _, _, testing::StrEq(L"C:/race_dir"), _))
+            .WillOnce(
+                [](const char *, int, const char *, const wchar_t *, struct _stat64 *st)
+                {
+                    st->st_mode = _S_IFDIR | 0755;
+                    return 0;
+                });
+
+        // 3) wmkdir が EEXIST で失敗し、再確認 _wstat64 が通常ファイル -> CPLAT_CAUSE_NOT_A_DIRECTORY
+        EXPECT_CALL(mock_sys_stat, wstat64(_, _, _, testing::StrEq(L"C:/race_file"), _))
+            .WillOnce(
+                [](const char *, int, const char *, const wchar_t *, struct _stat64 *)
+                {
+                    errno = ENOENT;
+                    return -1;
+                });
+        EXPECT_CALL(mock_direct, wmkdir(_, _, _, testing::StrEq(L"C:/race_file")))
+            .WillOnce(
+                [](const char *, int, const char *, const wchar_t *)
+                {
+                    errno = EEXIST;
+                    return -1;
+                });
+        EXPECT_CALL(mock_sys_stat, wstat64(_, _, _, testing::StrEq(L"C:/race_file"), _))
+            .WillOnce(
+                [](const char *, int, const char *, const wchar_t *, struct _stat64 *st)
+                {
+                    st->st_mode = _S_IFREG | 0644;
+                    return 0;
+                });
+    }
+
+    // Act
+    int rc_eacces = cplat_makedirs("C:/perm_mid/leaf", &eacces_detail);
+    int rc_race_dir = cplat_makedirs("C:/race_dir", &race_dir_detail);
+    int rc_race_file = cplat_makedirs("C:/race_file", &race_file_detail);
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED, rc_eacces);
+    EXPECT_EQ(EACCES, cplat_error_get_errno(&eacces_detail));
+    EXPECT_EQ(CPLAT_OK, rc_race_dir);
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, rc_race_file);
+    EXPECT_EQ(1, cplat_error_is(&race_file_detail, CPLAT_CAUSE_NOT_A_DIRECTORY));
+    EXPECT_EQ(ENOTDIR, cplat_error_get_errno(&race_file_detail));
 }
 #endif /* PLATFORM_WINDOWS */

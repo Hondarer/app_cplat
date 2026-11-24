@@ -426,18 +426,53 @@ static int setup_child_stdio(const cplat_process_options *options)
     return 0;
 }
 
+#ifndef NAME_MAX
+    #define NAME_MAX 255
+#endif /* NAME_MAX */
+
+/*
+ * PATH 環境変数から実行ファイルを探索して execve を試行する (Linux 子プロセス専用)。
+ * async-signal-safe な関数のみで実装するため、ヒープ確保は行わない。
+ *
+ * 探索規則は glibc の execvp (execvpe.c) に準拠するが、次の 3 点を意図的に異ならせる。
+ * - PATH は呼び出し元の環境ではなく子プロセス用の環境 (envp) から取得する
+ *   (起動する環境と探索する環境を一致させるため)。
+ * - PATH が未設定の場合だけでなく空文字列の場合も既定値 "/bin:/usr/bin" を使う
+ *   (空の PATH でカレント ディレクトリから予期せず実行しないため)。
+ * - ENOEXEC の場合に "/bin/sh" で再実行せず、そのまま ENOEXEC を報告する
+ *   (シェルの解釈を意図せず起こさないため)。
+ *
+ * see: https://raw.githubusercontent.com/bminor/glibc/master/posix/execvpe.c
+ * see: https://man7.org/linux/man-pages/man3/exec.3.html
+ */
 static void exec_with_path(char *const *argv, char *const *envp)
 {
     const char *path_value;
     const char *segment;
     const char *segment_end;
     size_t name_len;
+    int seen_eacces;
+    int executed_any;
+    int last_errno;
+
+    if (argv == NULL || argv[0] == NULL || argv[0][0] == '\0')
+    {
+        errno = ENOENT;
+        return;
+    }
 
     /* 実行ファイル名にパス区切り文字が含まれる場合は、PATH を走査せず直接実行する。 */
     if (strchr(argv[0], '/') != NULL)
     {
         /* execve は失敗した場合だけ戻り、errno を呼び出し元が報告するため、戻り値は明示的に破棄する。 */
         (void)execve(argv[0], argv, envp);
+        return;
+    }
+
+    name_len = strlen(argv[0]);
+    if (name_len > (size_t)NAME_MAX)
+    {
+        errno = ENAMETOOLONG;
         return;
     }
 
@@ -448,47 +483,84 @@ static void exec_with_path(char *const *argv, char *const *envp)
         path_value = "/bin:/usr/bin";
     }
 
-    name_len = strlen(argv[0]);
+    seen_eacces = 0;
+    executed_any = 0;
+    last_errno = ENOENT;
     segment = path_value;
 
-    /* PATH の各ディレクトリを走査し、実行ファイルを探索して起動を試行する。 */
-    while (*segment != '\0')
+    /* PATH の各区間を先頭から走査し、実行ファイルを探索して起動を試行する。 */
+    for (;;)
     {
         char candidate[PLATFORM_PATH_MAX];
+        const char *dir_ptr;
         size_t dir_len;
+        int reached_end;
 
         segment_end = strchr(segment, ':');
         if (segment_end == NULL)
         {
             segment_end = segment + strlen(segment);
-        }
-
-        dir_len = (size_t)(segment_end - segment);
-
-        /* 区切り文字が連続する場合など、空のセグメントはカレント ディレクトリを表す。 */
-        if (dir_len == 0)
-        {
-            dir_len = 1;
-            segment = ".";
-        }
-
-        if (dir_len + 1 + name_len + 1 <= sizeof(candidate))
-        {
-            memcpy(candidate, segment, dir_len);
-            candidate[dir_len] = '/';
-            memcpy(candidate + dir_len + 1, argv[0], name_len + 1);
-            /* 失敗した場合は次の候補を試し、最後の errno を呼び出し元が報告するため、戻り値は明示的に破棄する。 */
-            (void)execve(candidate, argv, envp);
-        }
-
-        if (*segment_end == '\0')
-        {
-            segment = segment_end;
+            reached_end = 1;
         }
         else
         {
-            segment = segment_end + 1;
+            reached_end = 0;
         }
+
+        dir_ptr = segment;
+        dir_len = (size_t)(segment_end - segment);
+
+        /* 先頭、途中、末尾の空の区間はカレント ディレクトリを表す。 */
+        if (dir_len == 0u)
+        {
+            dir_ptr = ".";
+            dir_len = 1u;
+        }
+
+        if (dir_len + 1u + name_len + 1u <= sizeof(candidate))
+        {
+            memcpy(candidate, dir_ptr, dir_len);
+            candidate[dir_len] = '/';
+            memcpy(candidate + dir_len + 1u, argv[0], name_len + 1u);
+
+            executed_any = 1;
+            /*
+             * 失敗時は errno で探索の継続・打ち切り・最終結果を決めるため、
+             * execve() の戻り値は明示的に破棄する。
+             */
+            (void)execve(candidate, argv, envp);
+            last_errno = errno;
+
+            if (last_errno == EACCES)
+            {
+                seen_eacces = 1;
+            }
+            else if (last_errno != ENOENT && last_errno != ESTALE && last_errno != ENOTDIR &&
+                     last_errno != ENODEV && last_errno != ETIMEDOUT)
+            {
+                return;
+            }
+        }
+
+        if (reached_end != 0)
+        {
+            break;
+        }
+
+        segment = segment_end + 1;
+    }
+
+    if (seen_eacces != 0)
+    {
+        errno = EACCES;
+    }
+    else if (executed_any == 0)
+    {
+        errno = ENAMETOOLONG;
+    }
+    else
+    {
+        errno = last_errno;
     }
 }
 
@@ -1194,17 +1266,23 @@ int cplat_process_get_executable_path(char *path_out, const size_t path_size)
     {
         ssize_t len;
 
-        if (path_size == 1)
-        {
-            path_out[0] = '\0';
-            return CPLAT_ERR_BUFFER_TOO_SMALL;
-        }
-
-        len = readlink("/proc/self/exe", path_out, path_size - 1);
+        /*
+         * readlink は終端の NUL を付けず、容量が足りない場合は bufsize で黙って切り詰める。
+         * 戻り値が bufsize (path_size) と等しい場合は切り詰めの可能性があり、
+         * 終端 NUL を置く余地もないため不足として扱う。
+         * see: https://man7.org/linux/man-pages/man2/readlink.2.html
+         */
+        len = readlink("/proc/self/exe", path_out, path_size);
         if (len < 0)
         {
             path_out[0] = '\0';
             return cplat_internal_result_from_errno(errno);
+        }
+
+        if (len == 0)
+        {
+            path_out[0] = '\0';
+            return CPLAT_ERR_UNKNOWN;
         }
 
         if ((size_t)len >= path_size)
