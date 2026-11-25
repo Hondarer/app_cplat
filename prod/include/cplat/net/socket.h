@@ -265,9 +265,9 @@ extern "C"
      *  設定後に実際に確保された大きさは、@ref cplat_socket_get_receive_buffer_size で取得します。
      *
      *  Linux は、設定値を 2 倍にして保持し (管理情報の分を含むため)、上限 (`net.core.rmem_max`) で
-     *  切り詰めます (see: https://man7.org/linux/man-pages/man7/socket.7.html )。\n
+     *  切り詰めます (see: https://man7.org/linux/man-pages/man7/socket.7.html)。\n
      *  Windows は、指定した大きさを `SO_RCVBUF` として要求します
-     *  (see: https://learn.microsoft.com/en-us/windows/win32/winsock/sol-socket-socket-options )。
+     *  (see: https://learn.microsoft.com/en-us/windows/win32/winsock/sol-socket-socket-options)。
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
