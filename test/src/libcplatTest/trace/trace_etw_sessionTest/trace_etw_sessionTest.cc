@@ -497,27 +497,25 @@ TEST_F(trace_etw_sessionTest, stop_handles_close_trace_success_and_pending_equiv
     EXPECT_CALL(mock_windows, OpenTraceW(_, _, _, _))
         .WillOnce(Return(handle_one))
         .WillOnce(Return(handle_two)); // [Pre-Assert確認_正常系] - 2 回の OpenTraceW() がそれぞれのハンドルを返すこと。
+    // 2 つのセッションの作業スレッドは並行して動き、ProcessTrace() を呼ぶ順序は決まらない。
+    // 呼び出しの順序で動作を割り当てると、1 つ目のセッションの停止条件を 2 つ目のスレッドが待ち、
+    // 1 つ目の join が待ち続けることがあるため、渡されたハンドルで、どちらのセッションかを判定する。
     EXPECT_CALL(mock_windows, ProcessTrace(_, _, _, _, 1UL, nullptr, nullptr))
-        .WillOnce(
-            [&sync_fail_path](const char *, const int, const char *, PROCESSTRACE_HANDLE *, ULONG, LPFILETIME,
-                              LPFILETIME)
+        .Times(2)
+        .WillRepeatedly(
+            [&sync_fail_path, &sync_ok_path, &handle_one](const char *, const int, const char *,
+                                                          PROCESSTRACE_HANDLE *handles, ULONG, LPFILETIME,
+                                                          LPFILETIME)
             {
-                std::unique_lock<std::mutex> lock(sync_fail_path.mtx);
-                const bool signaled = sync_fail_path.cv.wait_for(
-                    lock, std::chrono::seconds(5), [&sync_fail_path]() { return sync_fail_path.close_called; });
-                sync_fail_path.process_timed_out = !signaled;
+                const bool is_fail_path = (handles != nullptr) && (handles[0] == handle_one);
+                etw_stop_sync &sync = is_fail_path ? sync_fail_path : sync_ok_path;
+                std::unique_lock<std::mutex> lock(sync.mtx);
+                const bool signaled = sync.cv.wait_for(lock, std::chrono::seconds(5),
+                                                       [&sync, is_fail_path]()
+                                                       { return is_fail_path ? sync.close_called : sync.stop_succeeded; });
+                sync.process_timed_out = !signaled;
                 return static_cast<ULONG>(ERROR_SUCCESS);
-            })
-        .WillOnce(
-            [&sync_ok_path](const char *, const int, const char *, PROCESSTRACE_HANDLE *, ULONG, LPFILETIME, LPFILETIME)
-            {
-                std::unique_lock<std::mutex> lock(sync_ok_path.mtx);
-                const bool signaled = sync_ok_path.cv.wait_for(
-                    lock, std::chrono::seconds(5), [&sync_ok_path]() { return sync_ok_path.stop_succeeded; });
-                sync_ok_path.process_timed_out = !signaled;
-                return static_cast<ULONG>(ERROR_SUCCESS);
-            }); // [Pre-Assert確認_正常系] - 2 つの ProcessTrace() がそれぞれの停止条件まで待機して終了すること。
-
+            }); // [Pre-Assert確認_正常系] - 2 つの ProcessTrace() が、渡されたハンドルのセッションの停止条件まで待機して終了すること。
     {
         InSequence seq_fail;
         EXPECT_CALL(mock_windows, ControlTraceW(_, _, _, 13U, nullptr, _, EVENT_TRACE_CONTROL_STOP))
