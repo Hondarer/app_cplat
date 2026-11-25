@@ -850,7 +850,7 @@ Table: コマンド ライン引数解析における用途別 cplat API
 
 | 用途 | cplat API |
 |---|---|
-| パーサーを argc/argv とともに生成/初期化します (`cplat_argparser_init` は確保や複製の失敗を通知しない)。 | `cplat_argparser_handle_create` / `cplat_argparser_init` / `cplat_argparser_handle_dispose` |
+| パーサーを argc/argv とともに生成/初期化します (`cplat_argparser_init` は確保や複製の失敗で `CPLAT_ERR_OUT_OF_MEMORY` を返す)。 | `cplat_argparser_handle_create` / `cplat_argparser_init` / `cplat_argparser_handle_dispose` |
 | フラグ/オプション/位置引数を登録します。 | `cplat_argparser_register_flag` / `_register_option_int` / `_register_option_int_array` / `_register_option_string` / `_register_option_string_array` / `_register_positional_int` / `_register_positional_int_array` / `_register_positional_string` / `_register_positional_string_array` |
 | 登録エラーを確認します。 | `cplat_argparser_get_register_error` / `_get_register_error_count` / `_get_register_error_target` / `_get_register_error_message` / `_print_register_error_messages` |
 | 初期化時に受け取ったコマンド ラインを解析します。 | `cplat_argparser_parse` |

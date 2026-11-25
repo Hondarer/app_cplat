@@ -116,7 +116,12 @@ int main(int argc, char *argv[])
     argparser_sample_options options = {0};
     options.count_value = 1; /* 0 以外の既定値は解析前に設定する */
 
-    cplat_argparser_init(argc, argv, "cplat_argparser sample");
+    if (cplat_argparser_init(argc, argv, "cplat_argparser sample") != CPLAT_OK)
+    {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "引数の解析の準備に失敗しました。\n");
+        return EXIT_FAILURE;
+    }
 
     if (register_argparser(&options) != 0)
     {

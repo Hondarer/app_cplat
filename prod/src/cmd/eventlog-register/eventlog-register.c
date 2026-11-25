@@ -313,7 +313,12 @@ int main(int argc, char *argv[])
     int need_help = 0;
     const char *command = NULL;
 
-    cplat_argparser_init(argc, argv, "cplat 共通イベント ソースを登録または削除します。");
+    if (cplat_argparser_init(argc, argv, "cplat 共通イベント ソースを登録または削除します。") != CPLAT_OK)
+    {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "引数の解析の準備に失敗しました。\n");
+        return EXIT_FAILURE;
+    }
     /*
      * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
      * 登録の関数の戻り値は明示的に破棄する。

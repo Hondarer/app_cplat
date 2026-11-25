@@ -45,6 +45,7 @@ app/cplat/prod/cbin/argparser-sample -v
 
 - 解析結果の格納先を `argparser_sample_options` 構造体に集約します。
 - `cplat_argparser_init()` は `argc` と `argv` を受け取るため、main で呼び出します。
+- `cplat_argparser_init()` が失敗した場合は、`引数の解析の準備に失敗しました。` を標準エラー出力へ出力して `EXIT_FAILURE` で終了します。
 - 登録処理を `register_argparser()` という別関数に分離し、登録エラーの有無を `cplat_argparser_get_register_error_count()` でまとめて判定します。
 - 結果表示を `print_result()` に分離します。
 

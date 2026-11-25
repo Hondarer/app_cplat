@@ -1406,12 +1406,15 @@ static cplat_argparser *argparser_default_acquire(const int argc, char *const *a
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
-void cplat_argparser_init(const int argc, char *const *argv, const char *description)
+int cplat_argparser_init(const int argc, char *const *argv, const char *description)
 {
     cplat_argparser_options options = {0};
     options.program_description = description;
-    /* 失敗時は既定のパーサーを初期化しない状態に戻しており、呼び出し元へ伝える戻り値がないため、戻り値は明示的に破棄する。 */
-    (void)argparser_default_acquire(argc, argv, &options, 1);
+    if (argparser_default_acquire(argc, argv, &options, 1) == NULL)
+    {
+        return CPLAT_ERR_OUT_OF_MEMORY;
+    }
+    return CPLAT_OK;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */

@@ -74,7 +74,7 @@
     /* cplat/argparser/argparser.h */ \
     EXPORT_ENTRY(cplat_argparser_handle_create, \
                  cplat_argparser *(CPLAT_API *)(int argc, char *const *argv, const cplat_argparser_options *options)) \
-    EXPORT_ENTRY(cplat_argparser_init, void(CPLAT_API *)(int argc, char *const *argv, const char *description)) \
+    EXPORT_ENTRY(cplat_argparser_init, int(CPLAT_API *)(int argc, char *const *argv, const char *description)) \
     EXPORT_ENTRY(cplat_argparser_handle_dispose, void(CPLAT_API *)(cplat_argparser * parser)) \
     EXPORT_ENTRY(cplat_argparser_handle_register_flag, \
                  int(CPLAT_API *)(cplat_argparser * parser, const char *short_name, const char *long_name, \

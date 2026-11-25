@@ -43,7 +43,11 @@ API の詳細な引数説明は同ヘッダーの Doxygen コメントを参照�
 int main(int argc, char *argv[])
 {
     cplat_console_init();
-    cplat_argparser_init(argc, argv, "sample program");
+    if (cplat_argparser_init(argc, argv, "sample program") != CPLAT_OK)
+    { /* パーサーの確保や説明の複製に失敗した場合 */
+        fprintf(stderr, "引数の解析の準備に失敗しました。\n");
+        return EXIT_FAILURE;
+    }
 
     int need_help = 0;
     int count = 1; /* 既定値は解析前に設定する */
@@ -82,6 +86,7 @@ int main(int argc, char *argv[])
 ```
 
 `cplat_argparser_init()` には、解析対象の `argc` と `argv` を渡します。  
+パーサーの確保、名前や説明の複製、内部ロックの生成に失敗した場合は `CPLAT_ERR_OUT_OF_MEMORY` を返すため、戻り値を検査してください。  
 パーサーは `argv` を複製せずポインターを保持するため、解析結果を参照する間は `argv` を有効なまま維持してください。  
 `argv[0]` は usage に表示するプログラム名の既定値として使用します。  
 既定値は `argv[0]` のベース名から末尾の `.exe` を除いた名前です。  
@@ -311,12 +316,18 @@ cplat_argparser_get_usage(NULL, 0, &required_size);
 `cplat_argparser_init()` は登録済みのオプションと解析結果をすべて捨てるため、オプションの登録もやり直してください。
 
 ```c
-cplat_argparser_init(argc1, argv1, "sample program");
+if (cplat_argparser_init(argc1, argv1, "sample program") != CPLAT_OK)
+{
+    return EXIT_FAILURE;
+}
 register_options(&options); /* オプションを登録する */
 cplat_argparser_parse();
 /* ... 1 回目の結果を利用 ... */
 
-cplat_argparser_init(argc2, argv2, "sample program");
+if (cplat_argparser_init(argc2, argv2, "sample program") != CPLAT_OK)
+{
+    return EXIT_FAILURE;
+}
 register_options(&options); /* 再初期化で登録が捨てられるため、登録し直す */
 cplat_argparser_parse();
 /* ... 2 回目の結果を利用 ... */

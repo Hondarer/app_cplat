@@ -734,7 +734,7 @@ extern std::vector<char> mock_cplat_expand_format(const char *format, va_list ar
 // cplat/argparser/argparser.h
 extern cplat_argparser *delegate_real_cplat_argparser_handle_create(int argc, char *const *argv,
                                                                     const cplat_argparser_options *options);
-extern void delegate_real_cplat_argparser_init(int argc, char *const *argv, const char *description);
+extern int delegate_real_cplat_argparser_init(int argc, char *const *argv, const char *description);
 extern void delegate_real_cplat_argparser_handle_dispose(cplat_argparser *parser);
 extern int delegate_real_cplat_argparser_handle_register_flag(cplat_argparser *parser, const char *short_name,
                                                               const char *long_name, const char *description,
@@ -1743,7 +1743,7 @@ class Mock_cplat
     // cplat/argparser/argparser.h
     MOCK_METHOD(cplat_argparser *, cplat_argparser_handle_create,
                 (int, char *const *, const cplat_argparser_options *));
-    MOCK_METHOD(void, cplat_argparser_init, (int, char *const *, const char *));
+    MOCK_METHOD(int, cplat_argparser_init, (int, char *const *, const char *));
     MOCK_METHOD(void, cplat_argparser_handle_dispose, (cplat_argparser *));
     MOCK_METHOD(int, cplat_argparser_handle_register_flag,
                 (cplat_argparser *, const char *, const char *, const char *, int *));

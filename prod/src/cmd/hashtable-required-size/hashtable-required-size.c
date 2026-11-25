@@ -92,9 +92,14 @@ int main(int argc, char **argv)
 
     cplat_console_init();
 
-    cplat_argparser_init(argc, argv,
-                         "Print the management-region and data-region buffer sizes required to construct a hash "
-                         "table.");
+    if (cplat_argparser_init(argc, argv,
+                             "Print the management-region and data-region buffer sizes required to construct a hash "
+                             "table.") != CPLAT_OK)
+    {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "引数の解析の準備に失敗しました。\n");
+        return EXIT_FAILURE;
+    }
 
     if (register_options(&options) != 0)
     {
