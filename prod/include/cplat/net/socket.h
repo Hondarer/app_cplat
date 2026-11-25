@@ -568,7 +568,7 @@ extern "C"
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
      *  @return         受信可能になった場合は @ref CPLAT_OK 、タイムアウトした場合は @ref CPLAT_ERR_TIMEOUT
-     *                  (@p detail_out には Linux では @c ETIMEDOUT 、Windows では @c WSAETIMEDOUT を格納) 、
+     *                  (@p detail_out には Linux では @c ETIMEDOUT 、Windows では @c WSAETIMEDOUT を格納)、
      *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  待機がシグナルで中断された場合は、残り時間を再計算して待機を継続します。\n
@@ -607,7 +607,7 @@ extern "C"
      *                             負値を渡した場合は @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
      *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
      *  @return         送信可能になった場合は @ref CPLAT_OK 、タイムアウトした場合は @ref CPLAT_ERR_TIMEOUT
-     *                  (@p detail_out には Linux では @c ETIMEDOUT 、Windows では @c WSAETIMEDOUT を格納) 、
+     *                  (@p detail_out には Linux では @c ETIMEDOUT 、Windows では @c WSAETIMEDOUT を格納)、
      *                  @ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
      *
      *  待機がシグナルで中断された場合は、残り時間を再計算して待機を継続します。\n
