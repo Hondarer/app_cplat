@@ -14,14 +14,14 @@ Win32 のナロー文字列は現在のコード ページで解釈されるた�
 
 ## 機能要件
 
+Table: Win32 UTF-8 ラッパー機能の機能要件一覧
+
 | 要件 ID | cplat の要件 |
 |---|---|
 | `CPLAT-WIN32-FUNC-001` <!-- cplat-req: uuid=6fdd4aeb-61c2-45c1-8a2e-b87e281b4af2 --> | cplat の Win32 UTF-8 ラッパー機能は、文字列を入力として受け取る Win32 API へ、UTF-8 の文字列を渡せるようにします。 |
 | `CPLAT-WIN32-FUNC-002` <!-- cplat-req: uuid=addfc3db-753d-4cbd-848d-61e2349f9fe9 --> | cplat の Win32 UTF-8 ラッパー機能は、Win32 API が出力する文字列を UTF-8 で受け取れるようにします。 |
 | `CPLAT-WIN32-COMP-001` <!-- cplat-req: uuid=03278f72-ad59-4021-a4b6-116533adfef9 --> | cplat の Win32 UTF-8 ラッパー機能は、ラップ対象の Win32 API が持つ成功、失敗、詳細エラーの意味を、文字列変換後も維持します。 |
 | `CPLAT-WIN32-CONS-001` <!-- cplat-req: uuid=74287743-3338-4225-a0a5-97bbca0f70c9 --> | cplat の Win32 UTF-8 ラッパー機能は、文字列を入力または出力に使用する Win32 API だけを UTF-8 境界の対象とします。 |
-
-Table: Win32 UTF-8 ラッパー機能の機能要件一覧
 
 ## 対象の範囲
 

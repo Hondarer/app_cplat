@@ -45,13 +45,13 @@ app へ移す際は、項目 1 と項目 3 を `prod/include/<lib>/` の公開�
 
 `int sample_file_copy_if_newer(const char *from_path, const char *to_path, cplat_error *detail_out);`
 
+Table: sample_file_copy_if_newer 関数の引数仕様
+
 | 引数 | 方向 | 意味 |
 |------|------|------|
 | `from_path` | `[in]` | コピー元のパス (UTF-8)。NULL を渡してはなりません |
 | `to_path` | `[in]` | コピー先のパス (UTF-8)。NULL を渡してはなりません |
 | `detail_out` | `[out]` | エラー詳細の格納先。NULL を許容します |
-
-Table: sample_file_copy_if_newer 関数の引数仕様
 
 `detail_out` の扱いは cplat の既存 API と同じです。  
 NULL を指定した場合は詳細を返さず、NULL 以外を指定した場合は成功時に空の値を格納します。
@@ -60,6 +60,8 @@ NULL を指定した場合は詳細を返さず、NULL 以外を指定した場�
 
 戻り値は app ごとの共通結果コード群です。  
 成功は 0 のみ、エラーは負値、エラーではない省略は正値とし、cplat の `CPLAT_SKIPPED` と同じ考え方を採ります。
+
+Table: sample_file_copy_if_newer 関数の結果コード一覧
 
 | コード | 値 | 意味 |
 |--------|-----|------|
@@ -70,8 +72,6 @@ NULL を指定した場合は詳細を返さず、NULL 以外を指定した場�
 | `SAMPLE_ERR_NOT_FOUND` | -3 | いずれかが通常ファイルとして存在しません |
 | `SAMPLE_ERR_SIZE_MISMATCH` | -4 | ファイル サイズが一致しません |
 | `SAMPLE_ERR_OUT_OF_MEMORY` | -5 | 転送バッファーを確保できません |
-
-Table: sample_file_copy_if_newer 関数の結果コード一覧
 
 `SAMPLE_SKIPPED` は失敗ではありません。  
 呼び出し側は判定を `!= SAMPLE_OK` ではなく、目的に応じてコード名との比較で行ってください。
@@ -199,12 +199,12 @@ Coverity にソース内の `#pragma` で欠陥を抑制する機構はなく、
 [C/C++ プラットフォーム抽象化ガイドライン](../platform-abstraction-guideline.md) に従い、`_WIN32` や `_MSC_VER` を直接使わず `PLATFORM_LINUX` と `PLATFORM_WINDOWS` で分岐します。  
 分岐の順は Linux、Windows の順です。
 
+Table: ファイル状態取得におけるプラットフォーム差異
+
 | 項目 | Linux | Windows |
 |------|-------|---------|
 | `cplat_file_stat_t` の実体 | `struct stat` | `struct _stat64` |
 | `st_size` の型 | `off_t` | `__int64` |
-
-Table: ファイル状態取得におけるプラットフォーム差異
 
 `st_size` は型が異なるため、`int64_t` へそろえて比較します。  
 `long` は LP64 と LLP64 で幅が変わるため使いません。
@@ -218,6 +218,8 @@ Table: ファイル状態取得におけるプラットフォーム差異
 本関数は、通常ファイルの判定と最終更新日時の扱いを cplat の API に委ねます。  
 利用側に OS 差異が漏れないのは、次の API が差異を内部で吸収するためです。
 
+Table: ファイル コピー処理で OS 差異を吸収する cplat API
+
 | ヘッダー | API | 役割 |
 |----------|-----|------|
 | `cplat/crt/sys/stat.h` | `cplat_file_stat_is_regular` | 通常ファイルかどうかを OS 差異なしに判定します |
@@ -225,8 +227,6 @@ Table: ファイル状態取得におけるプラットフォーム差異
 | `cplat/crt/file.h` | `cplat_file_set_modified_timestamp` | 開いているファイルの最終更新日時を設定します |
 | `cplat/crt/file.h` | `cplat_file_get_path_modified_timestamp` | パスが指すファイルの最終更新日時をサブ秒で取得します |
 | `cplat/crt/file.h` | `cplat_file_set_path_modified_timestamp` | パスが指すファイルの最終更新日時を設定します |
-
-Table: ファイル コピー処理で OS 差異を吸収する cplat API
 
 ### 通常ファイルの判定
 

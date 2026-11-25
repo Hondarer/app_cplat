@@ -12,32 +12,32 @@
  *
  *  検出されたコンパイラに応じて、以下のマクロを定義します。
  *
+ *  Table: コンパイラの識別マクロとバージョン形式
+ *
  *  | コンパイラ | 識別マクロ       | COMPILER_NAME | COMPILER_VERSION の形式             |
  *  | ---------- | ---------------- | ------------- | ----------------------------------- |
  *  | GCC        | COMPILER_GCC     | "GCC"         | major * 10000 + minor * 100 + patch |
  *  | MSVC       | COMPILER_MSVC    | "MSVC"        | _MSC_VER の値 (例: 1943)            |
  *  | その他     | COMPILER_UNKNOWN | "Unknown"     | 0                                   |
  *
- *  Table: コンパイラの識別マクロとバージョン形式
- *
  *  @section        inline_control インライン制御マクロ
  *
  *  コンパイラごとに異なるインライン強制・抑制の構文を、統一的なマクロで提供します。
+ *
+ *  Table: コンパイラ別のインライン制御マクロ
  *
  *  | マクロ名     | GCC                                   | MSVC                  | その他 |
  *  | ------------ | ------------------------------------- | --------------------  | ------ |
  *  | FORCE_INLINE | inline __attribute__((always_inline)) | __forceinline         | inline |
  *  | NO_INLINE    | __attribute__((noinline))             | __declspec(noinline)  | (空)   |
  *
- *  Table: コンパイラ別のインライン制御マクロ
- *
  *  @section        thread_local_storage スレッド ローカル記憶域マクロ
+ *
+ *  Table: コンパイラ別のスレッド ローカル記憶域マクロ
  *
  *  | マクロ名              | GCC の C        | GCC の C++     | MSVC                 | その他 |
  *  | --------------------- | --------------- | -------------- | -------------------- | ------ |
  *  | THREAD_LOCAL          | `_Thread_local` | `thread_local` | `__declspec(thread)` | (空)   |
- *
- *  Table: コンパイラ別のスレッド ローカル記憶域マクロ
  *
  *  @section        usage 使用例
     @code{.c}

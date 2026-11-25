@@ -24,6 +24,8 @@
  *  失敗時は @p detail_out とスレッド ローカルの直前値 (cplat_error_get_last()) に errno を記録し、
  *  成功時は両方をクリアします。
  *
+ *  Table: 主な失敗と結果コード
+ *
  *  | 状況 | 結果コード |
  *  | --- | --- |
  *  | 権限不足 (`EPERM`、`EACCES`) | @ref CPLAT_ERR_PERMISSION_DENIED |
@@ -31,8 +33,6 @@
  *  | カーネルが機能に対応しない | @ref CPLAT_ERR_UNSUPPORTED |
  *  | 引数の誤り (cplat の検査、`EINVAL`) | @ref CPLAT_ERR_INVALID_ARGUMENT |
  *  | デッド ラインの帯域不足 (`EBUSY`) | @ref CPLAT_ERR_BUSY |
- *
- *  Table: 主な失敗と結果コード
  *
  *  権限不足の原因 (ケーパビリティ、`RLIMIT_RTPRIO` / `RLIMIT_NICE`、cgroup のリアルタイム帯域) は、
  *  OS が同じ errno を返すため区別できません。\n

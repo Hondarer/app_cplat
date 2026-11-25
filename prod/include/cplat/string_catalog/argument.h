@@ -46,6 +46,8 @@ extern "C"
      *
      *  種別ごとに、可変長引数へ渡す型と文字列表現が次のとおり決まります。
      *
+     *  Table: 文字列カタログ引数の種別と渡す型
+     *
      *  | 種別                                          | 渡す型          | 文字列表現の例         |
      *  | --------------------------------------------- | --------------- | ---------------------- |
      *  | @ref CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED     | なし            | なし                   |
@@ -68,8 +70,6 @@ extern "C"
      *  | @ref CPLAT_STRING_CATALOG_ARGUMENT_KIND_POINTER    | `const void *`  | `0x00007fffa1234567`   |
      *  | @ref CPLAT_STRING_CATALOG_ARGUMENT_KIND_DOUBLE     | `double`        | `12.5`                 |
      *  | @ref CPLAT_STRING_CATALOG_ARGUMENT_KIND_ERROR_CODE | `int`           | `2 (0x00000002)`       |
-     *
-     *  Table: 文字列カタログ引数の種別と渡す型
      *
      *  16 進表現は、桁数を種別で固定し、英小文字で出力します。\n
      *  @ref CPLAT_STRING_CATALOG_ARGUMENT_KIND_CHAR は、ASCII の印字可能な範囲 (`0x20` から `0x7e`) を

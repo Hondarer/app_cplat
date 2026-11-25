@@ -11,6 +11,8 @@
  *
  *  @section        clock_comparison クロックの比較
  *
+ *  Table: 単調増加クロックと実時刻クロックの比較
+ *
  *  | 項目                  | 単調増加クロック               | 実時刻クロック                        |
  *  | --------------------- | ------------------------------ | ------------------------------------- |
  *  | 対応関数              | cplat_clock_get_monotonic_ms()\n cplat_clock_get_monotonic() | cplat_clock_get_realtime() |
@@ -20,8 +22,6 @@
  *  | 精度 (Linux)          | ナノ秒                         | ナノ秒                                |
  *  | 精度 (Windows)        | カウンター周波数に依存 | 100 [ns] (FILETIME)                   |
  *  | 主な用途              | 経過時間測定・タイムアウト判定 | 実時刻の刻印 (ログ・セッション ID 等) |
- *
- *  Table: 単調増加クロックと実時刻クロックの比較
  *
  *  @section        clock_usage 使い分けの指針
  *
@@ -84,14 +84,14 @@ extern "C"
      *
      *  返す値の特性:
      *
+     *  Table: cplat_clock_get_monotonic_ms の返す値の特性
+     *
      *  | 項目                  | Linux                            | Windows                          |
      *  | --------------------- | -------------------------------- | -------------------------------- |
      *  | 基準点                | 未規定                           | 未規定                           |
      *  | 内部 API              | `clock_gettime(CLOCK_MONOTONIC)` | `QueryPerformanceCounter()` / `QueryPerformanceFrequency()` |
      *  | 精度                  | ナノ秒 (ms に切り捨て)           | カウンター周波数に依存 (ms に切り捨て) |
      *  | オーバーフロー        | 実質なし (uint64_t)              | 実質なし (uint64_t, ～5.8 億年)  |
-     *
-     *  Table: cplat_clock_get_monotonic_ms の返す値の特性
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -136,6 +136,8 @@ extern "C"
      *
      *  返す値の特性:
      *
+     *  Table: cplat_clock_get_monotonic の返す値の特性
+     *
      *  | 項目                  | Linux                            | Windows                           |
      *  | --------------------- | -------------------------------- | --------------------------------- |
      *  | 基準点                | 未規定                           | 未規定                            |
@@ -143,8 +145,6 @@ extern "C"
      *  | tv_nsec の範囲        | 0 ～ 999,999,999                 | 0 ～ 999,999,999 (カウンター周波数に依存) |
      *  | 時刻同期の補正        | 不連続な変更の影響なし。漸進的な補正の影響あり | 実時刻の変更や時刻同期から独立 |
      *  | サスペンド中          | 進まない                         | 進む (スリープ・休止を含む)       |
-     *
-     *  Table: cplat_clock_get_monotonic の返す値の特性
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。
@@ -202,14 +202,14 @@ extern "C"
      *
      *  返す値の特性:
      *
+     *  Table: cplat_clock_get_realtime の返す値の特性
+     *
      *  | 項目                  | Linux                           | Windows                               |
      *  | --------------------- | ------------------------------- | ------------------------------------- |
      *  | 内部 API              | `clock_gettime(CLOCK_REALTIME)` | `GetSystemTimeAsFileTime()`           |
      *  | 基準点                | Unix epoch (1970-01-01)         | Unix epoch に変換 (内部は 1601-01-01) |
      *  | 精度                  | ナノ秒                          | 100 [ns] (tv_nsec は 100 [ns] 刻み)   |
      *  | NTP 補正の影響        | 受ける                          | 受ける                                |
-     *
-     *  Table: cplat_clock_get_realtime の返す値の特性
      *
      *  @par            スレッド セーフ
      *  本関数はスレッド セーフです。

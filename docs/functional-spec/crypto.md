@@ -15,6 +15,8 @@
 
 ## 機能要件
 
+Table: 暗号機能の機能要件一覧
+
 | 要件 ID | cplat の要件 |
 |---|---|
 | `CPLAT-CRYPTO-FUNC-001` <!-- cplat-req: uuid=836f4f05-235f-47cd-b75a-bad40d0489ad --> | cplat の暗号機能は、バイト列を認証付きで暗号化し、復号時に認証タグを検証します。 |
@@ -24,8 +26,6 @@
 | `CPLAT-CRYPTO-FUNC-003` <!-- cplat-req: uuid=fa3162be-c6a4-422e-98cb-392ec449fb35 --> | cplat の暗号機能は、パスフレーズから暗号化に使用できる固定長の鍵を導出します。 |
 | `CPLAT-CRYPTO-QUAL-001` <!-- cplat-req: uuid=c60d6ba2-c8ff-4970-8002-15ca4e5ab8e2 --> | cplat の暗号機能は、暗号用途に使用できる予測困難な乱数を OS の暗号論的乱数源から取得します。 |
 | `CPLAT-CRYPTO-QUAL-002` <!-- cplat-req: uuid=547b171d-8cec-4d9a-bf32-efa6ee95dd90 --> | cplat の暗号機能は、認証タグが一致しない暗号文を平文として受け入れません。 |
-
-Table: 暗号機能の機能要件一覧
 
 ## 暗号化の形式
 

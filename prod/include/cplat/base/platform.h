@@ -13,24 +13,24 @@
  *
  *  検出されたプラットフォームに応じて、以下のマクロを定義します。
  *
+ *  Table: プラットフォームの識別マクロと名称
+ *
  *  | プラットフォーム | 識別マクロ           | PLATFORM_NAME       |
  *  | ---------------- | -------------------- | ------------------- |
  *  | Windows          | PLATFORM_WINDOWS     | "Windows"           |
  *  | Linux            | PLATFORM_LINUX       | "Linux"             |
  *  | その他           | PLATFORM_UNKNOWN     | "Unknown"           |
  *
- *  Table: プラットフォームの識別マクロと名称
- *
  *  @section        arch_detection アーキテクチャー検出マクロ
  *
  *  検出されたアーキテクチャーに応じて、以下のマクロを定義します。
+ *
+ *  Table: アーキテクチャーの名称
  *
  *  | アーキテクチャ | ARCH_NAME |
  *  | -------------- | --------- |
  *  | x86_64         | "x64"     |
  *  | その他         | "Unknown" |
- *
- *  Table: アーキテクチャーの名称
  *
  *  @copyright      Copyright (C) Tetsuo Honda. 2025-2026. All rights reserved.
  *

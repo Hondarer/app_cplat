@@ -55,13 +55,13 @@ cplat_memory_lock_scope_release(cplat_memory_lock_scope *scope);
 
 `options->flags` には次の flag を指定できます。
 
+Table: メモリ ロック options->flags のフラグと OS 別動作
+
 | flag | Linux | Windows |
 |---|---|---|
 | `CPLAT_MEMORY_LOCK_CURRENT` | 現在マップ済みのページを対象にします。 | 現在の committed region を列挙して対象にします。 |
 | `CPLAT_MEMORY_LOCK_FUTURE` | 今後追加されるマッピングも対象にします。 | 未対応です。 |
 | `CPLAT_MEMORY_LOCK_ONFAULT` | ページ フォルト時にロックします。 | 未対応です。 |
-
-Table: メモリ ロック options->flags のフラグと OS 別動作
 
 `options == NULL`、`flags == 0`、または未知の bit を含む場合は `CPLAT_ERR_INVALID_ARGUMENT` を返します。  
 Windows で `CPLAT_MEMORY_LOCK_FUTURE` または `CPLAT_MEMORY_LOCK_ONFAULT` を指定した場合は `CPLAT_ERR_UNSUPPORTED` を返します。
@@ -201,6 +201,8 @@ Windows の `scope` は `VirtualLock()` に成功した範囲を記録します�
 結果コードは cplat 共通の結果コード (`int`、`cplat/base/result.h` 参照) で返します。  
 本 API で実際に返しうるコードは次のとおりです。
 
+Table: メモリ ロック API が返す結果コードと意味
+
 | 結果コード | 意味 |
 |---|---|
 | `CPLAT_OK` | 成功。 |
@@ -209,8 +211,6 @@ Windows の `scope` は `VirtualLock()` に成功した範囲を記録します�
 | `CPLAT_ERR_PERMISSION_DENIED` | 権限不足。 |
 | `CPLAT_ERR_LIMIT_EXCEEDED` | ロック可能量またはリソース上限を超過。 |
 | `CPLAT_ERR_UNKNOWN` | 上記以外の OS エラー。 |
-
-Table: メモリ ロック API が返す結果コードと意味
 
 errno および Windows の `GetLastError()` の値は、共通ヘルパー `cplat_internal_result_from_errno()` / `cplat_internal_result_from_windows_error()` (`cplat/base/result_internal.h`) を通じて結果コードへ変換します。  
 ただし、ロック可能量の上限超過を示すエラーはこの API に固有の意味を持つため、共通ヘルパーより前段で個別に判定します。

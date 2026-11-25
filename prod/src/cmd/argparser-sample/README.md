@@ -12,6 +12,8 @@ short-title: "argparser-sample"
 
 ## 受け付ける引数
 
+Table: argparser-sample のコマンド ライン引数一覧
+
 | 引数 | 種別 | 説明 |
 |---|---|---|
 | `-h`, `--help` | フラグ | usage を表示して終了する (必須引数の省略より優先) |
@@ -21,8 +23,6 @@ short-title: "argparser-sample"
 | `-i DIR`, `--include DIR` | 複数値オプション (文字列、最大 4 回) | インクルード ディレクトリ |
 | `input` | 位置引数 (必須) | 入力ファイル |
 | `output` | 位置引数 (任意) | 出力ファイル |
-
-Table: argparser-sample のコマンド ライン引数一覧
 
 ## ビルドと実行
 

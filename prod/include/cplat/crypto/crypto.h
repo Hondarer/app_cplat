@@ -8,12 +8,12 @@
  *
  *  プラットフォームごとに異なる暗号 API を共通インターフェイスで抽象化します。\n
  *
+ *  Table: プラットフォーム別の暗号ライブラリとアルゴリズム
+ *
  *  | OS      | 使用ライブラリ                                           | アルゴリズム    |
  *  | ------- | -------------------------------------------------------- | --------------- |
  *  | Linux   | OpenSSL (libcrypto) EVP_aes_256_gcm() / EVP_sha256()     | AES-256-GCM / SHA-256 |
  *  | Windows | CNG (BCrypt) BCRYPT_AES_ALGORITHM / BCRYPT_SHA256_ALGORITHM | AES-256-GCM / SHA-256 |
- *
- *  Table: プラットフォーム別の暗号ライブラリとアルゴリズム
  *
  *  暗号化ペイロードのフォーマット:
     @code

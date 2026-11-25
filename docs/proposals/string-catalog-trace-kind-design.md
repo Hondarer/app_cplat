@@ -126,6 +126,8 @@
 トレース種別のカタログ項目は、次の 6 個の文脈引数を持ちます。  
 これらの引数定義は生成器が出力するため、カタログ定義へ記載しません。
 
+Table: トレース種別の文脈引数仕様
+
 | 位置指定 | 引数名 | 引数種別 | 値の取得元 |
 |---|---|---|---|
 | `{40}` | `source_file_path` | `STRING` | `__FILE__` |
@@ -134,8 +136,6 @@
 | `{43}` | `function_name` | `STRING` | `__func__` |
 | `{44}` | `process_id` | `UINT32` | `cplat_process_get_pid()` |
 | `{45}` | `thread_id` | `UINT32` | `cplat_process_get_tid()` |
-
-Table: トレース種別の文脈引数仕様
 
 ### ソース ファイル名の取得方法
 
@@ -194,6 +194,8 @@ glibc がラッパー関数 `gettid()` を提供するのは 2.30 以降であ�
 
 ### 種別ごとの差分
 
+Table: message カタログと trace カタログの仕様差分
+
 | 観点 | `message` | `trace` |
 |---|---|---|
 | 生成物の出力先 | 呼び出し側のバッファー | トレーサーのハンドル |
@@ -202,8 +204,6 @@ glibc がラッパー関数 `gettid()` を提供するのは 2.30 以降であ�
 | 分類値の記載 | `category` へ整数で記載する | `level` へ `cplat_trace_level` の名前で記載し、生成器が整数へ変換する |
 | `id` | 省略できる | 必須とする |
 | 生成物が参照するヘッダー | 文字列カタログの公開ヘッダー | 文字列カタログ、トレース、実行時支援の公開ヘッダー |
-
-Table: message カタログと trace カタログの仕様差分
 
 トレース種別で `id` を必須とする理由は、言語の設定によらず項目を識別できる文字列を、ログの検索と条件式の記述で使用するためです。
 
@@ -343,6 +343,8 @@ sample_trace_key_file_open_failed("config.json", 2);
 値は `CPLAT_TRACE_LEVEL_CRITICAL` より小さい負の値とし、`CPLAT_TRACE_LEVEL_FORCE_CRITICAL` を -7、`CPLAT_TRACE_LEVEL_FORCE_NONE` を -1 とします。  
 通常のレベルとの相互変換は 7 の加減算だけで行えます。
 
+Table: トレース強制出力レベル定数と通常レベルの対応
+
 | 定数 | 値 | 対応する通常のレベル |
 |---|---|---|
 | `CPLAT_TRACE_LEVEL_FORCE_CRITICAL` | -7 | `CPLAT_TRACE_LEVEL_CRITICAL` |
@@ -352,8 +354,6 @@ sample_trace_key_file_open_failed("config.json", 2);
 | `CPLAT_TRACE_LEVEL_FORCE_VERBOSE` | -3 | `CPLAT_TRACE_LEVEL_VERBOSE` |
 | `CPLAT_TRACE_LEVEL_FORCE_DEBUG` | -2 | `CPLAT_TRACE_LEVEL_DEBUG` |
 | `CPLAT_TRACE_LEVEL_FORCE_NONE` | -1 | `CPLAT_TRACE_LEVEL_NONE` |
-
-Table: トレース強制出力レベル定数と通常レベルの対応
 
 しきい値の判定は「出力要求のレベルがしきい値と同じかより重いこと」であり、しきい値が `CPLAT_TRACE_LEVEL_NONE` の場合だけ出力しません。  
 強制出力のレベル帯は、どの通常のしきい値よりも小さいため、判定処理を変更せずに通過します。  
@@ -429,6 +429,8 @@ syslog、EventLog、ETW への変換では、強制出力のレベル帯を個�
 
 各段階の状況を、着手および完了のたびに更新します。
 
+Table: トレース種別カタログ機能の実装進捗
+
 | 段階 | 状況 |
 |---|---|
 | 第 1 段階: スレッド ID の取得 | 完了 (2026/09/20) |
@@ -437,8 +439,6 @@ syslog、EventLog、ETW への変換では、強制出力のレベル帯を個�
 | 第 3.5 段階: 強制出力のレベル帯 | 完了 (2026/09/20) |
 | 第 4 段階: サンプルの追加 | 完了 (2026/09/20) |
 | 第 5 段階: 条件式フィルターとの接続 | 未着手 (条件式フィルターの第 1 段階の完了が前提) |
-
-Table: トレース種別カタログ機能の実装進捗
 
 ### 第 1 段階で設計から変更した事項
 

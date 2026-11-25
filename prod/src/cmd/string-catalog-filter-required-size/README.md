@@ -11,13 +11,13 @@ short-title: "string-catalog-filter-required-size"
 
 ## 受け付ける引数
 
+Table: string-catalog-filter-required-size のコマンド ライン引数一覧
+
 | 引数 | 種別 | 説明 |
 |---|---|---|
 | `-h`, `--help` | フラグ | usage を表示して終了する |
 | `-l N`, `--line-capacity N` | 値付きオプション (int、必須) | 条件式の行数の上限。1 以上 1024 以下 |
 | `-w N`, `--line-width N` | 値付きオプション (int、必須) | 条件式 1 行のバイト数。8 以上 1024 以下 |
-
-Table: string-catalog-filter-required-size のコマンド ライン引数一覧
 
 範囲外の値を指定した場合は、エラー メッセージを標準エラー出力へ出力して `EXIT_FAILURE` で終了します。  
 フィルター スロットを作成できる範囲と同じです。

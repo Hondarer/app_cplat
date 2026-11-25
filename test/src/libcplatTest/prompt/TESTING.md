@@ -11,6 +11,8 @@ Windows のカバレッジ計測は行カバレッジのみを対象とします
 `prompt_linux.c` は 2026-10-22 の計測値です。  
 その他は、絵文字の文字化け対策を反映した 2026-10-24 の計測値です。
 
+Table: prompt 系テストのカバレッジ計測結果
+
 | 対象ソース | テスト ディレクトリ | テスト数 | 行カバレッジ | C2 カバレッジ |
 |---|---|---:|---:|---:|
 | `prompt_edit.c` | `promptEditTest` | 63 | 100% (278/278) | 100% (230/230) |
@@ -18,8 +20,6 @@ Windows のカバレッジ計測は行カバレッジのみを対象とします
 | `prompt.c` | `promptTest` | 72 | 100% (391/391) | 100% (202/202) |
 | `pinned_prompt.c` | `pinnedPromptTest` | 78 | 100% (772/772) | 100% (414/414) |
 | `prompt_windows.c` | `promptWindowsTest` | 18 | Linux では計測対象外 | Linux では計測対象外 |
-
-Table: prompt 系テストのカバレッジ計測結果
 
 Windows では `promptEditTest` 63 件、`promptTest` 72 件、`pinnedPromptTest` 47 件、`promptWindowsTest` 18 件が成功しました。  
 固定プロンプト (`pinned_prompt.c`) の最新の除外適用前の C2 カバレッジは 416/418 です。  

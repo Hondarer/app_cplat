@@ -10,12 +10,12 @@
  *  `struct sockaddr_in` を公開面へ出さないため、利用側はシステムのソケット ヘッダーへ
  *  依存せずにアドレスを扱えます。
  *
+ *  Table: プラットフォーム別のアドレス処理 API
+ *
  *  | OS      | 使用 API                                        |
  *  | ------- | ----------------------------------------------- |
  *  | Linux   | `inet_pton` / `inet_ntop` / `getaddrinfo`        |
  *  | Windows | `inet_pton` / `inet_ntop` / `getaddrinfo` (Winsock) |
- *
- *  Table: プラットフォーム別のアドレス処理 API
  *
  *  @copyright      Copyright (C) Tetsuo Honda. 2026. All rights reserved.
  *

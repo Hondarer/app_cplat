@@ -20,14 +20,14 @@
  *  失敗時は @p detail_out とスレッド ローカルの直前値 (cplat_error_get_last()) に Windows エラーを記録し、
  *  成功時と省略時は両方をクリアします。
  *
+ *  Table: 主な失敗と結果コード
+ *
  *  | 状況 | 結果コード |
  *  | --- | --- |
  *  | 対象を開けない、または特権が不足する (`ERROR_ACCESS_DENIED`、`ERROR_PRIVILEGE_NOT_HELD`) | @ref CPLAT_ERR_PERMISSION_DENIED |
  *  | 対象が存在しない (対象を開くときの `ERROR_INVALID_PARAMETER`) | @ref CPLAT_ERR_NOT_FOUND |
  *  | OS が機能に対応しない (`ERROR_NOT_SUPPORTED` など) | @ref CPLAT_ERR_UNSUPPORTED |
  *  | 引数の誤り | @ref CPLAT_ERR_INVALID_ARGUMENT |
- *
- *  Table: 主な失敗と結果コード
  *
  *  取得関数の出力引数は、失敗時に変更しません。
  *  @endparblock

@@ -103,6 +103,8 @@
 
 ユーザーが対話セッションで明示した内容を、発言の出典とともに記載します。AI が提示した設計案は合意済みではないため、ここには含めず、[AI が提示した設計試案](#ai-が提示した設計試案-未合意) と各 Q で確認します。
 
+Table: ユーザーが明示した要求と出典
+
 | ID | 合意内容 | 出典 |
 | --- | --- | --- |
 | R-001 | cplat で `getuid()` に相当する機能を抽象化します。Windows のユーザー識別は SID とし、ユーザー名からの変換や実効ユーザーの指定などに使う中間表現として抽象化します。 | 対話 1 回目のユーザー発言 (2026-11-05) |
@@ -113,9 +115,9 @@
 | R-006 | ユーザーのログオンやセッション切り替えを検知する通知 (サービスの `SERVICE_CONTROL_SESSIONCHANGE`) を対象に含めます。 | 対話 4 回目のユーザー発言。原文「対称にする」を「対象にする」と解釈し、対話で解釈を明示した |
 | R-007 | 検討文書を porter の `docs/prompts/current` に置き、続きはローカル エージェントで進めます。 | 対話 5 回目のユーザー発言 |
 
-Table: ユーザーが明示した要求と出典
-
 次の事項は、ユーザーの判断ではなく OS の仕様に由来する技術的な制約です。設計はこれらを前提とします。
+
+Table: 設計の前提となる技術的な制約
 
 | ID | 技術的な制約 | 根拠 |
 | --- | --- | --- |
@@ -127,8 +129,6 @@ Table: ユーザーが明示した要求と出典
 | T-006 | `SERVICE_CONTROL_SESSIONCHANGE` はサービスの制御ハンドラー (`HandlerEx`) にだけ届き、受け取るには `SERVICE_ACCEPT_SESSIONCHANGE` を指定する必要があります。cplat は制御ハンドラーを持たないため、利用側からの転送が必要です。 | Microsoft Learn の `HandlerEx`、cplat `win32.h` |
 | T-007 | Linux の `fork()` 後の子プロセス (マルチスレッドのプロセス) では、非同期シグナル安全な関数だけを呼び出せます。`initgroups()` は NSS を読むため使えず、補助グループは親側で解決しておく必要があります。 | POSIX `fork()`、cplat `process.c` の既存コメント |
 | T-008 | Linux で別ユーザーとして起動するには、呼び出し側が root、または `CAP_SETUID` / `CAP_SETGID` を持つ必要があります。 | Linux `setuid(2)`、`capabilities(7)` |
-
-Table: 設計の前提となる技術的な制約
 
 ## 観点別の確認
 
@@ -147,6 +147,8 @@ Table: 設計の前提となる技術的な制約
 
 ### 層の構成
 
+Table: 設計試案の層と役割
+
 | 層 | 役割 | 主な要素 |
 | --- | --- | --- |
 | 識別 | ユーザー・グループを識別し、比較・保存する | `cplat_account_id` (固定長の値型) |
@@ -154,8 +156,6 @@ Table: 設計の前提となる技術的な制約
 | セッション | ログイン セッションの列挙と状態の取得 | `cplat_session_info`、`cplat_session_enumerate()` |
 | 通知 | セッションの変化 (ログオン、切り替えなど) を受け取る | `cplat_session_monitor` |
 | 起動 | 指定セッション上で、指定ユーザーとしてプロセスを起動する | `cplat_process_options.identity`、`cplat_session_process_start()` |
-
-Table: 設計試案の層と役割
 
 ### 識別 (試案)
 
@@ -329,6 +329,8 @@ void cplat_session_monitor_dispose(cplat_session_monitor *monitor);
 
 AI が確証を持てない事実です。最終仕様の作成前、または該当する実装段階の前に確認します。確認結果によって Q の推奨や選択肢の前提が変わる場合は、新しい Q-ID で再確認します。
 
+Table: 技術的な未確認事項
+
 | ID | 未確認事項 | 影響する Q | 確認方法 |
 | --- | --- | --- | --- |
 | V-001 | `CreateProcessWithLogonW` / `CreateProcessWithTokenW` で、`STARTF_USESTDHANDLES` による標準入出力の指定 (`CPLAT_PROCESS_STDIO_NATIVE_HANDLE`) が `CreateProcessW` と同じように機能するか | [Q-009](#q-009-windows-でトークン指定時に使う起動-api-の順序)、[Q-010](#q-010-資格情報指定での起動の提供) | Microsoft Learn の記述確認と、Windows 実機でパイプを渡す試験 |
@@ -337,8 +339,6 @@ AI が確証を持てない事実です。最終仕様の作成前、または�
 | V-004 | `LOGOFF` 通知の時点で `WTSQuerySessionInformation` によりユーザー名を取得できるか (監視側で記録する必要があるか) | [Q-020](#q-020-通知キューの上限の指定方法) | Windows 実機での試験 |
 | V-005 | logind の `LockedHint` を、主要なデスクトップ環境 (GNOME、KDE) が設定するか | [Q-021](#q-021-linux-でのロック解除通知の保証範囲) | 各環境での `loginctl show-session` の確認 |
 | V-006 | Windows で追加が必要なリンク ライブラリ (wtsapi32、userenv、secur32 など) と、cplat の既存のリンク指定方法 (`makepart.mk` か `#pragma comment(lib)` か) | [Q-017](#q-017-linux-の-logind-への依存方式) | cplat の既存 Windows 実装と makefw の確認 |
-
-Table: 技術的な未確認事項
 
 ## 質問一覧
 

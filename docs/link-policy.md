@@ -4,12 +4,12 @@
 
 `cplat` は動的ライブラリだけを生成します。
 
+Table: プラットフォームごとの cplat 動的ライブラリ成果物
+
 | プラットフォーム | 成果物 |
 |---|---|
 | Linux | `libcplat.so` |
 | Windows | `libcplat.dll` / `libcplat.lib` (import library) |
-
-Table: プラットフォームごとの cplat 動的ライブラリ成果物
 
 静的ライブラリ `libcplat_static.a` / `libcplat_static.lib` は生成しません。
 
@@ -47,12 +47,12 @@ Linux では、OpenSSL の `libcrypto_app.so.3` も同梱します。
 
 このリポジトリでは、対象 app の製品ビルドが次の成果物を `prod/cbin` へコピーします。
 
+Table: 実行ファイル同梱対象の共有ライブラリ一覧
+
 | プラットフォーム | 同梱するファイル |
 |---|---|
 | Linux | `libcplat.so` / `libcjson_app.so` / `libzlib_app.so` / `libcrypto_app.so.3` |
 | Windows | `libcplat.dll` / `libcjson_app.dll` / `libzlib_app.dll` |
-
-Table: 実行ファイル同梱対象の共有ライブラリ一覧
 
 Linux の対象実行ファイルと `libcplat.so` は、`$ORIGIN` の実行時探索パス (RPATH または RUNPATH) で同じディレクトリを探索します。
 

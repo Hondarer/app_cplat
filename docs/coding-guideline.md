@@ -40,6 +40,8 @@ cplat の公開 API が戻り値として使用する共通結果コードの運
 
 定義は課題別の値の範囲に分けて並べ、各範囲に将来の追加用の余白を設けています。
 
+Table: cplat 結果コードの分類・数値・意味一覧
+
 | 分類 (値の範囲) | コード | 値 | 意味 |
 |---|---|---|---|
 | 分類不能 | `CPLAT_OK` | 0 | 成功 |
@@ -78,8 +80,6 @@ cplat の公開 API が戻り値として使用する共通結果コードの運
 | | `CPLAT_ERR_WOULD_BLOCK` | -43 | ソケットの非ブロッキング操作が待たずに完了できない状態 |
 | データの検証<br> (-50 〜) | `CPLAT_ERR_AUTHENTICATION_FAILED` | -50 | 認証タグの検証に失敗 |
 | | `CPLAT_ERR_CORRUPT_DATA` | -51 | データが破損しているか、宣言された形式と不一致 |
-
-Table: cplat 結果コードの分類・数値・意味一覧
 
 `ret <= -20` のような範囲比較で種別を判定せず、個々のコード名との比較を使用します。
 
@@ -120,13 +120,13 @@ if (ret != CPLAT_OK)
 
 戻り値は「分類済みの結果コード」を伝達し、OS 由来の詳細はドメイン付きの `cplat_error` で伝達します。
 
+Table: 戻り値とエラー詳細における情報伝達の役割分担
+
 | 伝達手段 | 内容 |
 |---|---|
 | 戻り値 (`int`) | `CPLAT_OK`、正値の省略 (`CPLAT_SKIPPED`)、または負値の分類済みエラー コード |
 | `cplat_error *detail_out` 出力引数 | OS エラーのドメイン、共通結果コード、生の詳細値 |
 | スレッド ローカルの直前値 | `cplat_error_get_last()` で取得する、直前の対応 API と同じ詳細 |
-
-Table: 戻り値とエラー詳細における情報伝達の役割分担
 
 分類済みコードでは失われる詳細 (ともに `CPLAT_ERR_UNKNOWN` へ写像される `ENOSPC` と `EIO` の区別など) が必要な API は、`detail_out` を提供します (`cplat_fopen`、`crt/path.h` の各関数など)。  
 対応 API は失敗時に出力引数とスレッド ローカルの直前値へ同じ詳細を記録し、成功時は両方をクリアします。  
@@ -226,6 +226,8 @@ CPLAT_ASSERT(0);
 cplat には通常終了の後始末を行う shutdown コールバックと、異常終了時に呼び出す abort コールバックがあります。  
 終了の経路ごとに、実行されるコールバックが異なります。
 
+Table: プロセス終了経路ごとのコールバック実行と終了コード伝達
+
 | 終了の経路 | shutdown コールバック | abort コールバック | 終了コードの伝達 |
 |---|---|---|---|
 | `cplat_exit(code)` | 実行される | 実行されない | `CPLAT_SHUTDOWN_CODE_KIND_EXIT_CODE` として伝わる |
@@ -233,8 +235,6 @@ cplat には通常終了の後始末を行う shutdown コールバックと、�
 | `CPLAT_ASSERT` の条件が偽 | **実行されない** | 実行される | 伝達しません。 |
 | `CPLAT_ABORT` の呼び出し | **実行されない** | 実行される | 伝達しません。 |
 | `abort()` の直接呼び出し | **実行されない** | **実行されない** | 伝達しません。 |
-
-Table: プロセス終了経路ごとのコールバック実行と終了コード伝達
 
 通常終了で終了コードを確実に渡したい場合は `cplat_exit()` を使用します。  
 終了コードの値と意味は、上位規範の [プロセスの終了コード](../../general/docs/coding-guideline.md#プロセスの終了コード) に従います。  
@@ -270,6 +270,8 @@ TLS 変数はソース ファイル内のファイル スコープ `static` に�
 > 対象外を設けるのは、cplat が Linux / Windows のインターフェイス差異を抽象化する層でもあるためです。  
 > 元 API の戻り値規約を保存することで、標準 C / POSIX / Win32 の感覚のまま差し替えて使えます。
 
+Table: 共通戻り値規約の適用対象外 API 群と適用除外理由
+
 | 対象外の API 群 | 現行規約 | 理由 |
 |---|---|---|
 | CRT ラッパー (`cplat_fopen`、`cplat_fclose`、`cplat_fread`、`cplat_open`、`cplat_read`、`cplat_fseek`、`cplat_ftell` など) | `FILE *`/NULL、0/EOF、要素数、fd/-1 など元 API と同一 | 標準 C / POSIX の感覚で使えることが設計意図 |
@@ -280,8 +282,6 @@ TLS 変数はソース ファイル内のファイル スコープ `static` に�
 | ハンドル生成系 (`*_create` など) | 成功時ポインター / 失敗時 NULL | ポインター返却 API の慣用 |
 | 値をそのまま返す関数 (getter、`cplat_timespec_cmp`、`cplat_strcasecmp`、`cplat_strncasecmp` など) | 値そのもの | 結果コードの概念が適用されない |
 | 戻り値を持たない関数 (`*_destroy` など) | `void` | 同上 |
-
-Table: 共通戻り値規約の適用対象外 API 群と適用除外理由
 
 対象外の API 群を新設する場合は、元 API との対応と戻り値規約をヘッダーの Doxygen コメントに明記します。
 
@@ -329,6 +329,8 @@ W 版が文字列を含む構造体を受け取る場合は、U 版の契約で�
 
 CRT / POSIX / Win32 関数のラッパーを cplat へ追加してよいのは、次のいずれかを満たす場合に限ります。
 
+Table: cplat ラッパー API の追加許容条件と具体例
+
 | 条件 | 例 |
 |---|---|
 | プラットフォーム間での呼び分け | `cplat_fseek` (`fseeko` と `_fseeki64`)、`cplat_gmtime` (`gmtime_r` と `gmtime_s`)、`cplat_socket_*` (BSD ソケットと Winsock)、`cplat_host_get_name` (`gethostname` と `GetComputerNameExW`)、`cplat_strcasecmp` (`strcasecmp` と `_stricmp` の名前差と locale 差) |
@@ -338,8 +340,6 @@ CRT / POSIX / Win32 関数のラッパーを cplat へ追加してよいのは�
 | 境界検査または失敗通知の追加による安全化 | `cplat_snprintf` (切り詰めを検出する)、`cplat_parse_int64` (完全消費と範囲を検査する)、`cplat_fgets` (切り詰めと EOF を区別する) |
 | cplat 固有型の取り扱い | `cplat_timespec_*`、`cplat_file_*` |
 | cplat 他機能との統合 | `cplat_exit` (登録済みシャットダウン コールバックを実行する) |
-
-Table: cplat ラッパー API の追加許容条件と具体例
 
 通信 API の公開面の方針は [net カテゴリの公開面の方針](#net-カテゴリの公開面の方針) に定めます。
 
@@ -355,6 +355,8 @@ Table: cplat ラッパー API の追加許容条件と具体例
 
 Linux と Windows でラッパー先の API の制約や既定動作が異なる場合、cplat は両プラットフォームで同じ公開契約になるように差異を吸収します。
 
+Table: プラットフォーム差異吸収における共通契約方針と具体例
+
 | 差異 | 共通契約 | 例 |
 |---|---|---|
 | 引数の限界値 | より厳しい限界値の採用 | `RAND_bytes` と `BCryptGenRandom` の要求サイズを `INT_MAX` に統一 |
@@ -362,8 +364,6 @@ Linux と Windows でラッパー先の API の制約や既定動作が異なる
 | シグナルによる待機の中断 | 非中断動作への統一 (シグナル割り込みを吸収) | Linux 実装が `EINTR` を吸収 (詳細は [シグナル割り込み (EINTR) の扱い](#シグナル割り込み-eintr-の扱い) を参照) |
 | 切断済みソケットへの送信 | SIGPIPE 抑制と送信エラー通知への統一 | Linux 実装が `MSG_NOSIGNAL` で SIGPIPE を抑制 |
 | locale 依存の大文字小文字比較 | ASCII のみの畳み込み (ロケール非依存) | `cplat_strcasecmp` / `cplat_strncasecmp` |
-
-Table: プラットフォーム差異吸収における共通契約方針と具体例
 
 製品実装は、プラットフォーム固有の API を呼び出す前に共通契約を検査または設定します。  
 より緩い限界値を持つプラットフォームの追加差分は、共通 API では公開しません。
@@ -423,6 +423,8 @@ Windows には対応する機構がなく、非アラータブル待機が同じ
 
 #### API 分類ごとの規範
 
+Table: シグナル割り込み時における API 分類別の処理規範
+
 | 分類 | 対象 | 規範 |
 |---|---|---|
 | 期限付き待機 | `poll` 系、`nanosleep` | 単調時刻で期限を管理し、`EINTR` では残り時間を再計算して待機継続 (期限前の早期復帰を防止) |
@@ -432,8 +434,6 @@ Windows には対応する機構がなく、非アラータブル待機が同じ
 | stdio | `fopen`、`fread`、`fwrite`、`fgets`、`fclose` | 再試行禁止 (適用対象を中断の起きない通常ファイルに限定) |
 | pthread 同期 | mutex、condvar、`pthread_join` | `EINTR` は発生しないため分岐不要 |
 | Windows 実装 | 全般 | `EINTR` は発生しないため分岐不要。アラータブル待機は禁止 |
-
-Table: シグナル割り込み時における API 分類別の処理規範
 
 `close` を再試行しないのは、Linux では `EINTR` で復帰した時点で記述子が解放済みであり、再呼び出しが別スレッドの再利用した記述子を対象にしうるためです。
 
@@ -473,12 +473,12 @@ Windows へ移植できず、プラットフォームで動作が変わるため
 `CPLAT_CAUSE_INTERRUPTED` は、実行中の操作が中断されたことを表します。  
 次の 2 つの経路でこの要因が設定されます。
 
+Table: CPLAT_CAUSE_INTERRUPTED の発生経路と設定元
+
 | 経路 | 設定元 | 内容 |
 |---|---|---|
 | Windows の I/O キャンセル | `ERROR_OPERATION_ABORTED` | `CancelIo` などによる中断であり、シグナルとは無関係に発生します。 |
 | 利用者が持ち込んだ errno | `cplat_error_capture_errno()` | 利用者が自前で呼び出した OS API の `EINTR` を分類します。 |
-
-Table: CPLAT_CAUSE_INTERRUPTED の発生経路と設定元
 
 cplat がシグナルによる中断を理由にこの要因を返すことはありません。  
 利用者のコードに、シグナル中断への対処として `CPLAT_CAUSE_INTERRUPTED` の判定と再試行を求めません。
@@ -546,6 +546,8 @@ libc 関数のモックは `framework/testfw/libsrc/mock_libc/` が提供する�
 代替は cplat がすべて提供します。標準関数を代替として指定することはありません。  
 外部 OSS 由来のコード (`app/lua`、`app/sqlite`、`app/cjson`、`app/zlib`、`app/openssl`) は本規則の対象外です。
 
+Table: 使用を禁止する標準関数・マクロと cplat 代替一覧
+
 | 使用しない関数・マクロ | 問題 | 代替 |
 |---|---|---|
 | `strcpy` | コピー先の容量引数を取らず境界未検査 | `cplat_strcpy(dest, dest_size, src)` |
@@ -568,8 +570,6 @@ libc 関数のモックは `framework/testfw/libsrc/mock_libc/` が提供する�
 | `realloc` | 長さ 0 や失敗時の領域管理が呼び出し側に委ねられている | `cplat_realloc` / `cplat_realloc_zerofill` (同上) |
 | `free` | 共有ライブラリ境界を越えた際に C ランタイムのヒープ不整合を起こすおそれがある | `cplat_free(ptr)` (同上) |
 | `FD_SET` | 集合容量の境界検査を欠き、領域外書き込み (Linux) や無通知破棄 (Windows) を起こす | `CPLAT_FD_SET(fd, &set)` ([ファイル記述子集合への追加](#ファイル記述子集合への追加) を参照) |
-
-Table: 使用を禁止する標準関数・マクロと cplat 代替一覧
 
 `cplat_strcpy`、`cplat_strcat`、`cplat_strncat` は、バッファー不足を `CPLAT_ERR_BUFFER_TOO_SMALL` で通知します。  
 戻り値を破棄せず、`CPLAT_OK` との比較で判定してください。
@@ -701,6 +701,8 @@ cplat_error_capture_errno(&err, errno_value);
 cplat は、そこで呼び出し側の責務としている検査を関数側へ内包した確保 API を提供します。  
 要素数とサイズの乗算オーバーフローを関数側で担うことと、一般の加減乗算との分担は [整数演算の安全性](#整数演算の安全性) を参照してください。
 
+Table: cplat メモリ確保関数の用途とゼロ初期化仕様
+
 | 関数 | 用途 | ゼロ初期化 |
 |---|---|---|
 | `cplat_malloc(size)` | 単一オブジェクト、バイト バッファー | 行わない |
@@ -709,8 +711,6 @@ cplat は、そこで呼び出し側の責務としている検査を関数側�
 | `cplat_realloc(ptr, count, size)` | 配列の伸長・縮小 | 行わない |
 | `cplat_realloc_zerofill(ptr, old_count, count, size)` | 配列の伸長・縮小 | 拡張領域のみ |
 | `cplat_free(ptr)` | 上記すべての解放 | - |
-
-Table: cplat メモリ確保関数の用途とゼロ初期化仕様
 
 いずれも失敗を NULL で表し、共通結果コードを返しません。  
 関数側で検査する条件は次のとおりで、該当する場合は確保を行わずに NULL を返します。
@@ -881,14 +881,14 @@ cplat 自身のラッパー実装 (`prod/libsrc/cplat/crt/`、`prod/libsrc/cplat
 ロックを取らずにスレッド間、または共有メモリを介してプロセス間で読み書きする値は、`cplat/sync/atomic.h` の専用型に格納し、同ヘッダーの関数だけで読み書きします。  
 `volatile` による修飾、GCC の `__atomic` / `__sync` 組み込み関数、Windows の `Interlocked` 関数を、cplat の外で直接使用しません。
 
+Table: cplat アトミック専用型と対応する整数型および可能操作
+
 | 専用型 | 格納する整数型 | 読み書き、交換、比較交換 | 加算、減算 |
 |---|---|---|---|
 | `cplat_atomic_u8` | `uint8_t` | 可 | 不可 |
 | `cplat_atomic_i32`、`cplat_atomic_u32` | `int32_t`、`uint32_t` | 可 | 可 |
 | `cplat_atomic_i64`、`cplat_atomic_u64` | `int64_t`、`uint64_t` | 可 | 可 |
 | `cplat_atomic_ptr` | `void *` | 可 | 不可 |
-
-Table: cplat アトミック専用型と対応する整数型および可能操作
 
 専用型のメンバーを直接読み書きしません。  
 初期化は `CPLAT_ATOMIC_INIT()`、`{0}`、または他のスレッドへ公開する前のゼロ初期化 (`memset` など) で行います。
@@ -909,6 +909,8 @@ Table: cplat アトミック専用型と対応する整数型および可能操�
 各関数はメモリ順序 (`cplat_memory_order`) を受け取ります。  
 順序は、その値でほかのデータの受け渡しを表すかどうかで選びます。
 
+Table: 用途別のアトミック操作メモリ順序の指定基準
+
 | 用途 | 書き込み側 | 読み取り側 |
 |---|---|---|
 | 計数だけが目的のカウンター、統計、時刻の記録 | `RELAXED` | `RELAXED` |
@@ -916,8 +918,6 @@ Table: cplat アトミック専用型と対応する整数型および可能操�
 | 停止要求や準備完了などのフラグ。フラグの前に書いたデータを、フラグを見た側が読む | `RELEASE` | `ACQUIRE` |
 | 確認と更新を 1 回で行う操作 (交換、比較交換、加算) で、前後のデータの受け渡しも担う | `ACQ_REL` | `ACQ_REL` |
 | 複数の変数にまたがる全順序が必要な場合 | `SEQ_CST` | `SEQ_CST` |
-
-Table: 用途別のアトミック操作メモリ順序の指定基準
 
 迷った場合は `SEQ_CST` を指定し、根拠を確認できた箇所だけを弱い順序へ緩めます。  
 `RELAXED` を指定する箇所では、順序が不要な理由をコメントに記載します。
@@ -1025,13 +1025,13 @@ extern int g_cplat_internal_sink_count;
 > 使用しないのは、C 標準がアンダースコアで始まる識別子をファイル スコープで予約しているためです。  
 > 以前は、マクロの実体とテスト専用フックの 2 用途に限り `_cplat_` 前置きを許容していましたが、この扱いは撤回しました。
 
+Table: アンダースコア前置き廃止後の代替命名形式と具体例
+
 | 用途 | cplat での形式 | 例 |
 |---|---|---|
 | 呼び出し元情報 (`__FILE__` / `__LINE__`) を補うマクロの実体 | `_at` サフィックス | `cplat_tracer_write_at` |
 | 暗黙パーサー版と明示ハンドル版の対 | 暗黙パーサー版は無修飾、明示ハンドル版は `_handle_` を挟む | `cplat_argparser_parse` と `cplat_argparser_handle_parse` |
 | テスト専用フック | `_for_test` サフィックスのみ | `cplat_shutdown_invoke_for_test` |
-
-Table: アンダースコア前置き廃止後の代替命名形式と具体例
 
 テスト専用フックは公開ヘッダーに宣言しますが、Doxygen の公開グループには含めず `@internal` を付けます。
 
@@ -1069,12 +1069,12 @@ struct、enum、union、関数ポインターのいずれにも `_t` サフィ�
 > [!NOTE]
 > 以前は enum と関数ポインターの `_t` を現状追認として許容していましたが、この扱いは撤回しました。
 
+Table: _t サフィックスの付与を例外として認める型と理由
+
 | 型 | 定義 | 例外とする理由 |
 |---|---|---|
 | `cplat_file_stat_t` | `include/cplat/crt/sys/stat.h` | POSIX の `struct stat` および MSVC の `struct _stat64` の別名 (元の型名を保持) |
 | `cplat_etw_provider_ref_t` | `include/cplat/trace/etw.h` | Windows TraceLogging SDK の内部型参照の別名 (SDK 定義に準拠) |
-
-Table: _t サフィックスの付与を例外として認める型と理由
 
 ## 引数順序規約
 
@@ -1135,6 +1135,8 @@ cplat_vopen_fmt(flags, mode, detail_out, format, args);
 
 本規約および上位規範に対する既存公開 API の逸脱として整理していた項目は、すべて解消済みです。
 
+Table: 過去の規約逸脱 API とその解消内容一覧
+
 | API | 逸脱内容 | 解消結果 |
 |---|---|---|
 | `cplat_getenv` | 0 / -1 (未設定) / `ERANGE` の三値。上位規範の三値禁止に抵触 | 設定有無を `int *exists_out` へ分離し、戻り値を 0 / `EINVAL` / `ERANGE` の二値系へ変更 |
@@ -1147,8 +1149,6 @@ cplat_vopen_fmt(flags, mode, detail_out, format, args);
 | 内部共有関数のライブラリ接頭辞漏れ (12 件) | `include_internal/` の宣言に `cplat_` がなく、リンク時に利用側と衝突しうる | 一度 `cplat_` を付与し、その後の全面改名で `cplat_internal_` に統一 |
 | `static` 関数へのライブラリ接頭辞 (11 件) | 外部リンケージを持つかのように読め、公開シンボルの点検で偽陽性を生む | 接頭辞を除去 |
 
-Table: 過去の規約逸脱 API とその解消内容一覧
-
 > [!NOTE]
 > `cplat_argparser_init` は、既定インスタンスを初期化する `*_init` として本規約に適合するため、逸脱には該当しません。
 
@@ -1157,12 +1157,12 @@ Table: 過去の規約逸脱 API とその解消内容一覧
 処理環境を表す次の公開マクロは、上位規範の汎用ヘルパーの例外に従い、現行名を維持します。  
 新設する同種のマクロにも用途を表す接頭辞を使用し、cplat 固有の機能を表すマクロには `CPLAT_` を前置きします。
 
+Table: 接頭辞 CPLAT_ を付けない汎用ヘルパー マクロ
+
 | ヘッダー | マクロ |
 |---|---|
 | `include/cplat/base/platform.h` と `include/cplat/crt/path.h` | `PLATFORM_WINDOWS`、`PLATFORM_LINUX`、`PLATFORM_UNKNOWN`、`PLATFORM_NAME`、`ARCH_NAME`、`PLATFORM_PATH_MAX`、`PLATFORM_PATH_UTF8_MAX`、`PLATFORM_PATH_SEP`、`PLATFORM_PATH_SEP_CHR`、`PLATFORM_NULL_DEVICE_PATH` |
 | `include/cplat/base/compiler.h` | `COMPILER_GCC`、`COMPILER_MSVC`、`COMPILER_UNKNOWN`、`COMPILER_NAME`、`COMPILER_VERSION`、`FORCE_INLINE`、`NO_INLINE`、`NO_RETURN`、`THREAD_LOCAL` |
-
-Table: 接頭辞 CPLAT_ を付けない汎用ヘルパー マクロ
 
 文字符号の規格が定める値 (UTF-8 のマスク、サロゲートの範囲、置換文字など) の名前付き定数は、公開ヘッダー `cplat/base/char_code.h` に定義します。  
 `app/cplat` の製品コードと、`app/cplat` を利用する app は、文字符号の値を直値で書かず、この定数を使用します。
@@ -1173,13 +1173,13 @@ Table: 接頭辞 CPLAT_ を付けない汎用ヘルパー マクロ
 
 cplat が **関数側で検査を内包する** 範囲は次のとおりです。
 
+Table: 関数側で整数検査を内包する API と検査内容
+
 | 領域 | API | 関数側の検査 |
 |---|---|---|
 | 外部文字列から整数への変換 | `cplat_parse_int` / `cplat_parse_int64` / `cplat_parse_uint64` / `cplat_parse_double` | 文字列の完全消費、目的型の範囲、符号なし系での先頭負号の拒否 |
 | 要素数とサイズの乗算を伴う確保 | `cplat_calloc` / `cplat_realloc` / `cplat_realloc_zerofill` | 長さ 0、`count * size` の乗算オーバーフロー |
 | 時刻と期限の計算 | `cplat_timespec_normalize` / `cplat_timespec_add` / `cplat_timespec_sub` / `cplat_timespec_add_ms` / `cplat_timespec_diff_ms` / `cplat_clock_get_realtime_deadline_ms` | ナノ秒正規化時の秒加減算、ミリ秒換算、および期限加算における表現可能範囲の超過 |
-
-Table: 関数側で整数検査を内包する API と検査内容
 
 一般の加減乗算を検査する API は提供しません。  
 呼び出し側は上位規範の事前検査の慣用句に従います。  
@@ -1198,13 +1198,13 @@ Table: 関数側で整数検査を内包する API と検査内容
 `app/` 配下のコードでは、時刻の受け渡しに `struct timespec` を直接使用せず、公開型 `cplat_timespec` を使用します。  
 時刻の秒部、ナノ秒部、期間、時間差の型選択は、上位「コーディング規範」の「値の意味に対応する型」に従います。
 
+Table: cplat_timespec の型定義と仕様
+
 | 項目 | 内容 |
 |---|---|
 | 型定義 | `time_t tv_sec; int64_t tv_nsec;` (16 バイト)。Linux x86-64 の `struct timespec` とレイアウト互換 |
 | native 変換 | OS API 境界における `cplat_timespec_to_native()` / `from_native()` への変換集約 (キャスト・混用の禁止) |
 | 演算 | 専用演算関数 (`normalize`, `add`, `sub`, `cmp`, `add_ms`, `diff_ms`) の使用。`cmp` 以外は共通結果コード (`CPLAT_OK`、`CPLAT_ERR_INVALID_ARGUMENT`、`CPLAT_ERR_OUT_OF_RANGE`) を返し、失敗時は出力引数を変更しない |
-
-Table: cplat_timespec の型定義と仕様
 
 詳細は `prod/include/cplat/clock/timespec.h` の Doxygen コメントを参照してください。
 

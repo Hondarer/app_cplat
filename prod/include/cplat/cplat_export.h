@@ -34,6 +34,8 @@
      *
      *  ビルド条件に応じて次の値を取ります。
      *
+     *  Table: CPLAT_EXPORT のビルド条件別の展開値
+     *
      *  | 条件                                               | 値                                        |
      *  | -------------------------------------------------- | ----------------------------------------- |
      *  | Linux / `CPLAT_STATIC` 定義時 (静的リンク)      | (空)                                      |
@@ -42,8 +44,6 @@
      *  | Windows / `CPLAT_STATIC` 定義時 (静的リンク)    | (空)                                      |
      *  | Windows / `CPLAT_EXPORTS` 定義時 (DLL ビルド)   | `__declspec(dllexport)`                   |
      *  | Windows / `CPLAT_EXPORTS` 未定義時 (DLL 利用側) | `__declspec(dllimport)`                   |
-     *
-     *  Table: CPLAT_EXPORT のビルド条件別の展開値
      */
     #define CPLAT_EXPORT
 

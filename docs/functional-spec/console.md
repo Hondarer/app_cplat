@@ -15,6 +15,8 @@ Windows では、プロセスの文字コード設定だけでは、接続先コ
 
 ## 機能要件
 
+Table: コンソール機能の機能要件一覧
+
 | 要件 ID | cplat の要件 |
 |---|---|
 | `CPLAT-CONSOLE-FUNC-001` <!-- cplat-req: uuid=019fbe57-c2cf-490e-9f16-f4ced3ad07ce --> | cplat のコンソール機能は、Windows のコンソール入出力を UTF-8 として扱える状態に設定します。 |
@@ -23,8 +25,6 @@ Windows では、プロセスの文字コード設定だけでは、接続先コ
 | `CPLAT-CONSOLE-FUNC-004` <!-- cplat-req: uuid=f0ca8d65-5563-4956-ab1c-4325e3869160 --> | cplat のコンソール機能は、標準出力と標準エラー出力のいずれも端末へ接続されていない場合、端末固有の設定を変更しません。 |
 | `CPLAT-CONSOLE-FUNC-005` <!-- cplat-req: uuid=4eb73cc0-132e-4164-938f-988e29903add --> | cplat のコンソール機能は、権限昇格時に渡された親プロセスの情報を使用して、Windows の親コンソールへ再接続します。 |
 | `CPLAT-CONSOLE-COMP-001` <!-- cplat-req: uuid=1c7ec67b-40e9-402a-b40a-90f1016a08a3 --> | cplat のコンソール機能は、Linux では端末状態を変更せず、Windows と同じ初期化および後処理の流れを受け付けます。 |
-
-Table: コンソール機能の機能要件一覧
 
 ## 初期化と後処理
 

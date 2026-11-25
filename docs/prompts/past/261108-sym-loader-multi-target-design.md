@@ -52,6 +52,8 @@ CPLAT_EXPORT int CPLAT_API cplat_sym_loader_reject_get(
 
 値渡し引数 `fobj_length` の最上位の `const` は、関数型を変えないため一覧では省略しています。
 
+Table: 公開インターフェイスの変更と互換性
+
 | 対象 | 変更内容 | 互換性への影響 |
 | --- | --- | --- |
 | `cplat_sym_loader_resolve` | 公開関数を削除 | バイナリ ABI とソース API の破壊的変更 |
@@ -59,8 +61,6 @@ CPLAT_EXPORT int CPLAT_API cplat_sym_loader_reject_get(
 | `cplat_sym_loader_entry` | 単一移譲先から複数移譲先を保持する構造へ変更 | サイズとメンバー配置が変わるため利用側の再ビルドが必要 |
 | `CPLAT_SYM_LOADER_ENTRY_INIT` | 引数をキーだけに変更 | ソース API の破壊的変更。マクロ自体はエクスポート シンボルを持たない |
 | `cplat_sym_loader_resolve_as` / `cplat_sym_loader_get_as` | 旧マクロを削除し、インデックス指定のマクロを追加 | 呼び出し側のソースを更新 |
-
-Table: 公開インターフェイスの変更と互換性
 
 ### 移譲先と診断の取得
 
@@ -126,12 +126,12 @@ typedef struct cplat_sym_loader_entry {
 
 取得した関数ポインターと診断文字列は、エントリが保持するリソースを参照します。利用側は解放せず、`dispose` 後には使用しません。`init` と `dispose` は、取得系 API の実行および取得した関数ポインターの呼び出しと並行して実行しません。
 
+Table: 公開関数のスレッド契約
+
 | 関数 | スレッド |
 | --- | --- |
 | `cplat_sym_loader_count`、`cplat_sym_loader_get`、`cplat_sym_loader_reject_count`、`cplat_sym_loader_reject_get`、`cplat_sym_loader_is_default`、`cplat_sym_loader_is_failed`、`cplat_sym_loader_info` | スレッド セーフ |
 | `cplat_sym_loader_init`、`cplat_sym_loader_dispose` | 単一スレッド。DLL のロード直後やアンロード時に呼ぶ |
-
-Table: 公開関数のスレッド契約
 
 件数と取得は、削除する `cplat_sym_loader_resolve` のスレッド契約を引き継ぎます。初期化と解放の単一スレッド契約は変えません。
 
@@ -200,6 +200,8 @@ Table: 公開関数のスレッド契約
 
 移譲先ごとの診断理由は、次の 7 件です。内部失敗は、この表には入れません。
 
+Table: `cplat_sym_loader_reject_get` が返す理由
+
 | 公開定数 | 値 | 理由 |
 | --- | --- | --- |
 | `CPLAT_SYM_LOADER_REJECT_EMPTY_NAME` | -1 | 名前が空 |
@@ -209,8 +211,6 @@ Table: 公開関数のスレッド契約
 | `CPLAT_SYM_LOADER_REJECT_MIXED_DEFAULT` | -5 | 複数の移譲先に明示的既定値が含まれるため、キー全体を未適用にした |
 | `CPLAT_SYM_LOADER_REJECT_PARTIAL_DEFAULT` | -6 | `lib` と `func` の片方だけが `default` のため、その先を開かなかった |
 | `CPLAT_SYM_LOADER_REJECT_DUPLICATE_KEY` | -7 | 同じキーの後の値で置き換えたため、前の先を捨てた |
-
-Table: `cplat_sym_loader_reject_get` が返す理由
 
 これらは `reason` 出力引数に書き込む値です。`reject_get` 自体の成否を返す `CPLAT_OK` / `CPLAT_ERR_INVALID_ARGUMENT` とは用途が異なります。
 

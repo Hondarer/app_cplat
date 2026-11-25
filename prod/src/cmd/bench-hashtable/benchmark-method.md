@@ -8,14 +8,14 @@
 可変長キーと可変長値を持つハッシュ テーブルです。  
 キーと値の双方が可変長ストレージを使うため、1 回の追加で確保が 2 回発生します。
 
+Table: ハッシュ テーブル ベンチマークの測定対象設定
+
 | 設定 | 値 |
 |------|-----|
 | `key_type` / `value_type` | `CPLAT_HASHTABLE_FIELD_VARIABLE_STRING` |
 | `key_storage_size` | `capacity` × 16 バイト |
 | `value_storage_size` | `capacity` × 24 バイト |
 | `lifetime` | 5 |
-
-Table: ハッシュ テーブル ベンチマークの測定対象設定
 
 `lifetime` は削除済みレコードの寿命です。このベンチマークは加齢の処理 (`cplat_hashtable_push_deleted`) を呼び出さないため、3 以上なら測定結果に影響しません。2 を指定すると、削除したレコードが直ちに空へ戻ります。
 
@@ -27,6 +27,8 @@ Table: ハッシュ テーブル ベンチマークの測定対象設定
 
 ### 操作
 
+Table: ハッシュ テーブル ベンチマークの測定操作一覧
+
 | ID | 内容 | 1 反復で扱う件数 |
 |----|------|------|
 | `fill` | 空のテーブルへ `capacity` 件を追加します。 | `capacity` |
@@ -34,8 +36,6 @@ Table: ハッシュ テーブル ベンチマークの測定対象設定
 | `churn` | 1 件おきに回収して空きブロックを作った状態で、同数を追加し直します。 | `capacity` / 2 |
 | `compact` | 1 件おきに回収した状態のストレージを圧縮します。 | `capacity` |
 | `resize` | `capacity` を 2 倍へ広げます。 | `capacity` |
-
-Table: ハッシュ テーブル ベンチマークの測定操作一覧
 
 `fill` は断片化のない状態での確保を測ります。空き領域は常に 1 個のため、確保は実質 O(1) です。  
 `churn` は断片化した状態での確保を測ります。空き領域が `capacity` / 2 個ある状態からの先着適合になります。  
@@ -76,6 +76,8 @@ app/cplat/prod/cbin/bench-hashtable --max-capacity 65536 \
 
 ## CSV の列
 
+Table: ハッシュ テーブル ベンチマーク CSV の列仕様
+
 | 列 | 内容 |
 |----|------|
 | `capacity` | スロット数 |
@@ -84,5 +86,3 @@ app/cplat/prod/cbin/bench-hashtable --max-capacity 65536 \
 | `min_ns` | 1 反復の所要時間の最小値 (ナノ秒) |
 | `max_ns` | 1 反復の所要時間の最大値 (ナノ秒) |
 | `ns_per_unit` | 1 件あたりの所要時間 (ナノ秒) |
-
-Table: ハッシュ テーブル ベンチマーク CSV の列仕様
