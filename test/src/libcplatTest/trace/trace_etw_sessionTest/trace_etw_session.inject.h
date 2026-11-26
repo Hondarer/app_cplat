@@ -10,6 +10,7 @@
 #if defined(PLATFORM_WINDOWS)
 
     #include <cplat/base/windows_sdk.h>
+    #include <cplat/trace/etw.h>
     #include <evntcons.h>
     #include <tdh.h>
     #include <stdint.h>
@@ -22,6 +23,14 @@ extern "C"
     extern void test_trace_etw_session_extract_event_fields(PEVENT_RECORD event_record, const TRACE_EVENT_INFO *info,
                                                             const char **service_out, const char **message_out,
                                                             uint32_t *process_id_out);
+
+    extern void test_trace_etw_session_set_stop_abandon_timeout_ms(int timeout_ms);
+
+    extern void test_trace_etw_session_reset_stop_abandon_timeout_ms(void);
+
+    extern void test_trace_etw_session_deliver_event(cplat_etw_session *session, const cplat_etw_event *event);
+
+    extern void test_trace_etw_session_dispose_abandoned(cplat_etw_session *session);
 
     #ifdef __cplusplus
 }

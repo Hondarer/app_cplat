@@ -899,7 +899,7 @@ Table: トレース機能における用途別 cplat API
 | トレーサーの状態を取得します。 | `cplat_tracer_get_state` |
 | syslog (RFC5424 系、Linux 専用) の書き込みシンクを扱います (`cplat_syslog_sink_dispose` は記述子を閉じる処理の失敗を通知しない)。 | `cplat_syslog_sink_create` / `cplat_syslog_sink_write` / `cplat_syslog_sink_rename` / `cplat_syslog_sink_dispose` |
 | Windows イベント ログの書き込みシンクを扱います (`cplat_eventlog_sink_dispose` は登録の解除の失敗を通知しない)。 | `cplat_eventlog_register_source` / `cplat_eventlog_sink_create` / `cplat_eventlog_sink_write` / `cplat_eventlog_sink_dispose` / `cplat_eventlog_unregister_source` |
-| ETW (TraceLogging) の書き込みシンクを扱います (`cplat_etw_session_stop` は停止の要求が失敗しても通知せず、先にトレースを閉じてから処理スレッドを待つ)。 | `cplat_etw_provider_create` / `cplat_etw_provider_write` / `cplat_etw_provider_dispose` / `cplat_etw_session_start` / `cplat_etw_session_stop` / `cplat_etw_session_check_access` |
+| ETW (TraceLogging) の書き込みシンクを扱います (`cplat_etw_session_stop` は停止の要求が失敗しても通知せず、先にトレースを閉じてから処理スレッドを待つ。閉じる処理も失敗した場合は最大 5 秒待ち、資源を解放せずに戻る)。 | `cplat_etw_provider_create` / `cplat_etw_provider_write` / `cplat_etw_provider_dispose` / `cplat_etw_session_start` / `cplat_etw_session_stop` / `cplat_etw_session_check_access` |
 | ローテーション付きファイルへ同期書き込みするシンクを扱います。OS バッファーへ委ねる場合は `CPLAT_TRACE_FILE_SINK_OS_BUFFERED` を指定します。ローテーション後の新しい現在ファイルの open 失敗だけは `CPLAT_OK` とし、後続の `cplat_trace_file_sink_write` で追記で開き直します (ほかの世代更新・close・共有ロック解放などの失敗は `CPLAT_ERR_UNKNOWN`)。`cplat_trace_file_sink_dispose` はファイルを閉じる処理の失敗を通知しません。 | `cplat_trace_file_sink_create` / `cplat_trace_file_sink_write` / `cplat_trace_file_sink_dispose` |
 
 ### 管理者権限の確認と昇格
