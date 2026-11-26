@@ -223,6 +223,8 @@ extern "C"
      *  Windows ではシンボリック リンクを解決しません。両方の OS でハード リンクによる同一性は
      *  判定しません。Windows のディレクトリごとの大文字と小文字の区別の設定と、
      *  ファイル システムが持つ大文字の表との違いは考慮しません。\n
+     *  本関数はパスの文字列を比べ、ファイル システムの実体は調べません。2 つのパスが同じ実体を指すか
+     *  (ハード リンクや別の表記のパスを含む) を判定する場合は、cplat_path_is_same_file() を使用してください。\n
      *  Windows では、入力または結果が UTF-16 で @ref PLATFORM_PATH_MAX 文字 (終端を含む) を超える場合に
      *  @ref CPLAT_ERR_BUFFER_TOO_SMALL を返します。
      *  どちらかの入力が不正な UTF-8 の場合は置換せず、@ref CPLAT_ERR_INVALID_ENCODING と詳細 EILSEQ を返します。\n
@@ -234,6 +236,45 @@ extern "C"
      */
     CPLAT_EXPORT int CPLAT_API cplat_path_equal(const char *lhs, const char *rhs, int *equal_out,
                                                 cplat_error *detail_out);
+
+    /**
+     *  @brief          2 つのパスが、同じファイル システムの実体を指すかを判定します。
+     *  @param[in]      lhs        比較対象の 1 つ目のパス (UTF-8)。NULL および空文字は渡してはなりません。
+     *  @param[in]      rhs        比較対象の 2 つ目のパス (UTF-8)。NULL および空文字は渡してはなりません。
+     *  @param[out]     same_out   同じ実体を指す場合は 1、異なる場合は 0 の格納先。NULL を渡してはなりません。
+     *                             戻り値が @ref CPLAT_OK の場合のみ有効です。
+     *  @param[out]     detail_out エラー詳細の格納先。NULL を指定した場合、本引数へは
+     *                  エラー詳細を設定せず、返却しません。
+     *                  NULL 以外を指定した場合、成功時は空の値を格納します。
+     *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、@ref CPLAT_ERR_BUFFER_TOO_SMALL 、
+     *                  @ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_INVALID_ENCODING 、
+     *                  @ref CPLAT_ERR_PERMISSION_DENIED 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+     *
+     *  パスの文字列ではなく、OS のファイルの識別子で比べます。cplat_path_equal() と異なり、
+     *  ハード リンクや、別の表記のパス (相対パスと絶対パス、Windows の大文字と小文字の違いなど) が
+     *  同じ実体を指す場合も 1 を格納します。\n
+     *  Linux では stat() の `st_dev` と `st_ino`、Windows では GetFileInformationByHandleEx() の
+     *  `FileIdInfo` (ボリュームのシリアル番号と 128 ビットのファイル識別子) を比べます。\n
+     *  シンボリック リンクは解決し、リンク先の実体で比べます。ディレクトリも比べられます。\n
+     *  どちらかのパスが存在しない場合は、@ref CPLAT_OK を返し、@p same_out に 0 を格納します。
+     *  Linux の `ENOENT` と `ENOTDIR`、Windows の `ERROR_FILE_NOT_FOUND` と `ERROR_PATH_NOT_FOUND` を、
+     *  存在しないものとして扱います。\n
+     *  Windows では、アクセス権 0 (属性の照会だけ)、`FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE`、
+     *  `FILE_FLAG_BACKUP_SEMANTICS` で一時的に開くため、他プロセスが開いているファイルとディレクトリも比べられます。\n
+     *  Windows では、入力が UTF-16 で @ref PLATFORM_PATH_MAX 文字 (終端を含む) を超える場合に
+     *  @ref CPLAT_ERR_BUFFER_TOO_SMALL を返します。
+     *  どちらかの入力が不正な UTF-8 の場合は置換せず、@ref CPLAT_ERR_INVALID_ENCODING と詳細 EILSEQ を返します。\n
+     *  OS の照会の失敗は、権限の拒否を @ref CPLAT_ERR_PERMISSION_DENIED 、パスの長さの超過を
+     *  @ref CPLAT_ERR_BUFFER_TOO_SMALL 、メモリ不足を @ref CPLAT_ERR_OUT_OF_MEMORY 、それ以外を
+     *  @ref CPLAT_ERR_UNKNOWN として返し、OS のエラー値を @p detail_out に格納します。\n
+     *  失敗した場合、@p same_out は変更しません。
+     *  see: https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_info
+     *
+     *  @par            スレッド セーフ
+     *  本関数はスレッド セーフです。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_path_is_same_file(const char *lhs, const char *rhs, int *same_out,
+                                                       cplat_error *detail_out);
 
     /**
      *  @brief          プラットフォームの一時ディレクトリのパスを取得します。

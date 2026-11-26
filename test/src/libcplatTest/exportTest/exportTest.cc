@@ -363,6 +363,8 @@
                  int(CPLAT_API *)(char *path_out, size_t path_size, cplat_error *detail_out, const char *path)) \
     EXPORT_ENTRY(cplat_path_equal, \
                  int(CPLAT_API *)(const char *lhs, const char *rhs, int *equal_out, cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_path_is_same_file, \
+                 int(CPLAT_API *)(const char *lhs, const char *rhs, int *same_out, cplat_error *detail_out)) \
     EXPORT_ENTRY(cplat_path_get_temp_dir, int(CPLAT_API *)(char *path_out, size_t path_size, cplat_error *detail_out)) \
     EXPORT_ENTRY(cplat_path_concat_n, \
                  int(CPLAT_API *)(char *path_out, size_t path_size, cplat_error *detail_out, size_t part_count, ...)) \

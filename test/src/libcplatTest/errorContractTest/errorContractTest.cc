@@ -136,6 +136,7 @@ TEST_F(errorContractTest, all_detail_out_apis_accept_null)
         {"cplat_file_close", []() { (void)cplat_file_close(nullptr, nullptr); }, 1, 0U},
         {"cplat_path_get_full", []() { (void)cplat_path_get_full(nullptr, 0U, nullptr, nullptr); }, 1, 0U},
         {"cplat_path_equal", []() { (void)cplat_path_equal(nullptr, nullptr, nullptr, nullptr); }, 1, 0U},
+        {"cplat_path_is_same_file", []() { (void)cplat_path_is_same_file(nullptr, nullptr, nullptr, nullptr); }, 1, 0U},
         {"cplat_path_get_temp_dir", []() { (void)cplat_path_get_temp_dir(nullptr, 0U, nullptr); }, 1, 0U},
         {"cplat_path_concat_n", []() { (void)cplat_path_concat_n(nullptr, 0U, nullptr, 1U, "x"); }, 1, 0U},
         {"cplat_path_concat", []() { (void)cplat_path_concat(nullptr, 0U, nullptr, "x"); }, 1, 0U},
@@ -181,7 +182,7 @@ TEST_F(errorContractTest, all_detail_out_apis_accept_null)
          []() { (void)cplat_mmap_attach(nullptr, CPLAT_MMAP_ACCESS_READ_ONLY, 0U, nullptr, nullptr); }, 1, 0U},
         {"cplat_mmap_flush", []() { (void)cplat_mmap_flush(nullptr, nullptr, 0U, nullptr); }, 1, 0U},
         {"cplat_mmap_detach", []() { (void)cplat_mmap_detach(nullptr, nullptr); }, 0, 0U},
-    }; // [状態] - detail_out に nullptr を指定する公開関数 59 件と公開マクロ 2 件を用意する。
+    }; // [状態] - detail_out に nullptr を指定する公開関数 60 件と公開マクロ 2 件を用意する。
     std::vector<int> tls_set_results;
 
     // Pre-Assert
@@ -206,7 +207,7 @@ TEST_F(errorContractTest, all_detail_out_apis_accept_null)
         if (cases[index].expected_tls_set >= 0)
         {
             EXPECT_EQ(cases[index].expected_tls_set, tls_set_results[index]) << cases[index].name;
-            // [確認_正常系 回数=60] - tls_set_results[index] が cases[index].expected_tls_set と一致すること。(各公開 API が nullptr の detail_out を参照せず、TLS を規約どおり更新したことの確認)
+            // [確認_正常系 回数=61] - tls_set_results[index] が cases[index].expected_tls_set と一致すること。(各公開 API が nullptr の detail_out を参照せず、TLS を規約どおり更新したことの確認)
         }
     }
 }

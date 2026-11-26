@@ -187,6 +187,7 @@ MOCK_CPLAT_LINK_IMPL(cplat_file_close)
 MOCK_CPLAT_LINK_IMPL(cplat_path_normalize_sep)
 MOCK_CPLAT_LINK_IMPL(cplat_path_get_full)
 MOCK_CPLAT_LINK_IMPL(cplat_path_equal)
+MOCK_CPLAT_LINK_IMPL(cplat_path_is_same_file)
 MOCK_CPLAT_LINK_IMPL(cplat_path_get_temp_dir)
 MOCK_CPLAT_LINK_IMPL(cplat_path_concat_n)
 MOCK_CPLAT_LINK_IMPL(cplat_vpath_concat_n)
@@ -1005,6 +1006,8 @@ extern char *delegate_real_cplat_path_normalize_sep(char *path);
 extern int delegate_real_cplat_path_get_full(char *path_out, size_t path_size, cplat_error *detail_out,
                                              const char *path);
 extern int delegate_real_cplat_path_equal(const char *lhs, const char *rhs, int *equal_out, cplat_error *detail_out);
+extern int delegate_real_cplat_path_is_same_file(const char *lhs, const char *rhs, int *same_out,
+                                                 cplat_error *detail_out);
 extern int delegate_real_cplat_path_get_temp_dir(char *path_out, size_t path_size, cplat_error *detail_out);
 extern int delegate_real_cplat_path_concat_n(char *path_out, size_t path_size, cplat_error *detail_out,
                                              size_t part_count, ...);
@@ -1949,6 +1952,7 @@ class Mock_cplat
     MOCK_METHOD(char *, cplat_path_normalize_sep, (char *));
     MOCK_METHOD(int, cplat_path_get_full, (char *, size_t, cplat_error *, const char *));
     MOCK_METHOD(int, cplat_path_equal, (const char *, const char *, int *, cplat_error *));
+    MOCK_METHOD(int, cplat_path_is_same_file, (const char *, const char *, int *, cplat_error *));
     MOCK_METHOD(int, cplat_path_get_temp_dir, (char *, size_t, cplat_error *));
     MOCK_METHOD(int, cplat_path_concat_n, (char *, size_t, cplat_error *, size_t, va_list));
     MOCK_METHOD(int, cplat_vpath_concat_n, (char *, size_t, cplat_error *, size_t, va_list));

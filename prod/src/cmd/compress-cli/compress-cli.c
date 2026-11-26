@@ -239,21 +239,24 @@ static int compress_cli_resolve_paths(const compress_cli_options *options, char 
 {
     cplat_error error;
     char message[COMPRESS_CLI_ERROR_MESSAGE_SIZE];
-    int path_equal = 0;
+    int same_file = 0;
 
     /* 診断の出力先がほかにないため、この関数の fprintf の戻り値は明示的に破棄する。 */
 
-    /* 入力パスと出力パスが同一ファイルを指していないか検証する。 */
-    if (cplat_path_equal(options->input_path, options->output_path, &path_equal, &error) != CPLAT_OK)
+    /*
+     * 入力パスと出力パスが同じ実体を指していないか検証する。ハード リンクや表記の異なるパスも同じ実体として検出する。
+     * 出力ファイルがまだない場合は、同じ実体ではないと判定される。
+     */
+    if (cplat_path_is_same_file(options->input_path, options->output_path, &same_file, &error) != CPLAT_OK)
     {
         (void)fprintf(stderr, "入力パスと出力パスの比較に失敗しました (%s)\n",
                       compress_cli_error_text(&error, message, sizeof(message)));
         return -1;
     }
 
-    if (path_equal != 0)
+    if (same_file != 0)
     {
-        (void)fprintf(stderr, "入力ファイルと出力ファイルに同じパスは指定できません。\n");
+        (void)fprintf(stderr, "入力ファイルと出力ファイルに同じファイルは指定できません。\n");
         return -1;
     }
 
