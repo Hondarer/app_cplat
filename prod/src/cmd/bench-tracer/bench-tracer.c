@@ -41,6 +41,90 @@
 /** --worker モード起動時の argc 期待値 (args[] の並びに対応) です。 */
 #define BENCH_TRACER_WORKER_ARGC 5
 
+static int monotonic_ns(uint64_t *nanoseconds_out);
+static int run_worker(const char *path, int messages, int buffered);
+static int measure_filtered(int messages);
+static int measure_files(char *executable, char *path, int processes, int messages, int buffered);
+
+/**
+ *  @brief          コマンド エントリ ポイントです。
+ *  @param[in]      argc  引数の個数。
+ *  @param[in]      argv  引数配列。
+ *  @return         成功時は 0、失敗時は 1 を返します。
+ */
+int main(int argc, char **argv)
+{
+    char *path = "bench-tracer.log";
+    int processes = DEFAULT_PROCESSES;
+    int messages = DEFAULT_MESSAGES;
+
+    cplat_console_init();
+
+    /* worker モードで起動された場合は worker 処理を実行して終了する。 */
+    if (argc == BENCH_TRACER_WORKER_ARGC && strcmp(argv[1], "--worker") == 0)
+    {
+        int buffered;
+
+        if (cplat_parse_int(&messages, argv[3], 10) != CPLAT_OK || cplat_parse_int(&buffered, argv[4], 10) != CPLAT_OK)
+        {
+            return 1;
+        }
+
+        return run_worker(argv[2], messages, buffered);
+    }
+
+    if (argc > 1)
+    {
+        path = argv[1];
+    }
+
+    if (argc > 2)
+    {
+        if (cplat_parse_int(&processes, argv[2], 10) != CPLAT_OK)
+        {
+            return 1;
+        }
+    }
+
+    if (argc > 3)
+    {
+        if (cplat_parse_int(&messages, argv[3], 10) != CPLAT_OK)
+        {
+            return 1;
+        }
+    }
+
+    if (processes <= 0 || messages <= 0)
+    {
+        /* 失敗の経路の使い方の表示であり、診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "usage: bench-tracer [path [processes [messages]]]\n");
+        return 1;
+    }
+
+    if (messages > INT_MAX / processes)
+    {
+        /* 失敗の経路の診断と使い方の表示であり、診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "bench-tracer: product of processes and messages does not fit in int\n"
+                              "usage: bench-tracer [path [processes [messages]]]\n");
+        return 1;
+    }
+
+    /* 破棄経路、非バッファー、OS バッファーありの順に測定を実行する。 */
+    if (measure_filtered(messages * processes) != 0 || measure_files(argv[0], path, processes, messages, 0) != 0 ||
+        measure_files(argv[0], path, processes, messages, 1) != 0)
+    {
+        return 1;
+    }
+
+    if (fflush(stdout) != 0 || ferror(stdout) != 0)
+    {
+        (void)fprintf(stderr, "bench-tracer: failed to write stdout\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+        return 1;
+    }
+
+    return 0;
+}
+
 /**
  *  @brief          単調増加時計をナノ秒で取得します。
  *  @param[out]     nanoseconds_out ナノ秒時刻の格納先。
@@ -262,83 +346,4 @@ static int measure_files(char *executable, char *path, int processes, int messag
     cplat_free(children);
 
     return failed;
-}
-
-/**
- *  @brief          コマンド エントリ ポイントです。
- *  @param[in]      argc  引数の個数。
- *  @param[in]      argv  引数配列。
- *  @return         成功時は 0、失敗時は 1 を返します。
- */
-int main(int argc, char **argv)
-{
-    char *path = "bench-tracer.log";
-    int processes = DEFAULT_PROCESSES;
-    int messages = DEFAULT_MESSAGES;
-
-    cplat_console_init();
-
-    /* worker モードで起動された場合は worker 処理を実行して終了する。 */
-    if (argc == BENCH_TRACER_WORKER_ARGC && strcmp(argv[1], "--worker") == 0)
-    {
-        int buffered;
-
-        if (cplat_parse_int(&messages, argv[3], 10) != CPLAT_OK || cplat_parse_int(&buffered, argv[4], 10) != CPLAT_OK)
-        {
-            return 1;
-        }
-
-        return run_worker(argv[2], messages, buffered);
-    }
-
-    if (argc > 1)
-    {
-        path = argv[1];
-    }
-
-    if (argc > 2)
-    {
-        if (cplat_parse_int(&processes, argv[2], 10) != CPLAT_OK)
-        {
-            return 1;
-        }
-    }
-
-    if (argc > 3)
-    {
-        if (cplat_parse_int(&messages, argv[3], 10) != CPLAT_OK)
-        {
-            return 1;
-        }
-    }
-
-    if (processes <= 0 || messages <= 0)
-    {
-        /* 失敗の経路の使い方の表示であり、診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
-        (void)fprintf(stderr, "usage: bench-tracer [path [processes [messages]]]\n");
-        return 1;
-    }
-
-    if (messages > INT_MAX / processes)
-    {
-        /* 失敗の経路の診断と使い方の表示であり、診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
-        (void)fprintf(stderr, "bench-tracer: product of processes and messages does not fit in int\n"
-                              "usage: bench-tracer [path [processes [messages]]]\n");
-        return 1;
-    }
-
-    /* 破棄経路、非バッファー、OS バッファーありの順に測定を実行する。 */
-    if (measure_filtered(messages * processes) != 0 || measure_files(argv[0], path, processes, messages, 0) != 0 ||
-        measure_files(argv[0], path, processes, messages, 1) != 0)
-    {
-        return 1;
-    }
-
-    if (fflush(stdout) != 0 || ferror(stdout) != 0)
-    {
-        (void)fprintf(stderr, "bench-tracer: failed to write stdout\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
-        return 1;
-    }
-
-    return 0;
 }

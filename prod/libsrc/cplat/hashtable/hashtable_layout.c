@@ -20,6 +20,13 @@
 
 #include <stdint.h>
 
+static int mul_checked(size_t a, size_t b, size_t *product_out);
+static size_t entry_key_offset(const cplat_hashtable_config *config);
+static size_t key_slot_size(const cplat_hashtable_config *config);
+static int value_stride_checked(const cplat_hashtable_config *config, size_t *stride_out);
+static int entry_stride_checked(const cplat_hashtable_config *config, size_t *stride_out);
+static int hashtable_free_list_region_size(const cplat_hashtable_config *config, size_t *size_out);
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int hashtable_add_checked(size_t a, size_t b, size_t *sum_out)
@@ -30,26 +37,6 @@ int hashtable_add_checked(size_t a, size_t b, size_t *sum_out)
     }
 
     *sum_out = a + b;
-
-    return 0;
-}
-
-/**
- *  @brief          乗算のあふれを検出します。
- *  @param[in]      a    乗数。
- *  @param[in]      b    乗数。
- *  @param[out]     product_out  積の格納先。あふれ時は書きません。
- *  @return         成功なら 0、あふれなら 1 です。
- */
-static int mul_checked(size_t a, size_t b, size_t *product_out)
-{
-    /* a が 0 なら積は 0 で、SIZE_MAX / a は未定義になるため検査しない。 */
-    if ((a != 0) && (b > SIZE_MAX / a))
-    {
-        return 1;
-    }
-
-    *product_out = a * b;
 
     return 0;
 }
@@ -73,89 +60,6 @@ int hashtable_align_up_checked(size_t offset, size_t alignment, size_t *aligned_
     return hashtable_add_checked(offset, pad, aligned_out);
 }
 
-/**
- *  @brief          エントリ先頭からキーまでのオフセットを返します。
- *  @param[in]      config  設定。NULL を渡してはなりません。
- *  @return         キーのバイト オフセットです。
- *
- *  SCOPE_RECORD では next + status + pad + timespec + generation のあとです。\n
- *  SCOPE_TABLE では next + status の直後です。\n
- *  バイナリ キーは status 直後に有効長を置くため、SCOPE_TABLE では有効長の直後へ移します。
- *  SCOPE_RECORD では有効長が詰め物に収まるため、オフセットは変わりません。\n
- *  可変長キーは 16 [byte] の永続 descriptor を置くため、uint64_t 境界へ切り上げます。
- *  切り上げないと descriptor が境界から外れ、未整列アクセスになります。
- */
-static size_t entry_key_offset(const cplat_hashtable_config *config)
-{
-    size_t off = sizeof(uint64_t) + sizeof(unsigned char);
-    size_t rem;
-
-    if (config->timestamp_scope == CPLAT_HASHTABLE_TIMESTAMP_SCOPE_RECORD)
-    {
-        off += (size_t)ENTRY_TIMESTAMP_PAD + sizeof(cplat_timespec) + sizeof(uint64_t);
-    }
-
-    if (config->key_type == CPLAT_HASHTABLE_FIELD_BINARY)
-    {
-        if (off < (size_t)ENTRY_BINARY_KEY_OFFSET)
-        {
-            off = (size_t)ENTRY_BINARY_KEY_OFFSET;
-        }
-
-        return off;
-    }
-
-    if (config->key_type != CPLAT_HASHTABLE_FIELD_VARIABLE_STRING)
-    {
-        return off;
-    }
-
-    /* off は最大でも 40 [byte] のため、切り上げであふれない。 */
-    rem = off % _Alignof(struct hashtable_string_ref);
-    if (rem != 0)
-    {
-        off += _Alignof(struct hashtable_string_ref) - rem;
-    }
-
-    return off;
-}
-
-/*
- * 1 エントリ内でキーが占めるスロットのバイト数を返す。
- * 可変長キーの場合は参照 descriptor のサイズ、固定長キーの場合は key_size を返す。
- */
-static size_t key_slot_size(const cplat_hashtable_config *config)
-{
-    if (hashtable_field_is_variable(config->key_type) != 0)
-    {
-        return sizeof(struct hashtable_string_ref);
-    }
-    else
-    {
-        return config->key_size;
-    }
-}
-
-/**
- *  @brief          固定長値 1 件が占めるバイト数を求めます。
- *  @param[in]      config      設定。NULL を渡してはなりません。
- *  @param[out]     stride_out  ストライドの格納先。あふれ時は書きません。
- *  @return         成功なら 0、あふれなら 1 です。
- *
- *  value_align が 0 のときは value_size をそのまま返し、値を隙間なく並べます。\n
- *  非 0 のときは value_size をその境界へ切り上げ、各値を境界へ整列させます。
- */
-static int value_stride_checked(const cplat_hashtable_config *config, size_t *stride_out)
-{
-    if (config->value_align == 0)
-    {
-        *stride_out = config->value_size;
-        return 0;
-    }
-
-    return hashtable_align_up_checked(config->value_size, config->value_align, stride_out);
-}
-
 /* Doxygen コメントは、ヘッダーに記載 */
 
 size_t hashtable_data_region_align(const cplat_hashtable_config *config)
@@ -171,53 +75,6 @@ size_t hashtable_data_region_align(const cplat_hashtable_config *config)
     }
 
     return config->value_align;
-}
-
-/**
- *  @brief          1 エントリのストライドを求めます。
- *  @param[in]      config  設定。NULL を渡してはなりません。
- *  @param[out]     stride_out  ストライドの格納先。あふれ時は書きません。
- *  @return         成功なら 0、あふれなら 1 です。
- *
- *  中身は next + status + (SCOPE_RECORD なら pad と timespec) + key を
- *  uint64_t 境界へ切り上げた値です。
- */
-static int entry_stride_checked(const cplat_hashtable_config *config, size_t *stride_out)
-{
-    size_t raw;
-
-    if (hashtable_add_checked(entry_key_offset(config), key_slot_size(config), &raw) != 0)
-    {
-        return 1;
-    }
-
-    return hashtable_align_up_checked(raw, _Alignof(uint64_t), stride_out);
-}
-
-/**
- *  @brief          空きリストのバイト数を求めます。
- *  @param[in]      config    設定。NULL を渡してはなりません。
- *  @param[out]     size_out  バイト数の格納先。NULL を渡してはなりません。
- *  @return         成功なら 0、あふれなら -1 です。
- *
- *  空きブロックは使用中ブロックで区切られるため、個数の上限は capacity + 1 です。\n
- *  可変長フィールドのときだけ領域を確保します。
- */
-static int hashtable_free_list_region_size(const cplat_hashtable_config *config, size_t *size_out)
-{
-    size_t count;
-
-    if (hashtable_add_checked(config->capacity, 1u, &count) != 0)
-    {
-        return -1;
-    }
-
-    if (mul_checked(count, sizeof(struct hashtable_free_block), size_out) != 0)
-    {
-        return -1;
-    }
-
-    return 0;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -382,4 +239,154 @@ void hashtable_refresh_layout(cplat_hashtable *ht)
     ht->key_offset = entry_key_offset(config);
     ht->key_is_variable = (unsigned char)(hashtable_field_is_variable(config->key_type) != 0);
     ht->value_is_variable = (unsigned char)(hashtable_field_is_variable(config->value_type) != 0);
+}
+
+/**
+ *  @brief          乗算のあふれを検出します。
+ *  @param[in]      a    乗数。
+ *  @param[in]      b    乗数。
+ *  @param[out]     product_out  積の格納先。あふれ時は書きません。
+ *  @return         成功なら 0、あふれなら 1 です。
+ */
+static int mul_checked(size_t a, size_t b, size_t *product_out)
+{
+    /* a が 0 なら積は 0 で、SIZE_MAX / a は未定義になるため検査しない。 */
+    if ((a != 0) && (b > SIZE_MAX / a))
+    {
+        return 1;
+    }
+
+    *product_out = a * b;
+
+    return 0;
+}
+
+/**
+ *  @brief          エントリ先頭からキーまでのオフセットを返します。
+ *  @param[in]      config  設定。NULL を渡してはなりません。
+ *  @return         キーのバイト オフセットです。
+ *
+ *  SCOPE_RECORD では next + status + pad + timespec + generation のあとです。\n
+ *  SCOPE_TABLE では next + status の直後です。\n
+ *  バイナリ キーは status 直後に有効長を置くため、SCOPE_TABLE では有効長の直後へ移します。
+ *  SCOPE_RECORD では有効長が詰め物に収まるため、オフセットは変わりません。\n
+ *  可変長キーは 16 [byte] の永続 descriptor を置くため、uint64_t 境界へ切り上げます。
+ *  切り上げないと descriptor が境界から外れ、未整列アクセスになります。
+ */
+static size_t entry_key_offset(const cplat_hashtable_config *config)
+{
+    size_t off = sizeof(uint64_t) + sizeof(unsigned char);
+    size_t rem;
+
+    if (config->timestamp_scope == CPLAT_HASHTABLE_TIMESTAMP_SCOPE_RECORD)
+    {
+        off += (size_t)ENTRY_TIMESTAMP_PAD + sizeof(cplat_timespec) + sizeof(uint64_t);
+    }
+
+    if (config->key_type == CPLAT_HASHTABLE_FIELD_BINARY)
+    {
+        if (off < (size_t)ENTRY_BINARY_KEY_OFFSET)
+        {
+            off = (size_t)ENTRY_BINARY_KEY_OFFSET;
+        }
+
+        return off;
+    }
+
+    if (config->key_type != CPLAT_HASHTABLE_FIELD_VARIABLE_STRING)
+    {
+        return off;
+    }
+
+    /* off は最大でも 40 [byte] のため、切り上げであふれない。 */
+    rem = off % _Alignof(struct hashtable_string_ref);
+    if (rem != 0)
+    {
+        off += _Alignof(struct hashtable_string_ref) - rem;
+    }
+
+    return off;
+}
+
+/*
+ * 1 エントリ内でキーが占めるスロットのバイト数を返す。
+ * 可変長キーの場合は参照 descriptor のサイズ、固定長キーの場合は key_size を返す。
+ */
+static size_t key_slot_size(const cplat_hashtable_config *config)
+{
+    if (hashtable_field_is_variable(config->key_type) != 0)
+    {
+        return sizeof(struct hashtable_string_ref);
+    }
+    else
+    {
+        return config->key_size;
+    }
+}
+
+/**
+ *  @brief          固定長値 1 件が占めるバイト数を求めます。
+ *  @param[in]      config      設定。NULL を渡してはなりません。
+ *  @param[out]     stride_out  ストライドの格納先。あふれ時は書きません。
+ *  @return         成功なら 0、あふれなら 1 です。
+ *
+ *  value_align が 0 のときは value_size をそのまま返し、値を隙間なく並べます。\n
+ *  非 0 のときは value_size をその境界へ切り上げ、各値を境界へ整列させます。
+ */
+static int value_stride_checked(const cplat_hashtable_config *config, size_t *stride_out)
+{
+    if (config->value_align == 0)
+    {
+        *stride_out = config->value_size;
+        return 0;
+    }
+
+    return hashtable_align_up_checked(config->value_size, config->value_align, stride_out);
+}
+
+/**
+ *  @brief          1 エントリのストライドを求めます。
+ *  @param[in]      config  設定。NULL を渡してはなりません。
+ *  @param[out]     stride_out  ストライドの格納先。あふれ時は書きません。
+ *  @return         成功なら 0、あふれなら 1 です。
+ *
+ *  中身は next + status + (SCOPE_RECORD なら pad と timespec) + key を
+ *  uint64_t 境界へ切り上げた値です。
+ */
+static int entry_stride_checked(const cplat_hashtable_config *config, size_t *stride_out)
+{
+    size_t raw;
+
+    if (hashtable_add_checked(entry_key_offset(config), key_slot_size(config), &raw) != 0)
+    {
+        return 1;
+    }
+
+    return hashtable_align_up_checked(raw, _Alignof(uint64_t), stride_out);
+}
+
+/**
+ *  @brief          空きリストのバイト数を求めます。
+ *  @param[in]      config    設定。NULL を渡してはなりません。
+ *  @param[out]     size_out  バイト数の格納先。NULL を渡してはなりません。
+ *  @return         成功なら 0、あふれなら -1 です。
+ *
+ *  空きブロックは使用中ブロックで区切られるため、個数の上限は capacity + 1 です。\n
+ *  可変長フィールドのときだけ領域を確保します。
+ */
+static int hashtable_free_list_region_size(const cplat_hashtable_config *config, size_t *size_out)
+{
+    size_t count;
+
+    if (hashtable_add_checked(config->capacity, 1u, &count) != 0)
+    {
+        return -1;
+    }
+
+    if (mul_checked(count, sizeof(struct hashtable_free_block), size_out) != 0)
+    {
+        return -1;
+    }
+
+    return 0;
 }

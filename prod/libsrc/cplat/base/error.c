@@ -27,8 +27,475 @@
     #include <cplat/base/windows_sdk.h>
 #endif /* PLATFORM_ */
 
+static void error_store(cplat_error *error, const cplat_error_domain domain, const int result, const unsigned long code);
+static cplat_error_cause error_cause_from_errno(const int errno_value);
+static cplat_error_cause error_cause_from_socket_errno(const int errno_value);
+static cplat_error_cause error_cause_from_gai_error(const int error_code);
+#if defined(PLATFORM_WINDOWS)
+static cplat_error_cause error_cause_from_winsock_error(const unsigned long error_code);
+static cplat_error_cause error_cause_from_windows_error(const unsigned long error_code);
+#endif
+
 /* TLS 実体はヘッダーへ公開せず、エクスポート関数経由でのみ参照する。 */
 static THREAD_LOCAL cplat_error cplat_error_last;
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_error_clear(cplat_error *error)
+{
+    error_store(error, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_error_capture_errno(cplat_error *error, const int errno_value)
+{
+    if (errno_value == 0)
+    {
+        error_store(error, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
+    }
+    else
+    {
+        error_store(error, CPLAT_ERROR_DOMAIN_ERRNO, cplat_internal_result_from_errno(errno_value),
+                    (unsigned long)errno_value);
+    }
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_error_capture_current_errno(cplat_error *error)
+{
+    const int errno_value = errno;
+
+    cplat_error_capture_errno(error, errno_value);
+}
+
+#if defined(PLATFORM_WINDOWS)
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_error_capture_windows_error(cplat_error *error, const unsigned long error_code)
+{
+    if (error_code == ERROR_SUCCESS)
+    {
+        error_store(error, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
+    }
+    else
+    {
+        error_store(error, CPLAT_ERROR_DOMAIN_WINDOWS, cplat_internal_result_from_windows_error(error_code),
+                    error_code);
+    }
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_error_capture_current_windows_error(cplat_error *error)
+{
+    const DWORD error_code = GetLastError();
+
+    cplat_error_capture_windows_error(error, error_code);
+}
+#endif
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_error_get_last(cplat_error *error_out)
+{
+    if (error_out != NULL)
+    {
+        *error_out = cplat_error_last;
+    }
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_error_set_last(const cplat_error *error)
+{
+    if (error == NULL)
+    {
+        error_store(&cplat_error_last, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
+    }
+    else
+    {
+        cplat_error_last = *error;
+    }
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_error_clear_last(void)
+{
+    error_store(&cplat_error_last, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_error_is_set(const cplat_error *error)
+{
+    int is_set = 0;
+
+    if (error != NULL)
+    {
+        if (error->domain != CPLAT_ERROR_DOMAIN_NONE)
+        {
+            is_set = 1;
+        }
+    }
+
+    return is_set;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+cplat_error_domain cplat_error_get_domain(const cplat_error *error)
+{
+    cplat_error_domain domain = CPLAT_ERROR_DOMAIN_NONE;
+
+    if (error != NULL)
+    {
+        if ((error->domain == CPLAT_ERROR_DOMAIN_NONE) || (error->domain == CPLAT_ERROR_DOMAIN_ERRNO) ||
+            (error->domain == CPLAT_ERROR_DOMAIN_SOCKET_ERRNO) || (error->domain == CPLAT_ERROR_DOMAIN_WINDOWS) ||
+            (error->domain == CPLAT_ERROR_DOMAIN_WINSOCK) || (error->domain == CPLAT_ERROR_DOMAIN_GAI))
+        {
+            domain = error->domain;
+        }
+    }
+
+    return domain;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_error_get_errno(const cplat_error *error)
+{
+    int errno_value = 0;
+
+    if ((error != NULL) && (error->domain == CPLAT_ERROR_DOMAIN_ERRNO))
+    {
+        errno_value = (int)error->code;
+    }
+
+    return errno_value;
+}
+
+#if defined(PLATFORM_WINDOWS)
+/* Doxygen コメントは、ヘッダーに記載 */
+
+unsigned long cplat_error_get_windows_error(const cplat_error *error)
+{
+    unsigned long error_code = ERROR_SUCCESS;
+
+    if ((error != NULL) && (error->domain == CPLAT_ERROR_DOMAIN_WINDOWS))
+    {
+        error_code = error->code;
+    }
+
+    return error_code;
+}
+#endif
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_error_to_result(const cplat_error *error)
+{
+    int result = CPLAT_ERR_INVALID_ARGUMENT;
+
+    if (error != NULL)
+    {
+        if (error->domain == CPLAT_ERROR_DOMAIN_NONE)
+        {
+            result = CPLAT_OK;
+        }
+        else if ((error->domain == CPLAT_ERROR_DOMAIN_ERRNO) || (error->domain == CPLAT_ERROR_DOMAIN_WINDOWS) ||
+                 (error->domain == CPLAT_ERROR_DOMAIN_SOCKET_ERRNO) || (error->domain == CPLAT_ERROR_DOMAIN_WINSOCK) ||
+                 (error->domain == CPLAT_ERROR_DOMAIN_GAI))
+        {
+            result = error->result;
+        }
+    }
+
+    return result;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+cplat_error_cause cplat_error_get_cause(const cplat_error *error)
+{
+    cplat_error_cause cause = CPLAT_CAUSE_NONE;
+
+    if (error != NULL)
+    {
+        if (error->domain == CPLAT_ERROR_DOMAIN_ERRNO)
+        {
+            cause = error_cause_from_errno((int)error->code);
+        }
+        else if (error->domain == CPLAT_ERROR_DOMAIN_SOCKET_ERRNO)
+        {
+            cause = error_cause_from_socket_errno((int)error->code);
+        }
+        else if (error->domain == CPLAT_ERROR_DOMAIN_GAI)
+        {
+            cause = error_cause_from_gai_error((int)error->code);
+        }
+        else if (error->domain == CPLAT_ERROR_DOMAIN_WINDOWS)
+        {
+#if defined(PLATFORM_WINDOWS)
+            cause = error_cause_from_windows_error(error->code);
+#else
+            /* Windows 以外のビルドには Win32 エラーの要因変換がないため、その他とする。 */
+            cause = CPLAT_CAUSE_OTHER;
+#endif
+        }
+        else if (error->domain == CPLAT_ERROR_DOMAIN_WINSOCK)
+        {
+#if defined(PLATFORM_WINDOWS)
+            cause = error_cause_from_winsock_error(error->code);
+#else
+            /* Windows 以外のビルドには Winsock エラーの要因変換がないため、その他とする。 */
+            cause = CPLAT_CAUSE_OTHER;
+#endif
+        }
+        else if (error->domain != CPLAT_ERROR_DOMAIN_NONE)
+        {
+            cause = CPLAT_CAUSE_OTHER;
+        }
+    }
+
+    return cause;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_error_is(const cplat_error *error, const cplat_error_cause cause)
+{
+    int matches = 0;
+
+    /*
+     * 引数の要因が有効な列挙値であるかは検査しない。cplat_error_get_cause() は
+     * 定義済みの要因しか返さないため、未定義の値を指定しても一致しない。
+     * 上限を列挙の末尾と比較する形にすると、要因を追加するたびに更新が必要になり、
+     * 更新漏れがあると追加した要因の判定が常に不一致になる。
+     */
+    if ((error != NULL) && (cplat_error_get_cause(error) == cause))
+    {
+        matches = 1;
+    }
+
+    return matches;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_internal_error_report_errno(cplat_error *detail_out, const int errno_value)
+{
+    int result;
+
+    if (errno_value == 0)
+    {
+        result = CPLAT_OK;
+    }
+    else
+    {
+        if ((errno_value == EAGAIN)
+#if defined(EWOULDBLOCK) && (EWOULDBLOCK != EAGAIN)
+            || (errno_value == EWOULDBLOCK)
+#endif
+        )
+        {
+            result = CPLAT_ERR_WOULD_BLOCK;
+        }
+        else
+        {
+            result = cplat_internal_result_from_errno(errno_value);
+        }
+    }
+
+    return cplat_internal_error_report_errno_as(detail_out, errno_value, result);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_internal_error_report_errno_as(cplat_error *detail_out, const int errno_value, const int result)
+{
+    cplat_error_domain domain = CPLAT_ERROR_DOMAIN_ERRNO;
+
+    if ((errno_value == 0) && (result == CPLAT_OK))
+    {
+        domain = CPLAT_ERROR_DOMAIN_NONE;
+    }
+
+    error_store(detail_out, domain, result, (unsigned long)errno_value);
+    error_store(&cplat_error_last, domain, result, (unsigned long)errno_value);
+
+    return result;
+}
+
+#if defined(PLATFORM_WINDOWS)
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_internal_error_report_winsock_error(cplat_error *detail_out, const unsigned long error_code)
+{
+    int result;
+
+    if (error_code == 0UL)
+    {
+        result = CPLAT_OK;
+    }
+    else
+    {
+        result = cplat_internal_result_from_winsock_error(error_code);
+    }
+
+    return cplat_internal_error_report_winsock_error_as(detail_out, error_code, result);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_internal_error_report_winsock_error_as(cplat_error *detail_out, const unsigned long error_code,
+                                                 const int result)
+{
+    cplat_error_domain domain = CPLAT_ERROR_DOMAIN_WINSOCK;
+
+    if ((error_code == 0UL) && (result == CPLAT_OK))
+    {
+        domain = CPLAT_ERROR_DOMAIN_NONE;
+    }
+
+    error_store(detail_out, domain, result, error_code);
+    error_store(&cplat_error_last, domain, result, error_code);
+
+    return result;
+}
+#endif /* PLATFORM_WINDOWS */
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_internal_error_report_socket_errno(cplat_error *detail_out, const int errno_value)
+{
+    int result;
+
+    if (errno_value == 0)
+    {
+        result = CPLAT_OK;
+    }
+    else
+    {
+        if (error_cause_from_socket_errno(errno_value) == CPLAT_CAUSE_WOULD_BLOCK)
+        {
+            result = CPLAT_ERR_WOULD_BLOCK;
+        }
+        else
+        {
+            result = cplat_internal_result_from_errno(errno_value);
+        }
+    }
+
+    return cplat_internal_error_report_socket_errno_as(detail_out, errno_value, result);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_internal_error_report_socket_errno_as(cplat_error *detail_out, const int errno_value, const int result)
+{
+    cplat_error_domain domain = CPLAT_ERROR_DOMAIN_SOCKET_ERRNO;
+
+    if ((errno_value == 0) && (result == CPLAT_OK))
+    {
+        domain = CPLAT_ERROR_DOMAIN_NONE;
+    }
+
+    error_store(detail_out, domain, result, (unsigned long)errno_value);
+    error_store(&cplat_error_last, domain, result, (unsigned long)errno_value);
+
+    return result;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_internal_error_report_gai_error(cplat_error *detail_out, const int error_code)
+{
+    cplat_error_domain domain = CPLAT_ERROR_DOMAIN_GAI;
+    int result;
+
+    if (error_code == 0)
+    {
+        domain = CPLAT_ERROR_DOMAIN_NONE;
+        result = CPLAT_OK;
+    }
+    else
+    {
+        const cplat_error_cause cause = error_cause_from_gai_error(error_code);
+
+        if (cause == CPLAT_CAUSE_NOT_FOUND)
+        {
+            result = CPLAT_ERR_NOT_FOUND;
+        }
+        else if (cause == CPLAT_CAUSE_BUSY)
+        {
+            result = CPLAT_ERR_BUSY;
+        }
+        else if (cause == CPLAT_CAUSE_OUT_OF_MEMORY)
+        {
+            result = CPLAT_ERR_OUT_OF_MEMORY;
+        }
+        else
+        {
+            result = CPLAT_ERR_UNKNOWN;
+        }
+    }
+
+    error_store(detail_out, domain, result, (unsigned long)error_code);
+    error_store(&cplat_error_last, domain, result, (unsigned long)error_code);
+
+    return result;
+}
+
+#if defined(PLATFORM_WINDOWS)
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_internal_error_report_windows_error(cplat_error *detail_out, const unsigned long error_code)
+{
+    int result;
+
+    if (error_code == ERROR_SUCCESS)
+    {
+        result = CPLAT_OK;
+    }
+    else
+    {
+        result = cplat_internal_result_from_windows_error(error_code);
+    }
+
+    return cplat_internal_error_report_windows_error_as(detail_out, error_code, result);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_internal_error_report_windows_error_as(cplat_error *detail_out, const unsigned long error_code,
+                                                 const int result)
+{
+    cplat_error_domain domain = CPLAT_ERROR_DOMAIN_WINDOWS;
+
+    if ((error_code == ERROR_SUCCESS) && (result == CPLAT_OK))
+    {
+        domain = CPLAT_ERROR_DOMAIN_NONE;
+    }
+
+    error_store(detail_out, domain, result, error_code);
+    error_store(&cplat_error_last, domain, result, error_code);
+
+    return result;
+}
+#endif
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_internal_error_report_success(cplat_error *detail_out)
+{
+    error_store(detail_out, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
+    error_store(&cplat_error_last, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
+
+    return CPLAT_OK;
+}
 
 /**
  *  @brief          詳細エラーへ各フィールドを格納します。
@@ -515,461 +982,3 @@ static cplat_error_cause error_cause_from_windows_error(const unsigned long erro
     return cause;
 }
 #endif
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_error_clear(cplat_error *error)
-{
-    error_store(error, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_error_capture_errno(cplat_error *error, const int errno_value)
-{
-    if (errno_value == 0)
-    {
-        error_store(error, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
-    }
-    else
-    {
-        error_store(error, CPLAT_ERROR_DOMAIN_ERRNO, cplat_internal_result_from_errno(errno_value),
-                    (unsigned long)errno_value);
-    }
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_error_capture_current_errno(cplat_error *error)
-{
-    const int errno_value = errno;
-
-    cplat_error_capture_errno(error, errno_value);
-}
-
-#if defined(PLATFORM_WINDOWS)
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_error_capture_windows_error(cplat_error *error, const unsigned long error_code)
-{
-    if (error_code == ERROR_SUCCESS)
-    {
-        error_store(error, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
-    }
-    else
-    {
-        error_store(error, CPLAT_ERROR_DOMAIN_WINDOWS, cplat_internal_result_from_windows_error(error_code),
-                    error_code);
-    }
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_error_capture_current_windows_error(cplat_error *error)
-{
-    const DWORD error_code = GetLastError();
-
-    cplat_error_capture_windows_error(error, error_code);
-}
-#endif
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_error_get_last(cplat_error *error_out)
-{
-    if (error_out != NULL)
-    {
-        *error_out = cplat_error_last;
-    }
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_error_set_last(const cplat_error *error)
-{
-    if (error == NULL)
-    {
-        error_store(&cplat_error_last, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
-    }
-    else
-    {
-        cplat_error_last = *error;
-    }
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_error_clear_last(void)
-{
-    error_store(&cplat_error_last, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_error_is_set(const cplat_error *error)
-{
-    int is_set = 0;
-
-    if (error != NULL)
-    {
-        if (error->domain != CPLAT_ERROR_DOMAIN_NONE)
-        {
-            is_set = 1;
-        }
-    }
-
-    return is_set;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-cplat_error_domain cplat_error_get_domain(const cplat_error *error)
-{
-    cplat_error_domain domain = CPLAT_ERROR_DOMAIN_NONE;
-
-    if (error != NULL)
-    {
-        if ((error->domain == CPLAT_ERROR_DOMAIN_NONE) || (error->domain == CPLAT_ERROR_DOMAIN_ERRNO) ||
-            (error->domain == CPLAT_ERROR_DOMAIN_SOCKET_ERRNO) || (error->domain == CPLAT_ERROR_DOMAIN_WINDOWS) ||
-            (error->domain == CPLAT_ERROR_DOMAIN_WINSOCK) || (error->domain == CPLAT_ERROR_DOMAIN_GAI))
-        {
-            domain = error->domain;
-        }
-    }
-
-    return domain;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_error_get_errno(const cplat_error *error)
-{
-    int errno_value = 0;
-
-    if ((error != NULL) && (error->domain == CPLAT_ERROR_DOMAIN_ERRNO))
-    {
-        errno_value = (int)error->code;
-    }
-
-    return errno_value;
-}
-
-#if defined(PLATFORM_WINDOWS)
-/* Doxygen コメントは、ヘッダーに記載 */
-
-unsigned long cplat_error_get_windows_error(const cplat_error *error)
-{
-    unsigned long error_code = ERROR_SUCCESS;
-
-    if ((error != NULL) && (error->domain == CPLAT_ERROR_DOMAIN_WINDOWS))
-    {
-        error_code = error->code;
-    }
-
-    return error_code;
-}
-#endif
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_error_to_result(const cplat_error *error)
-{
-    int result = CPLAT_ERR_INVALID_ARGUMENT;
-
-    if (error != NULL)
-    {
-        if (error->domain == CPLAT_ERROR_DOMAIN_NONE)
-        {
-            result = CPLAT_OK;
-        }
-        else if ((error->domain == CPLAT_ERROR_DOMAIN_ERRNO) || (error->domain == CPLAT_ERROR_DOMAIN_WINDOWS) ||
-                 (error->domain == CPLAT_ERROR_DOMAIN_SOCKET_ERRNO) || (error->domain == CPLAT_ERROR_DOMAIN_WINSOCK) ||
-                 (error->domain == CPLAT_ERROR_DOMAIN_GAI))
-        {
-            result = error->result;
-        }
-    }
-
-    return result;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-cplat_error_cause cplat_error_get_cause(const cplat_error *error)
-{
-    cplat_error_cause cause = CPLAT_CAUSE_NONE;
-
-    if (error != NULL)
-    {
-        if (error->domain == CPLAT_ERROR_DOMAIN_ERRNO)
-        {
-            cause = error_cause_from_errno((int)error->code);
-        }
-        else if (error->domain == CPLAT_ERROR_DOMAIN_SOCKET_ERRNO)
-        {
-            cause = error_cause_from_socket_errno((int)error->code);
-        }
-        else if (error->domain == CPLAT_ERROR_DOMAIN_GAI)
-        {
-            cause = error_cause_from_gai_error((int)error->code);
-        }
-        else if (error->domain == CPLAT_ERROR_DOMAIN_WINDOWS)
-        {
-#if defined(PLATFORM_WINDOWS)
-            cause = error_cause_from_windows_error(error->code);
-#else
-            /* Windows 以外のビルドには Win32 エラーの要因変換がないため、その他とする。 */
-            cause = CPLAT_CAUSE_OTHER;
-#endif
-        }
-        else if (error->domain == CPLAT_ERROR_DOMAIN_WINSOCK)
-        {
-#if defined(PLATFORM_WINDOWS)
-            cause = error_cause_from_winsock_error(error->code);
-#else
-            /* Windows 以外のビルドには Winsock エラーの要因変換がないため、その他とする。 */
-            cause = CPLAT_CAUSE_OTHER;
-#endif
-        }
-        else if (error->domain != CPLAT_ERROR_DOMAIN_NONE)
-        {
-            cause = CPLAT_CAUSE_OTHER;
-        }
-    }
-
-    return cause;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_error_is(const cplat_error *error, const cplat_error_cause cause)
-{
-    int matches = 0;
-
-    /*
-     * 引数の要因が有効な列挙値であるかは検査しない。cplat_error_get_cause() は
-     * 定義済みの要因しか返さないため、未定義の値を指定しても一致しない。
-     * 上限を列挙の末尾と比較する形にすると、要因を追加するたびに更新が必要になり、
-     * 更新漏れがあると追加した要因の判定が常に不一致になる。
-     */
-    if ((error != NULL) && (cplat_error_get_cause(error) == cause))
-    {
-        matches = 1;
-    }
-
-    return matches;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_internal_error_report_errno(cplat_error *detail_out, const int errno_value)
-{
-    int result;
-
-    if (errno_value == 0)
-    {
-        result = CPLAT_OK;
-    }
-    else
-    {
-        if ((errno_value == EAGAIN)
-#if defined(EWOULDBLOCK) && (EWOULDBLOCK != EAGAIN)
-            || (errno_value == EWOULDBLOCK)
-#endif
-        )
-        {
-            result = CPLAT_ERR_WOULD_BLOCK;
-        }
-        else
-        {
-            result = cplat_internal_result_from_errno(errno_value);
-        }
-    }
-
-    return cplat_internal_error_report_errno_as(detail_out, errno_value, result);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_internal_error_report_errno_as(cplat_error *detail_out, const int errno_value, const int result)
-{
-    cplat_error_domain domain = CPLAT_ERROR_DOMAIN_ERRNO;
-
-    if ((errno_value == 0) && (result == CPLAT_OK))
-    {
-        domain = CPLAT_ERROR_DOMAIN_NONE;
-    }
-
-    error_store(detail_out, domain, result, (unsigned long)errno_value);
-    error_store(&cplat_error_last, domain, result, (unsigned long)errno_value);
-
-    return result;
-}
-
-#if defined(PLATFORM_WINDOWS)
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_internal_error_report_winsock_error(cplat_error *detail_out, const unsigned long error_code)
-{
-    int result;
-
-    if (error_code == 0UL)
-    {
-        result = CPLAT_OK;
-    }
-    else
-    {
-        result = cplat_internal_result_from_winsock_error(error_code);
-    }
-
-    return cplat_internal_error_report_winsock_error_as(detail_out, error_code, result);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_internal_error_report_winsock_error_as(cplat_error *detail_out, const unsigned long error_code,
-                                                 const int result)
-{
-    cplat_error_domain domain = CPLAT_ERROR_DOMAIN_WINSOCK;
-
-    if ((error_code == 0UL) && (result == CPLAT_OK))
-    {
-        domain = CPLAT_ERROR_DOMAIN_NONE;
-    }
-
-    error_store(detail_out, domain, result, error_code);
-    error_store(&cplat_error_last, domain, result, error_code);
-
-    return result;
-}
-#endif /* PLATFORM_WINDOWS */
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_internal_error_report_socket_errno(cplat_error *detail_out, const int errno_value)
-{
-    int result;
-
-    if (errno_value == 0)
-    {
-        result = CPLAT_OK;
-    }
-    else
-    {
-        if (error_cause_from_socket_errno(errno_value) == CPLAT_CAUSE_WOULD_BLOCK)
-        {
-            result = CPLAT_ERR_WOULD_BLOCK;
-        }
-        else
-        {
-            result = cplat_internal_result_from_errno(errno_value);
-        }
-    }
-
-    return cplat_internal_error_report_socket_errno_as(detail_out, errno_value, result);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_internal_error_report_socket_errno_as(cplat_error *detail_out, const int errno_value, const int result)
-{
-    cplat_error_domain domain = CPLAT_ERROR_DOMAIN_SOCKET_ERRNO;
-
-    if ((errno_value == 0) && (result == CPLAT_OK))
-    {
-        domain = CPLAT_ERROR_DOMAIN_NONE;
-    }
-
-    error_store(detail_out, domain, result, (unsigned long)errno_value);
-    error_store(&cplat_error_last, domain, result, (unsigned long)errno_value);
-
-    return result;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_internal_error_report_gai_error(cplat_error *detail_out, const int error_code)
-{
-    cplat_error_domain domain = CPLAT_ERROR_DOMAIN_GAI;
-    int result;
-
-    if (error_code == 0)
-    {
-        domain = CPLAT_ERROR_DOMAIN_NONE;
-        result = CPLAT_OK;
-    }
-    else
-    {
-        const cplat_error_cause cause = error_cause_from_gai_error(error_code);
-
-        if (cause == CPLAT_CAUSE_NOT_FOUND)
-        {
-            result = CPLAT_ERR_NOT_FOUND;
-        }
-        else if (cause == CPLAT_CAUSE_BUSY)
-        {
-            result = CPLAT_ERR_BUSY;
-        }
-        else if (cause == CPLAT_CAUSE_OUT_OF_MEMORY)
-        {
-            result = CPLAT_ERR_OUT_OF_MEMORY;
-        }
-        else
-        {
-            result = CPLAT_ERR_UNKNOWN;
-        }
-    }
-
-    error_store(detail_out, domain, result, (unsigned long)error_code);
-    error_store(&cplat_error_last, domain, result, (unsigned long)error_code);
-
-    return result;
-}
-
-#if defined(PLATFORM_WINDOWS)
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_internal_error_report_windows_error(cplat_error *detail_out, const unsigned long error_code)
-{
-    int result;
-
-    if (error_code == ERROR_SUCCESS)
-    {
-        result = CPLAT_OK;
-    }
-    else
-    {
-        result = cplat_internal_result_from_windows_error(error_code);
-    }
-
-    return cplat_internal_error_report_windows_error_as(detail_out, error_code, result);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_internal_error_report_windows_error_as(cplat_error *detail_out, const unsigned long error_code,
-                                                 const int result)
-{
-    cplat_error_domain domain = CPLAT_ERROR_DOMAIN_WINDOWS;
-
-    if ((error_code == ERROR_SUCCESS) && (result == CPLAT_OK))
-    {
-        domain = CPLAT_ERROR_DOMAIN_NONE;
-    }
-
-    error_store(detail_out, domain, result, error_code);
-    error_store(&cplat_error_last, domain, result, error_code);
-
-    return result;
-}
-#endif
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_internal_error_report_success(cplat_error *detail_out)
-{
-    error_store(detail_out, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
-    error_store(&cplat_error_last, CPLAT_ERROR_DOMAIN_NONE, CPLAT_OK, 0UL);
-
-    return CPLAT_OK;
-}

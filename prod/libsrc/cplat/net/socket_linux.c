@@ -27,266 +27,17 @@
     #include <cplat/net/socket.h>
     #include <cplat/sync/sync.h>
 
-/**
- *  @brief          共通のエンドポイント表現を sockaddr_in へ変換します。
- *  @param[in]      endpoint 変換元のエンドポイント。
- *  @param[out]     native   変換後の sockaddr_in の格納先。
- */
-static void endpoint_to_native(const cplat_ipv4_endpoint *endpoint, struct sockaddr_in *native)
-{
-    memset(native, 0, sizeof(*native));
-    native->sin_family = AF_INET;
-    memcpy(&native->sin_addr.s_addr, &endpoint->address, sizeof(native->sin_addr.s_addr));
-    memcpy(&native->sin_port, &endpoint->port, sizeof(native->sin_port));
-}
-
-/**
- *  @brief          sockaddr_in を共通のエンドポイント表現へ変換します。
- *  @param[in]      native   変換元の sockaddr_in。
- *  @param[out]     endpoint 変換後のエンドポイントの格納先。
- */
-static void endpoint_from_native(const struct sockaddr_in *native, cplat_ipv4_endpoint *endpoint)
-{
-    memset(endpoint, 0, sizeof(*endpoint));
-    memcpy(&endpoint->address, &native->sin_addr.s_addr, sizeof(endpoint->address));
-    memcpy(&endpoint->port, &native->sin_port, sizeof(endpoint->port));
-}
-
-/**
- *  @brief          ソケット オプションへ整数値を設定します。
- *  @param[in]      sock       対象のソケット。
- *  @param[in]      level      オプションの階層。
- *  @param[in]      optname    オプション名。
- *  @param[in]      value      設定する値。
- *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
- *  @return         共通結果コードを返します。
- */
-static int set_int_option(cplat_socket sock, int level, int optname, int value, cplat_error *detail_out)
-{
-    if (sock == CPLAT_INVALID_SOCKET)
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-
-    if (setsockopt((int)sock, level, optname, &value, (socklen_t)sizeof(value)) != 0)
-    {
-        return cplat_internal_error_report_socket_errno(detail_out, errno);
-    }
-
-    return cplat_internal_error_report_success(detail_out);
-}
-
-/**
- *  @brief          シグナルによる中断を吸収して poll を実行します。
- *  @param[in,out]  fds        poll へ渡す記述子の配列。
- *  @param[in]      count      @p fds の要素数。
- *  @param[in]      timeout_ms タイムアウト時間 [ms]。負値は無期限を表します。
- *  @return         poll の戻り値を返します。失敗した場合は負値を返し、errno を保持します。
- *
- *  中断された場合は、単調時刻から残り時間を再計算して待機を継続します。
- *  要求した時間より早く復帰しないため、シグナルの配信によって呼び出し側の
- *  タイムアウト判定が変化しません。
- */
-static int poll_with_deadline(struct pollfd *fds, nfds_t count, int timeout_ms)
-{
-    uint64_t deadline = 0U;
-    int remaining_ms = timeout_ms;
-
-    if (timeout_ms > 0)
-    {
-        uint64_t now;
-
-        if (cplat_clock_get_monotonic_ms(&now) != CPLAT_OK)
-        {
-            errno = EIO;
-            return -1;
-        }
-
-        deadline = now + (uint64_t)timeout_ms;
-    }
-
-    for (;;)
-    {
-        const int poll_result = poll(fds, count, remaining_ms);
-
-        if (poll_result >= 0)
-        {
-            return poll_result;
-        }
-
-        if (errno != EINTR)
-        {
-            return poll_result;
-        }
-
-        if (timeout_ms > 0)
-        {
-            uint64_t now;
-
-            if (cplat_clock_get_monotonic_ms(&now) != CPLAT_OK)
-            {
-                errno = EIO;
-                return -1;
-            }
-
-            if (now >= deadline)
-            {
-                /* 残り時間が尽きた。タイムアウトと同じく条件不成立を返す。 */
-                return 0;
-            }
-
-            remaining_ms = (int)(deadline - now);
-        }
-    }
-}
-
-/**
- *  @brief          単一のソケットに対して poll による待機を行います。
- *  @param[in]      sock       対象のソケット。
- *  @param[in]      events     待機するイベント。
- *  @param[in]      timeout_ms タイムアウト時間 [ms]。
- *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
- *  @return         共通結果コードを返します。
- */
-static int wait_single(cplat_socket sock, short events, int timeout_ms, cplat_error *detail_out)
-{
-    struct pollfd poll_fd;
-    int native_timeout;
-    int poll_result;
-
-    if ((sock == CPLAT_INVALID_SOCKET) || (timeout_ms < 0))
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-
-    native_timeout = (timeout_ms == CPLAT_WAIT_FOREVER) ? -1 : timeout_ms;
-
-    poll_fd.fd = (int)sock;
-    poll_fd.events = events;
-    poll_fd.revents = 0;
-
-    poll_result = poll_with_deadline(&poll_fd, (nfds_t)1, native_timeout);
-    if (poll_result < 0)
-    {
-        return cplat_internal_error_report_socket_errno(detail_out, errno);
-    }
-
-    /*
-     * poll は要求イベントに加えて POLLERR・POLLHUP・POLLNVAL を revents へ設定する。
-     * これらでも待機を解除し、呼び出し側の送受信で EOF またはエラーを検知させる。
-     * see: https://man7.org/linux/man-pages/man2/poll.2.html
-     */
-    if ((poll_result > 0) && ((poll_fd.revents & (events | POLLERR | POLLHUP | POLLNVAL)) != 0))
-    {
-        return cplat_internal_error_report_success(detail_out);
-    }
-
-    return cplat_internal_error_report_socket_errno_as(detail_out, ETIMEDOUT, CPLAT_ERR_TIMEOUT);
-}
-
-/**
- *  @brief          シグナルによる中断を吸収して accept を実行します。
- *  @param[in]      fd       待ち受けソケットの記述子。
- *  @param[out]     addr     接続元アドレスの格納先。
- *  @param[in,out]  addr_len @p addr のバイト数。復帰時に実際の長さが格納されます。
- *  @return         accept の戻り値を返します。失敗した場合は負値を返し、errno を保持します。
- */
-static int retry_accept(int fd, struct sockaddr *addr, socklen_t *addr_len)
-{
-    int accepted;
-
-    do
-    {
-        accepted = accept(fd, addr, addr_len);
-    } while ((accepted < 0) && (errno == EINTR));
-
-    return accepted;
-}
-
-/**
- *  @brief          SIGPIPE とシグナルによる中断を吸収して send を実行します。
- *  @param[in]      fd  対象のソケットの記述子。
- *  @param[in]      buf 送信するデータ。
- *  @param[in]      len @p buf のバイト数。
- *  @return         send の戻り値を返します。失敗した場合は負値を返し、errno を保持します。
- */
-static ssize_t retry_send(int fd, const void *buf, size_t len)
-{
-    ssize_t transferred;
-
-    do
-    {
-        /*
-         * MSG_NOSIGNAL はプロセス全体の設定を変更せず、この送信による SIGPIPE だけを抑制する。
-         * EPIPE は従来どおり返される。
-         * see: https://man7.org/linux/man-pages/man2/send.2.html
-         */
-        transferred = send(fd, buf, len, MSG_NOSIGNAL);
-    } while ((transferred < 0) && (errno == EINTR));
-
-    return transferred;
-}
-
-/**
- *  @brief          シグナルによる中断を吸収して recv を実行します。
- *  @param[in]      fd  対象のソケットの記述子。
- *  @param[out]     buf 受信したデータの格納先。
- *  @param[in]      len @p buf のバイト数。
- *  @return         recv の戻り値を返します。失敗した場合は負値を返し、errno を保持します。
- */
-static ssize_t retry_recv(int fd, void *buf, size_t len)
-{
-    ssize_t transferred;
-
-    do
-    {
-        transferred = recv(fd, buf, len, 0);
-    } while ((transferred < 0) && (errno == EINTR));
-
-    return transferred;
-}
-
-/**
- *  @brief          シグナルによる中断を吸収して sendto を実行します。
- *  @param[in]      fd       対象のソケットの記述子。
- *  @param[in]      buf      送信するデータ。
- *  @param[in]      len      @p buf のバイト数。
- *  @param[in]      addr     送信先アドレス。
- *  @param[in]      addr_len @p addr のバイト数。
- *  @return         sendto の戻り値を返します。失敗した場合は負値を返し、errno を保持します。
- */
-static ssize_t retry_sendto(int fd, const void *buf, size_t len, const struct sockaddr *addr, socklen_t addr_len)
-{
-    ssize_t transferred;
-
-    do
-    {
-        transferred = sendto(fd, buf, len, 0, addr, addr_len);
-    } while ((transferred < 0) && (errno == EINTR));
-
-    return transferred;
-}
-
-/**
- *  @brief          シグナルによる中断を吸収して recvfrom を実行します。
- *  @param[in]      fd       対象のソケットの記述子。
- *  @param[out]     buf      受信したデータの格納先。
- *  @param[in]      len      @p buf のバイト数。
- *  @param[out]     addr     送信元アドレスの格納先。
- *  @param[in,out]  addr_len @p addr のバイト数。復帰時に実際の長さが格納されます。
- *  @return         recvfrom の戻り値を返します。失敗した場合は負値を返し、errno を保持します。
- */
-static ssize_t retry_recvfrom(int fd, void *buf, size_t len, struct sockaddr *addr, socklen_t *addr_len)
-{
-    ssize_t transferred;
-
-    do
-    {
-        transferred = recvfrom(fd, buf, len, 0, addr, addr_len);
-    } while ((transferred < 0) && (errno == EINTR));
-
-    return transferred;
-}
+static void endpoint_to_native(const cplat_ipv4_endpoint *endpoint, struct sockaddr_in *native);
+static void endpoint_from_native(const struct sockaddr_in *native, cplat_ipv4_endpoint *endpoint);
+static int set_int_option(cplat_socket sock, int level, int optname, int value, cplat_error *detail_out);
+static int poll_with_deadline(struct pollfd *fds, nfds_t count, int timeout_ms);
+static int wait_single(cplat_socket sock, short events, int timeout_ms, cplat_error *detail_out);
+static int retry_accept(int fd, struct sockaddr *addr, socklen_t *addr_len);
+static ssize_t retry_send(int fd, const void *buf, size_t len);
+static ssize_t retry_recv(int fd, void *buf, size_t len);
+static ssize_t retry_sendto(int fd, const void *buf, size_t len, const struct sockaddr *addr, socklen_t addr_len);
+static ssize_t retry_recvfrom(int fd, void *buf, size_t len, struct sockaddr *addr, socklen_t *addr_len);
+static int wait_connect_completion(cplat_socket sock, cplat_error *detail_out);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -444,24 +195,6 @@ int cplat_socket_accept(const cplat_socket sock, cplat_ipv4_endpoint *peer_out, 
     *sock_out = (cplat_socket)accepted;
 
     return cplat_internal_error_report_success(detail_out);
-}
-
-/**
- *  @brief          中断された接続確立の完了を待機します。
- *  @param[in]      sock       対象のソケット。
- *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
- *  @return         共通結果コードを返します。
- */
-static int wait_connect_completion(cplat_socket sock, cplat_error *detail_out)
-{
-    const int wait_result = cplat_socket_wait_writable(sock, detail_out);
-
-    if (wait_result != CPLAT_OK)
-    {
-        return wait_result;
-    }
-
-    return cplat_socket_get_pending_error(sock, detail_out);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -1062,6 +795,285 @@ int cplat_socket_timed_wait_readable_multi(const cplat_socket *socks, const size
     }
 
     return cplat_internal_error_report_success(detail_out);
+}
+
+/**
+ *  @brief          共通のエンドポイント表現を sockaddr_in へ変換します。
+ *  @param[in]      endpoint 変換元のエンドポイント。
+ *  @param[out]     native   変換後の sockaddr_in の格納先。
+ */
+static void endpoint_to_native(const cplat_ipv4_endpoint *endpoint, struct sockaddr_in *native)
+{
+    memset(native, 0, sizeof(*native));
+    native->sin_family = AF_INET;
+    memcpy(&native->sin_addr.s_addr, &endpoint->address, sizeof(native->sin_addr.s_addr));
+    memcpy(&native->sin_port, &endpoint->port, sizeof(native->sin_port));
+}
+
+/**
+ *  @brief          sockaddr_in を共通のエンドポイント表現へ変換します。
+ *  @param[in]      native   変換元の sockaddr_in。
+ *  @param[out]     endpoint 変換後のエンドポイントの格納先。
+ */
+static void endpoint_from_native(const struct sockaddr_in *native, cplat_ipv4_endpoint *endpoint)
+{
+    memset(endpoint, 0, sizeof(*endpoint));
+    memcpy(&endpoint->address, &native->sin_addr.s_addr, sizeof(endpoint->address));
+    memcpy(&endpoint->port, &native->sin_port, sizeof(endpoint->port));
+}
+
+/**
+ *  @brief          ソケット オプションへ整数値を設定します。
+ *  @param[in]      sock       対象のソケット。
+ *  @param[in]      level      オプションの階層。
+ *  @param[in]      optname    オプション名。
+ *  @param[in]      value      設定する値。
+ *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
+ *  @return         共通結果コードを返します。
+ */
+static int set_int_option(cplat_socket sock, int level, int optname, int value, cplat_error *detail_out)
+{
+    if (sock == CPLAT_INVALID_SOCKET)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+
+    if (setsockopt((int)sock, level, optname, &value, (socklen_t)sizeof(value)) != 0)
+    {
+        return cplat_internal_error_report_socket_errno(detail_out, errno);
+    }
+
+    return cplat_internal_error_report_success(detail_out);
+}
+
+/**
+ *  @brief          シグナルによる中断を吸収して poll を実行します。
+ *  @param[in,out]  fds        poll へ渡す記述子の配列。
+ *  @param[in]      count      @p fds の要素数。
+ *  @param[in]      timeout_ms タイムアウト時間 [ms]。負値は無期限を表します。
+ *  @return         poll の戻り値を返します。失敗した場合は負値を返し、errno を保持します。
+ *
+ *  中断された場合は、単調時刻から残り時間を再計算して待機を継続します。
+ *  要求した時間より早く復帰しないため、シグナルの配信によって呼び出し側の
+ *  タイムアウト判定が変化しません。
+ */
+static int poll_with_deadline(struct pollfd *fds, nfds_t count, int timeout_ms)
+{
+    uint64_t deadline = 0U;
+    int remaining_ms = timeout_ms;
+
+    if (timeout_ms > 0)
+    {
+        uint64_t now;
+
+        if (cplat_clock_get_monotonic_ms(&now) != CPLAT_OK)
+        {
+            errno = EIO;
+            return -1;
+        }
+
+        deadline = now + (uint64_t)timeout_ms;
+    }
+
+    for (;;)
+    {
+        const int poll_result = poll(fds, count, remaining_ms);
+
+        if (poll_result >= 0)
+        {
+            return poll_result;
+        }
+
+        if (errno != EINTR)
+        {
+            return poll_result;
+        }
+
+        if (timeout_ms > 0)
+        {
+            uint64_t now;
+
+            if (cplat_clock_get_monotonic_ms(&now) != CPLAT_OK)
+            {
+                errno = EIO;
+                return -1;
+            }
+
+            if (now >= deadline)
+            {
+                /* 残り時間が尽きた。タイムアウトと同じく条件不成立を返す。 */
+                return 0;
+            }
+
+            remaining_ms = (int)(deadline - now);
+        }
+    }
+}
+
+/**
+ *  @brief          単一のソケットに対して poll による待機を行います。
+ *  @param[in]      sock       対象のソケット。
+ *  @param[in]      events     待機するイベント。
+ *  @param[in]      timeout_ms タイムアウト時間 [ms]。
+ *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
+ *  @return         共通結果コードを返します。
+ */
+static int wait_single(cplat_socket sock, short events, int timeout_ms, cplat_error *detail_out)
+{
+    struct pollfd poll_fd;
+    int native_timeout;
+    int poll_result;
+
+    if ((sock == CPLAT_INVALID_SOCKET) || (timeout_ms < 0))
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+
+    native_timeout = (timeout_ms == CPLAT_WAIT_FOREVER) ? -1 : timeout_ms;
+
+    poll_fd.fd = (int)sock;
+    poll_fd.events = events;
+    poll_fd.revents = 0;
+
+    poll_result = poll_with_deadline(&poll_fd, (nfds_t)1, native_timeout);
+    if (poll_result < 0)
+    {
+        return cplat_internal_error_report_socket_errno(detail_out, errno);
+    }
+
+    /*
+     * poll は要求イベントに加えて POLLERR・POLLHUP・POLLNVAL を revents へ設定する。
+     * これらでも待機を解除し、呼び出し側の送受信で EOF またはエラーを検知させる。
+     * see: https://man7.org/linux/man-pages/man2/poll.2.html
+     */
+    if ((poll_result > 0) && ((poll_fd.revents & (events | POLLERR | POLLHUP | POLLNVAL)) != 0))
+    {
+        return cplat_internal_error_report_success(detail_out);
+    }
+
+    return cplat_internal_error_report_socket_errno_as(detail_out, ETIMEDOUT, CPLAT_ERR_TIMEOUT);
+}
+
+/**
+ *  @brief          シグナルによる中断を吸収して accept を実行します。
+ *  @param[in]      fd       待ち受けソケットの記述子。
+ *  @param[out]     addr     接続元アドレスの格納先。
+ *  @param[in,out]  addr_len @p addr のバイト数。復帰時に実際の長さが格納されます。
+ *  @return         accept の戻り値を返します。失敗した場合は負値を返し、errno を保持します。
+ */
+static int retry_accept(int fd, struct sockaddr *addr, socklen_t *addr_len)
+{
+    int accepted;
+
+    do
+    {
+        accepted = accept(fd, addr, addr_len);
+    } while ((accepted < 0) && (errno == EINTR));
+
+    return accepted;
+}
+
+/**
+ *  @brief          SIGPIPE とシグナルによる中断を吸収して send を実行します。
+ *  @param[in]      fd  対象のソケットの記述子。
+ *  @param[in]      buf 送信するデータ。
+ *  @param[in]      len @p buf のバイト数。
+ *  @return         send の戻り値を返します。失敗した場合は負値を返し、errno を保持します。
+ */
+static ssize_t retry_send(int fd, const void *buf, size_t len)
+{
+    ssize_t transferred;
+
+    do
+    {
+        /*
+         * MSG_NOSIGNAL はプロセス全体の設定を変更せず、この送信による SIGPIPE だけを抑制する。
+         * EPIPE は従来どおり返される。
+         * see: https://man7.org/linux/man-pages/man2/send.2.html
+         */
+        transferred = send(fd, buf, len, MSG_NOSIGNAL);
+    } while ((transferred < 0) && (errno == EINTR));
+
+    return transferred;
+}
+
+/**
+ *  @brief          シグナルによる中断を吸収して recv を実行します。
+ *  @param[in]      fd  対象のソケットの記述子。
+ *  @param[out]     buf 受信したデータの格納先。
+ *  @param[in]      len @p buf のバイト数。
+ *  @return         recv の戻り値を返します。失敗した場合は負値を返し、errno を保持します。
+ */
+static ssize_t retry_recv(int fd, void *buf, size_t len)
+{
+    ssize_t transferred;
+
+    do
+    {
+        transferred = recv(fd, buf, len, 0);
+    } while ((transferred < 0) && (errno == EINTR));
+
+    return transferred;
+}
+
+/**
+ *  @brief          シグナルによる中断を吸収して sendto を実行します。
+ *  @param[in]      fd       対象のソケットの記述子。
+ *  @param[in]      buf      送信するデータ。
+ *  @param[in]      len      @p buf のバイト数。
+ *  @param[in]      addr     送信先アドレス。
+ *  @param[in]      addr_len @p addr のバイト数。
+ *  @return         sendto の戻り値を返します。失敗した場合は負値を返し、errno を保持します。
+ */
+static ssize_t retry_sendto(int fd, const void *buf, size_t len, const struct sockaddr *addr, socklen_t addr_len)
+{
+    ssize_t transferred;
+
+    do
+    {
+        transferred = sendto(fd, buf, len, 0, addr, addr_len);
+    } while ((transferred < 0) && (errno == EINTR));
+
+    return transferred;
+}
+
+/**
+ *  @brief          シグナルによる中断を吸収して recvfrom を実行します。
+ *  @param[in]      fd       対象のソケットの記述子。
+ *  @param[out]     buf      受信したデータの格納先。
+ *  @param[in]      len      @p buf のバイト数。
+ *  @param[out]     addr     送信元アドレスの格納先。
+ *  @param[in,out]  addr_len @p addr のバイト数。復帰時に実際の長さが格納されます。
+ *  @return         recvfrom の戻り値を返します。失敗した場合は負値を返し、errno を保持します。
+ */
+static ssize_t retry_recvfrom(int fd, void *buf, size_t len, struct sockaddr *addr, socklen_t *addr_len)
+{
+    ssize_t transferred;
+
+    do
+    {
+        transferred = recvfrom(fd, buf, len, 0, addr, addr_len);
+    } while ((transferred < 0) && (errno == EINTR));
+
+    return transferred;
+}
+
+/**
+ *  @brief          中断された接続確立の完了を待機します。
+ *  @param[in]      sock       対象のソケット。
+ *  @param[out]     detail_out エラー詳細の格納先。NULL 可。
+ *  @return         共通結果コードを返します。
+ */
+static int wait_connect_completion(cplat_socket sock, cplat_error *detail_out)
+{
+    const int wait_result = cplat_socket_wait_writable(sock, detail_out);
+
+    if (wait_result != CPLAT_OK)
+    {
+        return wait_result;
+    }
+
+    return cplat_socket_get_pending_error(sock, detail_out);
 }
 
 #elif defined(PLATFORM_WINDOWS) && defined(COMPILER_MSVC)

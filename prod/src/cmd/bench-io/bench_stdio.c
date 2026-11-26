@@ -31,6 +31,132 @@ typedef struct stdio_state
     bench_record *block; /**< ブロック単位の読み書きに使うバッファー。 */
 } stdio_state;
 
+static uint64_t accumulate(const bench_record *record);
+static int seq_read_by_record(bench_context *ctx);
+static int seq_read_by_block(bench_context *ctx, bench_record *block);
+static int seq_write_by_record(bench_context *ctx, int durable);
+static int seq_write_by_block(bench_context *ctx, bench_record *block, int durable);
+static int rand_read(bench_context *ctx);
+static int rand_update(bench_context *ctx, int durable);
+static int point_lookup(bench_context *ctx);
+static int open_close(bench_context *ctx);
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int bench_stdio_setup(bench_context *ctx, const bench_case *item)
+{
+    stdio_state *state;
+
+    if (ctx == NULL || item == NULL)
+    {
+        return -1;
+    }
+
+    if (item->api != BENCH_API_STDIO_BLK)
+    {
+        ctx->state = NULL;
+        return 0;
+    }
+
+    state = (stdio_state *)cplat_malloc_zerofill(sizeof(*state));
+    if (state == NULL)
+    {
+        return -1;
+    }
+
+    state->block = (bench_record *)cplat_calloc(BENCH_BLOCK_RECORDS, sizeof(bench_record));
+    if (state->block == NULL)
+    {
+        cplat_free(state);
+        return -1;
+    }
+
+    ctx->state = state;
+
+    return 0;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int bench_stdio_iterate(bench_context *ctx, const bench_case *item)
+{
+    stdio_state *state;
+    int result;
+
+    if (ctx == NULL || item == NULL)
+    {
+        return -1;
+    }
+
+    state = (stdio_state *)ctx->state;
+
+    switch (item->pattern)
+    {
+    case BENCH_PATTERN_SEQ_READ:
+        if (item->api == BENCH_API_STDIO_BLK)
+        {
+            result = seq_read_by_block(ctx, state->block);
+        }
+        else
+        {
+            result = seq_read_by_record(ctx);
+        }
+
+        break;
+    case BENCH_PATTERN_SEQ_WRITE:
+        if (item->api == BENCH_API_STDIO_BLK)
+        {
+            result = seq_write_by_block(ctx, state->block, item->durable);
+        }
+        else
+        {
+            result = seq_write_by_record(ctx, item->durable);
+        }
+
+        break;
+    case BENCH_PATTERN_RAND_READ:
+        result = rand_read(ctx);
+        break;
+    case BENCH_PATTERN_RAND_UPDATE:
+        result = rand_update(ctx, item->durable);
+        break;
+    case BENCH_PATTERN_POINT_LOOKUP:
+        result = point_lookup(ctx);
+        break;
+    case BENCH_PATTERN_OPEN_CLOSE:
+        result = open_close(ctx);
+        break;
+    case BENCH_PATTERN_COUNT:
+    default:
+        result = -1;
+        break;
+    }
+
+    return result;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void bench_stdio_teardown(bench_context *ctx, const bench_case *item)
+{
+    stdio_state *state;
+
+    if (ctx == NULL || item == NULL)
+    {
+        return;
+    }
+
+    state = (stdio_state *)ctx->state;
+    if (state == NULL)
+    {
+        return;
+    }
+
+    cplat_free(state->block);
+    cplat_free(state);
+    ctx->state = NULL;
+}
+
 /**
  *  @brief          レコードから集計値を求めます。
  *  @param[in]      record  対象のレコード。NULL を渡してはなりません。
@@ -405,120 +531,4 @@ static int open_close(bench_context *ctx)
     }
 
     return 0;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int bench_stdio_setup(bench_context *ctx, const bench_case *item)
-{
-    stdio_state *state;
-
-    if (ctx == NULL || item == NULL)
-    {
-        return -1;
-    }
-
-    if (item->api != BENCH_API_STDIO_BLK)
-    {
-        ctx->state = NULL;
-        return 0;
-    }
-
-    state = (stdio_state *)cplat_malloc_zerofill(sizeof(*state));
-    if (state == NULL)
-    {
-        return -1;
-    }
-
-    state->block = (bench_record *)cplat_calloc(BENCH_BLOCK_RECORDS, sizeof(bench_record));
-    if (state->block == NULL)
-    {
-        cplat_free(state);
-        return -1;
-    }
-
-    ctx->state = state;
-
-    return 0;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int bench_stdio_iterate(bench_context *ctx, const bench_case *item)
-{
-    stdio_state *state;
-    int result;
-
-    if (ctx == NULL || item == NULL)
-    {
-        return -1;
-    }
-
-    state = (stdio_state *)ctx->state;
-
-    switch (item->pattern)
-    {
-    case BENCH_PATTERN_SEQ_READ:
-        if (item->api == BENCH_API_STDIO_BLK)
-        {
-            result = seq_read_by_block(ctx, state->block);
-        }
-        else
-        {
-            result = seq_read_by_record(ctx);
-        }
-
-        break;
-    case BENCH_PATTERN_SEQ_WRITE:
-        if (item->api == BENCH_API_STDIO_BLK)
-        {
-            result = seq_write_by_block(ctx, state->block, item->durable);
-        }
-        else
-        {
-            result = seq_write_by_record(ctx, item->durable);
-        }
-
-        break;
-    case BENCH_PATTERN_RAND_READ:
-        result = rand_read(ctx);
-        break;
-    case BENCH_PATTERN_RAND_UPDATE:
-        result = rand_update(ctx, item->durable);
-        break;
-    case BENCH_PATTERN_POINT_LOOKUP:
-        result = point_lookup(ctx);
-        break;
-    case BENCH_PATTERN_OPEN_CLOSE:
-        result = open_close(ctx);
-        break;
-    case BENCH_PATTERN_COUNT:
-    default:
-        result = -1;
-        break;
-    }
-
-    return result;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void bench_stdio_teardown(bench_context *ctx, const bench_case *item)
-{
-    stdio_state *state;
-
-    if (ctx == NULL || item == NULL)
-    {
-        return;
-    }
-
-    state = (stdio_state *)ctx->state;
-    if (state == NULL)
-    {
-        return;
-    }
-
-    cplat_free(state->block);
-    cplat_free(state);
-    ctx->state = NULL;
 }

@@ -49,6 +49,155 @@ static_assert(CPLAT_COMPRESS_MAX_UNCOMPRESSED_SIZE <= SIZE_MAX, "展開後長さ
 static_assert(COMPRESS_CLI_CAPACITY_FACTOR >= 2U, "capacity factor must be at least 2");
 static_assert(COMPRESS_CLI_MIN_CAPACITY >= 256U, "minimum capacity must be at least 256");
 
+static const char *compress_cli_error_text(const cplat_error *error, char *buf, size_t buf_size);
+static uint64_t compress_cli_read_u64_be(const uint8_t *data);
+static int compress_cli_read_file_fail(FILE *file, uint8_t *data);
+static int compress_cli_read_file(const char *path, size_t max_size, uint8_t **data_out, size_t *size_out);
+static int compress_cli_write_file(const char *path, const uint8_t *data, size_t size);
+static int compress_cli_resolve_paths(const compress_cli_options *options, char *input_full, size_t input_full_size,
+                                      char *output_full, size_t output_full_size);
+static int compress_cli_run_compress_return(uint8_t *input_data, uint8_t *compressed_data, int rc);
+static int compress_cli_run_compress(const char *input_path, const char *output_path);
+static int compress_cli_run_decompress_return(uint8_t *input_data, uint8_t *decompressed_data, int rc);
+static int compress_cli_run_decompress(const char *input_path, const char *output_path);
+
+int main(int argc, char *argv[])
+{
+    compress_cli_options options;
+    char input_full[PLATFORM_PATH_UTF8_MAX];
+    char output_full[PLATFORM_PATH_UTF8_MAX];
+
+    cplat_console_init();
+
+    compress_cli_options_init(&options);
+
+    int compress_count = 0;
+    int decompress_count = 0;
+
+    if (cplat_argparser_init(argc, argv, "ファイルを圧縮または展開します。") != CPLAT_OK)
+    {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "引数の解析の準備に失敗しました。\n");
+        return EXIT_FAILURE;
+    }
+    /*
+     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
+     * 登録の関数の戻り値は明示的に破棄する。
+     */
+    (void)cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &options.need_help);
+    (void)cplat_argparser_register_flag(NULL, "--compress", "入力ファイルを圧縮します。", &compress_count);
+    (void)cplat_argparser_register_flag(NULL, "--decompress", "入力ファイルを展開します。", &decompress_count);
+    (void)cplat_argparser_register_positional_string("input", "入力ファイル。", CPLAT_ARGPARSER_REQUIRED,
+                                                     &options.input_path);
+    (void)cplat_argparser_register_positional_string("output", "出力ファイル。", CPLAT_ARGPARSER_REQUIRED,
+                                                     &options.output_path);
+
+    if (cplat_argparser_get_register_error_count() > 0)
+    {
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_register_error_messages(stderr);
+        (void)cplat_argparser_print_usage(stderr);
+        return EXIT_FAILURE;
+    }
+
+    int parse_result = cplat_argparser_parse();
+
+    /* ヘルプ要求時は使用法を表示して終了する。 */
+    if (options.need_help != 0)
+    {
+        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
+        {
+            (void)fprintf(stderr, "標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+            return EXIT_FAILURE;
+        }
+
+        return EXIT_SUCCESS;
+    }
+
+    if (parse_result != CPLAT_OK)
+    {
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_error_messages(stderr);
+        (void)cplat_argparser_print_usage(stderr);
+        return EXIT_FAILURE;
+    }
+
+    /* 圧縮モードと展開モードのどちらか一方のみが指定されていることを検証する。 */
+    if ((compress_count + decompress_count) != 1)
+    {
+        if ((compress_count + decompress_count) == 0)
+        {
+            /* 終了コードはすでに失敗に決まっており、記録失敗時は既定表示へ切り替わるだけのため、戻り値は明示的に破棄する。 */
+            (void)cplat_argparser_set_validation_error(CPLAT_ERR_MISSING_REQUIRED, "--compress | --decompress",
+                                                       "either --compress or --decompress is required");
+        }
+        else
+        {
+            /* 終了コードはすでに失敗に決まっており、記録失敗時は既定表示へ切り替わるだけのため、戻り値は明示的に破棄する。 */
+            (void)cplat_argparser_set_validation_error(CPLAT_ERR_DUPLICATE_OPTION, "--compress | --decompress",
+                                                       "specify only one of --compress and --decompress");
+        }
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_error_messages(stderr);
+        (void)cplat_argparser_print_usage(stderr);
+        return EXIT_FAILURE;
+    }
+
+    if (compress_count == 1 && decompress_count == 0)
+    {
+        options.mode = COMPRESS_CLI_MODE_COMPRESS;
+    }
+    else if (decompress_count == 1 && compress_count == 0)
+    {
+        options.mode = COMPRESS_CLI_MODE_DECOMPRESS;
+    }
+    else
+    {
+        /* 終了コードはすでに失敗に決まっているため、戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_usage(stderr);
+        return EXIT_FAILURE;
+    }
+
+    if (compress_cli_resolve_paths(&options, input_full, sizeof(input_full), output_full, sizeof(output_full)) != 0)
+    {
+        return EXIT_FAILURE;
+    }
+
+    int exit_code = EXIT_SUCCESS;
+
+    /* 指定されたモードに応じて圧縮または展開を実行する。 */
+    if (options.mode == COMPRESS_CLI_MODE_COMPRESS)
+    {
+        if (compress_cli_run_compress(input_full, output_full) != 0)
+        {
+            exit_code = EXIT_FAILURE;
+        }
+    }
+
+    if (options.mode == COMPRESS_CLI_MODE_DECOMPRESS)
+    {
+        if (compress_cli_run_decompress(input_full, output_full) != 0)
+        {
+            exit_code = EXIT_FAILURE;
+        }
+    }
+
+    return exit_code;
+}
+
+void compress_cli_options_init(compress_cli_options *options)
+{
+    if (options == NULL)
+    {
+        return;
+    }
+
+    options->mode = COMPRESS_CLI_MODE_NONE;
+    options->need_help = 0;
+    options->input_path = NULL;
+    options->output_path = NULL;
+}
+
 /**
  *  @brief          詳細エラーを人間可読の文字列へ変換します。
  *  @param[in]      error    変換する詳細エラー。
@@ -415,141 +564,4 @@ static int compress_cli_run_decompress(const char *input_path, const char *outpu
     }
 
     return compress_cli_run_decompress_return(input_data, decompressed_data, 0);
-}
-
-void compress_cli_options_init(compress_cli_options *options)
-{
-    if (options == NULL)
-    {
-        return;
-    }
-
-    options->mode = COMPRESS_CLI_MODE_NONE;
-    options->need_help = 0;
-    options->input_path = NULL;
-    options->output_path = NULL;
-}
-
-int main(int argc, char *argv[])
-{
-    compress_cli_options options;
-    char input_full[PLATFORM_PATH_UTF8_MAX];
-    char output_full[PLATFORM_PATH_UTF8_MAX];
-
-    cplat_console_init();
-
-    compress_cli_options_init(&options);
-
-    int compress_count = 0;
-    int decompress_count = 0;
-
-    if (cplat_argparser_init(argc, argv, "ファイルを圧縮または展開します。") != CPLAT_OK)
-    {
-        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
-        (void)fprintf(stderr, "引数の解析の準備に失敗しました。\n");
-        return EXIT_FAILURE;
-    }
-    /*
-     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
-     * 登録の関数の戻り値は明示的に破棄する。
-     */
-    (void)cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &options.need_help);
-    (void)cplat_argparser_register_flag(NULL, "--compress", "入力ファイルを圧縮します。", &compress_count);
-    (void)cplat_argparser_register_flag(NULL, "--decompress", "入力ファイルを展開します。", &decompress_count);
-    (void)cplat_argparser_register_positional_string("input", "入力ファイル。", CPLAT_ARGPARSER_REQUIRED,
-                                                     &options.input_path);
-    (void)cplat_argparser_register_positional_string("output", "出力ファイル。", CPLAT_ARGPARSER_REQUIRED,
-                                                     &options.output_path);
-
-    if (cplat_argparser_get_register_error_count() > 0)
-    {
-        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
-        (void)cplat_argparser_print_register_error_messages(stderr);
-        (void)cplat_argparser_print_usage(stderr);
-        return EXIT_FAILURE;
-    }
-
-    int parse_result = cplat_argparser_parse();
-
-    /* ヘルプ要求時は使用法を表示して終了する。 */
-    if (options.need_help != 0)
-    {
-        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
-        {
-            (void)fprintf(stderr, "標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
-            return EXIT_FAILURE;
-        }
-
-        return EXIT_SUCCESS;
-    }
-
-    if (parse_result != CPLAT_OK)
-    {
-        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
-        (void)cplat_argparser_print_error_messages(stderr);
-        (void)cplat_argparser_print_usage(stderr);
-        return EXIT_FAILURE;
-    }
-
-    /* 圧縮モードと展開モードのどちらか一方のみが指定されていることを検証する。 */
-    if ((compress_count + decompress_count) != 1)
-    {
-        if ((compress_count + decompress_count) == 0)
-        {
-            /* 終了コードはすでに失敗に決まっており、記録失敗時は既定表示へ切り替わるだけのため、戻り値は明示的に破棄する。 */
-            (void)cplat_argparser_set_validation_error(CPLAT_ERR_MISSING_REQUIRED, "--compress | --decompress",
-                                                       "either --compress or --decompress is required");
-        }
-        else
-        {
-            /* 終了コードはすでに失敗に決まっており、記録失敗時は既定表示へ切り替わるだけのため、戻り値は明示的に破棄する。 */
-            (void)cplat_argparser_set_validation_error(CPLAT_ERR_DUPLICATE_OPTION, "--compress | --decompress",
-                                                       "specify only one of --compress and --decompress");
-        }
-        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
-        (void)cplat_argparser_print_error_messages(stderr);
-        (void)cplat_argparser_print_usage(stderr);
-        return EXIT_FAILURE;
-    }
-
-    if (compress_count == 1 && decompress_count == 0)
-    {
-        options.mode = COMPRESS_CLI_MODE_COMPRESS;
-    }
-    else if (decompress_count == 1 && compress_count == 0)
-    {
-        options.mode = COMPRESS_CLI_MODE_DECOMPRESS;
-    }
-    else
-    {
-        /* 終了コードはすでに失敗に決まっているため、戻り値は明示的に破棄する。 */
-        (void)cplat_argparser_print_usage(stderr);
-        return EXIT_FAILURE;
-    }
-
-    if (compress_cli_resolve_paths(&options, input_full, sizeof(input_full), output_full, sizeof(output_full)) != 0)
-    {
-        return EXIT_FAILURE;
-    }
-
-    int exit_code = EXIT_SUCCESS;
-
-    /* 指定されたモードに応じて圧縮または展開を実行する。 */
-    if (options.mode == COMPRESS_CLI_MODE_COMPRESS)
-    {
-        if (compress_cli_run_compress(input_full, output_full) != 0)
-        {
-            exit_code = EXIT_FAILURE;
-        }
-    }
-
-    if (options.mode == COMPRESS_CLI_MODE_DECOMPRESS)
-    {
-        if (compress_cli_run_decompress(input_full, output_full) != 0)
-        {
-            exit_code = EXIT_FAILURE;
-        }
-    }
-
-    return exit_code;
 }

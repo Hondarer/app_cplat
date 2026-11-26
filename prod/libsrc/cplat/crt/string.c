@@ -13,106 +13,11 @@
 #include <stdio.h>
 #include <string.h>
 
-/**
- *  @brief          ASCII の大文字を小文字へ畳みます。
- *  @param[in]      c  対象のバイト。
- *  @return         `A` から `Z` なら対応する小文字、それ以外は元の値です。
- */
-static int ascii_tolower(const unsigned char c)
-{
-    if ((c >= (unsigned char)'A') && (c <= (unsigned char)'Z'))
-    {
-        return (int)c + ((int)'a' - (int)'A');
-    }
-
-    return (int)c;
-}
-
-/**
- *  @brief          非 0 の差分を -1 / 1 へ正規化します。
- *  @param[in]      diff  減算による差分。0 以外であること。
- *  @return         負なら -1、正なら 1 です。
- */
-static int cmp_sign(const int diff)
-{
-    if (diff < 0)
-    {
-        return -1;
-    }
-
-    return 1;
-}
-
-/**
- *  @brief          1 [byte] を ASCII 大小無視で比較し、比較を終えるかどうかを判定します。
- *  @param[in]      lhs_char  1 つ目の文字列のバイト。
- *  @param[in]      rhs_char  2 つ目の文字列のバイト。
- *  @param[out]     result    比較を終える場合の結果。@p lhs_char 側が小さいとき -1、一致するとき 0、大きいとき 1 です。
- *  @return         差分があるか終端に達したため比較を終える場合は 1、次のバイトへ進む場合は 0 です。
- */
-static int ascii_casecmp_byte(const char lhs_char, const char rhs_char, int *result)
-{
-    const unsigned char left = (unsigned char)lhs_char;
-    const unsigned char right = (unsigned char)rhs_char;
-    const int diff = ascii_tolower(left) - ascii_tolower(right);
-
-    if (diff != 0)
-    {
-        *result = cmp_sign(diff);
-        return 1;
-    }
-
-    if (left == '\0')
-    {
-        *result = 0;
-        return 1;
-    }
-
-    return 0;
-}
-
-/**
- *  @brief          非 NULL の 2 文字列を、終端まで ASCII 大小無視で比較します。
- *  @param[in]      lhs  比較する 1 つ目の文字列。
- *  @param[in]      rhs  比較する 2 つ目の文字列。
- *  @return         @p lhs が小さいとき -1、一致するとき 0、@p lhs が大きいとき 1 です。
- */
-static int ascii_casecmp(const char *lhs, const char *rhs)
-{
-    size_t i;
-    int result = 0;
-
-    i = 0;
-    while (ascii_casecmp_byte(lhs[i], rhs[i], &result) == 0)
-    {
-        i++;
-    }
-
-    return result;
-}
-
-/**
- *  @brief          非 NULL の 2 文字列を、最大 count バイトまで ASCII 大小無視で比較します。
- *  @param[in]      lhs    比較する 1 つ目の文字列。
- *  @param[in]      rhs    比較する 2 つ目の文字列。
- *  @param[in]      count  比較する最大バイト数。
- *  @return         @p lhs が小さいとき -1、一致するとき 0、@p lhs が大きいとき 1 です。
- */
-static int ascii_casecmp_bounded(const char *lhs, const char *rhs, const size_t count)
-{
-    size_t i;
-    int result = 0;
-
-    for (i = 0; i < count; i++)
-    {
-        if (ascii_casecmp_byte(lhs[i], rhs[i], &result) != 0)
-        {
-            return result;
-        }
-    }
-
-    return 0;
-}
+static int ascii_tolower(const unsigned char c);
+static int cmp_sign(const int diff);
+static int ascii_casecmp_byte(const char lhs_char, const char rhs_char, int *result);
+static int ascii_casecmp(const char *lhs, const char *rhs);
+static int ascii_casecmp_bounded(const char *lhs, const char *rhs, const size_t count);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -373,4 +278,105 @@ int cplat_strncasecmp(const char *lhs, const char *rhs, const size_t count)
     }
 
     return ascii_casecmp_bounded(lhs, rhs, count);
+}
+
+/**
+ *  @brief          ASCII の大文字を小文字へ畳みます。
+ *  @param[in]      c  対象のバイト。
+ *  @return         `A` から `Z` なら対応する小文字、それ以外は元の値です。
+ */
+static int ascii_tolower(const unsigned char c)
+{
+    if ((c >= (unsigned char)'A') && (c <= (unsigned char)'Z'))
+    {
+        return (int)c + ((int)'a' - (int)'A');
+    }
+
+    return (int)c;
+}
+
+/**
+ *  @brief          非 0 の差分を -1 / 1 へ正規化します。
+ *  @param[in]      diff  減算による差分。0 以外であること。
+ *  @return         負なら -1、正なら 1 です。
+ */
+static int cmp_sign(const int diff)
+{
+    if (diff < 0)
+    {
+        return -1;
+    }
+
+    return 1;
+}
+
+/**
+ *  @brief          1 [byte] を ASCII 大小無視で比較し、比較を終えるかどうかを判定します。
+ *  @param[in]      lhs_char  1 つ目の文字列のバイト。
+ *  @param[in]      rhs_char  2 つ目の文字列のバイト。
+ *  @param[out]     result    比較を終える場合の結果。@p lhs_char 側が小さいとき -1、一致するとき 0、大きいとき 1 です。
+ *  @return         差分があるか終端に達したため比較を終える場合は 1、次のバイトへ進む場合は 0 です。
+ */
+static int ascii_casecmp_byte(const char lhs_char, const char rhs_char, int *result)
+{
+    const unsigned char left = (unsigned char)lhs_char;
+    const unsigned char right = (unsigned char)rhs_char;
+    const int diff = ascii_tolower(left) - ascii_tolower(right);
+
+    if (diff != 0)
+    {
+        *result = cmp_sign(diff);
+        return 1;
+    }
+
+    if (left == '\0')
+    {
+        *result = 0;
+        return 1;
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          非 NULL の 2 文字列を、終端まで ASCII 大小無視で比較します。
+ *  @param[in]      lhs  比較する 1 つ目の文字列。
+ *  @param[in]      rhs  比較する 2 つ目の文字列。
+ *  @return         @p lhs が小さいとき -1、一致するとき 0、@p lhs が大きいとき 1 です。
+ */
+static int ascii_casecmp(const char *lhs, const char *rhs)
+{
+    size_t i;
+    int result = 0;
+
+    i = 0;
+    while (ascii_casecmp_byte(lhs[i], rhs[i], &result) == 0)
+    {
+        i++;
+    }
+
+    return result;
+}
+
+/**
+ *  @brief          非 NULL の 2 文字列を、最大 count バイトまで ASCII 大小無視で比較します。
+ *  @param[in]      lhs    比較する 1 つ目の文字列。
+ *  @param[in]      rhs    比較する 2 つ目の文字列。
+ *  @param[in]      count  比較する最大バイト数。
+ *  @return         @p lhs が小さいとき -1、一致するとき 0、@p lhs が大きいとき 1 です。
+ */
+static int ascii_casecmp_bounded(const char *lhs, const char *rhs, const size_t count)
+{
+    size_t i;
+    int result = 0;
+
+    for (i = 0; i < count; i++)
+    {
+        if (ascii_casecmp_byte(lhs[i], rhs[i], &result) != 0)
+        {
+            return result;
+        }
+    }
+
+    return 0;
 }

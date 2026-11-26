@@ -31,104 +31,9 @@ typedef struct mmap_state
     cplat_mmap *map; /**< @ref BENCH_API_MMAP_ONCE で保持するハンドル。 */
 } mmap_state;
 
-/**
- *  @brief          レコードから集計値を求めます。
- *  @param[in]      record  対象のレコード。NULL を渡してはなりません。
- *  @return         集計値。
- *
- *  読み取った内容が最適化で除去されないよう、呼び出し側で加算して保持します。\n
- *  集計値は出力も比較もしません。\n
- *  value_a と value_b は bench_fill_record() が設定する 0 から 65535 の値で、符号の扱いは結果に影響しません。
- */
-static uint64_t accumulate(const bench_record *record)
-{
-    return record->id + (uint64_t)(uint32_t)record->value_a + (uint64_t)(uint32_t)record->value_b;
-}
-
-/**
- *  @brief          書き込み系のアクセス パターンであるかを判定します。
- *  @param[in]      pattern  アクセス パターン。
- *  @return         書き込みを伴う場合は 1、それ以外は 0 を返します。
- */
-static int is_write_pattern(bench_pattern pattern)
-{
-    if (pattern == BENCH_PATTERN_SEQ_WRITE || pattern == BENCH_PATTERN_RAND_UPDATE)
-    {
-        return 1;
-    }
-
-    return 0;
-}
-
-/**
- *  @brief          マップ済み領域に対してアクセス パターンを 1 回実行します。
- *  @param[in,out]  ctx   共有状態。NULL を渡してはなりません。
- *  @param[in]      item  測定条件。NULL を渡してはなりません。
- *  @param[in,out]  map   アタッチ済みハンドル。NULL を渡してはなりません。
- *  @return         成功時は 0、失敗時は -1 を返します。
- */
-static int access_mapped(bench_context *ctx, const bench_case *item, cplat_mmap *map)
-{
-    bench_record *records = (bench_record *)cplat_mmap_get_address(map);
-    size_t index;
-    int result = 0;
-
-    if (records == NULL)
-    {
-        return -1;
-    }
-
-    switch (item->pattern)
-    {
-    case BENCH_PATTERN_SEQ_READ:
-        for (index = 0U; index < ctx->touch_count; index++)
-        {
-            ctx->checksum += accumulate(&records[index]);
-        }
-        break;
-    case BENCH_PATTERN_SEQ_WRITE:
-        for (index = 0U; index < ctx->touch_count; index++)
-        {
-            bench_fill_record(index, &records[index]);
-        }
-        break;
-    case BENCH_PATTERN_RAND_READ:
-        for (index = 0U; index < ctx->touch_count; index++)
-        {
-            ctx->checksum += accumulate(&records[ctx->order[index]]);
-        }
-        break;
-    case BENCH_PATTERN_RAND_UPDATE:
-        for (index = 0U; index < ctx->touch_count; index++)
-        {
-            bench_record *target = &records[ctx->order[index]];
-
-            target->counter++;
-            ctx->checksum += accumulate(target);
-        }
-        break;
-    case BENCH_PATTERN_POINT_LOOKUP:
-        ctx->checksum += accumulate(&records[ctx->order[0]]);
-        break;
-    case BENCH_PATTERN_OPEN_CLOSE:
-        ctx->checksum++; /* 読み取るレコードがなく、最適化による除去を防ぐ */
-        break;
-    case BENCH_PATTERN_COUNT:
-    default:
-        result = -1;
-        break;
-    }
-
-    if (result == 0 && item->durable != 0 && is_write_pattern(item->pattern) != 0)
-    {
-        if (cplat_mmap_flush(map, NULL, 0U, NULL) != CPLAT_OK)
-        {
-            result = -1;
-        }
-    }
-
-    return result;
-}
+static uint64_t accumulate(const bench_record *record);
+static int is_write_pattern(bench_pattern pattern);
+static int access_mapped(bench_context *ctx, const bench_case *item, cplat_mmap *map);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -227,4 +132,103 @@ int bench_mmap_teardown(bench_context *ctx, const bench_case *item)
     }
 
     return 0;
+}
+
+/**
+ *  @brief          レコードから集計値を求めます。
+ *  @param[in]      record  対象のレコード。NULL を渡してはなりません。
+ *  @return         集計値。
+ *
+ *  読み取った内容が最適化で除去されないよう、呼び出し側で加算して保持します。\n
+ *  集計値は出力も比較もしません。\n
+ *  value_a と value_b は bench_fill_record() が設定する 0 から 65535 の値で、符号の扱いは結果に影響しません。
+ */
+static uint64_t accumulate(const bench_record *record)
+{
+    return record->id + (uint64_t)(uint32_t)record->value_a + (uint64_t)(uint32_t)record->value_b;
+}
+
+/**
+ *  @brief          書き込み系のアクセス パターンであるかを判定します。
+ *  @param[in]      pattern  アクセス パターン。
+ *  @return         書き込みを伴う場合は 1、それ以外は 0 を返します。
+ */
+static int is_write_pattern(bench_pattern pattern)
+{
+    if (pattern == BENCH_PATTERN_SEQ_WRITE || pattern == BENCH_PATTERN_RAND_UPDATE)
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          マップ済み領域に対してアクセス パターンを 1 回実行します。
+ *  @param[in,out]  ctx   共有状態。NULL を渡してはなりません。
+ *  @param[in]      item  測定条件。NULL を渡してはなりません。
+ *  @param[in,out]  map   アタッチ済みハンドル。NULL を渡してはなりません。
+ *  @return         成功時は 0、失敗時は -1 を返します。
+ */
+static int access_mapped(bench_context *ctx, const bench_case *item, cplat_mmap *map)
+{
+    bench_record *records = (bench_record *)cplat_mmap_get_address(map);
+    size_t index;
+    int result = 0;
+
+    if (records == NULL)
+    {
+        return -1;
+    }
+
+    switch (item->pattern)
+    {
+    case BENCH_PATTERN_SEQ_READ:
+        for (index = 0U; index < ctx->touch_count; index++)
+        {
+            ctx->checksum += accumulate(&records[index]);
+        }
+        break;
+    case BENCH_PATTERN_SEQ_WRITE:
+        for (index = 0U; index < ctx->touch_count; index++)
+        {
+            bench_fill_record(index, &records[index]);
+        }
+        break;
+    case BENCH_PATTERN_RAND_READ:
+        for (index = 0U; index < ctx->touch_count; index++)
+        {
+            ctx->checksum += accumulate(&records[ctx->order[index]]);
+        }
+        break;
+    case BENCH_PATTERN_RAND_UPDATE:
+        for (index = 0U; index < ctx->touch_count; index++)
+        {
+            bench_record *target = &records[ctx->order[index]];
+
+            target->counter++;
+            ctx->checksum += accumulate(target);
+        }
+        break;
+    case BENCH_PATTERN_POINT_LOOKUP:
+        ctx->checksum += accumulate(&records[ctx->order[0]]);
+        break;
+    case BENCH_PATTERN_OPEN_CLOSE:
+        ctx->checksum++; /* 読み取るレコードがなく、最適化による除去を防ぐ */
+        break;
+    case BENCH_PATTERN_COUNT:
+    default:
+        result = -1;
+        break;
+    }
+
+    if (result == 0 && item->durable != 0 && is_write_pattern(item->pattern) != 0)
+    {
+        if (cplat_mmap_flush(map, NULL, 0U, NULL) != CPLAT_OK)
+        {
+            result = -1;
+        }
+    }
+
+    return result;
 }

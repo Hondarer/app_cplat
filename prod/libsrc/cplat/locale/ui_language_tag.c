@@ -40,6 +40,101 @@ static_assert(LANGUAGE_LENGTH_MIN <= LANGUAGE_LENGTH_MAX, "cplat: language lengt
 static_assert(LANGUAGE_LENGTH_MAX + SCRIPT_LENGTH + REGION_DIGIT_LENGTH + 3U <= (size_t)CPLAT_UI_LANGUAGE_TAG_MAX,
               "cplat: tag max");
 
+static int is_alpha_text(const char *const text, const size_t length);
+static int is_digit_text(const char *const text, const size_t length);
+static size_t subtag_length(const char *const text);
+static void append_subtag(char *const tag, size_t *const tag_length_inout, const char *const text, const size_t length,
+                          const size_t upper_length);
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_internal_ui_language_normalize(const char *const value, char *const tag_out, const size_t tag_size)
+{
+    /* 言語、表記体系、地域と区切りを合わせても言語タグの上限に収まるため、組み立て先は上限の配列とする。 */
+    char tag[CPLAT_UI_LANGUAGE_TAG_MAX];
+    char work[CPLAT_UI_LANGUAGE_TAG_MAX];
+    size_t tag_length = 0U;
+    size_t work_length;
+    size_t offset;
+    int has_script = 0;
+    int has_region = 0;
+
+    if ((value == NULL) || (tag_out == NULL) || (tag_size == 0U))
+    {
+        /* 引数不正時も正規化途中の失敗と同様に、以前の成功値を出力へ残さないため空にする。 */
+        if ((tag_out != NULL) && (tag_size > 0U))
+        {
+            tag_out[0] = '\0';
+        }
+
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    tag_out[0] = '\0';
+
+    /* 文字コード ('.' 以降) と修飾子 ('@' 以降) は言語を表さないため取り除く。 */
+    work_length = strcspn(value, ".@");
+    if ((work_length == 0U) || (work_length >= sizeof(work)))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    memcpy(work, value, work_length);
+    work[work_length] = '\0';
+
+    /* C と POSIX は、言語が不明であることではなく、言語に依存しない出力の指定である。 */
+    if ((cplat_strcasecmp(work, "C") == 0) || (cplat_strcasecmp(work, "POSIX") == 0))
+    {
+        return CPLAT_OK;
+    }
+
+    offset = subtag_length(work);
+    if ((offset < LANGUAGE_LENGTH_MIN) || (offset > LANGUAGE_LENGTH_MAX) || (is_alpha_text(work, offset) == 0))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    append_subtag(tag, &tag_length, work, offset, 0U); /* 言語は小文字 */
+
+    while (work[offset] != '\0')
+    {
+        const char *subtag;
+        size_t length;
+
+        offset++; /* 区切り文字を読み飛ばす */
+        subtag = &work[offset];
+        length = subtag_length(subtag);
+
+        if (length == 0U)
+        {
+            return CPLAT_ERR_INVALID_ARGUMENT;
+        }
+
+        /* 表記体系は、地域より前に現れた場合だけ受け付ける。 */
+        if ((has_script == 0) && (has_region == 0) && (length == SCRIPT_LENGTH) && (is_alpha_text(subtag, length) != 0))
+        {
+            append_subtag(tag, &tag_length, subtag, length, 1U); /* 表記体系は先頭だけ大文字 */
+            has_script = 1;
+        }
+        else if ((has_region == 0) && ((((length == REGION_ALPHA_LENGTH) && (is_alpha_text(subtag, length) != 0))) ||
+                                       ((length == REGION_DIGIT_LENGTH) && (is_digit_text(subtag, length) != 0))))
+        {
+            append_subtag(tag, &tag_length, subtag, length, length); /* 地域は大文字 */
+            has_region = 1;
+        }
+        else
+        {
+            break; /* 表記体系と地域より後ろの区別は、表示する文言の選択に使用しないため取り込まない */
+        }
+
+        offset += length;
+    }
+
+    tag[tag_length] = '\0';
+
+    return cplat_strcpy(tag_out, tag_size, tag);
+}
+
 /**
  *  @brief          指定された範囲がすべて英字かどうかを判定します。
  *  @param[in]      text    判定する文字列。NULL を渡してはなりません。
@@ -152,93 +247,4 @@ static void append_subtag(char *const tag, size_t *const tag_length_inout, const
     }
 
     *tag_length_inout = tag_length;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_internal_ui_language_normalize(const char *const value, char *const tag_out, const size_t tag_size)
-{
-    /* 言語、表記体系、地域と区切りを合わせても言語タグの上限に収まるため、組み立て先は上限の配列とする。 */
-    char tag[CPLAT_UI_LANGUAGE_TAG_MAX];
-    char work[CPLAT_UI_LANGUAGE_TAG_MAX];
-    size_t tag_length = 0U;
-    size_t work_length;
-    size_t offset;
-    int has_script = 0;
-    int has_region = 0;
-
-    if ((value == NULL) || (tag_out == NULL) || (tag_size == 0U))
-    {
-        /* 引数不正時も正規化途中の失敗と同様に、以前の成功値を出力へ残さないため空にする。 */
-        if ((tag_out != NULL) && (tag_size > 0U))
-        {
-            tag_out[0] = '\0';
-        }
-
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    tag_out[0] = '\0';
-
-    /* 文字コード ('.' 以降) と修飾子 ('@' 以降) は言語を表さないため取り除く。 */
-    work_length = strcspn(value, ".@");
-    if ((work_length == 0U) || (work_length >= sizeof(work)))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    memcpy(work, value, work_length);
-    work[work_length] = '\0';
-
-    /* C と POSIX は、言語が不明であることではなく、言語に依存しない出力の指定である。 */
-    if ((cplat_strcasecmp(work, "C") == 0) || (cplat_strcasecmp(work, "POSIX") == 0))
-    {
-        return CPLAT_OK;
-    }
-
-    offset = subtag_length(work);
-    if ((offset < LANGUAGE_LENGTH_MIN) || (offset > LANGUAGE_LENGTH_MAX) || (is_alpha_text(work, offset) == 0))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    append_subtag(tag, &tag_length, work, offset, 0U); /* 言語は小文字 */
-
-    while (work[offset] != '\0')
-    {
-        const char *subtag;
-        size_t length;
-
-        offset++; /* 区切り文字を読み飛ばす */
-        subtag = &work[offset];
-        length = subtag_length(subtag);
-
-        if (length == 0U)
-        {
-            return CPLAT_ERR_INVALID_ARGUMENT;
-        }
-
-        /* 表記体系は、地域より前に現れた場合だけ受け付ける。 */
-        if ((has_script == 0) && (has_region == 0) && (length == SCRIPT_LENGTH) && (is_alpha_text(subtag, length) != 0))
-        {
-            append_subtag(tag, &tag_length, subtag, length, 1U); /* 表記体系は先頭だけ大文字 */
-            has_script = 1;
-        }
-        else if ((has_region == 0) && ((((length == REGION_ALPHA_LENGTH) && (is_alpha_text(subtag, length) != 0))) ||
-                                       ((length == REGION_DIGIT_LENGTH) && (is_digit_text(subtag, length) != 0))))
-        {
-            append_subtag(tag, &tag_length, subtag, length, length); /* 地域は大文字 */
-            has_region = 1;
-        }
-        else
-        {
-            break; /* 表記体系と地域より後ろの区別は、表示する文言の選択に使用しないため取り込まない */
-        }
-
-        offset += length;
-    }
-
-    tag[tag_length] = '\0';
-
-    return cplat_strcpy(tag_out, tag_size, tag);
 }

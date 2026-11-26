@@ -31,6 +31,10 @@ static_assert(INT_MIN == INT32_MIN && INT_MAX == INT32_MAX && UINT_MAX == UINT32
 static_assert(LLONG_MIN == INT64_MIN && LLONG_MAX == INT64_MAX && ULLONG_MAX == UINT64_MAX,
               "cplat: long long must be 64-bit");
 
+static int env_name_is_valid(const char *name);
+static int parse_base_is_valid(const int base);
+static int alloc_size_rejects(const size_t count, const size_t size);
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_getenv(const char *name, char *buf, const size_t buf_size, int *exists_out, cplat_error *detail_out)
@@ -118,26 +122,6 @@ int cplat_getenv(const char *name, char *buf, const size_t buf_size, int *exists
         return cplat_internal_error_report_success(detail_out);
     }
 #endif /* PLATFORM_ */
-}
-
-/*
- * 環境変数名として妥当かを判定する。空文字列と '=' を含む名前は POSIX と MSVC の
- * いずれでも不正であるため、プラットフォーム差を出さないよう先に弾く。
- * 妥当な場合は 1、不正な場合は 0 を返す。
- */
-static int env_name_is_valid(const char *name)
-{
-    if (name == NULL || name[0] == '\0')
-    {
-        return 0;
-    }
-
-    if (strchr(name, '=') != NULL)
-    {
-        return 0;
-    }
-
-    return 1;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -235,29 +219,6 @@ int cplat_unsetenv(const char *name, cplat_error *detail_out)
         return cplat_internal_error_report_success(detail_out);
     }
 #endif /* PLATFORM_ */
-}
-
-/**
- *  @brief          strtoll 系へ渡す基数として妥当かを判定します。
- *  @param[in]      base 判定する基数。
- *  @return         妥当な場合は 1、そうでない場合は 0 を返します。
- *
- *  0 (接頭辞による自動判別) と 2 から 36 を妥当とします。
- *  これ以外の値に対する strtoll 系の動作は未定義であるため、変換前に弾きます。
- */
-static int parse_base_is_valid(const int base)
-{
-    if (base == 0)
-    {
-        return 1;
-    }
-
-    if ((base >= 2) && (base <= 36))
-    {
-        return 1;
-    }
-
-    return 0;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -758,36 +719,6 @@ int cplat_parse_double(double *value_out, const char *text)
     return CPLAT_OK;
 }
 
-/*
- * 以降の確保・解放関数は、上位規範「動的メモリの確保と解放」および
- * cplat 規範「メモリ確保の代替」が定める代替の実体である。
- * 本ファイル内の malloc() / calloc() / realloc() / free() の直接呼び出しは、
- * ラッパーが元関数へ委譲するための意図的な例外であり、置換対象外とする。
- */
-
-/**
- *  @brief          要素数と要素サイズの乗算が size_t を回り込むかを検査します。
- *  @param[in]      count  要素数。
- *  @param[in]      size   要素 1 個あたりのバイト数。
- *  @return         確保してはならない場合は 1、確保してよい場合は 0 を返します。
- *
- *  いずれかが 0 の場合も、長さ 0 の確保を行わないため 1 を返します。
- */
-static int alloc_size_rejects(const size_t count, const size_t size)
-{
-    if ((count == 0U) || (size == 0U))
-    {
-        return 1;
-    }
-
-    if (count > (SIZE_MAX / size))
-    {
-        return 1;
-    }
-
-    return 0;
-}
-
 /* Doxygen コメントは、ヘッダーに記載 */
 
 void *cplat_malloc(const size_t size)
@@ -875,4 +806,77 @@ void *cplat_realloc_zerofill(void *ptr, const size_t old_count, const size_t cou
 void cplat_free(void *ptr)
 {
     free(ptr); /* ラッパーの実体であり置換対象外 (free(NULL) は無害) */
+}
+
+/*
+ * 環境変数名として妥当かを判定する。空文字列と '=' を含む名前は POSIX と MSVC の
+ * いずれでも不正であるため、プラットフォーム差を出さないよう先に弾く。
+ * 妥当な場合は 1、不正な場合は 0 を返す。
+ */
+static int env_name_is_valid(const char *name)
+{
+    if (name == NULL || name[0] == '\0')
+    {
+        return 0;
+    }
+
+    if (strchr(name, '=') != NULL)
+    {
+        return 0;
+    }
+
+    return 1;
+}
+
+/**
+ *  @brief          strtoll 系へ渡す基数として妥当かを判定します。
+ *  @param[in]      base 判定する基数。
+ *  @return         妥当な場合は 1、そうでない場合は 0 を返します。
+ *
+ *  0 (接頭辞による自動判別) と 2 から 36 を妥当とします。
+ *  これ以外の値に対する strtoll 系の動作は未定義であるため、変換前に弾きます。
+ */
+static int parse_base_is_valid(const int base)
+{
+    if (base == 0)
+    {
+        return 1;
+    }
+
+    if ((base >= 2) && (base <= 36))
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
+/*
+ * 以降の確保・解放関数は、上位規範「動的メモリの確保と解放」および
+ * cplat 規範「メモリ確保の代替」が定める代替の実体である。
+ * 本ファイル内の malloc() / calloc() / realloc() / free() の直接呼び出しは、
+ * ラッパーが元関数へ委譲するための意図的な例外であり、置換対象外とする。
+ */
+
+/**
+ *  @brief          要素数と要素サイズの乗算が size_t を回り込むかを検査します。
+ *  @param[in]      count  要素数。
+ *  @param[in]      size   要素 1 個あたりのバイト数。
+ *  @return         確保してはならない場合は 1、確保してよい場合は 0 を返します。
+ *
+ *  いずれかが 0 の場合も、長さ 0 の確保を行わないため 1 を返します。
+ */
+static int alloc_size_rejects(const size_t count, const size_t size)
+{
+    if ((count == 0U) || (size == 0U))
+    {
+        return 1;
+    }
+
+    if (count > (SIZE_MAX / size))
+    {
+        return 1;
+    }
+
+    return 0;
 }

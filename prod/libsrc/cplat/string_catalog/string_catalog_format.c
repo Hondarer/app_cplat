@@ -26,33 +26,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-/** 引数種別が公開列挙の範囲内であることを確認します。 */
-static bool is_valid_argument_kind(const cplat_string_catalog_argument_kind kind)
-{
-    return (kind >= CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED) &&
-           (kind <= CPLAT_STRING_CATALOG_ARGUMENT_KIND_ERROR_CODE);
-}
-
-/**
- *  @brief          言語別リソースから、指定した言語の要素を選びます。
- *  @param[in]      localized 言語をインデックスとするリソースの配列。NULL を渡してはなりません。
- *  @param[in]      language  出力する言語。範囲内の値を渡してください。
- *  @return         使用するリソースです。ニュートラル言語の要素も未設定の場合は NULL を返します。
- *
- *  指定した言語のリソースが未設定の場合は、ニュートラル言語の要素を代替として使用します。\n
- *  翻訳が完了していない言語であっても、文字列を出力できます。
- */
-static const char *select_localized(const char *const *localized, const cplat_string_catalog_language language)
-{
-    const char *text = localized[(unsigned int)language];
-
-    if (text == NULL)
-    {
-        text = localized[CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL];
-    }
-
-    return text;
-}
+static bool is_valid_argument_kind(const cplat_string_catalog_argument_kind kind);
+static const char *select_localized(const char *const *localized, const cplat_string_catalog_language language);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -291,4 +266,32 @@ const char *cplat_string_catalog_get_note(const cplat_string_catalog *const cata
     }
 
     return select_localized(entry->notes, cplat_string_catalog_get_language());
+}
+
+/** 引数種別が公開列挙の範囲内であることを確認します。 */
+static bool is_valid_argument_kind(const cplat_string_catalog_argument_kind kind)
+{
+    return (kind >= CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED) &&
+           (kind <= CPLAT_STRING_CATALOG_ARGUMENT_KIND_ERROR_CODE);
+}
+
+/**
+ *  @brief          言語別リソースから、指定した言語の要素を選びます。
+ *  @param[in]      localized 言語をインデックスとするリソースの配列。NULL を渡してはなりません。
+ *  @param[in]      language  出力する言語。範囲内の値を渡してください。
+ *  @return         使用するリソースです。ニュートラル言語の要素も未設定の場合は NULL を返します。
+ *
+ *  指定した言語のリソースが未設定の場合は、ニュートラル言語の要素を代替として使用します。\n
+ *  翻訳が完了していない言語であっても、文字列を出力できます。
+ */
+static const char *select_localized(const char *const *localized, const cplat_string_catalog_language language)
+{
+    const char *text = localized[(unsigned int)language];
+
+    if (text == NULL)
+    {
+        text = localized[CPLAT_STRING_CATALOG_LANGUAGE_NEUTRAL];
+    }
+
+    return text;
 }

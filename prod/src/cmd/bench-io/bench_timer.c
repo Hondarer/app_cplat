@@ -25,100 +25,9 @@
 /** 計測区間の不足時に反復回数を増やす倍率です。 */
 #define BENCH_TIMER_ITERATION_GROWTH 2U
 
-/**
- *  @brief          2 点間の経過時間をナノ秒で求めます。
- *  @param[in]      start  開始時刻。NULL を渡してはなりません。
- *  @param[in]      end    終了時刻。NULL を渡してはなりません。
- *  @param[out]     nanoseconds_out 経過時間 [ns]。負の差は 0 を格納します。
- *  @return         成功時は 0、時刻差または変換の範囲外は -1 を返します。
- *
- *  `cplat_timespec_diff_ms()` はミリ秒単位のため、
- *  ナノ秒の分解能を保つ目的で `cplat_timespec_sub()` の結果から自前で算出します。
- */
-static int elapsed_ns(const cplat_timespec *start, const cplat_timespec *end, uint64_t *nanoseconds_out)
-{
-    cplat_timespec difference;
-    uint64_t seconds;
-    uint64_t nanoseconds;
-    if (cplat_timespec_sub(end, start, &difference) != CPLAT_OK)
-    {
-        return -1;
-    }
-    if (difference.tv_sec < 0)
-    {
-        *nanoseconds_out = 0U;
-        return 0;
-    }
-    seconds = (uint64_t)difference.tv_sec;
-    nanoseconds = (uint64_t)difference.tv_nsec;
-    if (seconds > (UINT64_MAX - nanoseconds) / BENCH_NS_PER_SEC)
-    {
-        return -1;
-    }
-    *nanoseconds_out = seconds * BENCH_NS_PER_SEC + nanoseconds;
-    return 0;
-}
-
-/**
- *  @brief          指定回数だけ測定対象を実行し、区間の所要時間を求めます。
- *  @param[in]      fn          測定対象を 1 反復ぶん実行するコールバック。NULL を渡してはなりません。
- *  @param[in,out]  arg         @p fn へ渡すデータ。
- *  @param[in]      iterations  反復回数。1 以上を指定します。
- *  @param[out]     total_ns    区間の所要時間 [ns] の格納先。NULL を渡してはなりません。
- *  @return         成功時は 0、@p fn の失敗時は -1 を返します。
- */
-static int run_block(bench_iteration_fn fn, void *arg, uint64_t iterations, uint64_t *total_ns)
-{
-    cplat_timespec start;
-    cplat_timespec end;
-    uint64_t index;
-
-    if (cplat_clock_get_monotonic(&start) != CPLAT_OK)
-    {
-        return -1;
-    }
-
-    for (index = 0U; index < iterations; index++)
-    {
-        if (fn(arg) != 0)
-        {
-            return -1;
-        }
-    }
-
-    if (cplat_clock_get_monotonic(&end) != CPLAT_OK)
-    {
-        return -1;
-    }
-
-    return elapsed_ns(&start, &end, total_ns);
-}
-
-/**
- *  @brief          ナノ秒値の配列を昇順に並べ替えます。
- *  @param[in,out]  values  並べ替える配列。NULL を渡してはなりません。
- *  @param[in]      count   要素数。
- *
- *  要素数が試行回数 (最大 @ref BENCH_TIMER_MAX_TRIALS) と小さいため、単純な挿入ソートを使用します。
- */
-static void sort_ascending(uint64_t *values, size_t count)
-{
-    size_t index;
-
-    for (index = 1U; index < count; index++)
-    {
-        uint64_t target = values[index];
-        size_t position = index;
-
-        while (position > 0U && values[position - 1U] > target)
-        {
-            values[position] = values[position - 1U];
-            position--;
-        }
-
-        values[position] = target;
-    }
-}
+static int elapsed_ns(const cplat_timespec *start, const cplat_timespec *end, uint64_t *nanoseconds_out);
+static int run_block(bench_iteration_fn fn, void *arg, uint64_t iterations, uint64_t *total_ns);
+static void sort_ascending(uint64_t *values, size_t count);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -235,4 +144,99 @@ int bench_timer_measure_cold(bench_iteration_fn fn, void *arg, bench_iteration_f
     timing->median_ns = samples[trial_count / 2U];
 
     return 0;
+}
+
+/**
+ *  @brief          2 点間の経過時間をナノ秒で求めます。
+ *  @param[in]      start  開始時刻。NULL を渡してはなりません。
+ *  @param[in]      end    終了時刻。NULL を渡してはなりません。
+ *  @param[out]     nanoseconds_out 経過時間 [ns]。負の差は 0 を格納します。
+ *  @return         成功時は 0、時刻差または変換の範囲外は -1 を返します。
+ *
+ *  `cplat_timespec_diff_ms()` はミリ秒単位のため、
+ *  ナノ秒の分解能を保つ目的で `cplat_timespec_sub()` の結果から自前で算出します。
+ */
+static int elapsed_ns(const cplat_timespec *start, const cplat_timespec *end, uint64_t *nanoseconds_out)
+{
+    cplat_timespec difference;
+    uint64_t seconds;
+    uint64_t nanoseconds;
+    if (cplat_timespec_sub(end, start, &difference) != CPLAT_OK)
+    {
+        return -1;
+    }
+    if (difference.tv_sec < 0)
+    {
+        *nanoseconds_out = 0U;
+        return 0;
+    }
+    seconds = (uint64_t)difference.tv_sec;
+    nanoseconds = (uint64_t)difference.tv_nsec;
+    if (seconds > (UINT64_MAX - nanoseconds) / BENCH_NS_PER_SEC)
+    {
+        return -1;
+    }
+    *nanoseconds_out = seconds * BENCH_NS_PER_SEC + nanoseconds;
+    return 0;
+}
+
+/**
+ *  @brief          指定回数だけ測定対象を実行し、区間の所要時間を求めます。
+ *  @param[in]      fn          測定対象を 1 反復ぶん実行するコールバック。NULL を渡してはなりません。
+ *  @param[in,out]  arg         @p fn へ渡すデータ。
+ *  @param[in]      iterations  反復回数。1 以上を指定します。
+ *  @param[out]     total_ns    区間の所要時間 [ns] の格納先。NULL を渡してはなりません。
+ *  @return         成功時は 0、@p fn の失敗時は -1 を返します。
+ */
+static int run_block(bench_iteration_fn fn, void *arg, uint64_t iterations, uint64_t *total_ns)
+{
+    cplat_timespec start;
+    cplat_timespec end;
+    uint64_t index;
+
+    if (cplat_clock_get_monotonic(&start) != CPLAT_OK)
+    {
+        return -1;
+    }
+
+    for (index = 0U; index < iterations; index++)
+    {
+        if (fn(arg) != 0)
+        {
+            return -1;
+        }
+    }
+
+    if (cplat_clock_get_monotonic(&end) != CPLAT_OK)
+    {
+        return -1;
+    }
+
+    return elapsed_ns(&start, &end, total_ns);
+}
+
+/**
+ *  @brief          ナノ秒値の配列を昇順に並べ替えます。
+ *  @param[in,out]  values  並べ替える配列。NULL を渡してはなりません。
+ *  @param[in]      count   要素数。
+ *
+ *  要素数が試行回数 (最大 @ref BENCH_TIMER_MAX_TRIALS) と小さいため、単純な挿入ソートを使用します。
+ */
+static void sort_ascending(uint64_t *values, size_t count)
+{
+    size_t index;
+
+    for (index = 1U; index < count; index++)
+    {
+        uint64_t target = values[index];
+        size_t position = index;
+
+        while (position > 0U && values[position - 1U] > target)
+        {
+            values[position] = values[position - 1U];
+            position--;
+        }
+
+        values[position] = target;
+    }
 }

@@ -50,6 +50,104 @@ typedef struct pinned_prompt_cli_session
     int reserved;
 } pinned_prompt_cli_session;
 
+static void complete_command(const char *line, size_t cursor, cplat_prompt_completions *completions, void *user_data);
+static char *skip_spaces(char *s);
+static int split_command(char *line, char **command, char **arg);
+static void decode_cli_escapes(char *s);
+static void print_help(cplat_pinned_prompt *screen);
+static void worker_init(pinned_prompt_cli_worker *worker, cplat_pinned_prompt *screen,
+                        cplat_pinned_prompt_channel channel, const char *name);
+static int worker_ensure_sync(pinned_prompt_cli_worker *worker);
+static void worker_thread_proc(void *arg);
+static void worker_start(pinned_prompt_cli_worker *worker);
+static void worker_stop(pinned_prompt_cli_worker *worker, int announce);
+static void worker_dispose(pinned_prompt_cli_worker *worker);
+static pinned_prompt_cli_worker *find_worker(pinned_prompt_cli_session *session, const char *name);
+static void process_start(pinned_prompt_cli_session *session, const char *arg);
+static void process_stop(pinned_prompt_cli_session *session, const char *arg);
+static void process_status(pinned_prompt_cli_session *session, const char *arg);
+static int read_primary_history(cplat_pinned_prompt *screen, char *buf, size_t buf_size);
+static int read_secondary_history(cplat_pinned_prompt *screen, char *buf, size_t buf_size);
+static int read_formatted_history(cplat_pinned_prompt *screen, char *buf, size_t buf_size);
+static void process_read(pinned_prompt_cli_session *session, const char *arg);
+static void process_line(pinned_prompt_cli_session *session, char *line);
+static int session_init(pinned_prompt_cli_session *session);
+static void session_dispose(pinned_prompt_cli_session *session);
+
+int main(int argc, char *argv[])
+{
+    pinned_prompt_cli_session session;
+    char line[PINNED_PROMPT_CLI_LINE_MAX];
+    int ret;
+
+    cplat_console_init();
+
+    int need_help = 0;
+
+    if (cplat_argparser_init(argc, argv, "固定プロンプト API を対話的に確認します。") != CPLAT_OK)
+    {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "引数の解析の準備に失敗しました。\n");
+        return EXIT_FAILURE;
+    }
+    /*
+     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() で検査するため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &need_help);
+
+    if (cplat_argparser_get_register_error_count() > 0)
+    {
+        /* 終了コードはすでに失敗に決まっているため、戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_register_error_messages(stderr);
+        return EXIT_FAILURE;
+    }
+
+    int parse_result = cplat_argparser_parse();
+
+    if (need_help != 0)
+    {
+        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
+        {
+            (void)fprintf(stderr, "標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+            return EXIT_FAILURE;
+        }
+
+        return EXIT_SUCCESS;
+    }
+
+    if (parse_result != CPLAT_OK)
+    {
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_error_messages(stderr);
+        (void)cplat_argparser_print_usage(stderr);
+        return EXIT_FAILURE;
+    }
+
+    if (session_init(&session) != 0)
+    {
+        return EXIT_FAILURE;
+    }
+
+    print_help(session.screen);
+
+    /* 終了要求を受け取るまで対話的に 1 行ずつ読み込み、コマンドを処理する。 */
+    while (!session.exit_requested)
+    {
+        ret = cplat_pinned_prompt_readline(session.screen, line, sizeof(line), "pinned-prompt> ");
+        if (ret != CPLAT_OK)
+        {
+            break;
+        }
+
+        process_line(&session, line);
+    }
+
+    session_dispose(&session);
+
+    return EXIT_SUCCESS;
+}
+
 static void complete_command(const char *line, size_t cursor, cplat_prompt_completions *completions, void *user_data)
 {
     static const char *const commands[] = {"help ", "echo ", "start ", "stop ", "status ", "read ", "exit ", "quit "};
@@ -750,78 +848,4 @@ static void session_dispose(pinned_prompt_cli_session *session)
     worker_dispose(&session->stderr_worker);
     cplat_pinned_prompt_dispose(session->screen);
     session->screen = NULL;
-}
-
-int main(int argc, char *argv[])
-{
-    pinned_prompt_cli_session session;
-    char line[PINNED_PROMPT_CLI_LINE_MAX];
-    int ret;
-
-    cplat_console_init();
-
-    int need_help = 0;
-
-    if (cplat_argparser_init(argc, argv, "固定プロンプト API を対話的に確認します。") != CPLAT_OK)
-    {
-        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
-        (void)fprintf(stderr, "引数の解析の準備に失敗しました。\n");
-        return EXIT_FAILURE;
-    }
-    /*
-     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() で検査するため、
-     * 戻り値は明示的に破棄する。
-     */
-    (void)cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &need_help);
-
-    if (cplat_argparser_get_register_error_count() > 0)
-    {
-        /* 終了コードはすでに失敗に決まっているため、戻り値は明示的に破棄する。 */
-        (void)cplat_argparser_print_register_error_messages(stderr);
-        return EXIT_FAILURE;
-    }
-
-    int parse_result = cplat_argparser_parse();
-
-    if (need_help != 0)
-    {
-        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
-        {
-            (void)fprintf(stderr, "標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
-            return EXIT_FAILURE;
-        }
-
-        return EXIT_SUCCESS;
-    }
-
-    if (parse_result != CPLAT_OK)
-    {
-        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
-        (void)cplat_argparser_print_error_messages(stderr);
-        (void)cplat_argparser_print_usage(stderr);
-        return EXIT_FAILURE;
-    }
-
-    if (session_init(&session) != 0)
-    {
-        return EXIT_FAILURE;
-    }
-
-    print_help(session.screen);
-
-    /* 終了要求を受け取るまで対話的に 1 行ずつ読み込み、コマンドを処理する。 */
-    while (!session.exit_requested)
-    {
-        ret = cplat_pinned_prompt_readline(session.screen, line, sizeof(line), "pinned-prompt> ");
-        if (ret != CPLAT_OK)
-        {
-            break;
-        }
-
-        process_line(&session, line);
-    }
-
-    session_dispose(&session);
-
-    return EXIT_SUCCESS;
 }

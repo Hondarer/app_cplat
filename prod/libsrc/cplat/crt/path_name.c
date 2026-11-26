@@ -16,35 +16,8 @@
 #include <stdarg.h>
 #include <string.h>
 
-static int path_is_sep(const char c)
-{
-    return c == '/' || c == '\\';
-}
-
-/*
- * パス文字列を出力バッファーへコピーする。
- * 成功時は CPLAT_OK を返し、バッファーに収まらない場合は ENAMETOOLONG に対応する結果コードを返す。
- */
-static int copy_path_name_text(char *path_out, const size_t path_size, cplat_error *detail_out, const char *text)
-{
-    size_t len;
-
-    if (path_out == NULL || path_size == 0u || text == NULL)
-    {
-        return cplat_internal_error_report_errno(detail_out, EINVAL);
-    }
-
-    len = strlen(text);
-    if (len + 1u > path_size)
-    {
-        path_out[0] = '\0';
-        return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
-    }
-
-    memcpy(path_out, text, len + 1u);
-
-    return cplat_internal_error_report_success(detail_out);
-}
+static int path_is_sep(const char c);
+static int copy_path_name_text(char *path_out, const size_t path_size, cplat_error *detail_out, const char *text);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -339,4 +312,34 @@ int cplat_path_join_n(char *path_out, const size_t path_size, cplat_error *detai
     va_end(args);
 
     return result;
+}
+
+static int path_is_sep(const char c)
+{
+    return c == '/' || c == '\\';
+}
+
+/*
+ * パス文字列を出力バッファーへコピーする。
+ * 成功時は CPLAT_OK を返し、バッファーに収まらない場合は ENAMETOOLONG に対応する結果コードを返す。
+ */
+static int copy_path_name_text(char *path_out, const size_t path_size, cplat_error *detail_out, const char *text)
+{
+    size_t len;
+
+    if (path_out == NULL || path_size == 0u || text == NULL)
+    {
+        return cplat_internal_error_report_errno(detail_out, EINVAL);
+    }
+
+    len = strlen(text);
+    if (len + 1u > path_size)
+    {
+        path_out[0] = '\0';
+        return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
+    }
+
+    memcpy(path_out, text, len + 1u);
+
+    return cplat_internal_error_report_success(detail_out);
 }

@@ -29,19 +29,7 @@
     #include "crt.h"
 #endif /* PLATFORM_ */
 
-static int file_is_open(const cplat_file *file)
-{
-    if (file == NULL)
-    {
-        return 0;
-    }
-
-#if defined(PLATFORM_LINUX)
-    return file->handle != -1;
-#elif defined(PLATFORM_WINDOWS)
-    return file->handle != INVALID_HANDLE_VALUE;
-#endif /* PLATFORM_ */
-}
+static int file_is_open(const cplat_file *file);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -658,4 +646,18 @@ int cplat_file_close(cplat_file *file, cplat_error *detail_out)
 #endif /* PLATFORM_ */
 
     return cplat_internal_error_report_success(detail_out);
+}
+
+static int file_is_open(const cplat_file *file)
+{
+    if (file == NULL)
+    {
+        return 0;
+    }
+
+#if defined(PLATFORM_LINUX)
+    return file->handle != -1;
+#elif defined(PLATFORM_WINDOWS)
+    return file->handle != INVALID_HANDLE_VALUE;
+#endif /* PLATFORM_ */
 }

@@ -58,6 +58,215 @@ static const char k_module_ext[] = ".dll";
 #endif /* PLATFORM_ */
 
 #if defined(PLATFORM_LINUX)
+static void wait_for_entry_lock_initialization(cplat_sym_loader_entry *fobj);
+#endif /* PLATFORM_LINUX */
+static void yield_while_entry_lock_initializing(cplat_sym_loader_entry *fobj);
+static int ensure_entry_lock_initialized(cplat_sym_loader_entry *fobj);
+static void free_name_pairs(cplat_sym_loader_name_pair *list, size_t count);
+static void free_reject_items(cplat_sym_loader_reject_item *list, size_t count);
+static void free_usable_items(cplat_sym_loader_usable *list, size_t count);
+static int append_reject_copy(cplat_sym_loader_reject_item **list, size_t *count, const char *lib_name,
+                              const char *func_name, int reason);
+static int names_are_both_default(const char *lib_name, const char *func_name);
+static int pending_has_both_default(const cplat_sym_loader_entry_impl *impl);
+static int open_configured_symbol(const char *lib_name, const char *func_name, int *reason,
+                                  cplat_sym_loader_usable *slot);
+static int classify_one(const char *lib_name, const char *func_name, int *reason, cplat_sym_loader_usable *slot);
+static void publish_resolved(cplat_sym_loader_entry *fobj, cplat_sym_loader_usable *usable, size_t usable_count,
+                             cplat_sym_loader_reject_item *rejects, size_t reject_count, int is_default);
+static int classify_pending(cplat_sym_loader_entry *fobj);
+static void fail_locked(cplat_sym_loader_entry *fobj);
+
+int cplat_sym_loader_ensure(cplat_sym_loader_entry *fobj)
+{
+    int result;
+    int32_t was_failed;
+    cplat_sym_loader_entry_impl *impl;
+
+    /*
+     * resolved の acquire 読み取りは、列を公開したあとの release 書き込みと対になる。
+     * 1 に見えた時点で、利用側の列と診断の列も見える。
+     */
+    if (cplat_atomic_load_i32(&fobj->resolved, CPLAT_MEMORY_ORDER_ACQUIRE) == 1)
+    {
+        return 0;
+    }
+
+    if (ensure_entry_lock_initialized(fobj) != 0)
+    {
+        fail_locked(fobj);
+        return -1;
+    }
+
+    cplat_local_lock_lock(fobj->lock);
+
+    if (cplat_atomic_load_i32(&fobj->resolved, CPLAT_MEMORY_ORDER_RELAXED) == 1)
+    {
+        result = 0;
+        goto unlock;
+    }
+
+    was_failed = cplat_atomic_load_i32(&fobj->failed, CPLAT_MEMORY_ORDER_RELAXED);
+    impl = fobj->impl;
+    if ((impl != NULL) && (impl->release_pending != 0))
+    {
+        fail_locked(fobj);
+        result = -1;
+        goto unlock;
+    }
+    cplat_atomic_store_i32(&fobj->failed, 0, CPLAT_MEMORY_ORDER_RELAXED);
+
+    if (impl == NULL)
+    {
+        if (was_failed != 0)
+        {
+            fail_locked(fobj);
+            result = -1;
+            goto unlock;
+        }
+
+        cplat_atomic_store_i32(&fobj->failed, 0, CPLAT_MEMORY_ORDER_RELEASE);
+        cplat_atomic_store_i32(&fobj->resolved, 1, CPLAT_MEMORY_ORDER_RELEASE);
+        result = 0;
+        goto unlock;
+    }
+
+    if (impl->needs_reload != 0)
+    {
+        char *path_copy;
+        int apply_result;
+        cplat_sym_loader_entry *reload_entries[1];
+
+        if (impl->config_path == NULL)
+        {
+            fail_locked(fobj);
+            result = -1;
+            goto unlock;
+        }
+
+        /* apply が管理構造体を解放しても、パスのコピーは残す。 */
+        path_copy = cplat_strdup(impl->config_path);
+        if (path_copy == NULL)
+        {
+            fail_locked(fobj);
+            result = -1;
+            goto unlock;
+        }
+
+        reload_entries[0] = fobj;
+        apply_result = cplat_sym_loader_apply_config(reload_entries, 1u, path_copy);
+        cplat_free(path_copy);
+        impl = fobj->impl;
+
+        if ((apply_result != 0) || (impl == NULL) || (impl->needs_reload != 0) ||
+            (cplat_atomic_load_i32(&fobj->failed, CPLAT_MEMORY_ORDER_RELAXED) != 0))
+        {
+            fail_locked(fobj);
+            result = -1;
+            goto unlock;
+        }
+    }
+
+    if (classify_pending(fobj) != 0)
+    {
+        fail_locked(fobj);
+        result = -1;
+        goto unlock;
+    }
+
+    result = 0;
+
+unlock:
+    cplat_local_lock_unlock(fobj->lock);
+    return result;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_sym_loader_count(cplat_sym_loader_entry *fobj, size_t *count_out)
+{
+    if ((fobj == NULL) || (count_out == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    if (cplat_sym_loader_ensure(fobj) != 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    *count_out = (fobj->impl == NULL) ? 0u : fobj->impl->usable_count;
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_sym_loader_get(cplat_sym_loader_entry *fobj, size_t index, void **address_out)
+{
+    if ((fobj == NULL) || (address_out == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    if (cplat_sym_loader_ensure(fobj) != 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    if ((fobj->impl == NULL) || (index >= fobj->impl->usable_count))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    *address_out = fobj->impl->usable[index].func_ptr;
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_sym_loader_reject_count(cplat_sym_loader_entry *fobj, size_t *count_out)
+{
+    if ((fobj == NULL) || (count_out == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    if (cplat_sym_loader_ensure(fobj) != 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    *count_out = (fobj->impl == NULL) ? 0u : fobj->impl->reject_count;
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_sym_loader_reject_get(cplat_sym_loader_entry *fobj, size_t index, const char **lib_name,
+                                const char **func_name, int *reason)
+{
+    const cplat_sym_loader_reject_item *item;
+
+    if ((fobj == NULL) || (lib_name == NULL) || (func_name == NULL) || (reason == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (cplat_sym_loader_ensure(fobj) != 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    if ((fobj->impl == NULL) || (index >= fobj->impl->reject_count))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    item = &fobj->impl->rejects[index];
+    *lib_name = item->lib_name;
+    *func_name = item->func_name;
+    *reason = item->reason;
+    return CPLAT_OK;
+}
+
+#if defined(PLATFORM_LINUX)
 /*
  * エントリ ロックの初期化完了を待機する間、CPU を他のスレッドへ譲る。
  */
@@ -469,193 +678,4 @@ static void fail_locked(cplat_sym_loader_entry *fobj)
 {
     cplat_atomic_store_i32(&fobj->resolved, 0, CPLAT_MEMORY_ORDER_RELEASE);
     cplat_atomic_store_i32(&fobj->failed, 1, CPLAT_MEMORY_ORDER_RELEASE);
-}
-
-int cplat_sym_loader_ensure(cplat_sym_loader_entry *fobj)
-{
-    int result;
-    int32_t was_failed;
-    cplat_sym_loader_entry_impl *impl;
-
-    /*
-     * resolved の acquire 読み取りは、列を公開したあとの release 書き込みと対になる。
-     * 1 に見えた時点で、利用側の列と診断の列も見える。
-     */
-    if (cplat_atomic_load_i32(&fobj->resolved, CPLAT_MEMORY_ORDER_ACQUIRE) == 1)
-    {
-        return 0;
-    }
-
-    if (ensure_entry_lock_initialized(fobj) != 0)
-    {
-        fail_locked(fobj);
-        return -1;
-    }
-
-    cplat_local_lock_lock(fobj->lock);
-
-    if (cplat_atomic_load_i32(&fobj->resolved, CPLAT_MEMORY_ORDER_RELAXED) == 1)
-    {
-        result = 0;
-        goto unlock;
-    }
-
-    was_failed = cplat_atomic_load_i32(&fobj->failed, CPLAT_MEMORY_ORDER_RELAXED);
-    impl = fobj->impl;
-    if ((impl != NULL) && (impl->release_pending != 0))
-    {
-        fail_locked(fobj);
-        result = -1;
-        goto unlock;
-    }
-    cplat_atomic_store_i32(&fobj->failed, 0, CPLAT_MEMORY_ORDER_RELAXED);
-
-    if (impl == NULL)
-    {
-        if (was_failed != 0)
-        {
-            fail_locked(fobj);
-            result = -1;
-            goto unlock;
-        }
-
-        cplat_atomic_store_i32(&fobj->failed, 0, CPLAT_MEMORY_ORDER_RELEASE);
-        cplat_atomic_store_i32(&fobj->resolved, 1, CPLAT_MEMORY_ORDER_RELEASE);
-        result = 0;
-        goto unlock;
-    }
-
-    if (impl->needs_reload != 0)
-    {
-        char *path_copy;
-        int apply_result;
-        cplat_sym_loader_entry *reload_entries[1];
-
-        if (impl->config_path == NULL)
-        {
-            fail_locked(fobj);
-            result = -1;
-            goto unlock;
-        }
-
-        /* apply が管理構造体を解放しても、パスのコピーは残す。 */
-        path_copy = cplat_strdup(impl->config_path);
-        if (path_copy == NULL)
-        {
-            fail_locked(fobj);
-            result = -1;
-            goto unlock;
-        }
-
-        reload_entries[0] = fobj;
-        apply_result = cplat_sym_loader_apply_config(reload_entries, 1u, path_copy);
-        cplat_free(path_copy);
-        impl = fobj->impl;
-
-        if ((apply_result != 0) || (impl == NULL) || (impl->needs_reload != 0) ||
-            (cplat_atomic_load_i32(&fobj->failed, CPLAT_MEMORY_ORDER_RELAXED) != 0))
-        {
-            fail_locked(fobj);
-            result = -1;
-            goto unlock;
-        }
-    }
-
-    if (classify_pending(fobj) != 0)
-    {
-        fail_locked(fobj);
-        result = -1;
-        goto unlock;
-    }
-
-    result = 0;
-
-unlock:
-    cplat_local_lock_unlock(fobj->lock);
-    return result;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_sym_loader_count(cplat_sym_loader_entry *fobj, size_t *count_out)
-{
-    if ((fobj == NULL) || (count_out == NULL))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    if (cplat_sym_loader_ensure(fobj) != 0)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    *count_out = (fobj->impl == NULL) ? 0u : fobj->impl->usable_count;
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_sym_loader_get(cplat_sym_loader_entry *fobj, size_t index, void **address_out)
-{
-    if ((fobj == NULL) || (address_out == NULL))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    if (cplat_sym_loader_ensure(fobj) != 0)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    if ((fobj->impl == NULL) || (index >= fobj->impl->usable_count))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    *address_out = fobj->impl->usable[index].func_ptr;
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_sym_loader_reject_count(cplat_sym_loader_entry *fobj, size_t *count_out)
-{
-    if ((fobj == NULL) || (count_out == NULL))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    if (cplat_sym_loader_ensure(fobj) != 0)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    *count_out = (fobj->impl == NULL) ? 0u : fobj->impl->reject_count;
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_sym_loader_reject_get(cplat_sym_loader_entry *fobj, size_t index, const char **lib_name,
-                                const char **func_name, int *reason)
-{
-    const cplat_sym_loader_reject_item *item;
-
-    if ((fobj == NULL) || (lib_name == NULL) || (func_name == NULL) || (reason == NULL))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (cplat_sym_loader_ensure(fobj) != 0)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    if ((fobj->impl == NULL) || (index >= fobj->impl->reject_count))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    item = &fobj->impl->rejects[index];
-    *lib_name = item->lib_name;
-    *func_name = item->func_name;
-    *reason = item->reason;
-    return CPLAT_OK;
 }

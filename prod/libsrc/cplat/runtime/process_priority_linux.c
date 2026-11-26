@@ -110,142 +110,13 @@ static_assert(offsetof(process_priority_sched_attr, sched_util_min) == PROCESS_P
 static_assert(sizeof(process_priority_sched_attr) == PROCESS_PRIORITY_SCHED_ATTR_SIZE_VERSION1,
               "sched_attr の 2 番目の版の大きさが一致すること");
 
-/*
- * スレッド ID を OS のスレッド ID (pid_t) へ変換する。
- * thread_id が INT32_MAX を超えて pid_t で表現できない場合は 0 を返し、正常に変換できた場合は 1 を返す。
- */
-static int to_os_thread_id(const uint32_t thread_id, pid_t *os_thread_id)
-{
-    if (thread_id > (uint32_t)INT32_MAX)
-    {
-        return 0;
-    }
-
-    *os_thread_id = (pid_t)thread_id;
-
-    return 1;
-}
-
-/*
- * ライブラリのポリシー列挙値を Linux のスケジューリング ポリシー値へ変換する。
- * 変換できた場合は 1 を返し、SCHED_DEADLINE や未知のポリシー値など変換できない場合は 0 を返す。
- */
-static int to_os_policy(const cplat_process_priority_linux_policy policy, int *os_policy)
-{
-    switch (policy)
-    {
-    case CPLAT_PROCESS_PRIORITY_LINUX_POLICY_OTHER:
-        *os_policy = SCHED_OTHER;
-        return 1;
-    case CPLAT_PROCESS_PRIORITY_LINUX_POLICY_BATCH:
-        *os_policy = SCHED_BATCH;
-        return 1;
-    case CPLAT_PROCESS_PRIORITY_LINUX_POLICY_IDLE:
-        *os_policy = SCHED_IDLE;
-        return 1;
-    case CPLAT_PROCESS_PRIORITY_LINUX_POLICY_FIFO:
-        *os_policy = SCHED_FIFO;
-        return 1;
-    case CPLAT_PROCESS_PRIORITY_LINUX_POLICY_ROUND_ROBIN:
-        *os_policy = SCHED_RR;
-        return 1;
-    case CPLAT_PROCESS_PRIORITY_LINUX_POLICY_DEADLINE:
-        /* デッド ラインは sched_setattr() で設定するため、sched_setscheduler() では扱わない。 */
-        return 0;
-    default:
-        return 0;
-    }
-}
-
-/*
- * Linux のスケジューリング ポリシー値をライブラリのポリシー列挙値へ変換する。
- * 変換できた場合は 1 を返し、未知のポリシー値など対応する列挙値がない場合は 0 を返す。
- */
-static int from_os_policy(const int os_policy, cplat_process_priority_linux_policy *policy)
-{
-    switch (os_policy)
-    {
-    case SCHED_OTHER:
-        *policy = CPLAT_PROCESS_PRIORITY_LINUX_POLICY_OTHER;
-        return 1;
-    case SCHED_BATCH:
-        *policy = CPLAT_PROCESS_PRIORITY_LINUX_POLICY_BATCH;
-        return 1;
-    case SCHED_IDLE:
-        *policy = CPLAT_PROCESS_PRIORITY_LINUX_POLICY_IDLE;
-        return 1;
-    case SCHED_FIFO:
-        *policy = CPLAT_PROCESS_PRIORITY_LINUX_POLICY_FIFO;
-        return 1;
-    case SCHED_RR:
-        *policy = CPLAT_PROCESS_PRIORITY_LINUX_POLICY_ROUND_ROBIN;
-        return 1;
-    case SCHED_DEADLINE:
-        *policy = CPLAT_PROCESS_PRIORITY_LINUX_POLICY_DEADLINE;
-        return 1;
-    default:
-        return 0;
-    }
-}
-
-/*
- * 指定されたポリシーに対する静的優先度の妥当性を判定する。
- * リアルタイム ポリシー (FIFO または RR) の場合は 1 から 99 の範囲、
- * それ以外は 0 であれば 1 を返し、それ以外は 0 を返す。
- */
-static int is_valid_static_priority(const cplat_process_priority_linux_policy policy, const int static_priority)
-{
-    if ((policy == CPLAT_PROCESS_PRIORITY_LINUX_POLICY_FIFO) ||
-        (policy == CPLAT_PROCESS_PRIORITY_LINUX_POLICY_ROUND_ROBIN))
-    {
-        return (static_priority >= PROCESS_PRIORITY_RT_PRIORITY_MIN) &&
-               (static_priority <= PROCESS_PRIORITY_RT_PRIORITY_MAX);
-    }
-
-    return static_priority == 0;
-}
-
-/*
- * システム コール経由で sched_setattr() を呼び出す。
- */
-static long sched_setattr_call(const pid_t os_thread_id, process_priority_sched_attr *attr)
-{
-#if defined(SYS_sched_setattr)
-    return syscall(SYS_sched_setattr, os_thread_id, attr, 0U);
-#else
-    (void)os_thread_id;
-    (void)attr;
-    errno = ENOSYS;
-
-    return -1;
-#endif
-}
-
-/*
- * システム コール経由で sched_getattr() を呼び出す。
- */
-static long sched_getattr_call(const pid_t os_thread_id, process_priority_sched_attr *attr, const unsigned int size)
-{
-#if defined(SYS_sched_getattr)
-    return syscall(SYS_sched_getattr, os_thread_id, attr, size, 0U);
-#else
-    (void)os_thread_id;
-    (void)attr;
-    (void)size;
-    errno = ENOSYS;
-
-    return -1;
-#endif
-}
-
-/*
- * CPU 使用率クランプ機能がシステムで利用可能かどうかを判定する。
- * sysctl ファイルが存在すれば 1 を返し、存在しなければ 0 を返す。
- */
-static int is_utilization_clamp_available(void)
-{
-    return access(PROCESS_PRIORITY_UTILIZATION_CLAMP_SYSCTL, F_OK) == 0;
-}
+static int to_os_thread_id(const uint32_t thread_id, pid_t *os_thread_id);
+static int to_os_policy(const cplat_process_priority_linux_policy policy, int *os_policy);
+static int from_os_policy(const int os_policy, cplat_process_priority_linux_policy *policy);
+static int is_valid_static_priority(const cplat_process_priority_linux_policy policy, const int static_priority);
+static long sched_setattr_call(const pid_t os_thread_id, process_priority_sched_attr *attr);
+static long sched_getattr_call(const pid_t os_thread_id, process_priority_sched_attr *attr, const unsigned int size);
+static int is_utilization_clamp_available(void);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -584,6 +455,143 @@ int cplat_process_priority_linux_get_utilization_clamp(const uint32_t thread_id,
     *maximum_out = attr.sched_util_max;
 
     return cplat_internal_error_report_success(detail_out);
+}
+
+/*
+ * スレッド ID を OS のスレッド ID (pid_t) へ変換する。
+ * thread_id が INT32_MAX を超えて pid_t で表現できない場合は 0 を返し、正常に変換できた場合は 1 を返す。
+ */
+static int to_os_thread_id(const uint32_t thread_id, pid_t *os_thread_id)
+{
+    if (thread_id > (uint32_t)INT32_MAX)
+    {
+        return 0;
+    }
+
+    *os_thread_id = (pid_t)thread_id;
+
+    return 1;
+}
+
+/*
+ * ライブラリのポリシー列挙値を Linux のスケジューリング ポリシー値へ変換する。
+ * 変換できた場合は 1 を返し、SCHED_DEADLINE や未知のポリシー値など変換できない場合は 0 を返す。
+ */
+static int to_os_policy(const cplat_process_priority_linux_policy policy, int *os_policy)
+{
+    switch (policy)
+    {
+    case CPLAT_PROCESS_PRIORITY_LINUX_POLICY_OTHER:
+        *os_policy = SCHED_OTHER;
+        return 1;
+    case CPLAT_PROCESS_PRIORITY_LINUX_POLICY_BATCH:
+        *os_policy = SCHED_BATCH;
+        return 1;
+    case CPLAT_PROCESS_PRIORITY_LINUX_POLICY_IDLE:
+        *os_policy = SCHED_IDLE;
+        return 1;
+    case CPLAT_PROCESS_PRIORITY_LINUX_POLICY_FIFO:
+        *os_policy = SCHED_FIFO;
+        return 1;
+    case CPLAT_PROCESS_PRIORITY_LINUX_POLICY_ROUND_ROBIN:
+        *os_policy = SCHED_RR;
+        return 1;
+    case CPLAT_PROCESS_PRIORITY_LINUX_POLICY_DEADLINE:
+        /* デッド ラインは sched_setattr() で設定するため、sched_setscheduler() では扱わない。 */
+        return 0;
+    default:
+        return 0;
+    }
+}
+
+/*
+ * Linux のスケジューリング ポリシー値をライブラリのポリシー列挙値へ変換する。
+ * 変換できた場合は 1 を返し、未知のポリシー値など対応する列挙値がない場合は 0 を返す。
+ */
+static int from_os_policy(const int os_policy, cplat_process_priority_linux_policy *policy)
+{
+    switch (os_policy)
+    {
+    case SCHED_OTHER:
+        *policy = CPLAT_PROCESS_PRIORITY_LINUX_POLICY_OTHER;
+        return 1;
+    case SCHED_BATCH:
+        *policy = CPLAT_PROCESS_PRIORITY_LINUX_POLICY_BATCH;
+        return 1;
+    case SCHED_IDLE:
+        *policy = CPLAT_PROCESS_PRIORITY_LINUX_POLICY_IDLE;
+        return 1;
+    case SCHED_FIFO:
+        *policy = CPLAT_PROCESS_PRIORITY_LINUX_POLICY_FIFO;
+        return 1;
+    case SCHED_RR:
+        *policy = CPLAT_PROCESS_PRIORITY_LINUX_POLICY_ROUND_ROBIN;
+        return 1;
+    case SCHED_DEADLINE:
+        *policy = CPLAT_PROCESS_PRIORITY_LINUX_POLICY_DEADLINE;
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+/*
+ * 指定されたポリシーに対する静的優先度の妥当性を判定する。
+ * リアルタイム ポリシー (FIFO または RR) の場合は 1 から 99 の範囲、
+ * それ以外は 0 であれば 1 を返し、それ以外は 0 を返す。
+ */
+static int is_valid_static_priority(const cplat_process_priority_linux_policy policy, const int static_priority)
+{
+    if ((policy == CPLAT_PROCESS_PRIORITY_LINUX_POLICY_FIFO) ||
+        (policy == CPLAT_PROCESS_PRIORITY_LINUX_POLICY_ROUND_ROBIN))
+    {
+        return (static_priority >= PROCESS_PRIORITY_RT_PRIORITY_MIN) &&
+               (static_priority <= PROCESS_PRIORITY_RT_PRIORITY_MAX);
+    }
+
+    return static_priority == 0;
+}
+
+/*
+ * システム コール経由で sched_setattr() を呼び出す。
+ */
+static long sched_setattr_call(const pid_t os_thread_id, process_priority_sched_attr *attr)
+{
+#if defined(SYS_sched_setattr)
+    return syscall(SYS_sched_setattr, os_thread_id, attr, 0U);
+#else
+    (void)os_thread_id;
+    (void)attr;
+    errno = ENOSYS;
+
+    return -1;
+#endif
+}
+
+/*
+ * システム コール経由で sched_getattr() を呼び出す。
+ */
+static long sched_getattr_call(const pid_t os_thread_id, process_priority_sched_attr *attr, const unsigned int size)
+{
+#if defined(SYS_sched_getattr)
+    return syscall(SYS_sched_getattr, os_thread_id, attr, size, 0U);
+#else
+    (void)os_thread_id;
+    (void)attr;
+    (void)size;
+    errno = ENOSYS;
+
+    return -1;
+#endif
+}
+
+/*
+ * CPU 使用率クランプ機能がシステムで利用可能かどうかを判定する。
+ * sysctl ファイルが存在すれば 1 を返し、存在しなければ 0 を返す。
+ */
+static int is_utilization_clamp_available(void)
+{
+    return access(PROCESS_PRIORITY_UTILIZATION_CLAMP_SYSCTL, F_OK) == 0;
 }
 
 #endif /* PLATFORM_LINUX */

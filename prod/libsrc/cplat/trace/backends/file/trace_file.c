@@ -142,10 +142,320 @@ struct sink_registry
     size_t capacity;
 };
 
+static void init_sink_registry_lock(void);
+static int sink_registry_lock(void);
+static void sink_registry_unlock(void);
+static char *build_registry_key(const char *path);
+static int registry_key_equals(const char *lhs, const char *rhs);
+static struct sink_registry_entry *sink_registry_find_by_key_locked(const char *key);
+static struct sink_registry_entry *sink_registry_find_by_sink_locked(const cplat_trace_file_sink *sink);
+static int sink_registry_register_locked(char *key, cplat_trace_file_sink *sink);
+static void sink_registry_remove_locked(struct sink_registry_entry *entry);
+static int base_open_flags(void);
+static int open_file(cplat_trace_file_sink *p);
+static int open_file_with_retry(cplat_trace_file_sink *p);
+static int open_file_truncate(cplat_trace_file_sink *p);
+static int sink_points_to_current_file(const cplat_trace_file_sink *p);
+static int close_file(cplat_trace_file_sink *p);
+static int rotate_file(cplat_trace_file_sink *p);
+static int check_rotate_shared(cplat_trace_file_sink *p);
+static void free_sink(cplat_trace_file_sink *p);
+static cplat_trace_file_sink *create_new_sink(const char *path, const size_t path_len, const size_t max_bytes,
+                                              const int generations, const int flags);
+
 static struct sink_registry s_sink_registry = {0};
 static cplat_local_lock *s_sink_registry_lock;
 static int s_sink_registry_lock_result = CPLAT_ERR_UNKNOWN;
 static cplat_once_flag s_sink_registry_lock_once = {0};
+
+/* ===== 公開 API ===== */
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+cplat_trace_file_sink *cplat_trace_file_sink_create(const char *path, const size_t max_bytes, const int generations,
+                                                    const int flags)
+{
+    cplat_trace_file_sink *handle;
+    struct sink_registry_entry *entry;
+    size_t path_len;
+    int requested_shared = 0;
+    char *key;
+
+    if (path == NULL || flags < 0)
+    {
+        return NULL;
+    }
+
+    path_len = strlen(path);
+
+    /* パスが長すぎてローテーションやロック ファイルのサフィックスを付加できない場合は拒否する。 */
+    if (path_len + TRACE_FILE_SUFFIX_MAX >= (size_t)PLATFORM_PATH_UTF8_MAX)
+    {
+        return NULL;
+    }
+
+    if ((flags & CPLAT_TRACE_FILE_SINK_SHARED) != 0)
+    {
+        requested_shared = 1;
+    }
+
+    key = build_registry_key(path);
+    if (key == NULL)
+    {
+        return NULL;
+    }
+
+    /*
+     * プロセス内で同一パスの sink を共有する (占有モードのプロセス内調停)。
+     * 生成自体もロック内で行い、同一パスの並行生成を直列化する。
+     */
+    if (sink_registry_lock() != CPLAT_OK)
+    {
+        cplat_free(key);
+        return NULL;
+    }
+
+    entry = sink_registry_find_by_key_locked(key);
+    if (entry != NULL)
+    {
+        /* 占有モードと共有モードの混在は意味的に矛盾するため拒否する。 */
+        if (entry->sink->shared != requested_shared)
+        {
+            sink_registry_unlock();
+            cplat_free(key);
+            return NULL;
+        }
+
+        entry->refcount++;
+        handle = entry->sink;
+        sink_registry_unlock();
+        cplat_free(key);
+        return handle;
+    }
+
+    handle = create_new_sink(path, path_len, max_bytes, generations, flags);
+    if (handle == NULL)
+    {
+        sink_registry_unlock();
+        cplat_free(key);
+        return NULL;
+    }
+
+    if (sink_registry_register_locked(key, handle) != 0)
+    {
+        sink_registry_unlock();
+        free_sink(handle);
+        cplat_free(key);
+        return NULL;
+    }
+
+    sink_registry_unlock();
+
+    return handle;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, const int level,
+                                              const cplat_timespec *timestamp, const char *timestamp_text,
+                                              const char *message)
+{
+    char buf[TRACE_FILE_LINE_BUF];
+    int len;
+    int ret;
+    int rotate_ret;
+    int reopen_ret;
+
+    (void)timestamp;
+
+    if (handle == NULL || message == NULL)
+    {
+        return CPLAT_OK;
+    }
+
+    if (timestamp_text == NULL)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    /* 1 行全体をスタック バッファーへフォーマットする。syscall 回数を最小化する。 */
+    len =
+        snprintf(buf, sizeof(buf), "%s %c %s\n", timestamp_text,
+                 cplat_internal_trace_level_char((cplat_trace_level)level), message); /* 置換対象外: 意図的な切り詰め */
+    if (len <= 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    if (len >= (int)sizeof(buf))
+    {
+        /* 切り詰めた場合は、バッファー末尾を改行で終端する。 */
+        len = (int)sizeof(buf) - 1;
+        buf[len - 1] = '\n';
+    }
+
+    if (cplat_local_lock_timed_lock(handle->mutex, FILE_LOCK_TIMEOUT_MS) != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    /* 未オープンなら開き直す。共有モードは、他プロセスのローテーションで実体が入れ替わった場合も開き直す。 */
+    reopen_ret = CPLAT_OK;
+    if (handle->file_open == 0 || (handle->shared != 0 && sink_points_to_current_file(handle) == 0))
+    {
+        reopen_ret = close_file(handle);
+
+        if (open_file(handle) != 0)
+        {
+            cplat_local_lock_unlock(handle->mutex);
+            return CPLAT_ERR_UNKNOWN;
+        }
+    }
+
+    /* OS バッファーを利用しない場合は、オープン時に指定した永続化設定で書き込む。 */
+    ret = cplat_file_write(&handle->file, buf, (size_t)len, NULL);
+    rotate_ret = CPLAT_OK;
+
+    /* 書き込み成功時は、サイズを追跡しローテーションしきい値を確認する。 */
+    if (ret == 0)
+    {
+        if (handle->shared != 0)
+        {
+            rotate_ret = check_rotate_shared(handle);
+        }
+        else
+        {
+            /* size_t のオーバーフローを防ぐ。実用上は発生しないが防御的に扱う。 */
+            if (handle->current_bytes <= (size_t)-1 - (size_t)len)
+            {
+                handle->current_bytes += (size_t)len;
+            }
+
+            if (handle->current_bytes >= handle->max_bytes)
+            {
+                rotate_ret = rotate_file(handle);
+            }
+        }
+    }
+
+    cplat_local_lock_unlock(handle->mutex);
+
+    if (ret != 0 || rotate_ret != CPLAT_OK || reopen_ret != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+    else
+    {
+        return CPLAT_OK;
+    }
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_trace_file_sink_write(cplat_trace_file_sink *handle, const int level, const cplat_timespec *timestamp,
+                                const char *message)
+{
+    char timestamp_text[TRACE_FILE_TS_LEN + 1];
+    cplat_timespec resolved;
+    int fallback_used = 0;
+    int ret;
+
+    if (handle == NULL || message == NULL)
+    {
+        return CPLAT_OK;
+    }
+
+    if (cplat_internal_trace_resolve_timestamp(timestamp, &resolved, &fallback_used) != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    if (cplat_internal_trace_format_local_timestamp(timestamp_text, sizeof(timestamp_text), &resolved) != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    ret = cplat_internal_trace_file_sink_write_text(handle, level, timestamp, timestamp_text, message);
+    if (ret != CPLAT_OK || fallback_used != 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_trace_file_sink_dispose(cplat_trace_file_sink *handle)
+{
+    struct sink_registry_entry *entry;
+    char *key_to_free = NULL;
+    int should_free = 1;
+
+    if (handle == NULL)
+    {
+        return;
+    }
+
+    if (sink_registry_lock() != CPLAT_OK)
+    {
+        return;
+    }
+
+    entry = sink_registry_find_by_sink_locked(handle);
+    if (entry != NULL)
+    {
+        entry->refcount--;
+
+        if (entry->refcount > 0)
+        {
+            should_free = 0;
+        }
+        else
+        {
+            key_to_free = entry->key;
+            sink_registry_remove_locked(entry);
+        }
+    }
+
+    sink_registry_unlock();
+
+    cplat_free(key_to_free);
+
+    if (should_free)
+    {
+        free_sink(handle);
+    }
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_internal_trace_file_sink_dispose_on_shutdown(cplat_trace_file_sink *handle)
+{
+    struct sink_registry_entry *entry;
+
+    if (handle == NULL)
+    {
+        return;
+    }
+
+    /* shutdown 経路ではロックを取得しない。呼び出し側がスレッドの静止を保証する。 */
+    entry = sink_registry_find_by_sink_locked(handle);
+    if (entry != NULL)
+    {
+        entry->refcount--;
+
+        if (entry->refcount > 0)
+        {
+            return;
+        }
+
+        cplat_free(entry->key);
+        sink_registry_remove_locked(entry);
+    }
+
+    free_sink(handle);
+}
 
 static void init_sink_registry_lock(void)
 {
@@ -794,293 +1104,4 @@ static cplat_trace_file_sink *create_new_sink(const char *path, const size_t pat
     }
 
     return handle;
-}
-
-/* ===== 公開 API ===== */
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-cplat_trace_file_sink *cplat_trace_file_sink_create(const char *path, const size_t max_bytes, const int generations,
-                                                    const int flags)
-{
-    cplat_trace_file_sink *handle;
-    struct sink_registry_entry *entry;
-    size_t path_len;
-    int requested_shared = 0;
-    char *key;
-
-    if (path == NULL || flags < 0)
-    {
-        return NULL;
-    }
-
-    path_len = strlen(path);
-
-    /* パスが長すぎてローテーションやロック ファイルのサフィックスを付加できない場合は拒否する。 */
-    if (path_len + TRACE_FILE_SUFFIX_MAX >= (size_t)PLATFORM_PATH_UTF8_MAX)
-    {
-        return NULL;
-    }
-
-    if ((flags & CPLAT_TRACE_FILE_SINK_SHARED) != 0)
-    {
-        requested_shared = 1;
-    }
-
-    key = build_registry_key(path);
-    if (key == NULL)
-    {
-        return NULL;
-    }
-
-    /*
-     * プロセス内で同一パスの sink を共有する (占有モードのプロセス内調停)。
-     * 生成自体もロック内で行い、同一パスの並行生成を直列化する。
-     */
-    if (sink_registry_lock() != CPLAT_OK)
-    {
-        cplat_free(key);
-        return NULL;
-    }
-
-    entry = sink_registry_find_by_key_locked(key);
-    if (entry != NULL)
-    {
-        /* 占有モードと共有モードの混在は意味的に矛盾するため拒否する。 */
-        if (entry->sink->shared != requested_shared)
-        {
-            sink_registry_unlock();
-            cplat_free(key);
-            return NULL;
-        }
-
-        entry->refcount++;
-        handle = entry->sink;
-        sink_registry_unlock();
-        cplat_free(key);
-        return handle;
-    }
-
-    handle = create_new_sink(path, path_len, max_bytes, generations, flags);
-    if (handle == NULL)
-    {
-        sink_registry_unlock();
-        cplat_free(key);
-        return NULL;
-    }
-
-    if (sink_registry_register_locked(key, handle) != 0)
-    {
-        sink_registry_unlock();
-        free_sink(handle);
-        cplat_free(key);
-        return NULL;
-    }
-
-    sink_registry_unlock();
-
-    return handle;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_internal_trace_file_sink_write_text(cplat_trace_file_sink *handle, const int level,
-                                              const cplat_timespec *timestamp, const char *timestamp_text,
-                                              const char *message)
-{
-    char buf[TRACE_FILE_LINE_BUF];
-    int len;
-    int ret;
-    int rotate_ret;
-    int reopen_ret;
-
-    (void)timestamp;
-
-    if (handle == NULL || message == NULL)
-    {
-        return CPLAT_OK;
-    }
-
-    if (timestamp_text == NULL)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    /* 1 行全体をスタック バッファーへフォーマットする。syscall 回数を最小化する。 */
-    len =
-        snprintf(buf, sizeof(buf), "%s %c %s\n", timestamp_text,
-                 cplat_internal_trace_level_char((cplat_trace_level)level), message); /* 置換対象外: 意図的な切り詰め */
-    if (len <= 0)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    if (len >= (int)sizeof(buf))
-    {
-        /* 切り詰めた場合は、バッファー末尾を改行で終端する。 */
-        len = (int)sizeof(buf) - 1;
-        buf[len - 1] = '\n';
-    }
-
-    if (cplat_local_lock_timed_lock(handle->mutex, FILE_LOCK_TIMEOUT_MS) != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    /* 未オープンなら開き直す。共有モードは、他プロセスのローテーションで実体が入れ替わった場合も開き直す。 */
-    reopen_ret = CPLAT_OK;
-    if (handle->file_open == 0 || (handle->shared != 0 && sink_points_to_current_file(handle) == 0))
-    {
-        reopen_ret = close_file(handle);
-
-        if (open_file(handle) != 0)
-        {
-            cplat_local_lock_unlock(handle->mutex);
-            return CPLAT_ERR_UNKNOWN;
-        }
-    }
-
-    /* OS バッファーを利用しない場合は、オープン時に指定した永続化設定で書き込む。 */
-    ret = cplat_file_write(&handle->file, buf, (size_t)len, NULL);
-    rotate_ret = CPLAT_OK;
-
-    /* 書き込み成功時は、サイズを追跡しローテーションしきい値を確認する。 */
-    if (ret == 0)
-    {
-        if (handle->shared != 0)
-        {
-            rotate_ret = check_rotate_shared(handle);
-        }
-        else
-        {
-            /* size_t のオーバーフローを防ぐ。実用上は発生しないが防御的に扱う。 */
-            if (handle->current_bytes <= (size_t)-1 - (size_t)len)
-            {
-                handle->current_bytes += (size_t)len;
-            }
-
-            if (handle->current_bytes >= handle->max_bytes)
-            {
-                rotate_ret = rotate_file(handle);
-            }
-        }
-    }
-
-    cplat_local_lock_unlock(handle->mutex);
-
-    if (ret != 0 || rotate_ret != CPLAT_OK || reopen_ret != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-    else
-    {
-        return CPLAT_OK;
-    }
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_trace_file_sink_write(cplat_trace_file_sink *handle, const int level, const cplat_timespec *timestamp,
-                                const char *message)
-{
-    char timestamp_text[TRACE_FILE_TS_LEN + 1];
-    cplat_timespec resolved;
-    int fallback_used = 0;
-    int ret;
-
-    if (handle == NULL || message == NULL)
-    {
-        return CPLAT_OK;
-    }
-
-    if (cplat_internal_trace_resolve_timestamp(timestamp, &resolved, &fallback_used) != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    if (cplat_internal_trace_format_local_timestamp(timestamp_text, sizeof(timestamp_text), &resolved) != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    ret = cplat_internal_trace_file_sink_write_text(handle, level, timestamp, timestamp_text, message);
-    if (ret != CPLAT_OK || fallback_used != 0)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_trace_file_sink_dispose(cplat_trace_file_sink *handle)
-{
-    struct sink_registry_entry *entry;
-    char *key_to_free = NULL;
-    int should_free = 1;
-
-    if (handle == NULL)
-    {
-        return;
-    }
-
-    if (sink_registry_lock() != CPLAT_OK)
-    {
-        return;
-    }
-
-    entry = sink_registry_find_by_sink_locked(handle);
-    if (entry != NULL)
-    {
-        entry->refcount--;
-
-        if (entry->refcount > 0)
-        {
-            should_free = 0;
-        }
-        else
-        {
-            key_to_free = entry->key;
-            sink_registry_remove_locked(entry);
-        }
-    }
-
-    sink_registry_unlock();
-
-    cplat_free(key_to_free);
-
-    if (should_free)
-    {
-        free_sink(handle);
-    }
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_internal_trace_file_sink_dispose_on_shutdown(cplat_trace_file_sink *handle)
-{
-    struct sink_registry_entry *entry;
-
-    if (handle == NULL)
-    {
-        return;
-    }
-
-    /* shutdown 経路ではロックを取得しない。呼び出し側がスレッドの静止を保証する。 */
-    entry = sink_registry_find_by_sink_locked(handle);
-    if (entry != NULL)
-    {
-        entry->refcount--;
-
-        if (entry->refcount > 0)
-        {
-            return;
-        }
-
-        cplat_free(entry->key);
-        sink_registry_remove_locked(entry);
-    }
-
-    free_sink(handle);
 }

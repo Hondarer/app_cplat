@@ -37,6 +37,61 @@ typedef struct argparser_sample_options
     int pad; /* 明示パディング (-Wpadded 対応) */
 } argparser_sample_options;
 
+static int register_argparser(argparser_sample_options *options);
+static void print_result(const argparser_sample_options *options);
+
+int main(int argc, char *argv[])
+{
+    cplat_console_init();
+
+    argparser_sample_options options = {0};
+    options.count_value = 1; /* 0 以外の既定値は解析前に設定する */
+
+    if (cplat_argparser_init(argc, argv, "cplat_argparser sample") != CPLAT_OK)
+    {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "引数の解析の準備に失敗しました。\n");
+        return EXIT_FAILURE;
+    }
+
+    if (register_argparser(&options) != 0)
+    {
+        return EXIT_FAILURE;
+    }
+
+    int parse_result = cplat_argparser_parse();
+
+    if (options.need_help != 0)
+    {
+        /* 必須引数が省略されていても -h, --help を優先する。 */
+        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
+        {
+            (void)fprintf(stderr, "error: failed to write stdout\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+            return EXIT_FAILURE;
+        }
+
+        return EXIT_SUCCESS;
+    }
+
+    if (parse_result != CPLAT_OK)
+    {
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_error_messages(stderr);
+        (void)cplat_argparser_print_usage(stderr);
+        return EXIT_FAILURE;
+    }
+
+    print_result(&options);
+
+    if (fflush(stdout) != 0 || ferror(stdout) != 0)
+    {
+        (void)fprintf(stderr, "error: failed to write stdout\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}
+
 /**
  *  @brief          オプションをパーサーへ登録します。
  *  @param[in,out]     options  解析結果の格納先として各メンバーのアドレスを登録するオプションです。
@@ -107,56 +162,4 @@ static void print_result(const argparser_sample_options *options)
     }
 
     (void)printf("output: %s\n", output);
-}
-
-int main(int argc, char *argv[])
-{
-    cplat_console_init();
-
-    argparser_sample_options options = {0};
-    options.count_value = 1; /* 0 以外の既定値は解析前に設定する */
-
-    if (cplat_argparser_init(argc, argv, "cplat_argparser sample") != CPLAT_OK)
-    {
-        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
-        (void)fprintf(stderr, "引数の解析の準備に失敗しました。\n");
-        return EXIT_FAILURE;
-    }
-
-    if (register_argparser(&options) != 0)
-    {
-        return EXIT_FAILURE;
-    }
-
-    int parse_result = cplat_argparser_parse();
-
-    if (options.need_help != 0)
-    {
-        /* 必須引数が省略されていても -h, --help を優先する。 */
-        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
-        {
-            (void)fprintf(stderr, "error: failed to write stdout\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
-            return EXIT_FAILURE;
-        }
-
-        return EXIT_SUCCESS;
-    }
-
-    if (parse_result != CPLAT_OK)
-    {
-        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
-        (void)cplat_argparser_print_error_messages(stderr);
-        (void)cplat_argparser_print_usage(stderr);
-        return EXIT_FAILURE;
-    }
-
-    print_result(&options);
-
-    if (fflush(stdout) != 0 || ferror(stdout) != 0)
-    {
-        (void)fprintf(stderr, "error: failed to write stdout\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
-        return EXIT_FAILURE;
-    }
-
-    return EXIT_SUCCESS;
 }

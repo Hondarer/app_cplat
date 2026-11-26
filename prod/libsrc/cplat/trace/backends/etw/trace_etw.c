@@ -36,6 +36,8 @@ struct cplat_etw_provider
     cplat_etw_provider_ref_t provider_ref;
 };
 
+static void write_trace_event(cplat_etw_provider_ref_t ref, const int level, const char *service, const char *message);
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 cplat_etw_provider *cplat_etw_provider_create(cplat_etw_provider_ref_t provider_ref)
@@ -64,6 +66,50 @@ cplat_etw_provider *cplat_etw_provider_create(cplat_etw_provider_ref_t provider_
     }
 
     return handle;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_etw_provider_write(cplat_etw_provider *handle, const int level, const char *service, const char *message)
+{
+    if (handle == NULL || message == NULL)
+    {
+        return CPLAT_OK;
+    }
+
+    write_trace_event(handle->provider_ref, level, service, message);
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_etw_provider_dispose(cplat_etw_provider *handle)
+{
+    if (handle == NULL)
+    {
+        return;
+    }
+
+    TraceLoggingUnregister(handle->provider_ref);
+    cplat_free(handle);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_internal_etw_provider_dispose_on_shutdown(cplat_etw_provider *handle, const cplat_shutdown_event *event)
+{
+    if (handle == NULL)
+    {
+        return;
+    }
+
+    if (event == NULL || event->reason == CPLAT_SHUTDOWN_REASON_NORMAL_EXIT)
+    {
+        TraceLoggingUnregister(handle->provider_ref);
+    }
+
+    cplat_free(handle);
 }
 
 /**
@@ -144,50 +190,6 @@ static void write_trace_event(cplat_etw_provider_ref_t ref, const int level, con
             break;
         }
     }
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_etw_provider_write(cplat_etw_provider *handle, const int level, const char *service, const char *message)
-{
-    if (handle == NULL || message == NULL)
-    {
-        return CPLAT_OK;
-    }
-
-    write_trace_event(handle->provider_ref, level, service, message);
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_etw_provider_dispose(cplat_etw_provider *handle)
-{
-    if (handle == NULL)
-    {
-        return;
-    }
-
-    TraceLoggingUnregister(handle->provider_ref);
-    cplat_free(handle);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_internal_etw_provider_dispose_on_shutdown(cplat_etw_provider *handle, const cplat_shutdown_event *event)
-{
-    if (handle == NULL)
-    {
-        return;
-    }
-
-    if (event == NULL || event->reason == CPLAT_SHUTDOWN_REASON_NORMAL_EXIT)
-    {
-        TraceLoggingUnregister(handle->provider_ref);
-    }
-
-    cplat_free(handle);
 }
 
 #endif /* PLATFORM_WINDOWS */

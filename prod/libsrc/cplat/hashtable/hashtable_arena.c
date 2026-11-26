@@ -18,6 +18,14 @@
 
 #include <string.h>
 
+static void arena_reset(struct hashtable_arena *arena);
+static int arena_free_block_adjoins(const struct hashtable_arena *arena, uint64_t index, uint64_t own_offset,
+                                    uint64_t own_length);
+static int arena_find_fit(const struct hashtable_arena *arena, uint64_t own_offset, uint64_t own_length, size_t needed,
+                          size_t *offset_out);
+static void arena_take(struct hashtable_arena *arena, size_t offset, size_t length);
+static void arena_give(struct hashtable_arena *arena, size_t offset, size_t length);
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 void hashtable_key_arena(const cplat_hashtable *ht, struct hashtable_arena *arena)
@@ -36,259 +44,6 @@ void hashtable_value_arena(const cplat_hashtable *ht, struct hashtable_arena *ar
     arena->free_list = hashtable_value_free_list(ht);
     arena->free_count = &ht->hdr->value_free_count;
     arena->storage_size = ht->hdr->config.value_storage_size;
-}
-
-/**
- *  @brief          空きリストを未使用の初期状態へ戻します。
- *  @param[in,out]  arena  操作対象。NULL を渡してはなりません。
- *
- *  ストレージ全体が 1 個の空きブロックになります。
- */
-static void arena_reset(struct hashtable_arena *arena)
-{
-    arena->free_list[0].offset = 0;
-    arena->free_list[0].length = (uint64_t)arena->storage_size;
-    *arena->free_count = 1;
-}
-
-/**
- *  @brief          指定の空きブロックが、置き換え対象ブロックと隣接するかを判定します。
- *  @param[in]      arena       操作対象。NULL を渡してはなりません。
- *  @param[in]      index       空きブロックのインデックス。
- *  @param[in]      own_offset  置き換え対象ブロックの先頭オフセット。
- *  @param[in]      own_length  置き換え対象ブロックのバイト数。0 なら対象なしです。
- *  @return         隣接するなら 1、しないなら 0 です。
- */
-static int arena_free_block_adjoins(const struct hashtable_arena *arena, uint64_t index, uint64_t own_offset,
-                                    uint64_t own_length)
-{
-    if (own_length == 0)
-    {
-        return 0;
-    }
-
-    if (((arena->free_list[index].offset + arena->free_list[index].length) == own_offset) ||
-        (arena->free_list[index].offset == (own_offset + own_length)))
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
-}
-
-/**
- *  @brief          先着適合で空き領域を探します。
- *  @param[in]      arena       操作対象。NULL を渡してはなりません。
- *  @param[in]      own_offset  置き換え対象ブロックの先頭オフセット。
- *  @param[in]      own_length  置き換え対象ブロックのバイト数。0 なら対象なしです。
- *  @param[in]      needed      必要バイト数。0 を渡してはなりません。
- *  @param[out]     offset_out  見つかった先頭オフセットの格納先。
- *  @return         見つかれば 1、見つからなければ 0 です。
- *
- *  空きリストを変更しません。@p own_length が非 0 のときは、その区間を
- *  前後の隣接する空きブロックと結合したうえで空きとみなします。\n
- *  結合した空きも、オフセットの昇順の位置で評価します。
- */
-static int arena_find_fit(const struct hashtable_arena *arena, uint64_t own_offset, uint64_t own_length, size_t needed,
-                          size_t *offset_out)
-{
-    uint64_t count = *arena->free_count;
-    uint64_t merged_offset = own_offset;
-    uint64_t merged_length = own_length;
-    uint64_t i;
-    int merged_pending;
-
-    if (own_length != 0)
-    {
-        merged_pending = 1;
-    }
-    else
-    {
-        merged_pending = 0;
-    }
-
-    /* 置き換え対象ブロックがある場合は、隣接する空きブロックと結合した領域を求める。 */
-    if (own_length != 0)
-    {
-        for (i = 0; i < count; i++)
-        {
-            if (arena_free_block_adjoins(arena, i, own_offset, own_length) != 0)
-            {
-                merged_length += arena->free_list[i].length;
-
-                if (arena->free_list[i].offset < merged_offset)
-                {
-                    merged_offset = arena->free_list[i].offset;
-                }
-            }
-        }
-    }
-
-    /* 空きリストをオフセット昇順に走査し、先着適合する位置を探す。 */
-    for (i = 0; i < count; i++)
-    {
-        if ((merged_pending != 0) && (merged_offset < arena->free_list[i].offset))
-        {
-            if ((uint64_t)needed <= merged_length)
-            {
-                *offset_out = (size_t)merged_offset;
-                return 1;
-            }
-
-            merged_pending = 0;
-        }
-
-        if (arena_free_block_adjoins(arena, i, own_offset, own_length) != 0)
-        {
-            continue; /* 結合済みのため、単独では評価しない */
-        }
-
-        if ((uint64_t)needed <= arena->free_list[i].length)
-        {
-            *offset_out = (size_t)arena->free_list[i].offset;
-            return 1;
-        }
-    }
-
-    if ((merged_pending != 0) && ((uint64_t)needed <= merged_length))
-    {
-        *offset_out = (size_t)merged_offset;
-        return 1;
-    }
-
-    return 0;
-}
-
-/**
- *  @brief          指定区間を空きリストから取り除きます。
- *  @param[in,out]  arena   操作対象。NULL を渡してはなりません。
- *  @param[in]      offset  取り除く区間の先頭オフセット。
- *  @param[in]      length  取り除く区間のバイト数。0 を渡してはなりません。
- *
- *  区間全体が 1 個の空きブロックに収まっていることが前提です。\n
- *  途中を取り除く場合は空きブロックが 2 個へ分かれますが、同時に使用中ブロックが 1 個増えるため、
- *  要素数の上限 capacity + 1 は超えません。
- */
-static void arena_take(struct hashtable_arena *arena, size_t offset, size_t length)
-{
-    uint64_t count = *arena->free_count;
-    uint64_t start = (uint64_t)offset;
-    uint64_t end = start + (uint64_t)length;
-    uint64_t i;
-
-    /* 対象区間を含む空きブロックを探し、確保した区間を取り除いて空きブロックを更新または分割する。 */
-    for (i = 0; i < count; i++)
-    {
-        uint64_t free_end = arena->free_list[i].offset + arena->free_list[i].length;
-
-        if ((arena->free_list[i].offset > start) || (end > free_end))
-        {
-            continue;
-        }
-
-        if ((arena->free_list[i].offset == start) && (end == free_end))
-        {
-            memmove(&arena->free_list[i], &arena->free_list[i + 1u],
-                    (size_t)(count - i - 1u) * sizeof(struct hashtable_free_block));
-            *arena->free_count = count - 1u;
-        }
-        else if (arena->free_list[i].offset == start)
-        {
-            arena->free_list[i].offset = end;
-            arena->free_list[i].length = free_end - end;
-        }
-        else if (end == free_end)
-        {
-            arena->free_list[i].length = start - arena->free_list[i].offset;
-        }
-        else
-        {
-            const size_t next_idx = i + 1u;
-            memmove(&arena->free_list[next_idx + 1u], &arena->free_list[next_idx],
-                    (size_t)(count - i - 1u) * sizeof(struct hashtable_free_block));
-            arena->free_list[i].length = start - arena->free_list[i].offset;
-            arena->free_list[next_idx].offset = end;
-            arena->free_list[next_idx].length = free_end - end;
-            *arena->free_count = count + 1u;
-        }
-
-        return;
-    }
-}
-
-/**
- *  @brief          指定区間を空きリストへ返します。
- *  @param[in,out]  arena   操作対象。NULL を渡してはなりません。
- *  @param[in]      offset  返す区間の先頭オフセット。
- *  @param[in]      length  返す区間のバイト数。0 なら何もしません。
- *
- *  前後に隣接する空きブロックがあれば結合し、空きブロックが常に極大であるように保ちます。
- */
-static void arena_give(struct hashtable_arena *arena, size_t offset, size_t length)
-{
-    uint64_t count = *arena->free_count;
-    uint64_t start = (uint64_t)offset;
-    uint64_t end = start + (uint64_t)length;
-    uint64_t i = 0;
-    int merge_prev;
-    int merge_next;
-
-    if (length == 0)
-    {
-        return;
-    }
-
-    /* 返す区間の挿入位置をオフセット昇順で探す。 */
-    while ((i < count) && (arena->free_list[i].offset < start))
-    {
-        i++;
-    }
-
-    if ((i > 0u) && ((arena->free_list[i - 1u].offset + arena->free_list[i - 1u].length) == start))
-    {
-        merge_prev = 1;
-    }
-    else
-    {
-        merge_prev = 0;
-    }
-
-    if ((i < count) && (arena->free_list[i].offset == end))
-    {
-        merge_next = 1;
-    }
-    else
-    {
-        merge_next = 0;
-    }
-
-    /* 前後の空きブロックとの隣接状況に応じて結合、または新規ブロックとして挿入する。 */
-    if ((merge_prev != 0) && (merge_next != 0))
-    {
-        arena->free_list[i - 1u].length += (uint64_t)length + arena->free_list[i].length;
-        memmove(&arena->free_list[i], &arena->free_list[i + 1u],
-                (size_t)(count - i - 1u) * sizeof(struct hashtable_free_block));
-        *arena->free_count = count - 1u;
-    }
-    else if (merge_prev != 0)
-    {
-        arena->free_list[i - 1u].length += (uint64_t)length;
-    }
-    else if (merge_next != 0)
-    {
-        arena->free_list[i].offset = start;
-        arena->free_list[i].length += (uint64_t)length;
-    }
-    else
-    {
-        memmove(&arena->free_list[i + 1u], &arena->free_list[i],
-                (size_t)(count - i) * sizeof(struct hashtable_free_block));
-        arena->free_list[i].offset = start;
-        arena->free_list[i].length = (uint64_t)length;
-        *arena->free_count = count + 1u;
-    }
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -658,4 +413,257 @@ int hashtable_value_storage_find_free(const cplat_hashtable *ht, size_t rec, int
     needed = hashtable_field_input_size(ht->hdr->config.value_type, 0, value);
 
     return arena_find_fit(&arena, own_offset, own_length, needed, offset_out);
+}
+
+/**
+ *  @brief          空きリストを未使用の初期状態へ戻します。
+ *  @param[in,out]  arena  操作対象。NULL を渡してはなりません。
+ *
+ *  ストレージ全体が 1 個の空きブロックになります。
+ */
+static void arena_reset(struct hashtable_arena *arena)
+{
+    arena->free_list[0].offset = 0;
+    arena->free_list[0].length = (uint64_t)arena->storage_size;
+    *arena->free_count = 1;
+}
+
+/**
+ *  @brief          指定の空きブロックが、置き換え対象ブロックと隣接するかを判定します。
+ *  @param[in]      arena       操作対象。NULL を渡してはなりません。
+ *  @param[in]      index       空きブロックのインデックス。
+ *  @param[in]      own_offset  置き換え対象ブロックの先頭オフセット。
+ *  @param[in]      own_length  置き換え対象ブロックのバイト数。0 なら対象なしです。
+ *  @return         隣接するなら 1、しないなら 0 です。
+ */
+static int arena_free_block_adjoins(const struct hashtable_arena *arena, uint64_t index, uint64_t own_offset,
+                                    uint64_t own_length)
+{
+    if (own_length == 0)
+    {
+        return 0;
+    }
+
+    if (((arena->free_list[index].offset + arena->free_list[index].length) == own_offset) ||
+        (arena->free_list[index].offset == (own_offset + own_length)))
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+/**
+ *  @brief          先着適合で空き領域を探します。
+ *  @param[in]      arena       操作対象。NULL を渡してはなりません。
+ *  @param[in]      own_offset  置き換え対象ブロックの先頭オフセット。
+ *  @param[in]      own_length  置き換え対象ブロックのバイト数。0 なら対象なしです。
+ *  @param[in]      needed      必要バイト数。0 を渡してはなりません。
+ *  @param[out]     offset_out  見つかった先頭オフセットの格納先。
+ *  @return         見つかれば 1、見つからなければ 0 です。
+ *
+ *  空きリストを変更しません。@p own_length が非 0 のときは、その区間を
+ *  前後の隣接する空きブロックと結合したうえで空きとみなします。\n
+ *  結合した空きも、オフセットの昇順の位置で評価します。
+ */
+static int arena_find_fit(const struct hashtable_arena *arena, uint64_t own_offset, uint64_t own_length, size_t needed,
+                          size_t *offset_out)
+{
+    uint64_t count = *arena->free_count;
+    uint64_t merged_offset = own_offset;
+    uint64_t merged_length = own_length;
+    uint64_t i;
+    int merged_pending;
+
+    if (own_length != 0)
+    {
+        merged_pending = 1;
+    }
+    else
+    {
+        merged_pending = 0;
+    }
+
+    /* 置き換え対象ブロックがある場合は、隣接する空きブロックと結合した領域を求める。 */
+    if (own_length != 0)
+    {
+        for (i = 0; i < count; i++)
+        {
+            if (arena_free_block_adjoins(arena, i, own_offset, own_length) != 0)
+            {
+                merged_length += arena->free_list[i].length;
+
+                if (arena->free_list[i].offset < merged_offset)
+                {
+                    merged_offset = arena->free_list[i].offset;
+                }
+            }
+        }
+    }
+
+    /* 空きリストをオフセット昇順に走査し、先着適合する位置を探す。 */
+    for (i = 0; i < count; i++)
+    {
+        if ((merged_pending != 0) && (merged_offset < arena->free_list[i].offset))
+        {
+            if ((uint64_t)needed <= merged_length)
+            {
+                *offset_out = (size_t)merged_offset;
+                return 1;
+            }
+
+            merged_pending = 0;
+        }
+
+        if (arena_free_block_adjoins(arena, i, own_offset, own_length) != 0)
+        {
+            continue; /* 結合済みのため、単独では評価しない */
+        }
+
+        if ((uint64_t)needed <= arena->free_list[i].length)
+        {
+            *offset_out = (size_t)arena->free_list[i].offset;
+            return 1;
+        }
+    }
+
+    if ((merged_pending != 0) && ((uint64_t)needed <= merged_length))
+    {
+        *offset_out = (size_t)merged_offset;
+        return 1;
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          指定区間を空きリストから取り除きます。
+ *  @param[in,out]  arena   操作対象。NULL を渡してはなりません。
+ *  @param[in]      offset  取り除く区間の先頭オフセット。
+ *  @param[in]      length  取り除く区間のバイト数。0 を渡してはなりません。
+ *
+ *  区間全体が 1 個の空きブロックに収まっていることが前提です。\n
+ *  途中を取り除く場合は空きブロックが 2 個へ分かれますが、同時に使用中ブロックが 1 個増えるため、
+ *  要素数の上限 capacity + 1 は超えません。
+ */
+static void arena_take(struct hashtable_arena *arena, size_t offset, size_t length)
+{
+    uint64_t count = *arena->free_count;
+    uint64_t start = (uint64_t)offset;
+    uint64_t end = start + (uint64_t)length;
+    uint64_t i;
+
+    /* 対象区間を含む空きブロックを探し、確保した区間を取り除いて空きブロックを更新または分割する。 */
+    for (i = 0; i < count; i++)
+    {
+        uint64_t free_end = arena->free_list[i].offset + arena->free_list[i].length;
+
+        if ((arena->free_list[i].offset > start) || (end > free_end))
+        {
+            continue;
+        }
+
+        if ((arena->free_list[i].offset == start) && (end == free_end))
+        {
+            memmove(&arena->free_list[i], &arena->free_list[i + 1u],
+                    (size_t)(count - i - 1u) * sizeof(struct hashtable_free_block));
+            *arena->free_count = count - 1u;
+        }
+        else if (arena->free_list[i].offset == start)
+        {
+            arena->free_list[i].offset = end;
+            arena->free_list[i].length = free_end - end;
+        }
+        else if (end == free_end)
+        {
+            arena->free_list[i].length = start - arena->free_list[i].offset;
+        }
+        else
+        {
+            const size_t next_idx = i + 1u;
+            memmove(&arena->free_list[next_idx + 1u], &arena->free_list[next_idx],
+                    (size_t)(count - i - 1u) * sizeof(struct hashtable_free_block));
+            arena->free_list[i].length = start - arena->free_list[i].offset;
+            arena->free_list[next_idx].offset = end;
+            arena->free_list[next_idx].length = free_end - end;
+            *arena->free_count = count + 1u;
+        }
+
+        return;
+    }
+}
+
+/**
+ *  @brief          指定区間を空きリストへ返します。
+ *  @param[in,out]  arena   操作対象。NULL を渡してはなりません。
+ *  @param[in]      offset  返す区間の先頭オフセット。
+ *  @param[in]      length  返す区間のバイト数。0 なら何もしません。
+ *
+ *  前後に隣接する空きブロックがあれば結合し、空きブロックが常に極大であるように保ちます。
+ */
+static void arena_give(struct hashtable_arena *arena, size_t offset, size_t length)
+{
+    uint64_t count = *arena->free_count;
+    uint64_t start = (uint64_t)offset;
+    uint64_t end = start + (uint64_t)length;
+    uint64_t i = 0;
+    int merge_prev;
+    int merge_next;
+
+    if (length == 0)
+    {
+        return;
+    }
+
+    /* 返す区間の挿入位置をオフセット昇順で探す。 */
+    while ((i < count) && (arena->free_list[i].offset < start))
+    {
+        i++;
+    }
+
+    if ((i > 0u) && ((arena->free_list[i - 1u].offset + arena->free_list[i - 1u].length) == start))
+    {
+        merge_prev = 1;
+    }
+    else
+    {
+        merge_prev = 0;
+    }
+
+    if ((i < count) && (arena->free_list[i].offset == end))
+    {
+        merge_next = 1;
+    }
+    else
+    {
+        merge_next = 0;
+    }
+
+    /* 前後の空きブロックとの隣接状況に応じて結合、または新規ブロックとして挿入する。 */
+    if ((merge_prev != 0) && (merge_next != 0))
+    {
+        arena->free_list[i - 1u].length += (uint64_t)length + arena->free_list[i].length;
+        memmove(&arena->free_list[i], &arena->free_list[i + 1u],
+                (size_t)(count - i - 1u) * sizeof(struct hashtable_free_block));
+        *arena->free_count = count - 1u;
+    }
+    else if (merge_prev != 0)
+    {
+        arena->free_list[i - 1u].length += (uint64_t)length;
+    }
+    else if (merge_next != 0)
+    {
+        arena->free_list[i].offset = start;
+        arena->free_list[i].length += (uint64_t)length;
+    }
+    else
+    {
+        memmove(&arena->free_list[i + 1u], &arena->free_list[i],
+                (size_t)(count - i) * sizeof(struct hashtable_free_block));
+        arena->free_list[i].offset = start;
+        arena->free_list[i].length = (uint64_t)length;
+        *arena->free_count = count + 1u;
+    }
 }

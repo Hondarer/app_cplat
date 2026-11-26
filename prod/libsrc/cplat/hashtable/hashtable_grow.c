@@ -25,6 +25,308 @@
 #define HASHTABLE_GROWTH_FACTOR (2U)
 static_assert(HASHTABLE_GROWTH_FACTOR >= 2U, "cplat: growth factor must expand capacity");
 
+static int hashtable_config_is_compatible(const cplat_hashtable_config *current, const cplat_hashtable_config *next);
+static int hashtable_plan_migration(const cplat_hashtable *src, const cplat_hashtable_config *new_config,
+                                    unsigned char **keep_out);
+static int hashtable_apply_migration(const cplat_hashtable *src, cplat_hashtable *dst, const unsigned char *keep);
+static int hashtable_growth_target(size_t current, size_t minimum, size_t maximum, size_t *target_out);
+static int hashtable_stage_growth(const cplat_hashtable *src, const struct hashtable_growth_request *growth,
+                                  int pressure_error, cplat_hashtable **staged_out);
+static void hashtable_commit_staged(cplat_hashtable *ht, cplat_hashtable *staged);
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int hashtable_put_with_growth(cplat_hashtable *ht, const void *key, size_t key_length, const void *value,
+                              cplat_hashtable_add_deleted_policy deleted_policy, int allow_update, int *inserted_out)
+{
+    struct hashtable_growth_request growth;
+    cplat_hashtable *staged = NULL;
+    int ret = hashtable_put(ht, key, key_length, value, deleted_policy, allow_update, inserted_out, &growth);
+
+    if ((ret == CPLAT_OK) || (ht == NULL) || (ht->growable == 0) || (growth.pressure == HASHTABLE_GROWTH_NONE))
+    {
+        return ret;
+    }
+
+    ret = hashtable_stage_growth(ht, &growth, ret, &staged);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    ret = hashtable_put(staged, key, key_length, value, deleted_policy, allow_update, inserted_out, NULL);
+    if (ret != CPLAT_OK)
+    {
+        cplat_hashtable_dispose(staged);
+        return ret;
+    }
+
+    hashtable_commit_staged(ht, staged);
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int hashtable_update_with_growth(cplat_hashtable *ht, const void *key, size_t key_length, const void *value)
+{
+    struct hashtable_growth_request growth;
+    cplat_hashtable *staged = NULL;
+    int ret = hashtable_update(ht, key, key_length, value, &growth);
+
+    if ((ret == CPLAT_OK) || (ht == NULL) || (ht->growable == 0) || (growth.pressure == HASHTABLE_GROWTH_NONE))
+    {
+        return ret;
+    }
+
+    ret = hashtable_stage_growth(ht, &growth, ret, &staged);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    ret = hashtable_update(staged, key, key_length, value, NULL);
+    if (ret != CPLAT_OK)
+    {
+        cplat_hashtable_dispose(staged);
+        return ret;
+    }
+
+    hashtable_commit_staged(ht, staged);
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int hashtable_update_rec_with_growth(cplat_hashtable *ht, uint64_t record, const void *value)
+{
+    struct hashtable_growth_request growth;
+    cplat_hashtable *staged = NULL;
+    int ret = hashtable_update_rec(ht, record, value, &growth);
+
+    if ((ret == CPLAT_OK) || (ht == NULL) || (ht->growable == 0) || (growth.pressure == HASHTABLE_GROWTH_NONE))
+    {
+        return ret;
+    }
+
+    ret = hashtable_stage_growth(ht, &growth, ret, &staged);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    ret = hashtable_update_rec(staged, record, value, NULL);
+    if (ret != CPLAT_OK)
+    {
+        cplat_hashtable_dispose(staged);
+        return ret;
+    }
+
+    hashtable_commit_staged(ht, staged);
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_hashtable_resize(cplat_hashtable *ht, const cplat_hashtable_config *new_config)
+{
+    cplat_hashtable *staged = NULL;
+    unsigned char *keep = NULL;
+    struct hashtable_persist_header *old_hdr;
+    int ret;
+
+    if ((ht == NULL) || (new_config == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (ht->owns_buffer == 0)
+    {
+        return CPLAT_ERR_UNSUPPORTED;
+    }
+
+    if (hashtable_validate_config(new_config) != 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (hashtable_config_is_compatible(&ht->hdr->config, new_config) == 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if ((ht->growable != 0) &&
+        (((ht->growth.max_capacity != 0) && (new_config->capacity > ht->growth.max_capacity)) ||
+         ((ht->growth.max_key_storage_size != 0) && (new_config->key_storage_size > ht->growth.max_key_storage_size)) ||
+         ((ht->growth.max_value_storage_size != 0) &&
+          (new_config->value_storage_size > ht->growth.max_value_storage_size))))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = hashtable_plan_migration(ht, new_config, &keep);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    ret = cplat_hashtable_create(new_config, NULL, 0, NULL, 0, &staged);
+    if (ret != CPLAT_OK)
+    {
+        cplat_free(keep);
+        return ret;
+    }
+
+    ret = hashtable_apply_migration(ht, staged, keep);
+    cplat_free(keep);
+
+    if (ret != CPLAT_OK)
+    {
+        cplat_hashtable_dispose(staged);
+        return ret;
+    }
+
+    /* 移行が終わってから旧領域を解放する。失敗時は元のテーブルを変更しない。 */
+    old_hdr = ht->hdr;
+    ht->hdr = staged->hdr;
+    ht->data = staged->data;
+
+    /* 設定が変わったため、レイアウトの控えを作り直す。 */
+    hashtable_refresh_layout(ht);
+    cplat_free(old_hdr);
+
+    /* 領域は ht が引き継いだため、staged は内部管理データだけを解放する。 */
+    cplat_free(staged);
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_hashtable_rebuild_into(const cplat_hashtable *src, const cplat_hashtable_config *new_config, void *buf_mgmt,
+                                 size_t buf_mgmt_size, void *buf_data, size_t buf_data_size, cplat_hashtable **ht_out)
+{
+    cplat_hashtable *dst = NULL;
+    unsigned char *keep = NULL;
+    int ret;
+
+    if (ht_out != NULL)
+    {
+        *ht_out = NULL;
+    }
+
+    if ((src == NULL) || (new_config == NULL) || (ht_out == NULL) || (buf_mgmt == NULL) || (buf_data == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (hashtable_validate_config(new_config) != 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (hashtable_config_is_compatible(&src->hdr->config, new_config) == 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = hashtable_plan_migration(src, new_config, &keep);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    ret = cplat_hashtable_create(new_config, buf_mgmt, buf_mgmt_size, buf_data, buf_data_size, &dst);
+    if (ret != CPLAT_OK)
+    {
+        cplat_free(keep);
+        return ret;
+    }
+
+    ret = hashtable_apply_migration(src, dst, keep);
+    cplat_free(keep);
+
+    if (ret != CPLAT_OK)
+    {
+        cplat_hashtable_dispose(dst);
+        return ret;
+    }
+
+    *ht_out = dst;
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_hashtable_compact(cplat_hashtable *ht)
+{
+    if (ht == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (hashtable_field_is_variable(ht->hdr->config.key_type) != 0)
+    {
+        struct hashtable_arena arena;
+
+        hashtable_key_arena(ht, &arena);
+        hashtable_arena_compact(ht, &arena, hashtable_key_ref_at, ht->hdr->key_storage_used);
+    }
+
+    if (hashtable_field_is_variable(ht->hdr->config.value_type) != 0)
+    {
+        struct hashtable_arena arena;
+
+        hashtable_value_arena(ht, &arena);
+        hashtable_arena_compact(ht, &arena, hashtable_value_ref_at, ht->hdr->value_storage_used);
+    }
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_hashtable_clear(cplat_hashtable *ht)
+{
+    size_t off_bucket_head;
+    size_t mgmt_size = 0;
+    size_t data_size = 0;
+
+    if (ht == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    cplat_timespec operation_time;
+    int clock_ret = cplat_clock_get_realtime(&operation_time);
+    if (clock_ret != CPLAT_OK)
+    {
+        return clock_ret;
+    }
+
+    /* 構築済みテーブルの設定値は作成時に検証済みで、算出があふれないため、次の 2 つの戻り値は明示的に破棄する。 */
+    (void)hashtable_mgmt_layout(&ht->hdr->config, &off_bucket_head, NULL, &mgmt_size);
+    (void)hashtable_data_region_size(&ht->hdr->config, &data_size);
+
+    /* 識別子、設定、テーブル時刻は残し、バケットとエントリだけを消す。 */
+    memset(hashtable_bytes(ht) + off_bucket_head, 0, mgmt_size - off_bucket_head);
+
+    /* 値配列 (データ領域) も 0 埋めする。ポインター自体 (ht->data) は変更しない。 */
+    memset(ht->data, 0, data_size);
+    ht->hdr->next_empty = 1;
+    ht->hdr->in_use_count = 0;
+    ht->hdr->deleted_count = 0;
+    ht->hdr->key_storage_used = 0;
+    ht->hdr->value_storage_used = 0;
+    hashtable_reset_arenas(ht);
+    hashtable_stamp_table(ht, &operation_time);
+
+    return CPLAT_OK;
+}
+
 /**
  *  @brief          設定のうち、伸長・縮小で変えてよい項目以外が一致するかを判定します。
  *  @param[in]      current  現在の設定。NULL を渡してはなりません。
@@ -379,297 +681,4 @@ static void hashtable_commit_staged(cplat_hashtable *ht, cplat_hashtable *staged
     hashtable_refresh_layout(ht);
     cplat_free(old_hdr);
     cplat_free(staged);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int hashtable_put_with_growth(cplat_hashtable *ht, const void *key, size_t key_length, const void *value,
-                              cplat_hashtable_add_deleted_policy deleted_policy, int allow_update, int *inserted_out)
-{
-    struct hashtable_growth_request growth;
-    cplat_hashtable *staged = NULL;
-    int ret = hashtable_put(ht, key, key_length, value, deleted_policy, allow_update, inserted_out, &growth);
-
-    if ((ret == CPLAT_OK) || (ht == NULL) || (ht->growable == 0) || (growth.pressure == HASHTABLE_GROWTH_NONE))
-    {
-        return ret;
-    }
-
-    ret = hashtable_stage_growth(ht, &growth, ret, &staged);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
-
-    ret = hashtable_put(staged, key, key_length, value, deleted_policy, allow_update, inserted_out, NULL);
-    if (ret != CPLAT_OK)
-    {
-        cplat_hashtable_dispose(staged);
-        return ret;
-    }
-
-    hashtable_commit_staged(ht, staged);
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int hashtable_update_with_growth(cplat_hashtable *ht, const void *key, size_t key_length, const void *value)
-{
-    struct hashtable_growth_request growth;
-    cplat_hashtable *staged = NULL;
-    int ret = hashtable_update(ht, key, key_length, value, &growth);
-
-    if ((ret == CPLAT_OK) || (ht == NULL) || (ht->growable == 0) || (growth.pressure == HASHTABLE_GROWTH_NONE))
-    {
-        return ret;
-    }
-
-    ret = hashtable_stage_growth(ht, &growth, ret, &staged);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
-
-    ret = hashtable_update(staged, key, key_length, value, NULL);
-    if (ret != CPLAT_OK)
-    {
-        cplat_hashtable_dispose(staged);
-        return ret;
-    }
-
-    hashtable_commit_staged(ht, staged);
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int hashtable_update_rec_with_growth(cplat_hashtable *ht, uint64_t record, const void *value)
-{
-    struct hashtable_growth_request growth;
-    cplat_hashtable *staged = NULL;
-    int ret = hashtable_update_rec(ht, record, value, &growth);
-
-    if ((ret == CPLAT_OK) || (ht == NULL) || (ht->growable == 0) || (growth.pressure == HASHTABLE_GROWTH_NONE))
-    {
-        return ret;
-    }
-
-    ret = hashtable_stage_growth(ht, &growth, ret, &staged);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
-
-    ret = hashtable_update_rec(staged, record, value, NULL);
-    if (ret != CPLAT_OK)
-    {
-        cplat_hashtable_dispose(staged);
-        return ret;
-    }
-
-    hashtable_commit_staged(ht, staged);
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_hashtable_resize(cplat_hashtable *ht, const cplat_hashtable_config *new_config)
-{
-    cplat_hashtable *staged = NULL;
-    unsigned char *keep = NULL;
-    struct hashtable_persist_header *old_hdr;
-    int ret;
-
-    if ((ht == NULL) || (new_config == NULL))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (ht->owns_buffer == 0)
-    {
-        return CPLAT_ERR_UNSUPPORTED;
-    }
-
-    if (hashtable_validate_config(new_config) != 0)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (hashtable_config_is_compatible(&ht->hdr->config, new_config) == 0)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if ((ht->growable != 0) &&
-        (((ht->growth.max_capacity != 0) && (new_config->capacity > ht->growth.max_capacity)) ||
-         ((ht->growth.max_key_storage_size != 0) && (new_config->key_storage_size > ht->growth.max_key_storage_size)) ||
-         ((ht->growth.max_value_storage_size != 0) &&
-          (new_config->value_storage_size > ht->growth.max_value_storage_size))))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    ret = hashtable_plan_migration(ht, new_config, &keep);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
-
-    ret = cplat_hashtable_create(new_config, NULL, 0, NULL, 0, &staged);
-    if (ret != CPLAT_OK)
-    {
-        cplat_free(keep);
-        return ret;
-    }
-
-    ret = hashtable_apply_migration(ht, staged, keep);
-    cplat_free(keep);
-
-    if (ret != CPLAT_OK)
-    {
-        cplat_hashtable_dispose(staged);
-        return ret;
-    }
-
-    /* 移行が終わってから旧領域を解放する。失敗時は元のテーブルを変更しない。 */
-    old_hdr = ht->hdr;
-    ht->hdr = staged->hdr;
-    ht->data = staged->data;
-
-    /* 設定が変わったため、レイアウトの控えを作り直す。 */
-    hashtable_refresh_layout(ht);
-    cplat_free(old_hdr);
-
-    /* 領域は ht が引き継いだため、staged は内部管理データだけを解放する。 */
-    cplat_free(staged);
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_hashtable_rebuild_into(const cplat_hashtable *src, const cplat_hashtable_config *new_config, void *buf_mgmt,
-                                 size_t buf_mgmt_size, void *buf_data, size_t buf_data_size, cplat_hashtable **ht_out)
-{
-    cplat_hashtable *dst = NULL;
-    unsigned char *keep = NULL;
-    int ret;
-
-    if (ht_out != NULL)
-    {
-        *ht_out = NULL;
-    }
-
-    if ((src == NULL) || (new_config == NULL) || (ht_out == NULL) || (buf_mgmt == NULL) || (buf_data == NULL))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (hashtable_validate_config(new_config) != 0)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (hashtable_config_is_compatible(&src->hdr->config, new_config) == 0)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    ret = hashtable_plan_migration(src, new_config, &keep);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
-
-    ret = cplat_hashtable_create(new_config, buf_mgmt, buf_mgmt_size, buf_data, buf_data_size, &dst);
-    if (ret != CPLAT_OK)
-    {
-        cplat_free(keep);
-        return ret;
-    }
-
-    ret = hashtable_apply_migration(src, dst, keep);
-    cplat_free(keep);
-
-    if (ret != CPLAT_OK)
-    {
-        cplat_hashtable_dispose(dst);
-        return ret;
-    }
-
-    *ht_out = dst;
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_hashtable_compact(cplat_hashtable *ht)
-{
-    if (ht == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (hashtable_field_is_variable(ht->hdr->config.key_type) != 0)
-    {
-        struct hashtable_arena arena;
-
-        hashtable_key_arena(ht, &arena);
-        hashtable_arena_compact(ht, &arena, hashtable_key_ref_at, ht->hdr->key_storage_used);
-    }
-
-    if (hashtable_field_is_variable(ht->hdr->config.value_type) != 0)
-    {
-        struct hashtable_arena arena;
-
-        hashtable_value_arena(ht, &arena);
-        hashtable_arena_compact(ht, &arena, hashtable_value_ref_at, ht->hdr->value_storage_used);
-    }
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_hashtable_clear(cplat_hashtable *ht)
-{
-    size_t off_bucket_head;
-    size_t mgmt_size = 0;
-    size_t data_size = 0;
-
-    if (ht == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    cplat_timespec operation_time;
-    int clock_ret = cplat_clock_get_realtime(&operation_time);
-    if (clock_ret != CPLAT_OK)
-    {
-        return clock_ret;
-    }
-
-    /* 構築済みテーブルの設定値は作成時に検証済みで、算出があふれないため、次の 2 つの戻り値は明示的に破棄する。 */
-    (void)hashtable_mgmt_layout(&ht->hdr->config, &off_bucket_head, NULL, &mgmt_size);
-    (void)hashtable_data_region_size(&ht->hdr->config, &data_size);
-
-    /* 識別子、設定、テーブル時刻は残し、バケットとエントリだけを消す。 */
-    memset(hashtable_bytes(ht) + off_bucket_head, 0, mgmt_size - off_bucket_head);
-
-    /* 値配列 (データ領域) も 0 埋めする。ポインター自体 (ht->data) は変更しない。 */
-    memset(ht->data, 0, data_size);
-    ht->hdr->next_empty = 1;
-    ht->hdr->in_use_count = 0;
-    ht->hdr->deleted_count = 0;
-    ht->hdr->key_storage_used = 0;
-    ht->hdr->value_storage_used = 0;
-    hashtable_reset_arenas(ht);
-    hashtable_stamp_table(ht, &operation_time);
-
-    return CPLAT_OK;
 }

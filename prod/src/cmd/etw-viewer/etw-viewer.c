@@ -66,224 +66,13 @@
     /** ISO 8601 時刻文字列を格納する配列の大きさ [byte] (終端を含む) です。 */
     #define ETW_VIEWER_TIMESTAMP_TEXT_SIZE 64U
 
+static void etw_viewer_shutdown_request_callback(const cplat_shutdown_event *event, void *context);
+static int parse_process_id_arg(const char *text, uint32_t *process_id_out);
+static char etw_viewer_priority_letter(int level);
+static void print_access_error(void);
+static void print_start_error(int ret, const char *session_name);
+
 static volatile sig_atomic_t g_stop_requested = 0;
-
-static void etw_viewer_shutdown_request_callback(const cplat_shutdown_event *event, void *context)
-{
-    (void)event;
-    (void)context;
-    g_stop_requested = 1;
-}
-
-static int parse_process_id_arg(const char *text, uint32_t *process_id_out)
-{
-    uint64_t value;
-    int parse_result;
-
-    if (text == NULL || process_id_out == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (text[0] == '\0')
-    {
-        return CPLAT_ERR_INVALID_INTEGER;
-    }
-
-    /* プロセス ID は Windows DWORD のため、コーディング規範の例外として UINT32_MAX 上限を維持する。 */
-    parse_result = cplat_parse_uint64(&value, text, 10);
-    if (parse_result != CPLAT_OK)
-    {
-        return parse_result;
-    }
-
-    if (value > UINT32_MAX)
-    {
-        return CPLAT_ERR_OUT_OF_RANGE;
-    }
-
-    *process_id_out = (uint32_t)value;
-
-    return CPLAT_OK;
-}
-
-void etw_viewer_options_init(etw_viewer_options *options)
-{
-    if (options == NULL)
-    {
-        return;
-    }
-
-    options->process_id_filter = 0U;
-    options->has_process_id_filter = 0;
-    options->need_help = 0;
-}
-
-int etw_viewer_build_default_session_name(unsigned long process_id, char *buffer, size_t buffer_size)
-{
-    if (buffer == NULL || buffer_size == 0U)
-    {
-        return -1;
-    }
-
-    if (cplat_snprintf(buffer, buffer_size, "etw-viewer_%lu", process_id) != CPLAT_OK)
-    {
-        return -1;
-    }
-
-    return 0;
-}
-
-const char *etw_viewer_level_name(int level)
-{
-    switch (level)
-    {
-    case TRACE_LEVEL_CRITICAL:
-        return "CRITICAL";
-    case TRACE_LEVEL_ERROR:
-        return "ERROR";
-    case TRACE_LEVEL_WARNING:
-        return "WARNING";
-    case TRACE_LEVEL_INFORMATION:
-        return "INFO";
-    case TRACE_LEVEL_VERBOSE:
-        return "VERBOSE";
-    default:
-        return "UNKNOWN";
-    }
-}
-
-/*
- * ETW イベント レベルを優先度文字 (C, E, W, I, V, U) へ変換する。
- */
-static char etw_viewer_priority_letter(int level)
-{
-    switch (level)
-    {
-    case TRACE_LEVEL_CRITICAL:
-        return 'C';
-    case TRACE_LEVEL_ERROR:
-        return 'E';
-    case TRACE_LEVEL_WARNING:
-        return 'W';
-    case TRACE_LEVEL_INFORMATION:
-        return 'I';
-    case TRACE_LEVEL_VERBOSE:
-        return 'V';
-    default:
-        return 'U';
-    }
-}
-
-int etw_viewer_format_timestamp_utc(int64_t timestamp_100ns, char *buffer, size_t buffer_size)
-{
-    int64_t unix_100ns;
-    cplat_timespec ts;
-
-    if (buffer == NULL || buffer_size == 0U)
-    {
-        return -1;
-    }
-
-    if (timestamp_100ns < ETW_VIEWER_FILETIME_UNIX_EPOCH_100NS)
-    {
-        return -1;
-    }
-
-    unix_100ns = timestamp_100ns - ETW_VIEWER_FILETIME_UNIX_EPOCH_100NS;
-    ts.tv_sec = (time_t)(unix_100ns / ETW_VIEWER_100NS_PER_SEC);
-    ts.tv_nsec = (unix_100ns % ETW_VIEWER_100NS_PER_SEC) * ETW_VIEWER_NS_PER_100NS;
-
-    return cplat_clock_format_realtime_iso8601_local(buffer, buffer_size, &ts);
-}
-
-void etw_viewer_handle_event(const cplat_etw_event *event, void *context)
-{
-    char timestamp_text[ETW_VIEWER_TIMESTAMP_TEXT_SIZE];
-    const char *timestamp_value;
-    const char *tag;
-    const char *message;
-    const etw_viewer_context *viewer_context = (const etw_viewer_context *)context;
-
-    if (event == NULL)
-    {
-        return;
-    }
-
-    /* cplat の Trace イベント以外のイベントは無視する。 */
-    if (event->event_name == NULL || strcmp(event->event_name, "Trace") != 0)
-    {
-        return;
-    }
-
-    if (event->message == NULL)
-    {
-        return;
-    }
-
-    /* プロセス ID フィルターが指定されている場合、一致しないプロセスのイベントを除外する。 */
-    if (viewer_context != NULL && viewer_context->has_process_id_filter &&
-        event->process_id != viewer_context->process_id_filter)
-    {
-        return;
-    }
-
-    if (event->service != NULL && event->service[0] != '\0')
-    {
-        tag = event->service;
-    }
-    else
-    {
-        tag = ETW_VIEWER_DEFAULT_TAG;
-    }
-
-    message = event->message;
-
-    if (etw_viewer_format_timestamp_utc(event->timestamp_100ns, timestamp_text, sizeof(timestamp_text)) != 0)
-    {
-        timestamp_value = "(invalid-timestamp)";
-    }
-    else
-    {
-        timestamp_value = timestamp_text;
-    }
-
-    /*
-     * イベントの表示の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
-     * この関数の printf と fflush の戻り値は明示的に破棄する。
-     */
-    (void)printf("%s <%c>%s[%" PRIu32 "]: %s\n", timestamp_value, etw_viewer_priority_letter(event->level), tag,
-                 event->process_id, message);
-    (void)fflush(stdout);
-}
-
-static void print_access_error(void)
-{
-    /* 診断の出力先がほかにないため、この関数の fprintf と fflush の戻り値は明示的に破棄する。 */
-    (void)fprintf(stderr, "ETW session の開始権限がありません。Administrators または "
-                          "\"Performance Log Users\" が必要です。\n"
-                          "対処方法: net localgroup \"Performance Log Users\" %%USERNAME%% /add\n"
-                          "          この操作後にサインアウト/サインインが必要です。\n");
-    (void)fflush(stderr);
-}
-
-static void print_start_error(int ret, const char *session_name)
-{
-    /* 診断の出力先がほかにないため、この関数の fprintf の戻り値は明示的に破棄する。 */
-    if (ret == CPLAT_ERR_PERMISSION_DENIED)
-    {
-        print_access_error();
-    }
-    else if (ret == CPLAT_ERR_INVALID_ARGUMENT)
-    {
-        (void)fprintf(stderr, "ETW session の開始に失敗しました。内部パラメーターが不正です。\n");
-    }
-    else
-    {
-        (void)fprintf(stderr, "ETW session の開始に失敗しました。session=\"%s\" provider=\"%s\"\n", session_name,
-                      CPLAT_TRACER_DEFAULT_PROVIDER_GUID_STR);
-    }
-}
 
 int main(int argc, char *argv[])
 {
@@ -440,6 +229,223 @@ int main(int argc, char *argv[])
     }
 
     return EXIT_SUCCESS;
+}
+
+void etw_viewer_options_init(etw_viewer_options *options)
+{
+    if (options == NULL)
+    {
+        return;
+    }
+
+    options->process_id_filter = 0U;
+    options->has_process_id_filter = 0;
+    options->need_help = 0;
+}
+
+int etw_viewer_build_default_session_name(unsigned long process_id, char *buffer, size_t buffer_size)
+{
+    if (buffer == NULL || buffer_size == 0U)
+    {
+        return -1;
+    }
+
+    if (cplat_snprintf(buffer, buffer_size, "etw-viewer_%lu", process_id) != CPLAT_OK)
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
+const char *etw_viewer_level_name(int level)
+{
+    switch (level)
+    {
+    case TRACE_LEVEL_CRITICAL:
+        return "CRITICAL";
+    case TRACE_LEVEL_ERROR:
+        return "ERROR";
+    case TRACE_LEVEL_WARNING:
+        return "WARNING";
+    case TRACE_LEVEL_INFORMATION:
+        return "INFO";
+    case TRACE_LEVEL_VERBOSE:
+        return "VERBOSE";
+    default:
+        return "UNKNOWN";
+    }
+}
+
+int etw_viewer_format_timestamp_utc(int64_t timestamp_100ns, char *buffer, size_t buffer_size)
+{
+    int64_t unix_100ns;
+    cplat_timespec ts;
+
+    if (buffer == NULL || buffer_size == 0U)
+    {
+        return -1;
+    }
+
+    if (timestamp_100ns < ETW_VIEWER_FILETIME_UNIX_EPOCH_100NS)
+    {
+        return -1;
+    }
+
+    unix_100ns = timestamp_100ns - ETW_VIEWER_FILETIME_UNIX_EPOCH_100NS;
+    ts.tv_sec = (time_t)(unix_100ns / ETW_VIEWER_100NS_PER_SEC);
+    ts.tv_nsec = (unix_100ns % ETW_VIEWER_100NS_PER_SEC) * ETW_VIEWER_NS_PER_100NS;
+
+    return cplat_clock_format_realtime_iso8601_local(buffer, buffer_size, &ts);
+}
+
+void etw_viewer_handle_event(const cplat_etw_event *event, void *context)
+{
+    char timestamp_text[ETW_VIEWER_TIMESTAMP_TEXT_SIZE];
+    const char *timestamp_value;
+    const char *tag;
+    const char *message;
+    const etw_viewer_context *viewer_context = (const etw_viewer_context *)context;
+
+    if (event == NULL)
+    {
+        return;
+    }
+
+    /* cplat の Trace イベント以外のイベントは無視する。 */
+    if (event->event_name == NULL || strcmp(event->event_name, "Trace") != 0)
+    {
+        return;
+    }
+
+    if (event->message == NULL)
+    {
+        return;
+    }
+
+    /* プロセス ID フィルターが指定されている場合、一致しないプロセスのイベントを除外する。 */
+    if (viewer_context != NULL && viewer_context->has_process_id_filter &&
+        event->process_id != viewer_context->process_id_filter)
+    {
+        return;
+    }
+
+    if (event->service != NULL && event->service[0] != '\0')
+    {
+        tag = event->service;
+    }
+    else
+    {
+        tag = ETW_VIEWER_DEFAULT_TAG;
+    }
+
+    message = event->message;
+
+    if (etw_viewer_format_timestamp_utc(event->timestamp_100ns, timestamp_text, sizeof(timestamp_text)) != 0)
+    {
+        timestamp_value = "(invalid-timestamp)";
+    }
+    else
+    {
+        timestamp_value = timestamp_text;
+    }
+
+    /*
+     * イベントの表示の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
+     * この関数の printf と fflush の戻り値は明示的に破棄する。
+     */
+    (void)printf("%s <%c>%s[%" PRIu32 "]: %s\n", timestamp_value, etw_viewer_priority_letter(event->level), tag,
+                 event->process_id, message);
+    (void)fflush(stdout);
+}
+
+static void etw_viewer_shutdown_request_callback(const cplat_shutdown_event *event, void *context)
+{
+    (void)event;
+    (void)context;
+    g_stop_requested = 1;
+}
+
+static int parse_process_id_arg(const char *text, uint32_t *process_id_out)
+{
+    uint64_t value;
+    int parse_result;
+
+    if (text == NULL || process_id_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (text[0] == '\0')
+    {
+        return CPLAT_ERR_INVALID_INTEGER;
+    }
+
+    /* プロセス ID は Windows DWORD のため、コーディング規範の例外として UINT32_MAX 上限を維持する。 */
+    parse_result = cplat_parse_uint64(&value, text, 10);
+    if (parse_result != CPLAT_OK)
+    {
+        return parse_result;
+    }
+
+    if (value > UINT32_MAX)
+    {
+        return CPLAT_ERR_OUT_OF_RANGE;
+    }
+
+    *process_id_out = (uint32_t)value;
+
+    return CPLAT_OK;
+}
+
+/*
+ * ETW イベント レベルを優先度文字 (C, E, W, I, V, U) へ変換する。
+ */
+static char etw_viewer_priority_letter(int level)
+{
+    switch (level)
+    {
+    case TRACE_LEVEL_CRITICAL:
+        return 'C';
+    case TRACE_LEVEL_ERROR:
+        return 'E';
+    case TRACE_LEVEL_WARNING:
+        return 'W';
+    case TRACE_LEVEL_INFORMATION:
+        return 'I';
+    case TRACE_LEVEL_VERBOSE:
+        return 'V';
+    default:
+        return 'U';
+    }
+}
+
+static void print_access_error(void)
+{
+    /* 診断の出力先がほかにないため、この関数の fprintf と fflush の戻り値は明示的に破棄する。 */
+    (void)fprintf(stderr, "ETW session の開始権限がありません。Administrators または "
+                          "\"Performance Log Users\" が必要です。\n"
+                          "対処方法: net localgroup \"Performance Log Users\" %%USERNAME%% /add\n"
+                          "          この操作後にサインアウト/サインインが必要です。\n");
+    (void)fflush(stderr);
+}
+
+static void print_start_error(int ret, const char *session_name)
+{
+    /* 診断の出力先がほかにないため、この関数の fprintf の戻り値は明示的に破棄する。 */
+    if (ret == CPLAT_ERR_PERMISSION_DENIED)
+    {
+        print_access_error();
+    }
+    else if (ret == CPLAT_ERR_INVALID_ARGUMENT)
+    {
+        (void)fprintf(stderr, "ETW session の開始に失敗しました。内部パラメーターが不正です。\n");
+    }
+    else
+    {
+        (void)fprintf(stderr, "ETW session の開始に失敗しました。session=\"%s\" provider=\"%s\"\n", session_name,
+                      CPLAT_TRACER_DEFAULT_PROVIDER_GUID_STR);
+    }
 }
 
 #elif defined(PLATFORM_LINUX)

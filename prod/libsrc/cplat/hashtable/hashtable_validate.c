@@ -18,6 +18,38 @@
 
 #include <cplat/crt/stdlib.h>
 
+static int validate_binary_key(const cplat_hashtable *ht, size_t rec);
+static int hashtable_validate_impl(const cplat_hashtable *ht, unsigned char *visited);
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_hashtable_validate(const cplat_hashtable *ht)
+{
+    unsigned char *visited;
+    int result;
+
+    if (ht == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    visited = (unsigned char *)cplat_calloc(ht->hdr->config.capacity, sizeof(*visited));
+    if (visited == NULL)
+    {
+        return CPLAT_ERR_OUT_OF_MEMORY;
+    }
+
+    result = hashtable_validate_impl(ht, visited);
+    cplat_free(visited);
+
+    if (result == 0)
+    {
+        return CPLAT_OK;
+    }
+
+    return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+}
+
 /**
  *  @brief          格納済みのバイナリ キーの有効長と 0 埋めを検査します。
  *  @param[in]      ht   対象。NULL を渡してはなりません。
@@ -332,33 +364,4 @@ static int hashtable_validate_impl(const cplat_hashtable *ht, unsigned char *vis
     }
 
     return 0;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_hashtable_validate(const cplat_hashtable *ht)
-{
-    unsigned char *visited;
-    int result;
-
-    if (ht == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    visited = (unsigned char *)cplat_calloc(ht->hdr->config.capacity, sizeof(*visited));
-    if (visited == NULL)
-    {
-        return CPLAT_ERR_OUT_OF_MEMORY;
-    }
-
-    result = hashtable_validate_impl(ht, visited);
-    cplat_free(visited);
-
-    if (result == 0)
-    {
-        return CPLAT_OK;
-    }
-
-    return CPLAT_ERR_CORRUPT_DESCRIPTOR;
 }

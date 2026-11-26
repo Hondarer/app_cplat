@@ -30,14 +30,14 @@ static int s_sigwinch_installed = 0;
     /* poll() で監視するファイル記述子数 (標準入力 + 中止通知パイプ) */
     #define PROMPT_LINUX_POLL_FD_COUNT 2U
 
-/*
- * SIGWINCH シグナルを受信した際に、端末サイズ変更の保留フラグを立てる。
- */
-static void prompt_sigwinch_handler(int sig)
-{
-    (void)sig;
-    s_resize_pending = 1;
-}
+/* テスト差し替えにも対応する pipe2() 呼び出し関数型と既定実装。 */
+typedef int (*prompt_linux_pipe2_fn)(int fds[2], int flags);
+
+static void prompt_sigwinch_handler(int sig);
+static int prompt_linux_default_pipe2(int fds[2], const int flags);
+static int prompt_linux_read_byte(prompt_platform_context *context, const int timeout_ms, const int report_resize);
+
+static prompt_linux_pipe2_fn s_pipe2_fn = prompt_linux_default_pipe2;
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -155,16 +155,6 @@ int prompt_platform_os_leave_raw(prompt_platform_context *context)
     return result;
 }
 
-/* テスト差し替えにも対応する pipe2() 呼び出し関数型と既定実装。 */
-typedef int (*prompt_linux_pipe2_fn)(int fds[2], int flags);
-
-static int prompt_linux_default_pipe2(int fds[2], const int flags)
-{
-    return pipe2(fds, flags);
-}
-
-static prompt_linux_pipe2_fn s_pipe2_fn = prompt_linux_default_pipe2;
-
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int prompt_platform_init_cancelable(prompt_platform_context *context)
@@ -277,6 +267,120 @@ int prompt_platform_stop_input(prompt_platform_context *context)
 
         return CPLAT_ERR_UNKNOWN;
     }
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int prompt_platform_read_char(prompt_platform_context *context)
+{
+    return prompt_linux_read_byte(context, -1, 1);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int prompt_platform_read_char_nb(prompt_platform_context *context)
+{
+    return prompt_linux_read_byte(context, PROMPT_PLATFORM_SHORT_WAIT_MS, 1);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int prompt_platform_read_line(prompt_platform_context *context, char *buf, const size_t buf_size)
+{
+    size_t len = 0U;
+    int saw_newline = 0;
+    int saw_eof = 0;
+
+    if (context == NULL || buf == NULL || buf_size == 0U)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    buf[0] = '\0';
+
+    if (prompt_platform_is_input_canceled(context))
+    {
+        return CPLAT_ERR_CANCELED;
+    }
+
+    if (buf_size == 1U)
+    {
+        return CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+
+    /* 部分行や残余データも待機可能な共通の 1 バイト経路で読み取る。 */
+    while (len + 1U < buf_size)
+    {
+        int ch = prompt_linux_read_byte(context, -1, 0);
+
+        if (ch == PROMPT_PLATFORM_CANCELED)
+        {
+            buf[0] = '\0';
+            return CPLAT_ERR_CANCELED;
+        }
+
+        if (ch == PROMPT_PLATFORM_ERROR || ch == PROMPT_PLATFORM_TIMEOUT || ch == PROMPT_PLATFORM_RESIZE)
+        {
+            buf[0] = '\0';
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        if (ch == PROMPT_PLATFORM_EOF)
+        {
+            if (len == 0U)
+            {
+                buf[0] = '\0';
+                return CPLAT_ERR_EOF;
+            }
+
+            saw_eof = 1;
+            break;
+        }
+
+        buf[len++] = (char)(unsigned char)ch;
+
+        if (ch == '\n')
+        {
+            saw_newline = 1;
+            break;
+        }
+    }
+
+    if (!saw_newline && !saw_eof)
+    {
+        buf[0] = '\0';
+        return CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+
+    if (len > 0U && buf[len - 1U] == '\n')
+    {
+        len--;
+        buf[len] = '\0';
+    }
+
+    if (len > 0U && buf[len - 1U] == '\r')
+    {
+        len--;
+        buf[len] = '\0';
+    }
+
+    buf[len] = '\0';
+
+    return CPLAT_OK;
+}
+
+/*
+ * SIGWINCH シグナルを受信した際に、端末サイズ変更の保留フラグを立てる。
+ */
+static void prompt_sigwinch_handler(int sig)
+{
+    (void)sig;
+    s_resize_pending = 1;
+}
+
+static int prompt_linux_default_pipe2(int fds[2], const int flags)
+{
+    return pipe2(fds, flags);
 }
 
 /* 標準入力と中止通知パイプを poll で同時に待機し、1 バイトまたは制御通知を返す。 */
@@ -416,106 +520,6 @@ static int prompt_linux_read_byte(prompt_platform_context *context, const int ti
 
         return PROMPT_PLATFORM_ERROR;
     }
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int prompt_platform_read_char(prompt_platform_context *context)
-{
-    return prompt_linux_read_byte(context, -1, 1);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int prompt_platform_read_char_nb(prompt_platform_context *context)
-{
-    return prompt_linux_read_byte(context, PROMPT_PLATFORM_SHORT_WAIT_MS, 1);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int prompt_platform_read_line(prompt_platform_context *context, char *buf, const size_t buf_size)
-{
-    size_t len = 0U;
-    int saw_newline = 0;
-    int saw_eof = 0;
-
-    if (context == NULL || buf == NULL || buf_size == 0U)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    buf[0] = '\0';
-
-    if (prompt_platform_is_input_canceled(context))
-    {
-        return CPLAT_ERR_CANCELED;
-    }
-
-    if (buf_size == 1U)
-    {
-        return CPLAT_ERR_BUFFER_TOO_SMALL;
-    }
-
-    /* 部分行や残余データも待機可能な共通の 1 バイト経路で読み取る。 */
-    while (len + 1U < buf_size)
-    {
-        int ch = prompt_linux_read_byte(context, -1, 0);
-
-        if (ch == PROMPT_PLATFORM_CANCELED)
-        {
-            buf[0] = '\0';
-            return CPLAT_ERR_CANCELED;
-        }
-
-        if (ch == PROMPT_PLATFORM_ERROR || ch == PROMPT_PLATFORM_TIMEOUT || ch == PROMPT_PLATFORM_RESIZE)
-        {
-            buf[0] = '\0';
-            return CPLAT_ERR_UNKNOWN;
-        }
-
-        if (ch == PROMPT_PLATFORM_EOF)
-        {
-            if (len == 0U)
-            {
-                buf[0] = '\0';
-                return CPLAT_ERR_EOF;
-            }
-
-            saw_eof = 1;
-            break;
-        }
-
-        buf[len++] = (char)(unsigned char)ch;
-
-        if (ch == '\n')
-        {
-            saw_newline = 1;
-            break;
-        }
-    }
-
-    if (!saw_newline && !saw_eof)
-    {
-        buf[0] = '\0';
-        return CPLAT_ERR_BUFFER_TOO_SMALL;
-    }
-
-    if (len > 0U && buf[len - 1U] == '\n')
-    {
-        len--;
-        buf[len] = '\0';
-    }
-
-    if (len > 0U && buf[len - 1U] == '\r')
-    {
-        len--;
-        buf[len] = '\0';
-    }
-
-    buf[len] = '\0';
-
-    return CPLAT_OK;
 }
 
 #endif /* PLATFORM_LINUX */

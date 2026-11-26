@@ -25,210 +25,14 @@
     #include <cplat/base/error_internal.h>
     #include <cplat/runtime/process_priority_windows.h>
 
-/*
- * OpenProcess() / OpenThread() は、存在しない ID に ERROR_INVALID_PARAMETER を返す。
- * ERROR_INVALID_PARAMETER は他の用途でも使われるため、対象を開く箇所でだけ対象不在へ変換する。
- * see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocess
- */
-static int report_open_error(cplat_error *detail_out, DWORD error_code)
-{
-    if (error_code == ERROR_INVALID_PARAMETER)
-    {
-        return cplat_internal_error_report_windows_error_as(detail_out, error_code, CPLAT_ERR_NOT_FOUND);
-    }
-
-    return cplat_internal_error_report_windows_error(detail_out, error_code);
-}
-
-/*
- * プロセス ID が 0 のときは擬似ハンドルを取得し、0 以外のときは指定のアクセス権でプロセスを開く。
- * 成功時は CPLAT_OK、失敗時はエラー コードを返す。
- */
-static int open_process(uint32_t process_id, DWORD desired_access, HANDLE *process, cplat_error *detail_out)
-{
-    HANDLE opened;
-
-    if (process_id == 0U)
-    {
-        *process = GetCurrentProcess();
-        return CPLAT_OK;
-    }
-
-    opened = OpenProcess(desired_access, FALSE, (DWORD)process_id);
-    if (opened == NULL)
-    {
-        return report_open_error(detail_out, GetLastError());
-    }
-
-    *process = opened;
-
-    return CPLAT_OK;
-}
-
-/*
- * スレッド ID が 0 のときは擬似ハンドルを取得し、0 以外のときは指定のアクセス権でスレッドを開く。
- * 成功時は CPLAT_OK、失敗時はエラー コードを返す。
- */
-static int open_thread(uint32_t thread_id, DWORD desired_access, HANDLE *thread, cplat_error *detail_out)
-{
-    HANDLE opened;
-
-    if (thread_id == 0U)
-    {
-        *thread = GetCurrentThread();
-        return CPLAT_OK;
-    }
-
-    opened = OpenThread(desired_access, FALSE, (DWORD)thread_id);
-    if (opened == NULL)
-    {
-        return report_open_error(detail_out, GetLastError());
-    }
-
-    *thread = opened;
-
-    return CPLAT_OK;
-}
-
-/* 擬似ハンドルは閉じない。 */
-static void close_target(uint32_t id, HANDLE handle)
-{
-    if (id != 0U)
-    {
-        /* 優先度の設定と取得の結果は確定済みで、閉じる処理の失敗で結果が変わらないため、戻り値は明示的に破棄する。 */
-        (void)CloseHandle(handle);
-    }
-}
-
-/*
- * cplat の優先度クラスを Windows の優先度クラスへ変換する。
- * 変換できた場合は 1、未知の優先度クラスの場合は 0 を返す。
- */
-static int to_os_class(cplat_process_priority_windows_class priority_class, DWORD *os_class)
-{
-    switch (priority_class)
-    {
-    case CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_IDLE:
-        *os_class = IDLE_PRIORITY_CLASS;
-        return 1;
-    case CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_BELOW_NORMAL:
-        *os_class = BELOW_NORMAL_PRIORITY_CLASS;
-        return 1;
-    case CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_NORMAL:
-        *os_class = NORMAL_PRIORITY_CLASS;
-        return 1;
-    case CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_ABOVE_NORMAL:
-        *os_class = ABOVE_NORMAL_PRIORITY_CLASS;
-        return 1;
-    case CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_HIGH:
-        *os_class = HIGH_PRIORITY_CLASS;
-        return 1;
-    case CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_REAL_TIME:
-        *os_class = REALTIME_PRIORITY_CLASS;
-        return 1;
-    default:
-        return 0;
-    }
-}
-
-/*
- * Windows の優先度クラスを cplat の優先度クラスへ変換する。
- * 変換できた場合は 1、未知の優先度クラスの場合は 0 を返す。
- */
-static int from_os_class(DWORD os_class, cplat_process_priority_windows_class *priority_class)
-{
-    switch (os_class)
-    {
-    case IDLE_PRIORITY_CLASS:
-        *priority_class = CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_IDLE;
-        return 1;
-    case BELOW_NORMAL_PRIORITY_CLASS:
-        *priority_class = CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_BELOW_NORMAL;
-        return 1;
-    case NORMAL_PRIORITY_CLASS:
-        *priority_class = CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_NORMAL;
-        return 1;
-    case ABOVE_NORMAL_PRIORITY_CLASS:
-        *priority_class = CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_ABOVE_NORMAL;
-        return 1;
-    case HIGH_PRIORITY_CLASS:
-        *priority_class = CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_HIGH;
-        return 1;
-    case REALTIME_PRIORITY_CLASS:
-        *priority_class = CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_REAL_TIME;
-        return 1;
-    default:
-        return 0;
-    }
-}
-
-/*
- * cplat のスレッド優先度を Windows のスレッド優先度へ変換する。
- * 変換できた場合は 1、未知のスレッド優先度の場合は 0 を返す。
- */
-static int to_os_thread_priority(cplat_process_priority_windows_thread_priority thread_priority, int *os_priority)
-{
-    switch (thread_priority)
-    {
-    case CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_IDLE:
-        *os_priority = THREAD_PRIORITY_IDLE;
-        return 1;
-    case CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_LOWEST:
-        *os_priority = THREAD_PRIORITY_LOWEST;
-        return 1;
-    case CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_BELOW_NORMAL:
-        *os_priority = THREAD_PRIORITY_BELOW_NORMAL;
-        return 1;
-    case CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_NORMAL:
-        *os_priority = THREAD_PRIORITY_NORMAL;
-        return 1;
-    case CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_ABOVE_NORMAL:
-        *os_priority = THREAD_PRIORITY_ABOVE_NORMAL;
-        return 1;
-    case CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_HIGHEST:
-        *os_priority = THREAD_PRIORITY_HIGHEST;
-        return 1;
-    case CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_TIME_CRITICAL:
-        *os_priority = THREAD_PRIORITY_TIME_CRITICAL;
-        return 1;
-    default:
-        return 0;
-    }
-}
-
-/*
- * Windows のスレッド優先度を cplat のスレッド優先度へ変換する。
- * 変換できた場合は 1、未知のスレッド優先度の場合は 0 を返す。
- */
-static int from_os_thread_priority(int os_priority, cplat_process_priority_windows_thread_priority *thread_priority)
-{
-    switch (os_priority)
-    {
-    case THREAD_PRIORITY_IDLE:
-        *thread_priority = CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_IDLE;
-        return 1;
-    case THREAD_PRIORITY_LOWEST:
-        *thread_priority = CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_LOWEST;
-        return 1;
-    case THREAD_PRIORITY_BELOW_NORMAL:
-        *thread_priority = CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_BELOW_NORMAL;
-        return 1;
-    case THREAD_PRIORITY_NORMAL:
-        *thread_priority = CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_NORMAL;
-        return 1;
-    case THREAD_PRIORITY_ABOVE_NORMAL:
-        *thread_priority = CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_ABOVE_NORMAL;
-        return 1;
-    case THREAD_PRIORITY_HIGHEST:
-        *thread_priority = CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_HIGHEST;
-        return 1;
-    case THREAD_PRIORITY_TIME_CRITICAL:
-        *thread_priority = CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_TIME_CRITICAL;
-        return 1;
-    default:
-        return 0;
-    }
-}
+static int report_open_error(cplat_error *detail_out, DWORD error_code);
+static int open_process(uint32_t process_id, DWORD desired_access, HANDLE *process, cplat_error *detail_out);
+static int open_thread(uint32_t thread_id, DWORD desired_access, HANDLE *thread, cplat_error *detail_out);
+static void close_target(uint32_t id, HANDLE handle);
+static int to_os_class(cplat_process_priority_windows_class priority_class, DWORD *os_class);
+static int from_os_class(DWORD os_class, cplat_process_priority_windows_class *priority_class);
+static int to_os_thread_priority(cplat_process_priority_windows_thread_priority thread_priority, int *os_priority);
+static int from_os_thread_priority(int os_priority, cplat_process_priority_windows_thread_priority *thread_priority);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -724,6 +528,211 @@ int cplat_process_priority_windows_get_thread_priority(
     *thread_priority_out = thread_priority;
 
     return cplat_internal_error_report_success(detail_out);
+}
+
+/*
+ * OpenProcess() / OpenThread() は、存在しない ID に ERROR_INVALID_PARAMETER を返す。
+ * ERROR_INVALID_PARAMETER は他の用途でも使われるため、対象を開く箇所でだけ対象不在へ変換する。
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocess
+ */
+static int report_open_error(cplat_error *detail_out, DWORD error_code)
+{
+    if (error_code == ERROR_INVALID_PARAMETER)
+    {
+        return cplat_internal_error_report_windows_error_as(detail_out, error_code, CPLAT_ERR_NOT_FOUND);
+    }
+
+    return cplat_internal_error_report_windows_error(detail_out, error_code);
+}
+
+/*
+ * プロセス ID が 0 のときは擬似ハンドルを取得し、0 以外のときは指定のアクセス権でプロセスを開く。
+ * 成功時は CPLAT_OK、失敗時はエラー コードを返す。
+ */
+static int open_process(uint32_t process_id, DWORD desired_access, HANDLE *process, cplat_error *detail_out)
+{
+    HANDLE opened;
+
+    if (process_id == 0U)
+    {
+        *process = GetCurrentProcess();
+        return CPLAT_OK;
+    }
+
+    opened = OpenProcess(desired_access, FALSE, (DWORD)process_id);
+    if (opened == NULL)
+    {
+        return report_open_error(detail_out, GetLastError());
+    }
+
+    *process = opened;
+
+    return CPLAT_OK;
+}
+
+/*
+ * スレッド ID が 0 のときは擬似ハンドルを取得し、0 以外のときは指定のアクセス権でスレッドを開く。
+ * 成功時は CPLAT_OK、失敗時はエラー コードを返す。
+ */
+static int open_thread(uint32_t thread_id, DWORD desired_access, HANDLE *thread, cplat_error *detail_out)
+{
+    HANDLE opened;
+
+    if (thread_id == 0U)
+    {
+        *thread = GetCurrentThread();
+        return CPLAT_OK;
+    }
+
+    opened = OpenThread(desired_access, FALSE, (DWORD)thread_id);
+    if (opened == NULL)
+    {
+        return report_open_error(detail_out, GetLastError());
+    }
+
+    *thread = opened;
+
+    return CPLAT_OK;
+}
+
+/* 擬似ハンドルは閉じない。 */
+static void close_target(uint32_t id, HANDLE handle)
+{
+    if (id != 0U)
+    {
+        /* 優先度の設定と取得の結果は確定済みで、閉じる処理の失敗で結果が変わらないため、戻り値は明示的に破棄する。 */
+        (void)CloseHandle(handle);
+    }
+}
+
+/*
+ * cplat の優先度クラスを Windows の優先度クラスへ変換する。
+ * 変換できた場合は 1、未知の優先度クラスの場合は 0 を返す。
+ */
+static int to_os_class(cplat_process_priority_windows_class priority_class, DWORD *os_class)
+{
+    switch (priority_class)
+    {
+    case CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_IDLE:
+        *os_class = IDLE_PRIORITY_CLASS;
+        return 1;
+    case CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_BELOW_NORMAL:
+        *os_class = BELOW_NORMAL_PRIORITY_CLASS;
+        return 1;
+    case CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_NORMAL:
+        *os_class = NORMAL_PRIORITY_CLASS;
+        return 1;
+    case CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_ABOVE_NORMAL:
+        *os_class = ABOVE_NORMAL_PRIORITY_CLASS;
+        return 1;
+    case CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_HIGH:
+        *os_class = HIGH_PRIORITY_CLASS;
+        return 1;
+    case CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_REAL_TIME:
+        *os_class = REALTIME_PRIORITY_CLASS;
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+/*
+ * Windows の優先度クラスを cplat の優先度クラスへ変換する。
+ * 変換できた場合は 1、未知の優先度クラスの場合は 0 を返す。
+ */
+static int from_os_class(DWORD os_class, cplat_process_priority_windows_class *priority_class)
+{
+    switch (os_class)
+    {
+    case IDLE_PRIORITY_CLASS:
+        *priority_class = CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_IDLE;
+        return 1;
+    case BELOW_NORMAL_PRIORITY_CLASS:
+        *priority_class = CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_BELOW_NORMAL;
+        return 1;
+    case NORMAL_PRIORITY_CLASS:
+        *priority_class = CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_NORMAL;
+        return 1;
+    case ABOVE_NORMAL_PRIORITY_CLASS:
+        *priority_class = CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_ABOVE_NORMAL;
+        return 1;
+    case HIGH_PRIORITY_CLASS:
+        *priority_class = CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_HIGH;
+        return 1;
+    case REALTIME_PRIORITY_CLASS:
+        *priority_class = CPLAT_PROCESS_PRIORITY_WINDOWS_CLASS_REAL_TIME;
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+/*
+ * cplat のスレッド優先度を Windows のスレッド優先度へ変換する。
+ * 変換できた場合は 1、未知のスレッド優先度の場合は 0 を返す。
+ */
+static int to_os_thread_priority(cplat_process_priority_windows_thread_priority thread_priority, int *os_priority)
+{
+    switch (thread_priority)
+    {
+    case CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_IDLE:
+        *os_priority = THREAD_PRIORITY_IDLE;
+        return 1;
+    case CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_LOWEST:
+        *os_priority = THREAD_PRIORITY_LOWEST;
+        return 1;
+    case CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_BELOW_NORMAL:
+        *os_priority = THREAD_PRIORITY_BELOW_NORMAL;
+        return 1;
+    case CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_NORMAL:
+        *os_priority = THREAD_PRIORITY_NORMAL;
+        return 1;
+    case CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_ABOVE_NORMAL:
+        *os_priority = THREAD_PRIORITY_ABOVE_NORMAL;
+        return 1;
+    case CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_HIGHEST:
+        *os_priority = THREAD_PRIORITY_HIGHEST;
+        return 1;
+    case CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_TIME_CRITICAL:
+        *os_priority = THREAD_PRIORITY_TIME_CRITICAL;
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+/*
+ * Windows のスレッド優先度を cplat のスレッド優先度へ変換する。
+ * 変換できた場合は 1、未知のスレッド優先度の場合は 0 を返す。
+ */
+static int from_os_thread_priority(int os_priority, cplat_process_priority_windows_thread_priority *thread_priority)
+{
+    switch (os_priority)
+    {
+    case THREAD_PRIORITY_IDLE:
+        *thread_priority = CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_IDLE;
+        return 1;
+    case THREAD_PRIORITY_LOWEST:
+        *thread_priority = CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_LOWEST;
+        return 1;
+    case THREAD_PRIORITY_BELOW_NORMAL:
+        *thread_priority = CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_BELOW_NORMAL;
+        return 1;
+    case THREAD_PRIORITY_NORMAL:
+        *thread_priority = CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_NORMAL;
+        return 1;
+    case THREAD_PRIORITY_ABOVE_NORMAL:
+        *thread_priority = CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_ABOVE_NORMAL;
+        return 1;
+    case THREAD_PRIORITY_HIGHEST:
+        *thread_priority = CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_HIGHEST;
+        return 1;
+    case THREAD_PRIORITY_TIME_CRITICAL:
+        *thread_priority = CPLAT_PROCESS_PRIORITY_WINDOWS_THREAD_PRIORITY_TIME_CRITICAL;
+        return 1;
+    default:
+        return 0;
+    }
 }
 
 #endif /* PLATFORM_WINDOWS */

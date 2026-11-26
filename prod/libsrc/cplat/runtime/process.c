@@ -104,6 +104,560 @@ struct cplat_process
     int exit_code;
 };
 
+static int has_valid_argv(char *const *argv);
+static void process_set_exit_code(cplat_process *process, const int exit_code);
+#if defined(PLATFORM_LINUX)
+static void process_set_exited_without_code(cplat_process *process);
+static uint64_t monotonic_ms(void);
+static char *string_duplicate(const char *text);
+static size_t env_key_len(const char *entry);
+static int env_key_matches(const char *entry, const char *key, const size_t key_len);
+static void free_envp(char **envp);
+static int set_env_entry(char **envp, const size_t capacity, const char *entry);
+static char **build_environment(char *const *overrides);
+static const char *find_env_value(char *const *envp, const char *key);
+static int setup_child_stdio_one(const cplat_process_stdio *spec, const int target_fd, const int null_flags);
+static int setup_child_stdio(const cplat_process_options *options);
+static void exec_with_path(char *const *argv, char *const *envp);
+static size_t child_append_text(char *buf, const size_t buf_size, size_t len, const char *text);
+static size_t child_append_uint(char *buf, const size_t buf_size, size_t len, unsigned int magnitude);
+static void child_report_exec_failure(const char *program, const int error_number);
+static int run_child_process(const cplat_process_options *options, char *const *envp);
+#elif defined(PLATFORM_WINDOWS)
+typedef struct wide_buffer
+{
+    wchar_t *data;
+    size_t len;
+    size_t cap;
+} wide_buffer;
+
+/**
+ *  @brief  cplat_process_start (Windows) が確保する一時リソースの集合です。
+ *
+ *  ゼロ初期化した状態から任意の時点で release_process_start_resources() へ
+ *  渡せるため、確保段階ごとに解放シーケンスを書き分ける必要がありません。
+ */
+struct process_start_resources
+{
+    wchar_t *command_line;
+    wchar_t *environment_block;
+    wchar_t *working_directory;
+    HANDLE stdio_handles[PROCESS_STDIO_COUNT];
+    LPPROC_THREAD_ATTRIBUTE_LIST attribute_list;
+    int attribute_list_initialized;
+};
+
+static int wide_buffer_reserve(wide_buffer *buf, const size_t need);
+static int wide_buffer_append_char(wide_buffer *buf, const wchar_t ch);
+static int wide_buffer_append_text(wide_buffer *buf, const wchar_t *text);
+static int append_windows_quoted_arg(wide_buffer *buf, const wchar_t *arg);
+static int build_command_line(wchar_t **command_line_out, char *const *argv);
+static size_t wide_env_key_len(const wchar_t *entry);
+static int wide_env_key_matches(const wchar_t *entry, const wchar_t *key, const size_t key_len);
+static void free_wide_env_list(wchar_t **list);
+static wchar_t *wide_string_duplicate(const wchar_t *text);
+static int set_wide_env_entry(wchar_t **list, const size_t capacity, const wchar_t *entry);
+static int build_environment_block(wchar_t **block_out, char *const *overrides);
+static HANDLE open_windows_null_device(const DWORD access);
+static int duplicate_inheritable_handle(const HANDLE source, HANDLE *duplicated_out);
+static int prepare_stdio_handle(const cplat_process_stdio *spec, const DWORD std_id, const DWORD null_access,
+                                HANDLE *prepared_out);
+static void close_stdio_handles(HANDLE handles[PROCESS_STDIO_COUNT]);
+static void release_process_start_resources(struct process_start_resources *res);
+#endif /* PLATFORM_ */
+#if defined(PLATFORM_LINUX)
+static int reap_child_nowait(cplat_process *process);
+static int process_wait_with_pidfd(cplat_process *process, const int pidfd, const int timeout_ms);
+static int process_wait_polling(cplat_process *process, const int timeout_ms);
+#elif defined(PLATFORM_WINDOWS)
+static int wait_and_read_windows_exit_code(cplat_process *process, const DWORD wait_ms);
+#endif /* PLATFORM_ */
+static int process_wait_internal(cplat_process *process, const int timeout_ms);
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_process_get_executable_path(char *path_out, const size_t path_size)
+{
+    if (path_out == NULL || path_size == 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+#if defined(PLATFORM_LINUX)
+    {
+        ssize_t len;
+
+        /*
+         * readlink は終端の NUL を付けず、容量が足りない場合は bufsize で黙って切り詰める。
+         * 戻り値が bufsize (path_size) と等しい場合は切り詰めの可能性があり、
+         * 終端 NUL を置く余地もないため不足として扱う。
+         * see: https://man7.org/linux/man-pages/man2/readlink.2.html
+         */
+        len = readlink("/proc/self/exe", path_out, path_size);
+        if (len < 0)
+        {
+            path_out[0] = '\0';
+            return cplat_internal_result_from_errno(errno);
+        }
+
+        if (len == 0)
+        {
+            path_out[0] = '\0';
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        if ((size_t)len >= path_size)
+        {
+            path_out[0] = '\0';
+            return CPLAT_ERR_BUFFER_TOO_SMALL;
+        }
+
+        path_out[len] = '\0';
+        return CPLAT_OK;
+    }
+#elif defined(PLATFORM_WINDOWS)
+    {
+        wchar_t *wbuf;
+        DWORD n;
+        int result;
+
+        wbuf = (wchar_t *)cplat_malloc((size_t)CPLAT_PROCESS_LONG_PATH_WCHAR_CAP * sizeof(wchar_t));
+        if (wbuf == NULL)
+        {
+            path_out[0] = '\0';
+            return CPLAT_ERR_OUT_OF_MEMORY;
+        }
+
+        /*
+         * GetModuleFileNameU はパス区切り文字を正規化しない。
+         * '\\' を '/' へ正規化する cplat_wpath_to_utf8 を使うため、ここでは W 版を直接使う。
+         */
+        n = GetModuleFileNameW(NULL, wbuf, (DWORD)CPLAT_PROCESS_LONG_PATH_WCHAR_CAP);
+        if (n == 0)
+        {
+            DWORD err_code = GetLastError();
+            cplat_free(wbuf);
+            path_out[0] = '\0';
+            return cplat_internal_result_from_windows_error(err_code);
+        }
+
+        if (n >= (DWORD)CPLAT_PROCESS_LONG_PATH_WCHAR_CAP)
+        {
+            cplat_free(wbuf);
+            path_out[0] = '\0';
+            return CPLAT_ERR_BUFFER_TOO_SMALL;
+        }
+
+        wbuf[n] = L'\0';
+
+        result = cplat_wpath_to_utf8(path_out, path_size, NULL, wbuf);
+        if (result != CPLAT_OK)
+        {
+            cplat_free(wbuf);
+            path_out[0] = '\0';
+            return result;
+        }
+
+        cplat_free(wbuf);
+        return CPLAT_OK;
+    }
+#else
+    path_out[0] = '\0';
+
+    return CPLAT_ERR_UNSUPPORTED;
+#endif /* PLATFORM_ */
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+uint32_t cplat_process_get_pid(void)
+{
+#if defined(PLATFORM_LINUX)
+    return (uint32_t)getpid();
+#elif defined(PLATFORM_WINDOWS)
+    return (uint32_t)GetCurrentProcessId();
+#else
+    return 0;
+#endif /* PLATFORM_ */
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+uint32_t cplat_process_get_tid(void)
+{
+#if defined(PLATFORM_LINUX)
+    /*
+     * glibc がラッパー関数 gettid() を提供するのは 2.30 以降であり、本リポジトリが対象とする
+     * glibc 2.28 では宣言されない。移植先の glibc の版に依存しないよう、システム コールを直接呼ぶ。
+     * see: https://man7.org/linux/man-pages/man2/gettid.2.html
+     */
+    return (uint32_t)syscall(SYS_gettid);
+#elif defined(PLATFORM_WINDOWS)
+    return (uint32_t)GetCurrentThreadId();
+#else
+    return 0;
+#endif /* PLATFORM_ */
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_process_start(const cplat_process_options *options, cplat_process **process_out)
+{
+    cplat_process *new_process;
+
+    if (options == NULL || process_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (has_valid_argv(options->argv) == 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    *process_out = NULL;
+
+#if defined(PLATFORM_LINUX)
+    {
+        char **envp;
+        pid_t pid;
+
+        envp = build_environment(options->env_overrides);
+        if (envp == NULL)
+        {
+            return CPLAT_ERR_INVALID_ARGUMENT;
+        }
+
+        new_process = (cplat_process *)cplat_calloc(1, sizeof(*new_process));
+        if (new_process == NULL)
+        {
+            free_envp(envp);
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        pid = fork();
+        if (pid < 0)
+        {
+            free_envp(envp);
+            cplat_free(new_process);
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        /* GCOVR_EXCL_START: 子プロセスの _exit() 前に gcda を安全に保存できない。 */
+        if (pid == 0)
+        {
+            _exit(run_child_process(options, envp));
+        }
+
+        /* GCOVR_EXCL_STOP */
+
+        free_envp(envp);
+        new_process->pid = pid;
+        *process_out = new_process;
+        return CPLAT_OK;
+    }
+#elif defined(PLATFORM_WINDOWS)
+    {
+        STARTUPINFOEXW startup = {0};
+        PROCESS_INFORMATION process_info = {0};
+        SIZE_T attr_size;
+        HANDLE inherit_handles[PROCESS_STDIO_COUNT] = {0};
+        struct process_start_resources res = {0};
+        DWORD create_flags;
+        BOOL created;
+        int ret;
+
+        ret = build_command_line(&res.command_line, options->argv);
+        if (ret != CPLAT_OK)
+        {
+            return ret;
+        }
+
+        if (options->env_overrides != NULL)
+        {
+            ret = build_environment_block(&res.environment_block, options->env_overrides);
+            if (ret != CPLAT_OK)
+            {
+                release_process_start_resources(&res);
+                return ret;
+            }
+        }
+
+        if (options->working_directory != NULL)
+        {
+            ret = cplat_utf8_to_wstr_alloc(&res.working_directory, options->working_directory);
+            if (ret != CPLAT_OK)
+            {
+                release_process_start_resources(&res);
+                return ret;
+            }
+        }
+
+        if (prepare_stdio_handle(&options->stdin_spec, STD_INPUT_HANDLE, GENERIC_READ,
+                                 &res.stdio_handles[PROCESS_STDIO_INDEX_STDIN]) != 0 ||
+            prepare_stdio_handle(&options->stdout_spec, STD_OUTPUT_HANDLE, GENERIC_WRITE,
+                                 &res.stdio_handles[PROCESS_STDIO_INDEX_STDOUT]) != 0 ||
+            prepare_stdio_handle(&options->stderr_spec, STD_ERROR_HANDLE, GENERIC_WRITE,
+                                 &res.stdio_handles[PROCESS_STDIO_INDEX_STDERR]) != 0)
+        {
+            release_process_start_resources(&res);
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        startup.StartupInfo.cb = sizeof(startup);
+        startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+        startup.StartupInfo.hStdInput = res.stdio_handles[PROCESS_STDIO_INDEX_STDIN];
+        startup.StartupInfo.hStdOutput = res.stdio_handles[PROCESS_STDIO_INDEX_STDOUT];
+        startup.StartupInfo.hStdError = res.stdio_handles[PROCESS_STDIO_INDEX_STDERR];
+
+        attr_size = 0;
+        /*
+         * 必要サイズの取得のための呼び出しであり、仕様上 FALSE を返し、成否は後続の確保と初期化で検査するため、
+         * 戻り値は明示的に破棄する。
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-initializeprocthreadattributelist
+         */
+        (void)InitializeProcThreadAttributeList(NULL, 1, 0, &attr_size);
+        res.attribute_list = (LPPROC_THREAD_ATTRIBUTE_LIST)cplat_calloc(1, attr_size);
+        if (res.attribute_list == NULL)
+        {
+            release_process_start_resources(&res);
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        if (!InitializeProcThreadAttributeList(res.attribute_list, 1, 0, &attr_size))
+        {
+            release_process_start_resources(&res);
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        res.attribute_list_initialized = 1;
+        startup.lpAttributeList = res.attribute_list;
+
+        inherit_handles[PROCESS_STDIO_INDEX_STDIN] = res.stdio_handles[PROCESS_STDIO_INDEX_STDIN];
+        inherit_handles[PROCESS_STDIO_INDEX_STDOUT] = res.stdio_handles[PROCESS_STDIO_INDEX_STDOUT];
+        inherit_handles[PROCESS_STDIO_INDEX_STDERR] = res.stdio_handles[PROCESS_STDIO_INDEX_STDERR];
+
+        /*
+         * 指定した標準入出力ハンドルだけを子プロセスへ明示的に継承させるため、
+         * PROC_THREAD_ATTRIBUTE_HANDLE_LIST を設定する。
+         */
+        if (!UpdateProcThreadAttribute(startup.lpAttributeList, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, inherit_handles,
+                                       sizeof(inherit_handles), NULL, NULL))
+        {
+            release_process_start_resources(&res);
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        create_flags = EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT;
+
+        /*
+         * res.command_line と res.environment_block は組み立て済みのワイド文字列であり、
+         * CreateProcessU を経由すると UTF-8 への往復変換が増えるだけになる。
+         */
+        created = CreateProcessW(NULL, res.command_line, NULL, NULL, TRUE, create_flags, res.environment_block,
+                                 res.working_directory, &startup.StartupInfo, &process_info);
+
+        release_process_start_resources(&res);
+
+        if (!created)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        /* スレッド ハンドルは使わず、閉じられなくても起動は成立しているため、戻り値は明示的に破棄する。 */
+        (void)CloseHandle(process_info.hThread);
+        new_process = (cplat_process *)cplat_calloc(1, sizeof(*new_process));
+        if (new_process == NULL)
+        {
+            (void)CloseHandle(process_info.hProcess); /* 確保の失敗を返す後始末のため、戻り値は明示的に破棄する */
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        new_process->process = process_info.hProcess;
+        *process_out = new_process;
+        return CPLAT_OK;
+    }
+#else
+    return CPLAT_ERR_UNSUPPORTED;
+#endif /* PLATFORM_ */
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_process_wait(cplat_process *process)
+{
+    return process_wait_internal(process, CPLAT_WAIT_FOREVER);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_process_timed_wait(cplat_process *process, const int timeout_ms)
+{
+    return process_wait_internal(process, timeout_ms);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_process_get_exit_code(cplat_process *process, int *exit_code_out)
+{
+    if (process == NULL || exit_code_out == NULL || process->exited == 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (process->exit_code_available == 0)
+    {
+        return CPLAT_ERR_NOT_FOUND;
+    }
+
+    *exit_code_out = process->exit_code;
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_process_terminate(cplat_process *process)
+{
+    if (process == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (process->exited != 0)
+    {
+        return CPLAT_OK;
+    }
+
+#if defined(PLATFORM_LINUX)
+    /*
+     * SIGKILL は捕捉も無視もできないため、呼び出し時点で生存している子プロセスを確実に終了させる。
+     * see: https://man7.org/linux/man-pages/man7/signal.7.html
+     */
+    if (kill(process->pid, SIGKILL) != 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    return CPLAT_OK;
+#elif defined(PLATFORM_WINDOWS)
+    if (!TerminateProcess(process->process, EXIT_FAILURE))
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    return CPLAT_OK;
+#else
+    return CPLAT_ERR_UNSUPPORTED;
+#endif /* PLATFORM_ */
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_process_dispose(cplat_process *process)
+{
+    if (process == NULL)
+    {
+        return;
+    }
+
+#if defined(PLATFORM_WINDOWS)
+    if (process->process != NULL)
+    {
+        (void)CloseHandle(process->process); /* 破棄の関数であり、失敗を伝える先がないため、戻り値は明示的に破棄する */
+    }
+#endif /* PLATFORM_WINDOWS */
+    cplat_free(process);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+cplat_process *cplat_internal_process_adopt_native(const intptr_t native_handle)
+{
+    cplat_process *new_process;
+
+    new_process = (cplat_process *)cplat_calloc(1, sizeof(*new_process));
+    if (new_process == NULL)
+    {
+        return NULL;
+    }
+
+#if defined(PLATFORM_LINUX)
+    new_process->pid = (pid_t)native_handle;
+#elif defined(PLATFORM_WINDOWS)
+    new_process->process = (HANDLE)native_handle;
+#else
+    cplat_free(new_process);
+    return NULL;
+#endif /* PLATFORM_ */
+    return new_process;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_process_run_sync(const cplat_process_options *options, int *exit_code_out)
+{
+    return cplat_process_timed_run_sync(options, CPLAT_WAIT_FOREVER, exit_code_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_process_timed_run_sync(const cplat_process_options *options, const int timeout_ms, int *exit_code_out)
+{
+    cplat_process *process;
+    int result;
+
+    if (exit_code_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    *exit_code_out = EXIT_FAILURE;
+
+    if (timeout_ms < 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    process = NULL;
+    result = cplat_process_start(options, &process);
+    if (result != CPLAT_OK)
+    {
+        return result;
+    }
+
+    result = cplat_process_timed_wait(process, timeout_ms);
+    if (result == CPLAT_ERR_TIMEOUT)
+    {
+        result = cplat_process_terminate(process);
+        if (result != CPLAT_OK)
+        {
+            cplat_process_dispose(process);
+            return result;
+        }
+
+        /*
+         * 強制終了後の回収を試みるが、Linux の割り込み不可の待ち (D 状態) や Windows で
+         * 実行中の I/O が完了・取り消しされるまでは終了しないことがあるため上限付きで待ち、
+         * 呼び出し元にはタイムアウトを返すため、この待ちの戻り値は明示的に破棄する。
+         * see: https://lwn.net/Articles/288056/
+         * see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess
+         */
+        (void)cplat_process_timed_wait(process, CPLAT_PROCESS_TERMINATE_WAIT_MS);
+        cplat_process_dispose(process);
+        return CPLAT_ERR_TIMEOUT;
+    }
+
+    if (result == CPLAT_OK)
+    {
+        result = cplat_process_get_exit_code(process, exit_code_out);
+    }
+
+    cplat_process_dispose(process);
+
+    return result;
+}
+
 static int has_valid_argv(char *const *argv)
 {
     if (argv == NULL)
@@ -648,13 +1202,6 @@ static int run_child_process(const cplat_process_options *options, char *const *
 }
 
 #elif defined(PLATFORM_WINDOWS)
-typedef struct wide_buffer
-{
-    wchar_t *data;
-    size_t len;
-    size_t cap;
-} wide_buffer;
-
 static int wide_buffer_reserve(wide_buffer *buf, const size_t need)
 {
     wchar_t *new_data;
@@ -1219,22 +1766,6 @@ static void close_stdio_handles(HANDLE handles[PROCESS_STDIO_COUNT])
 }
 
 /**
- *  @brief  cplat_process_start (Windows) が確保する一時リソースの集合です。
- *
- *  ゼロ初期化した状態から任意の時点で release_process_start_resources() へ
- *  渡せるため、確保段階ごとに解放シーケンスを書き分ける必要がありません。
- */
-struct process_start_resources
-{
-    wchar_t *command_line;
-    wchar_t *environment_block;
-    wchar_t *working_directory;
-    HANDLE stdio_handles[PROCESS_STDIO_COUNT];
-    LPPROC_THREAD_ATTRIBUTE_LIST attribute_list;
-    int attribute_list_initialized;
-};
-
-/**
  *  @brief          cplat_process_start (Windows) の一時リソースをすべて解放します。
  *  @param[in]      res  解放対象のリソース集合。未確保メンバーは 0/NULL であること。
  */
@@ -1252,314 +1783,6 @@ static void release_process_start_resources(struct process_start_resources *res)
     cplat_free(res->command_line);
 }
 #endif /* PLATFORM_ */
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_process_get_executable_path(char *path_out, const size_t path_size)
-{
-    if (path_out == NULL || path_size == 0)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-#if defined(PLATFORM_LINUX)
-    {
-        ssize_t len;
-
-        /*
-         * readlink は終端の NUL を付けず、容量が足りない場合は bufsize で黙って切り詰める。
-         * 戻り値が bufsize (path_size) と等しい場合は切り詰めの可能性があり、
-         * 終端 NUL を置く余地もないため不足として扱う。
-         * see: https://man7.org/linux/man-pages/man2/readlink.2.html
-         */
-        len = readlink("/proc/self/exe", path_out, path_size);
-        if (len < 0)
-        {
-            path_out[0] = '\0';
-            return cplat_internal_result_from_errno(errno);
-        }
-
-        if (len == 0)
-        {
-            path_out[0] = '\0';
-            return CPLAT_ERR_UNKNOWN;
-        }
-
-        if ((size_t)len >= path_size)
-        {
-            path_out[0] = '\0';
-            return CPLAT_ERR_BUFFER_TOO_SMALL;
-        }
-
-        path_out[len] = '\0';
-        return CPLAT_OK;
-    }
-#elif defined(PLATFORM_WINDOWS)
-    {
-        wchar_t *wbuf;
-        DWORD n;
-        int result;
-
-        wbuf = (wchar_t *)cplat_malloc((size_t)CPLAT_PROCESS_LONG_PATH_WCHAR_CAP * sizeof(wchar_t));
-        if (wbuf == NULL)
-        {
-            path_out[0] = '\0';
-            return CPLAT_ERR_OUT_OF_MEMORY;
-        }
-
-        /*
-         * GetModuleFileNameU はパス区切り文字を正規化しない。
-         * '\\' を '/' へ正規化する cplat_wpath_to_utf8 を使うため、ここでは W 版を直接使う。
-         */
-        n = GetModuleFileNameW(NULL, wbuf, (DWORD)CPLAT_PROCESS_LONG_PATH_WCHAR_CAP);
-        if (n == 0)
-        {
-            DWORD err_code = GetLastError();
-            cplat_free(wbuf);
-            path_out[0] = '\0';
-            return cplat_internal_result_from_windows_error(err_code);
-        }
-
-        if (n >= (DWORD)CPLAT_PROCESS_LONG_PATH_WCHAR_CAP)
-        {
-            cplat_free(wbuf);
-            path_out[0] = '\0';
-            return CPLAT_ERR_BUFFER_TOO_SMALL;
-        }
-
-        wbuf[n] = L'\0';
-
-        result = cplat_wpath_to_utf8(path_out, path_size, NULL, wbuf);
-        if (result != CPLAT_OK)
-        {
-            cplat_free(wbuf);
-            path_out[0] = '\0';
-            return result;
-        }
-
-        cplat_free(wbuf);
-        return CPLAT_OK;
-    }
-#else
-    path_out[0] = '\0';
-
-    return CPLAT_ERR_UNSUPPORTED;
-#endif /* PLATFORM_ */
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-uint32_t cplat_process_get_pid(void)
-{
-#if defined(PLATFORM_LINUX)
-    return (uint32_t)getpid();
-#elif defined(PLATFORM_WINDOWS)
-    return (uint32_t)GetCurrentProcessId();
-#else
-    return 0;
-#endif /* PLATFORM_ */
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-uint32_t cplat_process_get_tid(void)
-{
-#if defined(PLATFORM_LINUX)
-    /*
-     * glibc がラッパー関数 gettid() を提供するのは 2.30 以降であり、本リポジトリが対象とする
-     * glibc 2.28 では宣言されない。移植先の glibc の版に依存しないよう、システム コールを直接呼ぶ。
-     * see: https://man7.org/linux/man-pages/man2/gettid.2.html
-     */
-    return (uint32_t)syscall(SYS_gettid);
-#elif defined(PLATFORM_WINDOWS)
-    return (uint32_t)GetCurrentThreadId();
-#else
-    return 0;
-#endif /* PLATFORM_ */
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_process_start(const cplat_process_options *options, cplat_process **process_out)
-{
-    cplat_process *new_process;
-
-    if (options == NULL || process_out == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (has_valid_argv(options->argv) == 0)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    *process_out = NULL;
-
-#if defined(PLATFORM_LINUX)
-    {
-        char **envp;
-        pid_t pid;
-
-        envp = build_environment(options->env_overrides);
-        if (envp == NULL)
-        {
-            return CPLAT_ERR_INVALID_ARGUMENT;
-        }
-
-        new_process = (cplat_process *)cplat_calloc(1, sizeof(*new_process));
-        if (new_process == NULL)
-        {
-            free_envp(envp);
-            return CPLAT_ERR_UNKNOWN;
-        }
-
-        pid = fork();
-        if (pid < 0)
-        {
-            free_envp(envp);
-            cplat_free(new_process);
-            return CPLAT_ERR_UNKNOWN;
-        }
-
-        /* GCOVR_EXCL_START: 子プロセスの _exit() 前に gcda を安全に保存できない。 */
-        if (pid == 0)
-        {
-            _exit(run_child_process(options, envp));
-        }
-
-        /* GCOVR_EXCL_STOP */
-
-        free_envp(envp);
-        new_process->pid = pid;
-        *process_out = new_process;
-        return CPLAT_OK;
-    }
-#elif defined(PLATFORM_WINDOWS)
-    {
-        STARTUPINFOEXW startup = {0};
-        PROCESS_INFORMATION process_info = {0};
-        SIZE_T attr_size;
-        HANDLE inherit_handles[PROCESS_STDIO_COUNT] = {0};
-        struct process_start_resources res = {0};
-        DWORD create_flags;
-        BOOL created;
-        int ret;
-
-        ret = build_command_line(&res.command_line, options->argv);
-        if (ret != CPLAT_OK)
-        {
-            return ret;
-        }
-
-        if (options->env_overrides != NULL)
-        {
-            ret = build_environment_block(&res.environment_block, options->env_overrides);
-            if (ret != CPLAT_OK)
-            {
-                release_process_start_resources(&res);
-                return ret;
-            }
-        }
-
-        if (options->working_directory != NULL)
-        {
-            ret = cplat_utf8_to_wstr_alloc(&res.working_directory, options->working_directory);
-            if (ret != CPLAT_OK)
-            {
-                release_process_start_resources(&res);
-                return ret;
-            }
-        }
-
-        if (prepare_stdio_handle(&options->stdin_spec, STD_INPUT_HANDLE, GENERIC_READ,
-                                 &res.stdio_handles[PROCESS_STDIO_INDEX_STDIN]) != 0 ||
-            prepare_stdio_handle(&options->stdout_spec, STD_OUTPUT_HANDLE, GENERIC_WRITE,
-                                 &res.stdio_handles[PROCESS_STDIO_INDEX_STDOUT]) != 0 ||
-            prepare_stdio_handle(&options->stderr_spec, STD_ERROR_HANDLE, GENERIC_WRITE,
-                                 &res.stdio_handles[PROCESS_STDIO_INDEX_STDERR]) != 0)
-        {
-            release_process_start_resources(&res);
-            return CPLAT_ERR_UNKNOWN;
-        }
-
-        startup.StartupInfo.cb = sizeof(startup);
-        startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
-        startup.StartupInfo.hStdInput = res.stdio_handles[PROCESS_STDIO_INDEX_STDIN];
-        startup.StartupInfo.hStdOutput = res.stdio_handles[PROCESS_STDIO_INDEX_STDOUT];
-        startup.StartupInfo.hStdError = res.stdio_handles[PROCESS_STDIO_INDEX_STDERR];
-
-        attr_size = 0;
-        /*
-         * 必要サイズの取得のための呼び出しであり、仕様上 FALSE を返し、成否は後続の確保と初期化で検査するため、
-         * 戻り値は明示的に破棄する。
-         * see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-initializeprocthreadattributelist
-         */
-        (void)InitializeProcThreadAttributeList(NULL, 1, 0, &attr_size);
-        res.attribute_list = (LPPROC_THREAD_ATTRIBUTE_LIST)cplat_calloc(1, attr_size);
-        if (res.attribute_list == NULL)
-        {
-            release_process_start_resources(&res);
-            return CPLAT_ERR_UNKNOWN;
-        }
-
-        if (!InitializeProcThreadAttributeList(res.attribute_list, 1, 0, &attr_size))
-        {
-            release_process_start_resources(&res);
-            return CPLAT_ERR_UNKNOWN;
-        }
-
-        res.attribute_list_initialized = 1;
-        startup.lpAttributeList = res.attribute_list;
-
-        inherit_handles[PROCESS_STDIO_INDEX_STDIN] = res.stdio_handles[PROCESS_STDIO_INDEX_STDIN];
-        inherit_handles[PROCESS_STDIO_INDEX_STDOUT] = res.stdio_handles[PROCESS_STDIO_INDEX_STDOUT];
-        inherit_handles[PROCESS_STDIO_INDEX_STDERR] = res.stdio_handles[PROCESS_STDIO_INDEX_STDERR];
-
-        /*
-         * 指定した標準入出力ハンドルだけを子プロセスへ明示的に継承させるため、
-         * PROC_THREAD_ATTRIBUTE_HANDLE_LIST を設定する。
-         */
-        if (!UpdateProcThreadAttribute(startup.lpAttributeList, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, inherit_handles,
-                                       sizeof(inherit_handles), NULL, NULL))
-        {
-            release_process_start_resources(&res);
-            return CPLAT_ERR_UNKNOWN;
-        }
-
-        create_flags = EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT;
-
-        /*
-         * res.command_line と res.environment_block は組み立て済みのワイド文字列であり、
-         * CreateProcessU を経由すると UTF-8 への往復変換が増えるだけになる。
-         */
-        created = CreateProcessW(NULL, res.command_line, NULL, NULL, TRUE, create_flags, res.environment_block,
-                                 res.working_directory, &startup.StartupInfo, &process_info);
-
-        release_process_start_resources(&res);
-
-        if (!created)
-        {
-            return CPLAT_ERR_UNKNOWN;
-        }
-
-        /* スレッド ハンドルは使わず、閉じられなくても起動は成立しているため、戻り値は明示的に破棄する。 */
-        (void)CloseHandle(process_info.hThread);
-        new_process = (cplat_process *)cplat_calloc(1, sizeof(*new_process));
-        if (new_process == NULL)
-        {
-            (void)CloseHandle(process_info.hProcess); /* 確保の失敗を返す後始末のため、戻り値は明示的に破棄する */
-            return CPLAT_ERR_UNKNOWN;
-        }
-
-        new_process->process = process_info.hProcess;
-        *process_out = new_process;
-        return CPLAT_OK;
-    }
-#else
-    return CPLAT_ERR_UNSUPPORTED;
-#endif /* PLATFORM_ */
-}
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -1777,180 +2000,4 @@ static int process_wait_internal(cplat_process *process, const int timeout_ms)
 #else
     return CPLAT_ERR_UNSUPPORTED;
 #endif /* PLATFORM_ */
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_process_wait(cplat_process *process)
-{
-    return process_wait_internal(process, CPLAT_WAIT_FOREVER);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_process_timed_wait(cplat_process *process, const int timeout_ms)
-{
-    return process_wait_internal(process, timeout_ms);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_process_get_exit_code(cplat_process *process, int *exit_code_out)
-{
-    if (process == NULL || exit_code_out == NULL || process->exited == 0)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (process->exit_code_available == 0)
-    {
-        return CPLAT_ERR_NOT_FOUND;
-    }
-
-    *exit_code_out = process->exit_code;
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_process_terminate(cplat_process *process)
-{
-    if (process == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (process->exited != 0)
-    {
-        return CPLAT_OK;
-    }
-
-#if defined(PLATFORM_LINUX)
-    /*
-     * SIGKILL は捕捉も無視もできないため、呼び出し時点で生存している子プロセスを確実に終了させる。
-     * see: https://man7.org/linux/man-pages/man7/signal.7.html
-     */
-    if (kill(process->pid, SIGKILL) != 0)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    return CPLAT_OK;
-#elif defined(PLATFORM_WINDOWS)
-    if (!TerminateProcess(process->process, EXIT_FAILURE))
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    return CPLAT_OK;
-#else
-    return CPLAT_ERR_UNSUPPORTED;
-#endif /* PLATFORM_ */
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_process_dispose(cplat_process *process)
-{
-    if (process == NULL)
-    {
-        return;
-    }
-
-#if defined(PLATFORM_WINDOWS)
-    if (process->process != NULL)
-    {
-        (void)CloseHandle(process->process); /* 破棄の関数であり、失敗を伝える先がないため、戻り値は明示的に破棄する */
-    }
-#endif /* PLATFORM_WINDOWS */
-    cplat_free(process);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-cplat_process *cplat_internal_process_adopt_native(const intptr_t native_handle)
-{
-    cplat_process *new_process;
-
-    new_process = (cplat_process *)cplat_calloc(1, sizeof(*new_process));
-    if (new_process == NULL)
-    {
-        return NULL;
-    }
-
-#if defined(PLATFORM_LINUX)
-    new_process->pid = (pid_t)native_handle;
-#elif defined(PLATFORM_WINDOWS)
-    new_process->process = (HANDLE)native_handle;
-#else
-    cplat_free(new_process);
-    return NULL;
-#endif /* PLATFORM_ */
-    return new_process;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_process_run_sync(const cplat_process_options *options, int *exit_code_out)
-{
-    return cplat_process_timed_run_sync(options, CPLAT_WAIT_FOREVER, exit_code_out);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_process_timed_run_sync(const cplat_process_options *options, const int timeout_ms, int *exit_code_out)
-{
-    cplat_process *process;
-    int result;
-
-    if (exit_code_out == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    *exit_code_out = EXIT_FAILURE;
-
-    if (timeout_ms < 0)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    process = NULL;
-    result = cplat_process_start(options, &process);
-    if (result != CPLAT_OK)
-    {
-        return result;
-    }
-
-    result = cplat_process_timed_wait(process, timeout_ms);
-    if (result == CPLAT_ERR_TIMEOUT)
-    {
-        result = cplat_process_terminate(process);
-        if (result != CPLAT_OK)
-        {
-            cplat_process_dispose(process);
-            return result;
-        }
-
-        /*
-         * 強制終了後の回収を試みるが、Linux の割り込み不可の待ち (D 状態) や Windows で
-         * 実行中の I/O が完了・取り消しされるまでは終了しないことがあるため上限付きで待ち、
-         * 呼び出し元にはタイムアウトを返すため、この待ちの戻り値は明示的に破棄する。
-         * see: https://lwn.net/Articles/288056/
-         * see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess
-         */
-        (void)cplat_process_timed_wait(process, CPLAT_PROCESS_TERMINATE_WAIT_MS);
-        cplat_process_dispose(process);
-        return CPLAT_ERR_TIMEOUT;
-    }
-
-    if (result == CPLAT_OK)
-    {
-        result = cplat_process_get_exit_code(process, exit_code_out);
-    }
-
-    cplat_process_dispose(process);
-
-    return result;
 }

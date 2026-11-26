@@ -159,219 +159,86 @@ static cplat_once_flag s_trace_shutdown_once = {0};
 static int s_registry_lock_init_result = CPLAT_ERR_UNKNOWN;
 static int s_shutdown_registration_result = CPLAT_ERR_UNKNOWN;
 
+/** 設定の共有ロック取得を待つタイムアウト時間 [ms] です。 */
+#define LOCK_TIMEOUT_MS 100
+
+/** 終端 NUL を除く本文の最大バイト数 [byte] です。 */
+#define MAX_BODY ((size_t)CPLAT_TRACER_MESSAGE_MAX_BYTES - 1U)
+
+/** 時刻文字列と終端 NUL の作業配列 [byte] です。 */
+#define STDERR_TS_BUF_SIZE (CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1U)
+
+static const char s_hex_chars[] = "0123456789ABCDEF";
+/** 16 進ダンプ切り詰め時の省略記号です。 */
+#define HEX_DUMP_ELLIPSIS "..."
+
+/** 16 進ダンプ切り詰め時の省略記号の長さ [byte] です。 */
+#define ELLIPSIS_LEN (sizeof(HEX_DUMP_ELLIPSIS) - 1U)
+
+/** 16 進ダンプのラベルと本文を区切る文字列です。 */
+#define HEX_DUMP_LABEL_SEP ": "
+
+/** 16 進ダンプのラベルと本文の区切りの長さ [byte] です。 */
+#define HEX_DUMP_LABEL_SEP_LEN (sizeof(HEX_DUMP_LABEL_SEP) - 1U)
+
+/** 1 [byte] 当たりの文字数 (16 進 2 桁と空白) です。 */
+#define HEX_DUMP_CHARS_PER_BYTE 3U
+
+static void init_registry_lock(void);
+static void register_trace_shutdown_callback(void);
 static void trace_shutdown_callback(const cplat_shutdown_event *event, void *context);
-
-static void init_registry_lock(void)
-{
-    s_registry_lock_init_result = cplat_local_lock_create(&s_registry_lock);
-}
-
-static void register_trace_shutdown_callback(void)
-{
-    s_shutdown_registration_result = cplat_shutdown_register(trace_shutdown_callback, NULL);
-}
-
-static void trace_shutdown_callback(const cplat_shutdown_event *event, void *context)
-{
-    (void)context;
-    cplat_internal_trace_registry_dispose_all_on_shutdown(event);
-}
-
-/**
- *  @brief          レジストリの排他ロックを取得します。
- */
-static int registry_lock(void)
-{
-    cplat_call_once(&s_registry_lock_once, init_registry_lock);
-
-    if (s_registry_lock_init_result != CPLAT_OK)
-    {
-        return -1;
-    }
-
-    cplat_local_lock_lock(s_registry_lock);
-
-    return 0;
-}
-
-/**
- *  @brief          レジストリの排他ロックを解放します。
- */
-static void registry_unlock(void)
-{
-    cplat_local_lock_unlock(s_registry_lock);
-}
-
-/**
- *  @brief          レジストリを拡張する (ロック保持中) です。
- *  @return         成功時 0、メモリ確保失敗時 -1。
- */
-static int registry_expand_locked(void)
-{
-    cplat_tracer **new_items;
-    size_t new_capacity;
-
-    if (s_trace_registry.capacity == 0)
-    {
-        new_capacity = TRACE_REGISTRY_INITIAL_CAPACITY;
-    }
-    else
-    {
-        if (s_trace_registry.capacity > SIZE_MAX / TRACE_REGISTRY_GROWTH_FACTOR)
-        {
-            return -1;
-        }
-
-        new_capacity = s_trace_registry.capacity * TRACE_REGISTRY_GROWTH_FACTOR;
-    }
-
-    if (new_capacity > SIZE_MAX / sizeof(cplat_tracer *))
-    {
-        return -1;
-    }
-
-    new_items = (cplat_tracer **)cplat_realloc(s_trace_registry.items, new_capacity, sizeof(cplat_tracer *));
-    if (new_items == NULL)
-    {
-        return -1;
-    }
-
-    s_trace_registry.items = new_items;
-    s_trace_registry.capacity = new_capacity;
-
-    return 0;
-}
-
+static int registry_lock(void);
+static void registry_unlock(void);
+static int registry_expand_locked(void);
 #if defined(PLATFORM_WINDOWS)
-/*
- * Windows 向け共通バックエンド (ETW および EventLog) の参照カウントをインクリメントする。
- * 初回参照時に各バックエンドを初期化する。レジストリ ロック保持下で呼び出すこと。
- * 戻り値は成功時に 0、ETW プロバイダー生成失敗時に -1 である。
- */
-static int windows_backend_acquire_locked(void)
-{
-    if (s_trace_ref == 0)
-    {
-        s_etw_handle = cplat_etw_provider_create(s_trace_provider_ref);
-        if (s_etw_handle == NULL)
-        {
-            return -1;
-        }
-
-        /* EventLog は任意であり、生成失敗時はその出力だけを省略する。 */
-        s_eventlog_handle = cplat_eventlog_sink_create(CPLAT_TRACER_DEFAULT_PROVIDER_NAME);
-    }
-
-    s_trace_ref++;
-
-    return 0;
-}
-
-/*
- * Windows 向け共通バックエンド (ETW および EventLog) の参照カウントをデクリメントする。
- * 参照カウントが 0 になった場合は各バックエンドを解放する。レジストリ ロック保持下で呼び出すこと。
- */
-static void windows_backend_release_locked(void)
-{
-    if (s_trace_ref == 0)
-    {
-        return;
-    }
-
-    s_trace_ref--;
-
-    if (s_trace_ref == 0)
-    {
-        cplat_etw_provider_dispose(s_etw_handle);
-        s_etw_handle = NULL;
-        cplat_eventlog_sink_dispose(s_eventlog_handle);
-        s_eventlog_handle = NULL;
-    }
-}
+static int windows_backend_acquire_locked(void);
+static void windows_backend_release_locked(void);
 #endif /* PLATFORM_WINDOWS */
-
-/**
- *  @brief          ハンドルをレジストリに登録します。
- *  @param[in]      handle  登録するトレース プロバイダー ハンドル。
- *  @return         成功時 0、シャットダウン中またはメモリ不足時 -1。
- */
-static int registry_register_handle(cplat_tracer *handle)
-{
-    int rc = 0;
-
-    if (registry_lock() != 0)
-    {
-        return -1;
-    }
-
-    if (s_trace_registry.shutdown_started)
-    {
-        rc = -1;
-    }
-    else
-    {
-        if (s_trace_registry.count == s_trace_registry.capacity)
-        {
-            rc = registry_expand_locked();
-        }
-
-        if (rc == 0)
-        {
+static int registry_register_handle(cplat_tracer *handle);
+static int registry_unregister_handle(cplat_tracer *handle);
+static int handle_is_active(const cplat_tracer *handle);
+static int begin_dispose(cplat_tracer *handle);
+#if defined(PLATFORM_LINUX)
+static int to_syslog_level(const cplat_trace_level lv);
+#elif defined(PLATFORM_WINDOWS)
+static int to_etw_level(const cplat_trace_level lv);
+static int to_eventlog_level(const cplat_trace_level lv);
+#endif /* PLATFORM_ */
+static const char *get_process_basename(char *buf, const size_t buf_size);
+static void config_lock_exclusive(cplat_tracer *handle);
+static void config_unlock_exclusive(cplat_tracer *handle);
+static int config_lock_shared_timed(cplat_tracer *handle);
+static void config_unlock_shared(cplat_tracer *handle);
+static int tracer_enter_shared(cplat_tracer *handle);
+static int tracer_enter_shared_running(cplat_tracer *handle);
+static int tracer_enter_exclusive(cplat_tracer *handle);
+static int tracer_enter_exclusive_stopped(cplat_tracer *handle);
+static char *build_effective_name(const char *name, const int64_t identifier);
 #if defined(PLATFORM_WINDOWS)
-            rc = windows_backend_acquire_locked();
+static char *build_eventlog_instance_name(const char *name);
 #endif /* PLATFORM_WINDOWS */
-        }
-
-        if (rc == 0)
-        {
-            s_trace_registry.items[s_trace_registry.count++] = handle;
-        }
-    }
-
-    registry_unlock();
-
-    return rc;
-}
-
-/**
- *  @brief          ハンドルをレジストリから削除します。
- *  @param[in]      handle  削除するトレース プロバイダー ハンドル。
- */
-static int registry_unregister_handle(cplat_tracer *handle)
-{
-    size_t i;
-    int found = 0;
-
-    if (registry_lock() != 0)
-    {
-        return -1;
-    }
-
-    /* 登録済みハンドルを線形探索し、見つかった場合は末尾要素と入れ替えて削除する。 */
-    for (i = 0; i < s_trace_registry.count; i++)
-    {
-        if (s_trace_registry.items[i] == handle)
-        {
-            s_trace_registry.count--;
-            s_trace_registry.items[i] = s_trace_registry.items[s_trace_registry.count];
-            s_trace_registry.items[s_trace_registry.count] = NULL;
+static const char *tracer_effective_name(const cplat_tracer *handle);
 #if defined(PLATFORM_WINDOWS)
-            windows_backend_release_locked();
+static void strip_exe_suffix(char *name);
 #endif /* PLATFORM_WINDOWS */
-            found = 1;
-            break;
-        }
-    }
-
-    registry_unlock();
-
-    if (found)
-    {
-        return 0;
-    }
-
-    return -1;
-}
+static int resolve_file_name(const cplat_tracer *handle, char *file_name_out, const size_t file_name_size);
+static int build_default_file_path(const cplat_tracer *handle, char *path_out, const size_t path_size);
+static cplat_trace_file_sink *open_file_sink_with(const cplat_tracer *handle, const char *path, const size_t max_bytes,
+                                                  const int generations, const int flags);
+static int stop_handle_for_cleanup(cplat_tracer *handle);
+static void trace_handle_release_normal(cplat_tracer *handle);
+static void trace_handle_release_on_shutdown(cplat_tracer *handle);
+static size_t utf8_safe_truncate(const char *s, const size_t pos);
+static int has_output_target(const cplat_tracer *handle, const cplat_trace_level level);
+static int write_os_backends(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
+                             const char *msg);
+static int should_output(const cplat_trace_level msg_level, const cplat_trace_level threshold);
+static int is_valid_threshold(const cplat_trace_level level);
+static void write_stderr_entry(const cplat_trace_level level, const char *timestamp_text, const char *msg);
+static int write_dual(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
+                      const char *msg);
+static int hex_write_impl(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
+                          const void *data, const size_t size, const char *label);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -405,702 +272,6 @@ size_t cplat_internal_trace_registry_capacity(void)
     registry_unlock();
 
     return capacity;
-}
-
-/**
- *  @brief          ハンドルがアクティブか判定します。
- *  @param[in]      handle  判定対象のトレース プロバイダー ハンドル。
- *  @return         アクティブの場合 1、それ以外 0。
- */
-static int handle_is_active(const cplat_tracer *handle)
-{
-    return handle != NULL && handle->lifecycle_state == TRACE_HANDLE_ACTIVE && !s_trace_registry.shutdown_started;
-}
-
-/**
- *  @brief          解放処理を開始します。
- *  @param[in]      handle  解放対象のトレース プロバイダー ハンドル。
- *  @return         成功時 0、ハンドルが NULL またはアクティブでない場合 -1。
- */
-static int begin_dispose(cplat_tracer *handle)
-{
-    if (handle == NULL || handle->lifecycle_state != TRACE_HANDLE_ACTIVE)
-    {
-        return -1;
-    }
-
-    handle->lifecycle_state = TRACE_HANDLE_DISPOSING;
-
-    return 0;
-}
-
-#if defined(PLATFORM_LINUX)
-
-/**
- *  @brief          トレース レベルを syslog レベルに変換します。
- *  @param[in]      lv  変換元のトレース レベル。
- *  @return         対応する syslog レベル値。
- */
-static int to_syslog_level(const cplat_trace_level lv)
-{
-    switch (lv)
-    {
-    case CPLAT_TRACE_LEVEL_FORCE_CRITICAL:
-    case CPLAT_TRACE_LEVEL_CRITICAL:
-        return LOG_CRIT;
-    case CPLAT_TRACE_LEVEL_FORCE_ERROR:
-    case CPLAT_TRACE_LEVEL_ERROR:
-        return LOG_ERR;
-    case CPLAT_TRACE_LEVEL_FORCE_WARNING:
-    case CPLAT_TRACE_LEVEL_WARNING:
-        return LOG_WARNING;
-    case CPLAT_TRACE_LEVEL_INFO:
-        return LOG_INFO;
-
-    /* 強制出力は syslog 側の既定の設定で捨てられないよう、最下位から 1 段引き上げる。 */
-    case CPLAT_TRACE_LEVEL_FORCE_INFO:
-    case CPLAT_TRACE_LEVEL_FORCE_VERBOSE:
-    case CPLAT_TRACE_LEVEL_FORCE_DEBUG:
-    case CPLAT_TRACE_LEVEL_FORCE_NONE:
-        return LOG_INFO;
-    case CPLAT_TRACE_LEVEL_VERBOSE:
-        return LOG_DEBUG;
-    case CPLAT_TRACE_LEVEL_DEBUG:
-        return LOG_DEBUG;
-    case CPLAT_TRACE_LEVEL_NONE:
-    default:
-        return LOG_DEBUG;
-    }
-}
-
-#elif defined(PLATFORM_WINDOWS)
-
-/**
- *  @brief          トレース レベルを ETW レベルに変換します。
- *  @param[in]      lv  変換元のトレース レベル。
- *  @return         対応する ETW レベル値。
- */
-static int to_etw_level(const cplat_trace_level lv)
-{
-    switch (lv)
-    {
-    case CPLAT_TRACE_LEVEL_FORCE_CRITICAL:
-    case CPLAT_TRACE_LEVEL_CRITICAL:
-        return TRACE_LEVEL_CRITICAL;
-    case CPLAT_TRACE_LEVEL_FORCE_ERROR:
-    case CPLAT_TRACE_LEVEL_ERROR:
-        return TRACE_LEVEL_ERROR;
-    case CPLAT_TRACE_LEVEL_FORCE_WARNING:
-    case CPLAT_TRACE_LEVEL_WARNING:
-        return TRACE_LEVEL_WARNING;
-    case CPLAT_TRACE_LEVEL_INFO:
-        return TRACE_LEVEL_INFORMATION;
-
-    /* 強制出力は ETW セッション側の既定の設定で捨てられないよう、最下位から 1 段引き上げる。 */
-    case CPLAT_TRACE_LEVEL_FORCE_INFO:
-    case CPLAT_TRACE_LEVEL_FORCE_VERBOSE:
-    case CPLAT_TRACE_LEVEL_FORCE_DEBUG:
-    case CPLAT_TRACE_LEVEL_FORCE_NONE:
-        return TRACE_LEVEL_INFORMATION;
-    case CPLAT_TRACE_LEVEL_VERBOSE:
-        return TRACE_LEVEL_VERBOSE;
-    case CPLAT_TRACE_LEVEL_DEBUG:
-        return TRACE_LEVEL_VERBOSE;
-    default:
-        return TRACE_LEVEL_VERBOSE;
-    }
-}
-
-/**
- *  @brief          トレース レベルを EventLog のレベルへ変換します。
- *  @param[in]      lv  変換元のトレース レベル。
- *  @return         対応する EventLog のレベル値 (0 から 5)。定義されていない値はそのまま返します。
- */
-static int to_eventlog_level(const cplat_trace_level lv)
-{
-    switch (lv)
-    {
-    case CPLAT_TRACE_LEVEL_FORCE_CRITICAL:
-        return (int)CPLAT_TRACE_LEVEL_CRITICAL;
-    case CPLAT_TRACE_LEVEL_FORCE_ERROR:
-        return (int)CPLAT_TRACE_LEVEL_ERROR;
-    case CPLAT_TRACE_LEVEL_FORCE_WARNING:
-        return (int)CPLAT_TRACE_LEVEL_WARNING;
-    /* 強制出力の VERBOSE、DEBUG、NONE は EventLog 側の運用方針に合わせ、常時記録の INFO へ引き上げる。 */
-    case CPLAT_TRACE_LEVEL_FORCE_INFO:
-    case CPLAT_TRACE_LEVEL_FORCE_VERBOSE:
-    case CPLAT_TRACE_LEVEL_FORCE_DEBUG:
-    case CPLAT_TRACE_LEVEL_FORCE_NONE:
-        return (int)CPLAT_TRACE_LEVEL_INFO;
-    case CPLAT_TRACE_LEVEL_CRITICAL:
-    case CPLAT_TRACE_LEVEL_ERROR:
-    case CPLAT_TRACE_LEVEL_WARNING:
-    case CPLAT_TRACE_LEVEL_INFO:
-    case CPLAT_TRACE_LEVEL_VERBOSE:
-    case CPLAT_TRACE_LEVEL_DEBUG:
-    case CPLAT_TRACE_LEVEL_NONE:
-    default:
-        return (int)lv;
-    }
-}
-
-#endif /* PLATFORM_ */
-
-/**
- *  @brief          プロセスの実行ファイル パスからベース名を取得します。
- *  @param[in,out]  buf       パス文字列を格納するバッファー。
- *  @param[in]      buf_size  バッファーのバイト数。
- *  @return         ベース名へのポインター。失敗時は FALLBACK_NAME。
- *
- *  cplat_process_get_executable_path() で取得したパスは UTF-8 で
- *  セパレーターが '/' に統一されるため、プラットフォーム非依存で処理できます。
- */
-static const char *get_process_basename(char *buf, const size_t buf_size)
-{
-    if (cplat_process_get_executable_path(buf, buf_size) != CPLAT_OK)
-    {
-        return FALLBACK_NAME;
-    }
-
-    return cplat_path_basename(buf);
-}
-
-/**
- *  @brief          設定の排他ロック (書き込みロック) を取得します。
- *  @param[in]      handle  ロック対象のトレース プロバイダー ハンドル。
- */
-static void config_lock_exclusive(cplat_tracer *handle)
-{
-    if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED)
-    {
-        return;
-    }
-
-    cplat_local_rwlock_lock_exclusive(handle->config_rwlock);
-}
-
-/**
- *  @brief          設定の排他ロック (書き込みロック) を解放します。
- *  @param[in]      handle  ロック解放対象のトレース プロバイダー ハンドル。
- */
-static void config_unlock_exclusive(cplat_tracer *handle)
-{
-    if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
-    {
-        cplat_local_rwlock_unlock_exclusive(handle->config_rwlock);
-    }
-}
-
-/** 設定の共有ロック取得を待つタイムアウト時間 [ms] です。 */
-#define LOCK_TIMEOUT_MS 100
-
-/**
- *  @brief          タイムアウト付きで設定の共有ロック (読み取りロック) を取得します。
- *  @param[in]      handle  ロック対象のトレース プロバイダー ハンドル。
- *  @return         成功時 0、タイムアウト時 -1。
- */
-static int config_lock_shared_timed(cplat_tracer *handle)
-{
-    if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED)
-    {
-        return 0;
-    }
-
-    if (cplat_local_rwlock_timed_lock_shared(handle->config_rwlock, LOCK_TIMEOUT_MS) == CPLAT_OK)
-    {
-        return 0;
-    }
-    else
-    {
-        return -1;
-    }
-}
-
-/**
- *  @brief          設定の共有ロック (読み取りロック) を解放します。
- *  @param[in]      handle  ロック解放対象のトレース プロバイダー ハンドル。
- */
-static void config_unlock_shared(cplat_tracer *handle)
-{
-    if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
-    {
-        cplat_local_rwlock_unlock_shared(handle->config_rwlock);
-    }
-}
-
-/**
- *  @brief          アクティブ検証と設定の共有ロック取得をまとめて行います。
- *  @param[in]      handle  対象のトレース プロバイダー ハンドル。
- *  @return         成功時 0、失敗時 -1。
- *
- *  ロック取得前後の 2 回、ハンドルがアクティブであることを検証します
- *  (ロック待機中に dispose が進行した場合を検出するため)。\n
- *  成功時は共有ロックを保持したまま戻るため、呼び出し元は
- *  config_unlock_shared() で解放すること。失敗時はロックを保持しません。
- */
-static int tracer_enter_shared(cplat_tracer *handle)
-{
-    if (!handle_is_active(handle))
-    {
-        return -1;
-    }
-
-    if (config_lock_shared_timed(handle) != 0)
-    {
-        return -1;
-    }
-
-    if (handle->lifecycle_state != TRACE_HANDLE_ACTIVE)
-    {
-        config_unlock_shared(handle);
-        return -1;
-    }
-
-    return 0;
-}
-
-/**
- *  @brief          started 状態を要求する共有ロック取得を行います。
- *  @param[in]      handle  対象のトレース プロバイダー ハンドル。
- *  @return         成功時 0、失敗時 (非アクティブまたは stopped) -1。
- *
- *  tracer_enter_shared() の検証に加えて running であることを要求します。
- *  成功時は共有ロックを保持したまま戻ります。失敗時はロックを保持しません。
- */
-static int tracer_enter_shared_running(cplat_tracer *handle)
-{
-    if (tracer_enter_shared(handle) != 0)
-    {
-        return -1;
-    }
-
-    if (!handle->running)
-    {
-        config_unlock_shared(handle);
-        return -1;
-    }
-
-    return 0;
-}
-
-/**
- *  @brief          アクティブ検証と設定の排他ロック取得をまとめて行います。
- *  @param[in]      handle  対象のトレース プロバイダー ハンドル。
- *  @return         成功時 0、失敗時 -1。
- *
- *  ロック取得前後の 2 回、ハンドルがアクティブであることを検証します
- *  (ロック待機中に dispose が進行した場合を検出するため)。\n
- *  成功時は排他ロックを保持したまま戻るため、呼び出し元は
- *  config_unlock_exclusive() で解放すること。失敗時はロックを保持しません。
- */
-static int tracer_enter_exclusive(cplat_tracer *handle)
-{
-    if (!handle_is_active(handle))
-    {
-        return -1;
-    }
-
-    config_lock_exclusive(handle);
-
-    if (handle->lifecycle_state != TRACE_HANDLE_ACTIVE)
-    {
-        config_unlock_exclusive(handle);
-        return -1;
-    }
-
-    return 0;
-}
-
-/**
- *  @brief          stopped 状態を要求する排他ロック取得を行います。
- *  @param[in]      handle  対象のトレース プロバイダー ハンドル。
- *  @return         成功時 0、失敗時 (非アクティブまたは started) -1。
- *
- *  tracer_enter_exclusive() の検証に加えて stopped であることを要求します
- *  (started 中の変更を許可しない設定 API 向け)。\n
- *  成功時は排他ロックを保持したまま戻ります。失敗時はロックを保持しません。
- */
-static int tracer_enter_exclusive_stopped(cplat_tracer *handle)
-{
-    if (tracer_enter_exclusive(handle) != 0)
-    {
-        return -1;
-    }
-
-    if (handle->running)
-    {
-        config_unlock_exclusive(handle);
-        return -1;
-    }
-
-    return 0;
-}
-
-/**
- *  @brief          識別子を付加した有効名の文字列を構築します。
- *  @param[in]      name        サービス名 (NULL の場合はプロセス ベース名を使用)。
- *  @param[in]      identifier  識別子 (0 の場合はサフィックスなし)。
- *  @return         ヒープ確保された有効名文字列。呼び出し元が free すること。
- *                  失敗時は NULL。
- */
-static char *build_effective_name(const char *name, const int64_t identifier)
-{
-    char path_buf[PLATFORM_PATH_UTF8_MAX];
-    const char *base;
-    char *result;
-
-    if (name != NULL)
-    {
-        base = name;
-    }
-    else
-    {
-        base = get_process_basename(path_buf, sizeof(path_buf));
-    }
-
-    if (identifier == 0)
-    {
-        return cplat_strdup(base);
-    }
-
-    {
-        int id_len;
-        size_t base_len;
-        size_t total;
-
-        id_len = snprintf(NULL, 0, "%" PRId64, identifier); /* 置換対象外: 必要長の照会 */
-        base_len = strlen(base);
-        total = base_len + 1 + (size_t)id_len + 1;
-
-        result = (char *)cplat_malloc(total);
-        if (result == NULL)
-        {
-            return NULL;
-        }
-
-        if (cplat_snprintf(result, total, "%s_%" PRId64, base, identifier) != CPLAT_OK)
-        {
-            cplat_free(result);
-            return NULL;
-        }
-
-        return result;
-    }
-}
-
-#if defined(PLATFORM_WINDOWS)
-/**
- *  @brief          EventLog に渡す元のインスタンス名を構築します。
- *  @param[in]      name  インスタンス名。NULL の場合はプロセス ベース名を使用。
- *  @return         ヒープ確保されたインスタンス名。呼び出し元が free すること。
- */
-static char *build_eventlog_instance_name(const char *name)
-{
-    char path_buf[PLATFORM_PATH_UTF8_MAX];
-    const char *base;
-
-    if (name != NULL)
-    {
-        base = name;
-    }
-    else
-    {
-        base = get_process_basename(path_buf, sizeof(path_buf));
-    }
-
-    return cplat_strdup(base);
-}
-#endif /* PLATFORM_WINDOWS */
-
-/**
- *  @brief          ハンドルが保持する有効名を取得します。
- *  @param[in]      handle  対象のトレース プロバイダー ハンドル。
- *  @return         有効名文字列へのポインター。
- */
-static const char *tracer_effective_name(const cplat_tracer *handle)
-{
-#if defined(PLATFORM_LINUX)
-    return handle->effective_name;
-#elif defined(PLATFORM_WINDOWS)
-    return handle->service_name;
-#endif /* PLATFORM_ */
-}
-
-#if defined(PLATFORM_WINDOWS)
-/**
- *  @brief          名前の末尾にある ".exe" を除去する (インプレース) です。
- *  @param[in,out]  name  対象の名前文字列。
- *
- *  Windows ではプロセス名 (実行ファイルのベース名) が ".exe" で終わるため、
- *  トレース ファイル名からは除去する。大文字小文字は区別しません。
- */
-static void strip_exe_suffix(char *name)
-{
-    size_t name_len = strlen(name);
-
-    if (name_len >= 4 && cplat_strncasecmp(&name[name_len - 4], ".exe", 4) == 0)
-    {
-        name[name_len - 4] = '\0';
-    }
-}
-#endif /* PLATFORM_WINDOWS */
-
-/**
- *  @brief          トレース ファイル名 (ファイル識別込み) を解決します。
- *  @param[in]      handle          対象のトレース プロバイダー ハンドル。
- *  @param[out]     file_name_out   解決した名前を格納するバッファー。
- *  @param[in]      file_name_size  バッファーのバイト数。
- *  @return         成功時 0、失敗時 (バッファー不足) -1。
- *
- *  ファイル名が未設定 (NULL) の場合はプロセス名 (実行ファイルのベース名) を使用します。
- *  Windows ではプロセス名末尾の ".exe" を除去する (明示設定された名前には適用しない)。\n
- *  ファイル識別が 0 以外の場合は "_{ファイル識別}" を付加します。
- */
-static int resolve_file_name(const cplat_tracer *handle, char *file_name_out, const size_t file_name_size)
-{
-    char name_buf[TRACER_PROCESS_NAME_BUF_SIZE];
-    int ret;
-
-    if (handle->file_name != NULL)
-    {
-        ret = cplat_snprintf(name_buf, sizeof(name_buf), "%s", handle->file_name);
-    }
-    else
-    {
-        char path_buf[PLATFORM_PATH_UTF8_MAX];
-
-        ret = cplat_snprintf(name_buf, sizeof(name_buf), "%s", get_process_basename(path_buf, sizeof(path_buf)));
-#if defined(PLATFORM_WINDOWS)
-        if (ret == CPLAT_OK)
-        {
-            strip_exe_suffix(name_buf);
-        }
-#endif /* PLATFORM_WINDOWS */
-    }
-
-    if (ret != CPLAT_OK)
-    {
-        return CPLAT_ERR_BUFFER_TOO_SMALL;
-    }
-
-    if (handle->file_identifier != 0)
-    {
-        ret = cplat_snprintf(file_name_out, file_name_size, "%s_%" PRId64, name_buf, handle->file_identifier);
-    }
-    else
-    {
-        ret = cplat_snprintf(file_name_out, file_name_size, "%s", name_buf);
-    }
-
-    if (ret != CPLAT_OK)
-    {
-        return CPLAT_ERR_BUFFER_TOO_SMALL;
-    }
-
-    return CPLAT_OK;
-}
-
-/**
- *  @brief          ファイル トレースの既定パスを構築します。
- *  @param[in]      handle     対象のトレース プロバイダー ハンドル。
- *  @param[out]     path_out   構築したパスを格納するバッファー。
- *  @param[in]      path_size  バッファーのバイト数。
- *  @return         成功時 0、失敗時 -1。
- *
- *  実行ファイルのディレクトリ配下の log/{ファイル名}.log を構築する
- *  (ファイル名は resolve_file_name で解決する)。\n
- *  実行ファイル パスの取得に失敗した場合はカレント ディレクトリ相対の
- *  log/{ファイル名}.log にフォールバックします。
- */
-static int build_default_file_path(const cplat_tracer *handle, char *path_out, const size_t path_size)
-{
-    char exe_path[PLATFORM_PATH_UTF8_MAX];
-    char exe_dir[PLATFORM_PATH_UTF8_MAX];
-    char name_buf[TRACER_FILE_NAME_BUF_SIZE];
-    char log_file_name[TRACER_LOG_FILE_NAME_BUF_SIZE];
-
-    if (resolve_file_name(handle, name_buf, sizeof(name_buf)) != 0)
-    {
-        return -1;
-    }
-
-    if (cplat_snprintf(log_file_name, sizeof(log_file_name), "%s.log", name_buf) != CPLAT_OK)
-    {
-        return -1;
-    }
-
-    if (cplat_process_get_executable_path(exe_path, sizeof(exe_path)) == CPLAT_OK)
-    {
-        if (cplat_path_dirname(exe_dir, sizeof(exe_dir), NULL, exe_path) == CPLAT_OK)
-        {
-            if (strcmp(exe_dir, ".") != 0)
-            {
-                return cplat_path_join(path_out, path_size, NULL, exe_dir, "log", log_file_name);
-            }
-        }
-    }
-
-    return cplat_path_join(path_out, path_size, NULL, "log", log_file_name);
-}
-
-/**
- *  @brief          指定パラメーターでファイル トレース sink を開いて返します。
- *  @param[in]      handle       既定パス解決に用いるハンドル (file_name 等を参照)。
- *  @param[in]      path         出力ファイル パス。NULL の場合は既定パスを解決します。
- *  @param[in]      max_bytes    1 ファイルあたりの最大バイト数。
- *  @param[in]      generations  保持する旧世代数。
- *  @param[in]      flags        動作フラグ。
- *  @return         生成した sink。失敗時 NULL。
- *
- *  呼び出し側で config の排他ロックを保持していることを前提とします。
- *  cplat_tracer_start と cplat_tracer_set_file_level の双方から使用します。
- */
-static cplat_trace_file_sink *open_file_sink_with(const cplat_tracer *handle, const char *path, const size_t max_bytes,
-                                                  const int generations, const int flags)
-{
-    const char *eff_path = path;
-    char default_path[PLATFORM_PATH_UTF8_MAX];
-
-    if (eff_path == NULL)
-    {
-        if (build_default_file_path(handle, default_path, sizeof(default_path)) == 0)
-        {
-            eff_path = default_path;
-        }
-    }
-
-    if (eff_path == NULL)
-    {
-        return NULL;
-    }
-
-    return cplat_trace_file_sink_create(eff_path, max_bytes, generations, flags);
-}
-
-/**
- *  @brief          クリーンアップのためハンドルのトレース出力を停止します。
- *  @param[in]      handle  停止対象のトレース プロバイダー ハンドル。
- *  @return         常に 0。
- *
- *  ファイル トレースが開いていた場合はトレース ファイルを閉じます。
- *  ファイル トレースの設定は保持され、次回の start で改めてファイルを開きます。
- */
-static int stop_handle_for_cleanup(cplat_tracer *handle)
-{
-    config_lock_exclusive(handle);
-
-    if (!handle->running)
-    {
-        config_unlock_exclusive(handle);
-        return CPLAT_OK;
-    }
-
-    handle->running = 0;
-
-    if (handle->file_handle != NULL)
-    {
-        cplat_trace_file_sink_dispose(handle->file_handle);
-        handle->file_handle = NULL;
-    }
-
-    config_unlock_exclusive(handle);
-
-    return CPLAT_OK;
-}
-
-/**
- *  @brief          通常のハンドル解放処理を行います。
- *  @param[in]      handle  解放対象のトレース プロバイダー ハンドル。
- */
-static void trace_handle_release_normal(cplat_tracer *handle)
-{
-    cplat_tracer_hook_entry *hook;
-    cplat_tracer_hook_entry *next;
-
-    if (handle->file_handle != NULL)
-    {
-        cplat_trace_file_sink_dispose(handle->file_handle);
-        handle->file_handle = NULL;
-    }
-
-    for (hook = handle->hook_head; hook != NULL; hook = next)
-    {
-        next = hook->next;
-        cplat_free(hook);
-    }
-
-    handle->hook_head = NULL;
-
-    cplat_free(handle->file_path);
-    handle->file_path = NULL;
-    cplat_free(handle->file_name);
-    handle->file_name = NULL;
-
-#if defined(PLATFORM_LINUX)
-    cplat_syslog_sink_dispose(handle->syslog_handle);
-    cplat_free(handle->effective_name);
-
-    if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
-    {
-        cplat_local_rwlock_dispose(handle->config_rwlock);
-    }
-#elif defined(PLATFORM_WINDOWS)
-    cplat_free(handle->eventlog_instance_name);
-    cplat_free(handle->service_name);
-
-    if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
-    {
-        cplat_local_rwlock_dispose(handle->config_rwlock);
-    }
-#endif /* PLATFORM_ */
-
-    handle->lifecycle_state = TRACE_HANDLE_DISPOSED;
-    cplat_free(handle);
-}
-
-/**
- *  @brief          アンロード時のハンドル解放処理を行います。
- *  @param[in]      handle  解放対象のトレース プロバイダー ハンドル。
- */
-static void trace_handle_release_on_shutdown(cplat_tracer *handle)
-{
-    cplat_tracer_hook_entry *hook;
-    cplat_tracer_hook_entry *next;
-
-    if (handle->file_handle != NULL)
-    {
-        cplat_internal_trace_file_sink_dispose_on_shutdown(handle->file_handle);
-        handle->file_handle = NULL;
-    }
-
-    cplat_free(handle->file_path);
-    handle->file_path = NULL;
-    cplat_free(handle->file_name);
-    handle->file_name = NULL;
-
-    for (hook = handle->hook_head; hook != NULL; hook = next)
-    {
-        next = hook->next;
-        cplat_free(hook);
-    }
-
-    handle->hook_head = NULL;
-
-#if defined(PLATFORM_LINUX)
-    cplat_internal_syslog_sink_dispose_on_shutdown(handle->syslog_handle);
-    cplat_free(handle->effective_name);
-#elif defined(PLATFORM_WINDOWS)
-    cplat_free(handle->eventlog_instance_name);
-    cplat_free(handle->service_name);
-#endif /* PLATFORM_ */
-
-    if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
-    {
-        cplat_local_rwlock_dispose(handle->config_rwlock);
-    }
-
-    handle->lifecycle_state = TRACE_HANDLE_DISPOSED;
-    cplat_free(handle);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -1337,219 +508,6 @@ cplat_tracer_state cplat_tracer_get_state(cplat_tracer *handle)
     return state;
 }
 
-/** 終端 NUL を除く本文の最大バイト数 [byte] です。 */
-#define MAX_BODY ((size_t)CPLAT_TRACER_MESSAGE_MAX_BYTES - 1U)
-
-/**
- *  @brief          UTF-8 文字境界を考慮して文字列を切り詰める位置を返します。
- *  @param[in]      s    切り詰め対象の UTF-8 文字列。
- *  @param[in]      pos  切り詰め開始位置 [byte]。
- *  @return         文字境界に合わせた切り詰め位置。
- */
-static size_t utf8_safe_truncate(const char *s, const size_t pos)
-{
-    size_t result = pos;
-
-    while (result > 0 && ((unsigned char)s[result] & CPLAT_UTF8_CONT_MASK) == CPLAT_UTF8_CONT_VALUE)
-    {
-        result--;
-    }
-
-    return result;
-}
-
-static int should_output(const cplat_trace_level msg_level, const cplat_trace_level threshold);
-
-/*
- * 指定されたトレース レベルにおいて、出力対象となる出力先やフックが存在するかを判定する。
- * 出力先が存在する場合は 1、すべての出力先で出力不要な場合は 0 を返す。
- */
-static int has_output_target(const cplat_tracer *handle, const cplat_trace_level level)
-{
-    if (handle->hook_head != NULL || should_output(level, handle->stderr_level))
-    {
-        return 1;
-    }
-
-    if (handle->file_handle != NULL && should_output(level, handle->file_level))
-    {
-        return 1;
-    }
-#if defined(PLATFORM_LINUX)
-    return should_output(level, handle->os_level);
-#elif defined(PLATFORM_WINDOWS)
-    return should_output(level, handle->etw_level) || should_output(level, handle->os_level);
-#endif /* PLATFORM_ */
-}
-
-/**
- *  @brief          OS ネイティブのバックエンドにメッセージを書き込みます。
- *  @param[in]      handle      書き込み先のトレース プロバイダー ハンドル。
- *  @param[in]      level       トレース レベル。
- *  @param[in]      timestamp   書き込みに使用する実時刻。NULL の場合は内部で現在時刻を取得。
- *  @param[in]      msg         書き込むメッセージ文字列。
- *  @return         成功時 0、失敗時 -1。
- *
- *  Linux では os_level で syslog をゲートします。\n
- *  Windows では ETW を etw_level で、EventLog を os_level で独立してゲートします。
- *  各レベル判定を内部で行うため、本関数は常に呼び出せます。
- */
-static int write_os_backends(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
-                             const char *msg)
-{
-#if defined(PLATFORM_LINUX)
-    if (should_output(level, handle->os_level))
-    {
-        return cplat_syslog_sink_write(handle->syslog_handle, to_syslog_level(level), timestamp, msg);
-    }
-
-    return CPLAT_OK;
-#elif defined(PLATFORM_WINDOWS)
-    int etw_result = 0;
-    int eventlog_result = 0;
-
-    (void)timestamp;
-
-    if (should_output(level, handle->etw_level))
-    {
-        etw_result = cplat_etw_provider_write(s_etw_handle, to_etw_level(level), handle->service_name, msg);
-    }
-
-    if (should_output(level, handle->os_level))
-    {
-        eventlog_result =
-            cplat_eventlog_sink_write(s_eventlog_handle, to_eventlog_level(level), handle->file_identifier,
-                                      handle->eventlog_instance_name, handle->identifier, msg);
-    }
-
-    if (etw_result != 0 || eventlog_result != 0)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    return CPLAT_OK;
-#endif /* PLATFORM_ */
-}
-
-/**
- *  @brief          メッセージを出力すべきか判定します。
- *  @param[in]      msg_level   出力するメッセージのトレース レベル。
- *  @param[in]      threshold   出力閾値となるトレース レベル。
- *  @return         出力すべき場合 1、出力不要の場合 0。
- */
-static int should_output(const cplat_trace_level msg_level, const cplat_trace_level threshold)
-{
-    if (threshold == CPLAT_TRACE_LEVEL_NONE)
-    {
-        return 0;
-    }
-
-    return (int)msg_level <= (int)threshold;
-}
-
-/**
- *  @brief          スレッショルド レベルとして指定できる値かどうかを判定します。
- *  @param[in]      level 判定するトレース レベル。
- *  @return         指定できる場合は 0 以外、指定できない場合は 0 を返します。
- *
- *  強制出力のレベルは、どの通常のスレッショルド レベルよりも小さい値です。\n
- *  スレッショルド レベルとして指定すると、強制出力の要求だけが通る状態になるため受け付けません。
- */
-static int is_valid_threshold(const cplat_trace_level level)
-{
-    return ((int)level >= (int)CPLAT_TRACE_LEVEL_CRITICAL) && ((int)level <= (int)CPLAT_TRACE_LEVEL_NONE);
-}
-
-/** 時刻文字列と終端 NUL の作業配列 [byte] です。 */
-#define STDERR_TS_BUF_SIZE (CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1U)
-
-/**
- *  @brief          タイムスタンプとトレース レベルを付加して stderr にエントリを書き込みます。
- *  @param[in]      level  トレース レベル。
- *  @param[in]      timestamp_text  事前整形済みタイムスタンプ文字列。
- *  @param[in]      msg    書き込むメッセージ文字列。
- */
-static void write_stderr_entry(const cplat_trace_level level, const char *timestamp_text, const char *msg)
-{
-    /* 標準エラー出力はトレースの出力先の 1 つであり、ほかに失敗を伝える先がないため、戻り値は明示的に破棄する。 */
-    (void)cplat_fprintf(stderr, "%s %c %s\n", timestamp_text, cplat_internal_trace_level_char(level), msg);
-}
-
-/**
- *  @brief          OS プロバイダ・ファイル・stderr の各出力先にメッセージを書き込みます。
- *  @param[in]      handle  書き込み先のトレース プロバイダー ハンドル。
- *  @param[in]      level   トレース レベル。
- *  @param[in]      timestamp  書き込みに使用する実時刻。NULL の場合は内部で現在時刻を取得。
- *  @param[in]      msg        書き込むメッセージ文字列。
- *  @return         全出力先で成功時 0、いずれかで失敗時 -1。
- */
-static int write_dual(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
-                      const char *msg)
-{
-    int os_result = 0;
-    int file_result = 0;
-    int timestamp_fallback_used = 0;
-    int needs_text_timestamp;
-    cplat_timespec resolved;
-    const cplat_timespec *effective_timestamp = NULL;
-    char ts[STDERR_TS_BUF_SIZE];
-
-    needs_text_timestamp = (handle->file_handle != NULL && should_output(level, handle->file_level)) ||
-                           should_output(level, handle->stderr_level) ||
-#if defined(PLATFORM_LINUX)
-                           should_output(level, handle->os_level) ||
-#endif
-                           handle->hook_head != NULL || timestamp != NULL;
-
-    /* 文字列形式のタイムスタンプを必要とする出力先がある場合のみ、タイムスタンプを解決して整形する。 */
-    if (needs_text_timestamp)
-    {
-        if (cplat_internal_trace_resolve_timestamp(timestamp, &resolved, &timestamp_fallback_used) != CPLAT_OK)
-        {
-            return CPLAT_ERR_UNKNOWN;
-        }
-
-        effective_timestamp = &resolved;
-
-        if (cplat_internal_trace_format_local_timestamp(ts, sizeof(ts), effective_timestamp) != CPLAT_OK)
-        {
-            return CPLAT_ERR_UNKNOWN;
-        }
-    }
-
-    /* 各出力先 (OS バックエンド、ファイル、stderr、フック) へ順に出力する。 */
-    os_result = write_os_backends(handle, level, effective_timestamp, msg);
-
-    if (handle->file_handle != NULL && should_output(level, handle->file_level))
-    {
-        file_result =
-            cplat_internal_trace_file_sink_write_text(handle->file_handle, (int)level, effective_timestamp, ts, msg);
-    }
-
-    if (should_output(level, handle->stderr_level))
-    {
-        write_stderr_entry(level, ts, msg);
-    }
-
-    if (handle->hook_head != NULL)
-    {
-        cplat_tracer_hook_entry *head = handle->hook_head;
-        if (head->fn != NULL)
-        {
-            head->fn(head->next, handle, level, effective_timestamp, msg, head->context);
-        }
-    }
-
-    if (timestamp_fallback_used || os_result != 0 || file_result != 0)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-    else
-    {
-        return CPLAT_OK;
-    }
-}
-
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_tracer_write_at(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
@@ -1683,131 +641,6 @@ int cplat_tracer_write_with_source(cplat_tracer *handle, const cplat_trace_level
     }
 
     return cplat_tracer_writef_at(handle, level, timestamp, "[%s:%d]", file, line);
-}
-
-static const char s_hex_chars[] = "0123456789ABCDEF";
-/** 16 進ダンプ切り詰め時の省略記号です。 */
-#define HEX_DUMP_ELLIPSIS "..."
-
-/** 16 進ダンプ切り詰め時の省略記号の長さ [byte] です。 */
-#define ELLIPSIS_LEN (sizeof(HEX_DUMP_ELLIPSIS) - 1U)
-
-/** 16 進ダンプのラベルと本文を区切る文字列です。 */
-#define HEX_DUMP_LABEL_SEP ": "
-
-/** 16 進ダンプのラベルと本文の区切りの長さ [byte] です。 */
-#define HEX_DUMP_LABEL_SEP_LEN (sizeof(HEX_DUMP_LABEL_SEP) - 1U)
-
-/** 1 [byte] 当たりの文字数 (16 進 2 桁と空白) です。 */
-#define HEX_DUMP_CHARS_PER_BYTE 3U
-
-/**
- *  @brief          16 進ダンプ メッセージを構築して出力先に書き込む内部実装です。
- *  @param[in]      handle      書き込み先のトレース プロバイダー ハンドル。
- *  @param[in]      level       トレース レベル。
- *  @param[in]      timestamp   書き込みに使用する実時刻。NULL の場合は内部で現在時刻を取得。
- *  @param[in]      data        ダンプ対象のバイト列。
- *  @param[in]      size        バイト列のサイズ。
- *  @param[in]      label       メッセージに付加するラベル (NULL 可)。
- *  @return         成功時 0、失敗時 -1。
- */
-static int hex_write_impl(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
-                          const void *data, const size_t size, const char *label)
-{
-    char buf[CPLAT_TRACER_MESSAGE_MAX_BYTES];
-    const unsigned char *bytes = (const unsigned char *)data;
-    size_t pos = 0;
-    size_t max_data_bytes;
-    size_t effective_size;
-    int truncated = 0;
-    size_t i;
-
-    effective_size = size;
-
-    if (handle == NULL || data == NULL || size == 0)
-    {
-        return CPLAT_OK;
-    }
-
-    /* ラベルが指定されている場合は、バッファー先頭に付加する。ラベルだけで上限を超える場合は即座に出力する。 */
-    if (label != NULL && label[0] != '\0')
-    {
-        size_t lbl_len = strlen(label);
-        if (lbl_len + HEX_DUMP_LABEL_SEP_LEN >= MAX_BODY)
-        {
-            size_t copy_len;
-
-            if (lbl_len < MAX_BODY)
-            {
-                copy_len = lbl_len;
-            }
-            else
-            {
-                copy_len = MAX_BODY;
-            }
-
-            memcpy(buf, label, copy_len);
-            buf[copy_len] = '\0';
-            return write_dual(handle, level, timestamp, buf);
-        }
-
-        memcpy(buf, label, lbl_len);
-        memcpy(buf + lbl_len, HEX_DUMP_LABEL_SEP, HEX_DUMP_LABEL_SEP_LEN);
-        pos = lbl_len + HEX_DUMP_LABEL_SEP_LEN;
-    }
-
-    /*
-     * 以降の書き込みは、終端を含めて buf[MAX_BODY] までに収める。
-     * 1 [byte] は区切りの空白を含めて 3 文字で、先頭の 1 [byte] だけ空白を付けない。
-     */
-    max_data_bytes = (MAX_BODY - pos + 1) / HEX_DUMP_CHARS_PER_BYTE;
-
-    if (effective_size > max_data_bytes)
-    {
-        truncated = 1;
-
-        if (pos + ELLIPSIS_LEN > MAX_BODY)
-        {
-            buf[pos] = '\0';
-            return write_dual(handle, level, timestamp, buf);
-        }
-
-        /* 本体 (3 * max_data_bytes - 1 文字) と末尾の " ..." (4 文字) の合計を MAX_BODY - pos 以下に収める。 */
-        max_data_bytes = (MAX_BODY - pos - ELLIPSIS_LEN) / HEX_DUMP_CHARS_PER_BYTE;
-        if (max_data_bytes == 0)
-        {
-            memcpy(buf + pos, HEX_DUMP_ELLIPSIS, ELLIPSIS_LEN);
-            pos += ELLIPSIS_LEN;
-            buf[pos] = '\0';
-            return write_dual(handle, level, timestamp, buf);
-        }
-
-        effective_size = max_data_bytes;
-    }
-
-    /* 各バイトを 16 進数文字列へ変換して空白区切りで格納する。 */
-    for (i = 0; i < effective_size; i++)
-    {
-        if (i > 0)
-        {
-            buf[pos++] = ' ';
-        }
-
-        buf[pos++] = s_hex_chars[(bytes[i] >> 4) & 0x0F];
-        buf[pos++] = s_hex_chars[bytes[i] & 0x0F];
-    }
-
-    if (truncated)
-    {
-        buf[pos++] = ' ';
-        buf[pos++] = '.';
-        buf[pos++] = '.';
-        buf[pos++] = '.';
-    }
-
-    buf[pos] = '\0';
-
-    return write_dual(handle, level, timestamp, buf);
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -2538,4 +1371,1223 @@ int cplat_tracer_write_hex_with_source(cplat_tracer *handle, const cplat_trace_l
 {
     return cplat_tracer_write_hexf_at(handle, level, timestamp, data, size, "[%s:%d]%s%s", file, line,
                                       cplat_tracer_hex_sep(message), cplat_tracer_hex_msg(message));
+}
+
+static void init_registry_lock(void)
+{
+    s_registry_lock_init_result = cplat_local_lock_create(&s_registry_lock);
+}
+
+static void register_trace_shutdown_callback(void)
+{
+    s_shutdown_registration_result = cplat_shutdown_register(trace_shutdown_callback, NULL);
+}
+
+static void trace_shutdown_callback(const cplat_shutdown_event *event, void *context)
+{
+    (void)context;
+    cplat_internal_trace_registry_dispose_all_on_shutdown(event);
+}
+
+/**
+ *  @brief          レジストリの排他ロックを取得します。
+ */
+static int registry_lock(void)
+{
+    cplat_call_once(&s_registry_lock_once, init_registry_lock);
+
+    if (s_registry_lock_init_result != CPLAT_OK)
+    {
+        return -1;
+    }
+
+    cplat_local_lock_lock(s_registry_lock);
+
+    return 0;
+}
+
+/**
+ *  @brief          レジストリの排他ロックを解放します。
+ */
+static void registry_unlock(void)
+{
+    cplat_local_lock_unlock(s_registry_lock);
+}
+
+/**
+ *  @brief          レジストリを拡張する (ロック保持中) です。
+ *  @return         成功時 0、メモリ確保失敗時 -1。
+ */
+static int registry_expand_locked(void)
+{
+    cplat_tracer **new_items;
+    size_t new_capacity;
+
+    if (s_trace_registry.capacity == 0)
+    {
+        new_capacity = TRACE_REGISTRY_INITIAL_CAPACITY;
+    }
+    else
+    {
+        if (s_trace_registry.capacity > SIZE_MAX / TRACE_REGISTRY_GROWTH_FACTOR)
+        {
+            return -1;
+        }
+
+        new_capacity = s_trace_registry.capacity * TRACE_REGISTRY_GROWTH_FACTOR;
+    }
+
+    if (new_capacity > SIZE_MAX / sizeof(cplat_tracer *))
+    {
+        return -1;
+    }
+
+    new_items = (cplat_tracer **)cplat_realloc(s_trace_registry.items, new_capacity, sizeof(cplat_tracer *));
+    if (new_items == NULL)
+    {
+        return -1;
+    }
+
+    s_trace_registry.items = new_items;
+    s_trace_registry.capacity = new_capacity;
+
+    return 0;
+}
+
+#if defined(PLATFORM_WINDOWS)
+/*
+ * Windows 向け共通バックエンド (ETW および EventLog) の参照カウントをインクリメントする。
+ * 初回参照時に各バックエンドを初期化する。レジストリ ロック保持下で呼び出すこと。
+ * 戻り値は成功時に 0、ETW プロバイダー生成失敗時に -1 である。
+ */
+static int windows_backend_acquire_locked(void)
+{
+    if (s_trace_ref == 0)
+    {
+        s_etw_handle = cplat_etw_provider_create(s_trace_provider_ref);
+        if (s_etw_handle == NULL)
+        {
+            return -1;
+        }
+
+        /* EventLog は任意であり、生成失敗時はその出力だけを省略する。 */
+        s_eventlog_handle = cplat_eventlog_sink_create(CPLAT_TRACER_DEFAULT_PROVIDER_NAME);
+    }
+
+    s_trace_ref++;
+
+    return 0;
+}
+
+/*
+ * Windows 向け共通バックエンド (ETW および EventLog) の参照カウントをデクリメントする。
+ * 参照カウントが 0 になった場合は各バックエンドを解放する。レジストリ ロック保持下で呼び出すこと。
+ */
+static void windows_backend_release_locked(void)
+{
+    if (s_trace_ref == 0)
+    {
+        return;
+    }
+
+    s_trace_ref--;
+
+    if (s_trace_ref == 0)
+    {
+        cplat_etw_provider_dispose(s_etw_handle);
+        s_etw_handle = NULL;
+        cplat_eventlog_sink_dispose(s_eventlog_handle);
+        s_eventlog_handle = NULL;
+    }
+}
+#endif /* PLATFORM_WINDOWS */
+
+/**
+ *  @brief          ハンドルをレジストリに登録します。
+ *  @param[in]      handle  登録するトレース プロバイダー ハンドル。
+ *  @return         成功時 0、シャットダウン中またはメモリ不足時 -1。
+ */
+static int registry_register_handle(cplat_tracer *handle)
+{
+    int rc = 0;
+
+    if (registry_lock() != 0)
+    {
+        return -1;
+    }
+
+    if (s_trace_registry.shutdown_started)
+    {
+        rc = -1;
+    }
+    else
+    {
+        if (s_trace_registry.count == s_trace_registry.capacity)
+        {
+            rc = registry_expand_locked();
+        }
+
+        if (rc == 0)
+        {
+#if defined(PLATFORM_WINDOWS)
+            rc = windows_backend_acquire_locked();
+#endif /* PLATFORM_WINDOWS */
+        }
+
+        if (rc == 0)
+        {
+            s_trace_registry.items[s_trace_registry.count++] = handle;
+        }
+    }
+
+    registry_unlock();
+
+    return rc;
+}
+
+/**
+ *  @brief          ハンドルをレジストリから削除します。
+ *  @param[in]      handle  削除するトレース プロバイダー ハンドル。
+ */
+static int registry_unregister_handle(cplat_tracer *handle)
+{
+    size_t i;
+    int found = 0;
+
+    if (registry_lock() != 0)
+    {
+        return -1;
+    }
+
+    /* 登録済みハンドルを線形探索し、見つかった場合は末尾要素と入れ替えて削除する。 */
+    for (i = 0; i < s_trace_registry.count; i++)
+    {
+        if (s_trace_registry.items[i] == handle)
+        {
+            s_trace_registry.count--;
+            s_trace_registry.items[i] = s_trace_registry.items[s_trace_registry.count];
+            s_trace_registry.items[s_trace_registry.count] = NULL;
+#if defined(PLATFORM_WINDOWS)
+            windows_backend_release_locked();
+#endif /* PLATFORM_WINDOWS */
+            found = 1;
+            break;
+        }
+    }
+
+    registry_unlock();
+
+    if (found)
+    {
+        return 0;
+    }
+
+    return -1;
+}
+
+/**
+ *  @brief          ハンドルがアクティブか判定します。
+ *  @param[in]      handle  判定対象のトレース プロバイダー ハンドル。
+ *  @return         アクティブの場合 1、それ以外 0。
+ */
+static int handle_is_active(const cplat_tracer *handle)
+{
+    return handle != NULL && handle->lifecycle_state == TRACE_HANDLE_ACTIVE && !s_trace_registry.shutdown_started;
+}
+
+/**
+ *  @brief          解放処理を開始します。
+ *  @param[in]      handle  解放対象のトレース プロバイダー ハンドル。
+ *  @return         成功時 0、ハンドルが NULL またはアクティブでない場合 -1。
+ */
+static int begin_dispose(cplat_tracer *handle)
+{
+    if (handle == NULL || handle->lifecycle_state != TRACE_HANDLE_ACTIVE)
+    {
+        return -1;
+    }
+
+    handle->lifecycle_state = TRACE_HANDLE_DISPOSING;
+
+    return 0;
+}
+
+#if defined(PLATFORM_LINUX)
+
+/**
+ *  @brief          トレース レベルを syslog レベルに変換します。
+ *  @param[in]      lv  変換元のトレース レベル。
+ *  @return         対応する syslog レベル値。
+ */
+static int to_syslog_level(const cplat_trace_level lv)
+{
+    switch (lv)
+    {
+    case CPLAT_TRACE_LEVEL_FORCE_CRITICAL:
+    case CPLAT_TRACE_LEVEL_CRITICAL:
+        return LOG_CRIT;
+    case CPLAT_TRACE_LEVEL_FORCE_ERROR:
+    case CPLAT_TRACE_LEVEL_ERROR:
+        return LOG_ERR;
+    case CPLAT_TRACE_LEVEL_FORCE_WARNING:
+    case CPLAT_TRACE_LEVEL_WARNING:
+        return LOG_WARNING;
+    case CPLAT_TRACE_LEVEL_INFO:
+        return LOG_INFO;
+
+    /* 強制出力は syslog 側の既定の設定で捨てられないよう、最下位から 1 段引き上げる。 */
+    case CPLAT_TRACE_LEVEL_FORCE_INFO:
+    case CPLAT_TRACE_LEVEL_FORCE_VERBOSE:
+    case CPLAT_TRACE_LEVEL_FORCE_DEBUG:
+    case CPLAT_TRACE_LEVEL_FORCE_NONE:
+        return LOG_INFO;
+    case CPLAT_TRACE_LEVEL_VERBOSE:
+        return LOG_DEBUG;
+    case CPLAT_TRACE_LEVEL_DEBUG:
+        return LOG_DEBUG;
+    case CPLAT_TRACE_LEVEL_NONE:
+    default:
+        return LOG_DEBUG;
+    }
+}
+
+#elif defined(PLATFORM_WINDOWS)
+
+/**
+ *  @brief          トレース レベルを ETW レベルに変換します。
+ *  @param[in]      lv  変換元のトレース レベル。
+ *  @return         対応する ETW レベル値。
+ */
+static int to_etw_level(const cplat_trace_level lv)
+{
+    switch (lv)
+    {
+    case CPLAT_TRACE_LEVEL_FORCE_CRITICAL:
+    case CPLAT_TRACE_LEVEL_CRITICAL:
+        return TRACE_LEVEL_CRITICAL;
+    case CPLAT_TRACE_LEVEL_FORCE_ERROR:
+    case CPLAT_TRACE_LEVEL_ERROR:
+        return TRACE_LEVEL_ERROR;
+    case CPLAT_TRACE_LEVEL_FORCE_WARNING:
+    case CPLAT_TRACE_LEVEL_WARNING:
+        return TRACE_LEVEL_WARNING;
+    case CPLAT_TRACE_LEVEL_INFO:
+        return TRACE_LEVEL_INFORMATION;
+
+    /* 強制出力は ETW セッション側の既定の設定で捨てられないよう、最下位から 1 段引き上げる。 */
+    case CPLAT_TRACE_LEVEL_FORCE_INFO:
+    case CPLAT_TRACE_LEVEL_FORCE_VERBOSE:
+    case CPLAT_TRACE_LEVEL_FORCE_DEBUG:
+    case CPLAT_TRACE_LEVEL_FORCE_NONE:
+        return TRACE_LEVEL_INFORMATION;
+    case CPLAT_TRACE_LEVEL_VERBOSE:
+        return TRACE_LEVEL_VERBOSE;
+    case CPLAT_TRACE_LEVEL_DEBUG:
+        return TRACE_LEVEL_VERBOSE;
+    default:
+        return TRACE_LEVEL_VERBOSE;
+    }
+}
+
+/**
+ *  @brief          トレース レベルを EventLog のレベルへ変換します。
+ *  @param[in]      lv  変換元のトレース レベル。
+ *  @return         対応する EventLog のレベル値 (0 から 5)。定義されていない値はそのまま返します。
+ */
+static int to_eventlog_level(const cplat_trace_level lv)
+{
+    switch (lv)
+    {
+    case CPLAT_TRACE_LEVEL_FORCE_CRITICAL:
+        return (int)CPLAT_TRACE_LEVEL_CRITICAL;
+    case CPLAT_TRACE_LEVEL_FORCE_ERROR:
+        return (int)CPLAT_TRACE_LEVEL_ERROR;
+    case CPLAT_TRACE_LEVEL_FORCE_WARNING:
+        return (int)CPLAT_TRACE_LEVEL_WARNING;
+    /* 強制出力の VERBOSE、DEBUG、NONE は EventLog 側の運用方針に合わせ、常時記録の INFO へ引き上げる。 */
+    case CPLAT_TRACE_LEVEL_FORCE_INFO:
+    case CPLAT_TRACE_LEVEL_FORCE_VERBOSE:
+    case CPLAT_TRACE_LEVEL_FORCE_DEBUG:
+    case CPLAT_TRACE_LEVEL_FORCE_NONE:
+        return (int)CPLAT_TRACE_LEVEL_INFO;
+    case CPLAT_TRACE_LEVEL_CRITICAL:
+    case CPLAT_TRACE_LEVEL_ERROR:
+    case CPLAT_TRACE_LEVEL_WARNING:
+    case CPLAT_TRACE_LEVEL_INFO:
+    case CPLAT_TRACE_LEVEL_VERBOSE:
+    case CPLAT_TRACE_LEVEL_DEBUG:
+    case CPLAT_TRACE_LEVEL_NONE:
+    default:
+        return (int)lv;
+    }
+}
+
+#endif /* PLATFORM_ */
+
+/**
+ *  @brief          プロセスの実行ファイル パスからベース名を取得します。
+ *  @param[in,out]  buf       パス文字列を格納するバッファー。
+ *  @param[in]      buf_size  バッファーのバイト数。
+ *  @return         ベース名へのポインター。失敗時は FALLBACK_NAME。
+ *
+ *  cplat_process_get_executable_path() で取得したパスは UTF-8 で
+ *  セパレーターが '/' に統一されるため、プラットフォーム非依存で処理できます。
+ */
+static const char *get_process_basename(char *buf, const size_t buf_size)
+{
+    if (cplat_process_get_executable_path(buf, buf_size) != CPLAT_OK)
+    {
+        return FALLBACK_NAME;
+    }
+
+    return cplat_path_basename(buf);
+}
+
+/**
+ *  @brief          設定の排他ロック (書き込みロック) を取得します。
+ *  @param[in]      handle  ロック対象のトレース プロバイダー ハンドル。
+ */
+static void config_lock_exclusive(cplat_tracer *handle)
+{
+    if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED)
+    {
+        return;
+    }
+
+    cplat_local_rwlock_lock_exclusive(handle->config_rwlock);
+}
+
+/**
+ *  @brief          設定の排他ロック (書き込みロック) を解放します。
+ *  @param[in]      handle  ロック解放対象のトレース プロバイダー ハンドル。
+ */
+static void config_unlock_exclusive(cplat_tracer *handle)
+{
+    if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
+    {
+        cplat_local_rwlock_unlock_exclusive(handle->config_rwlock);
+    }
+}
+
+/**
+ *  @brief          タイムアウト付きで設定の共有ロック (読み取りロック) を取得します。
+ *  @param[in]      handle  ロック対象のトレース プロバイダー ハンドル。
+ *  @return         成功時 0、タイムアウト時 -1。
+ */
+static int config_lock_shared_timed(cplat_tracer *handle)
+{
+    if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_CALLER_MANAGED)
+    {
+        return 0;
+    }
+
+    if (cplat_local_rwlock_timed_lock_shared(handle->config_rwlock, LOCK_TIMEOUT_MS) == CPLAT_OK)
+    {
+        return 0;
+    }
+    else
+    {
+        return -1;
+    }
+}
+
+/**
+ *  @brief          設定の共有ロック (読み取りロック) を解放します。
+ *  @param[in]      handle  ロック解放対象のトレース プロバイダー ハンドル。
+ */
+static void config_unlock_shared(cplat_tracer *handle)
+{
+    if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
+    {
+        cplat_local_rwlock_unlock_shared(handle->config_rwlock);
+    }
+}
+
+/**
+ *  @brief          アクティブ検証と設定の共有ロック取得をまとめて行います。
+ *  @param[in]      handle  対象のトレース プロバイダー ハンドル。
+ *  @return         成功時 0、失敗時 -1。
+ *
+ *  ロック取得前後の 2 回、ハンドルがアクティブであることを検証します
+ *  (ロック待機中に dispose が進行した場合を検出するため)。\n
+ *  成功時は共有ロックを保持したまま戻るため、呼び出し元は
+ *  config_unlock_shared() で解放すること。失敗時はロックを保持しません。
+ */
+static int tracer_enter_shared(cplat_tracer *handle)
+{
+    if (!handle_is_active(handle))
+    {
+        return -1;
+    }
+
+    if (config_lock_shared_timed(handle) != 0)
+    {
+        return -1;
+    }
+
+    if (handle->lifecycle_state != TRACE_HANDLE_ACTIVE)
+    {
+        config_unlock_shared(handle);
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          started 状態を要求する共有ロック取得を行います。
+ *  @param[in]      handle  対象のトレース プロバイダー ハンドル。
+ *  @return         成功時 0、失敗時 (非アクティブまたは stopped) -1。
+ *
+ *  tracer_enter_shared() の検証に加えて running であることを要求します。
+ *  成功時は共有ロックを保持したまま戻ります。失敗時はロックを保持しません。
+ */
+static int tracer_enter_shared_running(cplat_tracer *handle)
+{
+    if (tracer_enter_shared(handle) != 0)
+    {
+        return -1;
+    }
+
+    if (!handle->running)
+    {
+        config_unlock_shared(handle);
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          アクティブ検証と設定の排他ロック取得をまとめて行います。
+ *  @param[in]      handle  対象のトレース プロバイダー ハンドル。
+ *  @return         成功時 0、失敗時 -1。
+ *
+ *  ロック取得前後の 2 回、ハンドルがアクティブであることを検証します
+ *  (ロック待機中に dispose が進行した場合を検出するため)。\n
+ *  成功時は排他ロックを保持したまま戻るため、呼び出し元は
+ *  config_unlock_exclusive() で解放すること。失敗時はロックを保持しません。
+ */
+static int tracer_enter_exclusive(cplat_tracer *handle)
+{
+    if (!handle_is_active(handle))
+    {
+        return -1;
+    }
+
+    config_lock_exclusive(handle);
+
+    if (handle->lifecycle_state != TRACE_HANDLE_ACTIVE)
+    {
+        config_unlock_exclusive(handle);
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          stopped 状態を要求する排他ロック取得を行います。
+ *  @param[in]      handle  対象のトレース プロバイダー ハンドル。
+ *  @return         成功時 0、失敗時 (非アクティブまたは started) -1。
+ *
+ *  tracer_enter_exclusive() の検証に加えて stopped であることを要求します
+ *  (started 中の変更を許可しない設定 API 向け)。\n
+ *  成功時は排他ロックを保持したまま戻ります。失敗時はロックを保持しません。
+ */
+static int tracer_enter_exclusive_stopped(cplat_tracer *handle)
+{
+    if (tracer_enter_exclusive(handle) != 0)
+    {
+        return -1;
+    }
+
+    if (handle->running)
+    {
+        config_unlock_exclusive(handle);
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          識別子を付加した有効名の文字列を構築します。
+ *  @param[in]      name        サービス名 (NULL の場合はプロセス ベース名を使用)。
+ *  @param[in]      identifier  識別子 (0 の場合はサフィックスなし)。
+ *  @return         ヒープ確保された有効名文字列。呼び出し元が free すること。
+ *                  失敗時は NULL。
+ */
+static char *build_effective_name(const char *name, const int64_t identifier)
+{
+    char path_buf[PLATFORM_PATH_UTF8_MAX];
+    const char *base;
+    char *result;
+
+    if (name != NULL)
+    {
+        base = name;
+    }
+    else
+    {
+        base = get_process_basename(path_buf, sizeof(path_buf));
+    }
+
+    if (identifier == 0)
+    {
+        return cplat_strdup(base);
+    }
+
+    {
+        int id_len;
+        size_t base_len;
+        size_t total;
+
+        id_len = snprintf(NULL, 0, "%" PRId64, identifier); /* 置換対象外: 必要長の照会 */
+        base_len = strlen(base);
+        total = base_len + 1 + (size_t)id_len + 1;
+
+        result = (char *)cplat_malloc(total);
+        if (result == NULL)
+        {
+            return NULL;
+        }
+
+        if (cplat_snprintf(result, total, "%s_%" PRId64, base, identifier) != CPLAT_OK)
+        {
+            cplat_free(result);
+            return NULL;
+        }
+
+        return result;
+    }
+}
+
+#if defined(PLATFORM_WINDOWS)
+/**
+ *  @brief          EventLog に渡す元のインスタンス名を構築します。
+ *  @param[in]      name  インスタンス名。NULL の場合はプロセス ベース名を使用。
+ *  @return         ヒープ確保されたインスタンス名。呼び出し元が free すること。
+ */
+static char *build_eventlog_instance_name(const char *name)
+{
+    char path_buf[PLATFORM_PATH_UTF8_MAX];
+    const char *base;
+
+    if (name != NULL)
+    {
+        base = name;
+    }
+    else
+    {
+        base = get_process_basename(path_buf, sizeof(path_buf));
+    }
+
+    return cplat_strdup(base);
+}
+#endif /* PLATFORM_WINDOWS */
+
+/**
+ *  @brief          ハンドルが保持する有効名を取得します。
+ *  @param[in]      handle  対象のトレース プロバイダー ハンドル。
+ *  @return         有効名文字列へのポインター。
+ */
+static const char *tracer_effective_name(const cplat_tracer *handle)
+{
+#if defined(PLATFORM_LINUX)
+    return handle->effective_name;
+#elif defined(PLATFORM_WINDOWS)
+    return handle->service_name;
+#endif /* PLATFORM_ */
+}
+
+#if defined(PLATFORM_WINDOWS)
+/**
+ *  @brief          名前の末尾にある ".exe" を除去する (インプレース) です。
+ *  @param[in,out]  name  対象の名前文字列。
+ *
+ *  Windows ではプロセス名 (実行ファイルのベース名) が ".exe" で終わるため、
+ *  トレース ファイル名からは除去する。大文字小文字は区別しません。
+ */
+static void strip_exe_suffix(char *name)
+{
+    size_t name_len = strlen(name);
+
+    if (name_len >= 4 && cplat_strncasecmp(&name[name_len - 4], ".exe", 4) == 0)
+    {
+        name[name_len - 4] = '\0';
+    }
+}
+#endif /* PLATFORM_WINDOWS */
+
+/**
+ *  @brief          トレース ファイル名 (ファイル識別込み) を解決します。
+ *  @param[in]      handle          対象のトレース プロバイダー ハンドル。
+ *  @param[out]     file_name_out   解決した名前を格納するバッファー。
+ *  @param[in]      file_name_size  バッファーのバイト数。
+ *  @return         成功時 0、失敗時 (バッファー不足) -1。
+ *
+ *  ファイル名が未設定 (NULL) の場合はプロセス名 (実行ファイルのベース名) を使用します。
+ *  Windows ではプロセス名末尾の ".exe" を除去する (明示設定された名前には適用しない)。\n
+ *  ファイル識別が 0 以外の場合は "_{ファイル識別}" を付加します。
+ */
+static int resolve_file_name(const cplat_tracer *handle, char *file_name_out, const size_t file_name_size)
+{
+    char name_buf[TRACER_PROCESS_NAME_BUF_SIZE];
+    int ret;
+
+    if (handle->file_name != NULL)
+    {
+        ret = cplat_snprintf(name_buf, sizeof(name_buf), "%s", handle->file_name);
+    }
+    else
+    {
+        char path_buf[PLATFORM_PATH_UTF8_MAX];
+
+        ret = cplat_snprintf(name_buf, sizeof(name_buf), "%s", get_process_basename(path_buf, sizeof(path_buf)));
+#if defined(PLATFORM_WINDOWS)
+        if (ret == CPLAT_OK)
+        {
+            strip_exe_suffix(name_buf);
+        }
+#endif /* PLATFORM_WINDOWS */
+    }
+
+    if (ret != CPLAT_OK)
+    {
+        return CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+
+    if (handle->file_identifier != 0)
+    {
+        ret = cplat_snprintf(file_name_out, file_name_size, "%s_%" PRId64, name_buf, handle->file_identifier);
+    }
+    else
+    {
+        ret = cplat_snprintf(file_name_out, file_name_size, "%s", name_buf);
+    }
+
+    if (ret != CPLAT_OK)
+    {
+        return CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+
+    return CPLAT_OK;
+}
+
+/**
+ *  @brief          ファイル トレースの既定パスを構築します。
+ *  @param[in]      handle     対象のトレース プロバイダー ハンドル。
+ *  @param[out]     path_out   構築したパスを格納するバッファー。
+ *  @param[in]      path_size  バッファーのバイト数。
+ *  @return         成功時 0、失敗時 -1。
+ *
+ *  実行ファイルのディレクトリ配下の log/{ファイル名}.log を構築する
+ *  (ファイル名は resolve_file_name で解決する)。\n
+ *  実行ファイル パスの取得に失敗した場合はカレント ディレクトリ相対の
+ *  log/{ファイル名}.log にフォールバックします。
+ */
+static int build_default_file_path(const cplat_tracer *handle, char *path_out, const size_t path_size)
+{
+    char exe_path[PLATFORM_PATH_UTF8_MAX];
+    char exe_dir[PLATFORM_PATH_UTF8_MAX];
+    char name_buf[TRACER_FILE_NAME_BUF_SIZE];
+    char log_file_name[TRACER_LOG_FILE_NAME_BUF_SIZE];
+
+    if (resolve_file_name(handle, name_buf, sizeof(name_buf)) != 0)
+    {
+        return -1;
+    }
+
+    if (cplat_snprintf(log_file_name, sizeof(log_file_name), "%s.log", name_buf) != CPLAT_OK)
+    {
+        return -1;
+    }
+
+    if (cplat_process_get_executable_path(exe_path, sizeof(exe_path)) == CPLAT_OK)
+    {
+        if (cplat_path_dirname(exe_dir, sizeof(exe_dir), NULL, exe_path) == CPLAT_OK)
+        {
+            if (strcmp(exe_dir, ".") != 0)
+            {
+                return cplat_path_join(path_out, path_size, NULL, exe_dir, "log", log_file_name);
+            }
+        }
+    }
+
+    return cplat_path_join(path_out, path_size, NULL, "log", log_file_name);
+}
+
+/**
+ *  @brief          指定パラメーターでファイル トレース sink を開いて返します。
+ *  @param[in]      handle       既定パス解決に用いるハンドル (file_name 等を参照)。
+ *  @param[in]      path         出力ファイル パス。NULL の場合は既定パスを解決します。
+ *  @param[in]      max_bytes    1 ファイルあたりの最大バイト数。
+ *  @param[in]      generations  保持する旧世代数。
+ *  @param[in]      flags        動作フラグ。
+ *  @return         生成した sink。失敗時 NULL。
+ *
+ *  呼び出し側で config の排他ロックを保持していることを前提とします。
+ *  cplat_tracer_start と cplat_tracer_set_file_level の双方から使用します。
+ */
+static cplat_trace_file_sink *open_file_sink_with(const cplat_tracer *handle, const char *path, const size_t max_bytes,
+                                                  const int generations, const int flags)
+{
+    const char *eff_path = path;
+    char default_path[PLATFORM_PATH_UTF8_MAX];
+
+    if (eff_path == NULL)
+    {
+        if (build_default_file_path(handle, default_path, sizeof(default_path)) == 0)
+        {
+            eff_path = default_path;
+        }
+    }
+
+    if (eff_path == NULL)
+    {
+        return NULL;
+    }
+
+    return cplat_trace_file_sink_create(eff_path, max_bytes, generations, flags);
+}
+
+/**
+ *  @brief          クリーンアップのためハンドルのトレース出力を停止します。
+ *  @param[in]      handle  停止対象のトレース プロバイダー ハンドル。
+ *  @return         常に 0。
+ *
+ *  ファイル トレースが開いていた場合はトレース ファイルを閉じます。
+ *  ファイル トレースの設定は保持され、次回の start で改めてファイルを開きます。
+ */
+static int stop_handle_for_cleanup(cplat_tracer *handle)
+{
+    config_lock_exclusive(handle);
+
+    if (!handle->running)
+    {
+        config_unlock_exclusive(handle);
+        return CPLAT_OK;
+    }
+
+    handle->running = 0;
+
+    if (handle->file_handle != NULL)
+    {
+        cplat_trace_file_sink_dispose(handle->file_handle);
+        handle->file_handle = NULL;
+    }
+
+    config_unlock_exclusive(handle);
+
+    return CPLAT_OK;
+}
+
+/**
+ *  @brief          通常のハンドル解放処理を行います。
+ *  @param[in]      handle  解放対象のトレース プロバイダー ハンドル。
+ */
+static void trace_handle_release_normal(cplat_tracer *handle)
+{
+    cplat_tracer_hook_entry *hook;
+    cplat_tracer_hook_entry *next;
+
+    if (handle->file_handle != NULL)
+    {
+        cplat_trace_file_sink_dispose(handle->file_handle);
+        handle->file_handle = NULL;
+    }
+
+    for (hook = handle->hook_head; hook != NULL; hook = next)
+    {
+        next = hook->next;
+        cplat_free(hook);
+    }
+
+    handle->hook_head = NULL;
+
+    cplat_free(handle->file_path);
+    handle->file_path = NULL;
+    cplat_free(handle->file_name);
+    handle->file_name = NULL;
+
+#if defined(PLATFORM_LINUX)
+    cplat_syslog_sink_dispose(handle->syslog_handle);
+    cplat_free(handle->effective_name);
+
+    if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
+    {
+        cplat_local_rwlock_dispose(handle->config_rwlock);
+    }
+#elif defined(PLATFORM_WINDOWS)
+    cplat_free(handle->eventlog_instance_name);
+    cplat_free(handle->service_name);
+
+    if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
+    {
+        cplat_local_rwlock_dispose(handle->config_rwlock);
+    }
+#endif /* PLATFORM_ */
+
+    handle->lifecycle_state = TRACE_HANDLE_DISPOSED;
+    cplat_free(handle);
+}
+
+/**
+ *  @brief          アンロード時のハンドル解放処理を行います。
+ *  @param[in]      handle  解放対象のトレース プロバイダー ハンドル。
+ */
+static void trace_handle_release_on_shutdown(cplat_tracer *handle)
+{
+    cplat_tracer_hook_entry *hook;
+    cplat_tracer_hook_entry *next;
+
+    if (handle->file_handle != NULL)
+    {
+        cplat_internal_trace_file_sink_dispose_on_shutdown(handle->file_handle);
+        handle->file_handle = NULL;
+    }
+
+    cplat_free(handle->file_path);
+    handle->file_path = NULL;
+    cplat_free(handle->file_name);
+    handle->file_name = NULL;
+
+    for (hook = handle->hook_head; hook != NULL; hook = next)
+    {
+        next = hook->next;
+        cplat_free(hook);
+    }
+
+    handle->hook_head = NULL;
+
+#if defined(PLATFORM_LINUX)
+    cplat_internal_syslog_sink_dispose_on_shutdown(handle->syslog_handle);
+    cplat_free(handle->effective_name);
+#elif defined(PLATFORM_WINDOWS)
+    cplat_free(handle->eventlog_instance_name);
+    cplat_free(handle->service_name);
+#endif /* PLATFORM_ */
+
+    if (handle->concurrency_mode == CPLAT_TRACER_CONCURRENCY_TRACER_MANAGED)
+    {
+        cplat_local_rwlock_dispose(handle->config_rwlock);
+    }
+
+    handle->lifecycle_state = TRACE_HANDLE_DISPOSED;
+    cplat_free(handle);
+}
+
+/**
+ *  @brief          UTF-8 文字境界を考慮して文字列を切り詰める位置を返します。
+ *  @param[in]      s    切り詰め対象の UTF-8 文字列。
+ *  @param[in]      pos  切り詰め開始位置 [byte]。
+ *  @return         文字境界に合わせた切り詰め位置。
+ */
+static size_t utf8_safe_truncate(const char *s, const size_t pos)
+{
+    size_t result = pos;
+
+    while (result > 0 && ((unsigned char)s[result] & CPLAT_UTF8_CONT_MASK) == CPLAT_UTF8_CONT_VALUE)
+    {
+        result--;
+    }
+
+    return result;
+}
+
+/*
+ * 指定されたトレース レベルにおいて、出力対象となる出力先やフックが存在するかを判定する。
+ * 出力先が存在する場合は 1、すべての出力先で出力不要な場合は 0 を返す。
+ */
+static int has_output_target(const cplat_tracer *handle, const cplat_trace_level level)
+{
+    if (handle->hook_head != NULL || should_output(level, handle->stderr_level))
+    {
+        return 1;
+    }
+
+    if (handle->file_handle != NULL && should_output(level, handle->file_level))
+    {
+        return 1;
+    }
+#if defined(PLATFORM_LINUX)
+    return should_output(level, handle->os_level);
+#elif defined(PLATFORM_WINDOWS)
+    return should_output(level, handle->etw_level) || should_output(level, handle->os_level);
+#endif /* PLATFORM_ */
+}
+
+/**
+ *  @brief          OS ネイティブのバックエンドにメッセージを書き込みます。
+ *  @param[in]      handle      書き込み先のトレース プロバイダー ハンドル。
+ *  @param[in]      level       トレース レベル。
+ *  @param[in]      timestamp   書き込みに使用する実時刻。NULL の場合は内部で現在時刻を取得。
+ *  @param[in]      msg         書き込むメッセージ文字列。
+ *  @return         成功時 0、失敗時 -1。
+ *
+ *  Linux では os_level で syslog をゲートします。\n
+ *  Windows では ETW を etw_level で、EventLog を os_level で独立してゲートします。
+ *  各レベル判定を内部で行うため、本関数は常に呼び出せます。
+ */
+static int write_os_backends(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
+                             const char *msg)
+{
+#if defined(PLATFORM_LINUX)
+    if (should_output(level, handle->os_level))
+    {
+        return cplat_syslog_sink_write(handle->syslog_handle, to_syslog_level(level), timestamp, msg);
+    }
+
+    return CPLAT_OK;
+#elif defined(PLATFORM_WINDOWS)
+    int etw_result = 0;
+    int eventlog_result = 0;
+
+    (void)timestamp;
+
+    if (should_output(level, handle->etw_level))
+    {
+        etw_result = cplat_etw_provider_write(s_etw_handle, to_etw_level(level), handle->service_name, msg);
+    }
+
+    if (should_output(level, handle->os_level))
+    {
+        eventlog_result =
+            cplat_eventlog_sink_write(s_eventlog_handle, to_eventlog_level(level), handle->file_identifier,
+                                      handle->eventlog_instance_name, handle->identifier, msg);
+    }
+
+    if (etw_result != 0 || eventlog_result != 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    return CPLAT_OK;
+#endif /* PLATFORM_ */
+}
+
+/**
+ *  @brief          メッセージを出力すべきか判定します。
+ *  @param[in]      msg_level   出力するメッセージのトレース レベル。
+ *  @param[in]      threshold   出力閾値となるトレース レベル。
+ *  @return         出力すべき場合 1、出力不要の場合 0。
+ */
+static int should_output(const cplat_trace_level msg_level, const cplat_trace_level threshold)
+{
+    if (threshold == CPLAT_TRACE_LEVEL_NONE)
+    {
+        return 0;
+    }
+
+    return (int)msg_level <= (int)threshold;
+}
+
+/**
+ *  @brief          スレッショルド レベルとして指定できる値かどうかを判定します。
+ *  @param[in]      level 判定するトレース レベル。
+ *  @return         指定できる場合は 0 以外、指定できない場合は 0 を返します。
+ *
+ *  強制出力のレベルは、どの通常のスレッショルド レベルよりも小さい値です。\n
+ *  スレッショルド レベルとして指定すると、強制出力の要求だけが通る状態になるため受け付けません。
+ */
+static int is_valid_threshold(const cplat_trace_level level)
+{
+    return ((int)level >= (int)CPLAT_TRACE_LEVEL_CRITICAL) && ((int)level <= (int)CPLAT_TRACE_LEVEL_NONE);
+}
+
+/**
+ *  @brief          タイムスタンプとトレース レベルを付加して stderr にエントリを書き込みます。
+ *  @param[in]      level  トレース レベル。
+ *  @param[in]      timestamp_text  事前整形済みタイムスタンプ文字列。
+ *  @param[in]      msg    書き込むメッセージ文字列。
+ */
+static void write_stderr_entry(const cplat_trace_level level, const char *timestamp_text, const char *msg)
+{
+    /* 標準エラー出力はトレースの出力先の 1 つであり、ほかに失敗を伝える先がないため、戻り値は明示的に破棄する。 */
+    (void)cplat_fprintf(stderr, "%s %c %s\n", timestamp_text, cplat_internal_trace_level_char(level), msg);
+}
+
+/**
+ *  @brief          OS プロバイダ・ファイル・stderr の各出力先にメッセージを書き込みます。
+ *  @param[in]      handle  書き込み先のトレース プロバイダー ハンドル。
+ *  @param[in]      level   トレース レベル。
+ *  @param[in]      timestamp  書き込みに使用する実時刻。NULL の場合は内部で現在時刻を取得。
+ *  @param[in]      msg        書き込むメッセージ文字列。
+ *  @return         全出力先で成功時 0、いずれかで失敗時 -1。
+ */
+static int write_dual(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
+                      const char *msg)
+{
+    int os_result = 0;
+    int file_result = 0;
+    int timestamp_fallback_used = 0;
+    int needs_text_timestamp;
+    cplat_timespec resolved;
+    const cplat_timespec *effective_timestamp = NULL;
+    char ts[STDERR_TS_BUF_SIZE];
+
+    needs_text_timestamp = (handle->file_handle != NULL && should_output(level, handle->file_level)) ||
+                           should_output(level, handle->stderr_level) ||
+#if defined(PLATFORM_LINUX)
+                           should_output(level, handle->os_level) ||
+#endif
+                           handle->hook_head != NULL || timestamp != NULL;
+
+    /* 文字列形式のタイムスタンプを必要とする出力先がある場合のみ、タイムスタンプを解決して整形する。 */
+    if (needs_text_timestamp)
+    {
+        if (cplat_internal_trace_resolve_timestamp(timestamp, &resolved, &timestamp_fallback_used) != CPLAT_OK)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        effective_timestamp = &resolved;
+
+        if (cplat_internal_trace_format_local_timestamp(ts, sizeof(ts), effective_timestamp) != CPLAT_OK)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
+    }
+
+    /* 各出力先 (OS バックエンド、ファイル、stderr、フック) へ順に出力する。 */
+    os_result = write_os_backends(handle, level, effective_timestamp, msg);
+
+    if (handle->file_handle != NULL && should_output(level, handle->file_level))
+    {
+        file_result =
+            cplat_internal_trace_file_sink_write_text(handle->file_handle, (int)level, effective_timestamp, ts, msg);
+    }
+
+    if (should_output(level, handle->stderr_level))
+    {
+        write_stderr_entry(level, ts, msg);
+    }
+
+    if (handle->hook_head != NULL)
+    {
+        cplat_tracer_hook_entry *head = handle->hook_head;
+        if (head->fn != NULL)
+        {
+            head->fn(head->next, handle, level, effective_timestamp, msg, head->context);
+        }
+    }
+
+    if (timestamp_fallback_used || os_result != 0 || file_result != 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+    else
+    {
+        return CPLAT_OK;
+    }
+}
+
+/**
+ *  @brief          16 進ダンプ メッセージを構築して出力先に書き込む内部実装です。
+ *  @param[in]      handle      書き込み先のトレース プロバイダー ハンドル。
+ *  @param[in]      level       トレース レベル。
+ *  @param[in]      timestamp   書き込みに使用する実時刻。NULL の場合は内部で現在時刻を取得。
+ *  @param[in]      data        ダンプ対象のバイト列。
+ *  @param[in]      size        バイト列のサイズ。
+ *  @param[in]      label       メッセージに付加するラベル (NULL 可)。
+ *  @return         成功時 0、失敗時 -1。
+ */
+static int hex_write_impl(cplat_tracer *handle, const cplat_trace_level level, const cplat_timespec *timestamp,
+                          const void *data, const size_t size, const char *label)
+{
+    char buf[CPLAT_TRACER_MESSAGE_MAX_BYTES];
+    const unsigned char *bytes = (const unsigned char *)data;
+    size_t pos = 0;
+    size_t max_data_bytes;
+    size_t effective_size;
+    int truncated = 0;
+    size_t i;
+
+    effective_size = size;
+
+    if (handle == NULL || data == NULL || size == 0)
+    {
+        return CPLAT_OK;
+    }
+
+    /* ラベルが指定されている場合は、バッファー先頭に付加する。ラベルだけで上限を超える場合は即座に出力する。 */
+    if (label != NULL && label[0] != '\0')
+    {
+        size_t lbl_len = strlen(label);
+        if (lbl_len + HEX_DUMP_LABEL_SEP_LEN >= MAX_BODY)
+        {
+            size_t copy_len;
+
+            if (lbl_len < MAX_BODY)
+            {
+                copy_len = lbl_len;
+            }
+            else
+            {
+                copy_len = MAX_BODY;
+            }
+
+            memcpy(buf, label, copy_len);
+            buf[copy_len] = '\0';
+            return write_dual(handle, level, timestamp, buf);
+        }
+
+        memcpy(buf, label, lbl_len);
+        memcpy(buf + lbl_len, HEX_DUMP_LABEL_SEP, HEX_DUMP_LABEL_SEP_LEN);
+        pos = lbl_len + HEX_DUMP_LABEL_SEP_LEN;
+    }
+
+    /*
+     * 以降の書き込みは、終端を含めて buf[MAX_BODY] までに収める。
+     * 1 [byte] は区切りの空白を含めて 3 文字で、先頭の 1 [byte] だけ空白を付けない。
+     */
+    max_data_bytes = (MAX_BODY - pos + 1) / HEX_DUMP_CHARS_PER_BYTE;
+
+    if (effective_size > max_data_bytes)
+    {
+        truncated = 1;
+
+        if (pos + ELLIPSIS_LEN > MAX_BODY)
+        {
+            buf[pos] = '\0';
+            return write_dual(handle, level, timestamp, buf);
+        }
+
+        /* 本体 (3 * max_data_bytes - 1 文字) と末尾の " ..." (4 文字) の合計を MAX_BODY - pos 以下に収める。 */
+        max_data_bytes = (MAX_BODY - pos - ELLIPSIS_LEN) / HEX_DUMP_CHARS_PER_BYTE;
+        if (max_data_bytes == 0)
+        {
+            memcpy(buf + pos, HEX_DUMP_ELLIPSIS, ELLIPSIS_LEN);
+            pos += ELLIPSIS_LEN;
+            buf[pos] = '\0';
+            return write_dual(handle, level, timestamp, buf);
+        }
+
+        effective_size = max_data_bytes;
+    }
+
+    /* 各バイトを 16 進数文字列へ変換して空白区切りで格納する。 */
+    for (i = 0; i < effective_size; i++)
+    {
+        if (i > 0)
+        {
+            buf[pos++] = ' ';
+        }
+
+        buf[pos++] = s_hex_chars[(bytes[i] >> 4) & 0x0F];
+        buf[pos++] = s_hex_chars[bytes[i] & 0x0F];
+    }
+
+    if (truncated)
+    {
+        buf[pos++] = ' ';
+        buf[pos++] = '.';
+        buf[pos++] = '.';
+        buf[pos++] = '.';
+    }
+
+    buf[pos] = '\0';
+
+    return write_dual(handle, level, timestamp, buf);
 }

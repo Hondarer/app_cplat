@@ -37,19 +37,7 @@
     #include <cplat/base/error_internal.h>
     #include <cplat/runtime/stack_limit_linux.h>
 
-/*
- * OS の資源上限値をバイト数へ変換する。
- * RLIM_INFINITY の場合は CPLAT_STACK_LIMIT_LINUX_UNLIMITED、それ以外は上限のバイト数を返す。
- */
-static uint64_t to_limit_bytes(rlim_t os_limit)
-{
-    if (os_limit == RLIM_INFINITY)
-    {
-        return CPLAT_STACK_LIMIT_LINUX_UNLIMITED;
-    }
-
-    return (uint64_t)os_limit;
-}
+static uint64_t to_limit_bytes(rlim_t os_limit);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -112,6 +100,20 @@ int cplat_stack_limit_linux_raise_to_hard_limit(uint64_t *soft_limit_bytes_out, 
     }
 
     return cplat_internal_error_report_success(detail_out);
+}
+
+/*
+ * OS の資源上限値をバイト数へ変換する。
+ * RLIM_INFINITY の場合は CPLAT_STACK_LIMIT_LINUX_UNLIMITED、それ以外は上限のバイト数を返す。
+ */
+static uint64_t to_limit_bytes(rlim_t os_limit)
+{
+    if (os_limit == RLIM_INFINITY)
+    {
+        return CPLAT_STACK_LIMIT_LINUX_UNLIMITED;
+    }
+
+    return (uint64_t)os_limit;
 }
 
 #endif /* PLATFORM_LINUX */

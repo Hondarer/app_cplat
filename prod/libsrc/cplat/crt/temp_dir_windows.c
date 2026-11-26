@@ -27,45 +27,12 @@
 
     #include <errno.h>
 
+static void resolve_temp_path_fn(void);
+static DWORD call_temp_path_api(DWORD capacity, LPWSTR buffer);
+
 static cplat_once_flag s_resolve_once = {CPLAT_ATOMIC_INIT(0)};
 static cplat_internal_temp_path_w_fn s_resolved_fn = NULL;
 static cplat_internal_temp_path_w_fn s_test_resolver = NULL;
-
-static void resolve_temp_path_fn(void)
-{
-    HMODULE kernel32;
-    void *symbol = NULL;
-
-    /*
-     * GetTempPath2W は Windows 11 / Server 2022 以降、および 2025 年 3 月以降の更新を適用した
-     * Windows 10 version 1607 以降で利用できる。同一 OS 版でも更新の有無で関数の有無が変わるため、
-     * 実行時に解決し、存在しない場合は GetTempPathW へフォールバックする。
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettemppath2w
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettemppathw
-     */
-    kernel32 = GetModuleHandleW(L"kernel32.dll");
-    if (kernel32 != NULL)
-    {
-        symbol = (void *)GetProcAddress(kernel32, "GetTempPath2W");
-    }
-
-    s_resolved_fn = (cplat_internal_temp_path_w_fn)symbol;
-}
-
-static DWORD call_temp_path_api(DWORD capacity, LPWSTR buffer)
-{
-    if (s_test_resolver != NULL)
-    {
-        return s_test_resolver(capacity, buffer);
-    }
-
-    if (s_resolved_fn != NULL)
-    {
-        return s_resolved_fn(capacity, buffer);
-    }
-
-    return GetTempPathW(capacity, buffer);
-}
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -165,6 +132,42 @@ int cplat_internal_get_temp_dir_w(wchar_t **dir_out, size_t *length_out, cplat_e
     cplat_free(buffer);
     return cplat_internal_error_report_windows_error_as(detail_out, ERROR_INSUFFICIENT_BUFFER,
                                                         CPLAT_ERR_BUFFER_TOO_SMALL);
+}
+
+static void resolve_temp_path_fn(void)
+{
+    HMODULE kernel32;
+    void *symbol = NULL;
+
+    /*
+     * GetTempPath2W は Windows 11 / Server 2022 以降、および 2025 年 3 月以降の更新を適用した
+     * Windows 10 version 1607 以降で利用できる。同一 OS 版でも更新の有無で関数の有無が変わるため、
+     * 実行時に解決し、存在しない場合は GetTempPathW へフォールバックする。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettemppath2w
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettemppathw
+     */
+    kernel32 = GetModuleHandleW(L"kernel32.dll");
+    if (kernel32 != NULL)
+    {
+        symbol = (void *)GetProcAddress(kernel32, "GetTempPath2W");
+    }
+
+    s_resolved_fn = (cplat_internal_temp_path_w_fn)symbol;
+}
+
+static DWORD call_temp_path_api(DWORD capacity, LPWSTR buffer)
+{
+    if (s_test_resolver != NULL)
+    {
+        return s_test_resolver(capacity, buffer);
+    }
+
+    if (s_resolved_fn != NULL)
+    {
+        return s_resolved_fn(capacity, buffer);
+    }
+
+    return GetTempPathW(capacity, buffer);
 }
 
 #endif /* PLATFORM_WINDOWS */

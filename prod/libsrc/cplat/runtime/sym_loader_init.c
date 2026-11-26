@@ -32,6 +32,177 @@
 /** 設定ファイル全体の最大バイト数 (NUL 終端を含まない)。 */
 #define CONFIG_FILE_MAX ((int64_t)(1024 * 1024))
 
+static void free_name_pairs(cplat_sym_loader_name_pair *list, size_t count);
+static void free_reject_items(cplat_sym_loader_reject_item *list, size_t count);
+static void free_usable_items(cplat_sym_loader_usable *list, size_t count);
+static int release_loaded_lists(cplat_sym_loader_entry *entry);
+static cplat_sym_loader_entry *find_entry(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length,
+                                          const char *func_key);
+static int ensure_impl(cplat_sym_loader_entry *entry, const char *configpath);
+static void mark_storage_failure(cplat_sym_loader_entry *entry, const char *configpath);
+static int append_name_pair(cplat_sym_loader_name_pair **list, size_t *count, const char *lib_name,
+                            const char *func_name);
+static int move_name_to_duplicates(cplat_sym_loader_entry_impl *impl, char *lib_name, char *func_name);
+static int move_pending_to_duplicates(cplat_sym_loader_entry_impl *impl);
+static int install_targets(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length, const char *func_key,
+                           cplat_sym_loader_name_pair *list, size_t count, const char *configpath);
+static int append_object_value(const cJSON *object, cplat_sym_loader_name_pair **list, size_t *count);
+static int append_array_targets(const cJSON *array, cplat_sym_loader_name_pair **list, size_t *count);
+static int mark_key_storage_failure(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length, const char *func_key,
+                                    const char *configpath);
+static int handle_property(const cJSON *item, cplat_sym_loader_entry *const *fobj_array, size_t fobj_length,
+                           const char *configpath);
+static void begin_apply(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length);
+static int finish_absent_keys(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length);
+
+int cplat_sym_loader_apply_config(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length, const char *configpath)
+{
+    FILE *fp;
+    char *buffer;
+    cJSON *root;
+    int64_t size;
+    size_t file_size;
+    size_t read_count;
+    const cJSON *entry;
+    int applied;
+    cplat_error detail;
+
+    if ((configpath == NULL) || (configpath[0] == '\0'))
+    {
+        return CPLAT_SKIPPED;
+    }
+
+    cplat_error_clear(&detail);
+    fp = cplat_fopen(configpath, "rb", &detail);
+    if (fp == NULL)
+    {
+        if (cplat_error_is(&detail, CPLAT_CAUSE_NOT_FOUND))
+        {
+            return CPLAT_SKIPPED;
+        }
+        applied = cplat_error_to_result(&detail);
+        return (applied < 0) ? applied : CPLAT_ERR_UNKNOWN;
+    }
+
+    buffer = NULL;
+    root = NULL;
+    applied = CPLAT_ERR_UNKNOWN;
+
+    if (cplat_fseek(fp, 0, SEEK_END) != 0)
+    {
+        goto out_close;
+    }
+
+    size = cplat_ftell(fp);
+
+    /* ファイル サイズが 0 以下、または上限の CONFIG_FILE_MAX を超える場合は読み込みを中止する。 */
+    if (size == 0)
+    {
+        applied = CPLAT_ERR_CORRUPT_DATA;
+        goto out_close;
+    }
+    if (size > CONFIG_FILE_MAX)
+    {
+        applied = CPLAT_ERR_LIMIT_EXCEEDED;
+        goto out_close;
+    }
+    if (size < 0)
+    {
+        goto out_close;
+    }
+
+    if (cplat_fseek(fp, 0, SEEK_SET) != 0)
+    {
+        goto out_close;
+    }
+
+    file_size = (size_t)size;
+    buffer = (char *)cplat_malloc(file_size + 1u);
+    if (buffer == NULL)
+    {
+        applied = CPLAT_ERR_OUT_OF_MEMORY;
+        goto out_close;
+    }
+
+    cplat_error_clear(&detail);
+    read_count = cplat_fread(buffer, 1u, file_size, fp, &detail);
+    if (read_count != file_size)
+    {
+        int read_error = cplat_error_to_result(&detail);
+        applied = (read_error < 0) ? read_error : CPLAT_ERR_UNKNOWN;
+        goto out_free_buffer;
+    }
+
+    buffer[file_size] = '\0';
+
+    root = cjson_app_cJSON_ParseJSONCWithLength(buffer, file_size);
+    if (root == NULL)
+    {
+        goto out_free_json;
+    }
+    if (cjson_app_cJSON_IsObject(root) == 0)
+    {
+        applied = CPLAT_ERR_CORRUPT_DATA;
+        goto out_free_json;
+    }
+
+    begin_apply(fobj_array, fobj_length);
+    applied = CPLAT_OK;
+    for (entry = root->child; entry != NULL; entry = entry->next)
+    {
+        if (handle_property(entry, fobj_array, fobj_length, configpath) != 0)
+        {
+            applied = CPLAT_ERR_UNKNOWN;
+        }
+    }
+
+    if (finish_absent_keys(fobj_array, fobj_length) != 0)
+    {
+        applied = CPLAT_ERR_UNKNOWN;
+    }
+
+out_free_json:
+    cjson_app_cJSON_Delete(root);
+    root = NULL;
+out_free_buffer:
+    cplat_free(buffer);
+    buffer = NULL;
+out_close:
+    /* 読み取り専用で開いたストリームであり、閉じる処理の失敗で適用の結果が変わらないため、戻り値は明示的に破棄する。 */
+    (void)cplat_fclose(fp, NULL);
+    return applied;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array, const size_t fobj_length, const char *configpath)
+{
+    size_t index;
+
+    if ((fobj_length > 0u) && (fobj_array == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    for (index = 0; index < fobj_length; index++)
+    {
+        if (fobj_array[index] == NULL)
+        {
+            return CPLAT_ERR_INVALID_ARGUMENT;
+        }
+    }
+
+    for (index = 0; index < fobj_length; index++)
+    {
+        if ((fobj_array[index]->impl != NULL) && (fobj_array[index]->impl->release_pending != 0))
+        {
+            return CPLAT_ERR_BUSY;
+        }
+    }
+
+    return cplat_sym_loader_apply_config(fobj_array, fobj_length, configpath);
+}
+
 static void free_name_pairs(cplat_sym_loader_name_pair *list, size_t count)
 {
     size_t index;
@@ -529,152 +700,4 @@ static int finish_absent_keys(cplat_sym_loader_entry *const *fobj_array, size_t 
         cplat_atomic_store_i32(&entry->failed, 0, CPLAT_MEMORY_ORDER_RELEASE);
     }
     return failed;
-}
-
-int cplat_sym_loader_apply_config(cplat_sym_loader_entry *const *fobj_array, size_t fobj_length, const char *configpath)
-{
-    FILE *fp;
-    char *buffer;
-    cJSON *root;
-    int64_t size;
-    size_t file_size;
-    size_t read_count;
-    const cJSON *entry;
-    int applied;
-    cplat_error detail;
-
-    if ((configpath == NULL) || (configpath[0] == '\0'))
-    {
-        return CPLAT_SKIPPED;
-    }
-
-    cplat_error_clear(&detail);
-    fp = cplat_fopen(configpath, "rb", &detail);
-    if (fp == NULL)
-    {
-        if (cplat_error_is(&detail, CPLAT_CAUSE_NOT_FOUND))
-        {
-            return CPLAT_SKIPPED;
-        }
-        applied = cplat_error_to_result(&detail);
-        return (applied < 0) ? applied : CPLAT_ERR_UNKNOWN;
-    }
-
-    buffer = NULL;
-    root = NULL;
-    applied = CPLAT_ERR_UNKNOWN;
-
-    if (cplat_fseek(fp, 0, SEEK_END) != 0)
-    {
-        goto out_close;
-    }
-
-    size = cplat_ftell(fp);
-
-    /* ファイル サイズが 0 以下、または上限の CONFIG_FILE_MAX を超える場合は読み込みを中止する。 */
-    if (size == 0)
-    {
-        applied = CPLAT_ERR_CORRUPT_DATA;
-        goto out_close;
-    }
-    if (size > CONFIG_FILE_MAX)
-    {
-        applied = CPLAT_ERR_LIMIT_EXCEEDED;
-        goto out_close;
-    }
-    if (size < 0)
-    {
-        goto out_close;
-    }
-
-    if (cplat_fseek(fp, 0, SEEK_SET) != 0)
-    {
-        goto out_close;
-    }
-
-    file_size = (size_t)size;
-    buffer = (char *)cplat_malloc(file_size + 1u);
-    if (buffer == NULL)
-    {
-        applied = CPLAT_ERR_OUT_OF_MEMORY;
-        goto out_close;
-    }
-
-    cplat_error_clear(&detail);
-    read_count = cplat_fread(buffer, 1u, file_size, fp, &detail);
-    if (read_count != file_size)
-    {
-        int read_error = cplat_error_to_result(&detail);
-        applied = (read_error < 0) ? read_error : CPLAT_ERR_UNKNOWN;
-        goto out_free_buffer;
-    }
-
-    buffer[file_size] = '\0';
-
-    root = cjson_app_cJSON_ParseJSONCWithLength(buffer, file_size);
-    if (root == NULL)
-    {
-        goto out_free_json;
-    }
-    if (cjson_app_cJSON_IsObject(root) == 0)
-    {
-        applied = CPLAT_ERR_CORRUPT_DATA;
-        goto out_free_json;
-    }
-
-    begin_apply(fobj_array, fobj_length);
-    applied = CPLAT_OK;
-    for (entry = root->child; entry != NULL; entry = entry->next)
-    {
-        if (handle_property(entry, fobj_array, fobj_length, configpath) != 0)
-        {
-            applied = CPLAT_ERR_UNKNOWN;
-        }
-    }
-
-    if (finish_absent_keys(fobj_array, fobj_length) != 0)
-    {
-        applied = CPLAT_ERR_UNKNOWN;
-    }
-
-out_free_json:
-    cjson_app_cJSON_Delete(root);
-    root = NULL;
-out_free_buffer:
-    cplat_free(buffer);
-    buffer = NULL;
-out_close:
-    /* 読み取り専用で開いたストリームであり、閉じる処理の失敗で適用の結果が変わらないため、戻り値は明示的に破棄する。 */
-    (void)cplat_fclose(fp, NULL);
-    return applied;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_sym_loader_init(cplat_sym_loader_entry *const *fobj_array, const size_t fobj_length, const char *configpath)
-{
-    size_t index;
-
-    if ((fobj_length > 0u) && (fobj_array == NULL))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    for (index = 0; index < fobj_length; index++)
-    {
-        if (fobj_array[index] == NULL)
-        {
-            return CPLAT_ERR_INVALID_ARGUMENT;
-        }
-    }
-
-    for (index = 0; index < fobj_length; index++)
-    {
-        if ((fobj_array[index]->impl != NULL) && (fobj_array[index]->impl->release_pending != 0))
-        {
-            return CPLAT_ERR_BUSY;
-        }
-    }
-
-    return cplat_sym_loader_apply_config(fobj_array, fobj_length, configpath);
 }

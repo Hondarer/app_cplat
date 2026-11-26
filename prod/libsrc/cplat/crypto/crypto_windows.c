@@ -31,151 +31,13 @@
     #include <cplat/crypto/crypto.h>
     #include <cplat/runtime/abort.h>
 
-/* BCrypt の NTSTATUS を公開結果コードへ変換する。
- * see: https://learn.microsoft.com/windows/win32/api/bcrypt/nf-bcrypt-bcryptdecrypt
- */
-static int bcrypt_result(const NTSTATUS status)
-{
-    if (status == (NTSTATUS)0xC000A002L) /* STATUS_AUTH_TAG_MISMATCH */
-    {
-        return CPLAT_ERR_AUTHENTICATION_FAILED;
-    }
-    if (status == (NTSTATUS)0xC0000017L || status == (NTSTATUS)0xC000009AL) /* NO_MEMORY / INSUFFICIENT_RESOURCES */
-    {
-        return CPLAT_ERR_OUT_OF_MEMORY;
-    }
-    return CPLAT_ERR_UNKNOWN;
-}
-
-/*
- * BCrypt の解放関数が失敗した場合は、プロセスを異常終了させる。
- * 文書が挙げる失敗は、ハンドルが無効な場合 (STATUS_INVALID_HANDLE) だけである。
- * ハンドルは直前まで正常に使えていたため、失敗は内部状態の破壊を示す。
- * 続行すると、鍵のデータが解放されないままプロセスのメモリに残る可能性がある。
- * see: https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptdestroykey
- * see: https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptdestroyhash
- * see: https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptclosealgorithmprovider
- */
-static void destroy_key_or_abort(const BCRYPT_KEY_HANDLE h_key)
-{
-    if (!BCRYPT_SUCCESS(BCryptDestroyKey(h_key)))
-    {
-        CPLAT_ABORT("BCrypt の鍵を破棄できません");
-    }
-}
-
-/* 失敗時の扱いと根拠は destroy_key_or_abort() と同じである。 */
-static void destroy_hash_or_abort(const BCRYPT_HASH_HANDLE h_hash)
-{
-    if (!BCRYPT_SUCCESS(BCryptDestroyHash(h_hash)))
-    {
-        CPLAT_ABORT("BCrypt のハッシュを破棄できません");
-    }
-}
-
-/* 失敗時の扱いと根拠は destroy_key_or_abort() と同じである。 */
-static void close_algorithm_or_abort(const BCRYPT_ALG_HANDLE h_alg)
-{
-    if (!BCRYPT_SUCCESS(BCryptCloseAlgorithmProvider(h_alg, 0)))
-    {
-        CPLAT_ABORT("BCrypt のアルゴリズム プロバイダーを閉じられません");
-    }
-}
-
-/*
- * BCrypt で AES-256-GCM の暗号化または復号を行う。
- * is_encrypt が TRUE のときは暗号化し、FALSE のときは復号する。復号ではタグ検証を含む。
- * src と src_len は、暗号化では平文、復号ではタグを除いた暗号文である。
- * tag は、暗号化では出力バッファー、復号では検証する入力バッファーである。
- * 成功したときは CPLAT_OK を返し、dst_len に書き込んだバイト数を格納する。
- * 認証不一致は CPLAT_ERR_AUTHENTICATION_FAILED、識別できるメモリ不足は CPLAT_ERR_OUT_OF_MEMORY を返す。
- * これらに分類できないバックエンドの失敗は CPLAT_ERR_UNKNOWN を返す。
- * これらの失敗時は dst_len を更新しない。
- */
+static int bcrypt_result(const NTSTATUS status);
+static void destroy_key_or_abort(const BCRYPT_KEY_HANDLE h_key);
+static void destroy_hash_or_abort(const BCRYPT_HASH_HANDLE h_hash);
+static void close_algorithm_or_abort(const BCRYPT_ALG_HANDLE h_alg);
 static int bcrypt_aes_gcm(const BOOL is_encrypt, uint8_t *dst, size_t *dst_len, const uint8_t *src,
                           const size_t src_len, const uint8_t *key, const uint8_t *nonce, const uint8_t *aad,
-                          const size_t aad_len, uint8_t *tag, const ULONG tag_len)
-{
-    BCRYPT_ALG_HANDLE h_alg = NULL;
-    BCRYPT_KEY_HANDLE h_key = NULL;
-    NTSTATUS status;
-    BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO auth_info;
-    ULONG len = 0;
-
-    status = BCryptOpenAlgorithmProvider(&h_alg, BCRYPT_AES_ALGORITHM, NULL, 0);
-    if (!BCRYPT_SUCCESS(status))
-    {
-        return bcrypt_result(status);
-    }
-
-    status =
-        BCryptSetProperty(h_alg, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_GCM, sizeof(BCRYPT_CHAIN_MODE_GCM), 0);
-    if (!BCRYPT_SUCCESS(status))
-    {
-        close_algorithm_or_abort(h_alg);
-        return bcrypt_result(status);
-    }
-
-    status = BCryptGenerateSymmetricKey(h_alg, &h_key, NULL, 0, (PUCHAR)key, (ULONG)CPLAT_CRYPTO_KEY_SIZE, 0);
-    if (!BCRYPT_SUCCESS(status))
-    {
-        close_algorithm_or_abort(h_alg);
-        return bcrypt_result(status);
-    }
-
-    /*
-     * cbSize と dwInfoVersion は直接代入しない。BCRYPT_INIT_AUTH_MODE_INFO() で初期化する。
-     * see: https://learn.microsoft.com/windows/win32/api/bcrypt/ns-bcrypt-bcrypt_authenticated_cipher_mode_info
-     */
-    BCRYPT_INIT_AUTH_MODE_INFO(auth_info);
-    auth_info.pbNonce = (PUCHAR)nonce;
-    auth_info.cbNonce = (ULONG)CPLAT_CRYPTO_NONCE_SIZE;
-    auth_info.pbAuthData = (PUCHAR)aad;
-
-    /*
-     * 追加認証データがない場合、API は pbAuthData を NULL、cbAuthData を 0 にするよう要求する。
-     * aad が NULL のときは aad_len を使わない。
-     * see: https://learn.microsoft.com/windows/win32/api/bcrypt/ns-bcrypt-bcrypt_authenticated_cipher_mode_info
-     */
-    if (aad != NULL)
-    {
-        auth_info.cbAuthData = (ULONG)aad_len;
-    }
-    else
-    {
-        auth_info.cbAuthData = 0U;
-    }
-
-    auth_info.pbTag = (PUCHAR)tag;
-    auth_info.cbTag = tag_len;
-
-    /*
-     * GCM のノンスは pbNonce で渡す。BCryptEncrypt() と BCryptDecrypt() の IV 引数は使わない。
-     * see: https://learn.microsoft.com/windows/win32/api/bcrypt/ns-bcrypt-bcrypt_authenticated_cipher_mode_info
-     */
-    if (is_encrypt)
-    {
-        status = BCryptEncrypt(h_key, (PUCHAR)src, (ULONG)src_len, &auth_info, NULL, 0, (PUCHAR)dst, (ULONG)src_len,
-                               &len, 0);
-    }
-    else
-    {
-        status = BCryptDecrypt(h_key, (PUCHAR)src, (ULONG)src_len, &auth_info, NULL, 0, (PUCHAR)dst, (ULONG)src_len,
-                               &len, 0);
-    }
-
-    destroy_key_or_abort(h_key);
-    close_algorithm_or_abort(h_alg);
-
-    if (!BCRYPT_SUCCESS(status))
-    {
-        return bcrypt_result(status);
-    }
-
-    *dst_len = (size_t)len;
-
-    return CPLAT_OK;
-}
+                          const size_t aad_len, uint8_t *tag, const ULONG tag_len);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -347,6 +209,152 @@ int cplat_passphrase_to_key(uint8_t *key_out, const uint8_t *passphrase, const s
     {
         return bcrypt_result(status);
     }
+}
+
+/* BCrypt の NTSTATUS を公開結果コードへ変換する。
+ * see: https://learn.microsoft.com/windows/win32/api/bcrypt/nf-bcrypt-bcryptdecrypt
+ */
+static int bcrypt_result(const NTSTATUS status)
+{
+    if (status == (NTSTATUS)0xC000A002L) /* STATUS_AUTH_TAG_MISMATCH */
+    {
+        return CPLAT_ERR_AUTHENTICATION_FAILED;
+    }
+    if (status == (NTSTATUS)0xC0000017L || status == (NTSTATUS)0xC000009AL) /* NO_MEMORY / INSUFFICIENT_RESOURCES */
+    {
+        return CPLAT_ERR_OUT_OF_MEMORY;
+    }
+    return CPLAT_ERR_UNKNOWN;
+}
+
+/*
+ * BCrypt の解放関数が失敗した場合は、プロセスを異常終了させる。
+ * 文書が挙げる失敗は、ハンドルが無効な場合 (STATUS_INVALID_HANDLE) だけである。
+ * ハンドルは直前まで正常に使えていたため、失敗は内部状態の破壊を示す。
+ * 続行すると、鍵のデータが解放されないままプロセスのメモリに残る可能性がある。
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptdestroykey
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptdestroyhash
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptclosealgorithmprovider
+ */
+static void destroy_key_or_abort(const BCRYPT_KEY_HANDLE h_key)
+{
+    if (!BCRYPT_SUCCESS(BCryptDestroyKey(h_key)))
+    {
+        CPLAT_ABORT("BCrypt の鍵を破棄できません");
+    }
+}
+
+/* 失敗時の扱いと根拠は destroy_key_or_abort() と同じである。 */
+static void destroy_hash_or_abort(const BCRYPT_HASH_HANDLE h_hash)
+{
+    if (!BCRYPT_SUCCESS(BCryptDestroyHash(h_hash)))
+    {
+        CPLAT_ABORT("BCrypt のハッシュを破棄できません");
+    }
+}
+
+/* 失敗時の扱いと根拠は destroy_key_or_abort() と同じである。 */
+static void close_algorithm_or_abort(const BCRYPT_ALG_HANDLE h_alg)
+{
+    if (!BCRYPT_SUCCESS(BCryptCloseAlgorithmProvider(h_alg, 0)))
+    {
+        CPLAT_ABORT("BCrypt のアルゴリズム プロバイダーを閉じられません");
+    }
+}
+
+/*
+ * BCrypt で AES-256-GCM の暗号化または復号を行う。
+ * is_encrypt が TRUE のときは暗号化し、FALSE のときは復号する。復号ではタグ検証を含む。
+ * src と src_len は、暗号化では平文、復号ではタグを除いた暗号文である。
+ * tag は、暗号化では出力バッファー、復号では検証する入力バッファーである。
+ * 成功したときは CPLAT_OK を返し、dst_len に書き込んだバイト数を格納する。
+ * 認証不一致は CPLAT_ERR_AUTHENTICATION_FAILED、識別できるメモリ不足は CPLAT_ERR_OUT_OF_MEMORY を返す。
+ * これらに分類できないバックエンドの失敗は CPLAT_ERR_UNKNOWN を返す。
+ * これらの失敗時は dst_len を更新しない。
+ */
+static int bcrypt_aes_gcm(const BOOL is_encrypt, uint8_t *dst, size_t *dst_len, const uint8_t *src,
+                          const size_t src_len, const uint8_t *key, const uint8_t *nonce, const uint8_t *aad,
+                          const size_t aad_len, uint8_t *tag, const ULONG tag_len)
+{
+    BCRYPT_ALG_HANDLE h_alg = NULL;
+    BCRYPT_KEY_HANDLE h_key = NULL;
+    NTSTATUS status;
+    BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO auth_info;
+    ULONG len = 0;
+
+    status = BCryptOpenAlgorithmProvider(&h_alg, BCRYPT_AES_ALGORITHM, NULL, 0);
+    if (!BCRYPT_SUCCESS(status))
+    {
+        return bcrypt_result(status);
+    }
+
+    status =
+        BCryptSetProperty(h_alg, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_GCM, sizeof(BCRYPT_CHAIN_MODE_GCM), 0);
+    if (!BCRYPT_SUCCESS(status))
+    {
+        close_algorithm_or_abort(h_alg);
+        return bcrypt_result(status);
+    }
+
+    status = BCryptGenerateSymmetricKey(h_alg, &h_key, NULL, 0, (PUCHAR)key, (ULONG)CPLAT_CRYPTO_KEY_SIZE, 0);
+    if (!BCRYPT_SUCCESS(status))
+    {
+        close_algorithm_or_abort(h_alg);
+        return bcrypt_result(status);
+    }
+
+    /*
+     * cbSize と dwInfoVersion は直接代入しない。BCRYPT_INIT_AUTH_MODE_INFO() で初期化する。
+     * see: https://learn.microsoft.com/windows/win32/api/bcrypt/ns-bcrypt-bcrypt_authenticated_cipher_mode_info
+     */
+    BCRYPT_INIT_AUTH_MODE_INFO(auth_info);
+    auth_info.pbNonce = (PUCHAR)nonce;
+    auth_info.cbNonce = (ULONG)CPLAT_CRYPTO_NONCE_SIZE;
+    auth_info.pbAuthData = (PUCHAR)aad;
+
+    /*
+     * 追加認証データがない場合、API は pbAuthData を NULL、cbAuthData を 0 にするよう要求する。
+     * aad が NULL のときは aad_len を使わない。
+     * see: https://learn.microsoft.com/windows/win32/api/bcrypt/ns-bcrypt-bcrypt_authenticated_cipher_mode_info
+     */
+    if (aad != NULL)
+    {
+        auth_info.cbAuthData = (ULONG)aad_len;
+    }
+    else
+    {
+        auth_info.cbAuthData = 0U;
+    }
+
+    auth_info.pbTag = (PUCHAR)tag;
+    auth_info.cbTag = tag_len;
+
+    /*
+     * GCM のノンスは pbNonce で渡す。BCryptEncrypt() と BCryptDecrypt() の IV 引数は使わない。
+     * see: https://learn.microsoft.com/windows/win32/api/bcrypt/ns-bcrypt-bcrypt_authenticated_cipher_mode_info
+     */
+    if (is_encrypt)
+    {
+        status = BCryptEncrypt(h_key, (PUCHAR)src, (ULONG)src_len, &auth_info, NULL, 0, (PUCHAR)dst, (ULONG)src_len,
+                               &len, 0);
+    }
+    else
+    {
+        status = BCryptDecrypt(h_key, (PUCHAR)src, (ULONG)src_len, &auth_info, NULL, 0, (PUCHAR)dst, (ULONG)src_len,
+                               &len, 0);
+    }
+
+    destroy_key_or_abort(h_key);
+    close_algorithm_or_abort(h_alg);
+
+    if (!BCRYPT_SUCCESS(status))
+    {
+        return bcrypt_result(status);
+    }
+
+    *dst_len = (size_t)len;
+
+    return CPLAT_OK;
 }
 
 #endif /* PLATFORM_WINDOWS */

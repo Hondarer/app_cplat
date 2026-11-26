@@ -159,6 +159,542 @@ struct cplat_pinned_prompt
 
 #define PINNED_PROMPT_HIST_IDX(s, ctx, i) (((ctx)->head + (i)) % (s)->history_max)
 
+static size_t cstr_len(const char *s);
+static FILE *pinned_prompt_channel_file(cplat_pinned_prompt_channel channel);
+static void pinned_prompt_lock(cplat_pinned_prompt *screen);
+static void pinned_prompt_unlock(cplat_pinned_prompt *screen);
+static void pinned_prompt_update_size(cplat_pinned_prompt *screen);
+static int pinned_prompt_set_prompt(cplat_pinned_prompt *screen, const char *prompt_str);
+static void pinned_prompt_adjust_view(cplat_pinned_prompt *screen);
+static void pinned_prompt_render_separator(cplat_pinned_prompt *screen, int row);
+static void pinned_prompt_render_status_line(cplat_pinned_prompt *screen, int row, const char *left_content,
+                                             const char *right_content);
+static void pinned_prompt_calc_layout(cplat_pinned_prompt *screen, pinned_prompt_layout *layout);
+static void pinned_prompt_clear_control_area(cplat_pinned_prompt *screen, const pinned_prompt_layout *layout);
+static void pinned_prompt_render_locked(cplat_pinned_prompt *screen);
+static void pinned_prompt_resize_locked(cplat_pinned_prompt *screen);
+static void pinned_prompt_hide_prompt_locked(cplat_pinned_prompt *screen);
+static void pinned_prompt_finish_prompt_locked(cplat_pinned_prompt *screen);
+static void pinned_prompt_cleanup_terminal_locked(cplat_pinned_prompt *screen);
+static void pinned_prompt_prepare_output_locked(cplat_pinned_prompt *screen);
+static pinned_prompt_key pinned_prompt_read_key(cplat_pinned_prompt *screen, int *ch_out);
+static pinned_prompt_history_ctx *pinned_prompt_find_or_create_history_ctx(cplat_pinned_prompt *screen,
+                                                                           const char *file, int line);
+static void pinned_prompt_history_add(cplat_pinned_prompt *screen, pinned_prompt_history_ctx *ctx, const char *line);
+static void pinned_prompt_set_edit_line(cplat_pinned_prompt *screen, const char *line);
+static void pinned_prompt_clear_edit_line(cplat_pinned_prompt *screen, pinned_prompt_history_ctx *ctx);
+static void pinned_prompt_history_prev(cplat_pinned_prompt *screen, pinned_prompt_history_ctx *ctx);
+static void pinned_prompt_history_next(cplat_pinned_prompt *screen, pinned_prompt_history_ctx *ctx);
+static void pinned_prompt_insert_byte(cplat_pinned_prompt *screen, int ch);
+static void pinned_prompt_backspace(cplat_pinned_prompt *screen);
+static void pinned_prompt_delete(cplat_pinned_prompt *screen);
+static int pinned_prompt_format_prompt(cplat_pinned_prompt *screen, const char *fmt, va_list ap);
+static int pinned_prompt_readline_fallback(cplat_pinned_prompt *screen, char *buf, const size_t buf_size,
+                                           const char *prompt_str);
+static void pinned_prompt_complete(cplat_pinned_prompt *screen);
+static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, const size_t buf_size,
+                                       const char *prompt_str, const char *initial_text, const size_t initial_length,
+                                       const char *file, int line);
+static int pinned_prompt_set_status_content(char **buf, size_t *cap, const char *content);
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+cplat_pinned_prompt *cplat_pinned_prompt_create(const cplat_pinned_prompt_options *options)
+{
+    cplat_pinned_prompt *screen;
+    size_t history_max;
+    size_t input_initial_capacity;
+    size_t input_max_bytes;
+
+    cplat_console_init();
+
+    screen = (cplat_pinned_prompt *)cplat_calloc(1U, sizeof(*screen));
+    if (screen == NULL)
+    {
+        return NULL;
+    }
+
+    if (options != NULL)
+    {
+        cplat_internal_prompt_edit_resolve_options(
+            options->input.history_max, options->input.input_initial_capacity, options->input.input_max_bytes,
+            CPLAT_INTERNAL_PROMPT_INPUT_INITIAL_DEFAULT, &history_max, &input_initial_capacity, &input_max_bytes);
+    }
+    else
+    {
+        cplat_internal_prompt_edit_resolve_options(0U, 0U, 0U, CPLAT_INTERNAL_PROMPT_INPUT_INITIAL_DEFAULT,
+                                                   &history_max, &input_initial_capacity, &input_max_bytes);
+    }
+
+    screen->history_max = history_max;
+    screen->input_max_bytes = input_max_bytes;
+    screen->edit_cap = input_initial_capacity;
+    screen->is_tty = prompt_platform_is_tty();
+    pinned_prompt_update_size(screen);
+
+    if (cplat_local_lock_create(&screen->mutex) != CPLAT_OK)
+    {
+        cplat_free(screen);
+        return NULL;
+    }
+
+    screen->mutex_active = 1;
+
+    if (prompt_platform_init_cancelable(&screen->platform) != 0)
+    {
+        cplat_pinned_prompt_dispose(screen);
+        return NULL;
+    }
+
+    screen->edit_buf = (char *)cplat_malloc(screen->edit_cap);
+    screen->prompt_buf = (char *)cplat_malloc(1U);
+    screen->status_top_left = (char *)cplat_malloc(1U);
+    screen->status_top_right = (char *)cplat_malloc(1U);
+    screen->status_bottom_left = (char *)cplat_malloc(1U);
+    screen->status_bottom_right = (char *)cplat_malloc(1U);
+    if (screen->edit_buf == NULL || screen->prompt_buf == NULL || screen->status_top_left == NULL ||
+        screen->status_top_right == NULL || screen->status_bottom_left == NULL || screen->status_bottom_right == NULL)
+    {
+        cplat_pinned_prompt_dispose(screen);
+        return NULL;
+    }
+
+    screen->edit_buf[0] = '\0';
+    screen->prompt_buf[0] = '\0';
+    screen->prompt_cap = 1U;
+    screen->status_top_left[0] = '\0';
+    screen->status_top_left_cap = 1U;
+    screen->status_top_right[0] = '\0';
+    screen->status_top_right_cap = 1U;
+    screen->status_bottom_left[0] = '\0';
+    screen->status_bottom_left_cap = 1U;
+    screen->status_bottom_right[0] = '\0';
+    screen->status_bottom_right_cap = 1U;
+    screen->status_dirty = 1;
+    screen->prev_main_bottom_row = PINNED_PROMPT_ROW_UNSET;
+
+    return screen;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_pinned_prompt_dispose(cplat_pinned_prompt *screen)
+{
+    size_t i;
+    size_t j;
+
+    if (screen == NULL)
+    {
+        return;
+    }
+
+    pinned_prompt_lock(screen);
+
+    pinned_prompt_cleanup_terminal_locked(screen);
+
+    /* 解放処理を継続して後続の資源解放を進めるため、端末状態の復帰の戻り値は明示的に破棄する。 */
+    (void)prompt_platform_leave_raw(&screen->platform);
+    pinned_prompt_unlock(screen);
+
+    if (screen->history_contexts != NULL)
+    {
+        for (i = 0U; i < screen->history_ctx_count; i++)
+        {
+            pinned_prompt_history_ctx *ctx;
+
+            ctx = &screen->history_contexts[i];
+            if (ctx->entries != NULL)
+            {
+                for (j = 0U; j < screen->history_max; j++)
+                {
+                    cplat_free(ctx->entries[j]);
+                }
+            }
+
+            cplat_free(ctx->entries);
+            cplat_free(ctx->saved_line);
+        }
+    }
+
+    cplat_free(screen->history_contexts);
+    cplat_internal_prompt_edit_completions_dispose(&screen->completions);
+    cplat_free(screen->edit_buf);
+    cplat_free(screen->prompt_buf);
+    cplat_free(screen->fmt_buf);
+    cplat_free(screen->status_top_left);
+    cplat_free(screen->status_top_right);
+    cplat_free(screen->status_bottom_left);
+    cplat_free(screen->status_bottom_right);
+
+    if (screen->mutex_active)
+    {
+        cplat_local_lock_dispose(screen->mutex);
+    }
+
+    prompt_platform_dispose(&screen->platform);
+    cplat_free(screen);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_pinned_prompt_readline_at(cplat_pinned_prompt *screen, char *buf, const size_t buf_size,
+                                    const char *prompt_str, const char *file, int line)
+{
+    if (screen == NULL || buf == NULL || buf_size == 0U)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    return pinned_prompt_readline_core(screen, buf, buf_size, prompt_str, NULL, 0U, file, line);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_pinned_prompt_readline_with_initial_at(cplat_pinned_prompt *screen, char *buf, const size_t buf_size,
+                                                 const char *prompt_str, const char *initial_text, const char *file,
+                                                 int line)
+{
+    size_t initial_length;
+    int ret;
+
+    if (screen == NULL || buf == NULL || buf_size == 0U)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    buf[0] = '\0';
+
+    /* TTY かどうかによらず同じ規則で検証し、契約を経路に依存させない。 */
+    ret = cplat_internal_prompt_edit_validate_initial_text(initial_text, screen->input_max_bytes, &initial_length);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    return pinned_prompt_readline_core(screen, buf, buf_size, prompt_str, initial_text, initial_length, file, line);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_pinned_prompt_readline_fmt_at(cplat_pinned_prompt *screen, char *buf, size_t buf_size, const char *file,
+                                        int line, const char *fmt, ...)
+{
+    va_list ap;
+    int rc;
+
+    if (screen == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    va_start(ap, fmt);
+    rc = pinned_prompt_format_prompt(screen, fmt, ap);
+    va_end(ap);
+
+    if (rc != CPLAT_OK)
+    {
+        return cplat_pinned_prompt_readline_at(screen, buf, buf_size, "", file, line);
+    }
+
+    return cplat_pinned_prompt_readline_at(screen, buf, buf_size, screen->fmt_buf, file, line);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_pinned_prompt_write(cplat_pinned_prompt *screen, cplat_pinned_prompt_channel channel, const void *data,
+                              size_t size, size_t *written_out)
+{
+    FILE *out;
+    size_t written;
+    int flush_result;
+
+    if (written_out != NULL)
+    {
+        *written_out = 0U;
+    }
+
+    if (screen == NULL || (data == NULL && size != 0U))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    out = pinned_prompt_channel_file(channel);
+
+    if (!screen->is_tty)
+    {
+        if (size > 0U)
+        {
+            written = fwrite(data, 1U, size, out);
+        }
+        else
+        {
+            written = 0U;
+        }
+
+        flush_result = fflush(out);
+
+        if (written_out != NULL)
+        {
+            *written_out = written;
+        }
+
+        if (written != size || flush_result != 0)
+        {
+            return CPLAT_ERR_UNKNOWN;
+        }
+
+        return CPLAT_OK;
+    }
+
+    pinned_prompt_lock(screen);
+
+    /* 通常出力領域へスクロール範囲を制限してデータを出力し、制限解除後に固定プロンプトを再描画する。 */
+    pinned_prompt_prepare_output_locked(screen);
+
+    if (size > 0U)
+    {
+        written = fwrite(data, 1U, size, out);
+    }
+    else
+    {
+        written = 0U;
+    }
+
+    flush_result = fflush(out);
+    /*
+     * スクロール領域を戻す端末制御であり、失敗しても書き込んだデータの結果は変わらないため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)printf("\033[r");
+    pinned_prompt_render_locked(screen);
+    pinned_prompt_unlock(screen);
+
+    if (written_out != NULL)
+    {
+        *written_out = written;
+    }
+
+    if (written != size || flush_result != 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_pinned_prompt_printf(cplat_pinned_prompt *screen, cplat_pinned_prompt_channel channel, const char *fmt, ...)
+{
+    va_list ap;
+    va_list ap_copy;
+    int needed;
+    char *buf;
+    size_t written = 0U;
+    int write_result;
+
+    if (screen == NULL)
+    {
+        return -1;
+    }
+
+    va_start(ap, fmt);
+    va_copy(ap_copy, ap);
+
+    if (fmt != NULL)
+    {
+        needed = vsnprintf(NULL, 0U, fmt, ap_copy); /* 置換対象外: 必要長の照会 */
+    }
+    else
+    {
+        needed = 0;
+    }
+
+    va_end(ap_copy);
+
+    if (needed < 0)
+    {
+        va_end(ap);
+        return -1;
+    }
+
+    buf = (char *)cplat_malloc((size_t)needed + 1U);
+    if (buf == NULL)
+    {
+        va_end(ap);
+        return -1;
+    }
+
+    if (fmt != NULL)
+    {
+        /*
+         * 書式の展開の失敗は直前の必要長の照会で検出済みで、同じ書式と引数に必要長 + 1 の大きさを
+         * 確保しており、切り詰めも起きないため、戻り値は明示的に破棄する。
+         */
+        (void)cplat_vsnprintf(buf, (size_t)needed + 1U, fmt, ap);
+    }
+    else
+    {
+        buf[0] = '\0';
+    }
+
+    va_end(ap);
+
+    write_result = cplat_pinned_prompt_write(screen, channel, buf, (size_t)needed, &written);
+    cplat_free(buf);
+
+    if (write_result != CPLAT_OK)
+    {
+        return -1;
+    }
+
+    return (int)written;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_pinned_prompt_status_enable(cplat_pinned_prompt *screen, cplat_pinned_prompt_status_position position,
+                                      int enable)
+{
+    if (screen == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    pinned_prompt_lock(screen);
+
+    if (position == CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP)
+    {
+        if (enable)
+        {
+            screen->status_top_enabled = 1;
+        }
+        else
+        {
+            screen->status_top_enabled = 0;
+        }
+    }
+    else if (position == CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM)
+    {
+        if (enable)
+        {
+            screen->status_bottom_enabled = 1;
+        }
+        else
+        {
+            screen->status_bottom_enabled = 0;
+        }
+    }
+    else
+    {
+        pinned_prompt_unlock(screen);
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    screen->status_dirty = 1;
+    pinned_prompt_render_locked(screen);
+    pinned_prompt_unlock(screen);
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_pinned_prompt_status_set(cplat_pinned_prompt *screen, cplat_pinned_prompt_status_position position,
+                                   cplat_pinned_prompt_status_align align, const char *content)
+{
+    int ret;
+
+    if (screen == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    pinned_prompt_lock(screen);
+
+    if (position == CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP)
+    {
+        if (align == CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT)
+        {
+            ret = pinned_prompt_set_status_content(&screen->status_top_left, &screen->status_top_left_cap, content);
+        }
+        else if (align == CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT)
+        {
+            ret = pinned_prompt_set_status_content(&screen->status_top_right, &screen->status_top_right_cap, content);
+        }
+        else
+        {
+            pinned_prompt_unlock(screen);
+            return CPLAT_ERR_INVALID_ARGUMENT;
+        }
+    }
+    else if (position == CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM)
+    {
+        if (align == CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT)
+        {
+            ret =
+                pinned_prompt_set_status_content(&screen->status_bottom_left, &screen->status_bottom_left_cap, content);
+        }
+        else if (align == CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT)
+        {
+            ret = pinned_prompt_set_status_content(&screen->status_bottom_right, &screen->status_bottom_right_cap,
+                                                   content);
+        }
+        else
+        {
+            pinned_prompt_unlock(screen);
+            return CPLAT_ERR_INVALID_ARGUMENT;
+        }
+    }
+    else
+    {
+        pinned_prompt_unlock(screen);
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (ret == CPLAT_OK)
+    {
+        screen->status_dirty = 1;
+        pinned_prompt_render_locked(screen);
+    }
+
+    pinned_prompt_unlock(screen);
+
+    return ret;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_pinned_prompt_completion_set(cplat_pinned_prompt *screen, cplat_prompt_completion_fn fn, void *user_data)
+{
+    if (screen == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    pinned_prompt_lock(screen);
+
+    screen->completion_fn = fn;
+    screen->completion_user_data = user_data;
+    screen->completions.count = 0U;
+    pinned_prompt_render_locked(screen);
+    pinned_prompt_unlock(screen);
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_pinned_prompt_stop_input(cplat_pinned_prompt *screen)
+{
+    if (screen == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    return prompt_platform_stop_input(&screen->platform);
+}
+
 /* NULL を許容して文字列の長さを取得する。s が NULL の場合は 0、それ以外は文字数を返す。 */
 static size_t cstr_len(const char *s)
 {
@@ -1134,144 +1670,6 @@ static int pinned_prompt_readline_fallback(cplat_pinned_prompt *screen, char *bu
     return prompt_platform_read_line(&screen->platform, buf, buf_size);
 }
 
-/* Doxygen コメントは、ヘッダーに記載 */
-
-cplat_pinned_prompt *cplat_pinned_prompt_create(const cplat_pinned_prompt_options *options)
-{
-    cplat_pinned_prompt *screen;
-    size_t history_max;
-    size_t input_initial_capacity;
-    size_t input_max_bytes;
-
-    cplat_console_init();
-
-    screen = (cplat_pinned_prompt *)cplat_calloc(1U, sizeof(*screen));
-    if (screen == NULL)
-    {
-        return NULL;
-    }
-
-    if (options != NULL)
-    {
-        cplat_internal_prompt_edit_resolve_options(
-            options->input.history_max, options->input.input_initial_capacity, options->input.input_max_bytes,
-            CPLAT_INTERNAL_PROMPT_INPUT_INITIAL_DEFAULT, &history_max, &input_initial_capacity, &input_max_bytes);
-    }
-    else
-    {
-        cplat_internal_prompt_edit_resolve_options(0U, 0U, 0U, CPLAT_INTERNAL_PROMPT_INPUT_INITIAL_DEFAULT,
-                                                   &history_max, &input_initial_capacity, &input_max_bytes);
-    }
-
-    screen->history_max = history_max;
-    screen->input_max_bytes = input_max_bytes;
-    screen->edit_cap = input_initial_capacity;
-    screen->is_tty = prompt_platform_is_tty();
-    pinned_prompt_update_size(screen);
-
-    if (cplat_local_lock_create(&screen->mutex) != CPLAT_OK)
-    {
-        cplat_free(screen);
-        return NULL;
-    }
-
-    screen->mutex_active = 1;
-
-    if (prompt_platform_init_cancelable(&screen->platform) != 0)
-    {
-        cplat_pinned_prompt_dispose(screen);
-        return NULL;
-    }
-
-    screen->edit_buf = (char *)cplat_malloc(screen->edit_cap);
-    screen->prompt_buf = (char *)cplat_malloc(1U);
-    screen->status_top_left = (char *)cplat_malloc(1U);
-    screen->status_top_right = (char *)cplat_malloc(1U);
-    screen->status_bottom_left = (char *)cplat_malloc(1U);
-    screen->status_bottom_right = (char *)cplat_malloc(1U);
-    if (screen->edit_buf == NULL || screen->prompt_buf == NULL || screen->status_top_left == NULL ||
-        screen->status_top_right == NULL || screen->status_bottom_left == NULL || screen->status_bottom_right == NULL)
-    {
-        cplat_pinned_prompt_dispose(screen);
-        return NULL;
-    }
-
-    screen->edit_buf[0] = '\0';
-    screen->prompt_buf[0] = '\0';
-    screen->prompt_cap = 1U;
-    screen->status_top_left[0] = '\0';
-    screen->status_top_left_cap = 1U;
-    screen->status_top_right[0] = '\0';
-    screen->status_top_right_cap = 1U;
-    screen->status_bottom_left[0] = '\0';
-    screen->status_bottom_left_cap = 1U;
-    screen->status_bottom_right[0] = '\0';
-    screen->status_bottom_right_cap = 1U;
-    screen->status_dirty = 1;
-    screen->prev_main_bottom_row = PINNED_PROMPT_ROW_UNSET;
-
-    return screen;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_pinned_prompt_dispose(cplat_pinned_prompt *screen)
-{
-    size_t i;
-    size_t j;
-
-    if (screen == NULL)
-    {
-        return;
-    }
-
-    pinned_prompt_lock(screen);
-
-    pinned_prompt_cleanup_terminal_locked(screen);
-
-    /* 解放処理を継続して後続の資源解放を進めるため、端末状態の復帰の戻り値は明示的に破棄する。 */
-    (void)prompt_platform_leave_raw(&screen->platform);
-    pinned_prompt_unlock(screen);
-
-    if (screen->history_contexts != NULL)
-    {
-        for (i = 0U; i < screen->history_ctx_count; i++)
-        {
-            pinned_prompt_history_ctx *ctx;
-
-            ctx = &screen->history_contexts[i];
-            if (ctx->entries != NULL)
-            {
-                for (j = 0U; j < screen->history_max; j++)
-                {
-                    cplat_free(ctx->entries[j]);
-                }
-            }
-
-            cplat_free(ctx->entries);
-            cplat_free(ctx->saved_line);
-        }
-    }
-
-    cplat_free(screen->history_contexts);
-    cplat_internal_prompt_edit_completions_dispose(&screen->completions);
-    cplat_free(screen->edit_buf);
-    cplat_free(screen->prompt_buf);
-    cplat_free(screen->fmt_buf);
-    cplat_free(screen->status_top_left);
-    cplat_free(screen->status_top_right);
-    cplat_free(screen->status_bottom_left);
-    cplat_free(screen->status_bottom_right);
-
-    if (screen->mutex_active)
-    {
-        cplat_local_lock_dispose(screen->mutex);
-    }
-
-    prompt_platform_dispose(&screen->platform);
-    cplat_free(screen);
-}
-
 /* 登録済みの補完関数を呼び出し、現在の入力文字列に対する補完候補を更新する。 */
 static void pinned_prompt_complete(cplat_pinned_prompt *screen)
 {
@@ -1540,269 +1938,6 @@ static int pinned_prompt_readline_core(cplat_pinned_prompt *screen, char *buf, c
     return result;
 }
 
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_pinned_prompt_readline_at(cplat_pinned_prompt *screen, char *buf, const size_t buf_size,
-                                    const char *prompt_str, const char *file, int line)
-{
-    if (screen == NULL || buf == NULL || buf_size == 0U)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    return pinned_prompt_readline_core(screen, buf, buf_size, prompt_str, NULL, 0U, file, line);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_pinned_prompt_readline_with_initial_at(cplat_pinned_prompt *screen, char *buf, const size_t buf_size,
-                                                 const char *prompt_str, const char *initial_text, const char *file,
-                                                 int line)
-{
-    size_t initial_length;
-    int ret;
-
-    if (screen == NULL || buf == NULL || buf_size == 0U)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    buf[0] = '\0';
-
-    /* TTY かどうかによらず同じ規則で検証し、契約を経路に依存させない。 */
-    ret = cplat_internal_prompt_edit_validate_initial_text(initial_text, screen->input_max_bytes, &initial_length);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
-
-    return pinned_prompt_readline_core(screen, buf, buf_size, prompt_str, initial_text, initial_length, file, line);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_pinned_prompt_readline_fmt_at(cplat_pinned_prompt *screen, char *buf, size_t buf_size, const char *file,
-                                        int line, const char *fmt, ...)
-{
-    va_list ap;
-    int rc;
-
-    if (screen == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    va_start(ap, fmt);
-    rc = pinned_prompt_format_prompt(screen, fmt, ap);
-    va_end(ap);
-
-    if (rc != CPLAT_OK)
-    {
-        return cplat_pinned_prompt_readline_at(screen, buf, buf_size, "", file, line);
-    }
-
-    return cplat_pinned_prompt_readline_at(screen, buf, buf_size, screen->fmt_buf, file, line);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_pinned_prompt_write(cplat_pinned_prompt *screen, cplat_pinned_prompt_channel channel, const void *data,
-                              size_t size, size_t *written_out)
-{
-    FILE *out;
-    size_t written;
-    int flush_result;
-
-    if (written_out != NULL)
-    {
-        *written_out = 0U;
-    }
-
-    if (screen == NULL || (data == NULL && size != 0U))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    out = pinned_prompt_channel_file(channel);
-
-    if (!screen->is_tty)
-    {
-        if (size > 0U)
-        {
-            written = fwrite(data, 1U, size, out);
-        }
-        else
-        {
-            written = 0U;
-        }
-
-        flush_result = fflush(out);
-
-        if (written_out != NULL)
-        {
-            *written_out = written;
-        }
-
-        if (written != size || flush_result != 0)
-        {
-            return CPLAT_ERR_UNKNOWN;
-        }
-
-        return CPLAT_OK;
-    }
-
-    pinned_prompt_lock(screen);
-
-    /* 通常出力領域へスクロール範囲を制限してデータを出力し、制限解除後に固定プロンプトを再描画する。 */
-    pinned_prompt_prepare_output_locked(screen);
-
-    if (size > 0U)
-    {
-        written = fwrite(data, 1U, size, out);
-    }
-    else
-    {
-        written = 0U;
-    }
-
-    flush_result = fflush(out);
-    /*
-     * スクロール領域を戻す端末制御であり、失敗しても書き込んだデータの結果は変わらないため、
-     * 戻り値は明示的に破棄する。
-     */
-    (void)printf("\033[r");
-    pinned_prompt_render_locked(screen);
-    pinned_prompt_unlock(screen);
-
-    if (written_out != NULL)
-    {
-        *written_out = written;
-    }
-
-    if (written != size || flush_result != 0)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_pinned_prompt_printf(cplat_pinned_prompt *screen, cplat_pinned_prompt_channel channel, const char *fmt, ...)
-{
-    va_list ap;
-    va_list ap_copy;
-    int needed;
-    char *buf;
-    size_t written = 0U;
-    int write_result;
-
-    if (screen == NULL)
-    {
-        return -1;
-    }
-
-    va_start(ap, fmt);
-    va_copy(ap_copy, ap);
-
-    if (fmt != NULL)
-    {
-        needed = vsnprintf(NULL, 0U, fmt, ap_copy); /* 置換対象外: 必要長の照会 */
-    }
-    else
-    {
-        needed = 0;
-    }
-
-    va_end(ap_copy);
-
-    if (needed < 0)
-    {
-        va_end(ap);
-        return -1;
-    }
-
-    buf = (char *)cplat_malloc((size_t)needed + 1U);
-    if (buf == NULL)
-    {
-        va_end(ap);
-        return -1;
-    }
-
-    if (fmt != NULL)
-    {
-        /*
-         * 書式の展開の失敗は直前の必要長の照会で検出済みで、同じ書式と引数に必要長 + 1 の大きさを
-         * 確保しており、切り詰めも起きないため、戻り値は明示的に破棄する。
-         */
-        (void)cplat_vsnprintf(buf, (size_t)needed + 1U, fmt, ap);
-    }
-    else
-    {
-        buf[0] = '\0';
-    }
-
-    va_end(ap);
-
-    write_result = cplat_pinned_prompt_write(screen, channel, buf, (size_t)needed, &written);
-    cplat_free(buf);
-
-    if (write_result != CPLAT_OK)
-    {
-        return -1;
-    }
-
-    return (int)written;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_pinned_prompt_status_enable(cplat_pinned_prompt *screen, cplat_pinned_prompt_status_position position,
-                                      int enable)
-{
-    if (screen == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    pinned_prompt_lock(screen);
-
-    if (position == CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP)
-    {
-        if (enable)
-        {
-            screen->status_top_enabled = 1;
-        }
-        else
-        {
-            screen->status_top_enabled = 0;
-        }
-    }
-    else if (position == CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM)
-    {
-        if (enable)
-        {
-            screen->status_bottom_enabled = 1;
-        }
-        else
-        {
-            screen->status_bottom_enabled = 0;
-        }
-    }
-    else
-    {
-        pinned_prompt_unlock(screen);
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    screen->status_dirty = 1;
-    pinned_prompt_render_locked(screen);
-    pinned_prompt_unlock(screen);
-
-    return CPLAT_OK;
-}
-
 /*
  * ステータス領域のバッファーへ文字列を複製する。必要に応じてバッファーを拡張する。
  * 成功時は CPLAT_OK、メモリ不足時は CPLAT_ERR_OUT_OF_MEMORY を返す。
@@ -1836,101 +1971,4 @@ static int pinned_prompt_set_status_content(char **buf, size_t *cap, const char 
     }
 
     return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_pinned_prompt_status_set(cplat_pinned_prompt *screen, cplat_pinned_prompt_status_position position,
-                                   cplat_pinned_prompt_status_align align, const char *content)
-{
-    int ret;
-
-    if (screen == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    pinned_prompt_lock(screen);
-
-    if (position == CPLAT_PINNED_PROMPT_STATUS_POSITION_TOP)
-    {
-        if (align == CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT)
-        {
-            ret = pinned_prompt_set_status_content(&screen->status_top_left, &screen->status_top_left_cap, content);
-        }
-        else if (align == CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT)
-        {
-            ret = pinned_prompt_set_status_content(&screen->status_top_right, &screen->status_top_right_cap, content);
-        }
-        else
-        {
-            pinned_prompt_unlock(screen);
-            return CPLAT_ERR_INVALID_ARGUMENT;
-        }
-    }
-    else if (position == CPLAT_PINNED_PROMPT_STATUS_POSITION_BOTTOM)
-    {
-        if (align == CPLAT_PINNED_PROMPT_STATUS_ALIGN_LEFT)
-        {
-            ret =
-                pinned_prompt_set_status_content(&screen->status_bottom_left, &screen->status_bottom_left_cap, content);
-        }
-        else if (align == CPLAT_PINNED_PROMPT_STATUS_ALIGN_RIGHT)
-        {
-            ret = pinned_prompt_set_status_content(&screen->status_bottom_right, &screen->status_bottom_right_cap,
-                                                   content);
-        }
-        else
-        {
-            pinned_prompt_unlock(screen);
-            return CPLAT_ERR_INVALID_ARGUMENT;
-        }
-    }
-    else
-    {
-        pinned_prompt_unlock(screen);
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (ret == CPLAT_OK)
-    {
-        screen->status_dirty = 1;
-        pinned_prompt_render_locked(screen);
-    }
-
-    pinned_prompt_unlock(screen);
-
-    return ret;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_pinned_prompt_completion_set(cplat_pinned_prompt *screen, cplat_prompt_completion_fn fn, void *user_data)
-{
-    if (screen == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    pinned_prompt_lock(screen);
-
-    screen->completion_fn = fn;
-    screen->completion_user_data = user_data;
-    screen->completions.count = 0U;
-    pinned_prompt_render_locked(screen);
-    pinned_prompt_unlock(screen);
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_pinned_prompt_stop_input(cplat_pinned_prompt *screen)
-{
-    if (screen == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    return prompt_platform_stop_input(&screen->platform);
 }

@@ -10,15 +10,7 @@
 
 #include <cplat/trace/trace_common.h>
 
-/**
- *  @brief          タイムスタンプが有効範囲か判定します。
- *  @param[in]      timestamp  判定対象のタイムスタンプです。NULL も指定できます。
- *  @return         有効な場合は 1、NULL または範囲外の場合は 0 を返します。
- */
-static int trace_timestamp_is_valid(const cplat_timespec *timestamp)
-{
-    return timestamp != NULL && timestamp->tv_nsec >= 0 && timestamp->tv_nsec < 1000000000; /* tv_nsec は 1 [s] 未満 */
-}
+static int trace_timestamp_is_valid(const cplat_timespec *timestamp);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -113,4 +105,14 @@ char cplat_internal_trace_level_char(const cplat_trace_level level)
     default:
         return 'D';
     }
+}
+
+/**
+ *  @brief          タイムスタンプが有効範囲か判定します。
+ *  @param[in]      timestamp  判定対象のタイムスタンプです。NULL も指定できます。
+ *  @return         有効な場合は 1、NULL または範囲外の場合は 0 を返します。
+ */
+static int trace_timestamp_is_valid(const cplat_timespec *timestamp)
+{
+    return timestamp != NULL && timestamp->tv_nsec >= 0 && timestamp->tv_nsec < 1000000000; /* tv_nsec は 1 [s] 未満 */
 }

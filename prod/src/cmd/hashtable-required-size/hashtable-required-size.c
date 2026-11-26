@@ -42,45 +42,7 @@ typedef struct hashtable_required_size_options
     int record_timestamp;
 } hashtable_required_size_options;
 
-/*
- * コマンド ライン オプションを登録する。
- * 登録エラー発生時は -1、正常時は 0 を返す。
- */
-static int register_options(hashtable_required_size_options *options)
-{
-    /*
-     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
-     * この関数の登録の関数の戻り値は明示的に破棄する。
-     */
-    (void)cplat_argparser_register_flag("-h", "--help", "show this help", &options->need_help);
-    (void)cplat_argparser_register_option_int("-c", "--capacity", "N", "number of slots", CPLAT_ARGPARSER_REQUIRED,
-                                              &options->capacity);
-    (void)cplat_argparser_register_option_int("-k", "--key-size", "N", "bytes per fixed key", 0, &options->key_size);
-    (void)cplat_argparser_register_option_int("-v", "--value-size", "N", "bytes per fixed value", 0,
-                                              &options->value_size);
-    (void)cplat_argparser_register_option_int(NULL, "--key-storage-size", "N", "bytes in variable key storage", 0,
-                                              &options->key_storage_size);
-    (void)cplat_argparser_register_option_int(NULL, "--value-storage-size", "N", "bytes in variable value storage", 0,
-                                              &options->value_storage_size);
-    (void)cplat_argparser_register_flag(NULL, "--variable-key", "store variable strings as keys",
-                                        &options->variable_key);
-    (void)cplat_argparser_register_flag(NULL, "--variable-value", "store variable strings as values",
-                                        &options->variable_value);
-    (void)cplat_argparser_register_option_int(
-        NULL, "--value-align", "N", "alignment boundary for fixed values (0 packs them)", 0, &options->value_align);
-    (void)cplat_argparser_register_flag(NULL, "--record-timestamp",
-                                        "include per-record timestamps and generations in the management region",
-                                        &options->record_timestamp);
-
-    if (cplat_argparser_get_register_error_count() > 0)
-    {
-        /* 登録の失敗は直後の -1 で伝え、診断の出力先もほかにないため、戻り値は明示的に破棄する。 */
-        (void)cplat_argparser_print_register_error_messages(stderr);
-        return -1;
-    }
-
-    return 0;
-}
+static int register_options(hashtable_required_size_options *options);
 
 int main(int argc, char **argv)
 {
@@ -201,4 +163,44 @@ int main(int argc, char **argv)
     }
 
     return EXIT_SUCCESS;
+}
+
+/*
+ * コマンド ライン オプションを登録する。
+ * 登録エラー発生時は -1、正常時は 0 を返す。
+ */
+static int register_options(hashtable_required_size_options *options)
+{
+    /*
+     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
+     * この関数の登録の関数の戻り値は明示的に破棄する。
+     */
+    (void)cplat_argparser_register_flag("-h", "--help", "show this help", &options->need_help);
+    (void)cplat_argparser_register_option_int("-c", "--capacity", "N", "number of slots", CPLAT_ARGPARSER_REQUIRED,
+                                              &options->capacity);
+    (void)cplat_argparser_register_option_int("-k", "--key-size", "N", "bytes per fixed key", 0, &options->key_size);
+    (void)cplat_argparser_register_option_int("-v", "--value-size", "N", "bytes per fixed value", 0,
+                                              &options->value_size);
+    (void)cplat_argparser_register_option_int(NULL, "--key-storage-size", "N", "bytes in variable key storage", 0,
+                                              &options->key_storage_size);
+    (void)cplat_argparser_register_option_int(NULL, "--value-storage-size", "N", "bytes in variable value storage", 0,
+                                              &options->value_storage_size);
+    (void)cplat_argparser_register_flag(NULL, "--variable-key", "store variable strings as keys",
+                                        &options->variable_key);
+    (void)cplat_argparser_register_flag(NULL, "--variable-value", "store variable strings as values",
+                                        &options->variable_value);
+    (void)cplat_argparser_register_option_int(
+        NULL, "--value-align", "N", "alignment boundary for fixed values (0 packs them)", 0, &options->value_align);
+    (void)cplat_argparser_register_flag(NULL, "--record-timestamp",
+                                        "include per-record timestamps and generations in the management region",
+                                        &options->record_timestamp);
+
+    if (cplat_argparser_get_register_error_count() > 0)
+    {
+        /* 登録の失敗は直後の -1 で伝え、診断の出力先もほかにないため、戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_register_error_messages(stderr);
+        return -1;
+    }
+
+    return 0;
 }

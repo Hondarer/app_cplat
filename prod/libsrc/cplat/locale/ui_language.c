@@ -37,6 +37,65 @@ static const char *const s_environment_names[] = {"LC_ALL", "LC_MESSAGES", "LANG
 /** `s_environment_names` の要素数です。 */
 #define ENVIRONMENT_NAME_COUNT ((size_t)(sizeof(s_environment_names) / sizeof(s_environment_names[0])))
 
+static int decide_from_environment(char *const tag_out, const size_t tag_size, int *const decided_out);
+#if defined(PLATFORM_WINDOWS)
+static int decide_from_windows(char *const tag_out, const size_t tag_size, int *const decided_out);
+#endif /* PLATFORM_WINDOWS */
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_ui_language_get_tag(char *const tag_out, const size_t tag_size)
+{
+    int decided = 0;
+    int ret;
+
+    if ((tag_out == NULL) || (tag_size == 0U))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    tag_out[0] = '\0';
+
+    ret = decide_from_environment(tag_out, tag_size, &decided);
+    if (ret != CPLAT_OK)
+    {
+        /*
+         * 容量が不足したときは言語タグを格納しない。
+         * 正本は app/cplat/docs/functional-spec/locale.md の「機能要件」節である。
+         */
+        tag_out[0] = '\0';
+        return ret;
+    }
+
+    if (decided != 0)
+    {
+        return CPLAT_OK;
+    }
+
+#if defined(PLATFORM_WINDOWS)
+    ret = decide_from_windows(tag_out, tag_size, &decided);
+    if (ret != CPLAT_OK)
+    {
+        /*
+         * 容量が不足したときは言語タグを格納しない。
+         * 正本は app/cplat/docs/functional-spec/locale.md の「機能要件」節である。
+         */
+        tag_out[0] = '\0';
+        return ret;
+    }
+
+    if (decided != 0)
+    {
+        return CPLAT_OK;
+    }
+#endif /* PLATFORM_WINDOWS */
+
+    /* Linux では、システムの設定がログイン時に環境変数へ反映されるため、環境変数以外の候補は評価しない。 */
+    tag_out[0] = '\0';
+
+    return CPLAT_OK;
+}
+
 /**
  *  @brief          環境変数から表示言語を決定します。
  *  @param[out]     tag_out       言語タグの格納先。NULL を渡してはなりません。
@@ -176,57 +235,3 @@ static int decide_from_windows(char *const tag_out, const size_t tag_size, int *
 }
 
 #endif /* PLATFORM_WINDOWS */
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_ui_language_get_tag(char *const tag_out, const size_t tag_size)
-{
-    int decided = 0;
-    int ret;
-
-    if ((tag_out == NULL) || (tag_size == 0U))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    tag_out[0] = '\0';
-
-    ret = decide_from_environment(tag_out, tag_size, &decided);
-    if (ret != CPLAT_OK)
-    {
-        /*
-         * 容量が不足したときは言語タグを格納しない。
-         * 正本は app/cplat/docs/functional-spec/locale.md の「機能要件」節である。
-         */
-        tag_out[0] = '\0';
-        return ret;
-    }
-
-    if (decided != 0)
-    {
-        return CPLAT_OK;
-    }
-
-#if defined(PLATFORM_WINDOWS)
-    ret = decide_from_windows(tag_out, tag_size, &decided);
-    if (ret != CPLAT_OK)
-    {
-        /*
-         * 容量が不足したときは言語タグを格納しない。
-         * 正本は app/cplat/docs/functional-spec/locale.md の「機能要件」節である。
-         */
-        tag_out[0] = '\0';
-        return ret;
-    }
-
-    if (decided != 0)
-    {
-        return CPLAT_OK;
-    }
-#endif /* PLATFORM_WINDOWS */
-
-    /* Linux では、システムの設定がログイン時に環境変数へ反映されるため、環境変数以外の候補は評価しない。 */
-    tag_out[0] = '\0';
-
-    return CPLAT_OK;
-}

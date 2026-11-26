@@ -45,6 +45,265 @@ enum trace_cli_prompt_state
     TRACE_CLI_PROMPT_STATE_DISPOSED = 1
 };
 
+/**
+ *  @brief  CLI コマンド 1 個の定義 (名前・usage・ハンドラー) です。
+ *
+ *  コマンドの追加は s_commands へのエントリ追加で完結します
+ *  (help のコマンド一覧と usage 表示はテーブルから生成されます)。
+ */
+struct trace_cli_command
+{
+    /** コマンド名。 */
+    const char *name;
+
+    /** usage 表示用の引数説明 (先頭に空白を含む)。引数なしは ""。 */
+    const char *usage_args;
+
+    /** 1 の場合、ディスパッチ側で余剰トークンを拒否する (引数なしコマンド)。 */
+    int no_args;
+
+    /** パディング (handler をポインター境界に揃える)。 */
+    int pad;
+
+    /** コマンド本体。成功時 0、終了要求時 1、失敗時 -1 を返す。 */
+    int (*handler)(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
+};
+
+static char *skip_spaces(char *p);
+static void trim_right(char *s);
+static int str_case_equal(const char *lhs, const char *rhs);
+static int is_null_keyword(const char *token);
+static char *next_token(char **cursor);
+static char *rest_argument(char **cursor);
+static const char *level_to_name(cplat_trace_level level);
+static int parse_trace_level(const char *token, cplat_trace_level *level);
+static int parse_int64_value(const char *token, int64_t *value);
+static int parse_int_value(const char *token, int *value);
+static const char *tracer_state_to_name(cplat_tracer_state state);
+static const char *session_prompt_state_to_name(const trace_cli_session *session);
+static int parse_size_value(const char *token, size_t *value);
+static int hex_nibble(char c);
+static int parse_hex_bytes(const char *text, unsigned char **data, size_t *size);
+static void print_level_result(cplat_trace_level level);
+static void print_rc_result(int ret);
+static void print_command_usage(const struct trace_cli_command *cmd);
+static void print_interactive_hint(void);
+static int cmd_help(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
+static int cmd_exit(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
+static int cmd_create(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
+static int cmd_dispose(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
+static int cmd_start(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
+static int cmd_stop(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
+static int cmd_set_name(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
+static int cmd_get_os_level(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
+static int cmd_set_os_level(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
+static int cmd_get_file_level(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
+static int cmd_set_file_level(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
+static int cmd_get_stderr_level(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
+static int cmd_set_stderr_level(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
+static int cmd_write(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
+static int cmd_write_hex(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
+static const struct trace_cli_command *find_command(const char *name);
+
+/** コマンド テーブル (help のコマンド一覧はこの順で表示される)。 */
+static const struct trace_cli_command s_commands[] = {
+    {"help", "", 1, 0, cmd_help},
+    {"exit", "", 1, 0, cmd_exit},
+    {"quit", "", 1, 0, cmd_exit},
+    {"create", "", 1, 0, cmd_create},
+    {"dispose", "", 1, 0, cmd_dispose},
+    {"start", "", 1, 0, cmd_start},
+    {"stop", "", 1, 0, cmd_stop},
+    {"set-name", " <name|null> [identifier]", 0, 0, cmd_set_name},
+    {"get-os-level", "", 1, 0, cmd_get_os_level},
+    {"set-os-level", " <level>", 0, 0, cmd_set_os_level},
+    {"get-file-level", "", 1, 0, cmd_get_file_level},
+    {"set-file-level", " <path|null> <level> [max-bytes] [generations]", 0, 0, cmd_set_file_level},
+    {"get-stderr-level", "", 1, 0, cmd_get_stderr_level},
+    {"set-stderr-level", " <level>", 0, 0, cmd_set_stderr_level},
+    {"write", " <level> <message...>", 0, 0, cmd_write},
+    {"writef", " <level> <message...>", 0, 0, cmd_write},
+    {"write-hex", " <level> <hex> [label...]", 0, 0, cmd_write_hex},
+    {"write-hexf", " <level> <hex> [label...]", 0, 0, cmd_write_hex},
+};
+
+int main(int argc, char *argv[])
+{
+    trace_cli_session session;
+    char line[TRACE_CLI_LINE_MAX];
+    cplat_prompt *prompt;
+    int need_help = 0;
+    int parse_result;
+
+    cplat_console_init();
+
+    if (cplat_argparser_init(argc, argv, "tracer API を対話的に確認します。") != CPLAT_OK)
+    {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "引数の解析の準備に失敗しました。\n");
+        return EXIT_FAILURE;
+    }
+    /*
+     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() で検査するため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &need_help);
+
+    if (cplat_argparser_get_register_error_count() > 0)
+    {
+        /* 登録失敗の終了値を優先するため、戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_register_error_messages(stderr);
+        return EXIT_FAILURE;
+    }
+
+    parse_result = cplat_argparser_parse();
+
+    if (need_help != 0)
+    {
+        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
+        {
+            (void)fprintf(stderr, "エラー: 標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+            return EXIT_FAILURE;
+        }
+
+        return EXIT_SUCCESS;
+    }
+
+    if (parse_result != CPLAT_OK)
+    {
+        /* 解析失敗の終了値を優先するため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_error_messages(stderr);
+        (void)cplat_argparser_print_usage(stderr);
+        return EXIT_FAILURE;
+    }
+
+    /* 対話セッションを初期化し、案内メッセージを表示する。 */
+    trace_cli_session_init(&session);
+    prompt = cplat_prompt_create(NULL);
+    print_interactive_hint();
+
+    /* ユーザーからの入力行を 1 行ずつ読み取ってコマンドを実行する。 */
+    while (!session.exit_requested)
+    {
+        if (cplat_prompt_readline_fmt(prompt, line, sizeof(line), "trace-cli[%s]> ",
+                                      session_prompt_state_to_name(&session)) != CPLAT_OK)
+        {
+            break;
+        }
+
+        if (line[0] == '\0')
+        {
+            continue;
+        }
+
+        /*
+         * エラーはコマンドの中で標準エラー出力へ診断済みであり、エラー時も対話ループを継続するため、
+         * 戻り値は明示的に破棄する。
+         */
+        (void)trace_cli_process_line(&session, line);
+    }
+
+    /* セッションとプロンプトの資源を解放する。 */
+    trace_cli_session_dispose(&session);
+    cplat_prompt_dispose(prompt);
+
+    if (fflush(stdout) != 0 || ferror(stdout) != 0)
+    {
+        (void)fprintf(stderr, "エラー: 標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+void trace_cli_session_init(trace_cli_session *session)
+{
+    if (session == NULL)
+    {
+        return;
+    }
+
+    session->handle = NULL;
+    session->prompt_state = TRACE_CLI_PROMPT_STATE_UNCREATED;
+    session->exit_requested = 0;
+}
+
+void trace_cli_session_dispose(trace_cli_session *session)
+{
+    if (session == NULL)
+    {
+        return;
+    }
+
+    cplat_tracer_dispose(&session->handle);
+    session->handle = NULL;
+    session->prompt_state = TRACE_CLI_PROMPT_STATE_DISPOSED;
+}
+
+void trace_cli_print_help(void)
+{
+    size_t i;
+
+    /*
+     * ヘルプの出力の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
+     * この関数の printf の戻り値は明示的に破棄する。
+     */
+    (void)printf("trace-cli: cplat.tracer interactive CLI\n");
+    (void)printf("使用可能な level: CRITICAL ERROR WARNING INFO VERBOSE DEBUG NONE\n");
+    (void)printf("コマンド:\n");
+
+    for (i = 0U; i < sizeof(s_commands) / sizeof(s_commands[0]); i++)
+    {
+        (void)printf("  %s%s\n", s_commands[i].name, s_commands[i].usage_args);
+    }
+
+    (void)printf("hex は 01ABFF または \"01 AB FF\" の形式で指定できます。\n");
+}
+
+int trace_cli_process_line(trace_cli_session *session, const char *line)
+{
+    char buffer[TRACE_CLI_LINE_MAX];
+    char *cursor;
+    char *command;
+    const struct trace_cli_command *cmd;
+
+    if (session == NULL || line == NULL)
+    {
+        return -1;
+    }
+
+    /*
+     * 失敗は引数が不正な場合だけであり、line は直前で NULL でないことを検査済みで、
+     * buffer の大きさと文字数の上限は固定の値のため、戻り値は明示的に破棄する。
+     */
+    (void)cplat_strncpy(buffer, sizeof(buffer), line, sizeof(buffer) - 1U);
+    trim_right(buffer);
+
+    cursor = buffer;
+    command = next_token(&cursor);
+    if (command == NULL)
+    {
+        return 0;
+    }
+
+    cmd = find_command(command);
+    if (cmd == NULL)
+    {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "エラー: 不明なコマンドです: %s\n", command);
+        return -1;
+    }
+
+    /* 引数を取らないコマンドに余剰引数が渡された場合はエラーとする。 */
+    if (cmd->no_args && next_token(&cursor) != NULL)
+    {
+        print_command_usage(cmd);
+        return -1;
+    }
+
+    return cmd->handler(session, cmd, &cursor);
+}
+
 /*
  * 文字列の先頭から空白文字を読み飛ばす。
  * 最初の非空白文字または終端文字へのポインターを返す。引数が NULL の場合は NULL を返す。
@@ -483,59 +742,11 @@ static void print_rc_result(int ret)
     (void)printf("\x1b[31mrc=%d\x1b[0m\n", ret);
 }
 
-/**
- *  @brief  CLI コマンド 1 個の定義 (名前・usage・ハンドラー) です。
- *
- *  コマンドの追加は s_commands へのエントリ追加で完結します
- *  (help のコマンド一覧と usage 表示はテーブルから生成されます)。
- */
-struct trace_cli_command
-{
-    /** コマンド名。 */
-    const char *name;
-
-    /** usage 表示用の引数説明 (先頭に空白を含む)。引数なしは ""。 */
-    const char *usage_args;
-
-    /** 1 の場合、ディスパッチ側で余剰トークンを拒否する (引数なしコマンド)。 */
-    int no_args;
-
-    /** パディング (handler をポインター境界に揃える)。 */
-    int pad;
-
-    /** コマンド本体。成功時 0、終了要求時 1、失敗時 -1 を返す。 */
-    int (*handler)(trace_cli_session *session, const struct trace_cli_command *cmd, char **cursor);
-};
-
 /* コマンドの使用方法を標準エラー出力へ表示する。 */
 static void print_command_usage(const struct trace_cli_command *cmd)
 {
     /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
     (void)fprintf(stderr, "使用方法: %s%s\n", cmd->name, cmd->usage_args);
-}
-
-void trace_cli_session_init(trace_cli_session *session)
-{
-    if (session == NULL)
-    {
-        return;
-    }
-
-    session->handle = NULL;
-    session->prompt_state = TRACE_CLI_PROMPT_STATE_UNCREATED;
-    session->exit_requested = 0;
-}
-
-void trace_cli_session_dispose(trace_cli_session *session)
-{
-    if (session == NULL)
-    {
-        return;
-    }
-
-    cplat_tracer_dispose(&session->handle);
-    session->handle = NULL;
-    session->prompt_state = TRACE_CLI_PROMPT_STATE_DISPOSED;
 }
 
 /* 対話セッション開始時の案内メッセージを表示する。 */
@@ -934,28 +1145,6 @@ static int cmd_write_hex(trace_cli_session *session, const struct trace_cli_comm
     return 0;
 }
 
-/** コマンド テーブル (help のコマンド一覧はこの順で表示される)。 */
-static const struct trace_cli_command s_commands[] = {
-    {"help", "", 1, 0, cmd_help},
-    {"exit", "", 1, 0, cmd_exit},
-    {"quit", "", 1, 0, cmd_exit},
-    {"create", "", 1, 0, cmd_create},
-    {"dispose", "", 1, 0, cmd_dispose},
-    {"start", "", 1, 0, cmd_start},
-    {"stop", "", 1, 0, cmd_stop},
-    {"set-name", " <name|null> [identifier]", 0, 0, cmd_set_name},
-    {"get-os-level", "", 1, 0, cmd_get_os_level},
-    {"set-os-level", " <level>", 0, 0, cmd_set_os_level},
-    {"get-file-level", "", 1, 0, cmd_get_file_level},
-    {"set-file-level", " <path|null> <level> [max-bytes] [generations]", 0, 0, cmd_set_file_level},
-    {"get-stderr-level", "", 1, 0, cmd_get_stderr_level},
-    {"set-stderr-level", " <level>", 0, 0, cmd_set_stderr_level},
-    {"write", " <level> <message...>", 0, 0, cmd_write},
-    {"writef", " <level> <message...>", 0, 0, cmd_write},
-    {"write-hex", " <level> <hex> [label...]", 0, 0, cmd_write_hex},
-    {"write-hexf", " <level> <hex> [label...]", 0, 0, cmd_write_hex},
-};
-
 /* コマンド名に一致するコマンド定義を検索する。見つかった場合は定義へのポインター、未登録の場合は NULL を返す。 */
 static const struct trace_cli_command *find_command(const char *name)
 {
@@ -970,157 +1159,4 @@ static const struct trace_cli_command *find_command(const char *name)
     }
 
     return NULL;
-}
-
-void trace_cli_print_help(void)
-{
-    size_t i;
-
-    /*
-     * ヘルプの出力の失敗は標準出力のストリームに残り、main が終了の直前にまとめて検査するため、
-     * この関数の printf の戻り値は明示的に破棄する。
-     */
-    (void)printf("trace-cli: cplat.tracer interactive CLI\n");
-    (void)printf("使用可能な level: CRITICAL ERROR WARNING INFO VERBOSE DEBUG NONE\n");
-    (void)printf("コマンド:\n");
-
-    for (i = 0U; i < sizeof(s_commands) / sizeof(s_commands[0]); i++)
-    {
-        (void)printf("  %s%s\n", s_commands[i].name, s_commands[i].usage_args);
-    }
-
-    (void)printf("hex は 01ABFF または \"01 AB FF\" の形式で指定できます。\n");
-}
-
-int trace_cli_process_line(trace_cli_session *session, const char *line)
-{
-    char buffer[TRACE_CLI_LINE_MAX];
-    char *cursor;
-    char *command;
-    const struct trace_cli_command *cmd;
-
-    if (session == NULL || line == NULL)
-    {
-        return -1;
-    }
-
-    /*
-     * 失敗は引数が不正な場合だけであり、line は直前で NULL でないことを検査済みで、
-     * buffer の大きさと文字数の上限は固定の値のため、戻り値は明示的に破棄する。
-     */
-    (void)cplat_strncpy(buffer, sizeof(buffer), line, sizeof(buffer) - 1U);
-    trim_right(buffer);
-
-    cursor = buffer;
-    command = next_token(&cursor);
-    if (command == NULL)
-    {
-        return 0;
-    }
-
-    cmd = find_command(command);
-    if (cmd == NULL)
-    {
-        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
-        (void)fprintf(stderr, "エラー: 不明なコマンドです: %s\n", command);
-        return -1;
-    }
-
-    /* 引数を取らないコマンドに余剰引数が渡された場合はエラーとする。 */
-    if (cmd->no_args && next_token(&cursor) != NULL)
-    {
-        print_command_usage(cmd);
-        return -1;
-    }
-
-    return cmd->handler(session, cmd, &cursor);
-}
-
-int main(int argc, char *argv[])
-{
-    trace_cli_session session;
-    char line[TRACE_CLI_LINE_MAX];
-    cplat_prompt *prompt;
-    int need_help = 0;
-    int parse_result;
-
-    cplat_console_init();
-
-    if (cplat_argparser_init(argc, argv, "tracer API を対話的に確認します。") != CPLAT_OK)
-    {
-        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
-        (void)fprintf(stderr, "引数の解析の準備に失敗しました。\n");
-        return EXIT_FAILURE;
-    }
-    /*
-     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() で検査するため、
-     * 戻り値は明示的に破棄する。
-     */
-    (void)cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &need_help);
-
-    if (cplat_argparser_get_register_error_count() > 0)
-    {
-        /* 登録失敗の終了値を優先するため、戻り値は明示的に破棄する。 */
-        (void)cplat_argparser_print_register_error_messages(stderr);
-        return EXIT_FAILURE;
-    }
-
-    parse_result = cplat_argparser_parse();
-
-    if (need_help != 0)
-    {
-        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
-        {
-            (void)fprintf(stderr, "エラー: 標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
-            return EXIT_FAILURE;
-        }
-
-        return EXIT_SUCCESS;
-    }
-
-    if (parse_result != CPLAT_OK)
-    {
-        /* 解析失敗の終了値を優先するため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
-        (void)cplat_argparser_print_error_messages(stderr);
-        (void)cplat_argparser_print_usage(stderr);
-        return EXIT_FAILURE;
-    }
-
-    /* 対話セッションを初期化し、案内メッセージを表示する。 */
-    trace_cli_session_init(&session);
-    prompt = cplat_prompt_create(NULL);
-    print_interactive_hint();
-
-    /* ユーザーからの入力行を 1 行ずつ読み取ってコマンドを実行する。 */
-    while (!session.exit_requested)
-    {
-        if (cplat_prompt_readline_fmt(prompt, line, sizeof(line), "trace-cli[%s]> ",
-                                      session_prompt_state_to_name(&session)) != CPLAT_OK)
-        {
-            break;
-        }
-
-        if (line[0] == '\0')
-        {
-            continue;
-        }
-
-        /*
-         * エラーはコマンドの中で標準エラー出力へ診断済みであり、エラー時も対話ループを継続するため、
-         * 戻り値は明示的に破棄する。
-         */
-        (void)trace_cli_process_line(&session, line);
-    }
-
-    /* セッションとプロンプトの資源を解放する。 */
-    trace_cli_session_dispose(&session);
-    cplat_prompt_dispose(prompt);
-
-    if (fflush(stdout) != 0 || ferror(stdout) != 0)
-    {
-        (void)fprintf(stderr, "エラー: 標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
-        return EXIT_FAILURE;
-    }
-
-    return EXIT_SUCCESS;
 }

@@ -40,154 +40,13 @@ static const char s_iso8601_utc_fallback[] = "0000-00-00T00:00:00.000Z";
 static_assert(sizeof(s_iso8601_local_fallback) - 1U == CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN, "cplat: local fallback len");
 static_assert(sizeof(s_iso8601_utc_fallback) - 1U == CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN, "cplat: utc fallback len");
 
-static void clock_write_fallback(char *buf, const size_t buf_size, const char *fallback)
-{
-    if (buf == NULL || buf_size == 0)
-    {
-        return;
-    }
-
-    /*
-     * 代替文字列の格納は試みるだけであり、失敗しても呼び出し元が返す結果コードは変わらないため、
-     * 戻り値は明示的に破棄する。
-     */
-    (void)cplat_snprintf(buf, buf_size, "%s", fallback);
-}
-
-/*
- * グレゴリオ暦の年月日を、1970-01-01 を 0 とする通算日で返す。負の値はそれより前である。
- * ローカル時刻と UTC の日付差から時差を求めるために使う。
- * 146097 は 400 年の日数、719468 は内部起点 0000-03-01 から 1970-01-01 までの日数である。
- * 定数と手順は days_from_civil と同じである。
- * see: https://howardhinnant.github.io/date_algorithms.html#days_from_civil
- */
-static int64_t clock_days_from_civil(const int year, const unsigned month, const unsigned day)
-{
-    int adjusted_year = year - (month <= 2);
-    int era_base;
-    int era;
-    unsigned yoe;
-    unsigned month_offset;
-    unsigned doy;
-    unsigned doe;
-
-    /*
-     * C の整数除算は 0 方向へ切り捨てる。負の年をそのまま 400 で割ると era がずれるため、
-     * 399 を引いてから割り、年が -400 以上 -1 以下のとき era が -1 になるようにする。
-     * see: https://en.cppreference.com/w/c/language/operator_arithmetic
-     */
-    if (adjusted_year >= 0)
-    {
-        era_base = adjusted_year;
-    }
-    else
-    {
-        era_base = adjusted_year - 399;
-    }
-
-    era = era_base / 400;
-
-    yoe = (unsigned)(adjusted_year - era * 400);
-
-    if (month > 2)
-    {
-        month_offset = (unsigned)-3; /* 3 月を 0 起点に戻すため、符号なしで -3 を加える */
-    }
-    else
-    {
-        month_offset = 9;
-    }
-
-    doy = (153 * (month + month_offset) + 2) / 5 + day - 1;
-
-    doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-
-    return (int64_t)era * 146097 + (int64_t)doe - 719468;
-}
-
-/*
- * 同一瞬間のローカル時刻と UTC から、ローカルの時差を分で求めて offset_minutes へ書く。
- * 日付をまたぐため、通算日の差と当日秒の差を秒へ直してから 60 で割る。
- * UTC との差が分の倍数でない場合、C の整数除算により、分未満を 0 方向へ切り捨てる。
- * tm_gmtoff は POSIX.1-2024 の拡張で MSVC にないため、共通メンバーだけで算出する。
- * see: https://man7.org/linux/man-pages/man3/tm.3type.html
- */
-static void clock_utc_offset_minutes(const struct tm *local_tm, const struct tm *utc_tm, int *offset_minutes)
-{
-    int64_t local_days;
-    int64_t utc_days;
-    int local_seconds;
-    int utc_seconds;
-    int64_t delta_seconds;
-
-    local_days =
-        clock_days_from_civil(local_tm->tm_year + 1900, (unsigned)local_tm->tm_mon + 1, (unsigned)local_tm->tm_mday);
-    utc_days = clock_days_from_civil(utc_tm->tm_year + 1900, (unsigned)utc_tm->tm_mon + 1, (unsigned)utc_tm->tm_mday);
-    local_seconds = local_tm->tm_hour * 3600 + local_tm->tm_min * 60 + local_tm->tm_sec;
-    utc_seconds = utc_tm->tm_hour * 3600 + utc_tm->tm_min * 60 + utc_tm->tm_sec;
-    delta_seconds = (local_days - utc_days) * SEC_PER_DAY + (local_seconds - utc_seconds);
-
-    *offset_minutes = (int)(delta_seconds / 60);
-}
-
-/* 成功で CPLAT_OK、バッファー不足または書式化の失敗で CPLAT_ERR_UNKNOWN を返す。 */
+static void clock_write_fallback(char *buf, const size_t buf_size, const char *fallback);
+static int64_t clock_days_from_civil(const int year, const unsigned month, const unsigned day);
+static void clock_utc_offset_minutes(const struct tm *local_tm, const struct tm *utc_tm, int *offset_minutes);
 static int clock_format_iso8601_utc_from_tm(char *buf, const size_t buf_size, const struct tm *utc_tm,
-                                            const int64_t tv_nsec)
-{
-    if (buf == NULL || buf_size < (size_t)(CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN + 1U))
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    /* ミリ秒未満のナノ秒は切り捨て、ミリ秒を 3 桁で出力する。 */
-    if (cplat_snprintf(buf, buf_size, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", utc_tm->tm_year + 1900, utc_tm->tm_mon + 1,
-                       utc_tm->tm_mday, utc_tm->tm_hour, utc_tm->tm_min, utc_tm->tm_sec,
-                       (int)(tv_nsec / CLOCK_NSEC_PER_MSEC)) != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    return CPLAT_OK;
-}
-
-/* 成功で CPLAT_OK、バッファー不足または書式化の失敗で CPLAT_ERR_UNKNOWN を返す。 */
+                                            const int64_t tv_nsec);
 static int clock_format_iso8601_local_from_tm(char *buf, const size_t buf_size, const struct tm *local_tm,
-                                              const int64_t tv_nsec, const int offset_minutes)
-{
-    char offset_sign;
-    int abs_offset_minutes;
-    int offset_hours;
-    int offset_mins;
-
-    if (buf == NULL || buf_size < (size_t)(CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1U))
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    if (offset_minutes < 0)
-    {
-        offset_sign = '-';
-        abs_offset_minutes = -offset_minutes;
-    }
-    else
-    {
-        offset_sign = '+';
-        abs_offset_minutes = offset_minutes;
-    }
-
-    offset_hours = abs_offset_minutes / 60;
-    offset_mins = abs_offset_minutes % 60;
-
-    /* ミリ秒未満のナノ秒は切り捨て、ミリ秒を 3 桁で出力する。 */
-    if (cplat_snprintf(buf, buf_size, "%04d-%02d-%02dT%02d:%02d:%02d.%03d%c%02d:%02d", local_tm->tm_year + 1900,
-                       local_tm->tm_mon + 1, local_tm->tm_mday, local_tm->tm_hour, local_tm->tm_min, local_tm->tm_sec,
-                       (int)(tv_nsec / CLOCK_NSEC_PER_MSEC), offset_sign, offset_hours, offset_mins) != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    return CPLAT_OK;
-}
+                                              const int64_t tv_nsec, const int offset_minutes);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -405,5 +264,154 @@ int cplat_clock_get_realtime_deadline_ms(const uint64_t timeout_ms, struct times
         return ret;
     }
     cplat_timespec_to_native(&deadline, deadline_out);
+    return CPLAT_OK;
+}
+
+static void clock_write_fallback(char *buf, const size_t buf_size, const char *fallback)
+{
+    if (buf == NULL || buf_size == 0)
+    {
+        return;
+    }
+
+    /*
+     * 代替文字列の格納は試みるだけであり、失敗しても呼び出し元が返す結果コードは変わらないため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)cplat_snprintf(buf, buf_size, "%s", fallback);
+}
+
+/*
+ * グレゴリオ暦の年月日を、1970-01-01 を 0 とする通算日で返す。負の値はそれより前である。
+ * ローカル時刻と UTC の日付差から時差を求めるために使う。
+ * 146097 は 400 年の日数、719468 は内部起点 0000-03-01 から 1970-01-01 までの日数である。
+ * 定数と手順は days_from_civil と同じである。
+ * see: https://howardhinnant.github.io/date_algorithms.html#days_from_civil
+ */
+static int64_t clock_days_from_civil(const int year, const unsigned month, const unsigned day)
+{
+    int adjusted_year = year - (month <= 2);
+    int era_base;
+    int era;
+    unsigned yoe;
+    unsigned month_offset;
+    unsigned doy;
+    unsigned doe;
+
+    /*
+     * C の整数除算は 0 方向へ切り捨てる。負の年をそのまま 400 で割ると era がずれるため、
+     * 399 を引いてから割り、年が -400 以上 -1 以下のとき era が -1 になるようにする。
+     * see: https://en.cppreference.com/w/c/language/operator_arithmetic
+     */
+    if (adjusted_year >= 0)
+    {
+        era_base = adjusted_year;
+    }
+    else
+    {
+        era_base = adjusted_year - 399;
+    }
+
+    era = era_base / 400;
+
+    yoe = (unsigned)(adjusted_year - era * 400);
+
+    if (month > 2)
+    {
+        month_offset = (unsigned)-3; /* 3 月を 0 起点に戻すため、符号なしで -3 を加える */
+    }
+    else
+    {
+        month_offset = 9;
+    }
+
+    doy = (153 * (month + month_offset) + 2) / 5 + day - 1;
+
+    doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+
+    return (int64_t)era * 146097 + (int64_t)doe - 719468;
+}
+
+/*
+ * 同一瞬間のローカル時刻と UTC から、ローカルの時差を分で求めて offset_minutes へ書く。
+ * 日付をまたぐため、通算日の差と当日秒の差を秒へ直してから 60 で割る。
+ * UTC との差が分の倍数でない場合、C の整数除算により、分未満を 0 方向へ切り捨てる。
+ * tm_gmtoff は POSIX.1-2024 の拡張で MSVC にないため、共通メンバーだけで算出する。
+ * see: https://man7.org/linux/man-pages/man3/tm.3type.html
+ */
+static void clock_utc_offset_minutes(const struct tm *local_tm, const struct tm *utc_tm, int *offset_minutes)
+{
+    int64_t local_days;
+    int64_t utc_days;
+    int local_seconds;
+    int utc_seconds;
+    int64_t delta_seconds;
+
+    local_days =
+        clock_days_from_civil(local_tm->tm_year + 1900, (unsigned)local_tm->tm_mon + 1, (unsigned)local_tm->tm_mday);
+    utc_days = clock_days_from_civil(utc_tm->tm_year + 1900, (unsigned)utc_tm->tm_mon + 1, (unsigned)utc_tm->tm_mday);
+    local_seconds = local_tm->tm_hour * 3600 + local_tm->tm_min * 60 + local_tm->tm_sec;
+    utc_seconds = utc_tm->tm_hour * 3600 + utc_tm->tm_min * 60 + utc_tm->tm_sec;
+    delta_seconds = (local_days - utc_days) * SEC_PER_DAY + (local_seconds - utc_seconds);
+
+    *offset_minutes = (int)(delta_seconds / 60);
+}
+
+/* 成功で CPLAT_OK、バッファー不足または書式化の失敗で CPLAT_ERR_UNKNOWN を返す。 */
+static int clock_format_iso8601_utc_from_tm(char *buf, const size_t buf_size, const struct tm *utc_tm,
+                                            const int64_t tv_nsec)
+{
+    if (buf == NULL || buf_size < (size_t)(CPLAT_CLOCK_ISO8601_UTC_MSEC_LEN + 1U))
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    /* ミリ秒未満のナノ秒は切り捨て、ミリ秒を 3 桁で出力する。 */
+    if (cplat_snprintf(buf, buf_size, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", utc_tm->tm_year + 1900, utc_tm->tm_mon + 1,
+                       utc_tm->tm_mday, utc_tm->tm_hour, utc_tm->tm_min, utc_tm->tm_sec,
+                       (int)(tv_nsec / CLOCK_NSEC_PER_MSEC)) != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    return CPLAT_OK;
+}
+
+/* 成功で CPLAT_OK、バッファー不足または書式化の失敗で CPLAT_ERR_UNKNOWN を返す。 */
+static int clock_format_iso8601_local_from_tm(char *buf, const size_t buf_size, const struct tm *local_tm,
+                                              const int64_t tv_nsec, const int offset_minutes)
+{
+    char offset_sign;
+    int abs_offset_minutes;
+    int offset_hours;
+    int offset_mins;
+
+    if (buf == NULL || buf_size < (size_t)(CPLAT_CLOCK_ISO8601_LOCAL_MSEC_LEN + 1U))
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    if (offset_minutes < 0)
+    {
+        offset_sign = '-';
+        abs_offset_minutes = -offset_minutes;
+    }
+    else
+    {
+        offset_sign = '+';
+        abs_offset_minutes = offset_minutes;
+    }
+
+    offset_hours = abs_offset_minutes / 60;
+    offset_mins = abs_offset_minutes % 60;
+
+    /* ミリ秒未満のナノ秒は切り捨て、ミリ秒を 3 桁で出力する。 */
+    if (cplat_snprintf(buf, buf_size, "%04d-%02d-%02dT%02d:%02d:%02d.%03d%c%02d:%02d", local_tm->tm_year + 1900,
+                       local_tm->tm_mon + 1, local_tm->tm_mday, local_tm->tm_hour, local_tm->tm_min, local_tm->tm_sec,
+                       (int)(tv_nsec / CLOCK_NSEC_PER_MSEC), offset_sign, offset_hours, offset_mins) != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
     return CPLAT_OK;
 }

@@ -86,6 +86,308 @@ static size_t s_windows_locked_range_count;                    /**< registry の
 static size_t s_windows_locked_range_capacity;                 /**< registry の確保済み要素数。 */
 #endif
 
+static void init_memory_lock_lock(void);
+static int memory_lock_lock(void);
+static void memory_lock_unlock(void);
+static NO_INLINE void prefault_stack_recursive(size_t remaining);
+#if defined(PLATFORM_LINUX)
+static int map_errno_to_memory_lock_result(int error_no);
+static int convert_flags_to_mlockall_flags(int flags, int *native_flags);
+static int prefault_stack(size_t stack_prefault_bytes);
+#elif defined(PLATFORM_WINDOWS)
+static int map_windows_error_to_memory_lock_result(unsigned long error_code);
+static int is_lockable_region(const MEMORY_BASIC_INFORMATION *info);
+static int append_scope_range(cplat_memory_lock_scope *scope, uintptr_t base, uintptr_t end);
+static int ensure_windows_registry_capacity(size_t required_capacity);
+static int insert_windows_registry_range(size_t index, uintptr_t base, uintptr_t end, size_t ref_count);
+static void remove_windows_registry_range(size_t index);
+static int split_windows_registry_at(uintptr_t boundary);
+static int find_windows_registry_range(uintptr_t address, size_t *index_out);
+static uintptr_t find_next_windows_registry_base(uintptr_t address, uintptr_t end);
+static size_t find_windows_registry_insert_index(uintptr_t base);
+static void *pointer_from_uintptr(uintptr_t address);
+static int release_windows_scope_ranges(cplat_memory_lock_scope *scope);
+static int acquire_windows_range(cplat_memory_lock_scope *scope, uintptr_t base, uintptr_t end);
+static int prefault_stack(size_t stack_prefault_bytes);
+#else
+static int prefault_stack(size_t stack_prefault_bytes);
+#endif
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_memory_lock_range(const void *address, const size_t size)
+{
+    int result = CPLAT_OK;
+
+    if ((address == NULL) || (size == 0U))
+    {
+        result = CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    else
+    {
+#if defined(PLATFORM_LINUX)
+        if (mlock(address, size) != 0)
+        {
+            result = map_errno_to_memory_lock_result(errno);
+        }
+#elif defined(PLATFORM_WINDOWS)
+        /* VirtualLock() はメモリ内容を書き換えないが、Windows API の型に合わせる。 */
+        LPVOID lock_address = (LPVOID)(uintptr_t)address;
+        if (VirtualLock(lock_address, size) == 0)
+        {
+            result = map_windows_error_to_memory_lock_result(GetLastError());
+        }
+#else
+        result = CPLAT_ERR_UNSUPPORTED;
+#endif
+    }
+
+    return result;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_memory_unlock_range(const void *address, const size_t size)
+{
+    int result = CPLAT_OK;
+
+    if ((address == NULL) || (size == 0U))
+    {
+        result = CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    else
+    {
+#if defined(PLATFORM_LINUX)
+        if (munlock(address, size) != 0)
+        {
+            result = map_errno_to_memory_lock_result(errno);
+        }
+#elif defined(PLATFORM_WINDOWS)
+        /* VirtualUnlock() はメモリ内容を書き換えないが、Windows API の型に合わせる。 */
+        LPVOID unlock_address = (LPVOID)(uintptr_t)address;
+        if (VirtualUnlock(unlock_address, size) == 0)
+        {
+            result = map_windows_error_to_memory_lock_result(GetLastError());
+        }
+#else
+        result = CPLAT_ERR_UNSUPPORTED;
+#endif
+    }
+
+    return result;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_memory_lock_self(const cplat_memory_lock_self_options *options, cplat_memory_lock_scope **scope_out)
+{
+    int result = CPLAT_OK;
+
+    if ((options == NULL) || (scope_out == NULL) || (options->flags == 0) ||
+        ((options->flags & ~CPLAT_MEMORY_LOCK_KNOWN_FLAGS) != 0))
+    {
+        result = CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    else
+    {
+        *scope_out = NULL;
+
+        result = prefault_stack(options->stack_prefault_bytes);
+
+        if (result != CPLAT_OK)
+        {
+            return result;
+        }
+
+#if defined(PLATFORM_LINUX)
+        int native_flags = 0;
+        if (convert_flags_to_mlockall_flags(options->flags, &native_flags) != 0)
+        {
+            return CPLAT_ERR_UNSUPPORTED;
+        }
+
+        {
+            cplat_memory_lock_scope *new_scope =
+                (cplat_memory_lock_scope *)cplat_calloc(1U, sizeof(cplat_memory_lock_scope));
+            if (new_scope == NULL)
+            {
+                result = CPLAT_ERR_UNKNOWN;
+            }
+            else
+            {
+                result = memory_lock_lock();
+                if (result == CPLAT_OK)
+                {
+                    if (mlockall(native_flags) != 0)
+                    {
+                        result = map_errno_to_memory_lock_result(errno);
+                    }
+                    else
+                    {
+                        s_linux_self_lock_scope_count++;
+                        new_scope->locked_all = 1;
+                        new_scope->flags = options->flags;
+                        *scope_out = new_scope;
+                    }
+
+                    memory_lock_unlock();
+                }
+
+                if (result != CPLAT_OK)
+                {
+                    cplat_free(new_scope);
+                }
+            }
+        }
+#elif defined(PLATFORM_WINDOWS)
+        if (options->flags != CPLAT_MEMORY_LOCK_CURRENT)
+        {
+            result = CPLAT_ERR_UNSUPPORTED;
+        }
+        else
+        {
+            cplat_memory_lock_scope *new_scope =
+                (cplat_memory_lock_scope *)cplat_calloc(1U, sizeof(cplat_memory_lock_scope));
+            if (new_scope == NULL)
+            {
+                result = CPLAT_ERR_UNKNOWN;
+            }
+            else
+            {
+                SYSTEM_INFO system_info;
+
+                result = memory_lock_lock();
+                if (result == CPLAT_OK)
+                {
+                    GetSystemInfo(&system_info);
+
+                    uintptr_t current = (uintptr_t)system_info.lpMinimumApplicationAddress;
+                    uintptr_t maximum = (uintptr_t)system_info.lpMaximumApplicationAddress;
+                    size_t page_size = (size_t)system_info.dwPageSize;
+
+                    while ((result == CPLAT_OK) && (current < maximum))
+                    {
+                        MEMORY_BASIC_INFORMATION info;
+                        SIZE_T query_size = VirtualQuery((LPCVOID)current, &info, sizeof(info));
+                        if (query_size == 0U)
+                        {
+                            current += page_size;
+                        }
+                        else
+                        {
+                            uintptr_t base = (uintptr_t)info.BaseAddress;
+                            uintptr_t next = base + (uintptr_t)info.RegionSize;
+
+                            if (is_lockable_region(&info) != 0)
+                            {
+                                result = acquire_windows_range(new_scope, base, next);
+                            }
+
+                            if (next <= current)
+                            {
+                                current += page_size;
+                            }
+                            else
+                            {
+                                current = next;
+                            }
+                        }
+                    }
+
+                    if (result == CPLAT_OK)
+                    {
+                        *scope_out = new_scope;
+                    }
+
+                    memory_lock_unlock();
+                }
+
+                if (result != CPLAT_OK)
+                {
+                    cplat_free(new_scope->entries);
+                    cplat_free(new_scope);
+                }
+            }
+        }
+#else
+        result = CPLAT_ERR_UNSUPPORTED;
+#endif
+    }
+
+    return result;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_memory_lock_scope_release(cplat_memory_lock_scope *scope)
+{
+    int result = CPLAT_OK;
+
+    if (scope != NULL)
+    {
+#if defined(PLATFORM_LINUX)
+        if (scope->locked_all != 0)
+        {
+            result = memory_lock_lock();
+            if (result == CPLAT_OK)
+            {
+                if (s_linux_self_lock_scope_count == 0U)
+                {
+                    result = CPLAT_ERR_UNKNOWN;
+                }
+                else
+                {
+                    s_linux_self_lock_scope_count--;
+
+                    if (s_linux_self_lock_scope_count == 0U)
+                    {
+                        if (munlockall() != 0)
+                        {
+                            result = map_errno_to_memory_lock_result(errno);
+                        }
+                    }
+                }
+
+                memory_lock_unlock();
+            }
+        }
+
+        cplat_free(scope);
+#elif defined(PLATFORM_WINDOWS)
+        result = memory_lock_lock();
+        if (result == CPLAT_OK)
+        {
+            result = release_windows_scope_ranges(scope);
+            memory_lock_unlock();
+        }
+
+        cplat_free(scope->entries);
+        cplat_free(scope);
+#else
+        cplat_free(scope);
+        result = CPLAT_ERR_UNSUPPORTED;
+#endif
+    }
+
+    return result;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_secure_zero(void *buf, const size_t size)
+{
+    if ((buf == NULL) || (size == 0U))
+    {
+        return;
+    }
+
+#if defined(PLATFORM_LINUX)
+    explicit_bzero(buf, size);
+#elif defined(PLATFORM_WINDOWS)
+    SecureZeroMemory(buf, size);
+#endif /* PLATFORM_ */
+}
+
 /**
  *  @brief          メモリ ロック内部状態を保護する local lock を初期化します。
  */
@@ -787,278 +1089,3 @@ static int prefault_stack(size_t stack_prefault_bytes)
     return result;
 }
 #endif
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_memory_lock_range(const void *address, const size_t size)
-{
-    int result = CPLAT_OK;
-
-    if ((address == NULL) || (size == 0U))
-    {
-        result = CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    else
-    {
-#if defined(PLATFORM_LINUX)
-        if (mlock(address, size) != 0)
-        {
-            result = map_errno_to_memory_lock_result(errno);
-        }
-#elif defined(PLATFORM_WINDOWS)
-        /* VirtualLock() はメモリ内容を書き換えないが、Windows API の型に合わせる。 */
-        LPVOID lock_address = (LPVOID)(uintptr_t)address;
-        if (VirtualLock(lock_address, size) == 0)
-        {
-            result = map_windows_error_to_memory_lock_result(GetLastError());
-        }
-#else
-        result = CPLAT_ERR_UNSUPPORTED;
-#endif
-    }
-
-    return result;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_memory_unlock_range(const void *address, const size_t size)
-{
-    int result = CPLAT_OK;
-
-    if ((address == NULL) || (size == 0U))
-    {
-        result = CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    else
-    {
-#if defined(PLATFORM_LINUX)
-        if (munlock(address, size) != 0)
-        {
-            result = map_errno_to_memory_lock_result(errno);
-        }
-#elif defined(PLATFORM_WINDOWS)
-        /* VirtualUnlock() はメモリ内容を書き換えないが、Windows API の型に合わせる。 */
-        LPVOID unlock_address = (LPVOID)(uintptr_t)address;
-        if (VirtualUnlock(unlock_address, size) == 0)
-        {
-            result = map_windows_error_to_memory_lock_result(GetLastError());
-        }
-#else
-        result = CPLAT_ERR_UNSUPPORTED;
-#endif
-    }
-
-    return result;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_memory_lock_self(const cplat_memory_lock_self_options *options, cplat_memory_lock_scope **scope_out)
-{
-    int result = CPLAT_OK;
-
-    if ((options == NULL) || (scope_out == NULL) || (options->flags == 0) ||
-        ((options->flags & ~CPLAT_MEMORY_LOCK_KNOWN_FLAGS) != 0))
-    {
-        result = CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    else
-    {
-        *scope_out = NULL;
-
-        result = prefault_stack(options->stack_prefault_bytes);
-
-        if (result != CPLAT_OK)
-        {
-            return result;
-        }
-
-#if defined(PLATFORM_LINUX)
-        int native_flags = 0;
-        if (convert_flags_to_mlockall_flags(options->flags, &native_flags) != 0)
-        {
-            return CPLAT_ERR_UNSUPPORTED;
-        }
-
-        {
-            cplat_memory_lock_scope *new_scope =
-                (cplat_memory_lock_scope *)cplat_calloc(1U, sizeof(cplat_memory_lock_scope));
-            if (new_scope == NULL)
-            {
-                result = CPLAT_ERR_UNKNOWN;
-            }
-            else
-            {
-                result = memory_lock_lock();
-                if (result == CPLAT_OK)
-                {
-                    if (mlockall(native_flags) != 0)
-                    {
-                        result = map_errno_to_memory_lock_result(errno);
-                    }
-                    else
-                    {
-                        s_linux_self_lock_scope_count++;
-                        new_scope->locked_all = 1;
-                        new_scope->flags = options->flags;
-                        *scope_out = new_scope;
-                    }
-
-                    memory_lock_unlock();
-                }
-
-                if (result != CPLAT_OK)
-                {
-                    cplat_free(new_scope);
-                }
-            }
-        }
-#elif defined(PLATFORM_WINDOWS)
-        if (options->flags != CPLAT_MEMORY_LOCK_CURRENT)
-        {
-            result = CPLAT_ERR_UNSUPPORTED;
-        }
-        else
-        {
-            cplat_memory_lock_scope *new_scope =
-                (cplat_memory_lock_scope *)cplat_calloc(1U, sizeof(cplat_memory_lock_scope));
-            if (new_scope == NULL)
-            {
-                result = CPLAT_ERR_UNKNOWN;
-            }
-            else
-            {
-                SYSTEM_INFO system_info;
-
-                result = memory_lock_lock();
-                if (result == CPLAT_OK)
-                {
-                    GetSystemInfo(&system_info);
-
-                    uintptr_t current = (uintptr_t)system_info.lpMinimumApplicationAddress;
-                    uintptr_t maximum = (uintptr_t)system_info.lpMaximumApplicationAddress;
-                    size_t page_size = (size_t)system_info.dwPageSize;
-
-                    while ((result == CPLAT_OK) && (current < maximum))
-                    {
-                        MEMORY_BASIC_INFORMATION info;
-                        SIZE_T query_size = VirtualQuery((LPCVOID)current, &info, sizeof(info));
-                        if (query_size == 0U)
-                        {
-                            current += page_size;
-                        }
-                        else
-                        {
-                            uintptr_t base = (uintptr_t)info.BaseAddress;
-                            uintptr_t next = base + (uintptr_t)info.RegionSize;
-
-                            if (is_lockable_region(&info) != 0)
-                            {
-                                result = acquire_windows_range(new_scope, base, next);
-                            }
-
-                            if (next <= current)
-                            {
-                                current += page_size;
-                            }
-                            else
-                            {
-                                current = next;
-                            }
-                        }
-                    }
-
-                    if (result == CPLAT_OK)
-                    {
-                        *scope_out = new_scope;
-                    }
-
-                    memory_lock_unlock();
-                }
-
-                if (result != CPLAT_OK)
-                {
-                    cplat_free(new_scope->entries);
-                    cplat_free(new_scope);
-                }
-            }
-        }
-#else
-        result = CPLAT_ERR_UNSUPPORTED;
-#endif
-    }
-
-    return result;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_memory_lock_scope_release(cplat_memory_lock_scope *scope)
-{
-    int result = CPLAT_OK;
-
-    if (scope != NULL)
-    {
-#if defined(PLATFORM_LINUX)
-        if (scope->locked_all != 0)
-        {
-            result = memory_lock_lock();
-            if (result == CPLAT_OK)
-            {
-                if (s_linux_self_lock_scope_count == 0U)
-                {
-                    result = CPLAT_ERR_UNKNOWN;
-                }
-                else
-                {
-                    s_linux_self_lock_scope_count--;
-
-                    if (s_linux_self_lock_scope_count == 0U)
-                    {
-                        if (munlockall() != 0)
-                        {
-                            result = map_errno_to_memory_lock_result(errno);
-                        }
-                    }
-                }
-
-                memory_lock_unlock();
-            }
-        }
-
-        cplat_free(scope);
-#elif defined(PLATFORM_WINDOWS)
-        result = memory_lock_lock();
-        if (result == CPLAT_OK)
-        {
-            result = release_windows_scope_ranges(scope);
-            memory_lock_unlock();
-        }
-
-        cplat_free(scope->entries);
-        cplat_free(scope);
-#else
-        cplat_free(scope);
-        result = CPLAT_ERR_UNSUPPORTED;
-#endif
-    }
-
-    return result;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_secure_zero(void *buf, const size_t size)
-{
-    if ((buf == NULL) || (size == 0U))
-    {
-        return;
-    }
-
-#if defined(PLATFORM_LINUX)
-    explicit_bzero(buf, size);
-#elif defined(PLATFORM_WINDOWS)
-    SecureZeroMemory(buf, size);
-#endif /* PLATFORM_ */
-}

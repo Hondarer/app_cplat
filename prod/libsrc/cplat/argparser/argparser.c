@@ -131,754 +131,6 @@ struct cplat_argparser
 
 /*
  * ================================================================
- * 内部ヘルパー
- * ================================================================
- */
-
-/**
- *  @brief          文字列を複製します。
- *  @param[in]      text  複製する文字列。NULL の場合は NULL を返します。
- *  @return         複製した文字列。メモリを確保できない場合は NULL を返します。
- *
- *  strdup は Windows (MSVC) では _strdup となるため、malloc ベースで自前実装します。
- */
-static char *argparser_strdup(const char *text)
-{
-    if (text == NULL)
-    {
-        return NULL;
-    }
-
-    size_t size = strlen(text) + 1;
-    char *copied = cplat_malloc(size);
-    if (copied == NULL)
-    {
-        return NULL;
-    }
-
-    memcpy(copied, text, size);
-
-    return copied;
-}
-
-/**
- *  @brief          短いオプション名 ("-x" 形式) かどうかを検証します。
- *  @param[in]      name  検証する名前。
- *  @return         有効な場合は 1、無効な場合は 0 を返します。
- */
-static int argparser_is_valid_short_name(const char *name)
-{
-    if (name == NULL)
-    {
-        return 0;
-    }
-
-    if (strlen(name) != ARGPARSER_SHORT_NAME_LENGTH)
-    {
-        return 0;
-    }
-
-    if (name[0] != '-')
-    {
-        return 0;
-    }
-
-    if (name[1] == '-')
-    {
-        return 0;
-    }
-
-    return 1;
-}
-
-/**
- *  @brief          長いオプション名 ("--xxx" 形式) かどうかを検証します。
- *  @param[in]      name  検証する名前。
- *  @return         有効な場合は 1、無効な場合は 0 を返します。
- */
-static int argparser_is_valid_long_name(const char *name)
-{
-    if (name == NULL)
-    {
-        return 0;
-    }
-
-    if (strlen(name) < ARGPARSER_LONG_NAME_MIN_LENGTH)
-    {
-        return 0;
-    }
-
-    if (strncmp(name, s_long_option_prefix, ARGPARSER_LONG_PREFIX_LENGTH) != 0)
-    {
-        return 0;
-    }
-
-    if (strchr(name, '=') != NULL)
-    {
-        return 0;
-    }
-
-    return 1;
-}
-
-/**
- *  @brief          登録項目が位置引数かどうかを判定します。
- *  @param[in]      spec  判定する登録項目。
- *  @return         位置引数の場合は 1、それ以外の場合は 0 を返します。
- */
-static int argparser_spec_is_positional(const argparser_spec *spec)
-{
-    if (spec->kind == ARGPARSER_SPEC_POSITIONAL_INT || spec->kind == ARGPARSER_SPEC_POSITIONAL_STRING ||
-        spec->kind == ARGPARSER_SPEC_POSITIONAL_INT_ARRAY || spec->kind == ARGPARSER_SPEC_POSITIONAL_STRING_ARRAY)
-    {
-        return 1;
-    }
-
-    return 0;
-}
-
-/**
- *  @brief          登録項目が可変長位置引数かどうかを判定します。
- *  @param[in]      spec  判定する登録項目。
- *  @return         可変長位置引数の場合は 1、それ以外の場合は 0 を返します。
- */
-static int argparser_spec_is_positional_array(const argparser_spec *spec)
-{
-    if (spec->kind == ARGPARSER_SPEC_POSITIONAL_INT_ARRAY || spec->kind == ARGPARSER_SPEC_POSITIONAL_STRING_ARRAY)
-    {
-        return 1;
-    }
-
-    return 0;
-}
-
-/**
- *  @brief          登録項目が値付きオプションかどうかを判定します。
- *  @param[in]      spec  判定する登録項目。
- *  @return         値付きオプションの場合は 1、それ以外の場合は 0 を返します。
- */
-static int argparser_spec_takes_value(const argparser_spec *spec)
-{
-    if (spec->kind == ARGPARSER_SPEC_OPTION_INT || spec->kind == ARGPARSER_SPEC_OPTION_STRING ||
-        spec->kind == ARGPARSER_SPEC_OPTION_INT_ARRAY || spec->kind == ARGPARSER_SPEC_OPTION_STRING_ARRAY)
-    {
-        return 1;
-    }
-
-    return 0;
-}
-
-/**
- *  @brief          登録項目の代表名 (long 優先) を取得します。
- *  @param[in]      spec  対象の登録項目。
- *  @return         代表名を返します。
- */
-static const char *argparser_spec_display_name(const argparser_spec *spec)
-{
-    if (spec->long_name != NULL)
-    {
-        return spec->long_name;
-    }
-
-    return spec->short_name;
-}
-
-/**
- *  @brief          登録項目が保持する文字列を解放します。
- *  @param[in,out]  spec  解放する登録項目。
- */
-static void argparser_free_spec(argparser_spec *spec)
-{
-    cplat_free(spec->short_name);
-    cplat_free(spec->long_name);
-    cplat_free(spec->value_name);
-    cplat_free(spec->description);
-    spec->short_name = NULL;
-    spec->long_name = NULL;
-    spec->value_name = NULL;
-    spec->description = NULL;
-}
-
-/**
- *  @brief          エラー状態をクリアします。
- *  @param[in,out]  parser  対象のハンドル。
- */
-static void argparser_clear_error(cplat_argparser *parser)
-{
-    parser->last_error = CPLAT_OK;
-    cplat_free(parser->last_error_target);
-    parser->last_error_target = NULL;
-    cplat_free(parser->last_error_message);
-    parser->last_error_message = NULL;
-    parser->last_error_index = -1;
-}
-
-/**
- *  @brief          独自の検証エラーとして記録できる誤りの種別かを判定します。
- *  @param[in]      error  判定する結果コード。
- *  @return         記録可能な種別であれば 1、それ以外は 0 を返します。
- */
-static int argparser_is_valid_validation_error(const int error)
-{
-    switch (error)
-    {
-    case CPLAT_ERR_UNKNOWN_OPTION:
-    case CPLAT_ERR_MISSING_VALUE:
-    case CPLAT_ERR_UNEXPECTED_VALUE:
-    case CPLAT_ERR_INVALID_INTEGER:
-    case CPLAT_ERR_OUT_OF_RANGE:
-    case CPLAT_ERR_MISSING_REQUIRED:
-    case CPLAT_ERR_DUPLICATE_OPTION:
-    case CPLAT_ERR_TOO_MANY_ARGUMENTS:
-    case CPLAT_ERR_TOO_MANY_OCCURRENCES:
-        return 1;
-    default:
-        return 0;
-    }
-}
-
-/**
- *  @brief          解析エラーの詳細をハンドルに記録します。
- *  @param[in,out]  parser  対象のハンドル。
- *  @param[in]      error   エラー種別。
- *  @param[in]      target  エラー対象名。NULL 可。複製して保持します。
- *  @param[in]      index   エラーを起こした argv インデックス。該当なしは -1。
- *  @return         @p error をそのまま返します。呼び出し元は解析関数の戻り値として伝播します。
- */
-static int argparser_set_error(cplat_argparser *parser, int error, const char *target, const int index)
-{
-    argparser_clear_error(parser);
-    parser->last_error = error;
-
-    /* 複製に失敗した場合は対象名なし (NULL) として記録を継続する。 */
-    parser->last_error_target = argparser_strdup(target);
-    parser->last_error_index = index;
-
-    return error;
-}
-
-/**
- *  @brief          register 系呼び出しのエラーをハンドルへ積み上げます。
- *  @param[in,out]  parser              対象のハンドル。NULL の場合は何もしません。
- *  @param[in]      result              register 呼び出しの結果。@ref CPLAT_OK の場合は何もしません。
- *  @param[in]      short_name_or_name  短いオプション名、または位置引数名。NULL 可。
- *  @param[in]      long_name           長いオプション名。位置引数では使用しません。NULL 可。
- *
- *  失敗するたびに 1 件ずつ配列へ追記します。記録用メモリを確保できない場合は記録を諦めます
- *  (呼び出し元へは result をそのまま返しているため、呼び出し元の動作に影響しません)。
- */
-static void argparser_record_register_result(cplat_argparser *parser, int result, const char *short_name_or_name,
-                                             const char *long_name)
-{
-    if (parser == NULL || result == CPLAT_OK)
-    {
-        return;
-    }
-
-    /* 配列が満杯の場合は容量を 2 倍に拡張する。メモリ確保失敗時は記録を諦めて復帰する。 */
-    if (parser->register_error_count == parser->register_error_capacity)
-    {
-        size_t new_capacity = parser->register_error_capacity * ARGPARSER_CAPACITY_GROWTH_FACTOR;
-        if (new_capacity == 0)
-        {
-            new_capacity = ARGPARSER_INITIAL_CAPACITY;
-        }
-
-        argparser_register_error *new_errors =
-            cplat_realloc(parser->register_errors, new_capacity, sizeof(*new_errors));
-        if (new_errors == NULL)
-        {
-            return;
-        }
-
-        parser->register_errors = new_errors;
-        parser->register_error_capacity = new_capacity;
-    }
-
-    argparser_register_error *entry = &parser->register_errors[parser->register_error_count];
-    entry->result = result;
-
-    /* 長いオプション名を優先し、なければ短いオプション名または位置引数名を複製して記録する。 */
-    if (long_name != NULL)
-    {
-        entry->target = argparser_strdup(long_name);
-    }
-    else
-    {
-        entry->target = argparser_strdup(short_name_or_name);
-    }
-
-    parser->register_error_count++;
-}
-
-/**
- *  @brief          登録名の重複を検査し、登録配列に空きを確保します。
- *  @param[in,out]  parser      対象のハンドル。
- *  @param[in]      short_name  検査する短い名前。NULL 可。
- *  @param[in]      long_name   検査する長い名前。NULL 可。
- *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_DUPLICATE_DEFINITION 、
- *                  @ref CPLAT_ERR_OUT_OF_MEMORY のいずれかを返します。
- */
-static int argparser_prepare_spec_slot(cplat_argparser *parser, const char *short_name, const char *long_name)
-{
-    /* 既存の登録項目と短い名前または長い名前が重複していないか検査する。 */
-    for (size_t i = 0; i < parser->spec_count; i++)
-    {
-        const argparser_spec *spec = &parser->specs[i];
-        if (short_name != NULL && spec->short_name != NULL && strcmp(spec->short_name, short_name) == 0)
-        {
-            return CPLAT_ERR_DUPLICATE_DEFINITION;
-        }
-
-        if (long_name != NULL && spec->long_name != NULL && strcmp(spec->long_name, long_name) == 0)
-        {
-            return CPLAT_ERR_DUPLICATE_DEFINITION;
-        }
-    }
-
-    /* 配列が満杯の場合は容量を 2 倍に拡張する。 */
-    if (parser->spec_count == parser->spec_capacity)
-    {
-        size_t new_capacity = parser->spec_capacity * ARGPARSER_CAPACITY_GROWTH_FACTOR;
-        if (new_capacity == 0)
-        {
-            new_capacity = ARGPARSER_INITIAL_CAPACITY;
-        }
-
-        argparser_spec *new_specs = cplat_realloc(parser->specs, new_capacity, sizeof(*new_specs));
-        if (new_specs == NULL)
-        {
-            return CPLAT_ERR_OUT_OF_MEMORY;
-        }
-
-        parser->specs = new_specs;
-        parser->spec_capacity = new_capacity;
-    }
-
-    return CPLAT_OK;
-}
-
-/**
- *  @brief          登録項目の名前・説明文を複製して格納します。
- *  @param[in,out]  spec         格納先の登録項目。
- *  @param[in]      short_name   短い名前。NULL 可。
- *  @param[in]      long_name    長い名前 (位置引数では名前)。NULL 可。
- *  @param[in]      value_name   値表示名。NULL 可。
- *  @param[in]      description  説明文。NULL 可。
- *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_OUT_OF_MEMORY を返します。
- *
- *  失敗した場合は複製済みの文字列を解放してから返します。
- */
-static int argparser_copy_spec_strings(argparser_spec *spec, const char *short_name, const char *long_name,
-                                       const char *value_name, const char *description)
-{
-    int failed = 0;
-
-    spec->short_name = argparser_strdup(short_name);
-    if (short_name != NULL && spec->short_name == NULL)
-    {
-        failed = 1;
-    }
-
-    spec->long_name = argparser_strdup(long_name);
-    if (long_name != NULL && spec->long_name == NULL)
-    {
-        failed = 1;
-    }
-
-    spec->value_name = argparser_strdup(value_name);
-    if (value_name != NULL && spec->value_name == NULL)
-    {
-        failed = 1;
-    }
-
-    spec->description = argparser_strdup(description);
-    if (description != NULL && spec->description == NULL)
-    {
-        failed = 1;
-    }
-
-    if (failed != 0)
-    {
-        argparser_free_spec(spec);
-        return CPLAT_ERR_OUT_OF_MEMORY;
-    }
-
-    return CPLAT_OK;
-}
-
-/**
- *  @brief          オプション (フラグ・値付き) の共通登録処理です。
- *  @param[in,out]  parser       対象のハンドル。
- *  @param[in]      kind         登録項目の種別。
- *  @param[in]      short_name   短いオプション名。NULL 可。
- *  @param[in]      long_name    長いオプション名。NULL 可。
- *  @param[in]      value_name   値表示名。値付きオプションで NULL の場合は既定名を使用します。
- *  @param[in]      description  説明文。NULL 可。
- *  @param[in]      flags        登録フラグ。
- *  @param[out]     registered   登録した項目の格納先。
- *  @return         登録結果を返します。
- */
-static int argparser_register_option_core(cplat_argparser *parser, argparser_spec_kind kind, const char *short_name,
-                                          const char *long_name, const char *value_name, const char *description,
-                                          const unsigned int flags, argparser_spec **registered)
-{
-    if (parser == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    int result = CPLAT_OK;
-
-    if (short_name == NULL && long_name == NULL)
-    {
-        result = CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    else if (short_name != NULL && argparser_is_valid_short_name(short_name) == 0)
-    {
-        result = CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    else if (long_name != NULL && argparser_is_valid_long_name(long_name) == 0)
-    {
-        result = CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    else if ((flags & ~CPLAT_ARGPARSER_REQUIRED) != 0u)
-    {
-        result = CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    else
-    {
-        result = argparser_prepare_spec_slot(parser, short_name, long_name);
-        if (result == CPLAT_OK)
-        {
-            argparser_spec *spec = &parser->specs[parser->spec_count];
-            memset(spec, 0, sizeof(*spec));
-            spec->kind = kind;
-            spec->flags = flags;
-
-            result = argparser_copy_spec_strings(spec, short_name, long_name, value_name, description);
-            if (result == CPLAT_OK)
-            {
-                parser->spec_count++;
-                *registered = spec;
-            }
-        }
-    }
-
-    argparser_record_register_result(parser, result, short_name, long_name);
-
-    return result;
-}
-
-/**
- *  @brief          位置引数の共通登録処理です。
- *  @param[in,out]  parser       対象のハンドル。
- *  @param[in]      kind         登録項目の種別。
- *  @param[in]      name         位置引数の名前。
- *  @param[in]      description  説明文。NULL 可。
- *  @param[in]      flags        登録フラグ。
- *  @param[out]     registered   登録した項目の格納先。
- *  @return         登録結果を返します。
- */
-static int argparser_register_positional_core(cplat_argparser *parser, argparser_spec_kind kind, const char *name,
-                                              const char *description, const unsigned int flags,
-                                              argparser_spec **registered)
-{
-    if (parser == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    int result = CPLAT_OK;
-
-    if (name == NULL)
-    {
-        result = CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    else if ((flags & ~CPLAT_ARGPARSER_REQUIRED) != 0u)
-    {
-        result = CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    else
-    {
-        /* 可変長位置引数は位置引数列の末尾に 1 件だけ登録できる。 */
-        for (size_t i = 0; i < parser->spec_count; i++)
-        {
-            if (argparser_spec_is_positional_array(&parser->specs[i]) != 0)
-            {
-                result = CPLAT_ERR_INVALID_ARGUMENT;
-                break;
-            }
-        }
-
-        /* 任意の位置引数の後に必須の位置引数は登録できない (割り当てが曖昧になるため)。 */
-        if (result == CPLAT_OK && (flags & CPLAT_ARGPARSER_REQUIRED) != 0u)
-        {
-            for (size_t i = 0; i < parser->spec_count; i++)
-            {
-                const argparser_spec *spec = &parser->specs[i];
-                if (argparser_spec_is_positional(spec) != 0 && (spec->flags & CPLAT_ARGPARSER_REQUIRED) == 0u)
-                {
-                    result = CPLAT_ERR_INVALID_ARGUMENT;
-                    break;
-                }
-            }
-        }
-
-        if (result == CPLAT_OK)
-        {
-            result = argparser_prepare_spec_slot(parser, NULL, NULL);
-            if (result == CPLAT_OK)
-            {
-                argparser_spec *spec = &parser->specs[parser->spec_count];
-                memset(spec, 0, sizeof(*spec));
-                spec->kind = kind;
-                spec->flags = flags;
-
-                result = argparser_copy_spec_strings(spec, NULL, name, NULL, description);
-                if (result == CPLAT_OK)
-                {
-                    parser->spec_count++;
-                    *registered = spec;
-                }
-            }
-        }
-    }
-
-    argparser_record_register_result(parser, result, name, NULL);
-
-    return result;
-}
-
-/**
- *  @brief          長いオプション名でトークンに一致する登録項目を検索します。
- *  @param[in]      parser    対象のハンドル。
- *  @param[in]      name      トークンの名前部分 (先頭)。
- *  @param[in]      name_len  名前部分の長さ。
- *  @return         一致した登録項目。見つからない場合は NULL を返します。
- */
-static argparser_spec *argparser_find_long(const cplat_argparser *parser, const char *name, const size_t name_len)
-{
-    for (size_t i = 0; i < parser->spec_count; i++)
-    {
-        argparser_spec *spec = &parser->specs[i];
-        if (argparser_spec_is_positional(spec) != 0 || spec->long_name == NULL)
-        {
-            continue;
-        }
-
-        if (strlen(spec->long_name) == name_len && strncmp(spec->long_name, name, name_len) == 0)
-        {
-            return spec;
-        }
-    }
-
-    return NULL;
-}
-
-/**
- *  @brief          短いオプション名でトークンに一致する登録項目を検索します。
- *  @param[in]      parser      対象のハンドル。
- *  @param[in]      token       トークン ("-x" 形式の名前部分を含む文字列)。
- *  @param[in]      name_len    トークンのうちオプション名として扱う長さ。
- *  @return         一致した登録項目。見つからない場合は NULL を返します。
- */
-static argparser_spec *argparser_find_short(const cplat_argparser *parser, const char *token, size_t name_len)
-{
-    for (size_t i = 0; i < parser->spec_count; i++)
-    {
-        argparser_spec *spec = &parser->specs[i];
-        if (argparser_spec_is_positional(spec) != 0 || spec->short_name == NULL)
-        {
-            continue;
-        }
-
-        if (strlen(spec->short_name) == name_len && strncmp(spec->short_name, token, name_len) == 0)
-        {
-            return spec;
-        }
-    }
-
-    return NULL;
-}
-
-/**
- *  @brief          値付きオプションの値を登録項目の格納先へ書き込みます。
- *  @param[in,out]  parser  対象のハンドル。
- *  @param[in,out]  spec    対象の登録項目。
- *  @param[in]      value   書き込む値の文字列。
- *  @param[in]      index   値を取得した argv インデックス。
- *  @return         成功時は @ref CPLAT_OK 、
- *                  失敗時は解析エラーの種別に対応する結果コードを返します。
- */
-static int argparser_store_option_value(cplat_argparser *parser, argparser_spec *spec, const char *value,
-                                        const int index)
-{
-    const char *display_name = argparser_spec_display_name(spec);
-
-    /* 単一値オプションの重複を検査し、値を変換または格納する。 */
-    if (spec->kind == ARGPARSER_SPEC_OPTION_INT || spec->kind == ARGPARSER_SPEC_OPTION_STRING)
-    {
-        if (spec->found > 0)
-        {
-            return argparser_set_error(parser, CPLAT_ERR_DUPLICATE_OPTION, display_name, index);
-        }
-
-        if (spec->kind == ARGPARSER_SPEC_OPTION_INT)
-        {
-            int int_error = cplat_parse_int(spec->int_storage, value, 10);
-            if (int_error != CPLAT_OK)
-            {
-                return argparser_set_error(parser, int_error, display_name, index);
-            }
-        }
-        else
-        {
-            *spec->string_storage = value;
-        }
-    }
-    else
-    {
-        /* 配列オプションの出現数超過を検査し、値を変換または格納する。 */
-        if (*spec->count >= spec->capacity)
-        {
-            return argparser_set_error(parser, CPLAT_ERR_TOO_MANY_OCCURRENCES, display_name, index);
-        }
-
-        if (spec->kind == ARGPARSER_SPEC_OPTION_INT_ARRAY)
-        {
-            int int_error = cplat_parse_int(&spec->int_storage[*spec->count], value, 10);
-            if (int_error != CPLAT_OK)
-            {
-                return argparser_set_error(parser, int_error, display_name, index);
-            }
-        }
-        else
-        {
-            spec->string_storage[*spec->count] = value;
-        }
-
-        (*spec->count)++;
-    }
-
-    spec->found++;
-
-    return CPLAT_OK;
-}
-
-/**
- *  @brief          位置引数トークンを次の未割当の位置引数へ書き込みます。
- *  @param[in,out]  parser            対象のハンドル。
- *  @param[in]      token             位置引数トークン。
- *  @param[in]      index             トークンの argv インデックス。
- *  @param[in,out]  positional_index  次に割り当てる位置引数の検索開始位置。
- *  @return         成功時は @ref CPLAT_OK 、
- *                  失敗時は解析エラーの種別に対応する結果コードを返します。
- */
-static int argparser_store_positional(cplat_argparser *parser, const char *token, const int index,
-                                      size_t *positional_index)
-{
-    /* 定義順に位置引数を走査し、トークンを割り当てる。 */
-    while (*positional_index < parser->spec_count)
-    {
-        argparser_spec *spec = &parser->specs[*positional_index];
-        if (argparser_spec_is_positional(spec) == 0)
-        {
-            (*positional_index)++;
-            continue;
-        }
-
-        /* 可変長位置引数は positional_index を進めずに配列へ追記する。 */
-        if (argparser_spec_is_positional_array(spec) != 0)
-        {
-            if (*spec->count >= spec->capacity)
-            {
-                return argparser_set_error(parser, CPLAT_ERR_TOO_MANY_ARGUMENTS, token, index);
-            }
-
-            if (spec->kind == ARGPARSER_SPEC_POSITIONAL_INT_ARRAY)
-            {
-                int int_error = cplat_parse_int(&spec->int_storage[*spec->count], token, 10);
-                if (int_error != CPLAT_OK)
-                {
-                    return argparser_set_error(parser, int_error, spec->long_name, index);
-                }
-            }
-            else
-            {
-                spec->string_storage[*spec->count] = token;
-            }
-
-            (*spec->count)++;
-            spec->found++;
-
-            return CPLAT_OK;
-        }
-
-        (*positional_index)++;
-
-        /* 単数位置引数は値を変換または格納し、次の位置引数へ進める。 */
-        if (spec->kind == ARGPARSER_SPEC_POSITIONAL_INT)
-        {
-            int int_error = cplat_parse_int(spec->int_storage, token, 10);
-            if (int_error != CPLAT_OK)
-            {
-                return argparser_set_error(parser, int_error, spec->long_name, index);
-            }
-        }
-        else
-        {
-            *spec->string_storage = token;
-        }
-
-        spec->found++;
-
-        return CPLAT_OK;
-    }
-
-    return argparser_set_error(parser, CPLAT_ERR_TOO_MANY_ARGUMENTS, token, index);
-}
-
-/**
- *  @brief          argv[0] からベース名を求めてハンドルに保持します。
- *  @param[in,out]  parser  対象のハンドル。
- *  @param[in]      argv0   argv[0] の文字列。NULL 可。
- *
- *  Linux と Windows で同じ名前を表示するため、末尾の ".exe" は大文字小文字を区別せずに
- *  除去します。ベース名が ".exe" だけの場合は除去しません。\n
- *  複製に失敗した場合は前回値を維持します (usage 表示のみに影響するため)。
- */
-static void argparser_resolve_program_name(cplat_argparser *parser, const char *argv0)
-{
-    if (argv0 == NULL)
-    {
-        return;
-    }
-
-    const char *base = cplat_path_basename(argv0);
-
-    char *copied = argparser_strdup(base);
-    if (copied == NULL)
-    {
-        return;
-    }
-
-    const size_t base_length = strlen(copied);
-    const size_t extension_length = sizeof(s_executable_extension) - 1u;
-
-    /* Linux と Windows で同一の表示名とするため、末尾の ".exe" を大文字小文字を区別せずに除去する。 */
-    if ((base_length > extension_length) &&
-        (cplat_strcasecmp(copied + base_length - extension_length, s_executable_extension) == 0))
-    {
-        copied[base_length - extension_length] = '\0';
-    }
-
-    cplat_free(parser->resolved_program_name);
-    parser->resolved_program_name = copied;
-}
-
-/*
- * ================================================================
  * usage 組み立て
  * ================================================================
  */
@@ -891,363 +143,57 @@ typedef struct argparser_usage_writer
     size_t needed;      /* NUL 終端を除く必要サイズ [byte] (書き込み済みとは限らない) */
 } argparser_usage_writer;
 
-/**
- *  @brief          usage 文字列に文字列を追記します。
- *  @param[in,out]  writer  書き込み状態。
- *  @param[in]      text    追記する文字列。
- *
- *  バッファーに収まらない部分は破棄し、必要バイト数の計測のみ継続します。
- */
-static void argparser_usage_write(argparser_usage_writer *writer, const char *text)
-{
-    size_t length = strlen(text);
-
-    if (writer->buffer != NULL && writer->needed < (writer->buffer_size - 1))
-    {
-        size_t writable = writer->buffer_size - 1 - writer->needed;
-        if (writable > length)
-        {
-            writable = length;
-        }
-
-        memcpy(&writer->buffer[writer->needed], text, writable);
-    }
-
-    writer->needed += length;
-}
-
-/**
- *  @brief          usage 文字列に空白を追記します。
- *  @param[in,out]  writer  書き込み状態。
- *  @param[in]      count   追記する空白の数。
- */
-static void argparser_usage_write_spaces(argparser_usage_writer *writer, size_t count)
-{
-    for (size_t i = 0; i < count; i++)
-    {
-        argparser_usage_write(writer, " ");
-    }
-}
-
-/**
- *  @brief          登録項目の値表示名を取得します。
- *  @param[in]      spec  対象の登録項目。
- *  @return         値表示名を返します。未指定の場合は既定名を返します。
- */
-static const char *argparser_spec_value_name(const argparser_spec *spec)
-{
-    if (spec->value_name != NULL)
-    {
-        return spec->value_name;
-    }
-
-    return s_default_value_name;
-}
-
-/**
- *  @brief          usage の 1 項目分 (左列ラベルと説明文) を追記します。
- *  @param[in,out]  writer       書き込み状態。
- *  @param[in]      label_start  左列ラベルの書き込み開始時点の必要バイト数。
- *  @param[in]      spec         対象の登録項目。
- */
+static char *argparser_strdup(const char *text);
+static int argparser_is_valid_short_name(const char *name);
+static int argparser_is_valid_long_name(const char *name);
+static int argparser_spec_is_positional(const argparser_spec *spec);
+static int argparser_spec_is_positional_array(const argparser_spec *spec);
+static int argparser_spec_takes_value(const argparser_spec *spec);
+static const char *argparser_spec_display_name(const argparser_spec *spec);
+static void argparser_free_spec(argparser_spec *spec);
+static void argparser_clear_error(cplat_argparser *parser);
+static int argparser_is_valid_validation_error(const int error);
+static int argparser_set_error(cplat_argparser *parser, int error, const char *target, const int index);
+static void argparser_record_register_result(cplat_argparser *parser, int result, const char *short_name_or_name,
+                                             const char *long_name);
+static int argparser_prepare_spec_slot(cplat_argparser *parser, const char *short_name, const char *long_name);
+static int argparser_copy_spec_strings(argparser_spec *spec, const char *short_name, const char *long_name,
+                                       const char *value_name, const char *description);
+static int argparser_register_option_core(cplat_argparser *parser, argparser_spec_kind kind, const char *short_name,
+                                          const char *long_name, const char *value_name, const char *description,
+                                          const unsigned int flags, argparser_spec **registered);
+static int argparser_register_positional_core(cplat_argparser *parser, argparser_spec_kind kind, const char *name,
+                                              const char *description, const unsigned int flags,
+                                              argparser_spec **registered);
+static argparser_spec *argparser_find_long(const cplat_argparser *parser, const char *name, const size_t name_len);
+static argparser_spec *argparser_find_short(const cplat_argparser *parser, const char *token, size_t name_len);
+static int argparser_store_option_value(cplat_argparser *parser, argparser_spec *spec, const char *value,
+                                        const int index);
+static int argparser_store_positional(cplat_argparser *parser, const char *token, const int index,
+                                      size_t *positional_index);
+static void argparser_resolve_program_name(cplat_argparser *parser, const char *argv0);
+static void argparser_usage_write(argparser_usage_writer *writer, const char *text);
+static void argparser_usage_write_spaces(argparser_usage_writer *writer, size_t count);
+static const char *argparser_spec_value_name(const argparser_spec *spec);
 static void argparser_usage_write_description(argparser_usage_writer *writer, const size_t label_start,
-                                              const argparser_spec *spec)
-{
-    size_t label_length = writer->needed - label_start;
+                                              const argparser_spec *spec);
+static void argparser_usage_build(const cplat_argparser *parser, argparser_usage_writer *writer);
+static void argparser_release_members(cplat_argparser *parser);
+static void argparser_dispose_core(cplat_argparser *parser);
+static void argparser_reset_core(cplat_argparser *parser);
+static int argparser_apply_options(cplat_argparser *parser, const cplat_argparser_options *options);
+static void argparser_apply_args(cplat_argparser *parser, int argc, char *const *argv);
+static void argparser_default_dispose_on_shutdown(const cplat_shutdown_event *event, void *context);
+static void argparser_default_initialize(void);
+static cplat_argparser *argparser_default_acquire(const int argc, char *const *argv,
+                                                  const cplat_argparser_options *options, int reset_existing);
 
-    if (label_length < ARGPARSER_USAGE_DESC_COLUMN)
-    {
-        argparser_usage_write_spaces(writer, ARGPARSER_USAGE_DESC_COLUMN - label_length);
-    }
-    else
-    {
-        argparser_usage_write(writer, "\n");
-        argparser_usage_write_spaces(writer, ARGPARSER_USAGE_DESC_COLUMN);
-    }
+/* プロセス共有の既定パーサー ハンドル */
+static cplat_argparser *s_default_parser = NULL;
 
-    if (spec->description != NULL)
-    {
-        argparser_usage_write(writer, spec->description);
-    }
-
-    if ((spec->flags & CPLAT_ARGPARSER_REQUIRED) != 0u)
-    {
-        if (spec->description != NULL)
-        {
-            argparser_usage_write(writer, " ");
-        }
-
-        argparser_usage_write(writer, "(required)");
-    }
-
-    argparser_usage_write(writer, "\n");
-}
-
-/**
- *  @brief          usage 文字列全体を組み立てます。
- *  @param[in]      parser  対象のハンドル。
- *  @param[in,out]  writer  書き込み状態。
- */
-static void argparser_usage_build(const cplat_argparser *parser, argparser_usage_writer *writer)
-{
-    int has_option = 0;
-    int has_positional = 0;
-
-    /* 登録項目にオプションまたは位置引数が存在するか確認する。 */
-    for (size_t i = 0; i < parser->spec_count; i++)
-    {
-        if (argparser_spec_is_positional(&parser->specs[i]) != 0)
-        {
-            has_positional = 1;
-        }
-        else
-        {
-            has_option = 1;
-        }
-    }
-
-    if (parser->program_description != NULL)
-    {
-        argparser_usage_write(writer, parser->program_description);
-        argparser_usage_write(writer, "\n\n");
-    }
-
-    const char *program_name = cplat_argparser_handle_get_program_name(parser);
-    if (program_name == NULL)
-    {
-        program_name = s_default_program_name;
-    }
-
-    /* Usage 行 ("Usage: {program} [OPTIONS] <args>...") を組み立てる。 */
-    argparser_usage_write(writer, "Usage: ");
-    argparser_usage_write(writer, program_name);
-
-    if (has_option != 0)
-    {
-        argparser_usage_write(writer, " [OPTIONS]");
-    }
-
-    /* 各位置引数の書式 (<arg> または [arg]、可変長は "...") を Usage 行へ追記する。 */
-    for (size_t i = 0; i < parser->spec_count; i++)
-    {
-        const argparser_spec *spec = &parser->specs[i];
-        if (argparser_spec_is_positional(spec) == 0)
-        {
-            continue;
-        }
-
-        if ((spec->flags & CPLAT_ARGPARSER_REQUIRED) != 0u)
-        {
-            argparser_usage_write(writer, " <");
-            argparser_usage_write(writer, spec->long_name);
-            argparser_usage_write(writer, ">");
-
-            if (argparser_spec_is_positional_array(spec) != 0)
-            {
-                argparser_usage_write(writer, "...");
-            }
-        }
-        else
-        {
-            argparser_usage_write(writer, " [");
-            argparser_usage_write(writer, spec->long_name);
-
-            if (argparser_spec_is_positional_array(spec) != 0)
-            {
-                argparser_usage_write(writer, "...");
-            }
-
-            argparser_usage_write(writer, "]");
-        }
-    }
-
-    argparser_usage_write(writer, "\n");
-
-    /* 位置引数の説明一覧 ("Positional arguments:") を組み立てる。 */
-    if (has_positional != 0)
-    {
-        argparser_usage_write(writer, "\nPositional arguments:\n");
-
-        for (size_t i = 0; i < parser->spec_count; i++)
-        {
-            const argparser_spec *spec = &parser->specs[i];
-            if (argparser_spec_is_positional(spec) == 0)
-            {
-                continue;
-            }
-
-            size_t label_start = writer->needed;
-            argparser_usage_write(writer, "  ");
-            argparser_usage_write(writer, spec->long_name);
-            argparser_usage_write_description(writer, label_start, spec);
-        }
-    }
-
-    /* オプションの説明一覧 ("Options:") を組み立てる。 */
-    if (has_option != 0)
-    {
-        argparser_usage_write(writer, "\nOptions:\n");
-
-        for (size_t i = 0; i < parser->spec_count; i++)
-        {
-            const argparser_spec *spec = &parser->specs[i];
-            if (argparser_spec_is_positional(spec) != 0)
-            {
-                continue;
-            }
-
-            size_t label_start = writer->needed;
-            argparser_usage_write(writer, "  ");
-
-            if (spec->short_name != NULL && spec->long_name != NULL)
-            {
-                argparser_usage_write(writer, spec->short_name);
-                argparser_usage_write(writer, ", ");
-                argparser_usage_write(writer, spec->long_name);
-            }
-            else if (spec->short_name != NULL)
-            {
-                argparser_usage_write(writer, spec->short_name);
-            }
-            else
-            {
-                /* 短いオプション名の桁 ("-x, ") を空白で揃える。 */
-                argparser_usage_write_spaces(writer, ARGPARSER_USAGE_SHORT_NAME_WIDTH);
-                argparser_usage_write(writer, spec->long_name);
-            }
-
-            if (argparser_spec_takes_value(spec) != 0)
-            {
-                argparser_usage_write(writer, " ");
-                argparser_usage_write(writer, argparser_spec_value_name(spec));
-            }
-
-            argparser_usage_write_description(writer, label_start, spec);
-        }
-    }
-}
-
-/*
- * ================================================================
- * 公開 API
- * ================================================================
- */
-
-/**
- *  @brief          パーサー ハンドルが所有する領域を解放します。
- *  @param[in]      parser  対象のパーサー ハンドル。NULL を渡してはなりません。
- *
- *  ハンドル自身は解放しません。メンバーの値も初期化しません。\n
- *  呼び出し側が、破棄なら @ref argparser_dispose_core 、
- *  再初期化なら @ref argparser_reset_core として後続を行います。
- */
-static void argparser_release_members(cplat_argparser *parser)
-{
-    for (size_t i = 0; i < parser->spec_count; i++)
-    {
-        argparser_free_spec(&parser->specs[i]);
-    }
-
-    cplat_free(parser->specs);
-    cplat_free(parser->program_name);
-    cplat_free(parser->program_description);
-    cplat_free(parser->resolved_program_name);
-    /* 通常の破棄・再初期化・既定パーサー再初期化のすべての終了経路で、共通のエラー状態解放処理を使用する。 */
-    argparser_clear_error(parser);
-
-    for (size_t i = 0; i < parser->register_error_count; i++)
-    {
-        cplat_free(parser->register_errors[i].target);
-    }
-
-    cplat_free(parser->register_errors);
-}
-
-/**
- *  @brief          パーサー ハンドルが保持するリソースを解放します。
- *  @param[in]      parser  解放するパーサー ハンドル。
- */
-static void argparser_dispose_core(cplat_argparser *parser)
-{
-    argparser_release_members(parser);
-    cplat_free(parser);
-}
-
-/**
- *  @brief          パーサー ハンドルを生成直後と同じ状態へ戻します。
- *  @param[in,out]  parser  対象のパーサー ハンドル。NULL を渡してはなりません。
- *
- *  登録済みのオプション、解析結果、エラー情報をすべて捨てます。\n
- *  ハンドルは作り直さないため、すでに取得済みのポインターは有効なままです。\n
- *  所有区分 (library_owned) は引き継ぎます。
- */
-static void argparser_reset_core(cplat_argparser *parser)
-{
-    int library_owned = parser->library_owned;
-
-    argparser_release_members(parser);
-
-    /* 宣言済みハンドルの再初期化のため、集成体初期化子ではなく memset を使う。 */
-    memset(parser, 0, sizeof(*parser));
-    parser->last_error_index = -1;
-    parser->library_owned = library_owned;
-}
-
-/**
- *  @brief          生成オプションをパーサー ハンドルへ適用します。
- *  @param[in,out]  parser   対象のパーサー ハンドル。NULL を渡してはなりません。
- *  @param[in]      options  生成オプション。NULL のときは何もしません。
- *  @return         成功なら 0、複製に失敗したら -1 です。
- *
- *  呼び出し前に、対象メンバーが NULL であること (生成直後または
- *  @ref argparser_reset_core 直後) を前提とします。
- */
-static int argparser_apply_options(cplat_argparser *parser, const cplat_argparser_options *options)
-{
-    if (options == NULL)
-    {
-        return 0;
-    }
-
-    parser->program_name = argparser_strdup(options->program_name);
-    if ((options->program_name != NULL) && (parser->program_name == NULL))
-    {
-        return -1;
-    }
-
-    parser->program_description = argparser_strdup(options->program_description);
-    if ((options->program_description != NULL) && (parser->program_description == NULL))
-    {
-        return -1;
-    }
-
-    return 0;
-}
-
-/**
- *  @brief          解析対象のコマンド ライン引数をパーサー ハンドルへ適用します。
- *  @param[in,out]  parser  対象のパーサー ハンドル。NULL を渡してはなりません。
- *  @param[in]      argc    argv の要素数。1 未満も指定できます。
- *  @param[in]      argv    コマンド ライン引数の配列。NULL も指定できます。
- *
- *  @p argv は複製せず、ポインターをそのまま保持します。\n
- *  @p argc と @p argv が解析できる組み合わせの場合に限り、
- *  usage 用のプログラム名を argv[0] から求めます。\n
- *  不正な組み合わせはここでは通知せず、
- *  cplat_argparser_handle_parse() が CPLAT_ERR_INVALID_ARGUMENT を返します。
- */
-static void argparser_apply_args(cplat_argparser *parser, int argc, char *const *argv)
-{
-    parser->argc = argc;
-    parser->argv = argv;
-
-    if ((argc < 1) || (argv == NULL))
-    {
-        return;
-    }
-
-    argparser_resolve_program_name(parser, argv[0]);
-}
+/* 破棄と並行取得の競合を避けるため、初期化後はプロセス終了まで同じロックを使用する。 */
+static cplat_local_lock *s_default_lock = NULL;
+static cplat_once_flag s_default_initialize_once = {0};
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -1283,125 +229,6 @@ void cplat_argparser_handle_dispose(cplat_argparser *parser)
     }
 
     argparser_dispose_core(parser);
-}
-
-/* プロセス共有の既定パーサー ハンドル */
-static cplat_argparser *s_default_parser = NULL;
-
-/* 破棄と並行取得の競合を避けるため、初期化後はプロセス終了まで同じロックを使用する。 */
-static cplat_local_lock *s_default_lock = NULL;
-static cplat_once_flag s_default_initialize_once = {0};
-
-/*
- * プロセス正常終了時に、プロセス共有の既定パーサー ハンドルを破棄する。
- * 排他ロック下でインスタンス ポインターを取り出し、ロック解放後に領域を解放する。
- */
-static void argparser_default_dispose_on_shutdown(const cplat_shutdown_event *event, void *context)
-{
-    (void)context;
-
-    if (event == NULL || event->reason != CPLAT_SHUTDOWN_REASON_NORMAL_EXIT)
-    {
-        return;
-    }
-
-    cplat_local_lock *lock = s_default_lock;
-    if (lock == NULL)
-    {
-        return;
-    }
-
-    cplat_local_lock_lock(lock);
-
-    cplat_argparser *parser = s_default_parser;
-    s_default_parser = NULL;
-    cplat_local_lock_unlock(lock);
-
-    if (parser != NULL)
-    {
-        argparser_dispose_core(parser);
-    }
-}
-
-/*
- * 既定パーサー用の排他ロックを生成し、シャットダウン時の自動破棄コールバックを登録する。
- * cplat_call_once() から 1 度だけ呼び出される。
- */
-static void argparser_default_initialize(void)
-{
-    if (cplat_local_lock_create(&s_default_lock) != CPLAT_OK)
-    {
-        s_default_lock = NULL;
-        return;
-    }
-
-    if (cplat_shutdown_register(argparser_default_dispose_on_shutdown, NULL) != CPLAT_OK)
-    {
-        cplat_local_lock_dispose(s_default_lock);
-        s_default_lock = NULL;
-    }
-}
-
-/**
- *  @brief          プロセス共有の既定パーサーを取得します。
- *  @param[in]      argc            解析対象の argv の要素数。適用しない場合は 0 を指定します。
- *  @param[in]      argv            解析対象のコマンド ライン引数。適用しない場合は NULL を指定します。
- *  @param[in]      options         生成オプション。NULL も指定できます。
- *  @param[in]      reset_existing  0 以外なら、既存インスタンスを生成直後の状態へ戻して
- *                                  @p argc 、@p argv 、@p options を適用し直します。
- *  @return         既定パーサー。生成に失敗した場合は NULL です。
- *
- *  生成と再初期化を同じロック区間で行い、取得と初期化の競合を避けます。
- */
-static cplat_argparser *argparser_default_acquire(const int argc, char *const *argv,
-                                                  const cplat_argparser_options *options, int reset_existing)
-{
-    cplat_call_once(&s_default_initialize_once, argparser_default_initialize);
-    cplat_local_lock *lock = s_default_lock;
-    if (lock == NULL)
-    {
-        return NULL;
-    }
-
-    cplat_argparser *failed_parser = NULL;
-
-    cplat_local_lock_lock(lock);
-
-    if (s_default_parser == NULL)
-    {
-        s_default_parser = cplat_argparser_handle_create(argc, argv, options);
-        if (s_default_parser != NULL)
-        {
-            s_default_parser->library_owned = 1;
-        }
-    }
-    else if (reset_existing != 0)
-    {
-        argparser_reset_core(s_default_parser);
-        if (argparser_apply_options(s_default_parser, options) != 0)
-        {
-            /*
-             * 名前や説明の複製に失敗したパーサーは返さず、新しく作る経路の失敗の後と同じ状態に戻す。
-             * 次の取得では、引数なしのパーサーが作られる。
-             */
-            failed_parser = s_default_parser;
-            s_default_parser = NULL;
-        }
-        else
-        {
-            argparser_apply_args(s_default_parser, argc, argv);
-        }
-    }
-
-    cplat_argparser *parser = s_default_parser;
-    cplat_local_lock_unlock(lock);
-
-    if (failed_parser != NULL)
-    {
-        argparser_dispose_core(failed_parser);
-    }
-
-    return parser;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -2518,4 +1345,1222 @@ int cplat_argparser_handle_print_register_error_messages(const cplat_argparser *
 int cplat_argparser_print_register_error_messages(FILE *stream)
 {
     return cplat_argparser_handle_print_register_error_messages(argparser_default_acquire(0, NULL, NULL, 0), stream);
+}
+
+/*
+ * ================================================================
+ * 内部ヘルパー
+ * ================================================================
+ */
+
+/**
+ *  @brief          文字列を複製します。
+ *  @param[in]      text  複製する文字列。NULL の場合は NULL を返します。
+ *  @return         複製した文字列。メモリを確保できない場合は NULL を返します。
+ *
+ *  strdup は Windows (MSVC) では _strdup となるため、malloc ベースで自前実装します。
+ */
+static char *argparser_strdup(const char *text)
+{
+    if (text == NULL)
+    {
+        return NULL;
+    }
+
+    size_t size = strlen(text) + 1;
+    char *copied = cplat_malloc(size);
+    if (copied == NULL)
+    {
+        return NULL;
+    }
+
+    memcpy(copied, text, size);
+
+    return copied;
+}
+
+/**
+ *  @brief          短いオプション名 ("-x" 形式) かどうかを検証します。
+ *  @param[in]      name  検証する名前。
+ *  @return         有効な場合は 1、無効な場合は 0 を返します。
+ */
+static int argparser_is_valid_short_name(const char *name)
+{
+    if (name == NULL)
+    {
+        return 0;
+    }
+
+    if (strlen(name) != ARGPARSER_SHORT_NAME_LENGTH)
+    {
+        return 0;
+    }
+
+    if (name[0] != '-')
+    {
+        return 0;
+    }
+
+    if (name[1] == '-')
+    {
+        return 0;
+    }
+
+    return 1;
+}
+
+/**
+ *  @brief          長いオプション名 ("--xxx" 形式) かどうかを検証します。
+ *  @param[in]      name  検証する名前。
+ *  @return         有効な場合は 1、無効な場合は 0 を返します。
+ */
+static int argparser_is_valid_long_name(const char *name)
+{
+    if (name == NULL)
+    {
+        return 0;
+    }
+
+    if (strlen(name) < ARGPARSER_LONG_NAME_MIN_LENGTH)
+    {
+        return 0;
+    }
+
+    if (strncmp(name, s_long_option_prefix, ARGPARSER_LONG_PREFIX_LENGTH) != 0)
+    {
+        return 0;
+    }
+
+    if (strchr(name, '=') != NULL)
+    {
+        return 0;
+    }
+
+    return 1;
+}
+
+/**
+ *  @brief          登録項目が位置引数かどうかを判定します。
+ *  @param[in]      spec  判定する登録項目。
+ *  @return         位置引数の場合は 1、それ以外の場合は 0 を返します。
+ */
+static int argparser_spec_is_positional(const argparser_spec *spec)
+{
+    if (spec->kind == ARGPARSER_SPEC_POSITIONAL_INT || spec->kind == ARGPARSER_SPEC_POSITIONAL_STRING ||
+        spec->kind == ARGPARSER_SPEC_POSITIONAL_INT_ARRAY || spec->kind == ARGPARSER_SPEC_POSITIONAL_STRING_ARRAY)
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          登録項目が可変長位置引数かどうかを判定します。
+ *  @param[in]      spec  判定する登録項目。
+ *  @return         可変長位置引数の場合は 1、それ以外の場合は 0 を返します。
+ */
+static int argparser_spec_is_positional_array(const argparser_spec *spec)
+{
+    if (spec->kind == ARGPARSER_SPEC_POSITIONAL_INT_ARRAY || spec->kind == ARGPARSER_SPEC_POSITIONAL_STRING_ARRAY)
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          登録項目が値付きオプションかどうかを判定します。
+ *  @param[in]      spec  判定する登録項目。
+ *  @return         値付きオプションの場合は 1、それ以外の場合は 0 を返します。
+ */
+static int argparser_spec_takes_value(const argparser_spec *spec)
+{
+    if (spec->kind == ARGPARSER_SPEC_OPTION_INT || spec->kind == ARGPARSER_SPEC_OPTION_STRING ||
+        spec->kind == ARGPARSER_SPEC_OPTION_INT_ARRAY || spec->kind == ARGPARSER_SPEC_OPTION_STRING_ARRAY)
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          登録項目の代表名 (long 優先) を取得します。
+ *  @param[in]      spec  対象の登録項目。
+ *  @return         代表名を返します。
+ */
+static const char *argparser_spec_display_name(const argparser_spec *spec)
+{
+    if (spec->long_name != NULL)
+    {
+        return spec->long_name;
+    }
+
+    return spec->short_name;
+}
+
+/**
+ *  @brief          登録項目が保持する文字列を解放します。
+ *  @param[in,out]  spec  解放する登録項目。
+ */
+static void argparser_free_spec(argparser_spec *spec)
+{
+    cplat_free(spec->short_name);
+    cplat_free(spec->long_name);
+    cplat_free(spec->value_name);
+    cplat_free(spec->description);
+    spec->short_name = NULL;
+    spec->long_name = NULL;
+    spec->value_name = NULL;
+    spec->description = NULL;
+}
+
+/**
+ *  @brief          エラー状態をクリアします。
+ *  @param[in,out]  parser  対象のハンドル。
+ */
+static void argparser_clear_error(cplat_argparser *parser)
+{
+    parser->last_error = CPLAT_OK;
+    cplat_free(parser->last_error_target);
+    parser->last_error_target = NULL;
+    cplat_free(parser->last_error_message);
+    parser->last_error_message = NULL;
+    parser->last_error_index = -1;
+}
+
+/**
+ *  @brief          独自の検証エラーとして記録できる誤りの種別かを判定します。
+ *  @param[in]      error  判定する結果コード。
+ *  @return         記録可能な種別であれば 1、それ以外は 0 を返します。
+ */
+static int argparser_is_valid_validation_error(const int error)
+{
+    switch (error)
+    {
+    case CPLAT_ERR_UNKNOWN_OPTION:
+    case CPLAT_ERR_MISSING_VALUE:
+    case CPLAT_ERR_UNEXPECTED_VALUE:
+    case CPLAT_ERR_INVALID_INTEGER:
+    case CPLAT_ERR_OUT_OF_RANGE:
+    case CPLAT_ERR_MISSING_REQUIRED:
+    case CPLAT_ERR_DUPLICATE_OPTION:
+    case CPLAT_ERR_TOO_MANY_ARGUMENTS:
+    case CPLAT_ERR_TOO_MANY_OCCURRENCES:
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+/**
+ *  @brief          解析エラーの詳細をハンドルに記録します。
+ *  @param[in,out]  parser  対象のハンドル。
+ *  @param[in]      error   エラー種別。
+ *  @param[in]      target  エラー対象名。NULL 可。複製して保持します。
+ *  @param[in]      index   エラーを起こした argv インデックス。該当なしは -1。
+ *  @return         @p error をそのまま返します。呼び出し元は解析関数の戻り値として伝播します。
+ */
+static int argparser_set_error(cplat_argparser *parser, int error, const char *target, const int index)
+{
+    argparser_clear_error(parser);
+    parser->last_error = error;
+
+    /* 複製に失敗した場合は対象名なし (NULL) として記録を継続する。 */
+    parser->last_error_target = argparser_strdup(target);
+    parser->last_error_index = index;
+
+    return error;
+}
+
+/**
+ *  @brief          register 系呼び出しのエラーをハンドルへ積み上げます。
+ *  @param[in,out]  parser              対象のハンドル。NULL の場合は何もしません。
+ *  @param[in]      result              register 呼び出しの結果。@ref CPLAT_OK の場合は何もしません。
+ *  @param[in]      short_name_or_name  短いオプション名、または位置引数名。NULL 可。
+ *  @param[in]      long_name           長いオプション名。位置引数では使用しません。NULL 可。
+ *
+ *  失敗するたびに 1 件ずつ配列へ追記します。記録用メモリを確保できない場合は記録を諦めます
+ *  (呼び出し元へは result をそのまま返しているため、呼び出し元の動作に影響しません)。
+ */
+static void argparser_record_register_result(cplat_argparser *parser, int result, const char *short_name_or_name,
+                                             const char *long_name)
+{
+    if (parser == NULL || result == CPLAT_OK)
+    {
+        return;
+    }
+
+    /* 配列が満杯の場合は容量を 2 倍に拡張する。メモリ確保失敗時は記録を諦めて復帰する。 */
+    if (parser->register_error_count == parser->register_error_capacity)
+    {
+        size_t new_capacity = parser->register_error_capacity * ARGPARSER_CAPACITY_GROWTH_FACTOR;
+        if (new_capacity == 0)
+        {
+            new_capacity = ARGPARSER_INITIAL_CAPACITY;
+        }
+
+        argparser_register_error *new_errors =
+            cplat_realloc(parser->register_errors, new_capacity, sizeof(*new_errors));
+        if (new_errors == NULL)
+        {
+            return;
+        }
+
+        parser->register_errors = new_errors;
+        parser->register_error_capacity = new_capacity;
+    }
+
+    argparser_register_error *entry = &parser->register_errors[parser->register_error_count];
+    entry->result = result;
+
+    /* 長いオプション名を優先し、なければ短いオプション名または位置引数名を複製して記録する。 */
+    if (long_name != NULL)
+    {
+        entry->target = argparser_strdup(long_name);
+    }
+    else
+    {
+        entry->target = argparser_strdup(short_name_or_name);
+    }
+
+    parser->register_error_count++;
+}
+
+/**
+ *  @brief          登録名の重複を検査し、登録配列に空きを確保します。
+ *  @param[in,out]  parser      対象のハンドル。
+ *  @param[in]      short_name  検査する短い名前。NULL 可。
+ *  @param[in]      long_name   検査する長い名前。NULL 可。
+ *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_DUPLICATE_DEFINITION 、
+ *                  @ref CPLAT_ERR_OUT_OF_MEMORY のいずれかを返します。
+ */
+static int argparser_prepare_spec_slot(cplat_argparser *parser, const char *short_name, const char *long_name)
+{
+    /* 既存の登録項目と短い名前または長い名前が重複していないか検査する。 */
+    for (size_t i = 0; i < parser->spec_count; i++)
+    {
+        const argparser_spec *spec = &parser->specs[i];
+        if (short_name != NULL && spec->short_name != NULL && strcmp(spec->short_name, short_name) == 0)
+        {
+            return CPLAT_ERR_DUPLICATE_DEFINITION;
+        }
+
+        if (long_name != NULL && spec->long_name != NULL && strcmp(spec->long_name, long_name) == 0)
+        {
+            return CPLAT_ERR_DUPLICATE_DEFINITION;
+        }
+    }
+
+    /* 配列が満杯の場合は容量を 2 倍に拡張する。 */
+    if (parser->spec_count == parser->spec_capacity)
+    {
+        size_t new_capacity = parser->spec_capacity * ARGPARSER_CAPACITY_GROWTH_FACTOR;
+        if (new_capacity == 0)
+        {
+            new_capacity = ARGPARSER_INITIAL_CAPACITY;
+        }
+
+        argparser_spec *new_specs = cplat_realloc(parser->specs, new_capacity, sizeof(*new_specs));
+        if (new_specs == NULL)
+        {
+            return CPLAT_ERR_OUT_OF_MEMORY;
+        }
+
+        parser->specs = new_specs;
+        parser->spec_capacity = new_capacity;
+    }
+
+    return CPLAT_OK;
+}
+
+/**
+ *  @brief          登録項目の名前・説明文を複製して格納します。
+ *  @param[in,out]  spec         格納先の登録項目。
+ *  @param[in]      short_name   短い名前。NULL 可。
+ *  @param[in]      long_name    長い名前 (位置引数では名前)。NULL 可。
+ *  @param[in]      value_name   値表示名。NULL 可。
+ *  @param[in]      description  説明文。NULL 可。
+ *  @return         @ref CPLAT_OK または @ref CPLAT_ERR_OUT_OF_MEMORY を返します。
+ *
+ *  失敗した場合は複製済みの文字列を解放してから返します。
+ */
+static int argparser_copy_spec_strings(argparser_spec *spec, const char *short_name, const char *long_name,
+                                       const char *value_name, const char *description)
+{
+    int failed = 0;
+
+    spec->short_name = argparser_strdup(short_name);
+    if (short_name != NULL && spec->short_name == NULL)
+    {
+        failed = 1;
+    }
+
+    spec->long_name = argparser_strdup(long_name);
+    if (long_name != NULL && spec->long_name == NULL)
+    {
+        failed = 1;
+    }
+
+    spec->value_name = argparser_strdup(value_name);
+    if (value_name != NULL && spec->value_name == NULL)
+    {
+        failed = 1;
+    }
+
+    spec->description = argparser_strdup(description);
+    if (description != NULL && spec->description == NULL)
+    {
+        failed = 1;
+    }
+
+    if (failed != 0)
+    {
+        argparser_free_spec(spec);
+        return CPLAT_ERR_OUT_OF_MEMORY;
+    }
+
+    return CPLAT_OK;
+}
+
+/**
+ *  @brief          オプション (フラグ・値付き) の共通登録処理です。
+ *  @param[in,out]  parser       対象のハンドル。
+ *  @param[in]      kind         登録項目の種別。
+ *  @param[in]      short_name   短いオプション名。NULL 可。
+ *  @param[in]      long_name    長いオプション名。NULL 可。
+ *  @param[in]      value_name   値表示名。値付きオプションで NULL の場合は既定名を使用します。
+ *  @param[in]      description  説明文。NULL 可。
+ *  @param[in]      flags        登録フラグ。
+ *  @param[out]     registered   登録した項目の格納先。
+ *  @return         登録結果を返します。
+ */
+static int argparser_register_option_core(cplat_argparser *parser, argparser_spec_kind kind, const char *short_name,
+                                          const char *long_name, const char *value_name, const char *description,
+                                          const unsigned int flags, argparser_spec **registered)
+{
+    if (parser == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    int result = CPLAT_OK;
+
+    if (short_name == NULL && long_name == NULL)
+    {
+        result = CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    else if (short_name != NULL && argparser_is_valid_short_name(short_name) == 0)
+    {
+        result = CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    else if (long_name != NULL && argparser_is_valid_long_name(long_name) == 0)
+    {
+        result = CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    else if ((flags & ~CPLAT_ARGPARSER_REQUIRED) != 0u)
+    {
+        result = CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    else
+    {
+        result = argparser_prepare_spec_slot(parser, short_name, long_name);
+        if (result == CPLAT_OK)
+        {
+            argparser_spec *spec = &parser->specs[parser->spec_count];
+            memset(spec, 0, sizeof(*spec));
+            spec->kind = kind;
+            spec->flags = flags;
+
+            result = argparser_copy_spec_strings(spec, short_name, long_name, value_name, description);
+            if (result == CPLAT_OK)
+            {
+                parser->spec_count++;
+                *registered = spec;
+            }
+        }
+    }
+
+    argparser_record_register_result(parser, result, short_name, long_name);
+
+    return result;
+}
+
+/**
+ *  @brief          位置引数の共通登録処理です。
+ *  @param[in,out]  parser       対象のハンドル。
+ *  @param[in]      kind         登録項目の種別。
+ *  @param[in]      name         位置引数の名前。
+ *  @param[in]      description  説明文。NULL 可。
+ *  @param[in]      flags        登録フラグ。
+ *  @param[out]     registered   登録した項目の格納先。
+ *  @return         登録結果を返します。
+ */
+static int argparser_register_positional_core(cplat_argparser *parser, argparser_spec_kind kind, const char *name,
+                                              const char *description, const unsigned int flags,
+                                              argparser_spec **registered)
+{
+    if (parser == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    int result = CPLAT_OK;
+
+    if (name == NULL)
+    {
+        result = CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    else if ((flags & ~CPLAT_ARGPARSER_REQUIRED) != 0u)
+    {
+        result = CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    else
+    {
+        /* 可変長位置引数は位置引数列の末尾に 1 件だけ登録できる。 */
+        for (size_t i = 0; i < parser->spec_count; i++)
+        {
+            if (argparser_spec_is_positional_array(&parser->specs[i]) != 0)
+            {
+                result = CPLAT_ERR_INVALID_ARGUMENT;
+                break;
+            }
+        }
+
+        /* 任意の位置引数の後に必須の位置引数は登録できない (割り当てが曖昧になるため)。 */
+        if (result == CPLAT_OK && (flags & CPLAT_ARGPARSER_REQUIRED) != 0u)
+        {
+            for (size_t i = 0; i < parser->spec_count; i++)
+            {
+                const argparser_spec *spec = &parser->specs[i];
+                if (argparser_spec_is_positional(spec) != 0 && (spec->flags & CPLAT_ARGPARSER_REQUIRED) == 0u)
+                {
+                    result = CPLAT_ERR_INVALID_ARGUMENT;
+                    break;
+                }
+            }
+        }
+
+        if (result == CPLAT_OK)
+        {
+            result = argparser_prepare_spec_slot(parser, NULL, NULL);
+            if (result == CPLAT_OK)
+            {
+                argparser_spec *spec = &parser->specs[parser->spec_count];
+                memset(spec, 0, sizeof(*spec));
+                spec->kind = kind;
+                spec->flags = flags;
+
+                result = argparser_copy_spec_strings(spec, NULL, name, NULL, description);
+                if (result == CPLAT_OK)
+                {
+                    parser->spec_count++;
+                    *registered = spec;
+                }
+            }
+        }
+    }
+
+    argparser_record_register_result(parser, result, name, NULL);
+
+    return result;
+}
+
+/**
+ *  @brief          長いオプション名でトークンに一致する登録項目を検索します。
+ *  @param[in]      parser    対象のハンドル。
+ *  @param[in]      name      トークンの名前部分 (先頭)。
+ *  @param[in]      name_len  名前部分の長さ。
+ *  @return         一致した登録項目。見つからない場合は NULL を返します。
+ */
+static argparser_spec *argparser_find_long(const cplat_argparser *parser, const char *name, const size_t name_len)
+{
+    for (size_t i = 0; i < parser->spec_count; i++)
+    {
+        argparser_spec *spec = &parser->specs[i];
+        if (argparser_spec_is_positional(spec) != 0 || spec->long_name == NULL)
+        {
+            continue;
+        }
+
+        if (strlen(spec->long_name) == name_len && strncmp(spec->long_name, name, name_len) == 0)
+        {
+            return spec;
+        }
+    }
+
+    return NULL;
+}
+
+/**
+ *  @brief          短いオプション名でトークンに一致する登録項目を検索します。
+ *  @param[in]      parser      対象のハンドル。
+ *  @param[in]      token       トークン ("-x" 形式の名前部分を含む文字列)。
+ *  @param[in]      name_len    トークンのうちオプション名として扱う長さ。
+ *  @return         一致した登録項目。見つからない場合は NULL を返します。
+ */
+static argparser_spec *argparser_find_short(const cplat_argparser *parser, const char *token, size_t name_len)
+{
+    for (size_t i = 0; i < parser->spec_count; i++)
+    {
+        argparser_spec *spec = &parser->specs[i];
+        if (argparser_spec_is_positional(spec) != 0 || spec->short_name == NULL)
+        {
+            continue;
+        }
+
+        if (strlen(spec->short_name) == name_len && strncmp(spec->short_name, token, name_len) == 0)
+        {
+            return spec;
+        }
+    }
+
+    return NULL;
+}
+
+/**
+ *  @brief          値付きオプションの値を登録項目の格納先へ書き込みます。
+ *  @param[in,out]  parser  対象のハンドル。
+ *  @param[in,out]  spec    対象の登録項目。
+ *  @param[in]      value   書き込む値の文字列。
+ *  @param[in]      index   値を取得した argv インデックス。
+ *  @return         成功時は @ref CPLAT_OK 、
+ *                  失敗時は解析エラーの種別に対応する結果コードを返します。
+ */
+static int argparser_store_option_value(cplat_argparser *parser, argparser_spec *spec, const char *value,
+                                        const int index)
+{
+    const char *display_name = argparser_spec_display_name(spec);
+
+    /* 単一値オプションの重複を検査し、値を変換または格納する。 */
+    if (spec->kind == ARGPARSER_SPEC_OPTION_INT || spec->kind == ARGPARSER_SPEC_OPTION_STRING)
+    {
+        if (spec->found > 0)
+        {
+            return argparser_set_error(parser, CPLAT_ERR_DUPLICATE_OPTION, display_name, index);
+        }
+
+        if (spec->kind == ARGPARSER_SPEC_OPTION_INT)
+        {
+            int int_error = cplat_parse_int(spec->int_storage, value, 10);
+            if (int_error != CPLAT_OK)
+            {
+                return argparser_set_error(parser, int_error, display_name, index);
+            }
+        }
+        else
+        {
+            *spec->string_storage = value;
+        }
+    }
+    else
+    {
+        /* 配列オプションの出現数超過を検査し、値を変換または格納する。 */
+        if (*spec->count >= spec->capacity)
+        {
+            return argparser_set_error(parser, CPLAT_ERR_TOO_MANY_OCCURRENCES, display_name, index);
+        }
+
+        if (spec->kind == ARGPARSER_SPEC_OPTION_INT_ARRAY)
+        {
+            int int_error = cplat_parse_int(&spec->int_storage[*spec->count], value, 10);
+            if (int_error != CPLAT_OK)
+            {
+                return argparser_set_error(parser, int_error, display_name, index);
+            }
+        }
+        else
+        {
+            spec->string_storage[*spec->count] = value;
+        }
+
+        (*spec->count)++;
+    }
+
+    spec->found++;
+
+    return CPLAT_OK;
+}
+
+/**
+ *  @brief          位置引数トークンを次の未割当の位置引数へ書き込みます。
+ *  @param[in,out]  parser            対象のハンドル。
+ *  @param[in]      token             位置引数トークン。
+ *  @param[in]      index             トークンの argv インデックス。
+ *  @param[in,out]  positional_index  次に割り当てる位置引数の検索開始位置。
+ *  @return         成功時は @ref CPLAT_OK 、
+ *                  失敗時は解析エラーの種別に対応する結果コードを返します。
+ */
+static int argparser_store_positional(cplat_argparser *parser, const char *token, const int index,
+                                      size_t *positional_index)
+{
+    /* 定義順に位置引数を走査し、トークンを割り当てる。 */
+    while (*positional_index < parser->spec_count)
+    {
+        argparser_spec *spec = &parser->specs[*positional_index];
+        if (argparser_spec_is_positional(spec) == 0)
+        {
+            (*positional_index)++;
+            continue;
+        }
+
+        /* 可変長位置引数は positional_index を進めずに配列へ追記する。 */
+        if (argparser_spec_is_positional_array(spec) != 0)
+        {
+            if (*spec->count >= spec->capacity)
+            {
+                return argparser_set_error(parser, CPLAT_ERR_TOO_MANY_ARGUMENTS, token, index);
+            }
+
+            if (spec->kind == ARGPARSER_SPEC_POSITIONAL_INT_ARRAY)
+            {
+                int int_error = cplat_parse_int(&spec->int_storage[*spec->count], token, 10);
+                if (int_error != CPLAT_OK)
+                {
+                    return argparser_set_error(parser, int_error, spec->long_name, index);
+                }
+            }
+            else
+            {
+                spec->string_storage[*spec->count] = token;
+            }
+
+            (*spec->count)++;
+            spec->found++;
+
+            return CPLAT_OK;
+        }
+
+        (*positional_index)++;
+
+        /* 単数位置引数は値を変換または格納し、次の位置引数へ進める。 */
+        if (spec->kind == ARGPARSER_SPEC_POSITIONAL_INT)
+        {
+            int int_error = cplat_parse_int(spec->int_storage, token, 10);
+            if (int_error != CPLAT_OK)
+            {
+                return argparser_set_error(parser, int_error, spec->long_name, index);
+            }
+        }
+        else
+        {
+            *spec->string_storage = token;
+        }
+
+        spec->found++;
+
+        return CPLAT_OK;
+    }
+
+    return argparser_set_error(parser, CPLAT_ERR_TOO_MANY_ARGUMENTS, token, index);
+}
+
+/**
+ *  @brief          argv[0] からベース名を求めてハンドルに保持します。
+ *  @param[in,out]  parser  対象のハンドル。
+ *  @param[in]      argv0   argv[0] の文字列。NULL 可。
+ *
+ *  Linux と Windows で同じ名前を表示するため、末尾の ".exe" は大文字小文字を区別せずに
+ *  除去します。ベース名が ".exe" だけの場合は除去しません。\n
+ *  複製に失敗した場合は前回値を維持します (usage 表示のみに影響するため)。
+ */
+static void argparser_resolve_program_name(cplat_argparser *parser, const char *argv0)
+{
+    if (argv0 == NULL)
+    {
+        return;
+    }
+
+    const char *base = cplat_path_basename(argv0);
+
+    char *copied = argparser_strdup(base);
+    if (copied == NULL)
+    {
+        return;
+    }
+
+    const size_t base_length = strlen(copied);
+    const size_t extension_length = sizeof(s_executable_extension) - 1u;
+
+    /* Linux と Windows で同一の表示名とするため、末尾の ".exe" を大文字小文字を区別せずに除去する。 */
+    if ((base_length > extension_length) &&
+        (cplat_strcasecmp(copied + base_length - extension_length, s_executable_extension) == 0))
+    {
+        copied[base_length - extension_length] = '\0';
+    }
+
+    cplat_free(parser->resolved_program_name);
+    parser->resolved_program_name = copied;
+}
+
+/**
+ *  @brief          usage 文字列に文字列を追記します。
+ *  @param[in,out]  writer  書き込み状態。
+ *  @param[in]      text    追記する文字列。
+ *
+ *  バッファーに収まらない部分は破棄し、必要バイト数の計測のみ継続します。
+ */
+static void argparser_usage_write(argparser_usage_writer *writer, const char *text)
+{
+    size_t length = strlen(text);
+
+    if (writer->buffer != NULL && writer->needed < (writer->buffer_size - 1))
+    {
+        size_t writable = writer->buffer_size - 1 - writer->needed;
+        if (writable > length)
+        {
+            writable = length;
+        }
+
+        memcpy(&writer->buffer[writer->needed], text, writable);
+    }
+
+    writer->needed += length;
+}
+
+/**
+ *  @brief          usage 文字列に空白を追記します。
+ *  @param[in,out]  writer  書き込み状態。
+ *  @param[in]      count   追記する空白の数。
+ */
+static void argparser_usage_write_spaces(argparser_usage_writer *writer, size_t count)
+{
+    for (size_t i = 0; i < count; i++)
+    {
+        argparser_usage_write(writer, " ");
+    }
+}
+
+/**
+ *  @brief          登録項目の値表示名を取得します。
+ *  @param[in]      spec  対象の登録項目。
+ *  @return         値表示名を返します。未指定の場合は既定名を返します。
+ */
+static const char *argparser_spec_value_name(const argparser_spec *spec)
+{
+    if (spec->value_name != NULL)
+    {
+        return spec->value_name;
+    }
+
+    return s_default_value_name;
+}
+
+/**
+ *  @brief          usage の 1 項目分 (左列ラベルと説明文) を追記します。
+ *  @param[in,out]  writer       書き込み状態。
+ *  @param[in]      label_start  左列ラベルの書き込み開始時点の必要バイト数。
+ *  @param[in]      spec         対象の登録項目。
+ */
+static void argparser_usage_write_description(argparser_usage_writer *writer, const size_t label_start,
+                                              const argparser_spec *spec)
+{
+    size_t label_length = writer->needed - label_start;
+
+    if (label_length < ARGPARSER_USAGE_DESC_COLUMN)
+    {
+        argparser_usage_write_spaces(writer, ARGPARSER_USAGE_DESC_COLUMN - label_length);
+    }
+    else
+    {
+        argparser_usage_write(writer, "\n");
+        argparser_usage_write_spaces(writer, ARGPARSER_USAGE_DESC_COLUMN);
+    }
+
+    if (spec->description != NULL)
+    {
+        argparser_usage_write(writer, spec->description);
+    }
+
+    if ((spec->flags & CPLAT_ARGPARSER_REQUIRED) != 0u)
+    {
+        if (spec->description != NULL)
+        {
+            argparser_usage_write(writer, " ");
+        }
+
+        argparser_usage_write(writer, "(required)");
+    }
+
+    argparser_usage_write(writer, "\n");
+}
+
+/**
+ *  @brief          usage 文字列全体を組み立てます。
+ *  @param[in]      parser  対象のハンドル。
+ *  @param[in,out]  writer  書き込み状態。
+ */
+static void argparser_usage_build(const cplat_argparser *parser, argparser_usage_writer *writer)
+{
+    int has_option = 0;
+    int has_positional = 0;
+
+    /* 登録項目にオプションまたは位置引数が存在するか確認する。 */
+    for (size_t i = 0; i < parser->spec_count; i++)
+    {
+        if (argparser_spec_is_positional(&parser->specs[i]) != 0)
+        {
+            has_positional = 1;
+        }
+        else
+        {
+            has_option = 1;
+        }
+    }
+
+    if (parser->program_description != NULL)
+    {
+        argparser_usage_write(writer, parser->program_description);
+        argparser_usage_write(writer, "\n\n");
+    }
+
+    const char *program_name = cplat_argparser_handle_get_program_name(parser);
+    if (program_name == NULL)
+    {
+        program_name = s_default_program_name;
+    }
+
+    /* Usage 行 ("Usage: {program} [OPTIONS] <args>...") を組み立てる。 */
+    argparser_usage_write(writer, "Usage: ");
+    argparser_usage_write(writer, program_name);
+
+    if (has_option != 0)
+    {
+        argparser_usage_write(writer, " [OPTIONS]");
+    }
+
+    /* 各位置引数の書式 (<arg> または [arg]、可変長は "...") を Usage 行へ追記する。 */
+    for (size_t i = 0; i < parser->spec_count; i++)
+    {
+        const argparser_spec *spec = &parser->specs[i];
+        if (argparser_spec_is_positional(spec) == 0)
+        {
+            continue;
+        }
+
+        if ((spec->flags & CPLAT_ARGPARSER_REQUIRED) != 0u)
+        {
+            argparser_usage_write(writer, " <");
+            argparser_usage_write(writer, spec->long_name);
+            argparser_usage_write(writer, ">");
+
+            if (argparser_spec_is_positional_array(spec) != 0)
+            {
+                argparser_usage_write(writer, "...");
+            }
+        }
+        else
+        {
+            argparser_usage_write(writer, " [");
+            argparser_usage_write(writer, spec->long_name);
+
+            if (argparser_spec_is_positional_array(spec) != 0)
+            {
+                argparser_usage_write(writer, "...");
+            }
+
+            argparser_usage_write(writer, "]");
+        }
+    }
+
+    argparser_usage_write(writer, "\n");
+
+    /* 位置引数の説明一覧 ("Positional arguments:") を組み立てる。 */
+    if (has_positional != 0)
+    {
+        argparser_usage_write(writer, "\nPositional arguments:\n");
+
+        for (size_t i = 0; i < parser->spec_count; i++)
+        {
+            const argparser_spec *spec = &parser->specs[i];
+            if (argparser_spec_is_positional(spec) == 0)
+            {
+                continue;
+            }
+
+            size_t label_start = writer->needed;
+            argparser_usage_write(writer, "  ");
+            argparser_usage_write(writer, spec->long_name);
+            argparser_usage_write_description(writer, label_start, spec);
+        }
+    }
+
+    /* オプションの説明一覧 ("Options:") を組み立てる。 */
+    if (has_option != 0)
+    {
+        argparser_usage_write(writer, "\nOptions:\n");
+
+        for (size_t i = 0; i < parser->spec_count; i++)
+        {
+            const argparser_spec *spec = &parser->specs[i];
+            if (argparser_spec_is_positional(spec) != 0)
+            {
+                continue;
+            }
+
+            size_t label_start = writer->needed;
+            argparser_usage_write(writer, "  ");
+
+            if (spec->short_name != NULL && spec->long_name != NULL)
+            {
+                argparser_usage_write(writer, spec->short_name);
+                argparser_usage_write(writer, ", ");
+                argparser_usage_write(writer, spec->long_name);
+            }
+            else if (spec->short_name != NULL)
+            {
+                argparser_usage_write(writer, spec->short_name);
+            }
+            else
+            {
+                /* 短いオプション名の桁 ("-x, ") を空白で揃える。 */
+                argparser_usage_write_spaces(writer, ARGPARSER_USAGE_SHORT_NAME_WIDTH);
+                argparser_usage_write(writer, spec->long_name);
+            }
+
+            if (argparser_spec_takes_value(spec) != 0)
+            {
+                argparser_usage_write(writer, " ");
+                argparser_usage_write(writer, argparser_spec_value_name(spec));
+            }
+
+            argparser_usage_write_description(writer, label_start, spec);
+        }
+    }
+}
+
+/*
+ * ================================================================
+ * 公開 API
+ * ================================================================
+ */
+
+/**
+ *  @brief          パーサー ハンドルが所有する領域を解放します。
+ *  @param[in]      parser  対象のパーサー ハンドル。NULL を渡してはなりません。
+ *
+ *  ハンドル自身は解放しません。メンバーの値も初期化しません。\n
+ *  呼び出し側が、破棄なら @ref argparser_dispose_core 、
+ *  再初期化なら @ref argparser_reset_core として後続を行います。
+ */
+static void argparser_release_members(cplat_argparser *parser)
+{
+    for (size_t i = 0; i < parser->spec_count; i++)
+    {
+        argparser_free_spec(&parser->specs[i]);
+    }
+
+    cplat_free(parser->specs);
+    cplat_free(parser->program_name);
+    cplat_free(parser->program_description);
+    cplat_free(parser->resolved_program_name);
+    /* 通常の破棄・再初期化・既定パーサー再初期化のすべての終了経路で、共通のエラー状態解放処理を使用する。 */
+    argparser_clear_error(parser);
+
+    for (size_t i = 0; i < parser->register_error_count; i++)
+    {
+        cplat_free(parser->register_errors[i].target);
+    }
+
+    cplat_free(parser->register_errors);
+}
+
+/**
+ *  @brief          パーサー ハンドルが保持するリソースを解放します。
+ *  @param[in]      parser  解放するパーサー ハンドル。
+ */
+static void argparser_dispose_core(cplat_argparser *parser)
+{
+    argparser_release_members(parser);
+    cplat_free(parser);
+}
+
+/**
+ *  @brief          パーサー ハンドルを生成直後と同じ状態へ戻します。
+ *  @param[in,out]  parser  対象のパーサー ハンドル。NULL を渡してはなりません。
+ *
+ *  登録済みのオプション、解析結果、エラー情報をすべて捨てます。\n
+ *  ハンドルは作り直さないため、すでに取得済みのポインターは有効なままです。\n
+ *  所有区分 (library_owned) は引き継ぎます。
+ */
+static void argparser_reset_core(cplat_argparser *parser)
+{
+    int library_owned = parser->library_owned;
+
+    argparser_release_members(parser);
+
+    /* 宣言済みハンドルの再初期化のため、集成体初期化子ではなく memset を使う。 */
+    memset(parser, 0, sizeof(*parser));
+    parser->last_error_index = -1;
+    parser->library_owned = library_owned;
+}
+
+/**
+ *  @brief          生成オプションをパーサー ハンドルへ適用します。
+ *  @param[in,out]  parser   対象のパーサー ハンドル。NULL を渡してはなりません。
+ *  @param[in]      options  生成オプション。NULL のときは何もしません。
+ *  @return         成功なら 0、複製に失敗したら -1 です。
+ *
+ *  呼び出し前に、対象メンバーが NULL であること (生成直後または
+ *  @ref argparser_reset_core 直後) を前提とします。
+ */
+static int argparser_apply_options(cplat_argparser *parser, const cplat_argparser_options *options)
+{
+    if (options == NULL)
+    {
+        return 0;
+    }
+
+    parser->program_name = argparser_strdup(options->program_name);
+    if ((options->program_name != NULL) && (parser->program_name == NULL))
+    {
+        return -1;
+    }
+
+    parser->program_description = argparser_strdup(options->program_description);
+    if ((options->program_description != NULL) && (parser->program_description == NULL))
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          解析対象のコマンド ライン引数をパーサー ハンドルへ適用します。
+ *  @param[in,out]  parser  対象のパーサー ハンドル。NULL を渡してはなりません。
+ *  @param[in]      argc    argv の要素数。1 未満も指定できます。
+ *  @param[in]      argv    コマンド ライン引数の配列。NULL も指定できます。
+ *
+ *  @p argv は複製せず、ポインターをそのまま保持します。\n
+ *  @p argc と @p argv が解析できる組み合わせの場合に限り、
+ *  usage 用のプログラム名を argv[0] から求めます。\n
+ *  不正な組み合わせはここでは通知せず、
+ *  cplat_argparser_handle_parse() が CPLAT_ERR_INVALID_ARGUMENT を返します。
+ */
+static void argparser_apply_args(cplat_argparser *parser, int argc, char *const *argv)
+{
+    parser->argc = argc;
+    parser->argv = argv;
+
+    if ((argc < 1) || (argv == NULL))
+    {
+        return;
+    }
+
+    argparser_resolve_program_name(parser, argv[0]);
+}
+
+/*
+ * プロセス正常終了時に、プロセス共有の既定パーサー ハンドルを破棄する。
+ * 排他ロック下でインスタンス ポインターを取り出し、ロック解放後に領域を解放する。
+ */
+static void argparser_default_dispose_on_shutdown(const cplat_shutdown_event *event, void *context)
+{
+    (void)context;
+
+    if (event == NULL || event->reason != CPLAT_SHUTDOWN_REASON_NORMAL_EXIT)
+    {
+        return;
+    }
+
+    cplat_local_lock *lock = s_default_lock;
+    if (lock == NULL)
+    {
+        return;
+    }
+
+    cplat_local_lock_lock(lock);
+
+    cplat_argparser *parser = s_default_parser;
+    s_default_parser = NULL;
+    cplat_local_lock_unlock(lock);
+
+    if (parser != NULL)
+    {
+        argparser_dispose_core(parser);
+    }
+}
+
+/*
+ * 既定パーサー用の排他ロックを生成し、シャットダウン時の自動破棄コールバックを登録する。
+ * cplat_call_once() から 1 度だけ呼び出される。
+ */
+static void argparser_default_initialize(void)
+{
+    if (cplat_local_lock_create(&s_default_lock) != CPLAT_OK)
+    {
+        s_default_lock = NULL;
+        return;
+    }
+
+    if (cplat_shutdown_register(argparser_default_dispose_on_shutdown, NULL) != CPLAT_OK)
+    {
+        cplat_local_lock_dispose(s_default_lock);
+        s_default_lock = NULL;
+    }
+}
+
+/**
+ *  @brief          プロセス共有の既定パーサーを取得します。
+ *  @param[in]      argc            解析対象の argv の要素数。適用しない場合は 0 を指定します。
+ *  @param[in]      argv            解析対象のコマンド ライン引数。適用しない場合は NULL を指定します。
+ *  @param[in]      options         生成オプション。NULL も指定できます。
+ *  @param[in]      reset_existing  0 以外なら、既存インスタンスを生成直後の状態へ戻して
+ *                                  @p argc 、@p argv 、@p options を適用し直します。
+ *  @return         既定パーサー。生成に失敗した場合は NULL です。
+ *
+ *  生成と再初期化を同じロック区間で行い、取得と初期化の競合を避けます。
+ */
+static cplat_argparser *argparser_default_acquire(const int argc, char *const *argv,
+                                                  const cplat_argparser_options *options, int reset_existing)
+{
+    cplat_call_once(&s_default_initialize_once, argparser_default_initialize);
+    cplat_local_lock *lock = s_default_lock;
+    if (lock == NULL)
+    {
+        return NULL;
+    }
+
+    cplat_argparser *failed_parser = NULL;
+
+    cplat_local_lock_lock(lock);
+
+    if (s_default_parser == NULL)
+    {
+        s_default_parser = cplat_argparser_handle_create(argc, argv, options);
+        if (s_default_parser != NULL)
+        {
+            s_default_parser->library_owned = 1;
+        }
+    }
+    else if (reset_existing != 0)
+    {
+        argparser_reset_core(s_default_parser);
+        if (argparser_apply_options(s_default_parser, options) != 0)
+        {
+            /*
+             * 名前や説明の複製に失敗したパーサーは返さず、新しく作る経路の失敗の後と同じ状態に戻す。
+             * 次の取得では、引数なしのパーサーが作られる。
+             */
+            failed_parser = s_default_parser;
+            s_default_parser = NULL;
+        }
+        else
+        {
+            argparser_apply_args(s_default_parser, argc, argv);
+        }
+    }
+
+    cplat_argparser *parser = s_default_parser;
+    cplat_local_lock_unlock(lock);
+
+    if (failed_parser != NULL)
+    {
+        argparser_dispose_core(failed_parser);
+    }
+
+    return parser;
 }

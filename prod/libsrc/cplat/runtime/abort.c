@@ -35,6 +35,9 @@ typedef struct abort_callback_entry
     struct abort_callback_entry *next;
 } abort_callback_entry;
 
+static const char *non_null_text(const char *text);
+static const char *kind_prefix(const cplat_abort_kind kind);
+
 /*
  * 異常終了の処理中にロックを取らずに辿れるよう、先頭へ追加するだけの単方向リストとする。
  * 登録の解除を提供しないため、要素は解放しない。
@@ -42,16 +45,6 @@ typedef struct abort_callback_entry
 static cplat_atomic_ptr s_abort_callbacks = CPLAT_ATOMIC_INIT(NULL);
 static cplat_atomic_i32 s_abort_started = CPLAT_ATOMIC_INIT(0);
 static THREAD_LOCAL int s_abort_running_on_this_thread = 0;
-
-static const char *non_null_text(const char *text)
-{
-    if (text == NULL)
-    {
-        return "";
-    }
-
-    return text;
-}
 
 int cplat_abort_register(cplat_abort_fn callback, void *context)
 {
@@ -84,20 +77,6 @@ int cplat_abort_register(cplat_abort_fn callback, void *context)
     } while (cplat_atomic_compare_exchange_ptr(&s_abort_callbacks, &head, entry, CPLAT_MEMORY_ORDER_ACQ_REL) == 0);
 
     return CPLAT_OK;
-}
-
-static const char *kind_prefix(const cplat_abort_kind kind)
-{
-    switch (kind)
-    {
-    case CPLAT_ABORT_KIND_ASSERTION_FAILED:
-        return "CPLAT_ASSERT failed";
-    case CPLAT_ABORT_KIND_REQUESTED:
-        return "CPLAT_ABORT";
-    default:
-        /* 定義外の種別でも異常終了の処理は続ける。理由は書き出せるため、接頭辞だけを汎用にする。 */
-        return "cplat abort";
-    }
 }
 
 void cplat_abort_at(const cplat_abort_kind kind, const char *message, const char *file, const int line,
@@ -150,4 +129,28 @@ void cplat_abort_at(const cplat_abort_kind kind, const char *message, const char
     }
 
     abort();
+}
+
+static const char *non_null_text(const char *text)
+{
+    if (text == NULL)
+    {
+        return "";
+    }
+
+    return text;
+}
+
+static const char *kind_prefix(const cplat_abort_kind kind)
+{
+    switch (kind)
+    {
+    case CPLAT_ABORT_KIND_ASSERTION_FAILED:
+        return "CPLAT_ASSERT failed";
+    case CPLAT_ABORT_KIND_REQUESTED:
+        return "CPLAT_ABORT";
+    default:
+        /* 定義外の種別でも異常終了の処理は続ける。理由は書き出せるため、接頭辞だけを汎用にする。 */
+        return "cplat abort";
+    }
 }

@@ -30,6 +30,22 @@ typedef struct shutdown_callback_entry
     struct shutdown_callback_entry *next;
 } shutdown_callback_entry;
 
+static void init_shutdown_lock(void);
+static void shutdown_lock(void);
+static void shutdown_unlock(void);
+static cplat_shutdown_event make_normal_exit_event(void);
+static void free_callback_list(shutdown_callback_entry *entry);
+static int invoke_shutdown_callbacks_once(const cplat_shutdown_event *event);
+static int invoke_shutdown_request_callbacks_once(const cplat_shutdown_event *event, int *handled_out);
+static void shutdown_atexit_callback(void);
+#if defined(PLATFORM_LINUX)
+static void shutdown_signal_handler(int signal_number);
+#elif defined(PLATFORM_WINDOWS)
+static BOOL WINAPI shutdown_console_ctrl_handler(DWORD ctrl_type);
+#endif
+static void install_shutdown_hooks(void);
+static int prepare_shutdown(void);
+
 static shutdown_callback_entry *s_shutdown_callbacks = NULL;
 static shutdown_callback_entry *s_shutdown_request_callbacks = NULL;
 static cplat_local_lock *s_shutdown_lock;
@@ -48,6 +64,192 @@ static int s_shutdown_request_started = 0;
  */
 static cplat_atomic_i32 s_exit_code = CPLAT_ATOMIC_INIT(0);
 static cplat_atomic_i32 s_exit_code_valid = CPLAT_ATOMIC_INIT(0);
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_shutdown_register(cplat_shutdown_fn callback, void *context)
+{
+    shutdown_callback_entry *entry;
+    int result = CPLAT_OK;
+
+    if (callback == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (prepare_shutdown() != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    entry = (shutdown_callback_entry *)cplat_malloc(sizeof(*entry));
+    if (entry == NULL)
+    {
+        return CPLAT_ERR_OUT_OF_MEMORY;
+    }
+
+    entry->callback = callback;
+    entry->context = context;
+
+    shutdown_lock();
+
+    if (s_shutdown_started)
+    {
+        result = CPLAT_ERR_UNKNOWN;
+    }
+    else
+    {
+        entry->next = s_shutdown_callbacks;
+        s_shutdown_callbacks = entry;
+    }
+
+    shutdown_unlock();
+
+    if (result != CPLAT_OK)
+    {
+        cplat_free(entry);
+    }
+
+    return result;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_exit(const int code)
+{
+    int effective_code = code;
+
+    if (code < 0 || code > (CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1))
+    {
+        effective_code = CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE;
+    }
+
+    cplat_atomic_store_i32(&s_exit_code, (int32_t)effective_code, CPLAT_MEMORY_ORDER_RELAXED);
+    cplat_atomic_store_i32(&s_exit_code_valid, 1, CPLAT_MEMORY_ORDER_RELEASE);
+    exit(effective_code);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_shutdown_request_register(cplat_shutdown_fn callback, void *context)
+{
+    shutdown_callback_entry *entry;
+    int result = CPLAT_OK;
+
+    if (callback == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (prepare_shutdown() != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    entry = (shutdown_callback_entry *)cplat_malloc(sizeof(*entry));
+    if (entry == NULL)
+    {
+        return CPLAT_ERR_OUT_OF_MEMORY;
+    }
+
+    entry->callback = callback;
+    entry->context = context;
+
+    shutdown_lock();
+
+    if (s_shutdown_started || s_shutdown_request_started)
+    {
+        result = CPLAT_ERR_UNKNOWN;
+    }
+    else
+    {
+        entry->next = s_shutdown_request_callbacks;
+        s_shutdown_request_callbacks = entry;
+    }
+
+    shutdown_unlock();
+
+    if (result != CPLAT_OK)
+    {
+        cplat_free(entry);
+    }
+
+    return result;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_shutdown_invoke_for_test(const cplat_shutdown_event *event, int *invoked_out)
+{
+    int rc = invoke_shutdown_callbacks_once(event);
+
+    if (rc < 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (invoked_out != NULL)
+    {
+        if (rc == 0)
+        {
+            *invoked_out = 1;
+        }
+        else
+        {
+            *invoked_out = 0;
+        }
+    }
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_shutdown_request_invoke_for_test(const cplat_shutdown_event *event, int *invoked_out)
+{
+    int rc = invoke_shutdown_request_callbacks_once(event, NULL);
+
+    if (rc < 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (invoked_out != NULL)
+    {
+        if (rc == 0)
+        {
+            *invoked_out = 1;
+        }
+        else
+        {
+            *invoked_out = 0;
+        }
+    }
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_shutdown_reset_for_test(void)
+{
+    shutdown_callback_entry *shutdown_entry;
+    shutdown_callback_entry *request_entry;
+
+    shutdown_lock();
+    shutdown_entry = s_shutdown_callbacks;
+    s_shutdown_callbacks = NULL;
+    request_entry = s_shutdown_request_callbacks;
+    s_shutdown_request_callbacks = NULL;
+    s_shutdown_started = 0;
+    s_shutdown_request_started = 0;
+    cplat_atomic_store_i32(&s_exit_code, 0, CPLAT_MEMORY_ORDER_RELAXED);
+    cplat_atomic_store_i32(&s_exit_code_valid, 0, CPLAT_MEMORY_ORDER_RELAXED);
+    shutdown_unlock();
+
+    free_callback_list(shutdown_entry);
+    free_callback_list(request_entry);
+}
 
 static void init_shutdown_lock(void)
 {
@@ -312,190 +514,4 @@ static int prepare_shutdown(void)
     }
 
     return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_shutdown_register(cplat_shutdown_fn callback, void *context)
-{
-    shutdown_callback_entry *entry;
-    int result = CPLAT_OK;
-
-    if (callback == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (prepare_shutdown() != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    entry = (shutdown_callback_entry *)cplat_malloc(sizeof(*entry));
-    if (entry == NULL)
-    {
-        return CPLAT_ERR_OUT_OF_MEMORY;
-    }
-
-    entry->callback = callback;
-    entry->context = context;
-
-    shutdown_lock();
-
-    if (s_shutdown_started)
-    {
-        result = CPLAT_ERR_UNKNOWN;
-    }
-    else
-    {
-        entry->next = s_shutdown_callbacks;
-        s_shutdown_callbacks = entry;
-    }
-
-    shutdown_unlock();
-
-    if (result != CPLAT_OK)
-    {
-        cplat_free(entry);
-    }
-
-    return result;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_exit(const int code)
-{
-    int effective_code = code;
-
-    if (code < 0 || code > (CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE - 1))
-    {
-        effective_code = CPLAT_EXIT_CODE_RESERVED_OUT_OF_RANGE;
-    }
-
-    cplat_atomic_store_i32(&s_exit_code, (int32_t)effective_code, CPLAT_MEMORY_ORDER_RELAXED);
-    cplat_atomic_store_i32(&s_exit_code_valid, 1, CPLAT_MEMORY_ORDER_RELEASE);
-    exit(effective_code);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_shutdown_request_register(cplat_shutdown_fn callback, void *context)
-{
-    shutdown_callback_entry *entry;
-    int result = CPLAT_OK;
-
-    if (callback == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (prepare_shutdown() != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    entry = (shutdown_callback_entry *)cplat_malloc(sizeof(*entry));
-    if (entry == NULL)
-    {
-        return CPLAT_ERR_OUT_OF_MEMORY;
-    }
-
-    entry->callback = callback;
-    entry->context = context;
-
-    shutdown_lock();
-
-    if (s_shutdown_started || s_shutdown_request_started)
-    {
-        result = CPLAT_ERR_UNKNOWN;
-    }
-    else
-    {
-        entry->next = s_shutdown_request_callbacks;
-        s_shutdown_request_callbacks = entry;
-    }
-
-    shutdown_unlock();
-
-    if (result != CPLAT_OK)
-    {
-        cplat_free(entry);
-    }
-
-    return result;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_shutdown_invoke_for_test(const cplat_shutdown_event *event, int *invoked_out)
-{
-    int rc = invoke_shutdown_callbacks_once(event);
-
-    if (rc < 0)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (invoked_out != NULL)
-    {
-        if (rc == 0)
-        {
-            *invoked_out = 1;
-        }
-        else
-        {
-            *invoked_out = 0;
-        }
-    }
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_shutdown_request_invoke_for_test(const cplat_shutdown_event *event, int *invoked_out)
-{
-    int rc = invoke_shutdown_request_callbacks_once(event, NULL);
-
-    if (rc < 0)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (invoked_out != NULL)
-    {
-        if (rc == 0)
-        {
-            *invoked_out = 1;
-        }
-        else
-        {
-            *invoked_out = 0;
-        }
-    }
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_shutdown_reset_for_test(void)
-{
-    shutdown_callback_entry *shutdown_entry;
-    shutdown_callback_entry *request_entry;
-
-    shutdown_lock();
-    shutdown_entry = s_shutdown_callbacks;
-    s_shutdown_callbacks = NULL;
-    request_entry = s_shutdown_request_callbacks;
-    s_shutdown_request_callbacks = NULL;
-    s_shutdown_started = 0;
-    s_shutdown_request_started = 0;
-    cplat_atomic_store_i32(&s_exit_code, 0, CPLAT_MEMORY_ORDER_RELAXED);
-    cplat_atomic_store_i32(&s_exit_code_valid, 0, CPLAT_MEMORY_ORDER_RELAXED);
-    shutdown_unlock();
-
-    free_callback_list(shutdown_entry);
-    free_callback_list(request_entry);
 }

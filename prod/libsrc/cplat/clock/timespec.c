@@ -50,94 +50,12 @@ static_assert(SECONDS_TERM_COUNT == 5U, "cplat: combine_timespec fills 5 terms")
 static_assert(sizeof(time_t) == sizeof(int64_t), "cplat: time_t must be 64-bit");
 static_assert((time_t)-1 < (time_t)0, "cplat: time_t must be signed");
 
-/* INT64_MIN の絶対値も符号なし型で表す。 */
-static uint64_t magnitude_of(const int64_t value)
-{
-    if (value < 0)
-    {
-        return (uint64_t)(-(value + 1)) + 1U;
-    }
-    return (uint64_t)value;
-}
-
-/*
- * values の count 項を合計する。subtract_mask のビットが立つ項は減算する。
- * 呼び出し元は count を SECONDS_TERM_COUNT 以下にする。
- * 先に正負を相殺し、途中の加算だけで表現範囲を超える場合も正しい最終値を求める。
- */
+static uint64_t magnitude_of(const int64_t value);
 static int sum_seconds(const int64_t *values, const unsigned int subtract_mask, const size_t count,
-                       int64_t *seconds_out)
-{
-    uint64_t positive[SECONDS_TERM_COUNT] = {0};
-    uint64_t negative[SECONDS_TERM_COUNT] = {0};
-    uint64_t positive_sum = 0U;
-    uint64_t negative_sum = 0U;
-    const uint64_t negative_limit = (uint64_t)INT64_MAX + 1U;
-    size_t i;
-    size_t j;
-
-    for (i = 0U; i < count; i++)
-    {
-        const int is_negative = (values[i] < 0) != ((subtract_mask & (1U << i)) != 0U);
-        if (is_negative != 0)
-        {
-            negative[i] = magnitude_of(values[i]);
-        }
-        else
-        {
-            positive[i] = magnitude_of(values[i]);
-        }
-    }
-    for (i = 0U; i < count; i++)
-    {
-        for (j = 0U; j < count; j++)
-        {
-            uint64_t cancel;
-            if (positive[i] < negative[j])
-            {
-                cancel = positive[i];
-            }
-            else
-            {
-                cancel = negative[j];
-            }
-            positive[i] -= cancel;
-            negative[j] -= cancel;
-        }
-    }
-    for (i = 0U; i < count; i++)
-    {
-        if ((positive[i] > (uint64_t)INT64_MAX - positive_sum) || (negative[i] > negative_limit - negative_sum))
-        {
-            return CPLAT_ERR_OUT_OF_RANGE;
-        }
-        positive_sum += positive[i];
-        negative_sum += negative[i];
-    }
-    if (negative_sum != 0U)
-    {
-        *seconds_out = -(int64_t)(negative_sum - 1U) - 1;
-    }
-    else
-    {
-        *seconds_out = (int64_t)positive_sum;
-    }
-    return CPLAT_OK;
-}
-
-/* 負の剰余は 1 秒借りて、0 以上のナノ秒へ変換する。 */
-static void split_nanoseconds(const int64_t value, int64_t *carry_out, int64_t *nanoseconds_out)
-{
-    int64_t carry = value / CLOCK_NSEC_PER_SEC;
-    int64_t nanoseconds = value % CLOCK_NSEC_PER_SEC;
-    if (nanoseconds < 0)
-    {
-        carry -= 1;
-        nanoseconds += CLOCK_NSEC_PER_SEC;
-    }
-    *carry_out = carry;
-    *nanoseconds_out = nanoseconds;
-}
+                       int64_t *seconds_out);
+static void split_nanoseconds(const int64_t value, int64_t *carry_out, int64_t *nanoseconds_out);
+static int combine_timespec(const cplat_timespec *a, const cplat_timespec *b, const int subtract,
+                            cplat_timespec *value_out);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -162,43 +80,6 @@ int cplat_timespec_normalize(cplat_timespec *ts)
     }
     ts->tv_sec = (time_t)seconds;
     ts->tv_nsec = nanoseconds;
-    return CPLAT_OK;
-}
-
-/* ナノ秒の商は秒部へ、剰余は小さい値同士の演算へ分ける。 */
-static int combine_timespec(const cplat_timespec *a, const cplat_timespec *b, const int subtract,
-                            cplat_timespec *value_out)
-{
-    int64_t terms[SECONDS_TERM_COUNT];
-    int64_t nanoseconds;
-    int64_t seconds;
-    unsigned int subtract_mask = 0U;
-    int ret;
-    if ((a == NULL) || (b == NULL) || (value_out == NULL))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    terms[TERM_A_SEC] = (int64_t)a->tv_sec;
-    terms[TERM_B_SEC] = (int64_t)b->tv_sec;
-    terms[TERM_A_NSEC_CARRY] = a->tv_nsec / CLOCK_NSEC_PER_SEC;
-    terms[TERM_B_NSEC_CARRY] = b->tv_nsec / CLOCK_NSEC_PER_SEC;
-    if (subtract != 0)
-    {
-        nanoseconds = (a->tv_nsec % CLOCK_NSEC_PER_SEC) - (b->tv_nsec % CLOCK_NSEC_PER_SEC);
-        subtract_mask = (1U << TERM_B_SEC) | (1U << TERM_B_NSEC_CARRY);
-    }
-    else
-    {
-        nanoseconds = (a->tv_nsec % CLOCK_NSEC_PER_SEC) + (b->tv_nsec % CLOCK_NSEC_PER_SEC);
-    }
-    split_nanoseconds(nanoseconds, &terms[TERM_NSEC_SUM_CARRY], &nanoseconds);
-    ret = sum_seconds(terms, subtract_mask, SECONDS_TERM_COUNT, &seconds);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
-    value_out->tv_sec = (time_t)seconds;
-    value_out->tv_nsec = nanoseconds;
     return CPLAT_OK;
 }
 
@@ -339,4 +220,130 @@ void cplat_timespec_from_native(const struct timespec *native, cplat_timespec *t
 
     ts->tv_sec = native->tv_sec;
     ts->tv_nsec = (int64_t)native->tv_nsec;
+}
+
+/* INT64_MIN の絶対値も符号なし型で表す。 */
+static uint64_t magnitude_of(const int64_t value)
+{
+    if (value < 0)
+    {
+        return (uint64_t)(-(value + 1)) + 1U;
+    }
+    return (uint64_t)value;
+}
+
+/*
+ * values の count 項を合計する。subtract_mask のビットが立つ項は減算する。
+ * 呼び出し元は count を SECONDS_TERM_COUNT 以下にする。
+ * 先に正負を相殺し、途中の加算だけで表現範囲を超える場合も正しい最終値を求める。
+ */
+static int sum_seconds(const int64_t *values, const unsigned int subtract_mask, const size_t count,
+                       int64_t *seconds_out)
+{
+    uint64_t positive[SECONDS_TERM_COUNT] = {0};
+    uint64_t negative[SECONDS_TERM_COUNT] = {0};
+    uint64_t positive_sum = 0U;
+    uint64_t negative_sum = 0U;
+    const uint64_t negative_limit = (uint64_t)INT64_MAX + 1U;
+    size_t i;
+    size_t j;
+
+    for (i = 0U; i < count; i++)
+    {
+        const int is_negative = (values[i] < 0) != ((subtract_mask & (1U << i)) != 0U);
+        if (is_negative != 0)
+        {
+            negative[i] = magnitude_of(values[i]);
+        }
+        else
+        {
+            positive[i] = magnitude_of(values[i]);
+        }
+    }
+    for (i = 0U; i < count; i++)
+    {
+        for (j = 0U; j < count; j++)
+        {
+            uint64_t cancel;
+            if (positive[i] < negative[j])
+            {
+                cancel = positive[i];
+            }
+            else
+            {
+                cancel = negative[j];
+            }
+            positive[i] -= cancel;
+            negative[j] -= cancel;
+        }
+    }
+    for (i = 0U; i < count; i++)
+    {
+        if ((positive[i] > (uint64_t)INT64_MAX - positive_sum) || (negative[i] > negative_limit - negative_sum))
+        {
+            return CPLAT_ERR_OUT_OF_RANGE;
+        }
+        positive_sum += positive[i];
+        negative_sum += negative[i];
+    }
+    if (negative_sum != 0U)
+    {
+        *seconds_out = -(int64_t)(negative_sum - 1U) - 1;
+    }
+    else
+    {
+        *seconds_out = (int64_t)positive_sum;
+    }
+    return CPLAT_OK;
+}
+
+/* 負の剰余は 1 秒借りて、0 以上のナノ秒へ変換する。 */
+static void split_nanoseconds(const int64_t value, int64_t *carry_out, int64_t *nanoseconds_out)
+{
+    int64_t carry = value / CLOCK_NSEC_PER_SEC;
+    int64_t nanoseconds = value % CLOCK_NSEC_PER_SEC;
+    if (nanoseconds < 0)
+    {
+        carry -= 1;
+        nanoseconds += CLOCK_NSEC_PER_SEC;
+    }
+    *carry_out = carry;
+    *nanoseconds_out = nanoseconds;
+}
+
+/* ナノ秒の商は秒部へ、剰余は小さい値同士の演算へ分ける。 */
+static int combine_timespec(const cplat_timespec *a, const cplat_timespec *b, const int subtract,
+                            cplat_timespec *value_out)
+{
+    int64_t terms[SECONDS_TERM_COUNT];
+    int64_t nanoseconds;
+    int64_t seconds;
+    unsigned int subtract_mask = 0U;
+    int ret;
+    if ((a == NULL) || (b == NULL) || (value_out == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    terms[TERM_A_SEC] = (int64_t)a->tv_sec;
+    terms[TERM_B_SEC] = (int64_t)b->tv_sec;
+    terms[TERM_A_NSEC_CARRY] = a->tv_nsec / CLOCK_NSEC_PER_SEC;
+    terms[TERM_B_NSEC_CARRY] = b->tv_nsec / CLOCK_NSEC_PER_SEC;
+    if (subtract != 0)
+    {
+        nanoseconds = (a->tv_nsec % CLOCK_NSEC_PER_SEC) - (b->tv_nsec % CLOCK_NSEC_PER_SEC);
+        subtract_mask = (1U << TERM_B_SEC) | (1U << TERM_B_NSEC_CARRY);
+    }
+    else
+    {
+        nanoseconds = (a->tv_nsec % CLOCK_NSEC_PER_SEC) + (b->tv_nsec % CLOCK_NSEC_PER_SEC);
+    }
+    split_nanoseconds(nanoseconds, &terms[TERM_NSEC_SUM_CARRY], &nanoseconds);
+    ret = sum_seconds(terms, subtract_mask, SECONDS_TERM_COUNT, &seconds);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+    value_out->tv_sec = (time_t)seconds;
+    value_out->tv_nsec = nanoseconds;
+    return CPLAT_OK;
 }

@@ -19,6 +19,9 @@
 #include <cplat/crt/stdlib.h>
 #include <string.h>
 
+static int growth_config_is_valid(const cplat_hashtable_config *initial_config,
+                                  const cplat_hashtable_growth_config *growth_config);
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int hashtable_validate_config(const cplat_hashtable_config *config)
@@ -269,47 +272,6 @@ int cplat_hashtable_create(const cplat_hashtable_config *config, void *buf_mgmt,
     *ht_out = ht;
 
     return CPLAT_OK;
-}
-
-/*
- * 初期設定と拡張上限設定の整合性を検査する。
- * 妥当なら 1、不正なら 0 を返す。
- */
-static int growth_config_is_valid(const cplat_hashtable_config *initial_config,
-                                  const cplat_hashtable_growth_config *growth_config)
-{
-    if ((growth_config->max_capacity != 0) && (growth_config->max_capacity < initial_config->capacity))
-    {
-        return 0;
-    }
-
-    if (hashtable_field_is_variable(initial_config->key_type) == 0)
-    {
-        if (growth_config->max_key_storage_size != 0)
-        {
-            return 0;
-        }
-    }
-    else if ((growth_config->max_key_storage_size != 0) &&
-             (growth_config->max_key_storage_size < initial_config->key_storage_size))
-    {
-        return 0;
-    }
-
-    if (hashtable_field_is_variable(initial_config->value_type) == 0)
-    {
-        if (growth_config->max_value_storage_size != 0)
-        {
-            return 0;
-        }
-    }
-    else if ((growth_config->max_value_storage_size != 0) &&
-             (growth_config->max_value_storage_size < initial_config->value_storage_size))
-    {
-        return 0;
-    }
-
-    return 1;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -574,4 +536,45 @@ void cplat_hashtable_dispose(cplat_hashtable *ht)
 
     /* 内部管理データは、生成経路によらず常に解放する。 */
     cplat_free(ht);
+}
+
+/*
+ * 初期設定と拡張上限設定の整合性を検査する。
+ * 妥当なら 1、不正なら 0 を返す。
+ */
+static int growth_config_is_valid(const cplat_hashtable_config *initial_config,
+                                  const cplat_hashtable_growth_config *growth_config)
+{
+    if ((growth_config->max_capacity != 0) && (growth_config->max_capacity < initial_config->capacity))
+    {
+        return 0;
+    }
+
+    if (hashtable_field_is_variable(initial_config->key_type) == 0)
+    {
+        if (growth_config->max_key_storage_size != 0)
+        {
+            return 0;
+        }
+    }
+    else if ((growth_config->max_key_storage_size != 0) &&
+             (growth_config->max_key_storage_size < initial_config->key_storage_size))
+    {
+        return 0;
+    }
+
+    if (hashtable_field_is_variable(initial_config->value_type) == 0)
+    {
+        if (growth_config->max_value_storage_size != 0)
+        {
+            return 0;
+        }
+    }
+    else if ((growth_config->max_value_storage_size != 0) &&
+             (growth_config->max_value_storage_size < initial_config->value_storage_size))
+    {
+        return 0;
+    }
+
+    return 1;
 }

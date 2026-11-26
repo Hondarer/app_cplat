@@ -32,188 +32,11 @@ static_assert(PLATFORM_PATH_UTF8_MAX >= PLATFORM_PATH_MAX, "PLATFORM_PATH_UTF8_M
 /* 親ディレクトリを示す ".." セグメントのバイト数 [byte]。 */
 #define PATH_PARENT_SEGMENT_LEN (2U)
 
-/*
- * パス文字列を出力バッファーへコピーする。
- * 成功時は CPLAT_OK を返し、バッファーに収まらない場合は ENAMETOOLONG に対応する結果コードを返す。
- */
-static int copy_path_text(char *path_out, const size_t path_size, cplat_error *detail_out, const char *text)
-{
-    size_t len;
-
-    len = strlen(text);
-    if (len + 1u > path_size)
-    {
-        path_out[0] = '\0';
-        return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
-    }
-
-    memcpy(path_out, text, len + 1u);
-
-    return cplat_internal_error_report_success(detail_out);
-}
-
-/*
- * 正規化された 2 つのパス文字列を比較する。
- * Windows では UTF-16 へ変換し、OS の大文字の表で大小文字を区別せずに比べる
- * (CompareStringOrdinal。言語の規則による同一視は行わない)。
- * バイトごとの tolower() は ASCII の外の文字を区別し、C ロケールに従うため使わない。
- * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-comparestringordinal
- * Linux では完全一致で比較する。
- * 成功時は *equal_out に 1 (一致) または 0 (不一致) を格納して CPLAT_OK を返し、
- * 失敗時は *equal_out を変更せずにエラー結果コードを返す。
- */
-static int compare_normalized_paths(const char *lhs, const char *rhs, int *equal_out, cplat_error *detail_out)
-{
-#if defined(PLATFORM_WINDOWS)
-    wchar_t lhs_w[PLATFORM_PATH_MAX];
-    wchar_t rhs_w[PLATFORM_PATH_MAX];
-    int cmp;
-    int rc;
-
-    rc = cplat_utf8_to_wpath(lhs_w, sizeof(lhs_w) / sizeof(lhs_w[0]), NULL, lhs);
-    if (rc != CPLAT_OK)
-    {
-        return cplat_internal_error_report_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
-    }
-
-    rc = cplat_utf8_to_wpath(rhs_w, sizeof(rhs_w) / sizeof(rhs_w[0]), NULL, rhs);
-    if (rc != CPLAT_OK)
-    {
-        return cplat_internal_error_report_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
-    }
-
-    cmp = CompareStringOrdinal(lhs_w, -1, rhs_w, -1, TRUE);
-    if (cmp == 0)
-    {
-        const DWORD error_code = GetLastError();
-
-        return cplat_internal_error_report_windows_error(detail_out, error_code);
-    }
-
-    *equal_out = (cmp == CSTR_EQUAL) ? 1 : 0;
-    return cplat_internal_error_report_success(detail_out);
-#else  /* !PLATFORM_WINDOWS */
-    if (strcmp(lhs, rhs) == 0)
-    {
-        *equal_out = 1;
-    }
-    else
-    {
-        *equal_out = 0;
-    }
-
-    return cplat_internal_error_report_success(detail_out);
-#endif /* PLATFORM_WINDOWS */
-}
-
+static int copy_path_text(char *path_out, const size_t path_size, cplat_error *detail_out, const char *text);
+static int compare_normalized_paths(const char *lhs, const char *rhs, int *equal_out, cplat_error *detail_out);
 #if defined(PLATFORM_LINUX)
-/*
- * POSIX 形式の絶対パスに含まれる '.'、'..'、連続するセパレーターをインプレースで正規化する。
- * 成功時は CPLAT_OK を返し、一時メモリの確保に失敗した場合は CPLAT_ERR_OUT_OF_MEMORY を返す。
- */
-static int normalize_absolute_posix_path(char *path)
-{
-    size_t read_idx;
-    size_t write_idx;
-    size_t *restore_points;
-    size_t restore_count = 0u;
-
-    restore_points = (size_t *)cplat_calloc((size_t)PLATFORM_PATH_MAX, sizeof(*restore_points));
-    if (restore_points == NULL)
-    {
-        return CPLAT_ERR_OUT_OF_MEMORY;
-    }
-
-    write_idx = 1u;
-    read_idx = 1u;
-
-    while (path[read_idx] != '\0')
-    {
-        size_t seg_start;
-        size_t seg_len;
-
-        while (path[read_idx] == PLATFORM_PATH_SEP_CHR)
-        {
-            read_idx++;
-        }
-
-        seg_start = read_idx;
-
-        while (path[read_idx] != '\0' && path[read_idx] != PLATFORM_PATH_SEP_CHR)
-        {
-            read_idx++;
-        }
-
-        seg_len = read_idx - seg_start;
-
-        if (seg_len == 0u)
-        {
-            break;
-        }
-
-        if (seg_len == 1u && path[seg_start] == '.')
-        {
-            continue;
-        }
-
-        if (seg_len == PATH_PARENT_SEGMENT_LEN && path[seg_start] == '.' && path[seg_start + 1u] == '.')
-        {
-            if (restore_count > 0u)
-            {
-                write_idx = restore_points[--restore_count];
-            }
-
-            continue;
-        }
-
-        restore_points[restore_count++] = write_idx;
-
-        if (write_idx > 1u)
-        {
-            path[write_idx++] = PLATFORM_PATH_SEP_CHR;
-        }
-
-        memmove(path + write_idx, path + seg_start, seg_len);
-        write_idx += seg_len;
-    }
-
-    path[write_idx] = '\0';
-    cplat_free(restore_points);
-
-    return CPLAT_OK;
-}
-
-/*
- * 相対パスの場合はカレント ワーキング ディレクトリを前置して絶対パスを組み立てる。
- * 既に絶対パスの場合はそのまま出力バッファーへコピーする。
- * 成功時は CPLAT_OK を返し、失敗時は結果コードを返す。
- */
-static int build_absolute_posix_path(char *path_out, const size_t path_size, cplat_error *detail_out, const char *path)
-{
-    if (path[0] == PLATFORM_PATH_SEP_CHR)
-    {
-        return copy_path_text(path_out, path_size, detail_out, path);
-    }
-
-    {
-        char cwd[PLATFORM_PATH_MAX];
-
-        if (getcwd(cwd, sizeof(cwd)) == NULL)
-        {
-            const int errno_value = errno;
-
-            path_out[0] = '\0';
-            return cplat_internal_error_report_errno(detail_out, errno_value);
-        }
-
-        if (cplat_snprintf(path_out, path_size, "%s/%s", cwd, path) != CPLAT_OK)
-        {
-            return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
-        }
-    }
-
-    return cplat_internal_error_report_success(detail_out);
-}
+static int normalize_absolute_posix_path(char *path);
+static int build_absolute_posix_path(char *path_out, const size_t path_size, cplat_error *detail_out, const char *path);
 #endif /* PLATFORM_LINUX */
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -518,3 +341,187 @@ int cplat_path_concat_n(char *path_out, const size_t path_size, cplat_error *det
 
     return result;
 }
+
+/*
+ * パス文字列を出力バッファーへコピーする。
+ * 成功時は CPLAT_OK を返し、バッファーに収まらない場合は ENAMETOOLONG に対応する結果コードを返す。
+ */
+static int copy_path_text(char *path_out, const size_t path_size, cplat_error *detail_out, const char *text)
+{
+    size_t len;
+
+    len = strlen(text);
+    if (len + 1u > path_size)
+    {
+        path_out[0] = '\0';
+        return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
+    }
+
+    memcpy(path_out, text, len + 1u);
+
+    return cplat_internal_error_report_success(detail_out);
+}
+
+/*
+ * 正規化された 2 つのパス文字列を比較する。
+ * Windows では UTF-16 へ変換し、OS の大文字の表で大小文字を区別せずに比べる
+ * (CompareStringOrdinal。言語の規則による同一視は行わない)。
+ * バイトごとの tolower() は ASCII の外の文字を区別し、C ロケールに従うため使わない。
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-comparestringordinal
+ * Linux では完全一致で比較する。
+ * 成功時は *equal_out に 1 (一致) または 0 (不一致) を格納して CPLAT_OK を返し、
+ * 失敗時は *equal_out を変更せずにエラー結果コードを返す。
+ */
+static int compare_normalized_paths(const char *lhs, const char *rhs, int *equal_out, cplat_error *detail_out)
+{
+#if defined(PLATFORM_WINDOWS)
+    wchar_t lhs_w[PLATFORM_PATH_MAX];
+    wchar_t rhs_w[PLATFORM_PATH_MAX];
+    int cmp;
+    int rc;
+
+    rc = cplat_utf8_to_wpath(lhs_w, sizeof(lhs_w) / sizeof(lhs_w[0]), NULL, lhs);
+    if (rc != CPLAT_OK)
+    {
+        return cplat_internal_error_report_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
+    }
+
+    rc = cplat_utf8_to_wpath(rhs_w, sizeof(rhs_w) / sizeof(rhs_w[0]), NULL, rhs);
+    if (rc != CPLAT_OK)
+    {
+        return cplat_internal_error_report_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
+    }
+
+    cmp = CompareStringOrdinal(lhs_w, -1, rhs_w, -1, TRUE);
+    if (cmp == 0)
+    {
+        const DWORD error_code = GetLastError();
+
+        return cplat_internal_error_report_windows_error(detail_out, error_code);
+    }
+
+    *equal_out = (cmp == CSTR_EQUAL) ? 1 : 0;
+    return cplat_internal_error_report_success(detail_out);
+#else  /* !PLATFORM_WINDOWS */
+    if (strcmp(lhs, rhs) == 0)
+    {
+        *equal_out = 1;
+    }
+    else
+    {
+        *equal_out = 0;
+    }
+
+    return cplat_internal_error_report_success(detail_out);
+#endif /* PLATFORM_WINDOWS */
+}
+
+#if defined(PLATFORM_LINUX)
+/*
+ * POSIX 形式の絶対パスに含まれる '.'、'..'、連続するセパレーターをインプレースで正規化する。
+ * 成功時は CPLAT_OK を返し、一時メモリの確保に失敗した場合は CPLAT_ERR_OUT_OF_MEMORY を返す。
+ */
+static int normalize_absolute_posix_path(char *path)
+{
+    size_t read_idx;
+    size_t write_idx;
+    size_t *restore_points;
+    size_t restore_count = 0u;
+
+    restore_points = (size_t *)cplat_calloc((size_t)PLATFORM_PATH_MAX, sizeof(*restore_points));
+    if (restore_points == NULL)
+    {
+        return CPLAT_ERR_OUT_OF_MEMORY;
+    }
+
+    write_idx = 1u;
+    read_idx = 1u;
+
+    while (path[read_idx] != '\0')
+    {
+        size_t seg_start;
+        size_t seg_len;
+
+        while (path[read_idx] == PLATFORM_PATH_SEP_CHR)
+        {
+            read_idx++;
+        }
+
+        seg_start = read_idx;
+
+        while (path[read_idx] != '\0' && path[read_idx] != PLATFORM_PATH_SEP_CHR)
+        {
+            read_idx++;
+        }
+
+        seg_len = read_idx - seg_start;
+
+        if (seg_len == 0u)
+        {
+            break;
+        }
+
+        if (seg_len == 1u && path[seg_start] == '.')
+        {
+            continue;
+        }
+
+        if (seg_len == PATH_PARENT_SEGMENT_LEN && path[seg_start] == '.' && path[seg_start + 1u] == '.')
+        {
+            if (restore_count > 0u)
+            {
+                write_idx = restore_points[--restore_count];
+            }
+
+            continue;
+        }
+
+        restore_points[restore_count++] = write_idx;
+
+        if (write_idx > 1u)
+        {
+            path[write_idx++] = PLATFORM_PATH_SEP_CHR;
+        }
+
+        memmove(path + write_idx, path + seg_start, seg_len);
+        write_idx += seg_len;
+    }
+
+    path[write_idx] = '\0';
+    cplat_free(restore_points);
+
+    return CPLAT_OK;
+}
+
+/*
+ * 相対パスの場合はカレント ワーキング ディレクトリを前置して絶対パスを組み立てる。
+ * 既に絶対パスの場合はそのまま出力バッファーへコピーする。
+ * 成功時は CPLAT_OK を返し、失敗時は結果コードを返す。
+ */
+static int build_absolute_posix_path(char *path_out, const size_t path_size, cplat_error *detail_out, const char *path)
+{
+    if (path[0] == PLATFORM_PATH_SEP_CHR)
+    {
+        return copy_path_text(path_out, path_size, detail_out, path);
+    }
+
+    {
+        char cwd[PLATFORM_PATH_MAX];
+
+        if (getcwd(cwd, sizeof(cwd)) == NULL)
+        {
+            const int errno_value = errno;
+
+            path_out[0] = '\0';
+            return cplat_internal_error_report_errno(detail_out, errno_value);
+        }
+
+        if (cplat_snprintf(path_out, path_size, "%s/%s", cwd, path) != CPLAT_OK)
+        {
+            return cplat_internal_error_report_errno(detail_out, ENAMETOOLONG);
+        }
+    }
+
+    return cplat_internal_error_report_success(detail_out);
+}
+#endif /* PLATFORM_LINUX */

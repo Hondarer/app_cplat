@@ -226,6 +226,125 @@ typedef struct describe_context
     describe_writer writer;
 } describe_context;
 
+static void append(describe_writer *writer, const char *text, const size_t length);
+static void append_text(describe_writer *writer, const char *text);
+static void append_sentence(describe_writer *writer, const char *text);
+static void append_before(describe_context *context, const char *before);
+static void append_constant(describe_context *context, const string_catalog_filter_constant *constant);
+static bool key_of_constant(const describe_context *context, const string_catalog_filter_constant *constant,
+                            int *key_out);
+static void append_entry(describe_context *context, const string_catalog_filter_constant *constant);
+static const cplat_string_catalog_argument *find_argument(const cplat_string_catalog_entry *entry, const char *name,
+                                                          const int index);
+static void append_argument(describe_context *context, const string_catalog_filter_instruction *instruction);
+static uint32_t append_subject(describe_context *context, const string_catalog_filter_instruction *instruction);
+static void append_constants(describe_context *context, const string_catalog_filter_instruction *instruction,
+                             uint32_t offset, const bool is_entry);
+static bool append_key_predicate(describe_context *context, const string_catalog_filter_instruction *instruction);
+static double real_of_constant(const describe_context *context, const string_catalog_filter_constant *constant);
+static bool is_category_matched(const describe_context *context, const string_catalog_filter_instruction *instruction,
+                                const double value);
+static void append_category_predicate(describe_context *context, const string_catalog_filter_instruction *instruction);
+static void append_predicate(describe_context *context, const string_catalog_filter_instruction *instruction);
+static int precedence_of(const uint8_t opcode);
+static void append_node(describe_context *context, const uint16_t node, const int parent_precedence);
+static void append_mixed_notes(describe_context *context);
+
+/* ===== 型区分の混在 ===== */
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+bool string_catalog_filter_find_mixed_argument(const cplat_string_catalog *catalog, const char *name,
+                                               string_catalog_filter_mixed_argument *mixed_out)
+{
+    bool has_string = false;
+    bool has_other = false;
+
+    memset(mixed_out, 0, sizeof(*mixed_out));
+
+    for (int entry_index = 0; entry_index < catalog->entry_count; entry_index++)
+    {
+        const cplat_string_catalog_entry *entry = &catalog->entries[entry_index];
+
+        /* 適用時の名前の解決と同じく、項目ごとに最初に名前が一致した引数を対象とする。 */
+        for (int argument = 0; argument < entry->argument_count; argument++)
+        {
+            const cplat_string_catalog_argument *candidate = &entry->arguments[argument];
+
+            if ((candidate->kind == CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED) || (candidate->name == NULL) ||
+                (strcmp(candidate->name, name) != 0))
+            {
+                continue;
+            }
+
+            if ((candidate->kind == CPLAT_STRING_CATALOG_ARGUMENT_KIND_STRING) && !has_string)
+            {
+                mixed_out->string_entry = entry;
+                mixed_out->string_argument = argument;
+                has_string = true;
+            }
+            else if ((candidate->kind != CPLAT_STRING_CATALOG_ARGUMENT_KIND_STRING) && !has_other)
+            {
+                mixed_out->other_entry = entry;
+                mixed_out->other_argument = argument;
+                has_other = true;
+            }
+            else
+            {
+                /* 区分ごとに最初の項目だけを代表として残す。 */
+            }
+
+            break;
+        }
+
+        if (has_string && has_other)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int string_catalog_filter_describe_record(const string_catalog_filter_describe_source *source, char *dest,
+                                          const size_t dest_size)
+{
+    describe_context context = {0};
+    string_catalog_filter_record_header header;
+    uint16_t root;
+
+    context.source = source;
+
+    if (source->is_japanese != 0)
+    {
+        context.phrases = &s_japanese;
+    }
+    else
+    {
+        context.phrases = &s_neutral;
+    }
+
+    string_catalog_filter_read_record_header(source->record, &header);
+    context.constants = string_catalog_filter_record_constants(source->record, source->line_width);
+    context.constant_size = header.constant_size;
+    context.writer.dest = dest;
+    context.writer.size = dest_size;
+    dest[0] = '\0';
+
+    root = string_catalog_filter_build_tree(source->record, context.left, context.right);
+    append_node(&context, root, 0);
+    append_mixed_notes(&context);
+
+    if (context.writer.is_truncated)
+    {
+        return CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+
+    return CPLAT_OK;
+}
+
 /* ===== 書き出し ===== */
 
 static void append(describe_writer *writer, const char *text, const size_t length)
@@ -905,62 +1024,6 @@ static void append_node(describe_context *context, const uint16_t node, const in
     }
 }
 
-/* ===== 型区分の混在 ===== */
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-bool string_catalog_filter_find_mixed_argument(const cplat_string_catalog *catalog, const char *name,
-                                               string_catalog_filter_mixed_argument *mixed_out)
-{
-    bool has_string = false;
-    bool has_other = false;
-
-    memset(mixed_out, 0, sizeof(*mixed_out));
-
-    for (int entry_index = 0; entry_index < catalog->entry_count; entry_index++)
-    {
-        const cplat_string_catalog_entry *entry = &catalog->entries[entry_index];
-
-        /* 適用時の名前の解決と同じく、項目ごとに最初に名前が一致した引数を対象とする。 */
-        for (int argument = 0; argument < entry->argument_count; argument++)
-        {
-            const cplat_string_catalog_argument *candidate = &entry->arguments[argument];
-
-            if ((candidate->kind == CPLAT_STRING_CATALOG_ARGUMENT_KIND_UNUSED) || (candidate->name == NULL) ||
-                (strcmp(candidate->name, name) != 0))
-            {
-                continue;
-            }
-
-            if ((candidate->kind == CPLAT_STRING_CATALOG_ARGUMENT_KIND_STRING) && !has_string)
-            {
-                mixed_out->string_entry = entry;
-                mixed_out->string_argument = argument;
-                has_string = true;
-            }
-            else if ((candidate->kind != CPLAT_STRING_CATALOG_ARGUMENT_KIND_STRING) && !has_other)
-            {
-                mixed_out->other_entry = entry;
-                mixed_out->other_argument = argument;
-                has_other = true;
-            }
-            else
-            {
-                /* 区分ごとに最初の項目だけを代表として残す。 */
-            }
-
-            break;
-        }
-
-        if (has_string && has_other)
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 /**
  *  @brief          型区分が混在する引数名を、説明文の末尾に注記します。
  *
@@ -1016,43 +1079,4 @@ static void append_mixed_notes(describe_context *context)
         append_text(&context->writer, constant.text);
         append_text(&context->writer, context->phrases->mixed_types_suffix);
     }
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int string_catalog_filter_describe_record(const string_catalog_filter_describe_source *source, char *dest,
-                                          const size_t dest_size)
-{
-    describe_context context = {0};
-    string_catalog_filter_record_header header;
-    uint16_t root;
-
-    context.source = source;
-
-    if (source->is_japanese != 0)
-    {
-        context.phrases = &s_japanese;
-    }
-    else
-    {
-        context.phrases = &s_neutral;
-    }
-
-    string_catalog_filter_read_record_header(source->record, &header);
-    context.constants = string_catalog_filter_record_constants(source->record, source->line_width);
-    context.constant_size = header.constant_size;
-    context.writer.dest = dest;
-    context.writer.size = dest_size;
-    dest[0] = '\0';
-
-    root = string_catalog_filter_build_tree(source->record, context.left, context.right);
-    append_node(&context, root, 0);
-    append_mixed_notes(&context);
-
-    if (context.writer.is_truncated)
-    {
-        return CPLAT_ERR_BUFFER_TOO_SMALL;
-    }
-
-    return CPLAT_OK;
 }

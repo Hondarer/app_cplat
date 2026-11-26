@@ -40,66 +40,12 @@
     #include "crt.h"
 #endif /* PLATFORM_ */
 
-static int file_is_open(const cplat_file *file)
-{
-    if (file == NULL)
-    {
-        return 0;
-    }
-
+static int file_is_open(const cplat_file *file);
 #if defined(PLATFORM_LINUX)
-    return file->handle != -1;
+static void build_times(const cplat_timespec *timestamp, struct timespec *times);
+static void stat_to_timestamp(const struct stat *file_stat, cplat_timespec *timestamp_out);
 #elif defined(PLATFORM_WINDOWS)
-    return file->handle != INVALID_HANDLE_VALUE;
-#endif /* PLATFORM_ */
-}
-
-#if defined(PLATFORM_LINUX)
-
-/*
- * utimensat と futimens へ渡す時刻の組を組み立てる。
- * 最終アクセス日時は UTIME_OMIT で据え置き、最終更新日時だけを設定する。
- */
-static void build_times(const cplat_timespec *timestamp, struct timespec *times)
-{
-    times[0].tv_sec = 0;
-    times[0].tv_nsec = UTIME_OMIT;
-    cplat_timespec_to_native(timestamp, &times[1]);
-}
-
-/* struct stat の最終更新日時を cplat_timespec へ写す。 */
-static void stat_to_timestamp(const struct stat *file_stat, cplat_timespec *timestamp_out)
-{
-    cplat_timespec_from_native(&file_stat->st_mtim, timestamp_out);
-}
-
-#elif defined(PLATFORM_WINDOWS)
-
-/*
- * 属性アクセスだけを要求してパスを一時的に開く。
- * 他プロセスの読み書きと削除を妨げない共有モードを指定する。
- * 成功時は開いたハンドルを返し、失敗時は INVALID_HANDLE_VALUE を返す。
- */
-static HANDLE open_for_attributes(const char *path, DWORD desired_access, cplat_error *detail_out, int *failed_out)
-{
-    HANDLE handle;
-
-    *failed_out = crt_check_wpath_length(path, detail_out);
-    if (*failed_out != CPLAT_OK)
-    {
-        return INVALID_HANDLE_VALUE;
-    }
-
-    handle = CreateFileU(path, desired_access, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
-                         OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (handle == INVALID_HANDLE_VALUE)
-    {
-        *failed_out = cplat_internal_error_report_windows_error(detail_out, GetLastError());
-    }
-
-    return handle;
-}
-
+static HANDLE open_for_attributes(const char *path, DWORD desired_access, cplat_error *detail_out, int *failed_out);
 #endif /* PLATFORM_ */
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -295,3 +241,65 @@ int cplat_file_set_path_modified_timestamp(const char *path, const cplat_timespe
     }
 #endif /* PLATFORM_ */
 }
+
+static int file_is_open(const cplat_file *file)
+{
+    if (file == NULL)
+    {
+        return 0;
+    }
+
+#if defined(PLATFORM_LINUX)
+    return file->handle != -1;
+#elif defined(PLATFORM_WINDOWS)
+    return file->handle != INVALID_HANDLE_VALUE;
+#endif /* PLATFORM_ */
+}
+
+#if defined(PLATFORM_LINUX)
+
+/*
+ * utimensat と futimens へ渡す時刻の組を組み立てる。
+ * 最終アクセス日時は UTIME_OMIT で据え置き、最終更新日時だけを設定する。
+ */
+static void build_times(const cplat_timespec *timestamp, struct timespec *times)
+{
+    times[0].tv_sec = 0;
+    times[0].tv_nsec = UTIME_OMIT;
+    cplat_timespec_to_native(timestamp, &times[1]);
+}
+
+/* struct stat の最終更新日時を cplat_timespec へ写す。 */
+static void stat_to_timestamp(const struct stat *file_stat, cplat_timespec *timestamp_out)
+{
+    cplat_timespec_from_native(&file_stat->st_mtim, timestamp_out);
+}
+
+#elif defined(PLATFORM_WINDOWS)
+
+/*
+ * 属性アクセスだけを要求してパスを一時的に開く。
+ * 他プロセスの読み書きと削除を妨げない共有モードを指定する。
+ * 成功時は開いたハンドルを返し、失敗時は INVALID_HANDLE_VALUE を返す。
+ */
+static HANDLE open_for_attributes(const char *path, DWORD desired_access, cplat_error *detail_out, int *failed_out)
+{
+    HANDLE handle;
+
+    *failed_out = crt_check_wpath_length(path, detail_out);
+    if (*failed_out != CPLAT_OK)
+    {
+        return INVALID_HANDLE_VALUE;
+    }
+
+    handle = CreateFileU(path, desired_access, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+                         OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (handle == INVALID_HANDLE_VALUE)
+    {
+        *failed_out = cplat_internal_error_report_windows_error(detail_out, GetLastError());
+    }
+
+    return handle;
+}
+
+#endif /* PLATFORM_ */

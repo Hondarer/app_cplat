@@ -45,39 +45,11 @@ static_assert(REVISION_WRAPPED != 0ULL && (REVISION_WRAPPED & REVISION_WRITING_B
 /** 偶数で進める版番号の増分です。 */
 #define REVISION_STEP 2ULL
 
-/** ヘッダーが、0 で埋まった未公開の領域か、本ライブラリの形式の領域であるかを確かめます。 */
-static int check_known_header(const string_catalog_filter_source_header *header)
-{
-    if (header->signature == 0U)
-    {
-        return CPLAT_OK;
-    }
-
-    return string_catalog_filter_source_check_header(header);
-}
-
-/**
- *  @brief          前回の版番号から、新しい版番号を求めます。
- *  @param[in]      base 前回の版番号 (偶数)。未公開の場合は 0。
- *  @return         0 でない偶数で、@p base と異なる値。
- *
- *  前回の値に 2 を加えます。書き込み側どうしは排他で直列化するため、同じ版番号を 2 回公開しません。\n
- *  ファイルをマップした領域は OS の再起動を越えて残りますが、版番号は時刻に依存しないため、前回の値から増やし続けます。
- *
- *  前回の値に 2 を加えると 64 ビットを超える場合は、@ref REVISION_WRAPPED へ戻します。\n
- *  読み取り側は大小ではなく不一致で変化を判定するため、戻った値でも取り込みます。
- *  1 [s] に 10 億回公開しても上限に届くには約 292 年かかるため、
- *  通常は、壊れた値や意図的に大きくした値でだけ起こります。
- */
-static uint64_t next_revision(const uint64_t base)
-{
-    if (base <= (UINT64_MAX - (REVISION_STEP + REVISION_WRITING_BIT)))
-    {
-        return base + REVISION_STEP;
-    }
-
-    return REVISION_WRAPPED;
-}
+static int check_known_header(const string_catalog_filter_source_header *header);
+static uint64_t next_revision(const uint64_t base);
+static uint64_t hash_bytes(uint64_t hash, const unsigned char *bytes, const size_t length);
+static uint64_t hash_u32(const uint64_t hash, const uint32_t value);
+static uint64_t hash_text(const uint64_t hash, const char *text);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -100,38 +72,6 @@ int string_catalog_filter_source_check_header(const string_catalog_filter_source
     }
 
     return CPLAT_OK;
-}
-
-/** バイト列を識別値のハッシュへ加えます。 */
-static uint64_t hash_bytes(uint64_t hash, const unsigned char *bytes, const size_t length)
-{
-    for (size_t index = 0; index < length; index++)
-    {
-        hash ^= bytes[index];
-        hash *= STRING_CATALOG_FILTER_FNV1A_64_PRIME;
-    }
-
-    return hash;
-}
-
-/** 32 ビットの値を、実行環境のバイト順序によらずリトル エンディアンの 4 [byte] としてハッシュへ加えます。 */
-static uint64_t hash_u32(const uint64_t hash, const uint32_t value)
-{
-    const unsigned char bytes[4] = {(unsigned char)(value & 0xFFU), (unsigned char)((value >> 8) & 0xFFU),
-                                    (unsigned char)((value >> 16) & 0xFFU), (unsigned char)((value >> 24) & 0xFFU)};
-
-    return hash_bytes(hash, bytes, sizeof(bytes));
-}
-
-/** 文字列を、長さと本体としてハッシュへ加えます。NULL は空の文字列と区別します。 */
-static uint64_t hash_text(const uint64_t hash, const char *text)
-{
-    if (text == NULL)
-    {
-        return hash_u32(hash, CATALOG_ID_NULL_LENGTH);
-    }
-
-    return hash_bytes(hash_u32(hash, (uint32_t)strlen(text)), (const unsigned char *)text, strlen(text));
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -377,4 +317,70 @@ int cplat_string_catalog_filter_source_get_info(const void *source, const size_t
     info_out->catalog_id = copy.catalog_id;
 
     return CPLAT_OK;
+}
+
+/** ヘッダーが、0 で埋まった未公開の領域か、本ライブラリの形式の領域であるかを確かめます。 */
+static int check_known_header(const string_catalog_filter_source_header *header)
+{
+    if (header->signature == 0U)
+    {
+        return CPLAT_OK;
+    }
+
+    return string_catalog_filter_source_check_header(header);
+}
+
+/**
+ *  @brief          前回の版番号から、新しい版番号を求めます。
+ *  @param[in]      base 前回の版番号 (偶数)。未公開の場合は 0。
+ *  @return         0 でない偶数で、@p base と異なる値。
+ *
+ *  前回の値に 2 を加えます。書き込み側どうしは排他で直列化するため、同じ版番号を 2 回公開しません。\n
+ *  ファイルをマップした領域は OS の再起動を越えて残りますが、版番号は時刻に依存しないため、前回の値から増やし続けます。
+ *
+ *  前回の値に 2 を加えると 64 ビットを超える場合は、@ref REVISION_WRAPPED へ戻します。\n
+ *  読み取り側は大小ではなく不一致で変化を判定するため、戻った値でも取り込みます。
+ *  1 [s] に 10 億回公開しても上限に届くには約 292 年かかるため、
+ *  通常は、壊れた値や意図的に大きくした値でだけ起こります。
+ */
+static uint64_t next_revision(const uint64_t base)
+{
+    if (base <= (UINT64_MAX - (REVISION_STEP + REVISION_WRITING_BIT)))
+    {
+        return base + REVISION_STEP;
+    }
+
+    return REVISION_WRAPPED;
+}
+
+/** バイト列を識別値のハッシュへ加えます。 */
+static uint64_t hash_bytes(uint64_t hash, const unsigned char *bytes, const size_t length)
+{
+    for (size_t index = 0; index < length; index++)
+    {
+        hash ^= bytes[index];
+        hash *= STRING_CATALOG_FILTER_FNV1A_64_PRIME;
+    }
+
+    return hash;
+}
+
+/** 32 ビットの値を、実行環境のバイト順序によらずリトル エンディアンの 4 [byte] としてハッシュへ加えます。 */
+static uint64_t hash_u32(const uint64_t hash, const uint32_t value)
+{
+    const unsigned char bytes[4] = {(unsigned char)(value & 0xFFU), (unsigned char)((value >> 8) & 0xFFU),
+                                    (unsigned char)((value >> 16) & 0xFFU), (unsigned char)((value >> 24) & 0xFFU)};
+
+    return hash_bytes(hash, bytes, sizeof(bytes));
+}
+
+/** 文字列を、長さと本体としてハッシュへ加えます。NULL は空の文字列と区別します。 */
+static uint64_t hash_text(const uint64_t hash, const char *text)
+{
+    if (text == NULL)
+    {
+        return hash_u32(hash, CATALOG_ID_NULL_LENGTH);
+    }
+
+    return hash_bytes(hash_u32(hash, (uint32_t)strlen(text)), (const unsigned char *)text, strlen(text));
 }

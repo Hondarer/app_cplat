@@ -15,15 +15,14 @@
 
 typedef BOOL(WINAPI *prompt_windows_cancel_sync_io_fn)(HANDLE thread_handle);
 
-static BOOL WINAPI prompt_windows_default_cancel_sync_io(HANDLE thread_handle)
-{
-    return CancelSynchronousIo(thread_handle);
-}
-
-static prompt_windows_cancel_sync_io_fn s_cancel_sync_io_fn = prompt_windows_default_cancel_sync_io;
-
     /* リサイズ確認契機を作る入力待機タイムアウト時間 [ms] */
     #define PROMPT_WINDOWS_RESIZE_POLL_INTERVAL_MS 100U
+
+static BOOL WINAPI prompt_windows_default_cancel_sync_io(HANDLE thread_handle);
+static int prompt_windows_begin_sync_input(prompt_platform_context *context);
+static int prompt_windows_end_sync_input(prompt_platform_context *context);
+
+static prompt_windows_cancel_sync_io_fn s_cancel_sync_io_fn = prompt_windows_default_cancel_sync_io;
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -97,87 +96,6 @@ int prompt_platform_is_input_canceled(const prompt_platform_context *context)
     }
 
     return cplat_atomic_load_i32(&context->cancel_requested, CPLAT_MEMORY_ORDER_ACQUIRE) != 0 ? 1 : 0;
-}
-
-/* 読み取りスレッドを排他区間下で入力区間へ登録し、中止側が他 I/O を誤って止めないようにする。 */
-static int prompt_windows_begin_sync_input(prompt_platform_context *context)
-{
-    HANDLE self_process;
-    HANDLE duplicated;
-
-    if (prompt_platform_is_input_canceled(context))
-    {
-        return PROMPT_PLATFORM_CANCELED;
-    }
-
-    if (context->input_lock == NULL)
-    {
-        return 0;
-    }
-
-    cplat_local_lock_lock(context->input_lock);
-
-    if (prompt_platform_is_input_canceled(context))
-    {
-        cplat_local_lock_unlock(context->input_lock);
-        return PROMPT_PLATFORM_CANCELED;
-    }
-
-    /*
-     * GetCurrentThread() が返す擬似ハンドルは使用側のスレッドを指すため、別スレッドから
-     * CancelSynchronousIo() で読み取り側を指定できるよう THREAD_TERMINATE 権限付きで複製する。
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentthread
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-cancelsynchronousio
-     */
-    self_process = GetCurrentProcess();
-    duplicated = NULL;
-    if (!DuplicateHandle(self_process, GetCurrentThread(), self_process, &duplicated, THREAD_TERMINATE, FALSE, 0U))
-    {
-        cplat_local_lock_unlock(context->input_lock);
-        return PROMPT_PLATFORM_ERROR;
-    }
-
-    context->input_thread = duplicated;
-    context->input_active = 1;
-    cplat_local_lock_unlock(context->input_lock);
-
-    return 0;
-}
-
-/* 入力区間の終了を排他区間下で確定して待機中の中止要求へ通知し、終了時の中止観測有無を返す。 */
-static int prompt_windows_end_sync_input(prompt_platform_context *context)
-{
-    HANDLE thread_to_close = NULL;
-    int canceled;
-
-    if (context->input_lock == NULL)
-    {
-        return prompt_platform_is_input_canceled(context);
-    }
-
-    cplat_local_lock_lock(context->input_lock);
-    thread_to_close = context->input_thread;
-    context->input_thread = NULL;
-    context->input_active = 0;
-    canceled = prompt_platform_is_input_canceled(context);
-
-    if (context->input_done_cv != NULL)
-    {
-        cplat_condvar_broadcast(context->input_done_cv);
-    }
-
-    cplat_local_lock_unlock(context->input_lock);
-
-    if (thread_to_close != NULL)
-    {
-        /*
-         * 入力の完了後にスレッド ハンドルを解放するだけで、失敗しても中止の判定結果は変わらないため、
-         * 戻り値は明示的に破棄する。
-         */
-        (void)CloseHandle(thread_to_close);
-    }
-
-    return canceled;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -479,6 +397,92 @@ int prompt_platform_read_line(prompt_platform_context *context, char *buf, const
     }
 
     return ret;
+}
+
+static BOOL WINAPI prompt_windows_default_cancel_sync_io(HANDLE thread_handle)
+{
+    return CancelSynchronousIo(thread_handle);
+}
+
+/* 読み取りスレッドを排他区間下で入力区間へ登録し、中止側が他 I/O を誤って止めないようにする。 */
+static int prompt_windows_begin_sync_input(prompt_platform_context *context)
+{
+    HANDLE self_process;
+    HANDLE duplicated;
+
+    if (prompt_platform_is_input_canceled(context))
+    {
+        return PROMPT_PLATFORM_CANCELED;
+    }
+
+    if (context->input_lock == NULL)
+    {
+        return 0;
+    }
+
+    cplat_local_lock_lock(context->input_lock);
+
+    if (prompt_platform_is_input_canceled(context))
+    {
+        cplat_local_lock_unlock(context->input_lock);
+        return PROMPT_PLATFORM_CANCELED;
+    }
+
+    /*
+     * GetCurrentThread() が返す擬似ハンドルは使用側のスレッドを指すため、別スレッドから
+     * CancelSynchronousIo() で読み取り側を指定できるよう THREAD_TERMINATE 権限付きで複製する。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentthread
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-cancelsynchronousio
+     */
+    self_process = GetCurrentProcess();
+    duplicated = NULL;
+    if (!DuplicateHandle(self_process, GetCurrentThread(), self_process, &duplicated, THREAD_TERMINATE, FALSE, 0U))
+    {
+        cplat_local_lock_unlock(context->input_lock);
+        return PROMPT_PLATFORM_ERROR;
+    }
+
+    context->input_thread = duplicated;
+    context->input_active = 1;
+    cplat_local_lock_unlock(context->input_lock);
+
+    return 0;
+}
+
+/* 入力区間の終了を排他区間下で確定して待機中の中止要求へ通知し、終了時の中止観測有無を返す。 */
+static int prompt_windows_end_sync_input(prompt_platform_context *context)
+{
+    HANDLE thread_to_close = NULL;
+    int canceled;
+
+    if (context->input_lock == NULL)
+    {
+        return prompt_platform_is_input_canceled(context);
+    }
+
+    cplat_local_lock_lock(context->input_lock);
+    thread_to_close = context->input_thread;
+    context->input_thread = NULL;
+    context->input_active = 0;
+    canceled = prompt_platform_is_input_canceled(context);
+
+    if (context->input_done_cv != NULL)
+    {
+        cplat_condvar_broadcast(context->input_done_cv);
+    }
+
+    cplat_local_lock_unlock(context->input_lock);
+
+    if (thread_to_close != NULL)
+    {
+        /*
+         * 入力の完了後にスレッド ハンドルを解放するだけで、失敗しても中止の判定結果は変わらないため、
+         * 戻り値は明示的に破棄する。
+         */
+        (void)CloseHandle(thread_to_close);
+    }
+
+    return canceled;
 }
 
 #endif /* PLATFORM_WINDOWS */

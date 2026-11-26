@@ -20,66 +20,14 @@
 #include <cplat/clock/clock.h>
 #include <string.h>
 
-/*
- * 入力ポインターがハッシュ テーブルの管理領域またはデータ領域の内部を指しているかを判定する。
- * 領域内部を指している場合は 1、領域外を指している場合は 0 を返す。
- */
-static int input_points_into_table(const cplat_hashtable *ht, const void *input)
-{
-    uintptr_t p = (uintptr_t)input;
-    uintptr_t mgmt = (uintptr_t)hashtable_bytes(ht);
-    uintptr_t data = (uintptr_t)hashtable_data(ht);
-    size_t mgmt_size = 0;
-    size_t data_size = 0;
-
-    /* 構築済みテーブルの設定値は作成時に検証済みで、算出があふれないため、次の 2 つの戻り値は明示的に破棄する。 */
-    (void)hashtable_mgmt_layout(&ht->hdr->config, NULL, NULL, &mgmt_size);
-    (void)hashtable_data_region_size(&ht->hdr->config, &data_size);
-
-    return ((p >= mgmt) && (p - mgmt < mgmt_size)) || ((p >= data) && (p - data < data_size));
-}
-
-/**
- *  @brief          start_idx 以降の最小空きスロットを 1 相対で返します。
- *  @param[in]      ht         対象。NULL を渡してはなりません。
- *  @param[in]      start_idx  走査開始の 0 相対インデックス。
- *  @return         1 相対のレコード番号です。無ければ 0 です。
- */
-static uint64_t scan_next_empty(cplat_hashtable *ht, size_t start_idx)
-{
-    size_t i;
-
-    for (i = start_idx; i < ht->hdr->config.capacity; i++)
-    {
-        if (*hashtable_entry_status(ht, i) == REC_EMPTY)
-        {
-            return (uint64_t)(i + 1);
-        }
-    }
-
-    return 0;
-}
-
-/**
- *  @brief          スロットへ現在の実時刻を刻みます。
- *  @param[in]      ht   対象。NULL を渡してはなりません。
- *  @param[in]      rec  0 相対のスロット インデックス。
- *  @param[in]      now  更新前に取得した実時刻。
- */
-static void stamp_record(cplat_hashtable *ht, size_t rec, const cplat_timespec *now)
-{
-
-    /* 実時刻は時計の巻き戻しで逆行しうるため、順序判定は世代カウンターで行う。 */
-    ht->hdr->table_generation++;
-
-    if (hashtable_has_record_timestamp(ht) != 0)
-    {
-        *hashtable_entry_timestamp(ht, rec) = *now;
-        *hashtable_entry_generation(ht, rec) = ht->hdr->table_generation;
-    }
-
-    ht->hdr->table_timestamp = *now;
-}
+static int input_points_into_table(const cplat_hashtable *ht, const void *input);
+static uint64_t scan_next_empty(cplat_hashtable *ht, size_t start_idx);
+static void stamp_record(cplat_hashtable *ht, size_t rec, const cplat_timespec *now);
+static void hashtable_unlink_record(cplat_hashtable *ht, size_t rec);
+static void store_inserted(int *inserted_out, int inserted);
+static size_t storage_min_for_transaction(uint64_t used, size_t input_size);
+static void hashtable_expire_record(cplat_hashtable *ht, size_t rec);
+static void hashtable_unlink_empty_chains(cplat_hashtable *ht);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -153,62 +101,6 @@ uint64_t hashtable_find_best_deleted_record(const cplat_hashtable *ht, const uns
     }
 
     return (uint64_t)(best_rec + 1);
-}
-
-/**
- *  @brief          レコードをバケット チェーンから切り離します。
- *
- *  レコードの状態・キー・値は変更しません。
- *
- *  @param[in,out]  ht          対象のハンドルです。
- *  @param[in]      rec         切り離すレコードの 0 起点の番号です。
- */
-static void hashtable_unlink_record(cplat_hashtable *ht, size_t rec)
-{
-    size_t idx = hashtable_hash_key(ht, hashtable_entry_key(ht, rec), hashtable_stored_key_length(ht, rec));
-    uint64_t *link = &hashtable_bucket_head(ht)[idx];
-    uint64_t target = (uint64_t)(rec + 1);
-
-    while (*link != 0)
-    {
-        if (*link == target)
-        {
-            *link = *hashtable_entry_next(ht, rec);
-            *hashtable_entry_next(ht, rec) = 0;
-            return;
-        }
-
-        link = hashtable_entry_next(ht, (size_t)(*link - 1));
-    }
-}
-
-/**
- *  @brief          追加した / 更新したの別を、必要なら呼び出し側へ書きます。
- *  @param[out]     inserted_out  格納先。NULL を渡せます。
- *  @param[in]      inserted      新規追加なら 1、既存更新なら 0。
- */
-static void store_inserted(int *inserted_out, int inserted)
-{
-    if (inserted_out != NULL)
-    {
-        *inserted_out = inserted;
-    }
-}
-
-/*
- * 現在のストレージ使用量と今回の入力サイズから、トランザクションに必要な最小容量を算出する。
- * 加算であふれた場合は SIZE_MAX、正常時は加算結果のバイト数を返す。
- */
-static size_t storage_min_for_transaction(uint64_t used, size_t input_size)
-{
-    size_t minimum;
-
-    if (hashtable_add_checked((size_t)used, input_size, &minimum) != 0)
-    {
-        return SIZE_MAX;
-    }
-
-    return minimum;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -797,27 +689,6 @@ int cplat_hashtable_update_rec(cplat_hashtable *ht, uint64_t record, const void 
     return hashtable_update_rec_with_growth(ht, record, value);
 }
 
-/**
- *  @brief          スロットを空へ戻し、キーと値と変更時刻を消します。
- *  @param[in]      ht   対象。NULL を渡してはなりません。
- *  @param[in]      rec  0 相対のスロット インデックス。
- *
- *  チェーンからの切り離しはしません。呼び出し側が外します。\n
- *  SCOPE_RECORD のときは変更時刻も 0 埋めします。
- */
-static void hashtable_expire_record(cplat_hashtable *ht, size_t rec)
-{
-    *hashtable_entry_status(ht, rec) = REC_EMPTY;
-    hashtable_release_value(ht, rec);
-    hashtable_release_key(ht, rec);
-
-    if (hashtable_has_record_timestamp(ht) != 0)
-    {
-        memset(hashtable_entry_timestamp(ht, rec), 0, sizeof(cplat_timespec));
-        *hashtable_entry_generation(ht, rec) = 0;
-    }
-}
-
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_hashtable_delete(cplat_hashtable *ht, const void *key)
@@ -931,38 +802,6 @@ int cplat_hashtable_delete_rec(cplat_hashtable *ht, uint64_t record)
     return hashtable_delete(ht, hashtable_entry_key(ht, rec), hashtable_stored_key_length(ht, rec));
 }
 
-/**
- *  @brief          空きになったスロットを全バケットのチェーンから外します。
- *  @param[in]      ht  対象。NULL を渡してはなりません。
- *
- *  expire はチェーンを触らないため、加齢や一括回収のあとで呼びます。
- */
-static void hashtable_unlink_empty_chains(cplat_hashtable *ht)
-{
-    uint64_t *bucket_head = hashtable_bucket_head(ht);
-    size_t i;
-
-    for (i = 0; i < ht->hdr->config.capacity; i++)
-    {
-        uint64_t *link = &bucket_head[i];
-
-        while (*link != 0)
-        {
-            size_t rec = (size_t)(*link - 1);
-
-            if (*hashtable_entry_status(ht, rec) == REC_EMPTY)
-            {
-                *link = *hashtable_entry_next(ht, rec);
-                *hashtable_entry_next(ht, rec) = 0;
-            }
-            else
-            {
-                link = hashtable_entry_next(ht, rec);
-            }
-        }
-    }
-}
-
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_hashtable_push_deleted(cplat_hashtable *ht)
@@ -1037,4 +876,174 @@ int cplat_hashtable_purge_deleted(cplat_hashtable *ht)
     ht->hdr->deleted_count = 0; /* 削除済みは無条件ですべて空へ戻すため */
 
     return CPLAT_OK;
+}
+
+/*
+ * 入力ポインターがハッシュ テーブルの管理領域またはデータ領域の内部を指しているかを判定する。
+ * 領域内部を指している場合は 1、領域外を指している場合は 0 を返す。
+ */
+static int input_points_into_table(const cplat_hashtable *ht, const void *input)
+{
+    uintptr_t p = (uintptr_t)input;
+    uintptr_t mgmt = (uintptr_t)hashtable_bytes(ht);
+    uintptr_t data = (uintptr_t)hashtable_data(ht);
+    size_t mgmt_size = 0;
+    size_t data_size = 0;
+
+    /* 構築済みテーブルの設定値は作成時に検証済みで、算出があふれないため、次の 2 つの戻り値は明示的に破棄する。 */
+    (void)hashtable_mgmt_layout(&ht->hdr->config, NULL, NULL, &mgmt_size);
+    (void)hashtable_data_region_size(&ht->hdr->config, &data_size);
+
+    return ((p >= mgmt) && (p - mgmt < mgmt_size)) || ((p >= data) && (p - data < data_size));
+}
+
+/**
+ *  @brief          start_idx 以降の最小空きスロットを 1 相対で返します。
+ *  @param[in]      ht         対象。NULL を渡してはなりません。
+ *  @param[in]      start_idx  走査開始の 0 相対インデックス。
+ *  @return         1 相対のレコード番号です。無ければ 0 です。
+ */
+static uint64_t scan_next_empty(cplat_hashtable *ht, size_t start_idx)
+{
+    size_t i;
+
+    for (i = start_idx; i < ht->hdr->config.capacity; i++)
+    {
+        if (*hashtable_entry_status(ht, i) == REC_EMPTY)
+        {
+            return (uint64_t)(i + 1);
+        }
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          スロットへ現在の実時刻を刻みます。
+ *  @param[in]      ht   対象。NULL を渡してはなりません。
+ *  @param[in]      rec  0 相対のスロット インデックス。
+ *  @param[in]      now  更新前に取得した実時刻。
+ */
+static void stamp_record(cplat_hashtable *ht, size_t rec, const cplat_timespec *now)
+{
+
+    /* 実時刻は時計の巻き戻しで逆行しうるため、順序判定は世代カウンターで行う。 */
+    ht->hdr->table_generation++;
+
+    if (hashtable_has_record_timestamp(ht) != 0)
+    {
+        *hashtable_entry_timestamp(ht, rec) = *now;
+        *hashtable_entry_generation(ht, rec) = ht->hdr->table_generation;
+    }
+
+    ht->hdr->table_timestamp = *now;
+}
+
+/**
+ *  @brief          レコードをバケット チェーンから切り離します。
+ *
+ *  レコードの状態・キー・値は変更しません。
+ *
+ *  @param[in,out]  ht          対象のハンドルです。
+ *  @param[in]      rec         切り離すレコードの 0 起点の番号です。
+ */
+static void hashtable_unlink_record(cplat_hashtable *ht, size_t rec)
+{
+    size_t idx = hashtable_hash_key(ht, hashtable_entry_key(ht, rec), hashtable_stored_key_length(ht, rec));
+    uint64_t *link = &hashtable_bucket_head(ht)[idx];
+    uint64_t target = (uint64_t)(rec + 1);
+
+    while (*link != 0)
+    {
+        if (*link == target)
+        {
+            *link = *hashtable_entry_next(ht, rec);
+            *hashtable_entry_next(ht, rec) = 0;
+            return;
+        }
+
+        link = hashtable_entry_next(ht, (size_t)(*link - 1));
+    }
+}
+
+/**
+ *  @brief          追加した / 更新したの別を、必要なら呼び出し側へ書きます。
+ *  @param[out]     inserted_out  格納先。NULL を渡せます。
+ *  @param[in]      inserted      新規追加なら 1、既存更新なら 0。
+ */
+static void store_inserted(int *inserted_out, int inserted)
+{
+    if (inserted_out != NULL)
+    {
+        *inserted_out = inserted;
+    }
+}
+
+/*
+ * 現在のストレージ使用量と今回の入力サイズから、トランザクションに必要な最小容量を算出する。
+ * 加算であふれた場合は SIZE_MAX、正常時は加算結果のバイト数を返す。
+ */
+static size_t storage_min_for_transaction(uint64_t used, size_t input_size)
+{
+    size_t minimum;
+
+    if (hashtable_add_checked((size_t)used, input_size, &minimum) != 0)
+    {
+        return SIZE_MAX;
+    }
+
+    return minimum;
+}
+
+/**
+ *  @brief          スロットを空へ戻し、キーと値と変更時刻を消します。
+ *  @param[in]      ht   対象。NULL を渡してはなりません。
+ *  @param[in]      rec  0 相対のスロット インデックス。
+ *
+ *  チェーンからの切り離しはしません。呼び出し側が外します。\n
+ *  SCOPE_RECORD のときは変更時刻も 0 埋めします。
+ */
+static void hashtable_expire_record(cplat_hashtable *ht, size_t rec)
+{
+    *hashtable_entry_status(ht, rec) = REC_EMPTY;
+    hashtable_release_value(ht, rec);
+    hashtable_release_key(ht, rec);
+
+    if (hashtable_has_record_timestamp(ht) != 0)
+    {
+        memset(hashtable_entry_timestamp(ht, rec), 0, sizeof(cplat_timespec));
+        *hashtable_entry_generation(ht, rec) = 0;
+    }
+}
+
+/**
+ *  @brief          空きになったスロットを全バケットのチェーンから外します。
+ *  @param[in]      ht  対象。NULL を渡してはなりません。
+ *
+ *  expire はチェーンを触らないため、加齢や一括回収のあとで呼びます。
+ */
+static void hashtable_unlink_empty_chains(cplat_hashtable *ht)
+{
+    uint64_t *bucket_head = hashtable_bucket_head(ht);
+    size_t i;
+
+    for (i = 0; i < ht->hdr->config.capacity; i++)
+    {
+        uint64_t *link = &bucket_head[i];
+
+        while (*link != 0)
+        {
+            size_t rec = (size_t)(*link - 1);
+
+            if (*hashtable_entry_status(ht, rec) == REC_EMPTY)
+            {
+                *link = *hashtable_entry_next(ht, rec);
+                *hashtable_entry_next(ht, rec) = 0;
+            }
+            else
+            {
+                link = hashtable_entry_next(ht, rec);
+            }
+        }
+    }
 }

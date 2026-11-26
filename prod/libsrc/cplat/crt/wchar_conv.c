@@ -27,101 +27,9 @@
     #include <limits.h>
     #include <string.h>
 
-/**
- *  @brief          Win32 の文字コード変換失敗を共通結果コードへ分類します。
- *  @return         `GetLastError()` に対応する共通結果コードを返します。
- *
- *  不正な入力と出力容量の不足を一般的な Win32 エラー分類より優先して扱います。
- */
-static int conversion_result_from_last_error(void)
-{
-    const DWORD error_code = GetLastError();
-
-    if (error_code == ERROR_NO_UNICODE_TRANSLATION)
-    {
-        return CPLAT_ERR_INVALID_ENCODING;
-    }
-
-    if (error_code == ERROR_INSUFFICIENT_BUFFER)
-    {
-        return CPLAT_ERR_BUFFER_TOO_SMALL;
-    }
-
-    return cplat_internal_result_from_windows_error(error_code);
-}
-
-/**
- *  @brief          UTF-8 を指定された長さで厳密にワイド文字列へ変換します。
- *  @param[out]     dest       変換先。
- *  @param[in]      dest_size  変換先の要素数。
- *  @param[in]      src        変換元。
- *  @param[in]      src_len    入力バイト数。-1 は NUL 終端を含めた変換です。
- *  @return         成功時は CPLAT_OK、失敗時は共通結果コードを返します。
- */
-static int utf8_to_wide(wchar_t *dest, const size_t dest_size, const char *src, const int src_len)
-{
-    int converted;
-
-    if (dest != NULL && dest_size > 0U)
-    {
-        /* 引数の誤りでも有効な出力先を空にし、前回の内容を誤用させません。 */
-        dest[0] = L'\0';
-    }
-
-    if (dest == NULL || src == NULL || dest_size == 0U || dest_size > (size_t)INT_MAX)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    /* フラグなしでは不正な UTF-8 が U+FFFD に置き換わるため、厳密変換を指定します。
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
-     */
-    converted = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, src, src_len, dest, (int)dest_size);
-    if (converted == 0)
-    {
-        const int result = conversion_result_from_last_error();
-        dest[0] = L'\0';
-        return result;
-    }
-
-    return CPLAT_OK;
-}
-
-/**
- *  @brief          ワイド文字列を UTF-8 へ厳密に変換します。
- *  @param[out]     dest       変換先。
- *  @param[in]      dest_size  変換先のバイト数。
- *  @param[in]      wtext      変換元。
- *  @return         成功時は CPLAT_OK、失敗時は共通結果コードを返します。
- */
-static int wide_to_utf8(char *dest, const size_t dest_size, const wchar_t *wtext)
-{
-    int converted;
-
-    if (dest != NULL && dest_size > 0U)
-    {
-        dest[0] = '\0';
-    }
-
-    if (dest == NULL || wtext == NULL || dest_size == 0U || dest_size > (size_t)INT_MAX)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    /* WC_ERR_INVALID_CHARS は対になっていない UTF-16 サロゲートを拒否します。
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
-     */
-    converted = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wtext, -1, dest, (int)dest_size, NULL, NULL);
-    if (converted == 0)
-    {
-        const int result = conversion_result_from_last_error();
-        dest[0] = '\0';
-        return result;
-    }
-
-    return CPLAT_OK;
-}
+static int conversion_result_from_last_error(void);
+static int utf8_to_wide(wchar_t *dest, const size_t dest_size, const char *src, const int src_len);
+static int wide_to_utf8(char *dest, const size_t dest_size, const wchar_t *wtext);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -303,6 +211,102 @@ int cplat_wstr_to_utf8_alloc(char **utf8_text_out, const wchar_t *wtext)
     }
 
     *utf8_text_out = utf8_text;
+    return CPLAT_OK;
+}
+
+/**
+ *  @brief          Win32 の文字コード変換失敗を共通結果コードへ分類します。
+ *  @return         `GetLastError()` に対応する共通結果コードを返します。
+ *
+ *  不正な入力と出力容量の不足を一般的な Win32 エラー分類より優先して扱います。
+ */
+static int conversion_result_from_last_error(void)
+{
+    const DWORD error_code = GetLastError();
+
+    if (error_code == ERROR_NO_UNICODE_TRANSLATION)
+    {
+        return CPLAT_ERR_INVALID_ENCODING;
+    }
+
+    if (error_code == ERROR_INSUFFICIENT_BUFFER)
+    {
+        return CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+
+    return cplat_internal_result_from_windows_error(error_code);
+}
+
+/**
+ *  @brief          UTF-8 を指定された長さで厳密にワイド文字列へ変換します。
+ *  @param[out]     dest       変換先。
+ *  @param[in]      dest_size  変換先の要素数。
+ *  @param[in]      src        変換元。
+ *  @param[in]      src_len    入力バイト数。-1 は NUL 終端を含めた変換です。
+ *  @return         成功時は CPLAT_OK、失敗時は共通結果コードを返します。
+ */
+static int utf8_to_wide(wchar_t *dest, const size_t dest_size, const char *src, const int src_len)
+{
+    int converted;
+
+    if (dest != NULL && dest_size > 0U)
+    {
+        /* 引数の誤りでも有効な出力先を空にし、前回の内容を誤用させません。 */
+        dest[0] = L'\0';
+    }
+
+    if (dest == NULL || src == NULL || dest_size == 0U || dest_size > (size_t)INT_MAX)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    /* フラグなしでは不正な UTF-8 が U+FFFD に置き換わるため、厳密変換を指定します。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
+     */
+    converted = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, src, src_len, dest, (int)dest_size);
+    if (converted == 0)
+    {
+        const int result = conversion_result_from_last_error();
+        dest[0] = L'\0';
+        return result;
+    }
+
+    return CPLAT_OK;
+}
+
+/**
+ *  @brief          ワイド文字列を UTF-8 へ厳密に変換します。
+ *  @param[out]     dest       変換先。
+ *  @param[in]      dest_size  変換先のバイト数。
+ *  @param[in]      wtext      変換元。
+ *  @return         成功時は CPLAT_OK、失敗時は共通結果コードを返します。
+ */
+static int wide_to_utf8(char *dest, const size_t dest_size, const wchar_t *wtext)
+{
+    int converted;
+
+    if (dest != NULL && dest_size > 0U)
+    {
+        dest[0] = '\0';
+    }
+
+    if (dest == NULL || wtext == NULL || dest_size == 0U || dest_size > (size_t)INT_MAX)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    /* WC_ERR_INVALID_CHARS は対になっていない UTF-16 サロゲートを拒否します。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
+     */
+    converted = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wtext, -1, dest, (int)dest_size, NULL, NULL);
+    if (converted == 0)
+    {
+        const int result = conversion_result_from_last_error();
+        dest[0] = '\0';
+        return result;
+    }
+
     return CPLAT_OK;
 }
 

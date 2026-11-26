@@ -79,6 +79,17 @@ struct cplat_eventlog_sink
     HANDLE source;
 };
 
+static void map_level(const int level, const int has_file_identifier, const int has_instance_identifier, WORD *type,
+                      WORD *category, DWORD *event_id);
+static void copy_wstr(wchar_t *dst, const size_t dst_count, const wchar_t *src);
+static void init_executable_path_cache(void);
+static const wchar_t *cached_executable_path(void);
+static void init_user_sid_cache(void);
+static PSID cached_user_sid(void);
+static int format_identifier_string(const int64_t identifier, char *buf, const size_t buf_size);
+static int build_source_key_path(const char *source_name, wchar_t *key_path, const size_t key_count);
+static int registry_status(const LONG rc);
+
 static cplat_once_flag s_executable_path_once = {0};
 static wchar_t s_executable_path[PLATFORM_PATH_MAX] = L"";
 
@@ -94,6 +105,273 @@ static union
     unsigned char bytes[sizeof(TOKEN_USER) + SECURITY_MAX_SID_SIZE];
 } s_user_sid_buffer;
 static PSID s_user_sid = NULL;
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+cplat_eventlog_sink *cplat_eventlog_sink_create(const char *source_name)
+{
+    cplat_eventlog_sink *handle;
+    wchar_t *wsource;
+    HANDLE source;
+
+    if (source_name == NULL)
+    {
+        return NULL;
+    }
+
+    if (cplat_utf8_to_wstr_alloc(&wsource, source_name) != CPLAT_OK)
+    {
+        return NULL;
+    }
+
+    source = RegisterEventSourceW(NULL, wsource);
+    cplat_free(wsource);
+
+    if (source == NULL)
+    {
+        return NULL;
+    }
+
+    handle = (cplat_eventlog_sink *)cplat_malloc(sizeof(cplat_eventlog_sink));
+    if (handle == NULL)
+    {
+        (void)DeregisterEventSource(source); /* 確保の失敗で NULL を返す経路の後始末のため、戻り値は明示的に破棄する */
+        return NULL;
+    }
+
+    handle->source = source;
+
+    return handle;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_eventlog_sink_write(cplat_eventlog_sink *handle, const int level, const int64_t file_identifier,
+                              const char *instance_name, const int64_t instance_identifier, const char *message)
+{
+    WORD type;
+    WORD category;
+    DWORD event_id;
+    wchar_t *wmsg = NULL;
+    wchar_t *wfile_id = NULL;
+    wchar_t *winstance = NULL;
+    wchar_t *winstance_id = NULL;
+    LPCWSTR strings[EVENTLOG_STRING_COUNT];
+    char file_id[EVENTLOG_IDENTIFIER_TEXT_SIZE];
+    char instance_id[EVENTLOG_IDENTIFIER_TEXT_SIZE];
+    int has_file_identifier;
+    int has_instance_identifier;
+    BOOL ok;
+    int conversion_result;
+
+    if (handle == NULL || handle->source == NULL || message == NULL)
+    {
+        return CPLAT_OK;
+    }
+
+    has_file_identifier = format_identifier_string(file_identifier, file_id, sizeof(file_id));
+    has_instance_identifier = format_identifier_string(instance_identifier, instance_id, sizeof(instance_id));
+    map_level(level, has_file_identifier, has_instance_identifier, &type, &category, &event_id);
+
+    conversion_result = cplat_utf8_to_wstr_alloc(&wmsg, message);
+    if (conversion_result == CPLAT_OK)
+    {
+        conversion_result = cplat_utf8_to_wstr_alloc(&wfile_id, file_id);
+    }
+
+    if (conversion_result == CPLAT_OK && instance_name != NULL)
+    {
+        conversion_result = cplat_utf8_to_wstr_alloc(&winstance, instance_name);
+    }
+    else if (conversion_result == CPLAT_OK)
+    {
+        conversion_result = cplat_utf8_to_wstr_alloc(&winstance, "");
+    }
+
+    if (conversion_result == CPLAT_OK)
+    {
+        conversion_result = cplat_utf8_to_wstr_alloc(&winstance_id, instance_id);
+    }
+
+    if (conversion_result != CPLAT_OK)
+    {
+        cplat_free(wmsg);
+        cplat_free(wfile_id);
+        cplat_free(winstance);
+        cplat_free(winstance_id);
+        return conversion_result;
+    }
+
+    strings[0] = wmsg;
+    strings[1] = cached_executable_path();
+    strings[2] = wfile_id;
+    strings[3] = winstance;
+    strings[4] = winstance_id;
+    ok = ReportEventW(handle->source, type, category, event_id, cached_user_sid(), EVENTLOG_STRING_COUNT, 0, strings,
+                      NULL);
+    cplat_free(wmsg);
+    cplat_free(wfile_id);
+    cplat_free(winstance);
+    cplat_free(winstance_id);
+
+    if (!ok)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_eventlog_sink_dispose(cplat_eventlog_sink *handle)
+{
+    if (handle == NULL)
+    {
+        return;
+    }
+
+    if (handle->source != NULL)
+    {
+        /* 破棄の後に失敗を受けても、呼び出し元が取れる行動がないため、戻り値は明示的に破棄する。 */
+        (void)DeregisterEventSource(handle->source);
+    }
+
+    cplat_free(handle);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_internal_eventlog_sink_dispose_on_shutdown(cplat_eventlog_sink *handle, const cplat_shutdown_event *event)
+{
+    if (handle == NULL)
+    {
+        return;
+    }
+
+    if (handle->source != NULL && (event == NULL || event->reason == CPLAT_SHUTDOWN_REASON_NORMAL_EXIT))
+    {
+        /* プロセスの終了時の破棄であり、失敗を受けて取れる行動がないため、戻り値は明示的に破棄する。 */
+        (void)DeregisterEventSource(handle->source);
+    }
+
+    cplat_free(handle);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_eventlog_register_source(const char *source_name, const char *message_file_path)
+{
+    wchar_t key_path[EVENTLOG_KEY_PATH_CHARS];
+    HKEY hkey;
+    LONG rc;
+    DWORD disposition;
+    DWORD types_supported;
+    DWORD category_count;
+
+    if (source_name == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (build_source_key_path(source_name, key_path, sizeof(key_path) / sizeof(key_path[0])) != 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    rc = RegCreateKeyExW(HKEY_LOCAL_MACHINE, key_path, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, NULL, &hkey,
+                         &disposition);
+    if (rc != ERROR_SUCCESS)
+    {
+        return registry_status(rc);
+    }
+
+    types_supported = EVENTLOG_ERROR_TYPE | EVENTLOG_WARNING_TYPE | EVENTLOG_INFORMATION_TYPE;
+    rc = RegSetValueExW(hkey, L"TypesSupported", 0, REG_DWORD, (const BYTE *)&types_supported,
+                        (DWORD)sizeof(types_supported));
+    if (rc == ERROR_SUCCESS)
+    {
+        category_count = CPLAT_EVENTLOG_LEVEL_COUNT;
+        rc = RegSetValueExW(hkey, L"CategoryCount", 0, REG_DWORD, (const BYTE *)&category_count,
+                            (DWORD)sizeof(category_count));
+    }
+
+    /*
+     * メッセージ リソース (MESSAGETABLE) を持つファイルの絶対パスが渡された場合は、
+     * EventMessageFile / CategoryMessageFile に登録して Event Viewer に解決させる。
+     */
+    if (rc == ERROR_SUCCESS && message_file_path != NULL)
+    {
+        wchar_t *wpath;
+        int conversion_result;
+
+        conversion_result = cplat_utf8_to_wstr_alloc(&wpath, message_file_path);
+        if (conversion_result != CPLAT_OK)
+        {
+            cplat_internal_win32_set_last_error_from_result(conversion_result);
+            rc = (LONG)GetLastError();
+        }
+        else
+        {
+            DWORD bytes;
+            wchar_t *p;
+
+            /*
+             * イベント表示側 (Event Viewer 等) が LoadLibraryEx() でメッセージ ファイルを読み込む。
+             * LoadLibraryExW() のパス仕様に合わせ、区切り文字の '/' を '\' へ変換する。
+             * see: https://learn.microsoft.com/en-us/windows/win32/eventlog/message-files
+             * see: https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw
+             */
+            for (p = wpath; *p != L'\0'; p++)
+            {
+                if (*p == L'/')
+                {
+                    *p = L'\\';
+                }
+            }
+
+            bytes = (DWORD)((wcslen(wpath) + 1) * sizeof(wchar_t));
+            rc = RegSetValueExW(hkey, L"EventMessageFile", 0, REG_SZ, (const BYTE *)wpath, bytes);
+            if (rc == ERROR_SUCCESS)
+            {
+                rc = RegSetValueExW(hkey, L"CategoryMessageFile", 0, REG_SZ, (const BYTE *)wpath, bytes);
+            }
+
+            cplat_free(wpath);
+        }
+    }
+
+    /* 登録の成否は値の書き込みの結果 rc で確定しており、閉じる失敗で結果が変わらないため、戻り値は明示的に破棄する。 */
+    (void)RegCloseKey(hkey);
+
+    return registry_status(rc);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_eventlog_unregister_source(const char *source_name)
+{
+    wchar_t key_path[EVENTLOG_KEY_PATH_CHARS];
+    LONG rc;
+
+    if (source_name == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (build_source_key_path(source_name, key_path, sizeof(key_path) / sizeof(key_path[0])) != 0)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    rc = RegDeleteKeyW(HKEY_LOCAL_MACHINE, key_path);
+    if (rc == ERROR_FILE_NOT_FOUND)
+    {
+        return CPLAT_OK;
+    }
+
+    return registry_status(rc);
+}
 
 /**
  *  @brief          トレース レベルをイベント タイプ・カテゴリ・イベント ID に写像します。
@@ -366,273 +644,6 @@ static int registry_status(const LONG rc)
     }
 
     return CPLAT_ERR_UNKNOWN;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-cplat_eventlog_sink *cplat_eventlog_sink_create(const char *source_name)
-{
-    cplat_eventlog_sink *handle;
-    wchar_t *wsource;
-    HANDLE source;
-
-    if (source_name == NULL)
-    {
-        return NULL;
-    }
-
-    if (cplat_utf8_to_wstr_alloc(&wsource, source_name) != CPLAT_OK)
-    {
-        return NULL;
-    }
-
-    source = RegisterEventSourceW(NULL, wsource);
-    cplat_free(wsource);
-
-    if (source == NULL)
-    {
-        return NULL;
-    }
-
-    handle = (cplat_eventlog_sink *)cplat_malloc(sizeof(cplat_eventlog_sink));
-    if (handle == NULL)
-    {
-        (void)DeregisterEventSource(source); /* 確保の失敗で NULL を返す経路の後始末のため、戻り値は明示的に破棄する */
-        return NULL;
-    }
-
-    handle->source = source;
-
-    return handle;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_eventlog_sink_write(cplat_eventlog_sink *handle, const int level, const int64_t file_identifier,
-                              const char *instance_name, const int64_t instance_identifier, const char *message)
-{
-    WORD type;
-    WORD category;
-    DWORD event_id;
-    wchar_t *wmsg = NULL;
-    wchar_t *wfile_id = NULL;
-    wchar_t *winstance = NULL;
-    wchar_t *winstance_id = NULL;
-    LPCWSTR strings[EVENTLOG_STRING_COUNT];
-    char file_id[EVENTLOG_IDENTIFIER_TEXT_SIZE];
-    char instance_id[EVENTLOG_IDENTIFIER_TEXT_SIZE];
-    int has_file_identifier;
-    int has_instance_identifier;
-    BOOL ok;
-    int conversion_result;
-
-    if (handle == NULL || handle->source == NULL || message == NULL)
-    {
-        return CPLAT_OK;
-    }
-
-    has_file_identifier = format_identifier_string(file_identifier, file_id, sizeof(file_id));
-    has_instance_identifier = format_identifier_string(instance_identifier, instance_id, sizeof(instance_id));
-    map_level(level, has_file_identifier, has_instance_identifier, &type, &category, &event_id);
-
-    conversion_result = cplat_utf8_to_wstr_alloc(&wmsg, message);
-    if (conversion_result == CPLAT_OK)
-    {
-        conversion_result = cplat_utf8_to_wstr_alloc(&wfile_id, file_id);
-    }
-
-    if (conversion_result == CPLAT_OK && instance_name != NULL)
-    {
-        conversion_result = cplat_utf8_to_wstr_alloc(&winstance, instance_name);
-    }
-    else if (conversion_result == CPLAT_OK)
-    {
-        conversion_result = cplat_utf8_to_wstr_alloc(&winstance, "");
-    }
-
-    if (conversion_result == CPLAT_OK)
-    {
-        conversion_result = cplat_utf8_to_wstr_alloc(&winstance_id, instance_id);
-    }
-
-    if (conversion_result != CPLAT_OK)
-    {
-        cplat_free(wmsg);
-        cplat_free(wfile_id);
-        cplat_free(winstance);
-        cplat_free(winstance_id);
-        return conversion_result;
-    }
-
-    strings[0] = wmsg;
-    strings[1] = cached_executable_path();
-    strings[2] = wfile_id;
-    strings[3] = winstance;
-    strings[4] = winstance_id;
-    ok = ReportEventW(handle->source, type, category, event_id, cached_user_sid(), EVENTLOG_STRING_COUNT, 0, strings,
-                      NULL);
-    cplat_free(wmsg);
-    cplat_free(wfile_id);
-    cplat_free(winstance);
-    cplat_free(winstance_id);
-
-    if (!ok)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_eventlog_sink_dispose(cplat_eventlog_sink *handle)
-{
-    if (handle == NULL)
-    {
-        return;
-    }
-
-    if (handle->source != NULL)
-    {
-        /* 破棄の後に失敗を受けても、呼び出し元が取れる行動がないため、戻り値は明示的に破棄する。 */
-        (void)DeregisterEventSource(handle->source);
-    }
-
-    cplat_free(handle);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_internal_eventlog_sink_dispose_on_shutdown(cplat_eventlog_sink *handle, const cplat_shutdown_event *event)
-{
-    if (handle == NULL)
-    {
-        return;
-    }
-
-    if (handle->source != NULL && (event == NULL || event->reason == CPLAT_SHUTDOWN_REASON_NORMAL_EXIT))
-    {
-        /* プロセスの終了時の破棄であり、失敗を受けて取れる行動がないため、戻り値は明示的に破棄する。 */
-        (void)DeregisterEventSource(handle->source);
-    }
-
-    cplat_free(handle);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_eventlog_register_source(const char *source_name, const char *message_file_path)
-{
-    wchar_t key_path[EVENTLOG_KEY_PATH_CHARS];
-    HKEY hkey;
-    LONG rc;
-    DWORD disposition;
-    DWORD types_supported;
-    DWORD category_count;
-
-    if (source_name == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (build_source_key_path(source_name, key_path, sizeof(key_path) / sizeof(key_path[0])) != 0)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    rc = RegCreateKeyExW(HKEY_LOCAL_MACHINE, key_path, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, NULL, &hkey,
-                         &disposition);
-    if (rc != ERROR_SUCCESS)
-    {
-        return registry_status(rc);
-    }
-
-    types_supported = EVENTLOG_ERROR_TYPE | EVENTLOG_WARNING_TYPE | EVENTLOG_INFORMATION_TYPE;
-    rc = RegSetValueExW(hkey, L"TypesSupported", 0, REG_DWORD, (const BYTE *)&types_supported,
-                        (DWORD)sizeof(types_supported));
-    if (rc == ERROR_SUCCESS)
-    {
-        category_count = CPLAT_EVENTLOG_LEVEL_COUNT;
-        rc = RegSetValueExW(hkey, L"CategoryCount", 0, REG_DWORD, (const BYTE *)&category_count,
-                            (DWORD)sizeof(category_count));
-    }
-
-    /*
-     * メッセージ リソース (MESSAGETABLE) を持つファイルの絶対パスが渡された場合は、
-     * EventMessageFile / CategoryMessageFile に登録して Event Viewer に解決させる。
-     */
-    if (rc == ERROR_SUCCESS && message_file_path != NULL)
-    {
-        wchar_t *wpath;
-        int conversion_result;
-
-        conversion_result = cplat_utf8_to_wstr_alloc(&wpath, message_file_path);
-        if (conversion_result != CPLAT_OK)
-        {
-            cplat_internal_win32_set_last_error_from_result(conversion_result);
-            rc = (LONG)GetLastError();
-        }
-        else
-        {
-            DWORD bytes;
-            wchar_t *p;
-
-            /*
-             * イベント表示側 (Event Viewer 等) が LoadLibraryEx() でメッセージ ファイルを読み込む。
-             * LoadLibraryExW() のパス仕様に合わせ、区切り文字の '/' を '\' へ変換する。
-             * see: https://learn.microsoft.com/en-us/windows/win32/eventlog/message-files
-             * see: https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw
-             */
-            for (p = wpath; *p != L'\0'; p++)
-            {
-                if (*p == L'/')
-                {
-                    *p = L'\\';
-                }
-            }
-
-            bytes = (DWORD)((wcslen(wpath) + 1) * sizeof(wchar_t));
-            rc = RegSetValueExW(hkey, L"EventMessageFile", 0, REG_SZ, (const BYTE *)wpath, bytes);
-            if (rc == ERROR_SUCCESS)
-            {
-                rc = RegSetValueExW(hkey, L"CategoryMessageFile", 0, REG_SZ, (const BYTE *)wpath, bytes);
-            }
-
-            cplat_free(wpath);
-        }
-    }
-
-    /* 登録の成否は値の書き込みの結果 rc で確定しており、閉じる失敗で結果が変わらないため、戻り値は明示的に破棄する。 */
-    (void)RegCloseKey(hkey);
-
-    return registry_status(rc);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_eventlog_unregister_source(const char *source_name)
-{
-    wchar_t key_path[EVENTLOG_KEY_PATH_CHARS];
-    LONG rc;
-
-    if (source_name == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (build_source_key_path(source_name, key_path, sizeof(key_path) / sizeof(key_path[0])) != 0)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    rc = RegDeleteKeyW(HKEY_LOCAL_MACHINE, key_path);
-    if (rc == ERROR_FILE_NOT_FOUND)
-    {
-        return CPLAT_OK;
-    }
-
-    return registry_status(rc);
 }
 
 #endif /* PLATFORM_WINDOWS */

@@ -77,6 +77,139 @@ static_assert(MODULE_PATH_UTF8_CAP_MAX >= PLATFORM_PATH_UTF8_MAX, "work area lim
 /** macOS の共有ライブラリの拡張子です。 */
 #define MODULE_DYLIB_EXT ".dylib"
 
+static const char *find_shared_lib_extension_cut(const char *s);
+#if defined(PLATFORM_LINUX)
+static int get_self_path_posix(char *path_out, size_t path_size, const void *func_addr);
+#elif defined(PLATFORM_WINDOWS)
+static int get_self_path_w_alloc(const void *func_addr, wchar_t **wpath_out);
+#endif /* PLATFORM_ */
+static int get_basename_from_path(char *basename_out, size_t basename_size, const char *path);
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_module_get_path(char *path_out, const size_t path_size, const void *func_addr)
+{
+    if (path_out == NULL || path_size == 0u || func_addr == NULL)
+    {
+        if (path_out != NULL && path_size > 0u)
+        {
+            path_out[0] = '\0';
+        }
+
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+#if defined(PLATFORM_LINUX)
+    return get_self_path_posix(path_out, path_size, func_addr);
+#elif defined(PLATFORM_WINDOWS)
+    wchar_t *wpath = NULL;
+    wchar_t *wfull = NULL;
+    DWORD full_cap;
+    DWORD full_len;
+    int rc;
+    int st;
+
+    st = get_self_path_w_alloc(func_addr, &wpath);
+    if (st != CPLAT_OK)
+    {
+        path_out[0] = '\0';
+        return st;
+    }
+
+    /* 拡張パス長に対応するため、cplat_path_get_full() は経由せず GetFullPathNameW() で必要文字数を照会する。 */
+    full_cap = GetFullPathNameW(wpath, 0U, NULL, NULL);
+    if (full_cap == 0U)
+    {
+        cplat_free(wpath);
+        path_out[0] = '\0';
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    wfull = (wchar_t *)cplat_malloc((size_t)full_cap * sizeof(wchar_t));
+    if (wfull == NULL)
+    {
+        cplat_free(wpath);
+        path_out[0] = '\0';
+        return CPLAT_ERR_OUT_OF_MEMORY;
+    }
+
+    full_len = GetFullPathNameW(wpath, full_cap, wfull, NULL);
+    cplat_free(wpath);
+    if (full_len == 0U || full_len >= full_cap)
+    {
+        cplat_free(wfull);
+        path_out[0] = '\0';
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    rc = cplat_wpath_to_utf8(path_out, path_size, NULL, wfull);
+    if (rc != CPLAT_OK)
+    {
+        cplat_free(wfull);
+        path_out[0] = '\0';
+        return rc;
+    }
+
+    cplat_free(wfull);
+    return CPLAT_OK;
+#endif /* PLATFORM_ */
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_module_get_basename(char *basename_out, const size_t basename_size, const void *func_addr)
+{
+    int st;
+    size_t path_cap;
+    char *path_buf;
+
+    if (basename_out == NULL || basename_size == 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    path_cap = (size_t)PLATFORM_PATH_UTF8_MAX;
+    for (;;)
+    {
+        path_buf = (char *)cplat_malloc(path_cap);
+        if (path_buf == NULL)
+        {
+            basename_out[0] = '\0';
+            return CPLAT_ERR_OUT_OF_MEMORY;
+        }
+
+        st = cplat_module_get_path(path_buf, path_cap, func_addr);
+        if (st == CPLAT_ERR_BUFFER_TOO_SMALL && path_cap < (size_t)MODULE_PATH_UTF8_CAP_MAX)
+        {
+            /*
+             * 作業領域が足りないため、広げて取得し直す。
+             * 上限に達した後の失敗は、広げても解消しないため、そのまま返す。
+             */
+            cplat_free(path_buf);
+            if (path_cap > (size_t)MODULE_PATH_UTF8_CAP_MAX / 2U)
+            {
+                path_cap = (size_t)MODULE_PATH_UTF8_CAP_MAX;
+            }
+            else
+            {
+                path_cap *= 2U;
+            }
+            continue;
+        }
+
+        if (st != CPLAT_OK)
+        {
+            cplat_free(path_buf);
+            basename_out[0] = '\0';
+            return st;
+        }
+
+        st = get_basename_from_path(basename_out, basename_size, path_buf);
+        cplat_free(path_buf);
+        return st;
+    }
+}
+
 /**
  *  @brief          共有ライブラリ特有の拡張子 (Linux の .so 系) の切り出し位置を求めます。
  *
@@ -271,129 +404,4 @@ static int get_basename_from_path(char *basename_out, size_t basename_size, cons
     }
 
     return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_module_get_path(char *path_out, const size_t path_size, const void *func_addr)
-{
-    if (path_out == NULL || path_size == 0u || func_addr == NULL)
-    {
-        if (path_out != NULL && path_size > 0u)
-        {
-            path_out[0] = '\0';
-        }
-
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-#if defined(PLATFORM_LINUX)
-    return get_self_path_posix(path_out, path_size, func_addr);
-#elif defined(PLATFORM_WINDOWS)
-    wchar_t *wpath = NULL;
-    wchar_t *wfull = NULL;
-    DWORD full_cap;
-    DWORD full_len;
-    int rc;
-    int st;
-
-    st = get_self_path_w_alloc(func_addr, &wpath);
-    if (st != CPLAT_OK)
-    {
-        path_out[0] = '\0';
-        return st;
-    }
-
-    /* 拡張パス長に対応するため、cplat_path_get_full() は経由せず GetFullPathNameW() で必要文字数を照会する。 */
-    full_cap = GetFullPathNameW(wpath, 0U, NULL, NULL);
-    if (full_cap == 0U)
-    {
-        cplat_free(wpath);
-        path_out[0] = '\0';
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    wfull = (wchar_t *)cplat_malloc((size_t)full_cap * sizeof(wchar_t));
-    if (wfull == NULL)
-    {
-        cplat_free(wpath);
-        path_out[0] = '\0';
-        return CPLAT_ERR_OUT_OF_MEMORY;
-    }
-
-    full_len = GetFullPathNameW(wpath, full_cap, wfull, NULL);
-    cplat_free(wpath);
-    if (full_len == 0U || full_len >= full_cap)
-    {
-        cplat_free(wfull);
-        path_out[0] = '\0';
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    rc = cplat_wpath_to_utf8(path_out, path_size, NULL, wfull);
-    if (rc != CPLAT_OK)
-    {
-        cplat_free(wfull);
-        path_out[0] = '\0';
-        return rc;
-    }
-
-    cplat_free(wfull);
-    return CPLAT_OK;
-#endif /* PLATFORM_ */
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_module_get_basename(char *basename_out, const size_t basename_size, const void *func_addr)
-{
-    int st;
-    size_t path_cap;
-    char *path_buf;
-
-    if (basename_out == NULL || basename_size == 0)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    path_cap = (size_t)PLATFORM_PATH_UTF8_MAX;
-    for (;;)
-    {
-        path_buf = (char *)cplat_malloc(path_cap);
-        if (path_buf == NULL)
-        {
-            basename_out[0] = '\0';
-            return CPLAT_ERR_OUT_OF_MEMORY;
-        }
-
-        st = cplat_module_get_path(path_buf, path_cap, func_addr);
-        if (st == CPLAT_ERR_BUFFER_TOO_SMALL && path_cap < (size_t)MODULE_PATH_UTF8_CAP_MAX)
-        {
-            /*
-             * 作業領域が足りないため、広げて取得し直す。
-             * 上限に達した後の失敗は、広げても解消しないため、そのまま返す。
-             */
-            cplat_free(path_buf);
-            if (path_cap > (size_t)MODULE_PATH_UTF8_CAP_MAX / 2U)
-            {
-                path_cap = (size_t)MODULE_PATH_UTF8_CAP_MAX;
-            }
-            else
-            {
-                path_cap *= 2U;
-            }
-            continue;
-        }
-
-        if (st != CPLAT_OK)
-        {
-            cplat_free(path_buf);
-            basename_out[0] = '\0';
-            return st;
-        }
-
-        st = get_basename_from_path(basename_out, basename_size, path_buf);
-        cplat_free(path_buf);
-        return st;
-    }
 }

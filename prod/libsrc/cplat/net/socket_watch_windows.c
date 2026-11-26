@@ -94,6 +94,468 @@ typedef enum socket_watch_direction
     SOCKET_WATCH_CONNECT
 } socket_watch_direction;
 
+static int cancel_is_signaled(const cplat_socket_wait_cancel *cancel);
+static void watch_lock(cplat_socket_watch *watch);
+static void watch_unlock(cplat_socket_watch *watch);
+static void store_internal_error_locked(cplat_socket_watch *watch, const int winsock_error);
+static void signal_directions_locked(cplat_socket_watch *watch);
+static int enumerate_network_events_locked(cplat_socket_watch *watch);
+static int process_shared_event(cplat_socket_watch *watch, int *wait_error);
+static int poll_current_state(cplat_socket_watch *watch, const short requested_events, cplat_error *detail_out);
+static int inspect_direction(cplat_socket_watch *watch, const socket_watch_direction direction, int *ready_out,
+                             int *terminal_out, int *connect_error_out, cplat_error *detail_out);
+static int get_deadline_remaining(const int timeout_ms, const uint64_t deadline_ms, uint64_t *remaining_ms);
+static int wait_native_events(WSAEVENT *events, const DWORD count, cplat_socket_wait_cancel *cancel,
+                              const int timeout_ms, const uint64_t deadline_ms, cplat_error *detail_out);
+static DWORD make_read_wait_events(cplat_socket_watch *const *watches, const size_t count,
+                                   cplat_socket_wait_cancel *cancel, WSAEVENT *events);
+static DWORD make_one_wait_events(cplat_socket_watch *watch, cplat_socket_wait_cancel *cancel,
+                                  WSAEVENT *events);
+static int wait_readable_many(cplat_socket_watch *const *watches, const size_t count,
+                              cplat_socket_wait_cancel *cancel, const int timeout_ms,
+                              unsigned char *ready_out, cplat_error *detail_out);
+static int wait_one_direction_with_deadline(cplat_socket_watch *watch, cplat_socket_wait_cancel *cancel,
+                                            const int timeout_ms, const uint64_t deadline_ms,
+                                            const socket_watch_direction direction, int *terminal_out,
+                                            cplat_error *detail_out);
+static int wait_one_direction(cplat_socket_watch *watch, cplat_socket_wait_cancel *cancel, const int timeout_ms,
+                              const socket_watch_direction direction, int *terminal_out, cplat_error *detail_out);
+static int send_once(cplat_socket_watch *watch, const void *buf, const size_t len, size_t *sent_out,
+                     const int use_sendto, const struct sockaddr *address, const int address_len,
+                     const int retry_eintr, int *interrupted_out, cplat_error *detail_out);
+static int transfer_all(cplat_socket_watch *watch, void *buf, const size_t len, cplat_socket_wait_cancel *cancel,
+                        const int timeout_ms, size_t *transferred_out, const int sending, cplat_error *detail_out);
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_wait_cancel_create(cplat_socket_wait_cancel **cancel_out, cplat_error *detail_out)
+{
+    cplat_socket_wait_cancel *cancel;
+
+    if (cancel_out == NULL)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+    *cancel_out = NULL;
+    if (cplat_internal_socket_startup(detail_out) != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    cancel = (cplat_socket_wait_cancel *)cplat_malloc(sizeof(*cancel));
+    if (cancel == NULL)
+    {
+        return cplat_internal_error_report_windows_error_as(detail_out, ERROR_NOT_ENOUGH_MEMORY,
+                                                            CPLAT_ERR_OUT_OF_MEMORY);
+    }
+    cancel->event = WSACreateEvent();
+    if (cancel->event == WSA_INVALID_EVENT)
+    {
+        const int saved_error = WSAGetLastError();
+        cplat_free(cancel);
+        return cplat_internal_error_report_winsock_error(detail_out, (unsigned long)saved_error);
+    }
+    cancel->signaled = 0;
+    *cancel_out = cancel;
+    return cplat_internal_error_report_success(detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_wait_cancel_signal(cplat_socket_wait_cancel *cancel, cplat_error *detail_out)
+{
+    if (cancel == NULL)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+    InterlockedExchange(&cancel->signaled, 1);
+    /* 失敗しても原子的な通知状態を保持し、最大 50 [ms] の状態確認で待機を解除します。 */
+    if (!WSASetEvent(cancel->event))
+    {
+        const int saved_error = WSAGetLastError();
+        (void)saved_error;
+    }
+    return cplat_internal_error_report_success(detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_wait_cancel_reset(cplat_socket_wait_cancel *cancel, cplat_error *detail_out)
+{
+    if (cancel == NULL)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+    /* 手動リセット イベントを先に戻し、失敗時は原子的な通知状態を維持します。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaresetevent
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsacreateevent
+     * see: https://learn.microsoft.com/en-us/windows/win32/sync/event-objects
+     */
+    if (!WSAResetEvent(cancel->event))
+    {
+        const int saved_error = WSAGetLastError();
+        return cplat_internal_error_report_winsock_error(detail_out, (unsigned long)saved_error);
+    }
+    InterlockedExchange(&cancel->signaled, 0);
+    return cplat_internal_error_report_success(detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_socket_wait_cancel_dispose(cplat_socket_wait_cancel *cancel)
+{
+    cplat_error saved;
+
+    if (cancel == NULL)
+    {
+        return;
+    }
+    cplat_error_get_last(&saved);
+    /* 解放関数であり、失敗を受けても利用側に取れる手段がありません。 */
+    (void)WSACloseEvent(cancel->event);
+    cplat_free(cancel);
+    cplat_error_set_last(&saved);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_watch_attach(const cplat_socket sock, cplat_socket_watch **watch_out, cplat_error *detail_out)
+{
+    cplat_socket_watch *watch;
+    int last_error;
+
+    if (sock == CPLAT_INVALID_SOCKET || watch_out == NULL)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+    *watch_out = NULL;
+    if (cplat_internal_socket_startup(detail_out) != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    /* WSAEventSelect はソケットを非ブロッキングにし、選択中の登録を置き換えるため最後に呼びます。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaeventselect
+     */
+    watch = (cplat_socket_watch *)cplat_malloc(sizeof(*watch));
+    if (watch == NULL)
+    {
+        return cplat_internal_error_report_windows_error_as(detail_out, ERROR_NOT_ENOUGH_MEMORY,
+                                                            CPLAT_ERR_OUT_OF_MEMORY);
+    }
+    memset(watch, 0, sizeof(*watch));
+    watch->sock = (SOCKET)sock;
+    watch->event_shared = WSA_INVALID_EVENT;
+    watch->event_read = WSA_INVALID_EVENT;
+    watch->event_write = WSA_INVALID_EVENT;
+    watch->writable = 1;
+    watch->event_read_usable = 1;
+    watch->event_write_usable = 1;
+
+    if (!InitializeCriticalSectionAndSpinCount(&watch->lock, 0U))
+    {
+        const DWORD saved_error = GetLastError();
+        cplat_free(watch);
+        return cplat_internal_error_report_windows_error(detail_out, (unsigned long)saved_error);
+    }
+    watch->lock_initialized = 1;
+    watch->event_shared = WSACreateEvent();
+    if (watch->event_shared == WSA_INVALID_EVENT)
+    {
+        last_error = WSAGetLastError();
+        goto cleanup;
+    }
+    watch->event_read = WSACreateEvent();
+    if (watch->event_read == WSA_INVALID_EVENT)
+    {
+        last_error = WSAGetLastError();
+        goto cleanup;
+    }
+    watch->event_write = WSACreateEvent();
+    if (watch->event_write == WSA_INVALID_EVENT)
+    {
+        last_error = WSAGetLastError();
+        goto cleanup;
+    }
+
+    /* 登録は資源をすべて準備した最後に行い、失敗時はソケット状態を変えません。 */
+    if (WSAEventSelect(watch->sock, watch->event_shared, SOCKET_WATCH_NETWORK_EVENTS) == SOCKET_ERROR)
+    {
+        last_error = WSAGetLastError();
+        goto cleanup;
+    }
+
+    *watch_out = watch;
+    return cplat_internal_error_report_success(detail_out);
+
+cleanup:
+    if (watch->event_write != WSA_INVALID_EVENT)
+    {
+        /* 未公開の準備資源を回収します。 */
+        (void)WSACloseEvent(watch->event_write);
+    }
+    if (watch->event_read != WSA_INVALID_EVENT)
+    {
+        (void)WSACloseEvent(watch->event_read);
+    }
+    if (watch->event_shared != WSA_INVALID_EVENT)
+    {
+        (void)WSACloseEvent(watch->event_shared);
+    }
+    if (watch->lock_initialized != 0)
+    {
+        DeleteCriticalSection(&watch->lock);
+    }
+    cplat_free(watch);
+    return cplat_internal_error_report_winsock_error(detail_out, (unsigned long)last_error);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_socket_watch_detach(cplat_socket_watch *watch)
+{
+    cplat_error saved;
+
+    if (watch == NULL)
+    {
+        return;
+    }
+    cplat_error_get_last(&saved);
+    /* 登録を解く時点では公開関数の待機者がいない契約です。 */
+    (void)WSAEventSelect(watch->sock, NULL, 0);
+    (void)WSACloseEvent(watch->event_write);
+    (void)WSACloseEvent(watch->event_read);
+    (void)WSACloseEvent(watch->event_shared);
+    DeleteCriticalSection(&watch->lock);
+    cplat_free(watch);
+    cplat_error_set_last(&saved);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_watch_wait_readable_multi(cplat_socket_watch *const *watches, const size_t count,
+                                           cplat_socket_wait_cancel *cancel, const int timeout_ms,
+                                           unsigned char *ready_out, cplat_error *detail_out)
+{
+    size_t valid_count = 0U;
+
+    if (watches == NULL || count == 0U || count > CPLAT_SOCKET_WATCH_WAIT_MAX || timeout_ms < 0 || ready_out == NULL)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+    for (size_t index = 0U; index < count; ++index)
+    {
+        ready_out[index] = 0U;
+        if (watches[index] != NULL)
+        {
+            if (watches[index]->sock == INVALID_SOCKET)
+            {
+                return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+            }
+            ++valid_count;
+        }
+    }
+    if (valid_count == 0U && cancel == NULL && timeout_ms == CPLAT_WAIT_FOREVER)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+    return wait_readable_many(watches, count, cancel, timeout_ms, ready_out, detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_watch_wait_writable(cplat_socket_watch *watch, cplat_socket_wait_cancel *cancel,
+                                     const int timeout_ms, cplat_error *detail_out)
+{
+    int terminal;
+
+    if (watch == NULL || watch->sock == INVALID_SOCKET || timeout_ms < 0)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+    return wait_one_direction(watch, cancel, timeout_ms, SOCKET_WATCH_WRITE, &terminal, detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_watch_send(cplat_socket_watch *watch, const void *buf, const size_t len, size_t *sent_out,
+                            cplat_error *detail_out)
+{
+    if (watch == NULL || watch->sock == INVALID_SOCKET || buf == NULL || sent_out == NULL ||
+        len > CPLAT_SOCKET_MAX_TRANSFER)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+    *sent_out = 0U;
+    return send_once(watch, buf, len, sent_out, 0, NULL, 0, 1, NULL, detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_watch_sendto(cplat_socket_watch *watch, const void *buf, const size_t len,
+                              const cplat_ipv4_endpoint *endpoint, size_t *sent_out, cplat_error *detail_out)
+{
+    struct sockaddr_in native;
+    if (watch == NULL || watch->sock == INVALID_SOCKET || buf == NULL || endpoint == NULL || sent_out == NULL ||
+        len > CPLAT_SOCKET_MAX_TRANSFER)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+    memset(&native, 0, sizeof(native));
+    native.sin_family = AF_INET;
+    memcpy(&native.sin_addr.S_un.S_addr, &endpoint->address, sizeof(native.sin_addr.S_un.S_addr));
+    memcpy(&native.sin_port, &endpoint->port, sizeof(native.sin_port));
+    *sent_out = 0U;
+    return send_once(watch, buf, len, sent_out, 1, (const struct sockaddr *)&native, (int)sizeof(native), 1, NULL,
+                     detail_out);
+}
+
+/*
+ * Windows は、Registered I/O (RIOSendEx) で送信を 1 回の呼び出しにまとめず、sendto() を先頭から順に繰り返す。
+ * WSA_FLAG_REGISTERED_IO 付きの UDP ソケットでは、bind() は成功するが、WSAEventSelect()、sendto()、recvfrom()、
+ * select() が WSAENOTSOCK で失敗する (Windows 11 10.0.26300 での実測、2026-11-25)。
+ * 登録は WSAEventSelect() で送受信の通知を待ち、利用側は通常の受信と送信の関数も使うため、RIO のソケットにできない。
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/mswsock/nc-mswsock-lpfn_riosendex
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/mswsock/nc-mswsock-lpfn_riocreaterequestqueue
+ */
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_watch_sendto_multi(cplat_socket_watch *watch, const cplat_socket_datagram *datagrams,
+                                    const size_t count, size_t *sent_count_out, cplat_error *detail_out)
+{
+    size_t index;
+
+    if (sent_count_out != NULL)
+    {
+        *sent_count_out = 0U;
+    }
+    if (watch == NULL || watch->sock == INVALID_SOCKET || datagrams == NULL || sent_count_out == NULL || count == 0U ||
+        count > CPLAT_SOCKET_SENDTO_MULTI_MAX)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+    for (index = 0U; index < count; index++)
+    {
+        if (datagrams[index].buf == NULL || datagrams[index].endpoint == NULL ||
+            datagrams[index].len > CPLAT_SOCKET_MAX_TRANSFER)
+        {
+            return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+        }
+    }
+
+    for (index = 0U; index < count; index++)
+    {
+        struct sockaddr_in native;
+        size_t sent = 0U;
+        int result;
+
+        memset(&native, 0, sizeof(native));
+        native.sin_family = AF_INET;
+        memcpy(&native.sin_addr.S_un.S_addr, &datagrams[index].endpoint->address, sizeof(native.sin_addr.S_un.S_addr));
+        memcpy(&native.sin_port, &datagrams[index].endpoint->port, sizeof(native.sin_port));
+        /* WSAEWOULDBLOCK の場合の送信可能の状態の更新は、send_once() が行う。 */
+        result = send_once(watch, datagrams[index].buf, datagrams[index].len, &sent, 1,
+                           (const struct sockaddr *)&native, (int)sizeof(native), 1, NULL, detail_out);
+        if (result != CPLAT_OK)
+        {
+            if (index == 0U)
+            {
+                return result;
+            }
+            break;
+        }
+
+        /* 全量を送れなかったデータグラムは送れなかったものとし、そこで止める。 */
+        if (sent != datagrams[index].len)
+        {
+            if (index == 0U)
+            {
+                return cplat_internal_error_report_errno_as(detail_out, EIO, CPLAT_ERR_UNKNOWN);
+            }
+            break;
+        }
+        *sent_count_out = index + 1U;
+    }
+
+    /* 途中で止めた場合も、送れたデータグラムがあるため成功を返す。止めた理由は返さない。 */
+    return cplat_internal_error_report_success(detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_watch_send_all(cplat_socket_watch *watch, const void *buf, const size_t len,
+                                cplat_socket_wait_cancel *cancel, const int timeout_ms, size_t *sent_out,
+                                cplat_error *detail_out)
+{
+    size_t transferred = 0U;
+    const int result = transfer_all(watch, (void *)buf, len, cancel, timeout_ms, &transferred, 1, detail_out);
+    if (sent_out != NULL)
+    {
+        *sent_out = transferred;
+    }
+    return result;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_watch_recv_all(cplat_socket_watch *watch, void *buf, const size_t len,
+                                cplat_socket_wait_cancel *cancel, const int timeout_ms, size_t *received_out,
+                                cplat_error *detail_out)
+{
+    size_t transferred = 0U;
+    const int result = transfer_all(watch, buf, len, cancel, timeout_ms, &transferred, 0, detail_out);
+    if (received_out != NULL)
+    {
+        *received_out = transferred;
+    }
+    return result;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_watch_connect(cplat_socket_watch *watch, const cplat_ipv4_endpoint *endpoint,
+                               cplat_socket_wait_cancel *cancel, const int timeout_ms, cplat_error *detail_out)
+{
+    struct sockaddr_in native;
+    int connect_result;
+
+    if (watch == NULL || watch->sock == INVALID_SOCKET || endpoint == NULL || timeout_ms < 0)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+    if (cancel_is_signaled(cancel))
+    {
+        return cplat_internal_error_report_winsock_error_as(detail_out, WSA_E_CANCELLED, CPLAT_ERR_CANCELED);
+    }
+    memset(&native, 0, sizeof(native));
+    native.sin_family = AF_INET;
+    memcpy(&native.sin_addr.S_un.S_addr, &endpoint->address, sizeof(native.sin_addr.S_un.S_addr));
+    memcpy(&native.sin_port, &endpoint->port, sizeof(native.sin_port));
+
+    /* 非ブロッキング接続の完了と失敗は FD_CONNECT の通知で確認します。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-connect
+     */
+    connect_result = connect(watch->sock, (const struct sockaddr *)&native, (int)sizeof(native));
+    if (connect_result == 0)
+    {
+        watch_lock(watch);
+        watch->connect_done = 1;
+        watch->connect_consumed = 1;
+        watch->connect_error = 0;
+        watch_unlock(watch);
+        return cplat_internal_error_report_success(detail_out);
+    }
+    {
+        const int saved_error = WSAGetLastError();
+        if (saved_error != WSAEWOULDBLOCK && saved_error != WSAEINPROGRESS && saved_error != WSAEALREADY)
+        {
+            return cplat_internal_error_report_winsock_error(detail_out, (unsigned long)saved_error);
+        }
+    }
+    return wait_one_direction(watch, cancel, timeout_ms, SOCKET_WATCH_CONNECT, NULL, detail_out);
+}
+
 /**
  *  @brief          解除状態を Interlocked 操作で acquire します。
  */
@@ -841,256 +1303,6 @@ static int wait_one_direction(cplat_socket_watch *watch, cplat_socket_wait_cance
                                             detail_out);
 }
 
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_wait_cancel_create(cplat_socket_wait_cancel **cancel_out, cplat_error *detail_out)
-{
-    cplat_socket_wait_cancel *cancel;
-
-    if (cancel_out == NULL)
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-    *cancel_out = NULL;
-    if (cplat_internal_socket_startup(detail_out) != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    cancel = (cplat_socket_wait_cancel *)cplat_malloc(sizeof(*cancel));
-    if (cancel == NULL)
-    {
-        return cplat_internal_error_report_windows_error_as(detail_out, ERROR_NOT_ENOUGH_MEMORY,
-                                                            CPLAT_ERR_OUT_OF_MEMORY);
-    }
-    cancel->event = WSACreateEvent();
-    if (cancel->event == WSA_INVALID_EVENT)
-    {
-        const int saved_error = WSAGetLastError();
-        cplat_free(cancel);
-        return cplat_internal_error_report_winsock_error(detail_out, (unsigned long)saved_error);
-    }
-    cancel->signaled = 0;
-    *cancel_out = cancel;
-    return cplat_internal_error_report_success(detail_out);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_wait_cancel_signal(cplat_socket_wait_cancel *cancel, cplat_error *detail_out)
-{
-    if (cancel == NULL)
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-    InterlockedExchange(&cancel->signaled, 1);
-    /* 失敗しても原子的な通知状態を保持し、最大 50 [ms] の状態確認で待機を解除します。 */
-    if (!WSASetEvent(cancel->event))
-    {
-        const int saved_error = WSAGetLastError();
-        (void)saved_error;
-    }
-    return cplat_internal_error_report_success(detail_out);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_wait_cancel_reset(cplat_socket_wait_cancel *cancel, cplat_error *detail_out)
-{
-    if (cancel == NULL)
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-    /* 手動リセット イベントを先に戻し、失敗時は原子的な通知状態を維持します。
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaresetevent
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsacreateevent
-     * see: https://learn.microsoft.com/en-us/windows/win32/sync/event-objects
-     */
-    if (!WSAResetEvent(cancel->event))
-    {
-        const int saved_error = WSAGetLastError();
-        return cplat_internal_error_report_winsock_error(detail_out, (unsigned long)saved_error);
-    }
-    InterlockedExchange(&cancel->signaled, 0);
-    return cplat_internal_error_report_success(detail_out);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_socket_wait_cancel_dispose(cplat_socket_wait_cancel *cancel)
-{
-    cplat_error saved;
-
-    if (cancel == NULL)
-    {
-        return;
-    }
-    cplat_error_get_last(&saved);
-    /* 解放関数であり、失敗を受けても利用側に取れる手段がありません。 */
-    (void)WSACloseEvent(cancel->event);
-    cplat_free(cancel);
-    cplat_error_set_last(&saved);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_watch_attach(const cplat_socket sock, cplat_socket_watch **watch_out, cplat_error *detail_out)
-{
-    cplat_socket_watch *watch;
-    int last_error;
-
-    if (sock == CPLAT_INVALID_SOCKET || watch_out == NULL)
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-    *watch_out = NULL;
-    if (cplat_internal_socket_startup(detail_out) != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    /* WSAEventSelect はソケットを非ブロッキングにし、選択中の登録を置き換えるため最後に呼びます。
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaeventselect
-     */
-    watch = (cplat_socket_watch *)cplat_malloc(sizeof(*watch));
-    if (watch == NULL)
-    {
-        return cplat_internal_error_report_windows_error_as(detail_out, ERROR_NOT_ENOUGH_MEMORY,
-                                                            CPLAT_ERR_OUT_OF_MEMORY);
-    }
-    memset(watch, 0, sizeof(*watch));
-    watch->sock = (SOCKET)sock;
-    watch->event_shared = WSA_INVALID_EVENT;
-    watch->event_read = WSA_INVALID_EVENT;
-    watch->event_write = WSA_INVALID_EVENT;
-    watch->writable = 1;
-    watch->event_read_usable = 1;
-    watch->event_write_usable = 1;
-
-    if (!InitializeCriticalSectionAndSpinCount(&watch->lock, 0U))
-    {
-        const DWORD saved_error = GetLastError();
-        cplat_free(watch);
-        return cplat_internal_error_report_windows_error(detail_out, (unsigned long)saved_error);
-    }
-    watch->lock_initialized = 1;
-    watch->event_shared = WSACreateEvent();
-    if (watch->event_shared == WSA_INVALID_EVENT)
-    {
-        last_error = WSAGetLastError();
-        goto cleanup;
-    }
-    watch->event_read = WSACreateEvent();
-    if (watch->event_read == WSA_INVALID_EVENT)
-    {
-        last_error = WSAGetLastError();
-        goto cleanup;
-    }
-    watch->event_write = WSACreateEvent();
-    if (watch->event_write == WSA_INVALID_EVENT)
-    {
-        last_error = WSAGetLastError();
-        goto cleanup;
-    }
-
-    /* 登録は資源をすべて準備した最後に行い、失敗時はソケット状態を変えません。 */
-    if (WSAEventSelect(watch->sock, watch->event_shared, SOCKET_WATCH_NETWORK_EVENTS) == SOCKET_ERROR)
-    {
-        last_error = WSAGetLastError();
-        goto cleanup;
-    }
-
-    *watch_out = watch;
-    return cplat_internal_error_report_success(detail_out);
-
-cleanup:
-    if (watch->event_write != WSA_INVALID_EVENT)
-    {
-        /* 未公開の準備資源を回収します。 */
-        (void)WSACloseEvent(watch->event_write);
-    }
-    if (watch->event_read != WSA_INVALID_EVENT)
-    {
-        (void)WSACloseEvent(watch->event_read);
-    }
-    if (watch->event_shared != WSA_INVALID_EVENT)
-    {
-        (void)WSACloseEvent(watch->event_shared);
-    }
-    if (watch->lock_initialized != 0)
-    {
-        DeleteCriticalSection(&watch->lock);
-    }
-    cplat_free(watch);
-    return cplat_internal_error_report_winsock_error(detail_out, (unsigned long)last_error);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_socket_watch_detach(cplat_socket_watch *watch)
-{
-    cplat_error saved;
-
-    if (watch == NULL)
-    {
-        return;
-    }
-    cplat_error_get_last(&saved);
-    /* 登録を解く時点では公開関数の待機者がいない契約です。 */
-    (void)WSAEventSelect(watch->sock, NULL, 0);
-    (void)WSACloseEvent(watch->event_write);
-    (void)WSACloseEvent(watch->event_read);
-    (void)WSACloseEvent(watch->event_shared);
-    DeleteCriticalSection(&watch->lock);
-    cplat_free(watch);
-    cplat_error_set_last(&saved);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_watch_wait_readable_multi(cplat_socket_watch *const *watches, const size_t count,
-                                           cplat_socket_wait_cancel *cancel, const int timeout_ms,
-                                           unsigned char *ready_out, cplat_error *detail_out)
-{
-    size_t valid_count = 0U;
-
-    if (watches == NULL || count == 0U || count > CPLAT_SOCKET_WATCH_WAIT_MAX || timeout_ms < 0 || ready_out == NULL)
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-    for (size_t index = 0U; index < count; ++index)
-    {
-        ready_out[index] = 0U;
-        if (watches[index] != NULL)
-        {
-            if (watches[index]->sock == INVALID_SOCKET)
-            {
-                return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-            }
-            ++valid_count;
-        }
-    }
-    if (valid_count == 0U && cancel == NULL && timeout_ms == CPLAT_WAIT_FOREVER)
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-    return wait_readable_many(watches, count, cancel, timeout_ms, ready_out, detail_out);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_watch_wait_writable(cplat_socket_watch *watch, cplat_socket_wait_cancel *cancel,
-                                     const int timeout_ms, cplat_error *detail_out)
-{
-    int terminal;
-
-    if (watch == NULL || watch->sock == INVALID_SOCKET || timeout_ms < 0)
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-    return wait_one_direction(watch, cancel, timeout_ms, SOCKET_WATCH_WRITE, &terminal, detail_out);
-}
-
 /**
  *  @brief          送信可能の世代を記録して、非ブロッキング送信を行います。
  */
@@ -1163,112 +1375,6 @@ static int send_once(cplat_socket_watch *watch, const void *buf, const size_t le
         }
         return cplat_internal_error_report_winsock_error(detail_out, (unsigned long)result);
     }
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_watch_send(cplat_socket_watch *watch, const void *buf, const size_t len, size_t *sent_out,
-                            cplat_error *detail_out)
-{
-    if (watch == NULL || watch->sock == INVALID_SOCKET || buf == NULL || sent_out == NULL ||
-        len > CPLAT_SOCKET_MAX_TRANSFER)
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-    *sent_out = 0U;
-    return send_once(watch, buf, len, sent_out, 0, NULL, 0, 1, NULL, detail_out);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_watch_sendto(cplat_socket_watch *watch, const void *buf, const size_t len,
-                              const cplat_ipv4_endpoint *endpoint, size_t *sent_out, cplat_error *detail_out)
-{
-    struct sockaddr_in native;
-    if (watch == NULL || watch->sock == INVALID_SOCKET || buf == NULL || endpoint == NULL || sent_out == NULL ||
-        len > CPLAT_SOCKET_MAX_TRANSFER)
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-    memset(&native, 0, sizeof(native));
-    native.sin_family = AF_INET;
-    memcpy(&native.sin_addr.S_un.S_addr, &endpoint->address, sizeof(native.sin_addr.S_un.S_addr));
-    memcpy(&native.sin_port, &endpoint->port, sizeof(native.sin_port));
-    *sent_out = 0U;
-    return send_once(watch, buf, len, sent_out, 1, (const struct sockaddr *)&native, (int)sizeof(native), 1, NULL,
-                     detail_out);
-}
-
-/*
- * Windows は、Registered I/O (RIOSendEx) で送信を 1 回の呼び出しにまとめず、sendto() を先頭から順に繰り返す。
- * WSA_FLAG_REGISTERED_IO 付きの UDP ソケットでは、bind() は成功するが、WSAEventSelect()、sendto()、recvfrom()、
- * select() が WSAENOTSOCK で失敗する (Windows 11 10.0.26300 での実測、2026-11-25)。
- * 登録は WSAEventSelect() で送受信の通知を待ち、利用側は通常の受信と送信の関数も使うため、RIO のソケットにできない。
- * see: https://learn.microsoft.com/en-us/windows/win32/api/mswsock/nc-mswsock-lpfn_riosendex
- * see: https://learn.microsoft.com/en-us/windows/win32/api/mswsock/nc-mswsock-lpfn_riocreaterequestqueue
- */
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_watch_sendto_multi(cplat_socket_watch *watch, const cplat_socket_datagram *datagrams,
-                                    const size_t count, size_t *sent_count_out, cplat_error *detail_out)
-{
-    size_t index;
-
-    if (sent_count_out != NULL)
-    {
-        *sent_count_out = 0U;
-    }
-    if (watch == NULL || watch->sock == INVALID_SOCKET || datagrams == NULL || sent_count_out == NULL || count == 0U ||
-        count > CPLAT_SOCKET_SENDTO_MULTI_MAX)
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-    for (index = 0U; index < count; index++)
-    {
-        if (datagrams[index].buf == NULL || datagrams[index].endpoint == NULL ||
-            datagrams[index].len > CPLAT_SOCKET_MAX_TRANSFER)
-        {
-            return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-        }
-    }
-
-    for (index = 0U; index < count; index++)
-    {
-        struct sockaddr_in native;
-        size_t sent = 0U;
-        int result;
-
-        memset(&native, 0, sizeof(native));
-        native.sin_family = AF_INET;
-        memcpy(&native.sin_addr.S_un.S_addr, &datagrams[index].endpoint->address, sizeof(native.sin_addr.S_un.S_addr));
-        memcpy(&native.sin_port, &datagrams[index].endpoint->port, sizeof(native.sin_port));
-        /* WSAEWOULDBLOCK の場合の送信可能の状態の更新は、send_once() が行う。 */
-        result = send_once(watch, datagrams[index].buf, datagrams[index].len, &sent, 1,
-                           (const struct sockaddr *)&native, (int)sizeof(native), 1, NULL, detail_out);
-        if (result != CPLAT_OK)
-        {
-            if (index == 0U)
-            {
-                return result;
-            }
-            break;
-        }
-
-        /* 全量を送れなかったデータグラムは送れなかったものとし、そこで止める。 */
-        if (sent != datagrams[index].len)
-        {
-            if (index == 0U)
-            {
-                return cplat_internal_error_report_errno_as(detail_out, EIO, CPLAT_ERR_UNKNOWN);
-            }
-            break;
-        }
-        *sent_count_out = index + 1U;
-    }
-
-    /* 途中で止めた場合も、送れたデータグラムがあるため成功を返す。止めた理由は返さない。 */
-    return cplat_internal_error_report_success(detail_out);
 }
 
 /**
@@ -1420,80 +1526,6 @@ static int transfer_all(cplat_socket_watch *watch, void *buf, const size_t len, 
         transferred += (size_t)transferred_once;
         terminal_hint = 0;
     }
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_watch_send_all(cplat_socket_watch *watch, const void *buf, const size_t len,
-                                cplat_socket_wait_cancel *cancel, const int timeout_ms, size_t *sent_out,
-                                cplat_error *detail_out)
-{
-    size_t transferred = 0U;
-    const int result = transfer_all(watch, (void *)buf, len, cancel, timeout_ms, &transferred, 1, detail_out);
-    if (sent_out != NULL)
-    {
-        *sent_out = transferred;
-    }
-    return result;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_watch_recv_all(cplat_socket_watch *watch, void *buf, const size_t len,
-                                cplat_socket_wait_cancel *cancel, const int timeout_ms, size_t *received_out,
-                                cplat_error *detail_out)
-{
-    size_t transferred = 0U;
-    const int result = transfer_all(watch, buf, len, cancel, timeout_ms, &transferred, 0, detail_out);
-    if (received_out != NULL)
-    {
-        *received_out = transferred;
-    }
-    return result;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_watch_connect(cplat_socket_watch *watch, const cplat_ipv4_endpoint *endpoint,
-                               cplat_socket_wait_cancel *cancel, const int timeout_ms, cplat_error *detail_out)
-{
-    struct sockaddr_in native;
-    int connect_result;
-
-    if (watch == NULL || watch->sock == INVALID_SOCKET || endpoint == NULL || timeout_ms < 0)
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-    if (cancel_is_signaled(cancel))
-    {
-        return cplat_internal_error_report_winsock_error_as(detail_out, WSA_E_CANCELLED, CPLAT_ERR_CANCELED);
-    }
-    memset(&native, 0, sizeof(native));
-    native.sin_family = AF_INET;
-    memcpy(&native.sin_addr.S_un.S_addr, &endpoint->address, sizeof(native.sin_addr.S_un.S_addr));
-    memcpy(&native.sin_port, &endpoint->port, sizeof(native.sin_port));
-
-    /* 非ブロッキング接続の完了と失敗は FD_CONNECT の通知で確認します。
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-connect
-     */
-    connect_result = connect(watch->sock, (const struct sockaddr *)&native, (int)sizeof(native));
-    if (connect_result == 0)
-    {
-        watch_lock(watch);
-        watch->connect_done = 1;
-        watch->connect_consumed = 1;
-        watch->connect_error = 0;
-        watch_unlock(watch);
-        return cplat_internal_error_report_success(detail_out);
-    }
-    {
-        const int saved_error = WSAGetLastError();
-        if (saved_error != WSAEWOULDBLOCK && saved_error != WSAEINPROGRESS && saved_error != WSAEALREADY)
-        {
-            return cplat_internal_error_report_winsock_error(detail_out, (unsigned long)saved_error);
-        }
-    }
-    return wait_one_direction(watch, cancel, timeout_ms, SOCKET_WATCH_CONNECT, NULL, detail_out);
 }
 
 #endif /* PLATFORM_WINDOWS */

@@ -84,8 +84,6 @@ static_assert(CPLAT_PROCESS_HANDOVER_EXTRA_BYTES == 49U, "コンソール引き�
  */
     #define CPLAT_PROCESS_RESULT_TARGET_FLAG       "--cplat-result-file"
 
-static char s_result_target_path[PLATFORM_PATH_UTF8_MAX] = {0};
-
 /**
  *  @brief          昇格プロセスへ出力パイプのトークンを引き継ぐ内部フラグです。
  *
@@ -143,132 +141,6 @@ static_assert(CPLAT_ELEVATED_PIPE_NAME_CAP <= CPLAT_ELEVATED_PIPE_NAME_API_MAX_C
               "pipe name must fit within CreateNamedPipeW limit");
 
 /**
- *  @brief          現在のプロセスが対話セッションで動作しているかを確認します。
- *
- *  Windows のサービス プロセスはセッション 0 に隔離され、UAC (User Account Control)
- *  ダイアログを表示できる対話デスクトップを持ちません。セッション 0 で未昇格のまま
- *  `ShellExecuteExW` の `runas` verb を呼び出すと、対話デスクトップが無いために
- *  昇格が失敗または応答不能になるおそれがあるため、事前にセッション ID で判定します。\n
- *  判定は、セッション ID が 0 かどうかだけで行います。
- *  see: https://learn.microsoft.com/windows/win32/services/interactive-services
- *
- *  @return         対話セッションの場合は非 0、非対話セッション (セッション 0) の場合は 0、
- *                  判定に失敗した場合は -1 を返します。
- */
-static int is_current_session_interactive(void)
-{
-    DWORD session_id = 0;
-
-    if (!ProcessIdToSessionId(GetCurrentProcessId(), &session_id))
-    {
-        return -1;
-    }
-
-    return (session_id != 0);
-}
-
-/**
- *  @brief          UAC を要求して、現在の実行ファイルを非表示で起動します。
- *  @param[in]      arguments      実行ファイルへ渡す引数文字列 (UTF-8)。NULL を渡してはなりません。
- *  @param[out]     child_out      起動したプロセスの格納先。失敗時は NULL を格納します。
- *  @param[out]     child_pid_out  起動したプロセスの ID の格納先。失敗時は 0 を格納します。
- *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
- */
-static int start_elevated_self(const char *arguments, cplat_process **child_out, DWORD *child_pid_out)
-{
-    SHELLEXECUTEINFOW exec_info;
-    char exe_path[PLATFORM_PATH_UTF8_MAX];
-    wchar_t *wide_exe_path;
-    wchar_t *wide_arguments;
-    DWORD child_pid;
-    BOOL executed;
-    int rc;
-
-    *child_out = NULL;
-    *child_pid_out = 0;
-
-    if (cplat_process_get_executable_path(exe_path, sizeof(exe_path)) != CPLAT_OK)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    rc = cplat_utf8_to_wstr_alloc(&wide_exe_path, exe_path);
-    if (rc != CPLAT_OK)
-    {
-        return rc;
-    }
-
-    rc = cplat_utf8_to_wstr_alloc(&wide_arguments, arguments);
-    if (rc != CPLAT_OK)
-    {
-        cplat_free(wide_exe_path);
-        return rc;
-    }
-
-    ZeroMemory(&exec_info, sizeof(exec_info));
-    exec_info.cbSize = sizeof(exec_info);
-    exec_info.fMask = SEE_MASK_NOCLOSEPROCESS;
-    exec_info.hwnd = NULL;
-    exec_info.lpVerb = L"runas";
-    exec_info.lpFile = wide_exe_path;
-    exec_info.lpParameters = wide_arguments;
-    exec_info.nShow = SW_HIDE;
-
-    executed = ShellExecuteExW(&exec_info);
-    cplat_free(wide_arguments);
-    cplat_free(wide_exe_path);
-
-    if (!executed)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    child_pid = GetProcessId(exec_info.hProcess);
-    if (child_pid == 0)
-    {
-        (void)CloseHandle(exec_info.hProcess); /* PID 取得失敗の後始末のため、戻り値は明示的に破棄する */
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    *child_out = cplat_internal_process_adopt_native((intptr_t)exec_info.hProcess);
-    if (*child_out == NULL)
-    {
-        (void)CloseHandle(exec_info.hProcess); /* 引き取りの失敗を返す後始末のため、戻り値は明示的に破棄する */
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    *child_pid_out = child_pid;
-    return CPLAT_OK;
-}
-
-/**
- *  @brief          昇格プロセスの出力を、呼び出し元の標準出力または標準エラー出力へ書き込みます。
- *
- *  cplat_elevated_process_run_piped() に @p output_fn として NULL を渡した場合の既定の処理です。
- *  昇格プロセス側はバイナリ モードで書き込むため、改行コードの変換は呼び出し元の CRT に任せます。
- */
-static void write_to_own_std_stream(cplat_elevated_process_stream stream, const char *data, size_t size, void *context)
-{
-    FILE *fp;
-
-    (void)context;
-
-    fp = stdout;
-
-    if (stream == CPLAT_ELEVATED_PROCESS_STREAM_STDERR)
-    {
-        fp = stderr;
-    }
-
-    /*
-     * このコールバックは戻り値を持たず、書き込みの失敗を伝える先がないため、
-     * fwrite と fflush の戻り値は明示的に破棄する。
-     */
-    (void)fwrite(data, 1, size, fp);
-    (void)fflush(fp);
-}
-
-/**
  *  @brief          名前付きパイプへ設定するアクセス許可です。
  */
 typedef struct elevated_pipe_security
@@ -293,591 +165,26 @@ typedef struct elevated_pipe_channel
     cplat_elevated_process_stream stream; /**< コールバックへ渡すストリームの種別です。 */
 } elevated_pipe_channel;
 
-/**
- *  @brief          名前付きパイプのトークンが仕様の文字種と長さ上限を満たすかを検証します。
- */
-static int is_valid_pipe_token(const char *token)
-{
-    size_t len = 0;
-
-    if (token == NULL || token[0] == '\0')
-    {
-        return 0;
-    }
-
-    while (token[len] != '\0')
-    {
-        const char ch = token[len];
-        const int is_digit = (ch >= '0' && ch <= '9');
-        const int is_lower_hex = (ch >= 'a' && ch <= 'f');
-        const int is_hyphen = (ch == '-');
-
-        if (!is_digit && !is_lower_hex && !is_hyphen)
-        {
-            return 0;
-        }
-
-        len++;
-        if (len > CPLAT_ELEVATED_PIPE_TOKEN_MAX_LEN)
-        {
-            return 0;
-        }
-    }
-
-    return 1;
-}
-
-/**
- *  @brief          呼び出し元 PID と暗号論的乱数からパイプ名のトークンを生成します。
- */
-static int generate_pipe_token(char *token_out, const size_t token_out_size)
-{
-    static const char hex_digits[] = "0123456789abcdef";
-    uint8_t random_bytes[CPLAT_ELEVATED_PIPE_TOKEN_RANDOM_BYTES];
-    char random_hex[(CPLAT_ELEVATED_PIPE_TOKEN_RANDOM_BYTES * 2U) + 1U];
-    size_t i;
-
-    if (cplat_random_bytes(random_bytes, sizeof(random_bytes)) != CPLAT_OK)
-    {
-        return -1;
-    }
-
-    for (i = 0; i < sizeof(random_bytes); i++)
-    {
-        random_hex[i * 2U] = hex_digits[(random_bytes[i] >> 4U) & 0x0FU];
-        random_hex[(i * 2U) + 1U] = hex_digits[random_bytes[i] & 0x0FU];
-    }
-
-    random_hex[sizeof(random_hex) - 1U] = '\0';
-
-    if (cplat_snprintf(token_out, token_out_size, "%lu-%s", (unsigned long)GetCurrentProcessId(), random_hex) !=
-        CPLAT_OK)
-    {
-        return -1;
-    }
-
-    return 0;
-}
-
-/**
- *  @brief          トークンと接尾辞から名前付きパイプのワイド文字列パスを組み立てます。
- */
+static int is_current_session_interactive(void);
+static int start_elevated_self(const char *arguments, cplat_process **child_out, DWORD *child_pid_out);
+static void write_to_own_std_stream(cplat_elevated_process_stream stream, const char *data, size_t size, void *context);
+static int is_valid_pipe_token(const char *token);
+static int generate_pipe_token(char *token_out, const size_t token_out_size);
 static int build_pipe_name(wchar_t *pipe_name_out, const size_t pipe_name_cap, const char *token, const wchar_t *suffix,
-                           const size_t suffix_chars_with_nul)
-{
-    const size_t prefix_chars = (sizeof(CPLAT_ELEVATED_PIPE_NAME_PREFIX) / sizeof(wchar_t)) - 1U;
-    size_t pos;
-    size_t i;
-
-    if (!is_valid_pipe_token(token))
-    {
-        return -1;
-    }
-
-    pos = prefix_chars;
-    for (i = 0; token[i] != '\0'; i++)
-    {
-        pos++;
-    }
-
-    if (pos + suffix_chars_with_nul > pipe_name_cap)
-    {
-        return -1;
-    }
-
-    memcpy(pipe_name_out, CPLAT_ELEVATED_PIPE_NAME_PREFIX, prefix_chars * sizeof(wchar_t));
-    pos = prefix_chars;
-
-    for (i = 0; token[i] != '\0'; i++)
-    {
-        pipe_name_out[pos] = (wchar_t)(unsigned char)token[i];
-        pos++;
-    }
-
-    memcpy(pipe_name_out + pos, suffix, suffix_chars_with_nul * sizeof(wchar_t));
-
-    return 0;
-}
-
-/**
- *  @brief          名前付きパイプに設定する DACL と SECURITY_ATTRIBUTES を破棄します。
- */
-static void dispose_pipe_security(elevated_pipe_security *sec)
-{
-    if (sec->dacl != NULL)
-    {
-        cplat_free(sec->dacl);
-        sec->dacl = NULL;
-    }
-}
-
-/**
- *  @brief          LocalSystem、Administrators、呼び出し元ユーザーへ許可を与える DACL を構築します。
- */
-static int init_pipe_security(elevated_pipe_security *sec)
-{
-    BYTE system_sid_buf[SECURITY_MAX_SID_SIZE];
-    BYTE admins_sid_buf[SECURITY_MAX_SID_SIZE];
-    DWORD system_sid_size = (DWORD)sizeof(system_sid_buf);
-    DWORD admins_sid_size = (DWORD)sizeof(admins_sid_buf);
-    HANDLE token = NULL;
-    DWORD user_info_size = 0;
-    TOKEN_USER *user_info = NULL;
-    PSID system_sid = (PSID)system_sid_buf;
-    PSID admins_sid = (PSID)admins_sid_buf;
-    PSID user_sid;
-    DWORD acl_size;
-    PACL dacl;
-
-    ZeroMemory(sec, sizeof(*sec));
-
-    if (!CreateWellKnownSid(WinLocalSystemSid, NULL, system_sid, &system_sid_size) ||
-        !CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, admins_sid, &admins_sid_size))
-    {
-        return -1;
-    }
-
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token))
-    {
-        return -1;
-    }
-
-    if (GetTokenInformation(token, TokenUser, NULL, 0, &user_info_size) ||
-        GetLastError() != ERROR_INSUFFICIENT_BUFFER || user_info_size == 0)
-    {
-        (void)CloseHandle(token); /* TokenUser サイズ取得の失敗の後始末のため、戻り値は明示的に破棄する */
-        return -1;
-    }
-
-    user_info = (TOKEN_USER *)cplat_malloc((size_t)user_info_size);
-    if (user_info == NULL)
-    {
-        (void)CloseHandle(token); /* メモリ確保失敗の後始末のため、戻り値は明示的に破棄する */
-        return -1;
-    }
-
-    if (!GetTokenInformation(token, TokenUser, user_info, user_info_size, &user_info_size))
-    {
-        cplat_free(user_info);
-        (void)CloseHandle(token); /* TokenUser 取得失敗の後始末のため、戻り値は明示的に破棄する */
-        return -1;
-    }
-
-    (void)CloseHandle(token); /* SID の取得を終えた後の解放で結果が変わらないため、戻り値は明示的に破棄する */
-
-    user_sid = user_info->User.Sid;
-    if (user_sid == NULL || !IsValidSid(user_sid))
-    {
-        cplat_free(user_info);
-        return -1;
-    }
-
-    acl_size = (DWORD)sizeof(ACL) + (3U * ((DWORD)sizeof(ACCESS_ALLOWED_ACE) - (DWORD)sizeof(DWORD))) +
-               GetLengthSid(system_sid) + GetLengthSid(admins_sid) + GetLengthSid(user_sid);
-    dacl = (PACL)cplat_malloc((size_t)acl_size);
-    if (dacl == NULL)
-    {
-        cplat_free(user_info);
-        return -1;
-    }
-
-    if (!InitializeAcl(dacl, acl_size, ACL_REVISION) ||
-        !AddAccessAllowedAce(dacl, ACL_REVISION, GENERIC_ALL, system_sid) ||
-        !AddAccessAllowedAce(dacl, ACL_REVISION, FILE_GENERIC_WRITE, admins_sid) ||
-        !AddAccessAllowedAce(dacl, ACL_REVISION, GENERIC_ALL, user_sid) ||
-        !InitializeSecurityDescriptor(&sec->descriptor, SECURITY_DESCRIPTOR_REVISION) ||
-        !SetSecurityDescriptorDacl(&sec->descriptor, TRUE, dacl, FALSE))
-    {
-        cplat_free(dacl);
-        cplat_free(user_info);
-        return -1;
-    }
-
-    cplat_free(user_info);
-    sec->dacl = dacl;
-    sec->attributes.nLength = (DWORD)sizeof(sec->attributes);
-    sec->attributes.lpSecurityDescriptor = &sec->descriptor;
-    sec->attributes.bInheritHandle = FALSE;
-
-    return 0;
-}
-
-/**
- *  @brief          重複 I/O の取り消しと完了待機を行ってから、パイプとイベントを閉じます。
- */
-static void cancel_and_close_pipe_channel(elevated_pipe_channel *ch)
-{
-    if (ch->pipe != INVALID_HANDLE_VALUE && ch->pending_connect != 0 && ch->connected == 0)
-    {
-        DWORD transferred = 0;
-
-        /*
-         * 重複 I/O を取り消した後、完了を待機してから OVERLAPPED とイベントを破棄する。
-         * 完了前に破棄するとカーネルが解放済みの構造体へ書き込むおそれがあるため。
-         * 後始末の経路であり返す結果を変えないため、戻り値は明示的に破棄する。
-         */
-        if (CancelIoEx(ch->pipe, &ch->overlapped) || GetLastError() != ERROR_NOT_FOUND)
-        {
-            (void)GetOverlappedResult(ch->pipe, &ch->overlapped, &transferred, TRUE);
-        }
-
-        ch->pending_connect = 0;
-    }
-
-    if (ch->pipe != INVALID_HANDLE_VALUE)
-    {
-        (void)CloseHandle(ch->pipe); /* パイプの後始末のため、戻り値は明示的に破棄する */
-        ch->pipe = INVALID_HANDLE_VALUE;
-    }
-
-    if (ch->event != NULL)
-    {
-        (void)CloseHandle(ch->event); /* イベントの後始末のため、戻り値は明示的に破棄する */
-        ch->event = NULL;
-    }
-}
-
-/**
- *  @brief          名前付きパイプと重複 I/O 用イベントを作成し、非同期で接続待機を開始します。
- */
+                           const size_t suffix_chars_with_nul);
+static void dispose_pipe_security(elevated_pipe_security *sec);
+static int init_pipe_security(elevated_pipe_security *sec);
+static void cancel_and_close_pipe_channel(elevated_pipe_channel *ch);
 static int init_pipe_channel(elevated_pipe_channel *ch, const cplat_elevated_process_stream stream,
-                             const wchar_t *pipe_name, LPSECURITY_ATTRIBUTES sec_attr)
-{
-    ZeroMemory(ch, sizeof(*ch));
-    ch->pipe = INVALID_HANDLE_VALUE;
-    ch->stream = stream;
-
-    /* パイプ名はワイド文字列で組み立てるため CreateNamedPipeU を使わない。 */
-    ch->pipe = CreateNamedPipeW(pipe_name, PIPE_ACCESS_INBOUND | FILE_FLAG_FIRST_PIPE_INSTANCE | FILE_FLAG_OVERLAPPED,
-                                PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS,
-                                CPLAT_ELEVATED_PIPE_MAX_INSTANCES, CPLAT_ELEVATED_PIPE_OUT_BUFFER_BYTES,
-                                CPLAT_ELEVATED_PIPE_IN_BUFFER_BYTES, 0, sec_attr);
-    if (ch->pipe == INVALID_HANDLE_VALUE)
-    {
-        return -1;
-    }
-
-    ch->event = CreateEventW(NULL, TRUE, FALSE, NULL);
-    if (ch->event == NULL)
-    {
-        (void)CloseHandle(ch->pipe); /* イベント作成失敗の後始末のため、戻り値は明示的に破棄する */
-        ch->pipe = INVALID_HANDLE_VALUE;
-        return -1;
-    }
-
-    ch->overlapped.hEvent = ch->event;
-    if (ConnectNamedPipe(ch->pipe, &ch->overlapped))
-    {
-        ch->connected = 1;
-    }
-    else
-    {
-        DWORD err = GetLastError();
-
-        if (err == ERROR_IO_PENDING)
-        {
-            ch->pending_connect = 1;
-        }
-        else if (err == ERROR_PIPE_CONNECTED)
-        {
-            ch->connected = 1;
-        }
-        else
-        {
-            (void)CloseHandle(ch->event); /* ConnectNamedPipe 失敗の後始末のため、戻り値は明示的に破棄する */
-            ch->event = NULL;
-            (void)CloseHandle(ch->pipe); /* ConnectNamedPipe 失敗の後始末のため、戻り値は明示的に破棄する */
-            ch->pipe = INVALID_HANDLE_VALUE;
-            return -1;
-        }
-    }
-
-    return 0;
-}
-
-/**
- *  @brief          接続したパイプのクライアント PID が起動した昇格プロセスの PID と一致するか照合します。
- */
-static int verify_pipe_client_pid(elevated_pipe_channel *ch, const DWORD child_pid)
-{
-    ULONG client_pid = 0;
-
-    if (ch->verified != 0)
-    {
-        return 0;
-    }
-
-    if (!GetNamedPipeClientProcessId(ch->pipe, &client_pid) || (DWORD)client_pid != child_pid)
-    {
-        return -1;
-    }
-
-    ch->verified = 1;
-    return 0;
-}
-
-/**
- *  @brief          出力パイプから、現時点で読み取れる内容をすべて読み取ってコールバックへ渡します。
- *
- *  読み取れる量を PeekNamedPipe で確認してから OVERLAPPED を指定して ReadFile を呼ぶため、
- *  パイプが空でも待機しません。PeekNamedPipe または ReadFile が ERROR_BROKEN_PIPE を返した
- *  場合は終端として正常に終了します。それ以外のエラーは異常として -1 を返します。
- *  see: https://learn.microsoft.com/en-us/windows/win32/api/namedpipeapi/nf-namedpipeapi-peeknamedpipe
- */
-static int pump_output_pipe(elevated_pipe_channel *ch, cplat_elevated_process_output_fn output_fn, void *context)
-{
-    char buffer[CPLAT_PROCESS_OUTPUT_CHUNK_SIZE];
-
-    if (ch->eof != 0)
-    {
-        return 0;
-    }
-
-    for (;;)
-    {
-        OVERLAPPED read_ov;
-        DWORD available = 0;
-        DWORD to_read;
-        DWORD bytes_read = 0;
-
-        if (!PeekNamedPipe(ch->pipe, NULL, 0, NULL, &available, NULL))
-        {
-            if (GetLastError() == ERROR_BROKEN_PIPE)
-            {
-                ch->eof = 1;
-                return 0;
-            }
-
-            return -1;
-        }
-
-        if (available == 0)
-        {
-            return 0;
-        }
-
-        to_read = (DWORD)sizeof(buffer);
-        if (available < to_read)
-        {
-            to_read = available;
-        }
-
-        /* ReadFile の重複 I/O 完了通知に同じイベントを再利用するため、呼び出し前に非シグナルへ戻す。 */
-        if (!ResetEvent(ch->event))
-        {
-            return -1;
-        }
-
-        ZeroMemory(&read_ov, sizeof(read_ov));
-        read_ov.hEvent = ch->event;
-
-        if (!ReadFile(ch->pipe, buffer, to_read, &bytes_read, &read_ov))
-        {
-            DWORD err = GetLastError();
-
-            if (err == ERROR_IO_PENDING)
-            {
-                if (!GetOverlappedResult(ch->pipe, &read_ov, &bytes_read, TRUE))
-                {
-                    if (GetLastError() == ERROR_BROKEN_PIPE)
-                    {
-                        ch->eof = 1;
-                        return 0;
-                    }
-
-                    return -1;
-                }
-            }
-            else if (err == ERROR_BROKEN_PIPE)
-            {
-                ch->eof = 1;
-                return 0;
-            }
-            else
-            {
-                return -1;
-            }
-        }
-
-        if (bytes_read == 0)
-        {
-            return 0;
-        }
-
-        output_fn(ch->stream, buffer, (size_t)bytes_read, context);
-    }
-}
-
-/**
- *  @brief          出力パイプの接続完了確認、クライアント PID 照合、読み取りを行います。
- */
+                             const wchar_t *pipe_name, LPSECURITY_ATTRIBUTES sec_attr);
+static int verify_pipe_client_pid(elevated_pipe_channel *ch, const DWORD child_pid);
+static int pump_output_pipe(elevated_pipe_channel *ch, cplat_elevated_process_output_fn output_fn, void *context);
 static int process_pipe_channel(elevated_pipe_channel *ch, const DWORD child_pid,
-                                cplat_elevated_process_output_fn output_fn, void *context)
-{
-    if (ch->connected == 0)
-    {
-        DWORD dummy = 0;
+                                cplat_elevated_process_output_fn output_fn, void *context);
+static int reopen_std_stream(FILE *stream, HANDLE handle, int open_flags, DWORD std_handle_id);
+static int extract_output_pipes_arg(int *argc, char **argv, char *token_out, const size_t token_out_size);
 
-        if (!GetOverlappedResult(ch->pipe, &ch->overlapped, &dummy, FALSE))
-        {
-            if (GetLastError() == ERROR_IO_INCOMPLETE)
-            {
-                return 0;
-            }
-
-            return -1;
-        }
-
-        ch->pending_connect = 0;
-        ch->connected = 1;
-    }
-
-    if (verify_pipe_client_pid(ch, child_pid) != 0)
-    {
-        return -1;
-    }
-
-    return pump_output_pipe(ch, output_fn, context);
-}
-
-/**
- *  @brief          CRT の標準ストリームと Win32 の標準ハンドルを、指定したハンドルへ付け替えます。
- *  @param[in]      stream         対象ストリーム (stdin / stdout / stderr)。
- *  @param[in]      handle         付け替え先のハンドル。成否にかかわらず本関数が所有権を持ちます。
- *  @param[in]      open_flags     `_open_osfhandle` へ渡すフラグ。
- *  @param[in]      std_handle_id  `SetStdHandle` へ渡す標準ハンドルの種別。
- *  @return         成功時は 0、失敗時は -1 を返します。
- *
- *  付け替え後の Win32 標準ハンドルには、fd が所有するハンドルをそのまま設定します。
- *  fd を閉じるとハンドルも閉じられるため、別に複製したハンドルを設定しません。
- */
-static int reopen_std_stream(FILE *stream, HANDLE handle, int open_flags, DWORD std_handle_id)
-{
-    int expected_fd;
-    int new_fd;
-
-    expected_fd = _fileno(stream);
-    if (expected_fd < 0)
-    {
-        (void)CloseHandle(handle); /* すでに -1 を返す経路の後始末のため、戻り値は明示的に破棄する */
-        return -1;
-    }
-
-    /*
-     * プログラムの開始直後に呼ぶ契約のため、未出力のデータはない。
-     * 付け替え前の出力先 (非表示のコンソール) は捨てる対象であり、失敗しても結果は変わらないため、
-     * 戻り値は明示的に破棄する。
-     */
-    (void)fflush(stream);
-
-    /*
-     * _close の失敗は fd がすでに無効な場合 (EBADF) だけである。
-     * 閉じられずに残った場合も、後続の _dup2 が複製先を閉じてから複製するため、戻り値は明示的に破棄する。
-     * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/close
-     * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/dup-dup2
-     */
-    (void)_close(expected_fd);
-
-    new_fd = _open_osfhandle((intptr_t)handle, open_flags);
-    if (new_fd < 0)
-    {
-        (void)CloseHandle(handle); /* すでに -1 を返す経路の後始末のため、戻り値は明示的に破棄する */
-        return -1;
-    }
-
-    if (new_fd != expected_fd)
-    {
-        if (_dup2(new_fd, expected_fd) != 0)
-        {
-            /* _dup2 の失敗の後始末であり、すでに -1 を返す経路のため、戻り値は明示的に破棄する。 */
-            (void)_close(new_fd);
-            return -1;
-        }
-
-        /* 付け替え先の fd は成立済みで、失敗しても余分な fd が 1 つ残るだけのため、戻り値は明示的に破棄する。 */
-        (void)_close(new_fd);
-    }
-
-    clearerr(stream);
-    if (!SetStdHandle(std_handle_id, (HANDLE)_get_osfhandle(expected_fd)))
-    {
-        return -1;
-    }
-
-    return 0;
-}
-
-/**
- *  @brief          argv から出力パイプ フラグを取り除き、トークン文字列を検証して取り出します。
- *  @param[in,out]  argc            引数の数へのポインター。
- *  @param[in,out]  argv            引数配列。
- *  @param[out]     token_out       検証済みトークン文字列の格納先。
- *  @param[in]      token_out_size  @p token_out のバイト数。
- *  @return         フラグがない場合は 0、値が正しい場合は 1、値が不正な場合は -1 を返します。
- *
- *  値が不正な場合も、フラグは argv から取り除きます。
- */
-static int extract_output_pipes_arg(int *argc, char **argv, char *token_out, const size_t token_out_size)
-{
-    const char *prefix = CPLAT_PROCESS_OUTPUT_PIPES_FLAG "=";
-    const char *value;
-    size_t prefix_len;
-    int n;
-    int i;
-    int j;
-
-    if (token_out == NULL || token_out_size == 0)
-    {
-        return -1;
-    }
-
-    token_out[0] = '\0';
-
-    if (argc == NULL || argv == NULL)
-    {
-        return 0;
-    }
-
-    prefix_len = strlen(prefix);
-    value = NULL;
-    n = *argc;
-    for (i = 1; i < n; i++)
-    {
-        if (argv[i] == NULL || strncmp(argv[i], prefix, prefix_len) != 0)
-        {
-            continue;
-        }
-
-        value = argv[i] + prefix_len;
-
-        for (j = i; j < n - 1; j++)
-        {
-            argv[j] = argv[j + 1];
-        }
-
-        argv[n - 1] = NULL;
-        *argc = n - 1;
-        break;
-    }
-
-    if (value == NULL)
-    {
-        return 0;
-    }
-
-    if (!is_valid_pipe_token(value))
-    {
-        return -1;
-    }
-
-    if (cplat_strcpy(token_out, token_out_size, value) != 0)
-    {
-        token_out[0] = '\0';
-        return -1;
-    }
-
-    return 1;
-}
+static char s_result_target_path[PLATFORM_PATH_UTF8_MAX] = {0};
 #endif /* PLATFORM_ */
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -1976,3 +1283,718 @@ int cplat_elevated_process_attach_output_pipes(int *argc, char **argv, int *atta
     return CPLAT_OK;
 #endif /* PLATFORM_ */
 }
+
+#if defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_WINDOWS)
+/**
+ *  @brief          現在のプロセスが対話セッションで動作しているかを確認します。
+ *
+ *  Windows のサービス プロセスはセッション 0 に隔離され、UAC (User Account Control)
+ *  ダイアログを表示できる対話デスクトップを持ちません。セッション 0 で未昇格のまま
+ *  `ShellExecuteExW` の `runas` verb を呼び出すと、対話デスクトップが無いために
+ *  昇格が失敗または応答不能になるおそれがあるため、事前にセッション ID で判定します。\n
+ *  判定は、セッション ID が 0 かどうかだけで行います。
+ *  see: https://learn.microsoft.com/windows/win32/services/interactive-services
+ *
+ *  @return         対話セッションの場合は非 0、非対話セッション (セッション 0) の場合は 0、
+ *                  判定に失敗した場合は -1 を返します。
+ */
+static int is_current_session_interactive(void)
+{
+    DWORD session_id = 0;
+
+    if (!ProcessIdToSessionId(GetCurrentProcessId(), &session_id))
+    {
+        return -1;
+    }
+
+    return (session_id != 0);
+}
+
+/**
+ *  @brief          UAC を要求して、現在の実行ファイルを非表示で起動します。
+ *  @param[in]      arguments      実行ファイルへ渡す引数文字列 (UTF-8)。NULL を渡してはなりません。
+ *  @param[out]     child_out      起動したプロセスの格納先。失敗時は NULL を格納します。
+ *  @param[out]     child_pid_out  起動したプロセスの ID の格納先。失敗時は 0 を格納します。
+ *  @return         @ref CPLAT_OK 、@ref CPLAT_ERR_OUT_OF_MEMORY 、@ref CPLAT_ERR_UNKNOWN のいずれかを返します。
+ */
+static int start_elevated_self(const char *arguments, cplat_process **child_out, DWORD *child_pid_out)
+{
+    SHELLEXECUTEINFOW exec_info;
+    char exe_path[PLATFORM_PATH_UTF8_MAX];
+    wchar_t *wide_exe_path;
+    wchar_t *wide_arguments;
+    DWORD child_pid;
+    BOOL executed;
+    int rc;
+
+    *child_out = NULL;
+    *child_pid_out = 0;
+
+    if (cplat_process_get_executable_path(exe_path, sizeof(exe_path)) != CPLAT_OK)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    rc = cplat_utf8_to_wstr_alloc(&wide_exe_path, exe_path);
+    if (rc != CPLAT_OK)
+    {
+        return rc;
+    }
+
+    rc = cplat_utf8_to_wstr_alloc(&wide_arguments, arguments);
+    if (rc != CPLAT_OK)
+    {
+        cplat_free(wide_exe_path);
+        return rc;
+    }
+
+    ZeroMemory(&exec_info, sizeof(exec_info));
+    exec_info.cbSize = sizeof(exec_info);
+    exec_info.fMask = SEE_MASK_NOCLOSEPROCESS;
+    exec_info.hwnd = NULL;
+    exec_info.lpVerb = L"runas";
+    exec_info.lpFile = wide_exe_path;
+    exec_info.lpParameters = wide_arguments;
+    exec_info.nShow = SW_HIDE;
+
+    executed = ShellExecuteExW(&exec_info);
+    cplat_free(wide_arguments);
+    cplat_free(wide_exe_path);
+
+    if (!executed)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    child_pid = GetProcessId(exec_info.hProcess);
+    if (child_pid == 0)
+    {
+        (void)CloseHandle(exec_info.hProcess); /* PID 取得失敗の後始末のため、戻り値は明示的に破棄する */
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    *child_out = cplat_internal_process_adopt_native((intptr_t)exec_info.hProcess);
+    if (*child_out == NULL)
+    {
+        (void)CloseHandle(exec_info.hProcess); /* 引き取りの失敗を返す後始末のため、戻り値は明示的に破棄する */
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    *child_pid_out = child_pid;
+    return CPLAT_OK;
+}
+
+/**
+ *  @brief          昇格プロセスの出力を、呼び出し元の標準出力または標準エラー出力へ書き込みます。
+ *
+ *  cplat_elevated_process_run_piped() に @p output_fn として NULL を渡した場合の既定の処理です。
+ *  昇格プロセス側はバイナリ モードで書き込むため、改行コードの変換は呼び出し元の CRT に任せます。
+ */
+static void write_to_own_std_stream(cplat_elevated_process_stream stream, const char *data, size_t size, void *context)
+{
+    FILE *fp;
+
+    (void)context;
+
+    fp = stdout;
+
+    if (stream == CPLAT_ELEVATED_PROCESS_STREAM_STDERR)
+    {
+        fp = stderr;
+    }
+
+    /*
+     * このコールバックは戻り値を持たず、書き込みの失敗を伝える先がないため、
+     * fwrite と fflush の戻り値は明示的に破棄する。
+     */
+    (void)fwrite(data, 1, size, fp);
+    (void)fflush(fp);
+}
+
+/**
+ *  @brief          名前付きパイプのトークンが仕様の文字種と長さ上限を満たすかを検証します。
+ */
+static int is_valid_pipe_token(const char *token)
+{
+    size_t len = 0;
+
+    if (token == NULL || token[0] == '\0')
+    {
+        return 0;
+    }
+
+    while (token[len] != '\0')
+    {
+        const char ch = token[len];
+        const int is_digit = (ch >= '0' && ch <= '9');
+        const int is_lower_hex = (ch >= 'a' && ch <= 'f');
+        const int is_hyphen = (ch == '-');
+
+        if (!is_digit && !is_lower_hex && !is_hyphen)
+        {
+            return 0;
+        }
+
+        len++;
+        if (len > CPLAT_ELEVATED_PIPE_TOKEN_MAX_LEN)
+        {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+/**
+ *  @brief          呼び出し元 PID と暗号論的乱数からパイプ名のトークンを生成します。
+ */
+static int generate_pipe_token(char *token_out, const size_t token_out_size)
+{
+    static const char hex_digits[] = "0123456789abcdef";
+    uint8_t random_bytes[CPLAT_ELEVATED_PIPE_TOKEN_RANDOM_BYTES];
+    char random_hex[(CPLAT_ELEVATED_PIPE_TOKEN_RANDOM_BYTES * 2U) + 1U];
+    size_t i;
+
+    if (cplat_random_bytes(random_bytes, sizeof(random_bytes)) != CPLAT_OK)
+    {
+        return -1;
+    }
+
+    for (i = 0; i < sizeof(random_bytes); i++)
+    {
+        random_hex[i * 2U] = hex_digits[(random_bytes[i] >> 4U) & 0x0FU];
+        random_hex[(i * 2U) + 1U] = hex_digits[random_bytes[i] & 0x0FU];
+    }
+
+    random_hex[sizeof(random_hex) - 1U] = '\0';
+
+    if (cplat_snprintf(token_out, token_out_size, "%lu-%s", (unsigned long)GetCurrentProcessId(), random_hex) !=
+        CPLAT_OK)
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          トークンと接尾辞から名前付きパイプのワイド文字列パスを組み立てます。
+ */
+static int build_pipe_name(wchar_t *pipe_name_out, const size_t pipe_name_cap, const char *token, const wchar_t *suffix,
+                           const size_t suffix_chars_with_nul)
+{
+    const size_t prefix_chars = (sizeof(CPLAT_ELEVATED_PIPE_NAME_PREFIX) / sizeof(wchar_t)) - 1U;
+    size_t pos;
+    size_t i;
+
+    if (!is_valid_pipe_token(token))
+    {
+        return -1;
+    }
+
+    pos = prefix_chars;
+    for (i = 0; token[i] != '\0'; i++)
+    {
+        pos++;
+    }
+
+    if (pos + suffix_chars_with_nul > pipe_name_cap)
+    {
+        return -1;
+    }
+
+    memcpy(pipe_name_out, CPLAT_ELEVATED_PIPE_NAME_PREFIX, prefix_chars * sizeof(wchar_t));
+    pos = prefix_chars;
+
+    for (i = 0; token[i] != '\0'; i++)
+    {
+        pipe_name_out[pos] = (wchar_t)(unsigned char)token[i];
+        pos++;
+    }
+
+    memcpy(pipe_name_out + pos, suffix, suffix_chars_with_nul * sizeof(wchar_t));
+
+    return 0;
+}
+
+/**
+ *  @brief          名前付きパイプに設定する DACL と SECURITY_ATTRIBUTES を破棄します。
+ */
+static void dispose_pipe_security(elevated_pipe_security *sec)
+{
+    if (sec->dacl != NULL)
+    {
+        cplat_free(sec->dacl);
+        sec->dacl = NULL;
+    }
+}
+
+/**
+ *  @brief          LocalSystem、Administrators、呼び出し元ユーザーへ許可を与える DACL を構築します。
+ */
+static int init_pipe_security(elevated_pipe_security *sec)
+{
+    BYTE system_sid_buf[SECURITY_MAX_SID_SIZE];
+    BYTE admins_sid_buf[SECURITY_MAX_SID_SIZE];
+    DWORD system_sid_size = (DWORD)sizeof(system_sid_buf);
+    DWORD admins_sid_size = (DWORD)sizeof(admins_sid_buf);
+    HANDLE token = NULL;
+    DWORD user_info_size = 0;
+    TOKEN_USER *user_info = NULL;
+    PSID system_sid = (PSID)system_sid_buf;
+    PSID admins_sid = (PSID)admins_sid_buf;
+    PSID user_sid;
+    DWORD acl_size;
+    PACL dacl;
+
+    ZeroMemory(sec, sizeof(*sec));
+
+    if (!CreateWellKnownSid(WinLocalSystemSid, NULL, system_sid, &system_sid_size) ||
+        !CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, admins_sid, &admins_sid_size))
+    {
+        return -1;
+    }
+
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token))
+    {
+        return -1;
+    }
+
+    if (GetTokenInformation(token, TokenUser, NULL, 0, &user_info_size) ||
+        GetLastError() != ERROR_INSUFFICIENT_BUFFER || user_info_size == 0)
+    {
+        (void)CloseHandle(token); /* TokenUser サイズ取得の失敗の後始末のため、戻り値は明示的に破棄する */
+        return -1;
+    }
+
+    user_info = (TOKEN_USER *)cplat_malloc((size_t)user_info_size);
+    if (user_info == NULL)
+    {
+        (void)CloseHandle(token); /* メモリ確保失敗の後始末のため、戻り値は明示的に破棄する */
+        return -1;
+    }
+
+    if (!GetTokenInformation(token, TokenUser, user_info, user_info_size, &user_info_size))
+    {
+        cplat_free(user_info);
+        (void)CloseHandle(token); /* TokenUser 取得失敗の後始末のため、戻り値は明示的に破棄する */
+        return -1;
+    }
+
+    (void)CloseHandle(token); /* SID の取得を終えた後の解放で結果が変わらないため、戻り値は明示的に破棄する */
+
+    user_sid = user_info->User.Sid;
+    if (user_sid == NULL || !IsValidSid(user_sid))
+    {
+        cplat_free(user_info);
+        return -1;
+    }
+
+    acl_size = (DWORD)sizeof(ACL) + (3U * ((DWORD)sizeof(ACCESS_ALLOWED_ACE) - (DWORD)sizeof(DWORD))) +
+               GetLengthSid(system_sid) + GetLengthSid(admins_sid) + GetLengthSid(user_sid);
+    dacl = (PACL)cplat_malloc((size_t)acl_size);
+    if (dacl == NULL)
+    {
+        cplat_free(user_info);
+        return -1;
+    }
+
+    if (!InitializeAcl(dacl, acl_size, ACL_REVISION) ||
+        !AddAccessAllowedAce(dacl, ACL_REVISION, GENERIC_ALL, system_sid) ||
+        !AddAccessAllowedAce(dacl, ACL_REVISION, FILE_GENERIC_WRITE, admins_sid) ||
+        !AddAccessAllowedAce(dacl, ACL_REVISION, GENERIC_ALL, user_sid) ||
+        !InitializeSecurityDescriptor(&sec->descriptor, SECURITY_DESCRIPTOR_REVISION) ||
+        !SetSecurityDescriptorDacl(&sec->descriptor, TRUE, dacl, FALSE))
+    {
+        cplat_free(dacl);
+        cplat_free(user_info);
+        return -1;
+    }
+
+    cplat_free(user_info);
+    sec->dacl = dacl;
+    sec->attributes.nLength = (DWORD)sizeof(sec->attributes);
+    sec->attributes.lpSecurityDescriptor = &sec->descriptor;
+    sec->attributes.bInheritHandle = FALSE;
+
+    return 0;
+}
+
+/**
+ *  @brief          重複 I/O の取り消しと完了待機を行ってから、パイプとイベントを閉じます。
+ */
+static void cancel_and_close_pipe_channel(elevated_pipe_channel *ch)
+{
+    if (ch->pipe != INVALID_HANDLE_VALUE && ch->pending_connect != 0 && ch->connected == 0)
+    {
+        DWORD transferred = 0;
+
+        /*
+         * 重複 I/O を取り消した後、完了を待機してから OVERLAPPED とイベントを破棄する。
+         * 完了前に破棄するとカーネルが解放済みの構造体へ書き込むおそれがあるため。
+         * 後始末の経路であり返す結果を変えないため、戻り値は明示的に破棄する。
+         */
+        if (CancelIoEx(ch->pipe, &ch->overlapped) || GetLastError() != ERROR_NOT_FOUND)
+        {
+            (void)GetOverlappedResult(ch->pipe, &ch->overlapped, &transferred, TRUE);
+        }
+
+        ch->pending_connect = 0;
+    }
+
+    if (ch->pipe != INVALID_HANDLE_VALUE)
+    {
+        (void)CloseHandle(ch->pipe); /* パイプの後始末のため、戻り値は明示的に破棄する */
+        ch->pipe = INVALID_HANDLE_VALUE;
+    }
+
+    if (ch->event != NULL)
+    {
+        (void)CloseHandle(ch->event); /* イベントの後始末のため、戻り値は明示的に破棄する */
+        ch->event = NULL;
+    }
+}
+
+/**
+ *  @brief          名前付きパイプと重複 I/O 用イベントを作成し、非同期で接続待機を開始します。
+ */
+static int init_pipe_channel(elevated_pipe_channel *ch, const cplat_elevated_process_stream stream,
+                             const wchar_t *pipe_name, LPSECURITY_ATTRIBUTES sec_attr)
+{
+    ZeroMemory(ch, sizeof(*ch));
+    ch->pipe = INVALID_HANDLE_VALUE;
+    ch->stream = stream;
+
+    /* パイプ名はワイド文字列で組み立てるため CreateNamedPipeU を使わない。 */
+    ch->pipe = CreateNamedPipeW(pipe_name, PIPE_ACCESS_INBOUND | FILE_FLAG_FIRST_PIPE_INSTANCE | FILE_FLAG_OVERLAPPED,
+                                PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS,
+                                CPLAT_ELEVATED_PIPE_MAX_INSTANCES, CPLAT_ELEVATED_PIPE_OUT_BUFFER_BYTES,
+                                CPLAT_ELEVATED_PIPE_IN_BUFFER_BYTES, 0, sec_attr);
+    if (ch->pipe == INVALID_HANDLE_VALUE)
+    {
+        return -1;
+    }
+
+    ch->event = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (ch->event == NULL)
+    {
+        (void)CloseHandle(ch->pipe); /* イベント作成失敗の後始末のため、戻り値は明示的に破棄する */
+        ch->pipe = INVALID_HANDLE_VALUE;
+        return -1;
+    }
+
+    ch->overlapped.hEvent = ch->event;
+    if (ConnectNamedPipe(ch->pipe, &ch->overlapped))
+    {
+        ch->connected = 1;
+    }
+    else
+    {
+        DWORD err = GetLastError();
+
+        if (err == ERROR_IO_PENDING)
+        {
+            ch->pending_connect = 1;
+        }
+        else if (err == ERROR_PIPE_CONNECTED)
+        {
+            ch->connected = 1;
+        }
+        else
+        {
+            (void)CloseHandle(ch->event); /* ConnectNamedPipe 失敗の後始末のため、戻り値は明示的に破棄する */
+            ch->event = NULL;
+            (void)CloseHandle(ch->pipe); /* ConnectNamedPipe 失敗の後始末のため、戻り値は明示的に破棄する */
+            ch->pipe = INVALID_HANDLE_VALUE;
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          接続したパイプのクライアント PID が起動した昇格プロセスの PID と一致するか照合します。
+ */
+static int verify_pipe_client_pid(elevated_pipe_channel *ch, const DWORD child_pid)
+{
+    ULONG client_pid = 0;
+
+    if (ch->verified != 0)
+    {
+        return 0;
+    }
+
+    if (!GetNamedPipeClientProcessId(ch->pipe, &client_pid) || (DWORD)client_pid != child_pid)
+    {
+        return -1;
+    }
+
+    ch->verified = 1;
+    return 0;
+}
+
+/**
+ *  @brief          出力パイプから、現時点で読み取れる内容をすべて読み取ってコールバックへ渡します。
+ *
+ *  読み取れる量を PeekNamedPipe で確認してから OVERLAPPED を指定して ReadFile を呼ぶため、
+ *  パイプが空でも待機しません。PeekNamedPipe または ReadFile が ERROR_BROKEN_PIPE を返した
+ *  場合は終端として正常に終了します。それ以外のエラーは異常として -1 を返します。
+ *  see: https://learn.microsoft.com/en-us/windows/win32/api/namedpipeapi/nf-namedpipeapi-peeknamedpipe
+ */
+static int pump_output_pipe(elevated_pipe_channel *ch, cplat_elevated_process_output_fn output_fn, void *context)
+{
+    char buffer[CPLAT_PROCESS_OUTPUT_CHUNK_SIZE];
+
+    if (ch->eof != 0)
+    {
+        return 0;
+    }
+
+    for (;;)
+    {
+        OVERLAPPED read_ov;
+        DWORD available = 0;
+        DWORD to_read;
+        DWORD bytes_read = 0;
+
+        if (!PeekNamedPipe(ch->pipe, NULL, 0, NULL, &available, NULL))
+        {
+            if (GetLastError() == ERROR_BROKEN_PIPE)
+            {
+                ch->eof = 1;
+                return 0;
+            }
+
+            return -1;
+        }
+
+        if (available == 0)
+        {
+            return 0;
+        }
+
+        to_read = (DWORD)sizeof(buffer);
+        if (available < to_read)
+        {
+            to_read = available;
+        }
+
+        /* ReadFile の重複 I/O 完了通知に同じイベントを再利用するため、呼び出し前に非シグナルへ戻す。 */
+        if (!ResetEvent(ch->event))
+        {
+            return -1;
+        }
+
+        ZeroMemory(&read_ov, sizeof(read_ov));
+        read_ov.hEvent = ch->event;
+
+        if (!ReadFile(ch->pipe, buffer, to_read, &bytes_read, &read_ov))
+        {
+            DWORD err = GetLastError();
+
+            if (err == ERROR_IO_PENDING)
+            {
+                if (!GetOverlappedResult(ch->pipe, &read_ov, &bytes_read, TRUE))
+                {
+                    if (GetLastError() == ERROR_BROKEN_PIPE)
+                    {
+                        ch->eof = 1;
+                        return 0;
+                    }
+
+                    return -1;
+                }
+            }
+            else if (err == ERROR_BROKEN_PIPE)
+            {
+                ch->eof = 1;
+                return 0;
+            }
+            else
+            {
+                return -1;
+            }
+        }
+
+        if (bytes_read == 0)
+        {
+            return 0;
+        }
+
+        output_fn(ch->stream, buffer, (size_t)bytes_read, context);
+    }
+}
+
+/**
+ *  @brief          出力パイプの接続完了確認、クライアント PID 照合、読み取りを行います。
+ */
+static int process_pipe_channel(elevated_pipe_channel *ch, const DWORD child_pid,
+                                cplat_elevated_process_output_fn output_fn, void *context)
+{
+    if (ch->connected == 0)
+    {
+        DWORD dummy = 0;
+
+        if (!GetOverlappedResult(ch->pipe, &ch->overlapped, &dummy, FALSE))
+        {
+            if (GetLastError() == ERROR_IO_INCOMPLETE)
+            {
+                return 0;
+            }
+
+            return -1;
+        }
+
+        ch->pending_connect = 0;
+        ch->connected = 1;
+    }
+
+    if (verify_pipe_client_pid(ch, child_pid) != 0)
+    {
+        return -1;
+    }
+
+    return pump_output_pipe(ch, output_fn, context);
+}
+
+/**
+ *  @brief          CRT の標準ストリームと Win32 の標準ハンドルを、指定したハンドルへ付け替えます。
+ *  @param[in]      stream         対象ストリーム (stdin / stdout / stderr)。
+ *  @param[in]      handle         付け替え先のハンドル。成否にかかわらず本関数が所有権を持ちます。
+ *  @param[in]      open_flags     `_open_osfhandle` へ渡すフラグ。
+ *  @param[in]      std_handle_id  `SetStdHandle` へ渡す標準ハンドルの種別。
+ *  @return         成功時は 0、失敗時は -1 を返します。
+ *
+ *  付け替え後の Win32 標準ハンドルには、fd が所有するハンドルをそのまま設定します。
+ *  fd を閉じるとハンドルも閉じられるため、別に複製したハンドルを設定しません。
+ */
+static int reopen_std_stream(FILE *stream, HANDLE handle, int open_flags, DWORD std_handle_id)
+{
+    int expected_fd;
+    int new_fd;
+
+    expected_fd = _fileno(stream);
+    if (expected_fd < 0)
+    {
+        (void)CloseHandle(handle); /* すでに -1 を返す経路の後始末のため、戻り値は明示的に破棄する */
+        return -1;
+    }
+
+    /*
+     * プログラムの開始直後に呼ぶ契約のため、未出力のデータはない。
+     * 付け替え前の出力先 (非表示のコンソール) は捨てる対象であり、失敗しても結果は変わらないため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)fflush(stream);
+
+    /*
+     * _close の失敗は fd がすでに無効な場合 (EBADF) だけである。
+     * 閉じられずに残った場合も、後続の _dup2 が複製先を閉じてから複製するため、戻り値は明示的に破棄する。
+     * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/close
+     * see: https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/dup-dup2
+     */
+    (void)_close(expected_fd);
+
+    new_fd = _open_osfhandle((intptr_t)handle, open_flags);
+    if (new_fd < 0)
+    {
+        (void)CloseHandle(handle); /* すでに -1 を返す経路の後始末のため、戻り値は明示的に破棄する */
+        return -1;
+    }
+
+    if (new_fd != expected_fd)
+    {
+        if (_dup2(new_fd, expected_fd) != 0)
+        {
+            /* _dup2 の失敗の後始末であり、すでに -1 を返す経路のため、戻り値は明示的に破棄する。 */
+            (void)_close(new_fd);
+            return -1;
+        }
+
+        /* 付け替え先の fd は成立済みで、失敗しても余分な fd が 1 つ残るだけのため、戻り値は明示的に破棄する。 */
+        (void)_close(new_fd);
+    }
+
+    clearerr(stream);
+    if (!SetStdHandle(std_handle_id, (HANDLE)_get_osfhandle(expected_fd)))
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
+ *  @brief          argv から出力パイプ フラグを取り除き、トークン文字列を検証して取り出します。
+ *  @param[in,out]  argc            引数の数へのポインター。
+ *  @param[in,out]  argv            引数配列。
+ *  @param[out]     token_out       検証済みトークン文字列の格納先。
+ *  @param[in]      token_out_size  @p token_out のバイト数。
+ *  @return         フラグがない場合は 0、値が正しい場合は 1、値が不正な場合は -1 を返します。
+ *
+ *  値が不正な場合も、フラグは argv から取り除きます。
+ */
+static int extract_output_pipes_arg(int *argc, char **argv, char *token_out, const size_t token_out_size)
+{
+    const char *prefix = CPLAT_PROCESS_OUTPUT_PIPES_FLAG "=";
+    const char *value;
+    size_t prefix_len;
+    int n;
+    int i;
+    int j;
+
+    if (token_out == NULL || token_out_size == 0)
+    {
+        return -1;
+    }
+
+    token_out[0] = '\0';
+
+    if (argc == NULL || argv == NULL)
+    {
+        return 0;
+    }
+
+    prefix_len = strlen(prefix);
+    value = NULL;
+    n = *argc;
+    for (i = 1; i < n; i++)
+    {
+        if (argv[i] == NULL || strncmp(argv[i], prefix, prefix_len) != 0)
+        {
+            continue;
+        }
+
+        value = argv[i] + prefix_len;
+
+        for (j = i; j < n - 1; j++)
+        {
+            argv[j] = argv[j + 1];
+        }
+
+        argv[n - 1] = NULL;
+        *argc = n - 1;
+        break;
+    }
+
+    if (value == NULL)
+    {
+        return 0;
+    }
+
+    if (!is_valid_pipe_token(value))
+    {
+        return -1;
+    }
+
+    if (cplat_strcpy(token_out, token_out_size, value) != 0)
+    {
+        token_out[0] = '\0';
+        return -1;
+    }
+
+    return 1;
+}
+#endif /* PLATFORM_ */

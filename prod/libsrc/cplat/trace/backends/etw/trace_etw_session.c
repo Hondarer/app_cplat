@@ -83,10 +83,304 @@ struct cplat_etw_session
     int pad;
 };
 
+static void dispose_session(cplat_etw_session *session);
+static int parse_guid(const char *str, GUID *guid);
+static int guid_equal(const GUID *a, const GUID *b);
+static TRACE_EVENT_INFO *get_trace_event_info(PEVENT_RECORD pEvent);
+static const wchar_t *get_event_name(const TRACE_EVENT_INFO *info);
+static int read_ansi_string_field(const unsigned char *cursor, const USHORT remaining, const char **text_out,
+                                  USHORT *consumed_out);
+static int read_uint32_field(const unsigned char *cursor, const USHORT remaining, uint32_t *value_out,
+                             USHORT *consumed_out);
+static void extract_event_fields(PEVENT_RECORD pEvent, const TRACE_EVENT_INFO *info, const char **service_out,
+                                 const char **message_out, uint32_t *process_id_out);
+static VOID WINAPI event_record_callback(PEVENT_RECORD pEvent);
 static void deliver_event(cplat_etw_session *session, const cplat_etw_event *event);
+static void trace_thread_proc(void *param);
+static int close_trace_handle(cplat_etw_session *session);
 
 /** 停止の要求とトレースを閉じる処理の両方が失敗した場合に、処理スレッドの終了を待つ上限 [ms]。単体テストは短くする。 */
 static int s_stop_abandon_timeout_ms = STOP_ABANDON_TIMEOUT_MS;
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_etw_session_check_access(void)
+{
+    static const wchar_t probe_name[] = L"EtwUtil_AccessProbe";
+    size_t props_size;
+    EVENT_TRACE_PROPERTIES *props;
+    TRACEHANDLE handle = 0;
+    ULONG status;
+    int result;
+
+    props_size = sizeof(EVENT_TRACE_PROPERTIES) + sizeof(probe_name);
+    props = (EVENT_TRACE_PROPERTIES *)cplat_malloc(props_size);
+    if (props == NULL)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    memset(props, 0, props_size);
+    props->Wnode.BufferSize = (ULONG)props_size;
+    props->Wnode.Flags = WNODE_FLAG_TRACED_GUID;
+    props->Wnode.ClientContext = 1;
+    props->LogFileMode = EVENT_TRACE_REAL_TIME_MODE;
+    props->LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
+
+    /*
+     * セッションを開始できるかどうかで権限を判定する。
+     * 開始できた場合は直ちに停止する。
+     */
+    status = StartTraceW(&handle, probe_name, props);
+
+    if (status == ERROR_SUCCESS)
+    {
+        /* 権限の判定は開始の成否で確定しており、停止の失敗で判定の結果が変わらないため、戻り値は明示的に破棄する。 */
+        (void)ControlTraceW(handle, NULL, props, EVENT_TRACE_CONTROL_STOP);
+        result = CPLAT_OK;
+    }
+    else if (status == ERROR_ACCESS_DENIED)
+    {
+        result = CPLAT_ERR_PERMISSION_DENIED;
+    }
+    else
+    {
+        result = CPLAT_ERR_UNKNOWN;
+    }
+
+    cplat_free(props);
+
+    return result;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_etw_session_start(const char *session_name, const char *provider_guid_str, cplat_etw_event_fn callback,
+                            void *context, cplat_etw_session **session_out)
+{
+    cplat_etw_session *session = NULL;
+    GUID provider_guid;
+    ULONG status;
+    size_t name_len_w;
+    size_t props_size;
+    ENABLE_TRACE_PARAMETERS etp = {0};
+
+    if (session_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    *session_out = NULL;
+
+    if (session_name == NULL || provider_guid_str == NULL || callback == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (parse_guid(provider_guid_str, &provider_guid) != 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    session = (cplat_etw_session *)cplat_malloc(sizeof(cplat_etw_session));
+    if (session == NULL)
+    {
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    memset(session, 0, sizeof(cplat_etw_session));
+    session->callback = callback;
+    session->context = context;
+    session->session_handle = 0;
+    session->trace_handle = INVALID_PROCESSTRACE_HANDLE;
+    session->thread_handle = NULL;
+    session->properties = NULL;
+    session->session_name_w = NULL;
+    session->provider_guid = provider_guid;
+
+    {
+        int result = cplat_utf8_to_wstr_alloc(&session->session_name_w, session_name);
+        if (result != CPLAT_OK)
+        {
+            dispose_session(session);
+            return result;
+        }
+    }
+    if (session->session_name_w == NULL)
+    {
+        dispose_session(session);
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    name_len_w = wcslen(session->session_name_w) + 1;
+
+    /*
+     * EVENT_TRACE_PROPERTIES の直後にセッション名を置く領域を含めて確保する。
+     * セッション名は StartTraceW() が LoggerNameOffset の位置へコピーする。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/ns-evntrace-event_trace_properties
+     */
+    props_size = sizeof(EVENT_TRACE_PROPERTIES) + (name_len_w * sizeof(wchar_t));
+    session->properties = (EVENT_TRACE_PROPERTIES *)cplat_malloc(props_size);
+    if (session->properties == NULL)
+    {
+        dispose_session(session);
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    /* リアルタイム セッションを開始する。 */
+    memset(session->properties, 0, props_size);
+    session->properties->Wnode.BufferSize = (ULONG)props_size;
+    session->properties->Wnode.Flags = WNODE_FLAG_TRACED_GUID;
+
+    /*
+     * ClientContext は性能カウンター (QPC) を時刻源にする。
+     * see: https://learn.microsoft.com/en-us/windows/win32/etw/wnode-header
+     */
+    session->properties->Wnode.ClientContext = 1;
+
+    session->properties->LogFileMode = EVENT_TRACE_REAL_TIME_MODE;
+    session->properties->LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
+
+    /*
+     * FlushTimer の単位は秒であり、指定値は仕様が定める最小間隔である。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/ns-evntrace-event_trace_properties
+     */
+    session->properties->FlushTimer = 1;
+
+    status = StartTraceW(&session->session_handle, session->session_name_w, session->properties);
+
+    if (status == ERROR_ACCESS_DENIED)
+    {
+        session->session_handle = 0; /* 失敗したハンドルを停止対象にしない */
+        dispose_session(session);
+        return CPLAT_ERR_PERMISSION_DENIED;
+    }
+
+    if (status != ERROR_SUCCESS)
+    {
+        session->session_handle = 0; /* 失敗したハンドルを停止対象にしない */
+        dispose_session(session);
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    /*
+     * プロバイダーを有効化する。
+     * Level は VERBOSE 以下を通す。
+     * MatchAnyKeyword はレガシと TraceLogging の両方ですべてのキーワードを有効にする。
+     * MatchAllKeyword は追加のキーワード条件を付けず、Timeout はコールバックの完了を待たない。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/nf-evntrace-enabletraceex2
+     */
+    etp.Version = ENABLE_TRACE_PARAMETERS_VERSION_2;
+    status = EnableTraceEx2(session->session_handle, &provider_guid, EVENT_CONTROL_CODE_ENABLE_PROVIDER,
+                            TRACE_LEVEL_VERBOSE, 0xFFFFFFFFFFFFFFFF, 0, 0, &etp);
+    if (status != ERROR_SUCCESS)
+    {
+        dispose_session(session);
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    /* リアルタイムの EventRecord コールバックでトレースを開く。 */
+    {
+        EVENT_TRACE_LOGFILEW trace_logfile = {0};
+        trace_logfile.LoggerName = session->session_name_w;
+        trace_logfile.ProcessTraceMode = PROCESS_TRACE_MODE_REAL_TIME | PROCESS_TRACE_MODE_EVENT_RECORD;
+        trace_logfile.EventRecordCallback = event_record_callback;
+        trace_logfile.Context = session;
+
+        session->trace_handle = OpenTraceW(&trace_logfile);
+    }
+
+    if (session->trace_handle == INVALID_PROCESSTRACE_HANDLE)
+    {
+        dispose_session(session);
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    /*
+     * ProcessTrace() は処理が終わるまでブロックするため、別スレッドで実行する。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/nf-evntrace-processtrace
+     */
+    if (cplat_thread_create(&session->thread_handle, trace_thread_proc, session) != CPLAT_OK)
+    {
+        dispose_session(session);
+        return CPLAT_ERR_UNKNOWN;
+    }
+
+    *session_out = session;
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_etw_session_stop(cplat_etw_session *session)
+{
+    ULONG stop_status = ERROR_SUCCESS;
+    int close_result = CPLAT_OK;
+
+    if (session == NULL)
+    {
+        return;
+    }
+
+    /*
+     * リアルタイム セッションの停止により ProcessTrace() が残イベント処理後に戻るため、
+     * 先に EVENT_TRACE_CONTROL_STOP でセッションを停止してからスレッドを join する。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/nf-evntrace-processtrace
+     */
+    if (session->session_handle != 0 && session->properties != NULL)
+    {
+        stop_status = ControlTraceW(session->session_handle, NULL, session->properties, EVENT_TRACE_CONTROL_STOP);
+    }
+
+    /*
+     * 停止の要求が失敗すると、ProcessTrace() が戻らず、続く join が終わらない。
+     * リアルタイムのトレースは、ProcessTrace() が戻る前でも CloseTrace() で閉じられるため、先に閉じて戻らせる。
+     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/nf-evntrace-closetrace
+     */
+    if (stop_status != ERROR_SUCCESS && session->trace_closed == 0)
+    {
+        close_result = close_trace_handle(session);
+    }
+
+    if (session->thread_handle != NULL)
+    {
+        if (stop_status != ERROR_SUCCESS && close_result != CPLAT_OK)
+        {
+            /*
+             * 停止の要求とトレースを閉じる処理の両方が失敗すると、ProcessTrace() が戻る契機がない。
+             * 期限までに終了しなければ、利用側のコールバックを止め、実行中のコールバックの終了を 1 [ms] ごとの
+             * 確認で待ってからスレッドを切り離す。処理スレッドがあとで戻っても参照先が有効なままになるよう、
+             * セッションの構造体、名前、プロパティは解放しない。
+             */
+            if (cplat_thread_timed_join(session->thread_handle, s_stop_abandon_timeout_ms) != CPLAT_OK)
+            {
+                cplat_atomic_store_i32(&session->callback_closed, 1, CPLAT_MEMORY_ORDER_SEQ_CST);
+                while (cplat_atomic_load_i32(&session->callback_active, CPLAT_MEMORY_ORDER_SEQ_CST) != 0)
+                {
+                    cplat_sleep_ms(1);
+                }
+
+                cplat_thread_detach(session->thread_handle);
+                return;
+            }
+        }
+        else
+        {
+            cplat_thread_join(session->thread_handle);
+        }
+    }
+
+    /*
+     * 停止の要求が成功した場合は、join 後にトレースを閉じる。すでに閉じていれば何もしない。
+     * 停止の関数は失敗を通知せず、破棄の後に失敗を受けても取れる行動がないため、戻り値は明示的に破棄する。
+     */
+    (void)close_trace_handle(session);
+
+    cplat_free(session->session_name_w);
+    cplat_free(session->properties);
+    cplat_free(session);
+}
 
 /**
  *  @brief  構築途中のセッションが確保した資源を解放します。
@@ -509,215 +803,6 @@ static void trace_thread_proc(void *param)
     return;
 }
 
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_etw_session_check_access(void)
-{
-    static const wchar_t probe_name[] = L"EtwUtil_AccessProbe";
-    size_t props_size;
-    EVENT_TRACE_PROPERTIES *props;
-    TRACEHANDLE handle = 0;
-    ULONG status;
-    int result;
-
-    props_size = sizeof(EVENT_TRACE_PROPERTIES) + sizeof(probe_name);
-    props = (EVENT_TRACE_PROPERTIES *)cplat_malloc(props_size);
-    if (props == NULL)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    memset(props, 0, props_size);
-    props->Wnode.BufferSize = (ULONG)props_size;
-    props->Wnode.Flags = WNODE_FLAG_TRACED_GUID;
-    props->Wnode.ClientContext = 1;
-    props->LogFileMode = EVENT_TRACE_REAL_TIME_MODE;
-    props->LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
-
-    /*
-     * セッションを開始できるかどうかで権限を判定する。
-     * 開始できた場合は直ちに停止する。
-     */
-    status = StartTraceW(&handle, probe_name, props);
-
-    if (status == ERROR_SUCCESS)
-    {
-        /* 権限の判定は開始の成否で確定しており、停止の失敗で判定の結果が変わらないため、戻り値は明示的に破棄する。 */
-        (void)ControlTraceW(handle, NULL, props, EVENT_TRACE_CONTROL_STOP);
-        result = CPLAT_OK;
-    }
-    else if (status == ERROR_ACCESS_DENIED)
-    {
-        result = CPLAT_ERR_PERMISSION_DENIED;
-    }
-    else
-    {
-        result = CPLAT_ERR_UNKNOWN;
-    }
-
-    cplat_free(props);
-
-    return result;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_etw_session_start(const char *session_name, const char *provider_guid_str, cplat_etw_event_fn callback,
-                            void *context, cplat_etw_session **session_out)
-{
-    cplat_etw_session *session = NULL;
-    GUID provider_guid;
-    ULONG status;
-    size_t name_len_w;
-    size_t props_size;
-    ENABLE_TRACE_PARAMETERS etp = {0};
-
-    if (session_out == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    *session_out = NULL;
-
-    if (session_name == NULL || provider_guid_str == NULL || callback == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (parse_guid(provider_guid_str, &provider_guid) != 0)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    session = (cplat_etw_session *)cplat_malloc(sizeof(cplat_etw_session));
-    if (session == NULL)
-    {
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    memset(session, 0, sizeof(cplat_etw_session));
-    session->callback = callback;
-    session->context = context;
-    session->session_handle = 0;
-    session->trace_handle = INVALID_PROCESSTRACE_HANDLE;
-    session->thread_handle = NULL;
-    session->properties = NULL;
-    session->session_name_w = NULL;
-    session->provider_guid = provider_guid;
-
-    {
-        int result = cplat_utf8_to_wstr_alloc(&session->session_name_w, session_name);
-        if (result != CPLAT_OK)
-        {
-            dispose_session(session);
-            return result;
-        }
-    }
-    if (session->session_name_w == NULL)
-    {
-        dispose_session(session);
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    name_len_w = wcslen(session->session_name_w) + 1;
-
-    /*
-     * EVENT_TRACE_PROPERTIES の直後にセッション名を置く領域を含めて確保する。
-     * セッション名は StartTraceW() が LoggerNameOffset の位置へコピーする。
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/ns-evntrace-event_trace_properties
-     */
-    props_size = sizeof(EVENT_TRACE_PROPERTIES) + (name_len_w * sizeof(wchar_t));
-    session->properties = (EVENT_TRACE_PROPERTIES *)cplat_malloc(props_size);
-    if (session->properties == NULL)
-    {
-        dispose_session(session);
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    /* リアルタイム セッションを開始する。 */
-    memset(session->properties, 0, props_size);
-    session->properties->Wnode.BufferSize = (ULONG)props_size;
-    session->properties->Wnode.Flags = WNODE_FLAG_TRACED_GUID;
-
-    /*
-     * ClientContext は性能カウンター (QPC) を時刻源にする。
-     * see: https://learn.microsoft.com/en-us/windows/win32/etw/wnode-header
-     */
-    session->properties->Wnode.ClientContext = 1;
-
-    session->properties->LogFileMode = EVENT_TRACE_REAL_TIME_MODE;
-    session->properties->LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
-
-    /*
-     * FlushTimer の単位は秒であり、指定値は仕様が定める最小間隔である。
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/ns-evntrace-event_trace_properties
-     */
-    session->properties->FlushTimer = 1;
-
-    status = StartTraceW(&session->session_handle, session->session_name_w, session->properties);
-
-    if (status == ERROR_ACCESS_DENIED)
-    {
-        session->session_handle = 0; /* 失敗したハンドルを停止対象にしない */
-        dispose_session(session);
-        return CPLAT_ERR_PERMISSION_DENIED;
-    }
-
-    if (status != ERROR_SUCCESS)
-    {
-        session->session_handle = 0; /* 失敗したハンドルを停止対象にしない */
-        dispose_session(session);
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    /*
-     * プロバイダーを有効化する。
-     * Level は VERBOSE 以下を通す。
-     * MatchAnyKeyword はレガシと TraceLogging の両方ですべてのキーワードを有効にする。
-     * MatchAllKeyword は追加のキーワード条件を付けず、Timeout はコールバックの完了を待たない。
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/nf-evntrace-enabletraceex2
-     */
-    etp.Version = ENABLE_TRACE_PARAMETERS_VERSION_2;
-    status = EnableTraceEx2(session->session_handle, &provider_guid, EVENT_CONTROL_CODE_ENABLE_PROVIDER,
-                            TRACE_LEVEL_VERBOSE, 0xFFFFFFFFFFFFFFFF, 0, 0, &etp);
-    if (status != ERROR_SUCCESS)
-    {
-        dispose_session(session);
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    /* リアルタイムの EventRecord コールバックでトレースを開く。 */
-    {
-        EVENT_TRACE_LOGFILEW trace_logfile = {0};
-        trace_logfile.LoggerName = session->session_name_w;
-        trace_logfile.ProcessTraceMode = PROCESS_TRACE_MODE_REAL_TIME | PROCESS_TRACE_MODE_EVENT_RECORD;
-        trace_logfile.EventRecordCallback = event_record_callback;
-        trace_logfile.Context = session;
-
-        session->trace_handle = OpenTraceW(&trace_logfile);
-    }
-
-    if (session->trace_handle == INVALID_PROCESSTRACE_HANDLE)
-    {
-        dispose_session(session);
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    /*
-     * ProcessTrace() は処理が終わるまでブロックするため、別スレッドで実行する。
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/nf-evntrace-processtrace
-     */
-    if (cplat_thread_create(&session->thread_handle, trace_thread_proc, session) != CPLAT_OK)
-    {
-        dispose_session(session);
-        return CPLAT_ERR_UNKNOWN;
-    }
-
-    *session_out = session;
-
-    return CPLAT_OK;
-}
-
 /**
  *  @brief  トレース ハンドルを一度だけ閉じます。
  *  @return 成功またはすでに閉じ済みの場合は @ref CPLAT_OK 、失敗時は @ref CPLAT_ERR_UNKNOWN 。
@@ -746,77 +831,6 @@ static int close_trace_handle(cplat_etw_session *session)
     }
 
     return CPLAT_ERR_UNKNOWN;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_etw_session_stop(cplat_etw_session *session)
-{
-    ULONG stop_status = ERROR_SUCCESS;
-    int close_result = CPLAT_OK;
-
-    if (session == NULL)
-    {
-        return;
-    }
-
-    /*
-     * リアルタイム セッションの停止により ProcessTrace() が残イベント処理後に戻るため、
-     * 先に EVENT_TRACE_CONTROL_STOP でセッションを停止してからスレッドを join する。
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/nf-evntrace-processtrace
-     */
-    if (session->session_handle != 0 && session->properties != NULL)
-    {
-        stop_status = ControlTraceW(session->session_handle, NULL, session->properties, EVENT_TRACE_CONTROL_STOP);
-    }
-
-    /*
-     * 停止の要求が失敗すると、ProcessTrace() が戻らず、続く join が終わらない。
-     * リアルタイムのトレースは、ProcessTrace() が戻る前でも CloseTrace() で閉じられるため、先に閉じて戻らせる。
-     * see: https://learn.microsoft.com/en-us/windows/win32/api/evntrace/nf-evntrace-closetrace
-     */
-    if (stop_status != ERROR_SUCCESS && session->trace_closed == 0)
-    {
-        close_result = close_trace_handle(session);
-    }
-
-    if (session->thread_handle != NULL)
-    {
-        if (stop_status != ERROR_SUCCESS && close_result != CPLAT_OK)
-        {
-            /*
-             * 停止の要求とトレースを閉じる処理の両方が失敗すると、ProcessTrace() が戻る契機がない。
-             * 期限までに終了しなければ、利用側のコールバックを止め、実行中のコールバックの終了を 1 [ms] ごとの
-             * 確認で待ってからスレッドを切り離す。処理スレッドがあとで戻っても参照先が有効なままになるよう、
-             * セッションの構造体、名前、プロパティは解放しない。
-             */
-            if (cplat_thread_timed_join(session->thread_handle, s_stop_abandon_timeout_ms) != CPLAT_OK)
-            {
-                cplat_atomic_store_i32(&session->callback_closed, 1, CPLAT_MEMORY_ORDER_SEQ_CST);
-                while (cplat_atomic_load_i32(&session->callback_active, CPLAT_MEMORY_ORDER_SEQ_CST) != 0)
-                {
-                    cplat_sleep_ms(1);
-                }
-
-                cplat_thread_detach(session->thread_handle);
-                return;
-            }
-        }
-        else
-        {
-            cplat_thread_join(session->thread_handle);
-        }
-    }
-
-    /*
-     * 停止の要求が成功した場合は、join 後にトレースを閉じる。すでに閉じていれば何もしない。
-     * 停止の関数は失敗を通知せず、破棄の後に失敗を受けても取れる行動がないため、戻り値は明示的に破棄する。
-     */
-    (void)close_trace_handle(session);
-
-    cplat_free(session->session_name_w);
-    cplat_free(session->properties);
-    cplat_free(session);
 }
 
 #endif /* PLATFORM_WINDOWS */

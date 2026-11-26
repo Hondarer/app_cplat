@@ -60,14 +60,7 @@ static_assert(PROMPT_EDIT_CAPACITY_GROWTH_FACTOR >= 2U, "cplat: growth factor mu
 #define PROMPT_EDIT_CSI_INTER_MIN 0x20U
 #define PROMPT_EDIT_CSI_INTER_MAX 0x2FU
 
-/*
- * UTF-8 の後続バイト (0x80〜0xBF) であるかを判定する。
- * 後続バイトであれば 1、それ以外であれば 0 を返す。
- */
-static int utf8_is_continuation(unsigned char c)
-{
-    return (c & CPLAT_UTF8_CONT_MASK) == CPLAT_UTF8_CONT_VALUE;
-}
+static int utf8_is_continuation(unsigned char c);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -778,4 +771,13 @@ void cplat_internal_prompt_edit_utf16_feed(cplat_internal_prompt_utf16_input *in
                                           ((code_point >> CPLAT_UTF8_CONT_SHIFT) & CPLAT_UTF8_CONT_DATA_MASK));
         input->bytes[3] = (unsigned char)(CPLAT_UTF8_CONT_VALUE | (code_point & CPLAT_UTF8_CONT_DATA_MASK));
     }
+}
+
+/*
+ * UTF-8 の後続バイト (0x80〜0xBF) であるかを判定する。
+ * 後続バイトであれば 1、それ以外であれば 0 を返す。
+ */
+static int utf8_is_continuation(unsigned char c)
+{
+    return (c & CPLAT_UTF8_CONT_MASK) == CPLAT_UTF8_CONT_VALUE;
 }

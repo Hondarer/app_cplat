@@ -43,6 +43,143 @@
 /* see: https://learn.microsoft.com/en-us/windows/win32/menurc/resource-types */
     #define EVENTLOG_MESSAGETABLE_TYPE_ID 11
 
+static int ensure_elevated(const char *command, int *handled);
+static int report_status(const int ret, const char *action, const char *message_file_path);
+static int do_install(void);
+static int do_uninstall(void);
+#endif /* PLATFORM_ */
+
+/**
+ *  @brief          メイン エントリ ポイントです。
+ *  @param[in]      argc  コマンド ライン引数の数。
+ *  @param[in]      argv  コマンド ライン引数の配列。
+ *  @return         正常終了時は 0、異常終了時は 0 以外を返します。
+ */
+int main(int argc, char *argv[])
+{
+    int run_result;
+
+    /*
+     * 昇格ワーカーとして再起動された場合、出力パイプ フラグを argv から取り除き、
+     * stdout / stderr を呼び出し元プロセスのパイプへ接続する。引数解析より前に呼び出す。
+     */
+    if (cplat_elevated_process_attach_output_pipes(&argc, argv, NULL) != CPLAT_OK)
+    {
+        return EXIT_FAILURE;
+    }
+
+    cplat_console_init();
+
+    int need_help = 0;
+    const char *command = NULL;
+
+    if (cplat_argparser_init(argc, argv, "cplat 共通イベント ソースを登録または削除します。") != CPLAT_OK)
+    {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "引数の解析の準備に失敗しました。\n");
+        return EXIT_FAILURE;
+    }
+    /*
+     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
+     * 登録の関数の戻り値は明示的に破棄する。
+     */
+    (void)cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &need_help);
+    (void)cplat_argparser_register_positional_string("command", "install または uninstall を指定します。",
+                                                     CPLAT_ARGPARSER_REQUIRED, &command);
+
+    if (cplat_argparser_get_register_error_count() > 0)
+    {
+        /* 終了コードはすでに失敗に決まっているため、戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_register_error_messages(stderr);
+        return EXIT_FAILURE;
+    }
+
+    int parse_result = cplat_argparser_parse();
+
+    if (need_help != 0)
+    {
+        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
+        {
+            (void)fprintf(stderr, "標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+            return EXIT_FAILURE;
+        }
+
+        return EXIT_SUCCESS;
+    }
+
+    if (parse_result != CPLAT_OK)
+    {
+        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
+        (void)cplat_argparser_print_error_messages(stderr);
+        (void)cplat_argparser_print_usage(stderr);
+        return EXIT_FAILURE;
+    }
+
+    if (strcmp(command, "install") != 0 && strcmp(command, "uninstall") != 0)
+    {
+        /*
+         * 終了コードはすでに失敗に決まっており、診断の出力先もほかにないため、
+         * この fprintf と表示の関数の戻り値は明示的に破棄する。
+         */
+        (void)fprintf(stderr, "不明なコマンド '%s'\n\n", command);
+        (void)cplat_argparser_print_usage(stderr);
+        return EXIT_FAILURE;
+    }
+
+    run_result = eventlog_register_run(command);
+
+    if (run_result != 0)
+    {
+        return EXIT_FAILURE;
+    }
+
+    if (fflush(stdout) != 0 || ferror(stdout) != 0)
+    {
+        (void)fprintf(stderr, "標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+#if defined(PLATFORM_WINDOWS)
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int eventlog_register_run(const char *command)
+{
+    if (strcmp(command, "install") == 0)
+    {
+        return do_install();
+    }
+
+    if (strcmp(command, "uninstall") == 0)
+    {
+        return do_uninstall();
+    }
+
+    /* command は main() の argparser 検証により install/uninstall のいずれかへ確定するため到達しない。 */
+    return -1;
+}
+
+#else /* PLATFORM_LINUX */
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int eventlog_register_run(const char *command)
+{
+    (void)command;
+
+    /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+    (void)fprintf(stderr, "eventlog-register は Windows 専用です。Linux ではイベント ログを使用しません。\n");
+
+    return -1;
+}
+
+#endif /* PLATFORM_ */
+
+#if defined(PLATFORM_WINDOWS)
+
 /**
  *  @brief          管理者権限を保証します。必要なら UAC 昇格して再実行します。
  *  @param[in]      command  昇格再実行するサブコマンド ("install" / "uninstall")。
@@ -254,130 +391,4 @@ static int do_uninstall(void)
 
     return report_status(ret, "削除", NULL);
 }
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int eventlog_register_run(const char *command)
-{
-    if (strcmp(command, "install") == 0)
-    {
-        return do_install();
-    }
-
-    if (strcmp(command, "uninstall") == 0)
-    {
-        return do_uninstall();
-    }
-
-    /* command は main() の argparser 検証により install/uninstall のいずれかへ確定するため到達しない。 */
-    return -1;
-}
-
-#else /* PLATFORM_LINUX */
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int eventlog_register_run(const char *command)
-{
-    (void)command;
-
-    /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
-    (void)fprintf(stderr, "eventlog-register は Windows 専用です。Linux ではイベント ログを使用しません。\n");
-
-    return -1;
-}
-
 #endif /* PLATFORM_ */
-
-/**
- *  @brief          メイン エントリ ポイントです。
- *  @param[in]      argc  コマンド ライン引数の数。
- *  @param[in]      argv  コマンド ライン引数の配列。
- *  @return         正常終了時は 0、異常終了時は 0 以外を返します。
- */
-int main(int argc, char *argv[])
-{
-    int run_result;
-
-    /*
-     * 昇格ワーカーとして再起動された場合、出力パイプ フラグを argv から取り除き、
-     * stdout / stderr を呼び出し元プロセスのパイプへ接続する。引数解析より前に呼び出す。
-     */
-    if (cplat_elevated_process_attach_output_pipes(&argc, argv, NULL) != CPLAT_OK)
-    {
-        return EXIT_FAILURE;
-    }
-
-    cplat_console_init();
-
-    int need_help = 0;
-    const char *command = NULL;
-
-    if (cplat_argparser_init(argc, argv, "cplat 共通イベント ソースを登録または削除します。") != CPLAT_OK)
-    {
-        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
-        (void)fprintf(stderr, "引数の解析の準備に失敗しました。\n");
-        return EXIT_FAILURE;
-    }
-    /*
-     * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
-     * 登録の関数の戻り値は明示的に破棄する。
-     */
-    (void)cplat_argparser_register_flag("-h", "--help", "ヘルプを表示します。", &need_help);
-    (void)cplat_argparser_register_positional_string("command", "install または uninstall を指定します。",
-                                                     CPLAT_ARGPARSER_REQUIRED, &command);
-
-    if (cplat_argparser_get_register_error_count() > 0)
-    {
-        /* 終了コードはすでに失敗に決まっているため、戻り値は明示的に破棄する。 */
-        (void)cplat_argparser_print_register_error_messages(stderr);
-        return EXIT_FAILURE;
-    }
-
-    int parse_result = cplat_argparser_parse();
-
-    if (need_help != 0)
-    {
-        if (cplat_argparser_print_usage(stdout) != CPLAT_OK || fflush(stdout) != 0 || ferror(stdout) != 0)
-        {
-            (void)fprintf(stderr, "標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
-            return EXIT_FAILURE;
-        }
-
-        return EXIT_SUCCESS;
-    }
-
-    if (parse_result != CPLAT_OK)
-    {
-        /* 終了コードはすでに失敗に決まっているため、この 2 つの表示の関数の戻り値は明示的に破棄する。 */
-        (void)cplat_argparser_print_error_messages(stderr);
-        (void)cplat_argparser_print_usage(stderr);
-        return EXIT_FAILURE;
-    }
-
-    if (strcmp(command, "install") != 0 && strcmp(command, "uninstall") != 0)
-    {
-        /*
-         * 終了コードはすでに失敗に決まっており、診断の出力先もほかにないため、
-         * この fprintf と表示の関数の戻り値は明示的に破棄する。
-         */
-        (void)fprintf(stderr, "不明なコマンド '%s'\n\n", command);
-        (void)cplat_argparser_print_usage(stderr);
-        return EXIT_FAILURE;
-    }
-
-    run_result = eventlog_register_run(command);
-
-    if (run_result != 0)
-    {
-        return EXIT_FAILURE;
-    }
-
-    if (fflush(stdout) != 0 || ferror(stdout) != 0)
-    {
-        (void)fprintf(stderr, "標準出力へ書き込めませんでした。\n"); /* 診断の出力先がほかにないため、戻り値は明示的に破棄する */
-        return EXIT_FAILURE;
-    }
-
-    return EXIT_SUCCESS;
-}

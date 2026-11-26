@@ -124,6 +124,141 @@ struct cplat_syslog_sink
     uint16_t pad_end;
 };
 
+static void advance_backoff(cplat_syslog_sink *h);
+static int close_and_backoff_locked(cplat_syslog_sink *h);
+static int try_open_socket_locked(cplat_syslog_sink *h);
+static void read_test_fd(int *exists_out, int *fd_out);
+static void write_test_fd(const int test_fd, const char *buf, const size_t nbytes);
+static int write_locked(cplat_syslog_sink *handle, const int level, const cplat_timespec *timestamp,
+                        const char *message);
+static void dispose_sink(cplat_syslog_sink *handle);
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+cplat_syslog_sink *cplat_syslog_sink_create(const char *ident, const int facility)
+{
+    cplat_syslog_sink *handle;
+    size_t len;
+
+    if (ident == NULL)
+    {
+        return NULL;
+    }
+
+    handle = (cplat_syslog_sink *)cplat_malloc(sizeof(cplat_syslog_sink));
+    if (handle == NULL)
+    {
+        return NULL;
+    }
+
+    len = strlen(ident) + 1;
+    handle->ident = (char *)cplat_malloc(len);
+    if (handle->ident == NULL)
+    {
+        cplat_free(handle);
+        return NULL;
+    }
+
+    memcpy(handle->ident, ident, len);
+
+    handle->facility = facility;
+    handle->fd = -1;
+    handle->next_connect = 0;
+    handle->backoff_sec = BACKOFF_INIT_SEC;
+    handle->pid = cplat_process_get_pid();
+    handle->test_fd_exists = 0;
+    handle->test_fd = -1;
+    read_test_fd(&handle->test_fd_exists, &handle->test_fd);
+    memset(&handle->address, 0, sizeof(handle->address));
+    handle->address.sun_family = AF_UNIX;
+    /*
+     * 宛先、大きさ、複写元はいずれも固定で有効であり、宣言の契約で失敗となる引数の不正に当たらないため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)cplat_strncpy(handle->address.sun_path, sizeof(handle->address.sun_path), DEVLOG_PATH,
+                        sizeof(handle->address.sun_path) - 1u);
+
+    if (cplat_local_lock_create(&handle->reconnect_lock) != CPLAT_OK)
+    {
+        cplat_free(handle->ident);
+        cplat_free(handle);
+        return NULL;
+    }
+
+    /* 初回接続を試みる (失敗しても構わない)。 */
+    cplat_local_lock_lock(handle->reconnect_lock);
+    int clock_ret = try_open_socket_locked(handle);
+    cplat_local_lock_unlock(handle->reconnect_lock);
+
+    if (clock_ret != CPLAT_OK)
+    {
+        cplat_syslog_sink_dispose(handle);
+        return NULL;
+    }
+
+    return handle;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cplat_timespec *timestamp,
+                            const char *message)
+{
+    int ret;
+    if (handle == NULL || message == NULL)
+    {
+        return CPLAT_OK;
+    }
+    cplat_local_lock_lock(handle->reconnect_lock);
+    /* rename と同じロックで ident の参照から送信まで保護する。 */
+    ret = write_locked(handle, level, timestamp, message);
+    cplat_local_lock_unlock(handle->reconnect_lock);
+    return ret;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_syslog_sink_dispose(cplat_syslog_sink *handle)
+{
+    dispose_sink(handle);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_syslog_sink_rename(cplat_syslog_sink *handle, const char *new_ident)
+{
+    char *dup;
+    size_t len;
+
+    if (handle == NULL || new_ident == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    len = strlen(new_ident) + 1;
+    dup = (char *)cplat_malloc(len);
+    if (dup == NULL)
+    {
+        return CPLAT_ERR_OUT_OF_MEMORY;
+    }
+
+    memcpy(dup, new_ident, len);
+
+    cplat_local_lock_lock(handle->reconnect_lock);
+
+    cplat_free(handle->ident);
+    handle->ident = dup;
+    cplat_local_lock_unlock(handle->reconnect_lock);
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_internal_syslog_sink_dispose_on_shutdown(cplat_syslog_sink *handle)
+{
+    dispose_sink(handle);
+}
+
 /**
  *  @brief  バックオフ値を次段階に進めます。ロック保持中に呼び出してください。
  */
@@ -238,72 +373,6 @@ static void write_test_fd(const int test_fd, const char *buf, const size_t nbyte
     /* テスト用の経路であり、書き込みの失敗は報告しない。glibc の warn_unused_result は (void) で抑止できない。 */
     written = write(test_fd, buf, nbytes);
     (void)written;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-cplat_syslog_sink *cplat_syslog_sink_create(const char *ident, const int facility)
-{
-    cplat_syslog_sink *handle;
-    size_t len;
-
-    if (ident == NULL)
-    {
-        return NULL;
-    }
-
-    handle = (cplat_syslog_sink *)cplat_malloc(sizeof(cplat_syslog_sink));
-    if (handle == NULL)
-    {
-        return NULL;
-    }
-
-    len = strlen(ident) + 1;
-    handle->ident = (char *)cplat_malloc(len);
-    if (handle->ident == NULL)
-    {
-        cplat_free(handle);
-        return NULL;
-    }
-
-    memcpy(handle->ident, ident, len);
-
-    handle->facility = facility;
-    handle->fd = -1;
-    handle->next_connect = 0;
-    handle->backoff_sec = BACKOFF_INIT_SEC;
-    handle->pid = cplat_process_get_pid();
-    handle->test_fd_exists = 0;
-    handle->test_fd = -1;
-    read_test_fd(&handle->test_fd_exists, &handle->test_fd);
-    memset(&handle->address, 0, sizeof(handle->address));
-    handle->address.sun_family = AF_UNIX;
-    /*
-     * 宛先、大きさ、複写元はいずれも固定で有効であり、宣言の契約で失敗となる引数の不正に当たらないため、
-     * 戻り値は明示的に破棄する。
-     */
-    (void)cplat_strncpy(handle->address.sun_path, sizeof(handle->address.sun_path), DEVLOG_PATH,
-                        sizeof(handle->address.sun_path) - 1u);
-
-    if (cplat_local_lock_create(&handle->reconnect_lock) != CPLAT_OK)
-    {
-        cplat_free(handle->ident);
-        cplat_free(handle);
-        return NULL;
-    }
-
-    /* 初回接続を試みる (失敗しても構わない)。 */
-    cplat_local_lock_lock(handle->reconnect_lock);
-    int clock_ret = try_open_socket_locked(handle);
-    cplat_local_lock_unlock(handle->reconnect_lock);
-
-    if (clock_ret != CPLAT_OK)
-    {
-        cplat_syslog_sink_dispose(handle);
-        return NULL;
-    }
-
-    return handle;
 }
 
 /* Doxygen コメントは、ヘッダーに記載 */
@@ -470,22 +539,6 @@ static int write_locked(cplat_syslog_sink *handle, const int level, const cplat_
     }
 }
 
-/* Doxygen コメントは、ヘッダーに記載 */
-int cplat_syslog_sink_write(cplat_syslog_sink *handle, const int level, const cplat_timespec *timestamp,
-                            const char *message)
-{
-    int ret;
-    if (handle == NULL || message == NULL)
-    {
-        return CPLAT_OK;
-    }
-    cplat_local_lock_lock(handle->reconnect_lock);
-    /* rename と同じロックで ident の参照から送信まで保護する。 */
-    ret = write_locked(handle, level, timestamp, message);
-    cplat_local_lock_unlock(handle->reconnect_lock);
-    return ret;
-}
-
 static void dispose_sink(cplat_syslog_sink *handle)
 {
     if (handle == NULL)
@@ -502,50 +555,6 @@ static void dispose_sink(cplat_syslog_sink *handle)
     cplat_local_lock_dispose(handle->reconnect_lock);
     cplat_free(handle->ident);
     cplat_free(handle);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_syslog_sink_dispose(cplat_syslog_sink *handle)
-{
-    dispose_sink(handle);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_syslog_sink_rename(cplat_syslog_sink *handle, const char *new_ident)
-{
-    char *dup;
-    size_t len;
-
-    if (handle == NULL || new_ident == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    len = strlen(new_ident) + 1;
-    dup = (char *)cplat_malloc(len);
-    if (dup == NULL)
-    {
-        return CPLAT_ERR_OUT_OF_MEMORY;
-    }
-
-    memcpy(dup, new_ident, len);
-
-    cplat_local_lock_lock(handle->reconnect_lock);
-
-    cplat_free(handle->ident);
-    handle->ident = dup;
-    cplat_local_lock_unlock(handle->reconnect_lock);
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_internal_syslog_sink_dispose_on_shutdown(cplat_syslog_sink *handle)
-{
-    dispose_sink(handle);
 }
 
 #elif defined(PLATFORM_WINDOWS) && defined(COMPILER_MSVC)

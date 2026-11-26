@@ -119,6 +119,282 @@ typedef struct compiler
     char string_buffer[CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX + STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT];
 } compiler;
 
+static bool is_space(const char character);
+static bool is_identifier_start(const char character);
+static bool is_digit(const char character);
+static bool is_identifier_part(const char character);
+static int hex_value(const char character);
+static bool fail(compiler *state, const cplat_string_catalog_filter_line_error error, const size_t column);
+static char peek_at(const compiler *state, const size_t position);
+static int read_quoted_byte(compiler *state);
+static bool lex_string(compiler *state, token *token_out);
+static bool lex_character(compiler *state, token *token_out);
+static bool lex_number(compiler *state, token *token_out);
+static bool advance(compiler *state);
+static bool is_word(const compiler *state, const char *word);
+static bool expect(compiler *state, const token_kind kind);
+static bool emit_instruction(compiler *state, const string_catalog_filter_instruction *instruction, uint32_t *index_out);
+static bool emit_logical(compiler *state, const string_catalog_filter_opcode opcode);
+static bool emit_constant(compiler *state, const string_catalog_filter_constant_header *header, const void *payload,
+                          const uint32_t payload_size, uint32_t *offset_out);
+static bool parse_literal(compiler *state, uint8_t *kind_out);
+static bool parse_argument_reference(compiler *state, string_catalog_filter_instruction *instruction);
+static bool parse_operator(compiler *state, string_catalog_filter_instruction *instruction);
+static bool parse_checked_literal(compiler *state, const string_catalog_filter_instruction *instruction,
+                                  uint8_t *kind_out);
+static bool parse_pattern(compiler *state, const string_catalog_filter_instruction *instruction);
+static bool is_same_class(const uint8_t first_kind, const uint8_t kind);
+static bool parse_predicate(compiler *state);
+static bool enter_nesting(compiler *state);
+static bool parse_unary(compiler *state);
+static bool parse_binary(compiler *state, const token_kind operator_token,
+                         const string_catalog_filter_opcode jump_opcode, const string_catalog_filter_opcode join_opcode,
+                         bool (*parse_operand)(compiler *));
+static bool parse_and(compiler *state);
+static bool parse_or(compiler *state);
+static bool trim_line(const char *row, const size_t width, size_t *start_out, size_t *length_out);
+static void record_diagnostic(cplat_string_catalog_filter_diagnostic *diagnostics, const size_t diagnostic_capacity,
+                              const size_t invalid_count, const size_t line_index, const size_t column,
+                              const cplat_string_catalog_filter_line_error error);
+static int compile_text(const char *text, const uint32_t line_width, unsigned char *record,
+                        cplat_string_catalog_filter_diagnostic *diagnostic_out);
+static int prepare_edit(void *image, const size_t image_size, const char *text,
+                        string_catalog_filter_image_header *header);
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int string_catalog_filter_compile_record(const char *text, const size_t text_length, const uint32_t line_width,
+                                         unsigned char *record, cplat_string_catalog_filter_line_error *error_out,
+                                         uint32_t *column_out)
+{
+    string_catalog_filter_record_header header = {0};
+    compiler state = {0};
+
+    memset(record, 0, CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(line_width));
+
+    state.text = text;
+    state.text_length = text_length;
+    state.record = record;
+    state.line_width = line_width;
+    state.instruction_capacity = string_catalog_filter_instruction_capacity(line_width);
+    state.constant_capacity = string_catalog_filter_constant_capacity(line_width);
+
+    /* 条件式の長さ上限を確認し、論理和から順に構文解析を行う。 */
+    if (text_length > line_width)
+    {
+        fail(&state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED, line_width);
+    }
+    else if (advance(&state) && parse_or(&state) && (state.current.kind != TOKEN_KIND_END))
+    {
+        fail(&state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, state.current.column);
+    }
+
+    if ((state.error == CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE) && (state.instruction_count == 0U))
+    {
+        fail(&state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, 0U);
+    }
+
+    if (state.error != CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE)
+    {
+        memset(record, 0, CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(line_width));
+        *error_out = state.error;
+        *column_out = state.error_column;
+        return CPLAT_ERR_MALFORMED_DEFINITION;
+    }
+
+    /* コンパイル結果を行レコードの見出しへ反映し、行ハッシュを算出する。 */
+    header.instruction_count = (uint16_t)state.instruction_count;
+    header.constant_size = (uint16_t)state.constant_size;
+    header.stack_depth = (uint8_t)state.max_depth;
+    header.argument_reference_count = (uint8_t)state.argument_reference_count;
+    header.identifier_count = (uint8_t)state.identifier_count;
+    header.pattern_count = (uint8_t)state.pattern_count;
+    string_catalog_filter_write_record_header(record, &header);
+
+    header.line_hash = string_catalog_filter_compute_line_hash(record, line_width);
+    string_catalog_filter_write_record_header(record, &header);
+
+    *error_out = CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE;
+    *column_out = 0U;
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_string_catalog_filter_compile(const char *lines, const size_t line_count, const size_t line_width,
+                                        const size_t line_capacity, void *image_out, const size_t image_size,
+                                        cplat_string_catalog_filter_diagnostic *diagnostics,
+                                        const size_t diagnostic_capacity, size_t *invalid_count_out)
+{
+    string_catalog_filter_image_header header = {0};
+    size_t invalid_count = 0U;
+
+    if ((image_out == NULL) || ((lines == NULL) && (line_count > 0U)) ||
+        (line_width < CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MIN) ||
+        (line_width > CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX) || (line_capacity == 0U) ||
+        (line_capacity > CPLAT_STRING_CATALOG_FILTER_LINE_MAX))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (image_size < CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(line_capacity, line_width))
+    {
+        return CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+
+    memset(image_out, 0, CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(line_capacity, line_width));
+    header.signature = STRING_CATALOG_FILTER_SIGNATURE;
+    header.format_version = STRING_CATALOG_FILTER_FORMAT_VERSION;
+    header.byte_order_mark = STRING_CATALOG_FILTER_BYTE_ORDER_MARK;
+    header.line_capacity = (uint32_t)line_capacity;
+    header.line_width = (uint32_t)line_width;
+    header.record_size = (uint32_t)CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(line_width);
+    header.image_size = CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(line_capacity, line_width);
+
+    /* 各行をコンパイルして行レコードへ格納し、診断情報を記録する。 */
+    for (size_t index = 0; index < line_count; index++)
+    {
+        const char *row = lines + (index * line_width);
+        cplat_string_catalog_filter_line_error error;
+        uint32_t column;
+        size_t start;
+        size_t length;
+
+        if (!trim_line(row, line_width, &start, &length))
+        {
+            continue;
+        }
+
+        if (header.line_count >= header.line_capacity)
+        {
+            record_diagnostic(diagnostics, diagnostic_capacity, invalid_count, index, start,
+                              CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LINE_CAPACITY);
+            invalid_count++;
+            continue;
+        }
+
+        if (string_catalog_filter_compile_record(
+                row + start, length, header.line_width,
+                string_catalog_filter_record_address(image_out, header.record_size, header.line_count), &error,
+                &column) != CPLAT_OK)
+        {
+            record_diagnostic(diagnostics, diagnostic_capacity, invalid_count, index, start + column, error);
+            invalid_count++;
+            continue;
+        }
+
+        header.line_count++;
+    }
+
+    string_catalog_filter_update_content_hash(image_out, &header);
+
+    if (invalid_count_out != NULL)
+    {
+        *invalid_count_out = invalid_count;
+    }
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_string_catalog_filter_compile_line(void *image, const size_t image_size, const size_t line_index,
+                                             const char *text, cplat_string_catalog_filter_diagnostic *diagnostic_out)
+{
+    unsigned char record[CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX)];
+    string_catalog_filter_image_header header;
+    int ret = prepare_edit(image, image_size, text, &header);
+
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    if (line_index >= header.line_count)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    ret = compile_text(text, header.line_width, record, diagnostic_out);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    if (diagnostic_out != NULL)
+    {
+        diagnostic_out->line_index = (uint32_t)line_index;
+    }
+
+    memcpy(string_catalog_filter_record_address(image, header.record_size, (uint32_t)line_index), record,
+           header.record_size);
+    string_catalog_filter_update_content_hash(image, &header);
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_string_catalog_filter_insert_line(void *image, const size_t image_size, const size_t line_index,
+                                            const char *text, cplat_string_catalog_filter_diagnostic *diagnostic_out)
+{
+    unsigned char record[CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX)];
+    string_catalog_filter_image_header header;
+    unsigned char *target;
+    int ret = prepare_edit(image, image_size, text, &header);
+
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    if (line_index > header.line_count)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (header.line_count >= header.line_capacity)
+    {
+        return CPLAT_ERR_STORAGE_FULL;
+    }
+
+    ret = compile_text(text, header.line_width, record, diagnostic_out);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    if (diagnostic_out != NULL)
+    {
+        diagnostic_out->line_index = (uint32_t)line_index;
+    }
+
+    /* 挿入位置から後ろの行を 1 つ後ろへずらす。 */
+    target = string_catalog_filter_record_address(image, header.record_size, (uint32_t)line_index);
+    memmove(target + header.record_size, target, (size_t)header.record_size * ((size_t)header.line_count - line_index));
+    memcpy(target, record, header.record_size);
+
+    header.line_count++;
+    string_catalog_filter_update_content_hash(image, &header);
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int string_catalog_filter_create_pattern(const char *pattern, const uint8_t operator_kind, cplat_regex **regex_out)
+{
+    unsigned int flags = CPLAT_REGEX_DEFAULT | CPLAT_REGEX_NOSUB;
+
+    if (operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_MATCHES_I)
+    {
+        flags |= CPLAT_REGEX_ICASE;
+    }
+
+    return cplat_regex_create(pattern, flags, regex_out, NULL);
+}
+
 /* ===== 字句解析 ===== */
 
 static bool is_space(const char character)
@@ -1237,8 +1513,6 @@ static bool parse_predicate(compiler *state)
     return emit_instruction(state, &instruction, NULL);
 }
 
-static bool parse_or(compiler *state);
-
 /*
  * 式のネストの深さを 1 増やし、上限を超えていないか確認する。
  * 上限を超えた場合はエラーを記録して false を返す。
@@ -1341,65 +1615,6 @@ static bool parse_or(compiler *state)
                         STRING_CATALOG_FILTER_OPCODE_OR, parse_and);
 }
 
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int string_catalog_filter_compile_record(const char *text, const size_t text_length, const uint32_t line_width,
-                                         unsigned char *record, cplat_string_catalog_filter_line_error *error_out,
-                                         uint32_t *column_out)
-{
-    string_catalog_filter_record_header header = {0};
-    compiler state = {0};
-
-    memset(record, 0, CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(line_width));
-
-    state.text = text;
-    state.text_length = text_length;
-    state.record = record;
-    state.line_width = line_width;
-    state.instruction_capacity = string_catalog_filter_instruction_capacity(line_width);
-    state.constant_capacity = string_catalog_filter_constant_capacity(line_width);
-
-    /* 条件式の長さ上限を確認し、論理和から順に構文解析を行う。 */
-    if (text_length > line_width)
-    {
-        fail(&state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LIMIT_EXCEEDED, line_width);
-    }
-    else if (advance(&state) && parse_or(&state) && (state.current.kind != TOKEN_KIND_END))
-    {
-        fail(&state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, state.current.column);
-    }
-
-    if ((state.error == CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE) && (state.instruction_count == 0U))
-    {
-        fail(&state, CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_SYNTAX, 0U);
-    }
-
-    if (state.error != CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE)
-    {
-        memset(record, 0, CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(line_width));
-        *error_out = state.error;
-        *column_out = state.error_column;
-        return CPLAT_ERR_MALFORMED_DEFINITION;
-    }
-
-    /* コンパイル結果を行レコードの見出しへ反映し、行ハッシュを算出する。 */
-    header.instruction_count = (uint16_t)state.instruction_count;
-    header.constant_size = (uint16_t)state.constant_size;
-    header.stack_depth = (uint8_t)state.max_depth;
-    header.argument_reference_count = (uint8_t)state.argument_reference_count;
-    header.identifier_count = (uint8_t)state.identifier_count;
-    header.pattern_count = (uint8_t)state.pattern_count;
-    string_catalog_filter_write_record_header(record, &header);
-
-    header.line_hash = string_catalog_filter_compute_line_hash(record, line_width);
-    string_catalog_filter_write_record_header(record, &header);
-
-    *error_out = CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE;
-    *column_out = 0U;
-
-    return CPLAT_OK;
-}
-
 /* ===== 公開関数 ===== */
 
 /**
@@ -1444,83 +1659,6 @@ static void record_diagnostic(cplat_string_catalog_filter_diagnostic *diagnostic
         diagnostics[invalid_count].column = (uint32_t)column;
         diagnostics[invalid_count].error = error;
     }
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_string_catalog_filter_compile(const char *lines, const size_t line_count, const size_t line_width,
-                                        const size_t line_capacity, void *image_out, const size_t image_size,
-                                        cplat_string_catalog_filter_diagnostic *diagnostics,
-                                        const size_t diagnostic_capacity, size_t *invalid_count_out)
-{
-    string_catalog_filter_image_header header = {0};
-    size_t invalid_count = 0U;
-
-    if ((image_out == NULL) || ((lines == NULL) && (line_count > 0U)) ||
-        (line_width < CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MIN) ||
-        (line_width > CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX) || (line_capacity == 0U) ||
-        (line_capacity > CPLAT_STRING_CATALOG_FILTER_LINE_MAX))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (image_size < CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(line_capacity, line_width))
-    {
-        return CPLAT_ERR_BUFFER_TOO_SMALL;
-    }
-
-    memset(image_out, 0, CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(line_capacity, line_width));
-    header.signature = STRING_CATALOG_FILTER_SIGNATURE;
-    header.format_version = STRING_CATALOG_FILTER_FORMAT_VERSION;
-    header.byte_order_mark = STRING_CATALOG_FILTER_BYTE_ORDER_MARK;
-    header.line_capacity = (uint32_t)line_capacity;
-    header.line_width = (uint32_t)line_width;
-    header.record_size = (uint32_t)CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(line_width);
-    header.image_size = CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(line_capacity, line_width);
-
-    /* 各行をコンパイルして行レコードへ格納し、診断情報を記録する。 */
-    for (size_t index = 0; index < line_count; index++)
-    {
-        const char *row = lines + (index * line_width);
-        cplat_string_catalog_filter_line_error error;
-        uint32_t column;
-        size_t start;
-        size_t length;
-
-        if (!trim_line(row, line_width, &start, &length))
-        {
-            continue;
-        }
-
-        if (header.line_count >= header.line_capacity)
-        {
-            record_diagnostic(diagnostics, diagnostic_capacity, invalid_count, index, start,
-                              CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_LINE_CAPACITY);
-            invalid_count++;
-            continue;
-        }
-
-        if (string_catalog_filter_compile_record(
-                row + start, length, header.line_width,
-                string_catalog_filter_record_address(image_out, header.record_size, header.line_count), &error,
-                &column) != CPLAT_OK)
-        {
-            record_diagnostic(diagnostics, diagnostic_capacity, invalid_count, index, start + column, error);
-            invalid_count++;
-            continue;
-        }
-
-        header.line_count++;
-    }
-
-    string_catalog_filter_update_content_hash(image_out, &header);
-
-    if (invalid_count_out != NULL)
-    {
-        *invalid_count_out = invalid_count;
-    }
-
-    return CPLAT_OK;
 }
 
 /**
@@ -1585,102 +1723,4 @@ static int prepare_edit(void *image, const size_t image_size, const char *text,
     string_catalog_filter_read_image_header(image, header);
 
     return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_string_catalog_filter_compile_line(void *image, const size_t image_size, const size_t line_index,
-                                             const char *text, cplat_string_catalog_filter_diagnostic *diagnostic_out)
-{
-    unsigned char record[CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX)];
-    string_catalog_filter_image_header header;
-    int ret = prepare_edit(image, image_size, text, &header);
-
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
-
-    if (line_index >= header.line_count)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    ret = compile_text(text, header.line_width, record, diagnostic_out);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
-
-    if (diagnostic_out != NULL)
-    {
-        diagnostic_out->line_index = (uint32_t)line_index;
-    }
-
-    memcpy(string_catalog_filter_record_address(image, header.record_size, (uint32_t)line_index), record,
-           header.record_size);
-    string_catalog_filter_update_content_hash(image, &header);
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_string_catalog_filter_insert_line(void *image, const size_t image_size, const size_t line_index,
-                                            const char *text, cplat_string_catalog_filter_diagnostic *diagnostic_out)
-{
-    unsigned char record[CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX)];
-    string_catalog_filter_image_header header;
-    unsigned char *target;
-    int ret = prepare_edit(image, image_size, text, &header);
-
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
-
-    if (line_index > header.line_count)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (header.line_count >= header.line_capacity)
-    {
-        return CPLAT_ERR_STORAGE_FULL;
-    }
-
-    ret = compile_text(text, header.line_width, record, diagnostic_out);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
-
-    if (diagnostic_out != NULL)
-    {
-        diagnostic_out->line_index = (uint32_t)line_index;
-    }
-
-    /* 挿入位置から後ろの行を 1 つ後ろへずらす。 */
-    target = string_catalog_filter_record_address(image, header.record_size, (uint32_t)line_index);
-    memmove(target + header.record_size, target, (size_t)header.record_size * ((size_t)header.line_count - line_index));
-    memcpy(target, record, header.record_size);
-
-    header.line_count++;
-    string_catalog_filter_update_content_hash(image, &header);
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int string_catalog_filter_create_pattern(const char *pattern, const uint8_t operator_kind, cplat_regex **regex_out)
-{
-    unsigned int flags = CPLAT_REGEX_DEFAULT | CPLAT_REGEX_NOSUB;
-
-    if (operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_MATCHES_I)
-    {
-        flags |= CPLAT_REGEX_ICASE;
-    }
-
-    return cplat_regex_create(pattern, flags, regex_out, NULL);
 }

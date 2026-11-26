@@ -74,6 +74,236 @@ typedef enum prompt_key
 /* リング バッファーの論理インデックス (最古 = 0、最新 = count - 1) を実インデックスへ変換する。 */
 #define HIST_IDX(p, ctx, i) (((ctx)->head + (i)) % (p)->history_max)
 
+static void history_add(cplat_prompt *p, prompt_history_context *ctx, const char *line);
+static void redisplay(cplat_prompt *p, const char *prompt_str, const char *buf, size_t len, size_t cursor);
+static void prompt_complete(cplat_prompt *p);
+static prompt_key read_key(cplat_prompt *p, int *ch_out);
+static void history_browse_prev(cplat_prompt *p, prompt_history_context *ctx, const char *prompt_str);
+static void history_browse_next(cplat_prompt *p, prompt_history_context *ctx, const char *prompt_str);
+static prompt_history_context *find_or_create_ctx(cplat_prompt *p, const char *file, int line);
+static int prompt_readline_fallback(cplat_prompt *p, char *buf, const size_t buf_size, const char *prompt_str);
+static int prompt_readline_core(cplat_prompt *p, char *buf, const size_t buf_size, const char *prompt_str,
+                                const char *initial_text, const size_t initial_length, const char *file, int line);
+
+/*
+ * ================================================================
+ * 公開 API
+ * ================================================================
+ */
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+cplat_prompt *cplat_prompt_create(const cplat_prompt_options *options)
+{
+    cplat_prompt *p = (cplat_prompt *)cplat_calloc(1, sizeof(*p));
+    size_t history_max;
+    size_t input_initial_capacity;
+    size_t input_max_bytes;
+    size_t opt_history_max;
+    size_t opt_input_initial_capacity;
+    size_t opt_input_max_bytes;
+
+    if (p == NULL)
+    {
+        return NULL;
+    }
+
+    if (options != NULL)
+    {
+        opt_history_max = options->history_max;
+        opt_input_initial_capacity = options->input_initial_capacity;
+        opt_input_max_bytes = options->input_max_bytes;
+    }
+    else
+    {
+        opt_history_max = 0U;
+        opt_input_initial_capacity = 0U;
+        opt_input_max_bytes = 0U;
+    }
+
+    cplat_internal_prompt_edit_resolve_options(opt_history_max, opt_input_initial_capacity, opt_input_max_bytes,
+                                               CPLAT_INTERNAL_PROMPT_INPUT_INITIAL_DEFAULT, &history_max,
+                                               &input_initial_capacity, &input_max_bytes);
+
+    p->history_max = history_max;
+    p->input_max_bytes = input_max_bytes;
+    p->edit_cap = input_initial_capacity;
+    p->edit_buf = (char *)cplat_malloc(p->edit_cap);
+    if (p->edit_buf == NULL)
+    {
+        cplat_free(p);
+        return NULL;
+    }
+
+    p->edit_buf[0] = '\0';
+    p->is_tty = prompt_platform_is_tty();
+
+    return p;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_prompt_dispose(cplat_prompt *prompt)
+{
+    size_t i;
+
+    if (prompt == NULL)
+    {
+        return;
+    }
+
+    /*
+     * raw モード中であれば端末設定を復元する。
+     * 後処理時の復元は最善努力で行い、成否を通知する手段がないため、戻り値は明示的に破棄する。
+     */
+    (void)prompt_platform_leave_raw(&prompt->platform);
+
+    /* 全コンテキストのリソースを解放する。 */
+    for (i = 0; i < prompt->ctx_count; i++)
+    {
+        size_t j;
+        prompt_history_context *ctx = &prompt->contexts[i];
+
+        for (j = 0; j < prompt->history_max; j++)
+        {
+            cplat_free(ctx->entries[j]);
+        }
+
+        cplat_free(ctx->entries);
+        cplat_free(ctx->saved_line);
+    }
+
+    cplat_internal_prompt_edit_completions_dispose(&prompt->completions);
+    cplat_free(prompt->contexts);
+    cplat_free(prompt->edit_buf);
+    cplat_free(prompt->prompt_fmt_buf);
+    cplat_free(prompt);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_prompt_readline_at(cplat_prompt *p, char *buf, const size_t buf_size, const char *prompt_str,
+                             const char *file, int line)
+{
+    if (p == NULL || buf == NULL || buf_size == 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    return prompt_readline_core(p, buf, buf_size, prompt_str, NULL, 0U, file, line);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_prompt_readline_with_initial_at(cplat_prompt *p, char *buf, const size_t buf_size, const char *prompt_str,
+                                          const char *initial_text, const char *file, int line)
+{
+    size_t initial_length;
+    int ret;
+
+    if (p == NULL || buf == NULL || buf_size == 0)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    buf[0] = '\0';
+
+    /* TTY かどうかによらず同じ規則で検証し、契約を経路に依存させない。 */
+    ret = cplat_internal_prompt_edit_validate_initial_text(initial_text, p->input_max_bytes, &initial_length);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    return prompt_readline_core(p, buf, buf_size, prompt_str, initial_text, initial_length, file, line);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_prompt_readline_fmt_at(cplat_prompt *p, char *buf, size_t buf_size, const char *file, int line,
+                                 const char *fmt, ...)
+{
+    va_list ap;
+    int needed;
+    const char *fmt_str;
+
+    if (p == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    /* 初回呼び出し時に書式付きプロンプト用のバッファーを確保する。 */
+    if (p->prompt_fmt_buf == NULL)
+    {
+        p->prompt_fmt_cap = PROMPT_FMT_INITIAL_CAPACITY;
+        p->prompt_fmt_buf = (char *)cplat_malloc(p->prompt_fmt_cap);
+        if (p->prompt_fmt_buf == NULL)
+        {
+            return cplat_prompt_readline_at(p, buf, buf_size, "", file, line);
+        }
+    }
+
+    if (fmt != NULL)
+    {
+        fmt_str = fmt;
+    }
+    else
+    {
+        fmt_str = "";
+    }
+
+    for (;;)
+    {
+        va_start(ap, fmt);
+        needed = vsnprintf(p->prompt_fmt_buf, p->prompt_fmt_cap, fmt_str, ap); /* 置換対象外: 必要長の照会 */
+        va_end(ap);
+
+        if (needed < 0)
+        {
+            p->prompt_fmt_buf[0] = '\0'; /* 書式化の失敗: 空のプロンプトで続行 */
+            break;
+        }
+
+        if ((size_t)needed < p->prompt_fmt_cap)
+        {
+            break; /* 成功 */
+        }
+
+        /* バッファー不足時は必要サイズへ拡張して再試行する。 */
+        {
+            size_t new_cap = (size_t)needed + 1U;
+            char *new_buf = (char *)cplat_realloc(p->prompt_fmt_buf, new_cap, 1U);
+            if (new_buf == NULL)
+            {
+                /* 書式化後の全体を保持できない。切り詰めた文字列は UTF-8 の文字の途中で切れ得るため、空にして続行する。 */
+                p->prompt_fmt_buf[0] = '\0';
+                break;
+            }
+
+            p->prompt_fmt_buf = new_buf;
+            p->prompt_fmt_cap = new_cap;
+        }
+    }
+
+    return cplat_prompt_readline_at(p, buf, buf_size, p->prompt_fmt_buf, file, line);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_prompt_completion_set(cplat_prompt *prompt, cplat_prompt_completion_fn fn, void *user_data)
+{
+    if (prompt == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    prompt->completion_fn = fn;
+    prompt->completion_user_data = user_data;
+    prompt->completions.count = 0U;
+
+    return CPLAT_OK;
+}
+
 /*
  * 確定した入力行を履歴コンテキストへ追加する。
  * 空行または直前の履歴と同一内容の場合は追加しない。
@@ -531,101 +761,6 @@ static prompt_history_context *find_or_create_ctx(cplat_prompt *p, const char *f
     return ctx;
 }
 
-/*
- * ================================================================
- * 公開 API
- * ================================================================
- */
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-cplat_prompt *cplat_prompt_create(const cplat_prompt_options *options)
-{
-    cplat_prompt *p = (cplat_prompt *)cplat_calloc(1, sizeof(*p));
-    size_t history_max;
-    size_t input_initial_capacity;
-    size_t input_max_bytes;
-    size_t opt_history_max;
-    size_t opt_input_initial_capacity;
-    size_t opt_input_max_bytes;
-
-    if (p == NULL)
-    {
-        return NULL;
-    }
-
-    if (options != NULL)
-    {
-        opt_history_max = options->history_max;
-        opt_input_initial_capacity = options->input_initial_capacity;
-        opt_input_max_bytes = options->input_max_bytes;
-    }
-    else
-    {
-        opt_history_max = 0U;
-        opt_input_initial_capacity = 0U;
-        opt_input_max_bytes = 0U;
-    }
-
-    cplat_internal_prompt_edit_resolve_options(opt_history_max, opt_input_initial_capacity, opt_input_max_bytes,
-                                               CPLAT_INTERNAL_PROMPT_INPUT_INITIAL_DEFAULT, &history_max,
-                                               &input_initial_capacity, &input_max_bytes);
-
-    p->history_max = history_max;
-    p->input_max_bytes = input_max_bytes;
-    p->edit_cap = input_initial_capacity;
-    p->edit_buf = (char *)cplat_malloc(p->edit_cap);
-    if (p->edit_buf == NULL)
-    {
-        cplat_free(p);
-        return NULL;
-    }
-
-    p->edit_buf[0] = '\0';
-    p->is_tty = prompt_platform_is_tty();
-
-    return p;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_prompt_dispose(cplat_prompt *prompt)
-{
-    size_t i;
-
-    if (prompt == NULL)
-    {
-        return;
-    }
-
-    /*
-     * raw モード中であれば端末設定を復元する。
-     * 後処理時の復元は最善努力で行い、成否を通知する手段がないため、戻り値は明示的に破棄する。
-     */
-    (void)prompt_platform_leave_raw(&prompt->platform);
-
-    /* 全コンテキストのリソースを解放する。 */
-    for (i = 0; i < prompt->ctx_count; i++)
-    {
-        size_t j;
-        prompt_history_context *ctx = &prompt->contexts[i];
-
-        for (j = 0; j < prompt->history_max; j++)
-        {
-            cplat_free(ctx->entries[j]);
-        }
-
-        cplat_free(ctx->entries);
-        cplat_free(ctx->saved_line);
-    }
-
-    cplat_internal_prompt_edit_completions_dispose(&prompt->completions);
-    cplat_free(prompt->contexts);
-    cplat_free(prompt->edit_buf);
-    cplat_free(prompt->prompt_fmt_buf);
-    cplat_free(prompt);
-}
-
 /**
  *  @brief          非 TTY または初期化失敗時に 1 行を読み取ります。
  *  @param[in,out]  p           プロンプト操作の状態です。
@@ -934,128 +1069,4 @@ static int prompt_readline_core(cplat_prompt *p, char *buf, const size_t buf_siz
             break;
         }
     }
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_prompt_readline_at(cplat_prompt *p, char *buf, const size_t buf_size, const char *prompt_str,
-                             const char *file, int line)
-{
-    if (p == NULL || buf == NULL || buf_size == 0)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    return prompt_readline_core(p, buf, buf_size, prompt_str, NULL, 0U, file, line);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_prompt_readline_with_initial_at(cplat_prompt *p, char *buf, const size_t buf_size, const char *prompt_str,
-                                          const char *initial_text, const char *file, int line)
-{
-    size_t initial_length;
-    int ret;
-
-    if (p == NULL || buf == NULL || buf_size == 0)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    buf[0] = '\0';
-
-    /* TTY かどうかによらず同じ規則で検証し、契約を経路に依存させない。 */
-    ret = cplat_internal_prompt_edit_validate_initial_text(initial_text, p->input_max_bytes, &initial_length);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
-
-    return prompt_readline_core(p, buf, buf_size, prompt_str, initial_text, initial_length, file, line);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_prompt_readline_fmt_at(cplat_prompt *p, char *buf, size_t buf_size, const char *file, int line,
-                                 const char *fmt, ...)
-{
-    va_list ap;
-    int needed;
-    const char *fmt_str;
-
-    if (p == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    /* 初回呼び出し時に書式付きプロンプト用のバッファーを確保する。 */
-    if (p->prompt_fmt_buf == NULL)
-    {
-        p->prompt_fmt_cap = PROMPT_FMT_INITIAL_CAPACITY;
-        p->prompt_fmt_buf = (char *)cplat_malloc(p->prompt_fmt_cap);
-        if (p->prompt_fmt_buf == NULL)
-        {
-            return cplat_prompt_readline_at(p, buf, buf_size, "", file, line);
-        }
-    }
-
-    if (fmt != NULL)
-    {
-        fmt_str = fmt;
-    }
-    else
-    {
-        fmt_str = "";
-    }
-
-    for (;;)
-    {
-        va_start(ap, fmt);
-        needed = vsnprintf(p->prompt_fmt_buf, p->prompt_fmt_cap, fmt_str, ap); /* 置換対象外: 必要長の照会 */
-        va_end(ap);
-
-        if (needed < 0)
-        {
-            p->prompt_fmt_buf[0] = '\0'; /* 書式化の失敗: 空のプロンプトで続行 */
-            break;
-        }
-
-        if ((size_t)needed < p->prompt_fmt_cap)
-        {
-            break; /* 成功 */
-        }
-
-        /* バッファー不足時は必要サイズへ拡張して再試行する。 */
-        {
-            size_t new_cap = (size_t)needed + 1U;
-            char *new_buf = (char *)cplat_realloc(p->prompt_fmt_buf, new_cap, 1U);
-            if (new_buf == NULL)
-            {
-                /* 書式化後の全体を保持できない。切り詰めた文字列は UTF-8 の文字の途中で切れ得るため、空にして続行する。 */
-                p->prompt_fmt_buf[0] = '\0';
-                break;
-            }
-
-            p->prompt_fmt_buf = new_buf;
-            p->prompt_fmt_cap = new_cap;
-        }
-    }
-
-    return cplat_prompt_readline_at(p, buf, buf_size, p->prompt_fmt_buf, file, line);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_prompt_completion_set(cplat_prompt *prompt, cplat_prompt_completion_fn fn, void *user_data)
-{
-    if (prompt == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    prompt->completion_fn = fn;
-    prompt->completion_user_data = user_data;
-    prompt->completions.count = 0U;
-
-    return CPLAT_OK;
 }

@@ -79,6 +79,35 @@ typedef struct decompile_context
     text_writer writer;
 } decompile_context;
 
+/** 定数の区分です。判定演算子との組み合わせの確認に使用します。 */
+typedef enum constant_class
+{
+    CONSTANT_CLASS_INVALID = 0,
+    CONSTANT_CLASS_NUMERIC = 1,
+    CONSTANT_CLASS_STRING = 2,
+    CONSTANT_CLASS_NULL = 3,
+    CONSTANT_CLASS_PATTERN = 4
+} constant_class;
+
+static constant_class class_of_constant(const uint8_t kind);
+static bool is_argument_field(const uint8_t field);
+static bool is_pattern_operator(const uint8_t operator_kind);
+static bool is_string_operator(const uint8_t operator_kind);
+static bool is_constant_allowed(const uint8_t field, const uint8_t operator_kind, const uint8_t constant_kind);
+static bool is_operand_count_valid(const uint8_t operator_kind, const uint16_t operand_count);
+static int check_predicate(const string_catalog_filter_instruction *instruction,
+                           const string_catalog_filter_record_header *header, const unsigned char *constants,
+                           const uint8_t *constant_starts);
+static void writer_append(text_writer *writer, const char *text, const size_t length);
+static void writer_append_text(text_writer *writer, const char *text);
+static void writer_append_escaped_byte(text_writer *writer, const unsigned char byte, const char quote);
+static void write_constant(text_writer *writer, const string_catalog_filter_constant *constant);
+static const char *operator_text(const uint8_t operator_kind);
+static void write_predicate(decompile_context *context, const string_catalog_filter_instruction *instruction);
+static int precedence_of(const uint8_t opcode);
+static void write_node(decompile_context *context, const uint16_t node, const int parent_precedence,
+                       const bool is_right_operand);
+
 /* ===== レイアウトの読み書き ===== */
 
 uint32_t string_catalog_filter_instruction_capacity(const uint32_t line_width)
@@ -391,221 +420,11 @@ int string_catalog_filter_check_header(const void *image, const size_t image_siz
     return CPLAT_OK;
 }
 
-/** 定数の区分です。判定演算子との組み合わせの確認に使用します。 */
-typedef enum constant_class
-{
-    CONSTANT_CLASS_INVALID = 0,
-    CONSTANT_CLASS_NUMERIC = 1,
-    CONSTANT_CLASS_STRING = 2,
-    CONSTANT_CLASS_NULL = 3,
-    CONSTANT_CLASS_PATTERN = 4
-} constant_class;
-
-static constant_class class_of_constant(const uint8_t kind)
-{
-    switch (kind)
-    {
-    case STRING_CATALOG_FILTER_CONSTANT_KIND_INTEGER:
-    case STRING_CATALOG_FILTER_CONSTANT_KIND_FLOAT:
-    case STRING_CATALOG_FILTER_CONSTANT_KIND_CHARACTER:
-    case STRING_CATALOG_FILTER_CONSTANT_KIND_IDENTIFIER:
-        return CONSTANT_CLASS_NUMERIC;
-    case STRING_CATALOG_FILTER_CONSTANT_KIND_STRING:
-        return CONSTANT_CLASS_STRING;
-    case STRING_CATALOG_FILTER_CONSTANT_KIND_NULL:
-        return CONSTANT_CLASS_NULL;
-    case STRING_CATALOG_FILTER_CONSTANT_KIND_PATTERN:
-        return CONSTANT_CLASS_PATTERN;
-    default:
-        return CONSTANT_CLASS_INVALID;
-    }
-}
-
-static bool is_argument_field(const uint8_t field)
-{
-    return (field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME) ||
-           (field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_INDEX);
-}
-
-static bool is_pattern_operator(const uint8_t operator_kind)
-{
-    return (operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_MATCHES) ||
-           (operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_MATCHES_I);
-}
-
-static bool is_string_operator(const uint8_t operator_kind)
-{
-    return (operator_kind >= (uint8_t)STRING_CATALOG_FILTER_OPERATOR_STARTS_WITH) &&
-           (operator_kind <= (uint8_t)STRING_CATALOG_FILTER_OPERATOR_CONTAINS_I);
-}
-
-/**
- *  @brief          フィールド、判定演算子、定数の区分の組み合わせが成立し得るかを判定します。
- *
- *  コンパイルと検証の双方が使用します。コンパイルで拒否した組み合わせを、検証でも拒否するためです。
- */
-static bool is_constant_allowed(const uint8_t field, const uint8_t operator_kind, const uint8_t constant_kind)
-{
-    const constant_class kind_class = class_of_constant(constant_kind);
-    const bool is_equality = (operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_EQUAL) ||
-                             (operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_NOT_EQUAL);
-
-    switch (kind_class)
-    {
-    case CONSTANT_CLASS_NULL:
-        return is_equality && ((field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ID) || is_argument_field(field));
-
-    case CONSTANT_CLASS_STRING:
-        if ((field != (uint8_t)STRING_CATALOG_FILTER_FIELD_ID) && !is_argument_field(field))
-        {
-            return false;
-        }
-        return is_equality || (operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_IN) ||
-               is_string_operator(operator_kind);
-
-    case CONSTANT_CLASS_PATTERN:
-        /* 正規表現のパターンは matches と matches_i だけが受け取り、それらはパターンだけを受け取る。 */
-        return is_pattern_operator(operator_kind) &&
-               ((field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ID) || is_argument_field(field));
-
-    case CONSTANT_CLASS_NUMERIC:
-        if (field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ID)
-        {
-            return false;
-        }
-        return (operator_kind >= (uint8_t)STRING_CATALOG_FILTER_OPERATOR_EQUAL) &&
-               (operator_kind <= (uint8_t)STRING_CATALOG_FILTER_OPERATOR_BETWEEN);
-
-    case CONSTANT_CLASS_INVALID:
-    default:
-        return false;
-    }
-}
-
 /* コンパイラから同じ規則を使用するための入口である。 */
 int string_catalog_filter_is_constant_allowed(const uint8_t field, const uint8_t operator_kind,
                                               const uint8_t constant_kind)
 {
     return is_constant_allowed(field, operator_kind, constant_kind);
-}
-
-/** 判定演算子が要求する定数の数を確認します。 */
-static bool is_operand_count_valid(const uint8_t operator_kind, const uint16_t operand_count)
-{
-    switch (operator_kind)
-    {
-    case STRING_CATALOG_FILTER_OPERATOR_HAS:
-        return operand_count == 0U;
-    case STRING_CATALOG_FILTER_OPERATOR_BETWEEN:
-        return operand_count == STRING_CATALOG_FILTER_BETWEEN_OPERAND_COUNT;
-    case STRING_CATALOG_FILTER_OPERATOR_IN:
-        return operand_count >= 1U;
-    default:
-        return operand_count == 1U;
-    }
-}
-
-/** 判定要素 1 件の参照先と型の組み合わせを確認します。 */
-static int check_predicate(const string_catalog_filter_instruction *instruction,
-                           const string_catalog_filter_record_header *header, const unsigned char *constants,
-                           const uint8_t *constant_starts)
-{
-    string_catalog_filter_constant constant;
-    uint32_t offset = instruction->operand;
-    uint8_t first_class = (uint8_t)CONSTANT_CLASS_INVALID;
-
-    if ((instruction->field < (uint8_t)STRING_CATALOG_FILTER_FIELD_KEY) ||
-        (instruction->field > (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_INDEX) ||
-        (instruction->operator_kind < (uint8_t)STRING_CATALOG_FILTER_OPERATOR_EQUAL) ||
-        (instruction->operator_kind > (uint8_t)STRING_CATALOG_FILTER_OPERATOR_MATCHES_I) ||
-        !is_operand_count_valid(instruction->operator_kind, instruction->operand_count))
-    {
-        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
-    }
-
-    if ((instruction->operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_HAS) &&
-        !is_argument_field(instruction->field))
-    {
-        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
-    }
-
-    switch (instruction->field)
-    {
-    case STRING_CATALOG_FILTER_FIELD_ARGUMENT_INDEX:
-        if (instruction->argument >= CPLAT_STRING_CATALOG_ARGUMENT_MAX)
-        {
-            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
-        }
-        break;
-
-    case STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME:
-        /* 引数名の定数が先頭にあり、比較対象の定数はその直後から並ぶ。 */
-        if ((instruction->argument >= header->argument_reference_count) || (offset >= header->constant_size) ||
-            (constant_starts[offset / STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT] == 0U) ||
-            (string_catalog_filter_read_constant(constants, header->constant_size, offset, &constant) != CPLAT_OK) ||
-            (constant.header.kind != (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_ARGUMENT_NAME) ||
-            (constant.header.slot != instruction->argument))
-        {
-            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
-        }
-        offset = constant.next_offset;
-        break;
-
-    default:
-        if (instruction->argument != 0U)
-        {
-            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
-        }
-        break;
-    }
-
-    /* 比較対象を持たない判定要素は、operand を使用しない。正規の形として 0 を求める。 */
-    if ((instruction->operand_count == 0U) &&
-        (instruction->field != (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME) && (instruction->operand != 0U))
-    {
-        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
-    }
-
-    for (uint16_t index = 0; index < instruction->operand_count; index++)
-    {
-        if ((offset >= header->constant_size) ||
-            (constant_starts[offset / STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT] == 0U) ||
-            (string_catalog_filter_read_constant(constants, header->constant_size, offset, &constant) != CPLAT_OK))
-        {
-            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
-        }
-
-        if (!is_constant_allowed(instruction->field, instruction->operator_kind, constant.header.kind))
-        {
-            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
-        }
-
-        /* in の要素は区分をそろえる。 */
-        if (index == 0U)
-        {
-            first_class = (uint8_t)class_of_constant(constant.header.kind);
-        }
-        else if ((uint8_t)class_of_constant(constant.header.kind) != first_class)
-        {
-            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
-        }
-
-        if ((constant.header.kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_IDENTIFIER) &&
-            (constant.header.slot >= header->identifier_count))
-        {
-            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
-        }
-
-        if ((constant.header.kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_PATTERN) &&
-            (constant.header.slot >= header->pattern_count))
-        {
-            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
-        }
-
-        offset = constant.next_offset;
-    }
-
-    return CPLAT_OK;
 }
 
 int string_catalog_filter_check_record(const unsigned char *record, const uint32_t line_width)
@@ -868,6 +687,316 @@ int cplat_string_catalog_filter_remove_line(void *image, const size_t image_size
 
     header.line_count--;
     string_catalog_filter_update_content_hash(image, &header);
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+uint16_t string_catalog_filter_build_tree(const unsigned char *record, uint16_t *left, uint16_t *right)
+{
+    string_catalog_filter_record_header record_header;
+    string_catalog_filter_instruction instruction;
+    uint16_t stack[CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX];
+    size_t depth = 0U;
+
+    string_catalog_filter_read_record_header(record, &record_header);
+
+    /* ジャンプは短絡評価のためだけの命令であり、木には現れない。 */
+    for (uint16_t index = 0; index < record_header.instruction_count; index++)
+    {
+        string_catalog_filter_read_instruction(record, index, &instruction);
+
+        switch (instruction.opcode)
+        {
+        case STRING_CATALOG_FILTER_OPCODE_PREDICATE:
+            stack[depth++] = index;
+            break;
+        case STRING_CATALOG_FILTER_OPCODE_NOT:
+            left[index] = stack[depth - 1U];
+            stack[depth - 1U] = index;
+            break;
+        case STRING_CATALOG_FILTER_OPCODE_AND:
+        case STRING_CATALOG_FILTER_OPCODE_OR:
+            right[index] = stack[depth - 1U];
+            left[index] = stack[depth - STRING_CATALOG_FILTER_BINARY_OPERAND_COUNT];
+            depth--;
+            stack[depth - 1U] = index;
+            break;
+        default:
+            break;
+        }
+    }
+
+    /* 検証済みのため、深さは 1 に戻っている。 */
+    return stack[0];
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int string_catalog_filter_format_constant(const string_catalog_filter_constant *constant, char *dest,
+                                          const size_t dest_size)
+{
+    text_writer writer = {0};
+    writer.dest = dest;
+    writer.size = dest_size;
+    dest[0] = '\0';
+    write_constant(&writer, constant);
+
+    if (writer.is_truncated)
+    {
+        return CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_string_catalog_filter_decompile_line(const void *image, const size_t image_size, const size_t line_index,
+                                               char *dest, const size_t dest_size)
+{
+    string_catalog_filter_image_header header;
+    string_catalog_filter_record_header record_header;
+    decompile_context context = {0};
+    int ret;
+
+    if ((image == NULL) || (dest == NULL) || (dest_size == 0U))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    dest[0] = '\0';
+
+    ret = string_catalog_filter_check_header(image, image_size, &header);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    if (line_index >= header.line_count)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    context.record = string_catalog_filter_record_address_const(image, header.record_size, (uint32_t)line_index);
+    if (string_catalog_filter_check_record(context.record, header.line_width) != CPLAT_OK)
+    {
+        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+    }
+
+    string_catalog_filter_read_record_header(context.record, &record_header);
+    context.constants = string_catalog_filter_record_constants(context.record, header.line_width);
+    context.constant_size = record_header.constant_size;
+    context.writer.dest = dest;
+    context.writer.size = dest_size;
+
+    write_node(&context, string_catalog_filter_build_tree(context.record, context.left, context.right), 0, false);
+
+    if (context.writer.is_truncated)
+    {
+        return CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+
+    return CPLAT_OK;
+}
+
+static constant_class class_of_constant(const uint8_t kind)
+{
+    switch (kind)
+    {
+    case STRING_CATALOG_FILTER_CONSTANT_KIND_INTEGER:
+    case STRING_CATALOG_FILTER_CONSTANT_KIND_FLOAT:
+    case STRING_CATALOG_FILTER_CONSTANT_KIND_CHARACTER:
+    case STRING_CATALOG_FILTER_CONSTANT_KIND_IDENTIFIER:
+        return CONSTANT_CLASS_NUMERIC;
+    case STRING_CATALOG_FILTER_CONSTANT_KIND_STRING:
+        return CONSTANT_CLASS_STRING;
+    case STRING_CATALOG_FILTER_CONSTANT_KIND_NULL:
+        return CONSTANT_CLASS_NULL;
+    case STRING_CATALOG_FILTER_CONSTANT_KIND_PATTERN:
+        return CONSTANT_CLASS_PATTERN;
+    default:
+        return CONSTANT_CLASS_INVALID;
+    }
+}
+
+static bool is_argument_field(const uint8_t field)
+{
+    return (field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME) ||
+           (field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_INDEX);
+}
+
+static bool is_pattern_operator(const uint8_t operator_kind)
+{
+    return (operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_MATCHES) ||
+           (operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_MATCHES_I);
+}
+
+static bool is_string_operator(const uint8_t operator_kind)
+{
+    return (operator_kind >= (uint8_t)STRING_CATALOG_FILTER_OPERATOR_STARTS_WITH) &&
+           (operator_kind <= (uint8_t)STRING_CATALOG_FILTER_OPERATOR_CONTAINS_I);
+}
+
+/**
+ *  @brief          フィールド、判定演算子、定数の区分の組み合わせが成立し得るかを判定します。
+ *
+ *  コンパイルと検証の双方が使用します。コンパイルで拒否した組み合わせを、検証でも拒否するためです。
+ */
+static bool is_constant_allowed(const uint8_t field, const uint8_t operator_kind, const uint8_t constant_kind)
+{
+    const constant_class kind_class = class_of_constant(constant_kind);
+    const bool is_equality = (operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_EQUAL) ||
+                             (operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_NOT_EQUAL);
+
+    switch (kind_class)
+    {
+    case CONSTANT_CLASS_NULL:
+        return is_equality && ((field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ID) || is_argument_field(field));
+
+    case CONSTANT_CLASS_STRING:
+        if ((field != (uint8_t)STRING_CATALOG_FILTER_FIELD_ID) && !is_argument_field(field))
+        {
+            return false;
+        }
+        return is_equality || (operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_IN) ||
+               is_string_operator(operator_kind);
+
+    case CONSTANT_CLASS_PATTERN:
+        /* 正規表現のパターンは matches と matches_i だけが受け取り、それらはパターンだけを受け取る。 */
+        return is_pattern_operator(operator_kind) &&
+               ((field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ID) || is_argument_field(field));
+
+    case CONSTANT_CLASS_NUMERIC:
+        if (field == (uint8_t)STRING_CATALOG_FILTER_FIELD_ID)
+        {
+            return false;
+        }
+        return (operator_kind >= (uint8_t)STRING_CATALOG_FILTER_OPERATOR_EQUAL) &&
+               (operator_kind <= (uint8_t)STRING_CATALOG_FILTER_OPERATOR_BETWEEN);
+
+    case CONSTANT_CLASS_INVALID:
+    default:
+        return false;
+    }
+}
+
+/** 判定演算子が要求する定数の数を確認します。 */
+static bool is_operand_count_valid(const uint8_t operator_kind, const uint16_t operand_count)
+{
+    switch (operator_kind)
+    {
+    case STRING_CATALOG_FILTER_OPERATOR_HAS:
+        return operand_count == 0U;
+    case STRING_CATALOG_FILTER_OPERATOR_BETWEEN:
+        return operand_count == STRING_CATALOG_FILTER_BETWEEN_OPERAND_COUNT;
+    case STRING_CATALOG_FILTER_OPERATOR_IN:
+        return operand_count >= 1U;
+    default:
+        return operand_count == 1U;
+    }
+}
+
+/** 判定要素 1 件の参照先と型の組み合わせを確認します。 */
+static int check_predicate(const string_catalog_filter_instruction *instruction,
+                           const string_catalog_filter_record_header *header, const unsigned char *constants,
+                           const uint8_t *constant_starts)
+{
+    string_catalog_filter_constant constant;
+    uint32_t offset = instruction->operand;
+    uint8_t first_class = (uint8_t)CONSTANT_CLASS_INVALID;
+
+    if ((instruction->field < (uint8_t)STRING_CATALOG_FILTER_FIELD_KEY) ||
+        (instruction->field > (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_INDEX) ||
+        (instruction->operator_kind < (uint8_t)STRING_CATALOG_FILTER_OPERATOR_EQUAL) ||
+        (instruction->operator_kind > (uint8_t)STRING_CATALOG_FILTER_OPERATOR_MATCHES_I) ||
+        !is_operand_count_valid(instruction->operator_kind, instruction->operand_count))
+    {
+        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+    }
+
+    if ((instruction->operator_kind == (uint8_t)STRING_CATALOG_FILTER_OPERATOR_HAS) &&
+        !is_argument_field(instruction->field))
+    {
+        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+    }
+
+    switch (instruction->field)
+    {
+    case STRING_CATALOG_FILTER_FIELD_ARGUMENT_INDEX:
+        if (instruction->argument >= CPLAT_STRING_CATALOG_ARGUMENT_MAX)
+        {
+            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        }
+        break;
+
+    case STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME:
+        /* 引数名の定数が先頭にあり、比較対象の定数はその直後から並ぶ。 */
+        if ((instruction->argument >= header->argument_reference_count) || (offset >= header->constant_size) ||
+            (constant_starts[offset / STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT] == 0U) ||
+            (string_catalog_filter_read_constant(constants, header->constant_size, offset, &constant) != CPLAT_OK) ||
+            (constant.header.kind != (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_ARGUMENT_NAME) ||
+            (constant.header.slot != instruction->argument))
+        {
+            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        }
+        offset = constant.next_offset;
+        break;
+
+    default:
+        if (instruction->argument != 0U)
+        {
+            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        }
+        break;
+    }
+
+    /* 比較対象を持たない判定要素は、operand を使用しない。正規の形として 0 を求める。 */
+    if ((instruction->operand_count == 0U) &&
+        (instruction->field != (uint8_t)STRING_CATALOG_FILTER_FIELD_ARGUMENT_NAME) && (instruction->operand != 0U))
+    {
+        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+    }
+
+    for (uint16_t index = 0; index < instruction->operand_count; index++)
+    {
+        if ((offset >= header->constant_size) ||
+            (constant_starts[offset / STRING_CATALOG_FILTER_CONSTANT_ALIGNMENT] == 0U) ||
+            (string_catalog_filter_read_constant(constants, header->constant_size, offset, &constant) != CPLAT_OK))
+        {
+            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        }
+
+        if (!is_constant_allowed(instruction->field, instruction->operator_kind, constant.header.kind))
+        {
+            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        }
+
+        /* in の要素は区分をそろえる。 */
+        if (index == 0U)
+        {
+            first_class = (uint8_t)class_of_constant(constant.header.kind);
+        }
+        else if ((uint8_t)class_of_constant(constant.header.kind) != first_class)
+        {
+            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        }
+
+        if ((constant.header.kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_IDENTIFIER) &&
+            (constant.header.slot >= header->identifier_count))
+        {
+            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        }
+
+        if ((constant.header.kind == (uint8_t)STRING_CATALOG_FILTER_CONSTANT_KIND_PATTERN) &&
+            (constant.header.slot >= header->pattern_count))
+        {
+            return CPLAT_ERR_CORRUPT_DESCRIPTOR;
+        }
+
+        offset = constant.next_offset;
+    }
 
     return CPLAT_OK;
 }
@@ -1236,114 +1365,4 @@ static void write_node(decompile_context *context, const uint16_t node, const in
     {
         writer_append_text(&context->writer, ")");
     }
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-uint16_t string_catalog_filter_build_tree(const unsigned char *record, uint16_t *left, uint16_t *right)
-{
-    string_catalog_filter_record_header record_header;
-    string_catalog_filter_instruction instruction;
-    uint16_t stack[CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX];
-    size_t depth = 0U;
-
-    string_catalog_filter_read_record_header(record, &record_header);
-
-    /* ジャンプは短絡評価のためだけの命令であり、木には現れない。 */
-    for (uint16_t index = 0; index < record_header.instruction_count; index++)
-    {
-        string_catalog_filter_read_instruction(record, index, &instruction);
-
-        switch (instruction.opcode)
-        {
-        case STRING_CATALOG_FILTER_OPCODE_PREDICATE:
-            stack[depth++] = index;
-            break;
-        case STRING_CATALOG_FILTER_OPCODE_NOT:
-            left[index] = stack[depth - 1U];
-            stack[depth - 1U] = index;
-            break;
-        case STRING_CATALOG_FILTER_OPCODE_AND:
-        case STRING_CATALOG_FILTER_OPCODE_OR:
-            right[index] = stack[depth - 1U];
-            left[index] = stack[depth - STRING_CATALOG_FILTER_BINARY_OPERAND_COUNT];
-            depth--;
-            stack[depth - 1U] = index;
-            break;
-        default:
-            break;
-        }
-    }
-
-    /* 検証済みのため、深さは 1 に戻っている。 */
-    return stack[0];
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int string_catalog_filter_format_constant(const string_catalog_filter_constant *constant, char *dest,
-                                          const size_t dest_size)
-{
-    text_writer writer = {0};
-    writer.dest = dest;
-    writer.size = dest_size;
-    dest[0] = '\0';
-    write_constant(&writer, constant);
-
-    if (writer.is_truncated)
-    {
-        return CPLAT_ERR_BUFFER_TOO_SMALL;
-    }
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_string_catalog_filter_decompile_line(const void *image, const size_t image_size, const size_t line_index,
-                                               char *dest, const size_t dest_size)
-{
-    string_catalog_filter_image_header header;
-    string_catalog_filter_record_header record_header;
-    decompile_context context = {0};
-    int ret;
-
-    if ((image == NULL) || (dest == NULL) || (dest_size == 0U))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    dest[0] = '\0';
-
-    ret = string_catalog_filter_check_header(image, image_size, &header);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
-
-    if (line_index >= header.line_count)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    context.record = string_catalog_filter_record_address_const(image, header.record_size, (uint32_t)line_index);
-    if (string_catalog_filter_check_record(context.record, header.line_width) != CPLAT_OK)
-    {
-        return CPLAT_ERR_CORRUPT_DESCRIPTOR;
-    }
-
-    string_catalog_filter_read_record_header(context.record, &record_header);
-    context.constants = string_catalog_filter_record_constants(context.record, header.line_width);
-    context.constant_size = record_header.constant_size;
-    context.writer.dest = dest;
-    context.writer.size = dest_size;
-
-    write_node(&context, string_catalog_filter_build_tree(context.record, context.left, context.right), 0, false);
-
-    if (context.writer.is_truncated)
-    {
-        return CPLAT_ERR_BUFFER_TOO_SMALL;
-    }
-
-    return CPLAT_OK;
 }

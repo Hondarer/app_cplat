@@ -26,86 +26,8 @@ struct cplat_mmap
     cplat_file file;
 };
 
-/*
- * 対応付けの対象ファイルを開き、対応付ける長さを size_out へ格納する。
- * 読み取り専用では既存ファイルを開き、その長さを格納する。
- * 読み書きでは、ファイルがなければ create_size の長さで作成し、あれば現在の長さを格納する。
- * 成功時は CPLAT_OK を返す。失敗時は共通結果コードを返す。
- * 新規作成のあと長さを確定できない場合は、作成したファイルを削除してから、その失敗を返す。
- * 長さ 0 は対応付けの対象外である。正本は app/cplat/docs/functional-spec/mmap.md の「適用範囲外」節である。
- */
 static int open_backing_file(const char *path, cplat_mmap_access access, size_t create_size, cplat_file *file,
-                             size_t *size_out, cplat_error *detail_out)
-{
-    int ret;
-
-    /*
-     * cplat_file_open() は開く前に既存のハンドルを閉じる。
-     * ハンドル 0 は未オープンではないため、先に無効値へ初期化する。
-     */
-    cplat_file_init(file);
-
-    if (access == CPLAT_MMAP_ACCESS_READ_ONLY)
-    {
-        ret = cplat_file_open(file, path, CPLAT_FILE_OPEN_READ, detail_out);
-        if (ret != CPLAT_OK)
-        {
-            return ret;
-        }
-
-        ret = cplat_file_get_size(file, size_out, detail_out);
-        if (ret != CPLAT_OK)
-        {
-            (void)cplat_file_close(file, NULL); /* サイズ取得の失敗を返す後始末のため、戻り値は明示的に破棄する */
-            return ret;
-        }
-
-        return cplat_internal_error_report_success(detail_out);
-    }
-
-    /* 新規作成のみ許可するオープンをまず試みる。成功すれば新規作成と判定できる。 */
-    ret = cplat_file_open(
-        file, path, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE | CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_CREATE_NEW,
-        detail_out);
-    if (ret == CPLAT_OK)
-    {
-        if (create_size == 0)
-        {
-            /* 長さ 0 の失敗を返す経路の後始末のため、閉じる処理と削除の戻り値は明示的に破棄する。 */
-            (void)cplat_file_close(file, NULL);
-            (void)cplat_remove(path, NULL);
-            return cplat_internal_error_report_errno(detail_out, EINVAL);
-        }
-
-        ret = cplat_file_set_size(file, create_size, detail_out);
-        if (ret != CPLAT_OK)
-        {
-            /* サイズ設定の失敗を返す経路の後始末のため、閉じる処理と削除の戻り値は明示的に破棄する。 */
-            (void)cplat_file_close(file, NULL);
-            (void)cplat_remove(path, NULL);
-            return ret;
-        }
-
-        *size_out = create_size;
-        return cplat_internal_error_report_success(detail_out);
-    }
-
-    /* 新規作成に失敗した場合は既存ファイルとみなし、CREATE_NEW を外して再オープンする。 */
-    ret = cplat_file_open(file, path, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, detail_out);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
-
-    ret = cplat_file_get_size(file, size_out, detail_out);
-    if (ret != CPLAT_OK)
-    {
-        (void)cplat_file_close(file, NULL); /* サイズ取得の失敗を返す後始末のため、戻り値は明示的に破棄する */
-        return ret;
-    }
-
-    return cplat_internal_error_report_success(detail_out);
-}
+                             size_t *size_out, cplat_error *detail_out);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -273,6 +195,87 @@ int cplat_mmap_detach(cplat_mmap *map, cplat_error *detail_out)
     if (close_result != CPLAT_OK)
     {
         return close_result;
+    }
+
+    return cplat_internal_error_report_success(detail_out);
+}
+
+/*
+ * 対応付けの対象ファイルを開き、対応付ける長さを size_out へ格納する。
+ * 読み取り専用では既存ファイルを開き、その長さを格納する。
+ * 読み書きでは、ファイルがなければ create_size の長さで作成し、あれば現在の長さを格納する。
+ * 成功時は CPLAT_OK を返す。失敗時は共通結果コードを返す。
+ * 新規作成のあと長さを確定できない場合は、作成したファイルを削除してから、その失敗を返す。
+ * 長さ 0 は対応付けの対象外である。正本は app/cplat/docs/functional-spec/mmap.md の「適用範囲外」節である。
+ */
+static int open_backing_file(const char *path, cplat_mmap_access access, size_t create_size, cplat_file *file,
+                             size_t *size_out, cplat_error *detail_out)
+{
+    int ret;
+
+    /*
+     * cplat_file_open() は開く前に既存のハンドルを閉じる。
+     * ハンドル 0 は未オープンではないため、先に無効値へ初期化する。
+     */
+    cplat_file_init(file);
+
+    if (access == CPLAT_MMAP_ACCESS_READ_ONLY)
+    {
+        ret = cplat_file_open(file, path, CPLAT_FILE_OPEN_READ, detail_out);
+        if (ret != CPLAT_OK)
+        {
+            return ret;
+        }
+
+        ret = cplat_file_get_size(file, size_out, detail_out);
+        if (ret != CPLAT_OK)
+        {
+            (void)cplat_file_close(file, NULL); /* サイズ取得の失敗を返す後始末のため、戻り値は明示的に破棄する */
+            return ret;
+        }
+
+        return cplat_internal_error_report_success(detail_out);
+    }
+
+    /* 新規作成のみ許可するオープンをまず試みる。成功すれば新規作成と判定できる。 */
+    ret = cplat_file_open(
+        file, path, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE | CPLAT_FILE_OPEN_CREATE | CPLAT_FILE_OPEN_CREATE_NEW,
+        detail_out);
+    if (ret == CPLAT_OK)
+    {
+        if (create_size == 0)
+        {
+            /* 長さ 0 の失敗を返す経路の後始末のため、閉じる処理と削除の戻り値は明示的に破棄する。 */
+            (void)cplat_file_close(file, NULL);
+            (void)cplat_remove(path, NULL);
+            return cplat_internal_error_report_errno(detail_out, EINVAL);
+        }
+
+        ret = cplat_file_set_size(file, create_size, detail_out);
+        if (ret != CPLAT_OK)
+        {
+            /* サイズ設定の失敗を返す経路の後始末のため、閉じる処理と削除の戻り値は明示的に破棄する。 */
+            (void)cplat_file_close(file, NULL);
+            (void)cplat_remove(path, NULL);
+            return ret;
+        }
+
+        *size_out = create_size;
+        return cplat_internal_error_report_success(detail_out);
+    }
+
+    /* 新規作成に失敗した場合は既存ファイルとみなし、CREATE_NEW を外して再オープンする。 */
+    ret = cplat_file_open(file, path, CPLAT_FILE_OPEN_READ | CPLAT_FILE_OPEN_WRITE, detail_out);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    ret = cplat_file_get_size(file, size_out, detail_out);
+    if (ret != CPLAT_OK)
+    {
+        (void)cplat_file_close(file, NULL); /* サイズ取得の失敗を返す後始末のため、戻り値は明示的に破棄する */
+        return ret;
     }
 
     return cplat_internal_error_report_success(detail_out);

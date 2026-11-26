@@ -142,6 +142,588 @@ typedef struct evaluation_context
     const argument_value *values;     /**< 引数の値。事前計算では NULL。 */
 } evaluation_context;
 
+static argument_class class_of_argument(const cplat_string_catalog_argument_kind kind);
+static bool normalize_arguments(const cplat_string_catalog_entry *entry,
+                                const cplat_internal_string_catalog_argument_value *shared, argument_value *values);
+static number number_from_signed(const int64_t value);
+static number number_from_unsigned(const uint64_t value);
+static number number_from_real(const double value);
+static double real_of_number(const number *value);
+static int compare_numbers(const number *left, const number *right);
+static bool is_order_accepted(const uint8_t operator_kind, const int order);
+static number number_from_constant(const evaluation_context *context, const string_catalog_filter_constant *constant);
+static unsigned char to_lower_ascii(const unsigned char character);
+static bool equals_bytes(const char *left, const char *right, const size_t length, const bool ignores_case);
+static bool match_string(const uint8_t operator_kind, const char *subject, const char *pattern,
+                         const size_t pattern_length);
+static bool match_pattern(const cplat_regex *regex, const char *subject);
+static truth_value evaluate_string(const evaluation_context *context,
+                                   const string_catalog_filter_instruction *instruction, uint32_t offset,
+                                   const char *subject);
+static truth_value evaluate_number(const evaluation_context *context,
+                                   const string_catalog_filter_instruction *instruction, uint32_t offset,
+                                   const number *subject);
+static bool is_argument_comparable(const argument_class kind_class, const uint8_t constant_kind);
+static truth_value evaluate_predicate(const evaluation_context *context,
+                                      const string_catalog_filter_instruction *instruction);
+static truth_value truth_not(const truth_value value);
+static truth_value truth_and(const truth_value left, const truth_value right);
+static truth_value truth_or(const truth_value left, const truth_value right);
+static truth_value evaluate_line(const evaluation_context *context, const bool honors_jumps);
+static uint8_t *line_states_of(const cplat_string_catalog_filter_slot *slot, filter_plane *plane,
+                               const uint32_t line_index);
+static int8_t *argument_maps_of(const cplat_string_catalog_filter_slot *slot, filter_plane *plane,
+                                const uint32_t line_index);
+static int64_t *identifier_values_of(filter_plane *plane, const uint32_t line_index);
+static uint64_t *dependent_lines_of(const cplat_string_catalog_filter_slot *slot, const filter_plane *plane,
+                                    const size_t entry_index);
+static bool is_line_enabled(const filter_plane *plane, const uint32_t line_index);
+static cplat_regex **patterns_of(filter_plane *plane, const uint32_t line_index);
+static void dispose_patterns(const cplat_string_catalog_filter_slot *slot, filter_plane *plane);
+static void free_plane(const cplat_string_catalog_filter_slot *slot, filter_plane *plane);
+static bool allocate_plane(const cplat_string_catalog_filter_slot *slot, filter_plane *plane);
+static bool is_key_name_table_valid(const cplat_string_catalog *catalog,
+                                    const cplat_string_catalog_filter_key_name *key_names, size_t key_name_count);
+static bool is_category_names_valid(const cplat_string_catalog_filter_category_names *category_names);
+static const cplat_string_catalog_filter_key_name *find_key_name(const cplat_string_catalog_filter_slot *slot,
+                                                                 const char *name);
+static cplat_string_catalog_filter_line_error
+resolve_category_constant(const cplat_string_catalog_filter_category_names *names,
+                          const string_catalog_filter_constant *constant, int64_t *identifiers,
+                          bool *is_category_identifier);
+static cplat_string_catalog_filter_line_error
+resolve_category_predicates(const cplat_string_catalog_filter_slot *slot, const unsigned char *record,
+                            const unsigned char *constants, const string_catalog_filter_record_header *header,
+                            int64_t *identifiers, bool *is_category_identifier);
+static cplat_string_catalog_filter_line_error compile_line_patterns(const cplat_string_catalog_filter_slot *slot,
+                                                                    filter_plane *plane, const uint32_t line_index);
+static cplat_string_catalog_filter_line_error resolve_line(const cplat_string_catalog_filter_slot *slot,
+                                                           filter_plane *plane, const uint32_t line_index);
+static bool find_reusable_line(const cplat_string_catalog_filter_slot *slot, const filter_plane *current,
+                               const unsigned char *record, uint32_t *line_index_out);
+static void build_plane(const cplat_string_catalog_filter_slot *slot, filter_plane *target, filter_plane *current,
+                        cplat_string_catalog_filter_diagnostic *diagnostics, const size_t diagnostic_capacity,
+                        size_t *invalid_count);
+static bool find_entry_index(const cplat_string_catalog_filter_slot *slot, const int string_key,
+                             size_t *entry_index_out);
+static int validate_copied_image(const cplat_string_catalog_filter_slot *slot, const filter_plane *target);
+static int apply_image_locked(cplat_string_catalog_filter_slot *slot, const void *image, const size_t image_size,
+                              cplat_string_catalog_filter_diagnostic *diagnostics, const size_t diagnostic_capacity,
+                              size_t *invalid_count_out, const void *source, const uint64_t revision,
+                              const cplat_string_catalog_filter_source_lock *writer_lock, bool *torn_out);
+static void add_warning(cplat_string_catalog_filter_warning *warnings, const size_t capacity, size_t *count,
+                        const cplat_string_catalog_filter_warning *warning);
+static void collect_line_warnings(const cplat_string_catalog_filter_slot *slot, filter_plane *plane,
+                                  const uint32_t line_index, cplat_string_catalog_filter_warning *warnings,
+                                  const size_t capacity, size_t *count);
+static void refresh_from_source(cplat_string_catalog_filter_slot *slot);
+static bool is_line_matched(const cplat_string_catalog_filter_slot *slot, filter_plane *plane, const size_t entry_index,
+                            const uint32_t line_index, const argument_value *values);
+static bool is_matched(const cplat_string_catalog_filter_slot *slot, filter_plane *plane, const size_t entry_index,
+                       const cplat_internal_string_catalog_argument_value *shared);
+
+/* ===== 公開関数 ===== */
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_string_catalog_filter_slot_create(const cplat_string_catalog *catalog,
+                                            const cplat_string_catalog_filter_key_name *key_names,
+                                            const size_t key_name_count,
+                                            const cplat_string_catalog_filter_category_names *category_names,
+                                            const size_t line_capacity, const size_t line_width,
+                                            cplat_string_catalog_filter_slot **slot_out)
+{
+    cplat_string_catalog_filter_slot *slot;
+    int ret;
+
+    if (slot_out == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    *slot_out = NULL;
+
+    if ((catalog == NULL) || (catalog->entry_count < 0) || ((catalog->entry_count > 0) && (catalog->entries == NULL)) ||
+        ((key_names == NULL) && (key_name_count > 0U)) || (line_capacity == 0U) ||
+        (line_capacity > CPLAT_STRING_CATALOG_FILTER_LINE_MAX) ||
+        (line_width < CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MIN) ||
+        (line_width > CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    /*
+     * 判定と説明文はカタログの引数定義を直接参照するため、作成時に定義全体を検査する。
+     * 項目数が 0 のカタログは、どの文字列キーにも一致しない何もしないカタログとして検査せずに受け付ける。
+     */
+    if (catalog->entry_count > 0)
+    {
+        ret = cplat_string_catalog_verify(catalog, NULL, NULL);
+        if (ret != CPLAT_OK)
+        {
+            return ret;
+        }
+    }
+
+    if (!is_key_name_table_valid(catalog, key_names, key_name_count) || !is_category_names_valid(category_names))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    slot = (cplat_string_catalog_filter_slot *)calloc(1U, sizeof(*slot));
+    if (slot == NULL)
+    {
+        return CPLAT_ERR_OUT_OF_MEMORY;
+    }
+
+    slot->catalog = catalog;
+    slot->key_names = key_names;
+    slot->key_name_count = key_name_count;
+    slot->category_names = category_names;
+    slot->entry_count = (size_t)catalog->entry_count;
+    slot->line_capacity = (uint32_t)line_capacity;
+    slot->line_width = (uint32_t)line_width;
+    slot->record_size = (uint32_t)CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(line_width);
+    slot->image_size = CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(line_capacity, line_width);
+    slot->line_word_count = (line_capacity + LINE_WORD_BITS - 1U) / LINE_WORD_BITS;
+
+    /* 失敗の条件は作成時に拒否する引数と同じで、ここでは失敗しないため、戻り値は明示的に破棄する。 */
+    (void)cplat_string_catalog_filter_get_catalog_id(catalog, &slot->catalog_id);
+
+    if (!allocate_plane(slot, &slot->planes[0]) || !allocate_plane(slot, &slot->planes[1]))
+    {
+        cplat_string_catalog_filter_slot_dispose(&slot);
+        return CPLAT_ERR_OUT_OF_MEMORY;
+    }
+
+    /* ロックの作成に失敗した場合は、作成関数の結果コードをそのまま返す。 */
+    ret = cplat_local_rwlock_create(&slot->plane_lock);
+    if (ret == CPLAT_OK)
+    {
+        ret = cplat_local_lock_create(&slot->apply_lock);
+    }
+
+    if (ret != CPLAT_OK)
+    {
+        cplat_string_catalog_filter_slot_dispose(&slot);
+        return ret;
+    }
+
+    /*
+     * 行を持たないフィルター オブジェクトを適用した状態から始める。全項目が「常に不一致」となる。
+     * 行数、行幅、領域の大きさは作成時に検査済みであり、行数が 0 のコンパイルは失敗しないため、
+     * 戻り値は明示的に破棄する。
+     */
+    (void)cplat_string_catalog_filter_compile(NULL, 0U, line_width, line_capacity, slot->planes[0].image,
+                                              slot->image_size, NULL, 0U, NULL);
+    slot->active_plane = 0;
+
+    *slot_out = slot;
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+void cplat_string_catalog_filter_slot_dispose(cplat_string_catalog_filter_slot **slot)
+{
+    if ((slot == NULL) || (*slot == NULL))
+    {
+        return;
+    }
+
+    if ((*slot)->plane_lock != NULL)
+    {
+        cplat_local_rwlock_dispose((*slot)->plane_lock);
+    }
+
+    if ((*slot)->apply_lock != NULL)
+    {
+        cplat_local_lock_dispose((*slot)->apply_lock);
+    }
+
+    free_plane(*slot, &(*slot)->planes[0]);
+    free_plane(*slot, &(*slot)->planes[1]);
+    free(*slot);
+    *slot = NULL;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+const cplat_string_catalog *cplat_string_catalog_filter_slot_get_catalog(const cplat_string_catalog_filter_slot *slot)
+{
+    if (slot == NULL)
+    {
+        return NULL;
+    }
+
+    return slot->catalog;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_string_catalog_filter_slot_apply(cplat_string_catalog_filter_slot *slot, const void *image,
+                                           const size_t image_size, cplat_string_catalog_filter_diagnostic *diagnostics,
+                                           const size_t diagnostic_capacity, size_t *invalid_count_out)
+{
+    bool torn;
+    int ret;
+
+    if ((slot == NULL) || (image == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    cplat_local_lock_lock(slot->apply_lock);
+
+    ret = apply_image_locked(slot, image, image_size, diagnostics, diagnostic_capacity, invalid_count_out, NULL, 0U,
+                             NULL, &torn);
+    cplat_local_lock_unlock(slot->apply_lock);
+
+    return ret;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_string_catalog_filter_slot_check(cplat_string_catalog_filter_slot *slot, const void *image,
+                                           const size_t image_size, cplat_string_catalog_filter_diagnostic *diagnostics,
+                                           const size_t diagnostic_capacity, size_t *invalid_count_out,
+                                           cplat_string_catalog_filter_warning *warnings, const size_t warning_capacity,
+                                           size_t *warning_count_out)
+{
+    filter_plane *target;
+    size_t invalid_count = 0U;
+    size_t warning_count = 0U;
+    int ret;
+
+    if ((slot == NULL) || (image == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    cplat_local_lock_lock(slot->apply_lock);
+
+    /* 未使用の面へ構築し、切り替えない。未使用の面は適用のたびに作り直すため、残った内容は判定に影響しない。 */
+    target = &slot->planes[1 - slot->active_plane];
+    ret = CPLAT_ERR_CORRUPT_DESCRIPTOR;
+
+    if (image_size >= slot->image_size)
+    {
+        memcpy(target->image, image, slot->image_size);
+        ret = validate_copied_image(slot, target);
+    }
+
+    if (ret == CPLAT_OK)
+    {
+        build_plane(slot, target, &slot->planes[slot->active_plane], diagnostics, diagnostic_capacity, &invalid_count);
+
+        for (uint32_t line_index = 0; line_index < target->line_count; line_index++)
+        {
+            /* 成立し得ない行は、型の不一致が原因であり得るため対象に含める。 */
+            if ((target->line_errors[line_index] == CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE) ||
+                (target->line_errors[line_index] == CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NEVER_SATISFIABLE))
+            {
+                collect_line_warnings(slot, target, line_index, warnings, warning_capacity, &warning_count);
+            }
+        }
+    }
+
+    cplat_local_lock_unlock(slot->apply_lock);
+
+    if (ret == CPLAT_OK)
+    {
+        if (invalid_count_out != NULL)
+        {
+            *invalid_count_out = invalid_count;
+        }
+
+        if (warning_count_out != NULL)
+        {
+            *warning_count_out = warning_count;
+        }
+    }
+
+    return ret;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_string_catalog_filter_slot_attach_source(cplat_string_catalog_filter_slot *slot, const void *source,
+                                                   const size_t source_size,
+                                                   const cplat_string_catalog_filter_source_lock *lock)
+{
+    if (slot == NULL)
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if ((source != NULL) && !string_catalog_filter_source_is_region_valid(source, source_size, slot->image_size))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if ((lock != NULL) && ((lock->lock == NULL) || (lock->unlock == NULL)))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    slot->source = source;
+
+    if (source != NULL)
+    {
+        slot->source_size = source_size;
+    }
+    else
+    {
+        slot->source_size = 0U;
+    }
+
+    memset(&slot->source_lock, 0, sizeof(slot->source_lock));
+
+    if ((source != NULL) && (lock != NULL))
+    {
+        slot->source_lock = *lock;
+    }
+
+    slot->source_last_result = CPLAT_OK;
+    slot->source_last_invalid_count = 0U;
+
+    /* 判定付きの組み立てと同時に呼ばない契約であり、この書き込みでほかのデータを渡さないため RELAXED で足りる。 */
+    cplat_atomic_store_u64(&slot->taken_revision, 0U, CPLAT_MEMORY_ORDER_RELAXED);
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_string_catalog_filter_slot_get_source_status(cplat_string_catalog_filter_slot *slot,
+                                                       cplat_string_catalog_filter_source_status *status_out)
+{
+    if ((slot == NULL) || (status_out == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    /* 結果コードと無効にした行の数は、同じ取り込みの値をそろえて返す。 */
+    cplat_local_lock_lock(slot->apply_lock);
+
+    memset(status_out, 0, sizeof(*status_out));
+
+    /* apply_lock の下での読み取りであり、この値でほかのデータを受け取らないため RELAXED で足りる。 */
+    status_out->taken_revision = cplat_atomic_load_u64(&slot->taken_revision, CPLAT_MEMORY_ORDER_RELAXED);
+    status_out->last_result = slot->source_last_result;
+    status_out->last_invalid_count = slot->source_last_invalid_count;
+    cplat_local_lock_unlock(slot->apply_lock);
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_string_catalog_filter_slot_snapshot(cplat_string_catalog_filter_slot *slot, void *image_out,
+                                              const size_t image_size)
+{
+    const filter_plane *plane;
+
+    if ((slot == NULL) || (image_out == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (image_size < slot->image_size)
+    {
+        return CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+
+    cplat_local_rwlock_lock_shared(slot->plane_lock);
+
+    plane = &slot->planes[slot->active_plane];
+    memcpy(image_out, plane->image, slot->image_size);
+
+    cplat_local_rwlock_unlock_shared(slot->plane_lock);
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_string_catalog_filter_slot_get_line_error(cplat_string_catalog_filter_slot *slot, const size_t line_index,
+                                                    cplat_string_catalog_filter_line_error *error_out)
+{
+    const filter_plane *plane;
+    int ret = CPLAT_OK;
+
+    if ((slot == NULL) || (error_out == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    cplat_local_rwlock_lock_shared(slot->plane_lock);
+
+    plane = &slot->planes[slot->active_plane];
+    if (line_index >= plane->line_count)
+    {
+        ret = CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    else
+    {
+        *error_out = plane->line_errors[line_index];
+    }
+
+    cplat_local_rwlock_unlock_shared(slot->plane_lock);
+
+    return ret;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_string_catalog_filter_slot_test(cplat_string_catalog_filter_slot *slot, const int string_key,
+                                          cplat_string_catalog_filter_state *state_out)
+{
+    size_t entry_index;
+
+    if ((slot == NULL) || (state_out == NULL))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (!find_entry_index(slot, string_key, &entry_index))
+    {
+        return CPLAT_ERR_NOT_FOUND;
+    }
+
+    cplat_local_rwlock_lock_shared(slot->plane_lock);
+
+    *state_out = (cplat_string_catalog_filter_state)slot->planes[slot->active_plane].entry_states[entry_index];
+    cplat_local_rwlock_unlock_shared(slot->plane_lock);
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_string_catalog_filter_slot_describe_line(cplat_string_catalog_filter_slot *slot, const size_t line_index,
+                                                   char *dest, const size_t dest_size)
+{
+    string_catalog_filter_describe_source source = {0};
+    filter_plane *plane;
+    const uint8_t *states;
+    size_t candidate_count = 0U;
+    int ret;
+
+    if ((slot == NULL) || (dest == NULL) || (dest_size == 0U))
+    {
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    dest[0] = '\0';
+
+    cplat_local_rwlock_lock_shared(slot->plane_lock);
+
+    plane = &slot->planes[slot->active_plane];
+    if (line_index >= plane->line_count)
+    {
+        ret = CPLAT_ERR_INVALID_ARGUMENT;
+    }
+    else if (!is_line_enabled(plane, (uint32_t)line_index))
+    {
+        /* 名前を解決できずに無効とした行は、メタ情報と結び付けられない。 */
+        ret = CPLAT_ERR_MALFORMED_DEFINITION;
+    }
+    else
+    {
+        source.catalog = slot->catalog;
+        source.record =
+            string_catalog_filter_record_address_const(plane->image, slot->record_size, (uint32_t)line_index);
+        source.identifier_values = identifier_values_of(plane, (uint32_t)line_index);
+        source.category_names = slot->category_names;
+        source.line_width = slot->line_width;
+        source.is_japanese = (cplat_string_catalog_get_language() == CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE);
+
+        /* 事前計算で「常に不一致」とならなかった項目が 1 つだけなら、その行は 1 つの項目に限定されている。 */
+        states = line_states_of(slot, plane, (uint32_t)line_index);
+
+        for (size_t entry_index = 0; entry_index < slot->entry_count; entry_index++)
+        {
+            if (states[entry_index] != (uint8_t)TRUTH_VALUE_FALSE)
+            {
+                source.single_entry = &slot->catalog->entries[entry_index];
+                candidate_count++;
+            }
+        }
+
+        if (candidate_count != 1U)
+        {
+            source.single_entry = NULL;
+        }
+
+        ret = string_catalog_filter_describe_record(&source, dest, dest_size);
+    }
+
+    cplat_local_rwlock_unlock_shared(slot->plane_lock);
+
+    return ret;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_string_catalog_filter_slot_vformat(cplat_string_catalog_filter_slot *slot, char *dest, const size_t dest_size,
+                                             int *matched_out, const int string_key, va_list args)
+{
+    const cplat_string_catalog_entry *entry = NULL;
+    const char *text = NULL;
+    cplat_internal_string_catalog_argument_value values[CPLAT_STRING_CATALOG_ARGUMENT_MAX] = {0};
+    int ret;
+
+    if ((slot == NULL) || (matched_out == NULL) || (dest == NULL) || (dest_size == 0U))
+    {
+        if (matched_out != NULL)
+        {
+            *matched_out = 0;
+        }
+
+        return CPLAT_ERR_INVALID_ARGUMENT;
+    }
+
+    *matched_out = 0;
+    dest[0] = '\0';
+
+    /* 判定の前に、ソース領域の公開内容が変わっていれば取り込む。通常は版番号の比較 1 回で戻る。 */
+    refresh_from_source(slot);
+
+    /* 可変長引数は 1 回だけ取り出し、判定と書式展開で同じ値を使用する。 */
+    ret = cplat_internal_string_catalog_prepare_format(slot->catalog, string_key, args, &entry, &text, values);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    /* 判定できない場合は不一致と区別するため、文字列を組み立てずに結果コードを返す。 */
+    cplat_local_rwlock_lock_shared(slot->plane_lock);
+
+    *matched_out =
+        is_matched(slot, &slot->planes[slot->active_plane], (size_t)(entry - slot->catalog->entries), values);
+    cplat_local_rwlock_unlock_shared(slot->plane_lock);
+
+    /* 書式展開はロックの外で行う。判定の結果によらず文字列を組み立てる。 */
+    return cplat_internal_string_catalog_render_text(dest, dest_size, text, values, entry->argument_count);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_string_catalog_filter_slot_format(cplat_string_catalog_filter_slot *slot, char *dest, const size_t dest_size,
+                                            int *matched_out, const int string_key, ...)
+{
+    va_list args;
+    int ret;
+
+    va_start(args, string_key);
+    ret = cplat_string_catalog_filter_slot_vformat(slot, dest, dest_size, matched_out, string_key, args);
+    va_end(args);
+
+    return ret;
+}
+
 /* ===== 引数と数値 ===== */
 
 static argument_class class_of_argument(const cplat_string_catalog_argument_kind kind)
@@ -1484,144 +2066,6 @@ static bool find_entry_index(const cplat_string_catalog_filter_slot *slot, const
     return true;
 }
 
-/* ===== 公開関数 ===== */
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_string_catalog_filter_slot_create(const cplat_string_catalog *catalog,
-                                            const cplat_string_catalog_filter_key_name *key_names,
-                                            const size_t key_name_count,
-                                            const cplat_string_catalog_filter_category_names *category_names,
-                                            const size_t line_capacity, const size_t line_width,
-                                            cplat_string_catalog_filter_slot **slot_out)
-{
-    cplat_string_catalog_filter_slot *slot;
-    int ret;
-
-    if (slot_out == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    *slot_out = NULL;
-
-    if ((catalog == NULL) || (catalog->entry_count < 0) || ((catalog->entry_count > 0) && (catalog->entries == NULL)) ||
-        ((key_names == NULL) && (key_name_count > 0U)) || (line_capacity == 0U) ||
-        (line_capacity > CPLAT_STRING_CATALOG_FILTER_LINE_MAX) ||
-        (line_width < CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MIN) ||
-        (line_width > CPLAT_STRING_CATALOG_FILTER_LINE_WIDTH_MAX))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    /*
-     * 判定と説明文はカタログの引数定義を直接参照するため、作成時に定義全体を検査する。
-     * 項目数が 0 のカタログは、どの文字列キーにも一致しない何もしないカタログとして検査せずに受け付ける。
-     */
-    if (catalog->entry_count > 0)
-    {
-        ret = cplat_string_catalog_verify(catalog, NULL, NULL);
-        if (ret != CPLAT_OK)
-        {
-            return ret;
-        }
-    }
-
-    if (!is_key_name_table_valid(catalog, key_names, key_name_count) || !is_category_names_valid(category_names))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    slot = (cplat_string_catalog_filter_slot *)calloc(1U, sizeof(*slot));
-    if (slot == NULL)
-    {
-        return CPLAT_ERR_OUT_OF_MEMORY;
-    }
-
-    slot->catalog = catalog;
-    slot->key_names = key_names;
-    slot->key_name_count = key_name_count;
-    slot->category_names = category_names;
-    slot->entry_count = (size_t)catalog->entry_count;
-    slot->line_capacity = (uint32_t)line_capacity;
-    slot->line_width = (uint32_t)line_width;
-    slot->record_size = (uint32_t)CPLAT_STRING_CATALOG_FILTER_RECORD_SIZE(line_width);
-    slot->image_size = CPLAT_STRING_CATALOG_FILTER_IMAGE_SIZE(line_capacity, line_width);
-    slot->line_word_count = (line_capacity + LINE_WORD_BITS - 1U) / LINE_WORD_BITS;
-
-    /* 失敗の条件は作成時に拒否する引数と同じで、ここでは失敗しないため、戻り値は明示的に破棄する。 */
-    (void)cplat_string_catalog_filter_get_catalog_id(catalog, &slot->catalog_id);
-
-    if (!allocate_plane(slot, &slot->planes[0]) || !allocate_plane(slot, &slot->planes[1]))
-    {
-        cplat_string_catalog_filter_slot_dispose(&slot);
-        return CPLAT_ERR_OUT_OF_MEMORY;
-    }
-
-    /* ロックの作成に失敗した場合は、作成関数の結果コードをそのまま返す。 */
-    ret = cplat_local_rwlock_create(&slot->plane_lock);
-    if (ret == CPLAT_OK)
-    {
-        ret = cplat_local_lock_create(&slot->apply_lock);
-    }
-
-    if (ret != CPLAT_OK)
-    {
-        cplat_string_catalog_filter_slot_dispose(&slot);
-        return ret;
-    }
-
-    /*
-     * 行を持たないフィルター オブジェクトを適用した状態から始める。全項目が「常に不一致」となる。
-     * 行数、行幅、領域の大きさは作成時に検査済みであり、行数が 0 のコンパイルは失敗しないため、
-     * 戻り値は明示的に破棄する。
-     */
-    (void)cplat_string_catalog_filter_compile(NULL, 0U, line_width, line_capacity, slot->planes[0].image,
-                                              slot->image_size, NULL, 0U, NULL);
-    slot->active_plane = 0;
-
-    *slot_out = slot;
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-void cplat_string_catalog_filter_slot_dispose(cplat_string_catalog_filter_slot **slot)
-{
-    if ((slot == NULL) || (*slot == NULL))
-    {
-        return;
-    }
-
-    if ((*slot)->plane_lock != NULL)
-    {
-        cplat_local_rwlock_dispose((*slot)->plane_lock);
-    }
-
-    if ((*slot)->apply_lock != NULL)
-    {
-        cplat_local_lock_dispose((*slot)->apply_lock);
-    }
-
-    free_plane(*slot, &(*slot)->planes[0]);
-    free_plane(*slot, &(*slot)->planes[1]);
-    free(*slot);
-    *slot = NULL;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-const cplat_string_catalog *cplat_string_catalog_filter_slot_get_catalog(const cplat_string_catalog_filter_slot *slot)
-{
-    if (slot == NULL)
-    {
-        return NULL;
-    }
-
-    return slot->catalog;
-}
-
 /**
  *  @brief          未使用の面へ複製したフィルター オブジェクトを検証します。
  *  @param[in]      slot   フィルター スロット。
@@ -1733,29 +2177,6 @@ static int apply_image_locked(cplat_string_catalog_filter_slot *slot, const void
     {
         *invalid_count_out = invalid_count;
     }
-
-    return ret;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_string_catalog_filter_slot_apply(cplat_string_catalog_filter_slot *slot, const void *image,
-                                           const size_t image_size, cplat_string_catalog_filter_diagnostic *diagnostics,
-                                           const size_t diagnostic_capacity, size_t *invalid_count_out)
-{
-    bool torn;
-    int ret;
-
-    if ((slot == NULL) || (image == NULL))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    cplat_local_lock_lock(slot->apply_lock);
-
-    ret = apply_image_locked(slot, image, image_size, diagnostics, diagnostic_capacity, invalid_count_out, NULL, 0U,
-                             NULL, &torn);
-    cplat_local_lock_unlock(slot->apply_lock);
 
     return ret;
 }
@@ -1902,69 +2323,6 @@ static void collect_line_warnings(const cplat_string_catalog_filter_slot *slot, 
     }
 }
 
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_string_catalog_filter_slot_check(cplat_string_catalog_filter_slot *slot, const void *image,
-                                           const size_t image_size, cplat_string_catalog_filter_diagnostic *diagnostics,
-                                           const size_t diagnostic_capacity, size_t *invalid_count_out,
-                                           cplat_string_catalog_filter_warning *warnings, const size_t warning_capacity,
-                                           size_t *warning_count_out)
-{
-    filter_plane *target;
-    size_t invalid_count = 0U;
-    size_t warning_count = 0U;
-    int ret;
-
-    if ((slot == NULL) || (image == NULL))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    cplat_local_lock_lock(slot->apply_lock);
-
-    /* 未使用の面へ構築し、切り替えない。未使用の面は適用のたびに作り直すため、残った内容は判定に影響しない。 */
-    target = &slot->planes[1 - slot->active_plane];
-    ret = CPLAT_ERR_CORRUPT_DESCRIPTOR;
-
-    if (image_size >= slot->image_size)
-    {
-        memcpy(target->image, image, slot->image_size);
-        ret = validate_copied_image(slot, target);
-    }
-
-    if (ret == CPLAT_OK)
-    {
-        build_plane(slot, target, &slot->planes[slot->active_plane], diagnostics, diagnostic_capacity, &invalid_count);
-
-        for (uint32_t line_index = 0; line_index < target->line_count; line_index++)
-        {
-            /* 成立し得ない行は、型の不一致が原因であり得るため対象に含める。 */
-            if ((target->line_errors[line_index] == CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NONE) ||
-                (target->line_errors[line_index] == CPLAT_STRING_CATALOG_FILTER_LINE_ERROR_NEVER_SATISFIABLE))
-            {
-                collect_line_warnings(slot, target, line_index, warnings, warning_capacity, &warning_count);
-            }
-        }
-    }
-
-    cplat_local_lock_unlock(slot->apply_lock);
-
-    if (ret == CPLAT_OK)
-    {
-        if (invalid_count_out != NULL)
-        {
-            *invalid_count_out = invalid_count;
-        }
-
-        if (warning_count_out != NULL)
-        {
-            *warning_count_out = warning_count;
-        }
-    }
-
-    return ret;
-}
-
 /**
  *  @brief          ソース領域の版番号が変わっていれば、フィルター オブジェクトを取り込みます。
  *
@@ -2105,225 +2463,6 @@ static void refresh_from_source(cplat_string_catalog_filter_slot *slot)
     cplat_local_lock_unlock(slot->apply_lock);
 }
 
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_string_catalog_filter_slot_attach_source(cplat_string_catalog_filter_slot *slot, const void *source,
-                                                   const size_t source_size,
-                                                   const cplat_string_catalog_filter_source_lock *lock)
-{
-    if (slot == NULL)
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if ((source != NULL) && !string_catalog_filter_source_is_region_valid(source, source_size, slot->image_size))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if ((lock != NULL) && ((lock->lock == NULL) || (lock->unlock == NULL)))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    slot->source = source;
-
-    if (source != NULL)
-    {
-        slot->source_size = source_size;
-    }
-    else
-    {
-        slot->source_size = 0U;
-    }
-
-    memset(&slot->source_lock, 0, sizeof(slot->source_lock));
-
-    if ((source != NULL) && (lock != NULL))
-    {
-        slot->source_lock = *lock;
-    }
-
-    slot->source_last_result = CPLAT_OK;
-    slot->source_last_invalid_count = 0U;
-
-    /* 判定付きの組み立てと同時に呼ばない契約であり、この書き込みでほかのデータを渡さないため RELAXED で足りる。 */
-    cplat_atomic_store_u64(&slot->taken_revision, 0U, CPLAT_MEMORY_ORDER_RELAXED);
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_string_catalog_filter_slot_get_source_status(cplat_string_catalog_filter_slot *slot,
-                                                       cplat_string_catalog_filter_source_status *status_out)
-{
-    if ((slot == NULL) || (status_out == NULL))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    /* 結果コードと無効にした行の数は、同じ取り込みの値をそろえて返す。 */
-    cplat_local_lock_lock(slot->apply_lock);
-
-    memset(status_out, 0, sizeof(*status_out));
-
-    /* apply_lock の下での読み取りであり、この値でほかのデータを受け取らないため RELAXED で足りる。 */
-    status_out->taken_revision = cplat_atomic_load_u64(&slot->taken_revision, CPLAT_MEMORY_ORDER_RELAXED);
-    status_out->last_result = slot->source_last_result;
-    status_out->last_invalid_count = slot->source_last_invalid_count;
-    cplat_local_lock_unlock(slot->apply_lock);
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_string_catalog_filter_slot_snapshot(cplat_string_catalog_filter_slot *slot, void *image_out,
-                                              const size_t image_size)
-{
-    const filter_plane *plane;
-
-    if ((slot == NULL) || (image_out == NULL))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (image_size < slot->image_size)
-    {
-        return CPLAT_ERR_BUFFER_TOO_SMALL;
-    }
-
-    cplat_local_rwlock_lock_shared(slot->plane_lock);
-
-    plane = &slot->planes[slot->active_plane];
-    memcpy(image_out, plane->image, slot->image_size);
-
-    cplat_local_rwlock_unlock_shared(slot->plane_lock);
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_string_catalog_filter_slot_get_line_error(cplat_string_catalog_filter_slot *slot, const size_t line_index,
-                                                    cplat_string_catalog_filter_line_error *error_out)
-{
-    const filter_plane *plane;
-    int ret = CPLAT_OK;
-
-    if ((slot == NULL) || (error_out == NULL))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    cplat_local_rwlock_lock_shared(slot->plane_lock);
-
-    plane = &slot->planes[slot->active_plane];
-    if (line_index >= plane->line_count)
-    {
-        ret = CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    else
-    {
-        *error_out = plane->line_errors[line_index];
-    }
-
-    cplat_local_rwlock_unlock_shared(slot->plane_lock);
-
-    return ret;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_string_catalog_filter_slot_test(cplat_string_catalog_filter_slot *slot, const int string_key,
-                                          cplat_string_catalog_filter_state *state_out)
-{
-    size_t entry_index;
-
-    if ((slot == NULL) || (state_out == NULL))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    if (!find_entry_index(slot, string_key, &entry_index))
-    {
-        return CPLAT_ERR_NOT_FOUND;
-    }
-
-    cplat_local_rwlock_lock_shared(slot->plane_lock);
-
-    *state_out = (cplat_string_catalog_filter_state)slot->planes[slot->active_plane].entry_states[entry_index];
-    cplat_local_rwlock_unlock_shared(slot->plane_lock);
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_string_catalog_filter_slot_describe_line(cplat_string_catalog_filter_slot *slot, const size_t line_index,
-                                                   char *dest, const size_t dest_size)
-{
-    string_catalog_filter_describe_source source = {0};
-    filter_plane *plane;
-    const uint8_t *states;
-    size_t candidate_count = 0U;
-    int ret;
-
-    if ((slot == NULL) || (dest == NULL) || (dest_size == 0U))
-    {
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    dest[0] = '\0';
-
-    cplat_local_rwlock_lock_shared(slot->plane_lock);
-
-    plane = &slot->planes[slot->active_plane];
-    if (line_index >= plane->line_count)
-    {
-        ret = CPLAT_ERR_INVALID_ARGUMENT;
-    }
-    else if (!is_line_enabled(plane, (uint32_t)line_index))
-    {
-        /* 名前を解決できずに無効とした行は、メタ情報と結び付けられない。 */
-        ret = CPLAT_ERR_MALFORMED_DEFINITION;
-    }
-    else
-    {
-        source.catalog = slot->catalog;
-        source.record =
-            string_catalog_filter_record_address_const(plane->image, slot->record_size, (uint32_t)line_index);
-        source.identifier_values = identifier_values_of(plane, (uint32_t)line_index);
-        source.category_names = slot->category_names;
-        source.line_width = slot->line_width;
-        source.is_japanese = (cplat_string_catalog_get_language() == CPLAT_STRING_CATALOG_LANGUAGE_JAPANESE);
-
-        /* 事前計算で「常に不一致」とならなかった項目が 1 つだけなら、その行は 1 つの項目に限定されている。 */
-        states = line_states_of(slot, plane, (uint32_t)line_index);
-
-        for (size_t entry_index = 0; entry_index < slot->entry_count; entry_index++)
-        {
-            if (states[entry_index] != (uint8_t)TRUTH_VALUE_FALSE)
-            {
-                source.single_entry = &slot->catalog->entries[entry_index];
-                candidate_count++;
-            }
-        }
-
-        if (candidate_count != 1U)
-        {
-            source.single_entry = NULL;
-        }
-
-        ret = string_catalog_filter_describe_record(&source, dest, dest_size);
-    }
-
-    cplat_local_rwlock_unlock_shared(slot->plane_lock);
-
-    return ret;
-}
-
 /** 引数の値に依存する 1 行を、引数の値で評価します。 */
 static bool is_line_matched(const cplat_string_catalog_filter_slot *slot, filter_plane *plane, const size_t entry_index,
                             const uint32_t line_index, const argument_value *values)
@@ -2395,63 +2534,4 @@ static bool is_matched(const cplat_string_catalog_filter_slot *slot, filter_plan
     }
 
     return false;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_string_catalog_filter_slot_vformat(cplat_string_catalog_filter_slot *slot, char *dest, const size_t dest_size,
-                                             int *matched_out, const int string_key, va_list args)
-{
-    const cplat_string_catalog_entry *entry = NULL;
-    const char *text = NULL;
-    cplat_internal_string_catalog_argument_value values[CPLAT_STRING_CATALOG_ARGUMENT_MAX] = {0};
-    int ret;
-
-    if ((slot == NULL) || (matched_out == NULL) || (dest == NULL) || (dest_size == 0U))
-    {
-        if (matched_out != NULL)
-        {
-            *matched_out = 0;
-        }
-
-        return CPLAT_ERR_INVALID_ARGUMENT;
-    }
-
-    *matched_out = 0;
-    dest[0] = '\0';
-
-    /* 判定の前に、ソース領域の公開内容が変わっていれば取り込む。通常は版番号の比較 1 回で戻る。 */
-    refresh_from_source(slot);
-
-    /* 可変長引数は 1 回だけ取り出し、判定と書式展開で同じ値を使用する。 */
-    ret = cplat_internal_string_catalog_prepare_format(slot->catalog, string_key, args, &entry, &text, values);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
-
-    /* 判定できない場合は不一致と区別するため、文字列を組み立てずに結果コードを返す。 */
-    cplat_local_rwlock_lock_shared(slot->plane_lock);
-
-    *matched_out =
-        is_matched(slot, &slot->planes[slot->active_plane], (size_t)(entry - slot->catalog->entries), values);
-    cplat_local_rwlock_unlock_shared(slot->plane_lock);
-
-    /* 書式展開はロックの外で行う。判定の結果によらず文字列を組み立てる。 */
-    return cplat_internal_string_catalog_render_text(dest, dest_size, text, values, entry->argument_count);
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_string_catalog_filter_slot_format(cplat_string_catalog_filter_slot *slot, char *dest, const size_t dest_size,
-                                            int *matched_out, const int string_key, ...)
-{
-    va_list args;
-    int ret;
-
-    va_start(args, string_key);
-    ret = cplat_string_catalog_filter_slot_vformat(slot, dest, dest_size, matched_out, string_key, args);
-    va_end(args);
-
-    return ret;
 }

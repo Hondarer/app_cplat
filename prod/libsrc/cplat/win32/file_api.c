@@ -32,6 +32,8 @@
 
 static_assert(CPLAT_WIN32_LONG_PATH_WCHAR_CAP > PLATFORM_PATH_MAX, "long path buffer must exceed PLATFORM_PATH_MAX");
 
+static int copy_wstr_as_utf8(char *utf8_buf, const DWORD size, const wchar_t *wtext);
+
 /* Doxygen コメントは、ヘッダーに記載 */
 
 HANDLE CreateFileU(const char *lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
@@ -197,41 +199,6 @@ BOOL WriteConsoleU(HANDLE hConsoleOutput, const char *lpBuffer, DWORD nNumberOfC
     return result;
 }
 
-/*
- * UTF-16 文字列を UTF-8 へ変換して固定長バッファーへ書き込みます。
- * utf8_buf が NULL、または size が 0 のときは CPLAT_OK を返します。
- * 変換に失敗したときは対応する結果コードを返し、収まらないときは CPLAT_ERR_BUFFER_TOO_SMALL を返します。
- */
-static int copy_wstr_as_utf8(char *utf8_buf, const DWORD size, const wchar_t *wtext)
-{
-    char *utf8 = NULL;
-    size_t utf8_len;
-    int rc;
-
-    if (utf8_buf == NULL || size == 0U)
-    {
-        return CPLAT_OK;
-    }
-
-    rc = cplat_wstr_to_utf8_alloc(&utf8, wtext);
-    if (rc != CPLAT_OK)
-    {
-        return rc;
-    }
-
-    utf8_len = strlen(utf8);
-    if (utf8_len + 1U > (size_t)size)
-    {
-        cplat_internal_win32_free_keep_last_error(utf8);
-        return CPLAT_ERR_BUFFER_TOO_SMALL;
-    }
-
-    memcpy(utf8_buf, utf8, utf8_len + 1U);
-    cplat_internal_win32_free_keep_last_error(utf8);
-
-    return CPLAT_OK;
-}
-
 /* Doxygen コメントは、ヘッダーに記載 */
 
 BOOL GetVolumePathNameU(const char *lpszFileName, char *lpszVolumePathName, DWORD cchBufferLength)
@@ -313,6 +280,41 @@ BOOL GetVolumeInformationU(const char *lpRootPathName, char *lpVolumeNameBuffer,
     }
 
     return TRUE;
+}
+
+/*
+ * UTF-16 文字列を UTF-8 へ変換して固定長バッファーへ書き込みます。
+ * utf8_buf が NULL、または size が 0 のときは CPLAT_OK を返します。
+ * 変換に失敗したときは対応する結果コードを返し、収まらないときは CPLAT_ERR_BUFFER_TOO_SMALL を返します。
+ */
+static int copy_wstr_as_utf8(char *utf8_buf, const DWORD size, const wchar_t *wtext)
+{
+    char *utf8 = NULL;
+    size_t utf8_len;
+    int rc;
+
+    if (utf8_buf == NULL || size == 0U)
+    {
+        return CPLAT_OK;
+    }
+
+    rc = cplat_wstr_to_utf8_alloc(&utf8, wtext);
+    if (rc != CPLAT_OK)
+    {
+        return rc;
+    }
+
+    utf8_len = strlen(utf8);
+    if (utf8_len + 1U > (size_t)size)
+    {
+        cplat_internal_win32_free_keep_last_error(utf8);
+        return CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+
+    memcpy(utf8_buf, utf8, utf8_len + 1U);
+    cplat_internal_win32_free_keep_last_error(utf8);
+
+    return CPLAT_OK;
 }
 
 #endif /* PLATFORM_WINDOWS */

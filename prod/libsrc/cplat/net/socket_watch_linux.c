@@ -41,244 +41,20 @@ struct cplat_socket_watch
     cplat_socket sock;
 };
 
-/**
- *  @brief          解除通知が保持されているかを acquire で取得します。
- */
-static int cancel_is_signaled(const cplat_socket_wait_cancel *cancel)
-{
-    return (cancel != NULL) && (atomic_load_explicit(&cancel->signaled, memory_order_acquire) != 0);
-}
-
-/**
- *  @brief          指定した待機期限の残り時間を計算します。
- *  @param[in]      deadline_ms 絶対期限。無期限は 0。
- *  @param[in]      timeout_ms  元のタイムアウト。
- *  @param[out]     remaining_ms 残り時間。
- *  @return         期限まで待機できる場合は 1、期限切れは 0、時計の失敗は -1 を返します。
- */
-static int deadline_remaining(const uint64_t deadline_ms, const int timeout_ms, uint64_t *remaining_ms)
-{
-    uint64_t now;
-
-    if (timeout_ms == CPLAT_WAIT_FOREVER)
-    {
-        *remaining_ms = UINT64_MAX;
-        return 1;
-    }
-
-    if (cplat_clock_get_monotonic_ms(&now) != CPLAT_OK)
-    {
-        return -1;
-    }
-
-    if (now >= deadline_ms)
-    {
-        *remaining_ms = 0U;
-        return 0;
-    }
-
-    *remaining_ms = deadline_ms - now;
-    return 1;
-}
-
-/**
- *  @brief          指定した解除状態と絶対期限で poll を実行します。
- *  @param[in]      fds         poll の対象。
- *  @param[in]      count       対象数。
- *  @param[in]      cancel      解除オブジェクト。NULL 可。
- *  @param[in]      timeout_ms  全体の期限。
- *  @param[in]      deadline_ms 正のタイムアウトに対する絶対期限。
- *  @return         poll の結果、タイムアウトは 0、失敗は -1 を返します。
- *
- *  解除通知の検出と 50 [ms] ごとの確認を poll の EINTR 再試行より優先します。
- *  see: https://man7.org/linux/man-pages/man2/eventfd.2.html
- */
+static int cancel_is_signaled(const cplat_socket_wait_cancel *cancel);
+static int deadline_remaining(const uint64_t deadline_ms, const int timeout_ms, uint64_t *remaining_ms);
 static int poll_with_cancel(struct pollfd *fds, const nfds_t count, const cplat_socket_wait_cancel *cancel,
-                            const int timeout_ms, const uint64_t deadline_ms)
-{
-    int no_wait_attempted = 0;
-
-    for (;;)
-    {
-        uint64_t remaining_ms;
-        int remaining_result;
-        int wait_ms;
-        int poll_result;
-
-        if (cancel_is_signaled(cancel))
-        {
-            errno = ECANCELED;
-            return -2;
-        }
-
-        if (timeout_ms == CPLAT_NO_WAIT)
-        {
-            if (no_wait_attempted != 0)
-            {
-                return 0;
-            }
-            remaining_ms = 0U;
-        }
-        else
-        {
-            remaining_result = deadline_remaining(deadline_ms, timeout_ms, &remaining_ms);
-            if (remaining_result < 0)
-            {
-                errno = EIO;
-                return -1;
-            }
-            if (remaining_result == 0)
-            {
-                return 0;
-            }
-        }
-
-        wait_ms = (timeout_ms == CPLAT_WAIT_FOREVER) ? -1 :
-                  (remaining_ms > (uint64_t)INT_MAX ? INT_MAX : (int)remaining_ms);
-        if (cancel != NULL && (wait_ms < 0 || wait_ms > (int)SOCKET_WATCH_CANCEL_CHECK_MS))
-        {
-            wait_ms = (int)SOCKET_WATCH_CANCEL_CHECK_MS;
-        }
-
-        poll_result = poll(fds, count, wait_ms);
-        no_wait_attempted = 1;
-        if (cancel_is_signaled(cancel))
-        {
-            errno = ECANCELED;
-            return -2;
-        }
-        if (poll_result < 0 && errno == EINTR)
-        {
-            continue;
-        }
-        if (poll_result < 0)
-        {
-            return -1;
-        }
-        if (poll_result > 0)
-        {
-            return poll_result;
-        }
-
-        remaining_result = deadline_remaining(deadline_ms, timeout_ms, &remaining_ms);
-        if (remaining_result < 0)
-        {
-            errno = EIO;
-            return -1;
-        }
-        if (remaining_result == 0)
-        {
-            return 0;
-        }
-        if (timeout_ms == CPLAT_NO_WAIT) return 0;
-    }
-}
-
-/**
- *  @brief          ソケットを受信または送信可能になるまで待ちます。
- *  @param[in]      watch       対象の登録。
- *  @param[in]      cancel      解除オブジェクト。NULL 可。
- *  @param[in]      timeout_ms  全体の期限。
- *  @param[in]      events      poll へ渡す方向。
- *  @param[out]     terminal_out 終了またはエラーで起床したことを格納します。
- *  @param[out]     detail_out  エラー詳細。NULL 可。
- *  @return         共通結果コードを返します。
- */
+                            const int timeout_ms, const uint64_t deadline_ms);
 static int wait_one_with_deadline(const cplat_socket_watch *watch, const cplat_socket_wait_cancel *cancel,
                                   const int timeout_ms, const uint64_t deadline_ms, const short events,
-                                  int *terminal_out, cplat_error *detail_out)
-{
-    struct pollfd fds[2];
-    nfds_t count = 0U;
-    int poll_result;
-
-    if ((watch == NULL) || (watch->sock == CPLAT_INVALID_SOCKET) || (timeout_ms < 0) || (terminal_out == NULL))
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-
-    *terminal_out = 0;
-    if (cancel != NULL)
-    {
-        fds[count].fd = cancel->event_fd;
-        fds[count].events = POLLIN;
-        fds[count].revents = 0;
-        ++count;
-    }
-    fds[count].fd = (int)watch->sock;
-    fds[count].events = events;
-    fds[count].revents = 0;
-    ++count;
-
-    for (;;)
-    {
-        poll_result = poll_with_cancel(fds, count, cancel, timeout_ms, deadline_ms);
-        if (poll_result == -2)
-        {
-            return cplat_internal_error_report_socket_errno_as(detail_out, ECANCELED, CPLAT_ERR_CANCELED);
-        }
-        if (poll_result < 0)
-        {
-            const int saved_errno = errno;
-            return cplat_internal_error_report_socket_errno(detail_out, saved_errno);
-        }
-        if (cancel != NULL && ((fds[0].revents & (POLLERR | POLLNVAL)) != 0))
-        {
-            return cplat_internal_error_report_errno_as(detail_out, EIO, CPLAT_ERR_UNKNOWN);
-        }
-        if (cancel != NULL && ((fds[0].revents & POLLIN) != 0 || cancel_is_signaled(cancel)))
-        {
-            return cplat_internal_error_report_socket_errno_as(detail_out, ECANCELED, CPLAT_ERR_CANCELED);
-        }
-        if (poll_result == 0)
-        {
-            return cplat_internal_error_report_socket_errno_as(detail_out, ETIMEDOUT, CPLAT_ERR_TIMEOUT);
-        }
-
-        {
-            const short revents = fds[count - 1U].revents;
-            if ((revents & POLLNVAL) != 0)
-            {
-                return cplat_internal_error_report_socket_errno_as(detail_out, EBADF, CPLAT_ERR_INVALID_ARGUMENT);
-            }
-            if ((revents & (POLLERR | POLLHUP)) != 0)
-            {
-                *terminal_out = 1;
-            }
-            if ((revents & (events | POLLERR | POLLHUP)) != 0)
-            {
-                return cplat_internal_error_report_success(detail_out);
-            }
-        }
-
-        fds[count - 1U].revents = 0;
-    }
-}
-
-/**
- *  @brief          相対タイムアウトから絶対期限を一度だけ求めてソケットを待ちます。
- */
+                                  int *terminal_out, cplat_error *detail_out);
 static int wait_one(const cplat_socket_watch *watch, const cplat_socket_wait_cancel *cancel, const int timeout_ms,
-                    const short events, int *terminal_out, cplat_error *detail_out)
-{
-    uint64_t deadline_ms = 0U;
-    uint64_t now;
-
-    if (timeout_ms < 0)
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-    if (timeout_ms != CPLAT_WAIT_FOREVER && timeout_ms != CPLAT_NO_WAIT)
-    {
-        if (cplat_clock_get_monotonic_ms(&now) != CPLAT_OK)
-        {
-            return cplat_internal_error_report_errno_as(detail_out, EIO, CPLAT_ERR_UNKNOWN);
-        }
-        deadline_ms = now + (uint64_t)timeout_ms;
-    }
-
-    return wait_one_with_deadline(watch, cancel, timeout_ms, deadline_ms, events, terminal_out, detail_out);
-}
+                    const short events, int *terminal_out, cplat_error *detail_out);
+static int send_once(cplat_socket_watch *watch, const void *buf, const size_t len, size_t *sent_out,
+                     cplat_error *detail_out);
+static int transfer_all(cplat_socket_watch *watch, const void *send_buf, void *recv_buf, const size_t len,
+                        cplat_socket_wait_cancel *cancel, const int timeout_ms, size_t *transferred_out,
+                        const int sending, cplat_error *detail_out);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -547,31 +323,6 @@ int cplat_socket_watch_wait_writable(cplat_socket_watch *watch, cplat_socket_wai
     return wait_one(watch, cancel, timeout_ms, POLLOUT, &terminal, detail_out);
 }
 
-/**
- *  @brief          登録済みソケットへ送信を 1 回実行し、送信可能の競合状態を報告します。
- */
-static int send_once(cplat_socket_watch *watch, const void *buf, const size_t len, size_t *sent_out,
-                     cplat_error *detail_out)
-{
-    ssize_t sent;
-
-    do
-    {
-        sent = send((int)watch->sock, buf, len, MSG_NOSIGNAL);
-    } while (sent < 0 && errno == EINTR);
-
-    if (sent < 0)
-    {
-        return cplat_internal_error_report_socket_errno(detail_out, errno);
-    }
-    if ((size_t)sent > len)
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EIO, CPLAT_ERR_UNKNOWN);
-    }
-    *sent_out = (size_t)sent;
-    return cplat_internal_error_report_success(detail_out);
-}
-
 /* Doxygen コメントは、ヘッダーに記載 */
 
 int cplat_socket_watch_send(cplat_socket_watch *watch, const void *buf, const size_t len, size_t *sent_out,
@@ -697,6 +448,357 @@ int cplat_socket_watch_sendto_multi(cplat_socket_watch *watch, const cplat_socke
         return cplat_internal_error_report_errno_as(detail_out, EIO, CPLAT_ERR_UNKNOWN);
     }
     *sent_count_out = full_count;
+    return cplat_internal_error_report_success(detail_out);
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_watch_send_all(cplat_socket_watch *watch, const void *buf, const size_t len,
+                                cplat_socket_wait_cancel *cancel, const int timeout_ms, size_t *sent_out,
+                                cplat_error *detail_out)
+{
+    size_t transferred = 0U;
+    const int result = transfer_all(watch, buf, NULL, len, cancel, timeout_ms, &transferred, 1, detail_out);
+    if (sent_out != NULL)
+    {
+        *sent_out = transferred;
+    }
+    return result;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_watch_recv_all(cplat_socket_watch *watch, void *buf, const size_t len,
+                                cplat_socket_wait_cancel *cancel, const int timeout_ms, size_t *received_out,
+                                cplat_error *detail_out)
+{
+    size_t transferred = 0U;
+    const int result = transfer_all(watch, NULL, buf, len, cancel, timeout_ms, &transferred, 0, detail_out);
+    if (received_out != NULL)
+    {
+        *received_out = transferred;
+    }
+    return result;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_watch_connect(cplat_socket_watch *watch, const cplat_ipv4_endpoint *endpoint,
+                               cplat_socket_wait_cancel *cancel, const int timeout_ms, cplat_error *detail_out)
+{
+    struct sockaddr_in native;
+    int connect_result;
+    int connect_errno;
+    int terminal;
+
+    if (watch == NULL || watch->sock == CPLAT_INVALID_SOCKET || endpoint == NULL || timeout_ms < 0)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+    if (cancel_is_signaled(cancel))
+    {
+        return cplat_internal_error_report_socket_errno_as(detail_out, ECANCELED, CPLAT_ERR_CANCELED);
+    }
+
+    memset(&native, 0, sizeof(native));
+    native.sin_family = AF_INET;
+    memcpy(&native.sin_addr.s_addr, &endpoint->address, sizeof(native.sin_addr.s_addr));
+    memcpy(&native.sin_port, &endpoint->port, sizeof(native.sin_port));
+    connect_result = connect((int)watch->sock, (const struct sockaddr *)&native, (socklen_t)sizeof(native));
+    if (connect_result == 0)
+    {
+        return cplat_internal_error_report_success(detail_out);
+    }
+
+    connect_errno = errno;
+    if (connect_errno != EINPROGRESS && connect_errno != EALREADY && connect_errno != EINTR)
+    {
+        return cplat_internal_error_report_socket_errno(detail_out, connect_errno);
+    }
+
+    {
+        const int wait_result = wait_one(watch, cancel, timeout_ms, POLLOUT, &terminal, detail_out);
+        if (wait_result != CPLAT_OK)
+        {
+            return wait_result;
+        }
+    }
+    {
+        int socket_error = 0;
+        socklen_t error_len = (socklen_t)sizeof(socket_error);
+        if (getsockopt((int)watch->sock, SOL_SOCKET, SO_ERROR, &socket_error, &error_len) != 0)
+        {
+            return cplat_internal_error_report_socket_errno(detail_out, errno);
+        }
+        if (socket_error != 0)
+        {
+            return cplat_internal_error_report_socket_errno(detail_out, socket_error);
+        }
+    }
+    return cplat_internal_error_report_success(detail_out);
+}
+
+/**
+ *  @brief          解除通知が保持されているかを acquire で取得します。
+ */
+static int cancel_is_signaled(const cplat_socket_wait_cancel *cancel)
+{
+    return (cancel != NULL) && (atomic_load_explicit(&cancel->signaled, memory_order_acquire) != 0);
+}
+
+/**
+ *  @brief          指定した待機期限の残り時間を計算します。
+ *  @param[in]      deadline_ms 絶対期限。無期限は 0。
+ *  @param[in]      timeout_ms  元のタイムアウト。
+ *  @param[out]     remaining_ms 残り時間。
+ *  @return         期限まで待機できる場合は 1、期限切れは 0、時計の失敗は -1 を返します。
+ */
+static int deadline_remaining(const uint64_t deadline_ms, const int timeout_ms, uint64_t *remaining_ms)
+{
+    uint64_t now;
+
+    if (timeout_ms == CPLAT_WAIT_FOREVER)
+    {
+        *remaining_ms = UINT64_MAX;
+        return 1;
+    }
+
+    if (cplat_clock_get_monotonic_ms(&now) != CPLAT_OK)
+    {
+        return -1;
+    }
+
+    if (now >= deadline_ms)
+    {
+        *remaining_ms = 0U;
+        return 0;
+    }
+
+    *remaining_ms = deadline_ms - now;
+    return 1;
+}
+
+/**
+ *  @brief          指定した解除状態と絶対期限で poll を実行します。
+ *  @param[in]      fds         poll の対象。
+ *  @param[in]      count       対象数。
+ *  @param[in]      cancel      解除オブジェクト。NULL 可。
+ *  @param[in]      timeout_ms  全体の期限。
+ *  @param[in]      deadline_ms 正のタイムアウトに対する絶対期限。
+ *  @return         poll の結果、タイムアウトは 0、失敗は -1 を返します。
+ *
+ *  解除通知の検出と 50 [ms] ごとの確認を poll の EINTR 再試行より優先します。
+ *  see: https://man7.org/linux/man-pages/man2/eventfd.2.html
+ */
+static int poll_with_cancel(struct pollfd *fds, const nfds_t count, const cplat_socket_wait_cancel *cancel,
+                            const int timeout_ms, const uint64_t deadline_ms)
+{
+    int no_wait_attempted = 0;
+
+    for (;;)
+    {
+        uint64_t remaining_ms;
+        int remaining_result;
+        int wait_ms;
+        int poll_result;
+
+        if (cancel_is_signaled(cancel))
+        {
+            errno = ECANCELED;
+            return -2;
+        }
+
+        if (timeout_ms == CPLAT_NO_WAIT)
+        {
+            if (no_wait_attempted != 0)
+            {
+                return 0;
+            }
+            remaining_ms = 0U;
+        }
+        else
+        {
+            remaining_result = deadline_remaining(deadline_ms, timeout_ms, &remaining_ms);
+            if (remaining_result < 0)
+            {
+                errno = EIO;
+                return -1;
+            }
+            if (remaining_result == 0)
+            {
+                return 0;
+            }
+        }
+
+        wait_ms = (timeout_ms == CPLAT_WAIT_FOREVER) ? -1 :
+                  (remaining_ms > (uint64_t)INT_MAX ? INT_MAX : (int)remaining_ms);
+        if (cancel != NULL && (wait_ms < 0 || wait_ms > (int)SOCKET_WATCH_CANCEL_CHECK_MS))
+        {
+            wait_ms = (int)SOCKET_WATCH_CANCEL_CHECK_MS;
+        }
+
+        poll_result = poll(fds, count, wait_ms);
+        no_wait_attempted = 1;
+        if (cancel_is_signaled(cancel))
+        {
+            errno = ECANCELED;
+            return -2;
+        }
+        if (poll_result < 0 && errno == EINTR)
+        {
+            continue;
+        }
+        if (poll_result < 0)
+        {
+            return -1;
+        }
+        if (poll_result > 0)
+        {
+            return poll_result;
+        }
+
+        remaining_result = deadline_remaining(deadline_ms, timeout_ms, &remaining_ms);
+        if (remaining_result < 0)
+        {
+            errno = EIO;
+            return -1;
+        }
+        if (remaining_result == 0)
+        {
+            return 0;
+        }
+        if (timeout_ms == CPLAT_NO_WAIT) return 0;
+    }
+}
+
+/**
+ *  @brief          ソケットを受信または送信可能になるまで待ちます。
+ *  @param[in]      watch       対象の登録。
+ *  @param[in]      cancel      解除オブジェクト。NULL 可。
+ *  @param[in]      timeout_ms  全体の期限。
+ *  @param[in]      events      poll へ渡す方向。
+ *  @param[out]     terminal_out 終了またはエラーで起床したことを格納します。
+ *  @param[out]     detail_out  エラー詳細。NULL 可。
+ *  @return         共通結果コードを返します。
+ */
+static int wait_one_with_deadline(const cplat_socket_watch *watch, const cplat_socket_wait_cancel *cancel,
+                                  const int timeout_ms, const uint64_t deadline_ms, const short events,
+                                  int *terminal_out, cplat_error *detail_out)
+{
+    struct pollfd fds[2];
+    nfds_t count = 0U;
+    int poll_result;
+
+    if ((watch == NULL) || (watch->sock == CPLAT_INVALID_SOCKET) || (timeout_ms < 0) || (terminal_out == NULL))
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+
+    *terminal_out = 0;
+    if (cancel != NULL)
+    {
+        fds[count].fd = cancel->event_fd;
+        fds[count].events = POLLIN;
+        fds[count].revents = 0;
+        ++count;
+    }
+    fds[count].fd = (int)watch->sock;
+    fds[count].events = events;
+    fds[count].revents = 0;
+    ++count;
+
+    for (;;)
+    {
+        poll_result = poll_with_cancel(fds, count, cancel, timeout_ms, deadline_ms);
+        if (poll_result == -2)
+        {
+            return cplat_internal_error_report_socket_errno_as(detail_out, ECANCELED, CPLAT_ERR_CANCELED);
+        }
+        if (poll_result < 0)
+        {
+            const int saved_errno = errno;
+            return cplat_internal_error_report_socket_errno(detail_out, saved_errno);
+        }
+        if (cancel != NULL && ((fds[0].revents & (POLLERR | POLLNVAL)) != 0))
+        {
+            return cplat_internal_error_report_errno_as(detail_out, EIO, CPLAT_ERR_UNKNOWN);
+        }
+        if (cancel != NULL && ((fds[0].revents & POLLIN) != 0 || cancel_is_signaled(cancel)))
+        {
+            return cplat_internal_error_report_socket_errno_as(detail_out, ECANCELED, CPLAT_ERR_CANCELED);
+        }
+        if (poll_result == 0)
+        {
+            return cplat_internal_error_report_socket_errno_as(detail_out, ETIMEDOUT, CPLAT_ERR_TIMEOUT);
+        }
+
+        {
+            const short revents = fds[count - 1U].revents;
+            if ((revents & POLLNVAL) != 0)
+            {
+                return cplat_internal_error_report_socket_errno_as(detail_out, EBADF, CPLAT_ERR_INVALID_ARGUMENT);
+            }
+            if ((revents & (POLLERR | POLLHUP)) != 0)
+            {
+                *terminal_out = 1;
+            }
+            if ((revents & (events | POLLERR | POLLHUP)) != 0)
+            {
+                return cplat_internal_error_report_success(detail_out);
+            }
+        }
+
+        fds[count - 1U].revents = 0;
+    }
+}
+
+/**
+ *  @brief          相対タイムアウトから絶対期限を一度だけ求めてソケットを待ちます。
+ */
+static int wait_one(const cplat_socket_watch *watch, const cplat_socket_wait_cancel *cancel, const int timeout_ms,
+                    const short events, int *terminal_out, cplat_error *detail_out)
+{
+    uint64_t deadline_ms = 0U;
+    uint64_t now;
+
+    if (timeout_ms < 0)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+    if (timeout_ms != CPLAT_WAIT_FOREVER && timeout_ms != CPLAT_NO_WAIT)
+    {
+        if (cplat_clock_get_monotonic_ms(&now) != CPLAT_OK)
+        {
+            return cplat_internal_error_report_errno_as(detail_out, EIO, CPLAT_ERR_UNKNOWN);
+        }
+        deadline_ms = now + (uint64_t)timeout_ms;
+    }
+
+    return wait_one_with_deadline(watch, cancel, timeout_ms, deadline_ms, events, terminal_out, detail_out);
+}
+
+/**
+ *  @brief          登録済みソケットへ送信を 1 回実行し、送信可能の競合状態を報告します。
+ */
+static int send_once(cplat_socket_watch *watch, const void *buf, const size_t len, size_t *sent_out,
+                     cplat_error *detail_out)
+{
+    ssize_t sent;
+
+    do
+    {
+        sent = send((int)watch->sock, buf, len, MSG_NOSIGNAL);
+    } while (sent < 0 && errno == EINTR);
+
+    if (sent < 0)
+    {
+        return cplat_internal_error_report_socket_errno(detail_out, errno);
+    }
+    if ((size_t)sent > len)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EIO, CPLAT_ERR_UNKNOWN);
+    }
+    *sent_out = (size_t)sent;
     return cplat_internal_error_report_success(detail_out);
 }
 
@@ -828,93 +930,6 @@ static int transfer_all(cplat_socket_watch *watch, const void *send_buf, void *r
         transferred += (size_t)result;
         terminal_hint = 0;
     }
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_watch_send_all(cplat_socket_watch *watch, const void *buf, const size_t len,
-                                cplat_socket_wait_cancel *cancel, const int timeout_ms, size_t *sent_out,
-                                cplat_error *detail_out)
-{
-    size_t transferred = 0U;
-    const int result = transfer_all(watch, buf, NULL, len, cancel, timeout_ms, &transferred, 1, detail_out);
-    if (sent_out != NULL)
-    {
-        *sent_out = transferred;
-    }
-    return result;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_watch_recv_all(cplat_socket_watch *watch, void *buf, const size_t len,
-                                cplat_socket_wait_cancel *cancel, const int timeout_ms, size_t *received_out,
-                                cplat_error *detail_out)
-{
-    size_t transferred = 0U;
-    const int result = transfer_all(watch, NULL, buf, len, cancel, timeout_ms, &transferred, 0, detail_out);
-    if (received_out != NULL)
-    {
-        *received_out = transferred;
-    }
-    return result;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_socket_watch_connect(cplat_socket_watch *watch, const cplat_ipv4_endpoint *endpoint,
-                               cplat_socket_wait_cancel *cancel, const int timeout_ms, cplat_error *detail_out)
-{
-    struct sockaddr_in native;
-    int connect_result;
-    int connect_errno;
-    int terminal;
-
-    if (watch == NULL || watch->sock == CPLAT_INVALID_SOCKET || endpoint == NULL || timeout_ms < 0)
-    {
-        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
-    }
-    if (cancel_is_signaled(cancel))
-    {
-        return cplat_internal_error_report_socket_errno_as(detail_out, ECANCELED, CPLAT_ERR_CANCELED);
-    }
-
-    memset(&native, 0, sizeof(native));
-    native.sin_family = AF_INET;
-    memcpy(&native.sin_addr.s_addr, &endpoint->address, sizeof(native.sin_addr.s_addr));
-    memcpy(&native.sin_port, &endpoint->port, sizeof(native.sin_port));
-    connect_result = connect((int)watch->sock, (const struct sockaddr *)&native, (socklen_t)sizeof(native));
-    if (connect_result == 0)
-    {
-        return cplat_internal_error_report_success(detail_out);
-    }
-
-    connect_errno = errno;
-    if (connect_errno != EINPROGRESS && connect_errno != EALREADY && connect_errno != EINTR)
-    {
-        return cplat_internal_error_report_socket_errno(detail_out, connect_errno);
-    }
-
-    {
-        const int wait_result = wait_one(watch, cancel, timeout_ms, POLLOUT, &terminal, detail_out);
-        if (wait_result != CPLAT_OK)
-        {
-            return wait_result;
-        }
-    }
-    {
-        int socket_error = 0;
-        socklen_t error_len = (socklen_t)sizeof(socket_error);
-        if (getsockopt((int)watch->sock, SOL_SOCKET, SO_ERROR, &socket_error, &error_len) != 0)
-        {
-            return cplat_internal_error_report_socket_errno(detail_out, errno);
-        }
-        if (socket_error != 0)
-        {
-            return cplat_internal_error_report_socket_errno(detail_out, socket_error);
-        }
-    }
-    return cplat_internal_error_report_success(detail_out);
 }
 
 #endif /* PLATFORM_LINUX */

@@ -70,6 +70,68 @@ static_assert(CPLAT_STRING_CATALOG_ARGUMENT_MAX >= 10U && CPLAT_STRING_CATALOG_A
 #define PLACEHOLDER_BRACES_LEN (sizeof("{}") - 1U)
 
 /**
+ *  @brief          書き込み先と、書き込みの経過を保持します。
+ *
+ *  @ref render_buffer::dest が NULL のときは、書き込みを行わず構文だけを確認します。
+ */
+typedef struct render_buffer
+{
+    char *dest;           /**< 書き込み先です。NULL のときは構文確認だけを行います。 */
+    size_t dest_size;     /**< dest のバイト数です。dest が NULL のときは 0 です。 */
+    size_t length;        /**< dest へ書き込んだバイト数です。NUL 終端を含みません。 */
+    bool is_truncated;    /**< 容量不足で切り詰めた場合に true になります。 */
+    unsigned char pad[7]; /**< 明示的アラインメントです。0 を指定します。 */
+} render_buffer;
+
+static size_t decimal_from_uint64(char *const out, uint64_t value);
+static size_t decimal_from_int64(char *const out, const int64_t value);
+static size_t hex_from_uint64(char *const out, const uint64_t value, const size_t digits);
+static void render_buffer_append(render_buffer *buffer, const char *text, const size_t length);
+static void render_buffer_append_string(render_buffer *buffer, const char *text);
+static int render_buffer_append_argument(render_buffer *buffer,
+                                         const cplat_internal_string_catalog_argument_value *value);
+static int render_scan_text(render_buffer *buffer, const char *text,
+                            const cplat_internal_string_catalog_argument_value *values,
+                            const cplat_string_catalog_argument *arguments, const int value_count);
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_internal_string_catalog_render_text(char *dest, const size_t dest_size, const char *text,
+                                              const cplat_internal_string_catalog_argument_value *values,
+                                              const int value_count)
+{
+    render_buffer buffer = {0};
+    int ret;
+
+    buffer.dest = dest;
+    buffer.dest_size = dest_size;
+    dest[0] = '\0';
+
+    ret = render_scan_text(&buffer, text, values, NULL, value_count);
+    if (ret != CPLAT_OK)
+    {
+        return ret;
+    }
+
+    if (buffer.is_truncated)
+    {
+        return CPLAT_ERR_BUFFER_TOO_SMALL;
+    }
+
+    return CPLAT_OK;
+}
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int string_catalog_validate_text(const char *text, const cplat_string_catalog_argument *arguments,
+                                 const int value_count)
+{
+    render_buffer buffer = {0};
+
+    return render_scan_text(&buffer, text, NULL, arguments, value_count);
+}
+
+/**
  *  @brief          符号なし整数を 10 進数へ変換します。
  *  @param[out]     out   書き込み先。@ref DECIMAL_DIGITS_MAX バイト以上の空きが必要です。
  *  @param[in]      value 変換する値。
@@ -144,20 +206,6 @@ static size_t hex_from_uint64(char *const out, const uint64_t value, const size_
 
     return HEX_PREFIX_LEN + digits;
 }
-
-/**
- *  @brief          書き込み先と、書き込みの経過を保持します。
- *
- *  @ref render_buffer::dest が NULL のときは、書き込みを行わず構文だけを確認します。
- */
-typedef struct render_buffer
-{
-    char *dest;           /**< 書き込み先です。NULL のときは構文確認だけを行います。 */
-    size_t dest_size;     /**< dest のバイト数です。dest が NULL のときは 0 です。 */
-    size_t length;        /**< dest へ書き込んだバイト数です。NUL 終端を含みません。 */
-    bool is_truncated;    /**< 容量不足で切り詰めた場合に true になります。 */
-    unsigned char pad[7]; /**< 明示的アラインメントです。0 を指定します。 */
-} render_buffer;
 
 /**
  *  @brief          指定した長さの文字列を書き込み先へ追加します。
@@ -458,41 +506,4 @@ static int render_scan_text(render_buffer *buffer, const char *text,
     }
 
     return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int cplat_internal_string_catalog_render_text(char *dest, const size_t dest_size, const char *text,
-                                              const cplat_internal_string_catalog_argument_value *values,
-                                              const int value_count)
-{
-    render_buffer buffer = {0};
-    int ret;
-
-    buffer.dest = dest;
-    buffer.dest_size = dest_size;
-    dest[0] = '\0';
-
-    ret = render_scan_text(&buffer, text, values, NULL, value_count);
-    if (ret != CPLAT_OK)
-    {
-        return ret;
-    }
-
-    if (buffer.is_truncated)
-    {
-        return CPLAT_ERR_BUFFER_TOO_SMALL;
-    }
-
-    return CPLAT_OK;
-}
-
-/* Doxygen コメントは、ヘッダーに記載 */
-
-int string_catalog_validate_text(const char *text, const cplat_string_catalog_argument *arguments,
-                                 const int value_count)
-{
-    render_buffer buffer = {0};
-
-    return render_scan_text(&buffer, text, NULL, arguments, value_count);
 }

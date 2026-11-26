@@ -34,20 +34,7 @@ static_assert(CPLAT_COMPRESS_MAX_UNCOMPRESSED_SIZE <= (size_t)((uInt)-1), "cplat
  */
 #define COMPRESS_RAW_DEFLATE_WINDOW_BITS (-15)
 
-/*
- * zlib の avail_in と avail_out は uInt のため、1 回に渡せる長さは 4 [GiB] 未満である。
- * uInt に収まらない remaining では uInt の最大値を返し、収まるときは remaining を返す。
- * see: https://zlib.net/manual.html
- */
-static uInt zlib_avail(const size_t remaining)
-{
-    if (remaining > (size_t)((uInt)-1))
-    {
-        return (uInt)-1;
-    }
-
-    return (uInt)remaining;
-}
+static uInt zlib_avail(const size_t remaining);
 
 /* Doxygen コメントは、ヘッダーに記載 */
 
@@ -246,4 +233,19 @@ int cplat_decompress(uint8_t *dst, size_t *dst_len, const uint8_t *src, const si
     }
     *dst_len = (size_t)orig_len;
     return CPLAT_OK;
+}
+
+/*
+ * zlib の avail_in と avail_out は uInt のため、1 回に渡せる長さは 4 [GiB] 未満である。
+ * uInt に収まらない remaining では uInt の最大値を返し、収まるときは remaining を返す。
+ * see: https://zlib.net/manual.html
+ */
+static uInt zlib_avail(const size_t remaining)
+{
+    if (remaining > (size_t)((uInt)-1))
+    {
+        return (uInt)-1;
+    }
+
+    return (uInt)remaining;
 }
