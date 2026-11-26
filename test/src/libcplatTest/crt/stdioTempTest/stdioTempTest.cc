@@ -10,8 +10,14 @@
     #include <mock_stdio.h>
     #include <mock_unistd.h>
 #elif defined(PLATFORM_WINDOWS)
+    #include <cplat/crt/stdlib.h>
     #include <cplat/crt/temp_dir_internal.h>
+    #include <mock_stdio.h>
     #include <mock_windows.h>
+    #include <cstdint>
+    #include <cwchar>
+    #include <string>
+    #include <vector>
 #endif /* PLATFORM_ */
 
 using testing::_;
@@ -510,109 +516,412 @@ TEST_F(stdioTempTest, path_formatting_failure_returns_enametoolong)
 namespace
 {
 
+// 一時ディレクトリの取得の差し替えで返すパス。テストごとに設定する。
+std::wstring g_temp_dir;
+
 DWORD WINAPI stdio_temp_resolver_failing(DWORD, LPWSTR)
 {
     SetLastError(ERROR_ACCESS_DENIED);
     return 0U;
 }
 
-DWORD WINAPI stdio_temp_resolver_custom_system_temp(DWORD buffer_length, LPWSTR buffer)
+DWORD WINAPI stdio_temp_resolver_from_global(DWORD buffer_length, LPWSTR buffer)
 {
-    static const wchar_t kPath[] = L"C:\\CustomSystemTemp\\";
-    const DWORD len = (DWORD)(sizeof(kPath) / sizeof(kPath[0]) - 1U);
+    const DWORD len = static_cast<DWORD>(g_temp_dir.size());
     if (buffer != nullptr && buffer_length > len)
     {
-        std::memcpy(buffer, kPath, sizeof(kPath));
+        std::memcpy(buffer, g_temp_dir.c_str(), (g_temp_dir.size() + 1U) * sizeof(wchar_t));
     }
     return len;
 }
 
-DWORD WINAPI stdio_temp_resolver_default_system_temp(DWORD buffer_length, LPWSTR buffer)
+// 実在の一時ディレクトリの配下に、長さが dir_length 文字以上 (区切りを含まない) の作業用のディレクトリを作る。
+// 破棄で、作ったディレクトリを削除する。
+class TempWorkDir
 {
-    static const wchar_t kPath[] = L"C:\\Windows\\SystemTemp\\";
-    const DWORD len = (DWORD)(sizeof(kPath) / sizeof(kPath[0]) - 1U);
-    if (buffer != nullptr && buffer_length > len)
+  public:
+    explicit TempWorkDir(size_t dir_length)
     {
-        std::memcpy(buffer, kPath, sizeof(kPath));
+        wchar_t base[MAX_PATH + 2] = {};
+        const DWORD base_length = GetTempPathW(static_cast<DWORD>(sizeof(base) / sizeof(base[0])), base);
+        if (base_length == 0U)
+        {
+            return;
+        }
+
+        std::wstring dir = std::wstring(base) + L"cplat_stdio_temp_" + std::to_wstring(GetCurrentProcessId());
+        if (!create_dir(dir))
+        {
+            return;
+        }
+
+        while (dir.size() < dir_length)
+        {
+            const size_t remaining = dir_length - dir.size() - 1U;
+            const size_t take = remaining < 50U ? remaining : 50U;
+            if (take == 0U)
+            {
+                break;
+            }
+            dir += L"\\" + std::wstring(take, L'd');
+            if (!create_dir(dir))
+            {
+                return;
+            }
+        }
+
+        dir_ = dir;
     }
-    return len;
+
+    ~TempWorkDir()
+    {
+        for (auto it = created_.rbegin(); it != created_.rend(); ++it)
+        {
+            (void)RemoveDirectoryW((L"\\\\?\\" + *it).c_str());
+        }
+    }
+
+    TempWorkDir(const TempWorkDir &) = delete;
+    TempWorkDir &operator=(const TempWorkDir &) = delete;
+
+    // 用意したディレクトリ (末尾の区切りを含まない)。用意できなかった場合は空。
+    const std::wstring &dir() const
+    {
+        return dir_;
+    }
+
+    // 用意したディレクトリが空であれば true を返す (作成した一時ファイルが削除されたことの確認に使う)。
+    bool is_empty() const
+    {
+        WIN32_FIND_DATAW data;
+        const std::wstring pattern = L"\\\\?\\" + dir_ + L"\\*";
+        HANDLE find = FindFirstFileW(pattern.c_str(), &data);
+        bool empty = true;
+        if (find == INVALID_HANDLE_VALUE)
+        {
+            return true;
+        }
+        do
+        {
+            if (std::wcscmp(data.cFileName, L".") != 0 && std::wcscmp(data.cFileName, L"..") != 0)
+            {
+                empty = false;
+            }
+        } while (FindNextFileW(find, &data));
+        (void)FindClose(find);
+        return empty;
+    }
+
+  private:
+    bool create_dir(const std::wstring &dir)
+    {
+        if (!CreateDirectoryW((L"\\\\?\\" + dir).c_str(), nullptr))
+        {
+            return false;
+        }
+        created_.push_back(dir);
+        return true;
+    }
+
+    std::vector<std::wstring> created_;
+    std::wstring dir_;
+};
+
+// 環境変数 TMP を一時的に変更する。破棄で元に戻す。
+class TmpEnvGuard
+{
+  public:
+    explicit TmpEnvGuard(const std::wstring &value)
+    {
+        const DWORD saved_size = GetEnvironmentVariableW(L"TMP", nullptr, 0U);
+        if (saved_size != 0U)
+        {
+            std::vector<wchar_t> saved(saved_size, L'\0');
+            if (GetEnvironmentVariableW(L"TMP", saved.data(), saved_size) + 1U == saved_size)
+            {
+                saved_.assign(saved.data());
+                has_saved_ = true;
+            }
+        }
+        changed_ = SetEnvironmentVariableW(L"TMP", value.c_str()) != FALSE;
+    }
+
+    ~TmpEnvGuard()
+    {
+        if (changed_)
+        {
+            (void)SetEnvironmentVariableW(L"TMP", has_saved_ ? saved_.c_str() : nullptr);
+        }
+    }
+
+    TmpEnvGuard(const TmpEnvGuard &) = delete;
+    TmpEnvGuard &operator=(const TmpEnvGuard &) = delete;
+
+    bool changed() const
+    {
+        return changed_;
+    }
+
+  private:
+    std::wstring saved_;
+    bool has_saved_ = false;
+    bool changed_ = false;
+};
+
+std::string to_utf8_with_slashes(const std::wstring &text)
+{
+    const int length = WideCharToMultiByte(CP_UTF8, 0, text.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    std::string result(static_cast<size_t>(length > 0 ? length : 1), '\0');
+    if (length > 0)
+    {
+        (void)WideCharToMultiByte(CP_UTF8, 0, text.c_str(), -1, &result[0], length, nullptr, nullptr);
+    }
+    result.resize(std::strlen(result.c_str()));
+    for (char &ch : result)
+    {
+        if (ch == '\\')
+        {
+            ch = '/';
+        }
+    }
+    return result;
+}
+
+std::wstring utf8_path_to_backslash_wide(const char *path)
+{
+    const int length = MultiByteToWideChar(CP_UTF8, 0, path, -1, nullptr, 0);
+    std::wstring wide(static_cast<size_t>(length > 0 ? length : 1), L'\0');
+    if (length > 0)
+    {
+        (void)MultiByteToWideChar(CP_UTF8, 0, path, -1, &wide[0], length);
+    }
+    wide.resize(std::wcslen(wide.c_str()));
+    for (wchar_t &ch : wide)
+    {
+        if (ch == L'/')
+        {
+            ch = L'\\';
+        }
+    }
+    return wide;
+}
+
+// path が "<dir_utf8>/<prefix>" に続く 16 進 16 文字と ".tmp" であるかを判定する。
+bool is_temp_file_path(const std::string &path, const std::string &dir_utf8, const std::string &prefix)
+{
+    const std::string head = dir_utf8 + "/" + prefix;
+    if (path.size() != head.size() + 16U + 4U || path.compare(0, head.size(), head) != 0)
+    {
+        return false;
+    }
+    for (size_t i = head.size(); i < head.size() + 16U; ++i)
+    {
+        if (std::strchr("0123456789abcdef", path[i]) == nullptr)
+        {
+            return false;
+        }
+    }
+    return path.compare(head.size() + 16U, 4U, ".tmp") == 0;
 }
 
 } // namespace
 
-// 内部の一時ディレクトリ取得が失敗した場合に NULL を返し GetTempFileNameW を呼ばないことの確認
-TEST_F(stdioTempTest, internal_temp_dir_failure_skips_get_temp_file_namew)
+// 内部の一時ディレクトリの取得が失敗した場合に NULL を返し、詳細エラーを記録することの確認
+TEST_F(stdioTempTest, internal_temp_dir_failure_returns_null)
 {
     // Arrange
-    NiceMock<Mock_windows> mock_windows;
     char path[PLATFORM_PATH_UTF8_MAX] = {};
     cplat_error detail;
-    cplat_internal_temp_dir_set_resolver_for_test(stdio_temp_resolver_failing);
+    cplat_internal_temp_dir_set_resolver_for_test(
+        stdio_temp_resolver_failing); // [状態] - 一時ディレクトリの取得が ERROR_ACCESS_DENIED で失敗するように差し替える。
 
     // Pre-Assert
-    EXPECT_CALL(mock_windows, GetTempFileNameW(_, _, _, _, _, _, _))
-        .Times(0); // [Pre-Assert確認_異常系] - 内部関数失敗時は GetTempFileNameW() が呼び出されないこと。
 
     // Act
-    FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path), &detail); // [手順] - 内部関数失敗時。
+    FILE *fp =
+        cplat_fopen_temp("ptr", "wb", path, sizeof(path),
+                         &detail); // [手順] - 一時ディレクトリの取得が失敗する状態で cplat_fopen_temp() を呼び出す。
 
     // Assert
-    EXPECT_EQ(nullptr, fp); // [確認_異常系] - NULL を返すこと。
-    EXPECT_EQ(CPLAT_ERROR_DOMAIN_WINDOWS, cplat_error_get_domain(&detail)); // [確認_異常系] - Win32 ドメインであること。
-    EXPECT_EQ((unsigned long)ERROR_ACCESS_DENIED, cplat_error_get_windows_error(&detail)); // [確認_異常系] - 詳細エラーが保持されること。
+    EXPECT_EQ(nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。
+    EXPECT_EQ(
+        CPLAT_ERROR_DOMAIN_WINDOWS,
+        cplat_error_get_domain(&detail)); // [確認_異常系] - detail のドメインが CPLAT_ERROR_DOMAIN_WINDOWS であること。
+    EXPECT_EQ((unsigned long)ERROR_ACCESS_DENIED,
+              cplat_error_get_windows_error(
+                  &detail)); // [確認_異常系] - detail の Win32 エラーが ERROR_ACCESS_DENIED であること。
 
     // Cleanup
     cplat_internal_temp_dir_set_resolver_for_test(nullptr);
 }
 
-// GetTempFileNameW が ERROR_BUFFER_OVERFLOW で失敗した場合に詳細エラーを返すことの確認
-TEST_F(stdioTempTest, get_temp_file_namew_buffer_overflow_reports_windows_error)
+// prefix が NULL の場合に、既定の接頭辞 "cu_" の一時ファイルを一時ディレクトリの直下に作り、
+// 区切りを '/' にした UTF-8 のパスを path_out へ返すことの確認
+TEST_F(stdioTempTest, reports_path_with_default_prefix_under_temp_dir)
 {
     // Arrange
-    NiceMock<Mock_windows> mock_windows;
+    TempWorkDir work(0U);             // [状態] - 実在の一時ディレクトリの配下に、作業用のディレクトリを作成する。
+    ASSERT_FALSE(work.dir().empty()); // [状態確認] - work.dir() が空でないこと。
+    g_temp_dir = work.dir() + L"\\";  // [状態] - 一時ディレクトリを、作業用のディレクトリとする。
+    cplat_internal_temp_dir_set_resolver_for_test(stdio_temp_resolver_from_global);
     char path[PLATFORM_PATH_UTF8_MAX] = {};
-    cplat_error detail;
-    cplat_internal_temp_dir_set_resolver_for_test(stdio_temp_resolver_custom_system_temp);
+    int close_result = -1;
+    BOOL deleted = FALSE;
 
     // Pre-Assert
-    EXPECT_CALL(mock_windows, GetTempFileNameW(_, _, _, testing::StrEq(L"C:\\CustomSystemTemp\\"), _, 0U, _))
-        .WillOnce(Return(0U)); // [Pre-Assert確認_異常系] - SystemTemp パスで GetTempFileNameW() が 1 回呼び出されること。
-    EXPECT_CALL(mock_windows, GetLastError(_, _, _))
-        .WillOnce(Return(ERROR_BUFFER_OVERFLOW)); // [Pre-Assert確認_異常系] - GetLastError() が 1 回呼び出されること。
 
     // Act
-    FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path), &detail); // [手順] - GetTempFileNameW が ERROR_BUFFER_OVERFLOW で失敗する場合。
+    FILE *fp = cplat_fopen_temp(nullptr, "wb", path, sizeof(path),
+                                nullptr); // [手順] - prefix に nullptr を渡して cplat_fopen_temp() を呼び出す。
+    if (fp != nullptr)
+    {
+        close_result = std::fclose(fp);                                   // [手順] - ストリームを閉じる。
+        deleted = DeleteFileW(utf8_path_to_backslash_wide(path).c_str()); // [手順] - 作成されたファイルを削除する。
+    }
 
     // Assert
-    EXPECT_EQ(nullptr, fp); // [確認_異常系] - NULL を返すこと。
-    EXPECT_EQ(CPLAT_ERROR_DOMAIN_WINDOWS, cplat_error_get_domain(&detail)); // [確認_異常系] - Win32 ドメインであること。
-    EXPECT_EQ((unsigned long)ERROR_BUFFER_OVERFLOW, cplat_error_get_windows_error(&detail)); // [確認_異常系] - ERROR_BUFFER_OVERFLOW が記録されること。
+    EXPECT_NE(nullptr, fp); // [確認_正常系] - cplat_fopen_temp() の戻り値が nullptr 以外であること。
+    EXPECT_TRUE(is_temp_file_path(
+        path, to_utf8_with_slashes(work.dir()),
+        "cu_")); // [確認_正常系] - path が、区切りを '/' にした作業用のディレクトリの直下の "cu_" + 16 進 16 文字 + ".tmp" であること。
+    EXPECT_EQ(0, close_result); // [確認_正常系] - fclose() の戻り値が 0 であること。
+    EXPECT_NE(FALSE, deleted);  // [確認_正常系] - 作成されたファイルを削除できたこと。
 
     // Cleanup
     cplat_internal_temp_dir_set_resolver_for_test(nullptr);
 }
 
-// SystemTemp の既定値 C:\Windows\SystemTemp をそのまま GetTempFileNameW へ渡すことの確認
-TEST_F(stdioTempTest, passes_default_system_temp_unmodified_to_get_temp_file_namew)
+// path_out が変換結果に足りない場合に、作成した一時ファイルを削除して NULL を返すことの確認
+TEST_F(stdioTempTest, small_path_out_deletes_created_file)
 {
     // Arrange
-    NiceMock<Mock_windows> mock_windows;
-    char path[PLATFORM_PATH_UTF8_MAX] = {};
+    TempWorkDir work(0U);             // [状態] - 実在の一時ディレクトリの配下に、作業用のディレクトリを作成する。
+    ASSERT_FALSE(work.dir().empty()); // [状態確認] - work.dir() が空でないこと。
+    g_temp_dir = work.dir() + L"\\";  // [状態] - 一時ディレクトリを、作業用のディレクトリとする。
+    cplat_internal_temp_dir_set_resolver_for_test(stdio_temp_resolver_from_global);
+    char path[8] = {};
     cplat_error detail;
-    cplat_internal_temp_dir_set_resolver_for_test(stdio_temp_resolver_default_system_temp);
 
     // Pre-Assert
-    EXPECT_CALL(mock_windows, GetTempFileNameW(_, _, _, testing::StrEq(L"C:\\Windows\\SystemTemp\\"), _, 0U, _))
-        .WillOnce(Return(0U)); // [Pre-Assert確認_異常系] - C:\Windows\SystemTemp\ がそのまま渡されること。
-    EXPECT_CALL(mock_windows, GetLastError(_, _, _)).WillOnce(Return(ERROR_PATH_NOT_FOUND));
 
     // Act
-    FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path), &detail); // [手順] - 既定 SystemTemp 時。
+    FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path),
+                                &detail); // [手順] - 8 バイトの path_out で cplat_fopen_temp() を呼び出す。
 
     // Assert
-    EXPECT_EQ(nullptr, fp); // [確認_異常系] - Mock の失敗により NULL を返すこと。
+    EXPECT_EQ(nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。
+    EXPECT_EQ(
+        1,
+        cplat_error_is_set(
+            &detail)); // [確認_異常系] - cplat_error_is_set() の戻り値が 1 であること。(detail に詳細が記録されたことの確認)
+    EXPECT_TRUE(work.is_empty()); // [確認_異常系] - 作成された一時ファイルが削除されていること。
 
     // Cleanup
     cplat_internal_temp_dir_set_resolver_for_test(nullptr);
+}
+
+// _wfsopen が失敗した場合に、作成した一時ファイルを削除し、その errno で失敗を返すことの確認
+TEST_F(stdioTempTest, wfsopen_failure_deletes_created_file)
+{
+    // Arrange
+    NiceMock<Mock_stdio> mock_stdio;
+    TempWorkDir work(0U);             // [状態] - 実在の一時ディレクトリの配下に、作業用のディレクトリを作成する。
+    ASSERT_FALSE(work.dir().empty()); // [状態確認] - work.dir() が空でないこと。
+    g_temp_dir = work.dir() + L"\\";  // [状態] - 一時ディレクトリを、作業用のディレクトリとする。
+    cplat_internal_temp_dir_set_resolver_for_test(stdio_temp_resolver_from_global);
+    char path[PLATFORM_PATH_UTF8_MAX] = {};
+    cplat_error detail;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_stdio, _wfsopen(_, _, _, _, _, _))
+        .WillOnce(
+            [](const char *, const int, const char *, const wchar_t *, const wchar_t *, int) -> FILE *
+            {
+                errno = EACCES;
+                return nullptr;
+            }); // [Pre-Assert確認_異常系] - _wfsopen() が 1 回呼び出されること。
+                // [Pre-Assert手順] - _wfsopen() から、errno に EACCES を設定して nullptr を返す。
+
+    // Act
+    FILE *fp = cplat_fopen_temp("ptr", "wb", path, sizeof(path),
+                                &detail); // [手順] - _wfsopen() が失敗する状態で cplat_fopen_temp() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(nullptr, fp); // [確認_異常系] - cplat_fopen_temp() の戻り値が nullptr であること。
+    EXPECT_EQ(EACCES, cplat_error_get_errno(&detail)); // [確認_異常系] - detail の errno が EACCES であること。
+    EXPECT_TRUE(work.is_empty());                      // [確認_異常系] - 作成された一時ファイルが削除されていること。
+
+    // Cleanup
+    cplat_internal_temp_dir_set_resolver_for_test(nullptr);
+}
+
+// 一時ファイルのパスが MAX_PATH 以上になる実在の一時ディレクトリで、作成、書き込み、削除ができ、
+// path_out が拡張パスの接頭辞付きのパスになることの確認
+TEST(stdioTempLongPathTest, creates_writes_and_deletes_file_under_long_temp_dir)
+{
+    // Arrange
+    // 一時ディレクトリ (末尾の区切りを含めて 241 文字) と名前 (23 文字) で、完全なパスが MAX_PATH を超える。
+    // GetTempPathW は MAX_PATH + 1 文字までしか返さないため、ディレクトリ自体は MAX_PATH 未満にする。
+    TempWorkDir work(240U); // [状態] - 実在の一時ディレクトリの配下に、240 文字の作業用のディレクトリを作成する。
+    ASSERT_FALSE(work.dir().empty()); // [状態確認] - work.dir() が空でないこと。
+    TmpEnvGuard tmp(work.dir());      // [状態] - 環境変数 TMP を作業用のディレクトリへ向ける。
+    ASSERT_TRUE(tmp.changed());       // [状態確認] - tmp.changed() が true であること。
+    std::wstring resolved_dir;
+    {
+        wchar_t *resolved = nullptr;
+        ASSERT_EQ(CPLAT_OK,
+                  cplat_internal_get_temp_dir_w(
+                      &resolved, nullptr,
+                      nullptr)); // [状態確認] - cplat_internal_get_temp_dir_w() の戻り値が CPLAT_OK であること。
+        resolved_dir = resolved;
+        cplat_free(resolved);
+    }
+    if (resolved_dir.find(L"SystemTemp") != std::wstring::npos)
+    {
+        // SYSTEM アカウントでは GetTempPath2W が TMP を参照せず、SystemTemp を返す。
+        GTEST_SKIP() << "the temp directory does not follow TMP (SYSTEM account)";
+    }
+    ASSERT_EQ(work.dir() + L"\\",
+              resolved_dir); // [状態確認] - 一時ディレクトリが TMP に設定したディレクトリであること。
+    char path[PLATFORM_PATH_UTF8_MAX] = {};
+    cplat_error detail;
+    const char data[] = "hello";
+    char read_back[sizeof(data)] = {};
+    size_t written = 0U;
+    size_t read = 0U;
+    int close_result = -1;
+    BOOL deleted = FALSE;
+    DWORD attributes_after = 0U;
+
+    // Pre-Assert
+
+    // Act
+    FILE *fp =
+        cplat_fopen_temp("ptr", "w+b", path, sizeof(path),
+                         &detail); // [手順] - 長い一時ディレクトリで、モード "w+b" で cplat_fopen_temp() を呼び出す。
+    if (fp != nullptr)
+    {
+        written = std::fwrite(data, 1U, sizeof(data) - 1U, fp);  // [手順] - 5 バイトを書き込む。
+        (void)std::fseek(fp, 0L, SEEK_SET);                      // [手順] - 先頭へ戻す。
+        read = std::fread(read_back, 1U, sizeof(data) - 1U, fp); // [手順] - 5 バイトを読み戻す。
+        close_result = std::fclose(fp);                          // [手順] - ストリームを閉じる。
+        const std::wstring wide_path = utf8_path_to_backslash_wide(path);
+        deleted = DeleteFileW(wide_path.c_str()); // [手順] - 区切りを '\' へ戻したパスで DeleteFileW() を呼び出す。
+        attributes_after = GetFileAttributesW(wide_path.c_str()); // [手順] - 削除後のファイルの属性を取得する。
+    }
+
+    // Assert
+    EXPECT_NE(nullptr, fp); // [確認_正常系] - cplat_fopen_temp() の戻り値が nullptr 以外であること。
+    EXPECT_TRUE(is_temp_file_path(
+        path, "//?/" + to_utf8_with_slashes(work.dir()),
+        "ptr")); // [確認_正常系] - path が "//?/" を前置した作業用のディレクトリの直下の "ptr" + 16 進 16 文字 + ".tmp" であること。
+    EXPECT_GE(std::strlen(path),
+              static_cast<size_t>(MAX_PATH)); // [確認_正常系] - path の長さが MAX_PATH 以上であること。
+    EXPECT_EQ(sizeof(data) - 1U, written);    // [確認_正常系] - 書き込めたバイト数が 5 であること。
+    EXPECT_EQ(sizeof(data) - 1U, read);       // [確認_正常系] - 読み戻せたバイト数が 5 であること。
+    EXPECT_STREQ(data, read_back);            // [確認_正常系] - 読み戻した内容が "hello" であること。
+    EXPECT_EQ(0, close_result);               // [確認_正常系] - fclose() の戻り値が 0 であること。
+    EXPECT_NE(FALSE, deleted);                // [確認_正常系] - DeleteFileW() の戻り値が FALSE 以外であること。
+    EXPECT_EQ(INVALID_FILE_ATTRIBUTES, attributes_after); // [確認_正常系] - 削除後にファイルが存在しないこと。
 }
 #endif /* PLATFORM_ */

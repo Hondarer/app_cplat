@@ -137,6 +137,7 @@ Table: 標準 I/O・ファイル操作 API と cplat 代替ラッパーの差異
 
 書式指定パスでファイルを開く/削除する用途には `cplat_fopen_fmt` / `cplat_vfopen_fmt` / `cplat_remove_fmt` / `cplat_vremove_fmt` を使用します。  
 一意な一時ファイルの作成には `cplat_fopen_temp(prefix, modes, path_out, path_size, detail_out)` を使用します。  
+Windows で一時ファイルのパスが `MAX_PATH` 文字以上になる場合、`path_out` は拡張パスの接頭辞付きのパス (`//?/C:/...`) になり、`cplat_remove` では削除できません。  
 Windows では、これらのパス変換を厳密に行い、不正な UTF-8 を置換しません。  
 `stdio` ラッパーとメモリ マップド ファイル (後述) のどちらを使うべきかの選定基準は [fileio-api-selection-guideline.md](fileio-api-selection-guideline.md) を参照してください。
 

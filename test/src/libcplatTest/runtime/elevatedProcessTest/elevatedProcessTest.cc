@@ -1384,50 +1384,196 @@ TEST(elevatedProcessTest, run_piped_rejects_client_other_than_launched_process)
 namespace
 {
 
+// 一時ディレクトリの取得の差し替えで返すパス。テストごとに設定する。
+std::wstring g_elevated_temp_dir;
+
 DWORD WINAPI elevated_temp_resolver_failing(DWORD, LPWSTR)
 {
     SetLastError(ERROR_ACCESS_DENIED);
     return 0U;
 }
 
-DWORD WINAPI elevated_temp_resolver_custom_system_temp(DWORD buffer_length, LPWSTR buffer)
+DWORD WINAPI elevated_temp_resolver_from_global(DWORD buffer_length, LPWSTR buffer)
 {
-    static const wchar_t kPath[] = L"C:\\CustomSystemTemp\\";
-    const DWORD len = (DWORD)(sizeof(kPath) / sizeof(kPath[0]) - 1U);
+    const DWORD len = static_cast<DWORD>(g_elevated_temp_dir.size());
     if (buffer != nullptr && buffer_length > len)
     {
-        std::memcpy(buffer, kPath, sizeof(kPath));
+        std::memcpy(buffer, g_elevated_temp_dir.c_str(), (g_elevated_temp_dir.size() + 1U) * sizeof(wchar_t));
     }
     return len;
 }
 
-DWORD WINAPI elevated_temp_resolver_default_system_temp(DWORD buffer_length, LPWSTR buffer)
+// 実在の一時ディレクトリの配下に、合計の長さが dir_length 以上になるディレクトリを作る。破棄で削除する。
+class ElevatedTempDirGuard
 {
-    static const wchar_t kPath[] = L"C:\\Windows\\SystemTemp\\";
-    const DWORD len = (DWORD)(sizeof(kPath) / sizeof(kPath[0]) - 1U);
-    if (buffer != nullptr && buffer_length > len)
+  public:
+    explicit ElevatedTempDirGuard(size_t dir_length)
     {
-        std::memcpy(buffer, kPath, sizeof(kPath));
+        wchar_t base[MAX_PATH + 2] = {};
+        const DWORD base_length = GetTempPathW(static_cast<DWORD>(sizeof(base) / sizeof(base[0])), base);
+        if (base_length == 0U)
+        {
+            return;
+        }
+
+        std::wstring dir = std::wstring(base) + L"cplat_elevated_temp_" + std::to_wstring(GetCurrentProcessId());
+        if (!create_dir(dir))
+        {
+            return;
+        }
+
+        while (dir.size() < dir_length)
+        {
+            dir += L"\\" + std::wstring(50U, L'd');
+            if (!create_dir(dir))
+            {
+                return;
+            }
+        }
+
+        dir_ = dir + L"\\";
     }
-    return len;
+
+    ~ElevatedTempDirGuard()
+    {
+        for (auto it = created_.rbegin(); it != created_.rend(); ++it)
+        {
+            (void)RemoveDirectoryW((L"\\\\?\\" + *it).c_str());
+        }
+    }
+
+    ElevatedTempDirGuard(const ElevatedTempDirGuard &) = delete;
+    ElevatedTempDirGuard &operator=(const ElevatedTempDirGuard &) = delete;
+
+    // 用意したディレクトリ (末尾の区切りを含む)。用意できなかった場合は空。
+    const std::wstring &dir() const
+    {
+        return dir_;
+    }
+
+    // 用意したディレクトリが空であれば true を返す (作成した一時ファイルが削除されたことの確認に使う)。
+    bool is_empty() const
+    {
+        WIN32_FIND_DATAW data;
+        const std::wstring pattern = L"\\\\?\\" + dir_ + L"*";
+        HANDLE find = FindFirstFileW(pattern.c_str(), &data);
+        bool empty = true;
+        if (find == INVALID_HANDLE_VALUE)
+        {
+            return true;
+        }
+        do
+        {
+            if (std::wcscmp(data.cFileName, L".") != 0 && std::wcscmp(data.cFileName, L"..") != 0)
+            {
+                empty = false;
+            }
+        } while (FindNextFileW(find, &data));
+        (void)FindClose(find);
+        return empty;
+    }
+
+  private:
+    bool create_dir(const std::wstring &dir)
+    {
+        if (!CreateDirectoryW((L"\\\\?\\" + dir).c_str(), nullptr))
+        {
+            return false;
+        }
+        created_.push_back(dir);
+        return true;
+    }
+
+    std::vector<std::wstring> created_;
+    std::wstring dir_;
+};
+
+// 昇格の引数 (--cplat-result-file="...") から、結果ファイルのパスを取り出す。見つからない場合は空を返す。
+std::wstring extract_result_path_from_wide_params(LPCWSTR params)
+{
+    if (params == nullptr)
+    {
+        return L"";
+    }
+
+    const wchar_t prefix[] = L"--cplat-result-file=\"";
+    const wchar_t *found = wcsstr(params, prefix);
+    if (found == nullptr)
+    {
+        return L"";
+    }
+
+    const wchar_t *begin = found + (sizeof(prefix) / sizeof(prefix[0]) - 1U);
+    const wchar_t *end = wcschr(begin, L'"');
+    if (end == nullptr)
+    {
+        return L"";
+    }
+
+    return std::wstring(begin, end);
 }
+
+// 結果ファイルのパスが、dir の直下の "cur" + 16 進 16 文字 + ".tmp" であるかを判定する。
+bool is_result_file_under(const std::wstring &path, const std::wstring &dir)
+{
+    const size_t name_length = 3U + 16U + 4U;
+    if (path.size() != dir.size() + name_length || path.compare(0, dir.size(), dir) != 0)
+    {
+        return false;
+    }
+
+    const std::wstring name = path.substr(dir.size());
+    if (name.compare(0, 3U, L"cur") != 0 || name.compare(3U + 16U, 4U, L".tmp") != 0)
+    {
+        return false;
+    }
+
+    for (size_t i = 3U; i < 3U + 16U; ++i)
+    {
+        if (std::wcschr(L"0123456789abcdef", name[i]) == nullptr)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// [サブ手順 名前=elevatedProcessTest.capture_result_file_on_shell_execute]
+// ShellExecuteExW() の呼び出しで、結果ファイルのパスとその時点のファイルの有無を記録し、起動の失敗を返す。
+void capture_result_file_on_shell_execute(Mock_shellapi &mock_shellapi, std::wstring *result_path, DWORD *attributes)
+{
+    EXPECT_CALL(mock_shellapi, ShellExecuteExW(_, _, _, _))
+        .WillOnce(
+            [result_path, attributes](const char *, const int, const char *, SHELLEXECUTEINFOW *exec_info) -> BOOL
+            {
+                *result_path = extract_result_path_from_wide_params(exec_info->lpParameters);
+                *attributes = GetFileAttributesW(result_path->c_str());
+                return FALSE;
+            }); // [Pre-Assert確認_正常系] - ShellExecuteExW() が 1 回呼び出されること。
+    // [Pre-Assert手順] - ShellExecuteExW() から、結果ファイルのパスとファイルの属性を記録して FALSE を返す。
+}
+// [サブ手順終了]
 
 } // namespace
 
-// 内部一時ディレクトリ取得の失敗時に GetTempFileNameW を呼ばず内部の結果コードを返すことの確認
+// 内部一時ディレクトリ取得の失敗時に昇格を試みず内部の結果コードを返すことの確認
 TEST(elevatedProcessTest, run_with_result_propagates_internal_temp_dir_failure)
 {
     // Arrange
     NiceMock<Mock_cplat> mock_cplat;
     NiceMock<Mock_windows> mock_windows;
+    NiceMock<Mock_shellapi> mock_shellapi;
     int exit_code = 0;
     int handled = 1;
     cplat_error last_err;
-    cplat_internal_temp_dir_set_resolver_for_test(elevated_temp_resolver_failing);
+    cplat_internal_temp_dir_set_resolver_for_test(
+        elevated_temp_resolver_failing); // [状態] - 一時ディレクトリの取得が ERROR_ACCESS_DENIED で失敗するように差し替える。
 
     // テスト対象は、同じ翻訳単位の昇格の判定を直接呼ぶため、mock_cplat では差し替えられない。
     // 昇格済みのプロセスや、対話のセッションではないプロセス (CI のランナーなど) でも未昇格の経路を通るよう、
     // Windows の API の側で、未昇格と対話のセッションを返す。
+    // [サブ手順参照 名前=elevatedProcessTest.setup_run_piped_base_mocks]
     setup_run_piped_base_mocks(mock_cplat, mock_windows);
     ON_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
         .WillByDefault(
@@ -1435,28 +1581,34 @@ TEST(elevatedProcessTest, run_with_result_propagates_internal_temp_dir_failure)
             {
                 std::snprintf(path_out, path_size, "C:/app/tool.exe");
                 return CPLAT_OK;
-            });
+            }); // [状態] - cplat_process_get_executable_path() から "C:/app/tool.exe" を返すように既定動作を設定する。
 
     // Pre-Assert
-    EXPECT_CALL(mock_windows, GetTempFileNameW(_, _, _, _, _, _, _))
-        .Times(0); // [Pre-Assert確認_異常系] - 一時ディレクトリ取得失敗時は GetTempFileNameW() を呼ばないこと。
+    EXPECT_CALL(mock_shellapi, ShellExecuteExW(_, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - ShellExecuteExW() が呼び出されないこと。
 
     // Act
-    int rc = cplat_elevated_process_run_with_result(nullptr, &exit_code, &handled, nullptr, 0U);
-    cplat_error_get_last(&last_err);
+    int rc = cplat_elevated_process_run_with_result(
+        nullptr, &exit_code, &handled, nullptr,
+        0U); // [手順] - 一時ディレクトリの取得が失敗する状態で cplat_elevated_process_run_with_result() を呼び出す。
+    cplat_error_get_last(&last_err); // [手順] - TLS に記録された詳細エラーを取得する。
 
     // Assert
-    EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED, rc); // [確認_異常系] - 内部関数の結果コードが返ること。
-    EXPECT_EQ(EXIT_FAILURE, exit_code); // [確認_異常系] - exit_code が EXIT_FAILURE であること。
-    EXPECT_EQ(CPLAT_ERROR_DOMAIN_WINDOWS, cplat_error_get_domain(&last_err)); // [確認_異常系] - Win32 ドメインであること。
-    EXPECT_EQ((unsigned long)ERROR_ACCESS_DENIED, cplat_error_get_windows_error(&last_err)); // [確認_異常系] - 詳細エラーが保持されること。
+    EXPECT_EQ(CPLAT_ERR_PERMISSION_DENIED, rc); // [確認_異常系] - 戻り値が CPLAT_ERR_PERMISSION_DENIED であること。
+    EXPECT_EQ(EXIT_FAILURE, exit_code);         // [確認_異常系] - exit_code が EXIT_FAILURE であること。
+    EXPECT_EQ(CPLAT_ERROR_DOMAIN_WINDOWS,
+              cplat_error_get_domain(
+                  &last_err)); // [確認_異常系] - 詳細エラーのドメインが CPLAT_ERROR_DOMAIN_WINDOWS であること。
+    EXPECT_EQ((unsigned long)ERROR_ACCESS_DENIED,
+              cplat_error_get_windows_error(
+                  &last_err)); // [確認_異常系] - 詳細エラーの Win32 エラーが ERROR_ACCESS_DENIED であること。
 
     // Cleanup
     cplat_internal_temp_dir_set_resolver_for_test(nullptr);
 }
 
-// GetTempFileNameW が ERROR_BUFFER_OVERFLOW で失敗した場合に詳細エラーを返すことの確認
-TEST(elevatedProcessTest, run_with_result_reports_get_temp_file_namew_buffer_overflow)
+// 結果ファイルを作成できない場合に昇格を試みず、作成の失敗を返すことの確認
+TEST(elevatedProcessTest, run_with_result_reports_result_file_creation_failure)
 {
     // Arrange
     NiceMock<Mock_cplat> mock_cplat;
@@ -1465,11 +1617,12 @@ TEST(elevatedProcessTest, run_with_result_reports_get_temp_file_namew_buffer_ove
     int exit_code = 0;
     int handled = 1;
     cplat_error last_err;
-    cplat_internal_temp_dir_set_resolver_for_test(elevated_temp_resolver_custom_system_temp);
+    ElevatedTempDirGuard guard(0U);    // [状態] - 実在の一時ディレクトリの配下に、作業用のディレクトリを作成する。
+    ASSERT_FALSE(guard.dir().empty()); // [状態確認] - guard.dir() が空でないこと。
+    g_elevated_temp_dir = guard.dir() + L"missing\\"; // [状態] - 一時ディレクトリを、存在しないディレクトリとする。
+    cplat_internal_temp_dir_set_resolver_for_test(elevated_temp_resolver_from_global);
 
-    // テスト対象は、同じ翻訳単位の昇格の判定を直接呼ぶため、mock_cplat では差し替えられない。
-    // 昇格済みのプロセスや、対話のセッションではないプロセス (CI のランナーなど) でも未昇格の経路を通るよう、
-    // Windows の API の側で、未昇格と対話のセッションを返す。
+    // [サブ手順参照 名前=elevatedProcessTest.setup_run_piped_base_mocks]
     setup_run_piped_base_mocks(mock_cplat, mock_windows);
     ON_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
         .WillByDefault(
@@ -1477,43 +1630,47 @@ TEST(elevatedProcessTest, run_with_result_reports_get_temp_file_namew_buffer_ove
             {
                 std::snprintf(path_out, path_size, "C:/app/tool.exe");
                 return CPLAT_OK;
-            });
+            }); // [状態] - cplat_process_get_executable_path() から "C:/app/tool.exe" を返すように既定動作を設定する。
 
     // Pre-Assert
-    EXPECT_CALL(mock_windows, GetTempFileNameW(_, _, _, testing::StrEq(L"C:\\CustomSystemTemp\\"), _, 0U, _))
-        .WillOnce(Return(0U)); // [Pre-Assert確認_異常系] - SystemTemp パスで GetTempFileNameW() が 1 回呼ばれること。
-    EXPECT_CALL(mock_windows, GetLastError(_, _, _))
-        .WillOnce(Return(ERROR_BUFFER_OVERFLOW)); // [Pre-Assert確認_異常系] - ERROR_BUFFER_OVERFLOW を返すこと。
-    EXPECT_CALL(mock_shellapi, ShellExecuteExW(_, _, _, _)).Times(0);
+    EXPECT_CALL(mock_shellapi, ShellExecuteExW(_, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - ShellExecuteExW() が呼び出されないこと。
 
     // Act
-    int rc = cplat_elevated_process_run_with_result(nullptr, &exit_code, &handled, nullptr, 0U);
-    cplat_error_get_last(&last_err);
+    int rc = cplat_elevated_process_run_with_result(
+        nullptr, &exit_code, &handled, nullptr,
+        0U); // [手順] - 結果ファイルを作成できない状態で cplat_elevated_process_run_with_result() を呼び出す。
+    cplat_error_get_last(&last_err); // [手順] - TLS に記録された詳細エラーを取得する。
 
     // Assert
-    EXPECT_NE(CPLAT_OK, rc); // [確認_異常系] - 失敗の結果コードが返ること。
+    EXPECT_NE(CPLAT_OK, rc);            // [確認_異常系] - 戻り値が CPLAT_OK 以外であること。
     EXPECT_EQ(EXIT_FAILURE, exit_code); // [確認_異常系] - exit_code が EXIT_FAILURE であること。
-    EXPECT_EQ(CPLAT_ERROR_DOMAIN_WINDOWS, cplat_error_get_domain(&last_err)); // [確認_異常系] - Win32 ドメインであること。
-    EXPECT_EQ((unsigned long)ERROR_BUFFER_OVERFLOW, cplat_error_get_windows_error(&last_err)); // [確認_異常系] - ERROR_BUFFER_OVERFLOW が記録されること。
+    EXPECT_EQ((unsigned long)ERROR_PATH_NOT_FOUND,
+              cplat_error_get_windows_error(
+                  &last_err)); // [確認_異常系] - 詳細エラーの Win32 エラーが ERROR_PATH_NOT_FOUND であること。
 
     // Cleanup
     cplat_internal_temp_dir_set_resolver_for_test(nullptr);
 }
 
-// 既定の C:\Windows\SystemTemp を上書きせず GetTempFileNameW へ渡すことの確認
-TEST(elevatedProcessTest, run_with_result_passes_default_system_temp_unmodified)
+// 結果ファイルを一時ディレクトリの直下に作成して昇格の引数へ渡し、起動の失敗後に削除することの確認
+// [サブ手順参照 名前=elevatedProcessTest.capture_result_file_on_shell_execute]
+TEST(elevatedProcessTest, run_with_result_creates_result_file_in_temp_dir)
 {
     // Arrange
     NiceMock<Mock_cplat> mock_cplat;
     NiceMock<Mock_windows> mock_windows;
     NiceMock<Mock_shellapi> mock_shellapi;
     int exit_code = 0;
-    int handled = 1;
-    cplat_internal_temp_dir_set_resolver_for_test(elevated_temp_resolver_default_system_temp);
+    int handled = 0;
+    std::wstring result_path;
+    DWORD attributes = INVALID_FILE_ATTRIBUTES;
+    ElevatedTempDirGuard guard(0U);    // [状態] - 実在の一時ディレクトリの配下に、作業用のディレクトリを作成する。
+    ASSERT_FALSE(guard.dir().empty()); // [状態確認] - guard.dir() が空でないこと。
+    g_elevated_temp_dir = guard.dir(); // [状態] - 一時ディレクトリを、作業用のディレクトリとする。
+    cplat_internal_temp_dir_set_resolver_for_test(elevated_temp_resolver_from_global);
 
-    // テスト対象は、同じ翻訳単位の昇格の判定を直接呼ぶため、mock_cplat では差し替えられない。
-    // 昇格済みのプロセスや、対話のセッションではないプロセス (CI のランナーなど) でも未昇格の経路を通るよう、
-    // Windows の API の側で、未昇格と対話のセッションを返す。
+    // [サブ手順参照 名前=elevatedProcessTest.setup_run_piped_base_mocks]
     setup_run_piped_base_mocks(mock_cplat, mock_windows);
     ON_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
         .WillByDefault(
@@ -1521,20 +1678,76 @@ TEST(elevatedProcessTest, run_with_result_passes_default_system_temp_unmodified)
             {
                 std::snprintf(path_out, path_size, "C:/app/tool.exe");
                 return CPLAT_OK;
-            });
+            }); // [状態] - cplat_process_get_executable_path() から "C:/app/tool.exe" を返すように既定動作を設定する。
 
     // Pre-Assert
-    EXPECT_CALL(mock_windows, GetTempFileNameW(_, _, _, testing::StrEq(L"C:\\Windows\\SystemTemp\\"), _, 0U, _))
-        .WillOnce(Return(0U)); // [Pre-Assert確認_正常系] - 既定 SystemTemp パスがそのまま渡されること。
-    EXPECT_CALL(mock_windows, GetLastError(_, _, _)).WillOnce(Return(ERROR_PATH_NOT_FOUND));
-    EXPECT_CALL(mock_shellapi, ShellExecuteExW(_, _, _, _)).Times(0);
+    capture_result_file_on_shell_execute(mock_shellapi, &result_path, &attributes);
 
     // Act
-    int rc = cplat_elevated_process_run_with_result(nullptr, &exit_code, &handled, nullptr, 0U);
+    int rc = cplat_elevated_process_run_with_result(
+        nullptr, &exit_code, &handled, nullptr,
+        0U); // [手順] - 昇格の起動が失敗する状態で cplat_elevated_process_run_with_result() を呼び出す。
 
     // Assert
-    EXPECT_NE(CPLAT_OK, rc); // [確認_異常系] - Mock の失敗に応じたエラーが返ること。
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, rc);   // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
     EXPECT_EQ(EXIT_FAILURE, exit_code); // [確認_異常系] - exit_code が EXIT_FAILURE であること。
+    EXPECT_TRUE(is_result_file_under(
+        result_path,
+        guard
+            .dir())); // [確認_正常系] - 結果ファイルのパスが一時ディレクトリの直下の "cur" + 16 進 16 文字 + ".tmp" であること。
+    EXPECT_NE(INVALID_FILE_ATTRIBUTES, attributes); // [確認_正常系] - 起動の時点で結果ファイルが存在したこと。
+    EXPECT_TRUE(guard.is_empty());                  // [確認_正常系] - 戻った後に結果ファイルが削除されていること。
+
+    // Cleanup
+    cplat_internal_temp_dir_set_resolver_for_test(nullptr);
+}
+
+// 完全なパスが MAX_PATH 以上になる一時ディレクトリで、\\?\ 付きのパスの結果ファイルを作成して昇格の引数へ渡すことの確認
+// [サブ手順参照 名前=elevatedProcessTest.capture_result_file_on_shell_execute]
+TEST(elevatedProcessTest, run_with_result_creates_result_file_in_long_temp_dir)
+{
+    // Arrange
+    NiceMock<Mock_cplat> mock_cplat;
+    NiceMock<Mock_windows> mock_windows;
+    NiceMock<Mock_shellapi> mock_shellapi;
+    int exit_code = 0;
+    int handled = 0;
+    std::wstring result_path;
+    DWORD attributes = INVALID_FILE_ATTRIBUTES;
+    ElevatedTempDirGuard guard(static_cast<size_t>(
+        MAX_PATH)); // [状態] - 実在の一時ディレクトリの配下に、MAX_PATH 文字以上の作業用のディレクトリを作成する。
+    ASSERT_FALSE(guard.dir().empty()); // [状態確認] - guard.dir() が空でないこと。
+    g_elevated_temp_dir = guard.dir(); // [状態] - 一時ディレクトリを、作業用のディレクトリとする。
+    cplat_internal_temp_dir_set_resolver_for_test(elevated_temp_resolver_from_global);
+
+    // [サブ手順参照 名前=elevatedProcessTest.setup_run_piped_base_mocks]
+    setup_run_piped_base_mocks(mock_cplat, mock_windows);
+    ON_CALL(mock_cplat, cplat_process_get_executable_path(_, _))
+        .WillByDefault(
+            [](char *path_out, size_t path_size) -> int
+            {
+                std::snprintf(path_out, path_size, "C:/app/tool.exe");
+                return CPLAT_OK;
+            }); // [状態] - cplat_process_get_executable_path() から "C:/app/tool.exe" を返すように既定動作を設定する。
+
+    // Pre-Assert
+    capture_result_file_on_shell_execute(mock_shellapi, &result_path, &attributes);
+
+    // Act
+    int rc = cplat_elevated_process_run_with_result(
+        nullptr, &exit_code, &handled, nullptr,
+        0U); // [手順] - 長い一時ディレクトリで、昇格の起動が失敗する状態で cplat_elevated_process_run_with_result() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_UNKNOWN, rc);   // [確認_異常系] - 戻り値が CPLAT_ERR_UNKNOWN であること。
+    EXPECT_EQ(EXIT_FAILURE, exit_code); // [確認_異常系] - exit_code が EXIT_FAILURE であること。
+    EXPECT_TRUE(is_result_file_under(
+        result_path,
+        L"\\\\?\\" +
+            guard
+                .dir())); // [確認_正常系] - 結果ファイルのパスが \\?\ を前置した一時ディレクトリの直下の "cur" + 16 進 16 文字 + ".tmp" であること。
+    EXPECT_NE(INVALID_FILE_ATTRIBUTES, attributes); // [確認_正常系] - 起動の時点で結果ファイルが存在したこと。
+    EXPECT_TRUE(guard.is_empty());                  // [確認_正常系] - 戻った後に結果ファイルが削除されていること。
 
     // Cleanup
     cplat_internal_temp_dir_set_resolver_for_test(nullptr);

@@ -26,7 +26,7 @@
 #include <cplat/console/console_internal.h>
 #include <cplat/crypto/random.h>
 #include <cplat/crt/path.h>
-#include <cplat/crt/temp_dir_internal.h>
+#include <cplat/crt/temp_file_internal.h>
 #include <cplat/crt/wchar_conv.h>
 
 #include <assert.h>
@@ -1248,9 +1248,8 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
     {
         SHELLEXECUTEINFOW exec_info;
         char exe_path[PLATFORM_PATH_UTF8_MAX];
-        char result_path[PLATFORM_PATH_UTF8_MAX];
-        wchar_t *wide_temp_dir = NULL;
-        wchar_t wide_result_path[PLATFORM_PATH_MAX];
+        char *result_path = NULL;
+        wchar_t *wide_result_path = NULL;
         char *combined_arguments;
         wchar_t *wide_arguments;
         wchar_t *wide_exe_path;
@@ -1289,40 +1288,28 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         }
 
         /*
-         * 昇格プロセスが結果メッセージを書き込む一時ファイルを確保する。GetTempFileNameW は
-         * 一意な空ファイルを作成するため、並行する別プロセスとの衝突を避けられる。
-         * GetTempFileNameW はディレクトリ部が MAX_PATH - 14 を超えると失敗する。
-         * see: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettempfilenamew
+         * 昇格プロセスが結果メッセージを書き込む一時ファイルを確保する。内部の共通関数は、一意な名前の空ファイルを
+         * CREATE_NEW で作成するため、並行する別プロセスとの衝突を避けられる。一時ディレクトリが長い場合は、
+         * 拡張パスの接頭辞 (\\?\) 付きのパスが返る。
          */
-        /*
-         * GetTempPath2W / GetTempPathW の実行時選択と十分な領域の確保を内部の共通関数へ集約し、
-         * 以降の GetTempFileNameW へワイドのまま渡すため、*U ラッパーを経由しない。
-         */
-        conversion_result = cplat_internal_get_temp_dir_w(&wide_temp_dir, NULL, NULL);
+        conversion_result = cplat_internal_create_temp_file_w(L"cur", &wide_result_path, NULL);
         if (conversion_result != CPLAT_OK)
         {
             *exit_code_out = EXIT_FAILURE;
             return conversion_result;
         }
 
-        if (GetTempFileNameW(wide_temp_dir, L"cur", 0, wide_result_path) == 0)
-        {
-            const DWORD error_code = GetLastError();
-
-            cplat_free(wide_temp_dir);
-            *exit_code_out = EXIT_FAILURE;
-            return cplat_internal_error_report_windows_error(NULL, error_code);
-        }
-        cplat_free(wide_temp_dir);
-
         /*
          * 一時ファイルの削除は、結果を読み終えた後か失敗を返す経路の後始末であり、削除できなくても返す結果が
          * 変わらないため、この関数の DeleteFileW の戻り値は明示的に破棄する。
+         * 昇格プロセスは受け取ったパスを CreateFileU へ渡すため、拡張パスの接頭辞を保つよう、区切りを '/' へ
+         * 正規化する cplat_wpath_to_utf8 ではなく cplat_wstr_to_utf8_alloc で変換する。
          */
-        conversion_result = cplat_wpath_to_utf8(result_path, sizeof(result_path), NULL, wide_result_path);
+        conversion_result = cplat_wstr_to_utf8_alloc(&result_path, wide_result_path);
         if (conversion_result != CPLAT_OK)
         {
             (void)DeleteFileW(wide_result_path);
+            cplat_free(wide_result_path);
             *exit_code_out = EXIT_FAILURE;
             return conversion_result;
         }
@@ -1339,6 +1326,9 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         combined_arguments = (char *)cplat_malloc(buf_sz);
         if (combined_arguments == NULL)
         {
+            cplat_free(result_path);
+            (void)DeleteFileW(wide_result_path);
+            cplat_free(wide_result_path);
             *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_OUT_OF_MEMORY;
         }
@@ -1362,11 +1352,14 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
                                  result_path);
         }
 
+        cplat_free(result_path);
+
         conversion_result = cplat_utf8_to_wstr_alloc(&wide_exe_path, exe_path);
         if (conversion_result != CPLAT_OK)
         {
             cplat_free(combined_arguments);
             (void)DeleteFileW(wide_result_path);
+            cplat_free(wide_result_path);
             *exit_code_out = EXIT_FAILURE;
             return conversion_result;
         }
@@ -1378,6 +1371,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         {
             cplat_free(wide_exe_path);
             (void)DeleteFileW(wide_result_path);
+            cplat_free(wide_result_path);
             *exit_code_out = EXIT_FAILURE;
             return conversion_result;
         }
@@ -1400,6 +1394,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
             cplat_free(wide_arguments);
             cplat_free(wide_exe_path);
             (void)DeleteFileW(wide_result_path);
+            cplat_free(wide_result_path);
             *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
@@ -1412,6 +1407,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         {
             (void)CloseHandle(exec_info.hProcess); /* 引き取りの失敗を返す後始末のため、戻り値は明示的に破棄する */
             (void)DeleteFileW(wide_result_path);
+            cplat_free(wide_result_path);
             *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
@@ -1421,6 +1417,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         {
             cplat_process_dispose(child_process);
             (void)DeleteFileW(wide_result_path);
+            cplat_free(wide_result_path);
             *exit_code_out = EXIT_FAILURE;
             return CPLAT_ERR_UNKNOWN;
         }
@@ -1448,6 +1445,7 @@ int cplat_elevated_process_run_with_result(const char *arguments, int *exit_code
         }
 
         (void)DeleteFileW(wide_result_path);
+        cplat_free(wide_result_path);
 
         *exit_code_out = child_exit_code;
         return CPLAT_OK;
