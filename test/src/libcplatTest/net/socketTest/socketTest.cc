@@ -31,9 +31,16 @@
 #include <cstring>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
+#include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <limits.h>
+#include <map>
+#include <mutex>
 #include <thread>
+#include <utility>
+#include <vector>
 
 using testing::_;
 using testing::Assign;
@@ -2396,6 +2403,1901 @@ TEST_F(socketTest, watch_wait_uses_bounded_event_arrays)
     ASSERT_TRUE(Mock::VerifyAndClearExpectations(&mock_winsock_));
 // [確認_正常系] - 受信待機の対象数が解除ありで 33、解除なしで 32、送信待機の解除ありで 3 となること。
 }
+
+namespace
+{
+
+/* 方向別の待機の競合を障壁で固定するため、Winsock のイベントを試験側で模擬します。
+ * 製品のソースに差し込み口を設けず、mock の呼び出しの中で待ち合わせて順序を決めます。
+ * 呼び出しの記録と障壁は、スレッドごとに設定する待機の役割で区別します。
+ */
+enum class watch_role
+{
+    MAIN,
+    READER,
+    WRITER,
+    PROBE
+};
+
+thread_local watch_role s_current_watch_role = watch_role::MAIN;
+
+enum class simulated_call_kind
+{
+    ZERO_WAIT,
+    BLOCKING_WAIT,
+    ENUMERATE,
+    SET_EVENT,
+    RESET_EVENT,
+    SEND,
+    FINISHED
+};
+
+enum class simulated_gate
+{
+    BEFORE_BLOCKING_WAIT,
+    ZERO_WAIT,
+    ENUMERATE
+};
+
+struct simulated_call
+{
+    simulated_call_kind kind = simulated_call_kind::FINISHED;
+    watch_role role = watch_role::MAIN;
+    WSAEVENT event = nullptr;
+    std::vector<WSAEVENT> events;
+    DWORD timeout_ms = 0U;
+    DWORD result = WSA_WAIT_TIMEOUT;
+    bool returned = false;
+    bool timed_out = false;
+    long network_events = 0;
+};
+
+using simulated_calls = std::vector<simulated_call>;
+
+struct watch_events
+{
+    WSAEVENT shared = nullptr;
+    WSAEVENT read = nullptr;
+    WSAEVENT write = nullptr;
+};
+
+/* 製品の 50 [ms] の内部間隔を超えて待ち、失われた起床を時間切れの記録として検出します。 */
+constexpr DWORD kSimulatedWaitGuardMs = 2000U;
+constexpr auto kSynchronizationLimit = std::chrono::seconds(5);
+
+class winsock_event_simulator
+{
+  public:
+    winsock_event_simulator(Mock_winsock &mock_winsock, const bool honor_timeout) : honor_timeout_(honor_timeout)
+    {
+        ON_CALL(mock_winsock, WSACreateEvent(_, _, _))
+            .WillByDefault([this](const char *, const int, const char *) { return create_event(); });
+        ON_CALL(mock_winsock, WSACloseEvent(_, _, _, _)).WillByDefault(Return(TRUE));
+        ON_CALL(mock_winsock, WSAEventSelect(_, _, _, _, _, _))
+            .WillByDefault(
+                [this](const char *, const int, const char *, SOCKET, WSAEVENT event, long)
+                {
+                    select_event(event);
+                    return 0;
+                });
+        ON_CALL(mock_winsock, WSASetEvent(_, _, _, _))
+            .WillByDefault(
+                [this](const char *, const int, const char *, WSAEVENT event)
+                {
+                    change_event(simulated_call_kind::SET_EVENT, event, true);
+                    return TRUE;
+                });
+        ON_CALL(mock_winsock, WSAResetEvent(_, _, _, _))
+            .WillByDefault(
+                [this](const char *, const int, const char *, WSAEVENT event)
+                {
+                    change_event(simulated_call_kind::RESET_EVENT, event, false);
+                    return TRUE;
+                });
+        ON_CALL(mock_winsock, WSAWaitForMultipleEvents(_, _, _, _, _, _, _, _))
+            .WillByDefault([this](const char *, const int, const char *, const DWORD count, const WSAEVENT *events,
+                                  const BOOL, const DWORD timeout_ms, const BOOL)
+                           { return wait_events(count, events, timeout_ms); });
+        ON_CALL(mock_winsock, WSAEnumNetworkEvents(_, _, _, _, _, _))
+            .WillByDefault([this](const char *, const int, const char *, SOCKET, WSAEVENT event,
+                                  LPWSANETWORKEVENTS network_events) { return enumerate(event, network_events); });
+        ON_CALL(mock_winsock, WSAGetLastError(_, _, _)).WillByDefault(Return(WSAEWOULDBLOCK));
+    }
+
+    /* 登録は E_s、E_r、E_w の順にイベントを生成するため、直近の 3 個を返します。 */
+    watch_events latest_watch_events()
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        watch_events events;
+        const size_t count = created_.size();
+
+        if (count >= 3U)
+        {
+            events.shared = created_[count - 3U];
+            events.read = created_[count - 2U];
+            events.write = created_[count - 1U];
+        }
+
+        return events;
+    }
+
+    /* OS が E_s へネットワーク イベントを記録した状態を作ります。 */
+    void inject(const long network_events)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        pending_network_events_ |= network_events;
+        signaled_[shared_] = true;
+        changed_.notify_all();
+    }
+
+    /* 障壁は 1 回だけ働きます。同じ障壁を再び置く場合も、前回の到着を消してから置きます。 */
+    void arm(const simulated_gate gate, const watch_role role)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        gate_state &state = gates_[std::make_pair(gate, role)];
+
+        state.armed = true;
+        state.arrived = false;
+        state.released = false;
+    }
+
+    bool wait_arrived(const simulated_gate gate, const watch_role role)
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        gate_state &state = gates_[std::make_pair(gate, role)];
+
+        return changed_.wait_for(lock, kSynchronizationLimit, [&]() { return state.arrived; });
+    }
+
+    void release(const simulated_gate gate, const watch_role role)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        gates_[std::make_pair(gate, role)].released = true;
+        changed_.notify_all();
+    }
+
+    /* 失敗時に止まったスレッドを回収するため、すべての障壁を開けます。 */
+    void open_all_gates()
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        gates_opened_ = true;
+        changed_.notify_all();
+    }
+
+    size_t mark()
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        return calls_.size();
+    }
+
+    bool wait_until(const std::function<bool(const simulated_calls &)> &predicate)
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+
+        return changed_.wait_for(lock, kSynchronizationLimit, [&]() { return predicate(calls_); });
+    }
+
+    simulated_calls snapshot()
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        return calls_;
+    }
+
+    void record(const simulated_call_kind kind)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        simulated_call call;
+
+        call.kind = kind;
+        call.role = s_current_watch_role;
+        call.returned = true;
+        calls_.push_back(call);
+        changed_.notify_all();
+    }
+
+  private:
+    struct gate_state
+    {
+        bool armed = false;
+        bool arrived = false;
+        bool released = false;
+    };
+
+    WSAEVENT create_event()
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        const WSAEVENT event = reinterpret_cast<WSAEVENT>(static_cast<uintptr_t>(0x1000U + created_.size()));
+
+        created_.push_back(event);
+        signaled_[event] = false;
+
+        return event;
+    }
+
+    void select_event(const WSAEVENT event)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        if (event != nullptr)
+        {
+            shared_ = event;
+        }
+    }
+
+    void change_event(const simulated_call_kind kind, const WSAEVENT event, const bool signaled)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        simulated_call call;
+
+        call.kind = kind;
+        call.role = s_current_watch_role;
+        call.event = event;
+        call.returned = true;
+        signaled_[event] = signaled;
+        calls_.push_back(call);
+        changed_.notify_all();
+    }
+
+    DWORD wait_events(const DWORD count, const WSAEVENT *events, const DWORD timeout_ms)
+    {
+        const watch_role role = s_current_watch_role;
+
+        pass_gate(timeout_ms == 0U ? simulated_gate::ZERO_WAIT : simulated_gate::BEFORE_BLOCKING_WAIT, role);
+
+        std::unique_lock<std::mutex> lock(mutex_);
+        simulated_call call;
+        const size_t index = calls_.size();
+
+        call.kind = timeout_ms == 0U ? simulated_call_kind::ZERO_WAIT : simulated_call_kind::BLOCKING_WAIT;
+        call.role = role;
+        call.events.assign(events, events + count);
+        call.timeout_ms = timeout_ms;
+        calls_.push_back(call);
+        changed_.notify_all();
+
+        DWORD result = first_signaled_locked(count, events);
+
+        if (result == WSA_WAIT_TIMEOUT && timeout_ms != 0U)
+        {
+            const DWORD limit_ms = honor_timeout_ ? timeout_ms : kSimulatedWaitGuardMs;
+            const bool woke = changed_.wait_for(lock, std::chrono::milliseconds(limit_ms), [&]()
+                                                { return first_signaled_locked(count, events) != WSA_WAIT_TIMEOUT; });
+
+            result = woke ? first_signaled_locked(count, events) : WSA_WAIT_TIMEOUT;
+            calls_[index].timed_out = !woke;
+        }
+
+        calls_[index].result = result;
+        calls_[index].returned = true;
+        changed_.notify_all();
+
+        return result;
+    }
+
+    /* WSAEnumNetworkEvents と同じく、記録の取り出しと E_s のリセットを 1 回の呼び出しで行います。 */
+    int enumerate(const WSAEVENT event, LPWSANETWORKEVENTS network_events)
+    {
+        const watch_role role = s_current_watch_role;
+
+        pass_gate(simulated_gate::ENUMERATE, role);
+
+        std::lock_guard<std::mutex> lock(mutex_);
+        simulated_call call;
+
+        std::memset(network_events, 0, sizeof(*network_events));
+        network_events->lNetworkEvents = pending_network_events_;
+        pending_network_events_ = 0;
+        signaled_[event] = false;
+        call.kind = simulated_call_kind::ENUMERATE;
+        call.role = role;
+        call.event = event;
+        call.network_events = network_events->lNetworkEvents;
+        call.returned = true;
+        calls_.push_back(call);
+        changed_.notify_all();
+
+        return 0;
+    }
+
+    void pass_gate(const simulated_gate gate, const watch_role role)
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        gate_state &state = gates_[std::make_pair(gate, role)];
+
+        if (gates_opened_ || !state.armed)
+        {
+            return;
+        }
+
+        state.armed = false;
+        state.arrived = true;
+        changed_.notify_all();
+        changed_.wait(lock, [&]() { return state.released || gates_opened_; });
+        state.released = false;
+    }
+
+    DWORD first_signaled_locked(const DWORD count, const WSAEVENT *events)
+    {
+        for (DWORD index = 0U; index < count; ++index)
+        {
+            if (signaled_[events[index]])
+            {
+                return WSA_WAIT_EVENT_0 + index;
+            }
+        }
+
+        return WSA_WAIT_TIMEOUT;
+    }
+
+    const bool honor_timeout_;
+    std::mutex mutex_;
+    std::condition_variable changed_;
+    std::vector<WSAEVENT> created_;
+    std::map<WSAEVENT, bool> signaled_;
+    std::map<std::pair<simulated_gate, watch_role>, gate_state> gates_;
+    bool gates_opened_ = false;
+    WSAEVENT shared_ = nullptr;
+    long pending_network_events_ = 0;
+    simulated_calls calls_;
+};
+
+/* 待機のスレッドを役割付きで起動し、テストの途中で失敗しても障壁と解除で回収します。 */
+class watch_thread_group
+{
+  public:
+    watch_thread_group(winsock_event_simulator &simulator, std::vector<cplat_socket_wait_cancel *> cancels)
+        : simulator_(simulator), cancels_(std::move(cancels))
+    {
+    }
+
+    ~watch_thread_group()
+    {
+        bool running = false;
+
+        for (const std::thread &thread : threads_)
+        {
+            running = running || thread.joinable();
+        }
+        if (running)
+        {
+            simulator_.open_all_gates();
+            for (cplat_socket_wait_cancel *cancel : cancels_)
+            {
+                /* 回収のための通知で、有効なオブジェクトでは常に成功します。 */
+                (void)cplat_socket_wait_cancel_signal(cancel, nullptr);
+            }
+        }
+        join_all();
+    }
+
+    watch_thread_group(const watch_thread_group &) = delete;
+    watch_thread_group &operator=(const watch_thread_group &) = delete;
+
+    void start(const watch_role role, std::function<void()> body)
+    {
+        threads_.emplace_back(
+            [this, role, body]()
+            {
+                s_current_watch_role = role;
+                body();
+                simulator_.record(simulated_call_kind::FINISHED);
+            });
+    }
+
+    void join_all()
+    {
+        for (std::thread &thread : threads_)
+        {
+            if (thread.joinable())
+            {
+                thread.join();
+            }
+        }
+    }
+
+  private:
+    winsock_event_simulator &simulator_;
+    std::vector<cplat_socket_wait_cancel *> cancels_;
+    std::vector<std::thread> threads_;
+};
+
+size_t count_calls(const simulated_calls &calls, const simulated_call_kind kind, const watch_role role,
+                   const size_t from = 0U)
+{
+    size_t count = 0U;
+
+    for (size_t index = from; index < calls.size(); ++index)
+    {
+        if (calls[index].kind == kind && calls[index].role == role)
+        {
+            ++count;
+        }
+    }
+
+    return count;
+}
+
+size_t count_event_calls(const simulated_calls &calls, const simulated_call_kind kind, const watch_role role,
+                         const WSAEVENT event, const size_t from = 0U)
+{
+    size_t count = 0U;
+
+    for (size_t index = from; index < calls.size(); ++index)
+    {
+        if (calls[index].kind == kind && calls[index].role == role && calls[index].event == event)
+        {
+            ++count;
+        }
+    }
+
+    return count;
+}
+
+/* 見つからない場合は calls.size() を返します。 */
+size_t find_call(const simulated_calls &calls, const simulated_call_kind kind, const watch_role role,
+                 const size_t from = 0U)
+{
+    for (size_t index = from; index < calls.size(); ++index)
+    {
+        if (calls[index].kind == kind && calls[index].role == role)
+        {
+            return index;
+        }
+    }
+
+    return calls.size();
+}
+
+size_t find_event_call(const simulated_calls &calls, const simulated_call_kind kind, const watch_role role,
+                       const WSAEVENT event, const size_t from = 0U)
+{
+    for (size_t index = from; index < calls.size(); ++index)
+    {
+        if (calls[index].kind == kind && calls[index].role == role && calls[index].event == event)
+        {
+            return index;
+        }
+    }
+
+    return calls.size();
+}
+
+bool is_blocked(const simulated_calls &calls, const watch_role role)
+{
+    for (size_t index = calls.size(); index > 0U; --index)
+    {
+        const simulated_call &call = calls[index - 1U];
+
+        if (call.kind == simulated_call_kind::BLOCKING_WAIT && call.role == role)
+        {
+            return !call.returned;
+        }
+    }
+
+    return false;
+}
+
+bool has_finished(const simulated_calls &calls, const watch_role role, const size_t from = 0U)
+{
+    return find_call(calls, simulated_call_kind::FINISHED, role, from) < calls.size();
+}
+
+size_t count_guard_timeouts(const simulated_calls &calls)
+{
+    size_t count = 0U;
+
+    for (const simulated_call &call : calls)
+    {
+        if (call.kind == simulated_call_kind::BLOCKING_WAIT && call.returned && call.timed_out)
+        {
+            ++count;
+        }
+    }
+
+    return count;
+}
+
+/* 最初の待機を起こしたイベントを返します。待機がない場合と時間切れの場合は nullptr を返します。 */
+WSAEVENT first_woken_event(const simulated_calls &calls, const watch_role role, const size_t from = 0U)
+{
+    const size_t index = find_call(calls, simulated_call_kind::BLOCKING_WAIT, role, from);
+
+    if (index >= calls.size() || !calls[index].returned || calls[index].result == WSA_WAIT_TIMEOUT)
+    {
+        return nullptr;
+    }
+
+    const DWORD offset = calls[index].result - WSA_WAIT_EVENT_0;
+
+    return offset < calls[index].events.size() ? calls[index].events[offset] : nullptr;
+}
+
+/* 最初の列挙が返したネットワーク イベントを返します。列挙がない場合は -1 を返します。 */
+long first_network_events(const simulated_calls &calls, const watch_role role, const size_t from = 0U)
+{
+    const size_t index = find_call(calls, simulated_call_kind::ENUMERATE, role, from);
+
+    return index < calls.size() ? calls[index].network_events : -1L;
+}
+
+/* 列挙のあとに、同じ役割の待機が始まって戻っていないことを判定します。 */
+bool is_blocked_after_enumeration(const simulated_calls &calls, const watch_role role, const size_t from)
+{
+    const size_t enumeration = find_call(calls, simulated_call_kind::ENUMERATE, role, from);
+
+    return enumeration < calls.size() &&
+           find_call(calls, simulated_call_kind::BLOCKING_WAIT, role, enumeration) < calls.size() &&
+           is_blocked(calls, role);
+}
+
+} // namespace
+
+// 送信側が E_w をリセットして待機の直前で止まる間に受信側が FD_WRITE を取得しても、送信側が E_w で起床することの確認
+TEST_F(socketTest, watch_writer_wakes_by_write_event_set_by_reader)
+{
+    // Arrange
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started()); // [状態確認] - winsock_session.started() の戻り値が true であること。
+    winsock_event_simulator simulator(mock_winsock_,
+                                      false); // [状態] - Winsock のイベントを模擬し、障壁で待機を止められるようにする。
+    cplat_socket_wait_cancel *reader_cancel = nullptr;
+    cplat_socket_wait_cancel *writer_cancel = nullptr;
+    ASSERT_EQ(CPLAT_OK,
+              cplat_socket_wait_cancel_create(
+                  &reader_cancel,
+                  nullptr)); // [状態確認] - 受信側の cplat_socket_wait_cancel_create() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_socket_wait_cancel_create(
+                  &writer_cancel,
+                  nullptr)); // [状態確認] - 送信側の cplat_socket_wait_cancel_create() の戻り値が CPLAT_OK であること。
+    cplat_socket_watch *watch = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(
+                            kSocket, &watch,
+                            nullptr)); // [状態確認] - cplat_socket_watch_attach() の戻り値が CPLAT_OK であること。
+    const watch_events events = simulator.latest_watch_events(); // [状態] - 登録の E_s、E_r、E_w を取り出す。
+    cplat_socket_watch *watches[] = {watch};
+    unsigned char ready[] = {0U};
+    const char payload[] = "x";
+    size_t sent = 0U;
+    std::atomic<int> actual_ret_writer{CPLAT_ERR_UNKNOWN};
+    std::atomic<int> actual_ret_reader{CPLAT_ERR_UNKNOWN};
+    watch_thread_group threads(simulator, {reader_cancel, writer_cancel});
+
+    // Pre-Assert
+    EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)kSocket, _, 1, 0))
+        .WillOnce(
+            Return(SOCKET_ERROR)); // [Pre-Assert確認_正常系] - send() が kSocket と 1 を指定して 1 回呼び出されること。
+                                   // [Pre-Assert手順] - send() から SOCKET_ERROR を返す。
+
+    // Act
+    const int actual_ret_send = cplat_socket_watch_send(
+        watch, payload, 1U, &sent,
+        nullptr); // [手順] - WSAEWOULDBLOCK で失敗する送信を指定して cplat_socket_watch_send() を呼び出す。
+    simulator.arm(simulated_gate::BEFORE_BLOCKING_WAIT,
+                  watch_role::WRITER); // [手順] - 送信側の待機の直前に障壁を置く。
+    threads.start(watch_role::WRITER,
+                  [&]()
+                  {
+                      actual_ret_writer.store(cplat_socket_watch_wait_writable(watch, writer_cancel, 10000, nullptr));
+                  }); // [手順] - 送信側のスレッドで cplat_socket_watch_wait_writable() を呼び出す。
+    ASSERT_TRUE(simulator.wait_arrived(
+        simulated_gate::BEFORE_BLOCKING_WAIT,
+        watch_role::
+            WRITER)); // [状態確認] - 送信側の待機の直前の障壁を待つ simulator.wait_arrived() の戻り値が true であること。
+    simulator.inject(FD_WRITE); // [手順] - E_s へ FD_WRITE を通知する。
+    threads.start(watch_role::READER,
+                  [&]()
+                  {
+                      actual_ret_reader.store(
+                          cplat_socket_watch_wait_readable_multi(watches, 1U, reader_cancel, 10000, ready, nullptr));
+                  }); // [手順] - 受信側のスレッドで cplat_socket_watch_wait_readable_multi() を呼び出す。
+    ASSERT_TRUE(simulator.wait_until(
+        [](const simulated_calls &calls)
+        {
+            return is_blocked_after_enumeration(calls, watch_role::READER, 0U);
+        })); // [状態確認] - 受信側の列挙の後の再待機を待つ simulator.wait_until() の戻り値が true であること。
+    simulator.release(simulated_gate::BEFORE_BLOCKING_WAIT, watch_role::WRITER); // [手順] - 送信側の待機を開始させる。
+    ASSERT_TRUE(simulator.wait_until(
+        [](const simulated_calls &calls)
+        {
+            return has_finished(calls, watch_role::WRITER);
+        })); // [状態確認] - 送信側の終了を待つ simulator.wait_until() の戻り値が true であること。
+    const simulated_calls calls = simulator.snapshot(); // [手順] - 受信側の待機中に呼び出しの記録を取り出す。
+    const int actual_ret_signal = cplat_socket_wait_cancel_signal(
+        reader_cancel,
+        nullptr);       // [手順] - 受信側の解除のオブジェクトを指定して cplat_socket_wait_cancel_signal() を呼び出す。
+    threads.join_all(); // [手順] - 両方のスレッドの終了を待つ。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_WOULD_BLOCK,
+        actual_ret_send); // [確認_正常系] - cplat_socket_watch_send() の戻り値が CPLAT_ERR_WOULD_BLOCK であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_writer
+            .load()); // [確認_正常系] - 送信側の cplat_socket_watch_wait_writable() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        FD_WRITE,
+        first_network_events(
+            calls,
+            watch_role::
+                READER)); // [確認_正常系] - 受信側の first_network_events() の戻り値が FD_WRITE であること。(受信側が FD_WRITE を取得したことの確認)
+    EXPECT_EQ(
+        1U,
+        count_event_calls(
+            calls, simulated_call_kind::SET_EVENT, watch_role::READER,
+            events
+                .write)); // [確認_正常系] - 受信側が E_w を設定した回数を数える count_event_calls() の戻り値が 1 であること。
+    EXPECT_EQ(
+        0U,
+        count_event_calls(
+            calls, simulated_call_kind::RESET_EVENT, watch_role::READER,
+            events
+                .write)); // [確認_正常系] - 受信側が E_w をリセットした回数を数える count_event_calls() の戻り値が 0 であること。(相手のイベントをリセットしないことの確認)
+    EXPECT_EQ(
+        0U,
+        count_event_calls(
+            calls, simulated_call_kind::RESET_EVENT, watch_role::WRITER,
+            events
+                .read)); // [確認_正常系] - 送信側が E_r をリセットした回数を数える count_event_calls() の戻り値が 0 であること。(相手のイベントをリセットしないことの確認)
+    EXPECT_EQ(1U,
+              count_calls(
+                  calls, simulated_call_kind::BLOCKING_WAIT,
+                  watch_role::WRITER)); // [確認_正常系] - 送信側の待機を数える count_calls() の戻り値が 1 であること。
+    EXPECT_EQ(
+        events.write,
+        first_woken_event(
+            calls,
+            watch_role::
+                WRITER)); // [確認_正常系] - 送信側の first_woken_event() の戻り値が events.write と一致すること。(待機の開始直後に E_w で起床したことの確認)
+    EXPECT_EQ(
+        0U,
+        count_calls(
+            calls, simulated_call_kind::ENUMERATE,
+            watch_role::
+                WRITER)); // [確認_正常系] - 送信側の列挙を数える count_calls() の戻り値が 0 であること。(受信側が保存した送信可能で戻ったことの確認)
+    EXPECT_TRUE(is_blocked(
+        calls,
+        watch_role::
+            READER)); // [確認_正常系] - 受信側の is_blocked() の戻り値が true であること。(受信側が FD_WRITE の取得の後に再び待機したことの確認)
+    EXPECT_EQ(
+        0U,
+        count_guard_timeouts(
+            calls)); // [確認_正常系] - count_guard_timeouts() の戻り値が 0 であること。(起床を失って時間切れになった待機がないことの確認)
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_signal); // [確認_正常系] - cplat_socket_wait_cancel_signal() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CANCELED,
+        actual_ret_reader
+            .load()); // [確認_正常系] - 受信側の cplat_socket_watch_wait_readable_multi() の戻り値が CPLAT_ERR_CANCELED であること。
+
+    // Cleanup
+    cplat_socket_watch_detach(watch);
+    cplat_socket_wait_cancel_dispose(writer_cancel);
+    cplat_socket_wait_cancel_dispose(reader_cancel);
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+
+// 受信側が E_r をリセットして待機の直前で止まる間に送信側が FD_READ または FD_ACCEPT を取得しても、受信側が E_r で起床することの確認
+TEST_F(socketTest, watch_reader_wakes_by_read_event_set_by_writer)
+{
+    // Arrange
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started()); // [状態確認] - winsock_session.started() の戻り値が true であること。
+    winsock_event_simulator simulator(mock_winsock_,
+                                      false); // [状態] - Winsock のイベントを模擬し、障壁で待機を止められるようにする。
+    const long notifications[] = {FD_READ, FD_ACCEPT}; // [状態] - 受信側の通知として FD_READ と FD_ACCEPT を用意する。
+    const char payload[] = "x";
+    int actual_ret_send[2] = {0};
+    int actual_ret_reader[2] = {0};
+    int actual_ret_writer[2] = {0};
+    int actual_ret_signal[2] = {0};
+    unsigned char ready[2] = {0U};
+    watch_events events[2];
+    simulated_calls calls[2];
+
+    // Pre-Assert
+    EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)kSocket, _, 1, 0))
+        .Times(2)
+        .WillRepeatedly(
+            Return(SOCKET_ERROR)); // [Pre-Assert確認_正常系] - send() が kSocket と 1 を指定して 2 回呼び出されること。
+                                   // [Pre-Assert手順] - send() から SOCKET_ERROR を返す。
+
+    // Act
+    for (size_t index = 0U; index < 2U; ++index)
+    {
+        cplat_socket_wait_cancel *reader_cancel = nullptr;
+        cplat_socket_wait_cancel *writer_cancel = nullptr;
+        ASSERT_EQ(
+            CPLAT_OK,
+            cplat_socket_wait_cancel_create(
+                &reader_cancel,
+                nullptr)); // [状態確認] - 受信側の cplat_socket_wait_cancel_create() の戻り値が CPLAT_OK であること。
+        ASSERT_EQ(
+            CPLAT_OK,
+            cplat_socket_wait_cancel_create(
+                &writer_cancel,
+                nullptr)); // [状態確認] - 送信側の cplat_socket_wait_cancel_create() の戻り値が CPLAT_OK であること。
+        cplat_socket_watch *watch = nullptr;
+        ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(
+                                kSocket, &watch,
+                                nullptr)); // [状態確認] - cplat_socket_watch_attach() の戻り値が CPLAT_OK であること。
+        events[index] = simulator.latest_watch_events(); // [手順] - 登録の E_s、E_r、E_w を取り出す。
+        const size_t from = simulator.mark();            // [手順] - この反復の呼び出しの記録の開始位置を控える。
+        cplat_socket_watch *watches[] = {watch};
+        unsigned char ready_once[] = {0U};
+        size_t sent = 0U;
+        std::atomic<int> reader_ret{CPLAT_ERR_UNKNOWN};
+        std::atomic<int> writer_ret{CPLAT_ERR_UNKNOWN};
+        {
+            watch_thread_group threads(simulator, {reader_cancel, writer_cancel});
+
+            actual_ret_send[index] = cplat_socket_watch_send(
+                watch, payload, 1U, &sent,
+                nullptr); // [手順] - WSAEWOULDBLOCK で失敗する送信を指定して cplat_socket_watch_send() を呼び出す。
+            simulator.arm(simulated_gate::BEFORE_BLOCKING_WAIT,
+                          watch_role::READER); // [手順] - 受信側の待機の直前に障壁を置く。
+            threads.start(watch_role::READER,
+                          [&]()
+                          {
+                              reader_ret.store(cplat_socket_watch_wait_readable_multi(watches, 1U, reader_cancel, 10000,
+                                                                                      ready_once, nullptr));
+                          }); // [手順] - 受信側のスレッドで cplat_socket_watch_wait_readable_multi() を呼び出す。
+            ASSERT_TRUE(simulator.wait_arrived(
+                simulated_gate::BEFORE_BLOCKING_WAIT,
+                watch_role::
+                    READER)); // [状態確認] - 受信側の待機の直前の障壁を待つ simulator.wait_arrived() の戻り値が true であること。
+            simulator.inject(notifications[index]); // [手順] - E_s へ FD_READ または FD_ACCEPT を通知する。
+            threads.start(watch_role::WRITER,
+                          [&]()
+                          {
+                              writer_ret.store(cplat_socket_watch_wait_writable(watch, writer_cancel, 10000, nullptr));
+                          }); // [手順] - 送信側のスレッドで cplat_socket_watch_wait_writable() を呼び出す。
+            ASSERT_TRUE(simulator.wait_until(
+                [from](const simulated_calls &recorded)
+                {
+                    return is_blocked_after_enumeration(recorded, watch_role::WRITER, from);
+                })); // [状態確認] - 送信側の列挙の後の再待機を待つ simulator.wait_until() の戻り値が true であること。
+            simulator.release(simulated_gate::BEFORE_BLOCKING_WAIT,
+                              watch_role::READER); // [手順] - 受信側の待機を開始させる。
+            ASSERT_TRUE(simulator.wait_until(
+                [from](const simulated_calls &recorded)
+                {
+                    return has_finished(recorded, watch_role::READER, from);
+                })); // [状態確認] - 受信側の終了を待つ simulator.wait_until() の戻り値が true であること。
+            const simulated_calls recorded =
+                simulator.snapshot(); // [手順] - 送信側の待機中に呼び出しの記録を取り出す。
+            calls[index].assign(recorded.begin() + static_cast<std::ptrdiff_t>(from),
+                                recorded.end()); // [手順] - この反復の記録だけを残す。
+            actual_ret_signal[index] = cplat_socket_wait_cancel_signal(
+                writer_cancel,
+                nullptr); // [手順] - 送信側の解除のオブジェクトを指定して cplat_socket_wait_cancel_signal() を呼び出す。
+            threads.join_all(); // [手順] - 両方のスレッドの終了を待つ。
+        }
+        actual_ret_reader[index] = reader_ret.load(); // [手順] - 受信側の戻り値を残す。
+        actual_ret_writer[index] = writer_ret.load(); // [手順] - 送信側の戻り値を残す。
+        ready[index] = ready_once[0];                 // [手順] - 受信側の受信可能の出力を残す。
+        cplat_socket_watch_detach(watch);             // [手順] - この反復の登録を cplat_socket_watch_detach() で解く。
+        cplat_socket_wait_cancel_dispose(
+            writer_cancel); // [手順] - 送信側の解除のオブジェクトを cplat_socket_wait_cancel_dispose() で解放する。
+        cplat_socket_wait_cancel_dispose(
+            reader_cancel); // [手順] - 受信側の解除のオブジェクトを cplat_socket_wait_cancel_dispose() で解放する。
+    }
+
+    // Assert
+    for (size_t index = 0U; index < 2U; ++index)
+    {
+        EXPECT_EQ(CPLAT_ERR_WOULD_BLOCK,
+                  actual_ret_send
+                      [index]); // [確認_正常系 回数=2] - actual_ret_send[index] が CPLAT_ERR_WOULD_BLOCK であること。
+        EXPECT_EQ(
+            notifications[index],
+            first_network_events(
+                calls[index],
+                watch_role::
+                    WRITER)); // [確認_正常系 回数=2] - 送信側の first_network_events() の戻り値が notifications[index] と一致すること。(送信側が受信側の通知を取得したことの確認)
+        EXPECT_EQ(
+            1U,
+            count_event_calls(
+                calls[index], simulated_call_kind::SET_EVENT, watch_role::WRITER,
+                events[index]
+                    .read)); // [確認_正常系 回数=2] - 送信側が E_r を設定した回数を数える count_event_calls() の戻り値が 1 であること。
+        EXPECT_EQ(
+            0U,
+            count_event_calls(
+                calls[index], simulated_call_kind::RESET_EVENT, watch_role::WRITER,
+                events[index]
+                    .read)); // [確認_正常系 回数=2] - 送信側が E_r をリセットした回数を数える count_event_calls() の戻り値が 0 であること。(相手のイベントをリセットしないことの確認)
+        EXPECT_EQ(
+            0U,
+            count_event_calls(
+                calls[index], simulated_call_kind::RESET_EVENT, watch_role::READER,
+                events[index]
+                    .write)); // [確認_正常系 回数=2] - 受信側が E_w をリセットした回数を数える count_event_calls() の戻り値が 0 であること。(相手のイベントをリセットしないことの確認)
+        EXPECT_EQ(CPLAT_OK,
+                  actual_ret_reader[index]); // [確認_正常系 回数=2] - actual_ret_reader[index] が CPLAT_OK であること。
+        EXPECT_EQ(
+            1U,
+            ready
+                [index]); // [確認_正常系 回数=2] - ready[index] が 1 であること。(送信側が pending を消費しないことの確認)
+        EXPECT_EQ(
+            1U, count_calls(
+                    calls[index], simulated_call_kind::BLOCKING_WAIT,
+                    watch_role::
+                        READER)); // [確認_正常系 回数=2] - 受信側の待機を数える count_calls() の戻り値が 1 であること。
+        EXPECT_EQ(
+            events[index].read,
+            first_woken_event(
+                calls[index],
+                watch_role::
+                    READER)); // [確認_正常系 回数=2] - 受信側の first_woken_event() の戻り値が events[index].read と一致すること。(待機の開始直後に E_r で起床したことの確認)
+        EXPECT_EQ(
+            0U,
+            count_calls(
+                calls[index], simulated_call_kind::ENUMERATE,
+                watch_role::
+                    READER)); // [確認_正常系 回数=2] - 受信側の列挙を数える count_calls() の戻り値が 0 であること。(送信側が保存した受信の通知で戻ったことの確認)
+        EXPECT_TRUE(is_blocked(
+            calls[index],
+            watch_role::
+                WRITER)); // [確認_正常系 回数=2] - 送信側の is_blocked() の戻り値が true であること。(送信側が通知の取得の後に再び待機したことの確認)
+        EXPECT_EQ(
+            0U,
+            count_guard_timeouts(
+                calls
+                    [index])); // [確認_正常系 回数=2] - count_guard_timeouts() の戻り値が 0 であること。(起床を失って時間切れになった待機がないことの確認)
+        EXPECT_EQ(CPLAT_OK,
+                  actual_ret_signal[index]); // [確認_正常系 回数=2] - actual_ret_signal[index] が CPLAT_OK であること。
+        EXPECT_EQ(CPLAT_ERR_CANCELED,
+                  actual_ret_writer
+                      [index]); // [確認_正常系 回数=2] - actual_ret_writer[index] が CPLAT_ERR_CANCELED であること。
+    }
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+
+// 一方の方向だけが待機して他方向の通知を取得した後に、他方向が待機を始めても通知を失わないことの確認
+TEST_F(socketTest, watch_later_direction_uses_notification_taken_by_other_direction)
+{
+    // Arrange
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started()); // [状態確認] - winsock_session.started() の戻り値が true であること。
+    winsock_event_simulator simulator(mock_winsock_,
+                                      false); // [状態] - Winsock のイベントを模擬し、障壁で待機を止められるようにする。
+    cplat_socket_wait_cancel *reader_cancel = nullptr;
+    cplat_socket_wait_cancel *writer_cancel = nullptr;
+    ASSERT_EQ(CPLAT_OK,
+              cplat_socket_wait_cancel_create(
+                  &reader_cancel,
+                  nullptr)); // [状態確認] - 受信側の cplat_socket_wait_cancel_create() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_socket_wait_cancel_create(
+                  &writer_cancel,
+                  nullptr)); // [状態確認] - 送信側の cplat_socket_wait_cancel_create() の戻り値が CPLAT_OK であること。
+    cplat_socket_watch *watch = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(
+                            kSocket, &watch,
+                            nullptr)); // [状態確認] - cplat_socket_watch_attach() の戻り値が CPLAT_OK であること。
+    const watch_events events = simulator.latest_watch_events(); // [状態] - 登録の E_s、E_r、E_w を取り出す。
+    cplat_socket_watch *watches[] = {watch};
+    unsigned char reader_ready[] = {0U};
+    unsigned char later_ready[] = {0U};
+    const char payload[] = "x";
+    size_t sent = 0U;
+    std::atomic<int> actual_ret_reader{CPLAT_ERR_UNKNOWN};
+    std::atomic<int> actual_ret_writer{CPLAT_ERR_UNKNOWN};
+    watch_thread_group threads(simulator, {reader_cancel, writer_cancel});
+
+    // Pre-Assert
+    EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)kSocket, _, 1, 0))
+        .Times(2)
+        .WillRepeatedly(
+            Return(SOCKET_ERROR)); // [Pre-Assert確認_正常系] - send() が kSocket と 1 を指定して 2 回呼び出されること。
+                                   // [Pre-Assert手順] - send() から SOCKET_ERROR を返す。
+
+    // Act
+    const int actual_ret_send_first = cplat_socket_watch_send(
+        watch, payload, 1U, &sent,
+        nullptr); // [手順] - WSAEWOULDBLOCK で失敗する送信を指定して cplat_socket_watch_send() を呼び出す。
+    threads.start(watch_role::READER,
+                  [&]()
+                  {
+                      actual_ret_reader.store(cplat_socket_watch_wait_readable_multi(watches, 1U, reader_cancel, 10000,
+                                                                                     reader_ready, nullptr));
+                  }); // [手順] - 受信側のスレッドで cplat_socket_watch_wait_readable_multi() を呼び出す。
+    ASSERT_TRUE(simulator.wait_until(
+        [](const simulated_calls &calls)
+        {
+            return is_blocked(calls, watch_role::READER);
+        })); // [状態確認] - 受信側の待機を待つ simulator.wait_until() の戻り値が true であること。
+    const size_t from_write = simulator.mark(); // [手順] - FD_WRITE の通知の前の記録の位置を控える。
+    simulator.inject(FD_WRITE);                 // [手順] - E_s へ FD_WRITE を通知する。
+    ASSERT_TRUE(simulator.wait_until(
+        [from_write](const simulated_calls &calls)
+        {
+            return is_blocked_after_enumeration(calls, watch_role::READER, from_write);
+        })); // [状態確認] - 受信側の列挙の後の再待機を待つ simulator.wait_until() の戻り値が true であること。
+    const int actual_ret_writer_later = cplat_socket_watch_wait_writable(
+        watch, nullptr, 1000,
+        nullptr); // [手順] - 受信側が FD_WRITE を取得した後に、送信側として cplat_socket_watch_wait_writable() を呼び出す。
+    const simulated_calls calls_write = simulator.snapshot(); // [手順] - 呼び出しの記録を取り出す。
+    const int actual_ret_signal_reader = cplat_socket_wait_cancel_signal(
+        reader_cancel,
+        nullptr); // [手順] - 受信側の解除のオブジェクトを指定して cplat_socket_wait_cancel_signal() を呼び出す。
+    ASSERT_TRUE(simulator.wait_until(
+        [](const simulated_calls &calls)
+        {
+            return has_finished(calls, watch_role::READER);
+        })); // [状態確認] - 受信側の終了を待つ simulator.wait_until() の戻り値が true であること。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_WOULD_BLOCK,
+        actual_ret_send_first); // [確認_正常系] - 1 回目の cplat_socket_watch_send() の戻り値が CPLAT_ERR_WOULD_BLOCK であること。
+    EXPECT_EQ(
+        FD_WRITE,
+        first_network_events(
+            calls_write, watch_role::READER,
+            from_write)); // [確認_正常系] - 受信側の first_network_events() の戻り値が FD_WRITE であること。(受信側が他方向の通知を取得したことの確認)
+    EXPECT_EQ(
+        1U,
+        count_event_calls(
+            calls_write, simulated_call_kind::SET_EVENT, watch_role::READER, events.write,
+            from_write)); // [確認_正常系] - 受信側が E_w を設定した回数を数える count_event_calls() の戻り値が 1 であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_writer_later); // [確認_正常系] - 後から待機を始めた cplat_socket_watch_wait_writable() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0U,
+        count_calls(
+            calls_write, simulated_call_kind::BLOCKING_WAIT, watch_role::MAIN,
+            from_write)); // [確認_正常系] - 後から始めた送信側の待機を数える count_calls() の戻り値が 0 であること。(ロック内の状態の確認で待たずに戻ったことの確認)
+    EXPECT_EQ(
+        0U,
+        count_calls(
+            calls_write, simulated_call_kind::ENUMERATE, watch_role::MAIN,
+            from_write)); // [確認_正常系] - 後から始めた送信側の列挙を数える count_calls() の戻り値が 0 であること。
+    EXPECT_EQ(
+        0U,
+        count_guard_timeouts(
+            calls_write)); // [確認_正常系] - count_guard_timeouts() の戻り値が 0 であること。(起床を失って時間切れになった待機がないことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_signal_reader); // [確認_正常系] - 受信側の cplat_socket_wait_cancel_signal() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CANCELED,
+        actual_ret_reader
+            .load()); // [確認_正常系] - 受信側の cplat_socket_watch_wait_readable_multi() の戻り値が CPLAT_ERR_CANCELED であること。
+
+    // Act_2
+    const int actual_ret_send_second = cplat_socket_watch_send(
+        watch, payload, 1U, &sent,
+        nullptr); // [手順] - WSAEWOULDBLOCK で失敗する送信を指定して、もう一度 cplat_socket_watch_send() を呼び出す。
+    threads.start(watch_role::WRITER,
+                  [&]()
+                  {
+                      actual_ret_writer.store(cplat_socket_watch_wait_writable(watch, writer_cancel, 10000, nullptr));
+                  }); // [手順] - 送信側のスレッドで cplat_socket_watch_wait_writable() を呼び出す。
+    ASSERT_TRUE(simulator.wait_until(
+        [](const simulated_calls &calls)
+        {
+            return is_blocked(calls, watch_role::WRITER);
+        })); // [状態確認] - 送信側の待機を待つ simulator.wait_until() の戻り値が true であること。
+    const size_t from_read = simulator.mark(); // [手順] - FD_READ の通知の前の記録の位置を控える。
+    simulator.inject(FD_READ);                 // [手順] - E_s へ FD_READ を通知する。
+    ASSERT_TRUE(simulator.wait_until(
+        [from_read](const simulated_calls &calls)
+        {
+            return is_blocked_after_enumeration(calls, watch_role::WRITER, from_read);
+        })); // [状態確認] - 送信側の列挙の後の再待機を待つ simulator.wait_until() の戻り値が true であること。
+    const int actual_ret_reader_later = cplat_socket_watch_wait_readable_multi(
+        watches, 1U, nullptr, 1000, later_ready,
+        nullptr); // [手順] - 送信側が FD_READ を取得した後に、受信側として cplat_socket_watch_wait_readable_multi() を呼び出す。
+    const simulated_calls calls_read = simulator.snapshot(); // [手順] - 呼び出しの記録を取り出す。
+    const int actual_ret_signal_writer = cplat_socket_wait_cancel_signal(
+        writer_cancel,
+        nullptr);       // [手順] - 送信側の解除のオブジェクトを指定して cplat_socket_wait_cancel_signal() を呼び出す。
+    threads.join_all(); // [手順] - スレッドの終了を待つ。
+
+    // Assert_2
+    EXPECT_EQ(
+        CPLAT_ERR_WOULD_BLOCK,
+        actual_ret_send_second); // [確認_正常系] - 2 回目の cplat_socket_watch_send() の戻り値が CPLAT_ERR_WOULD_BLOCK であること。
+    EXPECT_EQ(
+        FD_READ,
+        first_network_events(
+            calls_read, watch_role::WRITER,
+            from_read)); // [確認_正常系] - 送信側の first_network_events() の戻り値が FD_READ であること。(送信側が他方向の通知を取得したことの確認)
+    EXPECT_EQ(
+        1U,
+        count_event_calls(
+            calls_read, simulated_call_kind::SET_EVENT, watch_role::WRITER, events.read,
+            from_read)); // [確認_正常系] - 送信側が E_r を設定した回数を数える count_event_calls() の戻り値が 1 であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_reader_later); // [確認_正常系] - 後から待機を始めた cplat_socket_watch_wait_readable_multi() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, later_ready[0]); // [確認_正常系] - later_ready[0] が 1 であること。
+    EXPECT_EQ(
+        0U,
+        count_calls(
+            calls_read, simulated_call_kind::BLOCKING_WAIT, watch_role::MAIN,
+            from_read)); // [確認_正常系] - 後から始めた受信側の待機を数える count_calls() の戻り値が 0 であること。(ロック内の状態の確認で待たずに戻ったことの確認)
+    EXPECT_EQ(
+        0U, count_calls(
+                calls_read, simulated_call_kind::ENUMERATE, watch_role::MAIN,
+                from_read)); // [確認_正常系] - 後から始めた受信側の列挙を数える count_calls() の戻り値が 0 であること。
+    EXPECT_EQ(
+        0U,
+        count_guard_timeouts(
+            calls_read)); // [確認_正常系] - count_guard_timeouts() の戻り値が 0 であること。(起床を失って時間切れになった待機がないことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_signal_writer); // [確認_正常系] - 送信側の cplat_socket_wait_cancel_signal() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CANCELED,
+        actual_ret_writer
+            .load()); // [確認_正常系] - 送信側の cplat_socket_watch_wait_writable() の戻り値が CPLAT_ERR_CANCELED であること。
+
+    // Cleanup
+    cplat_socket_watch_detach(watch);
+    cplat_socket_wait_cancel_dispose(writer_cancel);
+    cplat_socket_wait_cancel_dispose(reader_cancel);
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+
+// 両方向が E_s で起床し、後続側の列挙が空になる順でも、後続側が待機を続けることの確認
+TEST_F(socketTest, watch_follower_keeps_waiting_after_empty_enumeration)
+{
+    // Arrange
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started()); // [状態確認] - winsock_session.started() の戻り値が true であること。
+    winsock_event_simulator simulator(mock_winsock_,
+                                      false); // [状態] - Winsock のイベントを模擬し、障壁で待機を止められるようにする。
+    cplat_socket_wait_cancel *reader_cancel = nullptr;
+    cplat_socket_wait_cancel *writer_cancel = nullptr;
+    ASSERT_EQ(CPLAT_OK,
+              cplat_socket_wait_cancel_create(
+                  &reader_cancel,
+                  nullptr)); // [状態確認] - 受信側の cplat_socket_wait_cancel_create() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_socket_wait_cancel_create(
+                  &writer_cancel,
+                  nullptr)); // [状態確認] - 送信側の cplat_socket_wait_cancel_create() の戻り値が CPLAT_OK であること。
+    cplat_socket_watch *watch = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(
+                            kSocket, &watch,
+                            nullptr)); // [状態確認] - cplat_socket_watch_attach() の戻り値が CPLAT_OK であること。
+    const watch_events events = simulator.latest_watch_events(); // [状態] - 登録の E_s、E_r、E_w を取り出す。
+    cplat_socket_watch *watches[] = {watch};
+    unsigned char ready[] = {0U};
+    const char payload[] = "x";
+    size_t sent = 0U;
+    std::atomic<int> actual_ret_reader{CPLAT_ERR_UNKNOWN};
+    std::atomic<int> actual_ret_writer{CPLAT_ERR_UNKNOWN};
+    watch_thread_group threads(simulator, {reader_cancel, writer_cancel});
+
+    // Pre-Assert
+    EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)kSocket, _, 1, 0))
+        .WillOnce(
+            Return(SOCKET_ERROR)); // [Pre-Assert確認_正常系] - send() が kSocket と 1 を指定して 1 回呼び出されること。
+                                   // [Pre-Assert手順] - send() から SOCKET_ERROR を返す。
+
+    // Act
+    const int actual_ret_send = cplat_socket_watch_send(
+        watch, payload, 1U, &sent,
+        nullptr); // [手順] - WSAEWOULDBLOCK で失敗する送信を指定して cplat_socket_watch_send() を呼び出す。
+    threads.start(watch_role::READER,
+                  [&]()
+                  {
+                      actual_ret_reader.store(
+                          cplat_socket_watch_wait_readable_multi(watches, 1U, reader_cancel, 10000, ready, nullptr));
+                  }); // [手順] - 受信側のスレッドで cplat_socket_watch_wait_readable_multi() を呼び出す。
+    threads.start(watch_role::WRITER,
+                  [&]()
+                  {
+                      actual_ret_writer.store(cplat_socket_watch_wait_writable(watch, writer_cancel, 10000, nullptr));
+                  }); // [手順] - 送信側のスレッドで cplat_socket_watch_wait_writable() を呼び出す。
+    ASSERT_TRUE(simulator.wait_until(
+        [](const simulated_calls &calls)
+        {
+            return is_blocked(calls, watch_role::READER) && is_blocked(calls, watch_role::WRITER);
+        })); // [状態確認] - 両方向の待機を待つ simulator.wait_until() の戻り値が true であること。
+    const size_t from = simulator.mark();                         // [手順] - 通知の前の記録の位置を控える。
+    simulator.arm(simulated_gate::ZERO_WAIT, watch_role::READER); // [手順] - 受信側の E_s の確認に障壁を置く。
+    simulator.arm(simulated_gate::ZERO_WAIT, watch_role::WRITER); // [手順] - 送信側の E_s の確認に障壁を置く。
+    simulator.arm(simulated_gate::ENUMERATE, watch_role::READER); // [手順] - 受信側の列挙に障壁を置く。
+    simulator.inject(FD_READ);                                    // [手順] - E_s へ FD_READ を通知する。
+    ASSERT_TRUE(simulator.wait_arrived(
+        simulated_gate::ZERO_WAIT,
+        watch_role::
+            READER)); // [状態確認] - 受信側が E_s で起床したことを待つ simulator.wait_arrived() の戻り値が true であること。
+    ASSERT_TRUE(simulator.wait_arrived(
+        simulated_gate::ZERO_WAIT,
+        watch_role::
+            WRITER)); // [状態確認] - 送信側が E_s で起床したことを待つ simulator.wait_arrived() の戻り値が true であること。
+    simulator.release(simulated_gate::ZERO_WAIT, watch_role::READER); // [手順] - 受信側に E_s を確認させる。
+    ASSERT_TRUE(simulator.wait_arrived(
+        simulated_gate::ENUMERATE,
+        watch_role::
+            READER)); // [状態確認] - 受信側の列挙の障壁を待つ simulator.wait_arrived() の戻り値が true であること。
+    simulator.release(simulated_gate::ZERO_WAIT,
+                      watch_role::WRITER); // [手順] - 受信側の列挙の前に、送信側に E_s を確認させる。
+    ASSERT_TRUE(simulator.wait_until(
+        [from](const simulated_calls &calls)
+        {
+            const size_t index = find_call(calls, simulated_call_kind::ZERO_WAIT, watch_role::WRITER, from);
+            return index < calls.size() && calls[index].returned;
+        })); // [状態確認] - 送信側の E_s の確認を待つ simulator.wait_until() の戻り値が true であること。
+    simulator.release(simulated_gate::ENUMERATE, watch_role::READER); // [手順] - 受信側の列挙を進める。
+    ASSERT_TRUE(simulator.wait_until(
+        [from](const simulated_calls &calls)
+        {
+            return has_finished(calls, watch_role::READER, from) &&
+                   count_calls(calls, simulated_call_kind::ENUMERATE, watch_role::WRITER, from) == 1U &&
+                   is_blocked(calls, watch_role::WRITER);
+        })); // [状態確認] - 受信側の終了と送信側の再待機を待つ simulator.wait_until() の戻り値が true であること。
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // [手順] - 送信側が待機を続ける間、100 [ms] 待つ。
+    const simulated_calls calls = simulator.snapshot();          // [手順] - 送信側の待機中に呼び出しの記録を取り出す。
+    const int actual_ret_signal = cplat_socket_wait_cancel_signal(
+        writer_cancel,
+        nullptr);       // [手順] - 送信側の解除のオブジェクトを指定して cplat_socket_wait_cancel_signal() を呼び出す。
+    threads.join_all(); // [手順] - 両方のスレッドの終了を待つ。
+
+    // Assert
+    const size_t writer_zero_wait = find_call(calls, simulated_call_kind::ZERO_WAIT, watch_role::WRITER, from);
+    const size_t reader_enumeration = find_call(calls, simulated_call_kind::ENUMERATE, watch_role::READER, from);
+    const size_t writer_enumeration = find_call(calls, simulated_call_kind::ENUMERATE, watch_role::WRITER, from);
+    const size_t writer_wait = find_call(calls, simulated_call_kind::BLOCKING_WAIT, watch_role::WRITER, from);
+    const bool writer_wait_found = writer_wait < calls.size();
+    const bool writer_waits_own_events = writer_wait_found && calls[writer_wait].events.size() == 3U &&
+                                         calls[writer_wait].events[1] == events.write &&
+                                         calls[writer_wait].events[2] == events.shared;
+    EXPECT_EQ(
+        CPLAT_ERR_WOULD_BLOCK,
+        actual_ret_send); // [確認_正常系] - cplat_socket_watch_send() の戻り値が CPLAT_ERR_WOULD_BLOCK であること。
+    ASSERT_LT(writer_zero_wait, calls.size()); // [確認_正常系] - writer_zero_wait が calls.size() より小さいこと。
+    EXPECT_EQ(
+        WSA_WAIT_EVENT_0,
+        calls[writer_zero_wait]
+            .result); // [確認_正常系] - calls[writer_zero_wait].result が WSA_WAIT_EVENT_0 であること。(送信側も E_s の通知を観測したことの確認)
+    EXPECT_LT(
+        writer_zero_wait,
+        reader_enumeration); // [確認_正常系] - writer_zero_wait が reader_enumeration より小さいこと。(送信側の確認が受信側の列挙より前であることの確認)
+    ASSERT_LT(
+        reader_enumeration,
+        writer_enumeration); // [確認_正常系] - reader_enumeration が writer_enumeration より小さいこと。(列挙がロックで直列化されたことの確認)
+    ASSERT_LT(writer_enumeration, calls.size()); // [確認_正常系] - writer_enumeration が calls.size() より小さいこと。
+    EXPECT_EQ(FD_READ,
+              calls[reader_enumeration]
+                  .network_events); // [確認_正常系] - calls[reader_enumeration].network_events が FD_READ であること。
+    EXPECT_EQ(
+        0,
+        calls[writer_enumeration]
+            .network_events); // [確認_正常系] - calls[writer_enumeration].network_events が 0 であること。(後続側の列挙が空であることの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_reader
+            .load()); // [確認_正常系] - 受信側の cplat_socket_watch_wait_readable_multi() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, ready[0]); // [確認_正常系] - ready[0] が 1 であること。
+    EXPECT_EQ(
+        1U,
+        count_event_calls(
+            calls, simulated_call_kind::RESET_EVENT, watch_role::WRITER, events.write,
+            from)); // [確認_正常系] - 送信側が E_w をリセットした回数を数える count_event_calls() の戻り値が 1 であること。(空の列挙の後に自分のイベントをリセットしたことの確認)
+    EXPECT_EQ(
+        0U,
+        count_event_calls(
+            calls, simulated_call_kind::RESET_EVENT, watch_role::WRITER,
+            events
+                .read)); // [確認_正常系] - 送信側が E_r をリセットした回数を数える count_event_calls() の戻り値が 0 であること。(相手のイベントをリセットしないことの確認)
+    EXPECT_EQ(
+        1U,
+        count_calls(
+            calls, simulated_call_kind::BLOCKING_WAIT, watch_role::WRITER,
+            from)); // [確認_正常系] - 通知の後の送信側の待機を数える count_calls() の戻り値が 1 であること。(空回りせずに待機を続けたことの確認)
+    EXPECT_TRUE(
+        writer_waits_own_events); // [確認_正常系] - writer_waits_own_events が true であること。(送信側が解除、E_w、E_s を待ち続けたことの確認)
+    EXPECT_TRUE(
+        is_blocked(calls, watch_role::WRITER)); // [確認_正常系] - 送信側の is_blocked() の戻り値が true であること。
+    EXPECT_EQ(
+        0U,
+        count_guard_timeouts(
+            calls)); // [確認_正常系] - count_guard_timeouts() の戻り値が 0 であること。(起床を失って時間切れになった待機がないことの確認)
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_signal); // [確認_正常系] - cplat_socket_wait_cancel_signal() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_CANCELED,
+        actual_ret_writer
+            .load()); // [確認_正常系] - 送信側の cplat_socket_watch_wait_writable() の戻り値が CPLAT_ERR_CANCELED であること。
+
+    // Cleanup
+    cplat_socket_watch_detach(watch);
+    cplat_socket_wait_cancel_dispose(writer_cancel);
+    cplat_socket_wait_cancel_dispose(reader_cancel);
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+
+// FD_READ だけの通知で、送信の待機がタイムアウト 0 の即時起床を反復しないことの確認
+TEST_F(socketTest, watch_write_wait_ignores_read_only_notification)
+{
+    // Arrange
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started()); // [状態確認] - winsock_session.started() の戻り値が true であること。
+    winsock_event_simulator simulator(mock_winsock_,
+                                      true); // [状態] - Winsock のイベントを模擬し、待機は指定の時間で時間切れにする。
+    cplat_socket_watch *watch = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(
+                            kSocket, &watch,
+                            nullptr)); // [状態確認] - cplat_socket_watch_attach() の戻り値が CPLAT_OK であること。
+    const watch_events events = simulator.latest_watch_events(); // [状態] - 登録の E_s、E_r、E_w を取り出す。
+    const char payload[] = "x";
+    size_t sent = 0U;
+
+    // Pre-Assert
+    EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)kSocket, _, 1, 0))
+        .WillOnce(
+            Return(SOCKET_ERROR)); // [Pre-Assert確認_正常系] - send() が kSocket と 1 を指定して 1 回呼び出されること。
+                                   // [Pre-Assert手順] - send() から SOCKET_ERROR を返す。
+
+    // Act
+    const int actual_ret_send = cplat_socket_watch_send(
+        watch, payload, 1U, &sent,
+        nullptr); // [手順] - WSAEWOULDBLOCK で失敗する送信を指定して cplat_socket_watch_send() を呼び出す。
+    const size_t from = simulator.mark(); // [手順] - 通知の前の記録の位置を控える。
+    simulator.inject(FD_READ);            // [手順] - E_s へ FD_READ を通知する。
+    const int actual_ret_wait = cplat_socket_watch_wait_writable(
+        watch, nullptr, 120, nullptr); // [手順] - 120 [ms] を指定して cplat_socket_watch_wait_writable() を呼び出す。
+    const simulated_calls calls = simulator.snapshot(); // [手順] - 呼び出しの記録を取り出す。
+
+    // Assert
+    size_t blocking_waits = 0U;
+    bool waits_own_events = true;
+    bool waits_with_positive_timeout = true;
+    bool waits_until_timeout = true;
+    for (size_t index = from; index < calls.size(); ++index)
+    {
+        const simulated_call &call = calls[index];
+        if (call.kind != simulated_call_kind::BLOCKING_WAIT)
+        {
+            continue;
+        }
+        ++blocking_waits;
+        waits_own_events = waits_own_events && call.events.size() == 2U && call.events[0] == events.write &&
+                           call.events[1] == events.shared;
+        waits_with_positive_timeout = waits_with_positive_timeout && call.timeout_ms > 0U && call.timeout_ms <= 50U;
+        waits_until_timeout = waits_until_timeout && call.timed_out;
+    }
+    const size_t zero_waits = count_calls(calls, simulated_call_kind::ZERO_WAIT, watch_role::MAIN, from);
+    EXPECT_EQ(
+        CPLAT_ERR_WOULD_BLOCK,
+        actual_ret_send); // [確認_正常系] - cplat_socket_watch_send() の戻り値が CPLAT_ERR_WOULD_BLOCK であること。
+    EXPECT_EQ(
+        CPLAT_ERR_TIMEOUT,
+        actual_ret_wait); // [確認_正常系] - cplat_socket_watch_wait_writable() の戻り値が CPLAT_ERR_TIMEOUT であること。
+    EXPECT_EQ(
+        1U,
+        count_calls(
+            calls, simulated_call_kind::ENUMERATE, watch_role::MAIN,
+            from)); // [確認_正常系] - 列挙を数える count_calls() の戻り値が 1 であること。(新しい通知のない E_s を列挙し直さないことの確認)
+    EXPECT_EQ(FD_READ,
+              first_network_events(calls, watch_role::MAIN,
+                                   from)); // [確認_正常系] - first_network_events() の戻り値が FD_READ であること。
+    EXPECT_EQ(1U,
+              count_event_calls(
+                  calls, simulated_call_kind::SET_EVENT, watch_role::MAIN, events.read,
+                  from)); // [確認_正常系] - E_r を設定した回数を数える count_event_calls() の戻り値が 1 であること。
+    EXPECT_EQ(0U,
+              count_event_calls(
+                  calls, simulated_call_kind::SET_EVENT, watch_role::MAIN, events.write,
+                  from)); // [確認_正常系] - E_w を設定した回数を数える count_event_calls() の戻り値が 0 であること。
+    EXPECT_EQ(
+        0U,
+        count_event_calls(
+            calls, simulated_call_kind::RESET_EVENT, watch_role::MAIN, events.read,
+            from)); // [確認_正常系] - E_r をリセットした回数を数える count_event_calls() の戻り値が 0 であること。(相手のイベントをリセットしないことの確認)
+    EXPECT_EQ(
+        zero_waits,
+        count_event_calls(
+            calls, simulated_call_kind::RESET_EVENT, watch_role::MAIN, events.write,
+            from)); // [確認_正常系] - E_w をリセットした回数を数える count_event_calls() の戻り値が zero_waits と一致すること。(各反復の条件確認で自分のイベントだけをリセットしたことの確認)
+    EXPECT_GE(blocking_waits, 1U); // [確認_正常系] - blocking_waits が 1 以上であること。
+    EXPECT_LE(
+        blocking_waits,
+        5U); // [確認_正常系] - blocking_waits が 5 以下であること。(120 [ms] の待機を最大 50 [ms] ずつに分けた回数で、即時起床の反復がないことの確認)
+    EXPECT_EQ(
+        blocking_waits + 1U,
+        zero_waits); // [確認_正常系] - zero_waits が blocking_waits + 1 と一致すること。(E_s の確認が反復ごとに 1 回だけであることの確認)
+    EXPECT_TRUE(
+        waits_own_events); // [確認_正常系] - waits_own_events が true であること。(待機の対象が E_w と E_s だけであることの確認)
+    EXPECT_TRUE(
+        waits_with_positive_timeout); // [確認_正常系] - waits_with_positive_timeout が true であること。(待機の時間が 0 でなく 50 [ms] 以下であることの確認)
+    EXPECT_TRUE(
+        waits_until_timeout); // [確認_正常系] - waits_until_timeout が true であること。(どの待機もイベントで即時に起床しなかったことの確認)
+
+    // Cleanup
+    cplat_socket_watch_detach(watch);
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+
+// 全方向の列挙と状態の更新が同じ登録のロックの中で行われ、各方向が相手のイベントをリセットしないことの確認
+TEST_F(socketTest, watch_enumeration_and_state_update_share_watch_lock)
+{
+    // Arrange
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started()); // [状態確認] - winsock_session.started() の戻り値が true であること。
+    winsock_event_simulator simulator(mock_winsock_,
+                                      false); // [状態] - Winsock のイベントを模擬し、障壁で待機を止められるようにする。
+    cplat_socket_wait_cancel *reader_cancel = nullptr;
+    cplat_socket_wait_cancel *writer_cancel = nullptr;
+    ASSERT_EQ(CPLAT_OK,
+              cplat_socket_wait_cancel_create(
+                  &reader_cancel,
+                  nullptr)); // [状態確認] - 受信側の cplat_socket_wait_cancel_create() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_socket_wait_cancel_create(
+                  &writer_cancel,
+                  nullptr)); // [状態確認] - 送信側の cplat_socket_wait_cancel_create() の戻り値が CPLAT_OK であること。
+    cplat_socket_watch *watch = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(
+                            kSocket, &watch,
+                            nullptr)); // [状態確認] - cplat_socket_watch_attach() の戻り値が CPLAT_OK であること。
+    const watch_events events = simulator.latest_watch_events(); // [状態] - 登録の E_s、E_r、E_w を取り出す。
+    cplat_socket_watch *watches[] = {watch};
+    unsigned char ready[] = {0U};
+    const char payload[] = "x";
+    size_t sent = 0U;
+    size_t probe_sent = 0U;
+    std::atomic<int> actual_ret_reader{CPLAT_ERR_UNKNOWN};
+    std::atomic<int> actual_ret_writer{CPLAT_ERR_UNKNOWN};
+    std::atomic<int> actual_ret_probe{CPLAT_ERR_UNKNOWN};
+    watch_thread_group threads(simulator, {reader_cancel, writer_cancel});
+
+    // Pre-Assert
+    EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)kSocket, _, 1, 0))
+        .WillOnce(Return(SOCKET_ERROR))
+        .WillOnce(
+            [&](const char *, const int, const char *, SOCKET, const char *, int, int)
+            {
+                simulator.record(simulated_call_kind::SEND);
+                return 1;
+            }); // [Pre-Assert確認_正常系] - send() が kSocket と 1 を指定して 2 回呼び出されること。
+                // [Pre-Assert手順] - send() から 1 回目は SOCKET_ERROR、2 回目は呼び出しを記録して 1 を返す。
+
+    // Act
+    const int actual_ret_send = cplat_socket_watch_send(
+        watch, payload, 1U, &sent,
+        nullptr); // [手順] - WSAEWOULDBLOCK で失敗する送信を指定して cplat_socket_watch_send() を呼び出す。
+    threads.start(watch_role::READER,
+                  [&]()
+                  {
+                      actual_ret_reader.store(
+                          cplat_socket_watch_wait_readable_multi(watches, 1U, reader_cancel, 10000, ready, nullptr));
+                  }); // [手順] - 受信側のスレッドで cplat_socket_watch_wait_readable_multi() を呼び出す。
+    threads.start(watch_role::WRITER,
+                  [&]()
+                  {
+                      actual_ret_writer.store(cplat_socket_watch_wait_writable(watch, writer_cancel, 10000, nullptr));
+                  }); // [手順] - 送信側のスレッドで cplat_socket_watch_wait_writable() を呼び出す。
+    ASSERT_TRUE(simulator.wait_until(
+        [](const simulated_calls &calls)
+        {
+            return is_blocked(calls, watch_role::READER) && is_blocked(calls, watch_role::WRITER);
+        })); // [状態確認] - 両方向の待機を待つ simulator.wait_until() の戻り値が true であること。
+    const size_t from = simulator.mark();                         // [手順] - 通知の前の記録の位置を控える。
+    simulator.arm(simulated_gate::ZERO_WAIT, watch_role::WRITER); // [手順] - 送信側の E_s の確認に障壁を置く。
+    simulator.arm(simulated_gate::ENUMERATE, watch_role::READER); // [手順] - 受信側の列挙に障壁を置く。
+    simulator.inject(FD_READ | FD_WRITE);                         // [手順] - E_s へ FD_READ と FD_WRITE を通知する。
+    ASSERT_TRUE(simulator.wait_arrived(
+        simulated_gate::ENUMERATE,
+        watch_role::
+            READER)); // [状態確認] - 受信側の列挙の障壁を待つ simulator.wait_arrived() の戻り値が true であること。
+    ASSERT_TRUE(simulator.wait_arrived(
+        simulated_gate::ZERO_WAIT,
+        watch_role::
+            WRITER)); // [状態確認] - 送信側の E_s の確認の障壁を待つ simulator.wait_arrived() の戻り値が true であること。
+    threads.start(
+        watch_role::PROBE,
+        [&]()
+        {
+            actual_ret_probe.store(cplat_socket_watch_send(watch, payload, 1U, &probe_sent, nullptr));
+        }); // [手順] - 受信側が列挙の中で止まっている間に、別のスレッドで cplat_socket_watch_send() を呼び出す。
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(100)); // [手順] - 送信の関数が登録のロックへ達するまで、100 [ms] 待つ。
+    const simulated_calls calls_during_enumeration =
+        simulator.snapshot();                                         // [手順] - 列挙の途中の呼び出しの記録を取り出す。
+    simulator.release(simulated_gate::ENUMERATE, watch_role::READER); // [手順] - 受信側の列挙を進める。
+    ASSERT_TRUE(simulator.wait_until(
+        [](const simulated_calls &calls)
+        {
+            return has_finished(calls, watch_role::READER) && has_finished(calls, watch_role::PROBE);
+        })); // [状態確認] - 受信側と送信の関数の終了を待つ simulator.wait_until() の戻り値が true であること。
+    simulator.release(simulated_gate::ZERO_WAIT, watch_role::WRITER); // [手順] - 送信側に E_s を確認させる。
+    ASSERT_TRUE(simulator.wait_until(
+        [](const simulated_calls &calls)
+        {
+            return has_finished(calls, watch_role::WRITER);
+        }));            // [状態確認] - 送信側の終了を待つ simulator.wait_until() の戻り値が true であること。
+    threads.join_all(); // [手順] - すべてのスレッドの終了を待つ。
+    const simulated_calls calls = simulator.snapshot(); // [手順] - 呼び出しの記録を取り出す。
+
+    // Assert
+    const size_t reader_enumeration = find_call(calls, simulated_call_kind::ENUMERATE, watch_role::READER, from);
+    const size_t read_set =
+        find_event_call(calls, simulated_call_kind::SET_EVENT, watch_role::READER, events.read, from);
+    const size_t write_set =
+        find_event_call(calls, simulated_call_kind::SET_EVENT, watch_role::READER, events.write, from);
+    const size_t probe_send = find_call(calls, simulated_call_kind::SEND, watch_role::PROBE, from);
+    EXPECT_EQ(
+        CPLAT_ERR_WOULD_BLOCK,
+        actual_ret_send); // [確認_正常系] - 1 回目の cplat_socket_watch_send() の戻り値が CPLAT_ERR_WOULD_BLOCK であること。
+    EXPECT_EQ(
+        0U,
+        count_calls(
+            calls_during_enumeration, simulated_call_kind::SEND, watch_role::PROBE,
+            from)); // [確認_正常系] - 列挙の途中の送信を数える count_calls() の戻り値が 0 であること。(列挙の間は登録のロックで送信の関数が待たされたことの確認)
+    ASSERT_LT(reader_enumeration, calls.size()); // [確認_正常系] - reader_enumeration が calls.size() より小さいこと。
+    EXPECT_EQ(
+        FD_READ | FD_WRITE,
+        calls[reader_enumeration]
+            .network_events); // [確認_正常系] - calls[reader_enumeration].network_events が FD_READ | FD_WRITE であること。(全方向の通知を 1 回で列挙したことの確認)
+    EXPECT_LT(reader_enumeration, read_set);  // [確認_正常系] - reader_enumeration が read_set より小さいこと。
+    EXPECT_LT(reader_enumeration, write_set); // [確認_正常系] - reader_enumeration が write_set より小さいこと。
+    EXPECT_LT(
+        read_set,
+        probe_send); // [確認_正常系] - read_set が probe_send より小さいこと。(E_r の設定までをロックの中で終えたことの確認)
+    EXPECT_LT(
+        write_set,
+        probe_send); // [確認_正常系] - write_set が probe_send より小さいこと。(E_w の設定までをロックの中で終えたことの確認)
+    EXPECT_LT(probe_send, calls.size()); // [確認_正常系] - probe_send が calls.size() より小さいこと。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_probe
+                  .load()); // [確認_正常系] - 別のスレッドの cplat_socket_watch_send() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, probe_sent); // [確認_正常系] - probe_sent が 1 であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_reader
+            .load()); // [確認_正常系] - 受信側の cplat_socket_watch_wait_readable_multi() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, ready[0]); // [確認_正常系] - ready[0] が 1 であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_writer
+            .load()); // [確認_正常系] - 送信側の cplat_socket_watch_wait_writable() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0U,
+        count_calls(
+            calls, simulated_call_kind::ENUMERATE, watch_role::WRITER,
+            from)); // [確認_正常系] - 送信側の列挙を数える count_calls() の戻り値が 0 であること。(受信側の列挙で保存した送信可能で戻ったことの確認)
+    EXPECT_GE(
+        count_event_calls(calls, simulated_call_kind::RESET_EVENT, watch_role::READER, events.read),
+        1U); // [確認_正常系] - 受信側が E_r をリセットした回数を数える count_event_calls() の戻り値が 1 以上であること。
+    EXPECT_GE(
+        count_event_calls(calls, simulated_call_kind::RESET_EVENT, watch_role::WRITER, events.write),
+        1U); // [確認_正常系] - 送信側が E_w をリセットした回数を数える count_event_calls() の戻り値が 1 以上であること。
+    EXPECT_EQ(
+        0U,
+        count_event_calls(
+            calls, simulated_call_kind::RESET_EVENT, watch_role::READER,
+            events
+                .write)); // [確認_正常系] - 受信側が E_w をリセットした回数を数える count_event_calls() の戻り値が 0 であること。(相手のイベントをリセットしないことの確認)
+    EXPECT_EQ(
+        0U,
+        count_event_calls(
+            calls, simulated_call_kind::RESET_EVENT, watch_role::WRITER,
+            events
+                .read)); // [確認_正常系] - 送信側が E_r をリセットした回数を数える count_event_calls() の戻り値が 0 であること。(相手のイベントをリセットしないことの確認)
+    EXPECT_EQ(
+        0U,
+        count_guard_timeouts(
+            calls)); // [確認_正常系] - count_guard_timeouts() の戻り値が 0 であること。(起床を失って時間切れになった待機がないことの確認)
+
+    // Cleanup
+    cplat_socket_watch_detach(watch);
+    cplat_socket_wait_cancel_dispose(writer_cancel);
+    cplat_socket_wait_cancel_dispose(reader_cancel);
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+
+// 両方向の待機の開始後に FD_CLOSE だけを通知し、先行側が取得した後に後続側を再開しても、両方が終了を検出することの確認
+TEST_F(socketTest, watch_close_notification_reaches_both_directions)
+{
+    // Arrange
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started()); // [状態確認] - winsock_session.started() の戻り値が true であること。
+    winsock_event_simulator simulator(mock_winsock_,
+                                      false); // [状態] - Winsock のイベントを模擬し、障壁で待機を止められるようにする。
+    cplat_socket_wait_cancel *reader_cancel = nullptr;
+    cplat_socket_wait_cancel *writer_cancel = nullptr;
+    ASSERT_EQ(CPLAT_OK,
+              cplat_socket_wait_cancel_create(
+                  &reader_cancel,
+                  nullptr)); // [状態確認] - 受信側の cplat_socket_wait_cancel_create() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_socket_wait_cancel_create(
+                  &writer_cancel,
+                  nullptr)); // [状態確認] - 送信側の cplat_socket_wait_cancel_create() の戻り値が CPLAT_OK であること。
+    cplat_socket_watch *watch = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(
+                            kSocket, &watch,
+                            nullptr)); // [状態確認] - cplat_socket_watch_attach() の戻り値が CPLAT_OK であること。
+    const watch_events events = simulator.latest_watch_events(); // [状態] - 登録の E_s、E_r、E_w を取り出す。
+    cplat_socket_watch *watches[] = {watch};
+    unsigned char ready[] = {0U};
+    unsigned char ready_again[] = {0U};
+    const char payload[] = "x";
+    size_t sent = 0U;
+    std::atomic<int> actual_ret_reader{CPLAT_ERR_UNKNOWN};
+    std::atomic<int> actual_ret_writer{CPLAT_ERR_UNKNOWN};
+    watch_thread_group threads(simulator, {reader_cancel, writer_cancel});
+
+    // Pre-Assert
+    EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)kSocket, _, 1, 0))
+        .WillOnce(
+            Return(SOCKET_ERROR)); // [Pre-Assert確認_正常系] - send() が kSocket と 1 を指定して 1 回呼び出されること。
+                                   // [Pre-Assert手順] - send() から SOCKET_ERROR を返す。
+
+    // Act
+    const int actual_ret_send = cplat_socket_watch_send(
+        watch, payload, 1U, &sent,
+        nullptr); // [手順] - WSAEWOULDBLOCK で失敗する送信を指定して cplat_socket_watch_send() を呼び出す。
+    threads.start(watch_role::READER,
+                  [&]()
+                  {
+                      actual_ret_reader.store(
+                          cplat_socket_watch_wait_readable_multi(watches, 1U, reader_cancel, 10000, ready, nullptr));
+                  }); // [手順] - 受信側のスレッドで cplat_socket_watch_wait_readable_multi() を呼び出す。
+    threads.start(watch_role::WRITER,
+                  [&]()
+                  {
+                      actual_ret_writer.store(cplat_socket_watch_wait_writable(watch, writer_cancel, 10000, nullptr));
+                  }); // [手順] - 送信側のスレッドで cplat_socket_watch_wait_writable() を呼び出す。
+    ASSERT_TRUE(simulator.wait_until(
+        [](const simulated_calls &calls)
+        {
+            return is_blocked(calls, watch_role::READER) && is_blocked(calls, watch_role::WRITER);
+        })); // [状態確認] - 両方向の待機を待つ simulator.wait_until() の戻り値が true であること。
+    const size_t from = simulator.mark();                         // [手順] - 通知の前の記録の位置を控える。
+    simulator.arm(simulated_gate::ZERO_WAIT, watch_role::WRITER); // [手順] - 送信側の E_s の確認に障壁を置く。
+    simulator.inject(FD_CLOSE);                                   // [手順] - E_s へ FD_CLOSE だけを通知する。
+    ASSERT_TRUE(simulator.wait_arrived(
+        simulated_gate::ZERO_WAIT,
+        watch_role::
+            WRITER)); // [状態確認] - 送信側の E_s の確認の障壁を待つ simulator.wait_arrived() の戻り値が true であること。
+    ASSERT_TRUE(simulator.wait_until(
+        [from](const simulated_calls &calls)
+        {
+            return has_finished(calls, watch_role::READER, from);
+        })); // [状態確認] - 先行側の受信側の終了を待つ simulator.wait_until() の戻り値が true であること。
+    simulator.release(simulated_gate::ZERO_WAIT, watch_role::WRITER); // [手順] - 後続側の送信側を再開させる。
+    ASSERT_TRUE(simulator.wait_until(
+        [from](const simulated_calls &calls)
+        {
+            return has_finished(calls, watch_role::WRITER, from);
+        }));            // [状態確認] - 後続側の送信側の終了を待つ simulator.wait_until() の戻り値が true であること。
+    threads.join_all(); // [手順] - 両方のスレッドの終了を待つ。
+    const simulated_calls calls = simulator.snapshot(); // [手順] - 呼び出しの記録を取り出す。
+
+    // Assert
+    const size_t writer_zero_wait = find_call(calls, simulated_call_kind::ZERO_WAIT, watch_role::WRITER, from);
+    EXPECT_EQ(
+        CPLAT_ERR_WOULD_BLOCK,
+        actual_ret_send); // [確認_正常系] - cplat_socket_watch_send() の戻り値が CPLAT_ERR_WOULD_BLOCK であること。
+    EXPECT_EQ(FD_CLOSE, first_network_events(
+                            calls, watch_role::READER,
+                            from)); // [確認_正常系] - 先行側の first_network_events() の戻り値が FD_CLOSE であること。
+    EXPECT_EQ(
+        1U,
+        count_event_calls(
+            calls, simulated_call_kind::SET_EVENT, watch_role::READER, events.read,
+            from)); // [確認_正常系] - 先行側が E_r を設定した回数を数える count_event_calls() の戻り値が 1 であること。
+    EXPECT_EQ(
+        1U,
+        count_event_calls(
+            calls, simulated_call_kind::SET_EVENT, watch_role::READER, events.write,
+            from)); // [確認_正常系] - 先行側が E_w を設定した回数を数える count_event_calls() の戻り値が 1 であること。(終了を両方向へ通知したことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_reader
+            .load()); // [確認_正常系] - 先行側の cplat_socket_watch_wait_readable_multi() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, ready[0]);                   // [確認_正常系] - ready[0] が 1 であること。
+    ASSERT_LT(writer_zero_wait, calls.size()); // [確認_正常系] - writer_zero_wait が calls.size() より小さいこと。
+    EXPECT_EQ(
+        static_cast<DWORD>(WSA_WAIT_TIMEOUT),
+        calls[writer_zero_wait]
+            .result); // [確認_正常系] - calls[writer_zero_wait].result が WSA_WAIT_TIMEOUT であること。(後続側の再開時には E_s の通知が取得済みであることの確認)
+    EXPECT_EQ(0U, count_calls(calls, simulated_call_kind::ENUMERATE, watch_role::WRITER,
+                              from)); // [確認_正常系] - 後続側の列挙を数える count_calls() の戻り値が 0 であること。
+    EXPECT_EQ(
+        0U,
+        count_calls(
+            calls, simulated_call_kind::BLOCKING_WAIT, watch_role::WRITER,
+            from)); // [確認_正常系] - 再開後の後続側の待機を数える count_calls() の戻り値が 0 であること。(保存した終了の状態で戻ったことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_writer
+            .load()); // [確認_正常系] - 後続側の cplat_socket_watch_wait_writable() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0U,
+        count_guard_timeouts(
+            calls)); // [確認_正常系] - count_guard_timeouts() の戻り値が 0 であること。(起床を失って時間切れになった待機がないことの確認)
+
+    // Act_2
+    const size_t from_again = simulator.mark(); // [手順] - 再度の待機の前の記録の位置を控える。
+    const int actual_ret_read_again = cplat_socket_watch_wait_readable_multi(
+        watches, 1U, nullptr, 1000, ready_again,
+        nullptr); // [手順] - 終了の取得後に、もう一度 cplat_socket_watch_wait_readable_multi() を呼び出す。
+    const int actual_ret_write_again = cplat_socket_watch_wait_writable(
+        watch, nullptr, 1000,
+        nullptr); // [手順] - 終了の取得後に、もう一度 cplat_socket_watch_wait_writable() を呼び出す。
+    const simulated_calls calls_again = simulator.snapshot(); // [手順] - 呼び出しの記録を取り出す。
+
+    // Assert_2
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_read_again); // [確認_正常系] - 再度の cplat_socket_watch_wait_readable_multi() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, ready_again[0]); // [確認_正常系] - ready_again[0] が 1 であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_write_again); // [確認_正常系] - 再度の cplat_socket_watch_wait_writable() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0U,
+        count_calls(
+            calls_again, simulated_call_kind::BLOCKING_WAIT, watch_role::MAIN,
+            from_again)); // [確認_正常系] - 再度の待機の中の待機を数える count_calls() の戻り値が 0 であること。(終了の状態を片方の確認で消費しないことの確認)
+
+    // Cleanup
+    cplat_socket_watch_detach(watch);
+    cplat_socket_wait_cancel_dispose(writer_cancel);
+    cplat_socket_wait_cancel_dispose(reader_cancel);
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+
+// 受信の通知の取得後の一部の受信と、送信の WSAEWOULDBLOCK と FD_WRITE の取得の前後で、状態と世代を更新して再び待機することの確認
+TEST_F(socketTest, watch_waits_rearm_after_partial_receive_and_write_generation_update)
+{
+    // Arrange
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started()); // [状態確認] - winsock_session.started() の戻り値が true であること。
+    winsock_event_simulator simulator(mock_winsock_,
+                                      false); // [状態] - Winsock のイベントを模擬し、障壁で待機を止められるようにする。
+    cplat_socket_wait_cancel *reader_cancel = nullptr;
+    cplat_socket_wait_cancel *writer_cancel = nullptr;
+    ASSERT_EQ(CPLAT_OK,
+              cplat_socket_wait_cancel_create(
+                  &reader_cancel,
+                  nullptr)); // [状態確認] - 受信側の cplat_socket_wait_cancel_create() の戻り値が CPLAT_OK であること。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_socket_wait_cancel_create(
+                  &writer_cancel,
+                  nullptr)); // [状態確認] - 送信側の cplat_socket_wait_cancel_create() の戻り値が CPLAT_OK であること。
+    cplat_socket_watch *watch = nullptr;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(
+                            kSocket, &watch,
+                            nullptr)); // [状態確認] - cplat_socket_watch_attach() の戻り値が CPLAT_OK であること。
+    const watch_events events = simulator.latest_watch_events(); // [状態] - 登録の E_s、E_r、E_w を取り出す。
+    cplat_socket_watch *watches[] = {watch};
+    unsigned char ready_first[] = {0U};
+    unsigned char ready_second[] = {0U};
+    char receive_buffer[4] = {0};
+    size_t received = 0U;
+    const char payload[] = "x";
+    size_t sent = 0U;
+    size_t from_race = 0U;
+    bool writer_finished_in_send = false;
+    std::atomic<int> actual_ret_reader{CPLAT_ERR_UNKNOWN};
+    std::atomic<int> actual_ret_writer_first{CPLAT_ERR_UNKNOWN};
+    std::atomic<int> actual_ret_writer_second{CPLAT_ERR_UNKNOWN};
+    watch_thread_group threads(simulator, {reader_cancel, writer_cancel});
+
+    // Pre-Assert
+    EXPECT_CALL(mock_winsock_, recv(_, _, _, (SOCKET)kSocket, _, 4, 0))
+        .WillOnce(Return(1)); // [Pre-Assert確認_正常系] - recv() が kSocket と 4 を指定して 1 回呼び出されること。
+                              // [Pre-Assert手順] - recv() から 1 を返す。
+
+    // Act
+    simulator.inject(FD_READ); // [手順] - E_s へ FD_READ を通知する。
+    const int actual_ret_read_first = cplat_socket_watch_wait_readable_multi(
+        watches, 1U, nullptr, 1000, ready_first,
+        nullptr); // [手順] - FD_READ の通知を取得する cplat_socket_watch_wait_readable_multi() を呼び出す。
+    const int actual_ret_recv =
+        cplat_socket_recv(kSocket, receive_buffer, sizeof(receive_buffer), &received,
+                          nullptr); // [手順] - 4 [byte] のうち 1 [byte] だけを受信する cplat_socket_recv() を呼び出す。
+    const size_t from_read = simulator.mark(); // [手順] - 再度の受信の待機の前の記録の位置を控える。
+    threads.start(watch_role::READER,
+                  [&]()
+                  {
+                      actual_ret_reader.store(cplat_socket_watch_wait_readable_multi(watches, 1U, reader_cancel, 10000,
+                                                                                     ready_second, nullptr));
+                  }); // [手順] - 受信側のスレッドで、もう一度 cplat_socket_watch_wait_readable_multi() を呼び出す。
+    ASSERT_TRUE(simulator.wait_until(
+        [](const simulated_calls &calls)
+        {
+            return is_blocked(calls, watch_role::READER);
+        })); // [状態確認] - 受信側の再待機を待つ simulator.wait_until() の戻り値が true であること。
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // [手順] - 受信側が待機を続ける間、100 [ms] 待つ。
+    const simulated_calls calls_before_notification =
+        simulator.snapshot();  // [手順] - 次の通知の前の呼び出しの記録を取り出す。
+    simulator.inject(FD_READ); // [手順] - 受信の関数の呼び出しで再開した FD_READ を E_s へ通知する。
+    ASSERT_TRUE(simulator.wait_until(
+        [](const simulated_calls &calls)
+        {
+            return has_finished(calls, watch_role::READER);
+        })); // [状態確認] - 受信側の終了を待つ simulator.wait_until() の戻り値が true であること。
+    const simulated_calls calls_read = simulator.snapshot(); // [手順] - 呼び出しの記録を取り出す。
+
+    // Assert
+    const size_t read_reset = find_event_call(calls_before_notification, simulated_call_kind::RESET_EVENT,
+                                              watch_role::READER, events.read, from_read);
+    const size_t read_wait =
+        find_call(calls_before_notification, simulated_call_kind::BLOCKING_WAIT, watch_role::READER, from_read);
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_read_first); // [確認_正常系] - 1 回目の cplat_socket_watch_wait_readable_multi() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, ready_first[0]);        // [確認_正常系] - ready_first[0] が 1 であること。
+    EXPECT_EQ(CPLAT_OK, actual_ret_recv); // [確認_正常系] - cplat_socket_recv() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, received);              // [確認_正常系] - received が 1 であること。
+    EXPECT_LT(
+        read_reset,
+        read_wait); // [確認_正常系] - read_reset が read_wait より小さいこと。(取得済みの通知の後に残った E_r を待機の前にリセットしたことの確認)
+    EXPECT_EQ(
+        1U,
+        count_calls(
+            calls_before_notification, simulated_call_kind::BLOCKING_WAIT, watch_role::READER,
+            from_read)); // [確認_正常系] - 次の通知の前の受信側の待機を数える count_calls() の戻り値が 1 であること。(消費した通知で空回りしないことの確認)
+    EXPECT_TRUE(is_blocked(
+        calls_before_notification,
+        watch_role::READER)); // [確認_正常系] - 次の通知の前の受信側の is_blocked() の戻り値が true であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_reader
+            .load()); // [確認_正常系] - 2 回目の cplat_socket_watch_wait_readable_multi() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, ready_second[0]); // [確認_正常系] - ready_second[0] が 1 であること。
+    EXPECT_EQ(
+        events.shared,
+        first_woken_event(
+            calls_read, watch_role::READER,
+            from_read)); // [確認_正常系] - 受信側の first_woken_event() の戻り値が events.shared と一致すること。(再開した通知で起床したことの確認)
+    EXPECT_EQ(
+        1U,
+        count_calls(calls_read, simulated_call_kind::ENUMERATE, watch_role::READER,
+                    from_read)); // [確認_正常系] - 2 回目の受信側の列挙を数える count_calls() の戻り値が 1 であること。
+
+    // Pre-Assert_2
+    EXPECT_CALL(mock_winsock_, send(_, _, _, (SOCKET)kSocket, _, 1, 0))
+        .WillOnce(Return(SOCKET_ERROR))
+        .WillOnce(Return(SOCKET_ERROR))
+        .WillOnce(
+            [&](const char *, const int, const char *, SOCKET, const char *, int, int)
+            {
+                simulator.inject(FD_WRITE);
+                writer_finished_in_send = simulator.wait_until(
+                    [&](const simulated_calls &calls) { return has_finished(calls, watch_role::WRITER, from_race); });
+                return SOCKET_ERROR;
+            }); // [Pre-Assert確認_正常系] - send() が kSocket と 1 を指定して 3 回呼び出されること。
+    // [Pre-Assert手順] - send() から 1 回目と 2 回目は SOCKET_ERROR を返し、3 回目は E_s へ FD_WRITE を通知して送信側の待機の終了を待ってから SOCKET_ERROR を返す。
+
+    // Act_2
+    const int actual_ret_send_first = cplat_socket_watch_send(
+        watch, payload, 1U, &sent,
+        nullptr); // [手順] - WSAEWOULDBLOCK で失敗する送信を指定して cplat_socket_watch_send() を呼び出す。
+    const size_t from_write = simulator.mark(); // [手順] - 送信の待機の前の記録の位置を控える。
+    threads.start(watch_role::WRITER,
+                  [&]()
+                  {
+                      actual_ret_writer_first.store(
+                          cplat_socket_watch_wait_writable(watch, writer_cancel, 10000, nullptr));
+                  }); // [手順] - 送信側のスレッドで cplat_socket_watch_wait_writable() を呼び出す。
+    ASSERT_TRUE(simulator.wait_until(
+        [](const simulated_calls &calls)
+        {
+            return is_blocked(calls, watch_role::WRITER);
+        }));                    // [状態確認] - 送信側の待機を待つ simulator.wait_until() の戻り値が true であること。
+    simulator.inject(FD_WRITE); // [手順] - WSAEWOULDBLOCK の後の FD_WRITE を E_s へ通知する。
+    ASSERT_TRUE(simulator.wait_until(
+        [from_write](const simulated_calls &calls)
+        {
+            return has_finished(calls, watch_role::WRITER, from_write);
+        })); // [状態確認] - 送信側の終了を待つ simulator.wait_until() の戻り値が true であること。
+    const simulated_calls calls_write = simulator.snapshot(); // [手順] - 呼び出しの記録を取り出す。
+
+    // Assert_2
+    EXPECT_EQ(
+        CPLAT_ERR_WOULD_BLOCK,
+        actual_ret_send_first); // [確認_正常系] - 1 回目の cplat_socket_watch_send() の戻り値が CPLAT_ERR_WOULD_BLOCK であること。
+    EXPECT_EQ(
+        1U,
+        count_calls(
+            calls_write, simulated_call_kind::BLOCKING_WAIT, watch_role::WRITER,
+            from_write)); // [確認_正常系] - 送信側の待機を数える count_calls() の戻り値が 1 であること。(WSAEWOULDBLOCK の後は送信可能を解除して待機したことの確認)
+    EXPECT_EQ(FD_WRITE,
+              first_network_events(
+                  calls_write, watch_role::WRITER,
+                  from_write)); // [確認_正常系] - 送信側の first_network_events() の戻り値が FD_WRITE であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_writer_first
+            .load()); // [確認_正常系] - 1 回目の送信側の cplat_socket_watch_wait_writable() の戻り値が CPLAT_OK であること。
+
+    // Act_3
+    const size_t from_rewait = simulator.mark(); // [手順] - 再度の送信の前の記録の位置を控える。
+    const int actual_ret_send_second = cplat_socket_watch_send(
+        watch, payload, 1U, &sent,
+        nullptr); // [手順] - FD_WRITE の取得の後に、WSAEWOULDBLOCK で失敗する cplat_socket_watch_send() を呼び出す。
+    threads.start(watch_role::WRITER,
+                  [&]()
+                  {
+                      actual_ret_writer_second.store(
+                          cplat_socket_watch_wait_writable(watch, writer_cancel, 10000, nullptr));
+                  }); // [手順] - 送信側のスレッドで、もう一度 cplat_socket_watch_wait_writable() を呼び出す。
+    ASSERT_TRUE(simulator.wait_until(
+        [from_rewait](const simulated_calls &calls)
+        {
+            return find_call(calls, simulated_call_kind::BLOCKING_WAIT, watch_role::WRITER, from_rewait) <
+                       calls.size() &&
+                   is_blocked(calls, watch_role::WRITER);
+        })); // [状態確認] - 送信側の再待機を待つ simulator.wait_until() の戻り値が true であること。
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // [手順] - 送信側が待機を続ける間、100 [ms] 待つ。
+    const simulated_calls calls_rewait = simulator.snapshot();   // [手順] - 再待機の間の呼び出しの記録を取り出す。
+    from_race = simulator.mark(); // [手順] - 送信の途中の FD_WRITE の前の記録の位置を控える。
+    const int actual_ret_send_third = cplat_socket_watch_send(
+        watch, payload, 1U, &sent,
+        nullptr); // [手順] - 送信の途中で FD_WRITE が取得される cplat_socket_watch_send() を呼び出す。
+    const int actual_ret_write_after_race = cplat_socket_watch_wait_writable(
+        watch, nullptr, 1000,
+        nullptr); // [手順] - 送信の途中で FD_WRITE が取得された後に cplat_socket_watch_wait_writable() を呼び出す。
+    const simulated_calls calls_race = simulator.snapshot(); // [手順] - 呼び出しの記録を取り出す。
+    threads.join_all();                                      // [手順] - すべてのスレッドの終了を待つ。
+
+    // Assert_3
+    EXPECT_EQ(
+        CPLAT_ERR_WOULD_BLOCK,
+        actual_ret_send_second); // [確認_正常系] - 2 回目の cplat_socket_watch_send() の戻り値が CPLAT_ERR_WOULD_BLOCK であること。
+    EXPECT_EQ(
+        1U,
+        count_event_calls(
+            calls_rewait, simulated_call_kind::RESET_EVENT, watch_role::MAIN, events.write,
+            from_rewait)); // [確認_正常系] - 2 回目の送信で E_w をリセットした回数を数える count_event_calls() の戻り値が 1 であること。(世代が変わらない WSAEWOULDBLOCK で送信可能を解除したことの確認)
+    EXPECT_EQ(
+        1U,
+        count_calls(
+            calls_rewait, simulated_call_kind::BLOCKING_WAIT, watch_role::WRITER,
+            from_rewait)); // [確認_正常系] - 再待機の間の送信側の待機を数える count_calls() の戻り値が 1 であること。(古い FD_WRITE の後でも再び待機したことの確認)
+    EXPECT_TRUE(is_blocked(
+        calls_rewait,
+        watch_role::WRITER)); // [確認_正常系] - 再待機の間の送信側の is_blocked() の戻り値が true であること。
+    EXPECT_EQ(
+        CPLAT_ERR_WOULD_BLOCK,
+        actual_ret_send_third); // [確認_正常系] - 3 回目の cplat_socket_watch_send() の戻り値が CPLAT_ERR_WOULD_BLOCK であること。
+    EXPECT_TRUE(
+        writer_finished_in_send); // [確認_正常系] - writer_finished_in_send が true であること。(送信の途中で送信側が FD_WRITE を取得したことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_writer_second
+            .load()); // [確認_正常系] - 2 回目の送信側の cplat_socket_watch_wait_writable() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0U,
+        count_event_calls(
+            calls_race, simulated_call_kind::RESET_EVENT, watch_role::MAIN, events.write,
+            from_race)); // [確認_正常系] - 3 回目の送信で E_w をリセットした回数を数える count_event_calls() の戻り値が 0 であること。(世代が変わったため新しい通知を残したことの確認)
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_write_after_race); // [確認_正常系] - 3 回目の送信の後の cplat_socket_watch_wait_writable() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        0U,
+        count_calls(
+            calls_race, simulated_call_kind::BLOCKING_WAIT, watch_role::MAIN,
+            from_race)); // [確認_正常系] - 3 回目の送信の後の待機を数える count_calls() の戻り値が 0 であること。(送信可能を保持したため待たずに戻ったことの確認)
+    EXPECT_EQ(
+        0U,
+        count_guard_timeouts(
+            calls_race)); // [確認_正常系] - count_guard_timeouts() の戻り値が 0 であること。(起床を失って時間切れになった待機がないことの確認)
+
+    // Cleanup
+    cplat_socket_watch_detach(watch);
+    cplat_socket_wait_cancel_dispose(writer_cancel);
+    cplat_socket_wait_cancel_dispose(reader_cancel);
+}
+// [サブ手順参照 名前=socketTest.TearDown]
 #endif /* PLATFORM_WINDOWS */
 
 // 登録済み UDP ソケットの送信待ちを結果コードで区別することの確認
