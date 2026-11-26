@@ -621,6 +621,85 @@ int cplat_socket_watch_sendto(cplat_socket_watch *watch, const void *buf, const 
     return cplat_internal_error_report_success(detail_out);
 }
 
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_watch_sendto_multi(cplat_socket_watch *watch, const cplat_socket_datagram *datagrams,
+                                    const size_t count, size_t *sent_count_out, cplat_error *detail_out)
+{
+    struct mmsghdr messages[CPLAT_SOCKET_SENDTO_MULTI_MAX];
+    struct iovec vectors[CPLAT_SOCKET_SENDTO_MULTI_MAX];
+    struct sockaddr_in natives[CPLAT_SOCKET_SENDTO_MULTI_MAX];
+    size_t index;
+    size_t full_count;
+    int sent;
+
+    if (sent_count_out != NULL)
+    {
+        *sent_count_out = 0U;
+    }
+    if (watch == NULL || watch->sock == CPLAT_INVALID_SOCKET || datagrams == NULL || sent_count_out == NULL ||
+        count == 0U || count > CPLAT_SOCKET_SENDTO_MULTI_MAX)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+    for (index = 0U; index < count; index++)
+    {
+        if (datagrams[index].buf == NULL || datagrams[index].endpoint == NULL ||
+            datagrams[index].len > CPLAT_SOCKET_MAX_TRANSFER)
+        {
+            return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+        }
+    }
+
+    memset(messages, 0, sizeof(messages[0]) * count);
+    memset(natives, 0, sizeof(natives[0]) * count);
+    for (index = 0U; index < count; index++)
+    {
+        natives[index].sin_family = AF_INET;
+        memcpy(&natives[index].sin_addr.s_addr, &datagrams[index].endpoint->address,
+               sizeof(natives[index].sin_addr.s_addr));
+        memcpy(&natives[index].sin_port, &datagrams[index].endpoint->port, sizeof(natives[index].sin_port));
+        /* iovec は書き込み可能なポインターを持つが、送信では buf を変更しない。 */
+        vectors[index].iov_base = (void *)(uintptr_t)datagrams[index].buf;
+        vectors[index].iov_len = datagrams[index].len;
+        messages[index].msg_hdr.msg_name = &natives[index];
+        messages[index].msg_hdr.msg_namelen = (socklen_t)sizeof(natives[index]);
+        messages[index].msg_hdr.msg_iov = &vectors[index];
+        messages[index].msg_hdr.msg_iovlen = 1U;
+    }
+
+    /*
+     * sendmmsg() は、途中のデータグラムで失敗すると、それまでに送れた数を返し、失敗の理由を返さない。
+     * 先頭で失敗した場合だけ -1 と errno を返す。
+     * see: https://man7.org/linux/man-pages/man2/sendmmsg.2.html
+     */
+    do
+    {
+        sent = sendmmsg((int)watch->sock, messages, (unsigned int)count, MSG_NOSIGNAL);
+    } while (sent < 0 && errno == EINTR);
+    if (sent < 0)
+    {
+        return cplat_internal_error_report_socket_errno(detail_out, errno);
+    }
+    if ((size_t)sent > count)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EIO, CPLAT_ERR_UNKNOWN);
+    }
+
+    /* 全量を送れなかったデータグラムは送れなかったものとし、その手前までを送れた数とする。 */
+    full_count = 0U;
+    while (full_count < (size_t)sent && (size_t)messages[full_count].msg_len == datagrams[full_count].len)
+    {
+        full_count++;
+    }
+    if (full_count == 0U)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EIO, CPLAT_ERR_UNKNOWN);
+    }
+    *sent_count_out = full_count;
+    return cplat_internal_error_report_success(detail_out);
+}
+
 /**
  *  @brief          解除、完了、期限の順で全量送受信の各確認点を処理します。
  *

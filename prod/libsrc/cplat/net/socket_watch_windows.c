@@ -1199,6 +1199,78 @@ int cplat_socket_watch_sendto(cplat_socket_watch *watch, const void *buf, const 
                      detail_out);
 }
 
+/*
+ * Windows は、Registered I/O (RIOSendEx) で送信を 1 回の呼び出しにまとめず、sendto() を先頭から順に繰り返す。
+ * WSA_FLAG_REGISTERED_IO 付きの UDP ソケットでは、bind() は成功するが、WSAEventSelect()、sendto()、recvfrom()、
+ * select() が WSAENOTSOCK で失敗する (Windows 11 10.0.26300 での実測、2026-11-25)。
+ * 登録は WSAEventSelect() で送受信の通知を待ち、利用側は通常の受信と送信の関数も使うため、RIO のソケットにできない。
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/mswsock/nc-mswsock-lpfn_riosendex
+ * see: https://learn.microsoft.com/en-us/windows/win32/api/mswsock/nc-mswsock-lpfn_riocreaterequestqueue
+ */
+
+/* Doxygen コメントは、ヘッダーに記載 */
+
+int cplat_socket_watch_sendto_multi(cplat_socket_watch *watch, const cplat_socket_datagram *datagrams,
+                                    const size_t count, size_t *sent_count_out, cplat_error *detail_out)
+{
+    size_t index;
+
+    if (sent_count_out != NULL)
+    {
+        *sent_count_out = 0U;
+    }
+    if (watch == NULL || watch->sock == INVALID_SOCKET || datagrams == NULL || sent_count_out == NULL || count == 0U ||
+        count > CPLAT_SOCKET_SENDTO_MULTI_MAX)
+    {
+        return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+    }
+    for (index = 0U; index < count; index++)
+    {
+        if (datagrams[index].buf == NULL || datagrams[index].endpoint == NULL ||
+            datagrams[index].len > CPLAT_SOCKET_MAX_TRANSFER)
+        {
+            return cplat_internal_error_report_errno_as(detail_out, EINVAL, CPLAT_ERR_INVALID_ARGUMENT);
+        }
+    }
+
+    for (index = 0U; index < count; index++)
+    {
+        struct sockaddr_in native;
+        size_t sent = 0U;
+        int result;
+
+        memset(&native, 0, sizeof(native));
+        native.sin_family = AF_INET;
+        memcpy(&native.sin_addr.S_un.S_addr, &datagrams[index].endpoint->address, sizeof(native.sin_addr.S_un.S_addr));
+        memcpy(&native.sin_port, &datagrams[index].endpoint->port, sizeof(native.sin_port));
+        /* WSAEWOULDBLOCK の場合の送信可能の状態の更新は、send_once() が行う。 */
+        result = send_once(watch, datagrams[index].buf, datagrams[index].len, &sent, 1,
+                           (const struct sockaddr *)&native, (int)sizeof(native), 1, NULL, detail_out);
+        if (result != CPLAT_OK)
+        {
+            if (index == 0U)
+            {
+                return result;
+            }
+            break;
+        }
+
+        /* 全量を送れなかったデータグラムは送れなかったものとし、そこで止める。 */
+        if (sent != datagrams[index].len)
+        {
+            if (index == 0U)
+            {
+                return cplat_internal_error_report_errno_as(detail_out, EIO, CPLAT_ERR_UNKNOWN);
+            }
+            break;
+        }
+        *sent_count_out = index + 1U;
+    }
+
+    /* 途中で止めた場合も、送れたデータグラムがあるため成功を返す。止めた理由は返さない。 */
+    return cplat_internal_error_report_success(detail_out);
+}
+
 /**
  *  @brief          送受信の全量を解除と期限を確認しながら転送します。
  */

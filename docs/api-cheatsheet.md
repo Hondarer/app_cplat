@@ -386,9 +386,10 @@ Table: ソケット操作 API と cplat 代替関数
 | `recv()` | `cplat_socket_recv(...)` |
 | `sendto()` | `cplat_socket_sendto(...)` |
 | `recvfrom()` | `cplat_socket_recvfrom(...)` |
+| `sendmmsg()` (Linux) | `cplat_socket_watch_sendto_multi(...)` (登録したソケットだけ。Windows は `sendto()` を先頭から順に繰り返す) |
 | `poll()` (Linux) / `WSAPoll()` (Winsock) | `cplat_socket_wait_readable(...)` / `cplat_socket_wait_writable(...)` / `cplat_socket_wait_readable_multi(...)` / `cplat_socket_timed_wait_readable(...)` / `cplat_socket_timed_wait_writable(...)` / `cplat_socket_timed_wait_readable_multi(...)` |
 | 解除できる受信・送信待機 | `cplat_socket_wait_cancel_create/signal/reset/dispose(...)`、`cplat_socket_watch_attach/detach(...)`、`cplat_socket_watch_wait_readable_multi(...)` / `cplat_socket_watch_wait_writable(...)` | 登録中は非ブロッキング。解除通知は待機前にも有効で、OS 通知が失敗しても最大 50 [ms] の状態確認で検出します |
-| 登録中の送受信と接続 | `cplat_socket_watch_send/sendto/send_all/recv_all/connect(...)` | 1 回の送受信は `CPLAT_ERR_WOULD_BLOCK` を返します。全量処理は解除、完了、全体期限の順で確認します |
+| 登録中の送受信と接続 | `cplat_socket_watch_send/sendto/sendto_multi/send_all/recv_all/connect(...)` | 1 回の送受信は `CPLAT_ERR_WOULD_BLOCK` を返します。`sendto_multi` は最大 `CPLAT_SOCKET_SENDTO_MULTI_MAX` 個のデータグラムを 1 回で送り、先頭から連続して送れた数を返します。全量処理は解除、完了、全体期限の順で確認します |
 
 `cplat_socket_send_all`/`cplat_socket_recv_all` は複数回の `send`/`recv` をループさせる合成 API です。  
 Linux の `cplat_socket_send`/`cplat_socket_send_all` は、切断済みの接続への送信による SIGPIPE を送信単位で抑制し、送信エラーは結果コードと `cplat_error` で通知します。  

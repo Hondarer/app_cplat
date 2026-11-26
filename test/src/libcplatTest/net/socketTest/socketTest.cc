@@ -142,6 +142,7 @@ class socketTest : public Test
     NiceMock<Mock_eventfd> mock_eventfd_;
 #elif defined(PLATFORM_WINDOWS)
     NiceMock<Mock_winsock> mock_winsock_;
+    uintptr_t next_event_id_ = 0x2000U;
 #endif /* PLATFORM_ */
 
     /* プラットフォームごとにモック対象が異なるため、呼び出し期待の検証はヘルパーへ限定する。 */
@@ -180,6 +181,53 @@ class socketTest : public Test
         EXPECT_CALL(mock_winsock_, shutdown(_, _, _, _, _)).Times(0);
         // [Pre-Assert確認_正常系] - shutdown() が呼び出されないこと。
 #endif /* PLATFORM_ */
+    }
+    // [サブ手順終了]
+
+    /* kSocket を登録する cplat_socket_watch_attach() の下位の呼び出しを期待する。 */
+    // [サブ手順 名前=socketTest.expectMockWatchAttach]
+    void expectMockWatchAttach()
+    {
+#if defined(PLATFORM_LINUX)
+        EXPECT_CALL(mock_fcntl_, fcntl(_, _, _, (int)kSocket, F_GETFL, (intptr_t)0))
+            .WillOnce(Return(
+                0)); // [Pre-Assert確認_正常系] - fcntl() が kSocket、F_GETFL、0 を指定して 1 回呼び出されること。
+                     // [Pre-Assert手順] - fcntl() から 0 を返す。
+        EXPECT_CALL(mock_fcntl_, fcntl(_, _, _, (int)kSocket, F_SETFL, (intptr_t)O_NONBLOCK))
+            .WillOnce(Return(
+                0)); // [Pre-Assert確認_正常系] - fcntl() が kSocket、F_SETFL、O_NONBLOCK を指定して 1 回呼び出されること。
+                     // [Pre-Assert手順] - fcntl() から 0 を返す。
+#elif defined(PLATFORM_WINDOWS)
+        EXPECT_CALL(mock_winsock_, WSACreateEvent(_, _, _))
+            .Times(3)
+            .WillRepeatedly(
+                [this](const char *, const int, const char *)
+                {
+                    return reinterpret_cast<WSAEVENT>(next_event_id_++);
+                }); // [Pre-Assert確認_正常系] - WSACreateEvent() が 3 回呼び出されること。
+                    // [Pre-Assert手順] - WSACreateEvent() から、呼び出しごとに異なるイベントの値を返す。
+        EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)kSocket, _, _))
+            .WillOnce(
+                Return(0)); // [Pre-Assert確認_正常系] - WSAEventSelect() が kSocket を指定して 1 回呼び出されること。
+                            // [Pre-Assert手順] - WSAEventSelect() から 0 を返す。
+#endif /* PLATFORM_ */
+    }
+    // [サブ手順終了]
+
+    /* kSocket の登録を解く cplat_socket_watch_detach() の下位の呼び出しを期待する。 */
+    // [サブ手順 名前=socketTest.expectMockWatchDetach]
+    void expectMockWatchDetach()
+    {
+#if defined(PLATFORM_WINDOWS)
+        EXPECT_CALL(mock_winsock_, WSAEventSelect(_, _, _, (SOCKET)kSocket, (WSAEVENT) nullptr, 0))
+            .WillOnce(Return(
+                0)); // [Pre-Assert確認_正常系] - WSAEventSelect() が kSocket、nullptr、0 を指定して 1 回呼び出されること。
+                     // [Pre-Assert手順] - WSAEventSelect() から 0 を返す。
+        EXPECT_CALL(mock_winsock_, WSACloseEvent(_, _, _, _))
+            .Times(3)
+            .WillRepeatedly(Return(TRUE)); // [Pre-Assert確認_正常系] - WSACloseEvent() が 3 回呼び出されること。
+                                           // [Pre-Assert手順] - WSACloseEvent() から TRUE を返す。
+#endif /* PLATFORM_WINDOWS */
     }
     // [サブ手順終了]
 
@@ -4346,6 +4394,576 @@ TEST_F(socketTest, watch_sendto_returns_would_block)
     ASSERT_TRUE(verifyExpectations());
 // [確認_正常系] - 送信キュー満杯の OS エラーが CPLAT_ERR_WOULD_BLOCK と要因 CPLAT_CAUSE_WOULD_BLOCK になること。
 }
+
+// 1 回の呼び出しで、各データグラムをそれぞれの送信先へ同じ内容と順序で送ることの確認
+TEST_F(socketTest, watch_sendto_multi_sends_each_datagram_to_its_endpoint)
+{
+    // Arrange
+#if defined(PLATFORM_WINDOWS)
+    RealWinsockSession winsock_session;
+    ASSERT_TRUE(winsock_session.started()); // [状態確認] - winsock_session.started() の戻り値が true であること。
+    const cplat_socket receiver_a = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    const cplat_socket receiver_b = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    const cplat_socket sender = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)receiver_a); // [状態確認] - receiver_a が INVALID_SOCKET 以外であること。
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)receiver_b); // [状態確認] - receiver_b が INVALID_SOCKET 以外であること。
+    ASSERT_NE(INVALID_SOCKET, (SOCKET)sender);     // [状態確認] - sender が INVALID_SOCKET 以外であること。
+#else
+    const cplat_socket receiver_a = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, 0);
+    const cplat_socket receiver_b = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, 0);
+    const cplat_socket sender = (cplat_socket)::socket(AF_INET, SOCK_DGRAM, 0);
+    ASSERT_NE(CPLAT_INVALID_SOCKET, receiver_a); // [状態確認] - receiver_a が CPLAT_INVALID_SOCKET 以外であること。
+    ASSERT_NE(CPLAT_INVALID_SOCKET, receiver_b); // [状態確認] - receiver_b が CPLAT_INVALID_SOCKET 以外であること。
+    ASSERT_NE(CPLAT_INVALID_SOCKET, sender);     // [状態確認] - sender が CPLAT_INVALID_SOCKET 以外であること。
+#endif
+    sockaddr_in address_a = {};
+    sockaddr_in address_b = {};
+    address_a.sin_family = AF_INET;
+    address_a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    address_b.sin_family = AF_INET;
+    address_b.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+#if defined(PLATFORM_WINDOWS)
+    ASSERT_EQ(0, ::bind((SOCKET)receiver_a, (const sockaddr *)&address_a,
+                        (int)sizeof(address_a))); // [状態確認] - receiver_a の ::bind() の戻り値が 0 であること。
+    ASSERT_EQ(0, ::bind((SOCKET)receiver_b, (const sockaddr *)&address_b,
+                        (int)sizeof(address_b))); // [状態確認] - receiver_b の ::bind() の戻り値が 0 であること。
+    int address_len = (int)sizeof(address_a);
+    ASSERT_EQ(0, ::getsockname((SOCKET)receiver_a, (sockaddr *)&address_a,
+                               &address_len)); // [状態確認] - receiver_a の ::getsockname() の戻り値が 0 であること。
+    address_len = (int)sizeof(address_b);
+    ASSERT_EQ(0, ::getsockname((SOCKET)receiver_b, (sockaddr *)&address_b,
+                               &address_len)); // [状態確認] - receiver_b の ::getsockname() の戻り値が 0 であること。
+#else
+    ASSERT_EQ(0, ::bind((int)receiver_a, (const sockaddr *)&address_a,
+                        (socklen_t)sizeof(address_a))); // [状態確認] - receiver_a の ::bind() の戻り値が 0 であること。
+    ASSERT_EQ(0, ::bind((int)receiver_b, (const sockaddr *)&address_b,
+                        (socklen_t)sizeof(address_b))); // [状態確認] - receiver_b の ::bind() の戻り値が 0 であること。
+    socklen_t address_len = (socklen_t)sizeof(address_a);
+    ASSERT_EQ(0, ::getsockname((int)receiver_a, (sockaddr *)&address_a,
+                               &address_len)); // [状態確認] - receiver_a の ::getsockname() の戻り値が 0 であること。
+    address_len = (socklen_t)sizeof(address_b);
+    ASSERT_EQ(0, ::getsockname((int)receiver_b, (sockaddr *)&address_b,
+                               &address_len)); // [状態確認] - receiver_b の ::getsockname() の戻り値が 0 であること。
+#endif
+    const cplat_ipv4_endpoint endpoint_a = {(uint32_t)address_a.sin_addr.s_addr, (uint16_t)address_a.sin_port, 0U};
+    const cplat_ipv4_endpoint endpoint_b = {(uint32_t)address_b.sin_addr.s_addr, (uint16_t)address_b.sin_port, 0U};
+    const cplat_socket_datagram datagrams[] = {
+        {"A", 1U, &endpoint_a},
+        {"BB", 2U, &endpoint_b},
+        {"CCC", 3U, &endpoint_a},
+    }; // [状態] - receiver_a へ "A"、receiver_b へ "BB"、receiver_a へ "CCC" を送る 3 個のデータグラムを用意する。
+    cplat_socket_watch *watch = nullptr;
+    cplat_error detail = {};
+    size_t sent_count = 0U;
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(
+                            sender, &watch,
+                            &detail)); // [状態確認] - cplat_socket_watch_attach() の戻り値が CPLAT_OK であること。
+
+    // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_sys_socket_, sendmmsg(_, _, _, (int)sender, _, 3U, MSG_NOSIGNAL))
+        .Times(1); // [Pre-Assert確認_正常系] - sendmmsg() が sender、3U、MSG_NOSIGNAL を指定して 1 回呼び出されること。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_winsock_, sendto(_, _, _, (SOCKET)sender, _, _, 0, _, _))
+        .Times(3); // [Pre-Assert確認_正常系] - sendto() が sender、0 を指定して 3 回呼び出されること。
+#endif /* PLATFORM_ */
+
+    // Act
+    const int actual_ret = cplat_socket_watch_sendto_multi(
+        watch, datagrams, 3U, &sent_count,
+        &detail); // [手順] - 3 個のデータグラムを指定して cplat_socket_watch_sendto_multi() を呼び出す。
+    char received_a_first[4] = {};
+    char received_b[4] = {};
+    char received_a_second[4] = {};
+    size_t received_a_first_len = 0U;
+    size_t received_b_len = 0U;
+    size_t received_a_second_len = 0U;
+    const int actual_ret_recv_a_first =
+        cplat_socket_recv(receiver_a, received_a_first, sizeof(received_a_first), &received_a_first_len,
+                          nullptr); // [手順] - receiver_a で 1 個目のデータグラムを cplat_socket_recv() で受信する。
+    const int actual_ret_recv_b =
+        cplat_socket_recv(receiver_b, received_b, sizeof(received_b), &received_b_len,
+                          nullptr); // [手順] - receiver_b でデータグラムを cplat_socket_recv() で受信する。
+    const int actual_ret_recv_a_second =
+        cplat_socket_recv(receiver_a, received_a_second, sizeof(received_a_second), &received_a_second_len,
+                          nullptr); // [手順] - receiver_a で 2 個目のデータグラムを cplat_socket_recv() で受信する。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret);     // [確認_正常系] - cplat_socket_watch_sendto_multi() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(3U, sent_count); // [確認_正常系] - sent_count が 3 であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_recv_a_first); // [確認_正常系] - receiver_a の 1 回目の cplat_socket_recv() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, received_a_first_len); // [確認_正常系] - received_a_first_len が 1 であること。
+    EXPECT_STREQ("A", received_a_first); // [確認_正常系] - received_a_first が "A" であること。
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret_recv_b);  // [確認_正常系] - receiver_b の cplat_socket_recv() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(2U, received_b_len); // [確認_正常系] - received_b_len が 2 であること。
+    EXPECT_STREQ("BB", received_b); // [確認_正常系] - received_b が "BB" であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        actual_ret_recv_a_second); // [確認_正常系] - receiver_a の 2 回目の cplat_socket_recv() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(3U, received_a_second_len); // [確認_正常系] - received_a_second_len が 3 であること。
+    EXPECT_STREQ(
+        "CCC",
+        received_a_second); // [確認_正常系] - received_a_second が "CCC" であること。(同じ送信先へのデータグラムが送った順に届いたことの確認)
+
+    // Cleanup
+    cplat_socket_watch_detach(watch);
+#if defined(PLATFORM_WINDOWS)
+    (void)::closesocket((SOCKET)sender);
+    (void)::closesocket((SOCKET)receiver_b);
+    (void)::closesocket((SOCKET)receiver_a);
+#else
+    (void)::close((int)sender);
+    (void)::close((int)receiver_b);
+    (void)::close((int)receiver_a);
+#endif
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+
+// 不正な引数で、OS の送信を呼ばずに CPLAT_ERR_INVALID_ARGUMENT を返すことの確認
+TEST_F(socketTest, watch_sendto_multi_rejects_invalid_arguments)
+{
+    // Arrange
+    const char payload[] = "x";
+    const cplat_socket_datagram valid[] = {{payload, 1U, &kEndpoint}};
+    const cplat_socket_datagram null_buf[] = {
+        {payload, 1U, &kEndpoint}, {nullptr, 1U, &kEndpoint}}; // [状態] - 2 個目の buf が nullptr の配列を用意する。
+    const cplat_socket_datagram null_endpoint[] = {
+        {payload, 1U, &kEndpoint}, {payload, 1U, nullptr}}; // [状態] - 2 個目の endpoint が nullptr の配列を用意する。
+    const cplat_socket_datagram too_long[] = {
+        {payload, 1U, &kEndpoint},
+        {payload, CPLAT_SOCKET_MAX_TRANSFER + 1U,
+         &kEndpoint}}; // [状態] - 2 個目の len が CPLAT_SOCKET_MAX_TRANSFER + 1 の配列を用意する。
+    cplat_socket_datagram
+        over_max[CPLAT_SOCKET_SENDTO_MULTI_MAX +
+                 1U]; // [状態] - 正しいデータグラムを CPLAT_SOCKET_SENDTO_MULTI_MAX + 1 個並べた配列を用意する。
+    for (cplat_socket_datagram &datagram : over_max)
+    {
+        datagram = valid[0];
+    }
+    cplat_socket_watch *watch = nullptr;
+    // [サブ手順参照 名前=socketTest.expectMockWatchAttach]
+    expectMockWatchAttach();
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(
+                            kSocket, &watch,
+                            nullptr)); // [状態確認] - cplat_socket_watch_attach() の戻り値が CPLAT_OK であること。
+    size_t sent_null_watch = 9U;
+    size_t sent_null_datagrams = 9U;
+    size_t sent_zero_count = 9U;
+    size_t sent_over_max = 9U;
+    size_t sent_null_buf = 9U;
+    size_t sent_null_endpoint = 9U;
+    size_t sent_too_long = 9U;
+
+    // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_sys_socket_, sendmmsg(_, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - sendmmsg() が呼び出されないこと。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_winsock_, sendto(_, _, _, _, _, _, _, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - sendto() が呼び出されないこと。
+#endif /* PLATFORM_ */
+    // [サブ手順参照 名前=socketTest.expectMockWatchDetach]
+    expectMockWatchDetach();
+
+    // Act
+    const int actual_ret_null_watch = cplat_socket_watch_sendto_multi(
+        nullptr, valid, 1U, &sent_null_watch,
+        nullptr); // [手順] - watch に nullptr を指定して cplat_socket_watch_sendto_multi() を呼び出す。
+    const int actual_ret_null_datagrams = cplat_socket_watch_sendto_multi(
+        watch, nullptr, 1U, &sent_null_datagrams,
+        nullptr); // [手順] - datagrams に nullptr を指定して cplat_socket_watch_sendto_multi() を呼び出す。
+    const int actual_ret_null_sent = cplat_socket_watch_sendto_multi(
+        watch, valid, 1U, nullptr,
+        nullptr); // [手順] - sent_count_out に nullptr を指定して cplat_socket_watch_sendto_multi() を呼び出す。
+    const int actual_ret_zero_count = cplat_socket_watch_sendto_multi(
+        watch, valid, 0U, &sent_zero_count,
+        nullptr); // [手順] - count に 0 を指定して cplat_socket_watch_sendto_multi() を呼び出す。
+    const int actual_ret_over_max = cplat_socket_watch_sendto_multi(
+        watch, over_max, CPLAT_SOCKET_SENDTO_MULTI_MAX + 1U, &sent_over_max,
+        nullptr); // [手順] - count に CPLAT_SOCKET_SENDTO_MULTI_MAX + 1 を指定して cplat_socket_watch_sendto_multi() を呼び出す。
+    const int actual_ret_null_buf = cplat_socket_watch_sendto_multi(
+        watch, null_buf, 2U, &sent_null_buf,
+        nullptr); // [手順] - null_buf を指定して cplat_socket_watch_sendto_multi() を呼び出す。
+    const int actual_ret_null_endpoint = cplat_socket_watch_sendto_multi(
+        watch, null_endpoint, 2U, &sent_null_endpoint,
+        nullptr); // [手順] - null_endpoint を指定して cplat_socket_watch_sendto_multi() を呼び出す。
+    const int actual_ret_too_long = cplat_socket_watch_sendto_multi(
+        watch, too_long, 2U, &sent_too_long,
+        nullptr); // [手順] - too_long を指定して cplat_socket_watch_sendto_multi() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_watch); // [確認_異常系] - watch が nullptr の cplat_socket_watch_sendto_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(0U, sent_null_watch); // [確認_異常系] - sent_null_watch が 0 であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_datagrams); // [確認_異常系] - datagrams が nullptr の cplat_socket_watch_sendto_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(0U, sent_null_datagrams); // [確認_異常系] - sent_null_datagrams が 0 であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_sent); // [確認_異常系] - sent_count_out が nullptr の cplat_socket_watch_sendto_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_zero_count); // [確認_異常系] - count が 0 の cplat_socket_watch_sendto_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(0U, sent_zero_count); // [確認_異常系] - sent_zero_count が 0 であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_over_max); // [確認_異常系] - count が最大を超える cplat_socket_watch_sendto_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(0U, sent_over_max); // [確認_異常系] - sent_over_max が 0 であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_buf); // [確認_異常系] - null_buf の cplat_socket_watch_sendto_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(0U, sent_null_buf); // [確認_異常系] - sent_null_buf が 0 であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_null_endpoint); // [確認_異常系] - null_endpoint の cplat_socket_watch_sendto_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(0U, sent_null_endpoint); // [確認_異常系] - sent_null_endpoint が 0 であること。
+    EXPECT_EQ(
+        CPLAT_ERR_INVALID_ARGUMENT,
+        actual_ret_too_long); // [確認_異常系] - too_long の cplat_socket_watch_sendto_multi() の戻り値が CPLAT_ERR_INVALID_ARGUMENT であること。
+    EXPECT_EQ(0U, sent_too_long); // [確認_異常系] - sent_too_long が 0 であること。
+
+    // Cleanup
+    cplat_socket_watch_detach(watch);
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+
+// 先頭のデータグラムで送信の空きがない場合に CPLAT_ERR_WOULD_BLOCK を返すことの確認
+TEST_F(socketTest, watch_sendto_multi_returns_would_block_when_first_blocks)
+{
+    // Arrange
+    const cplat_socket_datagram datagrams[] = {{"a", 1U, &kEndpoint}, {"bb", 2U, &kEndpoint}};
+    cplat_socket_watch *watch = nullptr;
+    cplat_error detail = {};
+    size_t sent_count = 9U;
+    // [サブ手順参照 名前=socketTest.expectMockWatchAttach]
+    expectMockWatchAttach();
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(
+                            kSocket, &watch,
+                            nullptr)); // [状態確認] - cplat_socket_watch_attach() の戻り値が CPLAT_OK であること。
+
+    // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_sys_socket_, sendmmsg(_, _, _, (int)kSocket, _, 2U, MSG_NOSIGNAL))
+        .WillOnce(DoAll(
+            Assign(&errno, EAGAIN),
+            Return(
+                -1))); // [Pre-Assert確認_異常系] - sendmmsg() が kSocket、2U、MSG_NOSIGNAL を指定して 1 回呼び出されること。
+                       // [Pre-Assert手順] - sendmmsg() から errno に EAGAIN を設定して -1 を返す。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_winsock_, sendto(_, _, _, (SOCKET)kSocket, _, 1, 0, _, _))
+        .WillOnce(Return(
+            SOCKET_ERROR)); // [Pre-Assert確認_異常系] - sendto() が kSocket、1、0 を指定して 1 回呼び出されること。
+                            // [Pre-Assert手順] - sendto() から SOCKET_ERROR を返す。
+    EXPECT_CALL(mock_winsock_, sendto(_, _, _, (SOCKET)kSocket, _, 2, 0, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - 2 を指定した sendto() の呼び出しがないこと。
+    EXPECT_CALL(mock_winsock_, WSAGetLastError(_, _, _))
+        .WillOnce(Return(WSAEWOULDBLOCK)); // [Pre-Assert確認_異常系] - WSAGetLastError() が 1 回呼び出されること。
+                                           // [Pre-Assert手順] - WSAGetLastError() から WSAEWOULDBLOCK を返す。
+    EXPECT_CALL(mock_winsock_, WSAResetEvent(_, _, _, _))
+        .WillOnce(Return(TRUE)); // [Pre-Assert確認_異常系] - WSAResetEvent() が 1 回呼び出されること。
+                                 // [Pre-Assert手順] - WSAResetEvent() から TRUE を返す。
+#endif /* PLATFORM_ */
+    // [サブ手順参照 名前=socketTest.expectMockWatchDetach]
+    expectMockWatchDetach();
+
+    // Act
+    const int actual_ret = cplat_socket_watch_sendto_multi(
+        watch, datagrams, 2U, &sent_count,
+        &detail); // [手順] - 2 個のデータグラムを指定して cplat_socket_watch_sendto_multi() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_WOULD_BLOCK,
+        actual_ret); // [確認_異常系] - cplat_socket_watch_sendto_multi() の戻り値が CPLAT_ERR_WOULD_BLOCK であること。
+    EXPECT_EQ(0U, sent_count); // [確認_異常系] - sent_count が 0 であること。
+    EXPECT_EQ(CPLAT_CAUSE_WOULD_BLOCK,
+              cplat_error_get_cause(
+                  &detail)); // [確認_異常系] - cplat_error_get_cause() の戻り値が CPLAT_CAUSE_WOULD_BLOCK であること。
+
+    // Cleanup
+    cplat_socket_watch_detach(watch);
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+
+// 先頭のデータグラムの送信が OS の失敗の場合に、対応する結果コードと OS のエラーを返すことの確認
+TEST_F(socketTest, watch_sendto_multi_reports_first_error)
+{
+    // Arrange
+    const cplat_socket_datagram datagrams[] = {{"a", 1U, &kEndpoint}, {"bb", 2U, &kEndpoint}};
+    cplat_socket_watch *watch = nullptr;
+    cplat_error detail = {};
+    size_t sent_count = 9U;
+    // [サブ手順参照 名前=socketTest.expectMockWatchAttach]
+    expectMockWatchAttach();
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(
+                            kSocket, &watch,
+                            nullptr)); // [状態確認] - cplat_socket_watch_attach() の戻り値が CPLAT_OK であること。
+
+    // Pre-Assert
+#if defined(PLATFORM_LINUX)
+    EXPECT_CALL(mock_sys_socket_, sendmmsg(_, _, _, (int)kSocket, _, 2U, MSG_NOSIGNAL))
+        .WillOnce(DoAll(
+            Assign(&errno, EACCES),
+            Return(
+                -1))); // [Pre-Assert確認_異常系] - sendmmsg() が kSocket、2U、MSG_NOSIGNAL を指定して 1 回呼び出されること。
+                       // [Pre-Assert手順] - sendmmsg() から errno に EACCES を設定して -1 を返す。
+#elif defined(PLATFORM_WINDOWS)
+    EXPECT_CALL(mock_winsock_, sendto(_, _, _, (SOCKET)kSocket, _, 1, 0, _, _))
+        .WillOnce(Return(
+            SOCKET_ERROR)); // [Pre-Assert確認_異常系] - sendto() が kSocket、1、0 を指定して 1 回呼び出されること。
+                            // [Pre-Assert手順] - sendto() から SOCKET_ERROR を返す。
+    EXPECT_CALL(mock_winsock_, sendto(_, _, _, (SOCKET)kSocket, _, 2, 0, _, _))
+        .Times(0); // [Pre-Assert確認_異常系] - 2 を指定した sendto() の呼び出しがないこと。
+    EXPECT_CALL(mock_winsock_, WSAGetLastError(_, _, _))
+        .WillOnce(Return(WSAEACCES)); // [Pre-Assert確認_異常系] - WSAGetLastError() が 1 回呼び出されること。
+                                      // [Pre-Assert手順] - WSAGetLastError() から WSAEACCES を返す。
+#endif /* PLATFORM_ */
+    // [サブ手順参照 名前=socketTest.expectMockWatchDetach]
+    expectMockWatchDetach();
+
+    // Act
+    const int actual_ret = cplat_socket_watch_sendto_multi(
+        watch, datagrams, 2U, &sent_count,
+        &detail); // [手順] - 2 個のデータグラムを指定して cplat_socket_watch_sendto_multi() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(
+        CPLAT_ERR_PERMISSION_DENIED,
+        actual_ret); // [確認_異常系] - cplat_socket_watch_sendto_multi() の戻り値が CPLAT_ERR_PERMISSION_DENIED であること。
+    EXPECT_EQ(0U, sent_count); // [確認_異常系] - sent_count が 0 であること。
+#if defined(PLATFORM_LINUX)
+    // [サブ手順参照 名前=socketTest.expect_detail 区分=異常系]
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_SOCKET_ERRNO, CPLAT_ERR_PERMISSION_DENIED, (unsigned long)EACCES);
+#elif defined(PLATFORM_WINDOWS)
+    // [サブ手順参照 名前=socketTest.expect_detail 区分=異常系]
+    expect_detail(detail, CPLAT_ERROR_DOMAIN_WINSOCK, CPLAT_ERR_PERMISSION_DENIED, (unsigned long)WSAEACCES);
+#endif /* PLATFORM_ */
+
+    // Cleanup
+    cplat_socket_watch_detach(watch);
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+
+#if defined(PLATFORM_LINUX)
+// sendmmsg() が要求より少ない数を返した場合に、送れた数を返すことの確認
+TEST_F(socketTest, watch_sendto_multi_returns_partial_count)
+{
+    // Arrange
+    const char payload[] = "abcd";
+    const cplat_socket_datagram datagrams[] = {
+        {payload, 1U, &kEndpoint}, {payload, 2U, &kEndpoint}, {payload, 3U, &kEndpoint}, {payload, 4U, &kEndpoint}};
+    cplat_socket_watch *watch = nullptr;
+    cplat_error detail = {};
+    size_t sent_count = 9U;
+    // [サブ手順参照 名前=socketTest.expectMockWatchAttach]
+    expectMockWatchAttach();
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(
+                            kSocket, &watch,
+                            nullptr)); // [状態確認] - cplat_socket_watch_attach() の戻り値が CPLAT_OK であること。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_sys_socket_, sendmmsg(_, _, _, (int)kSocket, _, 4U, MSG_NOSIGNAL))
+        .WillOnce(
+            [](const char *, const int, const char *, int, struct mmsghdr *messages, unsigned int, int)
+            {
+                EXPECT_EQ(
+                    sizeof(sockaddr_in),
+                    (size_t)messages[3]
+                        .msg_hdr
+                        .msg_namelen); // [Pre-Assert確認_正常系] - messages[3].msg_hdr.msg_namelen が sizeof(sockaddr_in) と一致すること。
+                EXPECT_EQ(
+                    1U, (size_t)messages[3]
+                            .msg_hdr
+                            .msg_iovlen); // [Pre-Assert確認_正常系] - messages[3].msg_hdr.msg_iovlen が 1 であること。
+                EXPECT_EQ(
+                    4U,
+                    messages[3]
+                        .msg_hdr.msg_iov[0]
+                        .iov_len); // [Pre-Assert確認_正常系] - messages[3].msg_hdr.msg_iov[0].iov_len が 4 であること。
+                messages[0].msg_len = 1U;
+                messages[1].msg_len = 2U;
+                return 2;
+            }); // [Pre-Assert確認_正常系] - sendmmsg() が kSocket、4U、MSG_NOSIGNAL を指定して 1 回呼び出されること。
+                // [Pre-Assert手順] - sendmmsg() から、先頭の 2 個の msg_len に 1 と 2 を設定して 2 を返す。
+    // [サブ手順参照 名前=socketTest.expectMockWatchDetach]
+    expectMockWatchDetach();
+
+    // Act
+    const int actual_ret = cplat_socket_watch_sendto_multi(
+        watch, datagrams, 4U, &sent_count,
+        &detail); // [手順] - 4 個のデータグラムを指定して cplat_socket_watch_sendto_multi() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret); // [確認_正常系] - cplat_socket_watch_sendto_multi() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        2U, sent_count); // [確認_正常系] - sent_count が 2 であること。(sendmmsg() が送れたと返した数であることの確認)
+
+    // Cleanup
+    cplat_socket_watch_detach(watch);
+}
+
+// 全量を送れなかったデータグラムの手前までを、送れた数とすることの確認
+TEST_F(socketTest, watch_sendto_multi_counts_only_full_datagrams)
+{
+    // Arrange
+    const char payload[] = "abc";
+    const cplat_socket_datagram datagrams[] = {
+        {payload, 1U, &kEndpoint}, {payload, 2U, &kEndpoint}, {payload, 3U, &kEndpoint}};
+    cplat_socket_watch *watch = nullptr;
+    cplat_error detail = {};
+    size_t sent_count = 9U;
+    // [サブ手順参照 名前=socketTest.expectMockWatchAttach]
+    expectMockWatchAttach();
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(
+                            kSocket, &watch,
+                            nullptr)); // [状態確認] - cplat_socket_watch_attach() の戻り値が CPLAT_OK であること。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_sys_socket_, sendmmsg(_, _, _, (int)kSocket, _, 3U, MSG_NOSIGNAL))
+        .WillOnce(
+            [](const char *, const int, const char *, int, struct mmsghdr *messages, unsigned int, int)
+            {
+                messages[0].msg_len = 1U;
+                messages[1].msg_len = 1U;
+                return 2;
+            }); // [Pre-Assert確認_正常系] - sendmmsg() が kSocket、3U、MSG_NOSIGNAL を指定して 1 回呼び出されること。
+                // [Pre-Assert手順] - sendmmsg() から、先頭の 2 個の msg_len に 1 と 1 を設定して 2 を返す。
+    // [サブ手順参照 名前=socketTest.expectMockWatchDetach]
+    expectMockWatchDetach();
+
+    // Act
+    const int actual_ret = cplat_socket_watch_sendto_multi(
+        watch, datagrams, 3U, &sent_count,
+        &detail); // [手順] - 3 個のデータグラムを指定して cplat_socket_watch_sendto_multi() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret); // [確認_正常系] - cplat_socket_watch_sendto_multi() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(
+        1U,
+        sent_count); // [確認_正常系] - sent_count が 1 であること。(2 個目は 2 バイト中 1 バイトだけのため数えないことの確認)
+
+    // Cleanup
+    cplat_socket_watch_detach(watch);
+}
+
+// sendmmsg() が EINTR で失敗した場合に、呼び直すことの確認
+TEST_F(socketTest, watch_sendto_multi_retries_after_interrupt)
+{
+    // Arrange
+    const cplat_socket_datagram datagrams[] = {{"a", 1U, &kEndpoint}, {"bb", 2U, &kEndpoint}};
+    cplat_socket_watch *watch = nullptr;
+    cplat_error detail = {};
+    size_t sent_count = 9U;
+    // [サブ手順参照 名前=socketTest.expectMockWatchAttach]
+    expectMockWatchAttach();
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(
+                            kSocket, &watch,
+                            nullptr)); // [状態確認] - cplat_socket_watch_attach() の戻り値が CPLAT_OK であること。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_sys_socket_, sendmmsg(_, _, _, (int)kSocket, _, 2U, MSG_NOSIGNAL))
+        .WillOnce(DoAll(Assign(&errno, EINTR), Return(-1)))
+        .WillOnce(
+            [](const char *, const int, const char *, int, struct mmsghdr *messages, unsigned int, int)
+            {
+                messages[0].msg_len = 1U;
+                messages[1].msg_len = 2U;
+                return 2;
+            }); // [Pre-Assert確認_正常系] - sendmmsg() が kSocket、2U、MSG_NOSIGNAL を指定して 2 回呼び出されること。
+                // [Pre-Assert手順] - 1 回目の sendmmsg() から errno に EINTR を設定して -1 を返す。
+                // [Pre-Assert手順] - 2 回目の sendmmsg() から、2 個の msg_len に 1 と 2 を設定して 2 を返す。
+    // [サブ手順参照 名前=socketTest.expectMockWatchDetach]
+    expectMockWatchDetach();
+
+    // Act
+    const int actual_ret = cplat_socket_watch_sendto_multi(
+        watch, datagrams, 2U, &sent_count,
+        &detail); // [手順] - 2 個のデータグラムを指定して cplat_socket_watch_sendto_multi() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret);     // [確認_正常系] - cplat_socket_watch_sendto_multi() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(2U, sent_count); // [確認_正常系] - sent_count が 2 であること。
+
+    // Cleanup
+    cplat_socket_watch_detach(watch);
+}
+#endif /* PLATFORM_LINUX */
+
+#if defined(PLATFORM_WINDOWS)
+// 2 個目の送信が失敗した場合に、そこで止めて送れた数を返し、送信の空きなしを記録することの確認
+TEST_F(socketTest, watch_sendto_multi_stops_at_failed_datagram)
+{
+    // Arrange
+    const cplat_socket_datagram datagrams[] = {{"a", 1U, &kEndpoint}, {"bb", 2U, &kEndpoint}, {"ccc", 3U, &kEndpoint}};
+    cplat_socket_watch *watch = nullptr;
+    cplat_error detail = {};
+    size_t sent_count = 9U;
+    // [サブ手順参照 名前=socketTest.expectMockWatchAttach]
+    expectMockWatchAttach();
+    ASSERT_EQ(CPLAT_OK, cplat_socket_watch_attach(
+                            kSocket, &watch,
+                            nullptr)); // [状態確認] - cplat_socket_watch_attach() の戻り値が CPLAT_OK であること。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_winsock_, sendto(_, _, _, (SOCKET)kSocket, _, 1, 0, _, _))
+        .WillOnce(Return(1)); // [Pre-Assert確認_正常系] - sendto() が kSocket、1、0 を指定して 1 回呼び出されること。
+                              // [Pre-Assert手順] - sendto() から 1 を返す。
+    EXPECT_CALL(mock_winsock_, sendto(_, _, _, (SOCKET)kSocket, _, 2, 0, _, _))
+        .WillOnce(Return(
+            SOCKET_ERROR)); // [Pre-Assert確認_正常系] - sendto() が kSocket、2、0 を指定して 1 回呼び出されること。
+                            // [Pre-Assert手順] - sendto() から SOCKET_ERROR を返す。
+    EXPECT_CALL(mock_winsock_, sendto(_, _, _, (SOCKET)kSocket, _, 3, 0, _, _))
+        .Times(0); // [Pre-Assert確認_正常系] - 3 を指定した sendto() の呼び出しがないこと。
+    EXPECT_CALL(mock_winsock_, WSAGetLastError(_, _, _))
+        .WillOnce(Return(WSAEWOULDBLOCK)); // [Pre-Assert確認_正常系] - WSAGetLastError() が 1 回呼び出されること。
+                                           // [Pre-Assert手順] - WSAGetLastError() から WSAEWOULDBLOCK を返す。
+    EXPECT_CALL(mock_winsock_, WSAResetEvent(_, _, _, _))
+        .Times(2)
+        .WillRepeatedly(Return(TRUE)); // [Pre-Assert確認_正常系] - WSAResetEvent() が 2 回呼び出されること。
+                                       // [Pre-Assert手順] - WSAResetEvent() から TRUE を返す。
+    EXPECT_CALL(mock_winsock_, WSAWaitForMultipleEvents(_, _, _, 1U, _, FALSE, 0U, FALSE))
+        .WillOnce(Return(
+            WSA_WAIT_TIMEOUT)); // [Pre-Assert確認_正常系] - WSAWaitForMultipleEvents() が 1U、FALSE、0U、FALSE を指定して 1 回呼び出されること。
+                                // [Pre-Assert手順] - WSAWaitForMultipleEvents() から WSA_WAIT_TIMEOUT を返す。
+    EXPECT_CALL(mock_winsock_, WSAPoll(_, _, _, _, 1U, 0))
+        .WillOnce(Return(0)); // [Pre-Assert確認_正常系] - WSAPoll() が 1U、0 を指定して 1 回呼び出されること。
+                              // [Pre-Assert手順] - WSAPoll() から 0 を返す。
+    // [サブ手順参照 名前=socketTest.expectMockWatchDetach]
+    expectMockWatchDetach();
+
+    // Act
+    const int actual_ret = cplat_socket_watch_sendto_multi(
+        watch, datagrams, 3U, &sent_count,
+        &detail); // [手順] - 3 個のデータグラムを指定して cplat_socket_watch_sendto_multi() を呼び出す。
+    const int actual_ret_writable = cplat_socket_watch_wait_writable(
+        watch, nullptr, CPLAT_NO_WAIT,
+        nullptr); // [手順] - CPLAT_NO_WAIT を指定して cplat_socket_watch_wait_writable() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_OK,
+              actual_ret);     // [確認_正常系] - cplat_socket_watch_sendto_multi() の戻り値が CPLAT_OK であること。
+    EXPECT_EQ(1U, sent_count); // [確認_正常系] - sent_count が 1 であること。
+    EXPECT_EQ(
+        CPLAT_OK,
+        detail.result); // [確認_正常系] - detail.result が CPLAT_OK であること。(途中で止めた理由を返さないことの確認)
+    EXPECT_EQ(
+        CPLAT_ERR_TIMEOUT,
+        actual_ret_writable); // [確認_正常系] - cplat_socket_watch_wait_writable() の戻り値が CPLAT_ERR_TIMEOUT であること。(WSAEWOULDBLOCK で送信の空きなしを記録したことの確認)
+
+    // Cleanup
+    cplat_socket_watch_detach(watch);
+}
+// [サブ手順参照 名前=socketTest.TearDown]
+#endif /* PLATFORM_WINDOWS */
 
 // 受け付けたソケットがブロッキングかつ未登録であることの確認
 TEST_F(socketTest, accept_from_watched_listener_returns_blocking_unregistered_socket)

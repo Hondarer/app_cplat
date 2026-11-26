@@ -58,6 +58,9 @@
 /** 1 回の送受信で扱えるバイト数の上限。 */
 #define CPLAT_SOCKET_MAX_TRANSFER ((size_t)INT_MAX)
 
+/** @ref cplat_socket_watch_sendto_multi へ一度に指定できるデータグラムの最大数。 */
+#define CPLAT_SOCKET_SENDTO_MULTI_MAX 64U
+
 /**
  *  @ingroup        CPLAT_NET
  *  @{
@@ -82,6 +85,16 @@ extern "C"
 
     /** ソケットの登録のオブジェクト (不透明型)。 */
     typedef struct cplat_socket_watch cplat_socket_watch;
+
+    /**
+     *  @brief          @ref cplat_socket_watch_sendto_multi で送る 1 つのデータグラムを表します。
+     */
+    typedef struct cplat_socket_datagram
+    {
+        const void *buf;                     /**< 送信するデータ。 */
+        size_t len;                          /**< buf のバイト数。@ref CPLAT_SOCKET_MAX_TRANSFER 以下。 */
+        const cplat_ipv4_endpoint *endpoint; /**< 送信先のエンドポイント。 */
+    } cplat_socket_datagram;
 
 /** 無効なソケットを表す値。 */
 #define CPLAT_INVALID_SOCKET ((cplat_socket) - 1)
@@ -756,7 +769,7 @@ extern "C"
      *    @ref cplat_socket_wait_writable 、@ref cplat_socket_timed_wait_writable 、
      *    @ref cplat_socket_wait_readable_multi 、@ref cplat_socket_timed_wait_readable_multi) を使わない。
      *  - 送信は @ref cplat_socket_watch_send 、@ref cplat_socket_watch_sendto 、
-     *    @ref cplat_socket_watch_send_all だけで行う。@ref cplat_socket_send 、@ref cplat_socket_sendto 、
+     *    @ref cplat_socket_watch_sendto_multi 、@ref cplat_socket_watch_send_all だけで行う。@ref cplat_socket_send 、@ref cplat_socket_sendto 、
      *    @ref cplat_socket_send_all は使わない (Windows で送信可能の状態を管理できなくなるためです)。
      *  - 接続は @ref cplat_socket_watch_connect で行う。
      *  - 受信は @ref cplat_socket_recv 、@ref cplat_socket_recvfrom 、@ref cplat_socket_accept 、
@@ -879,6 +892,46 @@ extern "C"
     CPLAT_EXPORT int CPLAT_API cplat_socket_watch_sendto(cplat_socket_watch *watch, const void *buf, size_t len,
                                                          const cplat_ipv4_endpoint *endpoint, size_t *sent_out,
                                                          cplat_error *detail_out);
+
+    /**
+     *  @brief          登録したソケットから、複数のデータグラムをそれぞれの送信先へ待たずに 1 回の呼び出しで送信します。
+     *  @param[in]      watch          対象の登録。
+     *  @param[in]      datagrams      送信するデータグラムの配列。先頭から順に送ります。
+     *  @param[in]      count          @p datagrams の要素数。1 以上 @ref CPLAT_SOCKET_SENDTO_MULTI_MAX 以下。
+     *  @param[out]     sent_count_out 先頭から連続して全量を送れたデータグラムの数の格納先。
+     *                                 失敗時も格納します (0 以上 @p count 以下)。
+     *  @param[out]     detail_out     エラー詳細の格納先。NULL 可。
+     *  @return         1 個以上を送れた場合は @ref CPLAT_OK 、先頭のデータグラムで送信の空きがない場合は
+     *                  @ref CPLAT_ERR_WOULD_BLOCK 、@ref CPLAT_ERR_INVALID_ARGUMENT 、
+     *                  先頭のデータグラムの送信の OS の失敗に対応する結果コードのいずれかを返します。
+     *
+     *  各データグラムは、それぞれの送信先へ 1 つのデータグラムとして送ります。\n
+     *  @ref CPLAT_OK で @p sent_count_out が @p count 未満の場合、残りのデータグラムは送っていません。
+     *  残りを送れなかった理由は返しません。残りを送る場合は、残りの先頭から呼び直します。\n
+     *  @ref CPLAT_OK 以外の場合、何も送っていません (@p sent_count_out は 0)。
+     *  次の場合は何も送らず @ref CPLAT_ERR_INVALID_ARGUMENT を返します。
+     *  - @p watch 、@p datagrams 、@p sent_count_out が NULL の場合。
+     *  - @p count が範囲の外の場合。
+     *  - いずれかの要素の `buf` または `endpoint` が NULL、`len` が @ref CPLAT_SOCKET_MAX_TRANSFER を超える場合。
+     *
+     *  Table: cplat_socket_watch_sendto_multi のプラットフォーム別の実装
+     *
+     *  | OS      | 実装                                                         |
+     *  | ------- | ------------------------------------------------------------ |
+     *  | Linux   | `sendmmsg()` を 1 回呼びます。                               |
+     *  | Windows | 先頭から順に、1 個ずつの非ブロッキング送信を繰り返します。   |
+     *
+     *  Windows は、送信を 1 回の呼び出しにまとめる Registered I/O を使いません。
+     *  Registered I/O のソケット (`WSA_FLAG_REGISTERED_IO`) では、登録に使う `WSAEventSelect()` と、
+     *  通常の送受信の関数が使えないためです。\n
+     *  see: https://learn.microsoft.com/en-us/windows/win32/api/mswsock/nc-mswsock-lpfn_riosendex
+     *
+     *  @par            スレッド セーフ
+     *  @ref cplat_socket_watch_wait_writable と同じ送信側の規則です。
+     */
+    CPLAT_EXPORT int CPLAT_API cplat_socket_watch_sendto_multi(cplat_socket_watch *watch,
+                                                               const cplat_socket_datagram *datagrams, size_t count,
+                                                               size_t *sent_count_out, cplat_error *detail_out);
 
     /**
      *  @brief          登録した接続済みソケットへ指定バイト数をすべて送信します。

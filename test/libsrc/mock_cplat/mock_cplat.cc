@@ -498,6 +498,8 @@ Mock_cplat::Mock_cplat()
         .WillByDefault(Invoke(delegate_real_cplat_socket_watch_send));
     ON_CALL(*this, cplat_socket_watch_sendto(_, _, _, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_socket_watch_sendto));
+    ON_CALL(*this, cplat_socket_watch_sendto_multi(_, _, _, _, _))
+        .WillByDefault(Invoke(delegate_real_cplat_socket_watch_sendto_multi));
     ON_CALL(*this, cplat_socket_watch_send_all(_, _, _, _, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_socket_watch_send_all));
     ON_CALL(*this, cplat_socket_watch_recv_all(_, _, _, _, _, _, _))

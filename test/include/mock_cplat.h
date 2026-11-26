@@ -386,6 +386,7 @@ MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_wait_readable_multi)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_wait_writable)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_send)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_sendto)
+MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_sendto_multi)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_send_all)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_recv_all)
 MOCK_CPLAT_LINK_IMPL(cplat_socket_watch_connect)
@@ -1252,6 +1253,9 @@ extern int delegate_real_cplat_socket_watch_send(cplat_socket_watch *watch, cons
 extern int delegate_real_cplat_socket_watch_sendto(cplat_socket_watch *watch, const void *buf, size_t len,
                                                    const cplat_ipv4_endpoint *endpoint, size_t *sent_out,
                                                    cplat_error *detail_out);
+extern int delegate_real_cplat_socket_watch_sendto_multi(cplat_socket_watch *watch,
+                                                         const cplat_socket_datagram *datagrams, size_t count,
+                                                         size_t *sent_count_out, cplat_error *detail_out);
 extern int delegate_real_cplat_socket_watch_send_all(cplat_socket_watch *watch, const void *buf, size_t len,
                                                      cplat_socket_wait_cancel *cancel, int timeout_ms,
                                                      size_t *sent_out, cplat_error *detail_out);
@@ -2167,6 +2171,8 @@ class Mock_cplat
     MOCK_METHOD(int, cplat_socket_watch_send, (cplat_socket_watch *, const void *, size_t, size_t *, cplat_error *));
     MOCK_METHOD(int, cplat_socket_watch_sendto,
                 (cplat_socket_watch *, const void *, size_t, const cplat_ipv4_endpoint *, size_t *, cplat_error *));
+    MOCK_METHOD(int, cplat_socket_watch_sendto_multi,
+                (cplat_socket_watch *, const cplat_socket_datagram *, size_t, size_t *, cplat_error *));
     MOCK_METHOD(int, cplat_socket_watch_send_all,
                 (cplat_socket_watch *, const void *, size_t, cplat_socket_wait_cancel *, int, size_t *, cplat_error *));
     MOCK_METHOD(int, cplat_socket_watch_recv_all,

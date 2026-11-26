@@ -617,6 +617,9 @@
     EXPORT_ENTRY(cplat_socket_watch_sendto, \
                  int(CPLAT_API *)(cplat_socket_watch *watch, const void *buf, size_t len, \
                                   const cplat_ipv4_endpoint *endpoint, size_t *sent_out, cplat_error *detail_out)) \
+    EXPORT_ENTRY(cplat_socket_watch_sendto_multi, \
+                 int(CPLAT_API *)(cplat_socket_watch *watch, const cplat_socket_datagram *datagrams, size_t count, \
+                                  size_t *sent_count_out, cplat_error *detail_out)) \
     EXPORT_ENTRY(cplat_socket_watch_send_all, \
                  int(CPLAT_API *)(cplat_socket_watch *watch, const void *buf, size_t len, \
                                   cplat_socket_wait_cancel *cancel, int timeout_ms, size_t *sent_out, \
