@@ -444,6 +444,74 @@ TEST_F(argparserAllocFailureTest, default_reinit_discards_parser_when_descriptio
 }
 // [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
 
+// 既定のパーサーの初回の生成で確保に失敗した場合に、cplat_argparser_init() が CPLAT_ERR_OUT_OF_MEMORY を返すことの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
+TEST_F(argparserAllocFailureTest, init_returns_out_of_memory_when_default_creation_fails)
+{
+    // Arrange
+    // argparser.c の単体テストでは shutdown.c の登録を使わない (argparserTest と同じ)。
+    ON_CALL(mock_cplat_, cplat_shutdown_register(_, _))
+        .WillByDefault(
+            Return(CPLAT_OK));      // [状態] - cplat_shutdown_register() から CPLAT_OK を返すように既定動作を設定する。
+    test_argparser_reset_default(); // [状態] - 既定のパーサーを初期化前の状態にする。
+    char program[] = "argparserAllocFailureTest";
+    char *argv[] = {program, nullptr};
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_calloc(_, _))
+        .WillRepeatedly(Return(
+            nullptr)); // [Pre-Assert確認_異常系] - 既定のパーサーの生成に対する cplat_calloc() が呼び出されること。
+    // [Pre-Assert手順] - cplat_calloc() から常に nullptr を返す。
+
+    // Act
+    int actual_ret = cplat_argparser_init(
+        1, argv, "説明"); // [手順] - 確保が失敗する状態で、初回の cplat_argparser_init() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
+              actual_ret); // [確認_異常系] - cplat_argparser_init() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+
+    // Cleanup
+    testing::Mock::VerifyAndClearExpectations(&mock_cplat_);
+    test_argparser_reset_default();
+}
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
+
+// 既定のパーサーの再初期化で説明の複製に失敗した場合に、cplat_argparser_init() が CPLAT_ERR_OUT_OF_MEMORY を返すことの確認
+// [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
+TEST_F(argparserAllocFailureTest, init_returns_out_of_memory_when_reinit_duplication_fails)
+{
+    // Arrange
+    // argparser.c の単体テストでは shutdown.c の登録を使わない (argparserTest と同じ)。
+    ON_CALL(mock_cplat_, cplat_shutdown_register(_, _))
+        .WillByDefault(
+            Return(CPLAT_OK));      // [状態] - cplat_shutdown_register() から CPLAT_OK を返すように既定動作を設定する。
+    test_argparser_reset_default(); // [状態] - 既定のパーサーを初期化前の状態にする。
+    ASSERT_EQ(CPLAT_OK, cplat_argparser_init(0, nullptr, nullptr)); // [状態確認] - 既定のパーサーを初期化できたこと。
+    char program[] = "argparserAllocFailureTest";
+    char *argv[] = {program, nullptr};
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_malloc(_))
+        .WillOnce(Return(nullptr))
+        .WillRepeatedly(
+            DoDefault()); // [Pre-Assert確認_異常系] - 説明の複製に対する cplat_malloc() が 1 回以上呼び出されること。
+    // [Pre-Assert手順] - cplat_malloc() から 1 回目は nullptr を返し、以降は製品 (prod) の処理へ委譲する。
+
+    // Act
+    int actual_ret = cplat_argparser_init(
+        1, argv, "説明"); // [手順] - 説明の複製が失敗する状態で、2 回目の cplat_argparser_init() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(CPLAT_ERR_OUT_OF_MEMORY,
+              actual_ret); // [確認_異常系] - cplat_argparser_init() の戻り値が CPLAT_ERR_OUT_OF_MEMORY であること。
+
+    // Cleanup
+    testing::Mock::VerifyAndClearExpectations(&mock_cplat_);
+    test_argparser_reset_default();
+}
+// [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
+
 // 独自の検証エラーの破棄・再初期化・既定パーサー再初期化・置き換えで対象名と文が 1 回ずつ解放されることの確認
 // [サブ手順参照 名前=argparserAllocFailureTest.SetUp]
 // [サブ手順参照 名前=argparserAllocFailureTest.TearDown]
@@ -533,7 +601,7 @@ TEST_F(argparserAllocFailureTest, validation_error_frees_strings_once_across_all
     // 3) 既定パーサーの再初期化で解放されること
     {
         test_argparser_reset_default();
-        cplat_argparser_init(0, nullptr, nullptr);
+        ASSERT_EQ(CPLAT_OK, cplat_argparser_init(0, nullptr, nullptr));
         custom_ptrs.clear();
         freed_ptrs.clear();
         EXPECT_CALL(mock_cplat_, cplat_malloc(_))
@@ -556,7 +624,7 @@ TEST_F(argparserAllocFailureTest, validation_error_frees_strings_once_across_all
                 }));
         ASSERT_EQ(CPLAT_OK, cplat_argparser_set_validation_error(CPLAT_ERR_MISSING_REQUIRED, "--def", "def msg"));
         ASSERT_EQ(2U, custom_ptrs.size());
-        cplat_argparser_init(0, nullptr, nullptr);
+        ASSERT_EQ(CPLAT_OK, cplat_argparser_init(0, nullptr, nullptr));
         testing::Mock::VerifyAndClearExpectations(&mock_cplat_);
 
         EXPECT_EQ(1, std::count(freed_ptrs.begin(), freed_ptrs.end(), custom_ptrs[0]));

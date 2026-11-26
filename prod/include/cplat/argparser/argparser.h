@@ -40,7 +40,11 @@
     int main(int argc, char *argv[])
     {
         cplat_console_init();
-        cplat_argparser_init(argc, argv, "sample program");
+        if (cplat_argparser_init(argc, argv, "sample program") != CPLAT_OK)
+        {
+            fprintf(stderr, "引数の解析の準備に失敗しました。\n");
+            return EXIT_FAILURE;
+        }
 
         int need_help = 0;
         int count = 1; // 既定値は解析前に設定する
@@ -175,6 +179,9 @@ extern "C"
      *  @param[in]      argv         解析するコマンド ライン引数の配列です。NULL を渡してはなりません。\n
      *                               argv[0] はプログラム名として扱い、usage のプログラム名を求めます。
      *  @param[in]      description  プログラムの説明文です。NULL も指定できます。
+     *  @retval         CPLAT_OK                 既定のパーサーを初期化しました。
+     *  @retval         CPLAT_ERR_OUT_OF_MEMORY  既定のパーサーの確保、名前や説明の複製、
+     *                                           または内部ロックの生成に失敗しました。
      *
      *  `cplat_console_init()` にならい、通常のコマンドで使う 1 インスタンスのみの用途では
      *  ハンドルを一切意識せずに済むようにするための入口です。\n
@@ -196,8 +203,8 @@ extern "C"
      *  この再初期化により登録の重複を避けられます。\n
      *  解析する引数を差し替える場合も、本関数を呼び出し直してオプションを登録し直してください。
      *
-     *  既定のパーサーの確保、または @p description などの複製に失敗した場合は、失敗を通知しません。\n
-     *  この場合、既定のパーサーは初期化されていない状態になり、@p argc と @p argv は適用されません。\n
+     *  @ref CPLAT_ERR_OUT_OF_MEMORY を返した場合、既定のパーサーは初期化されていない状態になり、
+     *  @p argc と @p argv は適用されません。\n
      *  この状態でプロセス共有のパーサーを操作すると、引数なしのパーサーが新しく作られます。
      *
      *  @warning        パーサーを共有する複数の登録元がある場合、
@@ -208,7 +215,7 @@ extern "C"
      *  本関数はスレッド セーフではありません。\n
      *  プロセス共有のパーサーに対する操作は、呼び出し側で直列化してください。
      */
-    CPLAT_EXPORT void CPLAT_API cplat_argparser_init(int argc, char *const *argv, const char *description);
+    CPLAT_EXPORT int CPLAT_API cplat_argparser_init(int argc, char *const *argv, const char *description);
 
     /**
      *  @brief          引数パーサー ハンドルを解放します。

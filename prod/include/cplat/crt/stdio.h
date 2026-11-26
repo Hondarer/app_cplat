@@ -509,14 +509,23 @@ extern "C"
      *  @p modes に "w"/"w+" を指定しても fdopen() の仕様上ファイルの切り詰めは発生しません。
      *  mkostemp() が新規作成したファイルは常に空のため、実用上の影響はありません。\n
      *  Windows 環境では `GetTempPath2W()` (利用できる場合) または `GetTempPathW()` で一時ディレクトリを取得し、
-     *  `GetTempFileNameW()` で一意なファイル名を生成して `_wfsopen()` により `_SH_DENYNO` 指定で開きます。\n
+     *  "{prefix}" と暗号論的乱数の 16 進表記 (16 文字) と ".tmp" を連結した名前で、`CreateFileW()` の
+     *  `CREATE_NEW` 指定により空のファイルを atomic に作成します (名前が衝突した場合は別の名前で最大 16 回まで試行します)。
+     *  作成したファイルを `_wfsopen()` により `_SH_DENYNO` 指定で開きます。\n
      *  `GetTempPath2W()` がある Windows で SYSTEM アカウントのプロセスとして実行する場合、一時ディレクトリは
      *  環境変数 `SystemTemp` の値、未設定時は既定のシステム用一時ディレクトリ (`C:\\Windows\\SystemTemp`) に
      *  なります。SYSTEM 以外のアカウント (管理者へ昇格した通常の利用者のプロセスを含む) は `GetTempPathW()` と
-     *  同じ規則に従います。`GetTempFileNameW()` の制約上、ディレクトリ部が `MAX_PATH - 14` 文字を超える場合は
-     *  失敗します。@p path_out には wchar から UTF-8 へ変換した結果が格納されます。\n
+     *  同じ規則に従います。\n
+     *  一時ファイルの完全なパスが `MAX_PATH` 文字以上になる場合は、拡張パスの接頭辞を付けて作成します
+     *  (ドライブのパスは `\\?\C:\...`、UNC のパスは `\\?\UNC\server\share\...`)。
+     *  see: https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation \n
+     *  @p path_out には wchar から UTF-8 へ変換し、区切り文字を `'/'` へ正規化した結果が格納されます。
+     *  拡張パスの接頭辞を付けた場合は `//?/C:/...` の形になり、そのまま Win32 のファイル API へ渡すことはできません。
+     *  @p path_size が変換結果に足りない場合は、作成したファイルを削除して NULL を返します。\n
      *  呼び出し元は不要になったら fclose() でクローズし、
      *  必要なら cplat_remove() でファイルを削除する責任があります。
+     *  ただし、cplat_remove() は Windows で `MAX_PATH` 文字以上のパスを扱えないため、拡張パスの接頭辞を付けた
+     *  一時ファイルは、区切り文字を `'\\'` へ戻したワイド文字列のパスで `DeleteFileW()` などにより削除してください。
      *
      *  @par            共有モード
      *  Linux では `fdopen` 経由のため強制ロックを持たず常に共有可です。\n

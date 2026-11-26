@@ -2910,16 +2910,20 @@ TEST_F(argparserTest, default_get_program_name_resolution)
 {
     // Arrange
     ARGV(cstr("/usr/local/bin/mytool"));
-    cplat_argparser_init(0, nullptr, nullptr); // [状態] - argv を渡さずに既定パーサーを初期化する。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_argparser_init(0, nullptr, nullptr)); // [状態] - argv を渡さずに既定パーサーを初期化する。
+    // [状態確認] - cplat_argparser_init() の戻り値が CPLAT_OK であること。
 
     // Pre-Assert
 
     // Act
     const char *actual_no_argv =
         cplat_argparser_get_program_name(); // [手順] - argv を持たない既定パーサーの状態で cplat_argparser_get_program_name() を呼び出す。
-    cplat_argparser_init(
-        argc, argv,
-        nullptr); // [手順] - argv[0] を "/usr/local/bin/mytool" として cplat_argparser_init() を呼び出す。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_argparser_init(
+                  argc, argv,
+                  nullptr)); // [手順] - argv[0] を "/usr/local/bin/mytool" として cplat_argparser_init() を呼び出す。
+    // [確認_正常系] - cplat_argparser_init() の戻り値が CPLAT_OK であること。
     const char *actual_resolved =
         cplat_argparser_get_program_name(); // [手順] - 既定パーサーの状態で cplat_argparser_get_program_name() を呼び出す。
 
@@ -3883,8 +3887,11 @@ TEST_F(argparserTest, public_api_wrappers_are_callable)
 
     // Act
     char *parse_argv[] = {cstr("prog")};
-    cplat_argparser_init(1, parse_argv,
-                         "public API"); // [手順] - 公開 API 用の説明文を指定して cplat_argparser_init() を呼び出す。
+    ASSERT_EQ(CPLAT_OK,
+              cplat_argparser_init(
+                  1, parse_argv,
+                  "public API")); // [手順] - 公開 API 用の説明文を指定して cplat_argparser_init() を呼び出す。
+    // [確認_正常系] - cplat_argparser_init() の戻り値が CPLAT_OK であること。
     int flag_result = cplat_argparser_register_flag(
         "-f", "--flag", nullptr,
         &flag); // [手順] - フラグ "-f" / "--flag" を指定して cplat_argparser_register_flag() を呼び出す。
@@ -4453,7 +4460,8 @@ TEST_F(argparserTest, default_init_resets_previous_registrations)
     char second_usage[512] = {};
     char *argv[] = {cstr("prog"), cstr("--first")};
 
-    cplat_argparser_init(2, argv, "first description"); // [状態] - 既定パーサーを初期化する。
+    ASSERT_EQ(CPLAT_OK, cplat_argparser_init(2, argv, "first description")); // [状態] - 既定パーサーを初期化する。
+    // [状態確認] - cplat_argparser_init() の戻り値が CPLAT_OK であること。
     ASSERT_EQ(CPLAT_OK, cplat_argparser_register_flag("-f", "--first", nullptr,
                                                       &first_flag)); // [状態] - フラグ "--first" を登録する。
     // [状態確認] - cplat_argparser_register_flag() の戻り値が CPLAT_OK であること。
@@ -4462,7 +4470,8 @@ TEST_F(argparserTest, default_init_resets_previous_registrations)
     // Pre-Assert
 
     // Act
-    cplat_argparser_init(2, argv, "second description"); // [手順] - 同じプロセスで cplat_argparser_init() を呼び出す。
+    int init_result = cplat_argparser_init(
+        2, argv, "second description"); // [手順] - 同じプロセスで cplat_argparser_init() を呼び出す。
     size_t register_error_count_after_reset =
         cplat_argparser_get_register_error_count(); // [手順] - 再初期化直後の状態で cplat_argparser_get_register_error_count() を呼び出す。
     int second_register = cplat_argparser_register_flag(
@@ -4475,6 +4484,8 @@ TEST_F(argparserTest, default_init_resets_previous_registrations)
         cplat_argparser_parse(); // [手順] - 再登録したフラグを解析対象とした状態で cplat_argparser_parse() を呼び出す。
 
     // Assert
+    EXPECT_EQ(CPLAT_OK,
+              init_result); // [確認_正常系] - 再初期化の cplat_argparser_init() の戻り値が CPLAT_OK であること。
     EXPECT_EQ(
         0u,
         register_error_count_after_reset); // [確認_正常系] - 再初期化直後の cplat_argparser_get_register_error_count() の戻り値が 0u であること。
@@ -4588,7 +4599,7 @@ TEST_F(argparserTest, set_validation_error_replaces_parse_error_and_supports_def
 
     // Act 2: 既定パーサー版が既定ハンドルへ記録する
     char *default_argv[] = {cstr("tool")};
-    cplat_argparser_init(1, default_argv, nullptr);
+    ASSERT_EQ(CPLAT_OK, cplat_argparser_init(1, default_argv, nullptr));
     EXPECT_EQ(CPLAT_OK, cplat_argparser_set_validation_error(CPLAT_ERR_MISSING_REQUIRED, "--input", nullptr));
     EXPECT_EQ(CPLAT_ERR_MISSING_REQUIRED, cplat_argparser_get_error());
     EXPECT_STREQ("--input", cplat_argparser_get_error_target());

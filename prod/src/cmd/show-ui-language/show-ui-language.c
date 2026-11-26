@@ -34,7 +34,13 @@ int main(int argc, char **argv)
     /* 後始末はシャットダウン コールバックが行うため、cplat_console_dispose は呼び出さない。 */
     cplat_console_init();
 
-    cplat_argparser_init(argc, argv, "Print the display language of the current environment as a language tag.");
+    if (cplat_argparser_init(argc, argv, "Print the display language of the current environment as a language tag.") !=
+        CPLAT_OK)
+    {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "引数の解析の準備に失敗しました。\n");
+        return EXIT_FAILURE;
+    }
     /*
      * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() で検査するため、
      * 戻り値は明示的に破棄する。

@@ -27,15 +27,21 @@
     #include <unistd.h>
 #elif defined(PLATFORM_WINDOWS)
     #include "crt.h"
-    #include <cplat/crt/temp_dir_internal.h>
+    #include <cplat/crt/temp_file_internal.h>
     #include <share.h>
     #include <stdlib.h>
     #include <wchar.h>
 #endif /* PLATFORM_ */
 
-/* prefix の有効文字数上限 (Windows の GetTempFileNameW() の制約に準拠) */
+/*
+ * prefix の有効文字数上限。一時ファイルの名前は、Linux では prefix と mkostemp() の 6 文字、
+ * Windows では prefix と乱数の 16 進表記の 16 文字と ".tmp" であり、両方で prefix の先頭 3 文字までを採用する。
+ */
 #define CPLAT_TEMP_PREFIX_MAX 3u
-static_assert(CPLAT_TEMP_PREFIX_MAX <= 3U, "cplat: GetTempFileNameW uses 3 chars");
+#if defined(PLATFORM_WINDOWS)
+static_assert(CPLAT_TEMP_PREFIX_MAX == CPLAT_INTERNAL_TEMP_FILE_PREFIX_MAX,
+              "cplat: CPLAT_TEMP_PREFIX_MAX must match the internal temp file prefix limit");
+#endif /* PLATFORM_WINDOWS */
 
 /* prefix 省略時に用いる既定の接頭辞 */
 static const char s_default_temp_prefix[] = "cu_";
@@ -131,27 +137,13 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
     }
 #elif defined(PLATFORM_WINDOWS)
     {
-        wchar_t *wdir = NULL;
-        wchar_t wfile[MAX_PATH];
+        wchar_t *wfile = NULL;
         wchar_t wprefix[CPLAT_TEMP_PREFIX_MAX + 1u];
         wchar_t wmodes[CRT_WMODES_CAPACITY];
         FILE *fp = NULL;
         errno_t err;
         size_t converted;
-        UINT uret;
         int rc;
-
-        /*
-         * GetTempPath2W / GetTempPathW の実行時選択と十分な領域の確保を内部の共通関数へ集約し、
-         * 以降の GetTempFileNameW() へワイドのまま渡すため、*U ラッパーを経由しない。
-         * GetTempFileNameW はディレクトリ部が MAX_PATH - 14 を超えると失敗し、
-         * 出力先は終端 NUL を含めて MAX_PATH 文字を要する。
-         * see: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettempfilenamew
-         */
-        if (cplat_internal_get_temp_dir_w(&wdir, NULL, detail_out) != CPLAT_OK)
-        {
-            return NULL;
-        }
 
         {
             const char *pfx;
@@ -170,27 +162,30 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
             /* STRUNCATE は 4 文字以上の prefix が CPLAT_TEMP_PREFIX_MAX に切り詰められた場合であり、正常として扱う。 */
             if (err != 0 && err != STRUNCATE)
             {
-                cplat_free(wdir);
                 cplat_internal_error_record_errno(detail_out, EINVAL);
                 return NULL;
             }
         }
 
-        uret = GetTempFileNameW(wdir, wprefix, 0u, wfile);
-        if (uret == 0u)
+        /*
+         * 一時ディレクトリの取得 (GetTempPath2W / GetTempPathW の実行時選択) と、一意な名前の空ファイルの作成を
+         * 内部の共通関数へ集約する。一時ディレクトリが長い場合は、拡張パスの接頭辞 (\\?\) 付きのパスが返る。
+         */
+        rc = cplat_internal_create_temp_file_w(wprefix, &wfile, detail_out);
+        if (rc != CPLAT_OK)
         {
-            const DWORD error_code = GetLastError();
-
-            cplat_free(wdir);
-            cplat_internal_error_record_windows_error(detail_out, error_code);
             return NULL;
         }
-        cplat_free(wdir);
 
+        /*
+         * 作成した一時ファイルの削除は、失敗を返す経路の後始末であり、削除できなくても返す結果が変わらないため、
+         * この分岐の DeleteFileW の戻り値は明示的に破棄する。
+         */
         rc = cplat_wpath_to_utf8(path_out, path_size, NULL, wfile);
         if (rc != CPLAT_OK)
         {
-            (void)DeleteFileW(wfile); /* 失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
+            (void)DeleteFileW(wfile);
+            cplat_free(wfile);
             cplat_internal_error_record_errno(detail_out, cplat_internal_errno_from_conv_result(rc, 1));
             return NULL;
         }
@@ -198,7 +193,8 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
         err = mbstowcs_s(&converted, wmodes, sizeof(wmodes) / sizeof(wmodes[0]), modes, _TRUNCATE);
         if (err != 0)
         {
-            (void)DeleteFileW(wfile); /* 失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
+            (void)DeleteFileW(wfile);
+            cplat_free(wfile);
             cplat_internal_error_record_errno(detail_out, EINVAL);
             return NULL;
         }
@@ -212,11 +208,13 @@ FILE *cplat_fopen_temp(const char *prefix, const char *modes, char *path_out, co
         if (fp == NULL)
         {
             int saved = errno;
-            (void)DeleteFileW(wfile); /* _wfsopen の失敗を返す経路の後始末のため、戻り値は明示的に破棄する */
+            (void)DeleteFileW(wfile);
+            cplat_free(wfile);
             cplat_internal_error_record_errno(detail_out, saved);
             return NULL;
         }
 
+        cplat_free(wfile);
         cplat_internal_error_record_success(detail_out);
         return fp;
     }

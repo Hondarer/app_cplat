@@ -17,6 +17,7 @@
     #include <cplat/crt/wchar_conv.h>
     #include <cplat/crt/string.h>
     #include <string.h> /* memset */
+    #include <cplat/sync/atomic.h>
     #include <cplat/sync/sync.h>
     #include <evntcons.h>
     #include <evntrace.h>
@@ -33,6 +34,12 @@
 
     /** GUID 書式の 16 進項目数です。 */
     #define GUID_FIELD_COUNT 11
+
+    /**
+     *  停止の要求とトレースを閉じる処理の両方が失敗した場合に、処理スレッドの終了を待つ上限 [ms] です。
+     *  リアルタイム セッションのバッファーの書き出しの周期 (FlushTimer の 1 [s]) より十分に長くします。
+     */
+    #define STOP_ABANDON_TIMEOUT_MS 5000
 
 /**
  *  @brief  ETW セッション構造体 (内部定義) です。
@@ -66,9 +73,20 @@ struct cplat_etw_session
     /** トレース ハンドルを CloseTrace 済みなら 1、未クローズなら 0。 */
     int trace_closed;
 
+    /** 利用側のコールバックの呼び出しを止めたら 1、呼び出せる間は 0。 */
+    cplat_atomic_i32 callback_closed;
+
+    /** 利用側のコールバックを実行中の数。 */
+    cplat_atomic_i32 callback_active;
+
     /** 64 bit アーキテクチャーで構造体末尾の暗黙パディングを防ぐ。 */
     int pad;
 };
+
+static void deliver_event(cplat_etw_session *session, const cplat_etw_event *event);
+
+/** 停止の要求とトレースを閉じる処理の両方が失敗した場合に、処理スレッドの終了を待つ上限 [ms]。単体テストは短くする。 */
+static int s_stop_abandon_timeout_ms = STOP_ABANDON_TIMEOUT_MS;
 
 /**
  *  @brief  構築途中のセッションが確保した資源を解放します。
@@ -454,8 +472,28 @@ static VOID WINAPI event_record_callback(PEVENT_RECORD pEvent)
     event.message = message;
     event.timestamp_100ns = pEvent->EventHeader.TimeStamp.QuadPart;
 
-    session->callback(&event, session->context);
+    deliver_event(session, &event);
     cplat_free(event_name_utf8);
+}
+
+/**
+ *  @brief  停止が処理スレッドを切り離していなければ、利用側のコールバックを呼び出します。
+ *
+ *  実行中の数を増やしてから停止の印を読み、停止側は印を立ててから実行中の数を読む。\n
+ *  どちらも逐次一貫の順序で行うため、停止側が実行中の数を 0 と読んだ後に、利用側のコールバックが始まることはない。
+ */
+static void deliver_event(cplat_etw_session *session, const cplat_etw_event *event)
+{
+    /* 戻り値は加算前の値であり、失敗を表さないため、戻り値は明示的に破棄する。 */
+    (void)cplat_atomic_fetch_add_i32(&session->callback_active, 1, CPLAT_MEMORY_ORDER_SEQ_CST);
+
+    if (cplat_atomic_load_i32(&session->callback_closed, CPLAT_MEMORY_ORDER_SEQ_CST) == 0)
+    {
+        session->callback(event, session->context);
+    }
+
+    /* 戻り値は減算前の値であり、失敗を表さないため、戻り値は明示的に破棄する。 */
+    (void)cplat_atomic_fetch_sub_i32(&session->callback_active, 1, CPLAT_MEMORY_ORDER_SEQ_CST);
 }
 
 /**
@@ -715,6 +753,7 @@ static int close_trace_handle(cplat_etw_session *session)
 void cplat_etw_session_stop(cplat_etw_session *session)
 {
     ULONG stop_status = ERROR_SUCCESS;
+    int close_result = CPLAT_OK;
 
     if (session == NULL)
     {
@@ -738,13 +777,35 @@ void cplat_etw_session_stop(cplat_etw_session *session)
      */
     if (stop_status != ERROR_SUCCESS && session->trace_closed == 0)
     {
-        /* 停止の関数は失敗を通知せず、閉じる処理の失敗を受けても取れる行動がないため、戻り値は明示的に破棄する。 */
-        (void)close_trace_handle(session);
+        close_result = close_trace_handle(session);
     }
 
     if (session->thread_handle != NULL)
     {
-        cplat_thread_join(session->thread_handle);
+        if (stop_status != ERROR_SUCCESS && close_result != CPLAT_OK)
+        {
+            /*
+             * 停止の要求とトレースを閉じる処理の両方が失敗すると、ProcessTrace() が戻る契機がない。
+             * 期限までに終了しなければ、利用側のコールバックを止め、実行中のコールバックの終了を 1 [ms] ごとの
+             * 確認で待ってからスレッドを切り離す。処理スレッドがあとで戻っても参照先が有効なままになるよう、
+             * セッションの構造体、名前、プロパティは解放しない。
+             */
+            if (cplat_thread_timed_join(session->thread_handle, s_stop_abandon_timeout_ms) != CPLAT_OK)
+            {
+                cplat_atomic_store_i32(&session->callback_closed, 1, CPLAT_MEMORY_ORDER_SEQ_CST);
+                while (cplat_atomic_load_i32(&session->callback_active, CPLAT_MEMORY_ORDER_SEQ_CST) != 0)
+                {
+                    cplat_sleep_ms(1);
+                }
+
+                cplat_thread_detach(session->thread_handle);
+                return;
+            }
+        }
+        else
+        {
+            cplat_thread_join(session->thread_handle);
+        }
     }
 
     /*

@@ -334,8 +334,8 @@ MOCK_WEAK_IMPL(const char *, cplat_argparser_handle_get_register_error_target, c
  * 省略可能な単一インスタンス API (parser 引数なし) のモック
  * ================================================================ */
 
-DEFINE_ARGPARSER_VOID(cplat_argparser_init, (argc, argv, description), int argc, char *const *argv,
-                      const char *description)
+DEFINE_ARGPARSER_RESULT(cplat_argparser_init, (argc, argv, description), int argc, char *const *argv,
+                        const char *description)
 
 DEFINE_ARGPARSER_RESULT(cplat_argparser_register_flag, (short_name, long_name, description, storage),
                         const char *short_name, const char *long_name, const char *description, int *storage)

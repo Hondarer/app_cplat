@@ -1046,7 +1046,12 @@ int main(int argc, char *argv[])
 
     cplat_console_init();
 
-    cplat_argparser_init(argc, argv, "tracer API を対話的に確認します。");
+    if (cplat_argparser_init(argc, argv, "tracer API を対話的に確認します。") != CPLAT_OK)
+    {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "引数の解析の準備に失敗しました。\n");
+        return EXIT_FAILURE;
+    }
     /*
      * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() で検査するため、
      * 戻り値は明示的に破棄する。

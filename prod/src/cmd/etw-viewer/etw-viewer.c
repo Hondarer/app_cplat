@@ -299,7 +299,12 @@ int main(int argc, char *argv[])
 
     etw_viewer_options_init(&options);
 
-    cplat_argparser_init(argc, argv, "ETW の cplat.tracer を表示します。");
+    if (cplat_argparser_init(argc, argv, "ETW の cplat.tracer を表示します。") != CPLAT_OK)
+    {
+        /* 診断の出力先がほかにないため、戻り値は明示的に破棄する。 */
+        (void)fprintf(stderr, "引数の解析の準備に失敗しました。\n");
+        return EXIT_FAILURE;
+    }
     /*
      * 登録の失敗はパーサーに記録され、直後の cplat_argparser_get_register_error_count() でまとめて検査するため、
      * 登録の関数の戻り値は明示的に破棄する。
