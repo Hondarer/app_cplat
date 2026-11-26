@@ -6,6 +6,9 @@
 #include <cerrno>
 #include <cstdint>
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <string>
 #include <cstring>
 
@@ -45,6 +48,25 @@ static int return_full_path(char *path_out, size_t path_size, cplat_error *detai
 
     std::memcpy(path_out, text, len + 1u);
     return 0;
+}
+
+// [サブ手順 名前=compress_cliTest.write_real_file]
+// 実ファイルを作成し、平文データ 6 byte を書き込む。
+static void write_real_file(const char *path)
+{
+    std::ofstream stream(path, std::ios::binary | std::ios::trunc);
+    stream.write(reinterpret_cast<const char *>(kPlainInput), sizeof(kPlainInput));
+    stream.close();
+    ASSERT_FALSE(stream.fail());
+    // [状態確認] - 平文データ 6 byte の実ファイルを作成できること。
+}
+// [サブ手順終了]
+
+// 実ファイルの内容を読み込んで返す。ファイルを開けない場合は空を返す。
+static std::string read_real_file(const char *path)
+{
+    std::ifstream stream(path, std::ios::binary);
+    return std::string(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
 }
 
 } // namespace
@@ -95,8 +117,8 @@ TEST_F(compress_cliTest, main_prints_usage_on_help)
               rc); // [確認_正常系] - 必須位置引数がない場合も __real_main() の戻り値が EXIT_SUCCESS であること。
 }
 
-// 正規化後に同一となる入出力パスが拒否されることの確認
-TEST_F(compress_cliTest, main_rejects_same_normalized_path)
+// 入力と出力が同じ実体を指すと判定された場合に、パスの正規化とファイルのオープンへ進まず失敗終了することの確認
+TEST_F(compress_cliTest, main_rejects_same_file_detected_by_identity)
 {
     // Arrange
     int argc = 4;
@@ -108,21 +130,21 @@ TEST_F(compress_cliTest, main_rejects_same_normalized_path)
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
                              // [Pre-Assert手順] - cplat_console_init() から戻る。
-    EXPECT_CALL(mock_cplat_, cplat_path_equal(StrEq("./data.bin"), StrEq("subdir/../data.bin"), _, _))
+    EXPECT_CALL(mock_cplat_, cplat_path_is_same_file(StrEq("./data.bin"), StrEq("subdir/../data.bin"), _, _))
         .WillOnce(DoAll(
             SetArgPointee<2>(1),
             Return(
-                CPLAT_OK))); // [Pre-Assert確認_異常系] - cplat_path_equal() が "./data.bin" と等しい文字列、"subdir/../data.bin" と等しい文字列を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_path_equal() から、equal_out に 1 (同一) を設定して CPLAT_OK を返す。
+                CPLAT_OK))); // [Pre-Assert確認_異常系] - cplat_path_is_same_file() が "./data.bin" と等しい文字列、"subdir/../data.bin" と等しい文字列を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_path_is_same_file() から、same_out に 1 (同じ実体) を設定して CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat_, cplat_path_get_full(_, _, _, _))
         .Times(
-            0); // [Pre-Assert確認_異常系] - cplat_path_get_full() が呼び出されないこと。(同一パスを検出した後はパスの正規化へ進まないことの確認)
+            0); // [Pre-Assert確認_異常系] - cplat_path_get_full() が呼び出されないこと。(同じファイルを検出した後はパスの正規化へ進まないことの確認)
     EXPECT_CALL(mock_cplat_, cplat_fopen(_, _, _))
         .Times(
-            0); // [Pre-Assert確認_異常系] - cplat_fopen() が呼び出されないこと。(同一パスを検出した後はファイルを開かないことの確認)
-    EXPECT_CALL(mock_stdio_, fprintf(_, _, _, _, HasSubstr("同じパス")))
+            0); // [Pre-Assert確認_異常系] - cplat_fopen() が呼び出されないこと。(同じファイルを検出した後はファイルを開かないことの確認)
+    EXPECT_CALL(mock_stdio_, fprintf(_, _, _, _, HasSubstr("同じファイル")))
         .WillOnce(Return(
-            0)); // [Pre-Assert確認_異常系] - fprintf() が "同じパス" を含む文字列を指定して 1 回呼び出されること。
+            0)); // [Pre-Assert確認_異常系] - fprintf() が "同じファイル" を含む文字列を指定して 1 回呼び出されること。
                  // [Pre-Assert手順] - fprintf() から 0 を返す。
 
     // Act
@@ -146,12 +168,12 @@ TEST_F(compress_cliTest, main_rejects_compress_input_over_size_limit_before_read
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
                              // [Pre-Assert手順] - cplat_console_init() から戻る。
-    EXPECT_CALL(mock_cplat_, cplat_path_equal(StrEq("input.bin"), StrEq("output.bin"), _, _))
+    EXPECT_CALL(mock_cplat_, cplat_path_is_same_file(StrEq("input.bin"), StrEq("output.bin"), _, _))
         .WillOnce(DoAll(
             SetArgPointee<2>(0),
             Return(
-                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_equal() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_path_equal() から、equal_out に 0 (不一致) を設定して CPLAT_OK を返す。
+                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_is_same_file() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_path_is_same_file() から、same_out に 0 (異なる実体) を設定して CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat_, cplat_path_get_full(_, _, _, StrEq("input.bin")))
         .WillOnce(
             [](char *path_out, size_t path_size, cplat_error *detail_out, const char *)
@@ -218,12 +240,12 @@ TEST_F(compress_cliTest, main_compresses_input_and_writes_output)
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
                              // [Pre-Assert手順] - cplat_console_init() から戻る。
-    EXPECT_CALL(mock_cplat_, cplat_path_equal(StrEq("input.bin"), StrEq("output.bin"), _, _))
+    EXPECT_CALL(mock_cplat_, cplat_path_is_same_file(StrEq("input.bin"), StrEq("output.bin"), _, _))
         .WillOnce(DoAll(
             SetArgPointee<2>(0),
             Return(
-                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_equal() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_path_equal() から、equal_out に 0 (不一致) を設定して CPLAT_OK を返す。
+                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_is_same_file() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_path_is_same_file() から、same_out に 0 (異なる実体) を設定して CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat_, cplat_path_get_full(_, _, _, StrEq("input.bin")))
         .WillOnce(
             [](char *path_out, size_t path_size, cplat_error *detail_out, const char *)
@@ -326,12 +348,12 @@ TEST_F(compress_cliTest, main_rejects_decompress_input_when_original_size_is_zer
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
                              // [Pre-Assert手順] - cplat_console_init() から戻る。
-    EXPECT_CALL(mock_cplat_, cplat_path_equal(StrEq("input.bin"), StrEq("output.bin"), _, _))
+    EXPECT_CALL(mock_cplat_, cplat_path_is_same_file(StrEq("input.bin"), StrEq("output.bin"), _, _))
         .WillOnce(DoAll(
             SetArgPointee<2>(0),
             Return(
-                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_equal() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_path_equal() から、equal_out に 0 (不一致) を設定して CPLAT_OK を返す。
+                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_is_same_file() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_path_is_same_file() から、same_out に 0 (異なる実体) を設定して CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat_, cplat_path_get_full(_, _, _, StrEq("input.bin")))
         .WillOnce(
             [](char *path_out, size_t path_size, cplat_error *detail_out, const char *)
@@ -408,12 +430,12 @@ TEST_F(compress_cliTest, main_rejects_decompress_input_when_original_size_exceed
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
                              // [Pre-Assert手順] - cplat_console_init() から戻る。
-    EXPECT_CALL(mock_cplat_, cplat_path_equal(StrEq("input.bin"), StrEq("output.bin"), _, _))
+    EXPECT_CALL(mock_cplat_, cplat_path_is_same_file(StrEq("input.bin"), StrEq("output.bin"), _, _))
         .WillOnce(DoAll(
             SetArgPointee<2>(0),
             Return(
-                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_equal() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_path_equal() から、equal_out に 0 (不一致) を設定して CPLAT_OK を返す。
+                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_is_same_file() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_path_is_same_file() から、same_out に 0 (異なる実体) を設定して CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat_, cplat_path_get_full(_, _, _, StrEq("input.bin")))
         .WillOnce(
             [](char *path_out, size_t path_size, cplat_error *detail_out, const char *)
@@ -493,12 +515,12 @@ TEST_F(compress_cliTest, main_rejects_decompress_when_max_original_size_allocati
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
                              // [Pre-Assert手順] - cplat_console_init() から戻る。
-    EXPECT_CALL(mock_cplat_, cplat_path_equal(StrEq("input.bin"), StrEq("output.bin"), _, _))
+    EXPECT_CALL(mock_cplat_, cplat_path_is_same_file(StrEq("input.bin"), StrEq("output.bin"), _, _))
         .WillOnce(DoAll(
             SetArgPointee<2>(0),
             Return(
-                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_equal() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_path_equal() から、equal_out に 0 (不一致) を設定して CPLAT_OK を返す。
+                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_is_same_file() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_path_is_same_file() から、same_out に 0 (異なる実体) を設定して CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat_, cplat_path_get_full(_, _, _, StrEq("input.bin")))
         .WillOnce(
             [](char *path_out, size_t path_size, cplat_error *detail_out, const char *)
@@ -586,12 +608,12 @@ TEST_F(compress_cliTest, main_rejects_decompress_input_when_raw_file_exceeds_siz
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
                              // [Pre-Assert手順] - cplat_console_init() から戻る。
-    EXPECT_CALL(mock_cplat_, cplat_path_equal(StrEq("input.bin"), StrEq("output.bin"), _, _))
+    EXPECT_CALL(mock_cplat_, cplat_path_is_same_file(StrEq("input.bin"), StrEq("output.bin"), _, _))
         .WillOnce(DoAll(
             SetArgPointee<2>(0),
             Return(
-                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_equal() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_path_equal() から、equal_out に 0 (不一致) を設定して CPLAT_OK を返す。
+                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_is_same_file() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_path_is_same_file() から、same_out に 0 (異なる実体) を設定して CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat_, cplat_path_get_full(_, _, _, StrEq("input.bin")))
         .WillOnce(
             [](char *path_out, size_t path_size, cplat_error *detail_out, const char *)
@@ -662,12 +684,12 @@ TEST_F(compress_cliTest, main_decompresses_one_byte_input)
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
                              // [Pre-Assert手順] - cplat_console_init() から戻る。
-    EXPECT_CALL(mock_cplat_, cplat_path_equal(StrEq("input.bin"), StrEq("output.bin"), _, _))
+    EXPECT_CALL(mock_cplat_, cplat_path_is_same_file(StrEq("input.bin"), StrEq("output.bin"), _, _))
         .WillOnce(DoAll(
             SetArgPointee<2>(0),
             Return(
-                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_equal() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_path_equal() から、equal_out に 0 (不一致) を設定して CPLAT_OK を返す。
+                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_is_same_file() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_path_is_same_file() から、same_out に 0 (異なる実体) を設定して CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat_, cplat_path_get_full(_, _, _, StrEq("input.bin")))
         .WillOnce(
             [](char *path_out, size_t path_size, cplat_error *detail_out, const char *)
@@ -765,12 +787,12 @@ TEST_F(compress_cliTest, main_rejects_decompress_output_when_size_mismatches_hea
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
                              // [Pre-Assert手順] - cplat_console_init() から戻る。
-    EXPECT_CALL(mock_cplat_, cplat_path_equal(StrEq("input.bin"), StrEq("output.bin"), _, _))
+    EXPECT_CALL(mock_cplat_, cplat_path_is_same_file(StrEq("input.bin"), StrEq("output.bin"), _, _))
         .WillOnce(DoAll(
             SetArgPointee<2>(0),
             Return(
-                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_equal() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_path_equal() から、equal_out に 0 (不一致) を設定して CPLAT_OK を返す。
+                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_is_same_file() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_path_is_same_file() から、same_out に 0 (異なる実体) を設定して CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat_, cplat_path_get_full(_, _, _, StrEq("input.bin")))
         .WillOnce(
             [](char *path_out, size_t path_size, cplat_error *detail_out, const char *)
@@ -857,12 +879,12 @@ TEST_F(compress_cliTest, main_removes_partial_output_when_write_fails)
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
                              // [Pre-Assert手順] - cplat_console_init() から戻る。
-    EXPECT_CALL(mock_cplat_, cplat_path_equal(StrEq("input.bin"), StrEq("output.bin"), _, _))
+    EXPECT_CALL(mock_cplat_, cplat_path_is_same_file(StrEq("input.bin"), StrEq("output.bin"), _, _))
         .WillOnce(DoAll(
             SetArgPointee<2>(0),
             Return(
-                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_equal() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_path_equal() から、equal_out に 0 (不一致) を設定して CPLAT_OK を返す。
+                CPLAT_OK))); // [Pre-Assert確認_正常系] - cplat_path_is_same_file() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_path_is_same_file() から、same_out に 0 (異なる実体) を設定して CPLAT_OK を返す。
     EXPECT_CALL(mock_cplat_, cplat_path_get_full(_, _, _, StrEq("input.bin")))
         .WillOnce(
             [](char *path_out, size_t path_size, cplat_error *detail_out, const char *)
@@ -955,12 +977,12 @@ TEST_F(compress_cliTest, main_fails_when_path_comparison_fails)
     EXPECT_CALL(mock_cplat_, cplat_console_init())
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
                              // [Pre-Assert手順] - cplat_console_init() から戻る。
-    EXPECT_CALL(mock_cplat_, cplat_path_equal(StrEq("input.bin"), StrEq("output.bin"), _, _))
+    EXPECT_CALL(mock_cplat_, cplat_path_is_same_file(StrEq("input.bin"), StrEq("output.bin"), _, _))
         .WillOnce(DoAll(
             SetArgPointee<3>(cplat_error{CPLAT_ERROR_DOMAIN_ERRNO, CPLAT_ERR_UNKNOWN, EIO}),
             Return(
-                CPLAT_ERR_UNKNOWN))); // [Pre-Assert確認_異常系] - cplat_path_equal() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
-    // [Pre-Assert手順] - cplat_path_equal() から、detail_out に EIO を設定して CPLAT_ERR_UNKNOWN を返す。
+                CPLAT_ERR_UNKNOWN))); // [Pre-Assert確認_異常系] - cplat_path_is_same_file() が "input.bin" と等しい文字列、"output.bin" と等しい文字列を指定して 1 回呼び出されること。
+    // [Pre-Assert手順] - cplat_path_is_same_file() から、detail_out に EIO を設定して CPLAT_ERR_UNKNOWN を返す。
     EXPECT_CALL(mock_cplat_, cplat_path_get_full(_, _, _, _))
         .Times(
             0); // [Pre-Assert確認_異常系] - cplat_path_get_full() が呼び出されないこと。(パス比較に失敗した後はパスの正規化へ進まないことの確認)
@@ -1094,4 +1116,82 @@ TEST_F(compress_cliTest, main_prints_validation_error_before_usage_on_invalid_mo
     EXPECT_NE(std::string::npos, pos_err_dup);
     EXPECT_NE(std::string::npos, pos_usage_dup);
     EXPECT_LT(pos_err_dup, pos_usage_dup);
+}
+
+// 出力に入力のハード リンクを指定した場合に、実体の比較で同じファイルと判定し、入力を書き換えずに失敗終了することの確認
+TEST_F(compress_cliTest, main_rejects_output_hard_linked_to_input)
+{
+    // Arrange
+    const char *input_path = "compress_cliTest_hard_input.bin";
+    const char *output_path = "compress_cliTest_hard_output.bin";
+    const char *argv[] = {"compress-cli", "--compress", input_path,
+                          output_path}; // [状態] - 圧縮モードで入力を実ファイル、出力をそのハード リンクとする。
+    std::error_code ec;
+    (void)std::filesystem::remove(output_path, ec);
+    write_real_file(input_path); // [サブ手順参照 名前=compress_cliTest.write_real_file]
+    std::filesystem::create_hard_link(input_path, output_path, ec);
+    ASSERT_FALSE(ec);
+    // [状態確認] - 入力の実ファイルのハード リンクを、出力のパスに作成できること。
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_console_init())
+        .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
+                             // [Pre-Assert手順] - cplat_console_init() から戻る。
+    EXPECT_CALL(mock_cplat_, cplat_path_is_same_file(StrEq(input_path), StrEq(output_path), _, _))
+        .Times(
+            1); // [Pre-Assert確認_異常系] - 実体の比較の cplat_path_is_same_file() が入力と出力のパスを指定して 1 回呼び出されること。(既定の動作で実 API へ委譲する)
+    EXPECT_CALL(mock_cplat_, cplat_fopen(_, _, _))
+        .Times(
+            0); // [Pre-Assert確認_異常系] - cplat_fopen() が呼び出されないこと。(同じファイルを検出した後はファイルを開かないことの確認)
+    EXPECT_CALL(mock_stdio_, fprintf(_, _, _, _, HasSubstr("同じファイル")))
+        .WillOnce(Return(
+            0)); // [Pre-Assert確認_異常系] - fprintf() が "同じファイル" を含む文字列を指定して 1 回呼び出されること。
+                 // [Pre-Assert手順] - fprintf() から 0 を返す。
+
+    // Act
+    int rc =
+        __real_main(4, (char **)&argv); // [手順] - 入力と、そのハード リンクの出力を指定して __real_main() を呼び出す。
+
+    // Assert
+    EXPECT_NE(EXIT_SUCCESS, rc); // [確認_異常系] - __real_main() の戻り値が EXIT_SUCCESS 以外であること。
+    EXPECT_EQ(
+        std::string(reinterpret_cast<const char *>(kPlainInput), sizeof(kPlainInput)),
+        read_real_file(input_path)); // [確認_異常系] - 入力の実ファイルの内容が平文データ 6 byte のままであること。
+
+    // Cleanup
+    (void)std::filesystem::remove(output_path, ec);
+    (void)std::filesystem::remove(input_path, ec);
+}
+
+// 出力のファイルがまだない場合に、実体の比較で異なるファイルと判定し、圧縮して出力を作成することの確認
+TEST_F(compress_cliTest, main_compresses_when_output_does_not_exist)
+{
+    // Arrange
+    const char *input_path = "compress_cliTest_new_input.bin";
+    const char *output_path = "compress_cliTest_new_output.bin";
+    const char *argv[] = {"compress-cli", "--compress", input_path,
+                          output_path}; // [状態] - 圧縮モードで入力を実ファイル、出力をまだないファイルとする。
+    std::error_code ec;
+    (void)std::filesystem::remove(output_path, ec);
+    // [状態] - 出力のファイルがない状態にする。
+    write_real_file(input_path); // [サブ手順参照 名前=compress_cliTest.write_real_file]
+
+    // Pre-Assert
+    EXPECT_CALL(mock_cplat_, cplat_console_init())
+        .WillOnce(Return()); // [Pre-Assert確認_正常系] - cplat_console_init() が 1 回呼び出されること。
+                             // [Pre-Assert手順] - cplat_console_init() から戻る。
+    EXPECT_CALL(mock_cplat_, cplat_path_is_same_file(StrEq(input_path), StrEq(output_path), _, _))
+        .Times(
+            1); // [Pre-Assert確認_正常系] - 実体の比較の cplat_path_is_same_file() が入力と出力のパスを指定して 1 回呼び出されること。(既定の動作で実 API へ委譲する)
+
+    // Act
+    int rc = __real_main(4, (char **)&argv); // [手順] - 入力と、まだない出力を指定して __real_main() を呼び出す。
+
+    // Assert
+    EXPECT_EQ(EXIT_SUCCESS, rc); // [確認_正常系] - __real_main() の戻り値が EXIT_SUCCESS であること。
+    EXPECT_TRUE(std::filesystem::exists(output_path, ec)); // [確認_正常系] - 出力のファイルが作成されていること。
+
+    // Cleanup
+    (void)std::filesystem::remove(output_path, ec);
+    (void)std::filesystem::remove(input_path, ec);
 }

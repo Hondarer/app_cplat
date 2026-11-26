@@ -266,6 +266,7 @@ Mock_cplat::Mock_cplat()
     ON_CALL(*this, cplat_path_normalize_sep(_)).WillByDefault(Invoke(delegate_real_cplat_path_normalize_sep));
     ON_CALL(*this, cplat_path_get_full(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_path_get_full));
     ON_CALL(*this, cplat_path_equal(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_path_equal));
+    ON_CALL(*this, cplat_path_is_same_file(_, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_path_is_same_file));
     ON_CALL(*this, cplat_path_get_temp_dir(_, _, _)).WillByDefault(Invoke(delegate_real_cplat_path_get_temp_dir));
     ON_CALL(*this, cplat_path_concat_n(_, _, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_vpath_concat_n));
     ON_CALL(*this, cplat_vpath_concat_n(_, _, _, _, _)).WillByDefault(Invoke(delegate_real_cplat_vpath_concat_n));
