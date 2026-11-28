@@ -1,8 +1,8 @@
 <!--
 生成元: agree-before-implement スキル
 文書種別: 全体管理文書 (overview)
-最終更新日時: 2026-11-28 16:30:00 JST
-最終更新エージェント: agy / セッション ID: 87c30968-8381-44b6-9a90-727b1b746990
+最終更新日時: 2026-11-29 03:01:00 JST
+最終更新エージェント: agy / セッション ID: a9536170-add8-45c9-a458-9b5dcbc3132a
 稼働 OS: Linux (WSL)
 下流文書: `261127-service-commonization-discussion.md` (検討用 Markdown)、`261127-service-commonization-lightadr.md` (簡易 ADR)、`261127-service-commonization-design.md` (最終仕様)、`261127-service-commonization-backlog.md` (残課題一覧)。未作成の場合や、削除されている場合があります。
 再開手順: このファイルを開いたエージェントは、作業の前に agree-before-implement スキルを読み込んでください。この文書と、ユーザーが編集した最新の検討用 Markdown を読み直し、作業 WBS の `← **CURRENT**` の項目から再開します。最終更新エージェントのセッション情報や稼働 OS・最終更新日時が参照可能であれば再開時のコンテキストや環境差分の把握に利用し、別エージェントや別環境・別 OS からの引き継ぎ、担当変更によりセッションが見つからない場合も異常とせず、文書の記載から継続してください。`← **CURRENT**` の項目は処理が中止された項目である場合があり、どこまで進んでいたかは文書だけでは分かりません。対象成果物の内容を確認して実施済みの範囲を特定してから、作業を再開してください。`← **CURRENT**` がなく、作業 WBS がすべて完了 (✅) であれば、この案件の合意フローは完了しています。
@@ -21,7 +21,7 @@
 
 検討用 Markdown の版: 3
 
-状態: 作業実施中
+状態: 成果物承認待ち (第 3 ゲート)
 
 ## 作業 WBS と進捗管理
 
@@ -51,7 +51,7 @@
     - ✅ 3.1. `261127-service-commonization-design.md` の作成 (公開 API、型、結果コード、OS 別実装方式、`libsystemd` 直接リンク・モック方式、テスト・文書移行計画、知見の反映計画)
     - ✅ 3.2. 最終仕様における受入条件と整合性の確認 (`framework/testfw`、`app/cplat`、`app/service-sample` の各種規範との整合確認)
     - ✅ 3.3. 対話セッションにおける最終仕様 (`261127-service-commonization-design.md`) の承認の受付 (第 2 ゲート: 作業着手の合意。2026-11-28、対話セッションで Tetsuo Honda が、13:00 以降の着手を事前に承認)
-- 🔄 4. 承認された最終仕様に従った作業の実施
+- ✅ 4. 承認された最終仕様に従った作業の実施
     - ✅ 4.1. `framework/testfw` への `libmock_systemd.a` (`include/mock_systemd.h`、`include_override/systemd/{sd-bus.h,sd-daemon.h,sd-event.h}`、`libsrc/mock_systemd/`、`SKIP_BUILD = WINDOWS`) および局所テスト (`test/src/mockSystemdTest/`) の追加
     - ✅ 4.2. `app/cplat` の機能仕様の追加・更新 (`docs/functional-spec/service.md`、`docs/functional-spec/README.md`、`docs/functional-spec-guideline.md`)
     - ✅ 4.3. `app/cplat` の公開ヘッダー・内部ヘッダー・アンブレラ ヘッダーの作成・更新 (`prod/include/cplat/service/service.h`、`prod/include/cplat.h`、`prod/include_internal/cplat/service/`)
@@ -61,12 +61,12 @@
     - ✅ 4.7. `app/service-sample` の `cplat/service/service.h` 利用への書き換え (CLI 層の `cplat_elevated_process_run_piped()` + `attach_output_pipes()` 昇格、`prod/src/cmd/makepart.mk` からの `libsystemd` / `pthread` 依存削除を含む)、重複実装・`test/` 配下の旧 `mock_systemd`・重複テストの削除、およびサンプル向けテストの整理
     - ✅ 4.8. 仕様文書と正本ドキュメントの更新・移設 (`app/cplat/docs/service-events.md`、`app/cplat/docs/systemd-oomkiller-advisory.md`、`app/cplat/docs/README.md`、`app/cplat/docs/api-cheatsheet.md`、`app/cplat/docs/link-policy.md`、`app/service-sample/docs/` 旧 2 ファイル削除および `README.md` 更新)
     - ✅ 4.9. Linux 上での局所検証 (`framework/testfw` のビルドおよび `mock_systemd` 局所テスト、`app/cplat` のビルド・全単体テスト、`app/service-sample` のビルド・全単体テスト、内容がある `.warn` 確認、`check_functional_spec.py`、`text_style_jp.py` 実行)
-    - ⏸️ 4.10. 受入条件への適合確認 (ワークスペース全体テストおよび Windows 確認が CI・ユーザー環境委任である旨の整理を含む) ← **CURRENT**
-    - ⏸️ 4.11. 簡易 ADR (`261127-service-commonization-lightadr.md`) の最終確認 (各決定が案件終了時点の決定を示し、経緯が時系列にそろっていることの確認)
-    - ⏸️ 4.12. 残課題一覧 (`261127-service-commonization-backlog.md`) の再構築と整理 (解消済みの `BL-001` を除外し、残課題の有無に応じて整理または削除)
-- ⏸️ 5. 成果物の承認の受付 (第 3 ゲート)
-    - ⏸️ 5.1. 成果物・検証結果 (Windows 未確認項目を含む)・残課題の提示
-    - ⏸️ 5.2. 対話セッションにおける成果物の承認の受付 (「承認」または「完了」の受領によるスキル完了)
+    - ✅ 4.10. 受入条件への適合確認 (ワークスペース全体テストおよび Windows 確認が CI・ユーザー環境委任である旨の整理を含む)
+    - ✅ 4.11. 簡易 ADR (`261127-service-commonization-lightadr.md`) の最終確認 (各決定が案件終了時点の決定を示し、経緯が時系列にそろっていることの確認)
+    - ✅ 4.12. 残課題一覧 (`261127-service-commonization-backlog.md`) の再構築と整理 (解消済みの `BL-001` を除外し、残課題なしのため削除)
+- 🔄 5. 成果物の承認の受付 (第 3 ゲート)
+    - ✅ 5.1. 成果物・検証結果 (Windows・CI 確認結果と実機未確認項目を含む)・残課題の提示
+    - 🔄 5.2. 対話セッションにおける成果物の承認の受付 (「承認」または「完了」の受領によるスキル完了) ← **CURRENT**
 
 ## 対象と参照資料
 
@@ -74,7 +74,7 @@
 
 今回の対象範囲: `framework/testfw` へ `libmock_systemd.a` + `include_override/systemd/` を独立静的ライブラリとして追加し、`app/service-sample` のクロスプラットフォーム サービス基盤を `app/cplat` の独立カテゴリ `service` (プロセス グローバル API、`cplat_service_*`、共通結果コード、`detail_out` なし、`cplat_tracer *` 外部注入、既定値付き `cplat_service_install_options`、自動昇格なし、Linux は `libsystemd` 直接リンク) として取り込み、`app/service-sample` を新 API + `run_piped` 昇格利用へ書き換えて仕様文書 2 件を `app/cplat/docs/` へ移設すること。Linux での検証は影響 3 か所の局所検証とし、ワークスペース全体テストと Windows 確認は CI・ユーザー環境へ委ねます。
 
-書き込み可能な検討文書: この文書 (`261127-service-commonization-overview.md`)、検討用 Markdown (`261127-service-commonization-discussion.md`)、簡易 ADR (`261127-service-commonization-lightadr.md`)、残課題一覧 (`261127-service-commonization-backlog.md`)。
+書き込み可能な検討文書: この文書 (`261127-service-commonization-overview.md`)、検討用 Markdown (`261127-service-commonization-discussion.md`)、簡易 ADR (`261127-service-commonization-lightadr.md`)。`261127-service-commonization-backlog.md` は残課題なしのため WBS 4.12 で削除済み。
 
 参照資料と版: 2026-11-27 時点の作業ツリー。親ワークスペース `c-modernization-kit` `a2aba192` (`app/service-sample` を含む)、サブモジュール `app/cplat` `05dcfcb7`。環境は Oracle Linux 8.10 (`systemd-devel-239-82.0.13.el8_10.19.x86_64` 導入済み)。CI (`.github/workflows/ci.yml`) は `oracle-linux-8-dev` / `9-dev` / `10-dev` コンテナーを使用。
 
@@ -178,6 +178,8 @@ Table: 案件進行の経緯
 | 2026-11-28 08:45 | 第 1 ゲート通過 | 全 21 件の Q の解決、6 観点の確認、および簡易 ADR (`LADR-001` 〜 `LADR-013`) の一致を確認し、版 3 を合意版として確定。最終仕様 (`261127-service-commonization-design.md`) の作成へ着手 |
 | 2026-11-28 08:48 | 最終仕様の作成と整合確認完了 | 最終仕様 (`261127-service-commonization-design.md`) を作成し、各規範との整合および `text_style_jp.py` を確認。第 2 ゲート (最終仕様の承認待ち) へ移行 |
 | 2026-11-28 13:03 | 第 2 ゲート通過・フェーズ 4 着手 | 2026-11-28、対話セッションで Tetsuo Honda が、13:00 以降の着手を事前に承認 (第 2 ゲート通過)。フェーズ 4 (WBS 4.1) へ着手 |
+| 2026-11-28 18:28 | WBS 4.1 〜 4.9 完了 (Linux 局所検証とテスト移植是正) | `framework/testfw` (`94284dd`)、`app/cplat` (`c31468f6`)、`app/service-sample` (`499a18f8`) の実装・テスト・文書更新および Linux 上での局所検証を完了。WBS 4.6 のテスト移植不足も是正 (旧 87 件 → 新 98 件) |
+| 2026-11-29 03:01 | CI・Windows 検証結果の記録と WBS 4.10 〜 5.1 完了 | CI run 46130821391 (2026-11-28、`main` `499a18f8`) と Windows 側の Claude Code セッション確認結果を記録。受入条件適合確認 (WBS 4.10)、簡易 ADR 最終確認 (WBS 4.11)、残課題整理 (WBS 4.12: 解消済み `BL-001` を除外し残課題なしのため `261127-service-commonization-backlog.md` を削除)、および提示準備 (WBS 5.1) を完了し、第 3 ゲート (WBS 5.2) で停止 |
 
 ## 反映と検証の記録
 
@@ -197,4 +199,23 @@ Table: 案件進行の経緯
     - `python3 framework/docsfw/bin/text_style_jp.py` (`--dry-run` → `--in-place`): 変更・新規 Markdown すべて正常終了。
     - `python3 app/general/bin/check_c_topdown.py`: 追跡対象の `service-sample.c` / `service-sample-impl.c` は 0 エラー・0 警告 (新規未追跡 `.c` 4 ファイルは手動でトップ ダウン順を確認済み)。
     - `clang-format`: 新規・変更 C/C++ ファイルへ適用済み。
-- 未確認事項 (CI・ユーザー環境委任): ワークスペース全体 `make test`、Windows/MSVC ビルド (`SKIP_BUILD = WINDOWS` 動作、`libcplat.dll`、`service-sample.exe`)、Windows 単体テスト (`exportTest`、`serviceCommonTest`、`serviceWindowsTest`、`service-sampleTest`)、および systemd / Windows SCM 実機動作。
+- 成果物コミット:
+    - `app/cplat`: `c31468f6`
+    - `framework/testfw`: `94284dd`
+    - ルート (`c-modernization-kit`): `499a18f8`
+- CI 検証結果 (CI run `46130821391`、`main` `499a18f8`、2026-11-28):
+    - Linux の 3 ジョブ (`ol8`、`ol9`、`ol10`)、`docs`、`verify-gen`、`warnings-summary` は成功。
+    - `build-and-test-windows` は、`app/process-orchestration-sample` の `ipc_transport_unix_windows.c` のコンパイル エラー (`CPLAT_ONCE_INIT`、`g_wsa_once`、`WSAENOENT` が未定義。本案件の範囲外であり、別案件 `261128-process-orchestration-sample-review-fix` で対処) で Build 段階が停止し、テストは未実行。
+    - CI ログにおいて、`app/cplat` の `service_windows.c`、`serviceWindowsTest.exe`、および `app/service-sample` (`app/cjson` の `cJSON_PatchCheck.h`、`app/porter`、`app/struct-meta` も含む) が MSVC でコンパイルおよびリンクを通過していることを確認。
+- Windows 側の Claude Code セッションでの検証結果 (2026-11-28、`main` `499a18f8`、`TESTFW_WINDOWS_VARIANTS=md`、`make` は 1 本ずつ実行):
+    - `framework/testfw`: gtest 16 件成功・失敗 0、Python 125 件 OK (`skipped=3`)。`libmock_systemd` と `mockSystemdTest` は `SKIP_BUILD=WINDOWS` でスキップ。
+    - `app/cplat`: 1844 件成功・失敗 0 (`serviceCommonTest` 21、`serviceWindowsTest` 14、`exportTest` 2 を含む)。
+    - `app/service-sample`: 18 件成功・失敗 0。
+    - 参考 (同セッションで併せて確認済み): `app/cjson` 36 件成功・失敗 0 (`bin_test` 9 件 OK、`skipped=4`)、`app/porter` 979 件成功・失敗 0、`app/struct-meta` 128 件成功・失敗 0。
+    - 内容がある `.warn` ファイルはなし。
+- WBS 4.10 〜 4.12 (受入条件・簡易 ADR・残課題一覧):
+    - 受入条件 (1) 〜 (4) への適合を確認 (ワークスペース全体テストの Linux 側 3 ジョブおよび Windows/MSVC のビルド・単体テストは上記 CI と Windows 側セッションで確認を完了)。
+    - 簡易 ADR (`261127-service-commonization-lightadr.md`) の全 13 件 (`LADR-001` 〜 `LADR-013`) が案件終了時点の決定を示し、経緯が時系列に揃っていることを確認。
+    - 残課題一覧 (`261127-service-commonization-backlog.md`): `BL-001` は Q-020 の方針改訂により解消済みであり、他に未対策の残課題がないためファイルを削除。
+- 残る未確認事項:
+    - Windows SCM 実機および systemd 有効 Linux 環境での `install` / `start` / `reload` / `stop` / `uninstall` の実機動作確認 (Q-013 / `LADR-013` に基づきユーザー環境での確認対象)。
