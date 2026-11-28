@@ -985,6 +985,29 @@ Table: 動的シンボル解決における用途別 cplat API
 | 診断の件数を取得します。 | `cplat_sym_loader_reject_count` |
 | 診断のライブラリ名、関数名、理由を取得します。 | `cplat_sym_loader_reject_get` |
 
+### サービス (service)
+
+対象ヘッダー: `cplat/service/service.h`
+
+Linux systemd と Windows SCM (Service Control Manager) を共通構成で扱うプロセス グローバル API です。  
+コマンド ライン引数の解析や自動権限昇格は含まず、個別のサービス操作・停止抽象・状態通知を提供します。
+
+Table: サービス基盤における用途別 cplat API
+
+| 用途 | cplat API |
+|---|---|
+| Linux の常駐実行前に `SIGHUP` をブロックする (スレッド・トレーサー開始前に呼び出し) | `cplat_service_prepare_run()` |
+| OS へサービスを登録する (自動昇格なし、`options` は NULL 可) | `cplat_service_install(def, options)` |
+| OS からサービスを停止・解除する (自動昇格なし) | `cplat_service_uninstall(def)` |
+| OS サービス マネージャー管理下で常駐実行する | `cplat_service_run(def, exit_code_out)` |
+| フォアグラウンドのコンソール モードで実行する | `cplat_service_run_console(def, exit_code_out)` |
+| 停止要求が届くかタイムアウトまで待機する (`CPLAT_OK` / `CPLAT_ERR_TIMEOUT`) | `cplat_service_wait_for_stop(timeout_ms)` |
+| 停止要求済みかを即時判定する (`1` / `0`) | `cplat_service_stop_requested()` |
+| 停止を要求し待機中スレッドへ通知する (べき等) | `cplat_service_request_stop()` |
+| サービスの状態テキストを通知する (Linux は `sd_notify("STATUS=...")`) | `cplat_service_set_status_text(text)` |
+
+主な型と定数: `cplat_service_definition`、`cplat_service_install_options`、`cplat_service_event_type` (`CPLAT_SERVICE_EVENT_POWER_SUSPEND` / `_POWER_RESUME` / `_SESSION_LOGON` / `_SESSION_LOGOFF` / `_PRESHUTDOWN`)、`cplat_service_event_info`、`cplat_service_on_start_fn`、`cplat_service_on_run_fn`、`cplat_service_on_stop_fn`、`cplat_service_on_event_fn`、`cplat_service_on_reload_fn`。
+
 ### 共有ライブラリのロード/アンロード フック
 
 対象ヘッダー: `cplat/base/shared_lib_lifecycle.h`
@@ -1025,6 +1048,7 @@ Table: 文字符号定数の一覧
 - ホスト: `cplat_host_get_name`
 - 表示言語: `cplat_ui_language_get_tag`
 - モジュール: `cplat_module_get_basename`
+- サービス: `cplat_service_prepare_run`、`cplat_service_install`、`cplat_service_uninstall`、`cplat_service_run`、`cplat_service_run_console`、`cplat_service_wait_for_stop`、`cplat_service_stop_requested`、`cplat_service_request_stop`、`cplat_service_set_status_text`
 - プロセス間ロック: `cplat_interprocess_lock_export_descriptor`、`cplat_interprocess_lock_import_descriptor`、`cplat_interprocess_rwlock_export_descriptor`、`cplat_interprocess_rwlock_import_descriptor`、`cplat_interprocess_rwlock_lock_shared`、`cplat_interprocess_rwlock_timed_lock_shared`、`cplat_interprocess_rwlock_try_lock_shared`、`cplat_interprocess_rwlock_lock_exclusive`、`cplat_interprocess_rwlock_timed_lock_exclusive`、`cplat_interprocess_rwlock_try_lock_exclusive`、`cplat_interprocess_rwlock_unlock`、`cplat_interprocess_rwlock_dispose`
 - トレース: `cplat_tracer_get_name`、`cplat_tracer_get_identifier`、`cplat_tracer_set_file_name`、`cplat_tracer_get_file_name`、`cplat_tracer_get_file_identifier`、`cplat_tracer_get_os_level`、`cplat_tracer_set_os_level`、`cplat_tracer_get_etw_level`、`cplat_tracer_set_etw_level`、`cplat_tracer_get_file_level`、`cplat_tracer_set_file_level`、`cplat_tracer_get_stderr_level`
 - Windows 文字列変換: `cplat_utf8_to_wpath`、`cplat_utf8_to_wstr`、`cplat_wpath_to_utf8`、`cplat_wstr_to_utf8`、`cplat_utf8_to_wstr_alloc`、`cplat_wstr_to_utf8_alloc`

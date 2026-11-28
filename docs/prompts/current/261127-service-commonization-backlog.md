@@ -1,8 +1,8 @@
 <!--
 生成元: agree-before-implement スキル
 文書種別: 残課題一覧 (backlog)
-最終更新日時: 2026-11-27 19:30:22 JST
-最終更新エージェント: agy / セッション ID: a422744b-85f9-4bdc-914d-195c5ca8a120
+最終更新日時: 2026-11-28 08:42:00 JST
+最終更新エージェント: agy / セッション ID: 73c19cdb-9b01-4b7c-831a-02f92420ab83
 稼働 OS: Linux (WSL)
 上流文書: `261127-service-commonization-overview.md` (全体管理文書)、`261127-service-commonization-design.md` (最終仕様)、`261127-service-commonization-discussion.md` (検討用 Markdown)、`261127-service-commonization-lightadr.md` (簡易 ADR)。いずれも削除されている場合があります。
 下流文書: 未作成
@@ -28,7 +28,7 @@ Table: 残課題一覧
 
 | 課題 ID | 題名 | 区分 | 優先度 / 影響度 | 状態 |
 | --- | --- | --- | --- | --- |
-| [BL-001](#bl-001-account-session-導入時の-libsystemd-動的ローダー内部共有) | account-session 導入時の libsystemd 動的ローダー内部共有 | 検討時見送り | 低 | 未着手 |
+| [BL-001](#bl-001-account-session-導入時の-libsystemd-動的ローダー内部共有) | account-session 導入時の libsystemd 動的ローダー内部共有 | 検討時見送り | 低 | 解消 |
 
 ## BL-001 account-session 導入時の libsystemd 動的ローダー内部共有
 
@@ -41,7 +41,7 @@ Table: 残課題一覧
 
 - **摘出契機**: 前提検討時 ([Q-012](261127-service-commonization-discussion.md#q-012-並行検討中の-account-session-案件との調整)) に確認・見送り決定。
 - **今回の見送り理由**: `cplat-account-session` 案件が未確定・未着手であるため、本案件では依存を持たず自己完結で実装し、将来の統合余地として残す決定 ([LADR-012](261127-service-commonization-lightadr.md#ladr-012-並行検討中の-account-session-案件との独立性)) としたため。
-- **継続作業での経緯と対処**: 未着手。
+- **継続作業での経緯と対処**: 2026-11-28 の [Q-020](261127-service-commonization-discussion.md#q-020-libsystemd-モックの配置先と-dlopen-呼び出し経路の整合) で C が選択され、`libcplat.so` から `libsystemd` を直接リンク (`LIBS += systemd`) し、`framework/testfw` に `libmock_systemd.a` を配置する方針 ([LADR-005](261127-service-commonization-lightadr.md#ladr-005-linux-での-libsystemd-直接リンクとモック配置)) へ改訂されました。本案件で `libsystemd` 動的ローダーを構築しなくなったため、重複の懸念は解消しました (WBS 4.12 の第 3 ゲート前整理で本項目を除外する予定)。
 
 ### 影響範囲とリスク
 

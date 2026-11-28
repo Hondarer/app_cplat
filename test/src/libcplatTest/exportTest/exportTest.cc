@@ -49,6 +49,7 @@
 #include <cplat/runtime/process.h>
 #include <cplat/runtime/shutdown.h>
 #include <cplat/runtime/sym_loader.h>
+#include <cplat/service/service.h>
 #include <cplat/string_catalog/filter.h>
 #include <cplat/string_catalog/string_catalog.h>
 #include <cplat/sync/sync.h>
@@ -771,6 +772,17 @@
     EXPORT_ENTRY(cplat_sym_loader_reject_get, \
                  int(CPLAT_API *)(cplat_sym_loader_entry * fobj, size_t index, const char **lib_name, \
                                   const char **func_name, int *reason)) \
+    /* cplat/service/service.h */ \
+    EXPORT_ENTRY(cplat_service_prepare_run, int(CPLAT_API *)(void)) \
+    EXPORT_ENTRY(cplat_service_install, int(CPLAT_API *)(const cplat_service_definition *def, \
+                                                         const cplat_service_install_options *options)) \
+    EXPORT_ENTRY(cplat_service_uninstall, int(CPLAT_API *)(const cplat_service_definition *def)) \
+    EXPORT_ENTRY(cplat_service_run, int(CPLAT_API *)(const cplat_service_definition *def, int *exit_code_out)) \
+    EXPORT_ENTRY(cplat_service_run_console, int(CPLAT_API *)(const cplat_service_definition *def, int *exit_code_out)) \
+    EXPORT_ENTRY(cplat_service_wait_for_stop, int(CPLAT_API *)(int timeout_ms)) \
+    EXPORT_ENTRY(cplat_service_stop_requested, int(CPLAT_API *)(void)) \
+    EXPORT_ENTRY(cplat_service_request_stop, void(CPLAT_API *)(void)) \
+    EXPORT_ENTRY(cplat_service_set_status_text, void(CPLAT_API *)(const char *text)) \
     /* cplat/string_catalog/string_catalog.h */ \
     EXPORT_ENTRY(cplat_string_catalog_set_language, int(CPLAT_API *)(cplat_string_catalog_language language)) \
     EXPORT_ENTRY(cplat_string_catalog_get_language, cplat_string_catalog_language(CPLAT_API *)(void)) \

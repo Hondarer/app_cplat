@@ -142,6 +142,12 @@
  */
 
 /**
+ *  @defgroup       CPLAT_SERVICE サービス (service)
+ *  @ingroup        CPLAT_PUBLIC_API
+ *  @brief          Linux systemd と Windows SCM を共通構成で扱うサービス基盤 API です。
+ */
+
+/**
  *  @defgroup       CPLAT_STRING_CATALOG 文字列カタログ (string_catalog)
  *  @ingroup        CPLAT_PUBLIC_API
  *  @brief          文字列キー、引数スキーマ、言語別リソースを分離して文字列を組み立てる API です。
@@ -226,6 +232,8 @@
 #include <cplat/runtime/process.h>
 #include <cplat/runtime/shutdown.h>
 #include <cplat/runtime/sym_loader.h>
+
+#include <cplat/service/service.h>
 
 #include <cplat/string_catalog/argument.h>
 #include <cplat/string_catalog/catalog.h>

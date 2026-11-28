@@ -484,6 +484,17 @@ MOCK_CPLAT_LINK_IMPL(cplat_sym_loader_get)
 MOCK_CPLAT_LINK_IMPL(cplat_sym_loader_reject_count)
 MOCK_CPLAT_LINK_IMPL(cplat_sym_loader_reject_get)
 
+// cplat/service/service.h
+MOCK_CPLAT_LINK_IMPL(cplat_service_prepare_run)
+MOCK_CPLAT_LINK_IMPL(cplat_service_install)
+MOCK_CPLAT_LINK_IMPL(cplat_service_uninstall)
+MOCK_CPLAT_LINK_IMPL(cplat_service_run)
+MOCK_CPLAT_LINK_IMPL(cplat_service_run_console)
+MOCK_CPLAT_LINK_IMPL(cplat_service_wait_for_stop)
+MOCK_CPLAT_LINK_IMPL(cplat_service_stop_requested)
+MOCK_CPLAT_LINK_IMPL(cplat_service_request_stop)
+MOCK_CPLAT_LINK_IMPL(cplat_service_set_status_text)
+
 // cplat/string_catalog/string_catalog.h
 MOCK_CPLAT_LINK_IMPL(cplat_string_catalog_set_language)
 MOCK_CPLAT_LINK_IMPL(cplat_string_catalog_get_language)
@@ -705,6 +716,7 @@ MOCK_CPLAT_LINK_IMPL(StartServiceCtrlDispatcherU)
 #include <cplat/runtime/process.h>
 #include <cplat/runtime/shutdown.h>
 #include <cplat/runtime/sym_loader.h>
+#include <cplat/service/service.h>
 #include <cplat/string_catalog/filter.h>
 #include <cplat/string_catalog/string_catalog.h>
 #include <cplat/sync/sync.h>
@@ -1399,6 +1411,18 @@ extern int delegate_real_cplat_sym_loader_get(cplat_sym_loader_entry *fobj, size
 extern int delegate_real_cplat_sym_loader_reject_count(cplat_sym_loader_entry *fobj, size_t *count_out);
 extern int delegate_real_cplat_sym_loader_reject_get(cplat_sym_loader_entry *fobj, size_t index, const char **lib_name,
                                                      const char **func_name, int *reason);
+
+// cplat/service/service.h
+extern int delegate_real_cplat_service_prepare_run(void);
+extern int delegate_real_cplat_service_install(const cplat_service_definition *def,
+                                               const cplat_service_install_options *options);
+extern int delegate_real_cplat_service_uninstall(const cplat_service_definition *def);
+extern int delegate_real_cplat_service_run(const cplat_service_definition *def, int *exit_code_out);
+extern int delegate_real_cplat_service_run_console(const cplat_service_definition *def, int *exit_code_out);
+extern int delegate_real_cplat_service_wait_for_stop(int timeout_ms);
+extern int delegate_real_cplat_service_stop_requested(void);
+extern void delegate_real_cplat_service_request_stop(void);
+extern void delegate_real_cplat_service_set_status_text(const char *text);
 
 // cplat/string_catalog/string_catalog.h
 extern int delegate_real_cplat_string_catalog_set_language(cplat_string_catalog_language language);
@@ -2292,6 +2316,17 @@ class Mock_cplat
     MOCK_METHOD(int, cplat_sym_loader_reject_count, (cplat_sym_loader_entry *, size_t *));
     MOCK_METHOD(int, cplat_sym_loader_reject_get,
                 (cplat_sym_loader_entry *, size_t, const char **, const char **, int *));
+
+    // cplat/service/service.h
+    MOCK_METHOD(int, cplat_service_prepare_run, ());
+    MOCK_METHOD(int, cplat_service_install, (const cplat_service_definition *, const cplat_service_install_options *));
+    MOCK_METHOD(int, cplat_service_uninstall, (const cplat_service_definition *));
+    MOCK_METHOD(int, cplat_service_run, (const cplat_service_definition *, int *));
+    MOCK_METHOD(int, cplat_service_run_console, (const cplat_service_definition *, int *));
+    MOCK_METHOD(int, cplat_service_wait_for_stop, (int));
+    MOCK_METHOD(int, cplat_service_stop_requested, ());
+    MOCK_METHOD(void, cplat_service_request_stop, ());
+    MOCK_METHOD(void, cplat_service_set_status_text, (const char *));
 
     // cplat/string_catalog/string_catalog.h
     MOCK_METHOD(int, cplat_string_catalog_set_language, (cplat_string_catalog_language));

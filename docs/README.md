@@ -21,6 +21,7 @@ Table: cplat の主な機能構成と概要
 | 同期 | Linux / Windows 共通の同期プリミティブ |
 | コンソール / プロンプト | 端末入出力と対話補助 |
 | 文字列 / 時刻 / ランタイム | CRT 補助、時計、ランタイム支援 |
+| サービス | Linux systemd と Windows SCM を共通構成で扱うサービス基盤 |
 | 圧縮 / 暗号 / ファイル | 基盤機能を支えるユーティリティ |
 | ネットワーク | IPv4 ソケットの生成、接続、送受信、アドレス解決 |
 | ハッシュ テーブル | 固定レコード数と固定ストレージ容量。外部領域への構築と再接続に対応 |
@@ -129,6 +130,8 @@ cplat が公開する API 全体の一覧は [cplat API チート シート](api
 ### 詳細仕様と測定結果
 
 - [メモリ ロック API](memory-lock.md)
+- [サービス イベントのタイミング](service-events.md)
+- [Linux systemd OOM killer 対策アドバイザリ](systemd-oomkiller-advisory.md)
 - [ファイル入出力 API の選定基準](fileio-api-selection-guideline.md)
 - [hashtable 可変長ストレージの管理方式](doxybook2_internal/Files/libsrc/cplat/hashtable/hashtable-storage-allocator.md)
 - [プロセス間 RW ロックの提案](proposals/interprocess-rwlock-shared-table.md)

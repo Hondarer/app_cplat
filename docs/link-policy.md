@@ -39,6 +39,11 @@ Windows の暗号処理と乱数生成は CNG を使い、OpenSSL をリンク�
 ただし、ビルド順序をそろえるため、両 OS で `app/openssl` に依存します (`appdeps.mk`)。  
 OpenSSL の配布条件は `app/openssl/README.md` を参照してください。
 
+Linux のサービス機能 (`service` カテゴリ) は、OS 標準の `libsystemd` (`LIBS += systemd`、`DT_NEEDED: libsystemd.so.0`) を `libcplat.so` へ直接リンクします。  
+ビルド時には `systemd-devel` (RHEL / Oracle Linux 系) または `libsystemd-dev` (Debian / Ubuntu 系) の開発パッケージが必要です。  
+`libsystemd.so.0` は各 Linux マシンの OS 標準ライブラリとして実行時に解決するため、`prod/cbin` への同梱対象には含めません。  
+また、`libcplat.so` は `-fvisibility=hidden` と `exports.map` で公開シンボルを制限するため、`sd_*` シンボルは一切エクスポートしません。
+
 ## 実行ファイルへの同梱
 
 単体配布する CLI や OS のサービスとして起動する実行ファイルには、`libcplat`、`libcjson_app`、`libzlib_app` を同じディレクトリへ同梱します。
@@ -107,6 +112,13 @@ OpenSSL の共有ライブラリへの依存と、OpenSSL の関数をエクス�
 readelf -d prod/lib/libcplat.so | grep -E 'NEEDED.*(libcrypto|libssl)'
 nm -D --defined-only prod/lib/libcplat.so | grep -cE ' (EVP|RAND|OPENSSL|CRYPTO)_'
 nm -D -u prod/lib/libcplat.so | grep 'OPENSSL_APP_'
+```
+
+Linux で `libsystemd.so.0` への依存と `sd_*` シンボル非エクスポートは、次のコマンドで確認できます。
+
+```bash
+readelf -d prod/lib/libcplat.so | grep -E 'NEEDED.*libsystemd'
+nm -D --defined-only prod/lib/libcplat.so | grep -c ' sd_'
 ```
 
 Windows では `dumpbin /dependents` を使い、実行ファイルが `libcplat.dll` を参照することを確認します。

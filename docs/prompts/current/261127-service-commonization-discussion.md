@@ -1,8 +1,8 @@
 <!--
 生成元: agree-before-implement スキル
 文書種別: 検討用 Markdown (discussion)
-最終更新日時: 2026-11-27 23:13:00 JST
-最終更新エージェント: agy / セッション ID: a422744b-85f9-4bdc-914d-195c5ca8a120
+最終更新日時: 2026-11-28 08:42:00 JST
+最終更新エージェント: agy / セッション ID: 73c19cdb-9b01-4b7c-831a-02f92420ab83
 稼働 OS: Linux (WSL)
 上流文書: `261127-service-commonization-overview.md` (全体管理文書)。削除されている場合があります。
 下流文書: `261127-service-commonization-lightadr.md` (簡易 ADR)、`261127-service-commonization-design.md` (最終仕様)、`261127-service-commonization-backlog.md` (残課題一覧)。未作成の場合や、削除されている場合があります。
@@ -120,7 +120,7 @@ static int on_run(cplat_service *service, void *user_data)
 - [ ] C: その他
 - [ ] X: 意図不明 (詳細な質問内容に再生成すること)
 
-その他の回答 / 補足: 1 つのプロセスは、マルチインスタンスには対応しなくてよい。
+その他の回答 / 補足: 1 つのプロセスは、マルチ インスタンスには対応しなくてよい。
 
 回答者: Tetsuo Honda  
 回答日時: 2026-11-27 19:28:39 JST
@@ -133,7 +133,7 @@ static int on_run(cplat_service *service, void *user_data)
 
 **Assessment**
 
-単一選択で A のみが選択され、補足「1 つのプロセスは、マルチインスタンスには対応しなくてよい。」も A と一致しています。プロセス グローバル API として設計し、複数インスタンス非対応 (適用範囲外) を機能仕様へ明記します。
+単一選択で A のみが選択され、補足「1 つのプロセスは、マルチ インスタンスには対応しなくてよい。」も A と一致しています。プロセス グローバル API として設計し、複数インスタンス非対応 (適用範囲外) を機能仕様へ明記します。
 
 **Related**
 
@@ -267,6 +267,10 @@ Linux 実装が使用する `libsystemd` (`sd_notify`、`sd_watchdog_enabled`、
 **Assessment**
 
 単一選択で A のみが選択されました。`libcplat.so` 内で `libsystemd.so.0` を実行時に `dlopen()` / `dlsym()` で読み込み、`docs/link-policy.md` へ実行時読み込みの旨を追記します。なお、ビルド時に `<systemd/*.h>` を参照するか自前の最小 ABI 宣言でビルド時依存も外すかについては、[Q-014](#q-014-dlopen-時のビルド時-libsystemd-ヘッダー依存) で確認します。
+
+**History**
+
+- 2026-11-28 08:42:00 JST: [Q-020](#q-020-libsystemd-モックの配置先と-dlopen-呼び出し経路の整合) で C が選択されたため、`LADR-005` の決定を `libcplat.so` への `libsystemd` 直接リンク (`LIBS += systemd`) へ改訂しました。
 
 **Related**
 
@@ -804,7 +808,7 @@ cplat_service_run(&def, &exit_code);
 
 **Status**
 
-未解決
+解決済み
 
 **Question**
 
@@ -845,7 +849,7 @@ typedef struct sd_bus_error {
 - [ ] C: その他
 - [ ] X: 意図不明 (詳細な質問内容に再生成すること)
 
-その他の回答 / 補足: 現在の環境に入っているようであれば、利用してよいと考えている。testfwにもmockを追加し、C標準ライブラリ同等でよい。libsystemd-dev は入っていないと思うが問題あるか。
+その他の回答 / 補足: 現在の環境に入っているようであれば、利用してよいと考えている。testfw にも mock を追加し、C 標準ライブラリ同等でよい。libsystemd-dev は入っていないと思うが問題あるか。
 
 回答者: Tetsuo Honda  
 回答日時: 2026-11-27 23:10:48 JST
@@ -858,9 +862,13 @@ typedef struct sd_bus_error {
 
 **Assessment**
 
-単一選択で B が選択されましたが、補足に「現在の環境に入っているようであれば、利用してよいと考えている。testfwにもmockを追加し、C標準ライブラリ同等でよい。libsystemd-dev は入っていないと思うが問題あるか。」との確認事項および新方針が含まれるため、本 Q は未解決とします。  
+単一選択で B が選択されましたが、補足に「現在の環境に入っているようであれば、利用してよいと考えている。testfw にも mock を追加し、C 標準ライブラリ同等でよい。libsystemd-dev は入っていないと思うが問題あるか。」との確認事項および新方針が含まれるため、本 Q は未解決とします。  
 事実確認の結果、現在の環境は Oracle Linux 8.10 (RPM 系) であり、Debian/Ubuntu の `libsystemd-dev` に相当する `systemd-devel-239-82.0.13.el8_10.19.x86_64` が導入済みです (`/usr/include/systemd/*.h` および `/lib64/libsystemd.so.0` が存在し、CI の `ol8`/`ol9`/`ol10` コンテナーでも既存 `app/service-sample` のビルドにより導入済みです)。したがって `<systemd/*.h>` のビルド時利用自体は問題ありません。  
 一方、`testfw` への mock 追加は (1) `libmock_libc.a` へ統合するとワークスペース全テストに `-lsystemd` 依存が波及するため `libmock_libssh.a` と同様に独立ライブラリ (`libmock_systemd.a`) とする設計論点、および (2) [Q-004](#q-004-linux-での-libsystemd-への依存方式) の `dlopen` / `dlsym` 経由の関数ポインター呼び出しは `include_override/systemd/*.h` のマクロ置換で自動捕捉できないという技術的整合論点が生じます。これらを [Q-020](#q-020-libsystemd-モックの配置先と-dlopen-呼び出し経路の整合) と [Q-021](#q-021-testfw-変更時のテスト検証範囲) で確認します。
+
+**History**
+
+- 2026-11-28 08:42:00 JST: [Q-020](#q-020-libsystemd-モックの配置先と-dlopen-呼び出し経路の整合) で C (`libcplat.so` への `libsystemd` 直接リンクおよび `framework/testfw` への `libmock_systemd.a` + `include_override/systemd/` 追加)、[Q-021](#q-021-testfw-変更時のテスト検証範囲) で A (局所検証) が確定しました。ビルド時の `<systemd/*.h>` インクルード方針 (本 Q の B) と完全に整合するため、本 Q を解決済みとし `LADR-005` へ反映しました。
 
 **Related**
 
@@ -1120,7 +1128,7 @@ CPLAT_EXPORT int CPLAT_API cplat_service_install(const cplat_service_definition 
 
 **Status**
 
-未回答
+解決済み
 
 **Question**
 
@@ -1131,7 +1139,7 @@ CPLAT_EXPORT int CPLAT_API cplat_service_install(const cplat_service_definition 
 - **経緯と背景**:
     1. **環境確認の結果**: 現在の環境は Oracle Linux 8.10 であり、`systemd-devel-239-82.0.13.el8_10.19.x86_64` (`/usr/include/systemd/*.h` および `/lib64/libsystemd.so.0`) が導入済みです。CI (`.github/workflows/ci.yml`) の `ol8`/`ol9`/`ol10` コンテナーにも導入済みのため、ビルド時に `<systemd/*.h>` をインクルードすること自体は問題ありません。
     2. **`libmock_libc.a` と別ライブラリの違い**: `framework/testfw` では、全 C/C++ テストがリンクする `libmock_libc.a` とは別に、特定ライブラリ向けのモック (`libmock_libssh.a`、`libmock_syslog.so`) を独立ライブラリへ分離しています。`libmock_libc.a` へ `mock_systemd` を含めると、`delegate_real_sd_*` が実 `libsystemd` を参照するためワークスペースの全テストに `LIBS += systemd` が必要になります。独立ライブラリ `libmock_systemd.a` (`framework/testfw/libsrc/mock_systemd/`、`SKIP_BUILD = WINDOWS`) であれば、必要なテストだけが `LIBS += mock_systemd systemd` をリンクできます。
-    3. **`dlopen` 方式 ([Q-004](#q-004-linux-での-libsystemd-への依存方式) 案 A) と `include_override` マクロの不整合**: `testfw` の C 標準ライブラリ同等モック (`include_override/systemd/*.h` による `#define sd_notify(...) mock_sd_notify(...)`) は、製品コードが関数名 `sd_notify(...)` を**直接呼び出す**前提の仕組みです。一方、[Q-004](#q-004-linux-での-libsystemd-への依存方式) で決定した `dlopen("libsystemd.so.0")` + `dlsym()` 方式では、製品コードが関数ポインター (`api->sd_notify(...)`) 経由で呼ぶため、`include_override` のマクロ置換では自動捕捉されません。
+    3. **`dlopen` 方式 ([Q-004](#q-004-linux-での-libsystemd-への依存方式) 案 A) と `include_override` マクロの不整合**: `testfw` の C 標準ライブラリ同等モック (`include_override/systemd/*.h` による `#define sd_notify(...) mock_sd_notify(...)`) は、製品コードが関数名 `sd_notify(...)` を **直接呼び出す** 前提の仕組みです。一方、[Q-004](#q-004-linux-での-libsystemd-への依存方式) で決定した `dlopen("libsystemd.so.0")` + `dlsym()` 方式では、製品コードが関数ポインター (`api->sd_notify(...)`) 経由で呼ぶため、`include_override` のマクロ置換では自動捕捉されません。
 - **根拠資料**: [framework/testfw/libsrc/makepart.mk](../../../../../framework/testfw/libsrc/makepart.mk)、[framework/testfw/include/mock_libssh.h](../../../../../framework/testfw/include/mock_libssh.h)、[framework/testfw/include/mock_dlfcn.h](../../../../../framework/testfw/include/mock_dlfcn.h)、[app/service-sample/test/include/mock_systemd.h](../../../../service-sample/test/include/mock_systemd.h)
 - **各案の具体例**:
 
@@ -1166,11 +1174,14 @@ CPLAT_EXPORT int CPLAT_API cplat_service_install(const cplat_service_definition 
 
 - [ ] A: (推奨) `Q-004` (`dlopen`) と `Q-014` (ビルド時 `<systemd/*.h>` 参照) を維持し、`framework/testfw` に独立ライブラリ `libmock_systemd.a` (`mock_libssh` 方式) を追加して、`cplat` テストからはローダー差し替え口経由で `Mock_systemd` へ接続する。
 - [ ] B: `Q-004` (`dlopen`) と `Q-014` (ビルド時 `<systemd/*.h>` 参照) を維持し、`framework/testfw` は変更せず、`app/cplat/test/` 内のテスト用ディスパッチ表モックで検証する。
-- [ ] C: `Q-004` を「`libcplat.so` への `libsystemd` 直接リンク」へ変更し、`framework/testfw` に `libmock_systemd.a` + `include_override/systemd/` を追加して C 標準ライブラリと同一のマクロ置換でテストする。
+- [x] C: `Q-004` を「`libcplat.so` への `libsystemd` 直接リンク」へ変更し、`framework/testfw` に `libmock_systemd.a` + `include_override/systemd/` を追加して C 標準ライブラリと同一のマクロ置換でテストする。
 - [ ] D: その他
 - [ ] X: 意図不明 (詳細な質問内容に再生成すること)
 
-その他の回答 / 補足:
+その他の回答 / 補足: リンク対象ライブラリが増えたとして、libsystemd そのものは各 Linux マシンに存在するので、問題にならないと判断。
+
+回答者: Tetsuo Honda  
+回答日時: 2026-11-28 08:35:47 JST
 
 **Recommendation**
 
@@ -1178,15 +1189,21 @@ CPLAT_EXPORT int CPLAT_API cplat_service_install(const cplat_service_definition 
 優先した基準: `libcplat.so` の実行時非依存 ([Q-004](#q-004-linux-での-libsystemd-への依存方式) 案 A) の維持と、ユーザーの「`testfw` に `mock_systemd` を標準整備し、ビルド時 `<systemd/*.h>` を活用する」意図の両立優先。  
 理由: `libmock_systemd.a` を `libmock_libssh.a` と同じ独立ライブラリとして `framework/testfw` に置けば、他の全テストへ `-lsystemd` 依存を波及させずに済みます。また、`cplat` の `dlopen` ローダーに内部差し替え口を設けてテスト時に `Mock_systemd` へつなぐことで、`libcplat.so` の `DT_NEEDED` 非依存と `testfw` 上での `Mock_systemd` 再利用を両方満たせます。
 
+**Assessment**
+
+単一選択で C のみが選択され、補足「リンク対象ライブラリが増えたとして、libsystemd そのものは各 Linux マシンに存在するので、問題にならないと判断。」も C の方針と完全に一致しています。  
+これにより、[Q-004](#q-004-linux-での-libsystemd-への依存方式) の方針を `libcplat.so` への `libsystemd` 直接リンク (`LIBS += systemd`、`MAKEFW_SYNC_EVAL` 未定義時の `pkg-config --exists libsystemd` 検査、`app/cplat/docs/link-policy.md` の更新) へ改訂します。[Q-014](#q-014-dlopen-時のビルド時-libsystemd-ヘッダー依存) のビルド時 `<systemd/*.h>` 参照とも矛盾なく整合します。  
+単体テスト用モックは、`framework/testfw` に独立静的ライブラリ `libmock_systemd.a` (`include/mock_systemd.h`、`include_override/systemd/{sd-bus.h,sd-daemon.h,sd-event.h}`、`libsrc/mock_systemd/`、`SKIP_BUILD = WINDOWS`) として配置し、C 標準ライブラリ モックと同一のマクロ置換で試験します。`dlopen` 動的ローダーを作成しないため、[Q-012](#q-012-並行検討中の-account-session-案件との調整) に伴い記録していた残課題 `BL-001` も解消しました。これらを `LADR-005`・`LADR-012`・`backlog.md` へ反映します。
+
 **Related**
 
-[Q-004](#q-004-linux-での-libsystemd-への依存方式)、[Q-014](#q-014-dlopen-時のビルド時-libsystemd-ヘッダー依存)、[Q-021](#q-021-testfw-変更時のテスト検証範囲)
+[Q-004](#q-004-linux-での-libsystemd-への依存方式)、[Q-012](#q-012-並行検討中の-account-session-案件との調整)、[Q-014](#q-014-dlopen-時のビルド時-libsystemd-ヘッダー依存)、[Q-021](#q-021-testfw-変更時のテスト検証範囲)
 
 ### Q-021 testfw 変更時のテスト検証範囲
 
 **Status**
 
-未回答
+解決済み
 
 **Question**
 
@@ -1201,18 +1218,25 @@ CPLAT_EXPORT int CPLAT_API cplat_service_install(const cplat_service_definition 
 
 選択方式: 単一選択
 
-- [ ] A: (推奨) 影響する範囲の局所検証 (`framework/testfw` のビルドおよび `mock_systemd` 局所テスト + `app/cplat` のビルド・全単体テスト + `app/service-sample` のビルド・全単体テスト) を実施し、ワークスペース全体テストは CI に委ねる (Q-020 で B を選んだ場合は `framework/testfw` 検証自体が不要)。
+- [x] A: (推奨) 影響する範囲の局所検証 (`framework/testfw` のビルドおよび `mock_systemd` 局所テスト + `app/cplat` のビルド・全単体テスト + `app/service-sample` のビルド・全単体テスト) を実施し、ワークスペース全体テストは CI に委ねる (Q-020 で B を選んだ場合は `framework/testfw` 検証自体が不要)。
 - [ ] B: 上記の局所検証に加えて、Linux 上でワークスペース全体の `make test` まで実施する。
 - [ ] C: その他
 - [ ] X: 意図不明 (詳細な質問内容に再生成すること)
 
 その他の回答 / 補足:
 
+回答者: Tetsuo Honda  
+回答日時: 2026-11-28 08:35:47 JST
+
 **Recommendation**
 
 推奨: A  
 優先した基準: 変更が独立ライブラリ (`libmock_systemd.a`) と新規 `include_override/systemd/` に局所化される性質を踏まえた、現実的な検証コストと確実な品質担保の両立優先。  
 理由: 既存の `libmock_libc.a` や既存の `include_override/*.h` に手を入れないため、他 app のテストへ破壊的影響が及ぶ経路がありません。影響範囲 3 か所 (`framework/testfw`、`app/cplat`、`app/service-sample`) のビルドと全テストをローカルで通し、全 app 横断の回帰は CI (`ol8`/`ol9`/`ol10` + Windows) で確認する運用が妥当です。
+
+**Assessment**
+
+単一選択で A のみが選択されました。Linux 上で影響範囲 3 か所 (`framework/testfw` のビルドおよび `mock_systemd` 局所テスト、`app/cplat` のビルド・全単体テスト、`app/service-sample` のビルド・全単体テスト) の局所検証を実施し、ワークスペース全体テストと Windows 確認は CI (またはユーザー環境) へ委ねます。`LADR-013` へ反映します。
 
 **Related**
 

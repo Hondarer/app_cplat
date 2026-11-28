@@ -48,6 +48,7 @@ Table: 機能仕様カテゴリごとの要件文の主語
 | `PROMPT` | cplat のプロンプト機能 |
 | `REGEX` | cplat の正規表現機能 |
 | `RUNTIME` | cplat の実行時支援機能 |
+| `SERVICE` | cplat のサービス機能 |
 | `STRING_CATALOG` | cplat の文字列カタログ機能 |
 | `SYNC` | cplat の同期機能 |
 | `TRACE` | cplat のトレース機能 |

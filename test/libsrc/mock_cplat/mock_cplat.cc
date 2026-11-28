@@ -633,6 +633,17 @@ Mock_cplat::Mock_cplat()
     ON_CALL(*this, cplat_sym_loader_reject_get(_, _, _, _, _))
         .WillByDefault(Invoke(delegate_real_cplat_sym_loader_reject_get));
 
+    // cplat/service/service.h
+    ON_CALL(*this, cplat_service_prepare_run()).WillByDefault(Invoke(delegate_real_cplat_service_prepare_run));
+    ON_CALL(*this, cplat_service_install(_, _)).WillByDefault(Invoke(delegate_real_cplat_service_install));
+    ON_CALL(*this, cplat_service_uninstall(_)).WillByDefault(Invoke(delegate_real_cplat_service_uninstall));
+    ON_CALL(*this, cplat_service_run(_, _)).WillByDefault(Invoke(delegate_real_cplat_service_run));
+    ON_CALL(*this, cplat_service_run_console(_, _)).WillByDefault(Invoke(delegate_real_cplat_service_run_console));
+    ON_CALL(*this, cplat_service_wait_for_stop(_)).WillByDefault(Invoke(delegate_real_cplat_service_wait_for_stop));
+    ON_CALL(*this, cplat_service_stop_requested()).WillByDefault(Invoke(delegate_real_cplat_service_stop_requested));
+    ON_CALL(*this, cplat_service_request_stop()).WillByDefault(Invoke(delegate_real_cplat_service_request_stop));
+    ON_CALL(*this, cplat_service_set_status_text(_)).WillByDefault(Invoke(delegate_real_cplat_service_set_status_text));
+
     // cplat/string_catalog/string_catalog.h
     ON_CALL(*this, cplat_string_catalog_set_language(_))
         .WillByDefault(Invoke(delegate_real_cplat_string_catalog_set_language));
